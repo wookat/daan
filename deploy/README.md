@@ -13,7 +13,7 @@
    ```
    cd deploy && docker compose up -d --build
    ```
-   服务监听 127.0.0.1:8000（含 H5 前端 + API）。
+   服务监听 127.0.0.1:8300（含 H5 前端 + API）。
 3. 反代 + HTTPS（Caddy 示例）：
    ```
    kaogong.zalize.com {
