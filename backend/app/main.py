@@ -11,7 +11,9 @@ app = FastAPI(title="考公错题助手")
 
 db.init_db()
 
-FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "frontend")
+_ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
+_H5_DIR = os.path.join(_ROOT, "frontend-uni", "dist", "build", "h5")
+FRONTEND_DIR = _H5_DIR if os.path.isdir(_H5_DIR) else os.path.join(_ROOT, "frontend")
 
 
 @app.post("/api/explain")
@@ -82,9 +84,4 @@ async def api_stats():
     return s
 
 
-@app.get("/")
-async def index():
-    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
-
-
-app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="static")

@@ -1,0 +1,32 @@
+{
+  "pages": [
+    {
+      "path": "pages/ask/ask",
+      "style": { "navigationBarTitleText": "拍题讲解" }
+    },
+    {
+      "path": "pages/book/book",
+      "style": { "navigationBarTitleText": "错题本" }
+    },
+    {
+      "path": "pages/stats/stats",
+      "style": { "navigationBarTitleText": "薄弱分析" }
+    }
+  ],
+  "tabBar": {
+    "color": "#8a90a0",
+    "selectedColor": "#2f6fed",
+    "backgroundColor": "#ffffff",
+    "list": [
+      { "pagePath": "pages/ask/ask", "text": "拍题讲解" },
+      { "pagePath": "pages/book/book", "text": "错题本" },
+      { "pagePath": "pages/stats/stats", "text": "薄弱分析" }
+    ]
+  },
+  "globalStyle": {
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "考公错题助手",
+    "navigationBarBackgroundColor": "#2f6fed",
+    "backgroundColor": "#f5f6fa"
+  }
+}
