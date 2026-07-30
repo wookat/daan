@@ -36,6 +36,8 @@ label{font-size:13px;color:var(--muted);display:block;margin:10px 0 6px}
 .md code{background:#f0f2f8;border-radius:4px;padding:1px 5px;font-size:13px}
 .md strong{color:#d14}
 .mistake{border-left:3px solid var(--p)}
+.card.folded>*:not(:first-child){display:none}
+.card.hist{opacity:.85}
 .mistake .q{font-size:14px;line-height:1.5;max-height:66px;overflow:hidden}
 .mistake .meta{font-size:12px;color:var(--muted);margin-top:6px}
 .spin{text-align:center;color:var(--muted);padding:20px;font-size:14px}
@@ -131,6 +133,9 @@ async function explain(){
     const d=await r.json();lastResult=d;
     document.getElementById('loading')?.remove();
     document.querySelectorAll('#result .simbox').forEach(x=>x.removeAttribute('id'));
+    document.querySelectorAll('#result > .card').forEach(c=>{if(!c.classList.contains('hist')){c.classList.add('hist');
+      c.insertAdjacentHTML('afterbegin','<div style="font-size:12px;color:var(--muted);margin-bottom:6px" onclick="event.stopPropagation();const b=this.parentElement;b.classList.toggle(\'folded\')">🕓 历史讲解（点此展开/折叠）</div>');
+      c.classList.add('folded')}});
     $('result').insertAdjacentHTML('afterbegin','<div class="card"><span class="tag">'+(d.module_name||'')+'</span><span class="tag">'+(d.question_type||'')+'</span>'
       +'<div class="md">'+md(d.explanation)+'</div>'
       +'<div style="height:10px"></div><div class="row"><button class="btn ghost" onclick="saveMistake(this)">存入错题本</button>'
