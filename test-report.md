@@ -1,5 +1,34 @@
 # 考公错题助手 MVP 验收测试报告
 
+## 增量测试 v7（访问码保护）— 2026-07-30
+
+- 结论：**四条断言全部通过**（H5，400px 移动视口）；测试中发现并修复了一个**环境问题**（非代码 bug，见下）
+- 录屏：`/home/ubuntu/screencasts/rec-bea62f9a-7979-4395-b8fc-b5bcf85ac9e4/rec-bea62f9a-7979-4395-b8fc-b5bcf85ac9e4-edited.mp4`
+
+### ① 首次无码提交 → 弹输入框；输错码 → 报错
+
+| 🟢 首次提交弹可编辑框"请输入访问码"（placeholder"联系管理员获取"） | 🟢 输入 wrong123 后红色错误"失败：访问码错误，请重试"，无讲解卡片 |
+|---|---|
+| ![访问码弹框](https://app.devin.ai/attachments/d9608a12-9911-4233-bcde-da3713b5ae7f/ss_f7a2f906.png) | ![错误码报错](https://app.devin.ai/attachments/782d0814-cba7-4cab-864f-43ac19d08b38/ss_66b99134.png) |
+
+### ② 清 storage 后输入正确码 kg2026 → 自动重试成功
+
+| 🟢 modal 再次弹出并输入 kg2026 | 🟢 确认后自动重试，讲解卡片正常渲染（4800÷1.2=4000，答案 B 自算正确） |
+|---|---|
+| ![输入正确码](https://app.devin.ai/attachments/694ae5a0-090c-4643-81fe-74ec3df208e7/ss_ab438818.png) | ![讲解成功](https://app.devin.ai/attachments/9c3c80df-ef83-49f0-b6e2-fc55a2d4201d/ss_2ff82a25.png) |
+
+### ③ 后续请求不再询问
+
+🟢 再次点"用花生十三方法讲解"：未弹访问码框，直接"AI 识题中…"并返回新讲解卡片（旧卡片自动折叠为历史行）：
+
+![不再询问](https://app.devin.ai/attachments/66111dfd-fdab-403c-af7a-9047f620f2fe/ss_12e66928.png)
+
+### 环境问题（测试中发现并修复，非代码 bug）
+
+首次输入正确码 kg2026 时后端返回 502"解析失败：Request URL is missing an 'http://' or 'https://' protocol."。排查发现服务器启动命令把 `LLM_BASE_URL` 设成了**字面字符串** `secret:personal:LLM_RELAY_BASE_URL`（secret 引用未被替换）。我已用真实环境变量值重启 uvicorn（ACCESS_CODE=kg2026 不变）后全部通过。**部署/启动脚本需确保 secret 引用被真正解析**。
+
+---
+
 ## 全量回归测试 v6（uni-app Vue3 H5 重写）— 2026-07-30
 
 - 结论：**H5 端全量回归所有断言通过**（v5 发现的"重做/删除"按钮重叠已修复）；2 条覆盖说明见下

@@ -27,6 +27,7 @@ async function withAuthRetry(fn) {
     return await fn();
   } catch (e) {
     if (String(e.message).includes('访问码') || String(e.message).includes('401')) {
+      uni.removeStorageSync('accessCode');
       const ok = await askCode();
       if (ok) return fn();
     }
