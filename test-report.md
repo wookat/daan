@@ -1,5 +1,57 @@
 # 考公错题助手 MVP 验收测试报告
 
+## 增量测试 v14（分段输入切换 + 深色模式 + 错题本空态）— 2026-07-30
+
+- 结论：**四项测试全部通过**，无失败断言。H5 构建 21:19 新鲜，后端无改动（进程 20179 仍有效）。
+- 录屏（400px 视口）：`/home/ubuntu/screencasts/rec-804c69ee-3803-473b-ab37-5f142e3dd63c/rec-804c69ee-3803-473b-ab37-5f142e3dd63c-edited.mp4`
+- 测试计划：`/home/ubuntu/repos/kaogong-assistant/test-plan-v14.md`
+
+### ① 分段切换「📷 拍图识题 / ⌨️ 粘贴文字」
+
+- 🟢 默认拍图模式：分段控件"拍图识题"高亮，仅显示选图按钮，无 textarea；答案输入框标签无"③"序号。
+- 🟢 拍图模式选图后出现预览+「✕ 移除图片」；切到「粘贴文字」→ textarea 显示、选图按钮/预览隐藏。
+- 🟢 **text 模式忽略图片**：已选图（9.6亿件图片题）情况下粘贴文字题（8800万件）提交 → 流式讲解针对**文字题**：8800÷1.1=8000，答案 **B.8000**（自算正确），非图片题内容。
+
+| 默认拍图模式（无 textarea） | 已选图（预览+移除按钮） |
+|---|---|
+| ![拍图模式](https://app.devin.ai/attachments/938d400a-305a-480c-918e-2d993c0e81c5/ss_zoom_e7bb582b.png) | ![选图后](https://app.devin.ai/attachments/ded15e48-c0fb-4a62-8e07-443ccda4e88b/ss_zoom_b24d8a92.png) |
+
+| 切文字模式（textarea 显示） | 流式讲解针对文字题（B.8000） |
+|---|---|
+| ![文字模式](https://app.devin.ai/attachments/e79534d4-825e-4c10-a784-cee5504cdadd/ss_zoom_0cce7fdb.png) | ![讲解](https://app.devin.ai/attachments/ff08fe74-d741-4461-abcb-47550ba5e71d/ss_zoom_8cf0a643.png) |
+
+### ② 错题本空态
+
+🟢 备份 data.db 后 UI 确认删除 id=6 → 空态卡：📖 图标 + "错题本还是空的" + 遗忘曲线说明 + 「去刷题」按钮；点击后 switchTab 跳到刷题页（模块卡片可见，兼作刷题页回归）。测后从备份**原样恢复 id=6 行**（review_count=2 保留），API 确认 `[6]`。
+
+| 空态卡 | 点「去刷题」跳转 |
+|---|---|
+| ![空态](https://app.devin.ai/attachments/6ab68e90-7656-4de7-a28c-b0f4b73035f6/ss_zoom_d96501d8.png) | ![跳刷题](https://app.devin.ai/attachments/74d0d384-44e0-4860-904f-dc8d0a8bbe9e/ss_zoom_82d170ec.png) |
+
+### ③ 深色模式（DevTools Emulate prefers-color-scheme: dark，用户指定方式）
+
+🟢 四个页面卡片深色（#23262f 系）、文字浅色可读、tabbar 深色（#1c1f27）、页面渐变深色，输入框/textarea/分段控件/模块卡均无白底残留：
+
+| 拍题讲解（深色，含分段+textarea） | 刷题（深色模块卡） |
+|---|---|
+| ![拍题深色](https://app.devin.ai/attachments/a92d8264-1ca0-4042-967d-92b63d1e4fe4/ss_zoom_67e0da14.png) | ![刷题深色](https://app.devin.ai/attachments/e39dc0a4-1839-4092-800c-9fb0b28d87bb/ss_zoom_1ef241a8.png) |
+
+| 错题本（深色） | 薄弱分析（深色） |
+|---|---|
+| ![错题本深色](https://app.devin.ai/attachments/9301c740-35d9-41c1-b37c-47f6e5adadc5/ss_zoom_7d13bd90.png) | ![薄弱深色](https://app.devin.ai/attachments/c52e1044-dccd-4dba-887a-6460b684dc2c/ss_zoom_b519d18b.png) |
+
+### ④ 快速回归（Regression，浅色）
+
+🟢 关闭深色模拟后浅色恢复：薄弱分析（资料分析 ×1 条形图 + TOP10）正常；刷题模块卡在②中已验证正常。
+
+![浅色回归](https://app.devin.ai/attachments/792c7aee-5e7a-4b7e-98c8-ebc3ba5b3345/ss_zoom_a29c479e.png)
+
+### 覆盖说明与清理
+
+- "重做/详解回填自动切文字模式"：代码路径（ask.vue L98/L285 均置 mode='text'）本轮未单独 UI 复跑（v5/v11 已验证重做/详解链路，本轮改动仅增加模式切换赋值）——标记为**未单独验证**。
+- 深色模式为 DevTools 模拟（用户指定 CDP/emulation 方式），非系统级深色；模拟关闭后浅色即恢复。
+- 清理：id=6 已从备份原样恢复（含复习状态），无残留测试数据；备份文件 /tmp/data_v14_backup.db。
+
 ## 增量测试 v13（新增「刷题」功能）— 2026-07-30
 
 - 结论：**五项测试全部通过**，无失败断言。服务进程 20179（21:00 启动，晚于代码修改）、H5 构建 21:00 新鲜，环境本轮由 lead 部署正确，无需重启。
