@@ -43,6 +43,14 @@ def init_db():
 
 def save_mistake(rec: dict) -> int:
     conn = get_conn()
+    qtext = rec.get("question_text")
+    if qtext:
+        dup = conn.execute(
+            "SELECT id FROM mistakes WHERE question_text=? LIMIT 1", (qtext,)
+        ).fetchone()
+        if dup:
+            conn.close()
+            return dup["id"]
     cur = conn.execute(
         """INSERT INTO mistakes
            (created_at, module, question_type, question_text, user_answer,

@@ -51,7 +51,15 @@
           </view>
           <view v-if="r.sim.picked && r.sim.ansHtml">
             <rich-text :nodes="r.sim.ansHtml" />
-            <button class="btn ghost sm" @click="explainSim(r)">用花生十三方法详解这道题</button>
+            <view class="row">
+              <button class="btn ghost sm" @click="explainSim(r)">用花生十三方法详解这道题</button>
+              <button
+                v-if="r.sim.correct && r.sim.picked !== r.sim.correct"
+                class="btn ghost sm"
+                :disabled="r.sim.saved"
+                @click="saveSim(r)"
+              >{{ r.sim.saved ? '✓ 已存入错题本' : '存入错题本' }}</button>
+            </view>
           </view>
         </view>
       </template>
@@ -222,10 +230,12 @@ export default {
         const m = (parts[1] || '').match(/答案[：:\s*]*([A-D])/);
         r.sim = {
           raw: parts[0],
+          rawAns: parts[1] || '',
           qHtml: md(parts[0]),
           ansHtml: parts[1] ? md(parts[1]) : '',
           correct: m ? m[1] : null,
           picked: '',
+          saved: false,
         };
       } catch (e) {
         uni.showToast({ title: '出题失败：' + e.message, icon: 'none' });
@@ -241,6 +251,23 @@ export default {
       if (r.sim.correct && o === r.sim.correct) return 'ok';
       if (o === r.sim.picked && r.sim.correct && o !== r.sim.correct) return 'bad';
       return 'dim';
+    },
+    async saveSim(r) {
+      if (r.sim.saved) return;
+      const qtext = (r.sim.raw || '').replace(/^##\s*练习题\s*/, '').replace(/##\s*提示[\s\S]*$/, '').trim();
+      await request('/api/mistakes', {
+        method: 'POST',
+        data: {
+          module: r.module,
+          question_type: r.question_type,
+          question_text: qtext,
+          user_answer: r.sim.picked,
+          correct_answer: r.sim.correct,
+          explanation: ((r.sim.raw || '') + '\n' + (r.sim.rawAns || '')).trim(),
+        },
+      });
+      r.sim.saved = true;
+      uni.showToast({ title: '已存入错题本', icon: 'success' });
     },
     explainSim(r) {
       this.qtext = (r.sim.raw || '').replace(/^##\s*练习题\s*/, '').replace(/##\s*提示[\s\S]*$/, '').trim();

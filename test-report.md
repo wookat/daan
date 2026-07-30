@@ -1,5 +1,45 @@
 # 考公错题助手 MVP 验收测试报告
 
+## 增量测试 v11（举一反三答错存入错题本）— 2026-07-30
+
+- 结论：**三项测试全部通过**（H5，400px 移动视口）
+- 录屏：`/home/ubuntu/screencasts/rec-e4ae07bb-11f8-46ca-a626-badfbd7de7f4/rec-e4ae07bb-11f8-46ca-a626-badfbd7de7f4-edited.mp4`
+- 造数与清理：流程中存入 1 条练习错题（id=10），测试后通过 UI 确认删除，DB 恢复仅剩 id=6
+
+### ① 答错 → 出现「存入错题本」按钮并可存入
+
+🟢 练习题（156 万辆÷1.3=120，正确 B）故意选错 D → D 红、B 绿、解析展开，按钮行出现「用花生十三方法详解这道题」+「存入错题本」；点击后按钮变"✓ 已存入错题本"禁用：
+
+| 选错后出现存入按钮 | 点击后 ✓ 已存入禁用 |
+|---|---|
+| ![选错出现按钮](https://app.devin.ai/attachments/ad8dc0e5-ddb2-4ac6-8e10-f883820fbbdc/ss_zoom_99dffd66.png) | ![已存入](https://app.devin.ai/attachments/130e2b7f-a7e7-4c86-aeb4-f4337b7233d4/ss_zoom_6e0db974.png) |
+
+🟢 API 校验入库字段：`user_answer=D`、`correct_answer=B`、`module=ziliao`、`question_type=资料分析-基期量计算`（继承原题）、explanation 含完整题目+解析（320 字符）。
+
+🟢 错题本页：新条目出现（题干无"## 练习题/## 提示"标题），点击可展开完整练习题+提示+答案与解析；顶部同时出现"📚 有 1 道错题待复习"：
+
+![错题本条目展开](https://app.devin.ai/attachments/bf23c7dc-2a65-4bbc-b870-f162f1a2c05d/ss_zoom_19ac672e.png)
+
+### ② 答对 → 不出现存入按钮
+
+🟢 重新出题后选正确 B（仅 B 绿色）→ 解析下方**只有**「用花生十三方法详解这道题」，无「存入错题本」：
+
+![答对无存入按钮](https://app.devin.ai/attachments/7269d958-b5e6-438c-9e95-43fb51c38a5a/ss_zoom_7af4789a.png)
+
+### ③ 新错题进入复习模式可作答
+
+🟢 该练习错题立即到期（复习 1/1）→ 选 B 变绿+"答对了！连对 1 次（下次复习：1 天后）"+解析展开 → 完成复习后回列表，待复习卡片消失、条目显示"已复习1次"；随后 UI 确认删除清理成功：
+
+| 复习作答正确 | 完成复习+删除清理后 |
+|---|---|
+| ![复习作答](https://app.devin.ai/attachments/8bc93269-4c29-44dd-b47b-e59e1921656b/ss_zoom_b637aa05.png) | ![完成复习](https://app.devin.ai/attachments/e8a8f5a9-c74d-4b8d-99be-cfbdc1bb31ad/ss_zoom_c1301b4e.png) |
+
+### 覆盖说明与小发现
+
+- 存入后再点「举一反三」重新出题会**重置 sim 状态（saved 归零）**，若再答错可重复存入同一道题（本轮未实际重复存入验证），可能产生重复错题条目——建议按题干去重或提示（P2）。
+- 「存入错题本」按钮 disabled 后未再次点击验证防重复（DOM disabled + saved 标志与非重复入库 API 证据一致）。
+- 小程序端按惯例未测。
+
 ## 增量测试 v10（流式讲解输出）— 2026-07-30
 
 - 结论：**四项测试全部通过**（H5，400px 移动视口）
