@@ -1,0 +1,15 @@
+{
+  "name": "考公错题助手",
+  "short_name": "错题助手",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f6fa",
+  "theme_color": "#2f6fed",
+  "icons": [
+    {
+      "src": "/static/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
