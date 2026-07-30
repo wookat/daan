@@ -147,18 +147,34 @@ async function saveMistake(btn){
   if(btn){btn.textContent='✓ 已存入错题本';btn.disabled=true}
 }
 async function similar(btn){
-  btn.disabled=true;btn.textContent='出题中…';
+  btn.disabled=true;let ss=0;btn.textContent='出题中…（0秒）';
+  const st=setInterval(()=>{ss++;btn.textContent='出题中…（'+ss+'秒）'},1000);
   try{
     const r=await fetch('/api/similar',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({question_text:lastResult.question_text,question_type:lastResult.question_type})});
     if(!r.ok)throw new Error((await r.json()).detail||r.status);
     const d=await r.json();
     const parts=d.content.split('<!--answer-->');
+    window._simQ=parts[0];
     $('simbox').innerHTML='<hr style="border:0;border-top:1px dashed #dde;margin:12px 0">'
       +'<div class="md">'+md(parts[0])+'</div>'
-      +(parts[1]?'<button class="btn ghost" onclick="this.nextElementSibling.style.display=\'block\';this.style.display=\'none\'">看答案与解析</button><div class="md" style="display:none">'+md(parts[1])+'</div>':'');
+      +'<div style="margin:8px 0"><label>先选你的答案再看解析：</label><div class="row" id="simopts">'
+      +['A','B','C','D'].map(o=>'<button class="btn ghost" onclick="pickSim(this,\''+o+'\')">'+o+'</button>').join('')+'</div></div>'
+      +(parts[1]?'<div id="simans" style="display:none"><div class="md">'+md(parts[1])+'</div>'
+      +'<button class="btn ghost" onclick="explainSim()">用花生十三方法详解这道题</button></div>':'');
   }catch(e){$('simbox').innerHTML='<p style="color:#c33;font-size:14px">出题失败：'+e.message+'</p>'}
-  btn.disabled=false;btn.textContent='举一反三';
+  clearInterval(st);btn.disabled=false;btn.textContent='举一反三';
+}
+function pickSim(btn,opt){
+  window._simUA=opt;
+  document.querySelectorAll('#simopts .btn').forEach(b=>{b.disabled=true;b.style.opacity=b===btn?'1':'.4'});
+  $('simans').style.display='block';
+}
+function explainSim(){
+  $('qtext').value=(window._simQ||'').replace(/^##\s*练习题\s*/,'').replace(/##\s*提示[\s\S]*$/,'').trim();
+  $('uanswer').value=window._simUA||'';
+  $('file').value='';$('preview').style.display='none';
+  window.scrollTo(0,0);explain();
 }
 async function loadBook(){
   $('book').innerHTML='<div class="spin">加载中…</div>';

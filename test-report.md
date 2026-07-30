@@ -1,5 +1,58 @@
 # 考公错题助手 MVP 验收测试报告
 
+## 增量测试 v2（P0 修复 + 举一反三 + PWA）— 2026-07-30
+
+- 结论：**本轮全部通过**（分阶段加载、举一反三、防重复存入、删除确认、薄弱分析中文名、manifest）
+- 录屏：`/home/ubuntu/screencasts/rec-19092a56-d12b-472e-a682-94a639cafa6d/rec-19092a56-d12b-472e-a682-94a639cafa6d-edited.mp4`
+
+### ① UI 完整流程
+
+| 加载阶段 1（AI 识题中…计秒） | 加载阶段 2（已识题，正在匹配…） |
+|---|---|
+| ![阶段1](https://app.devin.ai/attachments/99723a88-1ab6-41e4-a592-f1f6d0d62aeb/ss_231a4329.png) | ![阶段2](https://app.devin.ai/attachments/9e0aa765-e08c-4ae5-bfa2-13b4576e64f1/ss_63d6dc6b.png) |
+
+- ✅ 加载提示分阶段且带秒数："⏳ AI 识题中…（3秒）" → "🧭 已识题，正在匹配花生十三方法…（9秒）"
+
+| 举一反三：答案默认隐藏（🔴 点击前） | 点「看答案与解析」后展开（🟢 点击后） |
+|---|---|
+| ![隐藏](https://app.devin.ai/attachments/b4632766-e95e-4318-bfb9-9b5b9730e4be/ss_3a45df77.png) | ![展开](https://app.devin.ai/attachments/13871b86-17fc-43ab-ac90-d9b6729606dc/ss_dc6ba296.png) |
+
+- ✅ 点「举一反三」→ 按钮变"出题中…"（disabled）→ 生成新练习题+提示，答案隐藏在「看答案与解析」按钮后
+- ✅ 展开后按钮消失，显示答案与解析
+
+| 存入后按钮态"✓ 已存入错题本"（disabled） | 错题本仅 1 条（连点两次不重复） |
+|---|---|
+| ![按钮态](https://app.devin.ai/attachments/f31a017a-525d-4293-bbf0-3c594c22650f/ss_zoom_082242b1.png) | ![仅一条](https://app.devin.ai/attachments/f0d0853b-92a5-47bb-9897-5de1c11fa720/ss_25cdbda0.png) |
+
+| 删除确认框"确定删除这道错题？" | Cancel 保留 → OK 删除成功 |
+|---|---|
+| ![确认框](https://app.devin.ai/attachments/8b201dfc-27dc-45fd-bbf2-a4a42984e0ce/ss_91ace780.png) | ![删除后](https://app.devin.ai/attachments/ebedec64-a1a2-4093-a004-030d70d6b279/ss_44155b27.png) |
+
+薄弱分析显示中文模块名（上轮为 "ziliao × 1"，已修复）：
+
+![薄弱分析中文名](https://app.devin.ai/attachments/58fd6083-bba5-41a4-a306-6ac9c17e69f0/ss_890dddc3.png)
+
+### ② /api/similar 相似题质量（API）
+
+原题：1250 亿元 / 增长 8.4% 求基期。生成的练习题：
+- ✅ 数据全新编（3680 亿元 / 12.2%，UI 那次为 735 亿元 / 5.8%，均不同于原题）
+- ✅ 方法一致（基期量 = 现期 ÷ (1+增长率)）
+- ✅ 含 `<!--answer-->` 分隔符；答案自算验证正确（3680÷1.122≈3280→B；735÷1.058≈695→A）
+- ✅ 无 `\[` / `\frac`
+
+### ③ PWA
+- ✅ `/static/manifest.json` 200，含 name/short_name/start_url/display:standalone/icons
+- ✅ `/static/icon.svg` 200
+
+### 本轮新发现的改进建议（增量）
+1. 举一反三生成期间无阶段性提示（只有"出题中…"按钮文案），约 20–30 秒，建议同样加计秒提示。
+2. 举一反三的练习题不能"存入错题本"或再讲解，做完后没有后续动作闭环。
+3. 练习题没有让用户先选答案再看解析的交互（如 A/B/C/D 按钮），学习闭环可更强。
+
+---
+
+## 首轮验收测试（MVP）
+
 - 测试对象：本地项目 `/home/ubuntu/repos/kaogong-assistant`（无 PR）
 - 运行方式：uvicorn :8000，LLM 用中转站（LLM_MODEL=gpt-5.5）
 - 结论：**5 项验收标准全部通过**，另附真实用户视角的改进建议清单（按严重程度排序）
