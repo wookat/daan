@@ -23,6 +23,7 @@ export function md(s) {
     }
     if (inTable) { out += '</table>'; inTable = 0; }
     if (/^\s*(-{3,}|\*{3,})\s*$/.test(l)) { close(); out += '<hr style="border:none;border-top:1px solid #e5e7eb;margin:12px 0">'; }
+    else if (/^#{4,6}\s/.test(l)) { close(); out += '<h4 style="font-size:14px;margin:8px 0 4px">' + inline(l.replace(/^#{4,6}\s/, '')) + '</h4>'; }
     else if (/^###\s/.test(l)) { close(); out += '<h3 style="font-size:15px;margin:10px 0 4px">' + inline(l.slice(4)) + '</h3>'; }
     else if (/^##\s/.test(l)) { close(); out += '<h2 style="font-size:16px;margin:14px 0 6px;color:#4f46e5">' + inline(l.slice(3)) + '</h2>'; }
     else if (/^#\s/.test(l)) { close(); out += '<h2 style="font-size:16px;margin:14px 0 6px;color:#4f46e5">' + inline(l.slice(2)) + '</h2>'; }

@@ -1,5 +1,41 @@
 # 考公错题助手 MVP 验收测试报告
 
+## 增量测试 v15（题库扩充 699 题 + 刷题详解入口）— 2026-07-30
+
+- 结论：**三项测试全部通过**，无失败断言；1 个新发现的渲染小瑕疵（P3，见下）。
+- ⚠️ **环境处理**：本地 :8000 旧进程 20179（21:00 启动）早于 questions_bank.jsonl 修改（21:57），题库仍是旧 12 题——按 SKILL 我 kill 后用 exec env 参数绑定 secret 重启（新 PID 24322，environ 无 `secret:` 字面值、LLM_BASE_URL 为 https URL），重启后种子导入生效。
+- 录屏（400px 视口）：`/home/ubuntu/screencasts/rec-afcfc8fd-4bab-4e31-9fba-2db28304246b/rec-afcfc8fd-4bab-4e31-9fba-2db28304246b-edited.mp4`
+- 测试计划：`/home/ubuntu/repos/kaogong-assistant/test-plan-v15.md`
+
+### ① 题库 699 题：counts 与模块卡
+
+🟢 `GET /api/questions` counts：常识判断 162 / 资料分析 148 / 数量关系 135 / 判断推理 132 / 言语理解 122，**合计 699**；刷题页模块卡显示一致的新题数。`/api/questions?module=yanyu&limit=10` 返回 10 条且全部 module=yanyu（按模块取题正常）。
+
+![模块卡新题数](https://app.devin.ai/attachments/576b3e50-cdd1-43e0-ac8a-e8e543dad45a/ss_zoom_f67af962.png)
+
+### ② 刷题 →「🔍 用花生十三方法详解这道题」闭环
+
+- 🟢 资料分析第 1 题（四地增速比较）选 B 答对 → 解析下方出现「🔍 用花生十三方法详解这道题 ›」入口。
+- 🟢 点击 → switchTab 到拍题讲解页，自动处于「⌨️ 粘贴文字」模式，textarea 回填题干+`A.汀北省 B.禾原省 C.曲沙市 D.云屏省` 选项文本，答案框为空，**toast"题目已填入，先自己做一遍再点讲解"已在截图捕获**。
+- 🟢 点「用花生十三方法讲解」→ 流式讲解正常，内容针对该题（四地数据逐一计算 8.9%/4.8%/3.2%/11.8%），答案 **B. 禾原省** 与题库 answer 一致。
+
+| 答题后详解入口 | 跳转回填+toast |
+|---|---|
+| ![详解入口](https://app.devin.ai/attachments/1096126d-cc29-4a6f-81a6-4022a7f8d574/ss_zoom_182bb1f8.png) | ![回填toast](https://app.devin.ai/attachments/c53f7461-c6d4-48db-9050-b778003396b0/ss_zoom_e90cd134.png) |
+
+流式讲解（针对该题，答案 B）：
+
+![流式讲解](https://app.devin.ai/attachments/9b3b9f55-2b67-4db8-96dc-cb6103885967/ss_zoom_d801b805.png)
+
+### ③ 新发现（非阻塞）
+
+- P3 渲染瑕疵：讲解 rich-text 中 markdown **`####` 四级标题以字面文本显示**（见上图"#### 禾原省"），md.js 未处理 h4；建议 md.js 补 `####` → `<h4>`。
+
+### 覆盖说明与清理
+
+- 本轮未产生新错题（答对未存入），/api/mistakes 确认仍仅 `[6]`，无需清理。
+- 混合刷题/完成页等 v13 已验证项本轮未重测。
+
 ## 增量测试 v14（分段输入切换 + 深色模式 + 错题本空态）— 2026-07-30
 
 - 结论：**四项测试全部通过**，无失败断言。H5 构建 21:19 新鲜，后端无改动（进程 20179 仍有效）。
