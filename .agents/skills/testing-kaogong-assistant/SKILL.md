@@ -35,3 +35,9 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - `computer type` drops CJK characters (xdotool). To enter Chinese text, install xclip (`sudo apt-get install -y xclip`), pipe text via `xclip -selection clipboard`, then ctrl+v into the field.
 - The three tabs are a bottom fixed tabbar: 拍题讲解 / 错题本 / 薄弱分析. Save button 存入错题本 appears at the bottom of the explanation card; success is a native alert.
 - Mobile check: shrink window with `wmctrl -r :ACTIVE: -e 0,50,30,400,720`.
+
+## DB backup for destructive tests
+- SQLite DB is at repo root `data.db` (not backend/). Before destructive tests: `cp data.db /tmp/backup.db`; restore single rows via python sqlite3.
+
+## Dark mode testing
+- Use DevTools undocked window + Ctrl+Shift+P "Emulate CSS prefers-color-scheme: dark". Emulation is lost when DevTools closes.
