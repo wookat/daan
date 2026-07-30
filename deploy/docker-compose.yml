@@ -1,0 +1,16 @@
+services:
+  kaogong:
+    build: ..
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_BASE_URL=${LLM_BASE_URL}
+      - LLM_MODEL=${LLM_MODEL:-gpt-5.5}
+      - ACCESS_CODE=${ACCESS_CODE}
+    volumes:
+      - kaogong-data:/data
+
+volumes:
+  kaogong-data:
