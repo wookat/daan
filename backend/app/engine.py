@@ -1,0 +1,62 @@
+"""讲解引擎：题目识别 → 题型路由 → 按花生十三方法体系讲解。"""
+from . import kb, llm
+
+EXTRACT_PROMPT = """你是公务员考试题目识别助手。从用户提供的内容（图片或文字）中提取题目信息，输出 JSON（不要多余文字）：
+{
+  "question_text": "完整题干（含选项 A/B/C/D，若有）",
+  "module": "ziliao|shuliang|yanyu|panduan|changshi|shenlun 之一",
+  "question_type": "更细的子题型，如：资料分析-增长率比较、判断推理-定义判断",
+  "user_answer": "若图中可见用户所选答案则填，否则 null",
+  "marked_correct_answer": "若图中标注了正确答案则填，否则 null"
+}
+module 判断标准：资料分析(统计材料+计算)=ziliao；数学应用题=shuliang；词语填空/主旨/排序=yanyu；图形/定义/类比/逻辑=panduan；百科知识=changshi；申论材料题=shenlun。"""
+
+EXPLAIN_SYSTEM = """你是一位深谙"花生十三"解题体系的公考老师。你必须严格使用下方提供的方法库中的技巧来讲解，遵守：
+1. 先给"题型识别"：这题属于哪个模块哪个子题型，触发哪个方法（引用方法库中的方法名称，如"截位直除""415份数""ABRX"）。
+2. 按方法库中该方法的标准操作步骤分步讲解，资料分析/数量关系必须展示速算过程。
+3. 给出答案和"易错点"。
+4. 若用户答错了，分析错因（方法不会/看错题/计算失误/掉入陷阱）。
+5. 【红线】如果这道题所需方法不在方法库中，必须明确说"该题型的花生十三方法不在当前方法库中"，然后可以给通用解法，但要明确区分标注，绝不允许编造"花生十三方法"。
+6. 用手机阅读友好的 Markdown 输出，简明扼要。
+7. 【格式】禁止使用 LaTeX（\\[ \\] \\frac 等），所有算式用纯文本，如：1200 ÷ 1.08 ≈ 1111。
+
+输出结构：
+## 题型识别
+## 方法与步骤
+## 答案
+## 易错点
+## 错因分析（仅当用户答错时）
+
+=== 花生十三方法库（节选，仅可引用其中方法）===
+{methods}
+"""
+
+
+async def extract_question(image_b64: str | None, mime: str | None, text: str | None) -> dict:
+    if image_b64:
+        content = llm.image_content(image_b64, mime or "image/jpeg", EXTRACT_PROMPT)
+    else:
+        content = EXTRACT_PROMPT + "\n\n题目内容：\n" + (text or "")
+    data = await llm.chat_json([{"role": "user", "content": content}], max_tokens=2000)
+    if data.get("module") not in kb.MODULES:
+        guessed = kb.guess_module(data.get("question_text", ""))
+        data["module"] = guessed or "panduan"
+    return data
+
+
+async def explain(extracted: dict, user_answer: str | None = None) -> str:
+    module = extracted["module"]
+    methods = kb.load_method_text(module)
+    ua = user_answer or extracted.get("user_answer")
+    user_msg = f"题目：\n{extracted['question_text']}\n\n题型：{extracted.get('question_type', '')}"
+    if ua:
+        user_msg += f"\n\n我选了：{ua}（请判断对错并分析错因）"
+    if extracted.get("marked_correct_answer"):
+        user_msg += f"\n（图中标注正确答案：{extracted['marked_correct_answer']}）"
+    return await llm.chat(
+        [
+            {"role": "system", "content": EXPLAIN_SYSTEM.format(methods=methods)},
+            {"role": "user", "content": user_msg},
+        ],
+        max_tokens=4000,
+    )

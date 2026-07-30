@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>考公错题助手</title>
+<style>
+:root{--p:#2f6fed;--bg:#f5f6fa;--card:#fff;--txt:#1f2430;--muted:#8a90a0}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--txt);padding-bottom:70px}
+header{background:var(--p);color:#fff;padding:14px 16px;font-size:17px;font-weight:600;position:sticky;top:0;z-index:5}
+.page{padding:14px;display:none}.page.active{display:block}
+.card{background:var(--card);border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.btn{display:block;width:100%;padding:13px;border:0;border-radius:10px;background:var(--p);color:#fff;font-size:16px;font-weight:600}
+.btn:disabled{opacity:.5}
+.btn.ghost{background:#eef2ff;color:var(--p)}
+textarea{width:100%;min-height:90px;border:1px solid #dde1ea;border-radius:10px;padding:10px;font-size:15px;resize:vertical}
+input[type=text]{width:100%;border:1px solid #dde1ea;border-radius:10px;padding:10px;font-size:15px}
+label{font-size:13px;color:var(--muted);display:block;margin:10px 0 6px}
+.tabbar{position:fixed;bottom:0;left:0;right:0;display:flex;background:#fff;border-top:1px solid #e6e8ef;z-index:5}
+.tabbar button{flex:1;padding:10px 0 12px;border:0;background:none;font-size:12px;color:var(--muted)}
+.tabbar button.on{color:var(--p);font-weight:600}
+.tabbar .ico{font-size:20px;display:block;margin-bottom:2px}
+#preview{max-width:100%;border-radius:10px;margin-top:8px;display:none}
+.tag{display:inline-block;background:#eef2ff;color:var(--p);border-radius:6px;padding:2px 8px;font-size:12px;margin-right:6px}
+.md h2{font-size:16px;margin:14px 0 6px;color:var(--p)}
+.md h3{font-size:15px;margin:10px 0 4px}
+.md p,.md li{font-size:15px;line-height:1.65;margin:4px 0}
+.md ul,.md ol{padding-left:20px}
+.md table{border-collapse:collapse;width:100%;font-size:13px;margin:8px 0;display:block;overflow-x:auto}
+.md th,.md td{border:1px solid #e0e3ec;padding:5px 8px}
+.md code{background:#f0f2f8;border-radius:4px;padding:1px 5px;font-size:13px}
+.md strong{color:#d14}
+.mistake{border-left:3px solid var(--p)}
+.mistake .q{font-size:14px;line-height:1.5;max-height:66px;overflow:hidden}
+.mistake .meta{font-size:12px;color:var(--muted);margin-top:6px}
+.spin{text-align:center;color:var(--muted);padding:20px;font-size:14px}
+.bar{background:#eef2ff;border-radius:6px;height:18px;position:relative;margin:4px 0}
+.bar i{position:absolute;left:0;top:0;bottom:0;background:var(--p);border-radius:6px}
+.bar span{position:relative;font-size:12px;padding-left:8px;line-height:18px}
+.row{display:flex;gap:8px}.row .btn{flex:1}
+.del{background:none;border:0;color:#c33;font-size:12px;float:right}
+</style>
+</head>
+<body>
+<header>考公错题助手 · 花生十三方法</header>
+
+<div class="page active" id="page-ask">
+  <div class="card">
+    <label>① 上传错题截图 / 拍照（或在下方粘贴题目文字）</label>
+    <div class="row">
+      <button class="btn ghost" onclick="document.getElementById('file').click()">📷 选择图片</button>
+    </div>
+    <input type="file" id="file" accept="image/*" hidden>
+    <img id="preview">
+    <label>② 题目文字（可选，与图片二选一）</label>
+    <textarea id="qtext" placeholder="粘贴题干和选项…"></textarea>
+    <label>③ 你选的答案（可选，填了会帮你分析错因）</label>
+    <input type="text" id="uanswer" placeholder="如：A" maxlength="10">
+    <div style="height:12px"></div>
+    <button class="btn" id="go" onclick="explain()">用花生十三方法讲解</button>
+  </div>
+  <div id="result"></div>
+</div>
+
+<div class="page" id="page-book"><div id="book"></div></div>
+<div class="page" id="page-stats"><div id="stats"></div></div>
+
+<div class="tabbar">
+  <button class="on" data-p="ask"><span class="ico">✏️</span>拍题讲解</button>
+  <button data-p="book"><span class="ico">📒</span>错题本</button>
+  <button data-p="stats"><span class="ico">📊</span>薄弱分析</button>
+</div>
+
+<script>
+let lastResult=null;
+const $=id=>document.getElementById(id);
+document.querySelectorAll('.tabbar button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tabbar button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  $('page-'+b.dataset.p).classList.add('active');
+  if(b.dataset.p==='book')loadBook();
+  if(b.dataset.p==='stats')loadStats();
+});
+$('file').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();r.onload=()=>{$('preview').src=r.result;$('preview').style.display='block'};r.readAsDataURL(f);
+};
+function md(s){
+  s=s.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  const lines=s.split('\n');let out='',inUl=0,inOl=0,inTable=0;
+  const close=()=>{if(inUl){out+='</ul>';inUl=0}if(inOl){out+='</ol>';inOl=0}if(inTable){out+='</table>';inTable=0}};
+  for(let l of lines){
+    if(/^\s*\|/.test(l)){if(/^\s*\|[\s:|-]+\|\s*$/.test(l))continue;
+      if(!inTable){close();out+='<table>';inTable=1}
+      out+='<tr>'+l.replace(/^\s*\||\|\s*$/g,'').split('|').map(c=>'<td>'+inline(c.trim())+'</td>').join('')+'</tr>';continue}
+    if(inTable){out+='</table>';inTable=0}
+    if(/^###\s/.test(l)){close();out+='<h3>'+inline(l.slice(4))+'</h3>'}
+    else if(/^##\s/.test(l)){close();out+='<h2>'+inline(l.slice(3))+'</h2>'}
+    else if(/^#\s/.test(l)){close();out+='<h2>'+inline(l.slice(2))+'</h2>'}
+    else if(/^\s*[-*]\s/.test(l)){if(!inUl){close();out+='<ul>';inUl=1}out+='<li>'+inline(l.replace(/^\s*[-*]\s/,''))+'</li>'}
+    else if(/^\s*\d+[.、]\s/.test(l)){if(!inOl){close();out+='<ol>';inOl=1}out+='<li>'+inline(l.replace(/^\s*\d+[.、]\s/,''))+'</li>'}
+    else if(l.trim()===''){close()}
+    else{close();out+='<p>'+inline(l)+'</p>'}
+  }
+  close();return out;
+}
+function inline(s){return s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/`(.+?)`/g,'<code>$1</code>')}
+async function explain(){
+  const f=$('file').files[0],t=$('qtext').value.trim();
+  if(!f&&!t){alert('请上传图片或粘贴题目文字');return}
+  $('go').disabled=true;
+  $('result').innerHTML='<div class="card spin">AI 正在识题并匹配花生十三方法，约需 20–60 秒…</div>';
+  const fd=new FormData();
+  if(f)fd.append('image',f);
+  if(t)fd.append('text',t);
+  const ua=$('uanswer').value.trim();if(ua)fd.append('user_answer',ua);
+  try{
+    const r=await fetch('/api/explain',{method:'POST',body:fd});
+    if(!r.ok)throw new Error((await r.json()).detail||r.status);
+    const d=await r.json();lastResult=d;
+    $('result').innerHTML='<div class="card"><span class="tag">'+(d.module_name||'')+'</span><span class="tag">'+(d.question_type||'')+'</span>'
+      +'<div class="md">'+md(d.explanation)+'</div>'
+      +'<div style="height:10px"></div><button class="btn ghost" onclick="saveMistake()">存入错题本</button></div>';
+  }catch(e){$('result').innerHTML='<div class="card" style="color:#c33">失败：'+e.message+'</div>'}
+  $('go').disabled=false;
+}
+async function saveMistake(){
+  if(!lastResult)return;
+  const d=lastResult;
+  await fetch('/api/mistakes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    module:d.module,question_type:d.question_type,question_text:d.question_text,
+    user_answer:d.user_answer,explanation:d.explanation})});
+  alert('已存入错题本');
+}
+async function loadBook(){
+  $('book').innerHTML='<div class="spin">加载中…</div>';
+  const d=await(await fetch('/api/mistakes')).json();
+  if(!d.items.length){$('book').innerHTML='<div class="card spin">错题本还是空的</div>';return}
+  $('book').innerHTML=d.items.map(m=>'<div class="card mistake" onclick="toggle(this)">'
+    +'<button class="del" onclick="event.stopPropagation();delM('+m.id+')">删除</button>'
+    +'<span class="tag">'+(m.question_type||m.module||'')+'</span>'
+    +'<div class="q">'+(m.question_text||'').slice(0,120)+'</div>'
+    +'<div class="meta">'+new Date(m.created_at*1000).toLocaleString('zh-CN')+'</div>'
+    +'<div class="md" style="display:none">'+md(m.explanation||'')+'</div></div>').join('');
+}
+function toggle(el){const m=el.querySelector('.md');m.style.display=m.style.display==='none'?'block':'none';
+  el.querySelector('.q').style.maxHeight=m.style.display==='none'?'66px':'none'}
+async function delM(id){await fetch('/api/mistakes/'+id,{method:'DELETE'});loadBook()}
+async function loadStats(){
+  const d=await(await fetch('/api/stats')).json();
+  const total=d.by_module.reduce((s,m)=>s+m.n,0)||1;
+  $('stats').innerHTML='<div class="card"><h3 style="margin-bottom:8px">错题模块分布</h3>'
+    +(d.by_module.length?d.by_module.map(m=>'<div class="bar"><i style="width:'+(m.n/total*100)+'%"></i><span>'+(m.module||'未知')+' × '+m.n+'</span></div>').join(''):'<div class="spin">暂无数据</div>')
+    +'</div><div class="card"><h3 style="margin-bottom:8px">高频错题型 TOP10</h3>'
+    +(d.by_type.length?d.by_type.map(m=>'<p style="font-size:14px;margin:4px 0">'+(m.question_type||'未知')+' <b style="color:var(--p)">×'+m.n+'</b></p>').join(''):'<div class="spin">暂无数据</div>')
+    +'</div>';
+}
+</script>
+</body>
+</html>
