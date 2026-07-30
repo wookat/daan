@@ -111,28 +111,35 @@ async function explain(){
   const f=$('file').files[0],t=$('qtext').value.trim();
   if(!f&&!t){alert('请上传图片或粘贴题目文字');return}
   $('go').disabled=true;
-  $('result').innerHTML='<div class="card spin">AI 正在识题并匹配花生十三方法，约需 20–60 秒…</div>';
+  let secs=0;
+  $('result').innerHTML='<div class="card spin" id="loading">⏳ AI 识题中…（0秒）</div>';
+  const timer=setInterval(()=>{secs++;const el=$('loading');if(!el){clearInterval(timer);return}
+    el.textContent=secs<8?'⏳ AI 识题中…（'+secs+'秒）':secs<25?'🧭 已识题，正在匹配花生十三方法…（'+secs+'秒）':'✍️ 正在生成分步讲解，马上好…（'+secs+'秒）'},1000);
   const fd=new FormData();
   if(f)fd.append('image',f);
   if(t)fd.append('text',t);
   const ua=$('uanswer').value.trim();if(ua)fd.append('user_answer',ua);
   try{
+    saved=false;
     const r=await fetch('/api/explain',{method:'POST',body:fd});
     if(!r.ok)throw new Error((await r.json()).detail||r.status);
     const d=await r.json();lastResult=d;
     $('result').innerHTML='<div class="card"><span class="tag">'+(d.module_name||'')+'</span><span class="tag">'+(d.question_type||'')+'</span>'
       +'<div class="md">'+md(d.explanation)+'</div>'
-      +'<div style="height:10px"></div><button class="btn ghost" onclick="saveMistake()">存入错题本</button></div>';
-  }catch(e){$('result').innerHTML='<div class="card" style="color:#c33">失败：'+e.message+'</div>'}
+      +'<div style="height:10px"></div><button class="btn ghost" onclick="saveMistake(this)">存入错题本</button></div>';
+  }catch(e){$('result').innerHTML='<div class="card" style="color:#c33">失败：'+e.message+'，请重试</div>'}
+  clearInterval(timer);
   $('go').disabled=false;
 }
-async function saveMistake(){
-  if(!lastResult)return;
+let saved=false;
+async function saveMistake(btn){
+  if(!lastResult||saved)return;
   const d=lastResult;
   await fetch('/api/mistakes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
     module:d.module,question_type:d.question_type,question_text:d.question_text,
     user_answer:d.user_answer,explanation:d.explanation})});
-  alert('已存入错题本');
+  saved=true;
+  if(btn){btn.textContent='✓ 已存入错题本';btn.disabled=true}
 }
 async function loadBook(){
   $('book').innerHTML='<div class="spin">加载中…</div>';
@@ -147,7 +154,7 @@ async function loadBook(){
 }
 function toggle(el){const m=el.querySelector('.md');m.style.display=m.style.display==='none'?'block':'none';
   el.querySelector('.q').style.maxHeight=m.style.display==='none'?'66px':'none'}
-async function delM(id){await fetch('/api/mistakes/'+id,{method:'DELETE'});loadBook()}
+async function delM(id){if(!confirm('确定删除这道错题？'))return;await fetch('/api/mistakes/'+id,{method:'DELETE'});loadBook()}
 async function loadStats(){
   const d=await(await fetch('/api/stats')).json();
   const total=d.by_module.reduce((s,m)=>s+m.n,0)||1;

@@ -64,7 +64,10 @@ async def api_delete_mistake(mid: int):
 
 @app.get("/api/stats")
 async def api_stats():
-    return db.stats()
+    s = db.stats()
+    for row in s["by_module"]:
+        row["module"] = kb.MODULES.get(row["module"], {}).get("name", row["module"])
+    return s
 
 
 @app.get("/")
