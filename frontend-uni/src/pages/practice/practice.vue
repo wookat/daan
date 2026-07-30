@@ -48,6 +48,7 @@
           </button>
           <button class="btn sm" @click="next">{{ idx + 1 < items.length ? '下一题' : '完成' }}</button>
         </view>
+        <view class="deep" @click="deepExplain">🔍 用花生十三方法详解这道题 ›</view>
       </view>
     </view>
 
@@ -136,6 +137,12 @@ export default {
       q._saved = true;
       uni.showToast({ title: '已存入错题本', icon: 'success' });
     },
+    deepExplain() {
+      const q = this.cur;
+      const optText = Object.entries(q.options).map(([k, v]) => `${k}.${v}`).join(' ');
+      uni.setStorageSync('redoQuestion', q.question + '\n' + optText);
+      uni.switchTab({ url: '/pages/ask/ask' });
+    },
     next() {
       this.idx++;
       this.picked = '';
@@ -178,6 +185,7 @@ export default {
 .verdict.badv { color: var(--bad); }
 .exp { background: var(--soft-bg); border-radius: 14rpx; padding: 20rpx; font-size: 25rpx; line-height: 1.7; color: var(--ink); white-space: pre-wrap; margin-bottom: 16rpx; }
 .row { display: flex; gap: 16rpx; }
+.deep { margin-top: 18rpx; text-align: center; font-size: 25rpx; color: var(--brand); }
 .btn { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(79, 70, 229, 0.25); }
 .btn.ghost { background: var(--brand-soft); color: var(--brand); box-shadow: none; }
 .btn.sm { font-size: 26rpx; padding: 0 30rpx; line-height: 2.6; flex: 1; }
