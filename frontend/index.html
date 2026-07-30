@@ -116,7 +116,8 @@ async function explain(){
   if(!f&&!t){alert('请上传图片或粘贴题目文字');return}
   $('go').disabled=true;
   let secs=0;
-  $('result').innerHTML='<div class="card spin" id="loading">⏳ AI 识题中…（0秒）</div>';
+  document.getElementById('loading')?.remove();
+  $('result').insertAdjacentHTML('afterbegin','<div class="card spin" id="loading">⏳ AI 识题中…（0秒）</div>');
   const timer=setInterval(()=>{secs++;const el=$('loading');if(!el){clearInterval(timer);return}
     el.textContent=secs<8?'⏳ AI 识题中…（'+secs+'秒）':secs<25?'🧭 已识题，正在匹配花生十三方法…（'+secs+'秒）':'✍️ 正在生成分步讲解，马上好…（'+secs+'秒）'},1000);
   const fd=new FormData();
@@ -128,11 +129,13 @@ async function explain(){
     const r=await fetch('/api/explain',{method:'POST',body:fd});
     if(!r.ok)throw new Error((await r.json()).detail||r.status);
     const d=await r.json();lastResult=d;
-    $('result').innerHTML='<div class="card"><span class="tag">'+(d.module_name||'')+'</span><span class="tag">'+(d.question_type||'')+'</span>'
+    document.getElementById('loading')?.remove();
+    document.querySelectorAll('#result .simbox').forEach(x=>x.removeAttribute('id'));
+    $('result').insertAdjacentHTML('afterbegin','<div class="card"><span class="tag">'+(d.module_name||'')+'</span><span class="tag">'+(d.question_type||'')+'</span>'
       +'<div class="md">'+md(d.explanation)+'</div>'
       +'<div style="height:10px"></div><div class="row"><button class="btn ghost" onclick="saveMistake(this)">存入错题本</button>'
-      +'<button class="btn ghost" onclick="similar(this)">举一反三</button></div><div id="simbox"></div></div>';
-  }catch(e){$('result').innerHTML='<div class="card" style="color:#c33">失败：'+e.message+'，请重试</div>'}
+      +'<button class="btn ghost" onclick="similar(this)">举一反三</button></div><div class="simbox" id="simbox"></div></div>');
+  }catch(e){document.getElementById('loading')?.remove();$('result').insertAdjacentHTML('afterbegin','<div class="card" style="color:#c33">失败：'+e.message+'，请重试</div>')}
   clearInterval(timer);
   $('go').disabled=false;
 }
@@ -156,6 +159,8 @@ async function similar(btn){
     const d=await r.json();
     const parts=d.content.split('<!--answer-->');
     window._simQ=parts[0];
+    const m=(parts[1]||'').match(/答案[：:\s\*]*([A-D])/);
+    window._simCorrect=m?m[1]:null;
     $('simbox').innerHTML='<hr style="border:0;border-top:1px dashed #dde;margin:12px 0">'
       +'<div class="md">'+md(parts[0])+'</div>'
       +'<div style="margin:8px 0"><label>先选你的答案再看解析：</label><div class="row" id="simopts">'
@@ -167,7 +172,12 @@ async function similar(btn){
 }
 function pickSim(btn,opt){
   window._simUA=opt;
-  document.querySelectorAll('#simopts .btn').forEach(b=>{b.disabled=true;b.style.opacity=b===btn?'1':'.4'});
+  document.querySelectorAll('#simopts .btn').forEach(b=>{
+    b.disabled=true;b.style.opacity=b===btn?'1':'.4';
+    if(window._simCorrect){
+      if(b.textContent===window._simCorrect){b.style.background='#2eaf62';b.style.color='#fff';b.style.opacity='1'}
+      else if(b===btn){b.style.background='#d64545';b.style.color='#fff'}
+    }});
   $('simans').style.display='block';
 }
 function explainSim(){
