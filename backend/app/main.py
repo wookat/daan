@@ -1,13 +1,20 @@
 import base64
 import os
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import db, engine, kb
 
 app = FastAPI(title="考公错题助手")
+
+ACCESS_CODE = os.environ.get("ACCESS_CODE", "")
+
+
+def check_access(x_access_code: str | None):
+    if ACCESS_CODE and x_access_code != ACCESS_CODE:
+        raise HTTPException(401, "访问码错误")
 
 db.init_db()
 
@@ -21,7 +28,9 @@ async def api_explain(
     image: UploadFile | None = File(None),
     text: str | None = Form(None),
     user_answer: str | None = Form(None),
+    x_access_code: str | None = Header(None),
 ):
+    check_access(x_access_code)
     if not image and not text:
         raise HTTPException(400, "需要图片或题目文字")
     image_b64 = None
@@ -48,7 +57,8 @@ async def api_explain(
 
 
 @app.post("/api/similar")
-async def api_similar(body: dict):
+async def api_similar(body: dict, x_access_code: str | None = Header(None)):
+    check_access(x_access_code)
     qt = body.get("question_text")
     if not qt:
         raise HTTPException(400, "缺少 question_text")
