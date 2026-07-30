@@ -3,9 +3,14 @@
     <view class="card">
       <view class="h">错题模块分布</view>
       <view v-if="!byModule.length" class="spin">暂无数据</view>
-      <view v-for="m in byModule" :key="m.module" class="bar">
-        <view class="fill" :style="{ width: (m.n / total) * 100 + '%' }" />
-        <text class="bt">{{ m.module || '未知' }} × {{ m.n }}</text>
+      <view v-for="m in byModule" :key="m.module" class="brow">
+        <view class="blabel">
+          <text>{{ m.module || '未知' }}</text>
+          <text class="n">×{{ m.n }}</text>
+        </view>
+        <view class="bar">
+          <view class="fill" :style="{ width: (m.n / total) * 100 + '%' }" />
+        </view>
       </view>
     </view>
     <view class="card">
@@ -52,9 +57,10 @@ export default {
 .card { background: #fff; border-radius: var(--radius); padding: 24rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 28rpx; font-weight: 600; margin-bottom: 14rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 20rpx; }
-.bar { background: var(--brand-soft); border-radius: 10rpx; height: 36rpx; position: relative; margin: 10rpx 0; overflow: hidden; }
-.fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--brand); border-radius: 10rpx; }
-.bt { position: relative; font-size: 22rpx; padding-left: 14rpx; line-height: 36rpx; color: #1f2430; }
+.brow { margin: 14rpx 0; }
+.blabel { display: flex; justify-content: space-between; font-size: 26rpx; color: var(--ink); margin-bottom: 6rpx; }
+.bar { background: var(--brand-soft); border-radius: 999rpx; height: 20rpx; position: relative; overflow: hidden; }
+.fill { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #6366f1, #4f46e5); border-radius: 999rpx; }
 .tline { font-size: 26rpx; margin: 8rpx 0; }
 .n { color: var(--brand); font-weight: 600; }
 </style>
