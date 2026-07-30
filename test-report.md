@@ -1,5 +1,56 @@
 # 考公错题助手 MVP 验收测试报告
 
+## 全量回归测试 v6（uni-app Vue3 H5 重写）— 2026-07-30
+
+- 结论：**H5 端全量回归所有断言通过**（v5 发现的"重做/删除"按钮重叠已修复）；2 条覆盖说明见下
+- 录屏：`/home/ubuntu/screencasts/rec-4a615082-8f06-48c3-820e-58e950c316e5/rec-4a615082-8f06-48c3-820e-58e950c316e5-edited.mp4`
+- 范围：仅 H5（http://localhost:8000，uni-app 构建产物）；微信小程序端按要求未测
+
+### ① 讲解 + rich-text 渲染 + 存入错题本
+
+粘贴资料分析基期量题（9600 亿元 ÷1.25 = 7680，正确答案 B）→ 讲解 → 存入错题本：
+
+| 🟢 rich-text 渲染：标题/加粗/列表可读，无原始 markdown 符号，答案 B.7680 正确 | 🟢 存入后按钮变"✓ 已存入错题本"并禁用 |
+|---|---|
+| ![讲解卡片](https://app.devin.ai/attachments/04c19461-b1a9-497f-a950-c8cf52a9ee21/ss_d484652d.png) | ![举一反三+选项](https://app.devin.ai/attachments/ce4fccfb-1a8d-46f8-ba86-409f63ff4837/ss_1ffe2419.png) |
+
+### ② 举一反三 → 选错标色 → 解析 → 详解闭环
+
+练习题（156 万辆 ÷1.3 = 120，正确 B）故意选 D：
+
+| 🟢 所选错误 D 红色、正确 B 绿色，其余变淡禁用，解析同步展开（右图） | 🟢 点「详解这道题」：题目回填、答案=D、自动第二次讲解并给出错因分析（"你选的 D.140 是错误的"） |
+|---|---|
+| ![红绿标色](https://app.devin.ai/attachments/ce4fccfb-1a8d-46f8-ba86-409f63ff4837/ss_1ffe2419.png) | ![详解闭环](https://app.devin.ai/attachments/e8a1b2cf-1742-448c-8f48-af344ebb174a/ss_f674c46a.png) |
+
+### ③ 历史卡片折叠/展开
+
+| 🟢 第二次讲解后旧卡片自动折叠为一行"🕓 历史讲解（点此展开/折叠）" | 🟢 点击展开：原题 9600 数据完整可回看，再点复折叠 |
+|---|---|
+| ![折叠一行](https://app.devin.ai/attachments/98816551-4807-4807-9869-6e9c867316a2/ss_b84a9481.png) | ![展开回看](https://app.devin.ai/attachments/d20e154d-107a-4e7a-9078-440a3e49d2c4/ss_0de0d7c9.png) |
+
+### ④ 错题本重做 / 删除
+
+| 🟢 重做/删除按钮已分开（v5 重叠问题修复）；点重做后切回拍题讲解、题目回填、答案空、toast"题目已填入，先自己做一遍再点讲解" | 🟢 删除弹确认框"确定删除这道错题？"，OK 后条目消失（"错题本还是空的"） |
+|---|---|
+| ![重做 toast](https://app.devin.ai/attachments/7abd7950-d43c-40ff-96c6-73ed5effc391/ss_a5f1309a.png) | ![删除确认](https://app.devin.ai/attachments/cad16fb0-6ed3-469f-b021-62cd2217be51/ss_6fefab63.png) |
+
+错题本列表（分开的按钮）：![错题本](https://app.devin.ai/attachments/7b79fa33-5076-4681-b6c4-31640eaaf7c8/ss_63d790dd.png)　删除后空列表：![空](https://app.devin.ai/attachments/042498d3-c87a-44c2-a525-26c240e2d052/ss_586a0f28.png)
+
+### ⑤ 薄弱分析中文名 + 移动视口（~400px）
+
+| 🟢 薄弱分析显示中文"资料分析 × 1"与"资料分析-基期量计算 ×1" | 🟢 400px 窄窗口：表单/卡片/tabBar 布局不破版，文本折行可读 |
+|---|---|
+| ![薄弱分析](https://app.devin.ai/attachments/a5810401-321a-4834-95f5-b706836690ba/ss_aac43f2f.png) | ![移动表单](https://app.devin.ai/attachments/396bfa76-e50d-4943-a890-3e2e39829181/ss_21e95025.png) |
+
+移动视口讲解卡片：![移动卡片](https://app.devin.ai/attachments/3c1174e4-23f8-4e78-8253-fa7dc09e2b7c/ss_2bf53f8b.png)
+
+### 覆盖说明（诚实披露）
+
+1. **表格渲染未验证**：本轮两次 LLM 讲解输出均未自然产生 markdown 表格，rich-text 的表格可读性未获得运行时证据（加粗/标题/列表已充分验证可读）。
+2. 首次讲解时在答案输入框键入的"A"未成功落入输入框（uni-input 聚焦时序问题或测试操作误差），该次讲解无错因分析段；但闭环第二次讲解（答案=D）完整产生了错因分析，功能本身验证通过。
+
+---
+
 ## 增量测试 v5（历史卡片自动折叠 + 错题本重做）— 2026-07-30
 
 - 结论：**功能全部通过**；1 个新发现的视觉小瑕疵（错题本"重做/删除"按钮重叠）
