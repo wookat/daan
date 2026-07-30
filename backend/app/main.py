@@ -86,6 +86,19 @@ async def api_delete_mistake(mid: int):
     return {"ok": True}
 
 
+@app.get("/api/review")
+async def api_review_due():
+    return {"items": db.due_reviews()}
+
+
+@app.post("/api/review/{mid}")
+async def api_review_record(mid: int, body: dict):
+    try:
+        return db.record_review(mid, bool(body.get("correct")))
+    except KeyError:
+        raise HTTPException(404, "错题不存在") from None
+
+
 @app.get("/api/stats")
 async def api_stats():
     s = db.stats()

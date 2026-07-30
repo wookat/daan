@@ -29,6 +29,14 @@ def init_db():
             explanation TEXT
         )"""
     )
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(mistakes)")}
+    for col, ddl in [
+        ("review_count", "ALTER TABLE mistakes ADD COLUMN review_count INTEGER DEFAULT 0"),
+        ("review_streak", "ALTER TABLE mistakes ADD COLUMN review_streak INTEGER DEFAULT 0"),
+        ("next_review", "ALTER TABLE mistakes ADD COLUMN next_review REAL"),
+    ]:
+        if col not in cols:
+            conn.execute(ddl)
     conn.commit()
     conn.close()
 
@@ -77,6 +85,43 @@ def delete_mistake(mid: int):
     conn.execute("DELETE FROM mistakes WHERE id=?", (mid,))
     conn.commit()
     conn.close()
+
+
+REVIEW_INTERVALS_DAYS = [1, 3, 7, 15, 30]
+
+
+def due_reviews(limit: int = 20) -> list[dict]:
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT * FROM mistakes WHERE next_review IS NULL OR next_review <= ? "
+        "ORDER BY next_review IS NOT NULL, next_review, created_at LIMIT ?",
+        (time.time(), limit),
+    ).fetchall()
+    conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["methods"] = json.loads(d.get("methods") or "[]")
+        out.append(d)
+    return out
+
+
+def record_review(mid: int, correct: bool) -> dict:
+    conn = get_conn()
+    row = conn.execute("SELECT review_streak FROM mistakes WHERE id=?", (mid,)).fetchone()
+    if not row:
+        conn.close()
+        raise KeyError(mid)
+    streak = (row["review_streak"] or 0) + 1 if correct else 0
+    days = REVIEW_INTERVALS_DAYS[min(streak - 1, len(REVIEW_INTERVALS_DAYS) - 1)] if correct else 1
+    nxt = time.time() + days * 86400
+    conn.execute(
+        "UPDATE mistakes SET review_count=review_count+1, review_streak=?, next_review=? WHERE id=?",
+        (streak, nxt, mid),
+    )
+    conn.commit()
+    conn.close()
+    return {"streak": streak, "next_review_days": days}
 
 
 def stats() -> dict:
