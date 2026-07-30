@@ -37,7 +37,12 @@
         <text class="duego">开始复习 ›</text>
       </view>
       <view v-if="loading" class="card spin">加载中…</view>
-      <view v-else-if="!items.length" class="card spin">错题本还是空的</view>
+      <view v-else-if="!items.length" class="card empty">
+        <view class="e-ico">📖</view>
+        <view class="e-t">错题本还是空的</view>
+        <view class="e-s">去拍题讲解或刷题，答错的题会汇集到这里，之后按遗忘曲线安排复习</view>
+        <button class="e-btn" @click="goPractice">去刷题</button>
+      </view>
       <view v-for="m in items" :key="m.id" class="card" @click="m.open = !m.open">
         <view class="ops">
           <text class="op redo" @click.stop="redo(m)">重做</text>
@@ -92,6 +97,9 @@ export default {
     this.load();
   },
   methods: {
+    goPractice() {
+      uni.switchTab({ url: '/pages/practice/practice' });
+    },
     async load() {
       this.loading = true;
       try {
@@ -176,7 +184,12 @@ export default {
 
 <style scoped>
 .wrap { padding: 24rpx; }
-.card { background: #fff; border-radius: var(--radius); padding: 24rpx; margin-bottom: 24rpx; border-left: 6rpx solid var(--brand); border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
+.card { background: var(--card); border-radius: var(--radius); padding: 24rpx; margin-bottom: 24rpx; border-left: 6rpx solid var(--brand); border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
+.empty { text-align: center; padding: 56rpx 32rpx; }
+.e-ico { font-size: 72rpx; margin-bottom: 16rpx; }
+.e-t { font-size: 32rpx; font-weight: 600; margin-bottom: 10rpx; }
+.e-s { font-size: 24rpx; color: var(--ink-2); line-height: 1.7; margin-bottom: 28rpx; }
+.e-btn { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border-radius: 18rpx; font-size: 28rpx; font-weight: 600; width: 60%; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; border-left: none; }
 .ops { float: right; }
 .op { font-size: 24rpx; margin-left: 20rpx; padding: 4rpx 8rpx; color: var(--ink-2); }
@@ -194,7 +207,7 @@ export default {
 .opts { display: flex; gap: 16rpx; margin: 20rpx 0; }
 .opt { flex: 1; text-align: center; padding: 16rpx 0; border: 2rpx solid #d9dee8; border-radius: 12rpx; font-size: 28rpx; }
 .opt.ok { background: #e6f7e6; border-color: #3aa53a; color: #2a7a2a; }
-.opt.bad { background: #fdeaea; border-color: #d05050; color: #b03030; }
+.opt.bad { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); }
 .opt.dim { opacity: 0.4; }
 .verdict { font-size: 26rpx; font-weight: 600; margin: 12rpx 0; }
 .verdict.good { color: #2a7a2a; }
@@ -204,5 +217,5 @@ export default {
 .q2 { font-size: 24rpx; color: var(--ink-2); margin-bottom: 12rpx; }
 .sj { display: inline-block; width: 45%; margin-right: 4%; font-size: 26rpx; border-radius: 12rpx; }
 .sj.ok { background: #e6f7e6; color: #2a7a2a; }
-.sj.bad { background: #fdeaea; color: #b03030; }
+.sj.bad { background: var(--bad-soft); color: var(--bad); }
 </style>

@@ -5,15 +5,21 @@
       <text class="hero-s">拍题即得你学的方法体系讲解</text>
     </view>
     <view class="card">
-      <text class="label">① 上传错题截图 / 拍照（或在下方粘贴题目文字）</text>
-      <button class="btn ghost" @click="pickImage">📷 选择图片 / 拍照</button>
-      <view v-if="imagePath" class="preview-wrap">
-        <image :src="imagePath" mode="widthFix" class="preview" />
-        <view class="preview-x" @click="clearImage">✕ 移除图片</view>
+      <view class="seg">
+        <view class="seg-i" :class="{ on: mode === 'img' }" @click="mode = 'img'">📷 拍图识题</view>
+        <view class="seg-i" :class="{ on: mode === 'text' }" @click="mode = 'text'">⌨️ 粘贴文字</view>
       </view>
-      <text class="label">② 题目文字（可选，与图片二选一）</text>
-      <textarea v-model="qtext" class="ta" placeholder="粘贴题干和选项…" :maxlength="-1" auto-height />
-      <text class="label">③ 你选的答案（可选，填了会帮你分析错因）</text>
+      <template v-if="mode === 'img'">
+        <button class="btn ghost" @click="pickImage">📷 选择图片 / 拍照</button>
+        <view v-if="imagePath" class="preview-wrap">
+          <image :src="imagePath" mode="widthFix" class="preview" />
+          <view class="preview-x" @click="clearImage">✕ 移除图片</view>
+        </view>
+      </template>
+      <template v-else>
+        <textarea v-model="qtext" class="ta" placeholder="粘贴题干和选项…" :maxlength="-1" auto-height />
+      </template>
+      <text class="label">你选的答案（可选，填了会帮你分析错因）</text>
       <input v-model="uanswer" class="inp" placeholder="如：A" maxlength="10" />
       <view style="height: 24rpx" />
       <button class="btn" :disabled="loading" @click="doExplain">用花生十三方法讲解</button>
@@ -74,6 +80,7 @@ import { request, uploadExplain, streamExplain } from '../../api.js';
 export default {
   data() {
     return {
+      mode: 'img',
       imagePath: '',
       imageFile: null,
       qtext: '',
@@ -88,6 +95,7 @@ export default {
   onShow() {
     const redo = uni.getStorageSync('redoQuestion');
     if (redo) {
+      this.mode = 'text';
       this.qtext = redo;
       this.uanswer = '';
       this.imagePath = '';
@@ -121,8 +129,12 @@ export default {
       }, 1000);
     },
     async doExplain() {
-      if (!this.imagePath && !this.qtext.trim()) {
-        uni.showToast({ title: '请上传图片或粘贴题目文字', icon: 'none' });
+      const useImg = this.mode === 'img';
+      const img = useImg ? this.imagePath : '';
+      const imgFile = useImg ? this.imageFile : null;
+      const txt = useImg ? '' : this.qtext.trim();
+      if (!img && !txt) {
+        uni.showToast({ title: useImg ? '请先选择图片' : '请粘贴题目文字', icon: 'none' });
         return;
       }
       this.loading = true;
@@ -143,11 +155,11 @@ export default {
           simSecs: 0,
           streaming: true,
         };
-        if (this.imagePath && !this.imageFile) {
+        if (img && !imgFile) {
           // 无 File 对象（如重做回填），退回非流式
           d = await uploadExplain({
-            filePath: this.imagePath,
-            text: this.qtext.trim() || null,
+            filePath: img,
+            text: txt || null,
             userAnswer: this.uanswer.trim() || null,
           });
           this.results.unshift({ ...rec, ...d, html: md(d.explanation), streaming: false });
@@ -159,8 +171,8 @@ export default {
         let inserted = false;
         let live = rec; // 插入后改用响应式代理，保证增量更新触发渲染
         d = await streamExplain({
-          file: this.imageFile,
-          text: this.qtext.trim() || null,
+          file: imgFile,
+          text: txt || null,
           userAnswer: this.uanswer.trim() || null,
           onMeta: (m) => {
             Object.assign(rec, m);
@@ -181,8 +193,8 @@ export default {
         // #endif
         // #ifndef H5
         d = await uploadExplain({
-          filePath: this.imagePath || null,
-          text: this.qtext.trim() || null,
+          filePath: img || null,
+          text: txt || null,
           userAnswer: this.uanswer.trim() || null,
         });
         this.results.unshift({
@@ -270,6 +282,7 @@ export default {
       uni.showToast({ title: '已存入错题本', icon: 'success' });
     },
     explainSim(r) {
+      this.mode = 'text';
       this.qtext = (r.sim.raw || '').replace(/^##\s*练习题\s*/, '').replace(/##\s*提示[\s\S]*$/, '').trim();
       this.uanswer = r.sim.picked || '';
       this.imagePath = '';
@@ -286,8 +299,11 @@ export default {
 .hero { padding: 28rpx 8rpx 20rpx; }
 .hero-t { display: block; font-size: 40rpx; font-weight: 700; color: var(--ink); letter-spacing: 1rpx; }
 .hero-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 6rpx; }
-.card { background: #fff; border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
+.card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .label { font-size: 24rpx; color: var(--ink-2); display: block; margin: 20rpx 0 10rpx; }
+.seg { display: flex; background: var(--soft-bg); border-radius: 16rpx; padding: 6rpx; margin-bottom: 20rpx; }
+.seg-i { flex: 1; text-align: center; padding: 14rpx 0; font-size: 27rpx; color: var(--ink-2); border-radius: 12rpx; }
+.seg-i.on { background: var(--card); color: var(--brand); font-weight: 600; box-shadow: 0 2rpx 8rpx rgba(31, 36, 48, 0.08); }
 .btn { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(79, 70, 229, 0.25); }
 .btn[disabled] { opacity: 0.6; }
 .btn.ghost { background: var(--brand-soft); color: var(--brand); box-shadow: none; }
@@ -295,8 +311,8 @@ export default {
 .btn.ok { background: var(--ok); color: #fff; opacity: 1 !important; box-shadow: none; }
 .btn.bad { background: var(--bad); color: #fff; box-shadow: none; }
 .btn.dim { opacity: 0.35; }
-.ta { width: 100%; min-height: 160rpx; border: 1rpx solid var(--line); border-radius: 18rpx; padding: 18rpx; font-size: 28rpx; box-sizing: border-box; background: #fafafe; }
-.inp { width: 100%; border: 1rpx solid var(--line); border-radius: 18rpx; padding: 18rpx; font-size: 28rpx; box-sizing: border-box; background: #fafafe; }
+.ta { width: 100%; min-height: 160rpx; border: 1rpx solid var(--line); border-radius: 18rpx; padding: 18rpx; font-size: 28rpx; box-sizing: border-box; background: var(--soft-bg); }
+.inp { width: 100%; border: 1rpx solid var(--line); border-radius: 18rpx; padding: 18rpx; font-size: 28rpx; box-sizing: border-box; background: var(--soft-bg); }
 .preview-wrap { position: relative; }
 .preview-x {
   display: inline-block;

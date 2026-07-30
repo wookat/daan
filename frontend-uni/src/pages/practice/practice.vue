@@ -152,7 +152,7 @@ export default {
 
 <style scoped>
 .wrap { padding: 24rpx; padding-bottom: 40rpx; }
-.card { background: #fff; border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
+.card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 30rpx; font-weight: 600; margin-bottom: 20rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 24rpx; }
 .grid { display: flex; flex-wrap: wrap; gap: 20rpx; }
@@ -176,7 +176,7 @@ export default {
 .verdict { font-size: 28rpx; font-weight: 600; margin-bottom: 12rpx; }
 .verdict.good { color: var(--ok); }
 .verdict.badv { color: var(--bad); }
-.exp { background: #f8f9fc; border-radius: 14rpx; padding: 20rpx; font-size: 25rpx; line-height: 1.7; color: var(--ink); white-space: pre-wrap; margin-bottom: 16rpx; }
+.exp { background: var(--soft-bg); border-radius: 14rpx; padding: 20rpx; font-size: 25rpx; line-height: 1.7; color: var(--ink); white-space: pre-wrap; margin-bottom: 16rpx; }
 .row { display: flex; gap: 16rpx; }
 .btn { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(79, 70, 229, 0.25); }
 .btn.ghost { background: var(--brand-soft); color: var(--brand); box-shadow: none; }
