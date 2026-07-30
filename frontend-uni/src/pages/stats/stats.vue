@@ -49,12 +49,12 @@ export default {
 
 <style scoped>
 .wrap { padding: 24rpx; }
-.card { background: #fff; border-radius: 20rpx; padding: 24rpx; margin-bottom: 24rpx; box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.06); }
+.card { background: #fff; border-radius: var(--radius); padding: 24rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 28rpx; font-weight: 600; margin-bottom: 14rpx; }
-.spin { text-align: center; color: #8a90a0; font-size: 26rpx; padding: 20rpx; }
-.bar { background: #eef2ff; border-radius: 10rpx; height: 36rpx; position: relative; margin: 10rpx 0; overflow: hidden; }
-.fill { position: absolute; left: 0; top: 0; bottom: 0; background: #2f6fed; border-radius: 10rpx; }
+.spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 20rpx; }
+.bar { background: var(--brand-soft); border-radius: 10rpx; height: 36rpx; position: relative; margin: 10rpx 0; overflow: hidden; }
+.fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--brand); border-radius: 10rpx; }
 .bt { position: relative; font-size: 22rpx; padding-left: 14rpx; line-height: 36rpx; color: #1f2430; }
 .tline { font-size: 26rpx; margin: 8rpx 0; }
-.n { color: #2f6fed; font-weight: 600; }
+.n { color: var(--brand); font-weight: 600; }
 </style>

@@ -15,7 +15,7 @@
   ],
   "tabBar": {
     "color": "#8a90a0",
-    "selectedColor": "#2f6fed",
+    "selectedColor": "#4f46e5",
     "backgroundColor": "#ffffff",
     "list": [
       { "pagePath": "pages/ask/ask", "text": "拍题讲解" },
@@ -26,7 +26,7 @@
   "globalStyle": {
     "navigationBarTextStyle": "white",
     "navigationBarTitleText": "考公错题助手",
-    "navigationBarBackgroundColor": "#2f6fed",
+    "navigationBarBackgroundColor": "#4f46e5",
     "backgroundColor": "#f5f6fa"
   }
 }

@@ -1,5 +1,53 @@
 # 考公错题助手 MVP 验收测试报告
 
+## 增量测试 v9（UI/UX 视觉升级回归）— 2026-07-30
+
+- 结论：**三项测试全部通过**（400px 移动视口三页视觉 / 1200px 桌面限宽居中 / 讲解冒烟）
+- 录屏：`/home/ubuntu/screencasts/rec-2a9eb27b-04e0-4aa9-ae26-126f477063fc/rec-2a9eb27b-04e0-4aa9-ae26-126f477063fc-edited.mp4`
+- ⚠️ 环境问题复发（非本轮代码问题）：服务器再次以字面 `secret:personal:...` 字符串作为 LLM_BASE_URL 启动，冒烟首次讲解 502 "Request URL is missing an 'http://' or 'https://' protocol."。我已用真实 env 值重启 uvicorn（ACCESS_CODE=kg2026 不变）后通过。**启动脚本仍需修复 secret 绑定方式（v7 已报过一次）**。
+
+### ① 400px 移动视口三页视觉
+
+🟢 拍题讲解页：靛蓝导航栏白字、hero"花生十三错题助手"+副标题、顶部浅靛蓝渐变背景、渐变靛蓝主按钮，无破版/溢出：
+
+| hero + 表单 | 渐变靛蓝按钮 |
+|---|---|
+| ![拍题页hero](https://app.devin.ai/attachments/ecf972bb-2456-4ec2-ae96-d8479eb34be0/ss_zoom_d4ed98b6.png) | ![渐变按钮](https://app.devin.ai/attachments/215b1028-e44f-4104-ab9f-e778dce4aee8/ss_zoom_927559f5.png) |
+
+🟢 错题本页：白卡圆角描边阴影、胶囊 tag、tabBar 选中项"错题本"靛蓝色；薄弱分析页：靛蓝分布条+卡片统一：
+
+| 错题本 | 薄弱分析 |
+|---|---|
+| ![错题本](https://app.devin.ai/attachments/9eb0fdea-71f8-4141-8f40-3edbcd564a08/ss_zoom_56770b65.png) | ![薄弱分析](https://app.devin.ai/attachments/1601bb84-814b-4918-b47f-1025cee1f55e/ss_zoom_c1b75285.png) |
+
+### ② 1200px 桌面宽屏限宽居中
+
+🟢 三页内容列均居中且限宽约 680px，两侧留渐变背景空白，不满屏拉伸（示例两页）：
+
+| 薄弱分析 @1200px | 拍题讲解 @1200px |
+|---|---|
+| ![stats1200](https://app.devin.ai/attachments/0eaefe88-9f1c-405e-ba58-a7af10e4d5aa/ss_4bb583c5.png) | ![ask1200](https://app.devin.ai/attachments/cf182994-b591-4ae5-8ad0-bf2a6b0d894d/ss_2d53df35.png) |
+
+### ③ 讲解冒烟（400px）
+
+🟢 粘贴基期题（4800 亿元、+20%）→ 计秒加载态 → 讲解卡片正常渲染，胶囊 tag 靛蓝、rich-text 标题/加粗/列表可读，答案 B.4000 自算正确（4800÷1.2）。样式改动未破坏功能：
+
+| 首次 502（环境问题，已修复重启） | 修复后讲解成功 |
+|---|---|
+| ![502错误](https://app.devin.ai/attachments/85ea817e-7097-4ad1-883d-b00adfb33fb6/ss_1cc91b03.png) | ![讲解成功](https://app.devin.ai/attachments/4fb4e7cd-3cfa-4357-b30e-e46daf6cd958/ss_zoom_7200873e.png) |
+
+### 视觉问题建议（P1/P2）
+
+- P2：讲解 rich-text 中 markdown 分隔线 `---` 以字面文本"---"显示（未渲染为水平线），略显粗糙（见冒烟截图）。
+- P2：薄弱分析模块分布条内白字"资料分析 × 1"字号偏小，靛蓝底上可读但略拥挤，建议加大字号/内边距。
+- P2：1200px 下页面主体大量留白为纯渐变背景，可考虑桌面端双栏或提示"移动端体验更佳"（非必须）。
+- 未发现 P1 级对比度/破版问题。
+
+### 覆盖说明
+
+- 未测微信小程序端（按惯例 H5-only）。
+- 深色模式/其他视口宽度（如 320px、平板）未测。
+
 ## 增量测试 v8（复习模式·间隔重复）— 2026-07-30
 
 - 结论：**五条断言全部通过**（H5，400px 移动视口）；1 条未捕获项见覆盖说明

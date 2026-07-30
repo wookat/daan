@@ -1,5 +1,9 @@
 <template>
   <view class="wrap">
+    <view class="hero">
+      <text class="hero-t">花生十三错题助手</text>
+      <text class="hero-s">拍题即得你学的方法体系讲解</text>
+    </view>
     <view class="card">
       <text class="label">① 上传错题截图 / 拍照（或在下方粘贴题目文字）</text>
       <button class="btn ghost" @click="pickImage">📷 选择图片 / 拍照</button>
@@ -187,23 +191,27 @@ export default {
 
 <style scoped>
 .wrap { padding: 24rpx; padding-bottom: 40rpx; }
-.card { background: #fff; border-radius: 20rpx; padding: 24rpx; margin-bottom: 24rpx; box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.06); }
-.label { font-size: 24rpx; color: #8a90a0; display: block; margin: 20rpx 0 10rpx; }
-.btn { background: #2f6fed; color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; }
-.btn.ghost { background: #eef2ff; color: #2f6fed; }
+.hero { padding: 28rpx 8rpx 20rpx; }
+.hero-t { display: block; font-size: 40rpx; font-weight: 700; color: var(--ink); letter-spacing: 1rpx; }
+.hero-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 6rpx; }
+.card { background: #fff; border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
+.label { font-size: 24rpx; color: var(--ink-2); display: block; margin: 20rpx 0 10rpx; }
+.btn { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(79, 70, 229, 0.25); }
+.btn[disabled] { opacity: 0.6; }
+.btn.ghost { background: var(--brand-soft); color: var(--brand); box-shadow: none; }
 .btn.sm { font-size: 26rpx; flex: 1; }
-.btn.ok { background: #2eaf62; color: #fff; opacity: 1 !important; }
-.btn.bad { background: #d64545; color: #fff; }
-.btn.dim { opacity: 0.4; }
-.ta { width: 100%; min-height: 160rpx; border: 1rpx solid #dde1ea; border-radius: 18rpx; padding: 18rpx; font-size: 28rpx; box-sizing: border-box; }
-.inp { width: 100%; border: 1rpx solid #dde1ea; border-radius: 18rpx; padding: 18rpx; font-size: 28rpx; box-sizing: border-box; }
+.btn.ok { background: var(--ok); color: #fff; opacity: 1 !important; box-shadow: none; }
+.btn.bad { background: var(--bad); color: #fff; box-shadow: none; }
+.btn.dim { opacity: 0.35; }
+.ta { width: 100%; min-height: 160rpx; border: 1rpx solid var(--line); border-radius: 18rpx; padding: 18rpx; font-size: 28rpx; box-sizing: border-box; background: #fafafe; }
+.inp { width: 100%; border: 1rpx solid var(--line); border-radius: 18rpx; padding: 18rpx; font-size: 28rpx; box-sizing: border-box; background: #fafafe; }
 .preview { width: 100%; border-radius: 18rpx; margin-top: 14rpx; }
-.spin { text-align: center; color: #8a90a0; font-size: 26rpx; }
-.err { color: #c33; font-size: 26rpx; }
+.spin { text-align: center; color: var(--ink-2); font-size: 26rpx; }
+.err { color: var(--bad); background: var(--bad-soft); font-size: 26rpx; }
 .tags { margin-bottom: 10rpx; }
-.tag { display: inline-block; background: #eef2ff; color: #2f6fed; border-radius: 10rpx; padding: 4rpx 14rpx; font-size: 22rpx; margin-right: 10rpx; }
+.tag { display: inline-block; background: var(--brand-soft); color: var(--brand); border-radius: 999rpx; padding: 6rpx 20rpx; font-size: 22rpx; margin-right: 10rpx; }
 .row { display: flex; gap: 14rpx; margin: 10rpx 0; }
-.hist { font-size: 22rpx; color: #8a90a0; margin-bottom: 10rpx; }
-.dash { border-top: 1rpx dashed #dde1ea; margin: 20rpx 0; }
+.hist { font-size: 22rpx; color: var(--ink-2); margin-bottom: 10rpx; }
+.dash { border-top: 1rpx dashed var(--line); margin: 20rpx 0; }
 .simbox { margin-top: 10rpx; }
 </style>

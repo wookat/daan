@@ -22,9 +22,10 @@ export function md(s) {
       continue;
     }
     if (inTable) { out += '</table>'; inTable = 0; }
-    if (/^###\s/.test(l)) { close(); out += '<h3 style="font-size:15px;margin:10px 0 4px">' + inline(l.slice(4)) + '</h3>'; }
-    else if (/^##\s/.test(l)) { close(); out += '<h2 style="font-size:16px;margin:14px 0 6px;color:#2f6fed">' + inline(l.slice(3)) + '</h2>'; }
-    else if (/^#\s/.test(l)) { close(); out += '<h2 style="font-size:16px;margin:14px 0 6px;color:#2f6fed">' + inline(l.slice(2)) + '</h2>'; }
+    if (/^\s*(-{3,}|\*{3,})\s*$/.test(l)) { close(); out += '<hr style="border:none;border-top:1px solid #e5e7eb;margin:12px 0">'; }
+    else if (/^###\s/.test(l)) { close(); out += '<h3 style="font-size:15px;margin:10px 0 4px">' + inline(l.slice(4)) + '</h3>'; }
+    else if (/^##\s/.test(l)) { close(); out += '<h2 style="font-size:16px;margin:14px 0 6px;color:#4f46e5">' + inline(l.slice(3)) + '</h2>'; }
+    else if (/^#\s/.test(l)) { close(); out += '<h2 style="font-size:16px;margin:14px 0 6px;color:#4f46e5">' + inline(l.slice(2)) + '</h2>'; }
     else if (/^\s*[-*]\s/.test(l)) { if (!inUl) { close(); out += '<ul style="padding-left:20px">'; inUl = 1; } out += '<li style="font-size:15px;line-height:1.65">' + inline(l.replace(/^\s*[-*]\s/, '')) + '</li>'; }
     else if (/^\s*\d+[.、]\s/.test(l)) { if (!inOl) { close(); out += '<ol style="padding-left:20px">'; inOl = 1; } out += '<li style="font-size:15px;line-height:1.65">' + inline(l.replace(/^\s*\d+[.、]\s/, '')) + '</li>'; }
     else if (l.trim() === '') { close(); }

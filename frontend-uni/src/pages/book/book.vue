@@ -176,16 +176,16 @@ export default {
 
 <style scoped>
 .wrap { padding: 24rpx; }
-.card { background: #fff; border-radius: 20rpx; padding: 24rpx; margin-bottom: 24rpx; border-left: 6rpx solid #2f6fed; box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.06); }
-.spin { text-align: center; color: #8a90a0; font-size: 26rpx; border-left: none; }
+.card { background: #fff; border-radius: var(--radius); padding: 24rpx; margin-bottom: 24rpx; border-left: 6rpx solid var(--brand); border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
+.spin { text-align: center; color: var(--ink-2); font-size: 26rpx; border-left: none; }
 .ops { float: right; }
-.op { font-size: 24rpx; margin-left: 20rpx; padding: 4rpx 8rpx; color: #8a90a0; }
-.redo { color: #2f6fed; }
+.op { font-size: 24rpx; margin-left: 20rpx; padding: 4rpx 8rpx; color: var(--ink-2); }
+.redo { color: var(--brand); }
 .del { color: #c33; }
-.tag { display: inline-block; background: #eef2ff; color: #2f6fed; border-radius: 10rpx; padding: 4rpx 14rpx; font-size: 22rpx; }
+.tag { display: inline-block; background: var(--brand-soft); color: var(--brand); border-radius: 10rpx; padding: 4rpx 14rpx; font-size: 22rpx; }
 .q { font-size: 26rpx; line-height: 1.5; margin-top: 10rpx; }
 .q.clamp { max-height: 120rpx; overflow: hidden; }
-.meta { font-size: 22rpx; color: #8a90a0; margin-top: 10rpx; }
+.meta { font-size: 22rpx; color: var(--ink-2); margin-top: 10rpx; }
 .duecard { border-left-color: #f5a623; display: flex; justify-content: space-between; align-items: center; }
 .duetxt { font-size: 26rpx; font-weight: 600; }
 .duego { color: #f5a623; font-size: 24rpx; }
@@ -199,9 +199,9 @@ export default {
 .verdict { font-size: 26rpx; font-weight: 600; margin: 12rpx 0; }
 .verdict.good { color: #2a7a2a; }
 .verdict.badv { color: #b03030; }
-.next { margin-top: 20rpx; background: #2f6fed; color: #fff; font-size: 28rpx; border-radius: 12rpx; }
+.next { margin-top: 20rpx; background: var(--brand); color: #fff; font-size: 28rpx; border-radius: 12rpx; }
 .selfjudge { margin-top: 20rpx; }
-.q2 { font-size: 24rpx; color: #8a90a0; margin-bottom: 12rpx; }
+.q2 { font-size: 24rpx; color: var(--ink-2); margin-bottom: 12rpx; }
 .sj { display: inline-block; width: 45%; margin-right: 4%; font-size: 26rpx; border-radius: 12rpx; }
 .sj.ok { background: #e6f7e6; color: #2a7a2a; }
 .sj.bad { background: #fdeaea; color: #b03030; }
