@@ -194,9 +194,11 @@ function explainSim(){
 async function loadBook(){
   $('book').innerHTML='<div class="spin">加载中…</div>';
   const d=await(await fetch('/api/mistakes')).json();
+  bookCache=d.items;
   if(!d.items.length){$('book').innerHTML='<div class="card spin">错题本还是空的</div>';return}
   $('book').innerHTML=d.items.map(m=>'<div class="card mistake" onclick="toggle(this)">'
     +'<button class="del" onclick="event.stopPropagation();delM('+m.id+')">删除</button>'
+    +'<button class="del" style="color:var(--p)" onclick="event.stopPropagation();redo('+m.id+')">重做</button>'
     +'<span class="tag">'+(m.question_type||m.module||'')+'</span>'
     +'<div class="q">'+(m.question_text||'').slice(0,120)+'</div>'
     +'<div class="meta">'+new Date(m.created_at*1000).toLocaleString('zh-CN')+'</div>'
@@ -204,6 +206,15 @@ async function loadBook(){
 }
 function toggle(el){const m=el.querySelector('.md');m.style.display=m.style.display==='none'?'block':'none';
   el.querySelector('.q').style.maxHeight=m.style.display==='none'?'66px':'none'}
+let bookCache=[];
+function redo(id){
+  const m=bookCache.find(x=>x.id===id);if(!m)return;
+  $('qtext').value=m.question_text||'';$('uanswer').value='';
+  $('file').value='';$('preview').style.display='none';
+  document.querySelector('.tabbar button[data-p=ask]').click();
+  window.scrollTo(0,0);
+  alert('题目已填入，先自己做一遍、填上答案再点讲解');
+}
 async function delM(id){if(!confirm('确定删除这道错题？'))return;await fetch('/api/mistakes/'+id,{method:'DELETE'});loadBook()}
 async function loadStats(){
   const d=await(await fetch('/api/stats')).json();
