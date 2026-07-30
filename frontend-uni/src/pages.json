@@ -5,6 +5,10 @@
       "style": { "navigationBarTitleText": "拍题讲解" }
     },
     {
+      "path": "pages/practice/practice",
+      "style": { "navigationBarTitleText": "刷题" }
+    },
+    {
       "path": "pages/book/book",
       "style": { "navigationBarTitleText": "错题本" }
     },
@@ -19,6 +23,7 @@
     "backgroundColor": "#ffffff",
     "list": [
       { "pagePath": "pages/ask/ask", "text": "拍题讲解" },
+      { "pagePath": "pages/practice/practice", "text": "刷题" },
       { "pagePath": "pages/book/book", "text": "错题本" },
       { "pagePath": "pages/stats/stats", "text": "薄弱分析" }
     ]

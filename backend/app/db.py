@@ -37,8 +37,81 @@ def init_db():
     ]:
         if col not in cols:
             conn.execute(ddl)
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS questions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            module TEXT,
+            question_type TEXT,
+            question TEXT UNIQUE,
+            options TEXT,
+            answer TEXT,
+            explanation TEXT,
+            source TEXT
+        )"""
+    )
     conn.commit()
     conn.close()
+    _seed_questions()
+
+
+def _seed_questions():
+    """启动时从 knowledge/questions_bank.jsonl 导入题库（按题干去重）。"""
+    path = os.path.join(os.path.dirname(DB_PATH) if os.path.dirname(DB_PATH) else ".",
+                        "knowledge", "questions_bank.jsonl")
+    alt = os.path.join(os.path.dirname(__file__), "..", "..", "knowledge", "questions_bank.jsonl")
+    path = path if os.path.exists(path) else alt
+    if not os.path.exists(path):
+        return
+    conn = get_conn()
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                q = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            conn.execute(
+                "INSERT OR IGNORE INTO questions (module, question_type, question, options, answer, explanation, source) VALUES (?,?,?,?,?,?,?)",
+                (
+                    q.get("module"),
+                    q.get("question_type"),
+                    q.get("question"),
+                    json.dumps(q.get("options", {}), ensure_ascii=False),
+                    q.get("answer"),
+                    q.get("explanation"),
+                    q.get("source"),
+                ),
+            )
+    conn.commit()
+    conn.close()
+
+
+def random_questions(module: str | None = None, limit: int = 10) -> list[dict]:
+    conn = get_conn()
+    if module:
+        rows = conn.execute(
+            "SELECT * FROM questions WHERE module=? ORDER BY RANDOM() LIMIT ?", (module, limit)
+        ).fetchall()
+    else:
+        rows = conn.execute("SELECT * FROM questions ORDER BY RANDOM() LIMIT ?", (limit,)).fetchall()
+    conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["options"] = json.loads(d.get("options") or "{}")
+        out.append(d)
+    return out
+
+
+def question_counts() -> list[dict]:
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT module, COUNT(*) n FROM questions GROUP BY module ORDER BY n DESC"
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 
 def save_mistake(rec: dict) -> int:

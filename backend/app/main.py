@@ -110,6 +110,11 @@ async def api_similar(body: dict, x_access_code: str | None = Header(None)):
     return {"content": content}
 
 
+@app.get("/api/questions")
+async def api_questions(module: str | None = None, limit: int = 10):
+    return {"items": db.random_questions(module, min(limit, 30)), "counts": db.question_counts()}
+
+
 @app.post("/api/mistakes")
 async def api_save_mistake(rec: dict):
     mid = db.save_mistake(rec)
