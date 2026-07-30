@@ -28,6 +28,36 @@ async def chat(messages: list, temperature: float = 0.2, max_tokens: int = 4000)
         return data["choices"][0]["message"]["content"]
 
 
+async def chat_stream(messages: list, temperature: float = 0.2, max_tokens: int = 4000):
+    """逐段产出模型输出文本。"""
+    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+        async with client.stream(
+            "POST",
+            f"{BASE_URL}/v1/chat/completions",
+            headers={"Authorization": f"Bearer {API_KEY}"},
+            json={
+                "model": MODEL,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "stream": True,
+            },
+        ) as resp:
+            resp.raise_for_status()
+            async for line in resp.aiter_lines():
+                if not line.startswith("data:"):
+                    continue
+                payload = line[5:].strip()
+                if payload == "[DONE]":
+                    break
+                try:
+                    delta = json.loads(payload)["choices"][0]["delta"].get("content")
+                except (json.JSONDecodeError, KeyError, IndexError):
+                    continue
+                if delta:
+                    yield delta
+
+
 def image_content(image_b64: str, mime: str, text: str) -> list:
     return [
         {"type": "text", "text": text},

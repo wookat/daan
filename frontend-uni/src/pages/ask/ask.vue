@@ -7,7 +7,10 @@
     <view class="card">
       <text class="label">① 上传错题截图 / 拍照（或在下方粘贴题目文字）</text>
       <button class="btn ghost" @click="pickImage">📷 选择图片 / 拍照</button>
-      <image v-if="imagePath" :src="imagePath" mode="widthFix" class="preview" />
+      <view v-if="imagePath" class="preview-wrap">
+        <image :src="imagePath" mode="widthFix" class="preview" />
+        <view class="preview-x" @click="clearImage">✕ 移除图片</view>
+      </view>
       <text class="label">② 题目文字（可选，与图片二选一）</text>
       <textarea v-model="qtext" class="ta" placeholder="粘贴题干和选项…" :maxlength="-1" auto-height />
       <text class="label">③ 你选的答案（可选，填了会帮你分析错因）</text>
@@ -58,12 +61,13 @@
 
 <script>
 import { md } from '../../md.js';
-import { request, uploadExplain } from '../../api.js';
+import { request, uploadExplain, streamExplain } from '../../api.js';
 
 export default {
   data() {
     return {
       imagePath: '',
+      imageFile: null,
       qtext: '',
       uanswer: '',
       loading: false,
@@ -79,15 +83,23 @@ export default {
       this.qtext = redo;
       this.uanswer = '';
       this.imagePath = '';
+      this.imageFile = null;
       uni.removeStorageSync('redoQuestion');
       uni.showToast({ title: '题目已填入，先自己做一遍再点讲解', icon: 'none', duration: 2500 });
     }
   },
   methods: {
+    clearImage() {
+      this.imagePath = '';
+      this.imageFile = null;
+    },
     pickImage() {
       uni.chooseImage({
         count: 1,
-        success: (res) => { this.imagePath = res.tempFilePaths[0]; },
+        success: (res) => {
+          this.imagePath = res.tempFilePaths[0];
+          this.imageFile = (res.tempFiles && res.tempFiles[0]) || null;
+        },
       });
     },
     startTimer() {
@@ -109,7 +121,58 @@ export default {
       this.error = '';
       this.startTimer();
       try {
-        const d = await uploadExplain({
+        let d;
+        // #ifdef H5
+        const rec = {
+          ts: Date.now(),
+          module_name: '',
+          question_type: '',
+          html: '',
+          saved: false,
+          folded: false,
+          sim: null,
+          simLoading: false,
+          simSecs: 0,
+          streaming: true,
+        };
+        if (this.imagePath && !this.imageFile) {
+          // 无 File 对象（如重做回填），退回非流式
+          d = await uploadExplain({
+            filePath: this.imagePath,
+            text: this.qtext.trim() || null,
+            userAnswer: this.uanswer.trim() || null,
+          });
+          this.results.unshift({ ...rec, ...d, html: md(d.explanation), streaming: false });
+          this.results.forEach((r, i) => { if (i > 0) r.folded = true; });
+          clearInterval(this.timer);
+          this.loading = false;
+          return;
+        }
+        let inserted = false;
+        let live = rec; // 插入后改用响应式代理，保证增量更新触发渲染
+        d = await streamExplain({
+          file: this.imageFile,
+          text: this.qtext.trim() || null,
+          userAnswer: this.uanswer.trim() || null,
+          onMeta: (m) => {
+            Object.assign(rec, m);
+            this.results.unshift(rec);
+            this.results.forEach((r, i) => { if (i > 0) r.folded = true; });
+            live = this.results[0];
+            inserted = true;
+            clearInterval(this.timer);
+            this.loading = false;
+          },
+          onDelta: (full) => { live.html = md(full); },
+        });
+        Object.assign(live, d, { html: md(d.explanation), streaming: false });
+        if (!inserted) {
+          this.results.unshift(rec);
+          this.results.forEach((r, i) => { if (i > 0) r.folded = true; });
+        }
+        // #endif
+        // #ifndef H5
+        d = await uploadExplain({
           filePath: this.imagePath || null,
           text: this.qtext.trim() || null,
           userAnswer: this.uanswer.trim() || null,
@@ -125,6 +188,7 @@ export default {
           simSecs: 0,
         });
         this.results.forEach((r, i) => { if (i > 0) r.folded = true; });
+        // #endif
       } catch (e) {
         this.error = e.message;
       }
@@ -182,6 +246,7 @@ export default {
       this.qtext = (r.sim.raw || '').replace(/^##\s*练习题\s*/, '').replace(/##\s*提示[\s\S]*$/, '').trim();
       this.uanswer = r.sim.picked || '';
       this.imagePath = '';
+      this.imageFile = null;
       uni.pageScrollTo({ scrollTop: 0, duration: 200 });
       this.doExplain();
     },
@@ -205,6 +270,16 @@ export default {
 .btn.dim { opacity: 0.35; }
 .ta { width: 100%; min-height: 160rpx; border: 1rpx solid var(--line); border-radius: 18rpx; padding: 18rpx; font-size: 28rpx; box-sizing: border-box; background: #fafafe; }
 .inp { width: 100%; border: 1rpx solid var(--line); border-radius: 18rpx; padding: 18rpx; font-size: 28rpx; box-sizing: border-box; background: #fafafe; }
+.preview-wrap { position: relative; }
+.preview-x {
+  display: inline-block;
+  margin-top: 8rpx;
+  padding: 8rpx 24rpx;
+  border-radius: 999rpx;
+  background: var(--bad-soft);
+  color: var(--bad);
+  font-size: 24rpx;
+}
 .preview { width: 100%; border-radius: 18rpx; margin-top: 14rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; }
 .err { color: var(--bad); background: var(--bad-soft); font-size: 26rpx; }

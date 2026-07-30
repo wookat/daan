@@ -1,8 +1,9 @@
 import base64
+import json
 import os
 
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import db, engine, kb
@@ -54,6 +55,46 @@ async def api_explain(
         "user_answer": user_answer or extracted.get("user_answer"),
         "explanation": explanation,
     }
+
+
+@app.post("/api/explain/stream")
+async def api_explain_stream(
+    image: UploadFile | None = File(None),
+    text: str | None = Form(None),
+    user_answer: str | None = Form(None),
+    x_access_code: str | None = Header(None),
+):
+    check_access(x_access_code)
+    if not image and not text:
+        raise HTTPException(400, "需要图片或题目文字")
+    image_b64 = None
+    mime = None
+    if image:
+        raw = await image.read()
+        if len(raw) > 8 * 1024 * 1024:
+            raise HTTPException(400, "图片过大（限 8MB）")
+        image_b64 = base64.b64encode(raw).decode()
+        mime = image.content_type or "image/jpeg"
+
+    async def gen():
+        try:
+            extracted = await engine.extract_question(image_b64, mime, text)
+            meta = {
+                "module": extracted.get("module"),
+                "module_name": kb.MODULES.get(extracted.get("module"), {}).get("name"),
+                "question_type": extracted.get("question_type"),
+                "question_text": extracted.get("question_text"),
+                "user_answer": user_answer or extracted.get("user_answer"),
+            }
+            yield "event: meta\ndata: " + json.dumps(meta, ensure_ascii=False) + "\n\n"
+            async for delta in engine.explain_stream(extracted, user_answer):
+                yield "data: " + json.dumps({"d": delta}, ensure_ascii=False) + "\n\n"
+            yield "event: done\ndata: {}\n\n"
+        except Exception as e:  # noqa: BLE001
+            yield "event: error\ndata: " + json.dumps({"message": str(e)}, ensure_ascii=False) + "\n\n"
+
+    return StreamingResponse(gen(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 @app.post("/api/similar")

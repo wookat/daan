@@ -68,7 +68,7 @@ async def similar_question(question_text: str, question_type: str | None = None)
     )
 
 
-async def explain(extracted: dict, user_answer: str | None = None) -> str:
+def _explain_messages(extracted: dict, user_answer: str | None = None) -> list:
     module = extracted["module"]
     methods = kb.load_method_text(module)
     ua = user_answer or extracted.get("user_answer")
@@ -77,10 +77,15 @@ async def explain(extracted: dict, user_answer: str | None = None) -> str:
         user_msg += f"\n\n我选了：{ua}（请判断对错并分析错因）"
     if extracted.get("marked_correct_answer"):
         user_msg += f"\n（图中标注正确答案：{extracted['marked_correct_answer']}）"
-    return await llm.chat(
-        [
-            {"role": "system", "content": EXPLAIN_SYSTEM.format(methods=methods)},
-            {"role": "user", "content": user_msg},
-        ],
-        max_tokens=4000,
-    )
+    return [
+        {"role": "system", "content": EXPLAIN_SYSTEM.format(methods=methods)},
+        {"role": "user", "content": user_msg},
+    ]
+
+
+async def explain(extracted: dict, user_answer: str | None = None) -> str:
+    return await llm.chat(_explain_messages(extracted, user_answer), max_tokens=4000)
+
+
+def explain_stream(extracted: dict, user_answer: str | None = None):
+    return llm.chat_stream(_explain_messages(extracted, user_answer), max_tokens=4000)

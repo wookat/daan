@@ -56,6 +56,52 @@ export function request(path, opts) {
   return withAuthRetry(() => rawRequest(path, opts));
 }
 
+// H5 流式讲解：onMeta(meta) 一次，onDelta(fullText) 增量；返回完整讲解文本。
+// 仅 H5 可用（fetch 流）；小程序端调用方应回退到 uploadExplain。
+export async function streamExplain({ file, text, userAnswer, onMeta, onDelta }) {
+  const doIt = async () => {
+    const fd = new FormData();
+    if (file) fd.append('image', file);
+    if (text) fd.append('text', text);
+    if (userAnswer) fd.append('user_answer', userAnswer);
+    const resp = await fetch(BASE_URL + '/api/explain/stream', {
+      method: 'POST',
+      headers: { 'X-Access-Code': getCode() },
+      body: fd,
+    });
+    if (!resp.ok) {
+      let detail = `HTTP ${resp.status}`;
+      try { detail = (await resp.json()).detail || detail; } catch (e) { /* ignore */ }
+      throw new Error(detail);
+    }
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    let full = '';
+    let meta = null;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const events = buf.split('\n\n');
+      buf = events.pop();
+      for (const ev of events) {
+        const typeM = ev.match(/^event: (\w+)/m);
+        const dataM = ev.match(/^data: (.*)$/m);
+        if (!dataM) continue;
+        const type = typeM ? typeM[1] : 'message';
+        const data = JSON.parse(dataM[1]);
+        if (type === 'meta') { meta = data; onMeta && onMeta(data); }
+        else if (type === 'error') throw new Error(data.message || '生成失败');
+        else if (type === 'message') { full += data.d; onDelta && onDelta(full); }
+      }
+    }
+    if (!meta) throw new Error('生成失败：无响应');
+    return { ...meta, explanation: full };
+  };
+  return withAuthRetry(doIt);
+}
+
 export function uploadExplain({ filePath, text, userAnswer }) {
   const doIt = () =>
     new Promise((resolve, reject) => {
