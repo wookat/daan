@@ -23,6 +23,7 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - `POST /api/explain` is multipart form: fields `text`, `user_answer`, optional file `image` (≤8MB). Responses take 20–90s — always run curl in background and wait.
 - Verify cited method names really exist: `grep -r '方法名' knowledge/references/`.
 - 错题本 CRUD: `POST/GET /api/mistakes`, `DELETE /api/mistakes/{id}`, stats at `GET /api/stats`.
+- 复习模式: `GET /api/review` (due items), `POST /api/review/{id}` body `{"correct": bool}`. To create due review test data, `POST /api/mistakes` (no access code needed) with a `correct_answer` letter field — new mistakes are immediately due. To reset due times, edit `next_review` in `data.db` via python3's sqlite3 module (no sqlite3 CLI on this box).
 
 ## Browser UI testing gotchas
 - `computer type` drops CJK characters (xdotool). To enter Chinese text, install xclip (`sudo apt-get install -y xclip`), pipe text via `xclip -selection clipboard`, then ctrl+v into the field.

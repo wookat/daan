@@ -18,7 +18,7 @@
       </view>
       <view v-if="answered">
         <view class="verdict" :class="wasCorrect ? 'good' : 'badv'">
-          {{ wasCorrect ? '答对了！' : '又错了，看讲解' }}（下次复习：{{ nextDays }} 天后）
+          {{ wasCorrect ? '答对了！连对 ' + streak + ' 次' : '又错了，看讲解' }}（下次复习：{{ nextDays }} 天后）
         </view>
         <rich-text :nodes="curHtml" />
         <button class="next" @click="nextReview">{{ rIdx + 1 < rItems.length ? '下一题' : '完成复习' }}</button>
@@ -74,6 +74,7 @@ export default {
       answered: false,
       wasCorrect: false,
       nextDays: 0,
+      streak: 0,
     };
   },
   computed: {
@@ -128,6 +129,7 @@ export default {
       try {
         const res = await request('/api/review/' + this.cur.id, { method: 'POST', data: { correct } });
         this.nextDays = res.next_review_days;
+        this.streak = res.streak;
       } catch (e) {
         uni.showToast({ title: '记录失败：' + e.message, icon: 'none' });
       }
