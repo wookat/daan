@@ -126,7 +126,8 @@ async function explain(){
     const d=await r.json();lastResult=d;
     $('result').innerHTML='<div class="card"><span class="tag">'+(d.module_name||'')+'</span><span class="tag">'+(d.question_type||'')+'</span>'
       +'<div class="md">'+md(d.explanation)+'</div>'
-      +'<div style="height:10px"></div><button class="btn ghost" onclick="saveMistake(this)">存入错题本</button></div>';
+      +'<div style="height:10px"></div><div class="row"><button class="btn ghost" onclick="saveMistake(this)">存入错题本</button>'
+      +'<button class="btn ghost" onclick="similar(this)">举一反三</button></div><div id="simbox"></div></div>';
   }catch(e){$('result').innerHTML='<div class="card" style="color:#c33">失败：'+e.message+'，请重试</div>'}
   clearInterval(timer);
   $('go').disabled=false;
@@ -140,6 +141,20 @@ async function saveMistake(btn){
     user_answer:d.user_answer,explanation:d.explanation})});
   saved=true;
   if(btn){btn.textContent='✓ 已存入错题本';btn.disabled=true}
+}
+async function similar(btn){
+  btn.disabled=true;btn.textContent='出题中…';
+  try{
+    const r=await fetch('/api/similar',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({question_text:lastResult.question_text,question_type:lastResult.question_type})});
+    if(!r.ok)throw new Error((await r.json()).detail||r.status);
+    const d=await r.json();
+    const parts=d.content.split('<!--answer-->');
+    $('simbox').innerHTML='<hr style="border:0;border-top:1px dashed #dde;margin:12px 0">'
+      +'<div class="md">'+md(parts[0])+'</div>'
+      +(parts[1]?'<button class="btn ghost" onclick="this.nextElementSibling.style.display=\'block\';this.style.display=\'none\'">看答案与解析</button><div class="md" style="display:none">'+md(parts[1])+'</div>':'');
+  }catch(e){$('simbox').innerHTML='<p style="color:#c33;font-size:14px">出题失败：'+e.message+'</p>'}
+  btn.disabled=false;btn.textContent='举一反三';
 }
 async function loadBook(){
   $('book').innerHTML='<div class="spin">加载中…</div>';

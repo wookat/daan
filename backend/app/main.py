@@ -45,6 +45,18 @@ async def api_explain(
     }
 
 
+@app.post("/api/similar")
+async def api_similar(body: dict):
+    qt = body.get("question_text")
+    if not qt:
+        raise HTTPException(400, "缺少 question_text")
+    try:
+        content = await engine.similar_question(qt, body.get("question_type"))
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(502, f"生成失败：{e}") from e
+    return {"content": content}
+
+
 @app.post("/api/mistakes")
 async def api_save_mistake(rec: dict):
     mid = db.save_mistake(rec)

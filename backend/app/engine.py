@@ -44,6 +44,30 @@ async def extract_question(image_b64: str | None, mime: str | None, text: str | 
     return data
 
 
+SIMILAR_SYSTEM = """你是公考出题老师。根据用户给出的原题，出一道考察同一方法/技巧的新题（自编数据，不照搬真题原文），难度相当。
+输出 Markdown：
+## 练习题
+（题干+选项 A/B/C/D）
+## 提示
+（一句话点出该用什么方法，不透露答案）
+<!--answer-->
+## 答案与解析
+（答案+按方法分步简解）
+必须包含 <!--answer--> 分隔标记。禁止 LaTeX，算式用纯文本。"""
+
+
+async def similar_question(question_text: str, question_type: str | None = None) -> str:
+    user_msg = f"原题（题型：{question_type or '未知'}）：\n{question_text}"
+    return await llm.chat(
+        [
+            {"role": "system", "content": SIMILAR_SYSTEM},
+            {"role": "user", "content": user_msg},
+        ],
+        temperature=0.7,
+        max_tokens=2000,
+    )
+
+
 async def explain(extracted: dict, user_answer: str | None = None) -> str:
     module = extracted["module"]
     methods = kb.load_method_text(module)
