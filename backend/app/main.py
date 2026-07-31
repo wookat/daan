@@ -318,6 +318,16 @@ def api_questions(
     }
 
 
+@app.post("/api/practice_result")
+def api_practice_result(body: dict):
+    n = int(body.get("n") or 0)
+    if not (0 < n <= 200):
+        raise HTTPException(400, "无效题量")
+    correct = max(0, min(int(body.get("correct") or 0), n))
+    secs = max(0, min(int(body.get("secs") or 0), 86400))
+    return db.save_practice_result(body.get("module"), n, correct, secs)
+
+
 @app.get("/api/real_filters")
 def api_real_filters():
     return db.real_filters()

@@ -215,6 +215,34 @@ def real_filters() -> dict:
     return {"years": years, "regions": regions}
 
 
+def save_practice_result(module: str | None, n: int, correct: int, secs: int) -> dict:
+    """保存一次刷题结果并返回正确率百分位（击败了多少历史记录）。"""
+    conn = get_conn()
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS practice_results (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at REAL NOT NULL,
+            module TEXT,
+            n INTEGER,
+            correct INTEGER,
+            secs INTEGER
+        )"""
+    )
+    acc = correct / n if n else 0
+    conn.execute(
+        "INSERT INTO practice_results (created_at, module, n, correct, secs) VALUES (?,?,?,?,?)",
+        (time.time(), module, n, correct, secs),
+    )
+    conn.commit()
+    total = conn.execute("SELECT COUNT(*) FROM practice_results WHERE n>0").fetchone()[0]
+    beaten = conn.execute(
+        "SELECT COUNT(*) FROM practice_results WHERE n>0 AND CAST(correct AS REAL)/n < ?", (acc,)
+    ).fetchone()[0]
+    conn.close()
+    percentile = round(beaten / total * 100) if total >= 10 else None
+    return {"percentile": percentile, "samples": total}
+
+
 def admin_stats() -> dict:
     conn = get_conn()
     q = conn.execute

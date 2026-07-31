@@ -178,6 +178,7 @@
       <view class="big">{{ beiMode ? '本组背完' : '本组完成' }}</view>
       <view v-if="!beiMode" class="sub">答对 {{ right }}/{{ items.length }} · 最高连对 {{ bestStreak }} 题<template v-if="autoSaved">，错题已自动加入错题本</template></view>
       <view v-else class="sub">已浏览 {{ items.length }} 道题的答案与解析</view>
+      <view v-if="!beiMode && percentile != null" class="beat">本组正确率击败了 {{ percentile }}% 的刷题记录</view>
       <view v-if="!beiMode" class="report">
         <view class="report-row">
           <view class="report-cell"><text class="report-n">{{ fmtSecs(totalSecs) }}</text><text class="report-t">总用时</text></view>
@@ -268,6 +269,8 @@ export default {
       streak: 0,
       bestStreak: 0,
       autoSaved: false,
+      resultSent: false,
+      percentile: null,
       pstats: { byModule: {}, days: {} },
       autoTimer: null,
       cardOpen: false,
@@ -476,6 +479,8 @@ export default {
         this.streak = 0;
         this.bestStreak = 0;
         this.autoSaved = false;
+        this.resultSent = false;
+        this.percentile = null;
         this.session = true;
         this.startQTimer();
         uni.setStorageSync('lastModule', module || '');
@@ -683,7 +688,21 @@ export default {
       this.picked = (this.items[this.idx] && this.items[this.idx]._picked) || '';
       if (this.cur && !this.picked) this.startQTimer();
       else this.stopQTimer();
-      if (!this.cur) this.markDailyDone();
+      if (!this.cur) {
+        this.markDailyDone();
+        this.submitResult();
+      }
+    },
+    async submitResult() {
+      if (this.beiMode || this.resultSent || !this.items.length) return;
+      this.resultSent = true;
+      try {
+        const d = await request('/api/practice_result', {
+          method: 'POST',
+          data: { module: this.lastModule || '', n: this.items.length, correct: this.right, secs: this.totalSecs }
+        });
+        if (d.percentile != null) this.percentile = d.percentile;
+      } catch (e) { /* 非关键路径 */ }
     },
     quit() {
       this.session = false;
@@ -818,6 +837,7 @@ export default {
 .bnext.nok { background: #22c55e; }
 .bnext.nbad { background: #ef4444; }
 .bnext.bstay { background: transparent; border: 2rpx solid #22c55e; color: #15803d; margin-right: 12rpx; }
+.beat { margin-top: 10rpx; font-size: 25rpx; color: var(--brand); background: var(--soft-bg); border-radius: 999rpx; padding: 10rpx 26rpx; }
 .report { width: 100%; margin: 20rpx 0 28rpx; }
 .report-row { display: flex; gap: 16rpx; margin-bottom: 24rpx; }
 .report-cell { flex: 1; background: var(--soft-bg); border-radius: 16rpx; padding: 20rpx 0; display: flex; flex-direction: column; align-items: center; gap: 6rpx; }
