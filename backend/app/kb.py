@@ -1,7 +1,50 @@
-"""知识库：加载花生十三方法体系（来自开源项目 huasheng13-skill，公开教学体系整理）。"""
+"""知识库：花生十三主体系 + 补充名师体系（申论名师 shenlun-skill、小P判断推理），均来自公开开源整理。"""
 import os
 
-KB_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "knowledge", "references")
+_KNOW = os.path.join(os.path.dirname(__file__), "..", "..", "knowledge")
+KB_DIR = os.path.join(_KNOW, "references")
+
+# 补充方法库：模块 -> (体系名, 目录, 文件列表)
+EXTRA_SCHOOLS = {
+    "shenlun": [
+        (
+            "申论名师体系（李梦圆/小马哥/白鹭/袁东等，源自开源 shenlun-skill）",
+            os.path.join(_KNOW, "shenlun-mingshi"),
+            ["danyiti-guina.md", "zonghe-fenxi.md", "duice-tichu.md", "gongwen-xiezuo.md", "dazuowen.md", "guifan-biaoda.md"],
+        ),
+        (
+            "小马哥/白鹭/袁东方法论（源自开源 Shenlun.skill）",
+            os.path.join(_KNOW, "shenlun-smbl"),
+            ["xiaoma-methodology.md", "bai-lu-methodology.md", "yuan-dong-methodology.md", "writing-rules.md", "scoring-rules.md"],
+        ),
+    ],
+    "yanyu": [
+        (
+            "郭熙言语复盘法（源自开源 kaogong-review-skill，MIT）",
+            os.path.join(_KNOW, "fupan"),
+            ["言语复盘流程.md"],
+        ),
+    ],
+    "panduan": [
+        (
+            "小P考场排除法体系（源自开源 xiaop-judgment-reasoning）",
+            os.path.join(_KNOW, "xiaop"),
+            ["formal-logic-arrangement.md", "argumentation.md", "analogy-definition.md", "graphics-spatial.md"],
+        ),
+        (
+            "薛睿/刘义恒复盘法（源自开源 kaogong-review-skill，MIT）",
+            os.path.join(_KNOW, "fupan"),
+            ["判断推理复盘流程.md", "图推复盘流程.md"],
+        ),
+    ],
+    "changshi": [
+        (
+            "通用公考体系（源自开源 KeWang0622/kaogong-skill，MIT）",
+            os.path.join(_KNOW, "kw-general"),
+            ["kaogong-skill.md"],
+        ),
+    ],
+}
 
 MODULES = {
     "ziliao": {
@@ -54,6 +97,22 @@ def load_method_text(module_key: str, max_chars: int = 24000) -> str:
         budget -= len(take)
         if budget <= 0:
             break
+    for school, sdir, files in EXTRA_SCHOOLS.get(module_key, []):
+        sparts = []
+        sbudget = 12000
+        for fname in files:
+            path = os.path.join(sdir, fname)
+            if not os.path.exists(path):
+                continue
+            with open(path, encoding="utf-8") as f:
+                text = f.read()
+            take = text[: sbudget // len(files) + 1000]
+            sparts.append(f"<<< {fname} >>>\n{take}")
+            sbudget -= len(take)
+            if sbudget <= 0:
+                break
+        if sparts:
+            parts.append(f"=== 补充体系：{school}（可作第二解法视角，引用时须标明体系名）===\n" + "\n\n".join(sparts))
     return "\n\n".join(parts)
 
 
