@@ -52,7 +52,8 @@ async def api_explain(
         extracted = await engine.extract_question(image_b64, mime, text)
         ua = user_answer or extracted.get("user_answer")
         key = _cache_key(extracted.get("question_text"), ua)
-        cached = db.get_explain_cache(key)
+        raw_key = _cache_key(text, ua) if text else None
+        cached = db.get_explain_cache(key) or (db.get_explain_cache(raw_key) if raw_key else None)
         if cached:
             explanation = cached["explanation"]
         else:
@@ -70,6 +71,8 @@ async def api_explain(
     }
     if not cached:
         db.save_explain_cache(key, meta, explanation)
+        if raw_key and raw_key != key:
+            db.save_explain_cache(raw_key, meta, explanation)
     return {**meta, "explanation": explanation}
 
 
@@ -97,7 +100,8 @@ async def api_explain_stream(
             extracted = await engine.extract_question(image_b64, mime, text)
             ua = user_answer or extracted.get("user_answer")
             key = _cache_key(extracted.get("question_text"), ua)
-            cached = db.get_explain_cache(key)
+            raw_key = _cache_key(text, ua) if text else None
+            cached = db.get_explain_cache(key) or (db.get_explain_cache(raw_key) if raw_key else None)
             meta = {
                 "module": extracted.get("module"),
                 "module_name": kb.MODULES.get(extracted.get("module"), {}).get("name"),
@@ -117,6 +121,8 @@ async def api_explain_stream(
                     yield "data: " + json.dumps({"d": delta}, ensure_ascii=False) + "\n\n"
                 if full.strip():
                     db.save_explain_cache(key, meta, full)
+                    if raw_key and raw_key != key:
+                        db.save_explain_cache(raw_key, meta, full)
             yield "event: done\ndata: {}\n\n"
         except Exception as e:  # noqa: BLE001
             yield "event: error\ndata: " + json.dumps({"message": str(e)}, ensure_ascii=False) + "\n\n"
