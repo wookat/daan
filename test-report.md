@@ -1,5 +1,160 @@
 # 考公错题助手 MVP 验收测试报告
 
+## 增量测试 v21（P1a UI 改造：答题卡/计时/字号/错因自评/已斩/目标环/学习日历）— 2026-07-31
+
+- 测试环境：**线上 https://kaogong.zalize.com**，构建 hash 与本地 dist 一致（`assets/index-BNEtTXqa.js`），400px 移动视口，Chrome。
+- 结论：**六组测试全部通过**，无失败断言。
+- 生产数据保护：测前基线 `/api/mistakes` = **[23, 5, 3, 2]**（id 23 为用户真实数据，全程未动）；本轮故意答错 1 题自动新增 id 25，测后 DELETE，API 确认恢复 **[23, 5, 3, 2]**。复习队列中用户到期条目 id 23 未触碰（复习连对自动斩测试用的是本轮 id 25 的 API 调用）。
+- 录屏：`/home/ubuntu/screencasts/rec-b43c0b26-a275-4745-8b31-bb612ef092a0/rec-b43c0b26-a275-4745-8b31-bb612ef092a0-edited.mp4`
+- 测试计划：`/home/ubuntu/repos/kaogong-assistant/test-plan-v21.md`
+
+### T1 刷题页顶栏：计时 / Aa 字号 / 答题卡 — passed
+
+- 顶栏可见「⏱m:ss」单题计时（0:02→0:18 递增），答对进下一题后重置为 0:01。
+- 点 Aa → toast「字号：大」，题干/选项字号肉眼变大（截图）；继续点击循环 小/标准。
+
+  ![Aa字号大+toast](https://app.devin.ai/attachments/d74db1ac-58c4-408a-a7b0-5003aec38b95/ss_01c34f80.png)
+
+- 点顶栏「言语理解 · 中心理解 · 3/10 ▾」→ 弹出「答题卡」层：1=红（答错）、2=绿（答对）、3=当前描边，底部「已答 2/10 · 正确 1」；点题号 1 跳回第 1 题（已答状态、tag 变 1/10）：
+
+  | 🟢 答题卡圆点网格 | 🟢 点题号1跳题成功 |
+  |---|---|
+  | ![答题卡](https://app.devin.ai/attachments/6444aca4-51d4-4694-9351-507cedb24056/ss_451b150e.png) | ![跳题](https://app.devin.ai/attachments/b89ae72b-7c7f-44df-9666-d6b2d305bd1a/ss_zoom_c63afa19.png) |
+
+### T2 错因自评 + 错题本徽章 — passed
+
+- 故意答错（选 B，正确 C）后解析上方出现「错因自评：粗心大意/概念不清/方法不会/纯蒙的」4 chips；点「粗心大意」紫色高亮：
+
+  ![错因chips高亮](https://app.devin.ai/attachments/a5f1aa2a-2d88-4ee1-9a9a-a481c9cd0830/ss_zoom_c99c5f42.png)
+
+- 错题本该卡片（id 25）显示黄色「粗心大意」徽章 + 红「我选 B ✗」绿「· 答案 C」+ 相对时间「今天 09:31」；API 确认 error_reason='粗心大意'：
+
+  ![错题本徽章](https://app.devin.ai/attachments/9bad63c9-7dbf-4c04-8f2f-3d86d5262782/ss_47af8f96.png)
+
+### T3 已斩流程 — passed
+
+- 顶部「待掌握 5 / 已斩 0」tabs；点「标为已斩」→ 已斩 tab 该卡带旋转绿色「已斩」印章、操作变「恢复复习」，顶部横幅待复习 2→1；API 确认 mastered=1 且 `/api/review` 不再含 id 25：
+
+  ![已斩印章](https://app.devin.ai/attachments/a422e5b2-627b-4f3b-8dde-8d05be7787e6/ss_aa36d0be.png)
+
+- 点「恢复复习」→ 回到待掌握 5 / 已斩 0，待复习恢复 2 道。
+- API 抽查复习自动斩：`POST /api/review/25 {"correct":true}` ×2 → 第 2 次返回 `{"streak":2,"next_review_days":3,"mastered":true}`。
+
+### T4 首页每日目标环 — passed
+
+- 左侧目标环显示「31/20题」金色达成态 +「🎉 今日目标达成」+「🔥 连续打卡 1 天」；点环 → toast「每日目标：50 题」，环变 31/50 部分进度弧；继续点循环 10→20：
+
+  | 🟢 20题达成金环 | 🟢 点环切50+toast |
+  |---|---|
+  | ![目标环](https://app.devin.ai/attachments/9014326c-075a-4ebe-9f0e-08397017c1db/ss_zoom_1f4c1ed1.png) | ![循环50](https://app.devin.ai/attachments/22f36972-b8f9-4d0d-8e37-3bf5377ce292/ss_01ef4b84.png) |
+
+### T5 薄弱分析：学习日历 + 错因分布 — passed
+
+- 「学习日历」月历卡：今天（31 日）满色圆点+描边，「本月打卡 1 天」；总览 31 题/71%/打卡 1 天。
+- 「错因分布」卡出现，含「粗心大意 ×1」橙色条：
+
+  | 🟢 学习日历 | 🟢 错因分布 |
+  |---|---|
+  | ![日历](https://app.devin.ai/attachments/8d0bf1ac-d004-4834-9e23-92f6c873376d/ss_6f4347c8.png) | ![错因分布](https://app.devin.ai/attachments/b6fc6224-cd3a-4792-a7fe-31f1eb2c7394/ss_09ee39ff.png) |
+
+### T6 回归冒烟 — passed
+
+- 二级题型 sheet（言语→中心理解）、判分红绿+红横幅「✗ 正确答案 C / 已自动存入错题本」、答对自动跳题均正常（穿插于 T1 组内）。
+- 覆盖说明：完成结算环本轮未刷满 10 题故未复现（v20 已验证且无改动声明）；复习模式 UI 已斩抽查以 API 为证（避免触碰用户到期条目 id 23）。
+
+### 清理
+
+- DELETE 本轮 id 25，`/api/mistakes` 恢复 **[23, 5, 3, 2]**；id 23（用户数据）及生产复习状态零触碰。
+
+## 增量测试 v20（二级题型细分）— 2026-07-31
+
+- 测试环境：**线上 https://kaogong.zalize.com**，强刷新后确认线上构建 hash 与本地 dist 一致（`assets/index-BkLiGlF7.js`，新构建），400px 移动视口，Chrome。
+- 结论：**三组测试全部通过**，无失败断言。
+- ⚠️ 生产数据说明：测前 `/api/mistakes` 实为 **[21…13, 5, 3, 2]**（id 13-21 非本人创建，时间戳均在部署前后 ~30 分钟内，判断为部署方自测造数）。按用户明示"按基线 [5,3,2] 清理"指令，已删除 id 13-22（22 为本轮故意答错新增），API 确认恢复 **[5, 3, 2]**。生产复习数据零触碰。
+- 录屏：`/home/ubuntu/screencasts/rec-6c21b756-d528-4a96-a6ae-29f617512b7c/rec-6c21b756-d528-4a96-a6ae-29f617512b7c-edited.mp4`
+- 测试计划：`/home/ubuntu/repos/kaogong-assistant/test-plan-v20.md`
+
+### T1 模块卡 → 底部 sheet → 题型专项 → 再来一组 — passed
+
+- 点「言语理解」模块卡**不再直接开始**，弹出底部 sheet「言语理解 · 选择题型」+✕，含渐变「🎯 全部随机 1415 题」+ 四题型 chip：中心理解 464 / 逻辑填空 446 / 语句表达 346 / 细节理解 159 题——与 `/api/submodules?module=yanyu` 返回逐项一致。
+
+  ![sheet](https://app.devin.ai/attachments/c7f70ade-35a9-4203-92f4-b4b90d2b252f/ss_91d7e1d2.png)
+
+- 点「细节理解」→ 答题页 tag =「**言语理解 · 细节理解 · 1/10**」（题型专项生效）：
+
+  ![tag](https://app.devin.ai/attachments/d0daec86-b5ae-4abf-8706-05e2555996c6/ss_zoom_6c1b12d9.png)
+
+- 完整刷完一组 10 题（9 对 1 错，第 7 题故意选 A）：判分红绿、解析、红横幅「✗ 正确答案 C / 已自动存入错题本」、答对自动跳题均正常（回归）：
+
+  ![答错](https://app.devin.ai/attachments/d361b33a-71f9-4c38-bf51-fb1b4f597c33/ss_2f7b27b1.png)
+
+- 完成页「🎉 本组完成 答对 9/10 · 最高连对 6 题」；点「再来一组」→ 新组 tag 仍为「言语理解 · 细节理解 · 1/10」（**沿用同题型**，未回 sheet、未变全模块随机）：
+
+  | 🔴 完成页 | 🟢 再来一组沿用题型 |
+  |---|---|
+  | ![完成页](https://app.devin.ai/attachments/1cc521a0-b1ce-4bd9-95cd-de757cc3c162/ss_3f8b6f36.png) | ![再来一组](https://app.devin.ai/attachments/f9ed11b3-a33c-46b1-b211-09b28be3ea5d/ss_zoom_59f0d85f.png) |
+
+### T2 混合刷题 / 智能薄弱项入口不弹 sheet — passed
+
+- 点「🎯 混合刷题」卡 → **直接开始**（无 sheet），tag「数量关系 · 1/10」无题型段：
+
+  ![混合](https://app.devin.ai/attachments/b65f540e-c5ca-4f49-b1fb-c1d1ef06b75b/ss_69cf679a.png)
+
+- 点智能入口「去练 ›」（常识判断 29% 触发中）→ **直接开始**常识判断整模块（无 sheet），tag「常识判断 · 1/10」：
+
+  ![智能](https://app.devin.ai/attachments/a7d10825-ce94-4197-bad5-899eea712dbd/ss_zoom_4f9efe01.png)
+
+### T3 API 抽查 — passed
+
+- `/api/submodules?module=yanyu` → 中心理解464/逻辑填空446/语句表达346/细节理解159，与 UI sheet 逐项一致。
+- `/api/questions?module=yanyu&submodule=细节理解&limit=10` → 返回 10 条，全部 `(module='yanyu', submodule='细节理解')`。
+
+### 清理
+
+- 本轮新增错题 id 22（+ 部署自测遗留 13-21）已 DELETE，`/api/mistakes` 恢复 **[5, 3, 2]**。
+
+## 增量测试 v19（智能刷题入口 + 错题分布跳练）— 2026-07-31
+
+- 测试环境：**线上 https://kaogong.zalize.com**，强刷新后确认线上构建 hash 与本地 dist 一致（`assets/index-AWrukGne.js`，新构建），400px 移动视口，Chrome。
+- 结论：**三组测试全部通过**，无失败断言。
+- 环境变更说明：本轮期间收到通知——线上 ACCESS_CODE 已置空，/api/explain 等不再需要访问码；v19 计划不涉及访问码断言，不受影响。
+- 生产数据保护：测前基线 `/api/mistakes` = **[5, 3, 2]**；本轮常识判断故意答错 3 题自动新增 id 9/10/11，测后 DELETE 清理，API 确认恢复 **[5, 3, 2]**。生产复习数据零触碰。
+- 录屏：`/home/ubuntu/screencasts/rec-7614085a-8efb-4c72-93bf-c3f0b4edf7f4/rec-7614085a-8efb-4c72-93bf-c3f0b4edf7f4-edited.mp4`
+- 测试计划：`/home/ubuntu/repos/kaogong-assistant/test-plan-v19.md`
+
+### T1 智能刷题入口（done≥5 且正确率<80% 触发）— passed
+
+- 前置：常识判断仅 1 题时选模块页**无**智能入口（截图1）。
+- 常识判断刷 5 题（故意错 3 对 2，含答错自动存错题本，截图2 为答错界面），退出后 pstats 常识=6 题/33%。
+- 选模块页顶部出现**渐变橙红**入口「🎯 智能刷题：攻克薄弱项 / 你的 常识判断 正确率较低，建议专项练习 / 去练 ›」（截图3）。
+- 点「去练 ›」→ **直接进入常识判断答题**（题头「常识判断 · 1/10」，无需选模块卡，截图4）。
+
+| 🔴 前置：无智能入口 | 🟢 触发后：橙红智能入口 |
+|---|---|
+| ![before](https://app.devin.ai/attachments/9b5fd30f-a1bf-493b-a8ee-d3706e86d433/ss_zoom_fb7e01cb.png) | ![after](https://app.devin.ai/attachments/cb05c0ac-5750-4742-96ad-84033c478ef7/ss_zoom_4e0685a2.png) |
+
+| 造数：故意答错自动存错题本 | 点入口直开常识判断 1/10 |
+|---|---|
+| ![wrong](https://app.devin.ai/attachments/bc77fd0b-b7e6-41f4-b952-6d7ae8c164c3/ss_551c80a0.png) | ![start](https://app.devin.ai/attachments/406ee528-d267-4ca1-998b-703c46c12211/ss_zoom_2d4cd36c.png) |
+
+### T2 错题分布行跳练 — passed
+
+- 薄弱分析「错题模块分布」每行右侧为「×N 去练 ›」格式（常识判断 ×4、资料分析 ×2）。
+- 点「资料分析」行 → 切到刷题 tab 并**自动开始资料分析组**（题头「资料分析 · 1/10」，通过 storage practiceModule 传递，非停留选模块页）。
+
+| 分布行「×N 去练 ›」 | 点击后自动开始资料分析组 |
+|---|---|
+| ![rows](https://app.devin.ai/attachments/514c2ab9-c438-4ee6-943d-940290a03195/ss_4ba9ace7.png) | ![ziliao](https://app.devin.ai/attachments/96864542-6b49-4d54-a6be-f80b5b2d3ec4/ss_zoom_3bb64408.png) |
+
+### T3 回归：tabbar 图标抽查 — passed
+
+上方截图中 tabbar 四图标（相机/清单/书本/柱状图）均正常，选中项靛蓝、未选中灰（v18 功能未破坏）。
+
+### 清理与限制
+
+- DELETE id 9/10/11 → `/api/mistakes` 恢复 **[5, 3, 2]**。
+- 本地 pstats 遗留常识判断 6 题/33% 的低正确率记录（浏览器本地统计，非生产数据，保留；意味着该浏览器上智能入口会持续显示直至正确率回升）。
+
 ## 增量测试 v18（小回归：tabbar 图标 / 复习文案 / 题库 6254）— 2026-07-31
 
 - 测试环境：**线上 https://kaogong.zalize.com**（访问码 hs1326），强刷新后确认线上构建 hash 与本地 dist 一致（`assets/index-hEnMdvH3.js`，新构建），400px 移动视口，Chrome。
