@@ -31,6 +31,14 @@
         </view>
       </view>
       <view v-if="!counts.length" class="spin">题库为空，敬请期待</view>
+      <view v-if="announce" class="ann">
+        <uni-icons type="sound-filled" size="15" color="#b45309" />
+        <view class="ann-c">
+          <text class="ann-t">{{ announce.title }}</text>
+          <text v-if="announce.body" class="ann-b">{{ announce.body }}</text>
+        </view>
+        <text class="ann-x" @click="dismissAnn">✕</text>
+      </view>
       <view v-if="counts.length" class="daily exam" @click="startExam">
         <view class="daily-l">
           <view class="daily-t"><uni-icons type="flag-filled" size="16" color="#ffffff" /><text class="daily-t-t">迷你模考</text></view>
@@ -299,6 +307,7 @@ export default {
       realRegion: uni.getStorageSync('realRegion') || null,
       groupSize: uni.getStorageSync('groupSize') || 10,
       hsRated: {},
+      announce: null,
       REASONS: ['粗心大意', '概念不清', '方法不会', '纯蒙的'],
     };
   },
@@ -358,6 +367,7 @@ export default {
   onShow() {
     this.pstats = loadPStats();
     this.loadCounts();
+    this.loadAnnounce();
     if (this.realMode) this.loadRealFilters();
     const preset = uni.getStorageSync('practicePreset');
     if (preset && preset.module) {
@@ -393,6 +403,17 @@ export default {
     progPct(c) {
       const s = this.modStat(c.module);
       return Math.min(100, (s.done / (c.n || 1)) * 100);
+    },
+    async loadAnnounce() {
+      try {
+        const d = await request('/api/announcement');
+        const item = d.item;
+        if (item && uni.getStorageSync('annDismissed') !== String(item.id)) this.announce = item;
+      } catch (e) { /* 非关键路径 */ }
+    },
+    dismissAnn() {
+      if (this.announce) uni.setStorageSync('annDismissed', String(this.announce.id));
+      this.announce = null;
     },
     async loadCounts() {
       try {
@@ -951,6 +972,11 @@ export default {
 .bnext.nok { background: #22c55e; }
 .bnext.nbad { background: #ef4444; }
 .bnext.bstay { background: transparent; border: 2rpx solid #22c55e; color: #15803d; margin-right: 12rpx; }
+.ann { display: flex; align-items: flex-start; gap: 12rpx; background: #fef3c7; border: 1rpx solid #fde68a; border-radius: 16rpx; padding: 18rpx 22rpx; margin-bottom: 20rpx; }
+.ann-c { flex: 1; }
+.ann-t { display: block; font-size: 26rpx; font-weight: 600; color: #92400e; }
+.ann-b { display: block; font-size: 23rpx; color: #b45309; margin-top: 4rpx; }
+.ann-x { color: #b45309; font-size: 26rpx; padding: 0 8rpx; }
 .daily.exam { background: linear-gradient(120deg, #f97316, #ef4444); }
 .timer.examleft { color: #ef4444; font-weight: 700; }
 .opt.sel { border-color: var(--brand); background: var(--soft-bg); }

@@ -243,6 +243,61 @@ def save_practice_result(module: str | None, n: int, correct: int, secs: int) ->
     return {"percentile": percentile, "samples": total}
 
 
+def _ensure_announcements(conn) -> None:
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS announcements (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at REAL NOT NULL,
+            title TEXT NOT NULL,
+            body TEXT,
+            active INTEGER DEFAULT 1
+        )"""
+    )
+
+
+def active_announcement() -> dict | None:
+    conn = get_conn()
+    _ensure_announcements(conn)
+    row = conn.execute(
+        "SELECT id, title, body FROM announcements WHERE active=1 ORDER BY id DESC LIMIT 1"
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def admin_list_announcements() -> list[dict]:
+    conn = get_conn()
+    _ensure_announcements(conn)
+    rows = conn.execute(
+        "SELECT id, created_at, title, body, active FROM announcements ORDER BY id DESC LIMIT 50"
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def admin_create_announcement(title: str, body: str) -> int:
+    conn = get_conn()
+    _ensure_announcements(conn)
+    cur = conn.execute(
+        "INSERT INTO announcements (created_at, title, body, active) VALUES (?,?,?,1)",
+        (time.time(), title, body),
+    )
+    conn.commit()
+    aid = cur.lastrowid
+    conn.close()
+    return aid
+
+
+def admin_set_announcement(aid: int, active: bool) -> bool:
+    conn = get_conn()
+    _ensure_announcements(conn)
+    cur = conn.execute("UPDATE announcements SET active=? WHERE id=?", (1 if active else 0, aid))
+    conn.commit()
+    ok = cur.rowcount > 0
+    conn.close()
+    return ok
+
+
 def admin_stats() -> dict:
     conn = get_conn()
     q = conn.execute

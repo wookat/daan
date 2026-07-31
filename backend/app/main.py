@@ -318,6 +318,34 @@ def api_questions(
     }
 
 
+@app.get("/api/announcement")
+def api_announcement():
+    return {"item": db.active_announcement()}
+
+
+@app.get("/api/admin/announcements")
+def api_admin_announcements(x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return {"items": db.admin_list_announcements()}
+
+
+@app.post("/api/admin/announcements")
+def api_admin_create_announcement(body: dict, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    title = (body.get("title") or "").strip()
+    if not title:
+        raise HTTPException(400, "标题不能为空")
+    return {"id": db.admin_create_announcement(title, (body.get("body") or "").strip())}
+
+
+@app.patch("/api/admin/announcements/{aid}")
+def api_admin_toggle_announcement(aid: int, body: dict, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    if not db.admin_set_announcement(aid, bool(body.get("active"))):
+        raise HTTPException(404, "公告不存在")
+    return {"ok": True}
+
+
 @app.post("/api/practice_result")
 def api_practice_result(body: dict):
     n = int(body.get("n") or 0)

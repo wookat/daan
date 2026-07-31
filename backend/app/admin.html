@@ -48,6 +48,7 @@ main { max-width:1080px; margin:20px auto; padding:0 16px; }
     <div class="tab" data-tab="search" onclick="switchTab(this)">题库管理</div>
     <div class="tab" data-tab="cache" onclick="switchTab(this)">讲解缓存差评</div>
     <div class="tab" data-tab="disabled" onclick="switchTab(this)">已下架</div>
+    <div class="tab" data-tab="ann" onclick="switchTab(this)">运营公告</div>
   </div>
   <div class="bar" id="searchbar" style="display:none">
     <input id="kw" placeholder="题干关键词" />
@@ -60,6 +61,11 @@ main { max-width:1080px; margin:20px auto; padding:0 16px; }
       <option value="changshi">常识判断</option>
     </select>
     <button onclick="load()">搜索</button>
+  </div>
+  <div class="bar" id="annbar" style="display:none">
+    <input id="annTitle" placeholder="公告标题（展示在用户端首页）" />
+    <input id="annBody" placeholder="公告正文（可选）" style="flex:1" />
+    <button onclick="createAnn()">发布</button>
   </div>
   <div id="list"><div class="empty">输入管理令牌后加载数据</div></div>
 </main>
@@ -90,6 +96,7 @@ function switchTab(el) {
   el.classList.add('on');
   TAB = el.dataset.tab;
   $('searchbar').style.display = TAB === 'search' ? 'flex' : 'none';
+  $('annbar').style.display = TAB === 'ann' ? 'flex' : 'none';
   load();
 }
 function qCard(q) {
@@ -131,8 +138,28 @@ async function patchQ(id, body) {
 async function delCache(key) {
   try { await api('/api/admin/cache/' + key, { method: 'DELETE' }); load(); } catch (e) { alert('失败：' + e.message); }
 }
+async function createAnn() {
+  try {
+    await api('/api/admin/announcements', { method: 'POST', body: JSON.stringify({ title: $('annTitle').value, body: $('annBody').value }) });
+    $('annTitle').value = ''; $('annBody').value = ''; load();
+  } catch (e) { alert('失败：' + e.message); }
+}
+async function toggleAnn(id, active) {
+  try { await api('/api/admin/announcements/' + id, { method: 'PATCH', body: JSON.stringify({ active }) }); load(); } catch (e) { alert('失败：' + e.message); }
+}
 async function load() {
   try {
+    if (TAB === 'ann') {
+      const d = await api('/api/admin/announcements');
+      $('list').innerHTML = d.items.length ? d.items.map((a) => `<div class="q">
+        <div class="meta"><span>#${a.id}</span><span>${new Date(a.created_at * 1000).toLocaleString()}</span>${a.active ? '<span class="badge">展示中</span>' : '<span class="down">已下线</span>'}</div>
+        <pre>${esc(a.title)}${a.body ? '\n' + esc(a.body) : ''}</pre>
+        <div class="row">${a.active
+          ? `<button class="warn" onclick="toggleAnn(${a.id},false)">下线</button>`
+          : `<button class="ok" onclick="toggleAnn(${a.id},true)">重新上线</button>`}</div>
+      </div>`).join('') : '<div class="empty">暂无公告，在上方发布</div>';
+      return;
+    }
     if (TAB === 'cache') {
       const d = await api('/api/admin/flagged_cache');
       $('list').innerHTML = d.items.length ? d.items.map((c) => `<div class="q">
