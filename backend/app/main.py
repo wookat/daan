@@ -212,9 +212,9 @@ async def api_questions_hs_import(body: dict, x_import_token: str | None = Heade
 
 
 @app.get("/api/questions")
-async def api_questions(module: str | None = None, limit: int = 10, submodule: str | None = None):
+async def api_questions(module: str | None = None, limit: int = 10, submodule: str | None = None, real: int = 0):
     return {
-        "items": db.random_questions(module, min(limit, 30), submodule),
+        "items": db.random_questions(module, min(limit, 50), submodule, real_only=bool(real)),
         "counts": db.question_counts(),
     }
 

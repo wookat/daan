@@ -58,6 +58,9 @@ def init_db():
         ("hs_explanation", "ALTER TABLE questions ADD COLUMN hs_explanation TEXT"),
         ("hs_up", "ALTER TABLE questions ADD COLUMN hs_up INTEGER DEFAULT 0"),
         ("hs_down", "ALTER TABLE questions ADD COLUMN hs_down INTEGER DEFAULT 0"),
+        ("is_real", "ALTER TABLE questions ADD COLUMN is_real INTEGER DEFAULT 0"),
+        ("exam_year", "ALTER TABLE questions ADD COLUMN exam_year INTEGER"),
+        ("exam_region", "ALTER TABLE questions ADD COLUMN exam_region TEXT"),
     ]:
         if col not in qcols:
             conn.execute(ddl)
@@ -120,19 +123,23 @@ def _seed_questions():
     conn.close()
 
 
-def random_questions(module: str | None = None, limit: int = 10, submodule: str | None = None) -> list[dict]:
+def random_questions(module: str | None = None, limit: int = 10, submodule: str | None = None, real_only: bool = False) -> list[dict]:
     conn = get_conn()
-    if module and submodule:
-        rows = conn.execute(
-            "SELECT * FROM questions WHERE module=? AND submodule=? ORDER BY (hs_explanation IS NULL OR hs_explanation=''), RANDOM() LIMIT ?",
-            (module, submodule, limit),
-        ).fetchall()
-    elif module:
-        rows = conn.execute(
-            "SELECT * FROM questions WHERE module=? ORDER BY (hs_explanation IS NULL OR hs_explanation=''), RANDOM() LIMIT ?", (module, limit)
-        ).fetchall()
-    else:
-        rows = conn.execute("SELECT * FROM questions ORDER BY (hs_explanation IS NULL OR hs_explanation=''), RANDOM() LIMIT ?", (limit,)).fetchall()
+    where = []
+    args: list = []
+    if module:
+        where.append("module=?")
+        args.append(module)
+    if submodule:
+        where.append("submodule=?")
+        args.append(submodule)
+    if real_only:
+        where.append("is_real=1")
+    clause = ("WHERE " + " AND ".join(where)) if where else ""
+    rows = conn.execute(
+        f"SELECT * FROM questions {clause} ORDER BY (hs_explanation IS NULL OR hs_explanation=''), RANDOM() LIMIT ?",
+        (*args, limit),
+    ).fetchall()
     conn.close()
     out = []
     for r in rows:
@@ -260,7 +267,7 @@ def import_questions(items: list[dict]) -> dict:
             skipped += 1
             continue
         cur = conn.execute(
-            "INSERT OR IGNORE INTO questions (module, question_type, question, options, answer, explanation, source, submodule) VALUES (?,?,?,?,?,?,?,?)",
+            "INSERT OR IGNORE INTO questions (module, question_type, question, options, answer, explanation, source, submodule, is_real, exam_year, exam_region) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
             (
                 q.get("module"),
                 q.get("question_type"),
@@ -270,12 +277,20 @@ def import_questions(items: list[dict]) -> dict:
                 q.get("explanation"),
                 q.get("source"),
                 q.get("submodule"),
+                1 if q.get("is_real") else 0,
+                q.get("exam_year"),
+                q.get("exam_region"),
             ),
         )
         if cur.rowcount:
             inserted += 1
         else:
             skipped += 1
+            if q.get("is_real"):
+                conn.execute(
+                    "UPDATE questions SET is_real=1, exam_year=COALESCE(exam_year,?), exam_region=COALESCE(exam_region,?) WHERE question=?",
+                    (q.get("exam_year"), q.get("exam_region"), q.get("question")),
+                )
     conn.commit()
     conn.close()
     return {"inserted": inserted, "skipped": skipped}
