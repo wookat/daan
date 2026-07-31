@@ -48,6 +48,20 @@ async def api_explain(
             raise HTTPException(400, "图片过大（限 8MB）")
         image_b64 = base64.b64encode(raw).decode()
         mime = image.content_type or "image/jpeg"
+    if text and not image:
+        raw_key = _cache_key(text, user_answer)
+        hit = db.get_explain_cache(raw_key)
+        if hit:
+            return {
+                "module": hit.get("module"),
+                "module_name": kb.MODULES.get(hit.get("module"), {}).get("name"),
+                "question_type": hit.get("question_type"),
+                "question_text": hit.get("question_text"),
+                "user_answer": hit.get("user_answer") or user_answer,
+                "explain_key": raw_key,
+                "cached": True,
+                "explanation": hit["explanation"],
+            }
     try:
         extracted = await engine.extract_question(image_b64, mime, text)
         ua = user_answer or extracted.get("user_answer")
@@ -97,6 +111,23 @@ async def api_explain_stream(
 
     async def gen():
         try:
+            if text and not image:
+                rk = _cache_key(text, user_answer)
+                hit = db.get_explain_cache(rk)
+                if hit:
+                    meta0 = {
+                        "module": hit.get("module"),
+                        "module_name": kb.MODULES.get(hit.get("module"), {}).get("name"),
+                        "question_type": hit.get("question_type"),
+                        "question_text": hit.get("question_text"),
+                        "user_answer": hit.get("user_answer") or user_answer,
+                        "explain_key": rk,
+                        "cached": True,
+                    }
+                    yield "event: meta\ndata: " + json.dumps(meta0, ensure_ascii=False) + "\n\n"
+                    yield "data: " + json.dumps({"d": hit["explanation"]}, ensure_ascii=False) + "\n\n"
+                    yield "event: done\ndata: {}\n\n"
+                    return
             extracted = await engine.extract_question(image_b64, mime, text)
             ua = user_answer or extracted.get("user_answer")
             key = _cache_key(extracted.get("question_text"), ua)
