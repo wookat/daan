@@ -1,6 +1,7 @@
 """错题本存储（SQLite）。"""
 import json
 import os
+import secrets
 import sqlite3
 import time
 
@@ -64,6 +65,13 @@ def init_db():
     ]:
         if col not in qcols:
             conn.execute(ddl)
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS backups (
+            code TEXT PRIMARY KEY,
+            data TEXT NOT NULL,
+            updated_at REAL NOT NULL
+        )"""
+    )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_module ON questions(module, submodule)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_real ON questions(is_real)")
     conn.execute(
@@ -438,3 +446,28 @@ def stats() -> dict:
         "by_type": [dict(r) for r in by_type],
         "by_reason": [dict(r) for r in by_reason],
     }
+
+
+def save_backup(code: str | None, data: dict) -> str:
+    conn = get_conn()
+    if not code:
+        code = "".join(secrets.choice("ABCDEFGHJKLMNPQRSTUVWXYZ23456789") for _ in range(8))
+    else:
+        code = str(code).strip().upper()[:16]
+    conn.execute(
+        "INSERT INTO backups (code, data, updated_at) VALUES (?,?,?) "
+        "ON CONFLICT(code) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at",
+        (code, json.dumps(data, ensure_ascii=False)[:500000], time.time()),
+    )
+    conn.commit()
+    conn.close()
+    return code
+
+
+def get_backup(code: str) -> dict | None:
+    conn = get_conn()
+    row = conn.execute("SELECT data FROM backups WHERE code=?", (code,)).fetchone()
+    conn.close()
+    if not row:
+        return None
+    return json.loads(row["data"])

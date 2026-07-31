@@ -73,6 +73,23 @@ async def similar_question(question_text: str, question_type: str | None = None)
     )
 
 
+FOLLOWUP_SYSTEM = """你是公考 AI 学习助手，正在就一道题目和它的讲解回答学生的追问。
+要求：只围绕这道题和相关方法/考点回答；简明扼要、手机友好的 Markdown；禁止 LaTeX，算式用纯文本；不知道就说不知道，不编造。"""
+
+
+async def followup(question_text: str, explanation: str, history: list, query: str) -> str:
+    msgs = [
+        {"role": "system", "content": FOLLOWUP_SYSTEM},
+        {"role": "user", "content": f"题目：\n{question_text}\n\n讲解：\n{explanation[:3000]}"},
+        {"role": "assistant", "content": "好的，我已了解这道题及讲解，请提出你的疑问。"},
+    ]
+    for h in (history or [])[-6:]:
+        role = "user" if h.get("role") == "user" else "assistant"
+        msgs.append({"role": role, "content": str(h.get("content", ""))[:1000]})
+    msgs.append({"role": "user", "content": query})
+    return await llm.chat(msgs, max_tokens=1500)
+
+
 def _explain_messages(extracted: dict, user_answer: str | None = None) -> list:
     module = extracted["module"]
     methods = kb.load_method_text(module)

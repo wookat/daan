@@ -17,6 +17,13 @@
         </view>
       </view>
       <view v-if="!counts.length" class="spin">题库为空，敬请期待</view>
+      <view v-if="counts.length" class="daily" :class="{ done: todayDone }" @click="startDaily">
+        <view class="daily-l">
+          <view class="daily-t"><uni-icons :type="todayDone ? 'checkbox-filled' : 'calendar-filled'" size="16" color="#ffffff" /><text class="daily-t-t">今日一练</text></view>
+          <text class="daily-s">{{ todayDone ? '今天已完成，明天继续' : groupSize + ' 题 · ' + (realMode ? '真题模式' : '题库模式') }}{{ dailyStreak ? ' · 已连续打卡 ' + dailyStreak + ' 天' : '' }}</text>
+        </view>
+        <text class="daily-go">{{ todayDone ? '再练一组' : '开始' }}</text>
+      </view>
       <view v-if="weakModule" class="smart" @click="start(weakModule)">
         <view class="smart-l">
           <view class="smart-t"><uni-icons type="flag-filled" size="15" color="#ffffff" /><text class="smart-t-t">智能刷题：攻克薄弱项</text></view>
@@ -236,6 +243,7 @@ export default {
       fontLv: uni.getStorageSync('fontLv') || 1,
       sfxOn: uni.getStorageSync('sfxOff') ? false : true,
       beiMode: uni.getStorageSync('beiMode') ? true : false,
+      daily: uni.getStorageSync('dailyPlan') || { days: {} },
       realMode: uni.getStorageSync('realMode') ? true : false,
       groupSize: uni.getStorageSync('groupSize') || 10,
       hsRated: {},
@@ -261,6 +269,19 @@ export default {
         }
       }
       return worst;
+    },
+    todayDone() {
+      return !!this.daily.days[new Date().toISOString().slice(0, 10)];
+    },
+    dailyStreak() {
+      let n = 0;
+      const d = new Date();
+      if (!this.todayDone) d.setDate(d.getDate() - 1);
+      while (this.daily.days[d.toISOString().slice(0, 10)]) {
+        n++;
+        d.setDate(d.getDate() - 1);
+      }
+      return n;
     },
     answeredCount() {
       return this.items.filter((q) => q._picked).length;
@@ -344,6 +365,17 @@ export default {
       this.groupSize = n;
       uni.setStorageSync('groupSize', n);
     },
+    startDaily() {
+      this._daily = true;
+      this.start(null);
+    },
+    markDailyDone() {
+      if (!this._daily) return;
+      this._daily = false;
+      this.daily.days[new Date().toISOString().slice(0, 10)] = true;
+      uni.setStorageSync('dailyPlan', this.daily);
+      uni.showToast({ title: '今日一练完成，打卡成功！', icon: 'none' });
+    },
     async start(module, submodule, count) {
       this.lastModule = module;
       this.lastSubmodule = submodule || null;
@@ -382,11 +414,18 @@ export default {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
     },
-    recordStat(module, correct) {
+    recordStat(module, correct, submodule) {
       const s = this.pstats;
       if (!s.byModule[module]) s.byModule[module] = { done: 0, correct: 0 };
       s.byModule[module].done++;
       if (correct) s.byModule[module].correct++;
+      if (submodule) {
+        if (!s.bySub) s.bySub = {};
+        const key = module + '|' + submodule;
+        if (!s.bySub[key]) s.bySub[key] = { done: 0, correct: 0 };
+        s.bySub[key].done++;
+        if (correct) s.bySub[key].correct++;
+      }
       const day = new Date().toISOString().slice(0, 10);
       s.days[day] = (s.days[day] || 0) + 1;
       if (!s.daysCorrect) s.daysCorrect = {};
@@ -477,7 +516,7 @@ export default {
       this.cur._picked = k;
       this.stopQTimer();
       const correct = k === this.cur.answer;
-      this.recordStat(this.cur.module, correct);
+      this.recordStat(this.cur.module, correct, this.cur.submodule);
       this.playSfx(correct);
       try { uni.vibrateShort({ type: correct ? 'light' : 'medium' }); } catch (e) { /* 不支持则忽略 */ }
       if (correct) {
@@ -560,6 +599,7 @@ export default {
       this.picked = (this.items[this.idx] && this.items[this.idx]._picked) || '';
       if (this.cur && !this.picked) this.startQTimer();
       else this.stopQTimer();
+      if (!this.cur) this.markDailyDone();
     },
     quit() {
       this.session = false;
@@ -586,6 +626,12 @@ export default {
 .set-chip { font-size: 23rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 6rpx 22rpx; }
 .set-chip.on { color: #fff; background: var(--brand); border-color: var(--brand); }
 .real-tag { display: inline-block; font-size: 21rpx; color: #b45309; background: #fef3c7; border-radius: 8rpx; padding: 4rpx 14rpx; margin-bottom: 10rpx; }
+.daily { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 20rpx; padding: 24rpx 28rpx; margin-bottom: 20rpx; }
+.daily.done { background: linear-gradient(135deg, #10b981, #059669); }
+.daily-t { display: flex; align-items: center; gap: 8rpx; }
+.daily-t-t { font-size: 27rpx; font-weight: 700; color: #fff; }
+.daily-s { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.85); margin-top: 4rpx; }
+.daily-go { background: #fff; color: #4f46e5; font-size: 24rpx; font-weight: 600; border-radius: 999rpx; padding: 10rpx 26rpx; flex-shrink: 0; }
 .smart { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #f97316, #f43f5e); border-radius: 20rpx; padding: 24rpx 28rpx; margin-bottom: 20rpx; }
 .smart-t { display: flex; align-items: center; gap: 8rpx; font-size: 27rpx; font-weight: 700; color: #fff; }
 .smart-t-t { font-size: 27rpx; font-weight: 700; color: #fff; }

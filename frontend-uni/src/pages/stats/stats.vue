@@ -60,6 +60,20 @@
       </view>
     </view>
 
+    <view v-if="subMap.length" class="card">
+      <view class="h">考点地图</view>
+      <view v-for="g in subMap" :key="g.module" class="km-group">
+        <view class="km-mod">{{ g.name }}</view>
+        <view class="km-items">
+          <view v-for="s in g.subs" :key="s.sub" class="km-chip" :class="s.lv" @click="goSub(g.module, s.sub)">
+            <text class="km-name">{{ s.sub }}</text>
+            <text class="km-pct">{{ s.pct }}% · {{ s.done }}题</text>
+          </view>
+        </view>
+      </view>
+      <view class="km-legend"><text class="km-lg r">● &lt;60% 薄弱</text><text class="km-lg y">● 60–80%</text><text class="km-lg g">● &gt;80% 掌握</text><text class="km-lg">点考点直达专项练习</text></view>
+    </view>
+
     <view class="card">
       <view class="h">错题模块分布</view>
       <view v-if="!byModule.length" class="spin">暂无数据</view>
@@ -104,6 +118,16 @@
         {{ t.question_type || '未知' }} <text class="n">×{{ t.n }}</text>
       </view>
     </view>
+
+    <view class="card">
+      <view class="h">数据备份与迁移</view>
+      <view class="bk-tip">免注册也能换机：生成恢复码备份学习数据，在新设备输入恢复码即可找回。</view>
+      <view v-if="backupCode" class="bk-code" @click="copyCode">恢复码：{{ backupCode }}（点击复制）</view>
+      <view class="row2">
+        <button class="bk-btn" :disabled="bkLoading" @click="doBackup">{{ backupCode ? '更新备份' : '生成恢复码' }}</button>
+        <button class="bk-btn ghost" :disabled="bkLoading" @click="doRestore">输入恢复码恢复</button>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -120,7 +144,7 @@ const MODS = [
 
 export default {
   data() {
-    return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} } };
+    return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false };
   },
   computed: {
     total() {
@@ -226,6 +250,23 @@ export default {
     hasRadar() {
       return this.axes.some((a) => a.pct > 0);
     },
+    subMap() {
+      const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断' };
+      const bySub = this.pstats.bySub || {};
+      const groups = {};
+      for (const [key, s] of Object.entries(bySub)) {
+        const [mod, sub] = key.split('|');
+        if (!sub || s.done < 3) continue;
+        const pct = Math.round((s.correct / s.done) * 100);
+        if (!groups[mod]) groups[mod] = [];
+        groups[mod].push({ sub, done: s.done, pct, lv: pct < 60 ? 'lo' : pct <= 80 ? 'mid' : 'hi' });
+      }
+      return Object.entries(groups).map(([m, subs]) => ({
+        module: m,
+        name: NAMES[m] || m,
+        subs: subs.sort((a, b) => a.pct - b.pct),
+      }));
+    },
     polyStyle() {
       const pts = this.axes.map((a, i) => {
         const ang = (Math.PI * 2 * i) / 5 - Math.PI / 2;
@@ -262,6 +303,54 @@ export default {
       if (pct > 0.4) return 'sev-hi';
       if (pct > 0.2) return 'sev-mid';
       return '';
+    },
+    goSub(module, sub) {
+      uni.setStorageSync('practicePreset', { module, submodule: sub, count: 10 });
+      uni.switchTab({ url: '/pages/practice/practice' });
+    },
+    copyCode() {
+      uni.setClipboardData({ data: this.backupCode });
+    },
+    localData() {
+      const keys = ['pstats', 'dailyPlan', 'dailyGoal', 'groupSize', 'realMode', 'fontLv', 'beiMode'];
+      const out = {};
+      keys.forEach((k) => {
+        const v = uni.getStorageSync(k);
+        if (v !== '' && v !== null && v !== undefined) out[k] = v;
+      });
+      return out;
+    },
+    async doBackup() {
+      this.bkLoading = true;
+      try {
+        const d = await request('/api/backup', { method: 'POST', data: { code: this.backupCode || null, data: this.localData() } });
+        this.backupCode = d.code;
+        uni.setStorageSync('backupCode', d.code);
+        uni.showModal({ title: '备份成功', content: '恢复码：' + d.code + '\n请记下或截图保存，在新设备输入即可恢复数据。', showCancel: false });
+      } catch (e) {
+        uni.showToast({ title: '备份失败：' + e.message, icon: 'none' });
+      }
+      this.bkLoading = false;
+    },
+    doRestore() {
+      uni.showModal({
+        title: '输入恢复码',
+        editable: true,
+        placeholderText: '如：AB3D5F7H',
+        success: async (res) => {
+          if (!res.confirm || !res.content) return;
+          try {
+            const d = await request('/api/backup?code=' + encodeURIComponent(res.content.trim()));
+            Object.entries(d.data || {}).forEach(([k, v]) => uni.setStorageSync(k, v));
+            uni.setStorageSync('backupCode', res.content.trim().toUpperCase());
+            this.backupCode = res.content.trim().toUpperCase();
+            this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
+            uni.showToast({ title: '恢复成功！', icon: 'success' });
+          } catch (e) {
+            uni.showToast({ title: '恢复失败：' + e.message, icon: 'none' });
+          }
+        },
+      });
     },
     async load() {
       try {
@@ -330,4 +419,26 @@ export default {
 .cal-c.full { background: var(--brand); color: #fff; font-weight: 700; }
 .cal-c.today { border: 2rpx solid var(--brand); }
 .n { color: var(--brand); font-weight: 600; }
+.km-group { margin-bottom: 18rpx; }
+.km-mod { font-size: 24rpx; font-weight: 600; color: var(--ink-2); margin-bottom: 10rpx; }
+.km-items { display: flex; flex-wrap: wrap; gap: 12rpx; }
+.km-chip { border-radius: 14rpx; padding: 10rpx 18rpx; }
+.km-chip.lo { background: #fee2e2; }
+.km-chip.lo .km-name, .km-chip.lo .km-pct { color: #b91c1c; }
+.km-chip.mid { background: #fef3c7; }
+.km-chip.mid .km-name, .km-chip.mid .km-pct { color: #b45309; }
+.km-chip.hi { background: #d1fae5; }
+.km-chip.hi .km-name, .km-chip.hi .km-pct { color: #047857; }
+.km-name { display: block; font-size: 24rpx; font-weight: 600; }
+.km-pct { display: block; font-size: 19rpx; margin-top: 2rpx; }
+.km-legend { display: flex; gap: 18rpx; flex-wrap: wrap; margin-top: 8rpx; }
+.km-lg { font-size: 20rpx; color: var(--ink-2); }
+.km-lg.r { color: #ef4444; }
+.km-lg.y { color: #f59e0b; }
+.km-lg.g { color: #10b981; }
+.bk-tip { font-size: 23rpx; color: var(--ink-2); line-height: 1.6; margin-bottom: 14rpx; }
+.bk-code { font-size: 26rpx; font-weight: 700; color: var(--brand); background: var(--brand-soft); border-radius: 14rpx; padding: 14rpx 22rpx; margin-bottom: 14rpx; }
+.row2 { display: flex; gap: 16rpx; }
+.bk-btn { flex: 1; background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border-radius: 16rpx; font-size: 25rpx; font-weight: 600; }
+.bk-btn.ghost { background: var(--brand-soft); color: var(--brand); }
 </style>

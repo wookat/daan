@@ -190,6 +190,38 @@ def api_rate(body: dict):
 IMPORT_TOKEN = os.environ.get("IMPORT_TOKEN", "")
 
 
+@app.post("/api/followup")
+async def api_followup(body: dict, x_access_code: str | None = Header(None)):
+    check_access(x_access_code)
+    query = (body.get("query") or "").strip()
+    if not query:
+        raise HTTPException(400, "缺少追问内容")
+    answer = await engine.followup(
+        body.get("question_text") or "",
+        body.get("explanation") or "",
+        body.get("history") or [],
+        query[:500],
+    )
+    return {"answer": answer}
+
+
+@app.post("/api/backup")
+def api_backup_save(body: dict):
+    data = body.get("data")
+    if not isinstance(data, dict):
+        raise HTTPException(400, "缺少备份数据")
+    code = db.save_backup(body.get("code"), data)
+    return {"code": code}
+
+
+@app.get("/api/backup")
+def api_backup_get(code: str):
+    data = db.get_backup(code.strip().upper())
+    if data is None:
+        raise HTTPException(404, "恢复码不存在")
+    return {"data": data}
+
+
 @app.get("/api/questions/export")
 def api_questions_export(offset: int = 0, limit: int = 200, module: str | None = None, all: int = 0):
     return {"items": db.export_questions(offset, min(limit, 500), module, missing_only=not all)}

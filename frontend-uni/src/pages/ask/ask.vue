@@ -70,6 +70,16 @@
             <text class="rate-btn bad" @click="rate(r, false)">👎 有误</text>
           </view>
         </view>
+        <view v-if="!r.streaming" class="fu">
+          <view v-for="(m, mi) in r.fu || []" :key="mi" class="fu-msg" :class="m.role">
+            <rich-text v-if="m.role === 'ai'" :nodes="m.html" />
+            <text v-else>{{ m.content }}</text>
+          </view>
+          <view class="fu-row">
+            <input v-model="r.fuText" class="fu-inp" placeholder="对讲解有疑问？向 AI 追问…" confirm-type="send" @confirm="askFollowup(r)" />
+            <button class="btn sm fu-btn" :disabled="r.fuLoading" @click="askFollowup(r)">{{ r.fuLoading ? '思考中…' : '追问' }}</button>
+          </view>
+        </view>
         <view style="height: 20rpx" />
         <view class="row">
           <button class="btn ghost sm" :disabled="r.saved" @click="save(r)">{{ r.saved ? '✓ 已存入错题本' : '存入错题本' }}</button>
@@ -391,6 +401,31 @@ export default {
       r.sim.saved = true;
       uni.showToast({ title: '已存入错题本', icon: 'success' });
     },
+    async askFollowup(r) {
+      const q = (r.fuText || '').trim();
+      if (!q || r.fuLoading) return;
+      if (!r.fu) r.fu = [];
+      r.fu.push({ role: 'user', content: q });
+      r.fuText = '';
+      r.fuLoading = true;
+      this.$forceUpdate();
+      try {
+        const d = await request('/api/followup', {
+          method: 'POST',
+          data: {
+            question_text: r.question_text,
+            explanation: r.explanation,
+            history: r.fu.slice(0, -1).map((m) => ({ role: m.role === 'ai' ? 'assistant' : 'user', content: m.content })),
+            query: q,
+          },
+        });
+        r.fu.push({ role: 'ai', content: d.answer, html: md(d.answer) });
+      } catch (e) {
+        uni.showToast({ title: '追问失败：' + e.message, icon: 'none' });
+      }
+      r.fuLoading = false;
+      this.$forceUpdate();
+    },
     explainSim(r) {
       this.mode = 'text';
       this.qtext = (r.sim.raw || '').replace(/^##\s*练习题\s*/, '').replace(/##\s*提示[\s\S]*$/, '').trim();
@@ -454,6 +489,13 @@ export default {
 .sk2 { width: 90%; }
 .sk3 { width: 75%; }
 @keyframes skm { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+.fu { margin-top: 16rpx; }
+.fu-msg { border-radius: 16rpx; padding: 16rpx 22rpx; margin-bottom: 12rpx; font-size: 25rpx; line-height: 1.7; }
+.fu-msg.user { background: var(--brand-soft); color: var(--brand); margin-left: 15%; }
+.fu-msg.ai { background: var(--soft-bg); color: var(--ink); margin-right: 5%; }
+.fu-row { display: flex; gap: 14rpx; align-items: center; }
+.fu-inp { flex: 1; height: 76rpx; border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 26rpx; font-size: 25rpx; background: var(--soft-bg); box-sizing: border-box; }
+.fu-btn { flex: none; padding: 0 32rpx; font-size: 25rpx; line-height: 2.9; border-radius: 999rpx; }
 .raterow { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; background: var(--soft-bg); border-radius: 14rpx; padding: 16rpx 22rpx; margin-top: 16rpx; flex-wrap: wrap; }
 .rate-q { font-size: 24rpx; color: var(--ink-2); }
 .rate-btns { display: flex; gap: 14rpx; }
