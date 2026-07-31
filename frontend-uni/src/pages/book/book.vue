@@ -33,9 +33,21 @@
     <!-- 列表模式 -->
     <template v-else>
       <view v-if="due.length" class="card duecard" @click="startReview">
-        <text class="duetxt">📚 有 {{ due.length }} 道错题待复习</text>
-        <text class="duego">开始复习 ›</text>
+        <view>
+          <text class="duetxt">📚 今日待复习 {{ due.length }} 道</text>
+          <text class="duesub">按遗忘曲线安排 · 预计 {{ Math.max(1, Math.ceil(due.length * 0.8)) }} 分钟</text>
+        </view>
+        <text class="duego">开始复习</text>
       </view>
+      <scroll-view v-if="items.length" scroll-x class="chips">
+        <view
+          v-for="c in chipList"
+          :key="c.key"
+          class="chip"
+          :class="{ on: filterMod === c.key }"
+          @click="filterMod = c.key"
+        >{{ c.name }}</view>
+      </scroll-view>
       <view v-if="loading" class="card spin">加载中…</view>
       <view v-else-if="!items.length" class="card empty">
         <view class="e-ico">📖</view>
@@ -43,14 +55,19 @@
         <view class="e-s">去拍题讲解或刷题，答错的题会汇集到这里，之后按遗忘曲线安排复习</view>
         <button class="e-btn" @click="goPractice">去刷题</button>
       </view>
-      <view v-for="m in items" :key="m.id" class="card" @click="m.open = !m.open">
-        <view class="ops">
-          <text class="op redo" @click.stop="redo(m)">重做</text>
-          <text class="op del" @click.stop="del(m)">删除</text>
+      <view v-for="m in shownItems" :key="m.id" class="card mcard" :class="masteryClass(m)" @click="m.open = !m.open">
+        <view class="mhead">
+          <text class="tag">{{ m.question_type || modName(m.module) }}</text>
+          <text v-if="m.review_count" class="rvbadge">已复习{{ m.review_count }}次</text>
         </view>
-        <text class="tag">{{ m.question_type || m.module || '' }}</text>
         <view class="q" :class="{ clamp: !m.open }">{{ (m.question_text || '').slice(0, 200) }}</view>
-        <view class="meta">{{ fmt(m.created_at) }}<template v-if="m.review_count"> · 已复习{{ m.review_count }}次</template></view>
+        <view class="mfoot">
+          <text class="meta">{{ fmt(m.created_at) }}</text>
+          <view class="acts">
+            <text class="op redo" @click.stop="redo(m)">重做</text>
+            <text class="op del" @click.stop="del(m)">删除</text>
+          </view>
+        </view>
         <rich-text v-if="m.open" :nodes="m.html" />
       </view>
     </template>
@@ -60,6 +77,8 @@
 <script>
 import { md } from '../../md.js';
 import { request } from '../../api.js';
+
+const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 
 function extractLetter(s) {
   const m = /[A-D]/.exec(String(s || '').toUpperCase());
@@ -80,6 +99,7 @@ export default {
       wasCorrect: false,
       nextDays: 0,
       streak: 0,
+      filterMod: '',
     };
   },
   computed: {
@@ -92,11 +112,25 @@ export default {
     curHtml() {
       return md(this.cur.explanation || '');
     },
+    chipList() {
+      const mods = [...new Set(this.items.map((m) => m.module).filter(Boolean))];
+      return [{ key: '', name: '全部' }, ...mods.map((m) => ({ key: m, name: NAMES[m] || m }))];
+    },
+    shownItems() {
+      return this.filterMod ? this.items.filter((m) => m.module === this.filterMod) : this.items;
+    },
   },
   onShow() {
     this.load();
   },
   methods: {
+    modName(m) {
+      return NAMES[m] || m || '';
+    },
+    masteryClass(m) {
+      if (!m.review_count) return 'lv-new';
+      return m.review_count >= 2 ? 'lv-good' : 'lv-mid';
+    },
     goPractice() {
       uni.switchTab({ url: '/pages/practice/practice' });
     },
@@ -112,7 +146,7 @@ export default {
       this.loading = false;
     },
     startReview() {
-      this.rItems = this.due;
+      this.rItems = [...this.due];
       this.rIdx = 0;
       this.resetQ();
       this.reviewing = true;
@@ -134,6 +168,9 @@ export default {
     async record(correct) {
       this.wasCorrect = correct;
       this.answered = true;
+      if (!correct && !this.cur._requeued) {
+        this.rItems.push({ ...this.cur, _requeued: true });
+      }
       try {
         const res = await request('/api/review/' + this.cur.id, { method: 'POST', data: { correct } });
         this.nextDays = res.next_review_days;
@@ -191,17 +228,28 @@ export default {
 .e-s { font-size: 24rpx; color: var(--ink-2); line-height: 1.7; margin-bottom: 28rpx; }
 .e-btn { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border-radius: 18rpx; font-size: 28rpx; font-weight: 600; width: 60%; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; border-left: none; }
-.ops { float: right; }
-.op { font-size: 24rpx; margin-left: 20rpx; padding: 4rpx 8rpx; color: var(--ink-2); }
-.redo { color: var(--brand); }
+.chips { white-space: nowrap; margin-bottom: 24rpx; }
+.chip { display: inline-block; padding: 10rpx 30rpx; margin-right: 16rpx; border-radius: 999rpx; background: var(--card); border: 1rpx solid var(--line); font-size: 25rpx; color: var(--ink-2); }
+.chip.on { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
+.mcard { border-left-width: 8rpx; }
+.mcard.lv-new { border-left-color: var(--bad); }
+.mcard.lv-mid { border-left-color: #f59e0b; }
+.mcard.lv-good { border-left-color: var(--ok); }
+.mhead { display: flex; align-items: center; gap: 12rpx; }
+.rvbadge { font-size: 20rpx; color: var(--ink-2); background: var(--soft-bg); border-radius: 999rpx; padding: 4rpx 14rpx; }
+.mfoot { display: flex; justify-content: space-between; align-items: center; margin-top: 12rpx; }
+.acts { display: flex; gap: 8rpx; }
+.op { font-size: 24rpx; margin-left: 16rpx; padding: 6rpx 20rpx; border-radius: 999rpx; }
+.redo { color: var(--brand); border: 1rpx solid var(--brand); }
 .del { color: #c33; }
 .tag { display: inline-block; background: var(--brand-soft); color: var(--brand); border-radius: 10rpx; padding: 4rpx 14rpx; font-size: 22rpx; }
 .q { font-size: 26rpx; line-height: 1.5; margin-top: 10rpx; }
 .q.clamp { max-height: 120rpx; overflow: hidden; }
-.meta { font-size: 22rpx; color: var(--ink-2); margin-top: 10rpx; }
-.duecard { border-left-color: #f5a623; display: flex; justify-content: space-between; align-items: center; }
-.duetxt { font-size: 26rpx; font-weight: 600; }
-.duego { color: #f5a623; font-size: 24rpx; }
+.meta { font-size: 22rpx; color: var(--ink-2); }
+.duecard { background: linear-gradient(135deg, #3b6ef6, #7c5cfc); border: none; display: flex; justify-content: space-between; align-items: center; }
+.duetxt { display: block; font-size: 28rpx; font-weight: 700; color: #fff; }
+.duesub { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.75); margin-top: 6rpx; }
+.duego { background: #fff; color: #4f46e5; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 12rpx 30rpx; }
 .review { border-left-color: #f5a623; }
 .rhead { display: flex; justify-content: space-between; margin-bottom: 12rpx; }
 .opts { display: flex; gap: 16rpx; margin: 20rpx 0; }

@@ -4,13 +4,24 @@
       <text class="hero-t">花生十三错题助手</text>
       <text class="hero-s">拍题即得你学的方法体系讲解</text>
     </view>
+    <view class="today">
+      <view class="today-l">
+        <text class="today-t">今日已刷 {{ todayDone }} 题</text>
+        <text class="today-s">{{ streakDays > 0 ? '连续打卡 ' + streakDays + ' 天 🔥' : '开始今天的练习吧' }}</text>
+      </view>
+      <view class="today-btn" @click="goPractice">{{ dueCount > 0 ? '先复习 ' + dueCount + ' 道错题' : '继续刷题 ›' }}</view>
+    </view>
     <view class="card">
       <view class="seg">
         <view class="seg-i" :class="{ on: mode === 'img' }" @click="mode = 'img'">📷 拍图识题</view>
         <view class="seg-i" :class="{ on: mode === 'text' }" @click="mode = 'text'">⌨️ 粘贴文字</view>
       </view>
       <template v-if="mode === 'img'">
-        <button class="btn ghost" @click="pickImage">📷 选择图片 / 拍照</button>
+        <view v-if="!imagePath" class="drop" @click="pickImage">
+          <text class="drop-ico">📷</text>
+          <text class="drop-t">拍照 / 从相册选择</text>
+          <text class="drop-s">支持错题截图、试卷拍照</text>
+        </view>
         <view v-if="imagePath" class="preview-wrap">
           <image :src="imagePath" mode="widthFix" class="preview" />
           <view class="preview-x" @click="clearImage">✕ 移除图片</view>
@@ -90,9 +101,13 @@ export default {
       error: '',
       results: [],
       timer: null,
+      todayDone: 0,
+      streakDays: 0,
+      dueCount: 0,
     };
   },
   onShow() {
+    this.loadToday();
     const redo = uni.getStorageSync('redoQuestion');
     if (redo) {
       this.mode = 'text';
@@ -105,6 +120,33 @@ export default {
     }
   },
   methods: {
+    goPractice() {
+      const target = this.dueCount > 0 ? '/pages/book/book' : '/pages/practice/practice';
+      uni.switchTab({ url: target });
+    },
+    async loadToday() {
+      const s = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
+      const days = s.days || {};
+      const todayKey = new Date().toISOString().slice(0, 10);
+      this.todayDone = days[todayKey] || 0;
+      let n = 0;
+      const d = new Date();
+      if (!days[todayKey]) d.setDate(d.getDate() - 1);
+      for (;;) {
+        const key = d.toISOString().slice(0, 10);
+        if (days[key]) {
+          n++;
+          d.setDate(d.getDate() - 1);
+        } else break;
+      }
+      this.streakDays = n;
+      try {
+        const r = await request('/api/review');
+        this.dueCount = (r.items || []).length;
+      } catch (e) {
+        this.dueCount = 0;
+      }
+    },
     clearImage() {
       this.imagePath = '';
       this.imageFile = null;
@@ -299,6 +341,14 @@ export default {
 .hero { padding: 28rpx 8rpx 20rpx; }
 .hero-t { display: block; font-size: 40rpx; font-weight: 700; color: var(--ink); letter-spacing: 1rpx; }
 .hero-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 6rpx; }
+.today { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #3b6ef6, #7c5cfc); border-radius: var(--radius); padding: 26rpx 30rpx; margin-bottom: 24rpx; }
+.today-t { display: block; font-size: 28rpx; font-weight: 700; color: #fff; }
+.today-s { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.78); margin-top: 6rpx; }
+.today-btn { background: #fff; color: #4f46e5; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 12rpx 28rpx; flex-shrink: 0; }
+.drop { border: 2rpx dashed var(--brand); background: var(--brand-soft); border-radius: 24rpx; padding: 48rpx 24rpx; text-align: center; margin-bottom: 8rpx; }
+.drop-ico { display: block; font-size: 64rpx; margin-bottom: 12rpx; }
+.drop-t { display: block; font-size: 29rpx; font-weight: 600; color: var(--brand); }
+.drop-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 8rpx; }
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .label { font-size: 24rpx; color: var(--ink-2); display: block; margin: 20rpx 0 10rpx; }
 .seg { display: flex; background: var(--soft-bg); border-radius: 16rpx; padding: 6rpx; margin-bottom: 20rpx; }
