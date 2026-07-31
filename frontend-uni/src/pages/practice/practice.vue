@@ -96,8 +96,25 @@
             @click="setReason(rz)"
           >{{ rz }}</text>
         </view>
-        <view v-if="cur.explanation" class="exp">{{ cur.explanation }}</view>
-        <view class="deep" @click="deepExplain">🔍 用花生十三方法详解这道题 ›</view>
+        <view class="exp-sec">
+          <view class="exp-row">
+            <text class="exp-k">正确答案</text>
+            <text class="exp-ans" :class="picked === cur.answer ? 'okc2' : 'badc2'">{{ cur.answer }}</text>
+          </view>
+          <view v-if="cur.explanation" class="exp-row col">
+            <text class="exp-k">解析</text>
+            <view class="exp">{{ cur.explanation }}</view>
+          </view>
+          <view v-if="cur.question_type" class="exp-row">
+            <text class="exp-k">考点</text>
+            <text class="exp-v">{{ cur.question_type }}</text>
+          </view>
+          <view v-if="cur.source" class="exp-row">
+            <text class="exp-k">来源</text>
+            <text class="exp-v">{{ cur.source }}</text>
+          </view>
+        </view>
+        <view class="deep" @click="deepExplain">用花生十三方法详解这道题 ›</view>
       </view>
     </view>
 
@@ -315,6 +332,8 @@ export default {
       if (correct) s.byModule[module].correct++;
       const day = new Date().toISOString().slice(0, 10);
       s.days[day] = (s.days[day] || 0) + 1;
+      if (!s.daysCorrect) s.daysCorrect = {};
+      if (correct) s.daysCorrect[day] = (s.daysCorrect[day] || 0) + 1;
       savePStats(s);
     },
     fmtSecs(s) {
@@ -504,8 +523,17 @@ export default {
   75% { transform: translateX(8rpx); }
 }
 .after { margin-top: 8rpx; }
-.exp { background: var(--soft-bg); border-radius: 14rpx; padding: 20rpx; font-size: 25rpx; line-height: 1.7; color: var(--ink); white-space: pre-wrap; margin-bottom: 16rpx; }
-.deep { margin-top: 6rpx; text-align: center; font-size: 25rpx; color: var(--brand); padding: 10rpx 0; }
+.exp { background: var(--soft-bg); border-radius: 14rpx; padding: 20rpx; font-size: 25rpx; line-height: 1.7; color: var(--ink); white-space: pre-wrap; margin-top: 8rpx; }
+.exp-sec { background: var(--card); border: 1rpx solid var(--line); border-radius: 16rpx; padding: 20rpx; margin-bottom: 16rpx; }
+.exp-row { display: flex; align-items: baseline; gap: 16rpx; margin-bottom: 12rpx; }
+.exp-row:last-child { margin-bottom: 0; }
+.exp-row.col { display: block; }
+.exp-k { flex-shrink: 0; font-size: 22rpx; color: var(--ink-2); font-weight: 600; }
+.exp-v { font-size: 24rpx; color: var(--ink); }
+.exp-ans { font-size: 32rpx; font-weight: 800; }
+.exp-ans.okc2 { color: var(--ok); }
+.exp-ans.badc2 { color: var(--bad); }
+.deep { margin-top: 6rpx; text-align: center; font-size: 25rpx; color: var(--brand); border: 1rpx solid var(--brand); border-radius: 999rpx; padding: 14rpx 0; }
 .banner { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between; gap: 20rpx; padding: 28rpx 32rpx calc(28rpx + env(safe-area-inset-bottom)); animation: slideup 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
 @keyframes slideup {
   from { transform: translateY(100%); }

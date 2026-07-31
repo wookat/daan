@@ -59,5 +59,55 @@ page {
     font-size: 15px;
   }
 }
+
+/* 桌面端：底部 tabbar 变左侧侧栏 */
+@media (min-width: 768px) {
+  .uni-tabbar {
+    top: 0 !important;
+    bottom: 0 !important;
+    right: auto !important;
+    left: 0 !important;
+    width: 208px !important;
+    height: 100% !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    padding-top: 32px;
+    border-right: 1px solid var(--line);
+    box-sizing: border-box;
+  }
+  .uni-tabbar .uni-tabbar__border {
+    display: none;
+  }
+  .uni-tabbar .uni-tabbar__item {
+    flex: none !important;
+    width: 100%;
+    height: 52px;
+  }
+  .uni-tabbar .uni-tabbar__bd {
+    flex-direction: row !important;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 0 24px;
+    gap: 10px;
+    height: 52px !important;
+  }
+  .uni-tabbar .uni-tabbar__label {
+    margin-top: 0 !important;
+    font-size: 15px !important;
+    line-height: 52px !important;
+  }
+  uni-page-wrapper,
+  .uni-tabbar-page {
+    padding-left: 208px;
+    box-sizing: border-box;
+  }
+  uni-tabbar + .uni-placeholder {
+    display: none;
+  }
+  uni-page-body .banner,
+  uni-page-body .mask {
+    left: 208px !important;
+  }
+}
 /* #endif */
 </style>

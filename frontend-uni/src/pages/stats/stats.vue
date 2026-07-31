@@ -43,6 +43,19 @@
       </view>
     </view>
 
+    <view v-if="trendHas" class="card">
+      <view class="h">近 7 日正确率</view>
+      <view class="trend">
+        <view v-for="t in trend" :key="t.key" class="tcol">
+          <text class="tpct">{{ t.done ? t.pct + '%' : '' }}</text>
+          <view class="tbar">
+            <view class="tfill" :class="{ lo: t.done && t.pct < 60 }" :style="{ height: (t.done ? Math.max(t.pct, 6) : 0) + '%' }" />
+          </view>
+          <text class="tday">{{ t.label }}</text>
+        </view>
+      </view>
+    </view>
+
     <view class="card">
       <view class="h">错题模块分布</view>
       <view v-if="!byModule.length" class="spin">暂无数据</view>
@@ -121,6 +134,27 @@ export default {
         } else break;
       }
       return n;
+    },
+    trend() {
+      const days = this.pstats.days || {};
+      const dc = this.pstats.daysCorrect || {};
+      const out = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().slice(0, 10);
+        const done = days[key] || 0;
+        out.push({
+          key,
+          label: i === 0 ? '今天' : `${d.getMonth() + 1}/${d.getDate()}`,
+          done,
+          pct: done ? Math.round(((dc[key] || 0) / done) * 100) : 0,
+        });
+      }
+      return out;
+    },
+    trendHas() {
+      return this.trend.some((t) => t.done > 0);
     },
     reasonTotal() {
       return this.byReason.reduce((s, r) => s + r.n, 0) || 1;
@@ -235,6 +269,13 @@ export default {
 .fill.sev-mid { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
 .tline { font-size: 26rpx; margin: 8rpx 0; }
 .fill.rz { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
+.trend { display: flex; align-items: flex-end; gap: 12rpx; height: 220rpx; padding-top: 8rpx; }
+.tcol { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
+.tpct { font-size: 18rpx; color: var(--brand); height: 28rpx; }
+.tbar { flex: 1; width: 36rpx; background: var(--soft-bg); border-radius: 999rpx; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
+.tfill { width: 100%; background: linear-gradient(180deg, #6366f1, #4f46e5); border-radius: 999rpx; }
+.tfill.lo { background: linear-gradient(180deg, #fbbf24, #f59e0b); }
+.tday { font-size: 19rpx; color: var(--ink-2); margin-top: 8rpx; }
 .cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
 .cal-sub { font-size: 22rpx; color: var(--ink-2); }
 .cal-week { display: flex; margin-bottom: 8rpx; }
