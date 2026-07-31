@@ -257,6 +257,8 @@ def import_questions(items: list[dict]) -> dict:
     skipped = 0
     for q in items:
         opts = q.get("options") or {}
+        if q.get("is_real") and (not q.get("source") or q.get("source") == "original"):
+            q["is_real"] = False
         if (
             q.get("module") not in VALID_MODULES
             or not q.get("question")
