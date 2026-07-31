@@ -39,6 +39,9 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 ## Production testing
 - Live site: https://kaogong.zalize.com (access code hs1326, header `X-Access-Code`). `/api/questions` and `/api/mistakes` reads need no code.
 - When testing against production, record the pre-test `/api/mistakes` id list first and only delete records created during the test.
+- Practice mode auto-saves wrong answers to the mistake book (no manual button) — every deliberate wrong answer creates a production record; record the id baseline before testing.
+- The online review queue includes all due production items and cannot skip them; when testing requeue, answer production items correctly (minimal impact) and note it in the report.
+- Verify deployment freshness by comparing the `assets/index-*.js` hash in the live index.html against local `frontend-uni/dist/build/h5/index.html`.
 
 ## DB backup for destructive tests
 - SQLite DB is at repo root `data.db` (not backend/). Before destructive tests: `cp data.db /tmp/backup.db`; restore single rows via python sqlite3.
