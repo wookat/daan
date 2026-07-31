@@ -6,7 +6,7 @@
       <view v-if="!counts.length" class="spin">题库为空，敬请期待</view>
       <view v-if="weakModule" class="smart" @click="start(weakModule)">
         <view class="smart-l">
-          <text class="smart-t">🎯 智能刷题：攻克薄弱项</text>
+          <view class="smart-t"><uni-icons type="flag-filled" size="15" color="#ffffff" /><text class="smart-t-t">智能刷题：攻克薄弱项</text></view>
           <text class="smart-s">你的 {{ modName(weakModule) }} 正确率较低，建议专项练习</text>
         </view>
         <text class="smart-go">去练 ›</text>
@@ -28,7 +28,7 @@
           </view>
         </view>
         <view v-if="counts.length" class="mcard all" @click="start(null)">
-          <view class="mtop"><text class="mname">🎯 混合刷题</text></view>
+          <view class="mtop"><uni-icons type="loop" size="16" color="#ffffff" /><text class="mname">混合刷题</text></view>
           <text class="mn">全部模块随机</text>
         </view>
       </view>
@@ -39,10 +39,10 @@
       <view class="sheet" @click.stop>
         <view class="sheet-h">
           <text class="sheet-t">{{ modName(subSelect) }} · 选择题型</text>
-          <text class="sheet-x" @click="subSelect = null">✕</text>
+          <view class="sheet-x" @click="subSelect = null"><uni-icons type="closeempty" size="20" color="#6b7280" /></view>
         </view>
         <view class="sub-chip all-chip" @click="start(subSelect)">
-          <text class="sub-name">🎯 全部随机</text>
+          <text class="sub-name">全部随机</text>
           <text class="sub-n">{{ (counts.find(c => c.module === subSelect) || {}).n || 0 }} 题</text>
         </view>
         <view
@@ -62,12 +62,12 @@
       <view class="rhead">
         <text class="tag" @click="cardOpen = true">{{ modName(cur.module) }}{{ lastSubmodule ? ' · ' + lastSubmodule : '' }} · {{ idx + 1 }}/{{ items.length }} ▾</text>
         <view class="hstats">
-          <text class="timer">⏱{{ fmtSecs(qsecs) }}</text>
+          <text class="timer">{{ fmtSecs(qsecs) }}</text>
           <text class="fontbtn" @click="cycleFont">Aa</text>
-          <text class="fontbtn" @click="toggleSfx">{{ sfxOn ? '🔊' : '🔇' }}</text>
+          <view class="fontbtn iconbtn" @click="toggleSfx"><uni-icons :type="sfxOn ? 'sound-filled' : 'sound'" size="16" :color="sfxOn ? '#4f46e5' : '#8a90a0'" /></view>
           <text class="cnt okc">✓{{ right }}</text>
           <text class="cnt badc">✗{{ wrongCount }}</text>
-          <text v-if="streak >= 3" class="cnt fire">🔥{{ streak }}</text>
+          <view v-if="streak >= 3" class="cnt fire"><uni-icons type="fire-filled" size="13" color="#f97316" /><text class="fire-n">{{ streak }}</text></view>
           <text class="op" @click="quit">退出</text>
         </view>
       </view>
@@ -127,7 +127,7 @@
           <text class="ring-t">正确率</text>
         </view>
       </view>
-      <view class="big">🎉 本组完成</view>
+      <view class="big">本组完成</view>
       <view class="sub">答对 {{ right }}/{{ items.length }} · 最高连对 {{ bestStreak }} 题<template v-if="autoSaved">，错题已自动加入错题本</template></view>
       <button class="btn" @click="start(lastModule, lastSubmodule)">再来一组</button>
       <button class="btn ghost" style="margin-top: 16rpx" @click="quit">返回选模块</button>
@@ -138,7 +138,7 @@
       <view class="sheet" @click.stop>
         <view class="sheet-h">
           <text class="sheet-t">答题卡</text>
-          <text class="sheet-x" @click="cardOpen = false">✕</text>
+          <view class="sheet-x" @click="cardOpen = false"><uni-icons type="closeempty" size="20" color="#6b7280" /></view>
         </view>
         <view class="acard-grid">
           <view
@@ -434,7 +434,7 @@ export default {
           savePStats(s);
         }
         if (this.streak === 3 || this.streak === 5 || this.streak === 10) {
-          uni.showToast({ title: '🔥 连对 ' + this.streak + ' 题！', icon: 'none' });
+          uni.showToast({ title: '连对 ' + this.streak + ' 题！', icon: 'none' });
         }
         this.autoTimer = setTimeout(() => {
           if (this.picked === k) this.next();
@@ -512,7 +512,8 @@ export default {
 .h { font-size: 30rpx; font-weight: 600; margin-bottom: 20rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 24rpx; }
 .smart { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #f97316, #f43f5e); border-radius: 20rpx; padding: 24rpx 28rpx; margin-bottom: 20rpx; }
-.smart-t { display: block; font-size: 27rpx; font-weight: 700; color: #fff; }
+.smart-t { display: flex; align-items: center; gap: 8rpx; font-size: 27rpx; font-weight: 700; color: #fff; }
+.smart-t-t { font-size: 27rpx; font-weight: 700; color: #fff; }
 .smart-s { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.8); margin-top: 4rpx; }
 .smart-go { background: #fff; color: #f43f5e; font-size: 24rpx; font-weight: 600; border-radius: 999rpx; padding: 10rpx 26rpx; flex-shrink: 0; }
 .grid { display: flex; flex-wrap: wrap; gap: 20rpx; }
@@ -531,7 +532,9 @@ export default {
 .cnt { font-size: 22rpx; border-radius: 999rpx; padding: 2rpx 14rpx; font-weight: 600; }
 .okc { background: var(--ok-soft); color: var(--ok); }
 .badc { background: var(--bad-soft); color: var(--bad); }
-.fire { background: #fff7ed; color: #ea580c; }
+.fire { background: #fff7ed; color: #ea580c; display: inline-flex; align-items: center; gap: 2rpx; }
+.fire-n { font-size: 22rpx; color: #ea580c; font-weight: 700; }
+.iconbtn { display: inline-flex; align-items: center; }
 .timer { font-size: 22rpx; color: var(--ink-2); }
 .fontbtn { font-size: 24rpx; font-weight: 700; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 10rpx; padding: 2rpx 12rpx; }
 .reasons { display: flex; flex-wrap: wrap; align-items: center; gap: 12rpx; margin-bottom: 16rpx; }

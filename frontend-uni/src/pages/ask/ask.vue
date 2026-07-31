@@ -12,25 +12,25 @@
         </view>
       </view>
       <view class="today-l">
-        <text class="today-t">{{ todayDone >= goal ? '🎉 今日目标达成' : '今日 ' + todayDone + '/' + goal + ' 题' }}</text>
-        <text class="today-s">{{ streakDays > 0 ? '🔥 连续打卡 ' + streakDays + ' 天' : '开始今天的练习吧' }}</text>
+        <text class="today-t">{{ todayDone >= goal ? '今日目标达成' : '今日 ' + todayDone + '/' + goal + ' 题' }}</text>
+        <view class="today-s"><uni-icons v-if="streakDays > 0" type="fire-filled" size="14" color="#ffd6a0" /><text class="today-s-t">{{ streakDays > 0 ? '连续打卡 ' + streakDays + ' 天' : '开始今天的练习吧' }}</text></view>
       </view>
       <view class="today-btn" @click="goPractice">{{ dueCount > 0 ? '先复习 ' + dueCount + ' 道' : '继续刷题 ›' }}</view>
     </view>
     <view class="card">
       <view class="seg">
-        <view class="seg-i" :class="{ on: mode === 'img' }" @click="mode = 'img'">📷 拍图识题</view>
-        <view class="seg-i" :class="{ on: mode === 'text' }" @click="mode = 'text'">⌨️ 粘贴文字</view>
+        <view class="seg-i" :class="{ on: mode === 'img' }" @click="mode = 'img'"><uni-icons type="camera-filled" size="16" :color="mode === 'img' ? '#4f46e5' : '#8a90a0'" /><text class="seg-t">拍图识题</text></view>
+        <view class="seg-i" :class="{ on: mode === 'text' }" @click="mode = 'text'"><uni-icons type="compose" size="16" :color="mode === 'text' ? '#4f46e5' : '#8a90a0'" /><text class="seg-t">粘贴文字</text></view>
       </view>
       <template v-if="mode === 'img'">
         <view v-if="!imagePath" class="drop" @click="pickImage">
-          <text class="drop-ico">📷</text>
+          <view class="drop-ico"><uni-icons type="camera-filled" size="44" color="#4f46e5" /></view>
           <text class="drop-t">拍照 / 从相册选择</text>
           <text class="drop-s">支持错题截图、试卷拍照</text>
         </view>
         <view v-if="imagePath" class="preview-wrap">
           <image :src="imagePath" mode="widthFix" class="preview" />
-          <view class="preview-x" @click="clearImage">✕ 移除图片</view>
+          <view class="preview-x" @click="clearImage"><uni-icons type="closeempty" size="14" color="#dc2626" /><text> 移除图片</text></view>
         </view>
       </template>
       <template v-else>
@@ -46,7 +46,7 @@
     <view v-if="error" class="card err">失败：{{ error }}，请重试</view>
 
     <view v-for="(r, i) in results" :key="r.ts" class="card">
-      <view v-if="i > 0" class="hist" @click="r.folded = !r.folded">🕓 历史讲解（点此展开/折叠）</view>
+      <view v-if="i > 0" class="hist" @click="r.folded = !r.folded"><uni-icons type="undo" size="14" color="#6b7280" /><text> 历史讲解（点此展开/折叠）</text></view>
       <template v-if="i === 0 || !r.folded">
         <view class="tags">
           <text class="tag">{{ r.module_name }}</text>
@@ -186,8 +186,8 @@ export default {
       this.timer = setInterval(() => {
         secs++;
         this.loadingText = secs < 8 ? `⏳ AI 识题中…（${secs}秒）`
-          : secs < 25 ? `🧭 已识题，正在匹配花生十三方法…（${secs}秒）`
-          : `✍️ 正在生成分步讲解，马上好…（${secs}秒）`;
+          : secs < 25 ? `已识题，正在匹配花生十三方法…（${secs}秒）`
+          : `正在生成分步讲解，马上好…（${secs}秒）`;
       }, 1000);
     },
     async doExplain() {
@@ -368,7 +368,8 @@ export default {
 .goal-t { font-size: 17rpx; color: rgba(255, 255, 255, 0.8); }
 .today-l { flex: 1; min-width: 0; }
 .today-t { display: block; font-size: 28rpx; font-weight: 700; color: #fff; }
-.today-s { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.78); margin-top: 6rpx; }
+.today-s { display: flex; align-items: center; gap: 6rpx; font-size: 21rpx; color: rgba(255, 255, 255, 0.78); margin-top: 6rpx; }
+.today-s-t { font-size: 21rpx; color: rgba(255, 255, 255, 0.78); }
 .today-btn { background: #fff; color: #4f46e5; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 12rpx 28rpx; flex-shrink: 0; }
 .drop { border: 2rpx dashed var(--brand); background: var(--brand-soft); border-radius: 24rpx; padding: 48rpx 24rpx; text-align: center; margin-bottom: 8rpx; }
 .drop-ico { display: block; font-size: 64rpx; margin-bottom: 12rpx; }
@@ -377,7 +378,7 @@ export default {
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .label { font-size: 24rpx; color: var(--ink-2); display: block; margin: 20rpx 0 10rpx; }
 .seg { display: flex; background: var(--soft-bg); border-radius: 16rpx; padding: 6rpx; margin-bottom: 20rpx; }
-.seg-i { flex: 1; text-align: center; padding: 14rpx 0; font-size: 27rpx; color: var(--ink-2); border-radius: 12rpx; }
+.seg-i { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8rpx; padding: 14rpx 0; font-size: 27rpx; color: var(--ink-2); border-radius: 12rpx; }
 .seg-i.on { background: var(--card); color: var(--brand); font-weight: 600; box-shadow: 0 2rpx 8rpx rgba(31, 36, 48, 0.08); }
 .btn { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(79, 70, 229, 0.25); }
 .btn[disabled] { opacity: 0.6; }
@@ -387,7 +388,7 @@ export default {
 .btn.bad { background: var(--bad); color: #fff; box-shadow: none; }
 .btn.dim { opacity: 0.35; }
 .ta { width: 100%; min-height: 160rpx; border: 1rpx solid var(--line); border-radius: 18rpx; padding: 18rpx; font-size: 28rpx; box-sizing: border-box; background: var(--soft-bg); }
-.inp { width: 100%; border: 1rpx solid var(--line); border-radius: 18rpx; padding: 18rpx; font-size: 28rpx; box-sizing: border-box; background: var(--soft-bg); }
+.inp { width: 100%; height: 88rpx; line-height: 52rpx; border: 1rpx solid var(--line); border-radius: 18rpx; padding: 18rpx; font-size: 28rpx; box-sizing: border-box; background: var(--soft-bg); }
 .preview-wrap { position: relative; }
 .preview-x {
   display: inline-block;

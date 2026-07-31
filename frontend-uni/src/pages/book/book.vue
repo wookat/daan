@@ -34,7 +34,7 @@
     <template v-else>
       <view v-if="due.length" class="card duecard" @click="startReview">
         <view>
-          <text class="duetxt">📚 今日待复习 {{ due.length }} 道</text>
+          <view class="duetxt"><uni-icons type="calendar-filled" size="16" color="#ffffff" /><text class="duetxt-t">今日待复习 {{ due.length }} 道</text></view>
           <text class="duesub">按遗忘曲线安排 · 预计 {{ Math.max(1, Math.ceil(due.length * 0.8)) }} 分钟</text>
         </view>
         <text class="duego">开始复习</text>
@@ -54,7 +54,7 @@
       </scroll-view>
       <view v-if="loading" class="card spin">加载中…</view>
       <view v-else-if="!items.length" class="card empty">
-        <view class="e-ico">📖</view>
+        <view class="e-ico"><uni-icons type="folder-add" size="52" color="#c7cad4" /></view>
         <view class="e-t">错题本还是空的</view>
         <view class="e-s">去拍题讲解或刷题，答错的题会汇集到这里，之后按遗忘曲线安排复习</view>
         <button class="e-btn" @click="goPractice">去刷题</button>
@@ -294,7 +294,8 @@ export default {
 .q.clamp { max-height: 120rpx; overflow: hidden; }
 .meta { font-size: 22rpx; color: var(--ink-2); }
 .duecard { background: linear-gradient(135deg, #3b6ef6, #7c5cfc); border: none; display: flex; justify-content: space-between; align-items: center; }
-.duetxt { display: block; font-size: 28rpx; font-weight: 700; color: #fff; }
+.duetxt { display: flex; align-items: center; gap: 8rpx; font-size: 28rpx; font-weight: 700; color: #fff; }
+.duetxt-t { font-size: 28rpx; font-weight: 700; color: #fff; }
 .duesub { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.75); margin-top: 6rpx; }
 .duego { background: #fff; color: #4f46e5; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 12rpx 30rpx; }
 .review { border-left-color: #f5a623; }
