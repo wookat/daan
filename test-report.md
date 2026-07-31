@@ -1,5 +1,51 @@
 # 考公错题助手 MVP 验收测试报告
 
+## 增量测试 v18（小回归：tabbar 图标 / 复习文案 / 题库 6254）— 2026-07-31
+
+- 测试环境：**线上 https://kaogong.zalize.com**（访问码 hs1326），强刷新后确认线上构建 hash 与本地 dist 一致（`assets/index-hEnMdvH3.js`，新构建），400px 移动视口，Chrome。
+- 结论：**三组测试全部通过**，无失败断言。
+- 生产数据保护：测前基线 `/api/mistakes` = **[5, 3, 2]**，`/api/review` 到期 = **[]（空）**。本轮刷题故意答错自动新增 1 条（常识判断·水浒题），复习队列仅含该新条目——**生产复习数据本轮零触碰**。测后 UI 删除该条，API 确认恢复 **[5, 3, 2]**。
+- 录屏：`/home/ubuntu/screencasts/rec-fdb91d6f-c14e-4537-bfa9-f0e64cdac6e7/rec-fdb91d6f-c14e-4537-bfa9-f0e64cdac6e7-edited.mp4`
+- 测试计划：`/home/ubuntu/repos/kaogong-assistant/test-plan-v18.md`
+
+### T1 tabbar 四图标（选中靛蓝 / 未选中灰）— passed
+
+四个 tab 逐一点击验证：每项有图标+文字（相机=拍题讲解 / 清单=刷题 / 书本=错题本 / 柱状图=薄弱分析），当前选中项图标与文字为靛蓝 #4f46e5，其余三项灰色。
+
+| 拍题讲解选中 | 刷题选中 |
+|---|---|
+| ![ask](https://app.devin.ai/attachments/fe9ad436-0f15-4e20-b0ab-ed486523a1fa/ss_zoom_abf3de5b.png) | ![practice](https://app.devin.ai/attachments/2962d8b2-90c8-47fd-baf9-7fac83ba5b5d/ss_zoom_d663cef2.png) |
+
+| 错题本选中 | 薄弱分析选中 |
+|---|---|
+| ![book](https://app.devin.ai/attachments/36b2a2f8-431d-489d-ab8e-9ad763a65251/ss_zoom_3f79fb1c.png) | ![stats](https://app.devin.ai/attachments/64c4bf10-1023-4d2f-bf81-a8cd510fbc1b/ss_zoom_fe8e1e08.png) |
+
+### T2 题库 6254 与模块卡一致 — passed
+
+- 线上 `/api/questions` counts：言语 1415 / 判断 1377 / 数量 1342 / 常识 1297 / 资料 823，**合计 6254**。
+- 刷题页模块卡逐一比对一致：言语理解 1415 题 / 判断推理 1377 题 / 数量关系 1342 题 / 常识判断 1297 题 / 资料分析「已刷 12/823」（v17 本地 pstats 显示形式，总数 823 正确）。
+- 抽查 `?module=ziliao&limit=10`：返回 10 条且全部 module=ziliao。
+
+### T3 复习模式新文案 + 重入队 — passed
+
+准备：常识判断故意答错 1 题（自动存错题本），复习队列仅该新题。
+
+- 复习 1/1 故意答错 → 红色提示精确为「**又错了，看讲解（稍后本轮会再出现）**（下次复习：1 天后）」，队列变 **1/2**（重入队）。
+- 第 2/2 该题重现，答对 B → 绿色提示精确为「**这次答对了，本轮已纠正 ✓**（下次复习：1 天后）」（非旧「答对了！连对…」），v17 P3 已修复。
+
+| 🔴 答错新文案+重入队 1/2 | 🟢 纠正文案 2/2 |
+|---|---|
+| ![wrong](https://app.devin.ai/attachments/9071c213-1c84-4d8c-ab46-e0d32b0f561b/ss_zoom_1d98657e.png) | ![corrected](https://app.devin.ai/attachments/556a37b4-5bcd-4d1b-b3aa-913b814b79e0/ss_zoom_94f1be11.png) |
+
+### 清理
+
+UI 确认删除本轮新条目 → `/api/mistakes` 恢复 **[5, 3, 2]**（截图：![cleanup](https://app.devin.ai/attachments/5e0857e4-2117-4e04-9f94-77979898224f/ss_c05c816b.png)）。
+
+### 限制/说明
+
+- 该新条目复习答错+答对使其 review_count=2（随后已删除，无生产影响）。
+- 五模块计数分布与 v16/v17 不同（本轮以线上运行时为准）；v16 遗留的分布差异问题不再适用（题库已换代到 6254）。
+
 ## 增量测试 v17（P0 UI 改造：对标粉笔/Duolingo）— 2026-07-31
 
 - 测试环境：**线上 https://kaogong.zalize.com**（访问码 hs1326），强刷新后确认线上构建 hash 与本地 dist 一致（`assets/index-CsKRz-MI.js`），400px 移动视口，Chrome。
