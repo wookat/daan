@@ -18,7 +18,7 @@
       </view>
       <view v-if="answered">
         <view class="verdict" :class="wasCorrect ? 'good' : 'badv'">
-          {{ wasCorrect ? '答对了！连对 ' + streak + ' 次' : '又错了，看讲解' }}（下次复习：{{ nextDays }} 天后）
+          {{ wasCorrect ? (cur._requeued ? '这次答对了，本轮已纠正 ✓' : '答对了！连对 ' + streak + ' 次') : '又错了，看讲解（稍后本轮会再出现）' }}（下次复习：{{ nextDays }} 天后）
         </view>
         <rich-text :nodes="curHtml" />
         <button class="next" @click="nextReview">{{ rIdx + 1 < rItems.length ? '下一题' : '完成复习' }}</button>

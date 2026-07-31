@@ -22,10 +22,10 @@
     "selectedColor": "#4f46e5",
     "backgroundColor": "#ffffff",
     "list": [
-      { "pagePath": "pages/ask/ask", "text": "拍题讲解" },
-      { "pagePath": "pages/practice/practice", "text": "刷题" },
-      { "pagePath": "pages/book/book", "text": "错题本" },
-      { "pagePath": "pages/stats/stats", "text": "薄弱分析" }
+      { "pagePath": "pages/ask/ask", "text": "拍题讲解", "iconPath": "static/tab/ask.png", "selectedIconPath": "static/tab/ask-on.png" },
+      { "pagePath": "pages/practice/practice", "text": "刷题", "iconPath": "static/tab/practice.png", "selectedIconPath": "static/tab/practice-on.png" },
+      { "pagePath": "pages/book/book", "text": "错题本", "iconPath": "static/tab/book.png", "selectedIconPath": "static/tab/book-on.png" },
+      { "pagePath": "pages/stats/stats", "text": "薄弱分析", "iconPath": "static/tab/stats.png", "selectedIconPath": "static/tab/stats-on.png" }
     ]
   },
   "globalStyle": {
