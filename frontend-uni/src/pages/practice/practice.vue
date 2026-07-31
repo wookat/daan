@@ -64,6 +64,7 @@
         <view class="hstats">
           <text class="timer">{{ fmtSecs(qsecs) }}</text>
           <text class="fontbtn" @click="cycleFont">Aa</text>
+          <text class="fontbtn" :class="{ beion: beiMode }" @click="toggleBei">背</text>
           <view class="fontbtn iconbtn" @click="toggleSfx"><uni-icons :type="sfxOn ? 'sound-filled' : 'sound'" size="16" :color="sfxOn ? '#4f46e5' : '#8a90a0'" /></view>
           <text class="cnt okc">✓{{ right }}</text>
           <text class="cnt badc">✗{{ wrongCount }}</text>
@@ -79,15 +80,15 @@
         class="opt"
         :class="optClass(k)"
         :style="optStyle"
-        @click="pick(k)"
+        @click="beiMode ? null : pick(k)"
       >
         <text class="okey">{{ k }}</text>
         <text class="otext">{{ v }}</text>
-        <text v-if="picked && k === cur.answer" class="omark good">✓</text>
+        <text v-if="(picked || beiMode) && k === cur.answer" class="omark good">✓</text>
         <text v-else-if="picked && k === picked" class="omark badm">✗</text>
       </view>
-      <view v-if="picked" class="after">
-        <view v-if="picked !== cur.answer" class="reasons">
+      <view v-if="picked || beiMode" class="after">
+        <view v-if="picked && picked !== cur.answer" class="reasons">
           <text class="rz-t">错因自评：</text>
           <text
             v-for="rz in REASONS"
@@ -100,7 +101,7 @@
         <view class="exp-sec">
           <view class="exp-row">
             <text class="exp-k">正确答案</text>
-            <text class="exp-ans" :class="picked === cur.answer ? 'okc2' : 'badc2'">{{ cur.answer }}</text>
+            <text class="exp-ans" :class="beiMode || picked === cur.answer ? 'okc2' : 'badc2'">{{ cur.answer }}</text>
           </view>
           <view v-if="cur.explanation" class="exp-row col">
             <text class="exp-k">解析</text>
@@ -121,14 +122,15 @@
 
     <!-- 完成/结算 -->
     <view v-if="session && !cur" class="card done">
-      <view class="ring" :style="ringStyle">
+      <view v-if="!beiMode" class="ring" :style="ringStyle">
         <view class="ring-in">
           <text class="ring-n">{{ Math.round((right / items.length) * 100) }}%</text>
           <text class="ring-t">正确率</text>
         </view>
       </view>
-      <view class="big">本组完成</view>
-      <view class="sub">答对 {{ right }}/{{ items.length }} · 最高连对 {{ bestStreak }} 题<template v-if="autoSaved">，错题已自动加入错题本</template></view>
+      <view class="big">{{ beiMode ? '本组背完' : '本组完成' }}</view>
+      <view v-if="!beiMode" class="sub">答对 {{ right }}/{{ items.length }} · 最高连对 {{ bestStreak }} 题<template v-if="autoSaved">，错题已自动加入错题本</template></view>
+      <view v-else class="sub">已浏览 {{ items.length }} 道题的答案与解析</view>
       <button class="btn" @click="start(lastModule, lastSubmodule)">再来一组</button>
       <button class="btn ghost" style="margin-top: 16rpx" @click="quit">返回选模块</button>
     </view>
@@ -154,12 +156,12 @@
     </view>
 
     <!-- 判分横幅 -->
-    <view v-if="picked && cur" class="banner" :class="picked === cur.answer ? 'bok' : 'bbad'">
+    <view v-if="cur && (picked || beiMode)" class="banner" :class="beiMode || picked === cur.answer ? 'bok' : 'bbad'">
       <view class="binfo">
-        <text class="btitle">{{ picked === cur.answer ? '✓ 回答正确' + (streak >= 3 ? ' · 连对 ' + streak + ' 题！' : '') : '✗ 正确答案 ' + cur.answer }}</text>
-        <text v-if="picked !== cur.answer" class="bsub">{{ cur._saved ? '已自动存入错题本' : '' }}</text>
+        <text class="btitle">{{ beiMode ? '背题模式 · 答案 ' + cur.answer : picked === cur.answer ? '✓ 回答正确' + (streak >= 3 ? ' · 连对 ' + streak + ' 题！' : '') : '✗ 正确答案 ' + cur.answer }}</text>
+        <text v-if="!beiMode && picked !== cur.answer" class="bsub">{{ cur._saved ? '已自动存入错题本' : '' }}</text>
       </view>
-      <button class="bnext" :class="picked === cur.answer ? 'nok' : 'nbad'" @click="next">
+      <button class="bnext" :class="beiMode || picked === cur.answer ? 'nok' : 'nbad'" @click="next">
         {{ idx + 1 < items.length ? '下一题' : '完成' }}
       </button>
     </view>
@@ -208,6 +210,7 @@ export default {
       qTimer: null,
       fontLv: uni.getStorageSync('fontLv') || 1,
       sfxOn: uni.getStorageSync('sfxOff') ? false : true,
+      beiMode: uni.getStorageSync('beiMode') ? true : false,
       REASONS: ['粗心大意', '概念不清', '方法不会', '纯蒙的'],
     };
   },
@@ -435,6 +438,7 @@ export default {
       const correct = k === this.cur.answer;
       this.recordStat(this.cur.module, correct);
       this.playSfx(correct);
+      try { uni.vibrateShort({ type: correct ? 'light' : 'medium' }); } catch (e) { /* 不支持则忽略 */ }
       if (correct) {
         this.right++;
         this.streak++;
@@ -455,7 +459,13 @@ export default {
         this.saveWrong();
       }
     },
+    toggleBei() {
+      this.beiMode = !this.beiMode;
+      uni.setStorageSync('beiMode', this.beiMode ? '1' : '');
+      uni.showToast({ title: this.beiMode ? '背题模式：直接看答案解析，不计入正确率' : '已切回做题模式', icon: 'none', duration: 1500 });
+    },
     optClass(k) {
+      if (this.beiMode) return k === this.cur.answer ? 'right' : '';
       if (!this.picked) return '';
       if (k === this.cur.answer) return 'right';
       if (k === this.picked) return 'wrong';
@@ -548,6 +558,7 @@ export default {
 .iconbtn { display: inline-flex; align-items: center; }
 .timer { font-size: 22rpx; color: var(--ink-2); }
 .fontbtn { font-size: 24rpx; font-weight: 700; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 10rpx; padding: 2rpx 12rpx; }
+.fontbtn.beion { background: var(--brand); border-color: var(--brand); color: #fff; }
 .reasons { display: flex; flex-wrap: wrap; align-items: center; gap: 12rpx; margin-bottom: 16rpx; }
 .rz-t { font-size: 23rpx; color: var(--ink-2); }
 .rz { font-size: 23rpx; color: var(--ink-2); border: 1rpx solid var(--line); background: var(--soft-bg); border-radius: 999rpx; padding: 8rpx 22rpx; }

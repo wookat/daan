@@ -190,6 +190,10 @@ export default {
       } catch (e) {
         this.dueCount = 0;
       }
+      try {
+        if (this.dueCount > 0) uni.setTabBarBadge({ index: 2, text: String(this.dueCount) });
+        else uni.removeTabBarBadge({ index: 2 });
+      } catch (e) { /* tabBar 未就绪时忽略 */ }
     },
     clearImage() {
       this.imagePath = '';

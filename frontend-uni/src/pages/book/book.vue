@@ -171,6 +171,10 @@ export default {
         const [d, r] = await Promise.all([request('/api/mistakes'), request('/api/review')]);
         this.items = d.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
         this.due = r.items;
+        try {
+          if (this.due.length > 0) uni.setTabBarBadge({ index: 2, text: String(this.due.length) });
+          else uni.removeTabBarBadge({ index: 2 });
+        } catch (e) { /* tabBar 未就绪时忽略 */ }
       } catch (e) {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
