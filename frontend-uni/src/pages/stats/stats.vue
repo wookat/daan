@@ -115,7 +115,7 @@
       <view class="h">高频错题型 TOP10</view>
       <view v-if="!byType.length" class="spin">暂无数据</view>
       <view v-for="t in byType" :key="t.question_type" class="tline">
-        {{ t.question_type || '未分类' }} <text class="n">×{{ t.n }}</text>
+        {{ typeName(t.question_type) }} <text class="n">×{{ t.n }}</text>
       </view>
     </view>
 
@@ -281,6 +281,10 @@ export default {
     this.load();
   },
   methods: {
+    typeName(t) {
+      if (!t) return '未分类';
+      return String(t).replace(/^(数量关系|数学运算|资料分析|言语理解(与表达)?|判断推理|逻辑判断|常识判断|常识)[-－·：:]/, '');
+    },
     modName(m) {
       const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断' };
       return NAMES[m] || m || '未分类';
