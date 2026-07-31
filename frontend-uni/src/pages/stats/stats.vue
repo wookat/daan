@@ -90,7 +90,7 @@
       <view class="h">成就勋章</view>
       <view class="medals">
         <view v-for="md in medals" :key="md.name" class="medal" :class="{ got: md.got }">
-          <view class="m-ico"><uni-icons :type="md.icon" size="32" :color="md.got ? '#4f46e5' : '#c0c4cf'" /></view>
+          <text class="m-ico">{{ md.icon }}</text>
           <text class="m-name">{{ md.name }}</text>
           <text class="m-sub">{{ md.got ? '已达成' : md.progress }}</text>
         </view>
@@ -157,14 +157,14 @@ export default {
       const zhan = this.masteredCount;
       const m = (icon, name, got, progress) => ({ icon, name, got, progress });
       return [
-        m('star', '初战告捷', done >= 10, done + '/10 题'),
-        m('star-filled', '小有所成', done >= 100, done + '/100 题'),
-        m('medal-filled', '刷题大师', done >= 500, done + '/500 题'),
-        m('fire', '三日不辍', streak >= 3, streak + '/3 天'),
-        m('fire-filled', '七日连环', streak >= 7, streak + '/7 天'),
-        m('flag-filled', '十连对', best >= 10, best + '/10 连对'),
-        m('checkbox-filled', '斩题十道', zhan >= 10, zhan + '/10 道'),
-        m('vip-filled', '百题斩', zhan >= 100, zhan + '/100 道'),
+        m('🌱', '初战告捷', done >= 10, done + '/10 题'),
+        m('💪', '小有所成', done >= 100, done + '/100 题'),
+        m('🏆', '刷题大师', done >= 500, done + '/500 题'),
+        m('🔥', '三日不辍', streak >= 3, streak + '/3 天'),
+        m('⚡', '七日连环', streak >= 7, streak + '/7 天'),
+        m('🎯', '十连对', best >= 10, best + '/10 连对'),
+        m('⚔️', '斩题十道', zhan >= 10, zhan + '/10 道'),
+        m('👑', '百题斩', zhan >= 100, zhan + '/100 道'),
       ];
     },
     trend() {
