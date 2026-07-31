@@ -244,11 +244,25 @@ def api_questions_hs_import(body: dict, x_import_token: str | None = Header(None
 
 
 @app.get("/api/questions")
-def api_questions(module: str | None = None, limit: int = 10, submodule: str | None = None, real: int = 0):
+def api_questions(
+    module: str | None = None,
+    limit: int = 10,
+    submodule: str | None = None,
+    real: int = 0,
+    year: int | None = None,
+    region: str | None = None,
+):
     return {
-        "items": db.random_questions(module, min(limit, 50), submodule, real_only=bool(real)),
+        "items": db.random_questions(
+            module, min(limit, 50), submodule, real_only=bool(real), year=year, region=region
+        ),
         "counts": db.question_counts(),
     }
+
+
+@app.get("/api/real_filters")
+def api_real_filters():
+    return db.real_filters()
 
 
 @app.get("/api/submodules")

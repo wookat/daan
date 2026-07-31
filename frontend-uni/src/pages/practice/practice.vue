@@ -10,6 +10,20 @@
           <text class="set-chip" :class="{ on: realMode }" @click="setReal(true)">真题模式</text>
         </view>
       </view>
+      <view v-if="realMode && realYears.length" class="setrow">
+        <text class="set-k">真题年份</text>
+        <view class="set-chips scrollx">
+          <text class="set-chip" :class="{ on: !realYear }" @click="setRealYear(null)">全部</text>
+          <text v-for="y in realYears" :key="y.y" class="set-chip" :class="{ on: realYear === y.y }" @click="setRealYear(y.y)">{{ y.y }}</text>
+        </view>
+      </view>
+      <view v-if="realMode && realRegions.length" class="setrow">
+        <text class="set-k">真题地区</text>
+        <view class="set-chips scrollx">
+          <text class="set-chip" :class="{ on: !realRegion }" @click="setRealRegion(null)">全部</text>
+          <text v-for="r in realRegions" :key="r.r" class="set-chip" :class="{ on: realRegion === r.r }" @click="setRealRegion(r.r)">{{ r.r }}</text>
+        </view>
+      </view>
       <view class="setrow">
         <text class="set-k">每组题量</text>
         <view class="set-chips">
@@ -265,6 +279,10 @@ export default {
       autoNext: uni.getStorageSync('autoNextOff') ? false : true,
       daily: uni.getStorageSync('dailyPlan') || { days: {} },
       realMode: uni.getStorageSync('realMode') ? true : false,
+      realYears: [],
+      realRegions: [],
+      realYear: uni.getStorageSync('realYear') || null,
+      realRegion: uni.getStorageSync('realRegion') || null,
       groupSize: uni.getStorageSync('groupSize') || 10,
       hsRated: {},
       REASONS: ['粗心大意', '概念不清', '方法不会', '纯蒙的'],
@@ -326,6 +344,7 @@ export default {
   onShow() {
     this.pstats = loadPStats();
     this.loadCounts();
+    if (this.realMode) this.loadRealFilters();
     const preset = uni.getStorageSync('practicePreset');
     if (preset && preset.module) {
       uni.removeStorageSync('practicePreset');
@@ -386,6 +405,22 @@ export default {
     setReal(v) {
       this.realMode = v;
       uni.setStorageSync('realMode', v ? '1' : '');
+      if (v && !this.realYears.length) this.loadRealFilters();
+    },
+    async loadRealFilters() {
+      try {
+        const d = await request('/api/real_filters');
+        this.realYears = d.years || [];
+        this.realRegions = d.regions || [];
+      } catch (e) { /* 非关键路径 */ }
+    },
+    setRealYear(y) {
+      this.realYear = y;
+      uni.setStorageSync('realYear', y || '');
+    },
+    setRealRegion(r) {
+      this.realRegion = r;
+      uni.setStorageSync('realRegion', r || '');
     },
     setGroup(n) {
       this.groupSize = n;
@@ -407,7 +442,11 @@ export default {
       this.lastSubmodule = submodule || null;
       this.subSelect = null;
       const limit = count || this.groupSize || 10;
-      const realQ = this.realMode ? '&real=1' : '';
+      const realQ = this.realMode
+        ? '&real=1' +
+          (this.realYear ? '&year=' + this.realYear : '') +
+          (this.realRegion ? '&region=' + encodeURIComponent(this.realRegion) : '')
+        : '';
       try {
         let d = await request(
           '/api/questions?limit=' + limit + realQ +
@@ -417,6 +456,10 @@ export default {
         if (!d.items.length && submodule) {
           this.lastSubmodule = null;
           d = await request('/api/questions?limit=' + limit + realQ + (module ? '&module=' + module : ''));
+        }
+        if (!d.items.length && this.realMode && (this.realYear || this.realRegion)) {
+          uni.showToast({ title: '该年份/地区暂无此模块真题，已放宽筛选', icon: 'none' });
+          d = await request('/api/questions?limit=' + limit + '&real=1' + (module ? '&module=' + module : ''));
         }
         if (!d.items.length && this.realMode) {
           uni.showToast({ title: '真题还在搜集中，已切回题库模式', icon: 'none' });
@@ -664,6 +707,8 @@ export default {
 .setrow { display: flex; align-items: center; gap: 18rpx; margin-bottom: 16rpx; flex-wrap: wrap; }
 .set-k { font-size: 24rpx; color: var(--ink-2); }
 .set-chips { display: flex; gap: 12rpx; flex-wrap: wrap; }
+.set-chips.scrollx { flex-wrap: nowrap; overflow-x: auto; max-width: 70%; padding-bottom: 4rpx; }
+.set-chips.scrollx .set-chip { flex-shrink: 0; }
 .set-chip { font-size: 23rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 6rpx 22rpx; }
 .set-chip.on { color: #fff; background: var(--brand); border-color: var(--brand); }
 .real-tag { display: inline-block; font-size: 21rpx; color: #b45309; background: #fef3c7; border-radius: 8rpx; padding: 4rpx 14rpx; margin-bottom: 10rpx; }

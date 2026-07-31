@@ -133,7 +133,14 @@ def _seed_questions():
     conn.close()
 
 
-def random_questions(module: str | None = None, limit: int = 10, submodule: str | None = None, real_only: bool = False) -> list[dict]:
+def random_questions(
+    module: str | None = None,
+    limit: int = 10,
+    submodule: str | None = None,
+    real_only: bool = False,
+    year: int | None = None,
+    region: str | None = None,
+) -> list[dict]:
     conn = get_conn()
     where = []
     args: list = []
@@ -145,6 +152,12 @@ def random_questions(module: str | None = None, limit: int = 10, submodule: str 
         args.append(submodule)
     if real_only:
         where.append("is_real=1")
+    if year:
+        where.append("exam_year=?")
+        args.append(year)
+    if region:
+        where.append("exam_region=?")
+        args.append(region)
     clause = ("WHERE " + " AND ".join(where)) if where else ""
     rows = conn.execute(
         f"SELECT * FROM questions {clause} ORDER BY (hs_explanation IS NULL OR hs_explanation=''), RANDOM() LIMIT ?",
@@ -171,12 +184,33 @@ def question_counts() -> list[dict]:
 def submodule_counts(module: str) -> list[dict]:
     conn = get_conn()
     rows = conn.execute(
-        "SELECT submodule, COUNT(*) n FROM questions WHERE module=? AND submodule IS NOT NULL "
-        "GROUP BY submodule ORDER BY n DESC",
+        "SELECT submodule, COUNT(*) n FROM questions WHERE module=? AND submodule IS NOT NULL AND submodule!='' "
+        "GROUP BY submodule HAVING n >= 8 ORDER BY n DESC LIMIT 30",
         (module,),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+def real_filters() -> dict:
+    """真题可用的年份/地区筛选项及题量。"""
+    conn = get_conn()
+    years = [
+        dict(r)
+        for r in conn.execute(
+            "SELECT exam_year y, COUNT(*) n FROM questions WHERE is_real=1 AND exam_year IS NOT NULL "
+            "GROUP BY exam_year ORDER BY exam_year DESC"
+        )
+    ]
+    regions = [
+        dict(r)
+        for r in conn.execute(
+            "SELECT exam_region r, COUNT(*) n FROM questions WHERE is_real=1 AND exam_region IS NOT NULL AND exam_region!='' "
+            "GROUP BY exam_region HAVING n >= 20 ORDER BY n DESC"
+        )
+    ]
+    conn.close()
+    return {"years": years, "regions": regions}
 
 
 def get_explain_cache(key: str) -> dict | None:
@@ -260,6 +294,38 @@ def export_questions(offset: int = 0, limit: int = 200, module: str | None = Non
 
 VALID_MODULES = {"ziliao", "shuliang", "yanyu", "panduan", "changshi"}
 
+_SUB_PREFIXES = (
+    "数学运算-", "数量关系-", "资料分析-", "言语理解-", "言语理解与表达-",
+    "判断推理-", "逻辑判断-", "常识判断-", "常识-",
+)
+_SUB_SYNONYMS = {
+    "溶液问题": "浓度问题",
+    "经济利润问题": "经济利润",
+    "行程": "行程问题",
+    "工程": "工程问题",
+    "排列组合与概率问题": "排列组合与概率",
+    "排列组合": "排列组合与概率",
+    "概率问题": "排列组合与概率",
+    "概率": "排列组合与概率",
+    "几何": "几何问题",
+    "逻辑填空（实词/成语辨析）": "逻辑填空",
+    "中心理解题": "中心理解",
+    "主旨概括": "中心理解",
+    "细节理解题": "细节理解",
+    "细节判断": "细节理解",
+}
+
+
+def normalize_submodule(sub: str | None) -> str | None:
+    if not sub:
+        return sub
+    s = str(sub).strip()
+    for p in _SUB_PREFIXES:
+        if s.startswith(p):
+            s = s[len(p):]
+            break
+    return _SUB_SYNONYMS.get(s, s) or None
+
 
 def import_questions(items: list[dict]) -> dict:
     conn = get_conn()
@@ -288,7 +354,7 @@ def import_questions(items: list[dict]) -> dict:
                 q.get("answer"),
                 q.get("explanation"),
                 q.get("source"),
-                q.get("submodule"),
+                normalize_submodule(q.get("submodule")),
                 1 if q.get("is_real") else 0,
                 q.get("exam_year"),
                 q.get("exam_region"),
