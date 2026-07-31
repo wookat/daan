@@ -64,6 +64,8 @@ def init_db():
     ]:
         if col not in qcols:
             conn.execute(ddl)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_q_module ON questions(module, submodule)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_q_real ON questions(is_real)")
     conn.execute(
         """CREATE TABLE IF NOT EXISTS explain_cache (
             key TEXT PRIMARY KEY,
