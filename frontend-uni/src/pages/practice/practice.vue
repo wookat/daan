@@ -197,11 +197,11 @@
             v-for="(q, i) in items"
             :key="i"
             class="acard-n"
-            :class="q._picked === q.answer ? 'ok' : 'bad'"
+            :class="!q._picked ? 'skip' : q._picked === q.answer ? 'ok' : 'bad'"
             @click="jumpTo(i)"
           >{{ i + 1 }}</view>
         </view>
-        <view class="report-tip">点题号可回看题目与解析</view>
+        <view class="report-tip">点题号可回看题目与解析<template v-if="items.some(q => !q._picked)">（灰色为未作答）</template></view>
       </view>
       <button class="btn" @click="start(lastModule, lastSubmodule)">再来一组</button>
       <button class="btn ghost" style="margin-top: 16rpx" @click="quit">返回选模块</button>
@@ -954,6 +954,7 @@ export default {
 .daily.exam { background: linear-gradient(120deg, #f97316, #ef4444); }
 .timer.examleft { color: #ef4444; font-weight: 700; }
 .opt.sel { border-color: var(--brand); background: var(--soft-bg); }
+.acard-n.skip { background: #e5e7eb; color: #6b7280; }
 .beat { margin-top: 10rpx; font-size: 25rpx; color: var(--brand); background: var(--soft-bg); border-radius: 999rpx; padding: 10rpx 26rpx; }
 .report { width: 100%; margin: 20rpx 0 28rpx; }
 .report-row { display: flex; gap: 16rpx; margin-bottom: 24rpx; }
