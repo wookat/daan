@@ -8,16 +8,36 @@ BASE_URL = os.environ.get("LLM_BASE_URL", "").rstrip("/")
 API_KEY = os.environ.get("LLM_API_KEY", "")
 MODEL = os.environ.get("LLM_MODEL", "gpt-5.5")
 
+# 纯文本请求可走单独的文本模型（如 deepseek）；含图请求始终走视觉模型。
+TEXT_BASE_URL = os.environ.get("LLM_TEXT_BASE_URL", "").rstrip("/") or BASE_URL
+TEXT_API_KEY = os.environ.get("LLM_TEXT_API_KEY", "") or API_KEY
+TEXT_MODEL = os.environ.get("LLM_TEXT_MODEL", "") or MODEL
+
 TIMEOUT = httpx.Timeout(180.0, connect=15.0)
 
 
+def _has_image(messages: list) -> bool:
+    for m in messages:
+        c = m.get("content")
+        if isinstance(c, list) and any(p.get("type") == "image_url" for p in c):
+            return True
+    return False
+
+
+def _endpoint(messages: list) -> tuple[str, str, str]:
+    if _has_image(messages):
+        return BASE_URL, API_KEY, MODEL
+    return TEXT_BASE_URL, TEXT_API_KEY, TEXT_MODEL
+
+
 async def chat(messages: list, temperature: float = 0.2, max_tokens: int = 4000) -> str:
+    base, key, model = _endpoint(messages)
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
         resp = await client.post(
-            f"{BASE_URL}/v1/chat/completions",
-            headers={"Authorization": f"Bearer {API_KEY}"},
+            f"{base}/v1/chat/completions",
+            headers={"Authorization": f"Bearer {key}"},
             json={
-                "model": MODEL,
+                "model": model,
                 "messages": messages,
                 "temperature": temperature,
                 "max_tokens": max_tokens,
@@ -30,13 +50,14 @@ async def chat(messages: list, temperature: float = 0.2, max_tokens: int = 4000)
 
 async def chat_stream(messages: list, temperature: float = 0.2, max_tokens: int = 4000):
     """逐段产出模型输出文本。"""
+    base, key, model = _endpoint(messages)
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
         async with client.stream(
             "POST",
-            f"{BASE_URL}/v1/chat/completions",
-            headers={"Authorization": f"Bearer {API_KEY}"},
+            f"{base}/v1/chat/completions",
+            headers={"Authorization": f"Bearer {key}"},
             json={
-                "model": MODEL,
+                "model": model,
                 "messages": messages,
                 "temperature": temperature,
                 "max_tokens": max_tokens,
