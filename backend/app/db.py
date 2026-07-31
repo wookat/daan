@@ -65,6 +65,8 @@ def init_db():
         ("exam_region", "ALTER TABLE questions ADD COLUMN exam_region TEXT"),
         ("disabled", "ALTER TABLE questions ADD COLUMN disabled INTEGER DEFAULT 0"),
         ("import_batch", "ALTER TABLE questions ADD COLUMN import_batch TEXT"),
+        ("image", "ALTER TABLE questions ADD COLUMN image TEXT"),
+        ("image_credit", "ALTER TABLE questions ADD COLUMN image_credit TEXT"),
     ]:
         if col not in qcols:
             conn.execute(ddl)
@@ -540,7 +542,7 @@ def import_questions(items: list[dict], batch: str | None = None) -> dict:
             skipped += 1
             continue
         cur = conn.execute(
-            "INSERT OR IGNORE INTO questions (module, question_type, question, options, answer, explanation, source, submodule, is_real, exam_year, exam_region, disabled, import_batch) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT OR IGNORE INTO questions (module, question_type, question, options, answer, explanation, source, submodule, is_real, exam_year, exam_region, disabled, import_batch, image, image_credit) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
                 q.get("module"),
                 q.get("question_type"),
@@ -555,6 +557,8 @@ def import_questions(items: list[dict], batch: str | None = None) -> dict:
                 q.get("exam_region"),
                 2 if batch else 0,
                 batch,
+                q.get("image"),
+                q.get("image_credit"),
             ),
         )
         if cur.rowcount:

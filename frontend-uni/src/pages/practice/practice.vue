@@ -125,6 +125,8 @@
       <view class="progress"><view class="pfill" :style="{ width: (idx / items.length) * 100 + '%' }" /></view>
       <view v-if="cur.is_real" class="real-tag">真题{{ cur.exam_year ? ' · ' + cur.exam_year : '' }}{{ cur.exam_region ? ' · ' + cur.exam_region : '' }}</view>
       <view class="q" :style="qStyle">{{ cur.question }}</view>
+      <image v-if="cur.image" class="qimg" :src="imgUrl(cur.image)" mode="widthFix" @click="previewImg(cur.image)" />
+      <view v-if="cur.image && cur.image_credit" class="qimg-credit">图源：{{ cur.image_credit }}</view>
       <view
         v-for="(v, k) in cur.options"
         :key="k"
@@ -251,7 +253,7 @@
 </template>
 
 <script>
-import { request } from '../../api.js';
+import { request, BASE_URL } from '../../api.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -411,6 +413,12 @@ export default {
   methods: {
     modName(m) {
       return NAMES[m] || m || '未知';
+    },
+    imgUrl(p) {
+      return /^https?:/.test(p) ? p : (BASE_URL || '') + p;
+    },
+    previewImg(p) {
+      uni.previewImage({ urls: [this.imgUrl(p)] });
     },
     modColor(m) {
       return COLORS[m] || { bg: 'var(--brand-soft)', fg: 'var(--brand)' };
@@ -936,6 +944,8 @@ export default {
 .progress { height: 14rpx; background: var(--line); border-radius: 999rpx; overflow: hidden; margin-bottom: 22rpx; }
 .pfill { height: 100%; background: linear-gradient(90deg, #6366f1, #4f46e5); border-radius: 999rpx; transition: width 0.3s ease; }
 .q { font-size: 30rpx; line-height: 1.7; margin-bottom: 22rpx; white-space: pre-wrap; }
+.qimg { width: 100%; border-radius: 12rpx; margin-bottom: 8rpx; background: #f6f7fb; }
+.qimg-credit { font-size: 20rpx; color: var(--ink-2); margin-bottom: 16rpx; }
 .opt { display: flex; align-items: center; border: 2rpx solid var(--line); border-radius: 20rpx; padding: 22rpx 24rpx; margin-bottom: 20rpx; font-size: 29rpx; line-height: 1.6; transition: border-color 0.15s, background 0.15s; }
 .okey { flex-shrink: 0; width: 52rpx; height: 52rpx; line-height: 52rpx; text-align: center; border-radius: 50%; background: var(--soft-bg); color: var(--ink-2); font-weight: 600; font-size: 26rpx; margin-right: 20rpx; border: 1rpx solid var(--line); }
 .otext { flex: 1; }

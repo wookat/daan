@@ -2,6 +2,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 import time
 
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
@@ -435,4 +436,27 @@ def api_stats():
     return s
 
 
+QIMG_DIR = os.path.join(os.path.dirname(db.DB_PATH) or ".", "qimg")
+os.makedirs(QIMG_DIR, exist_ok=True)
+
+
+@app.post("/api/questions/image")
+def api_upload_qimg(body: dict, x_import_token: str | None = Header(None)):
+    if not IMPORT_TOKEN or x_import_token != IMPORT_TOKEN:
+        raise HTTPException(401, "无效导入令牌")
+    name = str(body.get("name") or "")
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,80}\.(png|jpg|jpeg|gif|webp|svg)", name):
+        raise HTTPException(400, "文件名不合法")
+    try:
+        raw = base64.b64decode(body.get("b64") or "", validate=True)
+    except Exception:
+        raise HTTPException(400, "b64 解码失败") from None
+    if not raw or len(raw) > 2 * 1024 * 1024:
+        raise HTTPException(400, "图片为空或超过 2MB")
+    with open(os.path.join(QIMG_DIR, name), "wb") as f:
+        f.write(raw)
+    return {"path": "/qimg/" + name}
+
+
+app.mount("/qimg", StaticFiles(directory=QIMG_DIR), name="qimg")
 app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="static")
