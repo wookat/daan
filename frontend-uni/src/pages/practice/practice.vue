@@ -85,6 +85,7 @@
           <text class="timer">{{ fmtSecs(qsecs) }}</text>
           <text class="fontbtn" @click="cycleFont">Aa</text>
           <text class="fontbtn" :class="{ beion: beiMode }" @click="toggleBei">背</text>
+          <text class="fontbtn" :class="{ beion: autoNext }" @click="toggleAutoNext">跳</text>
           <view class="fontbtn iconbtn" @click="toggleSfx"><uni-icons :type="sfxOn ? 'sound-filled' : 'sound'" size="16" :color="sfxOn ? '#4f46e5' : '#8a90a0'" /></view>
           <text class="cnt okc">✓{{ right }}</text>
           <text class="cnt badc">✗{{ wrongCount }}</text>
@@ -163,6 +164,23 @@
       <view class="big">{{ beiMode ? '本组背完' : '本组完成' }}</view>
       <view v-if="!beiMode" class="sub">答对 {{ right }}/{{ items.length }} · 最高连对 {{ bestStreak }} 题<template v-if="autoSaved">，错题已自动加入错题本</template></view>
       <view v-else class="sub">已浏览 {{ items.length }} 道题的答案与解析</view>
+      <view v-if="!beiMode" class="report">
+        <view class="report-row">
+          <view class="report-cell"><text class="report-n">{{ fmtSecs(totalSecs) }}</text><text class="report-t">总用时</text></view>
+          <view class="report-cell"><text class="report-n">{{ avgSecs }}s</text><text class="report-t">平均每题</text></view>
+          <view class="report-cell"><text class="report-n badc2">{{ wrongCount }}</text><text class="report-t">错题</text></view>
+        </view>
+        <view class="report-grid">
+          <view
+            v-for="(q, i) in items"
+            :key="i"
+            class="acard-n"
+            :class="q._picked === q.answer ? 'ok' : 'bad'"
+            @click="jumpTo(i)"
+          >{{ i + 1 }}</view>
+        </view>
+        <view class="report-tip">点题号可回看题目与解析</view>
+      </view>
       <button class="btn" @click="start(lastModule, lastSubmodule)">再来一组</button>
       <button class="btn ghost" style="margin-top: 16rpx" @click="quit">返回选模块</button>
     </view>
@@ -193,6 +211,7 @@
         <text class="btitle">{{ beiMode ? '背题模式 · 答案 ' + cur.answer : picked === cur.answer ? '✓ 回答正确' + (streak >= 3 ? ' · 连对 ' + streak + ' 题！' : '') : '✗ 正确答案 ' + cur.answer }}</text>
         <text v-if="!beiMode && picked !== cur.answer" class="bsub">{{ cur._saved ? '已自动存入错题本' : '' }}</text>
       </view>
+      <button v-if="!beiMode && picked === cur.answer && autoTimer" class="bnext bstay" @click="stayHere">看解析</button>
       <button class="bnext" :class="beiMode || picked === cur.answer ? 'nok' : 'nbad'" @click="next">
         {{ idx + 1 < items.length ? '下一题' : '完成' }}
       </button>
@@ -243,6 +262,7 @@ export default {
       fontLv: uni.getStorageSync('fontLv') || 1,
       sfxOn: uni.getStorageSync('sfxOff') ? false : true,
       beiMode: uni.getStorageSync('beiMode') ? true : false,
+      autoNext: uni.getStorageSync('autoNextOff') ? false : true,
       daily: uni.getStorageSync('dailyPlan') || { days: {} },
       realMode: uni.getStorageSync('realMode') ? true : false,
       groupSize: uni.getStorageSync('groupSize') || 10,
@@ -291,6 +311,12 @@ export default {
     },
     optStyle() {
       return { fontSize: [25, 29, 33][this.fontLv] + 'rpx' };
+    },
+    totalSecs() {
+      return this.items.reduce((a, q) => a + (q._secs || 0), 0);
+    },
+    avgSecs() {
+      return this.items.length ? Math.round(this.totalSecs / this.items.length) : 0;
     },
     ringStyle() {
       const pct = Math.round((this.right / (this.items.length || 1)) * 100);
@@ -514,6 +540,7 @@ export default {
       if (this.picked) return;
       this.picked = k;
       this.cur._picked = k;
+      this.cur._secs = this.qsecs;
       this.stopQTimer();
       const correct = k === this.cur.answer;
       this.recordStat(this.cur.module, correct, this.cur.submodule);
@@ -531,9 +558,12 @@ export default {
         if (this.streak === 3 || this.streak === 5 || this.streak === 10) {
           uni.showToast({ title: '连对 ' + this.streak + ' 题！', icon: 'none' });
         }
-        this.autoTimer = setTimeout(() => {
-          if (this.picked === k) this.next();
-        }, 1200);
+        if (this.autoNext) {
+          this.autoTimer = setTimeout(() => {
+            this.autoTimer = null;
+            if (this.picked === k) this.next();
+          }, 1200);
+        }
       } else {
         this.streak = 0;
         this.saveWrong();
@@ -545,6 +575,17 @@ export default {
         await request('/api/rate', { method: 'POST', data: { question_id: q.id, up } });
       } catch (e) { /* 静默失败 */ }
       uni.showToast({ title: up ? '感谢反馈' : '已记录，我们会核查这条解析', icon: 'none' });
+    },
+    stayHere() {
+      if (this.autoTimer) {
+        clearTimeout(this.autoTimer);
+        this.autoTimer = null;
+      }
+    },
+    toggleAutoNext() {
+      this.autoNext = !this.autoNext;
+      uni.setStorageSync('autoNextOff', this.autoNext ? '' : '1');
+      uni.showToast({ title: this.autoNext ? '答对自动跳下一题' : '答对后停留看解析', icon: 'none', duration: 1200 });
     },
     toggleBei() {
       this.beiMode = !this.beiMode;
@@ -726,6 +767,15 @@ export default {
 .bnext { flex-shrink: 0; border-radius: 999rpx; font-size: 28rpx; font-weight: 600; color: #fff; padding: 0 44rpx; line-height: 2.6; margin: 0; }
 .bnext.nok { background: #22c55e; }
 .bnext.nbad { background: #ef4444; }
+.bnext.bstay { background: transparent; border: 2rpx solid #22c55e; color: #15803d; margin-right: 12rpx; }
+.report { width: 100%; margin: 20rpx 0 28rpx; }
+.report-row { display: flex; gap: 16rpx; margin-bottom: 24rpx; }
+.report-cell { flex: 1; background: var(--soft-bg); border-radius: 16rpx; padding: 20rpx 0; display: flex; flex-direction: column; align-items: center; gap: 6rpx; }
+.report-n { font-size: 34rpx; font-weight: 700; color: var(--ink); }
+.report-n.badc2 { color: var(--bad); }
+.report-t { font-size: 22rpx; color: var(--ink-2); }
+.report-grid { display: flex; flex-wrap: wrap; gap: 16rpx; justify-content: center; }
+.report-tip { text-align: center; font-size: 22rpx; color: var(--ink-2); margin-top: 14rpx; }
 .btn { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(79, 70, 229, 0.25); }
 .btn.ghost { background: var(--brand-soft); color: var(--brand); box-shadow: none; }
 .done { text-align: center; padding: 48rpx 28rpx; }
