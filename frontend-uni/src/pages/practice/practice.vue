@@ -248,6 +248,12 @@ export default {
   onShow() {
     this.pstats = loadPStats();
     this.loadCounts();
+    const preset = uni.getStorageSync('practicePreset');
+    if (preset && preset.module) {
+      uni.removeStorageSync('practicePreset');
+      this.start(preset.module, preset.submodule || null, preset.count || 10);
+      return;
+    }
     const pm = uni.getStorageSync('practiceModule');
     if (pm) {
       uni.removeStorageSync('practiceModule');
@@ -299,16 +305,21 @@ export default {
         this.start(module);
       }
     },
-    async start(module, submodule) {
+    async start(module, submodule, count) {
       this.lastModule = module;
       this.lastSubmodule = submodule || null;
       this.subSelect = null;
+      const limit = count || 10;
       try {
-        const d = await request(
-          '/api/questions?limit=10' +
+        let d = await request(
+          '/api/questions?limit=' + limit +
             (module ? '&module=' + module : '') +
             (submodule ? '&submodule=' + encodeURIComponent(submodule) : '')
         );
+        if (!d.items.length && submodule) {
+          this.lastSubmodule = null;
+          d = await request('/api/questions?limit=' + limit + (module ? '&module=' + module : ''));
+        }
         if (!d.items.length) {
           uni.showToast({ title: '该模块暂无题目', icon: 'none' });
           return;

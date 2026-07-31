@@ -75,6 +75,7 @@
           <text class="meta">{{ fmt(m.created_at) }}</text>
           <view class="acts">
             <text v-if="!m.mastered" class="op redo" @click.stop="redo(m)">重做</text>
+            <text v-if="m.module" class="op sim" @click.stop="practiceSimilar(m)">练3道同类</text>
             <text v-if="!m.mastered" class="op zop" @click.stop="master(m)">标为已斩</text>
             <text v-else class="op redo" @click.stop="master(m, false)">恢复复习</text>
             <text class="op del" @click.stop="del(m)">删除</text>
@@ -243,6 +244,12 @@ export default {
       uni.setStorageSync('redoQuestion', m.question_text || '');
       uni.switchTab({ url: '/pages/ask/ask' });
     },
+    practiceSimilar(m) {
+      const qt = m.question_type || '';
+      const sub = qt.includes('-') ? qt.split('-').slice(1).join('-') : null;
+      uni.setStorageSync('practicePreset', { module: m.module, submodule: sub, count: 3 });
+      uni.switchTab({ url: '/pages/practice/practice' });
+    },
     del(m) {
       uni.showModal({
         title: '确定删除这道错题？',
@@ -287,6 +294,7 @@ export default {
 .mfoot { display: flex; justify-content: space-between; align-items: center; margin-top: 12rpx; }
 .acts { display: flex; gap: 8rpx; }
 .op { font-size: 24rpx; margin-left: 16rpx; padding: 6rpx 20rpx; border-radius: 999rpx; }
+.op.sim { background: var(--brand-soft); color: var(--brand); }
 .redo { color: var(--brand); border: 1rpx solid var(--brand); }
 .del { color: #c33; }
 .tag { display: inline-block; background: var(--brand-soft); color: var(--brand); border-radius: 10rpx; padding: 4rpx 14rpx; font-size: 22rpx; }

@@ -42,7 +42,10 @@
       <button class="btn" :disabled="loading" @click="doExplain">用花生十三方法讲解</button>
     </view>
 
-    <view v-if="loading" class="card spin">{{ loadingText }}</view>
+    <view v-if="loading" class="card">
+      <view class="spin">{{ loadingText }}</view>
+      <view class="sk sk1" /><view class="sk sk2" /><view class="sk sk3" />
+    </view>
     <view v-if="error" class="card err">失败：{{ error }}，请重试</view>
 
     <view v-for="(r, i) in results" :key="r.ts" class="card">
@@ -51,6 +54,13 @@
         <view class="tags">
           <text class="tag">{{ r.module_name }}</text>
           <text class="tag">{{ r.question_type }}</text>
+        </view>
+        <view v-if="r.ansCard" class="anscard">
+          <view class="ans-big">{{ r.ansCard.ans }}</view>
+          <view class="ans-r">
+            <view v-if="r.ansCard.method" class="ans-method">{{ r.ansCard.method }}</view>
+            <text class="ans-brief">{{ r.ansCard.brief }}</text>
+          </view>
         </view>
         <rich-text :nodes="r.html" />
         <view style="height: 20rpx" />
@@ -134,6 +144,20 @@ export default {
     }
   },
   methods: {
+    splitAnswer(full) {
+      const m = /^\s*【答案】\s*([^｜|\n]+?)\s*[｜|]\s*【方法】\s*([^｜|\n]+?)\s*[｜|]\s*【一句话】\s*([^\n]*)\n?/.exec(full || '');
+      if (!m) return { card: null, rest: full || '' };
+      return { card: { ans: m[1].trim(), method: m[2].trim(), brief: m[3].trim() }, rest: (full || '').slice(m.index + m[0].length) };
+    },
+    applyExplain(r, full) {
+      if (!r.ansCard) {
+        const first = (full || '').split('\n')[0] || '';
+        if (first.startsWith('【答案】') && !(full || '').includes('\n')) { r.html = ''; return; }
+      }
+      const { card, rest } = this.splitAnswer(full);
+      if (card) r.ansCard = card;
+      r.html = md(card ? rest : full);
+    },
     cycleGoal() {
       const opts = [10, 20, 50];
       this.goal = opts[(opts.indexOf(this.goal) + 1) % opts.length];
@@ -224,7 +248,9 @@ export default {
             text: txt || null,
             userAnswer: this.uanswer.trim() || null,
           });
-          this.results.unshift({ ...rec, ...d, html: md(d.explanation), streaming: false });
+          const nr = { ...rec, ...d, ansCard: null, streaming: false };
+          this.applyExplain(nr, d.explanation);
+          this.results.unshift(nr);
           this.results.forEach((r, i) => { if (i > 0) r.folded = true; });
           clearInterval(this.timer);
           this.loading = false;
@@ -237,7 +263,7 @@ export default {
           text: txt || null,
           userAnswer: this.uanswer.trim() || null,
           onMeta: (m) => {
-            Object.assign(rec, m);
+            Object.assign(rec, m, { ansCard: null });
             this.results.unshift(rec);
             this.results.forEach((r, i) => { if (i > 0) r.folded = true; });
             live = this.results[0];
@@ -245,9 +271,10 @@ export default {
             clearInterval(this.timer);
             this.loading = false;
           },
-          onDelta: (full) => { live.html = md(full); },
+          onDelta: (full) => { this.applyExplain(live, full); },
         });
-        Object.assign(live, d, { html: md(d.explanation), streaming: false });
+        Object.assign(live, d, { streaming: false });
+        this.applyExplain(live, d.explanation);
         if (!inserted) {
           this.results.unshift(rec);
           this.results.forEach((r, i) => { if (i > 0) r.folded = true; });
@@ -259,16 +286,19 @@ export default {
           text: txt || null,
           userAnswer: this.uanswer.trim() || null,
         });
-        this.results.unshift({
+        const nr2 = {
           ...d,
           ts: Date.now(),
-          html: md(d.explanation),
+          html: '',
+          ansCard: null,
           saved: false,
           folded: false,
           sim: null,
           simLoading: false,
           simSecs: 0,
-        });
+        };
+        this.applyExplain(nr2, d.explanation);
+        this.results.unshift(nr2);
         this.results.forEach((r, i) => { if (i > 0) r.folded = true; });
         // #endif
       } catch (e) {
@@ -401,6 +431,16 @@ export default {
 }
 .preview { width: 100%; border-radius: 18rpx; margin-top: 14rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; }
+.sk { height: 28rpx; border-radius: 8rpx; background: linear-gradient(90deg, #eef0f7 25%, #f7f8fc 50%, #eef0f7 75%); background-size: 400% 100%; animation: skm 1.4s ease infinite; margin-top: 18rpx; }
+.sk1 { width: 45%; height: 44rpx; }
+.sk2 { width: 90%; }
+.sk3 { width: 75%; }
+@keyframes skm { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+.anscard { display: flex; align-items: center; gap: 22rpx; background: linear-gradient(135deg, #eef2ff, #f5f3ff); border: 1rpx solid #e0e4ff; border-radius: 20rpx; padding: 22rpx 26rpx; margin: 6rpx 0 16rpx; }
+.ans-big { flex-shrink: 0; min-width: 88rpx; height: 88rpx; padding: 0 14rpx; border-radius: 20rpx; background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; font-size: 44rpx; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 6rpx 14rpx rgba(79, 70, 229, 0.3); }
+.ans-r { flex: 1; min-width: 0; }
+.ans-method { display: inline-block; background: #4f46e5; color: #fff; border-radius: 999rpx; font-size: 21rpx; font-weight: 600; padding: 4rpx 18rpx; margin-bottom: 8rpx; }
+.ans-brief { display: block; font-size: 25rpx; color: var(--ink); line-height: 1.5; }
 .err { color: var(--bad); background: var(--bad-soft); font-size: 26rpx; }
 .tags { margin-bottom: 10rpx; }
 .tag { display: inline-block; background: var(--brand-soft); color: var(--brand); border-radius: 999rpx; padding: 6rpx 20rpx; font-size: 22rpx; margin-right: 10rpx; }
