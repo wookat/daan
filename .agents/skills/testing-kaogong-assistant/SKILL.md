@@ -36,6 +36,10 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - The three tabs are a bottom fixed tabbar: 拍题讲解 / 错题本 / 薄弱分析. Save button 存入错题本 appears at the bottom of the explanation card; success is a native alert.
 - Mobile check: shrink window with `wmctrl -r :ACTIVE: -e 0,50,30,400,720`.
 
+## Production testing
+- Live site: https://kaogong.zalize.com (access code hs1326, header `X-Access-Code`). `/api/questions` and `/api/mistakes` reads need no code.
+- When testing against production, record the pre-test `/api/mistakes` id list first and only delete records created during the test.
+
 ## DB backup for destructive tests
 - SQLite DB is at repo root `data.db` (not backend/). Before destructive tests: `cp data.db /tmp/backup.db`; restore single rows via python sqlite3.
 

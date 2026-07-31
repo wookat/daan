@@ -1,5 +1,54 @@
 # 考公错题助手 MVP 验收测试报告
 
+## 增量测试 v16（线上部署：md.js h4-h6 渲染修复 + 题库 4051）— 2026-07-31
+
+- 测试环境：**线上 https://kaogong.zalize.com**（访问码 hs1326），400px 移动视口，Chrome。
+- 结论：**四项测试全部通过**，无失败断言。v15 P3（`####` 字面显示）**已修复验证**。
+- ⚠️ 备注：lead 消息给的分模块数字（shuliang 723 / changshi 678 / ziliao 673 / panduan 671 / yanyu 414）与线上实测不一致，但**总数一致 4051**。线上 API/UI 实测：常识判断 963 / 数量关系 945 / 判断推理 838 / 资料分析 718 / 言语理解 587（以运行时为准，可能是消息中的数字过期/笔误，建议 lead 确认）。
+- 录屏：`/home/ubuntu/screencasts/rec-5d3271be-2e71-4c6c-8234-07dceabda4d4/rec-5d3271be-2e71-4c6c-8234-07dceabda4d4-edited.mp4`
+- 测试计划：`/home/ubuntu/repos/kaogong-assistant/test-plan-v16.md`
+
+### ① h4 标题渲染（v15 P3 修复验证）
+
+🟢 文字模式提交四地增速比较题（与 v15 同型），流式讲解中 LLM 输出 `#### 甲省/乙省/丙市/丁省` 小节——全部渲染为**加粗小标题样式**，页面无任何原始 `####` 井号（对照 v15 截图中的字面 "#### 禾原省"）。流式正常（识题→生成→渐进渲染），答案 D.丁省 自算正确（360.1÷2950.4≈12.2% 最大）。访问码 hs1326 弹框输入后自动重试成功。
+
+![h4 渲染为标题样式，无井号](https://app.devin.ai/attachments/12bf0c22-2246-4663-8dad-d75cd38bdf69/ss_zoom_bc10352e.png)
+
+### ② 题库 4051 + 模块卡
+
+🟢 刷题页模块卡：常识判断 963 / 数量关系 945 / 判断推理 838 / 资料分析 718 / 言语理解 587，**合计 4051**，与线上 `GET /api/questions` counts 完全一致。`?module=shuliang&limit=10` 返回 10 条且全部 shuliang（API 抽查）。
+
+![模块卡 4051](https://app.devin.ai/attachments/32c161d6-d5b0-4da2-9d56-4ee74e1a0720/ss_zoom_26b32492.png)
+
+### ③ 刷题答题判分 + 错题保存
+
+- 🟢 资料分析 1/10 选 B（正确）→ B 绿、「✓ 答对了」+解析。
+- 🟢 2/10（养老床位题，正确 C）故意选 A → A 红、C 绿、「✗ 答错了，正确答案 C」+解析+「存入错题本」按钮。
+- 🟢 点存入 → toast「已存入错题本」+按钮变「✓ 已存入错题本」禁用。
+- 🟢 错题本页新条目出现（题干+A/B/C/D 选项文本+「资料分析-校验计算」tag）。
+
+| 答对判分（绿） | 答错判分（红/绿）+存入按钮 |
+|---|---|
+| ![答对](https://app.devin.ai/attachments/74f3a1c1-6ee6-47f5-8411-3e931ec19656/ss_zoom_41013b78.png) | ![答错](https://app.devin.ai/attachments/e0dca428-93f8-41e4-8500-a3bb95bd09e9/ss_zoom_feed9a22.png) |
+
+| 存入成功 toast | 错题本新条目 |
+|---|---|
+| ![存入](https://app.devin.ai/attachments/3e99b33d-7ffc-4fdc-b8f8-69cf2200996c/ss_zoom_0b2cd38c.png) | ![错题本](https://app.devin.ai/attachments/2e0e9ab3-bb61-4445-89a1-ddde38639339/ss_zoom_65800600.png) |
+
+### ④「🔍 用花生十三方法详解这道题」回归
+
+🟢 答错题下点入口 → switchTab 到拍题页、自动「⌨️ 粘贴文字」模式、textarea 回填题干+`A.11.2 B.11.6 C.12.0 D.12.4` 选项、答案框空、toast「题目已填入，先自己做一遍再点讲解」已捕获。（本轮未重复点讲解，流式已在 ① 验证。）
+
+![详解回填](https://app.devin.ai/attachments/c21e89c7-9c74-4ede-a02a-d5db74b3863b/ss_zoom_8c20e01e.png)
+
+### 清理与覆盖说明
+
+- 🟢 清理：UI 确认删除本轮存入的错题条目，`/api/mistakes` 恢复为线上既有 `[3, 2]`（用户生产数据未动）。
+
+![清理后错题本](https://app.devin.ai/attachments/92cd1faa-8e9d-458b-b46e-c7be47a7a311/ss_zoom_5ad2bfde.png)
+
+- 覆盖限制：h5/h6（`#####`/`######`）本轮 LLM 输出未自然出现，未单独像素验证（md.js 将 4-6 级统一渲染为 h4 样式，`/^#{4,6}\s/` 同一正则分支，h4 已验证）；混合刷题/完成页/复习模式等 v13/v8 已验证项未重测。
+
 ## 增量测试 v15（题库扩充 699 题 + 刷题详解入口）— 2026-07-30
 
 - 结论：**三项测试全部通过**，无失败断言；1 个新发现的渲染小瑕疵（P3，见下）。
