@@ -431,6 +431,11 @@ export default {
     },
     startDaily() {
       this._daily = true;
+      if (this.beiMode) {
+        this.beiMode = false;
+        uni.setStorageSync('beiMode', '');
+        uni.showToast({ title: '每日一练按做题模式进行', icon: 'none', duration: 1200 });
+      }
       this.start(null);
     },
     markDailyDone() {
