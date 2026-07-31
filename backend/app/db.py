@@ -51,8 +51,28 @@ def init_db():
         )"""
     )
     qcols = {r["name"] for r in conn.execute("PRAGMA table_info(questions)")}
-    if "submodule" not in qcols:
-        conn.execute("ALTER TABLE questions ADD COLUMN submodule TEXT")
+    for col, ddl in [
+        ("submodule", "ALTER TABLE questions ADD COLUMN submodule TEXT"),
+        ("hs_explanation", "ALTER TABLE questions ADD COLUMN hs_explanation TEXT"),
+        ("hs_up", "ALTER TABLE questions ADD COLUMN hs_up INTEGER DEFAULT 0"),
+        ("hs_down", "ALTER TABLE questions ADD COLUMN hs_down INTEGER DEFAULT 0"),
+    ]:
+        if col not in qcols:
+            conn.execute(ddl)
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS explain_cache (
+            key TEXT PRIMARY KEY,
+            created_at REAL NOT NULL,
+            module TEXT,
+            question_type TEXT,
+            question_text TEXT,
+            user_answer TEXT,
+            explanation TEXT,
+            hits INTEGER DEFAULT 0,
+            up INTEGER DEFAULT 0,
+            down INTEGER DEFAULT 0
+        )"""
+    )
     conn.commit()
     conn.close()
     _seed_questions()
@@ -138,6 +158,62 @@ def submodule_counts(module: str) -> list[dict]:
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+def get_explain_cache(key: str) -> dict | None:
+    conn = get_conn()
+    row = conn.execute("SELECT * FROM explain_cache WHERE key=?", (key,)).fetchone()
+    if row:
+        conn.execute("UPDATE explain_cache SET hits=hits+1 WHERE key=?", (key,))
+        conn.commit()
+    conn.close()
+    return dict(row) if row else None
+
+
+def save_explain_cache(key: str, meta: dict, explanation: str):
+    conn = get_conn()
+    conn.execute(
+        "INSERT OR REPLACE INTO explain_cache (key, created_at, module, question_type, question_text, user_answer, explanation, hits, up, down) "
+        "VALUES (?,?,?,?,?,?,?, COALESCE((SELECT hits FROM explain_cache WHERE key=?),0), "
+        "COALESCE((SELECT up FROM explain_cache WHERE key=?),0), COALESCE((SELECT down FROM explain_cache WHERE key=?),0))",
+        (
+            key,
+            time.time(),
+            meta.get("module"),
+            meta.get("question_type"),
+            meta.get("question_text"),
+            meta.get("user_answer"),
+            explanation,
+            key,
+            key,
+            key,
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+
+def rate_explain(key: str, up: bool):
+    conn = get_conn()
+    col = "up" if up else "down"
+    conn.execute(f"UPDATE explain_cache SET {col}={col}+1 WHERE key=?", (key,))
+    conn.commit()
+    conn.close()
+
+
+def rate_question_hs(qid: int, up: bool):
+    conn = get_conn()
+    col = "hs_up" if up else "hs_down"
+    conn.execute(f"UPDATE questions SET {col}={col}+1 WHERE id=?", (qid,))
+    conn.commit()
+    conn.close()
+
+
+def set_question_hs_explanation(qid: int, text: str):
+    conn = get_conn()
+    conn.execute("UPDATE questions SET hs_explanation=? WHERE id=?", (text, qid))
+    conn.commit()
+    conn.close()
 
 
 def save_mistake(rec: dict) -> int:

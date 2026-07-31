@@ -103,6 +103,17 @@
             <text class="exp-k">正确答案</text>
             <text class="exp-ans" :class="beiMode || picked === cur.answer ? 'okc2' : 'badc2'">{{ cur.answer }}</text>
           </view>
+          <view v-if="cur.hs_explanation" class="exp-row col">
+            <text class="exp-k hs">花生十三方法解析</text>
+            <view class="exp hsx">{{ cur.hs_explanation }}</view>
+            <view class="hs-rate">
+              <text v-if="hsRated[cur.id]" class="hs-rate-done">{{ hsRated[cur.id] === 'up' ? '已反馈：有用 👍' : '已反馈：有误 👎' }}</text>
+              <template v-else>
+                <text class="hs-rate-btn" @click="rateHs(cur, true)">👍 有用</text>
+                <text class="hs-rate-btn bad" @click="rateHs(cur, false)">👎 有误</text>
+              </template>
+            </view>
+          </view>
           <view v-if="cur.explanation" class="exp-row col">
             <text class="exp-k">解析</text>
             <view class="exp">{{ cur.explanation }}</view>
@@ -211,6 +222,7 @@ export default {
       fontLv: uni.getStorageSync('fontLv') || 1,
       sfxOn: uni.getStorageSync('sfxOff') ? false : true,
       beiMode: uni.getStorageSync('beiMode') ? true : false,
+      hsRated: {},
       REASONS: ['粗心大意', '概念不清', '方法不会', '纯蒙的'],
     };
   },
@@ -459,6 +471,13 @@ export default {
         this.saveWrong();
       }
     },
+    async rateHs(q, up) {
+      this.hsRated[q.id] = up ? 'up' : 'down';
+      try {
+        await request('/api/rate', { method: 'POST', data: { question_id: q.id, up } });
+      } catch (e) { /* 静默失败 */ }
+      uni.showToast({ title: up ? '感谢反馈' : '已记录，我们会核查这条解析', icon: 'none' });
+    },
     toggleBei() {
       this.beiMode = !this.beiMode;
       uni.setStorageSync('beiMode', this.beiMode ? '1' : '');
@@ -594,6 +613,12 @@ export default {
   75% { transform: translateX(8rpx); }
 }
 .after { margin-top: 8rpx; }
+.exp-k.hs { color: var(--brand); }
+.exp.hsx { border-left: 5rpx solid var(--brand); background: var(--brand-soft); }
+.hs-rate { display: flex; gap: 14rpx; margin-top: 10rpx; align-items: center; }
+.hs-rate-btn { font-size: 23rpx; color: var(--brand); border: 1rpx solid var(--brand); border-radius: 999rpx; padding: 6rpx 22rpx; }
+.hs-rate-btn.bad { color: var(--bad); border-color: var(--bad); }
+.hs-rate-done { font-size: 23rpx; color: var(--ink-2); }
 .exp { background: var(--soft-bg); border-radius: 14rpx; padding: 20rpx; font-size: 25rpx; line-height: 1.7; color: var(--ink); white-space: pre-wrap; margin-top: 8rpx; }
 .exp-sec { background: var(--card); border: 1rpx solid var(--line); border-radius: 16rpx; padding: 20rpx; margin-bottom: 16rpx; }
 .exp-row { display: flex; align-items: baseline; gap: 16rpx; margin-bottom: 12rpx; }

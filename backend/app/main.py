@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import json
 import os
 
@@ -18,6 +19,11 @@ def check_access(x_access_code: str | None):
         raise HTTPException(401, "访问码错误")
 
 db.init_db()
+
+
+def _cache_key(question_text: str | None, user_answer: str | None) -> str:
+    raw = (question_text or "").strip() + "\n||\n" + (user_answer or "").strip()
+    return hashlib.sha256(raw.encode()).hexdigest()
 
 _ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
 _H5_DIR = os.path.join(_ROOT, "frontend-uni", "dist", "build", "h5")
@@ -44,17 +50,27 @@ async def api_explain(
         mime = image.content_type or "image/jpeg"
     try:
         extracted = await engine.extract_question(image_b64, mime, text)
-        explanation = await engine.explain(extracted, user_answer)
+        ua = user_answer or extracted.get("user_answer")
+        key = _cache_key(extracted.get("question_text"), ua)
+        cached = db.get_explain_cache(key)
+        if cached:
+            explanation = cached["explanation"]
+        else:
+            explanation = await engine.explain(extracted, user_answer)
     except Exception as e:  # noqa: BLE001
         raise HTTPException(502, f"解析失败：{e}") from e
-    return {
+    meta = {
         "module": extracted.get("module"),
         "module_name": kb.MODULES.get(extracted.get("module"), {}).get("name"),
         "question_type": extracted.get("question_type"),
         "question_text": extracted.get("question_text"),
-        "user_answer": user_answer or extracted.get("user_answer"),
-        "explanation": explanation,
+        "user_answer": ua,
+        "explain_key": key,
+        "cached": bool(cached),
     }
+    if not cached:
+        db.save_explain_cache(key, meta, explanation)
+    return {**meta, "explanation": explanation}
 
 
 @app.post("/api/explain/stream")
@@ -79,16 +95,28 @@ async def api_explain_stream(
     async def gen():
         try:
             extracted = await engine.extract_question(image_b64, mime, text)
+            ua = user_answer or extracted.get("user_answer")
+            key = _cache_key(extracted.get("question_text"), ua)
+            cached = db.get_explain_cache(key)
             meta = {
                 "module": extracted.get("module"),
                 "module_name": kb.MODULES.get(extracted.get("module"), {}).get("name"),
                 "question_type": extracted.get("question_type"),
                 "question_text": extracted.get("question_text"),
-                "user_answer": user_answer or extracted.get("user_answer"),
+                "user_answer": ua,
+                "explain_key": key,
+                "cached": bool(cached),
             }
             yield "event: meta\ndata: " + json.dumps(meta, ensure_ascii=False) + "\n\n"
-            async for delta in engine.explain_stream(extracted, user_answer):
-                yield "data: " + json.dumps({"d": delta}, ensure_ascii=False) + "\n\n"
+            if cached:
+                yield "data: " + json.dumps({"d": cached["explanation"]}, ensure_ascii=False) + "\n\n"
+            else:
+                full = ""
+                async for delta in engine.explain_stream(extracted, user_answer):
+                    full += delta
+                    yield "data: " + json.dumps({"d": delta}, ensure_ascii=False) + "\n\n"
+                if full.strip():
+                    db.save_explain_cache(key, meta, full)
             yield "event: done\ndata: {}\n\n"
         except Exception as e:  # noqa: BLE001
             yield "event: error\ndata: " + json.dumps({"message": str(e)}, ensure_ascii=False) + "\n\n"
@@ -108,6 +136,18 @@ async def api_similar(body: dict, x_access_code: str | None = Header(None)):
     except Exception as e:  # noqa: BLE001
         raise HTTPException(502, f"生成失败：{e}") from e
     return {"content": content}
+
+
+@app.post("/api/rate")
+async def api_rate(body: dict):
+    up = bool(body.get("up"))
+    if body.get("key"):
+        db.rate_explain(str(body["key"]), up)
+    elif body.get("question_id"):
+        db.rate_question_hs(int(body["question_id"]), up)
+    else:
+        raise HTTPException(400, "缺少 key 或 question_id")
+    return {"ok": True}
 
 
 @app.get("/api/questions")

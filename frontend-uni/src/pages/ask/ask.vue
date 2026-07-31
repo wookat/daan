@@ -63,6 +63,13 @@
           </view>
         </view>
         <rich-text :nodes="r.html" />
+        <view v-if="r.explain_key && !r.streaming" class="raterow">
+          <text class="rate-q">{{ r.rated ? (r.rated === 'up' ? '已反馈：有用 👍' : '已反馈：有误 👎，我们会核查') : '这条解析对你有帮助吗？' }}</text>
+          <view v-if="!r.rated" class="rate-btns">
+            <text class="rate-btn" @click="rate(r, true)">👍 有用</text>
+            <text class="rate-btn bad" @click="rate(r, false)">👎 有误</text>
+          </view>
+        </view>
         <view style="height: 20rpx" />
         <view class="row">
           <button class="btn ghost sm" :disabled="r.saved" @click="save(r)">{{ r.saved ? '✓ 已存入错题本' : '存入错题本' }}</button>
@@ -148,6 +155,13 @@ export default {
       const m = /^\s*【答案】\s*([^｜|\n]+?)\s*[｜|]\s*【方法】\s*([^｜|\n]+?)\s*[｜|]\s*【一句话】\s*([^\n]*)\n?/.exec(full || '');
       if (!m) return { card: null, rest: full || '' };
       return { card: { ans: m[1].trim(), method: m[2].trim(), brief: m[3].trim() }, rest: (full || '').slice(m.index + m[0].length) };
+    },
+    async rate(r, up) {
+      r.rated = up ? 'up' : 'down';
+      try {
+        await request('/api/rate', { method: 'POST', data: { key: r.explain_key, up } });
+      } catch (e) { /* 静默失败 */ }
+      uni.showToast({ title: up ? '感谢反馈' : '已记录，我们会核查这条解析', icon: 'none' });
     },
     applyExplain(r, full) {
       if (!r.ansCard) {
@@ -440,6 +454,11 @@ export default {
 .sk2 { width: 90%; }
 .sk3 { width: 75%; }
 @keyframes skm { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+.raterow { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; background: var(--soft-bg); border-radius: 14rpx; padding: 16rpx 22rpx; margin-top: 16rpx; flex-wrap: wrap; }
+.rate-q { font-size: 24rpx; color: var(--ink-2); }
+.rate-btns { display: flex; gap: 14rpx; }
+.rate-btn { font-size: 24rpx; color: var(--brand); border: 1rpx solid var(--brand); border-radius: 999rpx; padding: 8rpx 24rpx; }
+.rate-btn.bad { color: var(--bad); border-color: var(--bad); }
 .anscard { display: flex; align-items: center; gap: 22rpx; background: linear-gradient(135deg, #eef2ff, #f5f3ff); border: 1rpx solid #e0e4ff; border-radius: 20rpx; padding: 22rpx 26rpx; margin: 6rpx 0 16rpx; }
 .ans-big { flex-shrink: 0; min-width: 88rpx; height: 88rpx; padding: 0 14rpx; border-radius: 20rpx; background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; font-size: 44rpx; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 6rpx 14rpx rgba(79, 70, 229, 0.3); }
 .ans-r { flex: 1; min-width: 0; }
