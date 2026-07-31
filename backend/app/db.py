@@ -122,15 +122,15 @@ def random_questions(module: str | None = None, limit: int = 10, submodule: str 
     conn = get_conn()
     if module and submodule:
         rows = conn.execute(
-            "SELECT * FROM questions WHERE module=? AND submodule=? ORDER BY RANDOM() LIMIT ?",
+            "SELECT * FROM questions WHERE module=? AND submodule=? ORDER BY (hs_explanation IS NULL OR hs_explanation=''), RANDOM() LIMIT ?",
             (module, submodule, limit),
         ).fetchall()
     elif module:
         rows = conn.execute(
-            "SELECT * FROM questions WHERE module=? ORDER BY RANDOM() LIMIT ?", (module, limit)
+            "SELECT * FROM questions WHERE module=? ORDER BY (hs_explanation IS NULL OR hs_explanation=''), RANDOM() LIMIT ?", (module, limit)
         ).fetchall()
     else:
-        rows = conn.execute("SELECT * FROM questions ORDER BY RANDOM() LIMIT ?", (limit,)).fetchall()
+        rows = conn.execute("SELECT * FROM questions ORDER BY (hs_explanation IS NULL OR hs_explanation=''), RANDOM() LIMIT ?", (limit,)).fetchall()
     conn.close()
     out = []
     for r in rows:
