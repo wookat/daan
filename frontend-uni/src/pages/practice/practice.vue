@@ -4,6 +4,13 @@
     <view v-if="!session" class="card">
       <view class="h">选择模块开始刷题</view>
       <view v-if="!counts.length" class="spin">题库为空，敬请期待</view>
+      <view v-if="weakModule" class="smart" @click="start(weakModule)">
+        <view class="smart-l">
+          <text class="smart-t">🎯 智能刷题：攻克薄弱项</text>
+          <text class="smart-s">你的 {{ modName(weakModule) }} 正确率较低，建议专项练习</text>
+        </view>
+        <text class="smart-go">去练 ›</text>
+      </view>
       <view class="grid">
         <view
           v-for="c in counts"
@@ -128,6 +135,19 @@ export default {
     wrongCount() {
       return (this.picked ? this.idx + 1 : this.idx) - this.right;
     },
+    weakModule() {
+      let worst = null;
+      let worstAcc = 1;
+      for (const [m, s] of Object.entries(this.pstats.byModule)) {
+        if (s.done < 5) continue;
+        const acc = s.correct / s.done;
+        if (acc < 0.8 && acc < worstAcc) {
+          worstAcc = acc;
+          worst = m;
+        }
+      }
+      return worst;
+    },
     ringStyle() {
       const pct = Math.round((this.right / (this.items.length || 1)) * 100);
       return { background: `conic-gradient(#22c55e 0% ${pct}%, var(--brand-soft) ${pct}% 100%)` };
@@ -136,6 +156,11 @@ export default {
   onShow() {
     this.pstats = loadPStats();
     this.loadCounts();
+    const pm = uni.getStorageSync('practiceModule');
+    if (pm) {
+      uni.removeStorageSync('practiceModule');
+      this.start(pm);
+    }
   },
   onHide() {
     if (this.autoTimer) clearTimeout(this.autoTimer);
@@ -276,6 +301,10 @@ export default {
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 30rpx; font-weight: 600; margin-bottom: 20rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 24rpx; }
+.smart { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #f97316, #f43f5e); border-radius: 20rpx; padding: 24rpx 28rpx; margin-bottom: 20rpx; }
+.smart-t { display: block; font-size: 27rpx; font-weight: 700; color: #fff; }
+.smart-s { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.8); margin-top: 4rpx; }
+.smart-go { background: #fff; color: #f43f5e; font-size: 24rpx; font-weight: 600; border-radius: 999rpx; padding: 10rpx 26rpx; flex-shrink: 0; }
 .grid { display: flex; flex-wrap: wrap; gap: 20rpx; }
 .mcard { width: calc(50% - 10rpx); box-sizing: border-box; background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 20rpx; padding: 24rpx; }
 .mcard.all { background: linear-gradient(135deg, #6366f1, #4f46e5); border: none; }
