@@ -239,6 +239,46 @@ def export_questions(offset: int = 0, limit: int = 200, module: str | None = Non
     return out
 
 
+VALID_MODULES = {"ziliao", "shuliang", "yanyu", "panduan", "changshi"}
+
+
+def import_questions(items: list[dict]) -> dict:
+    conn = get_conn()
+    inserted = 0
+    skipped = 0
+    for q in items:
+        opts = q.get("options") or {}
+        if (
+            q.get("module") not in VALID_MODULES
+            or not q.get("question")
+            or not q.get("answer")
+            or not isinstance(opts, dict)
+            or q.get("answer") not in opts
+        ):
+            skipped += 1
+            continue
+        cur = conn.execute(
+            "INSERT OR IGNORE INTO questions (module, question_type, question, options, answer, explanation, source, submodule) VALUES (?,?,?,?,?,?,?,?)",
+            (
+                q.get("module"),
+                q.get("question_type"),
+                q.get("question"),
+                json.dumps(opts, ensure_ascii=False),
+                q.get("answer"),
+                q.get("explanation"),
+                q.get("source"),
+                q.get("submodule"),
+            ),
+        )
+        if cur.rowcount:
+            inserted += 1
+        else:
+            skipped += 1
+    conn.commit()
+    conn.close()
+    return {"inserted": inserted, "skipped": skipped}
+
+
 def import_hs_explanations(items: list[dict]) -> int:
     conn = get_conn()
     n = 0

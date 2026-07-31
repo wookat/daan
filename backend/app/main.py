@@ -154,8 +154,16 @@ IMPORT_TOKEN = os.environ.get("IMPORT_TOKEN", "")
 
 
 @app.get("/api/questions/export")
-async def api_questions_export(offset: int = 0, limit: int = 200, module: str | None = None):
-    return {"items": db.export_questions(offset, min(limit, 500), module)}
+async def api_questions_export(offset: int = 0, limit: int = 200, module: str | None = None, all: int = 0):
+    return {"items": db.export_questions(offset, min(limit, 500), module, missing_only=not all)}
+
+
+@app.post("/api/questions/import")
+async def api_questions_import(body: dict, x_import_token: str | None = Header(None)):
+    if not IMPORT_TOKEN or x_import_token != IMPORT_TOKEN:
+        raise HTTPException(401, "无效导入令牌")
+    result = db.import_questions(body.get("items") or [])
+    return result
 
 
 @app.post("/api/questions/hs_import")
