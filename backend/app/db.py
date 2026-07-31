@@ -62,6 +62,7 @@ def init_db():
         ("is_real", "ALTER TABLE questions ADD COLUMN is_real INTEGER DEFAULT 0"),
         ("exam_year", "ALTER TABLE questions ADD COLUMN exam_year INTEGER"),
         ("exam_region", "ALTER TABLE questions ADD COLUMN exam_region TEXT"),
+        ("disabled", "ALTER TABLE questions ADD COLUMN disabled INTEGER DEFAULT 0"),
     ]:
         if col not in qcols:
             conn.execute(ddl)
@@ -158,6 +159,7 @@ def random_questions(
     if region:
         where.append("exam_region=?")
         args.append(region)
+    where.append("(disabled IS NULL OR disabled=0)")
     clause = ("WHERE " + " AND ".join(where)) if where else ""
     rows = conn.execute(
         f"SELECT * FROM questions {clause} ORDER BY (hs_explanation IS NULL OR hs_explanation=''), RANDOM() LIMIT ?",
@@ -211,6 +213,97 @@ def real_filters() -> dict:
     ]
     conn.close()
     return {"years": years, "regions": regions}
+
+
+def admin_stats() -> dict:
+    conn = get_conn()
+    q = conn.execute
+    stats = {
+        "total": q("SELECT COUNT(*) FROM questions").fetchone()[0],
+        "real": q("SELECT COUNT(*) FROM questions WHERE is_real=1").fetchone()[0],
+        "disabled": q("SELECT COUNT(*) FROM questions WHERE disabled=1").fetchone()[0],
+        "hs_done": q("SELECT COUNT(*) FROM questions WHERE hs_explanation IS NOT NULL AND hs_explanation!=''").fetchone()[0],
+        "hs_down_total": q("SELECT COUNT(*) FROM questions WHERE hs_down>0").fetchone()[0],
+        "by_module": [dict(r) for r in q("SELECT module, COUNT(*) n FROM questions GROUP BY module ORDER BY n DESC")],
+        "cache_entries": q("SELECT COUNT(*) FROM explain_cache").fetchone()[0],
+        "cache_hits": q("SELECT COALESCE(SUM(hits),0) FROM explain_cache").fetchone()[0],
+        "cache_down": q("SELECT COUNT(*) FROM explain_cache WHERE down>0").fetchone()[0],
+        "mistakes": q("SELECT COUNT(*) FROM mistakes").fetchone()[0],
+    }
+    conn.close()
+    return stats
+
+
+def admin_search_questions(
+    keyword: str | None = None,
+    module: str | None = None,
+    flagged: bool = False,
+    disabled_only: bool = False,
+    offset: int = 0,
+    limit: int = 20,
+) -> list[dict]:
+    conn = get_conn()
+    where = []
+    args: list = []
+    if keyword:
+        where.append("question LIKE ?")
+        args.append(f"%{keyword}%")
+    if module:
+        where.append("module=?")
+        args.append(module)
+    if flagged:
+        where.append("hs_down>0")
+    if disabled_only:
+        where.append("disabled=1")
+    clause = ("WHERE " + " AND ".join(where)) if where else ""
+    order = "hs_down DESC, id DESC" if flagged else "id DESC"
+    rows = conn.execute(
+        f"SELECT id, module, submodule, question, options, answer, explanation, hs_explanation, "
+        f"hs_up, hs_down, is_real, exam_year, exam_region, source, disabled "
+        f"FROM questions {clause} ORDER BY {order} LIMIT ? OFFSET ?",
+        (*args, min(limit, 50), offset),
+    ).fetchall()
+    conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["options"] = json.loads(d.get("options") or "{}")
+        out.append(d)
+    return out
+
+
+ADMIN_EDITABLE = {"answer", "explanation", "hs_explanation", "submodule", "question", "disabled", "module", "exam_year", "exam_region", "is_real"}
+
+
+def admin_update_question(qid: int, fields: dict) -> bool:
+    sets = {k: v for k, v in fields.items() if k in ADMIN_EDITABLE}
+    if not sets:
+        return False
+    conn = get_conn()
+    assignments = ", ".join(f"{k}=?" for k in sets)
+    cur = conn.execute(f"UPDATE questions SET {assignments} WHERE id=?", (*sets.values(), qid))
+    conn.commit()
+    conn.close()
+    return cur.rowcount > 0
+
+
+def admin_flagged_cache(limit: int = 30) -> list[dict]:
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT key, module, question_type, question_text, user_answer, explanation, hits, up, down "
+        "FROM explain_cache WHERE down>0 ORDER BY down DESC, hits DESC LIMIT ?",
+        (min(limit, 100),),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def admin_delete_cache(key: str) -> bool:
+    conn = get_conn()
+    cur = conn.execute("DELETE FROM explain_cache WHERE key=?", (key,))
+    conn.commit()
+    conn.close()
+    return cur.rowcount > 0
 
 
 def get_explain_cache(key: str) -> dict | None:

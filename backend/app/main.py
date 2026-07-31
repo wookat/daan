@@ -188,6 +188,64 @@ def api_rate(body: dict):
 
 
 IMPORT_TOKEN = os.environ.get("IMPORT_TOKEN", "")
+ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "") or IMPORT_TOKEN
+
+
+def check_admin(x_admin_token: str | None):
+    if not ADMIN_TOKEN or x_admin_token != ADMIN_TOKEN:
+        raise HTTPException(401, "无效管理令牌")
+
+
+@app.get("/api/admin/stats")
+def api_admin_stats(x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return db.admin_stats()
+
+
+@app.get("/api/admin/questions")
+def api_admin_questions(
+    keyword: str | None = None,
+    module: str | None = None,
+    flagged: int = 0,
+    disabled: int = 0,
+    offset: int = 0,
+    limit: int = 20,
+    x_admin_token: str | None = Header(None),
+):
+    check_admin(x_admin_token)
+    return {
+        "items": db.admin_search_questions(
+            keyword, module, flagged=bool(flagged), disabled_only=bool(disabled), offset=offset, limit=limit
+        )
+    }
+
+
+@app.patch("/api/admin/questions/{qid}")
+def api_admin_update_question(qid: int, body: dict, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    if not db.admin_update_question(qid, body):
+        raise HTTPException(400, "无可更新字段或题目不存在")
+    return {"ok": True}
+
+
+@app.get("/api/admin/flagged_cache")
+def api_admin_flagged_cache(limit: int = 30, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return {"items": db.admin_flagged_cache(limit)}
+
+
+@app.delete("/api/admin/cache/{key}")
+def api_admin_delete_cache(key: str, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return {"ok": db.admin_delete_cache(key)}
+
+
+_ADMIN_HTML = os.path.join(os.path.dirname(__file__), "admin.html")
+
+
+@app.get("/admin")
+def admin_page():
+    return FileResponse(_ADMIN_HTML, media_type="text/html")
 
 
 @app.post("/api/followup")

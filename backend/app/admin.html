@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>考公助手 · 管理后台</title>
+<style>
+:root { --brand:#4f46e5; --bad:#ef4444; --ok:#22c55e; --ink:#1f2430; --ink2:#6b7280; --line:#e5e7eb; --soft:#f4f5f9; }
+* { box-sizing:border-box; }
+body { margin:0; font:14px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif; color:var(--ink); background:var(--soft); }
+header { background:var(--brand); color:#fff; padding:12px 20px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+header h1 { font-size:16px; margin:0; }
+header input { border:none; border-radius:6px; padding:6px 10px; width:220px; }
+main { max-width:1080px; margin:20px auto; padding:0 16px; }
+.cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:20px; }
+.card { background:#fff; border-radius:10px; padding:14px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+.card .n { font-size:22px; font-weight:700; }
+.card .t { color:var(--ink2); font-size:12px; }
+.tabs { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+.tab { padding:6px 16px; border-radius:999px; background:#fff; border:1px solid var(--line); cursor:pointer; }
+.tab.on { background:var(--brand); color:#fff; border-color:var(--brand); }
+.bar { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+.bar input,.bar select { padding:6px 10px; border:1px solid var(--line); border-radius:6px; }
+.bar button,.q button { padding:6px 14px; border:none; border-radius:6px; background:var(--brand); color:#fff; cursor:pointer; }
+.q { background:#fff; border-radius:10px; padding:14px; margin-bottom:10px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+.q .meta { color:var(--ink2); font-size:12px; margin-bottom:6px; display:flex; gap:10px; flex-wrap:wrap; }
+.q .down { color:var(--bad); font-weight:600; }
+.q pre { white-space:pre-wrap; background:var(--soft); border-radius:8px; padding:10px; font:13px/1.5 inherit; max-height:180px; overflow:auto; }
+.q textarea { width:100%; min-height:80px; border:1px solid var(--line); border-radius:8px; padding:8px; font:13px/1.5 inherit; }
+.q .row { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; align-items:center; }
+.q button.warn { background:var(--bad); }
+.q button.ok { background:var(--ok); }
+.badge { display:inline-block; padding:1px 8px; border-radius:999px; font-size:12px; background:var(--soft); }
+.empty { text-align:center; color:var(--ink2); padding:40px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>考公助手 · 管理后台</h1>
+  <input id="token" type="password" placeholder="管理令牌" />
+  <button class="tab" onclick="saveToken()">登录</button>
+</header>
+<main>
+  <div class="cards" id="cards"></div>
+  <div class="tabs">
+    <div class="tab on" data-tab="flagged" onclick="switchTab(this)">解析质检（差评队列）</div>
+    <div class="tab" data-tab="search" onclick="switchTab(this)">题库管理</div>
+    <div class="tab" data-tab="cache" onclick="switchTab(this)">讲解缓存差评</div>
+    <div class="tab" data-tab="disabled" onclick="switchTab(this)">已下架</div>
+  </div>
+  <div class="bar" id="searchbar" style="display:none">
+    <input id="kw" placeholder="题干关键词" />
+    <select id="mod">
+      <option value="">全部模块</option>
+      <option value="ziliao">资料分析</option>
+      <option value="shuliang">数量关系</option>
+      <option value="yanyu">言语理解</option>
+      <option value="panduan">判断推理</option>
+      <option value="changshi">常识判断</option>
+    </select>
+    <button onclick="load()">搜索</button>
+  </div>
+  <div id="list"><div class="empty">输入管理令牌后加载数据</div></div>
+</main>
+<script>
+let TAB = 'flagged';
+const $ = (id) => document.getElementById(id);
+const token = () => localStorage.getItem('admToken') || '';
+function saveToken() { localStorage.setItem('admToken', $('token').value.trim()); boot(); }
+function h(t) { return { 'X-Admin-Token': t ?? token(), 'Content-Type': 'application/json' }; }
+async function api(path, opt) {
+  const r = await fetch(path, Object.assign({ headers: h() }, opt || {}));
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.status);
+  return r.json();
+}
+function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+async function stats() {
+  const s = await api('/api/admin/stats');
+  const items = [
+    ['总题数', s.total], ['真题', s.real], ['花生解析', s.hs_done],
+    ['差评题目', s.hs_down_total], ['已下架', s.disabled],
+    ['讲解缓存', s.cache_entries], ['缓存命中', s.cache_hits],
+    ['缓存差评', s.cache_down], ['错题记录', s.mistakes],
+  ];
+  $('cards').innerHTML = items.map(([t, n]) => `<div class="card"><div class="n">${n}</div><div class="t">${t}</div></div>`).join('');
+}
+function switchTab(el) {
+  document.querySelectorAll('.tab[data-tab]').forEach((t) => t.classList.remove('on'));
+  el.classList.add('on');
+  TAB = el.dataset.tab;
+  $('searchbar').style.display = TAB === 'search' ? 'flex' : 'none';
+  load();
+}
+function qCard(q) {
+  const opts = Object.entries(q.options || {}).map(([k, v]) => `${k}. ${esc(v)}`).join('<br>');
+  return `<div class="q" id="q${q.id}">
+    <div class="meta">
+      <span>#${q.id}</span><span class="badge">${esc(q.module)}${q.submodule ? ' · ' + esc(q.submodule) : ''}</span>
+      ${q.is_real ? `<span class="badge">真题 ${q.exam_year || ''} ${esc(q.exam_region || '')}</span>` : ''}
+      <span>答案 <b>${esc(q.answer)}</b></span>
+      ${q.hs_down ? `<span class="down">👎 ${q.hs_down}</span>` : ''}${q.hs_up ? `<span>👍 ${q.hs_up}</span>` : ''}
+      ${q.disabled ? '<span class="down">已下架</span>' : ''}
+    </div>
+    <pre>${esc(q.question)}\n\n${opts}</pre>
+    <details><summary>花生解析（点开编辑）</summary>
+      <textarea id="hs${q.id}">${esc(q.hs_explanation || '')}</textarea>
+      <div class="row">
+        答案 <input id="ans${q.id}" value="${esc(q.answer)}" style="width:50px;padding:4px;border:1px solid var(--line);border-radius:6px" />
+        <button class="ok" onclick="saveQ(${q.id})">保存修改</button>
+      </div>
+    </details>
+    <div class="row">
+      ${q.disabled
+        ? `<button class="ok" onclick="patchQ(${q.id},{disabled:0})">恢复上架</button>`
+        : `<button class="warn" onclick="patchQ(${q.id},{disabled:1})">下架此题</button>`}
+      ${q.hs_down ? `<button onclick="patchQ(${q.id},{hs_explanation:''})">清空差评解析（待重产）</button>` : ''}
+    </div>
+  </div>`;
+}
+async function saveQ(id) {
+  await patchQ(id, { hs_explanation: $('hs' + id).value, answer: $('ans' + id).value.trim() });
+}
+async function patchQ(id, body) {
+  try {
+    await api('/api/admin/questions/' + id, { method: 'PATCH', body: JSON.stringify(body) });
+    $('q' + id).style.opacity = 0.5;
+    load();
+  } catch (e) { alert('失败：' + e.message); }
+}
+async function delCache(key) {
+  try { await api('/api/admin/cache/' + key, { method: 'DELETE' }); load(); } catch (e) { alert('失败：' + e.message); }
+}
+async function load() {
+  try {
+    if (TAB === 'cache') {
+      const d = await api('/api/admin/flagged_cache');
+      $('list').innerHTML = d.items.length ? d.items.map((c) => `<div class="q">
+        <div class="meta"><span class="badge">${esc(c.module || '')}</span><span>命中 ${c.hits}</span><span class="down">👎 ${c.down}</span><span>👍 ${c.up}</span></div>
+        <pre>${esc((c.question_text || '').slice(0, 300))}</pre>
+        <details><summary>查看解析</summary><pre>${esc(c.explanation)}</pre></details>
+        <div class="row"><button class="warn" onclick="delCache('${c.key}')">删除此缓存（下次重新生成）</button></div>
+      </div>`).join('') : '<div class="empty">暂无差评缓存</div>';
+      return;
+    }
+    const p = new URLSearchParams();
+    if (TAB === 'flagged') p.set('flagged', '1');
+    if (TAB === 'disabled') p.set('disabled', '1');
+    if (TAB === 'search') {
+      if ($('kw').value.trim()) p.set('keyword', $('kw').value.trim());
+      if ($('mod').value) p.set('module', $('mod').value);
+    }
+    const d = await api('/api/admin/questions?' + p);
+    $('list').innerHTML = d.items.length ? d.items.map(qCard).join('') : '<div class="empty">暂无数据</div>';
+  } catch (e) {
+    $('list').innerHTML = `<div class="empty">加载失败：${esc(e.message)}（请检查管理令牌）</div>`;
+  }
+}
+async function boot() { try { await stats(); await load(); } catch (e) { $('list').innerHTML = `<div class="empty">加载失败：${esc(e.message)}（请检查管理令牌）</div>`; } }
+if (token()) { $('token').value = token(); boot(); }
+</script>
+</body>
+</html>
