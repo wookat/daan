@@ -150,6 +150,22 @@ async def api_rate(body: dict):
     return {"ok": True}
 
 
+IMPORT_TOKEN = os.environ.get("IMPORT_TOKEN", "")
+
+
+@app.get("/api/questions/export")
+async def api_questions_export(offset: int = 0, limit: int = 200, module: str | None = None):
+    return {"items": db.export_questions(offset, min(limit, 500), module)}
+
+
+@app.post("/api/questions/hs_import")
+async def api_questions_hs_import(body: dict, x_import_token: str | None = Header(None)):
+    if not IMPORT_TOKEN or x_import_token != IMPORT_TOKEN:
+        raise HTTPException(401, "无效导入令牌")
+    n = db.import_hs_explanations(body.get("items") or [])
+    return {"updated": n}
+
+
 @app.get("/api/questions")
 async def api_questions(module: str | None = None, limit: int = 10, submodule: str | None = None):
     return {

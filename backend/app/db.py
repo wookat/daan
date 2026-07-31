@@ -216,6 +216,44 @@ def set_question_hs_explanation(qid: int, text: str):
     conn.close()
 
 
+def export_questions(offset: int = 0, limit: int = 200, module: str | None = None, missing_only: bool = True) -> list[dict]:
+    conn = get_conn()
+    where = []
+    args: list = []
+    if module:
+        where.append("module=?")
+        args.append(module)
+    if missing_only:
+        where.append("(hs_explanation IS NULL OR hs_explanation='')")
+    clause = ("WHERE " + " AND ".join(where)) if where else ""
+    rows = conn.execute(
+        f"SELECT id, module, submodule, question_type, question, options, answer, explanation FROM questions {clause} ORDER BY id LIMIT ? OFFSET ?",
+        (*args, limit, offset),
+    ).fetchall()
+    conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["options"] = json.loads(d.get("options") or "{}")
+        out.append(d)
+    return out
+
+
+def import_hs_explanations(items: list[dict]) -> int:
+    conn = get_conn()
+    n = 0
+    for it in items:
+        qid = it.get("id")
+        text = (it.get("hs_explanation") or "").strip()
+        if not qid or not text:
+            continue
+        cur = conn.execute("UPDATE questions SET hs_explanation=? WHERE id=?", (text, int(qid)))
+        n += cur.rowcount
+    conn.commit()
+    conn.close()
+    return n
+
+
 def save_mistake(rec: dict) -> int:
     conn = get_conn()
     qtext = rec.get("question_text")
