@@ -74,7 +74,7 @@
         <view class="mfoot">
           <text class="meta">{{ fmt(m.created_at) }}</text>
           <view class="acts">
-            <text v-if="!m.mastered" class="op redo" @click.stop="redo(m)">重做</text>
+            <text v-if="!m.mastered" class="op redo" @click.stop="redo(m)">AI 详解</text>
             <text v-if="m.module" class="op sim" @click.stop="practiceSimilar(m)">练3道同类</text>
             <text v-if="!m.mastered" class="op zop" @click.stop="master(m)">标为已斩</text>
             <text v-else class="op redo" @click.stop="master(m, false)">恢复复习</text>
