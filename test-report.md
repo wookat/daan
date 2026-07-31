@@ -1,5 +1,64 @@
 # 考公错题助手 MVP 验收测试报告
 
+## 增量测试 v23（P1c：音效开关 / pop 动效 / 成就勋章 / 雷达空态）— 2026-07-31
+
+- 测试环境：**线上 https://kaogong.zalize.com**，构建 hash 与本地 dist 一致（`assets/index-B5gWKF-M.js`），Chrome，**400px 移动视口**为主 + 1200px 桌面侧栏抽查（均录进录屏）。
+- 结论：**五组测试全部通过**，无失败断言。
+- 生产数据保护：测前基线 [26, 23, 5, 3, 2] 全部保留；本轮故意答错自动新增 id 29（panduan），测后仅删除该条，API 确认恢复 **[26, 23, 5, 3, 2]**。
+- 说明：雷达空态验证前已完整备份 localStorage `pstats` 原值，验证后写回并刷新确认恢复（35 题/69%/打卡 2 天与勋章状态复原）。备份写回未包含本轮清空前刚答的 2 题（判断推理 1 对 1 错），属可接受的本地统计微差。
+- 录屏：`/home/ubuntu/screencasts/rec-8a7781f2-f28f-4ea5-a10f-b9ecaac147e1/rec-8a7781f2-f28f-4ea5-a10f-b9ecaac147e1-edited.mp4`
+- 测试计划：`/home/ubuntu/repos/kaogong-assistant/test-plan-v23.md`
+
+### T1 音效开关（刷题页顶栏）— passed
+
+- 开组后顶栏默认显示 🔊（默认开启）；点击后 toast 精确为「音效已关闭」、图标变 🔇、`localStorage sfxOff = "1"`；再点 toast「音效已开启」、图标回 🔊、`sfxOff = ""`：
+
+  | 🔴 关闭：toast「音效已关闭」+ 🔇 | 🟢 开启：toast「音效已开启」+ 🔊 |
+  |---|---|
+  | ![音效关闭](https://app.devin.ai/attachments/37677c8e-5b40-4472-b450-fd4a831b4b73/sfx-off-toast.png) | ![音效开启](https://app.devin.ai/attachments/67e6abc9-bf95-4796-86aa-88aaa98024f1/sfx-on-toast.png) |
+
+- WebAudio 验证（用户允许的 CDP/console 方式）：刷新后 hook `window.AudioContext` 构造计数，音效开启状态下答题判分后计数 **0 → 1**，证明 `playSfx` 实际创建了 AudioContext。
+
+### T2 pop 动效 + 结构化解析回归 — passed
+
+- 答对：正确选项 C 绿底绿框 ✓（pop 0.35s 缩放动效为瞬时动画，以录屏为证，截图为动效后的绿色结果态）；答错：所选 B 红框 ✗ + 正确 A 绿框 ✓（shake 反馈不变），结构化解析卡（正确答案大字母/解析/考点/来源 + 胶囊详解按钮）与「已自动存入错题本」横幅均正常（Regression）：
+
+  | 🟢 答对绿框（pop 后结果态） | 🔴 答错红框 + 结构化解析 |
+  |---|---|
+  | ![答对](https://app.devin.ai/attachments/e5d91200-66e9-4b36-ac87-10e5e30116f3/correct-green-pop.png) | ![答错](https://app.devin.ai/attachments/d222d7ef-0dee-42a1-9687-f1419332aefe/wrong-red-shake.png) |
+
+### T3 成就勋章卡（薄弱分析页）— passed
+
+- 8 枚勋章全部渲染：初战告捷🌱 / 小有所成💪 / 刷题大师🏆 / 三日不辍🔥 / 七日连环⚡ / 十连对🎯 / 斩题十道⚔️ / 百题斩👑。
+- 当前累计 35 题 →「初战告捷」**点亮**（绿色图标 + 主色「已达成」）；其余 7 枚**灰显**且带进度文字（35/100 题、35/500 题、2/3 天、2/7 天、0/10 连对、0/10 道、0/100 道），像素可见点亮/灰显差异：
+
+  ![成就勋章卡放大](https://app.devin.ai/attachments/8a672d42-b469-4c92-86b8-99b55b8669dd/medals-zoom.png)
+
+### T4 雷达空态引导卡 — passed
+
+- 备份并清除 `pstats` 后刷新：五模块能力雷达卡显示「还没有能力数据」+「刷几题就能生成你的五模块能力画像」+ 主色「去刷题」按钮（无雷达图）；点「去刷题」跳到刷题 Tab：
+
+  ![雷达空态引导卡](https://app.devin.ai/attachments/3c049d17-84e6-48b2-b6f9-f1bb8a5d8e5f/radar-empty.png)
+
+- 写回备份并刷新：总览 35 题/69%/打卡 2 天、勋章「初战告捷已达成」、近 7 日柱状卡均恢复原状。
+
+### T5 桌面侧栏 / 移动 tabbar 冒烟（Regression）— passed
+
+- 1200px：左侧竖排侧栏仍在、内容区不重叠；400px：底部横排 tabbar 恢复：
+
+  | 🟢 1200px 左侧侧栏 | 🟢 400px 底部 tabbar |
+  |---|---|
+  | ![桌面](https://app.devin.ai/attachments/c2511a0a-23df-41b9-a2d3-edd1a6e4ae09/desktop-sidebar-regression.png) | ![移动](https://app.devin.ai/attachments/5cc56ecb-a73a-4a09-bbb1-f71f341dd370/mobile-tabbar-regression.png) |
+
+### 清理
+
+- 本轮仅新增错题 id 29（判断推理，故意答错产生），已 DELETE；`/api/mistakes` 最终 = **[26, 23, 5, 3, 2]**，生产数据零触碰。
+
+### 未覆盖 / 说明
+
+- 音效"真实可听性"未主观验证（用户明确允许以 AudioContext 创建为准）；关闭状态下未重新 hook 验证"不创建"（代码 `if (!this.sfxOn) return` 为前置返回，且关闭态答题无异常）。
+- 十连对/斩题十道等高门槛勋章的"达成态"仅初战告捷一枚实际点亮验证，其余达成态未造数复现。
+
 ## 增量测试 v22（P1b：桌面 208px 侧栏 / 结构化解析卡 / 近 7 日正确率柱状卡）— 2026-07-31
 
 - 测试环境：**线上 https://kaogong.zalize.com**，构建 hash 与本地 dist 一致（`assets/index-D-TXMmEh.js`），Chrome，**1200px 桌面 + 400px 移动**双视口（均录进录屏）。
