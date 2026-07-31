@@ -31,6 +31,13 @@
         </view>
       </view>
       <view v-if="!counts.length" class="spin">题库为空，敬请期待</view>
+      <view v-if="counts.length" class="daily exam" @click="startExam">
+        <view class="daily-l">
+          <view class="daily-t"><uni-icons type="flag-filled" size="16" color="#ffffff" /><text class="daily-t-t">迷你模考</text></view>
+          <text class="daily-s">25 题 · 20 分钟 · 五模块混合 · 交卷后统一判分</text>
+        </view>
+        <text class="daily-go">开始</text>
+      </view>
       <view v-if="counts.length" class="daily" :class="{ done: todayDone }" @click="startDaily">
         <view class="daily-l">
           <view class="daily-t"><uni-icons :type="todayDone ? 'checkbox-filled' : 'calendar-filled'" size="16" color="#ffffff" /><text class="daily-t-t">今日一练</text></view>
@@ -96,13 +103,13 @@
       <view class="rhead">
         <text class="tag" @click="cardOpen = true">{{ modName(cur.module) }}{{ lastSubmodule ? ' · ' + lastSubmodule : '' }} · {{ idx + 1 }}/{{ items.length }} ▾</text>
         <view class="hstats">
-          <text class="timer">{{ fmtSecs(qsecs) }}</text>
+          <text class="timer" :class="{ examleft: examMode }">{{ examMode ? fmtSecs(examLeft) : fmtSecs(qsecs) }}</text>
           <text class="fontbtn" @click="cycleFont">Aa</text>
-          <text class="fontbtn" :class="{ beion: beiMode }" @click="toggleBei">背</text>
-          <text class="fontbtn" :class="{ beion: autoNext }" @click="toggleAutoNext">跳</text>
+          <text v-if="!examMode" class="fontbtn" :class="{ beion: beiMode }" @click="toggleBei">背</text>
+          <text v-if="!examMode" class="fontbtn" :class="{ beion: autoNext }" @click="toggleAutoNext">跳</text>
           <view class="fontbtn iconbtn" @click="toggleSfx"><uni-icons :type="sfxOn ? 'sound-filled' : 'sound'" size="16" :color="sfxOn ? '#4f46e5' : '#8a90a0'" /></view>
-          <text class="cnt okc">✓{{ right }}</text>
-          <text class="cnt badc">✗{{ wrongCount }}</text>
+          <text v-if="!examMode" class="cnt okc">✓{{ right }}</text>
+          <text v-if="!examMode" class="cnt badc">✗{{ wrongCount }}</text>
           <view v-if="streak >= 3" class="cnt fire"><uni-icons type="fire-filled" size="13" color="#f97316" /><text class="fire-n">{{ streak }}</text></view>
           <text class="op" @click="quit">退出</text>
         </view>
@@ -120,10 +127,10 @@
       >
         <text class="okey">{{ k }}</text>
         <text class="otext">{{ v }}</text>
-        <text v-if="(picked || beiMode) && k === cur.answer" class="omark good">✓</text>
-        <text v-else-if="picked && k === picked" class="omark badm">✗</text>
+        <text v-if="!examMode && (picked || beiMode) && k === cur.answer" class="omark good">✓</text>
+        <text v-else-if="!examMode && picked && k === picked" class="omark badm">✗</text>
       </view>
-      <view v-if="picked || beiMode" class="after">
+      <view v-if="(picked || beiMode) && !examMode" class="after">
         <view v-if="picked && picked !== cur.answer" class="reasons">
           <text class="rz-t">错因自评：</text>
           <text
@@ -216,12 +223,13 @@
             @click="jumpTo(i)"
           >{{ i + 1 }}</view>
         </view>
-        <view class="acard-foot">已答 {{ answeredCount }}/{{ items.length }} · 正确 {{ right }}</view>
+        <view class="acard-foot">已答 {{ answeredCount }}/{{ items.length }}<template v-if="!examMode"> · 正确 {{ right }}</template></view>
+        <button v-if="examMode" class="btn" style="margin-top: 16rpx" @click="finishExam">交卷</button>
       </view>
     </view>
 
     <!-- 判分横幅 -->
-    <view v-if="cur && (picked || beiMode)" class="banner" :class="beiMode || picked === cur.answer ? 'bok' : 'bbad'">
+    <view v-if="cur && !examMode && (picked || beiMode)" class="banner" :class="beiMode || picked === cur.answer ? 'bok' : 'bbad'">
       <view class="binfo">
         <text class="btitle">{{ beiMode ? '背题模式 · 答案 ' + cur.answer : picked === cur.answer ? '✓ 回答正确' + (streak >= 3 ? ' · 连对 ' + streak + ' 题！' : '') : '✗ 正确答案 ' + cur.answer }}</text>
         <text v-if="!beiMode && picked !== cur.answer" class="bsub">{{ cur._saved ? '已自动存入错题本' : '' }}</text>
@@ -271,6 +279,9 @@ export default {
       autoSaved: false,
       resultSent: false,
       percentile: null,
+      examMode: false,
+      examLeft: 0,
+      examTimer: null,
       pstats: { byModule: {}, days: {} },
       autoTimer: null,
       cardOpen: false,
@@ -429,6 +440,82 @@ export default {
       this.groupSize = n;
       uni.setStorageSync('groupSize', n);
     },
+    async startExam() {
+      if (this.beiMode) {
+        this.beiMode = false;
+        uni.setStorageSync('beiMode', '');
+      }
+      try {
+        const d = await request('/api/questions?limit=25');
+        if (!d.items || d.items.length < 5) {
+          uni.showToast({ title: '题目不足，稍后再试', icon: 'none' });
+          return;
+        }
+        this.items = d.items;
+        this.idx = 0;
+        this.picked = '';
+        this.right = 0;
+        this.streak = 0;
+        this.bestStreak = 0;
+        this.autoSaved = false;
+        this.resultSent = false;
+        this.percentile = null;
+        this.lastModule = null;
+        this.lastSubmodule = null;
+        this.session = true;
+        this.examMode = true;
+        this.examLeft = 20 * 60;
+        this.startQTimer();
+        if (this.examTimer) clearInterval(this.examTimer);
+        this.examTimer = setInterval(() => {
+          this.examLeft--;
+          if (this.examLeft <= 0) {
+            uni.showToast({ title: '时间到，自动交卷', icon: 'none' });
+            this.finishExam();
+          }
+        }, 1000);
+        uni.showToast({ title: '模考开始：交卷后统一判分', icon: 'none', duration: 1500 });
+      } catch (e) {
+        uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
+      }
+    },
+    finishExam() {
+      if (!this.examMode) return;
+      this.examMode = false;
+      if (this.examTimer) {
+        clearInterval(this.examTimer);
+        this.examTimer = null;
+      }
+      this.cardOpen = false;
+      this.stopQTimer();
+      this.right = this.items.filter((q) => q._picked === q.answer).length;
+      this.items.forEach((q) => {
+        if (q._picked && q._picked !== q.answer) this.saveExamWrong(q);
+      });
+      this.idx = this.items.length;
+      this.picked = '';
+      this.submitResult();
+    },
+    async saveExamWrong(q) {
+      if (q._saved) return;
+      const optText = Object.entries(q.options).map(([k, v]) => `${k}.${v}`).join(' ');
+      try {
+        const res = await request('/api/mistakes', {
+          method: 'POST',
+          data: {
+            module: q.module,
+            question_type: q.question_type,
+            question_text: q.question + '\n' + optText,
+            user_answer: q._picked,
+            correct_answer: q.answer,
+            explanation: q.explanation || '',
+          },
+        });
+        q._mid = res.id;
+        q._saved = true;
+        this.autoSaved = true;
+      } catch (e) { /* 非关键路径 */ }
+    },
     startDaily() {
       this._daily = true;
       if (this.beiMode) {
@@ -566,6 +653,7 @@ export default {
     acardClass(q, i) {
       if (i === this.idx) return 'cur';
       if (!q._picked) return '';
+      if (this.examMode) return 'cur';
       return q._picked === q.answer ? 'ok' : 'bad';
     },
     jumpTo(i) {
@@ -595,6 +683,21 @@ export default {
       this.cur._picked = k;
       this.cur._secs = this.qsecs;
       this.stopQTimer();
+      if (this.examMode) {
+        setTimeout(() => {
+          if (this.idx + 1 < this.items.length) {
+            this.next();
+            return;
+          }
+          const un = this.items.findIndex((q) => !q._picked);
+          if (un === -1) this.finishExam();
+          else {
+            uni.showToast({ title: '还有未答题目，答完自动交卷', icon: 'none' });
+            this.jumpTo(un);
+          }
+        }, 200);
+        return;
+      }
       const correct = k === this.cur.answer;
       this.recordStat(this.cur.module, correct, this.cur.submodule);
       this.playSfx(correct);
@@ -646,6 +749,7 @@ export default {
       uni.showToast({ title: this.beiMode ? '背题模式：直接看答案解析，不计入正确率' : '已切回做题模式', icon: 'none', duration: 1500 });
     },
     optClass(k) {
+      if (this.examMode) return k === this.picked ? 'sel' : '';
       if (this.beiMode) return k === this.cur.answer ? 'right' : '';
       if (!this.picked) return '';
       if (k === this.cur.answer) return 'right';
@@ -710,6 +814,11 @@ export default {
       } catch (e) { /* 非关键路径 */ }
     },
     quit() {
+      this.examMode = false;
+      if (this.examTimer) {
+        clearInterval(this.examTimer);
+        this.examTimer = null;
+      }
       this.session = false;
       this.items = [];
       this.idx = 0;
@@ -842,6 +951,9 @@ export default {
 .bnext.nok { background: #22c55e; }
 .bnext.nbad { background: #ef4444; }
 .bnext.bstay { background: transparent; border: 2rpx solid #22c55e; color: #15803d; margin-right: 12rpx; }
+.daily.exam { background: linear-gradient(120deg, #f97316, #ef4444); }
+.timer.examleft { color: #ef4444; font-weight: 700; }
+.opt.sel { border-color: var(--brand); background: var(--soft-bg); }
 .beat { margin-top: 10rpx; font-size: 25rpx; color: var(--brand); background: var(--soft-bg); border-radius: 999rpx; padding: 10rpx 26rpx; }
 .report { width: 100%; margin: 20rpx 0 28rpx; }
 .report-row { display: flex; gap: 16rpx; margin-bottom: 24rpx; }
