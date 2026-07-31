@@ -14,6 +14,9 @@ TEXT_BASE_URL = os.environ.get("LLM_TEXT_BASE_URL", "").rstrip("/") or BASE_URL
 TEXT_API_KEY = os.environ.get("LLM_TEXT_API_KEY", "") or API_KEY
 TEXT_MODEL = os.environ.get("LLM_TEXT_MODEL", "") or MODEL
 
+# 主模型不可用（5xx）时的后备模型（同一中继）
+FALLBACK_MODEL = os.environ.get("LLM_FALLBACK_MODEL", "gpt-5.5")
+
 TIMEOUT = httpx.Timeout(180.0, connect=15.0)
 
 
@@ -48,6 +51,17 @@ async def chat(messages: list, temperature: float = 0.2, max_tokens: int = 4000)
             if resp.status_code >= 500 and attempt < 2:
                 await asyncio.sleep(2 * (attempt + 1))
                 continue
+            if resp.status_code >= 500 and FALLBACK_MODEL and model != FALLBACK_MODEL:
+                resp = await client.post(
+                    f"{base}/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {key}"},
+                    json={
+                        "model": FALLBACK_MODEL,
+                        "messages": messages,
+                        "temperature": temperature,
+                        "max_tokens": max_tokens,
+                    },
+                )
             resp.raise_for_status()
             data = resp.json()
             return data["choices"][0]["message"]["content"]
@@ -56,32 +70,37 @@ async def chat(messages: list, temperature: float = 0.2, max_tokens: int = 4000)
 async def chat_stream(messages: list, temperature: float = 0.2, max_tokens: int = 4000):
     """逐段产出模型输出文本。"""
     base, key, model = _endpoint(messages)
+    models = [model] + ([FALLBACK_MODEL] if FALLBACK_MODEL and FALLBACK_MODEL != model else [])
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-        async with client.stream(
-            "POST",
-            f"{base}/v1/chat/completions",
-            headers={"Authorization": f"Bearer {key}"},
-            json={
-                "model": model,
-                "messages": messages,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-                "stream": True,
-            },
-        ) as resp:
-            resp.raise_for_status()
-            async for line in resp.aiter_lines():
-                if not line.startswith("data:"):
+        for i, m in enumerate(models):
+            async with client.stream(
+                "POST",
+                f"{base}/v1/chat/completions",
+                headers={"Authorization": f"Bearer {key}"},
+                json={
+                    "model": m,
+                    "messages": messages,
+                    "temperature": temperature,
+                    "max_tokens": max_tokens,
+                    "stream": True,
+                },
+            ) as resp:
+                if resp.status_code >= 500 and i < len(models) - 1:
                     continue
-                payload = line[5:].strip()
-                if payload == "[DONE]":
-                    break
-                try:
-                    delta = json.loads(payload)["choices"][0]["delta"].get("content")
-                except (json.JSONDecodeError, KeyError, IndexError):
-                    continue
-                if delta:
-                    yield delta
+                resp.raise_for_status()
+                async for line in resp.aiter_lines():
+                    if not line.startswith("data:"):
+                        continue
+                    payload = line[5:].strip()
+                    if payload == "[DONE]":
+                        break
+                    try:
+                        delta = json.loads(payload)["choices"][0]["delta"].get("content")
+                    except (json.JSONDecodeError, KeyError, IndexError):
+                        continue
+                    if delta:
+                        yield delta
+            return
 
 
 def image_content(image_b64: str, mime: str, text: str) -> list:
