@@ -111,8 +111,16 @@ async def api_similar(body: dict, x_access_code: str | None = Header(None)):
 
 
 @app.get("/api/questions")
-async def api_questions(module: str | None = None, limit: int = 10):
-    return {"items": db.random_questions(module, min(limit, 30)), "counts": db.question_counts()}
+async def api_questions(module: str | None = None, limit: int = 10, submodule: str | None = None):
+    return {
+        "items": db.random_questions(module, min(limit, 30), submodule),
+        "counts": db.question_counts(),
+    }
+
+
+@app.get("/api/submodules")
+async def api_submodules(module: str):
+    return {"items": db.submodule_counts(module)}
 
 
 @app.post("/api/mistakes")

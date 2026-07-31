@@ -49,6 +49,9 @@ def init_db():
             source TEXT
         )"""
     )
+    qcols = {r["name"] for r in conn.execute("PRAGMA table_info(questions)")}
+    if "submodule" not in qcols:
+        conn.execute("ALTER TABLE questions ADD COLUMN submodule TEXT")
     conn.commit()
     conn.close()
     _seed_questions()
@@ -73,7 +76,7 @@ def _seed_questions():
             except json.JSONDecodeError:
                 continue
             conn.execute(
-                "INSERT OR IGNORE INTO questions (module, question_type, question, options, answer, explanation, source) VALUES (?,?,?,?,?,?,?)",
+                "INSERT OR IGNORE INTO questions (module, question_type, question, options, answer, explanation, source, submodule) VALUES (?,?,?,?,?,?,?,?)",
                 (
                     q.get("module"),
                     q.get("question_type"),
@@ -82,15 +85,26 @@ def _seed_questions():
                     q.get("answer"),
                     q.get("explanation"),
                     q.get("source"),
+                    q.get("submodule"),
                 ),
             )
+            if q.get("submodule"):
+                conn.execute(
+                    "UPDATE questions SET submodule=? WHERE question=? AND (submodule IS NULL OR submodule='')",
+                    (q["submodule"], q.get("question")),
+                )
     conn.commit()
     conn.close()
 
 
-def random_questions(module: str | None = None, limit: int = 10) -> list[dict]:
+def random_questions(module: str | None = None, limit: int = 10, submodule: str | None = None) -> list[dict]:
     conn = get_conn()
-    if module:
+    if module and submodule:
+        rows = conn.execute(
+            "SELECT * FROM questions WHERE module=? AND submodule=? ORDER BY RANDOM() LIMIT ?",
+            (module, submodule, limit),
+        ).fetchall()
+    elif module:
         rows = conn.execute(
             "SELECT * FROM questions WHERE module=? ORDER BY RANDOM() LIMIT ?", (module, limit)
         ).fetchall()
@@ -109,6 +123,17 @@ def question_counts() -> list[dict]:
     conn = get_conn()
     rows = conn.execute(
         "SELECT module, COUNT(*) n FROM questions GROUP BY module ORDER BY n DESC"
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def submodule_counts(module: str) -> list[dict]:
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT submodule, COUNT(*) n FROM questions WHERE module=? AND submodule IS NOT NULL "
+        "GROUP BY submodule ORDER BY n DESC",
+        (module,),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]

@@ -16,7 +16,7 @@
           v-for="c in counts"
           :key="c.module"
           class="mcard"
-          @click="start(c.module)"
+          @click="openModule(c.module)"
         >
           <view class="mtop">
             <text class="mico" :style="{ background: modColor(c.module).bg, color: modColor(c.module).fg }">{{ modName(c.module).slice(0, 1) }}</text>
@@ -34,10 +34,33 @@
       </view>
     </view>
 
+    <!-- 选二级题型 -->
+    <view v-if="subSelect" class="mask" @click="subSelect = null">
+      <view class="sheet" @click.stop>
+        <view class="sheet-h">
+          <text class="sheet-t">{{ modName(subSelect) }} · 选择题型</text>
+          <text class="sheet-x" @click="subSelect = null">✕</text>
+        </view>
+        <view class="sub-chip all-chip" @click="start(subSelect)">
+          <text class="sub-name">🎯 全部随机</text>
+          <text class="sub-n">{{ (counts.find(c => c.module === subSelect) || {}).n || 0 }} 题</text>
+        </view>
+        <view
+          v-for="s in submodules"
+          :key="s.submodule"
+          class="sub-chip"
+          @click="start(subSelect, s.submodule)"
+        >
+          <text class="sub-name">{{ s.submodule }}</text>
+          <text class="sub-n">{{ s.n }} 题</text>
+        </view>
+      </view>
+    </view>
+
     <!-- 答题 -->
     <view v-if="session && cur" class="card">
       <view class="rhead">
-        <text class="tag">{{ modName(cur.module) }} · {{ idx + 1 }}/{{ items.length }}</text>
+        <text class="tag">{{ modName(cur.module) }}{{ lastSubmodule ? ' · ' + lastSubmodule : '' }} · {{ idx + 1 }}/{{ items.length }}</text>
         <view class="hstats">
           <text class="cnt okc">✓{{ right }}</text>
           <text class="cnt badc">✗{{ wrongCount }}</text>
@@ -75,7 +98,7 @@
       </view>
       <view class="big">🎉 本组完成</view>
       <view class="sub">答对 {{ right }}/{{ items.length }} · 最高连对 {{ bestStreak }} 题<template v-if="autoSaved">，错题已自动加入错题本</template></view>
-      <button class="btn" @click="start(lastModule)">再来一组</button>
+      <button class="btn" @click="start(lastModule, lastSubmodule)">再来一组</button>
       <button class="btn ghost" style="margin-top: 16rpx" @click="quit">返回选模块</button>
     </view>
 
@@ -121,6 +144,9 @@ export default {
       picked: '',
       right: 0,
       lastModule: null,
+      lastSubmodule: null,
+      subSelect: null,
+      submodules: [],
       streak: 0,
       bestStreak: 0,
       autoSaved: false,
@@ -192,10 +218,30 @@ export default {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
     },
-    async start(module) {
-      this.lastModule = module;
+    async openModule(module) {
       try {
-        const d = await request('/api/questions?limit=10' + (module ? '&module=' + module : ''));
+        const d = await request('/api/submodules?module=' + module);
+        const items = (d.items || []).filter((s) => s.submodule);
+        if (items.length < 2) {
+          this.start(module);
+          return;
+        }
+        this.submodules = items;
+        this.subSelect = module;
+      } catch (e) {
+        this.start(module);
+      }
+    },
+    async start(module, submodule) {
+      this.lastModule = module;
+      this.lastSubmodule = submodule || null;
+      this.subSelect = null;
+      try {
+        const d = await request(
+          '/api/questions?limit=10' +
+            (module ? '&module=' + module : '') +
+            (submodule ? '&submodule=' + encodeURIComponent(submodule) : '')
+        );
         if (!d.items.length) {
           uni.showToast({ title: '该模块暂无题目', icon: 'none' });
           return;
@@ -368,4 +414,14 @@ export default {
 .ring-t { font-size: 20rpx; color: var(--ink-2); }
 .big { font-size: 40rpx; font-weight: 700; margin-bottom: 12rpx; }
 .sub { font-size: 26rpx; color: var(--ink-2); margin-bottom: 28rpx; }
+.mask { position: fixed; inset: 0; background: rgba(15, 18, 30, 0.5); z-index: 90; display: flex; align-items: flex-end; }
+.sheet { width: 100%; box-sizing: border-box; background: var(--card); border-radius: 32rpx 32rpx 0 0; padding: 32rpx 28rpx calc(32rpx + env(safe-area-inset-bottom)); max-height: 70vh; overflow-y: auto; animation: slideup 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20rpx; }
+.sheet-t { font-size: 30rpx; font-weight: 700; }
+.sheet-x { font-size: 28rpx; color: var(--ink-2); padding: 8rpx 16rpx; }
+.sub-chip { display: flex; justify-content: space-between; align-items: center; border: 1rpx solid var(--line); background: var(--soft-bg); border-radius: 18rpx; padding: 24rpx 28rpx; margin-bottom: 16rpx; }
+.sub-chip.all-chip { background: linear-gradient(135deg, #6366f1, #4f46e5); border: none; }
+.sub-chip.all-chip .sub-name, .sub-chip.all-chip .sub-n { color: #fff; }
+.sub-name { font-size: 28rpx; font-weight: 600; color: var(--ink); }
+.sub-n { font-size: 22rpx; color: var(--ink-2); }
 </style>
