@@ -16,6 +16,19 @@
     </view>
 
     <view class="card">
+      <view class="cal-head">
+        <view class="h" style="margin-bottom: 0">学习日历</view>
+        <text class="cal-sub">本月打卡 {{ monthDays }} 天</text>
+      </view>
+      <view class="cal-week">
+        <text v-for="w in ['一', '二', '三', '四', '五', '六', '日']" :key="w" class="cal-w">{{ w }}</text>
+      </view>
+      <view class="cal-grid">
+        <view v-for="(c, i) in calCells" :key="i" class="cal-c" :class="c.cls">{{ c.d || '' }}</view>
+      </view>
+    </view>
+
+    <view class="card">
       <view class="h">五模块能力雷达</view>
       <view v-if="!hasRadar" class="spin">刷题后生成你的能力画像</view>
       <view v-else class="radar-box">
@@ -43,6 +56,19 @@
         </view>
       </view>
     </view>
+    <view v-if="byReason.length" class="card">
+      <view class="h">错因分布</view>
+      <view v-for="r in byReason" :key="r.error_reason" class="brow">
+        <view class="blabel">
+          <text>{{ r.error_reason }}</text>
+          <text class="n">×{{ r.n }}</text>
+        </view>
+        <view class="bar">
+          <view class="fill rz" :style="{ width: (r.n / reasonTotal) * 100 + '%' }" />
+        </view>
+      </view>
+    </view>
+
     <view class="card">
       <view class="h">高频错题型 TOP10</view>
       <view v-if="!byType.length" class="spin">暂无数据</view>
@@ -66,7 +92,7 @@ const MODS = [
 
 export default {
   data() {
-    return { byModule: [], byType: [], pstats: { byModule: {}, days: {} } };
+    return { byModule: [], byType: [], byReason: [], pstats: { byModule: {}, days: {} } };
   },
   computed: {
     total() {
@@ -95,6 +121,35 @@ export default {
         } else break;
       }
       return n;
+    },
+    reasonTotal() {
+      return this.byReason.reduce((s, r) => s + r.n, 0) || 1;
+    },
+    monthDays() {
+      const now = new Date();
+      const pre = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-`;
+      return Object.keys(this.pstats.days || {}).filter((k) => k.startsWith(pre) && this.pstats.days[k] > 0).length;
+    },
+    calCells() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = now.getMonth();
+      const first = new Date(y, m, 1);
+      const lead = (first.getDay() + 6) % 7;
+      const total = new Date(y, m + 1, 0).getDate();
+      const days = this.pstats.days || {};
+      const cells = [];
+      for (let i = 0; i < lead; i++) cells.push({ d: 0, cls: 'blank' });
+      for (let d = 1; d <= total; d++) {
+        const key = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const n = days[key] || 0;
+        let cls = '';
+        if (n >= 10) cls = 'full';
+        else if (n > 0) cls = 'part';
+        if (d === now.getDate()) cls += ' today';
+        cells.push({ d, cls });
+      }
+      return cells;
     },
     axes() {
       return MODS.map((m) => {
@@ -147,6 +202,7 @@ export default {
         const d = await request('/api/stats');
         this.byModule = d.by_module;
         this.byType = d.by_type;
+        this.byReason = d.by_reason || [];
       } catch (e) {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
@@ -178,5 +234,15 @@ export default {
 .fill.sev-hi { background: linear-gradient(90deg, #f87171, #ef4444); }
 .fill.sev-mid { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
 .tline { font-size: 26rpx; margin: 8rpx 0; }
+.fill.rz { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
+.cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
+.cal-sub { font-size: 22rpx; color: var(--ink-2); }
+.cal-week { display: flex; margin-bottom: 8rpx; }
+.cal-w { flex: 1; text-align: center; font-size: 20rpx; color: var(--ink-2); }
+.cal-grid { display: flex; flex-wrap: wrap; }
+.cal-c { width: 14.28%; height: 64rpx; line-height: 64rpx; text-align: center; font-size: 22rpx; color: var(--ink-2); box-sizing: border-box; border-radius: 50%; }
+.cal-c.part { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+.cal-c.full { background: var(--brand); color: #fff; font-weight: 700; }
+.cal-c.today { border: 2rpx solid var(--brand); }
 .n { color: var(--brand); font-weight: 600; }
 </style>

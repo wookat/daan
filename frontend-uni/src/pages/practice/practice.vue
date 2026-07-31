@@ -60,8 +60,10 @@
     <!-- 答题 -->
     <view v-if="session && cur" class="card">
       <view class="rhead">
-        <text class="tag">{{ modName(cur.module) }}{{ lastSubmodule ? ' · ' + lastSubmodule : '' }} · {{ idx + 1 }}/{{ items.length }}</text>
+        <text class="tag" @click="cardOpen = true">{{ modName(cur.module) }}{{ lastSubmodule ? ' · ' + lastSubmodule : '' }} · {{ idx + 1 }}/{{ items.length }} ▾</text>
         <view class="hstats">
+          <text class="timer">⏱{{ fmtSecs(qsecs) }}</text>
+          <text class="fontbtn" @click="cycleFont">Aa</text>
           <text class="cnt okc">✓{{ right }}</text>
           <text class="cnt badc">✗{{ wrongCount }}</text>
           <text v-if="streak >= 3" class="cnt fire">🔥{{ streak }}</text>
@@ -69,12 +71,13 @@
         </view>
       </view>
       <view class="progress"><view class="pfill" :style="{ width: (idx / items.length) * 100 + '%' }" /></view>
-      <view class="q">{{ cur.question }}</view>
+      <view class="q" :style="qStyle">{{ cur.question }}</view>
       <view
         v-for="(v, k) in cur.options"
         :key="k"
         class="opt"
         :class="optClass(k)"
+        :style="optStyle"
         @click="pick(k)"
       >
         <text class="okey">{{ k }}</text>
@@ -83,6 +86,16 @@
         <text v-else-if="picked && k === picked" class="omark badm">✗</text>
       </view>
       <view v-if="picked" class="after">
+        <view v-if="picked !== cur.answer" class="reasons">
+          <text class="rz-t">错因自评：</text>
+          <text
+            v-for="rz in REASONS"
+            :key="rz"
+            class="rz"
+            :class="{ on: cur._reason === rz }"
+            @click="setReason(rz)"
+          >{{ rz }}</text>
+        </view>
         <view v-if="cur.explanation" class="exp">{{ cur.explanation }}</view>
         <view class="deep" @click="deepExplain">🔍 用花生十三方法详解这道题 ›</view>
       </view>
@@ -100,6 +113,26 @@
       <view class="sub">答对 {{ right }}/{{ items.length }} · 最高连对 {{ bestStreak }} 题<template v-if="autoSaved">，错题已自动加入错题本</template></view>
       <button class="btn" @click="start(lastModule, lastSubmodule)">再来一组</button>
       <button class="btn ghost" style="margin-top: 16rpx" @click="quit">返回选模块</button>
+    </view>
+
+    <!-- 答题卡 -->
+    <view v-if="cardOpen && session" class="mask" @click="cardOpen = false">
+      <view class="sheet" @click.stop>
+        <view class="sheet-h">
+          <text class="sheet-t">答题卡</text>
+          <text class="sheet-x" @click="cardOpen = false">✕</text>
+        </view>
+        <view class="acard-grid">
+          <view
+            v-for="(q, i) in items"
+            :key="i"
+            class="acard-n"
+            :class="acardClass(q, i)"
+            @click="jumpTo(i)"
+          >{{ i + 1 }}</view>
+        </view>
+        <view class="acard-foot">已答 {{ answeredCount }}/{{ items.length }} · 正确 {{ right }}</view>
+      </view>
     </view>
 
     <!-- 判分横幅 -->
@@ -152,6 +185,11 @@ export default {
       autoSaved: false,
       pstats: { byModule: {}, days: {} },
       autoTimer: null,
+      cardOpen: false,
+      qsecs: 0,
+      qTimer: null,
+      fontLv: uni.getStorageSync('fontLv') || 1,
+      REASONS: ['粗心大意', '概念不清', '方法不会', '纯蒙的'],
     };
   },
   computed: {
@@ -159,7 +197,7 @@ export default {
       return this.items[this.idx] || null;
     },
     wrongCount() {
-      return (this.picked ? this.idx + 1 : this.idx) - this.right;
+      return this.items.filter((q) => q._picked && q._picked !== q.answer).length;
     },
     weakModule() {
       let worst = null;
@@ -173,6 +211,15 @@ export default {
         }
       }
       return worst;
+    },
+    answeredCount() {
+      return this.items.filter((q) => q._picked).length;
+    },
+    qStyle() {
+      return { fontSize: [26, 30, 34][this.fontLv] + 'rpx' };
+    },
+    optStyle() {
+      return { fontSize: [25, 29, 33][this.fontLv] + 'rpx' };
     },
     ringStyle() {
       const pct = Math.round((this.right / (this.items.length || 1)) * 100);
@@ -190,6 +237,7 @@ export default {
   },
   onHide() {
     if (this.autoTimer) clearTimeout(this.autoTimer);
+    this.stopQTimer();
   },
   methods: {
     modName(m) {
@@ -254,6 +302,7 @@ export default {
         this.bestStreak = 0;
         this.autoSaved = false;
         this.session = true;
+        this.startQTimer();
         uni.setStorageSync('lastModule', module || '');
       } catch (e) {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
@@ -268,9 +317,56 @@ export default {
       s.days[day] = (s.days[day] || 0) + 1;
       savePStats(s);
     },
+    fmtSecs(s) {
+      return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+    },
+    startQTimer() {
+      this.stopQTimer();
+      this.qsecs = 0;
+      this.qTimer = setInterval(() => { this.qsecs++; }, 1000);
+    },
+    stopQTimer() {
+      if (this.qTimer) {
+        clearInterval(this.qTimer);
+        this.qTimer = null;
+      }
+    },
+    cycleFont() {
+      this.fontLv = (this.fontLv + 1) % 3;
+      uni.setStorageSync('fontLv', this.fontLv);
+      uni.showToast({ title: '字号：' + ['小', '标准', '大'][this.fontLv], icon: 'none', duration: 800 });
+    },
+    acardClass(q, i) {
+      if (i === this.idx) return 'cur';
+      if (!q._picked) return '';
+      return q._picked === q.answer ? 'ok' : 'bad';
+    },
+    jumpTo(i) {
+      this.cardOpen = false;
+      if (i === this.idx) return;
+      if (this.autoTimer) {
+        clearTimeout(this.autoTimer);
+        this.autoTimer = null;
+      }
+      this.idx = i;
+      this.picked = this.items[i]._picked || '';
+      if (!this.picked) this.startQTimer();
+    },
+    async setReason(rz) {
+      const q = this.cur;
+      q._reason = rz;
+      this.$forceUpdate();
+      if (q._mid) {
+        try {
+          await request('/api/mistakes/' + q._mid, { method: 'PATCH', data: { error_reason: rz } });
+        } catch (e) { /* 非关键路径 */ }
+      }
+    },
     pick(k) {
       if (this.picked) return;
       this.picked = k;
+      this.cur._picked = k;
+      this.stopQTimer();
       const correct = k === this.cur.answer;
       this.recordStat(this.cur.module, correct);
       if (correct) {
@@ -299,7 +395,7 @@ export default {
       if (q._saved) return;
       const optText = Object.entries(q.options).map(([k, v]) => `${k}.${v}`).join(' ');
       try {
-        await request('/api/mistakes', {
+        const res = await request('/api/mistakes', {
           method: 'POST',
           data: {
             module: q.module,
@@ -310,6 +406,10 @@ export default {
             explanation: q.explanation || '',
           },
         });
+        q._mid = res.id;
+        if (q._reason) {
+          request('/api/mistakes/' + q._mid, { method: 'PATCH', data: { error_reason: q._reason } });
+        }
         q._saved = true;
         this.autoSaved = true;
       } catch (e) {
@@ -328,13 +428,17 @@ export default {
         this.autoTimer = null;
       }
       this.idx++;
-      this.picked = '';
+      this.picked = (this.items[this.idx] && this.items[this.idx]._picked) || '';
+      if (this.cur && !this.picked) this.startQTimer();
+      else this.stopQTimer();
     },
     quit() {
       this.session = false;
       this.items = [];
       this.idx = 0;
       this.picked = '';
+      this.cardOpen = false;
+      this.stopQTimer();
       this.pstats = loadPStats();
     },
   },
@@ -368,6 +472,18 @@ export default {
 .okc { background: var(--ok-soft); color: var(--ok); }
 .badc { background: var(--bad-soft); color: var(--bad); }
 .fire { background: #fff7ed; color: #ea580c; }
+.timer { font-size: 22rpx; color: var(--ink-2); }
+.fontbtn { font-size: 24rpx; font-weight: 700; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 10rpx; padding: 2rpx 12rpx; }
+.reasons { display: flex; flex-wrap: wrap; align-items: center; gap: 12rpx; margin-bottom: 16rpx; }
+.rz-t { font-size: 23rpx; color: var(--ink-2); }
+.rz { font-size: 23rpx; color: var(--ink-2); border: 1rpx solid var(--line); background: var(--soft-bg); border-radius: 999rpx; padding: 8rpx 22rpx; }
+.rz.on { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
+.acard-grid { display: flex; flex-wrap: wrap; gap: 20rpx; padding: 8rpx 0 20rpx; }
+.acard-n { width: 80rpx; height: 80rpx; line-height: 80rpx; text-align: center; border-radius: 50%; background: var(--soft-bg); border: 2rpx solid var(--line); font-size: 27rpx; font-weight: 600; color: var(--ink-2); box-sizing: border-box; }
+.acard-n.ok { background: var(--ok); border-color: var(--ok); color: #fff; }
+.acard-n.bad { background: var(--bad); border-color: var(--bad); color: #fff; }
+.acard-n.cur { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
+.acard-foot { text-align: center; font-size: 23rpx; color: var(--ink-2); padding-bottom: 8rpx; }
 .op { font-size: 24rpx; color: var(--ink-2); margin-left: 6rpx; }
 .progress { height: 14rpx; background: var(--line); border-radius: 999rpx; overflow: hidden; margin-bottom: 22rpx; }
 .pfill { height: 100%; background: linear-gradient(90deg, #6366f1, #4f46e5); border-radius: 999rpx; transition: width 0.3s ease; }

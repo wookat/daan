@@ -34,6 +34,7 @@ def init_db():
         ("review_count", "ALTER TABLE mistakes ADD COLUMN review_count INTEGER DEFAULT 0"),
         ("review_streak", "ALTER TABLE mistakes ADD COLUMN review_streak INTEGER DEFAULT 0"),
         ("next_review", "ALTER TABLE mistakes ADD COLUMN next_review REAL"),
+        ("mastered", "ALTER TABLE mistakes ADD COLUMN mastered INTEGER DEFAULT 0"),
     ]:
         if col not in cols:
             conn.execute(ddl)
@@ -186,6 +187,18 @@ def list_mistakes(limit: int = 100) -> list[dict]:
     return out
 
 
+def update_mistake(mid: int, fields: dict):
+    allowed = {"error_reason", "mastered"}
+    sets = {k: v for k, v in fields.items() if k in allowed}
+    if not sets:
+        return
+    conn = get_conn()
+    clause = ", ".join(f"{k}=?" for k in sets)
+    conn.execute(f"UPDATE mistakes SET {clause} WHERE id=?", (*sets.values(), mid))
+    conn.commit()
+    conn.close()
+
+
 def delete_mistake(mid: int):
     conn = get_conn()
     conn.execute("DELETE FROM mistakes WHERE id=?", (mid,))
@@ -199,7 +212,8 @@ REVIEW_INTERVALS_DAYS = [1, 3, 7, 15, 30]
 def due_reviews(limit: int = 20) -> list[dict]:
     conn = get_conn()
     rows = conn.execute(
-        "SELECT * FROM mistakes WHERE next_review IS NULL OR next_review <= ? "
+        "SELECT * FROM mistakes WHERE (mastered IS NULL OR mastered=0) "
+        "AND (next_review IS NULL OR next_review <= ?) "
         "ORDER BY next_review IS NOT NULL, next_review, created_at LIMIT ?",
         (time.time(), limit),
     ).fetchall()
@@ -221,13 +235,14 @@ def record_review(mid: int, correct: bool) -> dict:
     streak = (row["review_streak"] or 0) + 1 if correct else 0
     days = REVIEW_INTERVALS_DAYS[min(streak - 1, len(REVIEW_INTERVALS_DAYS) - 1)] if correct else 1
     nxt = time.time() + days * 86400
+    mastered = 1 if streak >= 2 else 0
     conn.execute(
-        "UPDATE mistakes SET review_count=review_count+1, review_streak=?, next_review=? WHERE id=?",
-        (streak, nxt, mid),
+        "UPDATE mistakes SET review_count=review_count+1, review_streak=?, next_review=?, mastered=? WHERE id=?",
+        (streak, nxt, mastered, mid),
     )
     conn.commit()
     conn.close()
-    return {"streak": streak, "next_review_days": days}
+    return {"streak": streak, "next_review_days": days, "mastered": bool(mastered)}
 
 
 def stats() -> dict:
@@ -238,8 +253,13 @@ def stats() -> dict:
     by_type = conn.execute(
         "SELECT question_type, COUNT(*) n FROM mistakes GROUP BY question_type ORDER BY n DESC LIMIT 10"
     ).fetchall()
+    by_reason = conn.execute(
+        "SELECT error_reason, COUNT(*) n FROM mistakes WHERE error_reason IS NOT NULL AND error_reason != '' "
+        "GROUP BY error_reason ORDER BY n DESC"
+    ).fetchall()
     conn.close()
     return {
         "by_module": [dict(r) for r in by_module],
         "by_type": [dict(r) for r in by_type],
+        "by_reason": [dict(r) for r in by_reason],
     }

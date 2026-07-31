@@ -39,6 +39,10 @@
         </view>
         <text class="duego">开始复习</text>
       </view>
+      <view v-if="items.length" class="toptabs">
+        <view class="ttab" :class="{ on: tab === 'todo' }" @click="tab = 'todo'">待掌握 {{ todoItems.length }}</view>
+        <view class="ttab" :class="{ on: tab === 'done' }" @click="tab = 'done'">已斩 {{ doneItems.length }}</view>
+      </view>
       <scroll-view v-if="items.length" scroll-x class="chips">
         <view
           v-for="c in chipList"
@@ -58,13 +62,21 @@
       <view v-for="m in shownItems" :key="m.id" class="card mcard" :class="masteryClass(m)" @click="m.open = !m.open">
         <view class="mhead">
           <text class="tag">{{ m.question_type || modName(m.module) }}</text>
+          <text v-if="m.error_reason" class="rzbadge">{{ m.error_reason }}</text>
           <text v-if="m.review_count" class="rvbadge">已复习{{ m.review_count }}次</text>
+          <text v-if="m.mastered" class="zhan">已斩</text>
         </view>
         <view class="q" :class="{ clamp: !m.open }">{{ (m.question_text || '').slice(0, 200) }}</view>
+        <view v-if="ansLetter(m.user_answer)" class="anscmp">
+          <text class="my">我选 {{ ansLetter(m.user_answer) }} ✗</text>
+          <text v-if="ansLetter(m.correct_answer)" class="ca">· 答案 {{ ansLetter(m.correct_answer) }}</text>
+        </view>
         <view class="mfoot">
           <text class="meta">{{ fmt(m.created_at) }}</text>
           <view class="acts">
-            <text class="op redo" @click.stop="redo(m)">重做</text>
+            <text v-if="!m.mastered" class="op redo" @click.stop="redo(m)">重做</text>
+            <text v-if="!m.mastered" class="op zop" @click.stop="master(m)">标为已斩</text>
+            <text v-else class="op redo" @click.stop="master(m, false)">恢复复习</text>
             <text class="op del" @click.stop="del(m)">删除</text>
           </view>
         </view>
@@ -100,6 +112,7 @@ export default {
       nextDays: 0,
       streak: 0,
       filterMod: '',
+      tab: 'todo',
     };
   },
   computed: {
@@ -116,8 +129,15 @@ export default {
       const mods = [...new Set(this.items.map((m) => m.module).filter(Boolean))];
       return [{ key: '', name: '全部' }, ...mods.map((m) => ({ key: m, name: NAMES[m] || m }))];
     },
+    todoItems() {
+      return this.items.filter((m) => !m.mastered);
+    },
+    doneItems() {
+      return this.items.filter((m) => m.mastered);
+    },
     shownItems() {
-      return this.filterMod ? this.items.filter((m) => m.module === this.filterMod) : this.items;
+      const base = this.tab === 'done' ? this.doneItems : this.todoItems;
+      return this.filterMod ? base.filter((m) => m.module === this.filterMod) : base;
     },
   },
   onShow() {
@@ -128,8 +148,18 @@ export default {
       return NAMES[m] || m || '';
     },
     masteryClass(m) {
+      if (m.mastered) return 'lv-good';
       if (!m.review_count) return 'lv-new';
       return m.review_count >= 2 ? 'lv-good' : 'lv-mid';
+    },
+    ansLetter(s) {
+      const m = /[A-D]/.exec(String(s || '').toUpperCase());
+      return m ? m[0] : '';
+    },
+    async master(m, on = true) {
+      await request('/api/mistakes/' + m.id, { method: 'PATCH', data: { mastered: on ? 1 : 0 } });
+      if (on) uni.showToast({ title: '已斩！', icon: 'success' });
+      this.load();
     },
     goPractice() {
       uni.switchTab({ url: '/pages/practice/practice' });
@@ -199,7 +229,15 @@ export default {
       return 'dim';
     },
     fmt(ts) {
-      return new Date(ts * 1000).toLocaleString('zh-CN');
+      const d = new Date(ts * 1000);
+      const now = new Date();
+      const hm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+      const sameDay = (a, b) => a.toDateString() === b.toDateString();
+      if (sameDay(d, now)) return '今天 ' + hm;
+      const yest = new Date(now);
+      yest.setDate(now.getDate() - 1);
+      if (sameDay(d, yest)) return '昨天 ' + hm;
+      return `${d.getMonth() + 1}月${d.getDate()}日`;
     },
     redo(m) {
       uni.setStorageSync('redoQuestion', m.question_text || '');
@@ -237,6 +275,15 @@ export default {
 .mcard.lv-good { border-left-color: var(--ok); }
 .mhead { display: flex; align-items: center; gap: 12rpx; }
 .rvbadge { font-size: 20rpx; color: var(--ink-2); background: var(--soft-bg); border-radius: 999rpx; padding: 4rpx 14rpx; }
+.rzbadge { font-size: 20rpx; color: #b45309; background: #fef3c7; border-radius: 999rpx; padding: 4rpx 14rpx; }
+.zhan { margin-left: auto; font-size: 22rpx; font-weight: 700; color: var(--ok); border: 3rpx solid var(--ok); border-radius: 8rpx; padding: 2rpx 12rpx; transform: rotate(-8deg); }
+.anscmp { margin-top: 8rpx; font-size: 23rpx; }
+.anscmp .my { color: var(--bad); font-weight: 600; }
+.anscmp .ca { color: var(--ok); font-weight: 600; margin-left: 8rpx; }
+.zop { color: var(--ok); border: 1rpx solid var(--ok); }
+.toptabs { display: flex; gap: 16rpx; margin-bottom: 20rpx; }
+.ttab { flex: 1; text-align: center; padding: 16rpx 0; border-radius: 16rpx; background: var(--card); border: 1rpx solid var(--line); font-size: 26rpx; color: var(--ink-2); }
+.ttab.on { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
 .mfoot { display: flex; justify-content: space-between; align-items: center; margin-top: 12rpx; }
 .acts { display: flex; gap: 8rpx; }
 .op { font-size: 24rpx; margin-left: 16rpx; padding: 6rpx 20rpx; border-radius: 999rpx; }

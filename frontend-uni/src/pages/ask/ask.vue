@@ -5,11 +5,17 @@
       <text class="hero-s">拍题即得你学的方法体系讲解</text>
     </view>
     <view class="today">
-      <view class="today-l">
-        <text class="today-t">今日已刷 {{ todayDone }} 题</text>
-        <text class="today-s">{{ streakDays > 0 ? '连续打卡 ' + streakDays + ' 天 🔥' : '开始今天的练习吧' }}</text>
+      <view class="goal-ring" :class="{ hit: todayDone >= goal }" :style="goalRingStyle" @click="cycleGoal">
+        <view class="goal-in">
+          <text class="goal-n">{{ todayDone }}</text>
+          <text class="goal-t">/{{ goal }}题</text>
+        </view>
       </view>
-      <view class="today-btn" @click="goPractice">{{ dueCount > 0 ? '先复习 ' + dueCount + ' 道错题' : '继续刷题 ›' }}</view>
+      <view class="today-l">
+        <text class="today-t">{{ todayDone >= goal ? '🎉 今日目标达成' : '今日 ' + todayDone + '/' + goal + ' 题' }}</text>
+        <text class="today-s">{{ streakDays > 0 ? '🔥 连续打卡 ' + streakDays + ' 天' : '开始今天的练习吧' }}</text>
+      </view>
+      <view class="today-btn" @click="goPractice">{{ dueCount > 0 ? '先复习 ' + dueCount + ' 道' : '继续刷题 ›' }}</view>
     </view>
     <view class="card">
       <view class="seg">
@@ -104,7 +110,15 @@ export default {
       todayDone: 0,
       streakDays: 0,
       dueCount: 0,
+      goal: uni.getStorageSync('dailyGoal') || 20,
     };
+  },
+  computed: {
+    goalRingStyle() {
+      const pct = Math.min(100, Math.round((this.todayDone / this.goal) * 100));
+      const c = this.todayDone >= this.goal ? '#f59e0b' : '#ffffff';
+      return { background: `conic-gradient(${c} 0% ${pct}%, rgba(255,255,255,0.25) ${pct}% 100%)` };
+    },
   },
   onShow() {
     this.loadToday();
@@ -120,6 +134,12 @@ export default {
     }
   },
   methods: {
+    cycleGoal() {
+      const opts = [10, 20, 50];
+      this.goal = opts[(opts.indexOf(this.goal) + 1) % opts.length];
+      uni.setStorageSync('dailyGoal', this.goal);
+      uni.showToast({ title: '每日目标：' + this.goal + ' 题', icon: 'none', duration: 800 });
+    },
     goPractice() {
       const target = this.dueCount > 0 ? '/pages/book/book' : '/pages/practice/practice';
       uni.switchTab({ url: target });
@@ -341,7 +361,12 @@ export default {
 .hero { padding: 28rpx 8rpx 20rpx; }
 .hero-t { display: block; font-size: 40rpx; font-weight: 700; color: var(--ink); letter-spacing: 1rpx; }
 .hero-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 6rpx; }
-.today { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #3b6ef6, #7c5cfc); border-radius: var(--radius); padding: 26rpx 30rpx; margin-bottom: 24rpx; }
+.today { display: flex; justify-content: space-between; align-items: center; gap: 20rpx; background: linear-gradient(135deg, #3b6ef6, #7c5cfc); border-radius: var(--radius); padding: 26rpx 30rpx; margin-bottom: 24rpx; }
+.goal-ring { flex-shrink: 0; width: 112rpx; height: 112rpx; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.goal-in { width: 88rpx; height: 88rpx; border-radius: 50%; background: rgba(30, 41, 99, 0.35); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.goal-n { font-size: 30rpx; font-weight: 700; color: #fff; line-height: 1.1; }
+.goal-t { font-size: 17rpx; color: rgba(255, 255, 255, 0.8); }
+.today-l { flex: 1; min-width: 0; }
 .today-t { display: block; font-size: 28rpx; font-weight: 700; color: #fff; }
 .today-s { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.78); margin-top: 6rpx; }
 .today-btn { background: #fff; color: #4f46e5; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 12rpx 28rpx; flex-shrink: 0; }

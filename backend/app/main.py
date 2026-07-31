@@ -134,6 +134,12 @@ async def api_list_mistakes():
     return {"items": db.list_mistakes()}
 
 
+@app.patch("/api/mistakes/{mid}")
+async def api_update_mistake(mid: int, body: dict):
+    db.update_mistake(mid, body)
+    return {"ok": True}
+
+
 @app.delete("/api/mistakes/{mid}")
 async def api_delete_mistake(mid: int):
     db.delete_mistake(mid)
