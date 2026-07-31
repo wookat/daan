@@ -43,6 +43,13 @@
         <view class="ttab" :class="{ on: tab === 'todo' }" @click="tab = 'todo'">待掌握 {{ todoItems.length }}</view>
         <view class="ttab" :class="{ on: tab === 'done' }" @click="tab = 'done'">已斩 {{ doneItems.length }}</view>
       </view>
+      <view v-if="todoItems.length" class="card redocard" @click="redoAll">
+        <view>
+          <view class="duetxt"><uni-icons type="refreshempty" size="16" color="#ffffff" /><text class="duetxt-t">错题重练</text></view>
+          <text class="duesub">把待掌握错题按刷题模式重做一遍（最多 10 题）</text>
+        </view>
+        <text class="duego">开始</text>
+      </view>
       <scroll-view v-if="items.length" scroll-x class="chips">
         <view
           v-for="c in chipList"
@@ -244,6 +251,19 @@ export default {
       if (sameDay(d, yest)) return '昨天 ' + hm;
       return `${d.getMonth() + 1}月${d.getDate()}日`;
     },
+    async redoAll() {
+      try {
+        const d = await request('/api/mistakes/redo?limit=10');
+        if (!d.items || !d.items.length) {
+          uni.showToast({ title: '错题未能匹配到题库原题', icon: 'none' });
+          return;
+        }
+        uni.setStorageSync('redoSet', d.items);
+        uni.switchTab({ url: '/pages/practice/practice' });
+      } catch (e) {
+        uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
+      }
+    },
     redo(m) {
       uni.setStorageSync('redoQuestion', m.question_text || '');
       uni.switchTab({ url: '/pages/ask/ask' });
@@ -306,6 +326,8 @@ export default {
 .q.clamp { max-height: 120rpx; overflow: hidden; }
 .meta { font-size: 22rpx; color: var(--ink-2); }
 .duecard { background: linear-gradient(135deg, #3b6ef6, #7c5cfc); border: none; display: flex; justify-content: space-between; align-items: center; }
+.redocard { background: linear-gradient(135deg, #0ea5e9, #22c55e); border: none; display: flex; justify-content: space-between; align-items: center; }
+.redocard .duego { color: #0e9488; }
 .duetxt { display: flex; align-items: center; gap: 8rpx; font-size: 28rpx; font-weight: 700; color: #fff; }
 .duetxt-t { font-size: 28rpx; font-weight: 700; color: #fff; }
 .duesub { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.75); margin-top: 6rpx; }

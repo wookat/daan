@@ -320,6 +320,11 @@ def api_questions(
     }
 
 
+@app.get("/api/mistakes/redo")
+def api_mistakes_redo(limit: int = 10):
+    return {"items": db.mistakes_redo_questions(min(limit, 25))}
+
+
 @app.get("/api/admin/batches")
 def api_admin_batches(x_admin_token: str | None = Header(None)):
     check_admin(x_admin_token)

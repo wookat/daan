@@ -369,6 +369,29 @@ export default {
     this.loadCounts();
     this.loadAnnounce();
     if (this.realMode) this.loadRealFilters();
+    const redoSet = uni.getStorageSync('redoSet');
+    if (redoSet && redoSet.length) {
+      uni.removeStorageSync('redoSet');
+      if (this.beiMode) {
+        this.beiMode = false;
+        uni.setStorageSync('beiMode', '');
+      }
+      this.items = redoSet.map((q) => ({ ...q, _saved: false }));
+      this.idx = 0;
+      this.picked = '';
+      this.right = 0;
+      this.streak = 0;
+      this.bestStreak = 0;
+      this.autoSaved = false;
+      this.resultSent = false;
+      this.percentile = null;
+      this.lastModule = null;
+      this.lastSubmodule = null;
+      this.session = true;
+      this.startQTimer();
+      uni.showToast({ title: '错题重练开始', icon: 'none' });
+      return;
+    }
     const preset = uni.getStorageSync('practicePreset');
     if (preset && preset.module) {
       uni.removeStorageSync('practicePreset');

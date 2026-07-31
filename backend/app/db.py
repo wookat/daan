@@ -571,6 +571,34 @@ def import_questions(items: list[dict], batch: str | None = None) -> dict:
     return {"inserted": inserted, "skipped": skipped, "batch": batch}
 
 
+def mistakes_redo_questions(limit: int = 10) -> list[dict]:
+    """把待掌握错题匹配回题库原题，供刷题页重练。"""
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT question_text FROM mistakes WHERE mastered=0 ORDER BY COALESCE(next_review, created_at), created_at DESC LIMIT ?",
+        (limit * 2,),
+    ).fetchall()
+    out = []
+    seen = set()
+    for r in rows:
+        head = (r["question_text"] or "").split("\n")[0].strip()
+        if not head or head in seen:
+            continue
+        seen.add(head)
+        q = conn.execute(
+            "SELECT * FROM questions WHERE question=? AND (disabled IS NULL OR disabled=0)", (head,)
+        ).fetchone()
+        if not q:
+            continue
+        d = dict(q)
+        d["options"] = json.loads(d.get("options") or "{}")
+        out.append(d)
+        if len(out) >= limit:
+            break
+    conn.close()
+    return out
+
+
 def admin_batches() -> list[dict]:
     conn = get_conn()
     rows = conn.execute(
