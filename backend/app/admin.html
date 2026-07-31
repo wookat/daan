@@ -49,6 +49,7 @@ main { max-width:1080px; margin:20px auto; padding:0 16px; }
     <div class="tab" data-tab="cache" onclick="switchTab(this)">讲解缓存差评</div>
     <div class="tab" data-tab="disabled" onclick="switchTab(this)">已下架</div>
     <div class="tab" data-tab="ann" onclick="switchTab(this)">运营公告</div>
+    <div class="tab" data-tab="batches" onclick="switchTab(this)">批次审核</div>
   </div>
   <div class="bar" id="searchbar" style="display:none">
     <input id="kw" placeholder="题干关键词" />
@@ -147,8 +148,30 @@ async function createAnn() {
 async function toggleAnn(id, active) {
   try { await api('/api/admin/announcements/' + id, { method: 'PATCH', body: JSON.stringify({ active }) }); load(); } catch (e) { alert('失败：' + e.message); }
 }
+async function batchDecide(bid, approve) {
+  if (!approve && !confirm('驳回将删除该批次待审题目，确定？')) return;
+  try { await api('/api/admin/batches/' + bid + '/decide', { method: 'POST', body: JSON.stringify({ approve }) }); load(); } catch (e) { alert('失败：' + e.message); }
+}
+async function batchSample(bid) {
+  try {
+    const d = await api('/api/admin/batches/' + bid + '/sample');
+    document.getElementById('bs' + bid).innerHTML = d.items.map((q) => `<pre>${esc(q.module)}｜答案 ${esc(q.answer)}｜${esc(q.question.slice(0, 200))}\n${Object.entries(q.options || {}).map(([k, v]) => k + '. ' + esc(String(v).slice(0, 80))).join('\n')}</pre>`).join('');
+  } catch (e) { alert('失败：' + e.message); }
+}
 async function load() {
   try {
+    if (TAB === 'batches') {
+      const d = await api('/api/admin/batches');
+      $('list').innerHTML = d.items.length ? d.items.map((b) => `<div class="q">
+        <div class="meta"><span class="badge">${esc(b.batch)}</span><span>共 ${b.n} 题</span><span>真题 ${b.real_n || 0}</span>${b.pending ? `<span class="down">待审 ${b.pending}</span>` : '<span>已全部发布</span>'}</div>
+        <div class="row">
+          <button onclick="batchSample('${esc(b.batch)}')">抽样 10 题</button>
+          ${b.pending ? `<button class="ok" onclick="batchDecide('${esc(b.batch)}',true)">发布批次</button><button class="warn" onclick="batchDecide('${esc(b.batch)}',false)">驳回删除</button>` : ''}
+        </div>
+        <div id="bs${esc(b.batch)}"></div>
+      </div>`).join('') : '<div class="empty">暂无导入批次（新导入将自动进入待审）</div>';
+      return;
+    }
     if (TAB === 'ann') {
       const d = await api('/api/admin/announcements');
       $('list').innerHTML = d.items.length ? d.items.map((a) => `<div class="q">

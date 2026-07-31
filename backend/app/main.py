@@ -2,6 +2,7 @@ import base64
 import hashlib
 import json
 import os
+import time
 
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
@@ -289,7 +290,8 @@ def api_questions_export(offset: int = 0, limit: int = 200, module: str | None =
 def api_questions_import(body: dict, x_import_token: str | None = Header(None)):
     if not IMPORT_TOKEN or x_import_token != IMPORT_TOKEN:
         raise HTTPException(401, "无效导入令牌")
-    result = db.import_questions(body.get("items") or [])
+    batch = "b" + time.strftime("%Y%m%d%H%M%S")
+    result = db.import_questions(body.get("items") or [], batch=batch)
     return result
 
 
@@ -316,6 +318,24 @@ def api_questions(
         ),
         "counts": db.question_counts(),
     }
+
+
+@app.get("/api/admin/batches")
+def api_admin_batches(x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return {"items": db.admin_batches()}
+
+
+@app.get("/api/admin/batches/{bid}/sample")
+def api_admin_batch_sample(bid: str, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return {"items": db.admin_batch_sample(bid)}
+
+
+@app.post("/api/admin/batches/{bid}/decide")
+def api_admin_batch_decide(bid: str, body: dict, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return {"n": db.admin_batch_decide(bid, bool(body.get("approve")))}
 
 
 @app.get("/api/announcement")

@@ -1,6 +1,7 @@
 """错题本存储（SQLite）。"""
 import json
 import os
+import re
 import secrets
 import sqlite3
 import time
@@ -63,6 +64,7 @@ def init_db():
         ("exam_year", "ALTER TABLE questions ADD COLUMN exam_year INTEGER"),
         ("exam_region", "ALTER TABLE questions ADD COLUMN exam_region TEXT"),
         ("disabled", "ALTER TABLE questions ADD COLUMN disabled INTEGER DEFAULT 0"),
+        ("import_batch", "ALTER TABLE questions ADD COLUMN import_batch TEXT"),
     ]:
         if col not in qcols:
             conn.execute(ddl)
@@ -177,7 +179,7 @@ def random_questions(
 def question_counts() -> list[dict]:
     conn = get_conn()
     rows = conn.execute(
-        "SELECT module, COUNT(*) n FROM questions GROUP BY module ORDER BY n DESC"
+        "SELECT module, COUNT(*) n FROM questions WHERE (disabled IS NULL OR disabled=0) GROUP BY module ORDER BY n DESC"
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -186,7 +188,7 @@ def question_counts() -> list[dict]:
 def submodule_counts(module: str) -> list[dict]:
     conn = get_conn()
     rows = conn.execute(
-        "SELECT submodule, COUNT(*) n FROM questions WHERE module=? AND submodule IS NOT NULL AND submodule!='' "
+        "SELECT submodule, COUNT(*) n FROM questions WHERE module=? AND (disabled IS NULL OR disabled=0) AND submodule IS NOT NULL AND submodule!='' "
         "GROUP BY submodule HAVING n >= 8 ORDER BY n DESC LIMIT 30",
         (module,),
     ).fetchall()
@@ -509,7 +511,17 @@ def normalize_submodule(sub: str | None) -> str | None:
     return _SUB_SYNONYMS.get(s, s) or None
 
 
-def import_questions(items: list[dict]) -> dict:
+_RESIDUE_RE = re.compile(r"[一二三四五六七八九十]、|第[一二三四五]部分|共\d+题")
+
+
+def _bad_options(opts: dict) -> bool:
+    vals = [str(v).strip() for v in opts.values()]
+    if len(vals) < 2 or any(not v for v in vals) or len(set(vals)) < len(vals):
+        return True
+    return any(len(v) > 120 or _RESIDUE_RE.search(v) for v in vals)
+
+
+def import_questions(items: list[dict], batch: str | None = None) -> dict:
     conn = get_conn()
     inserted = 0
     skipped = 0
@@ -523,11 +535,12 @@ def import_questions(items: list[dict]) -> dict:
             or not q.get("answer")
             or not isinstance(opts, dict)
             or q.get("answer") not in opts
+            or _bad_options(opts)
         ):
             skipped += 1
             continue
         cur = conn.execute(
-            "INSERT OR IGNORE INTO questions (module, question_type, question, options, answer, explanation, source, submodule, is_real, exam_year, exam_region) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT OR IGNORE INTO questions (module, question_type, question, options, answer, explanation, source, submodule, is_real, exam_year, exam_region, disabled, import_batch) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
                 q.get("module"),
                 q.get("question_type"),
@@ -540,6 +553,8 @@ def import_questions(items: list[dict]) -> dict:
                 1 if q.get("is_real") else 0,
                 q.get("exam_year"),
                 q.get("exam_region"),
+                2 if batch else 0,
+                batch,
             ),
         )
         if cur.rowcount:
@@ -553,7 +568,51 @@ def import_questions(items: list[dict]) -> dict:
                 )
     conn.commit()
     conn.close()
-    return {"inserted": inserted, "skipped": skipped}
+    return {"inserted": inserted, "skipped": skipped, "batch": batch}
+
+
+def admin_batches() -> list[dict]:
+    conn = get_conn()
+    rows = conn.execute(
+        """SELECT import_batch AS batch, COUNT(*) AS n,
+                  SUM(CASE WHEN disabled=2 THEN 1 ELSE 0 END) AS pending,
+                  SUM(is_real) AS real_n
+           FROM questions WHERE import_batch IS NOT NULL
+           GROUP BY import_batch ORDER BY import_batch DESC LIMIT 50"""
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def admin_batch_sample(batch: str, limit: int = 10) -> list[dict]:
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT * FROM questions WHERE import_batch=? ORDER BY RANDOM() LIMIT ?",
+        (batch, limit),
+    ).fetchall()
+    conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["options"] = json.loads(d["options"] or "{}")
+        out.append(d)
+    return out
+
+
+def admin_batch_decide(batch: str, approve: bool) -> int:
+    conn = get_conn()
+    if approve:
+        cur = conn.execute(
+            "UPDATE questions SET disabled=0 WHERE import_batch=? AND disabled=2", (batch,)
+        )
+    else:
+        cur = conn.execute(
+            "DELETE FROM questions WHERE import_batch=? AND disabled=2", (batch,)
+        )
+    conn.commit()
+    n = cur.rowcount
+    conn.close()
+    return n
 
 
 def import_hs_explanations(items: list[dict]) -> int:
