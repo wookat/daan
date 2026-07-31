@@ -1,4 +1,5 @@
 """LLM 客户端：OpenAI 兼容中转，支持图片（base64）与文本。"""
+import asyncio
 import json
 import os
 
@@ -33,19 +34,23 @@ def _endpoint(messages: list) -> tuple[str, str, str]:
 async def chat(messages: list, temperature: float = 0.2, max_tokens: int = 4000) -> str:
     base, key, model = _endpoint(messages)
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-        resp = await client.post(
-            f"{base}/v1/chat/completions",
-            headers={"Authorization": f"Bearer {key}"},
-            json={
-                "model": model,
-                "messages": messages,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-            },
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        return data["choices"][0]["message"]["content"]
+        for attempt in range(3):
+            resp = await client.post(
+                f"{base}/v1/chat/completions",
+                headers={"Authorization": f"Bearer {key}"},
+                json={
+                    "model": model,
+                    "messages": messages,
+                    "temperature": temperature,
+                    "max_tokens": max_tokens,
+                },
+            )
+            if resp.status_code >= 500 and attempt < 2:
+                await asyncio.sleep(2 * (attempt + 1))
+                continue
+            resp.raise_for_status()
+            data = resp.json()
+            return data["choices"][0]["message"]["content"]
 
 
 async def chat_stream(messages: list, temperature: float = 0.2, max_tokens: int = 4000):
