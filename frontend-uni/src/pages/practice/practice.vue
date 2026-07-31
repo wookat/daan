@@ -3,6 +3,19 @@
     <!-- 选模块 -->
     <view v-if="!session" class="card">
       <view class="h">选择模块开始刷题</view>
+      <view class="setrow">
+        <text class="set-k">选题来源</text>
+        <view class="set-chips">
+          <text class="set-chip" :class="{ on: !realMode }" @click="setReal(false)">题库模式</text>
+          <text class="set-chip" :class="{ on: realMode }" @click="setReal(true)">真题模式</text>
+        </view>
+      </view>
+      <view class="setrow">
+        <text class="set-k">每组题量</text>
+        <view class="set-chips">
+          <text v-for="n in [10, 20, 30, 50]" :key="n" class="set-chip" :class="{ on: groupSize === n }" @click="setGroup(n)">{{ n }}</text>
+        </view>
+      </view>
       <view v-if="!counts.length" class="spin">题库为空，敬请期待</view>
       <view v-if="weakModule" class="smart" @click="start(weakModule)">
         <view class="smart-l">
@@ -73,6 +86,7 @@
         </view>
       </view>
       <view class="progress"><view class="pfill" :style="{ width: (idx / items.length) * 100 + '%' }" /></view>
+      <view v-if="cur.is_real" class="real-tag">真题{{ cur.exam_year ? ' · ' + cur.exam_year : '' }}{{ cur.exam_region ? ' · ' + cur.exam_region : '' }}</view>
       <view class="q" :style="qStyle">{{ cur.question }}</view>
       <view
         v-for="(v, k) in cur.options"
@@ -222,6 +236,8 @@ export default {
       fontLv: uni.getStorageSync('fontLv') || 1,
       sfxOn: uni.getStorageSync('sfxOff') ? false : true,
       beiMode: uni.getStorageSync('beiMode') ? true : false,
+      realMode: uni.getStorageSync('realMode') ? true : false,
+      groupSize: uni.getStorageSync('groupSize') || 10,
       hsRated: {},
       REASONS: ['粗心大意', '概念不清', '方法不会', '纯蒙的'],
     };
@@ -320,19 +336,32 @@ export default {
         this.start(module);
       }
     },
+    setReal(v) {
+      this.realMode = v;
+      uni.setStorageSync('realMode', v ? '1' : '');
+    },
+    setGroup(n) {
+      this.groupSize = n;
+      uni.setStorageSync('groupSize', n);
+    },
     async start(module, submodule, count) {
       this.lastModule = module;
       this.lastSubmodule = submodule || null;
       this.subSelect = null;
-      const limit = count || 10;
+      const limit = count || this.groupSize || 10;
+      const realQ = this.realMode ? '&real=1' : '';
       try {
         let d = await request(
-          '/api/questions?limit=' + limit +
+          '/api/questions?limit=' + limit + realQ +
             (module ? '&module=' + module : '') +
             (submodule ? '&submodule=' + encodeURIComponent(submodule) : '')
         );
         if (!d.items.length && submodule) {
           this.lastSubmodule = null;
+          d = await request('/api/questions?limit=' + limit + realQ + (module ? '&module=' + module : ''));
+        }
+        if (!d.items.length && this.realMode) {
+          uni.showToast({ title: '真题还在搜集中，已切回题库模式', icon: 'none' });
           d = await request('/api/questions?limit=' + limit + (module ? '&module=' + module : ''));
         }
         if (!d.items.length) {
@@ -551,6 +580,12 @@ export default {
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 30rpx; font-weight: 600; margin-bottom: 20rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 24rpx; }
+.setrow { display: flex; align-items: center; gap: 18rpx; margin-bottom: 16rpx; flex-wrap: wrap; }
+.set-k { font-size: 24rpx; color: var(--ink-2); }
+.set-chips { display: flex; gap: 12rpx; flex-wrap: wrap; }
+.set-chip { font-size: 23rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 6rpx 22rpx; }
+.set-chip.on { color: #fff; background: var(--brand); border-color: var(--brand); }
+.real-tag { display: inline-block; font-size: 21rpx; color: #b45309; background: #fef3c7; border-radius: 8rpx; padding: 4rpx 14rpx; margin-bottom: 10rpx; }
 .smart { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #f97316, #f43f5e); border-radius: 20rpx; padding: 24rpx 28rpx; margin-bottom: 20rpx; }
 .smart-t { display: flex; align-items: center; gap: 8rpx; font-size: 27rpx; font-weight: 700; color: #fff; }
 .smart-t-t { font-size: 27rpx; font-weight: 700; color: #fff; }
