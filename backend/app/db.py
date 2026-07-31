@@ -409,10 +409,16 @@ _SUB_SYNONYMS = {
 }
 
 
+_SUB_COLLAPSE = ("类比推理", "定义判断", "图形推理")
+
+
 def normalize_submodule(sub: str | None) -> str | None:
     if not sub:
         return sub
     s = str(sub).strip()
+    for c in _SUB_COLLAPSE:
+        if s.startswith(c + "-") or s.startswith(c + "："):
+            return c
     for p in _SUB_PREFIXES:
         if s.startswith(p):
             s = s[len(p):]

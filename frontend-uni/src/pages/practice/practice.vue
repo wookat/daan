@@ -798,6 +798,11 @@ export default {
 .exp-ans.badc2 { color: var(--bad); }
 .deep { margin-top: 6rpx; text-align: center; font-size: 25rpx; color: var(--brand); border: 1rpx solid var(--brand); border-radius: 999rpx; padding: 14rpx 0; }
 .banner { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between; gap: 20rpx; padding: 28rpx 32rpx calc(28rpx + env(safe-area-inset-bottom)); animation: slideup 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
+/* #ifdef H5 */
+@media (max-width: 767px) {
+  .banner { bottom: calc(50px + env(safe-area-inset-bottom)); padding-bottom: 28rpx; }
+}
+/* #endif */
 @keyframes slideup {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
