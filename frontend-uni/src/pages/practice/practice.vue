@@ -64,6 +64,7 @@
         <view class="hstats">
           <text class="timer">⏱{{ fmtSecs(qsecs) }}</text>
           <text class="fontbtn" @click="cycleFont">Aa</text>
+          <text class="fontbtn" @click="toggleSfx">{{ sfxOn ? '🔊' : '🔇' }}</text>
           <text class="cnt okc">✓{{ right }}</text>
           <text class="cnt badc">✗{{ wrongCount }}</text>
           <text v-if="streak >= 3" class="cnt fire">🔥{{ streak }}</text>
@@ -206,6 +207,7 @@ export default {
       qsecs: 0,
       qTimer: null,
       fontLv: uni.getStorageSync('fontLv') || 1,
+      sfxOn: uni.getStorageSync('sfxOff') ? false : true,
       REASONS: ['粗心大意', '概念不清', '方法不会', '纯蒙的'],
     };
   },
@@ -350,6 +352,39 @@ export default {
         this.qTimer = null;
       }
     },
+    toggleSfx() {
+      this.sfxOn = !this.sfxOn;
+      uni.setStorageSync('sfxOff', this.sfxOn ? '' : '1');
+      uni.showToast({ title: this.sfxOn ? '音效已开启' : '音效已关闭', icon: 'none', duration: 800 });
+    },
+    playSfx(correct) {
+      if (!this.sfxOn) return;
+      // #ifdef H5
+      try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!this._actx) this._actx = new Ctx();
+        const ctx = this._actx;
+        const t = ctx.currentTime;
+        const mk = (freq, start, dur) => {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = 'sine';
+          o.frequency.value = freq;
+          g.gain.setValueAtTime(0.12, t + start);
+          g.gain.exponentialRampToValueAtTime(0.001, t + start + dur);
+          o.connect(g).connect(ctx.destination);
+          o.start(t + start);
+          o.stop(t + start + dur);
+        };
+        if (correct) {
+          mk(660, 0, 0.12);
+          mk(880, 0.1, 0.18);
+        } else {
+          mk(220, 0, 0.25);
+        }
+      } catch (e) { /* 音效失败不影响刷题 */ }
+      // #endif
+    },
     cycleFont() {
       this.fontLv = (this.fontLv + 1) % 3;
       uni.setStorageSync('fontLv', this.fontLv);
@@ -388,10 +423,16 @@ export default {
       this.stopQTimer();
       const correct = k === this.cur.answer;
       this.recordStat(this.cur.module, correct);
+      this.playSfx(correct);
       if (correct) {
         this.right++;
         this.streak++;
         if (this.streak > this.bestStreak) this.bestStreak = this.streak;
+        const s = this.pstats;
+        if (this.streak > (s.bestStreak || 0)) {
+          s.bestStreak = this.streak;
+          savePStats(s);
+        }
         if (this.streak === 3 || this.streak === 5 || this.streak === 10) {
           uni.showToast({ title: '🔥 连对 ' + this.streak + ' 题！', icon: 'none' });
         }
@@ -513,7 +554,12 @@ export default {
 .omark { flex-shrink: 0; font-size: 30rpx; font-weight: 700; margin-left: 12rpx; }
 .omark.good { color: var(--ok); }
 .omark.badm { color: var(--bad); }
-.opt.right { background: var(--ok-soft); border-color: var(--ok); }
+.opt.right { background: var(--ok-soft); border-color: var(--ok); animation: pop 0.35s cubic-bezier(0.2, 0.8, 0.2, 1.4); }
+@keyframes pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
 .opt.right .okey { background: var(--ok); color: #fff; border-color: var(--ok); }
 .opt.wrong { background: var(--bad-soft); border-color: var(--bad); animation: shake 0.3s; }
 .opt.wrong .okey { background: var(--bad); color: #fff; border-color: var(--bad); }

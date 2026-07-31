@@ -30,7 +30,11 @@
 
     <view class="card">
       <view class="h">五模块能力雷达</view>
-      <view v-if="!hasRadar" class="spin">刷题后生成你的能力画像</view>
+      <view v-if="!hasRadar" class="radar-empty">
+        <view class="re-t">还没有能力数据</view>
+        <view class="re-s">刷几题就能生成你的五模块能力画像</view>
+        <button class="re-btn" @click="goPractice('')">去刷题</button>
+      </view>
       <view v-else class="radar-box">
         <view class="radar">
           <view v-for="i in 4" :key="'g' + i" class="ring" :style="ringStyle(i)" />
@@ -83,6 +87,17 @@
     </view>
 
     <view class="card">
+      <view class="h">成就勋章</view>
+      <view class="medals">
+        <view v-for="md in medals" :key="md.name" class="medal" :class="{ got: md.got }">
+          <text class="m-ico">{{ md.icon }}</text>
+          <text class="m-name">{{ md.name }}</text>
+          <text class="m-sub">{{ md.got ? '已达成' : md.progress }}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="card">
       <view class="h">高频错题型 TOP10</view>
       <view v-if="!byType.length" class="spin">暂无数据</view>
       <view v-for="t in byType" :key="t.question_type" class="tline">
@@ -105,7 +120,7 @@ const MODS = [
 
 export default {
   data() {
-    return { byModule: [], byType: [], byReason: [], pstats: { byModule: {}, days: {} } };
+    return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} } };
   },
   computed: {
     total() {
@@ -134,6 +149,23 @@ export default {
         } else break;
       }
       return n;
+    },
+    medals() {
+      const done = this.totalDone;
+      const streak = this.streakDays;
+      const best = this.pstats.bestStreak || 0;
+      const zhan = this.masteredCount;
+      const m = (icon, name, got, progress) => ({ icon, name, got, progress });
+      return [
+        m('🌱', '初战告捷', done >= 10, done + '/10 题'),
+        m('💪', '小有所成', done >= 100, done + '/100 题'),
+        m('🏆', '刷题大师', done >= 500, done + '/500 题'),
+        m('🔥', '三日不辍', streak >= 3, streak + '/3 天'),
+        m('⚡', '七日连环', streak >= 7, streak + '/7 天'),
+        m('🎯', '十连对', best >= 10, best + '/10 连对'),
+        m('⚔️', '斩题十道', zhan >= 10, zhan + '/10 道'),
+        m('👑', '百题斩', zhan >= 100, zhan + '/100 道'),
+      ];
     },
     trend() {
       const days = this.pstats.days || {};
@@ -237,6 +269,8 @@ export default {
         this.byModule = d.by_module;
         this.byType = d.by_type;
         this.byReason = d.by_reason || [];
+        const mk = await request('/api/mistakes');
+        this.masteredCount = (mk.items || []).filter((m) => m.mastered).length;
       } catch (e) {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
@@ -276,6 +310,16 @@ export default {
 .tfill { width: 100%; background: linear-gradient(180deg, #6366f1, #4f46e5); border-radius: 999rpx; }
 .tfill.lo { background: linear-gradient(180deg, #fbbf24, #f59e0b); }
 .tday { font-size: 19rpx; color: var(--ink-2); margin-top: 8rpx; }
+.radar-empty { text-align: center; padding: 30rpx 0 20rpx; }
+.re-t { font-size: 28rpx; font-weight: 600; }
+.re-s { font-size: 23rpx; color: var(--ink-2); margin: 8rpx 0 20rpx; }
+.re-btn { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border-radius: 18rpx; font-size: 26rpx; font-weight: 600; width: 50%; }
+.medals { display: flex; flex-wrap: wrap; }
+.medal { width: 25%; box-sizing: border-box; text-align: center; padding: 14rpx 6rpx; opacity: 0.35; filter: grayscale(1); }
+.medal.got { opacity: 1; filter: none; }
+.m-ico { display: block; font-size: 48rpx; }
+.m-name { display: block; font-size: 22rpx; font-weight: 600; margin-top: 6rpx; }
+.m-sub { display: block; font-size: 18rpx; color: var(--ink-2); margin-top: 4rpx; }
 .cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
 .cal-sub { font-size: 22rpx; color: var(--ink-2); }
 .cal-week { display: flex; margin-bottom: 8rpx; }
