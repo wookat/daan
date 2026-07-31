@@ -38,6 +38,9 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - `computer type` drops CJK characters (xdotool). To enter Chinese text, install xclip (`sudo apt-get install -y xclip`), pipe text via `xclip -selection clipboard`, then ctrl+v into the field.
 - The three tabs are a bottom fixed tabbar: 拍题讲解 / 错题本 / 薄弱分析. Save button 存入错题本 appears at the bottom of the explanation card; success is a native alert.
 - Mobile check: shrink window with `wmctrl -r :ACTIVE: -e 0,50,30,400,720`.
+- Desktop layout breakpoint is 768px (App.vue): at ≥768px the bottom tabbar becomes a 208px left sidebar and fixed banners/masks shift right by 208px. To verify, resize Chrome to ≥1200px wide and hard-refresh.
+- localStorage `pstats` is stored wrapped as `{"type":"object","data":{...}}` — JSON.parse the raw value and read `.data`; preserve the wrapper when writing back.
+- After a correct answer the practice page auto-advances in ~1.2s; screenshot the green-answer state immediately after clicking, without waits.
 
 ## Production testing
 - Live site: https://kaogong.zalize.com (no access code). LLM model: gpt-5.6-terra for both text and image.

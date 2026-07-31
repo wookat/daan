@@ -1,5 +1,62 @@
 # 考公错题助手 MVP 验收测试报告
 
+## 增量测试 v22（P1b：桌面 208px 侧栏 / 结构化解析卡 / 近 7 日正确率柱状卡）— 2026-07-31
+
+- 测试环境：**线上 https://kaogong.zalize.com**，构建 hash 与本地 dist 一致（`assets/index-D-TXMmEh.js`），Chrome，**1200px 桌面 + 400px 移动**双视口（均录进录屏）。
+- 结论：**四组测试全部通过**，无失败断言。
+- 生产数据保护：测前基线含用户数据 [23, 5, 3, 2]，另发现**未知 id 26**（ziliao，创建于本轮开测前约 1 分钟，非我产生）——按红线**未删除**。本轮故意答错自动新增 id 27、28，测后仅删除这两条，API 确认恢复 **[26, 23, 5, 3, 2]**。
+- 说明：近 7 日紫色柱（≥60%）无法当天通过 UI 自然造出（today 的 days 含 v21 遗留 35 题而 daysCorrect 从 v22 才开始记录），故通过 localStorage 向 pstats 注入 7/30=8/10（80%）一天数据后刷新验证紫色柱；今天 6% 橙色柱为真实 UI 刷题产生。
+- 录屏：`/home/ubuntu/screencasts/rec-eb0e6e6c-fb69-4647-973e-44563954e4d5/rec-eb0e6e6c-fb69-4647-973e-44563954e4d5-edited.mp4`
+- 测试计划：`/home/ubuntu/repos/kaogong-assistant/test-plan-v22.md`
+
+### T1 桌面端 1200px 侧栏布局 — passed
+
+- tabbar 变为左侧竖排侧栏（四项图标+文字横排：拍题讲解/刷题/错题本/薄弱分析），底部无 tabbar，主内容在侧栏右侧不重叠：
+
+  ![1200px 左侧侧栏](https://app.devin.ai/attachments/7a3d4138-1462-4545-9f93-68bc5382cfde/desktop-sidebar-stats.png)
+
+- 题型 sheet 弹层的 mask 左边界从 208px 内容区开始，侧栏不被遮罩；答题卡弹层同样偏移：
+
+  | 🟢 题型 sheet mask 偏移 | 🟢 答题卡弹层 mask 偏移 |
+  |---|---|
+  | ![sheet mask](https://app.devin.ai/attachments/dc2a3363-d795-4117-a54f-a171a409bd95/desktop-mask-offset.png) | ![答题卡 mask](https://app.devin.ai/attachments/e6ffdc35-ebde-44b1-bb30-5baf855ebb90/desktop-answercard-mask.png) |
+
+- 判分横幅（红「✗ 正确答案 D · 已自动存入错题本」）左边界与侧栏右缘对齐，不遮侧栏：
+
+  ![判分横幅偏移](https://app.devin.ai/attachments/e15b7506-1bab-46a4-857e-fd3a8825d7fd/desktop-banner-offset.png)
+
+### T2 结构化解析卡 + 详解胶囊按钮 — passed
+
+- 答错：「正确答案」大字母 **D 红色** + 「解析」正文 + 「考点 言语理解-主旨概括」+「来源 original」四分区；底部「用花生十三方法详解这道题 ›」为主色描边胶囊按钮，**无 🔍 emoji**；答对：大字母 **B 绿色**：
+
+  | 🔴 答错-红色大字母+四分区+胶囊按钮 | 🟢 答对-绿色大字母 |
+  |---|---|
+  | ![答错红](https://app.devin.ai/attachments/8960b565-be26-4f26-a1c5-1aee5135f686/exp-card-wrong-red.png) | ![答对绿](https://app.devin.ai/attachments/241e8619-3129-46e5-821d-41288152b8f8/exp-card-correct-green.png) |
+
+### T3 近 7 日正确率柱状卡 — passed
+
+- 当天刷题后卡片出现；**今天 6% 柱为橙色（<60%）**、注入的 **7/30 80% 柱为紫色（≥60%）**，柱下日期、柱顶百分比均可见：
+
+  ![近7日正确率橙/紫柱](https://app.devin.ai/attachments/287ba4d1-ef0a-439b-b3db-6f86f09b75dc/trend-purple-orange.png)
+
+### T4 移动端 400px 回归 + P1a 冒烟 — passed
+
+- 400px 视口：tabbar 回到底部横排四图标，无左侧侧栏，内容占满宽度：
+
+  ![400px 底部 tabbar](https://app.devin.ai/attachments/656b32dc-271c-4cc5-b609-c69de37af115/mobile-bottom-tabbar.png)
+
+- P1a 冒烟（Regression，1200px 组内验证）：⏱ 计时换题重置（1:15→0:02）；Aa 点击 toast「字号：大」且字号变大；答题卡 1=红/2、3=绿/4=当前描边 +「已答 4/10 · 正确 2」；答错出现错因 chips，点「粗心大意」紫色高亮：
+
+  ![错因 chip 高亮](https://app.devin.ai/attachments/a4e90abe-1d75-4f53-ba18-8cb69e8a9811/chip-highlight.png)
+
+- 判分横幅/答错自动存错题本/二级题型 sheet 均正常（穿插验证）。完成结算环本轮未刷满 10 题未复现（v20 已验证，本轮无相关改动）。
+
+### 清理
+
+- 仅删除本轮自建 id 27、28；未知 id 26 与用户数据 23/5/3/2 未动；API 确认 `[26, 23, 5, 3, 2]`。
+
+---
+
 ## 增量测试 v21（P1a UI 改造：答题卡/计时/字号/错因自评/已斩/目标环/学习日历）— 2026-07-31
 
 - 测试环境：**线上 https://kaogong.zalize.com**，构建 hash 与本地 dist 一致（`assets/index-BNEtTXqa.js`），400px 移动视口，Chrome。
