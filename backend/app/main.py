@@ -176,7 +176,7 @@ async def api_similar(body: dict, x_access_code: str | None = Header(None)):
 
 
 @app.post("/api/rate")
-async def api_rate(body: dict):
+def api_rate(body: dict):
     up = bool(body.get("up"))
     if body.get("key"):
         db.rate_explain(str(body["key"]), up)
@@ -191,12 +191,12 @@ IMPORT_TOKEN = os.environ.get("IMPORT_TOKEN", "")
 
 
 @app.get("/api/questions/export")
-async def api_questions_export(offset: int = 0, limit: int = 200, module: str | None = None, all: int = 0):
+def api_questions_export(offset: int = 0, limit: int = 200, module: str | None = None, all: int = 0):
     return {"items": db.export_questions(offset, min(limit, 500), module, missing_only=not all)}
 
 
 @app.post("/api/questions/import")
-async def api_questions_import(body: dict, x_import_token: str | None = Header(None)):
+def api_questions_import(body: dict, x_import_token: str | None = Header(None)):
     if not IMPORT_TOKEN or x_import_token != IMPORT_TOKEN:
         raise HTTPException(401, "无效导入令牌")
     result = db.import_questions(body.get("items") or [])
@@ -204,7 +204,7 @@ async def api_questions_import(body: dict, x_import_token: str | None = Header(N
 
 
 @app.post("/api/questions/hs_import")
-async def api_questions_hs_import(body: dict, x_import_token: str | None = Header(None)):
+def api_questions_hs_import(body: dict, x_import_token: str | None = Header(None)):
     if not IMPORT_TOKEN or x_import_token != IMPORT_TOKEN:
         raise HTTPException(401, "无效导入令牌")
     n = db.import_hs_explanations(body.get("items") or [])
@@ -212,7 +212,7 @@ async def api_questions_hs_import(body: dict, x_import_token: str | None = Heade
 
 
 @app.get("/api/questions")
-async def api_questions(module: str | None = None, limit: int = 10, submodule: str | None = None, real: int = 0):
+def api_questions(module: str | None = None, limit: int = 10, submodule: str | None = None, real: int = 0):
     return {
         "items": db.random_questions(module, min(limit, 50), submodule, real_only=bool(real)),
         "counts": db.question_counts(),
@@ -220,40 +220,40 @@ async def api_questions(module: str | None = None, limit: int = 10, submodule: s
 
 
 @app.get("/api/submodules")
-async def api_submodules(module: str):
+def api_submodules(module: str):
     return {"items": db.submodule_counts(module)}
 
 
 @app.post("/api/mistakes")
-async def api_save_mistake(rec: dict):
+def api_save_mistake(rec: dict):
     mid = db.save_mistake(rec)
     return {"id": mid}
 
 
 @app.get("/api/mistakes")
-async def api_list_mistakes():
+def api_list_mistakes():
     return {"items": db.list_mistakes()}
 
 
 @app.patch("/api/mistakes/{mid}")
-async def api_update_mistake(mid: int, body: dict):
+def api_update_mistake(mid: int, body: dict):
     db.update_mistake(mid, body)
     return {"ok": True}
 
 
 @app.delete("/api/mistakes/{mid}")
-async def api_delete_mistake(mid: int):
+def api_delete_mistake(mid: int):
     db.delete_mistake(mid)
     return {"ok": True}
 
 
 @app.get("/api/review")
-async def api_review_due():
+def api_review_due():
     return {"items": db.due_reviews()}
 
 
 @app.post("/api/review/{mid}")
-async def api_review_record(mid: int, body: dict):
+def api_review_record(mid: int, body: dict):
     try:
         return db.record_review(mid, bool(body.get("correct")))
     except KeyError:
@@ -261,7 +261,7 @@ async def api_review_record(mid: int, body: dict):
 
 
 @app.get("/api/stats")
-async def api_stats():
+def api_stats():
     s = db.stats()
     for row in s["by_module"]:
         row["module"] = kb.MODULES.get(row["module"], {}).get("name", row["module"])
