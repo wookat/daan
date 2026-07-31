@@ -79,7 +79,7 @@
       <view v-if="!byModule.length" class="spin">暂无数据</view>
       <view v-for="m in byModule" :key="m.module" class="brow" @click="goPractice(m.module)">
         <view class="blabel">
-          <text>{{ m.module || '未知' }}</text>
+          <text>{{ modName(m.module) }}</text>
           <text class="n">×{{ m.n }} 去练 ›</text>
         </view>
         <view class="bar">
@@ -115,7 +115,7 @@
       <view class="h">高频错题型 TOP10</view>
       <view v-if="!byType.length" class="spin">暂无数据</view>
       <view v-for="t in byType" :key="t.question_type" class="tline">
-        {{ t.question_type || '未知' }} <text class="n">×{{ t.n }}</text>
+        {{ t.question_type || '未分类' }} <text class="n">×{{ t.n }}</text>
       </view>
     </view>
 
@@ -281,6 +281,10 @@ export default {
     this.load();
   },
   methods: {
+    modName(m) {
+      const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断' };
+      return NAMES[m] || m || '未分类';
+    },
     goPractice(mod) {
       const KEY = { '资料分析': 'ziliao', '数量关系': 'shuliang', '言语理解': 'yanyu', '判断推理': 'panduan', '常识判断': 'changshi' };
       const k = KEY[mod] || (Object.values(KEY).includes(mod) ? mod : '');

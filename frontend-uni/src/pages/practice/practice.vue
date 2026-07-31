@@ -525,7 +525,7 @@ export default {
           method: 'POST',
           data: {
             module: q.module,
-            question_type: q.question_type,
+            question_type: q.question_type || q.submodule,
             question_text: q.question + '\n' + optText,
             user_answer: q._picked,
             correct_answer: q.answer,
@@ -786,7 +786,7 @@ export default {
           method: 'POST',
           data: {
             module: q.module,
-            question_type: q.question_type,
+            question_type: q.question_type || q.submodule,
             question_text: q.question + '\n' + optText,
             user_answer: this.picked,
             correct_answer: q.answer,
