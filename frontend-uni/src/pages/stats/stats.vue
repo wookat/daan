@@ -373,7 +373,7 @@ export default {
       uni.setClipboardData({ data: this.backupCode });
     },
     localData() {
-      const keys = ['pstats', 'dailyPlan', 'dailyGoal', 'groupSize', 'realMode', 'fontLv', 'beiMode'];
+      const keys = ['pstats', 'dailyPlan', 'dailyGoal', 'groupSize', 'realMode', 'fontLv', 'beiMode', 'favQuestions', 'practiceHistory', 'coachAdvice', 'backupCode'];
       const out = {};
       keys.forEach((k) => {
         const v = uni.getStorageSync(k);

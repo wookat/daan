@@ -309,6 +309,15 @@ def _ensure_reports(conn) -> None:
 def add_report(question_id: int | None, reason: str, detail: str) -> int:
     conn = get_conn()
     _ensure_reports(conn)
+    if question_id:
+        dup = conn.execute(
+            "SELECT id FROM question_reports WHERE question_id=? AND reason=? "
+            "AND status='open' AND created_at > ? LIMIT 1",
+            (question_id, reason, time.time() - 86400),
+        ).fetchone()
+        if dup:
+            conn.close()
+            return dup["id"]
     cur = conn.execute(
         "INSERT INTO question_reports (created_at, question_id, reason, detail) VALUES (?,?,?,?)",
         (time.time(), question_id, reason, detail),
