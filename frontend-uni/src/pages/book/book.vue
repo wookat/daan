@@ -115,7 +115,7 @@
         <view class="e-t">没有匹配的错题</view>
         <view class="e-s">换个关键词或清除筛选试试</view>
       </view>
-      <view v-for="m in shownItems" :key="m.id" class="card mcard" :class="masteryClass(m)" @click="m.open = !m.open">
+      <view v-for="m in shownPage" :key="m.id" class="card mcard" :class="masteryClass(m)" @click="m.open = !m.open">
         <view class="mhead">
           <text class="tag">{{ m.question_type || modName(m.module) }}</text>
           <text v-if="m.times >= 2" class="timesbadge">错 {{ m.times }} 次</text>
@@ -139,6 +139,7 @@
         </view>
         <rich-text v-if="m.open" :nodes="m.html" />
       </view>
+      <view v-if="tab !== 'fav' && pageN < shownItems.length" class="loadmore" @click="pageN += 20">上滑或点击加载更多（{{ shownPage.length }}/{{ shownItems.length }}）</view>
     </template>
   </view>
 </template>
@@ -175,6 +176,7 @@ export default {
       tab: 'todo',
       favs: [],
       sortBy: 'time',
+      pageN: 20,
       SORTS: [
         { k: 'time', name: '最新' },
         { k: 'due', name: '待复习优先' },
@@ -233,6 +235,18 @@ export default {
       }
       return base;
     },
+    shownPage() {
+      return this.shownItems.slice(0, this.pageN);
+    },
+  },
+  watch: {
+    tab() { this.pageN = 20; },
+    filterMod() { this.pageN = 20; },
+    kw() { this.pageN = 20; },
+    sortBy() { this.pageN = 20; },
+  },
+  onReachBottom() {
+    if (this.tab !== 'fav' && this.pageN < this.shownItems.length) this.pageN += 20;
   },
   onShow() {
     this.favs = (uni.getStorageSync('favQuestions') || []).map((f) => ({ ...f, _open: false }));
@@ -447,6 +461,7 @@ export default {
 .xp-body { margin-top: 6rpx; font-size: 23rpx; color: var(--ink); background: #fff7ed; border-radius: 10rpx; padding: 12rpx; line-height: 1.6; }
 .mfoot { display: flex; justify-content: space-between; align-items: center; margin-top: 12rpx; border-top: 1rpx solid var(--line); padding-top: 8rpx; }
 .op.more { color: var(--ink-2); font-weight: 700; padding: 18rpx 30rpx; margin-left: 0; }
+.loadmore { text-align: center; font-size: 24rpx; color: var(--ink-2); padding: 24rpx 0 40rpx; }
 .acts { display: flex; gap: 8rpx; }
 .op { font-size: 24rpx; margin-left: 16rpx; padding: 18rpx 24rpx; border-radius: 999rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
 .op.sim { background: var(--brand-soft); color: var(--brand); }
