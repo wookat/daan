@@ -43,7 +43,7 @@
       </view>
       <view v-if="!counts.length" class="spin" @click="loadCounts">题库加载中…点此重试</view>
       <view v-if="announce" class="ann">
-        <uni-icons type="sound-filled" size="15" color="#b45309" />
+        <uni-icons type="sound-filled" size="15" color="#0369a1" />
         <view class="ann-c">
           <text class="ann-t">{{ announce.title }}</text>
           <text v-if="announce.body" class="ann-b">{{ announce.body }}</text>
@@ -52,15 +52,15 @@
       </view>
       <view v-if="counts.length" class="daily exam" @click="startExam(false)">
         <view class="daily-l">
-          <view class="daily-t"><uni-icons type="flag-filled" size="16" color="#ffffff" /><text class="daily-t-t">迷你模考</text></view>
-          <text class="daily-s">25 题 · 20 分钟 · 五模块混合 · 交卷后统一判分</text>
+          <view class="daily-t"><view class="exam-ico warn"><uni-icons type="flag-filled" size="16" color="#d97706" /></view><text class="daily-t-t dark">迷你模考</text></view>
+          <text class="daily-s dark">25 题 · 20 分钟 · 五模块混合 · 交卷后统一判分</text>
         </view>
         <text class="daily-go">开始</text>
       </view>
       <view v-if="counts.length" class="daily exam full" @click="startExam(true)">
         <view class="daily-l">
-          <view class="daily-t"><uni-icons type="medal-filled" size="16" color="#ffffff" /><text class="daily-t-t">全真模考</text></view>
-          <text class="daily-s">100 题 · 100 分钟 · 按行测真实模块配比 · 真题优先</text>
+          <view class="daily-t"><view class="exam-ico err"><uni-icons type="medal-filled" size="16" color="#dc2626" /></view><text class="daily-t-t dark">全真模考</text></view>
+          <text class="daily-s dark">100 题 · 100 分钟 · 按行测真实模块配比 · 真题优先</text>
         </view>
         <text class="daily-go">开始</text>
       </view>
@@ -1260,7 +1260,7 @@ export default {
 .acard-n.cur { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
 .acard-foot { text-align: center; font-size: 23rpx; color: var(--ink-2); padding-bottom: 8rpx; }
 .op { font-size: 24rpx; color: var(--ink-2); margin-left: 6rpx; }
-.progress { height: 14rpx; background: var(--line); border-radius: 999rpx; overflow: hidden; margin-bottom: 22rpx; }
+.progress { height: 6rpx; background: #e0e7ff; border-radius: 999rpx; overflow: hidden; margin-bottom: 22rpx; }
 .pfill { height: 100%; background: linear-gradient(90deg, #6366f1, #4f46e5); border-radius: 999rpx; transition: width 0.3s ease; }
 .q { font-size: 30rpx; line-height: 1.7; margin-bottom: 22rpx; white-space: pre-wrap; }
 .qimg { width: 100%; border-radius: 12rpx; margin-bottom: 8rpx; background: #f6f7fb; }
@@ -1333,15 +1333,19 @@ export default {
 .bnext.nok { background: #22c55e; }
 .bnext.nbad { background: #ef4444; }
 .bnext.bstay { background: transparent; border: 2rpx solid #22c55e; color: #15803d; margin-right: 12rpx; }
-.ann { display: flex; align-items: flex-start; gap: 12rpx; background: #fef3c7; border: 1rpx solid #fde68a; border-radius: 16rpx; padding: 18rpx 22rpx; margin-bottom: 20rpx; }
+.ann { display: flex; align-items: flex-start; gap: 12rpx; background: #f0f9ff; border: 1rpx solid #bae6fd; border-radius: 16rpx; padding: 18rpx 22rpx; margin-bottom: 20rpx; }
 .ann-c { flex: 1; }
-.ann-t { display: block; font-size: 26rpx; font-weight: 600; color: #92400e; }
-.ann-b { display: block; font-size: 23rpx; color: #b45309; margin-top: 4rpx; }
-.ann-x { color: #b45309; font-size: 26rpx; padding: 0 8rpx; }
-.daily.exam.full {
-  background: linear-gradient(135deg, #b45309, #d97706);
-}
-.daily.exam { background: linear-gradient(120deg, #f97316, #ef4444); }
+.ann-t { display: block; font-size: 26rpx; font-weight: 600; color: #0369a1; }
+.ann-b { display: block; font-size: 23rpx; color: #0284c7; margin-top: 4rpx; }
+.ann-x { color: #0369a1; font-size: 26rpx; padding: 8rpx 16rpx; }
+.daily.exam { background: #fff; border: 1rpx solid #e7e9f0; box-shadow: 0 2rpx 8rpx rgba(23,24,28,.04); }
+.exam-ico { width: 56rpx; height: 56rpx; border-radius: 16rpx; display: inline-flex; align-items: center; justify-content: center; }
+.exam-ico.warn { background: #fffbeb; }
+.exam-ico.err { background: #fef2f2; }
+.daily-t-t.dark { color: #17181c; }
+.daily-s.dark { color: #7d818f; }
+.daily.exam .daily-go { background: #eef2ff; color: #4f46e5; }
+
 .timer.examleft { color: #ef4444; font-weight: 700; }
 .timer.overtime { color: #ef4444; font-weight: 700; }
 .tm-cmp { margin-left: auto; font-size: 22rpx; color: #16a34a; }
