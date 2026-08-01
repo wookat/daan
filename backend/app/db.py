@@ -754,11 +754,25 @@ def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: s
         if not head or head in seen:
             continue
         seen.add(head)
-        pat = head.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+        esc = lambda s: s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         cands = conn.execute(
             "SELECT * FROM questions WHERE question LIKE ? ESCAPE '\\' AND (disabled IS NULL OR disabled=0) LIMIT 80",
-            (pat,),
+            (esc(full) + "%",),
         ).fetchall()
+        if not cands:
+            lines = [ln.strip() for ln in full.split("\n") if ln.strip()]
+            second = lines[1][:20] if len(lines) > 1 else ""
+            pats = []
+            if second:
+                pats.append(esc(head) + "%" + esc(second) + "%")
+            pats.append(esc(head) + "%")
+            for p in pats:
+                cands = conn.execute(
+                    "SELECT * FROM questions WHERE question LIKE ? ESCAPE '\\' AND (disabled IS NULL OR disabled=0) LIMIT 80",
+                    (p,),
+                ).fetchall()
+                if cands:
+                    break
         norm = re.sub(r"\s+", "", full)
         q = None
         for c in cands:
