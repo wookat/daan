@@ -747,15 +747,23 @@ def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: s
     out = []
     seen = set()
     for r in rows:
-        head = (r["question_text"] or "").split("\n")[0].strip()
+        full = (r["question_text"] or "").strip()
+        head = full.split("\n")[0].strip()
         if not head or head in seen:
             continue
         seen.add(head)
-        pat = head.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "\n%"
-        q = conn.execute(
-            "SELECT * FROM questions WHERE (question=? OR question LIKE ? ESCAPE '\\') AND (disabled IS NULL OR disabled=0)",
-            (head, pat),
-        ).fetchone()
+        pat = head.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+        cands = conn.execute(
+            "SELECT * FROM questions WHERE question LIKE ? ESCAPE '\\' AND (disabled IS NULL OR disabled=0) LIMIT 80",
+            (pat,),
+        ).fetchall()
+        norm = re.sub(r"\s+", "", full)
+        q = None
+        for c in cands:
+            cn = re.sub(r"\s+", "", c["question"] or "")
+            if cn == norm or cn.startswith(norm) or norm.startswith(cn):
+                q = c
+                break
         if not q:
             continue
         d = dict(q)
