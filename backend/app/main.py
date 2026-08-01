@@ -412,6 +412,12 @@ def api_report(body: dict):
     return {"id": rid}
 
 
+@app.post("/api/admin/refresh_stats")
+def api_admin_refresh_stats(x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return {"updated": db.refresh_question_stats()}
+
+
 @app.get("/api/admin/reports")
 def api_admin_reports(status: str = "open", x_admin_token: str | None = Header(None)):
     check_admin(x_admin_token)
