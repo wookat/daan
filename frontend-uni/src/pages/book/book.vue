@@ -49,7 +49,12 @@
           <view class="e-t">还没有收藏题目</view>
           <view class="e-s">刷题时点顶栏星星即可收藏好题</view>
         </view>
-        <view v-for="(f, fi) in favs" :key="f.t" class="card mcard" @click="f._open = !f._open">
+        <view v-if="favs.length > 3" class="searchbar">
+          <uni-icons type="search" size="16" color="#8a90a0" />
+          <input v-model="favKw" class="searchinput" placeholder="搜收藏题干或题型" confirm-type="search" />
+          <text v-if="favKw" class="searchclear" @click="favKw = ''">✕</text>
+        </view>
+        <view v-for="(f, fi) in favShown" :key="f.t" class="card mcard" @click="f._open = !f._open">
           <view class="mhead">
             <text class="tag">{{ f.submodule || modName(f.module) }}</text>
             <text v-if="f.is_real" class="rvbadge">真题{{ f.exam_year ? ' · ' + f.exam_year : '' }}{{ f.exam_region ? ' · ' + f.exam_region : '' }}</text>
@@ -66,7 +71,7 @@
           <view class="mfoot">
             <text class="meta">{{ fmt(f.t / 1000) }}</text>
             <view class="acts">
-              <text class="op del" @click.stop="unfav(fi)">取消收藏</text>
+              <text class="op del" @click.stop="unfavItem(f)">取消收藏</text>
             </view>
           </view>
         </view>
@@ -165,6 +170,7 @@ export default {
       streak: 0,
       filterMod: '',
       kw: '',
+      favKw: '',
       tab: 'todo',
       favs: [],
       sortBy: 'time',
@@ -180,6 +186,15 @@ export default {
   computed: {
     cur() {
       return this.rItems[this.rIdx] || {};
+    },
+    favShown() {
+      const k = this.favKw.trim().toLowerCase();
+      if (!k) return this.favs;
+      return this.favs.filter((f) =>
+        String(f.question || '').toLowerCase().includes(k) ||
+        String(f.submodule || '').toLowerCase().includes(k) ||
+        this.modName(f.module).includes(k)
+      );
     },
     curLetter() {
       return extractLetter(this.cur.correct_answer);
@@ -225,7 +240,11 @@ export default {
   },
   methods: {
     md,
+    unfavItem(f) {
+      this.unfav(this.favs.indexOf(f));
+    },
     unfav(i) {
+      if (i < 0) return;
       this.favs.splice(i, 1);
       uni.setStorageSync('favQuestions', this.favs.map(({ _open, ...f }) => f));
       if (!this.favs.length) this.tab = 'todo';
