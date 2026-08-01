@@ -1225,7 +1225,7 @@ export default {
 .goal-top { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; margin-bottom: 10rpx; flex-wrap: wrap; }
 .goal-t { font-size: 24rpx; color: var(--ink-2); }
 .goal-set { display: flex; gap: 8rpx; }
-.goal-chip { font-size: 22rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 2rpx 16rpx; }
+.goal-chip { font-size: 22rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 8rpx 20rpx; }
 .goal-chip.on { color: #fff; background: var(--brand, #4f6ef7); border-color: var(--brand, #4f6ef7); }
 .goal-bar { height: 12rpx; background: var(--brand-soft, #eef1fd); border-radius: 999rpx; overflow: hidden; }
 .goal-fill { height: 100%; background: var(--brand, #4f6ef7); border-radius: 999rpx; transition: width 0.3s; }
@@ -1235,7 +1235,7 @@ export default {
 .set-chips { display: flex; gap: 12rpx; flex-wrap: wrap; }
 .set-chips.scrollx { flex-wrap: nowrap; overflow-x: auto; max-width: 70%; padding-bottom: 4rpx; }
 .set-chips.scrollx .set-chip { flex-shrink: 0; }
-.set-chip { font-size: 23rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 6rpx 22rpx; }
+.set-chip { font-size: 23rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 12rpx 24rpx; }
 .set-chip.on { color: #fff; background: var(--brand); border-color: var(--brand); }
 .real-tag { display: inline-block; font-size: 21rpx; color: #b45309; background: #fef3c7; border-radius: 8rpx; padding: 4rpx 14rpx; margin-bottom: 10rpx; }
 .daily { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 20rpx; padding: 24rpx 28rpx; margin-bottom: 20rpx; }
