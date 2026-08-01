@@ -129,10 +129,11 @@
       <view class="rhead">
         <text class="tag" @click="cardOpen = true">{{ modName(cur.module) }}{{ lastSubmodule ? ' · ' + lastSubmodule : '' }} · {{ idx + 1 }}/{{ items.length }} ▾</text>
         <view class="hstats">
-          <text class="timer" :class="{ examleft: examMode }">{{ examMode ? fmtSecs(examLeft) : fmtSecs(qsecs) }}</text>
+          <text class="timer" :class="{ examleft: examMode, overtime: timedMode && !examMode && qsecs > targetSecs }">{{ examMode ? fmtSecs(examLeft) : timedMode ? (qsecs > targetSecs ? '超时+' + fmtSecs(qsecs - targetSecs) : fmtSecs(targetSecs - qsecs)) : fmtSecs(qsecs) }}</text>
           <text class="fontbtn" @click="cycleFont">Aa</text>
           <text v-if="!examMode" class="fontbtn" :class="{ beion: beiMode }" @click="toggleBei">背</text>
           <text v-if="!examMode" class="fontbtn" :class="{ beion: autoNext }" @click="toggleAutoNext">跳</text>
+          <text v-if="!examMode && !beiMode" class="fontbtn" :class="{ beion: timedMode }" @click="toggleTimed">限</text>
           <view class="fontbtn iconbtn" @click="toggleFav"><uni-icons :type="isFav ? 'star-filled' : 'star'" size="16" :color="isFav ? '#f59e0b' : '#8a90a0'" /></view>
           <view class="fontbtn iconbtn" @click="toggleSfx"><uni-icons :type="sfxOn ? 'sound-filled' : 'sound'" size="16" :color="sfxOn ? '#4f46e5' : '#8a90a0'" /></view>
           <text v-if="!examMode" class="cnt okc">✓{{ right }}</text>
@@ -174,6 +175,7 @@
           <view class="exp-row">
             <text class="exp-k">正确答案</text>
             <text class="exp-ans" :class="beiMode || picked === cur.answer ? 'okc2' : 'badc2'">{{ cur.answer }}</text>
+            <text v-if="timedMode && !beiMode && cur._secs != null" class="tm-cmp" :class="{ over: cur._secs > targetSecs }">用时 {{ cur._secs }}s / 目标 {{ targetSecs }}s</text>
           </view>
           <view v-if="cur.hs_explanation" class="exp-row col">
             <text class="exp-k hs">花生十三方法解析</text>
@@ -325,6 +327,7 @@ export default {
       fontLv: uni.getStorageSync('fontLv') || 1,
       sfxOn: uni.getStorageSync('sfxOff') ? false : true,
       beiMode: false,
+      timedMode: uni.getStorageSync('timedMode') ? true : false,
       favs: uni.getStorageSync('favQuestions') || [],
       autoNext: uni.getStorageSync('autoNextOff') ? false : true,
       daily: uni.getStorageSync('dailyPlan') || { days: {} },
@@ -341,6 +344,10 @@ export default {
     };
   },
   computed: {
+    targetSecs() {
+      const t = { changshi: 40, yanyu: 50, shuliang: 90, panduan: 60, ziliao: 80 };
+      return (this.cur && t[this.cur.module]) || 60;
+    },
     todayCount() {
       const days = (this.pstats && this.pstats.days) || {};
       return days[new Date().toISOString().slice(0, 10)] || 0;
@@ -781,7 +788,12 @@ export default {
     startQTimer() {
       this.stopQTimer();
       this.qsecs = 0;
-      this.qTimer = setInterval(() => { this.qsecs++; }, 1000);
+      this.qTimer = setInterval(() => {
+        this.qsecs++;
+        if (this.timedMode && !this.examMode && !this.beiMode && this.qsecs === this.targetSecs + 1) {
+          uni.showToast({ title: '超时了，考场上建议果断猜选跳过', icon: 'none' });
+        }
+      }, 1000);
     },
     stopQTimer() {
       if (this.qTimer) {
@@ -972,6 +984,11 @@ export default {
       this.autoNext = !this.autoNext;
       uni.setStorageSync('autoNextOff', this.autoNext ? '' : '1');
       uni.showToast({ title: this.autoNext ? '答对自动跳下一题' : '答对后停留看解析', icon: 'none', duration: 1200 });
+    },
+    toggleTimed() {
+      this.timedMode = !this.timedMode;
+      uni.setStorageSync('timedMode', this.timedMode ? '1' : '');
+      uni.showToast({ title: this.timedMode ? '限时训练开启：按考场建议用时倒计时' : '已关闭限时训练', icon: 'none', duration: 1500 });
     },
     toggleBei() {
       this.beiMode = !this.beiMode;
@@ -1277,6 +1294,9 @@ export default {
 }
 .daily.exam { background: linear-gradient(120deg, #f97316, #ef4444); }
 .timer.examleft { color: #ef4444; font-weight: 700; }
+.timer.overtime { color: #ef4444; font-weight: 700; }
+.tm-cmp { margin-left: auto; font-size: 22rpx; color: #16a34a; }
+.tm-cmp.over { color: #ef4444; }
 .opt.sel { border-color: var(--brand); background: var(--soft-bg); }
 .acard-n.skip { background: #e5e7eb; color: #6b7280; }
 .beat { margin-top: 10rpx; font-size: 25rpx; color: var(--brand); background: var(--soft-bg); border-radius: 999rpx; padding: 10rpx 26rpx; }
