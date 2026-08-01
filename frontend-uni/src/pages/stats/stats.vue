@@ -165,13 +165,16 @@
     <view class="card">
       <view class="h">错题模块分布</view>
       <view v-if="!byModule.length" class="spin">暂无数据</view>
-      <view v-for="m in byModule" :key="m.module" class="brow" @click="goPractice(m.module)">
+      <view v-for="m in byModule" :key="m.module" class="brow">
         <view class="blabel">
           <text>{{ modName(m.module) }}</text>
-          <text class="n">×{{ m.n }} 去练 ›</text>
+          <view class="blabel-r">
+            <text class="bn">×{{ m.n }}</text>
+            <text class="bgo" @click="goPractice(m.module)">去练 ›</text>
+          </view>
         </view>
         <view class="bar">
-          <view class="fill" :class="sevClass(m.n)" :style="{ width: (m.n / total) * 100 + '%' }" />
+          <view class="fill" :style="{ width: (m.n / total) * 100 + '%', background: modColor(m.module) }" />
         </view>
       </view>
     </view>
@@ -473,6 +476,10 @@ export default {
         top: 50 + 58 * Math.sin(ang) + '%',
       };
     },
+    modColor(mod) {
+      const C = { changshi: '#f59e0b', shuliang: '#3b82f6', panduan: '#8b5cf6', ziliao: '#10b981', yanyu: '#ef4444', shenlun: '#64748b' };
+      return C[mod] || '#6366f1';
+    },
     sevClass(n) {
       const pct = n / this.total;
       if (pct > 0.4) return 'sev-hi';
@@ -583,7 +590,10 @@ export default {
 .al-name { display: block; font-size: 23rpx; color: var(--ink); font-weight: 600; }
 .al-val { display: block; font-size: 20rpx; color: var(--brand); }
 .brow { margin: 14rpx 0; }
-.blabel { display: flex; justify-content: space-between; font-size: 26rpx; color: var(--ink); margin-bottom: 6rpx; }
+.blabel { display: flex; justify-content: space-between; align-items: center; font-size: 26rpx; color: var(--ink); margin-bottom: 6rpx; }
+.blabel-r { display: flex; align-items: center; gap: 16rpx; }
+.bn { font-size: 23rpx; color: var(--ink-2); }
+.bgo { font-size: 24rpx; color: var(--brand); font-weight: 600; padding: 10rpx 0 10rpx 10rpx; }
 .bar { background: var(--brand-soft); border-radius: 999rpx; height: 20rpx; position: relative; overflow: hidden; }
 .fill { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #6366f1, #4f46e5); border-radius: 999rpx; transition: width 0.6s ease; }
 .fill.sev-hi { background: linear-gradient(90deg, #f87171, #ef4444); }
@@ -691,6 +701,6 @@ export default {
 .bk-tip { font-size: 23rpx; color: var(--ink-2); line-height: 1.6; margin-bottom: 14rpx; }
 .bk-code { font-size: 26rpx; font-weight: 700; color: var(--brand); background: var(--brand-soft); border-radius: 14rpx; padding: 14rpx 22rpx; margin-bottom: 14rpx; }
 .row2 { display: flex; gap: 16rpx; }
-.bk-btn { flex: 1; background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border-radius: 16rpx; font-size: 25rpx; font-weight: 600; }
+.bk-btn { flex: 1; background: var(--brand-soft, #eef2ff); color: var(--brand, #4f46e5); border-radius: 16rpx; font-size: 25rpx; font-weight: 600; }
 .bk-btn.ghost { background: var(--brand-soft); color: var(--brand); }
 </style>
