@@ -858,6 +858,17 @@ export default {
       if (this.beiMode || this.resultSent || !this.items.length) return;
       this.resultSent = true;
       try {
+        const hist = uni.getStorageSync('practiceHistory') || [];
+        hist.unshift({
+          t: Date.now(),
+          module: this.lastModule || '',
+          n: this.items.length,
+          correct: this.right,
+          secs: this.totalSecs,
+        });
+        uni.setStorageSync('practiceHistory', hist.slice(0, 100));
+      } catch (e) { /* 非关键路径 */ }
+      try {
         const d = await request('/api/practice_result', {
           method: 'POST',
           data: { module: this.lastModule || '', n: this.items.length, correct: this.right, secs: this.totalSecs }

@@ -60,6 +60,17 @@
       </view>
     </view>
 
+    <view v-if="history.length" class="card">
+      <view class="h">练习记录</view>
+      <view v-for="(h, i) in history.slice(0, showAllHist ? 30 : 6)" :key="i" class="hist-row">
+        <text class="hist-time">{{ fmtHist(h.t) }}</text>
+        <text class="hist-mod">{{ modName(h.module) || '混合' }}</text>
+        <text class="hist-n">{{ h.correct }}/{{ h.n }}</text>
+        <text class="hist-pct" :class="{ lo: h.n && Math.round((h.correct / h.n) * 100) < 60 }">{{ h.n ? Math.round((h.correct / h.n) * 100) : 0 }}%</text>
+      </view>
+      <view v-if="history.length > 6" class="hist-more" @click="showAllHist = !showAllHist">{{ showAllHist ? '收起' : '展开全部 ' + Math.min(history.length, 30) + ' 条' }}</view>
+    </view>
+
     <view v-if="subMap.length" class="card">
       <view class="h">考点地图</view>
       <view v-for="g in subMap" :key="g.module" class="km-group">
@@ -144,7 +155,7 @@ const MODS = [
 
 export default {
   data() {
-    return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false };
+    return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, history: [], showAllHist: false };
   },
   computed: {
     total() {
@@ -278,9 +289,15 @@ export default {
   },
   onShow() {
     this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
+    this.history = uni.getStorageSync('practiceHistory') || [];
     this.load();
   },
   methods: {
+    fmtHist(t) {
+      const d = new Date(t);
+      const p = (x) => (x < 10 ? '0' + x : x);
+      return `${d.getMonth() + 1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+    },
     typeName(t) {
       if (!t) return '未分类';
       return String(t).replace(/^(数量关系|数学运算|资料分析|言语理解(与表达)?|判断推理|逻辑判断|常识判断|常识)[-－·：:]/, '');
@@ -440,6 +457,13 @@ export default {
 .km-name { display: block; font-size: 24rpx; font-weight: 600; }
 .km-pct { display: block; font-size: 19rpx; margin-top: 2rpx; }
 .km-legend { display: flex; gap: 18rpx; flex-wrap: wrap; margin-top: 8rpx; }
+.hist-row { display: flex; align-items: center; gap: 16rpx; padding: 14rpx 0; border-bottom: 1rpx solid #f0f1f5; }
+.hist-time { font-size: 22rpx; color: var(--ink-2); width: 170rpx; }
+.hist-mod { font-size: 24rpx; flex: 1; }
+.hist-n { font-size: 24rpx; color: var(--ink-2); }
+.hist-pct { font-size: 26rpx; font-weight: 700; color: #16a34a; width: 90rpx; text-align: right; }
+.hist-pct.lo { color: #dc2626; }
+.hist-more { text-align: center; font-size: 24rpx; color: var(--brand, #4f6ef7); padding: 14rpx 0 2rpx; }
 .km-lg { font-size: 20rpx; color: var(--ink-2); }
 .km-lg.r { color: #ef4444; }
 .km-lg.y { color: #f59e0b; }
