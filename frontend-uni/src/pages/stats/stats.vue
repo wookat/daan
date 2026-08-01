@@ -84,6 +84,19 @@
       </view>
     </view>
 
+    <view v-if="reco && reco.items.length" class="card">
+      <view class="h">个性化推荐 · 查漏补缺</view>
+      <view v-for="(r, i) in reco.items" :key="i" class="rc-row" @click="goSub(r.module, r.submodule)">
+        <view class="rc-main">
+          <text class="rc-name">{{ r.submodule }}</text>
+          <text class="rc-tag" :class="{ warn: r.reason === '近期退步' || r.reason === '正确率偏低' }">{{ r.reason }}</text>
+        </view>
+        <text class="rc-meta">正确率 {{ Math.round(r.acc * 100) }}%（{{ r.n }}题）</text>
+        <text class="rc-go">练10题 ›</text>
+      </view>
+      <view class="rc-note">基于你的做题历史（正确率/近期趋势/遗忘曲线/考频）自动推荐</view>
+    </view>
+
     <view v-if="history.length >= 3" class="card">
       <view class="h">正确率趋势（近 {{ trendData.length }} 次）</view>
       <view class="trend">
@@ -194,7 +207,7 @@ const MODS = [
 
 export default {
   data() {
-    return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, history: [], showAllHist: false, coachHtml: uni.getStorageSync('coachAdvice') || '', coachLoading: false, growth: null };
+    return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, history: [], showAllHist: false, coachHtml: uni.getStorageSync('coachAdvice') || '', coachLoading: false, growth: null, reco: null };
   },
   computed: {
     growthRows() {
@@ -357,6 +370,7 @@ export default {
     this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
     this.history = uni.getStorageSync('practiceHistory') || [];
     this.loadGrowth();
+    this.loadReco();
     this.load();
   },
   methods: {
@@ -478,6 +492,13 @@ export default {
         this.growth = await request('/api/growth?uid=' + encodeURIComponent(uid));
       } catch (e) { /* 非关键路径 */ }
     },
+    async loadReco() {
+      const uid = uni.getStorageSync('anonUid');
+      if (!uid) return;
+      try {
+        this.reco = await request('/api/recommend?uid=' + encodeURIComponent(uid));
+      } catch (e) { /* 非关键路径 */ }
+    },
     async load() {
       try {
         const d = await request('/api/stats');
@@ -588,6 +609,15 @@ export default {
 .gw-n { color: var(--ink-2); }
 .gw-delta { font-size: 23rpx; color: #dc2626; margin-top: 6rpx; }
 .gw-delta.up { color: #16a34a; }
+.rc-row { display: flex; align-items: center; gap: 12rpx; padding: 14rpx 0; border-bottom: 1rpx solid var(--line); }
+.rc-row:last-of-type { border-bottom: none; }
+.rc-main { flex: 1; display: flex; align-items: center; gap: 10rpx; min-width: 0; }
+.rc-name { font-size: 26rpx; font-weight: 600; }
+.rc-tag { font-size: 20rpx; color: #16a34a; background: #f0fdf4; border-radius: 999rpx; padding: 2rpx 14rpx; flex-shrink: 0; }
+.rc-tag.warn { color: #dc2626; background: #fef2f2; }
+.rc-meta { font-size: 22rpx; color: var(--ink-2); flex-shrink: 0; }
+.rc-go { font-size: 23rpx; color: var(--brand, #4f6ef7); flex-shrink: 0; }
+.rc-note { font-size: 20rpx; color: var(--ink-2); margin-top: 10rpx; }
 .trend { display: flex; align-items: flex-end; gap: 8rpx; height: 160rpx; padding-top: 12rpx; }
 .trend-col { flex: 1; height: 100%; display: flex; align-items: flex-end; }
 .trend-bar { width: 100%; border-radius: 6rpx 6rpx 0 0; background: #16a34a; min-height: 6rpx; }

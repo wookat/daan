@@ -301,6 +301,14 @@ def api_growth(uid: str):
     return db.growth_stats(uid[:64])
 
 
+@app.get("/api/recommend")
+def api_recommend(uid: str):
+    uid = uid.strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    return db.recommend_stats(uid[:64])
+
+
 @app.post("/api/backup")
 def api_backup_save(body: dict):
     data = body.get("data")

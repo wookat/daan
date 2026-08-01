@@ -845,6 +845,61 @@ def growth_stats(uid: str) -> dict:
     }
 
 
+FREQ_WEIGHT = {
+    "ziliao": 1.0, "panduan": 0.9, "yanyu": 0.9, "shuliang": 0.7, "changshi": 0.6,
+}
+
+
+def recommend_stats(uid: str, top: int = 3) -> dict:
+    """规则版查漏补缺：按二级题型算弱项分数（平滑正确率+近期趋势+遗忘+考频）。"""
+    conn = get_conn()
+    _ensure_answer_log(conn)
+    rows = conn.execute(
+        """SELECT module, submodule, correct, created_at FROM answer_log
+           WHERE uid=? AND submodule IS NOT NULL AND submodule!=''
+           ORDER BY created_at""",
+        (uid,),
+    ).fetchall()
+    conn.close()
+    skills: dict = {}
+    for r in rows:
+        k = (r["module"] or "", r["submodule"])
+        s = skills.setdefault(k, {"seq": [], "last": 0.0})
+        s["seq"].append(1 if r["correct"] else 0)
+        s["last"] = max(s["last"], r["created_at"])
+    now = time.time()
+    out = []
+    for (mod, sub), s in skills.items():
+        seq = s["seq"]
+        n = len(seq)
+        if n < 3:
+            continue
+        c = sum(seq)
+        acc = (c + 3 * 0.6) / (n + 3)
+        trend = 0.0
+        if n >= 10:
+            recent = seq[-20:]
+            prev = seq[-40:-20] or seq[:-20]
+            if prev:
+                trend = sum(recent) / len(recent) - sum(prev) / len(prev)
+        days = (now - s["last"]) / 86400
+        stab = min(60.0, max(2.0, 2 + 0.6 * c))
+        forget = 1 - (1 + 19 / 81 * days / stab) ** -0.5
+        freq = FREQ_WEIGHT.get(mod, 0.5)
+        w = 0.45 * (1 - acc) + 0.2 * max(0.0, -trend) + 0.2 * forget + 0.15 * freq
+        reason = (
+            "近期退步" if trend < -0.1 else
+            "正确率偏低" if acc < 0.6 else
+            "久未练习" if forget > 0.4 else "巩固提升"
+        )
+        out.append({
+            "module": mod, "submodule": sub, "n": n,
+            "acc": round(c / n, 3), "weakness": round(w, 3), "reason": reason,
+        })
+    out.sort(key=lambda x: -x["weakness"])
+    return {"items": out[:top], "total_skills": len(out)}
+
+
 def save_mistake(rec: dict) -> int:
     conn = get_conn()
     qtext = rec.get("question_text")
