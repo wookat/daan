@@ -182,8 +182,9 @@ export default {
       r.html = md(card ? rest : full);
     },
     cycleGoal() {
-      const opts = [10, 20, 50];
-      this.goal = opts[(opts.indexOf(this.goal) + 1) % opts.length];
+      const opts = [20, 50, 100];
+      const i = opts.indexOf(this.goal);
+      this.goal = opts[(i + 1) % opts.length];
       uni.setStorageSync('dailyGoal', this.goal);
       uni.showToast({ title: '每日目标：' + this.goal + ' 题', icon: 'none', duration: 800 });
     },
