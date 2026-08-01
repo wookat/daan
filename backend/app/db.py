@@ -156,10 +156,23 @@ def random_questions(
     real_only: bool = False,
     year: int | None = None,
     region: str | None = None,
+    uid: str | None = None,
 ) -> list[dict]:
     conn = get_conn()
     where = []
     args: list = []
+    if uid:
+        _ensure_answer_log(conn)
+        done = [
+            r["question_id"]
+            for r in conn.execute(
+                "SELECT DISTINCT question_id FROM (SELECT question_id FROM answer_log WHERE uid=? AND question_id IS NOT NULL ORDER BY id DESC LIMIT 3000)",
+                (uid,),
+            )
+        ]
+        if done:
+            where.append(f"id NOT IN ({','.join('?' * len(done))})")
+            args.extend(done)
     if module:
         where.append("module=?")
         args.append(module)
@@ -194,6 +207,27 @@ def random_questions(
                 f"SELECT id FROM questions {clause} AND id NOT IN ({placeholders}) "
                 "ORDER BY has_hs DESC, RANDOM() LIMIT ?",
                 (*args, *ids, limit - len(ids)),
+            )
+        ]
+    if uid and len(ids) < limit:
+        where2 = [w for w in where if not w.startswith("id NOT IN")]
+        base_args = []
+        if module:
+            base_args.append(module)
+        if submodule:
+            base_args.append(submodule)
+        if year:
+            base_args.append(year)
+        if region:
+            base_args.append(region)
+        clause2 = "WHERE " + " AND ".join(where2)
+        placeholders = ",".join("?" * len(ids)) or "0"
+        ids += [
+            r["id"]
+            for r in conn.execute(
+                f"SELECT id FROM questions {clause2} AND id NOT IN ({placeholders}) "
+                "ORDER BY has_hs DESC, RANDOM() LIMIT ?",
+                (*base_args, *ids, limit - len(ids)),
             )
         ]
     random.shuffle(ids)

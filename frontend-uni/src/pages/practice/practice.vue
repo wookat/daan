@@ -945,23 +945,25 @@ export default {
           (this.realYear ? '&year=' + this.realYear : '') +
           (this.realRegion ? '&region=' + encodeURIComponent(this.realRegion) : '')
         : '';
+      const uid = uni.getStorageSync('anonUid');
+      const uidQ = uid ? '&uid=' + encodeURIComponent(uid) : '';
       try {
         let d = await request(
-          '/api/questions?limit=' + limit + realQ +
+          '/api/questions?limit=' + limit + realQ + uidQ +
             (module ? '&module=' + module : '') +
             (submodule ? '&submodule=' + encodeURIComponent(submodule) : '')
         );
         if (!d.items.length && submodule) {
           this.lastSubmodule = null;
-          d = await request('/api/questions?limit=' + limit + realQ + (module ? '&module=' + module : ''));
+          d = await request('/api/questions?limit=' + limit + realQ + uidQ + (module ? '&module=' + module : ''));
         }
         if (!d.items.length && this.realMode && (this.realYear || this.realRegion)) {
           uni.showToast({ title: '该年份/地区暂无此模块真题，已放宽筛选', icon: 'none' });
-          d = await request('/api/questions?limit=' + limit + '&real=1' + (module ? '&module=' + module : ''));
+          d = await request('/api/questions?limit=' + limit + '&real=1' + uidQ + (module ? '&module=' + module : ''));
         }
         if (!d.items.length && this.realMode) {
           uni.showToast({ title: '真题还在搜集中，已切回题库模式', icon: 'none' });
-          d = await request('/api/questions?limit=' + limit + (module ? '&module=' + module : ''));
+          d = await request('/api/questions?limit=' + limit + uidQ + (module ? '&module=' + module : ''));
         }
         if (!d.items.length) {
           uni.hideLoading();
