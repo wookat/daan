@@ -17,6 +17,17 @@ TEXT_MODEL = os.environ.get("LLM_TEXT_MODEL", "") or MODEL
 # 主模型不可用（5xx）时的后备模型（同一中继）
 FALLBACK_MODEL = os.environ.get("LLM_FALLBACK_MODEL", "gpt-5.5")
 
+# 中继整体不可用（额度耗尽 402/403/429 或持续 5xx）时，纯文本请求的备用端点
+RESCUE_BASE_URL = os.environ.get("LLM_RESCUE_BASE_URL", "").rstrip("/")
+RESCUE_API_KEY = os.environ.get("LLM_RESCUE_API_KEY", "")
+RESCUE_MODEL = os.environ.get("LLM_RESCUE_MODEL", "deepseek-chat")
+
+_QUOTA_CODES = (402, 403, 429)
+
+
+def _rescue_ok(messages: list) -> bool:
+    return bool(RESCUE_BASE_URL and RESCUE_API_KEY) and not _has_image(messages)
+
 TIMEOUT = httpx.Timeout(180.0, connect=15.0)
 
 
@@ -62,6 +73,17 @@ async def chat(messages: list, temperature: float = 0.2, max_tokens: int = 4000)
                         "max_tokens": max_tokens,
                     },
                 )
+            if resp.status_code in _QUOTA_CODES and _rescue_ok(messages):
+                resp = await client.post(
+                    f"{RESCUE_BASE_URL}/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {RESCUE_API_KEY}"},
+                    json={
+                        "model": RESCUE_MODEL,
+                        "messages": messages,
+                        "temperature": temperature,
+                        "max_tokens": max_tokens,
+                    },
+                )
             resp.raise_for_status()
             data = resp.json()
             return data["choices"][0]["message"]["content"]
@@ -70,13 +92,17 @@ async def chat(messages: list, temperature: float = 0.2, max_tokens: int = 4000)
 async def chat_stream(messages: list, temperature: float = 0.2, max_tokens: int = 4000):
     """逐段产出模型输出文本。"""
     base, key, model = _endpoint(messages)
-    models = [model] + ([FALLBACK_MODEL] if FALLBACK_MODEL and FALLBACK_MODEL != model else [])
+    tries = [(base, key, model)]
+    if FALLBACK_MODEL and FALLBACK_MODEL != model:
+        tries.append((base, key, FALLBACK_MODEL))
+    if _rescue_ok(messages):
+        tries.append((RESCUE_BASE_URL, RESCUE_API_KEY, RESCUE_MODEL))
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-        for i, m in enumerate(models):
+        for i, (b, k, m) in enumerate(tries):
             async with client.stream(
                 "POST",
-                f"{base}/v1/chat/completions",
-                headers={"Authorization": f"Bearer {key}"},
+                f"{b}/v1/chat/completions",
+                headers={"Authorization": f"Bearer {k}"},
                 json={
                     "model": m,
                     "messages": messages,
@@ -85,7 +111,7 @@ async def chat_stream(messages: list, temperature: float = 0.2, max_tokens: int 
                     "stream": True,
                 },
             ) as resp:
-                if resp.status_code >= 500 and i < len(models) - 1:
+                if (resp.status_code >= 500 or resp.status_code in _QUOTA_CODES) and i < len(tries) - 1:
                     continue
                 resp.raise_for_status()
                 async for line in resp.aiter_lines():
