@@ -18,13 +18,16 @@
     <view class="card">
       <view class="cal-head">
         <view class="h" style="margin-bottom: 0">学习日历</view>
-        <text class="cal-sub">本月打卡 {{ monthDays }} 天</text>
+        <view class="cal-hr">
+          <text class="cal-sub">本月打卡 {{ monthDays }} 天</text>
+          <text class="cal-toggle" @click="calFull = !calFull">{{ calFull ? '收起' : '全月 ›' }}</text>
+        </view>
       </view>
       <view class="cal-week">
         <text v-for="w in ['一', '二', '三', '四', '五', '六', '日']" :key="w" class="cal-w">{{ w }}</text>
       </view>
       <view class="cal-grid">
-        <view v-for="(c, i) in calCells" :key="i" class="cal-c" :class="c.cls">{{ c.d || '' }}</view>
+        <view v-for="(c, i) in shownCalCells" :key="i" class="cal-c" :class="c.cls">{{ c.d || '' }}</view>
       </view>
     </view>
 
@@ -236,7 +239,7 @@ const MODS = [
 
 export default {
   data() {
-    return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, history: [], showAllHist: false, coachHtml: uni.getStorageSync('coachAdvice') || '', coachLoading: false, growth: null, reco: null, dueN: 0, gwMod: '' };
+    return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, history: [], showAllHist: false, coachHtml: uni.getStorageSync('coachAdvice') || '', coachLoading: false, calFull: false, growth: null, reco: null, dueN: 0, gwMod: '' };
   },
   computed: {
     speedData() {
@@ -377,6 +380,14 @@ export default {
         cells.push({ d, cls });
       }
       return cells;
+    },
+    shownCalCells() {
+      if (this.calFull) return this.calCells;
+      const cells = this.calCells;
+      const todayIdx = cells.findIndex((c) => String(c.cls).includes('today'));
+      if (todayIdx < 0) return cells.slice(0, 7);
+      const start = Math.floor(todayIdx / 7) * 7;
+      return cells.slice(start, start + 7);
     },
     axes() {
       return MODS.map((m) => {
@@ -577,6 +588,8 @@ export default {
 <style scoped>
 .wrap { padding: 24rpx; }
 .card { background: var(--card); border-radius: var(--radius); padding: 24rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
+.cal-hr { display: flex; align-items: center; gap: 16rpx; }
+.cal-toggle { font-size: 24rpx; color: var(--brand); font-weight: 600; padding: 10rpx 0 10rpx 10rpx; }
 .ov { display: flex; }
 .ovi { flex: 1; text-align: center; }
 .ovn { display: block; font-size: 48rpx; font-weight: 700; color: var(--ink); }

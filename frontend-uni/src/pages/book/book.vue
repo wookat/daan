@@ -461,7 +461,7 @@ export default {
 .xp-body { margin-top: 6rpx; font-size: 23rpx; color: var(--ink); background: #fff7ed; border-radius: 10rpx; padding: 12rpx; line-height: 1.6; }
 .mfoot { display: flex; justify-content: space-between; align-items: center; margin-top: 12rpx; border-top: 1rpx solid var(--line); padding-top: 8rpx; }
 .op.more { color: var(--ink-2); font-weight: 700; padding: 18rpx 30rpx; margin-left: 0; }
-.loadmore { text-align: center; font-size: 24rpx; color: var(--ink-2); padding: 24rpx 0 40rpx; }
+.loadmore { text-align: center; font-size: 24rpx; color: var(--ink-2); padding: 24rpx 0 140rpx; }
 .acts { display: flex; gap: 8rpx; }
 .op { font-size: 24rpx; margin-left: 16rpx; padding: 18rpx 24rpx; border-radius: 999rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
 .op.sim { background: var(--brand-soft); color: var(--brand); }
