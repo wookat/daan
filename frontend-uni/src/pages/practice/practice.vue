@@ -144,7 +144,11 @@
       </view>
       <view class="progress"><view class="pfill" :style="{ width: (idx / items.length) * 100 + '%' }" /></view>
       <view v-if="cur.is_real" class="real-tag">真题{{ cur.exam_year ? ' · ' + cur.exam_year : '' }}{{ cur.exam_region ? ' · ' + cur.exam_region : '' }}</view>
-      <view class="q" :style="qStyle">{{ cur.question }}</view>
+      <view class="q" :style="qStyle">
+        <template v-if="qSegs"><text v-for="(s, si) in qSegs" :key="si" :class="{ qhl: s.hl }">{{ s.t }}</text></template>
+        <template v-else>{{ cur.question }}</template>
+      </view>
+      <view v-if="qSegs && qSegs.some(s => s.hl)" class="qhl-tip">已标注题干重点（解析涉及的关键数字/关键词），对照检查是否找对了信息</view>
       <image v-if="cur.image" class="qimg" :src="imgUrl(cur.image)" mode="widthFix" @click="previewImg(cur.image)" />
       <view v-if="cur.image && cur.image_credit" class="qimg-credit">图源：{{ cur.image_credit }}</view>
       <view
@@ -344,6 +348,24 @@ export default {
     };
   },
   computed: {
+    qSegs() {
+      const q = this.cur;
+      if (!q || (!this.picked && !this.beiMode) || this.examMode) return null;
+      const src = [q.hs_explanation, q.explanation, q.xp_explanation].filter(Boolean).join('\n');
+      if (!src) return null;
+      const toks = new Set();
+      for (const m of src.match(/\d[\d.,]*[%％万亿倍]?/g) || []) {
+        if (m.replace(/[.,]/g, '').length >= 2 && q.question.includes(m)) toks.add(m);
+      }
+      const CONJ = ['但是', '然而', '因此', '所以', '总之', '可见', '也就是说', '实际上', '换句话说', '不仅', '而且', '否则', '如果', '只有', '除非'];
+      for (const c of CONJ) {
+        if (src.includes(c) && q.question.includes(c)) toks.add(c);
+      }
+      if (!toks.size) return null;
+      const list = [...toks].sort((a, b) => b.length - a.length).slice(0, 20);
+      const re = new RegExp('(' + list.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')', 'g');
+      return q.question.split(re).filter((t) => t !== '').map((t) => ({ t, hl: toks.has(t) }));
+    },
     targetSecs() {
       const t = { changshi: 40, yanyu: 50, shuliang: 90, panduan: 60, ziliao: 80 };
       return (this.cur && t[this.cur.module]) || 60;
@@ -1297,6 +1319,8 @@ export default {
 .timer.overtime { color: #ef4444; font-weight: 700; }
 .tm-cmp { margin-left: auto; font-size: 22rpx; color: #16a34a; }
 .tm-cmp.over { color: #ef4444; }
+.qhl { background: #fef08a; border-radius: 4rpx; padding: 0 2rpx; font-weight: 600; }
+.qhl-tip { margin-top: 8rpx; font-size: 21rpx; color: #b45309; }
 .opt.sel { border-color: var(--brand); background: var(--soft-bg); }
 .acard-n.skip { background: #e5e7eb; color: #6b7280; }
 .beat { margin-top: 10rpx; font-size: 25rpx; color: var(--brand); background: var(--soft-bg); border-radius: 999rpx; padding: 10rpx 26rpx; }
