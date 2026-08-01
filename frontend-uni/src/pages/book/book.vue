@@ -80,8 +80,8 @@
         <view class="redo-l">
           <view class="redo-ico"><uni-icons type="refreshempty" size="16" color="#4f46e5" /></view>
           <view>
-            <text class="redo-t">错题重练</text>
-            <text class="redo-s">把待掌握错题按刷题模式重做一遍（最多 10 题）</text>
+            <text class="redo-t">错题重练{{ kpFilter ? ' · ' + kpFilter : '' }}</text>
+            <text class="redo-s">{{ kpFilter ? '只重练当前筛选题型的待掌握错题（最多 10 题）' : '把待掌握错题按刷题模式重做一遍（最多 10 题）' }}</text>
           </view>
         </view>
         <text class="redo-go">开始</text>
@@ -402,7 +402,19 @@ export default {
     },
     async redoAll() {
       try {
-        const d = await request('/api/mistakes/redo?limit=10');
+        let q = '/api/mistakes/redo?limit=10';
+        if (this.kpFilter) {
+          const isModName = Object.values(NAMES).includes(this.kpFilter);
+          if (isModName) {
+            const key = Object.keys(NAMES).find((k) => NAMES[k] === this.kpFilter);
+            q += '&module=' + key + '&noqt=1';
+          } else {
+            q += '&qtype=' + encodeURIComponent(this.kpFilter);
+          }
+        } else if (this.filterMod) {
+          q += '&module=' + this.filterMod;
+        }
+        const d = await request(q);
         if (!d.items || !d.items.length) {
           uni.showToast({ title: '错题未能匹配到题库原题', icon: 'none' });
           return;

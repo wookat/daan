@@ -727,12 +727,22 @@ def import_questions(items: list[dict], batch: str | None = None) -> dict:
     return {"inserted": inserted, "skipped": skipped, "batch": batch}
 
 
-def mistakes_redo_questions(limit: int = 10) -> list[dict]:
+def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: str | None = None, noqt: bool = False) -> list[dict]:
     """把待掌握错题匹配回题库原题，供刷题页重练。"""
     conn = get_conn()
+    where = "mastered=0"
+    args: list = []
+    if qtype:
+        where += " AND question_type=?"
+        args.append(qtype)
+    if module:
+        where += " AND module=?"
+        args.append(module)
+    if noqt:
+        where += " AND (question_type IS NULL OR question_type='')"
     rows = conn.execute(
-        "SELECT question_text FROM mistakes WHERE mastered=0 ORDER BY COALESCE(next_review, created_at), created_at DESC LIMIT ?",
-        (limit * 2,),
+        f"SELECT question_text FROM mistakes WHERE {where} ORDER BY COALESCE(next_review, created_at), created_at DESC LIMIT ?",
+        (*args, limit * 2),
     ).fetchall()
     out = []
     seen = set()

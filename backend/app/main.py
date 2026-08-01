@@ -392,8 +392,8 @@ def api_questions(
 
 
 @app.get("/api/mistakes/redo")
-def api_mistakes_redo(limit: int = 10):
-    return {"items": db.mistakes_redo_questions(min(limit, 25))}
+def api_mistakes_redo(limit: int = 10, qtype: str | None = None, module: str | None = None, noqt: int = 0):
+    return {"items": db.mistakes_redo_questions(min(limit, 25), qtype=qtype, module=module, noqt=bool(noqt))}
 
 
 _REPORT_REASONS = {"答案有误", "题目有错字/乱码", "选项有问题", "图片不清晰/缺失", "解析有误", "其他"}
