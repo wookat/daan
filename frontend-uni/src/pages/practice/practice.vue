@@ -223,6 +223,7 @@
         <view class="report-tip">点题号可回看题目与解析<template v-if="items.some(q => !q._picked)">（灰色为未作答）</template></view>
       </view>
       <button class="btn" @click="start(lastModule, lastSubmodule)">再来一组</button>
+      <button v-if="!beiMode" class="btn ghost" style="margin-top: 16rpx" @click="shareResult">分享成绩</button>
       <button class="btn ghost" style="margin-top: 16rpx" @click="quit">返回选模块</button>
     </view>
 
@@ -980,6 +981,18 @@ export default {
       } catch (e) {
         /* 保存失败不阻塞刷题 */
       }
+    },
+    shareResult() {
+      const pct = Math.round((this.right / this.items.length) * 100);
+      let txt =
+        '我在考公助手刷了 ' + this.items.length + ' 道' + (this.lastModule ? this.modName(this.lastModule) : '行测') + '题，正确率 ' + pct + '%';
+      if (this.bestStreak >= 3) txt += '，最高连对 ' + this.bestStreak + ' 题';
+      if (this.percentile != null) txt += '，击败了 ' + this.percentile + '% 的刷题记录';
+      txt += '！一起来刷：https://kaogong.zalize.com';
+      uni.setClipboardData({
+        data: txt,
+        success: () => uni.showToast({ title: '成绩已复制，去粘贴给研友吧', icon: 'none', duration: 1600 }),
+      });
     },
     reportQuestion() {
       const q = this.cur;
