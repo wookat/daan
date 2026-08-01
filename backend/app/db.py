@@ -70,6 +70,7 @@ def init_db():
         ("image_credit", "ALTER TABLE questions ADD COLUMN image_credit TEXT"),
         ("xp_explanation", "ALTER TABLE questions ADD COLUMN xp_explanation TEXT"),
         ("xp_school", "ALTER TABLE questions ADD COLUMN xp_school TEXT"),
+        ("has_hs", "ALTER TABLE questions ADD COLUMN has_hs INTEGER DEFAULT 0"),
     ]:
         if col not in qcols:
             conn.execute(ddl)
@@ -82,6 +83,12 @@ def init_db():
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_module ON questions(module, submodule)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_real ON questions(is_real)")
+    if "has_hs" not in qcols:
+        conn.execute("UPDATE questions SET has_hs=(hs_explanation IS NOT NULL AND hs_explanation!='')")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_q_pick ON questions"
+        "(module, submodule, is_real, disabled, has_hs, exam_year, exam_region, id)"
+    )
     conn.execute(
         """CREATE TABLE IF NOT EXISTS explain_cache (
             key TEXT PRIMARY KEY,
@@ -168,10 +175,20 @@ def random_questions(
         args.append(region)
     where.append("(disabled IS NULL OR disabled=0)")
     clause = ("WHERE " + " AND ".join(where)) if where else ""
-    rows = conn.execute(
-        f"SELECT * FROM questions {clause} ORDER BY (hs_explanation IS NULL OR hs_explanation=''), RANDOM() LIMIT ?",
-        (*args, limit),
-    ).fetchall()
+    ids = [
+        r["id"]
+        for r in conn.execute(
+            f"SELECT id FROM questions {clause} ORDER BY has_hs DESC, RANDOM() LIMIT ?",
+            (*args, limit),
+        )
+    ]
+    rows = (
+        conn.execute(
+            f"SELECT * FROM questions WHERE id IN ({','.join('?' * len(ids))})", ids
+        ).fetchall()
+        if ids
+        else []
+    )
     conn.close()
     out = []
     for r in rows:
@@ -520,7 +537,7 @@ def rate_question_hs(qid: int, up: bool):
 
 def set_question_hs_explanation(qid: int, text: str):
     conn = get_conn()
-    conn.execute("UPDATE questions SET hs_explanation=? WHERE id=?", (text, qid))
+    conn.execute("UPDATE questions SET hs_explanation=?, has_hs=? WHERE id=?", (text, 1 if text else 0, qid))
     conn.commit()
     conn.close()
 
@@ -745,7 +762,7 @@ def import_hs_explanations(items: list[dict]) -> int:
         school = (it.get("xp_school") or "").strip()
         if text:
             n += conn.execute(
-                "UPDATE questions SET hs_explanation=? WHERE id=?", (text, int(qid))
+                "UPDATE questions SET hs_explanation=?, has_hs=1 WHERE id=?", (text, int(qid))
             ).rowcount
         if xp:
             n += conn.execute(
