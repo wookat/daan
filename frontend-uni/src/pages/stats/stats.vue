@@ -206,7 +206,7 @@
 </template>
 
 <script>
-import { request } from '../../api.js';
+import { request, anonUid } from '../../api.js';
 import { md } from '../../md.js';
 
 const MODS = [
@@ -521,7 +521,7 @@ export default {
         this.reco = await request('/api/recommend?uid=' + encodeURIComponent(uid));
       } catch (e) { /* 非关键路径 */ }
       try {
-        const d = await request('/api/review');
+        const d = await request('/api/review?uid=' + encodeURIComponent(anonUid()));
         this.dueN = d.total || 0;
       } catch (e) { /* 非关键路径 */ }
     },
@@ -531,7 +531,7 @@ export default {
         this.byModule = d.by_module;
         this.byType = d.by_type;
         this.byReason = d.by_reason || [];
-        const mk = await request('/api/mistakes');
+        const mk = await request('/api/mistakes?uid=' + encodeURIComponent(anonUid()));
         this.masteredCount = (mk.items || []).filter((m) => m.mastered).length;
       } catch (e) {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });

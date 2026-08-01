@@ -278,7 +278,7 @@
 </template>
 
 <script>
-import { request, BASE_URL } from '../../api.js';
+import { request, BASE_URL, anonUid } from '../../api.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -657,6 +657,7 @@ export default {
         const res = await request('/api/mistakes', {
           method: 'POST',
           data: {
+            uid: anonUid(),
             module: q.module,
             question_type: q.question_type || q.submodule,
             question_text: q.question + '\n' + optText,
@@ -993,6 +994,7 @@ export default {
         const res = await request('/api/mistakes', {
           method: 'POST',
           data: {
+            uid: anonUid(),
             module: q.module,
             question_type: q.question_type || q.submodule,
             question_text: q.question + '\n' + optText,

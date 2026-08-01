@@ -119,7 +119,7 @@
 
 <script>
 import { md } from '../../md.js';
-import { request, uploadExplain, streamExplain } from '../../api.js';
+import { request, uploadExplain, streamExplain, anonUid } from '../../api.js';
 
 export default {
   data() {
@@ -209,7 +209,7 @@ export default {
       }
       this.streakDays = n;
       try {
-        const r = await request('/api/review');
+        const r = await request('/api/review?uid=' + encodeURIComponent(anonUid()));
         this.dueCount = (r.items || []).length;
       } catch (e) {
         this.dueCount = 0;
@@ -340,6 +340,7 @@ export default {
       await request('/api/mistakes', {
         method: 'POST',
         data: {
+          uid: anonUid(),
           module: r.module,
           question_type: r.question_type,
           question_text: r.question_text,
@@ -390,6 +391,7 @@ export default {
       await request('/api/mistakes', {
         method: 'POST',
         data: {
+          uid: anonUid(),
           module: r.module,
           question_type: r.question_type,
           question_text: qtext,

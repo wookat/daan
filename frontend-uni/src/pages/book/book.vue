@@ -144,7 +144,7 @@
 
 <script>
 import { md } from '../../md.js';
-import { request } from '../../api.js';
+import { request, anonUid } from '../../api.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 
@@ -280,7 +280,8 @@ export default {
     async load() {
       this.loading = true;
       try {
-        const [d, r] = await Promise.all([request('/api/mistakes'), request('/api/review')]);
+        const uq = 'uid=' + encodeURIComponent(anonUid());
+        const [d, r] = await Promise.all([request('/api/mistakes?' + uq), request('/api/review?' + uq)]);
         this.items = d.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
         this.due = r.items;
         this.dueTotal = r.total || r.items.length;

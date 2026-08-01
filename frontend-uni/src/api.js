@@ -56,6 +56,15 @@ export function request(path, opts) {
   return withAuthRetry(() => rawRequest(path, opts));
 }
 
+export function anonUid() {
+  let uid = uni.getStorageSync('anonUid');
+  if (!uid) {
+    uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+    uni.setStorageSync('anonUid', uid);
+  }
+  return uid;
+}
+
 // H5 流式讲解：onMeta(meta) 一次，onDelta(fullText) 增量；返回完整讲解文本。
 // 仅 H5 可用（fetch 流）；小程序端调用方应回退到 uploadExplain。
 export async function streamExplain({ file, text, userAnswer, onMeta, onDelta }) {

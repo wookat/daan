@@ -475,8 +475,8 @@ def api_save_mistake(rec: dict):
 
 
 @app.get("/api/mistakes")
-def api_list_mistakes():
-    return {"items": db.list_mistakes()}
+def api_list_mistakes(uid: str = ""):
+    return {"items": db.list_mistakes(uid=uid.strip()[:64] or None)}
 
 
 @app.patch("/api/mistakes/{mid}")
@@ -492,8 +492,9 @@ def api_delete_mistake(mid: int):
 
 
 @app.get("/api/review")
-def api_review_due():
-    return {"items": db.due_reviews(), "total": db.due_review_count()}
+def api_review_due(uid: str = ""):
+    u = uid.strip()[:64] or None
+    return {"items": db.due_reviews(uid=u), "total": db.due_review_count(uid=u)}
 
 
 @app.post("/api/review/{mid}")

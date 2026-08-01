@@ -900,8 +900,22 @@ def recommend_stats(uid: str, top: int = 3) -> dict:
     return {"items": out[:top], "total_skills": len(out)}
 
 
+def _ensure_mistake_uid(conn):
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(mistakes)")}
+    if "uid" not in cols:
+        conn.execute("ALTER TABLE mistakes ADD COLUMN uid TEXT")
+
+
+def _uid_clause(uid: str | None) -> tuple[str, tuple]:
+    """历史无 uid 的记录对所有设备可见，新记录按 uid 隔离。"""
+    if not uid:
+        return "", ()
+    return " AND (uid IS NULL OR uid=?)", (uid,)
+
+
 def save_mistake(rec: dict) -> int:
     conn = get_conn()
+    _ensure_mistake_uid(conn)
     qtext = rec.get("question_text")
     if qtext:
         dup = conn.execute(
@@ -919,8 +933,8 @@ def save_mistake(rec: dict) -> int:
     cur = conn.execute(
         """INSERT INTO mistakes
            (created_at, module, question_type, question_text, user_answer,
-            correct_answer, methods, error_reason, explanation)
-           VALUES (?,?,?,?,?,?,?,?,?)""",
+            correct_answer, methods, error_reason, explanation, uid)
+           VALUES (?,?,?,?,?,?,?,?,?,?)""",
         (
             time.time(),
             rec.get("module"),
@@ -931,6 +945,7 @@ def save_mistake(rec: dict) -> int:
             json.dumps(rec.get("methods", []), ensure_ascii=False),
             rec.get("error_reason"),
             rec.get("explanation"),
+            (rec.get("uid") or None),
         ),
     )
     conn.commit()
@@ -939,10 +954,13 @@ def save_mistake(rec: dict) -> int:
     return rowid
 
 
-def list_mistakes(limit: int = 500) -> list[dict]:
+def list_mistakes(limit: int = 500, uid: str | None = None) -> list[dict]:
     conn = get_conn()
+    _ensure_mistake_uid(conn)
+    cl, args = _uid_clause(uid)
     rows = conn.execute(
-        "SELECT * FROM mistakes ORDER BY created_at DESC LIMIT ?", (limit,)
+        f"SELECT * FROM mistakes WHERE 1=1{cl} ORDER BY created_at DESC LIMIT ?",
+        (*args, limit),
     ).fetchall()
     conn.close()
     out = []
@@ -975,24 +993,28 @@ def delete_mistake(mid: int):
 REVIEW_INTERVALS_DAYS = [1, 3, 7, 15, 30]
 
 
-def due_review_count() -> int:
+def due_review_count(uid: str | None = None) -> int:
     conn = get_conn()
+    _ensure_mistake_uid(conn)
+    cl, args = _uid_clause(uid)
     n = conn.execute(
         "SELECT COUNT(*) n FROM mistakes WHERE (mastered IS NULL OR mastered=0) "
-        "AND (next_review IS NULL OR next_review <= ?)",
-        (time.time(),),
+        f"AND (next_review IS NULL OR next_review <= ?){cl}",
+        (time.time(), *args),
     ).fetchone()["n"]
     conn.close()
     return n
 
 
-def due_reviews(limit: int = 20) -> list[dict]:
+def due_reviews(limit: int = 20, uid: str | None = None) -> list[dict]:
     conn = get_conn()
+    _ensure_mistake_uid(conn)
+    cl, args = _uid_clause(uid)
     rows = conn.execute(
         "SELECT * FROM mistakes WHERE (mastered IS NULL OR mastered=0) "
-        "AND (next_review IS NULL OR next_review <= ?) "
+        f"AND (next_review IS NULL OR next_review <= ?){cl} "
         "ORDER BY next_review IS NOT NULL, next_review, created_at LIMIT ?",
-        (time.time(), limit),
+        (time.time(), *args, limit),
     ).fetchall()
     conn.close()
     out = []
