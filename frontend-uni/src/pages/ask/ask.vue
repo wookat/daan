@@ -465,7 +465,7 @@ export default {
 .seg { display: flex; background: var(--soft-bg); border-radius: 16rpx; padding: 6rpx; margin-bottom: 20rpx; }
 .seg-i { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8rpx; padding: 14rpx 0; font-size: 27rpx; color: var(--ink-2); border-radius: 12rpx; }
 .seg-i.on { background: var(--card); color: var(--brand); font-weight: 600; box-shadow: 0 2rpx 8rpx rgba(31, 36, 48, 0.08); }
-.btn { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(79, 70, 229, 0.25); }
+.btn { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(79, 70, 229, 0.25); min-height: 88rpx; line-height: 88rpx; }
 .btn[disabled] { opacity: 0.6; }
 .btn.ghost { background: var(--brand-soft); color: var(--brand); box-shadow: none; }
 .btn.sm { font-size: 26rpx; flex: 1; }

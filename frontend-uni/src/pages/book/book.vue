@@ -433,7 +433,7 @@ export default {
 .xp-body { margin-top: 6rpx; font-size: 23rpx; color: var(--ink); background: #fff7ed; border-radius: 10rpx; padding: 12rpx; line-height: 1.6; }
 .mfoot { display: flex; justify-content: space-between; align-items: center; margin-top: 12rpx; }
 .acts { display: flex; gap: 8rpx; }
-.op { font-size: 24rpx; margin-left: 16rpx; padding: 6rpx 20rpx; border-radius: 999rpx; }
+.op { font-size: 24rpx; margin-left: 16rpx; padding: 18rpx 24rpx; border-radius: 999rpx; }
 .op.sim { background: var(--brand-soft); color: var(--brand); }
 .redo { color: var(--brand); border: 1rpx solid var(--brand); }
 .del { color: #c33; }
@@ -461,7 +461,7 @@ export default {
 .duetxt { display: flex; align-items: center; gap: 8rpx; font-size: 28rpx; font-weight: 700; color: #fff; }
 .duetxt-t { font-size: 28rpx; font-weight: 700; color: #fff; }
 .duesub { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.75); margin-top: 6rpx; }
-.duego { background: #fff; color: #4f46e5; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 12rpx 30rpx; }
+.duego { background: #fff; color: #4f46e5; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 20rpx 34rpx; }
 .review { border-left-color: #f5a623; }
 .rhead { display: flex; justify-content: space-between; margin-bottom: 12rpx; }
 .opts { display: flex; gap: 16rpx; margin: 20rpx 0; }
