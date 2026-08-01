@@ -14,7 +14,7 @@
         <text class="today-t">{{ todayDone >= goal ? '今日目标达成' : '今日 ' + todayDone + '/' + goal + ' 题' }}</text>
         <view class="today-s"><uni-icons v-if="streakDays > 0" type="fire-filled" size="14" color="#ffd6a0" /><text class="today-s-t">{{ streakDays > 0 ? '连续打卡 ' + streakDays + ' 天' : '开始今天的练习吧' }}</text></view>
       </view>
-      <view class="today-btn" @click="goPractice">{{ dueCount > 0 ? '先复习 ' + dueCount + ' 道' : '继续刷题 ›' }}</view>
+      <view class="today-btn" @click="goPractice">{{ dueCount > 0 ? '先复习 ' + Math.min(dueCount, 20) + ' 道' : '继续刷题 ›' }}</view>
     </view>
     <view class="card">
       <view class="seg">

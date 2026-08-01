@@ -198,7 +198,7 @@
       <view class="h">成就勋章</view>
       <view class="medals">
         <view v-for="md in medals" :key="md.name" class="medal" :class="{ got: md.got }">
-          <text class="m-ico">{{ md.icon }}</text>
+          <view class="m-ring" :style="medalRingStyle(md)"><view class="m-ring-in"><text class="m-ico">{{ md.icon }}</text></view></view>
           <text class="m-name">{{ md.name }}</text>
           <text class="m-sub">{{ md.got ? '已达成' : md.progress }}</text>
         </view>
@@ -319,16 +319,16 @@ export default {
       const streak = this.streakDays;
       const best = this.pstats.bestStreak || 0;
       const zhan = this.masteredCount;
-      const m = (icon, name, got, progress) => ({ icon, name, got, progress });
+      const m = (icon, name, cur, target, unit) => ({ icon, name, got: cur >= target, progress: cur + '/' + target + ' ' + unit, pct: Math.min(100, Math.round((cur / target) * 100)) });
       return [
-        m('🌱', '初战告捷', done >= 10, done + '/10 题'),
-        m('💪', '小有所成', done >= 100, done + '/100 题'),
-        m('🏆', '刷题大师', done >= 500, done + '/500 题'),
-        m('🔥', '三日不辍', streak >= 3, streak + '/3 天'),
-        m('⚡', '七日连环', streak >= 7, streak + '/7 天'),
-        m('🎯', '十连对', best >= 10, best + '/10 连对'),
-        m('⚔️', '斩题十道', zhan >= 10, zhan + '/10 道'),
-        m('👑', '百题斩', zhan >= 100, zhan + '/100 道'),
+        m('🌱', '初战告捷', done, 10, '题'),
+        m('💪', '小有所成', done, 100, '题'),
+        m('🏆', '刷题大师', done, 500, '题'),
+        m('🔥', '三日不辍', streak, 3, '天'),
+        m('⚡', '七日连环', streak, 7, '天'),
+        m('🎯', '十连对', best, 10, '连对'),
+        m('⚔️', '斩题十道', zhan, 10, '道'),
+        m('👑', '百题斩', zhan, 100, '道'),
       ];
     },
     trend() {
@@ -487,6 +487,11 @@ export default {
         top: 50 + 58 * Math.sin(ang) + '%',
       };
     },
+    medalRingStyle(md) {
+      const color = md.got ? '#f59e0b' : '#c7cad4';
+      const pct = md.got ? 100 : md.pct;
+      return { background: `conic-gradient(${color} 0% ${pct}%, #eef0f4 ${pct}% 100%)` };
+    },
     modColor(mod) {
       const KEY = { '资料分析': 'ziliao', '数量关系': 'shuliang', '言语理解': 'yanyu', '判断推理': 'panduan', '常识判断': 'changshi', '申论': 'shenlun' };
       const C = { changshi: '#f59e0b', shuliang: '#3b82f6', panduan: '#8b5cf6', ziliao: '#10b981', yanyu: '#ef4444', shenlun: '#64748b' };
@@ -626,8 +631,13 @@ export default {
 .re-s { font-size: 23rpx; color: var(--ink-2); margin: 8rpx 0 20rpx; }
 .re-btn { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border-radius: 18rpx; font-size: 26rpx; font-weight: 600; width: 50%; }
 .medals { display: flex; flex-wrap: wrap; }
-.medal { width: 25%; box-sizing: border-box; text-align: center; padding: 14rpx 6rpx; opacity: 0.35; filter: grayscale(1); }
-.medal.got { opacity: 1; filter: none; }
+.medal { width: 25%; box-sizing: border-box; text-align: center; padding: 14rpx 6rpx; }
+.medal .m-ico { filter: grayscale(1); opacity: 0.55; }
+.medal.got .m-ico { filter: none; opacity: 1; }
+.medal .m-name { color: var(--ink-2); }
+.medal.got .m-name { color: var(--ink); }
+.m-ring { width: 88rpx; height: 88rpx; border-radius: 50%; margin: 0 auto 6rpx; display: flex; align-items: center; justify-content: center; }
+.m-ring-in { width: 72rpx; height: 72rpx; border-radius: 50%; background: var(--card); display: flex; align-items: center; justify-content: center; }
 .m-ico { display: block; font-size: 48rpx; }
 .m-name { display: block; font-size: 22rpx; font-weight: 600; margin-top: 6rpx; }
 .m-sub { display: block; font-size: 18rpx; color: var(--ink-2); margin-top: 4rpx; }
