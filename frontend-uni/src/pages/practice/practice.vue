@@ -1329,7 +1329,7 @@ export default {
 .bok .btitle { color: var(--ok); }
 .bbad .btitle { color: var(--bad); }
 .bsub { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
-.bnext { flex-shrink: 0; border-radius: 999rpx; font-size: 28rpx; font-weight: 600; color: #fff; padding: 0 44rpx; min-height: 88rpx; line-height: 88rpx; margin: 0; }
+.bnext { flex-shrink: 0; border-radius: 999rpx; font-size: 28rpx; font-weight: 600; color: #fff; padding: 0 44rpx; min-height: 44px; line-height: 44px; margin: 0; }
 .bnext.nok { background: #22c55e; }
 .bnext.nbad { background: #ef4444; }
 .bnext.bstay { background: transparent; border: 2rpx solid #22c55e; color: #15803d; margin-right: 12rpx; }
@@ -1363,7 +1363,7 @@ export default {
 .report-t { font-size: 22rpx; color: var(--ink-2); }
 .report-grid { display: flex; flex-wrap: wrap; gap: 16rpx; justify-content: center; }
 .report-tip { text-align: center; font-size: 22rpx; color: var(--ink-2); margin-top: 14rpx; }
-.btn { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(79, 70, 229, 0.25); min-height: 88rpx; line-height: 88rpx; }
+.btn { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(79, 70, 229, 0.25); min-height: 44px; line-height: 44px; }
 .btn.ghost { background: var(--brand-soft); color: var(--brand); box-shadow: none; }
 .done { text-align: center; padding: 48rpx 28rpx; }
 .ring { width: 200rpx; height: 200rpx; border-radius: 50%; margin: 0 auto 24rpx; display: flex; align-items: center; justify-content: center; }
