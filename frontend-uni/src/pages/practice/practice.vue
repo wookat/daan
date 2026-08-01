@@ -130,17 +130,19 @@
         <text class="tag" @click="cardOpen = true">{{ modName(cur.module) }}{{ lastSubmodule ? ' · ' + lastSubmodule : '' }} · {{ idx + 1 }}/{{ items.length }} ▾</text>
         <view class="hstats">
           <text class="timer" :class="{ examleft: examMode, overtime: timedMode && !examMode && qsecs > targetSecs }">{{ examMode ? fmtSecs(examLeft) : timedMode ? (qsecs > targetSecs ? '超时+' + fmtSecs(qsecs - targetSecs) : fmtSecs(targetSecs - qsecs)) : fmtSecs(qsecs) }}</text>
+          <text v-if="!examMode" class="cnt okc">✓{{ right }}</text>
+          <text v-if="!examMode" class="cnt badc">✗{{ wrongCount }}</text>
+          <view v-if="streak >= 3" class="cnt fire"><uni-icons type="fire-filled" size="13" color="#f97316" /><text class="fire-n">{{ streak }}</text></view>
+          <text class="op" @click="quit">退出</text>
+        </view>
+      </view>
+      <view class="rtools">
           <text class="fontbtn" @click="cycleFont">Aa</text>
           <text v-if="!examMode" class="fontbtn" :class="{ beion: beiMode }" @click="toggleBei">背</text>
           <text v-if="!examMode" class="fontbtn" :class="{ beion: autoNext }" @click="toggleAutoNext">跳</text>
           <text v-if="!examMode && !beiMode" class="fontbtn" :class="{ beion: timedMode }" @click="toggleTimed">限</text>
           <view class="fontbtn iconbtn" @click="toggleFav"><uni-icons :type="isFav ? 'star-filled' : 'star'" size="16" :color="isFav ? '#f59e0b' : '#8a90a0'" /></view>
           <view class="fontbtn iconbtn" @click="toggleSfx"><uni-icons :type="sfxOn ? 'sound-filled' : 'sound'" size="16" :color="sfxOn ? '#4f46e5' : '#8a90a0'" /></view>
-          <text v-if="!examMode" class="cnt okc">✓{{ right }}</text>
-          <text v-if="!examMode" class="cnt badc">✗{{ wrongCount }}</text>
-          <view v-if="streak >= 3" class="cnt fire"><uni-icons type="fire-filled" size="13" color="#f97316" /><text class="fire-n">{{ streak }}</text></view>
-          <text class="op" @click="quit">退出</text>
-        </view>
       </view>
       <view class="progress"><view class="pfill" :style="{ width: (idx / items.length) * 100 + '%' }" /></view>
       <view v-if="cur.is_real" class="real-tag">真题{{ cur.exam_year ? ' · ' + cur.exam_year : '' }}{{ cur.exam_region ? ' · ' + cur.exam_region : '' }}</view>
@@ -1236,7 +1238,8 @@ export default {
 .mfill { height: 100%; background: var(--brand); border-radius: 999rpx; transition: width 0.4s ease; }
 .rhead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14rpx; }
 .tag { display: inline-block; background: var(--brand-soft); color: var(--brand); border-radius: 999rpx; padding: 6rpx 20rpx; font-size: 22rpx; }
-.hstats { display: flex; align-items: center; gap: 12rpx; }
+.hstats { display: flex; align-items: center; gap: 12rpx; flex-shrink: 0; }
+.rtools { display: flex; align-items: center; gap: 12rpx; margin-bottom: 14rpx; flex-wrap: wrap; }
 .cnt { font-size: 22rpx; border-radius: 999rpx; padding: 2rpx 14rpx; font-weight: 600; }
 .okc { background: var(--ok-soft); color: var(--ok); }
 .badc { background: var(--bad-soft); color: var(--bad); }

@@ -35,9 +35,9 @@
     ]
   },
   "globalStyle": {
-    "navigationBarTextStyle": "white",
+    "navigationBarTextStyle": "black",
     "navigationBarTitleText": "考公错题助手",
-    "navigationBarBackgroundColor": "#4f46e5",
+    "navigationBarBackgroundColor": "#f6f7fb",
     "backgroundColor": "#f5f6fa"
   }
 }
