@@ -889,6 +889,7 @@ export default {
           method: 'POST',
           data: {
             uid: anonUid(),
+            question_id: q.id || null,
             module: q.module,
             question_type: q.question_type || q.submodule,
             question_text: q.question + '\n' + optText,
@@ -1238,6 +1239,7 @@ export default {
           method: 'POST',
           data: {
             uid: anonUid(),
+            question_id: q.id || null,
             module: q.module,
             question_type: q.question_type || q.submodule,
             question_text: q.question + '\n' + optText,

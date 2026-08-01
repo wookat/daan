@@ -743,7 +743,7 @@ def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: s
     if noqt:
         where += " AND (question_type IS NULL OR question_type='')"
     rows = conn.execute(
-        f"SELECT question_text FROM mistakes WHERE {where} ORDER BY COALESCE(next_review, created_at), created_at DESC LIMIT ?",
+        f"SELECT question_text, question_id FROM mistakes WHERE {where} ORDER BY COALESCE(next_review, created_at), created_at DESC LIMIT ?",
         (*args, limit * 2),
     ).fetchall()
     out = []
@@ -755,6 +755,18 @@ def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: s
         if not head or key in seen:
             continue
         seen.add(key)
+        if r["question_id"]:
+            byid = conn.execute(
+                "SELECT * FROM questions WHERE id=? AND (disabled IS NULL OR disabled=0)",
+                (r["question_id"],),
+            ).fetchone()
+            if byid:
+                d = dict(byid)
+                d["options"] = json.loads(d.get("options") or "{}")
+                out.append(d)
+                if len(out) >= limit:
+                    break
+                continue
         esc = lambda s: s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         cands = conn.execute(
             "SELECT * FROM questions WHERE question LIKE ? ESCAPE '\\' AND (disabled IS NULL OR disabled=0) LIMIT 80",
@@ -1092,6 +1104,8 @@ def _ensure_mistake_uid(conn):
     cols = {r["name"] for r in conn.execute("PRAGMA table_info(mistakes)")}
     if "uid" not in cols:
         conn.execute("ALTER TABLE mistakes ADD COLUMN uid TEXT")
+    if "question_id" not in cols:
+        conn.execute("ALTER TABLE mistakes ADD COLUMN question_id INTEGER")
 
 
 def _uid_clause(uid: str | None) -> tuple[str, tuple]:
@@ -1112,8 +1126,9 @@ def save_mistake(rec: dict) -> int:
         if dup:
             conn.execute(
                 "UPDATE mistakes SET times=COALESCE(times,1)+1, mastered=0, review_streak=0, "
-                "next_review=?, user_answer=COALESCE(?, user_answer) WHERE id=?",
-                (time.time(), rec.get("user_answer"), dup["id"]),
+                "next_review=?, user_answer=COALESCE(?, user_answer), "
+                "question_id=COALESCE(question_id, ?) WHERE id=?",
+                (time.time(), rec.get("user_answer"), rec.get("question_id"), dup["id"]),
             )
             conn.commit()
             conn.close()
@@ -1121,8 +1136,8 @@ def save_mistake(rec: dict) -> int:
     cur = conn.execute(
         """INSERT INTO mistakes
            (created_at, module, question_type, question_text, user_answer,
-            correct_answer, methods, error_reason, explanation, uid)
-           VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            correct_answer, methods, error_reason, explanation, uid, question_id)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
         (
             time.time(),
             rec.get("module"),
@@ -1134,6 +1149,7 @@ def save_mistake(rec: dict) -> int:
             rec.get("error_reason"),
             rec.get("explanation"),
             (rec.get("uid") or None),
+            rec.get("question_id"),
         ),
     )
     conn.commit()
