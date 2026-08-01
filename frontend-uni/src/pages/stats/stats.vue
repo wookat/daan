@@ -123,6 +123,20 @@
       </view>
     </view>
 
+    <view v-if="speedData.length >= 3" class="card">
+      <view class="h">做题速度趋势（平均每题用时）</view>
+      <view class="trend">
+        <view v-for="(s, i) in speedData" :key="i" class="trend-col">
+          <view class="trend-bar" :class="{ lo: s > 90, mid: s > 60 && s <= 90 }" :style="{ height: Math.min(Math.max((s / 120) * 100, 6), 100) + '%' }" />
+        </view>
+      </view>
+      <view class="trend-x">
+        <text>旧</text>
+        <text>近 {{ speedData.length }} 次平均 {{ speedAvg }}s/题（越短越好）</text>
+        <text>新</text>
+      </view>
+    </view>
+
     <view v-if="history.length" class="card">
       <view class="h">练习记录</view>
       <view v-for="(h, i) in history.slice(0, showAllHist ? 30 : 6)" :key="i" class="hist-row">
@@ -222,6 +236,17 @@ export default {
     return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, history: [], showAllHist: false, coachHtml: uni.getStorageSync('coachAdvice') || '', coachLoading: false, growth: null, reco: null, dueN: 0, gwMod: '' };
   },
   computed: {
+    speedData() {
+      return this.history
+        .filter((h) => h.n && h.secs)
+        .slice(0, 14)
+        .reverse()
+        .map((h) => Math.round(h.secs / h.n));
+    },
+    speedAvg() {
+      const d = this.speedData;
+      return d.length ? Math.round(d.reduce((a, b) => a + b, 0) / d.length) : 0;
+    },
     gwMods() {
       if (!this.growth) return [];
       const seen = new Set();
