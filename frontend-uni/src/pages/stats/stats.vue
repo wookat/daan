@@ -50,6 +50,7 @@
       </view>
     </view>
 
+    <view class="sec">诊断与建议</view>
     <view class="card coach">
       <view class="cal-head">
         <view class="h" style="margin-bottom: 0">AI 学习教练</view>
@@ -195,6 +196,15 @@
     </view>
 
     <view class="card">
+      <view class="h">高频错题型 TOP10</view>
+      <view v-if="!byType.length" class="spin">暂无数据</view>
+      <view v-for="t in byType" :key="t.question_type" class="tline">
+        {{ typeName(t.question_type) }} <text class="n">×{{ t.n }}</text>
+      </view>
+    </view>
+
+    <view class="sec">激励</view>
+    <view class="card">
       <view class="h">成就勋章</view>
       <view class="medals">
         <view v-for="md in medals" :key="md.name" class="medal" :class="{ got: md.got }">
@@ -205,14 +215,7 @@
       </view>
     </view>
 
-    <view class="card">
-      <view class="h">高频错题型 TOP10</view>
-      <view v-if="!byType.length" class="spin">暂无数据</view>
-      <view v-for="t in byType" :key="t.question_type" class="tline">
-        {{ typeName(t.question_type) }} <text class="n">×{{ t.n }}</text>
-      </view>
-    </view>
-
+    <view class="sec">工具</view>
     <view class="card">
       <view class="h">数据备份与迁移</view>
       <view class="bk-tip">免注册也能换机：生成恢复码备份学习数据，在新设备输入恢复码即可找回。</view>
@@ -593,6 +596,7 @@ export default {
 <style scoped>
 .wrap { padding: 24rpx; }
 .card { background: var(--card); border-radius: var(--radius); padding: 24rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
+.sec { font-size: 24rpx; font-weight: 700; color: var(--ink-2); letter-spacing: 2rpx; margin: 40rpx 0 20rpx 8rpx; }
 .cal-hr { display: flex; align-items: center; gap: 16rpx; }
 .cal-toggle { font-size: 24rpx; color: var(--brand); font-weight: 600; padding: 10rpx 0 10rpx 10rpx; }
 .ov { display: flex; }
