@@ -1,4 +1,6 @@
 """讲解引擎：题目识别 → 题型路由 → 按花生十三方法体系讲解。"""
+import re
+
 from . import kb, llm
 
 EXTRACT_PROMPT = """你是公务员考试题目识别助手。从用户提供的内容（图片或文字）中提取题目信息，输出 JSON（不要多余文字）：
@@ -108,9 +110,30 @@ def _explain_messages(extracted: dict, user_answer: str | None = None) -> list:
     ]
 
 
+_SUSPECT_TEXT = (
+    "【答案】题目存疑\n\n"
+    "## 题目存疑\n"
+    "题干无法识别为完整的考试题目（缺少可读的中文题干或明确的提问）。"
+    "为避免误导，不做任何猜测性解答。\n\n"
+    "请补充：完整题干文字（含数据/材料）、明确的提问，以及规范的选项内容后再试。"
+)
+
+
+def _suspect_reason(question_text: str) -> bool:
+    stem = re.split(r"\bA[\.．、:：]", question_text or "", maxsplit=1)[0]
+    hanzi = len(re.findall(r"[\u4e00-\u9fff]", stem))
+    return hanzi < 8
+
+
 async def explain(extracted: dict, user_answer: str | None = None) -> str:
+    if _suspect_reason(extracted.get("question_text", "")):
+        return _SUSPECT_TEXT
     return await llm.chat(_explain_messages(extracted, user_answer), max_tokens=6000)
 
 
 def explain_stream(extracted: dict, user_answer: str | None = None):
+    if _suspect_reason(extracted.get("question_text", "")):
+        async def _fixed():
+            yield _SUSPECT_TEXT
+        return _fixed()
     return llm.chat_stream(_explain_messages(extracted, user_answer), max_tokens=6000)
