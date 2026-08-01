@@ -68,6 +68,8 @@ def init_db():
         ("import_batch", "ALTER TABLE questions ADD COLUMN import_batch TEXT"),
         ("image", "ALTER TABLE questions ADD COLUMN image TEXT"),
         ("image_credit", "ALTER TABLE questions ADD COLUMN image_credit TEXT"),
+        ("xp_explanation", "ALTER TABLE questions ADD COLUMN xp_explanation TEXT"),
+        ("xp_school", "ALTER TABLE questions ADD COLUMN xp_school TEXT"),
     ]:
         if col not in qcols:
             conn.execute(ddl)
@@ -736,11 +738,20 @@ def import_hs_explanations(items: list[dict]) -> int:
     n = 0
     for it in items:
         qid = it.get("id")
-        text = (it.get("hs_explanation") or "").strip()
-        if not qid or not text:
+        if not qid:
             continue
-        cur = conn.execute("UPDATE questions SET hs_explanation=? WHERE id=?", (text, int(qid)))
-        n += cur.rowcount
+        text = (it.get("hs_explanation") or "").strip()
+        xp = (it.get("xp_explanation") or "").strip()
+        school = (it.get("xp_school") or "").strip()
+        if text:
+            n += conn.execute(
+                "UPDATE questions SET hs_explanation=? WHERE id=?", (text, int(qid))
+            ).rowcount
+        if xp:
+            n += conn.execute(
+                "UPDATE questions SET xp_explanation=?, xp_school=? WHERE id=?",
+                (xp, school or None, int(qid)),
+            ).rowcount
     conn.commit()
     conn.close()
     return n

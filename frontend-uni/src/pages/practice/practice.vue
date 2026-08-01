@@ -178,6 +178,10 @@
           <view v-if="cur.hs_explanation" class="exp-row col">
             <text class="exp-k hs">花生十三方法解析</text>
             <view class="exp hsx">{{ cur.hs_explanation }}</view>
+            <template v-if="cur.xp_explanation">
+              <text class="exp-k xp">{{ cur.xp_school || '第二名师视角' }}</text>
+              <view class="exp xpx">{{ cur.xp_explanation }}</view>
+            </template>
             <view class="hs-rate">
               <text v-if="hsRated[cur.id]" class="hs-rate-done">{{ hsRated[cur.id] === 'up' ? '已反馈：有用 👍' : '已反馈：有误 👎' }}</text>
               <template v-else>
@@ -1199,6 +1203,8 @@ export default {
 .after { margin-top: 8rpx; }
 .exp-k.hs { color: var(--brand); }
 .exp.hsx { border-left: 5rpx solid var(--brand); background: var(--brand-soft); }
+.exp-k.xp { color: #b45309; margin-top: 12rpx; }
+.exp.xpx { border-left: 5rpx solid #f59e0b; background: #fffbeb; }
 .hs-rate { display: flex; gap: 14rpx; margin-top: 10rpx; align-items: center; }
 .hs-rate-btn { font-size: 23rpx; color: var(--brand); border: 1rpx solid var(--brand); border-radius: 999rpx; padding: 6rpx 22rpx; }
 .hs-rate-btn.bad { color: var(--bad); border-color: var(--bad); }
