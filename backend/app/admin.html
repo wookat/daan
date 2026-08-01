@@ -195,12 +195,15 @@ async function refreshReportBadge() {
     if (el) el.textContent = d.items.length ? `用户纠错（${d.items.length}）` : '用户纠错';
   } catch (e) { /* ignore */ }
 }
+let LOADSEQ = 0;
 async function load() {
   refreshReportBadge();
+  const seq = ++LOADSEQ;
+  const render = (html) => { if (seq === LOADSEQ) $('list').innerHTML = html; };
   try {
     if (TAB === 'reports') {
       const d = await api('/api/admin/reports?status=open');
-      $('list').innerHTML = d.items.length ? d.items.map((r) => `<div class="q">
+      render(d.items.length ? d.items.map((r) => `<div class="q">
         <div class="meta"><span>#${r.id}</span><span>${new Date(r.created_at * 1000).toLocaleString()}</span><span class="badge">${esc(r.reason)}</span>${r.question_id ? `<span>题 #${r.question_id}（${esc(r.module || '')}，答案 ${esc(r.answer || '')}）</span>` : ''}${r.disabled ? '<span class="down">题目已下架</span>' : ''}</div>
         <pre>${esc((r.question || r.detail || '').slice(0, 300))}${r.options ? '\n' + esc(fmtOpts(r.options)) : ''}</pre>
         ${r.detail && r.question ? `<pre>用户补充：${esc(r.detail.slice(0, 200))}</pre>` : ''}
@@ -210,40 +213,40 @@ async function load() {
           <button class="ok" onclick="resolveReport(${r.id},'resolved')">标为已处理</button>
           <button onclick="resolveReport(${r.id},'dismissed')">忽略</button>
         </div>
-      </div>`).join('') : '<div class="empty">暂无待处理的用户纠错</div>';
+      </div>`).join('') : '<div class="empty">暂无待处理的用户纠错</div>');
       return;
     }
     if (TAB === 'batches') {
       const d = await api('/api/admin/batches');
-      $('list').innerHTML = d.items.length ? d.items.map((b) => `<div class="q">
+      render(d.items.length ? d.items.map((b) => `<div class="q">
         <div class="meta"><span class="badge">${esc(b.batch)}</span><span>共 ${b.n} 题</span><span>真题 ${b.real_n || 0}</span>${b.pending ? `<span class="down">待审 ${b.pending}</span>` : '<span>已全部发布</span>'}</div>
         <div class="row">
           <button onclick="batchSample('${esc(b.batch)}')">抽样 10 题</button>
           ${b.pending ? `<button class="ok" onclick="batchDecide('${esc(b.batch)}',true)">发布批次</button><button class="warn" onclick="batchDecide('${esc(b.batch)}',false)">驳回删除</button>` : ''}
         </div>
         <div id="bs${esc(b.batch)}"></div>
-      </div>`).join('') : '<div class="empty">暂无导入批次（新导入将自动进入待审）</div>';
+      </div>`).join('') : '<div class="empty">暂无导入批次（新导入将自动进入待审）</div>');
       return;
     }
     if (TAB === 'ann') {
       const d = await api('/api/admin/announcements');
-      $('list').innerHTML = d.items.length ? d.items.map((a) => `<div class="q">
+      render(d.items.length ? d.items.map((a) => `<div class="q">
         <div class="meta"><span>#${a.id}</span><span>${new Date(a.created_at * 1000).toLocaleString()}</span>${a.active ? '<span class="badge">展示中</span>' : '<span class="down">已下线</span>'}</div>
         <pre>${esc(a.title)}${a.body ? '\n' + esc(a.body) : ''}</pre>
         <div class="row">${a.active
           ? `<button class="warn" onclick="toggleAnn(${a.id},false)">下线</button>`
           : `<button class="ok" onclick="toggleAnn(${a.id},true)">重新上线</button>`}</div>
-      </div>`).join('') : '<div class="empty">暂无公告，在上方发布</div>';
+      </div>`).join('') : '<div class="empty">暂无公告，在上方发布</div>');
       return;
     }
     if (TAB === 'cache') {
       const d = await api('/api/admin/flagged_cache');
-      $('list').innerHTML = d.items.length ? d.items.map((c) => `<div class="q">
+      render(d.items.length ? d.items.map((c) => `<div class="q">
         <div class="meta"><span class="badge">${esc(c.module || '')}</span><span>命中 ${c.hits}</span><span class="down">👎 ${c.down}</span><span>👍 ${c.up}</span></div>
         <pre>${esc((c.question_text || '').slice(0, 300))}</pre>
         <details><summary>查看解析</summary><pre>${esc(c.explanation)}</pre></details>
         <div class="row"><button class="warn" onclick="delCache('${c.key}')">删除此缓存（下次重新生成）</button></div>
-      </div>`).join('') : '<div class="empty">暂无差评缓存</div>';
+      </div>`).join('') : '<div class="empty">暂无差评缓存</div>');
       return;
     }
     const p = new URLSearchParams();
@@ -254,9 +257,9 @@ async function load() {
       if ($('mod').value) p.set('module', $('mod').value);
     }
     const d = await api('/api/admin/questions?' + p);
-    $('list').innerHTML = d.items.length ? d.items.map(qCard).join('') : '<div class="empty">暂无数据</div>';
+    render(d.items.length ? d.items.map(qCard).join('') : '<div class="empty">暂无数据</div>');
   } catch (e) {
-    $('list').innerHTML = `<div class="empty">加载失败：${esc(e.message)}（请检查管理令牌）</div>`;
+    render(`<div class="empty">加载失败：${esc(e.message)}（请检查管理令牌）</div>`);
   }
 }
 async function boot() { try { await stats(); await load(); } catch (e) { $('list').innerHTML = `<div class="empty">加载失败：${esc(e.message)}（请检查管理令牌）</div>`; } }
