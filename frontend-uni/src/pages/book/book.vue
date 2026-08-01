@@ -74,6 +74,11 @@
         </view>
         <text class="duego">开始</text>
       </view>
+      <view v-if="tab !== 'fav' && items.length > 5" class="searchbar">
+        <uni-icons type="search" size="16" color="#8a90a0" />
+        <input v-model="kw" class="searchinput" placeholder="搜题干关键词或题型，如：增长率 / 类比推理" confirm-type="search" />
+        <text v-if="kw" class="searchclear" @click="kw = ''">✕</text>
+      </view>
       <scroll-view v-if="tab !== 'fav' && items.length" scroll-x class="chips">
         <view
           v-for="c in chipList"
@@ -89,6 +94,10 @@
         <view class="e-t">错题本还是空的</view>
         <view class="e-s">去拍题讲解或刷题，答错的题会汇集到这里，之后按遗忘曲线安排复习</view>
         <button class="e-btn" @click="goPractice">去刷题</button>
+      </view>
+      <view v-if="tab !== 'fav' && items.length && !shownItems.length && !loading" class="card empty">
+        <view class="e-t">没有匹配的错题</view>
+        <view class="e-s">换个关键词或清除筛选试试</view>
       </view>
       <view v-for="m in shownItems" :key="m.id" class="card mcard" :class="masteryClass(m)" @click="m.open = !m.open">
         <view class="mhead">
@@ -147,6 +156,7 @@ export default {
       nextDays: 0,
       streak: 0,
       filterMod: '',
+      kw: '',
       tab: 'todo',
       favs: [],
     };
@@ -173,8 +183,18 @@ export default {
     },
     shownItems() {
       if (this.tab === 'fav') return [];
-      const base = this.tab === 'done' ? this.doneItems : this.todoItems;
-      return this.filterMod ? base.filter((m) => m.module === this.filterMod) : base;
+      let base = this.tab === 'done' ? this.doneItems : this.todoItems;
+      if (this.filterMod) base = base.filter((m) => m.module === this.filterMod);
+      const k = this.kw.trim().toLowerCase();
+      if (k) {
+        base = base.filter(
+          (m) =>
+            (m.question_text || '').toLowerCase().includes(k) ||
+            (m.question_type || '').toLowerCase().includes(k) ||
+            (m.error_reason || '').includes(k)
+        );
+      }
+      return base;
     },
   },
   onShow() {
@@ -343,6 +363,9 @@ export default {
 .e-s { font-size: 24rpx; color: var(--ink-2); line-height: 1.7; margin-bottom: 28rpx; }
 .e-btn { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border-radius: 18rpx; font-size: 28rpx; font-weight: 600; width: 60%; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; border-left: none; }
+.searchbar { display: flex; align-items: center; gap: 12rpx; background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 14rpx 26rpx; margin-bottom: 20rpx; }
+.searchinput { flex: 1; font-size: 26rpx; color: var(--ink); height: 40rpx; line-height: 40rpx; }
+.searchclear { font-size: 26rpx; color: var(--ink-2); padding: 0 8rpx; }
 .chips { white-space: nowrap; margin-bottom: 24rpx; }
 .chip { display: inline-block; padding: 10rpx 30rpx; margin-right: 16rpx; border-radius: 999rpx; background: var(--card); border: 1rpx solid var(--line); font-size: 25rpx; color: var(--ink-2); }
 .chip.on { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
