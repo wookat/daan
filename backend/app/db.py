@@ -872,6 +872,51 @@ def refresh_question_stats() -> int:
     return n
 
 
+_PAPER_TITLE_RE = re.compile(r"(\d{4}年[^（(）).]{2,40}《行测》(?:真题|试卷|试题)?(?:（[^）]{1,8}）)?)")
+
+
+def list_papers() -> list[dict]:
+    """从真题 source 派生真题套卷列表（≥40 题视为整卷）。"""
+    conn = get_conn()
+    rows = conn.execute(
+        """SELECT source, COUNT(*) n, MAX(exam_year) y, MAX(exam_region) rg
+           FROM questions
+           WHERE is_real=1 AND (disabled IS NULL OR disabled=0) AND source IS NOT NULL AND source!=''
+           GROUP BY source HAVING n>=40
+           ORDER BY y DESC, n DESC"""
+    ).fetchall()
+    conn.close()
+    papers = []
+    seen = set()
+    for r in rows:
+        m = _PAPER_TITLE_RE.search(r["source"] or "")
+        if not m:
+            continue
+        title = m.group(1)
+        if title in seen:
+            continue
+        seen.add(title)
+        papers.append({"title": title, "source": r["source"], "n": r["n"], "year": r["y"], "region": r["rg"]})
+    return papers[:120]
+
+
+def paper_questions(source: str, limit: int = 140) -> list[dict]:
+    conn = get_conn()
+    rows = conn.execute(
+        """SELECT * FROM questions
+           WHERE source=? AND is_real=1 AND (disabled IS NULL OR disabled=0)
+           ORDER BY id LIMIT ?""",
+        (source, limit),
+    ).fetchall()
+    conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["options"] = json.loads(d.get("options") or "{}")
+        out.append(d)
+    return out
+
+
 def growth_stats(uid: str) -> dict:
     """按周（近 8 周）返回整体和各模块正确率成长曲线。"""
     conn = get_conn()

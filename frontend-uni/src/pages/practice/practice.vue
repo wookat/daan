@@ -64,6 +64,13 @@
         </view>
         <text class="daily-go">开始</text>
       </view>
+      <view v-if="counts.length" class="daily exam" @click="openPapers">
+        <view class="daily-l">
+          <view class="daily-t"><view class="exam-ico"><uni-icons type="paperplane-filled" size="16" color="#4f46e5" /></view><text class="daily-t-t dark">真题卷库</text></view>
+          <text class="daily-s dark">历年国考/省考整卷 · 120 分钟计时 · 交卷后统一判分</text>
+        </view>
+        <text class="daily-go">选卷</text>
+      </view>
       <view v-if="counts.length" class="daily" :class="{ done: todayDone }" @click="startDaily">
         <view class="daily-l">
           <view class="daily-t"><uni-icons :type="todayDone ? 'checkbox-filled' : 'calendar-filled'" size="16" color="#ffffff" /><text class="daily-t-t">今日一练</text></view>
@@ -97,6 +104,21 @@
         <view v-if="counts.length" class="mcard all" @click="start(null)">
           <view class="mtop"><uni-icons type="loop" size="16" color="#ffffff" /><text class="mname">混合刷题</text></view>
           <text class="mn">全部模块随机</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 真题卷库 -->
+    <view v-if="paperSheet" class="mask" @click="paperSheet = false">
+      <view class="sheet" @click.stop>
+        <view class="sheet-h">
+          <text class="sheet-t">真题卷库 · 选择试卷</text>
+          <view class="sheet-x" @click="paperSheet = false"><uni-icons type="closeempty" size="20" color="#6b7280" /></view>
+        </view>
+        <view v-if="!papers.length" class="spin">试卷加载中…</view>
+        <view v-for="p in papers" :key="p.source" class="sub-chip" @click="startPaper(p)">
+          <text class="sub-name">{{ p.title }}</text>
+          <text class="sub-n">{{ p.n }} 题</text>
         </view>
       </view>
     </view>
@@ -349,6 +371,8 @@ export default {
       lastModule: null,
       lastSubmodule: null,
       subSelect: null,
+      paperSheet: false,
+      papers: [],
       submodules: [],
       streak: 0,
       bestStreak: 0,
@@ -659,6 +683,64 @@ export default {
     setGroup(n) {
       this.groupSize = n;
       uni.setStorageSync('groupSize', n);
+    },
+    async openPapers() {
+      this.paperSheet = true;
+      if (this.papers.length) return;
+      try {
+        const d = await request('/api/papers');
+        this.papers = d.items || [];
+      } catch (e) {
+        uni.showToast({ title: '试卷加载失败：' + e.message, icon: 'none' });
+        this.paperSheet = false;
+      }
+    },
+    async startPaper(p) {
+      if (this._starting) return;
+      this._starting = true;
+      if (this.beiMode) {
+        this.beiMode = false;
+        uni.setStorageSync('beiMode', '');
+      }
+      uni.showLoading({ title: '加载试卷…', mask: true });
+      try {
+        const d = await request('/api/paper_questions?src=' + encodeURIComponent(p.source));
+        const items = d.items || [];
+        if (items.length < 20) {
+          uni.showToast({ title: '试卷题目不足，换一张试试', icon: 'none' });
+          return;
+        }
+        this.paperSheet = false;
+        this.items = items;
+        this.idx = 0;
+        this.picked = '';
+        this.right = 0;
+        this.streak = 0;
+        this.bestStreak = 0;
+        this.autoSaved = false;
+        this.resultSent = false;
+        this.percentile = null;
+        this.lastModule = null;
+        this.lastSubmodule = null;
+        this.session = true;
+        this.examMode = true;
+        this.examLeft = 120 * 60;
+        this.startQTimer();
+        if (this.examTimer) clearInterval(this.examTimer);
+        this.examTimer = setInterval(() => {
+          this.examLeft--;
+          if (this.examLeft <= 0) {
+            uni.showToast({ title: '时间到，自动交卷', icon: 'none' });
+            this.finishExam();
+          }
+        }, 1000);
+        uni.showToast({ title: p.title + ' 开始：交卷后统一判分', icon: 'none', duration: 1800 });
+      } catch (e) {
+        uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
+      } finally {
+        uni.hideLoading();
+        this._starting = false;
+      }
     },
     async startExam(full) {
       if (this._starting) return;

@@ -412,6 +412,19 @@ def api_report(body: dict):
     return {"id": rid}
 
 
+@app.get("/api/papers")
+def api_papers():
+    return {"items": db.list_papers()}
+
+
+@app.get("/api/paper_questions")
+def api_paper_questions(src: str):
+    items = db.paper_questions(src)
+    if not items:
+        raise HTTPException(404, "试卷不存在或题目不足")
+    return {"items": items}
+
+
 @app.post("/api/admin/refresh_stats")
 def api_admin_refresh_stats(x_admin_token: str | None = Header(None)):
     check_admin(x_admin_token)
