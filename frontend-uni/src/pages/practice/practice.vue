@@ -445,8 +445,9 @@ export default {
       if (!q) return '';
       const parts = [this.modName(q.module)];
       if (q.submodule) parts.push(q.submodule);
-      if (q.question_type && q.question_type !== q.submodule) {
-        parts.push(q.question_type.replace(/^.+-/, ''));
+      if (q.question_type) {
+        const kp = q.question_type.replace(/^.+-/, '');
+        if (kp && kp !== q.submodule) parts.push(kp);
       }
       return parts.filter(Boolean).join(' › ');
     },
