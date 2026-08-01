@@ -402,7 +402,7 @@ export default {
     },
     async redoAll() {
       try {
-        let q = '/api/mistakes/redo?limit=10';
+        let q = '/api/mistakes/redo?limit=10&uid=' + encodeURIComponent(anonUid());
         if (this.kpFilter) {
           const isModName = Object.values(NAMES).includes(this.kpFilter);
           if (isModName) {

@@ -727,11 +727,13 @@ def import_questions(items: list[dict], batch: str | None = None) -> dict:
     return {"inserted": inserted, "skipped": skipped, "batch": batch}
 
 
-def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: str | None = None, noqt: bool = False) -> list[dict]:
+def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: str | None = None, noqt: bool = False, uid: str | None = None) -> list[dict]:
     """把待掌握错题匹配回题库原题，供刷题页重练。"""
     conn = get_conn()
-    where = "mastered=0"
-    args: list = []
+    _ensure_mistake_uid(conn)
+    cl, cargs = _uid_clause(uid)
+    where = "mastered=0" + cl
+    args: list = list(cargs)
     if qtype:
         where += " AND question_type=?"
         args.append(qtype)
