@@ -677,8 +677,8 @@ export default {
         this.favs.splice(i, 1);
         uni.showToast({ title: '已取消收藏', icon: 'none', duration: 900 });
       } else {
-        const { question, options, answer, explanation, hs_explanation, module, submodule, is_real, exam_year, exam_region, image, image_credit } = this.cur;
-        this.favs.unshift({ t: Date.now(), question, options, answer, explanation, hs_explanation, module, submodule, is_real, exam_year, exam_region, image, image_credit });
+        const { question, options, answer, explanation, hs_explanation, xp_explanation, xp_school, module, submodule, is_real, exam_year, exam_region, image, image_credit } = this.cur;
+        this.favs.unshift({ t: Date.now(), question, options, answer, explanation, hs_explanation, xp_explanation, xp_school, module, submodule, is_real, exam_year, exam_region, image, image_credit });
         if (this.favs.length > 200) this.favs.length = 200;
         uni.showToast({ title: '已收藏，可在错题本查看', icon: 'none', duration: 900 });
       }

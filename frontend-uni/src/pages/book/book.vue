@@ -58,6 +58,10 @@
           <template v-if="f._open">
             <view v-for="(v, k) in f.options" :key="k" class="anscmp"><text :class="k === f.answer ? 'ca' : ''">{{ k }}. {{ v }}</text></view>
             <rich-text :nodes="md(f.hs_explanation || f.explanation || '暂无解析')" />
+            <template v-if="f.xp_explanation">
+              <view class="xp-k">{{ f.xp_school || '第二名师视角' }}</view>
+              <view class="xp-body">{{ f.xp_explanation }}</view>
+            </template>
           </template>
           <view class="mfoot">
             <text class="meta">{{ fmt(f.t / 1000) }}</text>
@@ -405,6 +409,8 @@ export default {
 .toptabs { display: flex; gap: 16rpx; margin-bottom: 20rpx; }
 .ttab { flex: 1; text-align: center; padding: 16rpx 0; border-radius: 16rpx; background: var(--card); border: 1rpx solid var(--line); font-size: 26rpx; color: var(--ink-2); }
 .ttab.on { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
+.xp-k { margin-top: 12rpx; font-size: 22rpx; font-weight: 700; color: #ea580c; border-left: 6rpx solid #ea580c; padding-left: 10rpx; }
+.xp-body { margin-top: 6rpx; font-size: 23rpx; color: var(--ink); background: #fff7ed; border-radius: 10rpx; padding: 12rpx; line-height: 1.6; }
 .mfoot { display: flex; justify-content: space-between; align-items: center; margin-top: 12rpx; }
 .acts { display: flex; gap: 8rpx; }
 .op { font-size: 24rpx; margin-left: 16rpx; padding: 6rpx 20rpx; border-radius: 999rpx; }
