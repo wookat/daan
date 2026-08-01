@@ -421,7 +421,9 @@ export default {
     if (pm) {
       uni.removeStorageSync('practiceModule');
       this.start(pm);
+      return;
     }
+    if (!this.session) this.tryResume();
   },
   onHide() {
     if (this.autoTimer) clearTimeout(this.autoTimer);
@@ -815,6 +817,59 @@ export default {
         this.streak = 0;
         this.saveWrong();
       }
+      this.saveSession();
+    },
+    saveSession() {
+      if (this.examMode || this.beiMode || !this.session || !this.items.length) return;
+      if (this.items.every((q) => q._picked)) {
+        uni.removeStorageSync('pendingSession');
+        return;
+      }
+      uni.setStorageSync('pendingSession', {
+        t: Date.now(),
+        items: this.items,
+        idx: this.idx,
+        right: this.right,
+        streak: this.streak,
+        bestStreak: this.bestStreak,
+        lastModule: this.lastModule,
+        lastSubmodule: this.lastSubmodule,
+      });
+    },
+    tryResume() {
+      const s = uni.getStorageSync('pendingSession');
+      if (!s || !s.items || !s.items.length) return false;
+      if (Date.now() - s.t > 24 * 3600 * 1000) {
+        uni.removeStorageSync('pendingSession');
+        return false;
+      }
+      const done = s.items.filter((q) => q._picked).length;
+      uni.showModal({
+        title: '继续上次练习？',
+        content: '上次还有一组未做完（' + done + '/' + s.items.length + ' 题），是否继续？',
+        confirmText: '继续',
+        cancelText: '不用了',
+        success: (res) => {
+          if (res.confirm) {
+            this.items = s.items;
+            this.idx = Math.min(s.idx, s.items.length - 1);
+            this.picked = this.items[this.idx]._picked || '';
+            this.right = s.right;
+            this.streak = s.streak;
+            this.bestStreak = s.bestStreak;
+            this.lastModule = s.lastModule;
+            this.lastSubmodule = s.lastSubmodule;
+            this.autoSaved = false;
+            this.resultSent = false;
+            this.percentile = null;
+            this.session = true;
+            this.startQTimer();
+          } else {
+            uni.removeStorageSync('pendingSession');
+          }
+        },
+      });
+      return true;
     },
     async rateHs(q, up) {
       this.hsRated[q.id] = up ? 'up' : 'down';
@@ -880,6 +935,7 @@ export default {
       uni.switchTab({ url: '/pages/ask/ask' });
     },
     next() {
+      this.saveSession();
       if (this.autoTimer) {
         clearTimeout(this.autoTimer);
         this.autoTimer = null;
@@ -896,6 +952,7 @@ export default {
     async submitResult() {
       if (this.beiMode || this.resultSent || !this.items.length) return;
       this.resultSent = true;
+      uni.removeStorageSync('pendingSession');
       try {
         const hist = uni.getStorageSync('practiceHistory') || [];
         hist.unshift({
@@ -916,6 +973,7 @@ export default {
       } catch (e) { /* 非关键路径 */ }
     },
     quit() {
+      uni.removeStorageSync('pendingSession');
       this.examMode = false;
       if (this.examTimer) {
         clearInterval(this.examTimer);
