@@ -3,6 +3,17 @@
     <!-- 选模块 -->
     <view v-if="!session" class="card">
       <view class="h">选择模块开始刷题</view>
+      <view class="goal">
+        <view class="goal-top">
+          <text class="goal-t">今日目标 {{ todayCount }}/{{ dailyGoal }} 题{{ todayCount >= dailyGoal ? ' · 已达成' : '' }}</text>
+          <view class="goal-set">
+            <text v-for="g in [20, 50, 100]" :key="g" class="goal-chip" :class="{ on: dailyGoal === g }" @click="setGoal(g)">{{ g }}</text>
+          </view>
+        </view>
+        <view class="goal-bar">
+          <view class="goal-fill" :class="{ done: todayCount >= dailyGoal }" :style="{ width: Math.min((todayCount / dailyGoal) * 100, 100) + '%' }" />
+        </view>
+      </view>
       <view class="setrow">
         <text class="set-k">选题来源</text>
         <view class="set-chips">
@@ -319,12 +330,17 @@ export default {
       realYear: uni.getStorageSync('realYear') || null,
       realRegion: uni.getStorageSync('realRegion') || null,
       groupSize: uni.getStorageSync('groupSize') || 10,
+      dailyGoal: uni.getStorageSync('dailyGoal') || 20,
       hsRated: {},
       announce: null,
       REASONS: ['粗心大意', '概念不清', '方法不会', '纯蒙的'],
     };
   },
   computed: {
+    todayCount() {
+      const days = (this.pstats && this.pstats.days) || {};
+      return days[new Date().toISOString().slice(0, 10)] || 0;
+    },
     cur() {
       return this.items[this.idx] || null;
     },
@@ -469,6 +485,10 @@ export default {
         const item = d.item;
         if (item && uni.getStorageSync('annDismissed') !== String(item.id)) this.announce = item;
       } catch (e) { /* 非关键路径 */ }
+    },
+    setGoal(g) {
+      this.dailyGoal = g;
+      uni.setStorageSync('dailyGoal', g);
     },
     dismissAnn() {
       if (this.announce) uni.setStorageSync('annDismissed', String(this.announce.id));
@@ -1090,6 +1110,15 @@ export default {
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 30rpx; font-weight: 600; margin-bottom: 20rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 24rpx; }
+.goal { margin-bottom: 22rpx; }
+.goal-top { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; margin-bottom: 10rpx; flex-wrap: wrap; }
+.goal-t { font-size: 24rpx; color: var(--ink-2); }
+.goal-set { display: flex; gap: 8rpx; }
+.goal-chip { font-size: 22rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 2rpx 16rpx; }
+.goal-chip.on { color: #fff; background: var(--brand, #4f6ef7); border-color: var(--brand, #4f6ef7); }
+.goal-bar { height: 12rpx; background: var(--brand-soft, #eef1fd); border-radius: 999rpx; overflow: hidden; }
+.goal-fill { height: 100%; background: var(--brand, #4f6ef7); border-radius: 999rpx; transition: width 0.3s; }
+.goal-fill.done { background: #16a34a; }
 .setrow { display: flex; align-items: center; gap: 18rpx; margin-bottom: 16rpx; flex-wrap: wrap; }
 .set-k { font-size: 24rpx; color: var(--ink-2); }
 .set-chips { display: flex; gap: 12rpx; flex-wrap: wrap; }
