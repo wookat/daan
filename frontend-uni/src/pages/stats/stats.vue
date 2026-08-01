@@ -47,6 +47,16 @@
       </view>
     </view>
 
+    <view class="card coach">
+      <view class="cal-head">
+        <view class="h" style="margin-bottom: 0">AI 学习教练</view>
+        <text v-if="!coachLoading" class="coach-btn" @click="getCoach">{{ coachHtml ? '重新诊断' : '生成建议' }}</text>
+      </view>
+      <view v-if="coachLoading" class="coach-tip">教练正在分析你的学习数据…</view>
+      <rich-text v-else-if="coachHtml" class="coach-body" :nodes="coachHtml" />
+      <view v-else class="coach-tip">基于你的正确率、错因分布和打卡情况，生成个性化备考建议</view>
+    </view>
+
     <view v-if="trendHas" class="card">
       <view class="h">近 7 日正确率</view>
       <view class="trend">
@@ -144,6 +154,7 @@
 
 <script>
 import { request } from '../../api.js';
+import { md } from '../../md.js';
 
 const MODS = [
   { key: 'ziliao', name: '资料' },
@@ -155,7 +166,7 @@ const MODS = [
 
 export default {
   data() {
-    return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, history: [], showAllHist: false };
+    return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, history: [], showAllHist: false, coachHtml: uni.getStorageSync('coachAdvice') || '', coachLoading: false };
   },
   computed: {
     total() {
@@ -293,6 +304,31 @@ export default {
     this.load();
   },
   methods: {
+    async getCoach() {
+      this.coachLoading = true;
+      try {
+        const byMod = {};
+        for (const [k, v] of Object.entries(this.pstats.byModule || {})) {
+          byMod[k] = { 已做: v.done, 正确率: v.done ? Math.round((v.correct / v.done) * 100) + '%' : '无' };
+        }
+        const stats = {
+          累计刷题: this.totalDone,
+          总正确率: this.accPct + '%',
+          连续打卡天数: this.streakDays,
+          各模块: byMod,
+          错题模块分布: this.byModule.map((m) => this.modName(m.module) + '×' + m.n).join('、'),
+          错因分布: this.byReason.map((r) => r.error_reason + '×' + r.n).join('、'),
+          高频错题型TOP5: this.byType.slice(0, 5).map((t) => this.typeName(t.question_type) + '×' + t.n).join('、'),
+          近10次练习: this.history.slice(0, 10).map((h) => (this.modName(h.module) || '混合') + ' ' + h.correct + '/' + h.n),
+        };
+        const d = await request('/api/coach', { method: 'POST', data: { stats } });
+        this.coachHtml = md(d.advice || '');
+        uni.setStorageSync('coachAdvice', this.coachHtml);
+      } catch (e) {
+        uni.showToast({ title: '生成失败：' + e.message, icon: 'none' });
+      }
+      this.coachLoading = false;
+    },
     fmtHist(t) {
       const d = new Date(t);
       const p = (x) => (x < 10 ? '0' + x : x);
@@ -457,6 +493,24 @@ export default {
 .km-name { display: block; font-size: 24rpx; font-weight: 600; }
 .km-pct { display: block; font-size: 19rpx; margin-top: 2rpx; }
 .km-legend { display: flex; gap: 18rpx; flex-wrap: wrap; margin-top: 8rpx; }
+.coach-btn {
+  font-size: 24rpx;
+  color: #4f46e5;
+  background: #eef2ff;
+  border-radius: 999rpx;
+  padding: 8rpx 22rpx;
+}
+.coach-tip {
+  font-size: 24rpx;
+  color: var(--ink-2);
+  padding: 16rpx 0 4rpx;
+}
+.coach-body {
+  display: block;
+  font-size: 25rpx;
+  line-height: 1.7;
+  padding-top: 8rpx;
+}
 .hist-row { display: flex; align-items: center; gap: 16rpx; padding: 14rpx 0; border-bottom: 1rpx solid #f0f1f5; }
 .hist-time { font-size: 22rpx; color: var(--ink-2); width: 170rpx; }
 .hist-mod { font-size: 24rpx; flex: 1; }

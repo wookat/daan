@@ -9,7 +9,7 @@ from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import db, engine, kb
+from . import db, engine, kb, llm
 
 app = FastAPI(title="考公错题助手")
 
@@ -263,6 +263,22 @@ async def api_followup(body: dict, x_access_code: str | None = Header(None)):
         query[:500],
     )
     return {"answer": answer}
+
+
+@app.post("/api/coach")
+async def api_coach(body: dict, x_access_code: str | None = Header(None)):
+    check_access(x_access_code)
+    stats = body.get("stats")
+    if not isinstance(stats, dict):
+        raise HTTPException(400, "缺少学习数据")
+    prompt = (
+        "你是公务员行测备考教练。根据以下学习数据，用中文给出简短、具体、可执行的学习建议。"
+        "格式：## 本周诊断（2-3 句）、## 建议行动（3-4 条带序号，每条一句话，具体到模块/题型/每天题量）、"
+        "## 一句鼓励。总字数 250 字以内，不要空话套话。\n\n学习数据（JSON）：\n"
+        + json.dumps(stats, ensure_ascii=False)[:3000]
+    )
+    advice = await llm.chat([{"role": "user", "content": prompt}], temperature=0.4, max_tokens=800)
+    return {"advice": advice}
 
 
 @app.post("/api/backup")
