@@ -73,6 +73,7 @@
           <text v-if="m.times >= 2" class="timesbadge">错 {{ m.times }} 次</text>
           <text v-if="m.review_count" class="rvbadge">已复习{{ m.review_count }}次</text>
           <text v-if="m.mastered" class="zhan">已斩</text>
+          <text v-if="!m.mastered && nextReviewText(m)" class="nrbadge" :class="{ due: isDue(m) }">{{ nextReviewText(m) }}</text>
         </view>
         <view class="q" :class="{ clamp: !m.open }">{{ (m.question_text || '').slice(0, 200) }}</view>
         <view v-if="ansLetter(m.user_answer)" class="anscmp">
@@ -154,6 +155,14 @@ export default {
     this.load();
   },
   methods: {
+    isDue(m) {
+      return !m.next_review || m.next_review <= Date.now() / 1000;
+    },
+    nextReviewText(m) {
+      if (this.isDue(m)) return '今日待复习';
+      const days = Math.ceil((m.next_review - Date.now() / 1000) / 86400);
+      return days === 1 ? '明天复习' : days + ' 天后复习';
+    },
     modName(m) {
       return NAMES[m] || m || '';
     },
@@ -331,6 +340,19 @@ export default {
 .duecard { background: linear-gradient(135deg, #3b6ef6, #7c5cfc); border: none; display: flex; justify-content: space-between; align-items: center; }
 .redocard { background: linear-gradient(135deg, #0ea5e9, #22c55e); border: none; display: flex; justify-content: space-between; align-items: center; }
 .redocard .duego { color: #0e9488; }
+.nrbadge {
+  display: inline-block;
+  background: #eef2ff;
+  color: #4f46e5;
+  border-radius: 10rpx;
+  padding: 4rpx 14rpx;
+  font-size: 22rpx;
+  margin-left: 8rpx;
+}
+.nrbadge.due {
+  background: #fff7ed;
+  color: #c2410c;
+}
 .timesbadge { display: inline-block; background: #fee2e2; color: #b91c1c; border-radius: 10rpx; padding: 4rpx 14rpx; font-size: 22rpx; margin-left: 8rpx; }
 .duetxt { display: flex; align-items: center; gap: 8rpx; font-size: 28rpx; font-weight: 700; color: #fff; }
 .duetxt-t { font-size: 28rpx; font-weight: 700; color: #fff; }
