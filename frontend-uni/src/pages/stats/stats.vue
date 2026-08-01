@@ -406,6 +406,8 @@ export default {
             uni.setStorageSync('backupCode', res.content.trim().toUpperCase());
             this.backupCode = res.content.trim().toUpperCase();
             this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
+            this.history = uni.getStorageSync('practiceHistory') || [];
+            this.coachHtml = uni.getStorageSync('coachAdvice') || '';
             uni.showToast({ title: '恢复成功！', icon: 'success' });
           } catch (e) {
             uni.showToast({ title: '恢复失败：' + e.message, icon: 'none' });
