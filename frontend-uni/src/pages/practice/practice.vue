@@ -299,7 +299,7 @@ export default {
       qTimer: null,
       fontLv: uni.getStorageSync('fontLv') || 1,
       sfxOn: uni.getStorageSync('sfxOff') ? false : true,
-      beiMode: uni.getStorageSync('beiMode') ? true : false,
+      beiMode: false,
       autoNext: uni.getStorageSync('autoNextOff') ? false : true,
       daily: uni.getStorageSync('dailyPlan') || { days: {} },
       realMode: uni.getStorageSync('realMode') ? true : false,
