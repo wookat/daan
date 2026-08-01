@@ -1,6 +1,7 @@
 """错题本存储（SQLite）。"""
 import json
 import os
+import random
 import re
 import secrets
 import sqlite3
@@ -175,13 +176,27 @@ def random_questions(
         args.append(region)
     where.append("(disabled IS NULL OR disabled=0)")
     clause = ("WHERE " + " AND ".join(where)) if where else ""
-    ids = [
-        r["id"]
-        for r in conn.execute(
-            f"SELECT id FROM questions {clause} ORDER BY has_hs DESC, RANDOM() LIMIT ?",
-            (*args, limit),
-        )
-    ]
+    ids: list[int] = []
+    if not real_only:
+        want_real = max(1, round(limit * 0.6))
+        ids = [
+            r["id"]
+            for r in conn.execute(
+                f"SELECT id FROM questions {clause} AND is_real=1 ORDER BY has_hs DESC, RANDOM() LIMIT ?",
+                (*args, want_real),
+            )
+        ]
+    if len(ids) < limit:
+        placeholders = ",".join("?" * len(ids)) or "0"
+        ids += [
+            r["id"]
+            for r in conn.execute(
+                f"SELECT id FROM questions {clause} AND id NOT IN ({placeholders}) "
+                "ORDER BY has_hs DESC, RANDOM() LIMIT ?",
+                (*args, *ids, limit - len(ids)),
+            )
+        ]
+    random.shuffle(ids)
     rows = (
         conn.execute(
             f"SELECT * FROM questions WHERE id IN ({','.join('?' * len(ids))})", ids
@@ -190,12 +205,12 @@ def random_questions(
         else []
     )
     conn.close()
-    out = []
+    by_id = {}
     for r in rows:
         d = dict(r)
         d["options"] = json.loads(d.get("options") or "{}")
-        out.append(d)
-    return out
+        by_id[d["id"]] = d
+    return [by_id[i] for i in ids if i in by_id]
 
 
 def question_counts() -> list[dict]:
