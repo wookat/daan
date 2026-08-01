@@ -45,7 +45,7 @@
       <view class="spin">{{ loadingText }}</view>
       <view class="sk sk1" /><view class="sk sk2" /><view class="sk sk3" />
     </view>
-    <view v-if="error" class="card err">失败：{{ error }}，请重试</view>
+    <view v-if="error" class="card err">失败：{{ error }}{{ error.includes('再试') ? '' : '，请重试' }}</view>
 
     <view v-for="(r, i) in results" :key="r.ts" class="card">
       <view v-if="i > 0" class="hist" @click="r.folded = !r.folded"><uni-icons type="undo" size="14" color="#6b7280" /><text> 历史讲解（点此展开/折叠）</text></view>
@@ -210,12 +210,12 @@ export default {
       this.streakDays = n;
       try {
         const r = await request('/api/review?uid=' + encodeURIComponent(anonUid()));
-        this.dueCount = (r.items || []).length;
+        this.dueCount = r.total || (r.items || []).length;
       } catch (e) {
         this.dueCount = 0;
       }
       try {
-        if (this.dueCount > 0) uni.setTabBarBadge({ index: 2, text: String(this.dueCount) });
+        if (this.dueCount > 0) uni.setTabBarBadge({ index: 2, text: String(this.dueCount > 99 ? '99+' : this.dueCount) });
         else uni.removeTabBarBadge({ index: 2 });
       } catch (e) { /* tabBar 未就绪时忽略 */ }
     },
