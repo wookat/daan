@@ -771,7 +771,7 @@ def save_mistake(rec: dict) -> int:
     return rowid
 
 
-def list_mistakes(limit: int = 100) -> list[dict]:
+def list_mistakes(limit: int = 500) -> list[dict]:
     conn = get_conn()
     rows = conn.execute(
         "SELECT * FROM mistakes ORDER BY created_at DESC LIMIT ?", (limit,)
