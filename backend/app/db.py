@@ -938,9 +938,16 @@ def refresh_question_stats() -> int:
     wrong = {
         r["qid"]: r["p"]
         for r in conn.execute(
-            """SELECT question_id qid, picked p, COUNT(*) n FROM answer_log
-               WHERE question_id IS NOT NULL AND correct=0 AND picked IS NOT NULL
-               GROUP BY question_id, picked ORDER BY n, picked DESC"""
+            """SELECT qid, p FROM (
+                 SELECT question_id qid, picked p,
+                        ROW_NUMBER() OVER (
+                          PARTITION BY question_id
+                          ORDER BY COUNT(*) DESC, picked ASC
+                        ) rk
+                 FROM answer_log
+                 WHERE question_id IS NOT NULL AND correct=0 AND picked IS NOT NULL
+                 GROUP BY question_id, picked
+               ) WHERE rk=1"""
         )
     }
     n = 0
