@@ -98,7 +98,7 @@
       <view v-if="tab !== 'fav' && typeGroups.length > 1" class="kpwrap">
         <text class="sort-k">题型聚合</text>
         <view class="kpchips">
-          <text v-for="g in typeGroups" :key="g.name" class="kpchip" :class="{ on: kw === g.name }" @click="kw = kw === g.name ? '' : g.name">{{ g.name }} ×{{ g.n }}</text>
+          <text v-for="g in typeGroups" :key="g.name" class="kpchip" :class="{ on: kpFilter === g.name }" @click="kpFilter = kpFilter === g.name ? '' : g.name">{{ g.name }} ×{{ g.n }}</text>
         </view>
       </view>
       <scroll-view v-if="tab !== 'fav' && items.length" scroll-x class="chips">
@@ -178,6 +178,7 @@ export default {
       streak: 0,
       filterMod: '',
       kw: '',
+      kpFilter: '',
       favKw: '',
       tab: 'todo',
       favs: [],
@@ -225,6 +226,7 @@ export default {
       if (this.tab === 'fav') return [];
       let base = this.tab === 'done' ? this.doneItems : this.todoItems;
       if (this.filterMod) base = base.filter((m) => m.module === this.filterMod);
+      if (this.kpFilter) base = base.filter((m) => this.groupKey(m) === this.kpFilter);
       base = [...base];
       if (this.sortBy === 'times') base.sort((a, b) => (b.times || 1) - (a.times || 1));
       else if (this.sortBy === 'type') base.sort((a, b) => String(a.question_type || a.module || '').localeCompare(String(b.question_type || b.module || ''), 'zh'));
@@ -251,7 +253,7 @@ export default {
       if (this.filterMod) base = base.filter((m) => m.module === this.filterMod);
       const map = {};
       for (const m of base) {
-        const t = m.question_type || NAMES[m.module] || m.module || '其他';
+        const t = this.groupKey(m);
         map[t] = (map[t] || 0) + 1;
       }
       return Object.entries(map)
@@ -264,6 +266,7 @@ export default {
     tab() { this.pageN = 20; },
     filterMod() { this.pageN = 20; },
     kw() { this.pageN = 20; },
+    kpFilter() { this.pageN = 20; },
     sortBy() { this.pageN = 20; },
   },
   onReachBottom() {
@@ -276,6 +279,9 @@ export default {
   },
   methods: {
     md,
+    groupKey(m) {
+      return m.question_type || NAMES[m.module] || m.module || '其他';
+    },
     unfavItem(f) {
       this.unfav(this.favs.indexOf(f));
     },
