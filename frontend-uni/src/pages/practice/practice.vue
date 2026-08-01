@@ -478,17 +478,13 @@ export default {
       try {
         const d = await request('/api/questions?limit=1');
         this.counts = d.counts || [];
-        if (!this.counts.length && !this._countsRetried) {
-          this._countsRetried = true;
-          setTimeout(() => this.loadCounts(), 3000);
-        }
-      } catch (e) {
-        uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
-        if (!this._countsRetried) {
-          this._countsRetried = true;
-          setTimeout(() => this.loadCounts(), 3000);
-        }
+      } catch (e) { /* 走下方重试 */ }
+      if (this.counts.length) {
+        this._countsTries = 0;
+        return;
       }
+      this._countsTries = (this._countsTries || 0) + 1;
+      if (this._countsTries <= 20) setTimeout(() => this.loadCounts(), 3000);
     },
     async openModule(module) {
       try {
