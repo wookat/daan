@@ -751,9 +751,10 @@ def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: s
     for r in rows:
         full = (r["question_text"] or "").strip()
         head = full.split("\n")[0].strip()
-        if not head or head in seen:
+        key = re.sub(r"\s+", "", full)
+        if not head or key in seen:
             continue
-        seen.add(head)
+        seen.add(key)
         esc = lambda s: s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         cands = conn.execute(
             "SELECT * FROM questions WHERE question LIKE ? ESCAPE '\\' AND (disabled IS NULL OR disabled=0) LIMIT 80",
