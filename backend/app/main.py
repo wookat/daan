@@ -76,10 +76,11 @@ async def api_explain(
             explanation = await engine.explain(extracted, user_answer)
     except Exception as e:  # noqa: BLE001
         raise HTTPException(502, f"解析失败：{e}") from e
+    suspect = engine.is_suspect(extracted.get("question_text", ""))
     meta = {
-        "module": extracted.get("module"),
-        "module_name": kb.MODULES.get(extracted.get("module"), {}).get("name"),
-        "question_type": extracted.get("question_type"),
+        "module": None if suspect else extracted.get("module"),
+        "module_name": None if suspect else kb.MODULES.get(extracted.get("module"), {}).get("name"),
+        "question_type": None if suspect else extracted.get("question_type"),
         "question_text": extracted.get("question_text"),
         "user_answer": ua,
         "explain_key": key,
@@ -135,10 +136,11 @@ async def api_explain_stream(
             key = _cache_key(extracted.get("question_text"), ua)
             raw_key = _cache_key(text, ua) if text else None
             cached = db.get_explain_cache(key) or (db.get_explain_cache(raw_key) if raw_key else None)
+            suspect = engine.is_suspect(extracted.get("question_text", ""))
             meta = {
-                "module": extracted.get("module"),
-                "module_name": kb.MODULES.get(extracted.get("module"), {}).get("name"),
-                "question_type": extracted.get("question_type"),
+                "module": None if suspect else extracted.get("module"),
+                "module_name": None if suspect else kb.MODULES.get(extracted.get("module"), {}).get("name"),
+                "question_type": None if suspect else extracted.get("question_type"),
                 "question_text": extracted.get("question_text"),
                 "user_answer": ua,
                 "explain_key": key,

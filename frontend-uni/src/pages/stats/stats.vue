@@ -74,7 +74,7 @@
       <view class="h">练习记录</view>
       <view v-for="(h, i) in history.slice(0, showAllHist ? 30 : 6)" :key="i" class="hist-row">
         <text class="hist-time">{{ fmtHist(h.t) }}</text>
-        <text class="hist-mod">{{ modName(h.module) || '混合' }}</text>
+        <text class="hist-mod" :class="{ exam: h.exam }">{{ h.exam ? (h.exam === 'full' ? '全真模考' : '迷你模考') : modName(h.module) || '混合' }}</text>
         <text class="hist-n">{{ h.correct }}/{{ h.n }}</text>
         <text class="hist-pct" :class="{ lo: h.n && Math.round((h.correct / h.n) * 100) < 60 }">{{ h.n ? Math.round((h.correct / h.n) * 100) : 0 }}%</text>
       </view>
@@ -516,6 +516,7 @@ export default {
 .hist-row { display: flex; align-items: center; gap: 16rpx; padding: 14rpx 0; border-bottom: 1rpx solid #f0f1f5; }
 .hist-time { font-size: 22rpx; color: var(--ink-2); width: 170rpx; }
 .hist-mod { font-size: 24rpx; flex: 1; }
+.hist-mod.exam { color: #b45309; font-weight: 600; }
 .hist-n { font-size: 24rpx; color: var(--ink-2); }
 .hist-pct { font-size: 26rpx; font-weight: 700; color: #16a34a; width: 90rpx; text-align: right; }
 .hist-pct.lo { color: #dc2626; }

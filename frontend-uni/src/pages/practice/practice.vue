@@ -606,6 +606,7 @@ export default {
     },
     finishExam() {
       if (!this.examMode) return;
+      this._wasExam = true;
       this.examMode = false;
       if (this.examTimer) {
         clearInterval(this.examTimer);
@@ -1047,9 +1048,11 @@ export default {
           n: this.items.length,
           correct: this.right,
           secs: this.totalSecs,
+          exam: this._wasExam ? (this.items.length > 50 ? 'full' : 'mini') : '',
         });
         uni.setStorageSync('practiceHistory', hist.slice(0, 100));
       } catch (e) { /* 非关键路径 */ }
+      this._wasExam = false;
       try {
         const d = await request('/api/practice_result', {
           method: 'POST',

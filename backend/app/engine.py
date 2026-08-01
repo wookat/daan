@@ -119,6 +119,10 @@ _SUSPECT_TEXT = (
 )
 
 
+def is_suspect(question_text: str) -> bool:
+    return _suspect_reason(question_text)
+
+
 def _suspect_reason(question_text: str) -> bool:
     stem = re.split(r"\bA[\.．、:：]", question_text or "", maxsplit=1)[0]
     hanzi = len(re.findall(r"[\u4e00-\u9fff]", stem))
