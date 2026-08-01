@@ -34,7 +34,7 @@
     <template v-else>
       <view v-if="due.length" class="card duecard" @click="startReview">
         <view>
-          <view class="duetxt"><uni-icons type="calendar-filled" size="16" color="#ffffff" /><text class="duetxt-t">今日待复习 {{ due.length }} 道</text></view>
+          <view class="duetxt"><uni-icons type="calendar-filled" size="16" color="#ffffff" /><text class="duetxt-t">今日待复习 {{ dueTotal }} 道</text></view>
           <text class="duesub">按遗忘曲线安排 · 预计 {{ Math.max(1, Math.ceil(due.length * 0.8)) }} 分钟</text>
         </view>
         <text class="duego">开始复习</text>
@@ -112,6 +112,7 @@ export default {
       items: [],
       loading: true,
       due: [],
+      dueTotal: 0,
       reviewing: false,
       rItems: [],
       rIdx: 0,
@@ -179,8 +180,9 @@ export default {
         const [d, r] = await Promise.all([request('/api/mistakes'), request('/api/review')]);
         this.items = d.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
         this.due = r.items;
+        this.dueTotal = r.total || r.items.length;
         try {
-          if (this.due.length > 0) uni.setTabBarBadge({ index: 2, text: String(this.due.length) });
+          if (this.dueTotal > 0) uni.setTabBarBadge({ index: 2, text: String(this.dueTotal > 99 ? '99+' : this.dueTotal) });
           else uni.removeTabBarBadge({ index: 2 });
         } catch (e) { /* tabBar 未就绪时忽略 */ }
       } catch (e) {

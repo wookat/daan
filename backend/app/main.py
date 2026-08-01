@@ -417,7 +417,7 @@ def api_delete_mistake(mid: int):
 
 @app.get("/api/review")
 def api_review_due():
-    return {"items": db.due_reviews()}
+    return {"items": db.due_reviews(), "total": db.due_review_count()}
 
 
 @app.post("/api/review/{mid}")

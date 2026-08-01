@@ -738,6 +738,17 @@ def delete_mistake(mid: int):
 REVIEW_INTERVALS_DAYS = [1, 3, 7, 15, 30]
 
 
+def due_review_count() -> int:
+    conn = get_conn()
+    n = conn.execute(
+        "SELECT COUNT(*) n FROM mistakes WHERE (mastered IS NULL OR mastered=0) "
+        "AND (next_review IS NULL OR next_review <= ?)",
+        (time.time(),),
+    ).fetchone()["n"]
+    conn.close()
+    return n
+
+
 def due_reviews(limit: int = 20) -> list[dict]:
     conn = get_conn()
     rows = conn.execute(
