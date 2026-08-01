@@ -257,9 +257,9 @@
             <text class="exp-k">解析</text>
             <view class="exp">{{ cur.explanation }}</view>
           </view>
-          <view v-if="cur.question_type" class="exp-row">
+          <view v-if="kpChain" class="exp-row">
             <text class="exp-k">考点</text>
-            <text class="exp-v">{{ cur.question_type }}</text>
+            <text class="exp-v">{{ kpChain }}</text>
           </view>
           <view v-if="cur.source" class="exp-row">
             <text class="exp-k">来源</text>
@@ -439,6 +439,16 @@ export default {
     },
     shownPapers() {
       return this.paperRegion ? this.papers.filter((p) => p.region === this.paperRegion) : this.papers;
+    },
+    kpChain() {
+      const q = this.cur;
+      if (!q) return '';
+      const parts = [this.modName(q.module)];
+      if (q.submodule) parts.push(q.submodule);
+      if (q.question_type && q.question_type !== q.submodule) {
+        parts.push(q.question_type.replace(/^.+-/, ''));
+      }
+      return parts.filter(Boolean).join(' › ');
     },
     qStatLine() {
       const q = this.cur;

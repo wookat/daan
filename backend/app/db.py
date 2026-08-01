@@ -857,7 +857,7 @@ def refresh_question_stats() -> int:
         for r in conn.execute(
             """SELECT question_id qid, picked p, COUNT(*) n FROM answer_log
                WHERE question_id IS NOT NULL AND correct=0 AND picked IS NOT NULL
-               GROUP BY question_id, picked ORDER BY n"""
+               GROUP BY question_id, picked ORDER BY n, picked DESC"""
         )
     }
     n = 0
