@@ -79,6 +79,10 @@
         <input v-model="kw" class="searchinput" placeholder="搜题干关键词或题型，如：增长率 / 类比推理" confirm-type="search" />
         <text v-if="kw" class="searchclear" @click="kw = ''">✕</text>
       </view>
+      <view v-if="tab !== 'fav' && items.length > 5" class="sortrow">
+        <text class="sort-k">排序</text>
+        <text v-for="s in SORTS" :key="s.k" class="sort-chip" :class="{ on: sortBy === s.k }" @click="sortBy = s.k">{{ s.name }}</text>
+      </view>
       <scroll-view v-if="tab !== 'fav' && items.length" scroll-x class="chips">
         <view
           v-for="c in chipList"
@@ -159,6 +163,14 @@ export default {
       kw: '',
       tab: 'todo',
       favs: [],
+      sortBy: 'time',
+      SORTS: [
+        { k: 'time', name: '最新' },
+        { k: 'due', name: '待复习优先' },
+        { k: 'times', name: '错次多' },
+        { k: 'type', name: '按题型' },
+        { k: 'reason', name: '按错因' },
+      ],
     };
   },
   computed: {
@@ -185,6 +197,11 @@ export default {
       if (this.tab === 'fav') return [];
       let base = this.tab === 'done' ? this.doneItems : this.todoItems;
       if (this.filterMod) base = base.filter((m) => m.module === this.filterMod);
+      base = [...base];
+      if (this.sortBy === 'times') base.sort((a, b) => (b.times || 1) - (a.times || 1));
+      else if (this.sortBy === 'type') base.sort((a, b) => String(a.question_type || a.module || '').localeCompare(String(b.question_type || b.module || ''), 'zh'));
+      else if (this.sortBy === 'reason') base.sort((a, b) => String(a.error_reason || '￿').localeCompare(String(b.error_reason || '￿'), 'zh'));
+      else if (this.sortBy === 'due') base.sort((a, b) => (a.next_review || 9e12) - (b.next_review || 9e12));
       const k = this.kw.trim().toLowerCase();
       if (k) {
         base = base.filter(
@@ -366,6 +383,10 @@ export default {
 .searchbar { display: flex; align-items: center; gap: 12rpx; background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 14rpx 26rpx; margin-bottom: 20rpx; }
 .searchinput { flex: 1; font-size: 26rpx; color: var(--ink); height: 40rpx; line-height: 40rpx; }
 .searchclear { font-size: 26rpx; color: var(--ink-2); padding: 0 8rpx; }
+.sortrow { display: flex; align-items: center; gap: 10rpx; margin-bottom: 16rpx; flex-wrap: wrap; }
+.sort-k { font-size: 22rpx; color: var(--ink-2); }
+.sort-chip { font-size: 22rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 4rpx 18rpx; background: var(--card); }
+.sort-chip.on { color: #fff; background: var(--brand, #4f6ef7); border-color: var(--brand, #4f6ef7); }
 .chips { white-space: nowrap; margin-bottom: 24rpx; }
 .chip { display: inline-block; padding: 10rpx 30rpx; margin-right: 16rpx; border-radius: 999rpx; background: var(--card); border: 1rpx solid var(--line); font-size: 25rpx; color: var(--ink-2); }
 .chip.on { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }

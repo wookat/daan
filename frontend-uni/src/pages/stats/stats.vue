@@ -70,6 +70,20 @@
       </view>
     </view>
 
+    <view v-if="growth && growth.weeks.length >= 2" class="card">
+      <view class="h">成长轨迹（周正确率）</view>
+      <view class="gw-row" v-for="w in growthRows" :key="w.week">
+        <text class="gw-wk">{{ w.label }}</text>
+        <view class="gw-bar">
+          <view class="gw-fill" :class="{ lo: w.pct < 60, mid: w.pct >= 60 && w.pct < 80 }" :style="{ width: w.pct + '%' }" />
+        </view>
+        <text class="gw-pct">{{ w.pct }}%<text class="gw-n">（{{ w.n }}题）</text></text>
+      </view>
+      <view v-if="growthDelta !== null" class="gw-delta" :class="{ up: growthDelta >= 0 }">
+        本周比上周{{ growthDelta >= 0 ? '提升' : '下降' }} {{ Math.abs(growthDelta) }} 个百分点
+      </view>
+    </view>
+
     <view v-if="history.length >= 3" class="card">
       <view class="h">正确率趋势（近 {{ trendData.length }} 次）</view>
       <view class="trend">
@@ -180,9 +194,26 @@ const MODS = [
 
 export default {
   data() {
-    return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, history: [], showAllHist: false, coachHtml: uni.getStorageSync('coachAdvice') || '', coachLoading: false };
+    return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, history: [], showAllHist: false, coachHtml: uni.getStorageSync('coachAdvice') || '', coachLoading: false, growth: null };
   },
   computed: {
+    growthRows() {
+      if (!this.growth) return [];
+      return this.growth.weeks.slice(-8).map((w) => {
+        const [y, wk] = w.week.split('-');
+        return {
+          week: w.week,
+          label: y.slice(2) + '年第' + Number(wk) + '周',
+          n: w.n,
+          pct: w.n ? Math.round((w.c / w.n) * 100) : 0,
+        };
+      });
+    },
+    growthDelta() {
+      const r = this.growthRows;
+      if (r.length < 2) return null;
+      return r[r.length - 1].pct - r[r.length - 2].pct;
+    },
     trendData() {
       return this.history
         .slice(0, 14)
@@ -325,6 +356,7 @@ export default {
   onShow() {
     this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
     this.history = uni.getStorageSync('practiceHistory') || [];
+    this.loadGrowth();
     this.load();
   },
   methods: {
@@ -439,6 +471,13 @@ export default {
         },
       });
     },
+    async loadGrowth() {
+      const uid = uni.getStorageSync('anonUid');
+      if (!uid) return;
+      try {
+        this.growth = await request('/api/growth?uid=' + encodeURIComponent(uid));
+      } catch (e) { /* 非关键路径 */ }
+    },
     async load() {
       try {
         const d = await request('/api/stats');
@@ -539,6 +578,16 @@ export default {
 }
 .hist-row { display: flex; align-items: center; gap: 16rpx; padding: 14rpx 0; border-bottom: 1rpx solid #f0f1f5; }
 .hist-time { font-size: 22rpx; color: var(--ink-2); width: 170rpx; }
+.gw-row { display: flex; align-items: center; gap: 14rpx; margin-bottom: 12rpx; }
+.gw-wk { font-size: 22rpx; color: var(--ink-2); width: 130rpx; flex-shrink: 0; }
+.gw-bar { flex: 1; height: 16rpx; background: var(--brand-soft, #eef1fd); border-radius: 999rpx; overflow: hidden; }
+.gw-fill { height: 100%; background: #16a34a; border-radius: 999rpx; }
+.gw-fill.mid { background: #f59e0b; }
+.gw-fill.lo { background: #dc2626; }
+.gw-pct { font-size: 22rpx; width: 150rpx; text-align: right; flex-shrink: 0; }
+.gw-n { color: var(--ink-2); }
+.gw-delta { font-size: 23rpx; color: #dc2626; margin-top: 6rpx; }
+.gw-delta.up { color: #16a34a; }
 .trend { display: flex; align-items: flex-end; gap: 8rpx; height: 160rpx; padding-top: 12rpx; }
 .trend-col { flex: 1; height: 100%; display: flex; align-items: flex-end; }
 .trend-bar { width: 100%; border-radius: 6rpx 6rpx 0 0; background: #16a34a; min-height: 6rpx; }

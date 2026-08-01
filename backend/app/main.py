@@ -283,6 +283,24 @@ async def api_coach(body: dict, x_access_code: str | None = Header(None)):
     return {"advice": advice}
 
 
+@app.post("/api/answer_log")
+def api_answer_log(body: dict):
+    uid = (body.get("uid") or "").strip()
+    items = body.get("items")
+    if not uid or not isinstance(items, list) or not items:
+        raise HTTPException(400, "缺少 uid 或答题记录")
+    n = db.save_answer_log(uid[:64], items[:200])
+    return {"saved": n}
+
+
+@app.get("/api/growth")
+def api_growth(uid: str):
+    uid = uid.strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    return db.growth_stats(uid[:64])
+
+
 @app.post("/api/backup")
 def api_backup_save(body: dict):
     data = body.get("data")

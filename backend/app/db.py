@@ -757,6 +757,77 @@ def import_hs_explanations(items: list[dict]) -> int:
     return n
 
 
+def _ensure_answer_log(conn):
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS answer_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            uid TEXT NOT NULL,
+            created_at REAL NOT NULL,
+            question_id INTEGER,
+            module TEXT,
+            submodule TEXT,
+            correct INTEGER,
+            secs INTEGER
+        )"""
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_al_uid ON answer_log(uid, created_at)")
+
+
+def save_answer_log(uid: str, items: list[dict]) -> int:
+    conn = get_conn()
+    _ensure_answer_log(conn)
+    now = time.time()
+    n = 0
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        conn.execute(
+            "INSERT INTO answer_log (uid, created_at, question_id, module, submodule, correct, secs) VALUES (?,?,?,?,?,?,?)",
+            (
+                uid,
+                now,
+                it.get("qid"),
+                it.get("module"),
+                it.get("submodule"),
+                1 if it.get("correct") else 0,
+                int(it.get("secs") or 0),
+            ),
+        )
+        n += 1
+    conn.commit()
+    conn.close()
+    return n
+
+
+def growth_stats(uid: str) -> dict:
+    """按周（近 8 周）返回整体和各模块正确率成长曲线。"""
+    conn = get_conn()
+    _ensure_answer_log(conn)
+    since = time.time() - 8 * 7 * 86400
+    rows = conn.execute(
+        """SELECT strftime('%Y-%W', created_at, 'unixepoch') wk, module,
+                  COUNT(*) n, SUM(correct) c
+           FROM answer_log WHERE uid=? AND created_at>?
+           GROUP BY wk, module ORDER BY wk""",
+        (uid, since),
+    ).fetchall()
+    total = conn.execute(
+        "SELECT COUNT(*) n, COALESCE(SUM(correct),0) c FROM answer_log WHERE uid=?", (uid,)
+    ).fetchone()
+    conn.close()
+    weeks: dict = {}
+    for r in rows:
+        w = weeks.setdefault(r["wk"], {"week": r["wk"], "n": 0, "c": 0, "modules": {}})
+        w["n"] += r["n"]
+        w["c"] += r["c"]
+        if r["module"]:
+            w["modules"][r["module"]] = {"n": r["n"], "c": r["c"]}
+    return {
+        "total": {"n": total["n"], "c": total["c"]},
+        "weeks": list(weeks.values()),
+    }
+
+
 def save_mistake(rec: dict) -> int:
     conn = get_conn()
     qtext = rec.get("question_text")
