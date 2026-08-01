@@ -751,8 +751,10 @@ def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: s
         if not head or head in seen:
             continue
         seen.add(head)
+        pat = head.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "\n%"
         q = conn.execute(
-            "SELECT * FROM questions WHERE question=? AND (disabled IS NULL OR disabled=0)", (head,)
+            "SELECT * FROM questions WHERE (question=? OR question LIKE ? ESCAPE '\\') AND (disabled IS NULL OR disabled=0)",
+            (head, pat),
         ).fetchone()
         if not q:
             continue
