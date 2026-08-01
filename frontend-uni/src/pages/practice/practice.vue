@@ -116,7 +116,11 @@
           <view class="sheet-x" @click="paperSheet = false"><uni-icons type="closeempty" size="20" color="#6b7280" /></view>
         </view>
         <view v-if="!papers.length" class="spin">试卷加载中…</view>
-        <view v-for="p in papers" :key="p.source" class="sub-chip" @click="startPaper(p)">
+        <scroll-view v-if="paperRegions.length > 1" scroll-x class="pr-scroll">
+          <text class="set-chip" :class="{ on: !paperRegion }" @click="paperRegion = null">全部</text>
+          <text v-for="rg in paperRegions" :key="rg" class="set-chip" :class="{ on: paperRegion === rg }" @click="paperRegion = rg">{{ rg }}</text>
+        </scroll-view>
+        <view v-for="p in shownPapers" :key="p.source" class="sub-chip" @click="startPaper(p)">
           <text class="sub-name">{{ p.title }}</text>
           <text class="sub-n">{{ p.n }} 题</text>
         </view>
@@ -376,6 +380,7 @@ export default {
       subSelect: null,
       paperSheet: false,
       papers: [],
+      paperRegion: null,
       subProg: {},
       submodules: [],
       streak: 0,
@@ -424,6 +429,16 @@ export default {
       return Object.values(map)
         .map((b) => ({ ...b, pct: Math.round((b.right / b.n) * 100) }))
         .sort((a, b) => order.indexOf(a.mod) - order.indexOf(b.mod));
+    },
+    paperRegions() {
+      const seen = [];
+      for (const p of this.papers) {
+        if (p.region && !seen.includes(p.region)) seen.push(p.region);
+      }
+      return seen.sort((a, b) => a.localeCompare(b, 'zh'));
+    },
+    shownPapers() {
+      return this.paperRegion ? this.papers.filter((p) => p.region === this.paperRegion) : this.papers;
     },
     qStatLine() {
       const q = this.cur;
@@ -1543,6 +1558,8 @@ export default {
 .sheet-x { font-size: 28rpx; color: var(--ink-2); padding: 8rpx 16rpx; }
 .sub-chip { display: flex; justify-content: space-between; align-items: center; border: 1rpx solid var(--line); background: var(--soft-bg); border-radius: 18rpx; padding: 24rpx 28rpx; margin-bottom: 16rpx; }
 .sub-l { display: flex; flex-direction: column; gap: 4rpx; min-width: 0; }
+.pr-scroll { white-space: nowrap; margin-bottom: 20rpx; }
+.pr-scroll .set-chip { display: inline-block; margin-right: 12rpx; }
 .sub-prog { font-size: 22rpx; color: var(--muted); }
 .sub-chip.all-chip { background: linear-gradient(135deg, #6366f1, #4f46e5); border: none; }
 .sub-chip.all-chip .sub-name, .sub-chip.all-chip .sub-n { color: #fff; }
