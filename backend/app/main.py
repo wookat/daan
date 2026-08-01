@@ -342,6 +342,38 @@ def api_mistakes_redo(limit: int = 10):
     return {"items": db.mistakes_redo_questions(min(limit, 25))}
 
 
+_REPORT_REASONS = {"答案有误", "题目有错字/乱码", "选项有问题", "图片不清晰/缺失", "解析有误", "其他"}
+
+
+@app.post("/api/report")
+def api_report(body: dict):
+    reason = str(body.get("reason") or "").strip()
+    if reason not in _REPORT_REASONS:
+        raise HTTPException(400, "无效的反馈类型")
+    qid = body.get("question_id")
+    rid = db.add_report(
+        int(qid) if qid else None,
+        reason,
+        str(body.get("detail") or "")[:500],
+    )
+    return {"id": rid}
+
+
+@app.get("/api/admin/reports")
+def api_admin_reports(status: str = "open", x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return {"items": db.admin_list_reports(status if status in ("open", "resolved", "dismissed") else "open")}
+
+
+@app.post("/api/admin/reports/{rid}/resolve")
+def api_admin_resolve_report(rid: int, body: dict, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    status = body.get("status")
+    if status not in ("resolved", "dismissed"):
+        raise HTTPException(400, "status 需为 resolved 或 dismissed")
+    return {"ok": db.admin_resolve_report(rid, status)}
+
+
 @app.get("/api/admin/batches")
 def api_admin_batches(x_admin_token: str | None = Header(None)):
     check_admin(x_admin_token)

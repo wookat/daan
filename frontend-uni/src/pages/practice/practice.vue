@@ -182,6 +182,7 @@
           </view>
         </view>
         <view class="deep" @click="deepExplain">用花生十三方法详解这道题 ›</view>
+        <view class="report-link" @click="reportQuestion">{{ cur._reported ? '已提交纠错，感谢反馈' : '题目有问题？纠错' }}</view>
       </view>
     </view>
 
@@ -928,6 +929,26 @@ export default {
         /* 保存失败不阻塞刷题 */
       }
     },
+    reportQuestion() {
+      const q = this.cur;
+      if (!q || q._reported) return;
+      const reasons = ['答案有误', '题目有错字/乱码', '选项有问题', '图片不清晰/缺失', '解析有误', '其他'];
+      uni.showActionSheet({
+        itemList: reasons,
+        success: async (res) => {
+          try {
+            await request('/api/report', {
+              method: 'POST',
+              data: { question_id: q.id, reason: reasons[res.tapIndex], detail: (q.question || '').slice(0, 100) },
+            });
+            q._reported = true;
+            uni.showToast({ title: '已提交，我们会尽快核查', icon: 'none' });
+          } catch (e) {
+            uni.showToast({ title: '提交失败：' + e.message, icon: 'none' });
+          }
+        },
+      });
+    },
     deepExplain() {
       const q = this.cur;
       const optText = Object.entries(q.options).map(([k, v]) => `${k}.${v}`).join(' ');
@@ -1091,6 +1112,13 @@ export default {
 .exp-ans { font-size: 32rpx; font-weight: 800; }
 .exp-ans.okc2 { color: var(--ok); }
 .exp-ans.badc2 { color: var(--bad); }
+.report-link {
+  text-align: center;
+  font-size: 22rpx;
+  color: var(--ink-2);
+  padding-top: 14rpx;
+  text-decoration: underline;
+}
 .deep { margin-top: 6rpx; text-align: center; font-size: 25rpx; color: var(--brand); border: 1rpx solid var(--brand); border-radius: 999rpx; padding: 14rpx 0; }
 .banner { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between; gap: 20rpx; padding: 28rpx 32rpx calc(28rpx + env(safe-area-inset-bottom)); animation: slideup 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
 /* #ifdef H5 */

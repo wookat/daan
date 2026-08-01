@@ -293,6 +293,56 @@ def admin_create_announcement(title: str, body: str) -> int:
     return aid
 
 
+def _ensure_reports(conn) -> None:
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS question_reports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at REAL NOT NULL,
+            question_id INTEGER,
+            reason TEXT NOT NULL,
+            detail TEXT,
+            status TEXT DEFAULT 'open'
+        )"""
+    )
+
+
+def add_report(question_id: int | None, reason: str, detail: str) -> int:
+    conn = get_conn()
+    _ensure_reports(conn)
+    cur = conn.execute(
+        "INSERT INTO question_reports (created_at, question_id, reason, detail) VALUES (?,?,?,?)",
+        (time.time(), question_id, reason, detail),
+    )
+    conn.commit()
+    rid = cur.lastrowid
+    conn.close()
+    return rid
+
+
+def admin_list_reports(status: str = "open") -> list[dict]:
+    conn = get_conn()
+    _ensure_reports(conn)
+    rows = conn.execute(
+        """SELECT r.id, r.created_at, r.question_id, r.reason, r.detail, r.status,
+                  q.question, q.module, q.answer, q.disabled
+           FROM question_reports r LEFT JOIN questions q ON q.id = r.question_id
+           WHERE r.status = ? ORDER BY r.id DESC LIMIT 100""",
+        (status,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def admin_resolve_report(rid: int, status: str) -> bool:
+    conn = get_conn()
+    _ensure_reports(conn)
+    cur = conn.execute("UPDATE question_reports SET status=? WHERE id=?", (status, rid))
+    conn.commit()
+    ok = cur.rowcount > 0
+    conn.close()
+    return ok
+
+
 def admin_set_announcement(aid: int, active: bool) -> bool:
     conn = get_conn()
     _ensure_announcements(conn)
