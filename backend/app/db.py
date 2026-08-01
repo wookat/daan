@@ -803,6 +803,10 @@ def _ensure_answer_log(conn):
         )"""
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_al_uid ON answer_log(uid, created_at)")
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(answer_log)")}
+    if "picked" not in cols:
+        conn.execute("ALTER TABLE answer_log ADD COLUMN picked TEXT")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_al_qid ON answer_log(question_id)")
 
 
 def save_answer_log(uid: str, items: list[dict]) -> int:
@@ -814,7 +818,7 @@ def save_answer_log(uid: str, items: list[dict]) -> int:
         if not isinstance(it, dict):
             continue
         conn.execute(
-            "INSERT INTO answer_log (uid, created_at, question_id, module, submodule, correct, secs) VALUES (?,?,?,?,?,?,?)",
+            "INSERT INTO answer_log (uid, created_at, question_id, module, submodule, correct, secs, picked) VALUES (?,?,?,?,?,?,?,?)",
             (
                 uid,
                 now,
@@ -823,7 +827,44 @@ def save_answer_log(uid: str, items: list[dict]) -> int:
                 it.get("submodule"),
                 1 if it.get("correct") else 0,
                 int(it.get("secs") or 0),
+                str(it.get("picked") or "")[:2] or None,
             ),
+        )
+        n += 1
+    conn.commit()
+    conn.close()
+    return n
+
+
+def refresh_question_stats() -> int:
+    """聚合 answer_log 为每题刷新全站作答人次/正确率/易错项。"""
+    conn = get_conn()
+    _ensure_answer_log(conn)
+    qcols = {r["name"] for r in conn.execute("PRAGMA table_info(questions)")}
+    for col, ddl in [
+        ("attempt_count", "ALTER TABLE questions ADD COLUMN attempt_count INTEGER"),
+        ("correct_ratio", "ALTER TABLE questions ADD COLUMN correct_ratio INTEGER"),
+        ("most_wrong", "ALTER TABLE questions ADD COLUMN most_wrong TEXT"),
+    ]:
+        if col not in qcols:
+            conn.execute(ddl)
+    rows = conn.execute(
+        """SELECT question_id qid, COUNT(*) n, SUM(correct) c
+           FROM answer_log WHERE question_id IS NOT NULL GROUP BY question_id"""
+    ).fetchall()
+    wrong = {
+        r["qid"]: r["p"]
+        for r in conn.execute(
+            """SELECT question_id qid, picked p, COUNT(*) n FROM answer_log
+               WHERE question_id IS NOT NULL AND correct=0 AND picked IS NOT NULL
+               GROUP BY question_id, picked ORDER BY n"""
+        )
+    }
+    n = 0
+    for r in rows:
+        conn.execute(
+            "UPDATE questions SET attempt_count=?, correct_ratio=?, most_wrong=? WHERE id=?",
+            (r["n"], round(100 * (r["c"] or 0) / r["n"]), wrong.get(r["qid"]), r["qid"]),
         )
         n += 1
     conn.commit()

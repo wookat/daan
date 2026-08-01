@@ -205,6 +205,10 @@
             <text class="exp-ans" :class="beiMode || picked === cur.answer ? 'okc2' : 'badc2'">{{ cur.answer }}</text>
             <text v-if="timedMode && !beiMode && cur._secs != null" class="tm-cmp" :class="{ over: cur._secs > targetSecs }">用时 {{ cur._secs }}s / 目标 {{ targetSecs }}s</text>
           </view>
+          <view v-if="qStatLine" class="exp-row">
+            <text class="exp-k">全站数据</text>
+            <text class="exp-v">{{ qStatLine }}</text>
+          </view>
           <view v-if="cur.hs_explanation" class="exp-row col">
             <text class="exp-k hs">花生十三方法解析</text>
             <view class="exp hsx">{{ cur.hs_explanation }}</view>
@@ -392,6 +396,15 @@ export default {
       return Object.values(map)
         .map((b) => ({ ...b, pct: Math.round((b.right / b.n) * 100) }))
         .sort((a, b) => order.indexOf(a.mod) - order.indexOf(b.mod));
+    },
+    qStatLine() {
+      const q = this.cur;
+      if (!q || !q.attempt_count || q.attempt_count < 5 || q.correct_ratio == null) return '';
+      const r = q.correct_ratio;
+      const stars = '★'.repeat(r > 85 ? 1 : r > 70 ? 2 : r > 55 ? 3 : r > 40 ? 4 : 5);
+      let s = `难度${stars} · 全站正确率 ${r}%（${q.attempt_count} 人次）`;
+      if (q.most_wrong && q.most_wrong !== q.answer) s += ` · 易错项 ${q.most_wrong}`;
+      return s;
     },
     qSegs() {
       const q = this.cur;
@@ -1213,6 +1226,7 @@ export default {
             submodule: q.submodule || null,
             correct: q._picked === q.answer,
             secs: q._secs || 0,
+            picked: q._picked,
           }));
         if (items.length) await request('/api/answer_log', { method: 'POST', data: { uid, items } });
       } catch (e) { /* 非关键路径 */ }

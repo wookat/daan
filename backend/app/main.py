@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 import re
+import threading
 import time
 
 import httpx
@@ -22,6 +23,18 @@ def check_access(x_access_code: str | None):
         raise HTTPException(401, "访问码错误")
 
 db.init_db()
+
+
+def _stats_refresher():
+    while True:
+        try:
+            db.refresh_question_stats()
+        except Exception:
+            pass
+        time.sleep(6 * 3600)
+
+
+threading.Thread(target=_stats_refresher, daemon=True).start()
 
 
 def _friendly_ai_err(e: Exception) -> str:
