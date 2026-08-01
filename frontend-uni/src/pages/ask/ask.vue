@@ -7,8 +7,7 @@
     <view class="today">
       <view class="goal-ring" :class="{ hit: todayDone >= goal }" :style="goalRingStyle" @click="cycleGoal">
         <view class="goal-in">
-          <text class="goal-n">{{ todayDone }}</text>
-          <text class="goal-t">/{{ goal }}题</text>
+          <text class="goal-n">{{ todayDone }}<text class="goal-t">/{{ goal }}</text></text>
         </view>
       </view>
       <view class="today-l">
@@ -444,20 +443,20 @@ export default {
 <style scoped>
 .wrap { padding: 24rpx; padding-bottom: 40rpx; }
 .hero { padding: 28rpx 8rpx 20rpx; }
-.hero-t { display: block; font-size: 40rpx; font-weight: 700; color: var(--ink); letter-spacing: 1rpx; }
+.hero-t { display: block; font-size: 34rpx; font-weight: 700; color: var(--ink); letter-spacing: 1rpx; }
 .hero-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 6rpx; }
 .today { display: flex; justify-content: space-between; align-items: center; gap: 20rpx; background: linear-gradient(135deg, #3b6ef6, #7c5cfc); border-radius: var(--radius); padding: 26rpx 30rpx; margin-bottom: 24rpx; }
 .goal-ring { flex-shrink: 0; width: 112rpx; height: 112rpx; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 .goal-in { width: 88rpx; height: 88rpx; border-radius: 50%; background: rgba(30, 41, 99, 0.35); display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .goal-n { font-size: 30rpx; font-weight: 700; color: #fff; line-height: 1.1; }
-.goal-t { font-size: 17rpx; color: rgba(255, 255, 255, 0.8); }
+.goal-t { font-size: 20rpx; font-weight: 400; color: rgba(255, 255, 255, 0.8); }
 .today-l { flex: 1; min-width: 0; }
 .today-t { display: block; font-size: 28rpx; font-weight: 700; color: #fff; }
 .today-s { display: flex; align-items: center; gap: 6rpx; font-size: 21rpx; color: rgba(255, 255, 255, 0.78); margin-top: 6rpx; }
 .today-s-t { font-size: 21rpx; color: rgba(255, 255, 255, 0.78); }
 .today-btn { background: #fff; color: #4f46e5; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 12rpx 28rpx; flex-shrink: 0; }
 .drop { border: 2rpx dashed var(--brand); background: var(--brand-soft); border-radius: 24rpx; padding: 48rpx 24rpx; text-align: center; margin-bottom: 8rpx; }
-.drop-ico { display: block; font-size: 64rpx; margin-bottom: 12rpx; }
+.drop-ico { width: 112rpx; height: 112rpx; border-radius: 50%; background: #e0e7ff; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12rpx; }
 .drop-t { display: block; font-size: 29rpx; font-weight: 600; color: var(--brand); }
 .drop-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 8rpx; }
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
