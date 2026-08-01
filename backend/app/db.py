@@ -39,6 +39,7 @@ def init_db():
         ("review_streak", "ALTER TABLE mistakes ADD COLUMN review_streak INTEGER DEFAULT 0"),
         ("next_review", "ALTER TABLE mistakes ADD COLUMN next_review REAL"),
         ("mastered", "ALTER TABLE mistakes ADD COLUMN mastered INTEGER DEFAULT 0"),
+        ("times", "ALTER TABLE mistakes ADD COLUMN times INTEGER DEFAULT 1"),
     ]:
         if col not in cols:
             conn.execute(ddl)
@@ -670,6 +671,12 @@ def save_mistake(rec: dict) -> int:
             "SELECT id FROM mistakes WHERE question_text=? LIMIT 1", (qtext,)
         ).fetchone()
         if dup:
+            conn.execute(
+                "UPDATE mistakes SET times=COALESCE(times,1)+1, mastered=0, review_streak=0, "
+                "next_review=?, user_answer=COALESCE(?, user_answer) WHERE id=?",
+                (time.time(), rec.get("user_answer"), dup["id"]),
+            )
+            conn.commit()
             conn.close()
             return dup["id"]
     cur = conn.execute(

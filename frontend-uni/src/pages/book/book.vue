@@ -70,6 +70,7 @@
         <view class="mhead">
           <text class="tag">{{ m.question_type || modName(m.module) }}</text>
           <text v-if="m.error_reason" class="rzbadge">{{ m.error_reason }}</text>
+          <text v-if="m.times >= 2" class="timesbadge">错 {{ m.times }} 次</text>
           <text v-if="m.review_count" class="rvbadge">已复习{{ m.review_count }}次</text>
           <text v-if="m.mastered" class="zhan">已斩</text>
         </view>
@@ -328,6 +329,7 @@ export default {
 .duecard { background: linear-gradient(135deg, #3b6ef6, #7c5cfc); border: none; display: flex; justify-content: space-between; align-items: center; }
 .redocard { background: linear-gradient(135deg, #0ea5e9, #22c55e); border: none; display: flex; justify-content: space-between; align-items: center; }
 .redocard .duego { color: #0e9488; }
+.timesbadge { display: inline-block; background: #fee2e2; color: #b91c1c; border-radius: 10rpx; padding: 4rpx 14rpx; font-size: 22rpx; margin-left: 8rpx; }
 .duetxt { display: flex; align-items: center; gap: 8rpx; font-size: 28rpx; font-weight: 700; color: #fff; }
 .duetxt-t { font-size: 28rpx; font-weight: 700; color: #fff; }
 .duesub { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.75); margin-top: 6rpx; }
