@@ -133,16 +133,38 @@
           <text v-if="!examMode" class="cnt okc">✓{{ right }}</text>
           <text v-if="!examMode" class="cnt badc">✗{{ wrongCount }}</text>
           <view v-if="streak >= 3" class="cnt fire"><uni-icons type="fire-filled" size="13" color="#f97316" /><text class="fire-n">{{ streak }}</text></view>
+          <view class="fontbtn iconbtn" @click="toggleFav"><uni-icons :type="isFav ? 'star-filled' : 'star'" size="16" :color="isFav ? '#f59e0b' : '#8a90a0'" /></view>
+          <text class="fontbtn" @click="toolsOpen = true">···</text>
           <text class="op" @click="quit">退出</text>
         </view>
       </view>
-      <view class="rtools">
-          <text class="fontbtn" @click="cycleFont">Aa</text>
-          <text v-if="!examMode" class="fontbtn" :class="{ beion: beiMode }" @click="toggleBei">背</text>
-          <text v-if="!examMode" class="fontbtn" :class="{ beion: autoNext }" @click="toggleAutoNext">跳</text>
-          <text v-if="!examMode && !beiMode" class="fontbtn" :class="{ beion: timedMode }" @click="toggleTimed">限</text>
-          <view class="fontbtn iconbtn" @click="toggleFav"><uni-icons :type="isFav ? 'star-filled' : 'star'" size="16" :color="isFav ? '#f59e0b' : '#8a90a0'" /></view>
-          <view class="fontbtn iconbtn" @click="toggleSfx"><uni-icons :type="sfxOn ? 'sound-filled' : 'sound'" size="16" :color="sfxOn ? '#4f46e5' : '#8a90a0'" /></view>
+      <view v-if="toolsOpen" class="mask" @click="toolsOpen = false">
+        <view class="sheet" @click.stop>
+          <view class="sheet-h">
+            <text class="sheet-t">练习工具</text>
+            <view class="sheet-x" @click="toolsOpen = false"><uni-icons type="closeempty" size="20" color="#6b7280" /></view>
+          </view>
+          <view class="tool-row" @click="cycleFont">
+            <text class="tool-name">字号大小</text>
+            <text class="tool-val">{{ ['小', '标准', '大'][fontLv] || '标准' }} · 点击切换</text>
+          </view>
+          <view v-if="!examMode" class="tool-row" @click="toggleBei">
+            <text class="tool-name">背题模式</text>
+            <text class="tool-val" :class="{ on: beiMode }">{{ beiMode ? '已开启' : '已关闭' }}</text>
+          </view>
+          <view v-if="!examMode" class="tool-row" @click="toggleAutoNext">
+            <text class="tool-name">答对自动跳下一题</text>
+            <text class="tool-val" :class="{ on: autoNext }">{{ autoNext ? '已开启' : '已关闭' }}</text>
+          </view>
+          <view v-if="!examMode && !beiMode" class="tool-row" @click="toggleTimed">
+            <text class="tool-name">限时训练（按模块建议用时倒计时）</text>
+            <text class="tool-val" :class="{ on: timedMode }">{{ timedMode ? '已开启' : '已关闭' }}</text>
+          </view>
+          <view class="tool-row" @click="toggleSfx">
+            <text class="tool-name">答题音效</text>
+            <text class="tool-val" :class="{ on: sfxOn }">{{ sfxOn ? '已开启' : '已关闭' }}</text>
+          </view>
+        </view>
       </view>
       <view class="progress"><view class="pfill" :style="{ width: (idx / items.length) * 100 + '%' }" /></view>
       <view v-if="cur.is_real" class="real-tag">真题{{ cur.exam_year ? ' · ' + cur.exam_year : '' }}{{ cur.exam_region ? ' · ' + cur.exam_region : '' }}</view>
@@ -328,6 +350,7 @@ export default {
       pstats: { byModule: {}, days: {} },
       autoTimer: null,
       cardOpen: false,
+      toolsOpen: false,
       qsecs: 0,
       qTimer: null,
       fontLv: uni.getStorageSync('fontLv') || 1,
@@ -1239,7 +1262,11 @@ export default {
 .rhead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14rpx; }
 .tag { display: inline-block; background: var(--brand-soft); color: var(--brand); border-radius: 999rpx; padding: 6rpx 20rpx; font-size: 22rpx; }
 .hstats { display: flex; align-items: center; gap: 12rpx; flex-shrink: 0; }
-.rtools { display: flex; align-items: center; gap: 12rpx; margin-bottom: 14rpx; flex-wrap: wrap; }
+.tool-row { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 8rpx 4rpx; border-bottom: 1rpx solid var(--line); }
+.tool-row:last-child { border-bottom: none; }
+.tool-name { font-size: 27rpx; color: var(--ink); }
+.tool-val { font-size: 24rpx; color: var(--ink-2); }
+.tool-val.on { color: var(--brand); font-weight: 600; }
 .cnt { font-size: 22rpx; border-radius: 999rpx; padding: 2rpx 14rpx; font-weight: 600; }
 .okc { background: var(--ok-soft); color: var(--ok); }
 .badc { background: var(--bad-soft); color: var(--bad); }
