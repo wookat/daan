@@ -363,8 +363,32 @@ export default {
       }
       if (!toks.size) return null;
       const list = [...toks].sort((a, b) => b.length - a.length).slice(0, 20);
-      const re = new RegExp('(' + list.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')', 'g');
-      return q.question.split(re).filter((t) => t !== '').map((t) => ({ t, hl: toks.has(t) }));
+      const text = q.question;
+      const isD = (ch) => ch >= '0' && ch <= '9';
+      const ivs = [];
+      for (const t of list) {
+        let p = 0;
+        while ((p = text.indexOf(t, p)) !== -1) {
+          const pre = text[p - 1];
+          const post = text[p + t.length];
+          if (!(isD(t[0]) && ((pre && isD(pre)) || (post && (isD(post) || post === '.')))) &&
+              !ivs.some((v) => p < v[1] && p + t.length > v[0])) {
+            ivs.push([p, p + t.length]);
+          }
+          p += t.length;
+        }
+      }
+      if (!ivs.length) return null;
+      ivs.sort((a, b) => a[0] - b[0]);
+      const segs = [];
+      let last = 0;
+      for (const [s, e] of ivs) {
+        if (s > last) segs.push({ t: text.slice(last, s), hl: false });
+        segs.push({ t: text.slice(s, e), hl: true });
+        last = e;
+      }
+      if (last < text.length) segs.push({ t: text.slice(last), hl: false });
+      return segs;
     },
     targetSecs() {
       const t = { changshi: 40, yanyu: 50, shuliang: 90, panduan: 60, ziliao: 80 };
