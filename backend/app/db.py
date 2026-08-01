@@ -191,7 +191,7 @@ def submodule_counts(module: str) -> list[dict]:
     conn = get_conn()
     rows = conn.execute(
         "SELECT submodule, COUNT(*) n FROM questions WHERE module=? AND (disabled IS NULL OR disabled=0) AND submodule IS NOT NULL AND submodule!='' "
-        "GROUP BY submodule HAVING n >= 8 ORDER BY n DESC LIMIT 30",
+        "GROUP BY submodule HAVING n >= 8 OR submodule='图形推理' ORDER BY n DESC LIMIT 30",
         (module,),
     ).fetchall()
     conn.close()
