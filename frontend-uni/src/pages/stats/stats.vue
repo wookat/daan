@@ -477,8 +477,9 @@ export default {
       };
     },
     modColor(mod) {
+      const KEY = { '资料分析': 'ziliao', '数量关系': 'shuliang', '言语理解': 'yanyu', '判断推理': 'panduan', '常识判断': 'changshi', '申论': 'shenlun' };
       const C = { changshi: '#f59e0b', shuliang: '#3b82f6', panduan: '#8b5cf6', ziliao: '#10b981', yanyu: '#ef4444', shenlun: '#64748b' };
-      return C[mod] || '#6366f1';
+      return C[KEY[mod] || mod] || '#6366f1';
     },
     sevClass(n) {
       const pct = n / this.total;
@@ -593,7 +594,7 @@ export default {
 .blabel { display: flex; justify-content: space-between; align-items: center; font-size: 26rpx; color: var(--ink); margin-bottom: 6rpx; }
 .blabel-r { display: flex; align-items: center; gap: 16rpx; }
 .bn { font-size: 23rpx; color: var(--ink-2); }
-.bgo { font-size: 24rpx; color: var(--brand); font-weight: 600; padding: 10rpx 0 10rpx 10rpx; }
+.bgo { font-size: 24rpx; color: var(--brand); font-weight: 600; padding: 0 0 0 16rpx; min-height: 44px; display: inline-flex; align-items: center; }
 .bar { background: var(--brand-soft); border-radius: 999rpx; height: 20rpx; position: relative; overflow: hidden; }
 .fill { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #6366f1, #4f46e5); border-radius: 999rpx; transition: width 0.6s ease; }
 .fill.sev-hi { background: linear-gradient(90deg, #f87171, #ef4444); }
