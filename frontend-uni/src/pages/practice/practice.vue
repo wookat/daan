@@ -585,6 +585,9 @@ export default {
       uni.showToast({ title: '今日一练完成，打卡成功！', icon: 'none' });
     },
     async start(module, submodule, count) {
+      if (this._starting) return;
+      this._starting = true;
+      uni.showLoading({ title: '出题中…', mask: true });
       this.lastModule = module;
       this.lastSubmodule = submodule || null;
       this.subSelect = null;
@@ -613,6 +616,8 @@ export default {
           d = await request('/api/questions?limit=' + limit + (module ? '&module=' + module : ''));
         }
         if (!d.items.length) {
+          uni.hideLoading();
+          this._starting = false;
           uni.showToast({ title: '该模块暂无题目', icon: 'none' });
           return;
         }
@@ -630,6 +635,9 @@ export default {
         uni.setStorageSync('lastModule', module || '');
       } catch (e) {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
+      } finally {
+        uni.hideLoading();
+        this._starting = false;
       }
     },
     recordStat(module, correct, submodule) {
