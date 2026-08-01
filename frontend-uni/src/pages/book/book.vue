@@ -95,6 +95,12 @@
         <text class="sort-k">排序</text>
         <text v-for="s in SORTS" :key="s.k" class="sort-chip" :class="{ on: sortBy === s.k }" @click="sortBy = s.k">{{ s.name }}</text>
       </view>
+      <view v-if="tab !== 'fav' && typeGroups.length > 1" class="kpwrap">
+        <text class="sort-k">题型聚合</text>
+        <view class="kpchips">
+          <text v-for="g in typeGroups" :key="g.name" class="kpchip" :class="{ on: kw === g.name }" @click="kw = kw === g.name ? '' : g.name">{{ g.name }} ×{{ g.n }}</text>
+        </view>
+      </view>
       <scroll-view v-if="tab !== 'fav' && items.length" scroll-x class="chips">
         <view
           v-for="c in chipList"
@@ -230,13 +236,28 @@ export default {
           (m) =>
             (m.question_text || '').toLowerCase().includes(k) ||
             (m.question_type || '').toLowerCase().includes(k) ||
-            (m.error_reason || '').includes(k)
+            (m.error_reason || '').includes(k) ||
+            (!m.question_type && (NAMES[m.module] || '').toLowerCase().includes(k))
         );
       }
       return base;
     },
     shownPage() {
       return this.shownItems.slice(0, this.pageN);
+    },
+    typeGroups() {
+      if (this.tab === 'fav') return [];
+      let base = this.tab === 'done' ? this.doneItems : this.todoItems;
+      if (this.filterMod) base = base.filter((m) => m.module === this.filterMod);
+      const map = {};
+      for (const m of base) {
+        const t = m.question_type || NAMES[m.module] || m.module || '其他';
+        map[t] = (map[t] || 0) + 1;
+      }
+      return Object.entries(map)
+        .map(([name, n]) => ({ name, n }))
+        .sort((a, b) => b.n - a.n)
+        .slice(0, 12);
     },
   },
   watch: {
@@ -436,6 +457,10 @@ export default {
 .sort-k { font-size: 22rpx; color: var(--ink-2); }
 .sort-chip { font-size: 22rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 4rpx 18rpx; background: var(--card); }
 .sort-chip.on { color: #fff; background: var(--brand, #4f6ef7); border-color: var(--brand, #4f6ef7); }
+.kpwrap { margin-bottom: 16rpx; }
+.kpchips { display: flex; flex-wrap: wrap; gap: 10rpx; margin-top: 8rpx; }
+.kpchip { font-size: 22rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 6rpx 18rpx; background: var(--card); }
+.kpchip.on { color: #fff; background: var(--brand, #4f6ef7); border-color: var(--brand, #4f6ef7); }
 .chips { white-space: nowrap; margin-bottom: 24rpx; }
 .chip { display: inline-block; padding: 10rpx 30rpx; margin-right: 16rpx; border-radius: 999rpx; background: var(--card); border: 1rpx solid var(--line); font-size: 25rpx; color: var(--ink-2); }
 .chip.on { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
