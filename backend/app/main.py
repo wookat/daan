@@ -5,6 +5,7 @@ import os
 import re
 import time
 
+import httpx
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -75,7 +76,11 @@ async def api_explain(
         else:
             explanation = await engine.explain(extracted, user_answer)
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(502, f"解析失败：{e}") from e
+        msg = str(e)
+        if isinstance(e, httpx.HTTPStatusError):
+            code = e.response.status_code
+            msg = "AI 服务额度已用完，请稍后再试" if code in (402, 403, 429) else "AI 服务暂时不可用，请稍后再试"
+        raise HTTPException(502, f"解析失败：{msg}") from e
     suspect = engine.is_suspect(extracted.get("question_text", ""))
     meta = {
         "module": None if suspect else extracted.get("module"),
