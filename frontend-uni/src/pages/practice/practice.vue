@@ -49,7 +49,7 @@
       <view v-if="counts.length" class="daily" :class="{ done: todayDone }" @click="startDaily">
         <view class="daily-l">
           <view class="daily-t"><uni-icons :type="todayDone ? 'checkbox-filled' : 'calendar-filled'" size="16" color="#ffffff" /><text class="daily-t-t">今日一练</text></view>
-          <text class="daily-s">{{ todayDone ? '今天已完成，明天继续' : groupSize + ' 题 · ' + (realMode ? '真题模式' : '题库模式') }}{{ dailyStreak ? ' · 已连续打卡 ' + dailyStreak + ' 天' : '' }}</text>
+          <text class="daily-s">{{ todayDone ? '今天已完成，明天继续' : '今日题型：' + dailyModName + ' · ' + groupSize + ' 题 · ' + (realMode ? '真题模式' : '题库模式') }}{{ dailyStreak ? ' · 已连续打卡 ' + dailyStreak + ' 天' : '' }}</text>
         </view>
         <text class="daily-go">{{ todayDone ? '再练一组' : '开始' }}</text>
       </view>
@@ -336,6 +336,16 @@ export default {
     todayDone() {
       return !!this.daily.days[new Date().toISOString().slice(0, 10)];
     },
+    dailyModule() {
+      const mods = ['ziliao', 'shuliang', 'yanyu', 'panduan', 'changshi'];
+      const key = new Date().toISOString().slice(0, 10);
+      let h = 0;
+      for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+      return mods[h % mods.length];
+    },
+    dailyModName() {
+      return this.modName(this.dailyModule);
+    },
     dailyStreak() {
       let n = 0;
       const d = new Date();
@@ -575,7 +585,7 @@ export default {
         uni.setStorageSync('beiMode', '');
         uni.showToast({ title: '每日一练按做题模式进行', icon: 'none', duration: 1200 });
       }
-      this.start(null);
+      this.start(this.dailyModule);
     },
     markDailyDone() {
       if (!this._daily) return;
