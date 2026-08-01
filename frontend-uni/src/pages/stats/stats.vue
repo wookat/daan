@@ -72,6 +72,10 @@
 
     <view v-if="growth && growth.weeks.length >= 2" class="card">
       <view class="h">成长轨迹（周正确率）</view>
+      <view class="gw-tabs">
+        <text class="gw-tab" :class="{ on: gwMod === '' }" @click="gwMod = ''">整体</text>
+        <text v-for="m in gwMods" :key="m.key" class="gw-tab" :class="{ on: gwMod === m.key }" @click="gwMod = m.key">{{ m.name }}</text>
+      </view>
       <view class="gw-row" v-for="w in growthRows" :key="w.week">
         <text class="gw-wk">{{ w.label }}</text>
         <view class="gw-bar">
@@ -207,18 +211,25 @@ const MODS = [
 
 export default {
   data() {
-    return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, history: [], showAllHist: false, coachHtml: uni.getStorageSync('coachAdvice') || '', coachLoading: false, growth: null, reco: null };
+    return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, history: [], showAllHist: false, coachHtml: uni.getStorageSync('coachAdvice') || '', coachLoading: false, growth: null, reco: null, gwMod: '' };
   },
   computed: {
+    gwMods() {
+      if (!this.growth) return [];
+      const seen = new Set();
+      this.growth.weeks.forEach((w) => Object.keys(w.modules || {}).forEach((k) => seen.add(k)));
+      return MODS.filter((m) => seen.has(m.key));
+    },
     growthRows() {
       if (!this.growth) return [];
       return this.growth.weeks.slice(-8).map((w) => {
         const [y, wk] = w.week.split('-');
+        const src = this.gwMod ? (w.modules || {})[this.gwMod] || { n: 0, c: 0 } : w;
         return {
           week: w.week,
           label: y.slice(2) + '年第' + Number(wk) + '周',
-          n: w.n,
-          pct: w.n ? Math.round((w.c / w.n) * 100) : 0,
+          n: src.n,
+          pct: src.n ? Math.round((src.c / src.n) * 100) : 0,
         };
       });
     },
@@ -607,6 +618,9 @@ export default {
 .gw-fill.lo { background: #dc2626; }
 .gw-pct { font-size: 22rpx; width: 150rpx; text-align: right; flex-shrink: 0; }
 .gw-n { color: var(--ink-2); }
+.gw-tabs { display: flex; gap: 10rpx; margin-bottom: 14rpx; flex-wrap: wrap; }
+.gw-tab { font-size: 22rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 4rpx 18rpx; background: var(--card); }
+.gw-tab.on { color: #fff; background: var(--brand, #4f6ef7); border-color: var(--brand, #4f6ef7); }
 .gw-delta { font-size: 23rpx; color: #dc2626; margin-top: 6rpx; }
 .gw-delta.up { color: #16a34a; }
 .rc-row { display: flex; align-items: center; gap: 12rpx; padding: 14rpx 0; border-bottom: 1rpx solid var(--line); }
