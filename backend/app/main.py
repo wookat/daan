@@ -412,6 +412,11 @@ def api_report(body: dict):
     return {"id": rid}
 
 
+@app.get("/api/submodule_progress")
+def api_submodule_progress(uid: str, module: str | None = None):
+    return {"items": db.submodule_progress(uid, module)}
+
+
 @app.get("/api/papers")
 def api_papers():
     return {"items": db.list_papers()}

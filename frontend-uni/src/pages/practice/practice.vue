@@ -140,7 +140,10 @@
           class="sub-chip"
           @click="start(subSelect, s.submodule)"
         >
-          <text class="sub-name">{{ s.submodule }}</text>
+          <view class="sub-l">
+            <text class="sub-name">{{ s.submodule }}</text>
+            <text v-if="subProg[s.submodule]" class="sub-prog">已做 {{ subProg[s.submodule].n }} 题 · 正确率 {{ Math.round(100 * subProg[s.submodule].c / subProg[s.submodule].n) }}%</text>
+          </view>
           <text class="sub-n">{{ s.n }} 题</text>
         </view>
       </view>
@@ -373,6 +376,7 @@ export default {
       subSelect: null,
       paperSheet: false,
       papers: [],
+      subProg: {},
       submodules: [],
       streak: 0,
       bestStreak: 0,
@@ -656,6 +660,13 @@ export default {
         }
         this.submodules = items;
         this.subSelect = module;
+        this.subProg = {};
+        const uid = uni.getStorageSync('anonUid');
+        if (uid) {
+          request('/api/submodule_progress?uid=' + uid + '&module=' + module)
+            .then((p) => { this.subProg = p.items || {}; })
+            .catch(() => {});
+        }
       } catch (e) {
         this.start(module);
       }
@@ -1531,6 +1542,8 @@ export default {
 .sheet-t { font-size: 30rpx; font-weight: 700; }
 .sheet-x { font-size: 28rpx; color: var(--ink-2); padding: 8rpx 16rpx; }
 .sub-chip { display: flex; justify-content: space-between; align-items: center; border: 1rpx solid var(--line); background: var(--soft-bg); border-radius: 18rpx; padding: 24rpx 28rpx; margin-bottom: 16rpx; }
+.sub-l { display: flex; flex-direction: column; gap: 4rpx; min-width: 0; }
+.sub-prog { font-size: 22rpx; color: var(--muted); }
 .sub-chip.all-chip { background: linear-gradient(135deg, #6366f1, #4f46e5); border: none; }
 .sub-chip.all-chip .sub-name, .sub-chip.all-chip .sub-n { color: #fff; }
 .sub-name { font-size: 28rpx; font-weight: 600; color: var(--ink); }

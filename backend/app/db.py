@@ -917,6 +917,22 @@ def paper_questions(source: str, limit: int = 140) -> list[dict]:
     return out
 
 
+def submodule_progress(uid: str, module: str | None = None) -> dict:
+    conn = get_conn()
+    _ensure_answer_log(conn)
+    where = "uid=? AND submodule IS NOT NULL AND submodule!=''"
+    args: list = [uid]
+    if module:
+        where += " AND module=?"
+        args.append(module)
+    rows = conn.execute(
+        f"SELECT submodule, COUNT(*) n, SUM(correct) c FROM answer_log WHERE {where} GROUP BY submodule",
+        args,
+    ).fetchall()
+    conn.close()
+    return {r["submodule"]: {"n": r["n"], "c": r["c"] or 0} for r in rows}
+
+
 def growth_stats(uid: str) -> dict:
     """按周（近 8 周）返回整体和各模块正确率成长曲线。"""
     conn = get_conn()
