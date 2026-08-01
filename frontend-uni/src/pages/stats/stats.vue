@@ -70,6 +70,20 @@
       </view>
     </view>
 
+    <view v-if="history.length >= 3" class="card">
+      <view class="h">正确率趋势（近 {{ trendData.length }} 次）</view>
+      <view class="trend">
+        <view v-for="(p, i) in trendData" :key="i" class="trend-col">
+          <view class="trend-bar" :class="{ lo: p < 60, mid: p >= 60 && p < 80 }" :style="{ height: Math.max(p, 4) + '%' }" />
+        </view>
+      </view>
+      <view class="trend-x">
+        <text>旧</text>
+        <text>近 {{ trendData.length }} 次平均 {{ trendAvg }}%</text>
+        <text>新</text>
+      </view>
+    </view>
+
     <view v-if="history.length" class="card">
       <view class="h">练习记录</view>
       <view v-for="(h, i) in history.slice(0, showAllHist ? 30 : 6)" :key="i" class="hist-row">
@@ -169,6 +183,16 @@ export default {
     return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, history: [], showAllHist: false, coachHtml: uni.getStorageSync('coachAdvice') || '', coachLoading: false };
   },
   computed: {
+    trendData() {
+      return this.history
+        .slice(0, 14)
+        .reverse()
+        .map((h) => (h.n ? Math.round((h.correct / h.n) * 100) : 0));
+    },
+    trendAvg() {
+      if (!this.trendData.length) return 0;
+      return Math.round(this.trendData.reduce((a, b) => a + b, 0) / this.trendData.length);
+    },
     total() {
       return this.byModule.reduce((s, m) => s + m.n, 0) || 1;
     },
@@ -515,6 +539,12 @@ export default {
 }
 .hist-row { display: flex; align-items: center; gap: 16rpx; padding: 14rpx 0; border-bottom: 1rpx solid #f0f1f5; }
 .hist-time { font-size: 22rpx; color: var(--ink-2); width: 170rpx; }
+.trend { display: flex; align-items: flex-end; gap: 8rpx; height: 160rpx; padding-top: 12rpx; }
+.trend-col { flex: 1; height: 100%; display: flex; align-items: flex-end; }
+.trend-bar { width: 100%; border-radius: 6rpx 6rpx 0 0; background: #16a34a; min-height: 6rpx; }
+.trend-bar.mid { background: #f59e0b; }
+.trend-bar.lo { background: #dc2626; }
+.trend-x { display: flex; justify-content: space-between; font-size: 22rpx; color: var(--ink-2); margin-top: 10rpx; }
 .hist-mod { font-size: 24rpx; flex: 1; }
 .hist-mod.exam { color: #b45309; font-weight: 600; }
 .hist-n { font-size: 24rpx; color: var(--ink-2); }

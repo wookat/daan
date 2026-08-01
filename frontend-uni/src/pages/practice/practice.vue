@@ -30,7 +30,7 @@
           <text v-for="n in [10, 20, 30, 50]" :key="n" class="set-chip" :class="{ on: groupSize === n }" @click="setGroup(n)">{{ n }}</text>
         </view>
       </view>
-      <view v-if="!counts.length" class="spin">题库为空，敬请期待</view>
+      <view v-if="!counts.length" class="spin" @click="loadCounts">题库加载中…点此重试</view>
       <view v-if="announce" class="ann">
         <uni-icons type="sound-filled" size="15" color="#b45309" />
         <view class="ann-c">
@@ -478,8 +478,16 @@ export default {
       try {
         const d = await request('/api/questions?limit=1');
         this.counts = d.counts || [];
+        if (!this.counts.length && !this._countsRetried) {
+          this._countsRetried = true;
+          setTimeout(() => this.loadCounts(), 3000);
+        }
       } catch (e) {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
+        if (!this._countsRetried) {
+          this._countsRetried = true;
+          setTimeout(() => this.loadCounts(), 3000);
+        }
       }
     },
     async openModule(module) {
