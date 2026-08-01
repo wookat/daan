@@ -115,6 +115,7 @@
           <text class="fontbtn" @click="cycleFont">Aa</text>
           <text v-if="!examMode" class="fontbtn" :class="{ beion: beiMode }" @click="toggleBei">背</text>
           <text v-if="!examMode" class="fontbtn" :class="{ beion: autoNext }" @click="toggleAutoNext">跳</text>
+          <view class="fontbtn iconbtn" @click="toggleFav"><uni-icons :type="isFav ? 'star-filled' : 'star'" size="16" :color="isFav ? '#f59e0b' : '#8a90a0'" /></view>
           <view class="fontbtn iconbtn" @click="toggleSfx"><uni-icons :type="sfxOn ? 'sound-filled' : 'sound'" size="16" :color="sfxOn ? '#4f46e5' : '#8a90a0'" /></view>
           <text v-if="!examMode" class="cnt okc">✓{{ right }}</text>
           <text v-if="!examMode" class="cnt badc">✗{{ wrongCount }}</text>
@@ -300,6 +301,7 @@ export default {
       fontLv: uni.getStorageSync('fontLv') || 1,
       sfxOn: uni.getStorageSync('sfxOff') ? false : true,
       beiMode: false,
+      favs: uni.getStorageSync('favQuestions') || [],
       autoNext: uni.getStorageSync('autoNextOff') ? false : true,
       daily: uni.getStorageSync('dailyPlan') || { days: {} },
       realMode: uni.getStorageSync('realMode') ? true : false,
@@ -332,6 +334,10 @@ export default {
         }
       }
       return worst;
+    },
+    isFav() {
+      if (!this.cur) return false;
+      return this.favs.some((f) => f.question === this.cur.question);
     },
     todayDone() {
       return !!this.daily.days[new Date().toISOString().slice(0, 10)];
@@ -378,6 +384,7 @@ export default {
   },
   onShow() {
     this.pstats = loadPStats();
+    this.favs = uni.getStorageSync('favQuestions') || [];
     this.loadCounts();
     this.loadAnnounce();
     if (this.realMode) this.loadRealFilters();
@@ -577,6 +584,20 @@ export default {
         q._saved = true;
         this.autoSaved = true;
       } catch (e) { /* 非关键路径 */ }
+    },
+    toggleFav() {
+      if (!this.cur) return;
+      const i = this.favs.findIndex((f) => f.question === this.cur.question);
+      if (i >= 0) {
+        this.favs.splice(i, 1);
+        uni.showToast({ title: '已取消收藏', icon: 'none', duration: 900 });
+      } else {
+        const { question, options, answer, explanation, hs_explanation, module, submodule, is_real, exam_year, exam_region, image, image_credit } = this.cur;
+        this.favs.unshift({ t: Date.now(), question, options, answer, explanation, hs_explanation, module, submodule, is_real, exam_year, exam_region, image, image_credit });
+        if (this.favs.length > 200) this.favs.length = 200;
+        uni.showToast({ title: '已收藏，可在错题本查看', icon: 'none', duration: 900 });
+      }
+      uni.setStorageSync('favQuestions', this.favs);
     },
     startDaily() {
       this._daily = true;

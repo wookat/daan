@@ -42,15 +42,39 @@
       <view v-if="items.length" class="toptabs">
         <view class="ttab" :class="{ on: tab === 'todo' }" @click="tab = 'todo'">待掌握 {{ todoItems.length }}</view>
         <view class="ttab" :class="{ on: tab === 'done' }" @click="tab = 'done'">已斩 {{ doneItems.length }}</view>
+        <view v-if="favs.length" class="ttab" :class="{ on: tab === 'fav' }" @click="tab = 'fav'">收藏 {{ favs.length }}</view>
       </view>
-      <view v-if="todoItems.length" class="card redocard" @click="redoAll">
+      <template v-if="tab === 'fav'">
+        <view v-if="!favs.length" class="card empty">
+          <view class="e-t">还没有收藏题目</view>
+          <view class="e-s">刷题时点顶栏星星即可收藏好题</view>
+        </view>
+        <view v-for="(f, fi) in favs" :key="f.t" class="card mcard" @click="f._open = !f._open">
+          <view class="mhead">
+            <text class="tag">{{ f.submodule || modName(f.module) }}</text>
+            <text v-if="f.is_real" class="rvbadge">真题{{ f.exam_year ? ' · ' + f.exam_year : '' }}{{ f.exam_region ? ' · ' + f.exam_region : '' }}</text>
+          </view>
+          <view class="q" :class="{ clamp: !f._open }">{{ (f.question || '').slice(0, 200) }}</view>
+          <template v-if="f._open">
+            <view v-for="(v, k) in f.options" :key="k" class="anscmp"><text :class="k === f.answer ? 'ca' : ''">{{ k }}. {{ v }}</text></view>
+            <rich-text :nodes="md(f.hs_explanation || f.explanation || '暂无解析')" />
+          </template>
+          <view class="mfoot">
+            <text class="meta">{{ fmt(f.t / 1000) }}</text>
+            <view class="acts">
+              <text class="op del" @click.stop="unfav(fi)">取消收藏</text>
+            </view>
+          </view>
+        </view>
+      </template>
+      <view v-if="tab !== 'fav' && todoItems.length" class="card redocard" @click="redoAll">
         <view>
           <view class="duetxt"><uni-icons type="refreshempty" size="16" color="#ffffff" /><text class="duetxt-t">错题重练</text></view>
           <text class="duesub">把待掌握错题按刷题模式重做一遍（最多 10 题）</text>
         </view>
         <text class="duego">开始</text>
       </view>
-      <scroll-view v-if="items.length" scroll-x class="chips">
+      <scroll-view v-if="tab !== 'fav' && items.length" scroll-x class="chips">
         <view
           v-for="c in chipList"
           :key="c.key"
@@ -59,8 +83,8 @@
           @click="filterMod = c.key"
         >{{ c.name }}</view>
       </scroll-view>
-      <view v-if="loading" class="card spin">加载中…</view>
-      <view v-else-if="!items.length" class="card empty">
+      <view v-if="tab !== 'fav' && loading" class="card spin">加载中…</view>
+      <view v-else-if="tab !== 'fav' && !items.length" class="card empty">
         <view class="e-ico"><uni-icons type="folder-add" size="52" color="#c7cad4" /></view>
         <view class="e-t">错题本还是空的</view>
         <view class="e-s">去拍题讲解或刷题，答错的题会汇集到这里，之后按遗忘曲线安排复习</view>
@@ -124,6 +148,7 @@ export default {
       streak: 0,
       filterMod: '',
       tab: 'todo',
+      favs: [],
     };
   },
   computed: {
@@ -147,14 +172,23 @@ export default {
       return this.items.filter((m) => m.mastered);
     },
     shownItems() {
+      if (this.tab === 'fav') return [];
       const base = this.tab === 'done' ? this.doneItems : this.todoItems;
       return this.filterMod ? base.filter((m) => m.module === this.filterMod) : base;
     },
   },
   onShow() {
+    this.favs = (uni.getStorageSync('favQuestions') || []).map((f) => ({ ...f, _open: false }));
+    if (this.tab === 'fav' && !this.favs.length) this.tab = 'todo';
     this.load();
   },
   methods: {
+    md,
+    unfav(i) {
+      this.favs.splice(i, 1);
+      uni.setStorageSync('favQuestions', this.favs.map(({ _open, ...f }) => f));
+      if (!this.favs.length) this.tab = 'todo';
+    },
     isDue(m) {
       return !m.next_review || m.next_review <= Date.now() / 1000;
     },
