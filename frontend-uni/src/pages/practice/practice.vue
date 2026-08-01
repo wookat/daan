@@ -256,6 +256,13 @@
           <view class="report-cell"><text class="report-n">{{ avgSecs }}s</text><text class="report-t">平均每题</text></view>
           <view class="report-cell"><text class="report-n badc2">{{ wrongCount }}</text><text class="report-t">错题</text></view>
         </view>
+        <view v-if="moduleBreakdown.length >= 2" class="mb-list">
+          <view v-for="b in moduleBreakdown" :key="b.mod" class="mb-row">
+            <text class="mb-name">{{ modName(b.mod) }}</text>
+            <view class="mb-bar"><view class="mb-fill" :class="{ lo: b.pct < 60, mid: b.pct >= 60 && b.pct < 80 }" :style="{ width: b.pct + '%' }" /></view>
+            <text class="mb-pct">{{ b.right }}/{{ b.n }} · {{ b.pct }}%</text>
+          </view>
+        </view>
         <view class="report-grid">
           <view
             v-for="(q, i) in items"
@@ -373,6 +380,19 @@ export default {
     };
   },
   computed: {
+    moduleBreakdown() {
+      const map = {};
+      for (const q of this.items) {
+        const m = q.module || 'other';
+        if (!map[m]) map[m] = { mod: m, n: 0, right: 0 };
+        map[m].n++;
+        if (q._picked && q._picked === q.answer) map[m].right++;
+      }
+      const order = ['changshi', 'yanyu', 'shuliang', 'panduan', 'ziliao'];
+      return Object.values(map)
+        .map((b) => ({ ...b, pct: Math.round((b.right / b.n) * 100) }))
+        .sort((a, b) => order.indexOf(a.mod) - order.indexOf(b.mod));
+    },
     qSegs() {
       const q = this.cur;
       if (!q || (!this.picked && !this.beiMode) || this.examMode) return null;
@@ -1389,6 +1409,14 @@ export default {
 .report-n { font-size: 34rpx; font-weight: 700; color: var(--ink); }
 .report-n.badc2 { color: var(--bad); }
 .report-t { font-size: 22rpx; color: var(--ink-2); }
+.mb-list { margin-bottom: 24rpx; }
+.mb-row { display: flex; align-items: center; gap: 16rpx; margin-bottom: 12rpx; }
+.mb-name { font-size: 23rpx; color: var(--ink); width: 130rpx; text-align: left; flex-shrink: 0; }
+.mb-bar { flex: 1; height: 14rpx; background: #eef0f4; border-radius: 999rpx; overflow: hidden; }
+.mb-fill { height: 100%; border-radius: 999rpx; background: #22c55e; }
+.mb-fill.mid { background: #f59e0b; }
+.mb-fill.lo { background: #ef4444; }
+.mb-pct { font-size: 22rpx; color: var(--ink-2); width: 150rpx; text-align: right; flex-shrink: 0; }
 .report-grid { display: flex; flex-wrap: wrap; gap: 16rpx; justify-content: center; }
 .report-tip { text-align: center; font-size: 22rpx; color: var(--ink-2); margin-top: 14rpx; }
 .btn { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(79, 70, 229, 0.25); min-height: 44px; line-height: 44px; }
