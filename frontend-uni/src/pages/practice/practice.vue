@@ -243,7 +243,7 @@
           >{{ i + 1 }}</view>
         </view>
         <view class="acard-foot">已答 {{ answeredCount }}/{{ items.length }}<template v-if="!examMode"> · 正确 {{ right }}</template></view>
-        <button v-if="examMode" class="btn" style="margin-top: 16rpx" @click="finishExam">交卷</button>
+        <button v-if="examMode" class="btn" style="margin-top: 16rpx" @click="confirmFinishExam">交卷</button>
       </view>
     </view>
 
@@ -586,6 +586,22 @@ export default {
         uni.hideLoading();
         this._starting = false;
       }
+    },
+    confirmFinishExam() {
+      const left = this.items.filter((q) => !q._picked).length;
+      if (!left) {
+        this.finishExam();
+        return;
+      }
+      uni.showModal({
+        title: '确认交卷？',
+        content: '还有 ' + left + ' 题未作答，交卷后未答题不得分',
+        confirmText: '交卷',
+        cancelText: '继续作答',
+        success: (res) => {
+          if (res.confirm) this.finishExam();
+        },
+      });
     },
     finishExam() {
       if (!this.examMode) return;
@@ -1208,7 +1224,7 @@ export default {
 .big { font-size: 40rpx; font-weight: 700; margin-bottom: 12rpx; }
 .sub { font-size: 26rpx; color: var(--ink-2); margin-bottom: 28rpx; }
 .mask { position: fixed; inset: 0; background: rgba(15, 18, 30, 0.5); z-index: 90; display: flex; align-items: flex-end; }
-.sheet { width: 100%; box-sizing: border-box; background: var(--card); border-radius: 32rpx 32rpx 0 0; padding: 32rpx 28rpx calc(32rpx + env(safe-area-inset-bottom)); max-height: 70vh; overflow-y: auto; animation: slideup 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.sheet { width: 100%; box-sizing: border-box; background: var(--card); border-radius: 32rpx 32rpx 0 0; padding: 32rpx 28rpx calc(130rpx + env(safe-area-inset-bottom)); max-height: 70vh; overflow-y: auto; animation: slideup 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20rpx; }
 .sheet-t { font-size: 30rpx; font-weight: 700; }
 .sheet-x { font-size: 28rpx; color: var(--ink-2); padding: 8rpx 16rpx; }
