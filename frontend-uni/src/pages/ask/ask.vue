@@ -51,9 +51,9 @@
     <view v-for="(r, i) in results" :key="r.ts" class="card">
       <view v-if="i > 0" class="hist" @click="r.folded = !r.folded"><uni-icons type="undo" size="14" color="#6b7280" /><text> 历史讲解（点此展开/折叠）</text></view>
       <template v-if="i === 0 || !r.folded">
-        <view class="tags">
-          <text class="tag">{{ r.module_name }}</text>
-          <text class="tag">{{ r.question_type }}</text>
+        <view v-if="r.module_name || r.question_type" class="tags">
+          <text v-if="r.module_name" class="tag">{{ r.module_name }}</text>
+          <text v-if="r.question_type" class="tag">{{ r.question_type }}</text>
         </view>
         <view v-if="r.ansCard" class="anscard">
           <view class="ans-big">{{ r.ansCard.ans }}</view>
