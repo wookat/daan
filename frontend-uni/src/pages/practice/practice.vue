@@ -39,10 +39,17 @@
         </view>
         <text class="ann-x" @click="dismissAnn">✕</text>
       </view>
-      <view v-if="counts.length" class="daily exam" @click="startExam">
+      <view v-if="counts.length" class="daily exam" @click="startExam(false)">
         <view class="daily-l">
           <view class="daily-t"><uni-icons type="flag-filled" size="16" color="#ffffff" /><text class="daily-t-t">迷你模考</text></view>
           <text class="daily-s">25 题 · 20 分钟 · 五模块混合 · 交卷后统一判分</text>
+        </view>
+        <text class="daily-go">开始</text>
+      </view>
+      <view v-if="counts.length" class="daily exam full" @click="startExam(true)">
+        <view class="daily-l">
+          <view class="daily-t"><uni-icons type="medal-filled" size="16" color="#ffffff" /><text class="daily-t-t">全真模考</text></view>
+          <text class="daily-s">100 题 · 100 分钟 · 按行测真实模块配比 · 真题优先</text>
         </view>
         <text class="daily-go">开始</text>
       </view>
@@ -512,18 +519,44 @@ export default {
       this.groupSize = n;
       uni.setStorageSync('groupSize', n);
     },
-    async startExam() {
+    async startExam(full) {
+      if (this._starting) return;
+      this._starting = true;
       if (this.beiMode) {
         this.beiMode = false;
         uni.setStorageSync('beiMode', '');
       }
+      uni.showLoading({ title: '组卷中…', mask: true });
       try {
-        const d = await request('/api/questions?limit=25');
-        if (!d.items || d.items.length < 5) {
+        let items = [];
+        if (full) {
+          const plan = [
+            ['changshi', 15],
+            ['yanyu', 30],
+            ['shuliang', 10],
+            ['panduan', 30],
+            ['ziliao', 15],
+          ];
+          const parts = await Promise.all(
+            plan.map(([m, n]) => request('/api/questions?limit=' + n + '&module=' + m + '&real=1').catch(() => ({ items: [] })))
+          );
+          for (let i = 0; i < plan.length; i++) {
+            let got = parts[i].items || [];
+            if (got.length < plan[i][1]) {
+              const extra = await request('/api/questions?limit=' + (plan[i][1] - got.length) + '&module=' + plan[i][0]).catch(() => ({ items: [] }));
+              got = got.concat(extra.items || []);
+            }
+            items = items.concat(got.slice(0, plan[i][1]));
+          }
+        } else {
+          const d = await request('/api/questions?limit=25');
+          items = d.items || [];
+        }
+        if (items.length < 5) {
           uni.showToast({ title: '题目不足，稍后再试', icon: 'none' });
           return;
         }
-        this.items = d.items;
+        this.items = items;
         this.idx = 0;
         this.picked = '';
         this.right = 0;
@@ -536,7 +569,7 @@ export default {
         this.lastSubmodule = null;
         this.session = true;
         this.examMode = true;
-        this.examLeft = 20 * 60;
+        this.examLeft = (full ? 100 : 20) * 60;
         this.startQTimer();
         if (this.examTimer) clearInterval(this.examTimer);
         this.examTimer = setInterval(() => {
@@ -546,9 +579,12 @@ export default {
             this.finishExam();
           }
         }, 1000);
-        uni.showToast({ title: '模考开始：交卷后统一判分', icon: 'none', duration: 1500 });
+        uni.showToast({ title: (full ? '全真模考开始' : '模考开始') + '：交卷后统一判分', icon: 'none', duration: 1500 });
       } catch (e) {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
+      } finally {
+        uni.hideLoading();
+        this._starting = false;
       }
     },
     finishExam() {
@@ -1146,6 +1182,9 @@ export default {
 .ann-t { display: block; font-size: 26rpx; font-weight: 600; color: #92400e; }
 .ann-b { display: block; font-size: 23rpx; color: #b45309; margin-top: 4rpx; }
 .ann-x { color: #b45309; font-size: 26rpx; padding: 0 8rpx; }
+.daily.exam.full {
+  background: linear-gradient(135deg, #b45309, #d97706);
+}
 .daily.exam { background: linear-gradient(120deg, #f97316, #ef4444); }
 .timer.examleft { color: #ef4444; font-weight: 700; }
 .opt.sel { border-color: var(--brand); background: var(--soft-bg); }
