@@ -269,7 +269,7 @@
       </view>
       <button class="btn" @click="start(lastModule, lastSubmodule)">再来一组</button>
       <button v-if="!beiMode" class="btn ghost" style="margin-top: 16rpx" @click="shareResult">分享成绩</button>
-      <button class="btn ghost" style="margin-top: 16rpx" @click="quit">返回选模块</button>
+      <button class="btn plain" style="margin-top: 8rpx" @click="quit">返回选模块</button>
     </view>
 
     <!-- 答题卡 -->
@@ -486,7 +486,8 @@ export default {
     },
     ringStyle() {
       const pct = Math.round((this.right / (this.items.length || 1)) * 100);
-      return { background: `conic-gradient(#22c55e 0% ${pct}%, var(--brand-soft) ${pct}% 100%)` };
+      const color = pct >= 80 ? '#22c55e' : pct >= 60 ? '#f59e0b' : '#ef4444';
+      return { background: `conic-gradient(${color} 0% ${pct}%, var(--brand-soft) ${pct}% 100%)` };
     },
   },
   onShow() {
@@ -1282,8 +1283,8 @@ export default {
 .rz.on { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
 .acard-grid { display: flex; flex-wrap: wrap; gap: 20rpx; padding: 8rpx 0 20rpx; }
 .acard-n { width: 80rpx; height: 80rpx; line-height: 80rpx; text-align: center; border-radius: 50%; background: var(--soft-bg); border: 2rpx solid var(--line); font-size: 27rpx; font-weight: 600; color: var(--ink-2); box-sizing: border-box; }
-.acard-n.ok { background: var(--ok); border-color: var(--ok); color: #fff; }
-.acard-n.bad { background: var(--bad); border-color: var(--bad); color: #fff; }
+.acard-n.ok { background: #dcfce7; border-color: #86efac; color: #15803d; }
+.acard-n.bad { background: #fee2e2; border-color: #fca5a5; color: #b91c1c; }
 .acard-n.cur { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
 .acard-foot { text-align: center; font-size: 23rpx; color: var(--ink-2); padding-bottom: 8rpx; }
 .op { font-size: 24rpx; color: var(--ink-2); margin-left: 6rpx; }
@@ -1392,6 +1393,7 @@ export default {
 .report-tip { text-align: center; font-size: 22rpx; color: var(--ink-2); margin-top: 14rpx; }
 .btn { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(79, 70, 229, 0.25); min-height: 44px; line-height: 44px; }
 .btn.ghost { background: var(--brand-soft); color: var(--brand); box-shadow: none; }
+.btn.plain { background: none; color: var(--ink-2); box-shadow: none; }
 .done { text-align: center; padding: 48rpx 28rpx; }
 .ring { width: 200rpx; height: 200rpx; border-radius: 50%; margin: 0 auto 24rpx; display: flex; align-items: center; justify-content: center; }
 .ring-in { width: 156rpx; height: 156rpx; border-radius: 50%; background: var(--card); display: flex; flex-direction: column; align-items: center; justify-content: center; }

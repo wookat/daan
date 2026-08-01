@@ -76,12 +76,15 @@
           </view>
         </view>
       </template>
-      <view v-if="tab !== 'fav' && todoItems.length" class="card redocard" @click="redoAll">
-        <view>
-          <view class="duetxt"><uni-icons type="refreshempty" size="16" color="#ffffff" /><text class="duetxt-t">错题重练</text></view>
-          <text class="duesub">把待掌握错题按刷题模式重做一遍（最多 10 题）</text>
+      <view v-if="tab !== 'fav' && todoItems.length" class="card redoentry" @click="redoAll">
+        <view class="redo-l">
+          <view class="redo-ico"><uni-icons type="refreshempty" size="16" color="#4f46e5" /></view>
+          <view>
+            <text class="redo-t">错题重练</text>
+            <text class="redo-s">把待掌握错题按刷题模式重做一遍（最多 10 题）</text>
+          </view>
         </view>
-        <text class="duego">开始</text>
+        <text class="redo-go">开始</text>
       </view>
       <view v-if="tab !== 'fav' && items.length > 5" class="searchbar">
         <uni-icons type="search" size="16" color="#8a90a0" />
@@ -115,26 +118,24 @@
       <view v-for="m in shownItems" :key="m.id" class="card mcard" :class="masteryClass(m)" @click="m.open = !m.open">
         <view class="mhead">
           <text class="tag">{{ m.question_type || modName(m.module) }}</text>
-          <text v-if="m.error_reason" class="rzbadge">{{ m.error_reason }}</text>
           <text v-if="m.times >= 2" class="timesbadge">错 {{ m.times }} 次</text>
-          <text v-if="m.review_count" class="rvbadge">已复习{{ m.review_count }}次</text>
           <text v-if="m.mastered" class="zhan">已斩</text>
-          <text v-if="!m.mastered && nextReviewText(m)" class="nrbadge" :class="{ due: isDue(m) }">{{ nextReviewText(m) }}</text>
+          <view v-else-if="nextReviewText(m)" class="duehint" :class="{ due: isDue(m) }">
+            <view class="duedot" /><text>{{ nextReviewText(m) }}</text>
+          </view>
+          <text class="meta mtime">{{ fmt(m.created_at) }}</text>
         </view>
         <view class="q" :class="{ clamp: !m.open }">{{ (m.question_text || '').slice(0, 200) }}</view>
         <view v-if="ansLetter(m.user_answer)" class="anscmp">
-          <text class="my">我选 {{ ansLetter(m.user_answer) }} ✗</text>
-          <text v-if="ansLetter(m.correct_answer)" class="ca">· 答案 {{ ansLetter(m.correct_answer) }}</text>
+          <text class="rpill wrong">我选 {{ ansLetter(m.user_answer) }}</text>
+          <text v-if="ansLetter(m.correct_answer)" class="rpill right">答案 {{ ansLetter(m.correct_answer) }}</text>
         </view>
         <view class="mfoot">
-          <text class="meta">{{ fmt(m.created_at) }}</text>
           <view class="acts">
             <text v-if="!m.mastered" class="op redo" @click.stop="redo(m)">AI 详解</text>
-            <text v-if="m.module" class="op sim" @click.stop="practiceSimilar(m)">练3道同类</text>
-            <text v-if="!m.mastered" class="op zop" @click.stop="master(m)">标为已斩</text>
             <text v-else class="op redo" @click.stop="master(m, false)">恢复复习</text>
-            <text class="op del" @click.stop="del(m)">删除</text>
           </view>
+          <text class="op more" @click.stop="itemSheet(m)">···</text>
         </view>
         <rich-text v-if="m.open" :nodes="m.html" />
       </view>
@@ -381,6 +382,16 @@ export default {
       uni.setStorageSync('practicePreset', { module: m.module, submodule: sub, count: 3 });
       uni.switchTab({ url: '/pages/practice/practice' });
     },
+    itemSheet(m) {
+      const acts = [];
+      if (m.module) acts.push({ t: '练3道同类', f: () => this.practiceSimilar(m) });
+      if (!m.mastered) acts.push({ t: '标为已斩', f: () => this.master(m) });
+      acts.push({ t: '删除', f: () => this.del(m) });
+      uni.showActionSheet({
+        itemList: acts.map((a) => a.t),
+        success: (r) => acts[r.tapIndex].f(),
+      });
+    },
     del(m) {
       uni.showModal({
         title: '确定删除这道错题？',
@@ -414,24 +425,28 @@ export default {
 .chips { white-space: nowrap; margin-bottom: 24rpx; }
 .chip { display: inline-block; padding: 10rpx 30rpx; margin-right: 16rpx; border-radius: 999rpx; background: var(--card); border: 1rpx solid var(--line); font-size: 25rpx; color: var(--ink-2); }
 .chip.on { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
-.mcard { border-left-width: 8rpx; }
-.mcard.lv-new { border-left-color: var(--bad); }
-.mcard.lv-mid { border-left-color: #f59e0b; }
-.mcard.lv-good { border-left-color: var(--ok); }
-.mhead { display: flex; align-items: center; gap: 12rpx; }
+.mhead { display: flex; align-items: center; gap: 12rpx; flex-wrap: wrap; }
+.mtime { margin-left: auto; white-space: nowrap; }
+.duehint { display: inline-flex; align-items: center; gap: 8rpx; font-size: 21rpx; color: var(--ink-2); }
+.duehint.due { color: #c2410c; }
+.duedot { width: 12rpx; height: 12rpx; border-radius: 50%; background: #c7cad4; }
+.duehint.due .duedot { background: #f59e0b; }
 .rvbadge { font-size: 20rpx; color: var(--ink-2); background: var(--soft-bg); border-radius: 999rpx; padding: 4rpx 14rpx; }
 .rzbadge { font-size: 20rpx; color: #b45309; background: #fef3c7; border-radius: 999rpx; padding: 4rpx 14rpx; }
 .zhan { margin-left: auto; font-size: 22rpx; font-weight: 700; color: var(--ok); border: 3rpx solid var(--ok); border-radius: 8rpx; padding: 2rpx 12rpx; transform: rotate(-8deg); }
-.anscmp { margin-top: 8rpx; font-size: 23rpx; }
-.anscmp .my { color: var(--bad); font-weight: 600; }
-.anscmp .ca { color: var(--ok); font-weight: 600; margin-left: 8rpx; }
+.anscmp { margin-top: 12rpx; font-size: 23rpx; display: flex; gap: 12rpx; align-items: center; flex-wrap: wrap; }
+.anscmp .ca { color: var(--ok); font-weight: 600; }
+.rpill { font-size: 22rpx; font-weight: 600; border-radius: 999rpx; padding: 6rpx 20rpx; }
+.rpill.wrong { background: #fee2e2; color: #b91c1c; }
+.rpill.right { background: #dcfce7; color: #15803d; }
 .zop { color: var(--ok); border: 1rpx solid var(--ok); }
 .toptabs { display: flex; gap: 16rpx; margin-bottom: 20rpx; }
 .ttab { flex: 1; text-align: center; padding: 16rpx 0; border-radius: 16rpx; background: var(--card); border: 1rpx solid var(--line); font-size: 26rpx; color: var(--ink-2); }
 .ttab.on { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
 .xp-k { margin-top: 12rpx; font-size: 22rpx; font-weight: 700; color: #ea580c; border-left: 6rpx solid #ea580c; padding-left: 10rpx; }
 .xp-body { margin-top: 6rpx; font-size: 23rpx; color: var(--ink); background: #fff7ed; border-radius: 10rpx; padding: 12rpx; line-height: 1.6; }
-.mfoot { display: flex; justify-content: space-between; align-items: center; margin-top: 12rpx; }
+.mfoot { display: flex; justify-content: space-between; align-items: center; margin-top: 12rpx; border-top: 1rpx solid var(--line); padding-top: 8rpx; }
+.op.more { color: var(--ink-2); font-weight: 700; padding: 18rpx 30rpx; margin-left: 0; }
 .acts { display: flex; gap: 8rpx; }
 .op { font-size: 24rpx; margin-left: 16rpx; padding: 18rpx 24rpx; border-radius: 999rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
 .op.sim { background: var(--brand-soft); color: var(--brand); }
@@ -442,8 +457,12 @@ export default {
 .q.clamp { max-height: 120rpx; overflow: hidden; }
 .meta { font-size: 22rpx; color: var(--ink-2); }
 .duecard { background: linear-gradient(135deg, #3b6ef6, #7c5cfc); border: none; display: flex; justify-content: space-between; align-items: center; }
-.redocard { background: linear-gradient(135deg, #0ea5e9, #22c55e); border: none; display: flex; justify-content: space-between; align-items: center; }
-.redocard .duego { color: #0e9488; }
+.redoentry { display: flex; justify-content: space-between; align-items: center; }
+.redo-l { display: flex; align-items: center; gap: 16rpx; }
+.redo-ico { width: 64rpx; height: 64rpx; border-radius: 50%; background: var(--brand-soft, #eef2ff); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.redo-t { display: block; font-size: 27rpx; font-weight: 600; color: var(--ink); }
+.redo-s { display: block; font-size: 21rpx; color: var(--ink-2); margin-top: 4rpx; }
+.redo-go { background: var(--brand-soft, #eef2ff); color: var(--brand, #4f46e5); font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 0 34rpx; min-height: 44px; line-height: 44px; flex-shrink: 0; box-sizing: border-box; }
 .nrbadge {
   display: inline-block;
   background: #eef2ff;
