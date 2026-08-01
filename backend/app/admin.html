@@ -33,6 +33,9 @@ main { max-width:1080px; margin:20px auto; padding:0 16px; }
 .q button.ok { background:var(--ok); }
 .badge { display:inline-block; padding:1px 8px; border-radius:999px; font-size:12px; background:var(--soft); }
 .empty { text-align:center; color:var(--ink2); padding:40px; }
+.tbl { width:100%; border-collapse:collapse; background:#fff; border-radius:10px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.06); margin-bottom:20px; }
+.tbl th,.tbl td { padding:8px 12px; text-align:left; border-bottom:1px solid var(--line); font-size:13px; }
+.tbl th { background:var(--soft); color:var(--ink2); font-weight:600; }
 </style>
 </head>
 <body>
@@ -43,6 +46,7 @@ main { max-width:1080px; margin:20px auto; padding:0 16px; }
 </header>
 <main>
   <div class="cards" id="cards"></div>
+  <div id="usage"></div>
   <div class="tabs">
     <div class="tab on" data-tab="flagged" onclick="switchTab(this)">解析质检（差评队列）</div>
     <div class="tab" data-tab="search" onclick="switchTab(this)">题库管理</div>
@@ -92,6 +96,11 @@ async function stats() {
     ['缓存差评', s.cache_down], ['错题记录', s.mistakes],
   ];
   $('cards').innerHTML = items.map(([t, n]) => `<div class="card"><div class="n">${n}</div><div class="t">${t}</div></div>`).join('');
+  const du = s.daily_usage || [];
+  $('usage').innerHTML = du.length
+    ? `<h3 style="margin:6px 0 8px">近 14 天使用趋势</h3>
+       <table class="tbl"><thead><tr><th>日期</th><th>练习组数</th><th>答题量</th><th>整体正确率</th></tr></thead><tbody>${du.map(r => `<tr><td>${r.d}</td><td>${r.sessions}</td><td>${r.answered}</td><td>${r.acc == null ? '-' : r.acc + '%'}</td></tr>`).join('')}</tbody></table>`
+    : '';
 }
 function switchTab(el) {
   document.querySelectorAll('.tab[data-tab]').forEach((t) => t.classList.remove('on'));

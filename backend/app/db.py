@@ -377,6 +377,20 @@ def admin_stats() -> dict:
         "cache_down": q("SELECT COUNT(*) FROM explain_cache WHERE down>0").fetchone()[0],
         "mistakes": q("SELECT COUNT(*) FROM mistakes").fetchone()[0],
     }
+    try:
+        stats["daily_usage"] = [
+            dict(r)
+            for r in q(
+                """SELECT date(created_at, 'unixepoch') d,
+                          COUNT(*) sessions, SUM(n) answered,
+                          ROUND(SUM(correct)*100.0/SUM(n), 1) acc
+                   FROM practice_results WHERE n>0
+                     AND created_at > strftime('%s','now') - 14*86400
+                   GROUP BY d ORDER BY d"""
+            )
+        ]
+    except Exception:
+        stats["daily_usage"] = []
     conn.close()
     return stats
 
