@@ -352,7 +352,7 @@ def admin_list_reports(status: str = "open") -> list[dict]:
     _ensure_reports(conn)
     rows = conn.execute(
         """SELECT r.id, r.created_at, r.question_id, r.reason, r.detail, r.status,
-                  q.question, q.module, q.answer, q.disabled
+                  q.question, q.options, q.module, q.answer, q.disabled
            FROM question_reports r LEFT JOIN questions q ON q.id = r.question_id
            WHERE r.status = ? ORDER BY r.id DESC LIMIT 100""",
         (status,),
