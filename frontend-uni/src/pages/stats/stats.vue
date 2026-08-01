@@ -88,9 +88,17 @@
       </view>
     </view>
 
-    <view v-if="reco && reco.items.length" class="card">
+    <view v-if="(reco && reco.items.length) || dueN" class="card">
       <view class="h">个性化推荐 · 查漏补缺</view>
-      <view v-for="(r, i) in reco.items" :key="i" class="rc-row" @click="goSub(r.module, r.submodule)">
+      <view v-if="dueN" class="rc-row" @click="goBook">
+        <view class="rc-main">
+          <text class="rc-name">错题到期复习</text>
+          <text class="rc-tag warn">今日到期</text>
+        </view>
+        <text class="rc-meta">{{ dueN }} 题待复习</text>
+        <text class="rc-go">去复习 ›</text>
+      </view>
+      <view v-for="(r, i) in (reco ? reco.items : [])" :key="i" class="rc-row" @click="goSub(r.module, r.submodule)">
         <view class="rc-main">
           <text class="rc-name">{{ r.submodule }}</text>
           <text class="rc-tag" :class="{ warn: r.reason === '近期退步' || r.reason === '正确率偏低' }">{{ r.reason }}</text>
@@ -211,7 +219,7 @@ const MODS = [
 
 export default {
   data() {
-    return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, history: [], showAllHist: false, coachHtml: uni.getStorageSync('coachAdvice') || '', coachLoading: false, growth: null, reco: null, gwMod: '' };
+    return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, history: [], showAllHist: false, coachHtml: uni.getStorageSync('coachAdvice') || '', coachLoading: false, growth: null, reco: null, dueN: 0, gwMod: '' };
   },
   computed: {
     gwMods() {
@@ -446,6 +454,9 @@ export default {
       if (pct > 0.2) return 'sev-mid';
       return '';
     },
+    goBook() {
+      uni.switchTab({ url: '/pages/book/book' });
+    },
     goSub(module, sub) {
       uni.setStorageSync('practicePreset', { module, submodule: sub, count: 10 });
       uni.switchTab({ url: '/pages/practice/practice' });
@@ -508,6 +519,10 @@ export default {
       if (!uid) return;
       try {
         this.reco = await request('/api/recommend?uid=' + encodeURIComponent(uid));
+      } catch (e) { /* 非关键路径 */ }
+      try {
+        const d = await request('/api/review');
+        this.dueN = d.total || 0;
       } catch (e) { /* 非关键路径 */ }
     },
     async load() {
