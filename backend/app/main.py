@@ -24,6 +24,17 @@ def check_access(x_access_code: str | None):
 db.init_db()
 
 
+def _friendly_ai_err(e: Exception) -> str:
+    if isinstance(e, httpx.HTTPStatusError):
+        code = e.response.status_code
+        if code in (402, 403, 429):
+            return "AI 服务额度已用完，请稍后再试"
+        return "AI 服务暂时不可用，请稍后再试"
+    if isinstance(e, httpx.HTTPError):
+        return "AI 服务连接失败，请稍后再试"
+    return str(e)
+
+
 def _cache_key(question_text: str | None, user_answer: str | None) -> str:
     raw = (question_text or "").strip() + "\n||\n" + (user_answer or "").strip()
     return hashlib.sha256(raw.encode()).hexdigest()
@@ -76,11 +87,7 @@ async def api_explain(
         else:
             explanation = await engine.explain(extracted, user_answer)
     except Exception as e:  # noqa: BLE001
-        msg = str(e)
-        if isinstance(e, httpx.HTTPStatusError):
-            code = e.response.status_code
-            msg = "AI 服务额度已用完，请稍后再试" if code in (402, 403, 429) else "AI 服务暂时不可用，请稍后再试"
-        raise HTTPException(502, f"解析失败：{msg}") from e
+        raise HTTPException(502, f"解析失败：{_friendly_ai_err(e)}") from e
     suspect = engine.is_suspect(extracted.get("question_text", ""))
     meta = {
         "module": None if suspect else extracted.get("module"),
@@ -165,7 +172,7 @@ async def api_explain_stream(
                         db.save_explain_cache(raw_key, meta, full)
             yield "event: done\ndata: {}\n\n"
         except Exception as e:  # noqa: BLE001
-            yield "event: error\ndata: " + json.dumps({"message": str(e)}, ensure_ascii=False) + "\n\n"
+            yield "event: error\ndata: " + json.dumps({"message": _friendly_ai_err(e)}, ensure_ascii=False) + "\n\n"
 
     return StreamingResponse(gen(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
@@ -180,7 +187,7 @@ async def api_similar(body: dict, x_access_code: str | None = Header(None)):
     try:
         content = await engine.similar_question(qt, body.get("question_type"))
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(502, f"生成失败：{e}") from e
+        raise HTTPException(502, f"生成失败：{_friendly_ai_err(e)}") from e
     return {"content": content}
 
 

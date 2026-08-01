@@ -73,7 +73,7 @@ async def chat(messages: list, temperature: float = 0.2, max_tokens: int = 4000)
                         "max_tokens": max_tokens,
                     },
                 )
-            if resp.status_code in _QUOTA_CODES and _rescue_ok(messages):
+            if (resp.status_code in _QUOTA_CODES or resp.status_code >= 500) and _rescue_ok(messages):
                 resp = await client.post(
                     f"{RESCUE_BASE_URL}/v1/chat/completions",
                     headers={"Authorization": f"Bearer {RESCUE_API_KEY}"},
