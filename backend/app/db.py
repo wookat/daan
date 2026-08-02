@@ -397,7 +397,7 @@ def import_shenlun(questions: list[dict], materials: list[dict], batch: str) -> 
     return {"questions": qn, "materials": mn, "batch": batch}
 
 
-def shenlun_questions(qtype: str | None = None, year: int | None = None, limit: int = 20, offset: int = 0) -> list[dict]:
+def shenlun_questions(qtype: str | None = None, year: int | None = None, region: str | None = None, limit: int = 20, offset: int = 0) -> list[dict]:
     conn = get_conn()
     where = ["(disabled IS NULL OR disabled=0)"]
     args: list = []
@@ -407,6 +407,9 @@ def shenlun_questions(qtype: str | None = None, year: int | None = None, limit: 
     if year:
         where.append("exam_year=?")
         args.append(year)
+    if region:
+        where.append("exam_region=?")
+        args.append(region)
     rows = conn.execute(
         f"""SELECT id, exam_year, exam_region, paper, qtype, question,
                    LENGTH(material) material_len
@@ -416,6 +419,17 @@ def shenlun_questions(qtype: str | None = None, year: int | None = None, limit: 
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+def shenlun_filters() -> dict:
+    conn = get_conn()
+    years = [r[0] for r in conn.execute(
+        "SELECT DISTINCT exam_year FROM shenlun_questions WHERE (disabled IS NULL OR disabled=0) AND exam_year IS NOT NULL ORDER BY exam_year DESC")]
+    regions = [r[0] for r in conn.execute(
+        "SELECT exam_region FROM shenlun_questions WHERE (disabled IS NULL OR disabled=0) AND exam_region IS NOT NULL "
+        "GROUP BY exam_region ORDER BY COUNT(*) DESC")]
+    conn.close()
+    return {"years": years, "regions": regions}
 
 
 def shenlun_question(qid: int) -> dict | None:

@@ -409,8 +409,13 @@ def api_shenlun_import(body: dict, x_import_token: str | None = Header(None)):
 
 
 @app.get("/api/shenlun/questions")
-def api_shenlun_questions(qtype: str | None = None, year: int | None = None, limit: int = 20, offset: int = 0):
-    return {"items": db.shenlun_questions(qtype, year, limit, offset)}
+def api_shenlun_questions(qtype: str | None = None, year: int | None = None, region: str | None = None, limit: int = 20, offset: int = 0):
+    return {"items": db.shenlun_questions(qtype, year, region, limit, offset)}
+
+
+@app.get("/api/shenlun/filters")
+def api_shenlun_filters():
+    return db.shenlun_filters()
 
 
 @app.get("/api/shenlun/questions/{qid}")

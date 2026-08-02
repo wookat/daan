@@ -9,6 +9,14 @@
       <view class="chips">
         <text v-for="t in QTYPES" :key="t" class="chip" :class="{ on: qtype === t }" @click="setQtype(t)">{{ t }}</text>
       </view>
+      <scroll-view v-if="years.length" scroll-x class="chips-x">
+        <text class="chip sm" :class="{ on: !year }" @click="setYear(0)">全部年份</text>
+        <text v-for="y in years" :key="y" class="chip sm" :class="{ on: year === y }" @click="setYear(y)">{{ y }}</text>
+      </scroll-view>
+      <scroll-view v-if="regions.length" scroll-x class="chips-x">
+        <text class="chip sm" :class="{ on: !region }" @click="setRegion('')">全部地区</text>
+        <text v-for="r in regions" :key="r" class="chip sm" :class="{ on: region === r }" @click="setRegion(r)">{{ r }}</text>
+      </scroll-view>
       <view v-if="loading" class="spin">加载中…</view>
       <view v-else-if="!qs.length" class="spin">暂无题目，敬请期待</view>
       <view v-for="q in qs" :key="q.id" class="card q-item" @click="openQ(q.id)">
@@ -92,17 +100,24 @@ export default {
       mOffset: 0,
       qEnd: false,
       mEnd: false,
+      years: [],
+      regions: [],
+      year: 0,
+      region: '',
     };
   },
   onLoad() {
     this.loadQs();
+    this.loadFilters();
   },
   methods: {
     async loadQs(append) {
       this.loading = !append;
       try {
         const t = this.qtype === '全部' ? '' : '&qtype=' + encodeURIComponent(this.qtype);
-        const d = await request('/api/shenlun/questions?limit=20&offset=' + this.qOffset + t);
+        const y = this.year ? '&year=' + this.year : '';
+        const rg = this.region ? '&region=' + encodeURIComponent(this.region) : '';
+        const d = await request('/api/shenlun/questions?limit=20&offset=' + this.qOffset + t + y + rg);
         const items = d.items || [];
         this.qEnd = items.length < 20;
         this.qs = append ? this.qs.concat(items) : items;
@@ -123,6 +138,29 @@ export default {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
       this.loading = false;
+    },
+    async loadFilters() {
+      try {
+        const d = await request('/api/shenlun/filters');
+        this.years = d.years || [];
+        this.regions = d.regions || [];
+      } catch (e) {
+        /* 筛选项加载失败不阻断列表 */
+      }
+    },
+    setYear(y) {
+      this.year = y;
+      this.qOffset = 0;
+      this.qEnd = false;
+      this.detail = null;
+      this.loadQs();
+    },
+    setRegion(r) {
+      this.region = r;
+      this.qOffset = 0;
+      this.qEnd = false;
+      this.detail = null;
+      this.loadQs();
     },
     switchMat() {
       this.tab = 'm';
@@ -206,6 +244,9 @@ export default {
 .m-topic { font-size: 24rpx; font-weight: 600; color: var(--ink-1, #1f2937); }
 .m-content { font-size: 25rpx; color: var(--ink-2, #4b5563); line-height: 1.8; white-space: pre-wrap; display: block; margin: 8rpx 0; word-break: break-all; overflow-wrap: anywhere; }
 .m-content.clamp { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
+.chips-x { white-space: nowrap; margin-bottom: 14rpx; }
+.chips-x .chip { display: inline-block; margin-right: 12rpx; }
+.chip.sm { font-size: 22rpx; padding: 10rpx 20rpx; }
 .m-src { font-size: 22rpx; color: var(--ink-3, #9ca3af); word-break: break-all; overflow-wrap: anywhere; display: block; }
 .d-ta { width: 100%; box-sizing: border-box; min-height: 220rpx; background: #f8f9fc; border: 1rpx solid var(--line, #e5e7eb); border-radius: 12rpx; padding: 18rpx; font-size: 25rpx; line-height: 1.7; }
 .grade-btn { margin-top: 16rpx; text-align: center; background: var(--brand, #4f46e5); color: #fff; font-size: 27rpx; font-weight: 600; border-radius: 999rpx; padding: 20rpx 0; }
