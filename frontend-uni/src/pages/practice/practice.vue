@@ -197,6 +197,7 @@
       </view>
       <view class="progress"><view class="pfill" :style="{ width: (idx / items.length) * 100 + '%' }" /></view>
       <view v-if="cur.is_real" class="real-tag">真题{{ cur.exam_year ? ' · ' + cur.exam_year : '' }}{{ cur.exam_region ? ' · ' + cur.exam_region : '' }}</view>
+      <view v-if="cur.group_seq" class="grp-tag">同材料题组 {{ cur.group_seq }}</view>
       <view class="q" :style="qStyle">
         <template v-if="qSegs"><text v-for="(s, si) in qSegs" :key="si" :class="{ qhl: s.hl }">{{ s.t }}</text></template>
         <template v-else>{{ cur.question }}</template>
@@ -949,9 +950,10 @@ export default {
       const uid = uni.getStorageSync('anonUid');
       const uidQ = uid ? '&uid=' + encodeURIComponent(uid) : '';
       const adQ = adaptive && uid ? '&adaptive=1' : '';
+      const grpQ = module === 'ziliao' && !submodule && !this.realMode ? '&grouped=1' : '';
       try {
         let d = await request(
-          '/api/questions?limit=' + limit + realQ + uidQ + adQ +
+          '/api/questions?limit=' + limit + realQ + uidQ + adQ + grpQ +
             (module ? '&module=' + module : '') +
             (submodule ? '&submodule=' + encodeURIComponent(submodule) : '')
         );
@@ -1397,6 +1399,7 @@ export default {
 .set-chip { font-size: 23rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 12rpx 24rpx; }
 .set-chip.on { color: #fff; background: var(--brand); border-color: var(--brand); }
 .real-tag { display: inline-block; font-size: 21rpx; color: #b45309; background: #fef3c7; border-radius: 8rpx; padding: 4rpx 14rpx; margin-bottom: 10rpx; }
+.grp-tag { display: inline-block; font-size: 21rpx; color: #0e7490; background: #cffafe; border-radius: 8rpx; padding: 4rpx 14rpx; margin-bottom: 10rpx; margin-left: 10rpx; }
 .daily { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 20rpx; padding: 24rpx 28rpx; margin-bottom: 20rpx; }
 .daily.done { background: linear-gradient(135deg, #10b981, #059669); }
 .daily-t { display: flex; align-items: center; gap: 8rpx; }

@@ -1,4 +1,5 @@
 """错题本存储（SQLite）。"""
+import hashlib
 import json
 import os
 import random
@@ -267,6 +268,80 @@ def random_questions(
         d["options"] = json.loads(d.get("options") or "{}")
         by_id[d["id"]] = d
     return [by_id[i] for i in ids if i in by_id]
+
+
+def _material_key(text: str) -> str | None:
+    """提取资料分析题的材料指纹（用于同材料题组）。"""
+    t = text or ""
+    if "【资料】" in t:
+        t = t.split("【资料】", 1)[1]
+    m = re.split(r"问题\s*[：:]", t, maxsplit=1)
+    mat = m[0] if len(m) > 1 else t
+    mat = re.sub(r"\s+", "", mat)
+    if len(mat) < 120:
+        return None
+    return hashlib.md5(mat[:400].encode()).hexdigest()
+
+
+def refresh_material_hash(batch: int = 20000) -> int:
+    conn = get_conn()
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(questions)")}
+    if "material_hash" not in cols:
+        conn.execute("ALTER TABLE questions ADD COLUMN material_hash TEXT")
+    rows = conn.execute(
+        "SELECT id, question FROM questions WHERE module='ziliao' AND material_hash IS NULL LIMIT ?",
+        (batch,),
+    ).fetchall()
+    n = 0
+    for r in rows:
+        conn.execute(
+            "UPDATE questions SET material_hash=? WHERE id=?",
+            (_material_key(r["question"]) or "-", r["id"]),
+        )
+        n += 1
+    conn.commit()
+    conn.close()
+    return n
+
+
+def grouped_ziliao_questions(limit: int = 10, uid: str | None = None) -> list[dict]:
+    """资料分析材料题组：选若干材料，同材料题连续出，标注 组内序号/组题数。"""
+    conn = get_conn()
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(questions)")}
+    if "material_hash" not in cols:
+        conn.close()
+        return random_questions("ziliao", limit, uid=uid)
+    out: list[dict] = []
+    hashes = [
+        r["material_hash"]
+        for r in conn.execute(
+            """SELECT material_hash FROM questions
+               WHERE module='ziliao' AND material_hash IS NOT NULL AND material_hash!='-'
+                 AND (disabled IS NULL OR disabled=0)
+               GROUP BY material_hash HAVING COUNT(*)>=2
+               ORDER BY RANDOM() LIMIT 8"""
+        )
+    ]
+    for h in hashes:
+        if len(out) >= limit:
+            break
+        rows = conn.execute(
+            "SELECT * FROM questions WHERE module='ziliao' AND material_hash=? "
+            "AND (disabled IS NULL OR disabled=0) ORDER BY id LIMIT 5",
+            (h,),
+        ).fetchall()
+        if len(rows) < 2:
+            continue
+        for i, r in enumerate(rows):
+            d = dict(r)
+            d["options"] = json.loads(d.get("options") or "{}")
+            d["group_seq"] = f"{i + 1}/{len(rows)}"
+            out.append(d)
+    conn.close()
+    if len(out) < limit:
+        seen = {d["id"] for d in out}
+        out += [q for q in random_questions("ziliao", limit - len(out), uid=uid) if q["id"] not in seen]
+    return out
 
 
 def question_counts() -> list[dict]:

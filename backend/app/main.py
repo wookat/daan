@@ -29,6 +29,7 @@ def _stats_refresher():
     while True:
         try:
             db.refresh_question_stats()
+            db.refresh_material_hash()
         except Exception:
             pass
         time.sleep(6 * 3600)
@@ -383,7 +384,13 @@ def api_questions(
     region: str | None = None,
     uid: str | None = None,
     adaptive: int = 0,
+    grouped: int = 0,
 ):
+    if grouped and module == "ziliao" and not real:
+        return {
+            "items": db.grouped_ziliao_questions(min(limit, 50), uid=uid),
+            "counts": db.question_counts(),
+        }
     return {
         "items": db.random_questions(
             module, min(limit, 50), submodule, real_only=bool(real), year=year, region=region, uid=uid,
