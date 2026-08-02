@@ -9,8 +9,8 @@ export default {
 <style>
 /* 全局设计规范 */
 page {
-  --brand: #4f46e5;
-  --brand-soft: #eef2ff;
+  --brand: #3b6ff5;
+  --brand-soft: #edf3fe;
   --ink: #1f2430;
   --ink-2: #6b7280;
   --ok: #16a34a;
@@ -21,7 +21,7 @@ page {
   --card: #ffffff;
   --soft-bg: #f8f9fc;
   --radius: 24rpx;
-  background: linear-gradient(180deg, #eef2ff 0%, #f6f7fb 240rpx, #f6f7fb 100%);
+  background: linear-gradient(180deg, #edf3fe 0%, #f6f7fb 240rpx, #f6f7fb 100%);
   color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', 'Microsoft YaHei', sans-serif;
 }

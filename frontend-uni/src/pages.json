@@ -29,7 +29,7 @@
   ],
   "tabBar": {
     "color": "#8a90a0",
-    "selectedColor": "#4f46e5",
+    "selectedColor": "#3b6ff5",
     "backgroundColor": "#ffffff",
     "list": [
       { "pagePath": "pages/ask/ask", "text": "拍题讲解", "iconPath": "static/tab/ask.png", "selectedIconPath": "static/tab/ask-on.png" },

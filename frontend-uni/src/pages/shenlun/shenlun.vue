@@ -9,15 +9,24 @@
     <template v-if="tab === 'q' && !detail">
       <view class="chips">
         <text v-for="t in QTYPES" :key="t" class="chip" :class="{ on: qtype === t }" @click="setQtype(t)">{{ t }}</text>
+        <text class="chip flt" :class="{ on: year || region }" @click="fltOpen = true">筛选{{ year || region ? ' · ' + [year || '', region || ''].filter(Boolean).join(' ') : ' ▾' }}</text>
+        <text v-if="year || region" class="chip clr" @click="clearFlt">清除 ✕</text>
       </view>
-      <scroll-view v-if="years.length" scroll-x class="chips-x">
-        <text class="chip sm" :class="{ on: !year }" @click="setYear(0)">全部年份</text>
-        <text v-for="y in years" :key="y" class="chip sm" :class="{ on: year === y }" @click="setYear(y)">{{ y }}</text>
-      </scroll-view>
-      <scroll-view v-if="regions.length" scroll-x class="chips-x">
-        <text class="chip sm" :class="{ on: !region }" @click="setRegion('')">全部地区</text>
-        <text v-for="r in regions" :key="r" class="chip sm" :class="{ on: region === r }" @click="setRegion(r)">{{ r }}</text>
-      </scroll-view>
+      <view v-if="fltOpen" class="mask" @click="fltOpen = false">
+        <view class="sheet" @click.stop>
+          <view class="sheet-h"><text class="sheet-t">筛选</text><text class="sheet-x" @click="fltOpen = false">完成</text></view>
+          <view v-if="years.length" class="sheet-k">年份</view>
+          <view v-if="years.length" class="chips">
+            <text class="chip sm" :class="{ on: !year }" @click="setYear(0)">全部</text>
+            <text v-for="y in years" :key="y" class="chip sm" :class="{ on: year === y }" @click="setYear(y)">{{ y }}</text>
+          </view>
+          <view v-if="regions.length" class="sheet-k">地区</view>
+          <view v-if="regions.length" class="chips">
+            <text class="chip sm" :class="{ on: !region }" @click="setRegion('')">全部</text>
+            <text v-for="r in regions" :key="r" class="chip sm" :class="{ on: region === r }" @click="setRegion(r)">{{ r }}</text>
+          </view>
+        </view>
+      </view>
       <view v-if="loading" class="spin">加载中…</view>
       <view v-else-if="!qs.length" class="spin">暂无题目，敬请期待</view>
       <view v-for="q in qs" :key="q.id" class="card q-item" @click="openQ(q.id)">
@@ -138,6 +147,7 @@ export default {
       regions: [],
       year: 0,
       region: '',
+      fltOpen: false,
     };
   },
   computed: {
@@ -194,6 +204,13 @@ export default {
       this.qOffset = 0;
       this.qEnd = false;
       this.detail = null;
+      this.loadQs();
+    },
+    clearFlt() {
+      this.year = 0;
+      this.region = '';
+      this.qOffset = 0;
+      this.qEnd = false;
       this.loadQs();
     },
     setRegion(r) {
@@ -345,10 +362,10 @@ export default {
 .page { padding: 20rpx 24rpx 40rpx; }
 .tabs { display: flex; gap: 12rpx; margin-bottom: 20rpx; }
 .tab { flex: 1; text-align: center; font-size: 27rpx; color: var(--ink-2, #6b7280); background: #fff; border-radius: 16rpx; padding: 18rpx 0; }
-.tab.on { color: #fff; background: var(--brand, #4f46e5); font-weight: 600; }
+.tab.on { color: #fff; background: var(--brand, #3b6ff5); font-weight: 600; }
 .chips { display: flex; gap: 12rpx; flex-wrap: wrap; margin-bottom: 20rpx; }
 .chip { font-size: 23rpx; color: var(--ink-2, #6b7280); background: #fff; border: 1rpx solid var(--line, #e5e7eb); border-radius: 999rpx; padding: 12rpx 24rpx; }
-.chip.on { color: #fff; background: var(--brand, #4f46e5); border-color: var(--brand, #4f46e5); }
+.chip.on { color: #fff; background: var(--brand, #3b6ff5); border-color: var(--brand, #3b6ff5); }
 .card { background: #fff; border-radius: 20rpx; padding: 26rpx 28rpx; margin-bottom: 18rpx; }
 .hist-item { background: #f8f9fc; border-radius: 12rpx; padding: 16rpx 18rpx; margin-bottom: 12rpx; }
 .hist-time { font-size: 21rpx; color: var(--ink-3, #9ca3af); display: block; margin-bottom: 6rpx; }
@@ -357,12 +374,12 @@ export default {
 .spin { text-align: center; color: var(--ink-3, #9ca3af); font-size: 25rpx; padding: 60rpx 0; }
 .q-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
 .q-paper { font-size: 22rpx; color: #b45309; background: #fef3c7; border-radius: 8rpx; padding: 4rpx 14rpx; }
-.q-type { font-size: 22rpx; color: var(--brand, #4f46e5); background: var(--brand-soft, #eef1fd); border-radius: 8rpx; padding: 4rpx 14rpx; }
+.q-type { font-size: 22rpx; color: var(--brand, #3b6ff5); background: var(--brand-soft, #edf3fe); border-radius: 8rpx; padding: 4rpx 14rpx; }
 .q-text { font-size: 26rpx; color: var(--ink-1, #1f2937); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.more { text-align: center; color: var(--brand, #4f46e5); font-size: 25rpx; padding: 20rpx 0 40rpx; }
-.back { color: var(--brand, #4f46e5); font-size: 26rpx; padding: 6rpx 0 18rpx; }
+.more { text-align: center; color: var(--brand, #3b6ff5); font-size: 25rpx; padding: 20rpx 0 40rpx; }
+.back { color: var(--brand, #3b6ff5); font-size: 26rpx; padding: 6rpx 0 18rpx; }
 .d-h { font-size: 25rpx; font-weight: 700; color: var(--ink-1, #1f2937); margin: 22rpx 0 10rpx; }
-.d-h.toggle { color: var(--brand, #4f46e5); }
+.d-h.toggle { color: var(--brand, #3b6ff5); }
 .d-h.ref { color: #b45309; }
 .d-q { font-size: 26rpx; color: var(--ink-1, #1f2937); line-height: 1.7; white-space: pre-wrap; }
 .d-mat { font-size: 25rpx; color: var(--ink-2, #4b5563); line-height: 1.8; white-space: pre-wrap; }
@@ -375,12 +392,18 @@ export default {
 .chip.fav.on { background: #fffbeb; color: #b45309; border-color: #fcd34d; }
 .m-content { font-size: 25rpx; color: var(--ink-2, #4b5563); line-height: 1.8; white-space: pre-wrap; display: block; margin: 8rpx 0; word-break: break-all; overflow-wrap: anywhere; }
 .m-content.clamp { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
-.chips-x { white-space: nowrap; margin-bottom: 14rpx; }
-.chips-x .chip { display: inline-block; margin-right: 12rpx; }
 .chip.sm { font-size: 22rpx; padding: 10rpx 20rpx; }
+.chip.flt { border-style: dashed; }
+.chip.clr { color: var(--ink-3, #9ca3af); }
+.mask { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 90; display: flex; align-items: flex-end; }
+.sheet { width: 100%; background: #fff; border-radius: 24rpx 24rpx 0 0; padding: 26rpx 28rpx 50rpx; box-sizing: border-box; max-height: 70vh; overflow-y: auto; }
+.sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18rpx; }
+.sheet-t { font-size: 30rpx; font-weight: 700; }
+.sheet-x { font-size: 26rpx; color: var(--brand, #3b6ff5); font-weight: 600; padding: 10rpx 0 10rpx 24rpx; }
+.sheet-k { font-size: 23rpx; color: var(--ink-3, #8f959e); margin: 14rpx 0 10rpx; }
 .m-src { font-size: 22rpx; color: var(--ink-3, #9ca3af); word-break: break-all; overflow-wrap: anywhere; display: block; }
 .d-ta { width: 100%; box-sizing: border-box; min-height: 220rpx; background: #f8f9fc; border: 1rpx solid var(--line, #e5e7eb); border-radius: 12rpx; padding: 18rpx; font-size: 25rpx; line-height: 1.7; }
-.grade-btn { margin-top: 16rpx; text-align: center; background: var(--brand, #4f46e5); color: #fff; font-size: 27rpx; font-weight: 600; border-radius: 999rpx; padding: 20rpx 0; }
+.grade-btn { margin-top: 16rpx; text-align: center; background: var(--brand, #3b6ff5); color: #fff; font-size: 27rpx; font-weight: 600; border-radius: 999rpx; padding: 20rpx 0; }
 .grade-btn.dis { opacity: 0.5; }
 .d-grade { margin-top: 8rpx; }
 .g-note { font-size: 21rpx; color: var(--ink-3, #9ca3af); font-weight: 400; }

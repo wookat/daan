@@ -59,7 +59,7 @@
       </view>
       <view v-if="counts.length" class="card custom-row" @click="customOpen = true">
         <view class="daily-l">
-          <view class="daily-t"><view class="exam-ico"><uni-icons type="gear-filled" size="16" color="#4f46e5" /></view><text class="daily-t-t dark">自定义练习</text></view>
+          <view class="daily-t"><view class="exam-ico"><uni-icons type="gear-filled" size="16" color="#3b6ff5" /></view><text class="daily-t-t dark">自定义练习</text></view>
           <text class="daily-s dark">选来源 / 年份 / 地区 / 题量 / 每日目标</text>
         </view>
         <text class="daily-go">设置</text>
@@ -1488,9 +1488,9 @@ export default {
 .goal-t { font-size: 24rpx; color: var(--ink-2); }
 .goal-set { display: flex; gap: 8rpx; }
 .goal-chip { font-size: 22rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 8rpx 20rpx; }
-.goal-chip.on { color: #fff; background: var(--brand, #4f6ef7); border-color: var(--brand, #4f6ef7); }
-.goal-bar { height: 12rpx; background: var(--brand-soft, #eef1fd); border-radius: 999rpx; overflow: hidden; }
-.goal-fill { height: 100%; background: var(--brand, #4f6ef7); border-radius: 999rpx; transition: width 0.3s; }
+.goal-chip.on { color: #fff; background: var(--brand, #3b6ff5); border-color: var(--brand, #3b6ff5); }
+.goal-bar { height: 12rpx; background: var(--brand-soft, #edf3fe); border-radius: 999rpx; overflow: hidden; }
+.goal-fill { height: 100%; background: var(--brand, #3b6ff5); border-radius: 999rpx; transition: width 0.3s; }
 .goal-fill.done { background: #16a34a; }
 .setrow { display: flex; align-items: center; gap: 18rpx; margin-bottom: 16rpx; flex-wrap: wrap; }
 .set-k { font-size: 24rpx; color: var(--ink-2); }
@@ -1502,12 +1502,12 @@ export default {
 .new-tag { font-size: 19rpx; color: #fff; background: #f43f5e; border-radius: 999rpx; padding: 2rpx 12rpx; margin-left: 10rpx; }
 .real-tag { display: inline-block; font-size: 21rpx; color: #b45309; background: #fef3c7; border-radius: 8rpx; padding: 4rpx 14rpx; margin-bottom: 10rpx; }
 .grp-tag { display: inline-block; font-size: 21rpx; color: #0e7490; background: #cffafe; border-radius: 8rpx; padding: 4rpx 14rpx; margin-bottom: 10rpx; margin-left: 10rpx; }
-.daily { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 20rpx; padding: 24rpx 28rpx; margin-bottom: 20rpx; }
+.daily { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(120deg, #3b6ff5, #6c9bff); border-radius: 20rpx; padding: 24rpx 28rpx; margin-bottom: 20rpx; }
 .daily.done { background: linear-gradient(135deg, #10b981, #059669); }
 .daily-t { display: flex; align-items: center; gap: 8rpx; }
 .daily-t-t { font-size: 27rpx; font-weight: 700; color: #fff; }
 .daily-s { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.85); margin-top: 4rpx; }
-.daily-go { background: #fff; color: #4f46e5; font-size: 24rpx; font-weight: 600; border-radius: 999rpx; padding: 10rpx 26rpx; flex-shrink: 0; }
+.daily-go { background: #fff; color: #3b6ff5; font-size: 24rpx; font-weight: 600; border-radius: 999rpx; padding: 10rpx 26rpx; flex-shrink: 0; }
 .smart { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #f97316, #f43f5e); border-radius: 20rpx; padding: 24rpx 28rpx; margin-bottom: 20rpx; }
 .smart-t { display: flex; align-items: center; gap: 8rpx; font-size: 27rpx; font-weight: 700; color: #fff; }
 .smart-t-t { font-size: 27rpx; font-weight: 700; color: #fff; }
@@ -1515,7 +1515,7 @@ export default {
 .smart-go { background: #fff; color: #f43f5e; font-size: 24rpx; font-weight: 600; border-radius: 999rpx; padding: 10rpx 26rpx; flex-shrink: 0; }
 .grid { display: flex; flex-wrap: wrap; gap: 20rpx; }
 .mcard { width: calc(50% - 10rpx); box-sizing: border-box; background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 20rpx; padding: 24rpx; }
-.mcard.all { background: linear-gradient(135deg, #6366f1, #4f46e5); border: none; }
+.mcard.all { background: linear-gradient(135deg, #6c9bff, #3b6ff5); border: none; }
 .mcard.all .mname, .mcard.all .mn { color: #fff; }
 .mtop { display: flex; align-items: center; gap: 12rpx; margin-bottom: 8rpx; }
 .mico { width: 48rpx; height: 48rpx; line-height: 48rpx; text-align: center; border-radius: 12rpx; font-size: 24rpx; font-weight: 600; }
@@ -1552,7 +1552,7 @@ export default {
 .acard-foot { text-align: center; font-size: 23rpx; color: var(--ink-2); padding-bottom: 8rpx; }
 .op { font-size: 24rpx; color: var(--ink-2); margin-left: 6rpx; }
 .progress { height: 6rpx; background: #e0e7ff; border-radius: 999rpx; overflow: hidden; margin-bottom: 22rpx; }
-.pfill { height: 100%; background: linear-gradient(90deg, #6366f1, #4f46e5); border-radius: 999rpx; transition: width 0.3s ease; }
+.pfill { height: 100%; background: linear-gradient(90deg, #6c9bff, #3b6ff5); border-radius: 999rpx; transition: width 0.3s ease; }
 .q { font-size: 30rpx; line-height: 1.7; margin-bottom: 22rpx; white-space: pre-wrap; }
 .qimg { width: 100%; border-radius: 12rpx; margin-bottom: 8rpx; background: #f6f7fb; }
 .qimg-credit { font-size: 20rpx; color: var(--ink-2); margin-bottom: 16rpx; }
@@ -1635,7 +1635,7 @@ export default {
 .exam-ico.err { background: #fef2f2; }
 .daily-t-t.dark { color: #17181c; }
 .daily-s.dark { color: #7d818f; }
-.daily.exam .daily-go { background: #eef2ff; color: #4f46e5; }
+.daily.exam .daily-go { background: #edf3fe; color: #3b6ff5; }
 
 .timer.examleft { color: #ef4444; font-weight: 700; }
 .timer.overtime { color: #ef4444; font-weight: 700; }
@@ -1662,7 +1662,7 @@ export default {
 .mb-pct { font-size: 22rpx; color: var(--ink-2); width: 150rpx; text-align: right; flex-shrink: 0; }
 .report-grid { display: flex; flex-wrap: wrap; gap: 16rpx; justify-content: center; }
 .report-tip { text-align: center; font-size: 22rpx; color: var(--ink-2); margin-top: 14rpx; }
-.btn { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(79, 70, 229, 0.25); min-height: 44px; line-height: 44px; }
+.btn { background: linear-gradient(135deg, #6c9bff, #3b6ff5); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(59, 111, 245, 0.25); min-height: 44px; line-height: 44px; }
 .btn.ghost { background: var(--brand-soft); color: var(--brand); box-shadow: none; }
 .btn.plain { background: none; color: var(--ink-2); box-shadow: none; }
 .done { text-align: center; padding: 48rpx 28rpx; }
@@ -1682,7 +1682,7 @@ export default {
 .pr-scroll { white-space: nowrap; margin-bottom: 20rpx; }
 .pr-scroll .set-chip { display: inline-block; margin-right: 12rpx; }
 .sub-prog { font-size: 22rpx; color: var(--muted); }
-.sub-chip.all-chip { background: linear-gradient(135deg, #6366f1, #4f46e5); border: none; }
+.sub-chip.all-chip { background: linear-gradient(135deg, #6c9bff, #3b6ff5); border: none; }
 .sub-chip.all-chip .sub-name, .sub-chip.all-chip .sub-n { color: #fff; }
 .sub-name { font-size: 28rpx; font-weight: 600; color: var(--ink); }
 .sub-n { font-size: 22rpx; color: var(--ink-2); }

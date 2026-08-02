@@ -203,7 +203,7 @@
           </view>
         </view>
         <view class="bar">
-          <view class="fill" :style="{ width: (m.n / total) * 100 + '%', background: modColor(m.module) }" />
+          <view class="fill" :style="{ width: (m.n / total) * 100 + '%' }" />
         </view>
       </view>
     </view>
@@ -527,11 +527,6 @@ export default {
       const pct = md.got ? 100 : md.pct;
       return { background: `conic-gradient(${color} 0% ${pct}%, #eef0f4 ${pct}% 100%)` };
     },
-    modColor(mod) {
-      const KEY = { '资料分析': 'ziliao', '数量关系': 'shuliang', '言语理解': 'yanyu', '判断推理': 'panduan', '常识判断': 'changshi', '申论': 'shenlun' };
-      const C = { changshi: '#f59e0b', shuliang: '#3b82f6', panduan: '#8b5cf6', ziliao: '#10b981', yanyu: '#ef4444', shenlun: '#64748b' };
-      return C[KEY[mod] || mod] || '#6366f1';
-    },
     sevClass(n) {
       const pct = n / this.total;
       if (pct > 0.4) return 'sev-hi';
@@ -650,7 +645,7 @@ export default {
 .radar-box { display: flex; justify-content: center; padding: 40rpx 0 30rpx; }
 .radar { position: relative; width: 380rpx; height: 380rpx; }
 .ring { position: absolute; border: 1rpx solid var(--line); border-radius: 50%; box-sizing: border-box; }
-.poly { position: absolute; inset: 0; background: rgba(79, 70, 229, 0.35); border-radius: 2rpx; }
+.poly { position: absolute; inset: 0; background: rgba(59, 111, 245, 0.35); border-radius: 2rpx; }
 .axis-label { position: absolute; transform: translate(-50%, -50%); text-align: center; white-space: nowrap; }
 .al-name { display: block; font-size: 23rpx; color: var(--ink); font-weight: 600; }
 .al-val { display: block; font-size: 20rpx; color: var(--brand); }
@@ -660,7 +655,7 @@ export default {
 .bn { font-size: 23rpx; color: var(--ink-2); }
 .bgo { font-size: 24rpx; color: var(--brand); font-weight: 600; padding: 0 0 0 16rpx; min-height: 44px; display: inline-flex; align-items: center; }
 .bar { background: var(--brand-soft); border-radius: 999rpx; height: 20rpx; position: relative; overflow: hidden; }
-.fill { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #6366f1, #4f46e5); border-radius: 999rpx; transition: width 0.6s ease; }
+.fill { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #6c9bff, #3b6ff5); border-radius: 999rpx; transition: width 0.6s ease; }
 .fill.sev-hi { background: linear-gradient(90deg, #f87171, #ef4444); }
 .fill.sev-mid { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
 .tline { font-size: 26rpx; margin: 8rpx 0; }
@@ -669,13 +664,13 @@ export default {
 .tcol { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
 .tpct { font-size: 18rpx; color: var(--brand); height: 28rpx; }
 .tbar { flex: 1; width: 36rpx; background: var(--soft-bg); border-radius: 999rpx; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
-.tfill { width: 100%; background: linear-gradient(180deg, #6366f1, #4f46e5); border-radius: 999rpx; }
+.tfill { width: 100%; background: linear-gradient(180deg, #6c9bff, #3b6ff5); border-radius: 999rpx; }
 .tfill.lo { background: linear-gradient(180deg, #fbbf24, #f59e0b); }
 .tday { font-size: 19rpx; color: var(--ink-2); margin-top: 8rpx; }
 .radar-empty { text-align: center; padding: 30rpx 0 20rpx; }
 .re-t { font-size: 28rpx; font-weight: 600; }
 .re-s { font-size: 23rpx; color: var(--ink-2); margin: 8rpx 0 20rpx; }
-.re-btn { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border-radius: 18rpx; font-size: 26rpx; font-weight: 600; width: 50%; }
+.re-btn { background: linear-gradient(135deg, #6c9bff, #3b6ff5); color: #fff; border-radius: 18rpx; font-size: 26rpx; font-weight: 600; width: 50%; }
 .medals { display: flex; flex-wrap: wrap; }
 .medal { width: 25%; box-sizing: border-box; text-align: center; padding: 14rpx 6rpx; }
 .medal .m-ico { filter: grayscale(1); opacity: 0.55; }
@@ -712,8 +707,8 @@ export default {
 .km-legend { display: flex; gap: 18rpx; flex-wrap: wrap; margin-top: 8rpx; }
 .coach-btn {
   font-size: 24rpx;
-  color: #4f46e5;
-  background: #eef2ff;
+  color: #3b6ff5;
+  background: #edf3fe;
   border-radius: 999rpx;
   padding: 8rpx 22rpx;
 }
@@ -732,7 +727,7 @@ export default {
 .hist-time { font-size: 22rpx; color: var(--ink-2); width: 170rpx; }
 .gw-row { display: flex; align-items: center; gap: 14rpx; margin-bottom: 12rpx; }
 .gw-wk { font-size: 22rpx; color: var(--ink-2); width: 130rpx; flex-shrink: 0; }
-.gw-bar { flex: 1; height: 16rpx; background: var(--brand-soft, #eef1fd); border-radius: 999rpx; overflow: hidden; }
+.gw-bar { flex: 1; height: 16rpx; background: var(--brand-soft, #edf3fe); border-radius: 999rpx; overflow: hidden; }
 .gw-fill { height: 100%; background: #16a34a; border-radius: 999rpx; }
 .gw-fill.mid { background: #f59e0b; }
 .gw-fill.lo { background: #dc2626; }
@@ -740,7 +735,7 @@ export default {
 .gw-n { color: var(--ink-2); }
 .gw-tabs { display: flex; gap: 10rpx; margin-bottom: 14rpx; flex-wrap: wrap; }
 .gw-tab { font-size: 22rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 4rpx 18rpx; background: var(--card); }
-.gw-tab.on { color: #fff; background: var(--brand, #4f6ef7); border-color: var(--brand, #4f6ef7); }
+.gw-tab.on { color: #fff; background: var(--brand, #3b6ff5); border-color: var(--brand, #3b6ff5); }
 .gw-delta { font-size: 23rpx; color: #dc2626; margin-top: 6rpx; }
 .gw-delta.up { color: #16a34a; }
 .rc-row { display: flex; align-items: center; gap: 12rpx; padding: 14rpx 0; border-bottom: 1rpx solid var(--line); }
@@ -750,14 +745,14 @@ export default {
 .rc-tag { font-size: 20rpx; color: #16a34a; background: #f0fdf4; border-radius: 999rpx; padding: 2rpx 14rpx; flex-shrink: 0; }
 .rc-tag.warn { color: #dc2626; background: #fef2f2; }
 .rc-meta { font-size: 22rpx; color: var(--ink-2); flex-shrink: 0; }
-.rc-go { font-size: 23rpx; color: var(--brand, #4f6ef7); flex-shrink: 0; }
+.rc-go { font-size: 23rpx; color: var(--brand, #3b6ff5); flex-shrink: 0; }
 .rc-note { font-size: 20rpx; color: var(--ink-2); margin-top: 10rpx; }
 .sl-row { display: flex; align-items: baseline; gap: 10rpx; margin: 16rpx 0 12rpx; }
-.sl-num { font-size: 44rpx; font-weight: 700; color: var(--brand, #4f46e5); }
+.sl-num { font-size: 44rpx; font-weight: 700; color: var(--brand, #3b6ff5); }
 .sl-lab { font-size: 23rpx; color: var(--ink-2, #6b7280); }
 .sl-last { font-size: 21rpx; color: var(--ink-3, #9ca3af); margin-left: auto; }
 .sl-types { display: flex; flex-wrap: wrap; gap: 10rpx; }
-.sl-chip { font-size: 21rpx; color: var(--brand, #4f46e5); background: var(--brand-soft, #eef1fd); border-radius: 999rpx; padding: 8rpx 18rpx; }
+.sl-chip { font-size: 21rpx; color: var(--brand, #3b6ff5); background: var(--brand-soft, #edf3fe); border-radius: 999rpx; padding: 8rpx 18rpx; }
 .sl-ih { font-size: 23rpx; color: var(--ink-2, #6b7280); margin-top: 16rpx; padding: 10rpx 0; }
 .sl-issue { display: flex; align-items: flex-start; gap: 10rpx; margin-bottom: 10rpx; }
 .sl-ik { font-size: 19rpx; color: #dc2626; background: #fef2f2; border-radius: 6rpx; padding: 2rpx 10rpx; flex-shrink: 0; margin-top: 2rpx; }
@@ -774,7 +769,7 @@ export default {
 .hist-n { font-size: 24rpx; color: var(--ink-2); }
 .hist-pct { font-size: 26rpx; font-weight: 700; color: #16a34a; width: 90rpx; text-align: right; }
 .hist-pct.lo { color: #dc2626; }
-.hist-more { text-align: center; font-size: 24rpx; color: var(--brand, #4f6ef7); padding: 14rpx 0 2rpx; }
+.hist-more { text-align: center; font-size: 24rpx; color: var(--brand, #3b6ff5); padding: 14rpx 0 2rpx; }
 .km-lg { font-size: 20rpx; color: var(--ink-2); }
 .km-lg.r { color: #ef4444; }
 .km-lg.y { color: #f59e0b; }
@@ -782,6 +777,6 @@ export default {
 .bk-tip { font-size: 23rpx; color: var(--ink-2); line-height: 1.6; margin-bottom: 14rpx; }
 .bk-code { font-size: 26rpx; font-weight: 700; color: var(--brand); background: var(--brand-soft); border-radius: 14rpx; padding: 14rpx 22rpx; margin-bottom: 14rpx; }
 .row2 { display: flex; gap: 16rpx; }
-.bk-btn { flex: 1; background: var(--brand-soft, #eef2ff); color: var(--brand, #4f46e5); border-radius: 16rpx; font-size: 25rpx; font-weight: 600; }
+.bk-btn { flex: 1; background: var(--brand-soft, #edf3fe); color: var(--brand, #3b6ff5); border-radius: 16rpx; font-size: 25rpx; font-weight: 600; }
 .bk-btn.ghost { background: var(--brand-soft); color: var(--brand); }
 </style>

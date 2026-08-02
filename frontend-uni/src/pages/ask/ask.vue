@@ -1,8 +1,8 @@
 <template>
   <view class="wrap">
     <view class="hero">
-      <text class="hero-t">花生十三错题助手</text>
-      <text class="hero-s">拍题即得你学的方法体系讲解</text>
+      <text class="hero-t">拍题讲解</text>
+      <text class="hero-s">拍题即得花生十三方法体系讲解</text>
     </view>
     <view class="today">
       <view class="goal-ring" :class="{ hit: todayDone >= goal }" :style="goalRingStyle" @click="cycleGoal">
@@ -18,12 +18,12 @@
     </view>
     <view class="card">
       <view class="seg">
-        <view class="seg-i" :class="{ on: mode === 'img' }" @click="mode = 'img'"><uni-icons type="camera-filled" size="16" :color="mode === 'img' ? '#4f46e5' : '#8a90a0'" /><text class="seg-t">拍图识题</text></view>
-        <view class="seg-i" :class="{ on: mode === 'text' }" @click="mode = 'text'"><uni-icons type="compose" size="16" :color="mode === 'text' ? '#4f46e5' : '#8a90a0'" /><text class="seg-t">粘贴文字</text></view>
+        <view class="seg-i" :class="{ on: mode === 'img' }" @click="mode = 'img'"><uni-icons type="camera-filled" size="16" :color="mode === 'img' ? '#3b6ff5' : '#8a90a0'" /><text class="seg-t">拍图识题</text></view>
+        <view class="seg-i" :class="{ on: mode === 'text' }" @click="mode = 'text'"><uni-icons type="compose" size="16" :color="mode === 'text' ? '#3b6ff5' : '#8a90a0'" /><text class="seg-t">粘贴文字</text></view>
       </view>
       <template v-if="mode === 'img'">
         <view v-if="!imagePath" class="drop" @click="pickImage">
-          <view class="drop-ico"><uni-icons type="camera-filled" size="44" color="#4f46e5" /></view>
+          <view class="drop-ico"><uni-icons type="camera-filled" size="44" color="#3b6ff5" /></view>
           <text class="drop-t">拍照 / 从相册选择</text>
           <text class="drop-s">支持错题截图、试卷拍照</text>
         </view>
@@ -36,7 +36,9 @@
         <textarea v-model="qtext" class="ta" placeholder="粘贴题干和选项…" :maxlength="-1" auto-height />
       </template>
       <text class="label">你选的答案（可选，填了会帮你分析错因）</text>
-      <input v-model="uanswer" class="inp" placeholder="如：A" maxlength="10" />
+      <view class="ans-chips">
+        <text v-for="o in ['A', 'B', 'C', 'D']" :key="o" class="ans-chip" :class="{ on: uanswer === o }" @click="uanswer = uanswer === o ? '' : o">{{ o }}</text>
+      </view>
       <view style="height: 24rpx" />
       <button class="btn" :disabled="loading" @click="doExplain">用花生十三方法讲解</button>
     </view>
@@ -455,7 +457,7 @@ export default {
 .today-t { display: block; font-size: 28rpx; font-weight: 700; color: #fff; }
 .today-s { display: flex; align-items: center; gap: 6rpx; font-size: 21rpx; color: rgba(255, 255, 255, 0.78); margin-top: 6rpx; }
 .today-s-t { font-size: 21rpx; color: rgba(255, 255, 255, 0.78); }
-.today-btn { background: #fff; color: #4f46e5; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 12rpx 28rpx; flex-shrink: 0; }
+.today-btn { background: #fff; color: #3b6ff5; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 12rpx 28rpx; flex-shrink: 0; }
 .drop { border: 2rpx dashed var(--brand); background: var(--brand-soft); border-radius: 24rpx; padding: 48rpx 24rpx; text-align: center; margin-bottom: 8rpx; }
 .drop-ico { width: 112rpx; height: 112rpx; border-radius: 50%; background: #e0e7ff; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12rpx; }
 .drop-t { display: block; font-size: 29rpx; font-weight: 600; color: var(--brand); }
@@ -465,7 +467,7 @@ export default {
 .seg { display: flex; background: var(--soft-bg); border-radius: 16rpx; padding: 6rpx; margin-bottom: 20rpx; }
 .seg-i { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8rpx; padding: 14rpx 0; font-size: 27rpx; color: var(--ink-2); border-radius: 12rpx; }
 .seg-i.on { background: var(--card); color: var(--brand); font-weight: 600; box-shadow: 0 2rpx 8rpx rgba(31, 36, 48, 0.08); }
-.btn { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(79, 70, 229, 0.25); min-height: 44px; line-height: 44px; }
+.btn { background: linear-gradient(135deg, #6c9bff, #3b6ff5); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(59, 111, 245, 0.25); min-height: 44px; line-height: 44px; }
 .btn[disabled] { opacity: 0.6; }
 .btn.ghost { background: var(--brand-soft); color: var(--brand); box-shadow: none; }
 .btn.sm { font-size: 26rpx; flex: 1; }
@@ -473,7 +475,9 @@ export default {
 .btn.bad { background: var(--bad); color: #fff; box-shadow: none; }
 .btn.dim { opacity: 0.35; }
 .ta { width: 100%; min-height: 160rpx; border: 1rpx solid var(--line); border-radius: 18rpx; padding: 18rpx; font-size: 28rpx; box-sizing: border-box; background: var(--soft-bg); }
-.inp { width: 100%; height: 88rpx; line-height: 52rpx; border: 1rpx solid var(--line); border-radius: 18rpx; padding: 18rpx; font-size: 28rpx; box-sizing: border-box; background: var(--soft-bg); }
+.ans-chips { display: flex; gap: 16rpx; }
+.ans-chip { flex: 1; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; font-size: 28rpx; font-weight: 600; color: var(--ink-2); background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 16rpx; }
+.ans-chip.on { color: #3b6ff5; background: #edf3fe; border-color: #3b6ff5; }
 .preview-wrap { position: relative; }
 .preview-x {
   display: inline-block;
@@ -503,10 +507,10 @@ export default {
 .rate-btns { display: flex; gap: 14rpx; }
 .rate-btn { font-size: 24rpx; color: var(--brand); border: 1rpx solid var(--brand); border-radius: 999rpx; padding: 8rpx 24rpx; }
 .rate-btn.bad { color: var(--bad); border-color: var(--bad); }
-.anscard { display: flex; align-items: center; gap: 22rpx; background: linear-gradient(135deg, #eef2ff, #f5f3ff); border: 1rpx solid #e0e4ff; border-radius: 20rpx; padding: 22rpx 26rpx; margin: 6rpx 0 16rpx; }
-.ans-big { flex-shrink: 0; min-width: 88rpx; height: 88rpx; padding: 0 14rpx; border-radius: 20rpx; background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; font-size: 44rpx; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 6rpx 14rpx rgba(79, 70, 229, 0.3); }
+.anscard { display: flex; align-items: center; gap: 22rpx; background: linear-gradient(135deg, #edf3fe, #f5f3ff); border: 1rpx solid #e0e4ff; border-radius: 20rpx; padding: 22rpx 26rpx; margin: 6rpx 0 16rpx; }
+.ans-big { flex-shrink: 0; min-width: 88rpx; height: 88rpx; padding: 0 14rpx; border-radius: 20rpx; background: linear-gradient(135deg, #6c9bff, #3b6ff5); color: #fff; font-size: 44rpx; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 6rpx 14rpx rgba(59, 111, 245, 0.3); }
 .ans-r { flex: 1; min-width: 0; }
-.ans-method { display: inline-block; background: #4f46e5; color: #fff; border-radius: 999rpx; font-size: 21rpx; font-weight: 600; padding: 4rpx 18rpx; margin-bottom: 8rpx; }
+.ans-method { display: inline-block; background: #3b6ff5; color: #fff; border-radius: 999rpx; font-size: 21rpx; font-weight: 600; padding: 4rpx 18rpx; margin-bottom: 8rpx; }
 .ans-brief { display: block; font-size: 25rpx; color: var(--ink); line-height: 1.5; }
 .err { color: var(--bad); background: var(--bad-soft); font-size: 26rpx; }
 .tags { margin-bottom: 10rpx; }

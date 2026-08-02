@@ -83,7 +83,7 @@
       </template>
       <view v-if="tab !== 'fav' && todoItems.length >= 3" class="card redoentry" @click="aiAnalysis">
         <view class="redo-l">
-          <view class="redo-ico"><uni-icons type="chatbubble-filled" size="16" color="#4f46e5" /></view>
+          <view class="redo-ico"><uni-icons type="chatbubble-filled" size="16" color="#3b6ff5" /></view>
           <view>
             <text class="redo-t">AI 错题分析</text>
             <text class="redo-s">基于你的错题分布与近期作答生成诊断与复习建议</text>
@@ -103,7 +103,7 @@
       </view>
       <view v-if="tab !== 'fav' && todoItems.length" class="card redoentry" @click="redoAll">
         <view class="redo-l">
-          <view class="redo-ico"><uni-icons type="refreshempty" size="16" color="#4f46e5" /></view>
+          <view class="redo-ico"><uni-icons type="refreshempty" size="16" color="#3b6ff5" /></view>
           <view>
             <text class="redo-t">错题重练{{ kpFilter ? ' · ' + kpFilter : '' }}</text>
             <text class="redo-s">{{ kpFilter ? '只重练当前筛选题型的待掌握错题（最多 10 题）' : '把待掌握错题按刷题模式重做一遍（最多 10 题）' }}</text>
@@ -582,7 +582,7 @@ export default {
 .e-ico { font-size: 72rpx; margin-bottom: 16rpx; }
 .e-t { font-size: 32rpx; font-weight: 600; margin-bottom: 10rpx; }
 .e-s { font-size: 24rpx; color: var(--ink-2); line-height: 1.7; margin-bottom: 28rpx; }
-.e-btn { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border-radius: 18rpx; font-size: 28rpx; font-weight: 600; width: 60%; }
+.e-btn { background: linear-gradient(135deg, #6c9bff, #3b6ff5); color: #fff; border-radius: 18rpx; font-size: 28rpx; font-weight: 600; width: 60%; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; border-left: none; }
 .searchbar { display: flex; align-items: center; gap: 12rpx; background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 14rpx 26rpx; margin-bottom: 20rpx; }
 .searchinput { flex: 1; font-size: 26rpx; color: var(--ink); height: 40rpx; line-height: 40rpx; }
@@ -590,11 +590,11 @@ export default {
 .sortrow { display: flex; align-items: center; gap: 10rpx; margin-bottom: 16rpx; flex-wrap: wrap; }
 .sort-k { font-size: 22rpx; color: var(--ink-2); }
 .sort-chip { font-size: 22rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 4rpx 18rpx; background: var(--card); }
-.sort-chip.on { color: #fff; background: var(--brand, #4f6ef7); border-color: var(--brand, #4f6ef7); }
+.sort-chip.on { color: #fff; background: var(--brand, #3b6ff5); border-color: var(--brand, #3b6ff5); }
 .kpwrap { margin-bottom: 16rpx; }
 .kpchips { display: flex; flex-wrap: wrap; gap: 10rpx; margin-top: 8rpx; }
 .kpchip { font-size: 22rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 6rpx 18rpx; background: var(--card); }
-.kpchip.on { color: #fff; background: var(--brand, #4f6ef7); border-color: var(--brand, #4f6ef7); }
+.kpchip.on { color: #fff; background: var(--brand, #3b6ff5); border-color: var(--brand, #3b6ff5); }
 .chips { white-space: nowrap; margin-bottom: 24rpx; }
 .chip { display: inline-block; padding: 10rpx 30rpx; margin-right: 16rpx; border-radius: 999rpx; background: var(--card); border: 1rpx solid var(--line); font-size: 25rpx; color: var(--ink-2); }
 .chip.on { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
@@ -665,14 +665,14 @@ export default {
 .duecard { background: linear-gradient(135deg, #3b6ef6, #7c5cfc); border: none; display: flex; justify-content: space-between; align-items: center; }
 .redoentry { display: flex; justify-content: space-between; align-items: center; }
 .redo-l { display: flex; align-items: center; gap: 16rpx; }
-.redo-ico { width: 64rpx; height: 64rpx; border-radius: 50%; background: var(--brand-soft, #eef2ff); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.redo-ico { width: 64rpx; height: 64rpx; border-radius: 50%; background: var(--brand-soft, #edf3fe); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .redo-t { display: block; font-size: 27rpx; font-weight: 600; color: var(--ink); }
 .redo-s { display: block; font-size: 21rpx; color: var(--ink-2); margin-top: 4rpx; }
-.redo-go { background: var(--brand-soft, #eef2ff); color: var(--brand, #4f46e5); font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 0 34rpx; min-height: 44px; line-height: 44px; flex-shrink: 0; box-sizing: border-box; }
+.redo-go { background: var(--brand-soft, #edf3fe); color: var(--brand, #3b6ff5); font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 0 34rpx; min-height: 44px; line-height: 44px; flex-shrink: 0; box-sizing: border-box; }
 .nrbadge {
   display: inline-block;
-  background: #eef2ff;
-  color: #4f46e5;
+  background: #edf3fe;
+  color: #3b6ff5;
   border-radius: 10rpx;
   padding: 4rpx 14rpx;
   font-size: 22rpx;
@@ -686,7 +686,7 @@ export default {
 .duetxt { display: flex; align-items: center; gap: 8rpx; font-size: 28rpx; font-weight: 700; color: #fff; }
 .duetxt-t { font-size: 28rpx; font-weight: 700; color: #fff; }
 .duesub { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.75); margin-top: 6rpx; }
-.duego { background: #fff; color: #4f46e5; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 0 34rpx; min-height: 44px; line-height: 44px; display: inline-block; box-sizing: border-box; }
+.duego { background: #fff; color: #3b6ff5; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 0 34rpx; min-height: 44px; line-height: 44px; display: inline-block; box-sizing: border-box; }
 .review { border-left-color: #f5a623; }
 .rhead { display: flex; justify-content: space-between; margin-bottom: 12rpx; }
 .opts { display: flex; gap: 16rpx; margin: 20rpx 0; }
