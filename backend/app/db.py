@@ -1410,6 +1410,56 @@ def growth_stats(uid: str) -> dict:
     }
 
 
+def question_attempts(uid: str, question_id: int, limit: int = 20) -> list[dict]:
+    conn = get_conn()
+    _ensure_answer_log(conn)
+    rows = conn.execute(
+        """SELECT created_at, correct, secs, picked FROM answer_log
+           WHERE uid=? AND question_id=? ORDER BY created_at DESC LIMIT ?""",
+        (uid, question_id, limit),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def mistake_analysis_stats(uid: str) -> dict:
+    """汇总错题分布与近期作答数据，供 AI 错题分析使用。"""
+    conn = get_conn()
+    _ensure_answer_log(conn)
+    _ensure_mistake_uid(conn)
+    uc, ua = _uid_clause(uid)
+    types = conn.execute(
+        f"""SELECT COALESCE(question_type, module, '其他') t, COUNT(*) n,
+                   SUM(CASE WHEN times>=2 THEN 1 ELSE 0 END) rep
+            FROM mistakes WHERE mastered=0{uc} GROUP BY t ORDER BY n DESC LIMIT 12""",
+        ua,
+    ).fetchall()
+    reasons = conn.execute(
+        f"""SELECT error_reason r, COUNT(*) n FROM mistakes
+            WHERE mastered=0 AND error_reason IS NOT NULL AND error_reason!=''{uc}
+            GROUP BY r ORDER BY n DESC LIMIT 8""",
+        ua,
+    ).fetchall()
+    week = conn.execute(
+        """SELECT COUNT(*) n, COALESCE(SUM(correct),0) c, COALESCE(AVG(secs),0) s
+           FROM answer_log WHERE uid=? AND created_at>?""",
+        (uid, time.time() - 7 * 86400),
+    ).fetchone()
+    slow = conn.execute(
+        """SELECT COALESCE(submodule, module) t, COUNT(*) n, AVG(secs) s, SUM(correct) c
+           FROM answer_log WHERE uid=? AND secs>0 GROUP BY t
+           HAVING n>=5 ORDER BY s DESC LIMIT 5""",
+        (uid,),
+    ).fetchall()
+    conn.close()
+    return {
+        "mistake_types": [dict(r) for r in types],
+        "error_reasons": [dict(r) for r in reasons],
+        "last7days": {"n": week["n"], "correct": week["c"], "avg_secs": round(week["s"], 1)},
+        "slowest_types": [{"t": r["t"], "n": r["n"], "avg_secs": round(r["s"], 1), "correct": r["c"]} for r in slow],
+    }
+
+
 FREQ_WEIGHT = {
     "ziliao": 1.0, "panduan": 0.9, "yanyu": 0.9, "shuliang": 0.7, "changshi": 0.6,
 }

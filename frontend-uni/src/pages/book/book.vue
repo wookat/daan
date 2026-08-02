@@ -81,6 +81,26 @@
           </view>
         </view>
       </template>
+      <view v-if="tab !== 'fav' && todoItems.length >= 3" class="card redoentry" @click="aiAnalysis">
+        <view class="redo-l">
+          <view class="redo-ico"><uni-icons type="chatbubble-filled" size="16" color="#4f46e5" /></view>
+          <view>
+            <text class="redo-t">AI 错题分析</text>
+            <text class="redo-s">基于你的错题分布与近期作答生成诊断与复习建议</text>
+          </view>
+        </view>
+        <text class="redo-go">生成</text>
+      </view>
+      <view v-if="aiOpen" class="mask" @click="aiOpen = false">
+        <view class="sheet" @click.stop>
+          <view class="sheet-h">
+            <text class="sheet-t">AI 错题分析</text>
+            <text class="sheet-x" @click="aiOpen = false">✕</text>
+          </view>
+          <view v-if="aiLoading" class="ai-loading">正在分析你的错题与作答数据，约需 30-60 秒…</view>
+          <rich-text v-else :nodes="aiHtml" />
+        </view>
+      </view>
       <view v-if="tab !== 'fav' && todoItems.length" class="card redoentry" @click="redoAll">
         <view class="redo-l">
           <view class="redo-ico"><uni-icons type="refreshempty" size="16" color="#4f46e5" /></view>
@@ -152,7 +172,7 @@
         <view class="e-t">没有匹配的错题</view>
         <view class="e-s">换个关键词或清除筛选试试</view>
       </view>
-      <view v-for="m in shownPage" :key="m.id" class="card mcard" :class="masteryClass(m)" @click="m.open = !m.open">
+      <view v-for="m in shownPage" :key="m.id" class="card mcard" :class="masteryClass(m)" @click="toggleCard(m)">
         <view class="mhead">
           <text class="tag">{{ m.question_type || modName(m.module) }}</text>
           <text v-if="m.times >= 2" class="timesbadge">错 {{ m.times }} 次</text>
@@ -166,6 +186,15 @@
         <view v-if="m.open && ansLetter(m.user_answer)" class="anscmp">
           <text class="rpill wrong">我选 {{ ansLetter(m.user_answer) }}</text>
           <text v-if="ansLetter(m.correct_answer)" class="rpill right">答案 {{ ansLetter(m.correct_answer) }}</text>
+        </view>
+        <view v-if="m.open && m.attempts && m.attempts.length" class="attempts">
+          <view class="att-h">历次作答 · {{ m.attempts.length }} 次</view>
+          <view v-for="(a, ai) in m.attempts" :key="ai" class="att-row">
+            <text class="att-mark" :class="a.correct ? 'aok' : 'abad'">{{ a.correct ? '✓ 对' : '✗ 错' }}</text>
+            <text class="att-pick">选 {{ a.picked || '—' }}</text>
+            <text v-if="a.secs" class="att-secs">用时 {{ a.secs }}s</text>
+            <text class="att-time">{{ fmt(a.created_at) }}</text>
+          </view>
         </view>
         <view v-if="!m.open" class="mfoot">
           <text class="op hint">点开看答案与详解</text>
@@ -219,6 +248,9 @@ export default {
       favs: [],
       filterOpen: false,
       mgOpen: {},
+      aiOpen: false,
+      aiLoading: false,
+      aiHtml: '',
       sortBy: 'time',
       pageN: 20,
       SORTS: [
@@ -336,6 +368,26 @@ export default {
   },
   methods: {
     md,
+    toggleCard(m) {
+      m.open = !m.open;
+      if (m.open && m.question_id && !m.attempts) {
+        request('/api/attempts?uid=' + encodeURIComponent(anonUid()) + '&question_id=' + m.question_id)
+          .then((d) => { m.attempts = (d && d.items) || []; })
+          .catch(() => {});
+      }
+    },
+    async aiAnalysis() {
+      this.aiOpen = true;
+      if (this.aiHtml) return;
+      this.aiLoading = true;
+      try {
+        const d = await request('/api/mistakes/analysis', { method: 'POST', data: { uid: anonUid() } });
+        this.aiHtml = md(d.analysis || '分析失败，请稍后重试');
+      } catch (e) {
+        this.aiHtml = md('分析失败：' + e.message);
+      }
+      this.aiLoading = false;
+    },
     toggleGroup(key) {
       this.mgOpen = { ...this.mgOpen, [key]: !this.mgOpen[key] };
     },
@@ -578,6 +630,16 @@ export default {
 .mg-sub { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding-left: 60rpx; border-bottom: 1rpx dashed var(--line); }
 .mg-sub-name { font-size: 26rpx; color: var(--ink); }
 .curfilter { display: flex; gap: 12rpx; margin-bottom: 16rpx; flex-wrap: wrap; }
+.attempts { margin-top: 14rpx; background: var(--soft-bg, #f7f8fa); border-radius: 12rpx; padding: 14rpx 18rpx; }
+.att-h { font-size: 22rpx; color: var(--ink-2); margin-bottom: 6rpx; }
+.att-row { display: flex; align-items: center; gap: 16rpx; font-size: 23rpx; padding: 6rpx 0; }
+.att-mark { font-weight: 600; }
+.att-mark.aok { color: var(--ok, #12b76a); }
+.att-mark.abad { color: var(--bad, #f04438); }
+.att-pick { color: var(--ink); }
+.att-secs { color: var(--ink-2); }
+.att-time { margin-left: auto; color: var(--ink-3, #8f959e); font-size: 21rpx; }
+.ai-loading { text-align: center; color: var(--ink-2); font-size: 25rpx; padding: 60rpx 0; }
 .mask { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 99; display: flex; align-items: flex-end; }
 .sheet { width: 100%; background: #fff; border-radius: 24rpx 24rpx 0 0; padding: 28rpx 28rpx 48rpx; max-height: 70vh; overflow-y: auto; box-sizing: border-box; }
 .sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }

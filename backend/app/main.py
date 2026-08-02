@@ -330,6 +330,34 @@ async def api_coach(body: dict, x_access_code: str | None = Header(None)):
     return {"advice": advice}
 
 
+@app.get("/api/attempts")
+def api_attempts(uid: str, question_id: int):
+    uid = uid.strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    return {"items": db.question_attempts(uid[:64], question_id)}
+
+
+@app.post("/api/mistakes/analysis")
+async def api_mistake_analysis(body: dict, x_access_code: str | None = Header(None)):
+    check_access(x_access_code)
+    uid = (body.get("uid") or "").strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    stats = db.mistake_analysis_stats(uid[:64])
+    if not stats["mistake_types"]:
+        return {"analysis": "错题本还没有待掌握的错题，先去刷题吧。"}
+    prompt = (
+        "你是公务员行测备考教练。根据用户的错题分布与近期作答数据，用中文生成一份简短错题分析。"
+        "格式：## 错题画像（2-3 句，指出最集中的题型与错因）、## 薄弱点诊断（2-3 条带序号，"
+        "结合正确率与做题速度）、## 复习建议（3 条带序号，具体到题型与做法）。"
+        "总字数 300 字以内，不要空话套话。\n\n数据（JSON）：\n"
+        + json.dumps(stats, ensure_ascii=False)[:3000]
+    )
+    analysis = await llm.chat([{"role": "user", "content": prompt}], temperature=0.4, max_tokens=900)
+    return {"analysis": analysis, "stats": stats}
+
+
 @app.post("/api/answer_log")
 def api_answer_log(body: dict):
     uid = (body.get("uid") or "").strip()
