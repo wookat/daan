@@ -21,6 +21,10 @@
     {
       "path": "pages/stats/stats",
       "style": { "navigationBarTitleText": "薄弱分析" }
+    },
+    {
+      "path": "pages/shenlun/shenlun",
+      "style": { "navigationBarTitleText": "申论专区" }
     }
   ],
   "tabBar": {

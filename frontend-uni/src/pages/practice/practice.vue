@@ -71,6 +71,13 @@
         </view>
         <text class="daily-go">选卷</text>
       </view>
+      <view v-if="counts.length" class="daily exam" @click="goShenlun">
+        <view class="daily-l">
+          <view class="daily-t"><view class="exam-ico"><uni-icons type="compose" size="16" color="#4f46e5" /></view><text class="daily-t-t dark">申论专区</text><text class="new-tag">新</text></view>
+          <text class="daily-s dark">历年申论真题 · 素材金句范文库</text>
+        </view>
+        <text class="daily-go">进入</text>
+      </view>
       <view v-if="counts.length" class="daily" :class="{ done: todayDone }" @click="startDaily">
         <view class="daily-l">
           <view class="daily-t"><uni-icons :type="todayDone ? 'checkbox-filled' : 'calendar-filled'" size="16" color="#ffffff" /><text class="daily-t-t">今日一练</text></view>
@@ -1299,6 +1306,9 @@ export default {
       uni.setStorageSync('redoQuestion', q.question + '\n' + optText);
       uni.switchTab({ url: '/pages/ask/ask' });
     },
+    goShenlun() {
+      uni.navigateTo({ url: '/pages/shenlun/shenlun' });
+    },
     next() {
       this.saveSession();
       if (this.autoTimer) {
@@ -1398,6 +1408,7 @@ export default {
 .set-chips.scrollx .set-chip { flex-shrink: 0; }
 .set-chip { font-size: 23rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 12rpx 24rpx; }
 .set-chip.on { color: #fff; background: var(--brand); border-color: var(--brand); }
+.new-tag { font-size: 19rpx; color: #fff; background: #f43f5e; border-radius: 999rpx; padding: 2rpx 12rpx; margin-left: 10rpx; }
 .real-tag { display: inline-block; font-size: 21rpx; color: #b45309; background: #fef3c7; border-radius: 8rpx; padding: 4rpx 14rpx; margin-bottom: 10rpx; }
 .grp-tag { display: inline-block; font-size: 21rpx; color: #0e7490; background: #cffafe; border-radius: 8rpx; padding: 4rpx 14rpx; margin-bottom: 10rpx; margin-left: 10rpx; }
 .daily { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 20rpx; padding: 24rpx 28rpx; margin-bottom: 20rpx; }
