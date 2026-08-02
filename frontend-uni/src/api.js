@@ -65,6 +65,31 @@ export function anonUid() {
   return uid;
 }
 
+// 导出试卷 PDF 并触发浏览器下载（H5）。
+export async function exportPdf(body) {
+  const resp = await fetch(BASE_URL + '/api/export/pdf', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!resp.ok) {
+    let msg = 'HTTP ' + resp.status;
+    try {
+      msg = (await resp.json()).detail || msg;
+    } catch (e) { /* 保留状态码 */ }
+    throw new Error(msg);
+  }
+  const blob = await resp.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (body.title || '试卷') + '.pdf';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 8000);
+}
+
 // H5 流式讲解：onMeta(meta) 一次，onDelta(fullText) 增量；返回完整讲解文本。
 // 仅 H5 可用（fetch 流）；小程序端调用方应回退到 uploadExplain。
 export async function streamExplain({ file, text, userAnswer, onMeta, onDelta }) {

@@ -11,7 +11,7 @@ from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import db, engine, kb, llm
+from . import db, engine, kb, llm, pdf_export
 
 app = FastAPI(title="考公错题助手")
 
@@ -353,6 +353,43 @@ def api_attempts(uid: str, question_id: int):
     if not uid:
         raise HTTPException(400, "缺少 uid")
     return {"items": db.question_attempts(uid[:64], question_id)}
+
+
+@app.post("/api/export/pdf")
+def api_export_pdf(body: dict):
+    ids = [int(i) for i in (body.get("question_ids") or [])[:100]]
+    items = body.get("items") or []
+    questions = db.questions_by_ids(ids) if ids else []
+    for it in items[:100]:
+        if isinstance(it, dict) and (it.get("question") or "").strip():
+            questions.append(
+                {
+                    "id": it.get("id"),
+                    "module": it.get("module") or "",
+                    "question": str(it.get("question"))[:2000],
+                    "options": it.get("options") or {},
+                    "answer": it.get("answer") or "",
+                    "analysis": it.get("analysis") or "",
+                    "material": it.get("material") or "",
+                }
+            )
+    if not questions:
+        raise HTTPException(400, "没有可导出的题目")
+    code = hashlib.md5(
+        (",".join(str(q.get("id") or q.get("question", "")[:20]) for q in questions)).encode()
+    ).hexdigest()[:8].upper()
+    data = pdf_export.build_paper_pdf(
+        title=str(body.get("title") or "自选练习卷")[:40],
+        questions=questions,
+        include_answers=bool(body.get("include_answers", True)),
+        answer_sheet=bool(body.get("answer_sheet", True)),
+        paper_code=code,
+    )
+    return StreamingResponse(
+        iter([data]),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="paper-{code}.pdf"'},
+    )
 
 
 @app.post("/api/mistakes/analysis")

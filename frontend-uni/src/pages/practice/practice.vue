@@ -104,6 +104,7 @@
             </view>
           </view>
           <view class="custom-start" @click="customOpen = false; start(null)">按以上设置开始练习（混合模块）</view>
+          <view class="custom-export" @click="exportPaper">{{ exporting ? '正在生成 PDF…' : '导出为试卷 PDF（含答题卡+答案页）' }}</view>
           <view class="custom-note">以上设置同样作用于下方模块列表；模考与真题卷不受影响</view>
         </view>
       </view>
@@ -386,7 +387,7 @@
 </template>
 
 <script>
-import { request, BASE_URL, anonUid } from '../../api.js';
+import { request, BASE_URL, anonUid, exportPdf } from '../../api.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -418,6 +419,7 @@ export default {
       subSelect: null,
       paperSheet: false,
       customOpen: false,
+      exporting: false,
       plan: null,
       FOCUS_MODS: { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断' },
       papers: [],
@@ -1349,6 +1351,29 @@ export default {
         this.plan = await request('/api/daily_plan?uid=' + encodeURIComponent(uid));
       } catch (e) { /* 非关键路径 */ }
     },
+    async exportPaper() {
+      if (this.exporting) return;
+      this.exporting = true;
+      try {
+        const limit = this.groupSize || 20;
+        const realQ = this.realMode
+          ? '&real=1' +
+            (this.realYear ? '&year=' + this.realYear : '') +
+            (this.realRegion ? '&region=' + encodeURIComponent(this.realRegion) : '')
+          : '';
+        const uid = uni.getStorageSync('anonUid');
+        const d = await request('/api/questions?limit=' + limit + realQ + (uid ? '&uid=' + encodeURIComponent(uid) : ''));
+        const ids = (d.items || []).map((q) => q.id).filter(Boolean);
+        if (!ids.length) throw new Error('没有可导出的题目');
+        const date = new Date();
+        const title = (this.realMode ? '真题精选卷' : '练习卷') + ' ' + (date.getMonth() + 1) + '月' + date.getDate() + '日';
+        await exportPdf({ title, question_ids: ids, include_answers: true, answer_sheet: true });
+        uni.showToast({ title: 'PDF 已开始下载', icon: 'none' });
+      } catch (e) {
+        uni.showToast({ title: '导出失败：' + e.message, icon: 'none' });
+      }
+      this.exporting = false;
+    },
     async setFocus(mod) {
       const uid = uni.getStorageSync('anonUid');
       if (!uid) return;
@@ -1478,6 +1503,7 @@ export default {
 .g4-t { font-size: 24rpx; color: var(--ink-2, #646a73); }
 .custom-row { display: flex; justify-content: space-between; align-items: center; padding: 24rpx 28rpx; }
 .custom-start { margin-top: 24rpx; background: var(--brand, #3b6ff5); color: #fff; text-align: center; border-radius: 999rpx; padding: 22rpx 0; font-size: 28rpx; font-weight: 500; }
+.custom-export { margin-top: 16rpx; text-align: center; border: 1rpx solid var(--brand, #3b6ff5); color: var(--brand, #3b6ff5); border-radius: 999rpx; padding: 20rpx 0; font-size: 27rpx; font-weight: 500; }
 .custom-note { margin-top: 14rpx; text-align: center; font-size: 21rpx; color: var(--ink-3, #8f959e); }
 .wrap.has-banner { padding-bottom: 200rpx; }
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }

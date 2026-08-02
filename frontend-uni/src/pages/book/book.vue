@@ -159,6 +159,7 @@
             <text v-for="g in typeGroups" :key="g.name" class="kpchip" :class="{ on: kpFilter === g.name }" @click="kpFilter = kpFilter === g.name ? '' : g.name">{{ g.name }} ×{{ g.n }}</text>
           </view>
           <view class="sheet-done" @click="filterOpen = false">完成</view>
+          <view class="sheet-export" @click="exportMistakes">{{ exporting ? '正在生成 PDF…' : '导出当前筛选为错题卷 PDF' }}</view>
         </view>
       </view>
       <view v-if="tab !== 'fav' && loading" class="card spin">加载中…</view>
@@ -216,7 +217,7 @@
 
 <script>
 import { md } from '../../md.js';
-import { request, anonUid } from '../../api.js';
+import { request, anonUid, exportPdf } from '../../api.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 
@@ -247,6 +248,7 @@ export default {
       tab: 'todo',
       favs: [],
       filterOpen: false,
+      exporting: false,
       mgOpen: {},
       aiOpen: false,
       aiLoading: false,
@@ -367,6 +369,29 @@ export default {
     this.load();
   },
   methods: {
+    async exportMistakes() {
+      if (this.exporting) return;
+      this.exporting = true;
+      try {
+        const list = this.shownItems.slice(0, 100);
+        if (!list.length) throw new Error('当前筛选没有错题');
+        const ids = list.filter((m) => m.question_id).map((m) => m.question_id);
+        const items = list
+          .filter((m) => !m.question_id && (m.question_text || '').trim())
+          .map((m) => ({
+            module: NAMES[m.module] || m.module || '',
+            question: m.question_text,
+            answer: extractLetter(m.correct_answer) || '',
+          }));
+        const d = new Date();
+        const title = '错题重练卷 ' + (d.getMonth() + 1) + '月' + d.getDate() + '日';
+        await exportPdf({ title, question_ids: ids, items, include_answers: true, answer_sheet: true });
+        uni.showToast({ title: 'PDF 已开始下载', icon: 'none' });
+      } catch (e) {
+        uni.showToast({ title: '导出失败：' + e.message, icon: 'none' });
+      }
+      this.exporting = false;
+    },
     md,
     toggleCard(m) {
       m.open = !m.open;
@@ -647,6 +672,7 @@ export default {
 .sheet-x { font-size: 30rpx; color: var(--ink-2); padding: 10rpx 20rpx; }
 .sheet-k { font-size: 23rpx; color: var(--ink-2); margin: 20rpx 0 10rpx; }
 .sheet-done { margin-top: 32rpx; background: var(--brand, #3b6ff5); color: #fff; text-align: center; border-radius: 999rpx; padding: 22rpx 0; font-size: 28rpx; font-weight: 500; }
+.sheet-export { margin-top: 16rpx; border: 1rpx solid var(--brand, #3b6ff5); color: var(--brand, #3b6ff5); text-align: center; border-radius: 999rpx; padding: 20rpx 0; font-size: 27rpx; font-weight: 500; }
 .xp-k { margin-top: 12rpx; font-size: 22rpx; font-weight: 700; color: #ea580c; border-left: 6rpx solid #ea580c; padding-left: 10rpx; }
 .xp-body { margin-top: 6rpx; font-size: 23rpx; color: var(--ink); background: #fff7ed; border-radius: 10rpx; padding: 12rpx; line-height: 1.6; }
 .mfoot { display: flex; justify-content: space-between; align-items: center; margin-top: 12rpx; border-top: 1rpx solid var(--line); padding-top: 8rpx; }

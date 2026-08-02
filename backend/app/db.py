@@ -296,6 +296,24 @@ def random_questions(
     return [by_id[i] for i in ids if i in by_id]
 
 
+def questions_by_ids(ids: list[int]) -> list[dict]:
+    if not ids:
+        return []
+    conn = get_conn()
+    rows = conn.execute(
+        f"SELECT * FROM questions WHERE id IN ({','.join('?' * len(ids))})", ids
+    ).fetchall()
+    conn.close()
+    by_id = {}
+    for r in rows:
+        d = dict(r)
+        d["options"] = json.loads(d.get("options") or "{}")
+        by_id[d["id"]] = d
+    out = [by_id[i] for i in ids if i in by_id]
+    out.sort(key=lambda q: (q.get("module") or "", q.get("submodule") or ""))
+    return out
+
+
 def _material_key(text: str) -> str | None:
     """提取资料分析题的材料指纹（用于同材料题组）。"""
     t = text or ""
