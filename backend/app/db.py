@@ -375,11 +375,12 @@ def import_shenlun(questions: list[dict], materials: list[dict], batch: str) -> 
     conn = get_conn()
     qn = mn = 0
     for q in questions or []:
+        qt = (q.get("qtype") or "").split("(")[0].split("（")[0] or None
         cur = conn.execute(
             """INSERT OR IGNORE INTO shenlun_questions
                (exam_year, exam_region, paper, qtype, material, question, reference, notes, import_batch, disabled)
                VALUES (?,?,?,?,?,?,?,?,?,2)""",
-            (q.get("exam_year"), q.get("exam_region"), q.get("paper"), q.get("qtype"),
+            (q.get("exam_year"), q.get("exam_region"), q.get("paper"), qt,
              q.get("material"), q.get("question"), q.get("reference"), q.get("notes"), batch),
         )
         qn += cur.rowcount
