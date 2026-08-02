@@ -1463,7 +1463,7 @@ export default {
 .plan-go { font-size: 24rpx; color: var(--brand, #3b6ff5); flex-shrink: 0; }
 .plan-focus { display: flex; align-items: center; gap: 10rpx; flex-wrap: wrap; border-top: 1rpx solid var(--line); padding-top: 14rpx; margin-top: 6rpx; }
 .plan-focus-k { font-size: 22rpx; color: var(--ink-3, #8f959e); margin-right: 4rpx; }
-.plan-fchip { font-size: 22rpx; color: var(--ink-2); background: #f2f3f5; border-radius: 999rpx; padding: 10rpx 20rpx; }
+.plan-fchip { font-size: 22rpx; color: var(--ink-2); background: #f2f3f5; border-radius: 999rpx; padding: 0 20rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
 .plan-fchip.on { background: var(--brand-50, #edf3fe); color: var(--brand, #3b6ff5); font-weight: 600; }
 .hbanner { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(120deg, #3b6ff5, #6c9bff); border-radius: 24rpx; padding: 28rpx; margin-bottom: 24rpx; }
 .hbanner-l { flex: 1; margin-right: 20rpx; }
