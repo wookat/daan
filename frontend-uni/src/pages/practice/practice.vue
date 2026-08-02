@@ -1135,6 +1135,7 @@ export default {
         return;
       }
       const correct = k === this.cur.answer;
+      if (!this.beiMode) this.logAttempts([this.cur]);
       this.recordStat(this.cur.module, correct, this.cur.submodule);
       this.playSfx(correct);
       try { uni.vibrateShort({ type: correct ? 'light' : 'medium' }); } catch (e) { /* 不支持则忽略 */ }
@@ -1358,26 +1359,32 @@ export default {
         });
         if (d.percentile != null) this.percentile = d.percentile;
       } catch (e) { /* 非关键路径 */ }
+      await this.logAttempts(this.items);
+    },
+    async logAttempts(qs) {
       try {
         let uid = uni.getStorageSync('anonUid');
         if (!uid) {
           uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
           uni.setStorageSync('anonUid', uid);
         }
-        const items = this.items
-          .filter((q) => q._picked)
-          .map((q) => ({
-            qid: q.id || null,
-            module: q.module || this.lastModule || null,
-            submodule: q.submodule || null,
-            correct: q._picked === q.answer,
-            secs: q._secs || 0,
-            picked: q._picked,
-          }));
-        if (items.length) await request('/api/answer_log', { method: 'POST', data: { uid, items } });
+        const pending = qs.filter((q) => q._picked && !q._logged);
+        const items = pending.map((q) => ({
+          qid: q.id || null,
+          module: q.module || this.lastModule || null,
+          submodule: q.submodule || null,
+          correct: q._picked === q.answer,
+          secs: q._secs || 0,
+          picked: q._picked,
+        }));
+        if (items.length) {
+          await request('/api/answer_log', { method: 'POST', data: { uid, items } });
+          pending.forEach((q) => { q._logged = true; });
+        }
       } catch (e) { /* 非关键路径 */ }
     },
     quit() {
+      if (!this.beiMode && this.items.length) this.logAttempts(this.items);
       uni.removeStorageSync('pendingSession');
       this.examMode = false;
       if (this.examTimer) {
