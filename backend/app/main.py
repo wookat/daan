@@ -482,6 +482,14 @@ def api_shenlun_history(uid: str, qid: int | None = None, limit: int = 20):
     return {"items": db.shenlun_answer_history(uid[:64], qid, limit)}
 
 
+@app.get("/api/shenlun/stats")
+def api_shenlun_stats(uid: str):
+    uid = uid.strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    return db.shenlun_stats(uid[:64])
+
+
 @app.get("/api/shenlun/materials")
 def api_shenlun_materials(topic: str | None = None, type: str | None = None, limit: int = 20, offset: int = 0):
     return {"items": db.shenlun_materials(topic, type, limit, offset)}

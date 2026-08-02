@@ -113,6 +113,21 @@
       <view class="rc-note">基于你的做题历史（正确率/近期趋势/遗忘曲线/考频）自动推荐</view>
     </view>
 
+    <view v-if="slStats && slStats.total" class="card">
+      <view class="cal-head">
+        <view class="h" style="margin-bottom: 0">申论学习</view>
+        <text class="coach-btn" @click="goShenlun">作答记录 ›</text>
+      </view>
+      <view class="sl-row">
+        <text class="sl-num">{{ slStats.total }}</text>
+        <text class="sl-lab">次 AI 批改</text>
+        <text v-if="slStats.last_at" class="sl-last">最近 {{ slLast }}</text>
+      </view>
+      <view class="sl-types">
+        <text v-for="t in slStats.by_type" :key="t.qtype" class="sl-chip">{{ t.qtype }} ×{{ t.n }}</text>
+      </view>
+    </view>
+
     <view v-if="history.length >= 3" class="card">
       <view class="h">正确率趋势（近 {{ trendData.length }} 次）</view>
       <view class="trend">
@@ -242,9 +257,15 @@ const MODS = [
 
 export default {
   data() {
-    return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, history: [], showAllHist: false, coachHtml: uni.getStorageSync('coachAdvice') || '', coachLoading: false, calFull: false, growth: null, reco: null, dueN: 0, gwMod: '' };
+    return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, history: [], showAllHist: false, coachHtml: uni.getStorageSync('coachAdvice') || '', coachLoading: false, calFull: false, growth: null, reco: null, dueN: 0, gwMod: '', slStats: null };
   },
   computed: {
+    slLast() {
+      if (!this.slStats || !this.slStats.last_at) return '';
+      const d = new Date(this.slStats.last_at * 1000);
+      const p = (n) => (n < 10 ? '0' + n : n);
+      return p(d.getMonth() + 1) + '-' + p(d.getDate());
+    },
     speedData() {
       return this.history
         .filter((h) => h.n && h.secs)
@@ -432,6 +453,7 @@ export default {
     this.history = uni.getStorageSync('practiceHistory') || [];
     this.loadGrowth();
     this.loadReco();
+    this.loadSlStats();
     this.load();
   },
   methods: {
@@ -558,6 +580,16 @@ export default {
           }
         },
       });
+    },
+    async loadSlStats() {
+      const uid = uni.getStorageSync('anonUid');
+      if (!uid) return;
+      try {
+        this.slStats = await request('/api/shenlun/stats?uid=' + encodeURIComponent(uid));
+      } catch (e) { /* 非关键路径 */ }
+    },
+    goShenlun() {
+      uni.navigateTo({ url: '/pages/shenlun/shenlun' });
     },
     async loadGrowth() {
       const uid = uni.getStorageSync('anonUid');
@@ -710,6 +742,12 @@ export default {
 .rc-meta { font-size: 22rpx; color: var(--ink-2); flex-shrink: 0; }
 .rc-go { font-size: 23rpx; color: var(--brand, #4f6ef7); flex-shrink: 0; }
 .rc-note { font-size: 20rpx; color: var(--ink-2); margin-top: 10rpx; }
+.sl-row { display: flex; align-items: baseline; gap: 10rpx; margin: 16rpx 0 12rpx; }
+.sl-num { font-size: 44rpx; font-weight: 700; color: var(--brand, #4f46e5); }
+.sl-lab { font-size: 23rpx; color: var(--ink-2, #6b7280); }
+.sl-last { font-size: 21rpx; color: var(--ink-3, #9ca3af); margin-left: auto; }
+.sl-types { display: flex; flex-wrap: wrap; gap: 10rpx; }
+.sl-chip { font-size: 21rpx; color: var(--brand, #4f46e5); background: var(--brand-soft, #eef1fd); border-radius: 999rpx; padding: 8rpx 18rpx; }
 .trend { display: flex; align-items: flex-end; gap: 8rpx; height: 160rpx; padding-top: 12rpx; }
 .trend-col { flex: 1; height: 100%; display: flex; align-items: flex-end; }
 .trend-bar { width: 100%; border-radius: 6rpx 6rpx 0 0; background: #16a34a; min-height: 6rpx; }

@@ -489,6 +489,25 @@ def shenlun_answer_history(uid: str, qid: int | None = None, limit: int = 20) ->
     return [dict(r) for r in rows]
 
 
+def shenlun_stats(uid: str) -> dict:
+    conn = get_conn()
+    _ensure_shenlun_answers(conn)
+    total, last = conn.execute(
+        "SELECT COUNT(*), MAX(created_at) FROM shenlun_answers WHERE uid=?", (uid,)
+    ).fetchone()
+    by_type = [
+        {"qtype": r[0] or "其他", "n": r[1]}
+        for r in conn.execute(
+            """SELECT q.qtype, COUNT(*) FROM shenlun_answers a
+               LEFT JOIN shenlun_questions q ON q.id=a.qid
+               WHERE a.uid=? GROUP BY q.qtype ORDER BY COUNT(*) DESC""",
+            (uid,),
+        )
+    ]
+    conn.close()
+    return {"total": total, "last_at": last, "by_type": by_type}
+
+
 def shenlun_question(qid: int) -> dict | None:
     conn = get_conn()
     r = conn.execute(
