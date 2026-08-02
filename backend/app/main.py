@@ -330,6 +330,14 @@ async def api_coach(body: dict, x_access_code: str | None = Header(None)):
     return {"advice": advice}
 
 
+@app.get("/api/daily_plan")
+def api_daily_plan(uid: str):
+    uid = uid.strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    return db.daily_plan(uid[:64])
+
+
 @app.get("/api/attempts")
 def api_attempts(uid: str, question_id: int):
     uid = uid.strip()

@@ -1410,6 +1410,43 @@ def growth_stats(uid: str) -> dict:
     }
 
 
+def daily_plan(uid: str) -> dict:
+    """昨日学习摘要 + 今日推荐（规则版：待复习错题 + 弱项题型）。"""
+    conn = get_conn()
+    _ensure_answer_log(conn)
+    _ensure_mistake_uid(conn)
+    now = time.time()
+    tz = 8 * 3600
+    day0 = ((now + tz) // 86400) * 86400 - tz  # 今日 0 点（东八区）
+    yest = conn.execute(
+        """SELECT COUNT(*) n, COALESCE(SUM(correct),0) c, COALESCE(SUM(secs),0) s
+           FROM answer_log WHERE uid=? AND created_at>=? AND created_at<?""",
+        (uid, day0 - 86400, day0),
+    ).fetchone()
+    ymods = conn.execute(
+        """SELECT module, COUNT(*) n, SUM(correct) c FROM answer_log
+           WHERE uid=? AND created_at>=? AND created_at<? AND module IS NOT NULL
+           GROUP BY module ORDER BY n DESC LIMIT 5""",
+        (uid, day0 - 86400, day0),
+    ).fetchall()
+    uc, ua = _uid_clause(uid)
+    due = conn.execute(
+        f"""SELECT COUNT(*) n FROM mistakes
+            WHERE mastered=0 AND next_review IS NOT NULL AND next_review<=?{uc}""",
+        (now, *ua),
+    ).fetchone()
+    conn.close()
+    weak = recommend_stats(uid, top=2)["items"]
+    return {
+        "yesterday": {
+            "n": yest["n"], "correct": yest["c"], "secs": yest["s"],
+            "modules": [{"module": r["module"], "n": r["n"], "c": r["c"]} for r in ymods],
+        },
+        "due_mistakes": due["n"],
+        "weak": weak,
+    }
+
+
 def question_attempts(uid: str, question_id: int, limit: int = 20) -> list[dict]:
     conn = get_conn()
     _ensure_answer_log(conn)

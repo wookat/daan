@@ -10,6 +10,23 @@
         </view>
         <text class="hbanner-btn" @click="startDaily">{{ todayDone ? '再练一组' : '继续目标 ›' }}</text>
       </view>
+      <view v-if="plan && (plan.due_mistakes || plan.weak.length || plan.yesterday.n)" class="card plancard">
+        <view class="plan-h">
+          <text class="plan-t">今日建议</text>
+          <text v-if="plan.yesterday.n" class="plan-y">昨日练 {{ plan.yesterday.n }} 题 · 正确率 {{ Math.round((plan.yesterday.correct / plan.yesterday.n) * 100) }}%</text>
+          <text v-else class="plan-y">昨日未练习</text>
+        </view>
+        <view v-if="plan.due_mistakes" class="plan-row" @click="goBook">
+          <text class="plan-dot due" />
+          <text class="plan-txt">先复习到期错题 {{ plan.due_mistakes }} 道</text>
+          <text class="plan-go">去复习 ›</text>
+        </view>
+        <view v-for="w in plan.weak" :key="w.module + w.submodule" class="plan-row" @click="start(w.module, w.submodule, 10, true)">
+          <text class="plan-dot" />
+          <text class="plan-txt">{{ w.submodule }}（{{ w.reason }} · 正确率 {{ Math.round(w.acc * 100) }}%）</text>
+          <text class="plan-go">练 10 题 ›</text>
+        </view>
+      </view>
       <view v-if="announce" class="card ann">
         <uni-icons type="sound-filled" size="15" color="#0369a1" />
         <view class="ann-c">
@@ -397,6 +414,7 @@ export default {
       subSelect: null,
       paperSheet: false,
       customOpen: false,
+      plan: null,
       papers: [],
       paperRegion: null,
       subProg: {},
@@ -600,6 +618,7 @@ export default {
     this.favs = uni.getStorageSync('favQuestions') || [];
     this.loadCounts();
     this.loadAnnounce();
+    this.loadPlan();
     if (this.realMode) this.loadRealFilters();
     const redoSet = uni.getStorageSync('redoSet');
     if (redoSet && redoSet.length) {
@@ -1318,6 +1337,16 @@ export default {
       uni.setStorageSync('redoQuestion', q.question + '\n' + optText);
       uni.switchTab({ url: '/pages/ask/ask' });
     },
+    async loadPlan() {
+      const uid = uni.getStorageSync('anonUid');
+      if (!uid) return;
+      try {
+        this.plan = await request('/api/daily_plan?uid=' + encodeURIComponent(uid));
+      } catch (e) { /* 非关键路径 */ }
+    },
+    goBook() {
+      uni.switchTab({ url: '/pages/book/book' });
+    },
     goShenlun() {
       uni.navigateTo({ url: '/pages/shenlun/shenlun' });
     },
@@ -1407,6 +1436,16 @@ export default {
 <style scoped>
 .wrap { padding: 24rpx; padding-bottom: 40rpx; }
 .home { padding-bottom: 40rpx; }
+.plancard { padding: 22rpx 26rpx; }
+.plan-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6rpx; }
+.plan-t { font-size: 27rpx; font-weight: 600; color: var(--ink); }
+.plan-y { font-size: 21rpx; color: var(--ink-3, #8f959e); }
+.plan-row { display: flex; align-items: center; gap: 14rpx; min-height: 44px; border-top: 1rpx solid var(--line); }
+.plan-row:first-of-type { border-top: none; }
+.plan-dot { width: 12rpx; height: 12rpx; border-radius: 50%; background: var(--brand, #3b6ff5); flex-shrink: 0; }
+.plan-dot.due { background: #f59e0b; }
+.plan-txt { flex: 1; font-size: 25rpx; color: var(--ink); }
+.plan-go { font-size: 24rpx; color: var(--brand, #3b6ff5); flex-shrink: 0; }
 .hbanner { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(120deg, #3b6ff5, #6c9bff); border-radius: 24rpx; padding: 28rpx; margin-bottom: 24rpx; }
 .hbanner-l { flex: 1; margin-right: 20rpx; }
 .hbanner-t { display: block; font-size: 30rpx; font-weight: 600; color: #fff; }
