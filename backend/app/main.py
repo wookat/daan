@@ -421,6 +421,51 @@ def api_shenlun_question(qid: int):
     return {"item": item}
 
 
+@app.post("/api/shenlun/grade")
+async def api_shenlun_grade(body: dict):
+    qid = body.get("qid")
+    answer = (body.get("answer") or "").strip()
+    if not qid or not answer:
+        raise HTTPException(400, "缺少题目或作答内容")
+    if len(answer) > 3000:
+        raise HTTPException(400, "作答内容过长")
+    q = db.shenlun_question(int(qid))
+    if not q:
+        raise HTTPException(404, "题目不存在")
+    is_essay = "大作文" in (q.get("qtype") or "")
+    if is_essay:
+        rubric = (
+            "这是申论大作文。不要给绝对分数，请输出：\n"
+            "【立意判断】考生立意是否契合材料主旨（对照参考要点）\n"
+            "【结构点评】标题/开头/分论点/结尾逐段简评\n"
+            "【语言与规范】用词、政治规范性问题\n"
+            "【提升建议】3 条最重要的改进方向\n"
+            "【参考档位】仅给出 一类文/二类文/三类文/四类文 参考档位（注明仅供参考）"
+        )
+    else:
+        rubric = (
+            "请严格按采分点批改，输出：\n"
+            "【命中要点】逐条列出考生答案命中的参考要点\n"
+            "【遗漏要点】逐条列出遗漏的参考要点\n"
+            "【冗余/错误】答非所问或表述错误之处\n"
+            "【逐条点评】简要点评条理、概括度、字数控制\n"
+            "【参考得分】x/满分（按命中要点比例估算，注明仅供参考）\n"
+            "【提升建议】2-3 条"
+        )
+    prompt = (
+        "你是资深申论阅卷人。以下是题目、给定资料摘要、参考要点和考生作答，请批改。\n\n"
+        f"【题目/作答要求】\n{q['question']}\n\n"
+        f"【参考要点】\n{q.get('reference') or '（无）'}\n\n"
+        f"【考生作答】\n{answer}\n\n" + rubric +
+        "\n\n要求：客观、具体、指出原文依据；不要复述整篇材料；控制在 600 字内。"
+    )
+    try:
+        result = await llm.chat([{"role": "user", "content": prompt}], temperature=0.3, max_tokens=1500)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(502, f"批改失败：{_friendly_ai_err(e)}") from e
+    return {"result": result, "essay": is_essay}
+
+
 @app.get("/api/shenlun/materials")
 def api_shenlun_materials(topic: str | None = None, type: str | None = None, limit: int = 20, offset: int = 0):
     return {"items": db.shenlun_materials(topic, type, limit, offset)}

@@ -32,6 +32,13 @@
         <text class="d-q">{{ detail.question }}</text>
         <view class="d-h toggle" @click="showMat = !showMat">给定资料 {{ showMat ? '▲' : '▼' }}</view>
         <text v-if="showMat" class="d-mat">{{ detail.material }}</text>
+        <view class="d-h">我的作答</view>
+        <textarea v-model="myAnswer" class="d-ta" :maxlength="3000" placeholder="在此作答后点击下方按钮，AI 按采分点批改（大作文为结构点评+参考档位）" auto-height />
+        <view class="grade-btn" :class="{ dis: grading || !myAnswer.trim() }" @click="grade">{{ grading ? 'AI 批改中…' : 'AI 批改' }}</view>
+        <view v-if="gradeResult" class="d-grade">
+          <view class="d-h">批改结果<text class="g-note">（AI 参考，非官方评分）</text></view>
+          <text class="g-body">{{ gradeResult }}</text>
+        </view>
         <view class="d-h toggle ref" @click="showRef = !showRef">{{ showRef ? '收起参考要点 ▲' : '写完再看 · 参考要点 ▼' }}</view>
         <text v-if="showRef" class="d-ref">{{ detail.reference }}</text>
         <text v-if="showRef && detail.notes" class="d-notes">{{ detail.notes }}</text>
@@ -78,6 +85,9 @@ export default {
       showRef: false,
       expanded: 0,
       loading: false,
+      myAnswer: '',
+      grading: false,
+      gradeResult: '',
       qOffset: 0,
       mOffset: 0,
     };
@@ -137,9 +147,26 @@ export default {
         this.detail = d.item;
         this.showMat = true;
         this.showRef = false;
+        this.myAnswer = '';
+        this.gradeResult = '';
       } catch (e) {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
+    },
+    async grade() {
+      if (this.grading || !this.myAnswer.trim()) return;
+      this.grading = true;
+      this.gradeResult = '';
+      try {
+        const d = await request('/api/shenlun/grade', {
+          method: 'POST',
+          data: { qid: this.detail.id, answer: this.myAnswer },
+        });
+        this.gradeResult = d.result;
+      } catch (e) {
+        uni.showToast({ title: e.message || '批改失败，请稍后重试', icon: 'none' });
+      }
+      this.grading = false;
     },
   },
 };
@@ -172,4 +199,10 @@ export default {
 .m-content { font-size: 25rpx; color: var(--ink-2, #4b5563); line-height: 1.8; white-space: pre-wrap; display: block; margin: 8rpx 0; }
 .m-content.clamp { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
 .m-src { font-size: 22rpx; color: var(--ink-3, #9ca3af); }
+.d-ta { width: 100%; box-sizing: border-box; min-height: 220rpx; background: #f8f9fc; border: 1rpx solid var(--line, #e5e7eb); border-radius: 12rpx; padding: 18rpx; font-size: 25rpx; line-height: 1.7; }
+.grade-btn { margin-top: 16rpx; text-align: center; background: var(--brand, #4f46e5); color: #fff; font-size: 27rpx; font-weight: 600; border-radius: 999rpx; padding: 20rpx 0; }
+.grade-btn.dis { opacity: 0.5; }
+.d-grade { margin-top: 8rpx; }
+.g-note { font-size: 21rpx; color: var(--ink-3, #9ca3af); font-weight: 400; }
+.g-body { font-size: 25rpx; color: var(--ink-1, #1f2937); background: #fffbeb; border-radius: 12rpx; padding: 18rpx; line-height: 1.8; white-space: pre-wrap; display: block; }
 </style>
