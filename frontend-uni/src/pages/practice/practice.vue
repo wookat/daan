@@ -26,6 +26,10 @@
           <text class="plan-txt">{{ w.submodule }}（{{ w.reason }} · 正确率 {{ Math.round(w.acc * 100) }}%）</text>
           <text class="plan-go">练 10 题 ›</text>
         </view>
+        <view class="plan-focus">
+          <text class="plan-focus-k">今天主攻</text>
+          <text v-for="(fn, fk) in FOCUS_MODS" :key="fk" class="plan-fchip" :class="{ on: plan.focus === fk }" @click="setFocus(fk)">{{ fn }}</text>
+        </view>
       </view>
       <view v-if="announce" class="card ann">
         <uni-icons type="sound-filled" size="15" color="#0369a1" />
@@ -415,6 +419,7 @@ export default {
       paperSheet: false,
       customOpen: false,
       plan: null,
+      FOCUS_MODS: { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断' },
       papers: [],
       paperRegion: null,
       subProg: {},
@@ -1344,6 +1349,16 @@ export default {
         this.plan = await request('/api/daily_plan?uid=' + encodeURIComponent(uid));
       } catch (e) { /* 非关键路径 */ }
     },
+    async setFocus(mod) {
+      const uid = uni.getStorageSync('anonUid');
+      if (!uid) return;
+      const next = this.plan && this.plan.focus === mod ? '' : mod;
+      try {
+        await request('/api/user_state', { method: 'POST', data: { uid, focus: next } });
+        this.plan = await request('/api/daily_plan?uid=' + encodeURIComponent(uid));
+        if (next) uni.showToast({ title: '今日主攻已设为' + (this.FOCUS_MODS[next] || next) + '，推荐已更新', icon: 'none' });
+      } catch (e) { /* 非关键路径 */ }
+    },
     goBook() {
       uni.switchTab({ url: '/pages/book/book' });
     },
@@ -1446,6 +1461,10 @@ export default {
 .plan-dot.due { background: #f59e0b; }
 .plan-txt { flex: 1; font-size: 25rpx; color: var(--ink); }
 .plan-go { font-size: 24rpx; color: var(--brand, #3b6ff5); flex-shrink: 0; }
+.plan-focus { display: flex; align-items: center; gap: 10rpx; flex-wrap: wrap; border-top: 1rpx solid var(--line); padding-top: 14rpx; margin-top: 6rpx; }
+.plan-focus-k { font-size: 22rpx; color: var(--ink-3, #8f959e); margin-right: 4rpx; }
+.plan-fchip { font-size: 22rpx; color: var(--ink-2); background: #f2f3f5; border-radius: 999rpx; padding: 10rpx 20rpx; }
+.plan-fchip.on { background: var(--brand-50, #edf3fe); color: var(--brand, #3b6ff5); font-weight: 600; }
 .hbanner { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(120deg, #3b6ff5, #6c9bff); border-radius: 24rpx; padding: 28rpx; margin-bottom: 24rpx; }
 .hbanner-l { flex: 1; margin-right: 20rpx; }
 .hbanner-t { display: block; font-size: 30rpx; font-weight: 600; color: #fff; }

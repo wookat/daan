@@ -1410,6 +1410,40 @@ def growth_stats(uid: str) -> dict:
     }
 
 
+def _ensure_user_state(conn):
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS user_state (
+            uid TEXT NOT NULL, day TEXT NOT NULL, focus_module TEXT, note TEXT,
+            created_at REAL, PRIMARY KEY (uid, day))"""
+    )
+
+
+def _today_str() -> str:
+    return time.strftime("%Y-%m-%d", time.gmtime(time.time() + 8 * 3600))
+
+
+def set_user_state(uid: str, focus_module: str, note: str = "") -> None:
+    conn = get_conn()
+    _ensure_user_state(conn)
+    conn.execute(
+        "INSERT OR REPLACE INTO user_state (uid, day, focus_module, note, created_at) VALUES (?,?,?,?,?)",
+        (uid, _today_str(), focus_module or None, (note or "")[:200] or None, time.time()),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_user_state(uid: str) -> dict | None:
+    conn = get_conn()
+    _ensure_user_state(conn)
+    row = conn.execute(
+        "SELECT focus_module, note FROM user_state WHERE uid=? AND day=?",
+        (uid, _today_str()),
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
 def daily_plan(uid: str) -> dict:
     """昨日学习摘要 + 今日推荐（规则版：待复习错题 + 弱项题型）。"""
     conn = get_conn()
@@ -1437,14 +1471,19 @@ def daily_plan(uid: str) -> dict:
         (now, *ua),
     ).fetchone()
     conn.close()
-    weak = recommend_stats(uid, top=2)["items"]
+    state = get_user_state(uid)
+    focus = (state or {}).get("focus_module") or ""
+    weak = recommend_stats(uid, top=6)["items"]
+    if focus:
+        weak.sort(key=lambda w: 0 if w.get("module") == focus else 1)
     return {
         "yesterday": {
             "n": yest["n"], "correct": yest["c"], "secs": yest["s"],
             "modules": [{"module": r["module"], "n": r["n"], "c": r["c"]} for r in ymods],
         },
         "due_mistakes": due["n"],
-        "weak": weak,
+        "weak": weak[:2],
+        "focus": focus,
     }
 
 
