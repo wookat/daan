@@ -47,7 +47,13 @@ async def extract_question(image_b64: str | None, mime: str | None, text: str | 
         content = llm.image_content(image_b64, mime or "image/jpeg", EXTRACT_PROMPT)
     else:
         content = EXTRACT_PROMPT + "\n\n题目内容：\n" + (text or "")
-    data = await llm.chat_json([{"role": "user", "content": content}], max_tokens=2000)
+    try:
+        data = await llm.chat_json([{"role": "user", "content": content}], max_tokens=2000)
+    except (ValueError, KeyError, TypeError):
+        data = {}
+    if not isinstance(data, dict):
+        data = {}
+    data["question_text"] = data.get("question_text") or ""
     if data.get("module") not in kb.MODULES:
         guessed = kb.guess_module(data.get("question_text", ""))
         data["module"] = guessed or "panduan"
