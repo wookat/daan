@@ -510,7 +510,7 @@ export default {
       uni.switchTab({ url: '/pages/book/book' });
     },
     goSub(module, sub) {
-      uni.setStorageSync('practicePreset', { module, submodule: sub, count: 10 });
+      uni.setStorageSync('practicePreset', { module, submodule: sub, count: 10, adaptive: true });
       uni.switchTab({ url: '/pages/practice/practice' });
     },
     copyCode() {

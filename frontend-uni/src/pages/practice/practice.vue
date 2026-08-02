@@ -609,7 +609,7 @@ export default {
     const preset = uni.getStorageSync('practicePreset');
     if (preset && preset.module) {
       uni.removeStorageSync('practicePreset');
-      this.start(preset.module, preset.submodule || null, preset.count || 10);
+      this.start(preset.module, preset.submodule || null, preset.count || 10, preset.adaptive);
       return;
     }
     const pm = uni.getStorageSync('practiceModule');
@@ -933,7 +933,7 @@ export default {
       uni.setStorageSync('dailyPlan', this.daily);
       uni.showToast({ title: '今日一练完成，打卡成功！', icon: 'none' });
     },
-    async start(module, submodule, count) {
+    async start(module, submodule, count, adaptive) {
       if (this._starting) return;
       this._starting = true;
       uni.showLoading({ title: '出题中…', mask: true });
@@ -948,9 +948,10 @@ export default {
         : '';
       const uid = uni.getStorageSync('anonUid');
       const uidQ = uid ? '&uid=' + encodeURIComponent(uid) : '';
+      const adQ = adaptive && uid ? '&adaptive=1' : '';
       try {
         let d = await request(
-          '/api/questions?limit=' + limit + realQ + uidQ +
+          '/api/questions?limit=' + limit + realQ + uidQ + adQ +
             (module ? '&module=' + module : '') +
             (submodule ? '&submodule=' + encodeURIComponent(submodule) : '')
         );

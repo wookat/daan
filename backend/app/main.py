@@ -382,10 +382,12 @@ def api_questions(
     year: int | None = None,
     region: str | None = None,
     uid: str | None = None,
+    adaptive: int = 0,
 ):
     return {
         "items": db.random_questions(
-            module, min(limit, 50), submodule, real_only=bool(real), year=year, region=region, uid=uid
+            module, min(limit, 50), submodule, real_only=bool(real), year=year, region=region, uid=uid,
+            adaptive=bool(adaptive),
         ),
         "counts": db.question_counts(),
     }

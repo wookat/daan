@@ -157,10 +157,32 @@ def random_questions(
     year: int | None = None,
     region: str | None = None,
     uid: str | None = None,
+    adaptive: bool = False,
 ) -> list[dict]:
     conn = get_conn()
     where = []
     args: list = []
+    order = "has_hs DESC, RANDOM()"
+    if adaptive and uid and (module or submodule):
+        _ensure_answer_log(conn)
+        acl = "uid=?"
+        aargs: list = [uid]
+        if submodule:
+            acl += " AND submodule=?"
+            aargs.append(submodule)
+        elif module:
+            acl += " AND module=?"
+            aargs.append(module)
+        st = conn.execute(
+            f"SELECT COUNT(*) n, SUM(correct) c FROM (SELECT correct FROM answer_log WHERE {acl} ORDER BY id DESC LIMIT 60)",
+            aargs,
+        ).fetchone()
+        if st and (st["n"] or 0) >= 5:
+            target = max(20, min(90, round(100 * (st["c"] or 0) / st["n"]) - 10))
+            order = (
+                "has_hs DESC, CASE WHEN correct_ratio IS NULL THEN 1 ELSE 0 END, "
+                f"ABS(correct_ratio - {target}) + ABS(RANDOM()) % 15"
+            )
     if uid:
         _ensure_answer_log(conn)
         done = [
@@ -195,7 +217,7 @@ def random_questions(
         ids = [
             r["id"]
             for r in conn.execute(
-                f"SELECT id FROM questions {clause} AND is_real=1 ORDER BY has_hs DESC, RANDOM() LIMIT ?",
+                f"SELECT id FROM questions {clause} AND is_real=1 ORDER BY {order} LIMIT ?",
                 (*args, want_real),
             )
         ]
@@ -205,7 +227,7 @@ def random_questions(
             r["id"]
             for r in conn.execute(
                 f"SELECT id FROM questions {clause} AND id NOT IN ({placeholders}) "
-                "ORDER BY has_hs DESC, RANDOM() LIMIT ?",
+                f"ORDER BY {order} LIMIT ?",
                 (*args, *ids, limit - len(ids)),
             )
         ]
