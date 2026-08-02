@@ -1,48 +1,16 @@
 <template>
   <view class="wrap" :class="{ 'has-banner': picked }">
     <!-- 选模块 -->
-    <view v-if="!session" class="card">
-      <view class="h">选择模块开始刷题</view>
-      <view class="goal">
-        <view class="goal-top">
-          <text class="goal-t">今日目标 {{ todayCount }}/{{ dailyGoal }} 题{{ todayCount >= dailyGoal ? ' · 已达成' : '' }}</text>
-          <view class="goal-set">
-            <text v-for="g in [20, 50, 100]" :key="g" class="goal-chip" :class="{ on: dailyGoal === g }" @click="setGoal(g)">{{ g }}</text>
-          </view>
+    <view v-if="!session" class="home">
+      <view class="banner">
+        <view class="banner-l">
+          <text class="banner-t">今日已练 {{ todayCount }}/{{ dailyGoal }} 题{{ todayCount >= dailyGoal ? ' · 已达成' : '' }}</text>
+          <text class="banner-s">{{ dailyStreak ? '连续打卡 ' + dailyStreak + ' 天' : '今天还没开始，练一组吧' }}</text>
+          <view class="banner-bar"><view class="banner-fill" :style="{ width: Math.min((todayCount / dailyGoal) * 100, 100) + '%' }" /></view>
         </view>
-        <view class="goal-bar">
-          <view class="goal-fill" :class="{ done: todayCount >= dailyGoal }" :style="{ width: Math.min((todayCount / dailyGoal) * 100, 100) + '%' }" />
-        </view>
+        <text class="banner-btn" @click="startDaily">{{ todayDone ? '再练一组' : '继续目标 ›' }}</text>
       </view>
-      <view class="setrow">
-        <text class="set-k">选题来源</text>
-        <view class="set-chips">
-          <text class="set-chip" :class="{ on: !realMode }" @click="setReal(false)">题库模式</text>
-          <text class="set-chip" :class="{ on: realMode }" @click="setReal(true)">真题模式</text>
-        </view>
-      </view>
-      <view v-if="realMode && realYears.length" class="setrow">
-        <text class="set-k">真题年份</text>
-        <view class="set-chips scrollx">
-          <text class="set-chip" :class="{ on: !realYear }" @click="setRealYear(null)">全部</text>
-          <text v-for="y in realYears" :key="y.y" class="set-chip" :class="{ on: realYear === y.y }" @click="setRealYear(y.y)">{{ y.y }}</text>
-        </view>
-      </view>
-      <view v-if="realMode && realRegions.length" class="setrow">
-        <text class="set-k">真题地区</text>
-        <view class="set-chips scrollx">
-          <text class="set-chip" :class="{ on: !realRegion }" @click="setRealRegion(null)">全部</text>
-          <text v-for="r in realRegions" :key="r.r" class="set-chip" :class="{ on: realRegion === r.r }" @click="setRealRegion(r.r)">{{ r.r }}</text>
-        </view>
-      </view>
-      <view class="setrow">
-        <text class="set-k">每组题量</text>
-        <view class="set-chips">
-          <text v-for="n in [10, 20, 30, 50]" :key="n" class="set-chip" :class="{ on: groupSize === n }" @click="setGroup(n)">{{ n }}</text>
-        </view>
-      </view>
-      <view v-if="!counts.length" class="spin" @click="loadCounts">题库加载中…点此重试</view>
-      <view v-if="announce" class="ann">
+      <view v-if="announce" class="card ann">
         <uni-icons type="sound-filled" size="15" color="#0369a1" />
         <view class="ann-c">
           <text class="ann-t">{{ announce.title }}</text>
@@ -50,34 +18,75 @@
         </view>
         <text class="ann-x" @click="dismissAnn">✕</text>
       </view>
-      <view v-if="counts.length" class="daily exam" @click="startExam(false)">
-        <view class="daily-l">
-          <view class="daily-t"><view class="exam-ico warn"><uni-icons type="flag-filled" size="16" color="#d97706" /></view><text class="daily-t-t dark">迷你模考</text></view>
-          <text class="daily-s dark">25 题 · 20 分钟 · 五模块混合 · 交卷后统一判分</text>
+      <view v-if="counts.length" class="card grid4">
+        <view class="g4" @click="startExam(false)">
+          <view class="g4-ic" style="background:#fff4e5"><uni-icons type="flag-filled" size="20" color="#d97706" /></view>
+          <text class="g4-t">迷你模考</text>
         </view>
-        <text class="daily-go">开始</text>
-      </view>
-      <view v-if="counts.length" class="daily exam full" @click="startExam(true)">
-        <view class="daily-l">
-          <view class="daily-t"><view class="exam-ico err"><uni-icons type="medal-filled" size="16" color="#dc2626" /></view><text class="daily-t-t dark">全真模考</text></view>
-          <text class="daily-s dark">100 题 · 100 分钟 · 按行测真实模块配比 · 真题优先</text>
+        <view class="g4" @click="startExam(true)">
+          <view class="g4-ic" style="background:#fef2f2"><uni-icons type="medal-filled" size="20" color="#dc2626" /></view>
+          <text class="g4-t">全真模考</text>
         </view>
-        <text class="daily-go">开始</text>
-      </view>
-      <view v-if="counts.length" class="daily exam" @click="openPapers">
-        <view class="daily-l">
-          <view class="daily-t"><view class="exam-ico"><uni-icons type="paperplane-filled" size="16" color="#4f46e5" /></view><text class="daily-t-t dark">真题卷库</text></view>
-          <text class="daily-s dark">历年国考/省考整卷 · 120 分钟计时 · 交卷后统一判分</text>
+        <view class="g4" @click="openPapers">
+          <view class="g4-ic" style="background:#edf3fe"><uni-icons type="paperplane-filled" size="20" color="#3b6ff5" /></view>
+          <text class="g4-t">真题卷库</text>
         </view>
-        <text class="daily-go">选卷</text>
-      </view>
-      <view v-if="counts.length" class="daily exam" @click="goShenlun">
-        <view class="daily-l">
-          <view class="daily-t"><view class="exam-ico"><uni-icons type="compose" size="16" color="#4f46e5" /></view><text class="daily-t-t dark">申论专区</text><text class="new-tag">新</text></view>
-          <text class="daily-s dark">历年申论真题 · 素材金句范文库</text>
+        <view class="g4" @click="goShenlun">
+          <view class="g4-ic" style="background:#f0fdf4"><uni-icons type="compose" size="20" color="#12b76a" /></view>
+          <text class="g4-t">申论专区</text>
         </view>
-        <text class="daily-go">进入</text>
       </view>
+      <view v-if="counts.length" class="card custom-row" @click="customOpen = true">
+        <view class="daily-l">
+          <view class="daily-t"><view class="exam-ico"><uni-icons type="gear-filled" size="16" color="#4f46e5" /></view><text class="daily-t-t dark">自定义练习</text></view>
+          <text class="daily-s dark">选来源 / 年份 / 地区 / 题量 / 每日目标</text>
+        </view>
+        <text class="daily-go">设置</text>
+      </view>
+      <view v-if="customOpen" class="mask" @click="customOpen = false">
+        <view class="sheet" @click.stop>
+          <view class="sheet-h">
+            <text class="sheet-t">自定义练习</text>
+            <view class="sheet-x" @click="customOpen = false"><uni-icons type="closeempty" size="20" color="#6b7280" /></view>
+          </view>
+          <view class="setrow">
+            <text class="set-k">每日目标</text>
+            <view class="set-chips">
+              <text v-for="g in [20, 50, 100]" :key="g" class="set-chip" :class="{ on: dailyGoal === g }" @click="setGoal(g)">{{ g }} 题</text>
+            </view>
+          </view>
+          <view class="setrow">
+            <text class="set-k">选题来源</text>
+            <view class="set-chips">
+              <text class="set-chip" :class="{ on: !realMode }" @click="setReal(false)">题库模式</text>
+              <text class="set-chip" :class="{ on: realMode }" @click="setReal(true)">真题模式</text>
+            </view>
+          </view>
+          <view v-if="realMode && realYears.length" class="setrow">
+            <text class="set-k">真题年份</text>
+            <view class="set-chips scrollx">
+              <text class="set-chip" :class="{ on: !realYear }" @click="setRealYear(null)">全部</text>
+              <text v-for="y in realYears" :key="y.y" class="set-chip" :class="{ on: realYear === y.y }" @click="setRealYear(y.y)">{{ y.y }}</text>
+            </view>
+          </view>
+          <view v-if="realMode && realRegions.length" class="setrow">
+            <text class="set-k">真题地区</text>
+            <view class="set-chips scrollx">
+              <text class="set-chip" :class="{ on: !realRegion }" @click="setRealRegion(null)">全部</text>
+              <text v-for="r in realRegions" :key="r.r" class="set-chip" :class="{ on: realRegion === r.r }" @click="setRealRegion(r.r)">{{ r.r }}</text>
+            </view>
+          </view>
+          <view class="setrow">
+            <text class="set-k">每组题量</text>
+            <view class="set-chips">
+              <text v-for="n in [10, 20, 30, 50]" :key="n" class="set-chip" :class="{ on: groupSize === n }" @click="setGroup(n)">{{ n }}</text>
+            </view>
+          </view>
+          <view class="custom-start" @click="customOpen = false; start(null)">按以上设置开始练习（混合模块）</view>
+          <view class="custom-note">以上设置同样作用于下方模块列表；模考与真题卷不受影响</view>
+        </view>
+      </view>
+      <view v-if="!counts.length" class="card spin" @click="loadCounts">题库加载中…点此重试</view>
       <view v-if="counts.length" class="daily" :class="{ done: todayDone }" @click="startDaily">
         <view class="daily-l">
           <view class="daily-t"><uni-icons :type="todayDone ? 'checkbox-filled' : 'calendar-filled'" size="16" color="#ffffff" /><text class="daily-t-t">今日一练</text></view>
@@ -387,6 +396,7 @@ export default {
       lastSubmodule: null,
       subSelect: null,
       paperSheet: false,
+      customOpen: false,
       papers: [],
       paperRegion: null,
       subProg: {},
@@ -1388,6 +1398,21 @@ export default {
 
 <style scoped>
 .wrap { padding: 24rpx; padding-bottom: 40rpx; }
+.home { padding-bottom: 40rpx; }
+.banner { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(120deg, #3b6ff5, #6c9bff); border-radius: 24rpx; padding: 28rpx; margin-bottom: 24rpx; }
+.banner-l { flex: 1; margin-right: 20rpx; }
+.banner-t { display: block; font-size: 30rpx; font-weight: 600; color: #fff; }
+.banner-s { display: block; font-size: 23rpx; color: rgba(255, 255, 255, 0.82); margin-top: 6rpx; }
+.banner-bar { height: 10rpx; background: rgba(255, 255, 255, 0.25); border-radius: 999rpx; margin-top: 14rpx; overflow: hidden; }
+.banner-fill { height: 100%; background: #fff; border-radius: 999rpx; }
+.banner-btn { flex-shrink: 0; background: #fff; color: #3b6ff5; border-radius: 999rpx; padding: 14rpx 24rpx; font-size: 26rpx; font-weight: 500; }
+.grid4 { display: flex; padding: 20rpx 8rpx; }
+.g4 { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 10rpx 0; }
+.g4-ic { width: 88rpx; height: 88rpx; border-radius: 24rpx; display: flex; align-items: center; justify-content: center; margin-bottom: 10rpx; }
+.g4-t { font-size: 24rpx; color: var(--ink-2, #646a73); }
+.custom-row { display: flex; justify-content: space-between; align-items: center; padding: 24rpx 28rpx; }
+.custom-start { margin-top: 24rpx; background: var(--brand, #3b6ff5); color: #fff; text-align: center; border-radius: 999rpx; padding: 22rpx 0; font-size: 28rpx; font-weight: 500; }
+.custom-note { margin-top: 14rpx; text-align: center; font-size: 21rpx; color: var(--ink-3, #8f959e); }
 .wrap.has-banner { padding-bottom: 200rpx; }
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 30rpx; font-weight: 600; margin-bottom: 20rpx; }

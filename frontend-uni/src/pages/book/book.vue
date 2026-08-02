@@ -39,10 +39,15 @@
         </view>
         <text class="duego">开始复习</text>
       </view>
-      <view v-if="items.length" class="toptabs">
-        <view class="ttab" :class="{ on: tab === 'todo' }" @click="tab = 'todo'">待掌握 {{ todoItems.length }}</view>
-        <view class="ttab" :class="{ on: tab === 'done' }" @click="tab = 'done'">已斩 {{ doneItems.length }}</view>
-        <view v-if="favs.length" class="ttab" :class="{ on: tab === 'fav' }" @click="tab = 'fav'">收藏 {{ favs.length }}</view>
+      <view v-if="items.length" class="segrow">
+        <view class="seg">
+          <view class="seg-i" :class="{ on: tab === 'todo' }" @click="tab = 'todo'">待掌握 {{ todoItems.length }}</view>
+          <view class="seg-i" :class="{ on: tab === 'done' }" @click="tab = 'done'">已掌握 {{ doneItems.length }}</view>
+          <view v-if="favs.length" class="seg-i" :class="{ on: tab === 'fav' }" @click="tab = 'fav'">收藏 {{ favs.length }}</view>
+        </view>
+        <view v-if="tab !== 'fav'" class="filterbtn" @click="filterOpen = true">
+          <uni-icons type="tune" size="18" color="#646a73" /><text class="filterbtn-t">筛选</text>
+        </view>
       </view>
       <template v-if="tab === 'fav'">
         <view v-if="!favs.length" class="card empty">
@@ -91,25 +96,51 @@
         <input v-model="kw" class="searchinput" placeholder="搜题干关键词或题型，如：增长率 / 类比推理" confirm-type="search" />
         <text v-if="kw" class="searchclear" @click="kw = ''">✕</text>
       </view>
-      <view v-if="tab !== 'fav' && items.length > 5" class="sortrow">
-        <text class="sort-k">排序</text>
-        <text v-for="s in SORTS" :key="s.k" class="sort-chip" :class="{ on: sortBy === s.k }" @click="sortBy = s.k">{{ s.name }}</text>
-      </view>
-      <view v-if="tab !== 'fav' && typeGroups.length > 1" class="kpwrap">
-        <text class="sort-k">题型聚合</text>
-        <view class="kpchips">
-          <text v-for="g in typeGroups" :key="g.name" class="kpchip" :class="{ on: kpFilter === g.name }" @click="kpFilter = kpFilter === g.name ? '' : g.name">{{ g.name }} ×{{ g.n }}</text>
+      <view v-if="tab !== 'fav' && modGroups.length" class="card modgroup">
+        <view class="mg-h">按模块查看</view>
+        <view v-for="g in modGroups" :key="g.key" class="mg-blk">
+          <view class="mg-row" @click="toggleGroup(g.key)">
+            <text class="mg-arrow">{{ mgOpen[g.key] ? '▾' : '▸' }}</text>
+            <text class="mg-name">{{ g.name }}</text>
+            <text class="mg-badge">{{ g.n }}</text>
+            <text class="mg-go" @click.stop="pickGroup(g.key, '')">查看 ›</text>
+          </view>
+          <view v-if="mgOpen[g.key]">
+            <view v-for="s in g.subs" :key="s.name" class="mg-sub" @click="pickGroup(g.key, s.name)">
+              <text class="mg-sub-name">{{ s.name }}</text>
+              <text class="mg-badge">{{ s.n }}</text>
+            </view>
+          </view>
         </view>
       </view>
-      <scroll-view v-if="tab !== 'fav' && items.length" scroll-x class="chips">
-        <view
-          v-for="c in chipList"
-          :key="c.key"
-          class="chip"
-          :class="{ on: filterMod === c.key }"
-          @click="filterMod = c.key"
-        >{{ c.name }}</view>
-      </scroll-view>
+      <view v-if="tab !== 'fav' && (filterMod || kpFilter)" class="curfilter">
+        <text class="kpchip on" @click="filterMod = ''; kpFilter = ''">{{ kpFilter || modName(filterMod) }} ✕</text>
+        <text v-if="sortBy !== 'time'" class="kpchip" @click="filterOpen = true">{{ (SORTS.find(s => s.k === sortBy) || {}).name }}</text>
+      </view>
+      <view v-else-if="tab !== 'fav' && sortBy !== 'time'" class="curfilter">
+        <text class="kpchip on" @click="sortBy = 'time'">{{ (SORTS.find(s => s.k === sortBy) || {}).name }} ✕</text>
+      </view>
+      <view v-if="filterOpen" class="mask" @click="filterOpen = false">
+        <view class="sheet" @click.stop>
+          <view class="sheet-h">
+            <text class="sheet-t">筛选与排序</text>
+            <text class="sheet-x" @click="filterOpen = false">✕</text>
+          </view>
+          <view class="sheet-k">排序</view>
+          <view class="kpchips">
+            <text v-for="s in SORTS" :key="s.k" class="kpchip" :class="{ on: sortBy === s.k }" @click="sortBy = s.k">{{ s.name }}</text>
+          </view>
+          <view class="sheet-k">模块</view>
+          <view class="kpchips">
+            <text v-for="c in chipList" :key="c.key" class="kpchip" :class="{ on: filterMod === c.key }" @click="filterMod = c.key; kpFilter = ''">{{ c.name }}</text>
+          </view>
+          <view v-if="typeGroups.length > 1" class="sheet-k">题型</view>
+          <view v-if="typeGroups.length > 1" class="kpchips">
+            <text v-for="g in typeGroups" :key="g.name" class="kpchip" :class="{ on: kpFilter === g.name }" @click="kpFilter = kpFilter === g.name ? '' : g.name">{{ g.name }} ×{{ g.n }}</text>
+          </view>
+          <view class="sheet-done" @click="filterOpen = false">完成</view>
+        </view>
+      </view>
       <view v-if="tab !== 'fav' && loading" class="card spin">加载中…</view>
       <view v-else-if="tab !== 'fav' && !items.length" class="card empty">
         <view class="e-ico"><uni-icons type="folder-add" size="52" color="#c7cad4" /></view>
@@ -125,7 +156,7 @@
         <view class="mhead">
           <text class="tag">{{ m.question_type || modName(m.module) }}</text>
           <text v-if="m.times >= 2" class="timesbadge">错 {{ m.times }} 次</text>
-          <text v-if="m.mastered" class="zhan">已斩</text>
+          <text v-if="m.mastered" class="zhan">已掌握</text>
           <view v-else-if="nextReviewText(m)" class="duehint" :class="{ due: isDue(m) }">
             <view class="duedot" /><text>{{ nextReviewText(m) }}</text>
           </view>
@@ -186,6 +217,8 @@ export default {
       favKw: '',
       tab: 'todo',
       favs: [],
+      filterOpen: false,
+      mgOpen: {},
       sortBy: 'time',
       pageN: 20,
       SORTS: [
@@ -251,6 +284,26 @@ export default {
     shownPage() {
       return this.shownItems.slice(0, this.pageN);
     },
+    modGroups() {
+      if (this.tab === 'fav') return [];
+      const base = this.tab === 'done' ? this.doneItems : this.todoItems;
+      const map = {};
+      for (const m of base) {
+        const key = m.module || 'other';
+        if (!map[key]) map[key] = { key, name: NAMES[key] || key || '其他', n: 0, subs: {} };
+        map[key].n++;
+        const t = this.groupKey(m);
+        map[key].subs[t] = (map[key].subs[t] || 0) + 1;
+      }
+      return Object.values(map)
+        .map((g) => ({
+          ...g,
+          subs: Object.entries(g.subs)
+            .map(([name, n]) => ({ name, n }))
+            .sort((a, b) => b.n - a.n),
+        }))
+        .sort((a, b) => b.n - a.n);
+    },
     typeGroups() {
       if (this.tab === 'fav') return [];
       let base = this.tab === 'done' ? this.doneItems : this.todoItems;
@@ -283,6 +336,13 @@ export default {
   },
   methods: {
     md,
+    toggleGroup(key) {
+      this.mgOpen = { ...this.mgOpen, [key]: !this.mgOpen[key] };
+    },
+    pickGroup(mod, sub) {
+      this.filterMod = mod;
+      this.kpFilter = sub || '';
+    },
     groupKey(m) {
       return m.question_type || NAMES[m.module] || m.module || '其他';
     },
@@ -317,7 +377,7 @@ export default {
     },
     async master(m, on = true) {
       await request('/api/mistakes/' + m.id, { method: 'PATCH', data: { mastered: on ? 1 : 0 } });
-      if (on) uni.showToast({ title: '已斩！', icon: 'success' });
+      if (on) uni.showToast({ title: '已掌握！', icon: 'success' });
       this.load();
     },
     goPractice() {
@@ -442,7 +502,7 @@ export default {
     itemSheet(m) {
       const acts = [];
       if (m.module) acts.push({ t: '练3道同类', f: () => this.practiceSimilar(m) });
-      if (!m.mastered) acts.push({ t: '标为已斩', f: () => this.master(m) });
+      if (!m.mastered) acts.push({ t: '标为已掌握', f: () => this.master(m) });
       acts.push({ t: '删除', f: () => this.del(m) });
       uni.showActionSheet({
         itemList: acts.map((a) => a.t),
@@ -501,9 +561,30 @@ export default {
 .rpill.wrong { background: #fee2e2; color: #b91c1c; }
 .rpill.right { background: #dcfce7; color: #15803d; }
 .zop { color: var(--ok); border: 1rpx solid var(--ok); }
-.toptabs { display: flex; gap: 16rpx; margin-bottom: 20rpx; }
-.ttab { flex: 1; text-align: center; padding: 16rpx 0; border-radius: 16rpx; background: var(--card); border: 1rpx solid var(--line); font-size: 26rpx; color: var(--ink-2); }
-.ttab.on { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
+.segrow { display: flex; align-items: center; gap: 16rpx; margin-bottom: 20rpx; }
+.seg { flex: 1; display: flex; background: #f2f3f5; border-radius: 16rpx; padding: 6rpx; }
+.seg-i { flex: 1; text-align: center; padding: 14rpx 0; border-radius: 12rpx; font-size: 25rpx; color: var(--ink-2); }
+.seg-i.on { background: #fff; color: var(--ink); font-weight: 600; box-shadow: 0 2rpx 8rpx rgba(31, 35, 41, 0.08); }
+.filterbtn { display: inline-flex; align-items: center; gap: 6rpx; background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 24rpx; min-height: 44px; box-sizing: border-box; flex-shrink: 0; }
+.filterbtn-t { font-size: 24rpx; color: var(--ink-2); }
+.modgroup { padding: 20rpx 24rpx; }
+.mg-h { font-size: 24rpx; color: var(--ink-2); margin-bottom: 6rpx; }
+.mg-row { display: flex; align-items: center; gap: 12rpx; min-height: 56px; border-bottom: 1rpx solid var(--line); }
+.mg-blk:last-child .mg-row { border-bottom: none; }
+.mg-arrow { font-size: 24rpx; color: var(--ink-3, #8f959e); width: 28rpx; }
+.mg-name { font-size: 29rpx; font-weight: 600; color: var(--ink); flex: 1; }
+.mg-badge { background: #f2f3f5; color: var(--ink-2); border-radius: 999rpx; font-size: 22rpx; padding: 4rpx 18rpx; }
+.mg-go { font-size: 24rpx; color: var(--brand); padding: 18rpx 0 18rpx 24rpx; }
+.mg-sub { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding-left: 60rpx; border-bottom: 1rpx dashed var(--line); }
+.mg-sub-name { font-size: 26rpx; color: var(--ink); }
+.curfilter { display: flex; gap: 12rpx; margin-bottom: 16rpx; flex-wrap: wrap; }
+.mask { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 99; display: flex; align-items: flex-end; }
+.sheet { width: 100%; background: #fff; border-radius: 24rpx 24rpx 0 0; padding: 28rpx 28rpx 48rpx; max-height: 70vh; overflow-y: auto; box-sizing: border-box; }
+.sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
+.sheet-t { font-size: 30rpx; font-weight: 600; }
+.sheet-x { font-size: 30rpx; color: var(--ink-2); padding: 10rpx 20rpx; }
+.sheet-k { font-size: 23rpx; color: var(--ink-2); margin: 20rpx 0 10rpx; }
+.sheet-done { margin-top: 32rpx; background: var(--brand, #3b6ff5); color: #fff; text-align: center; border-radius: 999rpx; padding: 22rpx 0; font-size: 28rpx; font-weight: 500; }
 .xp-k { margin-top: 12rpx; font-size: 22rpx; font-weight: 700; color: #ea580c; border-left: 6rpx solid #ea580c; padding-left: 10rpx; }
 .xp-body { margin-top: 6rpx; font-size: 23rpx; color: var(--ink); background: #fff7ed; border-radius: 10rpx; padding: 12rpx; line-height: 1.6; }
 .mfoot { display: flex; justify-content: space-between; align-items: center; margin-top: 12rpx; border-top: 1rpx solid var(--line); padding-top: 8rpx; }
