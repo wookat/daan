@@ -257,6 +257,11 @@
 import { request, anonUid } from '../../api.js';
 import { md } from '../../md.js';
 
+// 旧版缓存的 AI 建议内联了旧紫色，读取时映射到品牌色
+function cleanCoach(s) {
+  return s.replace(/#4f46e5/g, '#3b6ff5').replace(/#6366f1/g, '#6c9bff').replace(/#3730a3/g, '#2f5cd8').replace(/#f4f5ff/g, '#edf3fe');
+}
+
 const MODS = [
   { key: 'ziliao', name: '资料' },
   { key: 'shuliang', name: '数量' },
@@ -267,7 +272,7 @@ const MODS = [
 
 export default {
   data() {
-    return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, history: [], showAllHist: false, coachHtml: uni.getStorageSync('coachAdvice') || '', coachLoading: false, calFull: false, growth: null, reco: null, dueN: 0, gwMod: '', slStats: null, slIssuesOpen: false };
+    return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, history: [], showAllHist: false, coachHtml: cleanCoach(uni.getStorageSync('coachAdvice') || ''), coachLoading: false, calFull: false, growth: null, reco: null, dueN: 0, gwMod: '', slStats: null, slIssuesOpen: false };
   },
   computed: {
     slLast() {
@@ -578,7 +583,7 @@ export default {
             this.backupCode = res.content.trim().toUpperCase();
             this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
             this.history = uni.getStorageSync('practiceHistory') || [];
-            this.coachHtml = uni.getStorageSync('coachAdvice') || '';
+            this.coachHtml = cleanCoach(uni.getStorageSync('coachAdvice') || '');
             uni.showToast({ title: '恢复成功！', icon: 'success' });
           } catch (e) {
             uni.showToast({ title: '恢复失败：' + e.message, icon: 'none' });
