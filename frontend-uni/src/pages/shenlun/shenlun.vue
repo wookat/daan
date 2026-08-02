@@ -345,7 +345,7 @@ export default {
 .d-notes { font-size: 23rpx; color: var(--ink-2, #6b7280); margin-top: 12rpx; line-height: 1.7; white-space: pre-wrap; display: block; }
 .m-topic { font-size: 24rpx; font-weight: 600; color: var(--ink-1, #1f2937); }
 .q-top-r { display: flex; align-items: center; gap: 12rpx; }
-.m-star { font-size: 34rpx; color: var(--ink-3, #c4c9d4); padding: 8rpx 12rpx; margin: -8rpx -12rpx -8rpx 0; }
+.m-star { font-size: 34rpx; color: var(--ink-3, #c4c9d4); display: inline-flex; align-items: center; justify-content: center; min-width: 88rpx; min-height: 88rpx; margin: -24rpx -20rpx -24rpx -8rpx; }
 .m-star.on { color: #f59e0b; }
 .chip.fav.on { background: #fffbeb; color: #b45309; border-color: #fcd34d; }
 .m-content { font-size: 25rpx; color: var(--ink-2, #4b5563); line-height: 1.8; white-space: pre-wrap; display: block; margin: 8rpx 0; word-break: break-all; overflow-wrap: anywhere; }
