@@ -468,7 +468,18 @@ async def api_shenlun_grade(body: dict):
         result = await llm.chat([{"role": "user", "content": prompt}], temperature=0.3, max_tokens=1500)
     except Exception as e:  # noqa: BLE001
         raise HTTPException(502, f"批改失败：{_friendly_ai_err(e)}") from e
+    uid = (body.get("uid") or "").strip()[:64]
+    if uid:
+        db.save_shenlun_answer(uid, int(qid), answer, result)
     return {"result": result, "essay": is_essay}
+
+
+@app.get("/api/shenlun/history")
+def api_shenlun_history(uid: str, qid: int | None = None, limit: int = 20):
+    uid = uid.strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    return {"items": db.shenlun_answer_history(uid[:64], qid, limit)}
 
 
 @app.get("/api/shenlun/materials")

@@ -47,6 +47,14 @@
           <view class="d-h">批改结果<text class="g-note">（AI 参考，非官方评分）</text></view>
           <text class="g-body">{{ gradeResult }}</text>
         </view>
+        <view v-if="history.length" class="d-h toggle" @click="showHist = !showHist">历史作答（{{ history.length }}） {{ showHist ? '▲' : '▼' }}</view>
+        <view v-if="showHist">
+          <view v-for="h in history" :key="h.id" class="hist-item">
+            <text class="hist-time">{{ fmtTime(h.created_at) }}</text>
+            <text class="hist-ans">{{ h.answer }}</text>
+            <text v-if="h.result" class="hist-res">{{ h.result }}</text>
+          </view>
+        </view>
         <view class="d-h toggle ref" @click="showRef = !showRef">{{ showRef ? '收起参考要点 ▲' : '写完再看 · 参考要点 ▼' }}</view>
         <text v-if="showRef" class="d-ref">{{ detail.reference }}</text>
         <text v-if="showRef && detail.notes" class="d-notes">{{ detail.notes }}</text>
@@ -96,6 +104,8 @@ export default {
       myAnswer: '',
       grading: false,
       gradeResult: '',
+      history: [],
+      showHist: false,
       qOffset: 0,
       mOffset: 0,
       qEnd: false,
@@ -195,9 +205,27 @@ export default {
         this.showRef = false;
         this.myAnswer = '';
         this.gradeResult = '';
+        this.history = [];
+        this.showHist = false;
+        this.loadHistory(id);
       } catch (e) {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
+    },
+    async loadHistory(id) {
+      const uid = uni.getStorageSync('anonUid');
+      if (!uid) return;
+      try {
+        const d = await request('/api/shenlun/history?qid=' + id + '&uid=' + encodeURIComponent(uid));
+        if (this.detail && this.detail.id === id) this.history = d.items || [];
+      } catch (e) {
+        /* 历史加载失败不阻断 */
+      }
+    },
+    fmtTime(ts) {
+      const d = new Date((ts || 0) * 1000);
+      const p = (n) => (n < 10 ? '0' + n : n);
+      return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
     },
     async grade() {
       if (this.grading || !this.myAnswer.trim()) return;
@@ -206,9 +234,10 @@ export default {
       try {
         const d = await request('/api/shenlun/grade', {
           method: 'POST',
-          data: { qid: this.detail.id, answer: this.myAnswer },
+          data: { qid: this.detail.id, answer: this.myAnswer, uid: uni.getStorageSync('anonUid') || '' },
         });
         this.gradeResult = d.result;
+        this.loadHistory(this.detail.id);
       } catch (e) {
         uni.showToast({ title: e.message || '批改失败，请稍后重试', icon: 'none' });
       }
@@ -227,6 +256,10 @@ export default {
 .chip { font-size: 23rpx; color: var(--ink-2, #6b7280); background: #fff; border: 1rpx solid var(--line, #e5e7eb); border-radius: 999rpx; padding: 12rpx 24rpx; }
 .chip.on { color: #fff; background: var(--brand, #4f46e5); border-color: var(--brand, #4f46e5); }
 .card { background: #fff; border-radius: 20rpx; padding: 26rpx 28rpx; margin-bottom: 18rpx; }
+.hist-item { background: #f8f9fc; border-radius: 12rpx; padding: 16rpx 18rpx; margin-bottom: 12rpx; }
+.hist-time { font-size: 21rpx; color: var(--ink-3, #9ca3af); display: block; margin-bottom: 6rpx; }
+.hist-ans { font-size: 24rpx; color: var(--ink-1, #1f2937); line-height: 1.7; white-space: pre-wrap; display: block; max-height: 240rpx; overflow: hidden; }
+.hist-res { font-size: 23rpx; color: var(--ink-2, #4b5563); background: #fffbeb; border-radius: 8rpx; padding: 12rpx 14rpx; margin-top: 10rpx; line-height: 1.7; white-space: pre-wrap; display: block; }
 .spin { text-align: center; color: var(--ink-3, #9ca3af); font-size: 25rpx; padding: 60rpx 0; }
 .q-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
 .q-paper { font-size: 22rpx; color: #b45309; background: #fef3c7; border-radius: 8rpx; padding: 4rpx 14rpx; }

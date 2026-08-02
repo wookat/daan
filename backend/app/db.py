@@ -443,6 +443,52 @@ def shenlun_filters() -> dict:
     return {"years": years, "regions": regions}
 
 
+def _ensure_shenlun_answers(conn):
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS shenlun_answers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            uid TEXT NOT NULL,
+            qid INTEGER NOT NULL,
+            answer TEXT NOT NULL,
+            result TEXT,
+            created_at REAL NOT NULL
+        )"""
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_sa_uid ON shenlun_answers(uid, qid, id)")
+
+
+def save_shenlun_answer(uid: str, qid: int, answer: str, result: str) -> int:
+    conn = get_conn()
+    _ensure_shenlun_answers(conn)
+    cur = conn.execute(
+        "INSERT INTO shenlun_answers (uid, qid, answer, result, created_at) VALUES (?,?,?,?,?)",
+        (uid, qid, answer, result, time.time()),
+    )
+    conn.commit()
+    rid = cur.lastrowid
+    conn.close()
+    return rid
+
+
+def shenlun_answer_history(uid: str, qid: int | None = None, limit: int = 20) -> list[dict]:
+    conn = get_conn()
+    _ensure_shenlun_answers(conn)
+    where = "uid=?"
+    args: list = [uid]
+    if qid:
+        where += " AND qid=?"
+        args.append(qid)
+    rows = conn.execute(
+        f"""SELECT a.id, a.qid, a.answer, a.result, a.created_at,
+                   q.qtype, q.question
+            FROM shenlun_answers a LEFT JOIN shenlun_questions q ON q.id=a.qid
+            WHERE {where} ORDER BY a.id DESC LIMIT ?""",
+        (*args, min(limit, 50)),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 def shenlun_question(qid: int) -> dict | None:
     conn = get_conn()
     r = conn.execute(
