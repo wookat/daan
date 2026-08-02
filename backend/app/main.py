@@ -400,6 +400,32 @@ def api_questions(
     }
 
 
+@app.post("/api/shenlun/import")
+def api_shenlun_import(body: dict, x_import_token: str | None = Header(None)):
+    if not IMPORT_TOKEN or x_import_token != IMPORT_TOKEN:
+        raise HTTPException(401, "无效导入令牌")
+    batch = "sl" + time.strftime("%Y%m%d%H%M%S")
+    return db.import_shenlun(body.get("questions") or [], body.get("materials") or [], batch)
+
+
+@app.get("/api/shenlun/questions")
+def api_shenlun_questions(qtype: str | None = None, year: int | None = None, limit: int = 20, offset: int = 0):
+    return {"items": db.shenlun_questions(qtype, year, limit, offset)}
+
+
+@app.get("/api/shenlun/questions/{qid}")
+def api_shenlun_question(qid: int):
+    item = db.shenlun_question(qid)
+    if not item:
+        raise HTTPException(404, "题目不存在")
+    return {"item": item}
+
+
+@app.get("/api/shenlun/materials")
+def api_shenlun_materials(topic: str | None = None, type: str | None = None, limit: int = 20, offset: int = 0):
+    return {"items": db.shenlun_materials(topic, type, limit, offset)}
+
+
 @app.get("/api/mistakes/redo")
 def api_mistakes_redo(limit: int = 10, qtype: str | None = None, module: str | None = None, noqt: int = 0, uid: str | None = None):
     return {"items": db.mistakes_redo_questions(min(limit, 25), qtype=qtype, module=module, noqt=bool(noqt), uid=uid)}

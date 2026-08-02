@@ -105,6 +105,32 @@ def init_db():
             down INTEGER DEFAULT 0
         )"""
     )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS shenlun_questions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            exam_year INTEGER,
+            exam_region TEXT,
+            paper TEXT,
+            qtype TEXT,
+            material TEXT,
+            question TEXT UNIQUE,
+            reference TEXT,
+            notes TEXT,
+            import_batch TEXT,
+            disabled INTEGER
+        )"""
+    )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS shenlun_materials (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            type TEXT,
+            topic TEXT,
+            content TEXT UNIQUE,
+            source TEXT,
+            import_batch TEXT,
+            disabled INTEGER
+        )"""
+    )
     conn.commit()
     conn.close()
     _seed_questions()
@@ -342,6 +368,80 @@ def grouped_ziliao_questions(limit: int = 10, uid: str | None = None) -> list[di
         seen = {d["id"] for d in out}
         out += [q for q in random_questions("ziliao", limit - len(out), uid=uid) if q["id"] not in seen]
     return out
+
+
+def import_shenlun(questions: list[dict], materials: list[dict], batch: str) -> dict:
+    """申论数据导入：进待审（disabled=2），按内容去重。"""
+    conn = get_conn()
+    qn = mn = 0
+    for q in questions or []:
+        cur = conn.execute(
+            """INSERT OR IGNORE INTO shenlun_questions
+               (exam_year, exam_region, paper, qtype, material, question, reference, notes, import_batch, disabled)
+               VALUES (?,?,?,?,?,?,?,?,?,2)""",
+            (q.get("exam_year"), q.get("exam_region"), q.get("paper"), q.get("qtype"),
+             q.get("material"), q.get("question"), q.get("reference"), q.get("notes"), batch),
+        )
+        qn += cur.rowcount
+    for m in materials or []:
+        cur = conn.execute(
+            """INSERT OR IGNORE INTO shenlun_materials
+               (type, topic, content, source, import_batch, disabled)
+               VALUES (?,?,?,?,?,2)""",
+            (m.get("type"), m.get("topic"), m.get("content"), m.get("source"), batch),
+        )
+        mn += cur.rowcount
+    conn.commit()
+    conn.close()
+    return {"questions": qn, "materials": mn, "batch": batch}
+
+
+def shenlun_questions(qtype: str | None = None, year: int | None = None, limit: int = 20, offset: int = 0) -> list[dict]:
+    conn = get_conn()
+    where = ["(disabled IS NULL OR disabled=0)"]
+    args: list = []
+    if qtype:
+        where.append("qtype=?")
+        args.append(qtype)
+    if year:
+        where.append("exam_year=?")
+        args.append(year)
+    rows = conn.execute(
+        f"""SELECT id, exam_year, exam_region, paper, qtype, question,
+                   LENGTH(material) material_len
+            FROM shenlun_questions WHERE {' AND '.join(where)}
+            ORDER BY exam_year DESC, id LIMIT ? OFFSET ?""",
+        (*args, min(limit, 50), offset),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def shenlun_question(qid: int) -> dict | None:
+    conn = get_conn()
+    r = conn.execute(
+        "SELECT * FROM shenlun_questions WHERE id=? AND (disabled IS NULL OR disabled=0)", (qid,)
+    ).fetchone()
+    conn.close()
+    return dict(r) if r else None
+
+
+def shenlun_materials(topic: str | None = None, mtype: str | None = None, limit: int = 20, offset: int = 0) -> list[dict]:
+    conn = get_conn()
+    where = ["(disabled IS NULL OR disabled=0)"]
+    args: list = []
+    if topic:
+        where.append("topic=?")
+        args.append(topic)
+    if mtype:
+        where.append("type=?")
+        args.append(mtype)
+    rows = conn.execute(
+        f"SELECT * FROM shenlun_materials WHERE {' AND '.join(where)} ORDER BY id LIMIT ? OFFSET ?",
+        (*args, min(limit, 50), offset),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 
 def question_counts() -> list[dict]:
