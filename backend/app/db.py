@@ -401,7 +401,7 @@ def shenlun_questions(qtype: str | None = None, year: int | None = None, limit: 
     where = ["(disabled IS NULL OR disabled=0)"]
     args: list = []
     if qtype:
-        where.append("qtype=?")
+        where.append("qtype LIKE ? || '%'")
         args.append(qtype)
     if year:
         where.append("exam_year=?")
