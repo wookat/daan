@@ -3,6 +3,7 @@
     <view class="tabs">
       <text class="tab" :class="{ on: tab === 'q' }" @click="tab = 'q'">真题题库</text>
       <text class="tab" :class="{ on: tab === 'm' }" @click="switchMat">素材/范文</text>
+      <text class="tab" :class="{ on: tab === 'r' }" @click="switchRec">作答记录</text>
     </view>
 
     <template v-if="tab === 'q' && !detail">
@@ -77,6 +78,19 @@
       </view>
       <view v-if="!mEnd && mats.length >= 20" class="more" @click="loadMoreMat">加载更多</view>
     </template>
+
+    <template v-if="tab === 'r'">
+      <view v-if="recLoading" class="spin">加载中…</view>
+      <view v-else-if="!recs.length" class="spin">还没有作答记录，去题库作答并 AI 批改后会自动保存</view>
+      <view v-for="r in recs" :key="r.id" class="card">
+        <view class="q-top">
+          <text class="hist-time">{{ fmtTime(r.created_at) }}</text>
+          <text class="q-type">{{ r.qtype || '申论' }}</text>
+        </view>
+        <text class="q-text" @click="openQ(r.qid); tab = 'q'">{{ r.question || '（题目已下线）' }}</text>
+        <text class="m-content" :class="{ clamp: expanded !== 'r' + r.id }" @click="expanded = expanded === 'r' + r.id ? 0 : 'r' + r.id">{{ '【我的作答】\n' + r.answer + (r.result ? '\n\n【批改结果】\n' + r.result : '') }}</text>
+      </view>
+    </template>
   </view>
 </template>
 
@@ -106,6 +120,8 @@ export default {
       gradeResult: '',
       history: [],
       showHist: false,
+      recs: [],
+      recLoading: false,
       qOffset: 0,
       mOffset: 0,
       qEnd: false,
@@ -175,6 +191,22 @@ export default {
     switchMat() {
       this.tab = 'm';
       if (!this.mats.length) this.loadMats();
+    },
+    async switchRec() {
+      this.tab = 'r';
+      const uid = uni.getStorageSync('anonUid');
+      if (!uid) {
+        this.recs = [];
+        return;
+      }
+      this.recLoading = true;
+      try {
+        const d = await request('/api/shenlun/history?limit=50&uid=' + encodeURIComponent(uid));
+        this.recs = d.items || [];
+      } catch (e) {
+        uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
+      }
+      this.recLoading = false;
     },
     setQtype(t) {
       this.qtype = t;
