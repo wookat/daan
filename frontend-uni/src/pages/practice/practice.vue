@@ -2,13 +2,13 @@
   <view class="wrap" :class="{ 'has-banner': picked }">
     <!-- 选模块 -->
     <view v-if="!session" class="home">
-      <view class="banner">
-        <view class="banner-l">
-          <text class="banner-t">今日已练 {{ todayCount }}/{{ dailyGoal }} 题{{ todayCount >= dailyGoal ? ' · 已达成' : '' }}</text>
-          <text class="banner-s">{{ dailyStreak ? '连续打卡 ' + dailyStreak + ' 天' : '今天还没开始，练一组吧' }}</text>
-          <view class="banner-bar"><view class="banner-fill" :style="{ width: Math.min((todayCount / dailyGoal) * 100, 100) + '%' }" /></view>
+      <view class="hbanner">
+        <view class="hbanner-l">
+          <text class="hbanner-t">今日已练 {{ todayCount }}/{{ dailyGoal }} 题{{ todayCount >= dailyGoal ? ' · 已达成' : '' }}</text>
+          <text class="hbanner-s">{{ dailyStreak ? '连续打卡 ' + dailyStreak + ' 天' : '今天还没开始，练一组吧' }}</text>
+          <view class="hbanner-bar"><view class="hbanner-fill" :style="{ width: Math.min((todayCount / dailyGoal) * 100, 100) + '%' }" /></view>
         </view>
-        <text class="banner-btn" @click="startDaily">{{ todayDone ? '再练一组' : '继续目标 ›' }}</text>
+        <text class="hbanner-btn" @click="startDaily">{{ todayDone ? '再练一组' : '继续目标 ›' }}</text>
       </view>
       <view v-if="announce" class="card ann">
         <uni-icons type="sound-filled" size="15" color="#0369a1" />
@@ -1399,13 +1399,13 @@ export default {
 <style scoped>
 .wrap { padding: 24rpx; padding-bottom: 40rpx; }
 .home { padding-bottom: 40rpx; }
-.banner { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(120deg, #3b6ff5, #6c9bff); border-radius: 24rpx; padding: 28rpx; margin-bottom: 24rpx; }
-.banner-l { flex: 1; margin-right: 20rpx; }
-.banner-t { display: block; font-size: 30rpx; font-weight: 600; color: #fff; }
-.banner-s { display: block; font-size: 23rpx; color: rgba(255, 255, 255, 0.82); margin-top: 6rpx; }
-.banner-bar { height: 10rpx; background: rgba(255, 255, 255, 0.25); border-radius: 999rpx; margin-top: 14rpx; overflow: hidden; }
-.banner-fill { height: 100%; background: #fff; border-radius: 999rpx; }
-.banner-btn { flex-shrink: 0; background: #fff; color: #3b6ff5; border-radius: 999rpx; padding: 14rpx 24rpx; font-size: 26rpx; font-weight: 500; }
+.hbanner { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(120deg, #3b6ff5, #6c9bff); border-radius: 24rpx; padding: 28rpx; margin-bottom: 24rpx; }
+.hbanner-l { flex: 1; margin-right: 20rpx; }
+.hbanner-t { display: block; font-size: 30rpx; font-weight: 600; color: #fff; }
+.hbanner-s { display: block; font-size: 23rpx; color: rgba(255, 255, 255, 0.82); margin-top: 6rpx; }
+.hbanner-bar { height: 10rpx; background: rgba(255, 255, 255, 0.25); border-radius: 999rpx; margin-top: 14rpx; overflow: hidden; }
+.hbanner-fill { height: 100%; background: #fff; border-radius: 999rpx; }
+.hbanner-btn { flex-shrink: 0; background: #fff; color: #3b6ff5; border-radius: 999rpx; padding: 22rpx 28rpx; font-size: 26rpx; font-weight: 500; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
 .grid4 { display: flex; padding: 20rpx 8rpx; }
 .g4 { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 10rpx 0; }
 .g4-ic { width: 88rpx; height: 88rpx; border-radius: 24rpx; display: flex; align-items: center; justify-content: center; margin-bottom: 10rpx; }
