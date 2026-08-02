@@ -18,7 +18,7 @@
         </view>
         <text class="q-text">{{ q.question }}</text>
       </view>
-      <view v-if="qs.length >= 20" class="more" @click="loadMore">加载更多</view>
+      <view v-if="!qEnd && qs.length >= 20" class="more" @click="loadMore">加载更多</view>
     </template>
 
     <template v-if="tab === 'q' && detail">
@@ -59,7 +59,7 @@
         <text class="m-content" :class="{ clamp: expanded !== m.id }" @click="expanded = expanded === m.id ? 0 : m.id">{{ m.content }}</text>
         <text v-if="m.source" class="m-src">出处：{{ m.source }}</text>
       </view>
-      <view v-if="mats.length >= 20" class="more" @click="loadMoreMat">加载更多</view>
+      <view v-if="!mEnd && mats.length >= 20" class="more" @click="loadMoreMat">加载更多</view>
     </template>
   </view>
 </template>
@@ -90,6 +90,8 @@ export default {
       gradeResult: '',
       qOffset: 0,
       mOffset: 0,
+      qEnd: false,
+      mEnd: false,
     };
   },
   onLoad() {
@@ -101,7 +103,9 @@ export default {
       try {
         const t = this.qtype === '全部' ? '' : '&qtype=' + encodeURIComponent(this.qtype);
         const d = await request('/api/shenlun/questions?limit=20&offset=' + this.qOffset + t);
-        this.qs = append ? this.qs.concat(d.items || []) : d.items || [];
+        const items = d.items || [];
+        this.qEnd = items.length < 20;
+        this.qs = append ? this.qs.concat(items) : items;
       } catch (e) {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
@@ -112,7 +116,9 @@ export default {
       try {
         const t = this.mtype === '全部' ? '' : '&type=' + encodeURIComponent(this.mtype);
         const d = await request('/api/shenlun/materials?limit=20&offset=' + this.mOffset + t);
-        this.mats = append ? this.mats.concat(d.items || []) : d.items || [];
+        const items = d.items || [];
+        this.mEnd = items.length < 20;
+        this.mats = append ? this.mats.concat(items) : items;
       } catch (e) {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
@@ -125,12 +131,14 @@ export default {
     setQtype(t) {
       this.qtype = t;
       this.qOffset = 0;
+      this.qEnd = false;
       this.detail = null;
       this.loadQs();
     },
     setMtype(t) {
       this.mtype = t;
       this.mOffset = 0;
+      this.mEnd = false;
       this.loadMats();
     },
     loadMore() {
@@ -198,7 +206,7 @@ export default {
 .m-topic { font-size: 24rpx; font-weight: 600; color: var(--ink-1, #1f2937); }
 .m-content { font-size: 25rpx; color: var(--ink-2, #4b5563); line-height: 1.8; white-space: pre-wrap; display: block; margin: 8rpx 0; }
 .m-content.clamp { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
-.m-src { font-size: 22rpx; color: var(--ink-3, #9ca3af); }
+.m-src { font-size: 22rpx; color: var(--ink-3, #9ca3af); word-break: break-all; overflow-wrap: anywhere; display: block; }
 .d-ta { width: 100%; box-sizing: border-box; min-height: 220rpx; background: #f8f9fc; border: 1rpx solid var(--line, #e5e7eb); border-radius: 12rpx; padding: 18rpx; font-size: 25rpx; line-height: 1.7; }
 .grade-btn { margin-top: 16rpx; text-align: center; background: var(--brand, #4f46e5); color: #fff; font-size: 27rpx; font-weight: 600; border-radius: 999rpx; padding: 20rpx 0; }
 .grade-btn.dis { opacity: 0.5; }
