@@ -64,19 +64,23 @@
 
     <template v-if="tab === 'm'">
       <view class="chips">
-        <text v-for="t in MTYPES" :key="t" class="chip" :class="{ on: mtype === t }" @click="setMtype(t)">{{ t }}</text>
+        <text v-for="t in MTYPES" :key="t" class="chip" :class="{ on: mtype === t && !favOnly }" @click="setMtype(t)">{{ t }}</text>
+        <text class="chip fav" :class="{ on: favOnly }" @click="toggleFavOnly">★ 收藏{{ favIds.length ? ' ' + favIds.length : '' }}</text>
       </view>
       <view v-if="loading" class="spin">加载中…</view>
-      <view v-else-if="!mats.length" class="spin">暂无素材，敬请期待</view>
-      <view v-for="m in mats" :key="m.id" class="card m-item">
+      <view v-else-if="!shownMats.length" class="spin">{{ favOnly ? '还没有收藏素材，点素材右上☆收藏' : '暂无素材，敬请期待' }}</view>
+      <view v-for="m in shownMats" :key="m.id" class="card m-item">
         <view class="q-top">
           <text class="m-topic">{{ m.topic }}</text>
-          <text class="q-type">{{ m.type }}</text>
+          <view class="q-top-r">
+            <text class="q-type">{{ m.type }}</text>
+            <text class="m-star" :class="{ on: favIds.includes(m.id) }" @click="toggleFav(m)">{{ favIds.includes(m.id) ? '★' : '☆' }}</text>
+          </view>
         </view>
         <text class="m-content" :class="{ clamp: expanded !== m.id }" @click="expanded = expanded === m.id ? 0 : m.id">{{ m.content }}</text>
         <text v-if="m.source" class="m-src">出处：{{ m.source }}</text>
       </view>
-      <view v-if="!mEnd && mats.length >= 20" class="more" @click="loadMoreMat">加载更多</view>
+      <view v-if="!favOnly && !mEnd && mats.length >= 20" class="more" @click="loadMoreMat">加载更多</view>
     </template>
 
     <template v-if="tab === 'r'">
@@ -122,6 +126,9 @@ export default {
       showHist: false,
       recs: [],
       recLoading: false,
+      favOnly: false,
+      favIds: uni.getStorageSync('slMatFavIds') || [],
+      favMats: uni.getStorageSync('slMatFavs') || [],
       qOffset: 0,
       mOffset: 0,
       qEnd: false,
@@ -131,6 +138,11 @@ export default {
       year: 0,
       region: '',
     };
+  },
+  computed: {
+    shownMats() {
+      return this.favOnly ? this.favMats : this.mats;
+    },
   },
   onLoad(opts) {
     this.loadQs();
@@ -217,7 +229,23 @@ export default {
       this.detail = null;
       this.loadQs();
     },
+    toggleFav(m) {
+      const i = this.favIds.indexOf(m.id);
+      if (i >= 0) {
+        this.favIds.splice(i, 1);
+        this.favMats = this.favMats.filter((x) => x.id !== m.id);
+      } else {
+        this.favIds.push(m.id);
+        this.favMats.unshift(m);
+      }
+      uni.setStorageSync('slMatFavIds', this.favIds);
+      uni.setStorageSync('slMatFavs', this.favMats);
+    },
+    toggleFavOnly() {
+      this.favOnly = !this.favOnly;
+    },
     setMtype(t) {
+      this.favOnly = false;
       this.mtype = t;
       this.mOffset = 0;
       this.mEnd = false;
@@ -316,6 +344,10 @@ export default {
 .d-ref { font-size: 25rpx; color: #166534; background: #f0fdf4; border-radius: 12rpx; padding: 18rpx; line-height: 1.8; white-space: pre-wrap; display: block; }
 .d-notes { font-size: 23rpx; color: var(--ink-2, #6b7280); margin-top: 12rpx; line-height: 1.7; white-space: pre-wrap; display: block; }
 .m-topic { font-size: 24rpx; font-weight: 600; color: var(--ink-1, #1f2937); }
+.q-top-r { display: flex; align-items: center; gap: 12rpx; }
+.m-star { font-size: 34rpx; color: var(--ink-3, #c4c9d4); padding: 8rpx 12rpx; margin: -8rpx -12rpx -8rpx 0; }
+.m-star.on { color: #f59e0b; }
+.chip.fav.on { background: #fffbeb; color: #b45309; border-color: #fcd34d; }
 .m-content { font-size: 25rpx; color: var(--ink-2, #4b5563); line-height: 1.8; white-space: pre-wrap; display: block; margin: 8rpx 0; word-break: break-all; overflow-wrap: anywhere; }
 .m-content.clamp { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
 .chips-x { white-space: nowrap; margin-bottom: 14rpx; }
