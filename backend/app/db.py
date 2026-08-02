@@ -338,6 +338,15 @@ def grouped_ziliao_questions(limit: int = 10, uid: str | None = None) -> list[di
         conn.close()
         return random_questions("ziliao", limit, uid=uid)
     out: list[dict] = []
+    done: set[int] = set()
+    if uid:
+        done = {
+            r["question_id"]
+            for r in conn.execute(
+                "SELECT DISTINCT question_id FROM (SELECT question_id FROM answer_log WHERE uid=? AND question_id IS NOT NULL ORDER BY id DESC LIMIT 3000)",
+                (uid,),
+            )
+        }
     hashes = [
         r["material_hash"]
         for r in conn.execute(
@@ -345,7 +354,7 @@ def grouped_ziliao_questions(limit: int = 10, uid: str | None = None) -> list[di
                WHERE module='ziliao' AND material_hash IS NOT NULL AND material_hash!='-'
                  AND (disabled IS NULL OR disabled=0)
                GROUP BY material_hash HAVING COUNT(*)>=2
-               ORDER BY RANDOM() LIMIT 8"""
+               ORDER BY RANDOM() LIMIT 24"""
         )
     ]
     for h in hashes:
@@ -357,6 +366,8 @@ def grouped_ziliao_questions(limit: int = 10, uid: str | None = None) -> list[di
             (h,),
         ).fetchall()
         if len(rows) < 2:
+            continue
+        if done and any(r["id"] in done for r in rows):
             continue
         for i, r in enumerate(rows):
             d = dict(r)
