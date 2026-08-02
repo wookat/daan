@@ -1,15 +1,15 @@
 <template>
   <view class="wrap">
-    <view class="card ov">
-      <view class="ovi">
+    <view class="ovrow">
+      <view class="ovi card">
         <text class="ovn">{{ totalDone }}</text>
         <text class="ovt">累计刷题</text>
       </view>
-      <view class="ovi">
+      <view class="ovi card">
         <text class="ovn">{{ accPct }}%</text>
         <text class="ovt">总正确率</text>
       </view>
-      <view class="ovi">
+      <view class="ovi card">
         <text class="ovn">{{ streakDays }}</text>
         <text class="ovt">连续打卡(天)</text>
       </view>
@@ -641,9 +641,10 @@ export default {
 .sec { font-size: 24rpx; font-weight: 700; color: var(--ink-2); letter-spacing: 2rpx; margin: 40rpx 0 20rpx 8rpx; }
 .cal-hr { display: flex; align-items: center; gap: 16rpx; }
 .cal-toggle { font-size: 24rpx; color: var(--brand); font-weight: 600; padding: 10rpx 0 10rpx 10rpx; }
-.ov { display: flex; }
+.ovrow { display: flex; gap: 16rpx; margin-bottom: 24rpx; }
+.ovrow .ovi { margin-bottom: 0; padding: 22rpx 12rpx; }
 .ovi { flex: 1; text-align: center; }
-.ovn { display: block; font-size: 48rpx; font-weight: 700; color: var(--ink); }
+.ovn { display: block; font-size: 44rpx; font-weight: 700; color: var(--ink); }
 .ovt { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; }
 .h { font-size: 28rpx; font-weight: 600; margin-bottom: 14rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 20rpx; }
