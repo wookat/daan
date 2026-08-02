@@ -132,11 +132,15 @@
           <text class="meta mtime">{{ fmt(m.created_at) }}</text>
         </view>
         <view class="q" :class="{ clamp: !m.open }">{{ (m.question_text || '').slice(0, 200) }}</view>
-        <view v-if="ansLetter(m.user_answer)" class="anscmp">
+        <view v-if="m.open && ansLetter(m.user_answer)" class="anscmp">
           <text class="rpill wrong">我选 {{ ansLetter(m.user_answer) }}</text>
           <text v-if="ansLetter(m.correct_answer)" class="rpill right">答案 {{ ansLetter(m.correct_answer) }}</text>
         </view>
-        <view class="mfoot">
+        <view v-if="!m.open" class="mfoot">
+          <text class="op hint">点开看答案与详解</text>
+          <text class="op more" @click.stop="itemSheet(m)">···</text>
+        </view>
+        <view v-else class="mfoot">
           <view class="acts">
             <text v-if="!m.mastered" class="op redo" @click.stop="redo(m)">AI 详解</text>
             <text v-else class="op redo" @click.stop="master(m, false)">恢复复习</text>
@@ -504,6 +508,7 @@ export default {
 .xp-body { margin-top: 6rpx; font-size: 23rpx; color: var(--ink); background: #fff7ed; border-radius: 10rpx; padding: 12rpx; line-height: 1.6; }
 .mfoot { display: flex; justify-content: space-between; align-items: center; margin-top: 12rpx; border-top: 1rpx solid var(--line); padding-top: 8rpx; }
 .op.more { color: var(--ink-2); font-weight: 700; padding: 18rpx 30rpx; margin-left: 0; }
+.op.hint { color: var(--ink-3, #9ca3af); margin-left: 0; padding-left: 0; }
 .loadmore { text-align: center; font-size: 24rpx; color: var(--ink-2); padding: 24rpx 0 140rpx; }
 .acts { display: flex; gap: 8rpx; }
 .op { font-size: 24rpx; margin-left: 16rpx; padding: 18rpx 24rpx; border-radius: 999rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
