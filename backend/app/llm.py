@@ -28,7 +28,7 @@ _QUOTA_CODES = (402, 403, 429)
 def _rescue_ok(messages: list) -> bool:
     return bool(RESCUE_BASE_URL and RESCUE_API_KEY) and not _has_image(messages)
 
-TIMEOUT = httpx.Timeout(180.0, connect=15.0)
+TIMEOUT = httpx.Timeout(float(os.environ.get("LLM_TIMEOUT", "180")), connect=15.0)
 
 
 def _has_image(messages: list) -> bool:
