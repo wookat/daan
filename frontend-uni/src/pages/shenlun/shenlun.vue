@@ -204,7 +204,7 @@ export default {
 .d-ref { font-size: 25rpx; color: #166534; background: #f0fdf4; border-radius: 12rpx; padding: 18rpx; line-height: 1.8; white-space: pre-wrap; display: block; }
 .d-notes { font-size: 23rpx; color: var(--ink-2, #6b7280); margin-top: 12rpx; line-height: 1.7; white-space: pre-wrap; display: block; }
 .m-topic { font-size: 24rpx; font-weight: 600; color: var(--ink-1, #1f2937); }
-.m-content { font-size: 25rpx; color: var(--ink-2, #4b5563); line-height: 1.8; white-space: pre-wrap; display: block; margin: 8rpx 0; }
+.m-content { font-size: 25rpx; color: var(--ink-2, #4b5563); line-height: 1.8; white-space: pre-wrap; display: block; margin: 8rpx 0; word-break: break-all; overflow-wrap: anywhere; }
 .m-content.clamp { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
 .m-src { font-size: 22rpx; color: var(--ink-3, #9ca3af); word-break: break-all; overflow-wrap: anywhere; display: block; }
 .d-ta { width: 100%; box-sizing: border-box; min-height: 220rpx; background: #f8f9fc; border: 1rpx solid var(--line, #e5e7eb); border-radius: 12rpx; padding: 18rpx; font-size: 25rpx; line-height: 1.7; }
