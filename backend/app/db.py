@@ -1128,7 +1128,7 @@ def save_answer_log(uid: str, items: list[dict]) -> int:
             (
                 uid,
                 now,
-                it.get("qid"),
+                it.get("qid") or it.get("question_id") or it.get("id"),
                 it.get("module"),
                 it.get("submodule"),
                 1 if it.get("correct") else 0,
