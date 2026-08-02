@@ -129,6 +129,7 @@ export default {
       favOnly: false,
       favIds: uni.getStorageSync('slMatFavIds') || [],
       favMats: uni.getStorageSync('slMatFavs') || [],
+      favSynced: false,
       qOffset: 0,
       mOffset: 0,
       qEnd: false,
@@ -205,6 +206,10 @@ export default {
     switchMat() {
       this.tab = 'm';
       if (!this.mats.length) this.loadMats();
+      if (!this.favSynced) {
+        this.favSynced = true;
+        this.syncFavs();
+      }
     },
     async switchRec() {
       this.tab = 'r';
@@ -231,15 +236,35 @@ export default {
     },
     toggleFav(m) {
       const i = this.favIds.indexOf(m.id);
-      if (i >= 0) {
-        this.favIds.splice(i, 1);
-        this.favMats = this.favMats.filter((x) => x.id !== m.id);
-      } else {
+      const on = i < 0;
+      if (on) {
         this.favIds.push(m.id);
         this.favMats.unshift(m);
+      } else {
+        this.favIds.splice(i, 1);
+        this.favMats = this.favMats.filter((x) => x.id !== m.id);
       }
       uni.setStorageSync('slMatFavIds', this.favIds);
       uni.setStorageSync('slMatFavs', this.favMats);
+      const uid = uni.getStorageSync('anonUid');
+      if (uid) request('/api/shenlun/mat_favs', { method: 'POST', data: { uid, mid: m.id, on } }).catch(() => {});
+    },
+    async syncFavs() {
+      const uid = uni.getStorageSync('anonUid');
+      if (!uid) return;
+      try {
+        const d = await request('/api/shenlun/mat_favs?uid=' + encodeURIComponent(uid));
+        const serverIds = d.ids || [];
+        const localOnly = this.favIds.filter((id) => !serverIds.includes(id));
+        for (const id of localOnly) {
+          request('/api/shenlun/mat_favs', { method: 'POST', data: { uid, mid: id, on: true } }).catch(() => {});
+        }
+        const merged = (d.items || []).filter((x) => !localOnly.includes(x.id));
+        this.favMats = [...this.favMats.filter((x) => localOnly.includes(x.id)), ...merged];
+        this.favIds = this.favMats.map((x) => x.id);
+        uni.setStorageSync('slMatFavIds', this.favIds);
+        uni.setStorageSync('slMatFavs', this.favMats);
+      } catch (e) { /* 非关键路径 */ }
     },
     toggleFavOnly() {
       this.favOnly = !this.favOnly;

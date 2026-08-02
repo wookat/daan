@@ -457,6 +457,52 @@ def _ensure_shenlun_answers(conn):
     conn.execute("CREATE INDEX IF NOT EXISTS idx_sa_uid ON shenlun_answers(uid, qid, id)")
 
 
+def _ensure_mat_favs(conn):
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS shenlun_mat_favs (
+            uid TEXT NOT NULL,
+            mid INTEGER NOT NULL,
+            created_at REAL NOT NULL,
+            PRIMARY KEY (uid, mid)
+        )"""
+    )
+
+
+def mat_fav_ids(uid: str) -> list[int]:
+    conn = get_conn()
+    _ensure_mat_favs(conn)
+    ids = [r[0] for r in conn.execute(
+        "SELECT mid FROM shenlun_mat_favs WHERE uid=? ORDER BY created_at DESC", (uid,))]
+    conn.close()
+    return ids
+
+
+def mat_fav_set(uid: str, mid: int, on: bool):
+    conn = get_conn()
+    _ensure_mat_favs(conn)
+    if on:
+        conn.execute(
+            "INSERT OR IGNORE INTO shenlun_mat_favs (uid, mid, created_at) VALUES (?,?,?)",
+            (uid, mid, time.time()))
+    else:
+        conn.execute("DELETE FROM shenlun_mat_favs WHERE uid=? AND mid=?", (uid, mid))
+    conn.commit()
+    conn.close()
+
+
+def mat_fav_items(uid: str) -> list[dict]:
+    conn = get_conn()
+    _ensure_mat_favs(conn)
+    rows = conn.execute(
+        """SELECT m.* FROM shenlun_mat_favs f
+           JOIN shenlun_materials m ON m.id=f.mid AND (m.disabled IS NULL OR m.disabled=0)
+           WHERE f.uid=? ORDER BY f.created_at DESC LIMIT 200""",
+        (uid,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 def save_shenlun_answer(uid: str, qid: int, answer: str, result: str) -> int:
     conn = get_conn()
     _ensure_shenlun_answers(conn)

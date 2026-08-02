@@ -511,6 +511,24 @@ def api_shenlun_stats(uid: str):
     return db.shenlun_stats(uid[:64])
 
 
+@app.get("/api/shenlun/mat_favs")
+def api_shenlun_mat_favs(uid: str):
+    uid = uid.strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    return {"ids": db.mat_fav_ids(uid[:64]), "items": db.mat_fav_items(uid[:64])}
+
+
+@app.post("/api/shenlun/mat_favs")
+def api_shenlun_mat_fav_set(body: dict):
+    uid = (body.get("uid") or "").strip()[:64]
+    mid = body.get("mid")
+    if not uid or not mid:
+        raise HTTPException(400, "缺少 uid 或素材 id")
+    db.mat_fav_set(uid, int(mid), bool(body.get("on")))
+    return {"ok": True}
+
+
 @app.get("/api/shenlun/materials")
 def api_shenlun_materials(topic: str | None = None, type: str | None = None, limit: int = 20, offset: int = 0):
     return {"items": db.shenlun_materials(topic, type, limit, offset)}
