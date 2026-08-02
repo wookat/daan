@@ -1432,7 +1432,8 @@ def daily_plan(uid: str) -> dict:
     uc, ua = _uid_clause(uid)
     due = conn.execute(
         f"""SELECT COUNT(*) n FROM mistakes
-            WHERE mastered=0 AND next_review IS NOT NULL AND next_review<=?{uc}""",
+            WHERE (mastered IS NULL OR mastered=0)
+              AND (next_review IS NULL OR next_review<=?){uc}""",
         (now, *ua),
     ).fetchone()
     conn.close()
