@@ -232,6 +232,27 @@ def api_admin_stats(x_admin_token: str | None = Header(None)):
     return db.admin_stats()
 
 
+@app.get("/api/admin/llm_health")
+async def api_admin_llm_health(x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    out = []
+    seen = set()
+    for name, base in (("视觉/主通道", llm.BASE_URL), ("文字通道", llm.TEXT_BASE_URL), ("备用通道", llm.RESCUE_BASE_URL)):
+        if not base or base in seen:
+            continue
+        seen.add(base)
+        host = base.split("//")[-1].split("/")[0]
+        masked = host[:6] + "…" + host[-10:] if len(host) > 20 else host
+        try:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(10.0, connect=8.0)) as client:
+                r = await client.get(f"{base}/v1/models")
+            ok = r.status_code < 500
+            out.append({"name": name, "host": masked, "ok": ok, "status": r.status_code})
+        except Exception:
+            out.append({"name": name, "host": masked, "ok": False, "status": "不可达"})
+    return {"items": out}
+
+
 @app.get("/api/admin/questions")
 def api_admin_questions(
     keyword: str | None = None,
