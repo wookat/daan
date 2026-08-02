@@ -1195,6 +1195,7 @@ export default {
         cancelText: '不用了',
         success: (res) => {
           if (res.confirm) {
+            s.items.forEach((q) => { if (q._picked) q._logged = true; });
             this.items = s.items;
             this.idx = Math.min(s.idx, s.items.length - 1);
             this.picked = this.items[this.idx]._picked || '';
