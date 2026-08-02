@@ -489,6 +489,18 @@ def shenlun_answer_history(uid: str, qid: int | None = None, limit: int = 20) ->
     return [dict(r) for r in rows]
 
 
+def _shenlun_issue_lines(result: str, section: str, limit: int = 3) -> list[str]:
+    m = re.search(rf"【{section}】(.*?)(?=【|$)", result or "", re.S)
+    if not m:
+        return []
+    lines = []
+    for ln in m.group(1).splitlines():
+        ln = re.sub(r"^[\s\-•·*\d．．.、)）]+", "", ln).strip()
+        if 4 <= len(ln) <= 60:
+            lines.append(ln)
+    return lines[:limit]
+
+
 def shenlun_stats(uid: str) -> dict:
     conn = get_conn()
     _ensure_shenlun_answers(conn)
@@ -504,8 +516,20 @@ def shenlun_stats(uid: str) -> dict:
             (uid,),
         )
     ]
+    issues = []
+    for (res, qtype) in conn.execute(
+        """SELECT a.result, q.qtype FROM shenlun_answers a
+           LEFT JOIN shenlun_questions q ON q.id=a.qid
+           WHERE a.uid=? AND a.result IS NOT NULL ORDER BY a.id DESC LIMIT 10""",
+        (uid,),
+    ):
+        for sec in ("遗漏要点", "提升建议"):
+            for ln in _shenlun_issue_lines(res, sec, 2):
+                issues.append({"qtype": qtype or "申论", "kind": sec, "text": ln})
+        if len(issues) >= 8:
+            break
     conn.close()
-    return {"total": total, "last_at": last, "by_type": by_type}
+    return {"total": total, "last_at": last, "by_type": by_type, "issues": issues[:8]}
 
 
 def shenlun_question(qid: int) -> dict | None:

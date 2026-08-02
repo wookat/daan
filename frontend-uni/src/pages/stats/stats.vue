@@ -126,6 +126,16 @@
       <view class="sl-types">
         <text v-for="t in slStats.by_type" :key="t.qtype" class="sl-chip">{{ t.qtype }} ×{{ t.n }}</text>
       </view>
+      <template v-if="slStats.issues && slStats.issues.length">
+        <view class="sl-ih" @click="slIssuesOpen = !slIssuesOpen">近期问题点（{{ slStats.issues.length }}） {{ slIssuesOpen ? '▲' : '▼' }}</view>
+        <view v-if="slIssuesOpen">
+          <view v-for="(it, i) in slStats.issues" :key="i" class="sl-issue">
+            <text class="sl-ik" :class="{ adv: it.kind === '提升建议' }">{{ it.kind === '提升建议' ? '建议' : '遗漏' }}</text>
+            <text class="sl-it">{{ it.text }}</text>
+          </view>
+          <view class="rc-note">来自你最近的 AI 批改结果，供针对性强化</view>
+        </view>
+      </template>
     </view>
 
     <view v-if="history.length >= 3" class="card">
@@ -257,7 +267,7 @@ const MODS = [
 
 export default {
   data() {
-    return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, history: [], showAllHist: false, coachHtml: uni.getStorageSync('coachAdvice') || '', coachLoading: false, calFull: false, growth: null, reco: null, dueN: 0, gwMod: '', slStats: null };
+    return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, history: [], showAllHist: false, coachHtml: uni.getStorageSync('coachAdvice') || '', coachLoading: false, calFull: false, growth: null, reco: null, dueN: 0, gwMod: '', slStats: null, slIssuesOpen: false };
   },
   computed: {
     slLast() {
@@ -748,6 +758,11 @@ export default {
 .sl-last { font-size: 21rpx; color: var(--ink-3, #9ca3af); margin-left: auto; }
 .sl-types { display: flex; flex-wrap: wrap; gap: 10rpx; }
 .sl-chip { font-size: 21rpx; color: var(--brand, #4f46e5); background: var(--brand-soft, #eef1fd); border-radius: 999rpx; padding: 8rpx 18rpx; }
+.sl-ih { font-size: 23rpx; color: var(--ink-2, #6b7280); margin-top: 16rpx; padding: 10rpx 0; }
+.sl-issue { display: flex; align-items: flex-start; gap: 10rpx; margin-bottom: 10rpx; }
+.sl-ik { font-size: 19rpx; color: #dc2626; background: #fef2f2; border-radius: 6rpx; padding: 2rpx 10rpx; flex-shrink: 0; margin-top: 2rpx; }
+.sl-ik.adv { color: #b45309; background: #fffbeb; }
+.sl-it { font-size: 22rpx; color: var(--ink-1, #374151); line-height: 1.6; }
 .trend { display: flex; align-items: flex-end; gap: 8rpx; height: 160rpx; padding-top: 12rpx; }
 .trend-col { flex: 1; height: 100%; display: flex; align-items: flex-end; }
 .trend-bar { width: 100%; border-radius: 6rpx 6rpx 0 0; background: #16a34a; min-height: 6rpx; }
