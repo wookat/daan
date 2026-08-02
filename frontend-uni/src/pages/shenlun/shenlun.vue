@@ -42,7 +42,7 @@
         <view class="d-h toggle" @click="showMat = !showMat">给定资料 {{ showMat ? '▲' : '▼' }}</view>
         <text v-if="showMat" class="d-mat">{{ detail.material }}</text>
         <view class="d-h">我的作答</view>
-        <textarea v-model="myAnswer" class="d-ta" :maxlength="3000" placeholder="在此作答后点击下方按钮，AI 按采分点批改（大作文为结构点评+参考档位）" auto-height />
+        <textarea v-model="myAnswer" class="d-ta" :maxlength="3000" placeholder="在此作答后点击下方按钮，AI 按采分点批改（大作文为结构点评+参考档位）。草稿自动保存在本机" auto-height @input="saveDraft" />
         <view class="grade-btn" :class="{ dis: grading || !myAnswer.trim() }" @click="grade">{{ grading ? 'AI 批改中…' : 'AI 批改' }}</view>
         <view v-if="gradeResult" class="d-grade">
           <view class="d-h">批改结果<text class="g-note">（AI 参考，非官方评分）</text></view>
@@ -237,7 +237,7 @@ export default {
         this.detail = d.item;
         this.showMat = true;
         this.showRef = false;
-        this.myAnswer = '';
+        this.myAnswer = uni.getStorageSync('slDraft:' + id) || '';
         this.gradeResult = '';
         this.history = [];
         this.showHist = false;
@@ -245,6 +245,12 @@ export default {
       } catch (e) {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
+    },
+    saveDraft() {
+      if (!this.detail) return;
+      const k = 'slDraft:' + this.detail.id;
+      if (this.myAnswer) uni.setStorageSync(k, this.myAnswer);
+      else uni.removeStorageSync(k);
     },
     async loadHistory(id) {
       const uid = uni.getStorageSync('anonUid');
@@ -272,6 +278,7 @@ export default {
         });
         this.gradeResult = d.result;
         this.loadHistory(this.detail.id);
+        uni.removeStorageSync('slDraft:' + this.detail.id);
       } catch (e) {
         uni.showToast({ title: e.message || '批改失败，请稍后重试', icon: 'none' });
       }
