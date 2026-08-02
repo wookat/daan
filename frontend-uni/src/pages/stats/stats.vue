@@ -589,7 +589,7 @@ export default {
       } catch (e) { /* 非关键路径 */ }
     },
     goShenlun() {
-      uni.navigateTo({ url: '/pages/shenlun/shenlun' });
+      uni.navigateTo({ url: '/pages/shenlun/shenlun?tab=r' });
     },
     async loadGrowth() {
       const uid = uni.getStorageSync('anonUid');

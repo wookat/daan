@@ -132,9 +132,11 @@ export default {
       region: '',
     };
   },
-  onLoad() {
+  onLoad(opts) {
     this.loadQs();
     this.loadFilters();
+    if (opts && opts.tab === 'r') this.switchRec();
+    else if (opts && opts.tab === 'm') this.switchMat();
   },
   methods: {
     async loadQs(append) {
