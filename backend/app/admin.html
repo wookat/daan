@@ -190,7 +190,7 @@ async function batchSample(bid) {
   } catch (e) { alert('失败：' + e.message); }
 }
 async function handleReport(id, status) {
-  const note = prompt(status === 'fixed' ? '处理备注（可选）：' : '驳回原因（可选）：') || '';
+  const note = status === 'open' ? '' : prompt(status === 'fixed' ? '处理备注（可选）：' : '驳回原因（可选）：') || '';
   try { await api('/api/admin/question_reports/' + id, { method: 'PATCH', body: JSON.stringify({ status, note: note || null }) }); load(); } catch (e) { alert('失败：' + e.message); }
 }
 async function saveReportQ(rid, qid) {
