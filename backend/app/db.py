@@ -751,6 +751,14 @@ def _ensure_reports(conn) -> None:
             status TEXT DEFAULT 'open'
         )"""
     )
+    rcols = {r["name"] for r in conn.execute("PRAGMA table_info(question_reports)")}
+    for col, ddl in [
+        ("uid", "ALTER TABLE question_reports ADD COLUMN uid TEXT"),
+        ("note", "ALTER TABLE question_reports ADD COLUMN note TEXT"),
+        ("handled_at", "ALTER TABLE question_reports ADD COLUMN handled_at REAL"),
+    ]:
+        if col not in rcols:
+            conn.execute(ddl)
 
 
 def add_report(question_id: int | None, reason: str, detail: str) -> int:
@@ -775,18 +783,75 @@ def add_report(question_id: int | None, reason: str, detail: str) -> int:
     return rid
 
 
+def add_question_report(question_id: int, uid: str | None, rtype: str, detail: str) -> tuple[int, bool]:
+    """同一 uid 对同一题重复提交时去重更新，返回 (id, 是否为更新)。"""
+    conn = get_conn()
+    _ensure_reports(conn)
+    if uid:
+        dup = conn.execute(
+            "SELECT id FROM question_reports WHERE question_id=? AND uid=? LIMIT 1",
+            (question_id, uid),
+        ).fetchone()
+        if dup:
+            conn.execute(
+                "UPDATE question_reports SET reason=?, detail=?, created_at=?, status='open', "
+                "note=NULL, handled_at=NULL WHERE id=?",
+                (rtype, detail, time.time(), dup["id"]),
+            )
+            conn.commit()
+            conn.close()
+            return dup["id"], True
+    cur = conn.execute(
+        "INSERT INTO question_reports (created_at, question_id, uid, reason, detail) VALUES (?,?,?,?,?)",
+        (time.time(), question_id, uid, rtype, detail),
+    )
+    conn.commit()
+    rid = cur.lastrowid
+    conn.close()
+    return rid, False
+
+
+_REPORT_STATUS_ALIASES = {"fixed": ("fixed", "resolved"), "rejected": ("rejected", "dismissed"), "open": ("open",)}
+
+
 def admin_list_reports(status: str = "open") -> list[dict]:
     conn = get_conn()
     _ensure_reports(conn)
+    statuses = _REPORT_STATUS_ALIASES.get(status, (status,))
+    ph = ",".join("?" for _ in statuses)
     rows = conn.execute(
-        """SELECT r.id, r.created_at, r.question_id, r.reason, r.detail, r.status,
-                  q.question, q.options, q.module, q.answer, q.disabled
+        f"""SELECT r.id, r.created_at, r.question_id, r.uid, r.reason, r.detail, r.status,
+                  r.note, r.handled_at,
+                  q.question, q.options, q.module, q.submodule, q.answer, q.explanation,
+                  q.hs_explanation, q.disabled
            FROM question_reports r LEFT JOIN questions q ON q.id = r.question_id
-           WHERE r.status = ? ORDER BY r.id DESC LIMIT 100""",
-        (status,),
+           WHERE r.status IN ({ph}) ORDER BY r.id DESC LIMIT 100""",
+        statuses,
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+def admin_open_report_count() -> int:
+    conn = get_conn()
+    _ensure_reports(conn)
+    n = conn.execute("SELECT COUNT(*) AS n FROM question_reports WHERE status='open'").fetchone()["n"]
+    conn.close()
+    return n
+
+
+def admin_handle_report(rid: int, status: str, note: str | None = None) -> bool:
+    conn = get_conn()
+    _ensure_reports(conn)
+    handled = time.time() if status in ("fixed", "rejected", "resolved", "dismissed") else None
+    cur = conn.execute(
+        "UPDATE question_reports SET status=?, note=COALESCE(?, note), handled_at=? WHERE id=?",
+        (status, note, handled, rid),
+    )
+    conn.commit()
+    ok = cur.rowcount > 0
+    conn.close()
+    return ok
 
 
 def admin_resolve_report(rid: int, status: str) -> bool:
