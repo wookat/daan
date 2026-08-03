@@ -438,6 +438,7 @@ export default {
             module: NAMES[m.module] || m.module || '',
             question: m.question_text,
             answer: extractLetter(m.correct_answer) || '',
+            analysis: m.explanation || '',
           }));
         const d = new Date();
         const title = '错题重练卷 ' + (d.getMonth() + 1) + '月' + d.getDate() + '日';
