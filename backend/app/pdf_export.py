@@ -35,16 +35,19 @@ _FONT_HEI = "KGHei"
 _FONT_BOLD = "KGSongB"
 _FONT_DIR = os.path.join(os.path.dirname(__file__), "fonts")
 _SONG_CANDIDATES = [
+    os.path.join(_FONT_DIR, "SimSun.ttf"),
     os.path.join(_FONT_DIR, "NotoSerifSC.ttf"),
     "/usr/share/fonts/truetype/arphic/uming.ttc",
     "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
     "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
 ]
 _SONG_BOLD_CANDIDATES = [
+    os.path.join(_FONT_DIR, "SimHei.ttf"),
     os.path.join(_FONT_DIR, "NotoSerifSC-Bold.ttf"),
     "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
 ]
 _HEI_CANDIDATES = [
+    os.path.join(_FONT_DIR, "SimHei.ttf"),
     os.path.join(_FONT_DIR, "NotoSansSC-Bold.ttf"),
     "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
     "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
