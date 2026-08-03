@@ -1,9 +1,10 @@
 """试卷/答题卡 PDF 生成（A4 打印排版）。"""
 import io
 import math
+import os
 import time
 
-from . import omr
+from . import omr, qcode
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -31,10 +32,17 @@ _MOD_NAMES = {
     "shenlun": "申论",
 }
 _FONT_HEI = "KGHei"
+_FONT_BOLD = "KGSongB"
+_FONT_DIR = os.path.join(os.path.dirname(__file__), "fonts")
 _SONG_CANDIDATES = [
+    os.path.join(_FONT_DIR, "NotoSerifSC.ttf"),
     "/usr/share/fonts/truetype/arphic/uming.ttc",
     "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
     "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+]
+_SONG_BOLD_CANDIDATES = [
+    os.path.join(_FONT_DIR, "NotoSerifSC-Bold.ttf"),
+    "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
 ]
 _HEI_CANDIDATES = [
     "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
@@ -56,8 +64,14 @@ def _register(name: str, candidates: list[str]) -> str:
 
 
 def _ensure_font() -> str:
-    """正文字体：宋体。"""
-    return _register(_FONT, _SONG_CANDIDATES)
+    """正文字体：宋体（思源宋体），并注册粗体使 <b> 生效。"""
+    name = _register(_FONT, _SONG_CANDIDATES)
+    bold = _register(_FONT_BOLD, _SONG_BOLD_CANDIDATES)
+    if name == _FONT:
+        pdfmetrics.registerFontFamily(
+            _FONT, normal=_FONT, bold=bold, italic=_FONT, boldItalic=bold
+        )
+    return name
 
 
 def _ensure_hei() -> str:
@@ -145,22 +159,16 @@ def build_paper_pdf(
         if mat and mat != last_mat:
             story.append(Paragraph("【资料】" + _esc(mat.strip()), st["mat"]))
         last_mat = mat or last_mat
-        qid = q.get("id")
-        tag = f'<font size="7.5" color="#8F959E">[{qid}]</font> ' if qid else ""
-        block = [Paragraph(f"{i}. {tag}{_esc(qtext)}", st["q"])]
+        code = qcode.build_code(q)
+        tag = f'<font size="7.5" color="#8F959E">[{code}]</font> ' if code else ""
+        block = [Paragraph(f"<b>{i}.</b> {tag}{_esc(qtext)}", st["q"])]
         opts = q.get("options") or {}
         keys = [k for k in ["A", "B", "C", "D", "E", "F"] if k in opts and opts[k]]
-        texts = [str(opts[k]) for k in keys]
-        if keys and all(len(t) <= 12 for t in texts):
-            per = 4 if all(len(t) <= 5 for t in texts) else 2
-            for j in range(0, len(keys), per):
-                line = "　　".join(
-                    f"{k}. {_esc(str(opts[k]))}" for k in keys[j : j + per]
-                )
-                block.append(Paragraph(line, st["opt"]))
-        else:
-            for k in keys:
-                block.append(Paragraph(f"{k}. {_esc(str(opts[k]))}", st["opt"]))
+        segs = [f"{k}. {str(opts[k]).strip()}" for k in keys]
+        per = _opts_per_line(segs, font, 10.5, avail=A4[0] - 32 * mm - 16)
+        for j in range(0, len(keys), per):
+            line = "　　".join(_esc(s) for s in segs[j : j + per])
+            block.append(Paragraph(line, st["opt"]))
         if len(qtext) <= 400:
             story.append(KeepTogether(block))
         else:
@@ -257,14 +265,14 @@ def _omr_sheet_pdf(questions: list[dict], title: str, paper_code: str) -> bytes:
                 break
             q = questions[idx]
             nx, ix, cy_mid = omr.slot_label_pos(slot)
-            c.setFont(font, 9.5)
+            c.setFont(hei, 9.5)
             c.setFillColor(colors.black)
             c.drawRightString(X(nx + omr.NUM_W - 2), Y(cy_mid + 1.2), str(idx + 1))
-            qid = q.get("id")
-            if qid:
-                c.setFont(font, 6)
-                c.setFillColor(colors.HexColor("#8F959E"))
-                c.drawString(X(ix), Y(cy_mid + 1.0), f"[{qid}]")
+            code = qcode.build_code({**q, "is_real": None})  # 答题卡用短码（不含年份）
+            if code:
+                c.setFont(font, 5.5)
+                c.setFillColor(colors.HexColor("#646A73"))
+                c.drawString(X(ix), Y(cy_mid + 1.0), code)
             for opt in range(4):
                 bx, by, bw_, bh_ = omr.bubble_rect(slot, opt)
                 c.setStrokeColor(colors.black)
@@ -285,6 +293,26 @@ def _omr_sheet_pdf(questions: list[dict], title: str, paper_code: str) -> bytes:
         c.showPage()
     c.save()
     return buf.getvalue()
+
+
+def _opts_per_line(segs: list[str], font: str, size: float, avail: float) -> int:
+    """按实际渲染宽度自适应：4/2/1 个选项一行。"""
+    if not segs:
+        return 1
+    gap = pdfmetrics.stringWidth("　　", font, size)
+    widths = [pdfmetrics.stringWidth(s, font, size) for s in segs]
+
+    def fits(per: int) -> bool:
+        for j in range(0, len(widths), per):
+            chunk = widths[j : j + per]
+            if sum(chunk) + gap * (len(chunk) - 1) > avail:
+                return False
+        return True
+
+    for per in (4, 2):
+        if len(segs) >= per and fits(per):
+            return per
+    return 1
 
 
 def _page_break():
