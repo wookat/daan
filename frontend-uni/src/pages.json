@@ -29,6 +29,18 @@
     {
       "path": "pages/shenlun/shenlun",
       "style": { "navigationBarTitleText": "申论专区" }
+    },
+    {
+      "path": "pages/exam/list",
+      "style": { "navigationBarTitleText": "真题卷库" }
+    },
+    {
+      "path": "pages/exam/exam",
+      "style": { "navigationBarTitleText": "全真模考" }
+    },
+    {
+      "path": "pages/exam/report",
+      "style": { "navigationBarTitleText": "成绩报告" }
     }
   ],
   "tabBar": {

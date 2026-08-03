@@ -357,10 +357,10 @@ def api_attempts(uid: str, question_id: int):
 
 @app.post("/api/export/pdf")
 def api_export_pdf(body: dict):
-    ids = [int(i) for i in (body.get("question_ids") or [])[:100]]
+    ids = [int(i) for i in (body.get("question_ids") or [])[:140]]
     items = body.get("items") or []
     questions = db.questions_by_ids(ids) if ids else []
-    for it in items[:100]:
+    for it in items[:140]:
         if isinstance(it, dict) and (it.get("question") or "").strip():
             questions.append(
                 {
@@ -411,8 +411,8 @@ def api_paper_info(code: str):
     }
 
 
-def _judge_paper(uid: str, paper: dict, picks: dict[int, str]) -> dict:
-    """picks: {题号(从1开始): 'A'}；与扫描答题卡同一套判分/落库逻辑。"""
+def _judge_paper(uid: str, paper: dict, picks: dict[int, str], secs: dict[int, int] | None = None) -> dict:
+    """picks: {题号(从1开始): 'A'}；secs: {题号: 用时秒}；与扫描答题卡同一套判分/落库逻辑。"""
     qids = paper["question_ids"]
     questions = {q["id"]: q for q in db.questions_by_ids(qids)}
     results = []
@@ -429,10 +429,12 @@ def _judge_paper(uid: str, paper: dict, picks: dict[int, str]) -> dict:
             {
                 "no": i + 1,
                 "question_id": qid,
+                "module": q.get("module"),
                 "picked": picked,
                 "answer": correct_ans,
                 "correct": is_correct,
                 "status": status,
+                "secs": (secs or {}).get(i + 1) or 0,
                 "question": (q.get("question") or "")[:80],
             }
         )
@@ -444,7 +446,7 @@ def _judge_paper(uid: str, paper: dict, picks: dict[int, str]) -> dict:
                     "submodule": q.get("submodule"),
                     "correct": is_correct,
                     "picked": picked,
-                    "secs": 0,
+                    "secs": (secs or {}).get(i + 1) or 0,
                 }
             )
             if not is_correct:
@@ -823,6 +825,183 @@ def api_submodule_progress(uid: str, module: str | None = None):
 @app.get("/api/papers")
 def api_papers():
     return {"items": db.list_papers()}
+
+
+def _clean_int_map(raw: dict, as_str: bool = False) -> dict:
+    out: dict = {}
+    for k, v in (raw or {}).items():
+        try:
+            out[int(k)] = str(v or "")[:1] if as_str else max(0, min(int(v or 0), 86400))
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+@app.get("/api/exam/papers")
+def api_exam_papers(kind: str | None = None, year: int | None = None,
+                    region: str | None = None, uid: str | None = None):
+    return {
+        "items": db.list_exam_papers(kind, year, region, uid=(uid or "").strip()[:64] or None),
+        "filters": db.exam_paper_filters(),
+    }
+
+
+@app.get("/api/exam/papers/{pid}")
+def api_exam_paper_detail(pid: int):
+    paper = db.get_exam_paper(pid)
+    if not paper:
+        raise HTTPException(404, "试卷不存在")
+    return {"paper": paper}
+
+
+@app.post("/api/exam/start")
+def api_exam_start(body: dict):
+    uid = (body.get("uid") or "").strip()[:64]
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    if body.get("mini"):
+        pid = db.create_mock_paper(n=30, duration_min=30)
+    else:
+        pid = body.get("paper_id")
+        if not pid:
+            raise HTTPException(400, "缺少 paper_id")
+        pid = int(pid)
+    paper = db.get_exam_paper(pid)
+    if not paper:
+        raise HTTPException(404, "试卷不存在")
+    items = {q["id"]: q for q in db.questions_by_ids(paper["question_ids"])}
+    ordered = [items[i] for i in paper["question_ids"] if i in items]
+    if len(ordered) < 5:
+        raise HTTPException(400, "试卷题目不足")
+    attempt_id = db.start_exam_attempt(uid, pid)
+    return {
+        "attempt_id": attempt_id,
+        "paper": {
+            "id": paper["id"],
+            "title": paper["title"],
+            "kind": paper["kind"],
+            "year": paper["year"],
+            "region": paper["region"],
+            "duration_min": paper["duration_min"],
+            "n": len(ordered),
+        },
+        "items": ordered,
+    }
+
+
+@app.post("/api/exam/submit")
+def api_exam_submit(body: dict):
+    uid = (body.get("uid") or "").strip()[:64]
+    attempt_id = body.get("attempt_id")
+    if not uid or not attempt_id:
+        raise HTTPException(400, "缺少 uid 或 attempt_id")
+    attempt = db.get_exam_attempt(int(attempt_id))
+    if not attempt or attempt["uid"] != uid:
+        raise HTTPException(404, "答题记录不存在")
+    if attempt["submitted_at"]:
+        raise HTTPException(400, "该次模考已交卷")
+    paper = db.get_exam_paper(attempt["paper_id"])
+    if not paper:
+        raise HTTPException(404, "试卷不存在")
+    picks = _clean_int_map(body.get("picks") or {}, as_str=True)
+    secs = _clean_int_map(body.get("secs") or {})
+    judged = _judge_paper(uid, {"code": None, "title": paper["title"], "question_ids": paper["question_ids"]}, picks, secs)
+    per_module: dict = {}
+    for r in judged["items"]:
+        m = r.get("module") or "other"
+        pm = per_module.setdefault(m, {"n": 0, "answered": 0, "correct": 0, "secs": 0})
+        pm["n"] += 1
+        if r["status"] == "ok":
+            pm["answered"] += 1
+            if r["correct"]:
+                pm["correct"] += 1
+        pm["secs"] += r.get("secs") or 0
+    total = judged["total"] or 1
+    score = round(100.0 * judged["correct"] / total, 1)
+    db.finish_exam_attempt(int(attempt_id), {str(k): v for k, v in picks.items()}, score, per_module)
+    return {
+        "attempt_id": int(attempt_id),
+        "paper_id": paper["id"],
+        "title": paper["title"],
+        "score": score,
+        "total": judged["total"],
+        "answered": judged["answered"],
+        "correct": judged["correct"],
+        "per_module": per_module,
+        "items": judged["items"],
+    }
+
+
+@app.get("/api/exam/attempts")
+def api_exam_attempts(uid: str, paper_id: int | None = None, limit: int = 50):
+    uid = uid.strip()[:64]
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    return {"items": db.list_exam_attempts(uid, paper_id, limit)}
+
+
+@app.get("/api/exam/report/{attempt_id}")
+def api_exam_report(attempt_id: int, uid: str = ""):
+    attempt = db.get_exam_attempt(attempt_id)
+    if not attempt or not attempt["submitted_at"]:
+        raise HTTPException(404, "成绩报告不存在")
+    if uid and attempt["uid"] != uid.strip()[:64]:
+        raise HTTPException(404, "成绩报告不存在")
+    paper = db.get_exam_paper(attempt["paper_id"])
+    if not paper:
+        raise HTTPException(404, "试卷不存在")
+    questions = {q["id"]: q for q in db.questions_by_ids(paper["question_ids"])}
+    picks = {int(k): v for k, v in attempt["answers"].items()}
+    items = []
+    for i, qid in enumerate(paper["question_ids"]):
+        q = questions.get(qid)
+        if not q:
+            continue
+        picked = (picks.get(i + 1) or "").strip().upper()
+        correct_ans = (q.get("answer") or "").strip().upper()[:1]
+        items.append({
+            "no": i + 1,
+            "question_id": qid,
+            "module": q.get("module"),
+            "submodule": q.get("submodule"),
+            "question": q.get("question"),
+            "options": q.get("options"),
+            "picked": picked,
+            "answer": correct_ans,
+            "correct": bool(picked) and len(picked) == 1 and picked == correct_ans,
+            "explanation": q.get("explanation"),
+            "hs_explanation": q.get("hs_explanation"),
+        })
+    answered = sum(1 for r in items if r["picked"] and len(r["picked"]) == 1)
+    return {
+        "attempt": {
+            "id": attempt["id"],
+            "paper_id": attempt["paper_id"],
+            "started_at": attempt["started_at"],
+            "submitted_at": attempt["submitted_at"],
+            "score": attempt["score"],
+            "per_module": attempt["per_module"],
+        },
+        "paper": {
+            "id": paper["id"],
+            "title": paper["title"],
+            "kind": paper["kind"],
+            "year": paper["year"],
+            "region": paper["region"],
+            "duration_min": paper["duration_min"],
+            "question_ids": paper["question_ids"],
+        },
+        "total": len(items),
+        "answered": answered,
+        "correct": sum(1 for r in items if r["correct"]),
+        "items": items,
+    }
+
+
+@app.get("/api/admin/exam_papers")
+def api_admin_exam_papers(x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return {"items": db.list_exam_papers()}
 
 
 @app.get("/api/paper_questions")
