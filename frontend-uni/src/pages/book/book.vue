@@ -672,7 +672,7 @@ export default {
 .sheet-x { font-size: 30rpx; color: var(--ink-2); padding: 10rpx 20rpx; }
 .sheet-k { font-size: 23rpx; color: var(--ink-2); margin: 20rpx 0 10rpx; }
 .sheet-done { margin-top: 32rpx; background: var(--brand, #3b6ff5); color: #fff; text-align: center; border-radius: 999rpx; padding: 22rpx 0; font-size: 28rpx; font-weight: 500; }
-.sheet-export { margin-top: 16rpx; border: 1rpx solid var(--brand, #3b6ff5); color: var(--brand, #3b6ff5); text-align: center; border-radius: 999rpx; padding: 20rpx 0; font-size: 27rpx; font-weight: 500; }
+.sheet-export { margin-top: 16rpx; margin-bottom: 110rpx; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand, #3b6ff5); color: var(--brand, #3b6ff5); text-align: center; border-radius: 999rpx; padding: 20rpx 0; font-size: 27rpx; font-weight: 500; }
 .xp-k { margin-top: 12rpx; font-size: 22rpx; font-weight: 700; color: #ea580c; border-left: 6rpx solid #ea580c; padding-left: 10rpx; }
 .xp-body { margin-top: 6rpx; font-size: 23rpx; color: var(--ink); background: #fff7ed; border-radius: 10rpx; padding: 12rpx; line-height: 1.6; }
 .mfoot { display: flex; justify-content: space-between; align-items: center; margin-top: 12rpx; border-top: 1rpx solid var(--line); padding-top: 8rpx; }

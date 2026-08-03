@@ -17,6 +17,14 @@ from reportlab.platypus import (
 )
 
 _FONT = "KGSans"
+_MOD_NAMES = {
+    "ziliao": "资料分析",
+    "shuliang": "数量关系",
+    "yanyu": "言语理解与表达",
+    "panduan": "判断推理",
+    "changshi": "常识判断",
+    "shenlun": "申论",
+}
 _FONT_CANDIDATES = [
     "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
     "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
@@ -95,6 +103,7 @@ def build_paper_pdf(
     last_mat = None
     for i, q in enumerate(questions, 1):
         mod = q.get("module") or ""
+        mod = _MOD_NAMES.get(mod, mod)
         if mod and mod != cur_mod:
             cur_mod = mod
             part += 1

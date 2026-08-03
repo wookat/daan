@@ -1503,7 +1503,7 @@ export default {
 .g4-t { font-size: 24rpx; color: var(--ink-2, #646a73); }
 .custom-row { display: flex; justify-content: space-between; align-items: center; padding: 24rpx 28rpx; }
 .custom-start { margin-top: 24rpx; background: var(--brand, #3b6ff5); color: #fff; text-align: center; border-radius: 999rpx; padding: 22rpx 0; font-size: 28rpx; font-weight: 500; }
-.custom-export { margin-top: 16rpx; text-align: center; border: 1rpx solid var(--brand, #3b6ff5); color: var(--brand, #3b6ff5); border-radius: 999rpx; padding: 20rpx 0; font-size: 27rpx; font-weight: 500; }
+.custom-export { margin-top: 16rpx; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; text-align: center; border: 1rpx solid var(--brand, #3b6ff5); color: var(--brand, #3b6ff5); border-radius: 999rpx; padding: 20rpx 0; font-size: 27rpx; font-weight: 500; }
 .custom-note { margin-top: 14rpx; text-align: center; font-size: 21rpx; color: var(--ink-3, #8f959e); }
 .wrap.has-banner { padding-bottom: 200rpx; }
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
