@@ -205,6 +205,13 @@
         </view>
         <text class="daily-go">{{ todayDone ? '再练一组' : '开始' }}</text>
       </view>
+      <view v-if="counts.length" class="daily sz" :class="{ done: szTodayDone }" @click="szTodayDone ? reviewShizheng() : startShizheng()">
+        <view class="daily-l">
+          <view class="daily-t"><uni-icons :type="szTodayDone ? 'checkbox-filled' : 'sound-filled'" size="16" color="#ffffff" /><text class="daily-t-t">时政每日一练</text></view>
+          <text class="daily-s">{{ szTodayDone ? '今日已完成，明日再来 · 点击回顾解析' : '每日 10 题 · 近半年国内时政热点 · 全站同题' }}</text>
+        </view>
+        <text class="daily-go">{{ szTodayDone ? '回顾' : '开始' }}</text>
+      </view>
       <view v-if="weakModule" class="smart" @click="start(weakModule)">
         <view class="smart-l">
           <view class="smart-t"><uni-icons type="flag-filled" size="15" color="#ffffff" /><text class="smart-t-t">智能刷题：攻克薄弱项</text></view>
@@ -579,6 +586,7 @@ export default {
       favs: uni.getStorageSync('favQuestions') || [],
       autoNext: uni.getStorageSync('autoNextOff') ? false : true,
       daily: uni.getStorageSync('dailyPlan') || { days: {} },
+      szDaily: uni.getStorageSync('szDaily') || { days: {} },
       realMode: uni.getStorageSync('realMode') ? true : false,
       realYears: [],
       realRegions: [],
@@ -710,6 +718,9 @@ export default {
     },
     todayDone() {
       return !!this.daily.days[new Date().toISOString().slice(0, 10)];
+    },
+    szTodayDone() {
+      return !!this.szDaily.days[new Date().toISOString().slice(0, 10)];
     },
     dailyModule() {
       const mods = ['ziliao', 'shuliang', 'yanyu', 'panduan', 'changshi'];
@@ -1120,6 +1131,84 @@ export default {
       uni.setStorageSync('dailyPlan', this.daily);
       uni.showToast({ title: '今日一练完成，打卡成功！', icon: 'none' });
     },
+    _mapShizheng(q) {
+      return {
+        ...q,
+        explanation: (q.explanation || '') + (q.source_note ? '\n【出处】' + q.source_note : ''),
+        _saved: false,
+      };
+    },
+    async startShizheng() {
+      if (this._starting) return;
+      this._starting = true;
+      uni.showLoading({ title: '出题中…', mask: true });
+      if (this.beiMode) {
+        this.beiMode = false;
+        uni.setStorageSync('beiMode', '');
+      }
+      try {
+        const d = await request('/api/shizheng/daily');
+        if (!d.items || !d.items.length) {
+          uni.showToast({ title: '时政题库准备中，敬请期待', icon: 'none' });
+          return;
+        }
+        this._shizheng = true;
+        this._szDate = d.date;
+        this.lastModule = '时政';
+        this.lastSubmodule = null;
+        this.items = d.items.map((q) => this._mapShizheng(q));
+        this.idx = 0;
+        this.picked = '';
+        this.right = 0;
+        this.streak = 0;
+        this.bestStreak = 0;
+        this.autoSaved = false;
+        this.resultSent = false;
+        this.percentile = null;
+        this.session = true;
+        this.startQTimer();
+      } catch (e) {
+        uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
+      } finally {
+        uni.hideLoading();
+        this._starting = false;
+      }
+    },
+    async reviewShizheng() {
+      const day = new Date().toISOString().slice(0, 10);
+      const rec = this.szDaily.days[day];
+      if (!rec) return;
+      uni.showLoading({ title: '加载回顾…', mask: true });
+      try {
+        const d = await request('/api/shizheng/daily');
+        this._shizheng = false;
+        this.lastModule = '时政';
+        this.items = (d.items || []).map((q, i) => ({
+          ...this._mapShizheng(q),
+          _picked: (rec.picks || [])[i] || '',
+          _logged: true,
+          _saved: true,
+        }));
+        this.right = rec.right || 0;
+        this.idx = this.items.length;
+        this.picked = '';
+        this.resultSent = true;
+        this.session = true;
+        this.stopQTimer();
+      } catch (e) {
+        uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
+      } finally {
+        uni.hideLoading();
+      }
+    },
+    markShizhengDone() {
+      if (!this._shizheng) return;
+      this._shizheng = false;
+      const day = new Date().toISOString().slice(0, 10);
+      this.szDaily.days[day] = { right: this.right, picks: this.items.map((q) => q._picked || '') };
+      uni.setStorageSync('szDaily', this.szDaily);
+      uni.showToast({ title: '时政每日一练完成！', icon: 'none' });
+    },
     async start(module, submodule, count, adaptive, forceReal) {
       if (this._starting) return;
       this._starting = true;
@@ -1335,7 +1424,7 @@ export default {
       this.saveSession();
     },
     saveSession() {
-      if (this.examMode || this.beiMode || !this.session || !this.items.length) return;
+      if (this.examMode || this.beiMode || this._shizheng || !this.session || !this.items.length) return;
       if (this.items.every((q) => q._picked)) {
         uni.removeStorageSync('pendingSession');
         return;
@@ -1626,6 +1715,7 @@ export default {
       else this.stopQTimer();
       if (!this.cur) {
         this.markDailyDone();
+        this.markShizhengDone();
         this.submitResult();
       }
     },
@@ -1784,6 +1874,10 @@ export default {
 .grp-tag { display: inline-block; font-size: 21rpx; color: #0e7490; background: #cffafe; border-radius: 8rpx; padding: 4rpx 14rpx; margin-bottom: 10rpx; margin-left: 10rpx; }
 .daily { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(120deg, #3b6ff5, #6c9bff); border-radius: 20rpx; padding: 24rpx 28rpx; margin-bottom: 20rpx; }
 .daily.done { background: linear-gradient(135deg, #10b981, #059669); }
+.daily.sz { background: linear-gradient(120deg, #d9480f, #f59e0b); }
+.daily.sz.done { background: linear-gradient(135deg, #10b981, #059669); }
+.daily.sz .daily-go { color: #d9480f; }
+.daily.sz.done .daily-go { color: #059669; }
 .daily-t { display: flex; align-items: center; gap: 8rpx; }
 .daily-t-t { font-size: 27rpx; font-weight: 700; color: #fff; }
 .daily-s { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.85); margin-top: 4rpx; }

@@ -144,9 +144,22 @@ def init_db():
             disabled INTEGER
         )"""
     )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS shizheng_questions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT,
+            question TEXT UNIQUE,
+            options TEXT,
+            answer TEXT,
+            explanation TEXT,
+            source_note TEXT,
+            created_at REAL
+        )"""
+    )
     conn.commit()
     conn.close()
     _seed_questions()
+    _seed_shizheng()
 
 
 def _seed_questions():
@@ -187,6 +200,87 @@ def _seed_questions():
                 )
     conn.commit()
     conn.close()
+
+
+def _seed_shizheng():
+    """启动时从 knowledge/shizheng_bank.jsonl 导入时政题库（按题干去重）。"""
+    path = os.path.join(os.path.dirname(DB_PATH) if os.path.dirname(DB_PATH) else ".",
+                        "knowledge", "shizheng_bank.jsonl")
+    alt = os.path.join(os.path.dirname(__file__), "..", "..", "knowledge", "shizheng_bank.jsonl")
+    path = path if os.path.exists(path) else alt
+    if not os.path.exists(path):
+        return
+    conn = get_conn()
+    now = time.time()
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                q = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not q.get("question") or not q.get("answer"):
+                continue
+            conn.execute(
+                "INSERT OR IGNORE INTO shizheng_questions (date, question, options, answer, explanation, source_note, created_at) VALUES (?,?,?,?,?,?,?)",
+                (
+                    q.get("date"),
+                    q.get("question"),
+                    json.dumps(q.get("options", {}), ensure_ascii=False),
+                    q.get("answer"),
+                    q.get("explanation"),
+                    q.get("source_note"),
+                    now,
+                ),
+            )
+    conn.commit()
+    conn.close()
+
+
+def shizheng_daily(day: str, n: int = 10) -> list[dict]:
+    """按日期取每日一组时政题：以日期为随机种子从底池确定性抽取，同一天所有人相同。"""
+    conn = get_conn()
+    ids = [r["id"] for r in conn.execute("SELECT id FROM shizheng_questions ORDER BY id")]
+    if not ids:
+        conn.close()
+        return []
+    rng = random.Random(day)
+    picked = rng.sample(ids, min(n, len(ids)))
+    rows = conn.execute(
+        f"SELECT * FROM shizheng_questions WHERE id IN ({','.join('?' * len(picked))})", picked
+    ).fetchall()
+    conn.close()
+    by_id = {r["id"]: r for r in rows}
+    items = []
+    for qid in picked:
+        r = by_id.get(qid)
+        if not r:
+            continue
+        try:
+            options = json.loads(r["options"] or "{}")
+        except json.JSONDecodeError:
+            options = {}
+        items.append({
+            "id": r["id"],
+            "date": r["date"],
+            "question": r["question"],
+            "options": options,
+            "answer": r["answer"],
+            "explanation": r["explanation"],
+            "source_note": r["source_note"],
+            "module": "时政",
+            "question_type": "单选",
+        })
+    return items
+
+
+def shizheng_count() -> int:
+    conn = get_conn()
+    n = conn.execute("SELECT COUNT(*) FROM shizheng_questions").fetchone()[0]
+    conn.close()
+    return n
 
 
 def random_questions(
