@@ -35,14 +35,14 @@ async function withAuthRetry(fn) {
   }
 }
 
-function rawRequest(path, { method = 'GET', data, header = {} } = {}) {
+function rawRequest(path, { method = 'GET', data, header = {}, timeout = 180000 } = {}) {
   return new Promise((resolve, reject) => {
     uni.request({
       url: BASE_URL + path,
       method,
       data,
       header: { 'X-Access-Code': getCode(), ...header },
-      timeout: 180000,
+      timeout,
       success: (res) => {
         if (res.statusCode >= 200 && res.statusCode < 300) resolve(res.data);
         else reject(new Error((res.data && res.data.detail) || `HTTP ${res.statusCode}`));

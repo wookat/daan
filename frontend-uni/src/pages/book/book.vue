@@ -454,7 +454,7 @@ export default {
       if (this.aiHtml) return;
       this.aiLoading = true;
       try {
-        const d = await request('/api/mistakes/analysis', { method: 'POST', data: { uid: anonUid() } });
+        const d = await request('/api/mistakes/analysis', { method: 'POST', data: { uid: anonUid() }, timeout: 420000 });
         this.aiHtml = md(d.analysis || '分析失败，请稍后重试');
       } catch (e) {
         this.aiHtml = md('分析失败：' + e.message);
