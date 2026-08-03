@@ -55,7 +55,7 @@ main { max-width:1080px; margin:20px auto; padding:0 16px; }
     <div class="tab" data-tab="disabled" onclick="switchTab(this)">已下架</div>
     <div class="tab" data-tab="ann" onclick="switchTab(this)">运营公告</div>
     <div class="tab" data-tab="batches" onclick="switchTab(this)">批次审核</div>
-    <div class="tab" data-tab="reports" onclick="switchTab(this)" id="tab-reports">用户纠错</div>
+    <div class="tab" data-tab="reports" onclick="switchTab(this)" id="tab-reports">纠错处理</div>
   </div>
   <div class="bar" id="searchbar" style="display:none">
     <input id="kw" placeholder="题干关键词" />
@@ -68,6 +68,13 @@ main { max-width:1080px; margin:20px auto; padding:0 16px; }
       <option value="changshi">常识判断</option>
     </select>
     <button onclick="load()">搜索</button>
+  </div>
+  <div class="bar" id="reportbar" style="display:none">
+    <select id="rstatus" onchange="load()">
+      <option value="open">待处理</option>
+      <option value="fixed">已修复</option>
+      <option value="rejected">已驳回</option>
+    </select>
   </div>
   <div class="bar" id="annbar" style="display:none">
     <input id="annTitle" placeholder="公告标题（展示在用户端首页）" />
@@ -121,6 +128,7 @@ function switchTab(el) {
   TAB = el.dataset.tab;
   $('searchbar').style.display = TAB === 'search' ? 'flex' : 'none';
   $('annbar').style.display = TAB === 'ann' ? 'flex' : 'none';
+  $('reportbar').style.display = TAB === 'reports' ? 'flex' : 'none';
   load();
 }
 function qCard(q) {
@@ -181,20 +189,24 @@ async function batchSample(bid) {
     document.getElementById('bs' + bid).innerHTML = d.items.map((q) => `<pre>${esc(q.module)}｜答案 ${esc(q.answer)}｜${esc(q.question.slice(0, 200))}\n${Object.entries(q.options || {}).map(([k, v]) => k + '. ' + esc(String(v).slice(0, 80))).join('\n')}</pre>`).join('');
   } catch (e) { alert('失败：' + e.message); }
 }
-async function resolveReport(id, status) {
-  try { await api('/api/admin/reports/' + id + '/resolve', { method: 'POST', body: JSON.stringify({ status }) }); load(); } catch (e) { alert('失败：' + e.message); }
+async function handleReport(id, status) {
+  const note = prompt(status === 'fixed' ? '处理备注（可选）：' : '驳回原因（可选）：') || '';
+  try { await api('/api/admin/question_reports/' + id, { method: 'PATCH', body: JSON.stringify({ status, note: note || null }) }); load(); } catch (e) { alert('失败：' + e.message); }
 }
-async function fixAnswer(qid, rid, cur) {
-  const a = prompt('修正题 #' + qid + ' 的答案（当前 ' + cur + '，输入 A-D）：');
-  if (!a) return;
-  const v = a.trim().toUpperCase();
-  if (!/^[A-D]$/.test(v)) { alert('答案需为 A-D 单字母'); return; }
+async function saveReportQ(rid, qid) {
+  const body = {
+    answer: $('rq-ans' + rid).value.trim().toUpperCase(),
+    module: $('rq-mod' + rid).value,
+    submodule: $('rq-sub' + rid).value.trim(),
+    explanation: $('rq-exp' + rid).value,
+  };
+  if (body.answer && !/^[A-D]$/.test(body.answer)) { alert('答案需为 A-D 单字母'); return; }
   try {
-    await api('/api/admin/questions/' + qid, { method: 'PATCH', body: JSON.stringify({ answer: v }) });
-    await api('/api/admin/reports/' + rid + '/resolve', { method: 'POST', body: JSON.stringify({ status: 'resolved' }) });
-    load();
+    await api('/api/admin/questions/' + qid, { method: 'PATCH', body: JSON.stringify(body) });
+    alert('题目已更新，可继续标记已修复');
   } catch (e) { alert('失败：' + e.message); }
 }
+const MODS = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断' };
 function fmtOpts(s) {
   try {
     const o = JSON.parse(s || '{}');
@@ -203,9 +215,9 @@ function fmtOpts(s) {
 }
 async function refreshReportBadge() {
   try {
-    const d = await api('/api/admin/reports?status=open');
+    const d = await api('/api/admin/question_reports?status=open');
     const el = document.getElementById('tab-reports');
-    if (el) el.textContent = d.items.length ? `用户纠错（${d.items.length}）` : '用户纠错';
+    if (el) el.textContent = d.open_count ? `纠错处理（${d.open_count}）` : '纠错处理';
   } catch (e) { /* ignore */ }
 }
 let LOADSEQ = 0;
@@ -215,18 +227,30 @@ async function load() {
   const render = (html) => { if (seq === LOADSEQ) $('list').innerHTML = html; };
   try {
     if (TAB === 'reports') {
-      const d = await api('/api/admin/reports?status=open');
+      const st = $('rstatus') ? $('rstatus').value : 'open';
+      const d = await api('/api/admin/question_reports?status=' + st);
       render(d.items.length ? d.items.map((r) => `<div class="q">
-        <div class="meta"><span>#${r.id}</span><span>${new Date(r.created_at * 1000).toLocaleString()}</span><span class="badge">${esc(r.reason)}</span>${r.question_id ? `<span>题 #${r.question_id}（${esc(r.module || '')}，答案 ${esc(r.answer || '')}）</span>` : ''}${r.disabled ? '<span class="down">题目已下架</span>' : ''}</div>
-        <pre>${esc((r.question || r.detail || '').slice(0, 300))}${r.options ? '\n' + esc(fmtOpts(r.options)) : ''}</pre>
-        ${r.detail && r.question ? `<pre>用户补充：${esc(r.detail.slice(0, 200))}</pre>` : ''}
+        <div class="meta"><span>#${r.id}</span><span>${new Date(r.created_at * 1000).toLocaleString()}</span><span class="badge">${esc(r.reason)}</span>${r.uid ? `<span>用户 ${esc(r.uid.slice(0, 12))}</span>` : ''}${r.question_id ? `<span>题 #${r.question_id}（${esc(MODS[r.module] || r.module || '')}，答案 ${esc(r.answer || '')}）</span>` : ''}${r.disabled ? '<span class="down">题目已下架</span>' : ''}${r.handled_at ? `<span>处理于 ${new Date(r.handled_at * 1000).toLocaleString()}</span>` : ''}</div>
+        <pre>${esc((r.question || '（题目不存在或已删除）').slice(0, 300))}</pre>
+        ${r.detail ? `<pre>用户说明：${esc(r.detail.slice(0, 500))}</pre>` : ''}
+        ${r.note ? `<pre>处理备注：${esc(r.note)}</pre>` : ''}
+        ${r.question_id && r.question ? `<details><summary>查看完整题目 / 直接编辑</summary>
+          <pre>${esc(r.question)}\n\n${esc(fmtOpts(r.options))}</pre>
+          <div class="row">
+            答案 <input id="rq-ans${r.id}" value="${esc(r.answer || '')}" style="width:50px;padding:4px;border:1px solid var(--line);border-radius:6px" />
+            模块 <select id="rq-mod${r.id}">${Object.entries(MODS).map(([k, v]) => `<option value="${k}" ${r.module === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+            题型 <input id="rq-sub${r.id}" value="${esc(r.submodule || '')}" style="width:120px;padding:4px;border:1px solid var(--line);border-radius:6px" />
+          </div>
+          <div style="margin-top:8px;font-size:12px;color:var(--ink2)">解析</div>
+          <textarea id="rq-exp${r.id}">${esc(r.explanation || '')}</textarea>
+          <div class="row"><button class="ok" onclick="saveReportQ(${r.id},${r.question_id})">保存题目修改</button></div>
+        </details>` : ''}
         <div class="row">
           ${r.question_id && !r.disabled ? `<button class="warn" onclick="patchQ(${r.question_id},{disabled:1})">下架此题</button>` : ''}
-          ${r.question_id && !r.disabled ? `<button onclick="fixAnswer(${r.question_id},${r.id},'${esc(r.answer || '')}')">修正答案</button>` : ''}
-          <button class="ok" onclick="resolveReport(${r.id},'resolved')">标为已处理</button>
-          <button onclick="resolveReport(${r.id},'dismissed')">忽略</button>
+          ${st === 'open' ? `<button class="ok" onclick="handleReport(${r.id},'fixed')">标记已修复</button>
+          <button onclick="handleReport(${r.id},'rejected')">驳回</button>` : `<button onclick="handleReport(${r.id},'open')">重新打开</button>`}
         </div>
-      </div>`).join('') : '<div class="empty">暂无待处理的用户纠错</div>');
+      </div>`).join('') : '<div class="empty">暂无' + ($('rstatus').selectedOptions[0].textContent) + '的纠错</div>');
       return;
     }
     if (TAB === 'batches') {

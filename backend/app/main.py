@@ -815,6 +815,45 @@ def api_report(body: dict):
     return {"id": rid}
 
 
+_QREPORT_TYPES = {"答案错误", "解析错误", "题干或选项错字", "图片缺失", "分类错误", "重复题", "其他"}
+
+
+@app.post("/api/question_report")
+def api_question_report(body: dict):
+    rtype = str(body.get("type") or "").strip()
+    if rtype not in _QREPORT_TYPES:
+        raise HTTPException(400, "无效的纠错类型")
+    try:
+        qid = int(body.get("question_id") or 0)
+    except (TypeError, ValueError):
+        qid = 0
+    if not qid:
+        raise HTTPException(400, "缺少题目 ID")
+    uid = str(body.get("uid") or "").strip()[:64] or None
+    detail = str(body.get("detail") or "").strip()[:500]
+    rid, updated = db.add_question_report(qid, uid, rtype, detail)
+    return {"id": rid, "updated": updated}
+
+
+@app.get("/api/admin/question_reports")
+def api_admin_question_reports(status: str = "open", x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    st = status if status in ("open", "fixed", "rejected") else "open"
+    return {"items": db.admin_list_reports(st), "open_count": db.admin_open_report_count()}
+
+
+@app.patch("/api/admin/question_reports/{rid}")
+def api_admin_patch_question_report(rid: int, body: dict, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    status = body.get("status")
+    if status not in ("open", "fixed", "rejected"):
+        raise HTTPException(400, "status 需为 open/fixed/rejected")
+    note = body.get("note")
+    if not db.admin_handle_report(rid, status, str(note)[:500] if note else None):
+        raise HTTPException(404, "纠错记录不存在")
+    return {"ok": True}
+
+
 @app.get("/api/submodule_progress")
 def api_submodule_progress(uid: str, module: str | None = None):
     return {"items": db.submodule_progress(uid, module)}

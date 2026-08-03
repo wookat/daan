@@ -278,12 +278,37 @@
           <view class="acts">
             <text v-if="!m.mastered" class="op redo" @click.stop="redo(m)">AI 详解</text>
             <text v-else class="op redo" @click.stop="master(m, false)">恢复复习</text>
+            <text v-if="m.question_id" class="op reportop" @click.stop="openReport(m)">{{ m._reported ? '已纠错' : '纠错' }}</text>
           </view>
           <text class="op more" @click.stop="itemSheet(m)">···</text>
         </view>
         <rich-text v-if="m.open" :nodes="m.html" />
       </view>
       <view v-if="tab !== 'fav' && pageN < shownItems.length" class="loadmore" @click="pageN += 20">上滑或点击加载更多（{{ shownPage.length }}/{{ shownItems.length }}）</view>
+      <view v-if="reportOpen" class="mask" @click="reportOpen = false">
+        <view class="sheet" @click.stop>
+          <view class="sheet-h">
+            <text class="sheet-t">题目纠错</text>
+            <text class="sheet-x" @click="reportOpen = false">✕</text>
+          </view>
+          <view class="rp-types">
+            <text
+              v-for="t in reportTypes"
+              :key="t"
+              class="rp-chip"
+              :class="{ on: reportType === t }"
+              @click="reportType = t"
+            >{{ t }}</text>
+          </view>
+          <textarea
+            v-model="reportDetail"
+            class="rp-detail"
+            placeholder="补充说明（选填，500 字以内）"
+            :maxlength="500"
+          />
+          <view class="sheet-done rp-submit" :class="{ off: !reportType || reportBusy }" @click="submitReport">{{ reportBusy ? '提交中…' : '提交纠错' }}</view>
+        </view>
+      </view>
     </template>
   </view>
 </template>
@@ -311,6 +336,12 @@ export default {
       rIdx: 0,
       picked: null,
       answered: false,
+      reportOpen: false,
+      reportTarget: null,
+      reportType: '',
+      reportDetail: '',
+      reportBusy: false,
+      reportTypes: ['答案错误', '解析错误', '题干或选项错字', '图片缺失', '分类错误', '重复题', '其他'],
       wasCorrect: false,
       nextDays: 0,
       streak: 0,
@@ -732,9 +763,35 @@ export default {
       uni.setStorageSync('practicePreset', { module: m.module, submodule: sub, count: 3 });
       uni.switchTab({ url: '/pages/practice/practice' });
     },
+    openReport(m) {
+      if (!m.question_id) return;
+      this.reportTarget = m;
+      this.reportType = '';
+      this.reportDetail = '';
+      this.reportOpen = true;
+    },
+    async submitReport() {
+      const m = this.reportTarget;
+      if (!m || !this.reportType || this.reportBusy) return;
+      this.reportBusy = true;
+      try {
+        await request('/api/question_report', {
+          method: 'POST',
+          data: { question_id: m.question_id, uid: anonUid(), type: this.reportType, detail: this.reportDetail.slice(0, 500) },
+        });
+        m._reported = true;
+        this.reportOpen = false;
+        uni.showToast({ title: '感谢反馈，我们会尽快核查', icon: 'none' });
+      } catch (e) {
+        uni.showToast({ title: '提交失败：' + e.message, icon: 'none' });
+      } finally {
+        this.reportBusy = false;
+      }
+    },
     itemSheet(m) {
       const acts = [];
       if (m.module) acts.push({ t: '练3道同类', f: () => this.practiceSimilar(m) });
+      if (m.question_id) acts.push({ t: '题目纠错', f: () => this.openReport(m) });
       if (!m.mastered) acts.push({ t: '标为已掌握', f: () => this.master(m) });
       acts.push({ t: '删除', f: () => this.del(m) });
       uni.showActionSheet({
@@ -858,6 +915,12 @@ export default {
 .acts { display: flex; gap: 8rpx; }
 .op { font-size: 24rpx; margin-left: 16rpx; padding: 18rpx 24rpx; border-radius: 999rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
 .op.sim { background: var(--brand-soft); color: var(--brand); }
+.op.reportop { color: var(--ink-3, #9ca3af); text-decoration: underline; }
+.rp-types { display: flex; flex-wrap: wrap; gap: 16rpx; margin-bottom: 20rpx; }
+.rp-chip { padding: 18rpx 26rpx; border-radius: 999rpx; background: var(--soft-bg, #f4f5f9); font-size: 26rpx; color: var(--ink-2); }
+.rp-chip.on { background: rgba(59, 111, 245, 0.12); color: #3b6ff5; font-weight: 600; }
+.rp-detail { width: 100%; box-sizing: border-box; min-height: 140rpx; background: var(--soft-bg, #f4f5f9); border-radius: 16rpx; padding: 20rpx; font-size: 26rpx; }
+.rp-submit.off { opacity: 0.45; pointer-events: none; }
 .redo { color: var(--brand); border: 1rpx solid var(--brand); }
 .del { color: #c33; }
 .tag { display: inline-block; background: var(--brand-soft); color: var(--brand); border-radius: 10rpx; padding: 4rpx 14rpx; font-size: 22rpx; }
