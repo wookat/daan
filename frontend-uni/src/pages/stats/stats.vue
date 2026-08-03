@@ -15,20 +15,25 @@
       </view>
     </view>
 
-    <view class="card">
-      <view class="cal-head">
-        <view class="h" style="margin-bottom: 0">学习日历</view>
-        <view class="cal-hr">
-          <text class="cal-sub">本月打卡 {{ monthDays }} 天</text>
-          <text class="cal-toggle" @click="calFull = !calFull">{{ calFull ? '收起' : '全月 ›' }}</text>
+    <view v-if="(reco && reco.items.length) || dueN" class="card">
+      <view class="h">个性化推荐 · 查漏补缺</view>
+      <view v-if="dueN" class="rc-row" @click="goBook">
+        <view class="rc-main">
+          <text class="rc-name">错题到期复习</text>
+          <text class="rc-tag warn">今日到期</text>
         </view>
+        <text class="rc-meta">{{ dueN }} 题待复习</text>
+        <text class="rc-go">去复习 ›</text>
       </view>
-      <view class="cal-week">
-        <text v-for="w in ['一', '二', '三', '四', '五', '六', '日']" :key="w" class="cal-w">{{ w }}</text>
+      <view v-for="(r, i) in (reco ? reco.items : [])" :key="i" class="rc-row" @click="goSub(r.module, r.submodule)">
+        <view class="rc-main">
+          <text class="rc-name">{{ r.submodule }}</text>
+          <text class="rc-tag" :class="{ warn: r.reason === '近期退步' || r.reason === '正确率偏低' }">{{ r.reason }}</text>
+        </view>
+        <text class="rc-meta">正确率 {{ Math.round(r.acc * 100) }}%（{{ r.n }}题）</text>
+        <text class="rc-go">练10题 ›</text>
       </view>
-      <view class="cal-grid">
-        <view v-for="(c, i) in shownCalCells" :key="i" class="cal-c" :class="c.cls">{{ c.d || '' }}</view>
-      </view>
+      <view class="rc-note">基于你的做题历史（正确率/近期趋势/遗忘曲线/考频）自动推荐</view>
     </view>
 
     <view class="card">
@@ -92,25 +97,20 @@
       </view>
     </view>
 
-    <view v-if="(reco && reco.items.length) || dueN" class="card">
-      <view class="h">个性化推荐 · 查漏补缺</view>
-      <view v-if="dueN" class="rc-row" @click="goBook">
-        <view class="rc-main">
-          <text class="rc-name">错题到期复习</text>
-          <text class="rc-tag warn">今日到期</text>
+    <view class="card">
+      <view class="cal-head">
+        <view class="h" style="margin-bottom: 0">学习日历</view>
+        <view class="cal-hr">
+          <text class="cal-sub">本月打卡 {{ monthDays }} 天</text>
+          <text class="cal-toggle" @click="calFull = !calFull">{{ calFull ? '收起' : '全月 ›' }}</text>
         </view>
-        <text class="rc-meta">{{ dueN }} 题待复习</text>
-        <text class="rc-go">去复习 ›</text>
       </view>
-      <view v-for="(r, i) in (reco ? reco.items : [])" :key="i" class="rc-row" @click="goSub(r.module, r.submodule)">
-        <view class="rc-main">
-          <text class="rc-name">{{ r.submodule }}</text>
-          <text class="rc-tag" :class="{ warn: r.reason === '近期退步' || r.reason === '正确率偏低' }">{{ r.reason }}</text>
-        </view>
-        <text class="rc-meta">正确率 {{ Math.round(r.acc * 100) }}%（{{ r.n }}题）</text>
-        <text class="rc-go">练10题 ›</text>
+      <view class="cal-week">
+        <text v-for="w in ['一', '二', '三', '四', '五', '六', '日']" :key="w" class="cal-w">{{ w }}</text>
       </view>
-      <view class="rc-note">基于你的做题历史（正确率/近期趋势/遗忘曲线/考频）自动推荐</view>
+      <view class="cal-grid">
+        <view v-for="(c, i) in shownCalCells" :key="i" class="cal-c" :class="c.cls">{{ c.d || '' }}</view>
+      </view>
     </view>
 
     <view v-if="slStats && slStats.total" class="card">
