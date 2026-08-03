@@ -11,7 +11,7 @@ from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import auth, db, engine, kb, llm, omr, pdf_export
+from . import auth, db, engine, kb, llm, omr, pdf_export, taxonomy
 
 app = FastAPI(title="考公错题助手")
 app.include_router(auth.router)
@@ -276,9 +276,47 @@ def api_admin_questions(
 @app.patch("/api/admin/questions/{qid}")
 def api_admin_update_question(qid: int, body: dict, x_admin_token: str | None = Header(None)):
     check_admin(x_admin_token)
+    if "tag3" in body:
+        code = (body["tag3"] or "").strip()
+        if code and code != "UNKNOWN" and code not in taxonomy.topic_index():
+            raise HTTPException(400, "未知考点 code")
+        body["tag3"] = code or None
     if not db.admin_update_question(qid, body):
         raise HTTPException(400, "无可更新字段或题目不存在")
+    if "tag3" in body:
+        db.tag3_review_close(qid)
     return {"ok": True}
+
+
+@app.get("/api/taxonomy")
+def api_taxonomy():
+    """三级考点树 + 各级题目数。"""
+    counts = db.tag3_counts()
+    tree = json.loads(json.dumps(taxonomy.tree(), ensure_ascii=False))
+    for m in tree["modules"]:
+        mn = 0
+        for g in m["groups"]:
+            gn = 0
+            for t in g["topics"]:
+                t["n"] = counts.get(t["code"], 0)
+                gn += t["n"]
+            g["n"] = gn
+            mn += gn
+        m["n"] = mn
+    tree["unknown"] = counts.get("UNKNOWN", 0)
+    return tree
+
+
+@app.get("/api/admin/taxonomy/questions")
+def api_admin_taxonomy_questions(code: str, offset: int = 0, limit: int = 20, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return {"items": db.questions_by_tag3(code, offset=offset, limit=limit)}
+
+
+@app.get("/api/admin/tag3_review")
+def api_admin_tag3_review(limit: int = 100, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return {"items": db.tag3_review_list(limit)}
 
 
 @app.get("/api/admin/flagged_cache")
@@ -1148,7 +1186,12 @@ def api_save_mistake(rec: dict):
 
 @app.get("/api/mistakes")
 def api_list_mistakes(uid: str = ""):
-    return {"items": db.list_mistakes(uid=uid.strip()[:64] or None)}
+    items = db.list_mistakes(uid=uid.strip()[:64] or None)
+    idx = taxonomy.topic_index()
+    for m in items:
+        t = idx.get(m.get("tag3") or "")
+        m["tag3_name"] = t["name"] if t else None
+    return {"items": items}
 
 
 @app.patch("/api/mistakes/{mid}")

@@ -36,6 +36,12 @@ main { max-width:1080px; margin:20px auto; padding:0 16px; }
 .tbl { width:100%; border-collapse:collapse; background:#fff; border-radius:10px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.06); margin-bottom:20px; }
 .tbl th,.tbl td { padding:8px 12px; text-align:left; border-bottom:1px solid var(--line); font-size:13px; }
 .tbl th { background:var(--soft); color:var(--ink2); font-weight:600; }
+.txm { background:#fff; border-radius:10px; padding:10px 14px; margin-bottom:10px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+.txm summary,.txg summary { cursor:pointer; font-weight:600; }
+.txg { margin:6px 0 6px 14px; }
+.txt3 { display:flex; align-items:center; gap:8px; margin:4px 0 4px 30px; cursor:pointer; }
+.txt3:hover { color:var(--brand); }
+.txn { color:var(--ink2); font-size:12px; }
 </style>
 </head>
 <body>
@@ -57,6 +63,7 @@ main { max-width:1080px; margin:20px auto; padding:0 16px; }
     <div class="tab" data-tab="ann" onclick="switchTab(this)">运营公告</div>
     <div class="tab" data-tab="batches" onclick="switchTab(this)">批次审核</div>
     <div class="tab" data-tab="reports" onclick="switchTab(this)" id="tab-reports">纠错处理</div>
+    <div class="tab" data-tab="taxonomy" onclick="switchTab(this)">考点树</div>
   </div>
   <div class="bar" id="searchbar" style="display:none">
     <input id="kw" placeholder="题干关键词" />
@@ -214,6 +221,46 @@ function fmtOpts(s) {
     return Object.entries(o).map(([k, v]) => k + '. ' + String(v).slice(0, 60)).join('\n');
   } catch (e) { return ''; }
 }
+async function loadTaxonomy(render) {
+  const d = await api('/api/taxonomy');
+  window._TAX = d;
+  render(d.modules.map((m) => `<details class="txm">
+    <summary>${esc(m.name)} <span class="txn">已标 ${m.n} 题</span></summary>
+    ${m.groups.map((g) => `<details class="txg">
+      <summary>${esc(g.name)} <span class="txn">${g.n}</span></summary>
+      ${g.topics.map((t) => `<div class="txt3" onclick="showTopicQs('${t.code}')">
+        <span class="badge">${t.code}</span><b>${esc(t.name)}</b><span class="txn">${t.n} 题</span>
+        <span class="txn">${esc(t.desc || '')}</span>
+      </div><div id="tq-${t.code}"></div>`).join('')}
+    </details>`).join('')}
+  </details>`).join('') + `<div class="txm"><span class="txn">UNKNOWN（待定） ${d.unknown} 题 · 低置信抽审见 /api/admin/tag3_review</span></div>`);
+}
+function topicOptions(code) {
+  const opts = ['<option value="">（清空）</option>', '<option value="UNKNOWN">UNKNOWN</option>'];
+  for (const m of (window._TAX || {}).modules || []) for (const g of m.groups) for (const t of g.topics)
+    opts.push(`<option value="${t.code}" ${t.code === code ? 'selected' : ''}>${t.code} ${esc(t.name)}</option>`);
+  return opts.join('');
+}
+async function showTopicQs(code) {
+  const box = $('tq-' + code);
+  if (box.innerHTML) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div class="txn" style="margin-left:30px">加载中…</div>';
+  try {
+    const d = await api('/api/admin/taxonomy/questions?code=' + encodeURIComponent(code));
+    box.innerHTML = d.items.length ? d.items.map((q) => `<div class="q" style="margin-left:30px">
+      <div class="meta"><span>#${q.id}</span><span class="badge">${esc(MODS[q.module] || q.module)}${q.submodule ? ' · ' + esc(q.submodule) : ''}</span><span>答案 <b>${esc(q.answer)}</b></span></div>
+      <pre>${esc((q.question || '').slice(0, 260))}</pre>
+      <div class="row">考点 <select id="t3-${q.id}" style="max-width:340px">${topicOptions(q.tag3)}</select>
+        <button class="ok" onclick="saveTag3(${q.id})">保存考点</button></div>
+    </div>`).join('') : '<div class="txn" style="margin-left:30px">暂无题目</div>';
+  } catch (e) { box.innerHTML = '<div class="txn" style="margin-left:30px">加载失败：' + esc(e.message) + '</div>'; }
+}
+async function saveTag3(qid) {
+  try {
+    await api('/api/admin/questions/' + qid, { method: 'PATCH', body: JSON.stringify({ tag3: $('t3-' + qid).value }) });
+    alert('已保存');
+  } catch (e) { alert('失败：' + e.message); }
+}
 async function refreshReportBadge() {
   try {
     const d = await api('/api/admin/question_reports?status=open');
@@ -227,6 +274,10 @@ async function load() {
   const seq = ++LOADSEQ;
   const render = (html) => { if (seq === LOADSEQ) $('list').innerHTML = html; };
   try {
+    if (TAB === 'taxonomy') {
+      await loadTaxonomy(render);
+      return;
+    }
     if (TAB === 'reports') {
       const st = $('rstatus') ? $('rstatus').value : 'open';
       const d = await api('/api/admin/question_reports?status=' + st);

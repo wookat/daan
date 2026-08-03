@@ -73,6 +73,7 @@ def init_db():
         ("xp_explanation", "ALTER TABLE questions ADD COLUMN xp_explanation TEXT"),
         ("xp_school", "ALTER TABLE questions ADD COLUMN xp_school TEXT"),
         ("has_hs", "ALTER TABLE questions ADD COLUMN has_hs INTEGER DEFAULT 0"),
+        ("tag3", "ALTER TABLE questions ADD COLUMN tag3 TEXT"),
     ]:
         if col not in qcols:
             conn.execute(ddl)
@@ -85,6 +86,18 @@ def init_db():
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_module ON questions(module, submodule)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_real ON questions(is_real)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_q_tag3 ON questions(tag3)")
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS tag3_review (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at REAL NOT NULL,
+            question_id INTEGER NOT NULL,
+            tag3 TEXT,
+            confidence REAL,
+            reason TEXT,
+            status TEXT DEFAULT 'open'
+        )"""
+    )
     if "has_hs" not in qcols:
         conn.execute("UPDATE questions SET has_hs=(hs_explanation IS NOT NULL AND hs_explanation!='')")
     conn.execute(
@@ -646,6 +659,66 @@ def submodule_counts(module: str) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def tag3_counts() -> dict:
+    """各三级考点 code 的题目数（不含已下架）。"""
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT tag3, COUNT(*) n FROM questions WHERE tag3 IS NOT NULL AND tag3!='' "
+        "AND (disabled IS NULL OR disabled=0) GROUP BY tag3"
+    ).fetchall()
+    conn.close()
+    return {r["tag3"]: r["n"] for r in rows}
+
+
+def questions_by_tag3(code: str, offset: int = 0, limit: int = 20) -> list[dict]:
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT id, module, submodule, tag3, question, options, answer, explanation, is_real, exam_year, exam_region "
+        "FROM questions WHERE tag3=? AND (disabled IS NULL OR disabled=0) ORDER BY id DESC LIMIT ? OFFSET ?",
+        (code, min(limit, 50), offset),
+    ).fetchall()
+    conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["options"] = json.loads(d.get("options") or "{}")
+        out.append(d)
+    return out
+
+
+def tag3_review_add(question_id: int, tag3: str | None, confidence: float | None, reason: str):
+    conn = get_conn()
+    conn.execute(
+        "DELETE FROM tag3_review WHERE question_id=? AND status='open'", (question_id,)
+    )
+    conn.execute(
+        "INSERT INTO tag3_review (created_at, question_id, tag3, confidence, reason) VALUES (?,?,?,?,?)",
+        (time.time(), question_id, tag3, confidence, reason),
+    )
+    conn.commit()
+    conn.close()
+
+
+def tag3_review_list(limit: int = 100) -> list[dict]:
+    conn = get_conn()
+    rows = conn.execute(
+        """SELECT r.id, r.created_at, r.question_id, r.tag3, r.confidence, r.reason, r.status,
+                  q.module, q.submodule, q.question
+           FROM tag3_review r LEFT JOIN questions q ON q.id=r.question_id
+           WHERE r.status='open' ORDER BY r.id DESC LIMIT ?""",
+        (min(limit, 300),),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def tag3_review_close(question_id: int):
+    conn = get_conn()
+    conn.execute("UPDATE tag3_review SET status='done' WHERE question_id=? AND status='open'", (question_id,))
+    conn.commit()
+    conn.close()
+
+
 def real_filters() -> dict:
     """真题可用的年份/地区筛选项及题量。"""
     conn = get_conn()
@@ -932,7 +1005,7 @@ def admin_search_questions(
     order = "hs_down DESC, id DESC" if flagged else "id DESC"
     rows = conn.execute(
         f"SELECT id, module, submodule, question, options, answer, explanation, hs_explanation, "
-        f"hs_up, hs_down, is_real, exam_year, exam_region, source, disabled "
+        f"hs_up, hs_down, is_real, exam_year, exam_region, source, disabled, tag3 "
         f"FROM questions {clause} ORDER BY {order} LIMIT ? OFFSET ?",
         (*args, min(limit, 50), offset),
     ).fetchall()
@@ -945,7 +1018,7 @@ def admin_search_questions(
     return out
 
 
-ADMIN_EDITABLE = {"answer", "explanation", "hs_explanation", "submodule", "question", "disabled", "module", "exam_year", "exam_region", "is_real"}
+ADMIN_EDITABLE = {"answer", "explanation", "hs_explanation", "submodule", "question", "disabled", "module", "exam_year", "exam_region", "is_real", "tag3"}
 
 
 def admin_update_question(qid: int, fields: dict) -> bool:
@@ -1773,9 +1846,12 @@ def save_mistake(rec: dict) -> int:
 def list_mistakes(limit: int = 500, uid: str | None = None) -> list[dict]:
     conn = get_conn()
     _ensure_mistake_uid(conn)
-    cl, args = _uid_clause(uid)
+    cl = " AND (m.uid IS NULL OR m.uid=?)" if uid else ""
+    args = (uid,) if uid else ()
     rows = conn.execute(
-        f"SELECT * FROM mistakes WHERE 1=1{cl} ORDER BY created_at DESC LIMIT ?",
+        f"""SELECT m.*, q.tag3 FROM mistakes m
+            LEFT JOIN questions q ON q.id=m.question_id
+            WHERE 1=1{cl} ORDER BY m.created_at DESC LIMIT ?""",
         (*args, limit),
     ).fetchall()
     conn.close()
