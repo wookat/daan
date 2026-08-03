@@ -111,13 +111,53 @@
         </view>
         <text class="redo-go">{{ scanning ? '识别中…' : '拍照' }}</text>
       </view>
+      <view v-if="tab !== 'fav'" class="card redoentry" @click="manualOpenSheet">
+        <view class="redo-l">
+          <view class="redo-ico"><uni-icons type="compose" size="16" color="#3b6ff5" /></view>
+          <view>
+            <text class="redo-t">手动录入答案</text>
+            <text class="redo-s">打印卷做完后按题号点选答案，一键交卷自动判分记录</text>
+          </view>
+        </view>
+        <text class="redo-go">录入</text>
+      </view>
+      <view v-if="manualOpen" class="mask" @click="manualOpen = false">
+        <view class="sheet" @click.stop>
+          <view class="sheet-h">
+            <text class="sheet-t">手动录入答案</text>
+            <text class="sheet-x" @click="manualOpen = false">✕</text>
+          </view>
+          <template v-if="!manualPaper">
+            <view v-if="recentPapers.length" class="sheet-k">最近导出的试卷</view>
+            <view v-if="recentPapers.length" class="kpchips">
+              <text v-for="p in recentPapers" :key="p.code" class="kpchip" @click="manualLookup(p.code)">{{ p.title }} · {{ p.code }}</text>
+            </view>
+            <view class="sheet-k">或输入卷面上的卷码</view>
+            <view class="searchbar manual-codebar">
+              <input v-model="manualCode" class="searchinput" placeholder="如 A1B2C3D4（封面/答题卡顶部）" confirm-type="done" @confirm="manualLookup(manualCode)" />
+            </view>
+            <view class="sheet-done" @click="manualLookup(manualCode)">{{ manualLoading ? '查找中…' : '查找试卷' }}</view>
+          </template>
+          <template v-else>
+            <view class="scan-sum">{{ manualPaper.title || '试卷' }} · 卷码 {{ manualPaper.code }} · 共 {{ manualPaper.n }} 题 · 已选 {{ manualPickedCount }}</view>
+            <scroll-view scroll-y class="scan-list manual-list">
+              <view v-for="no in manualPaper.n" :key="no" class="manual-row">
+                <text class="scan-no">{{ no }}</text>
+                <text v-for="L in ['A','B','C','D']" :key="L" class="manual-opt" :class="{ on: manualPicks[no] === L }" @click="manualPick(no, L)">{{ L }}</text>
+              </view>
+            </scroll-view>
+            <view class="sheet-done" :class="{ dim: !manualPickedCount }" @click="manualSubmit">{{ manualSubmitting ? '判分中…' : '交卷判分（' + manualPickedCount + ' 题）' }}</view>
+            <view class="manual-back" @click="manualPaper = null">‹ 换一份试卷</view>
+          </template>
+        </view>
+      </view>
       <view v-if="scanOpen && scanResult" class="mask" @click="scanOpen = false">
         <view class="sheet" @click.stop>
           <view class="sheet-h">
-            <text class="sheet-t">扫描结果 · {{ scanResult.title || '试卷' }}</text>
+            <text class="sheet-t">对答案结果 · {{ scanResult.title || '试卷' }}</text>
             <text class="sheet-x" @click="scanOpen = false">✕</text>
           </view>
-          <view class="scan-sum">卷码 {{ scanResult.code }} · 第 {{ scanResult.page }} 页 · 已作答 {{ scanResult.answered }}/{{ scanResult.total }} · 答对 <text class="scan-good">{{ scanResult.correct }}</text> 题{{ scanResult.saved ? ' · 已记入做题记录' : '' }}</view>
+          <view class="scan-sum">卷码 {{ scanResult.code }}{{ scanResult.page ? ' · 第 ' + scanResult.page + ' 页' : '' }} · 已作答 {{ scanResult.answered }}/{{ scanResult.total }} · 答对 <text class="scan-good">{{ scanResult.correct }}</text> 题{{ scanResult.saved ? ' · 已记入做题记录' : '' }}</view>
           <scroll-view scroll-y class="scan-list">
             <view v-for="r in scanResult.items" :key="r.no" class="scan-row">
               <text class="scan-no">{{ r.no }}</text>
@@ -288,6 +328,13 @@ export default {
     expOnly: false,
       scanOpen: false,
       scanResult: null,
+      manualOpen: false,
+      manualCode: '',
+      manualPaper: null,
+      manualPicks: {},
+      manualLoading: false,
+      manualSubmitting: false,
+      recentPapers: [],
       mgOpen: {},
       aiOpen: false,
       aiLoading: false,
@@ -304,6 +351,9 @@ export default {
     };
   },
   computed: {
+    manualPickedCount() {
+      return Object.keys(this.manualPicks).length;
+    },
     cur() {
       return this.rItems[this.rIdx] || {};
     },
@@ -408,6 +458,48 @@ export default {
     this.load();
   },
   methods: {
+    manualOpenSheet() {
+      this.recentPapers = uni.getStorageSync('recentPapers') || [];
+      this.manualPaper = null;
+      this.manualPicks = {};
+      this.manualCode = '';
+      this.manualOpen = true;
+    },
+    async manualLookup(code) {
+      code = String(code || '').trim().toUpperCase();
+      if (!code) return uni.showToast({ title: '请输入卷码', icon: 'none' });
+      if (this.manualLoading) return;
+      this.manualLoading = true;
+      try {
+        this.manualPaper = await request('/api/paper/' + encodeURIComponent(code));
+        this.manualPicks = {};
+      } catch (e) {
+        uni.showToast({ title: e.message, icon: 'none', duration: 3000 });
+      }
+      this.manualLoading = false;
+    },
+    manualPick(no, L) {
+      const cur = { ...this.manualPicks };
+      if (cur[no] === L) delete cur[no];
+      else cur[no] = L;
+      this.manualPicks = cur;
+    },
+    async manualSubmit() {
+      if (this.manualSubmitting || !this.manualPickedCount) return;
+      this.manualSubmitting = true;
+      try {
+        const d = await request('/api/paper_answers', {
+          method: 'POST',
+          data: { uid: anonUid(), code: this.manualPaper.code, picks: this.manualPicks },
+        });
+        this.manualOpen = false;
+        this.scanResult = d;
+        this.scanOpen = true;
+      } catch (e) {
+        uni.showToast({ title: '判分失败：' + e.message, icon: 'none', duration: 3000 });
+      }
+      this.manualSubmitting = false;
+    },
     scanSheetPick() {
       if (this.scanning) return;
       uni.chooseImage({
@@ -746,6 +838,13 @@ export default {
 .scan-pick.bad { color: #f04438; }
 .scan-ans { width: 140rpx; color: #646a73; }
 .scan-mark { width: 50rpx; text-align: right; color: #8f959e; }
+.manual-list { max-height: 44vh; }
+.manual-row { display: flex; align-items: center; gap: 16rpx; min-height: 88rpx; border-bottom: 1rpx solid #f2f3f5; }
+.manual-opt { flex: 1; text-align: center; line-height: 68rpx; border: 1rpx solid #e0e3e8; border-radius: 12rpx; font-size: 28rpx; color: #646a73; }
+.manual-opt.on { background: var(--brand, #3b6ff5); border-color: var(--brand, #3b6ff5); color: #fff; font-weight: 600; }
+.manual-codebar { margin: 0; }
+.manual-back { text-align: center; color: #646a73; font-size: 25rpx; padding: 20rpx 0 4rpx; }
+.sheet-done.dim { opacity: 0.45; }
 .exp-opts { display: flex; gap: 12rpx; margin-top: 16rpx; }
 .expchip { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--line, #ebedf0); border-radius: 12rpx; font-size: 24rpx; color: var(--ink-2, #646a73); background: #f7f8fa; }
 .expchip.on { border-color: var(--brand, #3b6ff5); color: var(--brand, #3b6ff5); background: #edf3fe; font-weight: 600; }

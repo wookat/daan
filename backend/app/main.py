@@ -394,8 +394,102 @@ def api_export_pdf(body: dict):
     return StreamingResponse(
         iter([data]),
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="paper-{code}.pdf"'},
+        headers={"Content-Disposition": f'attachment; filename="paper-{code}.pdf"', "X-Paper-Code": code},
     )
+
+
+@app.get("/api/paper/{code}")
+def api_paper_info(code: str):
+    paper = db.get_paper_export(code.strip().upper()[:16])
+    if not paper:
+        raise HTTPException(404, "未找到该卷码对应的导出记录，请核对卷面右上角/封面的卷码")
+    return {
+        "code": paper["code"],
+        "title": paper.get("title"),
+        "n": len(paper["question_ids"]),
+        "created_at": paper.get("created_at"),
+    }
+
+
+def _judge_paper(uid: str, paper: dict, picks: dict[int, str]) -> dict:
+    """picks: {题号(从1开始): 'A'}；与扫描答题卡同一套判分/落库逻辑。"""
+    qids = paper["question_ids"]
+    questions = {q["id"]: q for q in db.questions_by_ids(qids)}
+    results = []
+    log_items = []
+    for i, qid in enumerate(qids):
+        q = questions.get(qid)
+        if not q:
+            continue
+        picked = (picks.get(i + 1) or "").strip().upper()
+        correct_ans = (q.get("answer") or "").strip().upper()[:1]
+        status = "blank" if not picked else ("multi" if len(picked) > 1 else "ok")
+        is_correct = status == "ok" and picked == correct_ans
+        results.append(
+            {
+                "no": i + 1,
+                "question_id": qid,
+                "picked": picked,
+                "answer": correct_ans,
+                "correct": is_correct,
+                "status": status,
+                "question": (q.get("question") or "")[:80],
+            }
+        )
+        if uid and status == "ok":
+            log_items.append(
+                {
+                    "question_id": qid,
+                    "module": q.get("module"),
+                    "submodule": q.get("submodule"),
+                    "correct": is_correct,
+                    "picked": picked,
+                    "secs": 0,
+                }
+            )
+            if not is_correct:
+                db.save_mistake(
+                    {
+                        "uid": uid[:64],
+                        "question_id": qid,
+                        "module": q.get("module"),
+                        "question_type": q.get("submodule"),
+                        "question_text": q.get("question"),
+                        "user_answer": picked,
+                        "correct_answer": correct_ans,
+                        "explanation": q.get("explanation") or q.get("hs_explanation") or "",
+                    }
+                )
+    if uid and log_items:
+        db.save_answer_log(uid[:64], log_items)
+    answered = [r for r in results if r["status"] == "ok"]
+    return {
+        "code": paper["code"],
+        "title": paper.get("title"),
+        "total": len(results),
+        "answered": len(answered),
+        "correct": sum(1 for r in answered if r["correct"]),
+        "saved": bool(uid and log_items),
+        "items": results,
+    }
+
+
+@app.post("/api/paper_answers")
+def api_paper_answers(body: dict):
+    code = str(body.get("code") or "").strip().upper()[:16]
+    paper = db.get_paper_export(code)
+    if not paper:
+        raise HTTPException(404, "未找到该卷码对应的导出记录")
+    raw_picks = body.get("picks") or {}
+    picks: dict[int, str] = {}
+    for k, v in raw_picks.items():
+        try:
+            picks[int(k)] = str(v or "")[:1]
+        except (TypeError, ValueError):
+            continue
+    if not picks:
+        raise HTTPException(400, "没有已选择的答案")
+    return _judge_paper(str(body.get("uid") or ""), paper, picks)
 
 
 @app.post("/api/scan_sheet")

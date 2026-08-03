@@ -79,6 +79,12 @@ export async function exportPdf(body) {
     } catch (e) { /* 保留状态码 */ }
     throw new Error(msg);
   }
+  const paperCode = resp.headers.get('X-Paper-Code');
+  if (paperCode) {
+    const list = (uni.getStorageSync('recentPapers') || []).filter((p) => p.code !== paperCode);
+    list.unshift({ code: paperCode, title: body.title || '试卷', ts: Date.now() });
+    uni.setStorageSync('recentPapers', list.slice(0, 10));
+  }
   const blob = await resp.blob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
