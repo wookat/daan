@@ -1903,3 +1903,213 @@ def get_backup(code: str) -> dict | None:
     if not row:
         return None
     return json.loads(row["data"])
+
+# ---------- 成套试卷 / 全真模考 ----------
+
+MODULE_ORDER = ["changshi", "yanyu", "shuliang", "panduan", "ziliao"]
+
+
+def _ensure_exam_tables(conn):
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS exam_papers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT UNIQUE NOT NULL,
+            kind TEXT NOT NULL DEFAULT 'zhenti',
+            year INTEGER,
+            region TEXT,
+            question_ids TEXT NOT NULL,
+            duration_min INTEGER NOT NULL DEFAULT 120,
+            created_at REAL NOT NULL
+        )"""
+    )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS exam_attempts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            uid TEXT NOT NULL,
+            paper_id INTEGER NOT NULL,
+            started_at REAL NOT NULL,
+            submitted_at REAL,
+            answers TEXT,
+            score REAL,
+            per_module TEXT
+        )"""
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_ep_kind ON exam_papers(kind, year, region)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_ea_uid ON exam_attempts(uid, paper_id, id)")
+
+
+def upsert_exam_paper(title: str, kind: str, year: int | None, region: str | None,
+                      question_ids: list[int], duration_min: int) -> int:
+    """按 title 幂等落卷（重跑成卷脚本不产生重复卷）。"""
+    conn = get_conn()
+    _ensure_exam_tables(conn)
+    conn.execute(
+        """INSERT INTO exam_papers (title, kind, year, region, question_ids, duration_min, created_at)
+           VALUES (?,?,?,?,?,?,?)
+           ON CONFLICT(title) DO UPDATE SET
+             kind=excluded.kind, year=excluded.year, region=excluded.region,
+             question_ids=excluded.question_ids, duration_min=excluded.duration_min""",
+        (title, kind, year, region, json.dumps(question_ids), duration_min, time.time()),
+    )
+    conn.commit()
+    pid = conn.execute("SELECT id FROM exam_papers WHERE title=?", (title,)).fetchone()["id"]
+    conn.close()
+    return pid
+
+
+def list_exam_papers(kind: str | None = None, year: int | None = None,
+                     region: str | None = None, uid: str | None = None) -> list[dict]:
+    conn = get_conn()
+    _ensure_exam_tables(conn)
+    where = ["1=1"]
+    args: list = []
+    if kind:
+        where.append("kind=?")
+        args.append(kind)
+    if year:
+        where.append("year=?")
+        args.append(year)
+    if region:
+        where.append("region=?")
+        args.append(region)
+    rows = conn.execute(
+        f"""SELECT id, title, kind, year, region, question_ids, duration_min, created_at
+            FROM exam_papers WHERE {' AND '.join(where)}
+            ORDER BY year DESC, id DESC LIMIT 200""",
+        args,
+    ).fetchall()
+    best: dict[int, dict] = {}
+    if uid and rows:
+        for b in conn.execute(
+            """SELECT paper_id, MAX(score) s, COUNT(*) n FROM exam_attempts
+               WHERE uid=? AND submitted_at IS NOT NULL GROUP BY paper_id""",
+            (uid,),
+        ):
+            best[b["paper_id"]] = {"best_score": b["s"], "attempt_count": b["n"]}
+    conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["n"] = len(json.loads(d.pop("question_ids") or "[]"))
+        d.update(best.get(d["id"], {"best_score": None, "attempt_count": 0}))
+        out.append(d)
+    return out
+
+
+def exam_paper_filters() -> dict:
+    conn = get_conn()
+    _ensure_exam_tables(conn)
+    years = [dict(r) for r in conn.execute(
+        "SELECT year y, COUNT(*) n FROM exam_papers WHERE kind='zhenti' AND year IS NOT NULL "
+        "GROUP BY year ORDER BY year DESC")]
+    regions = [dict(r) for r in conn.execute(
+        "SELECT region r, COUNT(*) n FROM exam_papers WHERE kind='zhenti' AND region IS NOT NULL AND region!='' "
+        "GROUP BY region ORDER BY n DESC")]
+    conn.close()
+    return {"years": years, "regions": regions}
+
+
+def get_exam_paper(pid: int) -> dict | None:
+    conn = get_conn()
+    _ensure_exam_tables(conn)
+    row = conn.execute("SELECT * FROM exam_papers WHERE id=?", (pid,)).fetchone()
+    conn.close()
+    if not row:
+        return None
+    d = dict(row)
+    d["question_ids"] = json.loads(d["question_ids"] or "[]")
+    return d
+
+
+def create_mock_paper(n: int = 30, duration_min: int = 30) -> int:
+    """迷你模考：随机组 n 题（按行测模块顺序），kind=mock 即时生成。"""
+    conn = get_conn()
+    _ensure_exam_tables(conn)
+    share = {"changshi": 0.15, "yanyu": 0.3, "shuliang": 0.1, "panduan": 0.3, "ziliao": 0.15}
+    ids: list[int] = []
+    for mod in MODULE_ORDER:
+        want = max(1, round(n * share[mod]))
+        ids += [r["id"] for r in conn.execute(
+            "SELECT id FROM questions WHERE module=? AND (disabled IS NULL OR disabled=0) "
+            "ORDER BY has_hs DESC, RANDOM() LIMIT ?", (mod, want))]
+    if len(ids) < n:
+        placeholders = ",".join("?" * len(ids)) or "0"
+        ids += [r["id"] for r in conn.execute(
+            f"SELECT id FROM questions WHERE (disabled IS NULL OR disabled=0) AND id NOT IN ({placeholders}) "
+            "ORDER BY RANDOM() LIMIT ?", (*ids, n - len(ids)))]
+    ids = ids[:n]
+    title = "迷你模考 " + time.strftime("%m-%d %H:%M:%S") + " #" + secrets.token_hex(3)
+    conn.execute(
+        "INSERT INTO exam_papers (title, kind, year, region, question_ids, duration_min, created_at) "
+        "VALUES (?,?,?,?,?,?,?)",
+        (title, "mock", None, None, json.dumps(ids), duration_min, time.time()),
+    )
+    conn.commit()
+    pid = conn.execute("SELECT id FROM exam_papers WHERE title=?", (title,)).fetchone()["id"]
+    conn.close()
+    return pid
+
+
+def start_exam_attempt(uid: str, paper_id: int) -> int:
+    conn = get_conn()
+    _ensure_exam_tables(conn)
+    cur = conn.execute(
+        "INSERT INTO exam_attempts (uid, paper_id, started_at) VALUES (?,?,?)",
+        (uid, paper_id, time.time()),
+    )
+    conn.commit()
+    aid = cur.lastrowid
+    conn.close()
+    return aid
+
+
+def finish_exam_attempt(attempt_id: int, answers: dict, score: float, per_module: dict) -> bool:
+    conn = get_conn()
+    _ensure_exam_tables(conn)
+    cur = conn.execute(
+        "UPDATE exam_attempts SET submitted_at=?, answers=?, score=?, per_module=? "
+        "WHERE id=? AND submitted_at IS NULL",
+        (time.time(), json.dumps(answers, ensure_ascii=False), score,
+         json.dumps(per_module, ensure_ascii=False), attempt_id),
+    )
+    conn.commit()
+    ok = cur.rowcount > 0
+    conn.close()
+    return ok
+
+
+def get_exam_attempt(attempt_id: int) -> dict | None:
+    conn = get_conn()
+    _ensure_exam_tables(conn)
+    row = conn.execute("SELECT * FROM exam_attempts WHERE id=?", (attempt_id,)).fetchone()
+    conn.close()
+    if not row:
+        return None
+    d = dict(row)
+    d["answers"] = json.loads(d["answers"] or "{}")
+    d["per_module"] = json.loads(d["per_module"] or "{}")
+    return d
+
+
+def list_exam_attempts(uid: str, paper_id: int | None = None, limit: int = 50) -> list[dict]:
+    conn = get_conn()
+    _ensure_exam_tables(conn)
+    where = "a.uid=? AND a.submitted_at IS NOT NULL"
+    args: list = [uid]
+    if paper_id:
+        where += " AND a.paper_id=?"
+        args.append(paper_id)
+    rows = conn.execute(
+        f"""SELECT a.id, a.paper_id, a.started_at, a.submitted_at, a.score, a.per_module,
+                   p.title, p.kind, p.year, p.region, p.duration_min
+            FROM exam_attempts a JOIN exam_papers p ON p.id=a.paper_id
+            WHERE {where} ORDER BY a.id DESC LIMIT ?""",
+        (*args, min(limit, 100)),
+    ).fetchall()
+    conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["per_module"] = json.loads(d["per_module"] or "{}")
+        out.append(d)
+    return out

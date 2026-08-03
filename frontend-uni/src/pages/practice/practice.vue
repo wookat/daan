@@ -40,15 +40,15 @@
         <text class="ann-x" @click="dismissAnn">✕</text>
       </view>
       <view v-if="counts.length" class="card grid4">
-        <view class="g4" @click="startExam(false)">
+        <view class="g4" @click="goMini">
           <view class="g4-ic" style="background:#fff4e5"><uni-icons type="flag-filled" size="20" color="#d97706" /></view>
           <text class="g4-t">迷你模考</text>
         </view>
-        <view class="g4" @click="startExam(true)">
+        <view class="g4" @click="goExamList">
           <view class="g4-ic" style="background:#fef2f2"><uni-icons type="medal-filled" size="20" color="#dc2626" /></view>
           <text class="g4-t">全真模考</text>
         </view>
-        <view class="g4" @click="openPapers">
+        <view class="g4" @click="goExamList">
           <view class="g4-ic" style="background:#edf3fe"><uni-icons type="paperplane-filled" size="20" color="#3b6ff5" /></view>
           <text class="g4-t">真题卷库</text>
         </view>
@@ -805,6 +805,12 @@ export default {
     setGroup(n) {
       this.groupSize = n;
       uni.setStorageSync('groupSize', n);
+    },
+    goMini() {
+      uni.navigateTo({ url: '/pages/exam/exam?mini=1' });
+    },
+    goExamList() {
+      uni.navigateTo({ url: '/pages/exam/list' });
     },
     async openPapers() {
       this.paperSheet = true;

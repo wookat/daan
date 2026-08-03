@@ -53,6 +53,7 @@ main { max-width:1080px; margin:20px auto; padding:0 16px; }
     <div class="tab" data-tab="search" onclick="switchTab(this)">题库管理</div>
     <div class="tab" data-tab="cache" onclick="switchTab(this)">讲解缓存差评</div>
     <div class="tab" data-tab="disabled" onclick="switchTab(this)">已下架</div>
+    <div class="tab" data-tab="papers" onclick="switchTab(this)">成套试卷</div>
     <div class="tab" data-tab="ann" onclick="switchTab(this)">运营公告</div>
     <div class="tab" data-tab="batches" onclick="switchTab(this)">批次审核</div>
     <div class="tab" data-tab="reports" onclick="switchTab(this)" id="tab-reports">纠错处理</div>
@@ -263,6 +264,11 @@ async function load() {
         </div>
         <div id="bs${esc(b.batch)}"></div>
       </div>`).join('') : '<div class="empty">暂无导入批次（新导入将自动进入待审）</div>');
+      return;
+    }
+    if (TAB === 'papers') {
+      const d = await api('/api/admin/exam_papers');
+      render(d.items.length ? `<table class="tbl"><thead><tr><th>ID</th><th>标题</th><th>类型</th><th>年份</th><th>地区</th><th>题量</th><th>时长</th><th>创建时间</th></tr></thead><tbody>${d.items.map((p) => `<tr><td>${p.id}</td><td>${esc(p.title)}</td><td>${esc(p.kind)}</td><td>${p.year || '-'}</td><td>${esc(p.region || '-')}</td><td>${p.n}</td><td>${p.duration_min} 分钟</td><td>${new Date(p.created_at * 1000).toLocaleString()}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">暂无成套试卷，在服务器上运行 backend/scripts/build_zhenti_papers.py 生成</div>');
       return;
     }
     if (TAB === 'ann') {
