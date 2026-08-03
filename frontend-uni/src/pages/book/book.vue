@@ -194,15 +194,26 @@
             <text class="mg-go" @click.stop="pickGroup(g.key, '')">查看 ›</text>
           </view>
           <view v-if="mgOpen[g.key]">
-            <view v-for="s in g.subs" :key="s.name" class="mg-sub" @click="pickGroup(g.key, s.name)">
-              <text class="mg-sub-name">{{ s.name }}</text>
-              <text class="mg-badge">{{ s.n }}</text>
-            </view>
+            <template v-for="s in g.subs" :key="s.name">
+              <view class="mg-sub" @click="pickGroup(g.key, s.name)">
+                <text class="mg-sub-name">{{ s.name }}</text>
+                <text class="mg-badge">{{ s.n }}</text>
+              </view>
+              <view
+                v-for="t in s.t3"
+                :key="s.name + '/' + t.name"
+                class="mg-sub mg-sub3"
+                @click="pickGroup(g.key, s.name, t.name)"
+              >
+                <text class="mg-sub-name">{{ t.name }}</text>
+                <text class="mg-badge">{{ t.n }}</text>
+              </view>
+            </template>
           </view>
         </view>
       </view>
-      <view v-if="tab !== 'fav' && (filterMod || kpFilter)" class="curfilter">
-        <text class="kpchip on" @click="filterMod = ''; kpFilter = ''">{{ kpFilter || modName(filterMod) }} ✕</text>
+      <view v-if="tab !== 'fav' && (filterMod || kpFilter || kp3Filter)" class="curfilter">
+        <text class="kpchip on" @click="filterMod = ''; kpFilter = ''; kp3Filter = ''">{{ kp3Filter || kpFilter || modName(filterMod) }} ✕</text>
         <text v-if="sortBy !== 'time'" class="kpchip" @click="filterOpen = true">{{ (SORTS.find(s => s.k === sortBy) || {}).name }}</text>
       </view>
       <view v-else-if="tab !== 'fav' && sortBy !== 'time'" class="curfilter">
@@ -220,11 +231,11 @@
           </view>
           <view class="sheet-k">模块</view>
           <view class="kpchips">
-            <text v-for="c in chipList" :key="c.key" class="kpchip" :class="{ on: filterMod === c.key }" @click="filterMod = c.key; kpFilter = ''">{{ c.name }}</text>
+            <text v-for="c in chipList" :key="c.key" class="kpchip" :class="{ on: filterMod === c.key }" @click="filterMod = c.key; kpFilter = ''; kp3Filter = ''">{{ c.name }}</text>
           </view>
           <view v-if="typeGroups.length > 1" class="sheet-k">题型</view>
           <view v-if="typeGroups.length > 1" class="kpchips">
-            <text v-for="g in typeGroups" :key="g.name" class="kpchip" :class="{ on: kpFilter === g.name }" @click="kpFilter = kpFilter === g.name ? '' : g.name">{{ g.name }} ×{{ g.n }}</text>
+            <text v-for="g in typeGroups" :key="g.name" class="kpchip" :class="{ on: kpFilter === g.name }" @click="kpFilter = kpFilter === g.name ? '' : g.name; kp3Filter = ''">{{ g.name }} ×{{ g.n }}</text>
           </view>
           <view class="sheet-done" @click="filterOpen = false">完成</view>
           <view class="exp-opts">
@@ -348,6 +359,7 @@ export default {
       filterMod: '',
       kw: '',
       kpFilter: '',
+      kp3Filter: '',
       favKw: '',
       tab: 'todo',
       favs: [],
@@ -418,6 +430,7 @@ export default {
       let base = this.tab === 'done' ? this.doneItems : this.todoItems;
       if (this.filterMod) base = base.filter((m) => m.module === this.filterMod);
       if (this.kpFilter) base = base.filter((m) => this.groupKey(m) === this.kpFilter);
+      if (this.kp3Filter) base = base.filter((m) => m.tag3_name === this.kp3Filter);
       base = [...base];
       if (this.sortBy === 'times') base.sort((a, b) => (b.times || 1) - (a.times || 1));
       else if (this.sortBy === 'type') base.sort((a, b) => String(a.question_type || a.module || '').localeCompare(String(b.question_type || b.module || ''), 'zh'));
@@ -447,13 +460,21 @@ export default {
         if (!map[key]) map[key] = { key, name: NAMES[key] || key || '其他', n: 0, subs: {} };
         map[key].n++;
         const t = this.groupKey(m);
-        map[key].subs[t] = (map[key].subs[t] || 0) + 1;
+        if (!map[key].subs[t]) map[key].subs[t] = { n: 0, t3: {} };
+        map[key].subs[t].n++;
+        if (m.tag3_name) map[key].subs[t].t3[m.tag3_name] = (map[key].subs[t].t3[m.tag3_name] || 0) + 1;
       }
       return Object.values(map)
         .map((g) => ({
           ...g,
           subs: Object.entries(g.subs)
-            .map(([name, n]) => ({ name, n }))
+            .map(([name, s]) => ({
+              name,
+              n: s.n,
+              t3: Object.entries(s.t3)
+                .map(([tn, tc]) => ({ name: tn, n: tc }))
+                .sort((a, b) => b.n - a.n),
+            }))
             .sort((a, b) => b.n - a.n),
         }))
         .sort((a, b) => b.n - a.n);
@@ -478,6 +499,7 @@ export default {
     filterMod() { this.pageN = 20; },
     kw() { this.pageN = 20; },
     kpFilter() { this.pageN = 20; },
+    kp3Filter() { this.pageN = 20; },
     sortBy() { this.pageN = 20; },
   },
   onReachBottom() {
@@ -603,9 +625,10 @@ export default {
     toggleGroup(key) {
       this.mgOpen = { ...this.mgOpen, [key]: !this.mgOpen[key] };
     },
-    pickGroup(mod, sub) {
+    pickGroup(mod, sub, t3) {
       this.filterMod = mod;
       this.kpFilter = sub || '';
+      this.kp3Filter = t3 || '';
     },
     groupKey(m) {
       return m.question_type || NAMES[m.module] || m.module || '其他';
@@ -867,6 +890,8 @@ export default {
 .mg-go { font-size: 24rpx; color: var(--brand); padding: 18rpx 0 18rpx 24rpx; }
 .mg-sub { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding-left: 60rpx; border-bottom: 1rpx dashed var(--line); }
 .mg-sub-name { font-size: 26rpx; color: var(--ink); }
+.mg-sub3 { padding-left: 110rpx; min-height: 42px; }
+.mg-sub3 .mg-sub-name { font-size: 24rpx; color: var(--ink-2, #646a73); }
 .curfilter { display: flex; gap: 12rpx; margin-bottom: 16rpx; flex-wrap: wrap; }
 .attempts { margin-top: 14rpx; background: var(--soft-bg, #f7f8fa); border-radius: 12rpx; padding: 14rpx 18rpx; }
 .att-h { font-size: 22rpx; color: var(--ink-2); margin-bottom: 6rpx; }
