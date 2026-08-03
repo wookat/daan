@@ -45,6 +45,7 @@ _SONG_BOLD_CANDIDATES = [
     "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
 ]
 _HEI_CANDIDATES = [
+    os.path.join(_FONT_DIR, "NotoSansSC-Bold.ttf"),
     "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
     "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
     "/usr/share/fonts/truetype/arphic/uming.ttc",
