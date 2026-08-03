@@ -243,6 +243,11 @@
     </view>
 
     <view class="card list-card">
+      <view class="lrow" @click="goPlanSetup">
+        <view class="lrow-ico">📅</view>
+        <text class="lrow-name">学习计划<text class="lrow-sub">报考画像与每日任务，可随时重新制定</text></text>
+        <text class="lrow-arrow">›</text>
+      </view>
       <view class="lrow" @click="secOpen.coach = !secOpen.coach">
         <view class="lrow-ico">🤖</view>
         <text class="lrow-name">AI 学习教练</text>
@@ -488,6 +493,10 @@ export default {
   methods: {
     goCalendar() {
       uni.navigateTo({ url: '/pages/stats/calendar' });
+    },
+    goPlanSetup() {
+      uni.setStorageSync('openPlanSetup', '1');
+      uni.switchTab({ url: '/pages/practice/practice' });
     },
     goLogin() {
       uni.navigateTo({ url: '/pages/user/login' });

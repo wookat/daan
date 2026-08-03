@@ -10,7 +10,40 @@
         </view>
         <text class="hbanner-btn" @click="startDaily">{{ todayDone ? '再练一组' : '继续目标 ›' }}</text>
       </view>
-      <view v-if="plan && (plan.due_mistakes || plan.weak.length || plan.yesterday.n)" class="card plancard">
+      <view v-if="profile === null && !guideHide" class="card guide">
+        <view class="guide-l" @click="openSetup">
+          <text class="guide-t">制定我的学习计划</text>
+          <text class="guide-s">按考试日期倒排每日任务：专项练习 + 错题复习 + 每周模考</text>
+        </view>
+        <text class="guide-btn" @click="openSetup">去制定 ›</text>
+        <text class="guide-x" @click.stop="skipGuide">跳过</text>
+      </view>
+      <view v-if="planToday && planToday.profile" class="card plancard">
+        <view class="plan-h">
+          <text class="plan-t">今日计划</text>
+          <view class="plan-hr">
+            <text v-if="planToday.days_left != null" class="plan-days">距考试 {{ planToday.days_left }} 天 · {{ planToday.phase_name }}</text>
+            <text class="plan-edit" @click="openSetup">编辑</text>
+          </view>
+        </view>
+        <view class="plan-prog">
+          <view class="plan-prog-bar"><view class="plan-prog-fill" :style="{ width: (planToday.progress.total ? (planToday.progress.done / planToday.progress.total) * 100 : 0) + '%' }" /></view>
+          <text class="plan-prog-t">{{ planToday.progress.done }}/{{ planToday.progress.total }}</text>
+        </view>
+        <view v-for="t in planToday.tasks" :key="t.key" class="plan-row task" @click="goTask(t)">
+          <text class="task-ck" :class="{ on: t.done }">{{ t.done ? '✓' : '' }}</text>
+          <view class="task-main">
+            <text class="plan-txt" :class="{ tdone: t.done }">{{ t.title }}</text>
+            <text class="task-sub">{{ t.sub }}<template v-if="t.type !== 'mock' && t.done_n"> · 已完成 {{ t.done_n }}/{{ t.target }}</template></text>
+          </view>
+          <text class="plan-go">{{ t.done ? '已完成' : t.type === 'mock' ? '去模考 ›' : t.type === 'review' ? '去复习 ›' : '去练 ›' }}</text>
+        </view>
+        <view class="plan-focus">
+          <text class="plan-focus-k">今天主攻</text>
+          <text v-for="(fn, fk) in FOCUS_MODS" :key="fk" class="plan-fchip" :class="{ on: plan && plan.focus === fk }" @click="setFocus(fk)">{{ fn }}</text>
+        </view>
+      </view>
+      <view v-else-if="plan && (plan.due_mistakes || plan.weak.length || plan.yesterday.n)" class="card plancard">
         <view class="plan-h">
           <text class="plan-t">今日建议</text>
           <text v-if="plan.yesterday.n" class="plan-y">昨日练 {{ plan.yesterday.n }} 题 · 正确率 {{ Math.round((plan.yesterday.correct / plan.yesterday.n) * 100) }}%</text>
@@ -111,6 +144,57 @@
           </view>
           <view class="custom-export" @click="exportPaper">{{ exporting ? '正在生成 PDF…' : '导出为试卷 PDF' }}</view>
           <view class="custom-note">以上设置同样作用于下方模块列表；模考与真题卷不受影响</view>
+        </view>
+      </view>
+      <view v-if="setupOpen" class="mask" @click="setupOpen = false">
+        <view class="sheet" @click.stop>
+          <view class="sheet-h">
+            <text class="sheet-t">制定学习计划 · {{ ['考试信息', '目标', '每日时长'][setupStep - 1] }}（{{ setupStep }}/3）</text>
+            <view class="sheet-x" @click="setupOpen = false"><uni-icons type="closeempty" size="20" color="#6b7280" /></view>
+          </view>
+          <template v-if="setupStep === 1">
+            <view class="setrow">
+              <text class="set-k">考试类型</text>
+              <view class="set-chips">
+                <text v-for="t in ['国考', '省考', '事业单位', '其他']" :key="t" class="set-chip" :class="{ on: pf.exam_type === t }" @click="pf.exam_type = t">{{ t }}</text>
+              </view>
+            </view>
+            <view class="setrow">
+              <text class="set-k">目标地区</text>
+              <input v-model="pf.target_region" class="pf-input" placeholder="如 广东 / 全国（选填）" :maxlength="20" />
+            </view>
+            <view class="setrow">
+              <text class="set-k">考试日期</text>
+              <picker mode="date" :value="pf.exam_date" @change="pf.exam_date = $event.detail.value">
+                <view class="pf-date" :class="{ empty: !pf.exam_date }">{{ pf.exam_date || '选择日期 ›' }}</view>
+              </picker>
+            </view>
+          </template>
+          <template v-else-if="setupStep === 2">
+            <view class="setrow">
+              <text class="set-k">目标分</text>
+              <view class="set-chips">
+                <text v-for="s in [60, 65, 70, 75, 80]" :key="s" class="set-chip" :class="{ on: pf.target_score === s }" @click="pf.target_score = s">{{ s }}+</text>
+              </view>
+            </view>
+            <view class="setrow">
+              <text class="set-k">基础自评</text>
+              <view class="set-chips">
+                <text v-for="b in ['零基础', '有基础', '二战']" :key="b" class="set-chip" :class="{ on: pf.base_level === b }" @click="pf.base_level = b">{{ b }}</text>
+              </view>
+            </view>
+          </template>
+          <template v-else>
+            <view class="setrow">
+              <view class="set-kwrap"><text class="set-k">每日可用时长</text><text class="set-sub">决定每日任务量</text></view>
+              <view class="set-chips">
+                <text v-for="m in [30, 60, 90, 120]" :key="m" class="set-chip" :class="{ on: pf.daily_minutes === m }" @click="pf.daily_minutes = m">{{ m }} 分钟</text>
+              </view>
+            </view>
+            <view class="pf-summary">{{ pf.exam_type }}{{ pf.target_region ? ' · ' + pf.target_region : '' }} · {{ pf.exam_date }} · 目标 {{ pf.target_score }}+ · {{ pf.base_level }} · 每天 {{ pf.daily_minutes }} 分钟</view>
+          </template>
+          <view class="custom-start" @click="setupNext">{{ setupStep < 3 ? '下一步' : setupBusy ? '生成中…' : '生成我的学习计划' }}</view>
+          <view v-if="setupStep > 1" class="pf-back" @click="setupStep--">上一步</view>
         </view>
       </view>
       <view v-if="!counts.length" class="card spin" @click="loadCounts">题库加载中…点此重试</view>
@@ -462,6 +546,13 @@ export default {
       expAns: true,
       expOnly: false,
       plan: null,
+      profile: undefined,
+      planToday: null,
+      guideHide: uni.getStorageSync('planGuideHide') ? true : false,
+      setupOpen: false,
+      setupStep: 1,
+      setupBusy: false,
+      pf: { exam_type: '国考', target_region: '', exam_date: '', target_score: 70, daily_minutes: 60, base_level: '零基础' },
       FOCUS_MODS: { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断' },
       papers: [],
       paperRegion: null,
@@ -667,6 +758,11 @@ export default {
     this.loadCounts();
     this.loadAnnounce();
     this.loadPlan();
+    const wantSetup = uni.getStorageSync('openPlanSetup');
+    if (wantSetup) uni.removeStorageSync('openPlanSetup');
+    this.loadProfile().then(() => {
+      if (wantSetup) this.openSetup();
+    });
     if (this.realMode) this.loadRealFilters();
     const redoSet = uni.getStorageSync('redoSet');
     if (redoSet && redoSet.length) {
@@ -1024,7 +1120,7 @@ export default {
       uni.setStorageSync('dailyPlan', this.daily);
       uni.showToast({ title: '今日一练完成，打卡成功！', icon: 'none' });
     },
-    async start(module, submodule, count, adaptive) {
+    async start(module, submodule, count, adaptive, forceReal) {
       if (this._starting) return;
       this._starting = true;
       uni.showLoading({ title: '出题中…', mask: true });
@@ -1032,7 +1128,9 @@ export default {
       this.lastSubmodule = submodule || null;
       this.subSelect = null;
       const limit = count || this.groupSize || 10;
-      const realQ = this.realMode
+      const realQ = forceReal
+        ? '&real=1'
+        : this.realMode
         ? '&real=1' +
           (this.realYear ? '&year=' + this.realYear : '') +
           (this.realRegion ? '&region=' + encodeURIComponent(this.realRegion) : '')
@@ -1403,6 +1501,73 @@ export default {
         this.plan = await request('/api/daily_plan?uid=' + encodeURIComponent(uid));
       } catch (e) { /* 非关键路径 */ }
     },
+    async loadProfile() {
+      try {
+        const d = await request('/api/profile?uid=' + encodeURIComponent(anonUid()));
+        this.profile = d.profile || null;
+        if (this.profile) await this.loadPlanToday();
+        else this.planToday = null;
+      } catch (e) { /* 非关键路径 */ }
+    },
+    async loadPlanToday() {
+      try {
+        this.planToday = await request('/api/plan/today?uid=' + encodeURIComponent(anonUid()));
+      } catch (e) { /* 非关键路径 */ }
+    },
+    openSetup() {
+      const p = this.profile || {};
+      this.pf = {
+        exam_type: p.exam_type || '国考',
+        target_region: p.target_region || '',
+        exam_date: p.exam_date || '',
+        target_score: p.target_score || 70,
+        daily_minutes: p.daily_minutes || 60,
+        base_level: p.base_level || '零基础',
+      };
+      this.setupStep = 1;
+      this.setupOpen = true;
+    },
+    skipGuide() {
+      this.guideHide = true;
+      uni.setStorageSync('planGuideHide', '1');
+      uni.showToast({ title: '已跳过，可在统计页随时制定', icon: 'none', duration: 1500 });
+    },
+    async setupNext() {
+      if (this.setupStep === 1 && !this.pf.exam_date) {
+        uni.showToast({ title: '请先选择考试日期', icon: 'none' });
+        return;
+      }
+      if (this.setupStep < 3) {
+        this.setupStep++;
+        return;
+      }
+      if (this.setupBusy) return;
+      this.setupBusy = true;
+      try {
+        const d = await request('/api/profile', { method: 'POST', data: { uid: anonUid(), ...this.pf } });
+        this.profile = d.profile;
+        await this.loadPlanToday();
+        this.setupOpen = false;
+        uni.showToast({ title: '学习计划已生成', icon: 'none' });
+      } catch (e) {
+        uni.showToast({ title: '保存失败：' + e.message, icon: 'none' });
+      } finally {
+        this.setupBusy = false;
+      }
+    },
+    goTask(t) {
+      if (t.done) return;
+      if (t.type === 'mock') {
+        this.goMini();
+        return;
+      }
+      if (t.type === 'review') {
+        this.goBook();
+        return;
+      }
+      const remain = Math.max(t.target - (t.done_n || 0), 5);
+      this.start(t.module || null, t.submodule || null, remain, !!t.submodule, t.real);
+    },
     async exportPaper() {
       if (this.exporting) return;
       this.exporting = true;
@@ -1439,6 +1604,7 @@ export default {
       try {
         await request('/api/user_state', { method: 'POST', data: { uid, focus: next } });
         this.plan = await request('/api/daily_plan?uid=' + encodeURIComponent(uid));
+        if (this.profile) this.loadPlanToday();
         if (next) uni.showToast({ title: '今日主攻已设为' + (this.FOCUS_MODS[next] || next) + '，推荐已更新', icon: 'none' });
       } catch (e) { /* 非关键路径 */ }
     },
@@ -1488,6 +1654,7 @@ export default {
         if (d.percentile != null) this.percentile = d.percentile;
       } catch (e) { /* 非关键路径 */ }
       await this.logAttempts(this.items);
+      if (this.profile) this.loadPlanToday();
     },
     async logAttempts(qs) {
       try {
@@ -1535,6 +1702,30 @@ export default {
 .wrap { padding: 24rpx; padding-bottom: 40rpx; }
 .home { padding-bottom: 40rpx; }
 .plancard { padding: 22rpx 26rpx; }
+.guide { display: flex; align-items: center; gap: 16rpx; background: linear-gradient(120deg, #edf3fe, #f5f8ff); border: 1rpx solid #d7e3fc; padding: 24rpx 26rpx; }
+.guide-l { flex: 1; min-height: 44px; display: flex; flex-direction: column; justify-content: center; }
+.guide-t { font-size: 28rpx; font-weight: 600; color: var(--brand, #3b6ff5); }
+.guide-s { font-size: 22rpx; color: var(--ink-2, #646a73); margin-top: 6rpx; }
+.guide-btn { flex-shrink: 0; background: var(--brand, #3b6ff5); color: #fff; border-radius: 999rpx; padding: 0 26rpx; font-size: 24rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
+.guide-x { flex-shrink: 0; font-size: 22rpx; color: var(--ink-3, #8f959e); min-height: 44px; display: inline-flex; align-items: center; padding: 0 8rpx; }
+.plan-hr { display: flex; align-items: center; gap: 14rpx; }
+.plan-days { font-size: 21rpx; color: var(--brand, #3b6ff5); background: var(--brand-50, #edf3fe); border-radius: 999rpx; padding: 4rpx 14rpx; }
+.plan-edit { font-size: 22rpx; color: var(--ink-3, #8f959e); min-height: 44px; display: inline-flex; align-items: center; }
+.plan-prog { display: flex; align-items: center; gap: 14rpx; margin: 8rpx 0 6rpx; }
+.plan-prog-bar { flex: 1; height: 10rpx; background: var(--brand-soft, #edf3fe); border-radius: 999rpx; overflow: hidden; }
+.plan-prog-fill { height: 100%; background: var(--brand, #3b6ff5); border-radius: 999rpx; transition: width 0.3s; }
+.plan-prog-t { font-size: 21rpx; color: var(--ink-3, #8f959e); flex-shrink: 0; }
+.plan-row.task { gap: 16rpx; }
+.task-ck { width: 36rpx; height: 36rpx; border-radius: 50%; border: 2rpx solid #c8cdd6; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 22rpx; color: #fff; box-sizing: border-box; }
+.task-ck.on { background: #16a34a; border-color: #16a34a; }
+.task-main { flex: 1; display: flex; flex-direction: column; padding: 10rpx 0; }
+.plan-txt.tdone { color: var(--ink-3, #8f959e); text-decoration: line-through; }
+.task-sub { font-size: 21rpx; color: var(--ink-3, #8f959e); margin-top: 4rpx; }
+.pf-input { flex: 1; min-height: 44px; border: 1rpx solid var(--line, #ebedf0); border-radius: 12rpx; padding: 0 20rpx; font-size: 26rpx; background: #f7f8fa; box-sizing: border-box; }
+.pf-date { min-height: 44px; display: inline-flex; align-items: center; border: 1rpx solid var(--line, #ebedf0); border-radius: 12rpx; padding: 0 24rpx; font-size: 26rpx; color: var(--ink); background: #f7f8fa; box-sizing: border-box; }
+.pf-date.empty { color: var(--ink-3, #8f959e); }
+.pf-summary { margin-top: 8rpx; font-size: 23rpx; color: var(--ink-2, #646a73); background: var(--brand-50, #edf3fe); border-radius: 12rpx; padding: 18rpx 22rpx; }
+.pf-back { margin-top: 16rpx; text-align: center; font-size: 24rpx; color: var(--ink-3, #8f959e); min-height: 44px; display: flex; align-items: center; justify-content: center; }
 .plan-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6rpx; }
 .plan-t { font-size: 27rpx; font-weight: 600; color: var(--ink); }
 .plan-y { font-size: 21rpx; color: var(--ink-3, #8f959e); }

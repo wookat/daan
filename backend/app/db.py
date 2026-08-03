@@ -1841,8 +1841,23 @@ def due_reviews(limit: int = 20, uid: str | None = None) -> list[dict]:
     return out
 
 
-def record_review(mid: int, correct: bool) -> dict:
+def _ensure_review_log(conn):
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS review_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            uid TEXT, mistake_id INTEGER, correct INTEGER, created_at REAL)"""
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_rl_uid ON review_log(uid, created_at)")
+
+
+def record_review(mid: int, correct: bool, uid: str | None = None) -> dict:
     conn = get_conn()
+    if uid:
+        _ensure_review_log(conn)
+        conn.execute(
+            "INSERT INTO review_log (uid, mistake_id, correct, created_at) VALUES (?,?,?,?)",
+            (uid, mid, 1 if correct else 0, time.time()),
+        )
     row = conn.execute("SELECT review_streak FROM mistakes WHERE id=?", (mid,)).fetchone()
     if not row:
         conn.close()
@@ -2113,3 +2128,130 @@ def list_exam_attempts(uid: str, paper_id: int | None = None, limit: int = 50) -
         d["per_module"] = json.loads(d["per_module"] or "{}")
         out.append(d)
     return out
+
+
+# ---------- 报考画像 & 学习计划数据 ----------
+
+PROFILE_FIELDS = ("exam_type", "target_region", "exam_date", "target_score", "daily_minutes", "base_level")
+
+
+def _ensure_user_profile(conn):
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS user_profile (
+            uid TEXT PRIMARY KEY,
+            exam_type TEXT,
+            target_region TEXT,
+            exam_date TEXT,
+            target_score INTEGER,
+            daily_minutes INTEGER,
+            base_level TEXT,
+            created_at REAL,
+            updated_at REAL)"""
+    )
+
+
+def get_user_profile(uid: str) -> dict | None:
+    conn = get_conn()
+    _ensure_user_profile(conn)
+    row = conn.execute("SELECT * FROM user_profile WHERE uid=?", (uid,)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def save_user_profile(uid: str, fields: dict) -> dict:
+    conn = get_conn()
+    _ensure_user_profile(conn)
+    now = time.time()
+    existing = conn.execute("SELECT uid FROM user_profile WHERE uid=?", (uid,)).fetchone()
+    vals = {k: fields.get(k) for k in PROFILE_FIELDS if k in fields}
+    if existing:
+        if vals:
+            clause = ", ".join(f"{k}=?" for k in vals)
+            conn.execute(
+                f"UPDATE user_profile SET {clause}, updated_at=? WHERE uid=?",
+                (*vals.values(), now, uid),
+            )
+    else:
+        conn.execute(
+            """INSERT INTO user_profile
+               (uid, exam_type, target_region, exam_date, target_score, daily_minutes, base_level, created_at, updated_at)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
+            (
+                uid,
+                vals.get("exam_type"),
+                vals.get("target_region"),
+                vals.get("exam_date"),
+                vals.get("target_score"),
+                vals.get("daily_minutes"),
+                vals.get("base_level"),
+                now,
+                now,
+            ),
+        )
+    conn.commit()
+    conn.close()
+    return get_user_profile(uid)
+
+
+def _day_start(offset_days: int = 0) -> float:
+    """东八区当日 0 点时间戳。"""
+    tz = 8 * 3600
+    now = time.time()
+    return ((now + tz) // 86400 + offset_days) * 86400 - tz
+
+
+def today_answer_counts(uid: str) -> dict:
+    """今日（东八区）作答统计：总数 + 按模块/二级题型分组。"""
+    conn = get_conn()
+    _ensure_answer_log(conn)
+    day0 = _day_start()
+    rows = conn.execute(
+        """SELECT module, submodule, COUNT(*) n, COALESCE(SUM(correct),0) c
+           FROM answer_log WHERE uid=? AND created_at>=?
+           GROUP BY module, submodule""",
+        (uid, day0),
+    ).fetchall()
+    conn.close()
+    total = 0
+    correct = 0
+    by_module: dict = {}
+    by_sub: dict = {}
+    for r in rows:
+        total += r["n"]
+        correct += r["c"]
+        if r["module"]:
+            m = by_module.setdefault(r["module"], {"n": 0, "c": 0})
+            m["n"] += r["n"]
+            m["c"] += r["c"]
+        if r["submodule"]:
+            s = by_sub.setdefault(r["submodule"], {"n": 0, "c": 0})
+            s["n"] += r["n"]
+            s["c"] += r["c"]
+    return {"total": total, "correct": correct, "by_module": by_module, "by_sub": by_sub}
+
+
+def reviews_today(uid: str) -> int:
+    conn = get_conn()
+    _ensure_review_log(conn)
+    n = conn.execute(
+        "SELECT COUNT(*) n FROM review_log WHERE uid=? AND created_at>=?",
+        (uid, _day_start()),
+    ).fetchone()["n"]
+    conn.close()
+    return n
+
+
+def mock_done_this_week(uid: str) -> bool:
+    """本周（东八区，周一起算）是否已交卷过一次模考/真题卷。"""
+    tz = 8 * 3600
+    now = time.time()
+    weekday = int(((now + tz) // 86400 + 4) % 7)  # 1970-01-01 是周四
+    week_start = _day_start() - ((weekday - 1) % 7) * 86400
+    conn = get_conn()
+    _ensure_exam_tables(conn)
+    row = conn.execute(
+        "SELECT 1 FROM exam_attempts WHERE uid=? AND submitted_at>=? LIMIT 1",
+        (uid, week_start),
+    ).fetchone()
+    conn.close()
+    return bool(row)

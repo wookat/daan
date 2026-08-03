@@ -11,7 +11,7 @@ from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import auth, db, engine, kb, llm, omr, pdf_export
+from . import auth, db, engine, kb, llm, omr, pdf_export, plan
 
 app = FastAPI(title="考公错题助手")
 app.include_router(auth.router)
@@ -339,6 +339,58 @@ def api_user_state(body: dict):
         raise HTTPException(400, "缺少 uid")
     db.set_user_state(uid[:64], str(body.get("focus") or "")[:32], str(body.get("note") or ""))
     return {"ok": True}
+
+
+PROFILE_EXAM_TYPES = {"国考", "省考", "事业单位", "其他"}
+PROFILE_BASE_LEVELS = {"零基础", "有基础", "二战"}
+
+
+@app.get("/api/profile")
+def api_profile_get(uid: str):
+    uid = uid.strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    return {"profile": db.get_user_profile(uid[:64])}
+
+
+@app.post("/api/profile")
+def api_profile_save(body: dict):
+    uid = (body.get("uid") or "").strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    fields: dict = {}
+    if "exam_type" in body:
+        v = (body.get("exam_type") or "").strip()
+        if v and v not in PROFILE_EXAM_TYPES:
+            raise HTTPException(400, "考试类型无效")
+        fields["exam_type"] = v or None
+    if "target_region" in body:
+        fields["target_region"] = (body.get("target_region") or "").strip()[:50] or None
+    if "exam_date" in body:
+        v = (body.get("exam_date") or "").strip()
+        if v and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", v):
+            raise HTTPException(400, "考试日期格式应为 YYYY-MM-DD")
+        fields["exam_date"] = v or None
+    if "target_score" in body:
+        v = body.get("target_score")
+        fields["target_score"] = max(0, min(100, int(v))) if v is not None else None
+    if "daily_minutes" in body:
+        v = body.get("daily_minutes")
+        fields["daily_minutes"] = max(10, min(600, int(v))) if v is not None else None
+    if "base_level" in body:
+        v = (body.get("base_level") or "").strip()
+        if v and v not in PROFILE_BASE_LEVELS:
+            raise HTTPException(400, "基础自评无效")
+        fields["base_level"] = v or None
+    return {"profile": db.save_user_profile(uid[:64], fields)}
+
+
+@app.get("/api/plan/today")
+def api_plan_today(uid: str):
+    uid = uid.strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    return plan.today_plan(uid[:64])
 
 
 @app.get("/api/daily_plan")
@@ -1172,7 +1224,8 @@ def api_review_due(uid: str = ""):
 @app.post("/api/review/{mid}")
 def api_review_record(mid: int, body: dict):
     try:
-        return db.record_review(mid, bool(body.get("correct")))
+        uid = (body.get("uid") or "").strip()[:64] or None
+        return db.record_review(mid, bool(body.get("correct")), uid=uid)
     except KeyError:
         raise HTTPException(404, "错题不存在") from None
 

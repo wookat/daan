@@ -691,7 +691,7 @@ export default {
         this.rItems.push({ ...this.cur, _requeued: true });
       }
       try {
-        const res = await request('/api/review/' + this.cur.id, { method: 'POST', data: { correct } });
+        const res = await request('/api/review/' + this.cur.id, { method: 'POST', data: { correct, uid: anonUid() } });
         this.nextDays = res.next_review_days;
         this.streak = res.streak;
       } catch (e) {
