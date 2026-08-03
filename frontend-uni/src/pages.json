@@ -29,6 +29,10 @@
     {
       "path": "pages/shenlun/shenlun",
       "style": { "navigationBarTitleText": "申论专区" }
+    },
+    {
+      "path": "pages/user/login",
+      "style": { "navigationBarTitleText": "登录 / 注册" }
     }
   ],
   "tabBar": {

@@ -1,5 +1,24 @@
 <template>
   <view class="wrap">
+    <view class="acct card">
+      <template v-if="authUser">
+        <view class="acct-ava">{{ (authUser.nickname || '考').slice(0, 1) }}</view>
+        <view class="acct-main">
+          <text class="acct-name">{{ authUser.nickname }}</text>
+          <text class="acct-sub">{{ authUser.phone }} · 多端同步已开启</text>
+        </view>
+        <view class="acct-btn ghost" @click="doLogout">退出</view>
+      </template>
+      <template v-else>
+        <view class="acct-ava anon">匿</view>
+        <view class="acct-main">
+          <text class="acct-name">未登录</text>
+          <text class="acct-sub">登录后错题与记录多端同步，本机数据自动合并</text>
+        </view>
+        <view class="acct-btn" @click="goLogin">登录/注册</view>
+      </template>
+    </view>
+
     <view class="hero">
       <view class="hero-top">
         <text class="hero-t">学习统计</text>
@@ -270,7 +289,7 @@
 </template>
 
 <script>
-import { request, anonUid } from '../../api.js';
+import { request, anonUid, getAuthUser, authLogout, clearAuth } from '../../api.js';
 import { md } from '../../md.js';
 
 // 旧版缓存的 AI 建议内联了旧紫色，读取时映射到品牌色
@@ -288,7 +307,7 @@ const MODS = [
 
 export default {
   data() {
-    return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, history: [], showAllHist: false, coachHtml: cleanCoach(uni.getStorageSync('coachAdvice') || ''), coachLoading: false, growth: null, reco: null, dueN: 0, gwMod: '', slStats: null, slIssuesOpen: false, modOpen: false, topOpen: false, secOpen: { coach: false, medal: false, bk: false } };
+    return { authUser: getAuthUser(), byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, history: [], showAllHist: false, coachHtml: cleanCoach(uni.getStorageSync('coachAdvice') || ''), coachLoading: false, growth: null, reco: null, dueN: 0, gwMod: '', slStats: null, slIssuesOpen: false, modOpen: false, topOpen: false, secOpen: { coach: false, medal: false, bk: false } };
   },
   computed: {
     shownModules() {
@@ -458,6 +477,7 @@ export default {
     },
   },
   onShow() {
+    this.authUser = getAuthUser();
     this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
     this.history = uni.getStorageSync('practiceHistory') || [];
     this.loadGrowth();
@@ -468,6 +488,26 @@ export default {
   methods: {
     goCalendar() {
       uni.navigateTo({ url: '/pages/stats/calendar' });
+    },
+    goLogin() {
+      uni.navigateTo({ url: '/pages/user/login' });
+    },
+    doLogout() {
+      uni.showModal({
+        title: '退出登录',
+        content: '退出后本机回到匿名模式，账号数据仍保留在云端',
+        success: async (res) => {
+          if (!res.confirm) return;
+          await authLogout();
+          clearAuth();
+          this.authUser = null;
+          this.load();
+          this.loadGrowth();
+          this.loadReco();
+          this.loadSlStats();
+          uni.showToast({ title: '已退出登录', icon: 'none' });
+        },
+      });
     },
     async getCoach() {
       this.coachLoading = true;
@@ -788,4 +828,12 @@ export default {
 .row2 { display: flex; gap: 16rpx; }
 .bk-btn { flex: 1; background: var(--brand-soft, #edf3fe); color: var(--brand, #3b6ff5); border-radius: 16rpx; font-size: 25rpx; font-weight: 600; }
 .bk-btn.ghost { background: var(--brand-soft); color: var(--brand); }
+.acct { display: flex; align-items: center; gap: 20rpx; }
+.acct-ava { width: 88rpx; height: 88rpx; border-radius: 50%; background: #3b6ff5; color: #fff; font-size: 36rpx; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.acct-ava.anon { background: #c3c9d8; }
+.acct-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.acct-name { font-size: 32rpx; font-weight: 700; color: var(--ink, #1b2233); }
+.acct-sub { font-size: 24rpx; color: #8a90a0; margin-top: 6rpx; }
+.acct-btn { flex-shrink: 0; min-height: 88rpx; display: flex; align-items: center; padding: 0 30rpx; border-radius: 16rpx; background: #3b6ff5; color: #fff; font-size: 28rpx; font-weight: 600; }
+.acct-btn.ghost { background: #f1f3f9; color: #5a6072; }
 </style>

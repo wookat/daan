@@ -11,9 +11,10 @@ from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import db, engine, kb, llm, omr, pdf_export
+from . import auth, db, engine, kb, llm, omr, pdf_export
 
 app = FastAPI(title="考公错题助手")
+app.include_router(auth.router)
 
 ACCESS_CODE = os.environ.get("ACCESS_CODE", "")
 
@@ -23,6 +24,7 @@ def check_access(x_access_code: str | None):
         raise HTTPException(401, "访问码错误")
 
 db.init_db()
+auth.init_auth_db()
 
 
 def _stats_refresher():
