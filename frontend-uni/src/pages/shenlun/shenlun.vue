@@ -404,9 +404,10 @@ page { background: #f5f6f8; }
 .seg-i.on { background: #fff; color: var(--brand, #3b6ff5); font-weight: 600; box-shadow: 0 2rpx 8rpx rgba(31, 36, 48, 0.08); }
 .chips { display: flex; gap: 12rpx; flex-wrap: wrap; margin-bottom: 20rpx; }
 .fltbar { display: flex; align-items: center; gap: 14rpx; margin-bottom: 20rpx; }
-.chips-scroll { flex: 1; min-width: 0; white-space: nowrap; }
-.chips-line { display: inline-flex; gap: 12rpx; }
-.flt-fixed { flex-shrink: 0; display: flex; align-items: center; gap: 6rpx; font-size: 23rpx; color: var(--ink-2, #6b7280); background: #fff; border: 1rpx solid var(--line, #e5e7eb); border-radius: 999rpx; padding: 12rpx 24rpx; min-height: 44rpx; box-sizing: border-box; }
+.chips-scroll { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; }
+.chips-line { display: inline-flex; flex-wrap: nowrap; width: max-content; gap: 12rpx; }
+.chips-line .chip { white-space: nowrap; flex-shrink: 0; }
+.flt-fixed { flex-shrink: 0; display: flex; align-items: center; gap: 6rpx; font-size: 23rpx; color: var(--ink-2, #6b7280); background: #fff; border: 1rpx solid var(--line, #e5e7eb); border-radius: 999rpx; padding: 12rpx 24rpx; min-height: 72rpx; box-sizing: border-box; }
 .flt-fixed.on { color: var(--brand, #3b6ff5); border-color: var(--brand, #3b6ff5); }
 .flt-badge { background: var(--brand, #3b6ff5); color: #fff; font-size: 19rpx; border-radius: 999rpx; min-width: 30rpx; height: 30rpx; line-height: 30rpx; text-align: center; }
 .sheet-foot { display: flex; gap: 18rpx; margin-top: 28rpx; }
