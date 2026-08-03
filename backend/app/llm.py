@@ -129,6 +129,28 @@ async def chat_stream(messages: list, temperature: float = 0.2, max_tokens: int 
             return
 
 
+async def chat_fast(messages: list, temperature: float = 0.2, max_tokens: int = 2000) -> str:
+    """轻量任务（分类/抽取）优先走无排队的备用端点，失败时回退主通道。"""
+    if _rescue_ok(messages):
+        try:
+            async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+                resp = await client.post(
+                    f"{RESCUE_BASE_URL}/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {RESCUE_API_KEY}"},
+                    json={
+                        "model": RESCUE_MODEL,
+                        "messages": messages,
+                        "temperature": temperature,
+                        "max_tokens": max_tokens,
+                    },
+                )
+                resp.raise_for_status()
+                return resp.json()["choices"][0]["message"]["content"]
+        except (httpx.HTTPError, KeyError, IndexError, ValueError):
+            pass
+    return await chat(messages, temperature=temperature, max_tokens=max_tokens)
+
+
 def image_content(image_b64: str, mime: str, text: str) -> list:
     return [
         {"type": "text", "text": text},
@@ -136,8 +158,8 @@ def image_content(image_b64: str, mime: str, text: str) -> list:
     ]
 
 
-async def chat_json(messages: list, **kw) -> dict:
-    raw = await chat(messages, **kw)
+async def chat_json(messages: list, fast: bool = False, **kw) -> dict:
+    raw = await (chat_fast(messages, **kw) if fast else chat(messages, **kw))
     text = raw.strip()
     if text.startswith("```"):
         text = text.split("\n", 1)[1].rsplit("```", 1)[0]

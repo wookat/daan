@@ -181,9 +181,22 @@ export default {
   },
   methods: {
     splitAnswer(full) {
-      const m = /^\s*【答案】\s*([^｜|\n]+?)\s*[｜|]\s*【方法】\s*([^｜|\n]+?)\s*[｜|]\s*【一句话】\s*([^\n]*)\n?/.exec(full || '');
-      if (!m) return { card: null, rest: full || '' };
-      return { card: { ans: m[1].trim(), method: m[2].trim(), brief: m[3].trim() }, rest: (full || '').slice(m.index + m[0].length) };
+      const text = full || '';
+      const m = /^\s*【答案】\s*([^｜|\n]+?)\s*[｜|]\s*【方法】\s*([^｜|\n]+?)\s*[｜|]\s*【一句话】\s*([^\n]*)\n?/.exec(text);
+      if (m) return { card: { ans: m[1].trim(), method: m[2].trim(), brief: m[3].trim() }, rest: text.slice(m.index + m[0].length) };
+      const lines = text.split('\n');
+      for (let i = 0; i < Math.min(lines.length, 6); i++) {
+        const am = /【答案】\s*[:：]?\s*([^｜|【\n]+)/.exec(lines[i]);
+        if (!am) continue;
+        const mm = /【方法】\s*[:：]?\s*([^｜|【\n]+)/.exec(lines[i]);
+        const bm = /【一句话】\s*[:：]?\s*([^｜|【\n]+)/.exec(lines[i]);
+        const rest = lines.slice(0, i).concat(lines.slice(i + 1)).join('\n');
+        return {
+          card: { ans: am[1].trim(), method: mm ? mm[1].trim() : '', brief: bm ? bm[1].trim() : '' },
+          rest,
+        };
+      }
+      return { card: null, rest: text };
     },
     async rate(r, up) {
       r.rated = up ? 'up' : 'down';
