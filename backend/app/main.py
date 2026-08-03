@@ -603,6 +603,16 @@ def api_answer_log(body: dict):
     return {"saved": n}
 
 
+@app.get("/api/shizheng/daily")
+def api_shizheng_daily(date: str | None = None, limit: int = 10):
+    """按日期取当日一组时政题（同一天所有人相同，用日期作随机种子从底池抽）。"""
+    day = (date or "").strip()
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", day or ""):
+        day = time.strftime("%Y-%m-%d")
+    items = db.shizheng_daily(day, min(max(limit, 1), 20))
+    return {"date": day, "items": items, "total": db.shizheng_count()}
+
+
 @app.get("/api/growth")
 def api_growth(uid: str):
     uid = uid.strip()
