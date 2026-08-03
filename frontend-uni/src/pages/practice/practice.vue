@@ -71,7 +71,7 @@
             <view class="sheet-x" @click="customOpen = false"><uni-icons type="closeempty" size="20" color="#6b7280" /></view>
           </view>
           <view class="setrow">
-            <text class="set-k">每日目标</text>
+            <view class="set-kwrap"><text class="set-k">每日目标</text><text class="set-sub">今天合计要练的题数</text></view>
             <view class="set-chips">
               <text v-for="g in [20, 50, 100]" :key="g" class="set-chip" :class="{ on: dailyGoal === g }" @click="setGoal(g)">{{ g }} 题</text>
             </view>
@@ -98,7 +98,7 @@
             </view>
           </view>
           <view class="setrow">
-            <text class="set-k">每组题量</text>
+            <view class="set-kwrap"><text class="set-k">每组题量</text><text class="set-sub">单次练习连做几道</text></view>
             <view class="set-chips">
               <text v-for="n in [10, 20, 30, 50]" :key="n" class="set-chip" :class="{ on: groupSize === n }" @click="setGroup(n)">{{ n }}</text>
             </view>
@@ -1537,6 +1537,8 @@ export default {
 .goal-fill.done { background: #16a34a; }
 .setrow { display: flex; align-items: center; gap: 18rpx; margin-bottom: 16rpx; flex-wrap: wrap; }
 .set-k { font-size: 24rpx; color: var(--ink-2); }
+.set-kwrap { display: flex; flex-direction: column; min-width: 150rpx; }
+.set-sub { font-size: 19rpx; color: var(--ink-3, #8f959e); margin-top: 2rpx; }
 .set-chips { display: flex; gap: 12rpx; flex-wrap: wrap; }
 .set-chips.scrollx { flex-wrap: nowrap; overflow-x: auto; max-width: 70%; padding-bottom: 4rpx; }
 .set-chips.scrollx .set-chip { flex-shrink: 0; }
