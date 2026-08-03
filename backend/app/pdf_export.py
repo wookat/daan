@@ -109,6 +109,7 @@ def build_paper_pdf(
     questions: list[dict],
     include_answers: bool = True,
     answer_sheet: bool = True,
+    include_questions: bool = True,
     paper_code: str = "",
 ) -> bytes:
     font = _ensure_font()
@@ -126,13 +127,14 @@ def build_paper_pdf(
     story = []
     n = len(questions)
     date = time.strftime("%Y-%m-%d", time.gmtime(time.time() + 8 * 3600))
-    story.append(Paragraph(_esc(title), st["title"]))
+    story.append(Paragraph(_esc(title if include_questions else title + " · 参考答案"), st["title"]))
     meta = f"共 {n} 题 · 建议用时 {max(5, round(n * 0.9))} 分钟 · {date}"
     if paper_code:
         meta += f" · 卷码 {paper_code}"
     story.append(Spacer(1, 3))
     story.append(Paragraph(meta, st["meta"]))
-    story.append(Paragraph("姓名：__________　得分：__________", st["meta"]))
+    if include_questions:
+        story.append(Paragraph("姓名：__________　得分：__________", st["meta"]))
     story.append(Spacer(1, 6))
     story.append(HRFlowable(width="100%", thickness=0.8, color=colors.HexColor("#1F2329")))
     story.append(Spacer(1, 2))
@@ -141,6 +143,8 @@ def build_paper_pdf(
     part = 0
     last_mat = None
     for i, q in enumerate(questions, 1):
+        if not include_questions:
+            break
         mod = q.get("module") or ""
         mod = _MOD_NAMES.get(mod, mod)
         if mod and mod != cur_mod:
@@ -175,8 +179,9 @@ def build_paper_pdf(
             story.extend(block)
 
     if include_answers:
-        story.append(_page_break())
-        story.append(Paragraph("参考答案与解析", st["title"]))
+        if include_questions:
+            story.append(_page_break())
+            story.append(Paragraph("参考答案与解析", st["title"]))
         story.append(Spacer(1, 6))
         story.extend(_answer_table(questions, st, font))
         for i, q in enumerate(questions, 1):
@@ -192,8 +197,9 @@ def build_paper_pdf(
 
     doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
     data = buf.getvalue()
-    if answer_sheet and paper_code:
-        data = _append_pdf(data, _omr_sheet_pdf(questions, title, paper_code))
+    if answer_sheet and paper_code and include_questions:
+        # 答题卡放在最前，方便用户先拿到/单独打印第一页
+        data = _append_pdf(_omr_sheet_pdf(questions, title, paper_code), data)
     return data
 
 

@@ -388,6 +388,7 @@ def api_export_pdf(body: dict):
         questions=questions,
         include_answers=bool(body.get("include_answers", True)),
         answer_sheet=bool(body.get("answer_sheet", True)),
+        include_questions=bool(body.get("include_questions", True)),
         paper_code=code,
     )
     return StreamingResponse(

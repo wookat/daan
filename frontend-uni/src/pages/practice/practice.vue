@@ -104,7 +104,12 @@
             </view>
           </view>
           <view class="custom-start" @click="customOpen = false; start(null)">按以上设置开始练习（混合模块）</view>
-          <view class="custom-export" @click="exportPaper">{{ exporting ? '正在生成 PDF…' : '导出为试卷 PDF（含答题卡+答案页）' }}</view>
+          <view class="exp-opts">
+            <text class="expchip" :class="{ on: expSheet && !expOnly }" @click="expOnly = false; expSheet = !expSheet">含答题卡</text>
+            <text class="expchip" :class="{ on: expAns && !expOnly }" @click="expOnly = false; expAns = !expAns">含答案解析</text>
+            <text class="expchip" :class="{ on: expOnly }" @click="expOnly = !expOnly">仅导出答案</text>
+          </view>
+          <view class="custom-export" @click="exportPaper">{{ exporting ? '正在生成 PDF…' : '导出为试卷 PDF' }}</view>
           <view class="custom-note">以上设置同样作用于下方模块列表；模考与真题卷不受影响</view>
         </view>
       </view>
@@ -420,6 +425,9 @@ export default {
       paperSheet: false,
       customOpen: false,
       exporting: false,
+      expSheet: true,
+      expAns: true,
+      expOnly: false,
       plan: null,
       FOCUS_MODS: { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断' },
       papers: [],
@@ -1367,7 +1375,13 @@ export default {
         if (!ids.length) throw new Error('没有可导出的题目');
         const date = new Date();
         const title = (this.realMode ? '真题精选卷' : '练习卷') + ' ' + (date.getMonth() + 1) + '月' + date.getDate() + '日';
-        await exportPdf({ title, question_ids: ids, include_answers: true, answer_sheet: true });
+        await exportPdf({
+          title,
+          question_ids: ids,
+          include_answers: this.expOnly || this.expAns,
+          answer_sheet: !this.expOnly && this.expSheet,
+          include_questions: !this.expOnly,
+        });
         uni.showToast({ title: 'PDF 已开始下载', icon: 'none' });
       } catch (e) {
         uni.showToast({ title: '导出失败：' + e.message, icon: 'none' });
@@ -1503,6 +1517,9 @@ export default {
 .g4-t { font-size: 24rpx; color: var(--ink-2, #646a73); }
 .custom-row { display: flex; justify-content: space-between; align-items: center; padding: 24rpx 28rpx; }
 .custom-start { margin-top: 24rpx; background: var(--brand, #3b6ff5); color: #fff; text-align: center; border-radius: 999rpx; padding: 22rpx 0; font-size: 28rpx; font-weight: 500; }
+.exp-opts { display: flex; gap: 12rpx; margin-top: 20rpx; }
+.expchip { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--line, #ebedf0); border-radius: 12rpx; font-size: 24rpx; color: var(--ink-2, #646a73); background: #f7f8fa; }
+.expchip.on { border-color: var(--brand, #3b6ff5); color: var(--brand, #3b6ff5); background: #edf3fe; font-weight: 600; }
 .custom-export { margin-top: 16rpx; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; text-align: center; border: 1rpx solid var(--brand, #3b6ff5); color: var(--brand, #3b6ff5); border-radius: 999rpx; padding: 20rpx 0; font-size: 27rpx; font-weight: 500; }
 .custom-note { margin-top: 14rpx; text-align: center; font-size: 21rpx; color: var(--ink-3, #8f959e); }
 .wrap.has-banner { padding-bottom: 200rpx; }
