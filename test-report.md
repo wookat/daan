@@ -1,5 +1,228 @@
 # 考公错题助手 MVP 验收测试报告
 
+## 增量测试 R119（手动录入答案）— 2026-08-03
+
+- 测试环境：**线上 https://kaogong.zalize.com**，强刷确认新 bundle `assets/index-DME6Kczy.js`。无需登录，本轮**未出现访问码弹窗**。浏览器内容区实际 `innerWidth=500`（非精确 375px，rpx 尺寸按 500/375 换算）。
+- 测试 uid（浏览器匿名 uid）：**`umsd071maax1ogamv`** — 本轮 `POST /api/paper_answers` 用此 uid 落库，请用它清理 answer_log 与本轮新增错题。
+- 结论：**测试计划全部断言通过，无失败项**。
+
+### 1. 造卷 + recentPapers
+- 刷题页自定义练习导出 10 题小卷 PDF 下载成功，标题「真题精选卷 8月3日」，响应 `X-Paper-Code` 生效：`localStorage.recentPapers = [{"code":"20F47932","title":"真题精选卷 8月3日",...}]` — **passed**
+
+| 导出小卷 | 错题本入口卡（扫描答题卡下方） |
+|---|---|
+| ![导出小卷](https://app.devin.ai/attachments/978c1dee-9f8d-429f-849a-96d01807ec5a/ss_50ceb93b.png) | ![入口卡](https://app.devin.ai/attachments/779dbfa0-8001-46dc-91db-b3121b59bab5/ss_1c86ced1.png) |
+
+### 2. 入口与错误路径
+- 「手动录入答案」入口卡位于「扫描答题卡」卡片正下方，compose 图标 + 副标题 + 「录入」按钮 — **passed**
+- 输入不存在卷码 `ZZZZ9999` → toast「未找到该卷码对应的导出记录，请核对卷面右上角/封面的卷码」，不崩溃 — **passed**
+
+| 🔴 错误卷码友好提示 | 🟢 chip 查卷成功（10 题 ABCD 网格） |
+|---|---|
+| ![错误卷码](https://app.devin.ai/attachments/2b0421dd-0d76-4f73-9d6e-f91fe5c15704/ss_43f55039.png) | ![查卷成功](https://app.devin.ai/attachments/b2ad9abd-3e58-4b93-aefe-1e0e9d9cc63e/ss_5ce40cb4.png) |
+
+### 3. 查卷与点选交互
+- 点「最近导出的试卷」chip → 「真题精选卷 8月3日 · 卷码 20F47932 · 共 10 题 · 已选 0」+ 1–10 题号 ABCD 网格 — **passed**
+- 点选/改选/取消：题1=D、题2=A（故意错，正确 C）、题3 先 C 后改 A、题4 选后再点同字母取消、题5=D；「已选 X」实时 0→3→4 变化 — **passed**
+
+![点选与已选实时变化](https://app.devin.ai/attachments/40e4b744-0001-44b1-a514-a29bf67aa62f/ss_b0d5d6c7.png)
+
+### 4. 交卷判分（核心）
+- 参考答案（导出 PDF 提取）：D C A B D B C C D D。最终点选：1=D✓ 2=A✗ 3=A✓ 4取消 5=D✓，其余未答。
+- 结果弹层：「卷码 20F47932 · 已作答 4/10 · 答对 3 题 · 已记入做题记录」，逐题 D✓ / A✗(答案C) / A✓ / 未涂— / D✓，其余未涂 — **与点选和参考答案完全一致，passed**
+
+![对答案结果弹层](https://app.devin.ai/attachments/f86271ba-8bf7-4eae-a991-e86acb62d612/ss_zoom_5bd9edaf.png)
+
+### 5. 错题落库
+- 提交前错题本待掌握 189 → 关闭结果弹层后 **190**；列表顶部新增「政治 · 今天 16:26」（2023国考·地市级 全过程人民民主题）= 本卷第 2 题答错题，常识判断计数 47→48 — **passed**
+
+| 🔴 提交前 189 | 🟢 提交后 190 + 新增错题置顶 |
+|---|---|
+| ![提交前](https://app.devin.ai/attachments/b27123de-a60f-4f84-833b-3cb0563917df/ss_084433f4.png) | ![提交后](https://app.devin.ai/attachments/964dfe01-f643-4ebf-8bc5-3536aa4cee8e/ss_1cd717ca.png) |
+
+### 6. 0 题防护
+- 重新查卷不选任何题：按钮「交卷判分（0 题）」class=`sheet-done dim` 置灰，点击无请求、无结果弹层 — **passed**
+
+![0题置灰](https://app.devin.ai/attachments/6c650c38-802a-4b22-bf98-f701bcd03849/ss_7bcae823.png)
+
+### 7. 数据说明（生产红线）
+- 未删除/修改任何既有服务器数据。本轮新增：uid `umsd071maax1ogamv` 的 answer_log（4 条作答记录）+ 1 条错题（第 2 题，2023国考人民民主题）+ paper_exports 卷码 `20F47932`，请用户按 uid 经 ssh 清理。
+- 说明：手动输入真实卷码走的是与 chip 相同的 `manualLookup(code)`，chip 与错误卷码输入两条路径均已覆盖，未再单独手输真实卷码。
+- 录屏：`/home/ubuntu/screencasts/rec-e0bd0c83-23e3-4ca7-aa65-1294e3f6d885/rec-e0bd0c83-23e3-4ca7-aa65-1294e3f6d885-edited.mp4`
+
+---
+
+## 增量测试 R116（答案卡渲染 + 讲解时延复测）— 2026-08-03
+
+- 测试环境：**线上 https://kaogong.zalize.com**，强刷确认新 bundle `assets/index-Dibj3ds2.js`。粘贴新数量关系题（和倍问题，故意选错 B，正确 C），本浏览器已有访问码缓存未再弹窗。
+- 结论：**两项 P2 修复全部通过，无失败断言**。零数据创建（未点「存入错题本」）。
+
+### 1. 答案卡 anscard（R115 untested → 本轮 passed）
+- 讲解返回后结果卡顶部出现答案卡：大字母 **C**、方法胶囊「和倍问题-设份数列方程」、一句话「设乙为x，4x+10=90，x=20，甲=2x=40」— **passed**
+- 样式实测：`.ans-big` backgroundColor=**rgb(59,111,245)** / backgroundImage=none（纯色品牌蓝无渐变）；`.anscard` 底 rgb(237,243,254) 无渐变 — **passed**
+- 错因分析正确命中我的错选 B（指出 30 是丙的本数，属答非所问型失误）— 讲解质量正常
+- `recentExplains` 最新条目 `ans:"C"`、brief 为一句话摘要 — **passed**
+- F5 重进后「最近讲解」首行左侧显示答案字母 **C**（上轮记录仍为「？」，对比明显）— **passed**
+
+![答案卡纯蓝大字母C](https://app.devin.ai/attachments/6c7e176f-11b0-480a-8e6f-6f22a9d429af/ss_9b500c9f.png)
+![最近讲解带答案字母C](https://app.devin.ai/attachments/48a05b8a-f3ea-430d-b773-a0716f101254/ss_a55b51c2.png)
+
+### 2. 讲解时延（deepseek 快速通道）
+- 从点击「用花生十三方法讲解」到结果渲染实测 **约 110 秒**（页面计时提示 3s 识题 → ~110s 完整渲染），对比上轮 R115 约 300 秒，**提速约 60%+，达到「约 2 分钟」目标** — **passed**
+
+- 录屏：`/home/ubuntu/screencasts/rec-cabf143c-d7c6-4111-9a2b-d831f24941dd/rec-cabf143c-d7c6-4111-9a2b-d831f24941dd-edited.mp4`
+
+## 增量测试 R115（AI 讲解修复复测 + 申论 chips 单行 + 快速回归）— 2026-08-03
+
+- 测试环境：**线上 https://kaogong.zalize.com**，Ctrl+Shift+R 强刷后确认新 bundle `assets/index-BYLlip32.js`。视口实测 `innerWidth=500`（Chrome 最小窗宽限制，无法到 375；rpx 换算按 500/375≈1.333，72rpx@500=48px 即 36px@375）。讲解触发时被要求输入访问码，输入 `kg2026` 通过。
+- 结论：**三组测试全部通过，无失败断言**；1 条说明项（anscard 未渲染，见下）。
+- 生产数据：零创建零删除（讲解不产生错题，未点「存入错题本」）。
+
+### 1. AI 讲解修复（P1 复测）
+- 粘贴完整行测题（守株待兔类比题）+选 A → 点「用花生十三方法讲解」→ 经「识题中→匹配方法→生成分步讲解」约 **5 分钟**后成功返回完整解析（判定正确、逐项分析、方法提示），上轮「AI 服务连接失败」不再出现 — **passed**
+- `localStorage.recentExplains` 写入 1 条 — **passed**
+- F5 重进页面后「最近讲解」显示该记录（判断推理·类比推理·8/3 11:30）— **passed**
+- 主按钮纯色品牌蓝：computed `rgb(59,111,245)`、backgroundImage=none — **passed**
+- ⚠️ 说明：**答案卡 anscard 未渲染** — 本次 AI 回复未按「【答案】X｜【方法】…｜【一句话】…」格式开头（splitAnswer 未命中），故无答案卡可验；CSS `.anscard/.ans-big` 为纯色 #3b6ff5 无渐变（源码确认），样式本身达标但运行时**untested**。模型输出格式不稳定可能导致答案卡时有时无，建议后端 prompt 强约束或前端兜底解析「你的选择/判定」格式。
+
+![AI 讲解成功返回](https://app.devin.ai/attachments/753541f1-52bd-4938-a592-80b9b2d7fe9b/ss_abeaa5ff.png)
+![重进后最近讲解列表](https://app.devin.ai/attachments/2f1935a4-2766-42e2-81a6-f4054528d9f5/ss_3a8395d0.png)
+
+### 2. 申论分类 chips（P2 复测）
+- chip computed `white-space:nowrap`、容器 `flex-wrap:nowrap`、单行（所有 chip top 一致）、chip 高 39px（上轮 93.5px 竖排已修复）— **passed**
+- 可横滚：内容宽 566 > 可视 379，横向滚动后「贯彻执行/大作文」露出、「全部/归纳概括」移出 — **passed**
+- 「筛选」按钮居右（距右缘 31px），高 **48px = 72rpx@500**（即 36px@375）— **passed**
+
+![chips 横滚后单行+筛选居右](https://app.devin.ai/attachments/a545386c-d29a-4044-9140-dd1d2ce76d73/ss_zoom_c6b65bd6.png)
+![申论页整体](https://app.devin.ai/attachments/7d496497-8f89-47a0-8493-4f3c0da0be68/ss_f2671e5f.png)
+
+### 3. 快速回归（Regression）
+- 统计页：标题「统计」、KPI 横幅+学习日历入口、今日待办、雷达+最薄弱+去补弱、模块分布 3 行+展开、TOP10 chips+「+5」、教练/勋章/备份列表卡 — 结构完整 **passed**
+- 申论页：三 tab 分段控件、题卡分值/去作答/收藏★ 正常 — **passed**
+- 紫色扫描：申论页 0、拍题讲解页 0、统计页 0 — **passed**
+
+![统计页回归](https://app.devin.ai/attachments/286b4a48-79e1-4aa3-b016-d41275434411/ss_4a336dd7.png)
+
+- 录屏：`/home/ubuntu/screencasts/rec-18eab57e-d6e4-4253-982c-2a3432b7821e/rec-18eab57e-d6e4-4253-982c-2a3432b7821e-edited.mp4`
+
+## 增量测试 R113（答题卡前置 + 导出三 chips + 扫描页序回归）— 2026-08-03
+
+- 测试环境：**线上 https://kaogong.zalize.com**（无访问码），构建 hash 已确认新版 `assets/index-DdSkSGuK.js`，Chrome 375px 移动视口（UI 部分录屏）。
+- 结论：**三组测试全部通过，无失败断言**。
+- 生产数据保护：测前 `/api/mistakes` 基线 261 条（max id 296）；扫描测试 uid `qa-r113-scan`，本轮产生 mistakes id **321–327** 已全部 DELETE（全 200），API 确认与基线完全一致。**answer_log 无删除 API**：uid `qa-r113-scan` 的 12 条做题记录留库，请经 ssh 清理。
+
+### 1. 导出三 chips（错题本筛选弹层 + 刷题自定义弹层，375px）
+- 两处弹层导出按钮上方均可见「含答题卡」「含答案解析」「仅导出答案」，getBoundingClientRect 高度 **44.0px**（≥44 热区达标）— passed
+- 默认前两个点亮；点「仅导出答案」→ 独占点亮、前两个变灰；再点恢复；「含答题卡」可独立熄灭（含答案解析保持点亮）— passed
+
+| 🟢 错题本弹层：仅导出答案点亮 | 🟢 恢复默认（前两点亮） |
+|---|---|
+| ![only](https://app.devin.ai/attachments/877be8be-c532-4026-89e1-23a58d517086/ss_zoom_765a6e48.png) | ![default](https://app.devin.ai/attachments/936839f2-46f7-4e1a-9e78-22c96e86ec35/ss_zoom_7763c6b7.png) |
+
+刷题弹层关「含答题卡」独立开关：![prac](https://app.devin.ai/attachments/be424f13-d63b-4c1e-892a-a26dc2471d34/ss_zoom_a6240900.png)
+
+### 2. 实际导出（UI 下载 + pymupdf 结构检查）
+- 默认导出（错题本，100 题）：13 页，**第 1–2 页为答题卡**（「答题卡…卷码 C0017FDD·第 1/2 页」+机读卷码区），试题第 3 页起，末页参考答案与解析 — passed
+- 「仅导出答案」导出：**仅 1 页**，标题「错题重练卷 8月3日 · 参考答案」+ 1–100 答案速查表，无试题、无答题卡 — passed（注：错题导出 items 不携带解析字段，故无逐题解析段——后端逻辑正确，属数据源限制）
+- 刷题弹层关「含答题卡」导出（10 题）：6 页，全文无答题卡页，试题从第 1 页开始，末尾含参考答案与解析 — passed
+
+| 🟢 默认导出第 1 页=答题卡 | 🟢 仅答案导出（1 页） | 🟢 无答题卡导出第 1 页=试题 |
+|---|---|---|
+| ![p1](https://app.devin.ai/attachments/f7e359de-5ebf-4db0-9196-2ed07261300f/default_p1_sheet.png) | ![ao](https://app.devin.ai/attachments/b06431a3-46a5-4eba-bf78-f29cc101328a/answersonly_p1.png) | ![ns](https://app.devin.ai/attachments/083ff094-17c1-49c3-affe-8c33cb27d95d/nosheet_p1.png) |
+
+### 3. 扫描页序回归（脚本 /tmp/r113/sim_scan.py，渲染第 1 页答题卡）
+- 12 题默认参数导出（卷码 3ECA00C3，5 页，答题卡在最前），渲染**第 1 页**涂黑 + 透视 + 180° 旋转 + 模糊压缩 → POST /api/scan_sheet：卷码一致、page=1、total=12、answered=10、correct=3，**逐题 12/12** status/picked/correct 与涂法完全一致（含 blank 与 multi "BC"）— passed。答题卡前置不影响识别（卷码查 paper_exports）。
+- 模拟照片：![photo](https://app.devin.ai/attachments/9c73c5b7-0e35-4ab6-9b0d-147f5ebb4477/photo.jpg)
+
+- 录屏：`/home/ubuntu/screencasts/rec-5b23b2a2-cd20-484c-9b2b-a16bb4b9d4f1/rec-5b23b2a2-cd20-484c-9b2b-a16bb4b9d4f1-edited.mp4`
+- 测试计划：`/home/ubuntu/repos/kaogong-assistant/test-plan-r113.md`；模拟脚本：`/tmp/r113/sim_scan.py`
+
+## 增量测试 R112（PDF 思源宋体/语义码/选项自适应 + 扫描回归 + AI 分析超时修复）— 2026-08-03
+
+- 测试环境：**线上 https://kaogong.zalize.com**（无访问码），构建 hash 已确认新版 `assets/index-Bxr8rrGF.js`，Chrome 375px 移动视口（AI 分析部分录屏）。
+- 结论：**三组测试全部通过**。上轮 R111 的失败项「AI 错题分析 request:fail timeout」已修复验证（约 3.5 分钟返回完整内容）。
+- 生产数据保护：测前记录 `/api/mistakes` 基线（261 条，296…23,5,3,2）；扫描测试使用 uid `qa-r112-scan`；测后删除本轮扫描产生的 mistakes id **313–320**（全部 HTTP 200），API 确认与基线完全一致（261 条，id 23 等零触碰）。
+- **answer_log 无删除 API**：uid `qa-r112-scan` 的 10 条做题记录仍在库中，请经 ssh 按 uid 清理。
+- 录屏（AI 分析 UI）：`/home/ubuntu/screencasts/rec-2ac4fd06-6624-4a6c-8d14-e5b2ce712ca5/rec-2ac4fd06-6624-4a6c-8d14-e5b2ce712ca5-edited.mp4`
+- 测试计划：`/home/ubuntu/repos/kaogong-assistant/test-plan-r112.md`；模拟脚本：`/tmp/r112/sim_scan.py`
+
+### 1. PDF 导出（POST /api/export/pdf，12 题常识，卷码 4021DFFC）— 全部通过
+
+- 字体（pymupdf get_fonts）：正文 **NotoSerifCJKsc-Regular**（思源宋体嵌入 TTF），题号（`1.`…`12.`）与答案页「N. 答案 X」为 **NotoSerifCJKsc-Bold** 加粗，标题/分节仍 WenQuanYiZenHei 黑体 —— 与需求一致。
+- 语义码：卷面 12 题题号旁灰色 `[语义码]` 全部符合格式（如 `CS-2015-260143`、`CS-XF-434735`、`CS-JJ-008441`），末 6 位与题库 id 逐一匹配（12/12）。
+- 选项自适应（`_opts_per_line`，像素+文本行核对）：短选项 4 个同行（如「A.凝固点更低 B.沸点更低 C.密度更大 D.颜色更深」）、中等宽度 2 个一行、长选项各自成行（如西汉霸陵题）—— 三种档位同页可见。
+- 末尾答题卡：「答题卡」黑体标题、四角实心定位块（左上更大）、40 格机读卷码条、每行题号 + **短语义码（无年份段**，如 `CS-260143`）+ A-D 方框，版式完整。
+
+| 🟢 正文页（宋体/加粗题号/语义码/选项 4-2-1 自适应） | 🟢 末尾答题卡（短语义码/定位块/卷码条） |
+| --- | --- |
+| ![body](https://app.devin.ai/attachments/13bdeaaa-67ab-41c9-9efb-51a7406bf9ba/r112_page1.png) | ![sheet](https://app.devin.ai/attachments/f7ab1d33-a71d-43b9-87d3-09f0a31b5bef/r112_page5.png) |
+
+### 2. 扫描识别回归（uid=qa-r112-scan）— 通过
+
+- 新版答题卡渲染 → opencv 涂黑（10 题单涂、1 空涂、1 多涂）→ 透视畸变 + 180° 旋转 + 模糊 JPEG 压缩（[模拟照片](https://app.devin.ai/attachments/1c765725-54fd-4ca6-9f86-a97e7f50037e/photo.jpg)）→ POST /api/scan_sheet。
+- 返回：卷码 4021DFFC 一致、page=1、total=12、answered=10、correct=2、saved=true；**逐题 12/12 status/picked/correct 与涂法完全一致**（blank/multi 正确标记）。
+- 落库：8 条涂错题写入 mistakes（id 313–320，question_id 匹配），测后已全部删除。
+
+### 3. AI 错题分析超时修复（375px UI，录屏）— 通过
+
+- 错题本页点「AI 错题分析 · 生成」→ 显示「正在分析…」→ **约 3.5 分钟后返回完整内容**（错题画像 / 薄弱点诊断 / 复习建议，富文本标题渲染正常），未出现 `request:fail timeout`（对照 R111 约 3 分钟即失败）。弹层可滚动、可正常关闭，页面无崩溃。
+- 说明：耗时约 210s < 420s 新超时上限，但仍偏长，建议后续考虑流式或缓存优化（非本轮阻塞项）。
+
+| 🔴 R111（修复前，超时失败） | 🟢 R112（修复后，成功返回） |
+| --- | --- |
+| ![before](https://app.devin.ai/attachments/10386b3e-2288-4c4b-82f1-96ea85bcef8a/ss_09869351.png) | ![after](https://app.devin.ai/attachments/4cf47b1f-66ec-4c64-9b34-ca392fb25d5a/ss_9382fb13.png) |
+
+复习建议部分：![advice](https://app.devin.ai/attachments/c25161b5-3d20-4b2a-93b9-46ef41011031/ss_b72bbfb7.png)
+
+---
+
+## 增量测试 R110+R111（PDF 排版 / 机读答题卡 + 扫描识别）— 2026-08-03
+
+- 测试环境：**线上 https://kaogong.zalize.com**（无访问码），构建 hash 与本地 dist 一致（`assets/index-LQx2OW6n.js`），Chrome，**375px 移动视口**（UI 部分录屏）。
+- 结论：**A/B/C 三组全部通过；D 回归中「AI 错题分析」生成失败（超时）**，其余回归通过。
+- 生产数据保护：测前记录 `/api/mistakes` 基线（296…23,5,3,2）；扫描测试全部使用 `qa-` 前缀 uid；测后删除本轮扫描产生的 id 308–312（uid=qa-r111-scan），API 确认其余 id 全部保留、`qa-` 记录清零；浏览器 `anonUid` 已恢复原值。
+- **answer_log 无删除 API**：uid `qa-r111-scan`（10 条）与 `qa-r111-ui`（10 条）的做题记录仍在库中，留给用户经 ssh 清理（answer_log 表按 uid 删即可）。
+- 录屏（UI 部分）：`/home/ubuntu/screencasts/rec-d5b6076b-11bb-4c0b-a380-221a7479e336/rec-d5b6076b-11bb-4c0b-a380-221a7479e336-edited.mp4`
+- 测试计划：`/home/ubuntu/repos/kaogong-assistant/test-plan-r110-111.md`；模拟脚本：`/tmp/r111/sim_scan.py`
+
+### A 导出 PDF 排版（R110）— passed
+
+- 错题本筛选（资料分析 ×12）→「导出当前筛选为错题卷 PDF」下载成功（`错题重练卷 8月3日.pdf`，150KB，卷码 BFC19C18）；刷题页自定义练习面板 →「导出为试卷 PDF（含答题卡+答案页）」下载成功（`真题精选卷 8月3日.pdf`，321KB，卷码 30A76488）。
+- pymupdf 字体检查：正文 **UMingCN（AR PL UMing 宋体）**，标题 **WenQuanYiZenHei（黑体）**，符合 R110 要求。
+- 版式渲染抽查：封面分隔线、短选项同行、题目+选项同页不跨页拆分（抽查 2 题）。
+
+| 正文页（宋体正文/黑体标题/选项同行） | 末尾机读答题卡页 |
+|---|---|
+| ![body](https://app.devin.ai/attachments/f7a6ddf0-509f-4a74-842b-d6792c3b258a/page1.png) | ![sheet](https://app.devin.ai/attachments/bfe336d7-f31a-44d6-9fa2-2650836f9109/page5.png) |
+
+- 答题卡页完整：四角实心定位块（左上更大）、40 格机读卷码条、每题 A–D 涂黑方框、题号+[题目ID]、两栏布局、页脚扫描指引。练习导出卷答题卡另证：![prac_sheet](https://app.devin.ai/attachments/165ae559-6f49-4744-a953-23e375f39c56/prac_sheet.png)
+
+### B 扫描识别管线（R111，脚本模拟）— passed
+
+- `/api/export/pdf` 导出 12 题（QA-R111 模拟卷，卷码 **1BE05FA3**）→ pymupdf 300dpi 渲染末页 → 按 `omr.py` 几何 opencv 涂黑（5 对、5 错、1 空、1 多涂）→ 加透视畸变 + **旋转 180°** + 模糊 + JPEG 压缩 → `POST /api/scan_sheet`（uid=qa-r111-scan）。
+- 模拟照片：![photo](https://app.devin.ai/attachments/a87a4c88-524b-4f7e-b107-7573ceae6e49/photo.jpg)
+- 返回：`code=1BE05FA3`（与导出一致，180° 方向判定生效）、`page=1, total=12, answered=10, correct=5, saved=true`；**逐题 12/12 与涂法完全一致**（空涂 status=blank、多涂 status=multi picked="BC"）。
+- 落库：`/api/mistakes?uid=qa-r111-scan` 出现涂错的 5 题（id 308–312，question_id 匹配）；`/api/growth?uid=qa-r111-ui` 显示 10 条做题记录（answer_log 落库侧证）。
+- 说明：UI 上传时错题按 `question_text` 去重合并进已有记录（times+1），未新增行，符合 `db.save_mistake` 实现。
+
+### C 前端 375px UI — passed
+
+- 「扫描答题卡」入口卡可见（图标+说明+「拍照」按钮），DOM 实测卡片热区高度 **96.7px ≥ 44px**。
+- 上传随机无效图片 → toast「识别失败：未找到答题卡四角定位块，请拍全整张答题卡」，页面不崩溃。
+- 通过页面上传 B 的模拟照片 → 结果弹层：「扫描结果 · QA-R111 模拟卷」「卷码 1BE05FA3 · 第 1 页 · 已作答 10/12 · 答对 5 题 · 已记入做题记录」，逐题行 ✓/✗/未涂/多涂 BC 全部正确显示；「完成」关闭正常。
+
+| 入口卡 | 无效图报错 | 扫描结果弹层 |
+|---|---|---|
+| ![entry](https://app.devin.ai/attachments/a737ce52-79f8-4a6b-b1a8-f183e8e34175/ss_eefffc64.png) | ![invalid](https://app.devin.ai/attachments/34139d9e-1e89-47c8-a3b3-ddd7aa507120/ss_a549e47d.png) | ![modal](https://app.devin.ai/attachments/1739fa45-4690-4451-ae80-2bb7320fe2c4/ss_1391afd7.png) |
+
+### D 回归 — AI 分析 failed，其余 passed
+
+- 错题本导出按钮：A 已覆盖 — passed。
+- 「错题重练」入口：开组正常（资料分析 · 1/4，刷题模式重做）— passed。![retry](https://app.devin.ai/attachments/888693d8-db7e-4931-9753-9ee99801ac75/ss_e1374ab8.png)
+- **「AI 错题分析」— failed**：点击「生成」弹层出现并显示「正在分析…约需 30-60 秒」，但约 3 分钟后显示「**分析失败：request:fail timeout**」（前端超时兜底正常、无崩溃，但功能不可用，疑为 LLM 上游慢/超时，建议后端加缓存或拉长/流式化）。![aifail](https://app.devin.ai/attachments/10386b3e-2288-4c4b-82f1-96ea85bcef8a/ss_09869351.png)
+- 说明：错题重练开组时误触把一道生产资料分析错题答错一次（times+1、next_review 重置），无法回滚，影响极小，已如实记录。
+
+
 ## 增量测试 v23（P1c：音效开关 / pop 动效 / 成就勋章 / 雷达空态）— 2026-07-31
 
 - 测试环境：**线上 https://kaogong.zalize.com**，构建 hash 与本地 dist 一致（`assets/index-B5gWKF-M.js`），Chrome，**400px 移动视口**为主 + 1200px 桌面侧栏抽查（均录进录屏）。
