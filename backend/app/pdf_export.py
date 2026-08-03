@@ -9,6 +9,8 @@ from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
+    HRFlowable,
+    KeepTogether,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
@@ -25,33 +27,51 @@ _MOD_NAMES = {
     "changshi": "常识判断",
     "shenlun": "申论",
 }
-_FONT_CANDIDATES = [
+_FONT_HEI = "KGHei"
+_SONG_CANDIDATES = [
+    "/usr/share/fonts/truetype/arphic/uming.ttc",
     "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
     "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
 ]
+_HEI_CANDIDATES = [
+    "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+    "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+    "/usr/share/fonts/truetype/arphic/uming.ttc",
+]
 
 
-def _ensure_font() -> str:
-    if _FONT in pdfmetrics.getRegisteredFontNames():
-        return _FONT
-    for path in _FONT_CANDIDATES:
+def _register(name: str, candidates: list[str]) -> str:
+    if name in pdfmetrics.getRegisteredFontNames():
+        return name
+    for path in candidates:
         try:
-            pdfmetrics.registerFont(TTFont(_FONT, path, subfontIndex=0))
-            return _FONT
+            pdfmetrics.registerFont(TTFont(name, path, subfontIndex=0))
+            return name
         except Exception:
             continue
     return "Helvetica"
 
 
+def _ensure_font() -> str:
+    """正文字体：宋体。"""
+    return _register(_FONT, _SONG_CANDIDATES)
+
+
+def _ensure_hei() -> str:
+    """标题/分节字体：黑体。"""
+    return _register(_FONT_HEI, _HEI_CANDIDATES)
+
+
 def _styles(font: str) -> dict:
+    hei = _ensure_hei()
     return {
-        "title": ParagraphStyle("t", fontName=font, fontSize=16, leading=22, alignment=1),
-        "meta": ParagraphStyle("m", fontName=font, fontSize=9, leading=13, alignment=1, textColor=colors.HexColor("#646A73")),
-        "sec": ParagraphStyle("s", fontName=font, fontSize=12, leading=17, spaceBefore=10, spaceAfter=4),
-        "q": ParagraphStyle("q", fontName=font, fontSize=10.5, leading=16, wordWrap="CJK", spaceBefore=6),
-        "opt": ParagraphStyle("o", fontName=font, fontSize=10.5, leading=15, wordWrap="CJK", leftIndent=14),
-        "mat": ParagraphStyle("mt", fontName=font, fontSize=9.5, leading=14, wordWrap="CJK", textColor=colors.HexColor("#333"), leftIndent=6, spaceBefore=4),
-        "ans": ParagraphStyle("a", fontName=font, fontSize=10, leading=15, wordWrap="CJK", spaceBefore=4),
+        "title": ParagraphStyle("t", fontName=hei, fontSize=17, leading=24, alignment=1),
+        "meta": ParagraphStyle("m", fontName=font, fontSize=9, leading=14, alignment=1, textColor=colors.HexColor("#646A73")),
+        "sec": ParagraphStyle("s", fontName=hei, fontSize=12.5, leading=18, spaceBefore=14, spaceAfter=5, textColor=colors.HexColor("#1F2329")),
+        "q": ParagraphStyle("q", fontName=font, fontSize=10.5, leading=17, wordWrap="CJK", spaceBefore=9, firstLineIndent=0),
+        "opt": ParagraphStyle("o", fontName=font, fontSize=10.5, leading=16.5, wordWrap="CJK", leftIndent=16),
+        "mat": ParagraphStyle("mt", fontName=font, fontSize=9.5, leading=15, wordWrap="CJK", textColor=colors.HexColor("#333"), leftIndent=8, rightIndent=4, spaceBefore=8, spaceAfter=2, backColor=colors.HexColor("#F7F8FA"), borderPadding=5),
+        "ans": ParagraphStyle("a", fontName=font, fontSize=10, leading=15.5, wordWrap="CJK", spaceBefore=5),
     }
 
 
@@ -97,6 +117,8 @@ def build_paper_pdf(
     story.append(Paragraph(meta, st["meta"]))
     story.append(Paragraph("姓名：__________　得分：__________", st["meta"]))
     story.append(Spacer(1, 6))
+    story.append(HRFlowable(width="100%", thickness=0.8, color=colors.HexColor("#1F2329")))
+    story.append(Spacer(1, 2))
 
     cur_mod = None
     part = 0
@@ -122,11 +144,24 @@ def build_paper_pdf(
         last_mat = mat or last_mat
         qid = q.get("id")
         tag = f'<font size="7.5" color="#8F959E">[{qid}]</font> ' if qid else ""
-        story.append(Paragraph(f"{i}. {tag}{_esc(qtext)}", st["q"]))
+        block = [Paragraph(f"{i}. {tag}{_esc(qtext)}", st["q"])]
         opts = q.get("options") or {}
-        for k in ["A", "B", "C", "D", "E", "F"]:
-            if k in opts and opts[k]:
-                story.append(Paragraph(f"{k}. {_esc(str(opts[k]))}", st["opt"]))
+        keys = [k for k in ["A", "B", "C", "D", "E", "F"] if k in opts and opts[k]]
+        texts = [str(opts[k]) for k in keys]
+        if keys and all(len(t) <= 12 for t in texts):
+            per = 4 if all(len(t) <= 5 for t in texts) else 2
+            for j in range(0, len(keys), per):
+                line = "　　".join(
+                    f"{k}. {_esc(str(opts[k]))}" for k in keys[j : j + per]
+                )
+                block.append(Paragraph(line, st["opt"]))
+        else:
+            for k in keys:
+                block.append(Paragraph(f"{k}. {_esc(str(opts[k]))}", st["opt"]))
+        if len(qtext) <= 400:
+            story.append(KeepTogether(block))
+        else:
+            story.extend(block)
 
     if answer_sheet:
         story.append(_page_break())
