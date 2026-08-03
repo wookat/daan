@@ -20,7 +20,11 @@
     },
     {
       "path": "pages/stats/stats",
-      "style": { "navigationBarTitleText": "薄弱分析" }
+      "style": { "navigationBarTitleText": "统计" }
+    },
+    {
+      "path": "pages/stats/calendar",
+      "style": { "navigationBarTitleText": "学习日历" }
     },
     {
       "path": "pages/shenlun/shenlun",
@@ -35,7 +39,7 @@
       { "pagePath": "pages/ask/ask", "text": "拍题讲解", "iconPath": "static/tab/ask.png", "selectedIconPath": "static/tab/ask-on.png" },
       { "pagePath": "pages/practice/practice", "text": "刷题", "iconPath": "static/tab/practice.png", "selectedIconPath": "static/tab/practice-on.png" },
       { "pagePath": "pages/book/book", "text": "错题本", "iconPath": "static/tab/book.png", "selectedIconPath": "static/tab/book-on.png" },
-      { "pagePath": "pages/stats/stats", "text": "薄弱分析", "iconPath": "static/tab/stats.png", "selectedIconPath": "static/tab/stats-on.png" }
+      { "pagePath": "pages/stats/stats", "text": "统计", "iconPath": "static/tab/stats.png", "selectedIconPath": "static/tab/stats-on.png" }
     ]
   },
   "globalStyle": {

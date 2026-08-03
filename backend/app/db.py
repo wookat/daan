@@ -426,7 +426,7 @@ def import_shenlun(questions: list[dict], materials: list[dict], batch: str) -> 
     return {"questions": qn, "materials": mn, "batch": batch}
 
 
-def shenlun_questions(qtype: str | None = None, year: int | None = None, region: str | None = None, limit: int = 20, offset: int = 0) -> list[dict]:
+def shenlun_questions(qtype: str | None = None, year: int | None = None, region: str | None = None, limit: int = 20, offset: int = 0) -> dict:
     conn = get_conn()
     where = ["(disabled IS NULL OR disabled=0)"]
     args: list = []
@@ -446,8 +446,11 @@ def shenlun_questions(qtype: str | None = None, year: int | None = None, region:
             ORDER BY exam_year DESC, id LIMIT ? OFFSET ?""",
         (*args, min(limit, 50), offset),
     ).fetchall()
+    total = conn.execute(
+        f"SELECT COUNT(*) FROM shenlun_questions WHERE {' AND '.join(where)}", args
+    ).fetchone()[0]
     conn.close()
-    return [dict(r) for r in rows]
+    return {"items": [dict(r) for r in rows], "total": total}
 
 
 def shenlun_filters() -> dict:

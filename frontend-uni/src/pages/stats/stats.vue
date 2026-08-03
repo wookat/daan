@@ -1,37 +1,43 @@
 <template>
   <view class="wrap">
-    <view class="ovrow">
-      <view class="ovi card">
-        <text class="ovn">{{ totalDone }}</text>
-        <text class="ovt">累计刷题</text>
+    <view class="hero">
+      <view class="hero-top">
+        <text class="hero-t">学习统计</text>
+        <text class="hero-cal" @click="goCalendar">学习日历 ›</text>
       </view>
-      <view class="ovi card">
-        <text class="ovn">{{ accPct }}%</text>
-        <text class="ovt">总正确率</text>
-      </view>
-      <view class="ovi card">
-        <text class="ovn">{{ streakDays }}</text>
-        <text class="ovt">连续打卡(天)</text>
+      <view class="hero-kpis">
+        <view class="hk">
+          <text class="hk-n">{{ totalDone }}</text>
+          <text class="hk-t">累计刷题</text>
+        </view>
+        <view class="hk">
+          <text class="hk-n">{{ accPct }}%</text>
+          <text class="hk-t">总正确率</text>
+        </view>
+        <view class="hk">
+          <text class="hk-n">{{ streakDays }}</text>
+          <text class="hk-t">连续打卡(天)</text>
+        </view>
       </view>
     </view>
 
     <view v-if="(reco && reco.items.length) || dueN" class="card">
-      <view class="h">个性化推荐 · 查漏补缺</view>
-      <view v-if="dueN" class="rc-row" @click="goBook">
-        <view class="rc-main">
-          <text class="rc-name">错题到期复习</text>
-          <text class="rc-tag warn">今日到期</text>
+      <view class="h">今日待办</view>
+      <view v-if="dueN" class="todo-row">
+        <view class="todo-ico warn">📘</view>
+        <view class="todo-main">
+          <text class="todo-name">错题到期复习</text>
+          <text class="todo-meta">{{ dueN }} 题今日待复习</text>
         </view>
-        <text class="rc-meta">{{ dueN }} 题待复习</text>
-        <text class="rc-go">去复习 ›</text>
+        <view class="todo-btn" @click="goBook">去复习</view>
       </view>
-      <view v-for="(r, i) in (reco ? reco.items : [])" :key="i" class="rc-row" @click="goSub(r.module, r.submodule)">
-        <view class="rc-main">
-          <text class="rc-name">{{ r.submodule }}</text>
-          <text class="rc-tag" :class="{ warn: r.reason === '近期退步' || r.reason === '正确率偏低' }">{{ r.reason }}</text>
+      <view v-for="(r, i) in (reco ? reco.items : [])" :key="i" class="todo-row">
+        <view class="todo-ico">🎯</view>
+        <view class="todo-main">
+          <text class="todo-name">{{ r.submodule }}</text>
+          <text class="todo-meta">{{ r.reason }} · 正确率 {{ Math.round(r.acc * 100) }}%（{{ r.n }}题）</text>
         </view>
-        <text class="rc-meta">正确率 {{ Math.round(r.acc * 100) }}%（{{ r.n }}题）</text>
-        <text class="rc-go">练10题 ›</text>
+        <view class="todo-btn" @click="goSub(r.module, r.submodule)">练10题</view>
       </view>
       <view class="rc-note">基于你的做题历史（正确率/近期趋势/遗忘曲线/考频）自动推荐</view>
     </view>
@@ -43,27 +49,69 @@
         <view class="re-s">刷几题就能生成你的五模块能力画像</view>
         <button class="re-btn" @click="goPractice('')">去刷题</button>
       </view>
-      <view v-else class="radar-box">
-        <view class="radar">
-          <view v-for="i in 4" :key="'g' + i" class="ring" :style="ringStyle(i)" />
-          <view class="poly" :style="polyStyle" />
-          <view v-for="(a, i) in axes" :key="a.key" class="axis-label" :style="labelStyle(i)">
-            <text class="al-name">{{ a.name }}</text>
-            <text class="al-val">{{ a.pct }}%</text>
+      <view v-else class="radar-flex">
+        <view class="radar-box">
+          <view class="radar">
+            <view v-for="i in 4" :key="'g' + i" class="ring" :style="ringStyle(i)" />
+            <view class="poly" :style="polyStyle" />
+            <view v-for="(a, i) in axes" :key="a.key" class="axis-label" :style="labelStyle(i)">
+              <text class="al-name">{{ a.name }}</text>
+              <text class="al-val">{{ a.pct }}%</text>
+            </view>
           </view>
+        </view>
+        <view class="radar-side">
+          <view v-if="weakAxes.length" class="rs-t">最薄弱</view>
+          <view v-for="a in weakAxes" :key="a.key" class="rs-row">
+            <text class="rs-name">{{ a.name }}</text>
+            <text class="rs-pct">{{ a.pct }}%</text>
+          </view>
+          <view v-if="weakAxes.length" class="ghost-btn" @click="goPractice(weakAxes[0].key)">去补弱</view>
         </view>
       </view>
     </view>
 
-    <view class="sec">诊断与建议</view>
-    <view class="card coach">
-      <view class="cal-head">
-        <view class="h" style="margin-bottom: 0">AI 学习教练</view>
-        <text v-if="!coachLoading" class="coach-btn" @click="getCoach">{{ coachHtml ? '重新诊断' : '生成建议' }}</text>
+    <view class="card">
+      <view class="h">错题模块分布</view>
+      <view v-if="!byModule.length" class="spin">暂无数据</view>
+      <view v-for="m in shownModules" :key="m.module" class="mrow" @click="goPractice(m.module)">
+        <view class="mrow-main">
+          <view class="blabel">
+            <text>{{ modName(m.module) }}</text>
+            <text class="bn">×{{ m.n }}</text>
+          </view>
+          <view class="bar">
+            <view class="fill" :style="{ width: (m.n / total) * 100 + '%' }" />
+          </view>
+        </view>
+        <text class="mrow-arrow">›</text>
       </view>
-      <view v-if="coachLoading" class="coach-tip">教练正在分析你的学习数据…</view>
-      <rich-text v-else-if="coachHtml" class="coach-body" :nodes="coachHtml" />
-      <view v-else class="coach-tip">基于你的正确率、错因分布和打卡情况，生成个性化备考建议</view>
+      <view v-if="byModule.length > 3" class="hist-more" @click="modOpen = !modOpen">{{ modOpen ? '收起' : '展开全部 ' + byModule.length + ' 个模块' }}</view>
+    </view>
+
+    <view class="card">
+      <view class="h">高频错题型 TOP10</view>
+      <view v-if="!byType.length" class="spin">暂无数据</view>
+      <view v-else class="top-chips">
+        <view v-for="t in shownTypes" :key="t.question_type" class="top-chip" @click="goPractice('')">
+          <text class="tc-name">{{ typeName(t.question_type) }}</text>
+          <text class="tc-n">×{{ t.n }}</text>
+        </view>
+        <view v-if="byType.length > 5" class="top-chip more" @click="topOpen = !topOpen">{{ topOpen ? '收起' : '+' + (byType.length - 5) }}</view>
+      </view>
+    </view>
+
+    <view v-if="byReason.length" class="card">
+      <view class="h">错因分布</view>
+      <view v-for="r in byReason" :key="r.error_reason" class="brow">
+        <view class="blabel">
+          <text>{{ r.error_reason }}</text>
+          <text class="n">×{{ r.n }}</text>
+        </view>
+        <view class="bar">
+          <view class="fill rz" :style="{ width: (r.n / reasonTotal) * 100 + '%' }" />
+        </view>
+      </view>
     </view>
 
     <view v-if="trendHas" class="card">
@@ -94,22 +142,6 @@
       </view>
       <view v-if="growthDelta !== null" class="gw-delta" :class="{ up: growthDelta >= 0 }">
         本周比上周{{ growthDelta >= 0 ? '提升' : '下降' }} {{ Math.abs(growthDelta) }} 个百分点
-      </view>
-    </view>
-
-    <view class="card">
-      <view class="cal-head">
-        <view class="h" style="margin-bottom: 0">学习日历</view>
-        <view class="cal-hr">
-          <text class="cal-sub">本月打卡 {{ monthDays }} 天</text>
-          <text class="cal-toggle" @click="calFull = !calFull">{{ calFull ? '收起' : '全月 ›' }}</text>
-        </view>
-      </view>
-      <view class="cal-week">
-        <text v-for="w in ['一', '二', '三', '四', '五', '六', '日']" :key="w" class="cal-w">{{ w }}</text>
-      </view>
-      <view class="cal-grid">
-        <view v-for="(c, i) in shownCalCells" :key="i" class="cal-c" :class="c.cls">{{ c.d || '' }}</view>
       </view>
     </view>
 
@@ -191,63 +223,47 @@
       <view class="km-legend"><text class="km-lg r">● &lt;60% 薄弱</text><text class="km-lg y">● 60–80%</text><text class="km-lg g">● &gt;80% 掌握</text><text class="km-lg">点考点直达专项练习</text></view>
     </view>
 
-    <view class="card">
-      <view class="h">错题模块分布</view>
-      <view v-if="!byModule.length" class="spin">暂无数据</view>
-      <view v-for="m in byModule" :key="m.module" class="brow">
-        <view class="blabel">
-          <text>{{ modName(m.module) }}</text>
-          <view class="blabel-r">
-            <text class="bn">×{{ m.n }}</text>
-            <text class="bgo" @click="goPractice(m.module)">去练 ›</text>
+    <view class="card list-card">
+      <view class="lrow" @click="secOpen.coach = !secOpen.coach">
+        <view class="lrow-ico">🤖</view>
+        <text class="lrow-name">AI 学习教练</text>
+        <text class="lrow-arrow">{{ secOpen.coach ? '▾' : '›' }}</text>
+      </view>
+      <view v-if="secOpen.coach" class="lrow-body">
+        <view class="cal-head">
+          <text class="coach-tip" style="padding: 0">个性化备考建议</text>
+          <text v-if="!coachLoading" class="coach-btn" @click="getCoach">{{ coachHtml ? '重新诊断' : '生成建议' }}</text>
+        </view>
+        <view v-if="coachLoading" class="coach-tip">教练正在分析你的学习数据…</view>
+        <rich-text v-else-if="coachHtml" class="coach-body" :nodes="coachHtml" />
+        <view v-else class="coach-tip">基于你的正确率、错因分布和打卡情况，生成个性化备考建议</view>
+      </view>
+      <view class="lrow" @click="secOpen.medal = !secOpen.medal">
+        <view class="lrow-ico">🏅</view>
+        <text class="lrow-name">成就勋章<text class="lrow-sub">已获 {{ medals.filter((m) => m.got).length }}/{{ medals.length }}</text></text>
+        <text class="lrow-arrow">{{ secOpen.medal ? '▾' : '›' }}</text>
+      </view>
+      <view v-if="secOpen.medal" class="lrow-body">
+        <view class="medals">
+          <view v-for="md in medals" :key="md.name" class="medal" :class="{ got: md.got }">
+            <view class="m-ring" :style="medalRingStyle(md)"><view class="m-ring-in"><text class="m-ico">{{ md.icon }}</text></view></view>
+            <text class="m-name">{{ md.name }}</text>
+            <text class="m-sub">{{ md.got ? '已达成' : md.progress }}</text>
           </view>
         </view>
-        <view class="bar">
-          <view class="fill" :style="{ width: (m.n / total) * 100 + '%' }" />
-        </view>
       </view>
-    </view>
-    <view v-if="byReason.length" class="card">
-      <view class="h">错因分布</view>
-      <view v-for="r in byReason" :key="r.error_reason" class="brow">
-        <view class="blabel">
-          <text>{{ r.error_reason }}</text>
-          <text class="n">×{{ r.n }}</text>
-        </view>
-        <view class="bar">
-          <view class="fill rz" :style="{ width: (r.n / reasonTotal) * 100 + '%' }" />
-        </view>
+      <view class="lrow" @click="secOpen.bk = !secOpen.bk">
+        <view class="lrow-ico">💾</view>
+        <text class="lrow-name">数据备份与迁移</text>
+        <text class="lrow-arrow">{{ secOpen.bk ? '▾' : '›' }}</text>
       </view>
-    </view>
-
-    <view class="card">
-      <view class="h">高频错题型 TOP10</view>
-      <view v-if="!byType.length" class="spin">暂无数据</view>
-      <view v-for="t in byType" :key="t.question_type" class="tline">
-        {{ typeName(t.question_type) }} <text class="n">×{{ t.n }}</text>
-      </view>
-    </view>
-
-    <view class="sec">激励</view>
-    <view class="card">
-      <view class="h">成就勋章</view>
-      <view class="medals">
-        <view v-for="md in medals" :key="md.name" class="medal" :class="{ got: md.got }">
-          <view class="m-ring" :style="medalRingStyle(md)"><view class="m-ring-in"><text class="m-ico">{{ md.icon }}</text></view></view>
-          <text class="m-name">{{ md.name }}</text>
-          <text class="m-sub">{{ md.got ? '已达成' : md.progress }}</text>
+      <view v-if="secOpen.bk" class="lrow-body">
+        <view class="bk-tip">免注册也能换机：生成恢复码备份学习数据，在新设备输入恢复码即可找回。</view>
+        <view v-if="backupCode" class="bk-code" @click="copyCode">恢复码：{{ backupCode }}（点击复制）</view>
+        <view class="row2">
+          <button class="bk-btn" :disabled="bkLoading" @click="doBackup">{{ backupCode ? '更新备份' : '生成恢复码' }}</button>
+          <button class="bk-btn ghost" :disabled="bkLoading" @click="doRestore">输入恢复码恢复</button>
         </view>
-      </view>
-    </view>
-
-    <view class="sec">工具</view>
-    <view class="card">
-      <view class="h">数据备份与迁移</view>
-      <view class="bk-tip">免注册也能换机：生成恢复码备份学习数据，在新设备输入恢复码即可找回。</view>
-      <view v-if="backupCode" class="bk-code" @click="copyCode">恢复码：{{ backupCode }}（点击复制）</view>
-      <view class="row2">
-        <button class="bk-btn" :disabled="bkLoading" @click="doBackup">{{ backupCode ? '更新备份' : '生成恢复码' }}</button>
-        <button class="bk-btn ghost" :disabled="bkLoading" @click="doRestore">输入恢复码恢复</button>
       </view>
     </view>
   </view>
@@ -272,9 +288,21 @@ const MODS = [
 
 export default {
   data() {
-    return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, history: [], showAllHist: false, coachHtml: cleanCoach(uni.getStorageSync('coachAdvice') || ''), coachLoading: false, calFull: false, growth: null, reco: null, dueN: 0, gwMod: '', slStats: null, slIssuesOpen: false };
+    return { byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, history: [], showAllHist: false, coachHtml: cleanCoach(uni.getStorageSync('coachAdvice') || ''), coachLoading: false, growth: null, reco: null, dueN: 0, gwMod: '', slStats: null, slIssuesOpen: false, modOpen: false, topOpen: false, secOpen: { coach: false, medal: false, bk: false } };
   },
   computed: {
+    shownModules() {
+      return this.modOpen ? this.byModule : this.byModule.slice(0, 3);
+    },
+    shownTypes() {
+      return this.topOpen ? this.byType : this.byType.slice(0, 5);
+    },
+    weakAxes() {
+      return this.axes
+        .filter((a) => a.pct > 0)
+        .sort((a, b) => a.pct - b.pct)
+        .slice(0, 2);
+    },
     slLast() {
       if (!this.slStats || !this.slStats.last_at) return '';
       const d = new Date(this.slStats.last_at * 1000);
@@ -394,40 +422,6 @@ export default {
     reasonTotal() {
       return this.byReason.reduce((s, r) => s + r.n, 0) || 1;
     },
-    monthDays() {
-      const now = new Date();
-      const pre = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-`;
-      return Object.keys(this.pstats.days || {}).filter((k) => k.startsWith(pre) && this.pstats.days[k] > 0).length;
-    },
-    calCells() {
-      const now = new Date();
-      const y = now.getFullYear();
-      const m = now.getMonth();
-      const first = new Date(y, m, 1);
-      const lead = (first.getDay() + 6) % 7;
-      const total = new Date(y, m + 1, 0).getDate();
-      const days = this.pstats.days || {};
-      const cells = [];
-      for (let i = 0; i < lead; i++) cells.push({ d: 0, cls: 'blank' });
-      for (let d = 1; d <= total; d++) {
-        const key = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-        const n = days[key] || 0;
-        let cls = '';
-        if (n >= 10) cls = 'full';
-        else if (n > 0) cls = 'part';
-        if (d === now.getDate()) cls += ' today';
-        cells.push({ d, cls });
-      }
-      return cells;
-    },
-    shownCalCells() {
-      if (this.calFull) return this.calCells;
-      const cells = this.calCells;
-      const todayIdx = cells.findIndex((c) => String(c.cls).includes('today'));
-      if (todayIdx < 0) return cells.slice(0, 7);
-      const start = Math.floor(todayIdx / 7) * 7;
-      return cells.slice(start, start + 7);
-    },
     axes() {
       return MODS.map((m) => {
         const s = this.pstats.byModule[m.key] || { done: 0, correct: 0 };
@@ -472,6 +466,9 @@ export default {
     this.load();
   },
   methods: {
+    goCalendar() {
+      uni.navigateTo({ url: '/pages/stats/calendar' });
+    },
     async getCoach() {
       this.coachLoading = true;
       try {
@@ -531,12 +528,6 @@ export default {
       const color = md.got ? '#f59e0b' : '#c7cad4';
       const pct = md.got ? 100 : md.pct;
       return { background: `conic-gradient(${color} 0% ${pct}%, #eef0f4 ${pct}% 100%)` };
-    },
-    sevClass(n) {
-      const pct = n / this.total;
-      if (pct > 0.4) return 'sev-hi';
-      if (pct > 0.2) return 'sev-mid';
-      return '';
     },
     goBook() {
       uni.switchTab({ url: '/pages/book/book' });
@@ -638,45 +629,65 @@ export default {
 <style scoped>
 .wrap { padding: 24rpx; }
 .card { background: var(--card); border-radius: var(--radius); padding: 24rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
-.sec { font-size: 24rpx; font-weight: 700; color: var(--ink-2); letter-spacing: 2rpx; margin: 40rpx 0 20rpx 8rpx; }
+.hero { background: linear-gradient(135deg, #3b6ff5, #2f5cd8); border-radius: var(--radius); padding: 30rpx 28rpx; margin-bottom: 24rpx; }
+.hero-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22rpx; }
+.hero-t { font-size: 30rpx; font-weight: 700; color: #fff; }
+.hero-cal { font-size: 24rpx; color: rgba(255, 255, 255, 0.9); padding: 14rpx 0 14rpx 20rpx; }
+.hero-kpis { display: flex; }
+.hk { flex: 1; text-align: center; }
+.hk-n { display: block; font-size: 44rpx; font-weight: 700; color: #fff; }
+.hk-t { display: block; font-size: 22rpx; color: rgba(255, 255, 255, 0.78); margin-top: 4rpx; }
 .cal-hr { display: flex; align-items: center; gap: 16rpx; }
-.cal-toggle { font-size: 24rpx; color: var(--brand); font-weight: 600; padding: 10rpx 0 10rpx 10rpx; }
-.ovrow { display: flex; gap: 16rpx; margin-bottom: 24rpx; }
-.ovrow .ovi { margin-bottom: 0; padding: 22rpx 12rpx; }
-.ovi { flex: 1; text-align: center; }
-.ovn { display: block; font-size: 44rpx; font-weight: 700; color: var(--ink); }
-.ovt { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; }
 .h { font-size: 28rpx; font-weight: 600; margin-bottom: 14rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 20rpx; }
-.radar-box { display: flex; justify-content: center; padding: 40rpx 0 30rpx; }
-.radar { position: relative; width: 380rpx; height: 380rpx; }
+.todo-row { display: flex; align-items: center; gap: 18rpx; min-height: 112rpx; border-bottom: 1rpx solid var(--line); }
+.todo-row:last-of-type { border-bottom: none; }
+.todo-ico { width: 88rpx; height: 88rpx; border-radius: 20rpx; background: var(--brand-soft, #edf3fe); display: flex; align-items: center; justify-content: center; font-size: 40rpx; flex-shrink: 0; }
+.todo-ico.warn { background: #fef2f2; }
+.todo-main { flex: 1; min-width: 0; }
+.todo-name { display: block; font-size: 27rpx; font-weight: 600; }
+.todo-meta { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
+.todo-btn { height: 72rpx; line-height: 72rpx; padding: 0 30rpx; background: var(--brand, #3b6ff5); color: #fff; border-radius: 999rpx; font-size: 25rpx; font-weight: 600; flex-shrink: 0; }
+.radar-flex { display: flex; align-items: center; gap: 12rpx; padding: 30rpx 0 20rpx; }
+.radar-box { flex: 1; display: flex; justify-content: center; }
+.radar { position: relative; width: 320rpx; height: 320rpx; }
+.radar-side { width: 220rpx; flex-shrink: 0; }
+.rs-t { font-size: 22rpx; color: var(--ink-2); margin-bottom: 10rpx; }
+.rs-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8rpx; }
+.rs-name { font-size: 25rpx; font-weight: 600; }
+.rs-pct { font-size: 24rpx; color: var(--danger, #f04438); font-weight: 600; }
+.ghost-btn { margin-top: 16rpx; height: 72rpx; line-height: 68rpx; text-align: center; border: 2rpx solid var(--brand, #3b6ff5); color: var(--brand, #3b6ff5); border-radius: 999rpx; font-size: 25rpx; font-weight: 600; }
 .ring { position: absolute; border: 1rpx solid var(--line); border-radius: 50%; box-sizing: border-box; }
 .poly { position: absolute; inset: 0; background: rgba(59, 111, 245, 0.35); border-radius: 2rpx; }
 .axis-label { position: absolute; transform: translate(-50%, -50%); text-align: center; white-space: nowrap; }
 .al-name { display: block; font-size: 23rpx; color: var(--ink); font-weight: 600; }
 .al-val { display: block; font-size: 20rpx; color: var(--brand); }
+.mrow { display: flex; align-items: center; gap: 16rpx; min-height: 112rpx; border-bottom: 1rpx solid var(--line); }
+.mrow:last-of-type { border-bottom: none; }
+.mrow-main { flex: 1; min-width: 0; }
+.mrow-arrow { font-size: 34rpx; color: var(--ink-3, #8f959e); flex-shrink: 0; padding: 0 6rpx; }
 .brow { margin: 14rpx 0; }
 .blabel { display: flex; justify-content: space-between; align-items: center; font-size: 26rpx; color: var(--ink); margin-bottom: 6rpx; }
-.blabel-r { display: flex; align-items: center; gap: 16rpx; }
 .bn { font-size: 23rpx; color: var(--ink-2); }
-.bgo { font-size: 24rpx; color: var(--brand); font-weight: 600; padding: 0 0 0 16rpx; min-height: 44px; display: inline-flex; align-items: center; }
 .bar { background: var(--brand-soft); border-radius: 999rpx; height: 20rpx; position: relative; overflow: hidden; }
-.fill { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #6c9bff, #3b6ff5); border-radius: 999rpx; transition: width 0.6s ease; }
-.fill.sev-hi { background: linear-gradient(90deg, #f87171, #ef4444); }
-.fill.sev-mid { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
-.tline { font-size: 26rpx; margin: 8rpx 0; }
-.fill.rz { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
+.fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--brand, #3b6ff5); border-radius: 999rpx; transition: width 0.6s ease; }
+.top-chips { display: flex; flex-wrap: wrap; gap: 14rpx; }
+.top-chip { display: flex; align-items: center; gap: 8rpx; background: var(--brand-soft, #edf3fe); border-radius: 999rpx; padding: 14rpx 24rpx; min-height: 44rpx; }
+.tc-name { font-size: 24rpx; color: var(--brand, #3b6ff5); font-weight: 600; }
+.tc-n { font-size: 21rpx; color: var(--ink-2); }
+.top-chip.more { background: var(--soft-bg, #f5f6f8); color: var(--ink-2); font-size: 24rpx; font-weight: 600; }
+.fill.rz { background: #f59e0b; }
 .trend { display: flex; align-items: flex-end; gap: 12rpx; height: 220rpx; padding-top: 8rpx; }
 .tcol { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
 .tpct { font-size: 18rpx; color: var(--brand); height: 28rpx; }
 .tbar { flex: 1; width: 36rpx; background: var(--soft-bg); border-radius: 999rpx; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
-.tfill { width: 100%; background: linear-gradient(180deg, #6c9bff, #3b6ff5); border-radius: 999rpx; }
-.tfill.lo { background: linear-gradient(180deg, #fbbf24, #f59e0b); }
+.tfill { width: 100%; background: var(--brand, #3b6ff5); border-radius: 999rpx; }
+.tfill.lo { background: #f59e0b; }
 .tday { font-size: 19rpx; color: var(--ink-2); margin-top: 8rpx; }
 .radar-empty { text-align: center; padding: 30rpx 0 20rpx; }
 .re-t { font-size: 28rpx; font-weight: 600; }
 .re-s { font-size: 23rpx; color: var(--ink-2); margin: 8rpx 0 20rpx; }
-.re-btn { background: linear-gradient(135deg, #6c9bff, #3b6ff5); color: #fff; border-radius: 18rpx; font-size: 26rpx; font-weight: 600; width: 50%; }
+.re-btn { background: var(--brand, #3b6ff5); color: #fff; border-radius: 18rpx; font-size: 26rpx; font-weight: 600; width: 50%; }
 .medals { display: flex; flex-wrap: wrap; }
 .medal { width: 25%; box-sizing: border-box; text-align: center; padding: 14rpx 6rpx; }
 .medal .m-ico { filter: grayscale(1); opacity: 0.55; }
@@ -689,14 +700,6 @@ export default {
 .m-name { display: block; font-size: 22rpx; font-weight: 600; margin-top: 6rpx; }
 .m-sub { display: block; font-size: 18rpx; color: var(--ink-2); margin-top: 4rpx; }
 .cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
-.cal-sub { font-size: 22rpx; color: var(--ink-2); }
-.cal-week { display: flex; margin-bottom: 8rpx; }
-.cal-w { flex: 1; text-align: center; font-size: 20rpx; color: var(--ink-2); }
-.cal-grid { display: flex; flex-wrap: wrap; }
-.cal-c { width: 14.28%; height: 64rpx; line-height: 64rpx; text-align: center; font-size: 22rpx; color: var(--ink-2); box-sizing: border-box; border-radius: 50%; }
-.cal-c.part { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
-.cal-c.full { background: var(--brand); color: #fff; font-weight: 700; }
-.cal-c.today { border: 2rpx solid var(--brand); }
 .n { color: var(--brand); font-weight: 600; }
 .km-group { margin-bottom: 18rpx; }
 .km-mod { font-size: 24rpx; font-weight: 600; color: var(--ink-2); margin-bottom: 10rpx; }
@@ -711,6 +714,14 @@ export default {
 .km-name { display: block; font-size: 24rpx; font-weight: 600; }
 .km-pct { display: block; font-size: 19rpx; margin-top: 2rpx; }
 .km-legend { display: flex; gap: 18rpx; flex-wrap: wrap; margin-top: 8rpx; }
+.list-card { padding: 0 24rpx; }
+.lrow { display: flex; align-items: center; gap: 18rpx; min-height: 112rpx; border-bottom: 1rpx solid var(--line); }
+.lrow:last-of-type { border-bottom: none; }
+.lrow-ico { width: 64rpx; height: 64rpx; border-radius: 16rpx; background: var(--brand-soft, #edf3fe); display: flex; align-items: center; justify-content: center; font-size: 32rpx; flex-shrink: 0; }
+.lrow-name { flex: 1; font-size: 27rpx; font-weight: 600; }
+.lrow-sub { font-size: 22rpx; color: var(--ink-2); font-weight: 400; margin-left: 14rpx; }
+.lrow-arrow { font-size: 30rpx; color: var(--ink-3, #8f959e); padding: 0 6rpx; }
+.lrow-body { padding: 6rpx 0 24rpx; border-bottom: 1rpx solid var(--line); }
 .coach-btn {
   font-size: 24rpx;
   color: #3b6ff5;
@@ -744,14 +755,6 @@ export default {
 .gw-tab.on { color: #fff; background: var(--brand, #3b6ff5); border-color: var(--brand, #3b6ff5); }
 .gw-delta { font-size: 23rpx; color: #dc2626; margin-top: 6rpx; }
 .gw-delta.up { color: #16a34a; }
-.rc-row { display: flex; align-items: center; gap: 12rpx; padding: 14rpx 0; border-bottom: 1rpx solid var(--line); }
-.rc-row:last-of-type { border-bottom: none; }
-.rc-main { flex: 1; display: flex; align-items: center; gap: 10rpx; min-width: 0; }
-.rc-name { font-size: 26rpx; font-weight: 600; }
-.rc-tag { font-size: 20rpx; color: #16a34a; background: #f0fdf4; border-radius: 999rpx; padding: 2rpx 14rpx; flex-shrink: 0; }
-.rc-tag.warn { color: #dc2626; background: #fef2f2; }
-.rc-meta { font-size: 22rpx; color: var(--ink-2); flex-shrink: 0; }
-.rc-go { font-size: 23rpx; color: var(--brand, #3b6ff5); flex-shrink: 0; }
 .rc-note { font-size: 20rpx; color: var(--ink-2); margin-top: 10rpx; }
 .sl-row { display: flex; align-items: baseline; gap: 10rpx; margin: 16rpx 0 12rpx; }
 .sl-num { font-size: 44rpx; font-weight: 700; color: var(--brand, #3b6ff5); }
@@ -775,7 +778,7 @@ export default {
 .hist-n { font-size: 24rpx; color: var(--ink-2); }
 .hist-pct { font-size: 26rpx; font-weight: 700; color: #16a34a; width: 90rpx; text-align: right; }
 .hist-pct.lo { color: #dc2626; }
-.hist-more { text-align: center; font-size: 24rpx; color: var(--brand, #3b6ff5); padding: 14rpx 0 2rpx; }
+.hist-more { text-align: center; font-size: 24rpx; color: var(--brand, #3b6ff5); padding: 14rpx 0 2rpx; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; }
 .km-lg { font-size: 20rpx; color: var(--ink-2); }
 .km-lg.r { color: #ef4444; }
 .km-lg.y { color: #f59e0b; }

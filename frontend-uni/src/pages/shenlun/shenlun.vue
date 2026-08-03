@@ -1,20 +1,26 @@
 <template>
   <view class="page">
-    <view class="tabs">
-      <text class="tab" :class="{ on: tab === 'q' }" @click="tab = 'q'">真题题库</text>
-      <text class="tab" :class="{ on: tab === 'm' }" @click="switchMat">素材/范文</text>
-      <text class="tab" :class="{ on: tab === 'r' }" @click="switchRec">作答记录</text>
+    <view class="seg">
+      <text class="seg-i" :class="{ on: tab === 'q' }" @click="tab = 'q'">真题题库</text>
+      <text class="seg-i" :class="{ on: tab === 'm' }" @click="switchMat">素材/范文</text>
+      <text class="seg-i" :class="{ on: tab === 'r' }" @click="switchRec">作答记录</text>
     </view>
 
     <template v-if="tab === 'q' && !detail">
-      <view class="chips">
-        <text v-for="t in QTYPES" :key="t" class="chip" :class="{ on: qtype === t }" @click="setQtype(t)">{{ t }}</text>
-        <text class="chip flt" :class="{ on: year || region }" @click="fltOpen = true">筛选{{ year || region ? ' · ' + [year || '', region || ''].filter(Boolean).join(' ') : ' ▾' }}</text>
-        <text v-if="year || region" class="chip clr" @click="clearFlt">清除 ✕</text>
+      <view class="fltbar">
+        <scroll-view scroll-x class="chips-scroll" :show-scrollbar="false">
+          <view class="chips-line">
+            <text v-for="t in QTYPES" :key="t" class="chip" :class="{ on: qtype === t }" @click="setQtype(t)">{{ t }}</text>
+          </view>
+        </scroll-view>
+        <view class="flt-fixed" :class="{ on: fltCount }" @click="fltOpen = true">
+          <text>筛选</text>
+          <text v-if="fltCount" class="flt-badge">{{ fltCount }}</text>
+        </view>
       </view>
       <view v-if="fltOpen" class="mask" @click="fltOpen = false">
         <view class="sheet" @click.stop>
-          <view class="sheet-h"><text class="sheet-t">筛选</text><text class="sheet-x" @click="fltOpen = false">完成</text></view>
+          <view class="sheet-h"><text class="sheet-t">筛选</text><text class="sheet-x" @click="fltOpen = false">✕</text></view>
           <view v-if="years.length" class="sheet-k">年份</view>
           <view v-if="years.length" class="chips">
             <text class="chip sm" :class="{ on: !year }" @click="setYear(0)">全部</text>
@@ -25,6 +31,10 @@
             <text class="chip sm" :class="{ on: !region }" @click="setRegion('')">全部</text>
             <text v-for="r in regions" :key="r" class="chip sm" :class="{ on: region === r }" @click="setRegion(r)">{{ r }}</text>
           </view>
+          <view class="sheet-foot">
+            <view class="sf-btn ghost" @click="clearFlt">重置</view>
+            <view class="sf-btn" @click="fltOpen = false">查看 {{ qTotal }} 道题</view>
+          </view>
         </view>
       </view>
       <view v-if="loading" class="spin">加载中…</view>
@@ -32,9 +42,16 @@
       <view v-for="q in qs" :key="q.id" class="card q-item" @click="openQ(q.id)">
         <view class="q-top">
           <text class="q-paper">{{ q.paper || (q.exam_year + ' · ' + (q.exam_region || '')) }}</text>
-          <text class="q-type">{{ q.qtype }}</text>
+          <view class="q-top-r">
+            <text class="q-type">{{ q.qtype }}</text>
+            <text class="m-star" :class="{ on: qFavIds.includes(q.id) }" @click.stop="toggleQFav(q)">{{ qFavIds.includes(q.id) ? '★' : '☆' }}</text>
+          </view>
         </view>
         <text class="q-text">{{ q.question }}</text>
+        <view class="q-foot">
+          <text class="q-meta">{{ qMeta(q.question) }}</text>
+          <view class="q-go" @click.stop="openQ(q.id)">去作答</view>
+        </view>
       </view>
       <view v-if="!qEnd && qs.length >= 20" class="more" @click="loadMore">加载更多</view>
     </template>
@@ -143,6 +160,8 @@ export default {
       mOffset: 0,
       qEnd: false,
       mEnd: false,
+      qTotal: 0,
+      qFavIds: uni.getStorageSync('slQFavIds') || [],
       years: [],
       regions: [],
       year: 0,
@@ -153,6 +172,9 @@ export default {
   computed: {
     shownMats() {
       return this.favOnly ? this.favMats : this.mats;
+    },
+    fltCount() {
+      return (this.year ? 1 : 0) + (this.region ? 1 : 0);
     },
   },
   onLoad(opts) {
@@ -171,6 +193,7 @@ export default {
         const d = await request('/api/shenlun/questions?limit=20&offset=' + this.qOffset + t + y + rg);
         const items = d.items || [];
         this.qEnd = items.length < 20;
+        this.qTotal = d.total || items.length;
         this.qs = append ? this.qs.concat(items) : items;
       } catch (e) {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
@@ -250,6 +273,21 @@ export default {
       this.qEnd = false;
       this.detail = null;
       this.loadQs();
+    },
+    qMeta(text) {
+      const s = String(text || '');
+      const score = (s.match(/(\d+)\s*分/) || [])[1];
+      const words = (s.match(/不超过\s*(\d+)\s*字/) || [])[1];
+      const parts = [];
+      if (score) parts.push(score + ' 分');
+      if (words) parts.push('≤' + words + ' 字');
+      return parts.join(' · ');
+    },
+    toggleQFav(q) {
+      const i = this.qFavIds.indexOf(q.id);
+      if (i < 0) this.qFavIds.push(q.id);
+      else this.qFavIds.splice(i, 1);
+      uni.setStorageSync('slQFavIds', this.qFavIds);
     },
     toggleFav(m) {
       const i = this.favIds.indexOf(m.id);
@@ -359,11 +397,24 @@ export default {
 </script>
 
 <style>
-.page { padding: 20rpx 24rpx 40rpx; }
-.tabs { display: flex; gap: 12rpx; margin-bottom: 20rpx; }
-.tab { flex: 1; text-align: center; font-size: 27rpx; color: var(--ink-2, #6b7280); background: #fff; border-radius: 16rpx; padding: 18rpx 0; }
-.tab.on { color: #fff; background: var(--brand, #3b6ff5); font-weight: 600; }
+page { background: #f5f6f8; }
+.page { padding: 20rpx 24rpx 40rpx; background: #f5f6f8; min-height: 100vh; box-sizing: border-box; }
+.seg { display: flex; background: #eceef2; border-radius: 16rpx; padding: 6rpx; margin-bottom: 20rpx; }
+.seg-i { flex: 1; text-align: center; font-size: 26rpx; color: var(--ink-2, #6b7280); border-radius: 12rpx; padding: 14rpx 0; }
+.seg-i.on { background: #fff; color: var(--brand, #3b6ff5); font-weight: 600; box-shadow: 0 2rpx 8rpx rgba(31, 36, 48, 0.08); }
 .chips { display: flex; gap: 12rpx; flex-wrap: wrap; margin-bottom: 20rpx; }
+.fltbar { display: flex; align-items: center; gap: 14rpx; margin-bottom: 20rpx; }
+.chips-scroll { flex: 1; min-width: 0; white-space: nowrap; }
+.chips-line { display: inline-flex; gap: 12rpx; }
+.flt-fixed { flex-shrink: 0; display: flex; align-items: center; gap: 6rpx; font-size: 23rpx; color: var(--ink-2, #6b7280); background: #fff; border: 1rpx solid var(--line, #e5e7eb); border-radius: 999rpx; padding: 12rpx 24rpx; min-height: 44rpx; box-sizing: border-box; }
+.flt-fixed.on { color: var(--brand, #3b6ff5); border-color: var(--brand, #3b6ff5); }
+.flt-badge { background: var(--brand, #3b6ff5); color: #fff; font-size: 19rpx; border-radius: 999rpx; min-width: 30rpx; height: 30rpx; line-height: 30rpx; text-align: center; }
+.sheet-foot { display: flex; gap: 18rpx; margin-top: 28rpx; }
+.sf-btn { flex: 1; text-align: center; background: var(--brand, #3b6ff5); color: #fff; font-size: 27rpx; font-weight: 600; border-radius: 999rpx; height: 88rpx; line-height: 88rpx; }
+.sf-btn.ghost { flex: 0 0 30%; background: #fff; color: var(--ink-2, #6b7280); border: 1rpx solid var(--line, #e5e7eb); box-sizing: border-box; }
+.q-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 14rpx; }
+.q-meta { font-size: 22rpx; color: var(--ink-3, #8f959e); }
+.q-go { height: 72rpx; line-height: 72rpx; padding: 0 30rpx; background: var(--brand, #3b6ff5); color: #fff; border-radius: 999rpx; font-size: 24rpx; font-weight: 600; }
 .chip { font-size: 23rpx; color: var(--ink-2, #6b7280); background: #fff; border: 1rpx solid var(--line, #e5e7eb); border-radius: 999rpx; padding: 12rpx 24rpx; }
 .chip.on { color: #fff; background: var(--brand, #3b6ff5); border-color: var(--brand, #3b6ff5); }
 .card { background: #fff; border-radius: 20rpx; padding: 26rpx 28rpx; margin-bottom: 18rpx; }
@@ -375,6 +426,7 @@ export default {
 .q-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
 .q-paper { font-size: 22rpx; color: #b45309; background: #fef3c7; border-radius: 8rpx; padding: 4rpx 14rpx; }
 .q-type { font-size: 22rpx; color: var(--brand, #3b6ff5); background: var(--brand-soft, #edf3fe); border-radius: 8rpx; padding: 4rpx 14rpx; }
+.q-item .q-text { font-size: 26rpx; color: var(--ink-1, #1f2937); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .q-text { font-size: 26rpx; color: var(--ink-1, #1f2937); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .more { text-align: center; color: var(--brand, #3b6ff5); font-size: 25rpx; padding: 20rpx 0 40rpx; }
 .back { color: var(--brand, #3b6ff5); font-size: 26rpx; padding: 6rpx 0 18rpx; }

@@ -14,7 +14,7 @@
         <text class="today-t">{{ todayDone >= goal ? '今日目标达成' : '今日 ' + todayDone + '/' + goal + ' 题' }}</text>
         <view class="today-s"><uni-icons v-if="streakDays > 0" type="fire-filled" size="14" color="#ffd6a0" /><text class="today-s-t">{{ streakDays > 0 ? '连续打卡 ' + streakDays + ' 天' : '开始今天的练习吧' }}</text></view>
       </view>
-      <view class="today-btn" @click="goPractice">{{ dueCount > 0 ? '先复习 ' + Math.min(dueCount, 20) + ' 道' : '继续刷题 ›' }}</view>
+      <text class="today-link" @click="goPractice">{{ dueCount > 0 ? '复习 ' + Math.min(dueCount, 20) + ' 道 ›' : '继续刷题 ›' }}</text>
     </view>
     <view class="card">
       <view class="seg">
@@ -115,6 +115,23 @@
         </view>
       </template>
     </view>
+
+    <view v-if="!results.length && !loading" class="card">
+      <view class="rec-h">最近讲解</view>
+      <template v-if="recent.length">
+        <view v-for="(r, i) in recent" :key="r.ts" class="rec-row">
+          <view class="rec-ans">{{ r.ans || '？' }}</view>
+          <view class="rec-main">
+            <text class="rec-brief">{{ r.brief || '已讲解' }}</text>
+            <text class="rec-meta">{{ [r.module_name, r.question_type].filter(Boolean).join(' · ') || '拍题讲解' }} · {{ fmtRec(r.ts) }}</text>
+          </view>
+        </view>
+      </template>
+      <view v-else class="rec-empty">
+        <text class="rec-e1">还没有讲解记录</text>
+        <text class="rec-e2">示例：拍下一道做错的行测题，AI 会用花生十三方法体系给出答案、速解思路与可迁移技巧，还能追问和举一反三</text>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -139,6 +156,7 @@ export default {
       streakDays: 0,
       dueCount: 0,
       goal: uni.getStorageSync('dailyGoal') || 20,
+      recent: uni.getStorageSync('recentExplains') || [],
     };
   },
   computed: {
@@ -182,6 +200,24 @@ export default {
       const { card, rest } = this.splitAnswer(full);
       if (card) r.ansCard = card;
       r.html = md(card ? rest : full);
+      if (!r.streaming) this.saveRecent(r);
+    },
+    saveRecent(r) {
+      if (this.recent.some((x) => x.ts === r.ts)) return;
+      const item = {
+        ts: r.ts,
+        module_name: r.module_name || '',
+        question_type: r.question_type || '',
+        ans: (r.ansCard && r.ansCard.ans) || '',
+        brief: ((r.ansCard && r.ansCard.brief) || '').slice(0, 40),
+      };
+      this.recent = [item, ...this.recent].slice(0, 10);
+      uni.setStorageSync('recentExplains', this.recent);
+    },
+    fmtRec(ts) {
+      const d = new Date(ts);
+      const p = (x) => (x < 10 ? '0' + x : x);
+      return `${d.getMonth() + 1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`;
     },
     cycleGoal() {
       const opts = [20, 50, 100];
@@ -448,16 +484,16 @@ export default {
 .hero { padding: 28rpx 8rpx 20rpx; }
 .hero-t { display: block; font-size: 34rpx; font-weight: 700; color: var(--ink); letter-spacing: 1rpx; }
 .hero-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 6rpx; }
-.today { display: flex; justify-content: space-between; align-items: center; gap: 20rpx; background: linear-gradient(135deg, #3b6ef6, #7c5cfc); border-radius: var(--radius); padding: 26rpx 30rpx; margin-bottom: 24rpx; }
-.goal-ring { flex-shrink: 0; width: 112rpx; height: 112rpx; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-.goal-in { width: 88rpx; height: 88rpx; border-radius: 50%; background: rgba(30, 41, 99, 0.35); display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.goal-n { font-size: 30rpx; font-weight: 700; color: #fff; line-height: 1.1; }
+.today { display: flex; justify-content: space-between; align-items: center; gap: 20rpx; background: linear-gradient(135deg, #3b6ff5, #2f5cd8); border-radius: var(--radius); padding: 26rpx 30rpx; margin-bottom: 24rpx; }
+.goal-ring { flex-shrink: 0; width: 88rpx; height: 88rpx; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.goal-in { width: 68rpx; height: 68rpx; border-radius: 50%; background: rgba(30, 41, 99, 0.35); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.goal-n { font-size: 26rpx; font-weight: 700; color: #fff; line-height: 1.1; }
 .goal-t { font-size: 20rpx; font-weight: 400; color: rgba(255, 255, 255, 0.8); }
 .today-l { flex: 1; min-width: 0; }
 .today-t { display: block; font-size: 28rpx; font-weight: 700; color: #fff; }
 .today-s { display: flex; align-items: center; gap: 6rpx; font-size: 21rpx; color: rgba(255, 255, 255, 0.78); margin-top: 6rpx; }
 .today-s-t { font-size: 21rpx; color: rgba(255, 255, 255, 0.78); }
-.today-btn { background: #fff; color: #3b6ff5; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 12rpx 28rpx; flex-shrink: 0; }
+.today-link { color: #fff; font-size: 25rpx; font-weight: 600; flex-shrink: 0; padding: 14rpx 0 14rpx 14rpx; }
 .drop { border: 2rpx dashed var(--brand); background: var(--brand-soft); border-radius: 24rpx; padding: 48rpx 24rpx; text-align: center; margin-bottom: 8rpx; }
 .drop-ico { width: 112rpx; height: 112rpx; border-radius: 50%; background: #e0e7ff; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12rpx; }
 .drop-t { display: block; font-size: 29rpx; font-weight: 600; color: var(--brand); }
@@ -467,7 +503,7 @@ export default {
 .seg { display: flex; background: var(--soft-bg); border-radius: 16rpx; padding: 6rpx; margin-bottom: 20rpx; }
 .seg-i { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8rpx; padding: 14rpx 0; font-size: 27rpx; color: var(--ink-2); border-radius: 12rpx; }
 .seg-i.on { background: var(--card); color: var(--brand); font-weight: 600; box-shadow: 0 2rpx 8rpx rgba(31, 36, 48, 0.08); }
-.btn { background: linear-gradient(135deg, #6c9bff, #3b6ff5); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(59, 111, 245, 0.25); min-height: 44px; line-height: 44px; }
+.btn { background: #3b6ff5; color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(59, 111, 245, 0.25); min-height: 44px; line-height: 44px; }
 .btn[disabled] { opacity: 0.6; }
 .btn.ghost { background: var(--brand-soft); color: var(--brand); box-shadow: none; }
 .btn.sm { font-size: 26rpx; flex: 1; }
@@ -507,8 +543,8 @@ export default {
 .rate-btns { display: flex; gap: 14rpx; }
 .rate-btn { font-size: 24rpx; color: var(--brand); border: 1rpx solid var(--brand); border-radius: 999rpx; padding: 8rpx 24rpx; }
 .rate-btn.bad { color: var(--bad); border-color: var(--bad); }
-.anscard { display: flex; align-items: center; gap: 22rpx; background: linear-gradient(135deg, #edf3fe, #f5f3ff); border: 1rpx solid #e0e4ff; border-radius: 20rpx; padding: 22rpx 26rpx; margin: 6rpx 0 16rpx; }
-.ans-big { flex-shrink: 0; min-width: 88rpx; height: 88rpx; padding: 0 14rpx; border-radius: 20rpx; background: linear-gradient(135deg, #6c9bff, #3b6ff5); color: #fff; font-size: 44rpx; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 6rpx 14rpx rgba(59, 111, 245, 0.3); }
+.anscard { display: flex; align-items: center; gap: 22rpx; background: #edf3fe; border: 1rpx solid #dbe6fd; border-radius: 20rpx; padding: 22rpx 26rpx; margin: 6rpx 0 16rpx; }
+.ans-big { flex-shrink: 0; min-width: 88rpx; height: 88rpx; padding: 0 14rpx; border-radius: 20rpx; background: #3b6ff5; color: #fff; font-size: 44rpx; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 6rpx 14rpx rgba(59, 111, 245, 0.3); }
 .ans-r { flex: 1; min-width: 0; }
 .ans-method { display: inline-block; background: #3b6ff5; color: #fff; border-radius: 999rpx; font-size: 21rpx; font-weight: 600; padding: 4rpx 18rpx; margin-bottom: 8rpx; }
 .ans-brief { display: block; font-size: 25rpx; color: var(--ink); line-height: 1.5; }
@@ -518,5 +554,15 @@ export default {
 .row { display: flex; gap: 14rpx; margin: 10rpx 0; }
 .hist { font-size: 22rpx; color: var(--ink-2); margin-bottom: 10rpx; }
 .dash { border-top: 1rpx dashed var(--line); margin: 20rpx 0; }
+.rec-h { font-size: 28rpx; font-weight: 600; margin-bottom: 14rpx; }
+.rec-row { display: flex; align-items: center; gap: 18rpx; min-height: 112rpx; border-bottom: 1rpx solid var(--line); }
+.rec-row:last-of-type { border-bottom: none; }
+.rec-ans { width: 72rpx; height: 72rpx; border-radius: 16rpx; background: var(--brand-soft, #edf3fe); color: var(--brand, #3b6ff5); font-size: 32rpx; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.rec-main { flex: 1; min-width: 0; }
+.rec-brief { display: block; font-size: 25rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rec-meta { display: block; font-size: 21rpx; color: var(--ink-2); margin-top: 4rpx; }
+.rec-empty { padding: 10rpx 0 6rpx; }
+.rec-e1 { display: block; font-size: 26rpx; font-weight: 600; color: var(--ink-2); }
+.rec-e2 { display: block; font-size: 23rpx; color: var(--ink-3, #8f959e); line-height: 1.7; margin-top: 8rpx; }
 .simbox { margin-top: 10rpx; }
 </style>
