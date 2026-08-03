@@ -11,7 +11,7 @@ from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import db, engine, kb, llm, pdf_export
+from . import db, engine, kb, llm, omr, pdf_export
 
 app = FastAPI(title="考公错题助手")
 
@@ -378,6 +378,11 @@ def api_export_pdf(body: dict):
     code = hashlib.md5(
         (",".join(str(q.get("id") or q.get("question", "")[:20]) for q in questions)).encode()
     ).hexdigest()[:8].upper()
+    db.save_paper_export(
+        code,
+        [int(q["id"]) for q in questions if q.get("id")],
+        str(body.get("title") or "自选练习卷")[:40],
+    )
     data = pdf_export.build_paper_pdf(
         title=str(body.get("title") or "自选练习卷")[:40],
         questions=questions,
@@ -390,6 +395,83 @@ def api_export_pdf(body: dict):
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="paper-{code}.pdf"'},
     )
+
+
+@app.post("/api/scan_sheet")
+async def api_scan_sheet(uid: str = Form(""), image: UploadFile = File(...)):
+    raw = await image.read()
+    if len(raw) > 12 * 1024 * 1024:
+        raise HTTPException(400, "图片过大，请控制在 12MB 以内")
+    try:
+        rec = omr.recognize(raw)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    paper = db.get_paper_export(rec["code"])
+    if not paper:
+        raise HTTPException(404, f"未找到卷码 {rec['code']} 对应的导出记录")
+    qids = paper["question_ids"]
+    page = max(1, rec["page"])
+    start = (page - 1) * omr.PER_PAGE
+    page_ids = qids[start : start + omr.PER_PAGE]
+    questions = {q["id"]: q for q in db.questions_by_ids(page_ids)}
+    results = []
+    log_items = []
+    for slot, qid in enumerate(page_ids):
+        q = questions.get(qid)
+        if not q:
+            continue
+        picked = rec["picks"].get(slot, "")
+        correct_ans = (q.get("answer") or "").strip().upper()[:1]
+        status = "blank" if not picked else ("multi" if len(picked) > 1 else "ok")
+        is_correct = status == "ok" and picked == correct_ans
+        results.append(
+            {
+                "no": start + slot + 1,
+                "question_id": qid,
+                "picked": picked,
+                "answer": correct_ans,
+                "correct": is_correct,
+                "status": status,
+                "question": (q.get("question") or "")[:80],
+            }
+        )
+        if uid and status == "ok":
+            log_items.append(
+                {
+                    "question_id": qid,
+                    "module": q.get("module"),
+                    "submodule": q.get("submodule"),
+                    "correct": is_correct,
+                    "picked": picked,
+                    "secs": 0,
+                }
+            )
+            if not is_correct:
+                db.save_mistake(
+                    {
+                        "uid": uid[:64],
+                        "question_id": qid,
+                        "module": q.get("module"),
+                        "question_type": q.get("submodule"),
+                        "question_text": q.get("question"),
+                        "user_answer": picked,
+                        "correct_answer": correct_ans,
+                        "explanation": q.get("explanation") or q.get("hs_explanation") or "",
+                    }
+                )
+    if uid and log_items:
+        db.save_answer_log(uid[:64], log_items)
+    answered = [r for r in results if r["status"] == "ok"]
+    return {
+        "code": rec["code"],
+        "page": page,
+        "title": paper.get("title"),
+        "total": len(results),
+        "answered": len(answered),
+        "correct": sum(1 for r in answered if r["correct"]),
+        "saved": bool(uid and log_items),
+        "items": results,
+    }
 
 
 @app.post("/api/mistakes/analysis")

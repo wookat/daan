@@ -101,6 +101,34 @@
           <rich-text v-else :nodes="aiHtml" />
         </view>
       </view>
+      <view v-if="tab !== 'fav'" class="card redoentry" @click="scanSheetPick">
+        <view class="redo-l">
+          <view class="redo-ico"><uni-icons type="scan" size="16" color="#3b6ff5" /></view>
+          <view>
+            <text class="redo-t">扫描答题卡</text>
+            <text class="redo-s">拍照导出卷的机读答题卡，自动对答案并记入做题记录</text>
+          </view>
+        </view>
+        <text class="redo-go">{{ scanning ? '识别中…' : '拍照' }}</text>
+      </view>
+      <view v-if="scanOpen && scanResult" class="mask" @click="scanOpen = false">
+        <view class="sheet" @click.stop>
+          <view class="sheet-h">
+            <text class="sheet-t">扫描结果 · {{ scanResult.title || '试卷' }}</text>
+            <text class="sheet-x" @click="scanOpen = false">✕</text>
+          </view>
+          <view class="scan-sum">卷码 {{ scanResult.code }} · 第 {{ scanResult.page }} 页 · 已作答 {{ scanResult.answered }}/{{ scanResult.total }} · 答对 <text class="scan-good">{{ scanResult.correct }}</text> 题{{ scanResult.saved ? ' · 已记入做题记录' : '' }}</view>
+          <scroll-view scroll-y class="scan-list">
+            <view v-for="r in scanResult.items" :key="r.no" class="scan-row">
+              <text class="scan-no">{{ r.no }}</text>
+              <text class="scan-pick" :class="{ good: r.correct, bad: r.status === 'ok' && !r.correct }">{{ r.status === 'blank' ? '未涂' : r.status === 'multi' ? '多涂 ' + r.picked : r.picked }}</text>
+              <text class="scan-ans">答案 {{ r.answer || '—' }}</text>
+              <text class="scan-mark">{{ r.correct ? '✓' : r.status === 'ok' ? '✗' : '—' }}</text>
+            </view>
+          </scroll-view>
+          <view class="sheet-done" @click="scanOpen = false; load()">完成</view>
+        </view>
+      </view>
       <view v-if="tab !== 'fav' && todoItems.length" class="card redoentry" @click="redoAll">
         <view class="redo-l">
           <view class="redo-ico"><uni-icons type="refreshempty" size="16" color="#3b6ff5" /></view>
@@ -217,7 +245,7 @@
 
 <script>
 import { md } from '../../md.js';
-import { request, anonUid, exportPdf } from '../../api.js';
+import { request, anonUid, exportPdf, scanSheet } from '../../api.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 
@@ -249,6 +277,9 @@ export default {
       favs: [],
       filterOpen: false,
       exporting: false,
+      scanning: false,
+      scanOpen: false,
+      scanResult: null,
       mgOpen: {},
       aiOpen: false,
       aiLoading: false,
@@ -369,6 +400,23 @@ export default {
     this.load();
   },
   methods: {
+    scanSheetPick() {
+      if (this.scanning) return;
+      uni.chooseImage({
+        count: 1,
+        success: async (res) => {
+          this.scanning = true;
+          try {
+            const d = await scanSheet({ filePath: res.tempFilePaths[0], uid: anonUid() });
+            this.scanResult = d;
+            this.scanOpen = true;
+          } catch (e) {
+            uni.showToast({ title: '识别失败：' + e.message, icon: 'none', duration: 3500 });
+          }
+          this.scanning = false;
+        },
+      });
+    },
     async exportMistakes() {
       if (this.exporting) return;
       this.exporting = true;
@@ -672,6 +720,16 @@ export default {
 .sheet-x { font-size: 30rpx; color: var(--ink-2); padding: 10rpx 20rpx; }
 .sheet-k { font-size: 23rpx; color: var(--ink-2); margin: 20rpx 0 10rpx; }
 .sheet-done { margin-top: 32rpx; background: var(--brand, #3b6ff5); color: #fff; text-align: center; border-radius: 999rpx; padding: 22rpx 0; font-size: 28rpx; font-weight: 500; }
+.scan-sum { font-size: 25rpx; color: #646a73; margin: 8rpx 0 12rpx; }
+.scan-good { color: #12b76a; font-weight: 600; }
+.scan-list { max-height: 50vh; }
+.scan-row { display: flex; align-items: center; min-height: 60rpx; border-bottom: 1rpx solid #f2f3f5; font-size: 26rpx; }
+.scan-no { width: 70rpx; color: #8f959e; }
+.scan-pick { flex: 1; color: #1f2329; }
+.scan-pick.good { color: #12b76a; }
+.scan-pick.bad { color: #f04438; }
+.scan-ans { width: 140rpx; color: #646a73; }
+.scan-mark { width: 50rpx; text-align: right; color: #8f959e; }
 .sheet-export { margin-top: 16rpx; margin-bottom: 110rpx; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand, #3b6ff5); color: var(--brand, #3b6ff5); text-align: center; border-radius: 999rpx; padding: 20rpx 0; font-size: 27rpx; font-weight: 500; }
 .xp-k { margin-top: 12rpx; font-size: 22rpx; font-weight: 700; color: #ea580c; border-left: 6rpx solid #ea580c; padding-left: 10rpx; }
 .xp-body { margin-top: 6rpx; font-size: 23rpx; color: var(--ink); background: #fff7ed; border-radius: 10rpx; padding: 12rpx; line-height: 1.6; }

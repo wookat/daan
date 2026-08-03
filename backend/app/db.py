@@ -1625,6 +1625,40 @@ def _uid_clause(uid: str | None) -> tuple[str, tuple]:
     return " AND (uid IS NULL OR uid=?)", (uid,)
 
 
+def save_paper_export(code: str, question_ids: list[int], title: str) -> None:
+    conn = get_conn()
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS paper_exports (
+            code TEXT PRIMARY KEY,
+            created_at REAL NOT NULL,
+            title TEXT,
+            question_ids TEXT NOT NULL
+        )"""
+    )
+    conn.execute(
+        "INSERT OR REPLACE INTO paper_exports (code, created_at, title, question_ids) VALUES (?,?,?,?)",
+        (code, time.time(), title, json.dumps(question_ids)),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_paper_export(code: str) -> dict | None:
+    conn = get_conn()
+    try:
+        row = conn.execute(
+            "SELECT * FROM paper_exports WHERE code=?", (code,)
+        ).fetchone()
+    except sqlite3.OperationalError:
+        row = None
+    conn.close()
+    if not row:
+        return None
+    d = dict(row)
+    d["question_ids"] = json.loads(d["question_ids"] or "[]")
+    return d
+
+
 def save_mistake(rec: dict) -> int:
     conn = get_conn()
     _ensure_mistake_uid(conn)

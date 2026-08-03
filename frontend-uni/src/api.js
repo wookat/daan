@@ -136,6 +136,28 @@ export async function streamExplain({ file, text, userAnswer, onMeta, onDelta })
   return withAuthRetry(doIt);
 }
 
+export function scanSheet({ filePath, uid }) {
+  return new Promise((resolve, reject) => {
+    uni.uploadFile({
+      url: BASE_URL + '/api/scan_sheet',
+      filePath,
+      name: 'image',
+      formData: { uid: uid || '' },
+      timeout: 120000,
+      success: (res) => {
+        try {
+          const data = JSON.parse(res.data);
+          if (res.statusCode >= 200 && res.statusCode < 300) resolve(data);
+          else reject(new Error(data.detail || `HTTP ${res.statusCode}`));
+        } catch (e) {
+          reject(e);
+        }
+      },
+      fail: (err) => reject(new Error(err.errMsg || '上传失败')),
+    });
+  });
+}
+
 export function uploadExplain({ filePath, text, userAnswer }) {
   const doIt = () =>
     new Promise((resolve, reject) => {

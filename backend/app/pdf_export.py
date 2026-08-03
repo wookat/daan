@@ -1,6 +1,9 @@
 """试卷/答题卡 PDF 生成（A4 打印排版）。"""
 import io
+import math
 import time
+
+from . import omr
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -163,10 +166,6 @@ def build_paper_pdf(
         else:
             story.extend(block)
 
-    if answer_sheet:
-        story.append(_page_break())
-        story.extend(_answer_sheet_flow(questions, st, font, title, paper_code))
-
     if include_answers:
         story.append(_page_break())
         story.append(Paragraph("参考答案与解析", st["title"]))
@@ -184,6 +183,107 @@ def build_paper_pdf(
             )
 
     doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
+    data = buf.getvalue()
+    if answer_sheet and paper_code:
+        data = _append_pdf(data, _omr_sheet_pdf(questions, title, paper_code))
+    return data
+
+
+def _append_pdf(main: bytes, extra: bytes) -> bytes:
+    from pypdf import PdfReader, PdfWriter
+
+    w = PdfWriter()
+    for src in (main, extra):
+        r = PdfReader(io.BytesIO(src))
+        for p in r.pages:
+            w.add_page(p)
+    out = io.BytesIO()
+    w.write(out)
+    return out.getvalue()
+
+
+def _omr_sheet_pdf(questions: list[dict], title: str, paper_code: str) -> bytes:
+    """机读答题卡：四角定位块 + 卷码条 + 涂黑框网格（几何与 omr.py 共用）。"""
+    from reportlab.pdfgen import canvas as rl_canvas
+
+    font = _ensure_font()
+    hei = _ensure_hei()
+    buf = io.BytesIO()
+    c = rl_canvas.Canvas(buf, pagesize=A4)
+    n = len(questions)
+    pages = max(1, math.ceil(n / omr.PER_PAGE))
+
+    def X(x):
+        return x * mm
+
+    def Y(y):
+        return (omr.PAGE_H - y) * mm
+
+    for pg in range(1, pages + 1):
+        # 四角定位块（左上更大）
+        c.setFillColor(colors.black)
+        for key, (cx, cy) in omr.FID_POS.items():
+            s = omr.FID_TL_SIZE if key == "tl" else omr.FID_SIZE
+            c.rect(X(cx - s / 2), Y(cy + s / 2), s * mm, s * mm, stroke=0, fill=1)
+        # 标题与说明
+        c.setFont(hei, 14)
+        c.drawCentredString(X(105), Y(16), "答题卡")
+        c.setFont(font, 8.5)
+        c.setFillColor(colors.HexColor("#646A73"))
+        c.drawCentredString(
+            X(105), Y(22),
+            f"{title} · 卷码 {paper_code} · 第 {pg}/{pages} 页 · 用黑色签字笔或 2B 铅笔将所选项方框完全涂黑",
+        )
+        c.drawCentredString(X(105), Y(27), "姓名：____________　　日期：____________")
+        # 卷码条
+        bits = omr.code_to_bits(paper_code, pg)
+        c.setFillColor(colors.black)
+        for i, b in enumerate(bits):
+            x = omr.CODE_X0 + i * omr.CODE_PITCH
+            if b:
+                c.rect(X(x), Y(omr.CODE_Y + omr.CODE_CELL_H), omr.CODE_CELL_W * mm, omr.CODE_CELL_H * mm, stroke=0, fill=1)
+            else:
+                c.setStrokeColor(colors.HexColor("#C9CDD4"))
+                c.setLineWidth(0.3)
+                c.rect(X(x), Y(omr.CODE_Y + omr.CODE_CELL_H), omr.CODE_CELL_W * mm, omr.CODE_CELL_H * mm, stroke=1, fill=0)
+        c.setFont(font, 6)
+        c.setFillColor(colors.HexColor("#8F959E"))
+        c.drawCentredString(X(105), Y(omr.CODE_Y + omr.CODE_CELL_H + 3), "机读卷码区 · 请勿涂改")
+        # 题行
+        start = (pg - 1) * omr.PER_PAGE
+        for slot in range(omr.PER_PAGE):
+            idx = start + slot
+            if idx >= n:
+                break
+            q = questions[idx]
+            nx, ix, cy_mid = omr.slot_label_pos(slot)
+            c.setFont(font, 9.5)
+            c.setFillColor(colors.black)
+            c.drawRightString(X(nx + omr.NUM_W - 2), Y(cy_mid + 1.2), str(idx + 1))
+            qid = q.get("id")
+            if qid:
+                c.setFont(font, 6)
+                c.setFillColor(colors.HexColor("#8F959E"))
+                c.drawString(X(ix), Y(cy_mid + 1.0), f"[{qid}]")
+            for opt in range(4):
+                bx, by, bw_, bh_ = omr.bubble_rect(slot, opt)
+                c.setStrokeColor(colors.black)
+                c.setLineWidth(0.5)
+                c.rect(X(bx), Y(by + bh_), bw_ * mm, bh_ * mm, stroke=1, fill=0)
+                c.setFont(font, 7)
+                c.setFillColor(colors.HexColor("#B9BFC7"))
+                c.drawCentredString(X(bx + bw_ / 2), Y(by + bh_ - 1.1), omr.LETTERS[opt])
+            if slot % omr.ROWS != omr.ROWS - 1 and idx != n - 1:
+                c.setStrokeColor(colors.HexColor("#EFF1F4"))
+                c.setLineWidth(0.25)
+                yline = omr.GRID_Y0 + (slot % omr.ROWS + 1) * omr.ROW_H
+                col = slot // omr.ROWS
+                c.line(X(omr.COL_X0[col]), Y(yline), X(omr.COL_X0[col] + 88), Y(yline))
+        c.setFont(font, 7)
+        c.setFillColor(colors.HexColor("#8F959E"))
+        c.drawCentredString(X(105), Y(292), "扫描入口：APP 错题本 → 扫描答题卡 · kaogong.zalize.com")
+        c.showPage()
+    c.save()
     return buf.getvalue()
 
 
@@ -218,41 +318,3 @@ def _answer_table(questions: list[dict], st: dict, font: str):
         )
     )
     return [t, Spacer(1, 8)]
-
-
-def _answer_sheet_flow(questions: list[dict], st: dict, font: str, title: str, paper_code: str):
-    flow = [Paragraph("答题卡", st["title"]), Spacer(1, 2)]
-    sub = _esc(title) + (f" · 卷码 {paper_code}" if paper_code else "")
-    flow.append(Paragraph(sub, st["meta"]))
-    flow.append(Paragraph("姓名：__________　日期：__________　请用铅笔将所选项涂满", st["meta"]))
-    flow.append(Spacer(1, 8))
-    n = len(questions)
-    cols = 2
-    rows_per_col = (n + cols - 1) // cols
-    grid = []
-    for r in range(rows_per_col):
-        row = []
-        for c in range(cols):
-            idx = c * rows_per_col + r
-            if idx < n:
-                qid = questions[idx].get("id") or ""
-                row += [f"{idx + 1}", f"[{qid}]", "Ⓐ", "Ⓑ", "Ⓒ", "Ⓓ"]
-            else:
-                row += [""] * 6
-        grid.append(row)
-    widths = ([10 * mm, 18 * mm] + [14 * mm] * 4) * cols
-    t = Table(grid, colWidths=widths, rowHeights=8.2 * mm)
-    style = [
-        ("FONTNAME", (0, 0), (-1, -1), font),
-        ("FONTSIZE", (0, 0), (-1, -1), 10),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("TEXTCOLOR", (1, 0), (1, -1), colors.HexColor("#8F959E")),
-        ("FONTSIZE", (1, 0), (1, -1), 7),
-        ("TEXTCOLOR", (7, 0), (7, -1), colors.HexColor("#8F959E")),
-        ("FONTSIZE", (7, 0), (7, -1), 7),
-        ("LINEBELOW", (0, 0), (-1, -1), 0.3, colors.HexColor("#EBEDF0")),
-    ]
-    t.setStyle(TableStyle(style))
-    flow.append(t)
-    return flow
