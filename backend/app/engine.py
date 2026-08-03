@@ -110,6 +110,7 @@ def _explain_messages(extracted: dict, user_answer: str | None = None) -> list:
         user_msg += f"\n\n我选了：{ua}（请判断对错并分析错因）"
     if extracted.get("marked_correct_answer"):
         user_msg += f"\n（图中标注正确答案：{extracted['marked_correct_answer']}）"
+    user_msg += "\n\n（提醒：输出第一行必须严格是 “【答案】X｜【方法】方法名｜【一句话】核心思路”，之后按规定的 Markdown 结构讲解）"
     return [
         {"role": "system", "content": EXPLAIN_SYSTEM.format(methods=methods)},
         {"role": "user", "content": user_msg},
