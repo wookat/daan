@@ -2,7 +2,10 @@
   <view class="wrap profile">
     <!-- 账号卡 -->
     <view class="card acct" @click="user ? null : goLogin()">
-      <view class="avatar">{{ user ? (user.nickname || user.phone || 'U').slice(0, 1) : '👤' }}</view>
+      <view class="avatar">
+        <text v-if="user">{{ (user.nickname || user.phone || 'U').slice(0, 1) }}</text>
+        <l-icon v-else name="user-round" :size="26" color="#ffffff" />
+      </view>
       <view class="grow">
         <text class="acct-name">{{ user ? user.nickname || maskPhone(user.phone) : '未登录' }}</text>
         <text class="acct-sub">{{ user ? maskPhone(user.phone) + ' · 记录多端同步中' : '登录后错题、做题记录多端同步' }}</text>
@@ -28,106 +31,65 @@
 
     <!-- 学习 -->
     <view class="sec-t">学习</view>
-    <view class="card group">
-      <view class="row" @click="goPlan">
-        <text class="row-ico">🎯</text>
-        <text class="row-t">学习计划与报考画像</text>
-        <text class="row-v">{{ profileSummary }}</text>
-        <text class="row-arrow">›</text>
-      </view>
-      <view class="row" @click="goCalendar">
-        <text class="row-ico">📅</text>
-        <text class="row-t">学习日历</text>
-        <text class="row-arrow">›</text>
-      </view>
-      <view class="row" @click="goFavs">
-        <text class="row-ico">⭐</text>
-        <text class="row-t">我的收藏</text>
-        <text class="row-v">{{ favN }} 题</text>
-        <text class="row-arrow">›</text>
-      </view>
-      <view class="row" @click="goExamList">
-        <text class="row-ico">📝</text>
-        <text class="row-t">模考记录</text>
-        <text class="row-arrow">›</text>
-      </view>
-      <view class="row" @click="goInterview">
-        <text class="row-ico">🎤</text>
-        <text class="row-t">AI 面试陪练</text>
-        <text class="row-v">抽题 · 打分 · 点评</text>
-        <text class="row-arrow">›</text>
-      </view>
-      <view class="row" @click="goPk">
-        <text class="row-ico">⚔️</text>
-        <text class="row-t">答题 PK</text>
-        <text class="row-arrow">›</text>
-      </view>
-    </view>
+    <wd-cell-group custom-class="cellcard" border>
+      <wd-cell title="学习计划与报考画像" :value="profileSummary" is-link clickable @click="goPlan">
+        <template #icon><view class="cell-ico"><l-icon name="target" :size="18" color="#3b6ff5" /></view></template>
+      </wd-cell>
+      <wd-cell title="学习日历" is-link clickable @click="goCalendar">
+        <template #icon><view class="cell-ico"><l-icon name="calendar" :size="18" color="#3b6ff5" /></view></template>
+      </wd-cell>
+      <wd-cell title="我的收藏" :value="favN + ' 题'" is-link clickable @click="goFavs">
+        <template #icon><view class="cell-ico"><l-icon name="star" :size="18" color="#3b6ff5" /></view></template>
+      </wd-cell>
+      <wd-cell title="模考记录" is-link clickable @click="goExamList">
+        <template #icon><view class="cell-ico"><l-icon name="file-text" :size="18" color="#3b6ff5" /></view></template>
+      </wd-cell>
+      <wd-cell title="AI 面试陪练" value="抽题 · 打分 · 点评" is-link clickable @click="goInterview">
+        <template #icon><view class="cell-ico"><l-icon name="mic" :size="18" color="#3b6ff5" /></view></template>
+      </wd-cell>
+      <wd-cell title="答题 PK" is-link clickable @click="goPk">
+        <template #icon><view class="cell-ico"><l-icon name="swords" :size="18" color="#3b6ff5" /></view></template>
+      </wd-cell>
+    </wd-cell-group>
 
     <!-- 偏好设置 -->
     <view class="sec-t">偏好设置</view>
-    <view class="card group">
-      <view class="row" @click="cycleGoal">
-        <text class="row-ico">🏁</text>
-        <text class="row-t">每日目标</text>
-        <text class="row-v">{{ dailyGoal }} 题/天</text>
-        <text class="row-arrow">›</text>
-      </view>
-      <view class="row" @click="cycleFont">
-        <text class="row-ico">🔠</text>
-        <text class="row-t">字号与显示</text>
-        <text class="row-v">{{ ['小', '标准', '大'][fontLv] }}</text>
-        <text class="row-arrow">›</text>
-      </view>
-      <view class="row" @click="goReminders">
-        <text class="row-ico">⏰</text>
-        <text class="row-t">学习提醒</text>
-        <text class="row-v">{{ remindOn ? '每天 ' + remindTime : '未开启' }}</text>
-        <text class="row-arrow">›</text>
-      </view>
+    <wd-cell-group custom-class="cellcard" border>
+      <wd-cell title="每日目标" :value="dailyGoal + ' 题/天'" is-link clickable @click="cycleGoal">
+        <template #icon><view class="cell-ico"><l-icon name="flag" :size="18" color="#0d9488" /></view></template>
+      </wd-cell>
+      <wd-cell title="字号与显示" :value="['小', '标准', '大'][fontLv]" is-link clickable @click="cycleFont">
+        <template #icon><view class="cell-ico"><l-icon name="a-large-small" :size="18" color="#0d9488" /></view></template>
+      </wd-cell>
+      <wd-cell title="学习提醒" :value="remindOn ? '每天 ' + remindTime : '未开启'" is-link clickable @click="goReminders">
+        <template #icon><view class="cell-ico"><l-icon name="alarm-clock" :size="18" color="#0d9488" /></view></template>
+      </wd-cell>
       <!-- #ifdef H5 -->
-      <view class="row" @click="cycleTheme">
-        <text class="row-ico">🌓</text>
-        <text class="row-t">外观模式</text>
-        <text class="row-v">{{ themeLabel }}</text>
-        <text class="row-arrow">›</text>
-      </view>
+      <wd-cell title="外观模式" :value="themeLabel" is-link clickable @click="cycleTheme">
+        <template #icon><view class="cell-ico"><l-icon name="moon" :size="18" color="#0d9488" /></view></template>
+      </wd-cell>
       <!-- #endif -->
-      <view class="row" @click="goOffline">
-        <text class="row-ico">📦</text>
-        <text class="row-t">离线题包</text>
-        <text class="row-v">{{ offlineN ? offlineN + ' 个题包' : '未下载' }}</text>
-        <text class="row-arrow">›</text>
-      </view>
-      <view class="row" @click="toggleSfx">
-        <text class="row-ico">🔔</text>
-        <text class="row-t">答题音效</text>
-        <text class="row-v">{{ sfxOn ? '已开启' : '已关闭' }}</text>
-        <text class="row-arrow">›</text>
-      </view>
-    </view>
+      <wd-cell title="离线题包" :value="offlineN ? offlineN + ' 个题包' : '未下载'" is-link clickable @click="goOffline">
+        <template #icon><view class="cell-ico"><l-icon name="package" :size="18" color="#0d9488" /></view></template>
+      </wd-cell>
+      <wd-cell title="答题音效" :value="sfxOn ? '已开启' : '已关闭'" is-link clickable @click="toggleSfx">
+        <template #icon><view class="cell-ico"><l-icon name="bell" :size="18" color="#0d9488" /></view></template>
+      </wd-cell>
+    </wd-cell-group>
 
     <!-- 其他 -->
     <view class="sec-t">其他</view>
-    <view class="card group">
-      <view v-if="announce" class="row" @click="showAnnounce">
-        <text class="row-ico">📢</text>
-        <text class="row-t">公告</text>
-        <text class="row-v ellip">{{ announce.title }}</text>
-        <text class="row-arrow">›</text>
-      </view>
-      <view class="row" @click="feedback">
-        <text class="row-ico">💬</text>
-        <text class="row-t">反馈与纠错</text>
-        <text class="row-arrow">›</text>
-      </view>
-      <view class="row" @click="about">
-        <text class="row-ico">ℹ️</text>
-        <text class="row-t">关于</text>
-        <text class="row-v">考公助手</text>
-        <text class="row-arrow">›</text>
-      </view>
-    </view>
+    <wd-cell-group custom-class="cellcard" border>
+      <wd-cell v-if="announce" title="公告" :value="announce.title" is-link clickable @click="showAnnounce">
+        <template #icon><view class="cell-ico"><l-icon name="megaphone" :size="18" color="#d97706" /></view></template>
+      </wd-cell>
+      <wd-cell title="反馈与纠错" is-link clickable @click="feedback">
+        <template #icon><view class="cell-ico"><l-icon name="message-circle" :size="18" color="#d97706" /></view></template>
+      </wd-cell>
+      <wd-cell title="关于" value="考公助手" is-link clickable @click="about">
+        <template #icon><view class="cell-ico"><l-icon name="info" :size="18" color="#d97706" /></view></template>
+      </wd-cell>
+    </wd-cell-group>
 
     <view v-if="user" class="logout" @click="doLogout">退出登录</view>
   </view>
@@ -324,14 +286,8 @@ export default {
 .stat-t { font-size: 22rpx; color: var(--ink-2); }
 
 .sec-t { font-size: 24rpx; color: var(--ink-2); margin: 28rpx 8rpx 14rpx; }
-.group { padding: 4rpx 32rpx; }
-.row { display: flex; align-items: center; gap: 20rpx; min-height: 52px; border-top: 1rpx solid var(--line); }
-.row:first-child { border-top: none; }
-.row-ico { font-size: 32rpx; flex-shrink: 0; }
-.row-t { flex: 1; font-size: 28rpx; color: var(--ink); }
-.row-v { font-size: 24rpx; color: var(--ink-2); max-width: 40%; }
-.row-v.ellip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.row-arrow { color: var(--ink-4); font-size: 30rpx; flex-shrink: 0; }
+:deep(.cellcard) { display: block; border-radius: 28rpx; overflow: hidden; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); margin-bottom: 20rpx; }
+.cell-ico { width: 56rpx; height: 56rpx; border-radius: 14rpx; background: var(--fill); display: flex; align-items: center; justify-content: center; margin-right: 20rpx; }
 
 .logout { margin-top: 40rpx; background: var(--card); border-radius: 24rpx; text-align: center; min-height: 44px; display: flex; align-items: center; justify-content: center; font-size: 28rpx; color: #dc2626; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); }
 

@@ -53,6 +53,10 @@ page {
   --muted: var(--ink-3);
   --danger: var(--bad);
   --radius: 28rpx;
+  /* wot-design-uni 主题对齐品牌蓝 */
+  --wot-color-theme: #3b6ff5;
+  --wot-button-primary-bg-color: #3b6ff5;
+  --wot-cell-title-fs: 15px;
   background: linear-gradient(180deg, #edf3fe 0%, #f6f7fb 240rpx, #f6f7fb 100%);
   color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', 'Microsoft YaHei', sans-serif;
@@ -76,6 +80,15 @@ page {
   --fill: #23252f;
   --card: #1d1f28;
   --soft-bg: #23252f;
+  /* wot-design-uni 深色适配 */
+  --wot-color-white: #1d1f28;
+  --wot-cell-title-color: #f2f3f7;
+  --wot-cell-value-color: #9ba0b0;
+  --wot-cell-label-color: #8a8ea0;
+  --wot-cell-tap-bg: rgba(255, 255, 255, 0.06);
+  --wot-cell-group-title-color: #9ba0b0;
+  --wot-color-border-light: #2b2e3a;
+  --wot-button-plain-bg-color: transparent;
   background: linear-gradient(180deg, #1b2233 0%, #15161c 240rpx, #15161c 100%);
 }
 .theme-dark uni-tabbar .uni-tabbar,
@@ -110,6 +123,30 @@ page {
   }
   uni-page-body {
     font-size: 15px;
+  }
+}
+
+/* 宽屏（≥768px）：shadcn/ui 风格打磨——细描边卡片 + 轻阴影 + hover 抬升 */
+@media (min-width: 768px) {
+  uni-page-body .card,
+  uni-page-body .stat-c,
+  uni-page-body .cellcard {
+    border: 1px solid var(--line);
+    box-shadow: 0 1px 2px rgba(23, 24, 28, 0.05);
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+  }
+  uni-page-body .card:hover,
+  uni-page-body .stat-c:hover {
+    box-shadow: 0 4px 12px rgba(23, 24, 28, 0.1);
+    cursor: pointer;
+  }
+  uni-page-body .searchbar {
+    border: 1px solid var(--line);
+    box-shadow: none;
+  }
+  uni-page-body .searchbar:hover {
+    border-color: var(--brand);
+    cursor: pointer;
   }
 }
 

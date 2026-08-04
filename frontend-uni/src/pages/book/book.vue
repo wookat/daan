@@ -1,6 +1,6 @@
 <template>
   <view class="wrap">
-    <view v-if="offlineView" class="offbar">✈️ 当前离线 · 展示已缓存错题，联网后自动更新</view>
+    <view v-if="offlineView" class="offbar"><l-icon name="plane" :size="15" color="#b45309" /><text>当前离线 · 展示已缓存错题，联网后自动更新</text></view>
     <!-- 复习模式 -->
     <view v-if="reviewing" class="card review">
       <view class="rhead">
@@ -22,12 +22,14 @@
           {{ wasCorrect ? (cur._requeued ? '这次答对了，本轮已纠正 ✓' : '答对了！连对 ' + streak + ' 次') : '又错了，看讲解（稍后本轮会再出现）' }}（下次复习：{{ nextDays }} 天后）
         </view>
         <rich-text :nodes="curHtml" />
-        <button class="next" @click="nextReview">{{ rIdx + 1 < rItems.length ? '下一题' : '完成复习' }}</button>
+        <wd-button type="primary" block custom-class="next-btn" @click="nextReview">{{ rIdx + 1 < rItems.length ? '下一题' : '完成复习' }}</wd-button>
       </view>
       <view v-else-if="!curLetter" class="selfjudge">
         <view class="q2">先自己做，然后：</view>
-        <button class="sj ok" @click="selfJudge(true)">我做对了</button>
-        <button class="sj bad" @click="selfJudge(false)">我做错了</button>
+        <view class="sj-row">
+          <wd-button type="success" plain custom-class="sj-btn" @click="selfJudge(true)">我做对了</wd-button>
+          <wd-button type="error" plain custom-class="sj-btn" @click="selfJudge(false)">我做错了</wd-button>
+        </view>
       </view>
     </view>
 
@@ -40,7 +42,7 @@
       </view>
       <view v-if="due.length" class="card duecard" @click="startReview">
         <view>
-          <view class="duetxt"><uni-icons type="calendar-filled" size="16" color="#ffffff" /><text class="duetxt-t">今日待复习 {{ dueTotal }} 道</text></view>
+          <view class="duetxt"><l-icon name="calendar-check" :size="16" color="#ffffff" /><text class="duetxt-t">今日待复习 {{ dueTotal }} 道</text></view>
           <text class="duesub">按遗忘曲线安排 · 预计 {{ Math.max(1, Math.ceil(due.length * 0.8)) }} 分钟</text>
         </view>
         <text class="duego">开始复习</text>
@@ -52,13 +54,13 @@
           <view class="seg-i" :class="{ on: tab === 'fav' }" @click="tab = 'fav'">收藏{{ favs.length ? ' ' + favs.length : '' }}</view>
         </view>
         <view v-if="tab !== 'fav'" class="filterbtn" @click="filterOpen = true">
-          <uni-icons type="tune" size="18" color="#646a73" /><text class="filterbtn-t">筛选</text>
+          <l-icon name="sliders-horizontal" :size="16" color="#646a73" /><text class="filterbtn-t">筛选</text>
         </view>
       </view>
       <template v-if="tab === 'fav'">
         <view class="card redoentry" @click="openFavPage">
           <view class="redo-l">
-            <view class="redo-ico"><uni-icons type="star-filled" size="16" color="#f59e0b" /></view>
+            <view class="redo-ico"><l-icon name="star" :size="16" color="#f59e0b" /></view>
             <view>
               <text class="redo-t">收藏夹与笔记</text>
               <text class="redo-s">多夹分组 · 每题笔记 · 可按夹重练</text>
@@ -71,7 +73,7 @@
           <view class="e-s">刷题时点顶栏星星即可收藏好题</view>
         </view>
         <view v-if="favs.length > 3" class="searchbar">
-          <uni-icons type="search" size="16" color="#8a90a0" />
+          <l-icon name="search" :size="16" color="#8a90a0" />
           <input v-model="favKw" class="searchinput" placeholder="搜收藏题干或题型" confirm-type="search" />
           <text v-if="favKw" class="searchclear" @click="favKw = ''">✕</text>
         </view>
@@ -99,7 +101,7 @@
       </template>
       <view v-if="tab !== 'fav' && todoItems.length >= 3" class="card redoentry" @click="aiAnalysis">
         <view class="redo-l">
-          <view class="redo-ico"><uni-icons type="chatbubble-filled" size="16" color="#3b6ff5" /></view>
+          <view class="redo-ico"><l-icon name="bot-message-square" :size="16" color="#3b6ff5" /></view>
           <view>
             <text class="redo-t">AI 错题分析</text>
             <text class="redo-s">基于你的错题分布与近期作答生成诊断与复习建议</text>
@@ -119,7 +121,7 @@
       </view>
       <view v-if="tab !== 'fav'" class="card redoentry" @click="scanSheetPick">
         <view class="redo-l">
-          <view class="redo-ico"><uni-icons type="scan" size="16" color="#3b6ff5" /></view>
+          <view class="redo-ico"><l-icon name="scan-line" :size="16" color="#3b6ff5" /></view>
           <view>
             <text class="redo-t">扫描答题卡</text>
             <text class="redo-s">拍照导出卷的机读答题卡，自动对答案并记入做题记录</text>
@@ -129,7 +131,7 @@
       </view>
       <view v-if="tab !== 'fav'" class="card redoentry" @click="manualOpenSheet">
         <view class="redo-l">
-          <view class="redo-ico"><uni-icons type="compose" size="16" color="#3b6ff5" /></view>
+          <view class="redo-ico"><l-icon name="pencil-line" :size="16" color="#3b6ff5" /></view>
           <view>
             <text class="redo-t">手动录入答案</text>
             <text class="redo-s">打印卷做完后按题号点选答案，一键交卷自动判分记录</text>
@@ -187,7 +189,7 @@
       </view>
       <view v-if="tab !== 'fav' && todoItems.length" class="card redoentry" @click="redoAll">
         <view class="redo-l">
-          <view class="redo-ico"><uni-icons type="refreshempty" size="16" color="#3b6ff5" /></view>
+          <view class="redo-ico"><l-icon name="rotate-ccw" :size="16" color="#3b6ff5" /></view>
           <view>
             <text class="redo-t">错题重练{{ kpFilter ? ' · ' + kpFilter : '' }}</text>
             <text class="redo-s">{{ kpFilter ? '只重练当前筛选题型的待掌握错题（最多 10 题）' : '把待掌握错题按刷题模式重做一遍（最多 10 题）' }}</text>
@@ -196,7 +198,7 @@
         <text class="redo-go">开始</text>
       </view>
       <view v-if="tab !== 'fav' && items.length > 5" class="searchbar">
-        <uni-icons type="search" size="16" color="#8a90a0" />
+        <l-icon name="search" :size="16" color="#8a90a0" />
         <input v-model="kw" class="searchinput" placeholder="搜题干关键词或题型，如：增长率 / 类比推理" confirm-type="search" />
         <text v-if="kw" class="searchclear" @click="kw = ''">✕</text>
       </view>
@@ -264,10 +266,10 @@
       </view>
       <view v-if="tab !== 'fav' && loading" class="card spin">加载中…</view>
       <view v-else-if="tab !== 'fav' && !items.length" class="card empty">
-        <view class="e-ico"><uni-icons type="folder-add" size="52" color="#c7cad4" /></view>
+        <view class="e-ico"><l-icon name="folder-plus" :size="52" color="#c7cad4" :stroke-width="1.5" /></view>
         <view class="e-t">错题本还是空的</view>
         <view class="e-s">去拍题讲解或刷题，答错的题会汇集到这里，之后按遗忘曲线安排复习</view>
-        <button class="e-btn" @click="goPractice">去刷题</button>
+        <wd-button type="primary" custom-class="e-btn2" @click="goPractice">去刷题</wd-button>
       </view>
       <view v-if="tab !== 'fav' && items.length && !shownItems.length && !loading" class="card empty">
         <view class="e-t">没有匹配的错题</view>
@@ -884,7 +886,7 @@ export default {
 .e-ico { font-size: 72rpx; margin-bottom: 16rpx; }
 .e-t { font-size: 32rpx; font-weight: 600; margin-bottom: 10rpx; }
 .e-s { font-size: 24rpx; color: var(--ink-2); line-height: 1.7; margin-bottom: 28rpx; }
-.e-btn { background: linear-gradient(135deg, #6c9bff, var(--brand)); color: #fff; border-radius: 18rpx; font-size: 28rpx; font-weight: 600; width: 60%; }
+:deep(.e-btn2) { margin-top: 8rpx; min-width: 60%; border-radius: 18rpx !important; background: linear-gradient(135deg, #6c9bff, var(--brand)) !important; font-weight: 600; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; border-left: none; }
 .searchbar { display: flex; align-items: center; gap: 12rpx; background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 14rpx 26rpx; margin-bottom: 20rpx; }
 .searchinput { flex: 1; font-size: 26rpx; color: var(--ink); height: 40rpx; line-height: 40rpx; }
@@ -1028,10 +1030,9 @@ export default {
 .verdict { font-size: 26rpx; font-weight: 600; margin: 12rpx 0; }
 .verdict.good { color: #2a7a2a; }
 .verdict.badv { color: #b03030; }
-.next { margin-top: 20rpx; background: var(--brand); color: #fff; font-size: 28rpx; border-radius: 12rpx; }
+:deep(.next-btn) { margin-top: 20rpx; width: 100%; border-radius: 12rpx !important; }
 .selfjudge { margin-top: 20rpx; }
 .q2 { font-size: 24rpx; color: var(--ink-2); margin-bottom: 12rpx; }
-.sj { display: inline-block; width: 45%; margin-right: 4%; font-size: 26rpx; border-radius: 12rpx; }
-.sj.ok { background: var(--ok-soft); color: #2a7a2a; }
-.sj.bad { background: var(--bad-soft); color: var(--bad); }
+.sj-row { display: flex; gap: 20rpx; }
+:deep(.sj-btn) { flex: 1; border-radius: 12rpx !important; }
 </style>

@@ -2,7 +2,7 @@
   <view class="wrap home">
     <!-- 全局搜索入口 -->
     <view class="searchbar" @click="goSearch">
-      <uni-icons type="search" size="16" color="#9ca3af" />
+      <l-icon name="search" :size="16" color="#9ca3af" />
       <text class="searchbar-t">搜题目 / 考点 / 试卷，支持题号</text>
     </view>
 
@@ -10,8 +10,8 @@
     <view class="hero">
       <view class="hero-top">
         <text class="hero-goal">今日已练 <text class="hero-n">{{ todayCount }}</text>/{{ dailyGoal }} 题{{ todayCount >= dailyGoal ? ' · 已达成' : '' }}</text>
-        <text v-if="todayCount >= dailyGoal" class="hero-streak" @click="openPoster">🎉 生成打卡海报 ›</text>
-        <text v-else-if="dailyStreak" class="hero-streak">🔥 连续打卡 {{ dailyStreak }} 天</text>
+        <view v-if="todayCount >= dailyGoal" class="hero-streak" @click="openPoster"><l-icon name="party-popper" :size="13" color="#ffffff" /><text>生成打卡海报 ›</text></view>
+        <view v-else-if="dailyStreak" class="hero-streak"><l-icon name="flame" :size="13" color="#ffffff" /><text>连续打卡 {{ dailyStreak }} 天</text></view>
       </view>
       <view class="hero-bar"><view class="hero-fill" :style="{ width: Math.min((todayCount / dailyGoal) * 100, 100) + '%' }" /></view>
       <view class="hero-acts">
@@ -78,7 +78,7 @@
 
     <!-- 断卡风险提示 -->
     <view v-if="streakRisk" class="card riskbar" @click="startDaily">
-      <text class="risk-ico">🔥</text>
+      <view class="risk-ico"><l-icon name="flame" :size="22" color="#d97706" /></view>
       <view class="grow">
         <text class="risk-t">{{ streakRisk.title }}</text>
         <text class="risk-s">{{ streakRisk.sub }}</text>
@@ -88,7 +88,7 @@
 
     <!-- 公告 -->
     <view v-if="announce" class="card ann">
-      <uni-icons type="sound-filled" size="15" color="#0369a1" />
+      <l-icon name="megaphone" :size="16" color="#0369a1" />
       <view class="ann-c">
         <text class="ann-t">{{ announce.title }}</text>
         <text v-if="announce.body" class="ann-b">{{ announce.body }}</text>
@@ -98,7 +98,7 @@
 
     <!-- 时政每日一练 -->
     <view v-if="counts.length" class="card szcard" @click="szTodayDone ? launch({ kind: 'szreview' }) : launch({ kind: 'shizheng' })">
-      <view class="sz-ico">📰</view>
+      <view class="sz-ico"><l-icon name="newspaper" :size="24" color="#d97706" /></view>
       <view class="grow">
         <view class="sz-t">时政每日一练 <text v-if="!szTodayDone" class="tag warn">今日更新</text><text v-else class="tag ok">已完成</text></view>
         <text class="sz-s">每日 10 题 · 近半年国内时政热点 · 全站同题</text>
@@ -114,7 +114,7 @@
     <view v-if="!counts.length" class="card spin" @click="loadCounts">题库加载中…点此重试</view>
     <view class="modlist">
       <view v-for="c in counts" :key="c.module" class="card modrow" @click="openModule(c.module)">
-        <view class="mod-ico" :style="{ background: modColor(c.module).bg }"><text>{{ modEmoji(c.module) }}</text></view>
+        <view class="mod-ico" :style="{ background: modColor(c.module).bg }"><l-icon :name="modIcon(c.module)" :size="24" :color="modColor(c.module).fg" /></view>
         <view class="grow">
           <text class="mod-name">{{ modName(c.module) }}</text>
           <text class="mod-sub">{{ progText(c) }}</text>
@@ -123,7 +123,7 @@
         <text class="mod-arrow">›</text>
       </view>
       <view v-if="counts.length" class="card modrow" @click="startPreset(null)">
-        <view class="mod-ico" style="background: var(--brand-soft)"><text>🔀</text></view>
+        <view class="mod-ico" style="background: var(--brand-soft)"><l-icon name="shuffle" :size="24" color="#3b6ff5" /></view>
         <view class="grow">
           <text class="mod-name">混合刷题</text>
           <text class="mod-sub">全部模块随机 · 每组 {{ groupSize }} 题</text>
@@ -143,37 +143,37 @@
     <view class="sec-h"><text class="sec-t">更多练习</text></view>
     <view class="more-grid">
       <view class="card more-c" @click="goExamList">
-        <text class="more-ico">📝</text>
+        <view class="more-ico"><l-icon name="file-text" :size="20" color="#3b6ff5" /></view>
         <text class="more-t">全真模考</text>
         <text class="more-s">真题卷库 · 成绩报告</text>
       </view>
       <view class="card more-c" @click="goShenlun">
-        <text class="more-ico">✍️</text>
+        <view class="more-ico"><l-icon name="pen-line" :size="20" color="#0d9488" /></view>
         <text class="more-t">申论专区</text>
         <text class="more-s">真题 + AI 采分点批改</text>
       </view>
       <view class="card more-c" @click="goBook">
-        <text class="more-ico">🔁</text>
+        <view class="more-ico"><l-icon name="rotate-ccw" :size="20" color="#e11d48" /></view>
         <text class="more-t">错题重练</text>
         <text class="more-s">遗忘曲线 · 今日复习</text>
       </view>
       <view class="card more-c" @click="goAsk">
-        <text class="more-ico">📷</text>
+        <view class="more-ico"><l-icon name="camera" :size="20" color="#7c3aed" /></view>
         <text class="more-t">拍题讲解</text>
         <text class="more-s">花生十三方法体系</text>
       </view>
       <view class="card more-c" @click="goPk">
-        <text class="more-ico">⚔️</text>
+        <view class="more-ico"><l-icon name="swords" :size="20" color="#d97706" /></view>
         <text class="more-t">答题 PK</text>
         <text class="more-s">同组 10 题 · 比分拼手速</text>
       </view>
       <view class="card more-c" @click="goMini">
-        <text class="more-ico">⚡</text>
+        <view class="more-ico"><l-icon name="zap" :size="20" color="#3b6ff5" /></view>
         <text class="more-t">迷你模考</text>
         <text class="more-s">25 题 · 20 分钟</text>
       </view>
       <view class="card more-c" @click="openPapers">
-        <text class="more-ico">📄</text>
+        <view class="more-ico"><l-icon name="files" :size="20" color="#0d9488" /></view>
         <text class="more-t">真题卷练习</text>
         <text class="more-s">按卷连做 · 统一判分</text>
       </view>
@@ -185,7 +185,7 @@
         <view class="grab" />
         <view class="sheet-h">
           <text class="sheet-t">练习设置</text>
-          <view class="sheet-x" @click="customOpen = false"><uni-icons type="closeempty" size="20" color="#6b7280" /></view>
+          <view class="sheet-x" @click="customOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <view class="setrow">
           <view class="set-kwrap"><text class="set-k">每日目标</text><text class="set-sub">今天合计要练的题数</text></view>
@@ -220,13 +220,13 @@
             <text v-for="n in [10, 20, 30, 50]" :key="n" class="set-chip" :class="{ on: groupSize === n }" @click="setGroup(n)">{{ n }}</text>
           </view>
         </view>
-        <view class="custom-start" @click="customOpen = false; startPreset(null)">按以上设置开始练习（混合模块）</view>
+        <wd-button type="primary" block custom-class="sheet-cta" @click="customOpen = false; startPreset(null)">按以上设置开始练习（混合模块）</wd-button>
         <view class="exp-opts">
           <text class="expchip" :class="{ on: expSheet && !expOnly }" @click="expOnly = false; expSheet = !expSheet">含答题卡</text>
           <text class="expchip" :class="{ on: expAns && !expOnly }" @click="expOnly = false; expAns = !expAns">含答案解析</text>
           <text class="expchip" :class="{ on: expOnly }" @click="expOnly = !expOnly">仅导出答案</text>
         </view>
-        <view class="custom-export" @click="exportPaper">{{ exporting ? '正在生成 PDF…' : '导出为试卷 PDF' }}</view>
+        <wd-button type="primary" plain block custom-class="sheet-cta2" @click="exportPaper">{{ exporting ? '正在生成 PDF…' : '导出为试卷 PDF' }}</wd-button>
         <view class="custom-note">以上设置同样作用于模块列表；模考与真题卷不受影响</view>
       </view>
     </view>
@@ -237,7 +237,7 @@
         <view class="grab" />
         <view class="sheet-h">
           <text class="sheet-t">制定学习计划 · {{ ['考试信息', '目标', '每日时长'][setupStep - 1] }}（{{ setupStep }}/3）</text>
-          <view class="sheet-x" @click="setupOpen = false"><uni-icons type="closeempty" size="20" color="#6b7280" /></view>
+          <view class="sheet-x" @click="setupOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <template v-if="setupStep === 1">
           <view class="setrow">
@@ -280,7 +280,7 @@
           </view>
           <view class="pf-summary">{{ pf.exam_type }}{{ pf.target_region ? ' · ' + pf.target_region : '' }} · {{ pf.exam_date }} · 目标 {{ pf.target_score }}+ · {{ pf.base_level }} · 每天 {{ pf.daily_minutes }} 分钟</view>
         </template>
-        <view class="custom-start" @click="setupNext">{{ setupStep < 3 ? '下一步' : setupBusy ? '生成中…' : '生成我的学习计划' }}</view>
+        <wd-button type="primary" block custom-class="sheet-cta" @click="setupNext">{{ setupStep < 3 ? '下一步' : setupBusy ? '生成中…' : '生成我的学习计划' }}</wd-button>
         <view v-if="setupStep > 1" class="pf-back" @click="setupStep--">上一步</view>
       </view>
     </view>
@@ -291,7 +291,7 @@
         <view class="grab" />
         <view class="sheet-h">
           <text class="sheet-t">真题卷库 · 选择试卷</text>
-          <view class="sheet-x" @click="paperSheet = false"><uni-icons type="closeempty" size="20" color="#6b7280" /></view>
+          <view class="sheet-x" @click="paperSheet = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <view v-if="!papers.length" class="spin">试卷加载中…</view>
         <scroll-view v-if="paperRegions.length > 1" scroll-x class="pr-scroll">
@@ -311,7 +311,7 @@
         <view class="grab" />
         <view class="sheet-h">
           <text class="sheet-t">{{ modName(subSelect) }} · 选择题型</text>
-          <view class="sheet-x" @click="subSelect = null"><uni-icons type="closeempty" size="20" color="#6b7280" /></view>
+          <view class="sheet-x" @click="subSelect = null"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <view class="sub-chip all-chip" @click="startPreset(subSelect)">
           <text class="sub-name">全部随机</text>
@@ -340,7 +340,7 @@ const COLORS = {
   panduan: { bg: '#f1eafd', fg: '#7c3aed' },
   changshi: { bg: '#fbf1e0', fg: '#d97706' },
 };
-const EMOJIS = { ziliao: '📊', shuliang: '🔢', yanyu: '💬', panduan: '🧩', changshi: '💡' };
+const ICONS = { ziliao: 'chart-pie', shuliang: 'calculator', yanyu: 'message-square', panduan: 'puzzle', changshi: 'lightbulb' };
 
 export default {
   data() {
@@ -435,7 +435,7 @@ export default {
         return { title: '昨天没打卡，连续记录中断了', sub: `今天练 ${this.dailyGoal} 题，重新出发不掉队` };
       }
       if (yN < this.dailyGoal) {
-        return { title: `昨天只练了 ${yN}/${this.dailyGoal} 题，未达标`, sub: '今天补上进度，守住你的连续打卡 🔥' };
+        return { title: `昨天只练了 ${yN}/${this.dailyGoal} 题，未达标`, sub: '今天补上进度，守住你的连续打卡' };
       }
       return null;
     },
@@ -482,8 +482,8 @@ export default {
     modColor(m) {
       return COLORS[m] || { bg: '#edf3fe', fg: '#3b6ff5' };
     },
-    modEmoji(m) {
-      return EMOJIS[m] || '📚';
+    modIcon(m) {
+      return ICONS[m] || 'book-open';
     },
     modStat(m) {
       return this.pstats.byModule[m] || { done: 0, correct: 0 };
@@ -736,7 +736,7 @@ export default {
 .hero-top { display: flex; justify-content: space-between; align-items: center; }
 .hero-goal { font-size: 26rpx; color: rgba(255, 255, 255, 0.85); }
 .hero-n { font-size: 36rpx; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
-.hero-streak { font-size: 22rpx; color: #fff; background: rgba(255, 255, 255, 0.18); border-radius: 8rpx; padding: 4rpx 16rpx; }
+.hero-streak { display: inline-flex; align-items: center; gap: 8rpx; font-size: 22rpx; color: #fff; background: rgba(255, 255, 255, 0.18); border-radius: 8rpx; padding: 4rpx 16rpx; }
 .hero-bar { height: 12rpx; background: rgba(255, 255, 255, 0.25); border-radius: 999rpx; margin: 16rpx 0 24rpx; overflow: hidden; }
 .hero-fill { height: 100%; background: var(--card); border-radius: 999rpx; transition: width 0.3s; }
 .hero-acts { display: flex; gap: 20rpx; }
@@ -778,7 +778,7 @@ export default {
 /* 更多练习 */
 .more-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20rpx; }
 .more-c { margin: 0; padding: 28rpx 30rpx; display: flex; flex-direction: column; }
-.more-ico { font-size: 42rpx; }
+.more-ico { width: 72rpx; height: 72rpx; border-radius: 18rpx; background: var(--fill); display: flex; align-items: center; justify-content: center; }
 .more-t { font-size: 29rpx; font-weight: 600; color: var(--ink); margin-top: 10rpx; }
 .more-s { font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
 
@@ -828,7 +828,7 @@ export default {
 
 /* 断卡风险提示 */
 .riskbar { display: flex; align-items: center; gap: 20rpx; background: var(--warn-soft); border: 1rpx solid #fde68a; padding: 22rpx 26rpx; }
-.risk-ico { font-size: 36rpx; flex-shrink: 0; }
+.risk-ico { flex-shrink: 0; display: flex; align-items: center; }
 .risk-t { display: block; font-size: 26rpx; font-weight: 600; color: var(--warn); }
 .risk-s { display: block; font-size: 22rpx; color: #b45309; margin-top: 4rpx; }
 .risk-go { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: var(--warn); }
@@ -855,11 +855,11 @@ export default {
 .set-chips.scrollx { flex-wrap: nowrap; overflow-x: auto; max-width: 65%; }
 .set-chip { font-size: 24rpx; color: var(--ink-2); background: var(--soft-bg); border-radius: 999rpx; padding: 0 22rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; white-space: nowrap; }
 .set-chip.on { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
-.custom-start { margin-top: 24rpx; background: linear-gradient(135deg, #5b8af8, var(--brand)); color: #fff; text-align: center; border-radius: 20rpx; padding: 22rpx 0; font-size: 28rpx; font-weight: 600; box-shadow: 0 8rpx 24rpx rgba(59, 111, 245, 0.28); }
+:deep(.sheet-cta) { margin-top: 24rpx; width: 100%; border-radius: 20rpx !important; background: linear-gradient(135deg, #5b8af8, var(--brand)) !important; box-shadow: 0 8rpx 24rpx rgba(59, 111, 245, 0.28); font-weight: 600; }
 .exp-opts { display: flex; gap: 12rpx; margin-top: 20rpx; }
 .expchip { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--line); border-radius: 12rpx; font-size: 24rpx; color: var(--ink-2); background: var(--fill); }
 .expchip.on { background: var(--brand-soft); color: var(--brand); border-color: var(--brand-soft-2); font-weight: 500; }
-.custom-export { margin-top: 16rpx; text-align: center; border: 1rpx solid var(--line); border-radius: 20rpx; padding: 20rpx 0; font-size: 26rpx; color: var(--ink-2); min-height: 44px; box-sizing: border-box; }
+:deep(.sheet-cta2) { margin-top: 16rpx; width: 100%; border-radius: 20rpx !important; }
 .custom-note { margin-top: 14rpx; text-align: center; font-size: 21rpx; color: var(--ink-3); }
 .pr-scroll { white-space: nowrap; margin-bottom: 12rpx; }
 .pr-scroll .set-chip { margin-right: 12rpx; }
