@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>练习答题页 · 考公助手 design-v3</title>
+<style>
+:root{
+  --brand-50:#EDF3FE; --brand-100:#DCE7FD; --brand-200:#BDD2FB; --brand-300:#8FB2F9;
+  --brand-400:#6493F7; --brand-500:#3B6FF5; --brand-600:#2C5AD6; --brand-700:#2247AC;
+  --grad-brand:linear-gradient(135deg,#5B8AF8,#3B6FF5);
+  --success:#16A34A; --success-bg:#ECFDF5; --error:#DC2626; --error-bg:#FEF2F2;
+  --warning:#D97706; --warning-bg:#FFFBEB; --info:#0284C7; --info-bg:#F0F9FF;
+  --t1:#17181C; --t2:#40434E; --t3:#7D818F; --t4:#B0B4C0;
+  --border:#E7E9F0; --fill:#F2F3F7; --bg:#F6F7FB; --surface:#FFF;
+  --mod-ziliao:#0D9488; --mod-shuliang:#3B6FF5; --mod-yanyu:#E11D48; --mod-panduan:#7C3AED; --mod-changshi:#D97706;
+  --r-s:6px; --r-m:10px; --r-l:14px; --r-xl:20px; --r-full:999px;
+  --sh-1:0 1px 4px rgba(23,24,28,.05); --sh-2:0 4px 12px rgba(23,24,28,.08); --sh-3:0 8px 24px rgba(23,24,28,.16);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue","Microsoft YaHei",sans-serif;
+  background:#E9EBF2;color:var(--t1);font-size:15px;line-height:1.55}
+.stage{display:flex;justify-content:center;align-items:flex-start;gap:24px;padding:0}
+@media(min-width:760px){.stage{padding:32px 24px}}
+.phone{width:375px;flex:none;background:var(--bg);min-height:812px;position:relative;overflow:hidden}
+@media(min-width:760px){.phone{border-radius:28px;box-shadow:var(--sh-3);border:1px solid #d8dbe4}}
+.statusbar{height:44px;display:flex;align-items:flex-end;justify-content:space-between;
+  padding:0 18px 6px;font-size:13px;font-weight:600;color:var(--t1)}
+.statusbar .right{letter-spacing:1px;font-size:12px;color:var(--t2)}
+.navbar{height:44px;display:flex;align-items:center;padding:0 16px;position:relative}
+.navbar .title{position:absolute;left:0;right:0;text-align:center;font-size:16px;font-weight:600;pointer-events:none}
+.navbar .back{width:32px;height:32px;border-radius:var(--r-full);display:flex;align-items:center;justify-content:center;
+  background:var(--surface);border:1px solid var(--border);font-size:15px;color:var(--t2);z-index:1;text-decoration:none}
+.navbar .navact{margin-left:auto;z-index:1;font-size:13px;color:var(--brand-500);font-weight:500;text-decoration:none}
+.content{padding:12px 16px 96px}
+.tabbar{position:absolute;left:0;right:0;bottom:0;height:74px;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);
+  border-top:.5px solid var(--border);display:flex;padding-bottom:18px}
+.tabbar a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  font-size:10px;color:var(--t3);text-decoration:none;min-height:44px}
+.tabbar a.on{color:var(--brand-500);font-weight:600}
+.tabbar .ico{font-size:20px;line-height:1}
+.card{background:var(--surface);border-radius:var(--r-l);box-shadow:var(--sh-1);padding:16px;margin-bottom:12px}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;margin:18px 2px 10px}
+.sec-h .t{font-size:16px;font-weight:700}
+.sec-h .more{font-size:12px;color:var(--t3);text-decoration:none}
+.btn{display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:var(--r-m);
+  font-size:15px;font-weight:600;text-decoration:none;border:none;cursor:pointer}
+.btn-primary{background:var(--grad-brand);color:#fff;box-shadow:0 4px 12px rgba(59,111,245,.28)}
+.btn-ghost{background:var(--brand-50);color:var(--brand-500)}
+.btn-plain{background:var(--surface);color:var(--t2);border:1px solid var(--border)}
+.btn-danger{background:var(--error-bg);color:var(--error)}
+.chip{display:inline-flex;align-items:center;height:30px;padding:0 12px;border-radius:var(--r-full);
+  background:var(--fill);color:var(--t2);font-size:12px;text-decoration:none;white-space:nowrap}
+.chip.on{background:var(--brand-50);color:var(--brand-500);font-weight:600}
+.tag{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:var(--r-s);font-size:11px;font-weight:500}
+.tag-brand{background:var(--brand-50);color:var(--brand-500)}
+.tag-ok{background:var(--success-bg);color:var(--success)}
+.tag-bad{background:var(--error-bg);color:var(--error)}
+.tag-warn{background:var(--warning-bg);color:var(--warning)}
+.tag-info{background:var(--info-bg);color:var(--info)}
+.tag-gray{background:var(--fill);color:var(--t3)}
+.row{display:flex;align-items:center}
+.grow{flex:1;min-width:0}
+.num{font-variant-numeric:tabular-nums;font-weight:700}
+.empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:48px 0;color:var(--t3);font-size:13px}
+.empty .eico{width:72px;height:72px;border-radius:24px;background:var(--fill);display:flex;align-items:center;justify-content:center;font-size:30px}
+.bar{height:6px;border-radius:var(--r-full);background:var(--fill);overflow:hidden}
+.bar>i{display:block;height:100%;border-radius:var(--r-full);background:var(--grad-brand)}
+.dim{position:absolute;inset:0;background:rgba(23,24,28,.45);z-index:10}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:11;background:var(--surface);
+  border-radius:var(--r-xl) var(--r-xl) 0 0;padding:8px 20px calc(20px + 18px);box-shadow:var(--sh-3)}
+.sheet .grab{width:36px;height:4px;border-radius:2px;background:var(--border);margin:4px auto 12px}
+.sheet .sh-t{font-size:17px;font-weight:700;text-align:center;margin-bottom:14px}
+.opt-row{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:.5px solid var(--fill);font-size:15px}
+.opt-row .oico{width:36px;height:36px;border-radius:var(--r-m);background:var(--brand-50);display:flex;align-items:center;justify-content:center;font-size:17px}
+.opt-row .osub{font-size:12px;color:var(--t3)}
+.notes{display:none;width:300px;flex:none;padding-top:8px}
+@media(min-width:760px){.notes{display:block}}
+.note{background:#fff;border:1px solid var(--border);border-left:3px solid var(--brand-500);
+  border-radius:var(--r-m);padding:12px 14px;margin-bottom:12px;font-size:12.5px;color:var(--t2)}
+.note b{display:block;color:var(--t1);margin-bottom:4px;font-size:13px}
+.note.plat{border-left-color:var(--warning)}
+.topbar{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid var(--border);
+  padding:10px 20px;display:flex;align-items:center;gap:14px;font-size:13px}
+.topbar a{color:var(--brand-500);text-decoration:none;font-weight:600}
+.topbar .crumb{color:var(--t3)}
+@media(max-width:759px){.topbar{display:none}}
+
+.opts{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.opt{display:flex;align-items:center;min-height:46px;padding:10px 14px;border-radius:var(--r-m);
+  border:1px solid var(--border);background:var(--surface);color:var(--t1);font-size:14.5px;text-decoration:none}
+.opt.ok{border-color:var(--success);background:var(--success-bg);color:var(--success);font-weight:600}
+.opt.bad{border-color:var(--error);background:var(--error-bg);color:var(--error);font-weight:600}
+</style></head>
+<body>
+<div class="topbar"><a href="index.html">← 原型总览</a><span class="crumb">design-v3 / 02 练习答题页</span></div>
+<div class="stage">
+<div class="phone">
+  <div class="statusbar"><span>9:41</span><span class="right">●●● ⁝ 100%</span></div>
+  
+  
+<header class="navbar" style="background:var(--bg)">
+  <a class="back" href="home.html">‹</a>
+  <span class="title">资料分析 · 专项练习</span>
+  <a class="navact" href="#" style="display:flex;gap:14px;color:var(--t3);font-size:16px">⭐ Aa ⋯</a>
+</header>
+<div style="padding:0 16px">
+  <div class="row" style="gap:10px;margin:2px 0 10px">
+    <span class="tag tag-brand">背题模式</span>
+    <span class="tag tag-info">自适应 · 难度 ↑</span>
+    <div class="grow"></div>
+    <span style="font-size:13px;color:var(--t3)"><b class="num" style="color:var(--t1)">7</b>/10 · 计时 04:12</span>
+  </div>
+  <div class="bar" style="margin-bottom:12px"><i style="width:70%"></i></div>
+</div>
+<div class="content" style="padding-top:0">
+  <div class="card">
+    <div class="row" style="gap:6px;margin-bottom:10px">
+      <span class="tag tag-gray">2024 国考</span><span class="tag" style="background:color-mix(in srgb,var(--mod-ziliao) 10%,white);color:var(--mod-ziliao)">截位直除</span><span class="tag tag-gray">同材料 2/4</span>
+    </div>
+    <p style="font-size:15.5px;line-height:1.7">2023 年全国粮食总产量 69541 万吨，比上年增长 1.3%。其中夏粮产量 14613 万吨，下降 0.8%……2023 年全国粮食总产量约为 2019 年的多少倍？</p>
+    <div class="opts">
+      <a href="#" class="opt">A　1.02 倍</a>
+      <a href="#" class="opt ok">B　1.05 倍 <span style="margin-left:auto;font-size:12px">✓ 正确</span></a>
+      <a href="#" class="opt bad">C　1.12 倍 <span style="margin-left:auto;font-size:12px">✕ 我的选择</span></a>
+      <a href="#" class="opt">D　1.21 倍</a>
+    </div>
+  </div>
+  <div class="card" style="border:1px solid var(--brand-100);background:linear-gradient(180deg,var(--brand-50),#fff 40%)">
+    <div class="row" style="gap:8px;margin-bottom:8px"><span class="tag tag-brand">花生十三 · 截位直除</span><span class="tag tag-gray">用时 38s · 全站正确率 61%</span></div>
+    <p style="font-size:14px;color:var(--t2)">基期倍数 = 69541 / (69541÷1.013⁴)。四年复合增速较小，可用截位直除：69541 截为 695，直除 663 ≈ <b>1.05</b>，选 B。</p>
+    <div class="row" style="gap:8px;margin-top:12px">
+      <a class="btn btn-ghost grow" href="ask.html" style="min-height:38px;font-size:13px">🤖 继续问 AI</a>
+      <a class="btn btn-plain grow" href="book-detail.html" style="min-height:38px;font-size:13px">📒 已自动入错题本</a>
+    </div>
+  </div>
+  <div class="card" style="text-align:center">
+    <div style="font-size:13px;color:var(--t3);margin-bottom:10px">— 组内结算（每 10 题）预览 —</div>
+    <div class="row" style="justify-content:space-around;margin-bottom:12px">
+      <div><div class="num" style="font-size:26px;color:var(--success)">8</div><div style="font-size:12px;color:var(--t3)">答对</div></div>
+      <div><div class="num" style="font-size:26px;color:var(--error)">2</div><div style="font-size:12px;color:var(--t3)">答错</div></div>
+      <div><div class="num" style="font-size:26px">6′48″</div><div style="font-size:12px;color:var(--t3)">用时</div></div>
+      <div><div class="num" style="font-size:26px;color:var(--brand-500)">↑</div><div style="font-size:12px;color:var(--t3)">下组难度</div></div>
+    </div>
+    <div class="row" style="gap:10px">
+      <a class="btn btn-plain grow" href="book.html" style="min-height:40px;font-size:14px">复盘错题</a>
+      <a class="btn btn-primary grow" href="practice.html" style="min-height:40px;font-size:14px">再来一组 ›</a>
+    </div>
+  </div>
+</div>
+<footer style="position:absolute;left:0;right:0;bottom:0;background:rgba(255,255,255,.96);border-top:.5px solid var(--border);padding:10px 16px 26px;display:flex;gap:10px">
+  <a class="btn btn-plain" href="#" style="flex:1">上一题</a>
+  <a class="btn btn-plain" href="exam.html" style="width:88px">答题卡</a>
+  <a class="btn btn-primary" href="#" style="flex:1">下一题</a>
+</footer>
+  
+</div>
+<aside class="notes"><div class="note"><b>设计要点</b>顶栏只留返回/收藏/字号/更多；模式状态（背题、自适应难度）用 chips 常驻可见；解析卡用品牌浅底渐变与题干区分；答完 10 题出现组内结算卡（本稿平铺展示三态：作答后+解析+结算）。</div><div class="note"><b>与现状差异</b>现状模式切换按钮占顶栏；v3 收进「⋯」更多菜单，符合「配置收进入口内部」；错项/对项用色块+文字双通道（无障碍）；底部操作区固定，热区 ≥44px。</div><div class="note plat"><b>背题模式</b>选项直接标绿显示答案，底部变「上一题 / 下一题」快速翻页，无计时。</div><div class="note plat"><b>App/小程序</b>App 支持左右滑动切题+iOS 边缘手势返回需二次确认防误退；小程序无字号 API 用页内 Aa 控件；退出练习弹确认保存进度。</div></aside>
+</div>
+</body></html>
