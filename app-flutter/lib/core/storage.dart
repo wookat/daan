@@ -28,6 +28,11 @@ class Store {
     return uid;
   }
 
+  // ---------- 访问码（复刻 api.js accessCode，AI 端点需 X-Access-Code） ----------
+
+  String get accessCode => _sp.getString('accessCode') ?? '';
+  set accessCode(String v) => _sp.setString('accessCode', v);
+
   // ---------- 登录态（复刻 api.js setAuth/clearAuth 的匿名 uid 保留与合并逻辑） ----------
 
   String get token => _sp.getString('authToken') ?? '';
@@ -76,6 +81,50 @@ class Store {
   int get todayCount => _sp.getInt(_todayKey()) ?? 0;
 
   void addTodayCount(int n) => _sp.setInt(_todayKey(), todayCount + n);
+
+  // ---------- 模考进度（复刻 examProgress 键） ----------
+
+  Map<String, dynamic>? get examProgress {
+    final s = _sp.getString('examProgress');
+    if (s == null || s.isEmpty) return null;
+    final d = jsonDecode(s);
+    return d is Map<String, dynamic> ? d : null;
+  }
+
+  set examProgress(Map<String, dynamic>? v) {
+    if (v == null) {
+      _sp.remove('examProgress');
+    } else {
+      _sp.setString('examProgress', jsonEncode(v));
+    }
+  }
+
+  // ---------- AI 问答会话（复刻 askSessions / askCurSession / recentExplains 键） ----------
+
+  List<dynamic> _jsonList(String key) {
+    final s = _sp.getString(key);
+    if (s == null || s.isEmpty) return [];
+    final d = jsonDecode(s);
+    return d is List ? d : [];
+  }
+
+  List<dynamic> get askSessions => _jsonList('askSessions');
+  set askSessions(List<dynamic> v) => _sp.setString('askSessions', jsonEncode(v));
+
+  List<dynamic> get askCurSession => _jsonList('askCurSession');
+  set askCurSession(List<dynamic> v) => _sp.setString('askCurSession', jsonEncode(v));
+  void clearAskCurSession() => _sp.remove('askCurSession');
+
+  List<dynamic> get recentExplains => _jsonList('recentExplains');
+  set recentExplains(List<dynamic> v) => _sp.setString('recentExplains', jsonEncode(v));
+
+  String get redoQuestion => _sp.getString('redoQuestion') ?? '';
+  set redoQuestion(String v) => _sp.setString('redoQuestion', v);
+  void clearRedoQuestion() => _sp.remove('redoQuestion');
+
+  // ---------- 最近导出的试卷（复刻 recentPapers 键） ----------
+
+  List<dynamic> get recentPapers => _jsonList('recentPapers');
 
   // ---------- 主题 ----------
 

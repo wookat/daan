@@ -97,11 +97,11 @@ class HomePage extends ConsumerWidget {
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
               children: [
-                _entry(context, LucideIcons.timer, '模考', '/placeholder?title=全真模考'),
+                _entry(context, LucideIcons.timer, '模考', '/exam/list'),
                 _entry(context, LucideIcons.repeat, '错题重练', '/practice?mode=redo'),
                 _entry(context, LucideIcons.penTool, '申论', '/placeholder?title=申论批改'),
                 _entry(context, LucideIcons.newspaper, '时政每日练', '/placeholder?title=时政每日一练'),
-                _entry(context, LucideIcons.camera, '拍题讲解', '/placeholder?title=拍题讲解'),
+                _entry(context, LucideIcons.camera, '拍题讲解', '/ask'),
                 _entry(context, LucideIcons.swords, '答题PK', '/placeholder?title=答题PK'),
                 _entry(context, LucideIcons.mic, '面试陪练', '/placeholder?title=AI 面试陪练'),
                 _entry(context, LucideIcons.fileDown, 'PDF导出', '/placeholder?title=PDF 导出'),

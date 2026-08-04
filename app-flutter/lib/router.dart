@@ -4,6 +4,11 @@ import 'package:lucide_icons/lucide_icons.dart';
 
 import 'pages/ask_page.dart';
 import 'pages/book_detail_page.dart';
+import 'pages/exam_list_page.dart';
+import 'pages/exam_page.dart';
+import 'pages/exam_report_page.dart';
+import 'pages/paper_entry_page.dart';
+import 'pages/scan_sheet_page.dart';
 import 'pages/book_page.dart';
 import 'pages/home_page.dart';
 import 'pages/login_page.dart';
@@ -36,6 +41,20 @@ final router = GoRouter(
       path: '/book/detail/:id',
       builder: (c, s) => BookDetailPage(mistakeId: int.parse(s.pathParameters['id']!)),
     ),
+    GoRoute(path: '/exam/list', builder: (c, s) => const ExamListPage()),
+    GoRoute(
+      path: '/exam/run',
+      builder: (c, s) => ExamPage(
+        paperId: int.tryParse(s.uri.queryParameters['paper_id'] ?? ''),
+        mini: s.uri.queryParameters['mini'] == '1',
+      ),
+    ),
+    GoRoute(
+      path: '/exam/report/:id',
+      builder: (c, s) => ExamReportPage(attemptId: int.parse(s.pathParameters['id']!)),
+    ),
+    GoRoute(path: '/paper/entry', builder: (c, s) => const PaperEntryPage()),
+    GoRoute(path: '/paper/scan', builder: (c, s) => const ScanSheetPage()),
     GoRoute(path: '/login', builder: (c, s) => const LoginPage()),
     GoRoute(
       path: '/placeholder',
