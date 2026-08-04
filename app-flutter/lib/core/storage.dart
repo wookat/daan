@@ -126,6 +126,47 @@ class Store {
 
   List<dynamic> get recentPapers => _jsonList('recentPapers');
 
+  // ---------- 时政每日一练完成记录（复刻 szDaily 键） ----------
+
+  Map<String, dynamic> get szDaily {
+    final s = _sp.getString('szDaily');
+    if (s == null || s.isEmpty) return {'days': <String, dynamic>{}};
+    final d = jsonDecode(s);
+    if (d is Map<String, dynamic> && d['days'] is Map) return d;
+    return {'days': <String, dynamic>{}};
+  }
+
+  set szDaily(Map<String, dynamic> v) => _sp.setString('szDaily', jsonEncode(v));
+
+  // ---------- 申论草稿 / 收藏（复刻 slDraft: / slMatFavIds / slMatFavs / slQFavIds 键） ----------
+
+  String slDraft(int qid) => _sp.getString('slDraft:$qid') ?? '';
+
+  void setSlDraft(int qid, String v) {
+    if (v.isEmpty) {
+      _sp.remove('slDraft:$qid');
+    } else {
+      _sp.setString('slDraft:$qid', v);
+    }
+  }
+
+  List<int> get slMatFavIds =>
+      _jsonList('slMatFavIds').map((e) => (e as num).toInt()).toList();
+  set slMatFavIds(List<int> v) => _sp.setString('slMatFavIds', jsonEncode(v));
+
+  List<dynamic> get slMatFavs => _jsonList('slMatFavs');
+  set slMatFavs(List<dynamic> v) => _sp.setString('slMatFavs', jsonEncode(v));
+
+  List<int> get slQFavIds =>
+      _jsonList('slQFavIds').map((e) => (e as num).toInt()).toList();
+  set slQFavIds(List<int> v) => _sp.setString('slQFavIds', jsonEncode(v));
+
+  // ---------- 学习计划引导（复刻 planGuideHide 键） ----------
+
+  bool get planGuideHide => (_sp.getString('planGuideHide') ?? '').isNotEmpty;
+  set planGuideHide(bool v) =>
+      v ? _sp.setString('planGuideHide', '1') : _sp.remove('planGuideHide');
+
   // ---------- 主题 ----------
 
   String get themeMode => _sp.getString('themeMode') ?? 'system';

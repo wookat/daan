@@ -333,6 +333,232 @@ class Api {
     return Map<String, dynamic>.from(r.data);
   }
 
+  // ---------- 时政每日一练 ----------
+
+  static Future<Map<String, dynamic>> shizhengDaily() async {
+    final r = await dio.get('/api/shizheng/daily');
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  // ---------- 申论 ----------
+
+  static Future<Map<String, dynamic>> shenlunQuestions({
+    int limit = 20,
+    int offset = 0,
+    String? qtype,
+    int? year,
+    String? region,
+  }) async {
+    final r = await dio.get('/api/shenlun/questions', queryParameters: {
+      'limit': limit,
+      'offset': offset,
+      if (qtype != null && qtype.isNotEmpty) 'qtype': qtype,
+      if (year != null && year > 0) 'year': year,
+      if (region != null && region.isNotEmpty) 'region': region,
+    });
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<Map<String, dynamic>> shenlunFilters() async {
+    final r = await dio.get('/api/shenlun/filters');
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<Map<String, dynamic>> shenlunQuestion(int qid) async {
+    final r = await dio.get('/api/shenlun/questions/$qid');
+    return Map<String, dynamic>.from(r.data['item']);
+  }
+
+  static Future<String> shenlunGrade(int qid, String answer) async {
+    final r = await dio.post('/api/shenlun/grade',
+        data: {'qid': qid, 'answer': answer, 'uid': uid()},
+        options: Options(receiveTimeout: const Duration(seconds: 180)));
+    return (r.data['result'] ?? '').toString();
+  }
+
+  static Future<Map<String, dynamic>> shenlunMaterials({
+    int limit = 20,
+    int offset = 0,
+    String? type,
+  }) async {
+    final r = await dio.get('/api/shenlun/materials', queryParameters: {
+      'limit': limit,
+      'offset': offset,
+      if (type != null && type.isNotEmpty) 'type': type,
+    });
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<List<dynamic>> shenlunHistory({int? qid, int limit = 50}) async {
+    final r = await dio.get('/api/shenlun/history', queryParameters: {
+      'uid': uid(),
+      'limit': limit,
+      if (qid != null) 'qid': qid,
+    });
+    return r.data['items'] as List<dynamic>;
+  }
+
+  static Future<Map<String, dynamic>> shenlunMatFavs() async {
+    final r = await dio.get('/api/shenlun/mat_favs', queryParameters: {'uid': uid()});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<void> shenlunMatFavSet(int mid, bool on) async {
+    await dio.post('/api/shenlun/mat_favs', data: {'uid': uid(), 'mid': mid, 'on': on});
+  }
+
+  // ---------- 学习计划 / 报考画像 ----------
+
+  static Future<Map<String, dynamic>?> profile() async {
+    final r = await dio.get('/api/profile', queryParameters: {'uid': uid()});
+    final p = r.data['profile'];
+    return p is Map ? Map<String, dynamic>.from(p) : null;
+  }
+
+  static Future<Map<String, dynamic>?> saveProfile(Map<String, dynamic> pf) async {
+    final r = await dio.post('/api/profile', data: {'uid': uid(), ...pf});
+    final p = r.data['profile'];
+    return p is Map ? Map<String, dynamic>.from(p) : null;
+  }
+
+  static Future<Map<String, dynamic>> planToday() async {
+    final r = await dio.get('/api/plan/today', queryParameters: {'uid': uid()});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<void> setFocus(String focus) async {
+    await dio.post('/api/user_state', data: {'uid': uid(), 'focus': focus});
+  }
+
+  // ---------- 全局搜索 ----------
+
+  static Future<Map<String, dynamic>> search(String q,
+      {String type = 'all', int offset = 0}) async {
+    final r = await dio.get('/api/search', queryParameters: {
+      'q': q,
+      'type': type,
+      if (offset > 0) 'offset': offset,
+    });
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<Map<String, dynamic>> searchQuestion(int qid) async {
+    final r = await dio.get('/api/search/question/$qid');
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<Map<String, dynamic>?> question(int qid) async {
+    final r = await dio.get('/api/question/$qid');
+    final it = r.data['item'];
+    return it is Map ? Map<String, dynamic>.from(it) : null;
+  }
+
+  // ---------- 讨论区 ----------
+
+  static Future<Map<String, dynamic>> comments(int questionId,
+      {String sort = 'hot'}) async {
+    final r = await dio.get('/api/comments', queryParameters: {
+      'question_id': questionId,
+      'sort': sort,
+      'uid': uid(),
+    });
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<int> commentCount(int questionId) async {
+    final r = await dio
+        .get('/api/comments/count', queryParameters: {'question_id': questionId});
+    return (r.data['n'] as num?)?.toInt() ?? 0;
+  }
+
+  static Future<Map<String, dynamic>> postComment(int questionId, String content,
+      {int? parentId}) async {
+    final r = await dio.post('/api/comments', data: {
+      'question_id': questionId,
+      'content': content,
+      if (parentId != null) 'parent_id': parentId,
+    });
+    return Map<String, dynamic>.from(r.data['item']);
+  }
+
+  static Future<Map<String, dynamic>> likeComment(int cid) async {
+    final r = await dio.post('/api/comments/$cid/like');
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<void> deleteComment(int cid) async {
+    await dio.delete('/api/comments/$cid');
+  }
+
+  // ---------- 收藏夹 / 笔记 ----------
+
+  static Future<List<dynamic>> favFolders() async {
+    final r = await dio.get('/api/favs/folders', queryParameters: {'uid': uid()});
+    return r.data['items'] as List<dynamic>;
+  }
+
+  static Future<void> createFavFolder(String name, {String? icon}) async {
+    await dio.post('/api/favs/folders',
+        data: {'uid': uid(), 'name': name, if (icon != null) 'icon': icon});
+  }
+
+  static Future<void> renameFavFolder(int fid, String name) async {
+    await dio.patch('/api/favs/folders/$fid', data: {'uid': uid(), 'name': name});
+  }
+
+  static Future<void> deleteFavFolder(int fid) async {
+    await dio.delete('/api/favs/folders/$fid', queryParameters: {'uid': uid()});
+  }
+
+  static Future<void> setFav(int questionId, {int? folderId}) async {
+    await dio.post('/api/favs',
+        data: {'uid': uid(), 'question_id': questionId, 'folder_id': folderId});
+  }
+
+  static Future<void> removeFav(int questionId) async {
+    await dio.delete('/api/favs',
+        queryParameters: {'uid': uid(), 'question_id': questionId});
+  }
+
+  static Future<Map<String, dynamic>> favStatus(int questionId) async {
+    final r = await dio.get('/api/favs/status',
+        queryParameters: {'uid': uid(), 'question_id': questionId});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<List<dynamic>> notes({int? questionId}) async {
+    final r = await dio.get('/api/notes', queryParameters: {
+      'uid': uid(),
+      if (questionId != null) 'question_id': questionId,
+    });
+    return r.data['items'] as List<dynamic>;
+  }
+
+  static Future<void> saveNote(int questionId, String content) async {
+    await dio.post('/api/notes',
+        data: {'uid': uid(), 'question_id': questionId, 'content': content});
+  }
+
+  // ---------- 打卡海报 ----------
+
+  static Future<Map<String, dynamic>> checkinSummary() async {
+    final r = await dio.get('/api/checkin/summary', queryParameters: {'uid': uid()});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  // ---------- PDF 导出 ----------
+
+  /// 调用后端导出接口，返回 PDF 字节。复刻 api.js exportPdf。
+  static Future<List<int>> exportPdf(Map<String, dynamic> body) async {
+    final r = await dio.post<List<int>>('/api/export/pdf',
+        data: body,
+        options: Options(
+          responseType: ResponseType.bytes,
+          receiveTimeout: const Duration(seconds: 120),
+        ));
+    return r.data ?? const [];
+  }
+
   // ---------- 账号 ----------
 
   static Future<Map<String, dynamic>> authLogin(String phone, String password) async {

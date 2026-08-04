@@ -3,6 +3,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 
 import '../core/api.dart';
 import '../theme.dart';
+import '../widgets/plan_setup_sheet.dart';
 
 /// 统计：KPI 卡 + 近 8 周正确率曲线 + 模块正确率 +（能力预测分占位）
 class StatsPage extends StatefulWidget {
@@ -15,6 +16,7 @@ class StatsPage extends StatefulWidget {
 class _StatsPageState extends State<StatsPage> {
   Map<String, dynamic>? growth;
   Map<String, dynamic>? plan;
+  Map<String, dynamic>? profile;
   int dueCount = 0;
   int mistakeCount = 0;
   bool loading = true;
@@ -38,11 +40,13 @@ class _StatsPageState extends State<StatsPage> {
         Api.reviewDue().catchError((_) => <String, dynamic>{'total': 0}),
         Api.mistakes().catchError((_) => const <dynamic>[]),
       ]);
+      final pf = await Api.profile().catchError((_) => null);
       setState(() {
         growth = r[0] as Map<String, dynamic>;
         plan = r[1] as Map<String, dynamic>;
         dueCount = ((r[2] as Map<String, dynamic>)['total'] ?? 0) as int;
         mistakeCount = (r[3] as List<dynamic>).length;
+        profile = pf;
         loading = false;
       });
     } catch (e) {
@@ -85,6 +89,8 @@ class _StatsPageState extends State<StatsPage> {
                       _moduleCard(),
                       const SizedBox(height: 16),
                       _scoreCard(),
+                      const SizedBox(height: 16),
+                      _profileCard(),
                     ],
                   ),
                 ),
@@ -285,6 +291,47 @@ class _StatsPageState extends State<StatsPage> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _profileCard() {
+    final pf = profile;
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () async {
+          final saved = await showPlanSetupSheet(context, profile: pf);
+          if (saved != null) setState(() => profile = saved);
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              const Icon(LucideIcons.target, color: KgColors.brand),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('报考画像',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 4),
+                    Text(
+                      pf == null
+                          ? '未设置：填写考试类型/日期/目标分，解锁每日学习计划'
+                          : '${pf['exam_type'] ?? ''}${(pf['target_region'] ?? '').toString().isNotEmpty ? ' · ${pf['target_region']}' : ''} · ${pf['exam_date'] ?? ''} · 目标 ${pf['target_score'] ?? ''}+ · 每天 ${pf['daily_minutes'] ?? ''} 分钟',
+                      style:
+                          const TextStyle(fontSize: 12, color: KgColors.t3),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(LucideIcons.chevronRight,
+                  size: 18, color: KgColors.t4),
+            ],
+          ),
         ),
       ),
     );
