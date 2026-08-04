@@ -15,6 +15,11 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 - 后台「考点树」在生产 tag3 全空时列表恒「暂无题目」；验证编辑闭环可先 API 打标一题（`PATCH /api/admin/questions/{id}` body `{"tag3":code}`，header `x-admin-token`）再经 UI 清空还原。
 - 服务器 DB 精确核对：容器 `deploy-kaogong-1` 内 `/data/data.db`（`answer_log.created_at` 为 epoch 秒非日期串）。
 
+## tag3 三级考点
+- tag3 覆盖率核对须过滤 disabled（已下架题 tag3 恒空属预期）。
+- 抽审队列 API `/api/admin/tag3_review`（x-admin-token=容器 IMPORT_TOKEN）；容器内无 curl，用 python urllib。
+- 错题本三级子行仅对有 question_id 的错题显示（tag3_name 由 /api/mistakes join questions 注入）。
+
 ## P7 多端分包路由
 - P7 起 exam 三页/shenlun/login 在 pkgA 分包，H5 路由为 `#/pkgA/exam/list|exam|report`、`#/pkgA/shenlun/shenlun`、`#/pkgA/user/login`；旧 `#/pages/...` 路径由 App.vue onLaunch 重定向到 pkgA。
 - H5 的 API base 为空串同源相对路径（api.js `BASE_URL`），非 H5 端为 `https://kaogong.zalize.com`。
