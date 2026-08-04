@@ -74,6 +74,14 @@
         {
           "path": "social/poster",
           "style": { "navigationBarTitleText": "打卡海报" }
+        },
+        {
+          "path": "interview/interview",
+          "style": { "navigationBarTitleText": "AI 面试陪练" }
+        },
+        {
+          "path": "interview/history",
+          "style": { "navigationBarTitleText": "面试练习记录" }
         }
       ]
     }

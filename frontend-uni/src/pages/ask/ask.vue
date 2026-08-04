@@ -21,6 +21,7 @@
         <view class="eg-btn main" @click="pickImage">📷 拍题 / 相册</view>
         <view class="eg-btn" @click="textOpen = true">📋 粘贴文字</view>
       </view>
+      <view class="eg-iv" @click="goInterview">🎤 AI 面试陪练：抽真题 · 考官打分点评 ›</view>
       <view v-if="recent.length" class="card reccard">
         <view class="rec-h">最近讲解</view>
         <view v-for="r in recent" :key="r.ts" class="rec-row">
@@ -245,6 +246,9 @@ export default {
     }
   },
   methods: {
+    goInterview() {
+      uni.navigateTo({ url: '/pkgA/interview/interview' });
+    },
     stripStop(s) {
       return (s || '').replace(/<\|[a-z_]+\|>/gi, '').trimEnd();
     },
@@ -636,7 +640,8 @@ export default {
 .eg-ico { font-size: 72rpx; }
 .eg-t { display: block; font-size: 30rpx; font-weight: 700; color: var(--ink); margin-top: 16rpx; }
 .eg-s { display: block; font-size: 23rpx; color: var(--ink-2); margin-top: 10rpx; line-height: 1.7; }
-.eg-acts { display: flex; gap: 20rpx; margin: 32rpx 0 40rpx; }
+.eg-acts { display: flex; gap: 20rpx; margin: 32rpx 0 24rpx; }
+.eg-iv { min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 20rpx; font-size: 26rpx; font-weight: 600; background: #eef4ff; color: #3b6ff5; margin-bottom: 40rpx; }
 .eg-btn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 20rpx; font-size: 28rpx; font-weight: 600; background: var(--card); color: var(--ink); border: 1rpx solid var(--line); }
 .eg-btn.main { background: linear-gradient(135deg, #5b8af8, #3b6ff5); color: #fff; border: none; box-shadow: 0 8rpx 24rpx rgba(59, 111, 245, 0.28); }
 .reccard { text-align: left; }

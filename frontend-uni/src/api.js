@@ -554,3 +554,79 @@ export function uploadExplain({ filePath, text, userAnswer }) {
     });
   return withAuthRetry(doIt);
 }
+
+// ---------- AI 面试陪练 ----------
+
+export function interviewCategories() {
+  return request('/api/interview/categories?uid=' + encodeURIComponent(anonUid()));
+}
+
+export function interviewDraw(category, excludeId) {
+  let qs = 'uid=' + encodeURIComponent(anonUid());
+  if (category) qs += '&category=' + encodeURIComponent(category);
+  if (excludeId) qs += '&exclude_id=' + excludeId;
+  return request('/api/interview/question?' + qs);
+}
+
+export function interviewHistory(limit) {
+  return request('/api/interview/history?uid=' + encodeURIComponent(anonUid()) + '&limit=' + (limit || 50));
+}
+
+export function interviewSession(id) {
+  return request('/api/interview/sessions/' + id + '?uid=' + encodeURIComponent(anonUid()));
+}
+
+// #ifdef H5
+// H5 流式点评：onMeta({scores,total,summary}) 一次，onDelta(fullText) 增量，onDone({session_id})。
+export async function streamInterview({ questionId, answer, durationSec, onMeta, onDelta }) {
+  const resp = await fetch(BASE_URL + '/api/interview/answer/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uid: anonUid(), question_id: questionId, answer, duration_sec: durationSec || 0 }),
+  });
+  if (!resp.ok) {
+    let detail = `HTTP ${resp.status}`;
+    try { detail = (await resp.json()).detail || detail; } catch (e) { /* ignore */ }
+    throw new Error(detail);
+  }
+  const reader = resp.body.getReader();
+  const dec = new TextDecoder();
+  const state = { buf: '', full: '', meta: null, done: null };
+  const feed = (chunkText) => {
+    state.buf += chunkText;
+    const events = state.buf.split('\n\n');
+    state.buf = events.pop();
+    for (const ev of events) {
+      const typeM = ev.match(/^event: (\w+)/m);
+      const dataM = ev.match(/^data: (.*)$/m);
+      if (!dataM) continue;
+      const type = typeM ? typeM[1] : 'message';
+      const data = JSON.parse(dataM[1]);
+      if (type === 'meta') { state.meta = data; onMeta && onMeta(data); }
+      else if (type === 'done') { state.done = data; }
+      else if (type === 'error') throw new Error(data.message || '点评失败');
+      else { state.full += data.d; onDelta && onDelta(state.full); }
+    }
+  };
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    feed(dec.decode(value, { stream: true }));
+  }
+  if (!state.meta) throw new Error('点评失败：无响应');
+  return { ...state.meta, review: state.full, session_id: state.done && state.done.session_id };
+}
+// #endif
+
+// #ifndef H5
+// 小程序 / App：一次性返回打分与点评。
+export async function streamInterview({ questionId, answer, durationSec, onMeta, onDelta }) {
+  const d = await request('/api/interview/answer', {
+    method: 'POST',
+    data: { uid: anonUid(), question_id: questionId, answer, duration_sec: durationSec || 0 },
+  });
+  onMeta && onMeta(d);
+  onDelta && onDelta(d.review || '');
+  return d;
+}
+// #endif

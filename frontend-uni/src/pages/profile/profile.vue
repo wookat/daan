@@ -51,6 +51,12 @@
         <text class="row-t">模考记录</text>
         <text class="row-arrow">›</text>
       </view>
+      <view class="row" @click="goInterview">
+        <text class="row-ico">🎤</text>
+        <text class="row-t">AI 面试陪练</text>
+        <text class="row-v">抽题 · 打分 · 点评</text>
+        <text class="row-arrow">›</text>
+      </view>
     </view>
 
     <!-- 偏好设置 -->
@@ -194,6 +200,9 @@ export default {
     },
     goExamList() {
       uni.navigateTo({ url: '/pkgA/exam/list' });
+    },
+    goInterview() {
+      uni.navigateTo({ url: '/pkgA/interview/interview' });
     },
     cycleGoal() {
       const opts = [20, 50, 100];
