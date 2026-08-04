@@ -53,10 +53,10 @@
       <view v-for="(r, i) in (reco ? reco.items : [])" :key="i" class="todo-row">
         <view class="todo-ico">🎯</view>
         <view class="todo-main">
-          <text class="todo-name">{{ r.submodule }}</text>
+          <text class="todo-name">{{ r.label || r.submodule }}</text>
           <text class="todo-meta">{{ r.reason }} · 正确率 {{ Math.round(r.acc * 100) }}%（{{ r.n }}题）</text>
         </view>
-        <view class="todo-btn" @click="goSub(r.module, r.submodule)">练10题</view>
+        <view class="todo-btn" @click="goSub(r.module, r.submodule, r.tag3)">练10题</view>
       </view>
       <view class="rc-note">基于你的做题历史（正确率/近期趋势/遗忘曲线/考频）自动推荐</view>
     </view>
@@ -581,8 +581,8 @@ export default {
     goBook() {
       uni.switchTab({ url: '/pages/book/book' });
     },
-    goSub(module, sub) {
-      uni.setStorageSync('practicePreset', { module, submodule: sub, count: 10, adaptive: true });
+    goSub(module, sub, tag3) {
+      uni.setStorageSync('practicePreset', { module, submodule: sub, count: 10, adaptive: true, tag3: tag3 || null });
       uni.switchTab({ url: '/pages/practice/practice' });
     },
     copyCode() {

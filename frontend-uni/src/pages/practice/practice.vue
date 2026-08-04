@@ -54,9 +54,9 @@
           <text class="plan-txt">先复习到期错题 {{ plan.due_mistakes }} 道</text>
           <text class="plan-go">去复习 ›</text>
         </view>
-        <view v-for="w in plan.weak" :key="w.module + w.submodule" class="plan-row" @click="start(w.module, w.submodule, 10, true)">
+        <view v-for="w in plan.weak" :key="w.module + w.submodule + (w.tag3 || '')" class="plan-row" @click="start(w.module, w.submodule, 10, true, undefined, w.tag3 || null)">
           <text class="plan-dot" />
-          <text class="plan-txt">{{ w.submodule }}（{{ w.reason }} · 正确率 {{ Math.round(w.acc * 100) }}%）</text>
+          <text class="plan-txt">{{ w.label || w.submodule }}（{{ w.reason }} · 正确率 {{ Math.round(w.acc * 100) }}%）</text>
           <text class="plan-go">练 10 题 ›</text>
         </view>
         <view class="plan-focus">
@@ -801,7 +801,7 @@ export default {
     const preset = uni.getStorageSync('practicePreset');
     if (preset && preset.module) {
       uni.removeStorageSync('practicePreset');
-      this.start(preset.module, preset.submodule || null, preset.count || 10, preset.adaptive);
+      this.start(preset.module, preset.submodule || null, preset.count || 10, preset.adaptive, undefined, preset.tag3 || null);
       return;
     }
     const pm = uni.getStorageSync('practiceModule');
@@ -1209,7 +1209,7 @@ export default {
       uni.setStorageSync('szDaily', this.szDaily);
       uni.showToast({ title: '时政每日一练完成！', icon: 'none' });
     },
-    async start(module, submodule, count, adaptive, forceReal) {
+    async start(module, submodule, count, adaptive, forceReal, tag3) {
       if (this._starting) return;
       this._starting = true;
       uni.showLoading({ title: '出题中…', mask: true });
@@ -1227,13 +1227,21 @@ export default {
       const uid = uni.getStorageSync('anonUid');
       const uidQ = uid ? '&uid=' + encodeURIComponent(uid) : '';
       const adQ = adaptive && uid ? '&adaptive=1' : '';
-      const grpQ = module === 'ziliao' && !submodule && !this.realMode ? '&grouped=1' : '';
+      const grpQ = module === 'ziliao' && !submodule && !tag3 && !this.realMode ? '&grouped=1' : '';
+      const tagQ = tag3 ? '&tag3=' + encodeURIComponent(tag3) : '';
       try {
         let d = await request(
-          '/api/questions?limit=' + limit + realQ + uidQ + adQ + grpQ +
+          '/api/questions?limit=' + limit + realQ + uidQ + adQ + grpQ + tagQ +
             (module ? '&module=' + module : '') +
             (submodule ? '&submodule=' + encodeURIComponent(submodule) : '')
         );
+        if (!d.items.length && tag3) {
+          d = await request(
+            '/api/questions?limit=' + limit + realQ + uidQ + adQ +
+              (module ? '&module=' + module : '') +
+              (submodule ? '&submodule=' + encodeURIComponent(submodule) : '')
+          );
+        }
         if (!d.items.length && submodule) {
           this.lastSubmodule = null;
           d = await request('/api/questions?limit=' + limit + realQ + uidQ + (module ? '&module=' + module : ''));

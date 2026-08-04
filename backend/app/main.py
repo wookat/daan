@@ -782,6 +782,7 @@ def api_questions(
     uid: str | None = None,
     adaptive: int = 0,
     grouped: int = 0,
+    tag3: str | None = None,
 ):
     if grouped and module == "ziliao" and not real:
         return {
@@ -791,7 +792,7 @@ def api_questions(
     return {
         "items": db.random_questions(
             module, min(limit, 50), submodule, real_only=bool(real), year=year, region=region, uid=uid,
-            adaptive=bool(adaptive),
+            adaptive=bool(adaptive), tag3=tag3,
         ),
         "counts": db.question_counts(),
     }

@@ -8,6 +8,8 @@ import secrets
 import sqlite3
 import time
 
+from . import taxonomy
+
 DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), "..", "..", "data.db"))
 
 
@@ -292,23 +294,30 @@ def random_questions(
     region: str | None = None,
     uid: str | None = None,
     adaptive: bool = False,
+    tag3: str | None = None,
 ) -> list[dict]:
     conn = get_conn()
     where = []
     args: list = []
     order = "has_hs DESC, RANDOM()"
-    if adaptive and uid and (module or submodule):
+    if adaptive and uid and (module or submodule or tag3):
         _ensure_answer_log(conn)
-        acl = "uid=?"
-        aargs: list = [uid]
-        if submodule:
-            acl += " AND submodule=?"
-            aargs.append(submodule)
-        elif module:
-            acl += " AND module=?"
-            aargs.append(module)
+        if tag3:
+            acl = "a.uid=? AND q.tag3=?"
+            aargs: list = [uid, tag3]
+            asrc = "answer_log a JOIN questions q ON q.id = a.question_id"
+        else:
+            acl = "uid=?"
+            aargs = [uid]
+            asrc = "answer_log"
+            if submodule:
+                acl += " AND submodule=?"
+                aargs.append(submodule)
+            elif module:
+                acl += " AND module=?"
+                aargs.append(module)
         st = conn.execute(
-            f"SELECT COUNT(*) n, SUM(correct) c FROM (SELECT correct FROM answer_log WHERE {acl} ORDER BY id DESC LIMIT 60)",
+            f"SELECT COUNT(*) n, SUM(correct) c FROM (SELECT correct FROM {asrc} WHERE {acl} ORDER BY {'a.' if tag3 else ''}id DESC LIMIT 60)",
             aargs,
         ).fetchone()
         if st and (st["n"] or 0) >= 5:
@@ -335,6 +344,9 @@ def random_questions(
     if submodule:
         where.append("submodule=?")
         args.append(submodule)
+    if tag3:
+        where.append("tag3=?")
+        args.append(tag3)
     if real_only:
         where.append("is_real=1")
     if year:
@@ -372,6 +384,8 @@ def random_questions(
             base_args.append(module)
         if submodule:
             base_args.append(submodule)
+        if tag3:
+            base_args.append(tag3)
         if year:
             base_args.append(year)
         if region:
@@ -1804,52 +1818,80 @@ FREQ_WEIGHT = {
 }
 
 
+TAG3_MIN_N = 5
+
+
+def _score_skill(seq: list[int], last: float, mod: str, now: float) -> tuple[float, float, str]:
+    n = len(seq)
+    c = sum(seq)
+    acc = (c + 3 * 0.6) / (n + 3)
+    trend = 0.0
+    if n >= 10:
+        recent = seq[-20:]
+        prev = seq[-40:-20] or seq[:-20]
+        if prev:
+            trend = sum(recent) / len(recent) - sum(prev) / len(prev)
+    days = (now - last) / 86400
+    stab = min(60.0, max(2.0, 2 + 0.6 * c))
+    forget = 1 - (1 + 19 / 81 * days / stab) ** -0.5
+    freq = FREQ_WEIGHT.get(mod, 0.5)
+    w = 0.45 * (1 - acc) + 0.2 * max(0.0, -trend) + 0.2 * forget + 0.15 * freq
+    reason = (
+        "近期退步" if trend < -0.1 else
+        "正确率偏低" if acc < 0.6 else
+        "久未练习" if forget > 0.4 else "巩固提升"
+    )
+    return w, trend, reason
+
+
 def recommend_stats(uid: str, top: int = 3) -> dict:
-    """规则版查漏补缺：按二级题型算弱项分数（平滑正确率+近期趋势+遗忘+考频）。"""
+    """规则版查漏补缺：按三级考点（tag3）算弱项分数，样本不足回退二级题型。
+
+    分数 = 平滑正确率 + 近期趋势 + 遗忘 + 考频。tag3 取题库当前值（join questions），
+    同一考点作答 >= TAG3_MIN_N 才单独成项，其余作答归入所属二级题型项。
+    """
     conn = get_conn()
     _ensure_answer_log(conn)
     rows = conn.execute(
-        """SELECT module, submodule, correct, created_at FROM answer_log
-           WHERE uid=? AND submodule IS NOT NULL AND submodule!=''
-           ORDER BY created_at""",
+        """SELECT a.module, a.submodule, a.correct, a.created_at, q.tag3
+           FROM answer_log a LEFT JOIN questions q ON q.id = a.question_id
+           WHERE a.uid=? AND a.submodule IS NOT NULL AND a.submodule!=''
+           ORDER BY a.created_at""",
         (uid,),
     ).fetchall()
     conn.close()
-    skills: dict = {}
+    tidx = taxonomy.topic_index()
+    topics: dict = {}
     for r in rows:
-        k = (r["module"] or "", r["submodule"])
-        s = skills.setdefault(k, {"seq": [], "last": 0.0})
-        s["seq"].append(1 if r["correct"] else 0)
-        s["last"] = max(s["last"], r["created_at"])
+        tag3 = r["tag3"] if r["tag3"] and r["tag3"] != "UNKNOWN" and r["tag3"] in tidx else None
+        k = (r["module"] or "", r["submodule"], tag3)
+        topics.setdefault(k, []).append((r["created_at"], 1 if r["correct"] else 0))
+    skills: dict = {}
+    for (mod, sub, tag3), recs in topics.items():
+        if tag3 and len(recs) >= TAG3_MIN_N:
+            skills[(mod, sub, tag3)] = recs
+        else:
+            skills.setdefault((mod, sub, None), []).extend(recs)
     now = time.time()
     out = []
-    for (mod, sub), s in skills.items():
-        seq = s["seq"]
+    for (mod, sub, tag3), recs in skills.items():
+        recs.sort()
+        seq = [c for _, c in recs]
         n = len(seq)
         if n < 3:
             continue
         c = sum(seq)
-        acc = (c + 3 * 0.6) / (n + 3)
-        trend = 0.0
-        if n >= 10:
-            recent = seq[-20:]
-            prev = seq[-40:-20] or seq[:-20]
-            if prev:
-                trend = sum(recent) / len(recent) - sum(prev) / len(prev)
-        days = (now - s["last"]) / 86400
-        stab = min(60.0, max(2.0, 2 + 0.6 * c))
-        forget = 1 - (1 + 19 / 81 * days / stab) ** -0.5
-        freq = FREQ_WEIGHT.get(mod, 0.5)
-        w = 0.45 * (1 - acc) + 0.2 * max(0.0, -trend) + 0.2 * forget + 0.15 * freq
-        reason = (
-            "近期退步" if trend < -0.1 else
-            "正确率偏低" if acc < 0.6 else
-            "久未练习" if forget > 0.4 else "巩固提升"
-        )
-        out.append({
+        w, _trend, reason = _score_skill(seq, recs[-1][0], mod, now)
+        item = {
             "module": mod, "submodule": sub, "n": n,
             "acc": round(c / n, 3), "weakness": round(w, 3), "reason": reason,
-        })
+        }
+        if tag3:
+            t = tidx[tag3]
+            item["tag3"] = tag3
+            item["tag3_name"] = t["name"]
+            item["label"] = f"{t['module_name']}·{t['name']}"
+        out.append(item)
     out.sort(key=lambda x: -x["weakness"])
     return {"items": out[:top], "total_skills": len(out)}
 
