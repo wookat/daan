@@ -47,10 +47,10 @@
         <text v-for="(fn, fk) in FOCUS_MODS" :key="fk" class="plan-fchip" :class="{ on: plan && plan.focus === fk }" @click="setFocus(fk)">{{ fn }}</text>
       </view>
     </view>
-    <view v-else-if="plan && (plan.due_mistakes || plan.weak.length || plan.yesterday.n)" class="card plancard">
+    <view v-else-if="plan && (plan.due_mistakes || (plan.weak || []).length || (plan.yesterday || {}).n)" class="card plancard">
       <view class="plan-h">
         <text class="plan-t">今日建议</text>
-        <text v-if="plan.yesterday.n" class="plan-y">昨日练 {{ plan.yesterday.n }} 题 · 正确率 {{ Math.round((plan.yesterday.correct / plan.yesterday.n) * 100) }}%</text>
+        <text v-if="(plan.yesterday || {}).n" class="plan-y">昨日练 {{ plan.yesterday.n }} 题 · 正确率 {{ Math.round((plan.yesterday.correct / plan.yesterday.n) * 100) }}%</text>
         <text v-else class="plan-y">昨日未练习</text>
       </view>
       <view v-if="plan.due_mistakes" class="plan-row" @click="goBook">
@@ -58,7 +58,7 @@
         <text class="plan-txt">先复习到期错题 {{ plan.due_mistakes }} 道</text>
         <text class="plan-go">去复习 ›</text>
       </view>
-      <view v-for="w in plan.weak" :key="w.module + w.submodule + (w.tag3 || '')" class="plan-row" @click="startPreset(w.module, w.submodule, 10, true, w.tag3 || null)">
+      <view v-for="w in plan.weak || []" :key="w.module + w.submodule + (w.tag3 || '')" class="plan-row" @click="startPreset(w.module, w.submodule, 10, true, w.tag3 || null)">
         <text class="plan-dot" />
         <text class="plan-txt">{{ w.label || w.submodule }}（{{ w.reason }} · 正确率 {{ Math.round(w.acc * 100) }}%）</text>
         <text class="plan-go">练 10 题 ›</text>
