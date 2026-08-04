@@ -1,0 +1,67 @@
+参照库题干数: 127776
+{
+  "raw_in": 12665,
+  "after_dedup_existing": 3532,
+  "after_digit_mask": 3532,
+  "final": 2963,
+  "drops": {
+    "explanation_semantic_mismatch": 621,
+    "truncated_explanation": 198,
+    "math_leak_reassigned": 48,
+    "lost_formula_exp": 847,
+    "ziliao_leak": 108,
+    "ziliao_leak_yearq": 47,
+    "too_short": 173,
+    "ziliao_leak_exp": 167,
+    "stub_explanation": 279,
+    "missing_passage": 274,
+    "bad_option": 418,
+    "low_cjk_ratio": 32,
+    "stray_page_number": 375,
+    "mojibake_cid": 167,
+    "module_reassigned_by_content": 295,
+    "module_mismatch": 679,
+    "lost_formula": 37,
+    "fill_blank_marker_lost": 53,
+    "truncated_question": 27,
+    "missing_table_exp": 207,
+    "answer_exp_conflict": 17,
+    "missing_conditions": 31,
+    "disputed": 5,
+    "dup_exact_in_source": 503,
+    "dup_vs_existing": 3871,
+    "clone_simhash": 1,
+    "unclassified_submodule": 565
+  }
+}
+模块分布: {"panduan": 1240, "changshi": 700, "shuliang": 267, "yanyu": 756}
+二级分布:
+  判断推理 / 分析推理: 56
+  判断推理 / 定义判断: 341
+  判断推理 / 类比推理: 413
+  判断推理 / 逻辑判断: 430
+  常识判断 / 历史人文: 71
+  常识判断 / 地理国情: 44
+  常识判断 / 政治: 181
+  常识判断 / 法律: 194
+  常识判断 / 科技: 106
+  常识判断 / 管理与公文: 57
+  常识判断 / 经济: 47
+  数量关系 / 几何问题: 22
+  数量关系 / 周期与日期: 8
+  数量关系 / 容斥原理: 8
+  数量关系 / 工程问题: 16
+  数量关系 / 年龄问题: 4
+  数量关系 / 排列组合与概率: 5
+  数量关系 / 数字推理: 1
+  数量关系 / 最值问题: 39
+  数量关系 / 植树与方阵: 2
+  数量关系 / 浓度问题: 4
+  数量关系 / 经济利润: 18
+  数量关系 / 行程问题: 19
+  数量关系 / 计算问题: 121
+  言语理解 / 中心理解: 207
+  言语理解 / 标题填入: 9
+  言语理解 / 细节理解: 64
+  言语理解 / 语句表达: 75
+  言语理解 / 逻辑填空: 401
