@@ -57,7 +57,7 @@
           <view class="p">
             <view class="av">我</view>
             <text class="nm">{{ myName }}</text>
-            <text class="sc">{{ myScore }}</text>
+            <text class="sc">{{ answers.length }}<text class="sc-sub">/{{ questions.length }}</text></text>
           </view>
           <text class="mid">VS</text>
           <view class="p">
@@ -177,9 +177,6 @@ export default {
   computed: {
     curQ() {
       return this.questions[this.qIndex] || null;
-    },
-    myScore() {
-      return this.answers.reduce((s, a) => s + (a.points || 0), 0);
     },
     streak() {
       return this.questions.map((q, i) => {
@@ -492,6 +489,7 @@ export default {
 .av.rival { color: #d97706; }
 .nm { font-size: 22rpx; color: #fff; max-width: 200rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sc { font-size: 44rpx; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
+.sc-sub { font-size: 24rpx; font-weight: 600; color: rgba(255, 255, 255, 0.75); }
 .mid { font-size: 40rpx; font-weight: 800; color: rgba(255, 255, 255, 0.85); }
 .timer { margin-top: 22rpx; background: rgba(255, 255, 255, 0.2); border-radius: 999rpx; height: 14rpx; overflow: hidden; }
 .timer-fill { height: 100%; background: #fff; border-radius: 999rpx; transition: width 0.25s linear; }
