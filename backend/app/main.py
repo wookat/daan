@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import auth, db, engine, kb, llm, omr, pdf_export, plan, taxonomy
+from . import auth, db, engine, insights, kb, llm, omr, pdf_export, plan, taxonomy
 
 app = FastAPI(title="考公错题助手")
 # Android App（Capacitor WebView，origin 为 https://localhost）跨域访问 API
@@ -28,6 +28,7 @@ app.add_middleware(
     expose_headers=["X-Paper-Code"],
 )
 app.include_router(auth.router)
+app.include_router(insights.router)
 
 ACCESS_CODE = os.environ.get("ACCESS_CODE", "")
 
@@ -51,6 +52,22 @@ def _stats_refresher():
 
 
 threading.Thread(target=_stats_refresher, daemon=True).start()
+
+
+def _fts_backfiller():
+    """搜索索引后台分批回填（首次建表 13.5 万题避免阻塞启动）。"""
+    while True:
+        try:
+            if insights.fts_backfill() == 0:
+                time.sleep(3600)
+                continue
+        except Exception:
+            time.sleep(600)
+            continue
+        time.sleep(2)
+
+
+threading.Thread(target=_fts_backfiller, daemon=True).start()
 
 
 def _friendly_ai_err(e: Exception) -> str:

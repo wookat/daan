@@ -2,6 +2,10 @@
   <view class="wrap" :class="{ 'has-banner': picked }">
     <!-- 选模块 -->
     <view v-if="!session" class="home">
+      <view class="searchbar" @click="goSearch">
+        <uni-icons type="search" size="16" color="#9ca3af" />
+        <text class="searchbar-t">搜题目 / 考点 / 试卷，支持题号</text>
+      </view>
       <view class="hbanner">
         <view class="hbanner-l">
           <text class="hbanner-t">今日已练 {{ todayCount }}/{{ dailyGoal }} 题{{ todayCount >= dailyGoal ? ' · 已达成' : '' }}</text>
@@ -918,6 +922,9 @@ export default {
     },
     goExamList() {
       uni.navigateTo({ url: '/pkgA/exam/list' });
+    },
+    goSearch() {
+      uni.navigateTo({ url: '/pkgA/search/search' });
     },
     async openPapers() {
       this.paperSheet = true;
@@ -2078,4 +2085,6 @@ export default {
 .sub-chip.all-chip .sub-name, .sub-chip.all-chip .sub-n { color: #fff; }
 .sub-name { font-size: 28rpx; font-weight: 600; color: var(--ink); }
 .sub-n { font-size: 22rpx; color: var(--ink-2); }
+.searchbar { display: flex; align-items: center; gap: 12rpx; background: #fff; border-radius: 999rpx; padding: 16rpx 26rpx; margin-bottom: 20rpx; box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04); }
+.searchbar-t { font-size: 26rpx; color: #9ca3af; }
 </style>

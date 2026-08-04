@@ -16,6 +16,8 @@
         </view>
       </view>
 
+      <rank-card v-if="report.attempt && report.attempt.id" :attempt-id="report.attempt.id" />
+
       <view v-if="modules.length" class="card">
         <view class="h">模块得分</view>
         <view v-for="m in modules" :key="m.key" class="mrow">
