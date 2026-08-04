@@ -58,6 +58,10 @@
         {
           "path": "exam/report",
           "style": { "navigationBarTitleText": "成绩报告" }
+        },
+        {
+          "path": "search/search",
+          "style": { "navigationBarTitleText": "搜索" }
         }
       ]
     }

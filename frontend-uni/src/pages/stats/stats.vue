@@ -40,6 +40,8 @@
       </view>
     </view>
 
+    <predict-card />
+
     <view v-if="(reco && reco.items.length) || dueN" class="card">
       <view class="h">今日待办</view>
       <view v-if="dueN" class="todo-row">

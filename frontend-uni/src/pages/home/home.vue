@@ -1,5 +1,11 @@
 <template>
   <view class="wrap home">
+    <!-- 全局搜索入口 -->
+    <view class="searchbar" @click="goSearch">
+      <uni-icons type="search" size="16" color="#9ca3af" />
+      <text class="searchbar-t">搜题目 / 考点 / 试卷，支持题号</text>
+    </view>
+
     <!-- Hero：今日目标 + 行动 -->
     <view class="hero">
       <view class="hero-top">
@@ -426,6 +432,9 @@ export default {
     if (this.realMode) this.loadRealFilters();
   },
   methods: {
+    goSearch() {
+      uni.navigateTo({ url: '/pkgA/search/search' });
+    },
     modName(m) {
       return NAMES[m] || m || '未知';
     },
@@ -827,4 +836,6 @@ export default {
   .sheet { max-width: 520px; border-radius: 28rpx; }
 }
 /* #endif */
+.searchbar { display: flex; align-items: center; gap: 12rpx; background: #fff; border-radius: 999rpx; padding: 16rpx 26rpx; margin-bottom: 20rpx; box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04); }
+.searchbar-t { font-size: 26rpx; color: #9ca3af; }
 </style>
