@@ -228,6 +228,7 @@
 | 9 | P1 | 考点树 | 缺模块筛选 chips | backend/app/admin/pages/taxonomy.js |
 | 10 | P1 | 内容治理 | 缺「立即扫描」按钮 | backend/app/admin/pages/governance.js |
 | 11 | P1 | 时政与申论 | 时政表缺「时效」列 | backend/app/admin/pages/content.js |
+| 12 | P1 | 全局（H5 桌面） | 浅色模式下页面内容以下 body 底色为深色（`.theme-dark page` 的 background 被 uni H5 编译为裸 `body` 规则覆盖浅色底） | frontend-uni/src/App.vue |
 
 P2（标注不修，共 9 项）：看板时间范围/导出报表、题库分页页码、抽审空态、时政作答统计列、设置危险操作区、导出弹层版式开关、成绩报告雷达图、每日一练独立页、申论批改独立页。
 

@@ -98,7 +98,6 @@ body {
   --wot-cell-group-title-color: #9ba0b0;
   --wot-color-border-light: #2b2e3a;
   --wot-button-plain-bg-color: transparent;
-  background: #15161c;
 }
 .theme-dark uni-tabbar .uni-tabbar,
 .theme-dark uni-tabbar .uni-tabbar__border {
