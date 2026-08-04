@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -410,9 +411,11 @@ class AskPageState extends State<AskPage> {
       _saveRecent(rec);
       _persistSession();
     } catch (e) {
-      setState(() => error = e is Exception
-          ? e.toString().replaceFirst('Exception: ', '')
-          : Api.errMsg(e));
+      setState(() => error = e is DioException
+          ? Api.errMsg(e)
+          : e is Exception
+              ? e.toString().replaceFirst('Exception: ', '')
+              : Api.errMsg(e));
     }
     _loadTimer?.cancel();
     if (mounted) {

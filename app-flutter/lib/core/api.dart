@@ -205,11 +205,31 @@ class Api {
     if (userAnswer != null && userAnswer.isNotEmpty) {
       form.fields.add(MapEntry('user_answer', userAnswer));
     }
-    final r = await dio.post<ResponseBody>(
-      '/api/explain/stream',
-      data: form,
-      options: Options(responseType: ResponseType.stream),
-    );
+    final Response<ResponseBody> r;
+    try {
+      r = await dio.post<ResponseBody>(
+        '/api/explain/stream',
+        data: form,
+        options: Options(responseType: ResponseType.stream),
+      );
+    } on DioException catch (e) {
+      // 流式请求出错时 response.data 是 ResponseBody，需解码后才能拿到 detail
+      final body = e.response?.data;
+      if (body is ResponseBody) {
+        final bytes = await body.stream
+            .cast<List<int>>()
+            .fold<List<int>>([], (a, b) => a..addAll(b));
+        try {
+          final m = jsonDecode(utf8.decode(bytes));
+          if (m is Map && m['detail'] != null) {
+            throw Exception(m['detail'].toString());
+          }
+        } on FormatException {
+          // ignore: 非 JSON 错误体
+        }
+      }
+      throw Exception(errMsg(e));
+    }
     Map<String, dynamic> meta = {};
     final full = StringBuffer();
     var buf = '';
