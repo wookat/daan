@@ -68,6 +68,20 @@
         <text class="row-v">{{ ['小', '标准', '大'][fontLv] }}</text>
         <text class="row-arrow">›</text>
       </view>
+      <!-- #ifdef H5 -->
+      <view class="row" @click="cycleTheme">
+        <text class="row-ico">🌓</text>
+        <text class="row-t">外观模式</text>
+        <text class="row-v">{{ themeLabel }}</text>
+        <text class="row-arrow">›</text>
+      </view>
+      <!-- #endif -->
+      <view class="row" @click="goOffline">
+        <text class="row-ico">📦</text>
+        <text class="row-t">离线题包</text>
+        <text class="row-v">{{ offlineN ? offlineN + ' 个题包' : '未下载' }}</text>
+        <text class="row-arrow">›</text>
+      </view>
       <view class="row" @click="toggleSfx">
         <text class="row-ico">🔔</text>
         <text class="row-t">答题音效</text>
@@ -104,6 +118,8 @@
 
 <script>
 import { request, getAuthUser, authLogout, clearAuth, anonUid } from '../../api.js';
+import { cycleThemeMode, getThemeMode, THEME_LABELS } from '../../theme.js';
+import { listPacks } from '../../offline.js';
 
 export default {
   data() {
@@ -118,9 +134,14 @@ export default {
       dailyGoal: 20,
       fontLv: 1,
       sfxOn: true,
+      themeMode: 'system',
+      offlineN: 0,
     };
   },
   computed: {
+    themeLabel() {
+      return THEME_LABELS[this.themeMode] || '跟随系统';
+    },
     totalDone() {
       let n = 0;
       for (const s of Object.values(this.pstats.byModule || {})) n += s.done || 0;
@@ -151,6 +172,8 @@ export default {
     this.dailyGoal = uni.getStorageSync('dailyGoal') || 20;
     this.fontLv = uni.getStorageSync('fontLv') || 1;
     this.sfxOn = uni.getStorageSync('sfxOff') ? false : true;
+    this.themeMode = getThemeMode();
+    this.offlineN = listPacks().length;
     this.loadRemote();
   },
   methods: {
@@ -207,6 +230,13 @@ export default {
       uni.setStorageSync('fontLv', this.fontLv);
       uni.showToast({ title: '字号：' + ['小', '标准', '大'][this.fontLv] + '（练习页生效）', icon: 'none' });
     },
+    cycleTheme() {
+      this.themeMode = cycleThemeMode();
+      uni.showToast({ title: '外观模式：' + this.themeLabel, icon: 'none' });
+    },
+    goOffline() {
+      uni.navigateTo({ url: '/pkgA/user/offline' });
+    },
     toggleSfx() {
       this.sfxOn = !this.sfxOn;
       uni.setStorageSync('sfxOff', this.sfxOn ? '' : '1');
@@ -250,7 +280,7 @@ export default {
 .card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); margin-bottom: 20rpx; }
 
 .acct { display: flex; align-items: center; gap: 24rpx; padding: 32rpx; }
-.avatar { width: 96rpx; height: 96rpx; border-radius: 50%; background: linear-gradient(135deg, #5b8af8, #3b6ff5); color: #fff; font-size: 40rpx; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.avatar { width: 96rpx; height: 96rpx; border-radius: 50%; background: linear-gradient(135deg, #5b8af8, var(--brand)); color: #fff; font-size: 40rpx; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .grow { flex: 1; min-width: 0; }
 .acct-name { display: block; font-size: 32rpx; font-weight: 700; color: var(--ink); }
 .acct-sub { display: block; font-size: 23rpx; color: var(--ink-2); margin-top: 6rpx; }
@@ -269,7 +299,7 @@ export default {
 .row-t { flex: 1; font-size: 28rpx; color: var(--ink); }
 .row-v { font-size: 24rpx; color: var(--ink-2); max-width: 40%; }
 .row-v.ellip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.row-arrow { color: #b0b4c0; font-size: 30rpx; flex-shrink: 0; }
+.row-arrow { color: var(--ink-4); font-size: 30rpx; flex-shrink: 0; }
 
 .logout { margin-top: 40rpx; background: var(--card); border-radius: 24rpx; text-align: center; min-height: 44px; display: flex; align-items: center; justify-content: center; font-size: 28rpx; color: #dc2626; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); }
 

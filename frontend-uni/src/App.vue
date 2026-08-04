@@ -1,4 +1,7 @@
 <script>
+import { applyTheme, watchSystemTheme } from './theme.js'
+import { flushOfflineQueue, watchNetwork } from './offline.js'
+
 export default {
   onLaunch: function () {
     // #ifdef H5
@@ -6,8 +9,13 @@ export default {
     const m = h.match(/^#\/pages\/(exam|shenlun|user)\//)
     if (m) window.location.replace(window.location.pathname + h.replace('#/pages/', '#/pkgA/'))
     // #endif
+    applyTheme()
+    watchSystemTheme()
+    watchNetwork()
   },
-  onShow: function () {},
+  onShow: function () {
+    flushOfflineQueue()
+  },
   onHide: function () {},
 }
 </script>
@@ -29,35 +37,63 @@ page {
   --bad-soft: #fef2f2;
   --warn: #d97706;
   --warn-soft: #fffbeb;
+  --info: #0284c7;
+  --info-soft: #f0f9ff;
   --line: #e7e9f0;
   --fill: #f2f3f7;
   --card: #ffffff;
   --soft-bg: #f2f3f7;
+  /* 历史别名（部分页面沿用） */
+  --brand-50: var(--brand-soft);
+  --ink-1: var(--ink);
+  --muted: var(--ink-3);
+  --danger: var(--bad);
   --radius: 28rpx;
   background: linear-gradient(180deg, #edf3fe 0%, #f6f7fb 240rpx, #f6f7fb 100%);
   color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', 'Microsoft YaHei', sans-serif;
 }
 
-/* 深色模式（H5，跟随系统） */
+/* 深色模式（三档设置见 theme.js；.theme-dark 挂在 html 上，H5/App 生效）
+   深色 token 见 docs/design-v3/features/dark-mode.html：品牌蓝不变，浅底改深底 */
 /* #ifdef H5 */
-@media (prefers-color-scheme: dark) {
-  page {
-    --brand-soft: #2b2d55;
-    --ink: #e7e9f0;
-    --ink-2: #9aa0b0;
-    --ok-soft: #10301f;
-    --bad-soft: #3a1414;
-    --line: #363a48;
-    --card: #23262f;
-    --soft-bg: #1c1f27;
-    background: linear-gradient(180deg, #1b1d33 0%, #14161c 240rpx, #14161c 100%);
-  }
-  uni-tabbar .uni-tabbar,
-  uni-tabbar .uni-tabbar__border {
-    background: #1c1f27 !important;
-    border-color: #363a48;
-  }
+.theme-dark page {
+  --brand-soft: #1e2a4a;
+  --brand-soft-2: #24345c;
+  --ink: #f2f3f7;
+  --ink-2: #9ba0b0;
+  --ink-3: #8a8ea0;
+  --ink-4: #5c6070;
+  --ok-soft: #0e2b1e;
+  --bad-soft: #331416;
+  --warn-soft: #33260e;
+  --info-soft: #0e2233;
+  --line: #2b2e3a;
+  --fill: #23252f;
+  --card: #1d1f28;
+  --soft-bg: #23252f;
+  background: linear-gradient(180deg, #1b2233 0%, #15161c 240rpx, #15161c 100%);
+}
+.theme-dark uni-tabbar .uni-tabbar,
+.theme-dark uni-tabbar .uni-tabbar__border {
+  background: #1d1f28 !important;
+  border-color: #2b2e3a;
+}
+.theme-dark uni-page-head .uni-page-head {
+  background: #15161c !important;
+  color: #f2f3f7;
+}
+.theme-dark uni-page-head .uni-page-head__title {
+  color: #f2f3f7 !important;
+}
+.theme-dark input,
+.theme-dark textarea {
+  color: var(--ink);
+  caret-color: var(--ink);
+}
+.theme-dark .uni-input-placeholder,
+.theme-dark .uni-textarea-placeholder {
+  color: var(--ink-4) !important;
 }
 /* #endif */
 

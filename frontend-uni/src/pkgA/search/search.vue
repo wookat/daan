@@ -170,34 +170,34 @@ export default {
 </script>
 
 <style scoped>
-.wrap { min-height: 100vh; background: #f5f6f8; padding: 20rpx 24rpx 60rpx; box-sizing: border-box; }
+.wrap { min-height: 100vh; background: var(--fill); padding: 20rpx 24rpx 60rpx; box-sizing: border-box; }
 .sbar { display: flex; align-items: center; gap: 20rpx; }
-.sbox { flex: 1; display: flex; align-items: center; gap: 12rpx; background: #fff; border-radius: 999rpx; padding: 14rpx 24rpx; }
+.sbox { flex: 1; display: flex; align-items: center; gap: 12rpx; background: var(--card); border-radius: 999rpx; padding: 14rpx 24rpx; }
 .sinput { flex: 1; font-size: 28rpx; }
-.sclear { color: #9ca3af; font-size: 26rpx; padding: 0 8rpx; }
-.scancel { font-size: 28rpx; color: #6b7280; }
+.sclear { color: var(--ink-3); font-size: 26rpx; padding: 0 8rpx; }
+.scancel { font-size: 28rpx; color: var(--ink-2); }
 .tabs { display: flex; gap: 12rpx; margin: 20rpx 0; }
-.tab { font-size: 26rpx; color: #6b7280; background: #fff; border-radius: 999rpx; padding: 8rpx 28rpx; }
-.tab.on { color: #fff; background: #3b6ff5; font-weight: 600; }
-.card { background: #fff; border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx; }
+.tab { font-size: 26rpx; color: var(--ink-2); background: var(--card); border-radius: 999rpx; padding: 8rpx 28rpx; }
+.tab.on { color: #fff; background: var(--brand); font-weight: 600; }
+.card { background: var(--card); border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx; }
 .sec { margin-bottom: 12rpx; }
-.sec-t { display: block; font-size: 24rpx; color: #9ca3af; margin: 12rpx 4rpx; }
+.sec-t { display: block; font-size: 24rpx; color: var(--ink-3); margin: 12rpx 4rpx; }
 .titem { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }
 .t-l { flex: 1; display: flex; flex-direction: column; gap: 6rpx; }
-.t-name { font-size: 28rpx; color: #111827; font-weight: 600; }
-.t-sub { font-size: 22rpx; color: #9ca3af; }
-.t-go { font-size: 24rpx; color: #3b6ff5; flex-shrink: 0; }
+.t-name { font-size: 28rpx; color: var(--ink); font-weight: 600; }
+.t-sub { font-size: 22rpx; color: var(--ink-3); }
+.t-go { font-size: 24rpx; color: var(--brand); flex-shrink: 0; }
 .qitem { display: flex; flex-direction: column; gap: 10rpx; }
 .q-top { display: flex; align-items: center; gap: 12rpx; flex-wrap: wrap; }
-.q-code { font-size: 20rpx; color: #6b7280; background: #f3f4f6; border-radius: 6rpx; padding: 2rpx 10rpx; font-family: monospace; }
-.q-real { font-size: 20rpx; color: #b45309; background: #fff4e5; border-radius: 6rpx; padding: 2rpx 10rpx; }
-.q-mod { font-size: 20rpx; color: #9ca3af; }
-.q-text { font-size: 26rpx; color: #374151; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.q-detail { border-top: 1rpx solid #f3f4f6; padding-top: 14rpx; display: flex; flex-direction: column; gap: 8rpx; }
-.q-opt { font-size: 24rpx; color: #4b5563; }
+.q-code { font-size: 20rpx; color: var(--ink-2); background: var(--fill); border-radius: 6rpx; padding: 2rpx 10rpx; font-family: monospace; }
+.q-real { font-size: 20rpx; color: #b45309; background: var(--warn-soft); border-radius: 6rpx; padding: 2rpx 10rpx; }
+.q-mod { font-size: 20rpx; color: var(--ink-3); }
+.q-text { font-size: 26rpx; color: var(--ink-2); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.q-detail { border-top: 1rpx solid var(--fill); padding-top: 14rpx; display: flex; flex-direction: column; gap: 8rpx; }
+.q-opt { font-size: 24rpx; color: var(--ink-2); }
 .q-opt.ans { color: #12b76a; font-weight: 600; }
 .q-ans { font-size: 24rpx; color: #12b76a; font-weight: 600; margin-top: 4rpx; }
-.q-exp { font-size: 24rpx; color: #6b7280; line-height: 1.6; }
-.more { text-align: center; font-size: 26rpx; color: #3b6ff5; padding: 16rpx; }
-.empty { text-align: center; color: #9ca3af; font-size: 26rpx; padding: 100rpx 40rpx; white-space: pre-line; }
+.q-exp { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; }
+.more { text-align: center; font-size: 26rpx; color: var(--brand); padding: 16rpx; }
+.empty { text-align: center; color: var(--ink-3); font-size: 26rpx; padding: 100rpx 40rpx; white-space: pre-line; }
 </style>

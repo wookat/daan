@@ -136,28 +136,28 @@ export default {
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 30rpx; font-weight: 600; margin-bottom: 20rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 40rpx 24rpx; }
-.mini { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(120deg, #3b6ff5, #6c9bff); border: none; }
+.mini { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(120deg, var(--brand), #6c9bff); border: none; }
 .mini-t { display: block; font-size: 30rpx; font-weight: 700; color: #fff; }
 .mini-s { display: block; font-size: 22rpx; color: rgba(255, 255, 255, 0.85); margin-top: 6rpx; }
-.mini-go { flex-shrink: 0; background: #fff; color: var(--brand, #3b6ff5); border-radius: 999rpx; padding: 0 40rpx; min-height: 44px; line-height: 44px; font-size: 26rpx; font-weight: 600; }
+.mini-go { flex-shrink: 0; background: var(--card); color: var(--brand); border-radius: 999rpx; padding: 0 40rpx; min-height: 44px; line-height: 44px; font-size: 26rpx; font-weight: 600; }
 .filters { margin-bottom: 20rpx; }
 .fscroll { white-space: nowrap; margin-bottom: 12rpx; }
 .fchip { display: inline-flex; align-items: center; min-height: 44px; box-sizing: border-box; font-size: 24rpx; color: var(--ink-2); background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 26rpx; margin-right: 12rpx; }
-.fchip.on { color: #fff; background: var(--brand, #3b6ff5); border-color: var(--brand, #3b6ff5); font-weight: 600; }
+.fchip.on { color: #fff; background: var(--brand); border-color: var(--brand); font-weight: 600; }
 .paper-top { min-height: 44px; }
 .paper-t { font-size: 29rpx; font-weight: 600; color: var(--ink); line-height: 1.5; }
 .paper-meta { display: flex; align-items: center; gap: 12rpx; margin-top: 10rpx; flex-wrap: wrap; }
-.ptag { font-size: 21rpx; color: var(--brand, #3b6ff5); background: var(--brand-soft, #edf3fe); border-radius: 8rpx; padding: 4rpx 14rpx; }
+.ptag { font-size: 21rpx; color: var(--brand); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
 .pmeta { font-size: 23rpx; color: var(--ink-2); }
 .pbest { display: block; font-size: 22rpx; color: #d97706; margin-top: 10rpx; }
 .pbest.none { color: var(--ink-2); }
 .paper-btns { display: flex; gap: 16rpx; margin-top: 20rpx; }
-.pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand, #3b6ff5); color: var(--brand, #3b6ff5); border-radius: 999rpx; font-size: 25rpx; font-weight: 500; }
-.pbtn.main { background: var(--brand, #3b6ff5); color: #fff; border-color: var(--brand, #3b6ff5); }
+.pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand); border-radius: 999rpx; font-size: 25rpx; font-weight: 500; }
+.pbtn.main { background: var(--brand); color: #fff; border-color: var(--brand); }
 .arow { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 12rpx 0; border-bottom: 1rpx solid var(--line); }
 .arow:last-child { border-bottom: none; }
 .arow-l { flex: 1; min-width: 0; margin-right: 16rpx; }
 .arow-t { display: block; font-size: 25rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .arow-s { display: block; font-size: 21rpx; color: var(--ink-2); margin-top: 4rpx; }
-.arow-score { flex-shrink: 0; font-size: 28rpx; font-weight: 700; color: var(--brand, #3b6ff5); }
+.arow-score { flex-shrink: 0; font-size: 28rpx; font-weight: 700; color: var(--brand); }
 </style>

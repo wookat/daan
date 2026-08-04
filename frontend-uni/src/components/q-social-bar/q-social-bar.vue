@@ -84,15 +84,15 @@ export default {
 
 <style scoped>
 .qsb { margin-top: 16rpx; }
-.mynote { background: #fffbeb; border-left: 6rpx solid #f59e0b; border-radius: 0 12rpx 12rpx 0; padding: 14rpx 18rpx; font-size: 24rpx; color: var(--ink-2, #4e5563); line-height: 1.6; }
+.mynote { background: var(--warn-soft); border-left: 6rpx solid #f59e0b; border-radius: 0 12rpx 12rpx 0; padding: 14rpx 18rpx; font-size: 24rpx; color: var(--ink-2); line-height: 1.6; }
 .nb { color: #b45309; font-weight: 600; }
-.edit { color: #3b6ff5; margin-left: 12rpx; font-size: 22rpx; }
-.note-edit { background: #fffbeb; border-radius: 14rpx; padding: 16rpx 18rpx; }
+.edit { color: var(--brand); margin-left: 12rpx; font-size: 22rpx; }
+.note-edit { background: var(--warn-soft); border-radius: 14rpx; padding: 16rpx 18rpx; }
 .note-ta { width: 100%; min-height: 100rpx; font-size: 25rpx; line-height: 1.6; box-sizing: border-box; }
 .note-ops { display: flex; justify-content: flex-end; gap: 34rpx; margin-top: 10rpx; }
-.nop { font-size: 24rpx; color: var(--ink-3, #8f959e); }
-.nop.save { color: #3b6ff5; font-weight: 600; }
+.nop { font-size: 24rpx; color: var(--ink-3); }
+.nop.save { color: var(--brand); font-weight: 600; }
 .nop.del { color: #ef4444; }
 .qsb-row { display: flex; gap: 40rpx; margin-top: 14rpx; }
-.qsb-link { font-size: 24rpx; color: #3b6ff5; }
+.qsb-link { font-size: 24rpx; color: var(--brand); }
 </style>
