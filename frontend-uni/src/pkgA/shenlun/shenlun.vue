@@ -8,19 +8,19 @@
 
     <template v-if="tab === 'q' && !detail">
       <view class="fltbar">
-        <scroll-view scroll-x class="chips-scroll" :show-scrollbar="false">
-          <view class="chips-line">
-            <text v-for="t in QTYPES" :key="t" class="chip" :class="{ on: qtype === t }" @click="setQtype(t)">{{ t }}</text>
-          </view>
-        </scroll-view>
-        <view class="flt-fixed" :class="{ on: fltCount }" @click="fltOpen = true">
-          <text>筛选</text>
-          <text v-if="fltCount" class="flt-badge">{{ fltCount }}</text>
-        </view>
+        <text class="chip" :class="{ on: !!region }" @click="fltOpen = true">{{ region || '地区' }} ▾</text>
+        <text class="chip" :class="{ on: !!year }" @click="fltOpen = true">{{ year || '年份' }} ▾</text>
+        <text class="chip" :class="{ on: qtype !== '全部' }" @click="fltOpen = true">{{ qtype === '全部' ? '题型' : qtype }} ▾</text>
+        <view class="grow"></view>
+        <text class="chip clr" @click="clearFlt">重置</text>
       </view>
       <view v-if="fltOpen" class="mask" @click="fltOpen = false">
         <view class="sheet" @click.stop>
           <view class="sheet-h"><text class="sheet-t">筛选</text><view class="sheet-x" @click="fltOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view></view>
+          <view class="sheet-k">题型</view>
+          <view class="chips">
+            <text v-for="t in QTYPES" :key="t" class="chip sm" :class="{ on: qtype === t }" @click="setQtype(t)">{{ t }}</text>
+          </view>
           <view v-if="years.length" class="sheet-k">年份</view>
           <view v-if="years.length" class="chips">
             <text class="chip sm" :class="{ on: !year }" @click="setYear(0)">全部</text>
@@ -41,16 +41,16 @@
       <view v-else-if="!qs.length" class="spin">暂无题目，敬请期待</view>
       <view v-for="q in qs" :key="q.id" class="card q-item" @click="openQ(q.id)">
         <view class="q-top">
-          <text class="q-paper">{{ q.paper || (q.exam_year + ' · ' + (q.exam_region || '')) }}</text>
-          <view class="q-top-r">
+          <view class="q-tags">
             <text class="q-type">{{ q.qtype }}</text>
-            <view class="m-star" :class="{ on: qFavIds.includes(q.id) }" @click.stop="toggleQFav(q)"><l-icon name="star" :size="17" :color="qFavIds.includes(q.id) ? '#f59e0b' : '#8a90a0'" :fill="qFavIds.includes(q.id) ? '#f59e0b' : 'none'" /></view>
+            <text class="q-paper">{{ q.paper || (q.exam_year + ' · ' + (q.exam_region || '')) }}</text>
           </view>
+          <view class="m-star" :class="{ on: qFavIds.includes(q.id) }" @click.stop="toggleQFav(q)"><l-icon name="star" :size="17" :color="qFavIds.includes(q.id) ? '#f59e0b' : '#8a90a0'" :fill="qFavIds.includes(q.id) ? '#f59e0b' : 'none'" /></view>
         </view>
         <text class="q-text">{{ q.question }}</text>
         <view class="q-foot">
           <text class="q-meta">{{ qMeta(q.question) }}</text>
-          <view class="q-go" @click.stop="openQ(q.id)">去作答</view>
+          <text class="q-go" @click.stop="openQ(q.id)">去作答 ›</text>
         </view>
       </view>
       <view v-if="!qEnd && qs.length >= 20" class="more" @click="loadMore">加载更多</view>
@@ -67,9 +67,9 @@
         <text class="d-q">{{ detail.question }}</text>
         <view class="d-h toggle" @click="showMat = !showMat">给定资料 {{ showMat ? '▲' : '▼' }}</view>
         <text v-if="showMat" class="d-mat">{{ detail.material }}</text>
-        <view class="d-h">我的作答</view>
+        <view class="d-ans-h"><view class="d-h" style="margin: 0">我的作答</view><text v-if="myAnswer" class="d-save">已自动保存 · {{ myAnswer.length }} 字</text></view>
         <textarea v-model="myAnswer" class="d-ta" :maxlength="3000" placeholder="在此作答后点击下方按钮，AI 按采分点批改（大作文为结构点评+参考档位）。草稿自动保存在本机" auto-height @input="saveDraft" />
-        <view class="grade-btn" :class="{ dis: grading || !myAnswer.trim() }" @click="grade">{{ grading ? 'AI 批改中…' : 'AI 批改' }}</view>
+        <view class="grade-btn" :class="{ dis: grading || !myAnswer.trim() }" @click="grade">{{ grading ? 'AI 批改中…' : '提交 AI 批改' }}</view>
         <view v-if="gradeResult" class="d-grade">
           <view class="d-h">批改结果<text class="g-note">（AI 参考，非官方评分）</text></view>
           <text class="g-body">{{ gradeResult }}</text>
@@ -230,6 +230,7 @@ export default {
       this.loadQs();
     },
     clearFlt() {
+      this.qtype = '全部';
       this.year = 0;
       this.region = '';
       this.qOffset = 0;
@@ -399,23 +400,18 @@ export default {
 <style>
 page { background: var(--fill); }
 .page { padding: 20rpx 24rpx 40rpx; background: var(--fill); min-height: 100vh; box-sizing: border-box; }
-.seg { display: flex; background: var(--line); border-radius: 16rpx; padding: 6rpx; margin-bottom: 20rpx; }
-.seg-i { flex: 1; text-align: center; font-size: 26rpx; color: var(--ink-2); border-radius: 12rpx; padding: 14rpx 0; }
-.seg-i.on { background: var(--card); color: var(--brand); font-weight: 600; box-shadow: 0 2rpx 8rpx rgba(31, 36, 48, 0.08); }
+.seg { display: flex; gap: 12rpx; margin-bottom: 20rpx; }
+.seg-i { display: inline-flex; align-items: center; justify-content: center; font-size: 24rpx; color: var(--ink-2); background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 12rpx 28rpx; }
+.seg-i.on { background: var(--brand-soft); color: var(--brand); border-color: transparent; font-weight: 600; }
 .chips { display: flex; gap: 12rpx; flex-wrap: wrap; margin-bottom: 20rpx; }
-.fltbar { display: flex; align-items: center; gap: 14rpx; margin-bottom: 20rpx; }
-.chips-scroll { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; }
-.chips-line { display: inline-flex; flex-wrap: nowrap; width: max-content; gap: 12rpx; }
-.chips-line .chip { white-space: nowrap; flex-shrink: 0; }
-.flt-fixed { flex-shrink: 0; display: flex; align-items: center; gap: 6rpx; font-size: 23rpx; color: var(--ink-2); background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 12rpx 24rpx; min-height: 72rpx; box-sizing: border-box; }
-.flt-fixed.on { color: var(--brand); border-color: var(--brand); }
-.flt-badge { background: var(--brand); color: #fff; font-size: 19rpx; border-radius: 999rpx; min-width: 30rpx; height: 30rpx; line-height: 30rpx; text-align: center; }
+.fltbar { display: flex; align-items: center; gap: 12rpx; margin-bottom: 20rpx; }
+.grow { flex: 1; }
 .sheet-foot { display: flex; gap: 18rpx; margin-top: 28rpx; }
 .sf-btn { flex: 1; text-align: center; background: var(--brand); color: #fff; font-size: 27rpx; font-weight: 600; border-radius: 999rpx; height: 88rpx; line-height: 88rpx; }
 .sf-btn.ghost { flex: 0 0 30%; background: var(--card); color: var(--ink-2); border: 1rpx solid var(--line); box-sizing: border-box; }
 .q-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 14rpx; }
 .q-meta { font-size: 22rpx; color: var(--ink-3); }
-.q-go { height: 72rpx; line-height: 72rpx; padding: 0 30rpx; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 24rpx; font-weight: 600; }
+.q-go { color: var(--brand); font-size: 24rpx; font-weight: 500; padding: 12rpx 0 12rpx 24rpx; }
 .chip { display: inline-flex; align-items: center; gap: 6rpx; font-size: 23rpx; color: var(--ink-2); background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 12rpx 24rpx; }
 .chip.on { color: #fff; background: var(--brand); border-color: var(--brand); }
 .card { background: var(--card); border-radius: 20rpx; padding: 26rpx 28rpx; margin-bottom: 18rpx; }
@@ -425,7 +421,8 @@ page { background: var(--fill); }
 .hist-res { font-size: 23rpx; color: var(--ink-2); background: var(--warn-soft); border-radius: 8rpx; padding: 12rpx 14rpx; margin-top: 10rpx; line-height: 1.7; white-space: pre-wrap; display: block; }
 .spin { text-align: center; color: var(--ink-3); font-size: 25rpx; padding: 60rpx 0; }
 .q-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
-.q-paper { font-size: 22rpx; color: #b45309; background: #fef3c7; border-radius: 8rpx; padding: 4rpx 14rpx; }
+.q-tags { display: flex; align-items: center; gap: 12rpx; flex-wrap: wrap; }
+.q-paper { font-size: 22rpx; color: var(--ink-2); background: var(--fill); border-radius: 8rpx; padding: 4rpx 14rpx; }
 .q-type { font-size: 22rpx; color: var(--brand); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
 .q-item .q-text { font-size: 26rpx; color: var(--ink-1); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .q-text { font-size: 26rpx; color: var(--ink-1); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
@@ -455,6 +452,8 @@ page { background: var(--fill); }
 .sheet-x { font-size: 26rpx; color: var(--brand); font-weight: 600; padding: 10rpx 0 10rpx 24rpx; }
 .sheet-k { font-size: 23rpx; color: var(--ink-3); margin: 14rpx 0 10rpx; }
 .m-src { font-size: 22rpx; color: var(--ink-3); word-break: break-all; overflow-wrap: anywhere; display: block; }
+.d-ans-h { display: flex; justify-content: space-between; align-items: baseline; margin: 22rpx 0 10rpx; }
+.d-save { font-size: 21rpx; color: var(--ink-3); }
 .d-ta { width: 100%; box-sizing: border-box; min-height: 220rpx; background: var(--fill); border: 1rpx solid var(--line); border-radius: 12rpx; padding: 18rpx; font-size: 25rpx; line-height: 1.7; }
 .grade-btn { margin-top: 16rpx; text-align: center; background: var(--brand); color: #fff; font-size: 27rpx; font-weight: 600; border-radius: 999rpx; padding: 20rpx 0; }
 .grade-btn.dis { opacity: 0.5; }

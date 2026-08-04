@@ -144,6 +144,9 @@
       if (/^\d+$/.test(v)) location.hash = '#/questions?id=' + v;
       else if (v) location.hash = '#/questions?kw=' + encodeURIComponent(v);
     });
+    window.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); $('gsearch').focus(); }
+    });
     window.addEventListener('hashchange', route);
     if (!token()) { showLogin(); return; }
     try {

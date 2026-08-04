@@ -1,7 +1,8 @@
 <template>
   <view class="wrap">
     <view class="hero">
-      <text class="hero-t">{{ mode === 'login' ? '登录账号' : '注册账号' }}</text>
+      <view class="hero-logo">📘</view>
+      <text class="hero-t">考公错题助手</text>
       <text class="hero-s">登录后错题、做题记录多端同步，本机记录自动合并</text>
     </view>
 
@@ -88,17 +89,30 @@ export default {
   box-sizing: border-box;
 }
 .hero {
-  padding: 40rpx 16rpx 28rpx;
+  padding: 64rpx 16rpx 44rpx;
+  text-align: center;
+}
+.hero-logo {
+  width: 144rpx;
+  height: 144rpx;
+  border-radius: 44rpx;
+  background: linear-gradient(135deg, #5b8af8, #3b6ff5);
+  margin: 0 auto 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 68rpx;
+  box-shadow: 0 16rpx 40rpx rgba(59, 111, 245, 0.35);
 }
 .hero-t {
   display: block;
-  font-size: 44rpx;
-  font-weight: 700;
+  font-size: 40rpx;
+  font-weight: 800;
   color: var(--ink);
 }
 .hero-s {
   display: block;
-  margin-top: 12rpx;
+  margin-top: 8rpx;
   font-size: 26rpx;
   color: var(--ink-3);
 }

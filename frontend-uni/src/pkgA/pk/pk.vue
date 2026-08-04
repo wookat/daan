@@ -459,7 +459,7 @@ export default {
 
 .join-row { display: flex; gap: 16rpx; margin-bottom: 8rpx; }
 .join-input { flex: 1; background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 30rpx; min-height: 44px; font-size: 27rpx; box-sizing: border-box; }
-.join-btn { min-height: 44px; display: flex; align-items: center; padding: 0 40rpx; background: #17181c; color: #fff; border-radius: 999rpx; font-size: 27rpx; font-weight: 600; }
+.join-btn { min-height: 44px; display: flex; align-items: center; padding: 0 40rpx; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 27rpx; font-weight: 600; }
 
 .lb-row { display: flex; align-items: center; gap: 20rpx; padding: 16rpx 0; border-bottom: 1rpx solid var(--fill); }
 .lb-row:last-child { border-bottom: none; }

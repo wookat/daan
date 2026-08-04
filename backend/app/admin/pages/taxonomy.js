@@ -5,11 +5,13 @@
   let openMods = new Set();
   let openGroups = new Set();
   let selCode = null;
+  let modFilter = '';
 
   function renderTree() {
     const box = document.getElementById('t-tree');
     const rows = [];
     for (const m of tax.modules) {
+      if (modFilter && m.key !== modFilter) continue;
       const mOpen = openMods.has(m.key);
       rows.push(`<div class="tree-row" data-mod="${m.key}" style="cursor:pointer;font-weight:600">
         <span>${mOpen ? '▾' : '▸'}</span><span style="flex:1">${esc(m.name)}</span>
@@ -81,10 +83,22 @@
       <div><h1>考点树</h1><div class="sub">三级考点结构与题量分布（考点定义随代码 taxonomy.json 版本管理）</div></div>
       <div class="acts"><a class="btn btn-ghost" href="#/review">考点抽审 →</a></div>
     </div>
+    <div class="row" id="t-chips" style="gap:8px;margin-bottom:12px">
+      <button class="chip on" data-m="">全部</button>
+      ${tax.modules.map((m) => `<button class="chip" data-m="${m.key}">${esc(m.name)}</button>`).join('')}
+    </div>
     <div class="split-2" style="display:grid;grid-template-columns:1.2fr 1fr;gap:14px">
       <div class="card" style="padding:8px 0" id="t-tree"></div>
       <div class="card" id="t-detail"></div>
     </div>`;
+    modFilter = '';
+    el.querySelectorAll('#t-chips .chip').forEach((c) => {
+      c.onclick = () => {
+        modFilter = c.dataset.m;
+        el.querySelectorAll('#t-chips .chip').forEach((x) => x.classList.toggle('on', x === c));
+        renderTree();
+      };
+    });
     renderTree();
     renderDetail();
   }

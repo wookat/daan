@@ -1,6 +1,7 @@
 <template>
   <view class="wrap">
     <view class="mini card" @click="startMini">
+      <text class="mini-ico">⚡</text>
       <view class="mini-l">
         <text class="mini-t">迷你模考</text>
         <text class="mini-s">30 题 · 30 分钟 · 随机组卷，即刻开考</text>
@@ -136,10 +137,12 @@ export default {
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 30rpx; font-weight: 600; margin-bottom: 20rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 40rpx 24rpx; }
-.mini { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(120deg, var(--brand), #6c9bff); border: none; }
-.mini-t { display: block; font-size: 30rpx; font-weight: 700; color: #fff; }
-.mini-s { display: block; font-size: 22rpx; color: rgba(255, 255, 255, 0.85); margin-top: 6rpx; }
-.mini-go { flex-shrink: 0; background: var(--card); color: var(--brand); border-radius: 999rpx; padding: 0 40rpx; min-height: 44px; line-height: 44px; font-size: 26rpx; font-weight: 600; }
+.mini { display: flex; align-items: center; gap: 20rpx; background: linear-gradient(135deg, #fff7ed, #fffbeb); border: none; }
+.mini-ico { flex-shrink: 0; font-size: 48rpx; }
+.mini-l { flex: 1; min-width: 0; }
+.mini-t { display: block; font-size: 30rpx; font-weight: 700; color: var(--ink); }
+.mini-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; }
+.mini-go { flex-shrink: 0; background: var(--brand); color: #fff; border-radius: 999rpx; padding: 0 36rpx; min-height: 38px; line-height: 38px; font-size: 26rpx; font-weight: 600; }
 .filters { margin-bottom: 20rpx; }
 .fscroll { white-space: nowrap; margin-bottom: 12rpx; }
 .fchip { display: inline-flex; align-items: center; min-height: 44px; box-sizing: border-box; font-size: 24rpx; color: var(--ink-2); background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 26rpx; margin-right: 12rpx; }

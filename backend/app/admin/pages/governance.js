@@ -20,6 +20,7 @@
     el.innerHTML = `
     <div class="pagehead">
       <div><h1>内容治理</h1><div class="sub">质量巡检 · 扫描缓存 10 分钟 · 生成于 ${new Date(g.generated_at * 1000).toLocaleTimeString('zh-CN')}</div></div>
+      <div class="acts"><button class="btn btn-ghost" id="gov-rescan">▶ 立即扫描</button></div>
     </div>
     <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
       <div class="kpi"><div class="lb">损坏题</div><div class="v" style="color:${g.broken.length ? 'var(--error)' : 'var(--success)'}">${g.broken.length}${g.broken.length >= 100 ? '+' : ''}</div><div class="d flat">空题干/选项异常/答案越界</div></div>
@@ -83,6 +84,7 @@
         };
       });
     });
+    el.querySelector('#gov-rescan').onclick = () => { toast('重新扫描中…'); render(el); };
   }
 
   Admin.registerPage('governance', { title: '内容治理', crumb: '内容 / 内容治理', render });

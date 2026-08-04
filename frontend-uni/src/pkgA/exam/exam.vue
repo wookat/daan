@@ -4,17 +4,14 @@
 
     <template v-if="!loading && items.length">
       <view class="topbar">
-        <view class="left-info">
-          <text class="pos">{{ idx + 1 }}/{{ items.length }}</text>
-          <text class="mod">{{ modName(cur.module) }}</text>
-        </view>
-        <text class="clock" :class="{ warn: leftSecs <= 300 }">{{ fmtLeft }}</text>
+        <text class="mod">{{ modName(cur.module) }}</text>
+        <text class="clock">⏱ {{ fmtLeft }}</text>
         <view class="top-btns">
           <view class="tbtn" :class="{ on: cur._marked }" @click="toggleMark">{{ cur._marked ? '已标记' : '标记' }}</view>
-          <view class="tbtn" @click="cardOpen = true">答题卡</view>
         </view>
       </view>
 
+      <view class="meta-row"><text class="pos">{{ idx + 1 }}/{{ items.length }}</text></view>
       <view class="progress"><view class="pfill" :style="{ width: ((idx + 1) / items.length) * 100 + '%' }"></view></view>
 
       <view class="card qcard" @touchstart="touchStart" @touchend="touchEnd">
@@ -34,6 +31,7 @@
 
       <view class="navrow">
         <view class="nbtn" :class="{ dis: idx === 0 }" @click="prev">上一题</view>
+        <view class="nbtn acard-btn" @click="cardOpen = true">答题卡</view>
         <view v-if="idx + 1 < items.length" class="nbtn main" @click="next">下一题</view>
         <view v-else class="nbtn main" @click="confirmSubmit">交卷</view>
       </view>
@@ -265,15 +263,14 @@ export default {
 </script>
 
 <style scoped>
-.wrap { padding: 24rpx; padding-bottom: 40rpx; }
+.wrap { padding: 24rpx; padding-bottom: calc(140rpx + env(safe-area-inset-bottom)); }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 60rpx 24rpx; }
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; gap: 12rpx; }
-.left-info { display: flex; align-items: baseline; gap: 10rpx; min-width: 0; }
-.pos { font-size: 27rpx; font-weight: 700; color: var(--ink); }
+.meta-row { display: flex; justify-content: flex-end; margin-bottom: 8rpx; }
+.pos { font-size: 24rpx; font-weight: 600; color: var(--ink-2); }
 .mod { font-size: 21rpx; color: var(--brand); background: var(--brand-soft); border-radius: 8rpx; padding: 2rpx 12rpx; }
-.clock { font-size: 30rpx; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
-.clock.warn { color: #ef4444; }
+.clock { font-size: 32rpx; font-weight: 700; color: #ef4444; font-variant-numeric: tabular-nums; }
 .top-btns { display: flex; gap: 10rpx; }
 .tbtn { min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; font-size: 23rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 22rpx; background: var(--card); }
 .tbtn.on { color: #d97706; border-color: #f59e0b; background: var(--warn-soft); font-weight: 600; }
@@ -286,8 +283,9 @@ export default {
 .okey { flex-shrink: 0; width: 52rpx; height: 52rpx; line-height: 52rpx; text-align: center; border-radius: 50%; background: var(--soft-bg); color: var(--ink-2); font-weight: 600; font-size: 26rpx; margin-right: 20rpx; border: 1rpx solid var(--line); }
 .opt.sel .okey { background: var(--brand); color: #fff; border-color: var(--brand); }
 .otext { flex: 1; }
-.navrow { display: flex; gap: 16rpx; }
+.navrow { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: flex; gap: 16rpx; padding: 20rpx 24rpx calc(20rpx + env(safe-area-inset-bottom)); background: var(--card); border-top: 1rpx solid var(--line); }
 .nbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand); border-radius: 999rpx; font-size: 27rpx; font-weight: 500; background: var(--card); }
+.nbtn.acard-btn { flex: 0 0 176rpx; border-color: var(--line); color: var(--ink-2); }
 .nbtn.main { background: var(--brand); color: #fff; }
 .nbtn.dis { opacity: 0.4; }
 .mask { position: fixed; inset: 0; background: rgba(15, 18, 25, 0.45); z-index: 90; display: flex; align-items: flex-end; }

@@ -10,12 +10,22 @@
     const r = await api(`/api/admin/shizheng?offset=${szOffset}&limit=${LIMIT}`);
     document.getElementById('ct-sz-total').textContent = r.total.toLocaleString();
     const today = new Date().toISOString().slice(0, 10);
+    const lifeTag = (d) => {
+      if (!d) return '<span style="color:var(--t4)">—</span>';
+      const exp = new Date(d); exp.setMonth(exp.getMonth() + 12);
+      const expStr = exp.toISOString().slice(0, 7);
+      const days = Math.round((exp - Date.now()) / 86400000);
+      if (days < 0) return '<span class="tag tag-bad">已过期</span>';
+      if (days <= 90) return `<span class="tag tag-warn">即将过期</span><div class="sub" style="font-size:11px;color:var(--t4)">至 ${expStr}</div>`;
+      return `<span class="tag tag-ok">时效内</span><div class="sub" style="font-size:11px;color:var(--t4)">至 ${expStr}</div>`;
+    };
     box.innerHTML = r.items.length ? `<table class="tbl"><thead><tr>
-      <th style="width:100px">日期</th><th>题干</th><th style="width:56px">答案</th><th style="width:130px">来源</th></tr></thead><tbody>
+      <th style="width:100px">日期</th><th>题干</th><th style="width:100px">时效</th><th style="width:56px">答案</th><th style="width:130px">来源</th></tr></thead><tbody>
       ${r.items.map((q) => {
         const fresh = q.date >= today ? ' <span class="tag tag-ok">今日</span>' : '';
         return `<tr><td>${esc(q.date || '—')}${fresh}</td>
           <td style="max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(q.question)}">${esc(q.question)}</td>
+          <td>${lifeTag(q.date)}</td>
           <td><b>${esc(q.answer || '—')}</b></td>
           <td style="font-size:12px;color:var(--t3);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(q.source_note || '—')}</td></tr>`;
       }).join('')}</tbody></table>
