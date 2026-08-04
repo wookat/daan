@@ -245,6 +245,9 @@ export default {
     }
   },
   methods: {
+    stripStop(s) {
+      return (s || '').replace(/<\|[a-z_]+\|>/gi, '').trimEnd();
+    },
     splitAnswer(full) {
       const text = full || '';
       const m = /^\s*【答案】\s*([^｜|\n]+?)\s*[｜|]\s*【方法】\s*([^｜|\n]+?)\s*[｜|]\s*【一句话】\s*([^\n]*)\n?/.exec(text);
@@ -270,7 +273,8 @@ export default {
       } catch (e) { /* 静默失败 */ }
       uni.showToast({ title: up ? '感谢反馈' : '已记录，我们会核查这条解析', icon: 'none' });
     },
-    applyExplain(r, full) {
+    applyExplain(r, raw) {
+      const full = this.stripStop(raw);
       if (!r.ansCard) {
         const first = (full || '').split('\n')[0] || '';
         if (first.startsWith('【答案】') && !(full || '').includes('\n')) { r.html = ''; return; }
@@ -532,7 +536,8 @@ export default {
             query: q,
           },
         });
-        r.fu.push({ role: 'ai', content: d.answer, html: md(d.answer) });
+        const ans = this.stripStop(d.answer);
+        r.fu.push({ role: 'ai', content: ans, html: md(ans) });
         this.persistSession();
       } catch (e) {
         uni.showToast({ title: '追问失败：' + e.message, icon: 'none' });
