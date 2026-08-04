@@ -1,0 +1,11 @@
+{
+  "appId": "com.zalize.kaogong",
+  "appName": "考公错题助手",
+  "webDir": "dist/build/h5",
+  "android": {
+    "allowMixedContent": false
+  },
+  "server": {
+    "androidScheme": "http"
+  }
+}

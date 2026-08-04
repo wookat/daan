@@ -8,12 +8,25 @@ import time
 
 import httpx
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import auth, db, engine, kb, llm, omr, pdf_export, plan, taxonomy
 
 app = FastAPI(title="考公错题助手")
+# Android App（Capacitor WebView，origin 为 https://localhost）跨域访问 API
+APP_ORIGINS = os.environ.get(
+    "APP_CORS_ORIGINS", "https://localhost,capacitor://localhost,http://localhost"
+).split(",")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in APP_ORIGINS if o.strip()],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["X-Paper-Code"],
+)
 app.include_router(auth.router)
 
 ACCESS_CODE = os.environ.get("ACCESS_CODE", "")

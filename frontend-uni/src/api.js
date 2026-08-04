@@ -1,4 +1,6 @@
 // API 封装：H5 同源相对路径；小程序 / App 必须用绝对域名（可用 VITE_API_BASE 覆盖）
+import { isNativeApp, savePdfNative } from './native';
+
 const REMOTE_BASE = 'https://kaogong.zalize.com';
 
 // #ifdef H5
@@ -229,6 +231,10 @@ export async function exportPdf(body) {
   }
   rememberPaper(resp.headers.get('X-Paper-Code'), body.title);
   const blob = await resp.blob();
+  if (isNativeApp()) {
+    await savePdfNative(blob, (body.title || '试卷') + '-' + Date.now() + '.pdf');
+    return;
+  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

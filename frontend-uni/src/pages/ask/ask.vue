@@ -138,6 +138,7 @@
 <script>
 import { md } from '../../md.js';
 import { request, uploadExplain, streamExplain, anonUid } from '../../api.js';
+import { isNativeApp, pickImageNative } from '../../native.js';
 
 export default {
   data() {
@@ -275,6 +276,17 @@ export default {
       this.imageFile = null;
     },
     pickImage() {
+      // #ifdef H5
+      if (isNativeApp()) {
+        pickImageNative()
+          .then(({ path, file }) => {
+            this.imagePath = path;
+            this.imageFile = file;
+          })
+          .catch(() => {});
+        return;
+      }
+      // #endif
       uni.chooseImage({
         count: 1,
         success: (res) => {
