@@ -151,11 +151,11 @@ export default {
       this.load(a.id);
     },
     goList() {
-      uni.redirectTo({ url: '/pages/exam/list' });
+      uni.redirectTo({ url: '/pkgA/exam/list' });
     },
     retake() {
       const p = this.report.paper;
-      uni.redirectTo({ url: p.kind === 'mock' ? '/pages/exam/exam?mini=1' : '/pages/exam/exam?paper_id=' + p.id });
+      uni.redirectTo({ url: p.kind === 'mock' ? '/pkgA/exam/exam?mini=1' : '/pkgA/exam/exam?paper_id=' + p.id });
     },
   },
 };

@@ -252,7 +252,7 @@ export default {
         });
         uni.removeStorageSync(PROG_KEY);
         uni.hideLoading();
-        uni.redirectTo({ url: '/pages/exam/report?attempt_id=' + d.attempt_id });
+        uni.redirectTo({ url: '/pkgA/exam/report?attempt_id=' + d.attempt_id });
       } catch (e) {
         uni.hideLoading();
         this.submitting = false;

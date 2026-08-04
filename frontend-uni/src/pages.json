@@ -25,28 +25,41 @@
     {
       "path": "pages/stats/calendar",
       "style": { "navigationBarTitleText": "学习日历" }
-    },
-    {
-      "path": "pages/shenlun/shenlun",
-      "style": { "navigationBarTitleText": "申论专区" }
-    },
-    {
-      "path": "pages/user/login",
-      "style": { "navigationBarTitleText": "登录 / 注册" }
-    },
-    {
-      "path": "pages/exam/list",
-      "style": { "navigationBarTitleText": "真题卷库" }
-    },
-    {
-      "path": "pages/exam/exam",
-      "style": { "navigationBarTitleText": "全真模考" }
-    },
-    {
-      "path": "pages/exam/report",
-      "style": { "navigationBarTitleText": "成绩报告" }
     }
   ],
+  "subPackages": [
+    {
+      "root": "pkgA",
+      "pages": [
+        {
+          "path": "shenlun/shenlun",
+          "style": { "navigationBarTitleText": "申论专区" }
+        },
+        {
+          "path": "user/login",
+          "style": { "navigationBarTitleText": "登录 / 注册" }
+        },
+        {
+          "path": "exam/list",
+          "style": { "navigationBarTitleText": "真题卷库" }
+        },
+        {
+          "path": "exam/exam",
+          "style": { "navigationBarTitleText": "全真模考" }
+        },
+        {
+          "path": "exam/report",
+          "style": { "navigationBarTitleText": "成绩报告" }
+        }
+      ]
+    }
+  ],
+  "preloadRule": {
+    "pages/practice/practice": {
+      "network": "all",
+      "packages": ["pkgA"]
+    }
+  },
   "tabBar": {
     "color": "#8a90a0",
     "selectedColor": "#3b6ff5",

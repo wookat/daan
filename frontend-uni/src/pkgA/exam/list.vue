@@ -97,13 +97,13 @@ export default {
     setRegion(r) { this.region = r; this.load(); },
     startPaper(p) {
       if (this._starting) return;
-      uni.navigateTo({ url: '/pages/exam/exam?paper_id=' + p.id });
+      uni.navigateTo({ url: '/pkgA/exam/exam?paper_id=' + p.id });
     },
     startMini() {
-      uni.navigateTo({ url: '/pages/exam/exam?mini=1' });
+      uni.navigateTo({ url: '/pkgA/exam/exam?mini=1' });
     },
     openReport(a) {
-      uni.navigateTo({ url: '/pages/exam/report?attempt_id=' + a.id });
+      uni.navigateTo({ url: '/pkgA/exam/report?attempt_id=' + a.id });
     },
     fmtTime(t) {
       const d = new Date(t * 1000);

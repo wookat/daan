@@ -307,7 +307,6 @@ export default {
       this.startTimer();
       try {
         let d;
-        // #ifdef H5
         const rec = {
           ts: Date.now(),
           module_name: '',
@@ -320,8 +319,9 @@ export default {
           simSecs: 0,
           streaming: true,
         };
+        // H5 图片重做回填时无 File 对象，退回非流式
+        // #ifdef H5
         if (img && !imgFile) {
-          // 无 File 对象（如重做回填），退回非流式
           d = await uploadExplain({
             filePath: img,
             text: txt || null,
@@ -335,10 +335,12 @@ export default {
           this.loading = false;
           return;
         }
+        // #endif
         let inserted = false;
         let live = rec; // 插入后改用响应式代理，保证增量更新触发渲染
         d = await streamExplain({
           file: imgFile,
+          filePath: img || null,
           text: txt || null,
           userAnswer: this.uanswer.trim() || null,
           onMeta: (m) => {
@@ -352,34 +354,13 @@ export default {
           },
           onDelta: (full) => { this.applyExplain(live, full); },
         });
-        Object.assign(live, d, { streaming: false });
-        this.applyExplain(live, d.explanation);
         if (!inserted) {
           this.results.unshift(rec);
           this.results.forEach((r, i) => { if (i > 0) r.folded = true; });
+          live = this.results[0];
         }
-        // #endif
-        // #ifndef H5
-        d = await uploadExplain({
-          filePath: img || null,
-          text: txt || null,
-          userAnswer: this.uanswer.trim() || null,
-        });
-        const nr2 = {
-          ...d,
-          ts: Date.now(),
-          html: '',
-          ansCard: null,
-          saved: false,
-          folded: false,
-          sim: null,
-          simLoading: false,
-          simSecs: 0,
-        };
-        this.applyExplain(nr2, d.explanation);
-        this.results.unshift(nr2);
-        this.results.forEach((r, i) => { if (i > 0) r.folded = true; });
-        // #endif
+        Object.assign(live, d, { streaming: false });
+        this.applyExplain(live, d.explanation);
       } catch (e) {
         this.error = e.message;
       }

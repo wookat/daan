@@ -499,7 +499,7 @@ export default {
       uni.switchTab({ url: '/pages/practice/practice' });
     },
     goLogin() {
-      uni.navigateTo({ url: '/pages/user/login' });
+      uni.navigateTo({ url: '/pkgA/user/login' });
     },
     doLogout() {
       uni.showModal({
@@ -639,7 +639,7 @@ export default {
       } catch (e) { /* 非关键路径 */ }
     },
     goShenlun() {
-      uni.navigateTo({ url: '/pages/shenlun/shenlun?tab=r' });
+      uni.navigateTo({ url: '/pkgA/shenlun/shenlun?tab=r' });
     },
     async loadGrowth() {
       const uid = uni.getStorageSync('anonUid');

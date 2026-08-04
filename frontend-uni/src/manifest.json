@@ -1,7 +1,7 @@
 {
-    "name" : "",
-    "appid" : "",
-    "description" : "",
+    "name" : "考公错题助手",
+    "appid" : "__UNI__KAOGONG",
+    "description" : "考公刷题 + 错题讲解（花生十三方法体系）",
     "versionName" : "1.0.0",
     "versionCode" : "100",
     "transformPx" : false,
@@ -10,6 +10,7 @@
         "usingComponents" : true,
         "nvueStyleCompiler" : "uni-app",
         "compilerVersion" : 3,
+        "screenOrientation" : [ "portrait-primary" ],
         "splashscreen" : {
             "alwaysShowBeforeRender" : true,
             "waiting" : true,
@@ -17,7 +18,9 @@
             "delay" : 0
         },
         /* 模块配置 */
-        "modules" : {},
+        "modules" : {
+            "Camera" : {}
+        },
         /* 应用发布信息 */
         "distribute" : {
             /* android打包配置 */
@@ -37,8 +40,16 @@
                     "<uses-permission android:name=\"android.permission.WAKE_LOCK\"/>",
                     "<uses-permission android:name=\"android.permission.FLASHLIGHT\"/>",
                     "<uses-feature android:name=\"android.hardware.camera\"/>",
-                    "<uses-permission android:name=\"android.permission.WRITE_SETTINGS\"/>"
-                ]
+                    "<uses-permission android:name=\"android.permission.WRITE_SETTINGS\"/>",
+                    "<uses-permission android:name=\"android.permission.INTERNET\"/>",
+                    "<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\"/>",
+                    "<uses-permission android:name=\"android.permission.READ_EXTERNAL_STORAGE\"/>"
+                ],
+                "minSdkVersion" : 21,
+                "targetSdkVersion" : 34,
+                "abiFilters" : [ "armeabi-v7a", "arm64-v8a", "x86_64" ],
+                "packagename" : "com.zalize.kaogong",
+                "schemes" : "kaogong"
             },
             /* ios打包配置 */
             "ios" : {},
@@ -50,11 +61,20 @@
     "quickapp" : {},
     /* 小程序特有相关 */
     "mp-weixin" : {
-        "appid" : "",
+        "appid" : "touristappid",
         "setting" : {
-            "urlCheck" : false
+            "urlCheck" : false,
+            "es6" : true,
+            "minified" : true,
+            "postcss" : true
         },
-        "usingComponents" : true
+        "usingComponents" : true,
+        "optimization" : {
+            "subPackages" : true
+        },
+        "lazyCodeLoading" : "requiredComponents",
+        "permission" : {},
+        "requiredPrivateInfos" : []
     },
     "mp-alipay" : {
         "usingComponents" : true

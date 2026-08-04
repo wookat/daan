@@ -914,10 +914,10 @@ export default {
       uni.setStorageSync('groupSize', n);
     },
     goMini() {
-      uni.navigateTo({ url: '/pages/exam/exam?mini=1' });
+      uni.navigateTo({ url: '/pkgA/exam/exam?mini=1' });
     },
     goExamList() {
-      uni.navigateTo({ url: '/pages/exam/list' });
+      uni.navigateTo({ url: '/pkgA/exam/list' });
     },
     async openPapers() {
       this.paperSheet = true;
@@ -1340,6 +1340,10 @@ export default {
         }
       } catch (e) { /* 音效失败不影响刷题 */ }
       // #endif
+      // #ifndef H5
+      // 小程序 / App 无 WebAudio 合成能力 → 用触感反馈代替提示音
+      uni.vibrateShort({ type: correct ? 'light' : 'heavy', fail: () => {} });
+      // #endif
     },
     cycleFont() {
       this.fontLv = (this.fontLv + 1) % 3;
@@ -1701,7 +1705,7 @@ export default {
       uni.switchTab({ url: '/pages/book/book' });
     },
     goShenlun() {
-      uni.navigateTo({ url: '/pages/shenlun/shenlun' });
+      uni.navigateTo({ url: '/pkgA/shenlun/shenlun' });
     },
     next() {
       this.saveSession();
