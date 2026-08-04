@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>考公助手 · 管理后台</title>
+<link rel="stylesheet" href="/admin/static/admin.css" />
+</head>
+<body>
+
+<!-- 登录页 -->
+<div id="login" class="login-wrap hidden">
+  <div class="login-card">
+    <div class="logo"><span class="mark">考</span>考公助手 · 管理台</div>
+    <div class="sub">请输入管理令牌登录后台</div>
+    <div class="fld"><div class="lb">管理令牌</div>
+      <input id="login-token" class="ipt" type="password" style="width:100%" placeholder="X-Admin-Token" autocomplete="current-password" />
+    </div>
+    <button id="login-btn" class="btn btn-primary btn-lg" style="width:100%">登录</button>
+    <div id="login-err" class="login-err"></div>
+  </div>
+</div>
+
+<!-- 应用壳：侧边导航 + 顶栏 + 内容区 -->
+<div id="app" class="layout hidden">
+  <aside class="side">
+    <div class="logo"><span class="mark">考</span><span class="name">考公助手 · 管理台</span></div>
+    <div class="grp">概览</div>
+    <nav>
+      <a data-page="dashboard" href="#/dashboard"><span class="ico">📊</span><span class="txt">数据看板</span></a>
+    </nav>
+    <div class="grp">内容</div>
+    <nav>
+      <a data-page="questions" href="#/questions"><span class="ico">📚</span><span class="txt">题库管理</span></a>
+      <a data-page="batches" href="#/batches"><span class="ico">📦</span><span class="txt">批次导入审核</span><span class="badge hidden" id="badge-batches"></span></a>
+      <a data-page="taxonomy" href="#/taxonomy"><span class="ico">🌲</span><span class="txt">考点树</span></a>
+      <a data-page="review" href="#/review"><span class="ico">🔍</span><span class="txt">考点抽审</span><span class="badge hidden" id="badge-review"></span></a>
+      <a data-page="reports" href="#/reports"><span class="ico">🛠</span><span class="txt">纠错处理</span><span class="badge hidden" id="badge-reports"></span></a>
+      <a data-page="governance" href="#/governance"><span class="ico">🛡</span><span class="txt">内容治理</span></a>
+      <a data-page="content" href="#/content"><span class="ico">📰</span><span class="txt">时政与申论</span></a>
+    </nav>
+    <div class="grp">用户</div>
+    <nav><a data-page="users" href="#/users"><span class="ico">👥</span><span class="txt">用户与运营</span></a></nav>
+    <div class="grp">系统</div>
+    <nav><a data-page="settings" href="#/settings"><span class="ico">⚙️</span><span class="txt">系统设置</span></a></nav>
+    <div class="foot">design-v3 · <a id="logout" style="cursor:pointer">退出登录</a></div>
+  </aside>
+  <div class="main">
+    <div class="topbar">
+      <span class="crumb" id="crumb"><b>数据看板</b></span>
+      <div class="search"><input id="gsearch" placeholder="🔎 跳到题目 ID…" style="border:none;background:transparent;outline:none;width:100%;font:inherit;color:var(--t2)" /></div>
+      <span class="env">● 生产环境</span>
+      <span class="avatar">管</span>
+    </div>
+    <div class="content" id="content" style="max-width:none"></div>
+  </div>
+</div>
+
+<div id="dim" class="dim"></div>
+<div id="drawer" class="drawer"></div>
+<div id="toast" class="toast"></div>
+
+<script src="/admin/static/core.js"></script>
+<script src="/admin/static/pages/dashboard.js"></script>
+<script src="/admin/static/pages/questions.js"></script>
+<script src="/admin/static/pages/batches.js"></script>
+<script src="/admin/static/pages/taxonomy.js"></script>
+<script src="/admin/static/pages/review.js"></script>
+<script src="/admin/static/pages/reports.js"></script>
+<script src="/admin/static/pages/governance.js"></script>
+<script src="/admin/static/pages/users.js"></script>
+<script src="/admin/static/pages/content.js"></script>
+<script src="/admin/static/pages/settings.js"></script>
+<script>Admin.boot();</script>
+</body>
+</html>

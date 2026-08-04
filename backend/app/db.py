@@ -1104,10 +1104,14 @@ def admin_search_questions(
     disabled_only: bool = False,
     offset: int = 0,
     limit: int = 20,
+    qid: int | None = None,
 ) -> list[dict]:
     conn = get_conn()
     where = []
     args: list = []
+    if qid:
+        where.append("id=?")
+        args.append(qid)
     if keyword:
         where.append("question LIKE ?")
         args.append(f"%{keyword}%")
@@ -1135,7 +1139,7 @@ def admin_search_questions(
     return out
 
 
-ADMIN_EDITABLE = {"answer", "explanation", "hs_explanation", "submodule", "question", "disabled", "module", "exam_year", "exam_region", "is_real", "tag3"}
+ADMIN_EDITABLE = {"answer", "explanation", "hs_explanation", "submodule", "question", "disabled", "module", "exam_year", "exam_region", "is_real", "tag3", "options"}
 
 
 def admin_update_question(qid: int, fields: dict) -> bool:
@@ -2476,3 +2480,415 @@ def mock_done_this_week(uid: str) -> bool:
     ).fetchone()
     conn.close()
     return bool(row)
+
+
+# ===== 管理后台 v3：看板统计 / 批次抽检 / 内容治理 / 用户运营 =====
+
+_ADMIN_CACHE: dict = {}
+
+
+def _cached(key: str, ttl: float, fn):
+    """2G 小服务器上重查询的简单进程内缓存。"""
+    now = time.time()
+    hit = _ADMIN_CACHE.get(key)
+    if hit and now - hit[0] < ttl:
+        return hit[1]
+    data = fn()
+    _ADMIN_CACHE[key] = (now, data)
+    return data
+
+
+def admin_dashboard() -> dict:
+    return _cached("dashboard", 300, _admin_dashboard_uncached)
+
+
+def _admin_dashboard_uncached() -> dict:
+    conn = get_conn()
+    _ensure_answer_log(conn)
+    _ensure_reports(conn)
+    q = conn.execute
+    day0 = _day_start()
+    day_1 = _day_start(-1)
+    day_14 = _day_start(-13)
+
+    def day_kpis(start: float, end: float | None) -> dict:
+        cond = "created_at>=?" + (" AND created_at<?" if end else "")
+        args = (start, end) if end else (start,)
+        row = q(
+            f"SELECT COUNT(DISTINCT uid) au, COUNT(*) n, COALESCE(SUM(correct),0) c FROM answer_log WHERE {cond}",
+            args,
+        ).fetchone()
+        return {"active": row["au"], "answered": row["n"], "correct": row["c"]}
+
+    today = day_kpis(day0, None)
+    yesterday = day_kpis(day_1, day0)
+    firsts = q(
+        "SELECT MIN(created_at) t FROM answer_log GROUP BY uid HAVING t>=?", (day_1,)
+    ).fetchall()
+    new_today = sum(1 for r in firsts if r["t"] >= day0)
+    new_yesterday = len(firsts) - new_today
+
+    trend = [
+        dict(r)
+        for r in q(
+            """SELECT date(created_at, 'unixepoch', '+8 hours') d,
+                      COUNT(*) answered, COUNT(DISTINCT uid) active,
+                      ROUND(COALESCE(SUM(correct),0)*100.0/COUNT(*), 1) acc
+               FROM answer_log WHERE created_at>=? GROUP BY d ORDER BY d""",
+            (day_14,),
+        )
+    ]
+    ai_trend = {
+        r["d"]: r["n"]
+        for r in q(
+            """SELECT date(created_at, 'unixepoch', '+8 hours') d, COUNT(*) n
+               FROM explain_cache WHERE created_at>=? GROUP BY d""",
+            (day_14,),
+        )
+    }
+    for row in trend:
+        row["ai_calls"] = ai_trend.get(row["d"], 0)
+    ai_today = q("SELECT COUNT(*) FROM explain_cache WHERE created_at>=?", (day0,)).fetchone()[0]
+    ai_yesterday = q(
+        "SELECT COUNT(*) FROM explain_cache WHERE created_at>=? AND created_at<?", (day_1, day0)
+    ).fetchone()[0]
+
+    total = q("SELECT COUNT(*) FROM questions").fetchone()[0]
+    disabled = q("SELECT COUNT(*) FROM questions WHERE disabled=1").fetchone()[0]
+    pending = q("SELECT COUNT(*) FROM questions WHERE disabled=2").fetchone()[0]
+    flagged = q("SELECT COUNT(*) FROM questions WHERE hs_down>0 AND (disabled IS NULL OR disabled=0)").fetchone()[0]
+    open_reports = q("SELECT COUNT(*) FROM question_reports WHERE status='open'").fetchone()[0]
+    health = round(100.0 * max(total - disabled - flagged, 0) / total, 1) if total else 100.0
+
+    todos = {
+        "pending_batches": q(
+            "SELECT COUNT(DISTINCT import_batch) FROM questions WHERE disabled=2 AND import_batch IS NOT NULL"
+        ).fetchone()[0],
+        "tag3_review": q("SELECT COUNT(*) FROM tag3_review WHERE status='open'").fetchone()[0],
+        "open_reports": open_reports,
+    }
+    by_module = [
+        dict(r)
+        for r in q(
+            "SELECT module, COUNT(*) n FROM questions WHERE (disabled IS NULL OR disabled=0) "
+            "GROUP BY module ORDER BY n DESC"
+        )
+    ]
+    acc7 = [
+        dict(r)
+        for r in q(
+            """SELECT module, COUNT(*) n, ROUND(COALESCE(SUM(correct),0)*100.0/COUNT(*),1) acc
+               FROM answer_log WHERE created_at>=? AND module IS NOT NULL
+               GROUP BY module ORDER BY n DESC""",
+            (_day_start(-6),),
+        )
+    ]
+    conn.close()
+    return {
+        "today": {**today, "new_users": new_today, "ai_calls": ai_today},
+        "yesterday": {**yesterday, "new_users": new_yesterday, "ai_calls": ai_yesterday},
+        "health": {"pct": health, "total": total, "disabled": disabled, "pending": pending,
+                   "flagged": flagged, "open_reports": open_reports},
+        "trend": trend,
+        "todos": todos,
+        "by_module": by_module,
+        "acc7": acc7,
+        "generated_at": time.time(),
+    }
+
+
+def _ensure_sample_reviews(conn):
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS sample_reviews (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at REAL NOT NULL,
+            batch TEXT NOT NULL,
+            question_id INTEGER NOT NULL,
+            verdict TEXT NOT NULL,
+            note TEXT,
+            UNIQUE(batch, question_id)
+        )"""
+    )
+
+
+def sample_review_set(batch: str, question_id: int, verdict: str, note: str | None) -> dict:
+    conn = get_conn()
+    _ensure_sample_reviews(conn)
+    conn.execute(
+        "INSERT INTO sample_reviews (created_at, batch, question_id, verdict, note) VALUES (?,?,?,?,?) "
+        "ON CONFLICT(batch, question_id) DO UPDATE SET verdict=excluded.verdict, note=excluded.note, created_at=excluded.created_at",
+        (time.time(), batch, question_id, verdict, note),
+    )
+    conn.commit()
+    conn.close()
+    return sample_review_summary(batch)
+
+
+def sample_review_delete(batch: str, question_id: int) -> None:
+    conn = get_conn()
+    _ensure_sample_reviews(conn)
+    conn.execute("DELETE FROM sample_reviews WHERE batch=? AND question_id=?", (batch, question_id))
+    conn.commit()
+    conn.close()
+
+
+def sample_reviews(batch: str) -> list[dict]:
+    conn = get_conn()
+    _ensure_sample_reviews(conn)
+    rows = conn.execute(
+        "SELECT question_id, verdict, note, created_at FROM sample_reviews WHERE batch=? ORDER BY created_at",
+        (batch,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def sample_review_summary(batch: str) -> dict:
+    conn = get_conn()
+    _ensure_sample_reviews(conn)
+    rows = conn.execute(
+        "SELECT verdict, COUNT(*) n FROM sample_reviews WHERE batch=? GROUP BY verdict", (batch,)
+    ).fetchall()
+    conn.close()
+    out = {"ok": 0, "problem": 0}
+    for r in rows:
+        out[r["verdict"]] = r["n"]
+    return out
+
+
+def batch_answer_dist(batch: str) -> dict:
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT UPPER(SUBSTR(TRIM(answer),1,1)) a, COUNT(*) n FROM questions "
+        "WHERE import_batch=? GROUP BY a",
+        (batch,),
+    ).fetchall()
+    conn.close()
+    return {r["a"]: r["n"] for r in rows if r["a"]}
+
+
+def admin_batches_v3() -> list[dict]:
+    conn = get_conn()
+    _ensure_sample_reviews(conn)
+    rows = conn.execute(
+        """SELECT import_batch AS batch, COUNT(*) AS n,
+                  SUM(CASE WHEN disabled=2 THEN 1 ELSE 0 END) AS pending,
+                  SUM(is_real) AS real_n
+           FROM questions WHERE import_batch IS NOT NULL
+           GROUP BY import_batch ORDER BY import_batch DESC LIMIT 50"""
+    ).fetchall()
+    reviews = {
+        r["batch"]: dict(r)
+        for r in conn.execute(
+            """SELECT batch, SUM(CASE WHEN verdict='ok' THEN 1 ELSE 0 END) ok,
+                      SUM(CASE WHEN verdict='problem' THEN 1 ELSE 0 END) problem
+               FROM sample_reviews GROUP BY batch"""
+        )
+    }
+    out = []
+    for r in rows:
+        d = dict(r)
+        rv = reviews.get(d["batch"], {})
+        d["review_ok"] = rv.get("ok", 0)
+        d["review_problem"] = rv.get("problem", 0)
+        d["answer_dist"] = batch_answer_dist(d["batch"])
+        out.append(d)
+    conn.close()
+    return out
+
+
+def tag3_review_reopen(question_id: int) -> bool:
+    conn = get_conn()
+    cur = conn.execute(
+        "UPDATE tag3_review SET status='open' WHERE question_id=? AND status='done'", (question_id,)
+    )
+    conn.commit()
+    conn.close()
+    return cur.rowcount > 0
+
+
+def governance_scan() -> dict:
+    return _cached("governance", 600, _governance_scan_uncached)
+
+
+def _governance_scan_uncached() -> dict:
+    conn = get_conn()
+    q = conn.execute
+    broken: list[dict] = []
+    rows = q(
+        "SELECT id, module, question, options, answer FROM questions "
+        "WHERE (disabled IS NULL OR disabled!=1) LIMIT 200000"
+    ).fetchall()
+    dist_all: dict = {}
+    for r in rows:
+        problems = []
+        text = (r["question"] or "").strip()
+        try:
+            opts = json.loads(r["options"] or "{}")
+        except ValueError:
+            opts = None
+        ans = (r["answer"] or "").strip().upper()[:1]
+        if not text:
+            problems.append("空题干")
+        if opts is None:
+            problems.append("选项 JSON 损坏")
+        elif len(opts) < 2:
+            problems.append("选项不足 2 个")
+        else:
+            vals = [str(v).strip() for v in opts.values()]
+            if len(set(vals)) < len(vals):
+                problems.append("选项内容重复")
+            if ans and ans not in {str(k).strip().upper() for k in opts}:
+                problems.append(f"答案 {ans} 越界")
+        if not ans:
+            problems.append("缺答案")
+        elif ans:
+            dist_all[ans] = dist_all.get(ans, 0) + 1
+        if problems:
+            broken.append({"id": r["id"], "module": r["module"],
+                           "question": text[:80], "problems": problems})
+        if len(broken) >= 100:
+            break
+    clones = [
+        dict(r)
+        for r in q(
+            """SELECT SUBSTR(TRIM(question),1,40) prefix, COUNT(*) n,
+                      GROUP_CONCAT(id) ids, COUNT(DISTINCT UPPER(SUBSTR(TRIM(answer),1,1))) answers
+               FROM questions WHERE (disabled IS NULL OR disabled!=1)
+                 AND LENGTH(TRIM(question))>=40
+               GROUP BY prefix HAVING n>1
+               ORDER BY answers DESC, n DESC LIMIT 50"""
+        )
+    ]
+    batch_dists = []
+    for b in q(
+        "SELECT DISTINCT import_batch b FROM questions WHERE import_batch IS NOT NULL "
+        "ORDER BY import_batch DESC LIMIT 12"
+    ).fetchall():
+        batch_dists.append({"batch": b["b"], "dist": batch_answer_dist(b["b"])})
+    missing_expl = q(
+        "SELECT COUNT(*) FROM questions WHERE (disabled IS NULL OR disabled=0) "
+        "AND (explanation IS NULL OR explanation='') AND (hs_explanation IS NULL OR hs_explanation='')"
+    ).fetchone()[0]
+    conn.close()
+    return {
+        "broken": broken,
+        "clones": clones,
+        "answer_dist": {"overall": dist_all, "batches": batch_dists},
+        "missing_explanation": missing_expl,
+        "generated_at": time.time(),
+    }
+
+
+def admin_users(keyword: str | None = None, offset: int = 0, limit: int = 20,
+                inactive_days: int | None = None) -> dict:
+    conn = get_conn()
+    _ensure_answer_log(conn)
+    _ensure_mistake_uid(conn)
+    where = "uid IS NOT NULL AND uid!=''"
+    args: list = []
+    if keyword:
+        where += " AND uid LIKE ?"
+        args.append(f"%{keyword}%")
+    having = ""
+    if inactive_days:
+        having = "HAVING MAX(created_at) < ?"
+    total = conn.execute(
+        f"SELECT COUNT(*) FROM (SELECT uid FROM answer_log WHERE {where} GROUP BY uid "
+        f"{having})",
+        args + ([_day_start(-inactive_days + 1)] if inactive_days else []),
+    ).fetchone()[0]
+    rows = conn.execute(
+        f"""SELECT uid, COUNT(*) answered, ROUND(COALESCE(SUM(correct),0)*100.0/COUNT(*),1) acc,
+                  MIN(created_at) first_seen, MAX(created_at) last_seen
+           FROM answer_log WHERE {where} GROUP BY uid {having}
+           ORDER BY last_seen DESC LIMIT ? OFFSET ?""",
+        args + ([_day_start(-inactive_days + 1)] if inactive_days else []) + [min(limit, 50), offset],
+    ).fetchall()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["mistakes"] = conn.execute(
+            "SELECT COUNT(*) FROM mistakes WHERE uid=?", (d["uid"],)
+        ).fetchone()[0]
+        out.append(d)
+    conn.close()
+    return {"total": total, "items": out}
+
+
+def admin_user_detail(uid: str) -> dict | None:
+    conn = get_conn()
+    _ensure_answer_log(conn)
+    _ensure_mistake_uid(conn)
+    row = conn.execute(
+        """SELECT COUNT(*) answered, ROUND(COALESCE(SUM(correct),0)*100.0/COUNT(*),1) acc,
+                  MIN(created_at) first_seen, MAX(created_at) last_seen
+           FROM answer_log WHERE uid=?""",
+        (uid,),
+    ).fetchone()
+    if not row or not row["answered"]:
+        return None
+    by_module = [
+        dict(r)
+        for r in conn.execute(
+            """SELECT module, COUNT(*) n, ROUND(COALESCE(SUM(correct),0)*100.0/COUNT(*),1) acc
+               FROM answer_log WHERE uid=? AND module IS NOT NULL GROUP BY module ORDER BY n DESC""",
+            (uid,),
+        )
+    ]
+    recent = [
+        dict(r)
+        for r in conn.execute(
+            """SELECT date(created_at, 'unixepoch', '+8 hours') d, COUNT(*) n,
+                      COALESCE(SUM(correct),0) c
+               FROM answer_log WHERE uid=? AND created_at>=? GROUP BY d ORDER BY d""",
+            (uid, _day_start(-13)),
+        )
+    ]
+    mistakes = conn.execute("SELECT COUNT(*) FROM mistakes WHERE uid=?", (uid,)).fetchone()[0]
+    conn.close()
+    return {"uid": uid, **dict(row), "by_module": by_module, "recent": recent, "mistakes": mistakes}
+
+
+def admin_shizheng(offset: int = 0, limit: int = 20) -> dict:
+    conn = get_conn()
+    total = conn.execute("SELECT COUNT(*) FROM shizheng_questions").fetchone()[0]
+    rows = conn.execute(
+        "SELECT id, date, question, options, answer, explanation, source_note FROM shizheng_questions "
+        "ORDER BY date DESC, id DESC LIMIT ? OFFSET ?",
+        (min(limit, 50), offset),
+    ).fetchall()
+    conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["options"] = json.loads(d.get("options") or "{}")
+        out.append(d)
+    return {"total": total, "items": out}
+
+
+def admin_shenlun_overview() -> dict:
+    conn = get_conn()
+    papers = [
+        dict(r)
+        for r in conn.execute(
+            """SELECT exam_year, exam_region, paper, COUNT(*) n,
+                      SUM(CASE WHEN reference IS NOT NULL AND reference!='' THEN 1 ELSE 0 END) with_ref,
+                      SUM(COALESCE(disabled,0)) disabled_n
+               FROM shenlun_questions
+               GROUP BY exam_year, exam_region, paper
+               ORDER BY exam_year DESC, exam_region LIMIT 100"""
+        )
+    ]
+    materials = [
+        dict(r)
+        for r in conn.execute(
+            "SELECT topic, type, COUNT(*) n FROM shenlun_materials GROUP BY topic, type ORDER BY n DESC LIMIT 50"
+        )
+    ]
+    totals = {
+        "questions": conn.execute("SELECT COUNT(*) FROM shenlun_questions").fetchone()[0],
+        "materials": conn.execute("SELECT COUNT(*) FROM shenlun_materials").fetchone()[0],
+    }
+    conn.close()
+    return {"papers": papers, "materials": materials, "totals": totals}
