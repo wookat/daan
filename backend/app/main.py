@@ -327,9 +327,9 @@ def api_admin_taxonomy_questions(code: str, offset: int = 0, limit: int = 20, x_
 
 
 @app.get("/api/admin/tag3_review")
-def api_admin_tag3_review(limit: int = 100, x_admin_token: str | None = Header(None)):
+def api_admin_tag3_review(limit: int = 100, module: str | None = None, x_admin_token: str | None = Header(None)):
     check_admin(x_admin_token)
-    return {"items": db.tag3_review_list(limit)}
+    return db.tag3_review_list(limit, module)
 
 
 @app.get("/api/admin/flagged_cache")

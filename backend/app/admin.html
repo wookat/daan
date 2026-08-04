@@ -64,6 +64,7 @@ main { max-width:1080px; margin:20px auto; padding:0 16px; }
     <div class="tab" data-tab="batches" onclick="switchTab(this)">批次审核</div>
     <div class="tab" data-tab="reports" onclick="switchTab(this)" id="tab-reports">纠错处理</div>
     <div class="tab" data-tab="taxonomy" onclick="switchTab(this)">考点树</div>
+    <div class="tab" data-tab="tag3review" onclick="switchTab(this)" id="tab-tag3review">考点抽审</div>
   </div>
   <div class="bar" id="searchbar" style="display:none">
     <input id="kw" placeholder="题干关键词" />
@@ -261,6 +262,29 @@ async function saveTag3(qid) {
     alert('已保存');
   } catch (e) { alert('失败：' + e.message); }
 }
+async function saveReviewTag3(qid) {
+  try {
+    await api('/api/admin/questions/' + qid, { method: 'PATCH', body: JSON.stringify({ tag3: $('rv3-' + qid).value }) });
+    const el = $('rvrow-' + qid);
+    if (el) el.style.opacity = 0.35;
+  } catch (e) { alert('失败：' + e.message); }
+}
+async function loadTag3Review(render) {
+  if (!window._TAX) window._TAX = await api('/api/taxonomy');
+  const mod = $('rv-mod') ? $('rv-mod').value : '';
+  const d = await api('/api/admin/tag3_review?limit=100' + (mod ? '&module=' + mod : ''));
+  const modSel = `<div class="row" style="margin-bottom:10px">待审 <b>${d.total}</b> 条（显示前 ${d.items.length} 条，审完保存自动出队）
+    模块 <select id="rv-mod" onchange="load()"><option value="">全部</option>${Object.entries(MODS).map(([k, v]) => `<option value="${k}" ${mod === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>`;
+  render(modSel + (d.items.length ? d.items.map((r) => `<div class="q" id="rvrow-${r.question_id}">
+    <div class="meta"><span>#${r.question_id}</span><span class="badge">${esc(MODS[r.module] || r.module || '')}${r.submodule ? ' · ' + esc(r.submodule) : ''}</span>
+      <span class="badge">当前 ${esc(r.cur_tag3 || '无')}</span><span>建议 ${esc(r.tag3 || 'UNKNOWN')}${r.confidence != null ? '（置信 ' + r.confidence + '）' : ''}</span><span>${esc(r.reason || '')}</span><span>答案 <b>${esc(r.answer || '')}</b></span></div>
+    <pre>${esc((r.question || '（题目不存在）').slice(0, 300))}</pre>
+    ${r.options ? `<pre>${esc(fmtOpts(r.options))}</pre>` : ''}
+    ${r.explanation ? `<details><summary>解析</summary><pre>${esc(r.explanation.slice(0, 600))}</pre></details>` : ''}
+    <div class="row">考点 <select id="rv3-${r.question_id}" style="max-width:340px">${topicOptions(r.cur_tag3 || r.tag3)}</select>
+      <button class="ok" onclick="saveReviewTag3(${r.question_id})">保存并审结</button></div>
+  </div>`).join('') : '<div class="empty">抽审队列已清空</div>'));
+}
 async function refreshReportBadge() {
   try {
     const d = await api('/api/admin/question_reports?status=open');
@@ -276,6 +300,10 @@ async function load() {
   try {
     if (TAB === 'taxonomy') {
       await loadTaxonomy(render);
+      return;
+    }
+    if (TAB === 'tag3review') {
+      await loadTag3Review(render);
       return;
     }
     if (TAB === 'reports') {

@@ -793,17 +793,26 @@ def tag3_review_add(question_id: int, tag3: str | None, confidence: float | None
     conn.close()
 
 
-def tag3_review_list(limit: int = 100) -> list[dict]:
+def tag3_review_list(limit: int = 100, module: str | None = None) -> dict:
     conn = get_conn()
+    cond = "r.status='open'"
+    args: list = []
+    if module:
+        cond += " AND q.module=?"
+        args.append(module)
+    total = conn.execute(
+        f"SELECT COUNT(*) FROM tag3_review r LEFT JOIN questions q ON q.id=r.question_id WHERE {cond}",
+        args,
+    ).fetchone()[0]
     rows = conn.execute(
-        """SELECT r.id, r.created_at, r.question_id, r.tag3, r.confidence, r.reason, r.status,
-                  q.module, q.submodule, q.question
+        f"""SELECT r.id, r.created_at, r.question_id, r.tag3, r.confidence, r.reason, r.status,
+                  q.module, q.submodule, q.question, q.options, q.explanation, q.answer, q.tag3 AS cur_tag3
            FROM tag3_review r LEFT JOIN questions q ON q.id=r.question_id
-           WHERE r.status='open' ORDER BY r.id DESC LIMIT ?""",
-        (min(limit, 300),),
+           WHERE {cond} ORDER BY r.id DESC LIMIT ?""",
+        args + [min(limit, 300)],
     ).fetchall()
     conn.close()
-    return [dict(r) for r in rows]
+    return {"total": total, "items": [dict(r) for r in rows]}
 
 
 def tag3_review_close(question_id: int):
