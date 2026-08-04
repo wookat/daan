@@ -45,7 +45,7 @@
     <view v-if="(reco && reco.items.length) || dueN" class="card">
       <view class="h">今日待办</view>
       <view v-if="dueN" class="todo-row">
-        <view class="todo-ico warn">📘</view>
+        <view class="todo-ico warn"><l-icon name="book-open" :size="20" color="#b45309" /></view>
         <view class="todo-main">
           <text class="todo-name">错题到期复习</text>
           <text class="todo-meta">{{ dueN }} 题今日待复习</text>
@@ -53,7 +53,7 @@
         <view class="todo-btn" @click="goBook">去复习</view>
       </view>
       <view v-for="(r, i) in (reco ? reco.items : [])" :key="i" class="todo-row">
-        <view class="todo-ico">🎯</view>
+        <view class="todo-ico"><l-icon name="target" :size="20" color="#3b6ff5" /></view>
         <view class="todo-main">
           <text class="todo-name">{{ r.label || r.submodule }}</text>
           <text class="todo-meta">{{ r.reason }} · 正确率 {{ Math.round(r.acc * 100) }}%（{{ r.n }}题）</text>
@@ -246,12 +246,12 @@
 
     <view class="card list-card">
       <view class="lrow" @click="goPlanSetup">
-        <view class="lrow-ico">📅</view>
+        <view class="lrow-ico"><l-icon name="calendar" :size="20" color="#3b6ff5" /></view>
         <text class="lrow-name">学习计划<text class="lrow-sub">报考画像与每日任务，可随时重新制定</text></text>
         <text class="lrow-arrow">›</text>
       </view>
       <view class="lrow" @click="secOpen.coach = !secOpen.coach">
-        <view class="lrow-ico">🤖</view>
+        <view class="lrow-ico"><l-icon name="bot-message-square" :size="20" color="#3b6ff5" /></view>
         <text class="lrow-name">AI 学习教练</text>
         <text class="lrow-arrow">{{ secOpen.coach ? '▾' : '›' }}</text>
       </view>
@@ -265,21 +265,21 @@
         <view v-else class="coach-tip">基于你的正确率、错因分布和打卡情况，生成个性化备考建议</view>
       </view>
       <view class="lrow" @click="secOpen.medal = !secOpen.medal">
-        <view class="lrow-ico">🏅</view>
+        <view class="lrow-ico"><l-icon name="medal" :size="20" color="#d97706" /></view>
         <text class="lrow-name">成就勋章<text class="lrow-sub">已获 {{ medals.filter((m) => m.got).length }}/{{ medals.length }}</text></text>
         <text class="lrow-arrow">{{ secOpen.medal ? '▾' : '›' }}</text>
       </view>
       <view v-if="secOpen.medal" class="lrow-body">
         <view class="medals">
           <view v-for="md in medals" :key="md.name" class="medal" :class="{ got: md.got }">
-            <view class="m-ring" :style="medalRingStyle(md)"><view class="m-ring-in"><text class="m-ico">{{ md.icon }}</text></view></view>
+            <view class="m-ring" :style="medalRingStyle(md)"><view class="m-ring-in"><l-icon :name="md.icon" :size="22" :color="md.got ? '#d97706' : '#b0b4c0'" /></view></view>
             <text class="m-name">{{ md.name }}</text>
             <text class="m-sub">{{ md.got ? '已达成' : md.progress }}</text>
           </view>
         </view>
       </view>
       <view class="lrow" @click="secOpen.bk = !secOpen.bk">
-        <view class="lrow-ico">💾</view>
+        <view class="lrow-ico"><l-icon name="save" :size="20" color="#0d9488" /></view>
         <text class="lrow-name">数据备份与迁移</text>
         <text class="lrow-arrow">{{ secOpen.bk ? '▾' : '›' }}</text>
       </view>
@@ -414,14 +414,14 @@ export default {
       const zhan = this.masteredCount;
       const m = (icon, name, cur, target, unit) => ({ icon, name, got: cur >= target, progress: cur + '/' + target + ' ' + unit, pct: Math.min(100, Math.round((cur / target) * 100)) });
       return [
-        m('🌱', '初战告捷', done, 10, '题'),
-        m('💪', '小有所成', done, 100, '题'),
-        m('🏆', '刷题大师', done, 500, '题'),
-        m('🔥', '三日不辍', streak, 3, '天'),
-        m('⚡', '七日连环', streak, 7, '天'),
-        m('🎯', '十连对', best, 10, '连对'),
-        m('⚔️', '斩题十道', zhan, 10, '道'),
-        m('👑', '百题斩', zhan, 100, '道'),
+        m('sprout', '初战告捷', done, 10, '题'),
+        m('dumbbell', '小有所成', done, 100, '题'),
+        m('trophy', '刷题大师', done, 500, '题'),
+        m('flame', '三日不辍', streak, 3, '天'),
+        m('zap', '七日连环', streak, 7, '天'),
+        m('target', '十连对', best, 10, '连对'),
+        m('swords', '斩题十道', zhan, 10, '道'),
+        m('crown', '百题斩', zhan, 100, '道'),
       ];
     },
     trend() {

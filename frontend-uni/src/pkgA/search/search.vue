@@ -2,9 +2,9 @@
   <view class="wrap">
     <view class="sbar">
       <view class="sbox">
-        <uni-icons type="search" size="18" color="#9ca3af" />
+        <l-icon name="search" :size="18" color="#9ca3af" />
         <input v-model="kw" class="sinput" placeholder="题号 / 题干关键词 / 考点名" confirm-type="search" focus @confirm="doSearch" @input="onInput" />
-        <text v-if="kw" class="sclear" @click="kw = ''; result = null">✕</text>
+        <view v-if="kw" class="sclear" @click="kw = ''; result = null"><l-icon name="x" :size="16" color="#8a90a0" /></view>
       </view>
       <text class="scancel" @click="goBack">取消</text>
     </view>

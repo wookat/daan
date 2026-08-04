@@ -2,15 +2,15 @@
   <view class="wrap reminders">
     <view class="card group">
       <view class="set-row">
-        <text class="ico">⏰</text>
+        <view class="ico"><l-icon name="alarm-clock" :size="18" color="#3b6ff5" /></view>
         <view class="grow">
           <text class="nm">每日刷题提醒</text>
           <text class="sub">每天 {{ time }} · 未完成今日目标时提醒</text>
         </view>
-        <switch :checked="on" color="#3b6ff5" @change="toggle" />
+        <wd-switch :model-value="on" active-color="#3b6ff5" size="22px" @change="toggle" />
       </view>
       <view class="set-row" :class="{ dim: !on }">
-        <text class="ico">🕗</text>
+        <view class="ico"><l-icon name="clock" :size="18" color="#3b6ff5" /></view>
         <view class="grow">
           <text class="nm">提醒时间</text>
           <text class="sub">建议安排在晚间黄金学习时段</text>
@@ -23,7 +23,7 @@
 
     <!-- #ifdef H5 -->
     <view v-if="on && perm !== 'granted'" class="card warn-card">
-      <text class="warn-t">{{ perm === 'denied' ? '🚫 浏览器通知权限被拒绝' : '🔔 需要开启浏览器通知权限' }}</text>
+      <view class="warn-t"><l-icon name="bell" :size="15" color="#d97706" /><text>{{ perm === 'denied' ? '浏览器通知权限被拒绝' : '需要开启浏览器通知权限' }}</text></view>
       <text class="warn-s">{{ perm === 'denied' ? '请在浏览器地址栏左侧站点设置中允许「通知」后刷新页面。' : '开启后才能在提醒时间收到今日目标进度提示。' }}</text>
       <view v-if="perm !== 'denied'" class="warn-btn" @click="askPerm">开启通知权限</view>
     </view>
@@ -36,7 +36,7 @@
     <!-- #ifdef MP-WEIXIN -->
     <view v-if="mpSubscribeAvailable" class="card group">
       <view class="set-row" @click="mpSubscribe">
-        <text class="ico">📬</text>
+        <view class="ico"><l-icon name="send" :size="18" color="#3b6ff5" /></view>
         <view class="grow">
           <text class="nm">微信订阅提醒</text>
           <text class="sub">一次授权可收到一条服务通知</text>
@@ -54,7 +54,7 @@
     </view>
 
     <view class="card tip">
-      <text class="tip-t">💡 提醒只在「有事可做」时打扰你：当天已达成目标则改为轻量鼓励；H5 端需保持页面打开才能收到通知。</text>
+      <text class="tip-t"><l-icon name="lightbulb" :size="14" color="#3b6ff5" /> 提醒只在「有事可做」时打扰你：当天已达成目标则改为轻量鼓励；H5 端需保持页面打开才能收到通知。</text>
     </view>
   </view>
 </template>
@@ -102,8 +102,8 @@ export default {
     // #endif
   },
   methods: {
-    async toggle(e) {
-      this.on = e.detail.value;
+    async toggle({ value }) {
+      this.on = value;
       setReminderSettings({ on: this.on, time: this.time });
       // #ifdef H5
       if (this.on && this.perm !== 'granted') await this.askPerm();
@@ -146,7 +146,7 @@ export default {
 .time-v { font-size: 27rpx; color: var(--brand); font-weight: 600; }
 
 .warn-card { padding: 26rpx 30rpx; background: var(--warn-soft); }
-.warn-t { display: block; font-size: 27rpx; font-weight: 600; color: var(--warn); }
+.warn-t { display: flex; align-items: center; gap: 8rpx; font-size: 27rpx; font-weight: 600; color: var(--warn); }
 .warn-s { display: block; font-size: 23rpx; color: #b45309; margin-top: 8rpx; line-height: 1.6; }
 .warn-btn { margin-top: 18rpx; min-height: 44px; display: flex; align-items: center; justify-content: center; background: var(--warn); color: #fff; border-radius: 999rpx; font-size: 26rpx; font-weight: 600; }
 

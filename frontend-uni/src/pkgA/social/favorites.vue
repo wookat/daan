@@ -25,7 +25,7 @@
           <text class="chev">{{ folderId === f.id ? '✓' : '›' }}</text>
         </view>
         <view class="folder add" @click="newFolder">
-          <text class="fico">＋</text>
+          <view class="fico"><l-icon name="folder-plus" :size="18" color="#3b6ff5" /></view>
           <view class="fmain"><text class="fname add-t">新建收藏夹</text></view>
         </view>
       </view>
@@ -45,7 +45,7 @@
       <view v-if="loading" class="card empty">加载中…</view>
       <view v-else-if="!shownItems.length" class="card empty">
         <view class="empty-t">这里还没有收藏</view>
-        <view class="empty-s">刷题时点右上角 ☆ 收藏好题，长按可选收藏夹</view>
+        <view class="empty-s">刷题时点右上角收藏星标收藏好题，长按可选收藏夹</view>
       </view>
       <template v-else>
         <button class="btn" @click="redoFolder">重练{{ curFolderName }}（{{ shownItems.length }} 题 · 乱序）</button>
@@ -56,7 +56,7 @@
             <text v-if="it.submodule" class="tag gray">{{ it.submodule }}</text>
             <text class="mtime">收藏于 {{ fmtDate(it.faved_at) }}</text>
           </view>
-          <view v-if="it.note" class="mynote"><text class="nb">📝 我的笔记：</text>{{ it.note }}</view>
+          <view v-if="it.note" class="mynote"><text class="nb"><l-icon name="pencil-line" :size="13" color="#b45309" /> 我的笔记：</text>{{ it.note }}</view>
           <view v-if="it._open" class="detail">
             <view v-for="(v, k) in it.options" :key="k" class="opt" :class="{ ans: k === it.answer }">{{ k }}. {{ v }}</view>
             <view class="ansline">正确答案 {{ it.answer }}</view>
@@ -84,7 +84,7 @@
           <text v-if="n.submodule" class="tag gray">{{ n.submodule }}</text>
           <text class="mtime">{{ fmtDate(n.updated_at) }}</text>
         </view>
-        <view class="mynote"><text class="nb">📝</text>{{ n.content }}</view>
+        <view class="mynote"><text class="nb"><l-icon name="pencil-line" :size="13" color="#b45309" /> </text>{{ n.content }}</view>
       </view>
     </template>
     <view style="height: 40rpx" />

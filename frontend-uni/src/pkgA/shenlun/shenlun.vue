@@ -20,7 +20,7 @@
       </view>
       <view v-if="fltOpen" class="mask" @click="fltOpen = false">
         <view class="sheet" @click.stop>
-          <view class="sheet-h"><text class="sheet-t">筛选</text><text class="sheet-x" @click="fltOpen = false">✕</text></view>
+          <view class="sheet-h"><text class="sheet-t">筛选</text><view class="sheet-x" @click="fltOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view></view>
           <view v-if="years.length" class="sheet-k">年份</view>
           <view v-if="years.length" class="chips">
             <text class="chip sm" :class="{ on: !year }" @click="setYear(0)">全部</text>
@@ -44,7 +44,7 @@
           <text class="q-paper">{{ q.paper || (q.exam_year + ' · ' + (q.exam_region || '')) }}</text>
           <view class="q-top-r">
             <text class="q-type">{{ q.qtype }}</text>
-            <text class="m-star" :class="{ on: qFavIds.includes(q.id) }" @click.stop="toggleQFav(q)">{{ qFavIds.includes(q.id) ? '★' : '☆' }}</text>
+            <view class="m-star" :class="{ on: qFavIds.includes(q.id) }" @click.stop="toggleQFav(q)"><l-icon name="star" :size="17" :color="qFavIds.includes(q.id) ? '#f59e0b' : '#8a90a0'" :fill="qFavIds.includes(q.id) ? '#f59e0b' : 'none'" /></view>
           </view>
         </view>
         <text class="q-text">{{ q.question }}</text>
@@ -91,16 +91,16 @@
     <template v-if="tab === 'm'">
       <view class="chips">
         <text v-for="t in MTYPES" :key="t" class="chip" :class="{ on: mtype === t && !favOnly }" @click="setMtype(t)">{{ t }}</text>
-        <text class="chip fav" :class="{ on: favOnly }" @click="toggleFavOnly">★ 收藏{{ favIds.length ? ' ' + favIds.length : '' }}</text>
+        <view class="chip fav" :class="{ on: favOnly }" @click="toggleFavOnly"><l-icon name="star" :size="13" :color="favOnly ? '#b45309' : '#8a90a0'" :fill="favOnly ? '#f59e0b' : 'none'" /><text>收藏{{ favIds.length ? ' ' + favIds.length : '' }}</text></view>
       </view>
       <view v-if="loading" class="spin">加载中…</view>
-      <view v-else-if="!shownMats.length" class="spin">{{ favOnly ? '还没有收藏素材，点素材右上☆收藏' : '暂无素材，敬请期待' }}</view>
+      <view v-else-if="!shownMats.length" class="spin">{{ favOnly ? '还没有收藏素材，点素材右上星标收藏' : '暂无素材，敬请期待' }}</view>
       <view v-for="m in shownMats" :key="m.id" class="card m-item">
         <view class="q-top">
           <text class="m-topic">{{ m.topic }}</text>
           <view class="q-top-r">
             <text class="q-type">{{ m.type }}</text>
-            <text class="m-star" :class="{ on: favIds.includes(m.id) }" @click="toggleFav(m)">{{ favIds.includes(m.id) ? '★' : '☆' }}</text>
+            <view class="m-star" :class="{ on: favIds.includes(m.id) }" @click="toggleFav(m)"><l-icon name="star" :size="17" :color="favIds.includes(m.id) ? '#f59e0b' : '#8a90a0'" :fill="favIds.includes(m.id) ? '#f59e0b' : 'none'" /></view>
           </view>
         </view>
         <text class="m-content" :class="{ clamp: expanded !== m.id }" @click="expanded = expanded === m.id ? 0 : m.id">{{ m.content }}</text>
@@ -416,7 +416,7 @@ page { background: var(--fill); }
 .q-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 14rpx; }
 .q-meta { font-size: 22rpx; color: var(--ink-3); }
 .q-go { height: 72rpx; line-height: 72rpx; padding: 0 30rpx; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 24rpx; font-weight: 600; }
-.chip { font-size: 23rpx; color: var(--ink-2); background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 12rpx 24rpx; }
+.chip { display: inline-flex; align-items: center; gap: 6rpx; font-size: 23rpx; color: var(--ink-2); background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 12rpx 24rpx; }
 .chip.on { color: #fff; background: var(--brand); border-color: var(--brand); }
 .card { background: var(--card); border-radius: 20rpx; padding: 26rpx 28rpx; margin-bottom: 18rpx; }
 .hist-item { background: var(--fill); border-radius: 12rpx; padding: 16rpx 18rpx; margin-bottom: 12rpx; }

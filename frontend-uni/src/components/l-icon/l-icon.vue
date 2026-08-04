@@ -31,6 +31,7 @@ export default {
     size: { type: [Number, String], default: 20 },
     color: { type: String, default: '#40434e' },
     strokeWidth: { type: [Number, String], default: 2 },
+    fill: { type: String, default: 'none' },
   },
   computed: {
     px() {
@@ -39,7 +40,7 @@ export default {
     src() {
       const body = PATHS[this.name] || '';
       const svg =
-        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="${this.color}"` +
+        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${this.fill}" stroke="${this.color}"` +
         ` stroke-width="${this.strokeWidth}" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
       return 'data:image/svg+xml;base64,' + b64encode(svg);
     },

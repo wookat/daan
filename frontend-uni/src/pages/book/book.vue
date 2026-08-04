@@ -75,7 +75,7 @@
         <view v-if="favs.length > 3" class="searchbar">
           <l-icon name="search" :size="16" color="#8a90a0" />
           <input v-model="favKw" class="searchinput" placeholder="搜收藏题干或题型" confirm-type="search" />
-          <text v-if="favKw" class="searchclear" @click="favKw = ''">✕</text>
+          <view v-if="favKw" class="searchclear" @click="favKw = ''"><l-icon name="x" :size="16" color="#8a90a0" /></view>
         </view>
         <view v-for="(f, fi) in favShown" :key="f.t" class="card mcard" @click="f._open = !f._open">
           <view class="mhead">
@@ -113,7 +113,7 @@
         <view class="sheet" @click.stop>
           <view class="sheet-h">
             <text class="sheet-t">AI 错题分析</text>
-            <text class="sheet-x" @click="aiOpen = false">✕</text>
+            <view class="sheet-x" @click="aiOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
           </view>
           <view v-if="aiLoading" class="ai-loading">正在分析你的错题与作答数据，约需 30-60 秒…</view>
           <rich-text v-else :nodes="aiHtml" />
@@ -143,7 +143,7 @@
         <view class="sheet" @click.stop>
           <view class="sheet-h">
             <text class="sheet-t">手动录入答案</text>
-            <text class="sheet-x" @click="manualOpen = false">✕</text>
+            <view class="sheet-x" @click="manualOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
           </view>
           <template v-if="!manualPaper">
             <view v-if="recentPapers.length" class="sheet-k">最近导出的试卷</view>
@@ -173,7 +173,7 @@
         <view class="sheet" @click.stop>
           <view class="sheet-h">
             <text class="sheet-t">对答案结果 · {{ scanResult.title || '试卷' }}</text>
-            <text class="sheet-x" @click="scanOpen = false">✕</text>
+            <view class="sheet-x" @click="scanOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
           </view>
           <view class="scan-sum">卷码 {{ scanResult.code }}{{ scanResult.page ? ' · 第 ' + scanResult.page + ' 页' : '' }} · 已作答 {{ scanResult.answered }}/{{ scanResult.total }} · 答对 <text class="scan-good">{{ scanResult.correct }}</text> 题{{ scanResult.saved ? ' · 已记入做题记录' : '' }}</view>
           <scroll-view scroll-y class="scan-list">
@@ -200,7 +200,7 @@
       <view v-if="tab !== 'fav' && items.length > 5" class="searchbar">
         <l-icon name="search" :size="16" color="#8a90a0" />
         <input v-model="kw" class="searchinput" placeholder="搜题干关键词或题型，如：增长率 / 类比推理" confirm-type="search" />
-        <text v-if="kw" class="searchclear" @click="kw = ''">✕</text>
+        <view v-if="kw" class="searchclear" @click="kw = ''"><l-icon name="x" :size="16" color="#8a90a0" /></view>
       </view>
       <view v-if="tab !== 'fav' && modGroups.length" class="card modgroup">
         <view class="mg-h">按模块查看</view>
@@ -241,7 +241,7 @@
         <view class="sheet" @click.stop>
           <view class="sheet-h">
             <text class="sheet-t">筛选与排序</text>
-            <text class="sheet-x" @click="filterOpen = false">✕</text>
+            <view class="sheet-x" @click="filterOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
           </view>
           <view class="sheet-k">排序</view>
           <view class="kpchips">
@@ -318,7 +318,7 @@
         <view class="sheet" @click.stop>
           <view class="sheet-h">
             <text class="sheet-t">题目纠错</text>
-            <text class="sheet-x" @click="reportOpen = false">✕</text>
+            <view class="sheet-x" @click="reportOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
           </view>
           <view class="rp-types">
             <text
@@ -890,7 +890,7 @@ export default {
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; border-left: none; }
 .searchbar { display: flex; align-items: center; gap: 12rpx; background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 14rpx 26rpx; margin-bottom: 20rpx; }
 .searchinput { flex: 1; font-size: 26rpx; color: var(--ink); height: 40rpx; line-height: 40rpx; }
-.searchclear { font-size: 26rpx; color: var(--ink-2); padding: 0 8rpx; }
+.searchclear { display: flex; align-items: center; padding: 0 8rpx; }
 .sortrow { display: flex; align-items: center; gap: 10rpx; margin-bottom: 16rpx; flex-wrap: wrap; }
 .sort-k { font-size: 22rpx; color: var(--ink-2); }
 .sort-chip { font-size: 22rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 4rpx 18rpx; background: var(--card); }

@@ -35,14 +35,14 @@
           </view>
           <view class="tx">{{ c.content }}</view>
           <view class="ft">
-            <text class="up" :class="{ on: c.liked }" @click="like(c)">▲ {{ c.likes || '赞' }}</text>
+            <view class="up" :class="{ on: c.liked }" @click="like(c)"><l-icon name="thumbs-up" :size="13" :color="c.liked ? '#3b6ff5' : '#8a90a0'" /><text>{{ c.likes || '赞' }}</text></view>
             <text class="op" @click="startReply(c)">回复{{ c.replies.length ? ' ' + c.replies.length : '' }}</text>
             <text v-if="c.mine" class="op del" @click="removeOwn(c)">删除</text>
           </view>
           <view v-for="r in c.replies" :key="r.id" class="reply">
             <text class="rnm">{{ r.nickname }}：</text>{{ r.content }}
             <view class="rft">
-              <text class="up sm" :class="{ on: r.liked }" @click="like(r)">▲ {{ r.likes || '赞' }}</text>
+              <view class="up sm" :class="{ on: r.liked }" @click="like(r)"><l-icon name="thumbs-up" :size="12" :color="r.liked ? '#3b6ff5' : '#8a90a0'" /><text>{{ r.likes || '赞' }}</text></view>
               <text class="op sm" @click="startReply(c, r)">回复</text>
               <text v-if="r.mine" class="op sm del" @click="removeOwn(r, c)">删除</text>
             </view>
@@ -51,14 +51,14 @@
       </view>
     </view>
 
-    <view class="pin">🛡 社区公约：讨论解题思路，不传播付费课程内容；违规内容将被删除。</view>
+    <view class="pin"><l-icon name="info" :size="14" color="#2c5ad6" /> 社区公约：讨论解题思路，不传播付费课程内容；违规内容将被删除。</view>
     <view style="height: 140rpx" />
 
     <!-- 输入栏 -->
     <view class="inputbar">
       <view v-if="replyTo" class="replying">
         回复 {{ replyTo.nickname }}
-        <text class="rx" @click="replyTo = null">✕</text>
+        <view class="rx" @click="replyTo = null"><l-icon name="x" :size="14" color="#8a90a0" /></view>
       </view>
       <view class="inputrow">
         <input
@@ -262,7 +262,7 @@ export default {
 .tm { font-size: 21rpx; color: var(--ink-3); }
 .tx { font-size: 27rpx; color: var(--ink-2); line-height: 1.65; margin-top: 6rpx; word-break: break-all; }
 .ft { display: flex; gap: 30rpx; margin-top: 12rpx; align-items: center; }
-.up { font-size: 23rpx; color: var(--ink-3); }
+.up { display: inline-flex; align-items: center; gap: 6rpx; font-size: 23rpx; color: var(--ink-3); }
 .up.on { color: var(--brand); font-weight: 700; }
 .up.sm, .op.sm { font-size: 21rpx; }
 .op { font-size: 23rpx; color: var(--ink-3); }

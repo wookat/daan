@@ -1,6 +1,6 @@
 <template>
   <view class="wrap">
-    <view v-if="!online" class="offbar">✈️ 当前离线 · 可继续刷已下载题包，作答将在联网后自动同步</view>
+    <view v-if="!online" class="offbar"><l-icon name="plane" :size="15" color="#b45309" /> 当前离线 · 可继续刷已下载题包，作答将在联网后自动同步</view>
 
     <view class="card">
       <view class="row-sb">
@@ -12,7 +12,7 @@
     </view>
 
     <view v-if="pending" class="card sync" @click="syncNow">
-      <text class="sync-t">🔄 待同步：离线作答 {{ pending }} 条 · 联网后自动上传并更新统计</text>
+      <text class="sync-t"><l-icon name="refresh-cw" :size="14" color="#3b6ff5" /> 待同步：离线作答 {{ pending }} 条 · 联网后自动上传并更新统计</text>
       <text class="sync-btn">{{ syncing ? '同步中…' : '立即同步' }}</text>
     </view>
 

@@ -15,8 +15,8 @@
           <text class="timer" :class="{ examleft: examMode, overtime: timedMode && !examMode && qsecs > targetSecs }">{{ examMode ? fmtSecs(examLeft) : timedMode ? (qsecs > targetSecs ? '超时+' + fmtSecs(qsecs - targetSecs) : fmtSecs(targetSecs - qsecs)) : fmtSecs(qsecs) }}</text>
           <text v-if="!examMode" class="cnt okc">✓{{ right }}</text>
           <text v-if="!examMode" class="cnt badc">✗{{ wrongCount }}</text>
-          <view v-if="streak >= 3" class="cnt fire"><uni-icons type="fire-filled" size="13" color="#f97316" /><text class="fire-n">{{ streak }}</text></view>
-          <view class="fontbtn iconbtn" @click="toggleFav"><uni-icons :type="isFav ? 'star-filled' : 'star'" size="16" :color="isFav ? '#f59e0b' : '#8a90a0'" /></view>
+          <view v-if="streak >= 3" class="cnt fire"><l-icon name="flame" :size="13" color="#f97316" fill="#fdba74" /><text class="fire-n">{{ streak }}</text></view>
+          <view class="fontbtn iconbtn" @click="toggleFav"><l-icon name="star" :size="16" :color="isFav ? '#f59e0b' : '#8a90a0'" :fill="isFav ? '#f59e0b' : 'none'" /></view>
           <text class="fontbtn" @click="toolsOpen = true">···</text>
           <text class="op" @click="quit">退出</text>
         </view>
@@ -25,7 +25,7 @@
         <view class="sheet" @click.stop>
           <view class="sheet-h">
             <text class="sheet-t">练习工具</text>
-            <view class="sheet-x" @click="toolsOpen = false"><uni-icons type="closeempty" size="20" color="#6b7280" /></view>
+            <view class="sheet-x" @click="toolsOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
           </view>
           <view class="tool-row" @click="cycleFont">
             <text class="tool-name">字号大小</text>
@@ -50,7 +50,7 @@
         </view>
       </view>
       <view class="progress"><view class="pfill" :style="{ width: (idx / items.length) * 100 + '%' }" /></view>
-      <view v-if="offline" class="offline-tag">✈️ 离线题包模式 · 本地判分，作答记录联网后自动同步（AI 讲解等需联网）</view>
+      <view v-if="offline" class="offline-tag"><l-icon name="plane" :size="14" color="#b45309" /> 离线题包模式 · 本地判分，作答记录联网后自动同步（AI 讲解等需联网）</view>
       <view v-if="cur.is_real" class="real-tag">真题{{ cur.exam_year ? ' · ' + cur.exam_year : '' }}{{ cur.exam_region ? ' · ' + cur.exam_region : '' }}</view>
       <view v-if="cur.group_seq" class="grp-tag">同材料题组 {{ cur.group_seq }}</view>
       <view class="q" :style="qStyle">
@@ -102,10 +102,10 @@
               <view class="exp xpx">{{ cur.xp_explanation }}</view>
             </template>
             <view class="hs-rate">
-              <text v-if="hsRated[cur.id]" class="hs-rate-done">{{ hsRated[cur.id] === 'up' ? '已反馈：有用 👍' : '已反馈：有误 👎' }}</text>
+              <text v-if="hsRated[cur.id]" class="hs-rate-done">{{ hsRated[cur.id] === 'up' ? '已反馈：有用' : '已反馈：有误' }}</text>
               <template v-else>
-                <text class="hs-rate-btn" @click="rateHs(cur, true)">👍 有用</text>
-                <text class="hs-rate-btn bad" @click="rateHs(cur, false)">👎 有误</text>
+                <view class="hs-rate-btn" @click="rateHs(cur, true)"><l-icon name="thumbs-up" :size="13" color="#3b6ff5" /><text>有用</text></view>
+                <view class="hs-rate-btn bad" @click="rateHs(cur, false)"><l-icon name="thumbs-down" :size="13" color="#b91c1c" /><text>有误</text></view>
               </template>
             </view>
           </view>
@@ -174,7 +174,7 @@
       <view class="sheet" @click.stop>
         <view class="sheet-h">
           <text class="sheet-t">答题卡</text>
-          <view class="sheet-x" @click="cardOpen = false"><uni-icons type="closeempty" size="20" color="#6b7280" /></view>
+          <view class="sheet-x" @click="cardOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <view class="acard-grid">
           <view
@@ -195,7 +195,7 @@
       <view class="sheet" @click.stop>
         <view class="sheet-h">
           <text class="sheet-t">题目纠错</text>
-          <text class="sheet-x" @click="reportOpen = false">✕</text>
+          <view class="sheet-x" @click="reportOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <view class="rp-types">
           <text
@@ -1783,7 +1783,7 @@ export default {
 .exp-k.xp { color: #b45309; margin-top: 12rpx; }
 .exp.xpx { border-left: 5rpx solid #f59e0b; background: var(--warn-soft); }
 .hs-rate { display: flex; gap: 14rpx; margin-top: 10rpx; align-items: center; }
-.hs-rate-btn { font-size: 23rpx; color: var(--brand); border: 1rpx solid var(--brand); border-radius: 999rpx; padding: 6rpx 22rpx; }
+.hs-rate-btn { display: inline-flex; align-items: center; gap: 6rpx; font-size: 23rpx; color: var(--brand); border: 1rpx solid var(--brand); border-radius: 999rpx; padding: 6rpx 22rpx; }
 .hs-rate-btn.bad { color: var(--bad); border-color: var(--bad); }
 .hs-rate-done { font-size: 23rpx; color: var(--ink-2); }
 .exp { background: var(--soft-bg); border-radius: 14rpx; padding: 20rpx; font-size: 25rpx; line-height: 1.7; color: var(--ink); white-space: pre-wrap; margin-top: 8rpx; }

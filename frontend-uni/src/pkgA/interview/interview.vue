@@ -17,7 +17,7 @@
           <text class="cat-arrow">›</text>
         </view>
       </view>
-      <button class="btn-primary" @click="draw('')">🎲 随机抽一题</button>
+      <button class="btn-primary" @click="draw('')"><l-icon name="shuffle" :size="16" color="#ffffff" /> 随机抽一题</button>
       <view class="hist-link" @click="goHistory">练习记录 ›</view>
     </view>
 
@@ -31,7 +31,7 @@
         <view class="q-text">{{ question.question }}</view>
       </view>
       <view class="timer-row">
-        <text class="timer">⏱ {{ fmtDur(elapsed) }}</text>
+        <view class="timer"><l-icon name="timer" :size="15" color="#40434e" /><text>{{ fmtDur(elapsed) }}</text></view>
         <text class="swap" @click="draw(pickedCategory, question.id)">换一题</text>
       </view>
       <textarea
@@ -42,7 +42,7 @@
       />
       <view class="cnt">{{ answer.length }} / 5000</view>
       <view class="btn-row">
-        <button class="btn-ghost" @click="voiceStub">🎙 语音作答（即将上线）</button>
+        <button class="btn-ghost" @click="voiceStub"><l-icon name="mic" :size="15" color="#3b6ff5" /> 语音作答（即将上线）</button>
         <button class="btn-primary grow" :disabled="answer.trim().length < 20 || submitting" @click="submit">
           {{ submitting ? '考官点评中…' : '提交作答' }}
         </button>
@@ -269,7 +269,7 @@ export default {
 .q-text { font-size: 29rpx; line-height: 1.7; color: var(--ink); }
 
 .timer-row { display: flex; justify-content: space-between; align-items: center; margin: 0 8rpx 14rpx; }
-.timer { font-size: 26rpx; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.timer { display: flex; align-items: center; gap: 8rpx; font-size: 26rpx; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .swap { font-size: 25rpx; color: #3b6ff5; }
 .ans-box { width: 100%; box-sizing: border-box; min-height: 320rpx; background: var(--card); border-radius: 24rpx; padding: 24rpx 28rpx; font-size: 28rpx; line-height: 1.7; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); }
 .cnt { text-align: right; font-size: 22rpx; color: var(--ink-2); margin: 10rpx 8rpx 24rpx; }

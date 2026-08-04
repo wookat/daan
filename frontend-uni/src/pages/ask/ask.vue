@@ -14,14 +14,14 @@
 
     <!-- 空态引导 -->
     <view v-if="!results.length && !loading" class="empty-guide">
-      <view class="eg-ico">💬</view>
+      <view class="eg-ico"><l-icon name="message-circle" :size="34" color="#3b6ff5" /></view>
       <text class="eg-t">拍下或粘贴一道题，AI 讲给你听</text>
       <text class="eg-s">答案 + 花生十三速解方法 + 可迁移技巧，支持追问和举一反三</text>
       <view class="eg-acts">
-        <view class="eg-btn main" @click="pickImage">📷 拍题 / 相册</view>
-        <view class="eg-btn" @click="textOpen = true">📋 粘贴文字</view>
+        <view class="eg-btn main" @click="pickImage"><l-icon name="camera" :size="16" color="#ffffff" /><text>拍题 / 相册</text></view>
+        <view class="eg-btn" @click="textOpen = true"><l-icon name="clipboard-list" :size="16" color="#3b6ff5" /><text>粘贴文字</text></view>
       </view>
-      <view class="eg-iv" @click="goInterview">🎤 AI 面试陪练：抽真题 · 考官打分点评 ›</view>
+      <view class="eg-iv" @click="goInterview"><l-icon name="mic" :size="14" color="#7c3aed" /><text>AI 面试陪练：抽真题 · 考官打分点评 ›</text></view>
       <view v-if="recent.length" class="card reccard">
         <view class="rec-h">最近讲解</view>
         <view v-for="r in recent" :key="r.ts" class="rec-row">
@@ -61,10 +61,10 @@
           <rich-text v-if="r.html" :nodes="r.html" />
           <view v-else-if="r.streaming" class="spin">生成中…</view>
           <view v-if="r.explain_key && !r.streaming" class="raterow">
-            <text class="rate-q">{{ r.rated ? (r.rated === 'up' ? '已反馈：有用 👍' : '已反馈：有误 👎，我们会核查') : '这条解析有帮助吗？' }}</text>
+            <text class="rate-q">{{ r.rated ? (r.rated === 'up' ? '已反馈：有用' : '已反馈：有误，我们会核查') : '这条解析有帮助吗？' }}</text>
             <view v-if="!r.rated" class="rate-btns">
-              <text class="rate-btn" @click="rate(r, true)">👍 有用</text>
-              <text class="rate-btn bad" @click="rate(r, false)">👎 有误</text>
+              <view class="rate-btn" @click="rate(r, true)"><l-icon name="thumbs-up" :size="13" color="#3b6ff5" /><text>有用</text></view>
+              <view class="rate-btn bad" @click="rate(r, false)"><l-icon name="thumbs-down" :size="13" color="#b91c1c" /><text>有误</text></view>
             </view>
           </view>
           <!-- 追问建议 + 操作 chips -->
@@ -132,8 +132,8 @@
 
     <!-- 底部输入栏 -->
     <view class="inputbar">
-      <view class="ib-cam" @click="pickImage">📷</view>
-      <view class="ib-txt" @click="textOpen = true">📋</view>
+      <view class="ib-cam" @click="pickImage"><l-icon name="camera" :size="20" color="#40434e" /></view>
+      <view class="ib-txt" @click="textOpen = true"><l-icon name="clipboard-list" :size="20" color="#40434e" /></view>
       <input
         v-model="fuText"
         class="ib-inp"
@@ -150,7 +150,7 @@
       <view class="sheet" @click.stop>
         <view class="sheet-h">
           <text class="sheet-t">粘贴题目文字</text>
-          <text class="sheet-x" @click="textOpen = false">✕</text>
+          <view class="sheet-x" @click="textOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <textarea v-model="qtext" class="ta" placeholder="粘贴题干和选项…" :maxlength="-1" auto-height />
         <text class="label">你选的答案（可选，填了会帮你分析错因）</text>
@@ -166,7 +166,7 @@
       <view class="sheet" @click.stop>
         <view class="sheet-h">
           <text class="sheet-t">确认题目图片</text>
-          <text class="sheet-x" @click="clearImage">✕</text>
+          <view class="sheet-x" @click="clearImage"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <image :src="imagePath" mode="widthFix" class="preview" />
         <text class="label">你选的答案（可选，填了会帮你分析错因）</text>
@@ -182,7 +182,7 @@
       <view class="sheet" @click.stop>
         <view class="sheet-h">
           <text class="sheet-t">历史会话</text>
-          <text class="sheet-x" @click="historyOpen = false">✕</text>
+          <view class="sheet-x" @click="historyOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <view v-if="!sessions.length" class="rec-empty">
           <text class="rec-e1">还没有历史会话</text>
@@ -641,8 +641,8 @@ export default {
 .eg-t { display: block; font-size: 30rpx; font-weight: 700; color: var(--ink); margin-top: 16rpx; }
 .eg-s { display: block; font-size: 23rpx; color: var(--ink-2); margin-top: 10rpx; line-height: 1.7; }
 .eg-acts { display: flex; gap: 20rpx; margin: 32rpx 0 24rpx; }
-.eg-iv { min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 20rpx; font-size: 26rpx; font-weight: 600; background: #eef4ff; color: #3b6ff5; margin-bottom: 40rpx; }
-.eg-btn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 20rpx; font-size: 28rpx; font-weight: 600; background: var(--card); color: var(--ink); border: 1rpx solid var(--line); }
+.eg-iv { min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 8rpx; border-radius: 20rpx; font-size: 26rpx; font-weight: 600; background: #eef4ff; color: #3b6ff5; margin-bottom: 40rpx; }
+.eg-btn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 8rpx; border-radius: 20rpx; font-size: 28rpx; font-weight: 600; background: var(--card); color: var(--ink); border: 1rpx solid var(--line); }
 .eg-btn.main { background: linear-gradient(135deg, #5b8af8, var(--brand)); color: #fff; border: none; box-shadow: 0 8rpx 24rpx rgba(59, 111, 245, 0.28); }
 .reccard { text-align: left; }
 
@@ -696,7 +696,7 @@ export default {
 .raterow { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; background: var(--soft-bg); border-radius: 14rpx; padding: 16rpx 22rpx; margin-top: 16rpx; flex-wrap: wrap; }
 .rate-q { font-size: 24rpx; color: var(--ink-2); }
 .rate-btns { display: flex; gap: 14rpx; }
-.rate-btn { font-size: 24rpx; color: var(--brand); border: 1rpx solid var(--brand); border-radius: 999rpx; padding: 8rpx 24rpx; }
+.rate-btn { display: inline-flex; align-items: center; gap: 6rpx; font-size: 24rpx; color: var(--brand); border: 1rpx solid var(--brand); border-radius: 999rpx; padding: 8rpx 24rpx; }
 .rate-btn.bad { color: var(--bad); border-color: var(--bad); }
 .anscard { display: flex; align-items: center; gap: 22rpx; background: var(--brand-soft); border: 1rpx solid var(--brand-soft-2); border-radius: 20rpx; padding: 22rpx 26rpx; margin: 6rpx 0 16rpx; }
 .ans-big { flex-shrink: 0; min-width: 88rpx; height: 88rpx; padding: 0 14rpx; border-radius: 20rpx; background: var(--brand); color: #fff; font-size: 44rpx; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 6rpx 14rpx rgba(59, 111, 245, 0.3); }

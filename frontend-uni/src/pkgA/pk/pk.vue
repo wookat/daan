@@ -3,7 +3,7 @@
     <!-- 入口页 -->
     <template v-if="view === 'home'">
       <view class="hero">
-        <text class="hero-t">⚔️ 答题 PK</text>
+        <view class="hero-t"><l-icon name="swords" :size="22" color="#ffffff" /><text>答题 PK</text></view>
         <text class="hero-s">同组 10 题 · 比分数拼手速 · 答对 +80，越快加成越高</text>
       </view>
 
@@ -92,7 +92,7 @@
         </view>
       </view>
 
-      <view v-if="rivalDone" class="card hint">⚡ 对手已完成全部作答 —— 锁定你的答案！</view>
+      <view v-if="rivalDone" class="card hint"><l-icon name="zap" :size="15" color="#3b6ff5" /> 对手已完成全部作答 —— 锁定你的答案！</view>
     </template>
 
     <!-- 结果 / 等待页 -->
@@ -440,7 +440,7 @@ export default {
 .empty { text-align: center; color: var(--ink-2); font-size: 25rpx; padding: 30rpx 0; }
 
 .hero { background: linear-gradient(135deg, #5b8af8, #3b6ff5); border-radius: 32rpx; padding: 36rpx 32rpx; margin-bottom: 24rpx; box-shadow: 0 12rpx 36rpx rgba(59, 111, 245, 0.3); }
-.hero-t { display: block; color: #fff; font-size: 40rpx; font-weight: 800; }
+.hero-t { display: flex; align-items: center; gap: 12rpx; color: #fff; font-size: 40rpx; font-weight: 800; }
 .hero-s { display: block; color: rgba(255, 255, 255, 0.85); font-size: 24rpx; margin-top: 10rpx; }
 
 .sec-t { font-size: 24rpx; color: var(--ink-2); margin: 24rpx 8rpx 14rpx; }

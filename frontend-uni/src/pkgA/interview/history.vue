@@ -26,7 +26,7 @@
       </view>
     </view>
     <view v-else-if="loaded" class="empty">
-      <text class="empty-ico">🎤</text>
+      <view class="empty-ico"><l-icon name="mic" :size="30" color="#b0b4c0" /></view>
       <text class="empty-t">还没有练习记录</text>
       <button class="btn-primary" @click="goPractice">去练一题</button>
     </view>

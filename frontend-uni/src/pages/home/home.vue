@@ -93,7 +93,7 @@
         <text class="ann-t">{{ announce.title }}</text>
         <text v-if="announce.body" class="ann-b">{{ announce.body }}</text>
       </view>
-      <text class="ann-x" @click="dismissAnn">✕</text>
+      <view class="ann-x" @click="dismissAnn"><l-icon name="x" :size="16" color="#0369a1" /></view>
     </view>
 
     <!-- 时政每日一练 -->
@@ -838,7 +838,7 @@ export default {
 .ann-c { flex: 1; }
 .ann-t { display: block; font-size: 25rpx; font-weight: 600; color: #0369a1; }
 .ann-b { display: block; font-size: 22rpx; color: #075985; margin-top: 4rpx; white-space: pre-wrap; }
-.ann-x { flex-shrink: 0; color: #7dd3fc; font-size: 26rpx; padding: 4rpx 8rpx; }
+.ann-x { flex-shrink: 0; display: flex; align-items: center; padding: 4rpx 8rpx; }
 
 /* Sheet */
 .mask { position: fixed; inset: 0; background: rgba(23, 24, 28, 0.45); z-index: 30; display: flex; align-items: flex-end; }
