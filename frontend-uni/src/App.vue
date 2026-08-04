@@ -15,18 +15,25 @@ export default {
 <style>
 /* 全局设计规范 */
 page {
+  /* design-v3 tokens（docs/design-v3/DESIGN.md） */
   --brand: #3b6ff5;
   --brand-soft: #edf3fe;
-  --ink: #1f2430;
-  --ink-2: #6b7280;
+  --brand-soft-2: #dce7fd;
+  --ink: #17181c;
+  --ink-2: #7d818f;
+  --ink-3: #8f959e;
+  --ink-4: #b0b4c0;
   --ok: #16a34a;
   --ok-soft: #ecfdf5;
   --bad: #dc2626;
   --bad-soft: #fef2f2;
-  --line: #e5e7eb;
+  --warn: #d97706;
+  --warn-soft: #fffbeb;
+  --line: #e7e9f0;
+  --fill: #f2f3f7;
   --card: #ffffff;
-  --soft-bg: #f8f9fc;
-  --radius: 24rpx;
+  --soft-bg: #f2f3f7;
+  --radius: 28rpx;
   background: linear-gradient(180deg, #edf3fe 0%, #f6f7fb 240rpx, #f6f7fb 100%);
   color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', 'Microsoft YaHei', sans-serif;
