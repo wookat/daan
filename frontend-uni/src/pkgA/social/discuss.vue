@@ -107,12 +107,15 @@ export default {
       draft: '',
       busy: false,
       replyTo: null,
+      logged: false,
     };
   },
-  computed: {
-    logged() {
-      return !!getToken();
-    },
+  onShow() {
+    const l = !!getToken();
+    if (l !== this.logged) {
+      this.logged = l;
+      if (this.qid) this.load();
+    }
   },
   onLoad(opts) {
     this.qid = Number(opts.qid || 0);
