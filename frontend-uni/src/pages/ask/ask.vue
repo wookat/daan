@@ -650,8 +650,8 @@ export default {
 .msg { display: flex; margin-bottom: 20rpx; }
 .msg.user { justify-content: flex-end; }
 .msg.ai { justify-content: flex-start; }
-.bubble { max-width: 86%; border-radius: 24rpx; padding: 20rpx 26rpx; font-size: 27rpx; line-height: 1.7; box-sizing: border-box; }
-.ub { background: linear-gradient(135deg, #5b8af8, var(--brand)); color: #fff; border-bottom-right-radius: 8rpx; }
+.bubble { max-width: 86%; border-radius: 28rpx; padding: 20rpx 26rpx; font-size: 27rpx; line-height: 1.7; box-sizing: border-box; }
+.ub { background: var(--brand); color: #fff; border-bottom-right-radius: 8rpx; }
 .ub-t { white-space: pre-wrap; word-break: break-all; }
 .ub-img { width: 320rpx; border-radius: 14rpx; display: block; }
 .ub-ans { display: block; margin-top: 8rpx; font-size: 22rpx; color: rgba(255, 255, 255, 0.85); }

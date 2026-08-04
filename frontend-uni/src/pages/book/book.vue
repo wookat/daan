@@ -877,7 +877,7 @@ export default {
 .offbar { background: var(--warn-soft); border-radius: 16rpx; padding: 16rpx 22rpx; font-size: 24rpx; color: var(--warn); margin-bottom: 20rpx; }
 .ovrow { display: flex; gap: 16rpx; margin-bottom: 20rpx; }
 .ov-c { flex: 1; background: var(--card, #fff); border-radius: 20rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 22rpx 0; display: flex; flex-direction: column; align-items: center; gap: 4rpx; }
-.ov-n { font-size: 34rpx; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.ov-n { font-size: 44rpx; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
 .ov-n.warn { color: #d97706; }
 .ov-n.ok { color: #16a34a; }
 .ov-t { font-size: 21rpx; color: var(--ink-2); }
@@ -995,7 +995,7 @@ export default {
 .q { font-size: 26rpx; line-height: 1.5; margin-top: 10rpx; }
 .q.clamp { max-height: 120rpx; overflow: hidden; }
 .meta { font-size: 22rpx; color: var(--ink-2); }
-.duecard { background: linear-gradient(135deg, var(--brand), #7c5cfc); border: none; display: flex; justify-content: space-between; align-items: center; }
+.duecard { background: linear-gradient(180deg, #4a7bf7, #3567ec); border: none; box-shadow: 0 6rpx 16rpx rgba(59, 111, 245, 0.25); display: flex; justify-content: space-between; align-items: center; }
 .redoentry { display: flex; justify-content: space-between; align-items: center; }
 .redo-l { display: flex; align-items: center; gap: 16rpx; }
 .redo-ico { width: 64rpx; height: 64rpx; border-radius: 50%; background: var(--brand-soft); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }

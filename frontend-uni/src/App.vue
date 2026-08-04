@@ -57,10 +57,19 @@ page {
   --wot-color-theme: #3b6ff5;
   --wot-button-primary-bg-color: #3b6ff5;
   --wot-cell-title-fs: 15px;
-  background: linear-gradient(180deg, #edf3fe 0%, #f6f7fb 240rpx, #f6f7fb 100%);
+  background: #f6f7fb;
   color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', 'Microsoft YaHei', sans-serif;
 }
+
+/* #ifdef H5 */
+body {
+  background: #f6f7fb;
+}
+.theme-dark body {
+  background: #15161c;
+}
+/* #endif */
 
 /* 深色模式（三档设置见 theme.js；.theme-dark 挂在 html 上，H5/App 生效）
    深色 token 见 docs/design-v3/features/dark-mode.html：品牌蓝不变，浅底改深底 */
@@ -89,7 +98,7 @@ page {
   --wot-cell-group-title-color: #9ba0b0;
   --wot-color-border-light: #2b2e3a;
   --wot-button-plain-bg-color: transparent;
-  background: linear-gradient(180deg, #1b2233 0%, #15161c 240rpx, #15161c 100%);
+  background: #15161c;
 }
 .theme-dark uni-tabbar .uni-tabbar,
 .theme-dark uni-tabbar .uni-tabbar__border {

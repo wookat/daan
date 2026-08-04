@@ -680,14 +680,16 @@ export default {
 <style scoped>
 .wrap { padding: 24rpx; }
 .card { background: var(--card); border-radius: var(--radius); padding: 24rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
-.hero { background: linear-gradient(135deg, var(--brand), #2f5cd8); border-radius: var(--radius); padding: 30rpx 28rpx; margin-bottom: 24rpx; }
+.hero { background: var(--card); border: 1rpx solid var(--line); border-radius: var(--radius); padding: 30rpx 28rpx; margin-bottom: 24rpx; box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .hero-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22rpx; }
-.hero-t { font-size: 30rpx; font-weight: 700; color: #fff; }
-.hero-cal { font-size: 24rpx; color: rgba(255, 255, 255, 0.9); padding: 14rpx 0 14rpx 20rpx; }
+.hero-t { font-size: 30rpx; font-weight: 700; color: var(--ink); }
+.hero-cal { font-size: 24rpx; color: var(--brand); padding: 14rpx 0 14rpx 20rpx; }
 .hero-kpis { display: flex; }
 .hk { flex: 1; text-align: center; }
-.hk-n { display: block; font-size: 44rpx; font-weight: 700; color: #fff; }
-.hk-t { display: block; font-size: 22rpx; color: rgba(255, 255, 255, 0.78); margin-top: 4rpx; }
+.hk-n { display: block; font-size: 44rpx; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.hk:nth-child(2) .hk-n { color: var(--ok); }
+.hk:nth-child(3) .hk-n { color: var(--brand); }
+.hk-t { display: block; font-size: 22rpx; color: var(--ink-3); margin-top: 4rpx; }
 .cal-hr { display: flex; align-items: center; gap: 16rpx; }
 .h { font-size: 28rpx; font-weight: 600; margin-bottom: 14rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 20rpx; }

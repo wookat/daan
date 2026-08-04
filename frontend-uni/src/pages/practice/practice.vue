@@ -1720,12 +1720,12 @@ export default {
 .mbar { height: 8rpx; background: var(--line); border-radius: 999rpx; overflow: hidden; }
 .mfill { height: 100%; background: var(--brand); border-radius: 999rpx; transition: width 0.4s ease; }
 .modechips { display: flex; gap: 12rpx; margin-bottom: 14rpx; flex-wrap: wrap; }
-.mchip { font-size: 21rpx; border-radius: 8rpx; padding: 4rpx 16rpx; font-weight: 500; }
+.mchip { font-size: 21rpx; border-radius: 12rpx; padding: 4rpx 16rpx; font-weight: 500; }
 .mchip.brand { background: var(--brand-soft); color: var(--brand); }
 .mchip.info { background: #cffafe; color: #0e7490; }
 .mchip.bad { background: var(--bad-soft); color: #dc2626; }
 .rhead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14rpx; }
-.tag { display: inline-block; background: var(--brand-soft); color: var(--brand); border-radius: 999rpx; padding: 6rpx 20rpx; font-size: 22rpx; }
+.tag { display: inline-block; background: var(--brand-soft); color: var(--brand); border-radius: 12rpx; padding: 6rpx 20rpx; font-size: 22rpx; }
 .hstats { display: flex; align-items: center; gap: 12rpx; flex-shrink: 0; }
 .tool-row { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 8rpx 4rpx; border-bottom: 1rpx solid var(--line); }
 .tool-row:last-child { border-bottom: none; }
@@ -1752,7 +1752,7 @@ export default {
 .acard-n.cur { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
 .acard-foot { text-align: center; font-size: 23rpx; color: var(--ink-2); padding-bottom: 8rpx; }
 .op { font-size: 24rpx; color: var(--ink-2); margin-left: 6rpx; }
-.progress { height: 6rpx; background: #e0e7ff; border-radius: 999rpx; overflow: hidden; margin-bottom: 22rpx; }
+.progress { height: 6rpx; background: var(--fill); border-radius: 999rpx; overflow: hidden; margin-bottom: 22rpx; }
 .pfill { height: 100%; background: linear-gradient(90deg, #6c9bff, var(--brand)); border-radius: 999rpx; transition: width 0.3s ease; }
 .q { font-size: 30rpx; line-height: 1.7; margin-bottom: 22rpx; white-space: pre-wrap; }
 .qimg { width: 100%; border-radius: 12rpx; margin-bottom: 8rpx; background: var(--fill); }
@@ -1787,7 +1787,7 @@ export default {
 .hs-rate-btn.bad { color: var(--bad); border-color: var(--bad); }
 .hs-rate-done { font-size: 23rpx; color: var(--ink-2); }
 .exp { background: var(--soft-bg); border-radius: 14rpx; padding: 20rpx; font-size: 25rpx; line-height: 1.7; color: var(--ink); white-space: pre-wrap; margin-top: 8rpx; }
-.exp-sec { background: var(--card); border: 1rpx solid var(--line); border-radius: 16rpx; padding: 20rpx; margin-bottom: 16rpx; }
+.exp-sec { background: linear-gradient(180deg, var(--brand-soft), var(--card) 40%); border: 1rpx solid var(--brand-soft-2); border-radius: 20rpx; padding: 20rpx; margin-bottom: 16rpx; }
 .exp-row { display: flex; align-items: baseline; gap: 16rpx; margin-bottom: 12rpx; }
 .exp-row:last-child { margin-bottom: 0; }
 .exp-row.col { display: block; }
@@ -1820,17 +1820,16 @@ export default {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
 }
-.banner.bok { background: var(--ok-soft); }
-.banner.bbad { background: var(--bad-soft); }
+.banner { background: rgba(255, 255, 255, 0.97); border-top: 1rpx solid var(--line); box-shadow: 0 -8rpx 24rpx rgba(23, 24, 28, 0.08); }
+.theme-dark .banner { background: rgba(29, 31, 40, 0.97); }
 .binfo { flex: 1; min-width: 0; }
 .btitle { display: block; font-size: 30rpx; font-weight: 700; }
 .bok .btitle { color: var(--ok); }
 .bbad .btitle { color: var(--bad); }
 .bsub { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
 .bnext { flex-shrink: 0; border-radius: 999rpx; font-size: 28rpx; font-weight: 600; color: #fff; padding: 0 44rpx; min-height: 44px; line-height: 44px; margin: 0; }
-.bnext.nok { background: #22c55e; }
-.bnext.nbad { background: #ef4444; }
-.bnext.bstay { background: transparent; border: 2rpx solid #22c55e; color: #15803d; margin-right: 12rpx; }
+.bnext.nok, .bnext.nbad { background: linear-gradient(180deg, #4a7bf7, #3567ec); box-shadow: 0 6rpx 16rpx rgba(59, 111, 245, 0.25); }
+.bnext.bstay { background: transparent; border: 2rpx solid var(--brand); color: var(--brand); margin-right: 12rpx; box-shadow: none; }
 .ann { display: flex; align-items: flex-start; gap: 12rpx; background: var(--info-soft); border: 1rpx solid #bae6fd; border-radius: 16rpx; padding: 18rpx 22rpx; margin-bottom: 20rpx; }
 .ann-c { flex: 1; }
 .ann-t { display: block; font-size: 26rpx; font-weight: 600; color: #0369a1; }

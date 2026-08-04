@@ -9,7 +9,7 @@
   "pages": [
     {
       "path": "pages/home/home",
-      "style": { "navigationBarTitleText": "首页" }
+      "style": { "navigationBarTitleText": "刷题" }
     },
     {
       "path": "pages/book/book",
