@@ -630,3 +630,45 @@ export async function streamInterview({ questionId, answer, durationSec, onMeta,
   return d;
 }
 // #endif
+
+// ---------- 答题 PK（异步） ----------
+
+export function pkNickname() {
+  const u = getAuthUser();
+  if (u && u.nickname) return u.nickname;
+  if (u && u.phone) return '考友' + String(u.phone).slice(-4);
+  let n = uni.getStorageSync('pkNickname');
+  if (!n) {
+    n = '考友' + Math.random().toString(36).slice(2, 6).toUpperCase();
+    uni.setStorageSync('pkNickname', n);
+  }
+  return n;
+}
+
+export function pkCreate(module) {
+  return request('/api/pk/create', { method: 'POST', data: { uid: anonUid(), nickname: pkNickname(), module: module || null } });
+}
+
+export function pkJoin(code) {
+  return request('/api/pk/join', { method: 'POST', data: { uid: anonUid(), nickname: pkNickname(), code } });
+}
+
+export function pkRandomMatch(module) {
+  return request('/api/pk/random_match', { method: 'POST', data: { uid: anonUid(), nickname: pkNickname(), module: module || null } });
+}
+
+export function pkMatch(code) {
+  return request(`/api/pk/match/${encodeURIComponent(code)}?uid=${encodeURIComponent(anonUid())}`);
+}
+
+export function pkSubmit(code, items) {
+  return request('/api/pk/submit', { method: 'POST', data: { uid: anonUid(), code, items } });
+}
+
+export function pkMine() {
+  return request(`/api/pk/mine?uid=${encodeURIComponent(anonUid())}`);
+}
+
+export function pkLeaderboard() {
+  return request(`/api/pk/leaderboard?uid=${encodeURIComponent(anonUid())}`);
+}

@@ -82,6 +82,14 @@
         {
           "path": "interview/history",
           "style": { "navigationBarTitleText": "面试练习记录" }
+        },
+        {
+          "path": "pk/pk",
+          "style": { "navigationBarTitleText": "答题 PK" }
+        },
+        {
+          "path": "settings/reminders",
+          "style": { "navigationBarTitleText": "学习提醒" }
         }
       ]
     }
