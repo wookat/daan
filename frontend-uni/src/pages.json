@@ -74,6 +74,14 @@
         {
           "path": "social/poster",
           "style": { "navigationBarTitleText": "打卡海报" }
+        },
+        {
+          "path": "pk/pk",
+          "style": { "navigationBarTitleText": "答题 PK" }
+        },
+        {
+          "path": "settings/reminders",
+          "style": { "navigationBarTitleText": "学习提醒" }
         }
       ]
     }

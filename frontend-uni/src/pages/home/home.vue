@@ -76,6 +76,16 @@
       </view>
     </view>
 
+    <!-- 断卡风险提示 -->
+    <view v-if="streakRisk" class="card riskbar" @click="startDaily">
+      <text class="risk-ico">🔥</text>
+      <view class="grow">
+        <text class="risk-t">{{ streakRisk.title }}</text>
+        <text class="risk-s">{{ streakRisk.sub }}</text>
+      </view>
+      <text class="risk-go">去刷题 ›</text>
+    </view>
+
     <!-- 公告 -->
     <view v-if="announce" class="card ann">
       <uni-icons type="sound-filled" size="15" color="#0369a1" />
@@ -151,6 +161,11 @@
         <text class="more-ico">📷</text>
         <text class="more-t">拍题讲解</text>
         <text class="more-s">花生十三方法体系</text>
+      </view>
+      <view class="card more-c" @click="goPk">
+        <text class="more-ico">⚔️</text>
+        <text class="more-t">答题 PK</text>
+        <text class="more-s">同组 10 题 · 比分拼手速</text>
       </view>
       <view class="card more-c" @click="goMini">
         <text class="more-ico">⚡</text>
@@ -405,6 +420,25 @@ export default {
       for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
       return mods[h % mods.length];
     },
+    streakRisk() {
+      const days = (this.pstats && this.pstats.days) || {};
+      const y = new Date();
+      y.setDate(y.getDate() - 1);
+      const yKey = y.toISOString().slice(0, 10);
+      const yN = days[yKey] || 0;
+      if (this.todayCount >= this.dailyGoal) return null;
+      if (!yN) {
+        // 昨天完全没练：若之前有打卡记录，提示找回节奏
+        const d2 = new Date();
+        d2.setDate(d2.getDate() - 2);
+        if (!days[d2.toISOString().slice(0, 10)]) return null;
+        return { title: '昨天没打卡，连续记录中断了', sub: `今天练 ${this.dailyGoal} 题，重新出发不掉队` };
+      }
+      if (yN < this.dailyGoal) {
+        return { title: `昨天只练了 ${yN}/${this.dailyGoal} 题，未达标`, sub: '今天补上进度，守住你的连续打卡 🔥' };
+      }
+      return null;
+    },
     dailyStreak() {
       let n = 0;
       const d = new Date();
@@ -438,6 +472,9 @@ export default {
     },
     openPoster() {
       uni.navigateTo({ url: '/pkgA/social/poster' });
+    },
+    goPk() {
+      uni.navigateTo({ url: '/pkgA/pk/pk' });
     },
     modName(m) {
       return NAMES[m] || m || '未知';
@@ -789,6 +826,13 @@ export default {
 .pf-summary { margin-top: 8rpx; font-size: 23rpx; color: var(--ink-2, #646a73); background: var(--brand-soft, #edf3fe); border-radius: 12rpx; padding: 18rpx 22rpx; }
 .pf-back { margin-top: 16rpx; text-align: center; font-size: 24rpx; color: var(--ink-3, #8f959e); min-height: 44px; display: flex; align-items: center; justify-content: center; }
 
+/* 断卡风险提示 */
+.riskbar { display: flex; align-items: center; gap: 20rpx; background: var(--warn-soft); border: 1rpx solid #fde68a; padding: 22rpx 26rpx; }
+.risk-ico { font-size: 36rpx; flex-shrink: 0; }
+.risk-t { display: block; font-size: 26rpx; font-weight: 600; color: var(--warn); }
+.risk-s { display: block; font-size: 22rpx; color: #b45309; margin-top: 4rpx; }
+.risk-go { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: var(--warn); }
+
 /* 公告 */
 .ann { display: flex; align-items: flex-start; gap: 14rpx; background: #f0f9ff; border: 1rpx solid #bae6fd; padding: 22rpx 26rpx; }
 .ann-c { flex: 1; }
@@ -831,7 +875,7 @@ export default {
 /* #ifdef H5 */
 @media (min-width: 768px) {
   .wrap.home { max-width: 960px !important; display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; align-items: start; }
-  .hero, .sec-h, .ann { grid-column: 1 / -1; }
+  .hero, .sec-h, .ann, .riskbar { grid-column: 1 / -1; }
   .modlist { grid-column: 1; }
   .more-grid { grid-column: 2; grid-template-columns: 1fr 1fr; }
   .card.guide, .card.plancard, .card.szcard, .card.spin { grid-column: 1 / -1; }

@@ -51,6 +51,11 @@
         <text class="row-t">模考记录</text>
         <text class="row-arrow">›</text>
       </view>
+      <view class="row" @click="goPk">
+        <text class="row-ico">⚔️</text>
+        <text class="row-t">答题 PK</text>
+        <text class="row-arrow">›</text>
+      </view>
     </view>
 
     <!-- 偏好设置 -->
@@ -66,6 +71,12 @@
         <text class="row-ico">🔠</text>
         <text class="row-t">字号与显示</text>
         <text class="row-v">{{ ['小', '标准', '大'][fontLv] }}</text>
+        <text class="row-arrow">›</text>
+      </view>
+      <view class="row" @click="goReminders">
+        <text class="row-ico">⏰</text>
+        <text class="row-t">学习提醒</text>
+        <text class="row-v">{{ remindOn ? '每天 ' + remindTime : '未开启' }}</text>
         <text class="row-arrow">›</text>
       </view>
       <view class="row" @click="toggleSfx">
@@ -104,6 +115,7 @@
 
 <script>
 import { request, getAuthUser, authLogout, clearAuth, anonUid } from '../../api.js';
+import { getReminderSettings } from '../../reminder.js';
 
 export default {
   data() {
@@ -118,6 +130,8 @@ export default {
       dailyGoal: 20,
       fontLv: 1,
       sfxOn: true,
+      remindOn: false,
+      remindTime: '20:30',
     };
   },
   computed: {
@@ -151,6 +165,9 @@ export default {
     this.dailyGoal = uni.getStorageSync('dailyGoal') || 20;
     this.fontLv = uni.getStorageSync('fontLv') || 1;
     this.sfxOn = uni.getStorageSync('sfxOff') ? false : true;
+    const rs = getReminderSettings();
+    this.remindOn = rs.on;
+    this.remindTime = rs.time;
     this.loadRemote();
   },
   methods: {
@@ -194,6 +211,12 @@ export default {
     },
     goExamList() {
       uni.navigateTo({ url: '/pkgA/exam/list' });
+    },
+    goPk() {
+      uni.navigateTo({ url: '/pkgA/pk/pk' });
+    },
+    goReminders() {
+      uni.navigateTo({ url: '/pkgA/settings/reminders' });
     },
     cycleGoal() {
       const opts = [20, 50, 100];

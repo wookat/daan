@@ -1,10 +1,15 @@
 <script>
+// #ifdef H5
+import { initReminderLoop } from './reminder.js'
+// #endif
+
 export default {
   onLaunch: function () {
     // #ifdef H5
     const h = window.location.hash || ''
     const m = h.match(/^#\/pages\/(exam|shenlun|user)\//)
     if (m) window.location.replace(window.location.pathname + h.replace('#/pages/', '#/pkgA/'))
+    initReminderLoop()
     // #endif
   },
   onShow: function () {},

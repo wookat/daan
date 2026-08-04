@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import auth, db, engine, insights, kb, llm, omr, pdf_export, plan, social, taxonomy
+from . import auth, db, engine, insights, kb, llm, omr, pdf_export, pk, plan, social, taxonomy
 
 app = FastAPI(title="考公错题助手")
 # Android App（Capacitor WebView，origin 为 https://localhost）跨域访问 API
@@ -30,6 +30,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(insights.router)
 app.include_router(social.router)
+app.include_router(pk.router)
 
 ACCESS_CODE = os.environ.get("ACCESS_CODE", "")
 
@@ -41,6 +42,7 @@ def check_access(x_access_code: str | None):
 db.init_db()
 auth.init_auth_db()
 social.init_social_db()
+pk.init_pk_db()
 
 
 def _stats_refresher():
