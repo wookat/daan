@@ -10,6 +10,11 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 - 纠错去重键为 `uid+question_id`：同一 uid 重复提交同一题会更新同一条记录（内容取最新）。
 - 全真模考「中途退出恢复进度」依赖本机 localStorage + 服务端未完成 attempt：测试恢复必须用同一浏览器重进同一套卷。
 
+## P6：学习计划 / 考点树 / 时政
+- 时政每日一练完成态存本机 localStorage `szDaily`，同日重测需先清该 key。
+- 后台「考点树」在生产 tag3 全空时列表恒「暂无题目」；验证编辑闭环可先 API 打标一题（`PATCH /api/admin/questions/{id}` body `{"tag3":code}`，header `x-admin-token`）再经 UI 清空还原。
+- 服务器 DB 精确核对：容器 `deploy-kaogong-1` 内 `/data/data.db`（`answer_log.created_at` 为 epoch 秒非日期串）。
+
 ## 题目纠错 (question reports, PR #2)
 - Admin console requires `ADMIN_TOKEN` env var on uvicorn (e.g. `ADMIN_TOKEN=testtok`); login at `/admin` with that token. 纠错处理 tab badge = count of open `question_reports`.
 - H5 entry points: practice answer view link「题目有问题？纠错」below the explanation card (must answer first; scroll down), and 错题本 expanded item footer「纠错」/ ··· sheet「题目纠错」. Sheet requires picking a type chip before 提交纠错 enables.
