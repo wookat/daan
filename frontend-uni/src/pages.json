@@ -7,20 +7,28 @@
   },
   "pages": [
     {
-      "path": "pages/ask/ask",
-      "style": { "navigationBarTitleText": "拍题讲解" }
-    },
-    {
-      "path": "pages/practice/practice",
-      "style": { "navigationBarTitleText": "刷题" }
+      "path": "pages/home/home",
+      "style": { "navigationBarTitleText": "首页" }
     },
     {
       "path": "pages/book/book",
       "style": { "navigationBarTitleText": "错题本" }
     },
     {
+      "path": "pages/ask/ask",
+      "style": { "navigationBarTitleText": "AI 问答" }
+    },
+    {
       "path": "pages/stats/stats",
       "style": { "navigationBarTitleText": "统计" }
+    },
+    {
+      "path": "pages/profile/profile",
+      "style": { "navigationBarTitleText": "我的" }
+    },
+    {
+      "path": "pages/practice/practice",
+      "style": { "navigationBarTitleText": "刷题" }
     },
     {
       "path": "pages/stats/calendar",
@@ -55,7 +63,7 @@
     }
   ],
   "preloadRule": {
-    "pages/practice/practice": {
+    "pages/home/home": {
       "network": "all",
       "packages": ["pkgA"]
     }
@@ -65,10 +73,11 @@
     "selectedColor": "#3b6ff5",
     "backgroundColor": "#ffffff",
     "list": [
-      { "pagePath": "pages/ask/ask", "text": "拍题讲解", "iconPath": "static/tab/ask.png", "selectedIconPath": "static/tab/ask-on.png" },
-      { "pagePath": "pages/practice/practice", "text": "刷题", "iconPath": "static/tab/practice.png", "selectedIconPath": "static/tab/practice-on.png" },
+      { "pagePath": "pages/home/home", "text": "刷题", "iconPath": "static/tab/home.png", "selectedIconPath": "static/tab/home-on.png" },
       { "pagePath": "pages/book/book", "text": "错题本", "iconPath": "static/tab/book.png", "selectedIconPath": "static/tab/book-on.png" },
-      { "pagePath": "pages/stats/stats", "text": "统计", "iconPath": "static/tab/stats.png", "selectedIconPath": "static/tab/stats-on.png" }
+      { "pagePath": "pages/ask/ask", "text": "AI问答", "iconPath": "static/tab/ask.png", "selectedIconPath": "static/tab/ask-on.png" },
+      { "pagePath": "pages/stats/stats", "text": "统计", "iconPath": "static/tab/stats.png", "selectedIconPath": "static/tab/stats-on.png" },
+      { "pagePath": "pages/profile/profile", "text": "我的", "iconPath": "static/tab/my.png", "selectedIconPath": "static/tab/my-on.png" }
     ]
   },
   "globalStyle": {

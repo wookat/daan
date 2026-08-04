@@ -1,294 +1,14 @@
 <template>
   <view class="wrap" :class="{ 'has-banner': picked }">
-    <!-- 选模块 -->
-    <view v-if="!session" class="home">
-      <view class="hbanner">
-        <view class="hbanner-l">
-          <text class="hbanner-t">今日已练 {{ todayCount }}/{{ dailyGoal }} 题{{ todayCount >= dailyGoal ? ' · 已达成' : '' }}</text>
-          <text class="hbanner-s">{{ dailyStreak ? '连续打卡 ' + dailyStreak + ' 天' : '今天还没开始，练一组吧' }}</text>
-          <view class="hbanner-bar"><view class="hbanner-fill" :style="{ width: Math.min((todayCount / dailyGoal) * 100, 100) + '%' }" /></view>
-        </view>
-        <text class="hbanner-btn" @click="startDaily">{{ todayDone ? '再练一组' : '继续目标 ›' }}</text>
-      </view>
-      <view v-if="profile === null && !guideHide" class="card guide">
-        <view class="guide-l" @click="openSetup">
-          <text class="guide-t">制定我的学习计划</text>
-          <text class="guide-s">按考试日期倒排每日任务：专项练习 + 错题复习 + 每周模考</text>
-        </view>
-        <text class="guide-btn" @click="openSetup">去制定 ›</text>
-        <text class="guide-x" @click.stop="skipGuide">跳过</text>
-      </view>
-      <view v-if="planToday && planToday.profile" class="card plancard">
-        <view class="plan-h">
-          <text class="plan-t">今日计划</text>
-          <view class="plan-hr">
-            <text v-if="planToday.days_left != null" class="plan-days">距考试 {{ planToday.days_left }} 天 · {{ planToday.phase_name }}</text>
-            <text class="plan-edit" @click="openSetup">编辑</text>
-          </view>
-        </view>
-        <view class="plan-prog">
-          <view class="plan-prog-bar"><view class="plan-prog-fill" :style="{ width: (planToday.progress.total ? (planToday.progress.done / planToday.progress.total) * 100 : 0) + '%' }" /></view>
-          <text class="plan-prog-t">{{ planToday.progress.done }}/{{ planToday.progress.total }}</text>
-        </view>
-        <view v-for="t in planToday.tasks" :key="t.key" class="plan-row task" @click="goTask(t)">
-          <text class="task-ck" :class="{ on: t.done }">{{ t.done ? '✓' : '' }}</text>
-          <view class="task-main">
-            <text class="plan-txt" :class="{ tdone: t.done }">{{ t.title }}</text>
-            <text class="task-sub">{{ t.sub }}<template v-if="t.type !== 'mock' && t.done_n"> · 已完成 {{ t.done_n }}/{{ t.target }}</template></text>
-          </view>
-          <text class="plan-go">{{ t.done ? '已完成' : t.type === 'mock' ? '去模考 ›' : t.type === 'review' ? '去复习 ›' : '去练 ›' }}</text>
-        </view>
-        <view class="plan-focus">
-          <text class="plan-focus-k">今天主攻</text>
-          <text v-for="(fn, fk) in FOCUS_MODS" :key="fk" class="plan-fchip" :class="{ on: plan && plan.focus === fk }" @click="setFocus(fk)">{{ fn }}</text>
-        </view>
-      </view>
-      <view v-else-if="plan && (plan.due_mistakes || plan.weak.length || plan.yesterday.n)" class="card plancard">
-        <view class="plan-h">
-          <text class="plan-t">今日建议</text>
-          <text v-if="plan.yesterday.n" class="plan-y">昨日练 {{ plan.yesterday.n }} 题 · 正确率 {{ Math.round((plan.yesterday.correct / plan.yesterday.n) * 100) }}%</text>
-          <text v-else class="plan-y">昨日未练习</text>
-        </view>
-        <view v-if="plan.due_mistakes" class="plan-row" @click="goBook">
-          <text class="plan-dot due" />
-          <text class="plan-txt">先复习到期错题 {{ plan.due_mistakes }} 道</text>
-          <text class="plan-go">去复习 ›</text>
-        </view>
-        <view v-for="w in plan.weak" :key="w.module + w.submodule + (w.tag3 || '')" class="plan-row" @click="start(w.module, w.submodule, 10, true, undefined, w.tag3 || null)">
-          <text class="plan-dot" />
-          <text class="plan-txt">{{ w.label || w.submodule }}（{{ w.reason }} · 正确率 {{ Math.round(w.acc * 100) }}%）</text>
-          <text class="plan-go">练 10 题 ›</text>
-        </view>
-        <view class="plan-focus">
-          <text class="plan-focus-k">今天主攻</text>
-          <text v-for="(fn, fk) in FOCUS_MODS" :key="fk" class="plan-fchip" :class="{ on: plan.focus === fk }" @click="setFocus(fk)">{{ fn }}</text>
-        </view>
-      </view>
-      <view v-if="announce" class="card ann">
-        <uni-icons type="sound-filled" size="15" color="#0369a1" />
-        <view class="ann-c">
-          <text class="ann-t">{{ announce.title }}</text>
-          <text v-if="announce.body" class="ann-b">{{ announce.body }}</text>
-        </view>
-        <text class="ann-x" @click="dismissAnn">✕</text>
-      </view>
-      <view v-if="counts.length" class="card grid4">
-        <view class="g4" @click="goMini">
-          <view class="g4-ic" style="background:#fff4e5"><uni-icons type="flag-filled" size="20" color="#d97706" /></view>
-          <text class="g4-t">迷你模考</text>
-        </view>
-        <view class="g4" @click="goExamList">
-          <view class="g4-ic" style="background:#fef2f2"><uni-icons type="medal-filled" size="20" color="#dc2626" /></view>
-          <text class="g4-t">全真模考</text>
-        </view>
-        <view class="g4" @click="goExamList">
-          <view class="g4-ic" style="background:#edf3fe"><uni-icons type="paperplane-filled" size="20" color="#3b6ff5" /></view>
-          <text class="g4-t">真题卷库</text>
-        </view>
-        <view class="g4" @click="goShenlun">
-          <view class="g4-ic" style="background:#f0fdf4"><uni-icons type="compose" size="20" color="#12b76a" /></view>
-          <text class="g4-t">申论专区</text>
-        </view>
-      </view>
-      <view v-if="counts.length" class="card custom-row" @click="customOpen = true">
-        <view class="daily-l">
-          <view class="daily-t"><view class="exam-ico"><uni-icons type="gear-filled" size="16" color="#3b6ff5" /></view><text class="daily-t-t dark">自定义练习</text></view>
-          <text class="daily-s dark">选来源 / 年份 / 地区 / 题量 / 每日目标</text>
-        </view>
-        <text class="daily-go">设置</text>
-      </view>
-      <view v-if="customOpen" class="mask" @click="customOpen = false">
-        <view class="sheet" @click.stop>
-          <view class="sheet-h">
-            <text class="sheet-t">自定义练习</text>
-            <view class="sheet-x" @click="customOpen = false"><uni-icons type="closeempty" size="20" color="#6b7280" /></view>
-          </view>
-          <view class="setrow">
-            <view class="set-kwrap"><text class="set-k">每日目标</text><text class="set-sub">今天合计要练的题数</text></view>
-            <view class="set-chips">
-              <text v-for="g in [20, 50, 100]" :key="g" class="set-chip" :class="{ on: dailyGoal === g }" @click="setGoal(g)">{{ g }} 题</text>
-            </view>
-          </view>
-          <view class="setrow">
-            <text class="set-k">选题来源</text>
-            <view class="set-chips">
-              <text class="set-chip" :class="{ on: !realMode }" @click="setReal(false)">题库模式</text>
-              <text class="set-chip" :class="{ on: realMode }" @click="setReal(true)">真题模式</text>
-            </view>
-          </view>
-          <view v-if="realMode && realYears.length" class="setrow">
-            <text class="set-k">真题年份</text>
-            <view class="set-chips scrollx">
-              <text class="set-chip" :class="{ on: !realYear }" @click="setRealYear(null)">全部</text>
-              <text v-for="y in realYears" :key="y.y" class="set-chip" :class="{ on: realYear === y.y }" @click="setRealYear(y.y)">{{ y.y }}</text>
-            </view>
-          </view>
-          <view v-if="realMode && realRegions.length" class="setrow">
-            <text class="set-k">真题地区</text>
-            <view class="set-chips scrollx">
-              <text class="set-chip" :class="{ on: !realRegion }" @click="setRealRegion(null)">全部</text>
-              <text v-for="r in realRegions" :key="r.r" class="set-chip" :class="{ on: realRegion === r.r }" @click="setRealRegion(r.r)">{{ r.r }}</text>
-            </view>
-          </view>
-          <view class="setrow">
-            <view class="set-kwrap"><text class="set-k">每组题量</text><text class="set-sub">单次练习连做几道</text></view>
-            <view class="set-chips">
-              <text v-for="n in [10, 20, 30, 50]" :key="n" class="set-chip" :class="{ on: groupSize === n }" @click="setGroup(n)">{{ n }}</text>
-            </view>
-          </view>
-          <view class="custom-start" @click="customOpen = false; start(null)">按以上设置开始练习（混合模块）</view>
-          <view class="exp-opts">
-            <text class="expchip" :class="{ on: expSheet && !expOnly }" @click="expOnly = false; expSheet = !expSheet">含答题卡</text>
-            <text class="expchip" :class="{ on: expAns && !expOnly }" @click="expOnly = false; expAns = !expAns">含答案解析</text>
-            <text class="expchip" :class="{ on: expOnly }" @click="expOnly = !expOnly">仅导出答案</text>
-          </view>
-          <view class="custom-export" @click="exportPaper">{{ exporting ? '正在生成 PDF…' : '导出为试卷 PDF' }}</view>
-          <view class="custom-note">以上设置同样作用于下方模块列表；模考与真题卷不受影响</view>
-        </view>
-      </view>
-      <view v-if="setupOpen" class="mask" @click="setupOpen = false">
-        <view class="sheet" @click.stop>
-          <view class="sheet-h">
-            <text class="sheet-t">制定学习计划 · {{ ['考试信息', '目标', '每日时长'][setupStep - 1] }}（{{ setupStep }}/3）</text>
-            <view class="sheet-x" @click="setupOpen = false"><uni-icons type="closeempty" size="20" color="#6b7280" /></view>
-          </view>
-          <template v-if="setupStep === 1">
-            <view class="setrow">
-              <text class="set-k">考试类型</text>
-              <view class="set-chips">
-                <text v-for="t in ['国考', '省考', '事业单位', '其他']" :key="t" class="set-chip" :class="{ on: pf.exam_type === t }" @click="pf.exam_type = t">{{ t }}</text>
-              </view>
-            </view>
-            <view class="setrow">
-              <text class="set-k">目标地区</text>
-              <input v-model="pf.target_region" class="pf-input" placeholder="如 广东 / 全国（选填）" :maxlength="20" />
-            </view>
-            <view class="setrow">
-              <text class="set-k">考试日期</text>
-              <picker mode="date" :value="pf.exam_date" @change="pf.exam_date = $event.detail.value">
-                <view class="pf-date" :class="{ empty: !pf.exam_date }">{{ pf.exam_date || '选择日期 ›' }}</view>
-              </picker>
-            </view>
-          </template>
-          <template v-else-if="setupStep === 2">
-            <view class="setrow">
-              <text class="set-k">目标分</text>
-              <view class="set-chips">
-                <text v-for="s in [60, 65, 70, 75, 80]" :key="s" class="set-chip" :class="{ on: pf.target_score === s }" @click="pf.target_score = s">{{ s }}+</text>
-              </view>
-            </view>
-            <view class="setrow">
-              <text class="set-k">基础自评</text>
-              <view class="set-chips">
-                <text v-for="b in ['零基础', '有基础', '二战']" :key="b" class="set-chip" :class="{ on: pf.base_level === b }" @click="pf.base_level = b">{{ b }}</text>
-              </view>
-            </view>
-          </template>
-          <template v-else>
-            <view class="setrow">
-              <view class="set-kwrap"><text class="set-k">每日可用时长</text><text class="set-sub">决定每日任务量</text></view>
-              <view class="set-chips">
-                <text v-for="m in [30, 60, 90, 120]" :key="m" class="set-chip" :class="{ on: pf.daily_minutes === m }" @click="pf.daily_minutes = m">{{ m }} 分钟</text>
-              </view>
-            </view>
-            <view class="pf-summary">{{ pf.exam_type }}{{ pf.target_region ? ' · ' + pf.target_region : '' }} · {{ pf.exam_date }} · 目标 {{ pf.target_score }}+ · {{ pf.base_level }} · 每天 {{ pf.daily_minutes }} 分钟</view>
-          </template>
-          <view class="custom-start" @click="setupNext">{{ setupStep < 3 ? '下一步' : setupBusy ? '生成中…' : '生成我的学习计划' }}</view>
-          <view v-if="setupStep > 1" class="pf-back" @click="setupStep--">上一步</view>
-        </view>
-      </view>
-      <view v-if="!counts.length" class="card spin" @click="loadCounts">题库加载中…点此重试</view>
-      <view v-if="counts.length" class="daily" :class="{ done: todayDone }" @click="startDaily">
-        <view class="daily-l">
-          <view class="daily-t"><uni-icons :type="todayDone ? 'checkbox-filled' : 'calendar-filled'" size="16" color="#ffffff" /><text class="daily-t-t">今日一练</text></view>
-          <text class="daily-s">{{ todayDone ? '今天已完成，明天继续' : '今日题型：' + dailyModName + ' · ' + groupSize + ' 题 · ' + (realMode ? '真题模式' : '题库模式') }}{{ dailyStreak ? ' · 已连续打卡 ' + dailyStreak + ' 天' : '' }}</text>
-        </view>
-        <text class="daily-go">{{ todayDone ? '再练一组' : '开始' }}</text>
-      </view>
-      <view v-if="counts.length" class="daily sz" :class="{ done: szTodayDone }" @click="szTodayDone ? reviewShizheng() : startShizheng()">
-        <view class="daily-l">
-          <view class="daily-t"><uni-icons :type="szTodayDone ? 'checkbox-filled' : 'sound-filled'" size="16" color="#ffffff" /><text class="daily-t-t">时政每日一练</text></view>
-          <text class="daily-s">{{ szTodayDone ? '今日已完成，明日再来 · 点击回顾解析' : '每日 10 题 · 近半年国内时政热点 · 全站同题' }}</text>
-        </view>
-        <text class="daily-go">{{ szTodayDone ? '回顾' : '开始' }}</text>
-      </view>
-      <view v-if="weakModule" class="smart" @click="start(weakModule)">
-        <view class="smart-l">
-          <view class="smart-t"><uni-icons type="flag-filled" size="15" color="#ffffff" /><text class="smart-t-t">智能刷题：攻克薄弱项</text></view>
-          <text class="smart-s">你的 {{ modName(weakModule) }} 正确率较低，建议专项练习</text>
-        </view>
-        <text class="smart-go">去练 ›</text>
-      </view>
-      <view class="grid">
-        <view
-          v-for="c in counts"
-          :key="c.module"
-          class="mcard"
-          @click="openModule(c.module)"
-        >
-          <view class="mtop">
-            <text class="mico" :style="{ background: modColor(c.module).bg, color: modColor(c.module).fg }">{{ modName(c.module).slice(0, 1) }}</text>
-            <text class="mname">{{ modName(c.module) }}</text>
-          </view>
-          <text class="mn">{{ progText(c) }}</text>
-          <view class="mbar">
-            <view class="mfill" :style="{ width: progPct(c) + '%' }" />
-          </view>
-        </view>
-        <view v-if="counts.length" class="mcard all" @click="start(null)">
-          <view class="mtop"><uni-icons type="loop" size="16" color="#ffffff" /><text class="mname">混合刷题</text></view>
-          <text class="mn">全部模块随机</text>
-        </view>
-      </view>
-    </view>
-
-    <!-- 真题卷库 -->
-    <view v-if="paperSheet" class="mask" @click="paperSheet = false">
-      <view class="sheet" @click.stop>
-        <view class="sheet-h">
-          <text class="sheet-t">真题卷库 · 选择试卷</text>
-          <view class="sheet-x" @click="paperSheet = false"><uni-icons type="closeempty" size="20" color="#6b7280" /></view>
-        </view>
-        <view v-if="!papers.length" class="spin">试卷加载中…</view>
-        <scroll-view v-if="paperRegions.length > 1" scroll-x class="pr-scroll">
-          <text class="set-chip" :class="{ on: !paperRegion }" @click="paperRegion = null">全部</text>
-          <text v-for="rg in paperRegions" :key="rg" class="set-chip" :class="{ on: paperRegion === rg }" @click="paperRegion = rg">{{ rg }}</text>
-        </scroll-view>
-        <view v-for="p in shownPapers" :key="p.source" class="sub-chip" @click="startPaper(p)">
-          <text class="sub-name">{{ p.title }}</text>
-          <text class="sub-n">{{ p.n }} 题</text>
-        </view>
-      </view>
-    </view>
-
-    <!-- 选二级题型 -->
-    <view v-if="subSelect" class="mask" @click="subSelect = null">
-      <view class="sheet" @click.stop>
-        <view class="sheet-h">
-          <text class="sheet-t">{{ modName(subSelect) }} · 选择题型</text>
-          <view class="sheet-x" @click="subSelect = null"><uni-icons type="closeempty" size="20" color="#6b7280" /></view>
-        </view>
-        <view class="sub-chip all-chip" @click="start(subSelect)">
-          <text class="sub-name">全部随机</text>
-          <text class="sub-n">{{ (counts.find(c => c.module === subSelect) || {}).n || 0 }} 题</text>
-        </view>
-        <view
-          v-for="s in submodules"
-          :key="s.submodule"
-          class="sub-chip"
-          @click="start(subSelect, s.submodule)"
-        >
-          <view class="sub-l">
-            <text class="sub-name">{{ s.submodule }}</text>
-            <text v-if="subProg[s.submodule]" class="sub-prog">已做 {{ subProg[s.submodule].n }} 题 · 正确率 {{ Math.round(100 * subProg[s.submodule].c / subProg[s.submodule].n) }}%</text>
-          </view>
-          <text class="sub-n">{{ s.n }} 题</text>
-        </view>
-      </view>
-    </view>
-
+    <!-- 加载/空态（本页仅承载答题会话，选题在首页） -->
+    <view v-if="!session" class="card spin" @click="quit">正在准备练习…点此返回首页</view>
     <!-- 答题 -->
     <view v-if="session && cur" class="card">
+      <view v-if="beiMode || timedMode || cur.is_real" class="modechips">
+        <text v-if="beiMode" class="mchip brand">背题模式</text>
+        <text v-if="timedMode && !beiMode && !examMode" class="mchip info">限时训练</text>
+        <text v-if="examMode" class="mchip bad">模考态 · 交卷统一判分</text>
+      </view>
       <view class="rhead">
         <text class="tag" @click="cardOpen = true">{{ modName(cur.module) }}{{ lastSubmodule ? ' · ' + lastSubmodule : '' }} · {{ idx + 1 }}/{{ items.length }} ▾</text>
         <view class="hstats">
@@ -444,7 +164,7 @@
       </view>
       <button class="btn" @click="start(lastModule, lastSubmodule)">再来一组</button>
       <button v-if="!beiMode" class="btn ghost" style="margin-top: 16rpx" @click="shareResult">分享成绩</button>
-      <button class="btn plain" style="margin-top: 8rpx" @click="quit">返回选模块</button>
+      <button class="btn plain" style="margin-top: 8rpx" @click="quit">返回首页</button>
     </view>
 
     <!-- 答题卡 -->
@@ -766,15 +486,35 @@ export default {
   onShow() {
     this.pstats = loadPStats();
     this.favs = uni.getStorageSync('favQuestions') || [];
-    this.loadCounts();
-    this.loadAnnounce();
-    this.loadPlan();
-    const wantSetup = uni.getStorageSync('openPlanSetup');
-    if (wantSetup) uni.removeStorageSync('openPlanSetup');
-    this.loadProfile().then(() => {
-      if (wantSetup) this.openSetup();
-    });
-    if (this.realMode) this.loadRealFilters();
+    this.realMode = uni.getStorageSync('realMode') ? true : false;
+    this.realYear = uni.getStorageSync('realYear') || null;
+    this.realRegion = uni.getStorageSync('realRegion') || null;
+    this.groupSize = uni.getStorageSync('groupSize') || 10;
+    this.dailyGoal = uni.getStorageSync('dailyGoal') || 20;
+    const launch = uni.getStorageSync('practiceLaunch');
+    if (launch && launch.kind) {
+      uni.removeStorageSync('practiceLaunch');
+      if (launch.kind === 'daily') {
+        this.startDaily();
+        return;
+      }
+      if (launch.kind === 'shizheng') {
+        this.startShizheng();
+        return;
+      }
+      if (launch.kind === 'szreview') {
+        this.reviewShizheng();
+        return;
+      }
+      if (launch.kind === 'paper') {
+        this.startPaper({ source: launch.source, title: launch.title || '真题卷' });
+        return;
+      }
+      if (launch.kind === 'start') {
+        this.start(launch.module || null, launch.submodule || null, launch.count || null, !!launch.adaptive, launch.forceReal, launch.tag3 || null);
+        return;
+      }
+    }
     const redoSet = uni.getStorageSync('redoSet');
     if (redoSet && redoSet.length) {
       uni.removeStorageSync('redoSet');
@@ -1177,7 +917,10 @@ export default {
     async reviewShizheng() {
       const day = new Date().toISOString().slice(0, 10);
       const rec = this.szDaily.days[day];
-      if (!rec) return;
+      if (!rec) {
+        this.startShizheng();
+        return;
+      }
       uni.showLoading({ title: '加载回顾…', mask: true });
       try {
         const d = await request('/api/shizheng/daily');
@@ -1795,6 +1538,7 @@ export default {
       this.cardOpen = false;
       this.stopQTimer();
       this.pstats = loadPStats();
+      uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/home/home' }) });
     },
   },
 };
@@ -1909,6 +1653,11 @@ export default {
 .mn { display: block; font-size: 21rpx; color: var(--ink-2); margin: 4rpx 0 10rpx; }
 .mbar { height: 8rpx; background: var(--line); border-radius: 999rpx; overflow: hidden; }
 .mfill { height: 100%; background: var(--brand); border-radius: 999rpx; transition: width 0.4s ease; }
+.modechips { display: flex; gap: 12rpx; margin-bottom: 14rpx; flex-wrap: wrap; }
+.mchip { font-size: 21rpx; border-radius: 8rpx; padding: 4rpx 16rpx; font-weight: 500; }
+.mchip.brand { background: var(--brand-soft, #edf3fe); color: var(--brand, #3b6ff5); }
+.mchip.info { background: #cffafe; color: #0e7490; }
+.mchip.bad { background: #fef2f2; color: #dc2626; }
 .rhead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14rpx; }
 .tag { display: inline-block; background: var(--brand-soft); color: var(--brand); border-radius: 999rpx; padding: 6rpx 20rpx; font-size: 22rpx; }
 .hstats { display: flex; align-items: center; gap: 12rpx; flex-shrink: 0; }

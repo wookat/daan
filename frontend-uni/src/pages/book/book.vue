@@ -32,6 +32,11 @@
 
     <!-- 列表模式 -->
     <template v-else>
+      <view v-if="items.length" class="ovrow">
+        <view class="ov-c"><text class="ov-n">{{ items.length }}</text><text class="ov-t">全部错题</text></view>
+        <view class="ov-c"><text class="ov-n warn">{{ todoItems.length }}</text><text class="ov-t">待掌握</text></view>
+        <view class="ov-c"><text class="ov-n ok">{{ doneItems.length }}</text><text class="ov-t">已掌握</text></view>
+      </view>
       <view v-if="due.length" class="card duecard" @click="startReview">
         <view>
           <view class="duetxt"><uni-icons type="calendar-filled" size="16" color="#ffffff" /><text class="duetxt-t">今日待复习 {{ dueTotal }} 道</text></view>
@@ -507,6 +512,10 @@ export default {
   },
   onShow() {
     this.favs = (uni.getStorageSync('favQuestions') || []).map((f) => ({ ...f, _open: false }));
+    if (uni.getStorageSync('bookShowFavs')) {
+      uni.removeStorageSync('bookShowFavs');
+      if (this.favs.length) this.tab = 'fav';
+    }
     if (this.tab === 'fav' && !this.favs.length) this.tab = 'todo';
     this.load();
   },
@@ -668,7 +677,7 @@ export default {
       this.load();
     },
     goPractice() {
-      uni.switchTab({ url: '/pages/practice/practice' });
+      uni.switchTab({ url: '/pages/home/home' });
     },
     async load() {
       this.loading = true;
@@ -679,8 +688,8 @@ export default {
         this.due = r.items;
         this.dueTotal = r.total || r.items.length;
         try {
-          if (this.dueTotal > 0) uni.setTabBarBadge({ index: 2, text: String(this.dueTotal > 99 ? '99+' : this.dueTotal) });
-          else uni.removeTabBarBadge({ index: 2 });
+          if (this.dueTotal > 0) uni.setTabBarBadge({ index: 1, text: String(this.dueTotal > 99 ? '99+' : this.dueTotal) });
+          else uni.removeTabBarBadge({ index: 1 });
         } catch (e) { /* tabBar 未就绪时忽略 */ }
       } catch (e) {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
@@ -771,7 +780,7 @@ export default {
           return;
         }
         uni.setStorageSync('redoSet', d.items);
-        uni.switchTab({ url: '/pages/practice/practice' });
+        uni.navigateTo({ url: '/pages/practice/practice' });
       } catch (e) {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
@@ -784,7 +793,7 @@ export default {
       const qt = m.question_type || '';
       const sub = qt.includes('-') ? qt.split('-').slice(1).join('-') : null;
       uni.setStorageSync('practicePreset', { module: m.module, submodule: sub, count: 3 });
-      uni.switchTab({ url: '/pages/practice/practice' });
+      uni.navigateTo({ url: '/pages/practice/practice' });
     },
     openReport(m) {
       if (!m.question_id) return;
@@ -838,6 +847,12 @@ export default {
 
 <style scoped>
 .wrap { padding: 24rpx; }
+.ovrow { display: flex; gap: 16rpx; margin-bottom: 20rpx; }
+.ov-c { flex: 1; background: var(--card, #fff); border-radius: 20rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 22rpx 0; display: flex; flex-direction: column; align-items: center; gap: 4rpx; }
+.ov-n { font-size: 34rpx; font-weight: 700; color: var(--ink, #17181c); font-variant-numeric: tabular-nums; }
+.ov-n.warn { color: #d97706; }
+.ov-n.ok { color: #16a34a; }
+.ov-t { font-size: 21rpx; color: var(--ink-2, #7d818f); }
 .card { background: var(--card); border-radius: var(--radius); padding: 24rpx; margin-bottom: 24rpx; border-left: 6rpx solid var(--brand); border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .empty { text-align: center; padding: 56rpx 32rpx; }
 .e-ico { font-size: 72rpx; margin-bottom: 16rpx; }

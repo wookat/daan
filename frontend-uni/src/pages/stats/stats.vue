@@ -496,7 +496,7 @@ export default {
     },
     goPlanSetup() {
       uni.setStorageSync('openPlanSetup', '1');
-      uni.switchTab({ url: '/pages/practice/practice' });
+      uni.switchTab({ url: '/pages/home/home' });
     },
     goLogin() {
       uni.navigateTo({ url: '/pkgA/user/login' });
@@ -560,7 +560,7 @@ export default {
       const KEY = { '资料分析': 'ziliao', '数量关系': 'shuliang', '言语理解': 'yanyu', '判断推理': 'panduan', '常识判断': 'changshi' };
       const k = KEY[mod] || (Object.values(KEY).includes(mod) ? mod : '');
       if (k) uni.setStorageSync('practiceModule', k);
-      uni.switchTab({ url: '/pages/practice/practice' });
+      uni.navigateTo({ url: '/pages/practice/practice' });
     },
     ringStyle(i) {
       const size = i * 25;
@@ -583,7 +583,7 @@ export default {
     },
     goSub(module, sub, tag3) {
       uni.setStorageSync('practicePreset', { module, submodule: sub, count: 10, adaptive: true, tag3: tag3 || null });
-      uni.switchTab({ url: '/pages/practice/practice' });
+      uni.navigateTo({ url: '/pages/practice/practice' });
     },
     copyCode() {
       uni.setClipboardData({ data: this.backupCode });
