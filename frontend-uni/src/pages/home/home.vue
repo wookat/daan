@@ -10,7 +10,8 @@
     <view class="hero">
       <view class="hero-top">
         <text class="hero-goal">今日已练 <text class="hero-n">{{ todayCount }}</text>/{{ dailyGoal }} 题{{ todayCount >= dailyGoal ? ' · 已达成' : '' }}</text>
-        <text v-if="dailyStreak" class="hero-streak">🔥 连续打卡 {{ dailyStreak }} 天</text>
+        <text v-if="todayCount >= dailyGoal" class="hero-streak" @click="openPoster">🎉 生成打卡海报 ›</text>
+        <text v-else-if="dailyStreak" class="hero-streak">🔥 连续打卡 {{ dailyStreak }} 天</text>
       </view>
       <view class="hero-bar"><view class="hero-fill" :style="{ width: Math.min((todayCount / dailyGoal) * 100, 100) + '%' }" /></view>
       <view class="hero-acts">
@@ -434,6 +435,9 @@ export default {
   methods: {
     goSearch() {
       uni.navigateTo({ url: '/pkgA/search/search' });
+    },
+    openPoster() {
+      uni.navigateTo({ url: '/pkgA/social/poster' });
     },
     modName(m) {
       return NAMES[m] || m || '未知';

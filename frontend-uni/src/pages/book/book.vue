@@ -48,15 +48,25 @@
         <view class="seg">
           <view class="seg-i" :class="{ on: tab === 'todo' }" @click="tab = 'todo'">待掌握 {{ todoItems.length }}</view>
           <view class="seg-i" :class="{ on: tab === 'done' }" @click="tab = 'done'">已掌握 {{ doneItems.length }}</view>
-          <view v-if="favs.length" class="seg-i" :class="{ on: tab === 'fav' }" @click="tab = 'fav'">收藏 {{ favs.length }}</view>
+          <view class="seg-i" :class="{ on: tab === 'fav' }" @click="tab = 'fav'">收藏{{ favs.length ? ' ' + favs.length : '' }}</view>
         </view>
         <view v-if="tab !== 'fav'" class="filterbtn" @click="filterOpen = true">
           <uni-icons type="tune" size="18" color="#646a73" /><text class="filterbtn-t">筛选</text>
         </view>
       </view>
       <template v-if="tab === 'fav'">
+        <view class="card redoentry" @click="openFavPage">
+          <view class="redo-l">
+            <view class="redo-ico"><uni-icons type="star-filled" size="16" color="#f59e0b" /></view>
+            <view>
+              <text class="redo-t">收藏夹与笔记</text>
+              <text class="redo-s">多夹分组 · 每题笔记 · 可按夹重练</text>
+            </view>
+          </view>
+          <text class="redo-go">打开</text>
+        </view>
         <view v-if="!favs.length" class="card empty">
-          <view class="e-t">还没有收藏题目</view>
+          <view class="e-t">还没有本机收藏</view>
           <view class="e-s">刷题时点顶栏星星即可收藏好题</view>
         </view>
         <view v-if="favs.length > 3" class="searchbar">
@@ -675,6 +685,9 @@ export default {
       await request('/api/mistakes/' + m.id, { method: 'PATCH', data: { mastered: on ? 1 : 0 } });
       if (on) uni.showToast({ title: '已掌握！', icon: 'success' });
       this.load();
+    },
+    openFavPage() {
+      uni.navigateTo({ url: '/pkgA/social/favorites' });
     },
     goPractice() {
       uni.switchTab({ url: '/pages/home/home' });

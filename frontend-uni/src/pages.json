@@ -62,6 +62,18 @@
         {
           "path": "search/search",
           "style": { "navigationBarTitleText": "搜索" }
+        },
+        {
+          "path": "social/discuss",
+          "style": { "navigationBarTitleText": "讨论区" }
+        },
+        {
+          "path": "social/favorites",
+          "style": { "navigationBarTitleText": "收藏与笔记" }
+        },
+        {
+          "path": "social/poster",
+          "style": { "navigationBarTitleText": "打卡海报" }
         }
       ]
     }
