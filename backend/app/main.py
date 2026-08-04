@@ -276,12 +276,13 @@ def api_admin_questions(
     disabled: int = 0,
     offset: int = 0,
     limit: int = 20,
+    qid: int | None = None,
     x_admin_token: str | None = Header(None),
 ):
     check_admin(x_admin_token)
     return {
         "items": db.admin_search_questions(
-            keyword, module, flagged=bool(flagged), disabled_only=bool(disabled), offset=offset, limit=limit
+            keyword, module, flagged=bool(flagged), disabled_only=bool(disabled), offset=offset, limit=limit, qid=qid
         )
     }
 
@@ -294,6 +295,10 @@ def api_admin_update_question(qid: int, body: dict, x_admin_token: str | None = 
         if code and code != "UNKNOWN" and code not in taxonomy.topic_index():
             raise HTTPException(400, "未知考点 code")
         body["tag3"] = code or None
+    if "options" in body:
+        if not isinstance(body["options"], dict):
+            raise HTTPException(400, "options 需为对象")
+        body["options"] = json.dumps(body["options"], ensure_ascii=False)
     if not db.admin_update_question(qid, body):
         raise HTTPException(400, "无可更新字段或题目不存在")
     if "tag3" in body:
@@ -344,12 +349,81 @@ def api_admin_delete_cache(key: str, x_admin_token: str | None = Header(None)):
     return {"ok": db.admin_delete_cache(key)}
 
 
-_ADMIN_HTML = os.path.join(os.path.dirname(__file__), "admin.html")
+_ADMIN_DIR = os.path.join(os.path.dirname(__file__), "admin")
 
 
 @app.get("/admin")
 def admin_page():
-    return FileResponse(_ADMIN_HTML, media_type="text/html")
+    return FileResponse(os.path.join(_ADMIN_DIR, "index.html"), media_type="text/html")
+
+
+app.mount("/admin/static", StaticFiles(directory=_ADMIN_DIR), name="admin_static")
+
+
+@app.get("/api/admin/dashboard")
+def api_admin_dashboard(x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return db.admin_dashboard()
+
+
+@app.get("/api/admin/governance")
+def api_admin_governance(x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return db.governance_scan()
+
+
+@app.get("/api/admin/users")
+def api_admin_users(
+    keyword: str | None = None,
+    offset: int = 0,
+    limit: int = 20,
+    inactive_days: int | None = None,
+    x_admin_token: str | None = Header(None),
+):
+    check_admin(x_admin_token)
+    return db.admin_users(keyword, offset, limit, inactive_days)
+
+
+@app.get("/api/admin/users/{uid}")
+def api_admin_user_detail(uid: str, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    d = db.admin_user_detail(uid.strip()[:64])
+    if not d:
+        raise HTTPException(404, "用户不存在")
+    return d
+
+
+@app.get("/api/admin/shizheng")
+def api_admin_shizheng(offset: int = 0, limit: int = 20, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return db.admin_shizheng(offset, limit)
+
+
+@app.get("/api/admin/shenlun_overview")
+def api_admin_shenlun_overview(x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return db.admin_shenlun_overview()
+
+
+@app.post("/api/admin/tag3_review/reopen")
+def api_admin_tag3_review_reopen(body: dict, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    qid = int(body.get("question_id") or 0)
+    if not qid:
+        raise HTTPException(400, "缺少 question_id")
+    return {"ok": db.tag3_review_reopen(qid)}
+
+
+@app.get("/api/admin/settings_info")
+def api_admin_settings_info(x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    tok = IMPORT_TOKEN or ""
+    return {
+        "import_token": ({"set": True, "masked": tok[:2] + "··" + tok[-4:]} if len(tok) >= 8
+                         else {"set": bool(tok), "masked": "··"}),
+        "llm_model": os.environ.get("LLM_MODEL", ""),
+        "access_code_enabled": bool(ACCESS_CODE),
+    }
 
 
 @app.post("/api/followup")
@@ -1191,13 +1265,29 @@ def api_admin_resolve_report(rid: int, body: dict, x_admin_token: str | None = H
 @app.get("/api/admin/batches")
 def api_admin_batches(x_admin_token: str | None = Header(None)):
     check_admin(x_admin_token)
-    return {"items": db.admin_batches()}
+    return {"items": db.admin_batches_v3()}
 
 
 @app.get("/api/admin/batches/{bid}/sample")
-def api_admin_batch_sample(bid: str, x_admin_token: str | None = Header(None)):
+def api_admin_batch_sample(bid: str, limit: int = 10, x_admin_token: str | None = Header(None)):
     check_admin(x_admin_token)
-    return {"items": db.admin_batch_sample(bid)}
+    return {"items": db.admin_batch_sample(bid, min(limit, 50)), "reviews": db.sample_reviews(bid)}
+
+
+@app.post("/api/admin/batches/{bid}/sample_reviews")
+def api_admin_batch_sample_review(bid: str, body: dict, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    qid = int(body.get("question_id") or 0)
+    verdict = body.get("verdict")
+    if not qid:
+        raise HTTPException(400, "缺少 question_id")
+    if verdict is None:
+        db.sample_review_delete(bid, qid)
+        return {"ok": True, "summary": db.sample_review_summary(bid)}
+    if verdict not in ("ok", "problem"):
+        raise HTTPException(400, "verdict 需为 ok/problem")
+    note = str(body.get("note") or "")[:300] or None
+    return {"ok": True, "summary": db.sample_review_set(bid, qid, verdict, note)}
 
 
 @app.post("/api/admin/batches/{bid}/decide")
