@@ -5,6 +5,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../core/api.dart';
 import '../core/models.dart';
 import '../theme.dart';
+import '../widgets/export_sheet.dart';
 
 /// 错题本：待掌握 / 已掌握 / 收藏 三个 tab + 今日复习入口
 class BookPage extends StatefulWidget {
@@ -63,6 +64,33 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
       appBar: AppBar(
         title: const Text('错题本'),
         actions: [
+          IconButton(
+            tooltip: '导出 PDF',
+            onPressed: all.isEmpty
+                ? null
+                : () {
+                    final pending = all.where((m) => !m.mastered).toList();
+                    final list = pending.isNotEmpty ? pending : all;
+                    showExportSheet(
+                      context,
+                      title: '错题本',
+                      questionIds: [
+                        for (final m in list)
+                          if (m.questionId != null) m.questionId!,
+                      ],
+                      rawItems: [
+                        for (final m in list)
+                          if (m.questionId == null)
+                            {
+                              'question': m.questionText,
+                              'answer': m.correctAnswer ?? '',
+                              'explanation': m.explanation ?? '',
+                            },
+                      ],
+                    );
+                  },
+            icon: const Icon(LucideIcons.fileDown, size: 20),
+          ),
           IconButton(
             tooltip: '手动录入答案',
             onPressed: () async {

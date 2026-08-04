@@ -3,14 +3,54 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
+import '../core/api.dart';
 import '../core/providers.dart';
+import '../core/storage.dart';
 import '../theme.dart';
+import '../widgets/plan_setup_sheet.dart';
 
-class HomePage extends ConsumerWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends ConsumerState<HomePage> {
+  Map<String, dynamic>? profile;
+  Map<String, dynamic>? plan;
+  bool planLoaded = false;
+  bool guideHidden = Store.instance.planGuideHide;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlan();
+  }
+
+  Future<void> _loadPlan() async {
+    try {
+      final pf = await Api.profile();
+      if (!mounted) return;
+      setState(() => profile = pf);
+      if (pf != null) {
+        final p = await Api.planToday();
+        if (mounted) setState(() => plan = p);
+      }
+    } catch (_) {/* 计划加载失败不阻断首页 */}
+    if (mounted) setState(() => planLoaded = true);
+  }
+
+  Future<void> _openSetup() async {
+    final pf = await showPlanSetupSheet(context, profile: profile);
+    if (pf != null) {
+      setState(() => profile = pf);
+      _loadPlan();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final goal = ref.watch(dailyGoalProvider);
     final today = ref.watch(todayCountProvider);
     final pct = (today / goal).clamp(0.0, 1.0);
@@ -20,6 +60,29 @@ class HomePage extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // 搜索入口
+            InkWell(
+              borderRadius: BorderRadius.circular(999),
+              onTap: () => context.push('/search'),
+              child: Container(
+                height: 38,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardTheme.color ?? Colors.white,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: KgColors.border),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(LucideIcons.search, size: 16, color: KgColors.t4),
+                    SizedBox(width: 8),
+                    Text('题号 / 题干关键词 / 考点名',
+                        style: TextStyle(fontSize: 13, color: KgColors.t4)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
             // 今日目标 Hero
             Container(
               padding: const EdgeInsets.all(20),
@@ -62,6 +125,15 @@ class HomePage extends ConsumerWidget {
                 ],
               ),
             ),
+            // 学习计划：引导卡 / 今日计划卡
+            if (planLoaded && profile == null && !guideHidden) ...[
+              const SizedBox(height: 14),
+              _guideCard(),
+            ],
+            if (profile != null && plan != null) ...[
+              const SizedBox(height: 14),
+              _planCard(),
+            ],
             const SizedBox(height: 20),
             const _SectionTitle('专项练习'),
             const SizedBox(height: 10),
@@ -99,14 +171,126 @@ class HomePage extends ConsumerWidget {
               children: [
                 _entry(context, LucideIcons.timer, '模考', '/exam/list'),
                 _entry(context, LucideIcons.repeat, '错题重练', '/practice?mode=redo'),
-                _entry(context, LucideIcons.penTool, '申论', '/placeholder?title=申论批改'),
-                _entry(context, LucideIcons.newspaper, '时政每日练', '/placeholder?title=时政每日一练'),
+                _entry(context, LucideIcons.penTool, '申论', '/shenlun'),
+                _entry(context, LucideIcons.newspaper, '时政每日练', '/shizheng'),
                 _entry(context, LucideIcons.camera, '拍题讲解', '/ask'),
-                _entry(context, LucideIcons.swords, '答题PK', '/placeholder?title=答题PK'),
-                _entry(context, LucideIcons.mic, '面试陪练', '/placeholder?title=AI 面试陪练'),
-                _entry(context, LucideIcons.fileDown, 'PDF导出', '/placeholder?title=PDF 导出'),
+                _entry(context, LucideIcons.star, '收藏笔记', '/favorites'),
+                _entry(context, LucideIcons.flame, '打卡海报', '/poster'),
+                _entry(context, LucideIcons.fileDown, 'PDF导出', '/book'),
               ],
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _guideCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(LucideIcons.target, size: 18, color: KgColors.brand),
+                const SizedBox(width: 6),
+                const Expanded(
+                  child: Text('制定你的学习计划',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                ),
+                InkWell(
+                  onTap: () {
+                    Store.instance.planGuideHide = true;
+                    setState(() => guideHidden = true);
+                  },
+                  child: const Icon(LucideIcons.x, size: 16, color: KgColors.t4),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            const Text('30 秒设置考试信息，每天给你一份可执行的刷题计划',
+                style: TextStyle(fontSize: 12.5, color: KgColors.t3)),
+            const SizedBox(height: 12),
+            FilledButton(
+              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(42)),
+              onPressed: _openSetup,
+              child: const Text('开始设置（3 步）'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _planCard() {
+    final p = plan!;
+    final tasks = p['tasks'] as List<dynamic>? ?? [];
+    final daysLeft = (p['days_left'] as num?)?.toInt();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(LucideIcons.calendarCheck, size: 18, color: KgColors.brand),
+                const SizedBox(width: 6),
+                const Expanded(
+                  child: Text('今日计划',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                ),
+                if (daysLeft != null && daysLeft > 0)
+                  Text('距考试 $daysLeft 天',
+                      style: const TextStyle(fontSize: 12, color: KgColors.warning, fontWeight: FontWeight.w600)),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: _openSetup,
+                  child: const Icon(LucideIcons.settings2, size: 16, color: KgColors.t3),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            if (tasks.isEmpty)
+              const Text('今日暂无任务，去自由刷一组吧',
+                  style: TextStyle(fontSize: 13, color: KgColors.t3))
+            else
+              for (final t in tasks) _taskRow(Map<String, dynamic>.from(t)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _taskRow(Map<String, dynamic> t) {
+    final done = t['done'] == true || t['done'] == 1;
+    final module = (t['module'] ?? '').toString();
+    return InkWell(
+      onTap: done
+          ? null
+          : () => context.push(
+              module.isNotEmpty ? '/practice?module=$module' : '/practice'),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            Icon(done ? LucideIcons.checkCircle2 : LucideIcons.circle,
+                size: 16, color: done ? KgColors.success : KgColors.t4),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                (t['title'] ?? t['name'] ?? '').toString(),
+                style: TextStyle(
+                  fontSize: 13.5,
+                  color: done ? KgColors.t3 : null,
+                  decoration: done ? TextDecoration.lineThrough : null,
+                ),
+              ),
+            ),
+            if (!done)
+              const Icon(LucideIcons.chevronRight, size: 15, color: KgColors.t4),
           ],
         ),
       ),

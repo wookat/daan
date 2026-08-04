@@ -10,6 +10,13 @@ import 'pages/exam_report_page.dart';
 import 'pages/paper_entry_page.dart';
 import 'pages/scan_sheet_page.dart';
 import 'pages/book_page.dart';
+import 'pages/discuss_page.dart';
+import 'pages/favorites_page.dart';
+import 'pages/poster_page.dart';
+import 'pages/search_page.dart';
+import 'pages/shenlun_detail_page.dart';
+import 'pages/shenlun_page.dart';
+import 'pages/shizheng_page.dart';
 import 'pages/home_page.dart';
 import 'pages/login_page.dart';
 import 'pages/placeholder_page.dart';
@@ -55,6 +62,25 @@ final router = GoRouter(
     ),
     GoRoute(path: '/paper/entry', builder: (c, s) => const PaperEntryPage()),
     GoRoute(path: '/paper/scan', builder: (c, s) => const ScanSheetPage()),
+    GoRoute(path: '/shizheng', builder: (c, s) => const ShizhengPage()),
+    GoRoute(
+      path: '/shenlun',
+      builder: (c, s) =>
+          ShenlunPage(initialTab: s.uri.queryParameters['tab'] ?? 'q'),
+    ),
+    GoRoute(
+      path: '/shenlun/detail/:id',
+      builder: (c, s) =>
+          ShenlunDetailPage(qid: int.parse(s.pathParameters['id']!)),
+    ),
+    GoRoute(path: '/search', builder: (c, s) => const SearchPage()),
+    GoRoute(path: '/favorites', builder: (c, s) => const FavoritesPage()),
+    GoRoute(
+      path: '/discuss',
+      builder: (c, s) =>
+          DiscussPage(qid: int.parse(s.uri.queryParameters['qid'] ?? '0')),
+    ),
+    GoRoute(path: '/poster', builder: (c, s) => const PosterPage()),
     GoRoute(path: '/login', builder: (c, s) => const LoginPage()),
     GoRoute(
       path: '/placeholder',

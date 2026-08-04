@@ -9,6 +9,7 @@ import '../core/api.dart';
 import '../core/models.dart';
 import '../core/providers.dart';
 import '../theme.dart';
+import '../widgets/export_sheet.dart';
 
 /// 练习答题页：取题 → 作答 → 判分 → 解析 → 上报 answer_log；答错自动入错题本。
 /// mode: normal（专项/综合）| redo（错题重练）| review（今日复习，按遗忘曲线记录）
@@ -31,6 +32,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
   DateTime _qStart = DateTime.now();
   Timer? _ticker;
   int elapsed = 0;
+  final Set<int> favedIds = {};
 
   @override
   void initState() {
@@ -356,9 +358,96 @@ class _PracticePageState extends ConsumerState<PracticePage> {
             const SizedBox(height: 8),
             Text(q.explanation!, style: const TextStyle(fontSize: 14, height: 1.6)),
           ],
+          if (q.id != null) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                _explainOp(
+                  favedIds.contains(q.id) ? LucideIcons.star : LucideIcons.star,
+                  favedIds.contains(q.id) ? '已收藏' : '收藏',
+                  () => _toggleFav(q),
+                  color: favedIds.contains(q.id) ? KgColors.warning : KgColors.t3,
+                ),
+                const SizedBox(width: 24),
+                _explainOp(LucideIcons.penTool, '写笔记', () => _writeNote(q)),
+                const SizedBox(width: 24),
+                _explainOp(LucideIcons.messagesSquare, '讨论区',
+                    () => context.push('/discuss?qid=${q.id}')),
+              ],
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  Widget _explainOp(IconData icon, String label, VoidCallback onTap,
+      {Color color = KgColors.t3}) {
+    return InkWell(
+      onTap: onTap,
+      child: Row(
+        children: [
+          Icon(icon, size: 15, color: color),
+          const SizedBox(width: 4),
+          Text(label, style: TextStyle(fontSize: 13, color: color)),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _toggleFav(Question q) async {
+    final id = q.id!;
+    final on = !favedIds.contains(id);
+    setState(() => on ? favedIds.add(id) : favedIds.remove(id));
+    try {
+      if (on) {
+        await Api.setFav(id);
+      } else {
+        await Api.removeFav(id);
+      }
+    } catch (e) {
+      setState(() => on ? favedIds.remove(id) : favedIds.add(id));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(Api.errMsg(e))));
+      }
+    }
+  }
+
+  Future<void> _writeNote(Question q) async {
+    final ctrl = TextEditingController();
+    final content = await showDialog<String>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('写笔记'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          maxLines: 4,
+          maxLength: 500,
+          decoration: const InputDecoration(hintText: '记下解题思路、易错点…'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c), child: const Text('取消')),
+          FilledButton(
+              onPressed: () => Navigator.pop(c, ctrl.text.trim()),
+              child: const Text('保存')),
+        ],
+      ),
+    );
+    if (content == null || content.isEmpty) return;
+    try {
+      await Api.saveNote(q.id!, content);
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('笔记已保存')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(Api.errMsg(e))));
+      }
+    }
   }
 
   Widget _resultView() {
@@ -378,6 +467,29 @@ class _PracticePageState extends ConsumerState<PracticePage> {
                 style: const TextStyle(color: KgColors.t3)),
             const SizedBox(height: 32),
             FilledButton(onPressed: _load, child: const Text('再来一组')),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+              onPressed: () => showExportSheet(
+                context,
+                title: '自定义练习',
+                questionIds: [
+                  for (final q in items)
+                    if (q.id != null) q.id!,
+                ],
+                rawItems: [
+                  for (final q in items)
+                    if (q.id == null)
+                      {
+                        'question':
+                            '${q.question}\n${q.options.entries.map((e) => '${e.key}.${e.value}').join(' ')}',
+                        'answer': q.answer,
+                        'explanation': q.explanation ?? '',
+                      },
+                ],
+              ),
+              child: const Text('导出本组 PDF'),
+            ),
             const SizedBox(height: 12),
             OutlinedButton(
               style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
