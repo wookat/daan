@@ -48,6 +48,10 @@
           "style": { "navigationBarTitleText": "登录 / 注册" }
         },
         {
+          "path": "user/offline",
+          "style": { "navigationBarTitleText": "离线题包" }
+        },
+        {
           "path": "exam/list",
           "style": { "navigationBarTitleText": "真题卷库" }
         },

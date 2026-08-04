@@ -91,25 +91,25 @@ export default {
 
 <style scoped>
 .wrap { padding: 24rpx; }
-.poster-btn { margin-top: 24rpx; background: var(--brand, #3b6ff5); color: #fff; font-size: 28rpx; border-radius: 18rpx; }
+.poster-btn { margin-top: 24rpx; background: var(--brand); color: #fff; font-size: 28rpx; border-radius: 18rpx; }
 .card { background: var(--card); border-radius: var(--radius); padding: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 30rpx; font-weight: 700; }
 .cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10rpx; }
 .cal-nav { display: flex; gap: 20rpx; }
-.cal-btn { font-size: 24rpx; color: var(--brand, #3b6ff5); font-weight: 600; padding: 14rpx 8rpx; }
-.cal-btn.dis { color: var(--ink-3, #8f959e); }
+.cal-btn { font-size: 24rpx; color: var(--brand); font-weight: 600; padding: 14rpx 8rpx; }
+.cal-btn.dis { color: var(--ink-3); }
 .cal-sub { font-size: 23rpx; color: var(--ink-2); margin-bottom: 18rpx; }
 .cal-week { display: flex; margin-bottom: 8rpx; }
 .cal-w { flex: 1; text-align: center; font-size: 20rpx; color: var(--ink-2); }
 .cal-grid { display: flex; flex-wrap: wrap; }
 .cal-c { width: 14.28%; height: 80rpx; line-height: 80rpx; text-align: center; font-size: 24rpx; color: var(--ink-2); box-sizing: border-box; border-radius: 50%; }
-.cal-c.part { background: var(--brand-soft, #edf3fe); color: var(--brand, #3b6ff5); font-weight: 600; }
-.cal-c.full { background: var(--brand, #3b6ff5); color: #fff; font-weight: 700; }
-.cal-c.today { border: 2rpx solid var(--brand, #3b6ff5); }
+.cal-c.part { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+.cal-c.full { background: var(--brand); color: #fff; font-weight: 700; }
+.cal-c.today { border: 2rpx solid var(--brand); }
 .cal-legend { display: flex; gap: 26rpx; margin-top: 18rpx; }
 .lg { font-size: 21rpx; color: var(--ink-2); display: flex; align-items: center; gap: 8rpx; }
 .dot { width: 20rpx; height: 20rpx; border-radius: 50%; display: inline-block; }
-.dot.part { background: var(--brand-soft, #edf3fe); border: 1rpx solid var(--brand, #3b6ff5); }
-.dot.full { background: var(--brand, #3b6ff5); }
-.dot.today { border: 2rpx solid var(--brand, #3b6ff5); background: #fff; }
+.dot.part { background: var(--brand-soft); border: 1rpx solid var(--brand); }
+.dot.full { background: var(--brand); }
+.dot.today { border: 2rpx solid var(--brand); background: var(--card); }
 </style>

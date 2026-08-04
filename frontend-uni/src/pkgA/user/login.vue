@@ -83,7 +83,7 @@ export default {
 <style scoped>
 .wrap {
   min-height: 100vh;
-  background: #f5f6fa;
+  background: var(--fill);
   padding: 24rpx;
   box-sizing: border-box;
 }
@@ -94,23 +94,23 @@ export default {
   display: block;
   font-size: 44rpx;
   font-weight: 700;
-  color: #1b2233;
+  color: var(--ink);
 }
 .hero-s {
   display: block;
   margin-top: 12rpx;
   font-size: 26rpx;
-  color: #8a90a0;
+  color: var(--ink-3);
 }
 .card {
-  background: #fff;
+  background: var(--card);
   border-radius: 24rpx;
   padding: 32rpx;
   box-shadow: 0 4rpx 16rpx rgba(27, 34, 51, 0.05);
 }
 .seg {
   display: flex;
-  background: #f1f3f9;
+  background: var(--fill);
   border-radius: 16rpx;
   padding: 6rpx;
   margin-bottom: 32rpx;
@@ -120,12 +120,12 @@ export default {
   text-align: center;
   padding: 18rpx 0;
   font-size: 30rpx;
-  color: #8a90a0;
+  color: var(--ink-3);
   border-radius: 12rpx;
 }
 .seg-item.on {
-  background: #fff;
-  color: #3b6ff5;
+  background: var(--card);
+  color: var(--brand);
   font-weight: 600;
   box-shadow: 0 2rpx 8rpx rgba(59, 111, 245, 0.15);
 }
@@ -135,27 +135,27 @@ export default {
 .label {
   display: block;
   font-size: 26rpx;
-  color: #5a6072;
+  color: var(--ink-2);
   margin-bottom: 12rpx;
 }
 .input {
   height: 88rpx;
   line-height: 88rpx;
-  background: #f6f7fb;
+  background: var(--fill);
   border-radius: 16rpx;
   padding: 0 24rpx;
   font-size: 30rpx;
 }
 .sms-note {
   font-size: 24rpx;
-  color: #b0b6c6;
+  color: var(--ink-4);
   margin: -8rpx 0 24rpx;
 }
 .primary {
   margin-top: 12rpx;
   height: 92rpx;
   line-height: 92rpx;
-  background: #3b6ff5;
+  background: var(--brand);
   color: #fff;
   font-size: 32rpx;
   font-weight: 600;

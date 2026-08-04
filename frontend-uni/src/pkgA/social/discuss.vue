@@ -239,43 +239,43 @@ export default {
 
 <style scoped>
 .wrap { padding: 24rpx; }
-.card { background: var(--card, #fff); border-radius: var(--radius, 24rpx); padding: 24rpx; border: 1rpx solid var(--line, #eceef3); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); margin-bottom: 20rpx; }
+.card { background: var(--card, #fff); border-radius: var(--radius, 24rpx); padding: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); margin-bottom: 20rpx; }
 .qtags { display: flex; gap: 10rpx; margin-bottom: 12rpx; flex-wrap: wrap; }
-.tag { font-size: 20rpx; padding: 4rpx 14rpx; border-radius: 8rpx; background: #edf3fe; color: #3b6ff5; }
-.tag.gray { background: #f2f3f7; color: #8f959e; }
+.tag { font-size: 20rpx; padding: 4rpx 14rpx; border-radius: 8rpx; background: var(--brand-soft); color: var(--brand); }
+.tag.gray { background: var(--fill); color: var(--ink-3); }
 .tag.warn { background: #fef3c7; color: #b45309; }
-.qtx { font-size: 26rpx; color: var(--ink-2, #4e5563); line-height: 1.7; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
-.qans { font-size: 23rpx; color: var(--ink-3, #8f959e); margin-top: 10rpx; }
+.qtx { font-size: 26rpx; color: var(--ink-2); line-height: 1.7; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.qans { font-size: 23rpx; color: var(--ink-3); margin-top: 10rpx; }
 .chips { display: flex; align-items: center; gap: 14rpx; margin: 4rpx 4rpx 18rpx; }
-.chip { font-size: 24rpx; color: var(--ink-2, #4e5563); background: #f2f3f7; padding: 8rpx 26rpx; border-radius: 999rpx; }
-.chip.on { background: #edf3fe; color: #3b6ff5; font-weight: 700; }
-.cnt { font-size: 22rpx; color: var(--ink-3, #8f959e); margin-left: auto; }
-.empty { text-align: center; color: var(--ink-3, #8f959e); font-size: 25rpx; padding: 60rpx 24rpx; }
-.empty-t { font-size: 28rpx; font-weight: 600; color: var(--ink-2, #4e5563); margin-bottom: 8rpx; }
+.chip { font-size: 24rpx; color: var(--ink-2); background: var(--fill); padding: 8rpx 26rpx; border-radius: 999rpx; }
+.chip.on { background: var(--brand-soft); color: var(--brand); font-weight: 700; }
+.cnt { font-size: 22rpx; color: var(--ink-3); margin-left: auto; }
+.empty { text-align: center; color: var(--ink-3); font-size: 25rpx; padding: 60rpx 24rpx; }
+.empty-t { font-size: 28rpx; font-weight: 600; color: var(--ink-2); margin-bottom: 8rpx; }
 .cmlist { padding: 6rpx 24rpx; }
-.cm { display: flex; gap: 18rpx; padding: 24rpx 0; border-bottom: 1rpx solid #f2f3f7; }
+.cm { display: flex; gap: 18rpx; padding: 24rpx 0; border-bottom: 1rpx solid var(--fill); }
 .cm:last-child { border-bottom: none; }
 .avatar { width: 64rpx; height: 64rpx; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26rpx; font-weight: 700; flex-shrink: 0; }
 .cm-body { flex: 1; min-width: 0; }
 .cm-hd { display: flex; align-items: center; gap: 10rpx; }
-.nm { font-size: 25rpx; font-weight: 600; color: var(--ink, #1f2430); }
-.tm { font-size: 21rpx; color: var(--ink-3, #8f959e); }
-.tx { font-size: 27rpx; color: var(--ink-2, #4e5563); line-height: 1.65; margin-top: 6rpx; word-break: break-all; }
+.nm { font-size: 25rpx; font-weight: 600; color: var(--ink); }
+.tm { font-size: 21rpx; color: var(--ink-3); }
+.tx { font-size: 27rpx; color: var(--ink-2); line-height: 1.65; margin-top: 6rpx; word-break: break-all; }
 .ft { display: flex; gap: 30rpx; margin-top: 12rpx; align-items: center; }
-.up { font-size: 23rpx; color: var(--ink-3, #8f959e); }
-.up.on { color: #3b6ff5; font-weight: 700; }
+.up { font-size: 23rpx; color: var(--ink-3); }
+.up.on { color: var(--brand); font-weight: 700; }
 .up.sm, .op.sm { font-size: 21rpx; }
-.op { font-size: 23rpx; color: var(--ink-3, #8f959e); }
+.op { font-size: 23rpx; color: var(--ink-3); }
 .op.del { color: #ef4444; }
-.reply { background: #f6f7fb; border-radius: 14rpx; padding: 14rpx 18rpx; font-size: 24rpx; color: var(--ink-2, #4e5563); margin-top: 12rpx; line-height: 1.6; word-break: break-all; }
-.rnm { font-weight: 600; color: var(--ink, #1f2430); }
+.reply { background: var(--fill); border-radius: 14rpx; padding: 14rpx 18rpx; font-size: 24rpx; color: var(--ink-2); margin-top: 12rpx; line-height: 1.6; word-break: break-all; }
+.rnm { font-weight: 600; color: var(--ink); }
 .rft { display: flex; gap: 24rpx; margin-top: 6rpx; }
-.pin { border: 1rpx solid #dbe7fd; background: #edf3fe; border-radius: 16rpx; padding: 18rpx 22rpx; font-size: 23rpx; color: #2c5ad6; line-height: 1.6; }
-.inputbar { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.97); border-top: 1rpx solid #eceef3; padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom)); z-index: 20; }
-.replying { font-size: 22rpx; color: var(--ink-3, #8f959e); margin-bottom: 8rpx; display: flex; align-items: center; gap: 12rpx; }
+.pin { border: 1rpx solid var(--brand-soft-2); background: var(--brand-soft); border-radius: 16rpx; padding: 18rpx 22rpx; font-size: 23rpx; color: #2c5ad6; line-height: 1.6; }
+.inputbar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 1rpx solid var(--line); padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom)); z-index: 20; }
+.replying { font-size: 22rpx; color: var(--ink-3); margin-bottom: 8rpx; display: flex; align-items: center; gap: 12rpx; }
 .rx { padding: 4rpx 12rpx; }
 .inputrow { display: flex; gap: 16rpx; align-items: center; }
-.ipt { flex: 1; height: 72rpx; border-radius: 999rpx; background: #f2f3f7; font-size: 26rpx; padding: 0 28rpx; }
-.send { margin: 0; height: 72rpx; line-height: 72rpx; padding: 0 34rpx; border-radius: 999rpx; background: #3b6ff5; color: #fff; font-size: 26rpx; }
-.send[disabled] { background: #c5d4fb; color: #fff; }
+.ipt { flex: 1; height: 72rpx; border-radius: 999rpx; background: var(--fill); font-size: 26rpx; padding: 0 28rpx; }
+.send { margin: 0; height: 72rpx; line-height: 72rpx; padding: 0 34rpx; border-radius: 999rpx; background: var(--brand); color: #fff; font-size: 26rpx; }
+.send[disabled] { background: var(--brand-soft-2); color: #fff; }
 </style>
