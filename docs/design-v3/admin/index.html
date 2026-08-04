@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>管理后台原型总览 · design-v3/admin</title><link rel="stylesheet" href="admin.css">
+<style>
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.pcard{background:#fff;border-radius:var(--r-l);box-shadow:var(--sh-1);padding:18px;display:block;color:var(--t1)}
+.pcard:hover{box-shadow:var(--sh-2)}
+.pcard .no{font-size:11px;color:var(--t4);letter-spacing:.08em}
+.pcard h3{font-size:16px;margin:4px 0 6px}
+.pcard p{font-size:12.5px;color:var(--t3);line-height:1.6}
+</style></head>
+<body>
+<div style="max-width:1080px;margin:0 auto;padding:40px 24px 80px">
+  <h1 style="font-size:24px;font-weight:800">考公助手 · 管理后台 design-v3 原型总览</h1>
+  <p style="color:var(--t3);margin:8px 0 8px;font-size:14px">左侧边导航 + 顶栏 + 内容区（Ant Design Pro 类布局）· 桌面 1440px 主稿 · 768px 平板侧栏收纳为图标栏 · 与客户端 v3 同 token（品牌蓝 #3B6FF5）。设计说明见 <a href="ADMIN.md">ADMIN.md</a>，客户端原型见 <a href="../index.html">../index.html</a>。</p>
+  <p style="margin-bottom:24px"><span class="tag tag-brand">深做：抽审 / 批次审核 / 题库编辑</span> <span class="tag tag-gray">线框级：治理 / 用户 / 时政申论 / 设置</span></p>
+  <div class="grid">
+    <a class="pcard" href="dashboard.html"><div class="no">A01</div><h3>📊 数据看板</h3><p>KPI 五卡（活跃/作答/新增/健康度/AI 调用）+ 趋势图 + AI 通道状态 + 集中待办入口。</p></a>
+    <a class="pcard" href="questions.html"><div class="no">A02 · 深做</div><h3>📚 题库管理</h3><p>表格列表 + 筛选/问题 chips + 批量操作条 + 右侧编辑抽屉（题干/选项/答案/考点/解析重产）。</p></a>
+    <a class="pcard" href="batches.html"><div class="no">A03 · 深做</div><h3>📦 批次导入与审核</h3><p>左批次队列（抽检进度/答案分布预警）+ 右逐题抽检工作台（键盘 1/2/S/E）+ 发布/驳回常驻栏。</p></a>
+    <a class="pcard" href="taxonomy.html"><div class="no">A04</div><h3>🌲 考点树管理</h3><p>三级树表（题数常驻 + 行内题目/抽审/编辑出口）+ 右侧考点详情面板；UNKNOWN 告警行直通抽审。</p></a>
+    <a class="pcard" href="review.html"><div class="no">A05 · 深做</div><h3>🔍 考点抽审工作台</h3><p>单题聚焦流：AI 建议 + 候选考点数字键直选 + Enter 审结自动下一题；近期审结栈可撤销。</p></a>
+    <a class="pcard" href="reports.html"><div class="no">A06</div><h3>🛠 纠错处理队列</h3><p>左队列右处理面板；同题反馈聚合；一步「保存修改并标记已修复」；备注即用户回执。</p></a>
+    <a class="pcard" href="governance.html"><div class="no">A07 · 新增</div><h3>🛡 内容治理</h3><p>克隆检测 / 损坏题体检 / 答案分布监控（批次级堆叠条 + 阈值预警直通审核）。</p></a>
+    <a class="pcard" href="users.html"><div class="no">A08 · 新增</div><h3>👥 用户与运营</h3><p>用户列表（学习数据 + 流失预警）/ 学习数据 / 用户反馈流；ID 脱敏。</p></a>
+    <a class="pcard" href="content.html"><div class="no">A09</div><h3>📰 时政与申论管理</h3><p>时政题时效生命周期 + 每日一练排期；申论按卷管理，采分点模板齐备才可上架。</p></a>
+    <a class="pcard" href="settings.html"><div class="no">A10</div><h3>⚙️ 系统设置</h3><p>AI 通道（状态/测试/故障切换）、导入令牌（脱敏/吊销）、运营公告、导出记录。</p></a>
+  </div>
+</div>
+</body></html>

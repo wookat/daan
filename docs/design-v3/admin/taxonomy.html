@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>考点树管理 · 管理后台 design-v3</title><link rel="stylesheet" href="admin.css"></head>
+<body>
+<div class="layout">
+<aside class="side">
+  <div class="logo"><span class="mark">考</span><span class="name">考公助手 · 管理台</span></div>
+  <div class="grp">概览</div>
+  <nav><a href="dashboard.html"><span class="ico">📊</span><span class="txt">数据看板</span></a></nav>
+  <div class="grp">内容</div>
+  <nav>
+    <a href="questions.html"><span class="ico">📚</span><span class="txt">题库管理</span></a>
+    <a href="batches.html"><span class="ico">📦</span><span class="txt">批次导入审核</span><span class="badge">3</span></a>
+    <a class="on" href="taxonomy.html"><span class="ico">🌲</span><span class="txt">考点树</span></a>
+    <a href="review.html"><span class="ico">🔍</span><span class="txt">考点抽审</span><span class="badge">86</span></a>
+    <a href="reports.html"><span class="ico">🛠</span><span class="txt">纠错处理</span><span class="badge">12</span></a>
+    <a href="governance.html"><span class="ico">🛡</span><span class="txt">内容治理</span></a>
+    <a href="content.html"><span class="ico">📰</span><span class="txt">时政与申论</span></a>
+  </nav>
+  <div class="grp">用户</div>
+  <nav><a href="users.html"><span class="ico">👥</span><span class="txt">用户与运营</span></a></nav>
+  <div class="grp">系统</div>
+  <nav><a href="settings.html"><span class="ico">⚙️</span><span class="txt">系统设置</span></a></nav>
+  <div class="foot">design-v3 · <a href="index.html">原型总览</a></div>
+</aside>
+<div class="main">
+  <div class="topbar">
+    <span class="crumb"><b>考点树</b>　内容 / 考点树管理</span>
+    <div class="search">🔎 搜索考点名 / 编码…　<span class="kbd">⌘K</span></div>
+    <span class="env">● 生产环境</span><span class="avatar">管</span>
+  </div>
+  <div class="content" style="max-width:none">
+    <div class="pagehead">
+      <div><h1>考点树管理</h1><div class="sub">5 模块 · 32 组 · 187 个三级考点 · UNKNOWN 待定 2,140 题</div></div>
+      <div class="acts"><a class="btn btn-ghost" href="review.html">🔍 进入抽审（86）</a><button class="btn btn-plain">导出考点表</button></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 380px;gap:14px;align-items:start">
+      <!-- 左：三级树 -->
+      <div class="card" style="padding:8px 0">
+        <div class="row" style="padding:8px 16px;gap:8px;border-bottom:1px solid var(--fill)">
+          <button class="chip on">资料分析</button><button class="chip">数量关系</button><button class="chip">言语理解</button><button class="chip">判断推理</button><button class="chip">常识判断</button>
+          <span class="grow"></span><span class="tag tag-warn">UNKNOWN 312</span>
+        </div>
+        <!-- L1 -->
+        <div class="row" style="padding:12px 16px;gap:8px;background:#FAFBFD">
+          <span>▾</span><b>资料分析</b><span class="tag" style="background:#E6FBF8;color:var(--mod-ziliao)">ziliao</span>
+          <span class="grow"></span><span class="sub num" style="color:var(--t3)">26,420 题</span>
+        </div>
+        <!-- L2 -->
+        <div class="row" style="padding:10px 16px 10px 36px;gap:8px">
+          <span>▾</span><b style="font-weight:600">增长类</b>
+          <span class="grow"></span><span class="sub num" style="color:var(--t3)">11,204 题</span>
+        </div>
+        <!-- L3 rows -->
+        <div class="row" style="padding:8px 16px 8px 60px;gap:10px;border-top:1px solid var(--fill)">
+          <span class="tag tag-gray">ZL-01</span><span>基期与现期</span>
+          <span class="grow"></span><span class="sub num" style="color:var(--t3)">3,820 题</span>
+          <a href="questions.html" style="font-size:12px">题目</a><a href="review.html" style="font-size:12px">抽审</a><a href="#" style="font-size:12px;color:var(--t3)">编辑</a>
+        </div>
+        <div class="row" style="padding:8px 16px 8px 60px;gap:10px;border-top:1px solid var(--fill);background:var(--brand-50)">
+          <span class="tag tag-brand">ZL-03</span><b>增长率计算</b>
+          <span class="grow"></span><span class="sub num" style="color:var(--t3)">4,213 题</span>
+          <a href="questions.html" style="font-size:12px">题目</a><a href="review.html" style="font-size:12px">抽审</a><a href="#" style="font-size:12px;color:var(--t3)">编辑</a>
+        </div>
+        <div class="row" style="padding:8px 16px 8px 60px;gap:10px;border-top:1px solid var(--fill)">
+          <span class="tag tag-gray">ZL-04</span><span>增长量计算</span>
+          <span class="grow"></span><span class="sub num" style="color:var(--t3)">3,171 题</span>
+          <a href="questions.html" style="font-size:12px">题目</a><a href="review.html" style="font-size:12px">抽审</a><a href="#" style="font-size:12px;color:var(--t3)">编辑</a>
+        </div>
+        <div class="row" style="padding:10px 16px 10px 36px;gap:8px;border-top:1px solid var(--fill)">
+          <span>▸</span><b style="font-weight:600">比重与比值</b>
+          <span class="grow"></span><span class="sub num" style="color:var(--t3)">8,910 题</span>
+        </div>
+        <div class="row" style="padding:10px 16px 10px 36px;gap:8px;border-top:1px solid var(--fill)">
+          <span>▸</span><b style="font-weight:600">平均数与倍数</b>
+          <span class="grow"></span><span class="sub num" style="color:var(--t3)">4,106 题</span>
+        </div>
+        <div class="row" style="padding:10px 16px 10px 36px;gap:8px;border-top:1px solid var(--fill)">
+          <span>▸</span><b style="font-weight:600">综合与速算</b>
+          <span class="grow"></span><span class="sub num" style="color:var(--t3)">2,200 题</span>
+        </div>
+        <div class="row" style="padding:12px 16px;gap:8px;border-top:1px solid var(--border);background:var(--warning-bg)">
+          <span class="tag tag-warn">UNKNOWN</span><span style="color:var(--warning)">待定考点（本模块）</span>
+          <span class="grow"></span><span class="sub num" style="color:var(--warning)">312 题</span>
+          <a class="btn btn-sm btn-ghost" href="review.html">去抽审</a>
+        </div>
+      </div>
+
+      <!-- 右：选中考点详情 -->
+      <div>
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-h"><span class="t">ZL-03 增长率计算</span><span class="tag tag-brand">L3</span></div>
+          <div class="sub" style="font-size:12px;color:var(--t3);margin-bottom:10px">资料分析 / 增长类 · 4,213 题 · 花生方法：截位直除、ABRX</div>
+          <div class="fld"><div class="lb">考点名称</div><input class="ipt" style="width:100%" value="增长率计算"></div>
+          <div class="fld"><div class="lb">判定描述（供 AI 标注参考）</div>
+            <textarea class="ipt">已知基期/现期量或增长量，求同比/环比增长率；含混合增长率、间隔增长率。</textarea></div>
+          <div class="row" style="gap:8px;justify-content:flex-end"><button class="btn btn-plain">移动到…</button><button class="btn btn-primary">保存</button></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><span class="t">该考点近 7 天数据</span></div>
+          <div class="hbar"><span class="lb">作答量</span><div class="bar"><i style="width:66%"></i></div><span class="n">2,140</span></div>
+          <div class="hbar"><span class="lb">正确率</span><div class="bar"><i style="width:71%"></i></div><span class="n">71%</span></div>
+          <div class="hbar"><span class="lb">待抽审</span><div class="bar"><i style="width:12%;background:var(--warning)"></i></div><span class="n" style="color:var(--warning)">9 题</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dnote"><b>设计说明 · 考点树</b>
+      现状三层 details 嵌套改为「树表 + 右侧详情面板」：树行常驻题数与三个行内出口（题目/抽审/编辑）；UNKNOWN 作为每模块置底的暖色告警行，直通抽审。右侧面板承担考点改名/判定描述编辑（判定描述同时是 AI 标注 prompt 语料）。</div>
+  </div>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>数据看板 · 管理后台 design-v3</title><link rel="stylesheet" href="admin.css"></head>
+<body>
+<div class="layout">
+<aside class="side">
+  <div class="logo"><span class="mark">考</span><span class="name">考公助手 · 管理台</span></div>
+  <div class="grp">概览</div>
+  <nav>
+    <a class="on" href="dashboard.html"><span class="ico">📊</span><span class="txt">数据看板</span></a>
+  </nav>
+  <div class="grp">内容</div>
+  <nav>
+    <a href="questions.html"><span class="ico">📚</span><span class="txt">题库管理</span></a>
+    <a href="batches.html"><span class="ico">📦</span><span class="txt">批次导入审核</span><span class="badge">3</span></a>
+    <a href="taxonomy.html"><span class="ico">🌲</span><span class="txt">考点树</span></a>
+    <a href="review.html"><span class="ico">🔍</span><span class="txt">考点抽审</span><span class="badge">86</span></a>
+    <a href="reports.html"><span class="ico">🛠</span><span class="txt">纠错处理</span><span class="badge">12</span></a>
+    <a href="governance.html"><span class="ico">🛡</span><span class="txt">内容治理</span></a>
+    <a href="content.html"><span class="ico">📰</span><span class="txt">时政与申论</span></a>
+  </nav>
+  <div class="grp">用户</div>
+  <nav><a href="users.html"><span class="ico">👥</span><span class="txt">用户与运营</span></a></nav>
+  <div class="grp">系统</div>
+  <nav><a href="settings.html"><span class="ico">⚙️</span><span class="txt">系统设置</span></a></nav>
+  <div class="foot">design-v3 · <a href="index.html">原型总览</a></div>
+</aside>
+<div class="main">
+  <div class="topbar">
+    <span class="crumb"><b>数据看板</b>　概览 / 数据看板</span>
+    <div class="search">🔎 搜索题目 ID / 用户 / 批次…　<span class="kbd">⌘K</span></div>
+    <span class="env">● 生产环境</span>
+    <span class="avatar">管</span>
+  </div>
+  <div class="content">
+    <div class="pagehead">
+      <div><h1>数据看板</h1><div class="sub">2026-08-04 · 数据每 5 分钟刷新</div></div>
+      <div class="acts">
+        <button class="chip on">今日</button><button class="chip">近 7 天</button><button class="chip">近 30 天</button>
+        <button class="btn btn-plain">导出报表</button>
+      </div>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="lb">今日活跃用户</div><div class="v">1,284</div><div class="d up">▲ 8.2% vs 昨日</div></div>
+      <div class="kpi"><div class="lb">今日作答量</div><div class="v">36,520</div><div class="d up">▲ 4.6% vs 昨日</div></div>
+      <div class="kpi"><div class="lb">新增用户</div><div class="v">216</div><div class="d dn">▼ 2.1% vs 昨日</div></div>
+      <div class="kpi"><div class="lb">题库健康度 <span class="tag tag-ok">良好</span></div><div class="v">97.4%</div><div class="d flat">下架 312 / 待纠错 12</div></div>
+      <div class="kpi"><div class="lb">今日 AI 调用</div><div class="v">8,930</div><div class="d up">▲ 12% · 失败率 0.4%</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="card">
+        <div class="card-h"><span class="t">近 14 天作答量 & AI 调用趋势</span>
+          <span class="tag tag-brand">作答量</span><span class="tag tag-gray">AI 调用</span>
+          <a class="more" href="#">查看明细 →</a></div>
+        <div class="spark">
+          <i style="height:38%"></i><i style="height:46%"></i><i style="height:42%"></i><i style="height:55%"></i>
+          <i style="height:50%"></i><i style="height:34%"></i><i style="height:30%"></i><i style="height:58%"></i>
+          <i style="height:62%"></i><i style="height:57%"></i><i style="height:70%"></i><i style="height:66%"></i>
+          <i style="height:78%"></i><i class="hi" style="height:92%"></i>
+        </div>
+        <div class="row" style="justify-content:space-between;font-size:11px;color:var(--t4);margin-top:6px"><span>07-22</span><span>07-29</span><span>08-04</span></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><span class="t">AI 通道状态</span><a class="more" href="settings.html">通道配置 →</a></div>
+        <div class="hbar"><span class="lb">主通道 gpt</span><span class="tag tag-ok">● 正常</span><span class="n">182ms</span></div>
+        <div class="hbar"><span class="lb">备通道 glm</span><span class="tag tag-ok">● 正常</span><span class="n">240ms</span></div>
+        <div class="hbar"><span class="lb">批改通道</span><span class="tag tag-warn">◐ 波动</span><span class="n">1.2s</span></div>
+        <div class="hbar"><span class="lb">识题多模态</span><span class="tag tag-ok">● 正常</span><span class="n">460ms</span></div>
+        <div class="dnote" style="margin-top:10px"><b>告警规则</b>连续 3 次失败标红并推送公告栏；点击行进入通道配置。</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+      <div class="card">
+        <div class="card-h"><span class="t">待办事项</span></div>
+        <div class="hbar"><span class="lb" style="width:auto;flex:1">待审批次</span><a class="tag tag-bad" href="batches.html">3 个批次</a></div>
+        <div class="hbar"><span class="lb" style="width:auto;flex:1">考点抽审队列</span><a class="tag tag-warn" href="review.html">86 题</a></div>
+        <div class="hbar"><span class="lb" style="width:auto;flex:1">用户纠错待处理</span><a class="tag tag-bad" href="reports.html">12 条</a></div>
+        <div class="hbar"><span class="lb" style="width:auto;flex:1">答案分布异常批次</span><a class="tag tag-warn" href="governance.html">1 个</a></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><span class="t">题库分布（131,204 题）</span><a class="more" href="questions.html">题库管理 →</a></div>
+        <div class="hbar"><span class="lb">言语理解</span><div class="bar"><i style="width:82%"></i></div><span class="n">38,610</span></div>
+        <div class="hbar"><span class="lb">判断推理</span><div class="bar"><i style="width:74%"></i></div><span class="n">34,900</span></div>
+        <div class="hbar"><span class="lb">资料分析</span><div class="bar"><i style="width:56%"></i></div><span class="n">26,420</span></div>
+        <div class="hbar"><span class="lb">常识判断</span><div class="bar"><i style="width:40%"></i></div><span class="n">18,830</span></div>
+        <div class="hbar"><span class="lb">数量关系</span><div class="bar"><i style="width:26%"></i></div><span class="n">12,444</span></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><span class="t">近 7 天正确率</span><a class="more" href="users.html">学习数据 →</a></div>
+        <div class="hbar"><span class="lb">整体</span><div class="bar"><i style="width:68%"></i></div><span class="n">68%</span></div>
+        <div class="hbar"><span class="lb">资料分析</span><div class="bar"><i style="width:74%"></i></div><span class="n">74%</span></div>
+        <div class="hbar"><span class="lb">数量关系</span><div class="bar"><i style="width:52%;background:var(--error)"></i></div><span class="n" style="color:var(--error)">52%</span></div>
+        <div class="hbar"><span class="lb">言语理解</span><div class="bar"><i style="width:71%"></i></div><span class="n">71%</span></div>
+        <div class="dnote" style="margin-top:8px"><b>阈值</b>&lt;60% 红显（色+文字双通道）。</div>
+      </div>
+    </div>
+
+    <div class="dnote"><b>设计说明 · 数据看板</b>
+      KPI 五卡对应任务要求（活跃/作答/新增/健康度/AI 调用）；趋势图实施时用 ECharts 面积图（品牌蓝渐变）；「待办事项」把分散在各 tab 的红点集中为看板入口，登录后先看待办。</div>
+  </div>
+</div>
+</div>
+</body></html>

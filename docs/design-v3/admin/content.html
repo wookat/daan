@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>时政与申论管理 · 管理后台 design-v3</title><link rel="stylesheet" href="admin.css"></head>
+<body>
+<div class="layout">
+<aside class="side">
+  <div class="logo"><span class="mark">考</span><span class="name">考公助手 · 管理台</span></div>
+  <div class="grp">概览</div>
+  <nav><a href="dashboard.html"><span class="ico">📊</span><span class="txt">数据看板</span></a></nav>
+  <div class="grp">内容</div>
+  <nav>
+    <a href="questions.html"><span class="ico">📚</span><span class="txt">题库管理</span></a>
+    <a href="batches.html"><span class="ico">📦</span><span class="txt">批次导入审核</span><span class="badge">3</span></a>
+    <a href="taxonomy.html"><span class="ico">🌲</span><span class="txt">考点树</span></a>
+    <a href="review.html"><span class="ico">🔍</span><span class="txt">考点抽审</span><span class="badge">86</span></a>
+    <a href="reports.html"><span class="ico">🛠</span><span class="txt">纠错处理</span><span class="badge">12</span></a>
+    <a href="governance.html"><span class="ico">🛡</span><span class="txt">内容治理</span></a>
+    <a class="on" href="content.html"><span class="ico">📰</span><span class="txt">时政与申论</span></a>
+  </nav>
+  <div class="grp">用户</div>
+  <nav><a href="users.html"><span class="ico">👥</span><span class="txt">用户与运营</span></a></nav>
+  <div class="grp">系统</div>
+  <nav><a href="settings.html"><span class="ico">⚙️</span><span class="txt">系统设置</span></a></nav>
+  <div class="foot">design-v3 · <a href="index.html">原型总览</a></div>
+</aside>
+<div class="main">
+  <div class="topbar">
+    <span class="crumb"><b>时政与申论</b>　内容 / 时政与申论管理</span>
+    <div class="search">🔎 搜索题目 / 素材…　<span class="kbd">⌘K</span></div>
+    <span class="env">● 生产环境</span><span class="avatar">管</span>
+  </div>
+  <div class="content">
+    <div class="pagehead">
+      <div><h1>时政与申论管理</h1><div class="sub">时政题 4,820 · 申论真题 386 · 素材范文 1,204</div></div>
+      <div class="acts">
+        <button class="chip on">时政题</button><button class="chip">申论真题</button><button class="chip">素材范文</button>
+        <button class="btn btn-primary">＋ 新建</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-h"><span class="t">时政每日一练 · 排期</span><span class="tag tag-ok">未来 14 天已排满</span><a class="more" href="#">排期日历 →</a></div>
+      <div class="row" style="gap:10px;flex-wrap:wrap">
+        <div class="card" style="box-shadow:none;background:var(--warning-bg);padding:12px;width:200px">
+          <div class="sub" style="font-size:12px;color:var(--warning)">今天 · 08-04</div>
+          <b style="font-size:13px">七月时政热点 10 题</b>
+          <div class="sub" style="font-size:12px;color:var(--t3);margin-top:4px">已推送 · 完成 812 人</div>
+        </div>
+        <div class="card" style="box-shadow:none;background:var(--fill);padding:12px;width:200px">
+          <div class="sub" style="font-size:12px;color:var(--t3)">明天 · 08-05</div>
+          <b style="font-size:13px">中央城市工作会议专题</b>
+          <div class="sub" style="font-size:12px;margin-top:4px"><a href="#">预览</a> · <a href="#">换题</a></div>
+        </div>
+        <div class="card" style="box-shadow:none;background:var(--fill);padding:12px;width:200px">
+          <div class="sub" style="font-size:12px;color:var(--t3)">08-06</div>
+          <b style="font-size:13px">科技成就月度盘点</b>
+          <div class="sub" style="font-size:12px;margin-top:4px"><a href="#">预览</a> · <a href="#">换题</a></div>
+        </div>
+        <button class="btn btn-plain" style="height:auto;min-height:84px">＋ 追加排期</button>
+      </div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th style="width:70px">ID</th><th>时政题</th><th style="width:110px">时效</th><th style="width:96px">作答/正确率</th><th style="width:72px">状态</th><th style="width:110px">操作</th></tr></thead>
+        <tbody>
+          <tr><td class="num">SZ-4820</td><td><div class="tit">2026 年中央一号文件提出的「千村示范」工程重点是——</div><div class="sub">来源：新华社 07-28 · AI 生成 + 人审</div></td>
+            <td><span class="tag tag-ok">时效内</span><div class="sub">至 2026-12</div></td><td class="num">3,210 / 74%</td>
+            <td><span class="tag tag-ok">已上架</span></td><td><a href="#">编辑</a>　<a href="#" style="color:var(--error)">下架</a></td></tr>
+          <tr><td class="num">SZ-4633</td><td><div class="tit">2025 年我国 GDP 增速目标为——</div><div class="sub">来源：政府工作报告</div></td>
+            <td><span class="tag tag-warn">即将过期</span><div class="sub">至 2026-09</div></td><td class="num">18,420 / 88%</td>
+            <td><span class="tag tag-ok">已上架</span></td><td><a href="#">编辑</a>　<a href="#" style="color:var(--error)">下架</a></td></tr>
+          <tr><td class="num">SZ-3102</td><td><div class="tit">「十四五」规划纲要中数字经济核心产业增加值占 GDP 比重目标——</div><div class="sub">已被十五五口径替代</div></td>
+            <td><span class="tag tag-bad">已过期</span></td><td class="num">42,100 / 91%</td>
+            <td><span class="tag tag-bad">自动下架</span></td><td><a href="#">编辑</a>　<a href="#" style="color:var(--success)">恢复</a></td></tr>
+        </tbody>
+      </table>
+      <div class="tbl-foot">显示 1–20 / 4,820<div class="pager"><a href="#">‹</a><a class="on" href="#">1</a><a href="#">2</a><a href="#">…</a><a href="#">241</a><a href="#">›</a></div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+      <div class="card">
+        <div class="card-h"><span class="t">申论真题（Tab 态示意）</span><a class="more" href="#">全部 386 →</a></div>
+        <div class="hbar"><span class="grow" style="font-size:13px"><b>2025 国考副省级</b> · 5 题 · 大作文「流动与新生」</span><span class="tag tag-ok">已上架</span><a href="#" style="font-size:12px">编辑</a></div>
+        <div class="hbar"><span class="grow" style="font-size:13px"><b>2025 联考 A 卷</b> · 4 题 · 批改模板已配</span><span class="tag tag-ok">已上架</span><a href="#" style="font-size:12px">编辑</a></div>
+        <div class="hbar"><span class="grow" style="font-size:13px"><b>2026 国考地市级</b> · 5 题 · <span style="color:var(--warning)">采分点模板缺失</span></span><span class="tag tag-warn">草稿</span><a href="#" style="font-size:12px">配置采分点</a></div>
+        <div class="dnote" style="margin-top:10px"><b>采分点模板</b>每题维护「采分点清单 + 分值」，是 AI 批改的评分依据；缺模板的卷不可上架。</div>
+      </div>
+      <div class="card">
+        <div class="card-h"><span class="t">素材范文（Tab 态示意）</span><a class="more" href="#">全部 1,204 →</a></div>
+        <div class="hbar"><span class="grow" style="font-size:13px"><b>基层治理</b> · 素材 84 · 范文 12</span><span class="sub num" style="font-size:12px;color:var(--t3)">收藏 2,410</span><a href="#" style="font-size:12px">管理</a></div>
+        <div class="hbar"><span class="grow" style="font-size:13px"><b>科技创新</b> · 素材 96 · 范文 15</span><span class="sub num" style="font-size:12px;color:var(--t3)">收藏 3,102</span><a href="#" style="font-size:12px">管理</a></div>
+        <div class="hbar"><span class="grow" style="font-size:13px"><b>生态文明</b> · 素材 71 · 范文 9</span><span class="sub num" style="font-size:12px;color:var(--t3)">收藏 1,880</span><a href="#" style="font-size:12px">管理</a></div>
+      </div>
+    </div>
+
+    <div class="dnote"><b>设计说明 · 时政与申论（线框级）</b>
+      时政题增加「时效」生命周期字段（时效内/即将过期/已过期自动下架），解决时政内容过期误导；每日一练排期卡置顶。申论侧以卷为单位管理，采分点模板齐备才可上架（上架前置校验）。</div>
+  </div>
+</div>
+</div>
+</body></html>

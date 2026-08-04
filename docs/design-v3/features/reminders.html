@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>学习提醒与推送 · features · design-v3</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+.sw{width:46px;height:28px;border-radius:999px;background:var(--border);position:relative;flex:none}
+.sw i{position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:var(--sh-1)}
+.sw.on{background:var(--brand-500)}
+.sw.on i{left:auto;right:2px}
+.set-row{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:.5px solid var(--fill)}
+.set-row:last-child{border-bottom:none}
+.set-row .ico{width:34px;height:34px;border-radius:var(--r-m);background:var(--brand-50);display:flex;align-items:center;justify-content:center;font-size:16px;flex:none}
+.set-row .nm{font-size:14px;font-weight:600}
+.set-row .sub{font-size:11.5px;color:var(--t3);margin-top:1px}
+.push{background:var(--surface);border-radius:var(--r-l);box-shadow:var(--sh-2);padding:12px 14px;margin-bottom:10px}
+.push .hd{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--t3);margin-bottom:6px}
+.push .appico{width:18px;height:18px;border-radius:5px;background:var(--grad-brand);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:800}
+.push .tt{font-size:13.5px;font-weight:700}
+.push .bd{font-size:12.5px;color:var(--t2);margin-top:2px;line-height:1.55}
+</style></head>
+<body>
+<div class="topbar"><a href="index.html">← 功能原型总览</a><span class="crumb">design-v3 / features / 消息推送 · 学习提醒（P1）</span></div>
+<div class="stage">
+<div class="phone">
+  <div class="statusbar"><span>9:41</span><span class="right">●●● ⁝ 100%</span></div>
+  <header class="navbar"><a class="back" href="index.html">‹</a><span class="title">学习提醒</span></header>
+  <div class="content">
+
+    <div class="card" style="padding:6px 16px">
+      <div class="set-row"><span class="ico">⏰</span><div class="grow"><div class="nm">每日刷题提醒</div><div class="sub">每天 20:30 · 未完成今日目标时提醒</div></div><span class="sw on"><i></i></span></div>
+      <div class="set-row"><span class="ico">🔁</span><div class="grow"><div class="nm">错题复习到期</div><div class="sub">遗忘曲线到期当天 9:00 汇总提醒</div></div><span class="sw on"><i></i></span></div>
+      <div class="set-row"><span class="ico">📰</span><div class="grow"><div class="nm">时政每日一练上新</div><div class="sub">每天 8:00</div></div><span class="sw on"><i></i></span></div>
+      <div class="set-row"><span class="ico">🏆</span><div class="grow"><div class="nm">模考大赛开考提醒</div><div class="sub">开考前 1 天 + 前 15 分钟</div></div><span class="sw on"><i></i></span></div>
+      <div class="set-row"><span class="ico">📊</span><div class="grow"><div class="nm">每周学习周报</div><div class="sub">周日 21:00 · 预测分变化 + 下周建议</div></div><span class="sw"><i></i></span></div>
+      <div class="set-row"><span class="ico">🌙</span><div class="grow"><div class="nm">勿扰时段</div><div class="sub">23:00 – 8:00 不推送</div></div><span style="font-size:13px;color:var(--t3)">已开启 ›</span></div>
+    </div>
+
+    <div class="sec-h"><span class="t">推送样式预览</span></div>
+    <div class="push">
+      <div class="hd"><span class="appico">考</span>考公错题助手 · 现在</div>
+      <div class="tt">今晚还差 18 题就能守住 23 天连续打卡 🔥</div>
+      <div class="bd">今日目标 50 题已完成 32 题。数量关系·工程问题正等着你清零～</div>
+    </div>
+    <div class="push">
+      <div class="hd"><span class="appico">考</span>考公错题助手 · 9:00</div>
+      <div class="tt">6 道错题今天到期复习</div>
+      <div class="bd">按遗忘曲线，今天不复习明天就要重学啦。预计用时 8 分钟。</div>
+    </div>
+    <div class="push">
+      <div class="hd"><span class="appico">考</span>考公错题助手 · 周日 21:00</div>
+      <div class="tt">本周战报：预测分 66.2 → 68.5（+2.3）📈</div>
+      <div class="bd">刷题 286 道，正确率 79%。最大短板仍是数量关系，下周建议主攻「工程问题」。</div>
+    </div>
+
+    <div class="card" style="background:var(--brand-50);box-shadow:none;margin-top:6px">
+      <div style="font-size:12.5px;color:var(--brand-600);line-height:1.6">💡 提醒文案由 AI 按你的学习数据个性化生成，只在有事可做时打扰你；连续 3 次未点击将自动降频。</div>
+    </div>
+
+  </div>
+</div>
+<aside class="notes">
+  <div class="note"><b>P1 · 消息推送/学习提醒</b>对标粉笔/腰果「做题提醒/考试倒计时提醒」。5 类场景化提醒 + 周报，全部数据来自现有统计与遗忘曲线，AI 生成个性化文案。</div>
+  <div class="note"><b>留存价值</b>打卡/复习类提醒是刷题类 App 次留最有效手段；「守住连续打卡」损失厌恶文案点击率最高。</div>
+  <div class="note plat"><b>多端</b>App 走本地通知+厂商通道；小程序只能订阅消息（一次授权一条），优先用于模考开考与复习到期；H5 降级为站内红点+日历。</div>
+  <div class="note"><b>克制原则</b>默认仅开 4 类、勿扰时段、自动降频，避免竞品式轰炸招致卸载。</div>
+</aside>
+</div>
+</body></html>

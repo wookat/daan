@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>用户与运营 · 管理后台 design-v3</title><link rel="stylesheet" href="admin.css"></head>
+<body>
+<div class="layout">
+<aside class="side">
+  <div class="logo"><span class="mark">考</span><span class="name">考公助手 · 管理台</span></div>
+  <div class="grp">概览</div>
+  <nav><a href="dashboard.html"><span class="ico">📊</span><span class="txt">数据看板</span></a></nav>
+  <div class="grp">内容</div>
+  <nav>
+    <a href="questions.html"><span class="ico">📚</span><span class="txt">题库管理</span></a>
+    <a href="batches.html"><span class="ico">📦</span><span class="txt">批次导入审核</span><span class="badge">3</span></a>
+    <a href="taxonomy.html"><span class="ico">🌲</span><span class="txt">考点树</span></a>
+    <a href="review.html"><span class="ico">🔍</span><span class="txt">考点抽审</span><span class="badge">86</span></a>
+    <a href="reports.html"><span class="ico">🛠</span><span class="txt">纠错处理</span><span class="badge">12</span></a>
+    <a href="governance.html"><span class="ico">🛡</span><span class="txt">内容治理</span></a>
+    <a href="content.html"><span class="ico">📰</span><span class="txt">时政与申论</span></a>
+  </nav>
+  <div class="grp">用户</div>
+  <nav><a class="on" href="users.html"><span class="ico">👥</span><span class="txt">用户与运营</span></a></nav>
+  <div class="grp">系统</div>
+  <nav><a href="settings.html"><span class="ico">⚙️</span><span class="txt">系统设置</span></a></nav>
+  <div class="foot">design-v3 · <a href="index.html">原型总览</a></div>
+</aside>
+<div class="main">
+  <div class="topbar">
+    <span class="crumb"><b>用户与运营</b>　用户 / 用户与运营</span>
+    <div class="search">🔎 搜索用户 ID / 昵称…　<span class="kbd">⌘K</span></div>
+    <span class="env">● 生产环境</span><span class="avatar">管</span>
+  </div>
+  <div class="content">
+    <div class="pagehead">
+      <div><h1>用户与运营</h1><div class="sub">注册 24,180 · 7 日留存 41% · 反馈待读 5</div></div>
+      <div class="acts">
+        <button class="chip on">用户列表</button><button class="chip">学习数据</button><button class="chip">用户反馈 5</button>
+        <button class="btn btn-plain">导出 CSV</button>
+      </div>
+    </div>
+
+    <div class="filterbar">
+      <input class="ipt" style="width:240px" placeholder="用户 ID / 昵称 / 设备">
+      <select class="ipt"><option selected>全部端</option><option>小程序</option><option>H5</option><option>App</option></select>
+      <select class="ipt"><option selected>最近活跃</option><option>连续 7 天活跃</option><option>7 天未活跃（流失预警）</option></select>
+      <button class="btn btn-ghost">搜索</button>
+    </div>
+
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th style="width:130px">用户</th><th style="width:70px">端</th><th style="width:100px">注册</th><th style="width:100px">最近活跃</th><th>学习数据（累计）</th><th style="width:90px">连续打卡</th><th style="width:110px">操作</th></tr></thead>
+        <tbody>
+          <tr><td><div class="tit">u_3f8a12…</div><div class="sub">备考 2027 国考</div></td><td><span class="tag tag-brand">小程序</span></td><td class="num">2026-03-14</td><td class="num">今天 09:41</td>
+            <td><span class="sub">答题 <b class="num">12,480</b> · 正确率 <b class="num">71%</b> · 错题本 <b class="num">340</b> · AI 提问 <b class="num">96</b></span></td>
+            <td><span class="tag tag-ok">🔥 46 天</span></td><td><a href="#">详情</a>　<a href="#">错题本</a></td></tr>
+          <tr><td><div class="tit">u_9c21b0…</div><div class="sub">备考省考</div></td><td><span class="tag tag-gray">H5</span></td><td class="num">2026-06-02</td><td class="num">昨天 22:10</td>
+            <td><span class="sub">答题 <b class="num">3,204</b> · 正确率 <b class="num">64%</b> · 错题本 <b class="num">122</b> · AI 提问 <b class="num">18</b></span></td>
+            <td><span class="tag tag-gray">3 天</span></td><td><a href="#">详情</a>　<a href="#">错题本</a></td></tr>
+          <tr><td><div class="tit">u_7bb04d…</div><div class="sub">—</div></td><td><span class="tag tag-info">App</span></td><td class="num">2026-07-28</td><td class="num" style="color:var(--error)">8 天前</td>
+            <td><span class="sub">答题 <b class="num">210</b> · 正确率 <b class="num" style="color:var(--error)">48%</b> · 错题本 <b class="num">31</b></span></td>
+            <td><span class="tag tag-bad">流失预警</span></td><td><a href="#">详情</a>　<a href="#">错题本</a></td></tr>
+        </tbody>
+      </table>
+      <div class="tbl-foot">显示 1–20 / 24,180
+        <div class="pager"><a href="#">‹</a><a class="on" href="#">1</a><a href="#">2</a><a href="#">3</a><a href="#">…</a><a href="#">1209</a><a href="#">›</a></div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+      <div class="card">
+        <div class="card-h"><span class="t">最新用户反馈</span><span class="tag tag-bad">5 未读</span><a class="more" href="#">全部 →</a></div>
+        <div class="hbar"><span class="tag tag-warn" style="flex:none">建议</span><span class="grow" style="font-size:13px">「希望错题本能按考点导出 PDF」</span><span class="n" style="width:auto">2h 前</span></div>
+        <div class="hbar"><span class="tag tag-bad" style="flex:none">问题</span><span class="grow" style="font-size:13px">「申论批改等了 3 分钟没出结果」</span><span class="n" style="width:auto">4h 前</span></div>
+        <div class="hbar"><span class="tag tag-gray" style="flex:none">好评</span><span class="grow" style="font-size:13px">「抽审后考点准多了，薄弱点统计有用」</span><span class="n" style="width:auto">昨天</span></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><span class="t">运营概览（近 30 天）</span></div>
+        <div class="hbar"><span class="lb">日均活跃</span><div class="bar"><i style="width:64%"></i></div><span class="n">1,180</span></div>
+        <div class="hbar"><span class="lb">7 日留存</span><div class="bar"><i style="width:41%"></i></div><span class="n">41%</span></div>
+        <div class="hbar"><span class="lb">30 日留存</span><div class="bar"><i style="width:22%"></i></div><span class="n">22%</span></div>
+        <div class="hbar"><span class="lb">人均日答题</span><div class="bar"><i style="width:52%"></i></div><span class="n">28.4</span></div>
+      </div>
+    </div>
+
+    <div class="dnote"><b>设计说明 · 用户与运营（线框级）</b>
+      新增模块：现状后台无用户视角。列表突出学习数据与流失预警（8 天未活跃红显）；「详情」抽屉复用题库编辑抽屉模式展示单用户学习曲线；反馈流与纠错队列分开（产品建议 vs 题目纠错）。隐私：ID 脱敏展示，无手机号明文。</div>
+  </div>
+</div>
+</div>
+</body></html>

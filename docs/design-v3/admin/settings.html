@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>系统设置 · 管理后台 design-v3</title><link rel="stylesheet" href="admin.css"></head>
+<body>
+<div class="layout">
+<aside class="side">
+  <div class="logo"><span class="mark">考</span><span class="name">考公助手 · 管理台</span></div>
+  <div class="grp">概览</div>
+  <nav><a href="dashboard.html"><span class="ico">📊</span><span class="txt">数据看板</span></a></nav>
+  <div class="grp">内容</div>
+  <nav>
+    <a href="questions.html"><span class="ico">📚</span><span class="txt">题库管理</span></a>
+    <a href="batches.html"><span class="ico">📦</span><span class="txt">批次导入审核</span><span class="badge">3</span></a>
+    <a href="taxonomy.html"><span class="ico">🌲</span><span class="txt">考点树</span></a>
+    <a href="review.html"><span class="ico">🔍</span><span class="txt">考点抽审</span><span class="badge">86</span></a>
+    <a href="reports.html"><span class="ico">🛠</span><span class="txt">纠错处理</span><span class="badge">12</span></a>
+    <a href="governance.html"><span class="ico">🛡</span><span class="txt">内容治理</span></a>
+    <a href="content.html"><span class="ico">📰</span><span class="txt">时政与申论</span></a>
+  </nav>
+  <div class="grp">用户</div>
+  <nav><a href="users.html"><span class="ico">👥</span><span class="txt">用户与运营</span></a></nav>
+  <div class="grp">系统</div>
+  <nav><a class="on" href="settings.html"><span class="ico">⚙️</span><span class="txt">系统设置</span></a></nav>
+  <div class="foot">design-v3 · <a href="index.html">原型总览</a></div>
+</aside>
+<div class="main">
+  <div class="topbar">
+    <span class="crumb"><b>系统设置</b>　系统 / 系统设置</span>
+    <div class="search">🔎 搜索设置项…　<span class="kbd">⌘K</span></div>
+    <span class="env">● 生产环境</span><span class="avatar">管</span>
+  </div>
+  <div class="content">
+    <div class="pagehead">
+      <div><h1>系统设置</h1><div class="sub">AI 通道 / 导入令牌 / 运营公告 / 导出记录</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="card">
+        <div class="card-h"><span class="t">AI 通道</span><button class="btn btn-sm btn-ghost">＋ 添加通道</button></div>
+        <div class="tbl-wrap" style="box-shadow:none;border:1px solid var(--fill)">
+          <table class="tbl">
+            <thead><tr><th>通道</th><th>模型 / 用途</th><th style="width:82px">状态</th><th style="width:110px">操作</th></tr></thead>
+            <tbody>
+              <tr><td class="tit">主通道</td><td><div>gpt-5.5</div><div class="sub">讲解 / 识题（多模态）</div></td><td><span class="tag tag-ok">● 正常 182ms</span></td><td><a href="#">编辑</a>　<a href="#">测试</a></td></tr>
+              <tr><td class="tit">备通道</td><td><div>glm-5-plus</div><div class="sub">主通道故障自动切换</div></td><td><span class="tag tag-ok">● 正常 240ms</span></td><td><a href="#">编辑</a>　<a href="#">测试</a></td></tr>
+              <tr><td class="tit">批改通道</td><td><div>gpt-5.5-mini</div><div class="sub">申论采分点批改</div></td><td><span class="tag tag-warn">◐ 波动 1.2s</span></td><td><a href="#">编辑</a>　<a href="#">测试</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="row" style="gap:10px;margin-top:12px;font-size:13px">
+          <span class="tag tag-gray">故障切换</span><span style="color:var(--t2)">主通道连续失败 3 次 → 自动切备通道并告警</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><span class="t">导入令牌</span><button class="btn btn-sm btn-ghost">＋ 生成令牌</button></div>
+        <div class="tbl-wrap" style="box-shadow:none;border:1px solid var(--fill)">
+          <table class="tbl">
+            <thead><tr><th>令牌</th><th>权限</th><th style="width:110px">最近使用</th><th style="width:80px">操作</th></tr></thead>
+            <tbody>
+              <tr><td class="tit num">tok_2 ·· 8f3a</td><td><span class="tag tag-brand">批次导入</span></td><td class="num">今天 06:12</td><td><a href="#" style="color:var(--error)">吊销</a></td></tr>
+              <tr><td class="tit num">tok_5 ·· c210</td><td><span class="tag tag-brand">批次导入</span> <span class="tag tag-gray">只读统计</span></td><td class="num">07-30</td><td><a href="#" style="color:var(--error)">吊销</a></td></tr>
+              <tr><td class="tit num">tok_1 ·· 990d</td><td><span class="tag tag-bad">已吊销</span></td><td class="num">06-18</td><td><span class="sub">—</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="dnote" style="margin-top:12px"><b>安全</b>令牌仅生成时明文展示一次；管理员操作全部留审计日志。</div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><span class="t">运营公告</span><button class="btn btn-sm btn-primary">＋ 发布公告</button></div>
+        <div class="fld"><div class="lb">标题</div><input class="ipt" style="width:100%" placeholder="展示在用户端首页公告栏"></div>
+        <div class="fld"><div class="lb">正文（可选）</div><textarea class="ipt" placeholder="支持换行；发布后立即生效"></textarea></div>
+        <div class="tbl-wrap" style="box-shadow:none;border:1px solid var(--fill)">
+          <table class="tbl">
+            <tbody>
+              <tr><td><div class="tit">8 月模考日历上线</div><div class="sub">2026-08-01 发布</div></td><td style="width:82px"><span class="tag tag-ok">展示中</span></td><td style="width:80px"><a href="#">停用</a></td></tr>
+              <tr><td><div class="tit">7 月时政题包已更新</div><div class="sub">2026-07-28 发布</div></td><td><span class="tag tag-gray">已停用</span></td><td><a href="#">重新启用</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><span class="t">导出记录</span><a class="more" href="#">全部 →</a></div>
+        <div class="tbl-wrap" style="box-shadow:none;border:1px solid var(--fill)">
+          <table class="tbl">
+            <thead><tr><th>任务</th><th style="width:110px">时间</th><th style="width:82px">状态</th><th style="width:80px">操作</th></tr></thead>
+            <tbody>
+              <tr><td class="tit">题库筛选导出（资料分析·差评）</td><td class="num">今天 09:02</td><td><span class="tag tag-ok">完成</span></td><td><a href="#">下载</a></td></tr>
+              <tr><td class="tit">近 30 天学习数据 CSV</td><td class="num">08-02</td><td><span class="tag tag-ok">完成</span></td><td><a href="#">下载</a></td></tr>
+              <tr><td class="tit">全库考点表</td><td class="num">08-01</td><td><span class="tag tag-bad">失败</span></td><td><a href="#">重试</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="dnote"><b>设计说明 · 系统设置（线框级）</b>
+      四卡分区：AI 通道（状态内联 + 测试按钮，故障切换规则可见）、导入令牌（脱敏 + 吊销）、公告（发布表单与历史同卡）、导出记录（集中现状散落的导出）。登录改为独立登录页（令牌 + 可选 TOTP），不再顶栏常驻明文令牌输入框。</div>
+  </div>
+</div>
+</div>
+</body></html>

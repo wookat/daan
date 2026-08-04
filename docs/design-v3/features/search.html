@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>全局搜索 · features · design-v3</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+.searchbar{display:flex;gap:10px;align-items:center;padding:4px 0 12px}
+.searchbar .box{flex:1;height:38px;border-radius:999px;background:var(--surface);border:1.5px solid var(--brand-500);display:flex;align-items:center;padding:0 14px;gap:8px;font-size:14px}
+.searchbar .box .cur{color:var(--t1)}
+.searchbar .box .caret{width:2px;height:18px;background:var(--brand-500)}
+.searchbar .cancel{font-size:14px;color:var(--t3);text-decoration:none}
+.hl{color:var(--brand-500);font-weight:600}
+.res-q{padding:12px 0;border-bottom:.5px solid var(--fill)}
+.res-q:last-child{border-bottom:none}
+.res-q .tx{font-size:14px;color:var(--t1);line-height:1.65;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.res-q .meta{display:flex;gap:6px;margin-top:6px;align-items:center;font-size:11px;color:var(--t3)}
+.kp-row{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:.5px solid var(--fill)}
+.kp-row:last-child{border-bottom:none}
+.kp-row .ico{width:34px;height:34px;border-radius:var(--r-m);background:var(--brand-50);display:flex;align-items:center;justify-content:center;font-size:16px;flex:none}
+</style></head>
+<body>
+<div class="topbar"><a href="index.html">← 功能原型总览</a><span class="crumb">design-v3 / features / 全局搜索：题目/知识点（P0）</span></div>
+<div class="stage">
+<div class="phone">
+  <div class="statusbar"><span>9:41</span><span class="right">●●● ⁝ 100%</span></div>
+  <div class="content" style="padding-top:8px">
+
+    <div class="searchbar">
+      <div class="box">🔍 <span class="cur">牛吃草</span><span class="caret"></span></div>
+      <a class="cancel" href="#">取消</a>
+    </div>
+
+    <div class="row" style="gap:8px;margin-bottom:12px"><a class="chip on" href="#">全部</a><a class="chip" href="#">题目</a><a class="chip" href="#">知识点</a><a class="chip" href="#">我的错题</a><a class="chip" href="#">申论素材</a></div>
+
+    <div class="sec-h" style="margin-top:6px"><span class="t" style="font-size:14px">知识点（2）</span></div>
+    <div class="card" style="padding:4px 16px">
+      <div class="kp-row"><span class="ico">🌱</span><div class="grow"><div style="font-size:14px;font-weight:600"><span class="hl">牛吃草</span>问题</div><div style="font-size:11px;color:var(--t3)">数量关系 › 工程与效率 · 收录 86 题 · 我的正确率 47%</div></div><a class="btn btn-ghost" style="min-height:30px;font-size:12px;padding:0 12px" href="#">去练习</a></div>
+      <div class="kp-row"><span class="ico">📐</span><div class="grow"><div style="font-size:14px;font-weight:600">追及与流水行船（含<span class="hl">牛吃草</span>变形）</div><div style="font-size:11px;color:var(--t3)">数量关系 › 行程问题 · 收录 132 题</div></div><a class="btn btn-ghost" style="min-height:30px;font-size:12px;padding:0 12px" href="#">去练习</a></div>
+    </div>
+
+    <div class="sec-h"><span class="t" style="font-size:14px">题目（143）</span><a class="more" href="#">筛选 ▾</a></div>
+    <div class="card" style="padding:4px 16px">
+      <div class="res-q">
+        <div class="tx">牧场上长满<span class="hl">牛吃草</span>，且每天匀速生长。这片牧场可供 10 头牛吃 20 天，或供 15 头牛吃 10 天，则可供 25 头牛吃多少天？</div>
+        <div class="meta"><span class="tag" style="background:var(--brand-50);color:var(--brand-500)">数量关系</span><span class="tag tag-gray">2023 联考</span><span>正确率 38%</span><span class="tag tag-bad">我做错过 ×2</span></div>
+      </div>
+      <div class="res-q">
+        <div class="tx">一片草地，草每天匀速生长（<span class="hl">牛吃草</span>模型）。若安排 12 头牛需 8 天吃完，安排 8 头牛需 16 天吃完…</div>
+        <div class="meta"><span class="tag" style="background:var(--brand-50);color:var(--brand-500)">数量关系</span><span class="tag tag-gray">2022 省考</span><span>正确率 44%</span></div>
+      </div>
+      <div class="res-q">
+        <div class="tx">某检票口检票开始前已有旅客排队，每分钟新增旅客人数相同（<span class="hl">牛吃草</span>排队变形）。若开 4 个检票口需 30 分钟…</div>
+        <div class="meta"><span class="tag" style="background:var(--brand-50);color:var(--brand-500)">数量关系</span><span class="tag tag-gray">2024 国考</span><span>正确率 35%</span><span class="tag tag-warn">高频考法</span></div>
+      </div>
+      <a class="btn btn-plain" href="#" style="margin:10px 0 12px;min-height:38px;font-size:13px">查看全部 143 题</a>
+    </div>
+
+    <div class="card" style="background:var(--brand-50);box-shadow:none">
+      <div style="font-size:13px;color:var(--brand-600)">🤖 没找到想要的？<b>拍题/粘贴题干问 AI</b>，讲完自动入错题本。</div>
+      <a class="btn btn-primary" href="#" style="margin-top:10px;min-height:38px;font-size:13px">去 AI 问答</a>
+    </div>
+
+  </div>
+</div>
+<aside class="notes">
+  <div class="note"><b>P0 · 全局搜索</b>对标粉笔搜题。范围：13 万+题库题干、三级考点树、我的错题、申论素材；结果分组展示，关键词高亮。</div>
+  <div class="note"><b>入口</b>刷题首页顶部搜索框（常驻）+ 错题本/申论列表搜索图标。历史记录与热搜词（如「牛吃草」「削峰填谷」）在输入前展示。</div>
+  <div class="note"><b>实现</b>SQLite FTS5 / 服务端倒排即可起步；知识点命中直接给「去练习」直达定向练习，比竞品多一步转化。搜索无结果兜底到 AI 拍题（差异化优势）。</div>
+</aside>
+</div>
+</body></html>
