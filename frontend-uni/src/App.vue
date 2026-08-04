@@ -1,6 +1,12 @@
 <script>
 export default {
-  onLaunch: function () {},
+  onLaunch: function () {
+    // #ifdef H5
+    const h = window.location.hash || ''
+    const m = h.match(/^#\/pages\/(exam|shenlun|user)\//)
+    if (m) window.location.replace(window.location.pathname + h.replace('#/pages/', '#/pkgA/'))
+    // #endif
+  },
   onShow: function () {},
   onHide: function () {},
 }
