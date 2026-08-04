@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>打卡分享海报 · features · design-v3</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+body{background:#E9EBF2}
+.mask{position:absolute;inset:0;background:rgba(23,24,28,.55);z-index:10;display:flex;flex-direction:column;justify-content:flex-end}
+.poster-wrap{position:absolute;inset:0;z-index:11;display:flex;flex-direction:column;align-items:center;padding:56px 34px 190px}
+.poster{width:100%;background:linear-gradient(160deg,#5B8AF8,#3B6FF5 55%,#2C5AD6);border-radius:var(--r-xl);color:#fff;padding:22px 20px 18px;box-shadow:var(--sh-3);position:relative;overflow:hidden}
+.poster .deco{position:absolute;right:-30px;top:-30px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.08)}
+.poster .day{font-size:44px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.05}
+.poster .quote{font-size:13px;line-height:1.7;color:rgba(255,255,255,.92);margin:14px 0;padding:12px;background:rgba(255,255,255,.12);border-radius:var(--r-m)}
+.pk{display:flex;text-align:center;background:rgba(255,255,255,.1);border-radius:var(--r-m);padding:10px 0;margin-bottom:14px}
+.pk>div{flex:1}
+.pk .v{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
+.pk .l{font-size:10px;color:rgba(255,255,255,.75);margin-top:1px}
+.poster .ft{display:flex;align-items:center;justify-content:space-between}
+.qr{width:52px;height:52px;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;color:var(--brand-500);font-size:9px;font-weight:700;text-align:center;line-height:1.3}
+.sharebar{position:absolute;left:0;right:0;bottom:0;z-index:12;background:var(--surface);border-radius:var(--r-xl) var(--r-xl) 0 0;padding:14px 20px 30px;box-shadow:var(--sh-3)}
+.sharebar .grab{width:36px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 14px}
+.share-row{display:flex;justify-content:space-around;text-align:center}
+.share-row a{text-decoration:none;color:var(--t2);font-size:11px}
+.share-row .ico{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 6px;background:var(--fill)}
+</style></head>
+<body>
+<div class="topbar"><a href="index.html">← 功能原型总览</a><span class="crumb">design-v3 / features / 打卡分享海报（P0）</span></div>
+<div class="stage">
+<div class="phone">
+  <div class="statusbar"><span>9:41</span><span class="right">●●● ⁝ 100%</span></div>
+  <header class="navbar"><span class="title">刷题</span></header>
+  <div class="content" style="filter:blur(1px)">
+    <div class="hero"><div style="font-size:13px;color:rgba(255,255,255,.85)">今日已练 <b class="num" style="font-size:18px;color:#fff">50</b>/50 题 · 目标达成 🎉</div></div>
+    <div class="card"><div style="height:80px"></div></div>
+    <div class="card"><div style="height:120px"></div></div>
+  </div>
+
+  <div class="mask"></div>
+  <div class="poster-wrap">
+    <div class="poster">
+      <div class="deco"></div>
+      <div style="font-size:12px;color:rgba(255,255,255,.8)">考公错题助手 · 学习打卡</div>
+      <div class="day">连续打卡 第 23 天</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.8);margin-top:2px">8 月 4 日 · 花生上岸 · 距 2026 国考还有 118 天</div>
+      <div class="quote">“数量关系正确率从 41% 爬到 52%，慢一点没关系，别停下来。” —— 今日 AI 学习小结</div>
+      <div class="pk">
+        <div><div class="v">50</div><div class="l">今日刷题</div></div>
+        <div><div class="v">82%</div><div class="l">正确率</div></div>
+        <div><div class="v">6</div><div class="l">错题清零</div></div>
+        <div><div class="v">1,286</div><div class="l">累计题量</div></div>
+      </div>
+      <div class="ft">
+        <div style="font-size:11px;color:rgba(255,255,255,.85);line-height:1.6">扫码和我一起<br>AI 刷题上岸 →</div>
+        <div class="qr">小程序码<br>kaogong</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sharebar">
+    <div class="grab"></div>
+    <div class="share-row">
+      <a href="#"><span class="ico" style="background:#ECFDF5">💬</span>微信好友</a>
+      <a href="#"><span class="ico" style="background:#ECFDF5">👥</span>朋友圈</a>
+      <a href="#"><span class="ico" style="background:#FEF2F2">📕</span>小红书</a>
+      <a href="#"><span class="ico">⬇️</span>保存图片</a>
+      <a href="#"><span class="ico">🔗</span>复制链接</a>
+    </div>
+  </div>
+</div>
+<aside class="notes">
+  <div class="note"><b>P0 · 打卡分享海报</b>对标粉笔「打卡日历/学习报告分享」。触发点：① 完成今日目标结算页；② 学习日历页「生成打卡海报」；③ 模考成绩页「战报海报」（同模板换数据）。</div>
+  <div class="note"><b>增长价值</b>唯一近零成本的自传播拉新渠道；海报带小程序码/短链落到落地页。</div>
+  <div class="note"><b>实现</b>前端 canvas 合成（uni-app 有现成海报库），数据全部来自现有统计接口 + AI 每日小结一句话（复用 LLM 通道）。</div>
+  <div class="note plat"><b>小程序</b>朋友圈需先保存图片再发；小程序码用 wxacode.getUnlimited 带邀请参数。</div>
+</aside>
+</div>
+</body></html>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>离线做题 · features · design-v3</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+.offbar{background:var(--warning-bg);border-radius:var(--r-m);padding:9px 12px;font-size:12.5px;color:var(--warning);display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.pkg{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:.5px solid var(--fill)}
+.pkg:last-child{border-bottom:none}
+.pkg .ico{width:36px;height:36px;border-radius:var(--r-m);display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;flex:none}
+.pkg .nm{font-size:14px;font-weight:600}
+.pkg .sub{font-size:11.5px;color:var(--t3);margin-top:1px}
+.pkg .act{font-size:12px;font-weight:600;color:var(--brand-500);text-decoration:none;flex:none}
+.ring{width:34px;height:34px;border-radius:50%;background:conic-gradient(var(--brand-500) 0 62%,var(--fill) 62% 100%);display:flex;align-items:center;justify-content:center;flex:none}
+.ring i{width:24px;height:24px;border-radius:50%;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--brand-500);font-style:normal}
+.done{color:var(--success);font-size:12px;font-weight:600;flex:none}
+</style></head>
+<body>
+<div class="topbar"><a href="index.html">← 功能原型总览</a><span class="crumb">design-v3 / features / 离线做题（P1）</span></div>
+<div class="stage">
+<div class="phone">
+  <div class="statusbar"><span>9:41</span><span class="right">✈︎ ⁝ 100%</span></div>
+  <header class="navbar"><a class="back" href="index.html">‹</a><span class="title">离线题包</span><a class="navact" href="#">管理</a></header>
+  <div class="content">
+
+    <div class="offbar">✈️ 当前离线 · 可继续刷已下载题包，作答将在联网后自动同步</div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:15px;font-weight:700">存储占用</span>
+        <span style="font-size:12px;color:var(--t3)">已用 86 MB / 上限 500 MB</span>
+      </div>
+      <div class="bar"><i style="width:17%"></i></div>
+      <div style="font-size:11.5px;color:var(--t3);margin-top:8px">题包含题干/选项/解析文本与图片，不含 AI 问答（需联网）。</div>
+    </div>
+
+    <div class="sec-h"><span class="t">已下载（3）</span></div>
+    <div class="card" style="padding:4px 16px">
+      <div class="pkg"><span class="ico" style="background:var(--mod-ziliao)">资</span><div class="grow"><div class="nm">资料分析 · 高频 500 题</div><div class="sub">32 MB · 已做 218 题 · 更新于 8/1</div></div><span class="done">✓ 可离线</span></div>
+      <div class="pkg"><span class="ico" style="background:var(--mod-shuliang)">数</span><div class="grow"><div class="nm">数量关系 · 弱项定向包</div><div class="sub">18 MB · 按我的弱项生成 · 300 题</div></div><span class="done">✓ 可离线</span></div>
+      <div class="pkg"><span class="ico" style="background:var(--error)">错</span><div class="grow"><div class="nm">我的错题本（全部）</div><div class="sub">21 MB · 含历次作答与 AI 分析快照</div></div><span class="done">✓ 可离线</span></div>
+    </div>
+
+    <div class="sec-h"><span class="t">推荐下载</span></div>
+    <div class="card" style="padding:4px 16px">
+      <div class="pkg"><span class="ico" style="background:var(--mod-yanyu)">言</span><div class="grow"><div class="nm">言语理解 · 高频 600 题</div><div class="sub">38 MB · 逻辑填空/片段阅读</div></div><span class="ring"><i>62%</i></span></div>
+      <div class="pkg"><span class="ico" style="background:var(--mod-panduan)">判</span><div class="grow"><div class="nm">判断推理 · 图推专项 400 题</div><div class="sub">45 MB · 含图片资源</div></div><a class="act" href="#">下载</a></div>
+      <div class="pkg"><span class="ico" style="background:var(--mod-changshi)">常</span><div class="grow"><div class="nm">常识判断 · 背题模式包</div><div class="sub">12 MB · 1,200 题速刷</div></div><a class="act" href="#">下载</a></div>
+      <div class="pkg"><span class="ico" style="background:var(--brand-500)">卷</span><div class="grow"><div class="nm">2026 国考冲刺 · 真题卷 ×5</div><div class="sub">26 MB · 含答题卡与解析</div></div><a class="act" href="#">下载</a></div>
+    </div>
+
+    <div class="card" style="background:var(--brand-50);box-shadow:none">
+      <div style="font-size:12.5px;color:var(--brand-600);line-height:1.6">🔄 待同步：离线作答 46 题（含 8 道新错题）· 联网后自动上传并更新统计/遗忘曲线</div>
+    </div>
+
+  </div>
+</div>
+<aside class="notes">
+  <div class="note"><b>P1 · 离线做题</b>对标腰果/粉笔「离线缓存」。通勤地铁弱网是刷题高频场景。方案：题包（题面+解析 JSON+图片）预下载到本地 SQLite/storage，作答记录本地队列，联网后增量同步。</div>
+  <div class="note"><b>边界</b>AI 讲解/批改/讨论区需联网（入口置灰并提示）；判分与解析展示纯本地可用。</div>
+  <div class="note"><b>包策略</b>模块高频包、弱项定向包（按用户画像生成）、错题本快照、真题卷；上限 500MB 可清理。</div>
+  <div class="note plat"><b>多端</b>App/小程序可用本地存储（小程序 10MB storage 上限 → 用文件系统 API）；H5 用 IndexedDB + Service Worker，能力降级仅错题本。</div>
+</aside>
+</div>
+</body></html>

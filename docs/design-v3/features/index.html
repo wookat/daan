@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>功能升级原型总览 · features · design-v3</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+body{background:var(--bg);padding:32px 20px}
+.wrap{max-width:960px;margin:0 auto}
+h1{font-size:22px;margin-bottom:4px}
+.sub{font-size:13px;color:var(--t3);margin-bottom:24px}
+h2{font-size:16px;margin:26px 0 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.itm{background:var(--surface);border-radius:var(--r-l);box-shadow:var(--sh-1);padding:16px;text-decoration:none;color:inherit;display:block}
+.itm:hover{box-shadow:var(--sh-2)}
+.itm .t{font-size:15px;font-weight:700;margin:6px 0 4px}
+.itm .d{font-size:12.5px;color:var(--t3);line-height:1.6}
+</style></head>
+<body>
+<div class="wrap">
+  <h1>产品功能升级 · P0/P1 原型总览</h1>
+  <div class="sub">对标粉笔/华图在线/腰果的竞品差距调研结论与入选项高保真原型（375px）。完整功能矩阵与路线见 <a href="FEATURES.md" style="color:var(--brand-500)">FEATURES.md</a>。风格延续 <a href="../DESIGN.md" style="color:var(--brand-500)">design-v3</a>。</div>
+
+  <h2>P0（本期必做 · 6 项）</h2>
+  <div class="grid">
+    <a class="itm" href="predict-score.html"><span class="tag tag-bad">P0</span><div class="t">能力预测分 + 进步曲线</div><div class="d">预测分 Hero、8 周进步曲线、分模块预测、AI 提分建议直达定向练习。</div></a>
+    <a class="itm" href="mokao-rank.html"><span class="tag tag-bad">P0</span><div class="t">万人模考大赛 · 排名报告</div><div class="d">全站/同省/同岗位排名、分数分布直方图、下季报名钩子。</div></a>
+    <a class="itm" href="question-discuss.html"><span class="tag tag-bad">P0</span><div class="t">每题讨论区</div><div class="d">最热/最新/只看讲解，高赞解法、楼中楼回复、社区公约与审核。</div></a>
+    <a class="itm" href="checkin-poster.html"><span class="tag tag-bad">P0</span><div class="t">打卡分享海报</div><div class="d">连续打卡战报海报 + AI 每日小结一句话 + 小程序码拉新。</div></a>
+    <a class="itm" href="search.html"><span class="tag tag-bad">P0</span><div class="t">全局搜索（题目/知识点）</div><div class="d">题干/考点/错题/素材分组结果，知识点直达定向练习，无结果兜底 AI 拍题。</div></a>
+    <a class="itm" href="favorites-notes.html"><span class="tag tag-bad">P0</span><div class="t">收藏夹 + 笔记</div><div class="d">多收藏夹、题目便签笔记、一键重练本夹、并入 PDF 导出。</div></a>
+  </div>
+
+  <h2>P1（下期规划 · 5 项）</h2>
+  <div class="grid">
+    <a class="itm" href="interview.html"><span class="tag tag-warn">P1</span><div class="t">AI 结构化面试陪练</div><div class="d">录音作答→五维点评→逐句标注→高分版对照；最自然的商业化模块。</div></a>
+    <a class="itm" href="pk.html"><span class="tag tag-warn">P1</span><div class="t">答题 PK 对战</div><div class="d">异步排位 PK、限时计分、段位赛季、好友约战分享。</div></a>
+    <a class="itm" href="reminders.html"><span class="tag tag-warn">P1</span><div class="t">消息推送 · 学习提醒</div><div class="d">5 类场景化提醒 + AI 个性化文案 + 勿扰/自动降频的克制策略。</div></a>
+    <a class="itm" href="dark-mode.html"><span class="tag tag-warn">P1</span><div class="t">深色模式</div><div class="d">深色 token 全集展示（答题+解析页），CSS 变量一键切换。</div></a>
+    <a class="itm" href="offline.html"><span class="tag tag-warn">P1</span><div class="t">离线做题</div><div class="d">题包下载、弱项定向包、本地作答队列联网同步、存储管理。</div></a>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>能力预测分 · features · design-v3</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+.score-hero{background:var(--grad-brand);border-radius:var(--r-l);padding:20px 18px;color:#fff;margin-bottom:12px;box-shadow:0 6px 18px rgba(59,111,245,.3);text-align:center}
+.score-hero .big{font-size:48px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.score-hero .delta{display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.18);border-radius:999px;padding:3px 12px;font-size:12px;margin-top:8px}
+.chart{position:relative;height:150px;margin:8px 0 4px}
+.chart svg{width:100%;height:100%}
+.axis{font-size:10px;fill:var(--t4)}
+.mod-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--fill)}
+.mod-item:last-child{border-bottom:none}
+.mod-ico{width:32px;height:32px;border-radius:var(--r-m);display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff;flex:none}
+.mod-item .nm{font-size:14px;font-weight:600}
+.mod-item .sub{font-size:11px;color:var(--t3)}
+.mod-item .sc{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
+</style></head>
+<body>
+<div class="topbar"><a href="index.html">← 功能原型总览</a><span class="crumb">design-v3 / features / 能力预测分 + 进步曲线（P0）</span></div>
+<div class="stage">
+<div class="phone">
+  <div class="statusbar"><span>9:41</span><span class="right">●●● ⁝ 100%</span></div>
+  <header class="navbar"><a class="back" href="index.html">‹</a><span class="title">能力预测分</span><a class="navact" href="#">规则说明</a></header>
+  <div class="content">
+
+    <div class="score-hero">
+      <div style="font-size:13px;color:rgba(255,255,255,.85)">行测预测分（2026 国考·地市级）</div>
+      <div class="big">68.5</div>
+      <div class="delta">▲ 较上周 +2.3 分 · 超过 76% 备考者</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:8px">基于近 30 天 1,286 道作答 + 3 次模考，置信度 中高</div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:15px;font-weight:700">进步曲线</span>
+        <span class="row" style="gap:6px">
+          <a class="chip on" href="#">近8周</a><a class="chip" href="#">近30天</a><a class="chip" href="#">全部</a>
+        </span>
+      </div>
+      <div class="chart">
+        <svg viewBox="0 0 343 150" preserveAspectRatio="none">
+          <line x1="0" y1="30" x2="343" y2="30" stroke="#F2F3F7"/><line x1="0" y1="70" x2="343" y2="70" stroke="#F2F3F7"/><line x1="0" y1="110" x2="343" y2="110" stroke="#F2F3F7"/>
+          <text class="axis" x="2" y="26">75</text><text class="axis" x="2" y="66">65</text><text class="axis" x="2" y="106">55</text>
+          <line x1="0" y1="42" x2="343" y2="42" stroke="#D97706" stroke-dasharray="4 4" stroke-width="1"/>
+          <text class="axis" x="250" y="38" fill="#D97706">目标 72 分</text>
+          <polyline points="20,118 65,108 110,112 155,96 200,88 245,80 290,68 330,58" fill="none" stroke="#3B6FF5" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="330" cy="58" r="4" fill="#3B6FF5"/><circle cx="330" cy="58" r="7" fill="rgba(59,111,245,.2)"/>
+          <text class="axis" x="14" y="146">6/8</text><text class="axis" x="104" y="146">6/22</text><text class="axis" x="194" y="146">7/6</text><text class="axis" x="284" y="146">7/20</text>
+        </svg>
+      </div>
+      <div style="font-size:12px;color:var(--t3)">按当前进步速度，预计 <b style="color:var(--brand-500)">9 月中旬</b> 达到目标分 72</div>
+    </div>
+
+    <div class="sec-h"><span class="t">分模块预测</span><a class="more" href="#">查看详情 ›</a></div>
+    <div class="card" style="padding:6px 16px">
+      <div class="mod-item"><div class="mod-ico" style="background:var(--mod-ziliao)">资</div><div class="grow"><div class="nm">资料分析</div><div class="sub">正确率 86% · 稳定</div></div><span class="tag tag-ok">强项</span><span class="sc" style="margin-left:10px">18.2<span style="font-size:11px;color:var(--t4)">/20</span></span></div>
+      <div class="mod-item"><div class="mod-ico" style="background:var(--mod-yanyu)">言</div><div class="grow"><div class="nm">言语理解</div><div class="sub">正确率 74% · 缓升</div></div><span class="tag tag-brand">正常</span><span class="sc" style="margin-left:10px">20.5<span style="font-size:11px;color:var(--t4)">/30</span></span></div>
+      <div class="mod-item"><div class="mod-ico" style="background:var(--mod-panduan)">判</div><div class="grow"><div class="nm">判断推理</div><div class="sub">正确率 71% · 波动大</div></div><span class="tag tag-warn">波动</span><span class="sc" style="margin-left:10px">18.9<span style="font-size:11px;color:var(--t4)">/28</span></span></div>
+      <div class="mod-item"><div class="mod-ico" style="background:var(--mod-shuliang)">数</div><div class="grow"><div class="nm">数量关系</div><div class="sub">正确率 52% · 拖后腿</div></div><span class="tag tag-bad">弱项</span><span class="sc" style="margin-left:10px">5.4<span style="font-size:11px;color:var(--t4)">/12</span></span></div>
+      <div class="mod-item"><div class="mod-ico" style="background:var(--mod-changshi)">常</div><div class="grow"><div class="nm">常识判断</div><div class="sub">正确率 61% · 缓升</div></div><span class="tag tag-brand">正常</span><span class="sc" style="margin-left:10px">5.5<span style="font-size:11px;color:var(--t4)">/10</span></span></div>
+    </div>
+
+    <div class="card" style="background:var(--brand-50);box-shadow:none">
+      <div style="font-size:13px;font-weight:700;color:var(--brand-600);margin-bottom:6px">🤖 AI 提分建议</div>
+      <div style="font-size:13px;color:var(--t2);line-height:1.6">数量关系是当前最大的提分空间（预计可 +4.2 分）。「工程问题·假设分配法」近 20 题正确率仅 40%，建议本周定向重练。</div>
+      <a class="btn btn-primary" href="#" style="margin-top:12px">去练数量关系 · 工程问题（15 题）</a>
+    </div>
+
+  </div>
+</div>
+<aside class="notes">
+  <div class="note"><b>P0 · 能力预测分 + 进步曲线</b>对标粉笔「预测考分/成长曲线」。复用现有作答记录、模考成绩与三级考点树，用 IRT/加权正确率折算预测分；置信度随样本量提升。</div>
+  <div class="note"><b>入口</b>统计 Tab 顶部 KPI 区新增「预测分」卡；模考成绩报告页尾部引流。</div>
+  <div class="note"><b>转化钩子</b>预测分→目标分差距→AI 提分建议→一键进入定向练习，闭环回刷题主链路。</div>
+  <div class="note plat"><b>小程序</b>曲线用 canvas 绘制；预测分说明需注明「仅供参考，非官方成绩」。</div>
+</aside>
+</div>
+</body></html>

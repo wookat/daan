@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>深色模式 · features · design-v3</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+.phone.dark{--t1:#F2F3F7; --t2:#C6C9D4; --t3:#8A8EA0; --t4:#5C6070;
+  --border:#2B2E3A; --fill:#23252F; --bg:#15161C; --surface:#1D1F28;
+  --brand-50:#1E2A4A; --brand-100:#24345C; --success-bg:#0E2B1E; --error-bg:#331416; --warning-bg:#33260E;
+  background:var(--bg); color:var(--t1)}
+.phone.dark .card{box-shadow:none;border:1px solid var(--border)}
+.phone.dark .statusbar{color:var(--t1)}
+.opt{display:flex;align-items:center;gap:10px;border:1.5px solid var(--border);border-radius:var(--r-m);padding:12px 14px;margin-top:10px;font-size:14px;background:var(--surface)}
+.opt .k{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--t3);flex:none}
+.opt.ok{border-color:var(--success);background:var(--success-bg)}
+.opt.ok .k{border-color:var(--success);background:var(--success);color:#fff}
+.opt .mark{margin-left:auto;font-size:12px;font-weight:600}
+.seg3{display:flex;background:var(--fill);border-radius:var(--r-m);padding:3px;margin-top:10px}
+.seg3 a{flex:1;text-align:center;padding:7px 0;border-radius:8px;font-size:13px;color:var(--t3);text-decoration:none}
+.seg3 a.on{background:var(--surface);color:var(--t1);font-weight:700;border:1px solid var(--border)}
+</style></head>
+<body>
+<div class="topbar"><a href="index.html">← 功能原型总览</a><span class="crumb">design-v3 / features / 深色模式（P1）</span></div>
+<div class="stage">
+<div class="phone dark">
+  <div class="statusbar"><span>9:41</span><span class="right">●●● ⁝ 100%</span></div>
+  <header class="navbar"><a class="back" href="index.html" style="background:var(--surface);border-color:var(--border);color:var(--t2)">‹</a><span class="title">言语理解 · 专项练习</span><a class="navact" href="#">3/15</a></header>
+  <div class="content">
+
+    <div class="card">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px">外观模式</div>
+      <div class="seg3"><a href="#">浅色</a><a class="on" href="#">深色</a><a href="#">跟随系统</a></div>
+      <div style="font-size:11.5px;color:var(--t3);margin-top:8px">夜间刷题护眼 · 正文对比度保持 ≥ 4.5:1</div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="gap:6px;margin-bottom:8px"><span class="tag" style="background:#3A1220;color:#F06A8A">言语理解</span><span class="tag tag-gray">逻辑填空</span><span class="tag tag-gray">2024 国考</span></div>
+      <div style="font-size:15px;line-height:1.75">传统技艺的传承不能只靠情怀______，更需要现代产业体系的______，让手艺人体面地生活，让技艺在市场中焕发新生。<br>依次填入画横线处最恰当的一项是：</div>
+      <div class="opt"><span class="k">A</span>支撑　加持</div>
+      <div class="opt ok"><span class="k">B</span>维系　托举<span class="mark" style="color:var(--success)">✓ 正确</span></div>
+      <div class="opt" style="border-color:var(--error);background:var(--error-bg)"><span class="k" style="border-color:var(--error);background:var(--error);color:#fff">C</span>驱动　赋能<span class="mark" style="color:var(--error)">✕ 我的选择</span></div>
+      <div class="opt"><span class="k">D</span>延续　滋养</div>
+    </div>
+
+    <div class="card" style="background:var(--brand-50);border-color:var(--brand-100)">
+      <div style="font-size:13px;font-weight:700;color:#8FB2F9;margin-bottom:6px">💡 AI 解析（花生十三 · 语境分析）</div>
+      <div style="font-size:13.5px;color:var(--t2);line-height:1.75">第一空与「只靠情怀」搭配，「维系」贴合「勉强维持」语境；第二空「产业体系的托举」呼应后文「体面地生活」。「赋能」为高频干扰项，语义过重…</div>
+      <div class="row" style="gap:8px;margin-top:12px"><a class="chip" href="#" style="background:var(--fill);color:var(--t2)">继续问 AI</a><a class="chip" href="#" style="background:var(--fill);color:var(--t2)">同考点再练 5 题</a><a class="chip" href="#" style="background:var(--fill);color:var(--t2)">☆ 收藏</a></div>
+    </div>
+
+  </div>
+</div>
+<aside class="notes">
+  <div class="note"><b>P1 · 深色模式</b>对标粉笔夜间模式。考公用户夜间刷题占比高，为高频呼声功能；design-v3 全部用 CSS 变量定义色板，切换只需换 token 映射（本页展示深色 token 全集）。</div>
+  <div class="note"><b>深色 token</b>bg #15161C / surface #1D1F28 / fill #23252F / border #2B2E3A；文本 F2F3F7→5C6070 四阶；品牌色不变，浅底色改深底（brand-50→#1E2A4A）。卡片去阴影改描边。</div>
+  <div class="note"><b>入口</b>「我的」→ 外观模式（浅色/深色/跟随系统），已在 profile 原型预留。</div>
+  <div class="note plat"><b>小程序</b>darkmode:true + theme.json 变量映射；App 端监听系统主题。</div>
+</aside>
+</div>
+</body></html>

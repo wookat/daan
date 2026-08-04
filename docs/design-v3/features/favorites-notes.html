@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>收藏夹与笔记 · features · design-v3</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+.fav-q{padding:13px 0;border-bottom:.5px solid var(--fill)}
+.fav-q:last-child{border-bottom:none}
+.fav-q .tx{font-size:14px;line-height:1.65;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.fav-q .meta{display:flex;gap:6px;margin-top:6px;align-items:center;font-size:11px;color:var(--t3)}
+.mynote{background:#FFFBEB;border-left:3px solid var(--warning);border-radius:0 var(--r-s) var(--r-s) 0;padding:8px 10px;font-size:12.5px;color:var(--t2);margin-top:8px;line-height:1.6}
+.mynote b{color:var(--warning)}
+.folder{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:.5px solid var(--fill)}
+.folder:last-child{border-bottom:none}
+.folder .ico{width:36px;height:36px;border-radius:var(--r-m);background:var(--brand-50);display:flex;align-items:center;justify-content:center;font-size:17px}
+.seg{display:flex;background:var(--fill);border-radius:var(--r-m);padding:3px;margin-bottom:12px}
+.seg a{flex:1;text-align:center;padding:7px 0;border-radius:8px;font-size:13px;color:var(--t3);text-decoration:none;font-weight:500}
+.seg a.on{background:#fff;color:var(--t1);font-weight:700;box-shadow:var(--sh-1)}
+</style></head>
+<body>
+<div class="topbar"><a href="index.html">← 功能原型总览</a><span class="crumb">design-v3 / features / 收藏夹 + 笔记（P0）</span></div>
+<div class="stage">
+<div class="phone">
+  <div class="statusbar"><span>9:41</span><span class="right">●●● ⁝ 100%</span></div>
+  <header class="navbar"><a class="back" href="index.html">‹</a><span class="title">收藏与笔记</span><a class="navact" href="#">＋新建夹</a></header>
+  <div class="content">
+
+    <div class="seg"><a class="on" href="#">收藏题目</a><a href="#">我的笔记</a><a href="#">申论素材</a></div>
+
+    <div class="card" style="padding:4px 16px">
+      <div class="folder"><span class="ico">⭐</span><div class="grow"><div style="font-size:14px;font-weight:600">默认收藏夹</div><div style="font-size:11px;color:var(--t3)">46 题 · 更新于今天</div></div><span style="color:var(--t4)">›</span></div>
+      <div class="folder"><span class="ico">🔥</span><div class="grow"><div style="font-size:14px;font-weight:600">图推·必背规律</div><div style="font-size:11px;color:var(--t3)">18 题 · 判断推理</div></div><span style="color:var(--t4)">›</span></div>
+      <div class="folder"><span class="ico">🧮</span><div class="grow"><div style="font-size:14px;font-weight:600">数量·好题二刷</div><div style="font-size:11px;color:var(--t3)">23 题 · 数量关系</div></div><span style="color:var(--t4)">›</span></div>
+    </div>
+
+    <div class="sec-h"><span class="t" style="font-size:14px">图推·必背规律（18）</span><span class="row" style="gap:6px"><a class="chip" href="#">排序 ▾</a><a class="chip on" href="#">重练本夹</a></span></div>
+    <div class="card" style="padding:4px 16px">
+      <div class="fav-q">
+        <div class="tx">从所给四个选项中，选择最合适的一个填入问号处，使之呈现一定的规律性…（九宫格·对称轴数量）</div>
+        <div class="meta"><span class="tag" style="background:#F5F3FF;color:var(--mod-panduan)">判断推理</span><span class="tag tag-gray">2024 国考</span><span>收藏于 7/28</span></div>
+        <div class="mynote"><b>📝 我的笔记：</b>先数对称轴再看曲直！本题横行对称轴数 1→2→3 递增，别被黑白块带偏。</div>
+      </div>
+      <div class="fav-q">
+        <div class="tx">左边给定的是纸盒的外表面，下面哪一项能由它折叠而成？（六面体·相邻面判定）</div>
+        <div class="meta"><span class="tag" style="background:#F5F3FF;color:var(--mod-panduan)">判断推理</span><span class="tag tag-gray">2023 省考</span><span>收藏于 7/25</span></div>
+        <div class="mynote"><b>📝 我的笔记：</b>时针法：以公共边为轴，A 面顺时针→B 面顺时针一致才可能相邻。</div>
+      </div>
+      <div class="fav-q">
+        <div class="tx">从所给四个选项中选择最合适的一个填入问号处…（五角星·旋转方向）</div>
+        <div class="meta"><span class="tag" style="background:#F5F3FF;color:var(--mod-panduan)">判断推理</span><span class="tag tag-gray">2022 联考</span><span>收藏于 7/21</span><span class="tag tag-gray">无笔记</span></div>
+      </div>
+    </div>
+
+    <a class="btn btn-primary" href="#" style="margin-top:4px">重练本收藏夹（18 题 · 乱序）</a>
+
+  </div>
+</div>
+<aside class="notes">
+  <div class="note"><b>P0 · 收藏夹 + 笔记</b>对标腰果「收藏练习+电子笔记」、粉笔「收藏/笔记」。现状仅申论素材可收藏；行测题目无收藏、无笔记，是明显缺口。</div>
+  <div class="note"><b>交互</b>答题页/解析页右上角 ☆ 收藏（长按选夹）；解析卡底部「写笔记」内联输入。笔记在下次遇到该题时随解析展示（黄色便签样式）。</div>
+  <div class="note"><b>钩子</b>「重练本收藏夹」复用现有定向重练引擎；笔记可一键并入 PDF 导出（复用现有导出）。</div>
+  <div class="note"><b>成本</b>低：favorite / note 两张表 + 答题页两个按钮；无 AI 依赖。</div>
+</aside>
+</div>
+</body></html>
