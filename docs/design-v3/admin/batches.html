@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>批次导入与审核 · 管理后台 design-v3</title><link rel="stylesheet" href="admin.css"></head>
+<body>
+<div class="layout">
+<aside class="side">
+  <div class="logo"><span class="mark">考</span><span class="name">考公助手 · 管理台</span></div>
+  <div class="grp">概览</div>
+  <nav><a href="dashboard.html"><span class="ico">📊</span><span class="txt">数据看板</span></a></nav>
+  <div class="grp">内容</div>
+  <nav>
+    <a href="questions.html"><span class="ico">📚</span><span class="txt">题库管理</span></a>
+    <a class="on" href="batches.html"><span class="ico">📦</span><span class="txt">批次导入审核</span><span class="badge">3</span></a>
+    <a href="taxonomy.html"><span class="ico">🌲</span><span class="txt">考点树</span></a>
+    <a href="review.html"><span class="ico">🔍</span><span class="txt">考点抽审</span><span class="badge">86</span></a>
+    <a href="reports.html"><span class="ico">🛠</span><span class="txt">纠错处理</span><span class="badge">12</span></a>
+    <a href="governance.html"><span class="ico">🛡</span><span class="txt">内容治理</span></a>
+    <a href="content.html"><span class="ico">📰</span><span class="txt">时政与申论</span></a>
+  </nav>
+  <div class="grp">用户</div>
+  <nav><a href="users.html"><span class="ico">👥</span><span class="txt">用户与运营</span></a></nav>
+  <div class="grp">系统</div>
+  <nav><a href="settings.html"><span class="ico">⚙️</span><span class="txt">系统设置</span></a></nav>
+  <div class="foot">design-v3 · <a href="index.html">原型总览</a></div>
+</aside>
+<div class="main">
+  <div class="topbar">
+    <span class="crumb"><b>批次导入与审核</b>　内容 / 批次导入审核</span>
+    <div class="search">🔎 搜索批次名…　<span class="kbd">⌘K</span></div>
+    <span class="env">● 生产环境</span><span class="avatar">管</span>
+  </div>
+  <div class="content" style="max-width:none">
+    <div class="pagehead">
+      <div><h1>批次导入与审核</h1><div class="sub">3 个批次待审 · 导入令牌管理见 <a href="settings.html">系统设置</a></div></div>
+      <div class="acts"><button class="btn btn-plain">导入历史</button><button class="btn btn-primary">＋ 新建导入</button></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:380px 1fr;gap:14px;align-items:start">
+      <!-- 左：批次列表 -->
+      <div>
+        <div class="filterbar" style="margin-bottom:10px">
+          <button class="chip on">待审 3</button><button class="chip">已发布 128</button><button class="chip">已驳回 9</button>
+        </div>
+        <div class="card" style="border:1.5px solid var(--brand-500);margin-bottom:10px">
+          <div class="row" style="gap:8px"><b>2026-08-03 · 言语真题增补</b><span class="tag tag-warn" style="margin-left:auto">待审</span></div>
+          <div class="sub" style="font-size:12px;color:var(--t3);margin:4px 0 8px">batch_20260803_yanyu · 共 1,240 题 · 真题 1,240 · 导入者 token#2</div>
+          <div class="hbar" style="margin:6px 0"><span class="lb" style="width:64px">抽检进度</span><div class="bar"><i style="width:60%"></i></div><span class="n">12/20</span></div>
+          <div class="row" style="gap:6px"><span class="tag tag-ok">合格 11</span><span class="tag tag-bad">问题 1</span><span class="tag tag-gray">答案分布正常</span></div>
+        </div>
+        <div class="card" style="margin-bottom:10px">
+          <div class="row" style="gap:8px"><b>2026-08-02 · 常识 AI 生成第 41 批</b><span class="tag tag-warn" style="margin-left:auto">待审</span></div>
+          <div class="sub" style="font-size:12px;color:var(--t3);margin:4px 0 8px">batch_20260802_changshi_ai41 · 共 800 题 · AI 生成</div>
+          <div class="hbar" style="margin:6px 0"><span class="lb" style="width:64px">抽检进度</span><div class="bar"><i style="width:0%"></i></div><span class="n">0/20</span></div>
+          <div class="row" style="gap:6px"><span class="tag tag-bad">答案分布：C 占 38% ⚠</span></div>
+        </div>
+        <div class="card" style="margin-bottom:10px">
+          <div class="row" style="gap:8px"><b>2026-08-01 · 数量关系补充</b><span class="tag tag-warn" style="margin-left:auto">待审</span></div>
+          <div class="sub" style="font-size:12px;color:var(--t3);margin:4px 0 8px">batch_20260801_shuliang · 共 520 题</div>
+          <div class="hbar" style="margin:6px 0"><span class="lb" style="width:64px">抽检进度</span><div class="bar"><i style="width:0%"></i></div><span class="n">0/20</span></div>
+        </div>
+        <div class="card" style="opacity:.65">
+          <div class="row" style="gap:8px"><b>2026-07-30 · 申论真题 2025 省考</b><span class="tag tag-ok" style="margin-left:auto">已发布</span></div>
+          <div class="sub" style="font-size:12px;color:var(--t3);margin-top:4px">batch_20260730_shenlun · 共 64 题 · 抽检 20/20 合格</div>
+        </div>
+      </div>
+
+      <!-- 右：抽检工作台 -->
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="row" style="padding:14px 20px;border-bottom:1px solid var(--border);gap:10px">
+          <b style="font-size:15px">抽检工作台 · 言语真题增补</b>
+          <span class="tag tag-brand">随机抽样 20 题</span>
+          <span class="grow"></span>
+          <span class="sub" style="font-size:12px;color:var(--t3)">第 <b class="num">13</b> / 20 题</span>
+          <div class="bar" style="width:120px;height:6px"><i style="width:60%"></i></div>
+        </div>
+        <div style="padding:20px">
+          <div class="row" style="gap:8px;margin-bottom:10px">
+            <span class="num" style="color:var(--t3)">#91277</span>
+            <span class="tag" style="background:#FDE8EE;color:var(--mod-yanyu)">言语理解</span>
+            <span class="tag tag-brand">真题 2025 联考</span>
+            <span class="tag tag-gray">YY-04 中心理解</span>
+          </div>
+          <p style="font-size:15px;line-height:1.7;margin-bottom:12px">传统村落是农耕文明的重要载体，但在快速城镇化进程中，"空心化"问题日益突出。有学者指出，保护传统村落不能只留下建筑的"躯壳"，更要留住原住民的生活方式与文化记忆。<br>这段文字意在强调（　）。</p>
+          <div style="display:grid;gap:8px;margin-bottom:14px;max-width:720px">
+            <div class="row" style="gap:10px;border:1px solid var(--border);border-radius:var(--r-m);padding:10px 14px"><span class="kbd">A</span>传统村落建筑修缮的技术难点</div>
+            <div class="row" style="gap:10px;border:1.5px solid var(--success);background:var(--success-bg);border-radius:var(--r-m);padding:10px 14px"><span class="kbd">B</span>传统村落保护应注重活态传承<span class="tag tag-ok" style="margin-left:auto">✓ 标注答案</span></div>
+            <div class="row" style="gap:10px;border:1px solid var(--border);border-radius:var(--r-m);padding:10px 14px"><span class="kbd">C</span>城镇化与村落保护的矛盾不可调和</div>
+            <div class="row" style="gap:10px;border:1px solid var(--border);border-radius:var(--r-m);padding:10px 14px"><span class="kbd">D</span>原住民迁出是空心化的主要原因</div>
+          </div>
+          <details open style="margin-bottom:14px"><summary style="font-size:13px;font-weight:600;color:var(--t2);cursor:pointer">解析（花生 · 中心理解）</summary>
+            <div style="background:var(--fill);border-radius:var(--r-m);padding:12px 14px;font-size:13px;color:var(--t2);margin-top:8px;line-height:1.7">
+              【方法】转折关联「但」之后为重点，尾句「更要」引出对策……对应 B。A 无中生有；C 表述绝对；D 偷换概念。</div></details>
+          <div class="row" style="gap:10px;padding-top:14px;border-top:1px dashed var(--border)">
+            <button class="btn btn-ok btn-lg">✓ 合格<span class="kbd" style="margin-left:6px">1</span></button>
+            <button class="btn btn-danger btn-lg">✕ 有问题<span class="kbd" style="margin-left:6px">2</span></button>
+            <button class="btn btn-plain">跳过<span class="kbd" style="margin-left:6px">S</span></button>
+            <button class="btn btn-plain">编辑此题<span class="kbd" style="margin-left:6px">E</span></button>
+            <span class="grow"></span>
+            <span class="sub" style="font-size:12px;color:var(--t3)"><span class="kbd">←</span> <span class="kbd">→</span> 上/下一题</span>
+          </div>
+        </div>
+        <div class="row" style="padding:14px 20px;border-top:1px solid var(--border);background:#FAFBFD;gap:10px">
+          <span class="sub" style="font-size:12px;color:var(--t3)">抽检结论：合格 11 / 问题 1 / 剩余 8　·　建议阈值：问题率 &gt; 10% 驳回</span>
+          <span class="grow"></span>
+          <button class="btn btn-danger">驳回批次…</button>
+          <button class="btn btn-primary">✓ 发布批次</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="dnote"><b>设计说明 · 批次审核</b>
+      现状「点开抽样 → 纯文本 pre」升级为左右分栏工作台：左侧批次队列（抽检进度 + 答案分布预警内联），右侧逐题抽检（键盘 1/2/S/E/←→）；发布/驳回置于工作台底部常驻栏，驳回需填原因（二次确认弹层，说明将删除待审题目）。</div>
+  </div>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>纠错处理队列 · 管理后台 design-v3</title><link rel="stylesheet" href="admin.css"></head>
+<body>
+<div class="layout">
+<aside class="side">
+  <div class="logo"><span class="mark">考</span><span class="name">考公助手 · 管理台</span></div>
+  <div class="grp">概览</div>
+  <nav><a href="dashboard.html"><span class="ico">📊</span><span class="txt">数据看板</span></a></nav>
+  <div class="grp">内容</div>
+  <nav>
+    <a href="questions.html"><span class="ico">📚</span><span class="txt">题库管理</span></a>
+    <a href="batches.html"><span class="ico">📦</span><span class="txt">批次导入审核</span><span class="badge">3</span></a>
+    <a href="taxonomy.html"><span class="ico">🌲</span><span class="txt">考点树</span></a>
+    <a href="review.html"><span class="ico">🔍</span><span class="txt">考点抽审</span><span class="badge">86</span></a>
+    <a class="on" href="reports.html"><span class="ico">🛠</span><span class="txt">纠错处理</span><span class="badge">12</span></a>
+    <a href="governance.html"><span class="ico">🛡</span><span class="txt">内容治理</span></a>
+    <a href="content.html"><span class="ico">📰</span><span class="txt">时政与申论</span></a>
+  </nav>
+  <div class="grp">用户</div>
+  <nav><a href="users.html"><span class="ico">👥</span><span class="txt">用户与运营</span></a></nav>
+  <div class="grp">系统</div>
+  <nav><a href="settings.html"><span class="ico">⚙️</span><span class="txt">系统设置</span></a></nav>
+  <div class="foot">design-v3 · <a href="index.html">原型总览</a></div>
+</aside>
+<div class="main">
+  <div class="topbar">
+    <span class="crumb"><b>纠错处理</b>　内容 / 纠错处理队列</span>
+    <div class="search">🔎 搜索题目 ID / 用户…　<span class="kbd">⌘K</span></div>
+    <span class="env">● 生产环境</span><span class="avatar">管</span>
+  </div>
+  <div class="content" style="max-width:none">
+    <div class="pagehead">
+      <div><h1>纠错处理队列</h1><div class="sub">待处理 12 · 近 7 天新增 31 · 平均响应 6.2h</div></div>
+      <div class="acts">
+        <button class="chip on">待处理 12</button><button class="chip">已修复 284</button><button class="chip">已驳回 96</button>
+        <span class="sep"></span>
+        <select class="ipt"><option selected>全部原因</option><option>答案错误</option><option>解析错误</option><option>题干/选项错漏</option><option>重复题</option></select>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:400px 1fr;gap:14px;align-items:start">
+      <!-- 左：队列 -->
+      <div>
+        <div class="card" style="border:1.5px solid var(--brand-500);margin-bottom:10px">
+          <div class="row" style="gap:8px"><span class="tag tag-bad">答案错误</span><span class="num" style="color:var(--t3)">题 #84213</span><span class="sub" style="margin-left:auto;font-size:12px;color:var(--t3)">2h 前</span></div>
+          <div style="font-size:13px;margin:6px 0 4px" class="tit">「解析算出来是 12.3%，但标准答案给的 A（8.6%），应该选 B」</div>
+          <div class="sub" style="font-size:12px;color:var(--t3)">用户 u_3f8a…（同题另有 2 人反馈） · 资料分析</div>
+        </div>
+        <div class="card" style="margin-bottom:10px">
+          <div class="row" style="gap:8px"><span class="tag tag-warn">解析错误</span><span class="num" style="color:var(--t3)">题 #66102</span><span class="sub" style="margin-left:auto;font-size:12px;color:var(--t3)">5h 前</span></div>
+          <div style="font-size:13px;margin:6px 0 4px" class="tit">「解析里的方法名写错了，这是翻译推理不是组合排列」</div>
+          <div class="sub" style="font-size:12px;color:var(--t3)">用户 u_9c21… · 判断推理</div>
+        </div>
+        <div class="card" style="margin-bottom:10px">
+          <div class="row" style="gap:8px"><span class="tag tag-gray">题干错漏</span><span class="num" style="color:var(--t3)">题 #71455</span><span class="sub" style="margin-left:auto;font-size:12px;color:var(--t3)">昨天</span></div>
+          <div style="font-size:13px;margin:6px 0 4px" class="tit">「选项 C 和 D 内容一样」</div>
+          <div class="sub" style="font-size:12px;color:var(--t3)">用户 u_7bb0… · 常识判断 <span class="tag tag-bad" style="margin-left:6px">题目已下架</span></div>
+        </div>
+        <div class="card" style="opacity:.6">
+          <div class="row" style="gap:8px"><span class="tag tag-gray">重复题</span><span class="num" style="color:var(--t3)">题 #58990</span><span class="sub" style="margin-left:auto;font-size:12px;color:var(--t3)">前天</span></div>
+          <div style="font-size:13px;margin:6px 0 4px" class="tit">「和 #58721 一模一样」→ 建议转 <a href="governance.html">内容治理·克隆检测</a></div>
+        </div>
+      </div>
+
+      <!-- 右：处理面板 -->
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="row" style="padding:14px 20px;border-bottom:1px solid var(--border);gap:10px">
+          <b style="font-size:15px">处理纠错 <span class="num" style="color:var(--t3)">#R-2041</span></b>
+          <span class="tag tag-bad">答案错误</span><span class="tag tag-warn">同题 3 人反馈</span>
+          <span class="grow"></span><span class="sub" style="font-size:12px;color:var(--t3)">提交于 2026-08-04 08:12</span>
+        </div>
+        <div style="padding:18px 20px">
+          <div class="card" style="background:var(--fill);box-shadow:none;padding:12px 14px;margin-bottom:14px;font-size:13px">
+            <b style="font-size:12px;color:var(--t3)">用户说明</b><br>解析算出来是 12.3%，但标准答案给的 A（8.6%），应该选 B。
+          </div>
+          <div class="row" style="gap:8px;margin-bottom:8px">
+            <span class="num" style="color:var(--t3)">题 #84213</span>
+            <span class="tag" style="background:#E6FBF8;color:var(--mod-ziliao)">资料分析 · ZL-03</span>
+            <span class="tag tag-brand">真题 2024 国考</span>
+            <a style="margin-left:auto;font-size:12px" href="questions.html">在题库中打开 →</a>
+          </div>
+          <p style="font-size:14px;line-height:1.7;margin-bottom:10px">根据资料，2023 年该省高新技术产业增加值同比增长约为（　）。</p>
+          <div class="row" style="gap:12px;font-size:13px;margin-bottom:14px;flex-wrap:wrap">
+            <span><span class="kbd">A</span> 8.6% <span class="tag tag-bad">当前答案</span></span>
+            <span><span class="kbd">B</span> 12.3% <span class="tag tag-ok">用户主张</span></span>
+            <span><span class="kbd">C</span> 15.1%</span><span><span class="kbd">D</span> 18.9%</span>
+          </div>
+          <div class="row" style="gap:12px;margin-bottom:14px">
+            <div class="fld grow" style="margin:0"><div class="lb">改答案为</div><select class="ipt" style="width:100%"><option>A（保持）</option><option selected>B</option><option>C</option><option>D</option></select></div>
+            <div class="fld grow" style="margin:0"><div class="lb">解析处理</div><select class="ipt" style="width:100%"><option selected>AI 按新答案重产</option><option>手动编辑</option><option>不变</option></select></div>
+          </div>
+          <div class="fld"><div class="lb">处理备注（回执将推送给反馈用户）</div>
+            <textarea class="ipt" style="min-height:64px">经核实答案应为 B，已修正并重产解析，感谢反馈！</textarea></div>
+        </div>
+        <div class="row" style="padding:14px 20px;border-top:1px solid var(--border);background:#FAFBFD;gap:10px">
+          <button class="btn btn-danger">下架此题</button>
+          <span class="grow"></span>
+          <button class="btn btn-plain">驳回（无效反馈）</button>
+          <button class="btn btn-primary">✓ 保存修改并标记已修复</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="dnote"><b>设计说明 · 纠错处理</b>
+      左队列右处理面板，替代现状长卡片流 + prompt() 弹窗；同题多人反馈自动聚合标注；处理动作合并为一步「保存修改并标记已修复」；备注即用户回执（闭环到客户端消息）；重复题类反馈给「转内容治理」出口。</div>
+  </div>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>考点抽审工作台 · 管理后台 design-v3</title><link rel="stylesheet" href="admin.css"></head>
+<body>
+<div class="layout">
+<aside class="side">
+  <div class="logo"><span class="mark">考</span><span class="name">考公助手 · 管理台</span></div>
+  <div class="grp">概览</div>
+  <nav><a href="dashboard.html"><span class="ico">📊</span><span class="txt">数据看板</span></a></nav>
+  <div class="grp">内容</div>
+  <nav>
+    <a href="questions.html"><span class="ico">📚</span><span class="txt">题库管理</span></a>
+    <a href="batches.html"><span class="ico">📦</span><span class="txt">批次导入审核</span><span class="badge">3</span></a>
+    <a href="taxonomy.html"><span class="ico">🌲</span><span class="txt">考点树</span></a>
+    <a class="on" href="review.html"><span class="ico">🔍</span><span class="txt">考点抽审</span><span class="badge">86</span></a>
+    <a href="reports.html"><span class="ico">🛠</span><span class="txt">纠错处理</span><span class="badge">12</span></a>
+    <a href="governance.html"><span class="ico">🛡</span><span class="txt">内容治理</span></a>
+    <a href="content.html"><span class="ico">📰</span><span class="txt">时政与申论</span></a>
+  </nav>
+  <div class="grp">用户</div>
+  <nav><a href="users.html"><span class="ico">👥</span><span class="txt">用户与运营</span></a></nav>
+  <div class="grp">系统</div>
+  <nav><a href="settings.html"><span class="ico">⚙️</span><span class="txt">系统设置</span></a></nav>
+  <div class="foot">design-v3 · <a href="index.html">原型总览</a></div>
+</aside>
+<div class="main">
+  <div class="topbar">
+    <span class="crumb"><b>考点抽审工作台</b>　内容 / 考点抽审</span>
+    <div class="search">🔎 跳到题目 ID…　<span class="kbd">⌘K</span></div>
+    <span class="env">● 生产环境</span><span class="avatar">管</span>
+  </div>
+  <div class="content" style="max-width:none">
+    <div class="pagehead">
+      <div><h1>考点抽审工作台</h1><div class="sub">低置信 AI 标注逐题人审 · 审结自动出队 · 本次会话已审 <b class="num">37</b> 题（均速 11s/题）</div></div>
+      <div class="acts">
+        <select class="ipt"><option>全部模块</option><option selected>资料分析（队列 24）</option><option>数量关系（18）</option><option>言语理解（21）</option><option>判断推理（15）</option><option>常识判断（8）</option></select>
+        <select class="ipt"><option selected>置信度 ≤ 0.6</option><option>全部低置信</option><option>仅 UNKNOWN</option></select>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 320px;gap:14px;align-items:start">
+      <!-- 主审核卡 -->
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="row" style="padding:12px 20px;border-bottom:1px solid var(--border);gap:10px;background:#FAFBFD">
+          <span class="sub" style="font-size:12px;color:var(--t3)">队列剩余 <b class="num" style="color:var(--t1)">86</b> 题</span>
+          <div class="bar" style="width:140px;height:6px"><i style="width:30%"></i></div>
+          <span class="grow"></span>
+          <span class="tag tag-warn">AI 置信 0.42 · 低</span>
+        </div>
+        <div style="padding:20px 24px">
+          <div class="row" style="gap:8px;margin-bottom:10px">
+            <span class="num" style="color:var(--t3)">#77841</span>
+            <span class="tag" style="background:#E6FBF8;color:var(--mod-ziliao)">资料分析</span>
+            <span class="tag tag-gray">当前：UNKNOWN</span>
+            <span class="tag tag-warn">AI 建议：ZL-03 增长率计算</span>
+            <span class="sub" style="font-size:12px;color:var(--t3)">理由：题干含「增长率」「若保持该增速」</span>
+          </div>
+          <p style="font-size:15px;line-height:1.7;margin-bottom:12px">某市 2021 年 GDP 为 12,400 亿元，增长率为 8.4%。若未来三年保持该增速，则 2024 年该市 GDP 约为（　）亿元。</p>
+          <div class="row" style="gap:14px;font-size:13px;color:var(--t2);margin-bottom:12px;flex-wrap:wrap">
+            <span><span class="kbd">A</span> 14,560</span><span><span class="kbd">B</span> <b style="color:var(--success)">15,790 ✓</b></span><span><span class="kbd">C</span> 16,320</span><span><span class="kbd">D</span> 17,080</span>
+          </div>
+          <details style="margin-bottom:16px"><summary style="font-size:13px;color:var(--t3);cursor:pointer">展开解析 <span class="kbd">X</span></summary>
+            <div style="background:var(--fill);border-radius:var(--r-m);padding:12px 14px;font-size:13px;color:var(--t2);margin-top:8px">【方法】多期增长 ≈ 1+3×8.4%＝1.252，12400×1.27 ≈ 15,790……</div></details>
+
+          <!-- 快捷判定区 -->
+          <div style="border-top:1px dashed var(--border);padding-top:16px">
+            <div class="sub" style="font-size:12px;color:var(--t3);margin-bottom:8px">判定考点（候选按共现频率排序，数字键直选）</div>
+            <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:12px">
+              <button class="chip on" style="height:36px">1　ZL-03 增长率计算（AI 建议）</button>
+              <button class="chip" style="height:36px">2　SL-06 增长与倍数</button>
+              <button class="chip" style="height:36px">3　ZL-05 间隔增长</button>
+              <button class="chip" style="height:36px">4　UNKNOWN 待定</button>
+              <select class="ipt" style="height:36px"><option>更多考点… (/)</option></select>
+            </div>
+            <div class="row" style="gap:10px">
+              <button class="btn btn-primary btn-lg">✓ 确认并下一题<span class="kbd" style="margin-left:6px;border-color:rgba(255,255,255,.5);background:transparent;color:#fff">Enter</span></button>
+              <button class="btn btn-ok">采纳 AI 建议<span class="kbd" style="margin-left:6px">A</span></button>
+              <button class="btn btn-plain">跳过<span class="kbd" style="margin-left:6px">S</span></button>
+              <button class="btn btn-danger">题目有问题<span class="kbd" style="margin-left:6px">P</span></button>
+              <span class="grow"></span>
+              <button class="btn btn-plain btn-sm">↩ 撤销上一题<span class="kbd" style="margin-left:6px">Z</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右：快捷键 + 近期审结 -->
+      <div>
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-h"><span class="t">键盘快捷键</span></div>
+          <div class="hbar"><span class="lb" style="width:auto;flex:1">选择候选考点</span><span><span class="kbd">1</span>–<span class="kbd">9</span></span></div>
+          <div class="hbar"><span class="lb" style="width:auto;flex:1">确认并下一题</span><span class="kbd">Enter</span></div>
+          <div class="hbar"><span class="lb" style="width:auto;flex:1">采纳 AI 建议</span><span class="kbd">A</span></div>
+          <div class="hbar"><span class="lb" style="width:auto;flex:1">搜索考点</span><span class="kbd">/</span></div>
+          <div class="hbar"><span class="lb" style="width:auto;flex:1">跳过 / 有问题</span><span><span class="kbd">S</span> <span class="kbd">P</span></span></div>
+          <div class="hbar"><span class="lb" style="width:auto;flex:1">展开解析</span><span class="kbd">X</span></div>
+          <div class="hbar"><span class="lb" style="width:auto;flex:1">撤销上一题</span><span class="kbd">Z</span></div>
+          <div class="hbar"><span class="lb" style="width:auto;flex:1">上一题 / 下一题</span><span><span class="kbd">←</span> <span class="kbd">→</span></span></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><span class="t">近期审结</span><a class="more" href="#">全部记录 →</a></div>
+          <div class="hbar"><span class="lb" style="width:56px">#77836</span><span class="grow" style="font-size:12px;color:var(--t2)">→ ZL-03（采纳 AI）</span><a href="#" style="font-size:12px">撤销</a></div>
+          <div class="hbar"><span class="lb" style="width:56px">#77820</span><span class="grow" style="font-size:12px;color:var(--t2)">→ ZL-01（人工改判）</span><a href="#" style="font-size:12px">撤销</a></div>
+          <div class="hbar"><span class="lb" style="width:56px">#77811</span><span class="grow" style="font-size:12px;color:var(--t2)">→ 标记有问题（缺选项）</span><a href="#" style="font-size:12px">撤销</a></div>
+          <div class="dnote" style="margin-top:10px"><b>撤销窗口</b>审结后保留在「近期审结」栈中，可随时撤销回队列，避免误判不可逆。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dnote"><b>设计说明 · 抽审工作台</b>
+      核心指标是「秒/题」：单题聚焦卡 + 候选考点 chips（AI 建议置顶、按共现频率排前 4、数字键直选）+ Enter 确认自动进下一题，全键盘可完成；解析默认折叠（X 展开）避免干扰独立判断；「近期审结」栈提供撤销，替代现状 alert('已保存') + 透明度变化。</div>
+  </div>
+</div>
+</div>
+</body></html>
