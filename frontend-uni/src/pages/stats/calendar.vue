@@ -21,6 +21,7 @@
         <text class="lg"><text class="dot today" /> 今天</text>
       </view>
     </view>
+    <button class="poster-btn" @click="openPoster">生成打卡海报</button>
   </view>
 </template>
 
@@ -73,6 +74,9 @@ export default {
     this.pstats = uni.getStorageSync('pstats') || { days: {} };
   },
   methods: {
+    openPoster() {
+      uni.navigateTo({ url: '/pkgA/social/poster' });
+    },
     shiftMonth(dir) {
       if (dir > 0 && this.isCurMonth) return;
       let { y, m } = this.ym;
@@ -87,6 +91,7 @@ export default {
 
 <style scoped>
 .wrap { padding: 24rpx; }
+.poster-btn { margin-top: 24rpx; background: var(--brand, #3b6ff5); color: #fff; font-size: 28rpx; border-radius: 18rpx; }
 .card { background: var(--card); border-radius: var(--radius); padding: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 30rpx; font-weight: 700; }
 .cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10rpx; }

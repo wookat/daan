@@ -5,7 +5,7 @@
       <view class="hbanner">
         <view class="hbanner-l">
           <text class="hbanner-t">今日已练 {{ todayCount }}/{{ dailyGoal }} 题{{ todayCount >= dailyGoal ? ' · 已达成' : '' }}</text>
-          <text class="hbanner-s">{{ dailyStreak ? '连续打卡 ' + dailyStreak + ' 天' : '今天还没开始，练一组吧' }}</text>
+          <text class="hbanner-s">{{ dailyStreak ? '连续打卡 ' + dailyStreak + ' 天' : '今天还没开始，练一组吧' }}<text v-if="todayCount >= dailyGoal" class="hbanner-poster" @click.stop="openPoster"> · 生成打卡海报 ›</text></text>
           <view class="hbanner-bar"><view class="hbanner-fill" :style="{ width: Math.min((todayCount / dailyGoal) * 100, 100) + '%' }" /></view>
         </view>
         <text class="hbanner-btn" @click="startDaily">{{ todayDone ? '再练一组' : '继续目标 ›' }}</text>
@@ -403,6 +403,7 @@
         </view>
         <view class="deep" @click="deepExplain">用花生十三方法详解这道题 ›</view>
         <view class="report-link" @click="reportQuestion">{{ cur._reported ? '已提交纠错，感谢反馈' : '题目有问题？纠错' }}</view>
+        <q-social-bar v-if="cur.id" :question-id="cur.id" />
       </view>
     </view>
 
@@ -511,7 +512,7 @@
 </template>
 
 <script>
-import { request, BASE_URL, anonUid, exportPdf } from '../../api.js';
+import { request, BASE_URL, anonUid, exportPdf, removeFav, setFav } from '../../api.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -1101,13 +1102,19 @@ export default {
         this.autoSaved = true;
       } catch (e) { /* 非关键路径 */ }
     },
+    openPoster() {
+      uni.navigateTo({ url: '/pkgA/social/poster' });
+    },
     toggleFav() {
       if (!this.cur) return;
+      const qid = this.cur.id;
       const i = this.favs.findIndex((f) => f.question === this.cur.question);
       if (i >= 0) {
         this.favs.splice(i, 1);
+        if (qid) removeFav(qid).catch(() => {});
         uni.showToast({ title: '已取消收藏', icon: 'none', duration: 900 });
       } else {
+        if (qid) setFav(qid).catch(() => {});
         const { question, options, answer, explanation, hs_explanation, xp_explanation, xp_school, module, submodule, is_real, exam_year, exam_region, image, image_credit } = this.cur;
         this.favs.unshift({ t: Date.now(), question, options, answer, explanation, hs_explanation, xp_explanation, xp_school, module, submodule, is_real, exam_year, exam_region, image, image_credit });
         if (this.favs.length > 200) this.favs.length = 200;
@@ -1845,6 +1852,7 @@ export default {
 .hbanner-l { flex: 1; margin-right: 20rpx; }
 .hbanner-t { display: block; font-size: 30rpx; font-weight: 600; color: #fff; }
 .hbanner-s { display: block; font-size: 23rpx; color: rgba(255, 255, 255, 0.82); margin-top: 6rpx; }
+.hbanner-poster { color: #fff; font-weight: 700; text-decoration: underline; }
 .hbanner-bar { height: 10rpx; background: rgba(255, 255, 255, 0.25); border-radius: 999rpx; margin-top: 14rpx; overflow: hidden; }
 .hbanner-fill { height: 100%; background: #fff; border-radius: 999rpx; }
 .hbanner-btn { flex-shrink: 0; background: #fff; color: #3b6ff5; border-radius: 999rpx; padding: 22rpx 28rpx; font-size: 26rpx; font-weight: 500; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }

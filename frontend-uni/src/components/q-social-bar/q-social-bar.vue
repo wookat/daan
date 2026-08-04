@@ -1,0 +1,98 @@
+<template>
+  <view class="qsb">
+    <!-- 我的笔记 -->
+    <view v-if="!editing && note" class="mynote" @click="startEdit">
+      <text class="nb">📝 我的笔记：</text>{{ note }}
+      <text class="edit">改</text>
+    </view>
+    <view v-else-if="editing" class="note-edit">
+      <textarea
+        v-model="draft"
+        class="note-ta"
+        placeholder="记下这题的方法 / 陷阱，下次遇到随解析展示"
+        :maxlength="1000"
+        auto-height
+      />
+      <view class="note-ops">
+        <text class="nop cancel" @click="editing = false">取消</text>
+        <text v-if="note" class="nop del" @click="saveIt('')">删除笔记</text>
+        <text class="nop save" @click="saveIt(draft)">{{ busy ? '保存中…' : '保存' }}</text>
+      </view>
+    </view>
+    <view class="qsb-row">
+      <text v-if="!note && !editing" class="qsb-link" @click="startEdit">📝 写笔记</text>
+      <text class="qsb-link" @click="openDiscuss">💬 讨论{{ count != null ? ' (' + count + ')' : '' }} ›</text>
+    </view>
+  </view>
+</template>
+
+<script>
+import { fetchCommentCount, fetchNote, saveNote } from '../../api.js';
+
+export default {
+  name: 'QSocialBar',
+  props: {
+    questionId: { type: Number, required: true },
+  },
+  data() {
+    return { count: null, note: '', draft: '', editing: false, busy: false };
+  },
+  watch: {
+    questionId: {
+      immediate: true,
+      handler() {
+        this.editing = false;
+        this.note = '';
+        this.count = null;
+        this.load();
+      },
+    },
+  },
+  methods: {
+    async load() {
+      const qid = this.questionId;
+      try {
+        const [c, n] = await Promise.all([fetchCommentCount(qid), fetchNote(qid)]);
+        if (qid !== this.questionId) return;
+        this.count = c.total;
+        this.note = (n.item && n.item.content) || '';
+      } catch (e) { /* 非关键路径 */ }
+    },
+    startEdit() {
+      this.draft = this.note;
+      this.editing = true;
+    },
+    async saveIt(content) {
+      if (this.busy) return;
+      this.busy = true;
+      try {
+        const d = await saveNote(this.questionId, content.trim());
+        this.note = d.content || '';
+        this.editing = false;
+        uni.showToast({ title: this.note ? '笔记已保存' : '笔记已删除', icon: 'none', duration: 900 });
+      } catch (e) {
+        uni.showToast({ title: e.message, icon: 'none' });
+      }
+      this.busy = false;
+    },
+    openDiscuss() {
+      uni.navigateTo({ url: '/pkgA/social/discuss?qid=' + this.questionId });
+    },
+  },
+};
+</script>
+
+<style scoped>
+.qsb { margin-top: 16rpx; }
+.mynote { background: #fffbeb; border-left: 6rpx solid #f59e0b; border-radius: 0 12rpx 12rpx 0; padding: 14rpx 18rpx; font-size: 24rpx; color: var(--ink-2, #4e5563); line-height: 1.6; }
+.nb { color: #b45309; font-weight: 600; }
+.edit { color: #3b6ff5; margin-left: 12rpx; font-size: 22rpx; }
+.note-edit { background: #fffbeb; border-radius: 14rpx; padding: 16rpx 18rpx; }
+.note-ta { width: 100%; min-height: 100rpx; font-size: 25rpx; line-height: 1.6; box-sizing: border-box; }
+.note-ops { display: flex; justify-content: flex-end; gap: 34rpx; margin-top: 10rpx; }
+.nop { font-size: 24rpx; color: var(--ink-3, #8f959e); }
+.nop.save { color: #3b6ff5; font-weight: 600; }
+.nop.del { color: #ef4444; }
+.qsb-row { display: flex; gap: 40rpx; margin-top: 14rpx; }
+.qsb-link { font-size: 24rpx; color: #3b6ff5; }
+</style>

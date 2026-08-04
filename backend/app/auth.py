@@ -225,7 +225,7 @@ def api_me(authorization: str | None = Header(None)):
 
 # 各 uid 数据表：uid 直接可改列的表 + 有 (uid,...) 主键需去重的表
 _UID_TABLES = ["answer_log", "mistakes", "shenlun_answers"]
-_UID_PK_TABLES = ["shenlun_mat_favs", "user_state"]
+_UID_PK_TABLES = ["shenlun_mat_favs", "user_state", "question_favs", "question_notes", "fav_folders", "comment_likes"]
 
 
 @router.post("/merge_anon")
