@@ -54,7 +54,10 @@ class _DiscussPageState extends State<DiscussPage> {
       final d = await Api.comments(widget.qid, sort: sort);
       if (mounted) {
         setState(() {
-          comments = d['items'] as List<dynamic>? ?? [];
+          comments = [
+            for (final e in d['items'] as List<dynamic>? ?? [])
+              Map<String, dynamic>.from(e as Map)
+          ];
           loading = false;
         });
       }
@@ -190,7 +193,7 @@ class _DiscussPageState extends State<DiscussPage> {
                         )
                       else
                         for (final c in comments)
-                          _commentItem(Map<String, dynamic>.from(c)),
+                          _commentItem(c as Map<String, dynamic>),
                     ],
                   ),
           ),
@@ -335,7 +338,8 @@ class _DiscussPageState extends State<DiscussPage> {
                 if (replies.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   for (final r in replies)
-                    _commentItem(Map<String, dynamic>.from(r), isReply: true),
+                    _commentItem((r as Map).cast<String, dynamic>(),
+                        isReply: true),
                 ],
               ],
             ),
