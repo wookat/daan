@@ -44,10 +44,13 @@ class _ExamListPageState extends State<ExamListPage> {
       setState(() {
         items = d['items'] as List<dynamic>? ?? [];
         years = (filters['years'] as List<dynamic>? ?? [])
-            .map((e) => int.tryParse('$e') ?? 0)
+            .map((e) => e is Map ? int.tryParse('${e['y']}') ?? 0 : int.tryParse('$e') ?? 0)
             .where((e) => e > 0)
             .toList();
-        regions = (filters['regions'] as List<dynamic>? ?? []).map((e) => e.toString()).toList();
+        regions = (filters['regions'] as List<dynamic>? ?? [])
+            .map((e) => e is Map ? '${e['r'] ?? ''}' : e.toString())
+            .where((e) => e.isNotEmpty)
+            .toList();
         attempts = results[1] as List<dynamic>;
         loading = false;
       });

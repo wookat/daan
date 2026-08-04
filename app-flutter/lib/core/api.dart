@@ -22,6 +22,8 @@ class Api {
       onRequest: (options, handler) {
         final t = Store.instance.token;
         if (t.isNotEmpty) options.headers['Authorization'] = 'Bearer $t';
+        final code = Store.instance.accessCode;
+        if (code.isNotEmpty) options.headers['X-Access-Code'] = code;
         handler.next(options);
       },
       onError: (e, handler) {

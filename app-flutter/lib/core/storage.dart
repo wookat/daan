@@ -28,6 +28,11 @@ class Store {
     return uid;
   }
 
+  // ---------- 访问码（复刻 api.js accessCode，AI 端点需 X-Access-Code） ----------
+
+  String get accessCode => _sp.getString('accessCode') ?? '';
+  set accessCode(String v) => _sp.setString('accessCode', v);
+
   // ---------- 登录态（复刻 api.js setAuth/clearAuth 的匿名 uid 保留与合并逻辑） ----------
 
   String get token => _sp.getString('authToken') ?? '';

@@ -6,6 +6,7 @@ import '../core/api.dart';
 import '../core/models.dart';
 import '../core/storage.dart';
 import '../theme.dart';
+import 'ask_page.dart';
 
 class BookDetailPage extends StatefulWidget {
   const BookDetailPage({super.key, required this.mistakeId});
@@ -105,6 +106,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
   void _askAi() {
     Store.instance.redoQuestion = m!.questionText;
     context.go('/ask');
+    askRedoTick.value++;
   }
 
   @override

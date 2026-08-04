@@ -9,6 +9,9 @@ import '../core/api.dart';
 import '../core/storage.dart';
 import '../theme.dart';
 
+/// 「继续问 AI」触发信号：AskPage 已挂载（IndexedStack 常驻）时也能弹出预填表单。
+final ValueNotifier<int> askRedoTick = ValueNotifier(0);
+
 /// AI 问答会话式：拍题/文字讲解（流式）+ 答案卡 + 追问 + 出同款题 + 入错题本 + 历史会话/最近讲解。
 class AskPage extends StatefulWidget {
   const AskPage({super.key});
@@ -100,10 +103,12 @@ class AskPageState extends State<AskPage> {
       results.add(r);
     }
     WidgetsBinding.instance.addPostFrameCallback((_) => _checkRedo());
+    askRedoTick.addListener(_checkRedo);
   }
 
   @override
   void dispose() {
+    askRedoTick.removeListener(_checkRedo);
     _loadTimer?.cancel();
     _fuCtrl.dispose();
     _scrollCtrl.dispose();
@@ -633,7 +638,7 @@ class AskPageState extends State<AskPage> {
       body: Column(
         children: [
           Expanded(
-            child: results.isEmpty && !loading
+            child: results.isEmpty && !loading && error == null
                 ? _emptyGuide()
                 : ListView(
                     controller: _scrollCtrl,
@@ -1081,9 +1086,49 @@ class AskPageState extends State<AskPage> {
         color: KgColors.errorBg,
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Text('讲解失败：$error',
-          style: const TextStyle(fontSize: 13, color: KgColors.error)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('讲解失败：$error',
+              style: const TextStyle(fontSize: 13, color: KgColors.error)),
+          if ('$error'.contains('访问码'))
+            TextButton(
+              onPressed: _promptAccessCode,
+              child: const Text('填写访问码', style: TextStyle(fontSize: 13)),
+            ),
+        ],
+      ),
     );
+  }
+
+  Future<void> _promptAccessCode() async {
+    final ctrl = TextEditingController(text: Store.instance.accessCode);
+    final code = await showDialog<String>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('请输入访问码'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: '访问码'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c), child: const Text('取消')),
+          FilledButton(
+            onPressed: () => Navigator.pop(c, ctrl.text.trim()),
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+    if (code != null && code.isNotEmpty) {
+      Store.instance.accessCode = code;
+      setState(() => error = null);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('访问码已保存，请重新发起讲解')));
+      }
+    }
   }
 
   Widget _bottomBar() {

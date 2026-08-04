@@ -35,7 +35,7 @@ class _ExamPageState extends State<ExamPage> {
   @override
   void initState() {
     super.initState();
-    _init();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _init());
   }
 
   @override
