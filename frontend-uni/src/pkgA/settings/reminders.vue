@@ -49,8 +49,8 @@
     <view class="sec-t">提醒样式预览</view>
     <view class="push">
       <view class="hd"><text class="appico">考</text><text>考公错题助手 · {{ time }}</text></view>
-      <text class="tt">今晚还差 {{ previewLeft }} 题就能守住连续打卡 🔥</text>
-      <text class="bd">今日目标 {{ goal }} 题已完成 {{ done }} 题，练完守住连续打卡～</text>
+      <text class="tt">{{ done >= goal ? '今日目标已达成，保持手感再练一组？🎉' : '今晚还差 ' + previewLeft + ' 题就能守住连续打卡 🔥' }}</text>
+      <text class="bd">今日目标 {{ goal }} 题已完成 {{ done }} 题{{ done >= goal ? '' : '，练完守住连续打卡～' }}</text>
     </view>
 
     <view class="card tip">
@@ -80,7 +80,7 @@ export default {
   },
   computed: {
     previewLeft() {
-      return Math.max(1, this.goal - this.done);
+      return Math.max(0, this.goal - this.done);
     },
     mpSubscribeAvailable() {
       // #ifdef MP-WEIXIN

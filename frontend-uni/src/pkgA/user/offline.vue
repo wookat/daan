@@ -52,12 +52,10 @@ export default {
       busy: '',
       syncing: false,
       online: true,
+      usageBytes: 0,
     };
   },
   computed: {
-    usageBytes() {
-      return packUsageBytes();
-    },
     usageText() {
       const b = this.usageBytes;
       return b > 1024 * 1024 ? (b / 1024 / 1024).toFixed(1) + ' MB' : Math.round(b / 1024) + ' KB';
@@ -83,6 +81,7 @@ export default {
     refresh() {
       this.packs = listPacks();
       this.pending = pendingCount();
+      this.usageBytes = packUsageBytes();
     },
     packOf(m) {
       return this.packs.find((p) => p.module === m) || null;
