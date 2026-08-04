@@ -62,6 +62,24 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
     return Scaffold(
       appBar: AppBar(
         title: const Text('错题本'),
+        actions: [
+          IconButton(
+            tooltip: '手动录入答案',
+            onPressed: () async {
+              await context.push('/paper/entry');
+              _load();
+            },
+            icon: const Icon(LucideIcons.clipboardEdit, size: 20),
+          ),
+          IconButton(
+            tooltip: '扫描答题卡',
+            onPressed: () async {
+              await context.push('/paper/scan');
+              _load();
+            },
+            icon: const Icon(LucideIcons.scanLine, size: 20),
+          ),
+        ],
         bottom: TabBar(
           controller: _tab,
           tabs: [

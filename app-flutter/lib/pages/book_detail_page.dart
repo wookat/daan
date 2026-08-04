@@ -4,6 +4,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 
 import '../core/api.dart';
 import '../core/models.dart';
+import '../core/storage.dart';
 import '../theme.dart';
 
 class BookDetailPage extends StatefulWidget {
@@ -19,6 +20,9 @@ class _BookDetailPageState extends State<BookDetailPage> {
   Mistake? m;
   bool loading = true;
   String? error;
+  List<dynamic> attempts = [];
+  String? analysis;
+  bool analysisLoading = false;
 
   @override
   void initState() {
@@ -38,6 +42,11 @@ class _BookDetailPageState extends State<BookDetailPage> {
         loading = false;
         if (found.isEmpty) error = '错题不存在或已删除';
       });
+      final qid = m?.questionId;
+      if (qid != null) {
+        final ats = await Api.questionAttempts(qid).catchError((_) => const <dynamic>[]);
+        if (mounted) setState(() => attempts = ats);
+      }
     } catch (e) {
       setState(() {
         loading = false;
@@ -76,6 +85,26 @@ class _BookDetailPageState extends State<BookDetailPage> {
     if (ok != true) return;
     await Api.deleteMistake(m!.id);
     if (mounted) context.pop();
+  }
+
+  Future<void> _loadAnalysis() async {
+    if (analysisLoading) return;
+    setState(() => analysisLoading = true);
+    try {
+      final d = await Api.mistakeAnalysis();
+      setState(() => analysis = (d['analysis'] ?? '').toString());
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('分析失败：${Api.errMsg(e)}')));
+      }
+    }
+    if (mounted) setState(() => analysisLoading = false);
+  }
+
+  void _askAi() {
+    Store.instance.redoQuestion = m!.questionText;
+    context.go('/ask');
   }
 
   @override
@@ -201,7 +230,119 @@ class _BookDetailPageState extends State<BookDetailPage> {
             ),
           ),
         ],
+        if (attempts.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('历次作答',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  for (final a in attempts) _attemptRow(Map<String, dynamic>.from(a)),
+                ],
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 12),
+        _aiCard(),
       ],
+    );
+  }
+
+  Widget _attemptRow(Map<String, dynamic> a) {
+    final ok = a['correct'] == true || a['correct'] == 1;
+    final secs = a['secs'];
+    final ts = a['created_at'] ?? a['ts'];
+    String when = '';
+    if (ts is num && ts > 0) {
+      final d = DateTime.fromMillisecondsSinceEpoch((ts * 1000).toInt());
+      when = '${d.month}.${d.day}';
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 9),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: KgColors.fill, width: .5)),
+      ),
+      child: Row(
+        children: [
+          _tag(ok ? '✓ 对' : '✕ 错', ok ? KgColors.success : KgColors.error),
+          const SizedBox(width: 10),
+          Text('选 ${a['picked'] ?? '-'}',
+              style: const TextStyle(fontSize: 13, color: KgColors.t2)),
+          if (secs is num && secs > 0) ...[
+            const SizedBox(width: 6),
+            Text('· 用时 ${secs.toInt()}s',
+                style: const TextStyle(fontSize: 13, color: KgColors.t4)),
+          ],
+          const Spacer(),
+          Text(when, style: const TextStyle(fontSize: 13, color: KgColors.t4)),
+        ],
+      ),
+    );
+  }
+
+  Widget _aiCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            KgColors.brand50.withValues(
+                alpha: Theme.of(context).brightness == Brightness.dark ? .12 : 1),
+            Theme.of(context).cardTheme.color ?? Colors.white,
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: KgColors.brand100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('🤖 AI 错因分析',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+              const Spacer(),
+              _tag('花生十三', KgColors.brand),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (analysis != null)
+            Text(analysis!,
+                style: const TextStyle(fontSize: 14, color: KgColors.t2, height: 1.65))
+          else
+            const Text('基于你的错题分布与近期作答数据，AI 给出错因画像与复习建议。',
+                style: TextStyle(fontSize: 13, color: KgColors.t3, height: 1.6)),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(38)),
+                  onPressed: analysisLoading ? null : _loadAnalysis,
+                  child: Text(
+                      analysisLoading ? '分析中…' : (analysis == null ? '生成错因分析' : '重新分析'),
+                      style: const TextStyle(fontSize: 13)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(38)),
+                  onPressed: _askAi,
+                  child: const Text('继续问 AI', style: TextStyle(fontSize: 13)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
