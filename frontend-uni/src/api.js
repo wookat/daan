@@ -5,6 +5,66 @@ function getCode() {
   return uni.getStorageSync('accessCode') || '';
 }
 
+// ---------- 账号登录态 ----------
+
+export function getToken() {
+  return uni.getStorageSync('authToken') || '';
+}
+
+export function getAuthUser() {
+  try {
+    const u = uni.getStorageSync('authUser');
+    return u && u.uid ? u : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+// 登录：保留本机匿名 uid 以便合并，并把当前 uid 切到账号稳定 uid
+export function setAuth(token, user) {
+  const cur = uni.getStorageSync('anonUid');
+  if (cur && cur !== user.uid && !uni.getStorageSync('deviceAnonUid')) {
+    uni.setStorageSync('deviceAnonUid', cur);
+  }
+  uni.setStorageSync('authToken', token);
+  uni.setStorageSync('authUser', user);
+  uni.setStorageSync('anonUid', user.uid);
+}
+
+// 退出/401：清登录态，回到本机匿名 uid
+export function clearAuth() {
+  uni.removeStorageSync('authToken');
+  uni.removeStorageSync('authUser');
+  const dev = uni.getStorageSync('deviceAnonUid');
+  if (dev) uni.setStorageSync('anonUid', dev);
+  else uni.removeStorageSync('anonUid');
+}
+
+function authHeader() {
+  const t = getToken();
+  return t ? { Authorization: 'Bearer ' + t } : {};
+}
+
+export function authRegister(phone, password, code) {
+  return request('/api/auth/register', { method: 'POST', data: { phone, password, code } });
+}
+
+export function authLogin(phone, password) {
+  return request('/api/auth/login', { method: 'POST', data: { phone, password } });
+}
+
+export function authLogout() {
+  return request('/api/auth/logout', { method: 'POST' }).catch(() => {});
+}
+
+export function authMe() {
+  return request('/api/auth/me');
+}
+
+export function mergeAnon(anonUidVal) {
+  return request('/api/auth/merge_anon', { method: 'POST', data: { anon_uid: anonUidVal } });
+}
+
 function askCode() {
   return new Promise((resolve) => {
     uni.showModal({
@@ -41,11 +101,14 @@ function rawRequest(path, { method = 'GET', data, header = {}, timeout = 180000 
       url: BASE_URL + path,
       method,
       data,
-      header: { 'X-Access-Code': getCode(), ...header },
+      header: { 'X-Access-Code': getCode(), ...authHeader(), ...header },
       timeout,
       success: (res) => {
         if (res.statusCode >= 200 && res.statusCode < 300) resolve(res.data);
-        else reject(new Error((res.data && res.data.detail) || `HTTP ${res.statusCode}`));
+        else {
+          if (res.statusCode === 401 && getToken() && !path.startsWith('/api/auth/login')) clearAuth();
+          reject(new Error((res.data && res.data.detail) || `HTTP ${res.statusCode}`));
+        }
       },
       fail: (err) => reject(new Error(err.errMsg || '网络错误')),
     });
@@ -106,7 +169,7 @@ export async function streamExplain({ file, text, userAnswer, onMeta, onDelta })
     if (userAnswer) fd.append('user_answer', userAnswer);
     const resp = await fetch(BASE_URL + '/api/explain/stream', {
       method: 'POST',
-      headers: { 'X-Access-Code': getCode() },
+      headers: { 'X-Access-Code': getCode(), ...authHeader() },
       body: fd,
     });
     if (!resp.ok) {
@@ -176,7 +239,7 @@ export function uploadExplain({ filePath, text, userAnswer }) {
           filePath,
           name: 'image',
           formData,
-          header: { 'X-Access-Code': getCode() },
+          header: { 'X-Access-Code': getCode(), ...authHeader() },
           timeout: 180000,
           success: (res) => {
             try {
