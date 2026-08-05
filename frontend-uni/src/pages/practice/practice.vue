@@ -377,6 +377,34 @@
       </view>
     </view>
 
+    <!-- 题目纠错弹层 -->
+    <view v-if="reportOpen" class="mask" @click="reportOpen = false">
+      <view class="sheet" @click.stop>
+        <view class="sheet-h">
+          <text class="sheet-t">题目纠错</text>
+          <text class="sheet-x" @click="reportOpen = false">✕</text>
+        </view>
+        <view class="rp-types">
+          <text
+            v-for="t in reportTypes"
+            :key="t"
+            class="rp-chip"
+            :class="{ on: reportType === t }"
+            @click="reportType = t"
+          >{{ t }}</text>
+        </view>
+        <textarea
+          v-model="reportDetail"
+          class="rp-detail"
+          placeholder="补充说明（选填，500 字以内）"
+          :maxlength="500"
+        />
+        <button class="btn rp-submit" :disabled="!reportType || reportBusy" @click="submitReport">
+          {{ reportBusy ? '提交中…' : '提交纠错' }}
+        </button>
+      </view>
+    </view>
+
     <!-- 判分横幅 -->
     <view v-if="cur && !examMode && (picked || beiMode)" class="banner" :class="beiMode || picked === cur.answer ? 'bok' : 'bbad'">
       <view class="binfo">
@@ -424,6 +452,11 @@ export default {
       subSelect: null,
       paperSheet: false,
       customOpen: false,
+      reportOpen: false,
+      reportType: '',
+      reportDetail: '',
+      reportBusy: false,
+      reportTypes: ['答案错误', '解析错误', '题干或选项错字', '图片缺失', '分类错误', '重复题', '其他'],
       exporting: false,
       expSheet: true,
       expAns: true,
@@ -1328,23 +1361,28 @@ export default {
     },
     reportQuestion() {
       const q = this.cur;
-      if (!q || q._reported) return;
-      const reasons = ['答案有误', '题目有错字/乱码', '选项有问题', '图片不清晰/缺失', '解析有误', '其他'];
-      uni.showActionSheet({
-        itemList: reasons,
-        success: async (res) => {
-          try {
-            await request('/api/report', {
-              method: 'POST',
-              data: { question_id: q.id, reason: reasons[res.tapIndex], detail: (q.question || '').slice(0, 100) },
-            });
-            q._reported = true;
-            uni.showToast({ title: '已提交，我们会尽快核查', icon: 'none' });
-          } catch (e) {
-            uni.showToast({ title: '提交失败：' + e.message, icon: 'none' });
-          }
-        },
-      });
+      if (!q || !q.id) return;
+      this.reportType = '';
+      this.reportDetail = '';
+      this.reportOpen = true;
+    },
+    async submitReport() {
+      const q = this.cur;
+      if (!q || !this.reportType || this.reportBusy) return;
+      this.reportBusy = true;
+      try {
+        await request('/api/question_report', {
+          method: 'POST',
+          data: { question_id: q.id, uid: anonUid(), type: this.reportType, detail: this.reportDetail.slice(0, 500) },
+        });
+        q._reported = true;
+        this.reportOpen = false;
+        uni.showToast({ title: '感谢反馈，我们会尽快核查', icon: 'none' });
+      } catch (e) {
+        uni.showToast({ title: '提交失败：' + e.message, icon: 'none' });
+      } finally {
+        this.reportBusy = false;
+      }
     },
     deepExplain() {
       const q = this.cur;
@@ -1640,6 +1678,12 @@ export default {
 .exp-ans { font-size: 32rpx; font-weight: 800; }
 .exp-ans.okc2 { color: var(--ok); }
 .exp-ans.badc2 { color: var(--bad); }
+.rp-types { display: flex; flex-wrap: wrap; gap: 16rpx; margin-bottom: 20rpx; }
+.rp-chip { padding: 18rpx 26rpx; min-height: 44rpx; border-radius: 999rpx; background: var(--soft-bg); font-size: 26rpx; color: var(--ink-2); }
+.rp-chip.on { background: rgba(59, 111, 245, 0.12); color: #3b6ff5; font-weight: 600; }
+.rp-detail { width: 100%; box-sizing: border-box; min-height: 140rpx; background: var(--soft-bg); border-radius: 16rpx; padding: 20rpx; font-size: 26rpx; margin-bottom: 24rpx; }
+.rp-submit { width: 100%; }
+.rp-submit[disabled] { opacity: 0.5; }
 .report-link {
   text-align: center;
   font-size: 22rpx;
