@@ -180,19 +180,19 @@ class _HomePageState extends ConsumerState<HomePage> {
               borderRadius: BorderRadius.circular(999),
               onTap: () => context.push('/search'),
               child: Container(
-                height: 38,
+                height: 40,
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
                   color: Theme.of(context).cardTheme.color ?? Colors.white,
                   borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: KgColors.border),
+                  border: Border.all(color: context.kg.border),
                 ),
-                child: const Row(
+                child: Row(
                   children: [
-                    Icon(LucideIcons.search, size: 16, color: KgColors.t4),
-                    SizedBox(width: 8),
+                    Icon(LucideIcons.search, size: 16, color: context.kg.t4),
+                    const SizedBox(width: 8),
                     Text('搜题目 / 考点 / 试卷，支持题号',
-                        style: TextStyle(fontSize: 13, color: KgColors.t4)),
+                        style: TextStyle(fontSize: 13, color: context.kg.t4)),
                   ],
                 ),
               ),
@@ -487,34 +487,74 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
+  /// 专项练习行：图标 + 名称 + 已刷/正确率 + 模块色进度条 + 开始/继续做题胶囊，
+  /// 对标华图专项练习的「刷题量/正确率 + 继续做题」。
   Widget _moduleRow(String key, String name) {
+    final kg = context.kg;
+    final color = KgColors.moduleColors[key] ?? KgColors.brand;
     final c = counts.firstWhere((e) => e['module'] == key,
         orElse: () => <String, dynamic>{});
     final total = ((c['n'] ?? 0) as num).toInt();
     final s = _modStat(key);
     final done = ((s['done'] ?? 0) as num).toInt();
     final correct = ((s['correct'] ?? 0) as num).toInt();
+    final acc = done > 0 ? (correct * 100 / done).round() : null;
     final sub = done == 0
-        ? (total > 0 ? '$total 题' : '')
-        : '已刷 $done/$total · 正确率 ${(correct * 100 / done).round()}%';
-    return ListTile(
-      leading: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: (KgColors.moduleColors[key] ?? KgColors.brand).withValues(alpha: .12),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(_moduleIcon(key),
-            size: 20, color: KgColors.moduleColors[key] ?? KgColors.brand),
-      ),
-      title: Text(name,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-      subtitle: sub.isEmpty
-          ? null
-          : Text(sub, style: const TextStyle(fontSize: 12, color: KgColors.t3)),
-      trailing: const Icon(LucideIcons.chevronRight, size: 18, color: KgColors.t4),
+        ? (total > 0 ? '$total 题 · 从这里开始' : '从这里开始')
+        : '已刷 $done/$total · 正确率 $acc%';
+    return InkWell(
       onTap: () => _openModule(key, name),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: .12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(_moduleIcon(key), size: 20, color: color),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(name,
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 4),
+                  Text(sub, style: TextStyle(fontSize: 12, color: kg.t3)),
+                  const SizedBox(height: 6),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      value: total > 0 ? (done / total).clamp(0.0, 1.0) : 0,
+                      minHeight: 4,
+                      backgroundColor: kg.fill,
+                      valueColor: AlwaysStoppedAnimation(color),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: .10),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                done == 0 ? '开始做题' : '继续做题',
+                style: TextStyle(
+                    fontSize: 12, fontWeight: FontWeight.w600, color: color),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

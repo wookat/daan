@@ -6,6 +6,7 @@ import '../core/api.dart';
 import '../core/models.dart';
 import '../core/storage.dart';
 import '../theme.dart';
+import '../widgets/empty_state.dart';
 import '../widgets/export_sheet.dart';
 
 /// 错题本：待掌握 / 已掌握 / 收藏 三个 tab + 今日复习入口
@@ -389,8 +390,13 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
                       child: TabBarView(
                         controller: _tab,
                         children: [
-                          _list(pending, empty: '还没有待掌握的错题，去刷题吧'),
-                          _list(mastered, empty: '还没有已掌握的错题'),
+                          _list(pending,
+                              empty: '错题本还是空的',
+                              emptyDesc: '做错的题会自动收进这里，配合遗忘曲线安排复习',
+                              emptyAction: '去刷一组题'),
+                          _list(mastered,
+                              empty: '还没有已掌握的错题',
+                              emptyDesc: '复习中答对的错题会移到这里'),
                           _favList(),
                         ],
                       ),
@@ -400,8 +406,24 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
     );
   }
 
-  Widget _list(List<Mistake> items, {required String empty}) {
-    if (items.isEmpty) return _empty(empty);
+  Widget _list(List<Mistake> items,
+      {required String empty, String? emptyDesc, String? emptyAction}) {
+    if (items.isEmpty) {
+      return Center(
+        child: EmptyState(
+          icon: LucideIcons.bookOpen,
+          title: empty,
+          description: emptyDesc,
+          actionLabel: emptyAction,
+          onAction: emptyAction == null
+              ? null
+              : () async {
+                  await context.push('/practice');
+                  _load();
+                },
+        ),
+      );
+    }
     final shown = items.take(pageN).toList();
     final hasMore = items.length > pageN;
     return RefreshIndicator(
@@ -533,7 +555,15 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
   }
 
   Widget _favList() {
-    if (favs.isEmpty) return _empty('还没有收藏的题目');
+    if (favs.isEmpty) {
+      return const Center(
+        child: EmptyState(
+          icon: LucideIcons.star,
+          title: '还没有收藏的题目',
+          description: '作答解析页点「收藏」，好题随时回看',
+        ),
+      );
+    }
     return ListView.separated(
       padding: const EdgeInsets.all(16),
       itemCount: favs.length,
@@ -595,19 +625,6 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
       child: Text(text,
           style: TextStyle(
               fontSize: 12, color: color, fontWeight: FontWeight.w600)),
-    );
-  }
-
-  Widget _empty(String text) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(LucideIcons.inbox, size: 48, color: KgColors.t4),
-          const SizedBox(height: 12),
-          Text(text, style: const TextStyle(color: KgColors.t3)),
-        ],
-      ),
     );
   }
 

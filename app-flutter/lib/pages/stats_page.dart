@@ -8,6 +8,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../core/api.dart';
 import '../core/storage.dart';
 import '../theme.dart';
+import '../widgets/empty_state.dart';
 import '../widgets/plan_setup_sheet.dart';
 import '../widgets/predict_card.dart';
 
@@ -610,12 +611,13 @@ class _StatsPageState extends State<StatsPage> {
         ),
       const SizedBox(height: 12),
       if (data.isEmpty)
-        const Center(
-            child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 12),
-          child: Text('还没有作答数据，去刷一组题吧',
-              style: TextStyle(color: KgColors.t3, fontSize: 13)),
-        ))
+        EmptyState(
+          icon: LucideIcons.lineChart,
+          title: '还没有作答数据',
+          description: '刷完第一组题，这里会生成你的正确率走势',
+          actionLabel: '去刷一组题',
+          onAction: () => context.push('/practice'),
+        )
       else ...[
         SizedBox(
           height: 110,

@@ -174,9 +174,9 @@ class Api {
     return Map<String, dynamic>.from(r.data);
   }
 
-  /// 全站错题统计（by_module / by_type / by_reason）。
+  /// 当前用户错题统计（by_module / by_type / by_reason）。
   static Future<Map<String, dynamic>> stats() async {
-    final r = await dio.get('/api/stats');
+    final r = await dio.get('/api/stats', queryParameters: {'uid': uid()});
     return Map<String, dynamic>.from(r.data);
   }
 

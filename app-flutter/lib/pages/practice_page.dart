@@ -274,14 +274,130 @@ class _PracticePageState extends ConsumerState<PracticePage> {
   void _next() {
     _autoTimer?.cancel();
     if (idx < items.length - 1) {
-      setState(() {
-        idx++;
-        qsecs = 0;
-        _qStart = DateTime.now();
-      });
+      _goTo(idx + 1);
     } else {
       _finish();
     }
+  }
+
+  void _goTo(int i) {
+    if (i < 0 || i >= items.length || i == idx) return;
+    setState(() {
+      idx = i;
+      qsecs = 0;
+      _qStart = DateTime.now();
+    });
+  }
+
+  /// 答题卡：网格展示全组题号与对/错/未答状态，支持跳题。
+  Future<void> _openAnswerCard() async {
+    final kg = context.kg;
+    final target = await showModalBottomSheet<int>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).cardTheme.color,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (c) {
+        final answered = items.where((q) => q.answered).length;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Text('答题卡',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                    const Spacer(),
+                    Text('已答 $answered/${items.length}',
+                        style: TextStyle(fontSize: 13, color: kg.t3)),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    for (var i = 0; i < items.length; i++)
+                      _answerCardChip(i, () => Navigator.pop(c, i)),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    _legend(KgColors.success, '答对'),
+                    const SizedBox(width: 16),
+                    _legend(KgColors.error, '答错'),
+                    const SizedBox(width: 16),
+                    _legend(kg.t4, '未答'),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(46)),
+                  onPressed: () => Navigator.pop(c, -1),
+                  child: const Text('提前交卷结算'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (!mounted || target == null) return;
+    if (target < 0) {
+      _finish();
+    } else {
+      _goTo(target);
+    }
+  }
+
+  Widget _answerCardChip(int i, VoidCallback onTap) {
+    final q = items[i];
+    final kg = context.kg;
+    Color fg = kg.t2;
+    Color bg = kg.fill;
+    Color? bd;
+    if (q.answered) {
+      fg = q.correct ? KgColors.success : KgColors.error;
+      bg = (q.correct ? KgColors.success : KgColors.error).withValues(alpha: .12);
+    }
+    if (i == idx) bd = KgColors.brand;
+    return InkWell(
+      borderRadius: BorderRadius.circular(999),
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: bg,
+          shape: BoxShape.circle,
+          border: bd == null ? null : Border.all(color: bd, width: 2),
+        ),
+        child: Text('${i + 1}',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: fg)),
+      ),
+    );
+  }
+
+  Widget _legend(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(color: color.withValues(alpha: .18), shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(label, style: TextStyle(fontSize: 12, color: context.kg.t3)),
+      ],
+    );
   }
 
   Future<void> _finish() async {
@@ -423,7 +539,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
               color: over ? KgColors.error : KgColors.brand));
     }
     return Text(fmt(elapsed),
-        style: const TextStyle(fontSize: 14, color: KgColors.t3));
+        style: TextStyle(fontSize: 14, color: context.kg.t3));
   }
 
   /// 模块建议单题用时（复刻 targetSecs）。
@@ -444,7 +560,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
         if (offline)
           Container(
             width: double.infinity,
-            color: KgColors.warningBg,
+            color: context.kg.warningBg,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             child: const Text('离线模式 · 本地题包判分，联网后自动同步',
                 style: TextStyle(fontSize: 11.5, color: KgColors.warning)),
@@ -452,7 +568,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
         LinearProgressIndicator(
           value: (idx + 1) / items.length,
           minHeight: 3,
-          backgroundColor: KgColors.fill,
+          backgroundColor: context.kg.fill,
         ),
         Expanded(
           child: ListView(
@@ -481,11 +597,11 @@ class _PracticePageState extends ConsumerState<PracticePage> {
                   _tag(moduleName(q.module), KgColors.moduleColors[q.module] ?? KgColors.brand),
                   if (q.questionType != null && q.questionType!.isNotEmpty) ...[
                     const SizedBox(width: 8),
-                    _tag(q.questionType!, KgColors.t3),
+                    _tag(q.questionType!, context.kg.t3),
                   ],
                   const Spacer(),
                   Text('${idx + 1}/${items.length}',
-                      style: const TextStyle(color: KgColors.t3, fontSize: 13)),
+                      style: TextStyle(color: context.kg.t3, fontSize: 13)),
                 ],
               ),
               const SizedBox(height: 12),
@@ -520,21 +636,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
             ],
           ),
         ),
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-            child: (q.answered || beiMode)
-                ? FilledButton(
-                    onPressed: _next,
-                    child: Text(idx < items.length - 1 ? '下一题' : '完成本组'),
-                  )
-                : OutlinedButton(
-                    style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-                    onPressed: _finish,
-                    child: const Text('提前结束'),
-                  ),
-          ),
-        ),
+        _bottomBar(q),
       ],
     );
   }
@@ -730,41 +832,115 @@ class _PracticePageState extends ConsumerState<PracticePage> {
     Store.instance.dailyPlanDays = {...plan, 'days': days};
   }
 
+  /// 底部固定工具栏：上一题 / 答题卡 / 下一题。
+  /// 对标粉笔与华图的作答页——跳题与回看是刷题的刚需，原本只有单个「提前结束」。
+  Widget _bottomBar(Question q) {
+    final kg = context.kg;
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        border: Border(top: BorderSide(color: kg.border)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          child: Row(
+            children: [
+              _barAction(LucideIcons.chevronLeft, '上一题',
+                  idx > 0 ? () => _goTo(idx - 1) : null),
+              _barAction(LucideIcons.layoutGrid, '答题卡', _openAnswerCard),
+              const SizedBox(width: 4),
+              Expanded(
+                child: FilledButton(
+                  style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(46)),
+                  onPressed: (q.answered || beiMode) ? _next : null,
+                  child: Text(idx < items.length - 1 ? '下一题' : '完成本组'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _barAction(IconData icon, String label, VoidCallback? onTap) {
+    final kg = context.kg;
+    final color = onTap == null ? kg.t4 : kg.t2;
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: onTap,
+      child: Container(
+        width: 62,
+        height: 46,
+        alignment: Alignment.center,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(height: 2),
+            Text(label, style: TextStyle(fontSize: 11, color: color)),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _option(Question q, String k, String v) {
-    Color border = KgColors.border;
+    final kg = context.kg;
+    Color border = kg.border;
     Color? bgc;
+    Color badgeBg = kg.fill;
+    Color badgeFg = kg.t2;
     Widget? trailing;
     if (q.answered || beiMode) {
       if (k == q.answer) {
         border = KgColors.success;
-        bgc = KgColors.successBg;
+        bgc = kg.successBg;
+        badgeBg = KgColors.success;
+        badgeFg = Colors.white;
         trailing = const Text('✓ 正确', style: TextStyle(color: KgColors.success, fontSize: 12));
       } else if (k == q.picked) {
         border = KgColors.error;
-        bgc = KgColors.errorBg;
+        bgc = kg.errorBg;
+        badgeBg = KgColors.error;
+        badgeFg = Colors.white;
         trailing = const Text('✕ 我的选择', style: TextStyle(color: KgColors.error, fontSize: 12));
       }
     }
-    final dark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: () => _pick(k),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-          decoration: BoxDecoration(
-            color: bgc ?? (dark ? const Color(0xFF1A1C22) : Colors.white),
-            border: Border.all(color: border),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Row(
-            children: [
-              Text('$k.', style: const TextStyle(fontWeight: FontWeight.w700)),
-              const SizedBox(width: 8),
-              Expanded(child: Text(v, style: const TextStyle(fontSize: 15, height: 1.5))),
-              if (trailing != null) trailing,
-            ],
+      child: Material(
+        color: bgc ?? Theme.of(context).cardTheme.color ?? kg.surface,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _pick(k),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 56),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              border: Border.all(color: border),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                // 圆形字母徽章：对标粉笔/华图，作为选项的视觉锚点与选中态载体
+                Container(
+                  width: 30,
+                  height: 30,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(color: badgeBg, shape: BoxShape.circle),
+                  child: Text(k,
+                      style: TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w700, color: badgeFg)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(child: Text(v, style: const TextStyle(fontSize: 15, height: 1.5))),
+                if (trailing != null) ...[const SizedBox(width: 8), trailing],
+              ],
+            ),
           ),
         ),
       ),
@@ -777,14 +953,14 @@ class _PracticePageState extends ConsumerState<PracticePage> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            KgColors.brand50.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? .12 : 1),
+            context.kg.brandBg,
             Theme.of(context).cardTheme.color ?? Colors.white,
           ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: KgColors.border.withValues(alpha: .6)),
+        border: Border.all(color: context.kg.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -934,7 +1110,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
                   favedIds.contains(q.id) ? LucideIcons.star : LucideIcons.star,
                   favedIds.contains(q.id) ? '已收藏' : '收藏',
                   () => _toggleFav(q),
-                  color: favedIds.contains(q.id) ? KgColors.warning : KgColors.t3,
+                  color: favedIds.contains(q.id) ? KgColors.warning : context.kg.t3,
                 ),
                 const SizedBox(width: 24),
                 _explainOp(LucideIcons.penTool, '写笔记', () => _writeNote(q)),
@@ -960,7 +1136,8 @@ class _PracticePageState extends ConsumerState<PracticePage> {
   }
 
   Widget _explainOp(IconData icon, String label, VoidCallback onTap,
-      {Color color = KgColors.t3}) {
+      {Color? color}) {
+    color ??= context.kg.t3;
     return InkWell(
       onTap: onTap,
       child: Row(
@@ -1237,29 +1414,29 @@ class _PracticePageState extends ConsumerState<PracticePage> {
           child: const Text('分享战绩'),
         ),
         const SizedBox(height: 12),
-            OutlinedButton(
-              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-              onPressed: () => showExportSheet(
-                context,
-                title: '自定义练习',
-                questionIds: [
-                  for (final q in items)
-                    if (q.id != null) q.id!,
-                ],
-                rawItems: [
-                  for (final q in items)
-                    if (q.id == null)
-                      {
-                        'question':
-                            '${q.question}\n${q.options.entries.map((e) => '${e.key}.${e.value}').join(' ')}',
-                        'answer': q.answer,
-                        'explanation': q.explanation ?? '',
-                      },
-                ],
-              ),
-              child: const Text('导出本组 PDF'),
-            ),
-            const SizedBox(height: 12),
+        OutlinedButton(
+          style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+          onPressed: () => showExportSheet(
+            context,
+            title: '自定义练习',
+            questionIds: [
+              for (final q in items)
+                if (q.id != null) q.id!,
+            ],
+            rawItems: [
+              for (final q in items)
+                if (q.id == null)
+                  {
+                    'question':
+                        '${q.question}\n${q.options.entries.map((e) => '${e.key}.${e.value}').join(' ')}',
+                    'answer': q.answer,
+                    'explanation': q.explanation ?? '',
+                  },
+            ],
+          ),
+          child: const Text('导出本组 PDF'),
+        ),
+        const SizedBox(height: 12),
         OutlinedButton(
           style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
           onPressed: () {
@@ -1327,73 +1504,6 @@ class _PracticePageState extends ConsumerState<PracticePage> {
     }
   }
 
-  /// 答题卡：全组题号网格，点击跳题。
-  Future<void> _openAnswerCard() async {
-    final jump = await showModalBottomSheet<int>(
-      context: context,
-      showDragHandle: true,
-      builder: (c) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('答题卡',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  for (var i = 0; i < items.length; i++)
-                    InkWell(
-                      onTap: () => Navigator.pop(c, i),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: !items[i].answered
-                              ? KgColors.fill
-                              : items[i].correct
-                                  ? KgColors.successBg
-                                  : KgColors.errorBg,
-                          borderRadius: BorderRadius.circular(8),
-                          border: i == idx
-                              ? Border.all(color: KgColors.brand, width: 1.5)
-                              : null,
-                        ),
-                        child: Text('${i + 1}',
-                            style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: !items[i].answered
-                                    ? KgColors.t3
-                                    : items[i].correct
-                                        ? KgColors.success
-                                        : KgColors.error)),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              const Text('绿=对 红=错 灰=未作答，点题号可跳转',
-                  style: TextStyle(fontSize: 11, color: KgColors.t4)),
-            ],
-          ),
-        ),
-      ),
-    );
-    if (jump != null && mounted) {
-      setState(() {
-        idx = jump;
-        if (!items[jump].answered) _qStart = DateTime.now();
-      });
-    }
-  }
-
   Widget _tag(String text, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -1418,9 +1528,9 @@ class _ErrorView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(LucideIcons.cloudOff, size: 48, color: KgColors.t4),
+          Icon(LucideIcons.cloudOff, size: 48, color: context.kg.t4),
           const SizedBox(height: 12),
-          Text(message, style: const TextStyle(color: KgColors.t3)),
+          Text(message, style: TextStyle(color: context.kg.t3)),
           const SizedBox(height: 16),
           FilledButton(
             style: FilledButton.styleFrom(minimumSize: const Size(160, 44)),
