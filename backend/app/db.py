@@ -1954,8 +1954,9 @@ def save_mistake(rec: dict) -> int:
     _ensure_mistake_uid(conn)
     qtext = rec.get("question_text")
     if qtext:
+        uc, ua = _uid_clause(rec.get("uid") or None)
         dup = conn.execute(
-            "SELECT id FROM mistakes WHERE question_text=? LIMIT 1", (qtext,)
+            f"SELECT id FROM mistakes WHERE question_text=?{uc} LIMIT 1", (qtext, *ua)
         ).fetchone()
         if dup:
             conn.execute(
