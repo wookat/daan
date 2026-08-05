@@ -99,3 +99,7 @@
 - `app-flutter/lib/pages/book_page.dart`、`stats_page.dart`：空态升级。
 
 `flutter analyze` 通过（No issues found）；`flutter build apk --debug` 构建并装机验证。
+
+## 6. Rebase 说明
+
+devin/p5-integration 后续合入 PR#40（B1-B4，home_page/stats_page 全量重写）。本分支已 rebase 到最新集成分支：以 B1-B4 新页面结构为基底重新叠加 5 项 P0 视觉改进（模块行进度条+CTA 胶囊、答题卡 sheet、选项徽章、KgSemantic 深色 token、EmptyState），去除与上游重复的简版答题卡实现。复验截图见 `after/rebase-*.png`。
