@@ -52,6 +52,7 @@ final router = GoRouter(
         count: int.tryParse(s.uri.queryParameters['count'] ?? ''),
         source: s.uri.queryParameters['source'],
         title: s.uri.queryParameters['title'],
+        tag3: s.uri.queryParameters['tag3'],
       ),
     ),
     GoRoute(

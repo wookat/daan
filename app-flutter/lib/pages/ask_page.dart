@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -698,6 +699,21 @@ class AskPageState extends State<AskPage> {
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 12),
+        Center(
+          child: InkWell(
+            onTap: () => context.push('/interview'),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(LucideIcons.mic, size: 14, color: Color(0xFF7C3AED)),
+                SizedBox(width: 4),
+                Text('AI 面试陪练：抽真题 · 考官打分点评 ›',
+                    style: TextStyle(fontSize: 12.5, color: Color(0xFF7C3AED))),
+              ],
+            ),
+          ),
         ),
         if (recent.isNotEmpty) ...[
           const SizedBox(height: 28),

@@ -7,7 +7,11 @@ import '../core/api.dart';
 import '../core/providers.dart';
 import '../core/storage.dart';
 import '../theme.dart';
+import '../widgets/export_sheet.dart';
 import '../widgets/plan_setup_sheet.dart';
+
+/// 「学习计划」入口触发信号：其它页跳回首页时自动弹出 setup（IndexedStack 常驻）。
+final ValueNotifier<int> homeSetupTick = ValueNotifier(0);
 
 /// 首页：复刻 pages/home/home.vue。
 /// 搜索 + 今日目标 Hero（打卡海报/连续打卡）+ 学习计划 + 断卡提示 + 公告 +
@@ -23,6 +27,7 @@ class HomePage extends ConsumerStatefulWidget {
 class _HomePageState extends ConsumerState<HomePage> {
   Map<String, dynamic>? profile;
   Map<String, dynamic>? plan;
+  Map<String, dynamic>? daily; // /api/daily_plan：主攻模块 focus + 考点级弱项 weak
   bool planLoaded = false;
   bool guideHidden = Store.instance.planGuideHide;
   List<Map<String, dynamic>> counts = [];
@@ -35,6 +40,32 @@ class _HomePageState extends ConsumerState<HomePage> {
     _loadPlan();
     _loadCounts();
     _loadAnnounce();
+    homeSetupTick.addListener(_onSetupTick);
+  }
+
+  @override
+  void dispose() {
+    homeSetupTick.removeListener(_onSetupTick);
+    super.dispose();
+  }
+
+  void _onSetupTick() {
+    if (mounted) _openSetup();
+  }
+
+  /// 连续打卡天数（同 home.vue dailyStreak：从今天/昨天起向前数 dailyPlan.days）。
+  int get dailyStreak {
+    final days = Store.instance.dailyPlanDays['days'] as Map;
+    var n = 0;
+    var d = DateTime.now();
+    String key(DateTime x) =>
+        '${x.year}-${x.month.toString().padLeft(2, '0')}-${x.day.toString().padLeft(2, '0')}';
+    if (days[key(d)] != true) d = d.subtract(const Duration(days: 1));
+    while (days[key(d)] == true) {
+      n++;
+      d = d.subtract(const Duration(days: 1));
+    }
+    return n;
   }
 
   Future<void> _loadPlan() async {
@@ -46,6 +77,8 @@ class _HomePageState extends ConsumerState<HomePage> {
         final p = await Api.planToday();
         if (mounted) setState(() => plan = p);
       }
+      final d = await Api.dailyPlan();
+      if (mounted) setState(() => daily = d);
     } catch (_) {/* 计划加载失败不阻断首页 */}
     if (mounted) setState(() => planLoaded = true);
   }
@@ -101,6 +134,30 @@ class _HomePageState extends ConsumerState<HomePage> {
     return worst;
   }
 
+  /// 断卡风险：昨天未练/未达标且今天还没达标时提醒（复刻 streakRisk）。
+  ({String title, String sub})? get streakRisk {
+    final goal = Store.instance.dailyGoal;
+    if (Store.instance.todayCount >= goal) return null;
+    final now = DateTime.now();
+    final yN = Store.instance.dayCount(now.subtract(const Duration(days: 1)));
+    if (yN == 0) {
+      if (Store.instance.dayCount(now.subtract(const Duration(days: 2))) == 0) {
+        return null;
+      }
+      return (
+        title: '昨天没打卡，连续记录中断了',
+        sub: '今天练 $goal 题，重新出发不掉队'
+      );
+    }
+    if (yN < goal) {
+      return (
+        title: '昨天只练了 $yN/$goal 题，未达标',
+        sub: '今天补上进度，守住你的连续打卡'
+      );
+    }
+    return null;
+  }
+
   bool get szTodayDone {
     final days = Map<String, dynamic>.from(
         Store.instance.szDaily['days'] as Map? ?? {});
@@ -142,6 +199,10 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
             const SizedBox(height: 14),
             _hero(today, goal, pct),
+            if (streakRisk != null) ...[
+              const SizedBox(height: 14),
+              _riskCard(streakRisk!),
+            ],
             // 学习计划：引导卡 / 今日计划卡
             if (planLoaded && profile == null && !guideHidden) ...[
               const SizedBox(height: 14),
@@ -246,6 +307,25 @@ class _HomePageState extends ConsumerState<HomePage> {
                       color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700),
                 ),
               ),
+              if (today < goal && dailyStreak > 0)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(LucideIcons.flame,
+                          size: 13, color: Colors.white),
+                      const SizedBox(width: 4),
+                      Text('连续打卡 $dailyStreak 天',
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 11)),
+                    ],
+                  ),
+                ),
               if (today >= goal)
                 InkWell(
                   onTap: () => context.push('/poster'),
@@ -302,6 +382,25 @@ class _HomePageState extends ConsumerState<HomePage> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _riskCard(({String title, String sub}) risk) {
+    return Card(
+      color: KgColors.warningBg,
+      child: ListTile(
+        leading: const Icon(LucideIcons.flame, size: 22, color: KgColors.warning),
+        title: Text(risk.title,
+            style: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+                color: KgColors.warning)),
+        subtitle: Text(risk.sub,
+            style: const TextStyle(fontSize: 12, color: KgColors.warning)),
+        trailing: const Text('去刷题 ›',
+            style: TextStyle(fontSize: 13, color: KgColors.warning)),
+        onTap: () => context.push('/practice'),
       ),
     );
   }
@@ -674,6 +773,16 @@ class _HomePageState extends ConsumerState<HomePage> {
                     child: const Text('按以上设置开始练习（混合模块）'),
                   ),
                   const SizedBox(height: 8),
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(46)),
+                    onPressed: () async {
+                      Navigator.pop(c);
+                      await _exportPaper();
+                    },
+                    child: const Text('按以上设置导出练习卷 PDF'),
+                  ),
+                  const SizedBox(height: 8),
                   const Text('以上设置同样作用于模块列表；模考与真题卷不受影响',
                       style: TextStyle(fontSize: 11, color: KgColors.t4)),
                 ],
@@ -684,6 +793,44 @@ class _HomePageState extends ConsumerState<HomePage> {
       ),
     );
     if (mounted) setState(() {});
+  }
+
+  /// 按当前练习设置抽题导出练习卷 PDF（复刻 exportPaper）。
+  Future<void> _exportPaper() async {
+    final st = Store.instance;
+    List<int> ids;
+    try {
+      final d = await Api.questions(
+        limit: st.groupSize,
+        adaptive: false,
+        real: st.realMode,
+        year: st.realMode ? st.realYear : null,
+        region: st.realMode ? st.realRegion : null,
+      );
+      ids = [
+        for (final q in (d['items'] as List<dynamic>? ?? []))
+          if ((q as Map)['id'] is num) (q['id'] as num).toInt(),
+      ];
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('导出失败：${Api.errMsg(e)}')));
+      }
+      return;
+    }
+    if (!mounted) return;
+    if (ids.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('没有可导出的题目')));
+      return;
+    }
+    final now = DateTime.now();
+    showExportSheet(
+      context,
+      title:
+          '${st.realMode ? '真题精选卷' : '练习卷'} ${now.month}月${now.day}日',
+      questionIds: ids,
+    );
   }
 
   /// 真题卷库 sheet：选卷整卷连做。
@@ -865,10 +1012,89 @@ class _HomePageState extends ConsumerState<HomePage> {
                   style: TextStyle(fontSize: 13, color: KgColors.t3))
             else
               for (final t in tasks) _taskRow(Map<String, dynamic>.from(t)),
+            // 考点级弱项推荐（复刻 plan.weak，携带 tag3）
+            for (final w in (daily?['weak'] as List<dynamic>? ?? []))
+              _weakRow(Map<String, dynamic>.from(w as Map)),
+            const SizedBox(height: 8),
+            // 今日主攻（复刻 plan-focus chips，影响推荐权重）
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                const Text('今天主攻',
+                    style: TextStyle(fontSize: 12, color: KgColors.t3)),
+                for (final e in kModuleNames.entries)
+                  Builder(builder: (context) {
+                    final on = daily?['focus'] == e.key;
+                    return InkWell(
+                      onTap: () => _setFocus(e.key),
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: on ? KgColors.brand : KgColors.fill,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(e.value,
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: on ? Colors.white : KgColors.t3)),
+                      ),
+                    );
+                  }),
+              ],
+            ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _weakRow(Map<String, dynamic> w) {
+    final module = (w['module'] ?? '').toString();
+    final sub = (w['submodule'] ?? '').toString();
+    final tag3 = (w['tag3'] ?? '').toString();
+    final name = tag3.isNotEmpty ? tag3 : (sub.isNotEmpty ? sub : moduleName(module));
+    return InkWell(
+      onTap: () {
+        var url = '/practice?count=10';
+        if (module.isNotEmpty) url += '&module=$module';
+        if (sub.isNotEmpty) url += '&submodule=${Uri.encodeComponent(sub)}';
+        if (tag3.isNotEmpty) url += '&tag3=${Uri.encodeComponent(tag3)}';
+        context.push(url);
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            const Icon(LucideIcons.crosshair, size: 16, color: KgColors.warning),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text('弱项专项：$name',
+                  style: const TextStyle(fontSize: 13.5)),
+            ),
+            const Text('练 10 题 ›',
+                style: TextStyle(fontSize: 12, color: KgColors.brand)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _setFocus(String mod) async {
+    final next = daily?['focus'] == mod ? '' : mod;
+    try {
+      await Api.setFocus(next);
+      final d = await Api.dailyPlan();
+      if (!mounted) return;
+      setState(() => daily = d);
+      if (next.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('今日主攻已设为${moduleName(next)}，推荐已更新')));
+      }
+    } catch (_) {/* 非关键路径 */}
   }
 
   Widget _taskRow(Map<String, dynamic> t) {
@@ -902,17 +1128,46 @@ class _HomePageState extends ConsumerState<HomePage> {
                 size: 16, color: done ? KgColors.success : KgColors.t4),
             const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                (t['title'] ?? t['name'] ?? '').toString(),
-                style: TextStyle(
-                  fontSize: 13.5,
-                  color: done ? KgColors.t3 : null,
-                  decoration: done ? TextDecoration.lineThrough : null,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    (t['title'] ?? t['name'] ?? '').toString(),
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      color: done ? KgColors.t3 : null,
+                      decoration: done ? TextDecoration.lineThrough : null,
+                    ),
+                  ),
+                  Builder(builder: (context) {
+                    final subText = (t['sub'] ?? '').toString();
+                    final doneN = ((t['done_n'] ?? 0) as num).toInt();
+                    final target = ((t['target'] ?? 0) as num).toInt();
+                    final extra = type != 'mock' && doneN > 0
+                        ? ' · 已完成 $doneN/$target'
+                        : '';
+                    if (subText.isEmpty && extra.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+                    return Text('$subText$extra',
+                        style: const TextStyle(
+                            fontSize: 11, color: KgColors.t4));
+                  }),
+                ],
               ),
             ),
-            if (!done)
-              const Icon(LucideIcons.chevronRight, size: 15, color: KgColors.t4),
+            Text(
+              done
+                  ? '已完成'
+                  : type == 'mock'
+                      ? '去模考 ›'
+                      : type == 'review'
+                          ? '去复习 ›'
+                          : '去练 ›',
+              style: TextStyle(
+                  fontSize: 12,
+                  color: done ? KgColors.t4 : KgColors.brand),
+            ),
           ],
         ),
       ),

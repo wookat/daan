@@ -4,6 +4,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 
 import '../core/api.dart';
 import '../core/models.dart';
+import '../core/storage.dart';
 import '../theme.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/export_sheet.dart';
@@ -25,19 +26,105 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
   String? error;
   String modFilter = '';
   String keyword = '';
+  String kpFilter = ''; // 二级题型筛选
+  String kp3Filter = ''; // 三级考点筛选
+  String sortBy = 'time'; // time/times/type/reason/due
+  int pageN = 20; // 分页：当前展示条数
 
-  List<Mistake> get filtered => all.where((m) {
-        if (modFilter.isNotEmpty && m.module != modFilter) return false;
-        if (keyword.isNotEmpty && !m.questionText.contains(keyword)) {
-          return false;
-        }
-        return true;
-      }).toList();
+  static const _sorts = [
+    ('time', '最近优先'),
+    ('times', '错次最多'),
+    ('type', '按题型'),
+    ('reason', '按错因'),
+    ('due', '到期优先'),
+  ];
+
+  List<Mistake> get filtered {
+    final base = all.where((m) {
+      if (modFilter.isNotEmpty && m.module != modFilter) return false;
+      if (kpFilter.isNotEmpty &&
+          (m.questionType ?? m.module ?? '') != kpFilter) {
+        return false;
+      }
+      if (kp3Filter.isNotEmpty && m.tag3Name != kp3Filter) return false;
+      if (keyword.isNotEmpty && !m.questionText.contains(keyword)) {
+        return false;
+      }
+      return true;
+    }).toList();
+    switch (sortBy) {
+      case 'times':
+        base.sort((a, b) => b.times.compareTo(a.times));
+      case 'type':
+        base.sort((a, b) => (a.questionType ?? a.module ?? '')
+            .compareTo(b.questionType ?? b.module ?? ''));
+      case 'reason':
+        base.sort((a, b) =>
+            (a.errorReason ?? '￿').compareTo(b.errorReason ?? '￿'));
+      case 'due':
+        base.sort((a, b) =>
+            (a.nextReview ?? 9e12).compareTo(b.nextReview ?? 9e12));
+      default:
+        break; // 后端已按最近在前返回
+    }
+    return base;
+  }
+
+  /// 当前模块下的题型分布（含三级考点子组），复刻 typeGroups。
+  List<(String, int)> get typeGroups {
+    final map = <String, int>{};
+    for (final m in all) {
+      if (modFilter.isNotEmpty && m.module != modFilter) continue;
+      final t = m.questionType ?? m.module;
+      if (t == null || t.isEmpty) continue;
+      map[t] = (map[t] ?? 0) + 1;
+    }
+    final list = map.entries.map((e) => (e.key, e.value)).toList()
+      ..sort((a, b) => b.$2.compareTo(a.$2));
+    return list;
+  }
+
+  /// 题型筛选下的三级考点分布。
+  List<(String, int)> get tag3Groups {
+    final map = <String, int>{};
+    for (final m in all) {
+      if (modFilter.isNotEmpty && m.module != modFilter) continue;
+      if (kpFilter.isNotEmpty &&
+          (m.questionType ?? m.module ?? '') != kpFilter) {
+        continue;
+      }
+      final t = m.tag3Name;
+      if (t == null || t.isEmpty) continue;
+      map[t] = (map[t] ?? 0) + 1;
+    }
+    final list = map.entries.map((e) => (e.key, e.value)).toList()
+      ..sort((a, b) => b.$2.compareTo(a.$2));
+    return list;
+  }
 
   @override
   void initState() {
     super.initState();
     _load();
+    _tab.addListener(_onTab);
+  }
+
+  @override
+  void dispose() {
+    _tab.removeListener(_onTab);
+    super.dispose();
+  }
+
+  /// 切到收藏 tab 时重拉收藏（练习页新收藏的题及时可见）。
+  void _onTab() {
+    if (!_tab.indexIsChanging && _tab.index == 2) _refreshFavs();
+  }
+
+  Future<void> _refreshFavs() async {
+    try {
+      final f = await Api.favs();
+      if (mounted) setState(() => favs = f);
+    } catch (_) {/* 非关键路径 */}
   }
 
   Future<void> _load() async {
@@ -170,7 +257,12 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
                                 child: ChoiceChip(
                                   label: Text(e.value, style: const TextStyle(fontSize: 12)),
                                   selected: modFilter == e.key,
-                                  onSelected: (_) => setState(() => modFilter = e.key),
+                                  onSelected: (_) => setState(() {
+                                    modFilter = e.key;
+                                    kpFilter = '';
+                                    kp3Filter = '';
+                                    pageN = 20;
+                                  }),
                                   visualDensity: VisualDensity.compact,
                                 ),
                               ),
@@ -178,6 +270,89 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
                         ),
                       ),
                     ),
+                    // 排序（复刻 SORTS）
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                      child: SizedBox(
+                        height: 32,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: [
+                            for (final s in _sorts)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: ChoiceChip(
+                                  label: Text(s.$2,
+                                      style: const TextStyle(fontSize: 11)),
+                                  selected: sortBy == s.$1,
+                                  onSelected: (_) => setState(() {
+                                    sortBy = s.$1;
+                                    pageN = 20;
+                                  }),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // 二级题型 × 数量（复刻 typeGroups chips）
+                    if (typeGroups.length > 1)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                        child: SizedBox(
+                          height: 32,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            children: [
+                              for (final g in typeGroups)
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: ChoiceChip(
+                                    label: Text('${g.$1} ×${g.$2}',
+                                        style: const TextStyle(fontSize: 11)),
+                                    selected: kpFilter == g.$1,
+                                    onSelected: (_) => setState(() {
+                                      kpFilter =
+                                          kpFilter == g.$1 ? '' : g.$1;
+                                      kp3Filter = '';
+                                      pageN = 20;
+                                    }),
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    // 三级考点 × 数量（复刻 kp3Filter）
+                    if (tag3Groups.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                        child: SizedBox(
+                          height: 32,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            children: [
+                              for (final g in tag3Groups)
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: ChoiceChip(
+                                    label: Text('${g.$1} ×${g.$2}',
+                                        style: const TextStyle(fontSize: 11)),
+                                    selected: kp3Filter == g.$1,
+                                    onSelected: (_) => setState(() {
+                                      kp3Filter =
+                                          kp3Filter == g.$1 ? '' : g.$1;
+                                      pageN = 20;
+                                    }),
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                       child: TextField(
@@ -268,14 +443,22 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
         ),
       );
     }
+    final shown = items.take(pageN).toList();
+    final hasMore = items.length > pageN;
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView.separated(
         padding: const EdgeInsets.all(16),
-        itemCount: items.length,
+        itemCount: shown.length + (hasMore ? 1 : 0),
         separatorBuilder: (_, __) => const SizedBox(height: 10),
         itemBuilder: (context, i) {
-          final m = items[i];
+          if (i == shown.length) {
+            return OutlinedButton(
+              onPressed: () => setState(() => pageN += 20),
+              child: Text('加载更多（共 ${items.length} 条）'),
+            );
+          }
+          final m = shown[i];
           final stem = m.questionText.split('\n').first;
           return Card(
             child: InkWell(
@@ -297,9 +480,17 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
                           const SizedBox(width: 6),
                           _tag(m.questionType!, KgColors.t3),
                         ],
+                        if (m.tag3Name != null && m.tag3Name!.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          _tag(m.tag3Name!, KgColors.brand),
+                        ],
                         if (m.errorReason != null && m.errorReason!.isNotEmpty) ...[
                           const SizedBox(width: 6),
                           _tag(m.errorReason!, KgColors.warning),
+                        ],
+                        if (m.mastered) ...[
+                          const SizedBox(width: 6),
+                          _tag('已掌握', KgColors.success),
                         ],
                         const Spacer(),
                         if (m.times > 1)
@@ -317,6 +508,22 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
                       '我的答案 ${m.userAnswer ?? '-'} · 正确答案 ${m.correctAnswer ?? '-'}',
                       style: const TextStyle(fontSize: 12, color: KgColors.t3),
                     ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        if (!m.mastered)
+                          _op('AI 详解', () {
+                            Store.instance.redoQuestion = m.questionText;
+                            context.go('/ask');
+                          })
+                        else
+                          _op('恢复复习', () => _master(m, false)),
+                        const SizedBox(width: 12),
+                        if (!m.mastered) _op('标为已掌握', () => _master(m, true)),
+                        const Spacer(),
+                        _op('删除', () => _delete(m), color: KgColors.error),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -325,6 +532,52 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
         },
       ),
     );
+  }
+
+  Future<void> _master(Mistake m, bool v) async {
+    try {
+      await Api.patchMistake(m.id, {'mastered': v ? 1 : 0});
+      setState(() => m.mastered = v);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(Api.errMsg(e))));
+      }
+    }
+  }
+
+  Future<void> _delete(Mistake m) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('删除这道错题？'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: const Text('取消')),
+          TextButton(
+              onPressed: () => Navigator.pop(c, true),
+              child: const Text('删除')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await Api.deleteMistake(m.id);
+      setState(() {
+        all.removeWhere((x) => x.id == m.id);
+        // 删空当前筛选结果时重置筛选，避免残留隐形筛选显示空态
+        if (filtered.isEmpty) {
+          kpFilter = '';
+          kp3Filter = '';
+        }
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(Api.errMsg(e))));
+      }
+    }
   }
 
   Widget _favList() {
@@ -343,18 +596,62 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, i) {
         final f = Map<String, dynamic>.from(favs[i]);
+        final text =
+            (f['question'] ?? f['question_text'] ?? '题目 #${f['id']}')
+                .toString();
         return Card(
           child: Padding(
             padding: const EdgeInsets.all(14),
-            child: Text(
-              (f['question'] ?? f['question_text'] ?? '题目 #${f['question_id']}').toString(),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 14, height: 1.5),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  text,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 14, height: 1.5),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    _op('AI 详解', () {
+                      Store.instance.redoQuestion = text;
+                      context.go('/ask');
+                    }),
+                    const Spacer(),
+                    _op('取消收藏', () => _unfav(f), color: KgColors.error),
+                  ],
+                ),
+              ],
             ),
           ),
         );
       },
+    );
+  }
+
+  Future<void> _unfav(Map<String, dynamic> f) async {
+    // /api/favs 返回的是题目展开字段，题目 id 在 `id`
+    final qid = f['id'];
+    if (qid is! num) return;
+    try {
+      await Api.removeFav(qid.toInt());
+      setState(() => favs.removeWhere(
+          (x) => Map<String, dynamic>.from(x)['id'] == qid));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(Api.errMsg(e))));
+      }
+    }
+  }
+
+  Widget _op(String text, VoidCallback onTap, {Color color = KgColors.brand}) {
+    return InkWell(
+      onTap: onTap,
+      child: Text(text,
+          style: TextStyle(
+              fontSize: 12, color: color, fontWeight: FontWeight.w600)),
     );
   }
 

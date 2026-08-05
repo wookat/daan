@@ -9,6 +9,7 @@ import '../core/providers.dart';
 import '../core/storage.dart';
 import '../theme.dart';
 import '../widgets/predict_card.dart';
+import 'home_page.dart';
 
 /// 个人中心：账号卡 + 三项统计 + 能力预测分卡 + 学习/偏好设置/其他分组，
 /// 对照 frontend-uni/src/pages/profile/profile.vue 与 docs/design-v3/profile.html。
@@ -178,7 +179,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             child: Column(
               children: [
                 _cell(LucideIcons.clipboardList, '学习计划 / 报考画像',
-                    value: _profileSummary, onTap: () => context.go('/home')),
+                    value: _profileSummary,
+                    onTap: () {
+                      context.go('/home');
+                      homeSetupTick.value++;
+                    }),
                 _div(),
                 _cell(LucideIcons.calendarDays, '学习日历',
                     onTap: () => context.push('/calendar')),

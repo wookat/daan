@@ -112,9 +112,12 @@ class Api {
     await dio.post('/api/answer_log', data: {'uid': uid(), 'items': items});
   }
 
-  static Future<void> practiceResult(String module, int n, int correct, int secs) async {
-    await dio.post('/api/practice_result',
+  /// 保存一次刷题结果，返回 {percentile, samples}（全站正确率分位）。
+  static Future<Map<String, dynamic>> practiceResult(
+      String module, int n, int correct, int secs) async {
+    final r = await dio.post('/api/practice_result',
         data: {'module': module, 'n': n, 'correct': correct, 'secs': secs});
+    return Map<String, dynamic>.from(r.data);
   }
 
   // ---------- 错题本 ----------
@@ -390,6 +393,11 @@ class Api {
 
   static Future<void> rateExplain(String key, bool up) async {
     await dio.post('/api/rate', data: {'key': key, 'up': up});
+  }
+
+  /// 花生十三方法解析评价（有用/有误）。
+  static Future<void> rateQuestionHs(int questionId, bool up) async {
+    await dio.post('/api/rate', data: {'question_id': questionId, 'up': up});
   }
 
   // ---------- 错题增强 ----------
