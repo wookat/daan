@@ -106,6 +106,25 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
   void initState() {
     super.initState();
     _load();
+    _tab.addListener(_onTab);
+  }
+
+  @override
+  void dispose() {
+    _tab.removeListener(_onTab);
+    super.dispose();
+  }
+
+  /// 切到收藏 tab 时重拉收藏（练习页新收藏的题及时可见）。
+  void _onTab() {
+    if (!_tab.indexIsChanging && _tab.index == 2) _refreshFavs();
+  }
+
+  Future<void> _refreshFavs() async {
+    try {
+      final f = await Api.favs();
+      if (mounted) setState(() => favs = f);
+    } catch (_) {/* 非关键路径 */}
   }
 
   Future<void> _load() async {
@@ -545,7 +564,14 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
     if (ok != true) return;
     try {
       await Api.deleteMistake(m.id);
-      setState(() => all.removeWhere((x) => x.id == m.id));
+      setState(() {
+        all.removeWhere((x) => x.id == m.id);
+        // 删空当前筛选结果时重置筛选，避免残留隐形筛选显示空态
+        if (filtered.isEmpty) {
+          kpFilter = '';
+          kp3Filter = '';
+        }
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -571,7 +597,7 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
       itemBuilder: (context, i) {
         final f = Map<String, dynamic>.from(favs[i]);
         final text =
-            (f['question'] ?? f['question_text'] ?? '题目 #${f['question_id']}')
+            (f['question'] ?? f['question_text'] ?? '题目 #${f['id']}')
                 .toString();
         return Card(
           child: Padding(
@@ -605,12 +631,13 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
   }
 
   Future<void> _unfav(Map<String, dynamic> f) async {
-    final qid = f['question_id'];
+    // /api/favs 返回的是题目展开字段，题目 id 在 `id`
+    final qid = f['id'];
     if (qid is! num) return;
     try {
       await Api.removeFav(qid.toInt());
       setState(() => favs.removeWhere(
-          (x) => Map<String, dynamic>.from(x)['question_id'] == qid));
+          (x) => Map<String, dynamic>.from(x)['id'] == qid));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
