@@ -1,0 +1,202 @@
+{"question_id": 236218, "module": "changshi", "stem": "关于著名战役与参战将领，下列对应错误的是：", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 236228, "module": "yanyu", "stem": "从外观上看，集装箱的结构太简单，甚至让人们觉得不屑一顾。但在集装箱出现之后，货运", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 236234, "module": "yanyu", "stem": "用“熔炉”和“马赛克”这一对象征来描写美国和加拿大的民族文化特征，虽然新颖，却有", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 236240, "module": "yanyu", "stem": "当代中国人“提笔忘字”的现象早不罕见。互联网时代，因为我们习惯于敲打键盘，越来越", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 236260, "module": "panduan", "stem": "定向思维是指根据以往的知识经验形成的方向、方法或程序进行思维活动的过程，与发散思", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 236269, "module": "panduan", "stem": "统计部门分析指出，尽管随着农村义务教育的普及，农村家庭的教育负担大大减轻，但随着", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 236339, "module": "panduan", "stem": "爆胎∶事故∶保险", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 236344, "module": "panduan", "stem": "英国肯特大学的研究人员让两组志愿者分别玩益智游戏和观看关于跑车的纪录片，然后再让", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 236637, "module": "yanyu", "stem": "4 月 8 日下午，湖南人胡国辉和彭孝良，路过广州白云机场航站楼 9 号门时，拾", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237010, "module": "yanyu", "stem": "凡是到达了的地方，都属于昨天。哪怕那山再青，那水再秀，那风再温柔。太深的流连便成", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237021, "module": "panduan", "stem": "机器视觉，是指通过光学的装置和非接触的传感器自动地接收和处理一个真实物体的图像，", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237157, "module": "changshi", "stem": "下列关于维生素的说法错误的是：", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237217, "module": "panduan", "stem": "顾客主动社会化是指顾客为了有效参与到服务过程而主动学习与其身份角色相关的知识和信", "decision": "keep_disabled", "reason": "重复题：同题已有在线版本 id=262388，保持下架"}
+{"question_id": 237263, "module": "yanyu", "stem": "为什么狗睡觉是把嘴藏在前肢下面，而猫睡觉是把耳朵挤在前肢下面？动物用感觉器官来察", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237268, "module": "yanyu", "stem": "凡论问题，皆要弄清文体的要素。人们习惯上把议论文分为三个要素，即论点、论据、论证", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237325, "module": "yanyu", "stem": "如果说《清明上河图》集中反映了宋朝生活“俗”的一面，“西园雅集”则是“雅”的象征", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237331, "module": "yanyu", "stem": "国内市场与国际市场将进一步融合，农业开放程度还会进一步提高，今后，我们不仅面临来", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237337, "module": "yanyu", "stem": "随着互联网的出现，人们求知有了更便捷、更有效率的渠道。但是，互联网企业在发展初期", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237342, "module": "yanyu", "stem": "如果没有阳光照射，五颜六色的昆虫可能是一片灰暗，因为它们具有奇妙的微结构，在光线", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237354, "module": "panduan", "stem": "一个国家生产某种产品的成本比另一个国家低，那么，该国就在这种商品的生产上与另一个", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237408, "module": "yanyu", "stem": "就青少年网络成瘾这个社会心理痼疾，社会各界一直在努力寻找对策。相关科学研究从生物", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237414, "module": "yanyu", "stem": "从社会治理的角度看，占用消防通道的行为之所以屡禁不止，除了违法者缺乏公共安全观念", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237420, "module": "yanyu", "stem": "在现实中，农民工维权时往往面临证据不足、难以取证的问题。北京市昌平区法院审理的案", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237437, "module": "panduan", "stem": "辟谣有时会使受众将谣言错记为“事实”，其中原因之一是受众遗忘了谣言的反驳信息，即", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237453, "module": "panduan", "stem": "最新研究显示，常喝绿茶有益心血管。研究者对十万余名参与者进行了为期七年的跟踪研究", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237542, "module": "panduan", "stem": "小严在商场看中一款鞋子，纠结是买黑色好还是买白色好，同行的好朋友小芳说：你去问下", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237582, "module": "yanyu", "stem": "社交恐惧症是焦虑障碍的一个重要亚型，其主要症状是害怕受到注视，例如害怕在大庭广众", "decision": "keep_disabled", "reason": "重复题：同题已有在线版本 id=376394，保持下架"}
+{"question_id": 237588, "module": "yanyu", "stem": "近来，多家情商教育机构针对不同年龄段推出相应套餐，“情商班”火爆家长圈，情商是控", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237597, "module": "panduan", "stem": "联觉是一种感觉器官受到刺激时引起性质完全不同的其他感觉的现象。它是不同感觉间相互", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237608, "module": "panduan", "stem": "一项最新研究发现，世界上的绿海龟越来越“雌性化”。专家估计，到 2100 年，约", "decision": "keep_disabled", "reason": "重复题：同题已有在线版本 id=237829，保持下架"}
+{"question_id": 237648, "module": "yanyu", "stem": "在移动阅读时代，自媒体的影响力不可小觑。由于拥有更广阔的传播路径和分发渠道，受公", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237654, "module": "yanyu", "stem": "技术是一把“双刃剑”，应用得当可以造福社会，造福人民，应用不当会危害社会，危害人", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237695, "module": "shuliang", "stem": "某社区拟对一块梯形活动场地进行扩建，经测算，如果将梯形的上底边增加 1 米，下底", "decision": "keep_disabled", "reason": "重复题：同题已有在线版本 id=263195，保持下架"}
+{"question_id": 237700, "module": "yanyu", "stem": "业内专家建议建立国家营养日或营养周，开展食育进农村等活动，加大公益广告投入，发布", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237714, "module": "yanyu", "stem": "世界卫生组织的调查指出，嗜糖之害，甚于吸烟，长期食用含糖量高的食物会使人的寿命明", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237720, "module": "yanyu", "stem": "在移动阅读时代，自媒体的影响力不可小觑。由于拥有更广阔的传播路径和分发渠道，受公", "decision": "keep_disabled", "reason": "重复题：与 id=237648 完全相同，保留 237648，本条保持下架"}
+{"question_id": 237771, "module": "changshi", "stem": "祠堂在中国传统社会是家族成员的重要活动中心，一般情况下姓氏称为某氏宗祠，但有时也", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237797, "module": "yanyu", "stem": "技术是一把“双刃剑”，应用得当可以造福社会，造福人民，应用不当会危害社会，危害人", "decision": "keep_disabled", "reason": "重复题：与 id=237654 完全相同，保留 237654，本条保持下架"}
+{"question_id": 237802, "module": "yanyu", "stem": "人之所以能看到物体，是因为物体阻挡了光波的通过。如想让某个小球隐形，可在该小球的", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237812, "module": "panduan", "stem": "亲环境行为是指个体通过减少或消除自身活动对环境的负面影响以达到改善生态系统结构的", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237823, "module": "panduan", "stem": "近年来，“类脑计算”从理念走向实践，正走出一条制造类人智能的新途径。所谓“类脑计", "decision": "keep_disabled", "reason": "重复题：同题已有在线版本 id=237686，保持下架"}
+{"question_id": 237837, "module": "changshi", "stem": "囚徒困境是博弈论的非零和博弈的经典例子，表明个人的最佳选择并非团体的最佳选择。下", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237873, "module": "yanyu", "stem": "水熊被认为是世界上最顽强的动物，其显著特征是能在各种极端环境中存活下来。科学家曾", "decision": "keep_disabled", "reason": "重复题：同题已有在线版本 id=237788，保持下架"}
+{"question_id": 237878, "module": "yanyu", "stem": "在移动阅读时代，自媒体的影响力不可小觑。由于拥有更广阔的传播路径和分发渠道，受公", "decision": "keep_disabled", "reason": "重复题：与 id=237648 完全相同，保留 237648，本条保持下架"}
+{"question_id": 237890, "module": "shuliang", "stem": "某学习平台的学习内容由观看视频、阅读文章、收藏分享、论坛交流、考试答题五个部分组", "decision": "keep_disabled", "reason": "重复题：同题已有在线版本 id=263164，保持下架"}
+{"question_id": 237909, "module": "panduan", "stem": "二氧化碳的排放量剧增导致全球气候变暖，使珠穆朗玛峰所在的喜马拉雅地区冰川正面临急", "decision": "keep_disabled", "reason": "重复题：同题已有在线版本 id=238340，保持下架"}
+{"question_id": 237938, "module": "yanyu", "stem": "业内专家建议建立国家营养日或营养周，开展食育进农村等活动，加大公益广告投入，发布", "decision": "keep_disabled", "reason": "重复题：与 id=237700 完全相同，保留 237700，本条保持下架"}
+{"question_id": 237960, "module": "yanyu", "stem": "最新研究表明，火星表面可能包含着一种叫做高氯酸镁的有毒化学化合物，它在紫外线下能", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 237991, "module": "panduan", "stem": "一项心理学研究认为，出身经济层次最低家庭的人中年后出现代谢综合征的比例最高，无论", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 238000, "module": "panduan", "stem": "外部性是指经济当事人的生产和消费行为对其他经济当事人的生产和消费行为施加的有益或", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 238023, "module": "changshi", "stem": "生活中俗称“暖宝宝”的一次性取暖片主要由铁粉、活性炭、蛭石、水、盐等材料构成，下", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 238045, "module": "yanyu", "stem": "水熊被认为是世界上最顽强的动物，其显著特征是能在各种极端环境中存活下来。科学家曾", "decision": "keep_disabled", "reason": "重复题：同题已有在线版本 id=237788，保持下架"}
+{"question_id": 238050, "module": "yanyu", "stem": "我国研究机构日前宣布，世界上第一个全超导托卡马克“东方超环”（EAST）实现了稳", "decision": "keep_disabled", "reason": "重复题：同题已有在线版本 id=238629，保持下架"}
+{"question_id": 238060, "module": "yanyu", "stem": "当传统媒体还在琢磨受众喜欢什么内容的时候，算法推荐已迅速赢得了大量用户，媒体技术", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 238077, "module": "panduan", "stem": "近年来，“类脑计算”从理念走向实践，正走出一条制造类人智能的新途径。所谓“类脑计", "decision": "keep_disabled", "reason": "重复题：同题已有在线版本 id=237686，保持下架"}
+{"question_id": 238092, "module": "panduan", "stem": "错觉是完全不符合刺激本身特征的失真的或扭曲事实的知觉经验，生活中，凭知觉经验所作", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 238113, "module": "yanyu", "stem": "在移动阅读时代，自媒体的影响力不可小觑。由于拥有更广阔的传播路径和分发渠道，受公", "decision": "keep_disabled", "reason": "重复题：与 id=237648 完全相同，保留 237648，本条保持下架"}
+{"question_id": 238118, "module": "yanyu", "stem": "生长在非洲大草原上的灰犀牛，身躯庞大，给人一种行动迟缓、安全无害的错觉，从而时常", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 238179, "module": "panduan", "stem": "二氧化碳的排放量剧增导致全球气候变暖，使珠穆朗玛峰所在的喜马拉雅地区冰川正面临急", "decision": "keep_disabled", "reason": "重复题：同题已有在线版本 id=238340，保持下架"}
+{"question_id": 238185, "module": "yanyu", "stem": "生长在非洲大草原上的灰犀牛，身躯庞大，给人一种行动迟缓、安全无害的错觉，从而时常", "decision": "keep_disabled", "reason": "重复题：与 id=238118 完全相同，保留 238118，本条保持下架"}
+{"question_id": 238307, "module": "yanyu", "stem": "社交恐惧症是焦虑障碍的一个重要亚型，其主要症状是害怕受到注视，例如害怕在大庭广众", "decision": "keep_disabled", "reason": "重复题：同题已有在线版本 id=376394，保持下架"}
+{"question_id": 238328, "module": "panduan", "stem": "算法歧视是以算法为手段实施的歧视，主要指在大数据背景下、依靠机器计算的自动决策系", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 238369, "module": "yanyu", "stem": "①语言是符号体系，而每一种语言的符号体系都带着文化的烙印，都是这种语言的共同体集", "decision": "keep_disabled", "reason": "重复题：同题已有在线版本 id=238313，保持下架"}
+{"question_id": 238375, "module": "yanyu", "stem": "生命存在的首要条件是液态水，一颗行星是否宜居取决于表面温度能否维持液态水的存在。", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 238381, "module": "yanyu", "stem": "一次，苏格拉底与三个学生走过一块麦田，他要学生从这边走过，去摘一穗最大的麦穗。结", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 238408, "module": "panduan", "stem": "社会计算的内涵包括两个层面：一是社会的计算化，二是计算的社会化。社会的计算化是指", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 238418, "module": "panduan", "stem": "学界一直认为第一个到达澳大利亚的是欧洲人。但有研究指出，来自今天的坦桑尼亚的东非", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 238464, "module": "yanyu", "stem": "社交恐惧症是焦虑障碍的一个重要亚型，其主要症状是害怕受到注视，例如害怕在大庭广众", "decision": "keep_disabled", "reason": "重复题：同题已有在线版本 id=376394，保持下架"}
+{"question_id": 238474, "module": "yanyu", "stem": "作为一种积极有效的开发性保护模式，全域旅游强调旅游发展与资源环境承载能力相适应，", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 238485, "module": "panduan", "stem": "积极强化是指用某种有吸引力的结果对某一行为进行奖励和肯定，以期在类似条件下重复这", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 238539, "module": "yanyu", "stem": "研究人员发现在大脑中存在着不同种类和巨大数量的高维几何结构，由紧密连接的神经元团", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 238544, "module": "yanyu", "stem": "当传统媒体还在琢磨受众喜欢什么内容的时候，算法推荐已迅速赢得了大量用户，媒体技术", "decision": "keep_disabled", "reason": "重复题：与 id=238060 完全相同，保留 238060，本条保持下架"}
+{"question_id": 238549, "module": "yanyu", "stem": "技术是一把“双刃剑”，应用得当可以造福社会，造福人民，应用不当会危害社会，危害人", "decision": "keep_disabled", "reason": "重复题：与 id=237654 完全相同，保留 237654，本条保持下架"}
+{"question_id": 238562, "module": "panduan", "stem": "印象管理是指人试图控制他人对自己形成的印象的过程。一个人留给他人的印象表明了他人", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 238568, "module": "panduan", "stem": "外部性是指经济当事人的生产和消费行为对其它经济当事人的生产和消费行为施加的有益或", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 238580, "module": "panduan", "stem": "近年来，“类脑计算”从理念走向实践，正走出一条制造类人智能的新途径。所谓“类脑计", "decision": "keep_disabled", "reason": "重复题：同题已有在线版本 id=237686，保持下架"}
+{"question_id": 238639, "module": "yanyu", "stem": "当传统媒体还在琢磨受众喜欢什么内容的时候，算法推荐已迅速赢得了大量用户，媒体技术", "decision": "keep_disabled", "reason": "重复题：与 id=238060 完全相同，保留 238060，本条保持下架"}
+{"question_id": 238652, "module": "shuliang", "stem": "某工厂先从边长为 1 米的正方形铁皮切割掉一个半径 1 米、圆心角为直角的扇形，", "decision": "keep_disabled", "reason": "解析公式在 OCR 中丢失、引用图形缺失，且解析自述标准答案 28.6 不在选项中（题目本身有缺陷），无法修复"}
+{"question_id": 238655, "module": "panduan", "stem": "师范类院校学生来自全国各地，甲大学是师范类院校，所以甲大学的学生来自全国各地。下", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 238670, "module": "panduan", "stem": "外部性是指经济当事人的生产和消费行为对其它经济当事人的生产和消费行为施加的有益或", "decision": "keep_disabled", "reason": "重复题：与 id=238568 完全相同，保留 238568，本条保持下架"}
+{"question_id": 238721, "module": "yanyu", "stem": "最新研究表明，火星表面可能包含着一种叫做高氯酸镁的有毒化学化合物，它在紫外线下能", "decision": "keep_disabled", "reason": "重复题：与 id=237960 完全相同，保留 237960，本条保持下架"}
+{"question_id": 238732, "module": "yanyu", "stem": "近来，多家情商教育机构针对不同年龄段推出相应套餐，“情商班”火爆家长圈，情商是控", "decision": "keep_disabled", "reason": "重复题：与 id=237588 完全相同，保留 237588，本条保持下架"}
+{"question_id": 238753, "module": "panduan", "stem": "一项心理学研究认为，出身经济层次最低家庭的人中年后出现代谢综合征的比例最高，无论", "decision": "keep_disabled", "reason": "重复题：与 id=237991 完全相同，保留 237991，本条保持下架"}
+{"question_id": 238757, "module": "panduan", "stem": "疼痛共情的偏好性，是指个体对他人疼痛的感知、判断和情绪反应，总是由于个体与他人之", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格", "修复选项 D 串入/截断文本"]}
+{"question_id": 238819, "module": "shuliang", "stem": "某工厂先从边长为 1 米的正方形铁皮切割掉一个半径 1 米、圆心角为直角的扇形，", "decision": "keep_disabled", "reason": "重复题：与 id=238652 完全相同，保留 238652，本条保持下架"}
+{"question_id": 238832, "module": "panduan", "stem": "食品添加剂是现代食品工业的重要组成部分，按规定使用食品添加剂对人体无害，而且可以", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 238837, "module": "panduan", "stem": "一项心理学研究认为，出身经济层次最低家庭的人中年后出现代谢综合征的比例最高，无论", "decision": "keep_disabled", "reason": "重复题：与 id=237991 完全相同，保留 237991，本条保持下架"}
+{"question_id": 238889, "module": "yanyu", "stem": "蟑螂的生殖分为有性生殖和孤雌生殖两种方式。蟑螂雌性个体生活在完全由雌性组成的群体", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 238904, "module": "panduan", "stem": "疼痛共情的偏好性，是指个体对他人疼痛的感知、判断和情绪反应，总是由于个体与他人之", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 238910, "module": "panduan", "stem": "外部性是指经济当事人的生产和消费行为对其它经济当事人的生产和消费行为施加的有益或", "decision": "keep_disabled", "reason": "重复题：与 id=238568 完全相同，保留 238568，本条保持下架"}
+{"question_id": 238949, "module": "yanyu", "stem": "资寿寺的壁画在我国现存的明代壁画中应属上品。在风格上，明显带着唐代接受外来文化影", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 238975, "module": "panduan", "stem": "再造想象是指根据言语的描述或图样的示意，在人脑中形成有关事物的形象的过程。根据上", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 238985, "module": "panduan", "stem": "假定有一个鱼缸，里面的金鱼透过弧形的鱼缸玻璃观察外面的世界，现在它们中的物理学家", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 259979, "module": "changshi", "stem": "关于北回归线，下列说法正确的是：", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格", "纠正错误答案并重写解析"]}
+{"question_id": 260158, "module": "changshi", "stem": "社会上普遍存在着当市场上充斥着大量差(假)产品而不能为消费者识别时，好的产品最终", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 260183, "module": "changshi", "stem": "社会上普遍存在着当市场上充斥着大量差(假)产品而不能为消费者识别时，好的产品最终", "decision": "keep_disabled", "reason": "重复题：与 id=260158 完全相同，保留 260158，本条保持下架"}
+{"question_id": 260295, "module": "panduan", "stem": "爆胎∶事故∶保险", "decision": "keep_disabled", "reason": "重复题：与 id=236339 完全相同，保留 236339，本条保持下架"}
+{"question_id": 260627, "module": "changshi", "stem": "下列我国的世界遗产所在省（区）不属于黄河流域的是：", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 261219, "module": "changshi", "stem": "洲际导弹通常指射程大于8000公里的远程弹道式导弹。目前，中国研制的洲际弹道导弹", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格", "补全解析中丢失的公式/文本"]}
+{"question_id": 261775, "module": "changshi", "stem": "下列关于胎儿与母体关系的表述错误的是：", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 261816, "module": "changshi", "stem": "以下各项按时间先后顺序排列正确的是：", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 261973, "module": "changshi", "stem": "下列关于世界古代文明的说法正确的是：", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 262330, "module": "changshi", "stem": "下列选项释义错误的是：", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 262482, "module": "panduan", "stem": "崎岖对于（ ），相当于（ ）对于悲痛", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 262666, "module": "changshi", "stem": "我国新冠肺炎疫情防控工作的总要求是：", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 262692, "module": "panduan", "stem": "辟谣有时会使受众将谣言错记为“事实”，其中原因之一是受众遗忘了谣言的反驳信息，即", "decision": "keep_disabled", "reason": "重复题：与 id=237437 完全相同，保留 237437，本条保持下架"}
+{"question_id": 262884, "module": "yanyu", "stem": "中国长城是在农耕民族和游牧民族的分界线上耸立起来的。这条分界线随着双方力量的__", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 262899, "module": "yanyu", "stem": "就青少年网络成瘾这个社会心理痼疾，社会各界一直在努力寻找对策。相关科学研究从生物", "decision": "keep_disabled", "reason": "重复题：与 id=237408 完全相同，保留 237408，本条保持下架"}
+{"question_id": 262929, "module": "panduan", "stem": "辟谣有时会使受众将谣言错记为“事实”，其中原因之一是受众遗忘了谣言的反驳信息，即", "decision": "keep_disabled", "reason": "重复题：与 id=237437 完全相同，保留 237437，本条保持下架"}
+{"question_id": 262935, "module": "panduan", "stem": "和谐对于（ ）相当于谦虚对于（ ）", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 262970, "module": "yanyu", "stem": "无论经历多少艰难、付出多大牺牲，都不能忘了为什么出发，不能忘了肩负的使命任务，始", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 263200, "module": "yanyu", "stem": "业内专家建议建立国家营养日或营养周，开展食育进农村等活动，加大公益广告投入，发布", "decision": "keep_disabled", "reason": "重复题：与 id=237700 完全相同，保留 237700，本条保持下架"}
+{"question_id": 263273, "module": "changshi", "stem": "祠堂在中国传统社会是家族成员的重要活动中心，一般情况下姓氏称为某氏宗祠，但有时也", "decision": "keep_disabled", "reason": "重复题：与 id=237771 完全相同，保留 237771，本条保持下架"}
+{"question_id": 263453, "module": "changshi", "stem": "生活中俗称“暖宝宝”的一次性取暖片主要由铁粉、活性炭、蛭石、水、盐等材料构成，下", "decision": "keep_disabled", "reason": "重复题：与 id=238023 完全相同，保留 238023，本条保持下架"}
+{"question_id": 263469, "module": "yanyu", "stem": "两相比较，白话文在通俗易懂的同时，往往在韵律上缺少节奏感，篇幅冗长，而文言文能用", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 263508, "module": "panduan", "stem": "近年来，“类脑计算”从理念走向实践，正走出一条制造类人智能的新途径。所谓“类脑计", "decision": "keep_disabled", "reason": "重复题：同题已有在线版本 id=237686，保持下架"}
+{"question_id": 263525, "module": "panduan", "stem": "错觉是完全不符合刺激本身特征的失真的或扭曲事实的知觉经验，生活中，凭知觉经验所作", "decision": "keep_disabled", "reason": "重复题：与 id=238092 完全相同，保留 238092，本条保持下架"}
+{"question_id": 263641, "module": "yanyu", "stem": "生长在非洲大草原上的灰犀牛，身躯庞大，给人一种行动迟缓、安全无害的错觉，从而时常", "decision": "keep_disabled", "reason": "重复题：与 id=238118 完全相同，保留 238118，本条保持下架"}
+{"question_id": 263687, "module": "panduan", "stem": "牵牛花∶喇叭花", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 263788, "module": "panduan", "stem": "算法歧视是以算法为手段实施的歧视，主要指在大数据背景下、依靠机器计算的自动决策系", "decision": "keep_disabled", "reason": "重复题：与 id=238328 完全相同，保留 238328，本条保持下架"}
+{"question_id": 263854, "module": "yanyu", "stem": "国学如果停留在如此浅层次的形式复古，无异于________，甚至会把国学弄成与现", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 263974, "module": "panduan", "stem": "近年来，“类脑计算”从理念走向实践，正走出一条制造类人智能的新途径。所谓“类脑计", "decision": "keep_disabled", "reason": "重复题：同题已有在线版本 id=237686，保持下架"}
+{"question_id": 264235, "module": "changshi", "stem": "下列与鸟类有关的说法，错误的是：", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 264323, "module": "changshi", "stem": "根据《中华人民共和国公务员法》，国家实行公务员交流制度。以下不属于公务员交流的是", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 272692, "module": "changshi", "stem": "关于北回归线，下列说法正确的是：", "decision": "keep_disabled", "reason": "重复题：与 id=259979 完全相同，保留 259979，本条保持下架"}
+{"question_id": 272706, "module": "yanyu", "stem": "承认男人与女人在公共生活上拥有不同特质和技能非常重要。长久以来，女人一直被认为需", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 272710, "module": "yanyu", "stem": "用“文化大散文”来命名八十年代末出现的一种散文文体和随之而来的一种散文创作现象，", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 272714, "module": "shuliang", "stem": "将 2 名教师，4 名学生分成 2 个小组，去甲乙两座城市参加数学建模比赛，每个", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格", "重写乱码/公式丢失的解析"]}
+{"question_id": 272738, "module": "panduan", "stem": "有专家指出，中国人不好酒，但爱劝酒，盛产大量“居心叵测”的劝酒者，在饮酒过程中，", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 273836, "module": "changshi", "stem": "下列选项释义错误的是：", "decision": "keep_disabled", "reason": "重复题：与 id=262330 完全相同，保留 262330，本条保持下架"}
+{"question_id": 273871, "module": "yanyu", "stem": "空气污染阻断了植物与昆虫间的正常交流，这一点对于像蜜蜂之类的传粉昆虫来说影响更大", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 273875, "module": "yanyu", "stem": "在宏观尺度下，金刚石通常被认为表现不出丝毫变形行为。任何极端尝试对它进行变形的后", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 273893, "module": "panduan", "stem": "顾客主动社会化是指顾客为了有效参与到服务过程而主动学习与其身份角色相关的知识和信", "decision": "keep_disabled", "reason": "重复题：同题已有在线版本 id=262388，保持下架"}
+{"question_id": 273897, "module": "panduan", "stem": "黄桃∶水蜜桃∶桃", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 273902, "module": "panduan", "stem": "人工智能无所不在地潜藏、萌发、产生和应用于人们生活的各个方面和各个角落，凡有人类", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 274003, "module": "yanyu", "stem": "对久不更新、久不回复的服务网站，人们没少投诉和批评，最终都________。因为", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 274013, "module": "yanyu", "stem": "众所周知，雷达主要靠接收目标的反射信号来发现目标，通常所说的技术主要依靠形状、吸", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 274018, "module": "yanyu", "stem": "或许是深受农业文明影响的缘故，中国古典艺术始终缠绕着一种对花草植物的敏感。林徽因", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 274036, "module": "panduan", "stem": "O2O 模式即 Online To Offline，是指将线下的商务机会与互联网", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 274040, "module": "panduan", "stem": "义务性规范要求人们以某种方式必须作出或不作出某种行为。授权性规范表明人们有作出或", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 274060, "module": "shuliang", "stem": "某单位开展“我身边的榜样”评选活动，现对 3 名候选人甲、乙、丙进行不记名投票，", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 274088, "module": "yanyu", "stem": "克黎利引述《新科学家》杂志的文章称，记忆的作用不一定是为了记住过去，而是帮助我们", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 274097, "module": "changshi", "stem": "我国新冠肺炎疫情防控工作的总要求是：", "decision": "keep_disabled", "reason": "重复题：与 id=262666 完全相同，保留 262666，本条保持下架"}
+{"question_id": 274103, "module": "changshi", "stem": "二十八星宿对于古人来说，不仅与军事，农耕等有紧密关系，与文学关系也很密切，所以古", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 274115, "module": "panduan", "stem": "在高大建筑物顶端安装一个金属棒，用金属线与埋在地下的金属板连接起来，通过金属棒尖", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 274124, "module": "panduan", "stem": "辟谣有时会使受众将谣言错记为“事实”，其中原因之一是受众遗忘了谣言的反驳信息，即", "decision": "keep_disabled", "reason": "重复题：与 id=237437 完全相同，保留 237437，本条保持下架"}
+{"question_id": 274135, "module": "panduan", "stem": "磷存在于我们的 DNA 中，是构成生命的基本元素之一。但它早期是如何到达地球的仍", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 274155, "module": "yanyu", "stem": "在闽江及其支流上存在着大量的传统村镇与古厝，如琴江满族村、闽安古镇、林浦村的“泰", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 274160, "module": "yanyu", "stem": "隐球菌首先通过肺部感染侵入人体，而后蔓延至包括大脑在内的其他各处器官，可导致胸痛", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 274166, "module": "yanyu", "stem": "重大疫情面前，及时发布权威信息，公开透明回应群众关切，能够有效解决信息不对称的问", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 274173, "module": "shuliang", "stem": "一条直线将一个平面分成 2 个部分，两条直线最多将一个平面分成 4 个部分，……", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 274187, "module": "panduan", "stem": "“小确丧”是网络流行词语，指小而确定的沮丧，是持续发生在日常生活中却又摆脱不了的", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 274220, "module": "changshi", "stem": "西汉末巧工丁缓发明的“被中香炉”是世界上已知最早的常平支架，其构造精巧，使用时把", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 274507, "module": "yanyu", "stem": "①语言是符号体系，而每一种语言的符号体系都带着文化的烙印，都是这种语言的共同体集", "decision": "keep_disabled", "reason": "重复题：同题已有在线版本 id=238313，保持下架"}
+{"question_id": 274515, "module": "yanyu", "stem": "一次，苏格拉底与三个学生走过一块麦田，他要学生从这边走过，去摘一穗最大的麦穗。结", "decision": "keep_disabled", "reason": "重复题：与 id=238381 完全相同，保留 238381，本条保持下架"}
+{"question_id": 274535, "module": "panduan", "stem": "地球距离火星最近约为 5500 万公里，最远则超过 4 亿公里，只有地球与火星夹", "decision": "keep_disabled", "reason": "重复题：同题已有在线版本 id=263180，保持下架"}
+{"question_id": 275789, "module": "changshi", "stem": "下列与鸟类有关的说法，错误的是：", "decision": "keep_disabled", "reason": "重复题：与 id=264235 完全相同，保留 264235，本条保持下架"}
+{"question_id": 275797, "module": "yanyu", "stem": "期刊与网络并存的格局是当下网络文学得以发生的逻辑前提，正是由于期刊发表难，积压的", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 275804, "module": "yanyu", "stem": "随着农村人口快速向城市转移，教育资源的供给并未随之增容，如调整中小学布局，扩建、", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 275822, "module": "yanyu", "stem": "房子是用来住的，不是用来炒的，从理论上说，买房不是刚需，居住才是刚需。但为何“宁", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 275837, "module": "panduan", "stem": "防御机制中的投射作用是指将自己行为中不为社会认可的部分加诸他人，藉以减少自己因此", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格", "修复选项 B 串入/截断文本"]}
+{"question_id": 275873, "module": "changshi", "stem": "下列居民的行为中，符合《条例》要求的是：", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 275897, "module": "yanyu", "stem": "天文学家到目前为止已经发现了超过 1000 颗系外行星，但考察其大小及其和恒星之", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 275937, "module": "panduan", "stem": "波音 737 飞机出现后的 50 年中，航空发动机的直径越来越大，所以新一代的 ", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 275940, "module": "panduan", "stem": "随着航天技术的发展，许多人开始打小行星的主意，认为人类可以通过开采小行星“发家致", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 275950, "module": "panduan", "stem": "路演是指通过现场演示的方法，引起目标人群的关注，使他们产生兴趣，最终达成销售或吸", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 275966, "module": "changshi", "stem": "根据《中华人民共和国公务员法》，国家实行公务员交流制度。以下不属于公务员交流的是", "decision": "keep_disabled", "reason": "重复题：与 id=264323 完全相同，保留 264323，本条保持下架"}
+{"question_id": 275975, "module": "changshi", "stem": "《条例》的顺利实施，重要的是鼓励居民积极参加生活垃圾分类活动。为此，亟需：①抓好", "decision": "keep_disabled", "reason": "题干引用未给出的《条例》材料（解析依赖材料中“桶前值守”内容），且存档答案 A 与解析结论（①③）矛盾，无法修复"}
+{"question_id": 276056, "module": "panduan", "stem": "无感审批是指通过智能技术强化身份认证、智能授权、自动填表等功能，企业群众无需出示", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 285355, "module": "panduan", "stem": "贫困的要素不仅包括物质和收入水平指标，还包括能力指标，即人类基本能力和权利的剥夺", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 285440, "module": "panduan", "stem": "行政不作为是行政机关对于公民、法人和其他组织的符合条件的申请依法应该实施某种行为", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 285601, "module": "changshi", "stem": "下列雕塑作品表现唐太宗李世民生平战功的是:", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格", "重写乱码/公式丢失的解析"]}
+{"question_id": 285642, "module": "shuliang", "stem": "为了国防需要，A基地要运载1480吨的战备物资到1100千米外的B基地。现在A基", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格", "重写乱码/公式丢失的解析"]}
+{"question_id": 285650, "module": "panduan", "stem": "谎言：欺骗", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格", "纠正错误答案并重写解析"]}
+{"question_id": 286051, "module": "shuliang", "stem": "有A和B两个公司想承包某项工程，A公司需要300天才能完工，费用为1.5万元/天", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格", "补全解析中丢失的公式/文本"]}
+{"question_id": 286958, "module": "panduan", "stem": "黄连：苦涩", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 287375, "module": "shuliang", "stem": "某高校艺术学院分音乐系和美术系两个系别，已知学院男生人数占人数的30％，且音乐系", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格", "补全解析中丢失的公式/文本"]}
+{"question_id": 287601, "module": "panduan", "stem": "“气候难民”指的是生存因气候变暖等特殊气候因素而受到威胁的人们，这是一个逐渐扩大", "decision": "keep_disabled", "reason": "重复题：同题已有在线版本 id=287396，保持下架"}
+{"question_id": 287785, "module": "yanyu", "stem": "当前，对于大部分消费者来说，智能化家居产品既熟悉又陌生，很多人的概念还停留在电动", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格", "截断串入其他题目的解析文本"]}
+{"question_id": 287923, "module": "shuliang", "stem": "某种商品原价25元，每半天可销售20个。现知道每降价1元，销量即增加5个。某日上", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格", "重写乱码/公式丢失的解析"]}
+{"question_id": 287934, "module": "panduan", "stem": "择一的因果关系是指两个或者两个以上的行为人都实施了可能对他人造成损害的危险行为，", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 288250, "module": "yanyu", "stem": "“治人者必先自治，责人者必先自责”，纪委是党风廉政建设的重要参与者和反腐败工作的", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 288411, "module": "changshi", "stem": "下列行为属于公民正确行使法定权利的是： ①陈某向有关部门举报公交站旁的诈骗团伙 ", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 288499, "module": "panduan", "stem": "机械类比，就是将两个本质不同的事物，按其表面的相似来机械地加以比较而得出某些结论", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格", "重写乱码/公式丢失的解析"]}
+{"question_id": 329907, "module": "changshi", "stem": "下列做法正确的是：", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 329944, "module": "panduan", "stem": "儿童：女童：未成年", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 330098, "module": "changshi", "stem": "王某将自家三层楼房的承建工程承包给没有施工资质的包工头李某。双方合同约定，李某“", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 330947, "module": "panduan", "stem": "我国婚姻法规定，禁止直系血亲和三代以内旁系血亲结婚。直系血亲是指和自己有直接血缘", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 331155, "module": "shuliang", "stem": "甜柠檬效应就是个体在追求预期目标失败时，为了冲淡自己内心的不安，就百般提高现已实", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格", "重写乱码/公式丢失的解析"]}
+{"question_id": 331658, "module": "yanyu", "stem": "全社会要形成抵制网络不良信息的“防火墙”。网络文化产品直接面向社会公众，经营者是", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 331848, "module": "yanyu", "stem": "在中国城镇化进程中，传统戏曲面临着前所未有的生态变化。民间职业演出积极地适应农村", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 331893, "module": "yanyu", "stem": "与先进轨道交通国家比，国内APM等自动导向轨道交通系统占比还较小；因此，在未来的", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 332270, "module": "panduan", "stem": "团扇：羽毛扇：舞蹈扇", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 332813, "module": "panduan", "stem": "家庭式迁移是指家庭成员以户为单位跟随主要生产要素离开原居住地迁往目标地的人口单向", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 332819, "module": "panduan", "stem": "设计：修建：高楼", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 333151, "module": "changshi", "stem": "2018年我国科技界取得了一系列重大成果，这些成果中不包括：", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 333285, "module": "changshi", "stem": "中国历史上出现过许多“盛世”。下列对应关系错误的是：", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 333511, "module": "changshi", "stem": "下列属于改革开放40年来我国经济建设所取得伟大成就的是: ①建立了最完整的现代工", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 333589, "module": "changshi", "stem": "下列说法正确的是：", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 333877, "module": "changshi", "stem": "下列表述正确的是：", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 333939, "module": "panduan", "stem": "生态系统反服务是指随着受损的自然生态系统结构和功能在人类主动干预保护措施的实施下", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
+{"question_id": 334352, "module": "changshi", "stem": "下列关于仿生生物学的应用对应关系不正确的是：", "decision": "repair_enable", "fixes": ["清理页码残留/广告水印/OCR 空格"]}
