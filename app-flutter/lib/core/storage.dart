@@ -231,6 +231,48 @@ class Store {
   set offlineQueue(Map<String, dynamic> v) =>
       _sp.setString('offlineQueue', jsonEncode(v));
 
+  // ---------- 练习记录 / 最高连对（复刻 practiceHistory / pstats.bestStreak） ----------
+
+  List<dynamic> get practiceHistory => _jsonList('practiceHistory');
+  set practiceHistory(List<dynamic> v) =>
+      _sp.setString('practiceHistory', jsonEncode(v));
+
+  void addPracticeHistory(Map<String, dynamic> rec) {
+    practiceHistory = [rec, ...practiceHistory].take(50).toList();
+  }
+
+  int get bestStreak => _sp.getInt('bestStreak') ?? 0;
+  set bestStreak(int v) => _sp.setInt('bestStreak', v);
+
+  // ---------- AI 学习教练 / 备份恢复码（复刻 coachAdvice / backupCode 键） ----------
+
+  String get coachAdvice => _sp.getString('coachAdvice') ?? '';
+  set coachAdvice(String v) => _sp.setString('coachAdvice', v);
+
+  String get backupCode => _sp.getString('backupCode') ?? '';
+  set backupCode(String v) => _sp.setString('backupCode', v);
+
+  /// 备份数据（复刻 stats.vue localData 键集合，取本端有意义的键）。
+  Map<String, dynamic> backupData() {
+    final out = <String, dynamic>{
+      'dailyGoal': dailyGoal,
+      'fontLv': fontLv,
+      'bestStreak': bestStreak,
+    };
+    if (practiceHistory.isNotEmpty) out['practiceHistory'] = practiceHistory;
+    if (coachAdvice.isNotEmpty) out['coachAdvice'] = coachAdvice;
+    if (backupCode.isNotEmpty) out['backupCode'] = backupCode;
+    return out;
+  }
+
+  void restoreBackup(Map<String, dynamic> data) {
+    if (data['dailyGoal'] is num) dailyGoal = (data['dailyGoal'] as num).toInt();
+    if (data['fontLv'] is num) fontLv = (data['fontLv'] as num).toInt();
+    if (data['bestStreak'] is num) bestStreak = (data['bestStreak'] as num).toInt();
+    if (data['practiceHistory'] is List) practiceHistory = data['practiceHistory'] as List;
+    if (data['coachAdvice'] is String) coachAdvice = data['coachAdvice'] as String;
+  }
+
   // ---------- 主题 ----------
 
   String get themeMode => _sp.getString('themeMode') ?? 'system';

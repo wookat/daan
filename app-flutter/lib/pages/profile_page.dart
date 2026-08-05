@@ -181,7 +181,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     value: _profileSummary, onTap: () => context.go('/home')),
                 _div(),
                 _cell(LucideIcons.calendarDays, '学习日历',
-                    onTap: () => context.go('/stats')),
+                    onTap: () => context.push('/calendar')),
                 _div(),
                 _cell(LucideIcons.star, '我的收藏',
                     onTap: () => context.push('/favorites')),

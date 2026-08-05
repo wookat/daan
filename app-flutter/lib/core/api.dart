@@ -140,6 +140,71 @@ class Api {
     return Map<String, dynamic>.from(r.data);
   }
 
+  /// 全站错题统计（by_module / by_type / by_reason）。
+  static Future<Map<String, dynamic>> stats() async {
+    final r = await dio.get('/api/stats');
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  /// AI 学习教练建议（需访问码）。
+  static Future<String> coach(Map<String, dynamic> statsData) async {
+    final r = await dio.post('/api/coach', data: {'stats': statsData});
+    return (r.data['advice'] ?? '').toString();
+  }
+
+  /// 申论学习统计。
+  static Future<Map<String, dynamic>> shenlunStats() async {
+    final r = await dio.get('/api/shenlun/stats', queryParameters: {'uid': uid()});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  /// 数据备份：上传本地数据，返回恢复码。
+  static Future<String> backupSave(Map<String, dynamic> data, {String? code}) async {
+    final r = await dio.post('/api/backup', data: {
+      if (code != null && code.isNotEmpty) 'code': code,
+      'data': data,
+    });
+    return (r.data['code'] ?? '').toString();
+  }
+
+  /// 用恢复码取回备份数据。
+  static Future<Map<String, dynamic>> backupGet(String code) async {
+    final r = await dio.get('/api/backup', queryParameters: {'code': code});
+    return Map<String, dynamic>.from(r.data['data'] as Map);
+  }
+
+  /// 二级题型（考点）掌握度：{submodule: {n, c}}。
+  static Future<Map<String, dynamic>> submoduleProgress({String? module}) async {
+    final r = await dio.get('/api/submodule_progress', queryParameters: {
+      'uid': uid(),
+      if (module != null && module.isNotEmpty) 'module': module,
+    });
+    final items = r.data['items'];
+    return items is Map ? Map<String, dynamic>.from(items) : <String, dynamic>{};
+  }
+
+  /// 模块下二级题型题量列表。
+  static Future<List<dynamic>> submodules(String module) async {
+    final r = await dio.get('/api/submodules', queryParameters: {'module': module});
+    return r.data['items'] as List<dynamic>;
+  }
+
+  /// 题目纠错上报。
+  static Future<void> questionReport(int questionId, String rtype, String detail) async {
+    await dio.post('/api/question_report', data: {
+      'uid': uid(),
+      'question_id': questionId,
+      'type': rtype,
+      'detail': detail,
+    });
+  }
+
+  /// 模考成绩排名（全站分位与分布）。
+  static Future<Map<String, dynamic>> examRank(int attemptId) async {
+    final r = await dio.get('/api/exam/rank/$attemptId', queryParameters: {'uid': uid()});
+    return Map<String, dynamic>.from(r.data);
+  }
+
   // ---------- 模考 ----------
 
   static Future<Map<String, dynamic>> examPapers({int? year, String? region}) async {

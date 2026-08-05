@@ -36,6 +36,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
   int elapsed = 0;
   final Set<int> favedIds = {};
   bool offline = false; // 断网时使用本地题包，本地判分，作答入离线队列
+  int _curStreak = 0; // 本组连对，用于更新 bestStreak 勋章
 
   @override
   void initState() {
@@ -150,6 +151,14 @@ class _PracticePageState extends ConsumerState<PracticePage> {
       cur.picked = k;
       cur.secs = DateTime.now().difference(_qStart).inSeconds;
     });
+    if (cur.correct) {
+      _curStreak++;
+      if (_curStreak > Store.instance.bestStreak) {
+        Store.instance.bestStreak = _curStreak;
+      }
+    } else {
+      _curStreak = 0;
+    }
     if (widget.mode == 'review' && cur.mistakeId != null) {
       // 遗忘曲线复习打卡
       unawaited(Api.recordReview(cur.mistakeId!, cur.correct).catchError((_) => <String, dynamic>{}));
@@ -197,6 +206,15 @@ class _PracticePageState extends ConsumerState<PracticePage> {
     final answered = items.where((q) => q.answered && !q.logged).toList();
     if (answered.isEmpty) return;
     ref.read(todayCountProvider.notifier).add(answered.length);
+    // 本地练习记录（复刻 practiceHistory 键，供统计页展示）
+    Store.instance.addPracticeHistory({
+      't': DateTime.now().millisecondsSinceEpoch,
+      'module': widget.module ?? '',
+      'mode': widget.mode,
+      'n': answered.length,
+      'correct': answered.where((q) => q.correct).length,
+      'secs': answered.fold<int>(0, (s, q) => s + q.secs),
+    });
     final logItems = answered
         .map((q) => {
               'qid': q.id,

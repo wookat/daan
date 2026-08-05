@@ -4,6 +4,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 
 import '../core/api.dart';
 import '../theme.dart';
+import '../widgets/rank_card.dart';
 
 /// 成绩报告：得分 Hero + 模块条形 + 逐题对错网格（点击看解析）+ 复盘错题。
 class ExamReportPage extends StatefulWidget {
@@ -67,6 +68,8 @@ class _ExamReportPageState extends State<ExamReportPage> {
                   padding: const EdgeInsets.all(16),
                   children: [
                     _hero(),
+                    const SizedBox(height: 12),
+                    RankCard(attemptId: widget.attemptId),
                     const SizedBox(height: 12),
                     _modules(),
                     const SizedBox(height: 12),
