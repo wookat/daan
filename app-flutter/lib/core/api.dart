@@ -559,6 +559,181 @@ class Api {
     return r.data ?? const [];
   }
 
+  // ---------- AI 面试陪练 ----------
+
+  static Future<Map<String, dynamic>> interviewCategories() async {
+    final r = await dio.get('/api/interview/categories', queryParameters: {'uid': uid()});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<Map<String, dynamic>> interviewDraw({String? category, int? excludeId}) async {
+    final r = await dio.get('/api/interview/question', queryParameters: {
+      'uid': uid(),
+      if (category != null && category.isNotEmpty) 'category': category,
+      if (excludeId != null) 'exclude_id': excludeId,
+    });
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<Map<String, dynamic>> interviewHistory({int limit = 50}) async {
+    final r = await dio.get('/api/interview/history',
+        queryParameters: {'uid': uid(), 'limit': limit});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<Map<String, dynamic>> interviewSession(int id) async {
+    final r = await dio.get('/api/interview/sessions/$id', queryParameters: {'uid': uid()});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  /// 面试作答流式点评（SSE）：meta 一次（scores/total/summary），message 增量，done 带 session_id。
+  static Future<Map<String, dynamic>> interviewAnswerStream({
+    required int questionId,
+    required String answer,
+    required int durationSec,
+    required void Function(Map<String, dynamic> meta) onMeta,
+    required void Function(String full) onDelta,
+  }) async {
+    final Response<ResponseBody> r;
+    try {
+      r = await dio.post<ResponseBody>(
+        '/api/interview/answer/stream',
+        data: {
+          'uid': uid(),
+          'question_id': questionId,
+          'answer': answer,
+          'duration_sec': durationSec,
+        },
+        options: Options(responseType: ResponseType.stream),
+      );
+    } on DioException catch (e) {
+      final body = e.response?.data;
+      if (body is ResponseBody) {
+        final bytes = await body.stream
+            .cast<List<int>>()
+            .fold<List<int>>([], (a, b) => a..addAll(b));
+        try {
+          final m = jsonDecode(utf8.decode(bytes));
+          if (m is Map && m['detail'] != null) {
+            throw Exception(m['detail'].toString());
+          }
+        } on FormatException {
+          // ignore: 非 JSON 错误体
+        }
+      }
+      throw Exception(errMsg(e));
+    }
+    Map<String, dynamic> meta = {};
+    Map<String, dynamic> done = {};
+    final full = StringBuffer();
+    var buf = '';
+    final textStream = r.data!.stream
+        .cast<List<int>>()
+        .transform(const Utf8Decoder(allowMalformed: true));
+    await for (final chunk in textStream) {
+      buf += chunk;
+      while (true) {
+        final idx = buf.indexOf('\n\n');
+        if (idx < 0) break;
+        final block = buf.substring(0, idx);
+        buf = buf.substring(idx + 2);
+        String event = 'message';
+        final datas = <String>[];
+        for (final line in block.split('\n')) {
+          if (line.startsWith('event:')) event = line.substring(6).trim();
+          if (line.startsWith('data:')) datas.add(line.substring(5).trim());
+        }
+        if (datas.isEmpty) continue;
+        final payload = datas.join('\n');
+        if (event == 'meta') {
+          meta = Map<String, dynamic>.from(jsonDecode(payload));
+          onMeta(meta);
+        } else if (event == 'error') {
+          final m = jsonDecode(payload);
+          throw Exception((m is Map ? m['message'] : null) ?? '点评失败');
+        } else if (event == 'done') {
+          final m = jsonDecode(payload);
+          if (m is Map) done = Map<String, dynamic>.from(m);
+        } else if (event == 'message') {
+          final m = jsonDecode(payload);
+          if (m is Map && m['d'] != null) {
+            full.write(m['d']);
+            onDelta(full.toString());
+          }
+        }
+      }
+    }
+    return {...meta, ...done, 'review': full.toString()};
+  }
+
+  // ---------- 答题 PK ----------
+
+  /// PK 昵称：登录昵称 > 考友+手机尾号 > 本地随机昵称（复刻 api.js pkNickname）。
+  static String pkNickname() {
+    final u = Store.instance.authUser;
+    if (u != null) {
+      final nick = (u['nickname'] ?? '').toString();
+      if (nick.isNotEmpty) return nick;
+      final phone = (u['phone'] ?? '').toString();
+      if (phone.length >= 4) return '考友${phone.substring(phone.length - 4)}';
+    }
+    return Store.instance.pkNickname();
+  }
+
+  static Future<Map<String, dynamic>> pkCreate(String? module) async {
+    final r = await dio.post('/api/pk/create',
+        data: {'uid': uid(), 'nickname': pkNickname(), 'module': module});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<Map<String, dynamic>> pkJoin(String code) async {
+    final r = await dio.post('/api/pk/join',
+        data: {'uid': uid(), 'nickname': pkNickname(), 'code': code});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<Map<String, dynamic>> pkRandomMatch(String? module) async {
+    final r = await dio.post('/api/pk/random_match',
+        data: {'uid': uid(), 'nickname': pkNickname(), 'module': module});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<Map<String, dynamic>> pkMatch(String code) async {
+    final r = await dio.get('/api/pk/match/${Uri.encodeComponent(code)}',
+        queryParameters: {'uid': uid()});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<Map<String, dynamic>> pkSubmit(
+      String code, List<Map<String, dynamic>> items) async {
+    final r = await dio.post('/api/pk/submit',
+        data: {'uid': uid(), 'code': code, 'items': items});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<Map<String, dynamic>> pkMine() async {
+    final r = await dio.get('/api/pk/mine', queryParameters: {'uid': uid()});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<Map<String, dynamic>> pkLeaderboard() async {
+    final r = await dio.get('/api/pk/leaderboard', queryParameters: {'uid': uid()});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  // ---------- 能力预测分 / 公告 ----------
+
+  static Future<Map<String, dynamic>> predict() async {
+    final r = await dio.get('/api/predict', queryParameters: {'uid': uid()});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<Map<String, dynamic>?> announcement() async {
+    final r = await dio.get('/api/announcement');
+    final it = r.data['item'];
+    return it is Map ? Map<String, dynamic>.from(it) : null;
+  }
+
   // ---------- 账号 ----------
 
   static Future<Map<String, dynamic>> authLogin(String phone, String password) async {

@@ -7,7 +7,9 @@ import 'package:lucide_icons/lucide_icons.dart';
 
 import '../core/api.dart';
 import '../core/models.dart';
+import '../core/offline.dart';
 import '../core/providers.dart';
+import '../core/storage.dart';
 import '../theme.dart';
 import '../widgets/export_sheet.dart';
 
@@ -33,6 +35,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
   Timer? _ticker;
   int elapsed = 0;
   final Set<int> favedIds = {};
+  bool offline = false; // 断网时使用本地题包，本地判分，作答入离线队列
 
   @override
   void initState() {
@@ -73,10 +76,19 @@ class _PracticePageState extends ConsumerState<PracticePage> {
             .whereType<Question>()
             .toList();
       } else {
-        final d = await Api.questions(module: widget.module, limit: 10);
-        qs = (d['items'] as List<dynamic>)
-            .map((e) => Question.fromJson(Map<String, dynamic>.from(e)))
-            .toList();
+        offline = false;
+        try {
+          final d = await Api.questions(module: widget.module, limit: 10);
+          qs = (d['items'] as List<dynamic>)
+              .map((e) => Question.fromJson(Map<String, dynamic>.from(e)))
+              .toList();
+          unawaited(Offline.flushQueue());
+        } on Exception {
+          final local = Offline.drawOffline(widget.module, 10);
+          if (local == null) rethrow;
+          offline = true;
+          qs = local.map(Question.fromJson).toList();
+        }
       }
       if (qs.isEmpty) {
         setState(() {
@@ -144,6 +156,19 @@ class _PracticePageState extends ConsumerState<PracticePage> {
     } else if (!cur.correct && !cur.savedAsMistake) {
       cur.savedAsMistake = true;
       final optText = cur.options.entries.map((e) => '${e.key}.${e.value}').join(' ');
+      if (offline) {
+        Offline.enqueueMistake({
+          'uid': Api.uid(),
+          'question_id': cur.id,
+          'module': cur.module,
+          'question_type': cur.questionType ?? cur.submodule,
+          'question_text': '${cur.question}\n$optText',
+          'user_answer': k,
+          'correct_answer': cur.answer,
+          'explanation': cur.explanation ?? '',
+        });
+        return;
+      }
       unawaited(Api.saveMistake({
         'question_id': cur.id,
         'module': cur.module,
@@ -182,6 +207,16 @@ class _PracticePageState extends ConsumerState<PracticePage> {
               'picked': q.picked,
             })
         .toList();
+    if (offline) {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      Offline.enqueueAnswers(Api.uid(), [
+        for (var i = 0; i < logItems.length; i++) {...logItems[i], 't': now + i},
+      ]);
+      for (final q in answered) {
+        q.logged = true;
+      }
+      return;
+    }
     try {
       await Api.answerLog(logItems);
       for (final q in answered) {
@@ -191,7 +226,16 @@ class _PracticePageState extends ConsumerState<PracticePage> {
       final secs = answered.fold<int>(0, (s, q) => s + q.secs);
       unawaited(Api.practiceResult(widget.module ?? '', answered.length, right, secs)
           .catchError((_) {}));
-    } catch (_) {/* 非关键路径：断网不阻塞结算 */}
+    } catch (_) {
+      // 断网结算：入离线队列，联网后自动补传去重
+      final now = DateTime.now().millisecondsSinceEpoch;
+      Offline.enqueueAnswers(Api.uid(), [
+        for (var i = 0; i < logItems.length; i++) {...logItems[i], 't': now + i},
+      ]);
+      for (final q in answered) {
+        q.logged = true;
+      }
+    }
   }
 
   @override
@@ -231,6 +275,14 @@ class _PracticePageState extends ConsumerState<PracticePage> {
     final q = cur;
     return Column(
       children: [
+        if (offline)
+          Container(
+            width: double.infinity,
+            color: KgColors.warningBg,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: const Text('离线模式 · 本地题包判分，联网后自动同步',
+                style: TextStyle(fontSize: 11.5, color: KgColors.warning)),
+          ),
         LinearProgressIndicator(
           value: (idx + 1) / items.length,
           minHeight: 3,
@@ -253,7 +305,11 @@ class _PracticePageState extends ConsumerState<PracticePage> {
                 ],
               ),
               const SizedBox(height: 12),
-              Text(q.question, style: const TextStyle(fontSize: 16, height: 1.7)),
+              Text(q.question,
+                  style: TextStyle(
+                      fontSize: const [14.0, 16.0, 18.0, 20.0][
+                          Store.instance.fontLv.clamp(0, 3)],
+                      height: 1.7)),
               const SizedBox(height: 16),
               for (final e in q.options.entries) _option(q, e.key, e.value),
               if (q.answered) ...[
@@ -465,6 +521,11 @@ class _PracticePageState extends ConsumerState<PracticePage> {
             const SizedBox(height: 4),
             Text('答对 $right/${answered.length} 题 · 用时 ${elapsed ~/ 60} 分 ${elapsed % 60} 秒',
                 style: const TextStyle(color: KgColors.t3)),
+            if (offline) ...[
+              const SizedBox(height: 8),
+              const Text('本组为离线作答，恢复网络后将自动同步（去重）',
+                  style: TextStyle(fontSize: 12, color: KgColors.warning)),
+            ],
             const SizedBox(height: 32),
             FilledButton(onPressed: _load, child: const Text('再来一组')),
             const SizedBox(height: 12),
