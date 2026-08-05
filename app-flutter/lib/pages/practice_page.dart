@@ -210,15 +210,16 @@ class _PracticePageState extends ConsumerState<PracticePage> {
         });
         return;
       }
+      final q = cur;
       unawaited(Api.saveMistake({
-        'question_id': cur.id,
-        'module': cur.module,
-        'question_type': cur.questionType ?? cur.submodule,
-        'question_text': '${cur.question}\n$optText',
+        'question_id': q.id,
+        'module': q.module,
+        'question_type': q.questionType ?? q.submodule,
+        'question_text': '${q.question}\n$optText',
         'user_answer': k,
-        'correct_answer': cur.answer,
-        'explanation': cur.explanation ?? '',
-      }).catchError((_) => null));
+        'correct_answer': q.answer,
+        'explanation': q.explanation ?? '',
+      }).then((mid) => q.mistakeId ??= mid).catchError((_) => null));
     }
   }
 
@@ -314,6 +315,12 @@ class _PracticePageState extends ConsumerState<PracticePage> {
         title: Text(title),
         actions: [
           if (!loading && error == null && !finished)
+            IconButton(
+              tooltip: '答题卡',
+              onPressed: _openAnswerCard,
+              icon: const Icon(LucideIcons.layoutGrid, size: 18),
+            ),
+          if (!loading && error == null && !finished)
             Padding(
               padding: const EdgeInsets.only(right: 16),
               child: Center(
@@ -374,6 +381,24 @@ class _PracticePageState extends ConsumerState<PracticePage> {
                       fontSize: const [14.0, 16.0, 18.0, 20.0][
                           Store.instance.fontLv.clamp(0, 3)],
                       height: 1.7)),
+              if (q.image != null && q.image!.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.network(
+                    _imgUrl(q.image!),
+                    width: double.infinity,
+                    fit: BoxFit.fitWidth,
+                    errorBuilder: (c, e, s) => const SizedBox.shrink(),
+                  ),
+                ),
+                if (q.imageCredit != null && q.imageCredit!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text('图源：${q.imageCredit}',
+                        style: const TextStyle(fontSize: 10, color: KgColors.t4)),
+                  ),
+              ],
               const SizedBox(height: 16),
               for (final e in q.options.entries) _option(q, e.key, e.value),
               if (q.answered) ...[
@@ -472,8 +497,55 @@ class _PracticePageState extends ConsumerState<PracticePage> {
                       color: q.correct ? KgColors.success : KgColors.error)),
             ],
           ),
+          if (!q.correct) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                const Text('错因自评：',
+                    style: TextStyle(fontSize: 12, color: KgColors.t3)),
+                for (final rz in const ['粗心大意', '概念不清', '方法不会', '纯蒙的'])
+                  InkWell(
+                    onTap: () => _setReason(q, rz),
+                    borderRadius: BorderRadius.circular(6),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: q.errorReason == rz
+                            ? KgColors.brand
+                            : KgColors.fill,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(rz,
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: q.errorReason == rz
+                                  ? Colors.white
+                                  : KgColors.t3)),
+                    ),
+                  ),
+              ],
+            ),
+          ],
           const SizedBox(height: 10),
-          Text('正确答案：${q.answer}', style: const TextStyle(fontWeight: FontWeight.w600)),
+          Row(
+            children: [
+              Text('正确答案：${q.answer}',
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              const Spacer(),
+              if (q.secs > 0)
+                Text('用时 ${q.secs}s',
+                    style: const TextStyle(fontSize: 12, color: KgColors.t4)),
+            ],
+          ),
+          if (q.source != null && q.source!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text('出处：${q.source}',
+                style: const TextStyle(fontSize: 11, color: KgColors.t4)),
+          ],
           if (q.explanation != null && q.explanation!.trim().isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(q.explanation!, style: const TextStyle(fontSize: 14, height: 1.6)),
@@ -494,6 +566,16 @@ class _PracticePageState extends ConsumerState<PracticePage> {
                 _explainOp(LucideIcons.messagesSquare, '讨论区',
                     () => context.push('/discuss?qid=${q.id}')),
               ],
+            ),
+            const SizedBox(height: 10),
+            InkWell(
+              onTap: q.reported ? null : () => _reportQuestion(q),
+              child: Text(
+                q.reported ? '已提交纠错，感谢反馈' : '题目有问题？纠错',
+                style: TextStyle(
+                    fontSize: 12,
+                    color: q.reported ? KgColors.t4 : KgColors.brand),
+              ),
             ),
           ],
         ],
@@ -627,6 +709,129 @@ class _PracticePageState extends ConsumerState<PracticePage> {
         ),
       ),
     );
+  }
+
+  String _imgUrl(String p) =>
+      p.startsWith('http') ? p : '${Api.baseUrl}$p';
+
+  Future<void> _setReason(Question q, String rz) async {
+    setState(() => q.errorReason = rz);
+    if (q.mistakeId != null) {
+      try {
+        await Api.patchMistake(q.mistakeId!, {'error_reason': rz});
+      } catch (_) {/* 非关键路径 */}
+    }
+  }
+
+  /// 题目纠错（复刻 reportTypes）。
+  Future<void> _reportQuestion(Question q) async {
+    if (q.id == null) return;
+    const types = ['答案错误', '解析错误', '题干或选项错字', '图片缺失', '分类错误', '重复题', '其他'];
+    final rtype = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (c) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Text('题目纠错 · 选择问题类型',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            ),
+            const SizedBox(height: 6),
+            for (final t in types)
+              ListTile(
+                dense: true,
+                title: Text(t, style: const TextStyle(fontSize: 14)),
+                onTap: () => Navigator.pop(c, t),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (rtype == null || !mounted) return;
+    try {
+      await Api.questionReport(q.id!, rtype, '');
+      setState(() => q.reported = true);
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('已提交，感谢反馈')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(Api.errMsg(e))));
+      }
+    }
+  }
+
+  /// 答题卡：全组题号网格，点击跳题。
+  Future<void> _openAnswerCard() async {
+    final jump = await showModalBottomSheet<int>(
+      context: context,
+      showDragHandle: true,
+      builder: (c) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('答题卡',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  for (var i = 0; i < items.length; i++)
+                    InkWell(
+                      onTap: () => Navigator.pop(c, i),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: !items[i].answered
+                              ? KgColors.fill
+                              : items[i].correct
+                                  ? KgColors.successBg
+                                  : KgColors.errorBg,
+                          borderRadius: BorderRadius.circular(8),
+                          border: i == idx
+                              ? Border.all(color: KgColors.brand, width: 1.5)
+                              : null,
+                        ),
+                        child: Text('${i + 1}',
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: !items[i].answered
+                                    ? KgColors.t3
+                                    : items[i].correct
+                                        ? KgColors.success
+                                        : KgColors.error)),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Text('绿=对 红=错 灰=未作答，点题号可跳转',
+                  style: TextStyle(fontSize: 11, color: KgColors.t4)),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (jump != null && mounted) {
+      setState(() {
+        idx = jump;
+        if (!items[jump].answered) _qStart = DateTime.now();
+      });
+    }
   }
 
   Widget _tag(String text, Color color) {
