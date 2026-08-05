@@ -16,10 +16,30 @@ import '../widgets/export_sheet.dart';
 /// 练习答题页：取题 → 作答 → 判分 → 解析 → 上报 answer_log；答错自动入错题本。
 /// mode: normal（专项/综合）| redo（错题重练）| review（今日复习，按遗忘曲线记录）
 class PracticePage extends ConsumerStatefulWidget {
-  const PracticePage({super.key, this.module, this.mode = 'normal'});
+  const PracticePage({
+    super.key,
+    this.module,
+    this.mode = 'normal',
+    this.submodule,
+    this.count,
+    this.source,
+    this.title,
+  });
 
   final String? module;
   final String mode;
+
+  /// 二级题型（考点）筛选。
+  final String? submodule;
+
+  /// 本组题量（默认取练习设置 groupSize）。
+  final int? count;
+
+  /// 真题卷来源（mode=paper 时整卷连做）。
+  final String? source;
+
+  /// 页面标题覆盖（卷名等）。
+  final String? title;
 
   @override
   ConsumerState<PracticePage> createState() => _PracticePageState();
@@ -76,16 +96,28 @@ class _PracticePageState extends ConsumerState<PracticePage> {
             })
             .whereType<Question>()
             .toList();
+      } else if (widget.mode == 'paper' && widget.source != null) {
+        final raw = await Api.paperQuestions(widget.source!);
+        qs = raw.map((e) => Question.fromJson(Map<String, dynamic>.from(e))).toList();
       } else {
         offline = false;
+        final n = widget.count ?? Store.instance.groupSize;
+        final real = Store.instance.realMode;
         try {
-          final d = await Api.questions(module: widget.module, limit: 10);
+          final d = await Api.questions(
+            module: widget.module,
+            submodule: widget.submodule,
+            limit: n,
+            real: real,
+            year: real ? Store.instance.realYear : null,
+            region: real ? Store.instance.realRegion : null,
+          );
           qs = (d['items'] as List<dynamic>)
               .map((e) => Question.fromJson(Map<String, dynamic>.from(e)))
               .toList();
           unawaited(Offline.flushQueue());
         } on Exception {
-          final local = Offline.drawOffline(widget.module, 10);
+          final local = Offline.drawOffline(widget.module, n);
           if (local == null) rethrow;
           offline = true;
           qs = local.map(Question.fromJson).toList();
@@ -206,6 +238,16 @@ class _PracticePageState extends ConsumerState<PracticePage> {
     final answered = items.where((q) => q.answered && !q.logged).toList();
     if (answered.isEmpty) return;
     ref.read(todayCountProvider.notifier).add(answered.length);
+    // 本地各模块统计（复刻 pstats.byModule，供首页进度展示）
+    final byMod = <String, List<int>>{};
+    for (final q in answered) {
+      final m = (q.module ?? widget.module ?? '').toString();
+      if (m.isEmpty) continue;
+      final cur = byMod.putIfAbsent(m, () => [0, 0]);
+      cur[0]++;
+      if (q.correct) cur[1]++;
+    }
+    byMod.forEach((m, v) => Store.instance.addModuleStat(m, v[0], v[1]));
     // 本地练习记录（复刻 practiceHistory 键，供统计页展示）
     Store.instance.addPracticeHistory({
       't': DateTime.now().millisecondsSinceEpoch,
@@ -261,7 +303,11 @@ class _PracticePageState extends ConsumerState<PracticePage> {
     final title = switch (widget.mode) {
       'redo' => '错题重练',
       'review' => '今日复习',
-      _ => moduleName(widget.module),
+      'paper' => widget.title ?? '真题卷',
+      _ => widget.title ??
+          (widget.submodule?.isNotEmpty == true
+              ? widget.submodule!
+              : moduleName(widget.module)),
     };
     return Scaffold(
       appBar: AppBar(

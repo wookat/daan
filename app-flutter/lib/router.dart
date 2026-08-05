@@ -48,6 +48,10 @@ final router = GoRouter(
       builder: (c, s) => PracticePage(
         module: s.uri.queryParameters['module'],
         mode: s.uri.queryParameters['mode'] ?? 'normal',
+        submodule: s.uri.queryParameters['submodule'],
+        count: int.tryParse(s.uri.queryParameters['count'] ?? ''),
+        source: s.uri.queryParameters['source'],
+        title: s.uri.queryParameters['title'],
       ),
     ),
     GoRoute(

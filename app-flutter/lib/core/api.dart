@@ -53,16 +53,47 @@ class Api {
 
   static Future<Map<String, dynamic>> questions({
     String? module,
+    String? submodule,
+    String? tag3,
     int limit = 10,
     bool adaptive = true,
+    bool real = false,
+    int? year,
+    String? region,
+    bool grouped = false,
   }) async {
     final r = await dio.get('/api/questions', queryParameters: {
       'limit': limit,
       if (module != null && module.isNotEmpty) 'module': module,
+      if (submodule != null && submodule.isNotEmpty) 'submodule': submodule,
+      if (tag3 != null && tag3.isNotEmpty) 'tag3': tag3,
       'uid': uid(),
       if (adaptive) 'adaptive': 1,
+      if (real) 'real': 1,
+      if (real && year != null) 'year': year,
+      if (real && region != null && region.isNotEmpty) 'region': region,
+      if (grouped) 'grouped': 1,
     });
     return Map<String, dynamic>.from(r.data);
+  }
+
+  /// 真题筛选项（年份/地区）。
+  static Future<Map<String, dynamic>> realFilters() async {
+    final r = await dio.get('/api/real_filters');
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  /// 真题卷库列表。
+  static Future<List<dynamic>> papers() async {
+    final r = await dio.get('/api/papers');
+    return r.data['items'] as List<dynamic>;
+  }
+
+  /// 按卷取题（整卷连做）。
+  static Future<List<dynamic>> paperQuestions(String source) async {
+    final r = await dio.get('/api/paper_questions',
+        queryParameters: {'src': source});
+    return r.data['items'] as List<dynamic>;
   }
 
   static Future<List<dynamic>> mistakesRedo({int limit = 10, String? module}) async {

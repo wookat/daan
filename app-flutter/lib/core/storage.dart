@@ -231,6 +231,47 @@ class Store {
   set offlineQueue(Map<String, dynamic> v) =>
       _sp.setString('offlineQueue', jsonEncode(v));
 
+  // ---------- 练习设置（复刻 groupSize / realMode / realYear / realRegion 键） ----------
+
+  int get groupSize => _sp.getInt('groupSize') ?? 10;
+  set groupSize(int v) => _sp.setInt('groupSize', v);
+
+  bool get realMode => _sp.getBool('realMode') ?? false;
+  set realMode(bool v) => _sp.setBool('realMode', v);
+
+  int? get realYear => _sp.getInt('realYear');
+  set realYear(int? v) =>
+      v == null ? _sp.remove('realYear') : _sp.setInt('realYear', v);
+
+  String get realRegion => _sp.getString('realRegion') ?? '';
+  set realRegion(String v) =>
+      v.isEmpty ? _sp.remove('realRegion') : _sp.setString('realRegion', v);
+
+  // ---------- 公告关闭记录（复刻 annDismissed 键） ----------
+
+  String get annDismissed => _sp.getString('annDismissed') ?? '';
+  set annDismissed(String v) => _sp.setString('annDismissed', v);
+
+  // ---------- 各模块本地做题统计（复刻 pstats.byModule） ----------
+
+  Map<String, dynamic> get moduleStats {
+    final s = _sp.getString('moduleStats');
+    if (s == null || s.isEmpty) return {};
+    final d = jsonDecode(s);
+    return d is Map<String, dynamic> ? d : {};
+  }
+
+  void addModuleStat(String module, int done, int correct) {
+    if (module.isEmpty) return;
+    final all = moduleStats;
+    final cur = Map<String, dynamic>.from(all[module] as Map? ?? {});
+    all[module] = {
+      'done': ((cur['done'] ?? 0) as num).toInt() + done,
+      'correct': ((cur['correct'] ?? 0) as num).toInt() + correct,
+    };
+    _sp.setString('moduleStats', jsonEncode(all));
+  }
+
   // ---------- 练习记录 / 最高连对（复刻 practiceHistory / pstats.bestStreak） ----------
 
   List<dynamic> get practiceHistory => _jsonList('practiceHistory');
