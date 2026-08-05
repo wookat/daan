@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import auth, db, engine, insights, interview, kb, llm, omr, pdf_export, pk, plan, social, taxonomy
+from . import auth, db, engine, insights, interview, kb, llm, omr, pdf_export, pk, plan, similarity, social, taxonomy
 
 app = FastAPI(title="考公错题助手")
 # Android App（Capacitor WebView，origin 为 https://localhost）跨域访问 API
@@ -300,12 +300,16 @@ def api_admin_questions(
     offset: int = 0,
     limit: int = 20,
     qid: int | None = None,
+    min_score: int | None = None,
+    max_score: int | None = None,
+    sort: str | None = None,
     x_admin_token: str | None = Header(None),
 ):
     check_admin(x_admin_token)
     return {
         "items": db.admin_search_questions(
-            keyword, module, flagged=bool(flagged), disabled_only=bool(disabled), offset=offset, limit=limit, qid=qid
+            keyword, module, flagged=bool(flagged), disabled_only=bool(disabled), offset=offset, limit=limit, qid=qid,
+            min_score=min_score, max_score=max_score, sort=sort,
         )
     }
 
@@ -358,6 +362,39 @@ def api_admin_taxonomy_questions(code: str, offset: int = 0, limit: int = 20, x_
 def api_admin_tag3_review(limit: int = 100, module: str | None = None, x_admin_token: str | None = Header(None)):
     check_admin(x_admin_token)
     return db.tag3_review_list(limit, module)
+
+
+@app.get("/api/admin/similar_questions")
+def api_admin_similar_questions(qid: int, limit: int = 10, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    conn = db.get_conn()
+    try:
+        items = similarity.find_similar(conn, qid, limit=min(limit, 50))
+    finally:
+        conn.close()
+    return {"qid": qid, "items": items}
+
+
+@app.get("/api/admin/dup_clusters")
+def api_admin_dup_clusters(offset: int = 0, limit: int = 20, status: str = "open", x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return {**db.dup_cluster_list(offset=offset, limit=limit, status=status), "stats": db.dup_cluster_stats()}
+
+
+@app.get("/api/admin/dup_clusters/{cluster_id}")
+def api_admin_dup_cluster_detail(cluster_id: int, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return {"cluster_id": cluster_id, "items": db.dup_cluster_detail(cluster_id)}
+
+
+@app.post("/api/admin/dup_clusters/{cluster_id}/resolve")
+def api_admin_dup_cluster_resolve(cluster_id: int, body: dict, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    keep = body.get("keep_qid")
+    res = db.dup_cluster_resolve(cluster_id, int(keep) if keep is not None else None)
+    if not res.get("ok"):
+        raise HTTPException(400, res.get("error", "处理失败"))
+    return res
 
 
 @app.get("/api/admin/flagged_cache")
