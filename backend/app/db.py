@@ -8,7 +8,7 @@ import secrets
 import sqlite3
 import time
 
-from . import taxonomy
+from . import similarity, taxonomy
 
 DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), "..", "..", "data.db"))
 
@@ -76,6 +76,7 @@ def init_db():
         ("xp_school", "ALTER TABLE questions ADD COLUMN xp_school TEXT"),
         ("has_hs", "ALTER TABLE questions ADD COLUMN has_hs INTEGER DEFAULT 0"),
         ("tag3", "ALTER TABLE questions ADD COLUMN tag3 TEXT"),
+        ("quality_score", "ALTER TABLE questions ADD COLUMN quality_score INTEGER"),
     ]:
         if col not in qcols:
             conn.execute(ddl)
@@ -89,6 +90,8 @@ def init_db():
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_module ON questions(module, submodule)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_real ON questions(is_real)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_tag3 ON questions(tag3)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_q_quality ON questions(quality_score)")
+    similarity.ensure_tables(conn)
     conn.execute(
         """CREATE TABLE IF NOT EXISTS tag3_review (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1105,6 +1108,9 @@ def admin_search_questions(
     offset: int = 0,
     limit: int = 20,
     qid: int | None = None,
+    min_score: int | None = None,
+    max_score: int | None = None,
+    sort: str | None = None,
 ) -> list[dict]:
     conn = get_conn()
     where = []
@@ -1122,11 +1128,24 @@ def admin_search_questions(
         where.append("hs_down>0")
     if disabled_only:
         where.append("disabled=1")
+    if min_score is not None:
+        where.append("quality_score>=?")
+        args.append(min_score)
+    if max_score is not None:
+        where.append("quality_score<=?")
+        args.append(max_score)
     clause = ("WHERE " + " AND ".join(where)) if where else ""
-    order = "hs_down DESC, id DESC" if flagged else "id DESC"
+    if sort == "score_asc":
+        order = "quality_score IS NULL, quality_score ASC, id DESC"
+    elif sort == "score_desc":
+        order = "quality_score IS NULL, quality_score DESC, id DESC"
+    elif flagged:
+        order = "hs_down DESC, id DESC"
+    else:
+        order = "id DESC"
     rows = conn.execute(
         f"SELECT id, module, submodule, question, options, answer, explanation, hs_explanation, "
-        f"hs_up, hs_down, is_real, exam_year, exam_region, source, disabled, tag3 "
+        f"hs_up, hs_down, is_real, exam_year, exam_region, source, disabled, tag3, quality_score "
         f"FROM questions {clause} ORDER BY {order} LIMIT ? OFFSET ?",
         (*args, min(limit, 50), offset),
     ).fetchall()
@@ -1152,6 +1171,83 @@ def admin_update_question(qid: int, fields: dict) -> bool:
     conn.commit()
     conn.close()
     return cur.rowcount > 0
+
+
+def dup_cluster_list(offset: int = 0, limit: int = 20, status: str = "open") -> dict:
+    conn = get_conn()
+    total = conn.execute(
+        "SELECT COUNT(DISTINCT cluster_id) FROM dup_clusters WHERE status=?", (status,)
+    ).fetchone()[0]
+    rows = conn.execute(
+        """SELECT d.cluster_id, COUNT(*) n, MAX(d.similarity) max_sim,
+                  COUNT(DISTINCT q.module) modules_n,
+                  GROUP_CONCAT(DISTINCT q.module) modules,
+                  COUNT(DISTINCT q.answer) answers_n,
+                  MIN(q.question) sample
+           FROM dup_clusters d JOIN questions q ON q.id=d.qid
+           WHERE d.status=?
+           GROUP BY d.cluster_id ORDER BY n DESC, d.cluster_id
+           LIMIT ? OFFSET ?""",
+        (status, min(limit, 100), offset),
+    ).fetchall()
+    conn.close()
+    return {"total": total, "items": [dict(r) for r in rows]}
+
+
+def dup_cluster_detail(cluster_id: int) -> list[dict]:
+    conn = get_conn()
+    rows = conn.execute(
+        """SELECT q.id, q.module, q.submodule, q.question, q.options, q.answer,
+                  q.explanation, q.hs_explanation, q.is_real, q.exam_year, q.exam_region,
+                  q.source, q.disabled, q.tag3, q.quality_score, d.similarity, d.status
+           FROM dup_clusters d JOIN questions q ON q.id=d.qid
+           WHERE d.cluster_id=? ORDER BY q.quality_score DESC, q.id""",
+        (cluster_id,),
+    ).fetchall()
+    conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["options"] = json.loads(d.get("options") or "{}")
+        out.append(d)
+    return out
+
+
+def dup_cluster_resolve(cluster_id: int, keep_qid: int | None) -> dict:
+    """一键保留最优：保留 keep_qid，下架簇内其余题；keep_qid 为 None 时仅标记忽略。"""
+    conn = get_conn()
+    qids = [r["qid"] for r in conn.execute(
+        "SELECT qid FROM dup_clusters WHERE cluster_id=? AND status='open'", (cluster_id,)
+    )]
+    if not qids:
+        conn.close()
+        return {"ok": False, "error": "簇不存在或已处理"}
+    disabled = []
+    if keep_qid is not None:
+        if keep_qid not in qids:
+            conn.close()
+            return {"ok": False, "error": "keep_qid 不在该簇内"}
+        disabled = [q for q in qids if q != keep_qid]
+        conn.executemany("UPDATE questions SET disabled=1 WHERE id=?", [(q,) for q in disabled])
+    new_status = "resolved" if keep_qid is not None else "ignored"
+    conn.execute("UPDATE dup_clusters SET status=? WHERE cluster_id=?", (new_status, cluster_id))
+    conn.commit()
+    conn.close()
+    return {"ok": True, "kept": keep_qid, "disabled": disabled, "status": new_status}
+
+
+def dup_cluster_stats() -> dict:
+    conn = get_conn()
+    row = conn.execute(
+        """SELECT COUNT(DISTINCT CASE WHEN status='open' THEN cluster_id END) open_clusters,
+                  COUNT(CASE WHEN status='open' THEN 1 END) open_questions,
+                  COUNT(DISTINCT CASE WHEN status='resolved' THEN cluster_id END) resolved,
+                  COUNT(DISTINCT CASE WHEN status='ignored' THEN cluster_id END) ignored
+           FROM dup_clusters"""
+    ).fetchone()
+    meta = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM sim_meta")}
+    conn.close()
+    return {**dict(row), "meta": meta}
 
 
 def admin_flagged_cache(limit: int = 30) -> list[dict]:

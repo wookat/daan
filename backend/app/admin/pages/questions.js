@@ -2,7 +2,7 @@
 (function () {
   const { api, esc, toast, MODS, modTag, openDrawer, closeDrawer, topicOptions } = Admin;
   const LIMIT = 20;
-  let state = { kw: '', module: '', filter: 'all', offset: 0, qid: null };
+  let state = { kw: '', module: '', filter: 'all', offset: 0, qid: null, minScore: '', maxScore: '', sort: '' };
   let items = [];
   let selected = new Set();
 
@@ -13,9 +13,18 @@
     if (state.module) p.set('module', state.module);
     if (state.filter === 'flagged') p.set('flagged', '1');
     if (state.filter === 'disabled') p.set('disabled', '1');
+    if (state.minScore !== '') p.set('min_score', state.minScore);
+    if (state.maxScore !== '') p.set('max_score', state.maxScore);
+    if (state.sort) p.set('sort', state.sort);
     p.set('offset', state.offset);
     p.set('limit', LIMIT);
     return '/api/admin/questions?' + p;
+  }
+
+  function scoreTag(s) {
+    if (s === null || s === undefined) return '<span class="tag tag-gray">未打分</span>';
+    const cls = s >= 80 ? 'tag-ok' : s >= 60 ? 'tag-info' : s >= 40 ? 'tag-warn' : 'tag-bad';
+    return `<span class="tag ${cls}">${s}</span>`;
   }
 
   function statusTag(q) {
@@ -40,6 +49,7 @@
       <th style="width:36px"><input type="checkbox" id="q-all"></th>
       <th style="width:70px">ID</th><th>题干</th><th style="width:90px">模块</th>
       <th style="width:120px">考点</th><th style="width:60px">答案</th>
+      <th style="width:66px">质量分</th>
       <th style="width:80px">状态</th><th style="width:110px">操作</th></tr></thead><tbody>
       ${items.map((q) => `<tr>
         <td><input type="checkbox" class="q-ck" data-id="${q.id}" ${selected.has(q.id) ? 'checked' : ''}></td>
@@ -48,6 +58,7 @@
         <td>${modTag(q.module)}</td>
         <td><span class="tag ${q.tag3 && q.tag3 !== 'UNKNOWN' ? 'tag-info' : 'tag-warn'}">${esc(q.tag3 || '未标注')}</span></td>
         <td><b>${esc(q.answer || '—')}</b></td>
+        <td>${scoreTag(q.quality_score)}</td>
         <td>${statusTag(q)}</td>
         <td><a data-edit="${q.id}" style="color:var(--brand-600)">编辑</a>　<a data-toggle="${q.id}" style="color:${q.disabled === 1 ? 'var(--success)' : 'var(--error)'}">${q.disabled === 1 ? '上架' : '下架'}</a></td>
       </tr>`).join('')}</tbody></table>
@@ -149,7 +160,7 @@
   }
 
   async function render(el, params) {
-    state = { kw: params.get('kw') || '', module: '', filter: 'all', offset: 0, qid: params.get('id') || null };
+    state = { kw: params.get('kw') || '', module: '', filter: 'all', offset: 0, qid: params.get('id') || null, minScore: '', maxScore: '', sort: '' };
     el.innerHTML = `
     <div class="pagehead">
       <div><h1>题库管理</h1><div class="sub">搜索、编辑、上下架与批量操作</div></div>
@@ -164,6 +175,11 @@
           <span class="chip" data-f="flagged">差评待处理</span>
           <span class="chip" data-f="disabled">已下架</span>
         </div>
+        <select class="sel" id="q-score"><option value="">全部质量分</option>
+          <option value="80-100">优 80-100</option><option value="60-79">良 60-79</option>
+          <option value="40-59">中 40-59</option><option value="0-39">差 0-39</option></select>
+        <select class="sel" id="q-sort"><option value="">默认排序</option>
+          <option value="score_asc">质量分 ↑</option><option value="score_desc">质量分 ↓</option></select>
         <button class="btn btn-primary" id="q-go">查询</button>
       </div>
     </div>
@@ -179,6 +195,9 @@
       state.qid = /^\d+$/.test(v) ? v : null;
       state.kw = state.qid ? '' : v;
       state.module = document.getElementById('q-module').value;
+      const range = document.getElementById('q-score').value;
+      [state.minScore, state.maxScore] = range ? range.split('-') : ['', ''];
+      state.sort = document.getElementById('q-sort').value;
       state.offset = 0;
       load();
     };
