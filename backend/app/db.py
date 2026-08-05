@@ -1909,10 +1909,10 @@ def _ensure_mistake_uid(conn):
 
 
 def _uid_clause(uid: str | None) -> tuple[str, tuple]:
-    """历史无 uid 的记录对所有设备可见，新记录按 uid 隔离。"""
+    """按 uid 严格隔离；无 uid 的调用只见无归属记录。"""
     if not uid:
-        return "", ()
-    return " AND (uid IS NULL OR uid=?)", (uid,)
+        return " AND uid IS NULL", ()
+    return " AND uid=?", (uid,)
 
 
 def save_paper_export(code: str, question_ids: list[int], title: str) -> None:
@@ -1995,7 +1995,7 @@ def save_mistake(rec: dict) -> int:
 def list_mistakes(limit: int = 500, uid: str | None = None) -> list[dict]:
     conn = get_conn()
     _ensure_mistake_uid(conn)
-    cl = " AND (m.uid IS NULL OR m.uid=?)" if uid else ""
+    cl = " AND m.uid=?" if uid else " AND m.uid IS NULL"
     args = (uid,) if uid else ()
     rows = conn.execute(
         f"""SELECT m.*, q.tag3 FROM mistakes m
