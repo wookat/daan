@@ -2100,17 +2100,22 @@ def record_review(mid: int, correct: bool, uid: str | None = None) -> dict:
     return {"streak": streak, "next_review_days": days, "mastered": bool(mastered)}
 
 
-def stats() -> dict:
+def stats(uid: str | None = None) -> dict:
     conn = get_conn()
+    _ensure_mistake_uid(conn)
+    uc, ua = _uid_clause(uid)
     by_module = conn.execute(
-        "SELECT module, COUNT(*) n FROM mistakes GROUP BY module ORDER BY n DESC"
+        f"SELECT module, COUNT(*) n FROM mistakes WHERE 1=1{uc} GROUP BY module ORDER BY n DESC",
+        ua,
     ).fetchall()
     by_type = conn.execute(
-        "SELECT question_type, COUNT(*) n FROM mistakes GROUP BY question_type ORDER BY n DESC LIMIT 10"
+        f"SELECT question_type, COUNT(*) n FROM mistakes WHERE 1=1{uc} GROUP BY question_type ORDER BY n DESC LIMIT 10",
+        ua,
     ).fetchall()
     by_reason = conn.execute(
-        "SELECT error_reason, COUNT(*) n FROM mistakes WHERE error_reason IS NOT NULL AND error_reason != '' "
-        "GROUP BY error_reason ORDER BY n DESC"
+        "SELECT error_reason, COUNT(*) n FROM mistakes WHERE error_reason IS NOT NULL AND error_reason != ''"
+        f"{uc} GROUP BY error_reason ORDER BY n DESC",
+        ua,
     ).fetchall()
     conn.close()
     return {

@@ -123,8 +123,8 @@
           </view>
         </view>
         <view class="deep" @click="deepExplain">用花生十三方法详解这道题 ›</view>
-        <view class="report-link" @click="reportQuestion">{{ cur._reported ? '已提交纠错，感谢反馈' : '题目有问题？纠错' }}</view>
-        <q-social-bar v-if="cur.id" :question-id="cur.id" />
+        <view v-if="!cur._sz" class="report-link" @click="reportQuestion">{{ cur._reported ? '已提交纠错，感谢反馈' : '题目有问题？纠错' }}</view>
+        <q-social-bar v-if="cur.id && !cur._sz" :question-id="cur.id" />
       </view>
     </view>
 
@@ -834,7 +834,7 @@ export default {
           method: 'POST',
           data: {
             uid: anonUid(),
-            question_id: q.id || null,
+            question_id: q._sz ? null : q.id || null,
             module: q.module,
             question_type: q.question_type || q.submodule,
             question_text: q.question + '\n' + optText,
@@ -849,7 +849,7 @@ export default {
       } catch (e) {
         enqueueMistake({
           uid: anonUid(),
-          question_id: q.id || null,
+          question_id: q._sz ? null : q.id || null,
           module: q.module,
           question_type: q.question_type || q.submodule,
           question_text: q.question + '\n' + optText,
@@ -866,7 +866,7 @@ export default {
     },
     toggleFav() {
       if (!this.cur) return;
-      const qid = this.cur.id;
+      const qid = this.cur._sz ? null : this.cur.id;
       const i = this.favs.findIndex((f) => f.question === this.cur.question);
       if (i >= 0) {
         this.favs.splice(i, 1);
@@ -901,6 +901,7 @@ export default {
       return {
         ...q,
         explanation: (q.explanation || '') + (q.source_note ? '\n【出处】' + q.source_note : ''),
+        _sz: true,
         _saved: false,
       };
     },
@@ -1323,7 +1324,7 @@ export default {
           method: 'POST',
           data: {
             uid: anonUid(),
-            question_id: q.id || null,
+            question_id: q._sz ? null : q.id || null,
             module: q.module,
             question_type: q.question_type || q.submodule,
             question_text: q.question + '\n' + optText,
@@ -1342,7 +1343,7 @@ export default {
         // 断网：错题进本地队列，联网后补传
         enqueueMistake({
           uid: anonUid(),
-          question_id: q.id || null,
+          question_id: q._sz ? null : q.id || null,
           module: q.module,
           question_type: q.question_type || q.submodule,
           question_text: q.question + '\n' + optText,

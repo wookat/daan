@@ -663,7 +663,7 @@ export default {
     },
     async load() {
       try {
-        const d = await request('/api/stats');
+        const d = await request('/api/stats?uid=' + encodeURIComponent(anonUid()));
         this.byModule = d.by_module;
         this.byType = d.by_type;
         this.byReason = d.by_reason || [];

@@ -476,7 +476,7 @@ async def api_coach(body: dict, x_access_code: str | None = Header(None)):
         "## 一句鼓励。总字数 250 字以内，不要空话套话。\n\n学习数据（JSON）：\n"
         + json.dumps(stats, ensure_ascii=False)[:3000]
     )
-    advice = await llm.chat([{"role": "user", "content": prompt}], temperature=0.4, max_tokens=800)
+    advice = await llm.chat_fast([{"role": "user", "content": prompt}], temperature=0.4, max_tokens=800)
     return {"advice": advice}
 
 
@@ -789,7 +789,7 @@ async def api_mistake_analysis(body: dict, x_access_code: str | None = Header(No
         "总字数 300 字以内，不要空话套话。\n\n数据（JSON）：\n"
         + json.dumps(stats, ensure_ascii=False)[:3000]
     )
-    analysis = await llm.chat([{"role": "user", "content": prompt}], temperature=0.4, max_tokens=900)
+    analysis = await llm.chat_fast([{"role": "user", "content": prompt}], temperature=0.4, max_tokens=900)
     return {"analysis": analysis, "stats": stats}
 
 
@@ -1412,8 +1412,8 @@ def api_review_record(mid: int, body: dict):
 
 
 @app.get("/api/stats")
-def api_stats():
-    s = db.stats()
+def api_stats(uid: str = ""):
+    s = db.stats(uid=uid.strip()[:64] or None)
     for row in s["by_module"]:
         row["module"] = kb.MODULES.get(row["module"], {}).get("name", row["module"])
     return s
