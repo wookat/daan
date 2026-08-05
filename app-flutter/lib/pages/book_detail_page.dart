@@ -24,6 +24,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
   List<dynamic> attempts = [];
   String? analysis;
   bool analysisLoading = false;
+  bool reported = false;
 
   @override
   void initState() {
@@ -103,6 +104,42 @@ class _BookDetailPageState extends State<BookDetailPage> {
     if (mounted) setState(() => analysisLoading = false);
   }
 
+  Future<void> _report() async {
+    final rtype = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (c) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('题目纠错',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            for (final t in const ['答案错误', '解析错误', '题干有误', '选项有误', '其它'])
+              ListTile(
+                dense: true,
+                title: Text(t, style: const TextStyle(fontSize: 14)),
+                onTap: () => Navigator.pop(c, t),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (rtype == null || m?.questionId == null) return;
+    try {
+      await Api.questionReport(m!.questionId!, rtype, '');
+      if (mounted) {
+        setState(() => reported = true);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('已提交纠错，感谢反馈')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(Api.errMsg(e))));
+      }
+    }
+  }
+
   void _askAi() {
     Store.instance.redoQuestion = m!.questionText;
     context.go('/ask');
@@ -115,6 +152,11 @@ class _BookDetailPageState extends State<BookDetailPage> {
       appBar: AppBar(
         title: const Text('错题详情'),
         actions: [
+          if (m?.questionId != null)
+            IconButton(
+                tooltip: reported ? '已纠错' : '纠错',
+                onPressed: reported ? null : _report,
+                icon: const Icon(LucideIcons.flag, size: 20)),
           if (m != null)
             IconButton(onPressed: _delete, icon: const Icon(LucideIcons.trash2, size: 20)),
         ],

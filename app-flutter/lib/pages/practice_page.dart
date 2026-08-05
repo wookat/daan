@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../core/api.dart';
 import '../core/models.dart';
@@ -24,10 +26,14 @@ class PracticePage extends ConsumerStatefulWidget {
     this.count,
     this.source,
     this.title,
+    this.tag3,
   });
 
   final String? module;
   final String mode;
+
+  /// 三级考点（tag3）筛选。
+  final String? tag3;
 
   /// 二级题型（考点）筛选。
   final String? submodule;
@@ -57,19 +63,37 @@ class _PracticePageState extends ConsumerState<PracticePage> {
   final Set<int> favedIds = {};
   bool offline = false; // 断网时使用本地题包，本地判分，作答入离线队列
   int _curStreak = 0; // 本组连对，用于更新 bestStreak 勋章
+  int _bestInGroup = 0; // 本组最高连对（结算展示）
+  int qsecs = 0; // 当前题已用秒数（限时训练倒计时用）
+  bool beiMode = Store.instance.beiMode;
+  bool timedMode = Store.instance.timedMode;
+  bool autoNext = Store.instance.autoNext;
+  bool sfxOn = Store.instance.sfxOn;
+  int fontLv = Store.instance.fontLv;
+  final Map<int, String> hsRated = {}; // 花生解析评价状态 qid -> up/down
+  int? percentile; // 本组正确率全站分位
+  Timer? _autoTimer;
 
   @override
   void initState() {
     super.initState();
     _load();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted && !finished) setState(() => elapsed++);
+      if (mounted && !finished) {
+        setState(() {
+          elapsed++;
+          if (!loading && error == null && items.isNotEmpty && !cur.answered) {
+            qsecs = DateTime.now().difference(_qStart).inSeconds;
+          }
+        });
+      }
     });
   }
 
   @override
   void dispose() {
     _ticker?.cancel();
+    _autoTimer?.cancel();
     super.dispose();
   }
 
@@ -104,13 +128,20 @@ class _PracticePageState extends ConsumerState<PracticePage> {
         final n = widget.count ?? Store.instance.groupSize;
         final real = Store.instance.realMode;
         try {
+          // 资料分析无二级/考点筛选时按同材料题组取题（复刻 grouped=1）
+          final grouped = widget.module == 'ziliao' &&
+              (widget.submodule == null || widget.submodule!.isEmpty) &&
+              (widget.tag3 == null || widget.tag3!.isEmpty) &&
+              !real;
           final d = await Api.questions(
             module: widget.module,
             submodule: widget.submodule,
+            tag3: widget.tag3,
             limit: n,
             real: real,
             year: real ? Store.instance.realYear : null,
             region: real ? Store.instance.realRegion : null,
+            grouped: grouped,
           );
           qs = (d['items'] as List<dynamic>)
               .map((e) => Question.fromJson(Map<String, dynamic>.from(e)))
@@ -133,6 +164,10 @@ class _PracticePageState extends ConsumerState<PracticePage> {
       setState(() {
         items = qs;
         loading = false;
+        _curStreak = 0;
+        _bestInGroup = 0;
+        percentile = null;
+        qsecs = 0;
         _qStart = DateTime.now();
       });
     } catch (e) {
@@ -178,15 +213,28 @@ class _PracticePageState extends ConsumerState<PracticePage> {
   Question get cur => items[idx];
 
   Future<void> _pick(String k) async {
-    if (cur.answered) return;
+    if (cur.answered || beiMode) return;
     setState(() {
       cur.picked = k;
       cur.secs = DateTime.now().difference(_qStart).inSeconds;
     });
+    if (sfxOn) {
+      unawaited(cur.correct
+          ? HapticFeedback.lightImpact()
+          : HapticFeedback.heavyImpact());
+    }
     if (cur.correct) {
       _curStreak++;
+      if (_curStreak > _bestInGroup) _bestInGroup = _curStreak;
       if (_curStreak > Store.instance.bestStreak) {
         Store.instance.bestStreak = _curStreak;
+      }
+      // 答对自动跳下一题（复刻 autoNext，停留 1.2s 看判定后跳转）
+      if (autoNext && idx < items.length - 1) {
+        _autoTimer?.cancel();
+        _autoTimer = Timer(const Duration(milliseconds: 1200), () {
+          if (mounted && !finished && cur.answered && cur.correct) _next();
+        });
       }
     } else {
       _curStreak = 0;
@@ -224,9 +272,11 @@ class _PracticePageState extends ConsumerState<PracticePage> {
   }
 
   void _next() {
+    _autoTimer?.cancel();
     if (idx < items.length - 1) {
       setState(() {
         idx++;
+        qsecs = 0;
         _qStart = DateTime.now();
       });
     } else {
@@ -285,8 +335,14 @@ class _PracticePageState extends ConsumerState<PracticePage> {
       }
       final right = answered.where((q) => q.correct).length;
       final secs = answered.fold<int>(0, (s, q) => s + q.secs);
-      unawaited(Api.practiceResult(widget.module ?? '', answered.length, right, secs)
-          .catchError((_) {}));
+      unawaited(Api
+          .practiceResult(widget.module ?? '', answered.length, right, secs)
+          .then((d) {
+        if (mounted && d['percentile'] != null) {
+          setState(() => percentile = (d['percentile'] as num).toInt());
+        }
+      }).catchError((_) {}));
+      _markDailyDone();
     } catch (_) {
       // 断网结算：入离线队列，联网后自动补传去重
       final now = DateTime.now().millisecondsSinceEpoch;
@@ -320,16 +376,27 @@ class _PracticePageState extends ConsumerState<PracticePage> {
               onPressed: _openAnswerCard,
               icon: const Icon(LucideIcons.layoutGrid, size: 18),
             ),
+          if (!loading && error == null && !finished && _curStreak >= 3)
+            Center(
+              child: Row(children: [
+                const Icon(LucideIcons.flame, size: 15, color: KgColors.warning),
+                Text('$_curStreak',
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: KgColors.warning)),
+              ]),
+            ),
           if (!loading && error == null && !finished)
             Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: Center(
-                child: Text(
-                  '${(elapsed ~/ 60).toString().padLeft(2, '0')}:${(elapsed % 60).toString().padLeft(2, '0')}',
-                  style: const TextStyle(fontSize: 14, color: KgColors.t3),
-                ),
-              ),
+              padding: const EdgeInsets.only(left: 8),
+              child: Center(child: _timerText()),
             ),
+          IconButton(
+            tooltip: '练习工具',
+            onPressed: _openTools,
+            icon: const Icon(LucideIcons.settings2, size: 18),
+          ),
         ],
       ),
       body: loading
@@ -341,6 +408,34 @@ class _PracticePageState extends ConsumerState<PracticePage> {
                   : _questionView(),
     );
   }
+
+  /// 顶栏计时：普通模式总用时；限时训练按模块建议用时倒计时/超时。
+  Widget _timerText() {
+    String fmt(int s) =>
+        '${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')}';
+    if (timedMode && !beiMode && items.isNotEmpty && !cur.answered) {
+      final t = _targetSecs;
+      final over = qsecs > t;
+      return Text(over ? '超时+${fmt(qsecs - t)}' : fmt(t - qsecs),
+          style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: over ? KgColors.error : KgColors.brand));
+    }
+    return Text(fmt(elapsed),
+        style: const TextStyle(fontSize: 14, color: KgColors.t3));
+  }
+
+  /// 模块建议单题用时（复刻 targetSecs）。
+  int get _targetSecs =>
+      const {
+        'changshi': 40,
+        'yanyu': 50,
+        'shuliang': 90,
+        'panduan': 60,
+        'ziliao': 80,
+      }[cur.module] ??
+      60;
 
   Widget _questionView() {
     final q = cur;
@@ -363,6 +458,24 @@ class _PracticePageState extends ConsumerState<PracticePage> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              if (beiMode || (timedMode && !beiMode) || q.isReal || q.groupSeq != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      if (beiMode) _tag('背题模式', KgColors.brand),
+                      if (timedMode && !beiMode) _tag('限时训练', KgColors.brand),
+                      if (q.isReal)
+                        _tag(
+                            '真题${q.examYear != null ? ' · ${q.examYear}' : ''}${q.examRegion?.isNotEmpty == true ? ' · ${q.examRegion}' : ''}',
+                            KgColors.warning),
+                      if (q.groupSeq != null)
+                        _tag('同材料题组 ${q.groupSeq}', KgColors.t3),
+                    ],
+                  ),
+                ),
               Row(
                 children: [
                   _tag(moduleName(q.module), KgColors.moduleColors[q.module] ?? KgColors.brand),
@@ -376,20 +489,19 @@ class _PracticePageState extends ConsumerState<PracticePage> {
                 ],
               ),
               const SizedBox(height: 12),
-              Text(q.question,
-                  style: TextStyle(
-                      fontSize: const [14.0, 16.0, 18.0, 20.0][
-                          Store.instance.fontLv.clamp(0, 3)],
-                      height: 1.7)),
+              _questionText(q),
               if (q.image != null && q.image!.isNotEmpty) ...[
                 const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.network(
-                    _imgUrl(q.image!),
-                    width: double.infinity,
-                    fit: BoxFit.fitWidth,
-                    errorBuilder: (c, e, s) => const SizedBox.shrink(),
+                GestureDetector(
+                  onTap: () => _previewImage(_imgUrl(q.image!)),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.network(
+                      _imgUrl(q.image!),
+                      width: double.infinity,
+                      fit: BoxFit.fitWidth,
+                      errorBuilder: (c, e, s) => const SizedBox.shrink(),
+                    ),
                   ),
                 ),
                 if (q.imageCredit != null && q.imageCredit!.isNotEmpty)
@@ -401,7 +513,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
               ],
               const SizedBox(height: 16),
               for (final e in q.options.entries) _option(q, e.key, e.value),
-              if (q.answered) ...[
+              if (q.answered || beiMode) ...[
                 const SizedBox(height: 16),
                 _explainCard(q),
               ],
@@ -411,7 +523,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
         SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-            child: q.answered
+            child: (q.answered || beiMode)
                 ? FilledButton(
                     onPressed: _next,
                     child: Text(idx < items.length - 1 ? '下一题' : '完成本组'),
@@ -427,11 +539,202 @@ class _PracticePageState extends ConsumerState<PracticePage> {
     );
   }
 
+  /// 题干文本：作答后/背题模式下标注解析涉及的关键数字/关联词（复刻 qSegs）。
+  Widget _questionText(Question q) {
+    final fs = const [14.0, 16.0, 18.0, 20.0][fontLv.clamp(0, 3)];
+    final segs = (q.answered || beiMode) ? _qSegs(q) : null;
+    if (segs == null) {
+      return Text(q.question, style: TextStyle(fontSize: fs, height: 1.7));
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text.rich(TextSpan(children: [
+          for (final s in segs)
+            TextSpan(
+              text: s.$1,
+              style: s.$2
+                  ? const TextStyle(
+                      backgroundColor: Color(0xFFFEF3C7),
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF92400E))
+                  : null,
+            ),
+        ]), style: TextStyle(fontSize: fs, height: 1.7)),
+        const Padding(
+          padding: EdgeInsets.only(top: 6),
+          child: Text('已标注题干重点（解析涉及的关键数字/关键词），对照检查是否找对了信息',
+              style: TextStyle(fontSize: 11, color: KgColors.warning)),
+        ),
+      ],
+    );
+  }
+
+  /// 从解析提取题干关键段（关键数字 + 关联词），无命中返回 null。
+  List<(String, bool)>? _qSegs(Question q) {
+    final src = [q.hsExplanation, q.explanation, q.xpExplanation]
+        .where((s) => s != null && s.trim().isNotEmpty)
+        .join('\n');
+    if (src.isEmpty) return null;
+    final toks = <String>{};
+    for (final m in RegExp(r'\d[\d.,]*[%％万亿倍]?').allMatches(src)) {
+      final t = m.group(0)!;
+      if (t.replaceAll(RegExp(r'[.,]'), '').length >= 2 && q.question.contains(t)) {
+        toks.add(t);
+      }
+    }
+    const conj = ['但是', '然而', '因此', '所以', '总之', '可见', '也就是说', '实际上', '换句话说', '不仅', '而且', '否则', '如果', '只有', '除非'];
+    for (final c in conj) {
+      if (src.contains(c) && q.question.contains(c)) toks.add(c);
+    }
+    if (toks.isEmpty) return null;
+    final list = toks.toList()
+      ..sort((a, b) => b.length.compareTo(a.length));
+    final text = q.question;
+    bool isD(String ch) => ch.codeUnitAt(0) >= 48 && ch.codeUnitAt(0) <= 57;
+    final ivs = <List<int>>[];
+    for (final t in list.take(20)) {
+      var p = 0;
+      while ((p = text.indexOf(t, p)) != -1) {
+        final pre = p > 0 ? text[p - 1] : '';
+        final postIdx = p + t.length;
+        final post = postIdx < text.length ? text[postIdx] : '';
+        final numClipped = isD(t[0]) &&
+            ((pre.isNotEmpty && isD(pre)) ||
+                (post.isNotEmpty && (isD(post) || post == '.')));
+        final overlap = ivs.any((v) => p < v[1] && p + t.length > v[0]);
+        if (!numClipped && !overlap) ivs.add([p, p + t.length]);
+        p += t.length;
+      }
+    }
+    if (ivs.isEmpty) return null;
+    ivs.sort((a, b) => a[0].compareTo(b[0]));
+    final segs = <(String, bool)>[];
+    var last = 0;
+    for (final iv in ivs) {
+      if (iv[0] > last) segs.add((text.substring(last, iv[0]), false));
+      segs.add((text.substring(iv[0], iv[1]), true));
+      last = iv[1];
+    }
+    if (last < text.length) segs.add((text.substring(last), false));
+    return segs;
+  }
+
+  /// 全屏图片预览（复刻 uni.previewImage，可双指缩放）。
+  void _previewImage(String url) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (c) => GestureDetector(
+        onTap: () => Navigator.pop(c),
+        child: InteractiveViewer(
+          maxScale: 5,
+          child: Center(child: Image.network(url)),
+        ),
+      ),
+    );
+  }
+
+  /// 练习工具：字号/背题/自动跳题/限时/音效（复刻网页端工具面板）。
+  Future<void> _openTools() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (c) => StatefulBuilder(
+        builder: (c, setSheet) {
+          void both(VoidCallback fn) {
+            setSheet(fn);
+            setState(() {});
+          }
+
+          Widget row(String name, String value, VoidCallback onTap,
+              {bool on = false}) {
+            return ListTile(
+              dense: true,
+              title: Text(name, style: const TextStyle(fontSize: 14)),
+              trailing: Text(value,
+                  style: TextStyle(
+                      fontSize: 13,
+                      color: on ? KgColors.brand : KgColors.t3,
+                      fontWeight: on ? FontWeight.w600 : FontWeight.w400)),
+              onTap: onTap,
+            );
+          }
+
+          return SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 4),
+                  child: Text('练习工具',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                ),
+                row('字号大小',
+                    '${const ['小', '标准', '大', '特大'][fontLv.clamp(0, 3)]} · 点击切换',
+                    () {
+                  both(() {
+                    fontLv = (fontLv + 1) % 3;
+                    Store.instance.fontLv = fontLv;
+                  });
+                }),
+                row('背题模式', beiMode ? '已开启' : '已关闭', () {
+                  both(() {
+                    beiMode = !beiMode;
+                    Store.instance.beiMode = beiMode;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(beiMode
+                          ? '背题模式：直接看答案解析，不计入正确率'
+                          : '已切回做题模式')));
+                }, on: beiMode),
+                row('答对自动跳下一题', autoNext ? '已开启' : '已关闭', () {
+                  both(() {
+                    autoNext = !autoNext;
+                    Store.instance.autoNext = autoNext;
+                  });
+                }, on: autoNext),
+                if (!beiMode)
+                  row('限时训练（按模块建议用时倒计时）',
+                      timedMode ? '已开启' : '已关闭', () {
+                    both(() {
+                      timedMode = !timedMode;
+                      Store.instance.timedMode = timedMode;
+                    });
+                  }, on: timedMode),
+                row('答题震动反馈', sfxOn ? '已开启' : '已关闭', () {
+                  both(() {
+                    sfxOn = !sfxOn;
+                    Store.instance.sfxOn = sfxOn;
+                  });
+                }, on: sfxOn),
+                const SizedBox(height: 8),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// 普通模式每日一组完成打卡（复刻 markDailyDone）。
+  void _markDailyDone() {
+    if (widget.mode != 'normal') return;
+    final now = DateTime.now();
+    final key =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final plan = Store.instance.dailyPlanDays;
+    final days = Map<String, dynamic>.from(plan['days'] as Map);
+    days[key] = true;
+    Store.instance.dailyPlanDays = {...plan, 'days': days};
+  }
+
   Widget _option(Question q, String k, String v) {
     Color border = KgColors.border;
     Color? bgc;
     Widget? trailing;
-    if (q.answered) {
+    if (q.answered || beiMode) {
       if (k == q.answer) {
         border = KgColors.success;
         bgc = KgColors.successBg;
@@ -486,18 +789,29 @@ class _PracticePageState extends ConsumerState<PracticePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(q.correct ? LucideIcons.checkCircle2 : LucideIcons.xCircle,
-                  size: 18, color: q.correct ? KgColors.success : KgColors.error),
-              const SizedBox(width: 6),
-              Text(q.correct ? '回答正确' : '回答错误，已自动存入错题本',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: q.correct ? KgColors.success : KgColors.error)),
-            ],
-          ),
-          if (!q.correct) ...[
+          if (q.answered)
+            Row(
+              children: [
+                Icon(q.correct ? LucideIcons.checkCircle2 : LucideIcons.xCircle,
+                    size: 18, color: q.correct ? KgColors.success : KgColors.error),
+                const SizedBox(width: 6),
+                Text(q.correct ? '回答正确' : '回答错误，已自动存入错题本',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: q.correct ? KgColors.success : KgColors.error)),
+              ],
+            )
+          else
+            const Row(
+              children: [
+                Icon(LucideIcons.bookOpen, size: 18, color: KgColors.brand),
+                SizedBox(width: 6),
+                Text('背题模式 · 直接看答案解析，不计入正确率',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600, color: KgColors.brand)),
+              ],
+            ),
+          if (q.answered && !q.correct) ...[
             const SizedBox(height: 10),
             Wrap(
               spacing: 6,
@@ -537,19 +851,81 @@ class _PracticePageState extends ConsumerState<PracticePage> {
                   style: const TextStyle(fontWeight: FontWeight.w600)),
               const Spacer(),
               if (q.secs > 0)
-                Text('用时 ${q.secs}s',
-                    style: const TextStyle(fontSize: 12, color: KgColors.t4)),
+                Text(
+                    timedMode
+                        ? '用时 ${q.secs}s / 建议 ${_targetSecs}s${q.secs > _targetSecs ? ' · 超时' : ''}'
+                        : '用时 ${q.secs}s',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: timedMode && q.secs > _targetSecs
+                            ? KgColors.error
+                            : KgColors.t4)),
             ],
           ),
+          if (_kpChain(q) != null) ...[
+            const SizedBox(height: 6),
+            Text('考点：${_kpChain(q)}',
+                style: const TextStyle(fontSize: 11, color: KgColors.t4)),
+          ],
+          if (_qStatLine(q) != null) ...[
+            const SizedBox(height: 6),
+            Text('全站数据：${_qStatLine(q)}',
+                style: const TextStyle(fontSize: 11, color: KgColors.t4)),
+          ],
           if (q.source != null && q.source!.isNotEmpty) ...[
             const SizedBox(height: 6),
             Text('出处：${q.source}',
                 style: const TextStyle(fontSize: 11, color: KgColors.t4)),
           ],
-          if (q.explanation != null && q.explanation!.trim().isNotEmpty) ...[
+          if (q.hsExplanation != null && q.hsExplanation!.trim().isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _tag('花生十三方法解析', KgColors.warning),
+            const SizedBox(height: 6),
+            Text(q.hsExplanation!,
+                style: const TextStyle(fontSize: 14, height: 1.6)),
+            if (q.xpExplanation != null && q.xpExplanation!.trim().isNotEmpty) ...[
+              const SizedBox(height: 10),
+              _tag(q.xpSchool?.isNotEmpty == true ? q.xpSchool! : '第二名师视角',
+                  KgColors.brand),
+              const SizedBox(height: 6),
+              Text(q.xpExplanation!,
+                  style: const TextStyle(fontSize: 14, height: 1.6)),
+            ],
+            if (q.id != null) ...[
+              const SizedBox(height: 8),
+              if (hsRated.containsKey(q.id))
+                Text(hsRated[q.id] == 'up' ? '已反馈：有用' : '已反馈：有误',
+                    style: const TextStyle(fontSize: 12, color: KgColors.t4))
+              else
+                Row(children: [
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(64, 30),
+                        padding: const EdgeInsets.symmetric(horizontal: 12)),
+                    onPressed: () => _rateHs(q, true),
+                    child: const Text('有用', style: TextStyle(fontSize: 12)),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(64, 30),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        foregroundColor: KgColors.error),
+                    onPressed: () => _rateHs(q, false),
+                    child: const Text('有误', style: TextStyle(fontSize: 12)),
+                  ),
+                ]),
+            ],
+          ] else if (q.explanation != null && q.explanation!.trim().isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(q.explanation!, style: const TextStyle(fontSize: 14, height: 1.6)),
           ],
+          const SizedBox(height: 10),
+          InkWell(
+            onTap: () => _deepExplain(q),
+            child: const Text('用花生十三方法详解这道题 ›',
+                style: TextStyle(fontSize: 12, color: KgColors.brand)),
+          ),
           if (q.id != null) ...[
             const SizedBox(height: 12),
             Row(
@@ -595,6 +971,43 @@ class _PracticePageState extends ConsumerState<PracticePage> {
         ],
       ),
     );
+  }
+
+  /// 考点链：模块 > 二级题型 > 题型。
+  String? _kpChain(Question q) {
+    final parts = <String>[
+      moduleName(q.module),
+      if (q.submodule?.isNotEmpty == true) q.submodule!,
+      if (q.questionType?.isNotEmpty == true &&
+          q.questionType != q.submodule)
+        q.questionType!,
+    ];
+    return parts.length > 1 ? parts.join(' > ') : null;
+  }
+
+  /// 全站难度/正确率/易错项（复刻 qStatLine）。
+  String? _qStatLine(Question q) {
+    if (q.attemptCount < 5 || q.correctRatio == null) return null;
+    final r = q.correctRatio!;
+    final stars = '★' * (r > 85 ? 1 : r > 70 ? 2 : r > 55 ? 3 : r > 40 ? 4 : 5);
+    var s = '难度$stars · 全站正确率 $r%（${q.attemptCount} 人次）';
+    if (q.mostWrong?.isNotEmpty == true && q.mostWrong != q.answer) {
+      s += ' · 易错项 ${q.mostWrong}';
+    }
+    return s;
+  }
+
+  Future<void> _rateHs(Question q, bool up) async {
+    setState(() => hsRated[q.id!] = up ? 'up' : 'down');
+    unawaited(Api.rateQuestionHs(q.id!, up).catchError((_) {}));
+  }
+
+  /// AI 深度详解：题干+选项存入 redoQuestion，跳 AI 问答页（复刻 deepExplain）。
+  void _deepExplain(Question q) {
+    final optText =
+        q.options.entries.map((e) => '${e.key}.${e.value}').join(' ');
+    Store.instance.redoQuestion = '${q.question}\n$optText';
+    context.go('/ask');
   }
 
   Future<void> _toggleFav(Question q) async {
@@ -656,25 +1069,174 @@ class _PracticePageState extends ConsumerState<PracticePage> {
     final answered = items.where((q) => q.answered).toList();
     final right = answered.where((q) => q.correct).length;
     final pct = answered.isEmpty ? 0 : (right * 100 / answered.length).round();
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('$pct%',
-                style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w800, color: KgColors.brand)),
-            const SizedBox(height: 4),
-            Text('答对 $right/${answered.length} 题 · 用时 ${elapsed ~/ 60} 分 ${elapsed % 60} 秒',
-                style: const TextStyle(color: KgColors.t3)),
-            if (offline) ...[
-              const SizedBox(height: 8),
-              const Text('本组为离线作答，恢复网络后将自动同步（去重）',
-                  style: TextStyle(fontSize: 12, color: KgColors.warning)),
-            ],
-            const SizedBox(height: 32),
-            FilledButton(onPressed: _load, child: const Text('再来一组')),
-            const SizedBox(height: 12),
+    // 分模块成绩（复刻结算页模块拆分）
+    final byMod = <String, List<int>>{};
+    for (final q in answered) {
+      final m = (q.module ?? '').toString();
+      if (m.isEmpty) continue;
+      final v = byMod.putIfAbsent(m, () => [0, 0]);
+      v[0]++;
+      if (q.correct) v[1]++;
+    }
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        const SizedBox(height: 12),
+        Center(
+          child: SizedBox(
+            width: 132,
+            height: 132,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  width: 132,
+                  height: 132,
+                  child: CircularProgressIndicator(
+                    value: pct / 100,
+                    strokeWidth: 10,
+                    backgroundColor: KgColors.fill,
+                    color: pct >= 80
+                        ? KgColors.success
+                        : pct >= 60
+                            ? KgColors.brand
+                            : KgColors.warning,
+                  ),
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('$pct%',
+                        style: const TextStyle(
+                            fontSize: 32, fontWeight: FontWeight.w800)),
+                    const Text('正确率',
+                        style: TextStyle(fontSize: 11, color: KgColors.t3)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Center(
+          child: Text(
+              '答对 $right/${answered.length} 题 · 用时 ${elapsed ~/ 60} 分 ${elapsed % 60} 秒'
+              '${_bestInGroup >= 2 ? ' · 最高连对 $_bestInGroup' : ''}',
+              style: const TextStyle(color: KgColors.t3)),
+        ),
+        if (percentile != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Center(
+              child: Text('本组正确率击败了全站 $percentile% 的练习记录',
+                  style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: KgColors.brand)),
+            ),
+          ),
+        if (byMod.length > 1) ...[
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('分模块成绩',
+                      style: TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 8),
+                  for (final e in byMod.entries)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        children: [
+                          Text(moduleName(e.key),
+                              style: const TextStyle(fontSize: 13)),
+                          const Spacer(),
+                          Text('${e.value[1]}/${e.value[0]} 对',
+                              style: const TextStyle(
+                                  fontSize: 13, color: KgColors.t3)),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 16),
+        // 题目回顾网格：点题号回看解析
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('题目回顾（点题号看解析）',
+                    style:
+                        TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (var i = 0; i < items.length; i++)
+                      InkWell(
+                        onTap: () => setState(() {
+                          finished = false;
+                          idx = i;
+                        }),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: !items[i].answered
+                                ? KgColors.fill
+                                : items[i].correct
+                                    ? KgColors.successBg
+                                    : KgColors.errorBg,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text('${i + 1}',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: !items[i].answered
+                                      ? KgColors.t3
+                                      : items[i].correct
+                                          ? KgColors.success
+                                          : KgColors.error)),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (offline) ...[
+          const SizedBox(height: 8),
+          const Center(
+            child: Text('本组为离线作答，恢复网络后将自动同步（去重）',
+                style: TextStyle(fontSize: 12, color: KgColors.warning)),
+          ),
+        ],
+        const SizedBox(height: 24),
+        FilledButton(onPressed: _load, child: const Text('再来一组')),
+        const SizedBox(height: 12),
+        OutlinedButton(
+          style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+          onPressed: () => Share.share(
+              '我在考公助手完成了一组练习：答对 $right/${answered.length} 题，正确率 $pct%'
+              '${_bestInGroup >= 2 ? '，最高连对 $_bestInGroup' : ''}'
+              '${percentile != null ? '，击败全站 $percentile% 的记录' : ''}，一起来刷题！'),
+          child: const Text('分享战绩'),
+        ),
+        const SizedBox(height: 12),
             OutlinedButton(
               style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
               onPressed: () => showExportSheet(
@@ -698,16 +1260,14 @@ class _PracticePageState extends ConsumerState<PracticePage> {
               child: const Text('导出本组 PDF'),
             ),
             const SizedBox(height: 12),
-            OutlinedButton(
-              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-              onPressed: () {
-                context.pop();
-              },
-              child: const Text('返回'),
-            ),
-          ],
+        OutlinedButton(
+          style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+          onPressed: () {
+            context.pop();
+          },
+          child: const Text('返回'),
         ),
-      ),
+      ],
     );
   }
 

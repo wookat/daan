@@ -82,6 +82,10 @@ class Store {
 
   void addTodayCount(int n) => _sp.setInt(_todayKey(), todayCount + n);
 
+  /// 指定日期的做题数（复刻 pstats.days，用于断卡风险判断）。
+  int dayCount(DateTime d) =>
+      _sp.getInt('todayCount:${d.year}-${d.month}-${d.day}') ?? 0;
+
   // ---------- 模考进度（复刻 examProgress 键） ----------
 
   Map<String, dynamic>? get examProgress {
@@ -196,6 +200,33 @@ class Store {
   bool get sfxOn => (_sp.getString('sfxOff') ?? '').isEmpty;
   set sfxOn(bool v) =>
       v ? _sp.setString('sfxOff', '') : _sp.setString('sfxOff', '1');
+
+  // ---------- 背题 / 限时训练 / 答对自动跳题（复刻 beiMode / timedMode / autoNextOff 键） ----------
+
+  bool get beiMode => (_sp.getString('beiMode') ?? '').isNotEmpty;
+  set beiMode(bool v) =>
+      v ? _sp.setString('beiMode', '1') : _sp.setString('beiMode', '');
+
+  bool get timedMode => (_sp.getString('timedMode') ?? '').isNotEmpty;
+  set timedMode(bool v) =>
+      v ? _sp.setString('timedMode', '1') : _sp.setString('timedMode', '');
+
+  bool get autoNext => (_sp.getString('autoNextOff') ?? '').isEmpty;
+  set autoNext(bool v) =>
+      v ? _sp.setString('autoNextOff', '') : _sp.setString('autoNextOff', '1');
+
+  // ---------- 每日一组完成记录（复刻 dailyPlan 键） ----------
+
+  Map<String, dynamic> get dailyPlanDays {
+    final s = _sp.getString('dailyPlan');
+    if (s == null || s.isEmpty) return {'days': <String, dynamic>{}};
+    final d = jsonDecode(s);
+    if (d is Map<String, dynamic> && d['days'] is Map) return d;
+    return {'days': <String, dynamic>{}};
+  }
+
+  set dailyPlanDays(Map<String, dynamic> v) =>
+      _sp.setString('dailyPlan', jsonEncode(v));
 
   // ---------- 离线题包 / 离线队列（复刻 offlinePacks / offlinePack: / offlineQueue 键） ----------
 

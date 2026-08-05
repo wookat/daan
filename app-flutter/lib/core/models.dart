@@ -13,6 +13,16 @@ class Question {
     this.image,
     this.imageCredit,
     this.source,
+    this.isReal = false,
+    this.examYear,
+    this.examRegion,
+    this.groupSeq,
+    this.hsExplanation,
+    this.xpExplanation,
+    this.xpSchool,
+    this.attemptCount = 0,
+    this.correctRatio,
+    this.mostWrong,
   });
 
   final int? id;
@@ -26,6 +36,16 @@ class Question {
   final String? image;
   final String? imageCredit;
   final String? source;
+  final bool isReal;
+  final int? examYear;
+  final String? examRegion;
+  final int? groupSeq;
+  final String? hsExplanation;
+  final String? xpExplanation;
+  final String? xpSchool;
+  final int attemptCount;
+  final int? correctRatio;
+  final String? mostWrong;
 
   /// 错题重练/新存错题时对应的错题 id（错因自评需要）
   int? mistakeId;
@@ -60,6 +80,16 @@ class Question {
       image: j['image']?.toString(),
       imageCredit: j['image_credit']?.toString(),
       source: j['source']?.toString(),
+      isReal: j['is_real'] == true || j['is_real'] == 1,
+      examYear: j['exam_year'] is num ? (j['exam_year'] as num).toInt() : null,
+      examRegion: j['exam_region']?.toString(),
+      groupSeq: j['group_seq'] is num ? (j['group_seq'] as num).toInt() : null,
+      hsExplanation: j['hs_explanation']?.toString(),
+      xpExplanation: j['xp_explanation']?.toString(),
+      xpSchool: j['xp_school']?.toString(),
+      attemptCount: j['attempt_count'] is num ? (j['attempt_count'] as num).toInt() : 0,
+      correctRatio: j['correct_ratio'] is num ? (j['correct_ratio'] as num).toInt() : null,
+      mostWrong: j['most_wrong']?.toString(),
     );
   }
 }
@@ -79,6 +109,8 @@ class Mistake {
     this.times = 1,
     this.createdAt = 0,
     this.questionId,
+    this.tag3Name,
+    this.nextReview,
   });
 
   final int id;
@@ -94,6 +126,12 @@ class Mistake {
   final double createdAt;
   final int? questionId;
 
+  /// 三级考点名（后端联查 taxonomy）
+  final String? tag3Name;
+
+  /// 下次复习时间戳（遗忘曲线）
+  final double? nextReview;
+
   static Mistake fromJson(Map<String, dynamic> j) => Mistake(
         id: j['id'] as int,
         questionText: (j['question_text'] ?? '').toString(),
@@ -107,5 +145,8 @@ class Mistake {
         times: (j['times'] ?? 1) is int ? (j['times'] ?? 1) as int : 1,
         createdAt: (j['created_at'] is num) ? (j['created_at'] as num).toDouble() : 0,
         questionId: j['question_id'] is int ? j['question_id'] as int : null,
+        tag3Name: j['tag3_name']?.toString(),
+        nextReview:
+            j['next_review'] is num ? (j['next_review'] as num).toDouble() : null,
       );
 }
