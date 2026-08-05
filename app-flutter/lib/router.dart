@@ -18,6 +18,11 @@ import 'pages/shenlun_detail_page.dart';
 import 'pages/shenlun_page.dart';
 import 'pages/shizheng_page.dart';
 import 'pages/home_page.dart';
+import 'pages/interview_history_page.dart';
+import 'pages/interview_page.dart';
+import 'pages/offline_page.dart';
+import 'pages/pk_page.dart';
+import 'pages/reminders_page.dart';
 import 'pages/login_page.dart';
 import 'pages/placeholder_page.dart';
 import 'pages/practice_page.dart';
@@ -80,6 +85,21 @@ final router = GoRouter(
       builder: (c, s) =>
           DiscussPage(qid: int.parse(s.uri.queryParameters['qid'] ?? '0')),
     ),
+    GoRoute(
+      path: '/interview',
+      builder: (c, s) => InterviewPage(
+        sessionId: int.tryParse(s.uri.queryParameters['session_id'] ?? ''),
+      ),
+    ),
+    GoRoute(
+        path: '/interview/history',
+        builder: (c, s) => const InterviewHistoryPage()),
+    GoRoute(
+      path: '/pk',
+      builder: (c, s) => PkPage(joinCode: s.uri.queryParameters['code']),
+    ),
+    GoRoute(path: '/reminders', builder: (c, s) => const RemindersPage()),
+    GoRoute(path: '/offline', builder: (c, s) => const OfflinePage()),
     GoRoute(path: '/poster', builder: (c, s) => const PosterPage()),
     GoRoute(path: '/login', builder: (c, s) => const LoginPage()),
     GoRoute(

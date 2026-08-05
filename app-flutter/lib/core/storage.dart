@@ -167,6 +167,70 @@ class Store {
   set planGuideHide(bool v) =>
       v ? _sp.setString('planGuideHide', '1') : _sp.remove('planGuideHide');
 
+  // ---------- PK 昵称（复刻 pkNickname 键） ----------
+
+  String pkNickname() {
+    var n = _sp.getString('pkNickname');
+    if (n == null || n.isEmpty) {
+      final r = Random();
+      n = '考友${List.generate(4, (_) => '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'[r.nextInt(36)]).join()}';
+      _sp.setString('pkNickname', n);
+    }
+    return n;
+  }
+
+  // ---------- 学习提醒（复刻 remindOn / remindTime 键） ----------
+
+  bool get remindOn => (_sp.getString('remindOn') ?? '').isNotEmpty;
+  set remindOn(bool v) =>
+      v ? _sp.setString('remindOn', '1') : _sp.setString('remindOn', '');
+
+  String get remindTime => _sp.getString('remindTime') ?? '20:30';
+  set remindTime(String v) => _sp.setString('remindTime', v);
+
+  // ---------- 字号 / 音效（复刻 fontLv / sfxOff 键） ----------
+
+  int get fontLv => _sp.getInt('fontLv') ?? 1;
+  set fontLv(int v) => _sp.setInt('fontLv', v);
+
+  bool get sfxOn => (_sp.getString('sfxOff') ?? '').isEmpty;
+  set sfxOn(bool v) =>
+      v ? _sp.setString('sfxOff', '') : _sp.setString('sfxOff', '1');
+
+  // ---------- 离线题包 / 离线队列（复刻 offlinePacks / offlinePack: / offlineQueue 键） ----------
+
+  List<dynamic> get offlinePacks => _jsonList('offlinePacks');
+  set offlinePacks(List<dynamic> v) =>
+      _sp.setString('offlinePacks', jsonEncode(v));
+
+  Map<String, dynamic>? offlinePack(String module) {
+    final s = _sp.getString('offlinePack:$module');
+    if (s == null || s.isEmpty) return null;
+    final d = jsonDecode(s);
+    return d is Map<String, dynamic> ? d : null;
+  }
+
+  void setOfflinePack(String module, Map<String, dynamic>? v) {
+    if (v == null) {
+      _sp.remove('offlinePack:$module');
+    } else {
+      _sp.setString('offlinePack:$module', jsonEncode(v));
+    }
+  }
+
+  Map<String, dynamic> get offlineQueue {
+    final s = _sp.getString('offlineQueue');
+    if (s == null || s.isEmpty) return {'answers': <dynamic>[], 'mistakes': <dynamic>[]};
+    final d = jsonDecode(s);
+    if (d is Map<String, dynamic> && d['answers'] is List && d['mistakes'] is List) {
+      return d;
+    }
+    return {'answers': <dynamic>[], 'mistakes': <dynamic>[]};
+  }
+
+  set offlineQueue(Map<String, dynamic> v) =>
+      _sp.setString('offlineQueue', jsonEncode(v));
+
   // ---------- 主题 ----------
 
   String get themeMode => _sp.getString('themeMode') ?? 'system';
