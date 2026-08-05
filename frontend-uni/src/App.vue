@@ -1,7 +1,25 @@
 <script>
+// #ifdef H5
+import { initReminderLoop } from './reminder.js'
+// #endif
+import { applyTheme, watchSystemTheme } from './theme.js'
+import { flushOfflineQueue, watchNetwork } from './offline.js'
+
 export default {
-  onLaunch: function () {},
-  onShow: function () {},
+  onLaunch: function () {
+    // #ifdef H5
+    const h = window.location.hash || ''
+    const m = h.match(/^#\/pages\/(exam|shenlun|user)\//)
+    if (m) window.location.replace(window.location.pathname + h.replace('#/pages/', '#/pkgA/'))
+    initReminderLoop()
+    // #endif
+    applyTheme()
+    watchSystemTheme()
+    watchNetwork()
+  },
+  onShow: function () {
+    flushOfflineQueue()
+  },
   onHide: function () {},
 }
 </script>
@@ -9,42 +27,98 @@ export default {
 <style>
 /* 全局设计规范 */
 page {
+  /* design-v3 tokens（docs/design-v3/DESIGN.md） */
   --brand: #3b6ff5;
   --brand-soft: #edf3fe;
-  --ink: #1f2430;
-  --ink-2: #6b7280;
+  --brand-soft-2: #dce7fd;
+  --ink: #17181c;
+  --ink-2: #7d818f;
+  --ink-3: #8f959e;
+  --ink-4: #b0b4c0;
   --ok: #16a34a;
   --ok-soft: #ecfdf5;
   --bad: #dc2626;
   --bad-soft: #fef2f2;
-  --line: #e5e7eb;
+  --warn: #d97706;
+  --warn-soft: #fffbeb;
+  --info: #0284c7;
+  --info-soft: #f0f9ff;
+  --line: #e7e9f0;
+  --fill: #f2f3f7;
   --card: #ffffff;
-  --soft-bg: #f8f9fc;
-  --radius: 24rpx;
-  background: linear-gradient(180deg, #edf3fe 0%, #f6f7fb 240rpx, #f6f7fb 100%);
+  --soft-bg: #f2f3f7;
+  /* 历史别名（部分页面沿用） */
+  --brand-50: var(--brand-soft);
+  --ink-1: var(--ink);
+  --muted: var(--ink-3);
+  --danger: var(--bad);
+  --radius: 28rpx;
+  /* wot-design-uni 主题对齐品牌蓝 */
+  --wot-color-theme: #3b6ff5;
+  --wot-button-primary-bg-color: #3b6ff5;
+  --wot-cell-title-fs: 15px;
+  background: #f6f7fb;
   color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', 'Microsoft YaHei', sans-serif;
 }
 
-/* 深色模式（H5，跟随系统） */
 /* #ifdef H5 */
-@media (prefers-color-scheme: dark) {
-  page {
-    --brand-soft: #2b2d55;
-    --ink: #e7e9f0;
-    --ink-2: #9aa0b0;
-    --ok-soft: #10301f;
-    --bad-soft: #3a1414;
-    --line: #363a48;
-    --card: #23262f;
-    --soft-bg: #1c1f27;
-    background: linear-gradient(180deg, #1b1d33 0%, #14161c 240rpx, #14161c 100%);
-  }
-  uni-tabbar .uni-tabbar,
-  uni-tabbar .uni-tabbar__border {
-    background: #1c1f27 !important;
-    border-color: #363a48;
-  }
+body {
+  background: #f6f7fb;
+}
+.theme-dark body {
+  background: #15161c;
+}
+/* #endif */
+
+/* 深色模式（三档设置见 theme.js；.theme-dark 挂在 html 上，H5/App 生效）
+   深色 token 见 docs/design-v3/features/dark-mode.html：品牌蓝不变，浅底改深底 */
+/* #ifdef H5 */
+.theme-dark page {
+  --brand-soft: #1e2a4a;
+  --brand-soft-2: #24345c;
+  --ink: #f2f3f7;
+  --ink-2: #9ba0b0;
+  --ink-3: #8a8ea0;
+  --ink-4: #5c6070;
+  --ok-soft: #0e2b1e;
+  --bad-soft: #331416;
+  --warn-soft: #33260e;
+  --info-soft: #0e2233;
+  --line: #2b2e3a;
+  --fill: #23252f;
+  --card: #1d1f28;
+  --soft-bg: #23252f;
+  /* wot-design-uni 深色适配 */
+  --wot-color-white: #1d1f28;
+  --wot-cell-title-color: #f2f3f7;
+  --wot-cell-value-color: #9ba0b0;
+  --wot-cell-label-color: #8a8ea0;
+  --wot-cell-tap-bg: rgba(255, 255, 255, 0.06);
+  --wot-cell-group-title-color: #9ba0b0;
+  --wot-color-border-light: #2b2e3a;
+  --wot-button-plain-bg-color: transparent;
+}
+.theme-dark uni-tabbar .uni-tabbar,
+.theme-dark uni-tabbar .uni-tabbar__border {
+  background: #1d1f28 !important;
+  border-color: #2b2e3a;
+}
+.theme-dark uni-page-head .uni-page-head {
+  background: #15161c !important;
+  color: #f2f3f7;
+}
+.theme-dark uni-page-head .uni-page-head__title {
+  color: #f2f3f7 !important;
+}
+.theme-dark input,
+.theme-dark textarea {
+  color: var(--ink);
+  caret-color: var(--ink);
+}
+.theme-dark .uni-input-placeholder,
+.theme-dark .uni-textarea-placeholder {
+  color: var(--ink-4) !important;
 }
 /* #endif */
 
@@ -57,6 +131,30 @@ page {
   }
   uni-page-body {
     font-size: 15px;
+  }
+}
+
+/* 宽屏（≥768px）：shadcn/ui 风格打磨——细描边卡片 + 轻阴影 + hover 抬升 */
+@media (min-width: 768px) {
+  uni-page-body .card,
+  uni-page-body .stat-c,
+  uni-page-body .cellcard {
+    border: 1px solid var(--line);
+    box-shadow: 0 1px 2px rgba(23, 24, 28, 0.05);
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+  }
+  uni-page-body .card:hover,
+  uni-page-body .stat-c:hover {
+    box-shadow: 0 4px 12px rgba(23, 24, 28, 0.1);
+    cursor: pointer;
+  }
+  uni-page-body .searchbar {
+    border: 1px solid var(--line);
+    box-shadow: none;
+  }
+  uni-page-body .searchbar:hover {
+    border-color: var(--brand);
+    cursor: pointer;
   }
 }
 

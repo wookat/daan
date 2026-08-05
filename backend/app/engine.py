@@ -98,7 +98,7 @@ async def followup(question_text: str, explanation: str, history: list, query: s
         role = "user" if h.get("role") == "user" else "assistant"
         msgs.append({"role": role, "content": str(h.get("content", ""))[:1000]})
     msgs.append({"role": "user", "content": query})
-    return await llm.chat(msgs, max_tokens=1500)
+    return await llm.chat_fast(msgs, max_tokens=1500)
 
 
 def _explain_messages(extracted: dict, user_answer: str | None = None) -> list:

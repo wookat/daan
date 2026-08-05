@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>内容治理 · 管理后台 design-v3</title><link rel="stylesheet" href="admin.css"></head>
+<body>
+<div class="layout">
+<aside class="side">
+  <div class="logo"><span class="mark">考</span><span class="name">考公助手 · 管理台</span></div>
+  <div class="grp">概览</div>
+  <nav><a href="dashboard.html"><span class="ico">📊</span><span class="txt">数据看板</span></a></nav>
+  <div class="grp">内容</div>
+  <nav>
+    <a href="questions.html"><span class="ico">📚</span><span class="txt">题库管理</span></a>
+    <a href="batches.html"><span class="ico">📦</span><span class="txt">批次导入审核</span><span class="badge">3</span></a>
+    <a href="taxonomy.html"><span class="ico">🌲</span><span class="txt">考点树</span></a>
+    <a href="review.html"><span class="ico">🔍</span><span class="txt">考点抽审</span><span class="badge">86</span></a>
+    <a href="reports.html"><span class="ico">🛠</span><span class="txt">纠错处理</span><span class="badge">12</span></a>
+    <a class="on" href="governance.html"><span class="ico">🛡</span><span class="txt">内容治理</span></a>
+    <a href="content.html"><span class="ico">📰</span><span class="txt">时政与申论</span></a>
+  </nav>
+  <div class="grp">用户</div>
+  <nav><a href="users.html"><span class="ico">👥</span><span class="txt">用户与运营</span></a></nav>
+  <div class="grp">系统</div>
+  <nav><a href="settings.html"><span class="ico">⚙️</span><span class="txt">系统设置</span></a></nav>
+  <div class="foot">design-v3 · <a href="index.html">原型总览</a></div>
+</aside>
+<div class="main">
+  <div class="topbar">
+    <span class="crumb"><b>内容治理</b>　内容 / 内容治理</span>
+    <div class="search">🔎 搜索…　<span class="kbd">⌘K</span></div>
+    <span class="env">● 生产环境</span><span class="avatar">管</span>
+  </div>
+  <div class="content">
+    <div class="pagehead">
+      <div><h1>内容治理</h1><div class="sub">题库健康度 97.4% · 每日凌晨自动扫描</div></div>
+      <div class="acts"><button class="btn btn-ghost">▶ 立即扫描</button></div>
+    </div>
+
+    <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+      <div class="kpi"><div class="lb">疑似克隆组</div><div class="v" style="color:var(--warning)">42</div><div class="d flat">涉及 96 题</div></div>
+      <div class="kpi"><div class="lb">损坏题</div><div class="v" style="color:var(--error)">17</div><div class="d flat">缺选项 / 空题干 / 乱码</div></div>
+      <div class="kpi"><div class="lb">答案分布异常批次</div><div class="v" style="color:var(--warning)">1</div><div class="d flat">C 占比 38% &gt; 阈值 32%</div></div>
+      <div class="kpi"><div class="lb">缺解析题</div><div class="v">2,304</div><div class="d flat">重产队列中 812</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="card">
+        <div class="card-h"><span class="t">克隆检测（相似度 ≥ 0.92）</span><a class="more" href="#">全部 42 组 →</a></div>
+        <div class="tbl-wrap" style="box-shadow:none;border:1px solid var(--fill)">
+          <table class="tbl">
+            <thead><tr><th>组</th><th>题目</th><th style="width:70px">相似度</th><th style="width:120px">操作</th></tr></thead>
+            <tbody>
+              <tr><td class="num">G-101</td><td><div class="tit">#58721 / #58990</div><div class="sub">常识 · 题干完全一致，选项顺序不同</div></td><td><span class="tag tag-bad">0.99</span></td><td><a href="#">对比</a>　<a href="#" style="color:var(--error)">下架副本</a></td></tr>
+              <tr><td class="num">G-102</td><td><div class="tit">#61230 / #77102 / #80441</div><div class="sub">言语 · 题干相同，答案不同 ⚠</div></td><td><span class="tag tag-bad">0.97</span></td><td><a href="#">对比</a>　<a href="#" style="color:var(--error)">下架副本</a></td></tr>
+              <tr><td class="num">G-103</td><td><div class="tit">#43110 / #43287</div><div class="sub">数量 · 数字微调的换皮题</div></td><td><span class="tag tag-warn">0.93</span></td><td><a href="#">对比</a>　<a href="#">保留两题</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h"><span class="t">损坏题（自动体检）</span><a class="more" href="#">全部 17 题 →</a></div>
+        <div class="tbl-wrap" style="box-shadow:none;border:1px solid var(--fill)">
+          <table class="tbl">
+            <thead><tr><th>题目</th><th>问题</th><th style="width:120px">操作</th></tr></thead>
+            <tbody>
+              <tr><td class="num">#71455</td><td><span class="tag tag-bad">选项 C=D 重复</span></td><td><a href="questions.html">修复</a>　<a href="#" style="color:var(--error)">下架</a></td></tr>
+              <tr><td class="num">#69012</td><td><span class="tag tag-bad">空题干</span></td><td><a href="questions.html">修复</a>　<a href="#" style="color:var(--error)">下架</a></td></tr>
+              <tr><td class="num">#66780</td><td><span class="tag tag-warn">答案 E 越界（仅 A–D）</span></td><td><a href="questions.html">修复</a>　<a href="#" style="color:var(--error)">下架</a></td></tr>
+              <tr><td class="num">#61233</td><td><span class="tag tag-warn">题干疑似乱码字符</span></td><td><a href="questions.html">修复</a>　<a href="#" style="color:var(--error)">下架</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="card-h"><span class="t">答案分布监控（按批次）</span><span class="tag tag-gray">阈值：单选项占比 &gt; 32% 预警</span></div>
+      <div class="hbar"><span class="lb" style="width:220px">batch_20260802_changshi_ai41</span>
+        <div class="bar" style="display:flex;gap:0;overflow:hidden"><i style="width:20%;background:var(--brand-300);border-radius:0"></i><i style="width:22%;background:var(--brand-400);border-radius:0"></i><i style="width:38%;background:var(--error);border-radius:0"></i><i style="width:20%;background:var(--brand-200);border-radius:0"></i></div>
+        <span class="n" style="width:150px;color:var(--error)">A20 B22 C38⚠ D20</span><a class="btn btn-sm btn-ghost" href="batches.html">去审核</a></div>
+      <div class="hbar"><span class="lb" style="width:220px">batch_20260803_yanyu</span>
+        <div class="bar" style="display:flex;gap:0;overflow:hidden"><i style="width:26%;background:var(--brand-300);border-radius:0"></i><i style="width:25%;background:var(--brand-400);border-radius:0"></i><i style="width:24%;background:var(--brand-500);border-radius:0"></i><i style="width:25%;background:var(--brand-200);border-radius:0"></i></div>
+        <span class="n" style="width:150px">A26 B25 C24 D25 ✓</span><span style="width:74px"></span></div>
+      <div class="hbar"><span class="lb" style="width:220px">全库整体</span>
+        <div class="bar" style="display:flex;gap:0;overflow:hidden"><i style="width:25%;background:var(--brand-300);border-radius:0"></i><i style="width:26%;background:var(--brand-400);border-radius:0"></i><i style="width:25%;background:var(--brand-500);border-radius:0"></i><i style="width:24%;background:var(--brand-200);border-radius:0"></i></div>
+        <span class="n" style="width:150px">A25 B26 C25 D24 ✓</span><span style="width:74px"></span></div>
+    </div>
+
+    <div class="dnote"><b>设计说明 · 内容治理（线框级）</b>
+      新增模块，收拢现状散落的质量能力：克隆检测（重点标「题干同答案不同」组）、损坏题体检、答案分布监控（批次级堆叠条 + 阈值预警，直通批次审核）。实施时扫描任务跑每日 cron，结果落表供本页查询。</div>
+  </div>
+</div>
+</div>
+</body></html>

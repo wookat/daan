@@ -1,211 +1,22 @@
 <template>
   <view class="wrap" :class="{ 'has-banner': picked }">
-    <!-- 选模块 -->
-    <view v-if="!session" class="home">
-      <view class="hbanner">
-        <view class="hbanner-l">
-          <text class="hbanner-t">今日已练 {{ todayCount }}/{{ dailyGoal }} 题{{ todayCount >= dailyGoal ? ' · 已达成' : '' }}</text>
-          <text class="hbanner-s">{{ dailyStreak ? '连续打卡 ' + dailyStreak + ' 天' : '今天还没开始，练一组吧' }}</text>
-          <view class="hbanner-bar"><view class="hbanner-fill" :style="{ width: Math.min((todayCount / dailyGoal) * 100, 100) + '%' }" /></view>
-        </view>
-        <text class="hbanner-btn" @click="startDaily">{{ todayDone ? '再练一组' : '继续目标 ›' }}</text>
-      </view>
-      <view v-if="plan && (plan.due_mistakes || plan.weak.length || plan.yesterday.n)" class="card plancard">
-        <view class="plan-h">
-          <text class="plan-t">今日建议</text>
-          <text v-if="plan.yesterday.n" class="plan-y">昨日练 {{ plan.yesterday.n }} 题 · 正确率 {{ Math.round((plan.yesterday.correct / plan.yesterday.n) * 100) }}%</text>
-          <text v-else class="plan-y">昨日未练习</text>
-        </view>
-        <view v-if="plan.due_mistakes" class="plan-row" @click="goBook">
-          <text class="plan-dot due" />
-          <text class="plan-txt">先复习到期错题 {{ plan.due_mistakes }} 道</text>
-          <text class="plan-go">去复习 ›</text>
-        </view>
-        <view v-for="w in plan.weak" :key="w.module + w.submodule" class="plan-row" @click="start(w.module, w.submodule, 10, true)">
-          <text class="plan-dot" />
-          <text class="plan-txt">{{ w.submodule }}（{{ w.reason }} · 正确率 {{ Math.round(w.acc * 100) }}%）</text>
-          <text class="plan-go">练 10 题 ›</text>
-        </view>
-        <view class="plan-focus">
-          <text class="plan-focus-k">今天主攻</text>
-          <text v-for="(fn, fk) in FOCUS_MODS" :key="fk" class="plan-fchip" :class="{ on: plan.focus === fk }" @click="setFocus(fk)">{{ fn }}</text>
-        </view>
-      </view>
-      <view v-if="announce" class="card ann">
-        <uni-icons type="sound-filled" size="15" color="#0369a1" />
-        <view class="ann-c">
-          <text class="ann-t">{{ announce.title }}</text>
-          <text v-if="announce.body" class="ann-b">{{ announce.body }}</text>
-        </view>
-        <text class="ann-x" @click="dismissAnn">✕</text>
-      </view>
-      <view v-if="counts.length" class="card grid4">
-        <view class="g4" @click="startExam(false)">
-          <view class="g4-ic" style="background:#fff4e5"><uni-icons type="flag-filled" size="20" color="#d97706" /></view>
-          <text class="g4-t">迷你模考</text>
-        </view>
-        <view class="g4" @click="startExam(true)">
-          <view class="g4-ic" style="background:#fef2f2"><uni-icons type="medal-filled" size="20" color="#dc2626" /></view>
-          <text class="g4-t">全真模考</text>
-        </view>
-        <view class="g4" @click="openPapers">
-          <view class="g4-ic" style="background:#edf3fe"><uni-icons type="paperplane-filled" size="20" color="#3b6ff5" /></view>
-          <text class="g4-t">真题卷库</text>
-        </view>
-        <view class="g4" @click="goShenlun">
-          <view class="g4-ic" style="background:#f0fdf4"><uni-icons type="compose" size="20" color="#12b76a" /></view>
-          <text class="g4-t">申论专区</text>
-        </view>
-      </view>
-      <view v-if="counts.length" class="card custom-row" @click="customOpen = true">
-        <view class="daily-l">
-          <view class="daily-t"><view class="exam-ico"><uni-icons type="gear-filled" size="16" color="#3b6ff5" /></view><text class="daily-t-t dark">自定义练习</text></view>
-          <text class="daily-s dark">选来源 / 年份 / 地区 / 题量 / 每日目标</text>
-        </view>
-        <text class="daily-go">设置</text>
-      </view>
-      <view v-if="customOpen" class="mask" @click="customOpen = false">
-        <view class="sheet" @click.stop>
-          <view class="sheet-h">
-            <text class="sheet-t">自定义练习</text>
-            <view class="sheet-x" @click="customOpen = false"><uni-icons type="closeempty" size="20" color="#6b7280" /></view>
-          </view>
-          <view class="setrow">
-            <view class="set-kwrap"><text class="set-k">每日目标</text><text class="set-sub">今天合计要练的题数</text></view>
-            <view class="set-chips">
-              <text v-for="g in [20, 50, 100]" :key="g" class="set-chip" :class="{ on: dailyGoal === g }" @click="setGoal(g)">{{ g }} 题</text>
-            </view>
-          </view>
-          <view class="setrow">
-            <text class="set-k">选题来源</text>
-            <view class="set-chips">
-              <text class="set-chip" :class="{ on: !realMode }" @click="setReal(false)">题库模式</text>
-              <text class="set-chip" :class="{ on: realMode }" @click="setReal(true)">真题模式</text>
-            </view>
-          </view>
-          <view v-if="realMode && realYears.length" class="setrow">
-            <text class="set-k">真题年份</text>
-            <view class="set-chips scrollx">
-              <text class="set-chip" :class="{ on: !realYear }" @click="setRealYear(null)">全部</text>
-              <text v-for="y in realYears" :key="y.y" class="set-chip" :class="{ on: realYear === y.y }" @click="setRealYear(y.y)">{{ y.y }}</text>
-            </view>
-          </view>
-          <view v-if="realMode && realRegions.length" class="setrow">
-            <text class="set-k">真题地区</text>
-            <view class="set-chips scrollx">
-              <text class="set-chip" :class="{ on: !realRegion }" @click="setRealRegion(null)">全部</text>
-              <text v-for="r in realRegions" :key="r.r" class="set-chip" :class="{ on: realRegion === r.r }" @click="setRealRegion(r.r)">{{ r.r }}</text>
-            </view>
-          </view>
-          <view class="setrow">
-            <view class="set-kwrap"><text class="set-k">每组题量</text><text class="set-sub">单次练习连做几道</text></view>
-            <view class="set-chips">
-              <text v-for="n in [10, 20, 30, 50]" :key="n" class="set-chip" :class="{ on: groupSize === n }" @click="setGroup(n)">{{ n }}</text>
-            </view>
-          </view>
-          <view class="custom-start" @click="customOpen = false; start(null)">按以上设置开始练习（混合模块）</view>
-          <view class="exp-opts">
-            <text class="expchip" :class="{ on: expSheet && !expOnly }" @click="expOnly = false; expSheet = !expSheet">含答题卡</text>
-            <text class="expchip" :class="{ on: expAns && !expOnly }" @click="expOnly = false; expAns = !expAns">含答案解析</text>
-            <text class="expchip" :class="{ on: expOnly }" @click="expOnly = !expOnly">仅导出答案</text>
-          </view>
-          <view class="custom-export" @click="exportPaper">{{ exporting ? '正在生成 PDF…' : '导出为试卷 PDF' }}</view>
-          <view class="custom-note">以上设置同样作用于下方模块列表；模考与真题卷不受影响</view>
-        </view>
-      </view>
-      <view v-if="!counts.length" class="card spin" @click="loadCounts">题库加载中…点此重试</view>
-      <view v-if="counts.length" class="daily" :class="{ done: todayDone }" @click="startDaily">
-        <view class="daily-l">
-          <view class="daily-t"><uni-icons :type="todayDone ? 'checkbox-filled' : 'calendar-filled'" size="16" color="#ffffff" /><text class="daily-t-t">今日一练</text></view>
-          <text class="daily-s">{{ todayDone ? '今天已完成，明天继续' : '今日题型：' + dailyModName + ' · ' + groupSize + ' 题 · ' + (realMode ? '真题模式' : '题库模式') }}{{ dailyStreak ? ' · 已连续打卡 ' + dailyStreak + ' 天' : '' }}</text>
-        </view>
-        <text class="daily-go">{{ todayDone ? '再练一组' : '开始' }}</text>
-      </view>
-      <view v-if="weakModule" class="smart" @click="start(weakModule)">
-        <view class="smart-l">
-          <view class="smart-t"><uni-icons type="flag-filled" size="15" color="#ffffff" /><text class="smart-t-t">智能刷题：攻克薄弱项</text></view>
-          <text class="smart-s">你的 {{ modName(weakModule) }} 正确率较低，建议专项练习</text>
-        </view>
-        <text class="smart-go">去练 ›</text>
-      </view>
-      <view class="grid">
-        <view
-          v-for="c in counts"
-          :key="c.module"
-          class="mcard"
-          @click="openModule(c.module)"
-        >
-          <view class="mtop">
-            <text class="mico" :style="{ background: modColor(c.module).bg, color: modColor(c.module).fg }">{{ modName(c.module).slice(0, 1) }}</text>
-            <text class="mname">{{ modName(c.module) }}</text>
-          </view>
-          <text class="mn">{{ progText(c) }}</text>
-          <view class="mbar">
-            <view class="mfill" :style="{ width: progPct(c) + '%' }" />
-          </view>
-        </view>
-        <view v-if="counts.length" class="mcard all" @click="start(null)">
-          <view class="mtop"><uni-icons type="loop" size="16" color="#ffffff" /><text class="mname">混合刷题</text></view>
-          <text class="mn">全部模块随机</text>
-        </view>
-      </view>
-    </view>
-
-    <!-- 真题卷库 -->
-    <view v-if="paperSheet" class="mask" @click="paperSheet = false">
-      <view class="sheet" @click.stop>
-        <view class="sheet-h">
-          <text class="sheet-t">真题卷库 · 选择试卷</text>
-          <view class="sheet-x" @click="paperSheet = false"><uni-icons type="closeempty" size="20" color="#6b7280" /></view>
-        </view>
-        <view v-if="!papers.length" class="spin">试卷加载中…</view>
-        <scroll-view v-if="paperRegions.length > 1" scroll-x class="pr-scroll">
-          <text class="set-chip" :class="{ on: !paperRegion }" @click="paperRegion = null">全部</text>
-          <text v-for="rg in paperRegions" :key="rg" class="set-chip" :class="{ on: paperRegion === rg }" @click="paperRegion = rg">{{ rg }}</text>
-        </scroll-view>
-        <view v-for="p in shownPapers" :key="p.source" class="sub-chip" @click="startPaper(p)">
-          <text class="sub-name">{{ p.title }}</text>
-          <text class="sub-n">{{ p.n }} 题</text>
-        </view>
-      </view>
-    </view>
-
-    <!-- 选二级题型 -->
-    <view v-if="subSelect" class="mask" @click="subSelect = null">
-      <view class="sheet" @click.stop>
-        <view class="sheet-h">
-          <text class="sheet-t">{{ modName(subSelect) }} · 选择题型</text>
-          <view class="sheet-x" @click="subSelect = null"><uni-icons type="closeempty" size="20" color="#6b7280" /></view>
-        </view>
-        <view class="sub-chip all-chip" @click="start(subSelect)">
-          <text class="sub-name">全部随机</text>
-          <text class="sub-n">{{ (counts.find(c => c.module === subSelect) || {}).n || 0 }} 题</text>
-        </view>
-        <view
-          v-for="s in submodules"
-          :key="s.submodule"
-          class="sub-chip"
-          @click="start(subSelect, s.submodule)"
-        >
-          <view class="sub-l">
-            <text class="sub-name">{{ s.submodule }}</text>
-            <text v-if="subProg[s.submodule]" class="sub-prog">已做 {{ subProg[s.submodule].n }} 题 · 正确率 {{ Math.round(100 * subProg[s.submodule].c / subProg[s.submodule].n) }}%</text>
-          </view>
-          <text class="sub-n">{{ s.n }} 题</text>
-        </view>
-      </view>
-    </view>
-
+    <!-- 加载/空态（本页仅承载答题会话，选题在首页） -->
+    <view v-if="!session" class="card spin" @click="quit">正在准备练习…点此返回首页</view>
     <!-- 答题 -->
     <view v-if="session && cur" class="card">
+      <view v-if="beiMode || timedMode || cur.is_real" class="modechips">
+        <text v-if="beiMode" class="mchip brand">背题模式</text>
+        <text v-if="timedMode && !beiMode && !examMode" class="mchip info">限时训练</text>
+        <text v-if="examMode" class="mchip bad">模考态 · 交卷统一判分</text>
+      </view>
       <view class="rhead">
         <text class="tag" @click="cardOpen = true">{{ modName(cur.module) }}{{ lastSubmodule ? ' · ' + lastSubmodule : '' }} · {{ idx + 1 }}/{{ items.length }} ▾</text>
         <view class="hstats">
           <text class="timer" :class="{ examleft: examMode, overtime: timedMode && !examMode && qsecs > targetSecs }">{{ examMode ? fmtSecs(examLeft) : timedMode ? (qsecs > targetSecs ? '超时+' + fmtSecs(qsecs - targetSecs) : fmtSecs(targetSecs - qsecs)) : fmtSecs(qsecs) }}</text>
           <text v-if="!examMode" class="cnt okc">✓{{ right }}</text>
           <text v-if="!examMode" class="cnt badc">✗{{ wrongCount }}</text>
-          <view v-if="streak >= 3" class="cnt fire"><uni-icons type="fire-filled" size="13" color="#f97316" /><text class="fire-n">{{ streak }}</text></view>
-          <view class="fontbtn iconbtn" @click="toggleFav"><uni-icons :type="isFav ? 'star-filled' : 'star'" size="16" :color="isFav ? '#f59e0b' : '#8a90a0'" /></view>
+          <view v-if="streak >= 3" class="cnt fire"><l-icon name="flame" :size="13" color="#f97316" fill="#fdba74" /><text class="fire-n">{{ streak }}</text></view>
+          <view class="fontbtn iconbtn" @click="toggleFav"><l-icon name="star" :size="16" :color="isFav ? '#f59e0b' : '#8a90a0'" :fill="isFav ? '#f59e0b' : 'none'" /></view>
           <text class="fontbtn" @click="toolsOpen = true">···</text>
           <text class="op" @click="quit">退出</text>
         </view>
@@ -214,7 +25,7 @@
         <view class="sheet" @click.stop>
           <view class="sheet-h">
             <text class="sheet-t">练习工具</text>
-            <view class="sheet-x" @click="toolsOpen = false"><uni-icons type="closeempty" size="20" color="#6b7280" /></view>
+            <view class="sheet-x" @click="toolsOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
           </view>
           <view class="tool-row" @click="cycleFont">
             <text class="tool-name">字号大小</text>
@@ -239,6 +50,7 @@
         </view>
       </view>
       <view class="progress"><view class="pfill" :style="{ width: (idx / items.length) * 100 + '%' }" /></view>
+      <view v-if="offline" class="offline-tag"><l-icon name="plane" :size="14" color="#b45309" /> 离线题包模式 · 本地判分，作答记录联网后自动同步（AI 讲解等需联网）</view>
       <view v-if="cur.is_real" class="real-tag">真题{{ cur.exam_year ? ' · ' + cur.exam_year : '' }}{{ cur.exam_region ? ' · ' + cur.exam_region : '' }}</view>
       <view v-if="cur.group_seq" class="grp-tag">同材料题组 {{ cur.group_seq }}</view>
       <view class="q" :style="qStyle">
@@ -290,10 +102,10 @@
               <view class="exp xpx">{{ cur.xp_explanation }}</view>
             </template>
             <view class="hs-rate">
-              <text v-if="hsRated[cur.id]" class="hs-rate-done">{{ hsRated[cur.id] === 'up' ? '已反馈：有用 👍' : '已反馈：有误 👎' }}</text>
+              <text v-if="hsRated[cur.id]" class="hs-rate-done">{{ hsRated[cur.id] === 'up' ? '已反馈：有用' : '已反馈：有误' }}</text>
               <template v-else>
-                <text class="hs-rate-btn" @click="rateHs(cur, true)">👍 有用</text>
-                <text class="hs-rate-btn bad" @click="rateHs(cur, false)">👎 有误</text>
+                <view class="hs-rate-btn" @click="rateHs(cur, true)"><l-icon name="thumbs-up" :size="13" color="#3b6ff5" /><text>有用</text></view>
+                <view class="hs-rate-btn bad" @click="rateHs(cur, false)"><l-icon name="thumbs-down" :size="13" color="#b91c1c" /><text>有误</text></view>
               </template>
             </view>
           </view>
@@ -311,7 +123,8 @@
           </view>
         </view>
         <view class="deep" @click="deepExplain">用花生十三方法详解这道题 ›</view>
-        <view class="report-link" @click="reportQuestion">{{ cur._reported ? '已提交纠错，感谢反馈' : '题目有问题？纠错' }}</view>
+        <view v-if="!cur._sz" class="report-link" @click="reportQuestion">{{ cur._reported ? '已提交纠错，感谢反馈' : '题目有问题？纠错' }}</view>
+        <q-social-bar v-if="cur.id && !cur._sz" :question-id="cur.id" />
       </view>
     </view>
 
@@ -353,7 +166,7 @@
       </view>
       <button class="btn" @click="start(lastModule, lastSubmodule)">再来一组</button>
       <button v-if="!beiMode" class="btn ghost" style="margin-top: 16rpx" @click="shareResult">分享成绩</button>
-      <button class="btn plain" style="margin-top: 8rpx" @click="quit">返回选模块</button>
+      <button class="btn plain" style="margin-top: 8rpx" @click="quit">返回首页</button>
     </view>
 
     <!-- 答题卡 -->
@@ -361,7 +174,7 @@
       <view class="sheet" @click.stop>
         <view class="sheet-h">
           <text class="sheet-t">答题卡</text>
-          <view class="sheet-x" @click="cardOpen = false"><uni-icons type="closeempty" size="20" color="#6b7280" /></view>
+          <view class="sheet-x" @click="cardOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <view class="acard-grid">
           <view
@@ -382,7 +195,7 @@
       <view class="sheet" @click.stop>
         <view class="sheet-h">
           <text class="sheet-t">题目纠错</text>
-          <text class="sheet-x" @click="reportOpen = false">✕</text>
+          <view class="sheet-x" @click="reportOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <view class="rp-types">
           <text
@@ -420,7 +233,8 @@
 </template>
 
 <script>
-import { request, BASE_URL, anonUid, exportPdf } from '../../api.js';
+import { request, BASE_URL, anonUid, exportPdf, removeFav, setFav } from '../../api.js';
+import { drawOffline, enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../offline.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -443,6 +257,7 @@ export default {
     return {
       counts: [],
       session: false,
+      offline: false,
       items: [],
       idx: 0,
       picked: '',
@@ -462,6 +277,13 @@ export default {
       expAns: true,
       expOnly: false,
       plan: null,
+      profile: undefined,
+      planToday: null,
+      guideHide: uni.getStorageSync('planGuideHide') ? true : false,
+      setupOpen: false,
+      setupStep: 1,
+      setupBusy: false,
+      pf: { exam_type: '国考', target_region: '', exam_date: '', target_score: 70, daily_minutes: 60, base_level: '零基础' },
       FOCUS_MODS: { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断' },
       papers: [],
       paperRegion: null,
@@ -488,6 +310,7 @@ export default {
       favs: uni.getStorageSync('favQuestions') || [],
       autoNext: uni.getStorageSync('autoNextOff') ? false : true,
       daily: uni.getStorageSync('dailyPlan') || { days: {} },
+      szDaily: uni.getStorageSync('szDaily') || { days: {} },
       realMode: uni.getStorageSync('realMode') ? true : false,
       realYears: [],
       realRegions: [],
@@ -620,6 +443,9 @@ export default {
     todayDone() {
       return !!this.daily.days[new Date().toISOString().slice(0, 10)];
     },
+    szTodayDone() {
+      return !!this.szDaily.days[new Date().toISOString().slice(0, 10)];
+    },
     dailyModule() {
       const mods = ['ziliao', 'shuliang', 'yanyu', 'panduan', 'changshi'];
       const key = new Date().toISOString().slice(0, 10);
@@ -664,10 +490,35 @@ export default {
   onShow() {
     this.pstats = loadPStats();
     this.favs = uni.getStorageSync('favQuestions') || [];
-    this.loadCounts();
-    this.loadAnnounce();
-    this.loadPlan();
-    if (this.realMode) this.loadRealFilters();
+    this.realMode = uni.getStorageSync('realMode') ? true : false;
+    this.realYear = uni.getStorageSync('realYear') || null;
+    this.realRegion = uni.getStorageSync('realRegion') || null;
+    this.groupSize = uni.getStorageSync('groupSize') || 10;
+    this.dailyGoal = uni.getStorageSync('dailyGoal') || 20;
+    const launch = uni.getStorageSync('practiceLaunch');
+    if (launch && launch.kind) {
+      uni.removeStorageSync('practiceLaunch');
+      if (launch.kind === 'daily') {
+        this.startDaily();
+        return;
+      }
+      if (launch.kind === 'shizheng') {
+        this.startShizheng();
+        return;
+      }
+      if (launch.kind === 'szreview') {
+        this.reviewShizheng();
+        return;
+      }
+      if (launch.kind === 'paper') {
+        this.startPaper({ source: launch.source, title: launch.title || '真题卷' });
+        return;
+      }
+      if (launch.kind === 'start') {
+        this.start(launch.module || null, launch.submodule || null, launch.count || null, !!launch.adaptive, launch.forceReal, launch.tag3 || null);
+        return;
+      }
+    }
     const redoSet = uni.getStorageSync('redoSet');
     if (redoSet && redoSet.length) {
       uni.removeStorageSync('redoSet');
@@ -694,7 +545,7 @@ export default {
     const preset = uni.getStorageSync('practicePreset');
     if (preset && preset.module) {
       uni.removeStorageSync('practicePreset');
-      this.start(preset.module, preset.submodule || null, preset.count || 10, preset.adaptive);
+      this.start(preset.module, preset.submodule || null, preset.count || 10, preset.adaptive, undefined, preset.tag3 || null);
       return;
     }
     const pm = uni.getStorageSync('practiceModule');
@@ -805,6 +656,15 @@ export default {
     setGroup(n) {
       this.groupSize = n;
       uni.setStorageSync('groupSize', n);
+    },
+    goMini() {
+      uni.navigateTo({ url: '/pkgA/exam/exam?mini=1' });
+    },
+    goExamList() {
+      uni.navigateTo({ url: '/pkgA/exam/list' });
+    },
+    goSearch() {
+      uni.navigateTo({ url: '/pkgA/search/search' });
     },
     async openPapers() {
       this.paperSheet = true;
@@ -974,7 +834,7 @@ export default {
           method: 'POST',
           data: {
             uid: anonUid(),
-            question_id: q.id || null,
+            question_id: q._sz ? null : q.id || null,
             module: q.module,
             question_type: q.question_type || q.submodule,
             question_text: q.question + '\n' + optText,
@@ -986,15 +846,34 @@ export default {
         q._mid = res.id;
         q._saved = true;
         this.autoSaved = true;
-      } catch (e) { /* 非关键路径 */ }
+      } catch (e) {
+        enqueueMistake({
+          uid: anonUid(),
+          question_id: q._sz ? null : q.id || null,
+          module: q.module,
+          question_type: q.question_type || q.submodule,
+          question_text: q.question + '\n' + optText,
+          user_answer: q._picked,
+          correct_answer: q.answer,
+          explanation: q.explanation || '',
+        });
+        q._saved = true;
+        this.autoSaved = true;
+      }
+    },
+    openPoster() {
+      uni.navigateTo({ url: '/pkgA/social/poster' });
     },
     toggleFav() {
       if (!this.cur) return;
+      const qid = this.cur._sz ? null : this.cur.id;
       const i = this.favs.findIndex((f) => f.question === this.cur.question);
       if (i >= 0) {
         this.favs.splice(i, 1);
+        if (qid) removeFav(qid).catch(() => {});
         uni.showToast({ title: '已取消收藏', icon: 'none', duration: 900 });
       } else {
+        if (qid) setFav(qid).catch(() => {});
         const { question, options, answer, explanation, hs_explanation, xp_explanation, xp_school, module, submodule, is_real, exam_year, exam_region, image, image_credit } = this.cur;
         this.favs.unshift({ t: Date.now(), question, options, answer, explanation, hs_explanation, xp_explanation, xp_school, module, submodule, is_real, exam_year, exam_region, image, image_credit });
         if (this.favs.length > 200) this.favs.length = 200;
@@ -1018,7 +897,89 @@ export default {
       uni.setStorageSync('dailyPlan', this.daily);
       uni.showToast({ title: '今日一练完成，打卡成功！', icon: 'none' });
     },
-    async start(module, submodule, count, adaptive) {
+    _mapShizheng(q) {
+      return {
+        ...q,
+        explanation: (q.explanation || '') + (q.source_note ? '\n【出处】' + q.source_note : ''),
+        _sz: true,
+        _saved: false,
+      };
+    },
+    async startShizheng() {
+      if (this._starting) return;
+      this._starting = true;
+      uni.showLoading({ title: '出题中…', mask: true });
+      if (this.beiMode) {
+        this.beiMode = false;
+        uni.setStorageSync('beiMode', '');
+      }
+      try {
+        const d = await request('/api/shizheng/daily');
+        if (!d.items || !d.items.length) {
+          uni.showToast({ title: '时政题库准备中，敬请期待', icon: 'none' });
+          return;
+        }
+        this._shizheng = true;
+        this._szDate = d.date;
+        this.lastModule = '时政';
+        this.lastSubmodule = null;
+        this.items = d.items.map((q) => this._mapShizheng(q));
+        this.idx = 0;
+        this.picked = '';
+        this.right = 0;
+        this.streak = 0;
+        this.bestStreak = 0;
+        this.autoSaved = false;
+        this.resultSent = false;
+        this.percentile = null;
+        this.session = true;
+        this.startQTimer();
+      } catch (e) {
+        uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
+      } finally {
+        uni.hideLoading();
+        this._starting = false;
+      }
+    },
+    async reviewShizheng() {
+      const day = new Date().toISOString().slice(0, 10);
+      const rec = this.szDaily.days[day];
+      if (!rec) {
+        this.startShizheng();
+        return;
+      }
+      uni.showLoading({ title: '加载回顾…', mask: true });
+      try {
+        const d = await request('/api/shizheng/daily');
+        this._shizheng = false;
+        this.lastModule = '时政';
+        this.items = (d.items || []).map((q, i) => ({
+          ...this._mapShizheng(q),
+          _picked: (rec.picks || [])[i] || '',
+          _logged: true,
+          _saved: true,
+        }));
+        this.right = rec.right || 0;
+        this.idx = this.items.length;
+        this.picked = '';
+        this.resultSent = true;
+        this.session = true;
+        this.stopQTimer();
+      } catch (e) {
+        uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
+      } finally {
+        uni.hideLoading();
+      }
+    },
+    markShizhengDone() {
+      if (!this._shizheng) return;
+      this._shizheng = false;
+      const day = new Date().toISOString().slice(0, 10);
+      this.szDaily.days[day] = { right: this.right, picks: this.items.map((q) => q._picked || '') };
+      uni.setStorageSync('szDaily', this.szDaily);
+      uni.showToast({ title: '时政每日一练完成！', icon: 'none' });
+    },
+    async start(module, submodule, count, adaptive, forceReal, tag3) {
       if (this._starting) return;
       this._starting = true;
       uni.showLoading({ title: '出题中…', mask: true });
@@ -1026,7 +987,9 @@ export default {
       this.lastSubmodule = submodule || null;
       this.subSelect = null;
       const limit = count || this.groupSize || 10;
-      const realQ = this.realMode
+      const realQ = forceReal
+        ? '&real=1'
+        : this.realMode
         ? '&real=1' +
           (this.realYear ? '&year=' + this.realYear : '') +
           (this.realRegion ? '&region=' + encodeURIComponent(this.realRegion) : '')
@@ -1034,13 +997,21 @@ export default {
       const uid = uni.getStorageSync('anonUid');
       const uidQ = uid ? '&uid=' + encodeURIComponent(uid) : '';
       const adQ = adaptive && uid ? '&adaptive=1' : '';
-      const grpQ = module === 'ziliao' && !submodule && !this.realMode ? '&grouped=1' : '';
+      const grpQ = module === 'ziliao' && !submodule && !tag3 && !this.realMode ? '&grouped=1' : '';
+      const tagQ = tag3 ? '&tag3=' + encodeURIComponent(tag3) : '';
       try {
         let d = await request(
-          '/api/questions?limit=' + limit + realQ + uidQ + adQ + grpQ +
+          '/api/questions?limit=' + limit + realQ + uidQ + adQ + grpQ + tagQ +
             (module ? '&module=' + module : '') +
             (submodule ? '&submodule=' + encodeURIComponent(submodule) : '')
         );
+        if (!d.items.length && tag3) {
+          d = await request(
+            '/api/questions?limit=' + limit + realQ + uidQ + adQ +
+              (module ? '&module=' + module : '') +
+              (submodule ? '&submodule=' + encodeURIComponent(submodule) : '')
+          );
+        }
         if (!d.items.length && submodule) {
           this.lastSubmodule = null;
           d = await request('/api/questions?limit=' + limit + realQ + uidQ + (module ? '&module=' + module : ''));
@@ -1071,8 +1042,29 @@ export default {
         this.session = true;
         this.startQTimer();
         uni.setStorageSync('lastModule', module || '');
+        this.offline = false;
+        flushOfflineQueue();
       } catch (e) {
-        uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
+        // 无网络：尝试使用已下载的离线题包（本地判分，作答记录进队列待同步）
+        const offItems = module ? drawOffline(module, limit) : null;
+        if (offItems && offItems.length) {
+          this.items = offItems.map((q) => ({ ...q, _saved: false }));
+          this.idx = 0;
+          this.picked = '';
+          this.right = 0;
+          this.streak = 0;
+          this.bestStreak = 0;
+          this.autoSaved = false;
+          this.resultSent = false;
+          this.percentile = null;
+          this.offline = true;
+          this.session = true;
+          this.startQTimer();
+          uni.setStorageSync('lastModule', module || '');
+          uni.showToast({ title: '当前无网络，已切换离线题包模式', icon: 'none', duration: 1800 });
+        } else {
+          uni.showToast({ title: '加载失败：' + e.message + '（可在我的→离线题包提前下载）', icon: 'none', duration: 2200 });
+        }
       } finally {
         uni.hideLoading();
         this._starting = false;
@@ -1146,6 +1138,10 @@ export default {
           mk(220, 0, 0.25);
         }
       } catch (e) { /* 音效失败不影响刷题 */ }
+      // #endif
+      // #ifndef H5
+      // 小程序 / App 无 WebAudio 合成能力 → 用触感反馈代替提示音
+      uni.vibrateShort({ type: correct ? 'light' : 'heavy', fail: () => {} });
       // #endif
     },
     cycleFont() {
@@ -1231,7 +1227,7 @@ export default {
       this.saveSession();
     },
     saveSession() {
-      if (this.examMode || this.beiMode || !this.session || !this.items.length) return;
+      if (this.examMode || this.beiMode || this._shizheng || !this.session || !this.items.length) return;
       if (this.items.every((q) => q._picked)) {
         uni.removeStorageSync('pendingSession');
         return;
@@ -1328,7 +1324,7 @@ export default {
           method: 'POST',
           data: {
             uid: anonUid(),
-            question_id: q.id || null,
+            question_id: q._sz ? null : q.id || null,
             module: q.module,
             question_type: q.question_type || q.submodule,
             question_text: q.question + '\n' + optText,
@@ -1344,7 +1340,19 @@ export default {
         q._saved = true;
         this.autoSaved = true;
       } catch (e) {
-        /* 保存失败不阻塞刷题 */
+        // 断网：错题进本地队列，联网后补传
+        enqueueMistake({
+          uid: anonUid(),
+          question_id: q._sz ? null : q.id || null,
+          module: q.module,
+          question_type: q.question_type || q.submodule,
+          question_text: q.question + '\n' + optText,
+          user_answer: this.picked,
+          correct_answer: q.answer,
+          explanation: q.explanation || '',
+        });
+        q._saved = true;
+        this.autoSaved = true;
       }
     },
     shareResult() {
@@ -1397,6 +1405,73 @@ export default {
         this.plan = await request('/api/daily_plan?uid=' + encodeURIComponent(uid));
       } catch (e) { /* 非关键路径 */ }
     },
+    async loadProfile() {
+      try {
+        const d = await request('/api/profile?uid=' + encodeURIComponent(anonUid()));
+        this.profile = d.profile || null;
+        if (this.profile) await this.loadPlanToday();
+        else this.planToday = null;
+      } catch (e) { /* 非关键路径 */ }
+    },
+    async loadPlanToday() {
+      try {
+        this.planToday = await request('/api/plan/today?uid=' + encodeURIComponent(anonUid()));
+      } catch (e) { /* 非关键路径 */ }
+    },
+    openSetup() {
+      const p = this.profile || {};
+      this.pf = {
+        exam_type: p.exam_type || '国考',
+        target_region: p.target_region || '',
+        exam_date: p.exam_date || '',
+        target_score: p.target_score || 70,
+        daily_minutes: p.daily_minutes || 60,
+        base_level: p.base_level || '零基础',
+      };
+      this.setupStep = 1;
+      this.setupOpen = true;
+    },
+    skipGuide() {
+      this.guideHide = true;
+      uni.setStorageSync('planGuideHide', '1');
+      uni.showToast({ title: '已跳过，可在统计页随时制定', icon: 'none', duration: 1500 });
+    },
+    async setupNext() {
+      if (this.setupStep === 1 && !this.pf.exam_date) {
+        uni.showToast({ title: '请先选择考试日期', icon: 'none' });
+        return;
+      }
+      if (this.setupStep < 3) {
+        this.setupStep++;
+        return;
+      }
+      if (this.setupBusy) return;
+      this.setupBusy = true;
+      try {
+        const d = await request('/api/profile', { method: 'POST', data: { uid: anonUid(), ...this.pf } });
+        this.profile = d.profile;
+        await this.loadPlanToday();
+        this.setupOpen = false;
+        uni.showToast({ title: '学习计划已生成', icon: 'none' });
+      } catch (e) {
+        uni.showToast({ title: '保存失败：' + e.message, icon: 'none' });
+      } finally {
+        this.setupBusy = false;
+      }
+    },
+    goTask(t) {
+      if (t.done) return;
+      if (t.type === 'mock') {
+        this.goMini();
+        return;
+      }
+      if (t.type === 'review') {
+        this.goBook();
+        return;
+      }
+      const remain = Math.max(t.target - (t.done_n || 0), 5);
+      this.start(t.module || null, t.submodule || null, remain, !!t.submodule, t.real);
+    },
     async exportPaper() {
       if (this.exporting) return;
       this.exporting = true;
@@ -1433,6 +1508,7 @@ export default {
       try {
         await request('/api/user_state', { method: 'POST', data: { uid, focus: next } });
         this.plan = await request('/api/daily_plan?uid=' + encodeURIComponent(uid));
+        if (this.profile) this.loadPlanToday();
         if (next) uni.showToast({ title: '今日主攻已设为' + (this.FOCUS_MODS[next] || next) + '，推荐已更新', icon: 'none' });
       } catch (e) { /* 非关键路径 */ }
     },
@@ -1440,7 +1516,7 @@ export default {
       uni.switchTab({ url: '/pages/book/book' });
     },
     goShenlun() {
-      uni.navigateTo({ url: '/pages/shenlun/shenlun' });
+      uni.navigateTo({ url: '/pkgA/shenlun/shenlun' });
     },
     next() {
       this.saveSession();
@@ -1454,6 +1530,7 @@ export default {
       else this.stopQTimer();
       if (!this.cur) {
         this.markDailyDone();
+        this.markShizhengDone();
         this.submitResult();
       }
     },
@@ -1482,6 +1559,7 @@ export default {
         if (d.percentile != null) this.percentile = d.percentile;
       } catch (e) { /* 非关键路径 */ }
       await this.logAttempts(this.items);
+      if (this.profile) this.loadPlanToday();
     },
     async logAttempts(qs) {
       try {
@@ -1500,7 +1578,12 @@ export default {
           picked: q._picked,
         }));
         if (items.length) {
-          await request('/api/answer_log', { method: 'POST', data: { uid, items } });
+          try {
+            await request('/api/answer_log', { method: 'POST', data: { uid, items } });
+          } catch (err) {
+            // 断网：进本地队列，恢复网络后自动同步（按 key 去重）
+            enqueueAnswers(uid, items.map((it, i) => ({ ...it, t: Date.now() + i })));
+          }
           pending.forEach((q) => { q._logged = true; });
         }
       } catch (e) { /* 非关键路径 */ }
@@ -1520,6 +1603,7 @@ export default {
       this.cardOpen = false;
       this.stopQTimer();
       this.pstats = loadPStats();
+      uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/home/home' }) });
     },
   },
 };
@@ -1529,37 +1613,62 @@ export default {
 .wrap { padding: 24rpx; padding-bottom: 40rpx; }
 .home { padding-bottom: 40rpx; }
 .plancard { padding: 22rpx 26rpx; }
+.guide { display: flex; align-items: center; gap: 16rpx; background: linear-gradient(120deg, var(--brand-soft), var(--brand-soft)); border: 1rpx solid var(--brand-soft-2); padding: 24rpx 26rpx; }
+.guide-l { flex: 1; min-height: 44px; display: flex; flex-direction: column; justify-content: center; }
+.guide-t { font-size: 28rpx; font-weight: 600; color: var(--brand); }
+.guide-s { font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; }
+.guide-btn { flex-shrink: 0; background: var(--brand); color: #fff; border-radius: 999rpx; padding: 0 26rpx; font-size: 24rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
+.guide-x { flex-shrink: 0; font-size: 22rpx; color: var(--ink-3); min-height: 44px; display: inline-flex; align-items: center; padding: 0 8rpx; }
+.plan-hr { display: flex; align-items: center; gap: 14rpx; }
+.plan-days { font-size: 21rpx; color: var(--brand); background: var(--brand-50); border-radius: 999rpx; padding: 4rpx 14rpx; }
+.plan-edit { font-size: 22rpx; color: var(--ink-3); min-height: 44px; display: inline-flex; align-items: center; }
+.plan-prog { display: flex; align-items: center; gap: 14rpx; margin: 8rpx 0 6rpx; }
+.plan-prog-bar { flex: 1; height: 10rpx; background: var(--brand-soft); border-radius: 999rpx; overflow: hidden; }
+.plan-prog-fill { height: 100%; background: var(--brand); border-radius: 999rpx; transition: width 0.3s; }
+.plan-prog-t { font-size: 21rpx; color: var(--ink-3); flex-shrink: 0; }
+.plan-row.task { gap: 16rpx; }
+.task-ck { width: 36rpx; height: 36rpx; border-radius: 50%; border: 2rpx solid var(--ink-4); flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 22rpx; color: #fff; box-sizing: border-box; }
+.task-ck.on { background: #16a34a; border-color: #16a34a; }
+.task-main { flex: 1; display: flex; flex-direction: column; padding: 10rpx 0; }
+.plan-txt.tdone { color: var(--ink-3); text-decoration: line-through; }
+.task-sub { font-size: 21rpx; color: var(--ink-3); margin-top: 4rpx; }
+.pf-input { flex: 1; min-height: 44px; border: 1rpx solid var(--line); border-radius: 12rpx; padding: 0 20rpx; font-size: 26rpx; background: var(--fill); box-sizing: border-box; }
+.pf-date { min-height: 44px; display: inline-flex; align-items: center; border: 1rpx solid var(--line); border-radius: 12rpx; padding: 0 24rpx; font-size: 26rpx; color: var(--ink); background: var(--fill); box-sizing: border-box; }
+.pf-date.empty { color: var(--ink-3); }
+.pf-summary { margin-top: 8rpx; font-size: 23rpx; color: var(--ink-2); background: var(--brand-50); border-radius: 12rpx; padding: 18rpx 22rpx; }
+.pf-back { margin-top: 16rpx; text-align: center; font-size: 24rpx; color: var(--ink-3); min-height: 44px; display: flex; align-items: center; justify-content: center; }
 .plan-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6rpx; }
 .plan-t { font-size: 27rpx; font-weight: 600; color: var(--ink); }
-.plan-y { font-size: 21rpx; color: var(--ink-3, #8f959e); }
+.plan-y { font-size: 21rpx; color: var(--ink-3); }
 .plan-row { display: flex; align-items: center; gap: 14rpx; min-height: 44px; border-top: 1rpx solid var(--line); }
 .plan-row:first-of-type { border-top: none; }
-.plan-dot { width: 12rpx; height: 12rpx; border-radius: 50%; background: var(--brand, #3b6ff5); flex-shrink: 0; }
+.plan-dot { width: 12rpx; height: 12rpx; border-radius: 50%; background: var(--brand); flex-shrink: 0; }
 .plan-dot.due { background: #f59e0b; }
 .plan-txt { flex: 1; font-size: 25rpx; color: var(--ink); }
-.plan-go { font-size: 24rpx; color: var(--brand, #3b6ff5); flex-shrink: 0; }
+.plan-go { font-size: 24rpx; color: var(--brand); flex-shrink: 0; }
 .plan-focus { display: flex; align-items: center; gap: 10rpx; flex-wrap: wrap; border-top: 1rpx solid var(--line); padding-top: 14rpx; margin-top: 6rpx; }
-.plan-focus-k { font-size: 22rpx; color: var(--ink-3, #8f959e); margin-right: 4rpx; }
-.plan-fchip { font-size: 22rpx; color: var(--ink-2); background: #f2f3f5; border-radius: 999rpx; padding: 0 20rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
-.plan-fchip.on { background: var(--brand-50, #edf3fe); color: var(--brand, #3b6ff5); font-weight: 600; }
-.hbanner { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(120deg, #3b6ff5, #6c9bff); border-radius: 24rpx; padding: 28rpx; margin-bottom: 24rpx; }
+.plan-focus-k { font-size: 22rpx; color: var(--ink-3); margin-right: 4rpx; }
+.plan-fchip { font-size: 22rpx; color: var(--ink-2); background: var(--fill); border-radius: 999rpx; padding: 0 20rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
+.plan-fchip.on { background: var(--brand-50); color: var(--brand); font-weight: 600; }
+.hbanner { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(120deg, var(--brand), #6c9bff); border-radius: 24rpx; padding: 28rpx; margin-bottom: 24rpx; }
 .hbanner-l { flex: 1; margin-right: 20rpx; }
 .hbanner-t { display: block; font-size: 30rpx; font-weight: 600; color: #fff; }
 .hbanner-s { display: block; font-size: 23rpx; color: rgba(255, 255, 255, 0.82); margin-top: 6rpx; }
+.hbanner-poster { color: #fff; font-weight: 700; text-decoration: underline; }
 .hbanner-bar { height: 10rpx; background: rgba(255, 255, 255, 0.25); border-radius: 999rpx; margin-top: 14rpx; overflow: hidden; }
-.hbanner-fill { height: 100%; background: #fff; border-radius: 999rpx; }
-.hbanner-btn { flex-shrink: 0; background: #fff; color: #3b6ff5; border-radius: 999rpx; padding: 22rpx 28rpx; font-size: 26rpx; font-weight: 500; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
+.hbanner-fill { height: 100%; background: var(--card); border-radius: 999rpx; }
+.hbanner-btn { flex-shrink: 0; background: var(--card); color: var(--brand); border-radius: 999rpx; padding: 22rpx 28rpx; font-size: 26rpx; font-weight: 500; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
 .grid4 { display: flex; padding: 20rpx 8rpx; }
 .g4 { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 10rpx 0; }
 .g4-ic { width: 88rpx; height: 88rpx; border-radius: 24rpx; display: flex; align-items: center; justify-content: center; margin-bottom: 10rpx; }
-.g4-t { font-size: 24rpx; color: var(--ink-2, #646a73); }
+.g4-t { font-size: 24rpx; color: var(--ink-2); }
 .custom-row { display: flex; justify-content: space-between; align-items: center; padding: 24rpx 28rpx; }
-.custom-start { margin-top: 24rpx; background: var(--brand, #3b6ff5); color: #fff; text-align: center; border-radius: 999rpx; padding: 22rpx 0; font-size: 28rpx; font-weight: 500; }
+.custom-start { margin-top: 24rpx; background: var(--brand); color: #fff; text-align: center; border-radius: 999rpx; padding: 22rpx 0; font-size: 28rpx; font-weight: 500; }
 .exp-opts { display: flex; gap: 12rpx; margin-top: 20rpx; }
-.expchip { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--line, #ebedf0); border-radius: 12rpx; font-size: 24rpx; color: var(--ink-2, #646a73); background: #f7f8fa; }
-.expchip.on { border-color: var(--brand, #3b6ff5); color: var(--brand, #3b6ff5); background: #edf3fe; font-weight: 600; }
-.custom-export { margin-top: 16rpx; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; text-align: center; border: 1rpx solid var(--brand, #3b6ff5); color: var(--brand, #3b6ff5); border-radius: 999rpx; padding: 20rpx 0; font-size: 27rpx; font-weight: 500; }
-.custom-note { margin-top: 14rpx; text-align: center; font-size: 21rpx; color: var(--ink-3, #8f959e); }
+.expchip { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--line); border-radius: 12rpx; font-size: 24rpx; color: var(--ink-2); background: var(--fill); }
+.expchip.on { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); font-weight: 600; }
+.custom-export { margin-top: 16rpx; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; text-align: center; border: 1rpx solid var(--brand); color: var(--brand); border-radius: 999rpx; padding: 20rpx 0; font-size: 27rpx; font-weight: 500; }
+.custom-note { margin-top: 14rpx; text-align: center; font-size: 21rpx; color: var(--ink-3); }
 .wrap.has-banner { padding-bottom: 200rpx; }
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 30rpx; font-weight: 600; margin-bottom: 20rpx; }
@@ -1569,14 +1678,14 @@ export default {
 .goal-t { font-size: 24rpx; color: var(--ink-2); }
 .goal-set { display: flex; gap: 8rpx; }
 .goal-chip { font-size: 22rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 8rpx 20rpx; }
-.goal-chip.on { color: #fff; background: var(--brand, #3b6ff5); border-color: var(--brand, #3b6ff5); }
-.goal-bar { height: 12rpx; background: var(--brand-soft, #edf3fe); border-radius: 999rpx; overflow: hidden; }
-.goal-fill { height: 100%; background: var(--brand, #3b6ff5); border-radius: 999rpx; transition: width 0.3s; }
+.goal-chip.on { color: #fff; background: var(--brand); border-color: var(--brand); }
+.goal-bar { height: 12rpx; background: var(--brand-soft); border-radius: 999rpx; overflow: hidden; }
+.goal-fill { height: 100%; background: var(--brand); border-radius: 999rpx; transition: width 0.3s; }
 .goal-fill.done { background: #16a34a; }
 .setrow { display: flex; align-items: center; gap: 18rpx; margin-bottom: 16rpx; flex-wrap: wrap; }
 .set-k { font-size: 24rpx; color: var(--ink-2); }
 .set-kwrap { display: flex; flex-direction: column; min-width: 150rpx; }
-.set-sub { font-size: 19rpx; color: var(--ink-3, #8f959e); margin-top: 2rpx; }
+.set-sub { font-size: 19rpx; color: var(--ink-3); margin-top: 2rpx; }
 .set-chips { display: flex; gap: 12rpx; flex-wrap: wrap; }
 .set-chips.scrollx { flex-wrap: nowrap; overflow-x: auto; max-width: 70%; padding-bottom: 4rpx; }
 .set-chips.scrollx .set-chip { flex-shrink: 0; }
@@ -1584,21 +1693,26 @@ export default {
 .set-chip.on { color: #fff; background: var(--brand); border-color: var(--brand); }
 .new-tag { font-size: 19rpx; color: #fff; background: #f43f5e; border-radius: 999rpx; padding: 2rpx 12rpx; margin-left: 10rpx; }
 .real-tag { display: inline-block; font-size: 21rpx; color: #b45309; background: #fef3c7; border-radius: 8rpx; padding: 4rpx 14rpx; margin-bottom: 10rpx; }
+.offline-tag { font-size: 21rpx; color: var(--warn); background: var(--warn-soft); border-radius: 8rpx; padding: 8rpx 14rpx; margin-bottom: 10rpx; line-height: 1.5; }
 .grp-tag { display: inline-block; font-size: 21rpx; color: #0e7490; background: #cffafe; border-radius: 8rpx; padding: 4rpx 14rpx; margin-bottom: 10rpx; margin-left: 10rpx; }
-.daily { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(120deg, #3b6ff5, #6c9bff); border-radius: 20rpx; padding: 24rpx 28rpx; margin-bottom: 20rpx; }
+.daily { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(120deg, var(--brand), #6c9bff); border-radius: 20rpx; padding: 24rpx 28rpx; margin-bottom: 20rpx; }
 .daily.done { background: linear-gradient(135deg, #10b981, #059669); }
+.daily.sz { background: linear-gradient(120deg, #d9480f, #f59e0b); }
+.daily.sz.done { background: linear-gradient(135deg, #10b981, #059669); }
+.daily.sz .daily-go { color: #d9480f; }
+.daily.sz.done .daily-go { color: #059669; }
 .daily-t { display: flex; align-items: center; gap: 8rpx; }
 .daily-t-t { font-size: 27rpx; font-weight: 700; color: #fff; }
 .daily-s { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.85); margin-top: 4rpx; }
-.daily-go { background: #fff; color: #3b6ff5; font-size: 24rpx; font-weight: 600; border-radius: 999rpx; padding: 10rpx 26rpx; flex-shrink: 0; }
+.daily-go { background: var(--card); color: var(--brand); font-size: 24rpx; font-weight: 600; border-radius: 999rpx; padding: 10rpx 26rpx; flex-shrink: 0; }
 .smart { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #f97316, #f43f5e); border-radius: 20rpx; padding: 24rpx 28rpx; margin-bottom: 20rpx; }
 .smart-t { display: flex; align-items: center; gap: 8rpx; font-size: 27rpx; font-weight: 700; color: #fff; }
 .smart-t-t { font-size: 27rpx; font-weight: 700; color: #fff; }
 .smart-s { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.8); margin-top: 4rpx; }
-.smart-go { background: #fff; color: #f43f5e; font-size: 24rpx; font-weight: 600; border-radius: 999rpx; padding: 10rpx 26rpx; flex-shrink: 0; }
+.smart-go { background: var(--card); color: #f43f5e; font-size: 24rpx; font-weight: 600; border-radius: 999rpx; padding: 10rpx 26rpx; flex-shrink: 0; }
 .grid { display: flex; flex-wrap: wrap; gap: 20rpx; }
 .mcard { width: calc(50% - 10rpx); box-sizing: border-box; background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 20rpx; padding: 24rpx; }
-.mcard.all { background: linear-gradient(135deg, #6c9bff, #3b6ff5); border: none; }
+.mcard.all { background: linear-gradient(135deg, #6c9bff, var(--brand)); border: none; }
 .mcard.all .mname, .mcard.all .mn { color: #fff; }
 .mtop { display: flex; align-items: center; gap: 12rpx; margin-bottom: 8rpx; }
 .mico { width: 48rpx; height: 48rpx; line-height: 48rpx; text-align: center; border-radius: 12rpx; font-size: 24rpx; font-weight: 600; }
@@ -1606,8 +1720,13 @@ export default {
 .mn { display: block; font-size: 21rpx; color: var(--ink-2); margin: 4rpx 0 10rpx; }
 .mbar { height: 8rpx; background: var(--line); border-radius: 999rpx; overflow: hidden; }
 .mfill { height: 100%; background: var(--brand); border-radius: 999rpx; transition: width 0.4s ease; }
+.modechips { display: flex; gap: 12rpx; margin-bottom: 14rpx; flex-wrap: wrap; }
+.mchip { font-size: 21rpx; border-radius: 12rpx; padding: 4rpx 16rpx; font-weight: 500; }
+.mchip.brand { background: var(--brand-soft); color: var(--brand); }
+.mchip.info { background: #cffafe; color: #0e7490; }
+.mchip.bad { background: var(--bad-soft); color: #dc2626; }
 .rhead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14rpx; }
-.tag { display: inline-block; background: var(--brand-soft); color: var(--brand); border-radius: 999rpx; padding: 6rpx 20rpx; font-size: 22rpx; }
+.tag { display: inline-block; background: var(--brand-soft); color: var(--brand); border-radius: 12rpx; padding: 6rpx 20rpx; font-size: 22rpx; }
 .hstats { display: flex; align-items: center; gap: 12rpx; flex-shrink: 0; }
 .tool-row { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 8rpx 4rpx; border-bottom: 1rpx solid var(--line); }
 .tool-row:last-child { border-bottom: none; }
@@ -1617,7 +1736,7 @@ export default {
 .cnt { font-size: 22rpx; border-radius: 999rpx; padding: 2rpx 14rpx; font-weight: 600; }
 .okc { background: var(--ok-soft); color: var(--ok); }
 .badc { background: var(--bad-soft); color: var(--bad); }
-.fire { background: #fff7ed; color: #ea580c; display: inline-flex; align-items: center; gap: 2rpx; }
+.fire { background: var(--warn-soft); color: #ea580c; display: inline-flex; align-items: center; gap: 2rpx; }
 .fire-n { font-size: 22rpx; color: #ea580c; font-weight: 700; }
 .iconbtn { display: inline-flex; align-items: center; }
 .timer { font-size: 22rpx; color: var(--ink-2); }
@@ -1629,15 +1748,15 @@ export default {
 .rz.on { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
 .acard-grid { display: flex; flex-wrap: wrap; gap: 20rpx; padding: 8rpx 0 20rpx; }
 .acard-n { width: 80rpx; height: 80rpx; line-height: 80rpx; text-align: center; border-radius: 50%; background: var(--soft-bg); border: 2rpx solid var(--line); font-size: 27rpx; font-weight: 600; color: var(--ink-2); box-sizing: border-box; }
-.acard-n.ok { background: #dcfce7; border-color: #86efac; color: #15803d; }
+.acard-n.ok { background: var(--ok-soft); border-color: #86efac; color: #15803d; }
 .acard-n.bad { background: #fee2e2; border-color: #fca5a5; color: #b91c1c; }
 .acard-n.cur { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
 .acard-foot { text-align: center; font-size: 23rpx; color: var(--ink-2); padding-bottom: 8rpx; }
 .op { font-size: 24rpx; color: var(--ink-2); margin-left: 6rpx; }
-.progress { height: 6rpx; background: #e0e7ff; border-radius: 999rpx; overflow: hidden; margin-bottom: 22rpx; }
-.pfill { height: 100%; background: linear-gradient(90deg, #6c9bff, #3b6ff5); border-radius: 999rpx; transition: width 0.3s ease; }
+.progress { height: 6rpx; background: var(--fill); border-radius: 999rpx; overflow: hidden; margin-bottom: 22rpx; }
+.pfill { height: 100%; background: linear-gradient(90deg, #6c9bff, var(--brand)); border-radius: 999rpx; transition: width 0.3s ease; }
 .q { font-size: 30rpx; line-height: 1.7; margin-bottom: 22rpx; white-space: pre-wrap; }
-.qimg { width: 100%; border-radius: 12rpx; margin-bottom: 8rpx; background: #f6f7fb; }
+.qimg { width: 100%; border-radius: 12rpx; margin-bottom: 8rpx; background: var(--fill); }
 .qimg-credit { font-size: 20rpx; color: var(--ink-2); margin-bottom: 16rpx; }
 .opt { display: flex; align-items: center; border: 2rpx solid var(--line); border-radius: 20rpx; padding: 22rpx 24rpx; margin-bottom: 20rpx; font-size: 29rpx; line-height: 1.6; transition: border-color 0.15s, background 0.15s; }
 .okey { flex-shrink: 0; width: 52rpx; height: 52rpx; line-height: 52rpx; text-align: center; border-radius: 50%; background: var(--soft-bg); color: var(--ink-2); font-weight: 600; font-size: 26rpx; margin-right: 20rpx; border: 1rpx solid var(--line); }
@@ -1663,13 +1782,13 @@ export default {
 .exp-k.hs { color: var(--brand); }
 .exp.hsx { border-left: 5rpx solid var(--brand); background: var(--brand-soft); }
 .exp-k.xp { color: #b45309; margin-top: 12rpx; }
-.exp.xpx { border-left: 5rpx solid #f59e0b; background: #fffbeb; }
+.exp.xpx { border-left: 5rpx solid #f59e0b; background: var(--warn-soft); }
 .hs-rate { display: flex; gap: 14rpx; margin-top: 10rpx; align-items: center; }
-.hs-rate-btn { font-size: 23rpx; color: var(--brand); border: 1rpx solid var(--brand); border-radius: 999rpx; padding: 6rpx 22rpx; }
+.hs-rate-btn { display: inline-flex; align-items: center; gap: 6rpx; font-size: 23rpx; color: var(--brand); border: 1rpx solid var(--brand); border-radius: 999rpx; padding: 6rpx 22rpx; }
 .hs-rate-btn.bad { color: var(--bad); border-color: var(--bad); }
 .hs-rate-done { font-size: 23rpx; color: var(--ink-2); }
 .exp { background: var(--soft-bg); border-radius: 14rpx; padding: 20rpx; font-size: 25rpx; line-height: 1.7; color: var(--ink); white-space: pre-wrap; margin-top: 8rpx; }
-.exp-sec { background: var(--card); border: 1rpx solid var(--line); border-radius: 16rpx; padding: 20rpx; margin-bottom: 16rpx; }
+.exp-sec { background: linear-gradient(180deg, var(--brand-soft), var(--card) 40%); border: 1rpx solid var(--brand-soft-2); border-radius: 20rpx; padding: 20rpx; margin-bottom: 16rpx; }
 .exp-row { display: flex; align-items: baseline; gap: 16rpx; margin-bottom: 12rpx; }
 .exp-row:last-child { margin-bottom: 0; }
 .exp-row.col { display: block; }
@@ -1680,7 +1799,7 @@ export default {
 .exp-ans.badc2 { color: var(--bad); }
 .rp-types { display: flex; flex-wrap: wrap; gap: 16rpx; margin-bottom: 20rpx; }
 .rp-chip { padding: 18rpx 26rpx; min-height: 44rpx; border-radius: 999rpx; background: var(--soft-bg); font-size: 26rpx; color: var(--ink-2); }
-.rp-chip.on { background: rgba(59, 111, 245, 0.12); color: #3b6ff5; font-weight: 600; }
+.rp-chip.on { background: rgba(59, 111, 245, 0.12); color: var(--brand); font-weight: 600; }
 .rp-detail { width: 100%; box-sizing: border-box; min-height: 140rpx; background: var(--soft-bg); border-radius: 16rpx; padding: 20rpx; font-size: 26rpx; margin-bottom: 24rpx; }
 .rp-submit { width: 100%; }
 .rp-submit[disabled] { opacity: 0.5; }
@@ -1702,29 +1821,28 @@ export default {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
 }
-.banner.bok { background: var(--ok-soft); }
-.banner.bbad { background: var(--bad-soft); }
+.banner { background: rgba(255, 255, 255, 0.97); border-top: 1rpx solid var(--line); box-shadow: 0 -8rpx 24rpx rgba(23, 24, 28, 0.08); }
+.theme-dark .banner { background: rgba(29, 31, 40, 0.97); }
 .binfo { flex: 1; min-width: 0; }
 .btitle { display: block; font-size: 30rpx; font-weight: 700; }
 .bok .btitle { color: var(--ok); }
 .bbad .btitle { color: var(--bad); }
 .bsub { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
 .bnext { flex-shrink: 0; border-radius: 999rpx; font-size: 28rpx; font-weight: 600; color: #fff; padding: 0 44rpx; min-height: 44px; line-height: 44px; margin: 0; }
-.bnext.nok { background: #22c55e; }
-.bnext.nbad { background: #ef4444; }
-.bnext.bstay { background: transparent; border: 2rpx solid #22c55e; color: #15803d; margin-right: 12rpx; }
-.ann { display: flex; align-items: flex-start; gap: 12rpx; background: #f0f9ff; border: 1rpx solid #bae6fd; border-radius: 16rpx; padding: 18rpx 22rpx; margin-bottom: 20rpx; }
+.bnext.nok, .bnext.nbad { background: linear-gradient(180deg, #4a7bf7, #3567ec); box-shadow: 0 6rpx 16rpx rgba(59, 111, 245, 0.25); }
+.bnext.bstay { background: transparent; border: 2rpx solid var(--brand); color: var(--brand); margin-right: 12rpx; box-shadow: none; }
+.ann { display: flex; align-items: flex-start; gap: 12rpx; background: var(--info-soft); border: 1rpx solid #bae6fd; border-radius: 16rpx; padding: 18rpx 22rpx; margin-bottom: 20rpx; }
 .ann-c { flex: 1; }
 .ann-t { display: block; font-size: 26rpx; font-weight: 600; color: #0369a1; }
 .ann-b { display: block; font-size: 23rpx; color: #0284c7; margin-top: 4rpx; }
 .ann-x { color: #0369a1; font-size: 26rpx; padding: 8rpx 16rpx; }
-.daily.exam { background: #fff; border: 1rpx solid #e7e9f0; box-shadow: 0 2rpx 8rpx rgba(23,24,28,.04); }
+.daily.exam { background: var(--card); border: 1rpx solid var(--line); box-shadow: 0 2rpx 8rpx rgba(23,24,28,.04); }
 .exam-ico { width: 56rpx; height: 56rpx; border-radius: 16rpx; display: inline-flex; align-items: center; justify-content: center; }
-.exam-ico.warn { background: #fffbeb; }
-.exam-ico.err { background: #fef2f2; }
-.daily-t-t.dark { color: #17181c; }
-.daily-s.dark { color: #7d818f; }
-.daily.exam .daily-go { background: #edf3fe; color: #3b6ff5; }
+.exam-ico.warn { background: var(--warn-soft); }
+.exam-ico.err { background: var(--bad-soft); }
+.daily-t-t.dark { color: var(--ink); }
+.daily-s.dark { color: var(--ink-2); }
+.daily.exam .daily-go { background: var(--brand-soft); color: var(--brand); }
 
 .timer.examleft { color: #ef4444; font-weight: 700; }
 .timer.overtime { color: #ef4444; font-weight: 700; }
@@ -1733,7 +1851,7 @@ export default {
 .qhl { background: #fef08a; border-radius: 4rpx; padding: 0 2rpx; font-weight: 600; }
 .qhl-tip { margin-top: 8rpx; font-size: 21rpx; color: #b45309; }
 .opt.sel { border-color: var(--brand); background: var(--soft-bg); }
-.acard-n.skip { background: #e5e7eb; color: #6b7280; }
+.acard-n.skip { background: var(--line); color: var(--ink-2); }
 .beat { margin-top: 10rpx; font-size: 25rpx; color: var(--brand); background: var(--soft-bg); border-radius: 999rpx; padding: 10rpx 26rpx; }
 .report { width: 100%; margin: 20rpx 0 28rpx; }
 .report-row { display: flex; gap: 16rpx; margin-bottom: 24rpx; }
@@ -1744,14 +1862,14 @@ export default {
 .mb-list { margin-bottom: 24rpx; }
 .mb-row { display: flex; align-items: center; gap: 16rpx; margin-bottom: 12rpx; }
 .mb-name { font-size: 23rpx; color: var(--ink); width: 130rpx; text-align: left; flex-shrink: 0; }
-.mb-bar { flex: 1; height: 14rpx; background: #eef0f4; border-radius: 999rpx; overflow: hidden; }
+.mb-bar { flex: 1; height: 14rpx; background: var(--line); border-radius: 999rpx; overflow: hidden; }
 .mb-fill { height: 100%; border-radius: 999rpx; background: #22c55e; }
 .mb-fill.mid { background: #f59e0b; }
 .mb-fill.lo { background: #ef4444; }
 .mb-pct { font-size: 22rpx; color: var(--ink-2); width: 150rpx; text-align: right; flex-shrink: 0; }
 .report-grid { display: flex; flex-wrap: wrap; gap: 16rpx; justify-content: center; }
 .report-tip { text-align: center; font-size: 22rpx; color: var(--ink-2); margin-top: 14rpx; }
-.btn { background: linear-gradient(135deg, #6c9bff, #3b6ff5); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(59, 111, 245, 0.25); min-height: 44px; line-height: 44px; }
+.btn { background: linear-gradient(135deg, #6c9bff, var(--brand)); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(59, 111, 245, 0.25); min-height: 44px; line-height: 44px; }
 .btn.ghost { background: var(--brand-soft); color: var(--brand); box-shadow: none; }
 .btn.plain { background: none; color: var(--ink-2); box-shadow: none; }
 .done { text-align: center; padding: 48rpx 28rpx; }
@@ -1771,8 +1889,10 @@ export default {
 .pr-scroll { white-space: nowrap; margin-bottom: 20rpx; }
 .pr-scroll .set-chip { display: inline-block; margin-right: 12rpx; }
 .sub-prog { font-size: 22rpx; color: var(--muted); }
-.sub-chip.all-chip { background: linear-gradient(135deg, #6c9bff, #3b6ff5); border: none; }
+.sub-chip.all-chip { background: linear-gradient(135deg, #6c9bff, var(--brand)); border: none; }
 .sub-chip.all-chip .sub-name, .sub-chip.all-chip .sub-n { color: #fff; }
 .sub-name { font-size: 28rpx; font-weight: 600; color: var(--ink); }
 .sub-n { font-size: 22rpx; color: var(--ink-2); }
+.searchbar { display: flex; align-items: center; gap: 12rpx; background: var(--card); border-radius: 999rpx; padding: 16rpx 26rpx; margin-bottom: 20rpx; box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04); }
+.searchbar-t { font-size: 26rpx; color: var(--ink-3); }
 </style>

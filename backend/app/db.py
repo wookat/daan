@@ -8,6 +8,8 @@ import secrets
 import sqlite3
 import time
 
+from . import similarity, taxonomy
+
 DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), "..", "..", "data.db"))
 
 
@@ -73,6 +75,8 @@ def init_db():
         ("xp_explanation", "ALTER TABLE questions ADD COLUMN xp_explanation TEXT"),
         ("xp_school", "ALTER TABLE questions ADD COLUMN xp_school TEXT"),
         ("has_hs", "ALTER TABLE questions ADD COLUMN has_hs INTEGER DEFAULT 0"),
+        ("tag3", "ALTER TABLE questions ADD COLUMN tag3 TEXT"),
+        ("quality_score", "ALTER TABLE questions ADD COLUMN quality_score INTEGER"),
     ]:
         if col not in qcols:
             conn.execute(ddl)
@@ -85,6 +89,20 @@ def init_db():
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_module ON questions(module, submodule)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_real ON questions(is_real)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_q_tag3 ON questions(tag3)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_q_quality ON questions(quality_score)")
+    similarity.ensure_tables(conn)
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS tag3_review (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at REAL NOT NULL,
+            question_id INTEGER NOT NULL,
+            tag3 TEXT,
+            confidence REAL,
+            reason TEXT,
+            status TEXT DEFAULT 'open'
+        )"""
+    )
     if "has_hs" not in qcols:
         conn.execute("UPDATE questions SET has_hs=(hs_explanation IS NOT NULL AND hs_explanation!='')")
     conn.execute(
@@ -131,9 +149,22 @@ def init_db():
             disabled INTEGER
         )"""
     )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS shizheng_questions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT,
+            question TEXT UNIQUE,
+            options TEXT,
+            answer TEXT,
+            explanation TEXT,
+            source_note TEXT,
+            created_at REAL
+        )"""
+    )
     conn.commit()
     conn.close()
     _seed_questions()
+    _seed_shizheng()
 
 
 def _seed_questions():
@@ -176,6 +207,87 @@ def _seed_questions():
     conn.close()
 
 
+def _seed_shizheng():
+    """启动时从 knowledge/shizheng_bank.jsonl 导入时政题库（按题干去重）。"""
+    path = os.path.join(os.path.dirname(DB_PATH) if os.path.dirname(DB_PATH) else ".",
+                        "knowledge", "shizheng_bank.jsonl")
+    alt = os.path.join(os.path.dirname(__file__), "..", "..", "knowledge", "shizheng_bank.jsonl")
+    path = path if os.path.exists(path) else alt
+    if not os.path.exists(path):
+        return
+    conn = get_conn()
+    now = time.time()
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                q = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not q.get("question") or not q.get("answer"):
+                continue
+            conn.execute(
+                "INSERT OR IGNORE INTO shizheng_questions (date, question, options, answer, explanation, source_note, created_at) VALUES (?,?,?,?,?,?,?)",
+                (
+                    q.get("date"),
+                    q.get("question"),
+                    json.dumps(q.get("options", {}), ensure_ascii=False),
+                    q.get("answer"),
+                    q.get("explanation"),
+                    q.get("source_note"),
+                    now,
+                ),
+            )
+    conn.commit()
+    conn.close()
+
+
+def shizheng_daily(day: str, n: int = 10) -> list[dict]:
+    """按日期取每日一组时政题：以日期为随机种子从底池确定性抽取，同一天所有人相同。"""
+    conn = get_conn()
+    ids = [r["id"] for r in conn.execute("SELECT id FROM shizheng_questions ORDER BY id")]
+    if not ids:
+        conn.close()
+        return []
+    rng = random.Random(day)
+    picked = rng.sample(ids, min(n, len(ids)))
+    rows = conn.execute(
+        f"SELECT * FROM shizheng_questions WHERE id IN ({','.join('?' * len(picked))})", picked
+    ).fetchall()
+    conn.close()
+    by_id = {r["id"]: r for r in rows}
+    items = []
+    for qid in picked:
+        r = by_id.get(qid)
+        if not r:
+            continue
+        try:
+            options = json.loads(r["options"] or "{}")
+        except json.JSONDecodeError:
+            options = {}
+        items.append({
+            "id": r["id"],
+            "date": r["date"],
+            "question": r["question"],
+            "options": options,
+            "answer": r["answer"],
+            "explanation": r["explanation"],
+            "source_note": r["source_note"],
+            "module": "时政",
+            "question_type": "单选",
+        })
+    return items
+
+
+def shizheng_count() -> int:
+    conn = get_conn()
+    n = conn.execute("SELECT COUNT(*) FROM shizheng_questions").fetchone()[0]
+    conn.close()
+    return n
+
+
 def random_questions(
     module: str | None = None,
     limit: int = 10,
@@ -185,23 +297,30 @@ def random_questions(
     region: str | None = None,
     uid: str | None = None,
     adaptive: bool = False,
+    tag3: str | None = None,
 ) -> list[dict]:
     conn = get_conn()
     where = []
     args: list = []
     order = "has_hs DESC, RANDOM()"
-    if adaptive and uid and (module or submodule):
+    if adaptive and uid and (module or submodule or tag3):
         _ensure_answer_log(conn)
-        acl = "uid=?"
-        aargs: list = [uid]
-        if submodule:
-            acl += " AND submodule=?"
-            aargs.append(submodule)
-        elif module:
-            acl += " AND module=?"
-            aargs.append(module)
+        if tag3:
+            acl = "a.uid=? AND q.tag3=?"
+            aargs: list = [uid, tag3]
+            asrc = "answer_log a JOIN questions q ON q.id = a.question_id"
+        else:
+            acl = "uid=?"
+            aargs = [uid]
+            asrc = "answer_log"
+            if submodule:
+                acl += " AND submodule=?"
+                aargs.append(submodule)
+            elif module:
+                acl += " AND module=?"
+                aargs.append(module)
         st = conn.execute(
-            f"SELECT COUNT(*) n, SUM(correct) c FROM (SELECT correct FROM answer_log WHERE {acl} ORDER BY id DESC LIMIT 60)",
+            f"SELECT COUNT(*) n, SUM(correct) c FROM (SELECT correct FROM {asrc} WHERE {acl} ORDER BY {'a.' if tag3 else ''}id DESC LIMIT 60)",
             aargs,
         ).fetchone()
         if st and (st["n"] or 0) >= 5:
@@ -228,6 +347,9 @@ def random_questions(
     if submodule:
         where.append("submodule=?")
         args.append(submodule)
+    if tag3:
+        where.append("tag3=?")
+        args.append(tag3)
     if real_only:
         where.append("is_real=1")
     if year:
@@ -265,6 +387,8 @@ def random_questions(
             base_args.append(module)
         if submodule:
             base_args.append(submodule)
+        if tag3:
+            base_args.append(tag3)
         if year:
             base_args.append(year)
         if region:
@@ -646,6 +770,75 @@ def submodule_counts(module: str) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def tag3_counts() -> dict:
+    """各三级考点 code 的题目数（不含已下架）。"""
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT tag3, COUNT(*) n FROM questions WHERE tag3 IS NOT NULL AND tag3!='' "
+        "AND (disabled IS NULL OR disabled=0) GROUP BY tag3"
+    ).fetchall()
+    conn.close()
+    return {r["tag3"]: r["n"] for r in rows}
+
+
+def questions_by_tag3(code: str, offset: int = 0, limit: int = 20) -> list[dict]:
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT id, module, submodule, tag3, question, options, answer, explanation, is_real, exam_year, exam_region "
+        "FROM questions WHERE tag3=? AND (disabled IS NULL OR disabled=0) ORDER BY id DESC LIMIT ? OFFSET ?",
+        (code, min(limit, 50), offset),
+    ).fetchall()
+    conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["options"] = json.loads(d.get("options") or "{}")
+        out.append(d)
+    return out
+
+
+def tag3_review_add(question_id: int, tag3: str | None, confidence: float | None, reason: str):
+    conn = get_conn()
+    conn.execute(
+        "DELETE FROM tag3_review WHERE question_id=? AND status='open'", (question_id,)
+    )
+    conn.execute(
+        "INSERT INTO tag3_review (created_at, question_id, tag3, confidence, reason) VALUES (?,?,?,?,?)",
+        (time.time(), question_id, tag3, confidence, reason),
+    )
+    conn.commit()
+    conn.close()
+
+
+def tag3_review_list(limit: int = 100, module: str | None = None) -> dict:
+    conn = get_conn()
+    cond = "r.status='open'"
+    args: list = []
+    if module:
+        cond += " AND q.module=?"
+        args.append(module)
+    total = conn.execute(
+        f"SELECT COUNT(*) FROM tag3_review r LEFT JOIN questions q ON q.id=r.question_id WHERE {cond}",
+        args,
+    ).fetchone()[0]
+    rows = conn.execute(
+        f"""SELECT r.id, r.created_at, r.question_id, r.tag3, r.confidence, r.reason, r.status,
+                  q.module, q.submodule, q.question, q.options, q.explanation, q.answer, q.tag3 AS cur_tag3
+           FROM tag3_review r LEFT JOIN questions q ON q.id=r.question_id
+           WHERE {cond} ORDER BY r.id DESC LIMIT ?""",
+        args + [min(limit, 300)],
+    ).fetchall()
+    conn.close()
+    return {"total": total, "items": [dict(r) for r in rows]}
+
+
+def tag3_review_close(question_id: int):
+    conn = get_conn()
+    conn.execute("UPDATE tag3_review SET status='done' WHERE question_id=? AND status='open'", (question_id,))
+    conn.commit()
+    conn.close()
+
+
 def real_filters() -> dict:
     """真题可用的年份/地区筛选项及题量。"""
     conn = get_conn()
@@ -914,10 +1107,17 @@ def admin_search_questions(
     disabled_only: bool = False,
     offset: int = 0,
     limit: int = 20,
+    qid: int | None = None,
+    min_score: int | None = None,
+    max_score: int | None = None,
+    sort: str | None = None,
 ) -> list[dict]:
     conn = get_conn()
     where = []
     args: list = []
+    if qid:
+        where.append("id=?")
+        args.append(qid)
     if keyword:
         where.append("question LIKE ?")
         args.append(f"%{keyword}%")
@@ -928,11 +1128,24 @@ def admin_search_questions(
         where.append("hs_down>0")
     if disabled_only:
         where.append("disabled=1")
+    if min_score is not None:
+        where.append("quality_score>=?")
+        args.append(min_score)
+    if max_score is not None:
+        where.append("quality_score<=?")
+        args.append(max_score)
     clause = ("WHERE " + " AND ".join(where)) if where else ""
-    order = "hs_down DESC, id DESC" if flagged else "id DESC"
+    if sort == "score_asc":
+        order = "quality_score IS NULL, quality_score ASC, id DESC"
+    elif sort == "score_desc":
+        order = "quality_score IS NULL, quality_score DESC, id DESC"
+    elif flagged:
+        order = "hs_down DESC, id DESC"
+    else:
+        order = "id DESC"
     rows = conn.execute(
         f"SELECT id, module, submodule, question, options, answer, explanation, hs_explanation, "
-        f"hs_up, hs_down, is_real, exam_year, exam_region, source, disabled "
+        f"hs_up, hs_down, is_real, exam_year, exam_region, source, disabled, tag3, quality_score "
         f"FROM questions {clause} ORDER BY {order} LIMIT ? OFFSET ?",
         (*args, min(limit, 50), offset),
     ).fetchall()
@@ -945,7 +1158,7 @@ def admin_search_questions(
     return out
 
 
-ADMIN_EDITABLE = {"answer", "explanation", "hs_explanation", "submodule", "question", "disabled", "module", "exam_year", "exam_region", "is_real"}
+ADMIN_EDITABLE = {"answer", "explanation", "hs_explanation", "submodule", "question", "disabled", "module", "exam_year", "exam_region", "is_real", "tag3", "options"}
 
 
 def admin_update_question(qid: int, fields: dict) -> bool:
@@ -958,6 +1171,83 @@ def admin_update_question(qid: int, fields: dict) -> bool:
     conn.commit()
     conn.close()
     return cur.rowcount > 0
+
+
+def dup_cluster_list(offset: int = 0, limit: int = 20, status: str = "open") -> dict:
+    conn = get_conn()
+    total = conn.execute(
+        "SELECT COUNT(DISTINCT cluster_id) FROM dup_clusters WHERE status=?", (status,)
+    ).fetchone()[0]
+    rows = conn.execute(
+        """SELECT d.cluster_id, COUNT(*) n, MAX(d.similarity) max_sim,
+                  COUNT(DISTINCT q.module) modules_n,
+                  GROUP_CONCAT(DISTINCT q.module) modules,
+                  COUNT(DISTINCT q.answer) answers_n,
+                  MIN(q.question) sample
+           FROM dup_clusters d JOIN questions q ON q.id=d.qid
+           WHERE d.status=?
+           GROUP BY d.cluster_id ORDER BY n DESC, d.cluster_id
+           LIMIT ? OFFSET ?""",
+        (status, min(limit, 100), offset),
+    ).fetchall()
+    conn.close()
+    return {"total": total, "items": [dict(r) for r in rows]}
+
+
+def dup_cluster_detail(cluster_id: int) -> list[dict]:
+    conn = get_conn()
+    rows = conn.execute(
+        """SELECT q.id, q.module, q.submodule, q.question, q.options, q.answer,
+                  q.explanation, q.hs_explanation, q.is_real, q.exam_year, q.exam_region,
+                  q.source, q.disabled, q.tag3, q.quality_score, d.similarity, d.status
+           FROM dup_clusters d JOIN questions q ON q.id=d.qid
+           WHERE d.cluster_id=? ORDER BY q.quality_score DESC, q.id""",
+        (cluster_id,),
+    ).fetchall()
+    conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["options"] = json.loads(d.get("options") or "{}")
+        out.append(d)
+    return out
+
+
+def dup_cluster_resolve(cluster_id: int, keep_qid: int | None) -> dict:
+    """一键保留最优：保留 keep_qid，下架簇内其余题；keep_qid 为 None 时仅标记忽略。"""
+    conn = get_conn()
+    qids = [r["qid"] for r in conn.execute(
+        "SELECT qid FROM dup_clusters WHERE cluster_id=? AND status='open'", (cluster_id,)
+    )]
+    if not qids:
+        conn.close()
+        return {"ok": False, "error": "簇不存在或已处理"}
+    disabled = []
+    if keep_qid is not None:
+        if keep_qid not in qids:
+            conn.close()
+            return {"ok": False, "error": "keep_qid 不在该簇内"}
+        disabled = [q for q in qids if q != keep_qid]
+        conn.executemany("UPDATE questions SET disabled=1 WHERE id=?", [(q,) for q in disabled])
+    new_status = "resolved" if keep_qid is not None else "ignored"
+    conn.execute("UPDATE dup_clusters SET status=? WHERE cluster_id=?", (new_status, cluster_id))
+    conn.commit()
+    conn.close()
+    return {"ok": True, "kept": keep_qid, "disabled": disabled, "status": new_status}
+
+
+def dup_cluster_stats() -> dict:
+    conn = get_conn()
+    row = conn.execute(
+        """SELECT COUNT(DISTINCT CASE WHEN status='open' THEN cluster_id END) open_clusters,
+                  COUNT(CASE WHEN status='open' THEN 1 END) open_questions,
+                  COUNT(DISTINCT CASE WHEN status='resolved' THEN cluster_id END) resolved,
+                  COUNT(DISTINCT CASE WHEN status='ignored' THEN cluster_id END) ignored
+           FROM dup_clusters"""
+    ).fetchone()
+    meta = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM sim_meta")}
+    conn.close()
+    return {**dict(row), "meta": meta}
 
 
 def admin_flagged_cache(limit: int = 30) -> list[dict]:
@@ -1628,52 +1918,80 @@ FREQ_WEIGHT = {
 }
 
 
+TAG3_MIN_N = 5
+
+
+def _score_skill(seq: list[int], last: float, mod: str, now: float) -> tuple[float, float, str]:
+    n = len(seq)
+    c = sum(seq)
+    acc = (c + 3 * 0.6) / (n + 3)
+    trend = 0.0
+    if n >= 10:
+        recent = seq[-20:]
+        prev = seq[-40:-20] or seq[:-20]
+        if prev:
+            trend = sum(recent) / len(recent) - sum(prev) / len(prev)
+    days = (now - last) / 86400
+    stab = min(60.0, max(2.0, 2 + 0.6 * c))
+    forget = 1 - (1 + 19 / 81 * days / stab) ** -0.5
+    freq = FREQ_WEIGHT.get(mod, 0.5)
+    w = 0.45 * (1 - acc) + 0.2 * max(0.0, -trend) + 0.2 * forget + 0.15 * freq
+    reason = (
+        "近期退步" if trend < -0.1 else
+        "正确率偏低" if acc < 0.6 else
+        "久未练习" if forget > 0.4 else "巩固提升"
+    )
+    return w, trend, reason
+
+
 def recommend_stats(uid: str, top: int = 3) -> dict:
-    """规则版查漏补缺：按二级题型算弱项分数（平滑正确率+近期趋势+遗忘+考频）。"""
+    """规则版查漏补缺：按三级考点（tag3）算弱项分数，样本不足回退二级题型。
+
+    分数 = 平滑正确率 + 近期趋势 + 遗忘 + 考频。tag3 取题库当前值（join questions），
+    同一考点作答 >= TAG3_MIN_N 才单独成项，其余作答归入所属二级题型项。
+    """
     conn = get_conn()
     _ensure_answer_log(conn)
     rows = conn.execute(
-        """SELECT module, submodule, correct, created_at FROM answer_log
-           WHERE uid=? AND submodule IS NOT NULL AND submodule!=''
-           ORDER BY created_at""",
+        """SELECT a.module, a.submodule, a.correct, a.created_at, q.tag3
+           FROM answer_log a LEFT JOIN questions q ON q.id = a.question_id
+           WHERE a.uid=? AND a.submodule IS NOT NULL AND a.submodule!=''
+           ORDER BY a.created_at""",
         (uid,),
     ).fetchall()
     conn.close()
-    skills: dict = {}
+    tidx = taxonomy.topic_index()
+    topics: dict = {}
     for r in rows:
-        k = (r["module"] or "", r["submodule"])
-        s = skills.setdefault(k, {"seq": [], "last": 0.0})
-        s["seq"].append(1 if r["correct"] else 0)
-        s["last"] = max(s["last"], r["created_at"])
+        tag3 = r["tag3"] if r["tag3"] and r["tag3"] != "UNKNOWN" and r["tag3"] in tidx else None
+        k = (r["module"] or "", r["submodule"], tag3)
+        topics.setdefault(k, []).append((r["created_at"], 1 if r["correct"] else 0))
+    skills: dict = {}
+    for (mod, sub, tag3), recs in topics.items():
+        if tag3 and len(recs) >= TAG3_MIN_N:
+            skills[(mod, sub, tag3)] = recs
+        else:
+            skills.setdefault((mod, sub, None), []).extend(recs)
     now = time.time()
     out = []
-    for (mod, sub), s in skills.items():
-        seq = s["seq"]
+    for (mod, sub, tag3), recs in skills.items():
+        recs.sort()
+        seq = [c for _, c in recs]
         n = len(seq)
         if n < 3:
             continue
         c = sum(seq)
-        acc = (c + 3 * 0.6) / (n + 3)
-        trend = 0.0
-        if n >= 10:
-            recent = seq[-20:]
-            prev = seq[-40:-20] or seq[:-20]
-            if prev:
-                trend = sum(recent) / len(recent) - sum(prev) / len(prev)
-        days = (now - s["last"]) / 86400
-        stab = min(60.0, max(2.0, 2 + 0.6 * c))
-        forget = 1 - (1 + 19 / 81 * days / stab) ** -0.5
-        freq = FREQ_WEIGHT.get(mod, 0.5)
-        w = 0.45 * (1 - acc) + 0.2 * max(0.0, -trend) + 0.2 * forget + 0.15 * freq
-        reason = (
-            "近期退步" if trend < -0.1 else
-            "正确率偏低" if acc < 0.6 else
-            "久未练习" if forget > 0.4 else "巩固提升"
-        )
-        out.append({
+        w, _trend, reason = _score_skill(seq, recs[-1][0], mod, now)
+        item = {
             "module": mod, "submodule": sub, "n": n,
             "acc": round(c / n, 3), "weakness": round(w, 3), "reason": reason,
-        })
+        }
+        if tag3:
+            t = tidx[tag3]
+            item["tag3"] = tag3
+            item["tag3_name"] = t["name"]
+            item["label"] = f"{t['module_name']}·{t['name']}"
+        out.append(item)
     out.sort(key=lambda x: -x["weakness"])
     return {"items": out[:top], "total_skills": len(out)}
 
@@ -1687,10 +2005,10 @@ def _ensure_mistake_uid(conn):
 
 
 def _uid_clause(uid: str | None) -> tuple[str, tuple]:
-    """历史无 uid 的记录对所有设备可见，新记录按 uid 隔离。"""
+    """按 uid 严格隔离；无 uid 的调用只见无归属记录。"""
     if not uid:
-        return "", ()
-    return " AND (uid IS NULL OR uid=?)", (uid,)
+        return " AND uid IS NULL", ()
+    return " AND uid=?", (uid,)
 
 
 def save_paper_export(code: str, question_ids: list[int], title: str) -> None:
@@ -1732,8 +2050,9 @@ def save_mistake(rec: dict) -> int:
     _ensure_mistake_uid(conn)
     qtext = rec.get("question_text")
     if qtext:
+        uc, ua = _uid_clause(rec.get("uid") or None)
         dup = conn.execute(
-            "SELECT id FROM mistakes WHERE question_text=? LIMIT 1", (qtext,)
+            f"SELECT id FROM mistakes WHERE question_text=?{uc} LIMIT 1", (qtext, *ua)
         ).fetchone()
         if dup:
             conn.execute(
@@ -1773,9 +2092,12 @@ def save_mistake(rec: dict) -> int:
 def list_mistakes(limit: int = 500, uid: str | None = None) -> list[dict]:
     conn = get_conn()
     _ensure_mistake_uid(conn)
-    cl, args = _uid_clause(uid)
+    cl = " AND m.uid=?" if uid else " AND m.uid IS NULL"
+    args = (uid,) if uid else ()
     rows = conn.execute(
-        f"SELECT * FROM mistakes WHERE 1=1{cl} ORDER BY created_at DESC LIMIT ?",
+        f"""SELECT m.*, q.tag3 FROM mistakes m
+            LEFT JOIN questions q ON q.id=m.question_id
+            WHERE 1=1{cl} ORDER BY m.created_at DESC LIMIT ?""",
         (*args, limit),
     ).fetchall()
     conn.close()
@@ -1841,8 +2163,23 @@ def due_reviews(limit: int = 20, uid: str | None = None) -> list[dict]:
     return out
 
 
-def record_review(mid: int, correct: bool) -> dict:
+def _ensure_review_log(conn):
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS review_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            uid TEXT, mistake_id INTEGER, correct INTEGER, created_at REAL)"""
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_rl_uid ON review_log(uid, created_at)")
+
+
+def record_review(mid: int, correct: bool, uid: str | None = None) -> dict:
     conn = get_conn()
+    if uid:
+        _ensure_review_log(conn)
+        conn.execute(
+            "INSERT INTO review_log (uid, mistake_id, correct, created_at) VALUES (?,?,?,?)",
+            (uid, mid, 1 if correct else 0, time.time()),
+        )
     row = conn.execute("SELECT review_streak FROM mistakes WHERE id=?", (mid,)).fetchone()
     if not row:
         conn.close()
@@ -1860,17 +2197,22 @@ def record_review(mid: int, correct: bool) -> dict:
     return {"streak": streak, "next_review_days": days, "mastered": bool(mastered)}
 
 
-def stats() -> dict:
+def stats(uid: str | None = None) -> dict:
     conn = get_conn()
+    _ensure_mistake_uid(conn)
+    uc, ua = _uid_clause(uid)
     by_module = conn.execute(
-        "SELECT module, COUNT(*) n FROM mistakes GROUP BY module ORDER BY n DESC"
+        f"SELECT module, COUNT(*) n FROM mistakes WHERE 1=1{uc} GROUP BY module ORDER BY n DESC",
+        ua,
     ).fetchall()
     by_type = conn.execute(
-        "SELECT question_type, COUNT(*) n FROM mistakes GROUP BY question_type ORDER BY n DESC LIMIT 10"
+        f"SELECT question_type, COUNT(*) n FROM mistakes WHERE 1=1{uc} GROUP BY question_type ORDER BY n DESC LIMIT 10",
+        ua,
     ).fetchall()
     by_reason = conn.execute(
-        "SELECT error_reason, COUNT(*) n FROM mistakes WHERE error_reason IS NOT NULL AND error_reason != '' "
-        "GROUP BY error_reason ORDER BY n DESC"
+        "SELECT error_reason, COUNT(*) n FROM mistakes WHERE error_reason IS NOT NULL AND error_reason != ''"
+        f"{uc} GROUP BY error_reason ORDER BY n DESC",
+        ua,
     ).fetchall()
     conn.close()
     return {
@@ -1903,3 +2245,752 @@ def get_backup(code: str) -> dict | None:
     if not row:
         return None
     return json.loads(row["data"])
+
+# ---------- 成套试卷 / 全真模考 ----------
+
+MODULE_ORDER = ["changshi", "yanyu", "shuliang", "panduan", "ziliao"]
+
+
+def _ensure_exam_tables(conn):
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS exam_papers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT UNIQUE NOT NULL,
+            kind TEXT NOT NULL DEFAULT 'zhenti',
+            year INTEGER,
+            region TEXT,
+            question_ids TEXT NOT NULL,
+            duration_min INTEGER NOT NULL DEFAULT 120,
+            created_at REAL NOT NULL
+        )"""
+    )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS exam_attempts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            uid TEXT NOT NULL,
+            paper_id INTEGER NOT NULL,
+            started_at REAL NOT NULL,
+            submitted_at REAL,
+            answers TEXT,
+            score REAL,
+            per_module TEXT
+        )"""
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_ep_kind ON exam_papers(kind, year, region)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_ea_uid ON exam_attempts(uid, paper_id, id)")
+
+
+def upsert_exam_paper(title: str, kind: str, year: int | None, region: str | None,
+                      question_ids: list[int], duration_min: int) -> int:
+    """按 title 幂等落卷（重跑成卷脚本不产生重复卷）。"""
+    conn = get_conn()
+    _ensure_exam_tables(conn)
+    conn.execute(
+        """INSERT INTO exam_papers (title, kind, year, region, question_ids, duration_min, created_at)
+           VALUES (?,?,?,?,?,?,?)
+           ON CONFLICT(title) DO UPDATE SET
+             kind=excluded.kind, year=excluded.year, region=excluded.region,
+             question_ids=excluded.question_ids, duration_min=excluded.duration_min""",
+        (title, kind, year, region, json.dumps(question_ids), duration_min, time.time()),
+    )
+    conn.commit()
+    pid = conn.execute("SELECT id FROM exam_papers WHERE title=?", (title,)).fetchone()["id"]
+    conn.close()
+    return pid
+
+
+def list_exam_papers(kind: str | None = None, year: int | None = None,
+                     region: str | None = None, uid: str | None = None) -> list[dict]:
+    conn = get_conn()
+    _ensure_exam_tables(conn)
+    where = ["1=1"]
+    args: list = []
+    if kind:
+        where.append("kind=?")
+        args.append(kind)
+    if year:
+        where.append("year=?")
+        args.append(year)
+    if region:
+        where.append("region=?")
+        args.append(region)
+    rows = conn.execute(
+        f"""SELECT id, title, kind, year, region, question_ids, duration_min, created_at
+            FROM exam_papers WHERE {' AND '.join(where)}
+            ORDER BY year DESC, id DESC LIMIT 200""",
+        args,
+    ).fetchall()
+    best: dict[int, dict] = {}
+    if uid and rows:
+        for b in conn.execute(
+            """SELECT paper_id, MAX(score) s, COUNT(*) n FROM exam_attempts
+               WHERE uid=? AND submitted_at IS NOT NULL GROUP BY paper_id""",
+            (uid,),
+        ):
+            best[b["paper_id"]] = {"best_score": b["s"], "attempt_count": b["n"]}
+    conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["n"] = len(json.loads(d.pop("question_ids") or "[]"))
+        d.update(best.get(d["id"], {"best_score": None, "attempt_count": 0}))
+        out.append(d)
+    return out
+
+
+def exam_paper_filters() -> dict:
+    conn = get_conn()
+    _ensure_exam_tables(conn)
+    years = [dict(r) for r in conn.execute(
+        "SELECT year y, COUNT(*) n FROM exam_papers WHERE kind='zhenti' AND year IS NOT NULL "
+        "GROUP BY year ORDER BY year DESC")]
+    regions = [dict(r) for r in conn.execute(
+        "SELECT region r, COUNT(*) n FROM exam_papers WHERE kind='zhenti' AND region IS NOT NULL AND region!='' "
+        "GROUP BY region ORDER BY n DESC")]
+    conn.close()
+    return {"years": years, "regions": regions}
+
+
+def get_exam_paper(pid: int) -> dict | None:
+    conn = get_conn()
+    _ensure_exam_tables(conn)
+    row = conn.execute("SELECT * FROM exam_papers WHERE id=?", (pid,)).fetchone()
+    conn.close()
+    if not row:
+        return None
+    d = dict(row)
+    d["question_ids"] = json.loads(d["question_ids"] or "[]")
+    return d
+
+
+def create_mock_paper(n: int = 30, duration_min: int = 30) -> int:
+    """迷你模考：随机组 n 题（按行测模块顺序），kind=mock 即时生成。"""
+    conn = get_conn()
+    _ensure_exam_tables(conn)
+    share = {"changshi": 0.15, "yanyu": 0.3, "shuliang": 0.1, "panduan": 0.3, "ziliao": 0.15}
+    ids: list[int] = []
+    for mod in MODULE_ORDER:
+        want = max(1, round(n * share[mod]))
+        ids += [r["id"] for r in conn.execute(
+            "SELECT id FROM questions WHERE module=? AND (disabled IS NULL OR disabled=0) "
+            "ORDER BY has_hs DESC, RANDOM() LIMIT ?", (mod, want))]
+    if len(ids) < n:
+        placeholders = ",".join("?" * len(ids)) or "0"
+        ids += [r["id"] for r in conn.execute(
+            f"SELECT id FROM questions WHERE (disabled IS NULL OR disabled=0) AND id NOT IN ({placeholders}) "
+            "ORDER BY RANDOM() LIMIT ?", (*ids, n - len(ids)))]
+    ids = ids[:n]
+    title = "迷你模考 " + time.strftime("%m-%d %H:%M:%S") + " #" + secrets.token_hex(3)
+    conn.execute(
+        "INSERT INTO exam_papers (title, kind, year, region, question_ids, duration_min, created_at) "
+        "VALUES (?,?,?,?,?,?,?)",
+        (title, "mock", None, None, json.dumps(ids), duration_min, time.time()),
+    )
+    conn.commit()
+    pid = conn.execute("SELECT id FROM exam_papers WHERE title=?", (title,)).fetchone()["id"]
+    conn.close()
+    return pid
+
+
+def start_exam_attempt(uid: str, paper_id: int) -> int:
+    conn = get_conn()
+    _ensure_exam_tables(conn)
+    cur = conn.execute(
+        "INSERT INTO exam_attempts (uid, paper_id, started_at) VALUES (?,?,?)",
+        (uid, paper_id, time.time()),
+    )
+    conn.commit()
+    aid = cur.lastrowid
+    conn.close()
+    return aid
+
+
+def finish_exam_attempt(attempt_id: int, answers: dict, score: float, per_module: dict) -> bool:
+    conn = get_conn()
+    _ensure_exam_tables(conn)
+    cur = conn.execute(
+        "UPDATE exam_attempts SET submitted_at=?, answers=?, score=?, per_module=? "
+        "WHERE id=? AND submitted_at IS NULL",
+        (time.time(), json.dumps(answers, ensure_ascii=False), score,
+         json.dumps(per_module, ensure_ascii=False), attempt_id),
+    )
+    conn.commit()
+    ok = cur.rowcount > 0
+    conn.close()
+    return ok
+
+
+def get_exam_attempt(attempt_id: int) -> dict | None:
+    conn = get_conn()
+    _ensure_exam_tables(conn)
+    row = conn.execute("SELECT * FROM exam_attempts WHERE id=?", (attempt_id,)).fetchone()
+    conn.close()
+    if not row:
+        return None
+    d = dict(row)
+    d["answers"] = json.loads(d["answers"] or "{}")
+    d["per_module"] = json.loads(d["per_module"] or "{}")
+    return d
+
+
+def list_exam_attempts(uid: str, paper_id: int | None = None, limit: int = 50) -> list[dict]:
+    conn = get_conn()
+    _ensure_exam_tables(conn)
+    where = "a.uid=? AND a.submitted_at IS NOT NULL"
+    args: list = [uid]
+    if paper_id:
+        where += " AND a.paper_id=?"
+        args.append(paper_id)
+    rows = conn.execute(
+        f"""SELECT a.id, a.paper_id, a.started_at, a.submitted_at, a.score, a.per_module,
+                   p.title, p.kind, p.year, p.region, p.duration_min
+            FROM exam_attempts a JOIN exam_papers p ON p.id=a.paper_id
+            WHERE {where} ORDER BY a.id DESC LIMIT ?""",
+        (*args, min(limit, 100)),
+    ).fetchall()
+    conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["per_module"] = json.loads(d["per_module"] or "{}")
+        out.append(d)
+    return out
+
+
+# ---------- 报考画像 & 学习计划数据 ----------
+
+PROFILE_FIELDS = ("exam_type", "target_region", "exam_date", "target_score", "daily_minutes", "base_level")
+
+
+def _ensure_user_profile(conn):
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS user_profile (
+            uid TEXT PRIMARY KEY,
+            exam_type TEXT,
+            target_region TEXT,
+            exam_date TEXT,
+            target_score INTEGER,
+            daily_minutes INTEGER,
+            base_level TEXT,
+            created_at REAL,
+            updated_at REAL)"""
+    )
+
+
+def get_user_profile(uid: str) -> dict | None:
+    conn = get_conn()
+    _ensure_user_profile(conn)
+    row = conn.execute("SELECT * FROM user_profile WHERE uid=?", (uid,)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def save_user_profile(uid: str, fields: dict) -> dict:
+    conn = get_conn()
+    _ensure_user_profile(conn)
+    now = time.time()
+    existing = conn.execute("SELECT uid FROM user_profile WHERE uid=?", (uid,)).fetchone()
+    vals = {k: fields.get(k) for k in PROFILE_FIELDS if k in fields}
+    if existing:
+        if vals:
+            clause = ", ".join(f"{k}=?" for k in vals)
+            conn.execute(
+                f"UPDATE user_profile SET {clause}, updated_at=? WHERE uid=?",
+                (*vals.values(), now, uid),
+            )
+    else:
+        conn.execute(
+            """INSERT INTO user_profile
+               (uid, exam_type, target_region, exam_date, target_score, daily_minutes, base_level, created_at, updated_at)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
+            (
+                uid,
+                vals.get("exam_type"),
+                vals.get("target_region"),
+                vals.get("exam_date"),
+                vals.get("target_score"),
+                vals.get("daily_minutes"),
+                vals.get("base_level"),
+                now,
+                now,
+            ),
+        )
+    conn.commit()
+    conn.close()
+    return get_user_profile(uid)
+
+
+def _day_start(offset_days: int = 0) -> float:
+    """东八区当日 0 点时间戳。"""
+    tz = 8 * 3600
+    now = time.time()
+    return ((now + tz) // 86400 + offset_days) * 86400 - tz
+
+
+def today_answer_counts(uid: str) -> dict:
+    """今日（东八区）作答统计：总数 + 按模块/二级题型分组。"""
+    conn = get_conn()
+    _ensure_answer_log(conn)
+    day0 = _day_start()
+    rows = conn.execute(
+        """SELECT module, submodule, COUNT(*) n, COALESCE(SUM(correct),0) c
+           FROM answer_log WHERE uid=? AND created_at>=?
+           GROUP BY module, submodule""",
+        (uid, day0),
+    ).fetchall()
+    conn.close()
+    total = 0
+    correct = 0
+    by_module: dict = {}
+    by_sub: dict = {}
+    for r in rows:
+        total += r["n"]
+        correct += r["c"]
+        if r["module"]:
+            m = by_module.setdefault(r["module"], {"n": 0, "c": 0})
+            m["n"] += r["n"]
+            m["c"] += r["c"]
+        if r["submodule"]:
+            s = by_sub.setdefault(r["submodule"], {"n": 0, "c": 0})
+            s["n"] += r["n"]
+            s["c"] += r["c"]
+    return {"total": total, "correct": correct, "by_module": by_module, "by_sub": by_sub}
+
+
+def reviews_today(uid: str) -> int:
+    conn = get_conn()
+    _ensure_review_log(conn)
+    n = conn.execute(
+        "SELECT COUNT(*) n FROM review_log WHERE uid=? AND created_at>=?",
+        (uid, _day_start()),
+    ).fetchone()["n"]
+    conn.close()
+    return n
+
+
+def mock_done_this_week(uid: str) -> bool:
+    """本周（东八区，周一起算）是否已交卷过一次模考/真题卷。"""
+    tz = 8 * 3600
+    now = time.time()
+    weekday = int(((now + tz) // 86400 + 4) % 7)  # 1970-01-01 是周四
+    week_start = _day_start() - ((weekday - 1) % 7) * 86400
+    conn = get_conn()
+    _ensure_exam_tables(conn)
+    row = conn.execute(
+        "SELECT 1 FROM exam_attempts WHERE uid=? AND submitted_at>=? LIMIT 1",
+        (uid, week_start),
+    ).fetchone()
+    conn.close()
+    return bool(row)
+
+
+# ===== 管理后台 v3：看板统计 / 批次抽检 / 内容治理 / 用户运营 =====
+
+_ADMIN_CACHE: dict = {}
+
+
+def _cached(key: str, ttl: float, fn):
+    """2G 小服务器上重查询的简单进程内缓存。"""
+    now = time.time()
+    hit = _ADMIN_CACHE.get(key)
+    if hit and now - hit[0] < ttl:
+        return hit[1]
+    data = fn()
+    _ADMIN_CACHE[key] = (now, data)
+    return data
+
+
+def admin_dashboard() -> dict:
+    return _cached("dashboard", 300, _admin_dashboard_uncached)
+
+
+def _admin_dashboard_uncached() -> dict:
+    conn = get_conn()
+    _ensure_answer_log(conn)
+    _ensure_reports(conn)
+    q = conn.execute
+    day0 = _day_start()
+    day_1 = _day_start(-1)
+    day_14 = _day_start(-13)
+
+    def day_kpis(start: float, end: float | None) -> dict:
+        cond = "created_at>=?" + (" AND created_at<?" if end else "")
+        args = (start, end) if end else (start,)
+        row = q(
+            f"SELECT COUNT(DISTINCT uid) au, COUNT(*) n, COALESCE(SUM(correct),0) c FROM answer_log WHERE {cond}",
+            args,
+        ).fetchone()
+        return {"active": row["au"], "answered": row["n"], "correct": row["c"]}
+
+    today = day_kpis(day0, None)
+    yesterday = day_kpis(day_1, day0)
+    firsts = q(
+        "SELECT MIN(created_at) t FROM answer_log GROUP BY uid HAVING t>=?", (day_1,)
+    ).fetchall()
+    new_today = sum(1 for r in firsts if r["t"] >= day0)
+    new_yesterday = len(firsts) - new_today
+
+    trend = [
+        dict(r)
+        for r in q(
+            """SELECT date(created_at, 'unixepoch', '+8 hours') d,
+                      COUNT(*) answered, COUNT(DISTINCT uid) active,
+                      ROUND(COALESCE(SUM(correct),0)*100.0/COUNT(*), 1) acc
+               FROM answer_log WHERE created_at>=? GROUP BY d ORDER BY d""",
+            (day_14,),
+        )
+    ]
+    ai_trend = {
+        r["d"]: r["n"]
+        for r in q(
+            """SELECT date(created_at, 'unixepoch', '+8 hours') d, COUNT(*) n
+               FROM explain_cache WHERE created_at>=? GROUP BY d""",
+            (day_14,),
+        )
+    }
+    for row in trend:
+        row["ai_calls"] = ai_trend.get(row["d"], 0)
+    ai_today = q("SELECT COUNT(*) FROM explain_cache WHERE created_at>=?", (day0,)).fetchone()[0]
+    ai_yesterday = q(
+        "SELECT COUNT(*) FROM explain_cache WHERE created_at>=? AND created_at<?", (day_1, day0)
+    ).fetchone()[0]
+
+    total = q("SELECT COUNT(*) FROM questions").fetchone()[0]
+    disabled = q("SELECT COUNT(*) FROM questions WHERE disabled=1").fetchone()[0]
+    pending = q("SELECT COUNT(*) FROM questions WHERE disabled=2").fetchone()[0]
+    flagged = q("SELECT COUNT(*) FROM questions WHERE hs_down>0 AND (disabled IS NULL OR disabled=0)").fetchone()[0]
+    open_reports = q("SELECT COUNT(*) FROM question_reports WHERE status='open'").fetchone()[0]
+    health = round(100.0 * max(total - disabled - flagged, 0) / total, 1) if total else 100.0
+
+    todos = {
+        "pending_batches": q(
+            "SELECT COUNT(DISTINCT import_batch) FROM questions WHERE disabled=2 AND import_batch IS NOT NULL"
+        ).fetchone()[0],
+        "tag3_review": q("SELECT COUNT(*) FROM tag3_review WHERE status='open'").fetchone()[0],
+        "open_reports": open_reports,
+    }
+    by_module = [
+        dict(r)
+        for r in q(
+            "SELECT module, COUNT(*) n FROM questions WHERE (disabled IS NULL OR disabled=0) "
+            "GROUP BY module ORDER BY n DESC"
+        )
+    ]
+    acc7 = [
+        dict(r)
+        for r in q(
+            """SELECT module, COUNT(*) n, ROUND(COALESCE(SUM(correct),0)*100.0/COUNT(*),1) acc
+               FROM answer_log WHERE created_at>=? AND module IS NOT NULL
+               GROUP BY module ORDER BY n DESC""",
+            (_day_start(-6),),
+        )
+    ]
+    conn.close()
+    return {
+        "today": {**today, "new_users": new_today, "ai_calls": ai_today},
+        "yesterday": {**yesterday, "new_users": new_yesterday, "ai_calls": ai_yesterday},
+        "health": {"pct": health, "total": total, "disabled": disabled, "pending": pending,
+                   "flagged": flagged, "open_reports": open_reports},
+        "trend": trend,
+        "todos": todos,
+        "by_module": by_module,
+        "acc7": acc7,
+        "generated_at": time.time(),
+    }
+
+
+def _ensure_sample_reviews(conn):
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS sample_reviews (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at REAL NOT NULL,
+            batch TEXT NOT NULL,
+            question_id INTEGER NOT NULL,
+            verdict TEXT NOT NULL,
+            note TEXT,
+            UNIQUE(batch, question_id)
+        )"""
+    )
+
+
+def sample_review_set(batch: str, question_id: int, verdict: str, note: str | None) -> dict:
+    conn = get_conn()
+    _ensure_sample_reviews(conn)
+    conn.execute(
+        "INSERT INTO sample_reviews (created_at, batch, question_id, verdict, note) VALUES (?,?,?,?,?) "
+        "ON CONFLICT(batch, question_id) DO UPDATE SET verdict=excluded.verdict, note=excluded.note, created_at=excluded.created_at",
+        (time.time(), batch, question_id, verdict, note),
+    )
+    conn.commit()
+    conn.close()
+    return sample_review_summary(batch)
+
+
+def sample_review_delete(batch: str, question_id: int) -> None:
+    conn = get_conn()
+    _ensure_sample_reviews(conn)
+    conn.execute("DELETE FROM sample_reviews WHERE batch=? AND question_id=?", (batch, question_id))
+    conn.commit()
+    conn.close()
+
+
+def sample_reviews(batch: str) -> list[dict]:
+    conn = get_conn()
+    _ensure_sample_reviews(conn)
+    rows = conn.execute(
+        "SELECT question_id, verdict, note, created_at FROM sample_reviews WHERE batch=? ORDER BY created_at",
+        (batch,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def sample_review_summary(batch: str) -> dict:
+    conn = get_conn()
+    _ensure_sample_reviews(conn)
+    rows = conn.execute(
+        "SELECT verdict, COUNT(*) n FROM sample_reviews WHERE batch=? GROUP BY verdict", (batch,)
+    ).fetchall()
+    conn.close()
+    out = {"ok": 0, "problem": 0}
+    for r in rows:
+        out[r["verdict"]] = r["n"]
+    return out
+
+
+def batch_answer_dist(batch: str) -> dict:
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT UPPER(SUBSTR(TRIM(answer),1,1)) a, COUNT(*) n FROM questions "
+        "WHERE import_batch=? GROUP BY a",
+        (batch,),
+    ).fetchall()
+    conn.close()
+    return {r["a"]: r["n"] for r in rows if r["a"]}
+
+
+def admin_batches_v3() -> list[dict]:
+    conn = get_conn()
+    _ensure_sample_reviews(conn)
+    rows = conn.execute(
+        """SELECT import_batch AS batch, COUNT(*) AS n,
+                  SUM(CASE WHEN disabled=2 THEN 1 ELSE 0 END) AS pending,
+                  SUM(is_real) AS real_n
+           FROM questions WHERE import_batch IS NOT NULL
+           GROUP BY import_batch ORDER BY import_batch DESC LIMIT 50"""
+    ).fetchall()
+    reviews = {
+        r["batch"]: dict(r)
+        for r in conn.execute(
+            """SELECT batch, SUM(CASE WHEN verdict='ok' THEN 1 ELSE 0 END) ok,
+                      SUM(CASE WHEN verdict='problem' THEN 1 ELSE 0 END) problem
+               FROM sample_reviews GROUP BY batch"""
+        )
+    }
+    out = []
+    for r in rows:
+        d = dict(r)
+        rv = reviews.get(d["batch"], {})
+        d["review_ok"] = rv.get("ok", 0)
+        d["review_problem"] = rv.get("problem", 0)
+        d["answer_dist"] = batch_answer_dist(d["batch"])
+        out.append(d)
+    conn.close()
+    return out
+
+
+def tag3_review_reopen(question_id: int) -> bool:
+    conn = get_conn()
+    cur = conn.execute(
+        "UPDATE tag3_review SET status='open' WHERE question_id=? AND status='done'", (question_id,)
+    )
+    conn.commit()
+    conn.close()
+    return cur.rowcount > 0
+
+
+def governance_scan() -> dict:
+    return _cached("governance", 600, _governance_scan_uncached)
+
+
+def _governance_scan_uncached() -> dict:
+    conn = get_conn()
+    q = conn.execute
+    broken: list[dict] = []
+    rows = q(
+        "SELECT id, module, question, options, answer FROM questions "
+        "WHERE (disabled IS NULL OR disabled!=1) LIMIT 200000"
+    ).fetchall()
+    dist_all: dict = {}
+    for r in rows:
+        problems = []
+        text = (r["question"] or "").strip()
+        try:
+            opts = json.loads(r["options"] or "{}")
+        except ValueError:
+            opts = None
+        ans = (r["answer"] or "").strip().upper()[:1]
+        if not text:
+            problems.append("空题干")
+        if opts is None:
+            problems.append("选项 JSON 损坏")
+        elif len(opts) < 2:
+            problems.append("选项不足 2 个")
+        else:
+            vals = [str(v).strip() for v in opts.values()]
+            if len(set(vals)) < len(vals):
+                problems.append("选项内容重复")
+            if ans and ans not in {str(k).strip().upper() for k in opts}:
+                problems.append(f"答案 {ans} 越界")
+        if not ans:
+            problems.append("缺答案")
+        elif ans:
+            dist_all[ans] = dist_all.get(ans, 0) + 1
+        if problems:
+            broken.append({"id": r["id"], "module": r["module"],
+                           "question": text[:80], "problems": problems})
+        if len(broken) >= 100:
+            break
+    clones = [
+        dict(r)
+        for r in q(
+            """SELECT SUBSTR(TRIM(question),1,40) prefix, COUNT(*) n,
+                      GROUP_CONCAT(id) ids, COUNT(DISTINCT UPPER(SUBSTR(TRIM(answer),1,1))) answers
+               FROM questions WHERE (disabled IS NULL OR disabled!=1)
+                 AND LENGTH(TRIM(question))>=40
+               GROUP BY prefix HAVING n>1
+               ORDER BY answers DESC, n DESC LIMIT 50"""
+        )
+    ]
+    batch_dists = []
+    for b in q(
+        "SELECT DISTINCT import_batch b FROM questions WHERE import_batch IS NOT NULL "
+        "ORDER BY import_batch DESC LIMIT 12"
+    ).fetchall():
+        batch_dists.append({"batch": b["b"], "dist": batch_answer_dist(b["b"])})
+    missing_expl = q(
+        "SELECT COUNT(*) FROM questions WHERE (disabled IS NULL OR disabled=0) "
+        "AND (explanation IS NULL OR explanation='') AND (hs_explanation IS NULL OR hs_explanation='')"
+    ).fetchone()[0]
+    conn.close()
+    return {
+        "broken": broken,
+        "clones": clones,
+        "answer_dist": {"overall": dist_all, "batches": batch_dists},
+        "missing_explanation": missing_expl,
+        "generated_at": time.time(),
+    }
+
+
+def admin_users(keyword: str | None = None, offset: int = 0, limit: int = 20,
+                inactive_days: int | None = None) -> dict:
+    conn = get_conn()
+    _ensure_answer_log(conn)
+    _ensure_mistake_uid(conn)
+    where = "uid IS NOT NULL AND uid!=''"
+    args: list = []
+    if keyword:
+        where += " AND uid LIKE ?"
+        args.append(f"%{keyword}%")
+    having = ""
+    if inactive_days:
+        having = "HAVING MAX(created_at) < ?"
+    total = conn.execute(
+        f"SELECT COUNT(*) FROM (SELECT uid FROM answer_log WHERE {where} GROUP BY uid "
+        f"{having})",
+        args + ([_day_start(-inactive_days + 1)] if inactive_days else []),
+    ).fetchone()[0]
+    rows = conn.execute(
+        f"""SELECT uid, COUNT(*) answered, ROUND(COALESCE(SUM(correct),0)*100.0/COUNT(*),1) acc,
+                  MIN(created_at) first_seen, MAX(created_at) last_seen
+           FROM answer_log WHERE {where} GROUP BY uid {having}
+           ORDER BY last_seen DESC LIMIT ? OFFSET ?""",
+        args + ([_day_start(-inactive_days + 1)] if inactive_days else []) + [min(limit, 50), offset],
+    ).fetchall()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["mistakes"] = conn.execute(
+            "SELECT COUNT(*) FROM mistakes WHERE uid=?", (d["uid"],)
+        ).fetchone()[0]
+        out.append(d)
+    conn.close()
+    return {"total": total, "items": out}
+
+
+def admin_user_detail(uid: str) -> dict | None:
+    conn = get_conn()
+    _ensure_answer_log(conn)
+    _ensure_mistake_uid(conn)
+    row = conn.execute(
+        """SELECT COUNT(*) answered, ROUND(COALESCE(SUM(correct),0)*100.0/COUNT(*),1) acc,
+                  MIN(created_at) first_seen, MAX(created_at) last_seen
+           FROM answer_log WHERE uid=?""",
+        (uid,),
+    ).fetchone()
+    if not row or not row["answered"]:
+        return None
+    by_module = [
+        dict(r)
+        for r in conn.execute(
+            """SELECT module, COUNT(*) n, ROUND(COALESCE(SUM(correct),0)*100.0/COUNT(*),1) acc
+               FROM answer_log WHERE uid=? AND module IS NOT NULL GROUP BY module ORDER BY n DESC""",
+            (uid,),
+        )
+    ]
+    recent = [
+        dict(r)
+        for r in conn.execute(
+            """SELECT date(created_at, 'unixepoch', '+8 hours') d, COUNT(*) n,
+                      COALESCE(SUM(correct),0) c
+               FROM answer_log WHERE uid=? AND created_at>=? GROUP BY d ORDER BY d""",
+            (uid, _day_start(-13)),
+        )
+    ]
+    mistakes = conn.execute("SELECT COUNT(*) FROM mistakes WHERE uid=?", (uid,)).fetchone()[0]
+    conn.close()
+    return {"uid": uid, **dict(row), "by_module": by_module, "recent": recent, "mistakes": mistakes}
+
+
+def admin_shizheng(offset: int = 0, limit: int = 20) -> dict:
+    conn = get_conn()
+    total = conn.execute("SELECT COUNT(*) FROM shizheng_questions").fetchone()[0]
+    rows = conn.execute(
+        "SELECT id, date, question, options, answer, explanation, source_note FROM shizheng_questions "
+        "ORDER BY date DESC, id DESC LIMIT ? OFFSET ?",
+        (min(limit, 50), offset),
+    ).fetchall()
+    conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["options"] = json.loads(d.get("options") or "{}")
+        out.append(d)
+    return {"total": total, "items": out}
+
+
+def admin_shenlun_overview() -> dict:
+    conn = get_conn()
+    papers = [
+        dict(r)
+        for r in conn.execute(
+            """SELECT exam_year, exam_region, paper, COUNT(*) n,
+                      SUM(CASE WHEN reference IS NOT NULL AND reference!='' THEN 1 ELSE 0 END) with_ref,
+                      SUM(COALESCE(disabled,0)) disabled_n
+               FROM shenlun_questions
+               GROUP BY exam_year, exam_region, paper
+               ORDER BY exam_year DESC, exam_region LIMIT 100"""
+        )
+    ]
+    materials = [
+        dict(r)
+        for r in conn.execute(
+            "SELECT topic, type, COUNT(*) n FROM shenlun_materials GROUP BY topic, type ORDER BY n DESC LIMIT 50"
+        )
+    ]
+    totals = {
+        "questions": conn.execute("SELECT COUNT(*) FROM shenlun_questions").fetchone()[0],
+        "materials": conn.execute("SELECT COUNT(*) FROM shenlun_materials").fetchone()[0],
+    }
+    conn.close()
+    return {"papers": papers, "materials": materials, "totals": totals}

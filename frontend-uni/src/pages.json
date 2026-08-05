@@ -2,16 +2,13 @@
   "easycom": {
     "autoscan": true,
     "custom": {
-      "^uni-(.*)": "@dcloudio/uni-ui/lib/uni-$1/uni-$1.vue"
+      "^uni-(.*)": "@dcloudio/uni-ui/lib/uni-$1/uni-$1.vue",
+      "^wd-(.*)": "wot-design-uni/components/wd-$1/wd-$1.vue"
     }
   },
   "pages": [
     {
-      "path": "pages/ask/ask",
-      "style": { "navigationBarTitleText": "拍题讲解" }
-    },
-    {
-      "path": "pages/practice/practice",
+      "path": "pages/home/home",
       "style": { "navigationBarTitleText": "刷题" }
     },
     {
@@ -19,31 +16,105 @@
       "style": { "navigationBarTitleText": "错题本" }
     },
     {
+      "path": "pages/ask/ask",
+      "style": { "navigationBarTitleText": "AI 问答" }
+    },
+    {
       "path": "pages/stats/stats",
       "style": { "navigationBarTitleText": "统计" }
     },
     {
+      "path": "pages/profile/profile",
+      "style": { "navigationBarTitleText": "我的" }
+    },
+    {
+      "path": "pages/practice/practice",
+      "style": { "navigationBarTitleText": "刷题" }
+    },
+    {
       "path": "pages/stats/calendar",
       "style": { "navigationBarTitleText": "学习日历" }
-    },
-    {
-      "path": "pages/shenlun/shenlun",
-      "style": { "navigationBarTitleText": "申论专区" }
-    },
-    {
-      "path": "pages/user/login",
-      "style": { "navigationBarTitleText": "登录 / 注册" }
     }
   ],
+  "subPackages": [
+    {
+      "root": "pkgA",
+      "pages": [
+        {
+          "path": "shenlun/shenlun",
+          "style": { "navigationBarTitleText": "申论专区" }
+        },
+        {
+          "path": "user/login",
+          "style": { "navigationBarTitleText": "登录 / 注册" }
+        },
+        {
+          "path": "user/offline",
+          "style": { "navigationBarTitleText": "离线题包" }
+        },
+        {
+          "path": "exam/list",
+          "style": { "navigationBarTitleText": "真题卷库" }
+        },
+        {
+          "path": "exam/exam",
+          "style": { "navigationBarTitleText": "全真模考" }
+        },
+        {
+          "path": "exam/report",
+          "style": { "navigationBarTitleText": "成绩报告" }
+        },
+        {
+          "path": "search/search",
+          "style": { "navigationBarTitleText": "搜索" }
+        },
+        {
+          "path": "social/discuss",
+          "style": { "navigationBarTitleText": "讨论区" }
+        },
+        {
+          "path": "social/favorites",
+          "style": { "navigationBarTitleText": "收藏与笔记" }
+        },
+        {
+          "path": "social/poster",
+          "style": { "navigationBarTitleText": "打卡海报" }
+        },
+        {
+          "path": "interview/interview",
+          "style": { "navigationBarTitleText": "AI 面试陪练" }
+        },
+        {
+          "path": "interview/history",
+          "style": { "navigationBarTitleText": "面试练习记录" }
+        },
+        {
+          "path": "pk/pk",
+          "style": { "navigationBarTitleText": "答题 PK" }
+        },
+        {
+          "path": "settings/reminders",
+          "style": { "navigationBarTitleText": "学习提醒" }
+        }
+      ]
+    }
+  ],
+  "preloadRule": {
+    "pages/home/home": {
+      "network": "all",
+      "packages": ["pkgA"]
+    }
+  },
   "tabBar": {
     "color": "#8a90a0",
     "selectedColor": "#3b6ff5",
     "backgroundColor": "#ffffff",
     "list": [
-      { "pagePath": "pages/ask/ask", "text": "拍题讲解", "iconPath": "static/tab/ask.png", "selectedIconPath": "static/tab/ask-on.png" },
-      { "pagePath": "pages/practice/practice", "text": "刷题", "iconPath": "static/tab/practice.png", "selectedIconPath": "static/tab/practice-on.png" },
+      { "pagePath": "pages/home/home", "text": "刷题", "iconPath": "static/tab/home.png", "selectedIconPath": "static/tab/home-on.png" },
       { "pagePath": "pages/book/book", "text": "错题本", "iconPath": "static/tab/book.png", "selectedIconPath": "static/tab/book-on.png" },
-      { "pagePath": "pages/stats/stats", "text": "统计", "iconPath": "static/tab/stats.png", "selectedIconPath": "static/tab/stats-on.png" }
+      { "pagePath": "pages/ask/ask", "text": "AI问答", "iconPath": "static/tab/ask.png", "selectedIconPath": "static/tab/ask-on.png" },
+      { "pagePath": "pages/stats/stats", "text": "统计", "iconPath": "static/tab/stats.png", "selectedIconPath": "static/tab/stats-on.png" },
+      { "pagePath": "pages/profile/profile", "text": "我的", "iconPath": "static/tab/my.png", "selectedIconPath": "static/tab/my-on.png" }
     ]
   },
   "globalStyle": {

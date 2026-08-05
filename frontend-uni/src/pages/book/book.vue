@@ -1,5 +1,6 @@
 <template>
   <view class="wrap">
+    <view v-if="offlineView" class="offbar"><l-icon name="plane" :size="15" color="#b45309" /><text>当前离线 · 展示已缓存错题，联网后自动更新</text></view>
     <!-- 复习模式 -->
     <view v-if="reviewing" class="card review">
       <view class="rhead">
@@ -21,20 +22,27 @@
           {{ wasCorrect ? (cur._requeued ? '这次答对了，本轮已纠正 ✓' : '答对了！连对 ' + streak + ' 次') : '又错了，看讲解（稍后本轮会再出现）' }}（下次复习：{{ nextDays }} 天后）
         </view>
         <rich-text :nodes="curHtml" />
-        <button class="next" @click="nextReview">{{ rIdx + 1 < rItems.length ? '下一题' : '完成复习' }}</button>
+        <wd-button type="primary" block custom-class="next-btn" @click="nextReview">{{ rIdx + 1 < rItems.length ? '下一题' : '完成复习' }}</wd-button>
       </view>
       <view v-else-if="!curLetter" class="selfjudge">
         <view class="q2">先自己做，然后：</view>
-        <button class="sj ok" @click="selfJudge(true)">我做对了</button>
-        <button class="sj bad" @click="selfJudge(false)">我做错了</button>
+        <view class="sj-row">
+          <wd-button type="success" plain custom-class="sj-btn" @click="selfJudge(true)">我做对了</wd-button>
+          <wd-button type="error" plain custom-class="sj-btn" @click="selfJudge(false)">我做错了</wd-button>
+        </view>
       </view>
     </view>
 
     <!-- 列表模式 -->
     <template v-else>
+      <view v-if="items.length" class="ovrow">
+        <view class="ov-c"><text class="ov-n">{{ items.length }}</text><text class="ov-t">全部错题</text></view>
+        <view class="ov-c"><text class="ov-n warn">{{ todoItems.length }}</text><text class="ov-t">待掌握</text></view>
+        <view class="ov-c"><text class="ov-n ok">{{ doneItems.length }}</text><text class="ov-t">已掌握</text></view>
+      </view>
       <view v-if="due.length" class="card duecard" @click="startReview">
         <view>
-          <view class="duetxt"><uni-icons type="calendar-filled" size="16" color="#ffffff" /><text class="duetxt-t">今日待复习 {{ dueTotal }} 道</text></view>
+          <view class="duetxt"><l-icon name="calendar-check" :size="16" color="#ffffff" /><text class="duetxt-t">今日待复习 {{ dueTotal }} 道</text></view>
           <text class="duesub">按遗忘曲线安排 · 预计 {{ Math.max(1, Math.ceil(due.length * 0.8)) }} 分钟</text>
         </view>
         <text class="duego">开始复习</text>
@@ -43,21 +51,31 @@
         <view class="seg">
           <view class="seg-i" :class="{ on: tab === 'todo' }" @click="tab = 'todo'">待掌握 {{ todoItems.length }}</view>
           <view class="seg-i" :class="{ on: tab === 'done' }" @click="tab = 'done'">已掌握 {{ doneItems.length }}</view>
-          <view v-if="favs.length" class="seg-i" :class="{ on: tab === 'fav' }" @click="tab = 'fav'">收藏 {{ favs.length }}</view>
+          <view class="seg-i" :class="{ on: tab === 'fav' }" @click="tab = 'fav'">收藏{{ favs.length ? ' ' + favs.length : '' }}</view>
         </view>
         <view v-if="tab !== 'fav'" class="filterbtn" @click="filterOpen = true">
-          <uni-icons type="tune" size="18" color="#646a73" /><text class="filterbtn-t">筛选</text>
+          <l-icon name="sliders-horizontal" :size="16" color="#646a73" /><text class="filterbtn-t">筛选</text>
         </view>
       </view>
       <template v-if="tab === 'fav'">
+        <view class="card redoentry" @click="openFavPage">
+          <view class="redo-l">
+            <view class="redo-ico"><l-icon name="star" :size="16" color="#f59e0b" /></view>
+            <view>
+              <text class="redo-t">收藏夹与笔记</text>
+              <text class="redo-s">多夹分组 · 每题笔记 · 可按夹重练</text>
+            </view>
+          </view>
+          <text class="redo-go">打开</text>
+        </view>
         <view v-if="!favs.length" class="card empty">
-          <view class="e-t">还没有收藏题目</view>
+          <view class="e-t">还没有本机收藏</view>
           <view class="e-s">刷题时点顶栏星星即可收藏好题</view>
         </view>
         <view v-if="favs.length > 3" class="searchbar">
-          <uni-icons type="search" size="16" color="#8a90a0" />
+          <l-icon name="search" :size="16" color="#8a90a0" />
           <input v-model="favKw" class="searchinput" placeholder="搜收藏题干或题型" confirm-type="search" />
-          <text v-if="favKw" class="searchclear" @click="favKw = ''">✕</text>
+          <view v-if="favKw" class="searchclear" @click="favKw = ''"><l-icon name="x" :size="16" color="#8a90a0" /></view>
         </view>
         <view v-for="(f, fi) in favShown" :key="f.t" class="card mcard" @click="f._open = !f._open">
           <view class="mhead">
@@ -83,7 +101,7 @@
       </template>
       <view v-if="tab !== 'fav' && todoItems.length >= 3" class="card redoentry" @click="aiAnalysis">
         <view class="redo-l">
-          <view class="redo-ico"><uni-icons type="chatbubble-filled" size="16" color="#3b6ff5" /></view>
+          <view class="redo-ico"><l-icon name="bot-message-square" :size="16" color="#3b6ff5" /></view>
           <view>
             <text class="redo-t">AI 错题分析</text>
             <text class="redo-s">基于你的错题分布与近期作答生成诊断与复习建议</text>
@@ -95,7 +113,7 @@
         <view class="sheet" @click.stop>
           <view class="sheet-h">
             <text class="sheet-t">AI 错题分析</text>
-            <text class="sheet-x" @click="aiOpen = false">✕</text>
+            <view class="sheet-x" @click="aiOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
           </view>
           <view v-if="aiLoading" class="ai-loading">正在分析你的错题与作答数据，约需 30-60 秒…</view>
           <rich-text v-else :nodes="aiHtml" />
@@ -103,7 +121,7 @@
       </view>
       <view v-if="tab !== 'fav'" class="card redoentry" @click="scanSheetPick">
         <view class="redo-l">
-          <view class="redo-ico"><uni-icons type="scan" size="16" color="#3b6ff5" /></view>
+          <view class="redo-ico"><l-icon name="scan-line" :size="16" color="#3b6ff5" /></view>
           <view>
             <text class="redo-t">扫描答题卡</text>
             <text class="redo-s">拍照导出卷的机读答题卡，自动对答案并记入做题记录</text>
@@ -113,7 +131,7 @@
       </view>
       <view v-if="tab !== 'fav'" class="card redoentry" @click="manualOpenSheet">
         <view class="redo-l">
-          <view class="redo-ico"><uni-icons type="compose" size="16" color="#3b6ff5" /></view>
+          <view class="redo-ico"><l-icon name="pencil-line" :size="16" color="#3b6ff5" /></view>
           <view>
             <text class="redo-t">手动录入答案</text>
             <text class="redo-s">打印卷做完后按题号点选答案，一键交卷自动判分记录</text>
@@ -125,7 +143,7 @@
         <view class="sheet" @click.stop>
           <view class="sheet-h">
             <text class="sheet-t">手动录入答案</text>
-            <text class="sheet-x" @click="manualOpen = false">✕</text>
+            <view class="sheet-x" @click="manualOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
           </view>
           <template v-if="!manualPaper">
             <view v-if="recentPapers.length" class="sheet-k">最近导出的试卷</view>
@@ -155,7 +173,7 @@
         <view class="sheet" @click.stop>
           <view class="sheet-h">
             <text class="sheet-t">对答案结果 · {{ scanResult.title || '试卷' }}</text>
-            <text class="sheet-x" @click="scanOpen = false">✕</text>
+            <view class="sheet-x" @click="scanOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
           </view>
           <view class="scan-sum">卷码 {{ scanResult.code }}{{ scanResult.page ? ' · 第 ' + scanResult.page + ' 页' : '' }} · 已作答 {{ scanResult.answered }}/{{ scanResult.total }} · 答对 <text class="scan-good">{{ scanResult.correct }}</text> 题{{ scanResult.saved ? ' · 已记入做题记录' : '' }}</view>
           <scroll-view scroll-y class="scan-list">
@@ -171,7 +189,7 @@
       </view>
       <view v-if="tab !== 'fav' && todoItems.length" class="card redoentry" @click="redoAll">
         <view class="redo-l">
-          <view class="redo-ico"><uni-icons type="refreshempty" size="16" color="#3b6ff5" /></view>
+          <view class="redo-ico"><l-icon name="rotate-ccw" :size="16" color="#3b6ff5" /></view>
           <view>
             <text class="redo-t">错题重练{{ kpFilter ? ' · ' + kpFilter : '' }}</text>
             <text class="redo-s">{{ kpFilter ? '只重练当前筛选题型的待掌握错题（最多 10 题）' : '把待掌握错题按刷题模式重做一遍（最多 10 题）' }}</text>
@@ -180,9 +198,9 @@
         <text class="redo-go">开始</text>
       </view>
       <view v-if="tab !== 'fav' && items.length > 5" class="searchbar">
-        <uni-icons type="search" size="16" color="#8a90a0" />
+        <l-icon name="search" :size="16" color="#8a90a0" />
         <input v-model="kw" class="searchinput" placeholder="搜题干关键词或题型，如：增长率 / 类比推理" confirm-type="search" />
-        <text v-if="kw" class="searchclear" @click="kw = ''">✕</text>
+        <view v-if="kw" class="searchclear" @click="kw = ''"><l-icon name="x" :size="16" color="#8a90a0" /></view>
       </view>
       <view v-if="tab !== 'fav' && modGroups.length" class="card modgroup">
         <view class="mg-h">按模块查看</view>
@@ -194,15 +212,26 @@
             <text class="mg-go" @click.stop="pickGroup(g.key, '')">查看 ›</text>
           </view>
           <view v-if="mgOpen[g.key]">
-            <view v-for="s in g.subs" :key="s.name" class="mg-sub" @click="pickGroup(g.key, s.name)">
-              <text class="mg-sub-name">{{ s.name }}</text>
-              <text class="mg-badge">{{ s.n }}</text>
-            </view>
+            <template v-for="s in g.subs" :key="s.name">
+              <view class="mg-sub" @click="pickGroup(g.key, s.name)">
+                <text class="mg-sub-name">{{ s.name }}</text>
+                <text class="mg-badge">{{ s.n }}</text>
+              </view>
+              <view
+                v-for="t in s.t3"
+                :key="s.name + '/' + t.name"
+                class="mg-sub mg-sub3"
+                @click="pickGroup(g.key, s.name, t.name)"
+              >
+                <text class="mg-sub-name">{{ t.name }}</text>
+                <text class="mg-badge">{{ t.n }}</text>
+              </view>
+            </template>
           </view>
         </view>
       </view>
-      <view v-if="tab !== 'fav' && (filterMod || kpFilter)" class="curfilter">
-        <text class="kpchip on" @click="filterMod = ''; kpFilter = ''">{{ kpFilter || modName(filterMod) }} ✕</text>
+      <view v-if="tab !== 'fav' && (filterMod || kpFilter || kp3Filter)" class="curfilter">
+        <text class="kpchip on" @click="filterMod = ''; kpFilter = ''; kp3Filter = ''">{{ kp3Filter || kpFilter || modName(filterMod) }} ✕</text>
         <text v-if="sortBy !== 'time'" class="kpchip" @click="filterOpen = true">{{ (SORTS.find(s => s.k === sortBy) || {}).name }}</text>
       </view>
       <view v-else-if="tab !== 'fav' && sortBy !== 'time'" class="curfilter">
@@ -212,7 +241,7 @@
         <view class="sheet" @click.stop>
           <view class="sheet-h">
             <text class="sheet-t">筛选与排序</text>
-            <text class="sheet-x" @click="filterOpen = false">✕</text>
+            <view class="sheet-x" @click="filterOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
           </view>
           <view class="sheet-k">排序</view>
           <view class="kpchips">
@@ -220,11 +249,11 @@
           </view>
           <view class="sheet-k">模块</view>
           <view class="kpchips">
-            <text v-for="c in chipList" :key="c.key" class="kpchip" :class="{ on: filterMod === c.key }" @click="filterMod = c.key; kpFilter = ''">{{ c.name }}</text>
+            <text v-for="c in chipList" :key="c.key" class="kpchip" :class="{ on: filterMod === c.key }" @click="filterMod = c.key; kpFilter = ''; kp3Filter = ''">{{ c.name }}</text>
           </view>
           <view v-if="typeGroups.length > 1" class="sheet-k">题型</view>
           <view v-if="typeGroups.length > 1" class="kpchips">
-            <text v-for="g in typeGroups" :key="g.name" class="kpchip" :class="{ on: kpFilter === g.name }" @click="kpFilter = kpFilter === g.name ? '' : g.name">{{ g.name }} ×{{ g.n }}</text>
+            <text v-for="g in typeGroups" :key="g.name" class="kpchip" :class="{ on: kpFilter === g.name }" @click="kpFilter = kpFilter === g.name ? '' : g.name; kp3Filter = ''">{{ g.name }} ×{{ g.n }}</text>
           </view>
           <view class="sheet-done" @click="filterOpen = false">完成</view>
           <view class="exp-opts">
@@ -237,10 +266,10 @@
       </view>
       <view v-if="tab !== 'fav' && loading" class="card spin">加载中…</view>
       <view v-else-if="tab !== 'fav' && !items.length" class="card empty">
-        <view class="e-ico"><uni-icons type="folder-add" size="52" color="#c7cad4" /></view>
+        <view class="e-ico"><l-icon name="folder-plus" :size="52" color="#c7cad4" :stroke-width="1.5" /></view>
         <view class="e-t">错题本还是空的</view>
         <view class="e-s">去拍题讲解或刷题，答错的题会汇集到这里，之后按遗忘曲线安排复习</view>
-        <button class="e-btn" @click="goPractice">去刷题</button>
+        <wd-button type="primary" custom-class="e-btn2" @click="goPractice">去刷题</wd-button>
       </view>
       <view v-if="tab !== 'fav' && items.length && !shownItems.length && !loading" class="card empty">
         <view class="e-t">没有匹配的错题</view>
@@ -289,7 +318,7 @@
         <view class="sheet" @click.stop>
           <view class="sheet-h">
             <text class="sheet-t">题目纠错</text>
-            <text class="sheet-x" @click="reportOpen = false">✕</text>
+            <view class="sheet-x" @click="reportOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
           </view>
           <view class="rp-types">
             <text
@@ -316,6 +345,7 @@
 <script>
 import { md } from '../../md.js';
 import { request, anonUid, exportPdf, scanSheet } from '../../api.js';
+import { cacheMistakes, getCachedMistakes } from '../../offline.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 
@@ -329,6 +359,7 @@ export default {
     return {
       items: [],
       loading: true,
+      offlineView: false,
       due: [],
       dueTotal: 0,
       reviewing: false,
@@ -348,6 +379,7 @@ export default {
       filterMod: '',
       kw: '',
       kpFilter: '',
+      kp3Filter: '',
       favKw: '',
       tab: 'todo',
       favs: [],
@@ -418,6 +450,7 @@ export default {
       let base = this.tab === 'done' ? this.doneItems : this.todoItems;
       if (this.filterMod) base = base.filter((m) => m.module === this.filterMod);
       if (this.kpFilter) base = base.filter((m) => this.groupKey(m) === this.kpFilter);
+      if (this.kp3Filter) base = base.filter((m) => m.tag3_name === this.kp3Filter);
       base = [...base];
       if (this.sortBy === 'times') base.sort((a, b) => (b.times || 1) - (a.times || 1));
       else if (this.sortBy === 'type') base.sort((a, b) => String(a.question_type || a.module || '').localeCompare(String(b.question_type || b.module || ''), 'zh'));
@@ -447,13 +480,21 @@ export default {
         if (!map[key]) map[key] = { key, name: NAMES[key] || key || '其他', n: 0, subs: {} };
         map[key].n++;
         const t = this.groupKey(m);
-        map[key].subs[t] = (map[key].subs[t] || 0) + 1;
+        if (!map[key].subs[t]) map[key].subs[t] = { n: 0, t3: {} };
+        map[key].subs[t].n++;
+        if (m.tag3_name) map[key].subs[t].t3[m.tag3_name] = (map[key].subs[t].t3[m.tag3_name] || 0) + 1;
       }
       return Object.values(map)
         .map((g) => ({
           ...g,
           subs: Object.entries(g.subs)
-            .map(([name, n]) => ({ name, n }))
+            .map(([name, s]) => ({
+              name,
+              n: s.n,
+              t3: Object.entries(s.t3)
+                .map(([tn, tc]) => ({ name: tn, n: tc }))
+                .sort((a, b) => b.n - a.n),
+            }))
             .sort((a, b) => b.n - a.n),
         }))
         .sort((a, b) => b.n - a.n);
@@ -478,6 +519,7 @@ export default {
     filterMod() { this.pageN = 20; },
     kw() { this.pageN = 20; },
     kpFilter() { this.pageN = 20; },
+    kp3Filter() { this.pageN = 20; },
     sortBy() { this.pageN = 20; },
   },
   onReachBottom() {
@@ -485,6 +527,10 @@ export default {
   },
   onShow() {
     this.favs = (uni.getStorageSync('favQuestions') || []).map((f) => ({ ...f, _open: false }));
+    if (uni.getStorageSync('bookShowFavs')) {
+      uni.removeStorageSync('bookShowFavs');
+      if (this.favs.length) this.tab = 'fav';
+    }
     if (this.tab === 'fav' && !this.favs.length) this.tab = 'todo';
     this.load();
   },
@@ -603,9 +649,10 @@ export default {
     toggleGroup(key) {
       this.mgOpen = { ...this.mgOpen, [key]: !this.mgOpen[key] };
     },
-    pickGroup(mod, sub) {
+    pickGroup(mod, sub, t3) {
       this.filterMod = mod;
       this.kpFilter = sub || '';
+      this.kp3Filter = t3 || '';
     },
     groupKey(m) {
       return m.question_type || NAMES[m.module] || m.module || '其他';
@@ -644,8 +691,11 @@ export default {
       if (on) uni.showToast({ title: '已掌握！', icon: 'success' });
       this.load();
     },
+    openFavPage() {
+      uni.navigateTo({ url: '/pkgA/social/favorites' });
+    },
     goPractice() {
-      uni.switchTab({ url: '/pages/practice/practice' });
+      uni.switchTab({ url: '/pages/home/home' });
     },
     async load() {
       this.loading = true;
@@ -655,12 +705,21 @@ export default {
         this.items = d.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
         this.due = r.items;
         this.dueTotal = r.total || r.items.length;
+        this.offlineView = false;
+        cacheMistakes(d.items);
         try {
-          if (this.dueTotal > 0) uni.setTabBarBadge({ index: 2, text: String(this.dueTotal > 99 ? '99+' : this.dueTotal) });
-          else uni.removeTabBarBadge({ index: 2 });
+          if (this.dueTotal > 0) uni.setTabBarBadge({ index: 1, text: String(this.dueTotal > 99 ? '99+' : this.dueTotal) });
+          else uni.removeTabBarBadge({ index: 1 });
         } catch (e) { /* tabBar 未就绪时忽略 */ }
       } catch (e) {
-        uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
+        const c = getCachedMistakes();
+        if (c && c.items && c.items.length) {
+          this.items = c.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
+          this.offlineView = true;
+          uni.showToast({ title: '当前无网络，展示已缓存的错题', icon: 'none' });
+        } else {
+          uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
+        }
       }
       this.loading = false;
     },
@@ -691,7 +750,7 @@ export default {
         this.rItems.push({ ...this.cur, _requeued: true });
       }
       try {
-        const res = await request('/api/review/' + this.cur.id, { method: 'POST', data: { correct } });
+        const res = await request('/api/review/' + this.cur.id, { method: 'POST', data: { correct, uid: anonUid() } });
         this.nextDays = res.next_review_days;
         this.streak = res.streak;
       } catch (e) {
@@ -748,7 +807,7 @@ export default {
           return;
         }
         uni.setStorageSync('redoSet', d.items);
-        uni.switchTab({ url: '/pages/practice/practice' });
+        uni.navigateTo({ url: '/pages/practice/practice' });
       } catch (e) {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
@@ -761,7 +820,7 @@ export default {
       const qt = m.question_type || '';
       const sub = qt.includes('-') ? qt.split('-').slice(1).join('-') : null;
       uni.setStorageSync('practicePreset', { module: m.module, submodule: sub, count: 3 });
-      uni.switchTab({ url: '/pages/practice/practice' });
+      uni.navigateTo({ url: '/pages/practice/practice' });
     },
     openReport(m) {
       if (!m.question_id) return;
@@ -815,24 +874,31 @@ export default {
 
 <style scoped>
 .wrap { padding: 24rpx; }
+.offbar { background: var(--warn-soft); border-radius: 16rpx; padding: 16rpx 22rpx; font-size: 24rpx; color: var(--warn); margin-bottom: 20rpx; }
+.ovrow { display: flex; gap: 16rpx; margin-bottom: 20rpx; }
+.ov-c { flex: 1; background: var(--card, #fff); border-radius: 20rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 22rpx 0; display: flex; flex-direction: column; align-items: center; gap: 4rpx; }
+.ov-n { font-size: 44rpx; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.ov-n.warn { color: #d97706; }
+.ov-n.ok { color: #16a34a; }
+.ov-t { font-size: 21rpx; color: var(--ink-2); }
 .card { background: var(--card); border-radius: var(--radius); padding: 24rpx; margin-bottom: 24rpx; border-left: 6rpx solid var(--brand); border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .empty { text-align: center; padding: 56rpx 32rpx; }
 .e-ico { font-size: 72rpx; margin-bottom: 16rpx; }
 .e-t { font-size: 32rpx; font-weight: 600; margin-bottom: 10rpx; }
 .e-s { font-size: 24rpx; color: var(--ink-2); line-height: 1.7; margin-bottom: 28rpx; }
-.e-btn { background: linear-gradient(135deg, #6c9bff, #3b6ff5); color: #fff; border-radius: 18rpx; font-size: 28rpx; font-weight: 600; width: 60%; }
+:deep(.e-btn2) { margin-top: 8rpx; min-width: 60%; border-radius: 18rpx !important; background: linear-gradient(135deg, #6c9bff, var(--brand)) !important; font-weight: 600; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; border-left: none; }
 .searchbar { display: flex; align-items: center; gap: 12rpx; background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 14rpx 26rpx; margin-bottom: 20rpx; }
 .searchinput { flex: 1; font-size: 26rpx; color: var(--ink); height: 40rpx; line-height: 40rpx; }
-.searchclear { font-size: 26rpx; color: var(--ink-2); padding: 0 8rpx; }
+.searchclear { display: flex; align-items: center; padding: 0 8rpx; }
 .sortrow { display: flex; align-items: center; gap: 10rpx; margin-bottom: 16rpx; flex-wrap: wrap; }
 .sort-k { font-size: 22rpx; color: var(--ink-2); }
 .sort-chip { font-size: 22rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 4rpx 18rpx; background: var(--card); }
-.sort-chip.on { color: #fff; background: var(--brand, #3b6ff5); border-color: var(--brand, #3b6ff5); }
+.sort-chip.on { color: #fff; background: var(--brand); border-color: var(--brand); }
 .kpwrap { margin-bottom: 16rpx; }
 .kpchips { display: flex; flex-wrap: wrap; gap: 10rpx; margin-top: 8rpx; }
 .kpchip { font-size: 22rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 6rpx 18rpx; background: var(--card); }
-.kpchip.on { color: #fff; background: var(--brand, #3b6ff5); border-color: var(--brand, #3b6ff5); }
+.kpchip.on { color: #fff; background: var(--brand); border-color: var(--brand); }
 .chips { white-space: nowrap; margin-bottom: 24rpx; }
 .chip { display: inline-block; padding: 10rpx 30rpx; margin-right: 16rpx; border-radius: 999rpx; background: var(--card); border: 1rpx solid var(--line); font-size: 25rpx; color: var(--ink-2); }
 .chip.on { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
@@ -840,7 +906,7 @@ export default {
 .mtime { margin-left: auto; white-space: nowrap; }
 .duehint { display: inline-flex; align-items: center; gap: 8rpx; font-size: 21rpx; color: var(--ink-2); }
 .duehint.due { color: #c2410c; }
-.duedot { width: 12rpx; height: 12rpx; border-radius: 50%; background: #c7cad4; }
+.duedot { width: 12rpx; height: 12rpx; border-radius: 50%; background: var(--ink-4); }
 .duehint.due .duedot { background: #f59e0b; }
 .rvbadge { font-size: 20rpx; color: var(--ink-2); background: var(--soft-bg); border-radius: 999rpx; padding: 4rpx 14rpx; }
 .rzbadge { font-size: 20rpx; color: #b45309; background: #fef3c7; border-radius: 999rpx; padding: 4rpx 14rpx; }
@@ -849,26 +915,28 @@ export default {
 .anscmp .ca { color: var(--ok); font-weight: 600; }
 .rpill { font-size: 22rpx; font-weight: 600; border-radius: 999rpx; padding: 6rpx 20rpx; }
 .rpill.wrong { background: #fee2e2; color: #b91c1c; }
-.rpill.right { background: #dcfce7; color: #15803d; }
+.rpill.right { background: var(--ok-soft); color: #15803d; }
 .zop { color: var(--ok); border: 1rpx solid var(--ok); }
 .segrow { display: flex; align-items: center; gap: 16rpx; margin-bottom: 20rpx; }
-.seg { flex: 1; display: flex; background: #f2f3f5; border-radius: 16rpx; padding: 6rpx; }
+.seg { flex: 1; display: flex; background: var(--fill); border-radius: 16rpx; padding: 6rpx; }
 .seg-i { flex: 1; text-align: center; padding: 14rpx 0; border-radius: 12rpx; font-size: 25rpx; color: var(--ink-2); }
-.seg-i.on { background: #fff; color: var(--ink); font-weight: 600; box-shadow: 0 2rpx 8rpx rgba(31, 35, 41, 0.08); }
+.seg-i.on { background: var(--card); color: var(--ink); font-weight: 600; box-shadow: 0 2rpx 8rpx rgba(31, 35, 41, 0.08); }
 .filterbtn { display: inline-flex; align-items: center; gap: 6rpx; background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 24rpx; min-height: 44px; box-sizing: border-box; flex-shrink: 0; }
 .filterbtn-t { font-size: 24rpx; color: var(--ink-2); }
 .modgroup { padding: 20rpx 24rpx; }
 .mg-h { font-size: 24rpx; color: var(--ink-2); margin-bottom: 6rpx; }
 .mg-row { display: flex; align-items: center; gap: 12rpx; min-height: 56px; border-bottom: 1rpx solid var(--line); }
 .mg-blk:last-child .mg-row { border-bottom: none; }
-.mg-arrow { font-size: 24rpx; color: var(--ink-3, #8f959e); width: 28rpx; }
+.mg-arrow { font-size: 24rpx; color: var(--ink-3); width: 28rpx; }
 .mg-name { font-size: 29rpx; font-weight: 600; color: var(--ink); flex: 1; }
-.mg-badge { background: #f2f3f5; color: var(--ink-2); border-radius: 999rpx; font-size: 22rpx; padding: 4rpx 18rpx; }
+.mg-badge { background: var(--fill); color: var(--ink-2); border-radius: 999rpx; font-size: 22rpx; padding: 4rpx 18rpx; }
 .mg-go { font-size: 24rpx; color: var(--brand); padding: 18rpx 0 18rpx 24rpx; }
 .mg-sub { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding-left: 60rpx; border-bottom: 1rpx dashed var(--line); }
 .mg-sub-name { font-size: 26rpx; color: var(--ink); }
+.mg-sub3 { padding-left: 110rpx; min-height: 42px; }
+.mg-sub3 .mg-sub-name { font-size: 24rpx; color: var(--ink-2); }
 .curfilter { display: flex; gap: 12rpx; margin-bottom: 16rpx; flex-wrap: wrap; }
-.attempts { margin-top: 14rpx; background: var(--soft-bg, #f7f8fa); border-radius: 12rpx; padding: 14rpx 18rpx; }
+.attempts { margin-top: 14rpx; background: var(--soft-bg); border-radius: 12rpx; padding: 14rpx 18rpx; }
 .att-h { font-size: 22rpx; color: var(--ink-2); margin-bottom: 6rpx; }
 .att-row { display: flex; align-items: center; gap: 16rpx; font-size: 23rpx; padding: 6rpx 0; }
 .att-mark { font-weight: 600; }
@@ -876,50 +944,50 @@ export default {
 .att-mark.abad { color: var(--bad, #f04438); }
 .att-pick { color: var(--ink); }
 .att-secs { color: var(--ink-2); }
-.att-time { margin-left: auto; color: var(--ink-3, #8f959e); font-size: 21rpx; }
+.att-time { margin-left: auto; color: var(--ink-3); font-size: 21rpx; }
 .ai-loading { text-align: center; color: var(--ink-2); font-size: 25rpx; padding: 60rpx 0; }
 .mask { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 99; display: flex; align-items: flex-end; }
-.sheet { width: 100%; background: #fff; border-radius: 24rpx 24rpx 0 0; padding: 28rpx 28rpx 48rpx; max-height: 70vh; overflow-y: auto; box-sizing: border-box; }
+.sheet { width: 100%; background: var(--card); border-radius: 24rpx 24rpx 0 0; padding: 28rpx 28rpx 48rpx; max-height: 70vh; overflow-y: auto; box-sizing: border-box; }
 .sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
 .sheet-t { font-size: 30rpx; font-weight: 600; }
 .sheet-x { font-size: 30rpx; color: var(--ink-2); padding: 10rpx 20rpx; }
 .sheet-k { font-size: 23rpx; color: var(--ink-2); margin: 20rpx 0 10rpx; }
-.sheet-done { margin-top: 32rpx; background: var(--brand, #3b6ff5); color: #fff; text-align: center; border-radius: 999rpx; padding: 22rpx 0; font-size: 28rpx; font-weight: 500; }
-.scan-sum { font-size: 25rpx; color: #646a73; margin: 8rpx 0 12rpx; }
+.sheet-done { margin-top: 32rpx; background: var(--brand); color: #fff; text-align: center; border-radius: 999rpx; padding: 22rpx 0; font-size: 28rpx; font-weight: 500; }
+.scan-sum { font-size: 25rpx; color: var(--ink-2); margin: 8rpx 0 12rpx; }
 .scan-good { color: #12b76a; font-weight: 600; }
 .scan-list { max-height: 50vh; }
-.scan-row { display: flex; align-items: center; min-height: 60rpx; border-bottom: 1rpx solid #f2f3f5; font-size: 26rpx; }
-.scan-no { width: 70rpx; color: #8f959e; }
-.scan-pick { flex: 1; color: #1f2329; }
+.scan-row { display: flex; align-items: center; min-height: 60rpx; border-bottom: 1rpx solid var(--fill); font-size: 26rpx; }
+.scan-no { width: 70rpx; color: var(--ink-3); }
+.scan-pick { flex: 1; color: var(--ink); }
 .scan-pick.good { color: #12b76a; }
 .scan-pick.bad { color: #f04438; }
-.scan-ans { width: 140rpx; color: #646a73; }
-.scan-mark { width: 50rpx; text-align: right; color: #8f959e; }
+.scan-ans { width: 140rpx; color: var(--ink-2); }
+.scan-mark { width: 50rpx; text-align: right; color: var(--ink-3); }
 .manual-list { max-height: 44vh; }
-.manual-row { display: flex; align-items: center; gap: 16rpx; min-height: 88rpx; border-bottom: 1rpx solid #f2f3f5; }
-.manual-opt { flex: 1; text-align: center; line-height: 68rpx; border: 1rpx solid #e0e3e8; border-radius: 12rpx; font-size: 28rpx; color: #646a73; }
-.manual-opt.on { background: var(--brand, #3b6ff5); border-color: var(--brand, #3b6ff5); color: #fff; font-weight: 600; }
+.manual-row { display: flex; align-items: center; gap: 16rpx; min-height: 88rpx; border-bottom: 1rpx solid var(--fill); }
+.manual-opt { flex: 1; text-align: center; line-height: 68rpx; border: 1rpx solid var(--line); border-radius: 12rpx; font-size: 28rpx; color: var(--ink-2); }
+.manual-opt.on { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
 .manual-codebar { margin: 0; }
-.manual-back { text-align: center; color: #646a73; font-size: 25rpx; padding: 20rpx 0 4rpx; }
+.manual-back { text-align: center; color: var(--ink-2); font-size: 25rpx; padding: 20rpx 0 4rpx; }
 .sheet-done.dim { opacity: 0.45; }
 .exp-opts { display: flex; gap: 12rpx; margin-top: 16rpx; }
-.expchip { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--line, #ebedf0); border-radius: 12rpx; font-size: 24rpx; color: var(--ink-2, #646a73); background: #f7f8fa; }
-.expchip.on { border-color: var(--brand, #3b6ff5); color: var(--brand, #3b6ff5); background: #edf3fe; font-weight: 600; }
-.sheet-export { margin-top: 16rpx; margin-bottom: 110rpx; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand, #3b6ff5); color: var(--brand, #3b6ff5); text-align: center; border-radius: 999rpx; padding: 20rpx 0; font-size: 27rpx; font-weight: 500; }
+.expchip { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--line); border-radius: 12rpx; font-size: 24rpx; color: var(--ink-2); background: var(--fill); }
+.expchip.on { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); font-weight: 600; }
+.sheet-export { margin-top: 16rpx; margin-bottom: 110rpx; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand); text-align: center; border-radius: 999rpx; padding: 20rpx 0; font-size: 27rpx; font-weight: 500; }
 .xp-k { margin-top: 12rpx; font-size: 22rpx; font-weight: 700; color: #ea580c; border-left: 6rpx solid #ea580c; padding-left: 10rpx; }
-.xp-body { margin-top: 6rpx; font-size: 23rpx; color: var(--ink); background: #fff7ed; border-radius: 10rpx; padding: 12rpx; line-height: 1.6; }
+.xp-body { margin-top: 6rpx; font-size: 23rpx; color: var(--ink); background: var(--warn-soft); border-radius: 10rpx; padding: 12rpx; line-height: 1.6; }
 .mfoot { display: flex; justify-content: space-between; align-items: center; margin-top: 12rpx; border-top: 1rpx solid var(--line); padding-top: 8rpx; }
 .op.more { color: var(--ink-2); font-weight: 700; padding: 18rpx 30rpx; margin-left: 0; }
-.op.hint { color: var(--ink-3, #9ca3af); margin-left: 0; padding-left: 0; }
+.op.hint { color: var(--ink-3); margin-left: 0; padding-left: 0; }
 .loadmore { text-align: center; font-size: 24rpx; color: var(--ink-2); padding: 24rpx 0 140rpx; }
 .acts { display: flex; gap: 8rpx; }
 .op { font-size: 24rpx; margin-left: 16rpx; padding: 18rpx 24rpx; border-radius: 999rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
 .op.sim { background: var(--brand-soft); color: var(--brand); }
-.op.reportop { color: var(--ink-3, #9ca3af); text-decoration: underline; }
+.op.reportop { color: var(--ink-3); text-decoration: underline; }
 .rp-types { display: flex; flex-wrap: wrap; gap: 16rpx; margin-bottom: 20rpx; }
-.rp-chip { padding: 18rpx 26rpx; border-radius: 999rpx; background: var(--soft-bg, #f4f5f9); font-size: 26rpx; color: var(--ink-2); }
-.rp-chip.on { background: rgba(59, 111, 245, 0.12); color: #3b6ff5; font-weight: 600; }
-.rp-detail { width: 100%; box-sizing: border-box; min-height: 140rpx; background: var(--soft-bg, #f4f5f9); border-radius: 16rpx; padding: 20rpx; font-size: 26rpx; }
+.rp-chip { padding: 18rpx 26rpx; border-radius: 999rpx; background: var(--soft-bg); font-size: 26rpx; color: var(--ink-2); }
+.rp-chip.on { background: rgba(59, 111, 245, 0.12); color: var(--brand); font-weight: 600; }
+.rp-detail { width: 100%; box-sizing: border-box; min-height: 140rpx; background: var(--soft-bg); border-radius: 16rpx; padding: 20rpx; font-size: 26rpx; }
 .rp-submit.off { opacity: 0.45; pointer-events: none; }
 .redo { color: var(--brand); border: 1rpx solid var(--brand); }
 .del { color: #c33; }
@@ -927,45 +995,44 @@ export default {
 .q { font-size: 26rpx; line-height: 1.5; margin-top: 10rpx; }
 .q.clamp { max-height: 120rpx; overflow: hidden; }
 .meta { font-size: 22rpx; color: var(--ink-2); }
-.duecard { background: linear-gradient(135deg, #3b6ef6, #7c5cfc); border: none; display: flex; justify-content: space-between; align-items: center; }
+.duecard { background: linear-gradient(180deg, #4a7bf7, #3567ec); border: none; box-shadow: 0 6rpx 16rpx rgba(59, 111, 245, 0.25); display: flex; justify-content: space-between; align-items: center; }
 .redoentry { display: flex; justify-content: space-between; align-items: center; }
 .redo-l { display: flex; align-items: center; gap: 16rpx; }
-.redo-ico { width: 64rpx; height: 64rpx; border-radius: 50%; background: var(--brand-soft, #edf3fe); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.redo-ico { width: 64rpx; height: 64rpx; border-radius: 50%; background: var(--brand-soft); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .redo-t { display: block; font-size: 27rpx; font-weight: 600; color: var(--ink); }
 .redo-s { display: block; font-size: 21rpx; color: var(--ink-2); margin-top: 4rpx; }
-.redo-go { background: var(--brand-soft, #edf3fe); color: var(--brand, #3b6ff5); font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 0 34rpx; min-height: 44px; line-height: 44px; flex-shrink: 0; box-sizing: border-box; }
+.redo-go { background: var(--brand-soft); color: var(--brand); font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 0 34rpx; min-height: 44px; line-height: 44px; flex-shrink: 0; box-sizing: border-box; }
 .nrbadge {
   display: inline-block;
-  background: #edf3fe;
-  color: #3b6ff5;
+  background: var(--brand-soft);
+  color: var(--brand);
   border-radius: 10rpx;
   padding: 4rpx 14rpx;
   font-size: 22rpx;
   margin-left: 8rpx;
 }
 .nrbadge.due {
-  background: #fff7ed;
+  background: var(--warn-soft);
   color: #c2410c;
 }
 .timesbadge { display: inline-block; background: #fee2e2; color: #b91c1c; border-radius: 10rpx; padding: 4rpx 14rpx; font-size: 22rpx; margin-left: 8rpx; }
 .duetxt { display: flex; align-items: center; gap: 8rpx; font-size: 28rpx; font-weight: 700; color: #fff; }
 .duetxt-t { font-size: 28rpx; font-weight: 700; color: #fff; }
 .duesub { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.75); margin-top: 6rpx; }
-.duego { background: #fff; color: #3b6ff5; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 0 34rpx; min-height: 44px; line-height: 44px; display: inline-block; box-sizing: border-box; }
+.duego { background: var(--card); color: var(--brand); font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 0 34rpx; min-height: 44px; line-height: 44px; display: inline-block; box-sizing: border-box; }
 .review { border-left-color: #f5a623; }
 .rhead { display: flex; justify-content: space-between; margin-bottom: 12rpx; }
 .opts { display: flex; gap: 16rpx; margin: 20rpx 0; }
-.opt { flex: 1; text-align: center; padding: 16rpx 0; border: 2rpx solid #d9dee8; border-radius: 12rpx; font-size: 28rpx; }
-.opt.ok { background: #e6f7e6; border-color: #3aa53a; color: #2a7a2a; }
+.opt { flex: 1; text-align: center; padding: 16rpx 0; border: 2rpx solid var(--line); border-radius: 12rpx; font-size: 28rpx; }
+.opt.ok { background: var(--ok-soft); border-color: #3aa53a; color: #2a7a2a; }
 .opt.bad { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); }
 .opt.dim { opacity: 0.4; }
 .verdict { font-size: 26rpx; font-weight: 600; margin: 12rpx 0; }
 .verdict.good { color: #2a7a2a; }
 .verdict.badv { color: #b03030; }
-.next { margin-top: 20rpx; background: var(--brand); color: #fff; font-size: 28rpx; border-radius: 12rpx; }
+:deep(.next-btn) { margin-top: 20rpx; width: 100%; border-radius: 12rpx !important; }
 .selfjudge { margin-top: 20rpx; }
 .q2 { font-size: 24rpx; color: var(--ink-2); margin-bottom: 12rpx; }
-.sj { display: inline-block; width: 45%; margin-right: 4%; font-size: 26rpx; border-radius: 12rpx; }
-.sj.ok { background: #e6f7e6; color: #2a7a2a; }
-.sj.bad { background: var(--bad-soft); color: var(--bad); }
+.sj-row { display: flex; gap: 20rpx; }
+:deep(.sj-btn) { flex: 1; border-radius: 12rpx !important; }
 </style>

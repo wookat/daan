@@ -8,13 +8,30 @@ import time
 
 import httpx
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import auth, db, engine, kb, llm, omr, pdf_export
+from . import auth, db, engine, insights, interview, kb, llm, omr, pdf_export, pk, plan, similarity, social, taxonomy
 
 app = FastAPI(title="考公错题助手")
+# Android App（Capacitor WebView，origin 为 https://localhost）跨域访问 API
+APP_ORIGINS = os.environ.get(
+    "APP_CORS_ORIGINS", "https://localhost,capacitor://localhost,http://localhost"
+).split(",")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in APP_ORIGINS if o.strip()],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["X-Paper-Code"],
+)
 app.include_router(auth.router)
+app.include_router(insights.router)
+app.include_router(social.router)
+app.include_router(interview.router)
+app.include_router(pk.router)
 
 ACCESS_CODE = os.environ.get("ACCESS_CODE", "")
 
@@ -25,6 +42,9 @@ def check_access(x_access_code: str | None):
 
 db.init_db()
 auth.init_auth_db()
+social.init_social_db()
+interview.init_interview_db()
+pk.init_pk_db()
 
 
 def _stats_refresher():
@@ -38,6 +58,22 @@ def _stats_refresher():
 
 
 threading.Thread(target=_stats_refresher, daemon=True).start()
+
+
+def _fts_backfiller():
+    """搜索索引后台分批回填（首次建表 13.5 万题避免阻塞启动）。"""
+    while True:
+        try:
+            if insights.fts_backfill() == 0:
+                time.sleep(3600)
+                continue
+        except Exception:
+            time.sleep(600)
+            continue
+        time.sleep(2)
+
+
+threading.Thread(target=_fts_backfiller, daemon=True).start()
 
 
 def _friendly_ai_err(e: Exception) -> str:
@@ -263,12 +299,17 @@ def api_admin_questions(
     disabled: int = 0,
     offset: int = 0,
     limit: int = 20,
+    qid: int | None = None,
+    min_score: int | None = None,
+    max_score: int | None = None,
+    sort: str | None = None,
     x_admin_token: str | None = Header(None),
 ):
     check_admin(x_admin_token)
     return {
         "items": db.admin_search_questions(
-            keyword, module, flagged=bool(flagged), disabled_only=bool(disabled), offset=offset, limit=limit
+            keyword, module, flagged=bool(flagged), disabled_only=bool(disabled), offset=offset, limit=limit, qid=qid,
+            min_score=min_score, max_score=max_score, sort=sort,
         )
     }
 
@@ -276,9 +317,84 @@ def api_admin_questions(
 @app.patch("/api/admin/questions/{qid}")
 def api_admin_update_question(qid: int, body: dict, x_admin_token: str | None = Header(None)):
     check_admin(x_admin_token)
+    if "tag3" in body:
+        code = (body["tag3"] or "").strip()
+        if code and code != "UNKNOWN" and code not in taxonomy.topic_index():
+            raise HTTPException(400, "未知考点 code")
+        body["tag3"] = code or None
+    if "options" in body:
+        if not isinstance(body["options"], dict):
+            raise HTTPException(400, "options 需为对象")
+        body["options"] = json.dumps(body["options"], ensure_ascii=False)
     if not db.admin_update_question(qid, body):
         raise HTTPException(400, "无可更新字段或题目不存在")
+    if "tag3" in body:
+        db.tag3_review_close(qid)
     return {"ok": True}
+
+
+@app.get("/api/taxonomy")
+def api_taxonomy():
+    """三级考点树 + 各级题目数。"""
+    counts = db.tag3_counts()
+    tree = json.loads(json.dumps(taxonomy.tree(), ensure_ascii=False))
+    for m in tree["modules"]:
+        mn = 0
+        for g in m["groups"]:
+            gn = 0
+            for t in g["topics"]:
+                t["n"] = counts.get(t["code"], 0)
+                gn += t["n"]
+            g["n"] = gn
+            mn += gn
+        m["n"] = mn
+    tree["unknown"] = counts.get("UNKNOWN", 0)
+    return tree
+
+
+@app.get("/api/admin/taxonomy/questions")
+def api_admin_taxonomy_questions(code: str, offset: int = 0, limit: int = 20, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return {"items": db.questions_by_tag3(code, offset=offset, limit=limit)}
+
+
+@app.get("/api/admin/tag3_review")
+def api_admin_tag3_review(limit: int = 100, module: str | None = None, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return db.tag3_review_list(limit, module)
+
+
+@app.get("/api/admin/similar_questions")
+def api_admin_similar_questions(qid: int, limit: int = 10, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    conn = db.get_conn()
+    try:
+        items = similarity.find_similar(conn, qid, limit=min(limit, 50))
+    finally:
+        conn.close()
+    return {"qid": qid, "items": items}
+
+
+@app.get("/api/admin/dup_clusters")
+def api_admin_dup_clusters(offset: int = 0, limit: int = 20, status: str = "open", x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return {**db.dup_cluster_list(offset=offset, limit=limit, status=status), "stats": db.dup_cluster_stats()}
+
+
+@app.get("/api/admin/dup_clusters/{cluster_id}")
+def api_admin_dup_cluster_detail(cluster_id: int, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return {"cluster_id": cluster_id, "items": db.dup_cluster_detail(cluster_id)}
+
+
+@app.post("/api/admin/dup_clusters/{cluster_id}/resolve")
+def api_admin_dup_cluster_resolve(cluster_id: int, body: dict, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    keep = body.get("keep_qid")
+    res = db.dup_cluster_resolve(cluster_id, int(keep) if keep is not None else None)
+    if not res.get("ok"):
+        raise HTTPException(400, res.get("error", "处理失败"))
+    return res
 
 
 @app.get("/api/admin/flagged_cache")
@@ -293,12 +409,81 @@ def api_admin_delete_cache(key: str, x_admin_token: str | None = Header(None)):
     return {"ok": db.admin_delete_cache(key)}
 
 
-_ADMIN_HTML = os.path.join(os.path.dirname(__file__), "admin.html")
+_ADMIN_DIR = os.path.join(os.path.dirname(__file__), "admin")
 
 
 @app.get("/admin")
 def admin_page():
-    return FileResponse(_ADMIN_HTML, media_type="text/html")
+    return FileResponse(os.path.join(_ADMIN_DIR, "index.html"), media_type="text/html")
+
+
+app.mount("/admin/static", StaticFiles(directory=_ADMIN_DIR), name="admin_static")
+
+
+@app.get("/api/admin/dashboard")
+def api_admin_dashboard(x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return db.admin_dashboard()
+
+
+@app.get("/api/admin/governance")
+def api_admin_governance(x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return db.governance_scan()
+
+
+@app.get("/api/admin/users")
+def api_admin_users(
+    keyword: str | None = None,
+    offset: int = 0,
+    limit: int = 20,
+    inactive_days: int | None = None,
+    x_admin_token: str | None = Header(None),
+):
+    check_admin(x_admin_token)
+    return db.admin_users(keyword, offset, limit, inactive_days)
+
+
+@app.get("/api/admin/users/{uid}")
+def api_admin_user_detail(uid: str, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    d = db.admin_user_detail(uid.strip()[:64])
+    if not d:
+        raise HTTPException(404, "用户不存在")
+    return d
+
+
+@app.get("/api/admin/shizheng")
+def api_admin_shizheng(offset: int = 0, limit: int = 20, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return db.admin_shizheng(offset, limit)
+
+
+@app.get("/api/admin/shenlun_overview")
+def api_admin_shenlun_overview(x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return db.admin_shenlun_overview()
+
+
+@app.post("/api/admin/tag3_review/reopen")
+def api_admin_tag3_review_reopen(body: dict, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    qid = int(body.get("question_id") or 0)
+    if not qid:
+        raise HTTPException(400, "缺少 question_id")
+    return {"ok": db.tag3_review_reopen(qid)}
+
+
+@app.get("/api/admin/settings_info")
+def api_admin_settings_info(x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    tok = IMPORT_TOKEN or ""
+    return {
+        "import_token": ({"set": True, "masked": tok[:2] + "··" + tok[-4:]} if len(tok) >= 8
+                         else {"set": bool(tok), "masked": "··"}),
+        "llm_model": os.environ.get("LLM_MODEL", ""),
+        "access_code_enabled": bool(ACCESS_CODE),
+    }
 
 
 @app.post("/api/followup")
@@ -328,7 +513,7 @@ async def api_coach(body: dict, x_access_code: str | None = Header(None)):
         "## 一句鼓励。总字数 250 字以内，不要空话套话。\n\n学习数据（JSON）：\n"
         + json.dumps(stats, ensure_ascii=False)[:3000]
     )
-    advice = await llm.chat([{"role": "user", "content": prompt}], temperature=0.4, max_tokens=800)
+    advice = await llm.chat_fast([{"role": "user", "content": prompt}], temperature=0.4, max_tokens=800)
     return {"advice": advice}
 
 
@@ -339,6 +524,58 @@ def api_user_state(body: dict):
         raise HTTPException(400, "缺少 uid")
     db.set_user_state(uid[:64], str(body.get("focus") or "")[:32], str(body.get("note") or ""))
     return {"ok": True}
+
+
+PROFILE_EXAM_TYPES = {"国考", "省考", "事业单位", "其他"}
+PROFILE_BASE_LEVELS = {"零基础", "有基础", "二战"}
+
+
+@app.get("/api/profile")
+def api_profile_get(uid: str):
+    uid = uid.strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    return {"profile": db.get_user_profile(uid[:64])}
+
+
+@app.post("/api/profile")
+def api_profile_save(body: dict):
+    uid = (body.get("uid") or "").strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    fields: dict = {}
+    if "exam_type" in body:
+        v = (body.get("exam_type") or "").strip()
+        if v and v not in PROFILE_EXAM_TYPES:
+            raise HTTPException(400, "考试类型无效")
+        fields["exam_type"] = v or None
+    if "target_region" in body:
+        fields["target_region"] = (body.get("target_region") or "").strip()[:50] or None
+    if "exam_date" in body:
+        v = (body.get("exam_date") or "").strip()
+        if v and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", v):
+            raise HTTPException(400, "考试日期格式应为 YYYY-MM-DD")
+        fields["exam_date"] = v or None
+    if "target_score" in body:
+        v = body.get("target_score")
+        fields["target_score"] = max(0, min(100, int(v))) if v is not None else None
+    if "daily_minutes" in body:
+        v = body.get("daily_minutes")
+        fields["daily_minutes"] = max(10, min(600, int(v))) if v is not None else None
+    if "base_level" in body:
+        v = (body.get("base_level") or "").strip()
+        if v and v not in PROFILE_BASE_LEVELS:
+            raise HTTPException(400, "基础自评无效")
+        fields["base_level"] = v or None
+    return {"profile": db.save_user_profile(uid[:64], fields)}
+
+
+@app.get("/api/plan/today")
+def api_plan_today(uid: str):
+    uid = uid.strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    return plan.today_plan(uid[:64])
 
 
 @app.get("/api/daily_plan")
@@ -359,10 +596,10 @@ def api_attempts(uid: str, question_id: int):
 
 @app.post("/api/export/pdf")
 def api_export_pdf(body: dict):
-    ids = [int(i) for i in (body.get("question_ids") or [])[:100]]
+    ids = [int(i) for i in (body.get("question_ids") or [])[:140]]
     items = body.get("items") or []
     questions = db.questions_by_ids(ids) if ids else []
-    for it in items[:100]:
+    for it in items[:140]:
         if isinstance(it, dict) and (it.get("question") or "").strip():
             questions.append(
                 {
@@ -413,8 +650,8 @@ def api_paper_info(code: str):
     }
 
 
-def _judge_paper(uid: str, paper: dict, picks: dict[int, str]) -> dict:
-    """picks: {题号(从1开始): 'A'}；与扫描答题卡同一套判分/落库逻辑。"""
+def _judge_paper(uid: str, paper: dict, picks: dict[int, str], secs: dict[int, int] | None = None) -> dict:
+    """picks: {题号(从1开始): 'A'}；secs: {题号: 用时秒}；与扫描答题卡同一套判分/落库逻辑。"""
     qids = paper["question_ids"]
     questions = {q["id"]: q for q in db.questions_by_ids(qids)}
     results = []
@@ -431,10 +668,12 @@ def _judge_paper(uid: str, paper: dict, picks: dict[int, str]) -> dict:
             {
                 "no": i + 1,
                 "question_id": qid,
+                "module": q.get("module"),
                 "picked": picked,
                 "answer": correct_ans,
                 "correct": is_correct,
                 "status": status,
+                "secs": (secs or {}).get(i + 1) or 0,
                 "question": (q.get("question") or "")[:80],
             }
         )
@@ -446,7 +685,7 @@ def _judge_paper(uid: str, paper: dict, picks: dict[int, str]) -> dict:
                     "submodule": q.get("submodule"),
                     "correct": is_correct,
                     "picked": picked,
-                    "secs": 0,
+                    "secs": (secs or {}).get(i + 1) or 0,
                 }
             )
             if not is_correct:
@@ -587,7 +826,7 @@ async def api_mistake_analysis(body: dict, x_access_code: str | None = Header(No
         "总字数 300 字以内，不要空话套话。\n\n数据（JSON）：\n"
         + json.dumps(stats, ensure_ascii=False)[:3000]
     )
-    analysis = await llm.chat([{"role": "user", "content": prompt}], temperature=0.4, max_tokens=900)
+    analysis = await llm.chat_fast([{"role": "user", "content": prompt}], temperature=0.4, max_tokens=900)
     return {"analysis": analysis, "stats": stats}
 
 
@@ -599,6 +838,16 @@ def api_answer_log(body: dict):
         raise HTTPException(400, "缺少 uid 或答题记录")
     n = db.save_answer_log(uid[:64], items[:200])
     return {"saved": n}
+
+
+@app.get("/api/shizheng/daily")
+def api_shizheng_daily(date: str | None = None, limit: int = 10):
+    """按日期取当日一组时政题（同一天所有人相同，用日期作随机种子从底池抽）。"""
+    day = (date or "").strip()
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", day or ""):
+        day = time.strftime("%Y-%m-%d")
+    items = db.shizheng_daily(day, min(max(limit, 1), 20))
+    return {"date": day, "items": items, "total": db.shizheng_count()}
 
 
 @app.get("/api/growth")
@@ -667,6 +916,7 @@ def api_questions(
     uid: str | None = None,
     adaptive: int = 0,
     grouped: int = 0,
+    tag3: str | None = None,
 ):
     if grouped and module == "ziliao" and not real:
         return {
@@ -676,7 +926,7 @@ def api_questions(
     return {
         "items": db.random_questions(
             module, min(limit, 50), submodule, real_only=bool(real), year=year, region=region, uid=uid,
-            adaptive=bool(adaptive),
+            adaptive=bool(adaptive), tag3=tag3,
         ),
         "counts": db.question_counts(),
     }
@@ -709,7 +959,8 @@ def api_shenlun_question(qid: int):
 
 
 @app.post("/api/shenlun/grade")
-async def api_shenlun_grade(body: dict):
+async def api_shenlun_grade(body: dict, x_access_code: str | None = Header(None)):
+    check_access(x_access_code)
     qid = body.get("qid")
     answer = (body.get("answer") or "").strip()
     if not qid or not answer:
@@ -747,7 +998,7 @@ async def api_shenlun_grade(body: dict):
         "\n\n要求：客观、具体、指出原文依据；不要复述整篇材料；控制在 600 字内。"
     )
     try:
-        result = await llm.chat([{"role": "user", "content": prompt}], temperature=0.3, max_tokens=1500)
+        result = await llm.chat_fast([{"role": "user", "content": prompt}], temperature=0.3, max_tokens=1500)
     except Exception as e:  # noqa: BLE001
         raise HTTPException(502, f"批改失败：{_friendly_ai_err(e)}") from e
     uid = (body.get("uid") or "").strip()[:64]
@@ -866,6 +1117,183 @@ def api_papers():
     return {"items": db.list_papers()}
 
 
+def _clean_int_map(raw: dict, as_str: bool = False) -> dict:
+    out: dict = {}
+    for k, v in (raw or {}).items():
+        try:
+            out[int(k)] = str(v or "")[:1] if as_str else max(0, min(int(v or 0), 86400))
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+@app.get("/api/exam/papers")
+def api_exam_papers(kind: str | None = None, year: int | None = None,
+                    region: str | None = None, uid: str | None = None):
+    return {
+        "items": db.list_exam_papers(kind, year, region, uid=(uid or "").strip()[:64] or None),
+        "filters": db.exam_paper_filters(),
+    }
+
+
+@app.get("/api/exam/papers/{pid}")
+def api_exam_paper_detail(pid: int):
+    paper = db.get_exam_paper(pid)
+    if not paper:
+        raise HTTPException(404, "试卷不存在")
+    return {"paper": paper}
+
+
+@app.post("/api/exam/start")
+def api_exam_start(body: dict):
+    uid = (body.get("uid") or "").strip()[:64]
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    if body.get("mini"):
+        pid = db.create_mock_paper(n=30, duration_min=30)
+    else:
+        pid = body.get("paper_id")
+        if not pid:
+            raise HTTPException(400, "缺少 paper_id")
+        pid = int(pid)
+    paper = db.get_exam_paper(pid)
+    if not paper:
+        raise HTTPException(404, "试卷不存在")
+    items = {q["id"]: q for q in db.questions_by_ids(paper["question_ids"])}
+    ordered = [items[i] for i in paper["question_ids"] if i in items]
+    if len(ordered) < 5:
+        raise HTTPException(400, "试卷题目不足")
+    attempt_id = db.start_exam_attempt(uid, pid)
+    return {
+        "attempt_id": attempt_id,
+        "paper": {
+            "id": paper["id"],
+            "title": paper["title"],
+            "kind": paper["kind"],
+            "year": paper["year"],
+            "region": paper["region"],
+            "duration_min": paper["duration_min"],
+            "n": len(ordered),
+        },
+        "items": ordered,
+    }
+
+
+@app.post("/api/exam/submit")
+def api_exam_submit(body: dict):
+    uid = (body.get("uid") or "").strip()[:64]
+    attempt_id = body.get("attempt_id")
+    if not uid or not attempt_id:
+        raise HTTPException(400, "缺少 uid 或 attempt_id")
+    attempt = db.get_exam_attempt(int(attempt_id))
+    if not attempt or attempt["uid"] != uid:
+        raise HTTPException(404, "答题记录不存在")
+    if attempt["submitted_at"]:
+        raise HTTPException(400, "该次模考已交卷")
+    paper = db.get_exam_paper(attempt["paper_id"])
+    if not paper:
+        raise HTTPException(404, "试卷不存在")
+    picks = _clean_int_map(body.get("picks") or {}, as_str=True)
+    secs = _clean_int_map(body.get("secs") or {})
+    judged = _judge_paper(uid, {"code": None, "title": paper["title"], "question_ids": paper["question_ids"]}, picks, secs)
+    per_module: dict = {}
+    for r in judged["items"]:
+        m = r.get("module") or "other"
+        pm = per_module.setdefault(m, {"n": 0, "answered": 0, "correct": 0, "secs": 0})
+        pm["n"] += 1
+        if r["status"] == "ok":
+            pm["answered"] += 1
+            if r["correct"]:
+                pm["correct"] += 1
+        pm["secs"] += r.get("secs") or 0
+    total = judged["total"] or 1
+    score = round(100.0 * judged["correct"] / total, 1)
+    db.finish_exam_attempt(int(attempt_id), {str(k): v for k, v in picks.items()}, score, per_module)
+    return {
+        "attempt_id": int(attempt_id),
+        "paper_id": paper["id"],
+        "title": paper["title"],
+        "score": score,
+        "total": judged["total"],
+        "answered": judged["answered"],
+        "correct": judged["correct"],
+        "per_module": per_module,
+        "items": judged["items"],
+    }
+
+
+@app.get("/api/exam/attempts")
+def api_exam_attempts(uid: str, paper_id: int | None = None, limit: int = 50):
+    uid = uid.strip()[:64]
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    return {"items": db.list_exam_attempts(uid, paper_id, limit)}
+
+
+@app.get("/api/exam/report/{attempt_id}")
+def api_exam_report(attempt_id: int, uid: str = ""):
+    attempt = db.get_exam_attempt(attempt_id)
+    if not attempt or not attempt["submitted_at"]:
+        raise HTTPException(404, "成绩报告不存在")
+    if uid and attempt["uid"] != uid.strip()[:64]:
+        raise HTTPException(404, "成绩报告不存在")
+    paper = db.get_exam_paper(attempt["paper_id"])
+    if not paper:
+        raise HTTPException(404, "试卷不存在")
+    questions = {q["id"]: q for q in db.questions_by_ids(paper["question_ids"])}
+    picks = {int(k): v for k, v in attempt["answers"].items()}
+    items = []
+    for i, qid in enumerate(paper["question_ids"]):
+        q = questions.get(qid)
+        if not q:
+            continue
+        picked = (picks.get(i + 1) or "").strip().upper()
+        correct_ans = (q.get("answer") or "").strip().upper()[:1]
+        items.append({
+            "no": i + 1,
+            "question_id": qid,
+            "module": q.get("module"),
+            "submodule": q.get("submodule"),
+            "question": q.get("question"),
+            "options": q.get("options"),
+            "picked": picked,
+            "answer": correct_ans,
+            "correct": bool(picked) and len(picked) == 1 and picked == correct_ans,
+            "explanation": q.get("explanation"),
+            "hs_explanation": q.get("hs_explanation"),
+        })
+    answered = sum(1 for r in items if r["picked"] and len(r["picked"]) == 1)
+    return {
+        "attempt": {
+            "id": attempt["id"],
+            "paper_id": attempt["paper_id"],
+            "started_at": attempt["started_at"],
+            "submitted_at": attempt["submitted_at"],
+            "score": attempt["score"],
+            "per_module": attempt["per_module"],
+        },
+        "paper": {
+            "id": paper["id"],
+            "title": paper["title"],
+            "kind": paper["kind"],
+            "year": paper["year"],
+            "region": paper["region"],
+            "duration_min": paper["duration_min"],
+            "question_ids": paper["question_ids"],
+        },
+        "total": len(items),
+        "answered": answered,
+        "correct": sum(1 for r in items if r["correct"]),
+        "items": items,
+    }
+
+
+@app.get("/api/admin/exam_papers")
+def api_admin_exam_papers(x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return {"items": db.list_exam_papers()}
+
+
 @app.get("/api/paper_questions")
 def api_paper_questions(src: str):
     items = db.paper_questions(src)
@@ -898,13 +1326,29 @@ def api_admin_resolve_report(rid: int, body: dict, x_admin_token: str | None = H
 @app.get("/api/admin/batches")
 def api_admin_batches(x_admin_token: str | None = Header(None)):
     check_admin(x_admin_token)
-    return {"items": db.admin_batches()}
+    return {"items": db.admin_batches_v3()}
 
 
 @app.get("/api/admin/batches/{bid}/sample")
-def api_admin_batch_sample(bid: str, x_admin_token: str | None = Header(None)):
+def api_admin_batch_sample(bid: str, limit: int = 10, x_admin_token: str | None = Header(None)):
     check_admin(x_admin_token)
-    return {"items": db.admin_batch_sample(bid)}
+    return {"items": db.admin_batch_sample(bid, min(limit, 50)), "reviews": db.sample_reviews(bid)}
+
+
+@app.post("/api/admin/batches/{bid}/sample_reviews")
+def api_admin_batch_sample_review(bid: str, body: dict, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    qid = int(body.get("question_id") or 0)
+    verdict = body.get("verdict")
+    if not qid:
+        raise HTTPException(400, "缺少 question_id")
+    if verdict is None:
+        db.sample_review_delete(bid, qid)
+        return {"ok": True, "summary": db.sample_review_summary(bid)}
+    if verdict not in ("ok", "problem"):
+        raise HTTPException(400, "verdict 需为 ok/problem")
+    note = str(body.get("note") or "")[:300] or None
+    return {"ok": True, "summary": db.sample_review_set(bid, qid, verdict, note)}
 
 
 @app.post("/api/admin/batches/{bid}/decide")
@@ -969,7 +1413,12 @@ def api_save_mistake(rec: dict):
 
 @app.get("/api/mistakes")
 def api_list_mistakes(uid: str = ""):
-    return {"items": db.list_mistakes(uid=uid.strip()[:64] or None)}
+    items = db.list_mistakes(uid=uid.strip()[:64] or None)
+    idx = taxonomy.topic_index()
+    for m in items:
+        t = idx.get(m.get("tag3") or "")
+        m["tag3_name"] = t["name"] if t else None
+    return {"items": items}
 
 
 @app.patch("/api/mistakes/{mid}")
@@ -993,14 +1442,15 @@ def api_review_due(uid: str = ""):
 @app.post("/api/review/{mid}")
 def api_review_record(mid: int, body: dict):
     try:
-        return db.record_review(mid, bool(body.get("correct")))
+        uid = (body.get("uid") or "").strip()[:64] or None
+        return db.record_review(mid, bool(body.get("correct")), uid=uid)
     except KeyError:
         raise HTTPException(404, "错题不存在") from None
 
 
 @app.get("/api/stats")
-def api_stats():
-    s = db.stats()
+def api_stats(uid: str = ""):
+    s = db.stats(uid=uid.strip()[:64] or None)
     for row in s["by_module"]:
         row["module"] = kb.MODULES.get(row["module"], {}).get("name", row["module"])
     return s

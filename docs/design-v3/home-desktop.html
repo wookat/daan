@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>刷题首页（宽屏） · 考公助手 design-v3</title>
+<style>
+:root{
+  --brand-50:#EDF3FE; --brand-100:#DCE7FD; --brand-200:#BDD2FB; --brand-300:#8FB2F9;
+  --brand-400:#6493F7; --brand-500:#3B6FF5; --brand-600:#2C5AD6; --brand-700:#2247AC;
+  --grad-brand:linear-gradient(135deg,#5B8AF8,#3B6FF5);
+  --success:#16A34A; --success-bg:#ECFDF5; --error:#DC2626; --error-bg:#FEF2F2;
+  --warning:#D97706; --warning-bg:#FFFBEB; --info:#0284C7; --info-bg:#F0F9FF;
+  --t1:#17181C; --t2:#40434E; --t3:#7D818F; --t4:#B0B4C0;
+  --border:#E7E9F0; --fill:#F2F3F7; --bg:#F6F7FB; --surface:#FFF;
+  --mod-ziliao:#0D9488; --mod-shuliang:#3B6FF5; --mod-yanyu:#E11D48; --mod-panduan:#7C3AED; --mod-changshi:#D97706;
+  --r-s:6px; --r-m:10px; --r-l:14px; --r-xl:20px; --r-full:999px;
+  --sh-1:0 1px 4px rgba(23,24,28,.05); --sh-2:0 4px 12px rgba(23,24,28,.08); --sh-3:0 8px 24px rgba(23,24,28,.16);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue","Microsoft YaHei",sans-serif;
+  background:#E9EBF2;color:var(--t1);font-size:15px;line-height:1.55}
+.stage{display:flex;justify-content:center;align-items:flex-start;gap:24px;padding:0}
+@media(min-width:760px){.stage{padding:32px 24px}}
+.phone{width:375px;flex:none;background:var(--bg);min-height:812px;position:relative;overflow:hidden}
+@media(min-width:760px){.phone{border-radius:28px;box-shadow:var(--sh-3);border:1px solid #d8dbe4}}
+.statusbar{height:44px;display:flex;align-items:flex-end;justify-content:space-between;
+  padding:0 18px 6px;font-size:13px;font-weight:600;color:var(--t1)}
+.statusbar .right{letter-spacing:1px;font-size:12px;color:var(--t2)}
+.navbar{height:44px;display:flex;align-items:center;padding:0 16px;position:relative}
+.navbar .title{position:absolute;left:0;right:0;text-align:center;font-size:16px;font-weight:600;pointer-events:none}
+.navbar .back{width:32px;height:32px;border-radius:var(--r-full);display:flex;align-items:center;justify-content:center;
+  background:var(--surface);border:1px solid var(--border);font-size:15px;color:var(--t2);z-index:1;text-decoration:none}
+.navbar .navact{margin-left:auto;z-index:1;font-size:13px;color:var(--brand-500);font-weight:500;text-decoration:none}
+.content{padding:12px 16px 96px}
+.tabbar{position:absolute;left:0;right:0;bottom:0;height:74px;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);
+  border-top:.5px solid var(--border);display:flex;padding-bottom:18px}
+.tabbar a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  font-size:10px;color:var(--t3);text-decoration:none;min-height:44px}
+.tabbar a.on{color:var(--brand-500);font-weight:600}
+.tabbar .ico{font-size:20px;line-height:1}
+.card{background:var(--surface);border-radius:var(--r-l);box-shadow:var(--sh-1);padding:16px;margin-bottom:12px}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;margin:18px 2px 10px}
+.sec-h .t{font-size:16px;font-weight:700}
+.sec-h .more{font-size:12px;color:var(--t3);text-decoration:none}
+.btn{display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:var(--r-m);
+  font-size:15px;font-weight:600;text-decoration:none;border:none;cursor:pointer}
+.btn-primary{background:var(--grad-brand);color:#fff;box-shadow:0 4px 12px rgba(59,111,245,.28)}
+.btn-ghost{background:var(--brand-50);color:var(--brand-500)}
+.btn-plain{background:var(--surface);color:var(--t2);border:1px solid var(--border)}
+.btn-danger{background:var(--error-bg);color:var(--error)}
+.chip{display:inline-flex;align-items:center;height:30px;padding:0 12px;border-radius:var(--r-full);
+  background:var(--fill);color:var(--t2);font-size:12px;text-decoration:none;white-space:nowrap}
+.chip.on{background:var(--brand-50);color:var(--brand-500);font-weight:600}
+.tag{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:var(--r-s);font-size:11px;font-weight:500}
+.tag-brand{background:var(--brand-50);color:var(--brand-500)}
+.tag-ok{background:var(--success-bg);color:var(--success)}
+.tag-bad{background:var(--error-bg);color:var(--error)}
+.tag-warn{background:var(--warning-bg);color:var(--warning)}
+.tag-info{background:var(--info-bg);color:var(--info)}
+.tag-gray{background:var(--fill);color:var(--t3)}
+.row{display:flex;align-items:center}
+.grow{flex:1;min-width:0}
+.num{font-variant-numeric:tabular-nums;font-weight:700}
+.empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:48px 0;color:var(--t3);font-size:13px}
+.empty .eico{width:72px;height:72px;border-radius:24px;background:var(--fill);display:flex;align-items:center;justify-content:center;font-size:30px}
+.bar{height:6px;border-radius:var(--r-full);background:var(--fill);overflow:hidden}
+.bar>i{display:block;height:100%;border-radius:var(--r-full);background:var(--grad-brand)}
+.dim{position:absolute;inset:0;background:rgba(23,24,28,.45);z-index:10}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:11;background:var(--surface);
+  border-radius:var(--r-xl) var(--r-xl) 0 0;padding:8px 20px calc(20px + 18px);box-shadow:var(--sh-3)}
+.sheet .grab{width:36px;height:4px;border-radius:2px;background:var(--border);margin:4px auto 12px}
+.sheet .sh-t{font-size:17px;font-weight:700;text-align:center;margin-bottom:14px}
+.opt-row{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:.5px solid var(--fill);font-size:15px}
+.opt-row .oico{width:36px;height:36px;border-radius:var(--r-m);background:var(--brand-50);display:flex;align-items:center;justify-content:center;font-size:17px}
+.opt-row .osub{font-size:12px;color:var(--t3)}
+.notes{display:none;width:300px;flex:none;padding-top:8px}
+@media(min-width:760px){.notes{display:block}}
+.note{background:#fff;border:1px solid var(--border);border-left:3px solid var(--brand-500);
+  border-radius:var(--r-m);padding:12px 14px;margin-bottom:12px;font-size:12.5px;color:var(--t2)}
+.note b{display:block;color:var(--t1);margin-bottom:4px;font-size:13px}
+.note.plat{border-left-color:var(--warning)}
+.topbar{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid var(--border);
+  padding:10px 20px;display:flex;align-items:center;gap:14px;font-size:13px}
+.topbar a{color:var(--brand-500);text-decoration:none;font-weight:600}
+.topbar .crumb{color:var(--t3)}
+@media(max-width:759px){.topbar{display:none}}
+
+body{background:var(--bg)}
+.dstage{max-width:1200px;margin:0 auto;padding:24px 28px 64px}
+.dheader{display:flex;align-items:center;gap:28px;background:#fff;border-bottom:1px solid var(--border);padding:0 28px;height:60px;position:sticky;top:0;z-index:6}
+.dheader .logo{font-weight:800;font-size:17px;color:var(--brand-500)}
+.dnav{display:flex;gap:6px}
+.dnav a{padding:8px 14px;border-radius:var(--r-m);font-size:14px;color:var(--t2);text-decoration:none}
+.dnav a.on{background:var(--brand-50);color:var(--brand-500);font-weight:600}
+.dnav a:hover{background:var(--fill)}
+.davatar{margin-left:auto;width:34px;height:34px;border-radius:50%;background:var(--grad-brand);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+</style></head>
+<body>
+<div class="topbar"><a href="index.html">← 原型总览</a><span class="crumb">design-v3 / 01D 刷题首页 · 宽屏（≥768px 宽屏稿）</span></div>
+<div class="dheader"><span class="logo">📘 考公助手</span>
+<nav class="dnav"><a href="home-desktop.html" class="on">刷题</a><a href="book-desktop.html" class="">错题本</a><a href="ask.html">AI 问答</a><a href="stats-desktop.html" class="">统计</a><a href="shenlun.html">申论</a><a href="exam-list.html">模考</a></nav>
+<span class="davatar">树</span></div>
+<div class="dstage">
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:20px">
+ <div>
+  <div style="background:var(--grad-brand);border-radius:var(--r-xl);padding:28px;color:#fff;margin-bottom:20px;display:flex;align-items:center;gap:32px">
+    <div class="grow"><div style="font-size:15px;opacity:.9">今日已练 <b class="num" style="font-size:26px">32</b>/50 题 · 连续打卡 12 天</div>
+    <div class="bar" style="background:rgba(255,255,255,.25);margin-top:12px;max-width:420px"><i style="width:64%;background:#fff"></i></div></div>
+    <a class="btn" href="practice.html" style="background:#fff;color:var(--brand-500);padding:0 28px">继续目标 ›</a>
+  </div>
+  <div class="sec-h"><span class="t">专项练习</span></div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px"><a class="card" href="practice.html" style="margin:0;text-decoration:none;color:inherit">
+    <span style="width:44px;height:44px;border-radius:var(--r-m);background:color-mix(in srgb,var(--mod-ziliao) 10%,white);display:flex;align-items:center;justify-content:center;font-size:20px">📊</span>
+    <div style="font-weight:600;margin-top:10px">资料分析</div>
+    <div style="font-size:12px;color:var(--t3);margin:4px 0 8px">32,140 题 · 正确率 72%</div>
+    <div class="bar" style="height:5px"><i style="width:72%;background:var(--mod-ziliao)"></i></div></a><a class="card" href="practice.html" style="margin:0;text-decoration:none;color:inherit">
+    <span style="width:44px;height:44px;border-radius:var(--r-m);background:color-mix(in srgb,var(--mod-shuliang) 10%,white);display:flex;align-items:center;justify-content:center;font-size:20px">🔢</span>
+    <div style="font-weight:600;margin-top:10px">数量关系</div>
+    <div style="font-size:12px;color:var(--t3);margin:4px 0 8px">18,660 题 · 正确率 69%</div>
+    <div class="bar" style="height:5px"><i style="width:69%;background:var(--mod-shuliang)"></i></div></a><a class="card" href="practice.html" style="margin:0;text-decoration:none;color:inherit">
+    <span style="width:44px;height:44px;border-radius:var(--r-m);background:color-mix(in srgb,var(--mod-yanyu) 10%,white);display:flex;align-items:center;justify-content:center;font-size:20px">💬</span>
+    <div style="font-weight:600;margin-top:10px">言语理解</div>
+    <div style="font-size:12px;color:var(--t3);margin:4px 0 8px">41,205 题 · 正确率 66%</div>
+    <div class="bar" style="height:5px"><i style="width:66%;background:var(--mod-yanyu)"></i></div></a><a class="card" href="practice.html" style="margin:0;text-decoration:none;color:inherit">
+    <span style="width:44px;height:44px;border-radius:var(--r-m);background:color-mix(in srgb,var(--mod-panduan) 10%,white);display:flex;align-items:center;justify-content:center;font-size:20px">🧩</span>
+    <div style="font-weight:600;margin-top:10px">判断推理</div>
+    <div style="font-size:12px;color:var(--t3);margin:4px 0 8px">28,930 题 · 正确率 63%</div>
+    <div class="bar" style="height:5px"><i style="width:63%;background:var(--mod-panduan)"></i></div></a><a class="card" href="practice.html" style="margin:0;text-decoration:none;color:inherit">
+    <span style="width:44px;height:44px;border-radius:var(--r-m);background:color-mix(in srgb,var(--mod-changshi) 10%,white);display:flex;align-items:center;justify-content:center;font-size:20px">💡</span>
+    <div style="font-weight:600;margin-top:10px">常识判断</div>
+    <div style="font-size:12px;color:var(--t3);margin:4px 0 8px">15,872 题 · 正确率 60%</div>
+    <div class="bar" style="height:5px"><i style="width:60%;background:var(--mod-changshi)"></i></div></a><a class="card" href="exam-list.html" style="margin:0;text-decoration:none;color:inherit;display:flex;flex-direction:column;justify-content:center;align-items:center;border:1.5px dashed var(--border);box-shadow:none;background:transparent"><span style="font-size:22px">📝</span><span style="font-weight:600;margin-top:6px;color:var(--t2)">全真模考 ›</span></a>
+  </div>
+ </div>
+ <aside>
+  <div class="card"><div class="sec-h" style="margin:0 0 10px"><span class="t" style="font-size:14px">今日计划</span><a class="more" href="plan.html">编辑</a></div>
+   <div class="opt-row" style="border:none;padding:8px 0"><span style="color:var(--success)">✓</span><span class="grow" style="color:var(--t4);text-decoration:line-through">专项练习 · 资料分析 20 题</span></div>
+   <div class="opt-row" style="border:none;padding:8px 0"><span style="color:var(--t4)">○</span><span class="grow">错题复习 14 题</span></div>
+   <div class="opt-row" style="border:none;padding:8px 0"><span style="color:var(--t4)">○</span><span class="grow">时政每日一练 10 题</span></div>
+  </div>
+  <div class="card"><div class="sec-h" style="margin:0 0 10px"><span class="t" style="font-size:14px">时政每日一练</span><span class="tag tag-warn">10.28</span></div>
+   <p style="font-size:13px;color:var(--t3)">今日热点：二十届四中全会公报 · 10 题</p>
+   <a class="btn btn-ghost" href="daily.html" style="margin-top:10px;min-height:38px;font-size:13px">去练习 ›</a></div>
+  <div class="card"><div class="sec-h" style="margin:0 0 10px"><span class="t" style="font-size:14px">错题复习</span></div>
+   <p style="font-size:13px;color:var(--t3)">今日待复习 <b style="color:var(--error)">14</b> 题（遗忘曲线）</p>
+   <a class="btn btn-primary" href="book-desktop.html" style="margin-top:10px;min-height:38px;font-size:13px">开始复习</a></div>
+ </aside>
+</div></div>
+</body></html>

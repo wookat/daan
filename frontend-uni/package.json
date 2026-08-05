@@ -30,12 +30,17 @@
     "build:mp-toutiao": "uni build -p mp-toutiao",
     "build:mp-harmony": "uni build -p mp-harmony",
     "build:mp-weixin": "uni build -p mp-weixin",
+    "build:android": "VITE_API_BASE=${VITE_API_BASE:-https://kaogong.zalize.com} uni build && cap sync android && (cd android && ./gradlew assembleDebug)",
     "build:mp-xhs": "uni build -p mp-xhs",
     "build:quickapp-webview": "uni build -p quickapp-webview",
     "build:quickapp-webview-huawei": "uni build -p quickapp-webview-huawei",
     "build:quickapp-webview-union": "uni build -p quickapp-webview-union"
   },
   "dependencies": {
+    "@capacitor-community/file-opener": "8.0.1",
+    "@capacitor/camera": "8.2.2",
+    "@capacitor/core": "8.4.2",
+    "@capacitor/filesystem": "8.1.2",
     "@dcloudio/uni-app": "3.0.0-5010520260709002",
     "@dcloudio/uni-app-harmony": "3.0.0-5010520260709002",
     "@dcloudio/uni-app-plus": "3.0.0-5010520260709002",
@@ -53,10 +58,14 @@
     "@dcloudio/uni-mp-xhs": "3.0.0-5010520260709002",
     "@dcloudio/uni-quickapp-webview": "3.0.0-5010520260709002",
     "@dcloudio/uni-ui": "^1.5.12",
+    "qrcode-generator": "^2.0.4",
     "vue": "^3.4.21",
-    "vue-i18n": "^9.1.9"
+    "vue-i18n": "^9.1.9",
+    "wot-design-uni": "1.14.0"
   },
   "devDependencies": {
+    "@capacitor/android": "8.4.2",
+    "@capacitor/cli": "8.4.2",
     "@dcloudio/types": "^3.4.8",
     "@dcloudio/uni-automator": "3.0.0-5010520260709002",
     "@dcloudio/uni-cli-shared": "3.0.0-5010520260709002",

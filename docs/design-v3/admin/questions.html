@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>题库管理 · 管理后台 design-v3</title><link rel="stylesheet" href="admin.css"></head>
+<body>
+<div class="layout">
+<aside class="side">
+  <div class="logo"><span class="mark">考</span><span class="name">考公助手 · 管理台</span></div>
+  <div class="grp">概览</div>
+  <nav><a href="dashboard.html"><span class="ico">📊</span><span class="txt">数据看板</span></a></nav>
+  <div class="grp">内容</div>
+  <nav>
+    <a class="on" href="questions.html"><span class="ico">📚</span><span class="txt">题库管理</span></a>
+    <a href="batches.html"><span class="ico">📦</span><span class="txt">批次导入审核</span><span class="badge">3</span></a>
+    <a href="taxonomy.html"><span class="ico">🌲</span><span class="txt">考点树</span></a>
+    <a href="review.html"><span class="ico">🔍</span><span class="txt">考点抽审</span><span class="badge">86</span></a>
+    <a href="reports.html"><span class="ico">🛠</span><span class="txt">纠错处理</span><span class="badge">12</span></a>
+    <a href="governance.html"><span class="ico">🛡</span><span class="txt">内容治理</span></a>
+    <a href="content.html"><span class="ico">📰</span><span class="txt">时政与申论</span></a>
+  </nav>
+  <div class="grp">用户</div>
+  <nav><a href="users.html"><span class="ico">👥</span><span class="txt">用户与运营</span></a></nav>
+  <div class="grp">系统</div>
+  <nav><a href="settings.html"><span class="ico">⚙️</span><span class="txt">系统设置</span></a></nav>
+  <div class="foot">design-v3 · <a href="index.html">原型总览</a></div>
+</aside>
+<div class="main">
+  <div class="topbar">
+    <span class="crumb"><b>题库管理</b>　内容 / 题库管理</span>
+    <div class="search">🔎 搜索题目 ID / 题干…　<span class="kbd">⌘K</span></div>
+    <span class="env">● 生产环境</span><span class="avatar">管</span>
+  </div>
+  <div class="content">
+    <div class="pagehead">
+      <div><h1>题库管理</h1><div class="sub">共 131,204 题 · 已下架 312 · 差评待处理 47</div></div>
+      <div class="acts"><button class="btn btn-plain">导出筛选结果</button><button class="btn btn-primary">＋ 新建题目</button></div>
+    </div>
+
+    <div class="filterbar">
+      <input class="ipt" style="width:260px" placeholder="题干关键词 / 题目 ID" value="增长率">
+      <select class="ipt"><option>全部模块</option><option selected>资料分析</option><option>数量关系</option><option>言语理解</option><option>判断推理</option><option>常识判断</option></select>
+      <select class="ipt"><option selected>全部状态</option><option>已上架</option><option>已下架</option><option>差评待处理</option></select>
+      <select class="ipt"><option selected>全部来源</option><option>真题</option><option>AI 生成</option><option>人工录入</option></select>
+      <span class="sep"></span>
+      <button class="chip on">有差评 47</button><button class="chip">缺解析</button><button class="chip">缺考点</button>
+      <button class="btn btn-ghost">搜索</button>
+    </div>
+
+    <!-- 批量操作条：勾选后浮出 -->
+    <div class="card" style="display:flex;align-items:center;gap:12px;padding:10px 16px;margin-bottom:10px;border:1px solid var(--brand-200);background:var(--brand-50)">
+      <span class="ck on"></span><b>已选 2 题</b>
+      <button class="btn btn-sm btn-plain">批量下架</button>
+      <button class="btn btn-sm btn-plain">批量改考点</button>
+      <button class="btn btn-sm btn-plain">清空差评解析（重产）</button>
+      <button class="btn btn-sm btn-danger">删除</button>
+      <a class="grow" style="text-align:right;font-size:12px" href="#">取消选择</a>
+    </div>
+
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr>
+          <th style="width:36px"><span class="ck"></span></th><th style="width:70px">ID</th><th>题干</th>
+          <th style="width:120px">模块 / 考点</th><th style="width:88px">来源</th><th style="width:56px">答案</th>
+          <th style="width:90px">反馈</th><th style="width:72px">状态</th><th style="width:130px">操作</th>
+        </tr></thead>
+        <tbody>
+        <tr class="sel"><td><span class="ck on"></span></td><td class="num">84213</td>
+          <td><div class="tit">2023 年该省高新技术产业增加值同比增长约为——</div><div class="sub">材料组 #2210 · 5 题同组</div></td>
+          <td><span class="tag" style="background:#E6FBF8;color:var(--mod-ziliao)">资料分析</span><div class="sub">ZL-03 增长率计算</div></td>
+          <td><span class="tag tag-brand">真题 2024 国考</span></td><td><b>B</b></td>
+          <td><span class="tag tag-bad">👎 6</span> <span class="sub">👍 12</span></td>
+          <td><span class="tag tag-ok">已上架</span></td>
+          <td><a href="#">编辑</a>　<a href="#" style="color:var(--error)">下架</a></td></tr>
+        <tr class="sel"><td><span class="ck on"></span></td><td class="num">84214</td>
+          <td><div class="tit">能够从上述资料中推出的是——</div><div class="sub">材料组 #2210</div></td>
+          <td><span class="tag" style="background:#E6FBF8;color:var(--mod-ziliao)">资料分析</span><div class="sub">ZL-07 综合判断</div></td>
+          <td><span class="tag tag-brand">真题 2024 国考</span></td><td><b>D</b></td>
+          <td><span class="tag tag-bad">👎 3</span></td>
+          <td><span class="tag tag-ok">已上架</span></td>
+          <td><a href="#">编辑</a>　<a href="#" style="color:var(--error)">下架</a></td></tr>
+        <tr><td><span class="ck"></span></td><td class="num">79102</td>
+          <td><div class="tit">2022 年全国粮食产量比上年增长 0.5%，其中夏粮增长——</div><div class="sub">单题</div></td>
+          <td><span class="tag" style="background:#E6FBF8;color:var(--mod-ziliao)">资料分析</span><div class="sub">ZL-01 基期与现期</div></td>
+          <td><span class="tag tag-gray">AI 生成</span></td><td><b>A</b></td>
+          <td><span class="sub">👍 4</span></td>
+          <td><span class="tag tag-ok">已上架</span></td>
+          <td><a href="#">编辑</a>　<a href="#" style="color:var(--error)">下架</a></td></tr>
+        <tr><td><span class="ck"></span></td><td class="num">77841</td>
+          <td><div class="tit">某市 2021 年 GDP 增长率为 8.4%，若保持该增速……</div><div class="sub">单题 · 缺解析</div></td>
+          <td><span class="tag" style="background:#E6FBF8;color:var(--mod-ziliao)">资料分析</span><div class="sub" style="color:var(--warning)">UNKNOWN 待标注</div></td>
+          <td><span class="tag tag-gray">人工录入</span></td><td><b>C</b></td>
+          <td><span class="sub">—</span></td>
+          <td><span class="tag tag-bad">已下架</span></td>
+          <td><a href="#">编辑</a>　<a href="#" style="color:var(--success)">恢复上架</a></td></tr>
+        </tbody>
+      </table>
+      <div class="tbl-foot">显示 1–20 / 共 1,284 条筛选结果
+        <div class="pager"><a href="#">‹</a><a class="on" href="#">1</a><a href="#">2</a><a href="#">3</a><a href="#">…</a><a href="#">65</a><a href="#">›</a></div>
+      </div>
+    </div>
+
+    <div class="dnote"><b>设计说明 · 题库管理</b>
+      现状卡片流改为「表格 + 右侧编辑抽屉」：列表信息密度高、可批量勾选；行内仅保留高频操作（编辑/上下架），编辑不离开列表上下文。筛选区固定四下拉 + 问题 chips（差评/缺解析/缺考点），替代现状仅关键词+模块。</div>
+  </div>
+</div>
+</div>
+
+<!-- 编辑抽屉（展开态示意） -->
+<div class="dim"></div>
+<div class="drawer">
+  <div class="dw-h"><span class="t">编辑题目 <span class="num" style="color:var(--t3)">#84213</span></span>
+    <span class="tag tag-brand">真题 2024 国考</span><span class="tag tag-bad">👎 6</span>
+    <span class="x">✕</span></div>
+  <div class="dw-b">
+    <div class="fld"><div class="lb">题干</div>
+      <textarea class="ipt" style="min-height:110px">根据资料，2023 年该省高新技术产业增加值同比增长约为（　）。</textarea></div>
+    <div class="fld"><div class="lb">选项</div>
+      <div style="display:grid;gap:8px">
+        <div class="row" style="gap:8px"><span class="kbd">A</span><input class="ipt grow" value="8.6%"></div>
+        <div class="row" style="gap:8px"><span class="kbd">B</span><input class="ipt grow" value="12.3%" style="border-color:var(--success)"></div>
+        <div class="row" style="gap:8px"><span class="kbd">C</span><input class="ipt grow" value="15.1%"></div>
+        <div class="row" style="gap:8px"><span class="kbd">D</span><input class="ipt grow" value="18.9%"></div>
+      </div></div>
+    <div class="row" style="gap:12px">
+      <div class="fld grow"><div class="lb">正确答案</div><select class="ipt" style="width:100%"><option>A</option><option selected>B</option><option>C</option><option>D</option></select></div>
+      <div class="fld grow"><div class="lb">模块</div><select class="ipt" style="width:100%"><option selected>资料分析</option><option>数量关系</option></select></div>
+      <div class="fld grow"><div class="lb">三级考点</div><select class="ipt" style="width:100%"><option selected>ZL-03 增长率计算</option></select></div>
+    </div>
+    <div class="fld"><div class="lb">花生解析 <span class="tag tag-bad">差评 6 · 建议重写</span></div>
+      <textarea class="ipt" style="min-height:130px">【方法】截位直除。观察选项首位各不相同，材料给出 2023 年增加值 4,820 亿元、2022 年 4,292 亿元……</textarea>
+      <div class="row" style="gap:8px;margin-top:8px">
+        <button class="btn btn-sm btn-ghost">✨ AI 重产解析</button>
+        <button class="btn btn-sm btn-plain">清空待重产</button>
+        <span class="sub" style="font-size:12px;color:var(--t3)">最近编辑：2026-08-02 by 管理员</span>
+      </div></div>
+    <div class="fld"><div class="lb">材料组</div>
+      <div class="card" style="background:var(--fill);box-shadow:none;padding:12px;font-size:12px;color:var(--t2)">
+        材料 #2210 · 本组共 5 题（84210–84214）· <a href="#">查看/编辑共享材料 →</a></div></div>
+  </div>
+  <div class="dw-f">
+    <button class="btn btn-danger">下架此题</button>
+    <span class="grow"></span>
+    <button class="btn btn-plain">取消</button>
+    <button class="btn btn-primary btn-lg">保存修改</button>
+  </div>
+</div>
+</body></html>
