@@ -163,7 +163,10 @@ class _OfflinePageState extends State<OfflinePage> {
           ),
           const SizedBox(height: 16),
           FilledButton.icon(
-            onPressed: () => context.push('/practice'),
+            onPressed: () async {
+              await context.push('/practice');
+              if (mounted) setState(() {});
+            },
             icon: const Icon(LucideIcons.play, size: 16),
             label: const Text('开始练习（断网时自动用本地题包）'),
           ),

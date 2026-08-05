@@ -373,7 +373,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       context: context,
       builder: (c) => AlertDialog(
         title: Text(a != null ? (a['title'] ?? '公告').toString() : '公告'),
-        content: Text(a != null ? (a['content'] ?? '').toString() : '暂无公告'),
+        content: Text(a != null ? (a['body'] ?? '').toString() : '暂无公告'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(c), child: const Text('知道了')),
         ],
