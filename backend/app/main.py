@@ -922,7 +922,8 @@ def api_shenlun_question(qid: int):
 
 
 @app.post("/api/shenlun/grade")
-async def api_shenlun_grade(body: dict):
+async def api_shenlun_grade(body: dict, x_access_code: str | None = Header(None)):
+    check_access(x_access_code)
     qid = body.get("qid")
     answer = (body.get("answer") or "").strip()
     if not qid or not answer:
