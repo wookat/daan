@@ -22,6 +22,16 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
   int dueCount = 0;
   bool loading = true;
   String? error;
+  String modFilter = '';
+  String keyword = '';
+
+  List<Mistake> get filtered => all.where((m) {
+        if (modFilter.isNotEmpty && m.module != modFilter) return false;
+        if (keyword.isNotEmpty && !m.questionText.contains(keyword)) {
+          return false;
+        }
+        return true;
+      }).toList();
 
   @override
   void initState() {
@@ -58,8 +68,9 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
-    final pending = all.where((m) => !m.mastered).toList();
-    final mastered = all.where((m) => m.mastered).toList();
+    final list = filtered;
+    final pending = list.where((m) => !m.mastered).toList();
+    final mastered = list.where((m) => m.mastered).toList();
     return Scaffold(
       appBar: AppBar(
         title: const Text('错题本'),
@@ -135,6 +146,68 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
                 )
               : Column(
                   children: [
+                    // 模块筛选 + 关键词搜索（复刻 book.vue 筛选栏）
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                      child: SizedBox(
+                        height: 36,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ChoiceChip(
+                                label: const Text('全部', style: TextStyle(fontSize: 12)),
+                                selected: modFilter.isEmpty,
+                                onSelected: (_) => setState(() => modFilter = ''),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ),
+                            for (final e in kModuleNames.entries)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: ChoiceChip(
+                                  label: Text(e.value, style: const TextStyle(fontSize: 12)),
+                                  selected: modFilter == e.key,
+                                  onSelected: (_) => setState(() => modFilter = e.key),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                      child: TextField(
+                        onChanged: (v) => setState(() => keyword = v.trim()),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          hintText: '搜题干关键词',
+                          hintStyle: const TextStyle(fontSize: 13, color: KgColors.t4),
+                          prefixIcon: const Icon(LucideIcons.search, size: 16),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(color: KgColors.border),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (modFilter.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton(
+                            onPressed: () async {
+                              await context.push('/practice?mode=redo&module=$modFilter');
+                              _load();
+                            },
+                            child: Text('重练「${moduleName(modFilter)}」错题'),
+                          ),
+                        ),
+                      ),
                     if (dueCount > 0)
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -201,6 +274,10 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
                         if (m.questionType != null && m.questionType!.isNotEmpty) ...[
                           const SizedBox(width: 6),
                           _tag(m.questionType!, KgColors.t3),
+                        ],
+                        if (m.errorReason != null && m.errorReason!.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          _tag(m.errorReason!, KgColors.warning),
                         ],
                         const Spacer(),
                         if (m.times > 1)
