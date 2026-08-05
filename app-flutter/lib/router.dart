@@ -4,6 +4,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 
 import 'pages/ask_page.dart';
 import 'pages/book_detail_page.dart';
+import 'pages/calendar_page.dart';
 import 'pages/exam_list_page.dart';
 import 'pages/exam_page.dart';
 import 'pages/exam_report_page.dart';
@@ -47,6 +48,10 @@ final router = GoRouter(
       builder: (c, s) => PracticePage(
         module: s.uri.queryParameters['module'],
         mode: s.uri.queryParameters['mode'] ?? 'normal',
+        submodule: s.uri.queryParameters['submodule'],
+        count: int.tryParse(s.uri.queryParameters['count'] ?? ''),
+        source: s.uri.queryParameters['source'],
+        title: s.uri.queryParameters['title'],
       ),
     ),
     GoRoute(
@@ -101,6 +106,7 @@ final router = GoRouter(
     GoRoute(path: '/reminders', builder: (c, s) => const RemindersPage()),
     GoRoute(path: '/offline', builder: (c, s) => const OfflinePage()),
     GoRoute(path: '/poster', builder: (c, s) => const PosterPage()),
+    GoRoute(path: '/calendar', builder: (c, s) => const CalendarPage()),
     GoRoute(path: '/login', builder: (c, s) => const LoginPage()),
     GoRoute(
       path: '/placeholder',

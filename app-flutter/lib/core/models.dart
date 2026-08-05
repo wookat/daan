@@ -10,6 +10,9 @@ class Question {
     this.questionType,
     this.explanation,
     this.mistakeId,
+    this.image,
+    this.imageCredit,
+    this.source,
   });
 
   final int? id;
@@ -20,15 +23,20 @@ class Question {
   final String? submodule;
   final String? questionType;
   final String? explanation;
+  final String? image;
+  final String? imageCredit;
+  final String? source;
 
-  /// 错题重练时对应的错题 id
-  final int? mistakeId;
+  /// 错题重练/新存错题时对应的错题 id（错因自评需要）
+  int? mistakeId;
 
   // 作答态
   String? picked;
   int secs = 0;
   bool logged = false;
   bool savedAsMistake = false;
+  String? errorReason;
+  bool reported = false;
 
   bool get answered => picked != null;
   bool get correct => picked == answer;
@@ -49,6 +57,9 @@ class Question {
       questionType: j['question_type']?.toString(),
       explanation: j['explanation']?.toString(),
       mistakeId: mistakeId,
+      image: j['image']?.toString(),
+      imageCredit: j['image_credit']?.toString(),
+      source: j['source']?.toString(),
     );
   }
 }

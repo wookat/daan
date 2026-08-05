@@ -231,6 +231,89 @@ class Store {
   set offlineQueue(Map<String, dynamic> v) =>
       _sp.setString('offlineQueue', jsonEncode(v));
 
+  // ---------- 练习设置（复刻 groupSize / realMode / realYear / realRegion 键） ----------
+
+  int get groupSize => _sp.getInt('groupSize') ?? 10;
+  set groupSize(int v) => _sp.setInt('groupSize', v);
+
+  bool get realMode => _sp.getBool('realMode') ?? false;
+  set realMode(bool v) => _sp.setBool('realMode', v);
+
+  int? get realYear => _sp.getInt('realYear');
+  set realYear(int? v) =>
+      v == null ? _sp.remove('realYear') : _sp.setInt('realYear', v);
+
+  String get realRegion => _sp.getString('realRegion') ?? '';
+  set realRegion(String v) =>
+      v.isEmpty ? _sp.remove('realRegion') : _sp.setString('realRegion', v);
+
+  // ---------- 公告关闭记录（复刻 annDismissed 键） ----------
+
+  String get annDismissed => _sp.getString('annDismissed') ?? '';
+  set annDismissed(String v) => _sp.setString('annDismissed', v);
+
+  // ---------- 各模块本地做题统计（复刻 pstats.byModule） ----------
+
+  Map<String, dynamic> get moduleStats {
+    final s = _sp.getString('moduleStats');
+    if (s == null || s.isEmpty) return {};
+    final d = jsonDecode(s);
+    return d is Map<String, dynamic> ? d : {};
+  }
+
+  void addModuleStat(String module, int done, int correct) {
+    if (module.isEmpty) return;
+    final all = moduleStats;
+    final cur = Map<String, dynamic>.from(all[module] as Map? ?? {});
+    all[module] = {
+      'done': ((cur['done'] ?? 0) as num).toInt() + done,
+      'correct': ((cur['correct'] ?? 0) as num).toInt() + correct,
+    };
+    _sp.setString('moduleStats', jsonEncode(all));
+  }
+
+  // ---------- 练习记录 / 最高连对（复刻 practiceHistory / pstats.bestStreak） ----------
+
+  List<dynamic> get practiceHistory => _jsonList('practiceHistory');
+  set practiceHistory(List<dynamic> v) =>
+      _sp.setString('practiceHistory', jsonEncode(v));
+
+  void addPracticeHistory(Map<String, dynamic> rec) {
+    practiceHistory = [rec, ...practiceHistory].take(50).toList();
+  }
+
+  int get bestStreak => _sp.getInt('bestStreak') ?? 0;
+  set bestStreak(int v) => _sp.setInt('bestStreak', v);
+
+  // ---------- AI 学习教练 / 备份恢复码（复刻 coachAdvice / backupCode 键） ----------
+
+  String get coachAdvice => _sp.getString('coachAdvice') ?? '';
+  set coachAdvice(String v) => _sp.setString('coachAdvice', v);
+
+  String get backupCode => _sp.getString('backupCode') ?? '';
+  set backupCode(String v) => _sp.setString('backupCode', v);
+
+  /// 备份数据（复刻 stats.vue localData 键集合，取本端有意义的键）。
+  Map<String, dynamic> backupData() {
+    final out = <String, dynamic>{
+      'dailyGoal': dailyGoal,
+      'fontLv': fontLv,
+      'bestStreak': bestStreak,
+    };
+    if (practiceHistory.isNotEmpty) out['practiceHistory'] = practiceHistory;
+    if (coachAdvice.isNotEmpty) out['coachAdvice'] = coachAdvice;
+    if (backupCode.isNotEmpty) out['backupCode'] = backupCode;
+    return out;
+  }
+
+  void restoreBackup(Map<String, dynamic> data) {
+    if (data['dailyGoal'] is num) dailyGoal = (data['dailyGoal'] as num).toInt();
+    if (data['fontLv'] is num) fontLv = (data['fontLv'] as num).toInt();
+    if (data['bestStreak'] is num) bestStreak = (data['bestStreak'] as num).toInt();
+    if (data['practiceHistory'] is List) practiceHistory = data['practiceHistory'] as List;
+    if (data['coachAdvice'] is String) coachAdvice = data['coachAdvice'] as String;
+  }
+
   // ---------- 主题 ----------
 
   String get themeMode => _sp.getString('themeMode') ?? 'system';

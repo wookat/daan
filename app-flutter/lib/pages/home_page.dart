@@ -9,6 +9,10 @@ import '../core/storage.dart';
 import '../theme.dart';
 import '../widgets/plan_setup_sheet.dart';
 
+/// 首页：复刻 pages/home/home.vue。
+/// 搜索 + 今日目标 Hero（打卡海报/连续打卡）+ 学习计划 + 断卡提示 + 公告 +
+/// 时政每日一练 + 专项练习（进度/二级题型）+ 混合刷题 + 智能弱项 +
+/// 更多练习（模考/申论/错题/拍题/PK/迷你模考/真题卷）+ 练习设置。
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
@@ -21,11 +25,16 @@ class _HomePageState extends ConsumerState<HomePage> {
   Map<String, dynamic>? plan;
   bool planLoaded = false;
   bool guideHidden = Store.instance.planGuideHide;
+  List<Map<String, dynamic>> counts = [];
+  Map<String, dynamic>? announce;
+  Map<String, dynamic> moduleStats = Store.instance.moduleStats;
 
   @override
   void initState() {
     super.initState();
     _loadPlan();
+    _loadCounts();
+    _loadAnnounce();
   }
 
   Future<void> _loadPlan() async {
@@ -41,12 +50,61 @@ class _HomePageState extends ConsumerState<HomePage> {
     if (mounted) setState(() => planLoaded = true);
   }
 
+  Future<void> _loadCounts() async {
+    try {
+      final d = await Api.questions(limit: 1, adaptive: false);
+      if (mounted) {
+        setState(() => counts = (d['counts'] as List<dynamic>? ?? [])
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList());
+      }
+    } catch (_) {/* 非关键路径 */}
+  }
+
+  Future<void> _loadAnnounce() async {
+    try {
+      final item = await Api.announcement();
+      if (item != null &&
+          Store.instance.annDismissed != '${item['id']}' &&
+          mounted) {
+        setState(() => announce = item);
+      }
+    } catch (_) {/* 非关键路径 */}
+  }
+
   Future<void> _openSetup() async {
     final pf = await showPlanSetupSheet(context, profile: profile);
     if (pf != null) {
       setState(() => profile = pf);
       _loadPlan();
     }
+  }
+
+  // ---------- 本地统计派生 ----------
+
+  Map<String, dynamic> _modStat(String m) =>
+      Map<String, dynamic>.from(moduleStats[m] as Map? ?? {});
+
+  String? get weakModule {
+    String? worst;
+    var worstAcc = 1.0;
+    moduleStats.forEach((m, v) {
+      final s = Map<String, dynamic>.from(v as Map);
+      final done = ((s['done'] ?? 0) as num).toInt();
+      if (done < 5) return;
+      final acc = ((s['correct'] ?? 0) as num).toInt() / done;
+      if (acc < 0.8 && acc < worstAcc) {
+        worstAcc = acc;
+        worst = m;
+      }
+    });
+    return worst;
+  }
+
+  bool get szTodayDone {
+    final days = Map<String, dynamic>.from(
+        Store.instance.szDaily['days'] as Map? ?? {});
+    return days[DateTime.now().toIso8601String().substring(0, 10)] != null;
   }
 
   @override
@@ -76,55 +134,14 @@ class _HomePageState extends ConsumerState<HomePage> {
                   children: [
                     Icon(LucideIcons.search, size: 16, color: KgColors.t4),
                     SizedBox(width: 8),
-                    Text('题号 / 题干关键词 / 考点名',
+                    Text('搜题目 / 考点 / 试卷，支持题号',
                         style: TextStyle(fontSize: 13, color: KgColors.t4)),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 14),
-            // 今日目标 Hero
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: kBrandGradient,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('今日目标',
-                      style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 6),
-                  Text(
-                    '今日已练 $today/$goal 题${today >= goal ? ' · 已达成' : ''}',
-                    style: const TextStyle(color: Colors.white70, fontSize: 13),
-                  ),
-                  const SizedBox(height: 12),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: LinearProgressIndicator(
-                      value: pct,
-                      minHeight: 6,
-                      backgroundColor: Colors.white24,
-                      valueColor: const AlwaysStoppedAnimation(Colors.white),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: KgColors.brandDeep,
-                      ),
-                      onPressed: () => context.push('/practice'),
-                      child: Text(today >= goal ? '再练一组' : '继续目标'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _hero(today, goal, pct),
             // 学习计划：引导卡 / 今日计划卡
             if (planLoaded && profile == null && !guideHidden) ...[
               const SizedBox(height: 14),
@@ -134,31 +151,56 @@ class _HomePageState extends ConsumerState<HomePage> {
               const SizedBox(height: 14),
               _planCard(),
             ],
+            if (announce != null) ...[
+              const SizedBox(height: 14),
+              _announceCard(),
+            ],
+            const SizedBox(height: 14),
+            _szCard(),
             const SizedBox(height: 20),
-            const _SectionTitle('专项练习'),
+            Row(
+              children: [
+                const _SectionTitle('专项练习'),
+                const Spacer(),
+                InkWell(
+                  onTap: _openSettings,
+                  child: const Text('练习设置 ›',
+                      style: TextStyle(fontSize: 13, color: KgColors.brand)),
+                ),
+              ],
+            ),
             const SizedBox(height: 10),
             Card(
               child: Column(
                 children: [
-                  for (final e in kModuleNames.entries)
-                    ListTile(
-                      leading: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: (KgColors.moduleColors[e.key] ?? KgColors.brand).withValues(alpha: .12),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(_moduleIcon(e.key),
-                            size: 20, color: KgColors.moduleColors[e.key] ?? KgColors.brand),
+                  for (final e in kModuleNames.entries) _moduleRow(e.key, e.value),
+                  // 混合刷题
+                  ListTile(
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: KgColors.brand.withValues(alpha: .12),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      title: Text(e.value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                      trailing: const Icon(LucideIcons.chevronRight, size: 18, color: KgColors.t4),
-                      onTap: () => context.push('/practice?module=${e.key}'),
+                      child: const Icon(LucideIcons.shuffle,
+                          size: 20, color: KgColors.brand),
                     ),
+                    title: const Text('混合刷题',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    subtitle: Text('全部模块随机 · 每组 ${Store.instance.groupSize} 题',
+                        style: const TextStyle(fontSize: 12, color: KgColors.t3)),
+                    trailing: const Icon(LucideIcons.chevronRight,
+                        size: 18, color: KgColors.t4),
+                    onTap: () => context.push('/practice'),
+                  ),
                 ],
               ),
             ),
+            if (weakModule != null) ...[
+              const SizedBox(height: 10),
+              _smartCard(weakModule!),
+            ],
             const SizedBox(height: 20),
             const _SectionTitle('更多练习'),
             const SizedBox(height: 10),
@@ -169,18 +211,543 @@ class _HomePageState extends ConsumerState<HomePage> {
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
               children: [
-                _entry(context, LucideIcons.timer, '模考', '/exam/list'),
-                _entry(context, LucideIcons.repeat, '错题重练', '/practice?mode=redo'),
-                _entry(context, LucideIcons.penTool, '申论', '/shenlun'),
-                _entry(context, LucideIcons.newspaper, '时政每日练', '/shizheng'),
+                _entry(context, LucideIcons.fileText, '全真模考', '/exam/list'),
+                _entry(context, LucideIcons.penTool, '申论专区', '/shenlun'),
+                _entry(context, LucideIcons.rotateCcw, '错题重练', '/practice?mode=redo'),
                 _entry(context, LucideIcons.camera, '拍题讲解', '/ask'),
+                _entry(context, LucideIcons.swords, '答题 PK', '/pk'),
+                _entry(context, LucideIcons.zap, '迷你模考', '/exam/run?mini=1'),
+                _paperEntry(context),
                 _entry(context, LucideIcons.star, '收藏笔记', '/favorites'),
-                _entry(context, LucideIcons.flame, '打卡海报', '/poster'),
-                _entry(context, LucideIcons.fileDown, 'PDF导出', '/book'),
               ],
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _hero(int today, int goal, double pct) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: kBrandGradient,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '今日已练 $today/$goal 题${today >= goal ? ' · 已达成' : ''}',
+                  style: const TextStyle(
+                      color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700),
+                ),
+              ),
+              if (today >= goal)
+                InkWell(
+                  onTap: () => context.push('/poster'),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(LucideIcons.partyPopper, size: 13, color: Colors.white),
+                        SizedBox(width: 4),
+                        Text('生成打卡海报 ›',
+                            style: TextStyle(color: Colors.white, fontSize: 11)),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: pct,
+              minHeight: 6,
+              backgroundColor: Colors.white24,
+              valueColor: const AlwaysStoppedAnimation(Colors.white),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: KgColors.brandDeep,
+                  ),
+                  onPressed: () => context.push('/practice'),
+                  child: Text(today >= goal ? '再练一组 ›' : '继续目标 ›'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: const BorderSide(color: Colors.white54),
+                ),
+                onPressed: _openSetup,
+                child: const Text('今日计划'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _announceCard() {
+    final a = announce!;
+    return Card(
+      color: const Color(0xFFEFF8FF),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(LucideIcons.megaphone, size: 16, color: Color(0xFF0369A1)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text((a['title'] ?? '').toString(),
+                      style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF0369A1))),
+                  if ((a['body'] ?? '').toString().isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text((a['body'] ?? '').toString(),
+                        style: const TextStyle(
+                            fontSize: 12, color: Color(0xFF0369A1))),
+                  ],
+                ],
+              ),
+            ),
+            InkWell(
+              onTap: () {
+                Store.instance.annDismissed = '${a['id']}';
+                setState(() => announce = null);
+              },
+              child: const Icon(LucideIcons.x, size: 16, color: Color(0xFF0369A1)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _szCard() {
+    final done = szTodayDone;
+    return Card(
+      child: ListTile(
+        leading: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: KgColors.warningBg,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Icon(LucideIcons.newspaper, size: 22, color: KgColors.warning),
+        ),
+        title: Row(
+          children: [
+            const Text('时政每日一练',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: done ? KgColors.successBg : KgColors.warningBg,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(done ? '已完成' : '今日更新',
+                  style: TextStyle(
+                      fontSize: 10,
+                      color: done ? KgColors.success : KgColors.warning)),
+            ),
+          ],
+        ),
+        subtitle: const Text('每日 10 题 · 近半年国内时政热点 · 全站同题',
+            style: TextStyle(fontSize: 12, color: KgColors.t3)),
+        trailing: Text(done ? '回顾 ›' : '去练习 ›',
+            style: const TextStyle(fontSize: 13, color: KgColors.brand)),
+        onTap: () => context.push('/shizheng'),
+      ),
+    );
+  }
+
+  Widget _moduleRow(String key, String name) {
+    final c = counts.firstWhere((e) => e['module'] == key,
+        orElse: () => <String, dynamic>{});
+    final total = ((c['n'] ?? 0) as num).toInt();
+    final s = _modStat(key);
+    final done = ((s['done'] ?? 0) as num).toInt();
+    final correct = ((s['correct'] ?? 0) as num).toInt();
+    final sub = done == 0
+        ? (total > 0 ? '$total 题' : '')
+        : '已刷 $done/$total · 正确率 ${(correct * 100 / done).round()}%';
+    return ListTile(
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: (KgColors.moduleColors[key] ?? KgColors.brand).withValues(alpha: .12),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(_moduleIcon(key),
+            size: 20, color: KgColors.moduleColors[key] ?? KgColors.brand),
+      ),
+      title: Text(name,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+      subtitle: sub.isEmpty
+          ? null
+          : Text(sub, style: const TextStyle(fontSize: 12, color: KgColors.t3)),
+      trailing: const Icon(LucideIcons.chevronRight, size: 18, color: KgColors.t4),
+      onTap: () => _openModule(key, name),
+    );
+  }
+
+  /// 点模块：有多个二级题型时弹选择 sheet，否则直接开练。
+  Future<void> _openModule(String module, String name) async {
+    List<Map<String, dynamic>> subs = [];
+    try {
+      subs = (await Api.submodules(module))
+          .map((e) => Map<String, dynamic>.from(e))
+          .where((s) => (s['submodule'] ?? '').toString().isNotEmpty)
+          .toList();
+    } catch (_) {/* 取不到就直接开练 */}
+    if (!mounted) return;
+    if (subs.length < 2) {
+      context.push('/practice?module=$module');
+      return;
+    }
+    Map<String, dynamic> prog = {};
+    try {
+      prog = await Api.submoduleProgress(module: module);
+    } catch (_) {/* 非关键路径 */}
+    if (!mounted) return;
+    final total = counts.firstWhere((e) => e['module'] == module,
+        orElse: () => <String, dynamic>{})['n'];
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (c) => SafeArea(
+        child: ConstrainedBox(
+          constraints:
+              BoxConstraints(maxHeight: MediaQuery.of(c).size.height * .7),
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            children: [
+              Text('$name · 选择题型',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 10),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('全部随机',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                trailing: Text('${total ?? '-'} 题',
+                    style: const TextStyle(fontSize: 12, color: KgColors.t3)),
+                onTap: () {
+                  Navigator.pop(c);
+                  context.push('/practice?module=$module');
+                },
+              ),
+              for (final s in subs)
+                Builder(builder: (context) {
+                  final sub = (s['submodule'] ?? '').toString();
+                  final p = prog[sub] is Map
+                      ? Map<String, dynamic>.from(prog[sub] as Map)
+                      : null;
+                  final pn = ((p?['n'] ?? 0) as num).toInt();
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(sub, style: const TextStyle(fontSize: 14)),
+                    subtitle: pn > 0
+                        ? Text(
+                            '已做 $pn 题 · 正确率 ${(((p?['c'] ?? 0) as num) * 100 / pn).round()}%',
+                            style: const TextStyle(
+                                fontSize: 11, color: KgColors.t4))
+                        : null,
+                    trailing: Text('${s['n']} 题',
+                        style:
+                            const TextStyle(fontSize: 12, color: KgColors.t3)),
+                    onTap: () {
+                      Navigator.pop(c);
+                      context.push(
+                          '/practice?module=$module&submodule=${Uri.encodeComponent(sub)}');
+                    },
+                  );
+                }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _smartCard(String module) {
+    return Card(
+      child: ListTile(
+        leading: const Icon(LucideIcons.brainCircuit, color: KgColors.brand),
+        title: const Text('智能刷题：攻克薄弱项',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+        subtitle: Text('你的${moduleName(module)}正确率较低，建议专项练习',
+            style: const TextStyle(fontSize: 12, color: KgColors.t3)),
+        trailing: const Text('去练 ›',
+            style: TextStyle(fontSize: 13, color: KgColors.brand)),
+        onTap: () => _openModule(module, moduleName(module)),
+      ),
+    );
+  }
+
+  /// 练习设置 sheet：每日目标 / 选题来源（题库/真题+年份地区）/ 每组题量。
+  Future<void> _openSettings() async {
+    Map<String, dynamic> filters = {};
+    if (Store.instance.realMode) {
+      try {
+        filters = await Api.realFilters();
+      } catch (_) {/* 非关键路径 */}
+    }
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (c) => StatefulBuilder(
+        builder: (c, setSheet) {
+          final st = Store.instance;
+          Future<void> ensureFilters() async {
+            if (filters.isNotEmpty) return;
+            try {
+              filters = await Api.realFilters();
+              setSheet(() {});
+            } catch (_) {/* 非关键路径 */}
+          }
+
+          final years = (filters['years'] as List<dynamic>? ?? []);
+          final regions = (filters['regions'] as List<dynamic>? ?? []);
+          Widget chips(String label, String? sub, List<Widget> items) => Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label,
+                        style: const TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w600)),
+                    if (sub != null)
+                      Text(sub,
+                          style: const TextStyle(
+                              fontSize: 11, color: KgColors.t4)),
+                    const SizedBox(height: 8),
+                    Wrap(spacing: 8, runSpacing: 8, children: items),
+                  ],
+                ),
+              );
+          ChoiceChip chip(String label, bool on, VoidCallback tap) => ChoiceChip(
+                label: Text(label, style: const TextStyle(fontSize: 12)),
+                selected: on,
+                onSelected: (_) => tap(),
+                visualDensity: VisualDensity.compact,
+              );
+          return SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('练习设置',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 14),
+                  chips('每日目标', '今天合计要练的题数', [
+                    for (final g in const [20, 50, 100])
+                      chip('$g 题', st.dailyGoal == g, () {
+                        ref.read(dailyGoalProvider.notifier).set(g);
+                        setSheet(() {});
+                      }),
+                  ]),
+                  chips('选题来源', null, [
+                    chip('题库模式', !st.realMode, () {
+                      st.realMode = false;
+                      setSheet(() {});
+                    }),
+                    chip('真题模式', st.realMode, () {
+                      st.realMode = true;
+                      setSheet(() {});
+                      ensureFilters();
+                    }),
+                  ]),
+                  if (st.realMode && years.isNotEmpty)
+                    chips('真题年份', null, [
+                      chip('全部', st.realYear == null, () {
+                        st.realYear = null;
+                        setSheet(() {});
+                      }),
+                      for (final y in years)
+                        chip('${(y as Map)['y']}',
+                            st.realYear == ((y)['y'] as num).toInt(), () {
+                          st.realYear = ((y)['y'] as num).toInt();
+                          setSheet(() {});
+                        }),
+                    ]),
+                  if (st.realMode && regions.isNotEmpty)
+                    chips('真题地区', null, [
+                      chip('全部', st.realRegion.isEmpty, () {
+                        st.realRegion = '';
+                        setSheet(() {});
+                      }),
+                      for (final r in regions)
+                        chip('${(r as Map)['r']}',
+                            st.realRegion == '${(r)['r']}', () {
+                          st.realRegion = '${(r)['r']}';
+                          setSheet(() {});
+                        }),
+                    ]),
+                  chips('每组题量', '单次练习连做几道', [
+                    for (final n in const [10, 20, 30, 50])
+                      chip('$n', st.groupSize == n, () {
+                        st.groupSize = n;
+                        setSheet(() {});
+                      }),
+                  ]),
+                  FilledButton(
+                    style:
+                        FilledButton.styleFrom(minimumSize: const Size.fromHeight(46)),
+                    onPressed: () {
+                      Navigator.pop(c);
+                      context.push('/practice');
+                    },
+                    child: const Text('按以上设置开始练习（混合模块）'),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text('以上设置同样作用于模块列表；模考与真题卷不受影响',
+                      style: TextStyle(fontSize: 11, color: KgColors.t4)),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+    if (mounted) setState(() {});
+  }
+
+  /// 真题卷库 sheet：选卷整卷连做。
+  Future<void> _openPapers() async {
+    List<Map<String, dynamic>> papers;
+    try {
+      papers =
+          (await Api.papers()).map((e) => Map<String, dynamic>.from(e)).toList();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('试卷加载失败：${Api.errMsg(e)}')));
+      }
+      return;
+    }
+    if (!mounted) return;
+    String? region;
+    final regions = <String>[];
+    for (final p in papers) {
+      final r = (p['region'] ?? '').toString();
+      if (r.isNotEmpty && !regions.contains(r)) regions.add(r);
+    }
+    regions.sort();
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (c) => StatefulBuilder(
+        builder: (c, setSheet) {
+          final shown = region == null
+              ? papers
+              : papers.where((p) => p['region'] == region).toList();
+          return SafeArea(
+            child: ConstrainedBox(
+              constraints:
+                  BoxConstraints(maxHeight: MediaQuery.of(c).size.height * .7),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: Text('真题卷库 · 选择试卷',
+                        style:
+                            TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                  ),
+                  if (regions.length > 1)
+                    SizedBox(
+                      height: 44,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: ChoiceChip(
+                              label: const Text('全部',
+                                  style: TextStyle(fontSize: 12)),
+                              selected: region == null,
+                              onSelected: (_) => setSheet(() => region = null),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ),
+                          for (final r in regions)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ChoiceChip(
+                                label: Text(r, style: const TextStyle(fontSize: 12)),
+                                selected: region == r,
+                                onSelected: (_) => setSheet(() => region = r),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  Flexible(
+                    child: ListView(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      children: [
+                        for (final p in shown)
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text((p['title'] ?? '').toString(),
+                                style: const TextStyle(fontSize: 14)),
+                            trailing: Text('${p['n']} 题',
+                                style: const TextStyle(
+                                    fontSize: 12, color: KgColors.t3)),
+                            onTap: () {
+                              Navigator.pop(c);
+                              context.push(
+                                  '/practice?mode=paper&source=${Uri.encodeComponent((p['source'] ?? '').toString())}&title=${Uri.encodeComponent((p['title'] ?? '').toString())}');
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -267,11 +834,26 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget _taskRow(Map<String, dynamic> t) {
     final done = t['done'] == true || t['done'] == 1;
     final module = (t['module'] ?? '').toString();
+    final type = (t['type'] ?? '').toString();
+    final sub = (t['submodule'] ?? '').toString();
     return InkWell(
       onTap: done
           ? null
-          : () => context.push(
-              module.isNotEmpty ? '/practice?module=$module' : '/practice'),
+          : () {
+              if (type == 'mock') {
+                context.push('/exam/run?mini=1');
+              } else if (type == 'review') {
+                context.push('/practice?mode=review');
+              } else {
+                final target = ((t['target'] ?? 0) as num).toInt();
+                final doneN = ((t['done_n'] ?? 0) as num).toInt();
+                final remain = (target - doneN).clamp(5, 100);
+                var url = '/practice?count=$remain';
+                if (module.isNotEmpty) url += '&module=$module';
+                if (sub.isNotEmpty) url += '&submodule=${Uri.encodeComponent(sub)}';
+                context.push(url);
+              }
+            },
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(
@@ -308,6 +890,23 @@ class _HomePageState extends ConsumerState<HomePage> {
             Icon(icon, size: 22, color: KgColors.brand),
             const SizedBox(height: 6),
             Text(label, style: const TextStyle(fontSize: 12)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _paperEntry(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: _openPapers,
+      child: Card(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            Icon(LucideIcons.files, size: 22, color: KgColors.brand),
+            SizedBox(height: 6),
+            Text('真题卷练习', style: TextStyle(fontSize: 12)),
           ],
         ),
       ),
