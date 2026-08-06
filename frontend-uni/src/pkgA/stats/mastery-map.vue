@@ -129,7 +129,7 @@ export default {
         tag3: t ? t.code : null,
         count: 10,
       });
-      uni.switchTab({ url: '/pages/practice/practice' });
+      uni.navigateTo({ url: '/pages/practice/practice' });
     },
     goReview() {
       uni.switchTab({ url: '/pages/book/book' });
