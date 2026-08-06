@@ -70,7 +70,7 @@ page {
 body {
   background: #f6f7fb;
 }
-.theme-dark body {
+html.theme-dark body {
   background: #15161c;
 }
 /* #endif */
@@ -78,7 +78,8 @@ body {
 /* 深色模式（三档设置见 theme.js；.theme-dark 挂在 html 上，H5/App 生效）
    深色 token 见 docs/design-v3/features/dark-mode.html：品牌蓝不变，浅底改深底 */
 /* #ifdef H5 */
-.theme-dark page {
+.theme-dark uni-page-body {
+  background: #15161c;
   --brand-soft: #1e2a4a;
   --brand-soft-2: #24345c;
   --ink: #f2f3f7;

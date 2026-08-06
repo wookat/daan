@@ -273,7 +273,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
             child: Container(
               padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
-                color: KgColors.border,
+                color: context.kg.border,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
@@ -313,7 +313,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
               textAlign: TextAlign.center,
               style: TextStyle(
                   fontSize: 13,
-                  color: on ? KgColors.brand : KgColors.t2,
+                  color: on ? KgColors.brand : context.kg.t2,
                   fontWeight: on ? FontWeight.w600 : FontWeight.w400)),
         ),
       ),
@@ -337,7 +337,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                     width: 34,
                     height: 34,
                     decoration: BoxDecoration(
-                      color: KgColors.brand50,
+                      color: context.kg.brandBg,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(LucideIcons.folderPlus,
@@ -370,7 +370,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
           ),
           const SizedBox(height: 12),
           if (shownItems.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 30),
               child: Column(
                 children: [
@@ -378,10 +378,10 @@ class _FavoritesPageState extends State<FavoritesPage> {
                       style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: KgColors.t2)),
+                          color: context.kg.t2)),
                   SizedBox(height: 4),
                   Text('刷题时点右上角收藏星标收藏好题，长按可选收藏夹',
-                      style: TextStyle(fontSize: 12, color: KgColors.t3)),
+                      style: TextStyle(fontSize: 12, color: context.kg.t3)),
                 ],
               ),
             )
@@ -414,7 +414,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
               height: 34,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: KgColors.brand50,
+                color: context.kg.brandBg,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text((f['icon'] ?? '📁').toString(),
@@ -431,13 +431,13 @@ class _FavoritesPageState extends State<FavoritesPage> {
                           fontWeight: FontWeight.w600,
                           color: on ? KgColors.brand : null)),
                   Text('${f['n'] ?? 0} 题',
-                      style: const TextStyle(
-                          fontSize: 11, color: KgColors.t3)),
+                      style: TextStyle(
+                          fontSize: 11, color: context.kg.t3)),
                 ],
               ),
             ),
             Icon(on ? LucideIcons.check : LucideIcons.chevronRight,
-                size: 16, color: on ? KgColors.brand : KgColors.t4),
+                size: 16, color: on ? KgColors.brand : context.kg.t4),
           ],
         ),
       ),
@@ -450,20 +450,20 @@ class _FavoritesPageState extends State<FavoritesPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: on ? KgColors.brand50 : KgColors.fill,
+          color: on ? context.kg.brandBg : context.kg.fill,
           borderRadius: BorderRadius.circular(999),
         ),
         child: Text(label,
             style: TextStyle(
                 fontSize: 12,
-                color: on ? KgColors.brand : KgColors.t2,
+                color: on ? KgColors.brand : context.kg.t2,
                 fontWeight: on ? FontWeight.w700 : FontWeight.w400)),
       ),
     );
   }
 
   Widget _modTag(String? mod) {
-    final c = _kModColors[mod] ?? (KgColors.brand50, KgColors.brand);
+    final c = _kModColors[mod] ?? (context.kg.brandBg, KgColors.brand);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
@@ -507,17 +507,17 @@ class _FavoritesPageState extends State<FavoritesPage> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: KgColors.fill,
+                        color: context.kg.fill,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text((it['submodule'] ?? '').toString(),
-                          style: const TextStyle(
-                              fontSize: 10, color: KgColors.t3)),
+                          style: TextStyle(
+                              fontSize: 10, color: context.kg.t3)),
                     ),
                   const Spacer(),
                   Text('收藏于 ${_fmtDate(it['faved_at'] as num?)}',
                       style:
-                          const TextStyle(fontSize: 11, color: KgColors.t3)),
+                          TextStyle(fontSize: 11, color: context.kg.t3)),
                 ],
               ),
               if (note.isNotEmpty) ...[
@@ -525,8 +525,8 @@ class _FavoritesPageState extends State<FavoritesPage> {
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(10),
-                  decoration: const BoxDecoration(
-                    color: KgColors.warningBg,
+                  decoration: BoxDecoration(
+                    color: context.kg.warningBg,
                     border: Border(
                         left: BorderSide(color: KgColors.warning, width: 3)),
                     borderRadius: BorderRadius.only(
@@ -534,8 +534,8 @@ class _FavoritesPageState extends State<FavoritesPage> {
                         bottomRight: Radius.circular(8)),
                   ),
                   child: Text('✎ 我的笔记：$note',
-                      style: const TextStyle(
-                          fontSize: 12, color: KgColors.t2, height: 1.6)),
+                      style: TextStyle(
+                          fontSize: 12, color: context.kg.t2, height: 1.6)),
                 ),
               ],
               if (open) ...[
@@ -550,26 +550,26 @@ class _FavoritesPageState extends State<FavoritesPage> {
                               height: 1.6,
                               color: '${e.key}' == ans
                                   ? KgColors.success
-                                  : KgColors.t2,
+                                  : context.kg.t2,
                               fontWeight: '${e.key}' == ans
                                   ? FontWeight.w600
                                   : FontWeight.w400)),
                     ),
                 Text('正确答案 $ans',
-                    style: const TextStyle(
-                        fontSize: 12, color: KgColors.t3)),
+                    style: TextStyle(
+                        fontSize: 12, color: context.kg.t3)),
                 if (exp.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: KgColors.fill,
+                      color: context.kg.fill,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(exp,
-                        style: const TextStyle(
-                            fontSize: 12, height: 1.7, color: KgColors.t2)),
+                        style: TextStyle(
+                            fontSize: 12, height: 1.7, color: context.kg.t2)),
                   ),
                 ],
                 const SizedBox(height: 10),
@@ -602,7 +602,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
 
   Widget _noteView() {
     if (notes.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -610,10 +610,10 @@ class _FavoritesPageState extends State<FavoritesPage> {
                 style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: KgColors.t2)),
+                    color: context.kg.t2)),
             SizedBox(height: 4),
             Text('答题后在解析下方「写笔记」，方法心得随题沉淀',
-                style: TextStyle(fontSize: 12, color: KgColors.t3)),
+                style: TextStyle(fontSize: 12, color: context.kg.t3)),
           ],
         ),
       );
@@ -648,24 +648,24 @@ class _FavoritesPageState extends State<FavoritesPage> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: KgColors.fill,
+                      color: context.kg.fill,
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text((n['submodule'] ?? '').toString(),
-                        style: const TextStyle(
-                            fontSize: 10, color: KgColors.t3)),
+                        style: TextStyle(
+                            fontSize: 10, color: context.kg.t3)),
                   ),
                 const Spacer(),
                 Text(_fmtDate(n['updated_at'] as num?),
-                    style: const TextStyle(fontSize: 11, color: KgColors.t3)),
+                    style: TextStyle(fontSize: 11, color: context.kg.t3)),
               ],
             ),
             const SizedBox(height: 8),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(10),
-              decoration: const BoxDecoration(
-                color: KgColors.warningBg,
+              decoration: BoxDecoration(
+                color: context.kg.warningBg,
                 border:
                     Border(left: BorderSide(color: KgColors.warning, width: 3)),
                 borderRadius: BorderRadius.only(
@@ -673,8 +673,8 @@ class _FavoritesPageState extends State<FavoritesPage> {
                     bottomRight: Radius.circular(8)),
               ),
               child: Text('✎ ${n['content'] ?? ''}',
-                  style: const TextStyle(
-                      fontSize: 12, color: KgColors.t2, height: 1.6)),
+                  style: TextStyle(
+                      fontSize: 12, color: context.kg.t2, height: 1.6)),
             ),
           ],
         ),

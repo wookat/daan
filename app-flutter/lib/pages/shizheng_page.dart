@@ -172,7 +172,7 @@ class _ShizhengPageState extends ConsumerState<ShizhengPage> {
               child: Center(
                 child: Text(
                   '${(elapsed ~/ 60).toString().padLeft(2, '0')}:${(elapsed % 60).toString().padLeft(2, '0')}',
-                  style: const TextStyle(fontSize: 14, color: KgColors.t3),
+                  style: TextStyle(fontSize: 14, color: context.kg.t3),
                 ),
               ),
             ),
@@ -195,9 +195,9 @@ class _ShizhengPageState extends ConsumerState<ShizhengPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(LucideIcons.newspaper, size: 48, color: KgColors.t4),
+          Icon(LucideIcons.newspaper, size: 48, color: context.kg.t4),
           const SizedBox(height: 12),
-          Text(error!, style: const TextStyle(color: KgColors.t3)),
+          Text(error!, style: TextStyle(color: context.kg.t3)),
           const SizedBox(height: 16),
           FilledButton(
             style: FilledButton.styleFrom(minimumSize: const Size(160, 44)),
@@ -216,7 +216,7 @@ class _ShizhengPageState extends ConsumerState<ShizhengPage> {
         LinearProgressIndicator(
           value: (idx + 1) / items.length,
           minHeight: 3,
-          backgroundColor: KgColors.fill,
+          backgroundColor: context.kg.fill,
         ),
         Expanded(
           child: ListView(
@@ -227,7 +227,7 @@ class _ShizhengPageState extends ConsumerState<ShizhengPage> {
                   _tag('今日热点 · $date', KgColors.warning),
                   const Spacer(),
                   Text('${idx + 1}/${items.length}',
-                      style: const TextStyle(color: KgColors.t3, fontSize: 13)),
+                      style: TextStyle(color: context.kg.t3, fontSize: 13)),
                 ],
               ),
               const SizedBox(height: 12),
@@ -262,18 +262,18 @@ class _ShizhengPageState extends ConsumerState<ShizhengPage> {
   }
 
   Widget _option(Question q, String k, String v) {
-    Color border = KgColors.border;
+    Color border = context.kg.border;
     Color? bgc;
     Widget? trailing;
     if (q.answered) {
       if (k == q.answer) {
         border = KgColors.success;
-        bgc = KgColors.successBg;
+        bgc = context.kg.successBg;
         trailing = const Text('✓ 正确',
             style: TextStyle(color: KgColors.success, fontSize: 12));
       } else if (k == q.picked) {
         border = KgColors.error;
-        bgc = KgColors.errorBg;
+        bgc = context.kg.errorBg;
         trailing = const Text('✕ 我的选择',
             style: TextStyle(color: KgColors.error, fontSize: 12));
       }
@@ -310,10 +310,10 @@ class _ShizhengPageState extends ConsumerState<ShizhengPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: KgColors.brand50.withValues(
+        color: context.kg.brandBg.withValues(
             alpha: Theme.of(context).brightness == Brightness.dark ? .12 : 1),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: KgColors.border.withValues(alpha: .6)),
+        border: Border.all(color: context.kg.border.withValues(alpha: .6)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -362,7 +362,7 @@ class _ShizhengPageState extends ConsumerState<ShizhengPage> {
                     color: KgColors.brand)),
             const SizedBox(height: 4),
             Text('答对 $right/$answered 题 · 用时 ${elapsed ~/ 60} 分 ${elapsed % 60} 秒',
-                style: const TextStyle(color: KgColors.t3)),
+                style: TextStyle(color: context.kg.t3)),
             const SizedBox(height: 32),
             FilledButton(
                 onPressed: () => setState(() {
@@ -430,7 +430,7 @@ class _ShizhengPageState extends ConsumerState<ShizhengPage> {
                   _tag(q.correct ? '答对' : '答错 ${q.picked}',
                       q.correct ? KgColors.success : KgColors.error)
                 else
-                  _tag('未作答', KgColors.t3),
+                  _tag('未作答', context.kg.t3),
               ],
             ),
             const SizedBox(height: 8),
@@ -446,7 +446,7 @@ class _ShizhengPageState extends ConsumerState<ShizhengPage> {
                     height: 1.5,
                     color: e.key == q.answer
                         ? KgColors.success
-                        : (e.key == q.picked ? KgColors.error : KgColors.t2),
+                        : (e.key == q.picked ? KgColors.error : context.kg.t2),
                     fontWeight:
                         e.key == q.answer ? FontWeight.w600 : FontWeight.w400,
                   ),
@@ -460,8 +460,8 @@ class _ShizhengPageState extends ConsumerState<ShizhengPage> {
             if (q.explanation != null && q.explanation!.trim().isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(q.explanation!,
-                  style: const TextStyle(
-                      fontSize: 13, height: 1.6, color: KgColors.t2)),
+                  style: TextStyle(
+                      fontSize: 13, height: 1.6, color: context.kg.t2)),
             ],
           ],
         ),

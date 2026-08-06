@@ -593,15 +593,15 @@ class AskPageState extends State<AskPage> {
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
-                      color: KgColors.border, borderRadius: BorderRadius.circular(2)),
+                      color: context.kg.border, borderRadius: BorderRadius.circular(2)),
                 ),
                 const Text('历史会话',
                     style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 8),
                 if (sessions.isEmpty)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.symmetric(vertical: 32),
-                    child: Text('暂无历史会话', style: TextStyle(color: KgColors.t3)),
+                    child: Text('暂无历史会话', style: TextStyle(color: context.kg.t3)),
                   )
                 else
                   Flexible(
@@ -617,10 +617,10 @@ class AskPageState extends State<AskPage> {
                           title: Text((s['title'] ?? '').toString(),
                               maxLines: 1, overflow: TextOverflow.ellipsis),
                           subtitle: Text('${s['n']} 条 · ${_fmtTs(s['ts'])}',
-                              style: const TextStyle(fontSize: 12, color: KgColors.t3)),
+                              style: TextStyle(fontSize: 12, color: context.kg.t3)),
                           trailing: IconButton(
                             icon:
-                                const Icon(LucideIcons.trash2, size: 18, color: KgColors.t4),
+                                Icon(LucideIcons.trash2, size: 18, color: context.kg.t4),
                             onPressed: () {
                               _delSession(i);
                               setSheet(() {});
@@ -694,11 +694,11 @@ class AskPageState extends State<AskPage> {
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
         ),
         const SizedBox(height: 10),
-        const Center(
+        Center(
           child: Text(
             '拍照或粘贴题目，AI 按花生十三方法体系分步讲解\n讲完可追问、出同款题、一键存入错题本',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: KgColors.t3, height: 1.7),
+            style: TextStyle(fontSize: 13, color: context.kg.t3, height: 1.7),
           ),
         ),
         const SizedBox(height: 28),
@@ -772,7 +772,7 @@ class AskPageState extends State<AskPage> {
                     Text((it['brief'] ?? '').toString(),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 12, color: KgColors.t3)),
+                        style: TextStyle(fontSize: 12, color: context.kg.t3)),
                 ],
               ),
             ),
@@ -782,14 +782,14 @@ class AskPageState extends State<AskPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: KgColors.successBg,
+                  color: context.kg.successBg,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text('答案 ${it['ans']}',
                     style: const TextStyle(fontSize: 11, color: KgColors.success)),
               ),
             const SizedBox(width: 4),
-            Text(_fmtTs(it['ts']), style: const TextStyle(fontSize: 11, color: KgColors.t4)),
+            Text(_fmtTs(it['ts']), style: TextStyle(fontSize: 11, color: context.kg.t4)),
           ],
         ),
       ),
@@ -809,10 +809,10 @@ class AskPageState extends State<AskPage> {
               errorBuilder: (c, e, s) => Container(
                     width: 150,
                     height: 90,
-                    color: KgColors.fill,
+                    color: context.kg.fill,
                     alignment: Alignment.center,
-                    child: const Text('🖼 题目截图',
-                        style: TextStyle(fontSize: 12, color: KgColors.t4)),
+                    child: Text('🖼 题目截图',
+                        style: TextStyle(fontSize: 12, color: context.kg.t4)),
                   )),
         )),
       // AI 回答
@@ -852,10 +852,10 @@ class AskPageState extends State<AskPage> {
         padding: const EdgeInsets.symmetric(horizontal: 12),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: KgColors.fill,
+          color: context.kg.fill,
           borderRadius: BorderRadius.circular(999),
         ),
-        child: Text(label, style: const TextStyle(fontSize: 12, color: KgColors.t2)),
+        child: Text(label, style: TextStyle(fontSize: 12, color: context.kg.t2)),
       ),
     );
   }
@@ -934,7 +934,7 @@ class AskPageState extends State<AskPage> {
                 margin: const EdgeInsets.only(bottom: 8),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: KgColors.brand50,
+                  color: context.kg.brandBg,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(tag,
@@ -944,30 +944,30 @@ class AskPageState extends State<AskPage> {
             if (r.body.trim().isNotEmpty)
               Text(r.body.trim(), style: const TextStyle(fontSize: 14, height: 1.7)),
             if (r.streaming)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(top: 8),
-                child: Text('▍生成中…', style: TextStyle(fontSize: 12, color: KgColors.t3)),
+                child: Text('▍生成中…', style: TextStyle(fontSize: 12, color: context.kg.t3)),
               ),
             if (!r.streaming && r.explainKey.isNotEmpty) ...[
               const SizedBox(height: 8),
               Row(
                 children: [
-                  const Text('这条讲解有用吗？',
-                      style: TextStyle(fontSize: 12, color: KgColors.t4)),
+                  Text('这条讲解有用吗？',
+                      style: TextStyle(fontSize: 12, color: context.kg.t4)),
                   const SizedBox(width: 8),
                   IconButton(
                     visualDensity: VisualDensity.compact,
                     onPressed: r.rated != null ? null : () => _rate(r, true),
                     icon: Icon(LucideIcons.thumbsUp,
                         size: 16,
-                        color: r.rated == 'up' ? KgColors.brand : KgColors.t4),
+                        color: r.rated == 'up' ? KgColors.brand : context.kg.t4),
                   ),
                   IconButton(
                     visualDensity: VisualDensity.compact,
                     onPressed: r.rated != null ? null : () => _rate(r, false),
                     icon: Icon(LucideIcons.thumbsDown,
                         size: 16,
-                        color: r.rated == 'down' ? KgColors.error : KgColors.t4),
+                        color: r.rated == 'down' ? KgColors.error : context.kg.t4),
                   ),
                 ],
               ),
@@ -984,16 +984,16 @@ class AskPageState extends State<AskPage> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: KgColors.brand50,
+        color: context.kg.brandBg,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: KgColors.brand100),
+        border: Border.all(color: context.kg.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Text('答案', style: TextStyle(fontSize: 12, color: KgColors.t3)),
+              Text('答案', style: TextStyle(fontSize: 12, color: context.kg.t3)),
               const SizedBox(width: 8),
               Text(card['ans'] ?? '',
                   style: const TextStyle(
@@ -1016,7 +1016,7 @@ class AskPageState extends State<AskPage> {
           if ((card['brief'] ?? '').isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(card['brief']!,
-                style: const TextStyle(fontSize: 13, color: KgColors.t2, height: 1.6)),
+                style: TextStyle(fontSize: 13, color: context.kg.t2, height: 1.6)),
           ],
         ],
       ),
@@ -1060,24 +1060,24 @@ class AskPageState extends State<AskPage> {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: picked.isEmpty
-                          ? KgColors.fill
+                          ? context.kg.fill
                           : o == correct
-                              ? KgColors.successBg
+                              ? context.kg.successBg
                               : o == picked
-                                  ? KgColors.errorBg
-                                  : KgColors.fill,
+                                  ? context.kg.errorBg
+                                  : context.kg.fill,
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(o,
                         style: TextStyle(
                             fontWeight: FontWeight.w700,
                             color: picked.isEmpty
-                                ? KgColors.t2
+                                ? context.kg.t2
                                 : o == correct
                                     ? KgColors.success
                                     : o == picked
                                         ? KgColors.error
-                                        : KgColors.t4)),
+                                        : context.kg.t4)),
                   ),
                 ),
             ],
@@ -1086,7 +1086,7 @@ class AskPageState extends State<AskPage> {
             const SizedBox(height: 10),
             Text(
               (sim['rawAns'] ?? '').toString().trim(),
-              style: const TextStyle(fontSize: 13, height: 1.6, color: KgColors.t2),
+              style: TextStyle(fontSize: 13, height: 1.6, color: context.kg.t2),
             ),
             const SizedBox(height: 8),
             Row(
@@ -1113,7 +1113,7 @@ class AskPageState extends State<AskPage> {
             const SizedBox(
                 width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
             const SizedBox(width: 10),
-            Text(loadingText, style: const TextStyle(fontSize: 13, color: KgColors.t3)),
+            Text(loadingText, style: TextStyle(fontSize: 13, color: context.kg.t3)),
           ],
         ),
       ),
@@ -1125,7 +1125,7 @@ class AskPageState extends State<AskPage> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: KgColors.errorBg,
+        color: context.kg.errorBg,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
@@ -1191,7 +1191,7 @@ class AskPageState extends State<AskPage> {
               child: Container(
                 decoration: BoxDecoration(
                   color: Theme.of(context).cardTheme.color ?? Colors.white,
-                  border: Border.all(color: KgColors.border),
+                  border: Border.all(color: context.kg.border),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 padding: const EdgeInsets.only(left: 16, right: 4),
@@ -1204,7 +1204,7 @@ class AskPageState extends State<AskPage> {
                         decoration: InputDecoration(
                           hintText: results.isEmpty ? '先拍题或粘贴题目开始…' : '继续追问这道题…',
                           hintStyle:
-                              const TextStyle(fontSize: 14, color: KgColors.t4),
+                              TextStyle(fontSize: 14, color: context.kg.t4),
                           border: InputBorder.none,
                           isDense: true,
                           contentPadding: const EdgeInsets.symmetric(vertical: 12),
