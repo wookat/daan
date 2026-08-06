@@ -292,9 +292,9 @@ class AskPageState extends State<AskPage> {
     );
   }
 
-  void _openTextSheet({String prefill = ''}) {
+  void _openTextSheet({String prefill = '', String prefillAnswer = ''}) {
     final qCtrl = TextEditingController(text: prefill);
-    final aCtrl = TextEditingController();
+    final aCtrl = TextEditingController(text: prefillAnswer);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -379,7 +379,13 @@ class AskPageState extends State<AskPage> {
 
   Future<void> _doExplain({String img = '', String text = '', String userAnswer = ''}) async {
     if (img.isEmpty && text.isEmpty) return;
-    if (!await _ensureAccess()) return;
+    if (!await _ensureAccess()) {
+      // 取消访问码：回填粘贴弹层，不丢失已输入内容
+      if (text.isNotEmpty && mounted) {
+        _openTextSheet(prefill: text, prefillAnswer: userAnswer);
+      }
+      return;
+    }
     setState(() {
       loading = true;
       error = null;
