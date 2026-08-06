@@ -8,7 +8,8 @@ import secrets
 import sqlite3
 import time
 
-from . import similarity, taxonomy
+from . import quality, similarity, taxonomy
+from .tagging import classify_question
 
 DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), "..", "..", "data.db"))
 
@@ -185,7 +186,7 @@ def _seed_questions():
                 q = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            conn.execute(
+            cur = conn.execute(
                 "INSERT OR IGNORE INTO questions (module, question_type, question, options, answer, explanation, source, submodule) VALUES (?,?,?,?,?,?,?,?)",
                 (
                     q.get("module"),
@@ -198,6 +199,8 @@ def _seed_questions():
                     q.get("submodule"),
                 ),
             )
+            if cur.rowcount:
+                _enrich_new_question(conn, cur.lastrowid, "seed")
             if q.get("submodule"):
                 conn.execute(
                     "UPDATE questions SET submodule=? WHERE question=? AND (submodule IS NULL OR submodule='')",
@@ -1384,6 +1387,52 @@ _SUB_SYNONYMS = {
 
 _SUB_COLLAPSE = ("类比推理", "定义判断", "图形推理")
 
+# 轮1 T3b 定案的 submodule 同义合并映射（module → {旧名: 新名}），
+# 供 answer_log 写入归一与一次性迁移脚本共用。
+SUBMODULE_MERGE = {
+    "changshi": {
+        "公文": "管理与公文", "应急": "管理与公文",
+        "地理": "地理国情",
+        "环保": "生态", "环境": "生态",
+        "婚家": "婚姻",
+        "消保": "消费",
+        "个人信息": "个保",
+        "未保": "未成年",
+        "科技常识": "科技", "科技-物理": "科技", "物理": "科技",
+        "网安": "网络",
+        "道交": "交通",
+    },
+    "shuliang": {
+        "钟表问题": "周期与日期", "敲钟问题": "周期与日期",
+        "牛吃草问题": "工程问题",
+        "抽屉原理": "最值问题", "最不利原则": "最值问题", "构造类问题": "最值问题",
+        "和倍问题": "计算问题", "还原问题": "计算问题", "平均数问题": "计算问题",
+        "不定方程": "计算问题", "盈亏问题": "计算问题", "鸡兔同笼": "计算问题",
+        "植树问题": "植树与方阵", "方阵问题": "植树与方阵", "锯木问题": "植树与方阵",
+        "数列问题": "数字推理", "数字推理-多重数列": "数字推理",
+        "爬楼问题": "行程问题", "队列问题": "行程问题",
+    },
+    "yanyu": {
+        "意图判断": "中心理解", "片段阅读": "中心理解",
+        "词句理解": "细节理解",
+        "语句排序": "语句表达", "语句填空": "语句表达", "接语选择": "语句表达",
+    },
+    "panduan": {"逻辑推理": "逻辑判断"},
+    "ziliao": {
+        "基期现期": "基期与现期", "基期量": "基期与现期", "现期量": "基期与现期",
+        "增长问题": "增长率", "比重问题": "比重",
+        "简单计算": "简单计算与读数",
+        "平均数": "平均数与倍数", "倍数": "平均数与倍数",
+    },
+}
+
+
+def merge_submodule(module: str | None, sub: str | None) -> str | None:
+    """按轮1 T3b 定案映射把旧考点名归一为当前 taxonomy 名。"""
+    if not sub:
+        return sub
+    return SUBMODULE_MERGE.get(module or "", {}).get(sub, sub)
+
 
 def normalize_submodule(sub: str | None) -> str | None:
     if not sub:
@@ -1407,6 +1456,40 @@ def _bad_options(opts: dict) -> bool:
     if len(vals) < 2 or any(not v for v in vals) or len(set(vals)) < len(vals):
         return True
     return any(len(v) > 120 or _RESIDUE_RE.search(v) for v in vals)
+
+
+def _enrich_new_question(conn, qid: int, batch: str | None = None):
+    """新题入库钩子：规则分类补 tag3/submodule、质量打分、记导入批次；
+
+    无法分类的题进 tag3_review 抽审队列并转待审（disabled=2），不裸上架。"""
+    row = conn.execute("SELECT * FROM questions WHERE id=?", (qid,)).fetchone()
+    if not row:
+        return
+    d = dict(row)
+    tag3, conf = classify_question(d)
+    score = quality.score_question(d)
+    sub = merge_submodule(d.get("module"), d.get("submodule"))
+    if not sub and tag3 != "UNKNOWN":
+        t = taxonomy.topic_index().get(tag3)
+        if t:
+            sub = t["group_name"]
+    conn.execute(
+        "UPDATE questions SET tag3=?, quality_score=?, submodule=?, "
+        "import_batch=COALESCE(import_batch,?) WHERE id=?",
+        (tag3, score, sub, batch or "auto" + time.strftime("%Y%m%d"), qid),
+    )
+    if tag3 == "UNKNOWN":
+        conn.execute(
+            "UPDATE questions SET disabled=2 WHERE id=? AND (disabled IS NULL OR disabled=0)",
+            (qid,),
+        )
+        conn.execute(
+            "DELETE FROM tag3_review WHERE question_id=? AND status='open'", (qid,)
+        )
+        conn.execute(
+            "INSERT INTO tag3_review (created_at, question_id, tag3, confidence, reason) VALUES (?,?,?,?,?)",
+            (time.time(), qid, None, conf, "新题入库规则分类未命中"),
+        )
 
 
 def import_questions(items: list[dict], batch: str | None = None) -> dict:
@@ -1449,6 +1532,7 @@ def import_questions(items: list[dict], batch: str | None = None) -> dict:
         )
         if cur.rowcount:
             inserted += 1
+            _enrich_new_question(conn, cur.lastrowid, batch)
         else:
             skipped += 1
             if q.get("is_real"):
@@ -1634,14 +1718,25 @@ def save_answer_log(uid: str, items: list[dict]) -> int:
     for it in items:
         if not isinstance(it, dict):
             continue
+        qid = it.get("qid") or it.get("question_id") or it.get("id")
+        module, sub = it.get("module"), it.get("submodule")
+        if qid and (not module or module in VALID_MODULES):
+            # 时政等非行测模块的 qid 指向其它表，不能拿 questions 表覆盖
+            qrow = conn.execute(
+                "SELECT module, submodule FROM questions WHERE id=?", (qid,)
+            ).fetchone()
+            if qrow:
+                module = qrow["module"] or module
+                sub = qrow["submodule"] or sub
+        sub = merge_submodule(module, sub)
         conn.execute(
             "INSERT INTO answer_log (uid, created_at, question_id, module, submodule, correct, secs, picked) VALUES (?,?,?,?,?,?,?,?)",
             (
                 uid,
                 now,
-                it.get("qid") or it.get("question_id") or it.get("id"),
-                it.get("module"),
-                it.get("submodule"),
+                qid,
+                module,
+                sub,
                 1 if it.get("correct") else 0,
                 int(it.get("secs") or 0),
                 str(it.get("picked") or "")[:2] or None,
