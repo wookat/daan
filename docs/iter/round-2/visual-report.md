@@ -59,4 +59,7 @@
 - `npm run build:h5`：成功（dist/build/h5），并人工核对编译后 CSS 的 body/uni-page-body 规则。
 - `flutter analyze`：No issues found（0 error 0 warning）。
 - 本地 dist 截图（375 深色 / 1440 浅色）确认 W1/W2 修复效果；线上前后对比截图见 annotated/ 与 PR 描述。
-- Flutter 模拟器（Android x86_64, bench30）深色/浅色逐页截图见 screenshots/app-*。
+- Flutter 模拟器（Android x86_64, bench30, 1080×2160）实测：debug APK 安装后深色/浅色逐页截图见 `screenshots/app-after-*`；并以合并前 main（9a14165）构建 before APK 同机对比，`screenshots/app-before-*`、并排对比图 `annotated/app-compare-dark-{ask,search,shizheng}.png`。
+  - 搜索页：修复前搜索框为浅色底（浅色 fill 常量）、筛选 chips 文字压深底低对比；修复后输入框/chips 全部深色语义色，文字可读。
+  - AI问答页：修复前底部输入 pill 白色描边刺眼；修复后为深色 border。
+  - 时政练习页：修复前选项卡白色描边；修复后为深色 border，层级靠 surface 色区分。
