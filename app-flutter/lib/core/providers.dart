@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'api.dart';
+import 'offline.dart';
 import 'storage.dart';
 
 /// 登录用户（null=匿名）
@@ -25,7 +28,10 @@ class AuthNotifier extends Notifier<Map<String, dynamic>?> {
     state = user;
     final dev = Store.instance.deviceAnonUid;
     if (dev != null && dev.isNotEmpty && dev != user['uid']) {
-      Api.mergeAnon(dev);
+      // 先把离线队列里的匿名作答补传到服务端，再归并到账号，避免漏合并
+      unawaited(
+        Offline.flushQueue().catchError((_) => false).whenComplete(() => Api.mergeAnon(dev)),
+      );
     }
   }
 

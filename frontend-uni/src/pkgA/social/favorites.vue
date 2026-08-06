@@ -49,7 +49,7 @@
       </view>
       <template v-else>
         <button class="btn" @click="redoFolder">重练{{ curFolderName }}（{{ shownItems.length }} 题 · 乱序）</button>
-        <view v-for="it in shownItems" :key="it.id" class="card qitem" @click="it._open = !it._open">
+        <view v-for="it in shownItems" :key="it.id || it._lkey" class="card qitem" @click="it._open = !it._open">
           <view class="qtx" :class="{ full: it._open }">{{ it.question }}</view>
           <view class="meta">
             <text class="tag" :style="{ background: modColor(it.module).bg, color: modColor(it.module).fg }">{{ modName(it.module) }}</text>
@@ -62,8 +62,8 @@
             <view class="ansline">正确答案 {{ it.answer }}</view>
             <view v-if="it.hs_explanation || it.explanation" class="exp">{{ it.hs_explanation || it.explanation }}</view>
             <view class="ops">
-              <text class="op" @click.stop="moveItem(it)">移动到…</text>
-              <text class="op" @click.stop="openDiscuss(it)">讨论区</text>
+              <text v-if="!it._local" class="op" @click.stop="moveItem(it)">移动到…</text>
+              <text v-if="!it._local" class="op" @click.stop="openDiscuss(it)">讨论区</text>
               <text class="op del" @click.stop="unfav(it)">取消收藏</text>
             </view>
           </view>
@@ -94,7 +94,7 @@
 <script>
 import { createFavFolder, deleteFavFolder, fetchFavFolders, fetchFavs, fetchNotes, removeFav, renameFavFolder, setFav } from '../../api.js';
 
-const MODS = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断' };
+const MODS = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', 时政: '时政' };
 const COLORS = {
   changshi: { bg: '#FEF3C7', fg: '#B45309' },
   shuliang: { bg: '#DBEAFE', fg: '#1D4ED8' },
@@ -149,6 +149,14 @@ export default {
         const [f, v] = await Promise.all([fetchFavFolders(), fetchFavs()]);
         this.folders = f.items;
         this.items = v.items.map((it) => ({ ...it, _open: false }));
+        // 合并本地收藏（时政题等无题库 id 的收藏只存本地），与题目页/错题本口径一致
+        const seen = new Set(this.items.map((it) => it.question));
+        const locals = (uni.getStorageSync('favQuestions') || [])
+          .filter((x) => x.question && !seen.has(x.question))
+          .map((x, i) => ({ ...x, module: x.module || '时政', id: null, _local: true, _lkey: 'L' + i, folder_id: 0, faved_at: Math.round((x.t || Date.now()) / 1000), _open: false }));
+        this.items = [...this.items, ...locals].sort((a, b) => b.faved_at - a.faved_at);
+        const def = this.folders.find((x) => x.id === 0);
+        if (def) def.n += locals.length;
       } catch (e) {
         uni.showToast({ title: e.message, icon: 'none' });
       }
@@ -246,8 +254,12 @@ export default {
         success: async (r) => {
           if (!r.confirm) return;
           try {
-            await removeFav(it.id);
-            this.items = this.items.filter((x) => x.id !== it.id);
+            if (it._local) {
+              const locals = (uni.getStorageSync('favQuestions') || []).filter((x) => x.question !== it.question);
+              uni.setStorageSync('favQuestions', locals);
+            } else {
+              await removeFav(it.id);
+            }
             this.load();
           } catch (e) {
             uni.showToast({ title: e.message, icon: 'none' });

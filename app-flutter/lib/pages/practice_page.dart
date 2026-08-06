@@ -94,7 +94,52 @@ class _PracticePageState extends ConsumerState<PracticePage> {
   void dispose() {
     _ticker?.cancel();
     _autoTimer?.cancel();
+    // 中途退出也上报已答题目，保证做题记录/累计统计不丢（与 H5 quit 一致）
+    unawaited(_flushLog());
     super.dispose();
+  }
+
+  /// 上报尚未记录的已答题目（answer_log）；失败/离线时入本地队列待同步。
+  /// 返回是否已直接上报成功。
+  Future<bool> _flushLog() async {
+    final answered = items.where((q) => q.answered && !q.logged).toList();
+    if (answered.isEmpty) return true;
+    final logItems = answered
+        .map((q) => {
+              'qid': q.id,
+              'module': q.module ?? widget.module,
+              'submodule': q.submodule,
+              'correct': q.correct,
+              'secs': q.secs,
+              'picked': q.picked,
+            })
+        .toList();
+    void markLogged() {
+      for (final q in answered) {
+        q.logged = true;
+      }
+    }
+    if (offline) {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      Offline.enqueueAnswers(Api.uid(), [
+        for (var i = 0; i < logItems.length; i++) {...logItems[i], 't': now + i},
+      ]);
+      markLogged();
+      return false;
+    }
+    try {
+      await Api.answerLog(logItems);
+      markLogged();
+      return true;
+    } catch (_) {
+      // 断网：入离线队列，联网后自动补传去重
+      final now = DateTime.now().millisecondsSinceEpoch;
+      Offline.enqueueAnswers(Api.uid(), [
+        for (var i = 0; i < logItems.length; i++) {...logItems[i], 't': now + i},
+      ]);
+      markLogged();
+      return false;
+    }
   }
 
   Future<void> _load() async {
@@ -424,31 +469,8 @@ class _PracticePageState extends ConsumerState<PracticePage> {
       'correct': answered.where((q) => q.correct).length,
       'secs': answered.fold<int>(0, (s, q) => s + q.secs),
     });
-    final logItems = answered
-        .map((q) => {
-              'qid': q.id,
-              'module': q.module ?? widget.module,
-              'submodule': q.submodule,
-              'correct': q.correct,
-              'secs': q.secs,
-              'picked': q.picked,
-            })
-        .toList();
-    if (offline) {
-      final now = DateTime.now().millisecondsSinceEpoch;
-      Offline.enqueueAnswers(Api.uid(), [
-        for (var i = 0; i < logItems.length; i++) {...logItems[i], 't': now + i},
-      ]);
-      for (final q in answered) {
-        q.logged = true;
-      }
-      return;
-    }
-    try {
-      await Api.answerLog(logItems);
-      for (final q in answered) {
-        q.logged = true;
-      }
+    final ok = await _flushLog();
+    if (ok) {
       final right = answered.where((q) => q.correct).length;
       final secs = answered.fold<int>(0, (s, q) => s + q.secs);
       unawaited(Api
@@ -459,15 +481,6 @@ class _PracticePageState extends ConsumerState<PracticePage> {
         }
       }).catchError((_) {}));
       _markDailyDone();
-    } catch (_) {
-      // 断网结算：入离线队列，联网后自动补传去重
-      final now = DateTime.now().millisecondsSinceEpoch;
-      Offline.enqueueAnswers(Api.uid(), [
-        for (var i = 0; i < logItems.length; i++) {...logItems[i], 't': now + i},
-      ]);
-      for (final q in answered) {
-        q.logged = true;
-      }
     }
   }
 

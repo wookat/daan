@@ -100,6 +100,10 @@ export default {
       this.busy = m;
       try {
         await downloadPack(m);
+        // #ifdef H5
+        // 预热练习页资源，配合 Service Worker 缓存，保证断网后能进入做题页
+        import('../../pages/practice/practice.vue').catch(() => {});
+        // #endif
         uni.showToast({ title: '题包已就绪，可离线刷题', icon: 'none' });
       } catch (e) {
         uni.showToast({ title: '下载失败：' + e.message, icon: 'none' });
