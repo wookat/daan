@@ -267,9 +267,16 @@
           </view>
           <view class="setrow">
             <text class="set-k">考试日期</text>
-            <picker mode="date" :value="pf.exam_date" :start="dateStart" :end="dateEnd" @change="onExamDate">
+            <wd-datetime-picker
+              v-model="pfDateTs"
+              type="date"
+              :min-date="dateStartTs"
+              :max-date="dateEndTs"
+              :before-confirm="beforeExamDate"
+              @confirm="onExamDate"
+            >
               <view class="pf-date" :class="{ empty: !pf.exam_date }">{{ pf.exam_date || '选择日期 ›' }}</view>
-            </picker>
+            </wd-datetime-picker>
           </view>
         </template>
         <template v-else-if="setupStep === 2">
@@ -396,6 +403,9 @@ export default {
       weeklyDot: false,
       dateStart: new Date().toISOString().slice(0, 10),
       dateEnd: new Date(Date.now() + 3 * 366 * 86400000).toISOString().slice(0, 10),
+      dateStartTs: Date.now(),
+      dateEndTs: Date.now() + 3 * 366 * 86400000,
+      pfDateTs: Date.now(),
     };
   },
   computed: {
@@ -484,19 +494,23 @@ export default {
     if (this.realMode) this.loadRealFilters();
   },
   methods: {
-    onExamDate(e) {
-      // H5 的 picker 滚轮可选出 start/end 之外的年份，这里再钳一次范围
-      const v = e.detail.value;
-      if (!v) return;
-      if (v < this.dateStart || v > this.dateEnd) {
-        this.pf.exam_date = v < this.dateStart ? this.dateStart : this.dateEnd;
-        // 等 picker 弹层收起后再提示，否则 toast 被弹层遮挡看不到
-        setTimeout(() => {
-          uni.showToast({ title: `请选择 ${this.dateStart} 至 ${this.dateEnd} 之间的日期`, icon: 'none', duration: 2500 });
-        }, 350);
+    beforeExamDate(value, resolve) {
+      // confirm 前拦截越界日期：钳回边界并提示，弹层保持打开
+      if (value < this.dateStartTs || value > this.dateEndTs) {
+        this.pfDateTs = value < this.dateStartTs ? this.dateStartTs : this.dateEndTs;
+        uni.showToast({ title: `请选择 ${this.dateStart} 至 ${this.dateEnd} 之间的日期`, icon: 'none', duration: 2500 });
+        resolve(false);
         return;
       }
-      this.pf.exam_date = v;
+      resolve(true);
+    },
+    onExamDate({ value }) {
+      this.pf.exam_date = this.fmtDateStr(value);
+    },
+    fmtDateStr(ts) {
+      const d = new Date(ts);
+      const p = (n) => (n < 10 ? '0' + n : '' + n);
+      return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
     },
     goSearch() {
       uni.navigateTo({ url: '/pkgA/search/search' });
@@ -689,6 +703,8 @@ export default {
         daily_minutes: p.daily_minutes || 60,
         base_level: p.base_level || '零基础',
       };
+      const ts = this.pf.exam_date ? new Date(this.pf.exam_date + 'T12:00:00').getTime() : Date.now();
+      this.pfDateTs = Math.min(Math.max(ts, this.dateStartTs), this.dateEndTs);
       this.setupStep = 1;
       this.setupOpen = true;
     },
