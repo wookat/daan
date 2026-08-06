@@ -66,7 +66,7 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - `LLM_RELAY_BASE_URL`, `LLM_RELAY_API_KEY` (OpenAI-compatible relay)
 
 ## API testing
-- Access codes are CANCELLED (ACCESS_CODE empty in prod since 2026-07): no endpoint returns 401 for a missing `X-Access-Code`. The frontend 401-modal code path is legacy fallback only.
+- Access codes were cancelled 2026-07 but RESTORED in prod later (deploy/.env ACCESS_CODE set): `GET /api/access_info` returns `{"required":true}` and AI 功能（问答/申论/面试）提交前会弹访问码框。访问码值向 lead/用户索取，只在浏览器运行时输入，勿写入任何提交/报告/计划文件。若 AI 返回 503「AI 服务暂时不可用」，先怀疑中转站渠道/模型下线（曾发生 gpt-5.6-terra 下线，切 grok-4.5 恢复），报 lead 而非自行改配置。
 - `POST /api/explain` is multipart form: fields `text`, `user_answer`, optional file `image` (≤8MB). Responses take 20–90s — always run curl in background and wait.
 - Verify cited method names really exist: `grep -r '方法名' knowledge/references/`.
 - 错题本 CRUD: `POST/GET /api/mistakes`, `DELETE /api/mistakes/{id}`, stats at `GET /api/stats`.
@@ -91,7 +91,7 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - To test empty states, back up `localStorage.getItem('pstats')` fully before clearing and write it back afterwards (keep the `{"type":"object","data":{...}}` wrapper).
 
 ## Production testing
-- Live site: https://kaogong.zalize.com (no access code). LLM model: gpt-5.6-terra for both text and image.
+- Live site: https://kaogong.zalize.com（AI 功能需访问码，见 API testing 节）. LLM model: grok-4.5 (LLM_MODEL/LLM_TEXT_MODEL, since 2026-08), fallback deepseek-chat; base URL 不带 /v1（后端自动追加）。
 - When testing against production, record the pre-test `/api/mistakes` id list first and only delete records created during the test.
 - NEVER delete pre-existing mistake ids even if they don't match an older baseline — the owner uses the live app on his phone, so unknown recent ids are likely REAL user data. Only delete ids you created yourself this run; escalate discrepancies instead of cleaning them.
 - Practice mode auto-saves wrong answers to the mistake book (no manual button) — every deliberate wrong answer creates a production record; record the id baseline before testing.

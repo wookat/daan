@@ -91,6 +91,7 @@ def init_db():
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_module ON questions(module, submodule)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_real ON questions(is_real)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_tag3 ON questions(tag3)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_q_tag3_disabled ON questions(tag3, disabled)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_quality ON questions(quality_score)")
     similarity.ensure_tables(conn)
     conn.execute(
@@ -773,15 +774,25 @@ def submodule_counts(module: str) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+_TAG3_COUNTS_CACHE: list = [0.0, None]
+TAG3_COUNTS_TTL = 300
+
+
 def tag3_counts() -> dict:
-    """各三级考点 code 的题目数（不含已下架）。"""
+    """各三级考点 code 的题目数（不含已下架），进程内 5 分钟缓存。"""
+    now = time.time()
+    if _TAG3_COUNTS_CACHE[1] is not None and now - _TAG3_COUNTS_CACHE[0] < TAG3_COUNTS_TTL:
+        return _TAG3_COUNTS_CACHE[1]
     conn = get_conn()
     rows = conn.execute(
         "SELECT tag3, COUNT(*) n FROM questions WHERE tag3 IS NOT NULL AND tag3!='' "
         "AND (disabled IS NULL OR disabled=0) GROUP BY tag3"
     ).fetchall()
     conn.close()
-    return {r["tag3"]: r["n"] for r in rows}
+    out = {r["tag3"]: r["n"] for r in rows}
+    _TAG3_COUNTS_CACHE[0] = now
+    _TAG3_COUNTS_CACHE[1] = out
+    return out
 
 
 def questions_by_tag3(code: str, offset: int = 0, limit: int = 20) -> list[dict]:
