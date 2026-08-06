@@ -454,7 +454,7 @@ class _StatsPageState extends State<StatsPage> {
             child: LinearProgressIndicator(
               value: pct,
               minHeight: 6,
-              backgroundColor: KgColors.fill,
+              backgroundColor: context.kg.fill,
               valueColor: const AlwaysStoppedAnimation(KgColors.brand),
             ),
           ),
@@ -1058,7 +1058,7 @@ class _StatsPageState extends State<StatsPage> {
                       child: CircularProgressIndicator(
                         value: m.cur >= m.target ? 1 : m.cur / m.target,
                         strokeWidth: 3,
-                        backgroundColor: KgColors.fill,
+                        backgroundColor: context.kg.fill,
                         valueColor: AlwaysStoppedAnimation(
                             m.cur >= m.target ? KgColors.warning : KgColors.t4),
                       ),

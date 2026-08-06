@@ -118,7 +118,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 user != null
                     ? _maskPhone((user['phone'] ?? '').toString())
                     : '登录后多设备同步做题记录',
-                style: const TextStyle(fontSize: 12, color: KgColors.t3),
+                style: TextStyle(fontSize: 12, color: context.kg.t3),
               ),
               trailing: user == null
                   ? FilledButton(
@@ -128,8 +128,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       onPressed: () => context.push('/login'),
                       child: const Text('登录'),
                     )
-                  : const Icon(LucideIcons.chevronRight,
-                      size: 18, color: KgColors.t4),
+                  : Icon(LucideIcons.chevronRight,
+                      size: 18, color: context.kg.t4),
             ),
           ),
           const SizedBox(height: 12),
@@ -248,8 +248,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     }),
                 _div(),
                 SwitchListTile(
-                  secondary: const Icon(LucideIcons.volume2,
-                      size: 20, color: KgColors.t3),
+                  secondary: Icon(LucideIcons.volume2,
+                      size: 20, color: context.kg.t3),
                   title: const Text('答题音效', style: TextStyle(fontSize: 15)),
                   value: sfxOn,
                   activeTrackColor: KgColors.brand,
@@ -307,9 +307,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             ),
           ),
           const SizedBox(height: 16),
-          const Center(
+          Center(
             child: Text('考公助手 · Flutter 原生版 v0.1.0',
-                style: TextStyle(fontSize: 12, color: KgColors.t4)),
+                style: TextStyle(fontSize: 12, color: context.kg.t4)),
           ),
         ],
       ),
@@ -332,7 +332,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         fontSize: 18, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 2),
                 Text(t,
-                    style: const TextStyle(fontSize: 11, color: KgColors.t3)),
+                    style: TextStyle(fontSize: 11, color: context.kg.t3)),
               ],
             ),
           ),
@@ -343,7 +343,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   Widget _sectionTitle(String t) => Padding(
         padding: const EdgeInsets.only(left: 4, bottom: 8),
-        child: Text(t, style: const TextStyle(fontSize: 12, color: KgColors.t3)),
+        child: Text(t, style: TextStyle(fontSize: 12, color: context.kg.t3)),
       );
 
   Widget _div() => const Divider(height: 1, indent: 16, endIndent: 16);
@@ -351,7 +351,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   Widget _cell(IconData icon, String label,
       {String value = '', VoidCallback? onTap}) {
     return ListTile(
-      leading: Icon(icon, size: 20, color: KgColors.t3),
+      leading: Icon(icon, size: 20, color: context.kg.t3),
       title: Text(label, style: const TextStyle(fontSize: 15)),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -362,10 +362,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               child: Text(value,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 13, color: KgColors.t3)),
+                  style: TextStyle(fontSize: 13, color: context.kg.t3)),
             ),
           const SizedBox(width: 4),
-          const Icon(LucideIcons.chevronRight, size: 18, color: KgColors.t4),
+          Icon(LucideIcons.chevronRight, size: 18, color: context.kg.t4),
         ],
       ),
       onTap: onTap,

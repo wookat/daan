@@ -48,7 +48,7 @@ class _PredictCardState extends State<PredictCard> {
                   child: Container(
                     height: 14,
                     decoration: BoxDecoration(
-                      color: KgColors.fill,
+                      color: context.kg.fill,
                       borderRadius: BorderRadius.circular(6),
                     ),
                   ),
@@ -82,14 +82,14 @@ class _PredictCardState extends State<PredictCard> {
                 style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
             const SizedBox(height: 4),
             Text('再作答 ${(need - n).clamp(0, need)} 题即可解锁预测分（$n/$need）',
-                style: const TextStyle(fontSize: 12, color: KgColors.t2)),
+                style: TextStyle(fontSize: 12, color: context.kg.t2)),
             const SizedBox(height: 8),
             ClipRRect(
               borderRadius: BorderRadius.circular(99),
               child: LinearProgressIndicator(
                 value: (n / need).clamp(0, 1),
                 minHeight: 6,
-                backgroundColor: KgColors.fill,
+                backgroundColor: context.kg.fill,
                 valueColor: const AlwaysStoppedAnimation(KgColors.brand),
               ),
             ),
@@ -118,12 +118,12 @@ class _PredictCardState extends State<PredictCard> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                   decoration: BoxDecoration(
-                    color: KgColors.fill,
+                    color: context.kg.fill,
                     borderRadius: BorderRadius.circular(99),
                   ),
                   child: Text('置信度 ${d['confidence'] ?? ''}',
                       style:
-                          const TextStyle(fontSize: 11, color: KgColors.t2)),
+                          TextStyle(fontSize: 11, color: context.kg.t2)),
                 ),
               ],
             ),
@@ -138,13 +138,13 @@ class _PredictCardState extends State<PredictCard> {
                       fontWeight: FontWeight.w800,
                       color: KgColors.brand,
                       height: 1),
-                  children: const [
+                  children: [
                     TextSpan(
                         text: ' 分',
                         style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
-                            color: KgColors.t2)),
+                            color: context.kg.t2)),
                   ],
                 )),
                 const SizedBox(width: 12),
@@ -165,7 +165,7 @@ class _PredictCardState extends State<PredictCard> {
                       Text(
                         '基于 ${d['n'] ?? 0} 题作答${(d['n_exam'] as num?) != null && (d['n_exam'] as num) > 0 ? ' · ${d['n_exam']} 次模考' : ''}',
                         style:
-                            const TextStyle(fontSize: 11, color: KgColors.t3),
+                            TextStyle(fontSize: 11, color: context.kg.t3),
                       ),
                     ],
                   ),
@@ -210,7 +210,7 @@ class _PredictCardState extends State<PredictCard> {
                               : FontWeight.w400,
                           color: i == history.length - 1
                               ? KgColors.brand
-                              : KgColors.t3)),
+                              : context.kg.t3)),
                   const SizedBox(height: 2),
                   FractionallySizedBox(
                     widthFactor: .4,
@@ -219,7 +219,7 @@ class _PredictCardState extends State<PredictCard> {
                       decoration: BoxDecoration(
                         color: i == history.length - 1
                             ? KgColors.brand
-                            : KgColors.brand100,
+                            : context.kg.brandBg,
                         borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(3)),
                       ),
@@ -228,7 +228,7 @@ class _PredictCardState extends State<PredictCard> {
                   const SizedBox(height: 3),
                   Text((history[i]['label'] ?? '').toString(),
                       style:
-                          const TextStyle(fontSize: 10, color: KgColors.t3)),
+                          TextStyle(fontSize: 10, color: context.kg.t3)),
                 ],
               ),
             ),
@@ -245,7 +245,7 @@ class _PredictCardState extends State<PredictCard> {
         ? ('↑', KgColors.success)
         : trend < -0.03
             ? ('↓', KgColors.error)
-            : ('—', KgColors.t4);
+            : ('—', context.kg.t4);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
@@ -253,7 +253,7 @@ class _PredictCardState extends State<PredictCard> {
           SizedBox(
             width: 60,
             child: Text((m['name'] ?? '').toString(),
-                style: const TextStyle(fontSize: 12, color: KgColors.t2)),
+                style: TextStyle(fontSize: 12, color: context.kg.t2)),
           ),
           Expanded(
             child: ClipRRect(
@@ -261,7 +261,7 @@ class _PredictCardState extends State<PredictCard> {
               child: LinearProgressIndicator(
                 value: (score / max).clamp(0, 1),
                 minHeight: 7,
-                backgroundColor: KgColors.fill,
+                backgroundColor: context.kg.fill,
                 valueColor: const AlwaysStoppedAnimation(KgColors.brand),
               ),
             ),
@@ -276,10 +276,10 @@ class _PredictCardState extends State<PredictCard> {
                 children: [
                   TextSpan(
                       text: '/${max == max.roundToDouble() ? max.toInt() : max}',
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w400,
-                          color: KgColors.t3)),
+                          color: context.kg.t3)),
                 ],
               ),
               textAlign: TextAlign.right,
