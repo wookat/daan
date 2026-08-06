@@ -12,6 +12,25 @@
       </view>
     </template>
 
+    <!-- 未结束周 -->
+    <template v-else-if="pending">
+      <view class="card empty">
+        <text class="empty-t">该周尚未结束</text>
+        <text class="empty-s">{{ range }}</text>
+        <text class="empty-s">周报会在下周一自动生成，先看看上一周的吧</text>
+        <view class="cta" @click="goPrevWeek()">查看上一周周报 ›</view>
+      </view>
+    </template>
+
+    <!-- 加载失败 -->
+    <template v-else-if="error">
+      <view class="card empty">
+        <text class="empty-t">加载失败</text>
+        <text class="empty-s">{{ error }}</text>
+        <view class="cta" @click="reload()">重试 ›</view>
+      </view>
+    </template>
+
     <template v-else-if="r">
       <!-- 1. 头部概览 -->
       <view class="card hero">
@@ -188,6 +207,9 @@ export default {
     return {
       loading: true,
       empty: false,
+      pending: false,
+      prevWeek: '',
+      error: '',
       range: '',
       r: null,
       nextEvent: null,
@@ -210,12 +232,17 @@ export default {
         if (d.status === 'empty') {
           this.empty = true;
           this.range = d.range || '';
+        } else if (d.status === 'pending') {
+          this.pending = true;
+          this.range = d.range || '';
+          this.prevWeek = d.prev_week || '';
         } else {
           this.r = d;
           this.markRead(d);
           this.loadNextEvent();
         }
       } catch (e) {
+        this.error = e.message || '网络异常';
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
       this.loading = false;
@@ -243,6 +270,17 @@ export default {
       if (cur > prev + 0.01) return 'up';
       if (cur < prev - 0.01) return 'down';
       return 'flat';
+    },
+    reload() {
+      this.loading = true;
+      this.empty = false;
+      this.pending = false;
+      this.error = '';
+      this.load();
+    },
+    goPrevWeek() {
+      this.week = this.prevWeek;
+      this.reload();
     },
     goPractice() {
       uni.navigateTo({ url: '/pages/practice/practice' });
