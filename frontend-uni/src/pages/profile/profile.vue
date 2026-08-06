@@ -263,7 +263,7 @@ export default {
 </script>
 
 <style scoped>
-.wrap { padding: 24rpx 32rpx 60rpx; }
+.wrap { padding: 24rpx 32rpx calc(60rpx + 50px + env(safe-area-inset-bottom)); }
 .card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); margin-bottom: 20rpx; }
 
 .acct { display: flex; align-items: center; gap: 24rpx; padding: 32rpx; }
