@@ -1258,9 +1258,6 @@ export default {
           s.bestStreak = this.streak;
           savePStats(s);
         }
-        if (this.streak === 3 || this.streak === 5 || this.streak === 10) {
-          uni.showToast({ title: '连对 ' + this.streak + ' 题！', icon: 'none' });
-        }
         if (this.autoNext) {
           this.autoTimer = setTimeout(() => {
             this.autoTimer = null;
