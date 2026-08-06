@@ -62,7 +62,7 @@
         <view class="h">本卷薄弱考点</view>
         <view v-for="t in r.weak_tags" :key="t.tag3" class="wrow" @click="goPractice(t.tag3)">
           <view class="wrow-l">
-            <text class="wrow-t">{{ t.tag3 }}</text>
+            <text class="wrow-t">{{ t.name || t.tag3 }}</text>
             <text class="wrow-s">错 {{ t.wrong }}/{{ t.n }} 题</text>
           </view>
           <text class="wrow-go">去练 ›</text>

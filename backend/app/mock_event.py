@@ -10,7 +10,7 @@ import time
 
 from fastapi import APIRouter, Header, HTTPException
 
-from . import db
+from . import db, taxonomy
 
 router = APIRouter(prefix="/api/mock")
 admin_router = APIRouter(prefix="/api/admin/mock")
@@ -179,6 +179,9 @@ def api_events(uid: str = ""):
         if uid:
             for e in past:
                 en = _entry(conn, e["id"], uid)
+                if en and en.get("score") is not None and en.get("rank") is None:
+                    _freeze_ranks(conn, e["id"])
+                    en = _entry(conn, e["id"], uid)
                 my_past.append({
                     "id": e["id"], "title": e["title"], "close_at": e["close_at"],
                     "score": en.get("score") if en else None,
@@ -448,8 +451,18 @@ def api_event_report(event_id: int, uid: str = ""):
                 tag_wrong[tag][0] += 1
                 if picked and not correct:
                     tag_wrong[tag][1] += 1
+        topic_idx = taxonomy.topic_index()
         weak_tags = sorted(
-            ({"tag3": t, "n": v[0], "wrong": v[1]} for t, v in tag_wrong.items() if v[1] > 0),
+            (
+                {
+                    "tag3": t,
+                    "name": (topic_idx.get(t) or {}).get("name") or t,
+                    "n": v[0],
+                    "wrong": v[1],
+                }
+                for t, v in tag_wrong.items()
+                if v[1] > 0
+            ),
             key=lambda x: (-x["wrong"], -x["n"]),
         )[:5]
         # 同系列历史成绩曲线

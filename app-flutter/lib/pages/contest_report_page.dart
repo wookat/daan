@@ -315,7 +315,7 @@ class _ContestReportPageState extends State<ContestReportPage> {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 dense: true,
-                title: Text(t['tag3'] as String),
+                title: Text((t['name'] ?? t['tag3']) as String),
                 subtitle: Text('错 ${t['wrong']}/${t['n']} 题',
                     style: const TextStyle(color: Colors.red)),
                 trailing: Text('去练 ›',
