@@ -27,6 +27,7 @@ import 'pages/offline_page.dart';
 import 'pages/pk_page.dart';
 import 'pages/reminders_page.dart';
 import 'pages/login_page.dart';
+import 'pages/mastery_map_page.dart';
 import 'pages/placeholder_page.dart';
 import 'pages/practice_page.dart';
 import 'pages/profile_page.dart';
@@ -46,6 +47,7 @@ final router = GoRouter(
         StatefulShellBranch(routes: [GoRoute(path: '/profile', builder: (c, s) => const ProfilePage())]),
       ],
     ),
+    GoRoute(path: '/mastery-map', builder: (c, s) => const MasteryMapPage()),
     GoRoute(
       path: '/practice',
       builder: (c, s) => PracticePage(

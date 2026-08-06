@@ -47,7 +47,7 @@
           <text class="plan-txt" :class="{ tdone: t.done }">{{ t.title }}</text>
           <text class="task-sub">{{ t.sub }}<template v-if="t.type !== 'mock' && t.done_n"> · 已完成 {{ t.done_n }}/{{ t.target }}</template></text>
         </view>
-        <text class="plan-go">{{ t.done ? '已完成' : t.type === 'mock' ? '去模考 ›' : t.type === 'review' ? '去复习 ›' : '去练 ›' }}</text>
+        <text class="plan-go">{{ t.done ? '已完成' : t.type === 'mock' ? '去模考 ›' : t.type === 'review' ? '去复习 ›' : t.type === 'reinforce' ? '去强化 ›' : '去练 ›' }}</text>
       </view>
       <view class="plan-focus">
         <text class="plan-focus-k">今天主攻</text>
@@ -728,6 +728,10 @@ export default {
       }
       if (t.type === 'review') {
         this.goBook();
+        return;
+      }
+      if (t.type === 'reinforce') {
+        this.launch({ kind: 'reinforce', module: t.module || null, submodule: t.submodule || null, tag3: t.tag3 || null, count: 5 });
         return;
       }
       const remain = Math.max(t.target - (t.done_n || 0), 5);

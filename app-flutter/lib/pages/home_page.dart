@@ -1112,6 +1112,13 @@ class _HomePageState extends ConsumerState<HomePage> {
                 context.push('/exam/run?mini=1');
               } else if (type == 'review') {
                 context.push('/practice?mode=review');
+              } else if (type == 'reinforce') {
+                final tag3 = (t['tag3'] ?? '').toString();
+                var url = '/practice?mode=reinforce&count=5';
+                if (module.isNotEmpty) url += '&module=$module';
+                if (sub.isNotEmpty) url += '&submodule=${Uri.encodeComponent(sub)}';
+                if (tag3.isNotEmpty) url += '&tag3=${Uri.encodeComponent(tag3)}';
+                context.push(url);
               } else {
                 final target = ((t['target'] ?? 0) as num).toInt();
                 final doneN = ((t['done_n'] ?? 0) as num).toInt();
@@ -1165,7 +1172,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ? '去模考 ›'
                       : type == 'review'
                           ? '去复习 ›'
-                          : '去练 ›',
+                          : type == 'reinforce'
+                              ? '去强化 ›'
+                              : '去练 ›',
               style: TextStyle(
                   fontSize: 12,
                   color: done ? context.kg.t4 : KgColors.brand),

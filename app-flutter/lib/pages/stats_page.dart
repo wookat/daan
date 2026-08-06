@@ -214,6 +214,8 @@ class _StatsPageState extends State<StatsPage> {
                       const SizedBox(height: 16),
                       _speedCard(),
                       const SizedBox(height: 16),
+                      _masteryEntryCard(),
+                      const SizedBox(height: 16),
                       _kpMapCard(),
                       const SizedBox(height: 16),
                       _profileCard(),
@@ -832,6 +834,38 @@ class _StatsPageState extends State<StatsPage> {
         ),
       ),
     ]);
+  }
+
+  // ---------- 考点掌握度地图入口 ----------
+
+  Widget _masteryEntryCard() {
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => context.push('/mastery-map'),
+        child: const Padding(
+          padding: EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(LucideIcons.map, size: 22, color: KgColors.brand),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('考点掌握度地图', style: TextStyle(fontWeight: FontWeight.w700)),
+                    SizedBox(height: 2),
+                    Text('三级考点五档色阶，看清每个考点的掌握度',
+                        style: TextStyle(fontSize: 12, color: KgColors.t3)),
+                  ],
+                ),
+              ),
+              Icon(LucideIcons.chevronRight, size: 18, color: KgColors.t4),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   // ---------- 考点地图 ----------

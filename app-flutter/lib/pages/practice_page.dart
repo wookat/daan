@@ -16,7 +16,7 @@ import '../theme.dart';
 import '../widgets/export_sheet.dart';
 
 /// 练习答题页：取题 → 作答 → 判分 → 解析 → 上报 answer_log；答错自动入错题本。
-/// mode: normal（专项/综合）| redo（错题重练）| review（今日复习，按遗忘曲线记录）
+/// mode: normal（专项/综合）| redo（错题重练）| review（今日复习，按遗忘曲线记录）| reinforce（同考点强化，只出未做过的新题）
 class PracticePage extends ConsumerStatefulWidget {
   const PracticePage({
     super.key,
@@ -73,6 +73,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
   final Map<int, String> hsRated = {}; // 花生解析评价状态 qid -> up/down
   int? percentile; // 本组正确率全站分位
   Timer? _autoTimer;
+  Map<String, dynamic>? reinforcePicked; // 复习完成后的同考点强化候选
 
   @override
   void initState() {
@@ -149,6 +150,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
       finished = false;
       idx = 0;
       elapsed = 0;
+      reinforcePicked = null;
     });
     try {
       List<Question> qs;
@@ -165,6 +167,15 @@ class _PracticePageState extends ConsumerState<PracticePage> {
             })
             .whereType<Question>()
             .toList();
+      } else if (widget.mode == 'reinforce') {
+        final d = await Api.reinforceQuestions(
+          module: widget.module,
+          submodule: widget.submodule,
+          tag3: widget.tag3,
+          limit: widget.count ?? 5,
+        );
+        final raw = (d['items'] as List<dynamic>? ?? []);
+        qs = raw.map((e) => Question.fromJson(Map<String, dynamic>.from(e))).toList();
       } else if (widget.mode == 'paper' && widget.source != null) {
         final raw = await Api.paperQuestions(widget.source!);
         qs = raw.map((e) => Question.fromJson(Map<String, dynamic>.from(e))).toList();
@@ -202,7 +213,11 @@ class _PracticePageState extends ConsumerState<PracticePage> {
       if (qs.isEmpty) {
         setState(() {
           loading = false;
-          error = widget.mode == 'review' ? '今日没有到期错题，去刷新题吧' : '暂无题目';
+          error = widget.mode == 'review'
+              ? '今日没有到期错题，去刷新题吧'
+              : widget.mode == 'reinforce'
+                  ? '该考点暂无未做过的新题，换个考点试试'
+                  : '暂无题目';
         });
         return;
       }
@@ -447,6 +462,14 @@ class _PracticePageState extends ConsumerState<PracticePage> {
 
   Future<void> _finish() async {
     setState(() => finished = true);
+    if (widget.mode == 'review') {
+      unawaited(Api.reinforceSuggest().then((d) {
+        final p = d['picked'];
+        if (p is Map && mounted) {
+          setState(() => reinforcePicked = Map<String, dynamic>.from(p));
+        }
+      }).catchError((_) {}));
+    }
     final answered = items.where((q) => q.answered && !q.logged).toList();
     if (answered.isEmpty) return;
     ref.read(todayCountProvider.notifier).add(answered.length);
@@ -489,6 +512,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
     final title = switch (widget.mode) {
       'redo' => '错题重练',
       'review' => '今日复习',
+      'reinforce' => widget.title ?? '同考点强化',
       'paper' => widget.title ?? '真题卷',
       _ => widget.title ??
           (widget.submodule?.isNotEmpty == true
@@ -1416,6 +1440,44 @@ class _PracticePageState extends ConsumerState<PracticePage> {
           const Center(
             child: Text('本组为离线作答，恢复网络后将自动同步（去重）',
                 style: TextStyle(fontSize: 12, color: KgColors.warning)),
+          ),
+        ],
+        if (reinforcePicked != null) ...[
+          const SizedBox(height: 16),
+          Card(
+            color: KgColors.brand50,
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('趁热打铁 · 同考点强化',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 6),
+                  Text(
+                      '${reinforcePicked!['tag3_name'] ?? reinforcePicked!['submodule']} · 掌握度 ${(((reinforcePicked!['mastery'] ?? 0) as num) * 100).round()}%（${reinforcePicked!['level_name']}） · 今日错 ${reinforcePicked!['wrong_today']} 道',
+                      style: const TextStyle(fontSize: 12, color: KgColors.t3)),
+                  const SizedBox(height: 10),
+                  FilledButton(
+                    onPressed: () {
+                      final p = reinforcePicked!;
+                      final q = Uri(queryParameters: {
+                        'mode': 'reinforce',
+                        if ((p['module'] ?? '').toString().isNotEmpty)
+                          'module': p['module'].toString(),
+                        if ((p['submodule'] ?? '').toString().isNotEmpty)
+                          'submodule': p['submodule'].toString(),
+                        if ((p['tag3'] ?? '').toString().isNotEmpty)
+                          'tag3': p['tag3'].toString(),
+                        'count': '5',
+                      }).query;
+                      context.pushReplacement('/practice?$q');
+                    },
+                    child: const Text('强化 5 道新题（未做过）'),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
         const SizedBox(height: 24),

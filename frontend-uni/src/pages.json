@@ -107,6 +107,10 @@
         {
           "path": "settings/reminders",
           "style": { "navigationBarTitleText": "学习提醒" }
+        },
+        {
+          "path": "stats/mastery-map",
+          "style": { "navigationBarTitleText": "考点掌握度地图" }
         }
       ]
     }

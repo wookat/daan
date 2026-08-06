@@ -230,6 +230,15 @@
       <view v-if="history.length > 6" class="hist-more" @click="showAllHist = !showAllHist">{{ showAllHist ? '收起' : '展开全部 ' + Math.min(history.length, 30) + ' 条' }}</view>
     </view>
 
+    <view class="card km-entry" @click="goMasteryMap">
+      <view class="km-cov" :style="kmCovStyle"><view class="km-cov-in">{{ kmCov != null ? kmCov + '%' : '--' }}</view></view>
+      <view class="grow">
+        <view class="h" style="margin: 0">考点掌握度地图</view>
+        <text class="km-entry-s">三级考点五档色阶，看清每个考点的掌握度{{ kmCov != null ? '，已覆盖 ' + kmCov + '% 考点' : '' }}</text>
+      </view>
+      <text class="km-entry-go">›</text>
+    </view>
+
     <view v-if="subMap.length" class="card">
       <view class="h">考点地图</view>
       <view v-for="g in subMap" :key="g.module" class="km-group">
@@ -315,7 +324,7 @@ const MODS = [
 
 export default {
   data() {
-    return { authUser: getAuthUser(), byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, history: [], showAllHist: false, coachHtml: cleanCoach(uni.getStorageSync('coachAdvice') || ''), coachLoading: false, growth: null, reco: null, dueN: 0, gwMod: '', slStats: null, slIssuesOpen: false, modOpen: false, topOpen: false, secOpen: { coach: false, medal: false, bk: false } };
+    return { authUser: getAuthUser(), byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, kmCov: null, history: [], showAllHist: false, coachHtml: cleanCoach(uni.getStorageSync('coachAdvice') || ''), coachLoading: false, growth: null, reco: null, dueN: 0, gwMod: '', slStats: null, slIssuesOpen: false, modOpen: false, topOpen: false, secOpen: { coach: false, medal: false, bk: false } };
   },
   computed: {
     shownModules() {
@@ -446,6 +455,10 @@ export default {
     hasRadar() {
       return this.axes.some((a) => a.pct > 0);
     },
+    kmCovStyle() {
+      const pct = this.kmCov || 0;
+      return { background: `conic-gradient(var(--brand) 0% ${pct}%, var(--brand-soft) ${pct}% 100%)` };
+    },
     subMap() {
       const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断' };
       const bySub = this.pstats.bySub || {};
@@ -479,6 +492,7 @@ export default {
     this.loadGrowth();
     this.loadReco();
     this.loadSlStats();
+    this.loadMastery();
     this.load();
   },
   methods: {
@@ -571,6 +585,15 @@ export default {
     },
     goBook() {
       uni.switchTab({ url: '/pages/book/book' });
+    },
+    async loadMastery() {
+      try {
+        const d = await request('/api/mastery/map?uid=' + encodeURIComponent(anonUid()));
+        this.kmCov = d.cold ? null : d.coverage.pct;
+      } catch (e) { /* 非关键路径 */ }
+    },
+    goMasteryMap() {
+      uni.navigateTo({ url: '/pkgA/stats/mastery-map' });
     },
     goSub(module, sub, tag3) {
       uni.setStorageSync('practicePreset', { module, submodule: sub, count: 10, adaptive: true, tag3: tag3 || null });
@@ -743,6 +766,12 @@ export default {
 .m-sub { display: block; font-size: 18rpx; color: var(--ink-2); margin-top: 4rpx; }
 .cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
 .n { color: var(--brand); font-weight: 600; }
+.km-entry { display: flex; align-items: center; gap: 20rpx; }
+.km-entry .grow { flex: 1; min-width: 0; }
+.km-entry-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; }
+.km-entry-go { font-size: 36rpx; color: var(--ink-3); }
+.km-cov { width: 92rpx; height: 92rpx; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.km-cov-in { width: 68rpx; height: 68rpx; border-radius: 50%; background: var(--card); display: flex; align-items: center; justify-content: center; font-size: 20rpx; font-weight: 700; color: var(--brand); }
 .km-group { margin-bottom: 18rpx; }
 .km-mod { font-size: 24rpx; font-weight: 600; color: var(--ink-2); margin-bottom: 10rpx; }
 .km-items { display: flex; flex-wrap: wrap; gap: 12rpx; }
