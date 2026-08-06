@@ -16,6 +16,7 @@ class LoginPage extends ConsumerStatefulWidget {
 class _LoginPageState extends ConsumerState<LoginPage> {
   final _phone = TextEditingController();
   final _password = TextEditingController();
+  final _nickname = TextEditingController();
   bool isRegister = false;
   bool busy = false;
   String? error;
@@ -24,6 +25,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   void dispose() {
     _phone.dispose();
     _password.dispose();
+    _nickname.dispose();
     super.dispose();
   }
 
@@ -45,7 +47,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     try {
       final auth = ref.read(authProvider.notifier);
       if (isRegister) {
-        await auth.register(phone, pwd);
+        await auth.register(phone, pwd, nickname: _nickname.text.trim());
       } else {
         await auth.login(phone, pwd);
       }
@@ -97,6 +99,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ),
             onSubmitted: (_) => _submit(),
           ),
+          if (isRegister) ...[
+            const SizedBox(height: 16),
+            TextField(
+              controller: _nickname,
+              maxLength: 20,
+              decoration: const InputDecoration(
+                labelText: '昵称（选填）',
+                counterText: '',
+                border: OutlineInputBorder(),
+              ),
+              onSubmitted: (_) => _submit(),
+            ),
+          ],
           if (error != null) ...[
             const SizedBox(height: 12),
             Text(error!, style: const TextStyle(color: KgColors.error, fontSize: 13)),

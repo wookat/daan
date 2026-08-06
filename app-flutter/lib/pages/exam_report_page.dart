@@ -105,6 +105,7 @@ class _ExamReportPageState extends State<ExamReportPage> {
     final correct = report?['correct'] ?? 0;
     final total = report?['total'] ?? 0;
     final acc = answered == 0 ? 0 : (correct * 100 / answered).round();
+    final fullAcc = total == 0 ? 0 : ((correct as num) * 100 / total).round();
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -141,7 +142,7 @@ class _ExamReportPageState extends State<ExamReportPage> {
             ]),
           ),
           const SizedBox(height: 2),
-          Text('答对 $correct/$total · 正确率 $acc% · 用时 $usedMinutes 分钟',
+          Text('答对 $correct/$total（已答 $answered）· 已答正确率 $acc% · 全卷正确率 $fullAcc% · 用时 $usedMinutes 分钟',
               style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: .85))),
         ],
       ),

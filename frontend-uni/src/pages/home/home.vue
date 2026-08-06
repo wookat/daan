@@ -21,12 +21,12 @@
     </view>
 
     <!-- 学习计划引导 / 今日计划 -->
-    <view v-if="profile === null && !guideHide" class="card guide">
-      <view class="guide-l" @click="openSetup">
+    <view v-if="profile === null && !guideHide" class="card guide" @click="openSetup">
+      <view class="guide-l">
         <text class="guide-t">制定我的学习计划</text>
         <text class="guide-s">按考试日期倒排每日任务：专项练习 + 错题复习 + 每周模考</text>
       </view>
-      <text class="guide-btn" @click="openSetup">去制定 ›</text>
+      <text class="guide-btn">去制定 ›</text>
       <text class="guide-x" @click.stop="skipGuide">跳过</text>
     </view>
     <view v-if="planToday && planToday.profile" class="card plancard">
@@ -170,7 +170,7 @@
       <view class="card more-c" @click="goMini">
         <view class="more-ico"><l-icon name="zap" :size="20" color="#3b6ff5" /></view>
         <text class="more-t">迷你模考</text>
-        <text class="more-s">25 题 · 20 分钟</text>
+        <text class="more-s">30 题 · 30 分钟</text>
       </view>
       <view class="card more-c" @click="openPapers">
         <view class="more-ico"><l-icon name="files" :size="20" color="#0d9488" /></view>
@@ -252,7 +252,7 @@
           </view>
           <view class="setrow">
             <text class="set-k">考试日期</text>
-            <picker mode="date" :value="pf.exam_date" @change="pf.exam_date = $event.detail.value">
+            <picker mode="date" :value="pf.exam_date" :start="dateStart" :end="dateEnd" @change="pf.exam_date = $event.detail.value">
               <view class="pf-date" :class="{ empty: !pf.exam_date }">{{ pf.exam_date || '选择日期 ›' }}</view>
             </picker>
           </view>
@@ -331,6 +331,7 @@
 
 <script>
 import { request, anonUid, exportPdf } from '../../api.js';
+import { checkinStreak } from '../../checkin.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -377,6 +378,8 @@ export default {
       groupSize: uni.getStorageSync('groupSize') || 10,
       dailyGoal: uni.getStorageSync('dailyGoal') || 20,
       announce: null,
+      dateStart: new Date().toISOString().slice(0, 10),
+      dateEnd: new Date(Date.now() + 3 * 366 * 86400000).toISOString().slice(0, 10),
     };
   },
   computed: {
@@ -440,14 +443,7 @@ export default {
       return null;
     },
     dailyStreak() {
-      let n = 0;
-      const d = new Date();
-      if (!this.todayDone) d.setDate(d.getDate() - 1);
-      while (this.daily.days[d.toISOString().slice(0, 10)]) {
-        n++;
-        d.setDate(d.getDate() - 1);
-      }
-      return n;
+      return checkinStreak(this.pstats);
     },
   },
   onShow() {
@@ -460,9 +456,13 @@ export default {
     this.loadAnnounce();
     this.loadPlan();
     const wantSetup = uni.getStorageSync('openPlanSetup');
-    if (wantSetup) uni.removeStorageSync('openPlanSetup');
+    if (wantSetup) {
+      uni.removeStorageSync('openPlanSetup');
+      // 立即弹出设置，不等 profile 请求返回（返回后表单会回填已有值）
+      this.openSetup();
+    }
     this.loadProfile().then(() => {
-      if (wantSetup) this.openSetup();
+      if (wantSetup && this.setupOpen && this.profile) this.openSetup();
     });
     if (this.realMode) this.loadRealFilters();
   },

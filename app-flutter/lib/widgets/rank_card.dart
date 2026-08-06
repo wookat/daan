@@ -43,6 +43,7 @@ class _RankCardState extends State<RankCard> {
     final myBucket = ((d['my_bucket'] ?? 0) as num).toInt();
     final maxN = dist.isEmpty ? 1 : math.max(dist.reduce(math.max), 1);
     final smallSample = d['small_sample'] == true;
+    final tinySample = ((d['total'] ?? 0) as num).toInt() < 10;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -68,19 +69,25 @@ class _RankCardState extends State<RankCard> {
             const SizedBox(height: 12),
             Row(
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('${d['beaten_pct']}%',
-                        style: const TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w700,
-                            color: KgColors.brand,
-                            height: 1.1)),
-                    Text(smallSample ? '已击败（样本 ${d['total']} 人）' : '已击败考生',
-                        style: const TextStyle(fontSize: 11, color: KgColors.t3)),
-                  ],
-                ),
+                if (tinySample)
+                  Expanded(
+                    child: Text('参与人数仍较少（${d['total']} 人），暂不计算击败比例',
+                        style: const TextStyle(fontSize: 12, color: KgColors.t3)),
+                  )
+                else
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('${d['beaten_pct']}%',
+                          style: const TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w700,
+                              color: KgColors.brand,
+                              height: 1.1)),
+                      Text(smallSample ? '已击败（样本 ${d['total']} 人）' : '已击败考生',
+                          style: const TextStyle(fontSize: 11, color: KgColors.t3)),
+                    ],
+                  ),
                 const SizedBox(width: 28),
                 _kv('排名', '${d['rank']}', suffix: '/${d['total']}'),
                 const SizedBox(width: 28),

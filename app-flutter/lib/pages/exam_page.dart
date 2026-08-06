@@ -211,6 +211,7 @@ class _ExamPageState extends State<ExamPage> {
       }
       final d = await Api.examSubmit(attemptId!, picks, secs);
       Store.instance.examProgress = null;
+      _mergeIntoStats(d);
       if (mounted) context.pushReplacement('/exam/report/${d['attempt_id']}');
     } catch (e) {
       if (mounted) {
@@ -220,6 +221,36 @@ class _ExamPageState extends State<ExamPage> {
             .showSnackBar(SnackBar(content: Text('交卷失败：${Api.errMsg(e)}')));
       }
     }
+  }
+
+  /// 模考作答同步计入本地统计（与练习同一口径，供统计页/打卡使用）
+  void _mergeIntoStats(Map<String, dynamic> d) {
+    try {
+      final results = (d['items'] as List<dynamic>? ?? [])
+          .whereType<Map>()
+          .where((it) => it['status'] == 'ok')
+          .toList();
+      if (results.isEmpty) return;
+      Store.instance.addTodayCount(results.length);
+      final byMod = <String, List<int>>{};
+      for (final it in results) {
+        final m = (it['module'] ?? '').toString();
+        if (m.isEmpty) continue;
+        final cur = byMod.putIfAbsent(m, () => [0, 0]);
+        cur[0]++;
+        if (it['correct'] == true) cur[1]++;
+      }
+      byMod.forEach((m, v) => Store.instance.addModuleStat(m, v[0], v[1]));
+      Store.instance.addPracticeHistory({
+        't': DateTime.now().millisecondsSinceEpoch,
+        'module': '',
+        'mode': 'exam',
+        'n': ((d['total'] ?? results.length) as num).toInt(),
+        'correct': ((d['correct'] ?? 0) as num).toInt(),
+        'secs': items.fold<int>(0, (s, q) => s + (((q['_secs'] ?? 0) as num).toInt())),
+        'exam': items.length > 50 ? 'full' : 'mini',
+      });
+    } catch (_) {/* 非关键路径 */}
   }
 
   void _openCard() {

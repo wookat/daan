@@ -100,6 +100,7 @@ import { request, getAuthUser, authLogout, clearAuth, anonUid } from '../../api.
 import { getReminderSettings } from '../../reminder.js';
 import { cycleThemeMode, getThemeMode, THEME_LABELS } from '../../theme.js';
 import { listPacks } from '../../offline.js';
+import { checkinStreak } from '../../checkin.js';
 
 export default {
   data() {
@@ -130,15 +131,7 @@ export default {
       return n;
     },
     streak() {
-      let n = 0;
-      const days = this.daily.days || {};
-      const d = new Date();
-      if (!days[d.toISOString().slice(0, 10)]) d.setDate(d.getDate() - 1);
-      while (days[d.toISOString().slice(0, 10)]) {
-        n++;
-        d.setDate(d.getDate() - 1);
-      }
-      return n;
+      return checkinStreak(this.pstats);
     },
     profileSummary() {
       if (!this.profile) return '未制定';

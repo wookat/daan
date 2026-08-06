@@ -5,9 +5,12 @@
       <text v-if="data.small_sample" class="r-tag">样本 {{ data.total }} 人</text>
     </view>
     <view class="r-main">
-      <view class="r-beat">
+      <view v-if="!tinySample" class="r-beat">
         <text class="r-beat-n">{{ data.beaten_pct }}%</text>
         <text class="r-beat-l">已击败{{ data.small_sample ? '（样本 ' + data.total + ' 人）' : '考生' }}</text>
+      </view>
+      <view v-else class="r-beat">
+        <text class="r-beat-tiny">参与人数仍较少（{{ data.total }} 人），暂不计算击败比例</text>
       </view>
       <view class="r-kv">
         <view class="r-kv-i"><text class="r-k">排名</text><text class="r-v">{{ data.rank }}<text class="r-v-s">/{{ data.total }}</text></text></view>
@@ -33,6 +36,11 @@ export default {
   props: { attemptId: { type: [Number, String], required: true } },
   data() {
     return { data: null };
+  },
+  computed: {
+    tinySample() {
+      return !!this.data && this.data.total < 10;
+    },
   },
   mounted() {
     this.load();
@@ -62,6 +70,7 @@ export default {
 .r-beat { display: flex; flex-direction: column; }
 .r-beat-n { font-size: 64rpx; font-weight: 700; color: var(--brand); line-height: 1.1; }
 .r-beat-l { font-size: 22rpx; color: var(--ink-2); }
+.r-beat-tiny { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; }
 .r-kv { display: flex; gap: 40rpx; }
 .r-kv-i { display: flex; flex-direction: column; }
 .r-k { font-size: 22rpx; color: var(--ink-3); }

@@ -228,6 +228,7 @@ export default {
         title: '确认交卷？',
         content: blank ? '还有 ' + blank + ' 题未作答，交卷后不能再修改' : '已全部作答，交卷查看成绩报告',
         confirmText: '交卷',
+        cancelText: '再检查',
         success: (r) => { if (r.confirm) this.submit(); },
       });
     },
@@ -249,6 +250,7 @@ export default {
           data: { uid: anonUid(), attempt_id: this.attemptId, picks, secs },
         });
         uni.removeStorageSync(PROG_KEY);
+        this.mergeIntoStats(d);
         uni.hideLoading();
         uni.redirectTo({ url: '/pkgA/exam/report?attempt_id=' + d.attempt_id });
       } catch (e) {
@@ -257,6 +259,41 @@ export default {
         this.startClock();
         uni.showToast({ title: '交卷失败：' + e.message, icon: 'none' });
       }
+    },
+    // 模考作答同步计入本地统计（统计页/打卡日历与练习同一口径）
+    mergeIntoStats(d) {
+      try {
+        const s = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
+        if (!s.byModule) s.byModule = {};
+        if (!s.days) s.days = {};
+        if (!s.daysCorrect) s.daysCorrect = {};
+        const day = new Date().toISOString().slice(0, 10);
+        let answered = 0;
+        let correctN = 0;
+        for (const it of d.items || []) {
+          if (it.status !== 'ok') continue;
+          const m = it.module || 'other';
+          if (!s.byModule[m]) s.byModule[m] = { done: 0, correct: 0 };
+          s.byModule[m].done++;
+          if (it.correct) s.byModule[m].correct++;
+          answered++;
+          if (it.correct) correctN++;
+        }
+        if (!answered) return;
+        s.days[day] = (s.days[day] || 0) + answered;
+        s.daysCorrect[day] = (s.daysCorrect[day] || 0) + correctN;
+        uni.setStorageSync('pstats', s);
+        const hist = uni.getStorageSync('practiceHistory') || [];
+        hist.unshift({
+          t: Date.now(),
+          module: '',
+          n: d.total,
+          correct: d.correct,
+          secs: this.items.reduce((a, q) => a + (q._secs || 0), 0),
+          exam: this._mini ? 'mini' : 'full',
+        });
+        uni.setStorageSync('practiceHistory', hist.slice(0, 100));
+      } catch (e) { /* 非关键路径 */ }
     },
   },
 };

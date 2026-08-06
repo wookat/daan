@@ -7,6 +7,7 @@ import { flushOfflineQueue, watchNetwork } from './offline.js'
 
 export default {
   onLaunch: function () {
+    try { uni.setLocale('zh-Hans') } catch (e) { /* 旧基础库不支持时忽略 */ }
     // #ifdef H5
     const h = window.location.hash || ''
     const m = h.match(/^#\/pages\/(exam|shenlun|user)\//)
@@ -47,6 +48,9 @@ page {
   --fill: #f2f3f7;
   --card: #ffffff;
   --soft-bg: #f2f3f7;
+  /* 题干关键词高亮 */
+  --hl-bg: #fef08a;
+  --hl-ink: inherit;
   /* 历史别名（部分页面沿用） */
   --brand-50: var(--brand-soft);
   --ink-1: var(--ink);
@@ -89,6 +93,8 @@ body {
   --fill: #23252f;
   --card: #1d1f28;
   --soft-bg: #23252f;
+  --hl-bg: rgba(250, 204, 21, 0.22);
+  --hl-ink: #fde047;
   /* wot-design-uni 深色适配 */
   --wot-color-white: #1d1f28;
   --wot-cell-title-color: #f2f3f7;

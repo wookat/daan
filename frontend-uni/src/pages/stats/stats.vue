@@ -27,7 +27,7 @@
       <view class="hero-kpis">
         <view class="hk">
           <text class="hk-n">{{ totalDone }}</text>
-          <text class="hk-t">累计刷题</text>
+          <text class="hk-t">累计刷题(含模考)</text>
         </view>
         <view class="hk">
           <text class="hk-n">{{ accPct }}%</text>
@@ -298,6 +298,7 @@
 <script>
 import { request, anonUid, getAuthUser, authLogout, clearAuth } from '../../api.js';
 import { md } from '../../md.js';
+import { checkinStreak } from '../../checkin.js';
 
 // 旧版缓存的 AI 建议内联了旧紫色，读取时映射到品牌色
 function cleanCoach(s) {
@@ -393,19 +394,7 @@ export default {
       return Math.round((c / done) * 100);
     },
     streakDays() {
-      const days = this.pstats.days || {};
-      let n = 0;
-      const d = new Date();
-      for (;;) {
-        const key = d.toISOString().slice(0, 10);
-        if (days[key]) {
-          n++;
-          d.setDate(d.getDate() - 1);
-        } else if (n === 0 && key === new Date().toISOString().slice(0, 10)) {
-          d.setDate(d.getDate() - 1);
-        } else break;
-      }
-      return n;
+      return checkinStreak(this.pstats);
     },
     medals() {
       const done = this.totalDone;

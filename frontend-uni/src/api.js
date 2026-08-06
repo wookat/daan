@@ -54,8 +54,8 @@ function authHeader() {
   return t ? { Authorization: 'Bearer ' + t } : {};
 }
 
-export function authRegister(phone, password, code) {
-  return request('/api/auth/register', { method: 'POST', data: { phone, password, code } });
+export function authRegister(phone, password, code, nickname) {
+  return request('/api/auth/register', { method: 'POST', data: { phone, password, code, nickname: nickname || null } });
 }
 
 export function authLogin(phone, password) {
@@ -157,9 +157,11 @@ export function fetchCheckinSummary() {
 function askCode() {
   return new Promise((resolve) => {
     uni.showModal({
-      title: '请输入访问码',
+      title: '需要访问码（内测功能）',
       editable: true,
-      placeholderText: '联系管理员获取',
+      placeholderText: '请输入访问码，可联系管理员获取',
+      confirmText: '确定',
+      cancelText: '取消',
       success: (res) => {
         if (res.confirm && res.content) {
           uni.setStorageSync('accessCode', res.content.trim());
@@ -171,14 +173,28 @@ function askCode() {
   });
 }
 
+export function promptAccessCode() {
+  return askCode();
+}
+
+export function hasAccessCode() {
+  return !!getCode();
+}
+
+// 后端是否开启访问码（新增只读接口，旧后端 404 时按未开启处理）
+export function fetchAccessInfo() {
+  return rawRequest('/api/access_info').catch(() => ({ required: false }));
+}
+
 async function withAuthRetry(fn) {
   try {
     return await fn();
   } catch (e) {
-    if (String(e.message).includes('访问码') || String(e.message).includes('401')) {
+    if (String(e.message).includes('访问码')) {
       uni.removeStorageSync('accessCode');
       const ok = await askCode();
       if (ok) return fn();
+      throw new Error('该功能需访问码，已取消（已输入的内容未丢失）');
     }
     throw e;
   }
@@ -195,8 +211,13 @@ function rawRequest(path, { method = 'GET', data, header = {}, timeout = 180000 
       success: (res) => {
         if (res.statusCode >= 200 && res.statusCode < 300) resolve(res.data);
         else {
-          if (res.statusCode === 401 && getToken() && !path.startsWith('/api/auth/login')) clearAuth();
-          reject(new Error((res.data && res.data.detail) || `HTTP ${res.statusCode}`));
+          const detail = (res.data && res.data.detail) || '';
+          // 仅登录态本身失效才清登录（访问码/管理令牌等 401 不应踢登录）
+          if (res.statusCode === 401 && getToken() && !path.startsWith('/api/auth/') && (detail.includes('未登录') || detail.includes('登录已过期'))) {
+            clearAuth();
+            uni.showToast({ title: '登录已过期，请重新登录', icon: 'none', duration: 2500 });
+          }
+          reject(new Error(detail || `HTTP ${res.statusCode}`));
         }
       },
       fail: (err) => reject(new Error(err.errMsg || '网络错误')),

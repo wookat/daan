@@ -14,8 +14,8 @@ class AuthNotifier extends Notifier<Map<String, dynamic>?> {
     _applyAuth(d);
   }
 
-  Future<void> register(String phone, String password) async {
-    final d = await Api.authRegister(phone, password);
+  Future<void> register(String phone, String password, {String nickname = ''}) async {
+    final d = await Api.authRegister(phone, password, nickname: nickname);
     _applyAuth(d);
   }
 
