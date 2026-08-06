@@ -65,6 +65,18 @@
           "style": { "navigationBarTitleText": "成绩报告" }
         },
         {
+          "path": "exam/contest",
+          "style": { "navigationBarTitleText": "模考大赛" }
+        },
+        {
+          "path": "exam/contest-report",
+          "style": { "navigationBarTitleText": "大赛报告" }
+        },
+        {
+          "path": "stats/weekly-report",
+          "style": { "navigationBarTitleText": "周学习报告" }
+        },
+        {
           "path": "search/search",
           "style": { "navigationBarTitleText": "搜索" }
         },

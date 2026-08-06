@@ -10,10 +10,11 @@ import '../theme.dart';
 
 /// 全真模考：整卷倒计时 + 答题卡浮层 + 中途退出恢复（examProgress 键）+ 交卷判分。
 class ExamPage extends StatefulWidget {
-  const ExamPage({super.key, this.paperId, this.mini = false});
+  const ExamPage({super.key, this.paperId, this.mini = false, this.eventId});
 
   final int? paperId;
   final bool mini;
+  final int? eventId;
 
   @override
   State<ExamPage> createState() => _ExamPageState();
@@ -212,6 +213,18 @@ class _ExamPageState extends State<ExamPage> {
       final d = await Api.examSubmit(attemptId!, picks, secs);
       Store.instance.examProgress = null;
       _mergeIntoStats(d);
+      if (widget.eventId != null) {
+        try {
+          await Api.mockAttach(widget.eventId!, d['attempt_id'] as int);
+          if (mounted) context.pushReplacement('/exam/contest/report/${widget.eventId}');
+          return;
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text('未计入比赛：${Api.errMsg(e)}')));
+          }
+        }
+      }
       if (mounted) context.pushReplacement('/exam/report/${d['attempt_id']}');
     } catch (e) {
       if (mounted) {

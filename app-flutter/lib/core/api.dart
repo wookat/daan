@@ -300,6 +300,54 @@ class Api {
     return Map<String, dynamic>.from(r.data);
   }
 
+  // ---------- 模考大赛 ----------
+
+  static Future<Map<String, dynamic>> mockEvents() async {
+    final r = await dio.get('/api/mock/events', queryParameters: {'uid': uid()});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<void> mockRegister(int eventId) async {
+    await dio.post('/api/mock/events/$eventId/register', data: {'uid': uid()});
+  }
+
+  static Future<Map<String, dynamic>> mockEnter(int eventId) async {
+    final r = await dio.post('/api/mock/events/$eventId/enter', data: {'uid': uid()});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<Map<String, dynamic>> mockAttach(int eventId, int attemptId) async {
+    final r = await dio.post('/api/mock/events/$eventId/attach',
+        data: {'uid': uid(), 'attempt_id': attemptId});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<Map<String, dynamic>> mockReport(int eventId) async {
+    final r = await dio
+        .get('/api/mock/events/$eventId/report', queryParameters: {'uid': uid()});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  // ---------- 周学习报告 ----------
+
+  static Future<Map<String, dynamic>> weeklyReport({String? week}) async {
+    final r = await dio.get('/api/report/weekly', queryParameters: {
+      'uid': uid(),
+      if (week != null && week.isNotEmpty) 'week': week,
+    });
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<void> weeklyReportRead(String week) async {
+    await dio.post('/api/report/weekly/read', data: {'uid': uid(), 'week': week});
+  }
+
+  static Future<Map<String, dynamic>?> weeklyNextEvent() async {
+    final r = await dio.get('/api/report/weekly/next_event');
+    final ev = r.data['event'];
+    return ev is Map ? Map<String, dynamic>.from(ev) : null;
+  }
+
   // ---------- AI 问答 ----------
 
   /// 拍题/文字讲解（SSE 流式）。onMeta 返回识题元信息；onDelta 返回累计全文。

@@ -100,6 +100,7 @@ export default {
     },
   },
   async onLoad(opt) {
+    this._eventId = opt.event_id ? Number(opt.event_id) : null;
     const saved = uni.getStorageSync(PROG_KEY);
     if (
       saved && saved.attemptId && saved.endAt > Date.now() &&
@@ -251,6 +252,19 @@ export default {
         });
         uni.removeStorageSync(PROG_KEY);
         this.mergeIntoStats(d);
+        if (this._eventId) {
+          try {
+            await request('/api/mock/events/' + this._eventId + '/attach', {
+              method: 'POST',
+              data: { uid: anonUid(), attempt_id: d.attempt_id },
+            });
+            uni.hideLoading();
+            uni.redirectTo({ url: '/pkgA/exam/contest-report?event_id=' + this._eventId });
+            return;
+          } catch (e) {
+            uni.showToast({ title: '未计入比赛：' + e.message, icon: 'none', duration: 2500 });
+          }
+        }
         uni.hideLoading();
         uni.redirectTo({ url: '/pkgA/exam/report?attempt_id=' + d.attempt_id });
       } catch (e) {

@@ -272,6 +272,8 @@ class _HomePageState extends ConsumerState<HomePage> {
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
               children: [
+                _entry(context, LucideIcons.trophy, '模考大赛', '/exam/contest'),
+                _entry(context, LucideIcons.calendarCheck, '周报', '/stats/weekly-report'),
                 _entry(context, LucideIcons.fileText, '全真模考', '/exam/list'),
                 _entry(context, LucideIcons.penTool, '申论专区', '/shenlun'),
                 _entry(context, LucideIcons.rotateCcw, '错题重练', '/practice?mode=redo'),
