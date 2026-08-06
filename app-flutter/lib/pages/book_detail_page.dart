@@ -171,26 +171,44 @@ class _BookDetailPageState extends State<BookDetailPage> {
           : SafeArea(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                child: Row(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-                        onPressed: _toggleMastered,
-                        icon: Icon(
-                            m!.mastered ? LucideIcons.rotateCcw : LucideIcons.checkCircle2,
-                            size: 18),
-                        label: Text(m!.mastered ? '标为待掌握' : '标为已掌握'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: FilledButton.icon(
+                    if (m!.tag3 != null && m!.tag3!.isNotEmpty) ...[
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
                         onPressed: () => context.push(
-                            '/practice?mode=redo${m!.module != null ? '&module=${m!.module}' : ''}'),
-                        icon: const Icon(LucideIcons.repeat, size: 18),
-                        label: const Text('错题重练'),
+                            '/practice?mode=reinforce&count=5'
+                            '${m!.module != null ? '&module=${m!.module}' : ''}'
+                            '&tag3=${Uri.encodeComponent(m!.tag3!)}'
+                            '${m!.tag3Name != null ? '&title=${Uri.encodeComponent('同考点强化 · ${m!.tag3Name}')}' : ''}'),
+                        icon: const Icon(LucideIcons.zap, size: 18),
+                        label: Text('同考点强化 5 道新题${m!.tag3Name != null ? ' · ${m!.tag3Name}' : ''}'),
                       ),
+                      const SizedBox(height: 10),
+                    ],
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                            onPressed: _toggleMastered,
+                            icon: Icon(
+                                m!.mastered ? LucideIcons.rotateCcw : LucideIcons.checkCircle2,
+                                size: 18),
+                            label: Text(m!.mastered ? '标为待掌握' : '标为已掌握'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: () => context.push(
+                                '/practice?mode=redo${m!.module != null ? '&module=${m!.module}' : ''}'),
+                            icon: const Icon(LucideIcons.repeat, size: 18),
+                            label: const Text('错题重练'),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

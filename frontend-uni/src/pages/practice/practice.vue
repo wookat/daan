@@ -514,6 +514,10 @@ export default {
         this.startPaper({ source: launch.source, title: launch.title || '真题卷' });
         return;
       }
+      if (launch.kind === 'reinforce') {
+        this.startReinforce(launch);
+        return;
+      }
       if (launch.kind === 'start') {
         this.start(launch.module || null, launch.submodule || null, launch.count || null, !!launch.adaptive, launch.forceReal, launch.tag3 || null);
         return;
@@ -978,6 +982,49 @@ export default {
       this.szDaily.days[day] = { right: this.right, picks: this.items.map((q) => q._picked || '') };
       uni.setStorageSync('szDaily', this.szDaily);
       uni.showToast({ title: '时政每日一练完成！', icon: 'none' });
+    },
+    async startReinforce(launch) {
+      if (this._starting) return;
+      this._starting = true;
+      uni.showLoading({ title: '组题中…', mask: true });
+      if (this.beiMode) {
+        this.beiMode = false;
+        uni.setStorageSync('beiMode', '');
+      }
+      const uid = anonUid();
+      const q =
+        '/api/questions?mode=reinforce&limit=' + (launch.count || 5) +
+        '&uid=' + encodeURIComponent(uid) +
+        (launch.module ? '&module=' + launch.module : '') +
+        (launch.submodule ? '&submodule=' + encodeURIComponent(launch.submodule) : '') +
+        (launch.tag3 ? '&tag3=' + encodeURIComponent(launch.tag3) : '');
+      try {
+        const d = await request(q);
+        if (!d.items || !d.items.length) {
+          uni.showToast({ title: '该考点暂无新题，换个考点试试', icon: 'none' });
+          return;
+        }
+        this._reinforce = { tag3: launch.tag3 || null, mastery: launch.mastery };
+        this.lastModule = launch.module || null;
+        this.lastSubmodule = launch.submodule || null;
+        this.items = d.items.map((it) => ({ ...it, _saved: false }));
+        this.idx = 0;
+        this.picked = '';
+        this.right = 0;
+        this.streak = 0;
+        this.bestStreak = 0;
+        this.autoSaved = false;
+        this.resultSent = false;
+        this.percentile = null;
+        this.session = true;
+        this.startQTimer();
+        uni.showToast({ title: '同考点强化开始：均为未做过的新题', icon: 'none', duration: 1500 });
+      } catch (e) {
+        uni.showToast({ title: '组题失败：' + e.message, icon: 'none' });
+      } finally {
+        uni.hideLoading();
+        this._starting = false;
+      }
     },
     async start(module, submodule, count, adaptive, forceReal, tag3) {
       if (this._starting) return;

@@ -33,8 +33,22 @@
       </view>
     </view>
 
+    <!-- 复习完成后：同考点强化卡（spec-03） -->
+    <view v-if="!reviewing && reinforce" class="mask" @click="reinforce = null">
+      <view class="rf-card" @click.stop>
+        <view class="rf-t">本轮复习完成！趁热打铁强化一下？</view>
+        <view class="rf-name">{{ reinforce.tag3_name || reinforce.submodule }}</view>
+        <view class="rf-meta">{{ reinforce.module_name }}<template v-if="reinforce.tag3_name"> · {{ reinforce.submodule }}</template> · 掌握度 {{ Math.round(reinforce.mastery * 100) }}%（{{ reinforce.level_name }}） · 今日错 {{ reinforce.wrong_today }} 道</view>
+        <button class="rf-btn" @click="startReinforce(reinforce)">强化 5 道新题（未做过）</button>
+        <view class="rf-row2">
+          <text v-if="reinforceItems.length > 1" class="rf-alt" @click="swapReinforce">换个考点</text>
+          <text class="rf-alt" @click="reinforce = null">下次再说</text>
+        </view>
+      </view>
+    </view>
+
     <!-- 列表模式 -->
-    <template v-else>
+    <template v-if="!reviewing">
       <view v-if="items.length" class="ovrow">
         <view class="ov-c"><text class="ov-n">{{ items.length }}</text><text class="ov-t">全部错题</text></view>
         <view class="ov-c"><text class="ov-n warn">{{ todoItems.length }}</text><text class="ov-t">待掌握</text></view>
@@ -363,6 +377,8 @@ export default {
       due: [],
       dueTotal: 0,
       reviewing: false,
+      reinforce: null,
+      reinforceItems: [],
       rItems: [],
       rIdx: 0,
       picked: null,
@@ -763,8 +779,35 @@ export default {
         this.resetQ();
       } else {
         this.exitReview();
-        uni.showToast({ title: '本轮复习完成！', icon: 'success' });
+        this.fetchReinforce();
       }
+    },
+    async fetchReinforce() {
+      try {
+        const d = await request('/api/reinforce/suggest?uid=' + encodeURIComponent(anonUid()));
+        this.reinforceItems = d.items || [];
+        if (d.picked) {
+          this.reinforce = d.picked;
+          return;
+        }
+      } catch (e) { /* 非关键路径 */ }
+      uni.showToast({ title: '本轮复习完成！', icon: 'success' });
+    },
+    swapReinforce() {
+      const i = this.reinforceItems.findIndex((x) => x.skill === this.reinforce.skill);
+      this.reinforce = this.reinforceItems[(i + 1) % this.reinforceItems.length];
+    },
+    startReinforce(item) {
+      this.reinforce = null;
+      uni.setStorageSync('practiceLaunch', {
+        kind: 'reinforce',
+        module: item.module,
+        submodule: item.submodule,
+        tag3: item.tag3 || null,
+        count: 5,
+        mastery: item.mastery,
+      });
+      uni.switchTab({ url: '/pages/practice/practice' });
     },
     exitReview() {
       this.reviewing = false;
@@ -816,6 +859,11 @@ export default {
       uni.setStorageSync('redoQuestion', m.question_text || '');
       uni.switchTab({ url: '/pages/ask/ask' });
     },
+    reinforceFromMistake(m) {
+      const qt = m.question_type || '';
+      const sub = qt.includes('-') ? qt.split('-').slice(1).join('-') : qt || null;
+      this.startReinforce({ module: m.module, submodule: sub, tag3: m.tag3, mastery: null });
+    },
     practiceSimilar(m) {
       const qt = m.question_type || '';
       const sub = qt.includes('-') ? qt.split('-').slice(1).join('-') : null;
@@ -849,6 +897,7 @@ export default {
     },
     itemSheet(m) {
       const acts = [];
+      if (m.tag3) acts.push({ t: '同考点强化 5 道新题', f: () => this.reinforceFromMistake(m) });
       if (m.module) acts.push({ t: '练3道同类', f: () => this.practiceSimilar(m) });
       if (m.question_id) acts.push({ t: '题目纠错', f: () => this.openReport(m) });
       if (!m.mastered) acts.push({ t: '标为已掌握', f: () => this.master(m) });
@@ -947,6 +996,13 @@ export default {
 .att-time { margin-left: auto; color: var(--ink-3); font-size: 21rpx; }
 .ai-loading { text-align: center; color: var(--ink-2); font-size: 25rpx; padding: 60rpx 0; }
 .mask { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 99; display: flex; align-items: flex-end; }
+.rf-card { width: 100%; background: var(--card, #fff); border-radius: 28rpx 28rpx 0 0; padding: 40rpx 32rpx calc(40rpx + env(safe-area-inset-bottom)); }
+.rf-t { font-size: 26rpx; color: var(--ink-2, #646a73); }
+.rf-name { font-size: 34rpx; font-weight: 700; margin-top: 10rpx; }
+.rf-meta { font-size: 22rpx; color: var(--ink-2, #8a90a0); margin: 8rpx 0 26rpx; }
+.rf-btn { background: var(--brand, #3b6ff5); color: #fff; border-radius: 999rpx; font-size: 28rpx; }
+.rf-row2 { display: flex; justify-content: center; gap: 48rpx; margin-top: 22rpx; }
+.rf-alt { font-size: 24rpx; color: var(--ink-2, #8a90a0); padding: 8rpx 16rpx; }
 .sheet { width: 100%; background: var(--card); border-radius: 24rpx 24rpx 0 0; padding: 28rpx 28rpx 48rpx; max-height: 70vh; overflow-y: auto; box-sizing: border-box; }
 .sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
 .sheet-t { font-size: 30rpx; font-weight: 600; }

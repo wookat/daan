@@ -222,6 +222,43 @@ class Api {
     return Map<String, dynamic>.from(r.data['data'] as Map);
   }
 
+  /// 三级考点掌握度地图（覆盖度/模块/二级/三级色阶）。
+  static Future<Map<String, dynamic>> masteryMap() async {
+    final r = await dio.get('/api/mastery/map', queryParameters: {'uid': uid()});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  /// 单考点详情（近20题/趋势/到期错题/可练新题数）。
+  static Future<Map<String, dynamic>> masteryTopic(String tag3) async {
+    final r = await dio.get('/api/mastery/topic',
+        queryParameters: {'uid': uid(), 'tag3': tag3});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  /// 同考点强化候选（今日错题→最薄弱考点）。
+  static Future<Map<String, dynamic>> reinforceSuggest() async {
+    final r = await dio.get('/api/reinforce/suggest', queryParameters: {'uid': uid()});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  /// 同考点强化组题（只出未做过的新题，tag3 不足时同二级题型补足）。
+  static Future<Map<String, dynamic>> reinforceQuestions({
+    String? module,
+    String? submodule,
+    String? tag3,
+    int limit = 5,
+  }) async {
+    final r = await dio.get('/api/questions', queryParameters: {
+      'mode': 'reinforce',
+      'limit': limit,
+      'uid': uid(),
+      if (module != null && module.isNotEmpty) 'module': module,
+      if (submodule != null && submodule.isNotEmpty) 'submodule': submodule,
+      if (tag3 != null && tag3.isNotEmpty) 'tag3': tag3,
+    });
+    return Map<String, dynamic>.from(r.data);
+  }
+
   /// 二级题型（考点）掌握度：{submodule: {n, c}}。
   static Future<Map<String, dynamic>> submoduleProgress({String? module}) async {
     final r = await dio.get('/api/submodule_progress', queryParameters: {

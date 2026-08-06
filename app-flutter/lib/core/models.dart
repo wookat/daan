@@ -109,6 +109,7 @@ class Mistake {
     this.times = 1,
     this.createdAt = 0,
     this.questionId,
+    this.tag3,
     this.tag3Name,
     this.nextReview,
   });
@@ -125,6 +126,9 @@ class Mistake {
   final int times;
   final double createdAt;
   final int? questionId;
+
+  /// 三级考点编码（后端联查 questions.tag3）
+  final String? tag3;
 
   /// 三级考点名（后端联查 taxonomy）
   final String? tag3Name;
@@ -145,6 +149,7 @@ class Mistake {
         times: (j['times'] ?? 1) is int ? (j['times'] ?? 1) as int : 1,
         createdAt: (j['created_at'] is num) ? (j['created_at'] as num).toDouble() : 0,
         questionId: j['question_id'] is int ? j['question_id'] as int : null,
+        tag3: j['tag3']?.toString(),
         tag3Name: j['tag3_name']?.toString(),
         nextReview:
             j['next_review'] is num ? (j['next_review'] as num).toDouble() : null,

@@ -924,7 +924,17 @@ def api_questions(
     adaptive: int = 0,
     grouped: int = 0,
     tag3: str | None = None,
+    mode: str | None = None,
 ):
+    if mode == "reinforce" and uid:
+        # 错题同考点强化：严格只出该 uid 未做过的新题，中等难度优先
+        return {
+            "items": db.reinforce_questions(
+                uid.strip()[:64], tag3=tag3, module=module, submodule=submodule,
+                limit=min(limit, 10),
+            ),
+            "counts": db.question_counts(),
+        }
     if grouped and module == "ziliao" and not real:
         return {
             "items": db.grouped_ziliao_questions(min(limit, 50), uid=uid),

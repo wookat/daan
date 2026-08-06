@@ -394,3 +394,36 @@ def _search_questions(q: str, limit: int, offset: int) -> dict:
         total = offset + len(rows) + (1 if len(rows) == limit else 0)
     conn.close()
     return {"total": total, "items": [_q_brief(dict(r)) for r in rows]}
+
+
+# ---------- 考点掌握度地图（spec-02）----------
+
+
+@router.get("/api/mastery/map")
+def api_mastery_map(uid: str):
+    uid = uid.strip()[:64]
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    return db.mastery_snapshot(uid)
+
+
+@router.get("/api/mastery/topic")
+def api_mastery_topic(uid: str, tag3: str):
+    uid = uid.strip()[:64]
+    tag3 = tag3.strip()[:32]
+    if not uid or not tag3:
+        raise HTTPException(400, "缺少 uid 或 tag3")
+    if tag3 not in taxonomy.topic_index():
+        raise HTTPException(404, "考点不存在")
+    return db.mastery_topic(uid, tag3)
+
+
+# ---------- 错题 → 同考点强化（spec-03）----------
+
+
+@router.get("/api/reinforce/suggest")
+def api_reinforce_suggest(uid: str):
+    uid = uid.strip()[:64]
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    return db.reinforce_candidates(uid)

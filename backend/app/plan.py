@@ -89,6 +89,28 @@ def today_plan(uid: str) -> dict:
             "done": reviewed >= review_target,
         })
 
+    # 错题同考点强化（spec-03）：今日复习完成且有薄弱考点时追加一组
+    if review_target > 0 and reviewed >= review_target:
+        picked = db.reinforce_candidates(uid, include_done=True)["picked"]
+        if picked:
+            done_n = db.today_skill_count(
+                uid, tag3=picked["tag3"], submodule=None if picked["tag3"] else picked["submodule"]
+            )
+            n = db.REINFORCE_N
+            label = picked["tag3_name"] or picked["submodule"]
+            tasks.append({
+                "key": "reinforce",
+                "type": "reinforce",
+                "title": f"同考点强化：{label} {n} 题",
+                "sub": f"今日复习仍薄弱 · 掌握度 {round(picked['mastery'] * 100)}%",
+                "target": n,
+                "done_n": min(done_n, n),
+                "done": done_n >= n,
+                "module": picked["module"],
+                "submodule": picked["submodule"],
+                "tag3": picked["tag3"],
+            })
+
     # 专项练习：优先弱项（今日主攻模块置前）
     weak = db.recommend_stats(uid, top=4)["items"]
     focus = (db.get_user_state(uid) or {}).get("focus_module") or ""
