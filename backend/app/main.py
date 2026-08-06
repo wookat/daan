@@ -59,6 +59,20 @@ mock_event.init_mock_event_db()
 report.init_report_db()
 
 
+def _warmup():
+    """启动后台预热题库热点索引页缓存，消除首个随机抽题/统计请求的冷启动秒级延迟。"""
+    try:
+        conn = db.get_conn()
+        conn.execute("SELECT COUNT(*) FROM questions INDEXED BY idx_q_pick WHERE has_hs IS NOT NULL")
+        conn.execute("SELECT COUNT(*) FROM questions INDEXED BY idx_q_tag3_disabled WHERE tag3 IS NOT NULL")
+        conn.close()
+    except Exception:
+        pass
+
+
+threading.Thread(target=_warmup, daemon=True).start()
+
+
 def _stats_refresher():
     while True:
         try:
