@@ -1485,5 +1485,14 @@ def api_upload_qimg(body: dict, x_import_token: str | None = Header(None)):
     return {"path": "/qimg/" + name}
 
 
+@app.get("/sw.js", include_in_schema=False)
+def api_sw_js():
+    """Service Worker 需从站点根路径提供才能获得 '/' 作用域（H5 离线壳）。"""
+    p = os.path.join(FRONTEND_DIR, "static", "sw.js")
+    if not os.path.isfile(p):
+        raise HTTPException(404, "not found")
+    return FileResponse(p, media_type="application/javascript")
+
+
 app.mount("/qimg", StaticFiles(directory=QIMG_DIR), name="qimg")
 app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="static")
