@@ -678,6 +678,9 @@ export default {
       if (!uid) return;
       try {
         this.plan = await request('/api/daily_plan?uid=' + encodeURIComponent(uid));
+        const due = (this.plan && this.plan.due_mistakes) || 0;
+        if (due > 0) uni.setTabBarBadge({ index: 1, text: String(due > 99 ? '99+' : due) });
+        else uni.removeTabBarBadge({ index: 1 });
       } catch (e) { /* 非关键路径 */ }
     },
     async loadProfile() {
