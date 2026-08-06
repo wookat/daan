@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/offline.dart';
@@ -22,8 +23,16 @@ Future<void> main() async {
       unawaited(Offline.flushQueue());
     }
   });
+  Store.instance.onAuthExpired = () {
+    kgMessengerKey.currentState?.showSnackBar(
+      const SnackBar(content: Text('登录已过期，请重新登录')),
+    );
+  };
   runApp(const ProviderScope(child: KgApp()));
 }
+
+/// 全局 ScaffoldMessenger，供非页面上下文（如网络层）提示使用
+final kgMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 class KgApp extends ConsumerWidget {
   const KgApp({super.key});
@@ -37,6 +46,14 @@ class KgApp extends ConsumerWidget {
       theme: kgTheme(Brightness.light),
       darkTheme: kgTheme(Brightness.dark),
       themeMode: mode,
+      locale: const Locale('zh', 'CN'),
+      supportedLocales: const [Locale('zh', 'CN'), Locale('en')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      scaffoldMessengerKey: kgMessengerKey,
       routerConfig: router,
     );
   }

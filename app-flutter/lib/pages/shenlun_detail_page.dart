@@ -72,9 +72,27 @@ class _ShenlunDetailPageState extends State<ShenlunDetailPage> {
     } catch (_) {/* 历史加载失败不阻断 */}
   }
 
+  /// AI 批改需访问码（内测）：提前提示；取消时草稿保留
+  Future<bool> _ensureAccess() async {
+    if (Store.instance.accessCode.isNotEmpty) return true;
+    if (!await Api.accessRequired()) return true;
+    if (!mounted) return false;
+    await _promptAccessCode();
+    if (Store.instance.accessCode.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('已取消，作答内容已保留为草稿')));
+      }
+      Store.instance.setSlDraft(widget.qid, _ctrl.text);
+      return false;
+    }
+    return true;
+  }
+
   Future<void> _grade() async {
     final answer = _ctrl.text.trim();
     if (grading || answer.isEmpty) return;
+    if (!await _ensureAccess()) return;
     setState(() {
       grading = true;
       gradeResult = '';
@@ -101,11 +119,11 @@ class _ShenlunDetailPageState extends State<ShenlunDetailPage> {
     final code = await showDialog<String>(
       context: context,
       builder: (c) => AlertDialog(
-        title: const Text('请输入访问码'),
+        title: const Text('需要访问码（内测功能）'),
         content: TextField(
           controller: ctrl,
           autofocus: true,
-          decoration: const InputDecoration(hintText: '访问码'),
+          decoration: const InputDecoration(hintText: '请输入访问码，可联系管理员获取'),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(c), child: const Text('取消')),

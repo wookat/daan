@@ -10,8 +10,9 @@
           <text class="score-u">分</text>
         </view>
         <view class="hero-meta">
-          <text class="hm">答对 {{ report.correct }}/{{ report.total }}</text>
-          <text class="hm">正确率 {{ accuracy }}%</text>
+          <text class="hm">答对 {{ report.correct }}/{{ report.total }}（已答 {{ report.answered }}）</text>
+          <text class="hm">已答正确率 {{ accuracy }}%</text>
+          <text class="hm">全卷正确率 {{ fullAccuracy }}%</text>
           <text class="hm">用时 {{ usedTime }}</text>
         </view>
       </view>
@@ -104,6 +105,10 @@ export default {
     accuracy() {
       const r = this.report;
       return r && r.answered ? Math.round((r.correct / r.answered) * 100) : 0;
+    },
+    fullAccuracy() {
+      const r = this.report;
+      return r && r.total ? Math.round((r.correct / r.total) * 100) : 0;
     },
     usedTime() {
       const a = this.report && this.report.attempt;

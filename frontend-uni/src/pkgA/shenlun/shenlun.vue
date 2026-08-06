@@ -125,7 +125,7 @@
 </template>
 
 <script>
-import { request } from '../../api';
+import { request, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api';
 
 const QTYPES = ['全部', '归纳概括', '综合分析', '提出对策', '贯彻执行', '大作文'];
 const MTYPES = ['全部', '金句', '案例', '政策理论', '范文'];
@@ -378,6 +378,18 @@ export default {
     },
     async grade() {
       if (this.grading || !this.myAnswer.trim()) return;
+      // AI 批改需访问码（内测）：提前提示；取消时草稿保留
+      if (!hasAccessCode()) {
+        const info = await fetchAccessInfo();
+        if (info && info.required) {
+          const ok = await promptAccessCode();
+          if (!ok) {
+            uni.showToast({ title: '已取消，作答内容已保留为草稿', icon: 'none' });
+            this.saveDraft();
+            return;
+          }
+        }
+      }
       this.grading = true;
       this.gradeResult = '';
       try {

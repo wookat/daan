@@ -55,6 +55,11 @@ class Store {
     _sp.setString('anonUid', uid);
   }
 
+  /// 登录过期回调（由 UI 层注册，提示“请重新登录”）
+  void Function()? onAuthExpired;
+
+  void notifyAuthExpired() => onAuthExpired?.call();
+
   void clearAuth() {
     _sp.remove('authToken');
     _sp.remove('authUser');

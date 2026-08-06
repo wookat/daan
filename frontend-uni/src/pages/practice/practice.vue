@@ -1848,8 +1848,8 @@ export default {
 .timer.overtime { color: #ef4444; font-weight: 700; }
 .tm-cmp { margin-left: auto; font-size: 22rpx; color: #16a34a; }
 .tm-cmp.over { color: #ef4444; }
-.qhl { background: #fef08a; border-radius: 4rpx; padding: 0 2rpx; font-weight: 600; }
-.qhl-tip { margin-top: 8rpx; font-size: 21rpx; color: #b45309; }
+.qhl { background: var(--hl-bg, #fef08a); color: var(--hl-ink, inherit); border-radius: 4rpx; padding: 0 2rpx; font-weight: 600; }
+.qhl-tip { margin-top: 8rpx; font-size: 21rpx; color: var(--warn); }
 .opt.sel { border-color: var(--brand); background: var(--soft-bg); }
 .acard-n.skip { background: var(--line); color: var(--ink-2); }
 .beat { margin-top: 10rpx; font-size: 25rpx; color: var(--brand); background: var(--soft-bg); border-radius: 999rpx; padding: 10rpx 26rpx; }

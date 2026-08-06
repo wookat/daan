@@ -27,11 +27,16 @@ class Api {
         handler.next(options);
       },
       onError: (e, handler) {
-        // 401：清登录态回到匿名 uid（与 api.js rawRequest 一致）
+        // 仅登录态本身失效才清登录（访问码/管理令牌等 401 不应踢登录），与 api.js rawRequest 一致
+        final data = e.response?.data;
+        final detail =
+            (data is Map && data['detail'] != null) ? data['detail'].toString() : '';
         if (e.response?.statusCode == 401 &&
             Store.instance.token.isNotEmpty &&
-            !(e.requestOptions.path.startsWith('/api/auth/login'))) {
+            !(e.requestOptions.path.startsWith('/api/auth/')) &&
+            (detail.contains('未登录') || detail.contains('登录已过期'))) {
           Store.instance.clearAuth();
+          Store.instance.notifyAuthExpired();
         }
         handler.next(e);
       },
@@ -178,6 +183,16 @@ class Api {
   static Future<Map<String, dynamic>> stats() async {
     final r = await dio.get('/api/stats', queryParameters: {'uid': uid()});
     return Map<String, dynamic>.from(r.data);
+  }
+
+  /// 后端是否开启访问码（旧后端 404 时按未开启处理）。
+  static Future<bool> accessRequired() async {
+    try {
+      final r = await dio.get('/api/access_info');
+      return r.data is Map && r.data['required'] == true;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// AI 学习教练建议（需访问码）。
@@ -845,8 +860,13 @@ class Api {
     return Map<String, dynamic>.from(r.data);
   }
 
-  static Future<Map<String, dynamic>> authRegister(String phone, String password) async {
-    final r = await dio.post('/api/auth/register', data: {'phone': phone, 'password': password});
+  static Future<Map<String, dynamic>> authRegister(String phone, String password,
+      {String nickname = ''}) async {
+    final r = await dio.post('/api/auth/register', data: {
+      'phone': phone,
+      'password': password,
+      if (nickname.isNotEmpty) 'nickname': nickname,
+    });
     return Map<String, dynamic>.from(r.data);
   }
 

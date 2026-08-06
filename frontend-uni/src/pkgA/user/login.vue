@@ -58,7 +58,7 @@ export default {
         const r =
           this.mode === 'login'
             ? await authLogin(this.phone, this.password)
-            : await authRegister(this.phone, this.password, '');
+            : await authRegister(this.phone, this.password, '', this.nickname.trim());
         setAuth(r.token, r.user);
         if (anon && anon !== r.user.uid) {
           try {

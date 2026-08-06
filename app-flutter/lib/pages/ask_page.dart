@@ -361,8 +361,25 @@ class AskPageState extends State<AskPage> {
     });
   }
 
+  /// AI 问答需访问码（内测）：提前提示；取消时不丢失已输入内容
+  Future<bool> _ensureAccess() async {
+    if (Store.instance.accessCode.isNotEmpty) return true;
+    if (!await Api.accessRequired()) return true;
+    if (!mounted) return false;
+    await _promptAccessCode();
+    if (Store.instance.accessCode.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('已取消，输入的内容已保留')));
+      }
+      return false;
+    }
+    return true;
+  }
+
   Future<void> _doExplain({String img = '', String text = '', String userAnswer = ''}) async {
     if (img.isEmpty && text.isEmpty) return;
+    if (!await _ensureAccess()) return;
     setState(() {
       loading = true;
       error = null;
@@ -1125,11 +1142,11 @@ class AskPageState extends State<AskPage> {
     final code = await showDialog<String>(
       context: context,
       builder: (c) => AlertDialog(
-        title: const Text('请输入访问码'),
+        title: const Text('需要访问码（内测功能）'),
         content: TextField(
           controller: ctrl,
           autofocus: true,
-          decoration: const InputDecoration(hintText: '访问码'),
+          decoration: const InputDecoration(hintText: '请输入访问码，可联系管理员获取'),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(c), child: const Text('取消')),

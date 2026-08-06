@@ -40,6 +40,13 @@ def check_access(x_access_code: str | None):
     if ACCESS_CODE and x_access_code != ACCESS_CODE:
         raise HTTPException(401, "访问码错误")
 
+
+@app.get("/api/access_info")
+def api_access_info():
+    """客户端进入 AI 功能前查询是否需要访问码（不泄露访问码本身）。"""
+    return {"required": bool(ACCESS_CODE)}
+
+
 db.init_db()
 auth.init_auth_db()
 social.init_social_db()

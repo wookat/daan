@@ -203,7 +203,7 @@
 
 <script>
 import { md } from '../../md.js';
-import { request, uploadExplain, streamExplain, anonUid } from '../../api.js';
+import { request, uploadExplain, streamExplain, anonUid, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api.js';
 import { isNativeApp, pickImageNative } from '../../native.js';
 
 export default {
@@ -347,16 +347,27 @@ export default {
           : `正在生成分步讲解，马上好…（${secs}秒）`;
       }, 1000);
     },
-    submitText() {
+    // AI 问答需访问码（内测）：提前提示；取消时不丢失已输入内容
+    async ensureAccess() {
+      if (hasAccessCode()) return true;
+      const info = await fetchAccessInfo();
+      if (!info || !info.required) return true;
+      const ok = await promptAccessCode();
+      if (!ok) uni.showToast({ title: '已取消，输入的内容已保留', icon: 'none' });
+      return ok;
+    },
+    async submitText() {
       const txt = this.qtext.trim();
       if (!txt) {
         uni.showToast({ title: '请粘贴题目文字', icon: 'none' });
         return;
       }
+      if (!(await this.ensureAccess())) return;
       this.textOpen = false;
       this.doExplain('', null, txt);
     },
-    submitImage() {
+    async submitImage() {
+      if (!(await this.ensureAccess())) return;
       const img = this.imagePath;
       const file = this.imageFile;
       this.imagePath = '';
@@ -370,8 +381,6 @@ export default {
       this.stagedImage = img || '';
       this.stagedText = txt || '';
       const uans = this.uanswer.trim();
-      this.uanswer = '';
-      this.qtext = '';
       this.startTimer();
       try {
         let d;
@@ -402,6 +411,8 @@ export default {
           const nr = { ...rec, ...d, userImage: img, user_answer: uans, ansCard: null, streaming: false };
           this.applyExplain(nr, d.explanation);
           this.results.unshift(nr);
+          this.uanswer = '';
+          this.qtext = '';
           this.persistSession();
           clearInterval(this.timer);
           this.loading = false;
@@ -433,6 +444,8 @@ export default {
         }
         Object.assign(live, d, { streaming: false, userImage: img || '', userText: txt || '', user_answer: uans });
         this.applyExplain(live, d.explanation);
+        this.uanswer = '';
+        this.qtext = '';
         this.persistSession();
       } catch (e) {
         this.error = e.message;
