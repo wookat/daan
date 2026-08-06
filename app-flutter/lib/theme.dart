@@ -198,7 +198,7 @@ ThemeData kgTheme(Brightness brightness) {
     ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: dark ? const Color(0xFF121318) : Colors.white,
-      indicatorColor: dark ? KgColors.brandDeep : KgColors.brand50,
+      indicatorColor: dark ? KgSemantic.dark.brandBg : KgColors.brand50,
       height: 64,
       labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
     ),

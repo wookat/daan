@@ -648,6 +648,9 @@ class _PracticePageState extends ConsumerState<PracticePage> {
     if (segs == null) {
       return Text(q.question, style: TextStyle(fontSize: fs, height: 1.7));
     }
+    final darkMode = Theme.of(context).brightness == Brightness.dark;
+    final hlBg = darkMode ? const Color(0xFF3A2E10) : const Color(0xFFFEF3C7);
+    final hlFg = darkMode ? const Color(0xFFFBBF24) : const Color(0xFF92400E);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -656,10 +659,10 @@ class _PracticePageState extends ConsumerState<PracticePage> {
             TextSpan(
               text: s.$1,
               style: s.$2
-                  ? const TextStyle(
-                      backgroundColor: Color(0xFFFEF3C7),
+                  ? TextStyle(
+                      backgroundColor: hlBg,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF92400E))
+                      color: hlFg)
                   : null,
             ),
         ]), style: TextStyle(fontSize: fs, height: 1.7)),
@@ -994,8 +997,8 @@ class _PracticePageState extends ConsumerState<PracticePage> {
               runSpacing: 6,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                const Text('错因自评：',
-                    style: TextStyle(fontSize: 12, color: KgColors.t3)),
+                Text('错因自评：',
+                    style: TextStyle(fontSize: 12, color: context.kg.t3)),
                 for (final rz in const ['粗心大意', '概念不清', '方法不会', '纯蒙的'])
                   InkWell(
                     onTap: () => _setReason(q, rz),
@@ -1006,7 +1009,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
                       decoration: BoxDecoration(
                         color: q.errorReason == rz
                             ? KgColors.brand
-                            : KgColors.fill,
+                            : context.kg.fill,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(rz,
@@ -1014,7 +1017,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
                               fontSize: 11,
                               color: q.errorReason == rz
                                   ? Colors.white
-                                  : KgColors.t3)),
+                                  : context.kg.t3)),
                     ),
                   ),
               ],
@@ -1272,7 +1275,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
                   child: CircularProgressIndicator(
                     value: pct / 100,
                     strokeWidth: 10,
-                    backgroundColor: KgColors.fill,
+                    backgroundColor: context.kg.fill,
                     color: pct >= 80
                         ? KgColors.success
                         : pct >= 60
@@ -1372,10 +1375,10 @@ class _PracticePageState extends ConsumerState<PracticePage> {
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                             color: !items[i].answered
-                                ? KgColors.fill
+                                ? context.kg.fill
                                 : items[i].correct
-                                    ? KgColors.successBg
-                                    : KgColors.errorBg,
+                                    ? context.kg.successBg
+                                    : context.kg.errorBg,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text('${i + 1}',
@@ -1383,7 +1386,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                   color: !items[i].answered
-                                      ? KgColors.t3
+                                      ? context.kg.t3
                                       : items[i].correct
                                           ? KgColors.success
                                           : KgColors.error)),
