@@ -139,9 +139,24 @@
       </view>
     </view>
 
+    <!-- 周学习报告 -->
+    <view class="card weekly-c" @click="goWeeklyReport">
+      <view class="more-ico"><l-icon name="calendar-check" :size="22" color="#3b6ff5" /></view>
+      <view class="grow">
+        <view class="weekly-t">周学习报告 <view v-if="weeklyDot" class="dot" /></view>
+        <text class="weekly-s">每周一生成 · 回顾上周 · 规划下周</text>
+      </view>
+      <view class="mini-btn">查看</view>
+    </view>
+
     <!-- 更多练习 -->
     <view class="sec-h"><text class="sec-t">更多练习</text></view>
     <view class="more-grid">
+      <view class="card more-c" @click="goContest">
+        <view class="more-ico"><l-icon name="trophy" :size="20" color="#d97706" /></view>
+        <text class="more-t">模考大赛</text>
+        <text class="more-s">每周六 · 全站同卷排名</text>
+      </view>
       <view class="card more-c" @click="goExamList">
         <view class="more-ico"><l-icon name="file-text" :size="20" color="#3b6ff5" /></view>
         <text class="more-t">全真模考</text>
@@ -378,6 +393,7 @@ export default {
       groupSize: uni.getStorageSync('groupSize') || 10,
       dailyGoal: uni.getStorageSync('dailyGoal') || 20,
       announce: null,
+      weeklyDot: false,
       dateStart: new Date().toISOString().slice(0, 10),
       dateEnd: new Date(Date.now() + 3 * 366 * 86400000).toISOString().slice(0, 10),
     };
@@ -455,6 +471,7 @@ export default {
     this.loadCounts();
     this.loadAnnounce();
     this.loadPlan();
+    this.calcWeeklyDot();
     const wantSetup = uni.getStorageSync('openPlanSetup');
     if (wantSetup) {
       uni.removeStorageSync('openPlanSetup');
@@ -472,8 +489,11 @@ export default {
       const v = e.detail.value;
       if (!v) return;
       if (v < this.dateStart || v > this.dateEnd) {
-        uni.showToast({ title: `请选择 ${this.dateStart} 至 ${this.dateEnd} 之间的日期`, icon: 'none' });
         this.pf.exam_date = v < this.dateStart ? this.dateStart : this.dateEnd;
+        // 等 picker 弹层收起后再提示，否则 toast 被弹层遮挡看不到
+        setTimeout(() => {
+          uni.showToast({ title: `请选择 ${this.dateStart} 至 ${this.dateEnd} 之间的日期`, icon: 'none', duration: 2500 });
+        }, 350);
         return;
       }
       this.pf.exam_date = v;
@@ -528,6 +548,24 @@ export default {
     },
     goExamList() {
       uni.navigateTo({ url: '/pkgA/exam/list' });
+    },
+    goContest() {
+      uni.navigateTo({ url: '/pkgA/exam/contest' });
+    },
+    goWeeklyReport() {
+      uni.navigateTo({ url: '/pkgA/stats/weekly-report' });
+    },
+    calcWeeklyDot() {
+      // 周一至周三未读上周周报时显示红点
+      const now = new Date();
+      const dow = now.getDay();
+      if (dow < 1 || dow > 3) {
+        this.weeklyDot = false;
+        return;
+      }
+      const day0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const lastWs = Math.floor(day0.getTime() / 1000) - ((dow + 6) % 7) * 86400 - 7 * 86400;
+      this.weeklyDot = uni.getStorageSync('weeklyReadWs') !== lastWs;
     },
     goShenlun() {
       uni.navigateTo({ url: '/pkgA/shenlun/shenlun' });
@@ -760,6 +798,12 @@ export default {
 .sec-t { font-size: 32rpx; font-weight: 700; color: var(--ink); }
 .sec-more { font-size: 24rpx; color: var(--ink-2); min-height: 44px; display: inline-flex; align-items: center; }
 
+/* 周报卡 */
+.weekly-c { display: flex; align-items: center; gap: 24rpx; padding: 26rpx 32rpx; }
+.weekly-t { font-size: 29rpx; font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 10rpx; }
+.weekly-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
+.dot { width: 16rpx; height: 16rpx; border-radius: 50%; background: #ef4444; }
+
 /* 时政卡 */
 .szcard { display: flex; align-items: center; gap: 24rpx; padding: 26rpx 32rpx; }
 .sz-ico { width: 80rpx; height: 80rpx; border-radius: 20rpx; background: var(--warn-soft); display: flex; align-items: center; justify-content: center; font-size: 38rpx; flex-shrink: 0; }
@@ -890,7 +934,7 @@ export default {
   .modlist { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; align-items: start; }
   .modlist .card.smart { grid-column: 1 / -1; }
   .more-grid { grid-column: 1 / -1; grid-template-columns: repeat(4, 1fr); }
-  .card.guide, .card.plancard, .card.szcard, .card.spin { grid-column: 1 / -1; }
+  .card.guide, .card.plancard, .card.szcard, .card.weekly-c, .card.spin { grid-column: 1 / -1; }
   .modrow:hover, .more-c:hover { box-shadow: 0 8rpx 24rpx rgba(23, 24, 28, 0.08); cursor: pointer; }
   .mask { position: fixed; align-items: center; justify-content: center; }
   .sheet { max-width: 520px; border-radius: 28rpx; }

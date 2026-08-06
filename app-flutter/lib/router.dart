@@ -5,6 +5,8 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'pages/ask_page.dart';
 import 'pages/book_detail_page.dart';
 import 'pages/calendar_page.dart';
+import 'pages/contest_page.dart';
+import 'pages/contest_report_page.dart';
 import 'pages/exam_list_page.dart';
 import 'pages/exam_page.dart';
 import 'pages/exam_report_page.dart';
@@ -29,6 +31,7 @@ import 'pages/placeholder_page.dart';
 import 'pages/practice_page.dart';
 import 'pages/profile_page.dart';
 import 'pages/stats_page.dart';
+import 'pages/weekly_report_page.dart';
 
 final router = GoRouter(
   initialLocation: '/home',
@@ -60,11 +63,22 @@ final router = GoRouter(
       builder: (c, s) => BookDetailPage(mistakeId: int.parse(s.pathParameters['id']!)),
     ),
     GoRoute(path: '/exam/list', builder: (c, s) => const ExamListPage()),
+    GoRoute(path: '/exam/contest', builder: (c, s) => const ContestPage()),
+    GoRoute(
+      path: '/exam/contest/report/:id',
+      builder: (c, s) =>
+          ContestReportPage(eventId: int.parse(s.pathParameters['id']!)),
+    ),
+    GoRoute(
+      path: '/stats/weekly-report',
+      builder: (c, s) => WeeklyReportPage(week: s.uri.queryParameters['week']),
+    ),
     GoRoute(
       path: '/exam/run',
       builder: (c, s) => ExamPage(
         paperId: int.tryParse(s.uri.queryParameters['paper_id'] ?? ''),
         mini: s.uri.queryParameters['mini'] == '1',
+        eventId: int.tryParse(s.uri.queryParameters['event_id'] ?? ''),
       ),
     ),
     GoRoute(
