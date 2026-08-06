@@ -1,0 +1,16 @@
+{
+ "t1": {
+  "targets": 1039,
+  "fix": 1006,
+  "keep": 33
+ },
+ "t2": {
+  "targets": 2489,
+  "fix": 2373,
+  "keep": 116
+ },
+ "t3": {
+  "samples_pass": 53,
+  "samples_reject": 27
+ }
+}
