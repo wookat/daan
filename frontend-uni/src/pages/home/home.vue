@@ -252,7 +252,7 @@
           </view>
           <view class="setrow">
             <text class="set-k">考试日期</text>
-            <picker mode="date" :value="pf.exam_date" :start="dateStart" :end="dateEnd" @change="pf.exam_date = $event.detail.value">
+            <picker mode="date" :value="pf.exam_date" :start="dateStart" :end="dateEnd" @change="onExamDate">
               <view class="pf-date" :class="{ empty: !pf.exam_date }">{{ pf.exam_date || '选择日期 ›' }}</view>
             </picker>
           </view>
@@ -467,6 +467,17 @@ export default {
     if (this.realMode) this.loadRealFilters();
   },
   methods: {
+    onExamDate(e) {
+      // H5 的 picker 滚轮可选出 start/end 之外的年份，这里再钳一次范围
+      const v = e.detail.value;
+      if (!v) return;
+      if (v < this.dateStart || v > this.dateEnd) {
+        uni.showToast({ title: `请选择 ${this.dateStart} 至 ${this.dateEnd} 之间的日期`, icon: 'none' });
+        this.pf.exam_date = v < this.dateStart ? this.dateStart : this.dateEnd;
+        return;
+      }
+      this.pf.exam_date = v;
+    },
     goSearch() {
       uni.navigateTo({ url: '/pkgA/search/search' });
     },

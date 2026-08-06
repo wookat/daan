@@ -213,11 +213,13 @@ function rawRequest(path, { method = 'GET', data, header = {}, timeout = 180000 
         else {
           const detail = (res.data && res.data.detail) || '';
           // 仅登录态本身失效才清登录（访问码/管理令牌等 401 不应踢登录）
-          if (res.statusCode === 401 && getToken() && !path.startsWith('/api/auth/') && (detail.includes('未登录') || detail.includes('登录已过期'))) {
+          const authExpired = res.statusCode === 401 && !path.startsWith('/api/auth/') && (detail.includes('未登录') || detail.includes('登录已过期'));
+          if (authExpired && getToken()) {
             clearAuth();
             uni.showToast({ title: '登录已过期，请重新登录', icon: 'none', duration: 2500 });
           }
-          reject(new Error(detail || `HTTP ${res.statusCode}`));
+          // 统一登录过期文案，避免调用方 toast 直接透出后端 detail
+          reject(new Error(authExpired ? '登录已过期，请重新登录' : detail || `HTTP ${res.statusCode}`));
         }
       },
       fail: (err) => reject(new Error(err.errMsg || '网络错误')),
