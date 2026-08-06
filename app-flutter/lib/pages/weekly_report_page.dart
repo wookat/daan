@@ -19,23 +19,37 @@ class _WeeklyReportPageState extends State<WeeklyReportPage> {
   bool loading = true;
   String? error;
   bool empty = false;
+  bool pending = false;
+  String prevWeek = '';
   String range = '';
   Map<String, dynamic>? r;
   Map<String, dynamic>? nextEvent;
 
+  String? _week;
+
   @override
   void initState() {
     super.initState();
+    _week = widget.week;
     _load();
   }
 
   Future<void> _load() async {
     try {
-      final d = await Api.weeklyReport(week: widget.week);
+      final d = await Api.weeklyReport(week: _week);
       if (d['status'] == 'empty') {
         setState(() {
           empty = true;
           range = (d['range'] ?? '') as String;
+          loading = false;
+        });
+        return;
+      }
+      if (d['status'] == 'pending') {
+        setState(() {
+          pending = true;
+          range = (d['range'] ?? '') as String;
+          prevWeek = (d['prev_week'] ?? '') as String;
           loading = false;
         });
         return;
@@ -81,7 +95,9 @@ class _WeeklyReportPageState extends State<WeeklyReportPage> {
           ? const Center(child: CircularProgressIndicator())
           : error != null
               ? Center(child: Text(error!))
-              : empty
+              : pending
+                  ? _pending(cs)
+                  : empty
                   ? _empty(cs)
                   : ListView(
                       padding: const EdgeInsets.all(16),
@@ -140,6 +156,38 @@ class _WeeklyReportPageState extends State<WeeklyReportPage> {
               FilledButton(
                 onPressed: () => context.push('/practice'),
                 child: const Text('去刷题'),
+              ),
+            ],
+          ),
+        ),
+      );
+
+  Widget _pending(ColorScheme cs) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('该周尚未结束',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              Text(range, style: TextStyle(color: cs.onSurfaceVariant)),
+              const SizedBox(height: 4),
+              Text('周报会在下周一自动生成，先看看上一周的吧',
+                  style: TextStyle(color: cs.onSurfaceVariant)),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: prevWeek.isEmpty
+                    ? null
+                    : () {
+                        setState(() {
+                          loading = true;
+                          pending = false;
+                          _week = prevWeek;
+                        });
+                        _load();
+                      },
+                child: const Text('查看上一周周报'),
               ),
             ],
           ),

@@ -46,7 +46,7 @@ def _clean_uid(uid) -> str:
     return u
 
 
-def _week_of(param: str | None) -> float:
+def _week_of(param: str | None, allow_unfinished: bool = False) -> float:
     """week 参数（YYYY-MM-DD，属于该周任一天）→ 周一 0 点时间戳；默认上一周。"""
     now = time.time()
     if param:
@@ -58,7 +58,7 @@ def _week_of(param: str | None) -> float:
         ws = _week_start(ts)
     else:
         ws = _week_start(now) - 7 * 86400
-    if ws + 7 * 86400 > now:
+    if not allow_unfinished and ws + 7 * 86400 > now:
         raise HTTPException(400, "该周尚未结束，周一之后可查看")
     return ws
 
@@ -238,7 +238,14 @@ def _cleanup(conn, uid: str):
 @router.get("/weekly")
 def api_weekly(uid: str = "", week: str | None = None):
     uid = _clean_uid(uid)
-    ws = _week_of(week)
+    ws = _week_of(week, allow_unfinished=True)
+    if ws + 7 * 86400 > time.time():
+        return {
+            "status": "pending",
+            "week_start": ws,
+            "range": f"{_fmt_day(ws)} ~ {_fmt_day(ws + 6 * 86400)}",
+            "prev_week": _fmt_day(ws - 7 * 86400),
+        }
     conn = db.get_conn()
     try:
         row = conn.execute(
