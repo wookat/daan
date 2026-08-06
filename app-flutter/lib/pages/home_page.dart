@@ -250,9 +250,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                     title: const Text('混合刷题',
                         style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                     subtitle: Text('全部模块随机 · 每组 ${Store.instance.groupSize} 题',
-                        style: const TextStyle(fontSize: 12, color: KgColors.t3)),
-                    trailing: const Icon(LucideIcons.chevronRight,
-                        size: 18, color: KgColors.t4),
+                        style: TextStyle(fontSize: 12, color: context.kg.t3)),
+                    trailing: Icon(LucideIcons.chevronRight,
+                        size: 18, color: context.kg.t4),
                     onTap: () => context.push('/practice'),
                   ),
                 ],
@@ -388,7 +388,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   Widget _riskCard(({String title, String sub}) risk) {
     return Card(
-      color: KgColors.warningBg,
+      color: context.kg.warningBg,
       child: ListTile(
         leading: const Icon(LucideIcons.flame, size: 22, color: KgColors.warning),
         title: Text(risk.title,
@@ -455,7 +455,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: KgColors.warningBg,
+            color: context.kg.warningBg,
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Icon(LucideIcons.newspaper, size: 22, color: KgColors.warning),
@@ -468,7 +468,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
               decoration: BoxDecoration(
-                color: done ? KgColors.successBg : KgColors.warningBg,
+                color: done ? context.kg.successBg : context.kg.warningBg,
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(done ? '已完成' : '今日更新',
@@ -478,8 +478,8 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
           ],
         ),
-        subtitle: const Text('每日 10 题 · 近半年国内时政热点 · 全站同题',
-            style: TextStyle(fontSize: 12, color: KgColors.t3)),
+        subtitle: Text('每日 10 题 · 近半年国内时政热点 · 全站同题',
+            style: TextStyle(fontSize: 12, color: context.kg.t3)),
         trailing: Text(done ? '回顾 ›' : '去练习 ›',
             style: const TextStyle(fontSize: 13, color: KgColors.brand)),
         onTap: () => context.push('/shizheng'),
@@ -599,7 +599,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 title: const Text('全部随机',
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                 trailing: Text('${total ?? '-'} 题',
-                    style: const TextStyle(fontSize: 12, color: KgColors.t3)),
+                    style: TextStyle(fontSize: 12, color: context.kg.t3)),
                 onTap: () {
                   Navigator.pop(c);
                   context.push('/practice?module=$module');
@@ -618,12 +618,12 @@ class _HomePageState extends ConsumerState<HomePage> {
                     subtitle: pn > 0
                         ? Text(
                             '已做 $pn 题 · 正确率 ${(((p?['c'] ?? 0) as num) * 100 / pn).round()}%',
-                            style: const TextStyle(
-                                fontSize: 11, color: KgColors.t4))
+                            style: TextStyle(
+                                fontSize: 11, color: context.kg.t4))
                         : null,
                     trailing: Text('${s['n']} 题',
                         style:
-                            const TextStyle(fontSize: 12, color: KgColors.t3)),
+                            TextStyle(fontSize: 12, color: context.kg.t3)),
                     onTap: () {
                       Navigator.pop(c);
                       context.push(
@@ -645,7 +645,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         title: const Text('智能刷题：攻克薄弱项',
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
         subtitle: Text('你的${moduleName(module)}正确率较低，建议专项练习',
-            style: const TextStyle(fontSize: 12, color: KgColors.t3)),
+            style: TextStyle(fontSize: 12, color: context.kg.t3)),
         trailing: const Text('去练 ›',
             style: TextStyle(fontSize: 13, color: KgColors.brand)),
         onTap: () => _openModule(module, moduleName(module)),
@@ -689,8 +689,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                             fontSize: 13, fontWeight: FontWeight.w600)),
                     if (sub != null)
                       Text(sub,
-                          style: const TextStyle(
-                              fontSize: 11, color: KgColors.t4)),
+                          style: TextStyle(
+                              fontSize: 11, color: context.kg.t4)),
                     const SizedBox(height: 8),
                     Wrap(spacing: 8, runSpacing: 8, children: items),
                   ],
@@ -783,8 +783,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                     child: const Text('按以上设置导出练习卷 PDF'),
                   ),
                   const SizedBox(height: 8),
-                  const Text('以上设置同样作用于模块列表；模考与真题卷不受影响',
-                      style: TextStyle(fontSize: 11, color: KgColors.t4)),
+                  Text('以上设置同样作用于模块列表；模考与真题卷不受影响',
+                      style: TextStyle(fontSize: 11, color: context.kg.t4)),
                 ],
               ),
             ),
@@ -919,8 +919,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                             title: Text((p['title'] ?? '').toString(),
                                 style: const TextStyle(fontSize: 14)),
                             trailing: Text('${p['n']} 题',
-                                style: const TextStyle(
-                                    fontSize: 12, color: KgColors.t3)),
+                                style: TextStyle(
+                                    fontSize: 12, color: context.kg.t3)),
                             onTap: () {
                               Navigator.pop(c);
                               context.push(
@@ -959,13 +959,13 @@ class _HomePageState extends ConsumerState<HomePage> {
                     Store.instance.planGuideHide = true;
                     setState(() => guideHidden = true);
                   },
-                  child: const Icon(LucideIcons.x, size: 16, color: KgColors.t4),
+                  child: Icon(LucideIcons.x, size: 16, color: context.kg.t4),
                 ),
               ],
             ),
             const SizedBox(height: 4),
-            const Text('30 秒设置考试信息，每天给你一份可执行的刷题计划',
-                style: TextStyle(fontSize: 12.5, color: KgColors.t3)),
+            Text('30 秒设置考试信息，每天给你一份可执行的刷题计划',
+                style: TextStyle(fontSize: 12.5, color: context.kg.t3)),
             const SizedBox(height: 12),
             FilledButton(
               style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(42)),
@@ -1002,14 +1002,14 @@ class _HomePageState extends ConsumerState<HomePage> {
                 const SizedBox(width: 8),
                 InkWell(
                   onTap: _openSetup,
-                  child: const Icon(LucideIcons.settings2, size: 16, color: KgColors.t3),
+                  child: Icon(LucideIcons.settings2, size: 16, color: context.kg.t3),
                 ),
               ],
             ),
             const SizedBox(height: 10),
             if (tasks.isEmpty)
-              const Text('今日暂无任务，去自由刷一组吧',
-                  style: TextStyle(fontSize: 13, color: KgColors.t3))
+              Text('今日暂无任务，去自由刷一组吧',
+                  style: TextStyle(fontSize: 13, color: context.kg.t3))
             else
               for (final t in tasks) _taskRow(Map<String, dynamic>.from(t)),
             // 考点级弱项推荐（复刻 plan.weak，携带 tag3）
@@ -1022,8 +1022,8 @@ class _HomePageState extends ConsumerState<HomePage> {
               runSpacing: 6,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                const Text('今天主攻',
-                    style: TextStyle(fontSize: 12, color: KgColors.t3)),
+                Text('今天主攻',
+                    style: TextStyle(fontSize: 12, color: context.kg.t3)),
                 for (final e in kModuleNames.entries)
                   Builder(builder: (context) {
                     final on = daily?['focus'] == e.key;
@@ -1034,13 +1034,13 @@ class _HomePageState extends ConsumerState<HomePage> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: on ? KgColors.brand : KgColors.fill,
+                          color: on ? KgColors.brand : context.kg.fill,
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(e.value,
                             style: TextStyle(
                                 fontSize: 11,
-                                color: on ? Colors.white : KgColors.t3)),
+                                color: on ? Colors.white : context.kg.t3)),
                       ),
                     );
                   }),
@@ -1125,7 +1125,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         child: Row(
           children: [
             Icon(done ? LucideIcons.checkCircle2 : LucideIcons.circle,
-                size: 16, color: done ? KgColors.success : KgColors.t4),
+                size: 16, color: done ? KgColors.success : context.kg.t4),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -1135,7 +1135,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     (t['title'] ?? t['name'] ?? '').toString(),
                     style: TextStyle(
                       fontSize: 13.5,
-                      color: done ? KgColors.t3 : null,
+                      color: done ? context.kg.t3 : null,
                       decoration: done ? TextDecoration.lineThrough : null,
                     ),
                   ),
@@ -1150,8 +1150,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                       return const SizedBox.shrink();
                     }
                     return Text('$subText$extra',
-                        style: const TextStyle(
-                            fontSize: 11, color: KgColors.t4));
+                        style: TextStyle(
+                            fontSize: 11, color: context.kg.t4));
                   }),
                 ],
               ),
@@ -1166,7 +1166,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                           : '去练 ›',
               style: TextStyle(
                   fontSize: 12,
-                  color: done ? KgColors.t4 : KgColors.brand),
+                  color: done ? context.kg.t4 : KgColors.brand),
             ),
           ],
         ),

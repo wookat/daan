@@ -295,9 +295,9 @@ class _PkPageState extends State<PkPage> {
           ),
         ),
         const SizedBox(height: 16),
-        const Padding(
+        Padding(
           padding: EdgeInsets.only(left: 4, bottom: 8),
-          child: Text('选择模块', style: TextStyle(fontSize: 12, color: KgColors.t3)),
+          child: Text('选择模块', style: TextStyle(fontSize: 12, color: context.kg.t3)),
         ),
         Wrap(
           spacing: 8,
@@ -349,8 +349,8 @@ class _PkPageState extends State<PkPage> {
         const SizedBox(height: 20),
         Row(
           children: [
-            const Text('本周胜场榜',
-                style: TextStyle(fontSize: 12, color: KgColors.t3)),
+            Text('本周胜场榜',
+                style: TextStyle(fontSize: 12, color: context.kg.t3)),
             const Spacer(),
             if (lb['my_rank'] != null)
               Text('我的排名 #${lb['my_rank']} · ${lb['my_wins']} 胜',
@@ -362,12 +362,12 @@ class _PkPageState extends State<PkPage> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             child: lbItems.isEmpty
-                ? const Padding(
+                ? Padding(
                     padding: EdgeInsets.symmetric(vertical: 16),
                     child: Center(
                         child: Text('本周还没有对局，快来抢占榜首！',
                             style:
-                                TextStyle(fontSize: 12.5, color: KgColors.t3))),
+                                TextStyle(fontSize: 12.5, color: context.kg.t3))),
                   )
                 : Column(
                     children: [
@@ -382,7 +382,7 @@ class _PkPageState extends State<PkPage> {
         const SizedBox(height: 20),
         Row(
           children: [
-            const Text('我的对局', style: TextStyle(fontSize: 12, color: KgColors.t3)),
+            Text('我的对局', style: TextStyle(fontSize: 12, color: context.kg.t3)),
             const Spacer(),
             if ((mine['wins'] as num?) != null && (mine['wins'] as num) > 0)
               Text('累计 ${mine['wins']} 胜',
@@ -394,12 +394,12 @@ class _PkPageState extends State<PkPage> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             child: mineItems.isEmpty
-                ? const Padding(
+                ? Padding(
                     padding: EdgeInsets.symmetric(vertical: 16),
                     child: Center(
                         child: Text('还没有对局记录',
                             style:
-                                TextStyle(fontSize: 12.5, color: KgColors.t3))),
+                                TextStyle(fontSize: 12.5, color: context.kg.t3))),
                   )
                 : Column(
                     children: [
@@ -421,7 +421,7 @@ class _PkPageState extends State<PkPage> {
       1 => (const Color(0xFFFEF3C7), const Color(0xFFD97706)),
       2 => (const Color(0xFFE5E7EB), const Color(0xFF6B7280)),
       3 => (const Color(0xFFFDE8D7), const Color(0xFFC2632B)),
-      _ => (KgColors.fill, KgColors.t3),
+      _ => (context.kg.fill, context.kg.t3),
     };
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -470,7 +470,7 @@ class _PkPageState extends State<PkPage> {
                   const SizedBox(height: 2),
                   Text(_matchDesc(m),
                       style:
-                          const TextStyle(fontSize: 11.5, color: KgColors.t3)),
+                          TextStyle(fontSize: 11.5, color: context.kg.t3)),
                 ],
               ),
             ),
@@ -500,12 +500,12 @@ class _PkPageState extends State<PkPage> {
 
   (String, Color, Color) _matchBadge(Map<String, dynamic> m) {
     if (m['status'] != 'finished') {
-      return ('等待中', KgColors.warningBg, KgColors.warning);
+      return ('等待中', context.kg.warningBg, KgColors.warning);
     }
-    if (m['winner'] == 'draw') return ('平局', KgColors.fill, KgColors.t3);
+    if (m['winner'] == 'draw') return ('平局', context.kg.fill, context.kg.t3);
     return m['winner'] == m['my_side']
-        ? ('胜', KgColors.successBg, KgColors.success)
-        : ('负', KgColors.errorBg, KgColors.error);
+        ? ('胜', context.kg.successBg, KgColors.success)
+        : ('负', context.kg.errorBg, KgColors.error);
   }
 
   void _openMatch(Map<String, dynamic> m) {
@@ -580,7 +580,7 @@ class _PkPageState extends State<PkPage> {
                       ? KgColors.brand
                       : i == qIndex
                           ? KgColors.brand.withValues(alpha: .4)
-                          : KgColors.fill,
+                          : context.kg.fill,
                   borderRadius: BorderRadius.circular(3),
                 ),
               ),
@@ -600,7 +600,7 @@ class _PkPageState extends State<PkPage> {
                           KgColors.brand),
                       if ((q['submodule'] ?? '').toString().isNotEmpty) ...[
                         const SizedBox(width: 8),
-                        _tag((q['submodule'] ?? '').toString(), KgColors.t3),
+                        _tag((q['submodule'] ?? '').toString(), context.kg.t3),
                       ],
                     ],
                   ),
@@ -619,7 +619,7 @@ class _PkPageState extends State<PkPage> {
         if (rivalDone) ...[
           const SizedBox(height: 10),
           Card(
-            color: KgColors.brand50,
+            color: context.kg.brandBg,
             child: const Padding(
               padding: EdgeInsets.all(12),
               child: Row(
@@ -683,9 +683,9 @@ class _PkPageState extends State<PkPage> {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color: on
-                ? (dark ? KgColors.brandDeep : KgColors.brand50)
+                ? (dark ? KgColors.brandDeep : context.kg.brandBg)
                 : (dark ? const Color(0xFF1A1C22) : Colors.white),
-            border: Border.all(color: on ? KgColors.brand : KgColors.border),
+            border: Border.all(color: on ? KgColors.brand : context.kg.border),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
@@ -775,11 +775,11 @@ class _PkPageState extends State<PkPage> {
                       '${my?['score'] ?? '—'}',
                       '答对 ${my?['correct'] ?? '—'}/$n · 用时 ${_fmtMs(my?['time_ms'])}'),
                 ),
-                const Text('VS',
+                Text('VS',
                     style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
-                        color: KgColors.t4)),
+                        color: context.kg.t4)),
                 Expanded(
                   child: their != null && their['done'] == true
                       ? _resSide((their['name'] ?? '').toString(),
@@ -817,18 +817,18 @@ class _PkPageState extends State<PkPage> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 20, vertical: 10),
                       decoration: BoxDecoration(
-                        color: KgColors.fill,
+                        color: context.kg.fill,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text((m['code'] ?? '').toString(),
-                              style: const TextStyle(
+                              style: TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: 3,
-                                  color: KgColors.t1)),
+                                  color: context.kg.t1)),
                           const SizedBox(width: 10),
                           const Text('复制',
                               style: TextStyle(
@@ -881,14 +881,14 @@ class _PkPageState extends State<PkPage> {
         Text(name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12.5, color: KgColors.t2)),
+            style: TextStyle(fontSize: 12.5, color: context.kg.t2)),
         const SizedBox(height: 4),
         Text(score,
             style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800)),
         const SizedBox(height: 4),
         Text(meta,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 10.5, color: KgColors.t3)),
+            style: TextStyle(fontSize: 10.5, color: context.kg.t3)),
       ],
     );
   }

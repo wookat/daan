@@ -63,7 +63,7 @@ class _ExamReportPageState extends State<ExamReportPage> {
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : error != null
-              ? Center(child: Text(error!, style: const TextStyle(color: KgColors.t3)))
+              ? Center(child: Text(error!, style: TextStyle(color: context.kg.t3)))
               : ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
@@ -186,7 +186,7 @@ class _ExamReportPageState extends State<ExamReportPage> {
           SizedBox(
             width: 64,
             child: Text(moduleName(mod),
-                style: const TextStyle(fontSize: 13, color: KgColors.t2)),
+                style: TextStyle(fontSize: 13, color: context.kg.t2)),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -195,7 +195,7 @@ class _ExamReportPageState extends State<ExamReportPage> {
               child: LinearProgressIndicator(
                 value: pct,
                 minHeight: 8,
-                backgroundColor: KgColors.fill,
+                backgroundColor: context.kg.fill,
                 color: color,
               ),
             ),
@@ -233,11 +233,11 @@ class _ExamReportPageState extends State<ExamReportPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: KgColors.fill,
+                    color: context.kg.fill,
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Text('错题已自动入本',
-                      style: TextStyle(fontSize: 11, color: KgColors.t3)),
+                  child: Text('错题已自动入本',
+                      style: TextStyle(fontSize: 11, color: context.kg.t3)),
                 ),
               ],
             ),
@@ -256,12 +256,12 @@ class _ExamReportPageState extends State<ExamReportPage> {
                 final r = items[i];
                 final answered = (r['picked'] ?? '') != '';
                 final Color bg = !answered
-                    ? KgColors.fill
+                    ? context.kg.fill
                     : r['correct'] == true
-                        ? KgColors.successBg
-                        : KgColors.errorBg;
+                        ? context.kg.successBg
+                        : context.kg.errorBg;
                 final Color fg = !answered
-                    ? KgColors.t3
+                    ? context.kg.t3
                     : r['correct'] == true
                         ? KgColors.success
                         : KgColors.error;
@@ -311,7 +311,7 @@ class _ExamReportPageState extends State<ExamReportPage> {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
-                    color: KgColors.border, borderRadius: BorderRadius.circular(2)),
+                    color: context.kg.border, borderRadius: BorderRadius.circular(2)),
               ),
             ),
             Row(
@@ -321,7 +321,7 @@ class _ExamReportPageState extends State<ExamReportPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: KgColors.brand50,
+                    color: context.kg.brandBg,
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(moduleName(r['module']?.toString()),
@@ -343,14 +343,14 @@ class _ExamReportPageState extends State<ExamReportPage> {
             const SizedBox(height: 8),
             Text(
               '我的答案 ${(r['picked'] ?? '').toString().isEmpty ? '未作答' : r['picked']} · 正确答案 ${r['answer']}',
-              style: const TextStyle(fontSize: 13, color: KgColors.t3),
+              style: TextStyle(fontSize: 13, color: context.kg.t3),
             ),
             if (explanation.isNotEmpty) ...[
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: KgColors.brand50.withValues(alpha: .5),
+                  color: context.kg.brandBg.withValues(alpha: .5),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Column(
@@ -370,14 +370,14 @@ class _ExamReportPageState extends State<ExamReportPage> {
   }
 
   Widget _detailOption(Map<String, dynamic> r, String k, String v) {
-    Color border = KgColors.border;
+    Color border = context.kg.border;
     Color? bgc;
     if (k == (r['answer'] ?? '')) {
       border = KgColors.success;
-      bgc = KgColors.successBg;
+      bgc = context.kg.successBg;
     } else if (k == (r['picked'] ?? '') && r['correct'] != true) {
       border = KgColors.error;
-      bgc = KgColors.errorBg;
+      bgc = context.kg.errorBg;
     }
     return Container(
       margin: const EdgeInsets.only(bottom: 8),

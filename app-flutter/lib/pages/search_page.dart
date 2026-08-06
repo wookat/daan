@@ -129,12 +129,12 @@ class _SearchPageState extends State<SearchPage> {
           margin: const EdgeInsets.only(right: 8),
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: KgColors.fill,
+            color: context.kg.fill,
             borderRadius: BorderRadius.circular(999),
           ),
           child: Row(
             children: [
-              const Icon(LucideIcons.search, size: 16, color: KgColors.t4),
+              Icon(LucideIcons.search, size: 16, color: context.kg.t4),
               const SizedBox(width: 6),
               Expanded(
                 child: TextField(
@@ -143,9 +143,9 @@ class _SearchPageState extends State<SearchPage> {
                   textInputAction: TextInputAction.search,
                   onChanged: _onInput,
                   onSubmitted: (_) => _doSearch(),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: '题号 / 题干关键词 / 考点名',
-                    hintStyle: TextStyle(fontSize: 13, color: KgColors.t4),
+                    hintStyle: TextStyle(fontSize: 13, color: context.kg.t4),
                     border: InputBorder.none,
                     isDense: true,
                   ),
@@ -158,8 +158,8 @@ class _SearchPageState extends State<SearchPage> {
                     _ctrl.clear();
                     setState(() => result = null);
                   },
-                  child: const Icon(LucideIcons.x,
-                      size: 16, color: KgColors.t3),
+                  child: Icon(LucideIcons.x,
+                      size: 16, color: context.kg.t3),
                 ),
             ],
           ),
@@ -167,8 +167,8 @@ class _SearchPageState extends State<SearchPage> {
         actions: [
           TextButton(
             onPressed: () => context.pop(),
-            child: const Text('取消',
-                style: TextStyle(color: KgColors.t2, fontSize: 14)),
+            child: Text('取消',
+                style: TextStyle(color: context.kg.t2, fontSize: 14)),
           ),
         ],
       ),
@@ -197,7 +197,7 @@ class _SearchPageState extends State<SearchPage> {
                       child: Text(n,
                           style: TextStyle(
                               fontSize: 13,
-                              color: tab == k ? Colors.white : KgColors.t2,
+                              color: tab == k ? Colors.white : context.kg.t2,
                               fontWeight: tab == k
                                   ? FontWeight.w600
                                   : FontWeight.w400)),
@@ -220,9 +220,9 @@ class _SearchPageState extends State<SearchPage> {
     }
     final r = result;
     if (r == null) {
-      return const Center(
+      return Center(
         child: Text('支持搜索：题号语义码、题干关键词、考点名、试卷名',
-            style: TextStyle(color: KgColors.t3, fontSize: 13)),
+            style: TextStyle(color: context.kg.t3, fontSize: 13)),
       );
     }
     if (isEmpty) {
@@ -230,7 +230,7 @@ class _SearchPageState extends State<SearchPage> {
         child: Text(
           '没有找到「${r['q']}」相关内容\n可尝试题号（如 ZL-JQ-2024-000914）、题干关键词或考点名',
           textAlign: TextAlign.center,
-          style: const TextStyle(color: KgColors.t3, fontSize: 13, height: 1.8),
+          style: TextStyle(color: context.kg.t3, fontSize: 13, height: 1.8),
         ),
       );
     }
@@ -266,14 +266,14 @@ class _SearchPageState extends State<SearchPage> {
   Widget _secTitle(String t) => Padding(
         padding: const EdgeInsets.only(bottom: 8, top: 4),
         child: Text(t,
-            style: const TextStyle(fontSize: 12, color: KgColors.t3)),
+            style: TextStyle(fontSize: 12, color: context.kg.t3)),
       );
 
   /// 高亮命中关键词
   Widget _hl(String text, {int maxLines = 3, double fontSize = 13.5}) {
     final q = (result?['q'] ?? '').toString();
     final style =
-        TextStyle(fontSize: fontSize, height: 1.6, color: KgColors.t2);
+        TextStyle(fontSize: fontSize, height: 1.6, color: context.kg.t2);
     if (q.isEmpty || !text.contains(q)) {
       return Text(text,
           maxLines: maxLines, overflow: TextOverflow.ellipsis, style: style);
@@ -314,7 +314,7 @@ class _SearchPageState extends State<SearchPage> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: codeBadge ? KgColors.brand50 : KgColors.fill,
+                        color: codeBadge ? context.kg.brandBg : context.kg.fill,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text((it['code'] ?? '').toString(),
@@ -323,7 +323,7 @@ class _SearchPageState extends State<SearchPage> {
                               fontFamily: 'monospace',
                               color: codeBadge
                                   ? KgColors.brand
-                                  : KgColors.t2)),
+                                  : context.kg.t2)),
                     ),
                   const SizedBox(width: 6),
                   if (it['is_real'] == true || it['is_real'] == 1)
@@ -331,7 +331,7 @@ class _SearchPageState extends State<SearchPage> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: KgColors.warningBg,
+                        color: context.kg.warningBg,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
@@ -342,8 +342,8 @@ class _SearchPageState extends State<SearchPage> {
                   const SizedBox(width: 6),
                   Text(
                       '$mod${(it['submodule'] ?? '').toString().isNotEmpty ? ' · ${it['submodule']}' : ''}',
-                      style: const TextStyle(
-                          fontSize: 10, color: KgColors.t3)),
+                      style: TextStyle(
+                          fontSize: 10, color: context.kg.t3)),
                 ],
               ),
               const SizedBox(height: 6),
@@ -363,8 +363,8 @@ class _SearchPageState extends State<SearchPage> {
     return Container(
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.only(top: 8),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: KgColors.fill)),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: context.kg.fill)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -379,7 +379,7 @@ class _SearchPageState extends State<SearchPage> {
                         height: 1.5,
                         color: '${e.key}' == ans
                             ? KgColors.success
-                            : KgColors.t2,
+                            : context.kg.t2,
                         fontWeight: '${e.key}' == ans
                             ? FontWeight.w600
                             : FontWeight.w400)),
@@ -392,8 +392,8 @@ class _SearchPageState extends State<SearchPage> {
           if ((d['explanation'] ?? '').toString().isNotEmpty) ...[
             const SizedBox(height: 4),
             Text((d['explanation'] ?? '').toString(),
-                style: const TextStyle(
-                    fontSize: 12.5, height: 1.6, color: KgColors.t2)),
+                style: TextStyle(
+                    fontSize: 12.5, height: 1.6, color: context.kg.t2)),
           ],
         ],
       ),
@@ -417,7 +417,7 @@ class _SearchPageState extends State<SearchPage> {
                   Text(
                     '${t['module_name'] ?? ''} · ${t['group_name'] ?? ''}${(t['n'] as num?) != null && (t['n'] as num) > 0 ? ' · ${t['n']} 题' : ''}',
                     style:
-                        const TextStyle(fontSize: 11, color: KgColors.t3),
+                        TextStyle(fontSize: 11, color: context.kg.t3),
                   ),
                 ],
               ),
@@ -449,7 +449,7 @@ class _SearchPageState extends State<SearchPage> {
                   Text(
                     '${p['year'] ?? ''}${(p['region'] ?? '').toString().isNotEmpty ? ' · ${p['region']}' : ''}',
                     style:
-                        const TextStyle(fontSize: 11, color: KgColors.t3),
+                        TextStyle(fontSize: 11, color: context.kg.t3),
                   ),
                 ],
               ),
