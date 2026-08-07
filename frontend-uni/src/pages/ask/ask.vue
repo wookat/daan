@@ -687,8 +687,10 @@ export default {
 .mask { position: fixed; inset: 0; background: rgba(15, 18, 30, 0.5); z-index: 90; display: flex; align-items: flex-end; }
 .sheet { width: 100%; box-sizing: border-box; background: var(--card); border-radius: 32rpx 32rpx 0 0; padding: 32rpx 28rpx calc(36rpx + env(safe-area-inset-bottom)); max-height: 76vh; overflow-y: auto; }
 /* #ifdef H5 */
-/* H5 底部 TabBar 常驻，弹层需为其让出空间，否则主按钮被遮挡 */
-.sheet { padding-bottom: calc(36rpx + 50px + env(safe-area-inset-bottom)); }
+/* H5 底部 TabBar 常驻：整个弹层收在 TabBar 上方，内容再高也不会被遮挡 */
+@media (max-width: 767px) {
+  .mask { bottom: calc(50px + env(safe-area-inset-bottom)); }
+}
 /* #endif */
 .sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20rpx; }
 .sheet-t { font-size: 30rpx; font-weight: 700; }
