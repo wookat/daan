@@ -143,7 +143,7 @@ export default {
   padding: 24rpx;
 }
 .card {
-  background: #fff;
+  background: var(--card, #fff);
   border-radius: 20rpx;
   padding: 28rpx;
   margin-bottom: 20rpx;
@@ -155,6 +155,7 @@ export default {
 .cold-t {
   font-size: 32rpx;
   font-weight: 700;
+  color: var(--ink, #17181c);
 }
 .cold-s {
   font-size: 24rpx;
@@ -198,7 +199,7 @@ export default {
   width: 100rpx;
   height: 100rpx;
   border-radius: 50%;
-  background: #fff;
+  background: var(--card, #fff);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -216,6 +217,7 @@ export default {
 .head-t {
   font-size: 30rpx;
   font-weight: 700;
+  color: var(--ink, #17181c);
 }
 .head-s {
   font-size: 22rpx;
@@ -258,7 +260,7 @@ export default {
   align-items: center;
   gap: 8rpx;
   padding: 14rpx 26rpx;
-  background: #fff;
+  background: var(--card, #fff);
   border-radius: 999rpx;
   margin-right: 14rpx;
   font-size: 26rpx;
@@ -281,6 +283,7 @@ export default {
 .grp-name {
   font-size: 28rpx;
   font-weight: 700;
+  color: var(--ink, #17181c);
 }
 .grp-meta {
   font-size: 22rpx;
@@ -357,7 +360,7 @@ export default {
   left: 24rpx;
   right: 24rpx;
   bottom: calc(24rpx + env(safe-area-inset-bottom));
-  background: #fff;
+  background: var(--card, #fff);
   border-radius: 20rpx;
   padding: 22rpx 24rpx;
   display: flex;
