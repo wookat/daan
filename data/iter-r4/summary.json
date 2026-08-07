@@ -1,0 +1,777 @@
+{
+ "iteration": "r4",
+ "scope": "在架生成题/非真题（coalesce(disabled,0)=0 AND (source LIKE 'original%' OR coalesce(is_real,0)!=1)）且去空白解析<30字符",
+ "targets": 40954,
+ "fixed": 36918,
+ "keep": 4036,
+ "module_breakdown": {
+  "changshi": {
+   "fixed": 12559,
+   "keep": 2825
+  },
+  "panduan": {
+   "fixed": 281,
+   "keep": 50
+  },
+  "shuliang": {
+   "fixed": 19234,
+   "keep": 866
+  },
+  "yanyu": {
+   "fixed": 2392,
+   "keep": 153
+  },
+  "ziliao": {
+   "fixed": 2452,
+   "keep": 142
+  }
+ },
+ "keep_reasons": {
+  "重写多轮未过程序校验（建议人工补写或下架）": 584,
+  "终检未过（程序校验拒绝）": 1,
+  "抽检未过（人工抽读发现事实/格式问题，已回退，建议人工补写）": 41,
+  "中转站额度耗尽（403）未完成重写（额度恢复后可续跑）": 921,
+  "所在批次两轮抽检未达95%整批暂缓（批次64/73/74，建议人工复核后再上线）": 1487,
+  "批量响应缺失/请求错误未获得候选（可重跑补齐）": 1002
+ },
+ "qa": {
+  "method": "按 qid 排序每500条为一批，seed=4444 每批抽20条人工逐条阅读；未达95%的批次移除失败项后用 seed=5555 再抽20条复检",
+  "round1_samples": 1540,
+  "round1_fails": 29,
+  "round2_samples": 160,
+  "round2_fails": 12,
+  "withheld_batches": [
+   64,
+   73,
+   74
+  ],
+  "batches": [
+   {
+    "batch": 0,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 1,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 2,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 3,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 4,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 5,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 6,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 7,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 8,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 9,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 10,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 11,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 12,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 13,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 14,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 15,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 16,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 17,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 18,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 19,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 20,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 21,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 22,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 23,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 24,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 25,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 26,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 27,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 28,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 29,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 30,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 31,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 32,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 33,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 34,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 35,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 36,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 37,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 38,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 39,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 40,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 41,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 42,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 43,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 44,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 45,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 46,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 47,
+    "r1_samples": 20,
+    "r1_fails": 1,
+    "r1_pass_rate": 95.0,
+    "r1_fail_ids": [
+     341259
+    ],
+    "status": "released"
+   },
+   {
+    "batch": 48,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 49,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 50,
+    "r1_samples": 20,
+    "r1_fails": 1,
+    "r1_pass_rate": 95.0,
+    "r1_fail_ids": [
+     377417
+    ],
+    "status": "released"
+   },
+   {
+    "batch": 51,
+    "r1_samples": 20,
+    "r1_fails": 1,
+    "r1_pass_rate": 95.0,
+    "r1_fail_ids": [
+     378391
+    ],
+    "status": "released"
+   },
+   {
+    "batch": 52,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 53,
+    "r1_samples": 20,
+    "r1_fails": 1,
+    "r1_pass_rate": 95.0,
+    "r1_fail_ids": [
+     412164
+    ],
+    "status": "released"
+   },
+   {
+    "batch": 54,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 55,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 56,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 57,
+    "r1_samples": 20,
+    "r1_fails": 1,
+    "r1_pass_rate": 95.0,
+    "r1_fail_ids": [
+     443619
+    ],
+    "status": "released"
+   },
+   {
+    "batch": 58,
+    "r1_samples": 20,
+    "r1_fails": 2,
+    "r1_pass_rate": 90.0,
+    "r1_fail_ids": [
+     444702,
+     451813
+    ],
+    "r2_samples": 20,
+    "r2_fails": 1,
+    "r2_pass_rate": 95.0,
+    "r2_fail_ids": [
+     451457
+    ],
+    "status": "released"
+   },
+   {
+    "batch": 59,
+    "r1_samples": 20,
+    "r1_fails": 1,
+    "r1_pass_rate": 95.0,
+    "r1_fail_ids": [
+     452096
+    ],
+    "status": "released"
+   },
+   {
+    "batch": 60,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 61,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 62,
+    "r1_samples": 20,
+    "r1_fails": 1,
+    "r1_pass_rate": 95.0,
+    "r1_fail_ids": [
+     467983
+    ],
+    "status": "released"
+   },
+   {
+    "batch": 63,
+    "r1_samples": 20,
+    "r1_fails": 2,
+    "r1_pass_rate": 90.0,
+    "r1_fail_ids": [
+     481861,
+     482095
+    ],
+    "r2_samples": 20,
+    "r2_fails": 1,
+    "r2_pass_rate": 95.0,
+    "r2_fail_ids": [
+     481820
+    ],
+    "status": "released"
+   },
+   {
+    "batch": 64,
+    "r1_samples": 20,
+    "r1_fails": 2,
+    "r1_pass_rate": 90.0,
+    "r1_fail_ids": [
+     507745,
+     514758
+    ],
+    "r2_samples": 20,
+    "r2_fails": 2,
+    "r2_pass_rate": 90.0,
+    "r2_fail_ids": [
+     495087,
+     508093
+    ],
+    "status": "withheld"
+   },
+   {
+    "batch": 65,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 66,
+    "r1_samples": 20,
+    "r1_fails": 1,
+    "r1_pass_rate": 95.0,
+    "r1_fail_ids": [
+     522262
+    ],
+    "status": "released"
+   },
+   {
+    "batch": 67,
+    "r1_samples": 20,
+    "r1_fails": 0,
+    "r1_pass_rate": 100.0,
+    "r1_fail_ids": [],
+    "status": "released"
+   },
+   {
+    "batch": 68,
+    "r1_samples": 20,
+    "r1_fails": 2,
+    "r1_pass_rate": 90.0,
+    "r1_fail_ids": [
+     543625,
+     544018
+    ],
+    "r2_samples": 20,
+    "r2_fails": 1,
+    "r2_pass_rate": 95.0,
+    "r2_fail_ids": [
+     543059
+    ],
+    "status": "released"
+   },
+   {
+    "batch": 69,
+    "r1_samples": 20,
+    "r1_fails": 1,
+    "r1_pass_rate": 95.0,
+    "r1_fail_ids": [
+     544384
+    ],
+    "status": "released"
+   },
+   {
+    "batch": 70,
+    "r1_samples": 20,
+    "r1_fails": 1,
+    "r1_pass_rate": 95.0,
+    "r1_fail_ids": [
+     564228
+    ],
+    "status": "released"
+   },
+   {
+    "batch": 71,
+    "r1_samples": 20,
+    "r1_fails": 1,
+    "r1_pass_rate": 95.0,
+    "r1_fail_ids": [
+     566064
+    ],
+    "status": "released"
+   },
+   {
+    "batch": 72,
+    "r1_samples": 20,
+    "r1_fails": 3,
+    "r1_pass_rate": 85.0,
+    "r1_fail_ids": [
+     567640,
+     568950,
+     569748
+    ],
+    "r2_samples": 20,
+    "r2_fails": 1,
+    "r2_pass_rate": 95.0,
+    "r2_fail_ids": [
+     568698
+    ],
+    "status": "released"
+   },
+   {
+    "batch": 73,
+    "r1_samples": 20,
+    "r1_fails": 2,
+    "r1_pass_rate": 90.0,
+    "r1_fail_ids": [
+     571384,
+     571521
+    ],
+    "r2_samples": 20,
+    "r2_fails": 2,
+    "r2_pass_rate": 90.0,
+    "r2_fail_ids": [
+     571372,
+     571516
+    ],
+    "status": "withheld"
+   },
+   {
+    "batch": 74,
+    "r1_samples": 20,
+    "r1_fails": 2,
+    "r1_pass_rate": 90.0,
+    "r1_fail_ids": [
+     571991,
+     572318
+    ],
+    "r2_samples": 20,
+    "r2_fails": 3,
+    "r2_pass_rate": 85.0,
+    "r2_fail_ids": [
+     572002,
+     572196,
+     579144
+    ],
+    "status": "withheld"
+   },
+   {
+    "batch": 75,
+    "r1_samples": 20,
+    "r1_fails": 2,
+    "r1_pass_rate": 90.0,
+    "r1_fail_ids": [
+     587467,
+     588292
+    ],
+    "r2_samples": 20,
+    "r2_fails": 1,
+    "r2_pass_rate": 95.0,
+    "r2_fail_ids": [
+     587081
+    ],
+    "status": "released"
+   },
+   {
+    "batch": 76,
+    "r1_samples": 20,
+    "r1_fails": 1,
+    "r1_pass_rate": 95.0,
+    "r1_fail_ids": [
+     640701
+    ],
+    "status": "released"
+   }
+  ]
+ },
+ "snapshot_validation": {
+  "applied": 36918,
+  "mismatch": 0,
+  "sample300_invariant_changes": 0,
+  "remaining_short": 4036,
+  "remaining_all_documented_keep": true,
+  "badlen": 0,
+  "badpat": 0
+ }
+}
