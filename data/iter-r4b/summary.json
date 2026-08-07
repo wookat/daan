@@ -1,0 +1,16 @@
+{
+  "iteration": "r4b",
+  "scope": "批次64/73/74暂缓题人工复核",
+  "total": 1487,
+  "fixed": 1486,
+  "disabled": 1,
+  "stem_typo_fixes": 1,
+  "answers_changed": 0,
+  "by_module": {
+    "changshi": 1052,
+    "shuliang": 286,
+    "yanyu": 71,
+    "ziliao": 54,
+    "panduan": 24
+  }
+}
