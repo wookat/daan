@@ -717,6 +717,15 @@ export default {
 .radar-box { flex: 1; display: flex; justify-content: center; }
 .radar { position: relative; width: 320rpx; height: 320rpx; }
 .radar-side { width: 220rpx; flex-shrink: 0; }
+/* #ifdef H5 */
+@media (max-width: 413px) {
+  .radar-flex { flex-direction: column; gap: 30rpx; }
+  .radar-box { padding: 20rpx 0; }
+  .radar-side { width: 100%; }
+}
+/* #endif */
+.theme-dark .ring { border-color: rgba(255, 255, 255, 0.18); }
+.theme-dark .poly { background: rgba(96, 141, 255, 0.45); }
 .rs-t { font-size: 22rpx; color: var(--ink-2); margin-bottom: 10rpx; }
 .rs-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8rpx; }
 .rs-name { font-size: 25rpx; font-weight: 600; }

@@ -1859,6 +1859,7 @@ export default {
 /* #ifdef H5 */
 @media (max-width: 767px) {
   .banner { bottom: calc(50px + env(safe-area-inset-bottom)); padding-bottom: 28rpx; }
+  .wrap.has-banner { padding-bottom: calc(240rpx + 50px + env(safe-area-inset-bottom)); }
 }
 /* #endif */
 @keyframes slideup {
