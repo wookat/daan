@@ -1,0 +1,20 @@
+<navbar title="我的" />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <view class="card usercard">
+      <view class="avatar">{{user ? (user.nickname || user.phone || '用').slice(0, 1) : '游'}}</view>
+      <view class="u-main">
+        <text class="u-name">{{user ? (user.nickname || user.phone) : '游客模式'}}</text>
+        <text class="u-sub">{{user ? '已登录 · 多端同步中' : '登录后错题与进度多端同步'}}</text>
+      </view>
+      <view wx:if="{{!user}}" class="u-btn" bind:tap="onLogin">登录 / 注册</view>
+      <view wx:else class="u-btn ghost" bind:tap="onLogout">退出</view>
+    </view>
+
+    <view class="card">
+      <view class="row-i"><text class="r-k">本机标识</text><text class="r-v">{{uid}}</text></view>
+      <view class="row-i"><text class="r-k">数据同步</text><text class="r-v">{{user ? '账号云端同步' : '匿名（登录后自动合并）'}}</text></view>
+      <view class="row-i"><text class="r-k">版本</text><text class="r-v">原生小程序 一期 0.1.0</text></view>
+    </view>
+  </view>
+</scroll-view>

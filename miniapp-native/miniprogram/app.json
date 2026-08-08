@@ -1,0 +1,46 @@
+{
+  "pages": [
+    "pages/home/home",
+    "pages/book/book",
+    "pages/exam/exam",
+    "pages/stats/stats",
+    "pages/profile/profile",
+    "pages/practice/practice",
+    "pages/login/login"
+  ],
+  "renderer": "skyline",
+  "rendererOptions": {
+    "skyline": {
+      "defaultDisplayBlock": true,
+      "defaultContentBox": true,
+      "disableABTest": true,
+      "sdkVersionBegin": "3.0.0",
+      "sdkVersionEnd": "15.255.255"
+    }
+  },
+  "componentFramework": "glass-easel",
+  "lazyCodeLoading": "requiredComponents",
+  "darkmode": true,
+  "themeLocation": "theme.json",
+  "window": {
+    "navigationStyle": "custom",
+    "navigationBarTitleText": "考公错题助手",
+    "backgroundColor": "@bgColor",
+    "backgroundTextStyle": "@bgTxtStyle"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#7D818F",
+    "selectedColor": "#3B6FF5",
+    "backgroundColor": "#ffffff",
+    "list": [
+      { "pagePath": "pages/home/home", "text": "首页" },
+      { "pagePath": "pages/book/book", "text": "错题本" },
+      { "pagePath": "pages/exam/exam", "text": "模考" },
+      { "pagePath": "pages/stats/stats", "text": "统计" },
+      { "pagePath": "pages/profile/profile", "text": "我的" }
+    ]
+  },
+  "usingComponents": {},
+  "sitemapLocation": "sitemap.json"
+}

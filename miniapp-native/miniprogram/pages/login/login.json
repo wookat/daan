@@ -1,0 +1,8 @@
+{
+  "renderer": "webview",
+  "usingComponents": {
+    "navbar": "/components/navbar/index",
+    "t-input": "tdesign-miniprogram/input/input",
+    "t-button": "tdesign-miniprogram/button/button"
+  }
+}

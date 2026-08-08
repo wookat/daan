@@ -1,0 +1,24 @@
+<navbar title="模考" />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <view class="card hero-mini">
+      <text class="hm-t">迷你模考</text>
+      <text class="hm-s">20 题混合模块 · 快速热身</text>
+      <view class="btn-primary" bind:tap="onMini">开始迷你模考</view>
+    </view>
+
+    <view class="sec-h"><text class="sec-t">真题卷库</text></view>
+    <view wx:if="{{loading}}" class="card spin">加载中…</view>
+    <view wx:if="{{!loading && !papers.length}}" class="empty">
+      <view class="eico">📄</view>
+      <text>真题卷搜集中，全真模考将在二期上线</text>
+    </view>
+    <view wx:for="{{papers}}" wx:key="source" class="card prow">
+      <view class="p-main">
+        <text class="p-t">{{item.title || item.source}}</text>
+        <text class="p-s">{{item.region ? item.region + ' · ' : ''}}{{item.year || ''}}{{item.n ? ' · ' + item.n + ' 题' : ''}}</text>
+      </view>
+      <text class="tag tag-gray">二期开放</text>
+    </view>
+  </view>
+</scroll-view>

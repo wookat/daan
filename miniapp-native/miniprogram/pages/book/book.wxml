@@ -1,0 +1,48 @@
+<navbar title="错题本" />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <view class="tabs">
+      <text class="tab-chip {{tab === 'todo' ? 'on' : ''}}" data-tab="todo" bind:tap="onTab">待掌握 {{todoCount}}</text>
+      <text class="tab-chip {{tab === 'done' ? 'on' : ''}}" data-tab="done" bind:tap="onTab">已掌握 {{doneCount}}</text>
+      <text class="tab-chip {{tab === 'fav' ? 'on' : ''}}" data-tab="fav" bind:tap="onTab">收藏 {{favs.length}}</text>
+    </view>
+
+    <view wx:if="{{tab !== 'fav'}}" class="btn-primary redo" bind:tap="onRedo">错题重练（抽 10 题）</view>
+
+    <view wx:if="{{loading}}" class="card spin">加载中…</view>
+
+    <block wx:if="{{!loading && tab !== 'fav'}}">
+      <view wx:if="{{!shown.length}}" class="empty">
+        <view class="eico">🎉</view>
+        <text>{{tab === 'todo' ? '暂无待掌握错题，继续刷题吧' : '还没有已掌握的错题'}}</text>
+      </view>
+      <view wx:for="{{shown}}" wx:key="id" class="card mrow" data-index="{{index}}" bind:tap="onToggle">
+        <view class="m-h">
+          <text class="tag tag-brand">{{item.modName}}</text>
+          <text wx:if="{{item.tag3_name}}" class="tag tag-gray">{{item.tag3_name}}</text>
+        </view>
+        <text class="m-q">{{item.question_text}}</text>
+        <view wx:if="{{item.open}}" class="m-detail">
+          <view class="m-ans">
+            <text class="m-k">我的答案 <text class="badc">{{item.user_answer}}</text></text>
+            <text class="m-k">正确答案 <text class="okc">{{item.correct_answer}}</text></text>
+          </view>
+          <text wx:if="{{item.explanation}}" class="m-exp" user-select>{{item.explanation}}</text>
+          <view class="m-ops">
+            <view class="m-op" data-index="{{index}}" catch:tap="onMaster">{{item.mastered ? '移回待掌握' : '标记已掌握'}}</view>
+          </view>
+        </view>
+      </view>
+    </block>
+
+    <block wx:if="{{!loading && tab === 'fav'}}">
+      <view wx:if="{{!favs.length}}" class="empty">
+        <view class="eico">⭐</view>
+        <text>暂无收藏题目</text>
+      </view>
+      <view wx:for="{{favs}}" wx:key="question_id" class="card">
+        <text class="m-q">{{item.question || '题目 #' + item.question_id}}</text>
+      </view>
+    </block>
+  </view>
+</scroll-view>
