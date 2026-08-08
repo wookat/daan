@@ -519,7 +519,7 @@ export default {
         return;
       }
       if (launch.kind === 'start') {
-        this.start(launch.module || null, launch.submodule || null, launch.count || null, !!launch.adaptive, launch.forceReal, launch.tag3 || null);
+        this.start(launch.module || null, launch.submodule || null, launch.count || null, !!launch.adaptive, launch.forceReal, launch.tag3 || null, launch.source || null);
         return;
       }
     }
@@ -549,7 +549,7 @@ export default {
     const preset = uni.getStorageSync('practicePreset');
     if (preset && preset.module) {
       uni.removeStorageSync('practicePreset');
-      this.start(preset.module, preset.submodule || null, preset.count || 10, preset.adaptive, undefined, preset.tag3 || null);
+      this.start(preset.module, preset.submodule || null, preset.count || 10, preset.adaptive, undefined, preset.tag3 || null, preset.source || null);
       return;
     }
     const pm = uni.getStorageSync('practiceModule');
@@ -986,6 +986,7 @@ export default {
     async startReinforce(launch) {
       if (this._starting) return;
       this._starting = true;
+      this._source = launch.source || 'reinforce';
       uni.showLoading({ title: '组题中…', mask: true });
       if (this.beiMode) {
         this.beiMode = false;
@@ -1026,9 +1027,11 @@ export default {
         this._starting = false;
       }
     },
-    async start(module, submodule, count, adaptive, forceReal, tag3) {
+    async start(module, submodule, count, adaptive, forceReal, tag3, source) {
       if (this._starting) return;
       this._starting = true;
+      // 推荐埋点：记录本次练习的入口来源（reco/weak 等），随 answer_log 落库
+      this._source = source || null;
       uni.showLoading({ title: '出题中…', mask: true });
       this.lastModule = module;
       this.lastSubmodule = submodule || null;
@@ -1620,6 +1623,7 @@ export default {
           correct: q._picked === q.answer,
           secs: q._secs || 0,
           picked: q._picked,
+          source: this._source || null,
         }));
         if (items.length) {
           try {

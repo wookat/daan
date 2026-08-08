@@ -270,14 +270,19 @@
             <text v-for="g in typeGroups" :key="g.name" class="kpchip" :class="{ on: kpFilter === g.name }" @click="kpFilter = kpFilter === g.name ? '' : g.name; kp3Filter = ''">{{ g.name }} ×{{ g.n }}</text>
           </view>
           <view class="sheet-done" @click="filterOpen = false">完成</view>
-          <view class="exp-opts">
-            <text class="expchip" :class="{ on: expSheet && !expOnly }" @click="expOnly = false; expSheet = !expSheet">含答题卡</text>
-            <text class="expchip" :class="{ on: expAns && !expOnly }" @click="expOnly = false; expAns = !expAns">含答案解析</text>
-            <text class="expchip" :class="{ on: expOnly }" @click="expOnly = !expOnly">仅导出答案</text>
-          </view>
-          <view class="sheet-export" @click="exportMistakes">{{ exporting ? '正在生成 PDF…' : '导出当前筛选为错题卷 PDF' }}</view>
+          <view class="sheet-export" @click="exportConfirm = true">{{ exporting ? '正在生成 PDF…' : '导出当前筛选为错题卷 PDF' }}</view>
         </view>
       </view>
+
+      <export-confirm
+        :visible="exportConfirm"
+        scope="错题本 · 当前筛选"
+        :count="Math.min(shownItems.length, 100)"
+        :busy="exporting"
+        above-tabbar
+        @close="exportConfirm = false"
+        @confirm="exportMistakes"
+      />
       <view v-if="tab !== 'fav' && loading" class="card spin">加载中…</view>
       <view v-else-if="tab !== 'fav' && !items.length" class="card empty">
         <view class="e-ico"><l-icon name="folder-plus" :size="52" color="#c7cad4" :stroke-width="1.5" /></view>
@@ -401,10 +406,8 @@ export default {
       favs: [],
       filterOpen: false,
       exporting: false,
+      exportConfirm: false,
       scanning: false,
-    expSheet: true,
-    expAns: true,
-    expOnly: false,
       scanOpen: false,
       scanResult: null,
       manualOpen: false,
@@ -610,7 +613,7 @@ export default {
         },
       });
     },
-    async exportMistakes() {
+    async exportMistakes(opts) {
       if (this.exporting) return;
       this.exporting = true;
       try {
@@ -631,10 +634,9 @@ export default {
           title,
           question_ids: ids,
           items,
-          include_answers: this.expOnly || this.expAns,
-          answer_sheet: !this.expOnly && this.expSheet,
-          include_questions: !this.expOnly,
+          ...opts,
         });
+        this.exportConfirm = false;
         uni.showToast({ title: 'PDF 已开始下载', icon: 'none' });
       } catch (e) {
         uni.showToast({ title: '导出失败：' + e.message, icon: 'none' });
@@ -1026,9 +1028,6 @@ export default {
 .manual-codebar { margin: 0; }
 .manual-back { text-align: center; color: var(--ink-2); font-size: 25rpx; padding: 20rpx 0 4rpx; }
 .sheet-done.dim { opacity: 0.45; }
-.exp-opts { display: flex; gap: 12rpx; margin-top: 16rpx; }
-.expchip { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--line); border-radius: 12rpx; font-size: 24rpx; color: var(--ink-2); background: var(--fill); }
-.expchip.on { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); font-weight: 600; }
 .sheet-export { margin-top: 16rpx; margin-bottom: 110rpx; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand); text-align: center; border-radius: 999rpx; padding: 20rpx 0; font-size: 27rpx; font-weight: 500; }
 .xp-k { margin-top: 12rpx; font-size: 22rpx; font-weight: 700; color: #ea580c; border-left: 6rpx solid #ea580c; padding-left: 10rpx; }
 .xp-body { margin-top: 6rpx; font-size: 23rpx; color: var(--ink); background: var(--warn-soft); border-radius: 10rpx; padding: 12rpx; line-height: 1.6; }

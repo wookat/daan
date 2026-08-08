@@ -65,7 +65,7 @@
         <text class="plan-txt">先复习到期错题 {{ plan.due_mistakes }} 道</text>
         <text class="plan-go">去复习 ›</text>
       </view>
-      <view v-for="w in plan.weak || []" :key="w.module + w.submodule + (w.tag3 || '')" class="plan-row" @click="startPreset(w.module, w.submodule, 10, true, w.tag3 || null)">
+      <view v-for="w in plan.weak || []" :key="w.module + w.submodule + (w.tag3 || '')" class="plan-row" @click="startPreset(w.module, w.submodule, 10, true, w.tag3 || null, 'reco')">
         <text class="plan-dot" />
         <text class="plan-txt">{{ w.label || w.submodule }}（{{ w.reason }} · 正确率 {{ Math.round(w.acc * 100) }}%）</text>
         <text class="plan-go">练 10 题 ›</text>
@@ -236,15 +236,20 @@
           </view>
         </view>
         <wd-button type="primary" block custom-class="sheet-cta" @click="customOpen = false; startPreset(null)">按以上设置开始练习（混合模块）</wd-button>
-        <view class="exp-opts">
-          <text class="expchip" :class="{ on: expSheet && !expOnly }" @click="expOnly = false; expSheet = !expSheet">含答题卡</text>
-          <text class="expchip" :class="{ on: expAns && !expOnly }" @click="expOnly = false; expAns = !expAns">含答案解析</text>
-          <text class="expchip" :class="{ on: expOnly }" @click="expOnly = !expOnly">仅导出答案</text>
-        </view>
-        <wd-button type="primary" plain block custom-class="sheet-cta2" @click="exportPaper">{{ exporting ? '正在生成 PDF…' : '导出为试卷 PDF' }}</wd-button>
+        <wd-button type="primary" plain block custom-class="sheet-cta2" @click="exportConfirm = true">{{ exporting ? '正在生成 PDF…' : '导出为试卷 PDF' }}</wd-button>
         <view class="custom-note">以上设置同样作用于模块列表；模考与真题卷不受影响</view>
       </view>
     </view>
+
+    <export-confirm
+      :visible="exportConfirm"
+      :scope="(realMode ? '真题精选卷' : '练习卷') + '（混合模块）'"
+      :count="groupSize || 20"
+      :busy="exporting"
+      above-tabbar
+      @close="exportConfirm = false"
+      @confirm="exportPaper"
+    />
 
     <!-- 制定学习计划 sheet -->
     <view v-if="setupOpen" class="mask" @click="setupOpen = false">
@@ -373,9 +378,7 @@ export default {
       paperSheet: false,
       customOpen: false,
       exporting: false,
-      expSheet: true,
-      expAns: true,
-      expOnly: false,
+      exportConfirm: false,
       plan: null,
       profile: undefined,
       planToday: null,
@@ -546,9 +549,9 @@ export default {
       uni.setStorageSync('practiceLaunch', payload);
       uni.navigateTo({ url: '/pages/practice/practice' });
     },
-    startPreset(module, submodule, count, adaptive, tag3) {
+    startPreset(module, submodule, count, adaptive, tag3, source) {
       this.subSelect = null;
-      this.launch({ kind: 'start', module: module || null, submodule: submodule || null, count: count || null, adaptive: !!adaptive, tag3: tag3 || null });
+      this.launch({ kind: 'start', module: module || null, submodule: submodule || null, count: count || null, adaptive: !!adaptive, tag3: tag3 || null, source: source || null });
     },
     startDaily() {
       this.launch({ kind: 'daily' });
@@ -756,7 +759,7 @@ export default {
       const remain = Math.max(t.target - (t.done_n || 0), 5);
       this.launch({ kind: 'start', module: t.module || null, submodule: t.submodule || null, count: remain, adaptive: !!t.submodule, forceReal: t.real, tag3: null });
     },
-    async exportPaper() {
+    async exportPaper(opts) {
       if (this.exporting) return;
       this.exporting = true;
       try {
@@ -775,10 +778,9 @@ export default {
         await exportPdf({
           title,
           question_ids: ids,
-          include_answers: this.expOnly || this.expAns,
-          answer_sheet: !this.expOnly && this.expSheet,
-          include_questions: !this.expOnly,
+          ...opts,
         });
+        this.exportConfirm = false;
         uni.showToast({ title: 'PDF 已开始下载', icon: 'none' });
       } catch (e) {
         uni.showToast({ title: '导出失败：' + e.message, icon: 'none' });
@@ -934,9 +936,6 @@ export default {
 .set-chip { font-size: 24rpx; color: var(--ink-2); background: var(--soft-bg); border-radius: 999rpx; padding: 0 22rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; white-space: nowrap; }
 .set-chip.on { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
 :deep(.sheet-cta) { margin-top: 24rpx; width: 100%; border-radius: 20rpx !important; background: linear-gradient(135deg, #5b8af8, var(--brand)) !important; box-shadow: 0 8rpx 24rpx rgba(59, 111, 245, 0.28); font-weight: 600; }
-.exp-opts { display: flex; gap: 12rpx; margin-top: 20rpx; }
-.expchip { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--line); border-radius: 12rpx; font-size: 24rpx; color: var(--ink-2); background: var(--fill); }
-.expchip.on { background: var(--brand-soft); color: var(--brand); border-color: var(--brand-soft-2); font-weight: 500; }
 :deep(.sheet-cta2) { margin-top: 16rpx; width: 100%; border-radius: 20rpx !important; }
 .custom-note { margin-top: 14rpx; text-align: center; font-size: 21rpx; color: var(--ink-3); }
 .pr-scroll { white-space: nowrap; margin-bottom: 12rpx; }
