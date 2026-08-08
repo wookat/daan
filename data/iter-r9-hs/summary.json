@@ -1,0 +1,69 @@
+{
+  "round": "iter-r9-hs",
+  "date": "2026-08-08",
+  "scope": "disabled=0 AND module IN ('ziliao','panduan') AND hs_explanation empty",
+  "target_total": 5653,
+  "written": 5087,
+  "written_by_module": {
+    "panduan": 3790,
+    "ziliao": 1297
+  },
+  "skipped": {
+    "skip_answer_doubt": 324,
+    "skip_missing_material": 220,
+    "skip_error": 22
+  },
+  "programmatic_full_verify_failures": 0,
+  "conclusion_letter_check_failures": 0,
+  "dry_run": {
+    "pre_target_rows": 5653,
+    "rows_changed": 5087,
+    "target_rows": 5087,
+    "post_remaining_empty": 566,
+    "nontarget_rows_changed": 0,
+    "question_options_answer_explanation_changed": 0,
+    "idempotent": true
+  },
+  "batch_audit": [
+    {
+      "batch": 1,
+      "size": 2000,
+      "sampled": 30,
+      "passed": 30,
+      "rate": 1.0
+    },
+    {
+      "batch": 2,
+      "size": 2000,
+      "sampled": 30,
+      "passed": 30,
+      "rate": 1.0
+    },
+    {
+      "batch": 3,
+      "size": 1088,
+      "sampled": 30,
+      "passed": 29,
+      "rate": 0.9667
+    }
+  ],
+  "written_by_submodule": {
+    "panduan/逻辑判断": 1646,
+    "panduan/定义判断": 1256,
+    "panduan/类比推理": 835,
+    "panduan/分析推理": 48,
+    "panduan/翻译推理": 2,
+    "panduan/真假推理": 1,
+    "panduan/加强论证": 1,
+    "panduan/削弱论证": 1,
+    "ziliao/综合分析": 212,
+    "ziliao/基期与现期": 269,
+    "ziliao/增长量": 267,
+    "ziliao/年均增长": 4,
+    "ziliao/比重": 270,
+    "ziliao/平均数与倍数": 14,
+    "ziliao/简单计算与读数": 4,
+    "ziliao/增长率": 256,
+    "ziliao/其他": 1
+  }
+}
