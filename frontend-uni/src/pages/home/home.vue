@@ -753,11 +753,11 @@ export default {
         return;
       }
       if (t.type === 'reinforce') {
-        this.launch({ kind: 'reinforce', module: t.module || null, submodule: t.submodule || null, tag3: t.tag3 || null, count: 5 });
+        this.launch({ kind: 'reinforce', module: t.module || null, submodule: t.submodule || null, tag3: t.tag3 || null, count: 5, source: 'reco' });
         return;
       }
       const remain = Math.max(t.target - (t.done_n || 0), 5);
-      this.launch({ kind: 'start', module: t.module || null, submodule: t.submodule || null, count: remain, adaptive: !!t.submodule, forceReal: t.real, tag3: null });
+      this.launch({ kind: 'start', module: t.module || null, submodule: t.submodule || null, count: remain, adaptive: !!t.submodule, forceReal: t.real, tag3: null, source: 'reco' });
     },
     async exportPaper(opts) {
       if (this.exporting) return;
@@ -922,6 +922,11 @@ export default {
 
 /* Sheet */
 .mask { position: fixed; inset: 0; background: rgba(23, 24, 28, 0.45); z-index: 30; display: flex; align-items: flex-end; }
+/* #ifdef H5 */
+@media (max-width: 767px) {
+  .mask { bottom: calc(50px + env(safe-area-inset-bottom)); }
+}
+/* #endif */
 .sheet { width: 100%; max-height: 76vh; overflow-y: auto; background: var(--card); border-radius: 40rpx 40rpx 0 0; padding: 12rpx 36rpx calc(36rpx + env(safe-area-inset-bottom)); box-sizing: border-box; box-shadow: 0 -16rpx 48rpx rgba(23, 24, 28, 0.16); }
 .grab { width: 72rpx; height: 8rpx; border-radius: 4rpx; background: var(--line); margin: 8rpx auto 16rpx; }
 .sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
