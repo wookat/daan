@@ -1,0 +1,23 @@
+<navbar title="统计" />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <view class="card nums">
+      <view class="numcell"><text class="num-n">{{today}}</text><text class="num-t">今日题数</text></view>
+      <view class="numcell"><text class="num-n">{{total}}</text><text class="num-t">累计题数</text></view>
+      <view class="numcell"><text class="num-n">{{streak}}</text><text class="num-t">连续天数</text></view>
+    </view>
+
+    <view class="sec-h"><text class="sec-t">分模块正确率（本机）</text></view>
+    <view wx:if="{{!rows.length}}" class="empty">
+      <view class="eico">📊</view>
+      <text>刷过题后这里会展示分模块正确率</text>
+    </view>
+    <view wx:for="{{rows}}" wx:key="key" class="card mrow">
+      <view class="mr-h">
+        <text class="mr-name">{{item.name}}</text>
+        <text class="mr-pct">{{item.correct}}/{{item.done}} · {{item.pct}}%</text>
+      </view>
+      <view class="bar"><view class="bar-fill" style="width: {{item.pct}}%" /></view>
+    </view>
+  </view>
+</scroll-view>

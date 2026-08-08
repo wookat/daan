@@ -1,0 +1,73 @@
+<navbar title="刷题" back="{{true}}" />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <view wx:if="{{loading}}" class="card spin">出题中…</view>
+
+    <!-- 答题 -->
+    <block wx:if="{{!loading && cur}}">
+      <view class="card">
+        <view class="rhead">
+          <text class="tag tag-brand">{{moduleName}} · {{idx + 1}}/{{items.length}}</text>
+          <text class="cnt-ok">✓{{right}}</text>
+        </view>
+        <view class="progress"><view class="pfill" style="width: {{(idx / items.length) * 100}}%" /></view>
+        <view wx:if="{{cur.is_real}}" class="tag tag-warn real-tag">真题{{cur.exam_year ? ' · ' + cur.exam_year : ''}}{{cur.exam_region ? ' · ' + cur.exam_region : ''}}</view>
+        <text class="q" user-select>{{cur.question}}</text>
+        <view
+          wx:for="{{cur.optList}}"
+          wx:key="k"
+          class="opt {{!picked ? '' : item.k === cur.answer ? 'right' : item.k === picked ? 'wrong' : 'dim'}}"
+          data-key="{{item.k}}"
+          bind:tap="onPick"
+        >
+          <text class="okey">{{item.k}}</text>
+          <text class="otext">{{item.v}}</text>
+          <text wx:if="{{picked && item.k === cur.answer}}" class="omark good">✓</text>
+          <text wx:elif="{{picked && item.k === picked}}" class="omark badm">✗</text>
+        </view>
+
+        <!-- 解析 -->
+        <view wx:if="{{picked}}" class="after">
+          <view class="exp-row">
+            <text class="exp-k">正确答案</text>
+            <text class="exp-ans {{picked === cur.answer ? 'okc' : 'badc'}}">{{cur.answer}}</text>
+          </view>
+          <view wx:if="{{cur.hs_explanation}}" class="exp-col">
+            <text class="exp-k hs">花生十三方法解析</text>
+            <text class="exp hsx" user-select>{{cur.hs_explanation}}</text>
+          </view>
+          <view wx:if="{{cur.xp_explanation}}" class="exp-col">
+            <text class="exp-k xp">{{cur.xp_school || '第二名师视角'}}</text>
+            <text class="exp" user-select>{{cur.xp_explanation}}</text>
+          </view>
+          <view wx:if="{{cur.explanation}}" class="exp-col">
+            <text class="exp-k">解析</text>
+            <text class="exp" user-select>{{cur.explanation}}</text>
+          </view>
+          <view wx:if="{{cur.source}}" class="exp-row">
+            <text class="exp-k">来源</text>
+            <text class="exp-v">{{cur.source}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 判分横幅 -->
+      <view wx:if="{{picked}}" class="banner {{picked === cur.answer ? 'bok' : 'bbad'}}">
+        <text class="btitle">{{picked === cur.answer ? '✓ 回答正确' : '✗ 正确答案 ' + cur.answer}}</text>
+        <view class="bnext {{picked === cur.answer ? 'nok' : 'nbad'}}" bind:tap="onNext">
+          {{idx + 1 < items.length ? '下一题' : '完成'}}
+        </view>
+      </view>
+    </block>
+
+    <!-- 结算 -->
+    <view wx:if="{{finished}}" class="card done">
+      <text class="done-pct">{{pct}}%</text>
+      <text class="done-t">本组完成</text>
+      <text class="done-sub">答对 {{right}}/{{items.length}} · 错题 {{wrongCount}} · 用时 {{totalSecs}}s</text>
+      <text wx:if="{{percentile !== null}}" class="done-beat">本组正确率击败了 {{percentile}}% 的刷题记录</text>
+      <view class="btn-primary" bind:tap="onRetry">再来一组</view>
+      <view class="btn-ghost done-quit" bind:tap="onQuit">返回首页</view>
+    </view>
+  </view>
+</scroll-view>

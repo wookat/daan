@@ -1,0 +1,32 @@
+.tabbar {
+  display: flex;
+  flex-direction: row;
+  background: var(--surface, #ffffff);
+  border-top: 1rpx solid var(--border, #e7e9f0);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12rpx 0 8rpx;
+}
+
+.tab-ic {
+  width: 48rpx;
+  height: 48rpx;
+}
+
+.tab-t {
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  color: #7d818f;
+}
+
+.tab.on .tab-t {
+  color: #3b6ff5;
+  font-weight: 600;
+}

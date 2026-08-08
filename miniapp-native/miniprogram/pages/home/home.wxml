@@ -1,0 +1,63 @@
+<navbar title="刷题" />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <!-- 今日目标 hero -->
+    <view class="hero">
+      <view class="hero-top">
+        <text class="hero-t">今日已练 <text class="hero-n">{{today}}</text>/{{goal}} 题</text>
+        <text class="hero-streak" wx:if="{{streak > 0}}">🔥 连续刷题 {{streak}} 天</text>
+      </view>
+      <view class="hero-bar"><view class="hero-fill" style="width: {{goalPct}}%" /></view>
+      <view class="hero-btns">
+        <view class="hero-go" bind:tap="onContinueGoal">继续目标 ›</view>
+        <view class="hero-chips">
+          <text
+            wx:for="{{goalChips}}"
+            wx:key="*this"
+            class="hero-chip {{goal === item ? 'on' : ''}}"
+            data-goal="{{item}}"
+            bind:tap="onSetGoal"
+          >{{item}}题</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 学习计划卡 -->
+    <view class="card" wx:if="{{hasProfile && planTasks.length}}">
+      <view class="plan-h">
+        <text class="plan-t">今日学习计划</text>
+        <text class="plan-days" wx:if="{{daysLeft !== null}}">距考试 {{daysLeft}} 天</text>
+      </view>
+      <view class="plan-prog">
+        <view class="plan-bar"><view class="plan-fill" style="width: {{planPct}}%" /></view>
+        <text class="plan-pct">{{planPct}}%</text>
+      </view>
+      <view
+        wx:for="{{planTasks}}"
+        wx:key="index"
+        class="plan-row"
+        data-index="{{index}}"
+        bind:tap="onPlanTask"
+      >
+        <view class="task-ck {{item.done ? 'on' : ''}}">{{item.done ? '✓' : ''}}</view>
+        <text class="plan-txt {{item.done ? 'tdone' : ''}}">{{item.title || '练习任务'}}</text>
+        <text class="plan-go" wx:if="{{!item.done}}">去完成 ›</text>
+      </view>
+    </view>
+
+    <!-- 专项练习入口 -->
+    <view class="sec-h"><text class="sec-t">专项练习</text></view>
+    <view class="grid">
+      <view
+        wx:for="{{mods}}"
+        wx:key="key"
+        class="mcard"
+        data-mod="{{item.key}}"
+        bind:tap="onStartModule"
+      >
+        <view class="mico" style="background: {{item.bg}}; color: {{item.color}}">{{item.name[0]}}</view>
+        <text class="mname">{{item.name}}</text>
+      </view>
+    </view>
+  </view>
+</scroll-view>

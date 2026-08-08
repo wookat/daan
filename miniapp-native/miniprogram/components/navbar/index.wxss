@@ -1,0 +1,27 @@
+.navbar {
+  background: var(--bg, #f6f7fb);
+}
+
+.nav-row {
+  position: relative;
+  height: 88rpx;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-back {
+  position: absolute;
+  left: 24rpx;
+  font-size: 48rpx;
+  line-height: 88rpx;
+  color: var(--t1, #17181c);
+  padding: 0 16rpx;
+}
+
+.nav-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--t1, #17181c);
+}

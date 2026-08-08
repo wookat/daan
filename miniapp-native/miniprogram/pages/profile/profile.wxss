@@ -1,0 +1,84 @@
+.page-scroll {
+  flex: 1;
+  height: 100%;
+}
+
+.wrap {
+  padding: 24rpx 32rpx 40rpx;
+}
+
+.usercard {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.avatar {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: var(--r-full);
+  background: var(--brand-50);
+  color: var(--brand-500);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40rpx;
+  font-weight: 700;
+  margin-right: 20rpx;
+}
+
+.u-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.u-name {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.u-sub {
+  font-size: 22rpx;
+  color: var(--t3);
+  margin-top: 6rpx;
+}
+
+.u-btn {
+  background: var(--brand-500);
+  color: #fff;
+  border-radius: var(--r-full);
+  padding: 14rpx 32rpx;
+  font-size: 24rpx;
+  font-weight: 500;
+}
+
+.u-btn.ghost {
+  background: var(--fill);
+  color: var(--t2);
+}
+
+.row-i {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 88rpx;
+  border-top: 1rpx solid var(--border);
+}
+
+.row-i:first-of-type {
+  border-top: none;
+}
+
+.r-k {
+  font-size: 27rpx;
+  color: var(--t1);
+}
+
+.r-v {
+  font-size: 23rpx;
+  color: var(--t3);
+  max-width: 60%;
+  text-align: right;
+}
