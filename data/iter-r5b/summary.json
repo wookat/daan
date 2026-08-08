@@ -1,0 +1,71 @@
+{
+  "iteration": "r5b",
+  "snapshot": "pre-r5-clean-1786069889.db",
+  "scope": "disabled=0 AND (explanation IS NULL OR TRIM(explanation)='')",
+  "total_targets": 1626,
+  "fixed": 1417,
+  "disabled": 209,
+  "sql_file": "fixes.sql",
+  "dry_run": {
+    "targets_before": 1626,
+    "targets_after": 0,
+    "explanation_updates": 1417,
+    "disable_updates": 209,
+    "answers_modified": 0,
+    "questions_or_options_modified": 0,
+    "non_target_rows_modified": 0
+  },
+  "qc_sampling": {
+    "batch_size": 500,
+    "sample_per_batch": 20,
+    "final_verification": [
+      {
+        "batch": 1,
+        "pass": 20,
+        "total": 20,
+        "rate": 1.0
+      },
+      {
+        "batch": 2,
+        "pass": 20,
+        "total": 20,
+        "rate": 1.0
+      },
+      {
+        "batch": 3,
+        "pass": 19,
+        "total": 20,
+        "rate": 0.95,
+        "note": "1条过度保守下架(332299)复核后确认答案C成立，改回补解析"
+      },
+      {
+        "batch": 4,
+        "pass": 20,
+        "total": 20,
+        "rate": 1.0
+      }
+    ],
+    "process_note": "中期抽查发现缺原文篇章题与截断/缺图表题两类系统性问题，整改后对四个批次重新抽检，全部≥95%放行"
+  },
+  "extra_audit": {
+    "math_ziliao_second_review": {
+      "reviewed": 428,
+      "issues_found": 61,
+      "rewritten": 50,
+      "disabled": 7
+    },
+    "explanation_answer_letter_scan": {
+      "mismatch_found": 1,
+      "action": "disable(答案存疑 id=298868)"
+    }
+  },
+  "disable_reasons": {
+    "标准答案存疑": 96,
+    "缺原文/篇章/材料": 78,
+    "题目残缺/数据缺失": 13,
+    "其他（乱码/无法唯一确定等）": 2,
+    "不定项选择题（题型不符）": 20
+  },
+  "explanation_length": "60-200 中文字符（全部通过校验）",
+  "answers_changed": 0
+}
