@@ -11,10 +11,68 @@
       <view wx:else class="u-btn ghost" bind:tap="onLogout">退出</view>
     </view>
 
+    <view wx:if="{{predictCold}}" class="card">
+      <view class="h">能力预测分</view>
+      <text class="cold-s">再做 {{predictNeed - (predict.n || 0) > 0 ? predictNeed - (predict.n || 0) : 0}} 题解锁预测分（已做 {{predict.n || 0}}/{{predictNeed}}）</text>
+    </view>
+    <view wx:elif="{{predict && predict.score != null}}" class="card predict">
+      <view class="p-top">
+        <view class="p-score-w">
+          <text class="p-score">{{predict.score}}</text>
+          <text class="p-unit">分（预测）</text>
+        </view>
+        <view class="p-side">
+          <text wx:if="{{deltaText}}" class="p-delta">{{deltaText}}</text>
+          <text wx:if="{{predict.confidence}}" class="p-conf">置信度 {{predict.confidence}}</text>
+        </view>
+      </view>
+      <view wx:if="{{history.length > 1}}" class="p-hist">
+        <view wx:for="{{history}}" wx:key="label" class="ph-col">
+          <text class="ph-s">{{item.score}}</text>
+          <view class="ph-bar-w"><view class="ph-bar" style="height: {{item.h}}%" /></view>
+          <text class="ph-l">{{item.label}}</text>
+        </view>
+      </view>
+      <view wx:for="{{modules}}" wx:key="module" class="p-mod">
+        <text class="pm-name">{{item.name}}</text>
+        <view class="pm-bar"><view class="pm-fill" style="width: {{item.pct}}%" /></view>
+        <text class="pm-v">{{item.score}}/{{item.max}}{{item.trend > 0 ? ' ↑' : (item.trend < 0 ? ' ↓' : '')}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{checkin}}" class="card checkin">
+      <view class="ck-main">
+        <view class="ck-row">
+          <text class="ck-streak">🔥 连续打卡 {{checkin.streak}} 天</text>
+          <text wx:if="{{checkin.days_to_exam != null}}" class="ck-exam">距考试 {{checkin.days_to_exam}} 天</text>
+        </view>
+        <text class="ck-sub">今日 {{checkin.today_n}} 题{{checkin.today_rate != null ? ' · 正确率 ' + checkin.today_rate + '%' : ''}} · 清错题 {{checkin.cleared_today}} · 累计 {{checkin.total}} 题</text>
+      </view>
+      <view class="u-btn" bind:tap="onPoster">生成海报</view>
+    </view>
+
+    <view class="card">
+      <view class="row-i link" bind:tap="onFavorites">
+        <text class="r-k">⭐ 收藏夹与笔记</text>
+        <text class="r-v">›</text>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="row-i link" bind:tap="onTheme">
+        <text class="r-k">外观模式</text>
+        <text class="r-v">{{themeLabel}} ›</text>
+      </view>
+      <view class="row-i link" bind:tap="onReminder">
+        <text class="r-k">学习提醒</text>
+        <text class="r-v">{{reminderOn ? '已开启（模板待配置）' : '未开启'}} ›</text>
+      </view>
+    </view>
+
     <view class="card">
       <view class="row-i"><text class="r-k">本机标识</text><text class="r-v">{{uid}}</text></view>
       <view class="row-i"><text class="r-k">数据同步</text><text class="r-v">{{user ? '账号云端同步' : '匿名（登录后自动合并）'}}</text></view>
-      <view class="row-i"><text class="r-k">版本</text><text class="r-v">原生小程序 一期 0.1.0</text></view>
+      <view class="row-i"><text class="r-k">版本</text><text class="r-v">原生小程序 二期 0.2.0</text></view>
     </view>
   </view>
 </scroll-view>

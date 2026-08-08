@@ -1,6 +1,12 @@
 <navbar title="刷题" />
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
+    <!-- 全局搜索入口 -->
+    <view class="searchbar" bind:tap="onSearch">
+      <text class="s-ico">🔍</text>
+      <text class="s-ph">搜题目 / 知识点 / 试卷</text>
+    </view>
+
     <!-- 今日目标 hero -->
     <view class="hero">
       <view class="hero-top">
@@ -26,7 +32,10 @@
     <view class="card" wx:if="{{hasProfile && planTasks.length}}">
       <view class="plan-h">
         <text class="plan-t">今日学习计划</text>
-        <text class="plan-days" wx:if="{{daysLeft !== null}}">距考试 {{daysLeft}} 天</text>
+        <view class="plan-h-r">
+          <text class="plan-days" wx:if="{{daysLeft !== null}}">距考试 {{daysLeft}} 天</text>
+          <text class="plan-edit" bind:tap="onOpenSetup">调整 ›</text>
+        </view>
       </view>
       <view class="plan-prog">
         <view class="plan-bar"><view class="plan-fill" style="width: {{planPct}}%" /></view>
@@ -45,6 +54,15 @@
       </view>
     </view>
 
+    <!-- 未设置计划时的引导卡 -->
+    <view class="card plan-empty" wx:if="{{profileLoaded && !hasProfile}}" bind:tap="onOpenSetup">
+      <view class="pe-main">
+        <text class="pe-t">📋 定制你的学习计划</text>
+        <text class="pe-s">3 步设置考试信息，每天生成专属任务</text>
+      </view>
+      <view class="pe-btn">去设置</view>
+    </view>
+
     <!-- 专项练习入口 -->
     <view class="sec-h"><text class="sec-t">专项练习</text></view>
     <view class="grid">
@@ -61,3 +79,55 @@
     </view>
   </view>
 </scroll-view>
+
+<!-- 学习计划三步设置弹层 -->
+<view wx:if="{{setupVisible}}" class="mask" bind:tap="onCloseSetup">
+  <view class="sheet" catch:tap="noop">
+    <view class="st-h">
+      <text class="st-t">学习计划设置</text>
+      <text class="st-step">{{setupStep + 1}}/3</text>
+    </view>
+    <view class="st-dots">
+      <view class="st-dot {{setupStep >= 0 ? 'on' : ''}}" />
+      <view class="st-dot {{setupStep >= 1 ? 'on' : ''}}" />
+      <view class="st-dot {{setupStep >= 2 ? 'on' : ''}}" />
+    </view>
+
+    <block wx:if="{{setupStep === 0}}">
+      <view class="st-l">考试类型</view>
+      <view class="chips">
+        <text wx:for="{{examTypes}}" wx:key="*this" class="set-chip {{pf.exam_type === item ? 'on' : ''}}" data-v="{{item}}" bind:tap="onPickExamType">{{item}}</text>
+      </view>
+      <view class="st-l">报考地区（选填）</view>
+      <input class="st-input" value="{{pf.target_region}}" placeholder="如：山东、广东" bind:input="onRegionInput" />
+      <view class="st-l">考试日期</view>
+      <picker mode="date" start="{{todayStr}}" value="{{pf.exam_date}}" bind:change="onPickDate">
+        <view class="st-date {{pf.exam_date ? '' : 'empty'}}">{{pf.exam_date || '选择日期 ›'}}</view>
+      </picker>
+    </block>
+
+    <block wx:elif="{{setupStep === 1}}">
+      <view class="st-l">目标分数</view>
+      <view class="chips">
+        <text wx:for="{{scores}}" wx:key="*this" class="set-chip {{pf.target_score === item ? 'on' : ''}}" data-v="{{item}}" bind:tap="onPickScore">{{item}}+</text>
+      </view>
+      <view class="st-l">当前基础</view>
+      <view class="chips">
+        <text wx:for="{{levels}}" wx:key="*this" class="set-chip {{pf.base_level === item ? 'on' : ''}}" data-v="{{item}}" bind:tap="onPickLevel">{{item}}</text>
+      </view>
+    </block>
+
+    <block wx:else>
+      <view class="st-l">每天学习时长</view>
+      <view class="chips">
+        <text wx:for="{{minutes}}" wx:key="*this" class="set-chip {{pf.daily_minutes === item ? 'on' : ''}}" data-v="{{item}}" bind:tap="onPickMinutes">{{item}} 分钟</text>
+      </view>
+      <view class="st-sum">{{pf.exam_type}}{{pf.target_region ? ' · ' + pf.target_region : ''}} · {{pf.exam_date}} · 目标 {{pf.target_score}}+ · {{pf.base_level}} · 每天 {{pf.daily_minutes}} 分钟</view>
+    </block>
+
+    <view class="st-btns">
+      <view wx:if="{{setupStep > 0}}" class="st-btn ghost" bind:tap="onSetupPrev">上一步</view>
+      <view class="st-btn primary {{saving ? 'dis' : ''}}" bind:tap="onSetupNext">{{setupStep < 2 ? '下一步' : (saving ? '生成中…' : '生成计划')}}</view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,63 @@
+<navbar title="{{title || '模考'}}" back />
+<view wx:if="{{loading}}" class="spin">试卷加载中…</view>
+
+<block wx:if="{{!loading && cur}}">
+  <view class="topbar">
+    <text class="tb-no">{{idx + 1}} / {{items.length}}</text>
+    <text class="tb-clock {{warn ? 'warn' : ''}}">⏱ {{clock}}</text>
+    <text class="tb-mark {{curMarked ? 'on' : ''}}" bind:tap="onMark">{{curMarked ? '★ 已标记' : '☆ 标记'}}</text>
+  </view>
+
+  <scroll-view class="page-scroll" scroll-y type="list">
+    <view class="wrap">
+      <view class="card">
+        <text class="q-mod">{{cur.module}}{{cur.submodule ? ' · ' + cur.submodule : ''}}</text>
+        <text class="q-text">{{cur.no}}. {{cur.question}}</text>
+        <view
+          wx:for="{{cur.optList}}"
+          wx:key="k"
+          class="opt {{picked === item.k ? 'sel' : ''}}"
+          data-key="{{item.k}}"
+          bind:tap="onPick"
+        >
+          <text class="opt-k">{{item.k}}</text>
+          <text class="opt-v">{{item.v}}</text>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+
+  <view class="footbar">
+    <view class="fbtn" bind:tap="onPrev">上一题</view>
+    <view class="fbtn" bind:tap="openSheet">答题卡 {{answeredCount}}/{{items.length}}</view>
+    <view class="fbtn" bind:tap="onNext">下一题</view>
+    <view class="fbtn main {{submitting ? 'dim' : ''}}" bind:tap="onAskSubmit">交卷</view>
+  </view>
+  <view class="quitline" bind:tap="onQuit">保存并退出</view>
+</block>
+
+<view wx:if="{{sheetOpen}}" class="mask" bind:tap="closeSheet">
+  <view class="sheet" catch:tap="noop">
+    <view class="sheet-h">
+      <text class="sheet-t">答题卡</text>
+      <view class="sheet-x" bind:tap="closeSheet">✕</view>
+    </view>
+    <view class="legend">
+      <text class="lg done">已答</text>
+      <text class="lg mark">标记</text>
+      <text class="lg">未答</text>
+    </view>
+    <scroll-view scroll-y type="list" class="grid-scroll">
+      <view class="grid">
+        <view
+          wx:for="{{sheet}}"
+          wx:key="no"
+          class="cell {{item.state}}"
+          data-index="{{index}}"
+          bind:tap="onSheetJump"
+        >{{item.no}}</view>
+      </view>
+    </scroll-view>
+    <view class="confirm-btn" bind:tap="onAskSubmit">确认交卷</view>
+  </view>
+</view>

@@ -6,7 +6,16 @@
     "pages/stats/stats",
     "pages/profile/profile",
     "pages/practice/practice",
-    "pages/login/login"
+    "pages/login/login",
+    "pages/exam-run/exam-run",
+    "pages/exam-report/exam-report",
+    "pages/contest/contest",
+    "pages/contest-report/contest-report",
+    "pages/mastery/mastery",
+    "pages/weekly/weekly",
+    "pages/search/search",
+    "pages/favorites/favorites",
+    "pages/poster/poster"
   ],
   "renderer": "skyline",
   "rendererOptions": {

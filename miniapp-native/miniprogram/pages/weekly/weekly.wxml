@@ -1,0 +1,78 @@
+<navbar title="周学习报告" back />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <view wx:if="{{loading}}" class="spin">报告加载中…</view>
+    <view wx:elif="{{err}}" class="spin">{{err}}</view>
+
+    <view wx:elif="{{state === 'empty'}}" class="card cold">
+      <view class="eico">📭</view>
+      <text class="cold-t">上周还没有学习记录</text>
+      <text class="cold-s">本周刷起来，下周一就能收到你的第一份周报</text>
+      <view class="btn-primary" bind:tap="onGoPractice">去刷题</view>
+    </view>
+
+    <view wx:elif="{{state === 'pending'}}" class="card cold">
+      <view class="eico">⏳</view>
+      <text class="cold-t">周报生成中</text>
+      <text class="cold-s">每周一凌晨生成上周报告，稍后再来看看</text>
+    </view>
+
+    <block wx:elif="{{r}}">
+      <view class="card hero">
+        <text class="hero-range">{{r.range}}</text>
+        <view class="hero-nums">
+          <view class="hn"><text class="hn-n">{{r.summary.days}}</text><text class="hn-l">学习天数</text></view>
+          <view class="hn"><text class="hn-n">{{r.summary.n}}</text><text class="hn-l">做题量</text></view>
+          <view class="hn"><text class="hn-n">{{r.summary.acc}}%</text><text class="hn-l">正确率</text></view>
+          <view class="hn"><text class="hn-n">{{minsText}}</text><text class="hn-l">学习时长</text></view>
+        </view>
+      </view>
+
+      <view wx:if="{{r.badges && r.badges.length}}" class="card">
+        <view class="h">本周徽章</view>
+        <view wx:for="{{r.badges}}" wx:key="key" class="badge">
+          <text class="badge-t">🏅 {{item.title}}</text>
+          <text class="badge-s">{{item.desc}}</text>
+        </view>
+      </view>
+
+      <view wx:if="{{r.mastery && (r.mastery.up.length || r.mastery.down.length)}}" class="card">
+        <view class="h">掌握度变化</view>
+        <view wx:for="{{r.mastery.up}}" wx:key="submodule" class="chg up">
+          <text>↑ {{item.submodule}}</text>
+          <text class="chg-v">{{item.prev_acc}}% → {{item.acc}}%</text>
+        </view>
+        <view wx:for="{{r.mastery.down}}" wx:key="submodule" class="chg down">
+          <text>↓ {{item.submodule}}</text>
+          <text class="chg-v">{{item.prev_acc}}% → {{item.acc}}%</text>
+        </view>
+      </view>
+
+      <view wx:if="{{r.reasons && r.reasons.length}}" class="card">
+        <view class="h">错因分布</view>
+        <view wx:for="{{r.reasons}}" wx:key="reason" class="reason">
+          <text class="reason-t">{{item.reason}}</text>
+          <text class="reason-n">{{item.n}} 次{{item.prev_n != null ? '（上周 ' + item.prev_n + '）' : ''}}</text>
+        </view>
+      </view>
+
+      <view wx:if="{{r.mock}}" class="card mockcard" bind:tap="onMockReport">
+        <view class="e-main">
+          <text class="e-t">📝 本周模考：{{r.mock.score}} 分</text>
+          <text class="e-s">{{r.mock.event_title || '模考'}}{{r.mock.rank ? ' · 第 ' + r.mock.rank + ' 名' : ''}}{{r.mock.pct ? ' · 击败 ' + r.mock.pct + '%' : ''}}</text>
+        </view>
+        <text class="e-go">›</text>
+      </view>
+
+      <view wx:if="{{r.actions && r.actions.length}}" class="card">
+        <view class="h">下周建议</view>
+        <view wx:for="{{r.actions}}" wx:key="title" class="action" data-type="{{item.type}}" bind:tap="onAction">
+          <text class="action-t">{{item.title}}</text>
+          <text class="action-go">去做 ›</text>
+        </view>
+      </view>
+
+      <view wx:if="{{hasPrev}}" class="prev-link" bind:tap="onPrevWeek">查看上一周报告 ‹</view>
+    </block>
+  </view>
+</scroll-view>

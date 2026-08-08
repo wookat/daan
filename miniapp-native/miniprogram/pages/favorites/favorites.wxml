@@ -1,0 +1,78 @@
+<navbar title="收藏与笔记" back />
+<view class="tabs">
+  <text class="tab {{tab === 'fav' ? 'on' : ''}}" data-tab="fav" bind:tap="onTab">收藏 {{items.length}}</text>
+  <text class="tab {{tab === 'note' ? 'on' : ''}}" data-tab="note" bind:tap="onTab">笔记 {{notes.length}}</text>
+</view>
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <view wx:if="{{loading}}" class="spin">加载中…</view>
+    <view wx:elif="{{err}}" class="spin">{{err}}</view>
+
+    <block wx:elif="{{tab === 'fav'}}">
+      <scroll-view scroll-x class="fscroll" type="list">
+        <view class="frow">
+          <text class="fchip {{!curFolder ? 'on' : ''}}" data-fid="0" bind:tap="onFolder">全部</text>
+          <text
+            wx:for="{{folders}}"
+            wx:key="id"
+            class="fchip {{curFolder === item.id ? 'on' : ''}}"
+            data-fid="{{item.id}}"
+            bind:tap="onFolder"
+            bind:longpress="onFolderLongPress"
+          >{{item.icon || '📁'}} {{item.name}} {{item.n}}</text>
+          <text class="fchip add" bind:tap="onAddFolder">＋ 新建</text>
+        </view>
+      </scroll-view>
+
+      <view wx:for="{{shown}}" wx:key="id" class="card qitem" data-id="{{item.id}}" bind:tap="onItem">
+        <view class="q-tags">
+          <text class="q-mod">{{item.moduleName}}</text>
+          <text wx:if="{{item.submodule}}" class="q-sub">{{item.submodule}}</text>
+        </view>
+        <text class="q-text">{{item.question}}</text>
+        <text wx:if="{{item.note}}" class="q-note">📝 {{item.note}}</text>
+      </view>
+      <view wx:if="{{!shown.length}}" class="empty">
+        <view class="eico">⭐</view>
+        <text>暂无收藏，做题时点星标收藏</text>
+      </view>
+    </block>
+
+    <block wx:else>
+      <view wx:for="{{notes}}" wx:key="question_id" class="card">
+        <text class="q-text">{{item.question}}</text>
+        <view class="note-box">{{item.content}}</view>
+      </view>
+      <view wx:if="{{!notes.length}}" class="empty">
+        <view class="eico">📝</view>
+        <text>暂无笔记，做题解析页可随手记</text>
+      </view>
+    </block>
+  </view>
+</scroll-view>
+
+<view wx:if="{{detail}}" class="mask" bind:tap="onCloseDetail">
+  <view class="sheet" catch:tap="noop">
+    <scroll-view scroll-y class="d-scroll" type="list">
+      <text class="d-q">{{detail.question}}</text>
+      <view wx:for="{{detail.optKeys}}" wx:key="*this" wx:for-item="k" class="d-opt {{k === detail.answer ? 'ans' : ''}}">
+        <text>{{k}}. {{detail.options[k]}}</text>
+      </view>
+      <view class="d-ans">正确答案：{{detail.answer}}</view>
+      <view wx:if="{{detail.explanation || detail.hs_explanation}}" class="d-exp">{{detail.hs_explanation || detail.explanation}}</view>
+      <view wx:if="{{detail.note}}" class="note-box">📝 {{detail.note}}</view>
+    </scroll-view>
+    <view class="d-btns">
+      <view class="d-btn" bind:tap="onMove">移动到…</view>
+      <view class="d-btn danger" bind:tap="onUnfav">取消收藏</view>
+    </view>
+  </view>
+</view>
+
+<view wx:if="{{moveFav}}" class="mask" bind:tap="onCloseMove">
+  <view class="sheet" catch:tap="noop">
+    <text class="d-t">移动到收藏夹</text>
+    <view class="move-row" data-fid="0" bind:tap="onMoveTo">默认收藏夹</view>
+    <view wx:for="{{folders}}" wx:key="id" class="move-row" data-fid="{{item.id}}" bind:tap="onMoveTo">{{item.icon || '📁'}} {{item.name}}</view>
+  </view>
+</view>

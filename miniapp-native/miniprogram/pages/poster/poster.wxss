@@ -1,0 +1,69 @@
+.body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24rpx 32rpx calc(40rpx + env(safe-area-inset-bottom));
+}
+
+.spin {
+  text-align: center;
+  color: var(--t3);
+  padding: 24rpx 0;
+}
+
+.canvas-w {
+  position: relative;
+  width: 640rpx;
+  height: 960rpx;
+  border-radius: 24rpx;
+  overflow: hidden;
+  box-shadow: 0 12rpx 40rpx rgba(20, 40, 100, 0.18);
+}
+
+.poster {
+  width: 640rpx;
+  height: 960rpx;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+}
+
+.btns {
+  width: 100%;
+  margin-top: 32rpx;
+}
+
+.btns .btn-primary {
+  width: 100%;
+}
+
+.btn-primary.dis {
+  opacity: 0.6;
+}
+
+.share-btn {
+  margin-top: 20rpx;
+  width: 100%;
+  background: var(--fill);
+  color: var(--t1);
+  font-size: 28rpx;
+  font-weight: 600;
+  border-radius: 999rpx;
+  padding: 20rpx 0;
+  border: none;
+  line-height: 1.4;
+}
+
+.share-btn::after {
+  border: none;
+}

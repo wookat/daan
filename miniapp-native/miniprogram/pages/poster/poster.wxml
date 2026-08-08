@@ -1,0 +1,12 @@
+<navbar title="打卡海报" back />
+<view class="body">
+  <view wx:if="{{err}}" class="spin">{{err}}</view>
+  <view class="canvas-w">
+    <canvas id="poster" type="2d" class="poster" />
+    <view wx:if="{{loading}}" class="spin overlay">海报生成中…</view>
+  </view>
+  <view class="btns">
+    <view class="btn-primary {{saving ? 'dis' : ''}}" bind:tap="onSave">{{saving ? '保存中…' : '保存到相册'}}</view>
+    <button class="share-btn" open-type="share">分享给好友</button>
+  </view>
+</view>

@@ -1,0 +1,87 @@
+<navbar title="搜索" back />
+<view class="searchbox">
+  <input
+    class="s-input"
+    value="{{q}}"
+    placeholder="题号 / 题干 / 知识点 / 试卷名"
+    confirm-type="search"
+    focus
+    bind:input="onInput"
+    bind:confirm="onConfirm"
+  />
+</view>
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <block wx:if="{{!searched}}">
+      <view wx:if="{{history.length}}" class="hist-h">
+        <text class="hist-t">搜索历史</text>
+        <text class="hist-clear" bind:tap="onClearHistory">清空</text>
+      </view>
+      <view class="chips">
+        <text wx:for="{{history}}" wx:key="*this" class="hchip" data-q="{{item}}" bind:tap="onHistoryTap">{{item}}</text>
+      </view>
+    </block>
+
+    <view wx:if="{{loading}}" class="spin">搜索中…</view>
+    <view wx:elif="{{err}}" class="spin">{{err}}</view>
+
+    <block wx:elif="{{searched}}">
+      <view wx:if="{{codeHit}}" class="card qitem" data-id="{{codeHit.id}}" bind:tap="onQuestion">
+        <text class="sec-tag">题号命中</text>
+        <text class="q-text">{{codeHit.question}}</text>
+      </view>
+
+      <block wx:if="{{topics.length}}">
+        <view class="sec-h">知识点</view>
+        <view wx:for="{{topics}}" wx:key="code" class="card row-item" data-code="{{item.code}}" bind:tap="onTopic">
+          <view class="r-main">
+            <text class="r-t">{{item.name}}</text>
+            <text class="r-s">{{item.module_name || ''}}{{item.group_name ? ' · ' + item.group_name : ''}}{{item.n ? ' · ' + item.n + ' 题' : ''}}</text>
+          </view>
+          <text class="r-go">练 ›</text>
+        </view>
+      </block>
+
+      <block wx:if="{{papers.length}}">
+        <view class="sec-h">真题卷</view>
+        <view wx:for="{{papers}}" wx:key="id" class="card row-item" data-id="{{item.id}}" bind:tap="onPaper">
+          <view class="r-main">
+            <text class="r-t">{{item.title}}</text>
+            <text class="r-s">{{item.year || ''}}{{item.region ? ' · ' + item.region : ''}}</text>
+          </view>
+          <text class="r-go">做卷 ›</text>
+        </view>
+      </block>
+
+      <block wx:if="{{questions.length}}">
+        <view class="sec-h">题目（{{total}}）</view>
+        <view wx:for="{{questions}}" wx:key="id" class="card qitem" data-id="{{item.id}}" bind:tap="onQuestion">
+          <view class="q-tags">
+            <text class="q-mod">{{item.moduleName}}</text>
+            <text wx:if="{{item.submodule}}" class="q-sub">{{item.submodule}}</text>
+            <text wx:if="{{item.exam_year}}" class="q-sub">{{item.exam_year}} 真题</text>
+          </view>
+          <text class="q-text">{{item.question}}</text>
+        </view>
+      </block>
+
+      <view wx:if="{{!codeHit && !topics.length && !papers.length && !questions.length}}" class="empty">
+        <view class="eico">🔍</view>
+        <text>没有找到相关内容，换个关键词试试</text>
+      </view>
+    </block>
+  </view>
+</scroll-view>
+
+<view wx:if="{{detail}}" class="mask" bind:tap="onCloseDetail">
+  <view class="sheet" catch:tap="noop">
+    <scroll-view scroll-y class="d-scroll" type="list">
+      <text class="d-q">{{detail.question}}</text>
+      <view wx:for="{{detail.optKeys}}" wx:key="*this" wx:for-item="k" class="d-opt {{k === detail.answer ? 'ans' : ''}}">
+        <text>{{k}}. {{detail.options[k]}}</text>
+      </view>
+      <view class="d-ans">正确答案：{{detail.answer}}</view>
+      <view wx:if="{{detail.explanation}}" class="d-exp">{{detail.explanation}}</view>
+    </scroll-view>
+  </view>
+</view>

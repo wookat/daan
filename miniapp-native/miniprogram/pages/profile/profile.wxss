@@ -58,6 +58,177 @@
   color: var(--t2);
 }
 
+.h {
+  font-size: 30rpx;
+  font-weight: 600;
+  margin-bottom: 12rpx;
+}
+
+.cold-s {
+  font-size: 23rpx;
+  color: var(--t3);
+}
+
+.p-top {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.p-score-w {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+}
+
+.p-score {
+  font-size: 64rpx;
+  font-weight: 800;
+  color: var(--brand-500);
+}
+
+.p-unit {
+  font-size: 22rpx;
+  color: var(--t3);
+  margin-left: 8rpx;
+}
+
+.p-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.p-delta {
+  font-size: 23rpx;
+  color: var(--success);
+  font-weight: 600;
+}
+
+.p-conf {
+  font-size: 21rpx;
+  color: var(--t3);
+  margin-top: 4rpx;
+}
+
+.p-hist {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  height: 160rpx;
+  margin-bottom: 20rpx;
+}
+
+.ph-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+}
+
+.ph-s {
+  font-size: 19rpx;
+  color: var(--t2);
+  margin-bottom: 4rpx;
+}
+
+.ph-bar-w {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.ph-bar {
+  width: 36%;
+  max-width: 30rpx;
+  background: var(--brand-300);
+  border-radius: 6rpx 6rpx 0 0;
+}
+
+.ph-l {
+  font-size: 18rpx;
+  color: var(--t4);
+  margin-top: 4rpx;
+}
+
+.p-mod {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  min-height: 52rpx;
+}
+
+.pm-name {
+  flex-shrink: 0;
+  width: 130rpx;
+  font-size: 23rpx;
+  color: var(--t2);
+}
+
+.pm-bar {
+  flex: 1;
+  height: 12rpx;
+  background: var(--brand-50);
+  border-radius: 999rpx;
+  overflow: hidden;
+  margin-right: 16rpx;
+}
+
+.pm-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #5b8af8, var(--brand-500));
+  border-radius: 999rpx;
+}
+
+.pm-v {
+  flex-shrink: 0;
+  font-size: 21rpx;
+  color: var(--t3);
+}
+
+.checkin {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.ck-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-right: 16rpx;
+}
+
+.ck-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ck-streak {
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.ck-exam {
+  font-size: 21rpx;
+  color: var(--warning);
+}
+
+.ck-sub {
+  font-size: 21rpx;
+  color: var(--t3);
+  margin-top: 8rpx;
+}
+
 .row-i {
   display: flex;
   flex-direction: row;

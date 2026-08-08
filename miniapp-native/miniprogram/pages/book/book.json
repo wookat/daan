@@ -1,5 +1,6 @@
 {
   "usingComponents": {
-    "navbar": "/components/navbar/index"
+    "navbar": "/components/navbar/index",
+    "export-confirm": "/components/export-confirm/index"
   }
 }

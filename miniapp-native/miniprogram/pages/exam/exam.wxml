@@ -2,23 +2,75 @@
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
     <view class="card hero-mini">
-      <text class="hm-t">迷你模考</text>
-      <text class="hm-s">20 题混合模块 · 快速热身</text>
+      <text class="hm-t">⚡ 迷你模考</text>
+      <text class="hm-s">30 题 · 30 分钟 · 随机组卷，即刻开考</text>
       <view class="btn-primary" bind:tap="onMini">开始迷你模考</view>
     </view>
 
+    <view class="card contest" bind:tap="onContest">
+      <view class="c-main">
+        <text class="c-t">🏆 模考大赛</text>
+        <text class="c-s">每周六全站同卷 · 交卷即出实时排名</text>
+      </view>
+      <text class="c-go">进入 ›</text>
+    </view>
+
     <view class="sec-h"><text class="sec-t">真题卷库</text></view>
-    <view wx:if="{{loading}}" class="card spin">加载中…</view>
+
+    <scroll-view wx:if="{{filters.years.length}}" scroll-x class="fscroll" type="list">
+      <view class="frow">
+        <text class="fchip {{!year ? 'on' : ''}}" data-y="" bind:tap="onYear">全部年份</text>
+        <text wx:for="{{filters.years}}" wx:key="y" class="fchip {{year === item.y ? 'on' : ''}}" data-y="{{item.y}}" bind:tap="onYear">{{item.y}}年</text>
+      </view>
+    </scroll-view>
+    <scroll-view wx:if="{{filters.regions.length}}" scroll-x class="fscroll" type="list">
+      <view class="frow">
+        <text class="fchip {{!region ? 'on' : ''}}" data-r="" bind:tap="onRegion">全部地区</text>
+        <text wx:for="{{filters.regions}}" wx:key="r" class="fchip {{region === item.r ? 'on' : ''}}" data-r="{{item.r}}" bind:tap="onRegion">{{item.r}}</text>
+      </view>
+    </scroll-view>
+
+    <view wx:if="{{loading}}" class="card spin">试卷加载中…</view>
     <view wx:if="{{!loading && !papers.length}}" class="empty">
       <view class="eico">📄</view>
-      <text>真题卷搜集中，全真模考将在二期上线</text>
+      <text>暂无成套真题卷{{year || region ? '，试试放宽筛选' : ''}}</text>
     </view>
-    <view wx:for="{{papers}}" wx:key="source" class="card prow">
-      <view class="p-main">
-        <text class="p-t">{{item.title || item.source}}</text>
-        <text class="p-s">{{item.region ? item.region + ' · ' : ''}}{{item.year || ''}}{{item.n ? ' · ' + item.n + ' 题' : ''}}</text>
+
+    <view wx:for="{{papers}}" wx:key="id" class="card paper">
+      <view class="paper-top" data-id="{{item.id}}" bind:tap="onStartPaper">
+        <text class="paper-t">{{item.title}}</text>
+        <view class="paper-meta">
+          <text wx:if="{{item.year}}" class="tag tag-brand">{{item.year}}年</text>
+          <text wx:if="{{item.region}}" class="tag tag-brand">{{item.region}}</text>
+          <text class="pmeta">{{item.n}} 题 · {{item.duration_min}} 分钟</text>
+        </view>
+        <text wx:if="{{item.best_score != null}}" class="pbest">我的最好成绩 {{item.best_score}} 分 · 已考 {{item.attempt_count}} 次</text>
+        <text wx:else class="pbest none">还没考过，来挑战一下</text>
       </view>
-      <text class="tag tag-gray">二期开放</text>
+      <view class="paper-btns">
+        <view class="pbtn main" data-id="{{item.id}}" bind:tap="onStartPaper">开始模考</view>
+        <view class="pbtn" data-index="{{index}}" bind:tap="onAskExport">导出 PDF</view>
+      </view>
+    </view>
+
+    <view wx:if="{{attempts.length}}" class="card">
+      <view class="h">历史成绩</view>
+      <view wx:for="{{attempts}}" wx:key="id" class="arow" data-id="{{item.id}}" bind:tap="onOpenReport">
+        <view class="arow-l">
+          <text class="arow-t">{{item.title}}</text>
+          <text class="arow-s">{{item.timeText}}</text>
+        </view>
+        <text class="arow-score">{{item.score}} 分</text>
+      </view>
     </view>
   </view>
 </scroll-view>
+
+<export-confirm
+  visible="{{!!exportTarget}}"
+  scope="{{exportTarget ? exportTarget.title : ''}}"
+  count="{{exportTarget ? exportTarget.n : null}}"
+  busy="{{exporting}}"
+  bind:close="onExportClose"
+  bind:confirm="onExportConfirm"
+/>

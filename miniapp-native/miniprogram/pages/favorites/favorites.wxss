@@ -1,0 +1,253 @@
+.tabs {
+  display: flex;
+  flex-direction: row;
+  padding: 0 32rpx;
+  background: var(--surface);
+  border-bottom: 1rpx solid var(--border);
+}
+
+.tab {
+  padding: 20rpx 24rpx;
+  font-size: 27rpx;
+  color: var(--t3);
+}
+
+.tab.on {
+  color: var(--brand-500);
+  font-weight: 700;
+  border-bottom: 4rpx solid var(--brand-500);
+}
+
+.page-scroll {
+  flex: 1;
+  height: 100%;
+}
+
+.wrap {
+  padding: 24rpx 32rpx 40rpx;
+}
+
+.spin {
+  text-align: center;
+  color: var(--t3);
+  padding: 96rpx 0;
+}
+
+.fscroll {
+  width: 100%;
+  margin-bottom: 16rpx;
+}
+
+.frow {
+  display: flex;
+  flex-direction: row;
+}
+
+.fchip {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  min-height: 64rpx;
+  box-sizing: border-box;
+  font-size: 24rpx;
+  color: var(--t2);
+  background: var(--surface);
+  border: 1rpx solid var(--border);
+  border-radius: 999rpx;
+  padding: 0 26rpx;
+  margin-right: 12rpx;
+}
+
+.fchip.on {
+  color: #fff;
+  background: var(--brand-500);
+  border-color: var(--brand-500);
+  font-weight: 600;
+}
+
+.fchip.add {
+  color: var(--brand-500);
+  border-style: dashed;
+}
+
+.qitem {
+  display: flex;
+  flex-direction: column;
+}
+
+.q-tags {
+  display: flex;
+  flex-direction: row;
+  margin-bottom: 10rpx;
+}
+
+.q-mod {
+  font-size: 20rpx;
+  color: var(--brand-600);
+  background: var(--brand-50);
+  border-radius: 8rpx;
+  padding: 4rpx 12rpx;
+  margin-right: 10rpx;
+}
+
+.q-sub {
+  font-size: 20rpx;
+  color: var(--t3);
+  background: var(--fill);
+  border-radius: 8rpx;
+  padding: 4rpx 12rpx;
+}
+
+.q-text {
+  font-size: 26rpx;
+  color: var(--t1);
+  line-height: 1.6;
+}
+
+.q-note {
+  display: block;
+  font-size: 22rpx;
+  color: var(--warning);
+  margin-top: 10rpx;
+}
+
+.note-box {
+  margin-top: 14rpx;
+  background: var(--warning-bg);
+  border-radius: 12rpx;
+  padding: 16rpx 20rpx;
+  font-size: 23rpx;
+  color: var(--t2);
+  line-height: 1.6;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 96rpx 0;
+  color: var(--t3);
+  font-size: 26rpx;
+}
+
+.eico {
+  width: 144rpx;
+  height: 144rpx;
+  border-radius: 48rpx;
+  background: var(--fill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 60rpx;
+  margin-bottom: 16rpx;
+}
+
+.mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 18, 30, 0.5);
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.sheet {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--surface);
+  border-radius: 32rpx 32rpx 0 0;
+  padding: 36rpx 28rpx calc(36rpx + env(safe-area-inset-bottom));
+  max-height: 75vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.d-scroll {
+  flex: 1;
+  max-height: 55vh;
+}
+
+.d-q {
+  display: block;
+  font-size: 28rpx;
+  color: var(--t1);
+  line-height: 1.7;
+  margin-bottom: 16rpx;
+}
+
+.d-opt {
+  font-size: 25rpx;
+  color: var(--t2);
+  padding: 12rpx 16rpx;
+  border-radius: 12rpx;
+  margin-bottom: 8rpx;
+  background: var(--fill);
+}
+
+.d-opt.ans {
+  background: var(--success-bg);
+  color: var(--success);
+  font-weight: 600;
+}
+
+.d-ans {
+  font-size: 24rpx;
+  color: var(--success);
+  font-weight: 600;
+  margin: 12rpx 0;
+}
+
+.d-exp {
+  font-size: 24rpx;
+  color: var(--t2);
+  line-height: 1.7;
+  background: var(--fill);
+  border-radius: 12rpx;
+  padding: 16rpx 20rpx;
+}
+
+.d-btns {
+  display: flex;
+  flex-direction: row;
+  margin-top: 24rpx;
+}
+
+.d-btn {
+  flex: 1;
+  text-align: center;
+  font-size: 27rpx;
+  font-weight: 600;
+  color: var(--brand-500);
+  background: var(--brand-50);
+  border-radius: 999rpx;
+  padding: 20rpx 0;
+  margin: 0 8rpx;
+}
+
+.d-btn.danger {
+  color: var(--error);
+  background: var(--error-bg);
+}
+
+.d-t {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 700;
+  margin-bottom: 16rpx;
+}
+
+.move-row {
+  font-size: 27rpx;
+  color: var(--t1);
+  padding: 24rpx 8rpx;
+  border-bottom: 1rpx solid var(--border);
+}
+
+.move-row:last-child {
+  border-bottom: none;
+}

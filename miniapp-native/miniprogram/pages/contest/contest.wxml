@@ -1,0 +1,71 @@
+<navbar title="模考大赛" back />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <view wx:if="{{loading}}" class="spin">比赛信息加载中…</view>
+
+    <block wx:else>
+      <view wx:if="{{event}}" class="card hero">
+        <view class="hero-top">
+          <text class="hero-series">{{event.series === 'weekly' ? '每周六 · 全站同卷' : '专场比赛'}}</text>
+          <text class="hero-phase {{event.phase}}">{{phaseText}}</text>
+        </view>
+        <text class="hero-title">{{event.title}}</text>
+        <text class="hero-paper">{{event.paper_title}} · {{event.n_questions}} 题 · {{event.duration_min}} 分钟</text>
+        <view class="hero-meta">
+          <text class="hm">{{windowText}}</text>
+          <text class="hm">{{event.registered}} 人报名 · {{event.submitted}} 人交卷</text>
+        </view>
+
+        <block wx:if="{{event.phase === 'upcoming'}}">
+          <view class="count">距开赛 <text class="count-n">{{countdownText}}</text></view>
+          <view wx:if="{{event.my_state === '未报名'}}" class="cta" bind:tap="onRegister">预约报名</view>
+          <view wx:else class="cta done">已报名，开赛后可进入</view>
+        </block>
+
+        <block wx:elif="{{event.phase === 'running'}}">
+          <view class="count">距截止 <text class="count-n">{{countdownText}}</text></view>
+          <block wx:if="{{event.my_state === '已交卷'}}">
+            <text class="score-line">本场成绩 {{event.my_score}} 分</text>
+            <view class="cta sub" data-id="{{event.id}}" bind:tap="onOpenReport">查看实时排名与报告 ›</view>
+          </block>
+          <view wx:else class="cta" bind:tap="onEnter">{{event.my_state === '已报名' ? '进入考试' : '立即参赛'}}</view>
+        </block>
+
+        <block wx:else>
+          <block wx:if="{{event.my_score != null}}">
+            <text class="score-line">本场成绩 {{event.my_score}} 分{{event.my_rank ? ' · 第 ' + event.my_rank + ' 名' : ''}}</text>
+            <view class="cta sub" data-id="{{event.id}}" bind:tap="onOpenReport">查看赛后报告 ›</view>
+          </block>
+          <view wx:else class="cta ghost" bind:tap="onPractice">比赛已结束 · 作为普通试卷练习</view>
+        </block>
+      </view>
+      <view wx:else class="card spin">暂无比赛场次</view>
+
+      <view wx:if="{{past.length}}" class="card">
+        <view class="h">我的往期战绩</view>
+        <view wx:for="{{past}}" wx:key="id" class="prow" data-index="{{index}}" bind:tap="onPastRow">
+          <view class="prow-l">
+            <text class="prow-t">{{item.title}}</text>
+            <text class="prow-s">{{item.dayText}}</text>
+          </view>
+          <text wx:if="{{item.joined}}" class="prow-score">{{item.score}} 分{{item.rank ? ' · 第 ' + item.rank + ' 名' : ''}}</text>
+          <text wx:else class="prow-none">未参加</text>
+        </view>
+      </view>
+
+      <view class="card">
+        <view class="h rules-h" bind:tap="toggleRules">
+          <text>赛制说明</text>
+          <text class="rules-arrow">{{rulesOpen ? '收起 ▲' : '展开 ▼'}}</text>
+        </view>
+        <view wx:if="{{rulesOpen}}" class="rules">
+          <text class="rule">1. 每周六 09:00-24:00（东八区）全站同卷比赛，报名可选，开赛后随时进入。</text>
+          <text class="rule">2. 只有比赛窗口内交卷的成绩计入排名，且以首次交卷为准。</text>
+          <text class="rule">3. 交卷后即可看到成绩与实时排名，比赛结束后排名冻结并生成赛后报告。</text>
+          <text class="rule">4. 比赛结束后试卷转为普通试卷，可自由练习，不影响比赛榜单。</text>
+          <text class="rule">5. 参赛人数较少时，报告会同时展示历史同卷分数池作为参照。</text>
+        </view>
+      </view>
+    </block>
+  </view>
+</scroll-view>

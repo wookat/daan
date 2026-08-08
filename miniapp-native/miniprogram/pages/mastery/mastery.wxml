@@ -1,0 +1,73 @@
+<navbar title="掌握度地图" back />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <view wx:if="{{loading}}" class="spin">掌握度计算中…</view>
+    <view wx:elif="{{err}}" class="spin">{{err}}</view>
+
+    <view wx:elif="{{cold}}" class="card cold">
+      <view class="eico">🗺️</view>
+      <text class="cold-t">再做 {{coldNeed - coldN > 0 ? coldNeed - coldN : 0}} 题解锁掌握度地图</text>
+      <text class="cold-s">已完成 {{coldN}}/{{coldNeed}} 题，做题越多，考点画像越准</text>
+      <view class="btn-primary" bind:tap="onGoPractice">去刷题</view>
+    </view>
+
+    <block wx:else>
+      <view wx:if="{{coverage}}" class="card cover">
+        <view class="cover-l">
+          <text class="cover-n">{{coverage.pct}}%</text>
+          <text class="cover-t">考点覆盖率</text>
+        </view>
+        <text class="cover-s">已练 {{coverage.practiced}}/{{coverage.total}} 个考点</text>
+      </view>
+
+      <scroll-view scroll-x class="fscroll" type="list">
+        <view class="frow">
+          <text
+            wx:for="{{modules}}"
+            wx:key="module"
+            class="fchip {{curMod === item.module ? 'on' : ''}}"
+            data-mod="{{item.module}}"
+            bind:tap="onMod"
+          >{{item.name}} {{item.mastery}}%</text>
+        </view>
+      </scroll-view>
+
+      <view class="legend">
+        <text class="lg"><text class="dot lv-strong" /> 熟练</text>
+        <text class="lg"><text class="dot lv-ok" /> 一般</text>
+        <text class="lg"><text class="dot lv-weak" /> 薄弱</text>
+        <text class="lg"><text class="dot lv-new" /> 未练</text>
+      </view>
+
+      <view wx:for="{{curSubs}}" wx:key="code" wx:for-item="sub" wx:for-index="si" class="card">
+        <view class="sub-h">
+          <text class="sub-t">{{sub.submodule}}</text>
+          <text class="sub-s">掌握 {{sub.mastery}}% · {{sub.n}} 题</text>
+        </view>
+        <view class="tiles">
+          <view
+            wx:for="{{sub.tag3v}}"
+            wx:key="code"
+            wx:for-index="ti"
+            class="tile {{item.cls}}"
+            data-si="{{si}}"
+            data-ti="{{ti}}"
+            bind:tap="onTag"
+          >
+            <text class="tile-t">{{item.name}}</text>
+            <text wx:if="{{item.due_mistakes}}" class="tile-due">错题 {{item.due_mistakes}}</text>
+          </view>
+        </view>
+      </view>
+    </block>
+  </view>
+</scroll-view>
+
+<view wx:if="{{selTag}}" class="mask" bind:tap="onCloseTag">
+  <view class="sheet" catch:tap="noop">
+    <text class="d-t">{{selTag.name}}</text>
+    <text class="d-s">{{selSub}} · 已练 {{selTag.n}} 题 · 正确率 {{selTag.acc}}% · 掌握度 {{selTag.mastery}}%</text>
+    <text wx:if="{{selTag.due_mistakes}}" class="d-due">有 {{selTag.due_mistakes}} 道到期错题待复习</text>
+    <view class="btn-primary" bind:tap="onPracticeTag">练 10 题该考点</view>
+  </view>
+</view>

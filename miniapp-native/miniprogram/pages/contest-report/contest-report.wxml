@@ -1,0 +1,86 @@
+<navbar title="赛后报告" back />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <view wx:if="{{loading}}" class="spin">赛后报告加载中…</view>
+    <view wx:elif="{{err}}" class="spin">{{err}}</view>
+
+    <block wx:elif="{{r}}">
+      <view class="card hero">
+        <text class="hero-title">{{r.event.title}}{{r.event.phase === 'ended' ? '（排名已冻结）' : '（实时排名）'}}</text>
+        <view class="hero-score"><text class="score-n">{{r.score}}</text><text class="score-u">分</text></view>
+        <view class="hero-meta">
+          <text class="hm">第 {{r.rank}} 名 / {{r.total}} 人</text>
+          <text class="hm">击败 {{r.pct}}%</text>
+          <text class="hm">全场平均 {{r.avg}} 分</text>
+        </view>
+      </view>
+
+      <view wx:if="{{r.small_sample && r.history_pool}}" class="card tip-card">
+        <text class="tipline">本场参赛 {{r.total}} 人，样本较少，排名仅供参考；历史同卷共 {{r.history_pool.n}} 人作答、平均 {{r.history_pool.avg}} 分（含比赛窗口外练习）。</text>
+      </view>
+
+      <view class="card">
+        <view class="h">分数分布</view>
+        <view class="dist">
+          <view wx:for="{{dist}}" wx:key="label" class="dist-col">
+            <view class="dist-bar-w"><view class="dist-bar {{item.me ? 'me' : ''}}" style="height: {{item.h}}%" /></view>
+            <text class="dist-l">{{item.label}}</text>
+          </view>
+        </view>
+        <text class="note">你在 {{r.my_bucket * 10}}-{{r.my_bucket * 10 + 10}} 分段（蓝色）</text>
+      </view>
+
+      <view wx:if="{{gapText || top25Text}}" class="card">
+        <view class="h">距离目标</view>
+        <view wx:if="{{gapText}}" class="gap-row">
+          <text class="gap-k">目标分 {{r.target_score}}</text>
+          <text class="gap-v {{gapOk ? 'ok' : ''}}">{{gapText}}</text>
+        </view>
+        <view wx:if="{{top25Text}}" class="gap-row">
+          <text class="gap-k">前 25% 分数线 {{r.top25_score}}</text>
+          <text class="gap-v {{top25Ok ? 'ok' : ''}}">{{top25Text}}</text>
+        </view>
+      </view>
+
+      <view wx:if="{{mods.length}}" class="card">
+        <view class="h">模块表现</view>
+        <view wx:for="{{mods}}" wx:key="module" class="mrow">
+          <text class="mrow-name">{{item.name}}</text>
+          <view class="mrow-main">
+            <view class="mrow-bar"><view class="mrow-fill" style="width: {{item.pct}}%" /></view>
+            <text class="mrow-sub">答对 {{item.correct}}/{{item.n}}{{item.avgCorrect != null ? ' · 全场平均 ' + item.avgCorrect : ''}}</text>
+            <text class="mrow-sub">用时 {{item.minsText}} · 建议 {{item.recText}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view wx:if="{{r.weak_tags.length}}" class="card">
+        <view class="h">本卷薄弱考点</view>
+        <view wx:for="{{r.weak_tags}}" wx:key="tag3" class="wrow" data-tag3="{{item.tag3}}" bind:tap="onWeakTag">
+          <view class="wrow-l">
+            <text class="wrow-t">{{item.name || item.tag3}}</text>
+            <text class="wrow-s">错 {{item.wrong}}/{{item.n}} 题</text>
+          </view>
+          <text class="wrow-go">去练 ›</text>
+        </view>
+      </view>
+
+      <view wx:if="{{history.length > 1}}" class="card">
+        <view class="h">历届大赛成绩</view>
+        <view class="curve">
+          <view wx:for="{{history}}" wx:key="id" class="curve-col">
+            <text class="curve-v">{{item.score}}</text>
+            <view class="curve-bar {{item.cur ? 'cur' : ''}}" style="height: {{item.h}}%" />
+            <text class="curve-x">{{index + 1}}</text>
+          </view>
+        </view>
+        <text class="note">同系列最近 {{history.length}} 场成绩（分）</text>
+      </view>
+
+      <view class="btns">
+        <view class="pbtn" bind:tap="onOpenAttempt">逐题回顾（错题已入本）</view>
+        <view class="pbtn main" bind:tap="onWeakPractice">弱项练 5 题</view>
+      </view>
+    </block>
+  </view>
+</scroll-view>

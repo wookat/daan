@@ -1,0 +1,85 @@
+<navbar title="成绩报告" back />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <view wx:if="{{loading}}" class="spin">报告生成中…</view>
+    <view wx:elif="{{err}}" class="spin">{{err}}</view>
+
+    <block wx:else>
+      <view class="card hero">
+        <text class="hero-title">{{title}}</text>
+        <view class="hero-score"><text class="score-n">{{score}}</text><text class="score-u">分</text></view>
+        <view class="hero-meta">
+          <text class="hm">正确率 {{accPct}}%</text>
+          <text class="hm">作答 {{answered}}/{{total}} 题</text>
+        </view>
+      </view>
+
+      <view wx:if="{{rank && !rank.cold}}" class="card">
+        <view class="h">全站排名</view>
+        <view class="rank-line">
+          <text class="rank-big">第 {{rank.rank}} 名</text>
+          <text class="rank-sub">/ {{rank.total}} 人 · 击败 {{rank.pct}}% · 平均 {{rank.avg}} 分</text>
+        </view>
+        <view wx:if="{{dist.length}}" class="dist">
+          <view wx:for="{{dist}}" wx:key="label" class="dist-col">
+            <view class="dist-bar-w"><view class="dist-bar {{item.me ? 'me' : ''}}" style="height: {{item.h}}%" /></view>
+            <text class="dist-l">{{item.label}}</text>
+          </view>
+        </view>
+        <text wx:if="{{dist.length}}" class="note">蓝色为你所在分数段</text>
+      </view>
+
+      <view wx:if="{{mods.length}}" class="card">
+        <view class="h">模块表现</view>
+        <view wx:for="{{mods}}" wx:key="key" class="mrow">
+          <text class="mrow-name">{{item.name}}</text>
+          <view class="mrow-main">
+            <view class="mrow-bar"><view class="mrow-fill" style="width: {{item.pct}}%" /></view>
+            <text class="mrow-sub">答对 {{item.correct}}/{{item.n}} · {{item.pct}}%</text>
+          </view>
+        </view>
+      </view>
+
+      <view wx:if="{{history.length > 1}}" class="card">
+        <view class="h">历次成绩</view>
+        <view class="curve">
+          <view wx:for="{{history}}" wx:key="id" class="curve-col">
+            <text class="curve-v">{{item.score}}</text>
+            <view class="curve-bar" style="height: {{item.h}}%" />
+          </view>
+        </view>
+      </view>
+
+      <view class="card">
+        <view class="h">逐题回顾（点击看解析）</view>
+        <view class="qgrid">
+          <view
+            wx:for="{{items}}"
+            wx:key="no"
+            class="qcell {{item.picked ? (item.correct ? 'ok' : 'bad') : ''}}"
+            data-index="{{index}}"
+            bind:tap="onOpenItem"
+          >{{item.no}}</view>
+        </view>
+      </view>
+
+      <view class="btn-primary" bind:tap="onBackList">返回模考</view>
+    </block>
+  </view>
+</scroll-view>
+
+<view wx:if="{{detail}}" class="mask" bind:tap="onCloseDetail">
+  <view class="sheet" catch:tap="noop">
+    <scroll-view scroll-y type="list" class="sheet-scroll">
+      <text class="d-q">{{detail.no}}. {{detail.question}}</text>
+      <view wx:for="{{detail.optList}}" wx:key="k" class="d-opt {{item.k === detail.answer ? 'right' : (item.k === detail.picked ? 'wrong' : '')}}">
+        <text>{{item.k}}. {{item.v}}</text>
+      </view>
+      <view class="d-ans">
+        <text>正确答案 {{detail.answer}}</text>
+        <text> · 你的作答 {{detail.picked || '未答'}}</text>
+      </view>
+      <view wx:if="{{detail.explanation}}" class="d-exp">{{detail.explanation}}</view>
+    </scroll-view>
+  </view>
+</view>

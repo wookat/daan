@@ -1,0 +1,297 @@
+.page-scroll {
+  flex: 1;
+  height: 100%;
+}
+
+.wrap {
+  padding: 24rpx 32rpx 40rpx;
+}
+
+.spin {
+  text-align: center;
+  color: var(--t3);
+  padding: 60rpx 24rpx;
+}
+
+.hero {
+  background: linear-gradient(135deg, var(--brand-500), #6c9bff);
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hero-title {
+  font-size: 25rpx;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.hero-score {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  margin: 16rpx 0 10rpx;
+}
+
+.score-n {
+  font-size: 88rpx;
+  font-weight: 800;
+  color: #fff;
+}
+
+.score-u {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.85);
+  margin-left: 6rpx;
+}
+
+.hero-meta {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.hm {
+  font-size: 23rpx;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0 14rpx;
+}
+
+.h {
+  font-size: 30rpx;
+  font-weight: 600;
+  margin-bottom: 20rpx;
+}
+
+.tip-card {
+  background: var(--warning-bg);
+  border-color: var(--warning);
+}
+
+.tipline {
+  font-size: 23rpx;
+  color: var(--warning);
+  line-height: 1.7;
+}
+
+.dist {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  height: 160rpx;
+}
+
+.dist-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+}
+
+.dist-bar-w {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.dist-bar {
+  width: 60%;
+  min-height: 4rpx;
+  background: var(--border);
+  border-radius: 4rpx 4rpx 0 0;
+}
+
+.dist-bar.me {
+  background: var(--brand-500);
+}
+
+.dist-l {
+  font-size: 18rpx;
+  color: var(--t4);
+  margin-top: 4rpx;
+}
+
+.note {
+  display: block;
+  font-size: 21rpx;
+  color: var(--t3);
+  margin-top: 10rpx;
+}
+
+.gap-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 88rpx;
+}
+
+.gap-k {
+  font-size: 26rpx;
+  color: var(--t1);
+}
+
+.gap-v {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: var(--warning);
+}
+
+.gap-v.ok {
+  color: var(--success);
+}
+
+.mrow {
+  display: flex;
+  flex-direction: row;
+  padding: 12rpx 0;
+  border-bottom: 1rpx solid var(--border);
+}
+
+.mrow:last-child {
+  border-bottom: none;
+}
+
+.mrow-name {
+  flex-shrink: 0;
+  width: 130rpx;
+  font-size: 24rpx;
+  color: var(--t2);
+  padding-top: 4rpx;
+}
+
+.mrow-main {
+  flex: 1;
+}
+
+.mrow-bar {
+  height: 14rpx;
+  background: var(--brand-50);
+  border-radius: 999rpx;
+  overflow: hidden;
+  margin-bottom: 8rpx;
+}
+
+.mrow-fill {
+  height: 100%;
+  background: var(--brand-500);
+  border-radius: 999rpx;
+}
+
+.mrow-sub {
+  display: block;
+  font-size: 21rpx;
+  color: var(--t2);
+  margin-top: 2rpx;
+}
+
+.wrow {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 88rpx;
+  padding: 10rpx 0;
+  border-bottom: 1rpx solid var(--border);
+}
+
+.wrow:last-child {
+  border-bottom: none;
+}
+
+.wrow-t {
+  display: block;
+  font-size: 25rpx;
+  color: var(--t1);
+}
+
+.wrow-s {
+  display: block;
+  font-size: 21rpx;
+  color: var(--error);
+  margin-top: 2rpx;
+}
+
+.wrow-go {
+  flex-shrink: 0;
+  font-size: 24rpx;
+  color: var(--brand-500);
+  font-weight: 600;
+}
+
+.curve {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  height: 220rpx;
+  padding: 10rpx 0;
+}
+
+.curve-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  min-width: 44rpx;
+}
+
+.curve-v {
+  font-size: 20rpx;
+  color: var(--t2);
+  margin-bottom: 4rpx;
+}
+
+.curve-bar {
+  width: 60%;
+  max-width: 44rpx;
+  background: var(--brand-100);
+  border-radius: 8rpx 8rpx 0 0;
+}
+
+.curve-bar.cur {
+  background: var(--brand-500);
+}
+
+.curve-x {
+  font-size: 20rpx;
+  color: var(--t2);
+  margin-top: 6rpx;
+}
+
+.btns {
+  display: flex;
+  flex-direction: row;
+}
+
+.pbtn {
+  flex: 1;
+  min-height: 88rpx;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  border: 1rpx solid var(--brand-500);
+  color: var(--brand-500);
+  border-radius: 999rpx;
+  font-size: 25rpx;
+  font-weight: 500;
+  background: var(--surface);
+  margin-right: 16rpx;
+}
+
+.pbtn:last-child {
+  margin-right: 0;
+}
+
+.pbtn.main {
+  background: var(--brand-500);
+  color: #fff;
+}

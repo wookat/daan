@@ -1,0 +1,23 @@
+<view wx:if="{{visible}}" class="mask" bind:tap="onClose">
+  <view class="sheet" catch:tap="noop">
+    <view class="sheet-h">
+      <text class="sheet-t">导出 PDF</text>
+      <view class="sheet-x" bind:tap="onClose">✕</view>
+    </view>
+    <view class="info-row">
+      <text class="info-k">导出范围</text>
+      <text class="info-v">{{scope}}</text>
+    </view>
+    <view class="info-row">
+      <text class="info-k">题数</text>
+      <text class="info-v">{{count != null ? count + ' 题' : '按当前设置组卷'}}</text>
+    </view>
+    <view class="exp-opts">
+      <text class="expchip {{withAns && !only ? 'on' : ''}}" bind:tap="toggleAns">含解析</text>
+      <text class="expchip {{only ? 'on' : ''}}" bind:tap="toggleOnly">仅答案</text>
+      <text class="expchip {{withSheet && !only ? 'on' : ''}}" bind:tap="toggleSheet">含答题卡</text>
+    </view>
+    <view class="opt-note">{{only ? '只导出参考答案页，不含题目' : '导出题目' + (withAns ? ' + 答案解析' : '') + (withSheet ? ' + 机读答题卡' : '')}}</view>
+    <view class="confirm-btn {{busy ? 'dim' : ''}}" bind:tap="onConfirm">{{busy ? '正在生成 PDF…' : '确认导出'}}</view>
+  </view>
+</view>
