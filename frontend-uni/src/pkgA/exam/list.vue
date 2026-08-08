@@ -36,9 +36,18 @@
       </view>
       <view class="paper-btns">
         <view class="pbtn main" @click="startPaper(p)">开始模考</view>
-        <view class="pbtn" @click="exportPaper(p)">{{ exportingId === p.id ? '导出中…' : '导出 PDF（含答题卡）' }}</view>
+        <view class="pbtn" @click="askExport(p)">{{ exportingId === p.id ? '导出中…' : '导出 PDF' }}</view>
       </view>
     </view>
+
+    <export-confirm
+      :visible="!!exportTarget"
+      :scope="exportTarget ? exportTarget.title : ''"
+      :count="exportTarget ? exportTarget.n : null"
+      :busy="!!exportingId"
+      @close="exportTarget = null"
+      @confirm="exportPaper"
+    />
 
     <view v-if="attempts.length" class="card">
       <view class="h">历史成绩</view>
@@ -66,6 +75,7 @@ export default {
       region: null,
       loading: true,
       exportingId: null,
+      exportTarget: null,
       _starting: false,
     };
   },
@@ -110,18 +120,22 @@ export default {
       const d = new Date(t * 1000);
       return `${d.getMonth() + 1}月${d.getDate()}日 ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     },
-    async exportPaper(p) {
+    askExport(p) {
       if (this.exportingId) return;
+      this.exportTarget = p;
+    },
+    async exportPaper(opts) {
+      const p = this.exportTarget;
+      if (!p || this.exportingId) return;
       this.exportingId = p.id;
       try {
         const d = await request('/api/exam/papers/' + p.id);
         await exportPdf({
           title: p.title,
           question_ids: d.paper.question_ids,
-          include_answers: true,
-          answer_sheet: true,
-          include_questions: true,
+          ...opts,
         });
+        this.exportTarget = null;
         uni.showToast({ title: 'PDF 已开始下载', icon: 'none' });
       } catch (e) {
         uni.showToast({ title: '导出失败：' + e.message, icon: 'none' });
@@ -137,7 +151,7 @@ export default {
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 30rpx; font-weight: 600; margin-bottom: 20rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 40rpx 24rpx; }
-.mini { display: flex; align-items: center; gap: 20rpx; background: linear-gradient(135deg, #fff7ed, #fffbeb); border: none; }
+.mini { display: flex; align-items: center; gap: 20rpx; background: linear-gradient(135deg, var(--warn-soft), var(--card)); border: 1rpx solid var(--line); }
 .mini-ico { flex-shrink: 0; font-size: 48rpx; }
 .mini-l { flex: 1; min-width: 0; }
 .mini-t { display: block; font-size: 30rpx; font-weight: 700; color: var(--ink); }
@@ -152,7 +166,7 @@ export default {
 .paper-meta { display: flex; align-items: center; gap: 12rpx; margin-top: 10rpx; flex-wrap: wrap; }
 .ptag { font-size: 21rpx; color: var(--brand); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
 .pmeta { font-size: 23rpx; color: var(--ink-2); }
-.pbest { display: block; font-size: 22rpx; color: #d97706; margin-top: 10rpx; }
+.pbest { display: block; font-size: 22rpx; color: var(--warn); margin-top: 10rpx; }
 .pbest.none { color: var(--ink-2); }
 .paper-btns { display: flex; gap: 16rpx; margin-top: 20rpx; }
 .pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand); border-radius: 999rpx; font-size: 25rpx; font-weight: 500; }

@@ -1721,6 +1721,9 @@ def _ensure_answer_log(conn):
     cols = {r["name"] for r in conn.execute("PRAGMA table_info(answer_log)")}
     if "picked" not in cols:
         conn.execute("ALTER TABLE answer_log ADD COLUMN picked TEXT")
+    if "source" not in cols:
+        # 推荐埋点：进入练习的入口（reco/weak/reinforce），旧数据默认 NULL
+        conn.execute("ALTER TABLE answer_log ADD COLUMN source TEXT")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_al_qid ON answer_log(question_id)")
 
 
@@ -1744,7 +1747,7 @@ def save_answer_log(uid: str, items: list[dict]) -> int:
                 sub = qrow["submodule"] or sub
         sub = merge_submodule(module, sub)
         conn.execute(
-            "INSERT INTO answer_log (uid, created_at, question_id, module, submodule, correct, secs, picked) VALUES (?,?,?,?,?,?,?,?)",
+            "INSERT INTO answer_log (uid, created_at, question_id, module, submodule, correct, secs, picked, source) VALUES (?,?,?,?,?,?,?,?,?)",
             (
                 uid,
                 now,
@@ -1754,6 +1757,7 @@ def save_answer_log(uid: str, items: list[dict]) -> int:
                 1 if it.get("correct") else 0,
                 int(it.get("secs") or 0),
                 str(it.get("picked") or "")[:2] or None,
+                (str(it.get("source") or "")[:32] or None),
             ),
         )
         n += 1

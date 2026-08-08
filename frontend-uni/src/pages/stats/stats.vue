@@ -58,7 +58,7 @@
           <text class="todo-name">{{ r.label || r.submodule }}</text>
           <text class="todo-meta">{{ r.reason }} · 正确率 {{ Math.round(r.acc * 100) }}%（{{ r.n }}题）</text>
         </view>
-        <view class="todo-btn" @click="goSub(r.module, r.submodule, r.tag3)">练10题</view>
+        <view class="todo-btn" @click="goSub(r.module, r.submodule, r.tag3, 'reco')">练10题</view>
       </view>
       <view class="rc-note">基于你的做题历史（正确率/近期趋势/遗忘曲线/考频）自动推荐</view>
     </view>
@@ -87,7 +87,7 @@
             <text class="rs-name">{{ a.name }}</text>
             <text class="rs-pct">{{ a.pct }}%</text>
           </view>
-          <view v-if="weakAxes.length" class="ghost-btn" @click="goPractice(weakAxes[0].key)">去补弱</view>
+          <view v-if="weakAxes.length" class="ghost-btn" @click="goPractice(weakAxes[0].key, 'weak')">去补弱</view>
         </view>
       </view>
     </view>
@@ -561,10 +561,10 @@ export default {
       const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断' };
       return NAMES[m] || m || '未分类';
     },
-    goPractice(mod) {
+    goPractice(mod, source) {
       const KEY = { '资料分析': 'ziliao', '数量关系': 'shuliang', '言语理解': 'yanyu', '判断推理': 'panduan', '常识判断': 'changshi' };
       const k = KEY[mod] || (Object.values(KEY).includes(mod) ? mod : '');
-      if (k) uni.setStorageSync('practiceModule', k);
+      if (k) uni.setStorageSync('practiceLaunch', { kind: 'start', module: k, source: source || null });
       uni.navigateTo({ url: '/pages/practice/practice' });
     },
     ringStyle(i) {
@@ -595,8 +595,8 @@ export default {
     goMasteryMap() {
       uni.navigateTo({ url: '/pkgA/stats/mastery-map' });
     },
-    goSub(module, sub, tag3) {
-      uni.setStorageSync('practicePreset', { module, submodule: sub, count: 10, adaptive: true, tag3: tag3 || null });
+    goSub(module, sub, tag3, source) {
+      uni.setStorageSync('practicePreset', { module, submodule: sub, count: 10, adaptive: true, tag3: tag3 || null, source: source || null });
       uni.navigateTo({ url: '/pages/practice/practice' });
     },
     copyCode() {
