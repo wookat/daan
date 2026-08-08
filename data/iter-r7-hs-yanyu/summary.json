@@ -1,0 +1,68 @@
+{
+  "round": "iter-r7-hs-yanyu",
+  "date": "2026-08-08",
+  "scope": "disabled=0 AND module='yanyu' AND hs_explanation empty",
+  "target_total": 13683,
+  "written": 13653,
+  "skipped_answer_doubt": 30,
+  "programmatic_full_verify_failures": 0,
+  "conclusion_letter_check_failures": 0,
+  "batch_audit": [
+    {
+      "batch": 1,
+      "size": 2000,
+      "sampled": 30,
+      "passed": 30,
+      "rate": 1.0
+    },
+    {
+      "batch": 2,
+      "size": 2000,
+      "sampled": 30,
+      "passed": 30,
+      "rate": 1.0
+    },
+    {
+      "batch": 3,
+      "size": 2000,
+      "sampled": 30,
+      "passed": 30,
+      "rate": 1.0
+    },
+    {
+      "batch": 4,
+      "size": 2000,
+      "sampled": 30,
+      "passed": 30,
+      "rate": 1.0
+    },
+    {
+      "batch": 5,
+      "size": 2000,
+      "sampled": 30,
+      "passed": 30,
+      "rate": 1.0
+    },
+    {
+      "batch": 6,
+      "size": 2000,
+      "sampled": 30,
+      "passed": 30,
+      "rate": 1.0
+    },
+    {
+      "batch": 7,
+      "size": 1653,
+      "sampled": 30,
+      "passed": 30,
+      "rate": 1.0
+    }
+  ],
+  "dry_run": {
+    "rows_changed": 13653,
+    "target_rows": 13653,
+    "nontarget_rows_changed": 0,
+    "question_options_answer_explanation_changed": 0,
+    "idempotent": true
+  }
+}
