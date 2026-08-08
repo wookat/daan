@@ -1626,13 +1626,14 @@ export default {
           source: this._source || null,
         }));
         if (items.length) {
+          // 先标记再发请求，避免请求在途期间并发调用重复落库
+          pending.forEach((q) => { q._logged = true; });
           try {
             await request('/api/answer_log', { method: 'POST', data: { uid, items } });
           } catch (err) {
             // 断网：进本地队列，恢复网络后自动同步（按 key 去重）
             enqueueAnswers(uid, items.map((it, i) => ({ ...it, t: Date.now() + i })));
           }
-          pending.forEach((q) => { q._logged = true; });
         }
       } catch (e) { /* 非关键路径 */ }
     },
