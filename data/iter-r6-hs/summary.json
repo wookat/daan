@@ -1,0 +1,83 @@
+{
+  "round": "iter-r6-hs",
+  "date": "2026-08-08",
+  "scan": {
+    "onshelf_with_hs": 76020,
+    "mismatch_found": 12661,
+    "qa_reported": 12656,
+    "no_conclusion_phrase": 7189
+  },
+  "actions": {
+    "A_fix_conclusion": 7139,
+    "B_remap_letters_fix_conclusion": 928,
+    "B_blank_hs": 4594,
+    "B_blank_conflict": 180,
+    "B_blank_unmappable": 4414,
+    "C_blank_hs": 0
+  },
+  "batch_audit": [
+    {
+      "batch": 1,
+      "size": 2000,
+      "sampled": 30,
+      "passed": 30,
+      "rate": 1.0
+    },
+    {
+      "batch": 2,
+      "size": 2000,
+      "sampled": 30,
+      "passed": 30,
+      "rate": 1.0
+    },
+    {
+      "batch": 3,
+      "size": 2000,
+      "sampled": 30,
+      "passed": 30,
+      "rate": 1.0
+    },
+    {
+      "batch": 4,
+      "size": 2000,
+      "sampled": 30,
+      "passed": 30,
+      "rate": 1.0
+    },
+    {
+      "batch": 5,
+      "size": 2000,
+      "sampled": 30,
+      "passed": 30,
+      "rate": 1.0
+    },
+    {
+      "batch": 6,
+      "size": 2000,
+      "sampled": 30,
+      "passed": 30,
+      "rate": 1.0
+    },
+    {
+      "batch": 7,
+      "size": 661,
+      "sampled": 30,
+      "passed": 29,
+      "rate": 0.9666666666666667
+    }
+  ],
+  "programmatic_full_verify_failures": 0,
+  "dry_run": {
+    "rows_changed": 12661,
+    "protected_cols_unchanged": true,
+    "nontarget_rows_changed": 0,
+    "target_rows_changed": 12661,
+    "idempotent": true,
+    "residual_mismatches": 0
+  },
+  "guarantees": {
+    "question_options_answer_explanation_changed": 0,
+    "nontarget_rows_changed": 0,
+    "idempotent": true
+  }
+}
