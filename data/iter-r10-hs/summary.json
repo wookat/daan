@@ -1,0 +1,40 @@
+{
+  "round": "iter-r10-hs",
+  "date": "2026-08-08",
+  "scope": "disabled=0 AND module IN ('changshi','shuliang') AND hs_explanation empty",
+  "target_total": 21383,
+  "target_by_module": {"changshi": 10576, "shuliang": 10807},
+  "written": 21068,
+  "written_by_module": {"changshi": 10390, "shuliang": 10678},
+  "written_by_source": {"llm_deepseek": 19594, "manual_agent": 1474},
+  "skipped_answer_doubt": 223,
+  "skipped_answer_doubt_by_module": {"changshi": 183, "shuliang": 40},
+  "skipped_format_error": 92,
+  "remaining_gap": 315,
+  "api_quota_note": "DeepSeek Insufficient Balance at ~19.6k; per lead's instruction the remaining 1,519 rows were manually authored by the agent (1,474 written, 45 recorded as answer doubts); 6 LLM rows with multi-letter conclusions conflicting with stored single answer were reclassified to skip_answer_doubt during final reconciliation",
+  "programmatic_full_verify_failures": 0,
+  "conclusion_letter_check_failures": 0,
+  "batch_audit_mode": "manual_agent_readthrough (LLM QC unavailable: balance exhausted)",
+  "batch_audit": [
+    {"batch": 1, "size": 2000, "sampled": 30, "passed": 30, "rate": 1.0},
+    {"batch": 2, "size": 2000, "sampled": 30, "passed": 29, "rate": 0.967},
+    {"batch": 3, "size": 2000, "sampled": 30, "passed": 30, "rate": 1.0},
+    {"batch": 4, "size": 2000, "sampled": 30, "passed": 29, "rate": 0.967},
+    {"batch": 5, "size": 2000, "sampled": 30, "passed": 30, "rate": 1.0},
+    {"batch": 6, "size": 2000, "sampled": 30, "passed": 30, "rate": 1.0},
+    {"batch": 7, "size": 2000, "sampled": 30, "passed": 30, "rate": 1.0},
+    {"batch": 8, "size": 2000, "sampled": 30, "passed": 29, "rate": 0.967},
+    {"batch": 9, "size": 2000, "sampled": 30, "passed": 30, "rate": 1.0},
+    {"batch": 10, "size": 1600, "sampled": 30, "passed": 30, "rate": 1.0}
+  ],
+  "batch_audit_fail_notes": "3 wording flaws (no answer-letter errors): b2 scheduling item lists correct value among distractor descriptions; b4 one leaked meta phrase; b8 one 'distractor B is correct' misphrase",
+  "dry_run": {
+    "rows_changed": 21068,
+    "target_rows": 21068,
+    "pre_gap": 21383,
+    "post_gap": 315,
+    "nontarget_rows_changed": 0,
+    "protected_cols_changed": 0,
+    "idempotent": true
+  }
+}
