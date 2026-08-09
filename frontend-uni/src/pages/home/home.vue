@@ -67,15 +67,6 @@
       </view>
       <text class="duebar-go">去复习 ›</text>
     </view>
-    <view v-else-if="planFetched" class="card duebar donebar">
-      <view class="duebar-l">
-        <l-icon name="check" :size="18" color="#16a34a" />
-        <view class="duebar-txts">
-          <text class="duebar-t">今日复习已清零 ✓</text>
-          <text class="duebar-s">到期错题已全部复习完，继续刷新题吧</text>
-        </view>
-      </view>
-    </view>
 
     <!-- 学习计划引导 / 今日计划 -->
     <view v-if="profile === null && !guideHide" class="card guide" @click="openSetup">
@@ -910,7 +901,7 @@ export default {
 .wrap { padding: 24rpx 32rpx 40rpx; }
 
 /* Hero */
-.hero { background: linear-gradient(135deg, #5b8af8, var(--brand)); border-radius: 28rpx; padding: 36rpx 36rpx 32rpx; margin-bottom: 24rpx; box-shadow: 0 12rpx 36rpx rgba(59, 111, 245, 0.3); }
+.hero { background: linear-gradient(135deg, #5b8af8, var(--brand)); border-radius: 28rpx; padding: 30rpx 36rpx 26rpx; margin-bottom: 20rpx; box-shadow: 0 12rpx 36rpx rgba(59, 111, 245, 0.3); }
 .hero-top { display: flex; justify-content: space-between; align-items: center; }
 .hero-goal { font-size: 26rpx; color: rgba(255, 255, 255, 0.85); }
 .hero-n { font-size: 36rpx; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
@@ -1033,9 +1024,6 @@ export default {
 .tk-bar { height: 10rpx; background: var(--line); border-radius: 999rpx; margin-top: 10rpx; overflow: hidden; }
 .tk-fill { height: 100%; background: linear-gradient(90deg, #f59e0b, #d97706); border-radius: 999rpx; }
 .tk-go { flex-shrink: 0; font-size: 23rpx; color: var(--brand); font-weight: 600; }
-.duebar.donebar { background: var(--card); border: 1rpx solid var(--line); box-shadow: none; }
-.donebar .duebar-t { color: #16a34a; }
-.donebar .duebar-s { color: var(--ink-3); }
 
 /* 断卡风险提示 */
 .riskbar { display: flex; align-items: center; gap: 20rpx; background: var(--warn-soft); border: 1rpx solid #fde68a; padding: 22rpx 26rpx; }

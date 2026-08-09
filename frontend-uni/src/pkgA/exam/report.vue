@@ -43,6 +43,18 @@
       </view>
 
       <view class="card">
+        <view class="h">本卷薄弱考点</view>
+        <text v-if="!(report.weak_tags && report.weak_tags.length)" class="note">本卷错题较少，暂未形成薄弱考点结论，继续保持！</text>
+        <view v-for="t in report.weak_tags || []" :key="t.tag3" class="wrow" @click="goPractice(t.tag3)">
+          <view class="wrow-l">
+            <text class="wrow-t">{{ t.name || t.tag3 }}</text>
+            <text class="wrow-s">错 {{ t.wrong }}/{{ t.n }} 题</text>
+          </view>
+          <text class="wrow-go">去练 ›</text>
+        </view>
+      </view>
+
+      <view class="card">
         <view class="h">逐题对错（点击看解析）</view>
         <view class="qgrid">
           <view
@@ -164,6 +176,10 @@ export default {
       const p = this.report.paper;
       uni.redirectTo({ url: p.kind === 'mock' ? '/pkgA/exam/exam?mini=1' : '/pkgA/exam/exam?paper_id=' + p.id });
     },
+    goPractice(tag3) {
+      uni.setStorageSync('practiceLaunch', { kind: 'start', tag3: tag3 || null, count: 10, adaptive: true });
+      uni.navigateTo({ url: '/pages/practice/practice' });
+    },
   },
 };
 </script>
@@ -219,4 +235,11 @@ export default {
 .da.ok { color: var(--ok, #16a34a); }
 .da.bad { color: var(--bad, #dc2626); }
 .dexp { background: var(--soft-bg); border-left: 5rpx solid var(--brand); border-radius: 14rpx; padding: 20rpx; font-size: 25rpx; line-height: 1.7; white-space: pre-wrap; margin-bottom: 20rpx; }
+.note { display: block; font-size: 23rpx; color: var(--ink-2); }
+.wrow { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 10rpx 0; border-bottom: 1rpx solid var(--line); }
+.wrow:last-child { border-bottom: none; }
+.wrow-l { display: flex; flex-direction: column; gap: 4rpx; }
+.wrow-t { font-size: 26rpx; color: var(--ink); font-weight: 500; }
+.wrow-s { font-size: 22rpx; color: var(--ink-2); }
+.wrow-go { font-size: 25rpx; color: var(--brand); font-weight: 600; }
 </style>
