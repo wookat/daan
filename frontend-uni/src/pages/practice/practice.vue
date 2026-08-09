@@ -507,6 +507,15 @@ export default {
         /* 保留原值 */
       }
       this._urlLaunch = { tag3, module, source: query.source || 'seo' };
+    } else if (query && query.year && query.module) {
+      // SEO 年份真题页直链：/practice?module=xx&real=1&year=xxxx 自动开练该年真题
+      let module = query.module;
+      try {
+        module = decodeURIComponent(module);
+      } catch (e) {
+        /* 保留原值 */
+      }
+      this._urlLaunch = { module, year: parseInt(query.year, 10) || null, source: query.source || 'seo' };
     }
   },
   onShow() {
@@ -520,7 +529,7 @@ export default {
     if (this._urlLaunch) {
       const q = this._urlLaunch;
       this._urlLaunch = null;
-      this.start(q.module, null, null, false, undefined, q.tag3, q.source);
+      this.start(q.module, null, null, false, q.year ? true : undefined, q.tag3, q.source, q.year);
       return;
     }
     const launch = uni.getStorageSync('practiceLaunch');
@@ -1055,7 +1064,7 @@ export default {
         this._starting = false;
       }
     },
-    async start(module, submodule, count, adaptive, forceReal, tag3, source) {
+    async start(module, submodule, count, adaptive, forceReal, tag3, source, year) {
       if (this._starting) return;
       this._starting = true;
       // 推荐埋点：记录本次练习的入口来源（reco/weak 等），随 answer_log 落库
@@ -1069,7 +1078,7 @@ export default {
       this.subSelect = null;
       const limit = count || this.groupSize || 10;
       const realQ = forceReal
-        ? '&real=1'
+        ? '&real=1' + (year ? '&year=' + year : '')
         : this.realMode
         ? '&real=1' +
           (this.realYear ? '&year=' + this.realYear : '') +
