@@ -17,6 +17,7 @@ from fastapi.responses import (
 from . import db, kb, taxonomy
 
 SITE_BASE = os.environ.get("SITE_BASE_URL", "https://kaogong.zalize.com").rstrip("/")
+INDEXNOW_KEY = os.environ.get("INDEXNOW_KEY", "")
 PAGE_SIZE = 50
 SITEMAP_SHARD = 10000
 BRAND = "#3B6FF5"
@@ -317,8 +318,15 @@ def _render_question(qid: int) -> str:
     opts_html = "".join(
         f'<div class="opt"><b>{_e(k)}.</b> {_e(v)}</div>' for k, v in sorted(options.items())
     )
-    explanation = (r["hs_explanation"] or r["explanation"] or "").strip()
-    exp_html = _e(explanation).replace("\n", "<br>")
+    hs = (r["hs_explanation"] or "").strip()
+    raw_exp = (r["explanation"] or "").strip()
+    explanation = hs or raw_exp
+    hs_html = _e(hs).replace("\n", "<br>")
+    raw_html = _e(raw_exp).replace("\n", "<br>")
+    if hs and raw_exp:
+        exp_html = f"<p><b>花生十三讲解</b></p><p>{hs_html}</p><p><b>原解析</b></p><p>{raw_html}</p>"
+    else:
+        exp_html = f"<p>{hs_html or raw_html or '暂无解析'}</p>"
     src = " ".join(filter(None, [f'{r["exam_year"]}年' if r["exam_year"] else "", r["exam_region"] or "", "真题" if r["is_real"] else "练习题"]))
     sim_html = "".join(
         f'<li><a href="/tiku/q/{s["id"]}">{_e((s["question"] or "").strip().replace(chr(10), " ")[:60])}…</a></li>'
@@ -338,7 +346,7 @@ def _render_question(qid: int) -> str:
         + img_html
         + opts_html
         + '<details open class="ans"><summary>答案与解析</summary>'
-        + f'<p><b>正确答案：{_e(r["answer"] or "见解析")}</b></p><p>{exp_html or "暂无解析"}</p></details>'
+        + f'<p><b>正确答案：{_e(r["answer"] or "见解析")}</b></p>{exp_html}</details>'
         + f'<a class="cta" href="{_e(SITE_BASE)}/">继续刷题（免费题库+AI 讲解）→</a></article>'
         + (f'<section class="card"><h2>同考点相似题</h2><ul class="qlist">{sim_html}</ul></section>' if sim_html else "")
     )
@@ -485,6 +493,13 @@ def sitemap_questions(shard: int):
     if shard < 1 or lo >= len(ids):
         raise HTTPException(404, "分片不存在")
     return _urlset([_url(f"/tiku/q/{i}") for i in ids[lo : lo + SITEMAP_SHARD]])
+
+
+@root_router.get("/indexnow-key.txt", include_in_schema=False)
+def indexnow_key():
+    if not INDEXNOW_KEY:
+        raise HTTPException(404, "未配置")
+    return PlainTextResponse(INDEXNOW_KEY)
 
 
 @root_router.get("/robots.txt", include_in_schema=False)

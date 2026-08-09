@@ -121,6 +121,11 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - share-q 页出现「一键加入小队」CTA 的条件：分享者本人在某小队（后端 `_sharer_invite`）；找 `shared_questions` 表里 from_uid 为小队成员的 sid 来测。
 - 深色模式生产站可直接用 我的→外观模式 循环切换（跟随系统→浅色→深色），比 DevTools emulation 稳，测完记得切回跟随系统。
 
+## 讲解（hs_explanation）批量抽查
+- 抽查指定题号的讲解与结论最快走 SEO 页 `https://kaogong.zalize.com/tiku/q/{id}`：解析块优先展示 hs_explanation（seo.py `hs_explanation or explanation`），可用 curl 批量抓取后正则提取「正确答案：X」与结尾「确认答案为X」比对，无需 UI 逐题定位。
+- 迷你模考入口在首页「更多练习→迷你模考」（30 题/30 分钟），可只答几题从答题卡交卷；交卷生成 `attempt_id`（成绩页 URL `#/pkgA/exam/report?attempt_id=N`），模考中答错的题也会自动写入错题本（saveExamWrong）——生产测试记得把这些 mistake id 一并列入清理清单。
+- 组队落地页：我的→刷题小队→创建小队→「复制邀请链接」得 `#/pages/team/join?code=XXXXXX`，可直接开新标签验证渲染；测试小队记下邀请码，测完可点「退出小队」清理。
+
 ## SEO 页（/tiku/*）测试
 - `/tiku/q/{id}` 详情页有 `lru_cache`：改 DB 后必须重启 uvicorn/容器才会反映新数据。
 - 本地起后端可能需先 `pip install reportlab`（pdf_export 依赖）。

@@ -54,7 +54,7 @@
         <view class="ov-c"><text class="ov-n warn">{{ todoItems.length }}</text><text class="ov-t">待掌握</text></view>
         <view class="ov-c"><text class="ov-n ok">{{ doneItems.length }}</text><text class="ov-t">已掌握</text></view>
       </view>
-      <view v-if="due.length" class="card duecard" @click="startReview">
+      <view v-if="due.length" class="card duecard" @click="startReviewFromCard">
         <view>
           <view class="duetxt"><l-icon name="calendar-check" :size="16" color="#ffffff" /><text class="duetxt-t">今日待复习 {{ dueTotal }} 道</text></view>
           <text class="duesub">按遗忘曲线安排 · 预计 {{ Math.max(1, Math.ceil(due.length * 0.8)) }} 分钟</text>
@@ -363,7 +363,7 @@
 
 <script>
 import { md } from '../../md.js';
-import { request, anonUid, exportPdf, scanSheet, shareCreate } from '../../api.js';
+import { request, anonUid, exportPdf, scanSheet, shareCreate, trackEvent } from '../../api.js';
 import { cacheMistakes, getCachedMistakes } from '../../offline.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
@@ -381,6 +381,7 @@ export default {
       offlineView: false,
       due: [],
       dueTotal: 0,
+      autoReview: false,
       reviewing: false,
       reinforce: null,
       reinforceItems: [],
@@ -551,6 +552,10 @@ export default {
       if (this.favs.length) this.tab = 'fav';
     }
     if (this.tab === 'fav' && !this.favs.length) this.tab = 'todo';
+    if (uni.getStorageSync('autoStartReview')) {
+      uni.removeStorageSync('autoStartReview');
+      this.autoReview = true;
+    }
     this.load();
   },
   methods: {
@@ -723,6 +728,10 @@ export default {
         this.items = d.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
         this.due = r.items;
         this.dueTotal = r.total || r.items.length;
+        if (this.autoReview) {
+          this.autoReview = false;
+          if (this.due.length && !this.reviewing) this.startReview();
+        }
         this.offlineView = false;
         cacheMistakes(d.items);
         try {
@@ -740,6 +749,10 @@ export default {
         }
       }
       this.loading = false;
+    },
+    startReviewFromCard() {
+      trackEvent('review_entry_click', 'book_card');
+      this.startReview();
     },
     startReview() {
       this.rItems = [...this.due];
