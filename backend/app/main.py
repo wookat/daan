@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import auth, db, engine, insights, interview, kb, llm, mock_event, omr, pdf_export, pk, plan, report, similarity, social, taxonomy
+from . import auth, db, engine, insights, interview, kb, llm, mock_event, omr, pdf_export, pk, plan, report, seo, similarity, social, taxonomy
 
 app = FastAPI(title="考公错题助手")
 # Android App（Capacitor WebView，origin 为 https://localhost）跨域访问 API
@@ -35,6 +35,8 @@ app.include_router(pk.router)
 app.include_router(mock_event.router)
 app.include_router(mock_event.admin_router)
 app.include_router(report.router)
+app.include_router(seo.router)
+app.include_router(seo.root_router)
 
 ACCESS_CODE = os.environ.get("ACCESS_CODE", "")
 
