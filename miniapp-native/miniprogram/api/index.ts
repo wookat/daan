@@ -1,5 +1,5 @@
 import { request } from '../utils/request';
-import { anonUid } from '../utils/auth';
+import { anonUid, pkNickname } from '../utils/auth';
 import type {
   AnswerLogItem,
   AuthResp,
@@ -11,6 +11,10 @@ import type {
   PracticeResultResp,
   Profile,
   QuestionsResp,
+  ShareAnswerResp,
+  ShareDetailResp,
+  TeamInfo,
+  TeamPanelResp,
 } from './types';
 
 // ---------- 题目 ----------
@@ -144,4 +148,71 @@ export function fetchPapers(): Promise<{ items: Paper[] }> {
 
 export function fetchPaperQuestions(source: string): Promise<QuestionsResp> {
   return request<QuestionsResp>('/api/paper_questions?src=' + encodeURIComponent(source));
+}
+
+// ---------- 组队打卡 / 题目分享 ----------
+
+export function teamCreate(name: string): Promise<{ team: TeamInfo }> {
+  return request<{ team: TeamInfo }>('/api/team/create', {
+    method: 'POST',
+    data: { uid: anonUid(), nickname: pkNickname(), name },
+  });
+}
+
+export function teamJoin(code: string): Promise<{ team: TeamInfo; already?: boolean }> {
+  return request<{ team: TeamInfo; already?: boolean }>('/api/team/join', {
+    method: 'POST',
+    data: { uid: anonUid(), nickname: pkNickname(), code },
+  });
+}
+
+export function teamLeave(teamId: number): Promise<void> {
+  return request<void>('/api/team/leave', {
+    method: 'POST',
+    data: { uid: anonUid(), team_id: teamId },
+  });
+}
+
+export function teamMine(): Promise<{ items: TeamInfo[] }> {
+  return request<{ items: TeamInfo[] }>('/api/team/mine?uid=' + encodeURIComponent(anonUid()));
+}
+
+export function teamPanel(teamId: number): Promise<TeamPanelResp> {
+  return request<TeamPanelResp>(
+    '/api/team/' + teamId + '/panel?uid=' + encodeURIComponent(anonUid())
+  );
+}
+
+export function shareCreate(
+  questionId: number,
+  teamId?: number | null
+): Promise<{ sid: string }> {
+  return request<{ sid: string }>('/api/share/create', {
+    method: 'POST',
+    data: { uid: anonUid(), nickname: pkNickname(), question_id: questionId, team_id: teamId || null },
+  });
+}
+
+export function shareDetail(sid: string): Promise<ShareDetailResp> {
+  return request<ShareDetailResp>(
+    '/api/share/' + encodeURIComponent(sid) + '?uid=' + encodeURIComponent(anonUid())
+  );
+}
+
+export function shareAnswer(sid: string, picked: string, secs: number): Promise<ShareAnswerResp> {
+  return request<ShareAnswerResp>('/api/share/' + encodeURIComponent(sid) + '/answer', {
+    method: 'POST',
+    data: { uid: anonUid(), nickname: pkNickname(), picked, secs: secs || 0 },
+  });
+}
+
+export function trackEvent(
+  event: string,
+  source?: string | null,
+  ref?: string | null
+): Promise<void> {
+  return request<void>('/api/track', {
+    method: 'POST',
+    data: { uid: anonUid(), event, source: source || null, ref: ref || null },
+  }).catch(() => undefined);
 }

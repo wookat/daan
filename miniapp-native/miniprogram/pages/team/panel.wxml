@@ -1,0 +1,46 @@
+<navbar title="小队面板" back="{{true}}" />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <view wx:if="{{loading}}" class="card spin">加载中…</view>
+
+    <block wx:if="{{!loading && panel}}">
+      <view class="hero">
+        <text class="hero-t">{{panel.team.name}}</text>
+        <text class="hero-s">{{members.length}} 名队友 · 邀请码 {{panel.team.invite_code}}</text>
+        <view class="hero-btns">
+          <view class="hero-btn" bind:tap="onCopyInvite">复制邀请链接</view>
+          <button class="hero-btn share-btn" open-type="share">微信邀请</button>
+          <view class="hero-btn ghost" bind:tap="onLeave">退出小队</view>
+        </view>
+      </view>
+
+      <view class="week-head">
+        <text class="wh-name">队友</text>
+        <view class="wh-days">
+          <text wx:for="{{weekLabels}}" wx:key="*this" class="wh-d {{index === todayIdx ? 'today' : ''}}">{{item}}</text>
+        </view>
+      </view>
+
+      <view wx:for="{{members}}" wx:key="index" class="card mem">
+        <view class="mem-top">
+          <view class="mem-av {{item.is_me ? 'me' : ''}}">{{item.av}}</view>
+          <view class="mem-l">
+            <view class="mem-name-row">
+              <text class="mem-name">{{item.nickname}}</text>
+              <text wx:if="{{item.is_me}}" class="mem-tag me">我</text>
+              <text wx:elif="{{item.is_creator}}" class="mem-tag">队长</text>
+            </view>
+            <text class="mem-sub">{{item.desc}}</text>
+          </view>
+          <view wx:if="{{!item.is_me && !item.today_n}}" class="remind-btn" data-index="{{index}}" catch:tap="onRemind">提醒 TA</view>
+          <text wx:elif="{{item.today_n}}" class="mem-done">今日 {{item.today_n}} 题</text>
+        </view>
+        <view class="mem-week">
+          <view wx:for="{{item.cells}}" wx:for-item="c" wx:key="index" class="wk-cell {{c.cls}}">
+            <text wx:if="{{c.label}}" class="wk-n {{c.cls}}">{{c.label}}</text>
+          </view>
+        </view>
+      </view>
+    </block>
+  </view>
+</scroll-view>

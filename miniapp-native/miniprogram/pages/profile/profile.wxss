@@ -82,3 +82,7 @@
   max-width: 60%;
   text-align: right;
 }
+
+.row-i.link .r-v {
+  color: var(--brand-500);
+}

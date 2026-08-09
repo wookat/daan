@@ -17,6 +17,9 @@ import 'pages/discuss_page.dart';
 import 'pages/favorites_page.dart';
 import 'pages/poster_page.dart';
 import 'pages/search_page.dart';
+import 'pages/share_q_page.dart';
+import 'pages/team_page.dart';
+import 'pages/team_panel_page.dart';
 import 'pages/shenlun_detail_page.dart';
 import 'pages/shenlun_page.dart';
 import 'pages/shizheng_page.dart';
@@ -119,6 +122,19 @@ final router = GoRouter(
     GoRoute(
       path: '/pk',
       builder: (c, s) => PkPage(joinCode: s.uri.queryParameters['code']),
+    ),
+    GoRoute(
+      path: '/team',
+      builder: (c, s) => TeamPage(joinCode: s.uri.queryParameters['code']),
+    ),
+    GoRoute(
+      path: '/team/panel/:id',
+      builder: (c, s) =>
+          TeamPanelPage(teamId: int.parse(s.pathParameters['id']!)),
+    ),
+    GoRoute(
+      path: '/share',
+      builder: (c, s) => ShareQPage(sid: s.uri.queryParameters['sid'] ?? ''),
     ),
     GoRoute(path: '/reminders', builder: (c, s) => const RemindersPage()),
     GoRoute(path: '/offline', builder: (c, s) => const OfflinePage()),

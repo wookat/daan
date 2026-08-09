@@ -102,3 +102,59 @@ export interface FavItem {
 export interface PracticeResultResp {
   percentile?: number | null;
 }
+
+export interface TeamInfo {
+  id: number;
+  name: string;
+  invite_code: string;
+  n_members?: number;
+  is_creator?: number | boolean;
+}
+
+export interface TeamMember {
+  nickname: string;
+  is_me?: boolean;
+  is_creator?: boolean;
+  today_n?: number;
+  today_acc?: number;
+  streak?: number;
+  last_active?: number | null;
+  week: number[];
+}
+
+export interface TeamPanelResp {
+  team: TeamInfo;
+  members: TeamMember[];
+}
+
+export interface ShareQuestion {
+  module?: string | null;
+  submodule?: string | null;
+  question: string;
+  options: Record<string, string>;
+  answer?: string;
+  explanation?: string | null;
+}
+
+export interface ShareAnswerRow {
+  nickname: string;
+  picked: string;
+  correct: boolean | number;
+}
+
+export interface ShareDetailResp {
+  from_name?: string;
+  question: ShareQuestion;
+  answered?: boolean;
+  is_sharer?: boolean;
+  n_answered?: number;
+  answers?: ShareAnswerRow[];
+  my_answer?: { picked: string; correct: boolean } | null;
+}
+
+export interface ShareAnswerResp {
+  correct: boolean;
+  answer: string;
+  explanation?: string | null;
+  answers?: ShareAnswerRow[];
+}

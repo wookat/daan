@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../core/api.dart';
 import '../core/models.dart';
@@ -146,12 +150,39 @@ class _BookDetailPageState extends State<BookDetailPage> {
     askRedoTick.value++;
   }
 
+  /// 分享给队友：生成分享 sid → 复制链接并唤起系统分享面板。
+  Future<void> _shareToTeam() async {
+    final qid = m?.questionId;
+    if (qid == null) return;
+    try {
+      final sid = await Api.shareCreate(qid);
+      final text =
+          '我在考公助手分享了一道题，敢来挑战吗？https://kaogong.zalize.com/#/pkgA/share/share-q?sid=$sid';
+      await Clipboard.setData(ClipboardData(text: text));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('分享链接已复制')));
+      }
+      unawaited(Share.share(text));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(Api.errMsg(e))));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('错题详情'),
         actions: [
+          if (m?.questionId != null)
+            IconButton(
+                tooltip: '分享给队友',
+                onPressed: _shareToTeam,
+                icon: const Icon(LucideIcons.share2, size: 20)),
           if (m?.questionId != null)
             IconButton(
                 tooltip: reported ? '已纠错' : '纠错',

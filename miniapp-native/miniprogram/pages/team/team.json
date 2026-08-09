@@ -1,0 +1,6 @@
+{
+  "renderer": "webview",
+  "usingComponents": {
+    "navbar": "/components/navbar/index"
+  }
+}

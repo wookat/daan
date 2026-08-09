@@ -1,0 +1,60 @@
+<navbar title="题目分享" back="{{true}}" />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <view wx:if="{{loading}}" class="card empty">加载中…</view>
+    <view wx:elif="{{errMsg}}" class="card empty">{{errMsg}}</view>
+
+    <block wx:elif="{{d}}">
+      <view class="from-bar">
+        <view class="from-av">{{fromAv}}</view>
+        <view class="from-l">
+          <text class="from-t">{{d.from_name}} 分享了一道题</text>
+          <text class="from-s">{{revealed ? (answers.length || d.n_answered || 0) + ' 人已作答' : '先作答，再看答案和大家的选择'}}</text>
+        </view>
+      </view>
+
+      <view class="card">
+        <view class="q-tags">
+          <text class="tag tag-brand">{{d.question.module || '行测'}}</text>
+          <text wx:if="{{d.question.submodule}}" class="tag tag-gray">{{d.question.submodule}}</text>
+        </view>
+        <text class="stem" user-select>{{d.question.question}}</text>
+        <view
+          wx:for="{{optList}}"
+          wx:key="k"
+          class="opt {{!revealed ? (picked === item.k ? 'pick' : '') : item.k === d.question.answer ? 'right' : (myResult && item.k === myResult.picked ? 'wrong' : '')}}"
+          data-key="{{item.k}}"
+          bind:tap="onPick"
+        >
+          <text class="okey">{{item.k}}</text>
+          <text class="otext">{{item.v}}</text>
+        </view>
+      </view>
+
+      <block wx:if="{{revealed}}">
+        <view wx:if="{{myResult}}" class="res-bar {{myResult.correct ? 'ok' : 'bad'}}">
+          {{myResult.correct ? '✅ 答对了！正确答案 ' + d.question.answer : '❌ 答错了，正确答案是 ' + d.question.answer + '，你选了 ' + myResult.picked}}
+        </view>
+        <view wx:else class="res-bar ok">正确答案：{{d.question.answer}}</view>
+
+        <view wx:if="{{d.question.explanation}}" class="card">
+          <text class="exp-k">解析</text>
+          <text class="exp" user-select>{{d.question.explanation}}</text>
+        </view>
+
+        <view class="card">
+          <text class="exp-k">大家的作答（{{answers.length}} 人）</text>
+          <view wx:if="{{!answers.length}}" class="empty small">还没有人作答，把链接再发给几个考友吧</view>
+          <view wx:for="{{answers}}" wx:key="index" class="ans-row">
+            <text class="ans-name">{{item.nickname}}</text>
+            <text class="ans-pick">选 {{item.picked}}</text>
+            <text class="ans-res {{item.correct ? 'ok' : 'bad'}}">{{item.correct ? '对' : '错'}}</text>
+          </view>
+        </view>
+
+        <view class="btn-primary" bind:tap="onSimilar">去刷同类题</view>
+        <view class="btn-sub" bind:tap="onCopyLink">复制分享链接，喊更多人来答</view>
+      </block>
+    </block>
+  </view>
+</scroll-view>

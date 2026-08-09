@@ -1,0 +1,248 @@
+.page-scroll {
+  flex: 1;
+  height: 100%;
+}
+
+.wrap {
+  padding: 24rpx 32rpx 60rpx;
+}
+
+.spin {
+  text-align: center;
+  color: var(--t3);
+  padding: 40rpx 0;
+}
+
+.hero {
+  background: linear-gradient(135deg, #5b8af8, #3b6ff5);
+  border-radius: 32rpx;
+  padding: 36rpx 32rpx;
+  margin-bottom: 24rpx;
+}
+
+.hero-t {
+  display: block;
+  color: #fff;
+  font-size: 40rpx;
+  font-weight: 800;
+}
+
+.hero-s {
+  display: block;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 24rpx;
+  margin-top: 10rpx;
+}
+
+.hero-btns {
+  display: flex;
+  flex-direction: row;
+  margin-top: 22rpx;
+}
+
+.hero-btn {
+  flex: 1;
+  min-height: 76rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: var(--brand-500);
+  border-radius: var(--r-full);
+  font-size: 25rpx;
+  font-weight: 600;
+  margin-right: 16rpx;
+}
+
+.hero-btn:last-child {
+  margin-right: 0;
+}
+
+.hero-btn.ghost {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+.share-btn {
+  padding: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  border: none;
+  line-height: normal;
+}
+
+.share-btn::after {
+  border: none;
+}
+
+.week-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 0 28rpx;
+  margin-bottom: 12rpx;
+}
+
+.wh-name {
+  width: 96rpx;
+  font-size: 22rpx;
+  color: var(--t4);
+}
+
+.wh-days {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  margin-left: 20rpx;
+}
+
+.wh-d {
+  flex: 1;
+  text-align: center;
+  font-size: 22rpx;
+  color: var(--t4);
+}
+
+.wh-d.today {
+  color: var(--brand-500);
+  font-weight: 700;
+}
+
+.mem {
+  padding: 22rpx 28rpx;
+}
+
+.mem-top {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.mem-av {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: var(--r-full);
+  background: var(--brand-50);
+  color: var(--brand-500);
+  font-size: 30rpx;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 18rpx;
+}
+
+.mem-av.me {
+  background: linear-gradient(135deg, #5b8af8, #3b6ff5);
+  color: #fff;
+}
+
+.mem-l {
+  flex: 1;
+  min-width: 0;
+}
+
+.mem-name-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.mem-name {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: var(--t1);
+  max-width: 260rpx;
+  overflow: hidden;
+}
+
+.mem-tag {
+  font-size: 20rpx;
+  color: #d97706;
+  background: #fef3c7;
+  border-radius: 8rpx;
+  padding: 2rpx 10rpx;
+  margin-left: 10rpx;
+}
+
+.mem-tag.me {
+  color: var(--brand-500);
+  background: var(--brand-50);
+}
+
+.mem-sub {
+  display: block;
+  font-size: 22rpx;
+  color: var(--t3);
+  margin-top: 6rpx;
+}
+
+.remind-btn {
+  flex-shrink: 0;
+  min-height: 64rpx;
+  display: flex;
+  align-items: center;
+  padding: 0 24rpx;
+  background: #fef3c7;
+  color: #b45309;
+  border-radius: var(--r-full);
+  font-size: 23rpx;
+  font-weight: 600;
+}
+
+.mem-done {
+  flex-shrink: 0;
+  font-size: 23rpx;
+  color: var(--success);
+  font-weight: 700;
+}
+
+.mem-week {
+  display: flex;
+  flex-direction: row;
+  margin-top: 18rpx;
+  margin-left: 90rpx;
+}
+
+.wk-cell {
+  flex: 1;
+  height: 52rpx;
+  border-radius: 10rpx;
+  background: var(--fill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 10rpx;
+}
+
+.wk-cell:last-child {
+  margin-right: 0;
+}
+
+.wk-cell.done {
+  background: #dbeafe;
+}
+
+.wk-cell.hot {
+  background: var(--brand-500);
+}
+
+.wk-cell.today-empty {
+  border: 1rpx dashed var(--brand-500);
+}
+
+.wk-cell.future {
+  background: transparent;
+  border: 1rpx dashed var(--border);
+}
+
+.wk-n {
+  font-size: 20rpx;
+  color: var(--brand-500);
+  font-weight: 700;
+}
+
+.wk-n.hot {
+  color: #fff;
+}
