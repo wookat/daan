@@ -72,7 +72,7 @@ export default {
     },
     goPractice() {
       uni.setStorageSync('practiceLaunch', { kind: 'start', count: 10, source: 'team' });
-      uni.switchTab({ url: '/pages/practice/practice' });
+      uni.navigateTo({ url: '/pages/practice/practice' });
     },
     goLogin() {
       uni.navigateTo({ url: '/pkgA/user/login' });

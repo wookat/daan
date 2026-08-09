@@ -146,7 +146,7 @@ export default {
         count: 10,
         source: 'share',
       });
-      uni.switchTab({ url: '/pages/practice/practice' });
+      uni.navigateTo({ url: '/pages/practice/practice' });
     },
     copyLink() {
       uni.setClipboardData({
