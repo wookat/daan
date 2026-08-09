@@ -28,6 +28,7 @@ import 'pages/interview_history_page.dart';
 import 'pages/interview_page.dart';
 import 'pages/offline_page.dart';
 import 'pages/pk_page.dart';
+import 'pages/pk_result_page.dart';
 import 'pages/reminders_page.dart';
 import 'pages/login_page.dart';
 import 'pages/mastery_map_page.dart';
@@ -124,6 +125,11 @@ final router = GoRouter(
       builder: (c, s) => PkPage(joinCode: s.uri.queryParameters['code']),
     ),
     GoRoute(
+      path: '/pk-result',
+      builder: (c, s) =>
+          PkResultPage(code: s.uri.queryParameters['rid'] ?? ''),
+    ),
+    GoRoute(
       path: '/team',
       builder: (c, s) => TeamPage(joinCode: s.uri.queryParameters['code']),
     ),
@@ -138,7 +144,11 @@ final router = GoRouter(
     ),
     GoRoute(path: '/reminders', builder: (c, s) => const RemindersPage()),
     GoRoute(path: '/offline', builder: (c, s) => const OfflinePage()),
-    GoRoute(path: '/poster', builder: (c, s) => const PosterPage()),
+    GoRoute(
+      path: '/poster',
+      builder: (c, s) => PosterPage(
+          badge: int.tryParse(s.uri.queryParameters['badge'] ?? '') ?? 0),
+    ),
     GoRoute(path: '/calendar', builder: (c, s) => const CalendarPage()),
     GoRoute(path: '/login', builder: (c, s) => const LoginPage()),
     GoRoute(

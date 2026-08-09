@@ -9,7 +9,9 @@
     "pages/login/login",
     "pages/team/team",
     "pages/team/panel",
-    "pages/share/share"
+    "pages/share/share",
+    "pages/share/pk-result",
+    "pages/social/poster"
   ],
   "renderer": "skyline",
   "rendererOptions": {

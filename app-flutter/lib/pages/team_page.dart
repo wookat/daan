@@ -135,6 +135,11 @@ class _TeamPageState extends State<TeamPage> {
       context.push('/share?sid=${sid.group(1)}');
       return;
     }
+    final rid = RegExp(r'rid=([A-Za-z0-9]+)').firstMatch(text);
+    if (rid != null) {
+      context.push('/pk-result?rid=${rid.group(1)}');
+      return;
+    }
     final code = RegExp(r'code=([A-Za-z0-9]+)').firstMatch(text);
     if (code != null) {
       joinCtrl.text = code.group(1)!.toUpperCase();

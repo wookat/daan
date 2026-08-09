@@ -3,15 +3,19 @@ import { anonUid, pkNickname } from '../utils/auth';
 import type {
   AnswerLogItem,
   AuthResp,
+  CheckinBadgesResp,
+  CheckinSummaryResp,
   FavItem,
   Mistake,
   MistakesResp,
   Paper,
+  PkResultResp,
   PlanToday,
   PracticeResultResp,
   Profile,
   QuestionsResp,
   ShareAnswerResp,
+  ShareCreateResp,
   ShareDetailResp,
   TeamInfo,
   TeamPanelResp,
@@ -186,8 +190,8 @@ export function teamPanel(teamId: number): Promise<TeamPanelResp> {
 export function shareCreate(
   questionId: number,
   teamId?: number | null
-): Promise<{ sid: string }> {
-  return request<{ sid: string }>('/api/share/create', {
+): Promise<ShareCreateResp> {
+  return request<ShareCreateResp>('/api/share/create', {
     method: 'POST',
     data: { uid: anonUid(), nickname: pkNickname(), question_id: questionId, team_id: teamId || null },
   });
@@ -204,6 +208,24 @@ export function shareAnswer(sid: string, picked: string, secs: number): Promise<
     method: 'POST',
     data: { uid: anonUid(), nickname: pkNickname(), picked, secs: secs || 0 },
   });
+}
+
+// ---------- 打卡徽章 / PK 战绩 ----------
+
+export function fetchCheckinSummary(): Promise<CheckinSummaryResp> {
+  return request<CheckinSummaryResp>(
+    '/api/checkin/summary?uid=' + encodeURIComponent(anonUid())
+  );
+}
+
+export function fetchCheckinBadges(): Promise<CheckinBadgesResp> {
+  return request<CheckinBadgesResp>(
+    '/api/checkin/badges?uid=' + encodeURIComponent(anonUid())
+  );
+}
+
+export function pkResult(code: string): Promise<PkResultResp> {
+  return request<PkResultResp>('/api/pk/result/' + encodeURIComponent(code));
 }
 
 export function trackEvent(

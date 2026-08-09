@@ -24,6 +24,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   int totalDone = 0;
   int streak = 0;
   int? mistakeN;
+  Map<String, dynamic>? badgeInfo;
   Map<String, dynamic>? profile;
   Map<String, dynamic>? announce;
   int fontLv = Store.instance.fontLv;
@@ -46,6 +47,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           streak = (d['streak'] as num?)?.toInt() ?? 0;
         });
       }
+    } catch (_) {/* 非关键路径 */}
+    try {
+      final b = await Api.checkinBadges();
+      if (mounted) setState(() => badgeInfo = b);
     } catch (_) {/* 非关键路径 */}
     try {
       final items = await Api.mistakes();
@@ -144,6 +149,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               _stat('$streak', '连续打卡', () => context.push('/poster')),
             ],
           ),
+          if (badgeInfo != null) ...[
+            const SizedBox(height: 12),
+            _badgeWall(),
+          ],
           const SizedBox(height: 12),
           // 能力预测分卡
           const PredictCard(),
@@ -316,6 +325,81 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 style: TextStyle(fontSize: 12, color: context.kg.t4)),
           ),
         ],
+      ),
+    );
+  }
+
+  // 打卡里程碑徽章墙（解锁口径以服务端 /api/checkin/badges 为准）
+  Widget _badgeWall() {
+    final kg = context.kg;
+    final b = badgeInfo!;
+    final badges = (b['badges'] as List<dynamic>? ?? [])
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text('当前连续 ${b['streak'] ?? 0} 天',
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w700)),
+                ),
+                Text('历史最长 ${b['best_streak'] ?? 0} 天',
+                    style: TextStyle(fontSize: 11, color: kg.t3)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [for (final x in badges) _badgeItem(x)],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _badgeItem(Map<String, dynamic> x) {
+    final kg = context.kg;
+    final days = (x['days'] as num?)?.toInt() ?? 0;
+    final unlocked = x['unlocked'] == true;
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: () {
+        if (unlocked) {
+          context.push('/poster?badge=$days');
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('连续打卡 $days 天即可解锁')));
+        }
+      },
+      child: Container(
+        width: 76,
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: unlocked ? kg.brandBg : kg.fill,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          children: [
+            Text(unlocked ? '🏅' : '🔒',
+                style: TextStyle(
+                    fontSize: 20,
+                    color: unlocked ? null : kg.t4)),
+            const SizedBox(height: 4),
+            Text('$days 天',
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: unlocked ? kg.t2 : kg.t4)),
+          ],
+        ),
       ),
     );
   }

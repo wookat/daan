@@ -21,8 +21,11 @@ const _kQuotes = [
 ];
 
 /// 打卡分享海报：连续天数/今日战报/倒计时/励志语录 + 保存/分享。复刻 pkgA/social/poster.vue。
+/// [badge] > 0 时为里程碑徽章海报（poster?badge=N）。
 class PosterPage extends StatefulWidget {
-  const PosterPage({super.key});
+  const PosterPage({super.key, this.badge = 0});
+
+  final int badge;
 
   @override
   State<PosterPage> createState() => _PosterPageState();
@@ -38,7 +41,9 @@ class _PosterPageState extends State<PosterPage> {
   @override
   void initState() {
     super.initState();
-    quote = _kQuotes[DateTime.now().day % _kQuotes.length];
+    quote = widget.badge > 0
+        ? '解锁「连续打卡 ${widget.badge} 天」徽章，坚持正在变成实力。'
+        : _kQuotes[DateTime.now().day % _kQuotes.length];
     _load();
   }
 
@@ -72,7 +77,8 @@ class _PosterPageState extends State<PosterPage> {
       final file = File(
           '${dir.path}/checkin_${DateTime.now().millisecondsSinceEpoch}.png');
       await file.writeAsBytes(bytes!.buffer.asUint8List());
-      await Share.shareXFiles([XFile(file.path)], text: '考公刷题打卡');
+      await Share.shareXFiles([XFile(file.path)],
+          text: widget.badge > 0 ? '考公刷题里程碑徽章' : '考公刷题打卡');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -102,7 +108,7 @@ class _PosterPageState extends State<PosterPage> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
-        title: const Text('打卡海报'),
+        title: Text(widget.badge > 0 ? '徽章海报' : '打卡海报'),
       ),
       body: loading
           ? const Center(
@@ -131,10 +137,17 @@ class _PosterPageState extends State<PosterPage> {
                             children: [
                               Row(
                                 children: [
-                                  const Icon(LucideIcons.flame,
-                                      color: Color(0xFFFF9F1C), size: 20),
+                                  Icon(
+                                      widget.badge > 0
+                                          ? LucideIcons.medal
+                                          : LucideIcons.flame,
+                                      color: const Color(0xFFFF9F1C),
+                                      size: 20),
                                   const SizedBox(width: 6),
-                                  Text('连续打卡 $streak 天',
+                                  Text(
+                                      widget.badge > 0
+                                          ? '连续打卡 ${widget.badge} 天徽章'
+                                          : '连续打卡 $streak 天',
                                       style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 16,

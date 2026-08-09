@@ -14,6 +14,20 @@
         </view>
       </view>
 
+      <view wx:if="{{weekRank.length}}" class="card rank-card">
+        <view class="rank-head">
+          <text class="rank-t">🏆 本周队内排行</text>
+          <view class="rank-copy" bind:tap="onCopyWeekReport">复制周战报</view>
+        </view>
+        <view wx:for="{{weekRank}}" wx:key="index" class="rank-row">
+          <text class="rank-no no{{index + 1}}">{{index + 1}}</text>
+          <text class="rank-name">{{item.nickname}}</text>
+          <text wx:if="{{index === 0 && item.week_n > 0}}" class="rank-king">卷王</text>
+          <text wx:if="{{item.is_me}}" class="rank-me">我</text>
+          <text class="rank-n">本周 {{item.week_n}} 题</text>
+        </view>
+      </view>
+
       <view class="week-head">
         <text class="wh-name">队友</text>
         <view class="wh-days">

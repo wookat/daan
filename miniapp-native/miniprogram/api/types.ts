@@ -142,6 +142,18 @@ export interface ShareAnswerRow {
   correct: boolean | number;
 }
 
+export interface QStats {
+  total: number;
+  acc?: number | null;
+  beat_pct?: number | null;
+}
+
+export interface TeamInvite {
+  code: string;
+  name: string;
+  n_members?: number;
+}
+
 export interface ShareDetailResp {
   from_name?: string;
   question: ShareQuestion;
@@ -150,6 +162,8 @@ export interface ShareDetailResp {
   n_answered?: number;
   answers?: ShareAnswerRow[];
   my_answer?: { picked: string; correct: boolean } | null;
+  q_stats?: QStats | null;
+  team_invite?: TeamInvite | null;
 }
 
 export interface ShareAnswerResp {
@@ -157,4 +171,53 @@ export interface ShareAnswerResp {
   answer: string;
   explanation?: string | null;
   answers?: ShareAnswerRow[];
+  q_stats?: QStats | null;
+  team_invite?: TeamInvite | null;
+}
+
+export interface ShareCreateResp {
+  sid: string;
+  module?: string | null;
+  submodule?: string | null;
+}
+
+export interface CheckinSummaryResp {
+  date?: string;
+  streak: number;
+  today_n: number;
+  today_correct?: number;
+  today_rate?: number | null;
+  cleared_today?: number;
+  total: number;
+  exam_type?: string | null;
+  days_to_exam?: number | null;
+}
+
+export interface CheckinBadge {
+  days: number;
+  unlocked: boolean;
+}
+
+export interface CheckinBadgesResp {
+  streak: number;
+  best_streak: number;
+  badges: CheckinBadge[];
+}
+
+export interface PkResultSide {
+  role?: string;
+  name: string;
+  score: number;
+  correct: number;
+  time_ms?: number | null;
+}
+
+export interface PkResultResp {
+  code: string;
+  module?: string | null;
+  n_questions: number;
+  winner: string;
+  creator: PkResultSide;
+  opponent: PkResultSide;
+  finished_at?: number | null;
 }

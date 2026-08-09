@@ -231,3 +231,40 @@
   font-size: 29rpx;
   font-weight: 600;
 }
+
+/* 击败 X% 提示条 */
+.beat-bar {
+  border-radius: 18rpx;
+  padding: 18rpx 26rpx;
+  font-size: 25rpx;
+  font-weight: 600;
+  margin-bottom: 20rpx;
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+/* 组队引导卡 */
+.team-cta {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 18rpx;
+}
+.team-cta.joined { background: var(--success-bg); }
+.tc-l { flex: 1; min-width: 0; }
+.tc-t { display: block; font-size: 28rpx; font-weight: 700; }
+.tc-s { display: block; font-size: 22rpx; color: var(--t3); margin-top: 6rpx; }
+.tc-btn {
+  flex-shrink: 0;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0 30rpx;
+  background: var(--brand-500);
+  color: #fff;
+  border-radius: 999rpx;
+  font-size: 25rpx;
+  font-weight: 600;
+}
+.tc-btn.off { opacity: 0.6; }
+.tc-btn.ghost { background: var(--brand-50); color: var(--brand-500); }

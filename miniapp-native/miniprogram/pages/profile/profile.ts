@@ -1,4 +1,5 @@
-import { authLogout } from '../../api/index';
+import { authLogout, fetchCheckinBadges } from '../../api/index';
+import type { CheckinBadgesResp } from '../../api/types';
 import { anonUid, clearAuth, getAuthUser } from '../../utils/auth';
 import { syncTabBar } from '../../utils/tabbar';
 
@@ -6,10 +7,30 @@ Page({
   data: {
     user: null as { uid: string; phone?: string; nickname?: string | null } | null,
     uid: '',
+    badgeInfo: null as CheckinBadgesResp | null,
   },
   onShow() {
     syncTabBar(this, 4);
     this.setData({ user: getAuthUser(), uid: anonUid() });
+    this.loadBadges();
+  },
+  // 徽章墙：连击口径以服务端 /api/checkin/badges 为准
+  async loadBadges() {
+    try {
+      const badgeInfo = await fetchCheckinBadges();
+      this.setData({ badgeInfo });
+    } catch (e) {
+      /* 非关键路径 */
+    }
+  },
+  onTapBadge(e: WechatMiniprogram.TouchEvent) {
+    const days = Number(e.currentTarget.dataset.days) || 0;
+    const unlocked = !!e.currentTarget.dataset.unlocked;
+    if (unlocked) {
+      wx.navigateTo({ url: '/pages/social/poster?badge=' + days });
+    } else {
+      wx.showToast({ title: `连续打卡 ${days} 天即可解锁`, icon: 'none' });
+    }
   },
   onTeam() {
     wx.navigateTo({ url: '/pages/team/team' });

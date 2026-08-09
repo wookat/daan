@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../core/api.dart';
@@ -54,9 +55,48 @@ class _TeamPanelPageState extends State<TeamPanelPage> {
 
   String _inviteUrl() => '$_site/#/pages/team/join?code=${_team['invite_code']}';
 
+  List<Map<String, dynamic>> get _weekRank {
+    final rank = _members
+        .map((m) => {
+              ...m,
+              'week_n': (m['week'] as List<dynamic>? ?? [])
+                  .fold<int>(0, (a, b) => a + ((b as num?)?.toInt() ?? 0)),
+            })
+        .toList();
+    rank.sort((a, b) => (b['week_n'] as int).compareTo(a['week_n'] as int));
+    return rank;
+  }
+
   void _invite() {
+    Api.trackEvent('team_invite_copy',
+        source: 'team', ref: (_team['invite_code'] ?? '').toString());
     Share.share(
         '我在考公助手建了刷题小队「${_team['name']}」，一起打卡刷题冲上岸！邀请码 ${_team['invite_code']}，点链接直接加入：${_inviteUrl()}');
+  }
+
+  Future<void> _copyWeekReport() async {
+    final t = _team;
+    final rank = _weekRank;
+    final totalN = rank.fold<int>(0, (a, m) => a + (m['week_n'] as int));
+    final upto = todayIdx + 1;
+    var dayCnt = 0;
+    for (final m in _members) {
+      for (final n in (m['week'] as List<dynamic>? ?? []).take(upto)) {
+        if (((n as num?)?.toInt() ?? 0) > 0) dayCnt += 1;
+      }
+    }
+    final king = rank.isNotEmpty && (rank[0]['week_n'] as int) > 0
+        ? '，卷王是「${rank[0]['nickname']}」（${rank[0]['week_n']} 题）'
+        : '';
+    Api.trackEvent('team_report_copy',
+        source: 'team', ref: (t['invite_code'] ?? '').toString());
+    final text =
+        '📊刷题小队「${t['name']}」本周战报：全队共刷 $totalN 题，打卡 $dayCnt 人天$king。一起打卡冲上岸，邀请码 ${t['invite_code']}，点链接加入：${_inviteUrl()}';
+    await Clipboard.setData(ClipboardData(text: text));
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('周战报已复制，发到微信群吧')));
+    }
   }
 
   void _remind(Map<String, dynamic> m) {
@@ -174,6 +214,8 @@ class _TeamPanelPageState extends State<TeamPanelPage> {
           ),
         ),
         const SizedBox(height: 16),
+        _rankCard(),
+        const SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(
@@ -195,6 +237,73 @@ class _TeamPanelPageState extends State<TeamPanelPage> {
         const SizedBox(height: 8),
         for (final m in members) _memberCard(m),
       ],
+    );
+  }
+
+  Widget _rankCard() {
+    final kg = context.kg;
+    final rank = _weekRank;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Text('🏆 本周队内排行',
+                      style:
+                          TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                ),
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(88, 30),
+                      padding: const EdgeInsets.symmetric(horizontal: 12)),
+                  onPressed: _copyWeekReport,
+                  child: const Text('复制周战报', style: TextStyle(fontSize: 12)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            for (var i = 0; i < rank.length; i++) _rankRow(i, rank[i], kg),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _rankRow(int i, Map<String, dynamic> m, KgSemantic kg) {
+    final weekN = m['week_n'] as int;
+    Color noColor = kg.t4;
+    if (i == 0) noColor = const Color(0xFFD97706);
+    if (i == 1) noColor = const Color(0xFF6B7280);
+    if (i == 2) noColor = const Color(0xFFB45309);
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 22,
+            child: Text('${i + 1}',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w800, color: noColor)),
+          ),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text((m['nickname'] ?? '').toString(),
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 13)),
+          ),
+          if (i == 0 && weekN > 0) _memTag('卷王', KgColors.warning, kg.warningBg),
+          if (m['is_me'] == true) _memTag('我', KgColors.brand, kg.brandBg),
+          const Spacer(),
+          Text('本周 $weekN 题',
+              style: TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w600, color: kg.t2)),
+        ],
+      ),
     );
   }
 

@@ -750,6 +750,18 @@ class Api {
     return Map<String, dynamic>.from(r.data);
   }
 
+  /// 打卡里程碑徽章（连击口径以服务端为准）
+  static Future<Map<String, dynamic>> checkinBadges() async {
+    final r = await dio.get('/api/checkin/badges', queryParameters: {'uid': uid()});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  /// PK 公开战绩（对局结束后任何人可看）
+  static Future<Map<String, dynamic>> pkResult(String code) async {
+    final r = await dio.get('/api/pk/result/${Uri.encodeComponent(code)}');
+    return Map<String, dynamic>.from(r.data);
+  }
+
   // ---------- PDF 导出 ----------
 
   /// 调用后端导出接口，返回 PDF 字节。复刻 api.js exportPdf。

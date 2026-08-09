@@ -86,3 +86,52 @@
 .row-i.link .r-v {
   color: var(--brand-500);
 }
+
+/* 打卡里程碑徽章墙 */
+.badges {
+  padding: 26rpx 28rpx;
+}
+.badge-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+}
+.badge-cur {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: var(--t1);
+}
+.badge-best {
+  font-size: 22rpx;
+  color: var(--t3);
+}
+.badge-grid {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+.badge {
+  width: 200rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6rpx;
+  background: var(--brand-50);
+  border-radius: 18rpx;
+  padding: 18rpx 0;
+}
+.badge.off {
+  background: var(--fill);
+  opacity: 0.7;
+}
+.badge-ico {
+  font-size: 40rpx;
+}
+.badge-d {
+  font-size: 22rpx;
+  color: var(--t2);
+  font-weight: 600;
+}
