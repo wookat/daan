@@ -39,6 +39,10 @@ def _sub_path(module: str, submodule: str) -> str:
     return f"/tiku/{quote(module)}/{quote(submodule)}/"
 
 
+def _topic_path(code: str) -> str:
+    return f"/tiku/t/{quote(code)}/"
+
+
 _CSS = (
     "*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',"
     "'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;color:#1f2329;background:#f7f8fa;"
@@ -96,11 +100,15 @@ def _crumb(items: list[tuple[str, str | None]]) -> str:
 def _pager(base_path: str, page: int, total: int) -> str:
     pages = max(1, math.ceil(total / PAGE_SIZE))
     out = []
+    if page > 2:
+        out.append(f'<a href="{_e(base_path)}">首页</a>')
     if page > 1:
         out.append(f'<a href="{_e(base_path)}?page={page - 1}" rel="prev">上一页</a>')
     out.append(f"<span>{page} / {pages}</span>")
     if page < pages:
         out.append(f'<a href="{_e(base_path)}?page={page + 1}" rel="next">下一页</a>')
+    if page < pages - 1:
+        out.append(f'<a href="{_e(base_path)}?page={pages}">末页</a>')
     return '<div class="pager">' + "".join(out) + "</div>"
 
 
@@ -174,13 +182,15 @@ def tiku_index():
         for g in m["groups"]:
             for t in g["topics"]:
                 if t3counts.get(t["code"]):
-                    topic_links.append(_e(t["name"]))
-        topics = "、".join(topic_links[:12])
+                    topic_links.append(
+                        f'<a href="{_e(_topic_path(t["code"]))}">{_e(t["name"])}</a>'
+                    )
+        topics = "".join(topic_links[:12])
         sections.append(
             f'<section class="card"><h2><a href="/tiku/{_e(key)}/">{_e(name)}</a>'
             f'<span class="meta">（{counts[key]} 题）</span></h2>'
             f'<div class="tags">{sub_links}</div>'
-            + (f'<p class="meta">考点：{topics} 等</p>' if topics else "")
+            + (f'<p class="meta">按考点刷题：</p><div class="tags">{topics}</div>' if topics else "")
             + "</section>"
         )
     total = sum(counts.values())
@@ -273,6 +283,83 @@ def tiku_question(qid: int):
     return HTMLResponse(_render_question(qid))
 
 
+@router.get("/t/{code}", include_in_schema=False)
+def tiku_topic_noslash(code: str):
+    return RedirectResponse(_topic_path(code), status_code=301)
+
+
+@router.get("/t/{code}/", response_class=HTMLResponse, include_in_schema=False)
+def tiku_topic(code: str, page: int = 1):
+    return HTMLResponse(_render_topic(code, max(1, page)))
+
+
+@lru_cache(maxsize=1024)
+def _render_topic(code: str, page: int) -> str:
+    topic = taxonomy.topic_index().get(code)
+    total = db.tag3_counts().get(code, 0)
+    if not topic or not total:
+        raise HTTPException(404, "考点不存在")
+    conn = db.get_conn()
+    rows = conn.execute(
+        "SELECT id, question, submodule, is_real, exam_year, exam_region FROM questions "
+        "WHERE tag3=? AND disabled=0 ORDER BY id DESC LIMIT ? OFFSET ?",
+        (code, PAGE_SIZE, (page - 1) * PAGE_SIZE),
+    ).fetchall()
+    conn.close()
+    if not rows and page > 1:
+        raise HTTPException(404, "页码超出范围")
+    name = topic["name"]
+    mod_key, mod_name = topic["module"], topic["module_name"]
+    intro = "".join(
+        filter(
+            None,
+            [
+                f'<p>{_e(topic["desc"])}</p>' if topic["desc"] else "",
+                f'<p><b>方法要点：</b>{_e(topic["usage"])}</p>' if topic["usage"] else "",
+            ],
+        )
+    )
+    cta = (
+        f'<a class="cta" href="{_e(SITE_BASE)}/#/pages/practice/practice?tag3={quote(code)}'
+        f'&module={quote(mod_key)}&source=seo">在线练习「{_e(name)}」（免费）→</a>'
+    )
+    body = (
+        _crumb([("题库", "/tiku/"), (mod_name, f"/tiku/{mod_key}/"), (name, None)])
+        + f"<h1>{_e(name)}考点题库（{total} 题）</h1>"
+        + f'<p class="meta">{_e(mod_name)} · {_e(topic["group_name"])} · 考点代码 {_e(code)}</p>'
+        + (f'<div class="card"><h2>考点介绍</h2>{intro}</div>' if intro else "")
+        + cta
+        + '<div class="card">'
+        + _q_items(rows)
+        + "</div>"
+        + _pager(_topic_path(code), page, total)
+    )
+    suffix = f"（第{page}页）" if page > 1 else ""
+    jsonld = {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "name": f"{name}考点题库",
+        "description": (topic["desc"] or f"{mod_name}{name}考点真题练习")[:200],
+        "url": _url(_topic_path(code)),
+        "isPartOf": {"@type": "WebSite", "name": "考公错题助手", "url": SITE_BASE},
+        "breadcrumb": {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+                {"@type": "ListItem", "position": 1, "name": "题库", "item": _url("/tiku/")},
+                {"@type": "ListItem", "position": 2, "name": mod_name, "item": _url(f"/tiku/{mod_key}/")},
+                {"@type": "ListItem", "position": 3, "name": name, "item": _url(_topic_path(code))},
+            ],
+        },
+    }
+    return _page(
+        f"{name}考点题库{suffix}_{mod_name}{name}真题及解题方法_考公错题助手",
+        f"{name}考点专项题库共 {total} 题：{(topic['desc'] or '')[:60]}附答案解析与花生十三方法讲解，可在线按考点刷题。{suffix}",
+        _topic_path(code) + (f"?page={page}" if page > 1 else ""),
+        body,
+        jsonld,
+    )
+
+
 @lru_cache(maxsize=4096)
 def _render_question(qid: int) -> str:
     conn = db.get_conn()
@@ -334,6 +421,9 @@ def _render_question(qid: int) -> str:
         for s in similar
     )
     crumbs = [("题库", "/tiku/"), (mod_name, f'/tiku/{r["module"]}/')]
+    topic_link = (
+        f' · <a href="{_e(_topic_path(r["tag3"]))}">{_e(topic["name"])}</a>' if topic else ""
+    )
     if r["submodule"]:
         crumbs.append((r["submodule"], _sub_path(r["module"], r["submodule"])))
     crumbs.append((f"题目 #{qid}", None))
@@ -341,15 +431,36 @@ def _render_question(qid: int) -> str:
         _crumb(crumbs)
         + f'<article class="card"><h1>{_e(qtext[:40])}{"…" if len(qtext) > 40 else ""}</h1>'
         + f'<p class="meta">{_e(mod_name)}{" · " + _e(r["submodule"]) if r["submodule"] else ""}'
-        + (f' · {_e(topic["name"])}' if topic else "")
+        + topic_link
         + f" · {_e(src)}</p>"
         + f"<p>{_e(qtext)}</p>"
         + img_html
         + opts_html
         + '<details open class="ans"><summary>答案与解析</summary>'
         + f'<p><b>正确答案：{_e(r["answer"] or "见解析")}</b></p>{exp_html}</details>'
-        + f'<a class="cta" href="{_e(SITE_BASE)}/">继续刷题（免费题库+AI 讲解）→</a></article>'
-        + (f'<section class="card"><h2>同考点相似题</h2><ul class="qlist">{sim_html}</ul></section>' if sim_html else "")
+        + (
+            f'<a class="cta" href="{_e(SITE_BASE)}/#/pages/practice/practice?tag3={quote(r["tag3"])}'
+            f'{"&module=" + quote(r["module"]) if r["module"] else ""}&source=seo">在线练习此考点（免费）→</a>'
+            if r["tag3"]
+            else f'<a class="cta" href="{_e(SITE_BASE)}/">继续刷题（免费题库+AI 讲解）→</a>'
+        )
+        + (
+            f'<p><a href="{_e(_topic_path(r["tag3"]))}">← 返回「{_e(topic["name"])}」考点题目列表</a></p>'
+            if topic
+            else ""
+        )
+        + "</article>"
+        + (
+            f'<section class="card"><h2>同考点相似题</h2><ul class="qlist">{sim_html}</ul>'
+            + (
+                f'<p><a href="{_e(_topic_path(r["tag3"]))}">查看「{_e(topic["name"])}」考点全部题目 →</a></p>'
+                if topic
+                else ""
+            )
+            + "</section>"
+            if sim_html
+            else ""
+        )
     )
     title_head = qtext.replace("\n", " ")[:50]
     jsonld = {
@@ -470,7 +581,10 @@ def _urlset(urls: list[tuple[str, float | None]]) -> Response:
 @root_router.get("/sitemap.xml", include_in_schema=False)
 def sitemap_index():
     n_shards = max(1, math.ceil(len(_question_ids()) / SITEMAP_SHARD))
-    maps = [_url("/sitemap-pages.xml")] + [_url(f"/sitemap-questions-{i}.xml") for i in range(1, n_shards + 1)]
+    maps = (
+        [_url("/sitemap-pages.xml"), _url("/sitemap-topics.xml")]
+        + [_url(f"/sitemap-questions-{i}.xml") for i in range(1, n_shards + 1)]
+    )
     body = (
         '<?xml version="1.0" encoding="UTF-8"?>'
         '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
@@ -490,6 +604,17 @@ def sitemap_pages():
         for s in db.submodule_counts(r["module"]):
             urls.append((_url(_sub_path(r["module"], s["submodule"])), None))
     urls += [(_url(f'/tiku/papers/{p["id"]}'), None) for p in db.list_exam_papers(kind="zhenti")]
+    return _urlset(urls)
+
+
+@root_router.get("/sitemap-topics.xml", include_in_schema=False)
+def sitemap_topics():
+    counts = db.tag3_counts()
+    urls = [
+        (_url(_topic_path(code)), None)
+        for code in taxonomy.topic_index()
+        if counts.get(code)
+    ]
     return _urlset(urls)
 
 

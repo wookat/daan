@@ -495,6 +495,20 @@ export default {
       return { background: `conic-gradient(${color} 0% ${pct}%, var(--brand-soft) ${pct}% 100%)` };
     },
   },
+  onLoad(query) {
+    // SEO 详情页「在线练习此考点」直链：/practice?tag3=xx&module=xx 自动开练
+    if (query && query.tag3) {
+      let tag3 = query.tag3;
+      let module = query.module || null;
+      try {
+        tag3 = decodeURIComponent(tag3);
+        if (module) module = decodeURIComponent(module);
+      } catch (e) {
+        /* 保留原值 */
+      }
+      this._urlLaunch = { tag3, module, source: query.source || 'seo' };
+    }
+  },
   onShow() {
     this.pstats = loadPStats();
     this.favs = uni.getStorageSync('favQuestions') || [];
@@ -503,6 +517,12 @@ export default {
     this.realRegion = uni.getStorageSync('realRegion') || null;
     this.groupSize = uni.getStorageSync('groupSize') || 10;
     this.dailyGoal = uni.getStorageSync('dailyGoal') || 20;
+    if (this._urlLaunch) {
+      const q = this._urlLaunch;
+      this._urlLaunch = null;
+      this.start(q.module, null, null, false, undefined, q.tag3, q.source);
+      return;
+    }
     const launch = uni.getStorageSync('practiceLaunch');
     if (launch && launch.kind) {
       uni.removeStorageSync('practiceLaunch');
@@ -1041,6 +1061,9 @@ export default {
       // 推荐埋点：记录本次练习的入口来源（reco/weak 等），随 answer_log 落库
       this._source = source || null;
       uni.showLoading({ title: '出题中…', mask: true });
+      this._slowTimer = setTimeout(() => {
+        if (this._starting) uni.showLoading({ title: '题库首次加载稍慢，请稍候…', mask: true });
+      }, 3000);
       this.lastModule = module;
       this.lastSubmodule = submodule || null;
       this.subSelect = null;
@@ -1124,6 +1147,7 @@ export default {
           uni.showToast({ title: '加载失败：' + e.message + '（可在我的→离线题包提前下载）', icon: 'none', duration: 2200 });
         }
       } finally {
+        clearTimeout(this._slowTimer);
         uni.hideLoading();
         this._starting = false;
       }

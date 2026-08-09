@@ -24,6 +24,15 @@ else
 fi
 
 DIST="$REPO_DIR/frontend-uni/dist/build/h5"
+
+step "1b 预压缩 assets（brotli，后端按 Accept-Encoding 返回 .br）"
+if command -v brotli >/dev/null; then
+  find "$DIST/assets" -type f \( -name '*.js' -o -name '*.css' \) -print0 \
+    | xargs -0 -n1 brotli -f -k -q 11
+  echo "已生成 $(find "$DIST/assets" -name '*.br' | wc -l) 个 .br 文件"
+else
+  echo "WARN: 本机无 brotli，跳过预压缩（线上将回退 Caddy gzip）"
+fi
 LOCAL_INDEX_REF=$(grep -o 'index-[^"]*\.js' "$DIST/index.html" | head -1)
 [[ -n "$LOCAL_INDEX_REF" ]] || { echo "本机构建产物缺 index.html bundle 引用"; exit 1; }
 echo "本机 bundle: $LOCAL_INDEX_REF"
