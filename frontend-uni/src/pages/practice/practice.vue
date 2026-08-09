@@ -495,6 +495,20 @@ export default {
       return { background: `conic-gradient(${color} 0% ${pct}%, var(--brand-soft) ${pct}% 100%)` };
     },
   },
+  onLoad(query) {
+    // SEO 详情页「在线练习此考点」直链：/practice?tag3=xx&module=xx 自动开练
+    if (query && query.tag3) {
+      let tag3 = query.tag3;
+      let module = query.module || null;
+      try {
+        tag3 = decodeURIComponent(tag3);
+        if (module) module = decodeURIComponent(module);
+      } catch (e) {
+        /* 保留原值 */
+      }
+      this._urlLaunch = { tag3, module, source: query.source || 'seo' };
+    }
+  },
   onShow() {
     this.pstats = loadPStats();
     this.favs = uni.getStorageSync('favQuestions') || [];
@@ -503,6 +517,12 @@ export default {
     this.realRegion = uni.getStorageSync('realRegion') || null;
     this.groupSize = uni.getStorageSync('groupSize') || 10;
     this.dailyGoal = uni.getStorageSync('dailyGoal') || 20;
+    if (this._urlLaunch) {
+      const q = this._urlLaunch;
+      this._urlLaunch = null;
+      this.start(q.module, null, null, false, undefined, q.tag3, q.source);
+      return;
+    }
     const launch = uni.getStorageSync('practiceLaunch');
     if (launch && launch.kind) {
       uni.removeStorageSync('practiceLaunch');
