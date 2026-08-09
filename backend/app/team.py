@@ -521,6 +521,7 @@ def api_track(body: dict):
         "share_open", "share_answer", "team_join_open", "register",
         "share_copy", "share_team_join", "team_invite_copy", "team_report_copy",
         "pk_result_open", "pk_result_copy", "pk_result_challenge", "badge_unlock",
+        "review_entry_click",
     }:
         raise HTTPException(400, "无效事件")
     uid = str(body.get("uid") or "").strip()[:64] or None

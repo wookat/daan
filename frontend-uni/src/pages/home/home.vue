@@ -20,6 +20,18 @@
       </view>
     </view>
 
+    <!-- 今日到期复习入口 -->
+    <view v-if="dueReview" class="card duebar" @click="goReview('home_card')">
+      <view class="duebar-l">
+        <l-icon name="calendar-check" :size="18" color="#ffffff" />
+        <view class="duebar-txts">
+          <text class="duebar-t">今日到期复习 {{ dueReview }} 题</text>
+          <text class="duebar-s">按遗忘曲线安排 · 越拖越容易忘</text>
+        </view>
+      </view>
+      <text class="duebar-go">去复习 ›</text>
+    </view>
+
     <!-- 学习计划引导 / 今日计划 -->
     <view v-if="profile === null && !guideHide" class="card guide" @click="openSetup">
       <view class="guide-l">
@@ -357,7 +369,7 @@
 </template>
 
 <script>
-import { request, anonUid, exportPdf } from '../../api.js';
+import { request, anonUid, exportPdf, trackEvent } from '../../api.js';
 import { checkinStreak } from '../../checkin.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
@@ -412,6 +424,9 @@ export default {
     };
   },
   computed: {
+    dueReview() {
+      return (this.plan && this.plan.due_mistakes) || 0;
+    },
     paperRegions() {
       const seen = [];
       for (const p of this.papers) {
@@ -588,6 +603,11 @@ export default {
       uni.navigateTo({ url: '/pkgA/shenlun/shenlun' });
     },
     goBook() {
+      uni.switchTab({ url: '/pages/book/book' });
+    },
+    goReview(src) {
+      trackEvent('review_entry_click', src);
+      uni.setStorageSync('autoStartReview', 1);
       uni.switchTab({ url: '/pages/book/book' });
     },
     goAsk() {
@@ -906,6 +926,14 @@ export default {
 .pf-summary { margin-top: 8rpx; font-size: 23rpx; color: var(--ink-2); background: var(--brand-soft); border-radius: 12rpx; padding: 18rpx 22rpx; }
 .pf-back { margin-top: 16rpx; text-align: center; font-size: 24rpx; color: var(--ink-3); min-height: 44px; display: flex; align-items: center; justify-content: center; }
 
+/* 今日到期复习入口 */
+.duebar { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(180deg, #4a7bf7, #3567ec); border: none; box-shadow: 0 6rpx 16rpx rgba(59, 111, 245, 0.25); padding: 24rpx 28rpx; }
+.duebar-l { display: flex; align-items: center; gap: 18rpx; min-width: 0; }
+.duebar-txts { min-width: 0; }
+.duebar-t { display: block; font-size: 28rpx; font-weight: 700; color: #ffffff; }
+.duebar-s { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.75); margin-top: 4rpx; }
+.duebar-go { flex-shrink: 0; background: rgba(255, 255, 255, 0.18); color: #ffffff; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 12rpx 30rpx; }
+
 /* 断卡风险提示 */
 .riskbar { display: flex; align-items: center; gap: 20rpx; background: var(--warn-soft); border: 1rpx solid #fde68a; padding: 22rpx 26rpx; }
 .risk-ico { flex-shrink: 0; display: flex; align-items: center; }
@@ -952,7 +980,7 @@ export default {
 /* #ifdef H5 */
 @media (min-width: 768px) {
   .wrap.home { max-width: 960px !important; display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; align-items: start; }
-  .hero, .sec-h, .ann, .riskbar { grid-column: 1 / -1; }
+  .hero, .sec-h, .ann, .riskbar, .duebar { grid-column: 1 / -1; }
   .modlist { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; align-items: start; }
   .modlist .card.smart { grid-column: 1 / -1; }
   .more-grid { grid-column: 1 / -1; grid-template-columns: repeat(4, 1fr); }

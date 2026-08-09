@@ -164,6 +164,13 @@
         </view>
         <view class="report-tip">点题号可回看题目与解析<template v-if="items.some(q => !q._picked)">（灰色为未作答）</template></view>
       </view>
+      <view v-if="!beiMode && dueReview" class="duenudge" @click="goReview">
+        <view class="duenudge-l">
+          <text class="duenudge-t">今日还有 {{ dueReview }} 题到期待复习</text>
+          <text class="duenudge-s">趁热打铁，按遗忘曲线巩固一遍</text>
+        </view>
+        <text class="duenudge-go">去复习 ›</text>
+      </view>
       <button class="btn" @click="start(lastModule, lastSubmodule)">再来一组</button>
       <button v-if="!beiMode" class="btn ghost" style="margin-top: 16rpx" @click="shareResult">分享成绩</button>
       <button class="btn plain" style="margin-top: 8rpx" @click="quit">返回首页</button>
@@ -292,6 +299,7 @@ export default {
       streak: 0,
       bestStreak: 0,
       autoSaved: false,
+      dueReview: 0,
       resultSent: false,
       percentile: null,
       examMode: false,
@@ -1620,6 +1628,7 @@ export default {
     async submitResult() {
       if (this.beiMode || this.resultSent || !this.items.length) return;
       this.resultSent = true;
+      this.dueReview = 0;
       uni.removeStorageSync('pendingSession');
       try {
         const hist = uni.getStorageSync('practiceHistory') || [];
@@ -1643,6 +1652,18 @@ export default {
       } catch (e) { /* 非关键路径 */ }
       await this.logAttempts(this.items);
       if (this.profile) this.loadPlanToday();
+      this.loadDueReview();
+    },
+    async loadDueReview() {
+      try {
+        const r = await request('/api/review?uid=' + encodeURIComponent(anonUid()));
+        this.dueReview = r.total || (r.items || []).length;
+      } catch (e) { /* 非关键路径 */ }
+    },
+    goReview() {
+      trackEvent('review_entry_click', 'practice_done');
+      uni.setStorageSync('autoStartReview', 1);
+      uni.switchTab({ url: '/pages/book/book' });
     },
     async logAttempts(qs) {
       try {
@@ -1959,6 +1980,10 @@ export default {
 .btn.ghost { background: var(--brand-soft); color: var(--brand); box-shadow: none; }
 .btn.plain { background: none; color: var(--ink-2); box-shadow: none; }
 .done { text-align: center; padding: 48rpx 28rpx; }
+.duenudge { display: flex; justify-content: space-between; align-items: center; text-align: left; background: linear-gradient(180deg, #4a7bf7, #3567ec); border-radius: 18rpx; box-shadow: 0 6rpx 16rpx rgba(59, 111, 245, 0.25); padding: 24rpx 28rpx; margin: 24rpx 0; }
+.duenudge-t { display: block; font-size: 27rpx; font-weight: 700; color: #ffffff; }
+.duenudge-s { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.75); margin-top: 4rpx; }
+.duenudge-go { flex-shrink: 0; background: rgba(255, 255, 255, 0.18); color: #ffffff; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 12rpx 30rpx; }
 .ring { width: 200rpx; height: 200rpx; border-radius: 50%; margin: 0 auto 24rpx; display: flex; align-items: center; justify-content: center; }
 .ring-in { width: 156rpx; height: 156rpx; border-radius: 50%; background: var(--card); display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .ring-n { font-size: 40rpx; font-weight: 700; color: var(--ink); }
