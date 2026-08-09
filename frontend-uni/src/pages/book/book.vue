@@ -33,6 +33,16 @@
       </view>
     </view>
 
+    <!-- 复习清零庆祝态 -->
+    <view v-if="celebrate" class="mask" @click="closeCelebrate">
+      <view class="cb-card" @click.stop>
+        <view class="cb-emoji">🎉</view>
+        <view class="cb-t">今日复习已清零！</view>
+        <view class="cb-s">{{ celebrateN }} 道到期错题全部复习完成，遗忘曲线稳住了</view>
+        <button class="cb-btn" @click="closeCelebrate">太棒了，继续 ›</button>
+      </view>
+    </view>
+
     <!-- 复习完成后：同考点强化卡（spec-03） -->
     <view v-if="!reviewing && reinforce" class="mask" @click="reinforce = null">
       <view class="rf-card" @click.stop>
@@ -383,6 +393,8 @@ export default {
       dueTotal: 0,
       autoReview: false,
       reviewing: false,
+      celebrate: false,
+      celebrateN: 0,
       reinforce: null,
       reinforceItems: [],
       rItems: [],
@@ -793,9 +805,15 @@ export default {
         this.rIdx++;
         this.resetQ();
       } else {
+        this.celebrateN = this.rItems.length;
         this.exitReview();
-        this.fetchReinforce();
+        this.celebrate = true;
+        trackEvent('review_done_celebrate', 'book');
       }
+    },
+    closeCelebrate() {
+      this.celebrate = false;
+      this.fetchReinforce();
     },
     async fetchReinforce() {
       try {
@@ -1105,6 +1123,20 @@ export default {
 .duesub { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.75); margin-top: 6rpx; }
 .duego { background: var(--card); color: var(--brand); font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 0 34rpx; min-height: 44px; line-height: 44px; display: inline-block; box-sizing: border-box; }
 .review { border-left-color: #f5a623; }
+.cb-card { background: var(--card); border-radius: 28rpx; padding: 56rpx 44rpx 40rpx; margin: 0 60rpx; text-align: center; max-width: 560rpx; animation: cb-pop 0.35s ease-out; }
+.cb-emoji { font-size: 88rpx; line-height: 1; animation: cb-bounce 0.8s ease-out; }
+.cb-t { font-size: 34rpx; font-weight: 800; color: #16a34a; margin-top: 20rpx; }
+.cb-s { font-size: 24rpx; color: var(--ink-2); margin-top: 12rpx; }
+.cb-btn { margin-top: 32rpx; background: linear-gradient(135deg, #5b8af8, var(--brand)); color: #fff; font-size: 27rpx; font-weight: 600; border-radius: 999rpx; }
+@keyframes cb-pop {
+  0% { transform: scale(0.7); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes cb-bounce {
+  0% { transform: translateY(-30rpx); }
+  50% { transform: translateY(8rpx); }
+  100% { transform: translateY(0); }
+}
 .rhead { display: flex; justify-content: space-between; margin-bottom: 12rpx; }
 .opts { display: flex; gap: 16rpx; margin: 20rpx 0; }
 .opt { flex: 1; text-align: center; padding: 16rpx 0; border: 2rpx solid var(--line); border-radius: 12rpx; font-size: 28rpx; }

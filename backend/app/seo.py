@@ -3,6 +3,7 @@ import html
 import json
 import math
 import os
+import time
 from functools import lru_cache
 from urllib.parse import quote
 
@@ -450,11 +451,17 @@ def _question_ids() -> list[int]:
     return ids
 
 
-def _urlset(urls: list[str]) -> Response:
+def _lastmod(ts: float | None) -> str:
+    if not ts:
+        return ""
+    return "<lastmod>" + time.strftime("%Y-%m-%d", time.gmtime(ts)) + "</lastmod>"
+
+
+def _urlset(urls: list[tuple[str, float | None]]) -> Response:
     body = (
         '<?xml version="1.0" encoding="UTF-8"?>'
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-        + "".join(f"<url><loc>{_e(u)}</loc></url>" for u in urls)
+        + "".join(f"<url><loc>{_e(u)}</loc>{_lastmod(ts)}</url>" for u, ts in urls)
         + "</urlset>"
     )
     return Response(content=body, media_type="application/xml")
@@ -475,24 +482,30 @@ def sitemap_index():
 
 @root_router.get("/sitemap-pages.xml", include_in_schema=False)
 def sitemap_pages():
-    urls = [_url("/tiku/"), _url("/tiku/papers/")]
+    urls = [(_url("/tiku/"), None), (_url("/tiku/papers/"), None)]
     for r in db.question_counts():
         if not _module_name(r["module"]):
             continue
-        urls.append(_url(f'/tiku/{quote(r["module"])}/'))
+        urls.append((_url(f'/tiku/{quote(r["module"])}/'), None))
         for s in db.submodule_counts(r["module"]):
-            urls.append(_url(_sub_path(r["module"], s["submodule"])))
-    urls += [_url(f'/tiku/papers/{p["id"]}') for p in db.list_exam_papers(kind="zhenti")]
+            urls.append((_url(_sub_path(r["module"], s["submodule"])), None))
+    urls += [(_url(f'/tiku/papers/{p["id"]}'), None) for p in db.list_exam_papers(kind="zhenti")]
     return _urlset(urls)
 
 
 @root_router.get("/sitemap-questions-{shard}.xml", include_in_schema=False)
 def sitemap_questions(shard: int):
-    ids = _question_ids()
+    conn = db.get_conn()
+    rows = conn.execute(
+        "SELECT id, updated_at FROM questions WHERE disabled=0 ORDER BY id"
+    ).fetchall()
+    conn.close()
     lo = (shard - 1) * SITEMAP_SHARD
-    if shard < 1 or lo >= len(ids):
+    if shard < 1 or lo >= len(rows):
         raise HTTPException(404, "分片不存在")
-    return _urlset([_url(f"/tiku/q/{i}") for i in ids[lo : lo + SITEMAP_SHARD]])
+    return _urlset([
+        (_url(f'/tiku/q/{r["id"]}'), r["updated_at"]) for r in rows[lo : lo + SITEMAP_SHARD]
+    ])
 
 
 @root_router.get("/indexnow-key.txt", include_in_schema=False)

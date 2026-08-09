@@ -629,6 +629,7 @@ def api_checkin_summary(uid: str):
         "today_rate": round(100 * (t["correct"] or 0) / t["n"]) if t["n"] else None,
         "cleared_today": cleared_today,
         "total": total,
+        "days": days,
         "exam_type": exam_type,
         "days_to_exam": days_to_exam if days_to_exam is not None and days_to_exam >= 0 else None,
     }

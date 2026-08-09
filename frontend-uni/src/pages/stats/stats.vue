@@ -42,6 +42,28 @@
 
     <predict-card />
 
+    <view class="card">
+      <view class="hm-h">
+        <view class="h" style="margin-bottom: 0">学习热力图·近12周</view>
+        <text class="hm-total">共 {{ hmTotal }} 题</text>
+      </view>
+      <view class="hm-body">
+        <view class="hm-ylab">
+          <text v-for="w in ['一', '', '三', '', '五', '', '日']" :key="w + 'y'" class="hm-yl">{{ w }}</text>
+        </view>
+        <view class="hm-grid">
+          <view v-for="(col, ci) in hmCols" :key="ci" class="hm-col">
+            <view v-for="(c, ri) in col" :key="ri" class="hm-c" :class="'lv' + c.lv + (c.future ? ' fut' : '')" />
+          </view>
+        </view>
+      </view>
+      <view class="hm-legend">
+        <text class="hm-lt">少</text>
+        <view v-for="i in [0, 1, 2, 3, 4]" :key="'lg' + i" class="hm-c" :class="'lv' + i" />
+        <text class="hm-lt">多</text>
+      </view>
+    </view>
+
     <view v-if="(reco && reco.items.length) || dueN" class="card">
       <view class="h">今日待办</view>
       <view v-if="dueN" class="todo-row">
@@ -305,7 +327,7 @@
 </template>
 
 <script>
-import { request, anonUid, getAuthUser, authLogout, clearAuth } from '../../api.js';
+import { request, anonUid, getAuthUser, authLogout, clearAuth, fetchCheckinSummary, trackEvent } from '../../api.js';
 import { md } from '../../md.js';
 import { checkinStreak } from '../../checkin.js';
 
@@ -324,7 +346,7 @@ const MODS = [
 
 export default {
   data() {
-    return { authUser: getAuthUser(), byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, kmCov: null, history: [], showAllHist: false, coachHtml: cleanCoach(uni.getStorageSync('coachAdvice') || ''), coachLoading: false, growth: null, reco: null, dueN: 0, gwMod: '', slStats: null, slIssuesOpen: false, modOpen: false, topOpen: false, secOpen: { coach: false, medal: false, bk: false } };
+    return { authUser: getAuthUser(), byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, kmCov: null, history: [], showAllHist: false, coachHtml: cleanCoach(uni.getStorageSync('coachAdvice') || ''), coachLoading: false, growth: null, reco: null, dueN: 0, gwMod: '', slStats: null, slIssuesOpen: false, modOpen: false, topOpen: false, secOpen: { coach: false, medal: false, bk: false }, hmDays: null };
   },
   computed: {
     shownModules() {
@@ -401,6 +423,51 @@ export default {
       if (!done) return 0;
       const c = Object.values(this.pstats.byModule).reduce((s, m) => s + m.correct, 0);
       return Math.round((c / done) * 100);
+    },
+    hmDayMap() {
+      // 服务端 answer_log（按 uid）优先，未返回时降级本地 pstats
+      if (this.hmDays) {
+        const m = {};
+        for (const [k, v] of Object.entries(this.hmDays)) m[k] = (v && v.n) || 0;
+        return m;
+      }
+      return (this.pstats && this.pstats.days) || {};
+    },
+    hmCols() {
+      const days = this.hmDayMap;
+      const today = new Date();
+      const dow = (today.getDay() + 6) % 7; // 周一=0
+      const cols = [];
+      // 本周周一往前推 11 周，共 12 列
+      const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - dow - 77);
+      for (let w = 0; w < 12; w++) {
+        const col = [];
+        for (let r = 0; r < 7; r++) {
+          const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + w * 7 + r);
+          const future = d > today;
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          const n = days[key] || 0;
+          let lv = 0;
+          if (n >= 30) lv = 4;
+          else if (n >= 15) lv = 3;
+          else if (n >= 5) lv = 2;
+          else if (n > 0) lv = 1;
+          col.push({ lv, future });
+        }
+        cols.push(col);
+      }
+      return cols;
+    },
+    hmTotal() {
+      const days = this.hmDayMap;
+      const today = new Date();
+      const from = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 83);
+      let s = 0;
+      for (const [k, n] of Object.entries(days)) {
+        const d = new Date(k + 'T00:00:00');
+        if (d >= from && d <= today) s += n;
+      }
+      return s;
     },
     streakDays() {
       return checkinStreak(this.pstats);
@@ -489,6 +556,7 @@ export default {
     this.authUser = getAuthUser();
     this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
     this.history = uni.getStorageSync('practiceHistory') || [];
+    this.loadHeatmap();
     this.loadGrowth();
     this.loadReco();
     this.loadSlStats();
@@ -496,6 +564,16 @@ export default {
     this.load();
   },
   methods: {
+    async loadHeatmap() {
+      try {
+        const d = await fetchCheckinSummary();
+        this.hmDays = d.days || {};
+        if (!this._hmTracked) {
+          this._hmTracked = true;
+          trackEvent('heatmap_view', 'stats');
+        }
+      } catch (e) { /* 降级用本地 pstats */ }
+    },
     goCalendar() {
       uni.navigateTo({ url: '/pages/stats/calendar' });
     },
@@ -690,6 +768,22 @@ export default {
 </script>
 
 <style scoped>
+.hm-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
+.hm-total { font-size: 21rpx; color: var(--ink-2); }
+.hm-body { display: flex; gap: 10rpx; }
+.hm-ylab { display: flex; flex-direction: column; justify-content: space-between; padding: 2rpx 0; }
+.hm-yl { font-size: 18rpx; color: var(--ink-3); height: 26rpx; line-height: 26rpx; }
+.hm-grid { flex: 1; display: flex; gap: 6rpx; }
+.hm-col { flex: 1; display: flex; flex-direction: column; gap: 6rpx; }
+.hm-c { width: 100%; height: 26rpx; border-radius: 6rpx; background: var(--line); }
+.hm-c.lv1 { background: #bfd3fc; }
+.hm-c.lv2 { background: #85a9f9; }
+.hm-c.lv3 { background: #4a7bf7; }
+.hm-c.lv4 { background: #2f5cd8; }
+.hm-c.fut { opacity: 0; }
+.hm-legend { display: flex; align-items: center; gap: 8rpx; justify-content: flex-end; margin-top: 14rpx; }
+.hm-legend .hm-c { width: 26rpx; flex: none; }
+.hm-lt { font-size: 19rpx; color: var(--ink-3); }
 .wrap { padding: 24rpx; }
 .card { background: var(--card); border-radius: var(--radius); padding: 24rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .hero { background: var(--card); border: 1rpx solid var(--line); border-radius: var(--radius); padding: 30rpx 28rpx; margin-bottom: 24rpx; box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }

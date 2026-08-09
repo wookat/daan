@@ -14,6 +14,8 @@ import type {
   PracticeResultResp,
   Profile,
   QuestionsResp,
+  ReviewRecordResp,
+  ReviewResp,
   ShareAnswerResp,
   ShareCreateResp,
   ShareDetailResp,
@@ -95,6 +97,17 @@ export function postMistake(m: {
 
 export function patchMistake(id: number, data: Partial<Mistake>): Promise<void> {
   return request<void>('/api/mistakes/' + id, { method: 'PATCH', data });
+}
+
+export function fetchReviewDue(): Promise<ReviewResp> {
+  return request<ReviewResp>('/api/review?uid=' + encodeURIComponent(anonUid()));
+}
+
+export function postReviewRecord(mid: number, correct: boolean): Promise<ReviewRecordResp> {
+  return request<ReviewRecordResp>('/api/review/' + mid, {
+    method: 'POST',
+    data: { uid: anonUid(), correct },
+  });
 }
 
 export function deleteMistake(id: number): Promise<void> {

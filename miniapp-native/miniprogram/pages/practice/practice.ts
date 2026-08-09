@@ -1,6 +1,7 @@
 import {
   fetchCheckinBadges,
   fetchQuestions,
+  fetchReviewDue,
   postAnswerLog,
   postMistake,
   postPracticeResult,
@@ -48,6 +49,7 @@ Page({
     moduleName: '',
     totalSecs: 0,
     wrongCount: 0,
+    dueReview: 0,
   },
   _source: null as string | null,
   _module: null as string | null,
@@ -202,8 +204,10 @@ Page({
       pct: Math.round((right / items.length) * 100),
       totalSecs,
       wrongCount: items.filter((q) => q._picked && q._picked !== q.answer).length,
+      dueReview: 0,
     });
     await this.logAttempts(items);
+    this.loadDueReview();
     if (!this._resultSent) {
       this._resultSent = true;
       try {
@@ -277,6 +281,19 @@ Page({
     return { title: '一起来刷题' };
   },
 
+  async loadDueReview() {
+    try {
+      const r = await fetchReviewDue();
+      this.setData({ dueReview: r.total || (r.items || []).length });
+    } catch (e) {
+      /* 非关键路径 */
+    }
+  },
+  onGoReview() {
+    trackEvent('review_entry_click', 'practice_done');
+    wx.setStorageSync('autoStartReview', 1);
+    wx.switchTab({ url: '/pages/book/book' });
+  },
   onRetry() {
     this._resultSent = false;
     this.setData({ finished: false, percentile: null });

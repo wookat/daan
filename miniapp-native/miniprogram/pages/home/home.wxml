@@ -22,6 +22,21 @@
       </view>
     </view>
 
+    <!-- 今日到期复习卡 -->
+    <view wx:if="{{dueReview > 0}}" class="duebar" bind:tap="onReviewEntry">
+      <view class="duebar-l">
+        <text class="duebar-t">今日到期复习 {{dueReview}} 题</text>
+        <text class="duebar-s">按遗忘曲线安排 · 越拖越容易忘</text>
+      </view>
+      <text class="duebar-go">去复习 ›</text>
+    </view>
+    <view wx:elif="{{dueLoaded}}" class="duebar donebar">
+      <view class="duebar-l">
+        <text class="duebar-t">今日复习已清零 ✓</text>
+        <text class="duebar-s">到期错题已全部复习完，继续刷新题吧</text>
+      </view>
+    </view>
+
     <!-- 学习计划卡 -->
     <view class="card" wx:if="{{hasProfile && planTasks.length}}">
       <view class="plan-h">

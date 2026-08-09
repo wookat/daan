@@ -1,4 +1,12 @@
-import { fetchFavs, fetchMistakes, patchMistake, shareCreate, trackEvent } from '../../api/index';
+import {
+  fetchFavs,
+  fetchMistakes,
+  fetchReviewDue,
+  patchMistake,
+  postReviewRecord,
+  shareCreate,
+  trackEvent,
+} from '../../api/index';
 import type { FavItem, Mistake } from '../../api/types';
 import { modName } from '../../utils/stats';
 import { syncTabBar } from '../../utils/tabbar';
@@ -6,6 +14,15 @@ import { syncTabBar } from '../../utils/tabbar';
 interface MRow extends Mistake {
   modName: string;
   open: boolean;
+}
+
+interface RItem extends Mistake {
+  requeued?: boolean;
+}
+
+function extractLetter(s: string | null | undefined): string {
+  const m = /[A-D]/.exec(String(s || '').toUpperCase());
+  return m ? m[0] : '';
 }
 
 Page({
@@ -17,6 +34,18 @@ Page({
     favs: [] as FavItem[],
     todoCount: 0,
     doneCount: 0,
+    due: [] as Mistake[],
+    dueTotal: 0,
+    reviewing: false,
+    rItems: [] as RItem[],
+    rIdx: 0,
+    rCur: null as RItem | null,
+    rLetter: '',
+    picked: '',
+    answered: false,
+    wasCorrect: false,
+    nextDays: 0,
+    rStreak: 0,
   },
   _shareSid: '',
   _shareTitle: '',
@@ -27,8 +56,9 @@ Page({
   async load() {
     this.setData({ loading: true });
     try {
-      const [m, f] = await Promise.all([
+      const [m, r, f] = await Promise.all([
         fetchMistakes(),
+        fetchReviewDue().catch(() => ({ items: [] as Mistake[], total: 0 })),
         fetchFavs().catch(() => ({ items: [] as FavItem[] })),
       ]);
       const all = (m.items || []).map((x) => ({ ...x, modName: modName(x.module), open: false }));
@@ -37,8 +67,14 @@ Page({
         favs: f.items || [],
         todoCount: all.filter((x) => !x.mastered).length,
         doneCount: all.filter((x) => !!x.mastered).length,
+        due: r.items || [],
+        dueTotal: r.total || (r.items || []).length,
       });
       this.applyTab();
+      if (wx.getStorageSync('autoStartReview') && (r.items || []).length && !this.data.reviewing) {
+        wx.removeStorageSync('autoStartReview');
+        this.startReview();
+      }
     } catch (e) {
       wx.showToast({ title: '加载失败：' + (e as Error).message, icon: 'none' });
     } finally {
@@ -107,5 +143,65 @@ Page({
 
   onRedo() {
     wx.navigateTo({ url: '/pages/practice/practice?mode=redo&source=redo' });
+  },
+
+  // ---------- 遗忘曲线复习 ----------
+  onReviewFromCard() {
+    trackEvent('review_entry_click', 'book_card');
+    this.startReview();
+  },
+  startReview() {
+    const rItems = [...this.data.due] as RItem[];
+    if (!rItems.length) return;
+    this.setData({ reviewing: true, rItems, rIdx: 0 });
+    this.resetQ();
+  },
+  resetQ() {
+    const cur = this.data.rItems[this.data.rIdx] || null;
+    this.setData({
+      rCur: cur,
+      rLetter: extractLetter(cur ? cur.correct_answer : ''),
+      picked: '',
+      answered: false,
+      wasCorrect: false,
+      nextDays: 0,
+    });
+  },
+  onReviewPick(e: WechatMiniprogram.TouchEvent) {
+    if (this.data.answered) return;
+    const o = String(e.currentTarget.dataset.opt);
+    this.setData({ picked: o });
+    this.recordReview(o === this.data.rLetter);
+  },
+  onSelfJudge(e: WechatMiniprogram.TouchEvent) {
+    if (this.data.answered) return;
+    this.recordReview(e.currentTarget.dataset.ok === '1');
+  },
+  async recordReview(correct: boolean) {
+    const cur = this.data.rCur;
+    if (!cur) return;
+    const rItems = this.data.rItems;
+    if (!correct && !cur.requeued) {
+      rItems.push({ ...cur, requeued: true });
+    }
+    this.setData({ answered: true, wasCorrect: correct, rItems });
+    try {
+      const res = await postReviewRecord(cur.id, correct);
+      this.setData({ nextDays: res.next_review_days, rStreak: res.streak });
+    } catch (e) {
+      wx.showToast({ title: '记录失败：' + (e as Error).message, icon: 'none' });
+    }
+  },
+  onNextReview() {
+    if (this.data.rIdx + 1 < this.data.rItems.length) {
+      this.setData({ rIdx: this.data.rIdx + 1 });
+      this.resetQ();
+    } else {
+      this.exitReview();
+    }
+  },
+  exitReview() {
+    this.setData({ reviewing: false, rItems: [], rCur: null });
+    this.load();
   },
 });

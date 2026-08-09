@@ -33,6 +33,8 @@ class _HomePageState extends ConsumerState<HomePage> {
   List<Map<String, dynamic>> counts = [];
   Map<String, dynamic>? announce;
   Map<String, dynamic> moduleStats = Store.instance.moduleStats;
+  int dueReview = 0;
+  bool dueLoaded = false;
 
   @override
   void initState() {
@@ -40,6 +42,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     _loadPlan();
     _loadCounts();
     _loadAnnounce();
+    _loadDueReview();
     homeSetupTick.addListener(_onSetupTick);
   }
 
@@ -81,6 +84,18 @@ class _HomePageState extends ConsumerState<HomePage> {
       if (mounted) setState(() => daily = d);
     } catch (_) {/* 计划加载失败不阻断首页 */}
     if (mounted) setState(() => planLoaded = true);
+  }
+
+  Future<void> _loadDueReview() async {
+    try {
+      final d = await Api.reviewDue();
+      if (mounted) {
+        setState(() {
+          dueReview = ((d['total'] ?? 0) as num).toInt();
+          dueLoaded = true;
+        });
+      }
+    } catch (_) {/* 非关键路径 */}
   }
 
   Future<void> _loadCounts() async {
@@ -199,6 +214,10 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
             const SizedBox(height: 14),
             _hero(today, goal, pct),
+            if (dueReview > 0 || dueLoaded) ...[
+              const SizedBox(height: 14),
+              _dueReviewCard(),
+            ],
             if (streakRisk != null) ...[
               const SizedBox(height: 14),
               _riskCard(streakRisk!),
@@ -286,6 +305,76 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _dueReviewCard() {
+    if (dueReview > 0) {
+      return InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () async {
+          Api.trackEvent('review_entry_click', source: 'home_card');
+          await context.push('/practice?mode=review');
+          _loadDueReview();
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            gradient: kBrandGradient,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              const Icon(LucideIcons.calendarCheck, size: 20, color: Colors.white),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('今日到期复习 $dueReview 题',
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
+                    const SizedBox(height: 2),
+                    Text('按遗忘曲线安排 · 越拖越容易忘',
+                        style: TextStyle(
+                            fontSize: 11, color: Colors.white.withValues(alpha: .75))),
+                  ],
+                ),
+              ),
+              const Text('去复习 ›',
+                  style: TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+            ],
+          ),
+        ),
+      );
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color ?? Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.kg.border),
+      ),
+      child: Row(
+        children: [
+          const Icon(LucideIcons.checkCircle2, size: 20, color: KgColors.success),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('今日复习已清零 ✓',
+                    style: TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w600, color: KgColors.success)),
+                const SizedBox(height: 2),
+                Text('到期错题已全部复习完，继续刷新题吧',
+                    style: TextStyle(fontSize: 11, color: context.kg.t3)),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

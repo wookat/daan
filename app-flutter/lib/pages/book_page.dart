@@ -397,6 +397,7 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
                                   minimumSize: const Size(88, 36),
                                   padding: const EdgeInsets.symmetric(horizontal: 12)),
                               onPressed: () async {
+                                Api.trackEvent('review_entry_click', source: 'book_card');
                                 await context.push('/practice?mode=review');
                                 _load();
                               },

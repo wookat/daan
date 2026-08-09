@@ -67,6 +67,13 @@
       <text class="done-t">本组完成</text>
       <text class="done-sub">答对 {{right}}/{{items.length}} · 错题 {{wrongCount}} · 用时 {{totalSecs}}s</text>
       <text wx:if="{{percentile !== null}}" class="done-beat">本组正确率击败了 {{percentile}}% 的刷题记录</text>
+      <view wx:if="{{dueReview > 0}}" class="duenudge" bind:tap="onGoReview">
+        <view class="duenudge-l">
+          <text class="duenudge-t">今日还有 {{dueReview}} 题到期待复习</text>
+          <text class="duenudge-s">趁热打铁，按遗忘曲线巩固一遍</text>
+        </view>
+        <text class="duenudge-go">去复习 ›</text>
+      </view>
       <view class="btn-primary" bind:tap="onRetry">再来一组</view>
       <view class="btn-ghost done-quit" bind:tap="onQuit">返回首页</view>
     </view>

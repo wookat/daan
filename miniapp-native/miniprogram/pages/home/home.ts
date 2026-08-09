@@ -1,4 +1,4 @@
-import { fetchPlanToday, fetchProfile } from '../../api/index';
+import { fetchPlanToday, fetchProfile, fetchReviewDue, trackEvent } from '../../api/index';
 import type { PlanTask } from '../../api/types';
 import { getDailyGoal, setDailyGoal, streakDays, todayCount } from '../../utils/stats';
 import { syncTabBar } from '../../utils/tabbar';
@@ -31,11 +31,14 @@ Page({
     planTasks: [] as PlanTask[],
     planPct: 0,
     daysLeft: null as number | null,
+    dueReview: 0,
+    dueLoaded: false,
   },
   onShow() {
     syncTabBar(this, 0);
     this.refreshGoal();
     this.loadPlan();
+    this.loadDueReview();
   },
   refreshGoal() {
     const today = todayCount();
@@ -66,6 +69,20 @@ Page({
     } catch (e) {
       /* 非关键路径 */
     }
+  },
+  async loadDueReview() {
+    try {
+      const r = await fetchReviewDue();
+      this.setData({ dueReview: r.total || (r.items || []).length, dueLoaded: true });
+    } catch (e) {
+      /* 非关键路径 */
+    }
+  },
+  onReviewEntry() {
+    if (!this.data.dueReview) return;
+    trackEvent('review_entry_click', 'home_card');
+    wx.setStorageSync('autoStartReview', 1);
+    wx.switchTab({ url: '/pages/book/book' });
   },
   onSetGoal(e: WechatMiniprogram.TouchEvent) {
     const g = Number(e.currentTarget.dataset.goal);
