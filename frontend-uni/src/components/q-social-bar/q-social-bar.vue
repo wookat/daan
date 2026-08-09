@@ -31,6 +31,7 @@
 import { fetchCommentCount, fetchNote, saveNote, shareCreate } from '../../api.js';
 
 const SITE = 'https://kaogong.zalize.com';
+const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 
 export default {
   name: 'QSocialBar',
@@ -86,8 +87,9 @@ export default {
         uni.showLoading({ title: '生成分享链接…' });
         const d = await shareCreate(this.questionId);
         uni.hideLoading();
+        const mod = d.submodule || NAMES[d.module] || d.module || '行测';
         uni.setClipboardData({
-          data: `我在考公助手分享了一道题，敢来挑战吗？答完就能看到大家选了啥：${SITE}/#/pkgA/share/share-q?sid=${d.sid}`,
+          data: `【${mod}】我刚做了一道题，你能做对吗？答完就能看到大家选了啥：${SITE}/#/pkgA/share/share-q?sid=${d.sid}`,
           success: () => uni.showToast({ title: '分享链接已复制，发给队友吧', icon: 'none' }),
         });
       } catch (e) {

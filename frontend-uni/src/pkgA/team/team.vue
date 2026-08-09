@@ -36,6 +36,21 @@
         </view>
       </view>
 
+      <!-- 本周队内排行榜 -->
+      <view v-if="weekRank.length" class="card rank-card">
+        <view class="rank-head">
+          <text class="rank-t">🏆 本周队内排行</text>
+          <view class="rank-copy" @click="copyWeekReport">复制周战报</view>
+        </view>
+        <view v-for="(m, i) in weekRank" :key="i" class="rank-row">
+          <text class="rank-no" :class="'no' + (i + 1)">{{ i + 1 }}</text>
+          <text class="rank-name">{{ m.nickname }}</text>
+          <text v-if="i === 0 && m.week_n > 0" class="rank-king">卷王</text>
+          <text v-if="m.is_me" class="rank-me">我</text>
+          <text class="rank-n">本周 {{ m.week_n }} 题</text>
+        </view>
+      </view>
+
       <view class="week-head">
         <text class="wh-name">队友</text>
         <view class="wh-days">
@@ -79,7 +94,7 @@
 </template>
 
 <script>
-import { teamMine, teamCreate, teamJoin, teamLeave, teamPanel } from '../../api.js';
+import { teamMine, teamCreate, teamJoin, teamLeave, teamPanel, trackEvent } from '../../api.js';
 
 const SITE = 'https://kaogong.zalize.com';
 
@@ -103,6 +118,12 @@ export default {
     },
     todayIdx() {
       return (new Date().getDay() + 6) % 7;
+    },
+    weekRank() {
+      if (!this.panel) return [];
+      return this.panel.members
+        .map((m) => ({ ...m, week_n: (m.week || []).reduce((a, b) => a + b, 0) }))
+        .sort((a, b) => b.week_n - a.week_n);
     },
   },
   onLoad(query) {
@@ -190,9 +211,26 @@ export default {
     },
     copyInvite() {
       const t = this.panel.team;
+      trackEvent('team_invite_copy', 'team', t.invite_code);
       uni.setClipboardData({
         data: `我在考公助手建了刷题小队「${t.name}」，一起打卡刷题冲上岸！邀请码 ${t.invite_code}，点链接直接加入：${this.inviteUrl()}`,
         success: () => uni.showToast({ title: '邀请链接已复制，发给考友吧', icon: 'none' }),
+      });
+    },
+    copyWeekReport() {
+      const t = this.panel.team;
+      const rank = this.weekRank;
+      const totalN = rank.reduce((a, m) => a + m.week_n, 0);
+      const upto = this.todayIdx + 1;
+      let dayCnt = 0;
+      this.panel.members.forEach((m) => {
+        (m.week || []).slice(0, upto).forEach((n) => { if (n > 0) dayCnt += 1; });
+      });
+      const king = rank[0] && rank[0].week_n > 0 ? `，卷王是「${rank[0].nickname}」（${rank[0].week_n} 题）` : '';
+      trackEvent('team_report_copy', 'team', t.invite_code);
+      uni.setClipboardData({
+        data: `📊刷题小队「${t.name}」本周战报：全队共刷 ${totalN} 题，打卡 ${dayCnt} 人天${king}。一起打卡冲上岸，邀请码 ${t.invite_code}，点链接加入：${this.inviteUrl()}`,
+        success: () => uni.showToast({ title: '周战报已复制，发到微信群吧', icon: 'none' }),
       });
     },
     remind(m) {
@@ -248,6 +286,22 @@ export default {
 .join-row { display: flex; gap: 16rpx; }
 .join-input { flex: 1; background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 30rpx; min-height: 44px; font-size: 27rpx; box-sizing: border-box; }
 .join-btn { min-height: 44px; display: flex; align-items: center; padding: 0 40rpx; background: var(--brand-soft); color: var(--brand); border-radius: 999rpx; font-size: 27rpx; font-weight: 600; }
+
+/* 本周排行榜 */
+.rank-card { padding: 24rpx 28rpx; }
+.rank-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8rpx; }
+.rank-t { font-size: 27rpx; font-weight: 700; color: var(--ink); }
+.rank-copy { min-height: 32px; display: flex; align-items: center; padding: 0 22rpx; background: var(--brand-soft); color: var(--brand); border-radius: 999rpx; font-size: 22rpx; font-weight: 600; }
+.rank-row { display: flex; align-items: center; gap: 14rpx; padding: 14rpx 0; border-bottom: 1rpx solid var(--fill); }
+.rank-row:last-child { border-bottom: none; }
+.rank-no { width: 40rpx; text-align: center; font-size: 24rpx; font-weight: 800; color: var(--ink-3); }
+.rank-no.no1 { color: #d97706; }
+.rank-no.no2 { color: #6b7280; }
+.rank-no.no3 { color: #b45309; }
+.rank-name { flex: 1; min-width: 0; font-size: 26rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-king { font-size: 20rpx; color: #d97706; background: #fef3c7; border-radius: 8rpx; padding: 2rpx 12rpx; font-weight: 700; }
+.rank-me { font-size: 20rpx; color: var(--brand); background: var(--brand-soft); border-radius: 8rpx; padding: 2rpx 10rpx; }
+.rank-n { font-size: 24rpx; color: var(--ink-2); font-weight: 600; }
 
 /* 打卡矩阵 */
 .week-head { display: flex; align-items: center; padding: 0 28rpx; margin-bottom: 12rpx; }

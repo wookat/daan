@@ -320,6 +320,40 @@ def _full_question(qid: int) -> dict | None:
     return items[0] if items else None
 
 
+def _sharer_invite(conn, s) -> dict | None:
+    """分享者所在小队的邀请信息（用于落地页「和 TA 组队刷题」引导）。
+    优先取分享时绑定的 team_id，否则取分享者最近加入的小队。"""
+    t = None
+    if s["team_id"]:
+        t = conn.execute("SELECT * FROM teams WHERE id=?", (s["team_id"],)).fetchone()
+    if not t:
+        t = conn.execute(
+            """SELECT t.* FROM teams t JOIN team_members m ON m.team_id=t.id
+               WHERE m.uid=? ORDER BY m.joined_at DESC LIMIT 1""",
+            (s["from_uid"],),
+        ).fetchone()
+    if not t:
+        return None
+    n = conn.execute("SELECT COUNT(*) FROM team_members WHERE team_id=?", (t["id"],)).fetchone()[0]
+    if n >= TEAM_MAX_MEMBERS:
+        return None
+    return {"code": t["invite_code"], "name": t["name"], "n_members": n}
+
+
+def _question_stats(conn, question_id: int) -> dict:
+    """该题在 answer_log 中的全量作答统计（用于「你击败了 X%」）。"""
+    row = conn.execute(
+        "SELECT COUNT(*) AS n, COALESCE(SUM(correct),0) AS c FROM answer_log WHERE question_id=?",
+        (question_id,),
+    ).fetchone()
+    n, c = row["n"], row["c"]
+    return {
+        "total": n,
+        "acc": round(100 * c / n) if n else None,
+        "beat_pct": round(100 * (n - c) / n) if n else None,
+    }
+
+
 def _answers_payload(conn, share_id: int) -> list[dict]:
     rows = conn.execute(
         "SELECT * FROM shared_answers WHERE share_id=? ORDER BY created_at", (share_id,)
@@ -357,7 +391,8 @@ def api_share_create(body: dict):
     )
     conn.commit()
     conn.close()
-    return {"sid": sid}
+    q = _sanitized_question(int(qid)) or {}
+    return {"sid": sid, "module": q.get("module"), "submodule": q.get("submodule")}
 
 
 @router.get("/share/{sid}")
@@ -390,10 +425,13 @@ def api_share_detail(sid: str, uid: str = ""):
         "question": q,
         "created_at": s["created_at"],
     }
+    out["team_invite"] = _sharer_invite(conn, s)
     if is_sharer or answered:
         full = _full_question(s["question_id"]) or {}
         out["question"] = {**q, "answer": full.get("answer"), "explanation": full.get("explanation")}
         out["answers"] = _answers_payload(conn, s["id"])
+        db._ensure_answer_log(conn)
+        out["q_stats"] = _question_stats(conn, s["question_id"])
         if my:
             out["my_answer"] = {"picked": my["picked"], "correct": bool(my["correct"])}
     conn.close()
@@ -431,6 +469,7 @@ def api_share_answer(sid: str, body: dict):
     )
     conn.commit()
     answers = _answers_payload(conn, s["id"])
+    team_invite = _sharer_invite(conn, s)
     conn.close()
     # 裂变埋点：分享作答同步写 answer_log（source=share）
     db.save_answer_log(uid, [{
@@ -440,11 +479,17 @@ def api_share_answer(sid: str, body: dict):
         "picked": picked,
         "source": "share",
     }])
+    conn2 = db.get_conn()
+    db._ensure_answer_log(conn2)
+    q_stats = _question_stats(conn2, s["question_id"])
+    conn2.close()
     return {
         "correct": correct,
         "answer": full.get("answer"),
         "explanation": full.get("explanation"),
         "answers": answers,
+        "q_stats": q_stats,
+        "team_invite": team_invite,
     }
 
 
@@ -472,7 +517,10 @@ def api_share_answers(sid: str, uid: str):
 @router.post("/track")
 def api_track(body: dict):
     event = str(body.get("event") or "").strip()[:32]
-    if event not in {"share_open", "share_answer", "team_join_open", "register"}:
+    if event not in {
+        "share_open", "share_answer", "team_join_open", "register",
+        "share_copy", "share_team_join", "team_invite_copy", "team_report_copy",
+    }:
         raise HTTPException(400, "无效事件")
     uid = str(body.get("uid") or "").strip()[:64] or None
     rate_limit(f"track:{uid or 'anon'}", 60, 300)
