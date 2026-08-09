@@ -18,6 +18,7 @@ services:
       - LLM_RESCUE_MODEL=${LLM_RESCUE_MODEL:-deepseek-chat}
       - ACCESS_CODE=${ACCESS_CODE}
       - IMPORT_TOKEN=${IMPORT_TOKEN:-}
+      - INDEXNOW_KEY=${INDEXNOW_KEY:-}
     volumes:
       - kaogong-data:/data
 
