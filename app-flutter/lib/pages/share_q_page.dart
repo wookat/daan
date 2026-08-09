@@ -1,8 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../core/api.dart';
 import '../theme.dart';
+
+const _kSite = 'https://kaogong.zalize.com';
 
 /// 分享作答页：先作答 → 揭示对错/解析/大家的选择 → 去刷同类题（source=share）。
 /// 复刻 pkgA/share/share-q.vue。
@@ -24,6 +30,24 @@ class _ShareQPageState extends State<ShareQPage> {
   List<dynamic> answers = [];
   DateTime startTs = DateTime.now();
   bool submitting = false;
+  Map<String, dynamic>? qStats;
+  Map<String, dynamic>? teamInvite;
+  bool teamJoined = false;
+  bool joining = false;
+  int joinedTeamId = 0;
+
+  String get _beatText {
+    final s = qStats;
+    if (s == null || myResult == null) return '';
+    final total = (s['total'] as num?)?.toInt() ?? 0;
+    if (total == 0) return '';
+    if (total < 5) return '🎯 你是第 $total 个作答的人，把题发给更多考友一起比比';
+    if (myResult!['correct'] == true && s['beat_pct'] != null) {
+      return '🏆 你击败了 ${s['beat_pct']}% 的作答者（共 $total 人做过这题）';
+    }
+    if (s['acc'] != null) return '共 $total 人做过这题，正确率 ${s['acc']}%，再战同类题赢回来';
+    return '';
+  }
 
   bool get revealed =>
       d != null && (d!['is_sharer'] == true || d!['answered'] == true || myResult != null);
@@ -53,6 +77,10 @@ class _ShareQPageState extends State<ShareQPage> {
         if (r['my_answer'] is Map) {
           myResult = Map<String, dynamic>.from(r['my_answer'] as Map);
         }
+        if (r['q_stats'] is Map) qStats = Map<String, dynamic>.from(r['q_stats'] as Map);
+        if (r['team_invite'] is Map) {
+          teamInvite = Map<String, dynamic>.from(r['team_invite'] as Map);
+        }
         startTs = DateTime.now();
         loading = false;
       });
@@ -81,6 +109,10 @@ class _ShareQPageState extends State<ShareQPage> {
           'explanation': r['explanation'],
         };
         answers = r['answers'] as List<dynamic>? ?? [];
+        if (r['q_stats'] is Map) qStats = Map<String, dynamic>.from(r['q_stats'] as Map);
+        if (r['team_invite'] is Map) {
+          teamInvite = Map<String, dynamic>.from(r['team_invite'] as Map);
+        }
       });
       Api.trackEvent('share_answer', source: 'share', ref: widget.sid);
     } catch (e) {
@@ -91,6 +123,47 @@ class _ShareQPageState extends State<ShareQPage> {
       }
     }
     if (mounted) setState(() => submitting = false);
+  }
+
+  Future<void> _joinTeam() async {
+    final inv = teamInvite;
+    if (inv == null || joining) return;
+    setState(() => joining = true);
+    try {
+      final r = await Api.teamJoin((inv['code'] ?? '').toString());
+      final team = r['team'];
+      setState(() {
+        teamJoined = true;
+        if (team is Map) joinedTeamId = (team['id'] as num?)?.toInt() ?? 0;
+      });
+      Api.trackEvent('share_team_join', source: 'share_q', ref: widget.sid);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(r['already'] == true ? '你已在该小队' : '加入成功！')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(Api.errMsg(e))));
+      }
+    }
+    if (mounted) setState(() => joining = false);
+  }
+
+  Future<void> _copyShareLink() async {
+    final q = _q;
+    final mod = (q['submodule'] ?? '').toString().isNotEmpty
+        ? q['submodule'].toString()
+        : moduleName((q['module'] ?? '').toString());
+    Api.trackEvent('share_copy', source: 'share_q', ref: widget.sid);
+    final text =
+        '【$mod】我刚在考公助手做了一道题，你能做对吗？答完就能看到大家选了啥：$_kSite/#/pkgA/share/share-q?sid=${widget.sid}';
+    await Clipboard.setData(ClipboardData(text: text));
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('分享链接已复制')));
+    }
+    unawaited(Share.share(text).catchError((_) => ShareResult.unavailable));
   }
 
   void _goSimilar() {
@@ -262,9 +335,74 @@ class _ShareQPageState extends State<ShareQPage> {
           ),
         ),
       ),
+      if (_beatText.isNotEmpty) ...[
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: kg.warningBg,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(_beatText,
+              style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: KgColors.warning)),
+        ),
+      ],
+      if (teamInvite != null) ...[
+        const SizedBox(height: 12),
+        _teamCta(),
+      ],
       const SizedBox(height: 16),
       FilledButton(onPressed: _goSimilar, child: const Text('去刷同类题')),
+      const SizedBox(height: 10),
+      OutlinedButton(
+          onPressed: _copyShareLink, child: const Text('复制分享链接，喊更多人来答')),
     ];
+  }
+
+  Widget _teamCta() {
+    final kg = context.kg;
+    final fromName = (d!['from_name'] ?? '考友').toString();
+    final teamName = (teamInvite!['name'] ?? '').toString();
+    return Card(
+      color: teamJoined ? kg.successBg : null,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(teamJoined ? '🎉 已加入「$teamName」' : '和 $fromName 组队刷题',
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  Text(
+                      teamJoined
+                          ? '每天刷题就是打卡，队友都能看到你的进度'
+                          : '加入小队「$teamName」，每天互相监督打卡',
+                      style: TextStyle(fontSize: 11, color: kg.t3)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            teamJoined
+                ? OutlinedButton(
+                    onPressed: joinedTeamId > 0
+                        ? () => context.push('/team/panel/$joinedTeamId')
+                        : null,
+                    child: const Text('看队友 ›'))
+                : FilledButton(
+                    onPressed: joining ? null : _joinTeam,
+                    child: Text(joining ? '加入中…' : '一键加入')),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _answerRow(Map<String, dynamic> a) {

@@ -321,6 +321,10 @@ class Store {
   int get bestStreak => _sp.getInt('bestStreak') ?? 0;
   set bestStreak(int v) => _sp.setInt('bestStreak', v);
 
+  /// 已弹过解锁提示的最高徽章里程碑（复刻 badgeSeenMax）
+  int get badgeSeenMax => _sp.getInt('badgeSeenMax') ?? 0;
+  set badgeSeenMax(int v) => _sp.setInt('badgeSeenMax', v);
+
   // ---------- AI 学习教练 / 备份恢复码（复刻 coachAdvice / backupCode 键） ----------
 
   String get coachAdvice => _sp.getString('coachAdvice') ?? '';

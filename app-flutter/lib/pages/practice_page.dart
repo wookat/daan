@@ -460,6 +460,54 @@ class _PracticePageState extends ConsumerState<PracticePage> {
     );
   }
 
+  /// 徽章里程碑检查：本地预检后以服务端 /api/checkin/badges 的 streak 为准
+  Future<void> _checkBadgeMilestone() async {
+    const milestones = [3, 7, 14, 30, 60, 100];
+    var localStreak = 0;
+    var d = DateTime.now();
+    while (Store.instance.dayCount(d) > 0) {
+      localStreak++;
+      d = d.subtract(const Duration(days: 1));
+    }
+    final seen = Store.instance.badgeSeenMax;
+    if (!milestones.any((m) => localStreak >= m && m > seen)) return;
+    try {
+      final b = await Api.checkinBadges();
+      final srvStreak = (b['streak'] as num?)?.toInt() ?? 0;
+      final badges = (b['badges'] as List<dynamic>? ?? [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+      final hits = milestones
+          .where((m) =>
+              srvStreak >= m &&
+              m > seen &&
+              badges.any((x) =>
+                  (x['days'] as num?)?.toInt() == m && x['unlocked'] == true))
+          .toList();
+      if (hits.isEmpty || !mounted) return;
+      final hit = hits.last;
+      Store.instance.badgeSeenMax = hit;
+      Api.trackEvent('badge_unlock', source: 'badge', ref: '$hit');
+      final go = await showDialog<bool>(
+        context: context,
+        builder: (c) => AlertDialog(
+          title: const Text('🏅 解锁新徽章！'),
+          content: Text(
+              '连续打卡 $srvStreak 天，解锁 $hit 天徽章，坚持就是实力。生成专属海报，晒给考友看？'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(c, false),
+                child: const Text('稍后再看')),
+            FilledButton(
+                onPressed: () => Navigator.pop(c, true),
+                child: const Text('生成海报')),
+          ],
+        ),
+      );
+      if (go == true && mounted) context.push('/poster?badge=$hit');
+    } catch (_) {/* 非关键路径 */}
+  }
+
   Future<void> _finish() async {
     setState(() => finished = true);
     if (widget.mode == 'review') {
@@ -473,6 +521,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
     final answered = items.where((q) => q.answered && !q.logged).toList();
     if (answered.isEmpty) return;
     ref.read(todayCountProvider.notifier).add(answered.length);
+    unawaited(_checkBadgeMilestone());
     // 本地各模块统计（复刻 pstats.byModule，供首页进度展示）
     final byMod = <String, List<int>>{};
     for (final q in answered) {
@@ -1234,8 +1283,12 @@ class _PracticePageState extends ConsumerState<PracticePage> {
     if (q.id == null) return;
     try {
       final sid = await Api.shareCreate(q.id!);
+      final mod = (q.submodule ?? '').isNotEmpty
+          ? q.submodule!
+          : moduleName(q.module);
+      Api.trackEvent('share_copy', source: 'share_q', ref: sid);
       final text =
-          '我在考公助手分享了一道题，敢来挑战吗？https://kaogong.zalize.com/#/pkgA/share/share-q?sid=$sid';
+          '【$mod】我刚在考公助手做了一道题，你能做对吗？答完就能看到大家选了啥：https://kaogong.zalize.com/#/pkgA/share/share-q?sid=$sid';
       await Clipboard.setData(ClipboardData(text: text));
       if (mounted) {
         ScaffoldMessenger.of(context)

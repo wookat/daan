@@ -42,6 +42,10 @@ class _PkPageState extends State<PkPage> {
   String rivalName = '';
   bool rivalDone = false;
   bool submitting = false;
+  bool fromRandom = false;
+  bool noOppHint = false;
+  Timer? _waitHintTimer;
+  Timer? _waitPollTimer;
   late final String myName = Api.pkNickname();
 
   @override
@@ -57,6 +61,7 @@ class _PkPageState extends State<PkPage> {
   @override
   void dispose() {
     _timer?.cancel();
+    _stopWaitWatch();
     joinCtrl.dispose();
     super.dispose();
   }
@@ -79,6 +84,7 @@ class _PkPageState extends State<PkPage> {
   }
 
   Future<void> _createMatch() async {
+    fromRandom = false;
     try {
       final d = await Api.pkCreate(module);
       _startQuiz((d['code'] ?? '').toString(), d['questions'] as List<dynamic>, 'creator');
@@ -91,16 +97,52 @@ class _PkPageState extends State<PkPage> {
     try {
       final d = await Api.pkRandomMatch(module);
       if (d['matched'] == true) {
+        fromRandom = false;
         _toast('已匹配到对手！');
         _startQuiz((d['code'] ?? '').toString(), d['questions'] as List<dynamic>, 'opponent');
         unawaited(_loadRival((d['code'] ?? '').toString()));
       } else {
+        fromRandom = true;
         _toast('暂无对手，已为你开局等待匹配');
         _startQuiz((d['code'] ?? '').toString(), d['questions'] as List<dynamic>, 'creator');
       }
     } catch (e) {
       _toast(Api.errMsg(e));
     }
+  }
+
+  // 随机匹配后等待对手：30s 无人应战提示邀好友，每 5s 轮询对局状态
+  void _startWaitWatch() {
+    _stopWaitWatch();
+    noOppHint = false;
+    _waitHintTimer = Timer(const Duration(seconds: 30), () {
+      if (!mounted) return;
+      if (view == 'result' && match != null && match!['status'] != 'finished') {
+        setState(() => noOppHint = true);
+      }
+    });
+    _waitPollTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+      if (view != 'result') {
+        _stopWaitWatch();
+        return;
+      }
+      try {
+        final d = await Api.pkMatch(code);
+        if (!mounted) return;
+        setState(() => match = Map<String, dynamic>.from(d['match'] as Map));
+        if (match!['status'] == 'finished') {
+          _stopWaitWatch();
+          _toast('对手已完成！');
+        }
+      } catch (_) {/* 非关键路径 */}
+    });
+  }
+
+  void _stopWaitWatch() {
+    _waitHintTimer?.cancel();
+    _waitHintTimer = null;
+    _waitPollTimer?.cancel();
+    _waitPollTimer = null;
   }
 
   Future<void> _joinByCode() async {
@@ -198,6 +240,7 @@ class _PkPageState extends State<PkPage> {
           match = Map<String, dynamic>.from(d['match'] as Map);
           view = 'result';
         });
+        if (fromRandom && match!['status'] != 'finished') _startWaitWatch();
       }
     } catch (e) {
       _toast(Api.errMsg(e));
@@ -247,6 +290,21 @@ class _PkPageState extends State<PkPage> {
 
   String _fmtMs(dynamic ms) =>
       ms is num ? '${(ms / 1000).toStringAsFixed(1)}s' : '—';
+
+  // 晒战绩：复制 pk-result 落地页链接 + 系统分享
+  Future<void> _shareResult() async {
+    final m = match!;
+    final c = (m['code'] ?? '').toString();
+    Api.trackEvent('pk_result_copy', source: 'pk_share', ref: c);
+    final me = _myP() ?? {};
+    final them = _theirP() ?? {};
+    final text =
+        '【答题PK战绩】${me['name'] ?? myName} ${me['score']} : ${them['score']} ${them['name']}，不服来战：https://kaogong.zalize.com/#/pkgA/share/pk-result?rid=$c';
+    await Clipboard.setData(ClipboardData(text: text));
+    _toast('战绩链接已复制，发给考友吧');
+    unawaited(
+        Share.share(text).catchError((_) => ShareResult.unavailable));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -798,6 +856,19 @@ class _PkPageState extends State<PkPage> {
         ),
         const SizedBox(height: 12),
         if (!finished) ...[
+          if (noOppHint)
+            Card(
+              color: context.kg.warningBg,
+              child: const Padding(
+                padding: EdgeInsets.all(12),
+                child: Text('❤️ 暂时没有考友应战，把挑战链接发给好友，邀 TA 来比一比！',
+                    style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: KgColors.warning)),
+              ),
+            ),
+          if (noOppHint) const SizedBox(height: 10),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -850,8 +921,14 @@ class _PkPageState extends State<PkPage> {
               ),
             ),
           ),
-        ] else
+        ] else ...[
           FilledButton(
+            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+            onPressed: _shareResult,
+            child: const Text('晒战绩，喊考友来战'),
+          ),
+          const SizedBox(height: 10),
+          FilledButton.tonal(
             onPressed: () {
               setState(() {
                 module = (m['module'] ?? '') == '' ? null : m['module'] as String?;
@@ -862,6 +939,7 @@ class _PkPageState extends State<PkPage> {
             },
             child: const Text('再来一局'),
           ),
+        ],
         const SizedBox(height: 10),
         OutlinedButton(
           style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
