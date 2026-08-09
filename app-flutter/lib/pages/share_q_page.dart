@@ -8,7 +8,6 @@ import 'package:share_plus/share_plus.dart';
 import '../core/api.dart';
 import '../theme.dart';
 
-const _kSite = 'https://kaogong.zalize.com';
 
 /// 分享作答页：先作答 → 揭示对错/解析/大家的选择 → 去刷同类题（source=share）。
 /// 复刻 pkgA/share/share-q.vue。
@@ -156,8 +155,7 @@ class _ShareQPageState extends State<ShareQPage> {
         ? q['submodule'].toString()
         : moduleName((q['module'] ?? '').toString());
     Api.trackEvent('share_copy', source: 'share_q', ref: widget.sid);
-    final text =
-        '【$mod】我刚在考公助手做了一道题，你能做对吗？答完就能看到大家选了啥：$_kSite/#/pkgA/share/share-q?sid=${widget.sid}';
+    final text = Api.qShareText(mod, widget.sid);
     await Clipboard.setData(ClipboardData(text: text));
     if (mounted) {
       ScaffoldMessenger.of(context)

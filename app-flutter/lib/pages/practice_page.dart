@@ -249,16 +249,23 @@ class _PracticePageState extends ConsumerState<PracticePage> {
     if (text.isEmpty || answer.isEmpty) return null;
     var stem = text;
     final opts = <String, String>{};
+    // 优先用后端联查回带的题目 options（r46 起 /api/review 返回）
+    final rawOpts = m['options'];
+    if (rawOpts is Map && rawOpts.isNotEmpty) {
+      rawOpts.forEach((k, v) => opts[k.toString()] = v.toString());
+    }
     final nl = text.lastIndexOf('\n');
     if (nl > 0) {
       final optLine = text.substring(nl + 1);
       final matches = RegExp(r'([A-D])\.').allMatches(optLine).toList();
       if (matches.length >= 2) {
         stem = text.substring(0, nl);
-        for (var i = 0; i < matches.length; i++) {
-          final start = matches[i].end;
-          final end = i + 1 < matches.length ? matches[i + 1].start : optLine.length;
-          opts[matches[i].group(1)!] = optLine.substring(start, end).trim();
+        if (opts.isEmpty) {
+          for (var i = 0; i < matches.length; i++) {
+            final start = matches[i].end;
+            final end = i + 1 < matches.length ? matches[i + 1].start : optLine.length;
+            opts[matches[i].group(1)!] = optLine.substring(start, end).trim();
+          }
         }
       }
     }
@@ -1305,9 +1312,8 @@ class _PracticePageState extends ConsumerState<PracticePage> {
       final mod = (q.submodule ?? '').isNotEmpty
           ? q.submodule!
           : moduleName(q.module);
-      Api.trackEvent('share_copy', source: 'share_q', ref: sid);
-      final text =
-          '【$mod】我刚在考公助手做了一道题，你能做对吗？答完就能看到大家选了啥：https://kaogong.zalize.com/#/pkgA/share/share-q?sid=$sid';
+      Api.trackEvent('share_copy', source: 'qbar_${Api.shareVariant()}', ref: sid);
+      final text = Api.qShareText(mod, sid);
       await Clipboard.setData(ClipboardData(text: text));
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -1648,10 +1654,15 @@ class _PracticePageState extends ConsumerState<PracticePage> {
         const SizedBox(height: 12),
         OutlinedButton(
           style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-          onPressed: () => Share.share(
+          onPressed: () {
+            Api.trackEvent('share_result_copy', source: 'practice',
+                ref: widget.module);
+            Share.share(
               '我在考公助手完成了一组练习：答对 $right/${answered.length} 题，正确率 $pct%'
               '${_bestInGroup >= 2 ? '，最高连对 $_bestInGroup' : ''}'
-              '${percentile != null ? '，击败全站 $percentile% 的记录' : ''}，一起来刷题！'),
+              '${percentile != null ? '，击败全站 $percentile% 的记录' : ''}，一起来刷题！',
+            );
+          },
           child: const Text('分享战绩'),
         ),
         const SizedBox(height: 12),

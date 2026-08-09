@@ -989,6 +989,26 @@ class Api {
     return Map<String, dynamic>.from(r.data);
   }
 
+  /// 分享文案 A/B：按 uid 稳定分桶（a=好奇型，b=挑战型），与 H5 shareVariant 同哈希
+  static String shareVariant() {
+    final u = uid();
+    var h = 0;
+    for (var i = 0; i < u.length; i++) {
+      h = (h * 31 + u.codeUnitAt(i)) & 0x7fffffff;
+    }
+    return h % 2 == 0 ? 'a' : 'b';
+  }
+
+  /// 分享题目文案（带 v 参数供落地页 share_a/b 归因），与 H5 qShareText 一致
+  static String qShareText(String mod, String sid) {
+    final v = shareVariant();
+    final url = 'https://kaogong.zalize.com/#/pkgA/share/share-q?sid=$sid&v=$v';
+    if (v == 'b') {
+      return '【$mod】敢不敢挑战这道题？不少人都做错了，答完立刻看你击败了多少人：$url';
+    }
+    return '【$mod】我刚做了一道题，你能做对吗？答完就能看到大家选了啥：$url';
+  }
+
   static Future<void> trackEvent(String event, {String? source, String? ref}) async {
     try {
       await dio.post('/api/track',

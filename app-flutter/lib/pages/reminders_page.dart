@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
+import '../core/api.dart';
 import '../core/reminders.dart';
 import '../core/storage.dart';
 import '../theme.dart';
@@ -30,6 +31,7 @@ class _RemindersPageState extends State<RemindersPage> {
       if (!ok && mounted) {
         _toast('通知权限被拒绝，请在系统设置中允许通知');
       }
+      Api.trackEvent('reminder_optin', source: 'app');
     }
     await Reminders.reschedule();
     if (mounted) _toast(v ? '已开启 · 每天 $time 提醒' : '已关闭提醒');
