@@ -27,6 +27,18 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 打开 http://localhost:8000
 
+## SEO 题库落地页（/tiku/）
+
+后端服务端渲染的题库落地页集群，承接「XX年国考真题」「资料分析 速算」等长尾搜索并导流刷题主站（代码在 `backend/app/seo.py`，无新依赖）：
+
+- `/tiku/` 索引页（模块→题型→考点三级导航）、`/tiku/{module}/`、`/tiku/{module}/{题型}/`（每页 50 题）
+- `/tiku/q/{id}` 题目详情（题干/选项/答案解析 + JSON-LD Question/Answer 结构化数据 + 同考点相似题内链）
+- `/tiku/papers/`、`/tiku/papers/{id}` 真题卷落地页
+- `/sitemap.xml`（分片索引，每片 ≤1 万 URL）、`/robots.txt`
+- 可选环境变量 `SITE_BASE_URL`（默认 `https://kaogong.zalize.com`），用于 canonical 与 sitemap 绝对链接
+
+部署后需要做的事：到百度/必应/谷歌站长平台提交 `https://kaogong.zalize.com/sitemap.xml`（详见对应 PR 描述的步骤清单）。
+
 ## 方法库来源与版权
 
 `knowledge/references/` 来自开源项目 [WangJunqing-coder/huasheng13-skill](https://github.com/WangJunqing-coder/huasheng13-skill)（README 声明 MIT），该项目基于花生十三**公开教学渠道**（B站公开课、知乎专栏等）整理，声明不含付费课程原文。本项目仅供个人学习辅助使用，不复制传播任何付费课程内容。
