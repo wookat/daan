@@ -6,6 +6,18 @@
       <text class="searchbar-t">搜题目 / 考点 / 试卷，支持题号</text>
     </view>
 
+    <!-- 回访召回卡（7天以上未练习的老用户） -->
+    <view v-if="comeback" class="card cbcard">
+      <view class="cb-l">
+        <text class="cb-t">欢迎回来！你已累计练 {{ comeback.total }} 题</text>
+        <text class="cb-s">上次练习是 {{ comeback.gap }} 天前 · 继续保持，看看你的学习周报</text>
+      </view>
+      <view class="cb-r">
+        <text class="cb-go" @click="cbWeekly">看周报 ›</text>
+        <text class="cb-x" @click="comeback = null">✕</text>
+      </view>
+    </view>
+
     <!-- Hero：今日目标 + 行动 -->
     <view class="hero">
       <view class="hero-top">
@@ -454,6 +466,7 @@ export default {
       announce: null,
       badgeInfo: null,
       weeklyDot: false,
+      comeback: null,
       dateStart: new Date().toISOString().slice(0, 10),
       dateEnd: new Date(Date.now() + 3 * 366 * 86400000).toISOString().slice(0, 10),
       dateStartTs: Date.now(),
@@ -558,6 +571,7 @@ export default {
     this.loadPlan();
     this.loadBadges();
     this.calcWeeklyDot();
+    this.checkComeback();
     const wantSetup = uni.getStorageSync('openPlanSetup');
     if (wantSetup) {
       uni.removeStorageSync('openPlanSetup');
@@ -644,6 +658,25 @@ export default {
     },
     goWeeklyReport() {
       uni.navigateTo({ url: '/pkgA/stats/weekly-report' });
+    },
+    checkComeback() {
+      const days = (this.pstats && this.pstats.days) || {};
+      const keys = Object.keys(days).filter((k) => days[k] > 0).sort();
+      if (!keys.length) return;
+      const todayKey = new Date().toISOString().slice(0, 10);
+      const last = keys[keys.length - 1];
+      if (last >= todayKey) return;
+      const gap = Math.round((new Date(todayKey) - new Date(last)) / 86400000);
+      if (gap < 7) return;
+      if (uni.getStorageSync('comebackShown') === todayKey) return;
+      const total = keys.reduce((s, k) => s + (days[k] || 0), 0);
+      this.comeback = { gap, total };
+      uni.setStorageSync('comebackShown', todayKey);
+      trackEvent('comeback_view', 'home');
+    },
+    cbWeekly() {
+      this.comeback = null;
+      this.goWeeklyReport();
     },
     calcWeeklyDot() {
       // 周一至周三未读上周周报时显示红点
@@ -1000,6 +1033,15 @@ export default {
 .pf-date.empty { color: var(--ink-3); }
 .pf-summary { margin-top: 8rpx; font-size: 23rpx; color: var(--ink-2); background: var(--brand-soft); border-radius: 12rpx; padding: 18rpx 22rpx; }
 .pf-back { margin-top: 16rpx; text-align: center; font-size: 24rpx; color: var(--ink-3); min-height: 44px; display: flex; align-items: center; justify-content: center; }
+
+/* 回访召回卡 */
+.cbcard { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #f59e0b, #f97316); border: none; box-shadow: 0 6rpx 16rpx rgba(249, 115, 22, 0.25); padding: 24rpx 28rpx; }
+.cb-l { min-width: 0; }
+.cb-t { display: block; font-size: 28rpx; font-weight: 700; color: #ffffff; }
+.cb-s { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.85); margin-top: 4rpx; }
+.cb-r { flex-shrink: 0; display: flex; align-items: center; gap: 16rpx; }
+.cb-go { background: rgba(255, 255, 255, 0.2); color: #ffffff; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 12rpx 26rpx; }
+.cb-x { color: rgba(255, 255, 255, 0.75); font-size: 26rpx; padding: 8rpx; }
 
 /* 今日到期复习入口 */
 .duebar { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(180deg, #4a7bf7, #3567ec); border: none; box-shadow: 0 6rpx 16rpx rgba(59, 111, 245, 0.25); padding: 24rpx 28rpx; }
