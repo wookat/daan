@@ -1,0 +1,14 @@
+== 目标变更 ==
+paper6 kind: retired
+options 目标 7 题全部为合法 JSON: True
+全库残留非JSON options(like {{'): 0
+== 非目标零变更 ==
+questions 保护字段(question/answer/explanation/hs_explanation) 不变: True
+非目标题 options 不变: True
+exam_papers 除 kind 外字段不变: True
+其余试卷 kind 不变: True
+== 行数核对 ==
+questions 总数不变: True
+disabled=0 题数: 111987
+zhenti 卷数(修复后): 120
+幂等重放后保护字段仍不变: True

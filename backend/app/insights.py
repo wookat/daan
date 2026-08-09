@@ -387,7 +387,7 @@ def _search_questions(q: str, limit: int, offset: int) -> dict:
         # 兜底：LIKE 扫描（短词/无 FTS 时），限制返回量
         rows = conn.execute(
             """SELECT * FROM questions WHERE question LIKE '%' || ? || '%'
-               AND (disabled IS NULL OR disabled=0)
+               AND disabled=0
                ORDER BY is_real DESC LIMIT ? OFFSET ?""",
             (q, limit, offset),
         ).fetchall()
