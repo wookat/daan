@@ -11,6 +11,26 @@
       <view wx:else class="u-btn ghost" bind:tap="onLogout">退出</view>
     </view>
 
+    <view wx:if="{{badgeInfo}}" class="card badges">
+      <view class="badge-head">
+        <text class="badge-cur">当前连续 {{badgeInfo.streak}} 天</text>
+        <text class="badge-best">历史最长 {{badgeInfo.best_streak}} 天</text>
+      </view>
+      <view class="badge-grid">
+        <view
+          wx:for="{{badgeInfo.badges}}"
+          wx:key="days"
+          class="badge {{item.unlocked ? '' : 'off'}}"
+          data-days="{{item.days}}"
+          data-unlocked="{{item.unlocked}}"
+          bind:tap="onTapBadge"
+        >
+          <text class="badge-ico">{{item.unlocked ? '🏅' : '🔒'}}</text>
+          <text class="badge-d">{{item.days}} 天</text>
+        </view>
+      </view>
+    </view>
+
     <view class="card">
       <view class="row-i link" bind:tap="onTeam">
         <text class="r-k">刷题小队</text>

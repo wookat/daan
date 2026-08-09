@@ -37,6 +37,8 @@
         </view>
         <view wx:else class="res-bar ok">正确答案：{{d.question.answer}}</view>
 
+        <view wx:if="{{beatText}}" class="beat-bar">{{beatText}}</view>
+
         <view wx:if="{{d.question.explanation}}" class="card">
           <text class="exp-k">解析</text>
           <text class="exp" user-select>{{d.question.explanation}}</text>
@@ -50,6 +52,21 @@
             <text class="ans-pick">选 {{item.picked}}</text>
             <text class="ans-res {{item.correct ? 'ok' : 'bad'}}">{{item.correct ? '对' : '错'}}</text>
           </view>
+        </view>
+
+        <view wx:if="{{teamInvite && !teamJoined}}" class="card team-cta">
+          <view class="tc-l">
+            <text class="tc-t">和 {{d.from_name}} 组队刷题</text>
+            <text class="tc-s">加入小队「{{teamInvite.name}}」，每天互相监督打卡</text>
+          </view>
+          <view class="tc-btn {{joining ? 'off' : ''}}" bind:tap="onJoinTeam">{{joining ? '加入中…' : '一键加入'}}</view>
+        </view>
+        <view wx:elif="{{teamJoined}}" class="card team-cta joined">
+          <view class="tc-l">
+            <text class="tc-t">🎉 已加入「{{teamInvite.name}}」</text>
+            <text class="tc-s">每天刷题就是打卡，队友都能看到你的进度</text>
+          </view>
+          <view class="tc-btn ghost" bind:tap="onGoTeam">看队友 ›</view>
         </view>
 
         <view class="btn-primary" bind:tap="onSimilar">去刷同类题</view>

@@ -1,0 +1,42 @@
+<navbar title="PK 战绩" back="{{true}}" />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <view wx:if="{{loading}}" class="card empty">加载中…</view>
+    <view wx:elif="{{errMsg}}" class="card empty">{{errMsg}}</view>
+
+    <block wx:elif="{{d}}">
+      <view class="hero">
+        <text class="hero-t">⚔️ 答题 PK 战绩</text>
+        <text class="hero-s">{{modLabel}} · 同组 {{d.n_questions}} 题 · 挑战码 {{d.code}}</text>
+      </view>
+
+      <view class="card vs">
+        <view class="p {{d.winner === 'creator' ? 'win' : ''}}">
+          <text wx:if="{{d.winner === 'creator'}}" class="crown">👑</text>
+          <view class="av">{{creatorAv}}</view>
+          <text class="nm">{{creatorName}}</text>
+          <text class="sc">{{d.creator.score}}</text>
+          <text class="meta">{{creatorMeta}}</text>
+        </view>
+        <view class="mid">
+          <text class="mid-vs">VS</text>
+          <text class="mid-res">{{resultText}}</text>
+        </view>
+        <view class="p {{d.winner === 'opponent' ? 'win' : ''}}">
+          <text wx:if="{{d.winner === 'opponent'}}" class="crown">👑</text>
+          <view class="av rival">{{opponentAv}}</view>
+          <text class="nm">{{opponentName}}</text>
+          <text class="sc">{{d.opponent.score}}</text>
+          <text class="meta">{{opponentMeta}}</text>
+        </view>
+      </view>
+
+      <view class="card cta">
+        <text class="cta-t">不服来战？</text>
+        <text class="cta-s">同组 10 题拼手速，答对 +80 分，越快加成越高</text>
+        <view class="act-btn main" bind:tap="onChallenge">去刷题练手</view>
+        <view class="act-btn sub" bind:tap="onCopyLink">复制战绩链接</view>
+      </view>
+    </block>
+  </view>
+</scroll-view>

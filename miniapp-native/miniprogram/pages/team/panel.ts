@@ -1,4 +1,4 @@
-import { teamLeave, teamPanel } from '../../api/index';
+import { teamLeave, teamPanel, trackEvent } from '../../api/index';
 import type { TeamMember, TeamPanelResp } from '../../api/types';
 
 const SITE = 'https://kaogong.zalize.com';
@@ -12,6 +12,12 @@ interface MemberRow extends TeamMember {
   av: string;
   desc: string;
   cells: WeekCell[];
+}
+
+interface RankRow {
+  nickname: string;
+  is_me?: boolean;
+  week_n: number;
 }
 
 function fmtAgo(ts: number): string {
@@ -41,6 +47,7 @@ Page({
     loading: true,
     panel: null as TeamPanelResp | null,
     members: [] as MemberRow[],
+    weekRank: [] as RankRow[],
     weekLabels: ['一', '二', '三', '四', '五', '六', '日'],
     todayIdx: 0,
   },
@@ -69,7 +76,14 @@ Page({
           label: n ? (n > 99 ? '99+' : String(n)) : '',
         })),
       }));
-      this.setData({ loading: false, panel: d, members, todayIdx });
+      const weekRank: RankRow[] = (d.members || [])
+        .map((m) => ({
+          nickname: m.nickname,
+          is_me: m.is_me,
+          week_n: (m.week || []).reduce((a, b) => a + b, 0),
+        }))
+        .sort((a, b) => b.week_n - a.week_n);
+      this.setData({ loading: false, panel: d, members, weekRank, todayIdx });
     } catch (e) {
       wx.showToast({ title: (e as Error).message || '加载失败', icon: 'none' });
       this.setData({ loading: false });
@@ -84,9 +98,33 @@ Page({
 
   onCopyInvite() {
     if (!this.data.panel) return;
+    trackEvent('team_invite_copy', 'team', this.data.panel.team.invite_code);
     wx.setClipboardData({
       data: this.inviteText(),
       success: () => wx.showToast({ title: '邀请链接已复制，发给考友吧', icon: 'none' }),
+    });
+  },
+
+  // 复制本周战报（含全队题量/打卡人天/卷王）
+  onCopyWeekReport() {
+    const p = this.data.panel;
+    if (!p) return;
+    const t = p.team;
+    const rank = this.data.weekRank;
+    const totalN = rank.reduce((a, m) => a + m.week_n, 0);
+    const upto = this.data.todayIdx + 1;
+    let dayCnt = 0;
+    (p.members || []).forEach((m) => {
+      (m.week || []).slice(0, upto).forEach((n) => {
+        if (n > 0) dayCnt += 1;
+      });
+    });
+    const king =
+      rank[0] && rank[0].week_n > 0 ? `，卷王是「${rank[0].nickname}」（${rank[0].week_n} 题）` : '';
+    trackEvent('team_report_copy', 'team', t.invite_code);
+    wx.setClipboardData({
+      data: `📊刷题小队「${t.name}」本周战报：全队共刷 ${totalN} 题，打卡 ${dayCnt} 人天${king}。一起打卡冲上岸，邀请码 ${t.invite_code}，点链接加入：${SITE}/#/pages/team/join?code=${t.invite_code}`,
+      success: () => wx.showToast({ title: '周战报已复制，发到微信群吧', icon: 'none' }),
     });
   },
 

@@ -1,13 +1,17 @@
 import {
+  fetchCheckinBadges,
   fetchQuestions,
   postAnswerLog,
   postMistake,
   postPracticeResult,
   redoMistakes,
   shareCreate,
+  trackEvent,
 } from '../../api/index';
 import type { AnswerLogItem, Question } from '../../api/types';
-import { modName, recordStat } from '../../utils/stats';
+import { modName, recordStat, streakDays } from '../../utils/stats';
+
+const BADGE_MILESTONES = [3, 7, 14, 30, 60, 100];
 
 interface PQuestion extends Question {
   _picked: string;
@@ -53,6 +57,7 @@ Page({
   _resultSent: false,
   _shareSid: '',
   _shareTitle: '',
+  _badgeChecking: false,
 
   onLoad(query: Record<string, string>) {
     this._source = query.source || null;
@@ -123,6 +128,7 @@ Page({
       [`items[${this.data.idx}]._picked`]: k,
     });
     recordStat(cur.module, correct, cur.submodule);
+    this.checkBadgeMilestone();
     this.logAttempts([cur]);
     if (!correct) this.saveWrong(cur, k);
     try {
@@ -210,6 +216,38 @@ Page({
   },
 
   // 分享给队友：生成 sid → 复制链接，并可通过右上角转发卡片直达分享作答页
+  // 本地连击只做「疑似达标」预检；解锁与展示以服务端 /api/checkin/badges 的 streak 为准
+  async checkBadgeMilestone() {
+    const localStreak = streakDays();
+    const seen = Number(wx.getStorageSync('badgeSeenMax') || 0);
+    if (!BADGE_MILESTONES.some((m) => localStreak >= m && m > seen) || this._badgeChecking) return;
+    this._badgeChecking = true;
+    try {
+      const b = await fetchCheckinBadges();
+      const srvStreak = b.streak || 0;
+      const hit = BADGE_MILESTONES.filter(
+        (m) =>
+          srvStreak >= m && m > seen && (b.badges || []).some((x) => x.days === m && x.unlocked)
+      ).pop();
+      if (hit) {
+        wx.setStorageSync('badgeSeenMax', hit);
+        trackEvent('badge_unlock', 'badge', String(hit));
+        wx.showModal({
+          title: '🏅 解锁新徽章！',
+          content: `连续打卡 ${srvStreak} 天，解锁 ${hit} 天徽章，坚持就是实力。生成专属海报，晒给考友看？`,
+          confirmText: '生成海报',
+          cancelText: '稍后再看',
+          success: (r) => {
+            if (r.confirm) wx.navigateTo({ url: '/pages/social/poster?badge=' + hit });
+          },
+        });
+      }
+    } catch (e) {
+      /* 非关键路径 */
+    }
+    this._badgeChecking = false;
+  },
+
   async onShareQ() {
     const cur = this.data.cur;
     if (!cur || !cur.id) {
@@ -218,10 +256,12 @@ Page({
     }
     try {
       const d = await shareCreate(cur.id);
+      const mod = d.submodule || modName(d.module || '');
       this._shareSid = d.sid;
-      this._shareTitle = '我分享了一道题，敢来挑战吗？';
+      this._shareTitle = `我考你一道${mod}题，你能做对吗？`;
+      trackEvent('share_copy', 'share_q', d.sid);
       wx.setClipboardData({
-        data: `我在考公助手分享了一道题，敢来挑战吗？https://kaogong.zalize.com/#/pkgA/share/share-q?sid=${d.sid}`,
+        data: `【${mod}】我刚在考公助手做了一道题，你能做对吗？答完就能看到大家选了啥：https://kaogong.zalize.com/#/pkgA/share/share-q?sid=${d.sid}`,
         success: () =>
           wx.showToast({ title: '链接已复制，也可点右上角转发给队友', icon: 'none' }),
       });
