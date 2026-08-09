@@ -35,6 +35,9 @@ class _HomePageState extends ConsumerState<HomePage> {
   Map<String, dynamic> moduleStats = Store.instance.moduleStats;
   int dueReview = 0;
   bool dueLoaded = false;
+  int badgeStreak = 0;
+  ({int days, int left, int pct})? nextMilestone;
+  bool allMilestonesDone = false;
 
   @override
   void initState() {
@@ -43,6 +46,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     _loadCounts();
     _loadAnnounce();
     _loadDueReview();
+    _loadBadges();
     homeSetupTick.addListener(_onSetupTick);
   }
 
@@ -96,6 +100,38 @@ class _HomePageState extends ConsumerState<HomePage> {
         });
       }
     } catch (_) {/* 非关键路径 */}
+  }
+
+  Future<void> _loadBadges() async {
+    var ms = const [3, 7, 14, 30, 60, 100];
+    var s = dailyStreak;
+    try {
+      final b = await Api.checkinBadges();
+      s = (b['streak'] as num?)?.toInt() ?? 0;
+      final srv = (b['badges'] as List<dynamic>? ?? [])
+          .map((e) => ((e as Map)['days'] as num).toInt())
+          .toList();
+      if (srv.isNotEmpty) ms = srv;
+    } catch (_) {/* 非关键路径，降级本地 streak */}
+    if (!mounted) return;
+    final next = ms.where((m) => m > s).firstOrNull;
+    setState(() {
+      badgeStreak = s;
+      allMilestonesDone = next == null;
+      if (next == null) {
+        nextMilestone = null;
+      } else {
+        var prev = 0;
+        for (final m in ms) {
+          if (m <= s) prev = m;
+        }
+        nextMilestone = (
+          days: next,
+          left: next - s,
+          pct: ((s - prev) * 100 / (next - prev)).round(),
+        );
+      }
+    });
   }
 
   Future<void> _loadCounts() async {
@@ -214,6 +250,8 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
             const SizedBox(height: 14),
             _hero(today, goal, pct),
+            const SizedBox(height: 14),
+            _taskCard(today, goal),
             if (dueReview > 0 || dueLoaded) ...[
               const SizedBox(height: 14),
               _dueReviewCard(),
@@ -303,6 +341,154 @@ class _HomePageState extends ConsumerState<HomePage> {
                 _entry(context, LucideIcons.star, '收藏笔记', '/favorites'),
               ],
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 今日任务三件套聚合卡：刷题目标 / 错题复习 / 每日打卡（含里程碑进度）。
+  Widget _taskCard(int today, int goal) {
+    var doneN = 0;
+    if (today >= goal) doneN++;
+    if (dueLoaded && dueReview == 0) doneN++;
+    if (today > 0) doneN++;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text('今日任务',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                const Spacer(),
+                Text('$doneN/3',
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: KgColors.brand)),
+              ],
+            ),
+            _todayTaskRow(
+              done: today >= goal,
+              name: '刷题目标',
+              sub: '已练 $today/$goal 题',
+              go: today >= goal ? '再练一组 ›' : '去刷题 ›',
+              onTap: () {
+                Api.trackEvent('task_card_click', source: 'practice');
+                context.push('/practice');
+              },
+            ),
+            _todayTaskRow(
+              done: dueLoaded && dueReview == 0,
+              name: '错题复习',
+              sub: dueReview > 0
+                  ? '今日到期 $dueReview 题'
+                  : dueLoaded
+                      ? '今日已清零'
+                      : '加载中…',
+              go: dueReview > 0 ? '去复习 ›' : '错题本 ›',
+              onTap: () async {
+                Api.trackEvent('task_card_click', source: 'review');
+                if (dueReview > 0) {
+                  Api.trackEvent('review_entry_click', source: 'task_card');
+                  await context.push('/practice?mode=review');
+                  _loadDueReview();
+                } else {
+                  context.go('/book');
+                }
+              },
+            ),
+            _todayTaskRow(
+              done: today > 0,
+              name: '每日打卡',
+              nameExtra: badgeStreak > 0 ? ' 🔥 连续 $badgeStreak 天' : null,
+              sub: nextMilestone != null
+                  ? '再打卡 ${nextMilestone!.left} 天解锁「${nextMilestone!.days} 天」徽章'
+                  : allMilestonesDone
+                      ? '已解锁全部打卡徽章，太强了！'
+                      : '每天练题即自动打卡',
+              pct: nextMilestone?.pct,
+              go: '日历 ›',
+              onTap: () {
+                Api.trackEvent('task_card_click', source: 'checkin');
+                context.push('/calendar');
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _todayTaskRow({
+    required bool done,
+    required String name,
+    String? nameExtra,
+    required String sub,
+    int? pct,
+    required String go,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
+            Container(
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: done ? KgColors.success : Colors.transparent,
+                border: done ? null : Border.all(color: context.kg.t4, width: 1.5),
+              ),
+              child: done
+                  ? const Icon(Icons.check, size: 14, color: Colors.white)
+                  : null,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(name,
+                          style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
+                              color: done ? context.kg.t3 : null)),
+                      if (nameExtra != null)
+                        Text(nameExtra,
+                            style: const TextStyle(
+                                fontSize: 11, color: KgColors.warning)),
+                    ],
+                  ),
+                  if (pct != null) ...[
+                    const SizedBox(height: 5),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        value: pct / 100,
+                        minHeight: 5,
+                        backgroundColor: context.kg.fill,
+                        valueColor: const AlwaysStoppedAnimation(KgColors.brand),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 2),
+                  Text(sub,
+                      style: TextStyle(fontSize: 11, color: context.kg.t3)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(go,
+                style: const TextStyle(fontSize: 12.5, color: KgColors.brand)),
           ],
         ),
       ),

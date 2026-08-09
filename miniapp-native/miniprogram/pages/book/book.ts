@@ -46,6 +46,8 @@ Page({
     wasCorrect: false,
     nextDays: 0,
     rStreak: 0,
+    celebrate: false,
+    celebrateN: 0,
   },
   _shareSid: '',
   _shareTitle: '',
@@ -197,8 +199,17 @@ Page({
       this.setData({ rIdx: this.data.rIdx + 1 });
       this.resetQ();
     } else {
+      const n = this.data.rItems.length;
       this.exitReview();
+      this.setData({ celebrate: true, celebrateN: n });
+      trackEvent('review_done_celebrate', 'book');
     }
+  },
+  onCloseCelebrate() {
+    this.setData({ celebrate: false });
+  },
+  noop() {
+    /* 阻断冒泡 */
   },
   exitReview() {
     this.setData({ reviewing: false, rItems: [], rCur: null });

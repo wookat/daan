@@ -107,6 +107,24 @@
   font-size: 22rpx;
   color: var(--t3);
 }
+.ms-bar {
+  height: 12rpx;
+  background: var(--fill);
+  border-radius: var(--r-full);
+  overflow: hidden;
+  margin-bottom: 8rpx;
+}
+.ms-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #5b8af8, var(--brand-500));
+  border-radius: var(--r-full);
+}
+.ms-sub {
+  display: block;
+  font-size: 22rpx;
+  color: var(--t3);
+  margin-bottom: 20rpx;
+}
 .badge-grid {
   display: flex;
   flex-direction: row;

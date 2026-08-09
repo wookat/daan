@@ -199,6 +199,7 @@ export interface CheckinSummaryResp {
   today_rate?: number | null;
   cleared_today?: number;
   total: number;
+  days?: Record<string, { n: number; correct: number | null }>;
   exam_type?: string | null;
   days_to_exam?: number | null;
 }

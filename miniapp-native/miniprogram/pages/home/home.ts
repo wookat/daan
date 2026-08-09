@@ -1,5 +1,11 @@
-import { fetchPlanToday, fetchProfile, fetchReviewDue, trackEvent } from '../../api/index';
-import type { PlanTask } from '../../api/types';
+import {
+  fetchCheckinBadges,
+  fetchPlanToday,
+  fetchProfile,
+  fetchReviewDue,
+  trackEvent,
+} from '../../api/index';
+import type { CheckinBadgesResp, PlanTask } from '../../api/types';
 import { getDailyGoal, setDailyGoal, streakDays, todayCount } from '../../utils/stats';
 import { syncTabBar } from '../../utils/tabbar';
 
@@ -33,12 +39,16 @@ Page({
     daysLeft: null as number | null,
     dueReview: 0,
     dueLoaded: false,
+    badgeStreak: 0,
+    nextMilestone: null as { days: number; left: number; pct: number } | null,
+    taskDoneN: 0,
   },
   onShow() {
     syncTabBar(this, 0);
     this.refreshGoal();
     this.loadPlan();
     this.loadDueReview();
+    this.loadBadges();
   },
   refreshGoal() {
     const today = todayCount();
@@ -49,6 +59,7 @@ Page({
       goalPct: Math.min(100, Math.round((today / goal) * 100)),
       streak: streakDays(),
     });
+    this.updateTaskCard();
   },
   async loadPlan() {
     try {
@@ -74,8 +85,62 @@ Page({
     try {
       const r = await fetchReviewDue();
       this.setData({ dueReview: r.total || (r.items || []).length, dueLoaded: true });
+      this.updateTaskCard();
     } catch (e) {
       /* 非关键路径 */
+    }
+  },
+  // 连签口径以服务端 /api/checkin/badges 为准，失败降级本机 streak
+  async loadBadges() {
+    try {
+      const b: CheckinBadgesResp = await fetchCheckinBadges();
+      this.setData({ badgeStreak: b.streak });
+      this.updateMilestone(
+        b.streak,
+        (b.badges || []).map((x) => x.days)
+      );
+    } catch (e) {
+      this.updateMilestone(this.data.streak, [3, 7, 14, 30, 60, 100]);
+    }
+  },
+  updateMilestone(streak: number, ms: number[]) {
+    const next = ms.find((m) => m > streak);
+    if (!next) {
+      this.setData({ nextMilestone: null });
+      return;
+    }
+    let prev = 0;
+    for (const m of ms) {
+      if (m <= streak) prev = m;
+    }
+    this.setData({
+      nextMilestone: {
+        days: next,
+        left: next - streak,
+        pct: Math.round(((streak - prev) / (next - prev)) * 100),
+      },
+    });
+  },
+  updateTaskCard() {
+    let n = 0;
+    if (this.data.today >= this.data.goal) n++;
+    if (this.data.dueLoaded && !this.data.dueReview) n++;
+    if (this.data.today > 0) n++;
+    this.setData({ taskDoneN: n });
+  },
+  onTaskGo(e: WechatMiniprogram.TouchEvent) {
+    const kind = String(e.currentTarget.dataset.kind || '');
+    trackEvent('task_card_click', kind);
+    if (kind === 'practice') {
+      wx.navigateTo({ url: '/pages/practice/practice' });
+    } else if (kind === 'review') {
+      if (this.data.dueReview) {
+        wx.setStorageSync('autoStartReview', 1);
+        trackEvent('review_entry_click', 'task_card');
+      }
+      wx.switchTab({ url: '/pages/book/book' });
+    } else {
+      wx.switchTab({ url: '/pages/profile/profile' });
     }
   },
   onReviewEntry() {

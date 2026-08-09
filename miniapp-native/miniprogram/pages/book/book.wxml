@@ -1,4 +1,13 @@
 <navbar title="错题本" />
+<!-- 复习清零庆祝态 -->
+<view wx:if="{{celebrate}}" class="cb-mask" bind:tap="onCloseCelebrate">
+  <view class="cb-card" catch:tap="noop">
+    <view class="cb-emoji">🎉</view>
+    <view class="cb-t">今日复习已清零！</view>
+    <view class="cb-s">{{celebrateN}} 道到期错题全部复习完成，遗忘曲线稳住了</view>
+    <view class="cb-btn" bind:tap="onCloseCelebrate">太棒了，继续 ›</view>
+  </view>
+</view>
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
     <!-- 复习模式 -->

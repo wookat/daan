@@ -8,6 +8,7 @@ Page({
     user: null as { uid: string; phone?: string; nickname?: string | null } | null,
     uid: '',
     badgeInfo: null as CheckinBadgesResp | null,
+    nextMilestone: null as { days: number; left: number; pct: number } | null,
   },
   onShow() {
     syncTabBar(this, 4);
@@ -18,7 +19,22 @@ Page({
   async loadBadges() {
     try {
       const badgeInfo = await fetchCheckinBadges();
-      this.setData({ badgeInfo });
+      const ms = (badgeInfo.badges || []).map((b) => b.days);
+      const s = badgeInfo.streak || 0;
+      const next = ms.find((m) => m > s);
+      let nextMilestone: { days: number; left: number; pct: number } | null = null;
+      if (next) {
+        let prev = 0;
+        for (const m of ms) {
+          if (m <= s) prev = m;
+        }
+        nextMilestone = {
+          days: next,
+          left: next - s,
+          pct: Math.round(((s - prev) / (next - prev)) * 100),
+        };
+      }
+      this.setData({ badgeInfo, nextMilestone });
     } catch (e) {
       /* 非关键路径 */
     }

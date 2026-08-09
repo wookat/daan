@@ -19,6 +19,11 @@ class _CalendarPageState extends State<CalendarPage> {
   String? error;
   late int y;
   late int m; // 1-12
+  int streak = 0;
+  int bestStreak = 0;
+  List<({int days, bool unlocked})> badges = [];
+  ({int days, int left, int pct})? nextMilestone;
+  bool badgesLoaded = false;
 
   @override
   void initState() {
@@ -27,6 +32,44 @@ class _CalendarPageState extends State<CalendarPage> {
     y = now.year;
     m = now.month;
     _load();
+    _loadBadges();
+  }
+
+  Future<void> _loadBadges() async {
+    try {
+      final b = await Api.checkinBadges();
+      final s = (b['streak'] as num?)?.toInt() ?? 0;
+      final bs = (b['best_streak'] as num?)?.toInt() ?? s;
+      final list = (b['badges'] as List<dynamic>? ?? [])
+          .map((e) => (
+                days: (((e as Map)['days'] ?? 0) as num).toInt(),
+                unlocked: e['unlocked'] == true,
+              ))
+          .toList();
+      final ms = list.map((x) => x.days).toList();
+      final next = ms.where((x) => x > s).firstOrNull;
+      ({int days, int left, int pct})? nm;
+      if (next != null) {
+        var prev = 0;
+        for (final x in ms) {
+          if (x <= s) prev = x;
+        }
+        nm = (
+          days: next,
+          left: next - s,
+          pct: ((s - prev) * 100 / (next - prev)).round(),
+        );
+      }
+      if (mounted) {
+        setState(() {
+          streak = s;
+          bestStreak = bs;
+          badges = list;
+          nextMilestone = nm;
+          badgesLoaded = true;
+        });
+      }
+    } catch (_) {/* 非关键路径 */}
   }
 
   Future<void> _load() async {
@@ -104,6 +147,10 @@ class _CalendarPageState extends State<CalendarPage> {
               : ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
+                    if (badgesLoaded) ...[
+                      _milestoneCard(),
+                      const SizedBox(height: 16),
+                    ],
                     Card(
                       child: Padding(
                         padding: const EdgeInsets.all(16),
@@ -178,6 +225,74 @@ class _CalendarPageState extends State<CalendarPage> {
                     ),
                   ],
                 ),
+    );
+  }
+
+  /// 连签里程碑卡：当前连签/最佳连签 + 下一枚徽章进度条 + 徽章墙。
+  Widget _milestoneCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(LucideIcons.flame, size: 18, color: KgColors.warning),
+                const SizedBox(width: 6),
+                Text('连续打卡 $streak 天',
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                const Spacer(),
+                Text('最佳 $bestStreak 天',
+                    style: const TextStyle(fontSize: 12, color: KgColors.t3)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (nextMilestone != null) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: LinearProgressIndicator(
+                  value: nextMilestone!.pct / 100,
+                  minHeight: 8,
+                  backgroundColor: context.kg.fill,
+                  valueColor: const AlwaysStoppedAnimation(KgColors.brand),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text('再打卡 ${nextMilestone!.left} 天解锁「${nextMilestone!.days} 天」徽章',
+                  style: const TextStyle(fontSize: 12, color: KgColors.t3)),
+            ] else if (badges.isNotEmpty)
+              const Text('已解锁全部打卡徽章，太强了！',
+                  style: TextStyle(fontSize: 12, color: KgColors.t3)),
+            if (badges.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  for (final b in badges)
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Opacity(
+                            opacity: b.unlocked ? 1 : .3,
+                            child: Text(b.unlocked ? '🏅' : '🔒',
+                                style: const TextStyle(fontSize: 20)),
+                          ),
+                          const SizedBox(height: 2),
+                          Text('${b.days}天',
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  color: b.unlocked ? KgColors.brand : KgColors.t4,
+                                  fontWeight:
+                                      b.unlocked ? FontWeight.w700 : FontWeight.w400)),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
