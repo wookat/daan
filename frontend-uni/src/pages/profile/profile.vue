@@ -154,6 +154,7 @@ export default {
       return n;
     },
     streak() {
+      if (this.badgeInfo && this.badgeInfo.streak != null) return this.badgeInfo.streak;
       return checkinStreak(this.pstats);
     },
     profileSummary() {

@@ -13,7 +13,7 @@
         <view class="p" :class="{ win: d.winner === 'creator' }">
           <text v-if="d.winner === 'creator'" class="crown">👑</text>
           <view class="av">{{ (d.creator.name || '?').slice(0, 1) }}</view>
-          <text class="nm">{{ d.creator.name }}</text>
+          <text class="nm">{{ creatorName }}</text>
           <text class="sc">{{ d.creator.score }}</text>
           <text class="meta">答对 {{ d.creator.correct }}/{{ d.n_questions }} · {{ fmtMs(d.creator.time_ms) }}</text>
         </view>
@@ -24,7 +24,7 @@
         <view class="p" :class="{ win: d.winner === 'opponent' }">
           <text v-if="d.winner === 'opponent'" class="crown">👑</text>
           <view class="av rival">{{ (d.opponent.name || '?').slice(0, 1) }}</view>
-          <text class="nm">{{ d.opponent.name }}</text>
+          <text class="nm">{{ opponentName }}</text>
           <text class="sc">{{ d.opponent.score }}</text>
           <text class="meta">答对 {{ d.opponent.correct }}/{{ d.n_questions }} · {{ fmtMs(d.opponent.time_ms) }}</text>
         </view>
@@ -56,11 +56,22 @@ export default {
     modLabel() {
       return NAMES[this.d && this.d.module] || '混合模块';
     },
+    sameName() {
+      return !!(this.d && this.d.creator.name === this.d.opponent.name);
+    },
+    creatorName() {
+      if (!this.d) return '';
+      return this.sameName ? `${this.d.creator.name}（发起方）` : this.d.creator.name;
+    },
+    opponentName() {
+      if (!this.d) return '';
+      return this.sameName ? `${this.d.opponent.name}（应战方）` : this.d.opponent.name;
+    },
     resultText() {
       if (!this.d) return '';
       if (this.d.winner === 'draw') return '平局';
-      const w = this.d.winner === 'creator' ? this.d.creator : this.d.opponent;
-      return `${w.name} 获胜`;
+      const w = this.d.winner === 'creator' ? this.creatorName : this.opponentName;
+      return `${w} 获胜`;
     },
   },
   onLoad(query) {
@@ -80,7 +91,7 @@ export default {
         const d = await pkResult(this.rid);
         this.d = d;
         uni.setNavigationBarTitle({
-          title: `${d.creator.name} vs ${d.opponent.name} 的答题 PK 战绩，不服来战！- 考公助手`,
+          title: `${this.creatorName} vs ${this.opponentName} 的答题 PK 战绩，不服来战！- 考公助手`,
         });
       } catch (e) {
         this.errMsg = e.message || '战绩不存在或对局未结束';

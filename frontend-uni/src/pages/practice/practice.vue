@@ -1140,29 +1140,34 @@ export default {
       this.checkBadgeMilestone();
     },
     async checkBadgeMilestone() {
+      // 本地连击只做「疑似达标」预检；解锁与展示以服务端 /api/checkin/badges 的 streak 为准
       const MILESTONES = [3, 7, 14, 30, 60, 100];
       const days = this.pstats.days || {};
-      let streak = 0;
+      let localStreak = 0;
       const d = new Date();
       while (days[d.toISOString().slice(0, 10)]) {
-        streak++;
+        localStreak++;
         d.setDate(d.getDate() - 1);
       }
       const seen = Number(uni.getStorageSync('badgeSeenMax') || 0);
-      if (!MILESTONES.includes(streak) || streak <= seen || this._badgeChecking) return;
+      if (!MILESTONES.some((m) => localStreak >= m && m > seen) || this._badgeChecking) return;
       this._badgeChecking = true;
       try {
         const b = await fetchCheckinBadges();
-        if ((b.badges || []).some((x) => x.days === streak && x.unlocked)) {
-          uni.setStorageSync('badgeSeenMax', streak);
-          trackEvent('badge_unlock', 'badge', String(streak));
+        const srvStreak = b.streak || 0;
+        const hit = MILESTONES.filter(
+          (m) => srvStreak >= m && m > seen && (b.badges || []).some((x) => x.days === m && x.unlocked)
+        ).pop();
+        if (hit) {
+          uni.setStorageSync('badgeSeenMax', hit);
+          trackEvent('badge_unlock', 'badge', String(hit));
           uni.showModal({
             title: '🏅 解锁新徽章！',
-            content: `连续打卡 ${streak} 天，坚持就是实力。生成专属海报，晒给考友看？`,
+            content: `连续打卡 ${srvStreak} 天，解锁 ${hit} 天徽章，坚持就是实力。生成专属海报，晒给考友看？`,
             confirmText: '生成海报',
             cancelText: '稍后再看',
             success: (r) => {
-              if (r.confirm) uni.navigateTo({ url: '/pkgA/social/poster?badge=' + streak });
+              if (r.confirm) uni.navigateTo({ url: '/pkgA/social/poster?badge=' + hit });
             },
           });
         }
