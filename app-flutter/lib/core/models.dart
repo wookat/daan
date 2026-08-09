@@ -59,7 +59,18 @@ class Question {
   bool reported = false;
 
   bool get answered => picked != null;
-  bool get correct => picked == answer;
+  bool get correct => normLetters(picked ?? '') == normLetters(answer);
+
+  /// 多选题（答案含多个 A-D 字母，如「ABD」）
+  bool get isMulti => normLetters(answer).length > 1;
+
+  /// 提取并归一答案字母（去重排序），非字母答案原样返回
+  static String normLetters(String s) {
+    final m = RegExp(r'[A-D]+').firstMatch(s.toUpperCase());
+    if (m == null) return s.trim().toUpperCase();
+    final l = m.group(0)!.split('').toSet().toList()..sort();
+    return l.join();
+  }
 
   static Question fromJson(Map<String, dynamic> j, {int? mistakeId}) {
     final rawOpts = j['options'];

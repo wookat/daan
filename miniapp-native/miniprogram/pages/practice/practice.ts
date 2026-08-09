@@ -52,6 +52,7 @@ Page({
     dueReview: 0,
   },
   _source: null as string | null,
+  _mode: '',
   _module: null as string | null,
   _submodule: null as string | null,
   _tag3: null as string | null,
@@ -68,7 +69,8 @@ Page({
     this._submodule = query.submodule ? decodeURIComponent(query.submodule) : null;
     this._tag3 = query.tag3 ? decodeURIComponent(query.tag3) : null;
     const count = Number(query.count) || 10;
-    this.start(query.mode || '', count);
+    this._mode = query.mode || '';
+    this.start(this._mode, count);
   },
   onUnload() {
     this.stopTimer();
@@ -301,7 +303,7 @@ Page({
   onRetry() {
     this._resultSent = false;
     this.setData({ finished: false, percentile: null });
-    this.start('', this.data.items.length || 10);
+    this.start(this._mode, this.data.items.length || 10);
   },
   onQuit() {
     wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/home/home' }) });

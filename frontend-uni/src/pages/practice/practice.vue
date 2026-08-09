@@ -171,7 +171,7 @@
         </view>
         <text class="duenudge-go">去复习 ›</text>
       </view>
-      <button class="btn" @click="start(lastModule, lastSubmodule)">再来一组</button>
+      <button class="btn" @click="retryGroup">再来一组</button>
       <button v-if="!beiMode" class="btn ghost" style="margin-top: 16rpx" @click="shareResult">分享成绩</button>
       <button class="btn plain" style="margin-top: 8rpx" @click="quit">返回首页</button>
     </view>
@@ -563,6 +563,7 @@ export default {
     const redoSet = uni.getStorageSync('redoSet');
     if (redoSet && redoSet.length) {
       uni.removeStorageSync('redoSet');
+      this._redoItems = redoSet;
       if (this.beiMode) {
         this.beiMode = false;
         uni.setStorageSync('beiMode', '');
@@ -1064,7 +1065,27 @@ export default {
         this._starting = false;
       }
     },
+    // 完成页「再来一组」：错题重练场次重用同一组错题，其余按原模块重新抽题
+    retryGroup() {
+      if (this._redoItems && this._redoItems.length && !this.lastModule) {
+        this.items = this._redoItems.map((q) => ({ ...q, _saved: false }));
+        this.idx = 0;
+        this.picked = '';
+        this.right = 0;
+        this.streak = 0;
+        this.bestStreak = 0;
+        this.autoSaved = false;
+        this.resultSent = false;
+        this.percentile = null;
+        this.session = true;
+        this.startQTimer();
+        uni.showToast({ title: '错题重练再来一组', icon: 'none' });
+        return;
+      }
+      this.start(this.lastModule, this.lastSubmodule);
+    },
     async start(module, submodule, count, adaptive, forceReal, tag3, source, year) {
+      this._redoItems = null;
       if (this._starting) return;
       this._starting = true;
       // 推荐埋点：记录本次练习的入口来源（reco/weak 等），随 answer_log 落库

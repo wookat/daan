@@ -22,8 +22,8 @@ interface RItem extends Mistake {
 }
 
 function extractLetter(s: string | null | undefined): string {
-  const m = /[A-D]/.exec(String(s || '').toUpperCase());
-  return m ? m[0] : '';
+  const m = /[A-D]+/.exec(String(s || '').toUpperCase());
+  return m ? Array.from(new Set(m[0])).sort().join('') : '';
 }
 
 Page({
@@ -42,6 +42,7 @@ Page({
     rIdx: 0,
     rCur: null as RItem | null,
     rLetter: '',
+    rMulti: false,
     rOpts: [] as { k: string; text: string }[],
     picked: '',
     answered: false,
@@ -183,9 +184,11 @@ Page({
     const cur = this.data.rItems[this.data.rIdx] || null;
     const opts = cur && cur.options ? cur.options : null;
     const rOpts = ['A', 'B', 'C', 'D'].map((k) => ({ k, text: (opts && opts[k]) || '' }));
+    const rLetter = extractLetter(cur ? cur.correct_answer : '');
     this.setData({
       rCur: cur,
-      rLetter: extractLetter(cur ? cur.correct_answer : ''),
+      rLetter,
+      rMulti: rLetter.length > 1,
       rOpts,
       picked: '',
       answered: false,
@@ -196,8 +199,19 @@ Page({
   onReviewPick(e: WechatMiniprogram.TouchEvent) {
     if (this.data.answered) return;
     const o = String(e.currentTarget.dataset.opt);
+    if (this.data.rMulti) {
+      const set = new Set(this.data.picked.split('').filter(Boolean));
+      if (set.has(o)) set.delete(o);
+      else set.add(o);
+      this.setData({ picked: Array.from(set).sort().join('') });
+      return;
+    }
     this.setData({ picked: o });
     this.recordReview(o === this.data.rLetter);
+  },
+  onConfirmMulti() {
+    if (this.data.answered || !this.data.picked) return;
+    this.recordReview(this.data.picked === this.data.rLetter);
   },
   onSelfJudge(e: WechatMiniprogram.TouchEvent) {
     if (this.data.answered) return;

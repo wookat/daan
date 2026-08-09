@@ -22,7 +22,7 @@
           <view
             wx:for="{{rOpts}}"
             wx:key="k"
-            class="r-opt {{rOpts[0].text ? 'r-opt-full' : ''}} {{!answered ? '' : item.k === rLetter ? 'rok' : item.k === picked ? 'rbad' : 'rdim'}}"
+            class="r-opt {{rOpts[0].text ? 'r-opt-full' : ''}} {{!answered ? (rMulti && picked.indexOf(item.k) > -1 ? 'rsel' : '') : rLetter.indexOf(item.k) > -1 ? 'rok' : picked.indexOf(item.k) > -1 ? 'rbad' : 'rdim'}}"
             data-opt="{{item.k}}"
             bind:tap="onReviewPick"
           >{{item.k}}{{item.text ? '. ' + item.text : ''}}</view>
@@ -33,6 +33,10 @@
           </view>
           <text wx:if="{{rCur.explanation}}" class="m-exp" user-select>{{rCur.explanation}}</text>
           <view class="btn-primary r-next" bind:tap="onNextReview">{{rIdx + 1 < rItems.length ? '下一题' : '完成复习'}}</view>
+        </block>
+        <block wx:elif="{{rMulti}}">
+          <text class="r-sj-t">多选题：选完所有选项后确认</text>
+          <view class="btn-primary r-next {{picked ? '' : 'r-dis'}}" bind:tap="onConfirmMulti">确认答案{{picked ? '（已选 ' + picked + '）' : ''}}</view>
         </block>
         <block wx:elif="{{!rLetter}}">
           <text class="r-sj-t">先自己做，然后：</text>
