@@ -121,12 +121,12 @@ def _count_questions(module: str, submodule: str | None = None) -> int:
     conn = db.get_conn()
     if submodule:
         n = conn.execute(
-            "SELECT COUNT(*) FROM questions WHERE module=? AND submodule=? AND (disabled IS NULL OR disabled=0)",
+            "SELECT COUNT(*) FROM questions WHERE module=? AND submodule=? AND disabled=0",
             (module, submodule),
         ).fetchone()[0]
     else:
         n = conn.execute(
-            "SELECT COUNT(*) FROM questions WHERE module=? AND (disabled IS NULL OR disabled=0)",
+            "SELECT COUNT(*) FROM questions WHERE module=? AND disabled=0",
             (module,),
         ).fetchone()[0]
     conn.close()
@@ -135,7 +135,7 @@ def _count_questions(module: str, submodule: str | None = None) -> int:
 
 def _list_questions(module: str, submodule: str | None, page: int) -> list:
     conn = db.get_conn()
-    cond = "module=? AND (disabled IS NULL OR disabled=0)"
+    cond = "module=? AND disabled=0"
     args: list = [module]
     if submodule:
         cond += " AND submodule=?"
@@ -219,7 +219,7 @@ def tiku_papers():
 @router.get("/papers/{pid}", response_class=HTMLResponse, include_in_schema=False)
 def tiku_paper_detail(pid: int):
     p = db.get_exam_paper(pid)
-    if not p or p.get("kind") == "mock":
+    if not p or p.get("kind") != "zhenti":
         raise HTTPException(404, "试卷不存在")
     qids = p["question_ids"]
     rows = []
@@ -230,7 +230,7 @@ def tiku_paper_detail(pid: int):
             r["id"]: r
             for r in conn.execute(
                 f"SELECT id, question, submodule, is_real, exam_year, exam_region FROM questions "
-                f"WHERE id IN ({placeholders}) AND (disabled IS NULL OR disabled=0)",
+                f"WHERE id IN ({placeholders}) AND disabled=0",
                 qids,
             )
         }
@@ -266,7 +266,7 @@ def _render_question(qid: int) -> str:
     conn = db.get_conn()
     r = conn.execute(
         "SELECT id, module, submodule, tag3, question, options, answer, explanation, hs_explanation, "
-        "is_real, exam_year, exam_region FROM questions WHERE id=? AND (disabled IS NULL OR disabled=0)",
+        "is_real, exam_year, exam_region, image, image_credit FROM questions WHERE id=? AND disabled=0",
         (qid,),
     ).fetchone()
     if not r:
@@ -275,7 +275,7 @@ def _render_question(qid: int) -> str:
     similar = []
     if r["tag3"]:
         similar = conn.execute(
-            "SELECT id, question FROM questions WHERE tag3=? AND id!=? AND (disabled IS NULL OR disabled=0) "
+            "SELECT id, question FROM questions WHERE tag3=? AND id!=? AND disabled=0 "
             "ORDER BY id DESC LIMIT 8",
             (r["tag3"], qid),
         ).fetchall()
@@ -284,7 +284,7 @@ def _render_question(qid: int) -> str:
         placeholders = ",".join("?" * len(have))
         similar += conn.execute(
             f"SELECT id, question FROM questions WHERE module=? AND submodule IS ? AND id NOT IN ({placeholders}) "
-            f"AND (disabled IS NULL OR disabled=0) ORDER BY id DESC LIMIT ?",
+            f"AND disabled=0 ORDER BY id DESC LIMIT ?",
             [r["module"], r["submodule"], *have, 8 - len(similar)],
         ).fetchall()
     conn.close()
@@ -296,6 +296,14 @@ def _render_question(qid: int) -> str:
         options = json.loads(r["options"] or "{}")
     except ValueError:
         options = {}
+    img_html = ""
+    if r["image"]:
+        img_src = r["image"] if r["image"].startswith("http") else _url(r["image"])
+        img_alt = _e(qtext[:40]) or "题目配图"
+        img_html = f'<img src="{_e(img_src)}" alt="{img_alt}" style="max-width:100%;border-radius:8px" loading="lazy">'
+        if r["image_credit"]:
+            credit = _e(r["image_credit"])
+            img_html += f'<p class="meta">图源：{credit}</p>'
     opts_html = "".join(
         f'<div class="opt"><b>{_e(k)}.</b> {_e(v)}</div>' for k, v in sorted(options.items())
     )
@@ -317,6 +325,7 @@ def _render_question(qid: int) -> str:
         + (f' · {_e(topic["name"])}' if topic else "")
         + f" · {_e(src)}</p>"
         + f"<p>{_e(qtext)}</p>"
+        + img_html
         + opts_html
         + '<details open class="ans"><summary>答案与解析</summary>'
         + f'<p><b>正确答案：{_e(r["answer"] or "见解析")}</b></p><p>{exp_html or "暂无解析"}</p></details>'
@@ -417,7 +426,7 @@ def tiku_submodule(module: str, submodule: str, page: int = 1):
 def _question_ids() -> list[int]:
     conn = db.get_conn()
     ids = [r["id"] for r in conn.execute(
-        "SELECT id FROM questions WHERE (disabled IS NULL OR disabled=0) ORDER BY id"
+        "SELECT id FROM questions WHERE disabled=0 ORDER BY id"
     )]
     conn.close()
     return ids

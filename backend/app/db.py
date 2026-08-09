@@ -362,7 +362,7 @@ def random_questions(
     if region:
         where.append("exam_region=?")
         args.append(region)
-    where.append("(disabled IS NULL OR disabled=0)")
+    where.append("disabled=0")
     clause = ("WHERE " + " AND ".join(where)) if where else ""
     # 默认随机抽题只取 id，强制走 covering 索引避免回表读大行（冷启动 10s+ → 亚秒）；
     # adaptive 排序引用 correct_ratio 不在索引内，保持默认计划
@@ -501,7 +501,7 @@ def grouped_ziliao_questions(limit: int = 10, uid: str | None = None) -> list[di
         for r in conn.execute(
             """SELECT material_hash FROM questions
                WHERE module='ziliao' AND material_hash IS NOT NULL AND material_hash!='-'
-                 AND (disabled IS NULL OR disabled=0)
+                 AND disabled=0
                GROUP BY material_hash HAVING COUNT(*)>=2
                ORDER BY RANDOM() LIMIT 24"""
         )
@@ -511,7 +511,7 @@ def grouped_ziliao_questions(limit: int = 10, uid: str | None = None) -> list[di
             break
         rows = conn.execute(
             "SELECT * FROM questions WHERE module='ziliao' AND material_hash=? "
-            "AND (disabled IS NULL OR disabled=0) ORDER BY id LIMIT 5",
+            "AND disabled=0 ORDER BY id LIMIT 5",
             (h,),
         ).fetchall()
         if len(rows) < 2:
@@ -760,7 +760,7 @@ def shenlun_materials(topic: str | None = None, mtype: str | None = None, limit:
 def question_counts() -> list[dict]:
     conn = get_conn()
     rows = conn.execute(
-        "SELECT module, COUNT(*) n FROM questions WHERE (disabled IS NULL OR disabled=0) GROUP BY module ORDER BY n DESC"
+        "SELECT module, COUNT(*) n FROM questions WHERE disabled=0 GROUP BY module ORDER BY n DESC"
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -769,7 +769,7 @@ def question_counts() -> list[dict]:
 def submodule_counts(module: str) -> list[dict]:
     conn = get_conn()
     rows = conn.execute(
-        "SELECT submodule, COUNT(*) n FROM questions WHERE module=? AND (disabled IS NULL OR disabled=0) AND submodule IS NOT NULL AND submodule!='' "
+        "SELECT submodule, COUNT(*) n FROM questions WHERE module=? AND disabled=0 AND submodule IS NOT NULL AND submodule!='' "
         "GROUP BY submodule HAVING n >= 8 OR submodule='图形推理' ORDER BY n DESC LIMIT 30",
         (module,),
     ).fetchall()
@@ -789,7 +789,7 @@ def tag3_counts() -> dict:
     conn = get_conn()
     rows = conn.execute(
         "SELECT tag3, COUNT(*) n FROM questions WHERE tag3 IS NOT NULL AND tag3!='' "
-        "AND (disabled IS NULL OR disabled=0) GROUP BY tag3"
+        "AND disabled=0 GROUP BY tag3"
     ).fetchall()
     conn.close()
     out = {r["tag3"]: r["n"] for r in rows}
@@ -802,7 +802,7 @@ def questions_by_tag3(code: str, offset: int = 0, limit: int = 20) -> list[dict]
     conn = get_conn()
     rows = conn.execute(
         "SELECT id, module, submodule, tag3, question, options, answer, explanation, is_real, exam_year, exam_region "
-        "FROM questions WHERE tag3=? AND (disabled IS NULL OR disabled=0) ORDER BY id DESC LIMIT ? OFFSET ?",
+        "FROM questions WHERE tag3=? AND disabled=0 ORDER BY id DESC LIMIT ? OFFSET ?",
         (code, min(limit, 50), offset),
     ).fetchall()
     conn.close()
@@ -1818,7 +1818,7 @@ def list_papers() -> list[dict]:
     rows = conn.execute(
         """SELECT source, COUNT(*) n, MAX(exam_year) y, MAX(exam_region) rg
            FROM questions
-           WHERE is_real=1 AND (disabled IS NULL OR disabled=0) AND source IS NOT NULL AND source!=''
+           WHERE is_real=1 AND disabled=0 AND source IS NOT NULL AND source!=''
            GROUP BY source HAVING n>=40
            ORDER BY y DESC, n DESC"""
     ).fetchall()
@@ -1841,7 +1841,7 @@ def paper_questions(source: str, limit: int = 140) -> list[dict]:
     conn = get_conn()
     rows = conn.execute(
         """SELECT * FROM questions
-           WHERE source=? AND is_real=1 AND (disabled IS NULL OR disabled=0)
+           WHERE source=? AND is_real=1 AND disabled=0
            ORDER BY id LIMIT ?""",
         (source, limit),
     ).fetchall()
@@ -2485,12 +2485,12 @@ def create_mock_paper(n: int = 30, duration_min: int = 30) -> int:
     for mod in MODULE_ORDER:
         want = max(1, round(n * share[mod]))
         ids += [r["id"] for r in conn.execute(
-            "SELECT id FROM questions WHERE module=? AND (disabled IS NULL OR disabled=0) "
+            "SELECT id FROM questions WHERE module=? AND disabled=0 "
             "ORDER BY has_hs DESC, RANDOM() LIMIT ?", (mod, want))]
     if len(ids) < n:
         placeholders = ",".join("?" * len(ids)) or "0"
         ids += [r["id"] for r in conn.execute(
-            f"SELECT id FROM questions WHERE (disabled IS NULL OR disabled=0) AND id NOT IN ({placeholders}) "
+            f"SELECT id FROM questions WHERE disabled=0 AND id NOT IN ({placeholders}) "
             "ORDER BY RANDOM() LIMIT ?", (*ids, n - len(ids)))]
     ids = ids[:n]
     title = "迷你模考 " + time.strftime("%m-%d %H:%M:%S") + " #" + secrets.token_hex(3)
@@ -3359,7 +3359,7 @@ def _avail_new_count(conn, uid: str, tag3: str | None = None, submodule: str | N
         return 0
     return conn.execute(
         f"""SELECT COUNT(*) FROM questions
-            WHERE {cond} AND (disabled IS NULL OR disabled=0)
+            WHERE {cond} AND disabled=0
               AND id NOT IN (SELECT question_id FROM answer_log WHERE uid=? AND question_id IS NOT NULL)""",
         (*args, uid),
     ).fetchone()[0]
@@ -3502,7 +3502,7 @@ def reinforce_questions(uid: str, tag3: str | None = None, module: str | None = 
         ph = ",".join("?" * len(exclude)) or "0"
         rows = conn.execute(
             f"""SELECT * FROM questions
-                WHERE {cond} AND (disabled IS NULL OR disabled=0)
+                WHERE {cond} AND disabled=0
                   AND id NOT IN ({ph})
                   AND id NOT IN (SELECT question_id FROM answer_log WHERE uid=? AND question_id IS NOT NULL)
                 ORDER BY {order} LIMIT ?""",
