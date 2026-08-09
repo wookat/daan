@@ -124,6 +124,7 @@
       </view>
 
       <template v-if="match.status !== 'finished'">
+        <view v-if="noOppHint" class="card wait-hint">⏳ 暂无对手，试试邀请好友——复制下方挑战码或分享链接，叫考友来应战</view>
         <view class="card share-card">
           <text class="share-t">把挑战发给考友，等 TA 应战</text>
           <view class="code-box" @click="copyCode"><text class="code">{{ match.code }}</text><text class="copy">复制</text></view>
@@ -173,6 +174,10 @@ export default {
       rivalDone: false,
       myName: pkNickname(),
       submitting: false,
+      fromRandom: false,
+      noOppHint: false,
+      waitTimerId: null,
+      waitPollId: null,
     };
   },
   computed: {
@@ -214,6 +219,7 @@ export default {
   },
   onUnload() {
     this.stopTimer();
+    this.stopWaitWatch();
   },
   // #ifdef MP-WEIXIN
   onShareAppMessage() {
@@ -237,6 +243,7 @@ export default {
         uni.showLoading({ title: '出题中…' });
         const d = await pkCreate(this.module);
         uni.hideLoading();
+        this.fromRandom = false;
         this.startQuiz(d.code, d.questions, 'creator');
       } catch (e) {
         uni.hideLoading();
@@ -254,6 +261,7 @@ export default {
           this.loadRival(d.code);
         } else {
           uni.showToast({ title: '暂无对手，已为你开局等待匹配', icon: 'none' });
+          this.fromRandom = true;
           this.startQuiz(d.code, d.questions, 'creator');
         }
       } catch (e) {
@@ -292,6 +300,7 @@ export default {
       } catch (e) { /* 非关键路径 */ }
     },
     startQuiz(code, questions, side) {
+      if (side !== 'creator') this.fromRandom = false;
       this.code = code;
       this.questions = questions;
       this.mySide = side;
@@ -346,11 +355,40 @@ export default {
         uni.hideLoading();
         this.match = d.match;
         this.view = 'result';
+        if (this.fromRandom && d.match.status !== 'finished') this.startWaitWatch();
       } catch (e) {
         uni.hideLoading();
         uni.showToast({ title: e.message || '提交失败', icon: 'none' });
       } finally {
         this.submitting = false;
+      }
+    },
+    startWaitWatch() {
+      this.stopWaitWatch();
+      this.noOppHint = false;
+      this.waitTimerId = setTimeout(() => {
+        if (this.view === 'result' && this.match && this.match.status !== 'finished') this.noOppHint = true;
+      }, 30000);
+      this.waitPollId = setInterval(async () => {
+        if (this.view !== 'result') return this.stopWaitWatch();
+        try {
+          const d = await pkMatch(this.code);
+          this.match = d.match;
+          if (d.match.status === 'finished') {
+            this.stopWaitWatch();
+            uni.showToast({ title: '对手已完成！', icon: 'none' });
+          }
+        } catch (e) { /* 非关键路径 */ }
+      }, 5000);
+    },
+    stopWaitWatch() {
+      if (this.waitTimerId) {
+        clearTimeout(this.waitTimerId);
+        this.waitTimerId = null;
+      }
+      if (this.waitPollId) {
+        clearInterval(this.waitPollId);
+        this.waitPollId = null;
       }
     },
     async viewResult(code) {
@@ -447,6 +485,8 @@ export default {
       this.createMatch();
     },
     backHome() {
+      this.stopWaitWatch();
+      this.fromRandom = false;
       this.view = 'home';
       this.loadHome();
     },
@@ -500,6 +540,8 @@ export default {
 .m-badge.lose { background: var(--bad-soft); color: var(--bad); }
 .m-badge.draw { background: var(--fill); color: var(--ink-2); }
 .m-badge.wait { background: var(--warn-soft); color: var(--warn); }
+
+.wait-hint { background: #fef3c7; color: #b45309; font-size: 25rpx; font-weight: 600; line-height: 1.6; }
 
 /* 答题页 */
 .pk-top { background: linear-gradient(135deg, #5b8af8, #3b6ff5); border-radius: 32rpx; padding: 30rpx 32rpx; margin-bottom: 20rpx; box-shadow: 0 12rpx 36rpx rgba(59, 111, 245, 0.3); }

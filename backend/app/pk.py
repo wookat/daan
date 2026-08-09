@@ -254,6 +254,7 @@ def api_pk_result(code: str):
         raise HTTPException(404, "战绩不存在或对局未结束")
     def pub(side):
         return {
+            "role": side,
             "name": m[f"{side}_name"] or "匿名考友",
             "score": m[f"{side}_score"],
             "correct": m[f"{side}_correct"],
