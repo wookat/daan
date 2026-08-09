@@ -45,6 +45,9 @@ Page({
       this._endAt = Date.now() + d.paper.duration_min * 60 * 1000;
       this.setData({ loading: false, items, idx: 0, cur: items[0] });
       this.startClock();
+      wx.enableAlertBeforeUnload({
+        message: '模考进行中，退出将不保留本次作答，确定离开吗？',
+      });
     } catch (e) {
       wx.showToast({ title: '开考失败：' + (e as Error).message, icon: 'none' });
       setTimeout(() => wx.navigateBack(), 1200);
@@ -158,6 +161,7 @@ Page({
         recordStat(it.module || 'other', !!it.correct, it.submodule || null);
       }
       wx.hideLoading();
+      wx.disableAlertBeforeUnload();
       wx.redirectTo({ url: '/pages/exam/report?attempt_id=' + d.attempt_id });
     } catch (e) {
       wx.hideLoading();
