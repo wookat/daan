@@ -53,6 +53,8 @@ def main():
     tiku_urls = Counter()
     status_counter = Counter()
     tiku_engine = 0
+    seg_counter = Counter()
+    seg_engine = Counter()
 
     for line in fh:
         line = line.strip()
@@ -81,9 +83,20 @@ def main():
             bot_counter[name] += 1
         if uri.startswith("/tiku"):
             tiku += 1
-            tiku_urls[uri.split("?")[0]] += 1
+            path = uri.split("?")[0]
+            tiku_urls[path] += 1
             if cat == "engine":
                 tiku_engine += 1
+            for pre, seg in (("/tiku/y/", "年份页"), ("/tiku/t/", "考点页"), ("/tiku/q/", "题目页"), ("/tiku/papers", "真题卷")):
+                if path.startswith(pre):
+                    seg_counter[seg] += 1
+                    if cat == "engine":
+                        seg_engine[seg] += 1
+                    break
+            else:
+                seg_counter["其他/导航"] += 1
+                if cat == "engine":
+                    seg_engine["其他/导航"] += 1
 
     def fmt(ts):
         return datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M") if ts else "-"
@@ -91,6 +104,8 @@ def main():
     print(f"时间范围: {fmt(ts_min)} ~ {fmt(ts_max)}")
     print(f"总请求: {total}")
     print(f"/tiku/ 请求: {tiku}（其中搜索引擎爬虫 {tiku_engine}）")
+    if seg_counter:
+        print("/tiku/ 分段命中（总/爬虫）:", {k: f"{v}/{seg_engine.get(k, 0)}" for k, v in seg_counter.most_common()})
     print(f"UA 分类: 搜索引擎爬虫 {cat_counter['engine']} / 其他bot(含自测curl等) {cat_counter['bot']} / 疑似真人 {cat_counter['human']}")
     if engine_counter:
         print("搜索引擎明细:", dict(engine_counter.most_common()))
