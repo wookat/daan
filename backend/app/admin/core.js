@@ -16,7 +16,8 @@
     const r = await fetch(path, Object.assign({
       headers: { 'X-Admin-Token': token(), 'Content-Type': 'application/json' },
     }, opt || {}));
-    if (r.status === 401) { showLogin('登录已失效，请重新输入管理令牌'); throw new Error('未授权'); }
+    if (r.status === 401) { showLogin('令牌无效或已失效，请重新输入管理令牌'); throw new Error('令牌无效'); }
+    if (r.status === 503) { const d = (await r.json().catch(() => ({}))).detail; showLogin(d || '服务端未配置管理令牌'); throw new Error(d || '服务端未配置管理令牌'); }
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || ('HTTP ' + r.status));
     return r.json();
   }
@@ -134,7 +135,7 @@
         $('login').classList.add('hidden');
         $('app').classList.remove('hidden');
         route();
-      } catch (e) { $('login-err').textContent = '令牌无效：' + e.message; }
+      } catch (e) { $('login-err').textContent = e.message; }
     };
     $('login-token').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('login-btn').click(); });
     $('logout').onclick = () => { localStorage.removeItem('admToken'); location.reload(); };

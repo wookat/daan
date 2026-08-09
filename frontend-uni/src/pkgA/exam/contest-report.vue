@@ -58,8 +58,9 @@
       </view>
 
       <!-- 4. 弱项考点 -->
-      <view v-if="r.weak_tags.length" class="card">
+      <view class="card">
         <view class="h">本卷薄弱考点</view>
+        <text v-if="!r.weak_tags.length" class="note">本卷错题较少，暂未形成薄弱考点结论，继续保持！</text>
         <view v-for="t in r.weak_tags" :key="t.tag3" class="wrow" @click="goPractice(t.tag3)">
           <view class="wrow-l">
             <text class="wrow-t">{{ t.name || t.tag3 }}</text>

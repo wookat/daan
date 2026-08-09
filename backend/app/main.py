@@ -290,7 +290,9 @@ ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "") or IMPORT_TOKEN
 
 
 def check_admin(x_admin_token: str | None):
-    if not ADMIN_TOKEN or x_admin_token != ADMIN_TOKEN:
+    if not ADMIN_TOKEN:
+        raise HTTPException(503, "服务端未配置管理令牌，请联系管理员")
+    if x_admin_token != ADMIN_TOKEN:
         raise HTTPException(401, "无效管理令牌")
 
 
@@ -1303,6 +1305,34 @@ def api_exam_report(attempt_id: int, uid: str = ""):
             "hs_explanation": q.get("hs_explanation"),
         })
     answered = sum(1 for r in items if r["picked"] and len(r["picked"]) == 1)
+    tag_stats: dict[str, list[int]] = {}
+    for i, qid in enumerate(paper["question_ids"]):
+        q = questions.get(qid)
+        if not q:
+            continue
+        tag = q.get("tag3")
+        if not tag or tag == "UNKNOWN":
+            continue
+        picked = (picks.get(i + 1) or "").strip().upper()
+        correct = picked == (q.get("answer") or "").strip().upper()[:1]
+        tag_stats.setdefault(tag, [0, 0])
+        tag_stats[tag][0] += 1
+        if picked and not correct:
+            tag_stats[tag][1] += 1
+    topic_idx = taxonomy.topic_index()
+    weak_tags = sorted(
+        (
+            {
+                "tag3": t,
+                "name": (topic_idx.get(t) or {}).get("name") or t,
+                "n": v[0],
+                "wrong": v[1],
+            }
+            for t, v in tag_stats.items()
+            if v[1] > 0
+        ),
+        key=lambda x: (-x["wrong"], -x["n"]),
+    )[:3]
     return {
         "attempt": {
             "id": attempt["id"],
@@ -1324,6 +1354,7 @@ def api_exam_report(attempt_id: int, uid: str = ""):
         "total": len(items),
         "answered": answered,
         "correct": sum(1 for r in items if r["correct"]),
+        "weak_tags": weak_tags,
         "items": items,
     }
 

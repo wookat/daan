@@ -73,6 +73,8 @@ class _ExamReportPageState extends State<ExamReportPage> {
                     const SizedBox(height: 12),
                     _modules(),
                     const SizedBox(height: 12),
+                    _weakCard(),
+                    const SizedBox(height: 12),
                     _grid(),
                     const SizedBox(height: 12),
                     Row(
@@ -211,6 +213,44 @@ class _ExamReportPageState extends State<ExamReportPage> {
                     fontFeatures: [FontFeature.tabularFigures()])),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _weakCard() {
+    final tags = (report?['weak_tags'] as List<dynamic>? ?? [])
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('本卷薄弱考点',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+            if (tags.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text('本卷错题较少，暂未形成薄弱考点结论，继续保持！',
+                    style: TextStyle(fontSize: 13, color: context.kg.t3)),
+              ),
+            for (final t in tags)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                title: Text((t['name'] ?? t['tag3']) as String),
+                subtitle: Text('错 ${t['wrong']}/${t['n']} 题',
+                    style: TextStyle(color: context.kg.t3)),
+                trailing: const Text('去练 ›',
+                    style: TextStyle(
+                        color: KgColors.brand, fontWeight: FontWeight.w600)),
+                onTap: () => context.push(
+                    '/practice?tag3=${Uri.encodeComponent(t['tag3'] as String)}&count=10'),
+              ),
+          ],
+        ),
       ),
     );
   }
