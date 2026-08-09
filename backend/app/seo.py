@@ -7,7 +7,12 @@ from functools import lru_cache
 from urllib.parse import quote
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import HTMLResponse, PlainTextResponse, Response
+from fastapi.responses import (
+    HTMLResponse,
+    PlainTextResponse,
+    RedirectResponse,
+    Response,
+)
 
 from . import db, kb, taxonomy
 
@@ -189,6 +194,11 @@ def tiku_index():
         "/tiku/",
         body,
     )
+
+
+@router.get("/papers", include_in_schema=False)
+def tiku_papers_noslash():
+    return RedirectResponse("/tiku/papers/", status_code=301)
 
 
 @router.get("/papers/", response_class=HTMLResponse, include_in_schema=False)
