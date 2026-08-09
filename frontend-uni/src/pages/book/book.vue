@@ -363,7 +363,7 @@
 
 <script>
 import { md } from '../../md.js';
-import { request, anonUid, exportPdf, scanSheet } from '../../api.js';
+import { request, anonUid, exportPdf, scanSheet, shareCreate } from '../../api.js';
 import { cacheMistakes, getCachedMistakes } from '../../offline.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
@@ -902,12 +902,27 @@ export default {
       if (m.tag3) acts.push({ t: '同考点强化 5 道新题', f: () => this.reinforceFromMistake(m) });
       if (m.module) acts.push({ t: '练3道同类', f: () => this.practiceSimilar(m) });
       if (m.question_id) acts.push({ t: '题目纠错', f: () => this.openReport(m) });
+      if (m.question_id) acts.push({ t: '分享给队友', f: () => this.shareToMates(m) });
       if (!m.mastered) acts.push({ t: '标为已掌握', f: () => this.master(m) });
       acts.push({ t: '删除', f: () => this.del(m) });
       uni.showActionSheet({
         itemList: acts.map((a) => a.t),
         success: (r) => acts[r.tapIndex].f(),
       });
+    },
+    async shareToMates(m) {
+      try {
+        uni.showLoading({ title: '生成分享链接…' });
+        const d = await shareCreate(m.question_id);
+        uni.hideLoading();
+        uni.setClipboardData({
+          data: `我在考公助手分享了一道题，敢来挑战吗？答完就能看到大家选了啥：https://kaogong.zalize.com/#/pkgA/share/share-q?sid=${d.sid}`,
+          success: () => uni.showToast({ title: '分享链接已复制，发给队友吧', icon: 'none' }),
+        });
+      } catch (e) {
+        uni.hideLoading();
+        uni.showToast({ title: e.message || '分享失败', icon: 'none' });
+      }
     },
     del(m) {
       uni.showModal({

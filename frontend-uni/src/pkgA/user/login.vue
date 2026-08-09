@@ -35,7 +35,7 @@
 </template>
 
 <script>
-import { authLogin, authRegister, mergeAnon, setAuth } from '../../api.js';
+import { authLogin, authRegister, mergeAnon, setAuth, trackEvent } from '../../api.js';
 
 export default {
   data() {
@@ -60,6 +60,13 @@ export default {
             ? await authLogin(this.phone, this.password)
             : await authRegister(this.phone, this.password, '', this.nickname.trim());
         setAuth(r.token, r.user);
+        if (this.mode === 'register') {
+          const src = uni.getStorageSync('regSource');
+          if (src) {
+            trackEvent('register', src);
+            uni.removeStorageSync('regSource');
+          }
+        }
         if (anon && anon !== r.user.uid) {
           try {
             await mergeAnon(anon);

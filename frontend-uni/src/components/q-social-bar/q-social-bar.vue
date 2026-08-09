@@ -22,12 +22,15 @@
     <view class="qsb-row">
       <text v-if="!note && !editing" class="qsb-link" @click="startEdit">📝 写笔记</text>
       <text class="qsb-link" @click="openDiscuss">💬 讨论{{ count != null ? ' (' + count + ')' : '' }} ›</text>
+      <text class="qsb-link" @click="shareToMates">🔗 分享给队友</text>
     </view>
   </view>
 </template>
 
 <script>
-import { fetchCommentCount, fetchNote, saveNote } from '../../api.js';
+import { fetchCommentCount, fetchNote, saveNote, shareCreate } from '../../api.js';
+
+const SITE = 'https://kaogong.zalize.com';
 
 export default {
   name: 'QSocialBar',
@@ -77,6 +80,20 @@ export default {
     },
     openDiscuss() {
       uni.navigateTo({ url: '/pkgA/social/discuss?qid=' + this.questionId });
+    },
+    async shareToMates() {
+      try {
+        uni.showLoading({ title: '生成分享链接…' });
+        const d = await shareCreate(this.questionId);
+        uni.hideLoading();
+        uni.setClipboardData({
+          data: `我在考公助手分享了一道题，敢来挑战吗？答完就能看到大家选了啥：${SITE}/#/pkgA/share/share-q?sid=${d.sid}`,
+          success: () => uni.showToast({ title: '分享链接已复制，发给队友吧', icon: 'none' }),
+        });
+      } catch (e) {
+        uni.hideLoading();
+        uni.showToast({ title: e.message || '分享失败', icon: 'none' });
+      }
     },
   },
 };

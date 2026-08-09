@@ -50,6 +50,9 @@
       <wd-cell title="答题 PK" is-link clickable @click="goPk">
         <template #icon><view class="cell-ico"><l-icon name="swords" :size="18" color="#3b6ff5" /></view></template>
       </wd-cell>
+      <wd-cell title="刷题小队" value="组队打卡 · 互相催学" is-link clickable @click="goTeam">
+        <template #icon><view class="cell-ico"><l-icon name="users" :size="18" color="#3b6ff5" /></view></template>
+      </wd-cell>
     </wd-cell-group>
 
     <!-- 偏好设置 -->
@@ -201,6 +204,9 @@ export default {
     },
     goPk() {
       uni.navigateTo({ url: '/pkgA/pk/pk' });
+    },
+    goTeam() {
+      uni.navigateTo({ url: '/pkgA/team/team' });
     },
     goReminders() {
       uni.navigateTo({ url: '/pkgA/settings/reminders' });

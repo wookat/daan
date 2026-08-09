@@ -692,6 +692,53 @@ export function pkMine() {
   return request(`/api/pk/mine?uid=${encodeURIComponent(anonUid())}`);
 }
 
+// ---------- 组队打卡 / 题目分享 ----------
+
+export function teamCreate(name) {
+  return request('/api/team/create', { method: 'POST', data: { uid: anonUid(), nickname: pkNickname(), name } });
+}
+
+export function teamJoin(code) {
+  return request('/api/team/join', { method: 'POST', data: { uid: anonUid(), nickname: pkNickname(), code } });
+}
+
+export function teamLeave(teamId) {
+  return request('/api/team/leave', { method: 'POST', data: { uid: anonUid(), team_id: teamId } });
+}
+
+export function teamMine() {
+  return request(`/api/team/mine?uid=${encodeURIComponent(anonUid())}`);
+}
+
+export function teamPanel(teamId) {
+  return request(`/api/team/${teamId}/panel?uid=${encodeURIComponent(anonUid())}`);
+}
+
+export function shareCreate(questionId, teamId) {
+  return request('/api/share/create', {
+    method: 'POST',
+    data: { uid: anonUid(), nickname: pkNickname(), question_id: questionId, team_id: teamId || null },
+  });
+}
+
+export function shareDetail(sid) {
+  return request(`/api/share/${encodeURIComponent(sid)}?uid=${encodeURIComponent(anonUid())}`);
+}
+
+export function shareAnswer(sid, picked, secs) {
+  return request(`/api/share/${encodeURIComponent(sid)}/answer`, {
+    method: 'POST',
+    data: { uid: anonUid(), nickname: pkNickname(), picked, secs: secs || 0 },
+  });
+}
+
+export function trackEvent(event, source, ref) {
+  return request('/api/track', {
+    method: 'POST',
+    data: { uid: anonUid(), event, source: source || null, ref: ref || null },
+  }).catch(() => {});
+}
+
 export function pkLeaderboard() {
   return request(`/api/pk/leaderboard?uid=${encodeURIComponent(anonUid())}`);
 }

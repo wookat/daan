@@ -34,6 +34,10 @@
     {
       "path": "pages/stats/calendar",
       "style": { "navigationBarTitleText": "学习日历" }
+    },
+    {
+      "path": "pages/team/join",
+      "style": { "navigationBarTitleText": "加入刷题小队" }
     }
   ],
   "subPackages": [
@@ -99,6 +103,14 @@
         {
           "path": "interview/history",
           "style": { "navigationBarTitleText": "面试练习记录" }
+        },
+        {
+          "path": "team/team",
+          "style": { "navigationBarTitleText": "刷题小队" }
+        },
+        {
+          "path": "share/share-q",
+          "style": { "navigationBarTitleText": "队友分享的题" }
         },
         {
           "path": "pk/pk",
