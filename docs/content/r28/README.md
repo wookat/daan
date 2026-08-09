@@ -4,4 +4,4 @@
 
 约束：仅写 hs_explanation/has_hs；answer/question/options/explanation/disabled 零变更；UPDATE 带 id+空值+answer 守卫；每批快照 dry-run→生产备份→事务→回归。
 
-进度：批次1（资料分析 24 题，150213-274953）已应用生产，回归 200。
+进度：批次1-2 共 46 题补写（另 2 题存疑记台账：282576、321450）已应用生产，回归 200。
