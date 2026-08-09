@@ -31,4 +31,5 @@
 ssh ubuntu@150.109.230.174
 docker cp deploy-kaogong-1:/data/data.db /tmp/backup-$(date +%F).db   # 先备份
 docker cp fixes.sql deploy-kaogong-1:/tmp/ && docker exec deploy-kaogong-1 sh -c "sqlite3 /data/data.db < /tmp/fixes.sql"  # 容器内无 sqlite3 则用 python
+docker restart deploy-kaogong-1   # 必须：/tiku/q 详情页有 lru_cache，不重启会继续渲染旧数据
 ```
