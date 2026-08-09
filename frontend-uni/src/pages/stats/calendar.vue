@@ -22,15 +22,35 @@
         <text class="lg"><text class="dot today" /> 今天</text>
       </view>
     </view>
+    <view v-if="badgeInfo" class="card ms">
+      <view class="ms-h">
+        <view class="h" style="margin-bottom: 0">连签里程碑</view>
+        <text class="ms-best">历史最长 {{ badgeInfo.best_streak }} 天</text>
+      </view>
+      <view class="ms-cur">🔥 当前连续打卡 <text class="ms-n">{{ badgeInfo.streak }}</text> 天</view>
+      <template v-if="nextMilestone">
+        <view class="ms-bar"><view class="ms-fill" :style="{ width: nextMilestone.pct + '%' }" /></view>
+        <view class="ms-sub">再打卡 <text class="ms-left">{{ nextMilestone.left }}</text> 天解锁「{{ nextMilestone.days }} 天」徽章</view>
+      </template>
+      <view v-else class="ms-sub">已解锁全部打卡徽章，太强了！</view>
+      <view class="ms-dots">
+        <view v-for="b in badgeInfo.badges" :key="b.days" class="ms-dot" :class="{ on: b.unlocked }">
+          <text class="ms-dot-i">{{ b.unlocked ? '🏅' : '🔒' }}</text>
+          <text class="ms-dot-d">{{ b.days }}天</text>
+        </view>
+      </view>
+    </view>
     <button class="poster-btn" @click="openPoster">生成打卡海报</button>
   </view>
 </template>
 
 <script>
+import { fetchCheckinBadges } from '../../api.js';
+
 export default {
   data() {
     const now = new Date();
-    return { pstats: { days: {} }, ym: { y: now.getFullYear(), m: now.getMonth() } };
+    return { pstats: { days: {} }, ym: { y: now.getFullYear(), m: now.getMonth() }, badgeInfo: null };
   },
   computed: {
     isCurMonth() {
@@ -49,6 +69,15 @@ export default {
       return Object.keys(days)
         .filter((k) => k.startsWith(this.monthPrefix))
         .reduce((s, k) => s + (days[k] || 0), 0);
+    },
+    nextMilestone() {
+      if (!this.badgeInfo) return null;
+      const ms = (this.badgeInfo.badges || []).map((b) => b.days);
+      const s = this.badgeInfo.streak || 0;
+      const next = ms.find((m) => m > s);
+      if (!next) return null;
+      const prev = ms.filter((m) => m <= s).pop() || 0;
+      return { days: next, left: next - s, pct: Math.round(((s - prev) / (next - prev)) * 100) };
     },
     calCells() {
       const { y, m } = this.ym;
@@ -73,8 +102,14 @@ export default {
   },
   onShow() {
     this.pstats = uni.getStorageSync('pstats') || { days: {} };
+    this.loadBadges();
   },
   methods: {
+    async loadBadges() {
+      try {
+        this.badgeInfo = await fetchCheckinBadges();
+      } catch (e) { /* 非关键路径 */ }
+    },
     openPoster() {
       uni.navigateTo({ url: '/pkgA/social/poster' });
     },
@@ -92,6 +127,20 @@ export default {
 
 <style scoped>
 .wrap { padding: 24rpx; }
+.ms { margin-top: 24rpx; }
+.ms-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
+.ms-best { font-size: 21rpx; color: var(--ink-2); }
+.ms-cur { font-size: 25rpx; color: var(--ink-1, #1f2430); }
+.ms-n { font-size: 34rpx; font-weight: 800; color: #d97706; }
+.ms-bar { height: 14rpx; background: var(--line); border-radius: 999rpx; margin-top: 14rpx; overflow: hidden; }
+.ms-fill { height: 100%; background: linear-gradient(90deg, #f59e0b, #d97706); border-radius: 999rpx; }
+.ms-sub { font-size: 22rpx; color: var(--ink-2); margin-top: 10rpx; }
+.ms-left { color: #d97706; font-weight: 700; }
+.ms-dots { display: flex; justify-content: space-between; margin-top: 20rpx; }
+.ms-dot { display: flex; flex-direction: column; align-items: center; gap: 4rpx; opacity: 0.45; }
+.ms-dot.on { opacity: 1; }
+.ms-dot-i { font-size: 30rpx; }
+.ms-dot-d { font-size: 20rpx; color: var(--ink-2); }
 .poster-btn { margin-top: 24rpx; background: var(--brand); color: #fff; font-size: 28rpx; border-radius: 18rpx; }
 .card { background: var(--card); border-radius: var(--radius); padding: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 30rpx; font-weight: 700; }

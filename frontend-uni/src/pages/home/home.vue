@@ -20,6 +20,42 @@
       </view>
     </view>
 
+    <!-- 今日任务三件套 -->
+    <view class="card taskcard">
+      <view class="tk-h">
+        <text class="tk-t">今日任务</text>
+        <text class="tk-n">{{ taskDoneN }}/3</text>
+      </view>
+      <view class="tk-row" @click="taskGo('practice')">
+        <text class="tk-ck" :class="{ on: todayCount >= dailyGoal }">{{ todayCount >= dailyGoal ? '✓' : '' }}</text>
+        <view class="tk-main">
+          <text class="tk-name" :class="{ done: todayCount >= dailyGoal }">刷题目标</text>
+          <text class="tk-sub">已练 {{ todayCount }}/{{ dailyGoal }} 题</text>
+        </view>
+        <text class="tk-go">{{ todayCount >= dailyGoal ? '再练一组 ›' : '去刷题 ›' }}</text>
+      </view>
+      <view class="tk-row" @click="taskGo('review')">
+        <text class="tk-ck" :class="{ on: planFetched && !dueReview }">{{ planFetched && !dueReview ? '✓' : '' }}</text>
+        <view class="tk-main">
+          <text class="tk-name" :class="{ done: planFetched && !dueReview }">错题复习</text>
+          <text class="tk-sub">{{ dueReview ? '今日到期 ' + dueReview + ' 题' : planFetched ? '今日已清零' : '加载中…' }}</text>
+        </view>
+        <text class="tk-go">{{ dueReview ? '去复习 ›' : '错题本 ›' }}</text>
+      </view>
+      <view class="tk-row" @click="taskGo('checkin')">
+        <text class="tk-ck" :class="{ on: todayCount > 0 }">{{ todayCount > 0 ? '✓' : '' }}</text>
+        <view class="tk-main">
+          <text class="tk-name" :class="{ done: todayCount > 0 }">每日打卡<text v-if="streakShown" class="tk-streak">🔥 连续 {{ streakShown }} 天</text></text>
+          <template v-if="nextMilestone">
+            <view class="tk-bar"><view class="tk-fill" :style="{ width: nextMilestone.pct + '%' }" /></view>
+            <text class="tk-sub">再打卡 {{ nextMilestone.left }} 天解锁「{{ nextMilestone.days }} 天」徽章</text>
+          </template>
+          <text v-else class="tk-sub">已解锁全部打卡徽章，太强了！</text>
+        </view>
+        <text class="tk-go">日历 ›</text>
+      </view>
+    </view>
+
     <!-- 今日到期复习入口 -->
     <view v-if="dueReview" class="card duebar" @click="goReview('home_card')">
       <view class="duebar-l">
@@ -378,7 +414,7 @@
 </template>
 
 <script>
-import { request, anonUid, exportPdf, trackEvent } from '../../api.js';
+import { request, anonUid, exportPdf, trackEvent, fetchCheckinBadges } from '../../api.js';
 import { checkinStreak } from '../../checkin.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
@@ -425,6 +461,7 @@ export default {
       groupSize: uni.getStorageSync('groupSize') || 10,
       dailyGoal: uni.getStorageSync('dailyGoal') || 20,
       announce: null,
+      badgeInfo: null,
       weeklyDot: false,
       dateStart: new Date().toISOString().slice(0, 10),
       dateEnd: new Date(Date.now() + 3 * 366 * 86400000).toISOString().slice(0, 10),
@@ -499,6 +536,25 @@ export default {
     dailyStreak() {
       return checkinStreak(this.pstats);
     },
+    streakShown() {
+      if (this.badgeInfo && this.badgeInfo.streak != null) return this.badgeInfo.streak;
+      return this.dailyStreak;
+    },
+    nextMilestone() {
+      const ms = [3, 7, 14, 30, 60, 100];
+      const s = this.streakShown;
+      const next = ms.find((m) => m > s);
+      if (!next) return null;
+      const prev = ms.filter((m) => m <= s).pop() || 0;
+      return { days: next, left: next - s, pct: Math.round(((s - prev) / (next - prev)) * 100) };
+    },
+    taskDoneN() {
+      let n = 0;
+      if (this.todayCount >= this.dailyGoal) n++;
+      if (this.planFetched && !this.dueReview) n++;
+      if (this.todayCount > 0) n++;
+      return n;
+    },
   },
   onShow() {
     this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
@@ -509,6 +565,7 @@ export default {
     this.loadCounts();
     this.loadAnnounce();
     this.loadPlan();
+    this.loadBadges();
     this.calcWeeklyDot();
     const wantSetup = uni.getStorageSync('openPlanSetup');
     if (wantSetup) {
@@ -619,6 +676,22 @@ export default {
       trackEvent('review_entry_click', src);
       uni.setStorageSync('autoStartReview', 1);
       uni.switchTab({ url: '/pages/book/book' });
+    },
+    async loadBadges() {
+      try {
+        this.badgeInfo = await fetchCheckinBadges();
+      } catch (e) { /* 非关键路径 */ }
+    },
+    taskGo(kind) {
+      trackEvent('task_card_click', kind);
+      if (kind === 'practice') this.startDaily();
+      else if (kind === 'review') {
+        if (this.dueReview) {
+          uni.setStorageSync('autoStartReview', 1);
+          trackEvent('review_entry_click', 'task_card');
+        }
+        uni.switchTab({ url: '/pages/book/book' });
+      } else uni.navigateTo({ url: '/pages/stats/calendar' });
     },
     goAsk() {
       uni.switchTab({ url: '/pages/ask/ask' });
@@ -944,6 +1017,22 @@ export default {
 .duebar-t { display: block; font-size: 28rpx; font-weight: 700; color: #ffffff; }
 .duebar-s { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.75); margin-top: 4rpx; }
 .duebar-go { flex-shrink: 0; background: rgba(255, 255, 255, 0.18); color: #ffffff; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 12rpx 30rpx; }
+.taskcard { padding: 24rpx 28rpx; }
+.tk-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8rpx; }
+.tk-t { font-size: 28rpx; font-weight: 700; }
+.tk-n { font-size: 22rpx; color: var(--brand); font-weight: 700; background: var(--brand-soft); border-radius: 8rpx; padding: 2rpx 14rpx; }
+.tk-row { display: flex; align-items: center; gap: 18rpx; padding: 16rpx 0; border-top: 1rpx solid var(--line); }
+.tk-row:first-of-type { border-top: none; }
+.tk-ck { flex-shrink: 0; width: 34rpx; height: 34rpx; line-height: 34rpx; text-align: center; border-radius: 50%; border: 2rpx solid var(--line); font-size: 22rpx; color: #fff; }
+.tk-ck.on { background: #16a34a; border-color: #16a34a; }
+.tk-main { flex: 1; min-width: 0; }
+.tk-name { display: block; font-size: 26rpx; font-weight: 600; }
+.tk-name.done { color: var(--ink-3); }
+.tk-streak { font-size: 21rpx; color: #d97706; font-weight: 600; margin-left: 12rpx; }
+.tk-sub { display: block; font-size: 21rpx; color: var(--ink-2); margin-top: 4rpx; }
+.tk-bar { height: 10rpx; background: var(--line); border-radius: 999rpx; margin-top: 10rpx; overflow: hidden; }
+.tk-fill { height: 100%; background: linear-gradient(90deg, #f59e0b, #d97706); border-radius: 999rpx; }
+.tk-go { flex-shrink: 0; font-size: 23rpx; color: var(--brand); font-weight: 600; }
 .duebar.donebar { background: var(--card); border: 1rpx solid var(--line); box-shadow: none; }
 .donebar .duebar-t { color: #16a34a; }
 .donebar .duebar-s { color: var(--ink-3); }
@@ -994,7 +1083,7 @@ export default {
 /* #ifdef H5 */
 @media (min-width: 768px) {
   .wrap.home { max-width: 960px !important; display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; align-items: start; }
-  .hero, .sec-h, .ann, .riskbar, .duebar { grid-column: 1 / -1; }
+  .hero, .sec-h, .ann, .riskbar, .duebar, .taskcard { grid-column: 1 / -1; }
   .modlist { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; align-items: start; }
   .modlist .card.smart { grid-column: 1 / -1; }
   .more-grid { grid-column: 1 / -1; grid-template-columns: repeat(4, 1fr); }
