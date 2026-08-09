@@ -4,6 +4,7 @@ import {
   postMistake,
   postPracticeResult,
   redoMistakes,
+  shareCreate,
 } from '../../api/index';
 import type { AnswerLogItem, Question } from '../../api/types';
 import { modName, recordStat } from '../../utils/stats';
@@ -50,6 +51,8 @@ Page({
   _qsecs: 0,
   _timer: 0 as number | ReturnType<typeof setInterval>,
   _resultSent: false,
+  _shareSid: '',
+  _shareTitle: '',
 
   onLoad(query: Record<string, string>) {
     this._source = query.source || null;
@@ -204,6 +207,34 @@ Page({
         /* 非关键路径 */
       }
     }
+  },
+
+  // 分享给队友：生成 sid → 复制链接，并可通过右上角转发卡片直达分享作答页
+  async onShareQ() {
+    const cur = this.data.cur;
+    if (!cur || !cur.id) {
+      wx.showToast({ title: '该题暂不支持分享', icon: 'none' });
+      return;
+    }
+    try {
+      const d = await shareCreate(cur.id);
+      this._shareSid = d.sid;
+      this._shareTitle = '我分享了一道题，敢来挑战吗？';
+      wx.setClipboardData({
+        data: `我在考公助手分享了一道题，敢来挑战吗？https://kaogong.zalize.com/#/pkgA/share/share-q?sid=${d.sid}`,
+        success: () =>
+          wx.showToast({ title: '链接已复制，也可点右上角转发给队友', icon: 'none' }),
+      });
+    } catch (e) {
+      wx.showToast({ title: (e as Error).message || '分享失败', icon: 'none' });
+    }
+  },
+
+  onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
+    if (this._shareSid) {
+      return { title: this._shareTitle, path: `/pages/share/share?sid=${this._shareSid}` };
+    }
+    return { title: '一起来刷题' };
   },
 
   onRetry() {

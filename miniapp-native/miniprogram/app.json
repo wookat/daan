@@ -6,7 +6,10 @@
     "pages/stats/stats",
     "pages/profile/profile",
     "pages/practice/practice",
-    "pages/login/login"
+    "pages/login/login",
+    "pages/team/team",
+    "pages/team/panel",
+    "pages/share/share"
   ],
   "renderer": "skyline",
   "rendererOptions": {

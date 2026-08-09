@@ -925,6 +925,65 @@ class Api {
     return Map<String, dynamic>.from(r.data);
   }
 
+  // ---------- 组队打卡 / 题目分享 ----------
+
+  static Future<Map<String, dynamic>> teamCreate(String name) async {
+    final r = await dio.post('/api/team/create',
+        data: {'uid': uid(), 'nickname': pkNickname(), 'name': name});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<Map<String, dynamic>> teamJoin(String code) async {
+    final r = await dio.post('/api/team/join',
+        data: {'uid': uid(), 'nickname': pkNickname(), 'code': code});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<void> teamLeave(int teamId) async {
+    await dio.post('/api/team/leave', data: {'uid': uid(), 'team_id': teamId});
+  }
+
+  static Future<List<dynamic>> teamMine() async {
+    final r = await dio.get('/api/team/mine', queryParameters: {'uid': uid()});
+    return r.data['items'] as List<dynamic>? ?? [];
+  }
+
+  static Future<Map<String, dynamic>> teamPanel(int teamId) async {
+    final r =
+        await dio.get('/api/team/$teamId/panel', queryParameters: {'uid': uid()});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<String> shareCreate(int questionId, {int? teamId}) async {
+    final r = await dio.post('/api/share/create', data: {
+      'uid': uid(),
+      'nickname': pkNickname(),
+      'question_id': questionId,
+      'team_id': teamId,
+    });
+    return (r.data['sid'] ?? '').toString();
+  }
+
+  static Future<Map<String, dynamic>> shareDetail(String sid) async {
+    final r = await dio.get('/api/share/${Uri.encodeComponent(sid)}',
+        queryParameters: {'uid': uid()});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<Map<String, dynamic>> shareAnswer(
+      String sid, String picked, int secs) async {
+    final r = await dio.post('/api/share/${Uri.encodeComponent(sid)}/answer',
+        data: {'uid': uid(), 'nickname': pkNickname(), 'picked': picked, 'secs': secs});
+    return Map<String, dynamic>.from(r.data);
+  }
+
+  static Future<void> trackEvent(String event, {String? source, String? ref}) async {
+    try {
+      await dio.post('/api/track',
+          data: {'uid': uid(), 'event': event, 'source': source, 'ref': ref});
+    } catch (_) {/* 非关键路径 */}
+  }
+
   // ---------- 能力预测分 / 公告 ----------
 
   static Future<Map<String, dynamic>> predict() async {

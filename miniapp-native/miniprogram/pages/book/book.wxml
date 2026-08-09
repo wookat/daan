@@ -30,6 +30,7 @@
           <text wx:if="{{item.explanation}}" class="m-exp" user-select>{{item.explanation}}</text>
           <view class="m-ops">
             <view class="m-op" data-index="{{index}}" catch:tap="onMaster">{{item.mastered ? '移回待掌握' : '标记已掌握'}}</view>
+            <view wx:if="{{item.question_id}}" class="m-op" data-index="{{index}}" catch:tap="onShareQ">分享给队友</view>
           </view>
         </view>
       </view>

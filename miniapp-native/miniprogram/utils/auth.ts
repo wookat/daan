@@ -53,6 +53,19 @@ export function clearAuth(): void {
   else wx.removeStorageSync('anonUid');
 }
 
+// 组队/分享昵称：登录昵称 > 考友+手机尾号 > 本地随机昵称（复刻 api.js pkNickname）
+export function pkNickname(): string {
+  const u = getAuthUser();
+  if (u && u.nickname) return u.nickname;
+  if (u && u.phone) return '考友' + String(u.phone).slice(-4);
+  let n = wx.getStorageSync<string>('pkNickname');
+  if (!n) {
+    n = '考友' + Math.random().toString(36).slice(2, 6).toUpperCase();
+    wx.setStorageSync('pkNickname', n);
+  }
+  return n;
+}
+
 export function getAccessCode(): string {
   return wx.getStorageSync<string>('accessCode') || '';
 }

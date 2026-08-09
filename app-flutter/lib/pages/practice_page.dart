@@ -1157,6 +1157,8 @@ class _PracticePageState extends ConsumerState<PracticePage> {
                 const SizedBox(width: 24),
                 _explainOp(LucideIcons.messagesSquare, '讨论区',
                     () => context.push('/discuss?qid=${q.id}')),
+                const SizedBox(width: 24),
+                _explainOp(LucideIcons.share2, '分享给队友', () => _shareToTeam(q)),
               ],
             ),
             const SizedBox(height: 10),
@@ -1225,6 +1227,27 @@ class _PracticePageState extends ConsumerState<PracticePage> {
         q.options.entries.map((e) => '${e.key}.${e.value}').join(' ');
     Store.instance.redoQuestion = '${q.question}\n$optText';
     context.go('/ask');
+  }
+
+  /// 分享给队友：生成分享 sid → 复制链接并唤起系统分享面板（队友未作答前看不到答案）。
+  Future<void> _shareToTeam(Question q) async {
+    if (q.id == null) return;
+    try {
+      final sid = await Api.shareCreate(q.id!);
+      final text =
+          '我在考公助手分享了一道题，敢来挑战吗？https://kaogong.zalize.com/#/pkgA/share/share-q?sid=$sid';
+      await Clipboard.setData(ClipboardData(text: text));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('分享链接已复制')));
+      }
+      unawaited(Share.share(text));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(Api.errMsg(e))));
+      }
+    }
   }
 
   Future<void> _toggleFav(Question q) async {

@@ -11,6 +11,9 @@ Page({
     syncTabBar(this, 4);
     this.setData({ user: getAuthUser(), uid: anonUid() });
   },
+  onTeam() {
+    wx.navigateTo({ url: '/pages/team/team' });
+  },
   onLogin() {
     wx.navigateTo({ url: '/pages/login/login' });
   },

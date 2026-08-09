@@ -48,6 +48,7 @@
             <text class="exp-k">来源</text>
             <text class="exp-v">{{cur.source}}</text>
           </view>
+          <view wx:if="{{cur.id}}" class="share-op" bind:tap="onShareQ">分享给队友，看 TA 能不能做对 ›</view>
         </view>
       </view>
 
