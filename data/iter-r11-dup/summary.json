@@ -1,0 +1,34 @@
+{
+  "round": "iter-r11-dup",
+  "date": "2026-08-08",
+  "snapshot": "deploy-kaogong-1:/data/data.db",
+  "active_questions_scanned": 112145,
+  "exact_conflict_groups": 141,
+  "near_candidate_pairs": 459,
+  "near_adjudicated_pairs": 20,
+  "groups_adjudicated": 161,
+  "groups_keep_one": 143,
+  "groups_disable_all": 1,
+  "groups_no_action_different_questions": 17,
+  "questions_disabled": 152,
+  "answers_fixed": {
+    "260577": {
+      "old": "A",
+      "new": "B"
+    }
+  },
+  "sample_review": {
+    "sampled_groups": 32,
+    "passed": 32,
+    "pass_rate": 1.0,
+    "threshold": 0.95
+  },
+  "dry_run": {
+    "disabled_before": 29748,
+    "disabled_after": 29900,
+    "delta": 152,
+    "non_target_changes": 0,
+    "idempotent": true
+  },
+  "adjudication_mode": "manual (all LLM channels out of quota)"
+}
