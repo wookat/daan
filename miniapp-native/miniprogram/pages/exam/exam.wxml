@@ -13,7 +13,7 @@
       <view class="eico">📄</view>
       <text>真题卷搜集中，全真模考将在二期上线</text>
     </view>
-    <view wx:for="{{papers}}" wx:key="source" class="card prow">
+    <view wx:for="{{papers}}" wx:key="source" class="card prow" data-title="{{item.title || item.source}}" bind:tap="onPaperTap">
       <view class="p-main">
         <text class="p-t">{{item.title || item.source}}</text>
         <text class="p-s">{{item.region ? item.region + ' · ' : ''}}{{item.year || ''}}{{item.n ? ' · ' + item.n + ' 题' : ''}}</text>

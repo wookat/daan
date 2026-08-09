@@ -1,4 +1,5 @@
 import {
+  deleteFav,
   fetchFavs,
   fetchMistakes,
   fetchReviewDue,
@@ -41,6 +42,7 @@ Page({
     rIdx: 0,
     rCur: null as RItem | null,
     rLetter: '',
+    rOpts: [] as { k: string; text: string }[],
     picked: '',
     answered: false,
     wasCorrect: false,
@@ -147,6 +149,25 @@ Page({
     wx.navigateTo({ url: '/pages/practice/practice?mode=redo&source=redo' });
   },
 
+  // ---------- 收藏 ----------
+  onFavPractice(e: WechatMiniprogram.TouchEvent) {
+    const mod = String(e.currentTarget.dataset.module || '');
+    wx.navigateTo({
+      url: '/pages/practice/practice' + (mod ? '?module=' + encodeURIComponent(mod) : ''),
+    });
+  },
+  async onUnfav(e: WechatMiniprogram.TouchEvent) {
+    const qid = Number(e.currentTarget.dataset.qid);
+    if (!qid) return;
+    try {
+      await deleteFav(qid);
+      wx.showToast({ title: '已取消收藏', icon: 'none' });
+      this.load();
+    } catch (err) {
+      wx.showToast({ title: '操作失败：' + (err as Error).message, icon: 'none' });
+    }
+  },
+
   // ---------- 遗忘曲线复习 ----------
   onReviewFromCard() {
     trackEvent('review_entry_click', 'book_card');
@@ -160,9 +181,12 @@ Page({
   },
   resetQ() {
     const cur = this.data.rItems[this.data.rIdx] || null;
+    const opts = cur && cur.options ? cur.options : null;
+    const rOpts = ['A', 'B', 'C', 'D'].map((k) => ({ k, text: (opts && opts[k]) || '' }));
     this.setData({
       rCur: cur,
       rLetter: extractLetter(cur ? cur.correct_answer : ''),
+      rOpts,
       picked: '',
       answered: false,
       wasCorrect: false,

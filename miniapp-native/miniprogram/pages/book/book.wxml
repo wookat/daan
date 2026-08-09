@@ -18,14 +18,14 @@
           <text class="r-exit" bind:tap="exitReview">退出复习</text>
         </view>
         <text class="m-q" user-select>{{rCur.question_text}}</text>
-        <view wx:if="{{rLetter}}" class="r-opts">
+        <view wx:if="{{rLetter}}" class="r-opts {{rOpts[0].text ? 'r-opts-full' : ''}}">
           <view
-            wx:for="{{['A', 'B', 'C', 'D']}}"
-            wx:key="*this"
-            class="r-opt {{!answered ? '' : item === rLetter ? 'rok' : item === picked ? 'rbad' : 'rdim'}}"
-            data-opt="{{item}}"
+            wx:for="{{rOpts}}"
+            wx:key="k"
+            class="r-opt {{rOpts[0].text ? 'r-opt-full' : ''}} {{!answered ? '' : item.k === rLetter ? 'rok' : item.k === picked ? 'rbad' : 'rdim'}}"
+            data-opt="{{item.k}}"
             bind:tap="onReviewPick"
-          >{{item}}</view>
+          >{{item.k}}{{item.text ? '. ' + item.text : ''}}</view>
         </view>
         <block wx:if="{{answered}}">
           <view class="r-verdict {{wasCorrect ? 'vok' : 'vbad'}}">
@@ -92,8 +92,12 @@
         <view class="eico">⭐</view>
         <text>暂无收藏题目</text>
       </view>
-      <view wx:for="{{favs}}" wx:key="question_id" class="card">
-        <text class="m-q">{{item.question || '题目 #' + item.question_id}}</text>
+      <view wx:for="{{favs}}" wx:key="id" class="card">
+        <text class="m-q">{{item.question || '题目 #' + item.id}}</text>
+        <view class="m-ops">
+          <view class="m-op" data-module="{{item.module}}" catch:tap="onFavPractice">去练同模块</view>
+          <view class="m-op" data-qid="{{item.id}}" catch:tap="onUnfav">取消收藏</view>
+        </view>
       </view>
     </block>
     </block>

@@ -1,7 +1,10 @@
-import { authLogout, fetchCheckinBadges } from '../../api/index';
+import { authLogout, fetchCheckinBadges, fetchReminders, setReminder, trackEvent } from '../../api/index';
 import type { CheckinBadgesResp } from '../../api/types';
 import { anonUid, clearAuth, getAuthUser } from '../../utils/auth';
 import { syncTabBar } from '../../utils/tabbar';
+
+// 订阅消息模板 ID：AppID/模板审核通过后填入即开闸，留空时仅登记提醒意向
+const SUBSCRIBE_TMPL_ID = '';
 
 Page({
   data: {
@@ -9,11 +12,62 @@ Page({
     uid: '',
     badgeInfo: null as CheckinBadgesResp | null,
     nextMilestone: null as { days: number; left: number; pct: number } | null,
+    reminderOn: false,
   },
   onShow() {
     syncTabBar(this, 4);
     this.setData({ user: getAuthUser(), uid: anonUid() });
     this.loadBadges();
+    this.loadReminder();
+  },
+  async loadReminder() {
+    try {
+      const d = await fetchReminders();
+      const r = (d.items || []).find((x) => x.channel === 'wxsub');
+      this.setData({ reminderOn: !!(r && r.enabled) });
+    } catch (e) {
+      /* 非关键路径 */
+    }
+  },
+  async onReminder() {
+    if (this.data.reminderOn) {
+      try {
+        await setReminder('wxsub', false);
+        this.setData({ reminderOn: false });
+        wx.showToast({ title: '已关闭学习提醒', icon: 'none' });
+      } catch (err) {
+        wx.showToast({ title: '操作失败：' + (err as Error).message, icon: 'none' });
+      }
+      return;
+    }
+    // 模板已配置时先请求微信订阅授权；未配置/拒绝时降级为仅登记意向
+    if (SUBSCRIBE_TMPL_ID && wx.requestSubscribeMessage) {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          wx.requestSubscribeMessage({
+            tmplIds: [SUBSCRIBE_TMPL_ID],
+            success: (r) => {
+              if (r[SUBSCRIBE_TMPL_ID] === 'accept') resolve();
+              else reject(new Error('未授权'));
+            },
+            fail: () => reject(new Error('订阅失败')),
+          });
+        });
+      } catch (e) {
+        wx.showToast({ title: '未开启订阅，已为你登记提醒意向', icon: 'none' });
+      }
+    }
+    try {
+      await setReminder('wxsub', true, 20);
+      this.setData({ reminderOn: true });
+      trackEvent('reminder_optin', 'profile');
+      wx.showToast({
+        title: SUBSCRIBE_TMPL_ID ? '已开启每日学习提醒' : '已登记提醒意向，订阅消息上线后自动生效',
+        icon: 'none',
+      });
+    } catch (err) {
+      wx.showToast({ title: '操作失败：' + (err as Error).message, icon: 'none' });
+    }
   },
   // 徽章墙：连击口径以服务端 /api/checkin/badges 为准
   async loadBadges() {

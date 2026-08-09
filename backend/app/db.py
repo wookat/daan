@@ -2131,11 +2131,55 @@ def _ensure_mistake_uid(conn):
         conn.execute("ALTER TABLE mistakes ADD COLUMN question_id INTEGER")
 
 
+def _parse_options(raw: str | None) -> dict | None:
+    if not raw:
+        return None
+    try:
+        d = json.loads(raw)
+        return d if isinstance(d, dict) and d else None
+    except (ValueError, TypeError):
+        return None
+
+
 def _uid_clause(uid: str | None) -> tuple[str, tuple]:
     """按 uid 严格隔离；无 uid 的调用只见无归属记录。"""
     if not uid:
         return " AND uid IS NULL", ()
     return " AND uid=?", (uid,)
+
+
+def _ensure_reminder_prefs(conn):
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS reminder_prefs (
+            uid TEXT NOT NULL,
+            channel TEXT NOT NULL,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            hour INTEGER,
+            updated_at REAL NOT NULL,
+            PRIMARY KEY (uid, channel)
+        )"""
+    )
+
+
+def set_reminder_pref(uid: str, channel: str, enabled: bool, hour: int | None = None):
+    conn = get_conn()
+    _ensure_reminder_prefs(conn)
+    conn.execute(
+        "INSERT OR REPLACE INTO reminder_prefs (uid, channel, enabled, hour, updated_at) VALUES (?,?,?,?,?)",
+        (uid, channel, 1 if enabled else 0, hour, time.time()),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_reminder_prefs(uid: str) -> list[dict]:
+    conn = get_conn()
+    _ensure_reminder_prefs(conn)
+    rows = conn.execute(
+        "SELECT channel, enabled, hour, updated_at FROM reminder_prefs WHERE uid=?", (uid,)
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 
 def save_paper_export(code: str, question_ids: list[int], title: str) -> None:
@@ -2222,7 +2266,7 @@ def list_mistakes(limit: int = 500, uid: str | None = None) -> list[dict]:
     cl = " AND m.uid=?" if uid else " AND m.uid IS NULL"
     args = (uid,) if uid else ()
     rows = conn.execute(
-        f"""SELECT m.*, q.tag3 FROM mistakes m
+        f"""SELECT m.*, q.tag3, q.options AS q_options FROM mistakes m
             LEFT JOIN questions q ON q.id=m.question_id
             WHERE 1=1{cl} ORDER BY m.created_at DESC LIMIT ?""",
         (*args, limit),
@@ -2232,6 +2276,7 @@ def list_mistakes(limit: int = 500, uid: str | None = None) -> list[dict]:
     for r in rows:
         d = dict(r)
         d["methods"] = json.loads(d.get("methods") or "[]")
+        d["options"] = _parse_options(d.pop("q_options", None))
         out.append(d)
     return out
 
@@ -2276,9 +2321,11 @@ def due_reviews(limit: int = 20, uid: str | None = None) -> list[dict]:
     _ensure_mistake_uid(conn)
     cl, args = _uid_clause(uid)
     rows = conn.execute(
-        "SELECT * FROM mistakes WHERE (mastered IS NULL OR mastered=0) "
-        f"AND (next_review IS NULL OR next_review <= ?){cl} "
-        "ORDER BY next_review IS NOT NULL, next_review, created_at LIMIT ?",
+        "SELECT m.*, q.options AS q_options FROM mistakes m "
+        "LEFT JOIN questions q ON q.id=m.question_id "
+        "WHERE (m.mastered IS NULL OR m.mastered=0) "
+        f"AND (m.next_review IS NULL OR m.next_review <= ?){cl} "
+        "ORDER BY m.next_review IS NOT NULL, m.next_review, m.created_at LIMIT ?",
         (time.time(), *args, limit),
     ).fetchall()
     conn.close()
@@ -2286,6 +2333,7 @@ def due_reviews(limit: int = 20, uid: str | None = None) -> list[dict]:
     for r in rows:
         d = dict(r)
         d["methods"] = json.loads(d.get("methods") or "[]")
+        d["options"] = _parse_options(d.pop("q_options", None))
         out.append(d)
     return out
 

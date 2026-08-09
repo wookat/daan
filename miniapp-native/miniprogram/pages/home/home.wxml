@@ -40,7 +40,7 @@
         <view class="tk-ck {{dueLoaded && !dueReview ? 'on' : ''}}">{{dueLoaded && !dueReview ? '✓' : ''}}</view>
         <view class="tk-main">
           <text class="tk-name {{dueLoaded && !dueReview ? 'tdone' : ''}}">错题复习</text>
-          <text class="tk-sub">{{dueReview ? '今日到期 ' + dueReview + ' 题' : dueLoaded ? '今日已清零' : '加载中…'}}</text>
+          <text class="tk-sub">{{dueReview ? '今日到期 ' + dueReview + ' 题' : dueLoaded ? '今日已清零' : '按遗忘曲线安排'}}</text>
         </view>
         <text class="tk-go">{{dueReview ? '去复习 ›' : '错题本 ›'}}</text>
       </view>

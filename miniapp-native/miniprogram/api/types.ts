@@ -47,6 +47,7 @@ export interface Mistake {
   error_reason?: string | null;
   tag3_name?: string | null;
   created_at?: number | string;
+  options?: Record<string, string> | null;
 }
 
 export interface MistakesResp {
@@ -103,7 +104,7 @@ export interface Paper {
 }
 
 export interface FavItem {
-  question_id: number;
+  id: number;
   module?: string | null;
   question?: string;
   folder_id?: number | null;

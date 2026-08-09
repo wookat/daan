@@ -41,6 +41,10 @@
         <text class="r-k">刷题小队</text>
         <text class="r-v">组队打卡 · 互相催学 ›</text>
       </view>
+      <view class="row-i link" bind:tap="onReminder">
+        <text class="r-k">学习提醒</text>
+        <text class="r-v">{{reminderOn ? '已开启 · 点击关闭' : '每天提醒我打卡刷题 ›'}}</text>
+      </view>
     </view>
 
     <view class="card">

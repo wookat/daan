@@ -21,6 +21,10 @@ Page({
       this.setData({ loading: false });
     }
   },
+  onPaperTap(e: WechatMiniprogram.TouchEvent) {
+    const title = String(e.currentTarget.dataset.title || '该卷');
+    wx.showToast({ title: `「${title}」全真模考二期开放，可先试迷你模考`, icon: 'none' });
+  },
   onMini() {
     // 迷你模考：真实模考流程（attempt + 成绩报告 + 薄弱考点）
     wx.navigateTo({ url: '/pages/exam/mini' });

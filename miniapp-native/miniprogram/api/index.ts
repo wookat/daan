@@ -123,6 +123,28 @@ export function fetchFavs(): Promise<{ items: FavItem[] }> {
   return request<{ items: FavItem[] }>('/api/favs?uid=' + encodeURIComponent(anonUid()));
 }
 
+export function deleteFav(questionId: number): Promise<void> {
+  return request<void>(
+    '/api/favs?uid=' + encodeURIComponent(anonUid()) + '&question_id=' + questionId,
+    { method: 'DELETE' }
+  );
+}
+
+// ---------- 学习提醒 ----------
+
+export function setReminder(channel: 'wxsub' | 'web', enabled: boolean, hour?: number): Promise<void> {
+  return request<void>('/api/reminders', {
+    method: 'POST',
+    data: { uid: anonUid(), channel, enabled, hour },
+  });
+}
+
+export function fetchReminders(): Promise<{ items: { channel: string; enabled: number; hour: number | null }[] }> {
+  return request<{ items: { channel: string; enabled: number; hour: number | null }[] }>(
+    '/api/reminders?uid=' + encodeURIComponent(anonUid())
+  );
+}
+
 // ---------- 账号 ----------
 
 export function authRegister(
