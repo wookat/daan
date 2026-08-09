@@ -66,14 +66,16 @@ team.init_team_db()
 
 
 def _warmup():
-    """启动后台预热题库热点索引页缓存，消除首个随机抽题/统计请求的冷启动秒级延迟。"""
-    try:
-        conn = db.get_conn()
-        conn.execute("SELECT COUNT(*) FROM questions INDEXED BY idx_q_pick WHERE has_hs IS NOT NULL")
-        conn.execute("SELECT COUNT(*) FROM questions INDEXED BY idx_q_tag3_disabled WHERE tag3 IS NOT NULL")
-        conn.close()
-    except Exception:
-        pass
+    """周期预热题库热点索引页缓存，消除随机抽题/tag3 查询在缓存被换出后的冷启动秒级延迟。"""
+    while True:
+        try:
+            conn = db.get_conn()
+            conn.execute("SELECT COUNT(*) FROM questions INDEXED BY idx_q_pick WHERE has_hs IS NOT NULL")
+            conn.execute("SELECT COUNT(*) FROM questions INDEXED BY idx_q_tag3_disabled WHERE tag3 IS NOT NULL")
+            conn.close()
+        except Exception:
+            pass
+        time.sleep(300)
 
 
 threading.Thread(target=_warmup, daemon=True).start()

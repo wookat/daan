@@ -100,11 +100,15 @@ def _crumb(items: list[tuple[str, str | None]]) -> str:
 def _pager(base_path: str, page: int, total: int) -> str:
     pages = max(1, math.ceil(total / PAGE_SIZE))
     out = []
+    if page > 2:
+        out.append(f'<a href="{_e(base_path)}">首页</a>')
     if page > 1:
         out.append(f'<a href="{_e(base_path)}?page={page - 1}" rel="prev">上一页</a>')
     out.append(f"<span>{page} / {pages}</span>")
     if page < pages:
         out.append(f'<a href="{_e(base_path)}?page={page + 1}" rel="next">下一页</a>')
+    if page < pages - 1:
+        out.append(f'<a href="{_e(base_path)}?page={pages}">末页</a>')
     return '<div class="pager">' + "".join(out) + "</div>"
 
 
@@ -439,6 +443,11 @@ def _render_question(qid: int) -> str:
             f'{"&module=" + quote(r["module"]) if r["module"] else ""}&source=seo">在线练习此考点（免费）→</a>'
             if r["tag3"]
             else f'<a class="cta" href="{_e(SITE_BASE)}/">继续刷题（免费题库+AI 讲解）→</a>'
+        )
+        + (
+            f'<p><a href="{_e(_topic_path(r["tag3"]))}">← 返回「{_e(topic["name"])}」考点题目列表</a></p>'
+            if topic
+            else ""
         )
         + "</article>"
         + (

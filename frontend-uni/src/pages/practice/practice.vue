@@ -1061,6 +1061,9 @@ export default {
       // 推荐埋点：记录本次练习的入口来源（reco/weak 等），随 answer_log 落库
       this._source = source || null;
       uni.showLoading({ title: '出题中…', mask: true });
+      this._slowTimer = setTimeout(() => {
+        if (this._starting) uni.showLoading({ title: '题库首次加载稍慢，请稍候…', mask: true });
+      }, 3000);
       this.lastModule = module;
       this.lastSubmodule = submodule || null;
       this.subSelect = null;
@@ -1144,6 +1147,7 @@ export default {
           uni.showToast({ title: '加载失败：' + e.message + '（可在我的→离线题包提前下载）', icon: 'none', duration: 2200 });
         }
       } finally {
+        clearTimeout(this._slowTimer);
         uni.hideLoading();
         this._starting = false;
       }
