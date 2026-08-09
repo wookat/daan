@@ -1,0 +1,106 @@
+<navbar title="成绩报告" back="{{true}}" />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <view wx:if="{{loading}}" class="card spin">报告生成中…</view>
+
+    <block wx:if="{{!loading && report}}">
+      <!-- 分数 -->
+      <view class="card hero">
+        <text class="score">{{report.attempt.score}}</text>
+        <text class="score-u">分</text>
+        <text class="hero-s">{{report.paper.title}}</text>
+        <view class="hero-row">
+          <view class="hstat"><text class="hv">{{report.correct}}/{{report.total}}</text><text class="hk">答对</text></view>
+          <view class="hstat"><text class="hv">{{accuracy}}%</text><text class="hk">正确率</text></view>
+          <view class="hstat"><text class="hv">{{report.answered}}</text><text class="hk">已作答</text></view>
+          <view class="hstat"><text class="hv">{{usedMin}} 分</text><text class="hk">用时</text></view>
+        </view>
+      </view>
+
+      <!-- 薄弱考点 -->
+      <view class="card">
+        <view class="h">本卷薄弱考点</view>
+        <text wx:if="{{!report.weak_tags.length}}" class="note">本卷错题较少，暂未形成薄弱考点结论，继续保持！</text>
+        <view
+          wx:for="{{report.weak_tags}}"
+          wx:key="tag3"
+          class="wrow"
+          data-tag3="{{item.tag3}}"
+          bind:tap="onWeakPractice"
+        >
+          <view class="wrow-l">
+            <text class="wrow-t">{{item.name || item.tag3}}</text>
+            <text class="wrow-s">错 {{item.wrong}}/{{item.n}} 题</text>
+          </view>
+          <text class="wrow-go">去练 ›</text>
+        </view>
+      </view>
+
+      <!-- 模块得分 -->
+      <view wx:if="{{modRows.length}}" class="card">
+        <view class="h">模块得分</view>
+        <view wx:for="{{modRows}}" wx:key="module" class="mrow">
+          <text class="mname">{{item.name}}</text>
+          <view class="mbar"><view class="mfill" style="width: {{item.pct}}%" /></view>
+          <text class="mval">{{item.correct}}/{{item.n}}</text>
+        </view>
+      </view>
+
+      <!-- 逐题回顾 -->
+      <view class="card">
+        <view class="h">逐题回顾（点击查看解析）</view>
+        <view class="qgrid">
+          <view
+            wx:for="{{report.items}}"
+            wx:key="no"
+            class="qn {{item.correct ? 'ok' : item.picked ? 'bad' : 'blank'}}"
+            data-i="{{index}}"
+            bind:tap="onOpenDetail"
+          >{{item.no}}</view>
+        </view>
+        <view class="legend">
+          <text class="lg ok">■ 答对</text>
+          <text class="lg bad">■ 答错</text>
+          <text class="lg blank">■ 未答</text>
+        </view>
+      </view>
+
+      <view class="btn-primary" bind:tap="onRetry">再考一次</view>
+      <view class="btn-ghost back-btn" bind:tap="onBackExam">返回模考</view>
+    </block>
+
+    <!-- 题目详情浮层 -->
+    <view wx:if="{{detail}}" class="mask" bind:tap="onCloseDetail">
+      <view class="sheet" catch:tap="noop">
+        <view class="sheet-h">
+          <text class="sheet-t">第 {{detail.no}} 题 · {{detail.correct ? '答对' : detail.picked ? '答错' : '未答'}}</text>
+          <text class="sheet-x" bind:tap="onCloseDetail">✕</text>
+        </view>
+        <scroll-view scroll-y class="detail-scroll" type="list">
+          <text class="q" user-select>{{detail.question}}</text>
+          <view
+            wx:for="{{detail.optList}}"
+            wx:key="k"
+            class="opt {{item.k === detail.answer ? 'right' : item.k === detail.picked ? 'wrong' : ''}}"
+          >
+            <text class="okey">{{item.k}}</text>
+            <text class="otext">{{item.v}}</text>
+          </view>
+          <view class="exp-row">
+            <text class="exp-k">正确答案</text>
+            <text class="exp-ans {{detail.correct ? 'okc' : 'badc'}}">{{detail.answer}}</text>
+            <text wx:if="{{detail.picked && !detail.correct}}" class="exp-picked">你的选择 {{detail.picked}}</text>
+          </view>
+          <view wx:if="{{detail.hs_explanation}}" class="exp-col">
+            <text class="exp-k hs">花生十三方法解析</text>
+            <text class="exp" user-select>{{detail.hs_explanation}}</text>
+          </view>
+          <view wx:elif="{{detail.explanation}}" class="exp-col">
+            <text class="exp-k">解析</text>
+            <text class="exp" user-select>{{detail.explanation}}</text>
+          </view>
+        </scroll-view>
+      </view>
+    </view>
+  </view>
+</scroll-view>

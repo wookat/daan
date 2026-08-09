@@ -81,9 +81,8 @@
 </template>
 
 <script>
-import { shareDetail, shareAnswer, trackEvent, teamJoin } from '../../api.js';
+import { shareDetail, shareAnswer, trackEvent, teamJoin, qShareText } from '../../api.js';
 
-const SITE = 'https://kaogong.zalize.com';
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const modName = (m) => NAMES[m] || m || '行测';
 
@@ -104,6 +103,7 @@ export default {
       teamJoined: false,
       joining: false,
       joinedTeamId: null,
+      variant: '',
     };
   },
   computed: {
@@ -127,7 +127,9 @@ export default {
   },
   onLoad(query) {
     this.sid = query && query.sid ? String(query.sid) : '';
-    trackEvent('share_open', 'share', this.sid || null);
+    const v = query && query.v ? String(query.v) : '';
+    this.variant = v === 'a' || v === 'b' ? v : '';
+    trackEvent('share_open', this.variant ? 'share_' + this.variant : 'share', this.sid || null);
     uni.setStorageSync('regSource', 'share');
     this.load();
   },
@@ -171,7 +173,7 @@ export default {
         this.answers = r.answers || [];
         if (r.q_stats) this.qStats = r.q_stats;
         if (r.team_invite) this.teamInvite = r.team_invite;
-        trackEvent('share_answer', 'share', this.sid);
+        trackEvent('share_answer', this.variant ? 'share_' + this.variant : 'share', this.sid);
       } catch (e) {
         this.picked = '';
         uni.showToast({ title: e.message || '提交失败', icon: 'none' });
@@ -192,7 +194,7 @@ export default {
       const mod = this.d.question.submodule || modName(this.d.question.module);
       trackEvent('share_copy', 'share_q', this.sid);
       uni.setClipboardData({
-        data: `【${mod}】我刚在考公助手做了一道题，你能做对吗？答完就能看到大家选了啥：${SITE}/#/pkgA/share/share-q?sid=${this.sid}`,
+        data: qShareText(mod, this.sid),
         success: () => uni.showToast({ title: '分享链接已复制', icon: 'none' }),
       });
     },

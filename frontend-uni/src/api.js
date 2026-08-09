@@ -747,6 +747,23 @@ export function trackEvent(event, source, ref) {
   }).catch(() => {});
 }
 
+// 分享文案 A/B：按 uid 稳定分桶（a=好奇型，b=挑战型），用于 share_open/share_answer/share_copy 漏斗对比
+export function shareVariant() {
+  const uid = anonUid();
+  let h = 0;
+  for (let i = 0; i < uid.length; i++) h = (h * 31 + uid.charCodeAt(i)) & 0x7fffffff;
+  return h % 2 === 0 ? 'a' : 'b';
+}
+
+export function qShareText(mod, sid) {
+  const v = shareVariant();
+  const url = `https://kaogong.zalize.com/#/pkgA/share/share-q?sid=${sid}&v=${v}`;
+  if (v === 'b') {
+    return `【${mod}】敢不敢挑战这道题？不少人都做错了，答完立刻看你击败了多少人：${url}`;
+  }
+  return `【${mod}】我刚做了一道题，你能做对吗？答完就能看到大家选了啥：${url}`;
+}
+
 export function pkLeaderboard() {
   return request(`/api/pk/leaderboard?uid=${encodeURIComponent(anonUid())}`);
 }

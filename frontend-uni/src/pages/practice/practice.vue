@@ -1453,6 +1453,7 @@ export default {
       if (this.bestStreak >= 3) txt += '，最高连对 ' + this.bestStreak + ' 题';
       if (this.percentile != null) txt += '，击败了 ' + this.percentile + '% 的刷题记录';
       txt += '！一起来刷：https://kaogong.zalize.com';
+      trackEvent('share_result_copy', 'practice', this.lastModule || null);
       uni.setClipboardData({
         data: txt,
         success: () => uni.showToast({ title: '成绩已复制，去粘贴给研友吧', icon: 'none', duration: 1600 }),

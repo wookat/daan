@@ -5,6 +5,9 @@ import type {
   AuthResp,
   CheckinBadgesResp,
   CheckinSummaryResp,
+  ExamReportResp,
+  ExamStartResp,
+  ExamSubmitResp,
   FavItem,
   Mistake,
   MistakesResp,
@@ -165,6 +168,30 @@ export function fetchPapers(): Promise<{ items: Paper[] }> {
 
 export function fetchPaperQuestions(source: string): Promise<QuestionsResp> {
   return request<QuestionsResp>('/api/paper_questions?src=' + encodeURIComponent(source));
+}
+
+export function examStart(): Promise<ExamStartResp> {
+  return request<ExamStartResp>('/api/exam/start', {
+    method: 'POST',
+    data: { uid: anonUid(), mini: true },
+  });
+}
+
+export function examSubmit(
+  attemptId: number,
+  picks: Record<number, string>,
+  secs: Record<number, number>
+): Promise<ExamSubmitResp> {
+  return request<ExamSubmitResp>('/api/exam/submit', {
+    method: 'POST',
+    data: { uid: anonUid(), attempt_id: attemptId, picks, secs },
+  });
+}
+
+export function fetchExamReport(attemptId: number): Promise<ExamReportResp> {
+  return request<ExamReportResp>(
+    '/api/exam/report/' + attemptId + '?uid=' + encodeURIComponent(anonUid())
+  );
 }
 
 // ---------- 组队打卡 / 题目分享 ----------

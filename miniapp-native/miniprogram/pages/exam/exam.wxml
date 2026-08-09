@@ -3,7 +3,7 @@
   <view class="wrap">
     <view class="card hero-mini">
       <text class="hm-t">迷你模考</text>
-      <text class="hm-s">20 题混合模块 · 快速热身</text>
+      <text class="hm-s">30 题混合模块 · 交卷出成绩报告与薄弱考点</text>
       <view class="btn-primary" bind:tap="onMini">开始迷你模考</view>
     </view>
 

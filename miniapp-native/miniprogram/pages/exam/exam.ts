@@ -22,7 +22,7 @@ Page({
     }
   },
   onMini() {
-    // 一期：小模考走刷题闭环（混合模块 20 题）
-    wx.navigateTo({ url: '/pages/practice/practice?count=20&source=mock' });
+    // 迷你模考：真实模考流程（attempt + 成绩报告 + 薄弱考点）
+    wx.navigateTo({ url: '/pages/exam/mini' });
   },
 });

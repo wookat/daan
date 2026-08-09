@@ -3,6 +3,8 @@
     "pages/home/home",
     "pages/book/book",
     "pages/exam/exam",
+    "pages/exam/mini",
+    "pages/exam/report",
     "pages/stats/stats",
     "pages/profile/profile",
     "pages/practice/practice",
