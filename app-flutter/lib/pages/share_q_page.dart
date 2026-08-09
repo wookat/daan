@@ -390,15 +390,26 @@ class _ShareQPageState extends State<ShareQPage> {
               ),
             ),
             const SizedBox(width: 10),
-            teamJoined
-                ? OutlinedButton(
-                    onPressed: joinedTeamId > 0
-                        ? () => context.push('/team/panel/$joinedTeamId')
-                        : null,
-                    child: const Text('看队友 ›'))
-                : FilledButton(
-                    onPressed: joining ? null : _joinTeam,
-                    child: Text(joining ? '加入中…' : '一键加入')),
+            // 全局按钮主题 minimumSize 宽为 infinity，Row 内需有界约束
+            SizedBox(
+              width: 96,
+              height: 40,
+              child: teamJoined
+                  ? OutlinedButton(
+                      onPressed: joinedTeamId > 0
+                          ? () => context.push('/team/panel/$joinedTeamId')
+                          : null,
+                      style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8)),
+                      child: const Text('看队友 ›',
+                          style: TextStyle(fontSize: 13)))
+                  : FilledButton(
+                      onPressed: joining ? null : _joinTeam,
+                      style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8)),
+                      child: Text(joining ? '加入中…' : '一键加入',
+                          style: const TextStyle(fontSize: 13))),
+            ),
           ],
         ),
       ),
