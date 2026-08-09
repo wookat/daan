@@ -74,6 +74,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
   int? percentile; // 本组正确率全站分位
   Timer? _autoTimer;
   Map<String, dynamic>? reinforcePicked; // 复习完成后的同考点强化候选
+  int dueReview = 0; // 完成页引导：今日到期待复习题数
 
   @override
   void initState() {
@@ -151,6 +152,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
       idx = 0;
       elapsed = 0;
       reinforcePicked = null;
+      dueReview = 0;
     });
     try {
       List<Question> qs;
@@ -510,6 +512,13 @@ class _PracticePageState extends ConsumerState<PracticePage> {
 
   Future<void> _finish() async {
     setState(() => finished = true);
+    if (widget.mode != 'review') {
+      unawaited(Api.reviewDue().then((d) {
+        if (mounted) {
+          setState(() => dueReview = ((d['total'] ?? 0) as num).toInt());
+        }
+      }).catchError((_) {}));
+    }
     if (widget.mode == 'review') {
       unawaited(Api.reinforceSuggest().then((d) {
         final p = d['picked'];
@@ -1551,6 +1560,49 @@ class _PracticePageState extends ConsumerState<PracticePage> {
                     },
                     child: const Text('强化 5 道新题（未做过）'),
                   ),
+                ],
+              ),
+            ),
+          ),
+        ],
+        if (widget.mode != 'review' && dueReview > 0) ...[
+          const SizedBox(height: 16),
+          InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () {
+              Api.trackEvent('review_entry_click', source: 'practice_done');
+              context.pushReplacement('/practice?mode=review');
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                gradient: kBrandGradient,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('今日还有 $dueReview 题到期待复习',
+                            style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white)),
+                        const SizedBox(height: 2),
+                        Text('趁热打铁，按遗忘曲线巩固一遍',
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.white.withValues(alpha: .75))),
+                      ],
+                    ),
+                  ),
+                  const Text('去复习 ›',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white)),
                 ],
               ),
             ),

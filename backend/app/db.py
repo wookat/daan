@@ -78,6 +78,7 @@ def init_db():
         ("has_hs", "ALTER TABLE questions ADD COLUMN has_hs INTEGER DEFAULT 0"),
         ("tag3", "ALTER TABLE questions ADD COLUMN tag3 TEXT"),
         ("quality_score", "ALTER TABLE questions ADD COLUMN quality_score INTEGER"),
+        ("updated_at", "ALTER TABLE questions ADD COLUMN updated_at REAL"),
     ]:
         if col not in qcols:
             conn.execute(ddl)
@@ -188,7 +189,7 @@ def _seed_questions():
             except json.JSONDecodeError:
                 continue
             cur = conn.execute(
-                "INSERT OR IGNORE INTO questions (module, question_type, question, options, answer, explanation, source, submodule) VALUES (?,?,?,?,?,?,?,?)",
+                "INSERT OR IGNORE INTO questions (module, question_type, question, options, answer, explanation, source, submodule, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
                 (
                     q.get("module"),
                     q.get("question_type"),
@@ -198,6 +199,7 @@ def _seed_questions():
                     q.get("explanation"),
                     q.get("source"),
                     q.get("submodule"),
+                    time.time(),
                 ),
             )
             if cur.rowcount:
@@ -1184,7 +1186,10 @@ def admin_update_question(qid: int, fields: dict) -> bool:
         return False
     conn = get_conn()
     assignments = ", ".join(f"{k}=?" for k in sets)
-    cur = conn.execute(f"UPDATE questions SET {assignments} WHERE id=?", (*sets.values(), qid))
+    cur = conn.execute(
+        f"UPDATE questions SET {assignments}, updated_at=? WHERE id=?",
+        (*sets.values(), time.time(), qid),
+    )
     conn.commit()
     conn.close()
     return cur.rowcount > 0
@@ -1245,7 +1250,10 @@ def dup_cluster_resolve(cluster_id: int, keep_qid: int | None) -> dict:
             conn.close()
             return {"ok": False, "error": "keep_qid 不在该簇内"}
         disabled = [q for q in qids if q != keep_qid]
-        conn.executemany("UPDATE questions SET disabled=1 WHERE id=?", [(q,) for q in disabled])
+        conn.executemany(
+            "UPDATE questions SET disabled=1, updated_at=? WHERE id=?",
+            [(time.time(), q) for q in disabled],
+        )
     new_status = "resolved" if keep_qid is not None else "ignored"
     conn.execute("UPDATE dup_clusters SET status=? WHERE cluster_id=?", (new_status, cluster_id))
     conn.commit()
@@ -1337,7 +1345,10 @@ def rate_question_hs(qid: int, up: bool):
 
 def set_question_hs_explanation(qid: int, text: str):
     conn = get_conn()
-    conn.execute("UPDATE questions SET hs_explanation=?, has_hs=? WHERE id=?", (text, 1 if text else 0, qid))
+    conn.execute(
+        "UPDATE questions SET hs_explanation=?, has_hs=?, updated_at=? WHERE id=?",
+        (text, 1 if text else 0, time.time(), qid),
+    )
     conn.commit()
     conn.close()
 
@@ -1525,7 +1536,7 @@ def import_questions(items: list[dict], batch: str | None = None) -> dict:
             skipped += 1
             continue
         cur = conn.execute(
-            "INSERT OR IGNORE INTO questions (module, question_type, question, options, answer, explanation, source, submodule, is_real, exam_year, exam_region, disabled, import_batch, image, image_credit) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT OR IGNORE INTO questions (module, question_type, question, options, answer, explanation, source, submodule, is_real, exam_year, exam_region, disabled, import_batch, image, image_credit, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
                 q.get("module"),
                 q.get("question_type"),
@@ -1542,6 +1553,7 @@ def import_questions(items: list[dict], batch: str | None = None) -> dict:
                 batch,
                 q.get("image"),
                 q.get("image_credit"),
+                time.time(),
             ),
         )
         if cur.rowcount:
@@ -1551,8 +1563,8 @@ def import_questions(items: list[dict], batch: str | None = None) -> dict:
             skipped += 1
             if q.get("is_real"):
                 conn.execute(
-                    "UPDATE questions SET is_real=1, exam_year=COALESCE(exam_year,?), exam_region=COALESCE(exam_region,?) WHERE question=?",
-                    (q.get("exam_year"), q.get("exam_region"), q.get("question")),
+                    "UPDATE questions SET is_real=1, exam_year=COALESCE(exam_year,?), exam_region=COALESCE(exam_region,?), updated_at=? WHERE question=?",
+                    (q.get("exam_year"), q.get("exam_region"), time.time(), q.get("question")),
                 )
     conn.commit()
     conn.close()
@@ -1668,7 +1680,8 @@ def admin_batch_decide(batch: str, approve: bool) -> int:
     conn = get_conn()
     if approve:
         cur = conn.execute(
-            "UPDATE questions SET disabled=0 WHERE import_batch=? AND disabled=2", (batch,)
+            "UPDATE questions SET disabled=0, updated_at=? WHERE import_batch=? AND disabled=2",
+            (time.time(), batch),
         )
     else:
         cur = conn.execute(
@@ -1692,12 +1705,13 @@ def import_hs_explanations(items: list[dict]) -> int:
         school = (it.get("xp_school") or "").strip()
         if text:
             n += conn.execute(
-                "UPDATE questions SET hs_explanation=?, has_hs=1 WHERE id=?", (text, int(qid))
+                "UPDATE questions SET hs_explanation=?, has_hs=1, updated_at=? WHERE id=?",
+                (text, time.time(), int(qid)),
             ).rowcount
         if xp:
             n += conn.execute(
-                "UPDATE questions SET xp_explanation=?, xp_school=? WHERE id=?",
-                (xp, school or None, int(qid)),
+                "UPDATE questions SET xp_explanation=?, xp_school=?, updated_at=? WHERE id=?",
+                (xp, school or None, time.time(), int(qid)),
             ).rowcount
     conn.commit()
     conn.close()

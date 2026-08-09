@@ -31,6 +31,15 @@
       </view>
       <text class="duebar-go">去复习 ›</text>
     </view>
+    <view v-else-if="planFetched" class="card duebar donebar">
+      <view class="duebar-l">
+        <l-icon name="check" :size="18" color="#16a34a" />
+        <view class="duebar-txts">
+          <text class="duebar-t">今日复习已清零 ✓</text>
+          <text class="duebar-s">到期错题已全部复习完，继续刷新题吧</text>
+        </view>
+      </view>
+    </view>
 
     <!-- 学习计划引导 / 今日计划 -->
     <view v-if="profile === null && !guideHide" class="card guide" @click="openSetup">
@@ -392,6 +401,7 @@ export default {
       exporting: false,
       exportConfirm: false,
       plan: null,
+      planFetched: false,
       profile: undefined,
       planToday: null,
       guideHide: uni.getStorageSync('planGuideHide') ? true : false,
@@ -701,6 +711,7 @@ export default {
       if (!uid) return;
       try {
         this.plan = await request('/api/daily_plan?uid=' + encodeURIComponent(uid));
+        this.planFetched = true;
         const due = (this.plan && this.plan.due_mistakes) || 0;
         if (due > 0) uni.setTabBarBadge({ index: 1, text: String(due > 99 ? '99+' : due) });
         else uni.removeTabBarBadge({ index: 1 });
@@ -933,6 +944,9 @@ export default {
 .duebar-t { display: block; font-size: 28rpx; font-weight: 700; color: #ffffff; }
 .duebar-s { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.75); margin-top: 4rpx; }
 .duebar-go { flex-shrink: 0; background: rgba(255, 255, 255, 0.18); color: #ffffff; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 12rpx 30rpx; }
+.duebar.donebar { background: var(--card); border: 1rpx solid var(--line); box-shadow: none; }
+.donebar .duebar-t { color: #16a34a; }
+.donebar .duebar-s { color: var(--ink-3); }
 
 /* 断卡风险提示 */
 .riskbar { display: flex; align-items: center; gap: 20rpx; background: var(--warn-soft); border: 1rpx solid #fde68a; padding: 22rpx 26rpx; }

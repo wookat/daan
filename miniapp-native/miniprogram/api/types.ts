@@ -53,6 +53,16 @@ export interface MistakesResp {
   items: Mistake[];
 }
 
+export interface ReviewResp {
+  items: Mistake[];
+  total: number;
+}
+
+export interface ReviewRecordResp {
+  next_review_days: number;
+  streak: number;
+}
+
 export interface AuthResp {
   token: string;
   user: { uid: string; phone?: string; nickname?: string | null };
