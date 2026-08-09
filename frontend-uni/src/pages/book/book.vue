@@ -915,8 +915,9 @@ export default {
         uni.showLoading({ title: '生成分享链接…' });
         const d = await shareCreate(m.question_id);
         uni.hideLoading();
+        const mod = d.submodule || this.modName(d.module) || '行测';
         uni.setClipboardData({
-          data: `我在考公助手分享了一道题，敢来挑战吗？答完就能看到大家选了啥：https://kaogong.zalize.com/#/pkgA/share/share-q?sid=${d.sid}`,
+          data: `【${mod}】我刚做了一道题，你能做对吗？答完就能看到大家选了啥：https://kaogong.zalize.com/#/pkgA/share/share-q?sid=${d.sid}`,
           success: () => uni.showToast({ title: '分享链接已复制，发给队友吧', icon: 'none' }),
         });
       } catch (e) {

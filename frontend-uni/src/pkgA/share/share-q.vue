@@ -14,7 +14,7 @@
 
       <view class="card q">
         <view class="q-tags">
-          <text class="tag">{{ d.question.module || '行测' }}</text>
+          <text class="tag">{{ modLabel }}</text>
           <text v-if="d.question.submodule" class="tag gray">{{ d.question.submodule }}</text>
         </view>
         <text class="stem">{{ d.question.question }}</text>
@@ -37,6 +37,8 @@
         </view>
         <view v-else class="res-bar ok">正确答案：{{ d.question.answer }}</view>
 
+        <view v-if="beatText" class="beat-bar">{{ beatText }}</view>
+
         <view v-if="d.question.explanation" class="card">
           <text class="exp-k">解析</text>
           <view class="exp">{{ d.question.explanation }}</view>
@@ -52,6 +54,21 @@
           </view>
         </view>
 
+        <view v-if="teamInvite && !teamJoined" class="card team-cta">
+          <view class="tc-l">
+            <text class="tc-t">和 {{ d.from_name }} 组队刷题</text>
+            <text class="tc-s">加入小队「{{ teamInvite.name }}」，每天互相监督打卡</text>
+          </view>
+          <view class="tc-btn" :class="{ off: joining }" @click="joinTeam">{{ joining ? '加入中…' : '一键加入' }}</view>
+        </view>
+        <view v-else-if="teamJoined" class="card team-cta joined">
+          <view class="tc-l">
+            <text class="tc-t">🎉 已加入「{{ teamInvite.name }}」</text>
+            <text class="tc-s">每天刷题就是打卡，队友都能看到你的进度</text>
+          </view>
+          <view class="tc-btn ghost" @click="goTeamPage">看队友 ›</view>
+        </view>
+
         <view class="act-btn main" @click="goSimilar">去刷同类题</view>
         <view v-if="d.is_sharer" class="act-btn sub" @click="copyLink">复制分享链接，喊更多人来答</view>
       </template>
@@ -64,9 +81,11 @@
 </template>
 
 <script>
-import { shareDetail, shareAnswer, trackEvent } from '../../api.js';
+import { shareDetail, shareAnswer, trackEvent, teamJoin } from '../../api.js';
 
 const SITE = 'https://kaogong.zalize.com';
+const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
+const modName = (m) => NAMES[m] || m || '行测';
 
 export default {
   data() {
@@ -80,14 +99,29 @@ export default {
       answers: [],
       startTs: 0,
       submitting: false,
+      qStats: null,
+      teamInvite: null,
+      teamJoined: false,
+      joining: false,
+      joinedTeamId: null,
     };
   },
   computed: {
     revealed() {
       return !!(this.d && (this.d.is_sharer || this.d.answered || this.myResult));
     },
+    modLabel() {
+      return modName(this.d && this.d.question.module);
+    },
     nAnsweredText() {
       return `${this.answers.length || this.d.n_answered} 人已作答`;
+    },
+    beatText() {
+      const s = this.qStats;
+      if (!s || !s.total || !this.myResult) return '';
+      if (this.myResult.correct && s.beat_pct != null) return `🏆 你击败了 ${s.beat_pct}% 的作答者（共 ${s.total} 人做过这题）`;
+      if (s.acc != null) return `共 ${s.total} 人做过这题，正确率 ${s.acc}%，再战同类题赢回来`;
+      return '';
     },
   },
   onLoad(query) {
@@ -108,7 +142,10 @@ export default {
         this.d = d;
         this.answers = d.answers || [];
         if (d.my_answer) this.myResult = d.my_answer;
+        if (d.q_stats) this.qStats = d.q_stats;
+        this.teamInvite = d.team_invite || null;
         this.startTs = Date.now();
+        uni.setNavigationBarTitle({ title: `${d.from_name} 考了你一道${d.question.submodule || modName(d.question.module)}题，你能做对吗？- 考公助手` });
       } catch (e) {
         this.errMsg = e.message || '分享不存在或已过期';
       }
@@ -131,6 +168,8 @@ export default {
         this.d.question.answer = r.answer;
         this.d.question.explanation = r.explanation;
         this.answers = r.answers || [];
+        if (r.q_stats) this.qStats = r.q_stats;
+        if (r.team_invite) this.teamInvite = r.team_invite;
         trackEvent('share_answer', 'share', this.sid);
       } catch (e) {
         this.picked = '';
@@ -149,10 +188,29 @@ export default {
       uni.navigateTo({ url: '/pages/practice/practice' });
     },
     copyLink() {
+      const mod = this.d.question.submodule || modName(this.d.question.module);
+      trackEvent('share_copy', 'share_q', this.sid);
       uni.setClipboardData({
-        data: `我在考公助手分享了一道题，敢来挑战吗？${SITE}/#/pkgA/share/share-q?sid=${this.sid}`,
+        data: `【${mod}】我刚在考公助手做了一道题，你能做对吗？答完就能看到大家选了啥：${SITE}/#/pkgA/share/share-q?sid=${this.sid}`,
         success: () => uni.showToast({ title: '分享链接已复制', icon: 'none' }),
       });
+    },
+    async joinTeam() {
+      if (this.joining) return;
+      this.joining = true;
+      try {
+        const d = await teamJoin(this.teamInvite.code);
+        this.teamJoined = true;
+        this.joinedTeamId = d.team.id;
+        trackEvent('share_team_join', 'share_q', this.sid);
+        uni.showToast({ title: d.already ? '你已在该小队' : '加入成功！', icon: 'none' });
+      } catch (e) {
+        uni.showToast({ title: e.message || '加入失败', icon: 'none' });
+      }
+      this.joining = false;
+    },
+    goTeamPage() {
+      uni.navigateTo({ url: '/pkgA/team/team?id=' + this.joinedTeamId });
     },
     goLogin() {
       uni.navigateTo({ url: '/pkgA/user/login' });
@@ -188,6 +246,17 @@ export default {
 .res-bar { border-radius: 18rpx; padding: 20rpx 26rpx; font-size: 27rpx; font-weight: 600; margin-bottom: 20rpx; }
 .res-bar.ok { background: var(--ok-soft); color: var(--ok); }
 .res-bar.bad { background: var(--bad-soft); color: var(--bad); }
+
+.beat-bar { border-radius: 18rpx; padding: 18rpx 26rpx; font-size: 25rpx; font-weight: 600; margin-bottom: 20rpx; background: #fef3c7; color: #b45309; }
+
+.team-cta { display: flex; align-items: center; gap: 18rpx; }
+.team-cta.joined { background: var(--ok-soft); }
+.tc-l { flex: 1; min-width: 0; }
+.tc-t { display: block; font-size: 28rpx; font-weight: 700; color: var(--ink); }
+.tc-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; }
+.tc-btn { flex-shrink: 0; min-height: 40px; display: flex; align-items: center; padding: 0 30rpx; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 25rpx; font-weight: 600; }
+.tc-btn.off { opacity: 0.6; }
+.tc-btn.ghost { background: var(--brand-soft); color: var(--brand); }
 
 .exp-k { display: block; font-size: 23rpx; color: var(--ink-2); font-weight: 600; margin-bottom: 10rpx; }
 .exp { font-size: 26rpx; color: var(--ink); line-height: 1.7; white-space: pre-wrap; }
