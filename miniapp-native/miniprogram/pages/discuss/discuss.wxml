@@ -1,0 +1,77 @@
+<navbar title="讨论区" back />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <!-- 题目摘要卡 -->
+    <view wx:if="{{q}}" class="card qcard">
+      <view class="q-tags">
+        <text class="tag tag-brand">{{q.module}}</text>
+        <text wx:if="{{q.is_real}}" class="tag tag-warn">真题{{q.exam_year ? ' · ' + q.exam_year : ''}}</text>
+        <text wx:if="{{q.correct_ratio != null}}" class="tag tag-gray">正确率 {{q.correct_ratio}}%</text>
+      </view>
+      <text class="q-text" user-select>{{q.question}}</text>
+    </view>
+
+    <!-- 排序 -->
+    <view class="sort-row">
+      <text class="sort-t">{{total}} 条讨论</text>
+      <view class="sort-btns">
+        <text class="sort-chip {{sort === 'hot' ? 'on' : ''}}" data-s="hot" bind:tap="onSort">最热</text>
+        <text class="sort-chip {{sort === 'new' ? 'on' : ''}}" data-s="new" bind:tap="onSort">最新</text>
+      </view>
+    </view>
+
+    <view wx:if="{{loading}}" class="spin">加载中…</view>
+    <view wx:if="{{!loading && !items.length}}" class="empty">
+      <view class="eico">💬</view>
+      <text>还没有讨论，发第一条吧</text>
+    </view>
+
+    <view wx:for="{{items}}" wx:key="id" class="card c-item">
+      <view class="c-top">
+        <text class="c-name">{{item.nickname}}</text>
+        <text class="c-time">{{item.timeText}}</text>
+      </view>
+      <text class="c-content" user-select>{{item.content}}</text>
+      <view class="c-acts">
+        <text class="c-act {{item.liked ? 'on' : ''}}" data-id="{{item.id}}" bind:tap="onLike">👍 {{item.likes || ''}}</text>
+        <text class="c-act" data-id="{{item.id}}" data-nick="{{item.nickname}}" bind:tap="onReply">回复</text>
+        <text wx:if="{{item.mine}}" class="c-act del" data-id="{{item.id}}" bind:tap="onDelete">删除</text>
+      </view>
+
+      <view wx:if="{{item.replies.length}}" class="replies">
+        <view wx:for="{{item.replies}}" wx:key="id" wx:for-item="r" class="reply">
+          <view class="c-top">
+            <text class="c-name">{{r.nickname}}</text>
+            <text class="c-time">{{r.timeText}}</text>
+          </view>
+          <text class="c-content" user-select>{{r.content}}</text>
+          <view class="c-acts">
+            <text class="c-act {{r.liked ? 'on' : ''}}" data-id="{{r.id}}" bind:tap="onLike">👍 {{r.likes || ''}}</text>
+            <text wx:if="{{r.mine}}" class="c-act del" data-id="{{r.id}}" bind:tap="onDelete">删除</text>
+          </view>
+        </view>
+      </view>
+    </view>
+    <view class="bottom-pad" />
+  </view>
+</scroll-view>
+
+<!-- 底部输入 -->
+<view class="inputbar">
+  <view wx:if="{{replyTo}}" class="reply-tip">
+    回复 @{{replyTo.nickname}}
+    <text class="reply-x" bind:tap="onCancelReply">✕</text>
+  </view>
+  <view class="ib-row">
+    <input
+      class="ib-input"
+      value="{{input}}"
+      placeholder="{{replyTo ? '回复 @' + replyTo.nickname + '…' : '说说这道题的思路…'}}"
+      confirm-type="send"
+      maxlength="500"
+      bind:input="onInput"
+      bind:confirm="onPost"
+    />
+    <text class="ib-send {{posting ? 'dis' : ''}}" bind:tap="onPost">发布</text>
+  </view>
+</view>

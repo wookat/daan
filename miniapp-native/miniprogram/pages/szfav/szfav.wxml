@@ -1,0 +1,28 @@
+<navbar title="时政收藏" back />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <view wx:if="{{!items.length}}" class="empty">
+      <view class="eico">📰</view>
+      <text>还没有收藏时政题</text>
+      <view class="btn-primary go" bind:tap="onGoDaily">去做今日时政</view>
+    </view>
+
+    <view wx:for="{{items}}" wx:key="ts" class="card">
+      <view class="f-top" data-index="{{index}}" bind:tap="onToggle">
+        <text class="f-q">{{item.question}}</text>
+        <text class="f-arrow">{{item.open ? '▲' : '▼'}}</text>
+      </view>
+      <block wx:if="{{item.open}}">
+        <view wx:for="{{item.optList}}" wx:key="k" wx:for-item="o" class="f-opt {{o.k === item.answer ? 'ans' : ''}}">
+          <text>{{o.k}}. {{o.v}}</text>
+        </view>
+        <view class="f-ans">正确答案：{{item.answer}}</view>
+        <text wx:if="{{item.explanation}}" class="f-exp" user-select>{{item.explanation}}</text>
+        <view class="f-foot">
+          <text class="f-time">{{item.timeText}} 收藏</text>
+          <text class="f-del" data-index="{{index}}" bind:tap="onRemove">取消收藏</text>
+        </view>
+      </block>
+    </view>
+  </view>
+</scroll-view>

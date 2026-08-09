@@ -1,0 +1,104 @@
+<navbar title="答题 PK" back />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <!-- 首页：发起 / 应战 / 榜单 -->
+    <block wx:if="{{view === 'home'}}">
+      <view class="card hero">
+        <text class="hero-t">⚔️ 答题 PK</text>
+        <text class="hero-s">10 题限时对战 · 每题 {{30}} 秒 · 比分数再比用时</text>
+        <view class="st-l">选择模块（不选则五模块混合）</view>
+        <view class="chips">
+          <text
+            wx:for="{{mods}}"
+            wx:key="key"
+            class="set-chip {{module === item.key ? 'on' : ''}}"
+            data-mod="{{item.key}}"
+            bind:tap="onPickMod"
+          >{{item.name}}</text>
+        </view>
+        <view class="btn-primary {{busy ? 'dis' : ''}}" bind:tap="onCreate">发起挑战（生成挑战码）</view>
+        <view class="btn-ghost gap {{busy ? 'dis' : ''}}" bind:tap="onRandom">🎲 随机匹配对手</view>
+      </view>
+
+      <view class="card">
+        <view class="st-l">收到研友的挑战码？</view>
+        <view class="join-row">
+          <input class="join-input" value="{{joinCode}}" placeholder="输入挑战码" maxlength="8" bind:input="onJoinInput" />
+          <view class="join-btn {{busy ? 'dis' : ''}}" bind:tap="onJoin">应战</view>
+        </view>
+      </view>
+
+      <view class="card" wx:if="{{lb}}">
+        <view class="lb-h">
+          <text class="lb-t">🏆 本周胜场榜</text>
+          <text class="lb-mine">{{lb.my_rank ? '我的排名 #' + lb.my_rank : '本周暂无胜场'}} · 胜 {{lb.my_wins}}</text>
+        </view>
+        <view wx:if="{{!lb.items.length}}" class="spin">本周还没有对局，快来抢头名</view>
+        <view wx:for="{{lb.items}}" wx:key="rank" class="lb-row">
+          <text class="lb-rank {{item.rank <= 3 ? 'top' : ''}}">{{item.rank}}</text>
+          <text class="lb-name">{{item.name}}</text>
+          <text class="lb-wins">{{item.wins}} 胜</text>
+        </view>
+      </view>
+
+      <view class="card" wx:if="{{mine.length}}">
+        <view class="lb-h">
+          <text class="lb-t">我的对局</text>
+          <text class="lb-mine">累计 {{wins}} 胜</text>
+        </view>
+        <view wx:for="{{mine}}" wx:key="code" class="mine-row" data-code="{{item.code}}" bind:tap="onOpenMatch">
+          <text class="m-result {{item.result === '胜' ? 'win' : item.result === '负' ? 'lose' : ''}}">{{item.result}}</text>
+          <view class="m-main">
+            <text class="m-t">{{item.moduleName}} · vs {{item.vs}}</text>
+            <text class="m-s">{{item.myScore}} : {{item.oppScore}} · 码 {{item.code}}</text>
+          </view>
+          <text class="m-go">›</text>
+        </view>
+      </view>
+    </block>
+
+    <!-- 对战答题 -->
+    <block wx:if="{{view === 'quiz' && cur}}">
+      <view class="card">
+        <view class="q-top">
+          <text class="tag tag-brand">第 {{idx + 1}}/{{items.length}} 题</text>
+          <text class="countdown {{secLeft <= 5 ? 'urgent' : ''}}">{{secLeft}}s</text>
+        </view>
+        <view class="progress"><view class="pfill" style="width: {{(idx / items.length) * 100}}%" /></view>
+        <text class="q-text" user-select>{{cur.question}}</text>
+        <view wx:for="{{cur.optList}}" wx:key="k" class="opt" data-key="{{item.k}}" bind:tap="onPick">
+          <text class="okey">{{item.k}}</text>
+          <text class="otext">{{item.v}}</text>
+        </view>
+      </view>
+    </block>
+
+    <!-- 胜负页 -->
+    <block wx:if="{{view === 'result' && match}}">
+      <view class="card result">
+        <text class="res-t">{{resultText}}</text>
+        <view class="vs-row">
+          <view class="vs-side">
+            <text class="vs-name">{{match.my_side === 'opponent' ? (match.opponent ? match.opponent.name : '我') : match.creator.name}}</text>
+            <text class="vs-score">{{match.my_side === 'opponent' ? (match.opponent ? match.opponent.score : 0) : match.creator.score}}</text>
+            <text class="vs-sub">{{match.my_side === 'opponent' ? (match.opponent ? match.opponent.correct : 0) : match.creator.correct}}/{{match.n_questions}} 题</text>
+          </view>
+          <text class="vs-x">VS</text>
+          <view class="vs-side">
+            <text class="vs-name">{{match.my_side === 'opponent' ? match.creator.name : (match.opponent ? match.opponent.name : '待应战')}}</text>
+            <text class="vs-score">{{match.my_side === 'opponent' ? match.creator.score : (match.opponent ? match.opponent.score : '—')}}</text>
+            <text class="vs-sub">{{match.my_side === 'opponent' ? match.creator.correct + '/' + match.n_questions + ' 题' : (match.opponent ? match.opponent.correct + '/' + match.n_questions + ' 题' : '')}}</text>
+          </view>
+        </view>
+
+        <block wx:if="{{waiting}}">
+          <text class="wait-tip">对手完成后自动出结果，也可以把挑战码发给研友</text>
+          <view class="code-box" bind:tap="onCopyCode">挑战码 {{code}} · 点击复制</view>
+          <button class="share-btn" open-type="share">微信转发挑战 ›</button>
+        </block>
+
+        <view class="btn-primary gap" bind:tap="onBackHome">{{waiting ? '先回大厅' : '再来一局'}}</view>
+      </view>
+    </block>
+  </view>
+</scroll-view>

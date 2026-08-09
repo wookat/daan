@@ -1,0 +1,17 @@
+<navbar title="面试历史记录" back />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <view wx:if="{{loading}}" class="card spin">加载中…</view>
+    <view wx:if="{{!loading && !items.length}}" class="empty">
+      <view class="eico">🎤</view>
+      <text>还没有练习记录，去抽一题吧</text>
+    </view>
+    <view wx:for="{{items}}" wx:key="id" class="card row" data-id="{{item.id}}" bind:tap="onOpen">
+      <view class="r-main">
+        <text class="r-q">{{item.question_text}}</text>
+        <text class="r-s">{{item.category}} · {{item.timeText}}</text>
+      </view>
+      <text class="r-score">{{item.total}} 分</text>
+    </view>
+  </view>
+</scroll-view>

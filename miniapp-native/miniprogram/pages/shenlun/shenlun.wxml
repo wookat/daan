@@ -1,0 +1,124 @@
+<navbar title="申论" back />
+<view class="tabs">
+  <text class="tab {{tab === 'q' ? 'on' : ''}}" data-tab="q" bind:tap="onTab">真题题库</text>
+  <text class="tab {{tab === 'm' ? 'on' : ''}}" data-tab="m" bind:tap="onTab">素材/范文</text>
+  <text class="tab {{tab === 'h' ? 'on' : ''}}" data-tab="h" bind:tap="onTab">作答记录</text>
+</view>
+
+<scroll-view class="page-scroll" scroll-y type="list" bindscrolltolower="onMoreQuestions">
+  <view class="wrap">
+    <!-- 题库 -->
+    <block wx:if="{{tab === 'q'}}">
+      <scroll-view scroll-x class="fscroll" type="list">
+        <view class="frow">
+          <text wx:for="{{qtypes}}" wx:key="*this" class="fchip {{qtype === item ? 'on' : ''}}" data-v="{{item}}" bind:tap="onQtype">{{item}}</text>
+        </view>
+      </scroll-view>
+      <scroll-view wx:if="{{years.length}}" scroll-x class="fscroll" type="list">
+        <view class="frow">
+          <text wx:for="{{years}}" wx:key="*this" class="fchip {{year === item ? 'on' : ''}}" data-v="{{item}}" bind:tap="onYear">{{item}}年</text>
+        </view>
+      </scroll-view>
+      <scroll-view wx:if="{{regions.length}}" scroll-x class="fscroll" type="list">
+        <view class="frow">
+          <text wx:for="{{regions}}" wx:key="*this" class="fchip {{region === item ? 'on' : ''}}" data-v="{{item}}" bind:tap="onRegion">{{item}}</text>
+        </view>
+      </scroll-view>
+
+      <view wx:if="{{qLoading && !questions.length}}" class="spin">加载中…</view>
+      <view wx:if="{{!qLoading && !questions.length}}" class="empty">
+        <view class="eico">📝</view>
+        <text>暂无题目，试试放宽筛选</text>
+      </view>
+      <view wx:for="{{questions}}" wx:key="id" class="card qrow" data-id="{{item.id}}" bind:tap="onOpenQuestion">
+        <view class="q-tags">
+          <text class="tag tag-brand">{{item.qtype}}</text>
+          <text wx:if="{{item.exam_year}}" class="tag tag-gray">{{item.exam_year}}{{item.exam_region ? ' · ' + item.exam_region : ''}}</text>
+        </view>
+        <text class="q-text">{{item.question}}</text>
+      </view>
+      <view wx:if="{{questions.length && questions.length < qTotal}}" class="spin">{{qLoading ? '加载中…' : '上拉加载更多'}}</view>
+    </block>
+
+    <!-- 素材 -->
+    <block wx:if="{{tab === 'm'}}">
+      <scroll-view scroll-x class="fscroll" type="list">
+        <view class="frow">
+          <text class="fchip {{onlyFav ? 'on' : ''}}" bind:tap="onToggleOnlyFav">⭐ 只看收藏</text>
+          <text wx:for="{{matTypes}}" wx:key="*this" class="fchip {{matType === item ? 'on' : ''}}" data-v="{{item}}" bind:tap="onMatType">{{item}}</text>
+        </view>
+      </scroll-view>
+      <view wx:if="{{mLoading && !materials.length}}" class="spin">加载中…</view>
+      <block wx:for="{{materials}}" wx:key="id">
+        <view wx:if="{{!onlyFav || item.fav}}" class="card">
+          <view class="mat-h" data-index="{{index}}" bind:tap="onToggleMat">
+            <view class="mat-main">
+              <text class="tag tag-brand">{{item.type}}</text>
+              <text class="mat-t">{{item.topic}}</text>
+            </view>
+            <text class="mat-fav {{item.fav ? 'on' : ''}}" data-index="{{index}}" catch:tap="onFavMat">{{item.fav ? '★' : '☆'}}</text>
+          </view>
+          <text class="mat-c {{item.open ? '' : 'clamp'}}" user-select>{{item.content}}</text>
+          <text wx:if="{{item.source}}" class="mat-src">{{item.source}}</text>
+        </view>
+      </block>
+    </block>
+
+    <!-- 记录 -->
+    <block wx:if="{{tab === 'h'}}">
+      <view wx:if="{{hLoading}}" class="spin">加载中…</view>
+      <view wx:if="{{hLoaded && !history.length}}" class="empty">
+        <view class="eico">🗂️</view>
+        <text>还没有作答记录</text>
+      </view>
+      <view wx:for="{{history}}" wx:key="id" class="card qrow" data-index="{{index}}" bind:tap="onOpenHist">
+        <view class="q-tags">
+          <text wx:if="{{item.qtype}}" class="tag tag-brand">{{item.qtype}}</text>
+          <text class="tag tag-gray">{{item.timeText}}</text>
+        </view>
+        <text class="q-text">{{item.question || item.answer}}</text>
+      </view>
+    </block>
+  </view>
+</scroll-view>
+
+<!-- 作答详情弹层 -->
+<view wx:if="{{detail}}" class="mask" bind:tap="onCloseDetail">
+  <view class="sheet big" catch:tap="noop">
+    <scroll-view scroll-y class="d-scroll" type="list">
+      <view class="q-tags">
+        <text class="tag tag-brand">{{detail.qtype}}</text>
+        <text wx:if="{{detail.exam_year}}" class="tag tag-gray">{{detail.exam_year}}{{detail.exam_region ? ' · ' + detail.exam_region : ''}}</text>
+      </view>
+      <text class="d-q" user-select>{{detail.question}}</text>
+
+      <block wx:if="{{detail.material}}">
+        <view class="fold" bind:tap="onToggleMaterial">给定材料 {{showMaterial ? '▲' : '▼'}}</view>
+        <text wx:if="{{showMaterial}}" class="d-mat" user-select>{{detail.material}}</text>
+      </block>
+
+      <view class="fold-l">我的作答</view>
+      <textarea
+        class="d-area"
+        value="{{myAnswer}}"
+        placeholder="在这里作答，草稿自动保存到本机…"
+        maxlength="5000"
+        bind:input="onAnswerInput"
+      />
+      <view class="d-foot">
+        <text class="d-len">{{myAnswer.length}} 字</text>
+        <view class="grade-btn {{grading ? 'dis' : ''}}" bind:tap="onGrade">{{grading ? 'AI 批改中…' : 'AI 批改'}}</view>
+      </view>
+
+      <block wx:if="{{report}}">
+        <view class="fold-l">📋 AI 批改报告</view>
+        <text class="d-report" user-select>{{report}}</text>
+      </block>
+
+      <block wx:if="{{detail.reference}}">
+        <view class="fold" bind:tap="onToggleReference">参考答案 {{showReference ? '▲' : '▼（作答后再看效果更好）'}}</view>
+        <text wx:if="{{showReference}}" class="d-mat" user-select>{{detail.reference}}</text>
+      </block>
+    </scroll-view>
+  </view>
+</view>

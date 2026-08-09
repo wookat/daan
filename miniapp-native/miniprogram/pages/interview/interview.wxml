@@ -1,0 +1,87 @@
+<navbar title="AI 面试陪练" back />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <view wx:if="{{loading}}" class="card spin">加载中…</view>
+
+    <!-- 1. 选分类抽题 -->
+    <block wx:if="{{!loading && step === 'pick'}}">
+      <view class="card hero">
+        <text class="hero-t">🎤 结构化面试陪练</text>
+        <text class="hero-s">抽真题 → 文字作答 → AI 五维打分点评{{total ? ' · 共 ' + total + ' 题' : ''}}</text>
+        <view class="btn-primary" data-c="" bind:tap="onPickCategory">{{drawLoading ? '抽题中…' : '随机抽一题'}}</view>
+        <view class="btn-ghost hist-btn" bind:tap="onHistory">历史记录</view>
+      </view>
+
+      <view class="sec-h"><text class="sec-t">按题型练</text></view>
+      <view wx:for="{{categories}}" wx:key="name" class="card cat" data-c="{{item.name}}" bind:tap="onPickCategory">
+        <view class="cat-main">
+          <text class="cat-t">{{item.name}}</text>
+          <text class="cat-s">共 {{item.total}} 题{{item.done ? ' · 已练 ' + item.done : ''}}</text>
+        </view>
+        <text class="cat-go">抽题 ›</text>
+      </view>
+    </block>
+
+    <!-- 2. 作答 -->
+    <block wx:if="{{step === 'answer' && q}}">
+      <view class="card">
+        <view class="q-top">
+          <text class="tag tag-brand">{{q.category}}</text>
+          <text class="timer">⏱ {{timeText}}</text>
+        </view>
+        <text class="q-text" user-select>{{q.question}}</text>
+        <text wx:if="{{q.source}}" class="q-src">{{q.source}}</text>
+        <text class="redraw" bind:tap="onRedraw">{{drawLoading ? '换题中…' : '换一题 ↻'}}</text>
+      </view>
+
+      <view class="card">
+        <textarea
+          class="ans-area"
+          value="{{answer}}"
+          placeholder="像面试现场一样组织语言作答（建议 150 字以上）…"
+          maxlength="3000"
+          bind:input="onAnswerInput"
+        />
+        <view class="ans-foot">
+          <text class="ans-len">{{answer.length}} 字</text>
+          <view class="btn-primary submit {{submitting ? 'dis' : ''}}" bind:tap="onSubmit">
+            {{submitting ? 'AI 打分中…' : '提交作答'}}
+          </view>
+        </view>
+      </view>
+    </block>
+
+    <!-- 3. 报告 -->
+    <block wx:if="{{step === 'report'}}">
+      <view class="card score-card">
+        <text class="total-score">{{totalScore}}</text>
+        <text class="total-l">总分（100）</text>
+        <text class="rep-meta">用时 {{reportDuration}} · 作答 {{reportLen}} 字</text>
+        <view wx:for="{{scoreRows}}" wx:key="name" class="dim-row">
+          <text class="dim-name">{{item.name}}</text>
+          <view class="dim-bar"><view class="dim-fill" style="width: {{item.pct}}%" /></view>
+          <text class="dim-v">{{item.score}}/20</text>
+        </view>
+        <text wx:if="{{summary}}" class="summary">{{summary}}</text>
+      </view>
+
+      <view wx:if="{{q}}" class="card">
+        <view class="sec-mini">面试题</view>
+        <text class="q-text" user-select>{{q.question}}</text>
+      </view>
+
+      <view wx:if="{{answer}}" class="card">
+        <view class="sec-mini">我的作答</view>
+        <text class="my-ans" user-select>{{answer}}</text>
+      </view>
+
+      <view wx:if="{{review}}" class="card">
+        <view class="sec-mini">AI 点评与参考框架</view>
+        <text class="review" user-select>{{review}}</text>
+      </view>
+
+      <view class="btn-primary" bind:tap="onAgain">再练一题</view>
+      <view class="btn-ghost again" bind:tap="onHistory">查看历史记录</view>
+    </block>
+  </view>
+</scroll-view>

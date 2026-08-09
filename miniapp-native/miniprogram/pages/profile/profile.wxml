@@ -65,7 +65,15 @@
       </view>
       <view class="row-i link" bind:tap="onReminder">
         <text class="r-k">学习提醒</text>
-        <text class="r-v">{{reminderOn ? '已开启（模板待配置）' : '未开启'}} ›</text>
+        <text class="r-v">{{reminderOn ? '已开启' : '未开启'}} ›</text>
+      </view>
+      <view class="row-i link" bind:tap="onInterviewHistory">
+        <text class="r-k">AI 面试记录</text>
+        <text class="r-v">›</text>
+      </view>
+      <view class="row-i link" bind:tap="onSzFavs">
+        <text class="r-k">时政收藏</text>
+        <text class="r-v">›</text>
       </view>
     </view>
 

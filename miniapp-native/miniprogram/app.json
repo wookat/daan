@@ -15,7 +15,15 @@
     "pages/weekly/weekly",
     "pages/search/search",
     "pages/favorites/favorites",
-    "pages/poster/poster"
+    "pages/poster/poster",
+    "pages/ask/ask",
+    "pages/interview/interview",
+    "pages/interview-history/interview-history",
+    "pages/pk/pk",
+    "pages/shenlun/shenlun",
+    "pages/discuss/discuss",
+    "pages/szfav/szfav",
+    "pages/reminders/reminders"
   ],
   "renderer": "skyline",
   "rendererOptions": {

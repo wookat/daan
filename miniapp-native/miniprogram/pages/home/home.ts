@@ -1,6 +1,6 @@
 import { fetchPlanToday, fetchProfile, saveProfile } from '../../api/index';
 import type { PlanTask, Profile } from '../../api/types';
-import { getDailyGoal, setDailyGoal, streakDays, todayCount } from '../../utils/stats';
+import { getDailyGoal, setDailyGoal, streakDays, todayCount, todayKey } from '../../utils/stats';
 import { syncTabBar } from '../../utils/tabbar';
 
 interface ModCard {
@@ -58,11 +58,19 @@ Page({
     levels: LEVELS,
     minutes: MINUTES,
     todayStr: '',
+    szDone: false,
+    szRight: 0,
   },
   onShow() {
     syncTabBar(this, 0);
     this.refreshGoal();
     this.loadPlan();
+    this.refreshShizheng();
+  },
+  refreshShizheng() {
+    const sz = wx.getStorageSync<{ days?: Record<string, { right: number }> }>('szDaily');
+    const done = sz && sz.days ? sz.days[todayKey()] : null;
+    this.setData({ szDone: !!done, szRight: done ? done.right : 0 });
   },
   refreshGoal() {
     const today = todayCount();
@@ -111,6 +119,18 @@ Page({
   },
   onSearch() {
     wx.navigateTo({ url: '/pages/search/search' });
+  },
+  onShizheng() {
+    wx.navigateTo({
+      url: '/pages/practice/practice?mode=' + (this.data.szDone ? 'szreview' : 'shizheng'),
+    });
+  },
+  onSzFavs() {
+    wx.navigateTo({ url: '/pages/szfav/szfav' });
+  },
+  onFeature(e: WechatMiniprogram.TouchEvent) {
+    const url = String(e.currentTarget.dataset.url || '');
+    if (url) wx.navigateTo({ url });
   },
   onPlanTask(e: WechatMiniprogram.TouchEvent) {
     const idx = Number(e.currentTarget.dataset.index);

@@ -257,3 +257,99 @@
 .done-quit {
   margin-top: 16rpx;
 }
+
+.rhead-r {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.sz-fav {
+  font-size: 36rpx;
+  color: var(--t4);
+  margin-right: 16rpx;
+}
+
+.sz-fav.on {
+  color: var(--warning);
+}
+
+.link-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  margin-top: 20rpx;
+}
+
+.link-item {
+  font-size: 23rpx;
+  color: var(--brand-500);
+}
+
+.link-item.report {
+  color: var(--t3);
+}
+
+.mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 18, 30, 0.5);
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.sheet {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--surface);
+  border-radius: 32rpx 32rpx 0 0;
+  padding: 36rpx 28rpx calc(36rpx + env(safe-area-inset-bottom));
+}
+
+.sheet-t {
+  font-size: 30rpx;
+  font-weight: 700;
+  margin-bottom: 20rpx;
+}
+
+.rp-types {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  margin-bottom: 16rpx;
+}
+
+.rp-chip {
+  font-size: 24rpx;
+  color: var(--t2);
+  background: var(--fill);
+  border-radius: 999rpx;
+  padding: 12rpx 28rpx;
+  margin: 0 14rpx 14rpx 0;
+}
+
+.rp-chip.on {
+  background: var(--brand-500);
+  color: #fff;
+}
+
+.rp-detail {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 140rpx;
+  background: var(--fill);
+  border-radius: 16rpx;
+  padding: 20rpx;
+  font-size: 25rpx;
+  color: var(--t1);
+  margin-bottom: 20rpx;
+}
+
+.rp-dis {
+  opacity: 0.5;
+}

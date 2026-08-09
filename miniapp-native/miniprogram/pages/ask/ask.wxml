@@ -1,0 +1,142 @@
+<navbar title="AI 问答" back />
+<view class="topbar">
+  <text class="tb-btn" bind:tap="onOpenHistory">历史会话</text>
+  <text class="tb-btn" bind:tap="onNewSession">＋新会话</text>
+</view>
+
+<scroll-view class="page-scroll" scroll-y type="list" scroll-into-view="{{scrollInto}}">
+  <view class="wrap">
+    <!-- 空态引导 -->
+    <block wx:if="{{!results.length && !loading}}">
+      <view class="card empty-guide">
+        <view class="eico">🤖</view>
+        <text class="eg-t">拍题或粘贴题目，AI 秒出讲解</text>
+        <text class="eg-s">支持行测五大模块 · 花生十三方法优先</text>
+        <view class="eg-btns">
+          <view class="btn-primary eg-btn" bind:tap="onPickImage">📷 拍题 / 相册</view>
+          <view class="btn-ghost eg-btn" bind:tap="onOpenText">⌨️ 粘贴题目文字</view>
+        </view>
+      </view>
+
+      <block wx:if="{{recent.length}}">
+        <view class="sec-h"><text class="sec-t">最近讲解</text></view>
+        <view wx:for="{{recent}}" wx:key="ts" class="card rec-item">
+          <view class="rec-top">
+            <text class="rec-mod">{{item.module_name || '题目'}}{{item.question_type ? ' · ' + item.question_type : ''}}</text>
+            <text class="rec-time">{{item.timeText}}</text>
+          </view>
+          <text class="rec-brief">{{item.ans ? '答案 ' + item.ans + (item.brief ? '｜' + item.brief : '') : (item.brief || 'AI 讲解')}}</text>
+        </view>
+      </block>
+    </block>
+
+    <!-- 会话消息 -->
+    <block wx:for="{{results}}" wx:key="ts" wx:for-item="r" wx:for-index="ri">
+      <view id="msg-{{r.ts}}" class="msg-group">
+        <view class="bubble user">
+          <image wx:if="{{r.userImage}}" class="u-img" src="{{r.userImage}}" mode="widthFix" />
+          <text wx:if="{{r.userText || r.question_text}}">{{r.userText || r.question_text}}</text>
+          <text wx:if="{{r.user_answer}}" class="u-ans">我的答案：{{r.user_answer}}</text>
+        </view>
+
+        <view class="bubble ai">
+          <view wx:if="{{r.module_name || r.question_type}}" class="ai-tags">
+            <text wx:if="{{r.module_name}}" class="tag tag-brand">{{r.module_name}}</text>
+            <text wx:if="{{r.question_type}}" class="tag tag-gray">{{r.question_type}}</text>
+          </view>
+          <!-- 答案卡 -->
+          <view wx:if="{{r.ansCard}}" class="anscard">
+            <view class="ac-row">
+              <text class="ac-k">答案</text>
+              <text class="ac-ans">{{r.ansCard.ans}}</text>
+              <text wx:if="{{r.ansCard.method}}" class="ac-method">{{r.ansCard.method}}</text>
+            </view>
+            <text wx:if="{{r.ansCard.brief}}" class="ac-brief">{{r.ansCard.brief}}</text>
+          </view>
+          <text class="ai-text" user-select>{{r.plain}}</text>
+          <text wx:if="{{r.streaming}}" class="cursor">▍</text>
+
+          <!-- 操作行 -->
+          <view wx:if="{{!r.streaming}}" class="act-row">
+            <text class="act-chip" data-index="{{ri}}" bind:tap="onChipDetail">再讲细一点</text>
+            <text class="act-chip {{r.saved ? 'dis' : ''}}" data-index="{{ri}}" bind:tap="onSave">{{r.saved ? '已存错题本' : '存入错题本'}}</text>
+            <text class="act-chip {{r.rated === 'up' ? 'on' : ''}}" data-index="{{ri}}" data-up="1" bind:tap="onRate">👍</text>
+            <text class="act-chip {{r.rated === 'down' ? 'on' : ''}}" data-index="{{ri}}" data-up="0" bind:tap="onRate">👎</text>
+          </view>
+        </view>
+
+        <!-- 追问 -->
+        <block wx:for="{{r.fu}}" wx:key="index" wx:for-item="m">
+          <view class="bubble {{m.role === 'user' ? 'user' : 'ai'}}">
+            <text class="ai-text" user-select>{{m.role === 'ai' ? m.plain : m.content}}</text>
+          </view>
+        </block>
+        <view wx:if="{{r.fuLoading}}" class="bubble ai"><text class="ai-text">思考中…</text></view>
+      </view>
+    </block>
+
+    <view wx:if="{{loading}}" class="card spin">{{loadingText}}</view>
+    <view wx:if="{{error}}" class="card err">{{error}}</view>
+    <view class="bottom-pad" />
+  </view>
+</scroll-view>
+
+<!-- 底部输入条 -->
+<view class="inputbar">
+  <text class="ib-cam" bind:tap="onPickImage">📷</text>
+  <input
+    wx:if="{{results.length}}"
+    class="ib-input"
+    value="{{fuText}}"
+    placeholder="继续追问这道题…"
+    confirm-type="send"
+    bind:input="onFuInput"
+    bind:confirm="onSendFollowup"
+  />
+  <view wx:else class="ib-input ib-ph" bind:tap="onOpenText">粘贴题目文字提问…</view>
+  <text wx:if="{{results.length}}" class="ib-send" bind:tap="onSendFollowup">发送</text>
+</view>
+
+<!-- 图片确认弹层 -->
+<view wx:if="{{imagePath}}" class="mask" bind:tap="onClearImage">
+  <view class="sheet" catch:tap="noop">
+    <view class="sheet-t">确认题目图片</view>
+    <image class="prev-img" src="{{imagePath}}" mode="widthFix" />
+    <view class="st-l">我做的答案（选填，AI 会点评）</view>
+    <view class="chips">
+      <text wx:for="{{['A','B','C','D']}}" wx:key="*this" class="set-chip {{uanswer === item ? 'on' : ''}}" data-o="{{item}}" bind:tap="onPickAns">{{item}}</text>
+    </view>
+    <view class="btn-primary" bind:tap="onSubmitImage">开始讲解</view>
+    <view class="btn-ghost sheet-cancel" bind:tap="onClearImage">重新选择</view>
+  </view>
+</view>
+
+<!-- 文字输入弹层 -->
+<view wx:if="{{textOpen}}" class="mask" bind:tap="onCloseText">
+  <view class="sheet" catch:tap="noop">
+    <view class="sheet-t">粘贴题目文字</view>
+    <textarea class="q-textarea" value="{{qtext}}" placeholder="把题干和选项一起粘贴进来" maxlength="2000" bind:input="onQtextInput" />
+    <view class="st-l">我做的答案（选填）</view>
+    <view class="chips">
+      <text wx:for="{{['A','B','C','D']}}" wx:key="*this" class="set-chip {{uanswer === item ? 'on' : ''}}" data-o="{{item}}" bind:tap="onPickAns">{{item}}</text>
+    </view>
+    <view class="btn-primary" bind:tap="onSubmitText">开始讲解</view>
+  </view>
+</view>
+
+<!-- 历史会话弹层 -->
+<view wx:if="{{historyOpen}}" class="mask" bind:tap="onCloseHistory">
+  <view class="sheet" catch:tap="noop">
+    <view class="sheet-t">历史会话（本机保存）</view>
+    <scroll-view scroll-y class="hist-scroll" type="list">
+      <view wx:if="{{!sessions.length}}" class="spin">暂无历史会话</view>
+      <view wx:for="{{sessions}}" wx:key="id" class="hs-row">
+        <view class="hs-main" data-index="{{index}}" bind:tap="onLoadSession">
+          <text class="hs-t">{{item.title}}</text>
+          <text class="hs-s">{{item.n}} 题 · {{item.timeText}}</text>
+        </view>
+        <text class="hs-del" data-index="{{index}}" bind:tap="onDelSession">删除</text>
+      </view>
+    </scroll-view>
+  </view>
+</view>

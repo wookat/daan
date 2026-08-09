@@ -1,4 +1,4 @@
-<navbar title="刷题" back="{{true}}" />
+<navbar title="{{szMode ? '时政每日一练' : '刷题'}}" back="{{true}}" />
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
     <view wx:if="{{loading}}" class="card spin">出题中…</view>
@@ -8,7 +8,10 @@
       <view class="card">
         <view class="rhead">
           <text class="tag tag-brand">{{moduleName}} · {{idx + 1}}/{{items.length}}</text>
-          <text class="cnt-ok">✓{{right}}</text>
+          <view class="rhead-r">
+            <text wx:if="{{cur._sz}}" class="sz-fav {{cur._szFav ? 'on' : ''}}" bind:tap="onToggleSzFav">{{cur._szFav ? '★' : '☆'}}</text>
+            <text class="cnt-ok">✓{{right}}</text>
+          </view>
         </view>
         <view class="progress"><view class="pfill" style="width: {{(idx / items.length) * 100}}%" /></view>
         <view wx:if="{{cur.is_real}}" class="tag tag-warn real-tag">真题{{cur.exam_year ? ' · ' + cur.exam_year : ''}}{{cur.exam_region ? ' · ' + cur.exam_region : ''}}</view>
@@ -48,6 +51,10 @@
             <text class="exp-k">来源</text>
             <text class="exp-v">{{cur.source}}</text>
           </view>
+          <view wx:if="{{cur.id && !cur._sz}}" class="link-row">
+            <text class="link-item" bind:tap="onOpenDiscuss">💬 讨论区</text>
+            <text class="link-item report" bind:tap="onOpenReport">{{cur._reported ? '已提交纠错，感谢反馈' : '题目有问题？纠错'}}</text>
+          </view>
         </view>
       </view>
 
@@ -66,8 +73,34 @@
       <text class="done-t">本组完成</text>
       <text class="done-sub">答对 {{right}}/{{items.length}} · 错题 {{wrongCount}} · 用时 {{totalSecs}}s</text>
       <text wx:if="{{percentile !== null}}" class="done-beat">本组正确率击败了 {{percentile}}% 的刷题记录</text>
-      <view class="btn-primary" bind:tap="onRetry">再来一组</view>
+      <view class="btn-primary" bind:tap="onRetry">{{szMode ? '回顾今日时政' : '再来一组'}}</view>
       <view class="btn-ghost done-quit" bind:tap="onQuit">返回首页</view>
     </view>
   </view>
 </scroll-view>
+
+<!-- 题目纠错弹层 -->
+<view wx:if="{{reportOpen}}" class="mask" bind:tap="onCloseReport">
+  <view class="sheet" catch:tap="noop">
+    <view class="sheet-t">题目纠错</view>
+    <view class="rp-types">
+      <text
+        wx:for="{{reportTypes}}"
+        wx:key="*this"
+        class="rp-chip {{reportType === item ? 'on' : ''}}"
+        data-t="{{item}}"
+        bind:tap="onReportType"
+      >{{item}}</text>
+    </view>
+    <textarea
+      class="rp-detail"
+      value="{{reportDetail}}"
+      placeholder="补充说明（选填，500 字以内）"
+      maxlength="500"
+      bind:input="onReportDetail"
+    />
+    <view class="btn-primary {{!reportType || reportBusy ? 'rp-dis' : ''}}" bind:tap="onSubmitReport">
+      {{reportBusy ? '提交中…' : '提交纠错'}}
+    </view>
+  </view>
+</view>

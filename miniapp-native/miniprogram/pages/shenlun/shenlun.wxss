@@ -1,0 +1,264 @@
+.tabs {
+  display: flex;
+  flex-direction: row;
+  background: var(--surface);
+  border-bottom: 1rpx solid var(--border);
+  padding: 0 32rpx;
+}
+
+.tab {
+  font-size: 27rpx;
+  color: var(--t3);
+  padding: 20rpx 0;
+  margin-right: 44rpx;
+  border-bottom: 4rpx solid transparent;
+}
+
+.tab.on {
+  color: var(--brand-500);
+  font-weight: 700;
+  border-bottom-color: var(--brand-500);
+}
+
+.page-scroll {
+  flex: 1;
+  height: 100%;
+}
+
+.wrap {
+  padding: 24rpx 32rpx 40rpx;
+}
+
+.spin {
+  text-align: center;
+  color: var(--t3);
+  padding: 48rpx 0;
+  font-size: 24rpx;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 96rpx 0;
+  color: var(--t3);
+  font-size: 26rpx;
+}
+
+.eico {
+  width: 144rpx;
+  height: 144rpx;
+  border-radius: 48rpx;
+  background: var(--fill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 60rpx;
+  margin-bottom: 16rpx;
+}
+
+.fscroll {
+  margin-bottom: 16rpx;
+}
+
+.frow {
+  display: flex;
+  flex-direction: row;
+}
+
+.fchip {
+  flex-shrink: 0;
+  font-size: 24rpx;
+  color: var(--t2);
+  background: var(--surface);
+  border: 1rpx solid var(--border);
+  border-radius: 999rpx;
+  padding: 10rpx 26rpx;
+  margin-right: 14rpx;
+}
+
+.fchip.on {
+  background: var(--brand-500);
+  border-color: var(--brand-500);
+  color: #fff;
+}
+
+.qrow {
+  display: flex;
+  flex-direction: column;
+}
+
+.q-tags {
+  display: flex;
+  flex-direction: row;
+  margin-bottom: 12rpx;
+}
+
+.q-tags .tag {
+  margin-right: 10rpx;
+}
+
+.q-text {
+  font-size: 27rpx;
+  color: var(--t1);
+  line-height: 1.65;
+}
+
+.mat-h {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+
+.mat-main {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.mat-t {
+  font-size: 27rpx;
+  font-weight: 600;
+  margin-left: 12rpx;
+}
+
+.mat-fav {
+  font-size: 36rpx;
+  color: var(--t4);
+  padding: 0 8rpx;
+}
+
+.mat-fav.on {
+  color: var(--warning);
+}
+
+.mat-c {
+  display: block;
+  font-size: 25rpx;
+  color: var(--t2);
+  line-height: 1.75;
+}
+
+.mat-c.clamp {
+  max-height: 180rpx;
+  overflow: hidden;
+}
+
+.mat-src {
+  display: block;
+  font-size: 21rpx;
+  color: var(--t4);
+  margin-top: 10rpx;
+}
+
+/* 详情弹层 */
+.mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 18, 30, 0.5);
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.sheet {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--surface);
+  border-radius: 32rpx 32rpx 0 0;
+  padding: 36rpx 28rpx calc(24rpx + env(safe-area-inset-bottom));
+}
+
+.sheet.big {
+  max-height: 88vh;
+}
+
+.d-scroll {
+  max-height: 78vh;
+}
+
+.d-q {
+  display: block;
+  font-size: 29rpx;
+  font-weight: 600;
+  line-height: 1.7;
+  margin: 8rpx 0 16rpx;
+}
+
+.fold {
+  font-size: 25rpx;
+  color: var(--brand-500);
+  font-weight: 600;
+  margin: 16rpx 0 12rpx;
+}
+
+.fold-l {
+  font-size: 25rpx;
+  font-weight: 700;
+  color: var(--t2);
+  margin: 20rpx 0 12rpx;
+}
+
+.d-mat {
+  display: block;
+  font-size: 25rpx;
+  color: var(--t2);
+  line-height: 1.75;
+  background: var(--fill);
+  border-radius: 12rpx;
+  padding: 18rpx 22rpx;
+}
+
+.d-area {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 280rpx;
+  background: var(--fill);
+  border-radius: 16rpx;
+  padding: 20rpx;
+  font-size: 26rpx;
+  line-height: 1.7;
+  color: var(--t1);
+}
+
+.d-foot {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14rpx;
+}
+
+.d-len {
+  font-size: 23rpx;
+  color: var(--t3);
+}
+
+.grade-btn {
+  background: var(--brand-500);
+  color: #fff;
+  border-radius: 999rpx;
+  padding: 16rpx 48rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.grade-btn.dis {
+  opacity: 0.6;
+}
+
+.d-report {
+  display: block;
+  font-size: 25rpx;
+  color: var(--t1);
+  line-height: 1.75;
+  background: var(--brand-50);
+  border-radius: 12rpx;
+  padding: 18rpx 22rpx;
+}

@@ -63,6 +63,43 @@
       <view class="pe-btn">去设置</view>
     </view>
 
+    <!-- 时政每日一练 -->
+    <view class="card sz-card">
+      <view class="sz-main" bind:tap="onShizheng">
+        <text class="sz-t">📰 时政每日一练</text>
+        <text class="sz-s">{{szDone ? '今日已完成 · 答对 ' + szRight + ' 题，点击回顾' : '每天 10 题新鲜时政，常识提分利器'}}</text>
+      </view>
+      <view class="sz-btns">
+        <text class="sz-go" bind:tap="onShizheng">{{szDone ? '回顾 ›' : '去练 ›'}}</text>
+        <text class="sz-fav-link" bind:tap="onSzFavs">⭐ 收藏</text>
+      </view>
+    </view>
+
+    <!-- AI 与对战 -->
+    <view class="sec-h"><text class="sec-t">AI 与对战</text></view>
+    <view class="feat-grid">
+      <view class="fcard" data-url="/pages/ask/ask" bind:tap="onFeature">
+        <text class="f-ico">🤖</text>
+        <text class="f-name">AI 问答</text>
+        <text class="f-sub">拍题秒讲</text>
+      </view>
+      <view class="fcard" data-url="/pages/interview/interview" bind:tap="onFeature">
+        <text class="f-ico">🎤</text>
+        <text class="f-name">AI 面试</text>
+        <text class="f-sub">五维打分</text>
+      </view>
+      <view class="fcard" data-url="/pages/pk/pk" bind:tap="onFeature">
+        <text class="f-ico">⚔️</text>
+        <text class="f-name">答题 PK</text>
+        <text class="f-sub">限时对战</text>
+      </view>
+      <view class="fcard" data-url="/pages/shenlun/shenlun" bind:tap="onFeature">
+        <text class="f-ico">✍️</text>
+        <text class="f-name">申论</text>
+        <text class="f-sub">AI 批改</text>
+      </view>
+    </view>
+
     <!-- 专项练习入口 -->
     <view class="sec-h"><text class="sec-t">专项练习</text></view>
     <view class="grid">

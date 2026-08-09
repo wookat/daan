@@ -34,7 +34,7 @@ Page({
       user: getAuthUser(),
       uid: anonUid(),
       themeLabel: THEME_LABELS[getThemeMode()],
-      reminderOn: !!wx.getStorageSync<boolean>('reminderOn'),
+      reminderOn: !!wx.getStorageSync('remindOn'),
     });
     this.load();
   },
@@ -96,13 +96,13 @@ Page({
     });
   },
   onReminder() {
-    const on = !this.data.reminderOn;
-    wx.setStorageSync('reminderOn', on);
-    this.setData({ reminderOn: on });
-    wx.showToast({
-      title: on ? '已开启学习提醒（订阅消息模板待配置）' : '已关闭学习提醒',
-      icon: 'none',
-    });
+    wx.navigateTo({ url: '/pages/reminders/reminders' });
+  },
+  onInterviewHistory() {
+    wx.navigateTo({ url: '/pages/interview-history/interview-history' });
+  },
+  onSzFavs() {
+    wx.navigateTo({ url: '/pages/szfav/szfav' });
   },
 
   onLogin() {

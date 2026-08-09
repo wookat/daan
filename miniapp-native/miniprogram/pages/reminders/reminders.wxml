@@ -1,0 +1,42 @@
+<navbar title="学习提醒" back />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <view class="card">
+      <view class="row">
+        <view class="row-main">
+          <text class="r-t">每日学习提醒</text>
+          <text class="r-s">到点提醒完成今日刷题目标</text>
+        </view>
+        <switch checked="{{on}}" bind:change="onToggle" color="#3B6FF5" />
+      </view>
+      <view class="row line">
+        <view class="row-main">
+          <text class="r-t">提醒时间</text>
+        </view>
+        <picker mode="time" value="{{time}}" bind:change="onTimeChange">
+          <view class="time-v">{{time}} ›</view>
+        </picker>
+      </view>
+    </view>
+
+    <view class="card preview">
+      <text class="pv-l">提醒效果预览</text>
+      <view class="pv-box">
+        <text class="pv-t">{{previewTitle}}</text>
+        <text class="pv-b">{{previewBody}}</text>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="row">
+        <view class="row-main">
+          <text class="r-t">微信订阅消息</text>
+          <text class="r-s">{{subscribeAvailable ? '订阅后到点由微信服务通知提醒' : '模板 ID 待正式 AppID 配置后启用（当前占位）'}}</text>
+        </view>
+        <view class="sub-btn {{subscribeAvailable ? '' : 'dis'}}" bind:tap="onSubscribe">申请订阅</view>
+      </view>
+    </view>
+
+    <text class="foot-tip">小程序在后台不常驻，正式提醒依赖微信订阅消息；配置模板 ID 后此页流程即完整生效。</text>
+  </view>
+</scroll-view>
