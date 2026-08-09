@@ -18,6 +18,18 @@
       </view>
     </view>
 
+    <!-- 每日打卡提醒横幅（傍晚仍未开练时展示，每天一次） -->
+    <view v-if="reminderBanner" class="card rmcard">
+      <view class="cb-l">
+        <text class="cb-t">今天还没打卡</text>
+        <text class="cb-s">练 1 题即可保住连续打卡，别让连击断在今天</text>
+      </view>
+      <view class="cb-r">
+        <text class="cb-go" @click="rmGo">去刷题 ›</text>
+        <text class="cb-x" @click="reminderBanner = false">✕</text>
+      </view>
+    </view>
+
     <!-- Hero：今日目标 + 行动 -->
     <view class="hero">
       <view class="hero-top">
@@ -50,7 +62,7 @@
         <text class="tk-ck" :class="{ on: planFetched && !dueReview }">{{ planFetched && !dueReview ? '✓' : '' }}</text>
         <view class="tk-main">
           <text class="tk-name" :class="{ done: planFetched && !dueReview }">错题复习</text>
-          <text class="tk-sub">{{ dueReview ? '今日到期 ' + dueReview + ' 题' : planFetched ? '今日已清零' : '加载中…' }}</text>
+          <text class="tk-sub">{{ dueReview ? '今日到期 ' + dueReview + ' 题' : planFetched ? '今日已清零' : '按遗忘曲线安排' }}</text>
         </view>
         <text class="tk-go">{{ dueReview ? '去复习 ›' : '错题本 ›' }}</text>
       </view>
@@ -467,6 +479,7 @@ export default {
       badgeInfo: null,
       weeklyDot: false,
       comeback: null,
+      reminderBanner: false,
       dateStart: new Date().toISOString().slice(0, 10),
       dateEnd: new Date(Date.now() + 3 * 366 * 86400000).toISOString().slice(0, 10),
       dateStartTs: Date.now(),
@@ -572,6 +585,7 @@ export default {
     this.loadBadges();
     this.calcWeeklyDot();
     this.checkComeback();
+    this.checkReminder();
     const wantSetup = uni.getStorageSync('openPlanSetup');
     if (wantSetup) {
       uni.removeStorageSync('openPlanSetup');
@@ -677,6 +691,22 @@ export default {
     cbWeekly() {
       this.comeback = null;
       this.goWeeklyReport();
+    },
+    checkReminder() {
+      // 今日已练/非傍晚/今天已展示过/新用户（无历史记录）均不打扰
+      if (this.todayCount > 0) return;
+      if (new Date().getHours() < 18) return;
+      const days = (this.pstats && this.pstats.days) || {};
+      if (!Object.keys(days).some((k) => days[k] > 0)) return;
+      const todayKey = new Date().toISOString().slice(0, 10);
+      if (uni.getStorageSync('reminderShown') === todayKey) return;
+      this.reminderBanner = true;
+      uni.setStorageSync('reminderShown', todayKey);
+    },
+    rmGo() {
+      this.reminderBanner = false;
+      trackEvent('reminder_banner_click', 'home');
+      this.startDaily();
     },
     calcWeeklyDot() {
       // 周一至周三未读上周周报时显示红点
@@ -1042,6 +1072,9 @@ export default {
 .cb-r { flex-shrink: 0; display: flex; align-items: center; gap: 16rpx; }
 .cb-go { background: rgba(255, 255, 255, 0.2); color: #ffffff; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 12rpx 26rpx; }
 .cb-x { color: rgba(255, 255, 255, 0.75); font-size: 26rpx; padding: 8rpx; }
+
+/* 每日打卡提醒横幅 */
+.rmcard { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #6366f1, #4f46e5); border: none; box-shadow: 0 6rpx 16rpx rgba(99, 102, 241, 0.25); padding: 24rpx 28rpx; }
 
 /* 今日到期复习入口 */
 .duebar { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(180deg, #4a7bf7, #3567ec); border: none; box-shadow: 0 6rpx 16rpx rgba(59, 111, 245, 0.25); padding: 24rpx 28rpx; }

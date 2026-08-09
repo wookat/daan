@@ -1,0 +1,59 @@
+<navbar title="迷你模考" back="{{true}}" />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <view wx:if="{{loading}}" class="card spin">试卷加载中…</view>
+
+    <block wx:if="{{!loading && cur}}">
+      <view class="topbar">
+        <text class="tag tag-brand">{{idx + 1}}/{{items.length}}</text>
+        <text class="clock">⏱ {{fmtLeft}}</text>
+        <text class="topinfo">已答 {{answered}}</text>
+      </view>
+      <view class="progress"><view class="pfill" style="width: {{((idx + 1) / items.length) * 100}}%" /></view>
+
+      <view class="card">
+        <text class="q" user-select>{{cur.question}}</text>
+        <view
+          wx:for="{{cur.optList}}"
+          wx:key="k"
+          class="opt {{cur._picked === item.k ? 'sel' : ''}}"
+          data-key="{{item.k}}"
+          bind:tap="onPick"
+        >
+          <text class="okey">{{item.k}}</text>
+          <text class="otext">{{item.v}}</text>
+        </view>
+      </view>
+
+      <view class="navrow">
+        <view class="nbtn {{idx === 0 ? 'dis' : ''}}" bind:tap="onPrev">上一题</view>
+        <view class="nbtn acard" bind:tap="onOpenCard">答题卡</view>
+        <view wx:if="{{idx + 1 < items.length}}" class="nbtn main" bind:tap="onNext">下一题</view>
+        <view wx:else class="nbtn main" bind:tap="onConfirmSubmit">交卷</view>
+      </view>
+    </block>
+
+    <!-- 答题卡浮层 -->
+    <view wx:if="{{cardOpen}}" class="mask" bind:tap="onCloseCard">
+      <view class="sheet" catch:tap="noop">
+        <view class="sheet-h">
+          <text class="sheet-t">答题卡</text>
+          <text class="sheet-x" bind:tap="onCloseCard">✕</text>
+        </view>
+        <scroll-view scroll-y class="acard-scroll" type="list">
+          <view class="acard-grid">
+            <view
+              wx:for="{{items}}"
+              wx:key="index"
+              class="acard-n {{item._picked ? 'done' : ''}} {{index === idx ? 'cur' : ''}}"
+              data-i="{{index}}"
+              bind:tap="onJump"
+            >{{index + 1}}</view>
+          </view>
+        </scroll-view>
+        <view class="acard-foot">已答 {{answered}}/{{items.length}} · 剩余 {{fmtLeft}}</view>
+        <view class="btn-primary" bind:tap="onConfirmSubmit">交卷</view>
+      </view>
+    </view>
+  </view>
+</scroll-view>

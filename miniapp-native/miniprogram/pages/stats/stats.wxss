@@ -141,6 +141,13 @@
   margin-top: 16rpx;
 }
 
+.hm-note {
+  display: block;
+  font-size: 22rpx;
+  color: var(--t3);
+  margin: 8rpx 4rpx 0;
+}
+
 .hm-legend .hm-c {
   width: 32rpx;
   height: 32rpx;

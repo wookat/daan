@@ -47,6 +47,7 @@ export interface Mistake {
   error_reason?: string | null;
   tag3_name?: string | null;
   created_at?: number | string;
+  options?: Record<string, string> | null;
 }
 
 export interface MistakesResp {
@@ -103,7 +104,7 @@ export interface Paper {
 }
 
 export interface FavItem {
-  question_id: number;
+  id: number;
   module?: string | null;
   question?: string;
   folder_id?: number | null;
@@ -231,4 +232,80 @@ export interface PkResultResp {
   creator: PkResultSide;
   opponent: PkResultSide;
   finished_at?: number | null;
+}
+
+export interface ExamPaperInfo {
+  id: number;
+  title: string;
+  kind?: string | null;
+  year?: number | null;
+  region?: string | null;
+  duration_min: number;
+  n?: number;
+}
+
+export interface ExamStartResp {
+  attempt_id: number;
+  paper: ExamPaperInfo;
+  items: Question[];
+}
+
+export interface ExamSubmitItem {
+  no: number;
+  question_id: number | null;
+  module?: string | null;
+  submodule?: string | null;
+  status: string;
+  correct?: boolean;
+  secs?: number;
+}
+
+export interface ExamSubmitResp {
+  attempt_id: number;
+  paper_id: number;
+  title: string;
+  score: number;
+  total: number;
+  answered: number;
+  correct: number;
+  per_module: Record<string, { n: number; answered: number; correct: number; secs: number }>;
+  items: ExamSubmitItem[];
+}
+
+export interface ExamWeakTag {
+  tag3: string;
+  name: string;
+  n: number;
+  wrong: number;
+}
+
+export interface ExamReportItem {
+  no: number;
+  question_id: number | null;
+  module?: string | null;
+  submodule?: string | null;
+  question: string;
+  options: Record<string, string>;
+  picked: string;
+  answer: string;
+  correct: boolean;
+  explanation?: string | null;
+  hs_explanation?: string | null;
+}
+
+export interface ExamReportResp {
+  attempt: {
+    id: number;
+    paper_id: number;
+    started_at: number;
+    submitted_at: number;
+    score: number;
+    per_module: Record<string, { n: number; answered: number; correct: number; secs: number }>;
+  };
+  paper: ExamPaperInfo & { question_ids?: number[] };
+  total: number;
+  answered: number;
+  correct: number;
+  weak_tags: ExamWeakTag[];
+  items: ExamReportItem[];
 }

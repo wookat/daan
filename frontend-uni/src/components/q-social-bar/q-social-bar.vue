@@ -28,9 +28,8 @@
 </template>
 
 <script>
-import { fetchCommentCount, fetchNote, saveNote, shareCreate } from '../../api.js';
+import { fetchCommentCount, fetchNote, saveNote, shareCreate, qShareText, shareVariant, trackEvent } from '../../api.js';
 
-const SITE = 'https://kaogong.zalize.com';
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 
 export default {
@@ -88,8 +87,9 @@ export default {
         const d = await shareCreate(this.questionId);
         uni.hideLoading();
         const mod = d.submodule || NAMES[d.module] || d.module || '行测';
+        trackEvent('share_copy', 'qbar_' + shareVariant(), d.sid);
         uni.setClipboardData({
-          data: `【${mod}】我刚做了一道题，你能做对吗？答完就能看到大家选了啥：${SITE}/#/pkgA/share/share-q?sid=${d.sid}`,
+          data: qShareText(mod, d.sid),
           success: () => uni.showToast({ title: '分享链接已复制，发给队友吧', icon: 'none' }),
         });
       } catch (e) {

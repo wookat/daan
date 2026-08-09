@@ -5,6 +5,9 @@ import type {
   AuthResp,
   CheckinBadgesResp,
   CheckinSummaryResp,
+  ExamReportResp,
+  ExamStartResp,
+  ExamSubmitResp,
   FavItem,
   Mistake,
   MistakesResp,
@@ -120,6 +123,28 @@ export function fetchFavs(): Promise<{ items: FavItem[] }> {
   return request<{ items: FavItem[] }>('/api/favs?uid=' + encodeURIComponent(anonUid()));
 }
 
+export function deleteFav(questionId: number): Promise<void> {
+  return request<void>(
+    '/api/favs?uid=' + encodeURIComponent(anonUid()) + '&question_id=' + questionId,
+    { method: 'DELETE' }
+  );
+}
+
+// ---------- 学习提醒 ----------
+
+export function setReminder(channel: 'wxsub' | 'web', enabled: boolean, hour?: number): Promise<void> {
+  return request<void>('/api/reminders', {
+    method: 'POST',
+    data: { uid: anonUid(), channel, enabled, hour },
+  });
+}
+
+export function fetchReminders(): Promise<{ items: { channel: string; enabled: number; hour: number | null }[] }> {
+  return request<{ items: { channel: string; enabled: number; hour: number | null }[] }>(
+    '/api/reminders?uid=' + encodeURIComponent(anonUid())
+  );
+}
+
 // ---------- 账号 ----------
 
 export function authRegister(
@@ -165,6 +190,30 @@ export function fetchPapers(): Promise<{ items: Paper[] }> {
 
 export function fetchPaperQuestions(source: string): Promise<QuestionsResp> {
   return request<QuestionsResp>('/api/paper_questions?src=' + encodeURIComponent(source));
+}
+
+export function examStart(): Promise<ExamStartResp> {
+  return request<ExamStartResp>('/api/exam/start', {
+    method: 'POST',
+    data: { uid: anonUid(), mini: true },
+  });
+}
+
+export function examSubmit(
+  attemptId: number,
+  picks: Record<number, string>,
+  secs: Record<number, number>
+): Promise<ExamSubmitResp> {
+  return request<ExamSubmitResp>('/api/exam/submit', {
+    method: 'POST',
+    data: { uid: anonUid(), attempt_id: attemptId, picks, secs },
+  });
+}
+
+export function fetchExamReport(attemptId: number): Promise<ExamReportResp> {
+  return request<ExamReportResp>(
+    '/api/exam/report/' + attemptId + '?uid=' + encodeURIComponent(anonUid())
+  );
 }
 
 // ---------- 组队打卡 / 题目分享 ----------

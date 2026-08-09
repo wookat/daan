@@ -1504,6 +1504,35 @@ def api_delete_mistake(mid: int):
     return {"ok": True}
 
 
+# 学习提醒偏好：仅存意向与时段；小程序订阅消息待 AppID/模板配置后由下发任务读取本表开闸
+@app.post("/api/reminders")
+def api_set_reminder(body: dict):
+    uid = str(body.get("uid") or "").strip()[:64]
+    channel = str(body.get("channel") or "").strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    if channel not in {"wxsub", "web"}:
+        raise HTTPException(400, "无效 channel")
+    hour = body.get("hour")
+    if hour is not None:
+        try:
+            hour = int(hour)
+        except (TypeError, ValueError):
+            raise HTTPException(400, "无效 hour")
+        if not 0 <= hour <= 23:
+            raise HTTPException(400, "无效 hour")
+    db.set_reminder_pref(uid, channel, bool(body.get("enabled", True)), hour)
+    return {"ok": True}
+
+
+@app.get("/api/reminders")
+def api_get_reminders(uid: str = ""):
+    u = uid.strip()[:64]
+    if not u:
+        raise HTTPException(400, "缺少 uid")
+    return {"items": db.get_reminder_prefs(u)}
+
+
 @app.get("/api/review")
 def api_review_due(uid: str = ""):
     u = uid.strip()[:64] or None

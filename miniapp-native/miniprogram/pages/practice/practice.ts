@@ -54,6 +54,7 @@ Page({
   _source: null as string | null,
   _module: null as string | null,
   _submodule: null as string | null,
+  _tag3: null as string | null,
   _qsecs: 0,
   _timer: 0 as number | ReturnType<typeof setInterval>,
   _resultSent: false,
@@ -65,6 +66,7 @@ Page({
     this._source = query.source || null;
     this._module = query.module || null;
     this._submodule = query.submodule ? decodeURIComponent(query.submodule) : null;
+    this._tag3 = query.tag3 ? decodeURIComponent(query.tag3) : null;
     const count = Number(query.count) || 10;
     this.start(query.mode || '', count);
   },
@@ -84,6 +86,8 @@ Page({
               limit: count,
               module: this._module,
               submodule: this._submodule,
+              tag3: this._tag3,
+              adaptive: this._tag3 ? true : undefined,
             });
       if (!d.items || !d.items.length) {
         wx.showToast({ title: '该模块暂无题目', icon: 'none' });

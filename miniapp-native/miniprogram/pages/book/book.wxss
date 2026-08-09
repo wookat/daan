@@ -272,6 +272,22 @@
   margin-left: 16rpx;
 }
 
+.r-opts-full {
+  flex-direction: column;
+}
+
+.r-opt-full {
+  text-align: left;
+  font-weight: 400;
+  font-size: 28rpx;
+  padding: 20rpx 24rpx;
+}
+
+.r-opts-full .r-opt + .r-opt {
+  margin-left: 0;
+  margin-top: 14rpx;
+}
+
 .r-opt.rok {
   background: var(--success);
   color: #fff;
