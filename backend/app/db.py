@@ -367,8 +367,14 @@ def random_questions(
     where.append("disabled=0")
     clause = ("WHERE " + " AND ".join(where)) if where else ""
     # 默认随机抽题只取 id，强制走 covering 索引避免回表读大行（冷启动 10s+ → 亚秒）；
+    # tag3 筛选时 idx_q_pick 不含 tag3，需走 tag3 等值索引缩小扫描范围；
     # adaptive 排序引用 correct_ratio 不在索引内，保持默认计划
-    src = "questions" if adaptive else "questions INDEXED BY idx_q_pick"
+    if adaptive:
+        src = "questions"
+    elif tag3:
+        src = "questions INDEXED BY idx_q_tag3_disabled"
+    else:
+        src = "questions INDEXED BY idx_q_pick"
     ids: list[int] = []
     if not real_only:
         want_real = max(1, round(limit * 0.6))
@@ -407,7 +413,7 @@ def random_questions(
         ids += [
             r["id"]
             for r in conn.execute(
-                f"SELECT id FROM questions INDEXED BY idx_q_pick {clause2} AND id NOT IN ({placeholders}) "
+                f"SELECT id FROM questions INDEXED BY {'idx_q_tag3_disabled' if tag3 else 'idx_q_pick'} {clause2} AND id NOT IN ({placeholders}) "
                 "ORDER BY has_hs DESC, RANDOM() LIMIT ?",
                 (*base_args, *ids, limit - len(ids)),
             )
