@@ -58,6 +58,7 @@
         </view>
       </view>
       <view class="hm-legend">
+        <text class="hm-note">仅统计练习/模考作答</text>
         <text class="hm-lt">少</text>
         <view v-for="i in [0, 1, 2, 3, 4]" :key="'lg' + i" class="hm-c" :class="'lv' + i" />
         <text class="hm-lt">多</text>
@@ -784,6 +785,7 @@ export default {
 .hm-legend { display: flex; align-items: center; gap: 8rpx; justify-content: flex-end; margin-top: 14rpx; }
 .hm-legend .hm-c { width: 26rpx; flex: none; }
 .hm-lt { font-size: 19rpx; color: var(--ink-3); }
+.hm-note { font-size: 19rpx; color: var(--ink-3); margin-right: auto; }
 .wrap { padding: 24rpx; }
 .card { background: var(--card); border-radius: var(--radius); padding: 24rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .hero { background: var(--card); border: 1rpx solid var(--line); border-radius: var(--radius); padding: 30rpx 28rpx; margin-bottom: 24rpx; box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }

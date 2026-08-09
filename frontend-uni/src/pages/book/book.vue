@@ -1123,7 +1123,7 @@ export default {
 .duesub { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.75); margin-top: 6rpx; }
 .duego { background: var(--card); color: var(--brand); font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 0 34rpx; min-height: 44px; line-height: 44px; display: inline-block; box-sizing: border-box; }
 .review { border-left-color: #f5a623; }
-.cb-card { background: var(--card); border-radius: 28rpx; padding: 56rpx 44rpx 40rpx; margin: 0 60rpx; text-align: center; max-width: 560rpx; animation: cb-pop 0.35s ease-out; }
+.cb-card { background: var(--card); border-radius: 28rpx; padding: 56rpx 44rpx 40rpx; margin: 0 60rpx calc(env(safe-area-inset-bottom) + 120rpx); text-align: center; max-width: 560rpx; animation: cb-pop 0.35s ease-out; }
 .cb-emoji { font-size: 88rpx; line-height: 1; animation: cb-bounce 0.8s ease-out; }
 .cb-t { font-size: 34rpx; font-weight: 800; color: #16a34a; margin-top: 20rpx; }
 .cb-s { font-size: 24rpx; color: var(--ink-2); margin-top: 12rpx; }
