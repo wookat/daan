@@ -22,6 +22,42 @@
       </view>
     </view>
 
+    <!-- 今日任务三件套 -->
+    <view class="card taskcard">
+      <view class="tk-h">
+        <text class="tk-t">今日任务</text>
+        <text class="tk-n">{{taskDoneN}}/3</text>
+      </view>
+      <view class="tk-row" data-kind="practice" bind:tap="onTaskGo">
+        <view class="tk-ck {{today >= goal ? 'on' : ''}}">{{today >= goal ? '✓' : ''}}</view>
+        <view class="tk-main">
+          <text class="tk-name {{today >= goal ? 'tdone' : ''}}">刷题目标</text>
+          <text class="tk-sub">已练 {{today}}/{{goal}} 题</text>
+        </view>
+        <text class="tk-go">{{today >= goal ? '再练一组 ›' : '去刷题 ›'}}</text>
+      </view>
+      <view class="tk-row" data-kind="review" bind:tap="onTaskGo">
+        <view class="tk-ck {{dueLoaded && !dueReview ? 'on' : ''}}">{{dueLoaded && !dueReview ? '✓' : ''}}</view>
+        <view class="tk-main">
+          <text class="tk-name {{dueLoaded && !dueReview ? 'tdone' : ''}}">错题复习</text>
+          <text class="tk-sub">{{dueReview ? '今日到期 ' + dueReview + ' 题' : dueLoaded ? '今日已清零' : '加载中…'}}</text>
+        </view>
+        <text class="tk-go">{{dueReview ? '去复习 ›' : '错题本 ›'}}</text>
+      </view>
+      <view class="tk-row" data-kind="checkin" bind:tap="onTaskGo">
+        <view class="tk-ck {{today > 0 ? 'on' : ''}}">{{today > 0 ? '✓' : ''}}</view>
+        <view class="tk-main">
+          <text class="tk-name {{today > 0 ? 'tdone' : ''}}">每日打卡 <text wx:if="{{badgeStreak || streak}}" class="tk-streak">🔥 连续 {{badgeStreak || streak}} 天</text></text>
+          <block wx:if="{{nextMilestone}}">
+            <view class="tk-bar"><view class="tk-fill" style="width: {{nextMilestone.pct}}%" /></view>
+            <text class="tk-sub">再打卡 {{nextMilestone.left}} 天解锁「{{nextMilestone.days}} 天」徽章</text>
+          </block>
+          <text wx:else class="tk-sub">已解锁全部打卡徽章，太强了！</text>
+        </view>
+        <text class="tk-go">徽章 ›</text>
+      </view>
+    </view>
+
     <!-- 今日到期复习卡 -->
     <view wx:if="{{dueReview > 0}}" class="duebar" bind:tap="onReviewEntry">
       <view class="duebar-l">

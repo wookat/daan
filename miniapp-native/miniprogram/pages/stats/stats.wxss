@@ -52,6 +52,106 @@
   margin-bottom: 16rpx;
 }
 
+/* 学习热力图 */
+.hm-h {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.hm-t {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: var(--t1);
+}
+
+.hm-total {
+  font-size: 22rpx;
+  color: var(--t3);
+}
+
+.hm-body {
+  display: flex;
+  flex-direction: row;
+}
+
+.hm-ylab {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin-right: 10rpx;
+}
+
+.hm-yl {
+  font-size: 18rpx;
+  color: var(--t4);
+  height: 40rpx;
+  line-height: 40rpx;
+}
+
+.hm-grid {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  gap: 8rpx;
+}
+
+.hm-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.hm-c {
+  width: 100%;
+  height: 40rpx;
+  border-radius: 8rpx;
+  background: var(--fill);
+}
+
+.hm-c.lv1 {
+  background: var(--brand-100);
+}
+
+.hm-c.lv2 {
+  background: var(--brand-300);
+}
+
+.hm-c.lv3 {
+  background: var(--brand-500);
+}
+
+.hm-c.lv4 {
+  background: var(--brand-700);
+}
+
+.hm-c.fut {
+  opacity: 0.35;
+}
+
+.hm-legend {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8rpx;
+  margin-top: 16rpx;
+}
+
+.hm-legend .hm-c {
+  width: 32rpx;
+  height: 32rpx;
+  flex: none;
+}
+
+.hm-lt {
+  font-size: 20rpx;
+  color: var(--t4);
+}
+
 .mr-h {
   display: flex;
   flex-direction: row;

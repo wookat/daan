@@ -75,6 +75,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
   Timer? _autoTimer;
   Map<String, dynamic>? reinforcePicked; // 复习完成后的同考点强化候选
   int dueReview = 0; // 完成页引导：今日到期待复习题数
+  bool reviewCleared = false; // 复习模式：今日到期队列已清零
 
   @override
   void initState() {
@@ -153,6 +154,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
       elapsed = 0;
       reinforcePicked = null;
       dueReview = 0;
+      reviewCleared = false;
     });
     try {
       List<Question> qs;
@@ -520,6 +522,14 @@ class _PracticePageState extends ConsumerState<PracticePage> {
       }).catchError((_) {}));
     }
     if (widget.mode == 'review') {
+      // 服务端到期队列清零才庆祝（答错题会被重新排期）
+      unawaited(Api.reviewDue().then((d) {
+        final left = ((d['total'] ?? 0) as num).toInt();
+        if (left == 0 && mounted) {
+          setState(() => reviewCleared = true);
+          Api.trackEvent('review_done_celebrate', source: 'practice');
+        }
+      }).catchError((_) {}));
       unawaited(Api.reinforceSuggest().then((d) {
         final p = d['picked'];
         if (p is Map && mounted) {
@@ -1383,6 +1393,31 @@ class _PracticePageState extends ConsumerState<PracticePage> {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
+        if (widget.mode == 'review' && reviewCleared) ...[
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: kBrandGradient,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: [
+                const Text('🎉', style: TextStyle(fontSize: 40)),
+                const SizedBox(height: 8),
+                const Text('今日复习已清零！',
+                    style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white)),
+                const SizedBox(height: 4),
+                Text('${items.length} 道到期错题全部复习完成，遗忘曲线稳住了',
+                    style: TextStyle(
+                        fontSize: 12, color: Colors.white.withValues(alpha: .85))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
         const SizedBox(height: 12),
         Center(
           child: SizedBox(

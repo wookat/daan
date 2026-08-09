@@ -16,6 +16,11 @@
         <text class="badge-cur">当前连续 {{badgeInfo.streak}} 天</text>
         <text class="badge-best">历史最长 {{badgeInfo.best_streak}} 天</text>
       </view>
+      <block wx:if="{{nextMilestone}}">
+        <view class="ms-bar"><view class="ms-fill" style="width: {{nextMilestone.pct}}%" /></view>
+        <text class="ms-sub">再打卡 {{nextMilestone.left}} 天解锁「{{nextMilestone.days}} 天」徽章</text>
+      </block>
+      <text wx:elif="{{badgeInfo.badges.length}}" class="ms-sub">已解锁全部打卡徽章，太强了！</text>
       <view class="badge-grid">
         <view
           wx:for="{{badgeInfo.badges}}"

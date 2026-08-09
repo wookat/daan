@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -55,6 +56,7 @@ class _StatsPageState extends State<StatsPage> {
   String backupCode = Store.instance.backupCode;
   bool bkLoading = false;
   List<dynamic> history = Store.instance.practiceHistory;
+  bool _hmTracked = false;
 
   @override
   void initState() {
@@ -102,6 +104,10 @@ class _StatsPageState extends State<StatsPage> {
         profile = pf;
         loading = false;
       });
+      if (!_hmTracked && checkin.containsKey('days')) {
+        _hmTracked = true;
+        unawaited(Api.trackEvent('heatmap_view', source: 'stats'));
+      }
     } catch (e) {
       setState(() {
         loading = false;
@@ -191,6 +197,8 @@ class _StatsPageState extends State<StatsPage> {
                       _accountCard(),
                       const SizedBox(height: 16),
                       _kpiRow(),
+                      const SizedBox(height: 16),
+                      _heatmapCard(),
                       const SizedBox(height: 16),
                       const PredictCard(),
                       const SizedBox(height: 16),
@@ -325,6 +333,126 @@ class _StatsPageState extends State<StatsPage> {
         ),
       ),
     );
+  }
+
+  // ---------- 学习热力图（近12周） ----------
+
+  Widget _heatmapCard() {
+    final days = _days;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dow = (today.weekday + 6) % 7; // 周一=0
+    final start = today.subtract(Duration(days: dow + 77));
+    var total = 0;
+    int lvOf(int n) => n >= 30
+        ? 4
+        : n >= 15
+            ? 3
+            : n >= 5
+                ? 2
+                : n > 0
+                    ? 1
+                    : 0;
+    Color cellColor(int lv) => switch (lv) {
+          4 => KgColors.brandDeep,
+          3 => KgColors.brand,
+          2 => KgColors.brand.withValues(alpha: .55),
+          1 => KgColors.brand.withValues(alpha: .25),
+          _ => context.kg.fill,
+        };
+    final cols = <List<({int lv, bool future})>>[];
+    for (var w = 0; w < 12; w++) {
+      final col = <({int lv, bool future})>[];
+      for (var r = 0; r < 7; r++) {
+        final d = start.add(Duration(days: w * 7 + r));
+        final key =
+            '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+        final n = days[key]?['n'] ?? 0;
+        final future = d.isAfter(today);
+        if (!future) total += n;
+        col.add((lv: lvOf(n), future: future));
+      }
+      cols.add(col);
+    }
+    return _section('学习热力图 · 近12周', LucideIcons.calendarDays, [
+      Row(
+        children: [
+          const Spacer(),
+          Text('共 $total 题',
+              style: const TextStyle(fontSize: 12, color: KgColors.t3)),
+        ],
+      ),
+      const SizedBox(height: 8),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Column(
+            children: [
+              for (final lbl in const ['一', '', '三', '', '五', '', '日'])
+                SizedBox(
+                  height: 22,
+                  width: 16,
+                  child: Center(
+                      child: Text(lbl,
+                          style:
+                              const TextStyle(fontSize: 9, color: KgColors.t4))),
+                ),
+            ],
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Row(
+              children: [
+                for (final col in cols)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 1.5),
+                      child: Column(
+                        children: [
+                          for (final c in col)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2),
+                              child: Opacity(
+                                opacity: c.future ? .3 : 1,
+                                child: Container(
+                                  height: 18,
+                                  decoration: BoxDecoration(
+                                    color: cellColor(c.lv),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 8),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          const Text('少', style: TextStyle(fontSize: 10, color: KgColors.t4)),
+          for (var lv = 0; lv <= 4; lv++)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: cellColor(lv),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ),
+          const Text('多', style: TextStyle(fontSize: 10, color: KgColors.t4)),
+        ],
+      ),
+    ]);
   }
 
   // ---------- 今日待办 ----------
