@@ -17,3 +17,5 @@
 | 合计 | 1246 | 1071 | 175 | 0 | 175 |
 
 四模块生产剩余空缺 ID 集合与本台账 skip_suspect 集合逐一比对完全一致（空缺清零或仅剩存疑台账题）。全部 write_hs 均经快照 dry-run 行数核对后按批（24-50 题）备份（VACUUM INTO /data/bak_r28_*）+守卫事务应用，/api/stats 与各模块 /api/questions 回归 200。存疑主因：存档答案与解析/文意矛盾、答案不唯一、缺图缺材料、串题乱码、法条时效冲突等，逐条已在台账 reason 注明。
+
+后续：上表 175 条 skip_suspect 已在轮29 纠错专项逐题终局裁定（fix_answer 73 / disable 100 / 保留 2），见 docs/content/r29/。裁定后四模块生产剩余空缺仅 2 条（changshi 655861、panduan 334296）。
