@@ -29,6 +29,21 @@
       </view>
     </view>
 
+    <!-- 打卡徽章墙 -->
+    <view class="sec-t">打卡徽章</view>
+    <view class="card badges">
+      <view v-if="badgeInfo" class="badge-head">
+        <text class="badge-cur">当前连续 {{ badgeInfo.streak }} 天</text>
+        <text class="badge-best">历史最长 {{ badgeInfo.best_streak }} 天</text>
+      </view>
+      <view class="badge-grid">
+        <view v-for="b in badgeList" :key="b.days" class="badge" :class="{ off: !b.unlocked }" @click="tapBadge(b)">
+          <text class="badge-ico">{{ b.unlocked ? '🏅' : '🔒' }}</text>
+          <text class="badge-d">{{ b.days }} 天</text>
+        </view>
+      </view>
+    </view>
+
     <!-- 学习 -->
     <view class="sec-t">学习</view>
     <wd-cell-group custom-class="cellcard" border>
@@ -99,7 +114,7 @@
 </template>
 
 <script>
-import { request, getAuthUser, authLogout, clearAuth, anonUid } from '../../api.js';
+import { request, getAuthUser, authLogout, clearAuth, anonUid, fetchCheckinBadges } from '../../api.js';
 import { getReminderSettings } from '../../reminder.js';
 import { cycleThemeMode, getThemeMode, THEME_LABELS } from '../../theme.js';
 import { listPacks } from '../../offline.js';
@@ -122,9 +137,14 @@ export default {
       remindTime: '20:30',
       themeMode: 'system',
       offlineN: 0,
+      badgeInfo: null,
     };
   },
   computed: {
+    badgeList() {
+      if (this.badgeInfo) return this.badgeInfo.badges || [];
+      return [3, 7, 14, 30, 60, 100].map((d) => ({ days: d, unlocked: false }));
+    },
     themeLabel() {
       return THEME_LABELS[this.themeMode] || '跟随系统';
     },
@@ -156,10 +176,23 @@ export default {
     this.themeMode = getThemeMode();
     this.offlineN = listPacks().length;
     this.loadRemote();
+    this.loadBadges();
   },
   methods: {
     maskPhone(p) {
       return p ? p.slice(0, 3) + '****' + p.slice(-4) : '';
+    },
+    async loadBadges() {
+      try {
+        this.badgeInfo = await fetchCheckinBadges();
+      } catch (e) { /* 非关键路径 */ }
+    },
+    tapBadge(b) {
+      if (b.unlocked) {
+        uni.navigateTo({ url: '/pkgA/social/poster?badge=' + b.days });
+      } else {
+        uni.showToast({ title: `连续打卡 ${b.days} 天即可解锁`, icon: 'none' });
+      }
     },
     async loadRemote() {
       const uid = anonUid();
@@ -285,6 +318,15 @@ export default {
 .stat-t { font-size: 22rpx; color: var(--ink-2); }
 
 .sec-t { font-size: 24rpx; color: var(--ink-2); margin: 28rpx 8rpx 14rpx; }
+.badges { padding: 26rpx 28rpx; }
+.badge-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20rpx; }
+.badge-cur { font-size: 26rpx; font-weight: 700; color: var(--ink); }
+.badge-best { font-size: 22rpx; color: var(--ink-2); }
+.badge-grid { display: flex; flex-wrap: wrap; gap: 16rpx; }
+.badge { width: calc((100% - 32rpx) / 3); box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 6rpx; background: var(--brand-soft); border-radius: 18rpx; padding: 18rpx 0; }
+.badge.off { background: var(--fill); opacity: 0.65; }
+.badge-ico { font-size: 40rpx; }
+.badge-d { font-size: 22rpx; font-weight: 600; color: var(--ink); }
 :deep(.cellcard) { display: block; border-radius: 28rpx; overflow: hidden; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); margin-bottom: 20rpx; }
 .cell-ico { width: 56rpx; height: 56rpx; border-radius: 14rpx; background: var(--fill); display: flex; align-items: center; justify-content: center; margin-right: 20rpx; }
 

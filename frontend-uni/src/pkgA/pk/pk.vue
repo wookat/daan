@@ -132,7 +132,8 @@
         </view>
       </template>
       <template v-else>
-        <view class="act-btn main" @click="rematch">再来一局</view>
+        <view class="act-btn main" @click="shareResult">晒战绩，喊人来战</view>
+        <view class="act-btn sub" @click="rematch">再来一局</view>
       </template>
       <view class="act-btn plain" @click="backHome">返回 PK 大厅</view>
     </template>
@@ -142,7 +143,7 @@
 </template>
 
 <script>
-import { pkCreate, pkJoin, pkRandomMatch, pkMatch, pkSubmit, pkMine, pkLeaderboard, pkNickname } from '../../api.js';
+import { pkCreate, pkJoin, pkRandomMatch, pkMatch, pkSubmit, pkMine, pkLeaderboard, pkNickname, trackEvent } from '../../api.js';
 
 const MODS = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断' };
 const PER_Q_SEC = 30;
@@ -418,6 +419,25 @@ export default {
       // #endif
       // #ifdef MP-WEIXIN
       uni.showToast({ title: '点右上角「…」转发给好友', icon: 'none' });
+      // #endif
+    },
+    shareResult() {
+      const code = this.match.code;
+      trackEvent('pk_result_copy', 'pk_share', code);
+      // #ifdef H5
+      const url = `${window.location.origin}${window.location.pathname}#/pkgA/share/pk-result?rid=${code}`;
+      const me = this.myP();
+      const them = this.theirP() || {};
+      uni.setClipboardData({
+        data: `【答题PK战绩】${me.name || this.myName} ${me.score} : ${them.score} ${them.name}，不服来战：${url}`,
+        success: () => uni.showToast({ title: '战绩链接已复制，发给考友吧', icon: 'none' }),
+      });
+      // #endif
+      // #ifndef H5
+      uni.setClipboardData({
+        data: `【答题PK战绩】不服来战：https://kaogong.zalize.com/#/pkgA/share/pk-result?rid=${code}`,
+        success: () => uni.showToast({ title: '战绩链接已复制，发给考友吧', icon: 'none' }),
+      });
       // #endif
     },
     rematch() {
