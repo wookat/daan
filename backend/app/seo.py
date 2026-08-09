@@ -43,6 +43,10 @@ def _topic_path(code: str) -> str:
     return f"/tiku/t/{quote(code)}/"
 
 
+def _year_path(year: int, module: str) -> str:
+    return f"/tiku/y/{year}/{quote(module)}/"
+
+
 _CSS = (
     "*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',"
     "'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;color:#1f2329;background:#f7f8fa;"
@@ -168,6 +172,7 @@ def _list_questions(module: str, submodule: str | None, page: int) -> list:
 def tiku_index():
     counts = {r["module"]: r["n"] for r in db.question_counts()}
     t3counts = db.tag3_counts()
+    ycounts = db.year_module_counts()
     sections = []
     for m in taxonomy.tree()["modules"]:
         key, name = m["key"], m["name"]
@@ -186,11 +191,17 @@ def tiku_index():
                         f'<a href="{_e(_topic_path(t["code"]))}">{_e(t["name"])}</a>'
                     )
         topics = "".join(topic_links[:12])
+        years = "".join(
+            f'<a href="{_e(_year_path(y, key))}">{y}年（{n}）</a>'
+            for (y, m), (n, _mu) in sorted(ycounts.items(), reverse=True)
+            if m == key
+        )
         sections.append(
             f'<section class="card"><h2><a href="/tiku/{_e(key)}/">{_e(name)}</a>'
             f'<span class="meta">（{counts[key]} 题）</span></h2>'
             f'<div class="tags">{sub_links}</div>'
             + (f'<p class="meta">按考点刷题：</p><div class="tags">{topics}</div>' if topics else "")
+            + (f'<p class="meta">按年份刷真题：</p><div class="tags">{years}</div>' if years else "")
             + "</section>"
         )
     total = sum(counts.values())
@@ -283,6 +294,78 @@ def tiku_question(qid: int):
     return HTMLResponse(_render_question(qid))
 
 
+@router.get("/y/{year}/{module}", include_in_schema=False)
+def tiku_year_noslash(year: int, module: str):
+    return RedirectResponse(_year_path(year, module), status_code=301)
+
+
+@router.get("/y/{year}/{module}/", response_class=HTMLResponse, include_in_schema=False)
+def tiku_year(year: int, module: str, page: int = 1):
+    return HTMLResponse(_render_year(year, module, max(1, page)))
+
+
+@lru_cache(maxsize=512)
+def _render_year(year: int, module: str, page: int) -> str:
+    mod_name = _module_name(module)
+    total = db.year_module_counts().get((year, module), (0, None))[0]
+    if not mod_name or not total:
+        raise HTTPException(404, "页面不存在")
+    conn = db.get_conn()
+    rows = conn.execute(
+        "SELECT id, question, submodule, is_real, exam_year, exam_region FROM questions "
+        "WHERE module=? AND is_real=1 AND exam_year=? AND disabled=0 ORDER BY id DESC LIMIT ? OFFSET ?",
+        (module, year, PAGE_SIZE, (page - 1) * PAGE_SIZE),
+    ).fetchall()
+    conn.close()
+    if not rows and page > 1:
+        raise HTTPException(404, "页码超出范围")
+    counts = db.year_module_counts()
+    other_years = "".join(
+        f'<a href="{_e(_year_path(y, module))}">{y}年（{n}）</a>'
+        for (y, m), (n, _mu) in sorted(counts.items(), reverse=True)
+        if m == module and y != year
+    )
+    cta = (
+        f'<a class="cta" href="{_e(SITE_BASE)}/#/pages/practice/practice?module={quote(module)}'
+        f'&real=1&year={year}&source=seo">在线刷{year}年{_e(mod_name)}真题（免费）→</a>'
+    )
+    body = (
+        _crumb([("题库", "/tiku/"), (mod_name, f"/tiku/{module}/"), (f"{year}年真题", None)])
+        + f"<h1>{year}年{_e(mod_name)}真题题库（{total} 题）</h1>"
+        + f'<p class="meta">{year}年国考/省考{_e(mod_name)}模块历年真题，附答案解析与方法讲解</p>'
+        + cta
+        + '<div class="card">'
+        + _q_items(rows)
+        + "</div>"
+        + _pager(_year_path(year, module), page, total)
+        + (f'<div class="card"><h2>其他年份{_e(mod_name)}真题</h2><div class="tags">{other_years}</div></div>' if other_years else "")
+    )
+    suffix = f"（第{page}页）" if page > 1 else ""
+    jsonld = {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "name": f"{year}年{mod_name}真题题库",
+        "description": f"{year}年公务员考试{mod_name}模块真题 {total} 题，附答案解析。",
+        "url": _url(_year_path(year, module)),
+        "isPartOf": {"@type": "WebSite", "name": "考公错题助手", "url": SITE_BASE},
+        "breadcrumb": {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+                {"@type": "ListItem", "position": 1, "name": "题库", "item": _url("/tiku/")},
+                {"@type": "ListItem", "position": 2, "name": mod_name, "item": _url(f"/tiku/{module}/")},
+                {"@type": "ListItem", "position": 3, "name": f"{year}年真题", "item": _url(_year_path(year, module))},
+            ],
+        },
+    }
+    return _page(
+        f"{year}年{mod_name}真题题库{suffix}_{year}年公务员考试{mod_name}真题及答案解析_考公错题助手",
+        f"{year}年公务员考试{mod_name}模块真题共 {total} 题，附答案与花生十三方法讲解，可在线按年份刷真题。{suffix}",
+        _year_path(year, module) + (f"?page={page}" if page > 1 else ""),
+        body,
+        jsonld,
+    )
+
+
 @router.get("/t/{code}", include_in_schema=False)
 def tiku_topic_noslash(code: str):
     return RedirectResponse(_topic_path(code), status_code=301)
@@ -291,6 +374,18 @@ def tiku_topic_noslash(code: str):
 @router.get("/t/{code}/", response_class=HTMLResponse, include_in_schema=False)
 def tiku_topic(code: str, page: int = 1):
     return HTMLResponse(_render_topic(code, max(1, page)))
+
+
+def _sibling_topics(code: str, topic: dict) -> str:
+    counts = db.tag3_counts()
+    links = "".join(
+        f'<a href="{_e(_topic_path(c))}">{_e(t["name"])}（{counts[c]}）</a>'
+        for c, t in taxonomy.topic_index().items()
+        if t["group_code"] == topic["group_code"] and c != code and counts.get(c)
+    )
+    if not links:
+        return ""
+    return f'<div class="card"><h2>同类考点（{_e(topic["group_name"])}）</h2><div class="tags">{links}</div></div>'
 
 
 @lru_cache(maxsize=1024)
@@ -333,6 +428,7 @@ def _render_topic(code: str, page: int) -> str:
         + _q_items(rows)
         + "</div>"
         + _pager(_topic_path(code), page, total)
+        + _sibling_topics(code, topic)
     )
     suffix = f"（第{page}页）" if page > 1 else ""
     jsonld = {
@@ -562,9 +658,12 @@ def _question_ids() -> list[int]:
     return ids
 
 
-def _lastmod(ts: float | None) -> str:
+def _lastmod(ts: float | str | None) -> str:
     if not ts:
         return ""
+    if isinstance(ts, str):
+        # 历史数据存在 ISO8601 文本（如 2026-08-09T18:23:19Z），取日期部分
+        return "<lastmod>" + ts[:10] + "</lastmod>" if len(ts) >= 10 else ""
     return "<lastmod>" + time.strftime("%Y-%m-%d", time.gmtime(ts)) + "</lastmod>"
 
 
@@ -582,7 +681,7 @@ def _urlset(urls: list[tuple[str, float | None]]) -> Response:
 def sitemap_index():
     n_shards = max(1, math.ceil(len(_question_ids()) / SITEMAP_SHARD))
     maps = (
-        [_url("/sitemap-pages.xml"), _url("/sitemap-topics.xml")]
+        [_url("/sitemap-pages.xml"), _url("/sitemap-topics.xml"), _url("/sitemap-years.xml")]
         + [_url(f"/sitemap-questions-{i}.xml") for i in range(1, n_shards + 1)]
     )
     body = (
@@ -610,10 +709,21 @@ def sitemap_pages():
 @root_router.get("/sitemap-topics.xml", include_in_schema=False)
 def sitemap_topics():
     counts = db.tag3_counts()
+    lastmod = db.tag3_lastmod()
     urls = [
-        (_url(_topic_path(code)), None)
+        (_url(_topic_path(code)), lastmod.get(code))
         for code in taxonomy.topic_index()
         if counts.get(code)
+    ]
+    return _urlset(urls)
+
+
+@root_router.get("/sitemap-years.xml", include_in_schema=False)
+def sitemap_years():
+    urls = [
+        (_url(_year_path(y, m)), mu)
+        for (y, m), (n, mu) in sorted(db.year_module_counts().items(), reverse=True)
+        if n and _module_name(m)
     ]
     return _urlset(urls)
 

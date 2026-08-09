@@ -367,8 +367,14 @@ def random_questions(
     where.append("disabled=0")
     clause = ("WHERE " + " AND ".join(where)) if where else ""
     # 默认随机抽题只取 id，强制走 covering 索引避免回表读大行（冷启动 10s+ → 亚秒）；
+    # tag3 筛选时 idx_q_pick 不含 tag3，需走 tag3 等值索引缩小扫描范围；
     # adaptive 排序引用 correct_ratio 不在索引内，保持默认计划
-    src = "questions" if adaptive else "questions INDEXED BY idx_q_pick"
+    if adaptive:
+        src = "questions"
+    elif tag3:
+        src = "questions INDEXED BY idx_q_tag3_disabled"
+    else:
+        src = "questions INDEXED BY idx_q_pick"
     ids: list[int] = []
     if not real_only:
         want_real = max(1, round(limit * 0.6))
@@ -407,7 +413,7 @@ def random_questions(
         ids += [
             r["id"]
             for r in conn.execute(
-                f"SELECT id FROM questions INDEXED BY idx_q_pick {clause2} AND id NOT IN ({placeholders}) "
+                f"SELECT id FROM questions INDEXED BY {'idx_q_tag3_disabled' if tag3 else 'idx_q_pick'} {clause2} AND id NOT IN ({placeholders}) "
                 "ORDER BY has_hs DESC, RANDOM() LIMIT ?",
                 (*base_args, *ids, limit - len(ids)),
             )
@@ -797,6 +803,46 @@ def tag3_counts() -> dict:
     out = {r["tag3"]: r["n"] for r in rows}
     _TAG3_COUNTS_CACHE[0] = now
     _TAG3_COUNTS_CACHE[1] = out
+    return out
+
+
+_YEAR_MODULE_CACHE: list = [0.0, None]
+
+
+def year_module_counts() -> dict:
+    """各（年份, 模块）的在架真题数与最新 updated_at，进程内 5 分钟缓存。"""
+    now = time.time()
+    if _YEAR_MODULE_CACHE[1] is not None and now - _YEAR_MODULE_CACHE[0] < TAG3_COUNTS_TTL:
+        return _YEAR_MODULE_CACHE[1]
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT exam_year y, module m, COUNT(*) n, MAX(updated_at) mu FROM questions "
+        "WHERE is_real=1 AND disabled=0 AND exam_year IS NOT NULL GROUP BY exam_year, module"
+    ).fetchall()
+    conn.close()
+    out = {(r["y"], r["m"]): (r["n"], r["mu"]) for r in rows}
+    _YEAR_MODULE_CACHE[0] = now
+    _YEAR_MODULE_CACHE[1] = out
+    return out
+
+
+_TAG3_LASTMOD_CACHE: list = [0.0, None]
+
+
+def tag3_lastmod() -> dict:
+    """各三级考点最新 updated_at（在架），进程内 5 分钟缓存，用于 sitemap lastmod。"""
+    now = time.time()
+    if _TAG3_LASTMOD_CACHE[1] is not None and now - _TAG3_LASTMOD_CACHE[0] < TAG3_COUNTS_TTL:
+        return _TAG3_LASTMOD_CACHE[1]
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT tag3, MAX(updated_at) mu FROM questions WHERE tag3 IS NOT NULL AND tag3!='' "
+        "AND disabled=0 GROUP BY tag3"
+    ).fetchall()
+    conn.close()
+    out = {r["tag3"]: r["mu"] for r in rows}
+    _TAG3_LASTMOD_CACHE[0] = now
+    _TAG3_LASTMOD_CACHE[1] = out
     return out
 
 
