@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import json
+import mimetypes
 import os
 import re
 import threading
@@ -11,6 +12,7 @@ from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.datastructures import Headers
 
 from . import auth, db, engine, insights, interview, kb, llm, mock_event, omr, pdf_export, pk, plan, report, seo, similarity, social, taxonomy, team
 
@@ -1587,5 +1589,31 @@ def api_sw_js():
     return FileResponse(p, media_type="application/javascript")
 
 
+class AssetStaticFiles(StaticFiles):
+    """带 hash 的 /assets/* 长缓存；存在预压缩 .br 产物时优先返回（比 gzip 小约 15-20%）。"""
+
+    _CACHE = "public, max-age=31536000, immutable"
+
+    async def get_response(self, path: str, scope):
+        is_asset = path.startswith("assets/")
+        if is_asset and "br" in Headers(scope=scope).get("accept-encoding", ""):
+            br = os.path.join(self.directory, path + ".br")
+            if os.path.isfile(br):
+                media_type = mimetypes.guess_type(path)[0] or "application/octet-stream"
+                return FileResponse(
+                    br,
+                    media_type=media_type,
+                    headers={
+                        "Content-Encoding": "br",
+                        "Vary": "Accept-Encoding",
+                        "Cache-Control": self._CACHE,
+                    },
+                )
+        resp = await super().get_response(path, scope)
+        if is_asset and resp.status_code == 200:
+            resp.headers["Cache-Control"] = self._CACHE
+        return resp
+
+
 app.mount("/qimg", StaticFiles(directory=QIMG_DIR), name="qimg")
-app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="static")
+app.mount("/", AssetStaticFiles(directory=FRONTEND_DIR, html=True), name="static")
