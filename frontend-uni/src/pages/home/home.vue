@@ -35,7 +35,7 @@
       <view class="hero-top">
         <text class="hero-goal">今日已练 <text class="hero-n">{{ todayCount }}</text>/{{ dailyGoal }} 题{{ todayCount >= dailyGoal ? ' · 已达成' : '' }}</text>
         <view v-if="todayCount >= dailyGoal" class="hero-streak" @click="openPoster"><l-icon name="party-popper" :size="13" color="#ffffff" /><text>生成打卡海报 ›</text></view>
-        <view v-else-if="dailyStreak" class="hero-streak"><l-icon name="flame" :size="13" color="#ffffff" /><text>连续打卡 {{ dailyStreak }} 天</text></view>
+        <view v-else-if="streakShown" class="hero-streak"><l-icon name="flame" :size="13" color="#ffffff" /><text>连续打卡 {{ streakShown }} 天</text></view>
       </view>
       <view class="hero-bar"><view class="hero-fill" :style="{ width: Math.min((todayCount / dailyGoal) * 100, 100) + '%' }" /></view>
       <view class="hero-acts">
@@ -429,8 +429,8 @@
 </template>
 
 <script>
-import { request, anonUid, exportPdf, trackEvent, fetchCheckinBadges } from '../../api.js';
-import { checkinStreak } from '../../checkin.js';
+import { request, anonUid, exportPdf, trackEvent, fetchCheckinBadges, fetchCheckinSummary } from '../../api.js';
+import { checkinStreak, dayKey } from '../../checkin.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -477,6 +477,7 @@ export default {
       dailyGoal: uni.getStorageSync('dailyGoal') || 20,
       announce: null,
       badgeInfo: null,
+      svTodayN: null,
       weeklyDot: false,
       comeback: null,
       reminderBanner: false,
@@ -502,8 +503,11 @@ export default {
       return this.paperRegion ? this.papers.filter((p) => p.region === this.paperRegion) : this.papers;
     },
     todayCount() {
+      // 服务端 answer_log（Asia/Shanghai 日界）优先，未返回时降级本地 pstats
       const days = (this.pstats && this.pstats.days) || {};
-      return days[new Date().toISOString().slice(0, 10)] || 0;
+      const local = days[dayKey()] || 0;
+      if (this.svTodayN != null) return Math.max(this.svTodayN, local);
+      return local;
     },
     weakModule() {
       let worst = null;
@@ -519,14 +523,14 @@ export default {
       return worst;
     },
     todayDone() {
-      return !!this.daily.days[new Date().toISOString().slice(0, 10)];
+      return !!this.daily.days[dayKey()];
     },
     szTodayDone() {
-      return !!this.szDaily.days[new Date().toISOString().slice(0, 10)];
+      return !!this.szDaily.days[dayKey()];
     },
     dailyModule() {
       const mods = ['ziliao', 'shuliang', 'yanyu', 'panduan', 'changshi'];
-      const key = new Date().toISOString().slice(0, 10);
+      const key = dayKey();
       let h = 0;
       for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
       return mods[h % mods.length];
@@ -535,14 +539,14 @@ export default {
       const days = (this.pstats && this.pstats.days) || {};
       const y = new Date();
       y.setDate(y.getDate() - 1);
-      const yKey = y.toISOString().slice(0, 10);
+      const yKey = dayKey(y);
       const yN = days[yKey] || 0;
       if (this.todayCount >= this.dailyGoal) return null;
       if (!yN) {
         // 昨天完全没练：若之前有打卡记录，提示找回节奏
         const d2 = new Date();
         d2.setDate(d2.getDate() - 2);
-        if (!days[d2.toISOString().slice(0, 10)]) return null;
+        if (!days[dayKey(d2)]) return null;
         return { title: '昨天没打卡，连续记录中断了', sub: `今天练 ${this.dailyGoal} 题，重新出发不掉队` };
       }
       if (yN < this.dailyGoal) {
@@ -677,7 +681,7 @@ export default {
       const days = (this.pstats && this.pstats.days) || {};
       const keys = Object.keys(days).filter((k) => days[k] > 0).sort();
       if (!keys.length) return;
-      const todayKey = new Date().toISOString().slice(0, 10);
+      const todayKey = dayKey();
       const last = keys[keys.length - 1];
       if (last >= todayKey) return;
       const gap = Math.round((new Date(todayKey) - new Date(last)) / 86400000);
@@ -698,7 +702,7 @@ export default {
       if (new Date().getHours() < 18) return;
       const days = (this.pstats && this.pstats.days) || {};
       if (!Object.keys(days).some((k) => days[k] > 0)) return;
-      const todayKey = new Date().toISOString().slice(0, 10);
+      const todayKey = dayKey();
       if (uni.getStorageSync('reminderShown') === todayKey) return;
       this.reminderBanner = true;
       uni.setStorageSync('reminderShown', todayKey);
@@ -734,6 +738,13 @@ export default {
     async loadBadges() {
       try {
         this.badgeInfo = await fetchCheckinBadges();
+      } catch (e) { /* 非关键路径 */ }
+      try {
+        const d = await fetchCheckinSummary();
+        if (d && d.today_n != null) {
+          this.svTodayN = d.today_n;
+          if (d.today_n > 0) this.reminderBanner = false;
+        }
       } catch (e) { /* 非关键路径 */ }
     },
     taskGo(kind) {

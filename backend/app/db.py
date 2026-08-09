@@ -2423,7 +2423,7 @@ def record_review(mid: int, correct: bool, uid: str | None = None) -> dict:
     streak = (row["review_streak"] or 0) + 1 if correct else 0
     days = REVIEW_INTERVALS_DAYS[min(streak - 1, len(REVIEW_INTERVALS_DAYS) - 1)] if correct else 1
     nxt = time.time() + days * 86400
-    mastered = 1 if streak >= 2 else 0
+    mastered = 1 if streak > len(REVIEW_INTERVALS_DAYS) else 0
     conn.execute(
         "UPDATE mistakes SET review_count=review_count+1, review_streak=?, next_review=?, mastered=? WHERE id=?",
         (streak, nxt, mastered, mid),

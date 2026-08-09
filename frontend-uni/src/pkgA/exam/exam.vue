@@ -69,6 +69,7 @@
 
 <script>
 import { request, anonUid } from '../../api.js';
+import { dayKey } from '../../checkin.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
 const PROG_KEY = 'examProgress';
@@ -281,7 +282,7 @@ export default {
         if (!s.byModule) s.byModule = {};
         if (!s.days) s.days = {};
         if (!s.daysCorrect) s.daysCorrect = {};
-        const day = new Date().toISOString().slice(0, 10);
+        const day = dayKey();
         let answered = 0;
         let correctN = 0;
         for (const it of d.items || []) {

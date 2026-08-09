@@ -347,7 +347,7 @@ const MODS = [
 
 export default {
   data() {
-    return { authUser: getAuthUser(), byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, kmCov: null, history: [], showAllHist: false, coachHtml: cleanCoach(uni.getStorageSync('coachAdvice') || ''), coachLoading: false, growth: null, reco: null, dueN: 0, gwMod: '', slStats: null, slIssuesOpen: false, modOpen: false, topOpen: false, secOpen: { coach: false, medal: false, bk: false }, hmDays: null };
+    return { authUser: getAuthUser(), byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, kmCov: null, history: [], showAllHist: false, coachHtml: cleanCoach(uni.getStorageSync('coachAdvice') || ''), coachLoading: false, growth: null, reco: null, dueN: 0, gwMod: '', slStats: null, slIssuesOpen: false, modOpen: false, topOpen: false, secOpen: { coach: false, medal: false, bk: false }, hmDays: null, svStreak: null };
   },
   computed: {
     shownModules() {
@@ -471,6 +471,7 @@ export default {
       return s;
     },
     streakDays() {
+      if (this.svStreak != null) return this.svStreak;
       return checkinStreak(this.pstats);
     },
     medals() {
@@ -569,6 +570,7 @@ export default {
       try {
         const d = await fetchCheckinSummary();
         this.hmDays = d.days || {};
+        if (d.streak != null) this.svStreak = d.streak;
         if (!this._hmTracked) {
           this._hmTracked = true;
           trackEvent('heatmap_view', 'stats');

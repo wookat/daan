@@ -4,7 +4,7 @@
 """
 import re
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Header, HTTPException
 
@@ -536,6 +536,14 @@ def api_note_save(body: dict):
 
 BADGE_MILESTONES = [3, 7, 14, 30, 60, 100]
 
+# 打卡日界统一按北京时间（Asia/Shanghai，无夏令时，固定 UTC+8）
+CN_TZ = timezone(timedelta(hours=8))
+CN_DAY_SQL = "DATE(created_at + 28800, 'unixepoch')"
+
+
+def _cn_now() -> datetime:
+    return datetime.now(CN_TZ)
+
 
 @router.get("/checkin/badges")
 def api_checkin_badges(uid: str):
@@ -545,13 +553,13 @@ def api_checkin_badges(uid: str):
     days = {
         r["d"]
         for r in conn.execute(
-            "SELECT DISTINCT DATE(created_at, 'unixepoch', 'localtime') AS d FROM answer_log WHERE uid=?",
+            f"SELECT DISTINCT {CN_DAY_SQL} AS d FROM answer_log WHERE uid=?",
             (u,),
         )
     }
     conn.close()
     streak = 0
-    d = datetime.now()
+    d = _cn_now()
     if d.strftime("%Y-%m-%d") not in days:
         d -= timedelta(days=1)
     while d.strftime("%Y-%m-%d") in days:
@@ -581,15 +589,15 @@ def api_checkin_summary(uid: str):
     days = {
         r["d"]: {"n": r["n"], "correct": r["c"]}
         for r in conn.execute(
-            """SELECT DATE(created_at, 'unixepoch', 'localtime') AS d,
+            f"""SELECT {CN_DAY_SQL} AS d,
                       COUNT(*) AS n, SUM(correct) AS c
                FROM answer_log WHERE uid=? GROUP BY d""",
             (u,),
         )
     }
     total = conn.execute("SELECT COUNT(*) FROM answer_log WHERE uid=?", (u,)).fetchone()[0]
-    today = datetime.now().strftime("%Y-%m-%d")
-    day0 = time.mktime(datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).timetuple())
+    today = _cn_now().strftime("%Y-%m-%d")
+    day0 = _cn_now().replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
     cleared_today = conn.execute(
         "SELECT COUNT(*) FROM review_log WHERE uid=? AND correct=1 AND created_at>=?",
         (u, day0),
@@ -608,7 +616,7 @@ def api_checkin_summary(uid: str):
             exam_type = p["exam_type"] if "exam_type" in keys else None
     conn.close()
     streak = 0
-    d = datetime.now()
+    d = _cn_now()
     if today not in days:
         d -= timedelta(days=1)
     while d.strftime("%Y-%m-%d") in days:
