@@ -233,7 +233,7 @@
 </template>
 
 <script>
-import { request, BASE_URL, anonUid, exportPdf, removeFav, setFav } from '../../api.js';
+import { request, BASE_URL, anonUid, exportPdf, removeFav, setFav, fetchCheckinBadges, trackEvent } from '../../api.js';
 import { drawOffline, enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../offline.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
@@ -1137,6 +1137,37 @@ export default {
       if (!s.daysCorrect) s.daysCorrect = {};
       if (correct) s.daysCorrect[day] = (s.daysCorrect[day] || 0) + 1;
       savePStats(s);
+      this.checkBadgeMilestone();
+    },
+    async checkBadgeMilestone() {
+      const MILESTONES = [3, 7, 14, 30, 60, 100];
+      const days = this.pstats.days || {};
+      let streak = 0;
+      const d = new Date();
+      while (days[d.toISOString().slice(0, 10)]) {
+        streak++;
+        d.setDate(d.getDate() - 1);
+      }
+      const seen = Number(uni.getStorageSync('badgeSeenMax') || 0);
+      if (!MILESTONES.includes(streak) || streak <= seen || this._badgeChecking) return;
+      this._badgeChecking = true;
+      try {
+        const b = await fetchCheckinBadges();
+        if ((b.badges || []).some((x) => x.days === streak && x.unlocked)) {
+          uni.setStorageSync('badgeSeenMax', streak);
+          trackEvent('badge_unlock', 'badge', String(streak));
+          uni.showModal({
+            title: '🏅 解锁新徽章！',
+            content: `连续打卡 ${streak} 天，坚持就是实力。生成专属海报，晒给考友看？`,
+            confirmText: '生成海报',
+            cancelText: '稍后再看',
+            success: (r) => {
+              if (r.confirm) uni.navigateTo({ url: '/pkgA/social/poster?badge=' + streak });
+            },
+          });
+        }
+      } catch (e) { /* 非关键路径 */ }
+      this._badgeChecking = false;
     },
     fmtSecs(s) {
       return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');

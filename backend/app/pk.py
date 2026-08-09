@@ -244,6 +244,32 @@ def api_pk_match(code: str, uid: str = ""):
     return {"match": _match_payload(m, (uid or "").strip()[:64] or None, with_detail=True)}
 
 
+@router.get("/result/{code}")
+def api_pk_result(code: str):
+    """PK 战绩公开落地页数据：仅已结束对局，只含昵称/比分等展示字段，匿名可看。"""
+    conn = db.get_conn()
+    m = conn.execute("SELECT * FROM pk_matches WHERE code=?", (code.strip().upper()[:12],)).fetchone()
+    conn.close()
+    if not m or m["status"] != "finished":
+        raise HTTPException(404, "战绩不存在或对局未结束")
+    def pub(side):
+        return {
+            "name": m[f"{side}_name"] or "匿名考友",
+            "score": m[f"{side}_score"],
+            "correct": m[f"{side}_correct"],
+            "time_ms": m[f"{side}_time_ms"],
+        }
+    return {
+        "code": m["code"],
+        "module": m["module"],
+        "n_questions": len(json.loads(m["question_ids"])),
+        "winner": m["winner"],
+        "creator": pub("creator"),
+        "opponent": pub("opponent"),
+        "finished_at": m["finished_at"],
+    }
+
+
 @router.post("/submit")
 def api_pk_submit(body: dict):
     uid = _clean_uid(body.get("uid"))

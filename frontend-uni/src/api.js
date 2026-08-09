@@ -154,6 +154,10 @@ export function fetchCheckinSummary() {
   return request(`/api/checkin/summary?uid=${encodeURIComponent(anonUid())}`);
 }
 
+export function fetchCheckinBadges() {
+  return request(`/api/checkin/badges?uid=${encodeURIComponent(anonUid())}`);
+}
+
 function askCode() {
   return new Promise((resolve) => {
     uni.showModal({
@@ -690,6 +694,10 @@ export function pkSubmit(code, items) {
 
 export function pkMine() {
   return request(`/api/pk/mine?uid=${encodeURIComponent(anonUid())}`);
+}
+
+export function pkResult(code) {
+  return request(`/api/pk/result/${encodeURIComponent(code)}`);
 }
 
 // ---------- 组队打卡 / 题目分享 ----------

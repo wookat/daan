@@ -113,6 +113,10 @@
           "style": { "navigationBarTitleText": "队友分享的题" }
         },
         {
+          "path": "share/pk-result",
+          "style": { "navigationBarTitleText": "PK 战绩" }
+        },
+        {
           "path": "pk/pk",
           "style": { "navigationBarTitleText": "答题 PK" }
         },

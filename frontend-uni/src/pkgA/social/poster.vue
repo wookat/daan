@@ -62,11 +62,16 @@ function drawPoster(ctx, d) {
   ctx.textBaseline = 'top';
   ctx.fillStyle = 'rgba(255,255,255,0.85)';
   ctx.font = '24px sans-serif';
-  ctx.fillText('考公错题助手 · 学习打卡', pad, 52);
+  ctx.fillText(d.badge ? '考公错题助手 · 里程碑徽章' : '考公错题助手 · 学习打卡', pad, 52);
 
   ctx.fillStyle = '#ffffff';
-  ctx.font = '800 76px sans-serif';
-  ctx.fillText(`连续打卡 第 ${d.streak} 天`, pad, 100);
+  if (d.badge) {
+    ctx.font = '800 64px sans-serif';
+    ctx.fillText(`🏅 连续打卡 ${d.badge} 天徽章`, pad, 106);
+  } else {
+    ctx.font = '800 76px sans-serif';
+    ctx.fillText(`连续打卡 第 ${d.streak} 天`, pad, 100);
+  }
 
   const date = new Date();
   let sub = `${date.getMonth() + 1} 月 ${date.getDate()} 日 · 花生上岸`;
@@ -154,9 +159,10 @@ function drawPoster(ctx, d) {
 
 export default {
   data() {
-    return { loading: true, imgSrc: '', err: '', tmpPath: '' };
+    return { loading: true, imgSrc: '', err: '', tmpPath: '', badge: 0 };
   },
-  onLoad() {
+  onLoad(query) {
+    this.badge = Number(query && query.badge) || 0;
     this.build();
   },
   // #ifdef MP-WEIXIN
@@ -166,6 +172,7 @@ export default {
   // #endif
   methods: {
     makeQuote(d) {
+      if (d.badge) return `“解锁「连续打卡 ${d.badge} 天」徽章，坚持正在变成实力。”`;
       if (d.today_rate != null && d.today_rate >= 80) return `“今日正确率 ${d.today_rate}%，手感在线，保持住这个节奏。”`;
       if (d.streak >= 7) return `“连续 ${d.streak} 天没断过，习惯正在变成实力。”`;
       if (d.today_n >= 50) return `“一天 ${d.today_n} 题，量变正在悄悄积累成质变。”`;
@@ -180,6 +187,7 @@ export default {
         this.loading = false;
         return;
       }
+      d.badge = this.badge;
       d.quote = this.makeQuote(d);
       try {
         // #ifdef H5

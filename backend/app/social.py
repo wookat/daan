@@ -532,6 +532,46 @@ def api_note_save(body: dict):
     return {"ok": True, "content": content or None}
 
 
+# ---------- 打卡里程碑徽章 ----------
+
+BADGE_MILESTONES = [3, 7, 14, 30, 60, 100]
+
+
+@router.get("/checkin/badges")
+def api_checkin_badges(uid: str):
+    """连续打卡里程碑徽章：按 answer_log 的做题日期计算当前连击与历史最长连击。"""
+    u = _clean_uid(uid)
+    conn = db.get_conn()
+    days = {
+        r["d"]
+        for r in conn.execute(
+            "SELECT DISTINCT DATE(created_at, 'unixepoch', 'localtime') AS d FROM answer_log WHERE uid=?",
+            (u,),
+        )
+    }
+    conn.close()
+    streak = 0
+    d = datetime.now()
+    if d.strftime("%Y-%m-%d") not in days:
+        d -= timedelta(days=1)
+    while d.strftime("%Y-%m-%d") in days:
+        streak += 1
+        d -= timedelta(days=1)
+    best = 0
+    run = 0
+    prev = None
+    for day in sorted(days):
+        cur = datetime.strptime(day, "%Y-%m-%d").date()
+        run = run + 1 if prev is not None and (cur - prev).days == 1 else 1
+        best = max(best, run)
+        prev = cur
+    return {
+        "streak": streak,
+        "best_streak": best,
+        "badges": [{"days": m, "unlocked": best >= m} for m in BADGE_MILESTONES],
+    }
+
+
 # ---------- 打卡摘要（海报数据） ----------
 
 @router.get("/checkin/summary")
