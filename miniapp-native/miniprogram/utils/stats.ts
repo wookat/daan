@@ -16,8 +16,14 @@ export function savePStats(s: PStats): void {
   wx.setStorageSync('pstats', s);
 }
 
+// 日界按设备本地时区（国内用户即北京时间），与服务端 answer_log 的 Asia/Shanghai 日界一致
+export function dayKey(d: Date = new Date()): string {
+  const p = (n: number) => (n < 10 ? '0' + n : '' + n);
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+
 export function todayKey(): string {
-  return new Date().toISOString().slice(0, 10);
+  return dayKey();
 }
 
 export function todayCount(): number {
@@ -69,7 +75,7 @@ export function streakDays(): number {
   let n = 0;
   const d = new Date();
   for (;;) {
-    const key = d.toISOString().slice(0, 10);
+    const key = dayKey(d);
     if (days[key]) {
       n++;
       d.setDate(d.getDate() - 1);

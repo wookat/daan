@@ -24,6 +24,10 @@
         <rich-text :nodes="curHtml" />
         <wd-button type="primary" block custom-class="next-btn" @click="nextReview">{{ rIdx + 1 < rItems.length ? '下一题' : '完成复习' }}</wd-button>
       </view>
+      <view v-else-if="curMulti" class="selfjudge">
+        <view class="q2">多选题：选完所有选项后确认</view>
+        <wd-button type="primary" block :disabled="!picked" custom-class="next-btn" @click="confirmMulti">确认答案{{ picked ? '（已选 ' + picked + '）' : '' }}</wd-button>
+      </view>
       <view v-else-if="!curLetter" class="selfjudge">
         <view class="q2">先自己做，然后：</view>
         <view class="sj-row">
@@ -379,8 +383,8 @@ import { cacheMistakes, getCachedMistakes } from '../../offline.js';
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 
 function extractLetter(s) {
-  const m = /[A-D]/.exec(String(s || '').toUpperCase());
-  return m ? m[0] : null;
+  const m = /[A-D]+/.exec(String(s || '').toUpperCase());
+  return m ? [...new Set(m[0])].sort().join('') : null;
 }
 
 export default {
@@ -463,6 +467,9 @@ export default {
     },
     curLetter() {
       return extractLetter(this.cur.correct_answer);
+    },
+    curMulti() {
+      return !!this.curLetter && this.curLetter.length > 1;
     },
     curHtml() {
       return md(this.cur.explanation || '');
@@ -718,8 +725,8 @@ export default {
       return m.review_count >= 2 ? 'lv-good' : 'lv-mid';
     },
     ansLetter(s) {
-      const m = /[A-D]/.exec(String(s || '').toUpperCase());
-      return m ? m[0] : '';
+      const m = /[A-D]+/.exec(String(s || '').toUpperCase());
+      return m ? [...new Set(m[0])].sort().join('') : '';
     },
     async master(m, on = true) {
       await request('/api/mistakes/' + m.id, { method: 'PATCH', data: { mastered: on ? 1 : 0 } });
@@ -780,8 +787,19 @@ export default {
     },
     async pick(o) {
       if (this.answered) return;
+      if (this.curMulti) {
+        const set = new Set((this.picked || '').split(''));
+        if (set.has(o)) set.delete(o);
+        else set.add(o);
+        this.picked = [...set].sort().join('');
+        return;
+      }
       this.picked = o;
       await this.record(o === this.curLetter);
+    },
+    async confirmMulti() {
+      if (this.answered || !this.picked) return;
+      await this.record(this.picked === this.curLetter);
     },
     async selfJudge(correct) {
       await this.record(correct);
@@ -847,9 +865,9 @@ export default {
       this.load();
     },
     optClass(o) {
-      if (!this.answered) return '';
-      if (o === this.curLetter) return 'ok';
-      if (o === this.picked) return 'bad';
+      if (!this.answered) return this.curMulti && (this.picked || '').includes(o) ? 'sel' : '';
+      if ((this.curLetter || '').includes(o)) return 'ok';
+      if ((this.picked || '').includes(o)) return 'bad';
       return 'dim';
     },
     fmt(ts) {
@@ -1144,6 +1162,7 @@ export default {
 .opt.ok { background: var(--ok-soft); border-color: #3aa53a; color: #2a7a2a; }
 .opt.bad { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); }
 .opt.dim { opacity: 0.4; }
+.opt.sel { background: var(--brand-soft, #edf3fe); border-color: var(--brand, #3b6ff5); color: var(--brand, #3b6ff5); }
 .verdict { font-size: 26rpx; font-weight: 600; margin: 12rpx 0; }
 .verdict.good { color: #2a7a2a; }
 .verdict.badv { color: #b03030; }

@@ -298,6 +298,15 @@
   color: #fff;
 }
 
+.r-opt.rsel {
+  background: var(--brand-500);
+  color: #fff;
+}
+
+.r-next.r-dis {
+  opacity: 0.5;
+}
+
 .r-opt.rdim {
   opacity: 0.5;
 }

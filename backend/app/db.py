@@ -1226,6 +1226,16 @@ def admin_search_questions(
 ADMIN_EDITABLE = {"answer", "explanation", "hs_explanation", "submodule", "question", "disabled", "module", "exam_year", "exam_region", "is_real", "tag3", "options"}
 
 
+def rescore_question(conn, qid: int):
+    """按现行口径重算并回写单题 quality_score（内容变更后调用，防打分过期）。"""
+    row = conn.execute("SELECT * FROM questions WHERE id=?", (qid,)).fetchone()
+    if row:
+        conn.execute(
+            "UPDATE questions SET quality_score=? WHERE id=?",
+            (quality.score_question(dict(row)), qid),
+        )
+
+
 def admin_update_question(qid: int, fields: dict) -> bool:
     sets = {k: v for k, v in fields.items() if k in ADMIN_EDITABLE}
     if not sets:
@@ -1236,6 +1246,7 @@ def admin_update_question(qid: int, fields: dict) -> bool:
         f"UPDATE questions SET {assignments}, updated_at=? WHERE id=?",
         (*sets.values(), time.time(), qid),
     )
+    rescore_question(conn, qid)
     conn.commit()
     conn.close()
     return cur.rowcount > 0
@@ -1385,6 +1396,7 @@ def rate_question_hs(qid: int, up: bool):
     conn = get_conn()
     col = "hs_up" if up else "hs_down"
     conn.execute(f"UPDATE questions SET {col}={col}+1 WHERE id=?", (qid,))
+    rescore_question(conn, qid)
     conn.commit()
     conn.close()
 
@@ -1395,6 +1407,7 @@ def set_question_hs_explanation(qid: int, text: str):
         "UPDATE questions SET hs_explanation=?, has_hs=?, updated_at=? WHERE id=?",
         (text, 1 if text else 0, time.time(), qid),
     )
+    rescore_question(conn, qid)
     conn.commit()
     conn.close()
 
@@ -1759,6 +1772,8 @@ def import_hs_explanations(items: list[dict]) -> int:
                 "UPDATE questions SET xp_explanation=?, xp_school=?, updated_at=? WHERE id=?",
                 (xp, school or None, time.time(), int(qid)),
             ).rowcount
+        if text or xp:
+            rescore_question(conn, int(qid))
     conn.commit()
     conn.close()
     return n
@@ -2408,7 +2423,7 @@ def record_review(mid: int, correct: bool, uid: str | None = None) -> dict:
     streak = (row["review_streak"] or 0) + 1 if correct else 0
     days = REVIEW_INTERVALS_DAYS[min(streak - 1, len(REVIEW_INTERVALS_DAYS) - 1)] if correct else 1
     nxt = time.time() + days * 86400
-    mastered = 1 if streak >= 2 else 0
+    mastered = 1 if streak > len(REVIEW_INTERVALS_DAYS) else 0
     conn.execute(
         "UPDATE mistakes SET review_count=review_count+1, review_streak=?, next_review=?, mastered=? WHERE id=?",
         (streak, nxt, mastered, mid),

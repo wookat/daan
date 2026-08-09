@@ -45,12 +45,12 @@
 </template>
 
 <script>
-import { fetchCheckinBadges } from '../../api.js';
+import { fetchCheckinBadges, fetchCheckinSummary } from '../../api.js';
 
 export default {
   data() {
     const now = new Date();
-    return { pstats: { days: {} }, ym: { y: now.getFullYear(), m: now.getMonth() }, badgeInfo: null };
+    return { pstats: { days: {} }, ym: { y: now.getFullYear(), m: now.getMonth() }, badgeInfo: null, svDays: null };
   },
   computed: {
     isCurMonth() {
@@ -60,12 +60,21 @@ export default {
     monthPrefix() {
       return `${this.ym.y}-${String(this.ym.m + 1).padStart(2, '0')}-`;
     },
+    dayMap() {
+      // 服务端 answer_log（Asia/Shanghai 日界）优先，未返回时降级本地 pstats
+      if (this.svDays) {
+        const m = {};
+        for (const [k, v] of Object.entries(this.svDays)) m[k] = (v && v.n) || 0;
+        return m;
+      }
+      return this.pstats.days || {};
+    },
     monthDays() {
-      const days = this.pstats.days || {};
+      const days = this.dayMap;
       return Object.keys(days).filter((k) => k.startsWith(this.monthPrefix) && days[k] > 0).length;
     },
     monthCount() {
-      const days = this.pstats.days || {};
+      const days = this.dayMap;
       return Object.keys(days)
         .filter((k) => k.startsWith(this.monthPrefix))
         .reduce((s, k) => s + (days[k] || 0), 0);
@@ -85,7 +94,7 @@ export default {
       const first = new Date(y, m, 1);
       const lead = (first.getDay() + 6) % 7;
       const total = new Date(y, m + 1, 0).getDate();
-      const days = this.pstats.days || {};
+      const days = this.dayMap;
       const cells = [];
       for (let i = 0; i < lead; i++) cells.push({ d: 0, cls: 'blank' });
       for (let d = 1; d <= total; d++) {
@@ -103,12 +112,19 @@ export default {
   onShow() {
     this.pstats = uni.getStorageSync('pstats') || { days: {} };
     this.loadBadges();
+    this.loadDays();
   },
   methods: {
     async loadBadges() {
       try {
         this.badgeInfo = await fetchCheckinBadges();
       } catch (e) { /* 非关键路径 */ }
+    },
+    async loadDays() {
+      try {
+        const d = await fetchCheckinSummary();
+        if (d && d.days) this.svDays = d.days;
+      } catch (e) { /* 非关键路径，降级本地 pstats */ }
     },
     openPoster() {
       uni.navigateTo({ url: '/pkgA/social/poster' });

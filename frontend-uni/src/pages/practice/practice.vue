@@ -171,7 +171,7 @@
         </view>
         <text class="duenudge-go">去复习 ›</text>
       </view>
-      <button class="btn" @click="start(lastModule, lastSubmodule)">再来一组</button>
+      <button class="btn" @click="retryGroup">再来一组</button>
       <button v-if="!beiMode" class="btn ghost" style="margin-top: 16rpx" @click="shareResult">分享成绩</button>
       <button class="btn plain" style="margin-top: 8rpx" @click="quit">返回首页</button>
     </view>
@@ -242,6 +242,7 @@
 <script>
 import { request, BASE_URL, anonUid, exportPdf, removeFav, setFav, fetchCheckinBadges, trackEvent } from '../../api.js';
 import { drawOffline, enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../offline.js';
+import { dayKey } from '../../checkin.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -423,7 +424,7 @@ export default {
     },
     todayCount() {
       const days = (this.pstats && this.pstats.days) || {};
-      return days[new Date().toISOString().slice(0, 10)] || 0;
+      return days[dayKey()] || 0;
     },
     cur() {
       return this.items[this.idx] || null;
@@ -449,14 +450,14 @@ export default {
       return this.favs.some((f) => f.question === this.cur.question);
     },
     todayDone() {
-      return !!this.daily.days[new Date().toISOString().slice(0, 10)];
+      return !!this.daily.days[dayKey()];
     },
     szTodayDone() {
-      return !!this.szDaily.days[new Date().toISOString().slice(0, 10)];
+      return !!this.szDaily.days[dayKey()];
     },
     dailyModule() {
       const mods = ['ziliao', 'shuliang', 'yanyu', 'panduan', 'changshi'];
-      const key = new Date().toISOString().slice(0, 10);
+      const key = dayKey();
       let h = 0;
       for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
       return mods[h % mods.length];
@@ -468,7 +469,7 @@ export default {
       let n = 0;
       const d = new Date();
       if (!this.todayDone) d.setDate(d.getDate() - 1);
-      while (this.daily.days[d.toISOString().slice(0, 10)]) {
+      while (this.daily.days[dayKey(d)]) {
         n++;
         d.setDate(d.getDate() - 1);
       }
@@ -563,6 +564,7 @@ export default {
     const redoSet = uni.getStorageSync('redoSet');
     if (redoSet && redoSet.length) {
       uni.removeStorageSync('redoSet');
+      this._redoItems = redoSet;
       if (this.beiMode) {
         this.beiMode = false;
         uni.setStorageSync('beiMode', '');
@@ -934,7 +936,7 @@ export default {
     markDailyDone() {
       if (!this._daily) return;
       this._daily = false;
-      this.daily.days[new Date().toISOString().slice(0, 10)] = true;
+      this.daily.days[dayKey()] = true;
       uni.setStorageSync('dailyPlan', this.daily);
       uni.showToast({ title: '今日一练完成，打卡成功！', icon: 'none' });
     },
@@ -983,7 +985,7 @@ export default {
       }
     },
     async reviewShizheng() {
-      const day = new Date().toISOString().slice(0, 10);
+      const day = dayKey();
       const rec = this.szDaily.days[day];
       if (!rec) {
         this.startShizheng();
@@ -1015,7 +1017,7 @@ export default {
     markShizhengDone() {
       if (!this._shizheng) return;
       this._shizheng = false;
-      const day = new Date().toISOString().slice(0, 10);
+      const day = dayKey();
       this.szDaily.days[day] = { right: this.right, picks: this.items.map((q) => q._picked || '') };
       uni.setStorageSync('szDaily', this.szDaily);
       uni.showToast({ title: '时政每日一练完成！', icon: 'none' });
@@ -1064,7 +1066,27 @@ export default {
         this._starting = false;
       }
     },
+    // 完成页「再来一组」：错题重练场次重用同一组错题，其余按原模块重新抽题
+    retryGroup() {
+      if (this._redoItems && this._redoItems.length && !this.lastModule) {
+        this.items = this._redoItems.map((q) => ({ ...q, _saved: false }));
+        this.idx = 0;
+        this.picked = '';
+        this.right = 0;
+        this.streak = 0;
+        this.bestStreak = 0;
+        this.autoSaved = false;
+        this.resultSent = false;
+        this.percentile = null;
+        this.session = true;
+        this.startQTimer();
+        uni.showToast({ title: '错题重练再来一组', icon: 'none' });
+        return;
+      }
+      this.start(this.lastModule, this.lastSubmodule);
+    },
     async start(module, submodule, count, adaptive, forceReal, tag3, source, year) {
+      this._redoItems = null;
       if (this._starting) return;
       this._starting = true;
       // 推荐埋点：记录本次练习的入口来源（reco/weak 等），随 answer_log 落库
@@ -1173,7 +1195,7 @@ export default {
         s.bySub[key].done++;
         if (correct) s.bySub[key].correct++;
       }
-      const day = new Date().toISOString().slice(0, 10);
+      const day = dayKey();
       s.days[day] = (s.days[day] || 0) + 1;
       if (!s.daysCorrect) s.daysCorrect = {};
       if (correct) s.daysCorrect[day] = (s.daysCorrect[day] || 0) + 1;
@@ -1186,7 +1208,7 @@ export default {
       const days = this.pstats.days || {};
       let localStreak = 0;
       const d = new Date();
-      while (days[d.toISOString().slice(0, 10)]) {
+      while (days[dayKey(d)]) {
         localStreak++;
         d.setDate(d.getDate() - 1);
       }

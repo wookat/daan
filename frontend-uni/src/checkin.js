@@ -1,5 +1,11 @@
-// 打卡/刷题数统一口径：当天练过任意题（专项练习或模考均计入）即打卡，
-// 数据源统一为本地 pstats（服务端 answer_log 与其同步写入）。
+// 打卡/刷题数统一口径：当天练过任意题（专项练习或模考均计入）即打卡。
+// 在线时以服务端 /api/checkin/badges|summary（answer_log，Asia/Shanghai 日界）为准，
+// 本地 pstats 仅作离线降级；日界按设备本地时区（国内用户即北京时间），与服务端口径一致。
+export function dayKey(d = new Date()) {
+  const p = (n) => (n < 10 ? '0' + n : '' + n);
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+
 export function loadPStats() {
   return uni.getStorageSync('pstats') || { byModule: {}, days: {} };
 }
@@ -8,8 +14,8 @@ export function checkinStreak(pstats) {
   const days = (pstats || loadPStats()).days || {};
   let n = 0;
   const d = new Date();
-  if (!days[d.toISOString().slice(0, 10)]) d.setDate(d.getDate() - 1);
-  while (days[d.toISOString().slice(0, 10)]) {
+  if (!days[dayKey(d)]) d.setDate(d.getDate() - 1);
+  while (days[dayKey(d)]) {
     n++;
     d.setDate(d.getDate() - 1);
   }

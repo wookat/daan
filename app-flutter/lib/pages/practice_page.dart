@@ -54,6 +54,7 @@ class PracticePage extends ConsumerStatefulWidget {
 class _PracticePageState extends ConsumerState<PracticePage> {
   List<Question> items = [];
   int idx = 0;
+  String _multiSel = '';
   bool loading = true;
   String? error;
   bool finished = false;
@@ -151,6 +152,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
       error = null;
       finished = false;
       idx = 0;
+      _multiSel = '';
       elapsed = 0;
       reinforcePicked = null;
       dueReview = 0;
@@ -285,6 +287,25 @@ class _PracticePageState extends ConsumerState<PracticePage> {
 
   Future<void> _pick(String k) async {
     if (cur.answered || beiMode) return;
+    if (cur.isMulti) {
+      setState(() {
+        final l = _multiSel.split('').where((c) => c.isNotEmpty).toSet();
+        if (!l.remove(k)) l.add(k);
+        _multiSel = (l.toList()..sort()).join();
+      });
+      return;
+    }
+    await _commitPick(k);
+  }
+
+  Future<void> _confirmMulti() async {
+    if (cur.answered || _multiSel.isEmpty) return;
+    final sel = _multiSel;
+    _multiSel = '';
+    await _commitPick(sel);
+  }
+
+  Future<void> _commitPick(String k) async {
     setState(() {
       cur.picked = k;
       cur.secs = DateTime.now().difference(_qStart).inSeconds;
@@ -355,6 +376,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
     if (i < 0 || i >= items.length || i == idx) return;
     setState(() {
       idx = i;
+      _multiSel = '';
       qsecs = 0;
       _qStart = DateTime.now();
     });
@@ -741,6 +763,14 @@ class _PracticePageState extends ConsumerState<PracticePage> {
               ],
               const SizedBox(height: 16),
               for (final e in q.options.entries) _option(q, e.key, e.value),
+              if (q.isMulti && !q.answered && !beiMode)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: FilledButton(
+                    onPressed: _multiSel.isEmpty ? null : _confirmMulti,
+                    child: Text(_multiSel.isEmpty ? '多选题：选完所有选项后确认' : '确认答案（已选 $_multiSel）'),
+                  ),
+                ),
               if (q.answered || beiMode) ...[
                 const SizedBox(height: 16),
                 _explainCard(q),
@@ -1010,19 +1040,24 @@ class _PracticePageState extends ConsumerState<PracticePage> {
     Color badgeFg = kg.t2;
     Widget? trailing;
     if (q.answered || beiMode) {
-      if (k == q.answer) {
+      if (Question.normLetters(q.answer).contains(k)) {
         border = KgColors.success;
         bgc = kg.successBg;
         badgeBg = KgColors.success;
         badgeFg = Colors.white;
         trailing = const Text('✓ 正确', style: TextStyle(color: KgColors.success, fontSize: 12));
-      } else if (k == q.picked) {
+      } else if ((q.picked ?? '').contains(k)) {
         border = KgColors.error;
         bgc = kg.errorBg;
         badgeBg = KgColors.error;
         badgeFg = Colors.white;
         trailing = const Text('✕ 我的选择', style: TextStyle(color: KgColors.error, fontSize: 12));
       }
+    } else if (q.isMulti && _multiSel.contains(k)) {
+      border = KgColors.brand;
+      bgc = kg.brandBg;
+      badgeBg = KgColors.brand;
+      badgeFg = Colors.white;
     }
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
