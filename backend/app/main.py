@@ -1173,11 +1173,16 @@ def _clean_int_map(raw: dict, as_str: bool = False) -> dict:
     return out
 
 
+_EXAM_ITEM_FIELDS = ("id", "question", "options", "module", "submodule", "image",
+                     "is_real", "exam_year", "exam_region")
+
+
 @app.get("/api/exam/papers")
 def api_exam_papers(kind: str | None = None, year: int | None = None,
                     region: str | None = None, uid: str | None = None):
+    items = db.list_exam_papers(kind, year, region, uid=(uid or "").strip()[:64] or None)
     return {
-        "items": db.list_exam_papers(kind, year, region, uid=(uid or "").strip()[:64] or None),
+        "items": [p for p in items if p["n"] >= 5],
         "filters": db.exam_paper_filters(),
     }
 
@@ -1187,6 +1192,7 @@ def api_exam_paper_detail(pid: int):
     paper = db.get_exam_paper(pid)
     if not paper:
         raise HTTPException(404, "试卷不存在")
+    paper["question_ids"] = db.exam_active_qids(paper["question_ids"])
     return {"paper": paper}
 
 
@@ -1205,8 +1211,9 @@ def api_exam_start(body: dict):
     paper = db.get_exam_paper(pid)
     if not paper:
         raise HTTPException(404, "试卷不存在")
-    items = {q["id"]: q for q in db.questions_by_ids(paper["question_ids"])}
-    ordered = [items[i] for i in paper["question_ids"] if i in items]
+    qids = db.exam_active_qids(paper["question_ids"])
+    items = {q["id"]: q for q in db.questions_by_ids(qids)}
+    ordered = [{k: items[i].get(k) for k in _EXAM_ITEM_FIELDS} for i in qids if i in items]
     if len(ordered) < 5:
         raise HTTPException(400, "试卷题目不足")
     attempt_id = db.start_exam_attempt(uid, pid)
@@ -1241,7 +1248,8 @@ def api_exam_submit(body: dict):
         raise HTTPException(404, "试卷不存在")
     picks = _clean_int_map(body.get("picks") or {}, as_str=True)
     secs = _clean_int_map(body.get("secs") or {})
-    judged = _judge_paper(uid, {"code": None, "title": paper["title"], "question_ids": paper["question_ids"]}, picks, secs)
+    judged = _judge_paper(uid, {"code": None, "title": paper["title"],
+                                "question_ids": db.exam_active_qids(paper["question_ids"])}, picks, secs)
     per_module: dict = {}
     for r in judged["items"]:
         m = r.get("module") or "other"
@@ -1286,10 +1294,11 @@ def api_exam_report(attempt_id: int, uid: str = ""):
     paper = db.get_exam_paper(attempt["paper_id"])
     if not paper:
         raise HTTPException(404, "试卷不存在")
-    questions = {q["id"]: q for q in db.questions_by_ids(paper["question_ids"])}
+    qids = db.exam_active_qids(paper["question_ids"])
+    questions = {q["id"]: q for q in db.questions_by_ids(qids)}
     picks = {int(k): v for k, v in attempt["answers"].items()}
     items = []
-    for i, qid in enumerate(paper["question_ids"]):
+    for i, qid in enumerate(qids):
         q = questions.get(qid)
         if not q:
             continue
@@ -1310,7 +1319,7 @@ def api_exam_report(attempt_id: int, uid: str = ""):
         })
     answered = sum(1 for r in items if r["picked"] and len(r["picked"]) == 1)
     tag_stats: dict[str, list[int]] = {}
-    for i, qid in enumerate(paper["question_ids"]):
+    for i, qid in enumerate(qids):
         q = questions.get(qid)
         if not q:
             continue
@@ -1353,7 +1362,7 @@ def api_exam_report(attempt_id: int, uid: str = ""):
             "year": paper["year"],
             "region": paper["region"],
             "duration_min": paper["duration_min"],
-            "question_ids": paper["question_ids"],
+            "question_ids": qids,
         },
         "total": len(items),
         "answered": answered,
