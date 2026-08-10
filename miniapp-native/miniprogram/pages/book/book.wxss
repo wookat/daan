@@ -49,7 +49,7 @@
 
 .cb-btn {
   margin-top: 32rpx;
-  background: linear-gradient(135deg, #5b8af8, var(--brand-500));
+  background: var(--brand-grad);
   color: #fff;
   font-size: 27rpx;
   font-weight: 600;
@@ -205,11 +205,11 @@
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(135deg, #5b8af8, #3b6ff5);
+  background: var(--brand-grad-btn);
   border-radius: var(--r-m);
   padding: 24rpx 28rpx;
   margin-bottom: 24rpx;
-  box-shadow: 0 8rpx 24rpx rgba(59, 111, 245, 0.25);
+  box-shadow: var(--sh-brand);
 }
 
 .duecard-l {
