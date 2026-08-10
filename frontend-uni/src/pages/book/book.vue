@@ -4,7 +4,7 @@
     <!-- 复习模式 -->
     <view v-if="reviewing" class="card review">
       <view class="rhead">
-        <text class="tag">复习 {{ rIdx + 1 }}/{{ rItems.length }}</text>
+        <text class="tag">{{ cur._extra ? '加练同类' : '复习' }} {{ rIdx + 1 }}/{{ rItems.length }}</text>
         <text class="op" @click="exitReview">退出复习</text>
       </view>
       <view class="q">{{ cur.question_text }}</view>
@@ -19,9 +19,24 @@
       </view>
       <view v-if="answered">
         <view class="verdict" :class="wasCorrect ? 'good' : 'badv'">
-          {{ wasCorrect ? (cur._requeued ? '这次答对了，本轮已纠正 ✓' : '答对了！连对 ' + streak + ' 次') : '又错了，看讲解（稍后本轮会再出现）' }}（下次复习：{{ nextDays }} 天后）
+          <template v-if="cur._extra">{{ wasCorrect ? '答对了，这个考法稳了 ✓' : '还没稳，仔细看讲解' }}</template>
+          <template v-else>{{ wasCorrect ? (cur._requeued ? '这次答对了，本轮已纠正 ✓' : '答对了！连对 ' + streak + ' 次') : '又错了，看讲解（稍后本轮会再出现）' }}（下次复习：{{ nextDays }} 天后）</template>
+        </view>
+        <view v-if="wasCorrect === false && cur._appended" class="appended-tip">已为你在本轮末尾加练 {{ cur._appended }} 道同类题</view>
+        <view v-if="!wasCorrect && !cur._extra" class="reasons">
+          <text class="rz-t">错因自评：</text>
+          <text
+            v-for="rz in REASONS"
+            :key="rz"
+            class="rz"
+            :class="{ on: cur.error_reason === rz }"
+            @click="setReviewReason(rz)"
+          >{{ rz }}</text>
         </view>
         <rich-text :nodes="curHtml" />
+        <view v-if="!wasCorrect && cur.module && !cur._extra" class="sim-row" @click="similarFromReview">
+          <text class="sim-t">还不稳？练 3 道同类题巩固 ›</text>
+        </view>
         <wd-button type="primary" block custom-class="next-btn" @click="nextReview">{{ rIdx + 1 < rItems.length ? '下一题' : '完成复习' }}</wd-button>
       </view>
       <view v-else-if="curMulti" class="selfjudge">
@@ -74,6 +89,31 @@
           <text class="duesub">按遗忘曲线安排 · 预计 {{ Math.max(1, Math.ceil(due.length * 0.8)) }} 分钟</text>
         </view>
         <text class="duego">开始复习</text>
+      </view>
+      <view v-if="monthRecap.total" class="card recap">
+        <view class="recap-h" @click="recapOpen = !recapOpen">
+          <text class="recap-t">本月错题复盘 · 新增 {{ monthRecap.total }} 道</text>
+          <text class="recap-x">{{ recapOpen ? '收起' : '展开' }}</text>
+        </view>
+        <view v-if="recapOpen">
+          <view class="recap-sec">
+            <text class="recap-st">按模块</text>
+            <view v-for="g in monthRecap.byModule" :key="g.name" class="recap-row">
+              <text class="recap-name">{{ g.name }}</text>
+              <view class="recap-bar"><view class="recap-fill" :style="{ width: Math.round((g.n / monthRecap.total) * 100) + '%' }" /></view>
+              <text class="recap-n">{{ g.n }}</text>
+            </view>
+          </view>
+          <view class="recap-sec">
+            <text class="recap-st">按错因</text>
+            <view v-for="g in monthRecap.byReason" :key="g.name" class="recap-row">
+              <text class="recap-name">{{ g.name }}</text>
+              <view class="recap-bar"><view class="recap-fill warnfill" :style="{ width: Math.round((g.n / monthRecap.total) * 100) + '%' }" /></view>
+              <text class="recap-n">{{ g.n }}</text>
+            </view>
+          </view>
+          <text class="recap-tip">高频错因是提分洼地：优先复习对应模块的待掌握错题</text>
+        </view>
       </view>
       <view v-if="items.length" class="segrow">
         <view class="seg">
@@ -440,6 +480,8 @@ export default {
       aiHtml: '',
       sortBy: 'time',
       pageN: 20,
+      recapOpen: false,
+      REASONS: ['粗心大意', '概念不清', '方法不会', '纯蒙的'],
       SORTS: [
         { k: 'time', name: '最新' },
         { k: 'due', name: '待复习优先' },
@@ -509,6 +551,27 @@ export default {
     },
     shownPage() {
       return this.shownItems.slice(0, this.pageN);
+    },
+    monthRecap() {
+      const now = new Date();
+      const m0 = new Date(now.getFullYear(), now.getMonth(), 1).getTime() / 1000;
+      const cur = this.items.filter((m) => (m.created_at || 0) >= m0);
+      const agg = (keyf) => {
+        const map = {};
+        for (const m of cur) {
+          const k = keyf(m);
+          map[k] = (map[k] || 0) + 1;
+        }
+        return Object.entries(map)
+          .map(([name, n]) => ({ name, n }))
+          .sort((a, b) => b.n - a.n)
+          .slice(0, 6);
+      };
+      return {
+        total: cur.length,
+        byModule: agg((m) => NAMES[m.module] || m.module || '其他'),
+        byReason: agg((m) => m.error_reason || '未标注'),
+      };
     },
     modGroups() {
       if (this.tab === 'fav') return [];
@@ -807,9 +870,11 @@ export default {
     async record(correct) {
       this.wasCorrect = correct;
       this.answered = true;
+      if (this.cur._extra) return;
       if (!correct && !this.cur._requeued) {
         this.rItems.push({ ...this.cur, _requeued: true });
       }
+      if (!correct) this.appendSimilar(this.cur);
       try {
         const res = await request('/api/review/' + this.cur.id, { method: 'POST', data: { correct, uid: anonUid() } });
         this.nextDays = res.next_review_days;
@@ -817,6 +882,47 @@ export default {
       } catch (e) {
         uni.showToast({ title: '记录失败：' + e.message, icon: 'none' });
       }
+    },
+    async appendSimilar(m) {
+      // 答错自动加推：本轮末尾追加最多 2 道同类新题（不写 SRS，不影响复习记录）
+      if (m._simFetched || m._requeued || !m.module) return;
+      m._simFetched = true;
+      const qt = m.question_type || '';
+      const sub = qt.includes('-') ? qt.split('-').slice(1).join('-') : null;
+      try {
+        let q = '/api/questions?limit=2&uid=' + encodeURIComponent(anonUid()) + '&module=' + encodeURIComponent(m.module);
+        if (sub) q += '&submodule=' + encodeURIComponent(sub);
+        const d = await request(q);
+        const add = (d.items || [])
+          .filter((x) => x.id !== m.question_id)
+          .slice(0, 2)
+          .map((x) => ({
+            _extra: true,
+            module: x.module,
+            question_text: x.question + '\n' + Object.entries(x.options || {}).map(([k, v]) => `${k}.${v}`).join(' '),
+            correct_answer: x.answer,
+            explanation: x.hs_explanation || x.explanation || '',
+          }));
+        if (add.length) {
+          this.rItems.push(...add);
+          m._appended = add.length;
+          this.$forceUpdate();
+          trackEvent('review_similar_auto', m.module || '');
+        }
+      } catch (e) { /* 非关键路径 */ }
+    },
+    async setReviewReason(rz) {
+      const m = this.cur;
+      m.error_reason = rz;
+      this.$forceUpdate();
+      try {
+        await request('/api/mistakes/' + m.id, { method: 'PATCH', data: { error_reason: rz } });
+        trackEvent('review_reason_tag', rz);
+      } catch (e) { /* 非关键路径 */ }
+    },
+    similarFromReview() {
+      trackEvent('review_similar_click', this.cur.module || '');
+      this.practiceSimilar(this.cur);
     },
     nextReview() {
       if (this.rIdx + 1 < this.rItems.length) {
@@ -1167,6 +1273,25 @@ export default {
 .verdict.good { color: #2a7a2a; }
 .verdict.badv { color: #b03030; }
 :deep(.next-btn) { margin-top: 20rpx; width: 100%; border-radius: 12rpx !important; }
+.reasons { display: flex; flex-wrap: wrap; align-items: center; gap: 12rpx; margin: 8rpx 0 16rpx; }
+.rz-t { font-size: 23rpx; color: var(--ink-2); }
+.rz { font-size: 23rpx; color: var(--ink-2); border: 1rpx solid var(--line); background: var(--soft-bg); border-radius: 999rpx; padding: 8rpx 22rpx; }
+.rz.on { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
+.appended-tip { font-size: 23rpx; color: var(--brand, #3b6ff5); background: var(--brand-soft, #edf3fe); border-radius: 10rpx; padding: 10rpx 16rpx; margin-bottom: 12rpx; }
+.sim-row { margin-top: 16rpx; text-align: center; }
+.sim-t { font-size: 25rpx; color: var(--brand, #3b6ff5); font-weight: 600; }
+.recap-h { display: flex; justify-content: space-between; align-items: center; }
+.recap-t { font-size: 26rpx; font-weight: 700; color: var(--ink-1, #1f2329); }
+.recap-x { font-size: 23rpx; color: var(--brand, #3b6ff5); }
+.recap-sec { margin-top: 16rpx; }
+.recap-st { font-size: 22rpx; color: var(--ink-2); }
+.recap-row { display: flex; align-items: center; gap: 12rpx; margin-top: 10rpx; }
+.recap-name { flex: 0 0 160rpx; font-size: 23rpx; color: var(--ink-1, #1f2329); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recap-bar { flex: 1; height: 14rpx; background: var(--soft-bg); border-radius: 999rpx; overflow: hidden; }
+.recap-fill { height: 100%; background: var(--brand, #3b6ff5); border-radius: 999rpx; }
+.recap-fill.warnfill { background: #f59e0b; }
+.recap-n { flex: 0 0 40rpx; text-align: right; font-size: 22rpx; color: var(--ink-2); }
+.recap-tip { display: block; margin-top: 14rpx; font-size: 22rpx; color: var(--ink-2); }
 .selfjudge { margin-top: 20rpx; }
 .q2 { font-size: 24rpx; color: var(--ink-2); margin-bottom: 12rpx; }
 .sj-row { display: flex; gap: 20rpx; }
