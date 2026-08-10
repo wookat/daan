@@ -169,6 +169,7 @@ export default {
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 30rpx; font-weight: 600; margin-bottom: 20rpx; }
 .hero { background: linear-gradient(135deg, #eef3ff, #fdfbf3); }
+.theme-dark .hero { background: linear-gradient(135deg, #232a3d, #262330); }
 .hero-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
 .hero-series { font-size: 21rpx; color: var(--brand); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
 .hero-phase { font-size: 22rpx; font-weight: 600; border-radius: 999rpx; padding: 4rpx 18rpx; }
