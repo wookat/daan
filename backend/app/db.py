@@ -93,6 +93,9 @@ def init_db():
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_real ON questions(is_real)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_tag3 ON questions(tag3)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_tag3_disabled ON questions(tag3, disabled)")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_q_tag3_pick ON questions(tag3, disabled, is_real, has_hs, id)"
+    )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_quality ON questions(quality_score)")
     similarity.ensure_tables(conn)
     conn.execute(
@@ -367,12 +370,12 @@ def random_questions(
     where.append("disabled=0")
     clause = ("WHERE " + " AND ".join(where)) if where else ""
     # 默认随机抽题只取 id，强制走 covering 索引避免回表读大行（冷启动 10s+ → 亚秒）；
-    # tag3 筛选时 idx_q_pick 不含 tag3，需走 tag3 等值索引缩小扫描范围；
+    # tag3 筛选时 idx_q_pick 不含 tag3，走 tag3 covering 索引避免回表读大行；
     # adaptive 排序引用 correct_ratio 不在索引内，保持默认计划
     if adaptive:
         src = "questions"
     elif tag3:
-        src = "questions INDEXED BY idx_q_tag3_disabled"
+        src = "questions INDEXED BY idx_q_tag3_pick"
     else:
         src = "questions INDEXED BY idx_q_pick"
     ids: list[int] = []
@@ -413,7 +416,7 @@ def random_questions(
         ids += [
             r["id"]
             for r in conn.execute(
-                f"SELECT id FROM questions INDEXED BY {'idx_q_tag3_disabled' if tag3 else 'idx_q_pick'} {clause2} AND id NOT IN ({placeholders}) "
+                f"SELECT id FROM questions INDEXED BY {'idx_q_tag3_pick' if tag3 else 'idx_q_pick'} {clause2} AND id NOT IN ({placeholders}) "
                 "ORDER BY has_hs DESC, RANDOM() LIMIT ?",
                 (*base_args, *ids, limit - len(ids)),
             )

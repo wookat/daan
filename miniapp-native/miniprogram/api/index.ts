@@ -241,6 +241,13 @@ export function fetchProfile(): Promise<{ profile: Profile | null }> {
   );
 }
 
+export function saveProfile(pf: Profile): Promise<{ profile: Profile }> {
+  return request<{ profile: Profile }>('/api/profile', {
+    method: 'POST',
+    data: { uid: anonUid(), ...pf },
+  });
+}
+
 export function fetchPlanToday(): Promise<PlanToday> {
   return request<PlanToday>('/api/plan/today?uid=' + encodeURIComponent(anonUid()));
 }

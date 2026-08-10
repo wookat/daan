@@ -1127,7 +1127,7 @@ export default {
 
 /* Sheet */
 .mask { position: fixed; inset: 0; background: rgba(23, 24, 28, 0.45); z-index: 30; display: flex; align-items: flex-end; }
-.sheet { width: 100%; max-height: 76vh; overflow-y: auto; background: var(--card); border-radius: 40rpx 40rpx 0 0; padding: 12rpx 36rpx calc(36rpx + env(safe-area-inset-bottom)); box-sizing: border-box; box-shadow: 0 -16rpx 48rpx rgba(23, 24, 28, 0.16); }
+.sheet { width: 100%; max-height: 76vh; overflow-y: auto; background: var(--card); border-radius: 40rpx 40rpx 0 0; padding: 12rpx 36rpx calc(146rpx + env(safe-area-inset-bottom)); box-sizing: border-box; box-shadow: 0 -16rpx 48rpx rgba(23, 24, 28, 0.16); }
 .grab { width: 72rpx; height: 8rpx; border-radius: 4rpx; background: var(--line); margin: 8rpx auto 16rpx; }
 .sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
 .sheet-t { font-size: 32rpx; font-weight: 700; color: var(--ink); }
@@ -1164,7 +1164,7 @@ export default {
   .card.guide, .card.plancard, .card.szcard, .card.weekly-c, .card.spin { grid-column: 1 / -1; }
   .modrow:hover, .more-c:hover { box-shadow: 0 8rpx 24rpx rgba(23, 24, 28, 0.08); cursor: pointer; }
   .mask { position: fixed; align-items: center; justify-content: center; }
-  .sheet { max-width: 520px; border-radius: 28rpx; }
+  .sheet { max-width: 520px; border-radius: 28rpx; padding-bottom: calc(36rpx + env(safe-area-inset-bottom)); }
 }
 /* #endif */
 .searchbar { display: flex; align-items: center; gap: 12rpx; background: var(--card); border-radius: 999rpx; padding: 16rpx 26rpx; margin-bottom: 20rpx; box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04); }

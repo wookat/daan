@@ -73,6 +73,16 @@
       </view>
     </view>
 
+    <!-- 制定学习计划引导卡 -->
+    <view wx:if="{{planLoaded && !hasProfile && !guideHide}}" class="card guide" bind:tap="onOpenSetup">
+      <view class="guide-l">
+        <text class="guide-t">制定我的学习计划</text>
+        <text class="guide-s">按考试日期倒排每日任务：专项练习 + 错题复习 + 每周模考</text>
+      </view>
+      <text class="guide-btn">去制定 ›</text>
+      <text class="guide-x" catch:tap="onSkipGuide">跳过</text>
+    </view>
+
     <!-- 学习计划卡 -->
     <view class="card" wx:if="{{hasProfile && planTasks.length}}">
       <view class="plan-h">
@@ -112,3 +122,78 @@
     </view>
   </view>
 </scroll-view>
+
+<!-- 制定学习计划 sheet -->
+<view wx:if="{{setupOpen}}" class="sheet-mask" bind:tap="onCloseSetup">
+  <view class="sheet" catch:tap="onSheetNoop">
+    <view class="sheet-h">
+      <text class="sheet-t">制定学习计划 · {{setupStep === 1 ? '考试信息' : setupStep === 2 ? '目标' : '每日时长'}}（{{setupStep}}/3）</text>
+      <text class="sheet-x" bind:tap="onCloseSetup">✕</text>
+    </view>
+    <block wx:if="{{setupStep === 1}}">
+      <text class="sheet-st">考试类型</text>
+      <view class="chips">
+        <text
+          wx:for="{{examTypes}}"
+          wx:key="*this"
+          class="chip {{pf.exam_type === item ? 'on' : ''}}"
+          data-key="exam_type"
+          data-val="{{item}}"
+          bind:tap="onPfChip"
+        >{{item}}</text>
+      </view>
+      <text class="sheet-st">目标地区</text>
+      <input
+        class="pf-input"
+        value="{{pf.target_region}}"
+        placeholder="如 广东 / 全国（选填）"
+        maxlength="20"
+        bind:input="onPfRegion"
+      />
+      <text class="sheet-st">考试日期</text>
+      <picker mode="date" value="{{pf.exam_date}}" start="{{dateStart}}" end="{{dateEnd}}" bind:change="onPfDate">
+        <view class="pf-date {{pf.exam_date ? '' : 'empty'}}">{{pf.exam_date || '选择日期 ›'}}</view>
+      </picker>
+    </block>
+    <block wx:elif="{{setupStep === 2}}">
+      <text class="sheet-st">目标分</text>
+      <view class="chips">
+        <text
+          wx:for="{{scoreChips}}"
+          wx:key="*this"
+          class="chip {{pf.target_score === item ? 'on' : ''}}"
+          data-key="target_score"
+          data-val="{{item}}"
+          bind:tap="onPfChip"
+        >{{item}}+</text>
+      </view>
+      <text class="sheet-st">基础自评</text>
+      <view class="chips">
+        <text
+          wx:for="{{baseLevels}}"
+          wx:key="*this"
+          class="chip {{pf.base_level === item ? 'on' : ''}}"
+          data-key="base_level"
+          data-val="{{item}}"
+          bind:tap="onPfChip"
+        >{{item}}</text>
+      </view>
+    </block>
+    <block wx:else>
+      <text class="sheet-st">每日可用时长（决定每日任务量）</text>
+      <view class="chips">
+        <text
+          wx:for="{{minuteChips}}"
+          wx:key="*this"
+          class="chip {{pf.daily_minutes === item ? 'on' : ''}}"
+          data-key="daily_minutes"
+          data-val="{{item}}"
+          bind:tap="onPfChip"
+        >{{item}} 分钟</text>
+      </view>
+      <view class="pf-summary">{{pf.exam_type}}{{pf.target_region ? ' · ' + pf.target_region : ''}} · {{pf.exam_date}} · 目标 {{pf.target_score}}+ · {{pf.base_level}} · 每天 {{pf.daily_minutes}} 分钟</view>
+    </block>
+    <view class="sheet-btn {{setupBusy ? 'dis' : ''}}" bind:tap="onSetupNext">{{setupStep < 3 ? '下一步' : setupBusy ? '生成中…' : '生成我的学习计划'}}</view>
+    <view wx:if="{{setupStep > 1}}" class="pf-back" bind:tap="onSetupBack">上一步</view>
+  </view>
+</view>
