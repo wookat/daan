@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=375, initial-scale=1">
+<title>登录 · 公考助手 v2</title>
+<link rel="stylesheet" href="assets/base.css">
+<style>
+/* ===== 登录页 ===== */
+.login-body { padding-top: 36px; }
+.logo {
+  width: 76px; height: 76px; border-radius: 22px;
+  background: var(--brand-grad);
+  box-shadow: var(--sh-brand);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px; margin: 0 auto;
+}
+.l-title { font-size: 24px; font-weight: 800; text-align: center; margin-top: 18px; }
+.l-sub { font-size: 13px; color: var(--t3); text-align: center; margin-top: 6px; margin-bottom: 30px; }
+
+.wx-btn {
+  background: linear-gradient(135deg, #34d377, #07c160);
+  color: #fff; border-radius: var(--r-full);
+  text-align: center; padding: 14px 0;
+  font-size: 16px; font-weight: 700;
+  box-shadow: 0 6px 16px rgba(7, 193, 96, 0.3);
+  margin-bottom: 22px;
+}
+
+.l-divider { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.l-line { flex: 1; height: 0.5px; background: var(--border); }
+.l-or { font-size: 12px; color: var(--t4); }
+
+.field {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--fill);
+  border-radius: var(--r-m);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+.field.focus { background: var(--surface); box-shadow: 0 0 0 1.5px var(--brand-500), var(--sh-1); }
+.f-label { font-size: 14px; font-weight: 700; width: 44px; flex: none; }
+.f-input { flex: 1; font-size: 15px; color: var(--t1); }
+.f-input.ph { color: var(--t4); }
+.f-cursor { display: inline-block; width: 2px; height: 18px; background: var(--brand-500); vertical-align: -3px; }
+
+.l-forgot { text-align: right; font-size: 12px; color: var(--t3); margin: 2px 2px 22px; }
+
+.l-switch { text-align: center; font-size: 13px; color: var(--t3); margin-top: 20px; }
+.l-switch b { color: var(--brand-500); font-weight: 700; }
+.l-agree { display: flex; align-items: flex-start; gap: 6px; justify-content: center; margin-top: 26px; font-size: 11px; color: var(--t4); line-height: 1.5; }
+.l-agree .ck { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--t4); flex: none; margin-top: 1px; }
+.l-agree a { color: var(--brand-500); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="statusbar"><span>9:41</span><span class="sb-r">●●●●&ensp;📶&ensp;🔋</span></div>
+  <div class="navbar"><span class="nav-back">‹</span><span class="nav-t"></span><div class="nav-capsule"><span>⋯</span><span class="cap-div"></span><span>◎</span></div></div>
+
+  <div class="page-body login-body">
+    <div class="logo">🎯</div>
+    <div class="l-title">欢迎回来</div>
+    <div class="l-sub">登录后错题与进度多端同步</div>
+
+    <div class="wx-btn">💬 微信一键登录</div>
+
+    <div class="l-divider"><div class="l-line"></div><span class="l-or">或手机号登录</span><div class="l-line"></div></div>
+
+    <div class="field focus">
+      <span class="f-label">手机号</span>
+      <span class="f-input">138 8888<span class="f-cursor"></span></span>
+    </div>
+    <div class="field">
+      <span class="f-label">密码</span>
+      <span class="f-input ph">至少 6 位</span>
+    </div>
+    <div class="l-forgot">忘记密码？</div>
+
+    <div class="btn-primary">登 录</div>
+
+    <div class="l-switch">没有账号？<b>去注册 ›</b></div>
+
+    <div class="l-agree">
+      <span class="ck"></span>
+      <span>已阅读并同意 <a>《用户协议》</a>与<a>《隐私政策》</a></span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

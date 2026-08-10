@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=375, initial-scale=1">
+<title>我的 · 公考助手 v2</title>
+<link rel="stylesheet" href="assets/base.css">
+<style>
+/* ===== 我的页 ===== */
+.u-card {
+  position: relative; z-index: 2;
+  display: flex; align-items: center; gap: 14px;
+  padding: 4px 4px 18px;
+  color: #fff;
+}
+.avatar {
+  width: 58px; height: 58px; border-radius: 50%; flex: none;
+  background: rgba(255,255,255,.25);
+  border: 2px solid rgba(255,255,255,.6);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; font-weight: 800;
+}
+.u-main { flex: 1; }
+.u-name { font-size: 19px; font-weight: 800; display: block; }
+.u-sub { font-size: 12px; opacity: .8; display: block; margin-top: 2px; }
+.u-btn {
+  background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.4);
+  color: #fff; border-radius: var(--r-full);
+  padding: 7px 14px; font-size: 12px; font-weight: 700;
+}
+
+/* 数据条 */
+.u-stats { display: flex; padding: 14px 0 !important; }
+.us-cell { flex: 1; text-align: center; position: relative; }
+.us-cell + .us-cell::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 0.5px; background: var(--border); }
+.us-n { font-size: 20px; display: block; }
+.us-t { font-size: 11px; color: var(--t3); margin-top: 1px; display: block; }
+
+/* 徽章 */
+.badge-head { display: flex; align-items: center; justify-content: space-between; }
+.badge-cur { font-size: 15px; font-weight: 800; }
+.badge-cur b { color: var(--accent-600); }
+.badge-best { font-size: 12px; color: var(--t3); }
+.ms-bar { height: 6px; border-radius: 3px; background: var(--fill); margin: 12px 0 6px; overflow: hidden; }
+.ms-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--gold), var(--accent-500)); width: 80%; }
+.ms-sub { font-size: 11px; color: var(--t3); }
+.badge-grid { display: flex; gap: 8px; margin-top: 14px; }
+.badge {
+  flex: 1; text-align: center; padding: 10px 0 8px;
+  background: var(--gold-bg); border-radius: var(--r-m);
+}
+.badge.off { background: var(--fill); opacity: .6; }
+.badge-ico { font-size: 22px; display: block; }
+.badge-d { font-size: 10px; font-weight: 700; color: var(--t2); margin-top: 2px; display: block; }
+
+/* 功能列表 */
+.row-ico {
+  width: 34px; height: 34px; border-radius: var(--r-s); flex: none;
+  display: flex; align-items: center; justify-content: center; font-size: 16px;
+}
+.r-k { font-size: 14px; font-weight: 700; flex: 1; }
+.r-v { font-size: 12px; color: var(--t3); }
+</style>
+</head>
+<body>
+<div class="phone on-brand">
+  <div class="hero-bleed" style="height:225px"></div>
+  <div class="statusbar"><span>9:41</span><span class="sb-r">●●●●&ensp;📶&ensp;🔋</span></div>
+  <div class="navbar"><span class="nav-t">我的</span><div class="nav-capsule"><span>⋯</span><span class="cap-div"></span><span>◎</span></div></div>
+
+  <div class="page-body">
+    <!-- 用户信息 -->
+    <div class="u-card">
+      <div class="avatar">粒</div>
+      <div class="u-main">
+        <span class="u-name">上岸的粒粒</span>
+        <span class="u-sub">已登录 · 多端同步中</span>
+      </div>
+      <span class="u-btn">编辑资料</span>
+    </div>
+
+    <!-- 数据概览 -->
+    <div class="card u-stats">
+      <div class="us-cell"><span class="num us-n" style="color:var(--brand-500)">1,286</span><span class="us-t">累计刷题</span></div>
+      <div class="us-cell"><span class="num us-n" style="color:var(--accent-600)">12</span><span class="us-t">连续天数</span></div>
+      <div class="us-cell"><span class="num us-n" style="color:var(--success-deep)">128</span><span class="us-t">错题收录</span></div>
+      <div class="us-cell"><span class="num us-n" style="color:var(--mod-panduan)">4</span><span class="us-t">徽章</span></div>
+    </div>
+
+    <!-- 打卡徽章 -->
+    <div class="card">
+      <div class="badge-head">
+        <span class="badge-cur">当前连续 <b class="num">12</b> 天</span>
+        <span class="badge-best">历史最长 21 天</span>
+      </div>
+      <div class="ms-bar"><div class="ms-fill"></div></div>
+      <span class="ms-sub">再打卡 3 天解锁「15 天」徽章</span>
+      <div class="badge-grid">
+        <div class="badge"><span class="badge-ico">🏅</span><span class="badge-d">3 天</span></div>
+        <div class="badge"><span class="badge-ico">🏅</span><span class="badge-d">7 天</span></div>
+        <div class="badge off"><span class="badge-ico">🔒</span><span class="badge-d">15 天</span></div>
+        <div class="badge off"><span class="badge-ico">🔒</span><span class="badge-d">30 天</span></div>
+        <div class="badge off"><span class="badge-ico">🔒</span><span class="badge-d">100 天</span></div>
+      </div>
+    </div>
+
+    <!-- 功能入口 -->
+    <div class="card" style="padding-top:4px;padding-bottom:4px">
+      <div class="row">
+        <div class="row-ico" style="background:var(--brand-50)">👥</div>
+        <span class="r-k">刷题小队</span>
+        <span class="r-v">组队打卡 · 互相催学</span>
+        <span class="chev">›</span>
+      </div>
+      <div class="row">
+        <div class="row-ico" style="background:var(--accent-bg)">⏰</div>
+        <span class="r-k">学习提醒</span>
+        <span class="r-v">已开启 · 每天 20:00</span>
+        <span class="chev">›</span>
+      </div>
+      <div class="row">
+        <div class="row-ico" style="background:var(--success-bg)">🎯</div>
+        <span class="r-k">学习计划</span>
+        <span class="r-v">距省考 89 天</span>
+        <span class="chev">›</span>
+      </div>
+    </div>
+
+    <div class="card" style="padding-top:4px;padding-bottom:4px">
+      <div class="row">
+        <div class="row-ico" style="background:var(--info-bg)">☁️</div>
+        <span class="r-k">数据同步</span>
+        <span class="r-v">账号云端同步</span>
+        <span class="chev">›</span>
+      </div>
+      <div class="row">
+        <div class="row-ico" style="background:var(--fill)">⚙️</div>
+        <span class="r-k">设置</span>
+        <span class="r-v">v2.0.0</span>
+        <span class="chev">›</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <div class="tab"><span class="tab-ico">📘</span>刷题</div>
+    <div class="tab"><span class="tab-ico">📕</span>错题本</div>
+    <div class="tab"><span class="tab-ico">📝</span>模考</div>
+    <div class="tab"><span class="tab-ico">📊</span>统计</div>
+    <div class="tab on"><span class="tab-ico">👤</span>我的</div>
+  </div>
+</div>
+</body>
+</html>

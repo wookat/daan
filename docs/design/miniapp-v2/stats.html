@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=375, initial-scale=1">
+<title>统计 · 公考助手 v2</title>
+<link rel="stylesheet" href="assets/base.css">
+<style>
+/* ===== 统计页 ===== */
+.nums { display: flex; padding: 18px 0; }
+.numcell { flex: 1; text-align: center; position: relative; }
+.numcell + .numcell::before {
+  content: ""; position: absolute; left: 0; top: 8px; bottom: 8px;
+  width: 0.5px; background: var(--border);
+}
+.num-n { font-size: 26px; display: block; line-height: 1.2; }
+.num-n.c1 { color: var(--brand-500); }
+.num-n.c2 { color: var(--t1); }
+.num-n.c3 { color: var(--accent-600); }
+.num-t { font-size: 11px; color: var(--t3); margin-top: 2px; display: block; }
+
+/* 热力图 */
+.hm-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.hm-t { font-size: 15px; font-weight: 800; }
+.hm-total { font-size: 12px; color: var(--t3); font-weight: 600; }
+.hm-body { display: flex; gap: 6px; }
+.hm-ylab { display: flex; flex-direction: column; justify-content: space-between; padding: 1px 0; }
+.hm-yl { font-size: 9px; color: var(--t4); height: 20px; line-height: 20px; }
+.hm-grid { flex: 1; display: flex; gap: 4px; justify-content: space-between; }
+.hm-col { display: flex; flex-direction: column; gap: 4px; flex: none; width: 20px; }
+.hm-c { width: 20px; height: 20px; border-radius: 5px; background: var(--fill); }
+.hm-c.lv1 { background: var(--brand-100); }
+.hm-c.lv2 { background: var(--brand-300); }
+.hm-c.lv3 { background: var(--brand-500); }
+.hm-c.lv4 { background: var(--brand-700); }
+.hm-legend { display: flex; align-items: center; gap: 4px; justify-content: flex-end; margin-top: 10px; }
+.hm-legend .hm-c { width: 12px; height: 12px; flex: none; }
+.hm-lt { font-size: 10px; color: var(--t4); }
+
+/* 正确率趋势（纯 CSS 柱状图，可用 canvas/wxs 落地） */
+.trend { display: flex; align-items: flex-end; gap: 8px; height: 90px; padding: 0 2px; }
+.tcol { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+.tbar { width: 100%; max-width: 22px; border-radius: 6px 6px 3px 3px; background: var(--brand-200); }
+.tcol.on .tbar { background: var(--brand-grad-btn); }
+.tlab { font-size: 9px; color: var(--t4); }
+.tval { font-size: 10px; font-weight: 800; color: var(--t3); }
+.tcol.on .tval { color: var(--brand-500); }
+
+/* 分模块正确率 */
+.mr-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.mr-l { display: flex; align-items: center; gap: 8px; }
+.mr-dot { width: 8px; height: 8px; border-radius: 50%; }
+.mr-name { font-size: 14px; font-weight: 700; }
+.mr-pct { font-size: 13px; font-weight: 800; }
+.mr-sub { font-size: 11px; color: var(--t4); margin-left: 4px; font-weight: 500; }
+.mrow { padding: 13px 16px; }
+.mrow + .mrow { margin-top: -6px; }
+.weak-tip {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--warning-bg); border-radius: var(--r-m);
+  padding: 10px 12px; margin-top: 10px;
+  font-size: 12px; color: var(--warning); font-weight: 600;
+}
+.weak-go { font-weight: 800; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="statusbar"><span>9:41</span><span class="sb-r">●●●●&ensp;📶&ensp;🔋</span></div>
+  <div class="navbar"><span class="nav-t">统计</span><div class="nav-capsule"><span>⋯</span><span class="cap-div"></span><span>◎</span></div></div>
+
+  <div class="page-body">
+    <!-- 关键数字 -->
+    <div class="card nums">
+      <div class="numcell"><span class="num num-n c1">18</span><span class="num-t">今日题数</span></div>
+      <div class="numcell"><span class="num num-n c2">1,286</span><span class="num-t">累计题数</span></div>
+      <div class="numcell"><span class="num num-n c3">🔥 12</span><span class="num-t">连续天数</span></div>
+    </div>
+
+    <!-- 热力图 -->
+    <div class="card">
+      <div class="hm-h"><span class="hm-t">学习热力图 · 近 12 周</span><span class="hm-total">共 <b class="num">1,286</b> 题</span></div>
+      <div class="hm-body">
+        <div class="hm-ylab"><span class="hm-yl">一</span><span class="hm-yl">三</span><span class="hm-yl">五</span><span class="hm-yl">日</span></div>
+        <div class="hm-grid">
+          <div class="hm-col"><div class="hm-c lv1"></div><div class="hm-c lv2"></div><div class="hm-c"></div><div class="hm-c lv1"></div><div class="hm-c lv3"></div><div class="hm-c lv2"></div><div class="hm-c"></div></div>
+          <div class="hm-col"><div class="hm-c lv2"></div><div class="hm-c lv1"></div><div class="hm-c lv3"></div><div class="hm-c"></div><div class="hm-c lv2"></div><div class="hm-c lv4"></div><div class="hm-c lv1"></div></div>
+          <div class="hm-col"><div class="hm-c"></div><div class="hm-c lv2"></div><div class="hm-c lv1"></div><div class="hm-c lv3"></div><div class="hm-c lv1"></div><div class="hm-c"></div><div class="hm-c lv2"></div></div>
+          <div class="hm-col"><div class="hm-c lv3"></div><div class="hm-c lv4"></div><div class="hm-c lv2"></div><div class="hm-c lv1"></div><div class="hm-c"></div><div class="hm-c lv3"></div><div class="hm-c lv2"></div></div>
+          <div class="hm-col"><div class="hm-c lv1"></div><div class="hm-c"></div><div class="hm-c lv2"></div><div class="hm-c lv4"></div><div class="hm-c lv3"></div><div class="hm-c lv1"></div><div class="hm-c lv2"></div></div>
+          <div class="hm-col"><div class="hm-c lv2"></div><div class="hm-c lv3"></div><div class="hm-c lv1"></div><div class="hm-c lv2"></div><div class="hm-c lv4"></div><div class="hm-c lv2"></div><div class="hm-c lv3"></div></div>
+          <div class="hm-col"><div class="hm-c lv4"></div><div class="hm-c lv2"></div><div class="hm-c lv3"></div><div class="hm-c lv2"></div><div class="hm-c lv1"></div><div class="hm-c lv4"></div><div class="hm-c lv3"></div></div>
+          <div class="hm-col"><div class="hm-c lv1"></div><div class="hm-c lv3"></div><div class="hm-c lv2"></div><div class="hm-c"></div><div class="hm-c lv3"></div><div class="hm-c lv2"></div><div class="hm-c lv1"></div></div>
+          <div class="hm-col"><div class="hm-c lv2"></div><div class="hm-c lv1"></div><div class="hm-c lv4"></div><div class="hm-c lv2"></div><div class="hm-c lv3"></div><div class="hm-c lv4"></div><div class="hm-c lv2"></div></div>
+          <div class="hm-col"><div class="hm-c lv3"></div><div class="hm-c lv2"></div><div class="hm-c lv3"></div><div class="hm-c lv4"></div><div class="hm-c lv2"></div><div class="hm-c lv3"></div><div class="hm-c lv3"></div></div>
+          <div class="hm-col"><div class="hm-c lv3"></div><div class="hm-c lv4"></div><div class="hm-c lv4"></div><div class="hm-c lv3"></div><div class="hm-c lv2"></div><div class="hm-c lv3"></div><div class="hm-c lv4"></div></div>
+        </div>
+      </div>
+      <div class="hm-legend" style="--hm-lg:1"><span class="hm-lt">少</span><div class="hm-c"></div><div class="hm-c lv1"></div><div class="hm-c lv2"></div><div class="hm-c lv3"></div><div class="hm-c lv4"></div><span class="hm-lt">多</span></div>
+    </div>
+
+    <!-- 正确率趋势 -->
+    <div class="card">
+      <div class="hm-h"><span class="hm-t">正确率趋势 · 近 7 天</span></div>
+      <div class="trend">
+        <div class="tcol"><span class="tval num">62</span><div class="tbar" style="height:46%"></div><span class="tlab">一</span></div>
+        <div class="tcol"><span class="tval num">70</span><div class="tbar" style="height:54%"></div><span class="tlab">二</span></div>
+        <div class="tcol"><span class="tval num">66</span><div class="tbar" style="height:50%"></div><span class="tlab">三</span></div>
+        <div class="tcol"><span class="tval num">74</span><div class="tbar" style="height:58%"></div><span class="tlab">四</span></div>
+        <div class="tcol"><span class="tval num">71</span><div class="tbar" style="height:55%"></div><span class="tlab">五</span></div>
+        <div class="tcol"><span class="tval num">78</span><div class="tbar" style="height:63%"></div><span class="tlab">六</span></div>
+        <div class="tcol on"><span class="tval num">82</span><div class="tbar" style="height:70%"></div><span class="tlab">今</span></div>
+      </div>
+    </div>
+
+    <!-- 分模块正确率 -->
+    <div class="sec-h"><span class="sec-t">分模块正确率</span><span class="sec-more">本机口径</span></div>
+    <div class="card mrow">
+      <div class="mr-h">
+        <div class="mr-l"><span class="mr-dot" style="background:var(--mod-ziliao)"></span><span class="mr-name">资料分析</span><span class="mr-sub">312 题</span></div>
+        <span class="mr-pct num" style="color:var(--mod-ziliao)">86%</span>
+      </div>
+      <div class="bar"><div class="bar-fill" style="width:86%;background:var(--mod-ziliao)"></div></div>
+    </div>
+    <div class="card mrow">
+      <div class="mr-h">
+        <div class="mr-l"><span class="mr-dot" style="background:var(--mod-panduan)"></span><span class="mr-name">判断推理</span><span class="mr-sub">286 题</span></div>
+        <span class="mr-pct num" style="color:var(--mod-panduan)">74%</span>
+      </div>
+      <div class="bar"><div class="bar-fill" style="width:74%;background:var(--mod-panduan)"></div></div>
+    </div>
+    <div class="card mrow">
+      <div class="mr-h">
+        <div class="mr-l"><span class="mr-dot" style="background:var(--mod-shuliang)"></span><span class="mr-name">数量关系</span><span class="mr-sub">198 题</span></div>
+        <span class="mr-pct num" style="color:var(--warning)">52%</span>
+      </div>
+      <div class="bar"><div class="bar-fill" style="width:52%;background:var(--warning)"></div></div>
+      <div class="weak-tip"><span>⚠️ 薄弱模块 · 低于平均 18 个百分点</span><span class="weak-go">定向重练 ›</span></div>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <div class="tab"><span class="tab-ico">📘</span>刷题</div>
+    <div class="tab"><span class="tab-ico">📕</span>错题本</div>
+    <div class="tab"><span class="tab-ico">📝</span>模考</div>
+    <div class="tab on"><span class="tab-ico">📊</span>统计</div>
+    <div class="tab"><span class="tab-ico">👤</span>我的</div>
+  </div>
+</div>
+</body>
+</html>

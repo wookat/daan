@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>公考助手 小程序 v2 视觉升级设计稿</title>
+<link rel="stylesheet" href="assets/base.css">
+<style>
+body { background: var(--bg); padding: 32px 24px 60px; }
+.wrap { max-width: 1280px; margin: 0 auto; }
+h1 { font-size: 26px; font-weight: 800; color: var(--t1); }
+.sub { color: var(--t3); font-size: 14px; margin: 8px 0 28px; }
+.sub a { color: var(--brand-500); font-weight: 600; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+.pg { background: var(--surface); border-radius: var(--r-l); box-shadow: var(--sh-1); overflow: hidden; text-decoration: none; color: var(--t1); display: block; }
+.pg iframe { width: 375px; height: 812px; border: 0; transform: scale(0.8); transform-origin: 0 0; pointer-events: none; }
+.pg .frame { width: 300px; height: 650px; overflow: hidden; margin: 0 auto; }
+.pg .cap { padding: 12px 16px 14px; border-top: 0.5px solid var(--border); }
+.pg .cap b { font-size: 15px; display: block; }
+.pg .cap span { font-size: 12px; color: var(--t3); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>公考助手 · 原生小程序 v2 视觉升级设计稿</h1>
+  <div class="sub">375px 视口 · rpx→px 按 2:1 · 设计规范见 <a href="tokens.md">tokens.md</a> · 点击卡片打开单页</div>
+  <div class="grid">
+    <a class="pg" href="home.html"><div class="frame"><iframe src="home.html"></iframe></div><div class="cap"><b>首页</b><span>沉浸式渐变头部 · 今日目标 hero · 任务清单 · 专项网格</span></div></a>
+    <a class="pg" href="practice.html"><div class="frame"><iframe src="practice.html"></iframe></div><div class="cap"><b>刷题练习（作答后解析态）</b><span>选项判分 · 双师解析 · 悬浮判分横幅</span></div></a>
+    <a class="pg" href="book.html"><div class="frame"><iframe src="book.html"></iframe></div><div class="cap"><b>错题本</b><span>到期复习 hero · 月度复盘条形图 · 模块筛选 · 错题卡</span></div></a>
+    <a class="pg" href="exam.html"><div class="frame"><iframe src="exam.html"></iframe></div><div class="cap"><b>模考</b><span>迷你模考 hero · 上次成绩环形图 · 真题卷库</span></div></a>
+    <a class="pg" href="stats.html"><div class="frame"><iframe src="stats.html"></iframe></div><div class="cap"><b>统计</b><span>关键数字 · 热力图 · 正确率趋势 · 分模块正确率</span></div></a>
+    <a class="pg" href="profile.html"><div class="frame"><iframe src="profile.html"></iframe></div><div class="cap"><b>我的</b><span>渐变头部用户卡 · 数据概览 · 打卡徽章 · 功能列表</span></div></a>
+    <a class="pg" href="login.html"><div class="frame"><iframe src="login.html"></iframe></div><div class="cap"><b>登录</b><span>微信一键登录主路径 · 手机号次路径 · 焦点态输入框</span></div></a>
+  </div>
+</div>
+</body>
+</html>
