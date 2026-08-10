@@ -2564,14 +2564,29 @@ def list_exam_papers(kind: str | None = None, year: int | None = None,
             (uid,),
         ):
             best[b["paper_id"]] = {"best_score": b["s"], "attempt_count": b["n"]}
+    qids_by_paper = {r["id"]: json.loads(r["question_ids"] or "[]") for r in rows}
+    all_ids = list({i for ids in qids_by_paper.values() for i in ids})
+    active: set[int] = set()
+    for chunk_start in range(0, len(all_ids), 900):
+        chunk = all_ids[chunk_start:chunk_start + 900]
+        active.update(r["id"] for r in conn.execute(
+            f"SELECT id FROM questions WHERE disabled=0 AND id IN ({','.join('?' * len(chunk))})",
+            chunk,
+        ))
     conn.close()
     out = []
     for r in rows:
         d = dict(r)
-        d["n"] = len(json.loads(d.pop("question_ids") or "[]"))
+        d.pop("question_ids")
+        d["n"] = sum(1 for i in qids_by_paper[d["id"]] if i in active)
         d.update(best.get(d["id"], {"best_score": None, "attempt_count": 0}))
         out.append(d)
     return out
+
+
+def exam_active_qids(question_ids: list[int]) -> list[int]:
+    active = {q["id"] for q in questions_by_ids(question_ids) if not q.get("disabled")}
+    return [i for i in question_ids if i in active]
 
 
 def exam_paper_filters() -> dict:
@@ -2631,6 +2646,10 @@ def create_mock_paper(n: int = 30, duration_min: int = 30) -> int:
 def start_exam_attempt(uid: str, paper_id: int) -> int:
     conn = get_conn()
     _ensure_exam_tables(conn)
+    conn.execute(
+        "DELETE FROM exam_attempts WHERE uid=? AND submitted_at IS NULL AND started_at<?",
+        (uid, time.time() - 86400),
+    )
     cur = conn.execute(
         "INSERT INTO exam_attempts (uid, paper_id, started_at) VALUES (?,?,?)",
         (uid, paper_id, time.time()),

@@ -74,10 +74,12 @@ def _saturday_window(now: float) -> tuple[float, float]:
 
 def _pick_paper_id(conn) -> int:
     rows = conn.execute(
-        "SELECT id FROM exam_papers WHERE kind='zhenti' ORDER BY id DESC LIMIT 50"
+        "SELECT id, question_ids FROM exam_papers WHERE kind='zhenti' ORDER BY id DESC LIMIT 50"
     ).fetchall()
-    if rows:
-        return random.choice(rows)["id"]
+    ok = [r["id"] for r in rows
+          if len(db.exam_active_qids(json.loads(r["question_ids"] or "[]"))) >= 60]
+    if ok:
+        return random.choice(ok)
     return db.create_mock_paper(n=30, duration_min=30)
 
 
@@ -150,7 +152,7 @@ def _event_brief(conn, ev: dict, uid: str, now: float) -> dict:
         "paper_id": ev["paper_id"],
         "paper_title": paper["title"] if paper else "",
         "duration_min": paper["duration_min"] if paper else 120,
-        "n_questions": len(json.loads(paper["question_ids"])) if paper else 0,
+        "n_questions": len(db.exam_active_qids(json.loads(paper["question_ids"]))) if paper else 0,
         "open_at": ev["open_at"],
         "close_at": ev["close_at"],
         "phase": _phase(ev, now),
@@ -436,7 +438,7 @@ def api_event_report(event_id: int, uid: str = ""):
             })
         # 弱项三级考点 top5（本卷错题聚合）
         picks = {int(k): v for k, v in (attempt.get("answers") or {}).items()}
-        qids = paper["question_ids"]
+        qids = db.exam_active_qids(paper["question_ids"])
         qmap = {q["id"]: q for q in db.questions_by_ids(qids)}
         tag_wrong: dict[str, list[int]] = {}
         for i, qid in enumerate(qids):

@@ -1,0 +1,586 @@
+{"pid": 119, "old": 284082, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 119, "old": 284084, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 119, "old": 284085, "new": 236103, "decision": "remap_to_active_twin", "qsim": 0.985, "osim": 0.988}
+{"pid": 119, "old": 284087, "new": 260244, "decision": "remap_to_active_twin", "qsim": 0.963, "osim": 1.0}
+{"pid": 119, "old": 284088, "new": 285204, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 119, "old": 284089, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 119, "old": 284091, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 119, "old": 284092, "new": 260229, "decision": "remap_to_active_twin", "qsim": 0.987, "osim": 1.0}
+{"pid": 119, "old": 284094, "new": 285209, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 119, "old": 284095, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 119, "old": 284096, "new": 236127, "decision": "remap_to_active_twin", "qsim": 0.947, "osim": 1.0}
+{"pid": 119, "old": 284097, "new": 285401, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 119, "old": 284098, "new": 236129, "decision": "remap_to_active_twin", "qsim": 0.963, "osim": 1.0}
+{"pid": 119, "old": 284099, "new": 236123, "decision": "remap_to_active_twin", "qsim": 0.972, "osim": 1.0}
+{"pid": 119, "old": 284100, "new": 236128, "decision": "remap_to_active_twin", "qsim": 0.972, "osim": 1.0}
+{"pid": 119, "old": 284101, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 119, "old": 284102, "new": 260254, "decision": "remap_to_active_twin", "qsim": 0.95, "osim": 1.0}
+{"pid": 119, "old": 284103, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 119, "old": 284104, "new": 236124, "decision": "remap_to_active_twin", "qsim": 0.964, "osim": 1.0}
+{"pid": 119, "old": 284105, "new": 260252, "decision": "remap_to_active_twin", "qsim": 0.946, "osim": 1.0}
+{"pid": 119, "old": 284106, "new": 285309, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 119, "old": 284107, "new": 259803, "decision": "remap_to_active_twin", "qsim": 0.966, "osim": 1.0}
+{"pid": 119, "old": 284108, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 119, "old": 284109, "new": 236137, "decision": "remap_to_active_twin", "qsim": 0.943, "osim": 1.0}
+{"pid": 119, "old": 284110, "new": 236134, "decision": "remap_to_active_twin", "qsim": 0.944, "osim": 1.0}
+{"pid": 119, "old": 284111, "new": 236131, "decision": "remap_to_active_twin", "qsim": 0.965, "osim": 1.0}
+{"pid": 119, "old": 284112, "new": 236141, "decision": "remap_to_active_twin", "qsim": 0.964, "osim": 1.0}
+{"pid": 119, "old": 284113, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 119, "old": 284114, "new": 260272, "decision": "remap_to_active_twin", "qsim": 0.963, "osim": 1.0}
+{"pid": 119, "old": 284115, "new": 260258, "decision": "remap_to_active_twin", "qsim": 0.979, "osim": 1.0}
+{"pid": 119, "old": 284116, "new": 260259, "decision": "remap_to_active_twin", "qsim": 0.97, "osim": 1.0}
+{"pid": 119, "old": 284117, "new": 236150, "decision": "remap_to_active_twin", "qsim": 0.988, "osim": 1.0}
+{"pid": 119, "old": 284118, "new": 285143, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 119, "old": 284119, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 119, "old": 284120, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 119, "old": 284121, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 119, "old": 284122, "new": 285146, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 119, "old": 284123, "new": 260264, "decision": "remap_to_active_twin", "qsim": 0.979, "osim": 1.0}
+{"pid": 119, "old": 284124, "new": 285149, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 119, "old": 284126, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 119, "old": 284127, "new": 260267, "decision": "remap_to_active_twin", "qsim": 0.992, "osim": 1.0}
+{"pid": 119, "old": 284128, "new": 236148, "decision": "remap_to_active_twin", "qsim": 0.995, "osim": 1.0}
+{"pid": 119, "old": 284130, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 119, "old": 284131, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 119, "old": 284132, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 119, "old": 284133, "new": 260273, "decision": "remap_to_active_twin", "qsim": 0.972, "osim": 1.0}
+{"pid": 119, "old": 284134, "new": 236323, "decision": "remap_to_active_twin", "qsim": 0.985, "osim": 1.0}
+{"pid": 119, "old": 284135, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 119, "old": 284136, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 119, "old": 284137, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 119, "old": 284141, "new": 236163, "decision": "remap_to_active_twin", "qsim": 0.983, "osim": 1.0}
+{"pid": 119, "old": 284144, "new": 236332, "decision": "remap_to_active_twin", "qsim": 0.995, "osim": 1.0}
+{"pid": 119, "old": 284146, "new": 236166, "decision": "remap_to_active_twin", "qsim": 0.992, "osim": 1.0}
+{"pid": 119, "old": 284148, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 119, "old": 284149, "new": 236336, "decision": "remap_to_active_twin", "qsim": 0.993, "osim": 1.0}
+{"pid": 119, "old": 284161, "new": 259861, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 0.918}
+{"pid": 119, "old": 284162, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 119, "old": 284165, "new": 236175, "decision": "remap_to_active_twin", "qsim": 0.99, "osim": 1.0}
+{"pid": 119, "old": 284168, "new": 236180, "decision": "kept_pending_answer_conflict", "old_ans": "D", "new_ans": "A"}
+{"pid": 24, "old": 264437, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264438, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264439, "new": 334827, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 24, "old": 264441, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264442, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264443, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264444, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264445, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264446, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264447, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264448, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264449, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264450, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264451, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264452, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264453, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264454, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264415, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264423, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264424, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264425, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264426, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264427, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264428, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264429, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264430, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264431, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264432, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264433, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264434, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264435, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264436, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264455, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264456, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264457, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264458, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264459, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264460, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264461, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264468, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264470, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264471, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264473, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264475, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 24, "old": 264476, "decision": "dropped_from_paper_bad_explanation", "reason": "解析错位批次：explanation 为无关题目的解析（或缺失），逐题比对确认，题目行保持 disabled 留档"}
+{"pid": 61, "old": 262326, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 61, "old": 262329, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 61, "old": 262335, "new": 237156, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262336, "new": 237237, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262337, "new": 237166, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262339, "new": 237171, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262340, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 61, "old": 262341, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 61, "old": 262342, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 61, "old": 262343, "new": 237183, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262345, "new": 237168, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262346, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 61, "old": 262347, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 61, "old": 262348, "new": 237185, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262351, "new": 237186, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262352, "new": 237173, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262353, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 61, "old": 262354, "new": 237179, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262357, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 61, "old": 262358, "new": 332794, "decision": "remap_to_active_twin", "qsim": 0.971, "osim": 1.0}
+{"pid": 61, "old": 262359, "new": 237202, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262361, "new": 332795, "decision": "remap_to_active_twin", "qsim": 0.942, "osim": 1.0}
+{"pid": 61, "old": 262363, "new": 333402, "decision": "remap_to_active_twin", "qsim": 0.988, "osim": 0.959}
+{"pid": 61, "old": 262364, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 61, "old": 262365, "new": 237192, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262367, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 61, "old": 262368, "new": 332800, "decision": "remap_to_active_twin", "qsim": 0.975, "osim": 1.0}
+{"pid": 61, "old": 262371, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 61, "old": 262372, "new": 333699, "decision": "remap_to_active_twin", "qsim": 0.991, "osim": 1.0}
+{"pid": 61, "old": 262374, "new": 237197, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262375, "new": 273881, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262377, "new": 333701, "decision": "remap_to_active_twin", "qsim": 0.992, "osim": 1.0}
+{"pid": 61, "old": 262379, "new": 237276, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262380, "new": 237205, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262381, "new": 262471, "decision": "remap_to_active_twin", "qsim": 0.961, "osim": 1.0}
+{"pid": 61, "old": 262382, "new": 237207, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262383, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 61, "old": 262384, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 61, "old": 262386, "new": 237281, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262387, "new": 237215, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262389, "new": 237212, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262390, "new": 237213, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262393, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 61, "old": 262394, "new": 237220, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262395, "new": 237290, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262396, "new": 237222, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262397, "new": 237221, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262398, "new": 237293, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262399, "new": 237294, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262400, "new": 237224, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 61, "old": 262401, "new": 237219, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 47, "old": 296650, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 47, "old": 296651, "new": 262668, "decision": "remap_to_active_twin", "qsim": 0.98, "osim": 1.0}
+{"pid": 47, "old": 296652, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 47, "old": 296653, "new": 262672, "decision": "remap_to_active_twin", "qsim": 0.974, "osim": 1.0}
+{"pid": 47, "old": 296657, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 47, "old": 296660, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 47, "old": 296661, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 47, "old": 296662, "new": 262873, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 47, "old": 296667, "new": 262630, "decision": "remap_to_active_twin", "qsim": 0.99, "osim": 1.0}
+{"pid": 47, "old": 296668, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 47, "old": 296681, "new": 262636, "decision": "remap_to_active_twin", "qsim": 0.992, "osim": 1.0}
+{"pid": 47, "old": 296682, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 47, "old": 296683, "new": 262875, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 47, "old": 296684, "new": 262635, "decision": "remap_to_active_twin", "qsim": 0.971, "osim": 1.0}
+{"pid": 47, "old": 296688, "new": 262650, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 47, "old": 296689, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 47, "old": 296691, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 47, "old": 296692, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 47, "old": 296694, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 47, "old": 296700, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 47, "old": 296701, "new": 237407, "decision": "remap_to_active_twin", "qsim": 0.993, "osim": 1.0}
+{"pid": 47, "old": 296702, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 47, "old": 296703, "new": 262645, "decision": "remap_to_active_twin", "qsim": 0.989, "osim": 1.0}
+{"pid": 47, "old": 296704, "new": 262647, "decision": "remap_to_active_twin", "qsim": 0.989, "osim": 1.0}
+{"pid": 47, "old": 296705, "new": 237424, "decision": "remap_to_active_twin", "qsim": 0.993, "osim": 1.0}
+{"pid": 47, "old": 296706, "new": 237421, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 47, "old": 296707, "new": 237428, "decision": "remap_to_active_twin", "qsim": 0.99, "osim": 1.0}
+{"pid": 47, "old": 296708, "new": 262821, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 47, "old": 296709, "new": 237519, "decision": "remap_to_active_twin", "qsim": 0.989, "osim": 1.0}
+{"pid": 47, "old": 296710, "new": 237429, "decision": "remap_to_active_twin", "qsim": 0.99, "osim": 1.0}
+{"pid": 47, "old": 296711, "new": 274061, "decision": "remap_to_active_twin", "qsim": 0.982, "osim": 1.0}
+{"pid": 47, "old": 296712, "new": 274182, "decision": "remap_to_active_twin", "qsim": 0.989, "osim": 1.0}
+{"pid": 47, "old": 296718, "new": 237439, "decision": "remap_to_active_twin", "qsim": 0.991, "osim": 0.993}
+{"pid": 47, "old": 296719, "new": 237438, "decision": "remap_to_active_twin", "qsim": 0.995, "osim": 1.0}
+{"pid": 47, "old": 296732, "new": 237443, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 47, "old": 296733, "new": 237534, "decision": "remap_to_active_twin", "qsim": 0.98, "osim": 1.0}
+{"pid": 47, "old": 296734, "new": 237450, "decision": "remap_to_active_twin", "qsim": 0.991, "osim": 1.0}
+{"pid": 47, "old": 296735, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 47, "old": 296736, "new": 237444, "decision": "remap_to_active_twin", "qsim": 0.99, "osim": 1.0}
+{"pid": 47, "old": 296737, "new": 237445, "decision": "remap_to_active_twin", "qsim": 0.973, "osim": 1.0}
+{"pid": 47, "old": 296738, "new": 237538, "decision": "remap_to_active_twin", "qsim": 0.972, "osim": 1.0}
+{"pid": 47, "old": 296739, "new": 237448, "decision": "remap_to_active_twin", "qsim": 0.976, "osim": 0.948}
+{"pid": 47, "old": 296740, "new": 237451, "decision": "remap_to_active_twin", "qsim": 0.973, "osim": 1.0}
+{"pid": 47, "old": 296741, "new": 237447, "decision": "remap_to_active_twin", "qsim": 0.996, "osim": 0.996}
+{"pid": 75, "old": 298416, "new": 264525, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298417, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 75, "old": 298419, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 75, "old": 298422, "new": 264532, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298426, "new": 264536, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298451, "new": 264561, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298452, "new": 264562, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298453, "new": 264563, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298454, "new": 264564, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298455, "new": 264565, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298457, "new": 264567, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298458, "new": 264568, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298459, "new": 264569, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298460, "new": 264570, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298461, "new": 264571, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298462, "new": 264572, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298463, "new": 264573, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298464, "new": 264574, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298465, "new": 264575, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298466, "new": 264576, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 319733, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 75, "old": 319745, "new": 264566, "decision": "remap_to_active_twin", "qsim": 0.986, "osim": 1.0}
+{"pid": 75, "old": 319756, "new": 264508, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 319761, "new": 264513, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 319769, "decision": "kept_pending_unverified", "reason": "解析枚举结果存疑（收费阶梯与6种时长对不上），未复核通过"}
+{"pid": 75, "old": 298467, "new": 264478, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298468, "new": 264479, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298469, "new": 264480, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298470, "new": 264481, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298471, "new": 264482, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298472, "new": 264483, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298473, "new": 264484, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298474, "new": 264485, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298475, "new": 264486, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298476, "new": 264487, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298481, "new": 264498, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298482, "new": 264499, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 0.994}
+{"pid": 75, "old": 298483, "new": 264500, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298484, "new": 264501, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298485, "new": 264502, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298486, "new": 264503, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298487, "new": 264504, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298488, "new": 264505, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298489, "new": 264506, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 298490, "new": 264507, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 319800, "new": 264507, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 75, "old": 319806, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 75, "old": 319807, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 113, "old": 272741, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 113, "old": 272742, "new": 260034, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272746, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 113, "old": 272747, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 113, "old": 272748, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 113, "old": 272749, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 113, "old": 272751, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 113, "old": 272752, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 113, "old": 272753, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 113, "old": 272756, "new": 260047, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272758, "new": 260049, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272760, "new": 260051, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272762, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 113, "old": 272767, "new": 260058, "decision": "remap_to_active_twin", "qsim": 0.994, "osim": 0.932}
+{"pid": 113, "old": 272771, "new": 260062, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 0.956}
+{"pid": 113, "old": 272775, "new": 260066, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272778, "new": 260069, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272780, "new": 260071, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272781, "new": 260072, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272782, "new": 260073, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272783, "new": 260074, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272784, "new": 260075, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272785, "new": 260076, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272786, "new": 260077, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272787, "new": 260078, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272788, "new": 260079, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272789, "new": 260080, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272790, "new": 260081, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272791, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 113, "old": 272792, "new": 260083, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272793, "new": 260084, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272795, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 113, "old": 272796, "new": 260087, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272797, "new": 260088, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272798, "new": 260089, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272799, "new": 260090, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272801, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 113, "old": 272805, "new": 260096, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272808, "new": 260099, "decision": "remap_to_active_twin", "qsim": 0.981, "osim": 1.0}
+{"pid": 113, "old": 272809, "new": 260100, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272810, "new": 260101, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272811, "new": 260102, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272812, "new": 260103, "decision": "remap_to_active_twin", "qsim": 0.984, "osim": 1.0}
+{"pid": 113, "old": 272813, "new": 260104, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272814, "new": 260105, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272815, "new": 260106, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272816, "new": 260107, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272817, "new": 260108, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272818, "new": 260109, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272819, "new": 260110, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272821, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 113, "old": 272822, "new": 260115, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272823, "new": 260116, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272824, "new": 260117, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272825, "new": 260118, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272826, "new": 260119, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 0.985}
+{"pid": 113, "old": 272827, "new": 260120, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272828, "new": 260121, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272829, "new": 260122, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272830, "new": 260123, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 113, "old": 272831, "new": 260124, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260233, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 124, "old": 260234, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 124, "old": 260239, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 124, "old": 260241, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 124, "old": 260242, "new": 236103, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260243, "decision": "kept_pending_unverified", "reason": "题干要求\"阅读表格\"但无材料/图片，无法独立作答"}
+{"pid": 124, "old": 260245, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 124, "old": 260246, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 124, "old": 260247, "new": 285309, "decision": "remap_to_active_twin", "qsim": 0.95, "osim": 1.0}
+{"pid": 124, "old": 260248, "new": 285209, "decision": "remap_to_active_twin", "qsim": 0.971, "osim": 1.0}
+{"pid": 124, "old": 260249, "new": 236122, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260250, "new": 285401, "decision": "remap_to_active_twin", "qsim": 0.957, "osim": 1.0}
+{"pid": 124, "old": 260251, "new": 236127, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260253, "new": 236128, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260255, "new": 236131, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260256, "new": 236134, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260260, "new": 236150, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260261, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 124, "old": 260262, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 124, "old": 260266, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 124, "old": 260268, "new": 236146, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260271, "new": 236147, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260276, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 124, "old": 260278, "new": 236160, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260279, "new": 236323, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260280, "new": 236164, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260281, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 124, "old": 260282, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 124, "old": 260283, "new": 236163, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260284, "new": 236328, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260285, "new": 236329, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260286, "new": 236169, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260287, "new": 236166, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260288, "new": 236332, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260289, "new": 236170, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260290, "new": 236171, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260291, "new": 236172, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260292, "new": 236336, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260293, "new": 236167, "decision": "remap_to_active_twin", "qsim": 0.995, "osim": 1.0}
+{"pid": 124, "old": 260294, "new": 236174, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260298, "new": 236176, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260299, "new": 236175, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260300, "new": 236183, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260301, "new": 236177, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260302, "new": 236179, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 0.969}
+{"pid": 124, "old": 260303, "new": 236178, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260304, "new": 236181, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260306, "new": 236182, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 124, "old": 260307, "new": 236347, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272594, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 118, "old": 272595, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 118, "old": 272599, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 118, "old": 272600, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 118, "old": 272603, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 118, "old": 272604, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 118, "old": 272606, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 118, "old": 272607, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 118, "old": 272610, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 118, "old": 272611, "new": 259897, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272612, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 118, "old": 272616, "new": 259902, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272619, "new": 259905, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272620, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 118, "old": 272625, "new": 259911, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272630, "new": 259916, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272632, "new": 259918, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272633, "new": 259919, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272634, "new": 259920, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272635, "new": 259921, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272637, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 118, "old": 272643, "new": 259927, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272644, "new": 259928, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272645, "new": 259929, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272647, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 118, "old": 272650, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 118, "old": 272651, "new": 259937, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272655, "new": 259941, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272656, "new": 259942, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272658, "new": 259944, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272659, "new": 259945, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272660, "new": 259946, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272661, "new": 259947, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272662, "new": 259948, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272663, "new": 259949, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 0.987}
+{"pid": 118, "old": 272664, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 118, "old": 272665, "new": 259951, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272666, "new": 259952, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272667, "new": 259953, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272668, "new": 259954, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272670, "new": 259956, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 0.99}
+{"pid": 118, "old": 272671, "new": 259957, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272672, "new": 259958, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272673, "new": 259959, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272674, "new": 259960, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272675, "new": 259961, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272676, "new": 259962, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 118, "old": 272677, "new": 259963, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 298379, "new": 262229, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 298381, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 90, "old": 319519, "new": 262229, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 319523, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 90, "old": 298360, "new": 262161, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 298367, "new": 288308, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 298368, "new": 288387, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 298369, "new": 262173, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 298370, "new": 288304, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 298372, "new": 262177, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 298373, "new": 262179, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 298374, "new": 288306, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 298375, "new": 262181, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 298376, "new": 288397, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 298377, "new": 288395, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 298378, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 90, "old": 319504, "new": 262168, "decision": "remap_to_active_twin", "qsim": 0.972, "osim": 1.0}
+{"pid": 90, "old": 319505, "new": 288308, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 319510, "new": 262175, "decision": "remap_to_active_twin", "qsim": 0.995, "osim": 1.0}
+{"pid": 90, "old": 319512, "new": 262179, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 319513, "new": 288306, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 319517, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 90, "old": 319479, "new": 262186, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 319489, "new": 262194, "decision": "remap_to_active_twin", "qsim": 0.981, "osim": 1.0}
+{"pid": 90, "old": 319492, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 90, "old": 298396, "new": 262202, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 298397, "new": 262203, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 298398, "new": 262204, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 298399, "new": 262206, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 298400, "new": 262207, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 298405, "new": 262219, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 0.989}
+{"pid": 90, "old": 298406, "new": 262220, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 298407, "new": 262221, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 298408, "new": 262222, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 298409, "new": 262223, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 298411, "new": 262225, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 298412, "new": 262226, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 298413, "new": 262227, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 319558, "new": 262223, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 0.992}
+{"pid": 90, "old": 319559, "new": 262224, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 319560, "new": 262225, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 319561, "new": 262226, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 90, "old": 319562, "new": 262227, "decision": "remap_to_active_twin", "qsim": 0.987, "osim": 1.0}
+{"pid": 90, "old": 319563, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 103, "old": 260657, "new": 261338, "decision": "kept_pending_answer_conflict", "old_ans": "D", "new_ans": "C"}
+{"pid": 103, "old": 260665, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 103, "old": 260667, "new": 260847, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 103, "old": 260671, "new": 260851, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 103, "old": 260672, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 103, "old": 260673, "new": 260854, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 103, "old": 260674, "new": 260855, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 103, "old": 260677, "new": 236371, "decision": "remap_to_active_twin", "qsim": 0.997, "osim": 1.0}
+{"pid": 103, "old": 260679, "new": 236373, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 103, "old": 260680, "new": 236374, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 103, "old": 260681, "new": 236375, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 103, "old": 260683, "new": 236377, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 103, "old": 260684, "new": 260867, "decision": "remap_to_active_twin", "qsim": 0.997, "osim": 1.0}
+{"pid": 103, "old": 260687, "new": 260873, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 103, "old": 260688, "new": 260875, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 103, "old": 260689, "new": 236383, "decision": "remap_to_active_twin", "qsim": 0.997, "osim": 1.0}
+{"pid": 103, "old": 260693, "new": 260879, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 0.996}
+{"pid": 103, "old": 260697, "new": 260885, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 103, "old": 260698, "new": 236393, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 103, "old": 260699, "new": 260882, "decision": "remap_to_active_twin", "qsim": 0.998, "osim": 1.0}
+{"pid": 103, "old": 260700, "new": 236395, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 103, "old": 260701, "new": 286938, "decision": "kept_pending_answer_conflict", "old_ans": "A", "new_ans": "C"}
+{"pid": 103, "old": 260702, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 103, "old": 260703, "new": 260889, "decision": "remap_to_active_twin", "qsim": 0.994, "osim": 1.0}
+{"pid": 103, "old": 260705, "new": 260891, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 103, "old": 260706, "new": 236401, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 103, "old": 260707, "new": 236402, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 103, "old": 260709, "new": 260899, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 0.991}
+{"pid": 103, "old": 260710, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确", "fix_module": "shuliang->panduan"}
+{"pid": 103, "old": 260711, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 103, "old": 260712, "new": 236407, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 103, "old": 260713, "new": 236584, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 0.992}
+{"pid": 103, "old": 260714, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确", "fix_module": "shuliang->panduan"}
+{"pid": 103, "old": 260715, "new": 236409, "decision": "remap_to_active_twin", "qsim": 0.99, "osim": 1.0}
+{"pid": 103, "old": 260718, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 103, "old": 260719, "new": 236411, "decision": "remap_to_active_twin", "qsim": 0.993, "osim": 1.0}
+{"pid": 103, "old": 260720, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确", "fix_module": "shuliang->panduan"}
+{"pid": 103, "old": 260721, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确", "fix_module": "shuliang->panduan"}
+{"pid": 103, "old": 260722, "new": 236414, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 103, "old": 260723, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确", "fix_module": "shuliang->panduan"}
+{"pid": 103, "old": 260724, "new": 236416, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 103, "old": 260725, "new": 236417, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 37, "old": 262667, "new": 237368, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 37, "old": 262669, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 37, "old": 262670, "new": 274101, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 37, "old": 262671, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 37, "old": 262675, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 37, "old": 262677, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 37, "old": 262679, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 37, "old": 262682, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 37, "old": 262631, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 37, "old": 262632, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 37, "old": 262633, "new": 237392, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 37, "old": 262637, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 37, "old": 262638, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 37, "old": 262640, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 37, "old": 262641, "new": 237489, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 37, "old": 262642, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 37, "old": 262643, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 37, "old": 262644, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 37, "old": 262646, "new": 274078, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 37, "old": 262652, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 37, "old": 262653, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 37, "old": 262654, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 37, "old": 262657, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 37, "old": 262658, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 37, "old": 262659, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 37, "old": 262661, "new": 237407, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 37, "old": 262663, "new": 237404, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 37, "old": 262664, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 37, "old": 262620, "new": 237422, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 37, "old": 262621, "new": 237424, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 37, "old": 262622, "new": 237421, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 37, "old": 262623, "new": 237428, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 37, "old": 262624, "new": 237426, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 37, "old": 262625, "new": 237519, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 37, "old": 262628, "new": 237522, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 37, "old": 262629, "new": 274061, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 37, "old": 262684, "new": 237440, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 37, "old": 262685, "new": 237432, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 37, "old": 262687, "new": 237433, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 37, "old": 262688, "new": 237431, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 37, "old": 262689, "new": 237435, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 37, "old": 262691, "new": 237530, "decision": "kept_pending_answer_conflict", "old_ans": "B", "new_ans": "C"}
+{"pid": 37, "old": 262695, "new": 237443, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 37, "old": 262696, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 37, "old": 262697, "new": 237450, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 37, "old": 262698, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确"}
+{"pid": 37, "old": 262699, "new": 237444, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 37, "old": 262700, "new": 237446, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 37, "old": 262701, "new": 237538, "decision": "remap_to_active_twin", "qsim": 0.994, "osim": 1.0}
+{"pid": 37, "old": 262702, "new": 237448, "decision": "remap_to_active_twin", "qsim": 0.988, "osim": 0.948}
+{"pid": 37, "old": 262703, "new": 237451, "decision": "kept_pending_answer_conflict", "old_ans": "A", "new_ans": "C"}
+{"pid": 116, "old": 273003, "new": 260466, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273006, "new": 260469, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273007, "new": 260470, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273008, "new": 260471, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273012, "decision": "kept_pending_unverified", "reason": "无孪生且未通过人工复核（解析相关性弱/质量存疑），保持 disabled 待后续裁定"}
+{"pid": 116, "old": 273013, "new": 260475, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273014, "new": 260476, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273016, "new": 260478, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273021, "new": 260482, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273025, "new": 260486, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273026, "new": 260487, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273027, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确", "fix_answer": "ABCD"}
+{"pid": 116, "old": 273031, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确", "fix_answer": "ACD"}
+{"pid": 116, "old": 273032, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确", "fix_answer": "BCD"}
+{"pid": 116, "old": 273036, "decision": "restored_in_paper", "review": "人工逐题复核：题干/选项/答案/解析一致且事实正确", "fix_answer": "BD"}
+{"pid": 116, "old": 273040, "new": 260500, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273043, "new": 260503, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273045, "new": 260505, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273049, "new": 260508, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273069, "new": 260527, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273071, "new": 260529, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273078, "new": 260536, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273083, "new": 260541, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273085, "new": 260543, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273087, "new": 260545, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273088, "new": 260546, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273089, "new": 260547, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273090, "new": 260548, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273091, "new": 260549, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273092, "new": 260550, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273093, "new": 260551, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273094, "new": 260552, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273095, "new": 260553, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273096, "new": 260554, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273098, "new": 260556, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273099, "new": 260557, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273100, "new": 260558, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273101, "new": 260559, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273102, "new": 260561, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273104, "new": 260562, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273105, "new": 260563, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273106, "new": 260564, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273107, "new": 260565, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
+{"pid": 116, "old": 273108, "new": 260566, "decision": "remap_to_active_twin", "qsim": 1.0, "osim": 1.0}
