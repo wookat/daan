@@ -165,7 +165,7 @@ Page({
       this._shareTitle = `我考你一道${mod}题，你能做对吗？`;
       trackEvent('share_copy', 'share_q', d.sid);
       wx.setClipboardData({
-        data: `【${mod}】我刚在考公助手做了一道题，你能做对吗？答完就能看到大家选了啥：https://kaogong.zalize.com/#/pkgA/share/share-q?sid=${d.sid}`,
+        data: `【${mod}】我刚在考公助手做了一道题，你能做对吗？答完就能看到大家选了啥：https://kaogong.zalize.com/s/${d.sid}`,
         success: () =>
           wx.showToast({ title: '链接已复制，也可点右上角转发给队友', icon: 'none' }),
       });

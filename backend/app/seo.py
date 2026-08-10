@@ -262,7 +262,7 @@ def tiku_paper_detail(pid: int):
         got = {
             r["id"]: r
             for r in conn.execute(
-                f"SELECT id, question, submodule, is_real, exam_year, exam_region FROM questions "
+                f"SELECT id, question, module, submodule, is_real, exam_year, exam_region FROM questions "
                 f"WHERE id IN ({placeholders}) AND disabled=0",
                 qids,
             )
@@ -270,22 +270,65 @@ def tiku_paper_detail(pid: int):
         conn.close()
         rows = [got[i] for i in qids if i in got]
     title = p["title"]
+    mod_dist: dict[str, int] = {}
+    for r in rows:
+        if _module_name(r["module"]):
+            mod_dist[r["module"]] = mod_dist.get(r["module"], 0) + 1
+    dist_links = "".join(
+        f'<a href="/tiku/{quote(m)}/">{_e(_module_name(m))} {n} 题</a>'
+        for m, n in sorted(mod_dist.items(), key=lambda kv: -kv[1])
+    )
+    dist_text = "、".join(
+        f"{_module_name(m)}{n}题" for m, n in sorted(mod_dist.items(), key=lambda kv: -kv[1])
+    )
+    siblings = [
+        sp for sp in db.list_exam_papers(kind="zhenti", year=p["year"]) if sp["id"] != pid
+    ][:10] if p["year"] else []
+    sib_links = "".join(
+        f'<a href="/tiku/papers/{sp["id"]}">{_e(sp["title"])}</a>' for sp in siblings
+    )
+    year_links = "".join(
+        f'<a href="{_e(_year_path(p["year"], m))}">{p["year"]}年{_e(_module_name(m))}真题</a>'
+        for m in mod_dist
+        if db.year_module_counts().get((p["year"], m))
+    ) if p["year"] else ""
     body = (
         _crumb([("题库", "/tiku/"), ("真题卷", "/tiku/papers/"), (title, None)])
         + f"<h1>{_e(title)}</h1>"
         + f'<p class="meta">{_e(p["year"] or "")} {_e(p["region"] or "")} · 共 {len(rows)} 题'
         + (f' · 限时 {p["duration_min"]} 分钟' if p["duration_min"] else "")
         + "</p>"
+        + (f'<div class="card"><h2>模块分布</h2><div class="tags">{dist_links}</div></div>' if dist_links else "")
         + f'<a class="cta" href="{_e(SITE_BASE)}/#/pkgA/exam/list">在线模考本卷 →</a>'
         + '<div class="card">'
         + _q_items(rows)
         + "</div>"
+        + (f'<div class="card"><h2>按模块刷{p["year"]}年真题</h2><div class="tags">{year_links}</div></div>' if year_links else "")
+        + (f'<div class="card"><h2>{p["year"]}年其他真题卷</h2><div class="tags">{sib_links}</div></div>' if sib_links else "")
     )
+    jsonld = {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "name": title,
+        "description": f"{title}，共 {len(rows)} 题，在线全真模考并查看逐题答案解析。",
+        "url": _url(f"/tiku/papers/{pid}"),
+        "isPartOf": {"@type": "WebSite", "name": "考公错题助手", "url": SITE_BASE},
+        "breadcrumb": {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+                {"@type": "ListItem", "position": 1, "name": "题库", "item": _url("/tiku/")},
+                {"@type": "ListItem", "position": 2, "name": "真题卷", "item": _url("/tiku/papers/")},
+                {"@type": "ListItem", "position": 3, "name": title, "item": _url(f"/tiku/papers/{pid}")},
+            ],
+        },
+    }
     return _page(
         f"{title}_真题卷在线模考_考公错题助手",
-        f"{title}，共 {len(rows)} 题，在线全真模考并查看逐题答案解析。",
+        f"{title}，共 {len(rows)} 题（{dist_text}），在线全真模考并生成成绩报告，附逐题答案解析。" if dist_text
+        else f"{title}，共 {len(rows)} 题，在线全真模考并查看逐题答案解析。",
         f"/tiku/papers/{pid}",
         body,
+        jsonld,
     )
 
 
@@ -702,7 +745,7 @@ def sitemap_pages():
         urls.append((_url(f'/tiku/{quote(r["module"])}/'), None))
         for s in db.submodule_counts(r["module"]):
             urls.append((_url(_sub_path(r["module"], s["submodule"])), None))
-    urls += [(_url(f'/tiku/papers/{p["id"]}'), None) for p in db.list_exam_papers(kind="zhenti")]
+    urls += [(_url(f'/tiku/papers/{p["id"]}'), p["created_at"]) for p in db.list_exam_papers(kind="zhenti")]
     return _urlset(urls)
 
 
@@ -748,6 +791,57 @@ def indexnow_key():
     if not INDEXNOW_KEY:
         raise HTTPException(404, "未配置")
     return PlainTextResponse(INDEXNOW_KEY)
+
+
+@root_router.get("/s/{sid}", response_class=HTMLResponse, include_in_schema=False)
+def share_landing(sid: str):
+    """分享落地页：服务端输出动态 OG（题干摘要作 og:description）后跳转 SPA 分享页。
+
+    社交爬虫（微信/QQ/微博/Telegram 等）抓 head 里的 OG；真实用户被 JS 立即带去
+    /#/pkgA/share/share-q。不含答案/解析，noindex 避免瘦内容进索引。
+    """
+    sid = sid.strip()[:16]
+    conn = db.get_conn()
+    try:
+        s = conn.execute(
+            "SELECT question_id, from_name FROM shared_questions WHERE sid=?", (sid,)
+        ).fetchone()
+        q = conn.execute(
+            "SELECT question, module FROM questions WHERE id=? AND disabled=0", (s["question_id"],)
+        ).fetchone() if s else None
+    except db.sqlite3.OperationalError:
+        s = q = None
+    finally:
+        conn.close()
+    if not s or not q:
+        return RedirectResponse(SITE_BASE + "/", status_code=302)
+    mod = _module_name(q["module"]) or "行测"
+    summary = " ".join((q["question"] or "").split())
+    if len(summary) > 90:
+        summary = summary[:90] + "…"
+    from_name = (s["from_name"] or "考友").strip()[:20]
+    title = f"{from_name}分享了一道{mod}题，敢来挑战吗？"
+    spa = f"/#/pkgA/share/share-q?sid={quote(sid)}"
+    page_url = _url(f"/s/{quote(sid)}")
+    return HTMLResponse(
+        '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        '<meta name="robots" content="noindex">'
+        f"<title>{_e(title)}</title>"
+        f'<meta name="description" content="{_e(summary)}">'
+        f'<meta property="og:type" content="website">'
+        f'<meta property="og:site_name" content="考公错题助手">'
+        f'<meta property="og:title" content="{_e(title)}">'
+        f'<meta property="og:description" content="{_e(summary)}">'
+        f'<meta property="og:url" content="{_e(page_url)}">'
+        f'<meta name="twitter:card" content="summary">'
+        f'<meta name="twitter:title" content="{_e(title)}">'
+        f'<meta name="twitter:description" content="{_e(summary)}">'
+        f'<meta http-equiv="refresh" content="0;url={_e(spa)}">'
+        f'<script>location.replace("{spa}"+location.search.replace("?","&"))</script>'
+        f"</head><body><p>正在打开分享题目… "
+        f'<a href="{_e(spa)}">点此继续</a></p></body></html>'
+    )
 
 
 @root_router.get("/robots.txt", include_in_schema=False)

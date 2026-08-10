@@ -157,7 +157,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
     try {
       final sid = await Api.shareCreate(qid);
       final text =
-          '我在考公助手分享了一道题，敢来挑战吗？https://kaogong.zalize.com/#/pkgA/share/share-q?sid=$sid';
+          '我在考公助手分享了一道题，敢来挑战吗？https://kaogong.zalize.com/s/$sid';
       await Clipboard.setData(ClipboardData(text: text));
       if (mounted) {
         ScaffoldMessenger.of(context)
