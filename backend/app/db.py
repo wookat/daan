@@ -2646,6 +2646,10 @@ def create_mock_paper(n: int = 30, duration_min: int = 30) -> int:
 def start_exam_attempt(uid: str, paper_id: int) -> int:
     conn = get_conn()
     _ensure_exam_tables(conn)
+    conn.execute(
+        "DELETE FROM exam_attempts WHERE uid=? AND submitted_at IS NULL AND started_at<?",
+        (uid, time.time() - 86400),
+    )
     cur = conn.execute(
         "INSERT INTO exam_attempts (uid, paper_id, started_at) VALUES (?,?,?)",
         (uid, paper_id, time.time()),
