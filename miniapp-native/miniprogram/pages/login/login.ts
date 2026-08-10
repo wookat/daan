@@ -1,4 +1,4 @@
-import { authLogin, authRegister, mergeAnon } from '../../api/index';
+import { authLogin, authRegister, authWxLogin, mergeAnon } from '../../api/index';
 import { setAuth } from '../../utils/auth';
 
 Page({
@@ -8,7 +8,32 @@ Page({
     password: '',
     nickname: '',
     busy: false,
+    wxBusy: false,
     err: '',
+  },
+  async onWxLogin() {
+    if (this.data.wxBusy) return;
+    this.setData({ wxBusy: true, err: '' });
+    try {
+      const { code } = await wx.login();
+      if (!code) throw new Error('微信登录失败，请重试');
+      const anon = wx.getStorageSync<string>('anonUid') || '';
+      const r = await authWxLogin(code);
+      setAuth(r.token, r.user);
+      if (anon && anon !== r.user.uid) {
+        try {
+          await mergeAnon(anon);
+          wx.showToast({ title: '本机记录已合并到账号', icon: 'success', duration: 2000 });
+        } catch (e) {
+          /* 合并失败不阻断登录 */
+        }
+      }
+      wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/profile/profile' }) });
+    } catch (e) {
+      this.setData({ err: (e as Error).message });
+    } finally {
+      this.setData({ wxBusy: false });
+    }
   },
   onSwitch() {
     this.setData({ mode: this.data.mode === 'login' ? 'register' : 'login', err: '' });

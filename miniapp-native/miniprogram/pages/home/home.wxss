@@ -4,7 +4,7 @@
 }
 
 .wrap {
-  padding: 24rpx 32rpx 40rpx;
+  padding: 24rpx 32rpx calc(160rpx + env(safe-area-inset-bottom));
 }
 
 .hero {

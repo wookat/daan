@@ -9,6 +9,7 @@ const SUBSCRIBE_TMPL_ID = '';
 Page({
   data: {
     user: null as { uid: string; phone?: string; nickname?: string | null } | null,
+    avatarChar: '游',
     uid: '',
     badgeInfo: null as CheckinBadgesResp | null,
     nextMilestone: null as { days: number; left: number; pct: number } | null,
@@ -16,7 +17,9 @@ Page({
   },
   onShow() {
     syncTabBar(this, 4);
-    this.setData({ user: getAuthUser(), uid: anonUid() });
+    const user = getAuthUser();
+    const avatarChar = user ? (user.nickname || user.phone || '用').slice(0, 1) : '游';
+    this.setData({ user, avatarChar, uid: anonUid() });
     this.loadBadges();
     this.loadReminder();
   },

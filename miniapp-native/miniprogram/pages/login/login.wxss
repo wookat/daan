@@ -25,6 +25,31 @@
   --td-button-primary-border-color: #3b6ff5;
 }
 
+.l-wxbtn {
+  margin-top: 8rpx;
+  --td-button-primary-bg-color: #07c160;
+  --td-button-primary-border-color: #07c160;
+}
+
+.l-divider {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin: 32rpx 0 8rpx;
+}
+
+.l-line {
+  flex: 1;
+  height: 1rpx;
+  background: var(--border);
+}
+
+.l-or {
+  font-size: 22rpx;
+  color: var(--t4);
+  margin: 0 16rpx;
+}
+
 .l-switch {
   text-align: center;
   color: var(--brand-500);

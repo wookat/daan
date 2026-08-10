@@ -113,11 +113,12 @@ def _mask_phone(phone: str) -> str:
 
 
 def _user_payload(row) -> dict:
+    is_wx = str(row["phone"]).startswith("wx:")
     return {
         "id": row["id"],
         "uid": user_uid(row["id"]),
-        "phone": _mask_phone(row["phone"]),
-        "nickname": row["nickname"] or ("考友" + str(row["phone"])[-4:]),
+        "phone": None if is_wx else _mask_phone(row["phone"]),
+        "nickname": row["nickname"] or ("微信考友" if is_wx else "考友" + str(row["phone"])[-4:]),
         "created_at": row["created_at"],
     }
 
@@ -217,6 +218,56 @@ def api_login(body: dict, request: Request):
     if not row or not verify_password(password, row["password_hash"]):
         conn.close()
         raise HTTPException(401, "手机号或密码错误")
+    token = _issue_token(conn, row["id"])
+    conn.commit()
+    conn.close()
+    return {"token": token, "user": _user_payload(row)}
+
+
+@router.post("/wxlogin")
+def api_wxlogin(body: dict, request: Request):
+    """微信小程序一键登录：wx.login code -> openid -> 找到/创建账号并发 token。"""
+    import os
+
+    import httpx
+
+    code = str(body.get("code") or "").strip()
+    nickname = str(body.get("nickname") or "").strip()[:20] or None
+    if not code:
+        raise HTTPException(400, "缺少微信登录 code")
+    appid = os.environ.get("WX_MINIAPP_APPID", "wx01f2f29cfe51baba")
+    secret = os.environ.get("WX_MINIAPP_SECRET", "")
+    if not secret:
+        raise HTTPException(503, "微信登录暂未开通（服务端未配置小程序密钥）")
+    ip = request.client.host if request.client else "?"
+    rate_limit(f"wxlogin:{ip}", 20, 300)
+    try:
+        r = httpx.get(
+            "https://api.weixin.qq.com/sns/jscode2session",
+            params={
+                "appid": appid,
+                "secret": secret,
+                "js_code": code,
+                "grant_type": "authorization_code",
+            },
+            timeout=10,
+        )
+        data = r.json()
+    except Exception:
+        raise HTTPException(502, "微信登录服务暂不可用，请稍后再试") from None
+    openid = data.get("openid")
+    if not openid:
+        raise HTTPException(401, f"微信登录失败：{data.get('errmsg') or '无效 code'}")
+    conn = db.get_conn()
+    conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_phone ON users(phone)")
+    placeholder = f"wx:{openid}"
+    row = conn.execute("SELECT * FROM users WHERE phone=?", (placeholder,)).fetchone()
+    if not row:
+        cur = conn.execute(
+            "INSERT INTO users (phone, password_hash, nickname, created_at) VALUES (?,?,?,?)",
+            (placeholder, hash_password(secrets.token_urlsafe(24)), nickname or "微信考友", time.time()),
+        )
+        row = conn.execute("SELECT * FROM users WHERE id=?", (cur.lastrowid,)).fetchone()
     token = _issue_token(conn, row["id"])
     conn.commit()
     conn.close()
