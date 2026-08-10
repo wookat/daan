@@ -2,6 +2,12 @@
   <view class="wrap">
     <view v-if="loading" class="spin">报告加载中…</view>
 
+    <view v-if="!loading && !report" class="card empty">
+      <text class="empty-t">暂无成绩报告</text>
+      <text class="empty-s">请从模考交卷或「模考记录」进入查看报告</text>
+      <view class="pbtn main" @click="goList">去卷库</view>
+    </view>
+
     <template v-if="!loading && report">
       <view class="card hero">
         <text class="hero-title">{{ report.paper.title }}</text>
@@ -141,7 +147,11 @@ export default {
     },
   },
   onLoad(opt) {
-    this.load(opt.attempt_id);
+    if (opt && opt.attempt_id) {
+      this.load(opt.attempt_id);
+    } else {
+      this.loading = false;
+    }
   },
   methods: {
     async load(aid) {
@@ -187,6 +197,10 @@ export default {
 <style scoped>
 .wrap { padding: 24rpx; padding-bottom: 40rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 60rpx 24rpx; }
+.empty { text-align: center; padding: 80rpx 28rpx; }
+.empty-t { display: block; font-size: 30rpx; font-weight: 600; color: var(--ink); }
+.empty-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 12rpx; margin-bottom: 32rpx; }
+.empty .pbtn { margin: 0 auto; max-width: 320rpx; }
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 30rpx; font-weight: 600; margin-bottom: 20rpx; }
 .hero { background: linear-gradient(135deg, var(--brand), #6c9bff); border: none; text-align: center; }
