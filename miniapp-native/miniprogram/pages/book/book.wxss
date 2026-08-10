@@ -476,3 +476,176 @@
   font-size: 22rpx;
   color: var(--t2);
 }
+
+/* 筛选按钮 */
+.filterbtn {
+  margin-left: auto;
+  font-size: 24rpx;
+  color: var(--t2);
+  padding: 8rpx 20rpx;
+  border-radius: var(--r-full);
+  background: var(--fill);
+}
+
+.filterbtn.fon {
+  color: var(--brand-500);
+  background: var(--brand-50);
+}
+
+/* 收藏夹 */
+.folders-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.fold-chip {
+  font-size: 24rpx;
+  color: var(--t2);
+  background: var(--surface);
+  border: 1rpx solid var(--border);
+  border-radius: var(--r-full);
+  padding: 10rpx 22rpx;
+}
+
+.fold-chip.on {
+  color: var(--brand-500);
+  border-color: var(--brand-500);
+  background: var(--brand-50);
+}
+
+.fold-chip.fold-new {
+  color: var(--brand-500);
+  border-style: dashed;
+}
+
+.fold-tip {
+  display: block;
+  margin: 12rpx 0 4rpx;
+  font-size: 21rpx;
+  color: var(--t3);
+}
+
+.fav-note {
+  margin-top: 12rpx;
+  font-size: 23rpx;
+  color: var(--t2);
+  background: var(--fill);
+  border-radius: var(--r-s);
+  padding: 12rpx 16rpx;
+}
+
+/* 底部操作 sheet（筛选/纠错/笔记共用） */
+.sheet-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 998;
+  display: flex;
+  align-items: flex-end;
+}
+
+.sheet {
+  width: 100%;
+  background: var(--surface);
+  border-radius: var(--r-l) var(--r-l) 0 0;
+  padding: 28rpx 32rpx calc(40rpx + env(safe-area-inset-bottom));
+  max-height: 75vh;
+  overflow-y: auto;
+}
+
+.sheet-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sheet-t {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: var(--t1);
+}
+
+.sheet-x {
+  font-size: 30rpx;
+  color: var(--t3);
+  padding: 8rpx;
+}
+
+.sheet-st {
+  display: block;
+  margin-top: 24rpx;
+  font-size: 24rpx;
+  color: var(--t2);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 14rpx;
+}
+
+.chip {
+  font-size: 24rpx;
+  color: var(--t2);
+  background: var(--fill);
+  border-radius: var(--r-full);
+  padding: 10rpx 24rpx;
+}
+
+.chip.on {
+  color: #fff;
+  background: var(--brand-500);
+}
+
+.sheet-ta {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 140rpx;
+  margin-top: 20rpx;
+  padding: 16rpx 20rpx;
+  font-size: 25rpx;
+  color: var(--t1);
+  background: var(--fill);
+  border-radius: var(--r-s);
+}
+
+.note-ta {
+  min-height: 220rpx;
+}
+
+.sheet-row {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 28rpx;
+}
+
+.sheet-btn {
+  flex: 1;
+  margin-top: 0;
+  text-align: center;
+  background: var(--brand-500);
+  color: #fff;
+  font-size: 27rpx;
+  font-weight: 600;
+  border-radius: var(--r-full);
+  padding: 20rpx 0;
+}
+
+.sheet-mask > .sheet > .sheet-btn:last-child {
+  margin-top: 28rpx;
+}
+
+.sheet-btn.ghost {
+  background: var(--fill);
+  color: var(--t2);
+}
+
+.sheet-btn.ghost.danger {
+  color: var(--error);
+}
+
+.sheet-btn.dis {
+  opacity: 0.5;
+}

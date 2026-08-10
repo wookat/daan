@@ -45,6 +45,7 @@ export interface Mistake {
   explanation?: string | null;
   mastered?: number;
   error_reason?: string | null;
+  times?: number;
   tag3_name?: string | null;
   created_at?: number | string;
   options?: Record<string, string> | null;
@@ -108,6 +109,24 @@ export interface FavItem {
   module?: string | null;
   question?: string;
   folder_id?: number | null;
+  note?: string | null;
+  faved_at?: number;
+}
+
+export interface FavFolder {
+  id: number;
+  name: string;
+  icon?: string | null;
+  n: number;
+}
+
+export interface NoteItem {
+  question_id: number;
+  content: string;
+  updated_at: number;
+  question?: string | null;
+  module?: string | null;
+  submodule?: string | null;
 }
 
 export interface PracticeResultResp {

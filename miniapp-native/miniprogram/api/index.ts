@@ -8,9 +8,11 @@ import type {
   ExamReportResp,
   ExamStartResp,
   ExamSubmitResp,
+  FavFolder,
   FavItem,
   Mistake,
   MistakesResp,
+  NoteItem,
   Paper,
   PkResultResp,
   PlanToday,
@@ -119,8 +121,37 @@ export function deleteMistake(id: number): Promise<void> {
 
 // ---------- 收藏 ----------
 
-export function fetchFavs(): Promise<{ items: FavItem[] }> {
-  return request<{ items: FavItem[] }>('/api/favs?uid=' + encodeURIComponent(anonUid()));
+export function fetchFavs(folderId?: number | null): Promise<{ items: FavItem[] }> {
+  let q = '/api/favs?uid=' + encodeURIComponent(anonUid());
+  if (folderId != null) q += '&folder_id=' + folderId;
+  return request<{ items: FavItem[] }>(q);
+}
+
+export function fetchFavFolders(): Promise<{ items: FavFolder[] }> {
+  return request<{ items: FavFolder[] }>(
+    '/api/favs/folders?uid=' + encodeURIComponent(anonUid())
+  );
+}
+
+export function createFavFolder(name: string): Promise<{ id: number }> {
+  return request<{ id: number }>('/api/favs/folders', {
+    method: 'POST',
+    data: { uid: anonUid(), name },
+  });
+}
+
+export function renameFavFolder(fid: number, name: string): Promise<void> {
+  return request<void>('/api/favs/folders/' + fid, {
+    method: 'PATCH',
+    data: { uid: anonUid(), name },
+  });
+}
+
+export function deleteFavFolder(fid: number): Promise<void> {
+  return request<void>(
+    '/api/favs/folders/' + fid + '?uid=' + encodeURIComponent(anonUid()),
+    { method: 'DELETE' }
+  );
 }
 
 export function deleteFav(questionId: number): Promise<void> {
@@ -128,6 +159,38 @@ export function deleteFav(questionId: number): Promise<void> {
     '/api/favs?uid=' + encodeURIComponent(anonUid()) + '&question_id=' + questionId,
     { method: 'DELETE' }
   );
+}
+
+// ---------- 笔记 / 纠错 ----------
+
+export function fetchNote(
+  questionId: number
+): Promise<{ item: { content: string; updated_at: number } | null }> {
+  return request<{ item: { content: string; updated_at: number } | null }>(
+    '/api/notes?uid=' + encodeURIComponent(anonUid()) + '&question_id=' + questionId
+  );
+}
+
+export function fetchNotes(): Promise<{ items: NoteItem[] }> {
+  return request<{ items: NoteItem[] }>('/api/notes?uid=' + encodeURIComponent(anonUid()));
+}
+
+export function saveNote(questionId: number, content: string): Promise<void> {
+  return request<void>('/api/notes', {
+    method: 'POST',
+    data: { uid: anonUid(), question_id: questionId, content },
+  });
+}
+
+export function postQuestionReport(
+  questionId: number,
+  rtype: string,
+  detail: string
+): Promise<void> {
+  return request<void>('/api/question_report', {
+    method: 'POST',
+    data: { uid: anonUid(), question_id: questionId, type: rtype, detail },
+  });
 }
 
 // ---------- 学习提醒 ----------

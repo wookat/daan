@@ -1,15 +1,22 @@
 import {
+  createFavFolder,
   deleteFav,
+  deleteFavFolder,
+  fetchFavFolders,
   fetchFavs,
   fetchMistakes,
+  fetchNote,
   fetchQuestions,
   fetchReviewDue,
   patchMistake,
+  postQuestionReport,
   postReviewRecord,
+  renameFavFolder,
+  saveNote,
   shareCreate,
   trackEvent,
 } from '../../api/index';
-import type { FavItem, Mistake } from '../../api/types';
+import type { FavFolder, FavItem, Mistake } from '../../api/types';
 import { modName } from '../../utils/stats';
 import { syncTabBar } from '../../utils/tabbar';
 
@@ -32,6 +39,15 @@ interface RecapRow {
 }
 
 const REASONS = ['粗心大意', '概念不清', '方法不会', '纯蒙的'];
+
+const REPORT_TYPES = ['答案错误', '解析错误', '题干或选项错字', '图片缺失', '分类错误', '重复题', '其他'];
+
+const SORTS = [
+  { k: 'time', t: '最新' },
+  { k: 'times', t: '错次多' },
+  { k: 'type', t: '按题型' },
+  { k: 'reason', t: '按错因' },
+];
 
 function monthRecap(all: Mistake[]): { total: number; byModule: RecapRow[]; byReason: RecapRow[] } {
   const now = new Date();
@@ -86,6 +102,29 @@ Page({
     celebrate: false,
     celebrateN: 0,
     REASONS,
+    // 筛选/排序
+    filterOpen: false,
+    SORTS,
+    sortBy: 'time',
+    filterMod: '',
+    modOptions: [] as string[],
+    filterType: '',
+    typeOptions: [] as string[],
+    // 纠错
+    reportOpen: false,
+    REPORT_TYPES,
+    reportType: '',
+    reportDetail: '',
+    reportBusy: false,
+    // 收藏夹
+    folders: [] as FavFolder[],
+    folderId: null as number | null,
+    // 笔记
+    noteOpen: false,
+    noteQid: 0,
+    noteDraft: '',
+    noteHas: false,
+    noteBusy: false,
     recapOpen: false,
     recap: { total: 0, byModule: [] as RecapRow[], byReason: [] as RecapRow[] },
   },
@@ -98,16 +137,24 @@ Page({
   async load() {
     this.setData({ loading: true });
     try {
-      const [m, r, f] = await Promise.all([
+      const [m, r, f, fd] = await Promise.all([
         fetchMistakes(),
         fetchReviewDue().catch(() => ({ items: [] as Mistake[], total: 0 })),
-        fetchFavs().catch(() => ({ items: [] as FavItem[] })),
+        fetchFavs(this.data.folderId).catch(() => ({ items: [] as FavItem[] })),
+        fetchFavFolders().catch(() => ({ items: [] as FavFolder[] })),
       ]);
       const all = (m.items || []).map((x) => ({ ...x, modName: modName(x.module), open: false }));
+      const modOptions = Array.from(new Set(all.map((x) => x.modName).filter(Boolean)));
+      const typeOptions = Array.from(
+        new Set(all.map((x) => x.question_type || '').filter(Boolean))
+      );
       this.setData({
         all,
+        modOptions,
+        typeOptions,
         recap: monthRecap(all),
         favs: f.items || [],
+        folders: fd.items || [],
         todoCount: all.filter((x) => !x.mastered).length,
         doneCount: all.filter((x) => !!x.mastered).length,
         due: r.items || [],
@@ -125,10 +172,45 @@ Page({
     }
   },
   applyTab() {
-    const { tab, all } = this.data;
-    const shown =
+    const { tab, all, sortBy, filterMod, filterType } = this.data;
+    let shown =
       tab === 'todo' ? all.filter((x) => !x.mastered) : tab === 'done' ? all.filter((x) => !!x.mastered) : [];
+    if (filterMod) shown = shown.filter((x) => x.modName === filterMod);
+    if (filterType) shown = shown.filter((x) => (x.question_type || '') === filterType);
+    shown = [...shown];
+    if (sortBy === 'times') {
+      shown.sort((a, b) => (b.times || 1) - (a.times || 1));
+    } else if (sortBy === 'type') {
+      shown.sort((a, b) => (a.question_type || '').localeCompare(b.question_type || ''));
+    } else if (sortBy === 'reason') {
+      shown.sort((a, b) => (a.error_reason || '未标注').localeCompare(b.error_reason || '未标注'));
+    }
     this.setData({ shown });
+  },
+  // ---------- 筛选/排序 ----------
+  onFilterOpen() {
+    this.setData({ filterOpen: true });
+  },
+  onFilterClose() {
+    this.setData({ filterOpen: false });
+  },
+  onPickSort(e: WechatMiniprogram.TouchEvent) {
+    this.setData({ sortBy: String(e.currentTarget.dataset.k) });
+    this.applyTab();
+  },
+  onPickMod(e: WechatMiniprogram.TouchEvent) {
+    const v = String(e.currentTarget.dataset.v || '');
+    this.setData({ filterMod: this.data.filterMod === v ? '' : v });
+    this.applyTab();
+  },
+  onPickType(e: WechatMiniprogram.TouchEvent) {
+    const v = String(e.currentTarget.dataset.v || '');
+    this.setData({ filterType: this.data.filterType === v ? '' : v });
+    this.applyTab();
+  },
+  onFilterReset() {
+    this.setData({ sortBy: 'time', filterMod: '', filterType: '' });
+    this.applyTab();
   },
   onTab(e: WechatMiniprogram.TouchEvent) {
     this.setData({ tab: e.currentTarget.dataset.tab as 'todo' | 'done' | 'fav' });
@@ -188,11 +270,141 @@ Page({
     wx.navigateTo({ url: '/pages/practice/practice?mode=redo&source=redo' });
   },
 
+  // ---------- 题目纠错 ----------
+  _reportIdx: -1,
+  onReportOpen(e: WechatMiniprogram.TouchEvent) {
+    this._reportIdx = Number(e.currentTarget.dataset.index);
+    this.setData({ reportOpen: true, reportType: '', reportDetail: '' });
+  },
+  onReportClose() {
+    this.setData({ reportOpen: false });
+  },
+  onPickReportType(e: WechatMiniprogram.TouchEvent) {
+    this.setData({ reportType: String(e.currentTarget.dataset.t) });
+  },
+  onReportDetail(e: WechatMiniprogram.Input) {
+    this.setData({ reportDetail: e.detail.value });
+  },
+  async onReportSubmit() {
+    const m = this.data.shown[this._reportIdx];
+    if (!m || !m.question_id || !this.data.reportType || this.data.reportBusy) return;
+    this.setData({ reportBusy: true });
+    try {
+      await postQuestionReport(m.question_id, this.data.reportType, this.data.reportDetail.slice(0, 500));
+      this.setData({ reportOpen: false });
+      wx.showToast({ title: '感谢反馈，我们会尽快核查', icon: 'none' });
+    } catch (err) {
+      wx.showToast({ title: '提交失败：' + (err as Error).message, icon: 'none' });
+    } finally {
+      this.setData({ reportBusy: false });
+    }
+  },
+
+  // ---------- 笔记 ----------
+  async onNoteOpen(e: WechatMiniprogram.TouchEvent) {
+    const qid = Number(e.currentTarget.dataset.qid);
+    if (!qid) return;
+    this.setData({ noteOpen: true, noteQid: qid, noteDraft: '', noteHas: false });
+    try {
+      const d = await fetchNote(qid);
+      if (this.data.noteQid === qid && d.item) {
+        this.setData({ noteDraft: d.item.content, noteHas: true });
+      }
+    } catch (err) {
+      /* 非关键路径 */
+    }
+  },
+  onNoteClose() {
+    this.setData({ noteOpen: false });
+  },
+  onNoteInput(e: WechatMiniprogram.Input) {
+    this.setData({ noteDraft: e.detail.value });
+  },
+  async onNoteSave(e: WechatMiniprogram.TouchEvent) {
+    const clear = e.currentTarget.dataset.clear === '1';
+    const content = clear ? '' : this.data.noteDraft.trim();
+    if (this.data.noteBusy || (!clear && !content && !this.data.noteHas)) return;
+    this.setData({ noteBusy: true });
+    try {
+      await saveNote(this.data.noteQid, content);
+      this.setData({ noteOpen: false });
+      wx.showToast({ title: content ? '笔记已保存' : '笔记已删除', icon: 'none' });
+      this.load();
+    } catch (err) {
+      wx.showToast({ title: '保存失败：' + (err as Error).message, icon: 'none' });
+    } finally {
+      this.setData({ noteBusy: false });
+    }
+  },
+
   // ---------- 收藏 ----------
   onFavPractice(e: WechatMiniprogram.TouchEvent) {
     const mod = String(e.currentTarget.dataset.module || '');
     wx.navigateTo({
       url: '/pages/practice/practice' + (mod ? '?module=' + encodeURIComponent(mod) : ''),
+    });
+  },
+  onPickFolder(e: WechatMiniprogram.TouchEvent) {
+    const raw = e.currentTarget.dataset.fid;
+    const folderId = raw === 'all' ? null : Number(raw);
+    this.setData({ folderId });
+    this.load();
+  },
+  onNewFolder() {
+    wx.showModal({
+      title: '新建收藏夹',
+      editable: true,
+      placeholderText: '夹名，如：图推·必背规律',
+      success: async (r) => {
+        if (!r.confirm || !r.content) return;
+        try {
+          await createFavFolder(r.content.trim());
+          this.load();
+        } catch (err) {
+          wx.showToast({ title: (err as Error).message, icon: 'none' });
+        }
+      },
+    });
+  },
+  onFolderOps(e: WechatMiniprogram.TouchEvent) {
+    const fid = Number(e.currentTarget.dataset.fid);
+    const name = String(e.currentTarget.dataset.name || '');
+    if (!fid) return;
+    wx.showActionSheet({
+      itemList: ['重命名', '删除（夹内收藏移回默认夹）'],
+      success: (r) => {
+        if (r.tapIndex === 0) {
+          wx.showModal({
+            title: '重命名收藏夹',
+            editable: true,
+            content: name,
+            success: async (m) => {
+              if (!m.confirm || !m.content) return;
+              try {
+                await renameFavFolder(fid, m.content.trim());
+                this.load();
+              } catch (err) {
+                wx.showToast({ title: (err as Error).message, icon: 'none' });
+              }
+            },
+          });
+        } else if (r.tapIndex === 1) {
+          wx.showModal({
+            title: '删除收藏夹',
+            content: `删除「${name}」？夹内收藏会移回默认夹`,
+            success: async (m) => {
+              if (!m.confirm) return;
+              try {
+                await deleteFavFolder(fid);
+                if (this.data.folderId === fid) this.setData({ folderId: null });
+                this.load();
+              } catch (err) {
+                wx.showToast({ title: (err as Error).message, icon: 'none' });
+              }
+            },
+          });
+        }
+      },
     });
   },
   async onUnfav(e: WechatMiniprogram.TouchEvent) {
