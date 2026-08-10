@@ -14,7 +14,7 @@
     <block wx:if="{{reviewing && rCur}}">
       <view class="card review">
         <view class="rhead">
-          <text class="tag tag-brand">复习 {{rIdx + 1}}/{{rItems.length}}</text>
+          <text class="tag tag-brand">{{rCur.extra ? '加练同类' : '复习'}} {{rIdx + 1}}/{{rItems.length}}</text>
           <text class="r-exit" bind:tap="exitReview">退出复习</text>
         </view>
         <text class="m-q" user-select>{{rCur.question_text}}</text>
@@ -29,7 +29,19 @@
         </view>
         <block wx:if="{{answered}}">
           <view class="r-verdict {{wasCorrect ? 'vok' : 'vbad'}}">
-            {{wasCorrect ? (rCur.requeued ? '这次答对了，本轮已纠正 ✓' : '答对了！连对 ' + rStreak + ' 次') : '又错了，看解析（稍后本轮会再出现）'}}（下次复习：{{nextDays}} 天后）
+            <block wx:if="{{rCur.extra}}">{{wasCorrect ? '答对了，这个考法稳了 ✓' : '还没稳，仔细看解析'}}</block>
+            <block wx:else>{{wasCorrect ? (rCur.requeued ? '这次答对了，本轮已纠正 ✓' : '答对了！连对 ' + rStreak + ' 次') : '又错了，看解析（稍后本轮会再出现）'}}（下次复习：{{nextDays}} 天后）</block>
+          </view>
+          <view wx:if="{{!wasCorrect && rCur.appended}}" class="appended-tip">已为你在本轮末尾加练 {{rCur.appended}} 道同类题</view>
+          <view wx:if="{{!wasCorrect && !rCur.extra}}" class="reasons">
+            <text class="rz-t">错因自评：</text>
+            <text
+              wx:for="{{REASONS}}"
+              wx:key="*this"
+              class="rz {{rCur.error_reason === item ? 'rz-on' : ''}}"
+              data-rz="{{item}}"
+              bind:tap="onReviewReason"
+            >{{item}}</text>
           </view>
           <text wx:if="{{rCur.explanation}}" class="m-exp" user-select>{{rCur.explanation}}</text>
           <view class="btn-primary r-next" bind:tap="onNextReview">{{rIdx + 1 < rItems.length ? '下一题' : '完成复习'}}</view>
@@ -55,6 +67,31 @@
         <text class="duecard-s">按遗忘曲线安排 · 趁热打铁巩固一遍</text>
       </view>
       <text class="duecard-go">开始复习</text>
+    </view>
+    <view wx:if="{{recap.total}}" class="card recap">
+      <view class="recap-h" bind:tap="onToggleRecap">
+        <text class="recap-t">本月错题复盘 · 新增 {{recap.total}} 道</text>
+        <text class="recap-x">{{recapOpen ? '收起' : '展开'}}</text>
+      </view>
+      <block wx:if="{{recapOpen}}">
+        <view class="recap-sec">
+          <text class="recap-st">按模块</text>
+          <view wx:for="{{recap.byModule}}" wx:key="name" class="recap-row">
+            <text class="recap-name">{{item.name}}</text>
+            <view class="recap-bar"><view class="recap-fill" style="width: {{item.pct}}%" /></view>
+            <text class="recap-n">{{item.n}}</text>
+          </view>
+        </view>
+        <view class="recap-sec">
+          <text class="recap-st">按错因</text>
+          <view wx:for="{{recap.byReason}}" wx:key="name" class="recap-row">
+            <text class="recap-name">{{item.name}}</text>
+            <view class="recap-bar"><view class="recap-fill warnfill" style="width: {{item.pct}}%" /></view>
+            <text class="recap-n">{{item.n}}</text>
+          </view>
+        </view>
+        <text class="recap-tip">高频错因是提分洼地：优先复习对应模块的待掌握错题</text>
+      </block>
     </view>
     <view class="tabs">
       <text class="tab-chip {{tab === 'todo' ? 'on' : ''}}" data-tab="todo" bind:tap="onTab">待掌握 {{todoCount}}</text>

@@ -331,9 +331,14 @@ class _PracticePageState extends ConsumerState<PracticePage> {
     } else {
       _curStreak = 0;
     }
+    if (widget.mode == 'review' && cur.extra) {
+      // 加练同类题：不写 SRS，不存错题
+      return;
+    }
     if (widget.mode == 'review' && cur.mistakeId != null) {
       // 遗忘曲线复习打卡
       unawaited(Api.recordReview(cur.mistakeId!, cur.correct).catchError((_) => <String, dynamic>{}));
+      if (!cur.correct) unawaited(_appendSimilar(cur));
     } else if (!cur.correct && !cur.savedAsMistake) {
       cur.savedAsMistake = true;
       final optText = cur.options.entries.map((e) => '${e.key}.${e.value}').join(' ');
@@ -361,6 +366,30 @@ class _PracticePageState extends ConsumerState<PracticePage> {
         'explanation': q.explanation ?? '',
       }).then((mid) => q.mistakeId ??= mid).catchError((_) => null));
     }
+  }
+
+  /// 复习答错自动加推：本组末尾追加最多 2 道同类新题
+  Future<void> _appendSimilar(Question q) async {
+    if (q.simFetched || q.module == null || q.module!.isEmpty) return;
+    q.simFetched = true;
+    final qt = q.questionType ?? '';
+    final sub = qt.contains('-') ? qt.split('-').skip(1).join('-') : null;
+    try {
+      final d = await Api.questions(
+          module: q.module, submodule: sub, limit: 2, adaptive: false);
+      final add = (d['items'] as List<dynamic>? ?? [])
+          .map((e) => Question.fromJson(Map<String, dynamic>.from(e)))
+          .where((x) => x.id != q.id)
+          .take(2)
+          .map((x) => x..extra = true)
+          .toList();
+      if (add.isEmpty || !mounted || finished) return;
+      setState(() {
+        items.addAll(add);
+        q.appended = add.length;
+      });
+      unawaited(Api.trackEvent('review_similar_auto', source: q.module));
+    } catch (_) {/* 非关键路径 */}
   }
 
   void _next() {
@@ -1121,7 +1150,10 @@ class _PracticePageState extends ConsumerState<PracticePage> {
                 Icon(q.correct ? LucideIcons.checkCircle2 : LucideIcons.xCircle,
                     size: 18, color: q.correct ? KgColors.success : KgColors.error),
                 const SizedBox(width: 6),
-                Text(q.correct ? '回答正确' : '回答错误，已自动存入错题本',
+                Text(
+                    q.extra
+                        ? (q.correct ? '加练同类 · 答对了，这个考法稳了' : '加练同类 · 还没稳，仔细看解析')
+                        : (q.correct ? '回答正确' : '回答错误，已自动存入错题本'),
                     style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: q.correct ? KgColors.success : KgColors.error)),
@@ -1137,7 +1169,20 @@ class _PracticePageState extends ConsumerState<PracticePage> {
                         fontWeight: FontWeight.w600, color: KgColors.brand)),
               ],
             ),
-          if (q.answered && !q.correct) ...[
+          if (q.answered && !q.correct && widget.mode == 'review' && q.appended > 0) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: KgColors.brand.withValues(alpha: .08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text('已为你在本组末尾加练 ${q.appended} 道同类题',
+                  style: const TextStyle(fontSize: 12, color: KgColors.brand)),
+            ),
+          ],
+          if (q.answered && !q.correct && !q.extra) ...[
             const SizedBox(height: 10),
             Wrap(
               spacing: 6,
