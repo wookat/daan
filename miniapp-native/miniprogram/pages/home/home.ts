@@ -3,9 +3,10 @@ import {
   fetchPlanToday,
   fetchProfile,
   fetchReviewDue,
+  saveProfile,
   trackEvent,
 } from '../../api/index';
-import type { CheckinBadgesResp, PlanTask } from '../../api/types';
+import type { CheckinBadgesResp, PlanTask, Profile } from '../../api/types';
 import { getDailyGoal, setDailyGoal, streakDays, todayCount } from '../../utils/stats';
 import { syncTabBar } from '../../utils/tabbar';
 
@@ -34,6 +35,25 @@ Page({
     mods: MODS,
     goalChips: [20, 50, 100],
     hasProfile: false,
+    planLoaded: false,
+    guideHide: false,
+    setupOpen: false,
+    setupStep: 1,
+    setupBusy: false,
+    pf: {
+      exam_type: '国考',
+      target_region: '',
+      exam_date: '',
+      target_score: 70,
+      daily_minutes: 60,
+      base_level: '零基础',
+    } as Profile,
+    examTypes: ['国考', '省考', '事业单位', '其他'],
+    scoreChips: [60, 65, 70, 75, 80],
+    baseLevels: ['零基础', '有基础', '二战'],
+    minuteChips: [30, 60, 90, 120],
+    dateStart: '',
+    dateEnd: '',
     planTasks: [] as PlanTask[],
     planPct: 0,
     daysLeft: null as number | null,
@@ -42,6 +62,20 @@ Page({
     badgeStreak: 0,
     nextMilestone: null as { days: number; left: number; pct: number } | null,
     taskDoneN: 0,
+  },
+  onLoad() {
+    const d = new Date();
+    const fmt = (x: Date) =>
+      x.getFullYear() +
+      '-' +
+      String(x.getMonth() + 1).padStart(2, '0') +
+      '-' +
+      String(x.getDate()).padStart(2, '0');
+    this.setData({
+      guideHide: !!wx.getStorageSync('planGuideHide'),
+      dateStart: fmt(d),
+      dateEnd: fmt(new Date(d.getFullYear() + 2, d.getMonth(), d.getDate())),
+    });
   },
   onShow() {
     syncTabBar(this, 0);
@@ -65,7 +99,7 @@ Page({
     try {
       const d = await fetchProfile();
       if (!d.profile) {
-        this.setData({ hasProfile: false, planTasks: [] });
+        this.setData({ hasProfile: false, planTasks: [], planLoaded: true });
         return;
       }
       const plan = await fetchPlanToday();
@@ -73,6 +107,7 @@ Page({
       const done = tasks.filter((t) => t.done).length;
       this.setData({
         hasProfile: true,
+        planLoaded: true,
         planTasks: tasks,
         daysLeft: plan.days_left ?? null,
         planPct: tasks.length ? Math.round((done / tasks.length) * 100) : 0,
@@ -159,6 +194,58 @@ Page({
     wx.navigateTo({
       url: '/pages/practice/practice' + (mod ? '?module=' + mod : ''),
     });
+  },
+  onOpenSetup() {
+    this.setData({ setupOpen: true, setupStep: 1 });
+  },
+  onCloseSetup() {
+    this.setData({ setupOpen: false });
+  },
+  onSheetNoop() {
+    /* 阻止冒泡关闭 */
+  },
+  onSkipGuide() {
+    wx.setStorageSync('planGuideHide', 1);
+    this.setData({ guideHide: true });
+    wx.showToast({ title: '已跳过，可在「我的」随时制定', icon: 'none' });
+  },
+  onPfChip(e: WechatMiniprogram.TouchEvent) {
+    const key = String(e.currentTarget.dataset.key || '');
+    let val: string | number = String(e.currentTarget.dataset.val || '');
+    if (key === 'target_score' || key === 'daily_minutes') val = Number(val);
+    this.setData({ ['pf.' + key]: val });
+  },
+  onPfRegion(e: WechatMiniprogram.Input) {
+    this.setData({ 'pf.target_region': e.detail.value });
+  },
+  onPfDate(e: WechatMiniprogram.PickerChange) {
+    this.setData({ 'pf.exam_date': String(e.detail.value) });
+  },
+  onSetupBack() {
+    if (this.data.setupStep > 1) this.setData({ setupStep: this.data.setupStep - 1 });
+  },
+  async onSetupNext() {
+    const { setupStep, pf, setupBusy } = this.data;
+    if (setupStep === 1 && !pf.exam_date) {
+      wx.showToast({ title: '请先选择考试日期', icon: 'none' });
+      return;
+    }
+    if (setupStep < 3) {
+      this.setData({ setupStep: setupStep + 1 });
+      return;
+    }
+    if (setupBusy) return;
+    this.setData({ setupBusy: true });
+    try {
+      await saveProfile(pf);
+      this.setData({ setupOpen: false });
+      wx.showToast({ title: '学习计划已生成', icon: 'none' });
+      this.loadPlan();
+    } catch (e) {
+      wx.showToast({ title: '保存失败，请稍后再试', icon: 'none' });
+    } finally {
+      this.setData({ setupBusy: false });
+    }
   },
   onContinueGoal() {
     wx.navigateTo({ url: '/pages/practice/practice' });

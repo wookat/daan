@@ -380,3 +380,169 @@
   color: var(--brand-500);
   flex-shrink: 0;
 }
+
+/* 制定学习计划引导卡 */
+.guide {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  background: var(--brand-50);
+  padding: 24rpx 26rpx;
+}
+
+.guide-l {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.guide-t {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--brand-500);
+}
+
+.guide-s {
+  font-size: 22rpx;
+  color: var(--t2);
+  margin-top: 6rpx;
+}
+
+.guide-btn {
+  flex-shrink: 0;
+  background: var(--brand-500);
+  color: #fff;
+  border-radius: var(--r-full);
+  padding: 14rpx 26rpx;
+  font-size: 24rpx;
+}
+
+.guide-x {
+  flex-shrink: 0;
+  font-size: 22rpx;
+  color: var(--t3);
+  padding: 14rpx 8rpx;
+}
+
+/* 制定学习计划 sheet */
+.sheet-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 998;
+  display: flex;
+  align-items: flex-end;
+}
+
+.sheet {
+  width: 100%;
+  background: var(--surface);
+  border-radius: var(--r-l) var(--r-l) 0 0;
+  padding: 28rpx 32rpx calc(40rpx + env(safe-area-inset-bottom));
+  max-height: 75vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.sheet-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sheet-t {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: var(--t1);
+}
+
+.sheet-x {
+  font-size: 30rpx;
+  color: var(--t3);
+  padding: 8rpx;
+}
+
+.sheet-st {
+  display: block;
+  margin-top: 24rpx;
+  font-size: 24rpx;
+  color: var(--t2);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 14rpx;
+}
+
+.chip {
+  font-size: 24rpx;
+  color: var(--t2);
+  background: var(--fill);
+  border-radius: var(--r-full);
+  padding: 10rpx 24rpx;
+}
+
+.chip.on {
+  color: #fff;
+  background: var(--brand-500);
+}
+
+.pf-input {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 14rpx;
+  padding: 18rpx 20rpx;
+  font-size: 26rpx;
+  color: var(--t1);
+  background: var(--fill);
+  border-radius: var(--r-s);
+}
+
+.pf-date {
+  margin-top: 14rpx;
+  padding: 18rpx 20rpx;
+  font-size: 26rpx;
+  color: var(--t1);
+  background: var(--fill);
+  border-radius: var(--r-s);
+}
+
+.pf-date.empty {
+  color: var(--t3);
+}
+
+.pf-summary {
+  margin-top: 26rpx;
+  padding: 16rpx 20rpx;
+  font-size: 23rpx;
+  color: var(--t2);
+  background: var(--fill);
+  border-radius: var(--r-s);
+  line-height: 1.6;
+}
+
+.sheet-btn {
+  margin-top: 28rpx;
+  text-align: center;
+  background: var(--brand-500);
+  color: #fff;
+  font-size: 27rpx;
+  font-weight: 600;
+  border-radius: var(--r-full);
+  padding: 20rpx 0;
+}
+
+.sheet-btn.dis {
+  opacity: 0.5;
+}
+
+.pf-back {
+  margin-top: 18rpx;
+  text-align: center;
+  font-size: 25rpx;
+  color: var(--t3);
+  padding: 8rpx 0;
+}
