@@ -183,7 +183,8 @@ def api_exam_rank(attempt_id: int, uid: str = ""):
     attempt = db.get_exam_attempt(attempt_id)
     if not attempt or not attempt["submitted_at"]:
         raise HTTPException(404, "成绩不存在")
-    if uid and attempt["uid"] != uid.strip()[:64]:
+    # attempt_id 自增可枚举，排名仅本人可查
+    if attempt["uid"] != (uid.strip()[:64] or None):
         raise HTTPException(404, "成绩不存在")
     conn = db.get_conn()
     db._ensure_exam_tables(conn)

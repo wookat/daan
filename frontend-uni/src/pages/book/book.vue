@@ -792,7 +792,7 @@ export default {
       return m ? [...new Set(m[0])].sort().join('') : '';
     },
     async master(m, on = true) {
-      await request('/api/mistakes/' + m.id, { method: 'PATCH', data: { mastered: on ? 1 : 0 } });
+      await request('/api/mistakes/' + m.id, { method: 'PATCH', data: { uid: anonUid(), mastered: on ? 1 : 0 } });
       if (on) uni.showToast({ title: '已掌握！', icon: 'success' });
       this.load();
     },
@@ -916,7 +916,7 @@ export default {
       m.error_reason = rz;
       this.$forceUpdate();
       try {
-        await request('/api/mistakes/' + m.id, { method: 'PATCH', data: { error_reason: rz } });
+        await request('/api/mistakes/' + m.id, { method: 'PATCH', data: { uid: anonUid(), error_reason: rz } });
         trackEvent('review_reason_tag', rz);
       } catch (e) { /* 非关键路径 */ }
     },
@@ -1086,7 +1086,7 @@ export default {
         title: '确定删除这道错题？',
         success: async (res) => {
           if (!res.confirm) return;
-          await request('/api/mistakes/' + m.id, { method: 'DELETE' });
+          await request('/api/mistakes/' + m.id + '?uid=' + encodeURIComponent(anonUid()), { method: 'DELETE' });
           this.load();
         },
       });

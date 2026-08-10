@@ -101,7 +101,7 @@ export function postMistake(m: {
 }
 
 export function patchMistake(id: number, data: Partial<Mistake>): Promise<void> {
-  return request<void>('/api/mistakes/' + id, { method: 'PATCH', data });
+  return request<void>('/api/mistakes/' + id, { method: 'PATCH', data: { uid: anonUid(), ...data } });
 }
 
 export function fetchReviewDue(): Promise<ReviewResp> {
@@ -116,7 +116,10 @@ export function postReviewRecord(mid: number, correct: boolean): Promise<ReviewR
 }
 
 export function deleteMistake(id: number): Promise<void> {
-  return request<void>('/api/mistakes/' + id, { method: 'DELETE' });
+  return request<void>(
+    '/api/mistakes/' + id + '?uid=' + encodeURIComponent(anonUid()),
+    { method: 'DELETE' }
+  );
 }
 
 // ---------- 收藏 ----------

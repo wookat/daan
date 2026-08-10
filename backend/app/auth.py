@@ -150,6 +150,22 @@ def get_user_by_token(authorization: str | None):
     return row
 
 
+_ACCOUNT_UID_RE = re.compile(r"^u\d+$")
+
+
+def is_account_uid(uid: str | None) -> bool:
+    """账号态 uid（u<id>，可被枚举），区别于随机匿名 uid。"""
+    return bool(uid) and bool(_ACCOUNT_UID_RE.match(uid))
+
+
+def owns_uid(uid: str, authorization: str | None) -> bool:
+    """请求方是否有权以该 uid 读写数据：匿名随机 uid 放行，账号 uid 需本人 token。"""
+    if not is_account_uid(uid):
+        return True
+    row = get_user_by_token(authorization)
+    return bool(row) and user_uid(row["id"]) == uid
+
+
 def require_user(authorization: str | None):
     row = get_user_by_token(authorization)
     if not row:

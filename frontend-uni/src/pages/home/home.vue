@@ -93,7 +93,8 @@
     </view>
 
     <!-- 学习计划引导 / 今日计划 -->
-    <view v-if="profile === null && !guideHide" class="card guide" @click="openSetup">
+    <view v-if="!profileFetched && planSkel" class="card skel skel-plan" />
+    <view v-if="profileFetched && profile === null && !guideHide" class="card guide" @click="openSetup">
       <view class="guide-l">
         <text class="guide-t">制定我的学习计划</text>
         <text class="guide-s">按考试日期倒排每日任务：专项练习 + 错题复习 + 每周模考</text>
@@ -159,6 +160,7 @@
     </view>
 
     <!-- 公告 -->
+    <view v-if="announce === undefined" class="card skel skel-ann" />
     <view v-if="announce" class="card ann">
       <l-icon name="megaphone" :size="16" color="#0369a1" />
       <view class="ann-c">
@@ -169,6 +171,7 @@
     </view>
 
     <!-- 时政每日一练 -->
+    <view v-if="!counts.length" class="card skel skel-sz" />
     <view v-if="counts.length" class="card szcard" @click="szTodayDone ? launch({ kind: 'szreview' }) : launch({ kind: 'shizheng' })">
       <view class="sz-ico"><l-icon name="newspaper" :size="24" color="#d97706" /></view>
       <view class="grow">
@@ -183,7 +186,10 @@
       <text class="sec-t">专项练习</text>
       <text class="sec-more" @click="customOpen = true">练习设置 ›</text>
     </view>
-    <view v-if="!counts.length" class="card spin" @click="loadCounts">题库加载中…点此重试</view>
+    <view v-if="!counts.length" class="skelwrap" @click="loadCounts">
+      <view v-for="i in 6" :key="i" class="card skel skel-row" />
+      <text class="skel-hint">题库加载中…点此重试</text>
+    </view>
     <view class="modlist">
       <view v-for="c in counts" :key="c.module" class="card modrow" @click="openModule(c.module)">
         <view class="mod-ico" :style="{ background: modColor(c.module).bg }"><l-icon :name="modIcon(c.module)" :size="24" :color="modColor(c.module).fg" /></view>
@@ -454,6 +460,8 @@ export default {
       plan: null,
       planFetched: false,
       profile: undefined,
+      profileFetched: false,
+      planSkel: uni.getStorageSync('homePlanCard') || !uni.getStorageSync('planGuideHide'),
       planToday: null,
       guideHide: uni.getStorageSync('planGuideHide') ? true : false,
       setupOpen: false,
@@ -475,7 +483,7 @@ export default {
       realRegion: uni.getStorageSync('realRegion') || null,
       groupSize: uni.getStorageSync('groupSize') || 10,
       dailyGoal: uni.getStorageSync('dailyGoal') || 20,
-      announce: null,
+      announce: undefined,
       badgeInfo: null,
       svTodayN: null,
       weeklyDot: false,
@@ -765,8 +773,10 @@ export default {
       try {
         const d = await request('/api/announcement');
         const item = d.item;
-        if (item && uni.getStorageSync('annDismissed') !== String(item.id)) this.announce = item;
-      } catch (e) { /* 非关键路径 */ }
+        this.announce = item && uni.getStorageSync('annDismissed') !== String(item.id) ? item : null;
+      } catch (e) {
+        this.announce = null;
+      }
     },
     dismissAnn() {
       if (this.announce) uni.setStorageSync('annDismissed', String(this.announce.id));
@@ -861,11 +871,14 @@ export default {
         this.profile = d.profile || null;
         if (this.profile) await this.loadPlanToday();
         else this.planToday = null;
-      } catch (e) { /* 非关键路径 */ }
+      } catch (e) { /* 非关键路径 */ } finally {
+        this.profileFetched = true;
+      }
     },
     async loadPlanToday() {
       try {
         this.planToday = await request('/api/plan/today?uid=' + encodeURIComponent(anonUid()));
+        uni.setStorageSync('homePlanCard', this.planToday && this.planToday.profile ? '1' : '');
       } catch (e) { /* 非关键路径 */ }
     },
     openSetup() {
@@ -1034,6 +1047,17 @@ export default {
 /* 通用卡片 */
 .card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); margin-bottom: 20rpx; padding: 28rpx 32rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 30rpx 0; }
+.skel { background: var(--fill); box-shadow: none; animation: skel-pulse 1.4s ease-in-out infinite; }
+.skel-plan { height: 162rpx; box-sizing: border-box; }
+.skel-sz { height: 166rpx; box-sizing: border-box; }
+.skel-ann { height: 154rpx; box-sizing: border-box; }
+.skel-row { height: 144rpx; box-sizing: border-box; }
+.skelwrap { position: relative; }
+.skel-hint { position: absolute; top: 56rpx; left: 0; right: 0; text-align: center; color: var(--ink-2); font-size: 26rpx; }
+@keyframes skel-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
 
 /* 计划卡（沿用原样式类名） */
 .plancard { padding: 22rpx 26rpx; }

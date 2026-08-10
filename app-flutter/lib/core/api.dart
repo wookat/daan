@@ -138,11 +138,11 @@ class Api {
   }
 
   static Future<void> patchMistake(int mid, Map<String, dynamic> fields) async {
-    await dio.patch('/api/mistakes/$mid', data: fields);
+    await dio.patch('/api/mistakes/$mid', data: {'uid': uid(), ...fields});
   }
 
   static Future<void> deleteMistake(int mid) async {
-    await dio.delete('/api/mistakes/$mid');
+    await dio.delete('/api/mistakes/$mid', queryParameters: {'uid': uid()});
   }
 
   static Future<Map<String, dynamic>> reviewDue() async {

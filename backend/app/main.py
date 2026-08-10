@@ -8,9 +8,9 @@ import threading
 import time
 
 import httpx
-from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.datastructures import Headers
 
@@ -29,6 +29,37 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["X-Paper-Code"],
 )
+
+
+@app.middleware("http")
+async def guard_account_uid(request, call_next):
+    """账号态 uid（u<id>）可被枚举，统一要求携带本人 Bearer token 才可按该 uid 读写。
+
+    匿名随机 uid 不受影响（其本身即凭据）。覆盖 query 与 JSON body 两处 uid。
+    """
+    uid = request.query_params.get("uid")
+    body = b""
+    if (
+        not auth.is_account_uid(uid)
+        and request.method in ("POST", "PATCH", "PUT", "DELETE")
+        and "json" in (request.headers.get("content-type") or "")
+    ):
+        body = await request.body()
+        try:
+            parsed = json.loads(body or b"{}")
+            uid = parsed.get("uid") if isinstance(parsed, dict) else None
+        except (ValueError, TypeError):
+            uid = None
+    if auth.is_account_uid(uid) and not auth.owns_uid(uid, request.headers.get("authorization")):
+        return JSONResponse({"detail": "无权访问该账号数据，请重新登录"}, status_code=403)
+    if body:
+        async def _receive():
+            return {"type": "http.request", "body": body, "more_body": False}
+
+        request = Request(request.scope, _receive)
+    return await call_next(request)
+
+
 app.include_router(auth.router)
 app.include_router(insights.router)
 app.include_router(social.router)
@@ -130,14 +161,22 @@ _H5_DIR = os.path.join(_ROOT, "frontend-uni", "dist", "build", "h5")
 FRONTEND_DIR = _H5_DIR if os.path.isdir(_H5_DIR) else os.path.join(_ROOT, "frontend")
 
 
+def _rl(request: Request, bucket: str, limit: int, window: int, uid: str | None = None):
+    """高成本接口（AI/OCR/导出/纠错）按 uid 或来源 IP 限速，防单机刷量。"""
+    who = (uid or "").strip()[:64] or (request.client.host if request.client else "anon")
+    auth.rate_limit(f"{bucket}:{who}", limit, window)
+
+
 @app.post("/api/explain")
 async def api_explain(
+    request: Request,
     image: UploadFile | None = File(None),
     text: str | None = Form(None),
     user_answer: str | None = Form(None),
     x_access_code: str | None = Header(None),
 ):
     check_access(x_access_code)
+    _rl(request, "ai_explain", 20, 300)
     if not image and not text:
         raise HTTPException(400, "需要图片或题目文字")
     image_b64 = None
@@ -193,12 +232,14 @@ async def api_explain(
 
 @app.post("/api/explain/stream")
 async def api_explain_stream(
+    request: Request,
     image: UploadFile | None = File(None),
     text: str | None = Form(None),
     user_answer: str | None = Form(None),
     x_access_code: str | None = Header(None),
 ):
     check_access(x_access_code)
+    _rl(request, "ai_explain", 20, 300)
     if not image and not text:
         raise HTTPException(400, "需要图片或题目文字")
     image_b64 = None
@@ -265,8 +306,9 @@ async def api_explain_stream(
 
 
 @app.post("/api/similar")
-async def api_similar(body: dict, x_access_code: str | None = Header(None)):
+async def api_similar(body: dict, request: Request, x_access_code: str | None = Header(None)):
     check_access(x_access_code)
+    _rl(request, "ai_similar", 30, 300, body.get("uid"))
     qt = body.get("question_text")
     if not qt:
         raise HTTPException(400, "缺少 question_text")
@@ -523,8 +565,9 @@ def api_admin_settings_info(x_admin_token: str | None = Header(None)):
 
 
 @app.post("/api/followup")
-async def api_followup(body: dict, x_access_code: str | None = Header(None)):
+async def api_followup(body: dict, request: Request, x_access_code: str | None = Header(None)):
     check_access(x_access_code)
+    _rl(request, "ai_followup", 30, 300, body.get("uid"))
     query = (body.get("query") or "").strip()
     if not query:
         raise HTTPException(400, "缺少追问内容")
@@ -541,8 +584,9 @@ async def api_followup(body: dict, x_access_code: str | None = Header(None)):
 
 
 @app.post("/api/coach")
-async def api_coach(body: dict, x_access_code: str | None = Header(None)):
+async def api_coach(body: dict, request: Request, x_access_code: str | None = Header(None)):
     check_access(x_access_code)
+    _rl(request, "ai_coach", 20, 300, body.get("uid"))
     stats = body.get("stats")
     if not isinstance(stats, dict):
         raise HTTPException(400, "缺少学习数据")
@@ -637,7 +681,8 @@ def api_attempts(uid: str, question_id: int):
 
 
 @app.post("/api/export/pdf")
-def api_export_pdf(body: dict):
+def api_export_pdf(body: dict, request: Request):
+    _rl(request, "export_pdf", 20, 300, body.get("uid"))
     ids = [int(i) for i in (body.get("question_ids") or [])[:140]]
     items = body.get("items") or []
     questions = db.questions_by_ids(ids) if ids else []
@@ -776,7 +821,8 @@ def api_paper_answers(body: dict):
 
 
 @app.post("/api/scan_sheet")
-async def api_scan_sheet(uid: str = Form(""), image: UploadFile = File(...)):
+async def api_scan_sheet(request: Request, uid: str = Form(""), image: UploadFile = File(...)):
+    _rl(request, "scan_sheet", 20, 300, uid)
     raw = await image.read()
     if len(raw) > 12 * 1024 * 1024:
         raise HTTPException(400, "图片过大，请控制在 12MB 以内")
@@ -853,8 +899,9 @@ async def api_scan_sheet(uid: str = Form(""), image: UploadFile = File(...)):
 
 
 @app.post("/api/mistakes/analysis")
-async def api_mistake_analysis(body: dict, x_access_code: str | None = Header(None)):
+async def api_mistake_analysis(body: dict, request: Request, x_access_code: str | None = Header(None)):
     check_access(x_access_code)
+    _rl(request, "ai_mistake_analysis", 10, 300, body.get("uid"))
     uid = (body.get("uid") or "").strip()
     if not uid:
         raise HTTPException(400, "缺少 uid")
@@ -1014,8 +1061,9 @@ def api_shenlun_question(qid: int):
 
 
 @app.post("/api/shenlun/grade")
-async def api_shenlun_grade(body: dict, x_access_code: str | None = Header(None)):
+async def api_shenlun_grade(body: dict, request: Request, x_access_code: str | None = Header(None)):
     check_access(x_access_code)
+    _rl(request, "ai_shenlun_grade", 10, 600, body.get("uid"))
     qid = body.get("qid")
     answer = (body.get("answer") or "").strip()
     if not qid or not answer:
@@ -1127,7 +1175,8 @@ _QREPORT_TYPES = {"答案错误", "解析错误", "题干或选项错字", "图�
 
 
 @app.post("/api/question_report")
-def api_question_report(body: dict):
+def api_question_report(body: dict, request: Request):
+    _rl(request, "qreport", 30, 3600, body.get("uid"))
     rtype = str(body.get("type") or "").strip()
     if rtype not in _QREPORT_TYPES:
         raise HTTPException(400, "无效的纠错类型")
@@ -1298,7 +1347,8 @@ def api_exam_report(attempt_id: int, uid: str = ""):
     attempt = db.get_exam_attempt(attempt_id)
     if not attempt or not attempt["submitted_at"]:
         raise HTTPException(404, "成绩报告不存在")
-    if uid and attempt["uid"] != uid.strip()[:64]:
+    # attempt_id 自增可枚举，成绩报告仅本人可读
+    if attempt["uid"] != (uid.strip()[:64] or None):
         raise HTTPException(404, "成绩报告不存在")
     paper = db.get_exam_paper(attempt["paper_id"])
     if not paper:
@@ -1516,13 +1566,17 @@ def api_list_mistakes(uid: str = ""):
 
 @app.patch("/api/mistakes/{mid}")
 def api_update_mistake(mid: int, body: dict):
-    db.update_mistake(mid, body)
+    """按 uid 隔离：只允许改自己的错题（uid 缺省时仅匹配无归属历史记录）。"""
+    uid = str(body.get("uid") or "").strip()[:64] or None
+    if not db.update_mistake(mid, body, uid=uid):
+        raise HTTPException(404, "错题不存在")
     return {"ok": True}
 
 
 @app.delete("/api/mistakes/{mid}")
-def api_delete_mistake(mid: int):
-    db.delete_mistake(mid)
+def api_delete_mistake(mid: int, uid: str = ""):
+    if not db.delete_mistake(mid, uid=uid.strip()[:64] or None):
+        raise HTTPException(404, "错题不存在")
     return {"ok": True}
 
 
