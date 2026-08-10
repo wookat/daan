@@ -20,7 +20,7 @@
 .poster {
   width: 620rpx;
   border-radius: 24rpx;
-  box-shadow: 0 12rpx 36rpx rgba(59, 111, 245, 0.3);
+  box-shadow: var(--sh-brand);
 }
 
 .bar {

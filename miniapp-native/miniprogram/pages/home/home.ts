@@ -18,12 +18,12 @@ interface ModCard {
 }
 
 const MODS: ModCard[] = [
-  { key: 'ziliao', name: '资料分析', color: '#0D9488', bg: '#D1FAE5' },
-  { key: 'shuliang', name: '数量关系', color: '#1D4ED8', bg: '#DBEAFE' },
-  { key: 'yanyu', name: '言语理解', color: '#B91C1C', bg: '#FEE2E2' },
-  { key: 'panduan', name: '判断推理', color: '#6D28D9', bg: '#EDE9FE' },
-  { key: 'changshi', name: '常识判断', color: '#B45309', bg: '#FEF3C7' },
-  { key: '', name: '全模块混练', color: '#3B6FF5', bg: '#DCE7FD' },
+  { key: 'ziliao', name: '资料分析', color: '#14B8A6', bg: '#E6F9F6' },
+  { key: 'shuliang', name: '数量关系', color: '#3B6FF5', bg: '#EEF4FF' },
+  { key: 'yanyu', name: '言语理解', color: '#F43F5E', bg: '#FEF0F2' },
+  { key: 'panduan', name: '判断推理', color: '#8B5CF6', bg: '#F3EFFE' },
+  { key: 'changshi', name: '常识判断', color: '#F59E0B', bg: '#FEF7E6' },
+  { key: '', name: '全模块混练', color: '#3B6FF5', bg: '#DCE8FF' },
 ];
 
 Page({

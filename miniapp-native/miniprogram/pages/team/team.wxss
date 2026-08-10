@@ -14,7 +14,7 @@
 }
 
 .hero {
-  background: linear-gradient(135deg, #5b8af8, #3b6ff5);
+  background: var(--brand-grad);
   border-radius: 32rpx;
   padding: 36rpx 32rpx;
   margin-bottom: 24rpx;

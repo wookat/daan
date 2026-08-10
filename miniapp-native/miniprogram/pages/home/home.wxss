@@ -8,11 +8,11 @@
 }
 
 .hero {
-  background: linear-gradient(135deg, #5b8af8, #3b6ff5);
-  border-radius: var(--r-l);
-  padding: 32rpx;
+  background: var(--brand-grad);
+  border-radius: var(--r-xl);
+  padding: 36rpx 32rpx;
   margin-bottom: 24rpx;
-  box-shadow: 0 12rpx 36rpx rgba(59, 111, 245, 0.3);
+  box-shadow: var(--sh-brand);
 }
 
 .hero-top {
@@ -28,17 +28,19 @@
 }
 
 .hero-n {
-  font-size: 36rpx;
-  font-weight: 700;
+  font-size: 44rpx;
+  font-weight: 800;
   color: #fff;
+  font-variant-numeric: tabular-nums;
 }
 
 .hero-streak {
   font-size: 22rpx;
+  font-weight: 600;
   color: #fff;
-  background: rgba(255, 255, 255, 0.18);
-  border-radius: var(--r-s);
-  padding: 4rpx 16rpx;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: var(--r-full);
+  padding: 6rpx 18rpx;
 }
 
 .hero-bar {
@@ -64,11 +66,11 @@
 
 .hero-go {
   background: #fff;
-  color: var(--brand-500);
+  color: var(--brand-600);
   border-radius: var(--r-full);
-  padding: 16rpx 36rpx;
+  padding: 18rpx 40rpx;
   font-size: 28rpx;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .hero-chips {
@@ -96,11 +98,11 @@
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(135deg, #5b8af8, #3b6ff5);
-  border-radius: var(--r-m);
+  background: var(--brand-grad-btn);
+  border-radius: var(--r-l);
   padding: 24rpx 28rpx;
   margin-bottom: 24rpx;
-  box-shadow: 0 8rpx 24rpx rgba(59, 111, 245, 0.25);
+  box-shadow: var(--sh-brand);
 }
 
 .duebar.donebar {
@@ -153,7 +155,7 @@
 
 .plan-t {
   font-size: 30rpx;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .plan-days {
@@ -181,7 +183,7 @@
 
 .plan-fill {
   height: 100%;
-  background: var(--brand-500);
+  background: var(--brand-grad-btn);
   border-radius: var(--r-full);
 }
 
@@ -248,9 +250,9 @@
   width: 48%;
   box-sizing: border-box;
   background: var(--surface);
-  border: 1rpx solid var(--border);
-  border-radius: var(--r-m);
-  padding: 24rpx;
+  border-radius: var(--r-l);
+  box-shadow: var(--sh-1);
+  padding: 28rpx 24rpx;
   margin-bottom: 20rpx;
   display: flex;
   flex-direction: row;
@@ -258,9 +260,9 @@
 }
 
 .mico {
-  width: 64rpx;
-  height: 64rpx;
-  border-radius: var(--r-s);
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: var(--r-m);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -371,7 +373,7 @@
 
 .tk-fill {
   height: 100%;
-  background: linear-gradient(90deg, #5b8af8, var(--brand-500));
+  background: var(--streak-grad);
   border-radius: var(--r-full);
 }
 
@@ -411,7 +413,7 @@
 
 .guide-btn {
   flex-shrink: 0;
-  background: var(--brand-500);
+  background: var(--brand-grad-btn);
   color: #fff;
   border-radius: var(--r-full);
   padding: 14rpx 26rpx;
@@ -438,7 +440,7 @@
 .sheet {
   width: 100%;
   background: var(--surface);
-  border-radius: var(--r-l) var(--r-l) 0 0;
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
   padding: 28rpx 32rpx calc(40rpx + env(safe-area-inset-bottom));
   max-height: 75vh;
   overflow-y: auto;
@@ -487,7 +489,8 @@
 
 .chip.on {
   color: #fff;
-  background: var(--brand-500);
+  background: var(--brand-grad-btn);
+  font-weight: 600;
 }
 
 .pf-input {
@@ -527,12 +530,13 @@
 .sheet-btn {
   margin-top: 28rpx;
   text-align: center;
-  background: var(--brand-500);
+  background: var(--brand-grad-btn);
   color: #fff;
-  font-size: 27rpx;
-  font-weight: 600;
+  font-size: 30rpx;
+  font-weight: 700;
   border-radius: var(--r-full);
-  padding: 20rpx 0;
+  padding: 24rpx 0;
+  box-shadow: var(--sh-brand);
 }
 
 .sheet-btn.dis {

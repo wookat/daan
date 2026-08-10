@@ -15,11 +15,11 @@
 }
 
 .hero {
-  background: linear-gradient(135deg, #5b8af8, #3b6ff5);
+  background: var(--brand-grad);
   border-radius: 32rpx;
   padding: 36rpx 32rpx;
   margin-bottom: 24rpx;
-  box-shadow: 0 12rpx 36rpx rgba(59, 111, 245, 0.3);
+  box-shadow: var(--sh-brand);
 }
 
 .hero-t {

@@ -64,9 +64,9 @@ function makeQuote(d: PosterData): string {
 // 对照 frontend-uni/src/pkgA/social/poster.vue 的画布绘制（QR 码以站点文字替代，避免引入新依赖）
 function drawPoster(ctx: Ctx2D, d: PosterData): void {
   const g = ctx.createLinearGradient(0, 0, W * 0.7, H);
-  g.addColorStop(0, '#5B8AF8');
-  g.addColorStop(0.55, '#3B6FF5');
-  g.addColorStop(1, '#2C5AD6');
+  g.addColorStop(0, '#5C8CFF');
+  g.addColorStop(0.52, '#3B6FF5');
+  g.addColorStop(1, '#2F57D4');
   roundRect(ctx, 0, 0, W, H, 36);
   ctx.fillStyle = g;
   ctx.fill();

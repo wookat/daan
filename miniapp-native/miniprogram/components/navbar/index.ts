@@ -4,6 +4,7 @@ Component({
   properties: {
     title: { type: String, value: '' },
     back: { type: Boolean, value: false },
+    brand: { type: Boolean, value: false },
   },
   data: {
     statusBarHeight: 20,

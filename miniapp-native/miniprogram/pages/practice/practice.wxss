@@ -31,7 +31,7 @@
 }
 
 .progress {
-  height: 6rpx;
+  height: 8rpx;
   background: var(--fill);
   border-radius: var(--r-full);
   overflow: hidden;
@@ -40,7 +40,7 @@
 
 .pfill {
   height: 100%;
-  background: linear-gradient(90deg, #6c9bff, var(--brand-500));
+  background: var(--brand-grad-btn);
   border-radius: var(--r-full);
 }
 
@@ -49,7 +49,8 @@
 }
 
 .q {
-  font-size: 30rpx;
+  font-size: 32rpx;
+  font-weight: 600;
   line-height: 1.7;
   color: var(--t1);
   margin-bottom: 24rpx;
@@ -59,10 +60,10 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  border: 1rpx solid var(--border);
+  border: 2rpx solid var(--border);
   border-radius: var(--r-m);
-  padding: 22rpx 24rpx;
-  margin-bottom: 16rpx;
+  padding: 24rpx 26rpx;
+  margin-bottom: 18rpx;
   background: var(--surface);
 }
 
@@ -164,7 +165,7 @@
 .exp.hsx {
   background: var(--brand-50);
   border-radius: var(--r-s);
-  padding: 16rpx 20rpx;
+  padding: 18rpx 22rpx;
 }
 
 .exp-v {
@@ -177,12 +178,13 @@
   left: 24rpx;
   right: 24rpx;
   bottom: calc(24rpx + env(safe-area-inset-bottom));
+  z-index: 900;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  border-radius: var(--r-m);
-  padding: 22rpx 28rpx;
+  border-radius: var(--r-l);
+  padding: 24rpx 28rpx;
   box-shadow: var(--sh-2);
 }
 
@@ -226,9 +228,10 @@
 }
 
 .done-pct {
-  font-size: 72rpx;
-  font-weight: 700;
+  font-size: 80rpx;
+  font-weight: 800;
   color: var(--brand-500);
+  font-variant-numeric: tabular-nums;
 }
 
 .done-t {
@@ -271,8 +274,8 @@
   align-items: center;
   justify-content: space-between;
   align-self: stretch;
-  background: linear-gradient(135deg, #5b8af8, #3b6ff5);
-  border-radius: var(--r-m);
+  background: var(--brand-grad-btn);
+  border-radius: var(--r-l);
   padding: 22rpx 28rpx;
   margin-bottom: 20rpx;
 }
