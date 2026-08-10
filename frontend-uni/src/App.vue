@@ -33,8 +33,8 @@ page {
   --brand-soft: #edf3fe;
   --brand-soft-2: #dce7fd;
   --ink: #17181c;
-  --ink-2: #7d818f;
-  --ink-3: #8f959e;
+  --ink-2: #5f6575;
+  --ink-3: #6b7280;
   --ink-4: #b0b4c0;
   --ok: #16a34a;
   --ok-soft: #ecfdf5;
