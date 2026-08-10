@@ -1,0 +1,1172 @@
+{"pid": 34, "old": 298822, "decision": "remap_to_active_twin", "new": 282473, "qsim": 0.987, "osim": 1.0}
+{"pid": 34, "old": 298823, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 34, "old": 298824, "decision": "remap_to_active_twin", "new": 282476, "qsim": 0.99, "osim": 1.0}
+{"pid": 34, "old": 298825, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 34, "old": 298826, "decision": "remap_to_active_twin", "new": 282479, "qsim": 0.989, "osim": 1.0}
+{"pid": 34, "old": 298827, "decision": "remap_to_active_twin", "new": 282480, "qsim": 0.987, "osim": 1.0}
+{"pid": 34, "old": 298828, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 34, "old": 298829, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 34, "old": 298830, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 34, "old": 298831, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 34, "old": 298832, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 34, "old": 298833, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 34, "old": 298834, "decision": "remap_to_active_twin", "new": 282484, "qsim": 0.993, "osim": 1.0}
+{"pid": 34, "old": 298885, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 34, "old": 320711, "decision": "remap_to_active_twin", "new": 282473, "qsim": 0.99, "osim": 1.0}
+{"pid": 34, "old": 320714, "decision": "remap_to_active_twin", "new": 282476, "qsim": 0.99, "osim": 1.0}
+{"pid": 34, "old": 320724, "decision": "remap_to_active_twin", "new": 282484, "qsim": 0.993, "osim": 1.0}
+{"pid": 34, "old": 298835, "decision": "remap_to_active_twin", "new": 282487, "qsim": 1.0, "osim": 1.0}
+{"pid": 34, "old": 298836, "decision": "remap_to_active_twin", "new": 282489, "qsim": 1.0, "osim": 1.0}
+{"pid": 34, "old": 298837, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 34, "old": 298839, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 34, "old": 298840, "decision": "remap_to_active_twin", "new": 282500, "qsim": 1.0, "osim": 1.0}
+{"pid": 34, "old": 298841, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 34, "old": 298842, "decision": "remap_to_active_twin", "new": 282490, "qsim": 1.0, "osim": 1.0}
+{"pid": 34, "old": 298843, "decision": "remap_to_active_twin", "new": 282488, "qsim": 1.0, "osim": 1.0}
+{"pid": 34, "old": 298844, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 34, "old": 298845, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 34, "old": 298855, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 34, "old": 298856, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 34, "old": 320731, "decision": "remap_to_active_twin", "new": 282491, "qsim": 0.997, "osim": 1.0}
+{"pid": 34, "old": 320733, "decision": "remap_to_active_twin", "new": 282495, "qsim": 0.967, "osim": 1.0}
+{"pid": 34, "old": 320740, "decision": "remap_to_active_twin", "new": 282501, "qsim": 0.983, "osim": 1.0}
+{"pid": 34, "old": 320744, "decision": "remap_to_active_twin", "new": 282504, "qsim": 0.984, "osim": 1.0}
+{"pid": 34, "old": 320751, "decision": "remap_to_active_twin", "new": 282512, "qsim": 0.995, "osim": 1.0}
+{"pid": 34, "old": 320757, "decision": "kept_pending_unverified", "flag": "PLACEHOLDER"}
+{"pid": 34, "old": 320760, "decision": "kept_pending_unverified", "flag": "corrupted numeric explanation", "note": "reverted after secondary review"}
+{"pid": 34, "old": 320761, "decision": "remap_to_active_twin", "new": 282526, "qsim": 0.976, "osim": 1.0}
+{"pid": 34, "old": 320762, "decision": "kept_pending_unverified", "flag": "corrupted numeric explanation", "note": "reverted after secondary review"}
+{"pid": 34, "old": 298863, "decision": "remap_to_active_twin", "new": 282542, "qsim": 1.0, "osim": 1.0}
+{"pid": 34, "old": 298865, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 34, "old": 298867, "decision": "remap_to_active_twin", "new": 282546, "qsim": 1.0, "osim": 1.0}
+{"pid": 34, "old": 298868, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 34, "old": 298869, "decision": "remap_to_active_twin", "new": 282545, "qsim": 1.0, "osim": 1.0}
+{"pid": 34, "old": 298870, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 34, "old": 298871, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 34, "old": 298872, "decision": "remap_to_active_twin", "new": 282552, "qsim": 1.0, "osim": 0.985}
+{"pid": 34, "old": 298873, "decision": "remap_to_active_twin", "new": 282553, "qsim": 1.0, "osim": 1.0}
+{"pid": 34, "old": 298874, "decision": "remap_to_active_twin", "new": 282554, "qsim": 1.0, "osim": 1.0}
+{"pid": 34, "old": 298875, "decision": "remap_to_active_twin", "new": 282555, "qsim": 1.0, "osim": 1.0}
+{"pid": 34, "old": 298876, "decision": "remap_to_active_twin", "new": 282556, "qsim": 1.0, "osim": 1.0}
+{"pid": 34, "old": 298877, "decision": "remap_to_active_twin", "new": 282557, "qsim": 1.0, "osim": 1.0}
+{"pid": 34, "old": 298878, "decision": "remap_to_active_twin", "new": 282558, "qsim": 1.0, "osim": 1.0}
+{"pid": 34, "old": 298879, "decision": "remap_to_active_twin", "new": 282559, "qsim": 1.0, "osim": 1.0}
+{"pid": 34, "old": 298881, "decision": "remap_to_active_twin", "new": 282560, "qsim": 1.0, "osim": 1.0}
+{"pid": 34, "old": 298882, "decision": "remap_to_active_twin", "new": 282561, "qsim": 1.0, "osim": 1.0}
+{"pid": 34, "old": 298886, "decision": "remap_to_active_twin", "new": 282565, "qsim": 1.0, "osim": 1.0}
+{"pid": 34, "old": 320775, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 34, "old": 320776, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 34, "old": 320777, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 34, "old": 320778, "decision": "remap_to_active_twin", "new": 282546, "qsim": 1.0, "osim": 1.0}
+{"pid": 34, "old": 320779, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 34, "old": 320780, "decision": "remap_to_active_twin", "new": 282545, "qsim": 1.0, "osim": 1.0}
+{"pid": 34, "old": 320792, "decision": "kept_pending_unverified", "flag": "NOANSLETTER"}
+{"pid": 34, "old": 320795, "decision": "kept_pending_unverified", "flag": "NOANSLETTER"}
+{"pid": 34, "old": 320796, "decision": "kept_pending_unverified", "flag": "NOANSLETTER"}
+{"pid": 34, "old": 320797, "decision": "remap_to_active_twin", "new": 282565, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264229, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 46, "old": 264232, "decision": "remap_to_active_twin", "new": 238927, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264239, "decision": "remap_to_active_twin", "new": 238934, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264240, "decision": "remap_to_active_twin", "new": 238935, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264241, "decision": "remap_to_active_twin", "new": 238936, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264242, "decision": "remap_to_active_twin", "new": 238937, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264244, "decision": "remap_to_active_twin", "new": 238939, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264245, "decision": "remap_to_active_twin", "new": 238940, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264246, "decision": "remap_to_active_twin", "new": 238941, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264248, "decision": "remap_to_active_twin", "new": 238943, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264255, "decision": "remap_to_active_twin", "new": 238950, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264260, "decision": "remap_to_active_twin", "new": 238955, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264261, "decision": "remap_to_active_twin", "new": 238956, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264269, "decision": "remap_to_active_twin", "new": 238964, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264270, "decision": "remap_to_active_twin", "new": 238965, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264271, "decision": "remap_to_active_twin", "new": 238966, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264272, "decision": "remap_to_active_twin", "new": 238967, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264273, "decision": "remap_to_active_twin", "new": 238968, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264274, "decision": "remap_to_active_twin", "new": 238969, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264275, "decision": "remap_to_active_twin", "new": 238970, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264276, "decision": "remap_to_active_twin", "new": 238971, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264277, "decision": "remap_to_active_twin", "new": 238972, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264278, "decision": "remap_to_active_twin", "new": 238973, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264279, "decision": "remap_to_active_twin", "new": 238974, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264281, "decision": "remap_to_active_twin", "new": 238976, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264282, "decision": "remap_to_active_twin", "new": 238977, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264283, "decision": "remap_to_active_twin", "new": 238978, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264284, "decision": "remap_to_active_twin", "new": 238979, "qsim": 1.0, "osim": 0.916}
+{"pid": 46, "old": 264285, "decision": "remap_to_active_twin", "new": 238980, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264286, "decision": "remap_to_active_twin", "new": 238981, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264290, "decision": "remap_to_active_twin", "new": 238982, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264291, "decision": "remap_to_active_twin", "new": 238983, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264292, "decision": "remap_to_active_twin", "new": 238984, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264294, "decision": "remap_to_active_twin", "new": 238986, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264295, "decision": "remap_to_active_twin", "new": 238987, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264296, "decision": "remap_to_active_twin", "new": 238989, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264297, "decision": "remap_to_active_twin", "new": 238990, "qsim": 1.0, "osim": 1.0}
+{"pid": 46, "old": 264298, "decision": "remap_to_active_twin", "new": 238991, "qsim": 1.0, "osim": 1.0}
+{"pid": 25, "old": 298887, "decision": "remap_to_active_twin", "new": 282646, "qsim": 1.0, "osim": 1.0}
+{"pid": 25, "old": 298888, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 25, "old": 298889, "decision": "remap_to_active_twin", "new": 282650, "qsim": 1.0, "osim": 1.0}
+{"pid": 25, "old": 298890, "decision": "remap_to_active_twin", "new": 282649, "qsim": 1.0, "osim": 1.0}
+{"pid": 25, "old": 298891, "decision": "remap_to_active_twin", "new": 282648, "qsim": 1.0, "osim": 1.0}
+{"pid": 25, "old": 298892, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 25, "old": 298893, "decision": "remap_to_active_twin", "new": 282652, "qsim": 1.0, "osim": 1.0}
+{"pid": 25, "old": 298894, "decision": "remap_to_active_twin", "new": 282654, "qsim": 1.0, "osim": 1.0}
+{"pid": 25, "old": 298895, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 25, "old": 298896, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 25, "old": 298899, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 25, "old": 298900, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 25, "old": 298901, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 25, "old": 298902, "decision": "remap_to_active_twin", "new": 282671, "qsim": 1.0, "osim": 1.0}
+{"pid": 25, "old": 298903, "decision": "remap_to_active_twin", "new": 282673, "qsim": 1.0, "osim": 1.0}
+{"pid": 25, "old": 298904, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 25, "old": 298905, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 25, "old": 298906, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 25, "old": 298907, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 25, "old": 298908, "decision": "remap_to_active_twin", "new": 282674, "qsim": 0.998, "osim": 1.0}
+{"pid": 25, "old": 298909, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 25, "old": 298910, "decision": "remap_to_active_twin", "new": 282669, "qsim": 1.0, "osim": 1.0}
+{"pid": 25, "old": 298911, "decision": "remap_to_active_twin", "new": 282667, "qsim": 1.0, "osim": 1.0}
+{"pid": 25, "old": 298912, "decision": "remap_to_active_twin", "new": 282670, "qsim": 1.0, "osim": 1.0}
+{"pid": 25, "old": 298913, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 25, "old": 298914, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 25, "old": 298915, "decision": "remap_to_active_twin", "new": 282661, "qsim": 1.0, "osim": 1.0}
+{"pid": 25, "old": 298916, "decision": "remap_to_active_twin", "new": 282666, "qsim": 1.0, "osim": 1.0}
+{"pid": 25, "old": 298917, "decision": "remap_to_active_twin", "new": 282675, "qsim": 1.0, "osim": 1.0}
+{"pid": 25, "old": 298918, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 25, "old": 298919, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 25, "old": 298920, "decision": "remap_to_active_twin", "new": 282678, "qsim": 1.0, "osim": 1.0}
+{"pid": 25, "old": 298921, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 25, "old": 298922, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 25, "old": 298923, "decision": "remap_to_active_twin", "new": 282680, "qsim": 1.0, "osim": 1.0}
+{"pid": 25, "old": 298924, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 25, "old": 298925, "decision": "remap_to_active_twin", "new": 282681, "qsim": 0.993, "osim": 1.0}
+{"pid": 25, "old": 298927, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 25, "old": 298929, "decision": "remap_to_active_twin", "new": 282688, "qsim": 0.952, "osim": 1.0}
+{"pid": 25, "old": 320821, "decision": "remap_to_active_twin", "new": 282673, "qsim": 0.988, "osim": 1.0}
+{"pid": 25, "old": 320841, "decision": "remap_to_active_twin", "new": 282680, "qsim": 0.987, "osim": 1.0}
+{"pid": 25, "old": 320843, "decision": "remap_to_active_twin", "new": 282681, "qsim": 0.993, "osim": 1.0}
+{"pid": 25, "old": 298934, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 25, "old": 298941, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 25, "old": 298942, "decision": "remap_to_active_twin", "new": 282725, "qsim": 1.0, "osim": 1.0}
+{"pid": 25, "old": 298944, "decision": "remap_to_active_twin", "new": 282719, "qsim": 1.0, "osim": 1.0}
+{"pid": 25, "old": 298945, "decision": "remap_to_active_twin", "new": 282728, "qsim": 0.988, "osim": 0.997}
+{"pid": 25, "old": 298946, "decision": "remap_to_active_twin", "new": 282720, "qsim": 1.0, "osim": 1.0}
+{"pid": 25, "old": 298947, "decision": "remap_to_active_twin", "new": 282724, "qsim": 1.0, "osim": 1.0}
+{"pid": 25, "old": 298949, "decision": "remap_to_active_twin", "new": 282721, "qsim": 1.0, "osim": 1.0}
+{"pid": 25, "old": 298950, "decision": "remap_to_active_twin", "new": 282726, "qsim": 1.0, "osim": 0.997}
+{"pid": 25, "old": 298951, "decision": "remap_to_active_twin", "new": 282727, "qsim": 1.0, "osim": 1.0}
+{"pid": 25, "old": 298952, "decision": "remap_to_active_twin", "new": 282731, "qsim": 1.0, "osim": 1.0}
+{"pid": 25, "old": 298953, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 25, "old": 320869, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 25, "old": 320870, "decision": "kept_pending_unverified", "flag": "PLACEHOLDER"}
+{"pid": 25, "old": 320871, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 25, "old": 320872, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 25, "old": 320873, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 25, "old": 320874, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 25, "old": 320875, "decision": "kept_pending_unverified", "flag": "NOANSLETTER"}
+{"pid": 25, "old": 320876, "decision": "kept_pending_unverified", "flag": "NOANSLETTER"}
+{"pid": 25, "old": 320881, "decision": "kept_pending_unverified", "flag": "NOANSLETTER"}
+{"pid": 25, "old": 320883, "decision": "remap_to_active_twin", "new": 282728, "qsim": 0.976, "osim": 0.997}
+{"pid": 25, "old": 320884, "decision": "remap_to_active_twin", "new": 282720, "qsim": 1.0, "osim": 1.0}
+{"pid": 25, "old": 320885, "decision": "remap_to_active_twin", "new": 282724, "qsim": 1.0, "osim": 1.0}
+{"pid": 25, "old": 320892, "decision": "kept_pending_unverified", "flag": "NOANSLETTER"}
+{"pid": 112, "old": 299082, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 112, "old": 299083, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299084, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299086, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 112, "old": 299087, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299088, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 112, "old": 299092, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299094, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 112, "old": 299095, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299096, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 112, "old": 299097, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299098, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299099, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299100, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299101, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299102, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299103, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299105, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299106, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299108, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299109, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299110, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299111, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299112, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299113, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299114, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299115, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299116, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299117, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299118, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299119, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299120, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299121, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 321482, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 112, "old": 321484, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 112, "old": 299122, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299124, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299125, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299126, "decision": "remap_to_active_twin", "new": 297040, "qsim": 0.938, "osim": 0.978}
+{"pid": 112, "old": 299127, "decision": "remap_to_active_twin", "new": 297038, "qsim": 0.947, "osim": 1.0}
+{"pid": 112, "old": 299129, "decision": "remap_to_active_twin", "new": 297039, "qsim": 0.93, "osim": 1.0}
+{"pid": 112, "old": 299131, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 112, "old": 299133, "decision": "remap_to_active_twin", "new": 297051, "qsim": 1.0, "osim": 0.975}
+{"pid": 112, "old": 299134, "decision": "remap_to_active_twin", "new": 297047, "qsim": 1.0, "osim": 0.997}
+{"pid": 112, "old": 299135, "decision": "remap_to_active_twin", "new": 297045, "qsim": 0.986, "osim": 0.985}
+{"pid": 112, "old": 299138, "decision": "kept_pending_answer_conflict", "flag": "ansdiff"}
+{"pid": 112, "old": 299139, "decision": "remap_to_active_twin", "new": 297046, "qsim": 0.961, "osim": 1.0}
+{"pid": 112, "old": 299140, "decision": "remap_to_active_twin", "new": 297052, "qsim": 0.976, "osim": 1.0}
+{"pid": 112, "old": 321498, "decision": "remap_to_active_twin", "new": 297040, "qsim": 0.938, "osim": 0.978}
+{"pid": 112, "old": 321499, "decision": "remap_to_active_twin", "new": 297038, "qsim": 0.947, "osim": 1.0}
+{"pid": 112, "old": 321500, "decision": "kept_pending_unverified", "flag": "NOANSLETTER"}
+{"pid": 112, "old": 321501, "decision": "remap_to_active_twin", "new": 297039, "qsim": 0.93, "osim": 1.0}
+{"pid": 112, "old": 321502, "decision": "remap_to_active_twin", "new": 297042, "qsim": 0.937, "osim": 1.0}
+{"pid": 112, "old": 321503, "decision": "kept_pending_unverified", "flag": "NOANSLETTER"}
+{"pid": 112, "old": 321504, "decision": "kept_pending_unverified", "flag": "NOANSLETTER"}
+{"pid": 112, "old": 321507, "decision": "remap_to_active_twin", "new": 297045, "qsim": 0.986, "osim": 0.987}
+{"pid": 112, "old": 321508, "decision": "kept_pending_unverified", "flag": "NOANSLETTER"}
+{"pid": 112, "old": 321509, "decision": "kept_pending_unverified", "flag": "NOANSLETTER;PLACEHOLDER"}
+{"pid": 112, "old": 321510, "decision": "kept_pending_answer_conflict", "flag": "ansdiff"}
+{"pid": 112, "old": 321511, "decision": "remap_to_active_twin", "new": 297046, "qsim": 0.97, "osim": 1.0}
+{"pid": 112, "old": 321512, "decision": "remap_to_active_twin", "new": 297052, "qsim": 0.976, "osim": 1.0}
+{"pid": 112, "old": 321513, "decision": "kept_pending_unverified", "flag": "NOANSLETTER;PLACEHOLDER"}
+{"pid": 112, "old": 321514, "decision": "kept_pending_unverified", "flag": "NOANSLETTER"}
+{"pid": 112, "old": 321515, "decision": "remap_to_active_twin", "new": 297053, "qsim": 0.945, "osim": 1.0}
+{"pid": 130, "old": 298614, "decision": "remap_to_active_twin", "new": 265917, "qsim": 1.0, "osim": 1.0}
+{"pid": 130, "old": 298617, "decision": "remap_to_active_twin", "new": 265915, "qsim": 1.0, "osim": 1.0}
+{"pid": 130, "old": 298619, "decision": "remap_to_active_twin", "new": 240318, "qsim": 0.997, "osim": 1.0}
+{"pid": 130, "old": 298620, "decision": "remap_to_active_twin", "new": 1274696, "qsim": 0.961, "osim": 1.0}
+{"pid": 130, "old": 298621, "decision": "remap_to_active_twin", "new": 265918, "qsim": 1.0, "osim": 1.0}
+{"pid": 130, "old": 298622, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 130, "old": 298623, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 130, "old": 298624, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 130, "old": 298625, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 130, "old": 298626, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 130, "old": 298629, "decision": "remap_to_active_twin", "new": 265932, "qsim": 0.986, "osim": 1.0}
+{"pid": 130, "old": 298632, "decision": "remap_to_active_twin", "new": 265931, "qsim": 1.0, "osim": 1.0}
+{"pid": 130, "old": 298634, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 130, "old": 298635, "decision": "remap_to_active_twin", "new": 265926, "qsim": 1.0, "osim": 1.0}
+{"pid": 130, "old": 320013, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 130, "old": 298644, "decision": "remap_to_active_twin", "new": 265957, "qsim": 1.0, "osim": 1.0}
+{"pid": 130, "old": 298646, "decision": "remap_to_active_twin", "new": 265961, "qsim": 1.0, "osim": 1.0}
+{"pid": 130, "old": 298647, "decision": "remap_to_active_twin", "new": 265962, "qsim": 1.0, "osim": 1.0}
+{"pid": 130, "old": 298648, "decision": "remap_to_active_twin", "new": 265958, "qsim": 1.0, "osim": 1.0}
+{"pid": 130, "old": 298650, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 130, "old": 298651, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 130, "old": 298652, "decision": "remap_to_active_twin", "new": 265965, "qsim": 1.0, "osim": 1.0}
+{"pid": 130, "old": 298654, "decision": "remap_to_active_twin", "new": 265967, "qsim": 1.0, "osim": 1.0}
+{"pid": 130, "old": 298655, "decision": "remap_to_active_twin", "new": 265973, "qsim": 1.0, "osim": 1.0}
+{"pid": 130, "old": 298656, "decision": "remap_to_active_twin", "new": 265966, "qsim": 1.0, "osim": 1.0}
+{"pid": 130, "old": 298659, "decision": "remap_to_active_twin", "new": 265969, "qsim": 1.0, "osim": 1.0}
+{"pid": 130, "old": 298660, "decision": "remap_to_active_twin", "new": 265971, "qsim": 1.0, "osim": 1.0}
+{"pid": 130, "old": 298661, "decision": "remap_to_active_twin", "new": 265972, "qsim": 1.0, "osim": 1.0}
+{"pid": 130, "old": 320023, "decision": "kept_pending_unverified", "flag": "PLACEHOLDER"}
+{"pid": 130, "old": 320026, "decision": "remap_to_active_twin", "new": 265962, "qsim": 1.0, "osim": 1.0}
+{"pid": 130, "old": 320028, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 130, "old": 320032, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 130, "old": 320036, "decision": "remap_to_active_twin", "new": 265968, "qsim": 0.985, "osim": 1.0}
+{"pid": 130, "old": 320041, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 57, "old": 298956, "decision": "remap_to_active_twin", "new": 295259, "qsim": 0.992, "osim": 1.0}
+{"pid": 57, "old": 298962, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 57, "old": 298970, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 57, "old": 298971, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 57, "old": 298972, "decision": "remap_to_active_twin", "new": 320644, "qsim": 1.0, "osim": 1.0}
+{"pid": 57, "old": 298974, "decision": "remap_to_active_twin", "new": 295287, "qsim": 1.0, "osim": 1.0}
+{"pid": 57, "old": 298975, "decision": "remap_to_active_twin", "new": 295280, "qsim": 1.0, "osim": 1.0}
+{"pid": 57, "old": 298976, "decision": "remap_to_active_twin", "new": 295281, "qsim": 1.0, "osim": 1.0}
+{"pid": 57, "old": 298977, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 57, "old": 298978, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 57, "old": 298979, "decision": "remap_to_active_twin", "new": 295279, "qsim": 1.0, "osim": 1.0}
+{"pid": 57, "old": 298980, "decision": "remap_to_active_twin", "new": 295285, "qsim": 1.0, "osim": 1.0}
+{"pid": 57, "old": 298991, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 57, "old": 298992, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 57, "old": 298993, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 57, "old": 321209, "decision": "remap_to_active_twin", "new": 295305, "qsim": 0.957, "osim": 1.0}
+{"pid": 57, "old": 321210, "decision": "remap_to_active_twin", "new": 295306, "qsim": 0.972, "osim": 1.0}
+{"pid": 57, "old": 321211, "decision": "kept_pending_unverified", "flag": "PASS"}
+{"pid": 57, "old": 321214, "decision": "remap_to_active_twin", "new": 320670, "qsim": 0.996, "osim": 1.0}
+{"pid": 57, "old": 321215, "decision": "kept_pending_unverified", "flag": "corrupted numeric explanation", "note": "reverted after secondary review"}
+{"pid": 57, "old": 299000, "decision": "remap_to_active_twin", "new": 295324, "qsim": 1.0, "osim": 1.0}
+{"pid": 57, "old": 299001, "decision": "remap_to_active_twin", "new": 295323, "qsim": 1.0, "osim": 1.0}
+{"pid": 57, "old": 299004, "decision": "remap_to_active_twin", "new": 295322, "qsim": 1.0, "osim": 1.0}
+{"pid": 57, "old": 299005, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 57, "old": 299006, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 57, "old": 299007, "decision": "remap_to_active_twin", "new": 295330, "qsim": 1.0, "osim": 1.0}
+{"pid": 57, "old": 299008, "decision": "remap_to_active_twin", "new": 295333, "qsim": 1.0, "osim": 0.997}
+{"pid": 57, "old": 299010, "decision": "remap_to_active_twin", "new": 295343, "qsim": 0.992, "osim": 1.0}
+{"pid": 57, "old": 299011, "decision": "remap_to_active_twin", "new": 295335, "qsim": 1.0, "osim": 1.0}
+{"pid": 57, "old": 299013, "decision": "remap_to_active_twin", "new": 295336, "qsim": 1.0, "osim": 0.994}
+{"pid": 57, "old": 299014, "decision": "remap_to_active_twin", "new": 295341, "qsim": 0.989, "osim": 1.0}
+{"pid": 57, "old": 299016, "decision": "remap_to_active_twin", "new": 295332, "qsim": 1.0, "osim": 1.0}
+{"pid": 57, "old": 321225, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 57, "old": 321226, "decision": "remap_to_active_twin", "new": 295325, "qsim": 1.0, "osim": 1.0}
+{"pid": 57, "old": 321227, "decision": "remap_to_active_twin", "new": 295324, "qsim": 1.0, "osim": 1.0}
+{"pid": 57, "old": 321228, "decision": "remap_to_active_twin", "new": 295323, "qsim": 1.0, "osim": 1.0}
+{"pid": 57, "old": 321229, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 57, "old": 321230, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 57, "old": 321231, "decision": "remap_to_active_twin", "new": 295322, "qsim": 1.0, "osim": 1.0}
+{"pid": 57, "old": 321240, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 57, "old": 321243, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 57, "old": 321246, "decision": "remap_to_active_twin", "new": 320710, "qsim": 0.995, "osim": 1.0}
+{"pid": 73, "old": 297641, "decision": "remap_to_active_twin", "new": 321772, "qsim": 0.955, "osim": 1.0}
+{"pid": 73, "old": 297643, "decision": "remap_to_active_twin", "new": 321773, "qsim": 0.966, "osim": 0.988}
+{"pid": 73, "old": 297647, "decision": "remap_to_active_twin", "new": 321774, "qsim": 0.965, "osim": 0.993}
+{"pid": 73, "old": 297648, "decision": "remap_to_active_twin", "new": 321777, "qsim": 0.948, "osim": 0.993}
+{"pid": 73, "old": 297650, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 73, "old": 297651, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297652, "decision": "remap_to_active_twin", "new": 321782, "qsim": 0.931, "osim": 1.0}
+{"pid": 73, "old": 297654, "decision": "remap_to_active_twin", "new": 321781, "qsim": 0.946, "osim": 1.0}
+{"pid": 73, "old": 297656, "decision": "remap_to_active_twin", "new": 321787, "qsim": 0.96, "osim": 0.992}
+{"pid": 73, "old": 297660, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 73, "old": 297661, "decision": "remap_to_active_twin", "new": 321788, "qsim": 0.99, "osim": 1.0}
+{"pid": 73, "old": 297665, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297666, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297667, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297670, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297671, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297672, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297673, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297674, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297675, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297676, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297677, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297678, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297679, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297680, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297681, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297683, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297685, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297686, "decision": "remap_to_active_twin", "new": 321722, "qsim": 0.922, "osim": 1.0}
+{"pid": 73, "old": 297689, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297690, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297692, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297694, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297698, "decision": "remap_to_active_twin", "new": 321732, "qsim": 0.979, "osim": 0.996}
+{"pid": 73, "old": 297699, "decision": "remap_to_active_twin", "new": 321734, "qsim": 0.95, "osim": 0.976}
+{"pid": 73, "old": 297700, "decision": "remap_to_active_twin", "new": 321741, "qsim": 0.96, "osim": 1.0}
+{"pid": 73, "old": 297702, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297703, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297704, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297706, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297707, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297710, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297711, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297715, "decision": "remap_to_active_twin", "new": 321756, "qsim": 0.985, "osim": 0.996}
+{"pid": 73, "old": 297719, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 73, "old": 297721, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 87, "old": 295519, "decision": "remap_to_active_twin", "new": 236969, "qsim": 0.981, "osim": 1.0}
+{"pid": 87, "old": 295537, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 87, "old": 295539, "decision": "remap_to_active_twin", "new": 236988, "qsim": 0.965, "osim": 1.0}
+{"pid": 87, "old": 295540, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 87, "old": 295541, "decision": "remap_to_active_twin", "new": 236983, "qsim": 0.958, "osim": 1.0}
+{"pid": 87, "old": 295542, "decision": "remap_to_active_twin", "new": 236984, "qsim": 0.962, "osim": 1.0}
+{"pid": 87, "old": 295547, "decision": "remap_to_active_twin", "new": 236989, "qsim": 0.946, "osim": 1.0}
+{"pid": 87, "old": 295550, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 87, "old": 295558, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 87, "old": 295559, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 87, "old": 295560, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 87, "old": 295561, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 87, "old": 295562, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 87, "old": 295564, "decision": "remap_to_active_twin", "new": 236997, "qsim": 0.994, "osim": 1.0}
+{"pid": 87, "old": 295565, "decision": "remap_to_active_twin", "new": 330130, "qsim": 0.994, "osim": 1.0}
+{"pid": 87, "old": 295567, "decision": "dropped_from_paper_bad", "reason": "explanation unrelated (快递包装 vs 精准医学) + answer conflict"}
+{"pid": 87, "old": 295568, "decision": "remap_to_active_twin", "new": 329923, "qsim": 1.0, "osim": 1.0}
+{"pid": 87, "old": 295570, "decision": "remap_to_active_twin", "new": 330125, "qsim": 1.0, "osim": 1.0}
+{"pid": 87, "old": 295571, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 87, "old": 295572, "decision": "kept_pending_answer_conflict", "flag": "ansdiff"}
+{"pid": 87, "old": 295573, "decision": "remap_to_active_twin", "new": 237005, "qsim": 0.971, "osim": 0.99}
+{"pid": 87, "old": 295574, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 87, "old": 295575, "decision": "remap_to_active_twin", "new": 288348, "qsim": 0.996, "osim": 1.0}
+{"pid": 87, "old": 295576, "decision": "remap_to_active_twin", "new": 330126, "qsim": 1.0, "osim": 1.0}
+{"pid": 87, "old": 295577, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 87, "old": 295578, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 87, "old": 295581, "decision": "kept_pending_unverified", "flag": "PASS"}
+{"pid": 87, "old": 295582, "decision": "remap_to_active_twin", "new": 330302, "qsim": 0.936, "osim": 1.0}
+{"pid": 87, "old": 295584, "decision": "kept_pending_unverified", "flag": "NOANSLETTER"}
+{"pid": 87, "old": 295586, "decision": "remap_to_active_twin", "new": 237016, "qsim": 0.98, "osim": 1.0}
+{"pid": 87, "old": 295589, "decision": "remap_to_active_twin", "new": 288268, "qsim": 1.0, "osim": 1.0}
+{"pid": 87, "old": 295592, "decision": "remap_to_active_twin", "new": 288269, "qsim": 1.0, "osim": 1.0}
+{"pid": 87, "old": 295593, "decision": "remap_to_active_twin", "new": 288267, "qsim": 1.0, "osim": 1.0}
+{"pid": 87, "old": 295604, "decision": "remap_to_active_twin", "new": 237027, "qsim": 0.985, "osim": 1.0}
+{"pid": 87, "old": 295610, "decision": "remap_to_active_twin", "new": 288270, "qsim": 1.0, "osim": 1.0}
+{"pid": 87, "old": 295611, "decision": "remap_to_active_twin", "new": 288274, "qsim": 1.0, "osim": 1.0}
+{"pid": 87, "old": 295612, "decision": "kept_pending_unverified", "flag": "NOANSLETTER"}
+{"pid": 87, "old": 295613, "decision": "remap_to_active_twin", "new": 288275, "qsim": 1.0, "osim": 1.0}
+{"pid": 87, "old": 295614, "decision": "kept_pending_unverified", "flag": "NOANSLETTER;PLACEHOLDER"}
+{"pid": 87, "old": 295616, "decision": "kept_pending_unverified", "flag": "NOANSLETTER;PLACEHOLDER"}
+{"pid": 87, "old": 295617, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 31, "old": 275851, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 31, "old": 275854, "decision": "remap_to_active_twin", "new": 264310, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275856, "decision": "remap_to_active_twin", "new": 264312, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275858, "decision": "remap_to_active_twin", "new": 264314, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275862, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 31, "old": 275864, "decision": "remap_to_active_twin", "new": 264318, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275867, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 31, "old": 275868, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 31, "old": 275869, "decision": "remap_to_active_twin", "new": 264327, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275871, "decision": "remap_to_active_twin", "new": 264329, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275872, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 31, "old": 275874, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 31, "old": 275875, "decision": "kept_pending_answer_conflict", "flag": "ANSCONF:BCD"}
+{"pid": 31, "old": 275878, "decision": "kept_pending_answer_conflict", "flag": "ANSCONF:ABC"}
+{"pid": 31, "old": 275879, "decision": "kept_pending_answer_conflict", "flag": "ANSCONF:ABD"}
+{"pid": 31, "old": 275880, "decision": "kept_pending_answer_conflict", "flag": "ANSCONF:AD"}
+{"pid": 31, "old": 275881, "decision": "kept_pending_answer_conflict", "flag": "ANSCONF:ABC"}
+{"pid": 31, "old": 275895, "decision": "remap_to_active_twin", "new": 264343, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275896, "decision": "remap_to_active_twin", "new": 264344, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275898, "decision": "remap_to_active_twin", "new": 264346, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275905, "decision": "remap_to_active_twin", "new": 264363, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275915, "decision": "remap_to_active_twin", "new": 264367, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275916, "decision": "remap_to_active_twin", "new": 264368, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275921, "decision": "remap_to_active_twin", "new": 264378, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275928, "decision": "remap_to_active_twin", "new": 264384, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275933, "decision": "remap_to_active_twin", "new": 264386, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275934, "decision": "remap_to_active_twin", "new": 264387, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275935, "decision": "remap_to_active_twin", "new": 264388, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275936, "decision": "remap_to_active_twin", "new": 264389, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275938, "decision": "remap_to_active_twin", "new": 264390, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275939, "decision": "remap_to_active_twin", "new": 264391, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275942, "decision": "remap_to_active_twin", "new": 264397, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275943, "decision": "remap_to_active_twin", "new": 264398, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275944, "decision": "remap_to_active_twin", "new": 264399, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275945, "decision": "remap_to_active_twin", "new": 264405, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275946, "decision": "remap_to_active_twin", "new": 264406, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275947, "decision": "remap_to_active_twin", "new": 264402, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275948, "decision": "remap_to_active_twin", "new": 264403, "qsim": 1.0, "osim": 0.954}
+{"pid": 31, "old": 275949, "decision": "remap_to_active_twin", "new": 264404, "qsim": 1.0, "osim": 1.0}
+{"pid": 31, "old": 275951, "decision": "remap_to_active_twin", "new": 264401, "qsim": 1.0, "osim": 1.0}
+{"pid": 17, "old": 334728, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334729, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334731, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334732, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334735, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334736, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334745, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334748, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334749, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334750, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334761, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334764, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334767, "decision": "kept_pending_unverified", "flag": "missing source passage", "note": "reverted after secondary review"}
+{"pid": 17, "old": 334770, "decision": "kept_pending_unverified", "flag": "missing source material", "note": "reverted after secondary review"}
+{"pid": 17, "old": 334771, "decision": "kept_pending_unverified", "flag": "missing source material", "note": "reverted after secondary review"}
+{"pid": 17, "old": 334772, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334776, "decision": "kept_pending_unverified", "flag": "missing source passage", "note": "reverted after secondary review"}
+{"pid": 17, "old": 334778, "decision": "kept_pending_unverified", "flag": "missing source passage", "note": "reverted after secondary review"}
+{"pid": 17, "old": 334779, "decision": "kept_pending_unverified", "flag": "missing source passage", "note": "reverted after secondary review"}
+{"pid": 17, "old": 334804, "decision": "kept_pending_unverified", "flag": "PLACEHOLDER"}
+{"pid": 17, "old": 334805, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334806, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334807, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334808, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334809, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334810, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334811, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334812, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334813, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334814, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334815, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334816, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334817, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334818, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334819, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334820, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334821, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334822, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334823, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334824, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 17, "old": 334825, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 42, "old": 297828, "decision": "remap_to_active_twin", "new": 321977, "qsim": 0.975, "osim": 1.0}
+{"pid": 42, "old": 297829, "decision": "remap_to_active_twin", "new": 321981, "qsim": 0.967, "osim": 0.911}
+{"pid": 42, "old": 297831, "decision": "remap_to_active_twin", "new": 321980, "qsim": 0.985, "osim": 1.0}
+{"pid": 42, "old": 297832, "decision": "remap_to_active_twin", "new": 321983, "qsim": 0.981, "osim": 1.0}
+{"pid": 42, "old": 297834, "decision": "remap_to_active_twin", "new": 321985, "qsim": 0.953, "osim": 1.0}
+{"pid": 42, "old": 297836, "decision": "remap_to_active_twin", "new": 321978, "qsim": 0.969, "osim": 1.0}
+{"pid": 42, "old": 297837, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 42, "old": 297840, "decision": "remap_to_active_twin", "new": 321986, "qsim": 0.9, "osim": 1.0}
+{"pid": 42, "old": 297841, "decision": "remap_to_active_twin", "new": 321992, "qsim": 0.941, "osim": 1.0}
+{"pid": 42, "old": 297842, "decision": "remap_to_active_twin", "new": 321993, "qsim": 0.978, "osim": 1.0}
+{"pid": 42, "old": 297843, "decision": "remap_to_active_twin", "new": 321990, "qsim": 0.975, "osim": 1.0}
+{"pid": 42, "old": 297846, "decision": "remap_to_active_twin", "new": 321997, "qsim": 0.99, "osim": 1.0}
+{"pid": 42, "old": 297899, "decision": "remap_to_active_twin", "new": 321998, "qsim": 0.99, "osim": 1.0}
+{"pid": 42, "old": 297902, "decision": "remap_to_active_twin", "new": 322002, "qsim": 1.0, "osim": 1.0}
+{"pid": 42, "old": 297903, "decision": "remap_to_active_twin", "new": 322003, "qsim": 1.0, "osim": 1.0}
+{"pid": 42, "old": 297906, "decision": "kept_pending_unverified", "flag": "NOANSLETTER"}
+{"pid": 42, "old": 297907, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 42, "old": 297908, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 42, "old": 297909, "decision": "kept_pending_unverified", "flag": "NOANSLETTER"}
+{"pid": 42, "old": 297910, "decision": "remap_to_active_twin", "new": 322006, "qsim": 0.944, "osim": 1.0}
+{"pid": 42, "old": 297911, "decision": "remap_to_active_twin", "new": 322007, "qsim": 0.979, "osim": 1.0}
+{"pid": 42, "old": 297912, "decision": "remap_to_active_twin", "new": 322008, "qsim": 0.962, "osim": 1.0}
+{"pid": 42, "old": 297798, "decision": "remap_to_active_twin", "new": 321928, "qsim": 1.0, "osim": 1.0}
+{"pid": 42, "old": 297800, "decision": "remap_to_active_twin", "new": 321929, "qsim": 1.0, "osim": 1.0}
+{"pid": 42, "old": 297802, "decision": "remap_to_active_twin", "new": 321926, "qsim": 1.0, "osim": 1.0}
+{"pid": 42, "old": 297803, "decision": "remap_to_active_twin", "new": 321930, "qsim": 1.0, "osim": 0.978}
+{"pid": 42, "old": 297806, "decision": "remap_to_active_twin", "new": 321934, "qsim": 0.987, "osim": 1.0}
+{"pid": 42, "old": 297807, "decision": "remap_to_active_twin", "new": 321936, "qsim": 0.987, "osim": 1.0}
+{"pid": 42, "old": 297809, "decision": "remap_to_active_twin", "new": 321938, "qsim": 0.994, "osim": 1.0}
+{"pid": 42, "old": 297810, "decision": "remap_to_active_twin", "new": 321940, "qsim": 1.0, "osim": 1.0}
+{"pid": 42, "old": 297811, "decision": "remap_to_active_twin", "new": 321943, "qsim": 0.935, "osim": 1.0}
+{"pid": 42, "old": 297813, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 42, "old": 297815, "decision": "remap_to_active_twin", "new": 321957, "qsim": 1.0, "osim": 1.0}
+{"pid": 42, "old": 297820, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 27, "old": 299018, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 27, "old": 299019, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 27, "old": 299020, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 27, "old": 299021, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 27, "old": 299022, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 27, "old": 299023, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 27, "old": 299024, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 27, "old": 299026, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 27, "old": 299027, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 27, "old": 299028, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 27, "old": 299032, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 27, "old": 299033, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 27, "old": 299036, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 27, "old": 299041, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 27, "old": 299042, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 27, "old": 299045, "decision": "remap_to_active_twin", "new": 282662, "qsim": 1.0, "osim": 1.0}
+{"pid": 27, "old": 299046, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 27, "old": 299048, "decision": "remap_to_active_twin", "new": 282676, "qsim": 1.0, "osim": 1.0}
+{"pid": 27, "old": 299050, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 27, "old": 299051, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 27, "old": 299054, "decision": "remap_to_active_twin", "new": 282682, "qsim": 1.0, "osim": 1.0}
+{"pid": 27, "old": 299056, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 27, "old": 299057, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 27, "old": 299058, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 27, "old": 299059, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 27, "old": 299060, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 27, "old": 321389, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 27, "old": 321399, "decision": "remap_to_active_twin", "new": 282674, "qsim": 0.998, "osim": 1.0}
+{"pid": 27, "old": 321415, "decision": "remap_to_active_twin", "new": 320856, "qsim": 0.983, "osim": 1.0}
+{"pid": 27, "old": 321416, "decision": "remap_to_active_twin", "new": 320854, "qsim": 1.0, "osim": 1.0}
+{"pid": 27, "old": 321419, "decision": "remap_to_active_twin", "new": 320858, "qsim": 0.969, "osim": 1.0}
+{"pid": 27, "old": 299066, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 27, "old": 299067, "decision": "remap_to_active_twin", "new": 282712, "qsim": 0.971, "osim": 1.0}
+{"pid": 27, "old": 299068, "decision": "remap_to_active_twin", "new": 282713, "qsim": 1.0, "osim": 1.0}
+{"pid": 27, "old": 299073, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 27, "old": 299078, "decision": "remap_to_active_twin", "new": 282729, "qsim": 1.0, "osim": 1.0}
+{"pid": 27, "old": 321428, "decision": "kept_pending_unverified", "flag": "NOANSLETTER"}
+{"pid": 27, "old": 321429, "decision": "kept_pending_unverified", "flag": "NOANSLETTER"}
+{"pid": 27, "old": 321430, "decision": "kept_pending_unverified", "flag": "NOANSLETTER"}
+{"pid": 27, "old": 321431, "decision": "kept_pending_unverified", "flag": "NOANSLETTER"}
+{"pid": 27, "old": 321432, "decision": "kept_pending_unverified", "flag": "NOANSLETTER"}
+{"pid": 27, "old": 321433, "decision": "remap_to_active_twin", "new": 282712, "qsim": 0.971, "osim": 1.0}
+{"pid": 27, "old": 321434, "decision": "remap_to_active_twin", "new": 282713, "qsim": 1.0, "osim": 1.0}
+{"pid": 27, "old": 321436, "decision": "kept_pending_unverified", "flag": "PLACEHOLDER"}
+{"pid": 27, "old": 321440, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 27, "old": 321447, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 27, "old": 321450, "decision": "kept_pending_unverified", "flag": "corrupted inline data/explanation", "note": "reverted after secondary review"}
+{"pid": 43, "old": 237543, "decision": "remap_to_active_twin", "new": 263036, "qsim": 1.0, "osim": 1.0}
+{"pid": 43, "old": 237544, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 43, "old": 237546, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 43, "old": 237552, "decision": "remap_to_active_twin", "new": 263045, "qsim": 1.0, "osim": 1.0}
+{"pid": 43, "old": 237559, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 43, "old": 237560, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 43, "old": 237561, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 43, "old": 237565, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 43, "old": 237566, "decision": "kept_pending_unverified", "flag": "PLACEHOLDER"}
+{"pid": 43, "old": 237567, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 43, "old": 237568, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 43, "old": 237569, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 43, "old": 237570, "decision": "remap_to_active_twin", "new": 263063, "qsim": 1.0, "osim": 1.0}
+{"pid": 43, "old": 237572, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 43, "old": 237573, "decision": "kept_pending_unverified", "flag": "PLACEHOLDER"}
+{"pid": 43, "old": 237574, "decision": "remap_to_active_twin", "new": 263067, "qsim": 1.0, "osim": 1.0}
+{"pid": 43, "old": 237575, "decision": "kept_pending_unverified", "flag": "NOANSLETTER;PLACEHOLDER"}
+{"pid": 43, "old": 237576, "decision": "kept_pending_unverified", "flag": "PLACEHOLDER"}
+{"pid": 43, "old": 237577, "decision": "kept_pending_unverified", "flag": "PLACEHOLDER"}
+{"pid": 43, "old": 237578, "decision": "remap_to_active_twin", "new": 263072, "qsim": 1.0, "osim": 1.0}
+{"pid": 43, "old": 237579, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 43, "old": 237580, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 43, "old": 237581, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 43, "old": 237583, "decision": "kept_pending_unverified", "flag": "PLACEHOLDER"}
+{"pid": 43, "old": 237585, "decision": "remap_to_active_twin", "new": 263080, "qsim": 1.0, "osim": 1.0}
+{"pid": 43, "old": 237586, "decision": "remap_to_active_twin", "new": 334521, "qsim": 0.985, "osim": 0.991}
+{"pid": 43, "old": 237587, "decision": "remap_to_active_twin", "new": 263082, "qsim": 1.0, "osim": 1.0}
+{"pid": 43, "old": 237589, "decision": "remap_to_active_twin", "new": 263084, "qsim": 1.0, "osim": 1.0}
+{"pid": 43, "old": 237590, "decision": "remap_to_active_twin", "new": 263085, "qsim": 1.0, "osim": 1.0}
+{"pid": 43, "old": 237594, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 43, "old": 237595, "decision": "dropped_from_paper_bad", "reason": "options corrupted with question fragments"}
+{"pid": 43, "old": 237596, "decision": "remap_to_active_twin", "new": 263091, "qsim": 1.0, "osim": 1.0}
+{"pid": 43, "old": 237607, "decision": "remap_to_active_twin", "new": 334541, "qsim": 0.995, "osim": 0.951}
+{"pid": 53, "old": 296106, "decision": "remap_to_active_twin", "new": 262326, "qsim": 0.978, "osim": 1.0}
+{"pid": 53, "old": 296107, "decision": "remap_to_active_twin", "new": 237150, "qsim": 0.973, "osim": 1.0}
+{"pid": 53, "old": 296111, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 53, "old": 296112, "decision": "remap_to_active_twin", "new": 262329, "qsim": 0.939, "osim": 1.0}
+{"pid": 53, "old": 296116, "decision": "remap_to_active_twin", "new": 334002, "qsim": 1.0, "osim": 1.0}
+{"pid": 53, "old": 296122, "decision": "remap_to_active_twin", "new": 332783, "qsim": 1.0, "osim": 1.0}
+{"pid": 53, "old": 296126, "decision": "remap_to_active_twin", "new": 237164, "qsim": 0.979, "osim": 1.0}
+{"pid": 53, "old": 296127, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 53, "old": 296128, "decision": "remap_to_active_twin", "new": 262344, "qsim": 0.962, "osim": 1.0}
+{"pid": 53, "old": 296129, "decision": "remap_to_active_twin", "new": 237166, "qsim": 0.965, "osim": 1.0}
+{"pid": 53, "old": 296130, "decision": "remap_to_active_twin", "new": 333389, "qsim": 0.959, "osim": 1.0}
+{"pid": 53, "old": 296133, "decision": "remap_to_active_twin", "new": 333679, "qsim": 1.0, "osim": 1.0}
+{"pid": 53, "old": 296134, "decision": "remap_to_active_twin", "new": 332789, "qsim": 1.0, "osim": 1.0}
+{"pid": 53, "old": 296136, "decision": "remap_to_active_twin", "new": 333393, "qsim": 0.961, "osim": 1.0}
+{"pid": 53, "old": 296137, "decision": "remap_to_active_twin", "new": 237173, "qsim": 0.919, "osim": 1.0}
+{"pid": 53, "old": 296138, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 53, "old": 296139, "decision": "remap_to_active_twin", "new": 237175, "qsim": 0.939, "osim": 1.0}
+{"pid": 53, "old": 296140, "decision": "remap_to_active_twin", "new": 332793, "qsim": 0.935, "osim": 1.0}
+{"pid": 53, "old": 296142, "decision": "remap_to_active_twin", "new": 262356, "qsim": 0.968, "osim": 1.0}
+{"pid": 53, "old": 296144, "decision": "remap_to_active_twin", "new": 237179, "qsim": 0.966, "osim": 1.0}
+{"pid": 53, "old": 296145, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 53, "old": 296146, "decision": "remap_to_active_twin", "new": 333398, "qsim": 1.0, "osim": 1.0}
+{"pid": 53, "old": 296147, "decision": "remap_to_active_twin", "new": 332794, "qsim": 1.0, "osim": 1.0}
+{"pid": 53, "old": 296148, "decision": "remap_to_active_twin", "new": 237190, "qsim": 0.979, "osim": 1.0}
+{"pid": 53, "old": 296149, "decision": "remap_to_active_twin", "new": 333409, "qsim": 1.0, "osim": 1.0}
+{"pid": 53, "old": 296151, "decision": "remap_to_active_twin", "new": 262362, "qsim": 0.967, "osim": 0.971}
+{"pid": 53, "old": 296152, "decision": "remap_to_active_twin", "new": 262364, "qsim": 0.987, "osim": 1.0}
+{"pid": 53, "old": 296155, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 53, "old": 296156, "decision": "remap_to_active_twin", "new": 332800, "qsim": 0.992, "osim": 1.0}
+{"pid": 53, "old": 296157, "decision": "remap_to_active_twin", "new": 262370, "qsim": 0.996, "osim": 1.0}
+{"pid": 53, "old": 296158, "decision": "remap_to_active_twin", "new": 262371, "qsim": 0.999, "osim": 0.988}
+{"pid": 53, "old": 296159, "decision": "remap_to_active_twin", "new": 333399, "qsim": 0.997, "osim": 1.0}
+{"pid": 53, "old": 296160, "decision": "remap_to_active_twin", "new": 332795, "qsim": 0.993, "osim": 1.0}
+{"pid": 53, "old": 296162, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 53, "old": 296163, "decision": "remap_to_active_twin", "new": 333696, "qsim": 0.974, "osim": 1.0}
+{"pid": 53, "old": 296164, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 53, "old": 296165, "decision": "remap_to_active_twin", "new": 333402, "qsim": 0.983, "osim": 1.0}
+{"pid": 53, "old": 296167, "decision": "remap_to_active_twin", "new": 237276, "qsim": 0.942, "osim": 1.0}
+{"pid": 53, "old": 296169, "decision": "remap_to_active_twin", "new": 262471, "qsim": 0.91, "osim": 1.0}
+{"pid": 53, "old": 296171, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 53, "old": 296190, "decision": "remap_to_active_twin", "new": 237288, "qsim": 0.97, "osim": 0.918}
+{"pid": 53, "old": 296191, "decision": "remap_to_active_twin", "new": 237220, "qsim": 0.987, "osim": 1.0}
+{"pid": 53, "old": 296192, "decision": "remap_to_active_twin", "new": 237221, "qsim": 0.989, "osim": 1.0}
+{"pid": 53, "old": 296193, "decision": "remap_to_active_twin", "new": 237293, "qsim": 0.995, "osim": 0.982}
+{"pid": 53, "old": 296203, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 105, "old": 261009, "decision": "dropped_from_paper_bad", "reason": "formula bases/exponents stripped; intact twin 236727 exists"}
+{"pid": 105, "old": 261010, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 105, "old": 261011, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 105, "old": 261013, "decision": "kept_pending_unverified", "flag": "PASS"}
+{"pid": 105, "old": 261019, "decision": "kept_pending_unverified", "flag": "PASS"}
+{"pid": 105, "old": 261023, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 105, "old": 261024, "decision": "remap_to_active_twin", "new": 236618, "qsim": 1.0, "osim": 1.0}
+{"pid": 105, "old": 261025, "decision": "remap_to_active_twin", "new": 236619, "qsim": 1.0, "osim": 1.0}
+{"pid": 105, "old": 261028, "decision": "remap_to_active_twin", "new": 236622, "qsim": 1.0, "osim": 1.0}
+{"pid": 105, "old": 261029, "decision": "remap_to_active_twin", "new": 236623, "qsim": 1.0, "osim": 1.0}
+{"pid": 105, "old": 261031, "decision": "remap_to_active_twin", "new": 236625, "qsim": 1.0, "osim": 1.0}
+{"pid": 105, "old": 261036, "decision": "remap_to_active_twin", "new": 236628, "qsim": 1.0, "osim": 1.0}
+{"pid": 105, "old": 261045, "decision": "remap_to_active_twin", "new": 261111, "qsim": 0.91, "osim": 1.0}
+{"pid": 105, "old": 261055, "decision": "remap_to_active_twin", "new": 236646, "qsim": 1.0, "osim": 1.0}
+{"pid": 105, "old": 261056, "decision": "remap_to_active_twin", "new": 236647, "qsim": 1.0, "osim": 1.0}
+{"pid": 105, "old": 261057, "decision": "remap_to_active_twin", "new": 236648, "qsim": 1.0, "osim": 1.0}
+{"pid": 105, "old": 261058, "decision": "remap_to_active_twin", "new": 236649, "qsim": 1.0, "osim": 1.0}
+{"pid": 105, "old": 261059, "decision": "remap_to_active_twin", "new": 236650, "qsim": 1.0, "osim": 1.0}
+{"pid": 105, "old": 261060, "decision": "remap_to_active_twin", "new": 236651, "qsim": 1.0, "osim": 0.915}
+{"pid": 105, "old": 261061, "decision": "remap_to_active_twin", "new": 236652, "qsim": 1.0, "osim": 1.0}
+{"pid": 105, "old": 261062, "decision": "remap_to_active_twin", "new": 236653, "qsim": 1.0, "osim": 0.919}
+{"pid": 105, "old": 261065, "decision": "remap_to_active_twin", "new": 236654, "qsim": 1.0, "osim": 1.0}
+{"pid": 105, "old": 261068, "decision": "remap_to_active_twin", "new": 236655, "qsim": 1.0, "osim": 1.0}
+{"pid": 105, "old": 261069, "decision": "remap_to_active_twin", "new": 236656, "qsim": 1.0, "osim": 1.0}
+{"pid": 105, "old": 261070, "decision": "remap_to_active_twin", "new": 236657, "qsim": 1.0, "osim": 1.0}
+{"pid": 105, "old": 261071, "decision": "dropped_from_paper_bad", "reason": "question truncated (缺三句预测) + explanation unrelated (哲学鸡汤)"}
+{"pid": 105, "old": 261072, "decision": "remap_to_active_twin", "new": 236658, "qsim": 1.0, "osim": 1.0}
+{"pid": 105, "old": 261073, "decision": "remap_to_active_twin", "new": 236659, "qsim": 1.0, "osim": 0.896}
+{"pid": 105, "old": 261074, "decision": "remap_to_active_twin", "new": 236660, "qsim": 1.0, "osim": 1.0}
+{"pid": 105, "old": 261076, "decision": "remap_to_active_twin", "new": 236661, "qsim": 1.0, "osim": 1.0}
+{"pid": 105, "old": 261077, "decision": "remap_to_active_twin", "new": 236662, "qsim": 1.0, "osim": 1.0}
+{"pid": 105, "old": 261078, "decision": "remap_to_active_twin", "new": 236663, "qsim": 1.0, "osim": 1.0}
+{"pid": 44, "old": 262547, "decision": "remap_to_active_twin", "new": 237299, "qsim": 1.0, "osim": 1.0}
+{"pid": 44, "old": 262555, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 44, "old": 262561, "decision": "remap_to_active_twin", "new": 237312, "qsim": 1.0, "osim": 1.0}
+{"pid": 44, "old": 262562, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 44, "old": 262563, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 44, "old": 262564, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 44, "old": 262566, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 44, "old": 262570, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 44, "old": 262576, "decision": "remap_to_active_twin", "new": 237327, "qsim": 1.0, "osim": 1.0}
+{"pid": 44, "old": 262584, "decision": "remap_to_active_twin", "new": 237335, "qsim": 1.0, "osim": 1.0}
+{"pid": 44, "old": 262587, "decision": "remap_to_active_twin", "new": 237338, "qsim": 1.0, "osim": 1.0}
+{"pid": 44, "old": 262592, "decision": "remap_to_active_twin", "new": 237343, "qsim": 1.0, "osim": 1.0}
+{"pid": 44, "old": 262594, "decision": "remap_to_active_twin", "new": 237345, "qsim": 1.0, "osim": 1.0}
+{"pid": 44, "old": 262595, "decision": "remap_to_active_twin", "new": 237346, "qsim": 1.0, "osim": 1.0}
+{"pid": 44, "old": 262596, "decision": "remap_to_active_twin", "new": 237347, "qsim": 1.0, "osim": 1.0}
+{"pid": 44, "old": 262598, "decision": "remap_to_active_twin", "new": 237349, "qsim": 1.0, "osim": 1.0}
+{"pid": 44, "old": 262599, "decision": "remap_to_active_twin", "new": 237350, "qsim": 1.0, "osim": 1.0}
+{"pid": 44, "old": 262600, "decision": "remap_to_active_twin", "new": 237351, "qsim": 1.0, "osim": 0.97}
+{"pid": 44, "old": 262601, "decision": "remap_to_active_twin", "new": 237352, "qsim": 1.0, "osim": 1.0}
+{"pid": 44, "old": 262602, "decision": "remap_to_active_twin", "new": 237353, "qsim": 1.0, "osim": 1.0}
+{"pid": 44, "old": 262604, "decision": "remap_to_active_twin", "new": 237355, "qsim": 1.0, "osim": 1.0}
+{"pid": 44, "old": 262605, "decision": "remap_to_active_twin", "new": 237356, "qsim": 1.0, "osim": 1.0}
+{"pid": 44, "old": 262606, "decision": "remap_to_active_twin", "new": 237357, "qsim": 1.0, "osim": 1.0}
+{"pid": 44, "old": 262607, "decision": "remap_to_active_twin", "new": 237358, "qsim": 1.0, "osim": 1.0}
+{"pid": 44, "old": 262612, "decision": "remap_to_active_twin", "new": 237360, "qsim": 1.0, "osim": 0.977}
+{"pid": 44, "old": 262613, "decision": "remap_to_active_twin", "new": 237362, "qsim": 1.0, "osim": 1.0}
+{"pid": 44, "old": 262614, "decision": "remap_to_active_twin", "new": 237363, "qsim": 1.0, "osim": 1.0}
+{"pid": 44, "old": 262615, "decision": "remap_to_active_twin", "new": 237364, "qsim": 1.0, "osim": 1.0}
+{"pid": 44, "old": 262616, "decision": "remap_to_active_twin", "new": 237365, "qsim": 1.0, "osim": 1.0}
+{"pid": 44, "old": 262617, "decision": "remap_to_active_twin", "new": 237366, "qsim": 1.0, "osim": 1.0}
+{"pid": 44, "old": 262618, "decision": "remap_to_active_twin", "new": 237367, "qsim": 1.0, "osim": 1.0}
+{"pid": 59, "old": 297764, "decision": "remap_to_active_twin", "new": 321836, "qsim": 1.0, "osim": 1.0}
+{"pid": 59, "old": 297765, "decision": "remap_to_active_twin", "new": 321834, "qsim": 1.0, "osim": 1.0}
+{"pid": 59, "old": 297767, "decision": "remap_to_active_twin", "new": 321835, "qsim": 1.0, "osim": 1.0}
+{"pid": 59, "old": 297768, "decision": "remap_to_active_twin", "new": 321837, "qsim": 1.0, "osim": 1.0}
+{"pid": 59, "old": 297769, "decision": "remap_to_active_twin", "new": 321839, "qsim": 1.0, "osim": 1.0}
+{"pid": 59, "old": 297771, "decision": "remap_to_active_twin", "new": 321840, "qsim": 1.0, "osim": 1.0}
+{"pid": 59, "old": 297772, "decision": "remap_to_active_twin", "new": 321842, "qsim": 1.0, "osim": 1.0}
+{"pid": 59, "old": 297775, "decision": "remap_to_active_twin", "new": 321843, "qsim": 1.0, "osim": 1.0}
+{"pid": 59, "old": 297776, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 59, "old": 297777, "decision": "remap_to_active_twin", "new": 321847, "qsim": 1.0, "osim": 1.0}
+{"pid": 59, "old": 297778, "decision": "remap_to_active_twin", "new": 321849, "qsim": 0.953, "osim": 1.0}
+{"pid": 59, "old": 297780, "decision": "remap_to_active_twin", "new": 321850, "qsim": 1.0, "osim": 1.0}
+{"pid": 59, "old": 297782, "decision": "remap_to_active_twin", "new": 321851, "qsim": 1.0, "osim": 1.0}
+{"pid": 59, "old": 297783, "decision": "remap_to_active_twin", "new": 321853, "qsim": 1.0, "osim": 1.0}
+{"pid": 59, "old": 297784, "decision": "remap_to_active_twin", "new": 321854, "qsim": 1.0, "osim": 0.988}
+{"pid": 59, "old": 297786, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 59, "old": 297787, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 59, "old": 297792, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 59, "old": 297794, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 59, "old": 297797, "decision": "kept_pending_answer_conflict", "flag": "likely multi-select answer truncated to A; only B refuted in explanation", "note": "reverted after secondary review"}
+{"pid": 59, "old": 297724, "decision": "remap_to_active_twin", "new": 321801, "qsim": 0.972, "osim": 1.0}
+{"pid": 59, "old": 297725, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 59, "old": 297726, "decision": "remap_to_active_twin", "new": 321803, "qsim": 0.972, "osim": 1.0}
+{"pid": 59, "old": 297727, "decision": "remap_to_active_twin", "new": 321805, "qsim": 0.949, "osim": 1.0}
+{"pid": 59, "old": 297731, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 59, "old": 297732, "decision": "remap_to_active_twin", "new": 321810, "qsim": 1.0, "osim": 1.0}
+{"pid": 59, "old": 297740, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 59, "old": 297741, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 59, "old": 297742, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 59, "old": 297744, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 59, "old": 297746, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 59, "old": 297747, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 59, "old": 297748, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 59, "old": 297750, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 59, "old": 297752, "decision": "remap_to_active_twin", "new": 321814, "qsim": 0.966, "osim": 1.0}
+{"pid": 59, "old": 297753, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 66, "old": 298742, "decision": "remap_to_active_twin", "new": 274858, "qsim": 0.981, "osim": 1.0}
+{"pid": 66, "old": 298743, "decision": "remap_to_active_twin", "new": 274860, "qsim": 0.977, "osim": 1.0}
+{"pid": 66, "old": 298744, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 66, "old": 298745, "decision": "remap_to_active_twin", "new": 274862, "qsim": 0.97, "osim": 1.0}
+{"pid": 66, "old": 298748, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 66, "old": 298749, "decision": "remap_to_active_twin", "new": 274864, "qsim": 1.0, "osim": 1.0}
+{"pid": 66, "old": 298750, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 66, "old": 298751, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 66, "old": 298753, "decision": "remap_to_active_twin", "new": 274865, "qsim": 1.0, "osim": 1.0}
+{"pid": 66, "old": 320489, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 66, "old": 320493, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 66, "old": 320498, "decision": "remap_to_active_twin", "new": 274865, "qsim": 1.0, "osim": 1.0}
+{"pid": 66, "old": 298756, "decision": "remap_to_active_twin", "new": 274873, "qsim": 1.0, "osim": 1.0}
+{"pid": 66, "old": 298757, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 66, "old": 298758, "decision": "remap_to_active_twin", "new": 274875, "qsim": 1.0, "osim": 1.0}
+{"pid": 66, "old": 298759, "decision": "remap_to_active_twin", "new": 274877, "qsim": 1.0, "osim": 1.0}
+{"pid": 66, "old": 298760, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 66, "old": 298761, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 66, "old": 298762, "decision": "remap_to_active_twin", "new": 274879, "qsim": 1.0, "osim": 1.0}
+{"pid": 66, "old": 298763, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 66, "old": 298764, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 66, "old": 298765, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 66, "old": 298766, "decision": "remap_to_active_twin", "new": 274887, "qsim": 1.0, "osim": 0.885}
+{"pid": 66, "old": 298781, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 66, "old": 298783, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 66, "old": 320506, "decision": "remap_to_active_twin", "new": 274877, "qsim": 1.0, "osim": 1.0}
+{"pid": 66, "old": 320509, "decision": "remap_to_active_twin", "new": 274881, "qsim": 1.0, "osim": 1.0}
+{"pid": 66, "old": 320534, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 66, "old": 320539, "decision": "remap_to_active_twin", "new": 274911, "qsim": 1.0, "osim": 1.0}
+{"pid": 66, "old": 298792, "decision": "remap_to_active_twin", "new": 274930, "qsim": 1.0, "osim": 1.0}
+{"pid": 66, "old": 298795, "decision": "remap_to_active_twin", "new": 274928, "qsim": 1.0, "osim": 1.0}
+{"pid": 66, "old": 298797, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 66, "old": 298798, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 66, "old": 298799, "decision": "remap_to_active_twin", "new": 274935, "qsim": 1.0, "osim": 1.0}
+{"pid": 66, "old": 298800, "decision": "remap_to_active_twin", "new": 274936, "qsim": 1.0, "osim": 1.0}
+{"pid": 66, "old": 298802, "decision": "remap_to_active_twin", "new": 274938, "qsim": 1.0, "osim": 0.954}
+{"pid": 66, "old": 298803, "decision": "remap_to_active_twin", "new": 274939, "qsim": 1.0, "osim": 1.0}
+{"pid": 66, "old": 298804, "decision": "remap_to_active_twin", "new": 274940, "qsim": 1.0, "osim": 1.0}
+{"pid": 66, "old": 298806, "decision": "remap_to_active_twin", "new": 274942, "qsim": 1.0, "osim": 1.0}
+{"pid": 66, "old": 298807, "decision": "remap_to_active_twin", "new": 274943, "qsim": 1.0, "osim": 0.96}
+{"pid": 66, "old": 298808, "decision": "remap_to_active_twin", "new": 274944, "qsim": 1.0, "osim": 1.0}
+{"pid": 66, "old": 298809, "decision": "remap_to_active_twin", "new": 274945, "qsim": 1.0, "osim": 1.0}
+{"pid": 66, "old": 298810, "decision": "remap_to_active_twin", "new": 274937, "qsim": 1.0, "osim": 1.0}
+{"pid": 66, "old": 298811, "decision": "remap_to_active_twin", "new": 274947, "qsim": 1.0, "osim": 0.956}
+{"pid": 66, "old": 298812, "decision": "remap_to_active_twin", "new": 274948, "qsim": 1.0, "osim": 1.0}
+{"pid": 66, "old": 298813, "decision": "remap_to_active_twin", "new": 274949, "qsim": 1.0, "osim": 1.0}
+{"pid": 66, "old": 320551, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 66, "old": 320553, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 66, "old": 320556, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 66, "old": 320557, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 66, "old": 320559, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 66, "old": 320565, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 66, "old": 320575, "decision": "kept_pending_unverified", "flag": "PLACEHOLDER"}
+{"pid": 38, "old": 237370, "decision": "remap_to_active_twin", "new": 262682, "qsim": 1.0, "osim": 1.0}
+{"pid": 38, "old": 237371, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 38, "old": 237372, "decision": "remap_to_active_twin", "new": 262672, "qsim": 1.0, "osim": 1.0}
+{"pid": 38, "old": 237373, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 38, "old": 237374, "decision": "remap_to_active_twin", "new": 262671, "qsim": 1.0, "osim": 1.0}
+{"pid": 38, "old": 237376, "decision": "remap_to_active_twin", "new": 262669, "qsim": 1.0, "osim": 1.0}
+{"pid": 38, "old": 237378, "decision": "remap_to_active_twin", "new": 262677, "qsim": 1.0, "osim": 1.0}
+{"pid": 38, "old": 237379, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 38, "old": 237380, "decision": "kept_pending_unverified", "flag": "PLACEHOLDER"}
+{"pid": 38, "old": 237381, "decision": "remap_to_active_twin", "new": 262668, "qsim": 0.99, "osim": 1.0}
+{"pid": 38, "old": 237382, "decision": "remap_to_active_twin", "new": 262873, "qsim": 1.0, "osim": 1.0}
+{"pid": 38, "old": 237383, "decision": "remap_to_active_twin", "new": 296682, "qsim": 0.992, "osim": 1.0}
+{"pid": 38, "old": 237384, "decision": "remap_to_active_twin", "new": 262875, "qsim": 1.0, "osim": 1.0}
+{"pid": 38, "old": 237386, "decision": "remap_to_active_twin", "new": 262630, "qsim": 1.0, "osim": 1.0}
+{"pid": 38, "old": 237387, "decision": "remap_to_active_twin", "new": 262631, "qsim": 1.0, "osim": 1.0}
+{"pid": 38, "old": 237388, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 38, "old": 237389, "decision": "remap_to_active_twin", "new": 262636, "qsim": 1.0, "osim": 1.0}
+{"pid": 38, "old": 237390, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 38, "old": 237394, "decision": "remap_to_active_twin", "new": 262635, "qsim": 0.921, "osim": 1.0}
+{"pid": 38, "old": 237395, "decision": "remap_to_active_twin", "new": 262637, "qsim": 1.0, "osim": 1.0}
+{"pid": 38, "old": 237398, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 38, "old": 237401, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 38, "old": 237402, "decision": "remap_to_active_twin", "new": 262656, "qsim": 1.0, "osim": 1.0}
+{"pid": 38, "old": 237403, "decision": "remap_to_active_twin", "new": 262645, "qsim": 1.0, "osim": 1.0}
+{"pid": 38, "old": 237405, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 38, "old": 237406, "decision": "remap_to_active_twin", "new": 262664, "qsim": 1.0, "osim": 1.0}
+{"pid": 38, "old": 237410, "decision": "remap_to_active_twin", "new": 296702, "qsim": 0.995, "osim": 1.0}
+{"pid": 38, "old": 237411, "decision": "kept_pending_unverified", "flag": "PLACEHOLDER"}
+{"pid": 38, "old": 237412, "decision": "remap_to_active_twin", "new": 262655, "qsim": 1.0, "osim": 1.0}
+{"pid": 38, "old": 237413, "decision": "remap_to_active_twin", "new": 262657, "qsim": 1.0, "osim": 1.0}
+{"pid": 38, "old": 237415, "decision": "remap_to_active_twin", "new": 262906, "qsim": 1.0, "osim": 1.0}
+{"pid": 38, "old": 237416, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 38, "old": 237417, "decision": "remap_to_active_twin", "new": 262649, "qsim": 1.0, "osim": 1.0}
+{"pid": 38, "old": 237418, "decision": "remap_to_active_twin", "new": 262647, "qsim": 1.0, "osim": 1.0}
+{"pid": 38, "old": 237419, "decision": "remap_to_active_twin", "new": 296700, "qsim": 0.995, "osim": 1.0}
+{"pid": 38, "old": 237423, "decision": "remap_to_active_twin", "new": 262626, "qsim": 1.0, "osim": 1.0}
+{"pid": 38, "old": 237430, "decision": "remap_to_active_twin", "new": 262627, "qsim": 1.0, "osim": 1.0}
+{"pid": 111, "old": 261341, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 111, "old": 261357, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 111, "old": 261358, "decision": "remap_to_active_twin", "new": 260847, "qsim": 0.978, "osim": 1.0}
+{"pid": 111, "old": 261363, "decision": "remap_to_active_twin", "new": 260854, "qsim": 0.983, "osim": 1.0}
+{"pid": 111, "old": 261365, "decision": "kept_pending_answer_conflict", "flag": "ansdiff"}
+{"pid": 111, "old": 261369, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 111, "old": 261373, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 111, "old": 261374, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 111, "old": 261375, "decision": "remap_to_active_twin", "new": 260875, "qsim": 0.992, "osim": 1.0}
+{"pid": 111, "old": 261377, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 111, "old": 261381, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 111, "old": 261382, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 111, "old": 261383, "decision": "kept_pending_unverified", "flag": "NOANSLETTER;PLACEHOLDER"}
+{"pid": 111, "old": 261384, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 111, "old": 261385, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 111, "old": 261386, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 111, "old": 261387, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 111, "old": 261388, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 111, "old": 261391, "decision": "remap_to_active_twin", "new": 260891, "qsim": 1.0, "osim": 1.0}
+{"pid": 111, "old": 261392, "decision": "remap_to_active_twin", "new": 236402, "qsim": 1.0, "osim": 1.0}
+{"pid": 111, "old": 261395, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 111, "old": 261397, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 111, "old": 261398, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 111, "old": 261401, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 111, "old": 261405, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 111, "old": 261407, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 111, "old": 261409, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 111, "old": 261410, "decision": "remap_to_active_twin", "new": 260721, "qsim": 1.0, "osim": 0.998}
+{"pid": 111, "old": 261414, "decision": "kept_pending_answer_conflict", "flag": "ansdiff"}
+{"pid": 95, "old": 298662, "decision": "remap_to_active_twin", "new": 265979, "qsim": 1.0, "osim": 1.0}
+{"pid": 95, "old": 298663, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 298664, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 298666, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 298669, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 298678, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 298679, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 298680, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 298682, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 298683, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 298684, "decision": "remap_to_active_twin", "new": 266004, "qsim": 1.0, "osim": 1.0}
+{"pid": 95, "old": 298685, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 298686, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 298687, "decision": "remap_to_active_twin", "new": 266007, "qsim": 1.0, "osim": 1.0}
+{"pid": 95, "old": 298688, "decision": "remap_to_active_twin", "new": 266013, "qsim": 1.0, "osim": 1.0}
+{"pid": 95, "old": 298689, "decision": "remap_to_active_twin", "new": 266009, "qsim": 1.0, "osim": 1.0}
+{"pid": 95, "old": 298690, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 298691, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 298692, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 298693, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 298694, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 298695, "decision": "remap_to_active_twin", "new": 266010, "qsim": 1.0, "osim": 1.0}
+{"pid": 95, "old": 298696, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 298701, "decision": "remap_to_active_twin", "new": 266024, "qsim": 1.0, "osim": 1.0}
+{"pid": 95, "old": 298702, "decision": "remap_to_active_twin", "new": 266019, "qsim": 1.0, "osim": 1.0}
+{"pid": 95, "old": 298703, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 298704, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 298705, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 298706, "decision": "remap_to_active_twin", "new": 266029, "qsim": 0.903, "osim": 1.0}
+{"pid": 95, "old": 298707, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 298708, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 298709, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 298710, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 298711, "decision": "remap_to_active_twin", "new": 266027, "qsim": 1.0, "osim": 1.0}
+{"pid": 95, "old": 298712, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 298713, "decision": "remap_to_active_twin", "new": 266030, "qsim": 1.0, "osim": 1.0}
+{"pid": 95, "old": 298714, "decision": "remap_to_active_twin", "new": 266032, "qsim": 1.0, "osim": 0.863}
+{"pid": 95, "old": 298715, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 320203, "decision": "remap_to_active_twin", "new": 266010, "qsim": 0.998, "osim": 1.0}
+{"pid": 95, "old": 320229, "decision": "kept_pending_answer_conflict", "flag": "ansdiff"}
+{"pid": 95, "old": 298722, "decision": "remap_to_active_twin", "new": 266058, "qsim": 0.995, "osim": 1.0}
+{"pid": 95, "old": 298726, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 95, "old": 298729, "decision": "remap_to_active_twin", "new": 266071, "qsim": 1.0, "osim": 1.0}
+{"pid": 95, "old": 298731, "decision": "remap_to_active_twin", "new": 266068, "qsim": 1.0, "osim": 1.0}
+{"pid": 95, "old": 298732, "decision": "remap_to_active_twin", "new": 266069, "qsim": 1.0, "osim": 1.0}
+{"pid": 95, "old": 298733, "decision": "remap_to_active_twin", "new": 266074, "qsim": 1.0, "osim": 0.957}
+{"pid": 95, "old": 298737, "decision": "remap_to_active_twin", "new": 266062, "qsim": 1.0, "osim": 1.0}
+{"pid": 95, "old": 298739, "decision": "remap_to_active_twin", "new": 266066, "qsim": 1.0, "osim": 1.0}
+{"pid": 95, "old": 320242, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 95, "old": 320243, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 95, "old": 320245, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 95, "old": 320246, "decision": "remap_to_active_twin", "new": 266058, "qsim": 0.995, "osim": 1.0}
+{"pid": 95, "old": 320247, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 95, "old": 320248, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 95, "old": 320252, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 95, "old": 320253, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 95, "old": 320255, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 95, "old": 320259, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 95, "old": 320260, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 95, "old": 320261, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 95, "old": 320263, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 95, "old": 320265, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 95, "old": 320266, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 95, "old": 320267, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 95, "old": 320268, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 131, "old": 285287, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 131, "old": 285299, "decision": "remap_to_active_twin", "new": 284091, "qsim": 1.0, "osim": 1.0}
+{"pid": 131, "old": 285301, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 131, "old": 285302, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 131, "old": 285304, "decision": "remap_to_active_twin", "new": 236122, "qsim": 0.946, "osim": 1.0}
+{"pid": 131, "old": 285306, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 131, "old": 285308, "decision": "remap_to_active_twin", "new": 236119, "qsim": 0.991, "osim": 1.0}
+{"pid": 131, "old": 285314, "decision": "remap_to_active_twin", "new": 236123, "qsim": 0.972, "osim": 1.0}
+{"pid": 131, "old": 285315, "decision": "remap_to_active_twin", "new": 284108, "qsim": 1.0, "osim": 1.0}
+{"pid": 131, "old": 285320, "decision": "remap_to_active_twin", "new": 284119, "qsim": 1.0, "osim": 1.0}
+{"pid": 131, "old": 285322, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 131, "old": 285324, "decision": "remap_to_active_twin", "new": 284120, "qsim": 1.0, "osim": 1.0}
+{"pid": 131, "old": 285325, "decision": "kept_pending_answer_conflict", "flag": "ansdiff"}
+{"pid": 131, "old": 285330, "decision": "remap_to_active_twin", "new": 284130, "qsim": 1.0, "osim": 1.0}
+{"pid": 131, "old": 285331, "decision": "remap_to_active_twin", "new": 284126, "qsim": 1.0, "osim": 1.0}
+{"pid": 131, "old": 285334, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 131, "old": 285335, "decision": "remap_to_active_twin", "new": 284132, "qsim": 1.0, "osim": 1.0}
+{"pid": 131, "old": 285336, "decision": "remap_to_active_twin", "new": 260273, "qsim": 0.972, "osim": 1.0}
+{"pid": 131, "old": 285338, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 131, "old": 285339, "decision": "remap_to_active_twin", "new": 284136, "qsim": 1.0, "osim": 1.0}
+{"pid": 131, "old": 285340, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 131, "old": 285341, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 131, "old": 285343, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 131, "old": 285345, "decision": "remap_to_active_twin", "new": 236163, "qsim": 0.983, "osim": 1.0}
+{"pid": 131, "old": 285346, "decision": "remap_to_active_twin", "new": 236164, "qsim": 1.0, "osim": 1.0}
+{"pid": 131, "old": 285354, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 131, "old": 285360, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 131, "old": 285364, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 65, "old": 299231, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299232, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299233, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299234, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299235, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299236, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299237, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299238, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299239, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299240, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299241, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299242, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299243, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299244, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299245, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299246, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299247, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299248, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299249, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299250, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299251, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299252, "decision": "remap_to_active_twin", "new": 297664, "qsim": 0.978, "osim": 0.892}
+{"pid": 65, "old": 299254, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299255, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299256, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299258, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299259, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299198, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299199, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299202, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299203, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299204, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299205, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299206, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299207, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299208, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299209, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299210, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299211, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299212, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299213, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299214, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299215, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299216, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 321737, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 65, "old": 299219, "decision": "remap_to_active_twin", "new": 297712, "qsim": 0.98, "osim": 1.0}
+{"pid": 65, "old": 299222, "decision": "remap_to_active_twin", "new": 297716, "qsim": 0.991, "osim": 0.995}
+{"pid": 65, "old": 299223, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299224, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 299225, "decision": "remap_to_active_twin", "new": 297722, "qsim": 0.98, "osim": 0.986}
+{"pid": 65, "old": 299226, "decision": "remap_to_active_twin", "new": 297718, "qsim": 0.975, "osim": 1.0}
+{"pid": 65, "old": 299228, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 65, "old": 321751, "decision": "remap_to_active_twin", "new": 297712, "qsim": 1.0, "osim": 1.0}
+{"pid": 65, "old": 321752, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 65, "old": 321753, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 65, "old": 321754, "decision": "remap_to_active_twin", "new": 297716, "qsim": 1.0, "osim": 0.995}
+{"pid": 65, "old": 321757, "decision": "remap_to_active_twin", "new": 297722, "qsim": 1.0, "osim": 0.986}
+{"pid": 65, "old": 321758, "decision": "remap_to_active_twin", "new": 297718, "qsim": 0.975, "osim": 1.0}
+{"pid": 65, "old": 321759, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 65, "old": 321760, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 65, "old": 321762, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 65, "old": 321764, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 45, "old": 263113, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 45, "old": 263124, "decision": "kept_pending_unverified", "flag": "PLACEHOLDER"}
+{"pid": 45, "old": 263126, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 45, "old": 263127, "decision": "kept_pending_unverified", "flag": "NOANSLETTER;PLACEHOLDER"}
+{"pid": 45, "old": 263128, "decision": "kept_pending_unverified", "flag": "PLACEHOLDER"}
+{"pid": 45, "old": 263130, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 45, "old": 263131, "decision": "kept_pending_unverified", "flag": "PLACEHOLDER"}
+{"pid": 45, "old": 263132, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 45, "old": 263133, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 45, "old": 263134, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 45, "old": 263135, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 45, "old": 263138, "decision": "kept_pending_unverified", "flag": "PLACEHOLDER"}
+{"pid": 45, "old": 263140, "decision": "kept_pending_unverified", "flag": "PLACEHOLDER"}
+{"pid": 45, "old": 263141, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 45, "old": 263142, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 45, "old": 263143, "decision": "kept_pending_unverified", "flag": "PLACEHOLDER"}
+{"pid": 45, "old": 263144, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 45, "old": 263145, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 45, "old": 263147, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 45, "old": 263148, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 45, "old": 263149, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 45, "old": 263154, "decision": "kept_pending_unverified", "flag": "PLACEHOLDER"}
+{"pid": 45, "old": 263155, "decision": "kept_pending_unverified", "flag": "PLACEHOLDER"}
+{"pid": 45, "old": 263156, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 45, "old": 263166, "decision": "remap_to_active_twin", "new": 237669, "qsim": 1.0, "osim": 1.0}
+{"pid": 45, "old": 263167, "decision": "remap_to_active_twin", "new": 237670, "qsim": 1.0, "osim": 1.0}
+{"pid": 45, "old": 263178, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 96, "old": 299145, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 299147, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 299148, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 299149, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 299151, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 299154, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 299155, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 299156, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 321519, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 96, "old": 321565, "decision": "kept_pending_unverified", "flag": "NOIMG"}
+{"pid": 96, "old": 299158, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 299159, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 299160, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 299161, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 299162, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 299163, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 299165, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 299166, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 299167, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 299168, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 299169, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 299170, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 299172, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 299173, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 299174, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 299176, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 299177, "decision": "kept_pending_unverified", "flag": "NOANSLETTER;NOIMG"}
+{"pid": 96, "old": 299178, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 299179, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 299180, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 96, "old": 299181, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 96, "old": 299188, "decision": "remap_to_active_twin", "new": 297313, "qsim": 0.97, "osim": 1.0}
+{"pid": 96, "old": 299190, "decision": "remap_to_active_twin", "new": 297315, "qsim": 0.984, "osim": 1.0}
+{"pid": 96, "old": 299194, "decision": "remap_to_active_twin", "new": 297312, "qsim": 1.0, "osim": 1.0}
+{"pid": 96, "old": 299196, "decision": "remap_to_active_twin", "new": 297316, "qsim": 1.0, "osim": 1.0}
+{"pid": 96, "old": 299197, "decision": "remap_to_active_twin", "new": 297318, "qsim": 0.978, "osim": 1.0}
+{"pid": 96, "old": 321571, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 96, "old": 321572, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 96, "old": 321573, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 96, "old": 321574, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 96, "old": 321575, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 96, "old": 321576, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 96, "old": 321578, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 96, "old": 321579, "decision": "remap_to_active_twin", "new": 297313, "qsim": 0.985, "osim": 1.0}
+{"pid": 96, "old": 321580, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 96, "old": 321581, "decision": "remap_to_active_twin", "new": 297315, "qsim": 0.989, "osim": 1.0}
+{"pid": 96, "old": 321582, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 96, "old": 321583, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 96, "old": 321584, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 96, "old": 321586, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 96, "old": 321588, "decision": "remap_to_active_twin", "new": 297318, "qsim": 0.978, "osim": 1.0}
+{"pid": 110, "old": 236724, "decision": "remap_to_active_twin", "new": 261079, "qsim": 1.0, "osim": 1.0}
+{"pid": 110, "old": 236725, "decision": "remap_to_active_twin", "new": 261080, "qsim": 1.0, "osim": 1.0}
+{"pid": 110, "old": 236727, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 110, "old": 236729, "decision": "remap_to_active_twin", "new": 261084, "qsim": 1.0, "osim": 1.0}
+{"pid": 110, "old": 236736, "decision": "remap_to_active_twin", "new": 261091, "qsim": 1.0, "osim": 1.0}
+{"pid": 110, "old": 236737, "decision": "remap_to_active_twin", "new": 261092, "qsim": 1.0, "osim": 1.0}
+{"pid": 110, "old": 236738, "decision": "remap_to_active_twin", "new": 261093, "qsim": 1.0, "osim": 1.0}
+{"pid": 110, "old": 236748, "decision": "remap_to_active_twin", "new": 236619, "qsim": 0.987, "osim": 0.989}
+{"pid": 110, "old": 236750, "decision": "kept_pending_unverified", "flag": "PASS"}
+{"pid": 110, "old": 236756, "decision": "remap_to_active_twin", "new": 261111, "qsim": 1.0, "osim": 1.0}
+{"pid": 110, "old": 236758, "decision": "remap_to_active_twin", "new": 261113, "qsim": 1.0, "osim": 1.0}
+{"pid": 110, "old": 236759, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 110, "old": 236761, "decision": "remap_to_active_twin", "new": 261116, "qsim": 1.0, "osim": 1.0}
+{"pid": 110, "old": 236762, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 110, "old": 236763, "decision": "remap_to_active_twin", "new": 261118, "qsim": 1.0, "osim": 1.0}
+{"pid": 110, "old": 236765, "decision": "remap_to_active_twin", "new": 261120, "qsim": 1.0, "osim": 1.0}
+{"pid": 110, "old": 236766, "decision": "remap_to_active_twin", "new": 261121, "qsim": 1.0, "osim": 1.0}
+{"pid": 110, "old": 236768, "decision": "remap_to_active_twin", "new": 261123, "qsim": 1.0, "osim": 1.0}
+{"pid": 110, "old": 236769, "decision": "remap_to_active_twin", "new": 261124, "qsim": 0.905, "osim": 1.0}
+{"pid": 110, "old": 236777, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 110, "old": 236778, "decision": "remap_to_active_twin", "new": 261134, "qsim": 0.977, "osim": 0.988}
+{"pid": 110, "old": 236780, "decision": "dropped_from_paper_bad", "reason": "question truncated mid-sentence, options corrupted with question fragments"}
+{"pid": 110, "old": 236781, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 110, "old": 236782, "decision": "remap_to_active_twin", "new": 261138, "qsim": 1.0, "osim": 1.0}
+{"pid": 110, "old": 236783, "decision": "remap_to_active_twin", "new": 261140, "qsim": 1.0, "osim": 1.0}
+{"pid": 110, "old": 236784, "decision": "kept_pending_unverified", "flag": "NOIMG"}
+{"pid": 127, "old": 285193, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 127, "old": 285200, "decision": "kept_pending_unverified", "flag": "NOIMG"}
+{"pid": 127, "old": 285205, "decision": "remap_to_active_twin", "new": 284091, "qsim": 1.0, "osim": 1.0}
+{"pid": 127, "old": 285207, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 127, "old": 285208, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 127, "old": 285210, "decision": "remap_to_active_twin", "new": 236119, "qsim": 0.991, "osim": 1.0}
+{"pid": 127, "old": 285211, "decision": "remap_to_active_twin", "new": 236122, "qsim": 0.946, "osim": 1.0}
+{"pid": 127, "old": 285215, "decision": "remap_to_active_twin", "new": 236123, "qsim": 0.972, "osim": 1.0}
+{"pid": 127, "old": 285224, "decision": "remap_to_active_twin", "new": 236141, "qsim": 0.964, "osim": 1.0}
+{"pid": 127, "old": 285225, "decision": "remap_to_active_twin", "new": 284113, "qsim": 1.0, "osim": 1.0}
+{"pid": 127, "old": 285229, "decision": "remap_to_active_twin", "new": 284119, "qsim": 1.0, "osim": 1.0}
+{"pid": 127, "old": 285231, "decision": "kept_pending_answer_conflict", "flag": "ansdiff"}
+{"pid": 127, "old": 285232, "decision": "remap_to_active_twin", "new": 284126, "qsim": 1.0, "osim": 1.0}
+{"pid": 127, "old": 285235, "decision": "remap_to_active_twin", "new": 284130, "qsim": 1.0, "osim": 1.0}
+{"pid": 127, "old": 285236, "decision": "remap_to_active_twin", "new": 284132, "qsim": 1.0, "osim": 1.0}
+{"pid": 127, "old": 285238, "decision": "remap_to_active_twin", "new": 260273, "qsim": 0.972, "osim": 1.0}
+{"pid": 127, "old": 285240, "decision": "remap_to_active_twin", "new": 284120, "qsim": 1.0, "osim": 1.0}
+{"pid": 127, "old": 285241, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 127, "old": 285243, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 127, "old": 285248, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 127, "old": 285249, "decision": "remap_to_active_twin", "new": 284136, "qsim": 1.0, "osim": 1.0}
+{"pid": 127, "old": 285252, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 127, "old": 285255, "decision": "kept_pending_unverified", "flag": "NOEXP/LOW/MISMATCH"}
+{"pid": 127, "old": 285256, "decision": "remap_to_active_twin", "new": 236163, "qsim": 0.983, "osim": 1.0}
+{"pid": 127, "old": 285263, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 127, "old": 285264, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 127, "old": 285265, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 127, "old": 285271, "decision": "kept_pending_answer_conflict", "flag": "ansdiff"}
+{"pid": 127, "old": 285274, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 64, "old": 333147, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 64, "old": 333148, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 64, "old": 333149, "decision": "remap_to_active_twin", "new": 332833, "qsim": 0.944, "osim": 1.0}
+{"pid": 64, "old": 333156, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 64, "old": 333125, "decision": "remap_to_active_twin", "new": 334028, "qsim": 0.981, "osim": 1.0}
+{"pid": 64, "old": 333127, "decision": "remap_to_active_twin", "new": 333821, "qsim": 1.0, "osim": 1.0}
+{"pid": 64, "old": 333129, "decision": "remap_to_active_twin", "new": 332856, "qsim": 0.987, "osim": 1.0}
+{"pid": 64, "old": 333130, "decision": "remap_to_active_twin", "new": 332857, "qsim": 0.994, "osim": 1.0}
+{"pid": 64, "old": 333131, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 64, "old": 333133, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 64, "old": 333134, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 64, "old": 333136, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 64, "old": 333137, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 64, "old": 333142, "decision": "remap_to_active_twin", "new": 332864, "qsim": 0.976, "osim": 1.0}
+{"pid": 64, "old": 333145, "decision": "remap_to_active_twin", "new": 332865, "qsim": 0.996, "osim": 1.0}
+{"pid": 64, "old": 333146, "decision": "remap_to_active_twin", "new": 332866, "qsim": 0.997, "osim": 1.0}
+{"pid": 64, "old": 333105, "decision": "remap_to_active_twin", "new": 333353, "qsim": 1.0, "osim": 1.0}
+{"pid": 64, "old": 333106, "decision": "remap_to_active_twin", "new": 333475, "qsim": 1.0, "osim": 1.0}
+{"pid": 64, "old": 333109, "decision": "remap_to_active_twin", "new": 332872, "qsim": 1.0, "osim": 1.0}
+{"pid": 64, "old": 333165, "decision": "remap_to_active_twin", "new": 332874, "qsim": 1.0, "osim": 1.0}
+{"pid": 64, "old": 333167, "decision": "remap_to_active_twin", "new": 332875, "qsim": 0.982, "osim": 1.0}
+{"pid": 64, "old": 333168, "decision": "restored_in_paper", "basis": "manual review: explanation relevant, answer consistent, facts verified"}
+{"pid": 64, "old": 333169, "decision": "remap_to_active_twin", "new": 332877, "qsim": 1.0, "osim": 0.993}
+{"pid": 64, "old": 333172, "decision": "remap_to_active_twin", "new": 332879, "qsim": 1.0, "osim": 1.0}
+{"pid": 64, "old": 333178, "decision": "remap_to_active_twin", "new": 332887, "qsim": 1.0, "osim": 1.0}
+{"pid": 64, "old": 333185, "decision": "remap_to_active_twin", "new": 332891, "qsim": 1.0, "osim": 1.0}
+{"pid": 64, "old": 333187, "decision": "kept_pending_answer_conflict", "flag": "ansdiff"}
+{"pid": 64, "old": 333188, "decision": "remap_to_active_twin", "new": 332894, "qsim": 0.995, "osim": 1.0}
