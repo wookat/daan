@@ -12,6 +12,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
 from . import db, llm
+from .auth import rate_limit
 
 router = APIRouter(prefix="/api/interview")
 
@@ -189,6 +190,7 @@ def _validate(body: dict) -> tuple[str, dict, str, int]:
     uid = str(body.get("uid") or "").strip()
     if not uid:
         raise HTTPException(400, "缺少 uid")
+    rate_limit(f"itv_answer:{uid[:64]}", 20, 600)
     q = question_by_id(int(body.get("question_id") or 0))
     if not q:
         raise HTTPException(404, "题目不存在")

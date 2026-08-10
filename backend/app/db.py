@@ -2345,23 +2345,31 @@ def list_mistakes(limit: int = 500, uid: str | None = None) -> list[dict]:
     return out
 
 
-def update_mistake(mid: int, fields: dict):
+def update_mistake(mid: int, fields: dict, uid: str | None = None) -> bool:
     allowed = {"error_reason", "mastered"}
     sets = {k: v for k, v in fields.items() if k in allowed}
     if not sets:
-        return
+        return False
     conn = get_conn()
+    _ensure_mistake_uid(conn)
     clause = ", ".join(f"{k}=?" for k in sets)
-    conn.execute(f"UPDATE mistakes SET {clause} WHERE id=?", (*sets.values(), mid))
+    cl, args = _uid_clause(uid)
+    cur = conn.execute(
+        f"UPDATE mistakes SET {clause} WHERE id=?{cl}", (*sets.values(), mid, *args)
+    )
     conn.commit()
     conn.close()
+    return cur.rowcount > 0
 
 
-def delete_mistake(mid: int):
+def delete_mistake(mid: int, uid: str | None = None) -> bool:
     conn = get_conn()
-    conn.execute("DELETE FROM mistakes WHERE id=?", (mid,))
+    _ensure_mistake_uid(conn)
+    cl, args = _uid_clause(uid)
+    cur = conn.execute(f"DELETE FROM mistakes WHERE id=?{cl}", (mid, *args))
     conn.commit()
     conn.close()
+    return cur.rowcount > 0
 
 
 REVIEW_INTERVALS_DAYS = [1, 3, 7, 15, 30]
@@ -2413,13 +2421,20 @@ def _ensure_review_log(conn):
 
 def record_review(mid: int, correct: bool, uid: str | None = None) -> dict:
     conn = get_conn()
+    _ensure_mistake_uid(conn)
+    cl, args = _uid_clause(uid)
+    if not conn.execute(f"SELECT 1 FROM mistakes WHERE id=?{cl}", (mid, *args)).fetchone():
+        conn.close()
+        raise KeyError(mid)
     if uid:
         _ensure_review_log(conn)
         conn.execute(
             "INSERT INTO review_log (uid, mistake_id, correct, created_at) VALUES (?,?,?,?)",
             (uid, mid, 1 if correct else 0, time.time()),
         )
-    row = conn.execute("SELECT review_streak FROM mistakes WHERE id=?", (mid,)).fetchone()
+    row = conn.execute(
+        f"SELECT review_streak FROM mistakes WHERE id=?{cl}", (mid, *args)
+    ).fetchone()
     if not row:
         conn.close()
         raise KeyError(mid)
@@ -2428,8 +2443,9 @@ def record_review(mid: int, correct: bool, uid: str | None = None) -> dict:
     nxt = time.time() + days * 86400
     mastered = 1 if streak > len(REVIEW_INTERVALS_DAYS) else 0
     conn.execute(
-        "UPDATE mistakes SET review_count=review_count+1, review_streak=?, next_review=?, mastered=? WHERE id=?",
-        (streak, nxt, mastered, mid),
+        "UPDATE mistakes SET review_count=review_count+1, review_streak=?, next_review=?, "
+        f"mastered=? WHERE id=?{cl}",
+        (streak, nxt, mastered, mid, *args),
     )
     conn.commit()
     conn.close()

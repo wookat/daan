@@ -1321,7 +1321,7 @@ export default {
       this.$forceUpdate();
       if (q._mid) {
         try {
-          await request('/api/mistakes/' + q._mid, { method: 'PATCH', data: { error_reason: rz } });
+          await request('/api/mistakes/' + q._mid, { method: 'PATCH', data: { uid: anonUid(), error_reason: rz } });
         } catch (e) { /* 非关键路径 */ }
       }
     },
@@ -1481,7 +1481,7 @@ export default {
         });
         q._mid = res.id;
         if (q._reason) {
-          request('/api/mistakes/' + q._mid, { method: 'PATCH', data: { error_reason: q._reason } });
+          request('/api/mistakes/' + q._mid, { method: 'PATCH', data: { uid: anonUid(), error_reason: q._reason } });
         }
         q._saved = true;
         this.autoSaved = true;
