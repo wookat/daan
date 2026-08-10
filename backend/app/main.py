@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import hmac
 import json
 import mimetypes
 import os
@@ -338,7 +339,9 @@ ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "") or IMPORT_TOKEN
 def check_admin(x_admin_token: str | None):
     if not ADMIN_TOKEN:
         raise HTTPException(503, "服务端未配置管理令牌，请联系管理员")
-    if x_admin_token != ADMIN_TOKEN:
+    if not hmac.compare_digest(x_admin_token or "", ADMIN_TOKEN):
+        # 令牌错误按全局失败计数限速，封顶暴力枚举速率（正确令牌不受影响）
+        auth.rate_limit("admin_token_fail", 20, 300)
         raise HTTPException(401, "无效管理令牌")
 
 

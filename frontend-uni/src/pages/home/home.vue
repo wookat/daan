@@ -1017,7 +1017,7 @@ export default {
 .sz-t { font-size: 29rpx; font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 8rpx; }
 .sz-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
 .tag { display: inline-flex; align-items: center; height: 40rpx; padding: 0 16rpx; border-radius: 12rpx; font-size: 21rpx; font-weight: 500; }
-.tag.warn { background: var(--warn-soft); color: #d97706; }
+.tag.warn { background: var(--warn-soft); color: #b45309; }
 .tag.ok { background: var(--ok-soft); color: #16a34a; }
 .mini-btn { flex-shrink: 0; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 28rpx; background: var(--brand-soft); color: var(--brand); border-radius: 20rpx; font-size: 25rpx; font-weight: 600; }
 .grow { flex: 1; min-width: 0; }

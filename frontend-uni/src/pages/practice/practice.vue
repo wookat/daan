@@ -1902,7 +1902,8 @@ export default {
 .fire-n { font-size: 22rpx; color: #ea580c; font-weight: 700; }
 .iconbtn { display: inline-flex; align-items: center; }
 .timer { font-size: 22rpx; color: var(--ink-2); }
-.fontbtn { font-size: 24rpx; font-weight: 700; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 10rpx; padding: 2rpx 12rpx; }
+.fontbtn { font-size: 24rpx; font-weight: 700; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 10rpx; padding: 2rpx 12rpx; position: relative; }
+.fontbtn::after { content: ''; position: absolute; inset: -16rpx; }
 .fontbtn.beion { background: var(--brand); border-color: var(--brand); color: #fff; }
 .reasons { display: flex; flex-wrap: wrap; align-items: center; gap: 12rpx; margin-bottom: 16rpx; }
 .rz-t { font-size: 23rpx; color: var(--ink-2); }
