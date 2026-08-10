@@ -2,7 +2,7 @@
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
     <view class="card usercard">
-      <view class="avatar">{{user ? (user.nickname || user.phone || '用').slice(0, 1) : '游'}}</view>
+      <view class="avatar">{{avatarChar}}</view>
       <view class="u-main">
         <text class="u-name">{{user ? (user.nickname || user.phone) : '游客模式'}}</text>
         <text class="u-sub">{{user ? '已登录 · 多端同步中' : '登录后错题与进度多端同步'}}</text>
