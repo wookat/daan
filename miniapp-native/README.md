@@ -13,10 +13,21 @@
 ## 微信开发者工具导入步骤
 
 1. `cd miniapp-native && npm install`
-2. 打开微信开发者工具 → 导入项目 → 选择 `miniapp-native/` 目录（`project.config.json` 所在层级），AppID 可先用测试号
+2. 打开微信开发者工具 → 导入项目 → 选择 `miniapp-native/` 目录（`project.config.json` 所在层级），AppID 已配置为正式号 `wx01f2f29cfe51baba`
 3. 菜单「工具 → 构建 npm」（生成 `miniprogram/miniprogram_npm/tdesign-miniprogram`）
 4. 详情 → 本地设置：勾选「将 JS 编译成 ES5」「使用 npm 模块」；基础库选 3.x（Skyline 需要）
 5. 编译预览。真机预览需在小程序后台把 `kaogong.zalize.com` 加入 request 合法域名（开发阶段可勾选「不校验合法域名」）
+
+## 发布前配置清单（小程序后台，需管理员）
+
+在 https://mp.weixin.qq.com （AppID `wx01f2f29cfe51baba`）：
+
+1. 开发 → 开发管理 → 开发设置 → 服务器域名：
+   - request 合法域名：`https://kaogong.zalize.com`
+   - downloadFile 合法域名：`https://kaogong.zalize.com`（PDF 导出/图片题）
+2. 成员管理：把开发者微信号加入「开发者」（真机预览需要）
+3. 订阅消息：按需申请「学习提醒」类模板，模板 ID 回填 `pages/profile` 提醒逻辑
+4. 版本管理：开发者工具「上传」后在后台提交审核（类目建议：教育→在线教育）
 
 ## 本地校验
 
