@@ -273,7 +273,7 @@ async def api_similar(body: dict, x_access_code: str | None = Header(None)):
     try:
         content = await engine.similar_question(qt, body.get("question_type"))
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(502, f"生成失败：{_friendly_ai_err(e)}") from e
+        raise HTTPException(502, _friendly_ai_err(e)) from e
     return {"content": content}
 
 
@@ -528,12 +528,15 @@ async def api_followup(body: dict, x_access_code: str | None = Header(None)):
     query = (body.get("query") or "").strip()
     if not query:
         raise HTTPException(400, "缺少追问内容")
-    answer = await engine.followup(
-        body.get("question_text") or "",
-        body.get("explanation") or "",
-        body.get("history") or [],
-        query[:500],
-    )
+    try:
+        answer = await engine.followup(
+            body.get("question_text") or "",
+            body.get("explanation") or "",
+            body.get("history") or [],
+            query[:500],
+        )
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(502, _friendly_ai_err(e)) from e
     return {"answer": answer}
 
 
@@ -549,7 +552,10 @@ async def api_coach(body: dict, x_access_code: str | None = Header(None)):
         "## 一句鼓励。总字数 250 字以内，不要空话套话。\n\n学习数据（JSON）：\n"
         + json.dumps(stats, ensure_ascii=False)[:3000]
     )
-    advice = await llm.chat_fast([{"role": "user", "content": prompt}], temperature=0.4, max_tokens=800)
+    try:
+        advice = await llm.chat_fast([{"role": "user", "content": prompt}], temperature=0.4, max_tokens=800)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(502, _friendly_ai_err(e)) from e
     return {"advice": advice}
 
 
@@ -862,7 +868,10 @@ async def api_mistake_analysis(body: dict, x_access_code: str | None = Header(No
         "总字数 300 字以内，不要空话套话。\n\n数据（JSON）：\n"
         + json.dumps(stats, ensure_ascii=False)[:3000]
     )
-    analysis = await llm.chat_fast([{"role": "user", "content": prompt}], temperature=0.4, max_tokens=900)
+    try:
+        analysis = await llm.chat_fast([{"role": "user", "content": prompt}], temperature=0.4, max_tokens=900)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(502, _friendly_ai_err(e)) from e
     return {"analysis": analysis, "stats": stats}
 
 

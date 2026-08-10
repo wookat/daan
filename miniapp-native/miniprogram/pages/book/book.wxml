@@ -97,6 +97,7 @@
       <text class="tab-chip {{tab === 'todo' ? 'on' : ''}}" data-tab="todo" bind:tap="onTab">待掌握 {{todoCount}}</text>
       <text class="tab-chip {{tab === 'done' ? 'on' : ''}}" data-tab="done" bind:tap="onTab">已掌握 {{doneCount}}</text>
       <text class="tab-chip {{tab === 'fav' ? 'on' : ''}}" data-tab="fav" bind:tap="onTab">收藏 {{favs.length}}</text>
+      <text wx:if="{{tab !== 'fav'}}" class="filterbtn {{sortBy !== 'time' || filterMod || filterType ? 'fon' : ''}}" bind:tap="onFilterOpen">筛选</text>
     </view>
 
     <view wx:if="{{tab !== 'fav'}}" class="btn-primary redo" bind:tap="onRedo">错题重练（抽 10 题）</view>
@@ -112,6 +113,8 @@
         <view class="m-h">
           <text class="tag tag-brand">{{item.modName}}</text>
           <text wx:if="{{item.tag3_name}}" class="tag tag-gray">{{item.tag3_name}}</text>
+          <text wx:if="{{item.error_reason}}" class="tag tag-warn">{{item.error_reason}}</text>
+          <text wx:if="{{item.times > 1}}" class="tag tag-gray">错 {{item.times}} 次</text>
         </view>
         <text class="m-q">{{item.question_text}}</text>
         <view wx:if="{{item.open}}" class="m-detail">
@@ -122,6 +125,8 @@
           <text wx:if="{{item.explanation}}" class="m-exp" user-select>{{item.explanation}}</text>
           <view class="m-ops">
             <view class="m-op" data-index="{{index}}" catch:tap="onMaster">{{item.mastered ? '移回待掌握' : '标记已掌握'}}</view>
+            <view wx:if="{{item.question_id}}" class="m-op" data-qid="{{item.question_id}}" catch:tap="onNoteOpen">笔记</view>
+            <view wx:if="{{item.question_id}}" class="m-op" data-index="{{index}}" catch:tap="onReportOpen">纠错</view>
             <view wx:if="{{item.question_id}}" class="m-op" data-index="{{index}}" catch:tap="onShareQ">分享给队友</view>
           </view>
         </view>
@@ -129,13 +134,29 @@
     </block>
 
     <block wx:if="{{!loading && tab === 'fav'}}">
+      <view class="folders-row">
+        <text class="fold-chip {{folderId === null ? 'on' : ''}}" data-fid="all" bind:tap="onPickFolder">全部</text>
+        <text
+          wx:for="{{folders}}"
+          wx:key="id"
+          class="fold-chip {{folderId === item.id ? 'on' : ''}}"
+          data-fid="{{item.id}}"
+          data-name="{{item.name}}"
+          bind:tap="onPickFolder"
+          bind:longpress="onFolderOps"
+        >{{item.icon}} {{item.name}} {{item.n}}</text>
+        <text class="fold-chip fold-new" bind:tap="onNewFolder">＋ 新建收藏夹</text>
+      </view>
+      <text class="fold-tip">长按自建收藏夹可重命名 / 删除</text>
       <view wx:if="{{!favs.length}}" class="empty">
         <view class="eico">⭐</view>
         <text>暂无收藏题目</text>
       </view>
       <view wx:for="{{favs}}" wx:key="id" class="card">
         <text class="m-q">{{item.question || '题目 #' + item.id}}</text>
+        <view wx:if="{{item.note}}" class="fav-note">📝 {{item.note}}</view>
         <view class="m-ops">
+          <view class="m-op" data-qid="{{item.id}}" catch:tap="onNoteOpen">{{item.note ? '改笔记' : '写笔记'}}</view>
           <view class="m-op" data-module="{{item.module}}" catch:tap="onFavPractice">去练同模块</view>
           <view class="m-op" data-qid="{{item.id}}" catch:tap="onUnfav">取消收藏</view>
         </view>
@@ -144,3 +165,99 @@
     </block>
   </view>
 </scroll-view>
+
+<!-- 筛选与排序 -->
+<view wx:if="{{filterOpen}}" class="sheet-mask" bind:tap="onFilterClose">
+  <view class="sheet" catch:tap="noop">
+    <view class="sheet-h">
+      <text class="sheet-t">筛选与排序</text>
+      <text class="sheet-x" bind:tap="onFilterClose">✕</text>
+    </view>
+    <text class="sheet-st">排序</text>
+    <view class="chips">
+      <text
+        wx:for="{{SORTS}}"
+        wx:key="k"
+        class="chip {{sortBy === item.k ? 'on' : ''}}"
+        data-k="{{item.k}}"
+        bind:tap="onPickSort"
+      >{{item.t}}</text>
+    </view>
+    <block wx:if="{{modOptions.length}}">
+      <text class="sheet-st">模块</text>
+      <view class="chips">
+        <text
+          wx:for="{{modOptions}}"
+          wx:key="*this"
+          class="chip {{filterMod === item ? 'on' : ''}}"
+          data-v="{{item}}"
+          bind:tap="onPickMod"
+        >{{item}}</text>
+      </view>
+    </block>
+    <block wx:if="{{typeOptions.length}}">
+      <text class="sheet-st">题型</text>
+      <view class="chips">
+        <text
+          wx:for="{{typeOptions}}"
+          wx:key="*this"
+          class="chip {{filterType === item ? 'on' : ''}}"
+          data-v="{{item}}"
+          bind:tap="onPickType"
+        >{{item}}</text>
+      </view>
+    </block>
+    <view class="sheet-row">
+      <view class="sheet-btn ghost" bind:tap="onFilterReset">重置</view>
+      <view class="sheet-btn" bind:tap="onFilterClose">完成（{{shown.length}} 题）</view>
+    </view>
+  </view>
+</view>
+
+<!-- 题目纠错 -->
+<view wx:if="{{reportOpen}}" class="sheet-mask" bind:tap="onReportClose">
+  <view class="sheet" catch:tap="noop">
+    <view class="sheet-h">
+      <text class="sheet-t">题目纠错</text>
+      <text class="sheet-x" bind:tap="onReportClose">✕</text>
+    </view>
+    <view class="chips">
+      <text
+        wx:for="{{REPORT_TYPES}}"
+        wx:key="*this"
+        class="chip {{reportType === item ? 'on' : ''}}"
+        data-t="{{item}}"
+        bind:tap="onPickReportType"
+      >{{item}}</text>
+    </view>
+    <textarea
+      class="sheet-ta"
+      value="{{reportDetail}}"
+      placeholder="补充说明（选填，500 字以内）"
+      maxlength="500"
+      bind:input="onReportDetail"
+    />
+    <view class="sheet-btn {{!reportType || reportBusy ? 'dis' : ''}}" bind:tap="onReportSubmit">{{reportBusy ? '提交中…' : '提交纠错'}}</view>
+  </view>
+</view>
+
+<!-- 题目笔记 -->
+<view wx:if="{{noteOpen}}" class="sheet-mask" bind:tap="onNoteClose">
+  <view class="sheet" catch:tap="noop">
+    <view class="sheet-h">
+      <text class="sheet-t">我的笔记</text>
+      <text class="sheet-x" bind:tap="onNoteClose">✕</text>
+    </view>
+    <textarea
+      class="sheet-ta note-ta"
+      value="{{noteDraft}}"
+      placeholder="记下这题的方法 / 陷阱，下次遇到随解析展示"
+      maxlength="1000"
+      bind:input="onNoteInput"
+    />
+    <view class="sheet-row">
+      <view wx:if="{{noteHas}}" class="sheet-btn ghost danger" data-clear="1" bind:tap="onNoteSave">删除笔记</view>
+      <view class="sheet-btn {{noteBusy ? 'dis' : ''}}" bind:tap="onNoteSave">{{noteBusy ? '保存中…' : '保存'}}</view>
+    </view>
+  </view>
+</view>

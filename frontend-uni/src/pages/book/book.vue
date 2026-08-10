@@ -1215,6 +1215,7 @@ export default {
 .rp-chip { padding: 18rpx 26rpx; border-radius: 999rpx; background: var(--soft-bg); font-size: 26rpx; color: var(--ink-2); }
 .rp-chip.on { background: rgba(59, 111, 245, 0.12); color: var(--brand); font-weight: 600; }
 .rp-detail { width: 100%; box-sizing: border-box; min-height: 140rpx; background: var(--soft-bg); border-radius: 16rpx; padding: 20rpx; font-size: 26rpx; }
+.rp-submit { margin-bottom: 110rpx; }
 .rp-submit.off { opacity: 0.45; pointer-events: none; }
 .redo { color: var(--brand); border: 1rpx solid var(--brand); }
 .del { color: #c33; }
