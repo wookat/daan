@@ -54,6 +54,20 @@ sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" \
   "docker inspect deploy-kaogong-1 --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -q '^ADMIN_TOKEN=..'" \
   || { echo "FAIL: 容器 ADMIN_TOKEN 为空，.env 未正确注入！"; exit 1; }
 
+step "4b 容器预热（读接口拉升 OS 页缓存，消除冷启动长尾）"
+for u in "/api/stats" \
+         "/api/questions?limit=10&module=yanyu" \
+         "/api/questions?limit=10&module=changshi" \
+         "/api/questions?limit=10&module=panduan" \
+         "/api/questions?limit=10&module=shuliang" \
+         "/api/questions?limit=10&module=ziliao" \
+         "/api/questions?limit=10&tag3=CS-LS-01&module=changshi" \
+         "/api/exam/papers" \
+         "/api/papers"; do
+  t=$(curl -s -o /dev/null -w "%{time_total}" "$SITE$u")
+  echo "warm $u ${t}s"
+done
+
 step "5/6 线上 bundle hash 校验"
 ONLINE_INDEX_REF=$(curl -s "$SITE/" | grep -o 'index-[^"]*\.js' | head -1)
 echo "线上 bundle: $ONLINE_INDEX_REF"
