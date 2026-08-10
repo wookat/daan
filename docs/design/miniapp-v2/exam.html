@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=375, initial-scale=1">
+<title>模考 · 公考助手 v2</title>
+<link rel="stylesheet" href="assets/base.css">
+<style>
+/* ===== 模考页 ===== */
+.mock-hero {
+  background: linear-gradient(150deg, #6d5cf6 0%, #4f46e5 60%, #3b2fc9 100%);
+  border-radius: var(--r-xl);
+  padding: 20px 16px;
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.32);
+  position: relative; overflow: hidden;
+  margin-bottom: var(--sp-3);
+}
+.mock-hero::after {
+  content: "📝"; position: absolute; right: 8px; bottom: -14px;
+  font-size: 92px; opacity: .16; transform: rotate(-12deg);
+}
+.mh-t { font-size: 20px; font-weight: 800; }
+.mh-s { font-size: 12px; opacity: .8; display: block; margin: 4px 0 16px; }
+.mh-stats { display: flex; gap: 20px; margin-bottom: 16px; }
+.mh-stat b { font-size: 22px; display: block; }
+.mh-stat span { font-size: 11px; opacity: .75; }
+.mh-btn {
+  display: inline-block; background: #fff; color: #4f46e5;
+  border-radius: var(--r-full); padding: 11px 26px;
+  font-size: 15px; font-weight: 800;
+  position: relative; z-index: 1;
+}
+
+/* 上次成绩 */
+.last-h { display: flex; align-items: center; justify-content: space-between; }
+.last-t { font-size: 15px; font-weight: 800; }
+.last-more { font-size: 12px; color: var(--t3); }
+.last-body { display: flex; align-items: center; gap: 18px; margin-top: 12px; }
+.score-ring {
+  width: 74px; height: 74px; border-radius: 50%; flex: none;
+  background: conic-gradient(var(--brand-500) 0 273deg, var(--fill) 273deg 360deg);
+  display: flex; align-items: center; justify-content: center;
+}
+.score-ring i {
+  width: 60px; height: 60px; border-radius: 50%; background: var(--surface);
+  font-style: normal; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+.score-ring b { font-size: 20px; color: var(--brand-500); line-height: 1.1; }
+.score-ring span { font-size: 9px; color: var(--t3); }
+.last-rows { flex: 1; }
+.last-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.last-name { font-size: 12px; color: var(--t2); width: 52px; flex: none; font-weight: 600; }
+.last-bar { flex: 1; height: 6px; border-radius: 3px; background: var(--fill); overflow: hidden; }
+.last-fill { height: 100%; border-radius: 3px; }
+.last-pct { font-size: 11px; color: var(--t3); width: 32px; text-align: right; font-weight: 700; }
+
+/* 真题卷列表 */
+.prow { display: flex; align-items: center; gap: 12px; }
+.p-badge {
+  width: 44px; height: 48px; border-radius: var(--r-s); flex: none;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font-weight: 800;
+}
+.p-badge b { font-size: 16px; line-height: 1.1; }
+.p-badge span { font-size: 9px; font-weight: 600; opacity: .8; }
+.p-main { flex: 1; min-width: 0; }
+.p-t { font-size: 14px; font-weight: 700; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p-s { font-size: 11px; color: var(--t3); display: block; margin-top: 2px; }
+.p-go { font-size: 12px; font-weight: 700; color: var(--brand-500); background: var(--brand-50); border-radius: var(--r-full); padding: 7px 14px; flex: none; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="statusbar"><span>9:41</span><span class="sb-r">●●●●&ensp;📶&ensp;🔋</span></div>
+  <div class="navbar"><span class="nav-t">模考</span><div class="nav-capsule"><span>⋯</span><span class="cap-div"></span><span>◎</span></div></div>
+
+  <div class="page-body">
+    <!-- 迷你模考 hero -->
+    <div class="mock-hero">
+      <div class="mh-t">迷你模考</div>
+      <span class="mh-s">30 题混合模块 · 交卷即出成绩报告与薄弱考点</span>
+      <div class="mh-stats">
+        <div class="mh-stat"><b class="num">30</b><span>题量</span></div>
+        <div class="mh-stat"><b class="num">25<i style="font-size:12px;font-style:normal">min</i></b><span>建议用时</span></div>
+        <div class="mh-stat"><b class="num">5</b><span>覆盖模块</span></div>
+      </div>
+      <span class="mh-btn">开始迷你模考 ›</span>
+    </div>
+
+    <!-- 上次成绩 -->
+    <div class="card">
+      <div class="last-h">
+        <span class="last-t">上次模考 · 3 月 12 日</span>
+        <span class="last-more">全部报告 ›</span>
+      </div>
+      <div class="last-body">
+        <div class="score-ring"><i><b class="num">76</b><span>正确率%</span></i></div>
+        <div class="last-rows">
+          <div class="last-row"><span class="last-name">资料分析</span><div class="last-bar"><div class="last-fill" style="width:88%;background:var(--mod-ziliao)"></div></div><span class="last-pct num">88%</span></div>
+          <div class="last-row"><span class="last-name">判断推理</span><div class="last-bar"><div class="last-fill" style="width:75%;background:var(--mod-panduan)"></div></div><span class="last-pct num">75%</span></div>
+          <div class="last-row"><span class="last-name">数量关系</span><div class="last-bar"><div class="last-fill" style="width:50%;background:var(--mod-shuliang)"></div></div><span class="last-pct num">50%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 真题卷库 -->
+    <div class="sec-h"><span class="sec-t">真题卷库</span><span class="sec-more">按地区筛选 ›</span></div>
+
+    <div class="card prow">
+      <div class="p-badge" style="background:var(--brand-50);color:var(--brand-600)"><b class="num">24</b><span>国考</span></div>
+      <div class="p-main">
+        <span class="p-t">2024 年国家公务员考试行测</span>
+        <span class="p-s">副省级 · 135 题 · 12.4 万人做过</span>
+      </div>
+      <span class="p-go">开考</span>
+    </div>
+
+    <div class="card prow">
+      <div class="p-badge" style="background:var(--success-bg);color:var(--success-deep)"><b class="num">24</b><span>省考</span></div>
+      <div class="p-main">
+        <span class="p-t">2024 年广东省考行测（县级）</span>
+        <span class="p-s">广东 · 100 题 · 8.1 万人做过</span>
+      </div>
+      <span class="p-go">开考</span>
+    </div>
+
+    <div class="card prow">
+      <div class="p-badge" style="background:var(--mod-panduan-bg);color:var(--mod-panduan)"><b class="num">23</b><span>国考</span></div>
+      <div class="p-main">
+        <span class="p-t">2023 年国家公务员考试行测</span>
+        <span class="p-s">地市级 · 130 题 · 15.7 万人做过</span>
+      </div>
+      <span class="p-go">开考</span>
+    </div>
+
+    <div class="card prow" style="opacity:.6">
+      <div class="p-badge" style="background:var(--fill);color:var(--t3)"><b class="num">22</b><span>联考</span></div>
+      <div class="p-main">
+        <span class="p-t">2022 年多省联考行测</span>
+        <span class="p-s">联考 · 120 题</span>
+      </div>
+      <span class="tag tag-gray">二期开放</span>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <div class="tab"><span class="tab-ico">📘</span>刷题</div>
+    <div class="tab"><span class="tab-ico">📕</span>错题本</div>
+    <div class="tab on"><span class="tab-ico">📝</span>模考</div>
+    <div class="tab"><span class="tab-ico">📊</span>统计</div>
+    <div class="tab"><span class="tab-ico">👤</span>我的</div>
+  </div>
+</div>
+</body>
+</html>

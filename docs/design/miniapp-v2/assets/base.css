@@ -1,0 +1,267 @@
+/* ============================================================
+   公考助手 小程序 v2 设计稿 · 共享设计 token 与基础组件
+   视口 375px，rpx→px 按 2:1（本文件 px ×2 = WXSS rpx）
+   ============================================================ */
+
+:root {
+  /* —— 品牌色 —— */
+  --brand-50: #eef4ff;
+  --brand-100: #dce8ff;
+  --brand-200: #b9d0ff;
+  --brand-300: #8ab0ff;
+  --brand-400: #5c8cff;
+  --brand-500: #3b6ff5;
+  --brand-600: #2f57d4;
+  --brand-700: #2545ab;
+  --brand-grad: linear-gradient(160deg, #5c8cff 0%, #3b6ff5 52%, #2f57d4 100%);
+  --brand-grad-btn: linear-gradient(135deg, #5c8cff, #3457e0);
+
+  /* —— 点缀色（连续打卡 / 激励 / VIP）—— */
+  --accent-500: #ff8a3d;
+  --accent-600: #f2711c;
+  --accent-bg: #fff3e8;
+  --gold: #f5b83d;
+  --gold-bg: #fdf6e5;
+
+  /* —— 中性色 —— */
+  --t1: #171a23;
+  --t2: #464b5c;
+  --t3: #858ba3;
+  --t4: #b4b9c9;
+  --border: #eceef4;
+  --fill: #f1f3f8;
+  --fill-deep: #e8ebf2;
+  --bg: #f5f7fb;
+  --surface: #ffffff;
+
+  /* —— 语义色 —— */
+  --success: #10b981;
+  --success-deep: #059669;
+  --success-bg: #e8faf3;
+  --error: #f43f5e;
+  --error-deep: #e11d48;
+  --error-bg: #fef0f2;
+  --warning: #f59e0b;
+  --warning-bg: #fef7e6;
+  --info: #0ea5e9;
+  --info-bg: #eaf6fd;
+
+  /* —— 模块色（五大模块）—— */
+  --mod-ziliao: #14b8a6;   --mod-ziliao-bg: #e6f9f6;
+  --mod-shuliang: #3b6ff5; --mod-shuliang-bg: #eef4ff;
+  --mod-yanyu: #f43f5e;    --mod-yanyu-bg: #fef0f2;
+  --mod-panduan: #8b5cf6;  --mod-panduan-bg: #f3effe;
+  --mod-changshi: #f59e0b; --mod-changshi-bg: #fef7e6;
+
+  /* —— 圆角 —— */
+  --r-xs: 6px;   /* 12rpx  小标签 */
+  --r-s: 10px;   /* 20rpx  输入框/小卡 */
+  --r-m: 14px;   /* 28rpx  选项/次级卡 */
+  --r-l: 18px;   /* 36rpx  主卡片 */
+  --r-xl: 24px;  /* 48rpx  hero/弹层 */
+  --r-full: 999px;
+
+  /* —— 阴影层级（低饱和、大范围、可 WXSS 落地）—— */
+  --sh-1: 0 1px 2px rgba(23, 26, 35, 0.03), 0 4px 14px rgba(23, 26, 35, 0.05);
+  --sh-2: 0 2px 6px rgba(23, 26, 35, 0.04), 0 10px 28px rgba(23, 26, 35, 0.08);
+  --sh-brand: 0 6px 16px rgba(59, 111, 245, 0.32);
+  --sh-accent: 0 6px 16px rgba(255, 138, 61, 0.32);
+
+  /* —— 间距（4 的倍数）—— */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px; --sp-8: 32px;
+  --gutter: 16px;
+}
+
+.dark {
+  --brand-50: #1c2742;
+  --brand-100: #223260;
+  --t1: #edeff5;
+  --t2: #c3c7d4;
+  --t3: #8a90a2;
+  --t4: #5d6274;
+  --border: #2a2d3a;
+  --fill: #232634;
+  --fill-deep: #2b2f3f;
+  --bg: #141721;
+  --surface: #1d202c;
+  --success-bg: #0e3527;
+  --error-bg: #3b1520;
+  --warning-bg: #3a2b0e;
+  --info-bg: #0e2b3a;
+  --accent-bg: #3a2410;
+  --gold-bg: #383012;
+  --mod-ziliao-bg: #0e332f; --mod-shuliang-bg: #1c2742; --mod-yanyu-bg: #3b1520;
+  --mod-panduan-bg: #291f45; --mod-changshi-bg: #3a2b0e;
+  --sh-1: 0 1px 2px rgba(0,0,0,.25), 0 4px 14px rgba(0,0,0,.3);
+  --sh-2: 0 2px 6px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.4);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body { background: #dfe3ec; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 手机画布 375×812 */
+.phone {
+  width: 375px;
+  height: 812px;
+  margin: 0 auto;
+  background: var(--bg);
+  position: relative;
+  overflow: hidden;
+  color: var(--t1);
+  font-size: 14px;
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+}
+
+/* —— 状态栏 / 导航栏 —— */
+.statusbar {
+  height: 44px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 var(--sp-4);
+  font-size: 14px; font-weight: 600;
+  position: relative; z-index: 5;
+}
+.statusbar .sb-r { display: flex; gap: 5px; align-items: center; font-size: 12px; }
+.navbar {
+  height: 44px;
+  display: flex; align-items: center;
+  padding: 0 var(--sp-4);
+  position: relative; z-index: 5;
+}
+.navbar .nav-t { font-size: 17px; font-weight: 700; }
+.navbar .nav-back { font-size: 20px; margin-right: 8px; font-weight: 400; }
+.nav-capsule {
+  position: absolute; right: 10px; top: 6px;
+  width: 87px; height: 32px; border-radius: var(--r-full);
+  border: 0.5px solid rgba(0,0,0,.08);
+  background: rgba(255,255,255,.65);
+  display: flex; align-items: center; justify-content: center;
+  gap: 0; font-size: 15px; color: #000;
+}
+.nav-capsule span { flex: 1; text-align: center; }
+.nav-capsule .cap-div { width: 0.5px; height: 18px; background: rgba(0,0,0,.12); flex: none; }
+.on-brand .statusbar, .on-brand .navbar { color: #fff; }
+.on-brand .nav-capsule { background: rgba(255,255,255,.22); border-color: rgba(255,255,255,.25); color: #fff; }
+.on-brand .nav-capsule .cap-div { background: rgba(255,255,255,.35); }
+
+/* —— 页面主体 —— */
+.page-body {
+  flex: 1; overflow: hidden;
+  padding: var(--sp-3) var(--gutter) 0;
+  position: relative; z-index: 2;
+}
+
+/* —— 沉浸式头部渐变（延伸到状态栏后面）—— */
+.hero-bleed {
+  position: absolute; top: 0; left: 0; right: 0; height: 280px;
+  background: var(--brand-grad);
+  z-index: 0;
+}
+.hero-bleed::after {
+  content: ""; position: absolute; right: -60px; top: -40px;
+  width: 220px; height: 220px; border-radius: 50%;
+  background: rgba(255,255,255,.08);
+}
+.hero-bleed::before {
+  content: ""; position: absolute; left: -40px; bottom: -30px;
+  width: 160px; height: 160px; border-radius: 50%;
+  background: rgba(255,255,255,.06);
+}
+
+/* —— TabBar —— */
+.tabbar {
+  height: 83px; flex: none;
+  background: var(--surface);
+  border-top: 0.5px solid var(--border);
+  display: flex;
+  padding: 6px var(--sp-2) 0;
+  position: relative; z-index: 6;
+}
+.tab {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  color: var(--t3); font-size: 10px; font-weight: 500;
+}
+.tab .tab-ico { font-size: 22px; line-height: 26px; filter: grayscale(1) opacity(.55); }
+.tab.on { color: var(--brand-500); font-weight: 600; }
+.tab.on .tab-ico { filter: none; }
+
+/* —— 卡片 —— */
+.card {
+  background: var(--surface);
+  border-radius: var(--r-l);
+  box-shadow: var(--sh-1);
+  padding: var(--sp-4);
+  margin-bottom: var(--sp-3);
+}
+
+/* —— 分组标题 —— */
+.sec-h {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: var(--sp-4) 2px var(--sp-3);
+}
+.sec-t { font-size: 17px; font-weight: 800; letter-spacing: .2px; }
+.sec-t::before {
+  content: ""; display: inline-block; width: 4px; height: 14px;
+  border-radius: 2px; background: var(--brand-grad-btn);
+  margin-right: 8px; vertical-align: -1px;
+}
+.sec-more { font-size: 12px; color: var(--t3); font-weight: 500; }
+
+/* —— 按钮 —— */
+.btn-primary {
+  background: var(--brand-grad-btn);
+  color: #fff; border-radius: var(--r-full);
+  text-align: center; padding: 13px 0;
+  font-size: 16px; font-weight: 700;
+  box-shadow: var(--sh-brand);
+}
+.btn-ghost {
+  background: var(--brand-50); color: var(--brand-500);
+  border-radius: var(--r-full); text-align: center;
+  padding: 13px 0; font-size: 16px; font-weight: 600;
+}
+.btn-sm {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 32px; padding: 0 14px; border-radius: var(--r-full);
+  font-size: 13px; font-weight: 600;
+}
+
+/* —— 标签 —— */
+.tag {
+  display: inline-flex; align-items: center;
+  height: 20px; padding: 0 8px;
+  border-radius: var(--r-xs);
+  font-size: 11px; font-weight: 600;
+}
+.tag-brand { background: var(--brand-50); color: var(--brand-500); }
+.tag-ok { background: var(--success-bg); color: var(--success-deep); }
+.tag-bad { background: var(--error-bg); color: var(--error-deep); }
+.tag-warn { background: var(--warning-bg); color: var(--warning); }
+.tag-gray { background: var(--fill); color: var(--t3); }
+.tag-accent { background: var(--accent-bg); color: var(--accent-600); }
+
+/* —— 进度条 —— */
+.bar { height: 6px; border-radius: 3px; background: var(--fill); overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; background: var(--brand-grad-btn); }
+
+/* —— 大数字（数据展示统一风格）—— */
+.num {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
+}
+
+/* —— 列表行 —— */
+.row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 0;
+}
+.row + .row { border-top: 0.5px solid var(--border); }
+.row .chev { color: var(--t4); font-size: 14px; }

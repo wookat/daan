@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=375, initial-scale=1">
+<title>首页 · 公考助手 v2</title>
+<link rel="stylesheet" href="assets/base.css">
+<style>
+/* ===== 首页 ===== */
+.hero-card {
+  background: var(--brand-grad);
+  border-radius: var(--r-xl);
+  padding: 18px 16px 16px;
+  color: #fff;
+  box-shadow: var(--sh-brand);
+  position: relative; overflow: hidden;
+  margin-bottom: var(--sp-3);
+}
+.hero-card::after {
+  content: ""; position: absolute; right: -30px; top: -46px;
+  width: 150px; height: 150px; border-radius: 50%;
+  background: rgba(255,255,255,.1);
+}
+.hero-top { display: flex; align-items: baseline; justify-content: space-between; position: relative; z-index: 1; }
+.hero-label { font-size: 13px; font-weight: 500; opacity: .85; }
+.hero-num-row { display: flex; align-items: baseline; gap: 4px; margin-top: 4px; position: relative; z-index: 1; }
+.hero-n { font-size: 40px; line-height: 1.1; }
+.hero-goal { font-size: 14px; opacity: .75; font-weight: 600; }
+.streak-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: rgba(255,255,255,.18);
+  border-radius: var(--r-full);
+  padding: 4px 10px; font-size: 12px; font-weight: 700;
+  position: relative; z-index: 1;
+}
+.hero-bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,.22); margin: 14px 0 12px; overflow: hidden; position: relative; z-index: 1; }
+.hero-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #ffd08a, #ff8a3d); width: 60%; }
+.hero-foot { display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 1; }
+.hero-go {
+  background: #fff; color: var(--brand-600);
+  border-radius: var(--r-full); padding: 8px 18px;
+  font-size: 14px; font-weight: 800;
+}
+.hero-chips { display: flex; gap: 6px; }
+.hero-chip {
+  padding: 5px 10px; border-radius: var(--r-full);
+  background: rgba(255,255,255,.14); font-size: 11px; font-weight: 600; opacity: .85;
+}
+.hero-chip.on { background: rgba(255,255,255,.95); color: var(--brand-600); opacity: 1; }
+
+/* 今日任务 */
+.tk-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.tk-t { font-size: 16px; font-weight: 800; }
+.tk-ring {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: conic-gradient(var(--brand-500) 0 240deg, var(--fill) 240deg 360deg);
+  display: flex; align-items: center; justify-content: center;
+}
+.tk-ring i { width: 26px; height: 26px; border-radius: 50%; background: var(--surface); font-style: normal; font-size: 10px; font-weight: 800; color: var(--brand-500); display: flex; align-items: center; justify-content: center; }
+.tk-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
+.tk-row + .tk-row { border-top: 0.5px solid var(--border); }
+.tk-ck {
+  width: 22px; height: 22px; border-radius: 50%; flex: none;
+  border: 2px solid var(--fill-deep);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: #fff; font-weight: 800;
+}
+.tk-ck.on { background: var(--success); border-color: var(--success); }
+.tk-main { flex: 1; min-width: 0; }
+.tk-name { font-size: 15px; font-weight: 700; }
+.tk-name.tdone { color: var(--t3); text-decoration: line-through; font-weight: 500; }
+.tk-sub { font-size: 12px; color: var(--t3); margin-top: 1px; display: block; }
+.tk-go { font-size: 12px; font-weight: 700; color: var(--brand-500); background: var(--brand-50); border-radius: var(--r-full); padding: 6px 12px; }
+.tk-streak { color: var(--accent-600); font-size: 12px; font-weight: 700; margin-left: 4px; }
+.tk-bar { height: 5px; border-radius: 3px; background: var(--fill); margin: 6px 0 4px; overflow: hidden; }
+.tk-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--gold), var(--accent-500)); width: 68%; }
+
+/* 到期复习条 */
+.duebar {
+  background: linear-gradient(120deg, var(--accent-bg), #fff8f0);
+  border: 1px solid #ffe0c4;
+  border-radius: var(--r-l);
+  padding: 13px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: var(--sp-3);
+}
+.duebar-t { font-size: 14px; font-weight: 800; color: var(--accent-600); }
+.duebar-s { font-size: 11px; color: var(--t3); display: block; margin-top: 2px; }
+.duebar-go {
+  background: linear-gradient(135deg, #ffa763, var(--accent-600));
+  color: #fff; font-size: 13px; font-weight: 700;
+  border-radius: var(--r-full); padding: 8px 14px;
+  box-shadow: var(--sh-accent);
+}
+
+/* 学习计划 */
+.plan-h { display: flex; align-items: center; justify-content: space-between; }
+.plan-t { font-size: 16px; font-weight: 800; }
+.plan-days { font-size: 12px; font-weight: 700; color: var(--error-deep); background: var(--error-bg); border-radius: var(--r-full); padding: 4px 10px; }
+.plan-prog { display: flex; align-items: center; gap: 10px; margin: 12px 0 4px; }
+.plan-prog .bar { flex: 1; }
+.plan-pct { font-size: 13px; font-weight: 800; color: var(--brand-500); }
+
+/* 专项练习 2×3 网格 */
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mcard {
+  background: var(--surface); border-radius: var(--r-l);
+  box-shadow: var(--sh-1); padding: 14px;
+  display: flex; align-items: center; gap: 12px;
+  position: relative; overflow: hidden;
+}
+.mcard::after { content: "›"; position: absolute; right: 12px; color: var(--t4); font-size: 14px; }
+.mico {
+  width: 42px; height: 42px; border-radius: var(--r-m); flex: none;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 19px; font-weight: 800;
+}
+.mname { font-size: 14px; font-weight: 700; display: block; }
+.mcount { font-size: 11px; color: var(--t3); display: block; margin-top: 1px; }
+</style>
+</head>
+<body>
+<div class="phone on-brand">
+  <div class="hero-bleed"></div>
+  <div class="statusbar"><span>9:41</span><span class="sb-r">●●●●&ensp;📶&ensp;🔋</span></div>
+  <div class="navbar"><span class="nav-t">刷题</span><div class="nav-capsule"><span>⋯</span><span class="cap-div"></span><span>◎</span></div></div>
+
+  <div class="page-body">
+    <!-- 今日目标 hero -->
+    <div class="hero-card">
+      <div class="hero-top">
+        <span class="hero-label">今日已练</span>
+        <span class="streak-pill">🔥 连续刷题 12 天</span>
+      </div>
+      <div class="hero-num-row"><span class="num hero-n">18</span><span class="hero-goal">/ 30 题</span></div>
+      <div class="hero-bar"><div class="hero-fill"></div></div>
+      <div class="hero-foot">
+        <span class="hero-go">继续目标 ›</span>
+        <div class="hero-chips">
+          <span class="hero-chip">10题</span><span class="hero-chip on">30题</span><span class="hero-chip">50题</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 今日任务 -->
+    <div class="card">
+      <div class="tk-h">
+        <span class="tk-t">今日任务</span>
+        <div class="tk-ring"><i>2/3</i></div>
+      </div>
+      <div class="tk-row">
+        <div class="tk-ck on">✓</div>
+        <div class="tk-main">
+          <span class="tk-name tdone">刷题目标</span>
+          <span class="tk-sub">已练 18/30 题</span>
+        </div>
+        <span class="tk-go">再练一组 ›</span>
+      </div>
+      <div class="tk-row">
+        <div class="tk-ck"></div>
+        <div class="tk-main">
+          <span class="tk-name">错题复习</span>
+          <span class="tk-sub">今日到期 6 题</span>
+        </div>
+        <span class="tk-go">去复习 ›</span>
+      </div>
+      <div class="tk-row">
+        <div class="tk-ck on">✓</div>
+        <div class="tk-main">
+          <span class="tk-name">每日打卡<span class="tk-streak">🔥 连续 12 天</span></span>
+          <div class="tk-bar"><div class="tk-fill"></div></div>
+          <span class="tk-sub">再打卡 3 天解锁「15 天」徽章</span>
+        </div>
+        <span class="tk-go">徽章 ›</span>
+      </div>
+    </div>
+
+    <!-- 到期复习 -->
+    <div class="duebar">
+      <div>
+        <span class="duebar-t">今日到期复习 6 题</span>
+        <span class="duebar-s">按遗忘曲线安排 · 越拖越容易忘</span>
+      </div>
+      <span class="duebar-go">去复习 ›</span>
+    </div>
+
+    <!-- 学习计划 -->
+    <div class="card">
+      <div class="plan-h">
+        <span class="plan-t">今日学习计划</span>
+        <span class="plan-days">距省考 89 天</span>
+      </div>
+      <div class="plan-prog">
+        <div class="bar"><div class="bar-fill" style="width:67%"></div></div>
+        <span class="plan-pct num">67%</span>
+      </div>
+      <div class="tk-row">
+        <div class="tk-ck on">✓</div>
+        <div class="tk-main"><span class="tk-name tdone">资料分析 · 截位直除专项 15 题</span></div>
+      </div>
+      <div class="tk-row">
+        <div class="tk-ck"></div>
+        <div class="tk-main"><span class="tk-name">判断推理 · 翻译推理 10 题</span></div>
+        <span class="tk-go">去完成 ›</span>
+      </div>
+    </div>
+
+    <!-- 专项练习 -->
+    <div class="sec-h"><span class="sec-t">专项练习</span><span class="sec-more">全部题型 ›</span></div>
+    <div class="grid">
+      <div class="mcard"><div class="mico" style="background:var(--mod-ziliao-bg);color:var(--mod-ziliao)">资</div><div><span class="mname">资料分析</span><span class="mcount">3.2 万题</span></div></div>
+      <div class="mcard"><div class="mico" style="background:var(--mod-shuliang-bg);color:var(--mod-shuliang)">数</div><div><span class="mname">数量关系</span><span class="mcount">2.1 万题</span></div></div>
+      <div class="mcard"><div class="mico" style="background:var(--mod-yanyu-bg);color:var(--mod-yanyu)">言</div><div><span class="mname">言语理解</span><span class="mcount">3.8 万题</span></div></div>
+      <div class="mcard"><div class="mico" style="background:var(--mod-panduan-bg);color:var(--mod-panduan)">判</div><div><span class="mname">判断推理</span><span class="mcount">3.4 万题</span></div></div>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <div class="tab on"><span class="tab-ico">📘</span>刷题</div>
+    <div class="tab"><span class="tab-ico">📕</span>错题本</div>
+    <div class="tab"><span class="tab-ico">📝</span>模考</div>
+    <div class="tab"><span class="tab-ico">📊</span>统计</div>
+    <div class="tab"><span class="tab-ico">👤</span>我的</div>
+  </div>
+</div>
+</body>
+</html>

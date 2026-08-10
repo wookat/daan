@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=375, initial-scale=1">
+<title>错题本 · 公考助手 v2</title>
+<link rel="stylesheet" href="assets/base.css">
+<style>
+/* ===== 错题本 ===== */
+.duecard {
+  background: var(--brand-grad);
+  border-radius: var(--r-xl);
+  padding: 16px;
+  color: #fff;
+  box-shadow: var(--sh-brand);
+  display: flex; align-items: center; justify-content: space-between;
+  position: relative; overflow: hidden;
+  margin-bottom: var(--sp-3);
+}
+.duecard::after {
+  content: ""; position: absolute; right: -26px; top: -40px;
+  width: 130px; height: 130px; border-radius: 50%;
+  background: rgba(255,255,255,.1);
+}
+.duecard-t { font-size: 17px; font-weight: 800; }
+.duecard-t b { font-size: 26px; margin: 0 2px; }
+.duecard-s { font-size: 11px; opacity: .8; display: block; margin-top: 3px; }
+.duecard-go {
+  background: #fff; color: var(--brand-600);
+  border-radius: var(--r-full); padding: 9px 18px;
+  font-size: 14px; font-weight: 800;
+  position: relative; z-index: 1;
+}
+
+/* 月度复盘 */
+.recap-h { display: flex; align-items: center; justify-content: space-between; }
+.recap-t { font-size: 15px; font-weight: 800; }
+.recap-x { font-size: 12px; color: var(--t3); }
+.recap-rows { margin-top: 12px; }
+.recap-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.recap-name { font-size: 12px; color: var(--t2); width: 60px; flex: none; font-weight: 600; }
+.recap-bar { flex: 1; height: 8px; border-radius: 4px; background: var(--fill); overflow: hidden; }
+.recap-fill { height: 100%; border-radius: 4px; }
+.recap-n { font-size: 12px; color: var(--t3); width: 30px; text-align: right; font-weight: 700; }
+
+/* 筛选 chips */
+.filters { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 12px; }
+.fchip {
+  flex: none; padding: 7px 14px; border-radius: var(--r-full);
+  background: var(--surface); box-shadow: var(--sh-1);
+  font-size: 13px; font-weight: 600; color: var(--t2);
+}
+.fchip.on { background: var(--brand-500); color: #fff; box-shadow: var(--sh-brand); }
+
+/* 错题卡片 */
+.wq-top { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.wq-q { font-size: 14px; line-height: 1.65; color: var(--t1); font-weight: 500;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.wq-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+.wq-meta { font-size: 11px; color: var(--t4); }
+.wq-review { font-size: 12px; font-weight: 700; color: var(--brand-500); }
+.wq-times { color: var(--error-deep); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="statusbar"><span>9:41</span><span class="sb-r">●●●●&ensp;📶&ensp;🔋</span></div>
+  <div class="navbar"><span class="nav-t">错题本</span><div class="nav-capsule"><span>⋯</span><span class="cap-div"></span><span>◎</span></div></div>
+
+  <div class="page-body">
+    <!-- 到期复习 -->
+    <div class="duecard">
+      <div>
+        <span class="duecard-t">今日待复习 <b class="num">6</b> 道</span>
+        <span class="duecard-s">按遗忘曲线安排 · 趁热打铁巩固一遍</span>
+      </div>
+      <span class="duecard-go">开始复习</span>
+    </div>
+
+    <!-- 本月复盘 -->
+    <div class="card">
+      <div class="recap-h">
+        <span class="recap-t">本月错题复盘 · 新增 43 道</span>
+        <span class="recap-x">收起 ⌃</span>
+      </div>
+      <div class="recap-rows">
+        <div class="recap-row"><span class="recap-name">资料分析</span><div class="recap-bar"><div class="recap-fill" style="width:80%;background:var(--mod-ziliao)"></div></div><span class="recap-n num">16</span></div>
+        <div class="recap-row"><span class="recap-name">数量关系</span><div class="recap-bar"><div class="recap-fill" style="width:60%;background:var(--mod-shuliang)"></div></div><span class="recap-n num">12</span></div>
+        <div class="recap-row"><span class="recap-name">判断推理</span><div class="recap-bar"><div class="recap-fill" style="width:45%;background:var(--mod-panduan)"></div></div><span class="recap-n num">9</span></div>
+        <div class="recap-row"><span class="recap-name">言语理解</span><div class="recap-bar"><div class="recap-fill" style="width:30%;background:var(--mod-yanyu)"></div></div><span class="recap-n num">6</span></div>
+      </div>
+    </div>
+
+    <!-- 筛选 -->
+    <div class="filters">
+      <span class="fchip on">全部 128</span>
+      <span class="fchip">资料分析 41</span>
+      <span class="fchip">数量关系 32</span>
+      <span class="fchip">判断推理 28</span>
+      <span class="fchip">言语 27</span>
+    </div>
+
+    <!-- 错题列表 -->
+    <div class="card">
+      <div class="wq-top">
+        <span class="tag" style="background:var(--mod-ziliao-bg);color:var(--mod-ziliao)">资料分析</span>
+        <span class="tag tag-gray">截位直除</span>
+        <span class="tag tag-bad">错 <b class="wq-times num">2</b> 次</span>
+      </div>
+      <div class="wq-q">2023 年某省粮食产量 3806.5 万吨，同比增长 2.3%；其中夏粮 1276.8 万吨，同比增长 3.1%。则 2022 年秋粮产量约为……</div>
+      <div class="wq-foot">
+        <span class="wq-meta">错因：计算失误 · 3 天前</span>
+        <span class="wq-review">重练同类 ›</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="wq-top">
+        <span class="tag" style="background:var(--mod-panduan-bg);color:var(--mod-panduan)">判断推理</span>
+        <span class="tag tag-gray">翻译推理</span>
+        <span class="tag tag-warn">今日到期</span>
+      </div>
+      <div class="wq-q">如果天下雨，那么地面湿。已知地面没有湿，则以下推理正确的是……</div>
+      <div class="wq-foot">
+        <span class="wq-meta">错因：方法不会 · 昨天</span>
+        <span class="wq-review">重练同类 ›</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="wq-top">
+        <span class="tag" style="background:var(--mod-yanyu-bg);color:var(--mod-yanyu)">言语理解</span>
+        <span class="tag tag-gray">逻辑填空</span>
+      </div>
+      <div class="wq-q">传统村落是农耕文明的______，承载着中华民族的历史记忆。依次填入画横线部分最恰当的一项是……</div>
+      <div class="wq-foot">
+        <span class="wq-meta">错因：看错题 · 上周</span>
+        <span class="wq-review">重练同类 ›</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <div class="tab"><span class="tab-ico">📘</span>刷题</div>
+    <div class="tab on"><span class="tab-ico">📕</span>错题本</div>
+    <div class="tab"><span class="tab-ico">📝</span>模考</div>
+    <div class="tab"><span class="tab-ico">📊</span>统计</div>
+    <div class="tab"><span class="tab-ico">👤</span>我的</div>
+  </div>
+</div>
+</body>
+</html>

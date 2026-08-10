@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=375, initial-scale=1">
+<title>刷题练习（作答后解析态）· 公考助手 v2</title>
+<link rel="stylesheet" href="assets/base.css">
+<style>
+/* ===== 刷题练习页（作答后解析态）===== */
+.p-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.p-cnt { display: flex; gap: 10px; font-size: 12px; font-weight: 700; }
+.p-cnt .ok { color: var(--success-deep); }
+.p-cnt .bad { color: var(--error-deep); }
+.p-prog { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.p-prog .bar { flex: 1; }
+.p-idx { font-size: 12px; font-weight: 800; color: var(--t3); }
+.p-idx b { color: var(--brand-500); font-size: 14px; }
+
+.q { font-size: 16px; line-height: 1.72; font-weight: 500; margin: 10px 0 14px; }
+.real-tag { margin-bottom: 8px; }
+
+.opt {
+  display: flex; align-items: flex-start; gap: 10px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-m);
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  font-size: 15px; line-height: 1.5;
+  background: var(--surface);
+}
+.okey {
+  width: 24px; height: 24px; border-radius: 50%; flex: none;
+  background: var(--fill); color: var(--t2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800;
+}
+.otext { flex: 1; color: var(--t1); }
+.omark { font-weight: 800; font-size: 16px; }
+.opt.right { border-color: var(--success); background: var(--success-bg); }
+.opt.right .okey { background: var(--success); color: #fff; }
+.opt.right .omark { color: var(--success-deep); }
+.opt.wrong { border-color: var(--error); background: var(--error-bg); }
+.opt.wrong .okey { background: var(--error); color: #fff; }
+.opt.wrong .omark { color: var(--error-deep); }
+.opt.dim { opacity: .5; }
+
+/* 解析区 */
+.exp-card { margin-top: 4px; }
+.exp-ans-row { display: flex; align-items: center; gap: 12px; padding-bottom: 12px; border-bottom: 0.5px solid var(--border); }
+.exp-ans-k { font-size: 13px; color: var(--t3); }
+.exp-ans { font-size: 22px; font-weight: 800; color: var(--success-deep); }
+.exp-mine { font-size: 13px; color: var(--error-deep); font-weight: 700; margin-left: auto; }
+.exp-block { margin-top: 14px; }
+.exp-title {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 800;
+  padding: 4px 10px; border-radius: var(--r-full);
+}
+.exp-title.hs { background: var(--accent-bg); color: var(--accent-600); }
+.exp-title.xp { background: var(--mod-panduan-bg); color: var(--mod-panduan); }
+.exp-text { font-size: 14px; line-height: 1.8; color: var(--t2); margin-top: 8px; }
+.exp-text b { color: var(--t1); }
+.exp-src { font-size: 11px; color: var(--t4); margin-top: 12px; }
+.share-op { margin-top: 12px; font-size: 13px; font-weight: 600; color: var(--brand-500); }
+
+/* 判分横幅（底部悬浮）*/
+.banner {
+  position: absolute; left: 12px; right: 12px; bottom: 16px;
+  border-radius: var(--r-l);
+  padding: 12px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: var(--sh-2);
+  z-index: 8;
+}
+.banner.bbad { background: linear-gradient(120deg, #ff6b81, var(--error-deep)); color: #fff; }
+.btitle { font-size: 15px; font-weight: 800; }
+.bsub { display: block; font-size: 11px; opacity: .8; font-weight: 500; }
+.bnext {
+  background: #fff; color: var(--error-deep);
+  border-radius: var(--r-full); padding: 9px 20px;
+  font-size: 14px; font-weight: 800;
+}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="statusbar"><span>9:41</span><span class="sb-r">●●●●&ensp;📶&ensp;🔋</span></div>
+  <div class="navbar"><span class="nav-back">‹</span><span class="nav-t">资料分析 · 专项练习</span><div class="nav-capsule"><span>⋯</span><span class="cap-div"></span><span>◎</span></div></div>
+
+  <div class="page-body" style="overflow:hidden;padding-bottom:90px">
+    <div class="p-head">
+      <span class="p-idx num"><b>7</b>/15</span>
+      <div class="p-cnt"><span class="ok">✓ 5</span><span class="bad">✗ 1</span><span style="color:var(--t3)">⏱ 04:32</span></div>
+    </div>
+    <div class="p-prog"><div class="bar"><div class="bar-fill" style="width:47%"></div></div></div>
+
+    <div class="card">
+      <div><span class="tag tag-warn real-tag">真题 · 2024 国考</span>&nbsp;<span class="tag tag-brand">增长率比较</span></div>
+      <div class="q">2023 年某省粮食产量 3806.5 万吨，同比增长 2.3%；其中夏粮 1276.8 万吨，同比增长 3.1%。则 2022 年秋粮产量约为：</div>
+
+      <div class="opt dim"><span class="okey">A</span><span class="otext">2384 万吨</span></div>
+      <div class="opt wrong"><span class="okey">B</span><span class="otext">2429 万吨</span><span class="omark">✗</span></div>
+      <div class="opt right"><span class="okey">C</span><span class="otext">2483 万吨</span><span class="omark">✓</span></div>
+      <div class="opt dim"><span class="okey">D</span><span class="otext">2531 万吨</span></div>
+    </div>
+
+    <div class="card exp-card">
+      <div class="exp-ans-row">
+        <span class="exp-ans-k">正确答案</span>
+        <span class="exp-ans num">C</span>
+        <span class="exp-mine">我的答案 B</span>
+      </div>
+      <div class="exp-block">
+        <span class="exp-title hs">🥜 花生十三方法解析</span>
+        <div class="exp-text">基期量 = 现期量 ÷ (1 + 增长率)。秋粮现期 = 3806.5 − 1276.8 = 2529.7。<b>截位直除</b>：2529.7 ÷ 1.019 ≈ 253 ÷ 1.02 ≈ <b>2482</b>，最接近 C。</div>
+      </div>
+      <div class="exp-block">
+        <span class="exp-title xp">👓 第二名师视角</span>
+        <div class="exp-text">增长率 1.9% 较小，可用化除为乘：2529.7 × (1 − 1.9%) ≈ 2529.7 − 48 ≈ 2482。</div>
+      </div>
+      <div class="exp-src">来源：2024 年国家公务员考试行测（副省级）第 121 题</div>
+      <div class="share-op">分享给队友，看 TA 能不能做对 ›</div>
+    </div>
+  </div>
+
+  <div class="banner bbad">
+    <div>
+      <span class="btitle">✗ 回答错误</span>
+      <span class="bsub">已自动加入错题本 · 错因：计算失误？</span>
+    </div>
+    <span class="bnext">下一题</span>
+  </div>
+</div>
+</body>
+</html>
