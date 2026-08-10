@@ -148,13 +148,13 @@ export default {
       }
     },
     goTopic() {
-      uni.switchTab({ url: '/pages/practice/practice' });
+      uni.navigateTo({ url: '/pages/practice/practice' });
     },
     goPaper(p) {
       uni.navigateTo({ url: '/pkgA/exam/exam?paper_id=' + p.id });
     },
     goBack() {
-      uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/practice/practice' }) });
+      uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/home/home' }) });
     },
     esc(s) {
       return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

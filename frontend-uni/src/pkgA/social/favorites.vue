@@ -277,7 +277,7 @@ export default {
         [list[i], list[j]] = [list[j], list[i]];
       }
       uni.setStorageSync('redoSet', list.slice(0, 50));
-      uni.switchTab({ url: '/pages/practice/practice' });
+      uni.navigateTo({ url: '/pages/practice/practice' });
     },
   },
 };
