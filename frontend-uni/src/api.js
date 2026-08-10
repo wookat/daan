@@ -757,7 +757,7 @@ export function shareVariant() {
 
 export function qShareText(mod, sid) {
   const v = shareVariant();
-  const url = `https://kaogong.zalize.com/#/pkgA/share/share-q?sid=${sid}&v=${v}`;
+  const url = `https://kaogong.zalize.com/s/${sid}?v=${v}`;
   if (v === 'b') {
     return `【${mod}】敢不敢挑战这道题？不少人都做错了，答完立刻看你击败了多少人：${url}`;
   }

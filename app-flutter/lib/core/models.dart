@@ -58,6 +58,13 @@ class Question {
   String? errorReason;
   bool reported = false;
 
+  /// 复习答错自动加推的同类题（不写 SRS，不存错题）
+  bool extra = false;
+
+  /// 本题答错后已自动追加的同类题数
+  int appended = 0;
+  bool simFetched = false;
+
   bool get answered => picked != null;
   bool get correct => normLetters(picked ?? '') == normLetters(answer);
 

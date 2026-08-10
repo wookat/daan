@@ -367,3 +367,112 @@
   color: var(--error);
   border: 1rpx solid var(--error);
 }
+
+.appended-tip {
+  font-size: 23rpx;
+  color: var(--brand-500);
+  background: var(--brand-50);
+  border-radius: 10rpx;
+  padding: 10rpx 16rpx;
+  margin-bottom: 12rpx;
+}
+
+.reasons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 12rpx;
+}
+
+.rz-t {
+  font-size: 23rpx;
+  color: var(--t2);
+}
+
+.rz {
+  font-size: 23rpx;
+  color: var(--t2);
+  background: var(--fill);
+  border-radius: var(--r-full);
+  padding: 8rpx 20rpx;
+}
+
+.rz.rz-on {
+  color: #fff;
+  background: var(--brand-500);
+}
+
+.recap-h {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.recap-t {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: var(--t1);
+}
+
+.recap-x {
+  font-size: 23rpx;
+  color: var(--brand-500);
+}
+
+.recap-sec {
+  margin-top: 16rpx;
+}
+
+.recap-st {
+  font-size: 22rpx;
+  color: var(--t2);
+}
+
+.recap-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 10rpx;
+}
+
+.recap-name {
+  flex: 0 0 160rpx;
+  font-size: 23rpx;
+  color: var(--t1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recap-bar {
+  flex: 1;
+  height: 14rpx;
+  background: var(--fill);
+  border-radius: var(--r-full);
+  overflow: hidden;
+}
+
+.recap-fill {
+  height: 100%;
+  background: var(--brand-500);
+  border-radius: var(--r-full);
+}
+
+.recap-fill.warnfill {
+  background: #f59e0b;
+}
+
+.recap-n {
+  flex: 0 0 40rpx;
+  text-align: right;
+  font-size: 22rpx;
+  color: var(--t2);
+}
+
+.recap-tip {
+  display: block;
+  margin-top: 14rpx;
+  font-size: 22rpx;
+  color: var(--t2);
+}

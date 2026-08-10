@@ -30,6 +30,7 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
   String kp3Filter = ''; // 三级考点筛选
   String sortBy = 'time'; // time/times/type/reason/due
   int pageN = 20; // 分页：当前展示条数
+  bool recapOpen = false; // 本月错题复盘展开态
 
   static const _sorts = [
     ('time', '最近优先'),
@@ -100,6 +101,29 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
     final list = map.entries.map((e) => (e.key, e.value)).toList()
       ..sort((a, b) => b.$2.compareTo(a.$2));
     return list;
+  }
+
+  /// 本月新增错题按模块/错因聚合（纯前端，Top6）
+  (int, List<(String, int)>, List<(String, int)>) get monthRecap {
+    final now = DateTime.now();
+    final m0 = DateTime(now.year, now.month).millisecondsSinceEpoch / 1000;
+    final cur = all.where((m) => m.createdAt >= m0).toList();
+    List<(String, int)> agg(String Function(Mistake) keyf) {
+      final map = <String, int>{};
+      for (final m in cur) {
+        final k = keyf(m);
+        map[k] = (map[k] ?? 0) + 1;
+      }
+      final list = map.entries.map((e) => (e.key, e.value)).toList()
+        ..sort((a, b) => b.$2.compareTo(a.$2));
+      return list.take(6).toList();
+    }
+
+    return (
+      cur.length,
+      agg((m) => moduleName(m.module)),
+      agg((m) => (m.errorReason == null || m.errorReason!.isEmpty) ? '未标注' : m.errorReason!),
+    );
   }
 
   @override
@@ -406,6 +430,7 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
                           ),
                         ),
                       ),
+                    if (monthRecap.$1 > 0) _recapCard(),
                     Expanded(
                       child: TabBarView(
                         controller: _tab,
@@ -423,6 +448,83 @@ class _BookPageState extends State<BookPage> with SingleTickerProviderStateMixin
                     ),
                   ],
                 ),
+    );
+  }
+
+  /// 本月错题复盘卡（按模块/错因分布，可折叠）
+  Widget _recapCard() {
+    final (total, byModule, byReason) = monthRecap;
+    Widget row(String name, int n, Color color) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 80,
+              child: Text(name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12)),
+            ),
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(99),
+                child: LinearProgressIndicator(
+                  value: total > 0 ? n / total : 0,
+                  minHeight: 7,
+                  color: color,
+                  backgroundColor: context.kg.fill,
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 28,
+              child: Text('$n',
+                  textAlign: TextAlign.right,
+                  style: TextStyle(fontSize: 11, color: context.kg.t3)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              InkWell(
+                onTap: () => setState(() => recapOpen = !recapOpen),
+                child: Row(
+                  children: [
+                    Text('本月错题复盘 · 新增 ${monthRecap.$1} 道',
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w700)),
+                    const Spacer(),
+                    Text(recapOpen ? '收起' : '展开',
+                        style: const TextStyle(
+                            fontSize: 12, color: KgColors.brand)),
+                  ],
+                ),
+              ),
+              if (recapOpen) ...[
+                const SizedBox(height: 8),
+                Text('按模块', style: TextStyle(fontSize: 11, color: context.kg.t3)),
+                for (final g in byModule) row(g.$1, g.$2, KgColors.brand),
+                const SizedBox(height: 10),
+                Text('按错因', style: TextStyle(fontSize: 11, color: context.kg.t3)),
+                for (final g in byReason) row(g.$1, g.$2, KgColors.warning),
+                const SizedBox(height: 10),
+                Text('高频错因是提分洼地：优先复习对应模块的待掌握错题',
+                    style: TextStyle(fontSize: 11, color: context.kg.t3)),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 

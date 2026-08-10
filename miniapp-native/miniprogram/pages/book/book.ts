@@ -2,6 +2,7 @@ import {
   deleteFav,
   fetchFavs,
   fetchMistakes,
+  fetchQuestions,
   fetchReviewDue,
   patchMistake,
   postReviewRecord,
@@ -19,6 +20,39 @@ interface MRow extends Mistake {
 
 interface RItem extends Mistake {
   requeued?: boolean;
+  extra?: boolean;
+  simFetched?: boolean;
+  appended?: number;
+}
+
+interface RecapRow {
+  name: string;
+  n: number;
+  pct: number;
+}
+
+const REASONS = ['粗心大意', '概念不清', '方法不会', '纯蒙的'];
+
+function monthRecap(all: Mistake[]): { total: number; byModule: RecapRow[]; byReason: RecapRow[] } {
+  const now = new Date();
+  const m0 = new Date(now.getFullYear(), now.getMonth(), 1).getTime() / 1000;
+  const cur = all.filter((m) => Number(m.created_at || 0) >= m0);
+  const agg = (keyf: (m: Mistake) => string): RecapRow[] => {
+    const map: Record<string, number> = {};
+    for (const m of cur) {
+      const k = keyf(m);
+      map[k] = (map[k] || 0) + 1;
+    }
+    return Object.keys(map)
+      .map((name) => ({ name, n: map[name], pct: Math.round((map[name] / cur.length) * 100) }))
+      .sort((a, b) => b.n - a.n)
+      .slice(0, 6);
+  };
+  return {
+    total: cur.length,
+    byModule: agg((m) => modName(m.module) || m.module || '其他'),
+    byReason: agg((m) => m.error_reason || '未标注'),
+  };
 }
 
 function extractLetter(s: string | null | undefined): string {
@@ -51,6 +85,9 @@ Page({
     rStreak: 0,
     celebrate: false,
     celebrateN: 0,
+    REASONS,
+    recapOpen: false,
+    recap: { total: 0, byModule: [] as RecapRow[], byReason: [] as RecapRow[] },
   },
   _shareSid: '',
   _shareTitle: '',
@@ -69,6 +106,7 @@ Page({
       const all = (m.items || []).map((x) => ({ ...x, modName: modName(x.module), open: false }));
       this.setData({
         all,
+        recap: monthRecap(all),
         favs: f.items || [],
         todoCount: all.filter((x) => !x.mastered).length,
         doneCount: all.filter((x) => !!x.mastered).length,
@@ -127,7 +165,7 @@ Page({
       this._shareTitle = `我考你一道${mod}题，你能做对吗？`;
       trackEvent('share_copy', 'share_q', d.sid);
       wx.setClipboardData({
-        data: `【${mod}】我刚在考公助手做了一道题，你能做对吗？答完就能看到大家选了啥：https://kaogong.zalize.com/#/pkgA/share/share-q?sid=${d.sid}`,
+        data: `【${mod}】我刚在考公助手做了一道题，你能做对吗？答完就能看到大家选了啥：https://kaogong.zalize.com/s/${d.sid}`,
         success: () =>
           wx.showToast({ title: '链接已复制，也可点右上角转发给队友', icon: 'none' }),
       });
@@ -220,16 +258,72 @@ Page({
   async recordReview(correct: boolean) {
     const cur = this.data.rCur;
     if (!cur) return;
+    if (cur.extra) {
+      this.setData({ answered: true, wasCorrect: correct });
+      return;
+    }
     const rItems = this.data.rItems;
     if (!correct && !cur.requeued) {
       rItems.push({ ...cur, requeued: true });
     }
     this.setData({ answered: true, wasCorrect: correct, rItems });
+    if (!correct) this.appendSimilar(cur);
     try {
       const res = await postReviewRecord(cur.id, correct);
       this.setData({ nextDays: res.next_review_days, rStreak: res.streak });
     } catch (e) {
       wx.showToast({ title: '记录失败：' + (e as Error).message, icon: 'none' });
+    }
+  },
+  // 答错自动加推：本轮末尾追加最多 2 道同类新题（extra 题不写 SRS，不影响复习记录）
+  async appendSimilar(cur: RItem) {
+    if (cur.simFetched || cur.requeued || !cur.module) return;
+    const idx = this.data.rIdx;
+    this.setData({ [`rItems[${idx}].simFetched`]: true, 'rCur.simFetched': true });
+    const qt = cur.question_type || '';
+    const sub = qt.indexOf('-') > -1 ? qt.split('-').slice(1).join('-') : null;
+    try {
+      const d = await fetchQuestions({ limit: 2, module: cur.module, submodule: sub });
+      const add: RItem[] = (d.items || [])
+        .filter((x) => x.id !== cur.question_id)
+        .slice(0, 2)
+        .map((x) => ({
+          id: -1,
+          question_id: x.id,
+          extra: true,
+          module: x.module,
+          question_text:
+            x.question +
+            '\n' +
+            Object.keys(x.options || {})
+              .sort()
+              .map((k) => `${k}.${x.options[k]}`)
+              .join(' '),
+          user_answer: '',
+          correct_answer: x.answer,
+          explanation: x.hs_explanation || x.explanation || '',
+          options: x.options || null,
+        }));
+      if (add.length) {
+        const rItems = this.data.rItems.concat(add);
+        this.setData({ rItems, [`rItems[${idx}].appended`]: add.length, 'rCur.appended': add.length });
+        trackEvent('review_similar_auto', cur.module || '');
+      }
+    } catch (e) {
+      /* 非关键路径 */
+    }
+  },
+  async onReviewReason(e: WechatMiniprogram.TouchEvent) {
+    const rz = String(e.currentTarget.dataset.rz || '');
+    const cur = this.data.rCur;
+    if (!rz || !cur || cur.extra) return;
+    const i = this.data.rIdx;
+    this.setData({ 'rCur.error_reason': rz, [`rItems[${i}].error_reason`]: rz });
+    try {
+      await patchMistake(cur.id, { error_reason: rz });
+      trackEvent('review_reason_tag', rz);
+    } catch (err) {
+      /* 非关键路径 */
     }
   },
   onNextReview() {
@@ -242,6 +336,9 @@ Page({
       this.setData({ celebrate: true, celebrateN: n });
       trackEvent('review_done_celebrate', 'book');
     }
+  },
+  onToggleRecap() {
+    this.setData({ recapOpen: !this.data.recapOpen });
   },
   onCloseCelebrate() {
     this.setData({ celebrate: false });
