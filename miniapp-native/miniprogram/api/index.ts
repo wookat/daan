@@ -228,6 +228,13 @@ export function authLogin(phone: string, password: string): Promise<AuthResp> {
   return request<AuthResp>('/api/auth/login', { method: 'POST', data: { phone, password } });
 }
 
+export function authWxLogin(code: string, nickname?: string): Promise<AuthResp> {
+  return request<AuthResp>('/api/auth/wxlogin', {
+    method: 'POST',
+    data: { code, nickname: nickname || null },
+  });
+}
+
 export function authLogout(): Promise<void> {
   return request<void>('/api/auth/logout', { method: 'POST' }).catch(() => undefined);
 }

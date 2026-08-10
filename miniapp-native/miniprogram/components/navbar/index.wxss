@@ -1,4 +1,6 @@
 .navbar {
+  position: relative;
+  z-index: 100;
   background: var(--bg, #f6f7fb);
 }
 
@@ -13,15 +15,23 @@
 
 .nav-back {
   position: absolute;
-  left: 24rpx;
-  font-size: 48rpx;
-  line-height: 88rpx;
+  left: 16rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 44rpx;
+  border-radius: var(--r-full, 999rpx);
+  background: var(--surface, #ffffff);
+  box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.06);
   color: var(--t1, #17181c);
-  padding: 0 16rpx;
 }
 
 .nav-title {
-  font-size: 32rpx;
-  font-weight: 600;
+  font-size: 34rpx;
+  font-weight: 700;
   color: var(--t1, #17181c);
 }

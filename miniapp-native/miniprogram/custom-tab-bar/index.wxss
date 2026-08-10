@@ -8,6 +8,7 @@
   flex-direction: row;
   background: var(--surface, #ffffff);
   border-top: 1rpx solid var(--border, #e7e9f0);
+  box-shadow: 0 -4rpx 20rpx rgba(23, 24, 28, 0.05);
   padding-bottom: env(safe-area-inset-bottom);
 }
 
@@ -17,7 +18,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 12rpx 0 8rpx;
+  padding: 14rpx 0 10rpx;
 }
 
 .tab-ic {
@@ -26,12 +27,16 @@
 }
 
 .tab-t {
-  margin-top: 4rpx;
-  font-size: 20rpx;
-  color: #7d818f;
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: var(--t3, #7d818f);
 }
 
 .tab.on .tab-t {
   color: #3b6ff5;
   font-weight: 600;
+}
+
+.tab.on .tab-ic {
+  transform: translateY(-2rpx);
 }
