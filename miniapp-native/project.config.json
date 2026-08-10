@@ -3,7 +3,9 @@
   "miniprogramRoot": "miniprogram/",
   "srcMiniprogramRoot": "miniprogram/",
   "setting": {
-    "useCompilerPlugins": ["typescript"],
+    "useCompilerPlugins": [
+      "typescript"
+    ],
     "coverView": true,
     "es6": true,
     "postcss": true,
@@ -29,9 +31,18 @@
   },
   "libVersion": "3.7.9",
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      {
+        "type": "folder",
+        "value": "node_modules"
+      },
+      {
+        "type": "folder",
+        "value": "scripts"
+      }
+    ],
     "include": []
   },
-  "appid": "touristappid",
+  "appid": "wx01f2f29cfe51baba",
   "projectname": "kaogong-miniapp-native"
 }
