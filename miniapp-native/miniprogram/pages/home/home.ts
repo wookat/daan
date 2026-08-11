@@ -15,15 +15,16 @@ interface ModCard {
   name: string;
   color: string;
   bg: string;
+  count: string;
 }
 
 const MODS: ModCard[] = [
-  { key: 'ziliao', name: '资料分析', color: '#14B8A6', bg: '#E6F9F6' },
-  { key: 'shuliang', name: '数量关系', color: '#3B6FF5', bg: '#EEF4FF' },
-  { key: 'yanyu', name: '言语理解', color: '#F43F5E', bg: '#FEF0F2' },
-  { key: 'panduan', name: '判断推理', color: '#8B5CF6', bg: '#F3EFFE' },
-  { key: 'changshi', name: '常识判断', color: '#F59E0B', bg: '#FEF7E6' },
-  { key: '', name: '全模块混练', color: '#3B6FF5', bg: '#DCE8FF' },
+  { key: 'ziliao', name: '资料分析', color: '#14B8A6', bg: '#E6F9F6', count: '4,600+ 题' },
+  { key: 'shuliang', name: '数量关系', color: '#3B6FF5', bg: '#EEF4FF', count: '3.2 万题' },
+  { key: 'yanyu', name: '言语理解', color: '#F43F5E', bg: '#FEF0F2', count: '2.2 万题' },
+  { key: 'panduan', name: '判断推理', color: '#8B5CF6', bg: '#F3EFFE', count: '2.2 万题' },
+  { key: 'changshi', name: '常识判断', color: '#F59E0B', bg: '#FEF7E6', count: '3 万题' },
+  { key: '', name: '全模块混练', color: '#3B6FF5', bg: '#DCE8FF', count: '11 万+ 题' },
 ];
 
 Page({

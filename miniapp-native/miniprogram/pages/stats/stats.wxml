@@ -2,14 +2,14 @@
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
     <view class="card nums">
-      <view class="numcell"><text class="num-n">{{today}}</text><text class="num-t">今日题数</text></view>
-      <view class="numcell"><text class="num-n">{{total}}</text><text class="num-t">累计题数</text></view>
-      <view class="numcell"><text class="num-n">{{streak}}</text><text class="num-t">连续天数</text></view>
+      <view class="numcell"><text class="num-n c1">{{today}}</text><text class="num-t">今日题数</text></view>
+      <view class="numcell divl"><text class="num-n c2">{{total}}</text><text class="num-t">累计题数</text></view>
+      <view class="numcell divl"><text class="num-n c3">🔥 {{streak}}</text><text class="num-t">连续天数</text></view>
     </view>
 
     <view class="card">
       <view class="hm-h">
-        <text class="hm-t">学习热力图·近12周</text>
+        <text class="hm-t">学习热力图 · 近 12 周</text>
         <text class="hm-total">共 {{hmTotal}} 题</text>
       </view>
       <view class="hm-body">
@@ -40,18 +40,25 @@
 
     <text class="hm-note">热力图为云端口径（练习/模考作答，多端同步）</text>
 
-    <view class="sec-h"><text class="sec-t">分模块正确率（本机）</text></view>
-    <text class="hm-note">正确率为本机口径，仅统计本设备作答记录</text>
+    <view class="sec-h"><text class="sec-t">分模块正确率</text><text class="sec-more">本机口径</text></view>
     <view wx:if="{{!rows.length}}" class="empty">
       <view class="eico">📊</view>
       <text>刷过题后这里会展示分模块正确率</text>
     </view>
     <view wx:for="{{rows}}" wx:key="key" class="card mrow">
       <view class="mr-h">
-        <text class="mr-name">{{item.name}}</text>
-        <text class="mr-pct">{{item.correct}}/{{item.done}} · {{item.pct}}%</text>
+        <view class="mr-l">
+          <view class="mr-dot" style="background: {{item.color}}" />
+          <text class="mr-name">{{item.name}}</text>
+          <text class="mr-sub">{{item.done}} 题</text>
+        </view>
+        <text class="mr-pct" style="color: {{item.weak ? '#f59e0b' : item.color}}">{{item.pct}}%</text>
       </view>
-      <view class="bar"><view class="bar-fill" style="width: {{item.pct}}%" /></view>
+      <view class="bar"><view class="bar-fill" style="width: {{item.pct}}%; background: {{item.weak ? '#f59e0b' : item.color}}" /></view>
+      <view wx:if="{{item.weak}}" class="weak-tip" data-mod="{{item.key}}" bind:tap="onWeakGo">
+        <text>⚠️ 薄弱模块 · 低于平均 {{item.gap}} 个百分点</text>
+        <text class="weak-go">定向重练 ›</text>
+      </view>
     </view>
   </view>
 </scroll-view>

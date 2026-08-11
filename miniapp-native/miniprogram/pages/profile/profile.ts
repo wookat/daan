@@ -1,6 +1,7 @@
-import { authLogout, fetchCheckinBadges, fetchReminders, setReminder, trackEvent } from '../../api/index';
+import { authLogout, fetchCheckinBadges, fetchMistakes, fetchReminders, setReminder, trackEvent } from '../../api/index';
 import type { CheckinBadgesResp } from '../../api/types';
 import { anonUid, clearAuth, getAuthUser } from '../../utils/auth';
+import { loadPStats, streakDays } from '../../utils/stats';
 import { syncTabBar } from '../../utils/tabbar';
 
 // 订阅消息模板 ID：AppID/模板审核通过后填入即开闸，留空时仅登记提醒意向
@@ -14,14 +15,30 @@ Page({
     badgeInfo: null as CheckinBadgesResp | null,
     nextMilestone: null as { days: number; left: number; pct: number } | null,
     reminderOn: false,
+    totalDone: 0,
+    streakN: 0,
+    mistakeN: 0,
+    badgeN: 0,
   },
   onShow() {
     syncTabBar(this, 4);
     const user = getAuthUser();
     const avatarChar = user ? (user.nickname || user.phone || '用').slice(0, 1) : '游';
-    this.setData({ user, avatarChar, uid: anonUid() });
+    const s = loadPStats();
+    let totalDone = 0;
+    for (const k of Object.keys(s.byModule)) totalDone += s.byModule[k].done;
+    this.setData({ user, avatarChar, uid: anonUid(), totalDone, streakN: streakDays() });
     this.loadBadges();
     this.loadReminder();
+    this.loadMistakes();
+  },
+  async loadMistakes() {
+    try {
+      const d = await fetchMistakes();
+      this.setData({ mistakeN: (d.items || []).length });
+    } catch (e) {
+      /* 非关键路径 */
+    }
   },
   async loadReminder() {
     try {
@@ -91,7 +108,12 @@ Page({
           pct: Math.round(((s - prev) / (next - prev)) * 100),
         };
       }
-      this.setData({ badgeInfo, nextMilestone });
+      this.setData({
+        badgeInfo,
+        nextMilestone,
+        badgeN: (badgeInfo.badges || []).filter((b) => b.unlocked).length,
+        streakN: s || this.data.streakN,
+      });
     } catch (e) {
       /* 非关键路径 */
     }

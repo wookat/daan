@@ -10,6 +10,8 @@
 .nums {
   display: flex;
   flex-direction: row;
+  padding-top: 36rpx;
+  padding-bottom: 36rpx;
 }
 
 .numcell {
@@ -19,12 +21,29 @@
   align-items: center;
 }
 
+.numcell.divl {
+  border-left: 1rpx solid var(--border);
+}
+
 .num-n {
-  font-size: 48rpx;
+  font-size: 52rpx;
   font-weight: 800;
   color: var(--brand-500);
   font-variant-numeric: tabular-nums;
   letter-spacing: -1rpx;
+  line-height: 1.2;
+}
+
+.num-n.c1 {
+  color: var(--brand-500);
+}
+
+.num-n.c2 {
+  color: var(--t1);
+}
+
+.num-n.c3 {
+  color: var(--accent-600);
 }
 
 .num-t {
@@ -169,14 +188,55 @@
   margin-bottom: 12rpx;
 }
 
+.mr-l {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.mr-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  margin-right: 14rpx;
+}
+
 .mr-name {
   font-size: 28rpx;
-  font-weight: 600;
+  font-weight: 700;
+  color: var(--t1);
+}
+
+.mr-sub {
+  font-size: 22rpx;
+  color: var(--t4);
+  margin-left: 10rpx;
 }
 
 .mr-pct {
-  font-size: 24rpx;
-  color: var(--t3);
+  font-size: 26rpx;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.weak-tip {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  background: #fef7e6;
+  border-radius: var(--r-m);
+  padding: 18rpx 22rpx;
+  margin-top: 18rpx;
+  font-size: 23rpx;
+  color: #b45309;
+  font-weight: 600;
+}
+
+.weak-go {
+  font-weight: 800;
+  flex-shrink: 0;
+  margin-left: 16rpx;
 }
 
 .bar {

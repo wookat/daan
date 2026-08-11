@@ -2,10 +2,12 @@ import { fetchPapers } from '../../api/index';
 import type { Paper } from '../../api/types';
 import { syncTabBar } from '../../utils/tabbar';
 
+type PaperVM = Paper & { yearShort: string; regionShort: string };
+
 Page({
   data: {
     loading: true,
-    papers: [] as Paper[],
+    papers: [] as PaperVM[],
   },
   onShow() {
     syncTabBar(this, 2);
@@ -14,7 +16,16 @@ Page({
   async load() {
     try {
       const d = await fetchPapers();
-      this.setData({ papers: d.items || [] });
+      const papers: PaperVM[] = (d.items || []).map((p) => {
+        const y = String(p.year || '');
+        const region = String(p.region || '');
+        let regionShort = '真题';
+        if (region.indexOf('国考') > -1 || region.indexOf('国家') > -1) regionShort = '国考';
+        else if (region.indexOf('联考') > -1) regionShort = '联考';
+        else if (region) regionShort = region.slice(0, 2);
+        return { ...p, yearShort: y.length === 4 ? y.slice(2) : y, regionShort };
+      });
+      this.setData({ papers });
     } catch (e) {
       /* 静默失败，展示空态 */
     } finally {
