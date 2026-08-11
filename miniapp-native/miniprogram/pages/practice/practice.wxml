@@ -1,17 +1,24 @@
-<navbar title="刷题" back="{{true}}" />
+<navbar title="{{moduleName}} · 专项练习" back="{{true}}" />
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
     <view wx:if="{{loading}}" class="card spin">出题中…</view>
 
     <!-- 答题 -->
     <block wx:if="{{!loading && cur}}">
-      <view class="card">
-        <view class="rhead">
-          <text class="tag tag-brand">{{moduleName}} · {{idx + 1}}/{{items.length}}</text>
-          <text class="cnt-ok">✓{{right}}</text>
+      <view class="p-head">
+        <text class="p-idx"><text class="p-idx-b">{{idx + 1}}</text>/{{items.length}}</text>
+        <view class="p-cnt">
+          <text class="cnt-ok">✓ {{right}}</text>
+          <text class="cnt-bad">✗ {{wrongCount}}</text>
         </view>
-        <view class="progress"><view class="pfill" style="width: {{(idx / items.length) * 100}}%" /></view>
-        <view wx:if="{{cur.is_real}}" class="tag tag-warn real-tag">真题{{cur.exam_year ? ' · ' + cur.exam_year : ''}}{{cur.exam_region ? ' · ' + cur.exam_region : ''}}</view>
+      </view>
+      <view class="progress"><view class="pfill" style="width: {{(idx / items.length) * 100}}%" /></view>
+
+      <view class="card">
+        <view class="tagrow">
+          <view wx:if="{{cur.is_real}}" class="tag tag-warn">真题{{cur.exam_year ? ' · ' + cur.exam_year : ''}}{{cur.exam_region ? ' · ' + cur.exam_region : ''}}</view>
+          <view wx:if="{{cur.submodule}}" class="tag tag-brand">{{cur.submodule}}</view>
+        </view>
         <text class="q" user-select>{{cur.question}}</text>
         <view
           wx:for="{{cur.optList}}"
@@ -25,36 +32,37 @@
           <text wx:if="{{picked && item.k === cur.answer}}" class="omark good">✓</text>
           <text wx:elif="{{picked && item.k === picked}}" class="omark badm">✗</text>
         </view>
+      </view>
 
-        <!-- 解析 -->
-        <view wx:if="{{picked}}" class="after">
-          <view class="exp-row">
-            <text class="exp-k">正确答案</text>
-            <text class="exp-ans {{picked === cur.answer ? 'okc' : 'badc'}}">{{cur.answer}}</text>
-          </view>
-          <view wx:if="{{cur.hs_explanation}}" class="exp-col">
-            <text class="exp-k hs">花生十三方法解析</text>
-            <text class="exp hsx" user-select>{{cur.hs_explanation}}</text>
-          </view>
-          <view wx:if="{{cur.xp_explanation}}" class="exp-col">
-            <text class="exp-k xp">{{cur.xp_school || '第二名师视角'}}</text>
-            <text class="exp" user-select>{{cur.xp_explanation}}</text>
-          </view>
-          <view wx:if="{{cur.explanation}}" class="exp-col">
-            <text class="exp-k">解析</text>
-            <text class="exp" user-select>{{cur.explanation}}</text>
-          </view>
-          <view wx:if="{{cur.source}}" class="exp-row">
-            <text class="exp-k">来源</text>
-            <text class="exp-v">{{cur.source}}</text>
-          </view>
-          <view wx:if="{{cur.id}}" class="share-op" bind:tap="onShareQ">分享给队友，看 TA 能不能做对 ›</view>
+      <!-- 解析卡 -->
+      <view wx:if="{{picked}}" class="card exp-card">
+        <view class="exp-ans-row">
+          <text class="exp-ans-k">正确答案</text>
+          <text class="exp-ans">{{cur.answer}}</text>
+          <text wx:if="{{picked !== cur.answer}}" class="exp-mine">我的答案 {{picked}}</text>
         </view>
+        <view wx:if="{{cur.hs_explanation}}" class="exp-block">
+          <text class="exp-title hs">🥜 花生十三方法解析</text>
+          <text class="exp-text" user-select>{{cur.hs_explanation}}</text>
+        </view>
+        <view wx:if="{{cur.xp_explanation}}" class="exp-block">
+          <text class="exp-title xp">👓 {{cur.xp_school || '第二名师视角'}}</text>
+          <text class="exp-text" user-select>{{cur.xp_explanation}}</text>
+        </view>
+        <view wx:if="{{cur.explanation}}" class="exp-block">
+          <text class="exp-title pl">解析</text>
+          <text class="exp-text" user-select>{{cur.explanation}}</text>
+        </view>
+        <text wx:if="{{cur.source}}" class="exp-src">来源：{{cur.source}}</text>
+        <view wx:if="{{cur.id}}" class="share-op" bind:tap="onShareQ">分享给队友，看 TA 能不能做对 ›</view>
       </view>
 
       <!-- 判分横幅 -->
       <view wx:if="{{picked}}" class="banner {{picked === cur.answer ? 'bok' : 'bbad'}}">
-        <text class="btitle">{{picked === cur.answer ? '✓ 回答正确' : '✗ 正确答案 ' + cur.answer}}</text>
+        <view class="b-l">
+          <text class="btitle">{{picked === cur.answer ? '✓ 回答正确' : '✗ 回答错误'}}</text>
+          <text class="bsub">{{picked === cur.answer ? '再接再厉，保持节奏' : '已自动加入错题本'}}</text>
+        </view>
         <view class="bnext {{picked === cur.answer ? 'nok' : 'nbad'}}" bind:tap="onNext">
           {{idx + 1 < items.length ? '下一题' : '完成'}}
         </view>

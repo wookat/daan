@@ -2,9 +2,15 @@
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
     <view class="hero-mini">
+      <text class="hm-deco">📝</text>
       <text class="hm-t">迷你模考</text>
-      <text class="hm-s">30 题混合模块 · 交卷出成绩报告与薄弱考点</text>
-      <view class="hm-btn" bind:tap="onMini">开始迷你模考</view>
+      <text class="hm-s">30 题混合模块 · 交卷即出成绩报告与薄弱考点</text>
+      <view class="mh-stats">
+        <view class="mh-stat"><text class="mh-n">30</text><text class="mh-k">题量</text></view>
+        <view class="mh-stat"><text class="mh-n">25<text class="mh-u">min</text></text><text class="mh-k">建议用时</text></view>
+        <view class="mh-stat"><text class="mh-n">5</text><text class="mh-k">覆盖模块</text></view>
+      </view>
+      <view class="hm-btn" bind:tap="onMini">开始迷你模考 ›</view>
     </view>
 
     <view class="sec-h"><text class="sec-t"><view class="sec-bar" />真题卷库</text></view>
@@ -14,9 +20,13 @@
       <text>真题卷搜集中，全真模考将在二期上线</text>
     </view>
     <view wx:for="{{papers}}" wx:key="source" class="card prow" data-title="{{item.title || item.source}}" bind:tap="onPaperTap">
+      <view class="p-badge">
+        <text class="pb-y">{{item.yearShort}}</text>
+        <text class="pb-k">{{item.regionShort}}</text>
+      </view>
       <view class="p-main">
         <text class="p-t">{{item.title || item.source}}</text>
-        <text class="p-s">{{item.region ? item.region + ' · ' : ''}}{{item.year || ''}}{{item.n ? ' · ' + item.n + ' 题' : ''}}</text>
+        <text class="p-s">{{item.region ? item.region + ' · ' : ''}}{{item.n ? item.n + ' 题' : ''}}</text>
       </view>
       <text class="tag tag-gray">二期开放</text>
     </view>

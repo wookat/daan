@@ -62,6 +62,7 @@
 
     <block wx:if="{{!reviewing}}">
     <view wx:if="{{dueTotal > 0}}" class="duecard" bind:tap="onReviewFromCard">
+      <view class="duecard-deco" />
       <view class="duecard-l">
         <text class="duecard-t">今日待复习 {{dueTotal}} 道</text>
         <text class="duecard-s">按遗忘曲线安排 · 趁热打铁巩固一遍</text>

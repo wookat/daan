@@ -13,29 +13,60 @@
   padding: 48rpx;
 }
 
-.rhead {
+.p-head {
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16rpx;
+  margin-bottom: 20rpx;
+}
+
+.p-idx {
+  font-size: 24rpx;
+  font-weight: 800;
+  color: var(--t3);
+  font-variant-numeric: tabular-nums;
+}
+
+.p-idx-b {
+  font-size: 28rpx;
+  color: var(--brand-500);
+}
+
+.p-cnt {
+  display: flex;
+  flex-direction: row;
 }
 
 .cnt-ok {
-  font-size: 22rpx;
-  color: var(--success);
-  background: var(--success-bg);
-  border-radius: var(--r-full);
-  padding: 2rpx 16rpx;
-  font-weight: 600;
+  font-size: 24rpx;
+  font-weight: 700;
+  color: var(--success-deep);
+}
+
+.cnt-bad {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: var(--error-deep);
+  margin-left: 20rpx;
 }
 
 .progress {
-  height: 8rpx;
+  height: 12rpx;
   background: var(--fill);
   border-radius: var(--r-full);
   overflow: hidden;
-  margin-bottom: 22rpx;
+  margin-bottom: 28rpx;
+}
+
+.tagrow {
+  display: flex;
+  flex-direction: row;
+  margin-bottom: 16rpx;
+}
+
+.tagrow .tag {
+  margin-right: 12rpx;
 }
 
 .pfill {
@@ -50,20 +81,20 @@
 
 .q {
   font-size: 32rpx;
-  font-weight: 600;
-  line-height: 1.7;
+  font-weight: 500;
+  line-height: 1.72;
   color: var(--t1);
-  margin-bottom: 24rpx;
+  margin: 8rpx 0 28rpx;
 }
 
 .opt {
   display: flex;
   flex-direction: row;
-  align-items: center;
-  border: 2rpx solid var(--border);
+  align-items: flex-start;
+  border: 3rpx solid var(--border);
   border-radius: var(--r-m);
-  padding: 24rpx 26rpx;
-  margin-bottom: 18rpx;
+  padding: 24rpx 28rpx;
+  margin-bottom: 20rpx;
   background: var(--surface);
 }
 
@@ -78,146 +109,184 @@
 }
 
 .opt.dim {
-  opacity: 0.55;
+  opacity: 0.5;
 }
 
 .okey {
-  font-weight: 700;
-  color: var(--brand-500);
-  margin-right: 16rpx;
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  background: var(--fill);
+  color: var(--t2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+  font-weight: 800;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.opt.right .okey {
+  background: var(--success);
+  color: #fff;
+}
+
+.opt.wrong .okey {
+  background: var(--error);
+  color: #fff;
 }
 
 .otext {
   flex: 1;
-  font-size: 28rpx;
+  font-size: 30rpx;
   color: var(--t1);
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
 .omark {
-  font-weight: 700;
+  font-weight: 800;
+  font-size: 32rpx;
   margin-left: 12rpx;
 }
 
 .omark.good {
-  color: var(--success);
+  color: var(--success-deep);
 }
 
 .omark.badm {
-  color: var(--error);
+  color: var(--error-deep);
 }
 
-.after {
+.exp-card {
   margin-top: 8rpx;
-  border-top: 1rpx solid var(--border);
-  padding-top: 20rpx;
 }
 
-.exp-row {
+.exp-ans-row {
   display: flex;
   flex-direction: row;
   align-items: center;
-  margin-bottom: 12rpx;
+  padding-bottom: 24rpx;
+  border-bottom: 1rpx solid var(--border);
 }
 
-.exp-col {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 16rpx;
-}
-
-.exp-k {
-  font-size: 22rpx;
+.exp-ans-k {
+  font-size: 26rpx;
   color: var(--t3);
-  margin-right: 16rpx;
-  margin-bottom: 8rpx;
-}
-
-.exp-k.hs {
-  color: var(--brand-500);
-  font-weight: 600;
-}
-
-.exp-k.xp {
-  color: var(--warning);
-  font-weight: 600;
+  margin-right: 24rpx;
 }
 
 .exp-ans {
-  font-size: 32rpx;
-  font-weight: 700;
+  font-size: 44rpx;
+  font-weight: 800;
+  color: var(--success-deep);
+  font-variant-numeric: tabular-nums;
 }
 
-.exp-ans.okc {
-  color: var(--success);
-}
-
-.exp-ans.badc {
-  color: var(--error);
-}
-
-.exp {
+.exp-mine {
   font-size: 26rpx;
-  line-height: 1.7;
+  color: var(--error-deep);
+  font-weight: 700;
+  margin-left: auto;
+}
+
+.exp-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-top: 28rpx;
+}
+
+.exp-title {
+  font-size: 26rpx;
+  font-weight: 800;
+  padding: 8rpx 20rpx;
+  border-radius: var(--r-full);
+}
+
+.exp-title.hs {
+  background: var(--accent-bg);
+  color: var(--accent-600);
+}
+
+.exp-title.xp {
+  background: var(--mod-panduan-bg);
+  color: var(--mod-panduan);
+}
+
+.exp-title.pl {
+  background: var(--fill);
   color: var(--t2);
 }
 
-.exp.hsx {
-  background: var(--brand-50);
-  border-radius: var(--r-s);
-  padding: 18rpx 22rpx;
+.exp-text {
+  font-size: 28rpx;
+  line-height: 1.8;
+  color: var(--t2);
+  margin-top: 16rpx;
 }
 
-.exp-v {
-  font-size: 24rpx;
-  color: var(--t2);
+.exp-src {
+  display: block;
+  font-size: 22rpx;
+  color: var(--t4);
+  margin-top: 24rpx;
 }
 
 .banner {
   position: fixed;
   left: 24rpx;
   right: 24rpx;
-  bottom: calc(24rpx + env(safe-area-inset-bottom));
+  bottom: calc(32rpx + env(safe-area-inset-bottom));
   z-index: 900;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
   border-radius: var(--r-l);
-  padding: 24rpx 28rpx;
+  padding: 24rpx 32rpx;
   box-shadow: var(--sh-2);
 }
 
 .banner.bok {
-  background: var(--success-bg);
-  border: 1rpx solid var(--success);
+  background: linear-gradient(120deg, #34d399, var(--success-deep));
 }
 
 .banner.bbad {
-  background: var(--error-bg);
-  border: 1rpx solid var(--error);
+  background: linear-gradient(120deg, #ff6b81, var(--error-deep));
+}
+
+.b-l {
+  display: flex;
+  flex-direction: column;
 }
 
 .btitle {
-  font-size: 28rpx;
-  font-weight: 600;
-  color: var(--t1);
-}
-
-.bnext {
-  border-radius: var(--r-full);
-  padding: 14rpx 36rpx;
-  font-size: 26rpx;
-  font-weight: 600;
+  font-size: 30rpx;
+  font-weight: 800;
   color: #fff;
 }
 
+.bsub {
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.8);
+  margin-top: 2rpx;
+}
+
+.bnext {
+  background: #fff;
+  border-radius: var(--r-full);
+  padding: 18rpx 40rpx;
+  font-size: 28rpx;
+  font-weight: 800;
+}
+
 .bnext.nok {
-  background: var(--success);
+  color: var(--success-deep);
 }
 
 .bnext.nbad {
-  background: var(--error);
+  color: var(--error-deep);
 }
 
 .done {
@@ -262,8 +331,8 @@
 }
 
 .share-op {
-  margin-top: 18rpx;
-  font-size: 24rpx;
+  margin-top: 24rpx;
+  font-size: 26rpx;
   color: var(--brand-500);
   font-weight: 600;
 }

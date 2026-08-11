@@ -1,11 +1,17 @@
-<navbar title="刷题" />
+<view class="hero-bleed"><view class="bleed-c1" /><view class="bleed-c2" /></view>
+<navbar title="刷题" brand />
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
     <!-- 今日目标 hero -->
     <view class="hero">
+      <view class="hero-deco" />
       <view class="hero-top">
-        <text class="hero-t">今日已练 <text class="hero-n">{{today}}</text>/{{goal}} 题</text>
+        <text class="hero-label">今日已练</text>
         <text class="hero-streak" wx:if="{{streak > 0}}">🔥 连续刷题 {{streak}} 天</text>
+      </view>
+      <view class="hero-num-row">
+        <text class="hero-n">{{today}}</text>
+        <text class="hero-goal">/ {{goal}} 题</text>
       </view>
       <view class="hero-bar"><view class="hero-fill" style="width: {{goalPct}}%" /></view>
       <view class="hero-btns">
@@ -26,7 +32,9 @@
     <view class="card taskcard">
       <view class="tk-h">
         <text class="tk-t">今日任务</text>
-        <text class="tk-n">{{taskDoneN}}/3</text>
+        <view class="tk-ring" style="background: conic-gradient(#3b6ff5 0deg {{taskDoneN * 120}}deg, #f1f3f8 {{taskDoneN * 120}}deg 360deg)">
+          <view class="tk-ring-i">{{taskDoneN}}/3</view>
+        </view>
       </view>
       <view class="tk-row" data-kind="practice" bind:tap="onTaskGo">
         <view class="tk-ck {{today >= goal ? 'on' : ''}}">{{today >= goal ? '✓' : ''}}</view>
@@ -117,7 +125,11 @@
         bind:tap="onStartModule"
       >
         <view class="mico" style="background: {{item.bg}}; color: {{item.color}}">{{item.name[0]}}</view>
-        <text class="mname">{{item.name}}</text>
+        <view class="m-main">
+          <text class="mname">{{item.name}}</text>
+          <text class="mcount">{{item.count}}</text>
+        </view>
+        <text class="m-arrow">›</text>
       </view>
     </view>
   </view>

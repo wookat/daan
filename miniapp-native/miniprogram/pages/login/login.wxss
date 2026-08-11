@@ -31,14 +31,18 @@
 }
 
 .l-title {
-  font-size: 40rpx;
+  display: block;
+  font-size: 44rpx;
   font-weight: 800;
+  text-align: center;
 }
 
 .l-sub {
-  font-size: 24rpx;
+  display: block;
+  font-size: 25rpx;
   color: var(--t3);
-  margin: 8rpx 0 24rpx;
+  margin: 10rpx 0 40rpx;
+  text-align: center;
 }
 
 .l-err {
@@ -57,13 +61,21 @@
   margin-top: 8rpx;
   --td-button-primary-bg-color: #07c160;
   --td-button-primary-border-color: #07c160;
+  --td-button-border-radius: 999rpx;
+  box-shadow: 0 12rpx 32rpx rgba(7, 193, 96, 0.3);
+  border-radius: 999rpx;
+}
+
+.l-btn {
+  --td-button-border-radius: 999rpx;
+  border-radius: 999rpx;
 }
 
 .l-divider {
   display: flex;
   flex-direction: row;
   align-items: center;
-  margin: 32rpx 0 8rpx;
+  margin: 40rpx 0 16rpx;
 }
 
 .l-line {

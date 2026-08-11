@@ -7,24 +7,63 @@
   padding: 24rpx 32rpx calc(160rpx + env(safe-area-inset-bottom));
 }
 
-.usercard {
+/* 沉浸式品牌头部 */
+.hero-bleed {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 450rpx;
+  background: var(--brand-grad);
+  overflow: hidden;
+  z-index: 0;
+}
+
+.bleed-c1 {
+  position: absolute;
+  right: -120rpx;
+  top: -80rpx;
+  width: 440rpx;
+  height: 440rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.bleed-c2 {
+  position: absolute;
+  left: -80rpx;
+  bottom: -60rpx;
+  width: 320rpx;
+  height: 320rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* 用户信息（直接置于渐变上） */
+.u-card {
   display: flex;
   flex-direction: row;
   align-items: center;
+  padding: 8rpx 8rpx 36rpx;
+  color: #fff;
+  position: relative;
+  z-index: 1;
 }
 
 .avatar {
-  width: 112rpx;
-  height: 112rpx;
-  border-radius: var(--r-full);
-  background: var(--brand-grad);
+  width: 116rpx;
+  height: 116rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  border: 4rpx solid rgba(255, 255, 255, 0.6);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 40rpx;
-  font-weight: 700;
-  margin-right: 20rpx;
+  font-size: 48rpx;
+  font-weight: 800;
+  margin-right: 28rpx;
+  flex-shrink: 0;
 }
 
 .u-main {
@@ -34,37 +73,85 @@
 }
 
 .u-name {
-  font-size: 32rpx;
-  font-weight: 700;
+  font-size: 38rpx;
+  font-weight: 800;
+  color: #fff;
 }
 
 .u-sub {
-  font-size: 22rpx;
-  color: var(--t3);
-  margin-top: 6rpx;
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.8);
+  margin-top: 4rpx;
 }
 
 .u-btn {
-  background: var(--brand-grad-btn);
+  background: rgba(255, 255, 255, 0.2);
+  border: 1rpx solid rgba(255, 255, 255, 0.4);
   color: #fff;
-  box-shadow: var(--sh-brand);
   border-radius: var(--r-full);
-  padding: 14rpx 32rpx;
+  padding: 14rpx 28rpx;
   font-size: 24rpx;
-  font-weight: 500;
+  font-weight: 700;
 }
 
-.u-btn.ghost {
-  background: var(--fill);
-  color: var(--t2);
+/* 数据概览条 */
+.u-stats {
+  display: flex;
+  flex-direction: row;
+  padding: 28rpx 0;
+}
+
+.us-cell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.us-cell + .us-cell {
+  border-left: 1rpx solid var(--border);
+}
+
+.us-n {
+  font-size: 40rpx;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.us-t {
+  font-size: 22rpx;
+  color: var(--t3);
+  margin-top: 2rpx;
+}
+
+.c-brand {
+  color: var(--brand-500);
+}
+
+.c-accent {
+  color: var(--accent-600);
+}
+
+.c-success {
+  color: var(--success-deep);
+}
+
+.c-purple {
+  color: var(--mod-panduan);
+}
+
+/* 功能列表 */
+.listcard {
+  padding-top: 8rpx;
+  padding-bottom: 8rpx;
 }
 
 .row-i {
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: space-between;
-  min-height: 88rpx;
+  min-height: 100rpx;
   border-top: 1rpx solid var(--border);
 }
 
@@ -72,20 +159,52 @@
   border-top: none;
 }
 
+.row-ico {
+  width: 68rpx;
+  height: 68rpx;
+  border-radius: var(--r-s);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+  margin-right: 24rpx;
+  flex-shrink: 0;
+}
+
+.bg-brand {
+  background: var(--brand-50);
+}
+
+.bg-accent {
+  background: var(--accent-bg);
+}
+
+.bg-info {
+  background: var(--info-bg);
+}
+
+.bg-fill {
+  background: var(--fill);
+}
+
 .r-k {
-  font-size: 27rpx;
+  font-size: 28rpx;
+  font-weight: 700;
   color: var(--t1);
+  flex: 1;
 }
 
 .r-v {
-  font-size: 23rpx;
+  font-size: 24rpx;
   color: var(--t3);
-  max-width: 60%;
+  max-width: 55%;
   text-align: right;
 }
 
-.row-i.link .r-v {
-  color: var(--brand-500);
+.chev {
+  font-size: 28rpx;
+  color: var(--t4);
+  margin-left: 16rpx;
 }
 
 /* 打卡里程碑徽章墙 */
@@ -100,12 +219,16 @@
   margin-bottom: 20rpx;
 }
 .badge-cur {
-  font-size: 26rpx;
-  font-weight: 700;
+  font-size: 30rpx;
+  font-weight: 800;
   color: var(--t1);
 }
+.badge-b {
+  color: var(--accent-600);
+  font-variant-numeric: tabular-nums;
+}
 .badge-best {
-  font-size: 22rpx;
+  font-size: 24rpx;
   color: var(--t3);
 }
 .ms-bar {
@@ -113,7 +236,7 @@
   background: var(--fill);
   border-radius: var(--r-full);
   overflow: hidden;
-  margin-bottom: 8rpx;
+  margin-bottom: 10rpx;
 }
 .ms-fill {
   height: 100%;
@@ -124,33 +247,32 @@
   display: block;
   font-size: 22rpx;
   color: var(--t3);
-  margin-bottom: 20rpx;
+  margin-bottom: 24rpx;
 }
 .badge-grid {
   display: flex;
   flex-direction: row;
-  flex-wrap: wrap;
   gap: 16rpx;
 }
 .badge {
-  width: 200rpx;
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6rpx;
+  gap: 4rpx;
   background: var(--gold-bg);
-  border-radius: var(--r-s);
-  padding: 18rpx 0;
+  border-radius: var(--r-m);
+  padding: 20rpx 0 16rpx;
 }
 .badge.off {
   background: var(--fill);
-  opacity: 0.7;
+  opacity: 0.6;
 }
 .badge-ico {
-  font-size: 40rpx;
+  font-size: 44rpx;
 }
 .badge-d {
-  font-size: 22rpx;
+  font-size: 20rpx;
   color: var(--t2);
-  font-weight: 600;
+  font-weight: 700;
 }

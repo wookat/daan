@@ -8,7 +8,18 @@ interface ModRow {
   done: number;
   correct: number;
   pct: number;
+  color: string;
+  weak: boolean;
+  gap: number;
 }
+
+const MOD_COLORS: Record<string, string> = {
+  ziliao: '#14b8a6',
+  shuliang: '#3b6ff5',
+  yanyu: '#f43f5e',
+  panduan: '#8b5cf6',
+  changshi: '#f59e0b',
+};
 
 interface HmCell {
   lv: number;
@@ -68,9 +79,22 @@ Page({
         done: m.done,
         correct: m.correct,
         pct: m.done ? Math.round((m.correct / m.done) * 100) : 0,
+        color: MOD_COLORS[k] || '#3b6ff5',
+        weak: false,
+        gap: 0,
       };
     });
     rows.sort((a, b) => b.done - a.done);
+    const scored = rows.filter((r) => r.done >= 5);
+    if (scored.length >= 2) {
+      const avg = Math.round(scored.reduce((n, r) => n + r.pct, 0) / scored.length);
+      for (const r of scored) {
+        if (avg - r.pct >= 10) {
+          r.weak = true;
+          r.gap = avg - r.pct;
+        }
+      }
+    }
     this.setData({
       today: todayCount(),
       total: rows.reduce((n, r) => n + r.done, 0),
@@ -78,6 +102,10 @@ Page({
       rows,
     });
     this.loadHeatmap();
+  },
+  onWeakGo(e: WechatMiniprogram.TouchEvent) {
+    const mod = String(e.currentTarget.dataset.mod || '');
+    wx.navigateTo({ url: `/pages/practice/practice?module=${mod}` });
   },
   // 热力图：服务端 answer_log（按 uid）为准，失败降级本机 pstats
   async loadHeatmap() {

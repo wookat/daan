@@ -1,19 +1,29 @@
-<navbar title="我的" />
+<view class="hero-bleed"><view class="bleed-c1" /><view class="bleed-c2" /></view>
+<navbar title="我的" brand />
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
-    <view class="card usercard">
+    <!-- 用户信息（沉浸头部上，无卡片） -->
+    <view class="u-card">
       <view class="avatar">{{avatarChar}}</view>
       <view class="u-main">
         <text class="u-name">{{user ? (user.nickname || user.phone) : '游客模式'}}</text>
         <text class="u-sub">{{user ? '已登录 · 多端同步中' : '登录后错题与进度多端同步'}}</text>
       </view>
       <view wx:if="{{!user}}" class="u-btn" bind:tap="onLogin">登录 / 注册</view>
-      <view wx:else class="u-btn ghost" bind:tap="onLogout">退出</view>
+      <view wx:else class="u-btn" bind:tap="onLogout">退出</view>
+    </view>
+
+    <!-- 数据概览 -->
+    <view class="card u-stats">
+      <view class="us-cell"><text class="us-n c-brand">{{totalDone}}</text><text class="us-t">累计刷题</text></view>
+      <view class="us-cell"><text class="us-n c-accent">{{streakN}}</text><text class="us-t">连续天数</text></view>
+      <view class="us-cell"><text class="us-n c-success">{{mistakeN}}</text><text class="us-t">错题收录</text></view>
+      <view class="us-cell"><text class="us-n c-purple">{{badgeN}}</text><text class="us-t">徽章</text></view>
     </view>
 
     <view wx:if="{{badgeInfo}}" class="card badges">
       <view class="badge-head">
-        <text class="badge-cur">当前连续 {{badgeInfo.streak}} 天</text>
+        <text class="badge-cur">当前连续 <text class="badge-b">{{badgeInfo.streak}}</text> 天</text>
         <text class="badge-best">历史最长 {{badgeInfo.best_streak}} 天</text>
       </view>
       <block wx:if="{{nextMilestone}}">
@@ -36,21 +46,37 @@
       </view>
     </view>
 
-    <view class="card">
+    <view class="card listcard">
       <view class="row-i link" bind:tap="onTeam">
+        <view class="row-ico bg-brand">👥</view>
         <text class="r-k">刷题小队</text>
-        <text class="r-v">组队打卡 · 互相催学 ›</text>
+        <text class="r-v">组队打卡 · 互相催学</text>
+        <text class="chev">›</text>
       </view>
       <view class="row-i link" bind:tap="onReminder">
+        <view class="row-ico bg-accent">⏰</view>
         <text class="r-k">学习提醒</text>
-        <text class="r-v">{{reminderOn ? '已开启 · 点击关闭' : '每天提醒我打卡刷题 ›'}}</text>
+        <text class="r-v">{{reminderOn ? '已开启 · 点击关闭' : '每天提醒我打卡刷题'}}</text>
+        <text class="chev">›</text>
       </view>
     </view>
 
-    <view class="card">
-      <view class="row-i"><text class="r-k">本机标识</text><text class="r-v">{{uid}}</text></view>
-      <view class="row-i"><text class="r-k">数据同步</text><text class="r-v">{{user ? '账号云端同步' : '匿名（登录后自动合并）'}}</text></view>
-      <view class="row-i"><text class="r-k">版本</text><text class="r-v">原生小程序 一期 0.1.0</text></view>
+    <view class="card listcard">
+      <view class="row-i">
+        <view class="row-ico bg-info">☁️</view>
+        <text class="r-k">数据同步</text>
+        <text class="r-v">{{user ? '账号云端同步' : '匿名（登录后自动合并）'}}</text>
+      </view>
+      <view class="row-i">
+        <view class="row-ico bg-fill">🪪</view>
+        <text class="r-k">本机标识</text>
+        <text class="r-v">{{uid}}</text>
+      </view>
+      <view class="row-i">
+        <view class="row-ico bg-fill">⚙️</view>
+        <text class="r-k">版本</text>
+        <text class="r-v">v0.2</text>
+      </view>
     </view>
   </view>
 </scroll-view>
