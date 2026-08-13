@@ -328,6 +328,22 @@ def shizheng_count() -> int:
 _PICK_TTL = 600
 _pick_cache: dict[tuple, tuple[float, dict]] = {}
 _pick_lock = threading.Lock()
+_pick_refreshing: set = set()
+
+
+def _pick_rebuild(module, submodule, tag3, year, region):
+    key = (module, submodule, tag3, year, region)
+    try:
+        conn = get_conn()
+        with _pick_lock:
+            _pick_cache.pop(key, None)
+        _pick_pools(conn, module, submodule, tag3, year, region)
+        conn.close()
+    except Exception:
+        pass
+    finally:
+        with _pick_lock:
+            _pick_refreshing.discard(key)
 
 
 def _pick_pools(conn, module, submodule, tag3, year, region) -> dict:
@@ -336,7 +352,15 @@ def _pick_pools(conn, module, submodule, tag3, year, region) -> dict:
     key = (module, submodule, tag3, year, region)
     with _pick_lock:
         ent = _pick_cache.get(key)
-        if ent and time.time() - ent[0] < _PICK_TTL:
+        if ent:
+            if time.time() - ent[0] < _PICK_TTL:
+                return ent[1]
+            if key not in _pick_refreshing:
+                # 过期先返回旧池（stale-while-revalidate），后台重建，避免用户请求承担秒级重扫
+                _pick_refreshing.add(key)
+                threading.Thread(
+                    target=_pick_rebuild, args=(module, submodule, tag3, year, region), daemon=True
+                ).start()
             return ent[1]
     where = ["disabled=0"]
     args: list = []
