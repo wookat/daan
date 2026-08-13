@@ -14,6 +14,17 @@ import { modName, recordStat, streakDays } from '../../utils/stats';
 
 const BADGE_MILESTONES = [3, 7, 14, 30, 60, 100];
 
+const FONT_LABELS = ['小', '标', '大'];
+const Q_FS = [28, 32, 36];
+const OPT_FS = [26, 30, 34];
+const EXP_FS = [24, 28, 32];
+
+function fmtSecs(s: number): string {
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m < 10 ? '0' + m : m}:${r < 10 ? '0' + r : r}`;
+}
+
 interface PQuestion extends Question {
   _picked: string;
   _secs: number;
@@ -50,6 +61,12 @@ Page({
     totalSecs: 0,
     wrongCount: 0,
     dueReview: 0,
+    timerText: '00:00',
+    fontLv: 1,
+    fontLabel: FONT_LABELS[1],
+    qFs: Q_FS[1],
+    optFs: OPT_FS[1],
+    expFs: EXP_FS[1],
   },
   _source: null as string | null,
   _mode: '',
@@ -64,6 +81,8 @@ Page({
   _badgeChecking: false,
 
   onLoad(query: Record<string, string>) {
+    const savedFont = wx.getStorageSync('fontLv');
+    if (savedFont === 0 || savedFont === 2) this.applyFont(savedFont);
     this._source = query.source || null;
     this._module = query.module || null;
     this._submodule = query.submodule ? decodeURIComponent(query.submodule) : null;
@@ -108,8 +127,10 @@ Page({
   startTimer() {
     this.stopTimer();
     this._qsecs = 0;
+    this.setData({ timerText: '00:00' });
     this._timer = setInterval(() => {
       this._qsecs++;
+      this.setData({ timerText: fmtSecs(this._qsecs) });
     }, 1000);
   },
   stopTimer() {
@@ -117,6 +138,22 @@ Page({
       clearInterval(this._timer as ReturnType<typeof setInterval>);
       this._timer = 0;
     }
+  },
+
+  applyFont(lv: number) {
+    this.setData({
+      fontLv: lv,
+      fontLabel: FONT_LABELS[lv],
+      qFs: Q_FS[lv],
+      optFs: OPT_FS[lv],
+      expFs: EXP_FS[lv],
+    });
+  },
+  onCycleFont() {
+    const lv = (this.data.fontLv + 1) % 3;
+    this.applyFont(lv);
+    wx.setStorageSync('fontLv', lv);
+    wx.showToast({ title: '字号：' + FONT_LABELS[lv], icon: 'none', duration: 800 });
   },
 
   onPick(e: WechatMiniprogram.TouchEvent) {

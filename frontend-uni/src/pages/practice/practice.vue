@@ -1918,12 +1918,12 @@ export default {
 .op { font-size: 24rpx; color: var(--ink-2); margin-left: 6rpx; }
 .progress { height: 6rpx; background: var(--fill); border-radius: 999rpx; overflow: hidden; margin-bottom: 22rpx; }
 .pfill { height: 100%; background: linear-gradient(90deg, #6c9bff, var(--brand)); border-radius: 999rpx; transition: width 0.3s ease; }
-.q { font-size: 30rpx; line-height: 1.7; margin-bottom: 22rpx; white-space: pre-wrap; }
+.q { font-size: 30rpx; line-height: 1.7; margin-bottom: 22rpx; white-space: pre-wrap; word-break: break-all; }
 .qimg { width: 100%; border-radius: 12rpx; margin-bottom: 8rpx; background: var(--fill); }
 .qimg-credit { font-size: 20rpx; color: var(--ink-2); margin-bottom: 16rpx; }
 .opt { display: flex; align-items: center; border: 2rpx solid var(--line); border-radius: 20rpx; padding: 22rpx 24rpx; margin-bottom: 20rpx; font-size: 29rpx; line-height: 1.6; transition: border-color 0.15s, background 0.15s; }
 .okey { flex-shrink: 0; width: 52rpx; height: 52rpx; line-height: 52rpx; text-align: center; border-radius: 50%; background: var(--soft-bg); color: var(--ink-2); font-weight: 600; font-size: 26rpx; margin-right: 20rpx; border: 1rpx solid var(--line); }
-.otext { flex: 1; }
+.otext { flex: 1; word-break: break-all; }
 .omark { flex-shrink: 0; font-size: 30rpx; font-weight: 700; margin-left: 12rpx; }
 .omark.good { color: var(--ok); }
 .omark.badm { color: var(--bad); }
@@ -1950,7 +1950,7 @@ export default {
 .hs-rate-btn { display: inline-flex; align-items: center; gap: 6rpx; font-size: 23rpx; color: var(--brand); border: 1rpx solid var(--brand); border-radius: 999rpx; padding: 6rpx 22rpx; }
 .hs-rate-btn.bad { color: var(--bad); border-color: var(--bad); }
 .hs-rate-done { font-size: 23rpx; color: var(--ink-2); }
-.exp { background: var(--soft-bg); border-radius: 14rpx; padding: 20rpx; font-size: 25rpx; line-height: 1.7; color: var(--ink); white-space: pre-wrap; margin-top: 8rpx; }
+.exp { background: var(--soft-bg); border-radius: 14rpx; padding: 20rpx; font-size: 25rpx; line-height: 1.7; color: var(--ink); white-space: pre-wrap; word-break: break-all; margin-top: 8rpx; }
 .exp-sec { background: linear-gradient(180deg, var(--brand-soft), var(--card) 40%); border: 1rpx solid var(--brand-soft-2); border-radius: 20rpx; padding: 20rpx; margin-bottom: 16rpx; }
 .exp-row { display: flex; align-items: baseline; gap: 16rpx; margin-bottom: 12rpx; }
 .exp-row:last-child { margin-bottom: 0; }

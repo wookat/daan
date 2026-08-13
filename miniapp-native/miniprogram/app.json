@@ -15,16 +15,7 @@
     "pages/share/pk-result",
     "pages/social/poster"
   ],
-  "renderer": "skyline",
-  "rendererOptions": {
-    "skyline": {
-      "defaultDisplayBlock": true,
-      "defaultContentBox": true,
-      "disableABTest": true,
-      "sdkVersionBegin": "3.0.0",
-      "sdkVersionEnd": "15.255.255"
-    }
-  },
+  "renderer": "webview",
   "componentFramework": "glass-easel",
   "lazyCodeLoading": "requiredComponents",
   "darkmode": true,

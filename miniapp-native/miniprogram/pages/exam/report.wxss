@@ -322,6 +322,8 @@
 }
 
 .exp {
+  white-space: pre-wrap;
+  word-break: break-all;
   font-size: 26rpx;
   line-height: 1.7;
   color: var(--t2);

@@ -39,9 +39,15 @@ Component({
     onTap(e: WechatMiniprogram.TouchEvent) {
       const idx = Number(e.currentTarget.dataset.index);
       const tab = TABS[idx];
-      if (!tab) return;
-      wx.switchTab({ url: tab.pagePath });
-      this.setData({ active: idx });
+      if (!tab || idx === this.data.active) return;
+      wx.switchTab({
+        url: tab.pagePath,
+        success: () => this.setData({ active: idx }),
+        fail: (err) => {
+          console.error('switchTab fail', tab.pagePath, err);
+          wx.reLaunch({ url: tab.pagePath });
+        },
+      });
     },
   },
 });

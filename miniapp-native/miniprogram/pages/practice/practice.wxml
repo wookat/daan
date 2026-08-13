@@ -8,8 +8,10 @@
       <view class="p-head">
         <text class="p-idx"><text class="p-idx-b">{{idx + 1}}</text>/{{items.length}}</text>
         <view class="p-cnt">
+          <text class="p-timer">{{timerText}}</text>
           <text class="cnt-ok">✓ {{right}}</text>
           <text class="cnt-bad">✗ {{wrongCount}}</text>
+          <view class="font-btn" bind:tap="onCycleFont">A<text class="font-btn-lv">{{fontLabel}}</text></view>
         </view>
       </view>
       <view class="progress"><view class="pfill" style="width: {{(idx / items.length) * 100}}%" /></view>
@@ -19,7 +21,7 @@
           <view wx:if="{{cur.is_real}}" class="tag tag-warn">真题{{cur.exam_year ? ' · ' + cur.exam_year : ''}}{{cur.exam_region ? ' · ' + cur.exam_region : ''}}</view>
           <view wx:if="{{cur.submodule}}" class="tag tag-brand">{{cur.submodule}}</view>
         </view>
-        <text class="q" user-select>{{cur.question}}</text>
+        <text class="q" style="font-size: {{qFs}}rpx" user-select>{{cur.question}}</text>
         <view
           wx:for="{{cur.optList}}"
           wx:key="k"
@@ -28,7 +30,7 @@
           bind:tap="onPick"
         >
           <text class="okey">{{item.k}}</text>
-          <text class="otext">{{item.v}}</text>
+          <text class="otext" style="font-size: {{optFs}}rpx">{{item.v}}</text>
           <text wx:if="{{picked && item.k === cur.answer}}" class="omark good">✓</text>
           <text wx:elif="{{picked && item.k === picked}}" class="omark badm">✗</text>
         </view>
@@ -43,15 +45,15 @@
         </view>
         <view wx:if="{{cur.hs_explanation}}" class="exp-block">
           <text class="exp-title hs">🥜 花生十三方法解析</text>
-          <text class="exp-text" user-select>{{cur.hs_explanation}}</text>
+          <text class="exp-text" style="font-size: {{expFs}}rpx" user-select>{{cur.hs_explanation}}</text>
         </view>
         <view wx:if="{{cur.xp_explanation}}" class="exp-block">
           <text class="exp-title xp">👓 {{cur.xp_school || '第二名师视角'}}</text>
-          <text class="exp-text" user-select>{{cur.xp_explanation}}</text>
+          <text class="exp-text" style="font-size: {{expFs}}rpx" user-select>{{cur.xp_explanation}}</text>
         </view>
         <view wx:if="{{cur.explanation}}" class="exp-block">
           <text class="exp-title pl">解析</text>
-          <text class="exp-text" user-select>{{cur.explanation}}</text>
+          <text class="exp-text" style="font-size: {{expFs}}rpx" user-select>{{cur.explanation}}</text>
         </view>
         <text wx:if="{{cur.source}}" class="exp-src">来源：{{cur.source}}</text>
         <view wx:if="{{cur.id}}" class="share-op" bind:tap="onShareQ">分享给队友，看 TA 能不能做对 ›</view>

@@ -36,6 +36,38 @@
 .p-cnt {
   display: flex;
   flex-direction: row;
+  align-items: center;
+}
+
+.p-timer {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: var(--t2);
+  font-variant-numeric: tabular-nums;
+  background: var(--fill);
+  border-radius: var(--r-full);
+  padding: 4rpx 16rpx;
+  margin-right: 20rpx;
+}
+
+.font-btn {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  margin-left: 24rpx;
+  padding: 4rpx 16rpx;
+  border-radius: var(--r-full);
+  background: var(--fill);
+  color: var(--t2);
+  font-size: 26rpx;
+  font-weight: 800;
+}
+
+.font-btn-lv {
+  font-size: 20rpx;
+  font-weight: 600;
+  color: var(--brand-500);
+  margin-left: 4rpx;
 }
 
 .cnt-ok {
@@ -85,6 +117,8 @@
   line-height: 1.72;
   color: var(--t1);
   margin: 8rpx 0 28rpx;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 .opt {
@@ -142,6 +176,8 @@
   font-size: 30rpx;
   color: var(--t1);
   line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 .omark {
@@ -220,10 +256,14 @@
 }
 
 .exp-text {
+  align-self: stretch;
+  width: 100%;
   font-size: 28rpx;
   line-height: 1.8;
   color: var(--t2);
   margin-top: 16rpx;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 .exp-src {
