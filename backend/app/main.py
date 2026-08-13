@@ -98,13 +98,11 @@ team.init_team_db()
 
 
 def _warmup():
-    """周期预热题库热点索引页缓存，消除随机抽题/tag3 查询在缓存被换出后的冷启动秒级延迟。"""
+    """周期预热抽题 id 池与热点索引页，消除缓存被换出后的冷启动秒级延迟。"""
     while True:
         try:
-            conn = db.get_conn()
-            conn.execute("SELECT COUNT(*) FROM questions INDEXED BY idx_q_pick WHERE has_hs IS NOT NULL")
-            conn.execute("SELECT COUNT(*) FROM questions INDEXED BY idx_q_tag3_disabled WHERE tag3 IS NOT NULL")
-            conn.close()
+            for m in (None, "yanyu", "changshi", "panduan", "shuliang", "ziliao"):
+                db.random_questions(m, 1)
         except Exception:
             pass
         time.sleep(300)
