@@ -130,12 +130,19 @@
     $('login-btn').onclick = async () => {
       const tok = $('login-token').value.trim();
       if (!tok) { $('login-err').textContent = '请输入令牌'; return; }
+      const btn = $('login-btn');
+      btn.disabled = true;
+      const orig = btn.textContent;
+      btn.textContent = '验证中…';
+      $('login-err').textContent = '';
       try {
         await tryLogin(tok);
         $('login').classList.add('hidden');
         $('app').classList.remove('hidden');
         route();
       } catch (e) { $('login-err').textContent = e.message; }
+      btn.disabled = false;
+      btn.textContent = orig;
     };
     $('login-token').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('login-btn').click(); });
     $('logout').onclick = () => { localStorage.removeItem('admToken'); location.reload(); };

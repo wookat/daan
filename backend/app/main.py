@@ -11,7 +11,7 @@ import time
 import httpx
 from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.datastructures import Headers
 
@@ -493,9 +493,21 @@ def api_admin_delete_cache(key: str, x_admin_token: str | None = Header(None)):
 _ADMIN_DIR = os.path.join(os.path.dirname(__file__), "admin")
 
 
+def _admin_assets_version() -> str:
+    latest = 0.0
+    for root, _dirs, files in os.walk(_ADMIN_DIR):
+        for f in files:
+            if f.endswith((".js", ".css")):
+                latest = max(latest, os.path.getmtime(os.path.join(root, f)))
+    return str(int(latest))
+
+
 @app.get("/admin")
 def admin_page():
-    return FileResponse(os.path.join(_ADMIN_DIR, "index.html"), media_type="text/html")
+    with open(os.path.join(_ADMIN_DIR, "index.html"), encoding="utf-8") as f:
+        html = f.read()
+    html = re.sub(r"\?v=[A-Za-z0-9._-]+", "?v=" + _admin_assets_version(), html)
+    return Response(html, media_type="text/html", headers={"Cache-Control": "no-cache"})
 
 
 app.mount("/admin/static", StaticFiles(directory=_ADMIN_DIR), name="admin_static")
