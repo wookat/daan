@@ -179,6 +179,8 @@
 }
 
 .m-exp {
+  white-space: pre-wrap;
+  word-break: break-all;
   font-size: 25rpx;
   color: var(--t2);
   line-height: 1.7;
