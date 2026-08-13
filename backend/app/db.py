@@ -6,6 +6,7 @@ import random
 import re
 import secrets
 import sqlite3
+import threading
 import time
 
 from . import quality, similarity, taxonomy
@@ -14,12 +15,39 @@ from .tagging import classify_question
 DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), "..", "..", "data.db"))
 
 
+_local = threading.local()
+
+
+class _ConnProxy:
+    """线程内复用底层连接：close() 仅回滚未提交事务（与真实 close 语义一致），
+    连接与其堆内页缓存常驻，避免同机邻居 I/O 挤出 OS 页缓存后每请求重读索引。"""
+
+    __slots__ = ("_conn",)
+
+    def __init__(self, conn):
+        self._conn = conn
+
+    def close(self):
+        try:
+            self._conn.rollback()
+        except Exception:
+            pass
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
+
 def get_conn():
-    conn = sqlite3.connect(DB_PATH, timeout=30)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA busy_timeout=30000")
-    return conn
+    conn = getattr(_local, "conn", None)
+    if conn is None:
+        conn = sqlite3.connect(DB_PATH, timeout=30)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA busy_timeout=30000")
+        conn.execute("PRAGMA cache_size=-32768")
+        conn.execute("PRAGMA mmap_size=268435456")
+        _local.conn = conn
+    return _ConnProxy(conn)
 
 
 def init_db():
@@ -297,6 +325,87 @@ def shizheng_count() -> int:
     return n
 
 
+_PICK_TTL = 600
+_pick_cache: dict[tuple, tuple[float, dict]] = {}
+_pick_lock = threading.Lock()
+_pick_refreshing: set = set()
+
+
+def _pick_rebuild(module, submodule, tag3, year, region):
+    key = (module, submodule, tag3, year, region)
+    try:
+        conn = get_conn()
+        with _pick_lock:
+            _pick_cache.pop(key, None)
+        _pick_pools(conn, module, submodule, tag3, year, region)
+        conn.close()
+    except Exception:
+        pass
+    finally:
+        with _pick_lock:
+            _pick_refreshing.discard(key)
+
+
+def _pick_pools(conn, module, submodule, tag3, year, region) -> dict:
+    """按筛选维度缓存候选 id 池（按 is_real×has_hs 分层），使每次抽题只读 limit 行，
+    不再每请求全索引 ORDER BY RANDOM() 扫描（页缓存被挤出时单次扫描可达秒级）。"""
+    key = (module, submodule, tag3, year, region)
+    with _pick_lock:
+        ent = _pick_cache.get(key)
+        if ent:
+            if time.time() - ent[0] < _PICK_TTL:
+                return ent[1]
+            if key not in _pick_refreshing:
+                # 过期先返回旧池（stale-while-revalidate），后台重建，避免用户请求承担秒级重扫
+                _pick_refreshing.add(key)
+                threading.Thread(
+                    target=_pick_rebuild, args=(module, submodule, tag3, year, region), daemon=True
+                ).start()
+            return ent[1]
+    where = ["disabled=0"]
+    args: list = []
+    for col, val in (
+        ("module", module),
+        ("submodule", submodule),
+        ("tag3", tag3),
+        ("exam_year", year),
+        ("exam_region", region),
+    ):
+        if val:
+            where.append(f"{col}=?")
+            args.append(val)
+    src = "questions INDEXED BY idx_q_tag3_pick" if tag3 else "questions INDEXED BY idx_q_pick"
+    pools: dict = {(1, 1): [], (1, 0): [], (0, 1): [], (0, 0): []}
+    for r in conn.execute(
+        f"SELECT id, is_real, COALESCE(has_hs,0) hs FROM {src} WHERE {' AND '.join(where)}", args
+    ):
+        pools[(1 if r["is_real"] else 0, 1 if r["hs"] else 0)].append(r["id"])
+    with _pick_lock:
+        if len(_pick_cache) >= 512:
+            _pick_cache.clear()
+        _pick_cache[key] = (time.time(), pools)
+    return pools
+
+
+def _pick_invalidate(module, submodule, tag3, year, region):
+    with _pick_lock:
+        _pick_cache.pop((module, submodule, tag3, year, region), None)
+
+
+def _draw(tiers: list[list[int]], n: int, exclude: set) -> list[int]:
+    """依次从各层随机抽样（层间保序 = 原 has_hs DESC 优先级），排除 exclude。"""
+    out: list[int] = []
+    for tier in tiers:
+        if len(out) >= n:
+            break
+        cand = [i for i in tier if i not in exclude]
+        take = min(n - len(out), len(cand))
+        picked = random.sample(cand, take)
+        out += picked
+        exclude.update(picked)
+    return out
+
+
 def random_questions(
     module: str | None = None,
     limit: int = 10,
@@ -311,6 +420,7 @@ def random_questions(
     conn = get_conn()
     where = []
     args: list = []
+    done: list[int] = []
     order = "has_hs DESC, RANDOM()"
     if adaptive and uid and (module or submodule or tag3):
         _ensure_answer_log(conn)
@@ -379,56 +489,72 @@ def random_questions(
     else:
         src = "questions INDEXED BY idx_q_pick"
     ids: list[int] = []
-    if not real_only:
-        want_real = max(1, round(limit * 0.6))
-        ids = [
-            r["id"]
-            for r in conn.execute(
-                f"SELECT id FROM {src} {clause} AND is_real=1 ORDER BY {order} LIMIT ?",
-                (*args, want_real),
-            )
-        ]
-    if len(ids) < limit:
-        placeholders = ",".join("?" * len(ids)) or "0"
-        ids += [
-            r["id"]
-            for r in conn.execute(
-                f"SELECT id FROM {src} {clause} AND id NOT IN ({placeholders}) "
-                f"ORDER BY {order} LIMIT ?",
-                (*args, *ids, limit - len(ids)),
-            )
-        ]
-    if uid and len(ids) < limit:
-        where2 = [w for w in where if not w.startswith("id NOT IN")]
-        base_args = []
-        if module:
-            base_args.append(module)
-        if submodule:
-            base_args.append(submodule)
-        if tag3:
-            base_args.append(tag3)
-        if year:
-            base_args.append(year)
-        if region:
-            base_args.append(region)
-        clause2 = "WHERE " + " AND ".join(where2)
-        placeholders = ",".join("?" * len(ids)) or "0"
-        ids += [
-            r["id"]
-            for r in conn.execute(
-                f"SELECT id FROM questions INDEXED BY {'idx_q_tag3_pick' if tag3 else 'idx_q_pick'} {clause2} AND id NOT IN ({placeholders}) "
-                "ORDER BY has_hs DESC, RANDOM() LIMIT ?",
-                (*base_args, *ids, limit - len(ids)),
-            )
-        ]
+    if not adaptive:
+        pools = _pick_pools(conn, module, submodule, tag3, year, region)
+        real_tiers = [pools[(1, 1)], pools[(1, 0)]]
+        any_tiers = [pools[(1, 1)] + pools[(0, 1)], pools[(1, 0)] + pools[(0, 0)]]
+        exclude: set = set(done)
+        if real_only:
+            ids = _draw(real_tiers, limit, exclude)
+        else:
+            ids = _draw(real_tiers, max(1, round(limit * 0.6)), exclude)
+            ids += _draw(any_tiers, limit - len(ids), exclude)
+        if len(ids) < limit and done:
+            ids += _draw(real_tiers if real_only else any_tiers, limit - len(ids), set(ids))
+    else:
+        if not real_only:
+            want_real = max(1, round(limit * 0.6))
+            ids = [
+                r["id"]
+                for r in conn.execute(
+                    f"SELECT id FROM {src} {clause} AND is_real=1 ORDER BY {order} LIMIT ?",
+                    (*args, want_real),
+                )
+            ]
+        if len(ids) < limit:
+            placeholders = ",".join("?" * len(ids)) or "0"
+            ids += [
+                r["id"]
+                for r in conn.execute(
+                    f"SELECT id FROM {src} {clause} AND id NOT IN ({placeholders}) "
+                    f"ORDER BY {order} LIMIT ?",
+                    (*args, *ids, limit - len(ids)),
+                )
+            ]
+        if uid and len(ids) < limit:
+            where2 = [w for w in where if not w.startswith("id NOT IN")]
+            base_args = []
+            if module:
+                base_args.append(module)
+            if submodule:
+                base_args.append(submodule)
+            if tag3:
+                base_args.append(tag3)
+            if year:
+                base_args.append(year)
+            if region:
+                base_args.append(region)
+            clause2 = "WHERE " + " AND ".join(where2)
+            placeholders = ",".join("?" * len(ids)) or "0"
+            ids += [
+                r["id"]
+                for r in conn.execute(
+                    f"SELECT id FROM questions INDEXED BY {'idx_q_tag3_pick' if tag3 else 'idx_q_pick'} {clause2} AND id NOT IN ({placeholders}) "
+                    "ORDER BY has_hs DESC, RANDOM() LIMIT ?",
+                    (*base_args, *ids, limit - len(ids)),
+                )
+            ]
     random.shuffle(ids)
     rows = (
         conn.execute(
-            f"SELECT * FROM questions WHERE id IN ({','.join('?' * len(ids))})", ids
+            f"SELECT * FROM questions WHERE id IN ({','.join('?' * len(ids))}) AND disabled=0",
+            ids,
         ).fetchall()
         if ids
         else []
     )
+    if len(rows) < len(ids):
+        _pick_invalidate(module, submodule, tag3, year, region)
     conn.close()
     by_id = {}
     for r in rows:
