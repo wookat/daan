@@ -6,6 +6,7 @@ import random
 import re
 import secrets
 import sqlite3
+import threading
 import time
 
 from . import quality, similarity, taxonomy
@@ -14,12 +15,39 @@ from .tagging import classify_question
 DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), "..", "..", "data.db"))
 
 
+_local = threading.local()
+
+
+class _ConnProxy:
+    """线程内复用底层连接：close() 仅回滚未提交事务（与真实 close 语义一致），
+    连接与其堆内页缓存常驻，避免同机邻居 I/O 挤出 OS 页缓存后每请求重读索引。"""
+
+    __slots__ = ("_conn",)
+
+    def __init__(self, conn):
+        self._conn = conn
+
+    def close(self):
+        try:
+            self._conn.rollback()
+        except Exception:
+            pass
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
+
 def get_conn():
-    conn = sqlite3.connect(DB_PATH, timeout=30)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA busy_timeout=30000")
-    return conn
+    conn = getattr(_local, "conn", None)
+    if conn is None:
+        conn = sqlite3.connect(DB_PATH, timeout=30)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA busy_timeout=30000")
+        conn.execute("PRAGMA cache_size=-32768")
+        conn.execute("PRAGMA mmap_size=268435456")
+        _local.conn = conn
+    return _ConnProxy(conn)
 
 
 def init_db():
