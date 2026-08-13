@@ -1888,7 +1888,7 @@ export default {
 .mchip.info { background: #cffafe; color: #0e7490; }
 .mchip.bad { background: var(--bad-soft); color: #dc2626; }
 .rhead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14rpx; }
-.tag { display: inline-block; background: var(--brand-soft); color: var(--brand); border-radius: 12rpx; padding: 6rpx 20rpx; font-size: 22rpx; }
+.tag { display: inline-block; background: var(--brand-soft); color: var(--brand); border-radius: 12rpx; padding: 6rpx 20rpx; font-size: 22rpx; min-width: 0; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hstats { display: flex; align-items: center; gap: 12rpx; flex-shrink: 0; }
 .tool-row { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 8rpx 4rpx; border-bottom: 1rpx solid var(--line); }
 .tool-row:last-child { border-bottom: none; }
