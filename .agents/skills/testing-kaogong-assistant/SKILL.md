@@ -5,6 +5,80 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R18 审查轮新经验（搜索/统计四卡/时政/申论/分享）
+- **CDP 移动仿真要用常驻 daemon**：一次性 ws 连接断开后 `Emulation.setDeviceMetricsOverride` 会失效；用常驻脚本保持连接（本轮 /tmp/cdp_daemon.py 模式），测完 pkill。
+- **CJK 搜索输入**：xdotool/type 会丢字；用 CDP 调 `HTMLInputElement.prototype.value` 原生 setter + dispatch `input` 事件写 `uni-input input`。
+- 搜索考点结果深链走 `goTopic()`，方法忽略参数、裸跳 /pages/practice/practice——验证深链时看落地页是否发 `/api/questions` 请求即可判断是否真的带上了考点。
+- 统计页三卡「已答题数」口径各自独立（预测卡/掌握度地图/热力图），审查时要交叉核对同页数字是否自洽；预测分进度可能不计入时政/混合练习。
+- **分享全链路测法**：错题卡「···」→分享给队友 → sid 在剪贴板（xclip 读）；`/s/{sid}` 为 meta-refresh 秒跳 SPA，og 标签用 curl 看原始 HTML。访客视角切 uid 即可（同机注意 `pkNickname` 不随 uid 隔离，作答昵称会串号）；分享无删除接口，sid 记台账。
+- 错题清理 API：`GET /api/mistakes?uid=` 拿 id，`DELETE /api/mistakes/{id}?uid=` 逐条删。
+- localStorage 备份是双重 JSON 编码字符串，还原时要 `json.loads` 两次。
+- 时政 szDaily 完成态存 localStorage 不按 uid 隔离，切换一次性 uid 前先备份、测后整体还原。
+
+## R14 回归轮新经验（交卷兜底 / LLM 降级 / hb-gap 心跳）
+- **模拟「请求已送达但响应丢失」**：CDP Fetch 用 `requestStage:"Response"` 拦截 `*api/exam/submit*` 再 failRequest——服务端已判分、客户端收失败，可验 exam.vue 的 report 确认分支（直进报告，不报「已交卷」）。`Request` 阶段拦截则验「作答保留+重交」分支。
+- **触发 hb-gap 心跳上报的正确方式**：挂起必须发生在**文档提交之后**（旧页面已卸载、新壳 JS 未运行）。做法：① 页面 eval 删 SW cache 里的 `assets/index-*.js`；② 浏览器级 ws（/json/version 的 browser endpoint）`Fetch.enable` 拦 `assets/index-*` 挂 21s 放行；③ F5。挂起导航文档请求没用——旧页面存活期间心跳照写，gap 不超 15s（实测 81s/92s 文档挂起都只报 nav: 级 RUM、无 hb-gap，这是设计边界不是 bug）。
+- **页面级 CDP Fetch 拦不到导航/SW 请求**，要用浏览器级 endpoint；且多个拦截脚本同时 enable 会互相抢事件导致请求悬死——测前 `pkill -f` 清干净旧拦截器。
+- 生产容器应用端口映射是 `127.0.0.1:8300`（不是 8000）；admin token 可 `docker exec deploy-kaogong-1 printenv ADMIN_TOKEN` 直接取。
+- AI 问答降级入口：`/#/pages/ask/ask` →「粘贴文字」→ CDP 写 textarea →「用花生十三方法讲解」；LLM 未配时 `/api/explain/stream` ~0.4s 返回红条「失败：AI 服务未配置，请重试」。`/api/access_info` 可先查是否需要访问码。
+- uni-app 有的 textarea 用 `document.querySelector('textarea')` 写入会被 Vue 重置；改用更精确的 `uni-textarea textarea` 选择器 + value setter + input 事件即可。
+
+## R13 审查轮新经验（模考大赛/时政/申论/PK 平局/slow_load RUM）
+- **模考大赛 admin 路由前缀是 `/api/admin/mock`**（不是 `/api/admin/events`）：建临时场次 `POST /api/admin/mock/events` body `{title,series,paper_id,open_at,close_at}`（epoch 秒，open_at 设 now-60 即 running），删除 `DELETE /api/admin/mock/events/{id}`。paper_id=24 是 17 题小卷，适合快速全链路。
+- 防泄漏口径：`/api/exam/start` items 只含 `_EXAM_ITEM_FIELDS`（无 answer/explanation），可用 r13-probe 类一次性 uid 直接 curl 验证（会留 exam_attempts 残留）。
+- **造 PK 平局**：winner 判定为 分数→总用时→draw；双方都提交 `items:[]`（空作答）则 0 分且每题 ms 均按 PER_Q_MS_CAP 计 → 总用时相等 → draw。API 造局后浏览器切两个身份分别看结果页即可验证「🤝 平局！」与「（我）」。
+- **生产 growth_events 在容器 `/data/data.db`**（app.db/kaogong.db 里没有该表）：`docker exec deploy-kaogong-1 python3 -c "...sqlite3.connect('/data/data.db')..."` 查 `event='slow_load'`。
+- slow_load RUM 盲区：挂起型慢加载（chunk fetch 不完成、「点击屏幕重试」后重载）不满足 nav>10s/resource>8s 触发条件，自然慢加载可能不上报；判断 RUM 是否生效别只看有无记录。
+- 捕获一闪而过的 uni.showToast：截图常错过；用 CDP 注入 200ms 轮询 `document.querySelector('uni-toast')` 收集 innerText 最可靠。
+- CJK 无法用 xdotool type 输入（会丢字）：对 textarea 用 CDP 调 value setter + dispatch input 事件写入。
+- 申论 AI 批改降级：LLM key 未配时 `/api/shenlun/grade` 返回 502「批改失败：AI 服务连接失败，请稍后再试」，但服务端等 ~22s 才失败（会打 slow-req）。
+
+## R10b 回归轮新经验（SW 壳时效 / PK 续答）
+- **验证回前台 SW 重校验**：`reg.update()` 的 /sw.js 请求不出现在页面 performance/CDP Network（由浏览器进程发出）；最可靠的取证是 SSH 看容器访问日志 `docker logs deploy-kaogong-1 --since 3m -t | grep "GET /sw.js"`，先确认 3 分钟基线为空，再切 tab 隐藏/切回，几秒内应出现一条。60s 节流：紧接着再切一次应无新请求。
+- **/sw.js 的 FastAPI FileResponse 不处理 If-None-Match**（条件请求恒 200 全量）；SPA 壳 `/` 由 StaticFiles 提供、304 正常。核验时别把 sw.js 的 200 误判为 no-cache 失效。
+- **制造 PK「未交卷离开」**：uni-app H5 是 SPA，同 tab 改 hash 或点返回不销毁答题内存态，F5 有时也被计时器抢跑（超时自动作答推进，答满会自动交卷）。可靠做法是导航到 `about:blank` 再回来。
+- PK 续答（PR#137 后）：我的对局「待作答」点入会重新 pkJoin 拉同题组从第 1 题重答（不是从中断处继续），creator/opponent 均可；已交卷局点入进等待/结果页。
+- 非参与者输他人挑战码：后端 409，前端按设计跳观战结果页，但 my_side=null 时「（我）」标签取错名（P2 已报告）。
+- pk/submit 偶发 ~60s 长尾仍存在（请求未落库）；#136 重试卡 + 「重新提交」可救回，验证时提交后先 `GET /api/pk/match/{code}?uid=` 查 done 再下结论。
+
+## R10 审查轮新经验（SW 旧 shell/PK 断网重试/小队与海报）
+- **发版后已装 SW 的浏览器会继续跑旧 bundle**：即使生产文件已更新（curl 可证），页面加载的 index/chunk 可能仍是旧版（旧 chunk 在服务器上甚至已 404 但被 cache 命中）。测新功能前必须核对 `performance.getEntriesByType('resource')` 里的 chunk hash 与生产 index.html 引用一致；不一致时 `navigator.serviceWorker.getRegistration().then(r=>r.update())` + Ctrl+Shift+R。
+- **模拟 PK 提交失败**：CDP `Fetch.enable`（urlPattern `*api/pk/submit*`）+ `Fetch.failRequest(ConnectionFailed)` 稳定复现；失败卡片文案「提交未成功（作答已保留），网络恢复后可重试」。注意作答只保留在内存，刷新后该局在「我的对局」显示「待作答」但点进去只有等待页、无法续答（P2 已报告）。
+- 日历页 `/#/pages/stats/calendar` 出现过 chunk 请求不发出→40s「连接服务器超时」→点击重试后 renderer 彻底挂死（CDP eval 无响应、tab 从 /json 消失）；只能重启 Chrome。sw-asset-timeout 救不了发生在 fetch 事件之前的挂起。
+- 错题删除 API：`GET /api/mistakes?uid=` 取 id，`DELETE /api/mistakes/{id}?uid=`。
+- 小队测法：/pkgA/team/team 创建得邀请码，切第二 anonUid F5 后输码「加入」即成 2 人；「提醒 TA」「复制周战报」都写剪贴板（xclip 验证）；「退出小队」入口存在，双 uid 退出即可清理（小队空壳无解散接口）。中文队名在 H5 input 可能丢失（本轮实建名只剩 ASCII 部分）。
+- 打卡海报入口：日历页底部「生成打卡海报」→ /pkgA/social/poster，「保存图片」直接触发 PNG 下载。周报 /pkgA/stats/weekly-report 是上周口径，新 uid 恒为空态。
+
+## R9 回归轮新经验（部署核验/PK 提交长尾/深链）
+- **验证「修复已部署」不能只看 PR 状态**：对前端静态资源直接 curl 生产文件比对特征串/md5（如 `curl /sw.js | grep sw-asset-timeout`，与 `git show <branch>:frontend-uni/src/static/sw.js | md5sum` 对比）。R9 实测 PR#134 的 SW 修复宣称已上线但生产文件仍是旧版——部署可能只更新了部分产物。
+- **PK 提交可能整机长尾**：/api/pk/submit 偶发 20s+ 前端超时且请求根本未达应用层（容器无日志），同期 `[slow-req]` 可见 admin 接口 10-17s——疑服务器资源争抢。前端超时 toast 转瞬即逝、页面停留题目页**无重试按钮**，答完的局会永久 waiting。测试时若首局提交卡死，重开一局通常正常（0.2s）。
+- module-only 深链 `/#/pages/practice/practice?module=xx` R9 起已支持直开（约 3s 加载），可用 performance resource 里的 `/api/questions?module=` 佐证。
+- 首页「今日已练」实现为 `Math.max(服务端 today_n, 本地 pstats 今日)`——并非严格「服务端为准」；测污染场景注意 pstats 按 uid 维度隔离。
+- localStorage 备份文件可能是双重 JSON 编码（`json.load` 后仍是 str，需再 `json.loads` 一次）。
+- uni-app localStorage 值为包装格式 `{"type":"string","data":"..."}`，还原时按原样 setItem 即可。
+
+## R8 回归轮新经验（分享幂等/PK/SW 挂起）
+- **SW 静态资源分支挂起是首页/刷题页卡 spinner 的根因**：现象是 chunk 请求根本不发出、console 报 `Async component timed out after 60000ms`、页面内 `fetch('/assets/...')` 永久挂起，而同期 curl 服务器正常。sw.js v2 只给 navigate 分支加了 8s 超时，asset 分支（cache-first）无兜底。恢复法：按 /proc argv 重启托管 Chrome；注意重启命令若直接 `tr '\n' ' '` 拼 argv，UA 字符串会被拆成多个假 URL 标签页，需事后用 CDP `/json/close/{id}` 关闭。
+- 直接 URL 打开 `/#/pages/practice/practice?module=xx` 会停在「正在准备练习…」不发 /api/questions——练习页依赖首页入口传参，测试必须从首页模块卡片进入。
+- 分享幂等验证法：判错后连点「🔗 分享给队友」，每次点击都会发真实 /api/share/create（可用 performance.getEntriesByType('resource') 数请求数），用 `xclip -o` 读剪贴板比对 sid。
+- 写已答记录可直接 `POST /api/answer_log {uid, items:[{question_id,correct,answer}]}`，无需 UI 逐题作答，适合 reinforce uid 排除测试。
+- PK 多选过滤按 answer 长度（len>1）实现，**题干标注「(不定项选择)」但库内 answer 为单字母的脏数据会漏网**，验证时要逐题看题干。
+- 慢请求日志：`docker logs deploy-kaogong-1 | grep slow-req`（服务器容器名 deploy-kaogong-1，SSH 凭据 TICKETS_VPS_*）。注意浏览器端 duration 含网络，比服务端计时大，3.3s 前端耗时可能不触发 3s 服务端日志线。
+
+## 原生小程序 miniapp-native（Linux 微信开发者工具）
+- 工具：`/opt/apps/io.github.msojocs.wechat-devtools-linux/files/bin/bin/wechat-devtools`；登录二维码约 1 分钟过期需手动刷新；未登录时编译输出 `touristappid` 且模拟器不渲染，只能做静态核查。
+- **「开启 Skyline 渲染调试」在 Linux 版会让编译卡死在 theme.json**：详情→本地设置取消勾选，改用 WebView 渲染即可正常编译。
+- **模拟器滚动输入不生效仅限 skyline 渲染期**：PR#129 起 app.json `renderer: webview`，滚轮滚动正常。若仍需整页一屏目视，可在机型下拉选「自定义」添加高分辨率机型（如 375×1400）。
+- 小程序直连生产 API（`miniprogram/utils/request.ts` BASE_URL=https://kaogong.zalize.com），模拟器匿名 uid 会真实写 answer_log/mistakes，测完要列清理清单。
+- 统计页薄弱提示触发条件：≥2 个模块 done≥5 且某模块正确率低于均值 ≥10 个百分点；混练约 3 组 10 题可构造。
+
+## R7 审查轮新经验（分享/PK/reinforce）
+- **生产 API 有间歇性 10–60s 长尾**（reinforce 回退路径、/api/pk/submit 实测 60.2s、首页偶发卡 45–75s）。遇到 UI 卡「判分中…」或首页 spinner 时先等 60–90s 再判失败，并用 `performance.getEntriesByType('resource')` 抓实际请求耗时作证据，勿直接归因浏览器。
+- reinforce covering 索引 idx_q_reinforce **只覆盖 tag3 精确条件**（db.py `cond.startswith("tag3=")`），submodule/module 回退是慢路径——采样时延要分开测两类路径。
+- 分享闭环：任意判分后的 q-social-bar「🔗 分享给队友」只出 toast+写剪贴板（`xclip -selection clipboard -o` 取链接）；同人同题连点会生成多个 sid。/s/{sid} 可 curl 断言 OG/noindex；无效 sid 302 回首页；分享者视角直接见答案，挑战者需先作答；同 uid 二次作答 409（UI 无反应）。
+- PK 双人流程可单机完成：创建方答完 10 题拿挑战码 → CDP 改 anonUid/pkNickname → F5 → 输码应战。PK 作答不写 answer_log（不计入 checkin/今日已练），周榜昵称会留残留。
+- 本地 pstats/首页「今日已练」缓存不按 uid 隔离（practiceHistory 已修，pstats 未修），切 uid 测试计数断言以 `/api/checkin/summary` 为准。
+
 ## 本地 H5 测试环境（PR #32 起）
 - 本地后端：`cd backend && ADMIN_TOKEN=devtoken IMPORT_TOKEN=devtoken LLM_API_KEY=x LLM_BASE_URL=http://localhost:1/v1 APP_CORS_ORIGINS="http://localhost:5173" uvicorn app.main:app --port 8300`；SQLite 在 **仓库根** `data.db`（不是 backend/data.db）。
 - H5：`cd frontend-uni && npm run dev:h5`（:5173）；要打到本地后端需建 `frontend-uni/.env.local` 写 `VITE_API_BASE=http://localhost:8300`（勿提交）。
@@ -28,7 +102,7 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 ## P6：学习计划 / 考点树 / 时政
 - 时政每日一练完成态存本机 localStorage `szDaily`，同日重测需先清该 key。
 - 后台「考点树」在生产 tag3 全空时列表恒「暂无题目」；验证编辑闭环可先 API 打标一题（`PATCH /api/admin/questions/{id}` body `{"tag3":code}`，header `x-admin-token`）再经 UI 清空还原。
-- 服务器 DB 精确核对：容器 `deploy-kaogong-1` 内 `/data/data.db`（`answer_log.created_at` 为 epoch 秒非日期串）。
+- 服务器 DB 精确核对：容器 `deploy-kaogong-1` 内 `/data/data.db`（不是 /app/data/kaogong.db；`answer_log.created_at` 为 epoch 秒非日期串，判分列名为 `correct`）。容器内无 sqlite3 CLI，用 `docker exec deploy-kaogong-1 python3 -c` + sqlite3 模块查询。
 
 ## tag3 三级考点
 - tag3 覆盖率核对须过滤 disabled（已下架题 tag3 恒空属预期）。
@@ -126,7 +200,37 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 迷你模考入口在首页「更多练习→迷你模考」（30 题/30 分钟），可只答几题从答题卡交卷；交卷生成 `attempt_id`（成绩页 URL `#/pkgA/exam/report?attempt_id=N`），模考中答错的题也会自动写入错题本（saveExamWrong）——生产测试记得把这些 mistake id 一并列入清理清单。
 - 组队落地页：我的→刷题小队→创建小队→「复制邀请链接」得 `#/pages/team/join?code=XXXXXX`，可直接开新标签验证渲染；测试小队记下邀请码，测完可点「退出小队」清理。
 
+## 生产服务器与 /admin 令牌（R1 审查轮）
+- 生产服务器即 TICKETS_VPS（env：`TICKETS_VPS_SSH_HOST/USER/CREDENTIAL`，sshpass 登录），仓库在 `/home/ubuntu/kaogong-assistant`，令牌在 `deploy/.env` 的 `ADMIN_TOKEN`（32 位）；取值管道到 `xclip` 粘贴进 /admin 登录框，勿落盘。
+- /admin 登录按钮首次点击可能无响应且无提示（已报 P2），再点一次即可进入。
+- 375px 视口：Chrome 窗口最小宽度 >375，无法用 wmctrl 缩窗实现；用 CDP `Emulation.setDeviceMetricsOverride`（375×812, mobile）+ 常连 websocket（cdp_hold.py 模式）。注意该 override 在断开/clearDeviceMetricsOverride 后可能仍卡在原 tab——桌面视口测试直接开新标签页最省事。
+- H5 匿名 uid/pstats 等 localStorage 值都是 `{"type":"string|object","data":...}` 包装格式，切换测试身份必须写包装格式，否则页面读不到。
+
+## R3 审查轮新经验
+- 生产站有 Service Worker（/sw.js，拦截所有同源 GET 含 navigate）：SW 线程一旦挂起，/admin 及所有同源导航会永久 pending（curl 正常但浏览器转圈、渲染进程 JS 无响应）。解法：在任一还活着的同源 H5 tab 里执行 `navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister()))` 后重开标签页。管理台「退出登录」点击后曾触发此挂起。
+- /admin 静态资源版本号自 PR#130 改为文件 mtime（`core.js?v=<epoch>`），HTML `cache-control: no-cache`——普通刷新即拿新脚本，不再需要强刷。注意 `curl -I /admin`（HEAD）返回 404，探活要用 GET。
+- 抽题正确性 API 断言要点：默认路径真题≈60%（`round(limit*0.6)` 从 real 层抽）、花生讲解层优先（has_hs DESC）、`exclude=set(done)` 按 uid 去已答；grouped 资料分析按 `material_hash` 分组、`group_seq` 形如 "1/5"。`mode=reinforce` 冷触仍可能 5s 级（未纳入 id 池预热）。
+- 统计页「练习记录」读浏览器本地存储、不按 uid 隔离：切换 anonUid 测试时会看到旧身份的模考记录，与顶部按 uid 的「学习统计」不一致，核对以 `/api/exam/attempts?uid=` 为准。
+- 迷你模考交卷时立即截图可捕捉「判分中…」toast（无需网络节流）；错题删除可直接 `DELETE /api/mistakes/{id}?uid=`。
+
+## R4 回归轮新经验（PR#132 后）
+- sw.js 已升 v2（CACHE `kg-shell-v2`）：不再拦截 /admin、/tiku、/s/ 导航，SPA 导航 fetch 有 8s 超时兜底。验证激活版本用 `navigator.serviceWorker.getRegistration()`（active.state=activated）+ `caches.keys()` 含 kg-shell-v2；v2 activate 会自动删 v1 cache。
+- 若此前用 unregister 强杀过 SW，Chrome profile 的 SW 子系统可能进入卡死态：registration 存在但无 worker，`register()`/`unregister()` 均永久挂起。解法：重启整个 Chrome（保留 user-data-dir 即可），重启后自动装上新 SW。
+- 重启 Devin 托管 Chrome：从 `/proc/<pid>/cmdline` 取原 argv（user-agent 含空格，不能整串丢给 bash），kill 后用 python subprocess.Popen 按 argv 重启，DISPLAY 用 `ls /tmp/.X11-unix`（通常 :0）。
+- `/api/checkin/summary` 的 days/today_n/streak 自 PR#132 起 = answer_log + review_log 合并，复习作答计入今日已练；`cleared_today` 只数当日 review_log correct=1。
+- 统计页「练习记录」自 PR#132 起按 uid 隔离：写入带 uid，展示按当前 anonUid 过滤；存量无 uid 记录会在首次打开统计页时一次性归属当前身份（测试切身份前注意先备份 practiceHistory）。
+- HEAD /admin 已修复返回 200，可直接用 HEAD 探活。
+
 ## SEO 页（/tiku/*）测试
 - `/tiku/q/{id}` 详情页有 `lru_cache`：改 DB 后必须重启 uvicorn/容器才会反映新数据。
 - 本地起后端可能需先 `pip install reportlab`（pdf_export 依赖）。
 - sitemap/试卷页 HTML 为单行：统计 URL 数用 `grep -o '<loc>' | wc -l`，不能用 `grep -c`。
+
+## R19 回归轮经验
+- 箱内 Chrome profile 是 `~/.config/google-chrome-for-testing`，重启 Chrome 需带 `--user-data-dir` 指向它；重启后 kaogong localStorage 可能丢失，测前先备份（如 /tmp/*_ls_backup.json）再还原。
+- 需要「答对指定比例」时：先 XHR monkey-patch 捕获 `/api/questions` 响应里的 answer 字段，再按字母点选（参考 /tmp/r19_answer.sh 模式）。
+
+## R20 审查轮新经验（错题深链路/大赛/计划/组队）
+- 手动录入/扫描答题卡测法：先在错题本筛选 sheet 导出错题卷拿卷码（H5 下 rememberPaper 写 recentPapers）；`pdftoppm` 转 PNG 后用 PIL 按答题卡框线坐标涂黑即可喂给 `/api/scan_sheet` 上传（OMR 识别可靠）。
+- 组队入口在「我的」页；team API 为 `/api/team/create|join|leave|mine`，队长退出即解散。
+- 模考大赛每周六 09:00-24:00（东八区）开赛，非窗口期只能测报名+空态。
