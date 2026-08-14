@@ -10,7 +10,7 @@
 - 每日专项练习量 N = clamp(每日可用时长(分钟) × 0.5, 10, 100)，按弱项拆成 1~2 个
   专项任务（弱项来自 answer_log 正确率，即现有 recommend_stats 口径，今日主攻模块优先），
   剩余量为综合练习。
-- 错题复习 M = min(到期错题数, max(5, 时长//10), 20)，到期口径与现有复习队列一致。
+- 错题复习 M = min(到期错题数, max(5, 时长//10), 20)；今日新产生的错题不计入今日任务（首次复习属于明天），避免已完成任务回退；复习队列本身仍可立即复习新错题。
 - 每周 1 次模考：本周（周一起）无已交卷模考记录时列入任务。
 - 完成判定：练习/综合任务用当日 answer_log 按模块/题型计数；复习用当日 review_log；
   模考用本周 exam_attempts 交卷记录。
@@ -71,7 +71,9 @@ def today_plan(uid: str) -> dict:
 
     today = db.today_answer_counts(uid)
     reviewed = db.reviews_today(uid)
-    due = db.due_review_count(uid)
+    # 今日新错题不计入今日计划，否则按计划练习产生的新错题会把刚完成的复习任务变回未完成
+    cn_day_start = (int(time.time() + 8 * 3600) // 86400) * 86400 - 8 * 3600
+    due = db.due_review_count(uid, created_before=cn_day_start)
 
     tasks: list[dict] = []
 

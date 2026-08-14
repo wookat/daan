@@ -350,7 +350,7 @@
       </view>
       <view v-for="m in shownPage" :key="m.id" class="card mcard" :class="masteryClass(m)" @click="toggleCard(m)">
         <view class="mhead">
-          <text class="tag">{{ m.question_type || modName(m.module) }}</text>
+          <text class="tag">{{ tagName(m) }}</text>
           <text v-if="m.times >= 2" class="timesbadge">错 {{ m.times }} 次</text>
           <text v-if="m.mastered" class="zhan">已掌握</text>
           <view v-else-if="nextReviewText(m)" class="duehint" :class="{ due: isDue(m) }">
@@ -760,7 +760,13 @@ export default {
       this.kp3Filter = t3 || '';
     },
     groupKey(m) {
-      return m.question_type || NAMES[m.module] || m.module || '其他';
+      return this.tagName(m) || '其他';
+    },
+    // 题型标签统一粒度：去掉「模块名-」前缀（历史数据两种格式并存），无题型时用模块名
+    tagName(m) {
+      const qt = m.question_type || '';
+      if (!qt) return this.modName(m.module);
+      return qt.includes('-') ? qt.split('-').slice(1).join('-') : qt;
     },
     unfavItem(f) {
       this.unfav(this.favs.indexOf(f));
@@ -929,7 +935,7 @@ export default {
         this.rIdx++;
         this.resetQ();
       } else {
-        this.celebrateN = this.rItems.length;
+        this.celebrateN = this.rItems.filter((q) => !q._extra && !q._requeued).length;
         this.exitReview();
         this.celebrate = true;
         trackEvent('review_done_celebrate', 'book');

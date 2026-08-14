@@ -2414,21 +2414,27 @@ def save_mistake(rec: dict) -> int:
     conn = get_conn()
     _ensure_mistake_uid(conn)
     qtext = rec.get("question_text")
-    if qtext:
-        uc, ua = _uid_clause(rec.get("uid") or None)
+    qid = rec.get("question_id")
+    dup = None
+    uc, ua = _uid_clause(rec.get("uid") or None)
+    if qid:
+        dup = conn.execute(
+            f"SELECT id FROM mistakes WHERE question_id=?{uc} LIMIT 1", (qid, *ua)
+        ).fetchone()
+    if not dup and qtext:
         dup = conn.execute(
             f"SELECT id FROM mistakes WHERE question_text=?{uc} LIMIT 1", (qtext, *ua)
         ).fetchone()
-        if dup:
-            conn.execute(
-                "UPDATE mistakes SET times=COALESCE(times,1)+1, mastered=0, review_streak=0, "
-                "next_review=?, user_answer=COALESCE(?, user_answer), "
-                "question_id=COALESCE(question_id, ?) WHERE id=?",
-                (time.time(), rec.get("user_answer"), rec.get("question_id"), dup["id"]),
-            )
-            conn.commit()
-            conn.close()
-            return dup["id"]
+    if dup:
+        conn.execute(
+            "UPDATE mistakes SET times=COALESCE(times,1)+1, mastered=0, review_streak=0, "
+            "next_review=?, user_answer=COALESCE(?, user_answer), "
+            "question_id=COALESCE(question_id, ?) WHERE id=?",
+            (time.time(), rec.get("user_answer"), qid, dup["id"]),
+        )
+        conn.commit()
+        conn.close()
+        return dup["id"]
     cur = conn.execute(
         """INSERT INTO mistakes
            (created_at, module, question_type, question_text, user_answer,
@@ -2505,13 +2511,17 @@ def delete_mistake(mid: int, uid: str | None = None) -> bool:
 REVIEW_INTERVALS_DAYS = [1, 3, 7, 15, 30]
 
 
-def due_review_count(uid: str | None = None) -> int:
+def due_review_count(uid: str | None = None, created_before: float | None = None) -> int:
     conn = get_conn()
     _ensure_mistake_uid(conn)
     cl, args = _uid_clause(uid)
+    extra = ""
+    if created_before is not None:
+        extra = " AND created_at < ?"
+        args = (*args, created_before)
     n = conn.execute(
         "SELECT COUNT(*) n FROM mistakes WHERE (mastered IS NULL OR mastered=0) "
-        f"AND (next_review IS NULL OR next_review <= ?){cl}",
+        f"AND (next_review IS NULL OR next_review <= ?){cl}{extra}",
         (time.time(), *args),
     ).fetchone()["n"]
     conn.close()
