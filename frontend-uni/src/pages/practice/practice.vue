@@ -517,6 +517,15 @@ export default {
         /* 保留原值 */
       }
       this._urlLaunch = { module, year: parseInt(query.year, 10) || null, source: query.source || 'seo' };
+    } else if (query && query.module) {
+      // 仅带模块的深链（分享/外链直开）：直接开练该模块
+      let module = query.module;
+      try {
+        module = decodeURIComponent(module);
+      } catch (e) {
+        /* 保留原值 */
+      }
+      this._urlLaunch = { module, source: query.source || 'link' };
     }
   },
   onShow() {
