@@ -557,7 +557,7 @@ export default {
   onShow() {
     this.authUser = getAuthUser();
     this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
-    this.history = uni.getStorageSync('practiceHistory') || [];
+    this.history = this.loadHist();
     this.loadHeatmap();
     this.loadGrowth();
     this.loadReco();
@@ -566,6 +566,20 @@ export default {
     this.load();
   },
   methods: {
+    loadHist() {
+      // 本地练习记录按当前身份隔离；无 uid 的历史记录一次性归属到当前身份（升级前设备默认单身份）
+      try {
+        const uid = anonUid();
+        let hist = uni.getStorageSync('practiceHistory') || [];
+        if (hist.some((h) => !h.uid)) {
+          hist = hist.map((h) => (h.uid ? h : { ...h, uid }));
+          uni.setStorageSync('practiceHistory', hist);
+        }
+        return hist.filter((h) => h.uid === uid);
+      } catch (e) {
+        return [];
+      }
+    },
     async loadHeatmap() {
       try {
         const d = await fetchCheckinSummary();
@@ -717,7 +731,7 @@ export default {
             uni.setStorageSync('backupCode', res.content.trim().toUpperCase());
             this.backupCode = res.content.trim().toUpperCase();
             this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
-            this.history = uni.getStorageSync('practiceHistory') || [];
+            this.history = this.loadHist();
             this.coachHtml = cleanCoach(uni.getStorageSync('coachAdvice') || '');
             uni.showToast({ title: '恢复成功！', icon: 'success' });
           } catch (e) {

@@ -595,6 +595,19 @@ def api_checkin_summary(uid: str):
             (u,),
         )
     }
+    # 复习作答同样计入每日练习量（今日已练/连签/日历口径统一：练习+复习都算学习行为）
+    if conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='review_log'"
+    ).fetchone():
+        for r in conn.execute(
+            f"""SELECT {CN_DAY_SQL} AS d,
+                      COUNT(*) AS n, SUM(correct) AS c
+               FROM review_log WHERE uid=? GROUP BY d""",
+            (u,),
+        ):
+            t = days.setdefault(r["d"], {"n": 0, "correct": 0})
+            t["n"] += r["n"]
+            t["correct"] = (t["correct"] or 0) + (r["c"] or 0)
     total = conn.execute("SELECT COUNT(*) FROM answer_log WHERE uid=?", (u,)).fetchone()[0]
     today = _cn_now().strftime("%Y-%m-%d")
     day0 = _cn_now().replace(hour=0, minute=0, second=0, microsecond=0).timestamp()

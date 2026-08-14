@@ -125,6 +125,10 @@ def init_db():
         "CREATE INDEX IF NOT EXISTS idx_q_tag3_pick ON questions(tag3, disabled, is_real, has_hs, id)"
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_quality ON questions(quality_score)")
+    if "correct_ratio" in qcols:
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_q_reinforce ON questions(tag3, disabled, correct_ratio, id)"
+        )
     similarity.ensure_tables(conn)
     conn.execute(
         """CREATE TABLE IF NOT EXISTS tag3_review (
@@ -3060,7 +3064,9 @@ def _admin_dashboard_uncached() -> dict:
     pending = q("SELECT COUNT(*) FROM questions WHERE disabled=2").fetchone()[0]
     flagged = q("SELECT COUNT(*) FROM questions WHERE hs_down>0 AND (disabled IS NULL OR disabled=0)").fetchone()[0]
     open_reports = q("SELECT COUNT(*) FROM question_reports WHERE status='open'").fetchone()[0]
-    health = round(100.0 * max(total - disabled - flagged, 0) / total, 1) if total else 100.0
+    # 健康度口径：基于当前可运营题库（历史下架存量是治理成果，不计入分母惩罚）
+    active = max(total - disabled - pending, 0)
+    health = round(100.0 * max(active - flagged, 0) / active, 1) if active else 100.0
 
     todos = {
         "pending_batches": q(
@@ -3089,8 +3095,8 @@ def _admin_dashboard_uncached() -> dict:
     return {
         "today": {**today, "new_users": new_today, "ai_calls": ai_today},
         "yesterday": {**yesterday, "new_users": new_yesterday, "ai_calls": ai_yesterday},
-        "health": {"pct": health, "total": total, "disabled": disabled, "pending": pending,
-                   "flagged": flagged, "open_reports": open_reports},
+        "health": {"pct": health, "total": total, "active": active, "disabled": disabled,
+                   "pending": pending, "flagged": flagged, "open_reports": open_reports},
         "trend": trend,
         "todos": todos,
         "by_module": by_module,
@@ -3787,15 +3793,33 @@ def reinforce_questions(uid: str, tag3: str | None = None, module: str | None = 
 
     def _pick(cond: str, args: list, n: int, exclude: set) -> list[dict]:
         ph = ",".join("?" * len(exclude)) or "0"
-        rows = conn.execute(
-            f"""SELECT * FROM questions
-                WHERE {cond} AND disabled=0
-                  AND id NOT IN ({ph})
-                  AND id NOT IN (SELECT question_id FROM answer_log WHERE uid=? AND question_id IS NOT NULL)
-                ORDER BY {order} LIMIT ?""",
-            (*args, *exclude, uid, n),
-        ).fetchall()
-        return [dict(r) for r in rows]
+        # 两阶段：先用 covering 索引只读 id/correct_ratio 完成排序选取，再回表取 limit 行，
+        # 避免排序阶段读全部候选大行（页缓存被挤出时冷触可达秒级）
+        src = (
+            "questions INDEXED BY idx_q_reinforce"
+            if cond.startswith("tag3=") and "correct_ratio" in qcols
+            else "questions"
+        )
+        ids = [
+            r["id"]
+            for r in conn.execute(
+                f"""SELECT id FROM {src}
+                    WHERE {cond} AND disabled=0
+                      AND id NOT IN ({ph})
+                      AND id NOT IN (SELECT question_id FROM answer_log WHERE uid=? AND question_id IS NOT NULL)
+                    ORDER BY {order} LIMIT ?""",
+                (*args, *exclude, uid, n),
+            )
+        ]
+        if not ids:
+            return []
+        rows = {
+            r["id"]: dict(r)
+            for r in conn.execute(
+                f"SELECT * FROM questions WHERE id IN ({','.join('?' * len(ids))})", ids
+            )
+        }
+        return [rows[i] for i in ids if i in rows]
 
     out: list[dict] = []
     seen: set = set()
