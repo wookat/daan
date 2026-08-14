@@ -119,9 +119,9 @@ export default {
     beatText() {
       const s = this.qStats;
       if (!s || !s.total || !this.myResult) return '';
-      if (s.total < 5) return `🎯 你是第 ${s.total} 个作答的人，把题发给更多考友一起比比`;
-      if (this.myResult.correct && s.beat_pct != null) return `🏆 你击败了 ${s.beat_pct}% 的作答者（共 ${s.total} 人做过这题）`;
-      if (s.acc != null) return `共 ${s.total} 人做过这题，正确率 ${s.acc}%，再战同类题赢回来`;
+      if (s.total < 5) return `🎯 全站第 ${s.total} 个作答本题的人，把题发给更多考友一起比比`;
+      if (this.myResult.correct && s.beat_pct != null) return `🏆 你击败了全站 ${s.beat_pct}% 的作答者（共 ${s.total} 人做过这题）`;
+      if (s.acc != null) return `全站共 ${s.total} 人做过这题，正确率 ${s.acc}%，再战同类题赢回来`;
       return '';
     },
   },

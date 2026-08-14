@@ -383,6 +383,17 @@ def api_share_create(body: dict):
     if team_id and not _member(conn, int(team_id), uid):
         conn.close()
         raise HTTPException(403, "你不在该小队中")
+    # 同人同题幂等复用 sid：连点/重复分享不再产生多条分享记录，作答数也随之累计到同一处
+    existing = conn.execute(
+        """SELECT sid FROM shared_questions
+           WHERE question_id=? AND from_uid=? AND COALESCE(team_id,0)=?
+           ORDER BY created_at DESC LIMIT 1""",
+        (int(qid), uid, int(team_id) if team_id else 0),
+    ).fetchone()
+    if existing:
+        conn.close()
+        q = _sanitized_question(int(qid)) or {}
+        return {"sid": existing["sid"], "module": q.get("module"), "submodule": q.get("submodule")}
     sid = _gen_sid(conn)
     conn.execute(
         """INSERT INTO shared_questions (sid, question_id, from_uid, from_name, team_id, created_at)

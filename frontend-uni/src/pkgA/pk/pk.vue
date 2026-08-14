@@ -358,7 +358,20 @@ export default {
         if (this.fromRandom && d.match.status !== 'finished') this.startWaitWatch();
       } catch (e) {
         uni.hideLoading();
-        uni.showToast({ title: e.message || '提交失败', icon: 'none' });
+        // 超时/断连时提交可能已在服务端生效，先确认比分再决定是否让用户重试
+        try {
+          const d = await pkMatch(this.code);
+          const mySide = d.match && d.match.my_side;
+          if (mySide && d.match[mySide] && d.match[mySide].done) {
+            this.match = d.match;
+            this.view = 'result';
+            if (this.fromRandom && d.match.status !== 'finished') this.startWaitWatch();
+            return;
+          }
+        } catch (e2) {
+          /* 忽略确认失败，走重试提示 */
+        }
+        uni.showToast({ title: e.message || '提交超时，请重试', icon: 'none' });
       } finally {
         this.submitting = false;
       }
