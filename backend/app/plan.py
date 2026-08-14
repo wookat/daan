@@ -121,6 +121,9 @@ def today_plan(uid: str) -> dict:
     focus = (db.get_user_state(uid) or {}).get("focus_module") or ""
     if focus:
         weak.sort(key=lambda w: 0 if w.get("module") == focus else 1)
+    # 完成判定按 submodule 计数，同一题型只保留权重最高的一项，避免同名任务且 done_n 双计
+    seen_subs: set[str] = set()
+    weak = [w for w in weak if not (w["submodule"] in seen_subs or seen_subs.add(w["submodule"]))]
     assigned = 0
     counted_subs: list[str] = []
     for i, w in enumerate(weak[:2]):
