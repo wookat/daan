@@ -664,10 +664,14 @@ export function pkNickname() {
   const u = getAuthUser();
   if (u && u.nickname) return u.nickname;
   if (u && u.phone) return '考友' + String(u.phone).slice(-4);
-  let n = uni.getStorageSync('pkNickname');
+  // 匿名昵称按 uid 隔离，避免同设备切换身份后串用他人昵称；旧全局键迁移到当前 uid 一次
+  const key = 'pkNickname:' + anonUid();
+  let n = uni.getStorageSync(key);
   if (!n) {
-    n = '考友' + Math.random().toString(36).slice(2, 6).toUpperCase();
-    uni.setStorageSync('pkNickname', n);
+    n = uni.getStorageSync('pkNickname');
+    if (n) uni.removeStorageSync('pkNickname');
+    else n = '考友' + Math.random().toString(36).slice(2, 6).toUpperCase();
+    uni.setStorageSync(key, n);
   }
   return n;
 }
