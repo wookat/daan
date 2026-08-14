@@ -534,6 +534,7 @@ def api_track(body: dict):
         "pk_result_open", "pk_result_copy", "pk_result_challenge", "badge_unlock",
         "review_entry_click", "task_card_click", "heatmap_view", "review_done_celebrate",
         "comeback_view", "share_result_copy", "reminder_optin", "reminder_banner_click",
+        "slow_load",
     }:
         raise HTTPException(400, "无效事件")
     uid = str(body.get("uid") or "").strip()[:64] or None
@@ -541,7 +542,9 @@ def api_track(body: dict):
     conn = db.get_conn()
     conn.execute(
         "INSERT INTO growth_events (uid, event, source, ref, created_at) VALUES (?,?,?,?,?)",
-        (uid, event, str(body.get("source") or "")[:16] or None, str(body.get("ref") or "")[:32] or None, time.time()),
+        # slow_load 携带导航/最慢资源耗时明细，需要更长 ref
+        (uid, event, str(body.get("source") or "")[:16] or None,
+         str(body.get("ref") or "")[:200 if event == "slow_load" else 32] or None, time.time()),
     )
     conn.commit()
     conn.close()
