@@ -434,12 +434,24 @@ export default {
     },
     openMatch(m) {
       if (m.my_side && !(m.my_side === 'creator' ? m.creator.done : m.opponent && m.opponent.done)) {
-        // 已加入但未作答（异常态），重新加入作答
-        this.joinCode = m.code;
-        this.joinByCode();
+        // 未交卷（提交失败/中途离开）：重新拉题续答
+        this.resumeMatch(m);
         return;
       }
       this.viewResult(m.code);
+    },
+    async resumeMatch(m) {
+      try {
+        uni.showLoading({ title: '加载中…' });
+        const d = await pkJoin(m.code);
+        uni.hideLoading();
+        this.fromRandom = false;
+        this.startQuiz(d.code, d.questions, m.my_side);
+        this.loadRival(d.code);
+      } catch (e) {
+        uni.hideLoading();
+        uni.showToast({ title: e.message || '加载失败', icon: 'none' });
+      }
     },
     myP() {
       return this.mySide === 'opponent' ? this.match.opponent : this.match.creator;

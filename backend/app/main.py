@@ -1685,7 +1685,8 @@ def api_sw_js():
     p = os.path.join(FRONTEND_DIR, "static", "sw.js")
     if not os.path.isfile(p):
         raise HTTPException(404, "not found")
-    return FileResponse(p, media_type="application/javascript")
+    # SW 脚本必须免启发式缓存：否则浏览器最长 24h 不回源校验，新发版对存量用户长时间不生效
+    return FileResponse(p, media_type="application/javascript", headers={"Cache-Control": "no-cache"})
 
 
 class AssetStaticFiles(StaticFiles):
@@ -1711,6 +1712,9 @@ class AssetStaticFiles(StaticFiles):
         resp = await super().get_response(path, scope)
         if is_asset and resp.status_code == 200:
             resp.headers["Cache-Control"] = self._CACHE
+        elif resp.status_code == 200 and "text/html" in (resp.headers.get("content-type") or ""):
+            # SPA 壳（index.html）每次回源协商（ETag 命中返 304），避免启发式缓存供给旧壳引用已下线的 hash chunk
+            resp.headers["Cache-Control"] = "no-cache"
         return resp
 
 
