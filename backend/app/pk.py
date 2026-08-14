@@ -6,6 +6,7 @@ PK 作答不写入 answer_log / 错题本统计（防作弊 + 不污染个人数
 """
 import json
 import random
+import re
 import string
 import time
 from datetime import datetime, timedelta
@@ -22,6 +23,7 @@ PER_Q_MS_CAP = 30_000
 BASE_SCORE = 80
 SPEED_BONUS_MAX = 20
 PK_MODULES = {"ziliao", "shuliang", "yanyu", "panduan", "changshi"}
+_MULTI_RE = re.compile(r"不定项|多选")
 
 
 def init_pk_db():
@@ -167,9 +169,11 @@ def api_pk_create(body: dict):
     if module and module not in PK_MODULES:
         raise HTTPException(400, "模块无效")
     # PK 计分按单选严格匹配，多选/不定项题不适合限时对战，抽题时排除
+    # （answer 存单字母但题干标注「不定项/多选」的脏数据也一并按题干过滤）
     questions = [
         q for q in db.random_questions(module, PK_N_QUESTIONS * 3)
         if len((q.get("answer") or "").strip()) == 1
+        and not _MULTI_RE.search(q.get("question") or "")
     ][:PK_N_QUESTIONS]
     if len(questions) < PK_N_QUESTIONS:
         raise HTTPException(400, "题库题量不足，无法发起 PK")
