@@ -93,6 +93,11 @@
       </view>
 
       <view v-if="rivalDone" class="card hint"><l-icon name="zap" :size="15" color="#3b6ff5" /> 对手已完成全部作答 —— 锁定你的答案！</view>
+
+      <view v-if="submitFailed" class="card hint">
+        <text>提交未成功（作答已保留），网络恢复后可重试</text>
+        <view class="act-btn main" style="margin-top: 16rpx" @click="finishQuiz">重新提交</view>
+      </view>
     </template>
 
     <!-- 结果 / 等待页 -->
@@ -174,6 +179,7 @@ export default {
       rivalDone: false,
       myName: pkNickname(),
       submitting: false,
+      submitFailed: false,
       fromRandom: false,
       noOppHint: false,
       waitTimerId: null,
@@ -307,6 +313,7 @@ export default {
       this.qIndex = 0;
       this.answers = [];
       this.picked = '';
+      this.submitFailed = false;
       this.rivalName = '';
       this.rivalScore = null;
       this.rivalDone = false;
@@ -349,6 +356,7 @@ export default {
     async finishQuiz() {
       if (this.submitting) return;
       this.submitting = true;
+      this.submitFailed = false;
       try {
         uni.showLoading({ title: '判分中…' });
         const d = await pkSubmit(this.code, this.answers.map((a) => ({ question_id: a.question_id, answer: a.answer, ms: a.ms })));
@@ -371,6 +379,7 @@ export default {
         } catch (e2) {
           /* 忽略确认失败，走重试提示 */
         }
+        this.submitFailed = true;
         uni.showToast({ title: e.message || '提交超时，请重试', icon: 'none' });
       } finally {
         this.submitting = false;
