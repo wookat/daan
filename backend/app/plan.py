@@ -7,10 +7,11 @@
     专项期：30 < days_left <= 基础阈值
     真题期：14 < days_left <= 30（专项练习切换真题模式）
     冲刺期：days_left <= 14（真题模式 + 错题优先）
-- 每日专项练习量 N = clamp(每日可用时长(分钟) × 0.5, 10, 100)，按弱项拆成 1~2 个
+- 每日专项练习量 N = clamp(每日可用时长(分钟) × 阶段系数, 10, 100)，按弱项拆成 1~2 个
   专项任务（弱项来自 answer_log 正确率，即现有 recommend_stats 口径，今日主攻模块优先），
-  剩余量为综合练习。
-- 错题复习 M = min(到期错题数, max(5, 时长//10), 20)；今日新产生的错题不计入今日任务（首次复习属于明天），避免已完成任务回退；复习队列本身仍可立即复习新错题。
+  剩余量为综合练习。阶段系数：基础/专项/真题期 0.5，冲刺期 0.35（错题优先，新题量让位）。
+- 错题复习 M：基础/专项/真题期 min(到期错题数, max(5, 时长//10), 20)；
+  冲刺期 min(到期错题数, max(8, 时长//6), 30)，体现错题优先；今日新产生的错题不计入今日任务（首次复习属于明天），避免已完成任务回退；复习队列本身仍可立即复习新错题。
 - 每周 1 次模考：本周（周一起）无已交卷模考记录时列入任务。
 - 完成判定：练习/综合任务用当日 answer_log 按模块/题型计数；复习用当日 review_log；
   模考用本周 exam_attempts 交卷记录。
@@ -66,8 +67,10 @@ def today_plan(uid: str) -> dict:
     days_left = _days_left(profile.get("exam_date"))
     phase = _phase(days_left, profile.get("base_level"))
     minutes = profile.get("daily_minutes") or 60
-    n_practice = max(10, min(100, round(minutes * 0.5)))
     real = phase in ("zhenti", "chongci")
+    # 冲刺期错题优先：复习配额上调、新题练习量下调；其余阶段按 0.5 时长换算
+    chongci = phase == "chongci"
+    n_practice = max(10, min(100, round(minutes * (0.35 if chongci else 0.5))))
 
     today = db.today_answer_counts(uid)
     reviewed = db.reviews_today(uid)
@@ -78,7 +81,7 @@ def today_plan(uid: str) -> dict:
     tasks: list[dict] = []
 
     # 错题复习（到期口径与现有复习队列一致）
-    m_review = min(max(5, minutes // 10), 20)
+    m_review = min(max(8, minutes // 6), 30) if chongci else min(max(5, minutes // 10), 20)
     review_target = min(m_review, reviewed + due)
     if review_target > 0:
         tasks.append({

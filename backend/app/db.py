@@ -76,6 +76,12 @@ def init_db():
     ]:
         if col not in cols:
             conn.execute(ddl)
+    # 历史 question_type 混存「模块名-细分」与「细分」两种格式，统一回填为细分题型名（幂等）
+    conn.execute(
+        "UPDATE mistakes SET question_type = trim(substr(question_type, instr(question_type,'-')+1)) "
+        "WHERE question_type LIKE '%-%' AND trim(substr(question_type, 1, instr(question_type,'-')-1)) "
+        "IN ('资料分析','数量关系','言语理解','判断推理','常识判断','常识','时政')"
+    )
     conn.execute(
         """CREATE TABLE IF NOT EXISTS questions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2418,6 +2424,20 @@ def get_paper_export(code: str) -> dict | None:
     return d
 
 
+_QTYPE_MOD_PREFIXES = ("资料分析", "数量关系", "言语理解", "判断推理", "常识判断", "常识", "时政")
+
+
+def norm_qtype(question_type) -> str | None:
+    """题型统一为细分题型名：去掉「模块名-」前缀（模块归属已由 module 字段承担）。"""
+    t = str(question_type or "").strip()
+    if not t:
+        return None
+    head, sep, rest = t.partition("-")
+    if sep and head in _QTYPE_MOD_PREFIXES and rest.strip():
+        return rest.strip()
+    return t
+
+
 def save_mistake(rec: dict) -> int:
     conn = get_conn()
     _ensure_mistake_uid(conn)
@@ -2451,7 +2471,7 @@ def save_mistake(rec: dict) -> int:
         (
             time.time(),
             rec.get("module"),
-            rec.get("question_type"),
+            norm_qtype(rec.get("question_type")),
             rec.get("question_text"),
             rec.get("user_answer"),
             rec.get("correct_answer"),
