@@ -44,18 +44,23 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // 静态资源（带 hash）：缓存优先，未命中走网络并写入缓存
+  // 静态资源（带 hash）：缓存优先，未命中走网络并写入缓存。
+  // Cache Storage 子系统偶发挂起会拖死 chunk 加载（异步组件 60s 超时白屏），
+  // 与导航分支同样加超时兜底：超时后绕过缓存直连网络
   e.respondWith(
-    caches.match(req).then(
-      (hit) =>
-        hit ||
-        fetch(req).then((res) => {
-          if (res.ok && (res.type === 'basic' || res.type === 'default')) {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(req, copy));
-          }
-          return res;
-        })
-    )
+    Promise.race([
+      caches.match(req).then(
+        (hit) =>
+          hit ||
+          fetch(req).then((res) => {
+            if (res.ok && (res.type === 'basic' || res.type === 'default')) {
+              const copy = res.clone();
+              caches.open(CACHE).then((c) => c.put(req, copy));
+            }
+            return res;
+          })
+      ),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('sw-asset-timeout')), 8000)),
+    ]).catch(() => fetch(req))
   );
 });
