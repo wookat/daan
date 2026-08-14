@@ -301,6 +301,7 @@ export default {
         const hist = uni.getStorageSync('practiceHistory') || [];
         hist.unshift({
           t: Date.now(),
+          uid: anonUid(),
           module: '',
           n: d.total,
           correct: d.correct,

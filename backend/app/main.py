@@ -500,7 +500,7 @@ def _admin_assets_version() -> str:
     return str(int(latest))
 
 
-@app.get("/admin")
+@app.api_route("/admin", methods=["GET", "HEAD"])
 def admin_page():
     with open(os.path.join(_ADMIN_DIR, "index.html"), encoding="utf-8") as f:
         html = f.read()
