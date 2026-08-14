@@ -511,11 +511,11 @@ export default {
       return this.paperRegion ? this.papers.filter((p) => p.region === this.paperRegion) : this.papers;
     },
     todayCount() {
-      // 服务端 answer_log（Asia/Shanghai 日界）优先，未返回时降级本地 pstats
+      // 服务端 answer_log（Asia/Shanghai 日界，按当前 uid）为准；
+      // 本地 pstats 不分身份，仅在服务端未返回（离线）时降级使用
+      if (this.svTodayN != null) return this.svTodayN;
       const days = (this.pstats && this.pstats.days) || {};
-      const local = days[dayKey()] || 0;
-      if (this.svTodayN != null) return Math.max(this.svTodayN, local);
-      return local;
+      return days[dayKey()] || 0;
     },
     weakModule() {
       let worst = null;
