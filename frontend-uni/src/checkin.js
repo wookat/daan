@@ -6,6 +6,24 @@ export function dayKey(d = new Date()) {
   return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
 }
 
+// 时政每日一练完成态按 uid 隔离，避免同设备切换身份后互相污染；旧全局键迁移一次
+export function loadSzDaily(uid) {
+  const key = 'szDaily:' + uid;
+  let d = uni.getStorageSync(key);
+  if (!d) {
+    d = uni.getStorageSync('szDaily');
+    if (d) {
+      uni.removeStorageSync('szDaily');
+      uni.setStorageSync(key, d);
+    }
+  }
+  return d || { days: {} };
+}
+
+export function saveSzDaily(uid, d) {
+  uni.setStorageSync('szDaily:' + uid, d);
+}
+
 export function loadPStats() {
   return uni.getStorageSync('pstats') || { byModule: {}, days: {} };
 }

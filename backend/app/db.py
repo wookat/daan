@@ -2093,6 +2093,13 @@ def growth_stats(uid: str) -> dict:
     total = conn.execute(
         "SELECT COUNT(*) n, COALESCE(SUM(correct),0) c FROM answer_log WHERE uid=?", (uid,)
     ).fetchone()
+    # 全量分模块：雷达等能力画像的服务端口径（按 uid，不依赖设备本地缓存）
+    mod_rows = conn.execute(
+        """SELECT module, COUNT(*) n, COALESCE(SUM(correct),0) c FROM answer_log
+           WHERE uid=? AND module IN ('changshi','yanyu','shuliang','panduan','ziliao')
+           GROUP BY module""",
+        (uid,),
+    ).fetchall()
     conn.close()
     weeks: dict = {}
     for r in rows:
@@ -2103,6 +2110,7 @@ def growth_stats(uid: str) -> dict:
             w["modules"][r["module"]] = {"n": r["n"], "c": r["c"]}
     return {
         "total": {"n": total["n"], "c": total["c"]},
+        "modules": {r["module"]: {"n": r["n"], "c": r["c"]} for r in mod_rows},
         "weeks": list(weeks.values()),
     }
 

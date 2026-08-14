@@ -521,7 +521,13 @@ export default {
       return this.byReason.reduce((s, r) => s + r.n, 0) || 1;
     },
     axes() {
+      // 服务端 answer_log 全量分模块（按 uid）优先，与掌握度地图/预测卡同口径；离线降级本地 pstats
+      const sv = this.growth && this.growth.modules;
       return MODS.map((m) => {
+        if (sv) {
+          const s = sv[m.key] || { n: 0, c: 0 };
+          return { ...m, pct: s.n ? Math.round((s.c / s.n) * 100) : 0 };
+        }
         const s = this.pstats.byModule[m.key] || { done: 0, correct: 0 };
         return { ...m, pct: s.done ? Math.round((s.correct / s.done) * 100) : 0 };
       });

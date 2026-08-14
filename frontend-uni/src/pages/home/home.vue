@@ -436,7 +436,7 @@
 
 <script>
 import { request, anonUid, exportPdf, trackEvent, fetchCheckinBadges, fetchCheckinSummary } from '../../api.js';
-import { checkinStreak, dayKey } from '../../checkin.js';
+import { checkinStreak, dayKey, loadSzDaily } from '../../checkin.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -588,7 +588,7 @@ export default {
   onShow() {
     this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
     this.daily = uni.getStorageSync('dailyPlan') || { days: {} };
-    this.szDaily = uni.getStorageSync('szDaily') || { days: {} };
+    this.szDaily = loadSzDaily(anonUid());
     this.groupSize = uni.getStorageSync('groupSize') || 10;
     this.dailyGoal = uni.getStorageSync('dailyGoal') || 20;
     this.loadCounts();

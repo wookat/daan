@@ -242,7 +242,7 @@
 <script>
 import { request, BASE_URL, anonUid, exportPdf, removeFav, setFav, fetchCheckinBadges, trackEvent } from '../../api.js';
 import { drawOffline, enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../offline.js';
-import { dayKey } from '../../checkin.js';
+import { dayKey, loadSzDaily, saveSzDaily } from '../../checkin.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -319,7 +319,7 @@ export default {
       favs: uni.getStorageSync('favQuestions') || [],
       autoNext: uni.getStorageSync('autoNextOff') ? false : true,
       daily: uni.getStorageSync('dailyPlan') || { days: {} },
-      szDaily: uni.getStorageSync('szDaily') || { days: {} },
+      szDaily: loadSzDaily(anonUid()),
       realMode: uni.getStorageSync('realMode') ? true : false,
       realYears: [],
       realRegions: [],
@@ -1030,7 +1030,7 @@ export default {
       this._shizheng = false;
       const day = dayKey();
       this.szDaily.days[day] = { right: this.right, best: this.bestStreak, picks: this.items.map((q) => q._picked || ''), secs: this.items.map((q) => q._secs || 0) };
-      uni.setStorageSync('szDaily', this.szDaily);
+      saveSzDaily(anonUid(), this.szDaily);
       uni.showToast({ title: '时政每日一练完成！', icon: 'none' });
     },
     async startReinforce(launch) {
