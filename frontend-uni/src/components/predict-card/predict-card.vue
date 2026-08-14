@@ -65,11 +65,13 @@ export default {
     this.load();
   },
   methods: {
+    // 页面 onShow 会重新调用以刷新作答进度；已有数据时静默更新不闪骨架屏
     async load() {
-      this.loading = true;
+      this.loading = !this.data;
       try {
         this.data = await request('/api/predict?uid=' + encodeURIComponent(anonUid()));
       } catch (e) {
+        if (!this.loading) return;
         this.data = null;
       }
       this.loading = false;

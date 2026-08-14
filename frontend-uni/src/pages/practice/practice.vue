@@ -1008,10 +1008,12 @@ export default {
         this.items = (d.items || []).map((q, i) => ({
           ...this._mapShizheng(q),
           _picked: (rec.picks || [])[i] || '',
+          _secs: (rec.secs || [])[i] || 0,
           _logged: true,
           _saved: true,
         }));
         this.right = rec.right || 0;
+        this.bestStreak = rec.best || 0;
         this.idx = this.items.length;
         this.picked = '';
         this.resultSent = true;
@@ -1027,7 +1029,7 @@ export default {
       if (!this._shizheng) return;
       this._shizheng = false;
       const day = dayKey();
-      this.szDaily.days[day] = { right: this.right, picks: this.items.map((q) => q._picked || '') };
+      this.szDaily.days[day] = { right: this.right, best: this.bestStreak, picks: this.items.map((q) => q._picked || ''), secs: this.items.map((q) => q._secs || 0) };
       uni.setStorageSync('szDaily', this.szDaily);
       uni.showToast({ title: '时政每日一练完成！', icon: 'none' });
     },

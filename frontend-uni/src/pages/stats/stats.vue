@@ -40,7 +40,7 @@
       </view>
     </view>
 
-    <predict-card />
+    <predict-card ref="predict" />
 
     <view class="card">
       <view class="hm-h">
@@ -434,9 +434,14 @@ export default {
       }
       return (this.pstats && this.pstats.days) || {};
     },
+    // 服务端 days 按东八区日界计日，网格/合计同样用东八区“今天”，避免跨时区设备当日作答不落图
+    cnToday() {
+      const now = new Date();
+      return new Date(now.getTime() + (now.getTimezoneOffset() + 8 * 60) * 60000);
+    },
     hmCols() {
       const days = this.hmDayMap;
-      const today = new Date();
+      const today = this.cnToday;
       const dow = (today.getDay() + 6) % 7; // 周一=0
       const cols = [];
       // 本周周一往前推 11 周，共 12 列
@@ -461,7 +466,7 @@ export default {
     },
     hmTotal() {
       const days = this.hmDayMap;
-      const today = new Date();
+      const today = this.cnToday;
       const from = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 83);
       let s = 0;
       for (const [k, n] of Object.entries(days)) {
@@ -559,6 +564,7 @@ export default {
     this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
     this.history = this.loadHist();
     this.loadHeatmap();
+    if (this.$refs.predict) this.$refs.predict.load();
     this.loadGrowth();
     this.loadReco();
     this.loadSlStats();
