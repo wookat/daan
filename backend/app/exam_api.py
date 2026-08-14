@@ -1,0 +1,446 @@
+"""模考/真题卷域：PDF 导出卷、答题卡/卷码判分、整卷模考（同一套判分落库逻辑）。"""
+import hashlib
+
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import StreamingResponse
+
+from . import db, omr, pdf_export, taxonomy
+from .deps import rl
+
+router = APIRouter()
+
+
+@router.post("/api/export/pdf")
+def api_export_pdf(body: dict, request: Request):
+    rl(request, "export_pdf", 20, 300, body.get("uid"))
+    ids = [int(i) for i in (body.get("question_ids") or [])[:140]]
+    items = body.get("items") or []
+    questions = db.questions_by_ids(ids) if ids else []
+    for it in items[:140]:
+        if isinstance(it, dict) and (it.get("question") or "").strip():
+            questions.append(
+                {
+                    "id": it.get("id"),
+                    "module": it.get("module") or "",
+                    "question": str(it.get("question"))[:2000],
+                    "options": it.get("options") or {},
+                    "answer": it.get("answer") or "",
+                    "analysis": it.get("analysis") or "",
+                    "material": it.get("material") or "",
+                }
+            )
+    if not questions:
+        raise HTTPException(400, "没有可导出的题目")
+    code = hashlib.md5(
+        (",".join(str(q.get("id") or q.get("question", "")[:20]) for q in questions)).encode()
+    ).hexdigest()[:8].upper()
+    db.save_paper_export(
+        code,
+        [int(q["id"]) for q in questions if q.get("id")],
+        str(body.get("title") or "自选练习卷")[:40],
+    )
+    data = pdf_export.build_paper_pdf(
+        title=str(body.get("title") or "自选练习卷")[:40],
+        questions=questions,
+        include_answers=bool(body.get("include_answers", True)),
+        answer_sheet=bool(body.get("answer_sheet", True)),
+        include_questions=bool(body.get("include_questions", True)),
+        paper_code=code,
+    )
+    return StreamingResponse(
+        iter([data]),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="paper-{code}.pdf"', "X-Paper-Code": code},
+    )
+
+
+@router.get("/api/paper/{code}")
+def api_paper_info(code: str):
+    paper = db.get_paper_export(code.strip().upper()[:16])
+    if not paper:
+        raise HTTPException(404, "未找到该卷码对应的导出记录，请核对卷面右上角/封面的卷码")
+    return {
+        "code": paper["code"],
+        "title": paper.get("title"),
+        "n": len(paper["question_ids"]),
+        "created_at": paper.get("created_at"),
+    }
+
+def _judge_paper(uid: str, paper: dict, picks: dict[int, str], secs: dict[int, int] | None = None) -> dict:
+    """picks: {题号(从1开始): 'A'}；secs: {题号: 用时秒}；与扫描答题卡同一套判分/落库逻辑。"""
+    qids = paper["question_ids"]
+    questions = {q["id"]: q for q in db.questions_by_ids(qids)}
+    results = []
+    log_items = []
+    for i, qid in enumerate(qids):
+        q = questions.get(qid)
+        if not q:
+            continue
+        picked = (picks.get(i + 1) or "").strip().upper()
+        correct_ans = (q.get("answer") or "").strip().upper()[:1]
+        status = "blank" if not picked else ("multi" if len(picked) > 1 else "ok")
+        is_correct = status == "ok" and picked == correct_ans
+        results.append(
+            {
+                "no": i + 1,
+                "question_id": qid,
+                "module": q.get("module"),
+                "picked": picked,
+                "answer": correct_ans,
+                "correct": is_correct,
+                "status": status,
+                "secs": (secs or {}).get(i + 1) or 0,
+                "question": (q.get("question") or "")[:80],
+            }
+        )
+        if uid and status == "ok":
+            log_items.append(
+                {
+                    "question_id": qid,
+                    "module": q.get("module"),
+                    "submodule": q.get("submodule"),
+                    "correct": is_correct,
+                    "picked": picked,
+                    "secs": (secs or {}).get(i + 1) or 0,
+                }
+            )
+            if not is_correct:
+                db.save_mistake(
+                    {
+                        "uid": uid[:64],
+                        "question_id": qid,
+                        "module": q.get("module"),
+                        "question_type": q.get("submodule"),
+                        "question_text": q.get("question"),
+                        "user_answer": picked,
+                        "correct_answer": correct_ans,
+                        "explanation": q.get("explanation") or q.get("hs_explanation") or "",
+                    }
+                )
+    if uid and log_items:
+        db.save_answer_log(uid[:64], log_items)
+    answered = [r for r in results if r["status"] == "ok"]
+    return {
+        "code": paper["code"],
+        "title": paper.get("title"),
+        "total": len(results),
+        "answered": len(answered),
+        "correct": sum(1 for r in answered if r["correct"]),
+        "saved": bool(uid and log_items),
+        "items": results,
+    }
+
+
+@router.post("/api/paper_answers")
+def api_paper_answers(body: dict):
+    code = str(body.get("code") or "").strip().upper()[:16]
+    paper = db.get_paper_export(code)
+    if not paper:
+        raise HTTPException(404, "未找到该卷码对应的导出记录")
+    raw_picks = body.get("picks") or {}
+    picks: dict[int, str] = {}
+    for k, v in raw_picks.items():
+        try:
+            picks[int(k)] = str(v or "")[:1]
+        except (TypeError, ValueError):
+            continue
+    if not picks:
+        raise HTTPException(400, "没有已选择的答案")
+    return _judge_paper(str(body.get("uid") or ""), paper, picks)
+
+
+@router.post("/api/scan_sheet")
+async def api_scan_sheet(request: Request, uid: str = Form(""), image: UploadFile = File(...)):
+    rl(request, "scan_sheet", 20, 300, uid)
+    raw = await image.read()
+    if len(raw) > 12 * 1024 * 1024:
+        raise HTTPException(400, "图片过大，请控制在 12MB 以内")
+    try:
+        rec = omr.recognize(raw)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    paper = db.get_paper_export(rec["code"])
+    if not paper:
+        raise HTTPException(404, f"未找到卷码 {rec['code']} 对应的导出记录")
+    qids = paper["question_ids"]
+    page = max(1, rec["page"])
+    start = (page - 1) * omr.PER_PAGE
+    page_ids = qids[start : start + omr.PER_PAGE]
+    questions = {q["id"]: q for q in db.questions_by_ids(page_ids)}
+    results = []
+    log_items = []
+    for slot, qid in enumerate(page_ids):
+        q = questions.get(qid)
+        if not q:
+            continue
+        picked = rec["picks"].get(slot, "")
+        correct_ans = (q.get("answer") or "").strip().upper()[:1]
+        status = "blank" if not picked else ("multi" if len(picked) > 1 else "ok")
+        is_correct = status == "ok" and picked == correct_ans
+        results.append(
+            {
+                "no": start + slot + 1,
+                "question_id": qid,
+                "picked": picked,
+                "answer": correct_ans,
+                "correct": is_correct,
+                "status": status,
+                "question": (q.get("question") or "")[:80],
+            }
+        )
+        if uid and status == "ok":
+            log_items.append(
+                {
+                    "question_id": qid,
+                    "module": q.get("module"),
+                    "submodule": q.get("submodule"),
+                    "correct": is_correct,
+                    "picked": picked,
+                    "secs": 0,
+                }
+            )
+            if not is_correct:
+                db.save_mistake(
+                    {
+                        "uid": uid[:64],
+                        "question_id": qid,
+                        "module": q.get("module"),
+                        "question_type": q.get("submodule"),
+                        "question_text": q.get("question"),
+                        "user_answer": picked,
+                        "correct_answer": correct_ans,
+                        "explanation": q.get("explanation") or q.get("hs_explanation") or "",
+                    }
+                )
+    if uid and log_items:
+        db.save_answer_log(uid[:64], log_items)
+    answered = [r for r in results if r["status"] == "ok"]
+    return {
+        "code": rec["code"],
+        "page": page,
+        "title": paper.get("title"),
+        "total": len(results),
+        "answered": len(answered),
+        "correct": sum(1 for r in answered if r["correct"]),
+        "saved": bool(uid and log_items),
+        "items": results,
+    }
+
+@router.get("/api/papers")
+def api_papers():
+    return {"items": db.list_papers()}
+
+def _clean_int_map(raw: dict, as_str: bool = False) -> dict:
+    out: dict = {}
+    for k, v in (raw or {}).items():
+        try:
+            out[int(k)] = str(v or "")[:1] if as_str else max(0, min(int(v or 0), 86400))
+        except (TypeError, ValueError):
+            continue
+    return out
+
+_EXAM_ITEM_FIELDS = ("id", "question", "options", "module", "submodule", "image",
+                     "is_real", "exam_year", "exam_region")
+
+
+@router.get("/api/exam/papers")
+def api_exam_papers(kind: str | None = None, year: int | None = None,
+                    region: str | None = None, uid: str | None = None):
+    items = db.list_exam_papers(kind, year, region, uid=(uid or "").strip()[:64] or None)
+    return {
+        "items": [p for p in items if p["n"] >= 5],
+        "filters": db.exam_paper_filters(),
+    }
+
+
+@router.get("/api/exam/papers/{pid}")
+def api_exam_paper_detail(pid: int):
+    paper = db.get_exam_paper(pid)
+    if not paper:
+        raise HTTPException(404, "试卷不存在")
+    paper["question_ids"] = db.exam_active_qids(paper["question_ids"])
+    return {"paper": paper}
+
+
+@router.post("/api/exam/start")
+def api_exam_start(body: dict):
+    uid = (body.get("uid") or "").strip()[:64]
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    if body.get("mini"):
+        pid = db.create_mock_paper(n=30, duration_min=30)
+    else:
+        pid = body.get("paper_id")
+        if not pid:
+            raise HTTPException(400, "缺少 paper_id")
+        pid = int(pid)
+    paper = db.get_exam_paper(pid)
+    if not paper:
+        raise HTTPException(404, "试卷不存在")
+    qids = db.exam_active_qids(paper["question_ids"])
+    items = {q["id"]: q for q in db.questions_by_ids(qids)}
+    ordered = [{k: items[i].get(k) for k in _EXAM_ITEM_FIELDS} for i in qids if i in items]
+    if len(ordered) < 5:
+        raise HTTPException(400, "试卷题目不足")
+    attempt_id = db.start_exam_attempt(uid, pid)
+    return {
+        "attempt_id": attempt_id,
+        "paper": {
+            "id": paper["id"],
+            "title": paper["title"],
+            "kind": paper["kind"],
+            "year": paper["year"],
+            "region": paper["region"],
+            "duration_min": paper["duration_min"],
+            "n": len(ordered),
+        },
+        "items": ordered,
+    }
+
+
+@router.post("/api/exam/submit")
+def api_exam_submit(body: dict):
+    uid = (body.get("uid") or "").strip()[:64]
+    attempt_id = body.get("attempt_id")
+    if not uid or not attempt_id:
+        raise HTTPException(400, "缺少 uid 或 attempt_id")
+    attempt = db.get_exam_attempt(int(attempt_id))
+    if not attempt or attempt["uid"] != uid:
+        raise HTTPException(404, "答题记录不存在")
+    if attempt["submitted_at"]:
+        raise HTTPException(400, "该次模考已交卷")
+    paper = db.get_exam_paper(attempt["paper_id"])
+    if not paper:
+        raise HTTPException(404, "试卷不存在")
+    picks = _clean_int_map(body.get("picks") or {}, as_str=True)
+    secs = _clean_int_map(body.get("secs") or {})
+    judged = _judge_paper(uid, {"code": None, "title": paper["title"],
+                                "question_ids": db.exam_active_qids(paper["question_ids"])}, picks, secs)
+    per_module: dict = {}
+    for r in judged["items"]:
+        m = r.get("module") or "other"
+        pm = per_module.setdefault(m, {"n": 0, "answered": 0, "correct": 0, "secs": 0})
+        pm["n"] += 1
+        if r["status"] == "ok":
+            pm["answered"] += 1
+            if r["correct"]:
+                pm["correct"] += 1
+        pm["secs"] += r.get("secs") or 0
+    total = judged["total"] or 1
+    score = round(100.0 * judged["correct"] / total, 1)
+    db.finish_exam_attempt(int(attempt_id), {str(k): v for k, v in picks.items()}, score, per_module)
+    return {
+        "attempt_id": int(attempt_id),
+        "paper_id": paper["id"],
+        "title": paper["title"],
+        "score": score,
+        "total": judged["total"],
+        "answered": judged["answered"],
+        "correct": judged["correct"],
+        "per_module": per_module,
+        "items": judged["items"],
+    }
+
+
+@router.get("/api/exam/attempts")
+def api_exam_attempts(uid: str, paper_id: int | None = None, limit: int = 50):
+    uid = uid.strip()[:64]
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    return {"items": db.list_exam_attempts(uid, paper_id, limit)}
+
+
+@router.get("/api/exam/report/{attempt_id}")
+def api_exam_report(attempt_id: int, uid: str = ""):
+    attempt = db.get_exam_attempt(attempt_id)
+    if not attempt or not attempt["submitted_at"]:
+        raise HTTPException(404, "成绩报告不存在")
+    # attempt_id 自增可枚举，成绩报告仅本人可读
+    if attempt["uid"] != (uid.strip()[:64] or None):
+        raise HTTPException(404, "成绩报告不存在")
+    paper = db.get_exam_paper(attempt["paper_id"])
+    if not paper:
+        raise HTTPException(404, "试卷不存在")
+    qids = db.exam_active_qids(paper["question_ids"])
+    questions = {q["id"]: q for q in db.questions_by_ids(qids)}
+    picks = {int(k): v for k, v in attempt["answers"].items()}
+    items = []
+    for i, qid in enumerate(qids):
+        q = questions.get(qid)
+        if not q:
+            continue
+        picked = (picks.get(i + 1) or "").strip().upper()
+        correct_ans = (q.get("answer") or "").strip().upper()[:1]
+        items.append({
+            "no": i + 1,
+            "question_id": qid,
+            "module": q.get("module"),
+            "submodule": q.get("submodule"),
+            "question": q.get("question"),
+            "options": q.get("options"),
+            "picked": picked,
+            "answer": correct_ans,
+            "correct": bool(picked) and len(picked) == 1 and picked == correct_ans,
+            "explanation": q.get("explanation"),
+            "hs_explanation": q.get("hs_explanation"),
+        })
+    answered = sum(1 for r in items if r["picked"] and len(r["picked"]) == 1)
+    tag_stats: dict[str, list[int]] = {}
+    for i, qid in enumerate(qids):
+        q = questions.get(qid)
+        if not q:
+            continue
+        tag = q.get("tag3")
+        if not tag or tag == "UNKNOWN":
+            continue
+        picked = (picks.get(i + 1) or "").strip().upper()
+        correct = picked == (q.get("answer") or "").strip().upper()[:1]
+        tag_stats.setdefault(tag, [0, 0])
+        tag_stats[tag][0] += 1
+        if picked and not correct:
+            tag_stats[tag][1] += 1
+    topic_idx = taxonomy.topic_index()
+    weak_tags = sorted(
+        (
+            {
+                "tag3": t,
+                "name": (topic_idx.get(t) or {}).get("name") or t,
+                "n": v[0],
+                "wrong": v[1],
+            }
+            for t, v in tag_stats.items()
+            if v[1] > 0
+        ),
+        key=lambda x: (-x["wrong"], -x["n"]),
+    )[:3]
+    return {
+        "attempt": {
+            "id": attempt["id"],
+            "paper_id": attempt["paper_id"],
+            "started_at": attempt["started_at"],
+            "submitted_at": attempt["submitted_at"],
+            "score": attempt["score"],
+            "per_module": attempt["per_module"],
+        },
+        "paper": {
+            "id": paper["id"],
+            "title": paper["title"],
+            "kind": paper["kind"],
+            "year": paper["year"],
+            "region": paper["region"],
+            "duration_min": paper["duration_min"],
+            "question_ids": qids,
+        },
+        "total": len(items),
+        "answered": answered,
+        "correct": sum(1 for r in items if r["correct"]),
+        "weak_tags": weak_tags,
+        "items": items,
+    }
+
+@router.get("/api/paper_questions")
+def api_paper_questions(src: str):
+    items = db.paper_questions(src)
+    if not items:
+        raise HTTPException(404, "试卷不存在或题目不足")
+    return {"items": items}
