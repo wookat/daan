@@ -3064,7 +3064,9 @@ def _admin_dashboard_uncached() -> dict:
     pending = q("SELECT COUNT(*) FROM questions WHERE disabled=2").fetchone()[0]
     flagged = q("SELECT COUNT(*) FROM questions WHERE hs_down>0 AND (disabled IS NULL OR disabled=0)").fetchone()[0]
     open_reports = q("SELECT COUNT(*) FROM question_reports WHERE status='open'").fetchone()[0]
-    health = round(100.0 * max(total - disabled - flagged, 0) / total, 1) if total else 100.0
+    # 健康度口径：基于当前可运营题库（历史下架存量是治理成果，不计入分母惩罚）
+    active = max(total - disabled - pending, 0)
+    health = round(100.0 * max(active - flagged, 0) / active, 1) if active else 100.0
 
     todos = {
         "pending_batches": q(
@@ -3093,8 +3095,8 @@ def _admin_dashboard_uncached() -> dict:
     return {
         "today": {**today, "new_users": new_today, "ai_calls": ai_today},
         "yesterday": {**yesterday, "new_users": new_yesterday, "ai_calls": ai_yesterday},
-        "health": {"pct": health, "total": total, "disabled": disabled, "pending": pending,
-                   "flagged": flagged, "open_reports": open_reports},
+        "health": {"pct": health, "total": total, "active": active, "disabled": disabled,
+                   "pending": pending, "flagged": flagged, "open_reports": open_reports},
         "trend": trend,
         "todos": todos,
         "by_module": by_module,

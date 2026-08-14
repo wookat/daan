@@ -33,7 +33,7 @@
       <div class="kpi"><div class="lb">今日作答量</div><div class="v">${t.answered.toLocaleString()}</div>${delta(t.answered, y.answered)}</div>
       <div class="kpi"><div class="lb">新增用户</div><div class="v">${t.new_users.toLocaleString()}</div>${delta(t.new_users, y.new_users)}</div>
       <div class="kpi"><div class="lb">题库健康度 ${healthTag}</div><div class="v">${h.pct}%</div>
-        <div class="d flat">下架 ${h.disabled.toLocaleString()} / 差评 ${h.flagged.toLocaleString()} / 待纠错 ${h.open_reports}</div></div>
+        <div class="d flat">在库 ${(h.active != null ? h.active : h.total).toLocaleString()} / 差评 ${h.flagged.toLocaleString()} / 待纠错 ${h.open_reports} / 下架存量 ${h.disabled.toLocaleString()}</div></div>
       <div class="kpi"><div class="lb">今日 AI 调用</div><div class="v">${t.ai_calls.toLocaleString()}</div>${delta(t.ai_calls, y.ai_calls)}</div>
     </div>
     <div class="split-2" style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px">
