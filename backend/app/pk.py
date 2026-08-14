@@ -202,8 +202,13 @@ def api_pk_join(body: dict):
         conn.close()
         raise HTTPException(404, "挑战不存在或已过期")
     if m["creator_uid"] == uid:
+        if m["creator_score"] is not None:
+            conn.close()
+            raise HTTPException(400, "不能挑战自己发起的对局")
+        # 发起者尚未交卷（提交失败/中途离开）：返回题面供续答
         conn.close()
-        raise HTTPException(400, "不能挑战自己发起的对局")
+        qids = json.loads(m["question_ids"])
+        return {"code": code, "module": m["module"], "questions": _sanitized_questions(qids)}
     if m["opponent_uid"] and m["opponent_uid"] != uid:
         conn.close()
         raise HTTPException(409, "该挑战已被其他考友接受")
