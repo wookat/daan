@@ -64,7 +64,10 @@
         </view>
         <view v-if="result.questions.total > result.questions.items.length" class="more" @click="loadMore">加载更多</view>
       </view>
-      <view v-if="isEmpty" class="empty">没有找到「{{ result.q }}」相关内容\n可尝试题号（如 ZL-JQ-2024-000914）、题干关键词或考点名</view>
+      <view v-if="isEmpty" class="empty">
+        <text>没有找到「{{ result.q }}」相关内容</text>
+        <text>可尝试题号（如 ZL-JQ-2024-000914）、题干关键词或考点名</text>
+      </view>
     </template>
     <view v-else class="empty">支持搜索：题号语义码、题干关键词、考点名、试卷名</view>
   </view>
@@ -147,7 +150,8 @@ export default {
         uni.showToast({ title: '加载失败', icon: 'none' });
       }
     },
-    goTopic() {
+    goTopic(t) {
+      uni.setStorageSync('practicePreset', { module: t.module, count: 10, adaptive: true, tag3: t.code || null, source: 'search' });
       uni.navigateTo({ url: '/pages/practice/practice' });
     },
     goPaper(p) {
@@ -199,5 +203,5 @@ export default {
 .q-ans { font-size: 24rpx; color: #12b76a; font-weight: 600; margin-top: 4rpx; }
 .q-exp { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; }
 .more { text-align: center; font-size: 26rpx; color: var(--brand); padding: 16rpx; }
-.empty { text-align: center; color: var(--ink-3); font-size: 26rpx; padding: 100rpx 40rpx; white-space: pre-line; }
+.empty { display: flex; flex-direction: column; gap: 8rpx; text-align: center; color: var(--ink-3); font-size: 26rpx; padding: 100rpx 40rpx; }
 </style>
