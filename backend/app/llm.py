@@ -39,6 +39,12 @@ def _has_image(messages: list) -> bool:
     return False
 
 
+def _require_configured(base: str, key: str) -> None:
+    """未配置 LLM 时立即失败，让调用方友好降级，而不是等待连接超时拖长响应。"""
+    if not base or not key:
+        raise RuntimeError("AI 服务未配置")
+
+
 def _endpoint(messages: list) -> tuple[str, str, str]:
     if _has_image(messages):
         return BASE_URL, API_KEY, MODEL
@@ -47,6 +53,9 @@ def _endpoint(messages: list) -> tuple[str, str, str]:
 
 async def chat(messages: list, temperature: float = 0.2, max_tokens: int = 4000) -> str:
     base, key, model = _endpoint(messages)
+    if (not base or not key) and _rescue_ok(messages):
+        base, key, model = RESCUE_BASE_URL, RESCUE_API_KEY, RESCUE_MODEL
+    _require_configured(base, key)
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
         for attempt in range(3):
             resp = await client.post(
@@ -92,11 +101,15 @@ async def chat(messages: list, temperature: float = 0.2, max_tokens: int = 4000)
 async def chat_stream(messages: list, temperature: float = 0.2, max_tokens: int = 4000):
     """逐段产出模型输出文本。"""
     base, key, model = _endpoint(messages)
-    tries = [(base, key, model)]
-    if FALLBACK_MODEL and FALLBACK_MODEL != model:
-        tries.append((base, key, FALLBACK_MODEL))
+    tries = []
+    if base and key:
+        tries.append((base, key, model))
+        if FALLBACK_MODEL and FALLBACK_MODEL != model:
+            tries.append((base, key, FALLBACK_MODEL))
     if _rescue_ok(messages):
         tries.append((RESCUE_BASE_URL, RESCUE_API_KEY, RESCUE_MODEL))
+    if not tries:
+        _require_configured(base, key)
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
         for i, (b, k, m) in enumerate(tries):
             async with client.stream(

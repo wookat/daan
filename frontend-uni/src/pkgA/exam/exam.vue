@@ -250,30 +250,43 @@ export default {
         const d = await request('/api/exam/submit', {
           method: 'POST',
           data: { uid: anonUid(), attempt_id: this.attemptId, picks, secs },
+          timeout: 20000,
         });
         uni.removeStorageSync(PROG_KEY);
         this.mergeIntoStats(d);
-        if (this._eventId) {
-          try {
-            await request('/api/mock/events/' + this._eventId + '/attach', {
-              method: 'POST',
-              data: { uid: anonUid(), attempt_id: d.attempt_id },
-            });
-            uni.hideLoading();
-            uni.redirectTo({ url: '/pkgA/exam/contest-report?event_id=' + this._eventId });
-            return;
-          } catch (e) {
-            uni.showToast({ title: '未计入比赛：' + e.message, icon: 'none', duration: 2500 });
-          }
-        }
-        uni.hideLoading();
-        uni.redirectTo({ url: '/pkgA/exam/report?attempt_id=' + d.attempt_id });
+        await this.gotoReport(d.attempt_id);
       } catch (e) {
+        // 超时/失败先确认服务端是否已判分（请求可能已送达），已判分直接进报告，避免重交撞「已交卷」
+        try {
+          await request('/api/exam/report/' + this.attemptId + '?uid=' + encodeURIComponent(anonUid()), { timeout: 8000 });
+          uni.removeStorageSync(PROG_KEY);
+          await this.gotoReport(this.attemptId);
+          return;
+        } catch (e2) {
+          /* 未判分，回到可重交状态 */
+        }
         uni.hideLoading();
         this.submitting = false;
         this.startClock();
-        uni.showToast({ title: '交卷失败：' + e.message, icon: 'none' });
+        uni.showToast({ title: '交卷失败：' + e.message + '，作答已保留，可再次交卷', icon: 'none', duration: 3000 });
       }
+    },
+    async gotoReport(attemptId) {
+      if (this._eventId) {
+        try {
+          await request('/api/mock/events/' + this._eventId + '/attach', {
+            method: 'POST',
+            data: { uid: anonUid(), attempt_id: attemptId },
+          });
+          uni.hideLoading();
+          uni.redirectTo({ url: '/pkgA/exam/contest-report?event_id=' + this._eventId });
+          return;
+        } catch (e) {
+          uni.showToast({ title: '未计入比赛：' + e.message, icon: 'none', duration: 2500 });
+        }
+      }
+      uni.hideLoading();
+      uni.redirectTo({ url: '/pkgA/exam/report?attempt_id=' + attemptId });
     },
     // 模考作答同步计入本地统计（统计页/打卡日历与练习同一口径）
     mergeIntoStats(d) {
