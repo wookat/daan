@@ -33,6 +33,18 @@ app.add_middleware(
 
 
 @app.middleware("http")
+async def log_slow_requests(request, call_next):
+    """慢请求留痕：>3s 打点路径与耗时，用于定位生产间歇性长尾。"""
+    t0 = time.monotonic()
+    response = await call_next(request)
+    dt = time.monotonic() - t0
+    if dt >= 3.0:
+        q = ("?" + request.url.query) if request.url.query else ""
+        print(f"[slow-req] {dt:.1f}s {request.method} {request.url.path}{q}", flush=True)
+    return response
+
+
+@app.middleware("http")
 async def guard_account_uid(request, call_next):
     """账号态 uid（u<id>）可被枚举，统一要求携带本人 Bearer token 才可按该 uid 读写。
 

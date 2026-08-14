@@ -166,7 +166,11 @@ def api_pk_create(body: dict):
     module = (body.get("module") or "").strip() or None
     if module and module not in PK_MODULES:
         raise HTTPException(400, "模块无效")
-    questions = db.random_questions(module, PK_N_QUESTIONS)
+    # PK 计分按单选严格匹配，多选/不定项题不适合限时对战，抽题时排除
+    questions = [
+        q for q in db.random_questions(module, PK_N_QUESTIONS * 3)
+        if len((q.get("answer") or "").strip()) == 1
+    ][:PK_N_QUESTIONS]
     if len(questions) < PK_N_QUESTIONS:
         raise HTTPException(400, "题库题量不足，无法发起 PK")
     qids = [q["id"] for q in questions]

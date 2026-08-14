@@ -3793,13 +3793,14 @@ def reinforce_questions(uid: str, tag3: str | None = None, module: str | None = 
 
     def _pick(cond: str, args: list, n: int, exclude: set) -> list[dict]:
         ph = ",".join("?" * len(exclude)) or "0"
-        # 两阶段：先用 covering 索引只读 id/correct_ratio 完成排序选取，再回表取 limit 行，
-        # 避免排序阶段读全部候选大行（页缓存被挤出时冷触可达秒级）
-        src = (
-            "questions INDEXED BY idx_q_reinforce"
-            if cond.startswith("tag3=") and "correct_ratio" in qcols
-            else "questions"
-        )
+        # 两阶段：先用 covering 索引只读排序列完成选取，再回表取 limit 行，
+        # 避免排序阶段读全部候选大行（页缓存被挤出时冷触可达秒级）。
+        # 主路径（tag3）保留中等难度优先排序；submodule/module 回退是补足路径，
+        # 候选集大（可达数万），排序改随机并走 idx_q_pick 纯索引扫描，杜绝逐行回表。
+        if cond.startswith("tag3=") and "correct_ratio" in qcols:
+            src, pick_order = "questions INDEXED BY idx_q_reinforce", order
+        else:
+            src, pick_order = "questions INDEXED BY idx_q_pick", "RANDOM()"
         ids = [
             r["id"]
             for r in conn.execute(
@@ -3807,7 +3808,7 @@ def reinforce_questions(uid: str, tag3: str | None = None, module: str | None = 
                     WHERE {cond} AND disabled=0
                       AND id NOT IN ({ph})
                       AND id NOT IN (SELECT question_id FROM answer_log WHERE uid=? AND question_id IS NOT NULL)
-                    ORDER BY {order} LIMIT ?""",
+                    ORDER BY {pick_order} LIMIT ?""",
                 (*args, *exclude, uid, n),
             )
         ]

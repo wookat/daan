@@ -689,7 +689,7 @@ export function pkMatch(code) {
 }
 
 export function pkSubmit(code, items) {
-  return request('/api/pk/submit', { method: 'POST', data: { uid: anonUid(), code, items } });
+  return request('/api/pk/submit', { method: 'POST', data: { uid: anonUid(), code, items }, timeout: 20000 });
 }
 
 export function pkMine() {
