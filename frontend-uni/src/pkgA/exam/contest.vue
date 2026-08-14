@@ -39,21 +39,47 @@
             <text>本场成绩 <text class="score-n">{{ event.my_score }}</text> 分<template v-if="event.my_rank"> · 第 {{ event.my_rank }} 名</template></text>
             <view class="cta sub" @click="openReport(event.id)">查看赛后报告 ›</view>
           </view>
-          <view v-else class="cta ghost" @click="practice">比赛已结束 · 作为普通试卷练习</view>
+          <template v-else>
+            <view class="cta ghost" @click="practice">比赛已结束 · 作为普通试卷练习</view>
+            <view v-if="event.submitted" class="cta sub" @click="openBoard(event)">围观本场榜单 ›</view>
+          </template>
         </template>
       </view>
       <view v-else class="card spin">暂无比赛场次</view>
 
       <!-- 往期成绩 -->
       <view v-if="past.length" class="card">
-        <view class="h">我的往期战绩</view>
-        <view v-for="p in past" :key="p.id" class="prow" @click="p.joined && openReport(p.id)">
+        <view class="h">往期比赛</view>
+        <view v-for="p in past" :key="p.id" class="prow" @click="p.joined ? openReport(p.id) : openBoard(p)">
           <view class="prow-l">
             <text class="prow-t">{{ p.title }}</text>
             <text class="prow-s">{{ fmtDay(p.close_at) }}</text>
           </view>
           <text v-if="p.joined" class="prow-score">{{ p.score }} 分<template v-if="p.rank"> · 第 {{ p.rank }} 名</template></text>
-          <text v-else class="prow-none">未参加</text>
+          <text v-else class="prow-none">未参加 · 看榜单 ›</text>
+        </view>
+      </view>
+
+      <!-- 公共榜单弹层（非参赛者也可围观） -->
+      <view v-if="board || boardLoading" class="mask" @click="closeBoard">
+        <view class="sheet" @click.stop>
+          <view class="sheet-h">
+            <text class="sheet-t">{{ boardTitle }} · 榜单</text>
+            <text class="sheet-x" @click="closeBoard">✕</text>
+          </view>
+          <view v-if="boardLoading" class="spin">榜单加载中…</view>
+          <template v-else-if="board">
+            <view class="board-meta">
+              <text class="hm">{{ board.total }} 人交卷 · 平均 {{ board.avg }} 分</text>
+              <text v-if="!board.frozen" class="hm">排名实时变化中</text>
+            </view>
+            <view v-if="!board.top || !board.top.length" class="spin">本场暂无交卷成绩</view>
+            <view v-for="(t, i) in board.top" :key="i" class="brow" :class="{ me: t.me }">
+              <text class="brow-r" :class="'r' + t.rank">{{ t.rank }}</text>
+              <text class="brow-n">{{ t.nickname }}<text v-if="t.me" class="brow-me">（我）</text></text>
+              <text class="brow-s">{{ t.score }} 分</text>
+            </view>
+          </template>
         </view>
       </view>
 
@@ -76,7 +102,7 @@
 </template>
 
 <script>
-import { request, anonUid } from '../../api.js';
+import { request, anonUid, pkNickname } from '../../api.js';
 
 export default {
   data() {
@@ -87,6 +113,9 @@ export default {
       rulesOpen: false,
       nowSec: Math.floor(Date.now() / 1000),
       timer: null,
+      board: null,
+      boardTitle: '',
+      boardLoading: false,
     };
   },
   computed: {
@@ -134,7 +163,7 @@ export default {
     },
     async register() {
       try {
-        await request('/api/mock/events/' + this.event.id + '/register', { method: 'POST', data: { uid: anonUid() } });
+        await request('/api/mock/events/' + this.event.id + '/register', { method: 'POST', data: { uid: anonUid(), nickname: pkNickname() } });
         uni.showToast({ title: '报名成功，周六见！', icon: 'none' });
         this.load();
       } catch (e) {
@@ -143,7 +172,7 @@ export default {
     },
     async enter() {
       try {
-        const d = await request('/api/mock/events/' + this.event.id + '/enter', { method: 'POST', data: { uid: anonUid() } });
+        const d = await request('/api/mock/events/' + this.event.id + '/enter', { method: 'POST', data: { uid: anonUid(), nickname: pkNickname() } });
         uni.navigateTo({ url: '/pkgA/exam/exam?paper_id=' + d.paper_id + '&event_id=' + this.event.id });
       } catch (e) {
         uni.showToast({ title: e.message, icon: 'none' });
@@ -154,6 +183,23 @@ export default {
     },
     openReport(eventId) {
       uni.navigateTo({ url: '/pkgA/exam/contest-report?event_id=' + eventId });
+    },
+    async openBoard(ev) {
+      this.boardTitle = ev.title;
+      this.board = null;
+      this.boardLoading = true;
+      try {
+        this.board = await request('/api/mock/events/' + ev.id + '/rank?uid=' + encodeURIComponent(anonUid()));
+      } catch (e) {
+        this.boardLoading = false;
+        uni.showToast({ title: e.message, icon: 'none' });
+        return;
+      }
+      this.boardLoading = false;
+    },
+    closeBoard() {
+      this.board = null;
+      this.boardLoading = false;
     },
     fmtDay(t) {
       const d = new Date(t * 1000);
@@ -199,4 +245,20 @@ export default {
 .rules-arrow { font-size: 22rpx; color: var(--ink-2); font-weight: 400; }
 .rules { margin-top: 16rpx; }
 .rule { display: block; font-size: 24rpx; color: var(--ink-2); line-height: 1.8; margin-bottom: 8rpx; }
+.mask { position: fixed; inset: 0; background: rgba(15, 18, 26, 0.5); z-index: 60; display: flex; align-items: flex-end; }
+.sheet { width: 100%; max-height: 70vh; overflow-y: auto; background: var(--card); border-radius: 32rpx 32rpx 0 0; padding: 28rpx 28rpx calc(28rpx + env(safe-area-inset-bottom)); }
+.sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
+.sheet-t { font-size: 30rpx; font-weight: 700; color: var(--ink); }
+.sheet-x { font-size: 30rpx; color: var(--ink-2); padding: 8rpx 16rpx; }
+.board-meta { display: flex; justify-content: space-between; margin-bottom: 16rpx; }
+.brow { display: flex; align-items: center; min-height: 44px; padding: 10rpx 0; border-bottom: 1rpx solid var(--line); }
+.brow:last-child { border-bottom: none; }
+.brow.me { background: var(--brand-soft); border-radius: 12rpx; padding-left: 8rpx; padding-right: 8rpx; }
+.brow-r { width: 64rpx; font-size: 28rpx; font-weight: 800; color: var(--ink-2); }
+.brow-r.r1 { color: #d97706; }
+.brow-r.r2 { color: #6b7280; }
+.brow-r.r3 { color: #b45309; }
+.brow-n { flex: 1; min-width: 0; font-size: 26rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brow-me { color: var(--brand); font-size: 22rpx; }
+.brow-s { flex-shrink: 0; font-size: 26rpx; font-weight: 700; color: var(--brand); }
 </style>
