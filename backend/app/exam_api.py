@@ -66,6 +66,14 @@ def api_paper_info(code: str):
         "created_at": paper.get("created_at"),
     }
 
+def _mistake_text(q: dict) -> str:
+    """错题文本与刷题端同格式（题干+选项），复习时才看得到选项。"""
+    opts = q.get("options") or {}
+    opt_text = " ".join(f"{k}.{v}" for k, v in opts.items())
+    base = q.get("question") or ""
+    return base + ("\n" + opt_text if opt_text else "")
+
+
 def _judge_paper(uid: str, paper: dict, picks: dict[int, str], secs: dict[int, int] | None = None) -> dict:
     """picks: {题号(从1开始): 'A'}；secs: {题号: 用时秒}；与扫描答题卡同一套判分/落库逻辑。"""
     qids = paper["question_ids"]
@@ -111,7 +119,7 @@ def _judge_paper(uid: str, paper: dict, picks: dict[int, str], secs: dict[int, i
                         "question_id": qid,
                         "module": q.get("module"),
                         "question_type": q.get("submodule"),
-                        "question_text": q.get("question"),
+                        "question_text": _mistake_text(q),
                         "user_answer": picked,
                         "correct_answer": correct_ans,
                         "explanation": q.get("explanation") or q.get("hs_explanation") or "",
@@ -206,7 +214,7 @@ async def api_scan_sheet(request: Request, uid: str = Form(""), image: UploadFil
                         "question_id": qid,
                         "module": q.get("module"),
                         "question_type": q.get("submodule"),
-                        "question_text": q.get("question"),
+                        "question_text": _mistake_text(q),
                         "user_answer": picked,
                         "correct_answer": correct_ans,
                         "explanation": q.get("explanation") or q.get("hs_explanation") or "",
