@@ -1680,13 +1680,19 @@ def api_upload_qimg(body: dict, x_import_token: str | None = Header(None)):
 
 
 @app.get("/sw.js", include_in_schema=False)
-def api_sw_js():
+def api_sw_js(if_none_match: str | None = Header(None)):
     """Service Worker 需从站点根路径提供才能获得 '/' 作用域（H5 离线壳）。"""
     p = os.path.join(FRONTEND_DIR, "static", "sw.js")
     if not os.path.isfile(p):
         raise HTTPException(404, "not found")
-    # SW 脚本必须免启发式缓存：否则浏览器最长 24h 不回源校验，新发版对存量用户长时间不生效
-    return FileResponse(p, media_type="application/javascript", headers={"Cache-Control": "no-cache"})
+    # SW 脚本必须免启发式缓存：否则浏览器最长 24h 不回源校验，新发版对存量用户长时间不生效。
+    # FileResponse 只生成 ETag 不做条件判断，这里自行处理 If-None-Match 返 304
+    st = os.stat(p)
+    etag = f'"{hashlib.md5(f"{st.st_mtime}-{st.st_size}".encode()).hexdigest()}"'
+    headers = {"Cache-Control": "no-cache", "ETag": etag}
+    if if_none_match and etag in {t.strip() for t in if_none_match.split(",")}:
+        return Response(status_code=304, headers=headers)
+    return FileResponse(p, media_type="application/javascript", headers=headers)
 
 
 class AssetStaticFiles(StaticFiles):

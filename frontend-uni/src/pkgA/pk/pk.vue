@@ -109,7 +109,7 @@
 
       <view class="card res-vs">
         <view class="res-p">
-          <text class="res-name">{{ mySide === 'creator' ? match.creator.name : oppOf().name }}（我）</text>
+          <text class="res-name">{{ myP().name }}{{ mySide ? '（我）' : '' }}</text>
           <text class="res-score">{{ myP().score }}</text>
           <text class="res-meta">答对 {{ myP().correct }}/{{ match.n_questions }} · 用时 {{ fmtMs(myP().time_ms) }}</text>
         </view>
@@ -198,11 +198,12 @@ export default {
     },
     resCls() {
       if (!this.match || this.match.status !== 'finished') return 'waiting';
-      if (this.match.winner === 'draw') return 'draw';
+      if (this.match.winner === 'draw' || !this.mySide) return 'draw';
       return this.match.winner === this.mySide ? 'win' : 'lose';
     },
     resTitle() {
       if (!this.match || this.match.status !== 'finished') return '⏳ 等待对手应战';
+      if (!this.mySide) return '🏳️ 对局已结束';
       if (this.match.winner === 'draw') return '🤝 平局！';
       return this.match.winner === this.mySide ? '🏆 胜利！' : '💪 惜败，再战一局';
     },
