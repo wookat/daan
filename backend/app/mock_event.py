@@ -4,6 +4,7 @@
 窗口内交卷（首次）计入排名，窗口外该卷退化为普通试卷、不影响比赛榜单。
 排名在赛后首次访问时按事务惰性冻结；无人建赛时自动兜底生成下周六场次。
 """
+import hashlib
 import json
 import random
 import time
@@ -49,6 +50,9 @@ def init_mock_event_db():
         )"""
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_mee_event ON mock_event_entries(event_id, score)")
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(mock_event_entries)").fetchall()}
+    if "nickname" not in cols:
+        conn.execute("ALTER TABLE mock_event_entries ADD COLUMN nickname TEXT")
     conn.commit()
     conn.close()
 
@@ -58,6 +62,19 @@ def _clean_uid(uid) -> str:
     if not u:
         raise HTTPException(400, "缺少 uid")
     return u
+
+
+def _clean_nickname(nickname) -> str | None:
+    n = str(nickname or "").strip()[:20]
+    return n or None
+
+
+def _alias(uid: str, nickname: str | None) -> str:
+    """榜单展示名：报名时留存的昵称优先，缺失时用 uid 派生的稳定化名（不暴露 uid）。"""
+    if nickname:
+        return nickname
+    h = hashlib.sha1(uid.encode()).hexdigest()[:4].upper()
+    return f"考友{h}"
 
 
 def _saturday_window(now: float) -> tuple[float, float]:
@@ -221,11 +238,12 @@ def api_event_register(event_id: int, body: dict):
         if now >= ev["close_at"]:
             raise HTTPException(400, "比赛已结束，无法报名")
         conn.execute(
-            """INSERT INTO mock_event_entries(event_id, uid, registered_at)
-               VALUES(?,?,?)
+            """INSERT INTO mock_event_entries(event_id, uid, registered_at, nickname)
+               VALUES(?,?,?,?)
                ON CONFLICT(event_id, uid) DO UPDATE SET
-                 registered_at=COALESCE(registered_at, excluded.registered_at)""",
-            (event_id, uid, now),
+                 registered_at=COALESCE(registered_at, excluded.registered_at),
+                 nickname=COALESCE(excluded.nickname, nickname)""",
+            (event_id, uid, now, _clean_nickname(body.get("nickname"))),
         )
         conn.commit()
         return {"ok": True, "state": "已报名"}
@@ -248,11 +266,12 @@ def api_event_enter(event_id: int, body: dict):
         if entry and entry.get("score") is not None:
             raise HTTPException(400, "你已交卷，成绩以首次为准")
         conn.execute(
-            """INSERT INTO mock_event_entries(event_id, uid, registered_at)
-               VALUES(?,?,?)
+            """INSERT INTO mock_event_entries(event_id, uid, registered_at, nickname)
+               VALUES(?,?,?,?)
                ON CONFLICT(event_id, uid) DO UPDATE SET
-                 registered_at=COALESCE(registered_at, excluded.registered_at)""",
-            (event_id, uid, now),
+                 registered_at=COALESCE(registered_at, excluded.registered_at),
+                 nickname=COALESCE(excluded.nickname, nickname)""",
+            (event_id, uid, now, _clean_nickname(body.get("nickname"))),
         )
         conn.commit()
         return {"paper_id": ev["paper_id"], "close_at": ev["close_at"]}
@@ -353,8 +372,9 @@ def api_event_rank(event_id: int, uid: str = ""):
         if frozen:
             _freeze_ranks(conn, event_id)
         rows = conn.execute(
-            """SELECT uid, score, rank FROM mock_event_entries
-               WHERE event_id=? AND score IS NOT NULL ORDER BY score DESC""",
+            """SELECT uid, score, rank, nickname FROM mock_event_entries
+               WHERE event_id=? AND score IS NOT NULL
+               ORDER BY score DESC, attempt_id ASC""",
             (event_id,),
         ).fetchall()
         scores = [r["score"] for r in rows]
@@ -381,6 +401,16 @@ def api_event_rank(event_id: int, uid: str = ""):
             "my_bucket": my_bucket,
             "small_sample": n < 10,
             "history_pool": _score_pool(conn, ev),
+            # 公共榜单 Top10：非参赛者也可围观；展示名不暴露 uid
+            "top": [
+                {
+                    "rank": (r["rank"] if frozen and r["rank"] else i + 1),
+                    "score": r["score"],
+                    "nickname": _alias(r["uid"], r["nickname"]),
+                    "me": r["uid"] == uid,
+                }
+                for i, r in enumerate(rows[:10])
+            ],
         }
     finally:
         conn.close()

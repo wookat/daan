@@ -124,6 +124,9 @@
         <view v-if="tab !== 'fav'" class="filterbtn" @click="filterOpen = true">
           <l-icon name="sliders-horizontal" :size="16" color="#646a73" /><text class="filterbtn-t">筛选</text>
         </view>
+        <view v-if="tab !== 'fav' && shownItems.length" class="filterbtn" :class="{ bon: batchMode }" @click="toggleBatch">
+          <text class="filterbtn-t" :class="{ bont: batchMode }">{{ batchMode ? '完成' : '批量' }}</text>
+        </view>
       </view>
       <template v-if="tab === 'fav'">
         <view class="card redoentry" @click="openFavPage">
@@ -348,8 +351,9 @@
         <view class="e-t">没有匹配的错题</view>
         <view class="e-s">换个关键词或清除筛选试试</view>
       </view>
-      <view v-for="m in shownPage" :key="m.id" class="card mcard" :class="masteryClass(m)" @click="toggleCard(m)">
+      <view v-for="m in shownPage" :key="m.id" class="card mcard" :class="[masteryClass(m), { bsel: batchMode && selIds[m.id] }]" @click="batchMode ? toggleSel(m) : toggleCard(m)">
         <view class="mhead">
+          <view v-if="batchMode" class="bchk" :class="{ on: selIds[m.id] }">{{ selIds[m.id] ? '✓' : '' }}</view>
           <text class="tag">{{ tagName(m) }}</text>
           <text v-if="m.times >= 2" class="timesbadge">错 {{ m.times }} 次</text>
           <text v-if="m.mastered" class="zhan">已掌握</text>
@@ -387,6 +391,16 @@
         <rich-text v-if="m.open" :nodes="m.html" />
       </view>
       <view v-if="tab !== 'fav' && pageN < shownItems.length" class="loadmore" @click="pageN += 20">上滑或点击加载更多（{{ shownPage.length }}/{{ shownItems.length }}）</view>
+      <!-- 批量操作条 -->
+      <view v-if="batchMode && tab !== 'fav'" class="batchbar">
+        <text class="bb-sel" @click="selAll">{{ selCount === shownPage.length ? '取消全选' : '全选本页' }}</text>
+        <text class="bb-n">已选 {{ selCount }}</text>
+        <view class="bb-acts">
+          <text v-if="tab === 'todo'" class="bb-btn ok" :class="{ dis: !selCount || batchBusy }" @click="batchMaster(true)">标已掌握</text>
+          <text v-else class="bb-btn ok" :class="{ dis: !selCount || batchBusy }" @click="batchMaster(false)">恢复复习</text>
+          <text class="bb-btn danger" :class="{ dis: !selCount || batchBusy }" @click="batchDel">删除</text>
+        </view>
+      </view>
       <view v-if="reportOpen" class="mask" @click="reportOpen = false">
         <view class="sheet" @click.stop>
           <view class="sheet-h">
@@ -480,6 +494,9 @@ export default {
       aiHtml: '',
       sortBy: 'time',
       pageN: 20,
+      batchMode: false,
+      selIds: {},
+      batchBusy: false,
       recapOpen: false,
       REASONS: ['粗心大意', '概念不清', '方法不会', '纯蒙的'],
       SORTS: [
@@ -552,6 +569,9 @@ export default {
     shownPage() {
       return this.shownItems.slice(0, this.pageN);
     },
+    selCount() {
+      return Object.keys(this.selIds).length;
+    },
     monthRecap() {
       const now = new Date();
       const m0 = new Date(now.getFullYear(), now.getMonth(), 1).getTime() / 1000;
@@ -617,7 +637,7 @@ export default {
     },
   },
   watch: {
-    tab() { this.pageN = 20; },
+    tab() { this.pageN = 20; this.batchMode = false; this.selIds = {}; },
     filterMod() { this.pageN = 20; },
     kw() { this.pageN = 20; },
     kpFilter() { this.pageN = 20; },
@@ -1087,6 +1107,64 @@ export default {
         uni.showToast({ title: e.message || '分享失败', icon: 'none' });
       }
     },
+    toggleBatch() {
+      this.batchMode = !this.batchMode;
+      this.selIds = {};
+    },
+    toggleSel(m) {
+      if (this.selIds[m.id]) delete this.selIds[m.id];
+      else this.selIds[m.id] = true;
+      this.selIds = { ...this.selIds };
+    },
+    selAll() {
+      if (this.selCount === this.shownPage.length) {
+        this.selIds = {};
+      } else {
+        const s = {};
+        this.shownPage.forEach((m) => { s[m.id] = true; });
+        this.selIds = s;
+      }
+    },
+    async batchMaster(on) {
+      if (!this.selCount || this.batchBusy) return;
+      this.batchBusy = true;
+      try {
+        await Promise.all(Object.keys(this.selIds).map((id) =>
+          request('/api/mistakes/' + id, { method: 'PATCH', data: { uid: anonUid(), mastered: on ? 1 : 0 } })
+        ));
+        uni.showToast({ title: (on ? '已掌握 ' : '已恢复复习 ') + this.selCount + ' 题', icon: 'none' });
+        this.selIds = {};
+        this.load();
+      } catch (e) {
+        uni.showToast({ title: '部分操作失败：' + e.message, icon: 'none' });
+        this.load();
+      } finally {
+        this.batchBusy = false;
+      }
+    },
+    batchDel() {
+      if (!this.selCount || this.batchBusy) return;
+      uni.showModal({
+        title: '删除选中的 ' + this.selCount + ' 道错题？',
+        content: '删除后不可恢复，也不再进入复习队列',
+        success: async (res) => {
+          if (!res.confirm) return;
+          this.batchBusy = true;
+          try {
+            await Promise.all(Object.keys(this.selIds).map((id) =>
+              request('/api/mistakes/' + id + '?uid=' + encodeURIComponent(anonUid()), { method: 'DELETE' })
+            ));
+            uni.showToast({ title: '已删除 ' + this.selCount + ' 题', icon: 'none' });
+          } catch (e) {
+            uni.showToast({ title: '部分删除失败：' + e.message, icon: 'none' });
+          } finally {
+            this.selIds = {};
+            this.batchBusy = false;
+            this.load();
+          }
+        },
+      });
+    },
     del(m) {
       uni.showModal({
         title: '确定删除这道错题？',
@@ -1152,6 +1230,19 @@ export default {
 .seg-i.on { background: var(--card); color: var(--ink); font-weight: 600; box-shadow: 0 2rpx 8rpx rgba(31, 35, 41, 0.08); }
 .filterbtn { display: inline-flex; align-items: center; gap: 6rpx; background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 24rpx; min-height: 44px; box-sizing: border-box; flex-shrink: 0; }
 .filterbtn-t { font-size: 24rpx; color: var(--ink-2); }
+.filterbtn.bon { background: var(--brand); border-color: var(--brand); }
+.filterbtn-t.bont { color: #fff; font-weight: 600; }
+.bchk { width: 36rpx; height: 36rpx; border-radius: 50%; border: 3rpx solid var(--line); margin-right: 12rpx; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 24rpx; color: #fff; box-sizing: border-box; }
+.bchk.on { background: var(--brand); border-color: var(--brand); }
+.mcard.bsel { border-color: var(--brand); box-shadow: 0 0 0 2rpx var(--brand-soft); }
+.batchbar { position: fixed; left: 24rpx; right: 24rpx; bottom: calc(120rpx + env(safe-area-inset-bottom)); z-index: 50; background: var(--card); border: 1rpx solid var(--line); border-radius: 24rpx; box-shadow: 0 8rpx 32rpx rgba(31, 36, 48, 0.16); padding: 16rpx 24rpx; display: flex; align-items: center; gap: 16rpx; }
+.bb-sel { font-size: 24rpx; color: var(--brand); min-height: 44px; display: inline-flex; align-items: center; }
+.bb-n { font-size: 24rpx; color: var(--ink-2); flex: 1; }
+.bb-acts { display: flex; gap: 12rpx; }
+.bb-btn { font-size: 24rpx; font-weight: 600; border-radius: 999rpx; padding: 0 24rpx; min-height: 44px; display: inline-flex; align-items: center; }
+.bb-btn.ok { color: #15803d; background: var(--ok-soft); }
+.bb-btn.danger { color: #c33; background: rgba(204, 51, 51, 0.08); }
+.bb-btn.dis { opacity: 0.4; }
 .modgroup { padding: 20rpx 24rpx; }
 .mg-h { font-size: 24rpx; color: var(--ink-2); margin-bottom: 6rpx; }
 .mg-row { display: flex; align-items: center; gap: 12rpx; min-height: 56px; border-bottom: 1rpx solid var(--line); }
