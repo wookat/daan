@@ -417,12 +417,18 @@ export default {
       return this.byModule.reduce((s, m) => s + m.n, 0) || 1;
     },
     totalDone() {
+      // 服务端 answer_log 全量口径优先（与雷达/热力图/周报同源），离线降级本地 pstats
+      const sv = this.growth && this.growth.modules;
+      if (sv) return Object.values(sv).reduce((s, m) => s + (m.n || 0), 0);
       return Object.values(this.pstats.byModule).reduce((s, m) => s + m.done, 0);
     },
     accPct() {
       const done = this.totalDone;
       if (!done) return 0;
-      const c = Object.values(this.pstats.byModule).reduce((s, m) => s + m.correct, 0);
+      const sv = this.growth && this.growth.modules;
+      const c = sv
+        ? Object.values(sv).reduce((s, m) => s + (m.c || 0), 0)
+        : Object.values(this.pstats.byModule).reduce((s, m) => s + m.correct, 0);
       return Math.round((c / done) * 100);
     },
     hmDayMap() {

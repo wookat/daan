@@ -309,7 +309,8 @@ export default {
       }
     },
     fmtDay(t) {
-      const d = new Date(t * 1000);
+      // 赛事时间为北京时间场次，跨时区设备也按东八区显示
+      const d = new Date(t * 1000 + (new Date().getTimezoneOffset() + 8 * 60) * 60000);
       return `${d.getMonth() + 1}月${d.getDate()}日 ${String(d.getHours()).padStart(2, '0')}:00`;
     },
     async buildShare() {

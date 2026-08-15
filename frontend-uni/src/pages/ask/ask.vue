@@ -449,6 +449,8 @@ export default {
         this.persistSession();
       } catch (e) {
         this.error = e.message;
+        // 失败时重新展开文本面板，已粘贴的题目原文保留可重试
+        if (txt) this.textOpen = true;
       }
       clearInterval(this.timer);
       this.loading = false;

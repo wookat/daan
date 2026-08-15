@@ -138,6 +138,7 @@ export default {
       themeMode: 'system',
       offlineN: 0,
       badgeInfo: null,
+      growth: null,
     };
   },
   computed: {
@@ -149,6 +150,9 @@ export default {
       return THEME_LABELS[this.themeMode] || '跟随系统';
     },
     totalDone() {
+      // 服务端 answer_log 全量口径优先（与统计页同源），离线降级本地 pstats
+      const sv = this.growth && this.growth.modules;
+      if (sv) return Object.values(sv).reduce((s, m) => s + (m.n || 0), 0);
       let n = 0;
       for (const s of Object.values(this.pstats.byModule || {})) n += s.done || 0;
       return n;
@@ -204,6 +208,9 @@ export default {
       try {
         const d = await request('/api/profile?uid=' + encodeURIComponent(uid));
         this.profile = d.profile || null;
+      } catch (e) { /* 非关键路径 */ }
+      try {
+        this.growth = await request('/api/growth?uid=' + encodeURIComponent(uid));
       } catch (e) { /* 非关键路径 */ }
       try {
         const d = await request('/api/announcement');
