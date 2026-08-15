@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Header, HTTPException
 
 from . import db
-from .auth import get_user_by_token, rate_limit, require_user, user_uid
+from .auth import rate_limit, require_user, user_uid
 
 router = APIRouter(prefix="/api")
 
@@ -23,7 +23,7 @@ _BANNED_WORDS = [
     "色情", "赌博", "博彩", "毒品", "枪支", "炸弹",
     "傻逼", "傻b", "煞笔", "狗东西", "去死", "妈的", "尼玛", "操你", "草你",
 ]
-_URL_RE = re.compile(r"https?://|www\.", re.I)
+_URL_RE = re.compile(r"https?://|www\.", re.IGNORECASE)
 
 
 def _hit_banned(text: str) -> str | None:
@@ -644,7 +644,7 @@ def api_checkin_summary(uid: str):
     days_to_exam = None
     if exam_date:
         try:
-            days_to_exam = (datetime.strptime(exam_date, "%Y-%m-%d").date() - datetime.now().date()).days
+            days_to_exam = (datetime.strptime(exam_date, "%Y-%m-%d").date() - datetime.now(CN_TZ).date()).days
         except ValueError:
             days_to_exam = None
     return {

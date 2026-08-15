@@ -75,6 +75,24 @@ for r in q("SELECT id,question_ids FROM exam_papers"):
 print("paper_dup", dup)
 print("paper_lowcov", lowcov)
 
+# 引用篇章材料但题干过短（缺阅读材料，无法作答）——r33 下架治理后防回流（与 r33_missing_passage.py 同口径）
+PASSAGE_PAT = re.compile(
+    r"根据(以上)?文章|这篇文章|篇文章的节选|根据(本|短)文|适合作?(为)?(本文|上文)标题"
+    r"|本文(没有|着重|主要|是|旨在)|填入文中|文中(画|划)|文中没有|文中提到"
+    r"|所给材料|这篇短文|续写并结束此文|原文的哪个位置"
+    r"|第[一二三四五六七八九十1-9１-９]段(的|中|里|末|首)"
+)
+missing_passage = [
+    r["id"]
+    for r in q(
+        "SELECT id, question, submodule FROM questions "
+        "WHERE (disabled IS NULL OR disabled=0) AND length(question)<120 "
+        "AND (material_hash IS NULL OR material_hash='')"
+    )
+    if "篇章" in (r["submodule"] or "") or PASSAGE_PAT.search(r["question"] or "")
+]
+print("missing_passage", len(missing_passage), missing_passage[:10])
+
 now = int(time.time())
 r7 = q("SELECT COUNT(*) n, COUNT(DISTINCT uid) u FROM answer_log WHERE created_at>?", now - 604800)[0]
 print("last7d", (r7["n"], r7["u"]))

@@ -134,7 +134,9 @@ export default {
     this.loadHome();
   },
   onShow() {
-    if (this.view === 'home' && this.loaded) this.loadHome();
+    if (!this.loaded) return;
+    if (this.view === 'home') this.loadHome();
+    else if (this.view === 'panel' && this.curTeamId) this.refreshPanel();
   },
   methods: {
     async loadHome() {
@@ -143,6 +145,11 @@ export default {
         this.teams = d.items || [];
       } catch (e) { /* 非关键路径 */ }
       this.loaded = true;
+    },
+    async refreshPanel() {
+      try {
+        this.panel = await teamPanel(this.curTeamId);
+      } catch (e) { /* 非关键路径 */ }
     },
     async openPanel(t) {
       try {

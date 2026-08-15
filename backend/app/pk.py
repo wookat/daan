@@ -15,6 +15,7 @@ from fastapi import APIRouter, HTTPException
 
 from . import db
 from .auth import rate_limit
+from .social import CN_TZ
 
 router = APIRouter(prefix="/api/pk")
 
@@ -355,7 +356,7 @@ def api_pk_mine(uid: str, limit: int = 20):
 @router.get("/leaderboard")
 def api_pk_leaderboard(uid: str = ""):
     """周维度 PK 胜场排行（本周一 00:00 起）。"""
-    now = datetime.now()
+    now = datetime.now(CN_TZ)
     monday = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
     week_start = monday.timestamp()
     conn = db.get_conn()
