@@ -5,6 +5,15 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R26r 生产回归新经验（growth.total 口径 / 注册迁移 / 收藏页入口）
+- R26 起时政完成态按 uid 隔离存 `szDaily:<uid>`（不再是裸 `szDaily`）；注册合并会把 `szDaily:<旧匿名uid>` 复制到 `szDaily:<账号uid>`。验证迁移要注册后 F5 再看首页时政卡。
+- 统计页/我的页「累计做题/正确率」自 R26 用 `/api/growth` 的 `total`（answer_log 全量含时政）；旧口径是本地 pstats 模块和（不含时政）——构造「时政+行测」混合作答即可区分新旧口径。
+- 收藏页 `#/pkgA/social/favorites` 的 UI 入口：错题本页 →「收藏」tab →「收藏夹与笔记」卡。我的页「我的收藏」不去收藏页，而是 `bookShowFavs=1` 后 switchTab 到错题本。
+- 我的页「外观模式」cell 点击循环 跟随系统→浅色→深色，可代替 CDP 媒体仿真做深/浅色回归（用户可见、录屏友好）。
+- 账号注册后 uid = `'u'+users.id`（如 u18）；**users 表没有 uid 列**，清理账号行按 id/phone 删。账号 uid 的 /api/mistakes 需 `Authorization: Bearer <authToken>`（浏览器 localStorage `authToken`），否则 403「无权访问该账号数据」。
+- 服务器 SSH：env `TICKETS_VPS_SSH_HOST/USER/CREDENTIAL`（CREDENTIAL 是密码，用 sshpass）；容器内 sqlite 脚本若中途抛错则整个事务未提交，重跑前先查计数确认。
+- SW 静态资源挂起（R8/R10 已知）本轮复现 2 次（懒加载 chunk 请求不发出→40s「连接服务器超时」）：`navigator.serviceWorker.getRegistration().then(r=>r.update())` + Ctrl+Shift+R 可恢复，无需重启 Chrome。
+
 ## R18 审查轮新经验（搜索/统计四卡/时政/申论/分享）
 - **CDP 移动仿真要用常驻 daemon**：一次性 ws 连接断开后 `Emulation.setDeviceMetricsOverride` 会失效；用常驻脚本保持连接（本轮 /tmp/cdp_daemon.py 模式），测完 pkill。
 - **CJK 搜索输入**：xdotool/type 会丢字；用 CDP 调 `HTMLInputElement.prototype.value` 原生 setter + dispatch `input` 事件写 `uni-input input`。
