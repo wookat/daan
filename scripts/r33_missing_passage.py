@@ -12,22 +12,31 @@ import time
 DB = "/data/data.db"
 APPLY = len(sys.argv) > 1 and sys.argv[1] == "apply"
 
-# 引用篇章的表述；「文中」排除 古文中/铭文中/散文中 等词内误命中
+# 引用篇章/材料的表述；「文中」排除 古文中/铭文中/散文中 等词内误命中（r33b 扩口径）
 PAT = re.compile(
     r"根据(以上)?文章|这篇文章|篇文章的节选|根据(本|短)文|适合作?(为)?(本文|上文)标题"
     r"|本文(没有|着重|主要|是|旨在)|填入文中|文中(画|划)|文中没有|文中提到"
+    r"|所给材料|这篇短文|续写并结束此文|原文的哪个位置"
+    r"|第[一二三四五六七八九十1-9１-９]段(的|中|里|末|首)"
 )
+# 篇章阅读子模块短题干一律视为缺材料（材料表不存在，题干装不下文章）
+PIANZHANG_SQL = "submodule LIKE '%篇章%'"
 
 c = sqlite3.connect(DB)
 c.row_factory = sqlite3.Row
 rows = c.execute(
-    """SELECT id, module, question FROM questions
-       WHERE (disabled IS NULL OR disabled=0) AND length(question) < 120"""
+    """SELECT id, module, question, submodule, material_hash FROM questions
+       WHERE (disabled IS NULL OR disabled=0) AND length(question) < 120
+         AND (material_hash IS NULL OR material_hash='')"""
 ).fetchall()
-hits = [r for r in rows if PAT.search(r["question"] or "")]
+hits = [
+    r for r in rows
+    if "篇章" in (r["submodule"] or "") or PAT.search(r["question"] or "")
+]
 print("candidates:", len(hits))
-for r in hits[:30]:
-    print(r["id"], r["module"], (r["question"] or "")[:50])
+for r in hits:
+    why = "sub" if "篇章" in (r["submodule"] or "") else "pat"
+    print(r["id"], r["module"], why, (r["question"] or "")[:50])
 
 if APPLY:
     now = int(time.time())

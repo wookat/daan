@@ -79,11 +79,17 @@ print("paper_lowcov", lowcov)
 PASSAGE_PAT = re.compile(
     r"根据(以上)?文章|这篇文章|篇文章的节选|根据(本|短)文|适合作?(为)?(本文|上文)标题"
     r"|本文(没有|着重|主要|是|旨在)|填入文中|文中(画|划)|文中没有|文中提到"
+    r"|所给材料|这篇短文|续写并结束此文|原文的哪个位置"
+    r"|第[一二三四五六七八九十1-9１-９]段(的|中|里|末|首)"
 )
 missing_passage = [
     r["id"]
-    for r in q("SELECT id, question FROM questions WHERE (disabled IS NULL OR disabled=0) AND length(question)<120")
-    if PASSAGE_PAT.search(r["question"] or "")
+    for r in q(
+        "SELECT id, question, submodule FROM questions "
+        "WHERE (disabled IS NULL OR disabled=0) AND length(question)<120 "
+        "AND (material_hash IS NULL OR material_hash='')"
+    )
+    if "篇章" in (r["submodule"] or "") or PASSAGE_PAT.search(r["question"] or "")
 ]
 print("missing_passage", len(missing_passage), missing_passage[:10])
 

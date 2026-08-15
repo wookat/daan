@@ -58,7 +58,7 @@
         </view>
       </view>
       <view class="hm-legend">
-        <text class="hm-note">仅统计练习/模考作答</text>
+        <text class="hm-note">统计练习/模考/复习作答</text>
         <text class="hm-lt">少</text>
         <view v-for="i in [0, 1, 2, 3, 4]" :key="'lg' + i" class="hm-c" :class="'lv' + i" />
         <text class="hm-lt">多</text>
