@@ -114,11 +114,16 @@ def api_question_detail(qid: int):
 
 
 
+def _clean_name(name, fallback: str = "考友") -> str:
+    n = str(name or "").strip()[:20]
+    return fallback if not n or n.lower() in ("null", "undefined") else n
+
+
 def _comment_payload(r, liked_ids: set[int], my_uid: str | None) -> dict:
     return {
         "id": r["id"],
         "question_id": r["question_id"],
-        "nickname": r["nickname"] or "考友",
+        "nickname": _clean_name(r["nickname"]),
         "content": r["content"] if r["status"] == "ok" else "该评论已删除",
         "parent_id": r["parent_id"],
         "likes": r["likes"],
@@ -206,7 +211,7 @@ def api_comment_create(body: dict, authorization: str | None = Header(None)):
             raise HTTPException(404, "回复的评论不存在")
         # 只允许一层嵌套：回复楼中楼时挂到顶层楼
         parent_id = p["parent_id"] or p["id"]
-    nickname = user["nickname"] or ("考友" + str(user["phone"])[-4:])
+    nickname = _clean_name(user["nickname"], "考友" + str(user["phone"])[-4:])
     cur = conn.execute(
         """INSERT INTO question_comments (question_id, user_id, uid, nickname, content, parent_id, created_at)
            VALUES (?,?,?,?,?,?,?)""",

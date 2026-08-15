@@ -114,11 +114,14 @@ def _mask_phone(phone: str) -> str:
 
 def _user_payload(row) -> dict:
     is_wx = str(row["phone"]).startswith("wx:")
+    nick = str(row["nickname"] or "").strip()[:20]
+    if nick.lower() in ("null", "undefined"):
+        nick = ""
     return {
         "id": row["id"],
         "uid": user_uid(row["id"]),
         "phone": None if is_wx else _mask_phone(row["phone"]),
-        "nickname": row["nickname"] or ("微信考友" if is_wx else "考友" + str(row["phone"])[-4:]),
+        "nickname": nick or ("微信考友" if is_wx else "考友" + str(row["phone"])[-4:]),
         "created_at": row["created_at"],
     }
 
@@ -291,8 +294,8 @@ def api_me(authorization: str | None = Header(None)):
 
 
 # 各 uid 数据表：uid 直接可改列的表 + 有 (uid,...) 主键需去重的表
-_UID_TABLES = ["answer_log", "mistakes", "shenlun_answers"]
-_UID_PK_TABLES = ["shenlun_mat_favs", "user_state", "question_favs", "question_notes", "fav_folders", "comment_likes"]
+_UID_TABLES = ["answer_log", "mistakes", "shenlun_answers", "review_log", "exam_attempts"]
+_UID_PK_TABLES = ["shenlun_mat_favs", "user_state", "question_favs", "question_notes", "fav_folders", "comment_likes", "user_profile", "reminder_prefs", "reinforce_log"]
 
 
 @router.post("/merge_anon")
@@ -312,6 +315,11 @@ def api_merge_anon(body: dict, authorization: str | None = Header(None)):
     db._ensure_shenlun_answers(conn)
     db._ensure_mat_favs(conn)
     db._ensure_user_state(conn)
+    db._ensure_review_log(conn)
+    db._ensure_exam_tables(conn)
+    db._ensure_user_profile(conn)
+    db._ensure_reminder_prefs(conn)
+    db._ensure_reinforce_log(conn)
     merged: dict[str, int] = {}
     for t in _UID_TABLES:
         cur = conn.execute(f"UPDATE {t} SET uid=? WHERE uid=?", (target, anon))
