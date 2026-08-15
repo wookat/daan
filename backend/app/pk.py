@@ -68,7 +68,8 @@ def _clean_uid(uid) -> str:
 
 
 def _clean_name(name) -> str:
-    return str(name or "").strip()[:20] or "匿名考友"
+    n = str(name or "").strip()[:20]
+    return "匿名考友" if not n or n.lower() in ("null", "undefined") else n
 
 
 def _gen_code(conn) -> str:

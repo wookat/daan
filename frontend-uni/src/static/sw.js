@@ -1,6 +1,6 @@
-// H5 离线壳：缓存应用静态资源（页面/脚本/样式/字体），断网时仍能进入应用；
+// H5 离线壳：仅缓存 SPA 壳（/），静态资源走 HTTP immutable 长缓存；
 // API 请求不缓存（离线做题由页面内离线题包逻辑处理）。
-const CACHE = 'kg-shell-v2';
+const CACHE = 'kg-shell-v3';
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/'])).then(() => self.skipWaiting()));
@@ -44,23 +44,6 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // 静态资源（带 hash）：缓存优先，未命中走网络并写入缓存。
-  // Cache Storage 子系统偶发挂起会拖死 chunk 加载（异步组件 60s 超时白屏），
-  // 与导航分支同样加超时兜底：超时后绕过缓存直连网络
-  e.respondWith(
-    Promise.race([
-      caches.match(req).then(
-        (hit) =>
-          hit ||
-          fetch(req).then((res) => {
-            if (res.ok && (res.type === 'basic' || res.type === 'default')) {
-              const copy = res.clone();
-              caches.open(CACHE).then((c) => c.put(req, copy));
-            }
-            return res;
-          })
-      ),
-      new Promise((_, rej) => setTimeout(() => rej(new Error('sw-asset-timeout')), 8000)),
-    ]).catch(() => fetch(req))
-  );
+  // 静态资源（带 hash）不拦截：immutable 长缓存由 HTTP 缓存承担；
+  // SW 内 Cache Storage 偶发挂起时连兜底 fetch 都发不出去，不 respondWith 让浏览器原生处理，挂起面归零
 });
