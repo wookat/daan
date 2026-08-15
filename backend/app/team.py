@@ -207,6 +207,14 @@ def api_team_leave(body: dict):
         ).fetchone()[0]
         if not left:
             conn.execute("DELETE FROM teams WHERE id=?", (int(team_id),))
+        else:
+            # 队长退出后队长身份顺延给最早加入的队员，避免出现无主队
+            conn.execute(
+                """UPDATE teams SET creator_uid=(
+                       SELECT uid FROM team_members WHERE team_id=? ORDER BY joined_at LIMIT 1
+                   ) WHERE id=? AND creator_uid=?""",
+                (int(team_id), int(team_id), uid),
+            )
     conn.commit()
     conn.close()
     if not cur.rowcount:

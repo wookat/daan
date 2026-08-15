@@ -66,8 +66,11 @@ function drawPoster(ctx, d) {
 
   ctx.fillStyle = '#ffffff';
   if (d.badge) {
+    // 标题超出安全宽度时降字号，避免贴边
+    const bt = `🏅 连续打卡 ${d.badge} 天徽章`;
     ctx.font = '800 64px sans-serif';
-    ctx.fillText(`🏅 连续打卡 ${d.badge} 天徽章`, pad, 106);
+    if (ctx.measureText(bt).width > W - pad * 2) ctx.font = '800 52px sans-serif';
+    ctx.fillText(bt, pad, 106);
   } else {
     ctx.font = '800 76px sans-serif';
     ctx.fillText(`连续打卡 第 ${d.streak} 天`, pad, 100);
