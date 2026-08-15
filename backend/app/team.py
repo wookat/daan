@@ -9,12 +9,13 @@ uid 隔离：非小队成员不可见小队面板；分享作答明细仅分享�
 import random
 import string
 import time
-from datetime import date, timedelta
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, HTTPException
 
 from . import db
 from .auth import rate_limit
+from .social import CN_DAY_SQL, CN_TZ
 
 router = APIRouter(prefix="/api")
 
@@ -238,7 +239,7 @@ def api_team_mine(uid: str):
 
 
 def _week_days() -> list[str]:
-    today = date.today()  # noqa: DTZ011  # 服务器本地时区，与 answer_log 的 localtime 聚合一致
+    today = datetime.now(CN_TZ).date()
     monday = today - timedelta(days=today.weekday())
     return [(monday + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)]
 
@@ -247,16 +248,29 @@ def _member_stats(conn, uid: str) -> dict:
     days = {
         r["d"]: {"n": r["n"], "correct": r["c"] or 0}
         for r in conn.execute(
-            """SELECT DATE(created_at, 'unixepoch', 'localtime') AS d,
+            f"""SELECT {CN_DAY_SQL} AS d,
                       COUNT(*) AS n, SUM(correct) AS c
                FROM answer_log WHERE uid=? GROUP BY d""",
             (uid,),
         )
     }
+    # 复习作答同样计入每日学习量（与首页今日已练/连签/热力图口径一致）
+    if conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='review_log'"
+    ).fetchone():
+        for r in conn.execute(
+            f"""SELECT {CN_DAY_SQL} AS d,
+                      COUNT(*) AS n, SUM(correct) AS c
+               FROM review_log WHERE uid=? GROUP BY d""",
+            (uid,),
+        ):
+            t = days.setdefault(r["d"], {"n": 0, "correct": 0})
+            t["n"] += r["n"]
+            t["correct"] += r["c"] or 0
     last = conn.execute(
         "SELECT MAX(created_at) FROM answer_log WHERE uid=?", (uid,)
     ).fetchone()[0]
-    d = date.today()  # noqa: DTZ011  # 服务器本地时区，与 answer_log 的 localtime 聚合一致
+    d = datetime.now(CN_TZ).date()
     today = d.strftime("%Y-%m-%d")
     t = days.get(today, {"n": 0, "correct": 0})
     streak = 0

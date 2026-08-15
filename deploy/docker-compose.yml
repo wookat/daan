@@ -7,6 +7,7 @@ services:
     ports:
       - "127.0.0.1:8300:8000"
     environment:
+      - TZ=Asia/Shanghai
       - LLM_API_KEY=${LLM_API_KEY}
       - LLM_BASE_URL=${LLM_BASE_URL}
       - LLM_MODEL=${LLM_MODEL:-gpt-5.5}

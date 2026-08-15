@@ -45,7 +45,7 @@
     <view class="card">
       <view class="hm-h">
         <view class="h" style="margin-bottom: 0">学习热力图·近12周</view>
-        <text class="hm-total">共 {{ hmTotal }} 题</text>
+        <text class="hm-total">学习 {{ hmTotal }} 次(含复习)</text>
       </view>
       <view class="hm-body">
         <view class="hm-ylab">
