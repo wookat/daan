@@ -45,7 +45,7 @@
       <view v-if="loading" class="card empty">加载中…</view>
       <view v-else-if="!shownItems.length" class="card empty">
         <view class="empty-t">这里还没有收藏</view>
-        <view class="empty-s">刷题时点右上角收藏星标收藏好题，长按可选收藏夹</view>
+        <view class="empty-s">刷题时点右上角收藏星标收藏好题，收藏后可在这里「移动到…」选收藏夹</view>
       </view>
       <template v-else>
         <button class="btn" @click="redoFolder">重练{{ curFolderName }}（{{ shownItems.length }} 题 · 乱序）</button>

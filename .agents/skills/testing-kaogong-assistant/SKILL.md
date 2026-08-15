@@ -232,5 +232,10 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 
 ## R20 审查轮新经验（错题深链路/大赛/计划/组队）
 - 手动录入/扫描答题卡测法：先在错题本筛选 sheet 导出错题卷拿卷码（H5 下 rememberPaper 写 recentPapers）；`pdftoppm` 转 PNG 后用 PIL 按答题卡框线坐标涂黑即可喂给 `/api/scan_sheet` 上传（OMR 识别可靠）。
-- 组队入口在「我的」页；team API 为 `/api/team/create|join|leave|mine`，队长退出即解散。
+- 组队入口在「我的」页；team API 为 `/api/team/create|join|leave|mine`。R25 起队长退出且队伍仍有人时 `creator_uid` 顺延给最早加入队员，末位成员退出才删除队伍。
 - 模考大赛每周六 09:00-24:00（东八区）开赛，非窗口期只能测报名+空态。
+
+## R25 回归轮新经验
+- 错题删除只有 `DELETE /api/mistakes/{id}?uid=`（`POST /api/mistakes/{id}/delete` 不存在且静默无效）。
+- 团队面板对本人显示「我」标签（is_me 优先于 is_creator）；验证队长身份需切队友视角或查 DB `teams.creator_uid`。
+- 本地统计缓存键名即 `pstats`（不带 uid 前缀）；R25 起统计页/我的页累计口径以 `/api/growth` modules 服务端为准，清 pstats 不再归零。

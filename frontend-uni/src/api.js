@@ -35,6 +35,11 @@ export function setAuth(token, user) {
   if (cur && cur !== user.uid && !uni.getStorageSync('deviceAnonUid')) {
     uni.setStorageSync('deviceAnonUid', cur);
   }
+  // 做题记录服务端已合并，本机按 uid 隔离的时政完成态也一并迁移到账号 uid
+  if (cur && cur !== user.uid && !uni.getStorageSync('szDaily:' + user.uid)) {
+    const sz = uni.getStorageSync('szDaily:' + cur);
+    if (sz) uni.setStorageSync('szDaily:' + user.uid, sz);
+  }
   uni.setStorageSync('authToken', token);
   uni.setStorageSync('authUser', user);
   uni.setStorageSync('anonUid', user.uid);
