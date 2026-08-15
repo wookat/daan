@@ -66,11 +66,12 @@ def _clean_uid(uid) -> str:
 
 def _clean_nickname(nickname) -> str | None:
     n = str(nickname or "").strip()[:20]
-    return n or None
+    return None if not n or n.lower() in ("null", "undefined") else n
 
 
 def _alias(uid: str, nickname: str | None) -> str:
     """榜单展示名：报名时留存的昵称优先，缺失时用 uid 派生的稳定化名（不暴露 uid）。"""
+    nickname = _clean_nickname(nickname)
     if nickname:
         return nickname
     h = hashlib.sha1(uid.encode()).hexdigest()[:4].upper()

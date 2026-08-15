@@ -295,7 +295,7 @@ def api_team_panel(team_id: int, uid: str):
     for m in members:
         st = _member_stats(conn, m["uid"])
         items.append({
-            "nickname": m["nickname"] or "匿名考友",
+            "nickname": _clean_name(m["nickname"]),
             "is_me": m["uid"] == u,
             "is_creator": m["uid"] == t["creator_uid"],
             "joined_at": m["joined_at"],
@@ -369,7 +369,7 @@ def _answers_payload(conn, share_id: int) -> list[dict]:
     ).fetchall()
     return [
         {
-            "nickname": r["nickname"] or "匿名考友",
+            "nickname": _clean_name(r["nickname"]),
             "picked": r["picked"],
             "correct": bool(r["correct"]),
             "created_at": r["created_at"],

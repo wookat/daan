@@ -5,6 +5,15 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R28 审查轮新经验（SW v3 / 学习计划 / OMR 闭环 / 组队周报）
+- SW v3（kg-shell-v3）后 asset 不经 SW：验证用 CDP `Network.responseReceived` 的 `fromServiceWorker` + `performance.getEntriesByType('resource')` 的 transferSize（二次访问==0 即 memory/disk cache）。断网 F5 仍进壳（导航兜底），但 `/static/tab/*.png` 图标离线缺失属预期降级。
+- **懒加载 chunk 挂起与 SW 无关**：SW v3 不拦 asset 后周报页仍复现「spinner→连接服务器超时」，点击重试后 chunk 160ms 秒开——疑 HTTP/2 连接或反代层，别再拿 SW update 当修复手段。
+- **POST 类接口客户端 60s+ 但服务端 slow-req 只记 5-7s**（export/pdf、scan_sheet、plan、profile）：差额在反代/隧道上游，audit 时要同时采集客户端 duration 和容器日志对照。
+- 学习计划阶段验证：改画像考试日期即可切换 专项期(>30天)/真题期(>14)/冲刺期(≤14)；冲刺期 60min → 13专项+8真题=21 题；复习配额受「今日之前到期数」约束，UI 显示 min 值属正常。
+- OMR 闭环可全真测：导出含答题卡 PDF → pymupdf 渲染 → 按 backend/app/omr.py 几何（bubble_rect）PIL 涂黑 → UI「扫描答题卡→拍照」走系统文件选择器选图 → 识别卷码/精确判分/自动记入。生产表是 `paper_exports`（无 `papers` 表），correct 答案查 `questions` 表。
+- 组队打卡：pkgA/team/team 创建得 6 位邀请码，第二 uid 输码加入即 2 名队友；做题后队页「今日 N 题」实时联动。**队长昵称可能显示 null**（创建时无 pkNickname），周战报剪贴板可用 `navigator.clipboard.readText()` 读（先在页面点 Allow 授权弹窗）。
+- `practice_results` 表无 uid 列（全局聚合），测试产生的行无法归属、不清理。清理团队要删 `teams` + `team_members` 两表。
+
 ## R26r 生产回归新经验（growth.total 口径 / 注册迁移 / 收藏页入口）
 - R26 起时政完成态按 uid 隔离存 `szDaily:<uid>`（不再是裸 `szDaily`）；注册合并会把 `szDaily:<旧匿名uid>` 复制到 `szDaily:<账号uid>`。验证迁移要注册后 F5 再看首页时政卡。
 - 统计页/我的页「累计做题/正确率」自 R26 用 `/api/growth` 的 `total`（answer_log 全量含时政）；旧口径是本地 pstats 模块和（不含时政）——构造「时政+行测」混合作答即可区分新旧口径。
@@ -243,6 +252,15 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 手动录入/扫描答题卡测法：先在错题本筛选 sheet 导出错题卷拿卷码（H5 下 rememberPaper 写 recentPapers）；`pdftoppm` 转 PNG 后用 PIL 按答题卡框线坐标涂黑即可喂给 `/api/scan_sheet` 上传（OMR 识别可靠）。
 - 组队入口在「我的」页；team API 为 `/api/team/create|join|leave|mine`。R25 起队长退出且队伍仍有人时 `creator_uid` 顺延给最早加入队员，末位成员退出才删除队伍。
 - 模考大赛每周六 09:00-24:00（东八区）开赛，非窗口期只能测报名+空态。
+
+## R30 审查轮新经验
+- 迁移边界坑：注册合并 `auth.py` 的 `_UID_TABLES`/`_UID_PK_TABLES` 不含 `user_profile` → 匿名学习计划注册后丢失（R30 实证 P1）。测迁移时务必核对该表列 vs 实际数据面。
+- R29 昵称清洗只在 team/pk create/join/share 写入路径；`api_team_panel` 用 `m["nickname"] or "匿名考友"`，字面 `'null'` 字符串是 truthy → 存量脏数据仍渲染「null」。测显示路径可直接 UPDATE 自己测试行昵称为 'null' 再刷新队页。
+- 团队页正确路由是 `/pkgA/team/team`（不是 /pkgA/social/team——错误路由表现为整页空白且无 chunk 请求，容易误判为 chunk 挂起）。
+- ~60s 请求停滞的量化证据：`performance.getEntriesByType('resource')` 里 duration≈60016ms，或点击后 API 请求 60s 后才发出（发出后服务端仅百余 ms）。记录 UTC 时间戳供 Caddy 对照，不要直接判服务端缺陷。
+- 登出后本机 pstats 等缓存不清 → 匿名视图可能残留账号统计数字（DB 实为 0）；判断迁移隔离要以 DB/API 为准。
+- shizheng 每日一练每答错 1 题自动进错题本（uid 归属当前登录账号）——清理时错题数按「行测错题+时政错题」总数算。
+- Chrome 崩溃后 localStorage 回滚到 leveldb 上次提交态；崩溃恢复后先核对 anonUid 再继续，避免把原始 uid 的本机数据 merge 进测试账号（login/register 都会触发 merge_anon）。
 
 ## R25 回归轮新经验
 - 错题删除只有 `DELETE /api/mistakes/{id}?uid=`（`POST /api/mistakes/{id}/delete` 不存在且静默无效）。
