@@ -1,8 +1,8 @@
 <navbar title="{{mode === 'login' ? '登录' : '注册'}}" back="{{true}}" />
 <view class="wrap">
   <view class="l-logo-box">
-    <view class="l-logo">考</view>
-    <text class="l-app">考公助手</text>
+    <view class="l-logo">岸</view>
+    <text class="l-app">上岸错题</text>
   </view>
   <view class="card">
     <text class="l-title">{{mode === 'login' ? '欢迎回来' : '创建账号'}}</text>

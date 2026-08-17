@@ -48,25 +48,25 @@
     <view class="sec-t">学习</view>
     <wd-cell-group custom-class="cellcard" border>
       <wd-cell title="学习计划与报考画像" :value="profileSummary" is-link clickable @click="goPlan">
-        <template #icon><view class="cell-ico"><l-icon name="target" :size="18" color="#3b6ff5" /></view></template>
+        <template #icon><view class="cell-ico"><l-icon name="target" :size="18" color="#2e5bff" /></view></template>
       </wd-cell>
       <wd-cell title="学习日历" is-link clickable @click="goCalendar">
-        <template #icon><view class="cell-ico"><l-icon name="calendar" :size="18" color="#3b6ff5" /></view></template>
+        <template #icon><view class="cell-ico"><l-icon name="calendar" :size="18" color="#2e5bff" /></view></template>
       </wd-cell>
       <wd-cell title="我的收藏" :value="favN + ' 题'" is-link clickable @click="goFavs">
-        <template #icon><view class="cell-ico"><l-icon name="star" :size="18" color="#3b6ff5" /></view></template>
+        <template #icon><view class="cell-ico"><l-icon name="star" :size="18" color="#2e5bff" /></view></template>
       </wd-cell>
       <wd-cell title="模考记录" is-link clickable @click="goExamList">
-        <template #icon><view class="cell-ico"><l-icon name="file-text" :size="18" color="#3b6ff5" /></view></template>
+        <template #icon><view class="cell-ico"><l-icon name="file-text" :size="18" color="#2e5bff" /></view></template>
       </wd-cell>
       <wd-cell title="AI 面试陪练" value="抽题 · 打分 · 点评" is-link clickable @click="goInterview">
-        <template #icon><view class="cell-ico"><l-icon name="mic" :size="18" color="#3b6ff5" /></view></template>
+        <template #icon><view class="cell-ico"><l-icon name="mic" :size="18" color="#2e5bff" /></view></template>
       </wd-cell>
       <wd-cell title="答题 PK" is-link clickable @click="goPk">
-        <template #icon><view class="cell-ico"><l-icon name="swords" :size="18" color="#3b6ff5" /></view></template>
+        <template #icon><view class="cell-ico"><l-icon name="swords" :size="18" color="#2e5bff" /></view></template>
       </wd-cell>
       <wd-cell title="刷题小队" value="组队打卡 · 互相催学" is-link clickable @click="goTeam">
-        <template #icon><view class="cell-ico"><l-icon name="users" :size="18" color="#3b6ff5" /></view></template>
+        <template #icon><view class="cell-ico"><l-icon name="users" :size="18" color="#2e5bff" /></view></template>
       </wd-cell>
     </wd-cell-group>
 
@@ -104,12 +104,19 @@
       <wd-cell title="反馈与纠错" is-link clickable @click="feedback">
         <template #icon><view class="cell-ico"><l-icon name="message-circle" :size="18" color="#d97706" /></view></template>
       </wd-cell>
-      <wd-cell title="关于" value="考公助手" is-link clickable @click="about">
+      <wd-cell title="关于" value="上岸错题" is-link clickable @click="about">
         <template #icon><view class="cell-ico"><l-icon name="info" :size="18" color="#d97706" /></view></template>
       </wd-cell>
     </wd-cell-group>
 
     <view v-if="user" class="logout" @click="doLogout">退出登录</view>
+
+    <view class="zl-footer">
+      <view class="zl-links">
+        <text class="zl-link" v-for="p in zlProducts" :key="p.url" @click="zlOpen(p.url)">{{ p.name }}</text>
+      </view>
+      <text class="zl-copy">© 2026 Zalize 上岸 · 上岸错题</text>
+    </view>
   </view>
 </template>
 
@@ -139,6 +146,13 @@ export default {
       offlineN: 0,
       badgeInfo: null,
       growth: null,
+      zlProducts: [
+        { name: '上岸 Zalize 门户', url: 'https://career.zalize.com' },
+        { name: '上岸题库', url: 'https://tiku.zalize.com' },
+        { name: '上岸真题', url: 'https://zhenti.zalize.com' },
+        { name: '上岸笔试', url: 'https://test.zalize.com' },
+        { name: '上岸面试', url: 'https://interview.zalize.com' },
+      ],
     };
   },
   computed: {
@@ -288,8 +302,16 @@ export default {
         confirmText: '知道了',
       });
     },
+    zlOpen(url) {
+      // #ifdef H5
+      window.open(url, '_blank');
+      // #endif
+      // #ifndef H5
+      uni.setClipboardData({ data: url, success: () => uni.showToast({ title: '链接已复制', icon: 'none' }) });
+      // #endif
+    },
     about() {
-      uni.showModal({ title: '考公助手', content: '行测刷题 · 错题本 · AI 讲解 · 全真模考\nkaogong.zalize.com', showCancel: false, confirmText: '知道了' });
+      uni.showModal({ title: '上岸错题', content: '行测刷题 · 错题本 · AI 讲解 · 全真模考\nkaogong.zalize.com', showCancel: false, confirmText: '知道了' });
     },
     doLogout() {
       uni.showModal({
@@ -339,6 +361,11 @@ export default {
 .cell-ico { width: 56rpx; height: 56rpx; border-radius: 14rpx; background: var(--fill); display: flex; align-items: center; justify-content: center; margin-right: 20rpx; }
 
 .logout { margin-top: 40rpx; background: var(--card); border-radius: 24rpx; text-align: center; min-height: 44px; display: flex; align-items: center; justify-content: center; font-size: 28rpx; color: #dc2626; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); }
+
+.zl-footer { margin: 48rpx 0 16rpx; text-align: center; }
+.zl-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8rpx 28rpx; margin-bottom: 14rpx; }
+.zl-link { font-size: 24rpx; color: var(--brand); }
+.zl-copy { font-size: 22rpx; color: var(--ink-3); }
 
 /* #ifdef H5 */
 @media (min-width: 768px) {

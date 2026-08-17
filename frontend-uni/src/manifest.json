@@ -1,7 +1,7 @@
 {
-    "name" : "考公错题助手",
+    "name" : "上岸错题",
     "appid" : "__UNI__KAOGONG",
-    "description" : "考公刷题 + 错题讲解（花生十三方法体系）",
+    "description" : "上岸 Zalize · 考公刷题 + 错题讲解（原考公错题助手，花生十三方法体系）",
     "versionName" : "1.0.0",
     "versionCode" : "100",
     "transformPx" : false,

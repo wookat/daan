@@ -64,9 +64,9 @@ function makeQuote(d: PosterData): string {
 // 对照 frontend-uni/src/pkgA/social/poster.vue 的画布绘制（QR 码以站点文字替代，避免引入新依赖）
 function drawPoster(ctx: Ctx2D, d: PosterData): void {
   const g = ctx.createLinearGradient(0, 0, W * 0.7, H);
-  g.addColorStop(0, '#5C8CFF');
-  g.addColorStop(0.52, '#3B6FF5');
-  g.addColorStop(1, '#2F57D4');
+  g.addColorStop(0, '#5c82ff');
+  g.addColorStop(0.52, '#2e5bff');
+  g.addColorStop(1, '#1e44d9');
   roundRect(ctx, 0, 0, W, H, 36);
   ctx.fillStyle = g;
   ctx.fill();
@@ -86,7 +86,7 @@ function drawPoster(ctx: Ctx2D, d: PosterData): void {
   ctx.textBaseline = 'top';
   ctx.fillStyle = 'rgba(255,255,255,0.85)';
   ctx.font = '24px sans-serif';
-  ctx.fillText(d.badge ? '考公错题助手 · 里程碑徽章' : '考公错题助手 · 学习打卡', pad, 52);
+  ctx.fillText(d.badge ? '上岸错题 · 里程碑徽章' : '上岸错题 · 学习打卡', pad, 52);
 
   ctx.fillStyle = '#ffffff';
   if (d.badge) {
@@ -153,7 +153,7 @@ function drawPoster(ctx: Ctx2D, d: PosterData): void {
   // 底部：引导 + 站点
   ctx.fillStyle = 'rgba(255,255,255,0.9)';
   ctx.font = '24px sans-serif';
-  ctx.fillText('搜一搜「考公错题助手」', pad, H - 190);
+  ctx.fillText('搜一搜「上岸错题」', pad, H - 190);
   ctx.fillText('AI 刷题上岸 →', pad, H - 152);
   ctx.fillStyle = 'rgba(255,255,255,0.65)';
   ctx.font = '20px sans-serif';
@@ -238,6 +238,6 @@ Page({
   },
 
   onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
-    return { title: '我在考公错题助手打卡刷题，一起上岸！', path: '/pages/home/home' };
+    return { title: '我在上岸错题打卡刷题，一起上岸！', path: '/pages/home/home' };
   },
 });

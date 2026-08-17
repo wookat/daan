@@ -45,7 +45,7 @@ export default {
     const c = query && query.code ? String(query.code).trim().toUpperCase() : '';
     trackEvent('team_join_open', 'team', c || null);
     uni.setStorageSync('regSource', 'team');
-    uni.setNavigationBarTitle({ title: '队友邀请你加入刷题小队，一起打卡冲上岸 - 考公助手' });
+    uni.setNavigationBarTitle({ title: '队友邀请你加入刷题小队，一起打卡冲上岸 - 上岸错题' });
     if (c) {
       this.code = c;
       this.state = 'ready';
@@ -84,7 +84,7 @@ export default {
 
 <style scoped>
 .wrap { padding: 24rpx 32rpx 60rpx; }
-.hero { background: linear-gradient(135deg, #5b8af8, #3b6ff5); border-radius: 32rpx; padding: 36rpx 32rpx; margin-bottom: 24rpx; box-shadow: 0 12rpx 36rpx rgba(59, 111, 245, 0.3); }
+.hero { background: linear-gradient(135deg, #5b8af8, #2e5bff); border-radius: 32rpx; padding: 36rpx 32rpx; margin-bottom: 24rpx; box-shadow: 0 12rpx 36rpx rgba(46, 91, 255, 0.3); }
 .hero-t { display: flex; align-items: center; gap: 12rpx; color: #fff; font-size: 40rpx; font-weight: 800; }
 .hero-s { display: block; color: rgba(255, 255, 255, 0.85); font-size: 24rpx; margin-top: 10rpx; }
 

@@ -34,7 +34,7 @@
 }
 
 .tab.on .tab-t {
-  color: var(--brand-500, #3b6ff5);
+  color: var(--brand-500, #2e5bff);
   font-weight: 600;
 }
 

@@ -144,7 +144,7 @@ export default {
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 60rpx 24rpx; }
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 30rpx; font-weight: 600; margin-bottom: 20rpx; }
-.hero { background: linear-gradient(135deg, var(--brand), #6c9bff); border: none; text-align: center; }
+.hero { background: linear-gradient(135deg, var(--brand), #5c82ff); border: none; text-align: center; }
 .hero-title { display: block; font-size: 25rpx; color: rgba(255, 255, 255, 0.85); }
 .hero-score { margin: 16rpx 0 10rpx; }
 .score-n { font-size: 88rpx; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }

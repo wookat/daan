@@ -40,7 +40,7 @@ function drawPoster(ctx, d) {
   // 背景渐变
   const g = ctx.createLinearGradient(0, 0, W * 0.7, H);
   g.addColorStop(0, '#5B8AF8');
-  g.addColorStop(0.55, '#3B6FF5');
+  g.addColorStop(0.55, '#2E5BFF');
   g.addColorStop(1, '#2C5AD6');
   roundRect(ctx, 0, 0, W, H, 36);
   ctx.fillStyle = g;
@@ -62,7 +62,7 @@ function drawPoster(ctx, d) {
   ctx.textBaseline = 'top';
   ctx.fillStyle = 'rgba(255,255,255,0.85)';
   ctx.font = '24px sans-serif';
-  ctx.fillText(d.badge ? '考公错题助手 · 里程碑徽章' : '考公错题助手 · 学习打卡', pad, 52);
+  ctx.fillText(d.badge ? '上岸错题 · 里程碑徽章' : '上岸错题 · 学习打卡', pad, 52);
 
   ctx.fillStyle = '#ffffff';
   if (d.badge) {
@@ -170,7 +170,7 @@ export default {
   },
   // #ifdef MP-WEIXIN
   onShareAppMessage() {
-    return { title: '我在考公错题助手打卡刷题，一起上岸！', path: '/pages/practice/practice' };
+    return { title: '我在上岸错题打卡刷题，一起上岸！', path: '/pages/practice/practice' };
   },
   // #endif
   methods: {

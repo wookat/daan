@@ -104,7 +104,7 @@
             <view class="hs-rate">
               <text v-if="hsRated[cur.id]" class="hs-rate-done">{{ hsRated[cur.id] === 'up' ? '已反馈：有用' : '已反馈：有误' }}</text>
               <template v-else>
-                <view class="hs-rate-btn" @click="rateHs(cur, true)"><l-icon name="thumbs-up" :size="13" color="#3b6ff5" /><text>有用</text></view>
+                <view class="hs-rate-btn" @click="rateHs(cur, true)"><l-icon name="thumbs-up" :size="13" color="#2e5bff" /><text>有用</text></view>
                 <view class="hs-rate-btn bad" @click="rateHs(cur, false)"><l-icon name="thumbs-down" :size="13" color="#b91c1c" /><text>有误</text></view>
               </template>
             </view>
@@ -1515,7 +1515,7 @@ export default {
     shareResult() {
       const pct = Math.round((this.right / this.items.length) * 100);
       let txt =
-        '我在考公助手刷了 ' + this.items.length + ' 道' + (this.lastModule ? this.modName(this.lastModule) : '行测') + '题，正确率 ' + pct + '%';
+        '我在上岸错题刷了 ' + this.items.length + ' 道' + (this.lastModule ? this.modName(this.lastModule) : '行测') + '题，正确率 ' + pct + '%';
       if (this.bestStreak >= 3) txt += '，最高连对 ' + this.bestStreak + ' 题';
       if (this.percentile != null) txt += '，击败了 ' + this.percentile + '% 的刷题记录';
       txt += '！一起来刷：https://kaogong.zalize.com';
@@ -1824,7 +1824,7 @@ export default {
 .plan-focus-k { font-size: 22rpx; color: var(--ink-3); margin-right: 4rpx; }
 .plan-fchip { font-size: 22rpx; color: var(--ink-2); background: var(--fill); border-radius: 999rpx; padding: 0 20rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
 .plan-fchip.on { background: var(--brand-50); color: var(--brand); font-weight: 600; }
-.hbanner { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(120deg, var(--brand), #6c9bff); border-radius: 24rpx; padding: 28rpx; margin-bottom: 24rpx; }
+.hbanner { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(120deg, var(--brand), #5c82ff); border-radius: 24rpx; padding: 28rpx; margin-bottom: 24rpx; }
 .hbanner-l { flex: 1; margin-right: 20rpx; }
 .hbanner-t { display: block; font-size: 30rpx; font-weight: 600; color: #fff; }
 .hbanner-s { display: block; font-size: 23rpx; color: rgba(255, 255, 255, 0.82); margin-top: 6rpx; }
@@ -1869,7 +1869,7 @@ export default {
 .real-tag { display: inline-block; font-size: 21rpx; color: #b45309; background: #fef3c7; border-radius: 8rpx; padding: 4rpx 14rpx; margin-bottom: 10rpx; }
 .offline-tag { font-size: 21rpx; color: var(--warn); background: var(--warn-soft); border-radius: 8rpx; padding: 8rpx 14rpx; margin-bottom: 10rpx; line-height: 1.5; }
 .grp-tag { display: inline-block; font-size: 21rpx; color: #0e7490; background: #cffafe; border-radius: 8rpx; padding: 4rpx 14rpx; margin-bottom: 10rpx; margin-left: 10rpx; }
-.daily { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(120deg, var(--brand), #6c9bff); border-radius: 20rpx; padding: 24rpx 28rpx; margin-bottom: 20rpx; }
+.daily { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(120deg, var(--brand), #5c82ff); border-radius: 20rpx; padding: 24rpx 28rpx; margin-bottom: 20rpx; }
 .daily.done { background: linear-gradient(135deg, #10b981, #059669); }
 .daily.sz { background: linear-gradient(120deg, #d9480f, #f59e0b); }
 .daily.sz.done { background: linear-gradient(135deg, #10b981, #059669); }
@@ -1886,7 +1886,7 @@ export default {
 .smart-go { background: var(--card); color: #f43f5e; font-size: 24rpx; font-weight: 600; border-radius: 999rpx; padding: 10rpx 26rpx; flex-shrink: 0; }
 .grid { display: flex; flex-wrap: wrap; gap: 20rpx; }
 .mcard { width: calc(50% - 10rpx); box-sizing: border-box; background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 20rpx; padding: 24rpx; }
-.mcard.all { background: linear-gradient(135deg, #6c9bff, var(--brand)); border: none; }
+.mcard.all { background: linear-gradient(135deg, #5c82ff, var(--brand)); border: none; }
 .mcard.all .mname, .mcard.all .mn { color: #fff; }
 .mtop { display: flex; align-items: center; gap: 12rpx; margin-bottom: 8rpx; }
 .mico { width: 48rpx; height: 48rpx; line-height: 48rpx; text-align: center; border-radius: 12rpx; font-size: 24rpx; font-weight: 600; }
@@ -1929,7 +1929,7 @@ export default {
 .acard-foot { text-align: center; font-size: 23rpx; color: var(--ink-2); padding-bottom: 8rpx; }
 .op { font-size: 24rpx; color: var(--ink-2); margin-left: 6rpx; }
 .progress { height: 6rpx; background: var(--fill); border-radius: 999rpx; overflow: hidden; margin-bottom: 22rpx; }
-.pfill { height: 100%; background: linear-gradient(90deg, #6c9bff, var(--brand)); border-radius: 999rpx; transition: width 0.3s ease; }
+.pfill { height: 100%; background: linear-gradient(90deg, #5c82ff, var(--brand)); border-radius: 999rpx; transition: width 0.3s ease; }
 .q { font-size: 30rpx; line-height: 1.7; margin-bottom: 22rpx; white-space: pre-wrap; word-break: break-all; }
 .qimg { width: 100%; border-radius: 12rpx; margin-bottom: 8rpx; background: var(--fill); }
 .qimg-credit { font-size: 20rpx; color: var(--ink-2); margin-bottom: 16rpx; }
@@ -1974,7 +1974,7 @@ export default {
 .exp-ans.badc2 { color: var(--bad); }
 .rp-types { display: flex; flex-wrap: wrap; gap: 16rpx; margin-bottom: 20rpx; }
 .rp-chip { padding: 18rpx 26rpx; min-height: 44rpx; border-radius: 999rpx; background: var(--soft-bg); font-size: 26rpx; color: var(--ink-2); }
-.rp-chip.on { background: rgba(59, 111, 245, 0.12); color: var(--brand); font-weight: 600; }
+.rp-chip.on { background: rgba(46, 91, 255, 0.12); color: var(--brand); font-weight: 600; }
 .rp-detail { width: 100%; box-sizing: border-box; min-height: 140rpx; background: var(--soft-bg); border-radius: 16rpx; padding: 20rpx; font-size: 26rpx; margin-bottom: 24rpx; }
 .rp-submit { width: 100%; }
 .rp-submit[disabled] { opacity: 0.5; }
@@ -2005,7 +2005,7 @@ export default {
 .bbad .btitle { color: var(--bad); }
 .bsub { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
 .bnext { flex-shrink: 0; border-radius: 999rpx; font-size: 28rpx; font-weight: 600; color: #fff; padding: 0 44rpx; min-height: 44px; line-height: 44px; margin: 0; }
-.bnext.nok, .bnext.nbad { background: linear-gradient(180deg, #4a7bf7, #3567ec); box-shadow: 0 6rpx 16rpx rgba(59, 111, 245, 0.25); }
+.bnext.nok, .bnext.nbad { background: linear-gradient(180deg, #4a7bf7, #3567ec); box-shadow: 0 6rpx 16rpx rgba(46, 91, 255, 0.25); }
 .bnext.bstay { background: transparent; border: 2rpx solid var(--brand); color: var(--brand); margin-right: 12rpx; box-shadow: none; }
 .ann { display: flex; align-items: flex-start; gap: 12rpx; background: var(--info-soft); border: 1rpx solid #bae6fd; border-radius: 16rpx; padding: 18rpx 22rpx; margin-bottom: 20rpx; }
 .ann-c { flex: 1; }
@@ -2045,11 +2045,11 @@ export default {
 .mb-pct { font-size: 22rpx; color: var(--ink-2); width: 150rpx; text-align: right; flex-shrink: 0; }
 .report-grid { display: flex; flex-wrap: wrap; gap: 16rpx; justify-content: center; }
 .report-tip { text-align: center; font-size: 22rpx; color: var(--ink-2); margin-top: 14rpx; }
-.btn { background: linear-gradient(135deg, #6c9bff, var(--brand)); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(59, 111, 245, 0.25); min-height: 44px; line-height: 44px; }
+.btn { background: linear-gradient(135deg, #5c82ff, var(--brand)); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(46, 91, 255, 0.25); min-height: 44px; line-height: 44px; }
 .btn.ghost { background: var(--brand-soft); color: var(--brand); box-shadow: none; }
 .btn.plain { background: none; color: var(--ink-2); box-shadow: none; }
 .done { text-align: center; padding: 48rpx 28rpx; }
-.duenudge { display: flex; justify-content: space-between; align-items: center; text-align: left; background: linear-gradient(180deg, #4a7bf7, #3567ec); border-radius: 18rpx; box-shadow: 0 6rpx 16rpx rgba(59, 111, 245, 0.25); padding: 24rpx 28rpx; margin: 24rpx 0; }
+.duenudge { display: flex; justify-content: space-between; align-items: center; text-align: left; background: linear-gradient(180deg, #4a7bf7, #3567ec); border-radius: 18rpx; box-shadow: 0 6rpx 16rpx rgba(46, 91, 255, 0.25); padding: 24rpx 28rpx; margin: 24rpx 0; }
 .duenudge-t { display: block; font-size: 27rpx; font-weight: 700; color: #ffffff; }
 .duenudge-s { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.75); margin-top: 4rpx; }
 .duenudge-go { flex-shrink: 0; background: rgba(255, 255, 255, 0.18); color: #ffffff; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 12rpx 30rpx; }
@@ -2069,7 +2069,7 @@ export default {
 .pr-scroll { white-space: nowrap; margin-bottom: 20rpx; }
 .pr-scroll .set-chip { display: inline-block; margin-right: 12rpx; }
 .sub-prog { font-size: 22rpx; color: var(--muted); }
-.sub-chip.all-chip { background: linear-gradient(135deg, #6c9bff, var(--brand)); border: none; }
+.sub-chip.all-chip { background: linear-gradient(135deg, #5c82ff, var(--brand)); border: none; }
 .sub-chip.all-chip .sub-name, .sub-chip.all-chip .sub-n { color: #fff; }
 .sub-name { font-size: 28rpx; font-weight: 600; color: var(--ink); }
 .sub-n { font-size: 22rpx; color: var(--ink-2); }

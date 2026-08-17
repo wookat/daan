@@ -29,8 +29,8 @@ export default {
 /* 全局设计规范 */
 page {
   /* design-v3 tokens（docs/design-v3/DESIGN.md） */
-  --brand: #3b6ff5;
-  --brand-soft: #edf3fe;
+  --brand: #2e5bff;
+  --brand-soft: #eef3ff;
   --brand-soft-2: #dce7fd;
   --ink: #17181c;
   --ink-2: #5f6575;
@@ -58,12 +58,13 @@ page {
   --danger: var(--bad);
   --radius: 28rpx;
   /* wot-design-uni 主题对齐品牌蓝 */
-  --wot-color-theme: #3b6ff5;
-  --wot-button-primary-bg-color: #3b6ff5;
+  --wot-color-theme: #2e5bff;
+  --wot-button-primary-bg-color: #2e5bff;
   --wot-cell-title-fs: 15px;
   background: #f6f7fb;
   color: var(--ink);
-  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', 'Microsoft YaHei', sans-serif;
+  /* 字体栈对齐 @zalize/brand（Inter + 系统中文字体） */
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'HarmonyOS Sans', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif;
 }
 
 /* #ifdef H5 */

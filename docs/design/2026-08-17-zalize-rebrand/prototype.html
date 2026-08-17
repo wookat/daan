@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>上岸错题 · 品牌换装原型</title>
+<style>
+  :root{
+    --brand-50:#eef3ff;--brand-100:#dbe6ff;--brand-200:#b8ccff;--brand-300:#8aa9ff;
+    --brand-400:#5c82ff;--brand-600:#2e5bff;--brand-700:#1e44d9;
+    --ink-900:#101828;--ink-600:#475467;--ink-400:#98a2b3;
+    --surface:#fff;--bg:#f5f7fb;--border:#eceef4;
+    --success:#12b76a;--warning:#f79009;
+  }
+  .dark{
+    --ink-900:#f2f4f7;--ink-600:#c3c7d4;--ink-400:#8a90a2;
+    --surface:#1d202c;--bg:#141721;--border:#2a2d3a;
+    --brand-50:#1c2742;--brand-100:#223260;
+  }
+  *{box-sizing:border-box;margin:0}
+  body{font-family:Inter,-apple-system,'PingFang SC','HarmonyOS Sans','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif;background:var(--bg);color:var(--ink-900)}
+  .suite-nav{display:flex;gap:16px;align-items:center;padding:7px 16px;background:#0d1d57;color:#dbe6ff;font-size:13px;overflow-x:auto;white-space:nowrap}
+  .suite-nav b{color:#fff}
+  .suite-nav .on{color:#fff;font-weight:600;border-bottom:2px solid #5c82ff}
+  header.app{display:flex;align-items:center;gap:10px;padding:14px 20px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0}
+  header.app img{width:32px;height:32px;border-radius:8px}
+  header.app .t{font-size:17px;font-weight:700}
+  header.app .s{font-size:12px;color:var(--ink-400)}
+  main{max-width:960px;margin:0 auto;padding:20px 16px;display:grid;gap:16px}
+  .hero{background:linear-gradient(160deg,#5c82ff 0%,#2e5bff 52%,#1e44d9 100%);color:#fff;border-radius:12px;padding:20px;box-shadow:0 4px 8px -2px rgb(16 24 40 / .1)}
+  .hero .bar{height:8px;background:rgba(255,255,255,.28);border-radius:99px;margin:12px 0}
+  .hero .fill{width:40%;height:100%;background:#fff;border-radius:99px}
+  .hero .acts{display:flex;gap:10px}
+  .btn{border:none;border-radius:8px;padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer}
+  .btn.main{background:#fff;color:#1e44d9}
+  .btn.ghost{background:rgba(255,255,255,.16);color:#fff}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:0 1px 2px 0 rgb(16 24 40 / .05)}
+  .card:hover{box-shadow:0 4px 8px -2px rgb(16 24 40 / .1)}
+  .card .n{font-weight:700;margin-bottom:4px}
+  .card .c{font-size:12px;color:var(--ink-600)}
+  .tag{display:inline-block;background:var(--brand-50);color:var(--brand-600);border-radius:6px;font-size:12px;padding:2px 8px;margin-top:8px}
+  .dark .tag{color:#8aa9ff}
+  .primary{background:var(--brand-600);color:#fff}
+  .primary:hover{background:var(--brand-700)}
+  footer{padding:24px 16px;text-align:center;color:var(--ink-400);font-size:12px;line-height:2}
+  footer a{color:var(--brand-600);text-decoration:none;margin:0 8px}
+  .dark footer a{color:#8aa9ff}
+  .toggle{position:fixed;right:14px;bottom:14px}
+</style>
+</head>
+<body>
+  <!-- 顶部跨产品互链：生产用 https://career.zalize.com/nav.js -->
+  <nav class="suite-nav">
+    <b>上岸 Zalize</b>
+    <a href="#" style="color:inherit;text-decoration:none">门户</a>
+    <span class="on">上岸错题</span>
+    <a href="#" style="color:inherit;text-decoration:none">上岸题库</a>
+    <a href="#" style="color:inherit;text-decoration:none">上岸真题</a>
+    <a href="#" style="color:inherit;text-decoration:none">上岸简历</a>
+  </nav>
+  <header class="app">
+    <img src="kaogong.svg" alt="上岸错题">
+    <div><div class="t">上岸错题</div><div class="s">考公错题助手 · 行测真题 · AI 讲解</div></div>
+  </header>
+  <main>
+    <section class="hero">
+      <div>今日已练 <b>8</b>/20 题 · 连续打卡 5 天</div>
+      <div class="bar"><div class="fill"></div></div>
+      <div class="acts"><button class="btn main">继续目标 ›</button><button class="btn ghost">今日计划</button></div>
+    </section>
+    <section class="cards">
+      <div class="card"><div class="n">数量关系</div><div class="c">3.2 万题</div><span class="tag">岸蓝主线</span></div>
+      <div class="card"><div class="n">判断推理</div><div class="c">2.8 万题</div><span class="tag">花生十三方法</span></div>
+      <div class="card"><div class="n">资料分析</div><div class="c">2.1 万题</div><span class="tag">分组材料</span></div>
+      <div class="card"><div class="n">全模块混练</div><div class="c">11 万+ 题</div><button class="btn primary" style="margin-top:8px">去刷题</button></div>
+    </section>
+  </main>
+  <footer>
+    <div><a href="#">上岸 Zalize 门户</a>·<a href="#">上岸题库</a>·<a href="#">上岸真题</a>·<a href="#">上岸简历</a></div>
+    © 2026 Zalize 上岸 · 上岸错题（原考公错题助手）
+  </footer>
+  <button class="btn primary toggle" onclick="document.body.classList.toggle('dark')">亮/暗</button>
+</body>
+</html>

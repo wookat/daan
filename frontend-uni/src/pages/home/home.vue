@@ -201,7 +201,7 @@
         <text class="mod-arrow">›</text>
       </view>
       <view v-if="counts.length" class="card modrow" @click="startPreset(null)">
-        <view class="mod-ico" style="background: var(--brand-soft)"><l-icon name="shuffle" :size="24" color="#3b6ff5" /></view>
+        <view class="mod-ico" style="background: var(--brand-soft)"><l-icon name="shuffle" :size="24" color="#2e5bff" /></view>
         <view class="grow">
           <text class="mod-name">混合刷题</text>
           <text class="mod-sub">全部模块随机 · 每组 {{ groupSize }} 题</text>
@@ -219,7 +219,7 @@
 
     <!-- 周学习报告 -->
     <view class="card weekly-c" @click="goWeeklyReport">
-      <view class="more-ico"><l-icon name="calendar-check" :size="22" color="#3b6ff5" /></view>
+      <view class="more-ico"><l-icon name="calendar-check" :size="22" color="#2e5bff" /></view>
       <view class="grow">
         <view class="weekly-t">周学习报告 <view v-if="weeklyDot" class="dot" /></view>
         <text class="weekly-s">每周一生成 · 回顾上周 · 规划下周</text>
@@ -236,7 +236,7 @@
         <text class="more-s">每周六 · 全站同卷排名</text>
       </view>
       <view class="card more-c" @click="goExamList">
-        <view class="more-ico"><l-icon name="file-text" :size="20" color="#3b6ff5" /></view>
+        <view class="more-ico"><l-icon name="file-text" :size="20" color="#2e5bff" /></view>
         <text class="more-t">全真模考</text>
         <text class="more-s">真题卷库 · 成绩报告</text>
       </view>
@@ -261,7 +261,7 @@
         <text class="more-s">同组 10 题 · 比分拼手速</text>
       </view>
       <view class="card more-c" @click="goMini">
-        <view class="more-ico"><l-icon name="zap" :size="20" color="#3b6ff5" /></view>
+        <view class="more-ico"><l-icon name="zap" :size="20" color="#2e5bff" /></view>
         <text class="more-t">迷你模考</text>
         <text class="more-s">30 题 · 30 分钟</text>
       </view>
@@ -441,7 +441,7 @@ import { checkinStreak, dayKey, loadSzDaily } from '../../checkin.js';
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
   ziliao: { bg: '#e6f5f3', fg: '#0d9488' },
-  shuliang: { bg: '#e8effe', fg: '#3b6ff5' },
+  shuliang: { bg: '#e8effe', fg: '#2e5bff' },
   yanyu: { bg: '#fce8ec', fg: '#e11d48' },
   panduan: { bg: '#f1eafd', fg: '#7c3aed' },
   changshi: { bg: '#fbf1e0', fg: '#d97706' },
@@ -641,7 +641,7 @@ export default {
       return NAMES[m] || m || '未知';
     },
     modColor(m) {
-      return COLORS[m] || { bg: '#edf3fe', fg: '#3b6ff5' };
+      return COLORS[m] || { bg: '#eef3ff', fg: '#2e5bff' };
     },
     modIcon(m) {
       return ICONS[m] || 'book-open';
@@ -988,7 +988,7 @@ export default {
 .wrap { padding: 24rpx 32rpx 40rpx; }
 
 /* Hero */
-.hero { background: linear-gradient(135deg, #5b8af8, var(--brand)); border-radius: 28rpx; padding: 30rpx 36rpx 26rpx; margin-bottom: 20rpx; box-shadow: 0 12rpx 36rpx rgba(59, 111, 245, 0.3); }
+.hero { background: linear-gradient(135deg, #5b8af8, var(--brand)); border-radius: 28rpx; padding: 30rpx 36rpx 26rpx; margin-bottom: 20rpx; box-shadow: 0 12rpx 36rpx rgba(46, 91, 255, 0.3); }
 .hero-top { display: flex; justify-content: space-between; align-items: center; }
 .hero-goal { font-size: 26rpx; color: rgba(255, 255, 255, 0.85); }
 .hero-n { font-size: 36rpx; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
@@ -1112,7 +1112,7 @@ export default {
 .rmcard { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #6366f1, #4f46e5); border: none; box-shadow: 0 6rpx 16rpx rgba(99, 102, 241, 0.25); padding: 24rpx 28rpx; }
 
 /* 今日到期复习入口 */
-.duebar { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(180deg, #4a7bf7, #3567ec); border: none; box-shadow: 0 6rpx 16rpx rgba(59, 111, 245, 0.25); padding: 24rpx 28rpx; }
+.duebar { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(180deg, #4a7bf7, #3567ec); border: none; box-shadow: 0 6rpx 16rpx rgba(46, 91, 255, 0.25); padding: 24rpx 28rpx; }
 .duebar-l { display: flex; align-items: center; gap: 18rpx; min-width: 0; }
 .duebar-txts { min-width: 0; }
 .duebar-t { display: block; font-size: 28rpx; font-weight: 700; color: #ffffff; }
@@ -1164,7 +1164,7 @@ export default {
 .set-chips.scrollx { flex-wrap: nowrap; overflow-x: auto; max-width: 65%; }
 .set-chip { font-size: 24rpx; color: var(--ink-2); background: var(--soft-bg); border-radius: 999rpx; padding: 0 22rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; white-space: nowrap; }
 .set-chip.on { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
-:deep(.sheet-cta) { margin-top: 24rpx; width: 100%; border-radius: 20rpx !important; background: linear-gradient(135deg, #5b8af8, var(--brand)) !important; box-shadow: 0 8rpx 24rpx rgba(59, 111, 245, 0.28); font-weight: 600; }
+:deep(.sheet-cta) { margin-top: 24rpx; width: 100%; border-radius: 20rpx !important; background: linear-gradient(135deg, #5b8af8, var(--brand)) !important; box-shadow: 0 8rpx 24rpx rgba(46, 91, 255, 0.28); font-weight: 600; }
 :deep(.sheet-cta2) { margin-top: 16rpx; width: 100%; border-radius: 20rpx !important; }
 .custom-note { margin-top: 14rpx; text-align: center; font-size: 21rpx; color: var(--ink-3); }
 .pr-scroll { white-space: nowrap; margin-bottom: 12rpx; }

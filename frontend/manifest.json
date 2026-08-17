@@ -1,10 +1,10 @@
 {
-  "name": "考公错题助手",
-  "short_name": "错题助手",
+  "name": "上岸错题",
+  "short_name": "上岸错题",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f5f6fa",
-  "theme_color": "#2f6fed",
+  "theme_color": "#2e5bff",
   "icons": [
     {
       "src": "/static/icon.svg",

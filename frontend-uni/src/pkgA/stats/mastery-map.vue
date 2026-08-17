@@ -93,7 +93,7 @@ export default {
     },
     covStyle() {
       const pct = this.map ? this.map.coverage.pct : 0;
-      return { background: `conic-gradient(#3b6ff5 0% ${pct}%, #e8ecf5 ${pct}% 100%)` };
+      return { background: `conic-gradient(#2e5bff 0% ${pct}%, #e8ecf5 ${pct}% 100%)` };
     },
   },
   onShow() {
@@ -171,11 +171,11 @@ export default {
 }
 .cold-fill {
   height: 100%;
-  background: #3b6ff5;
+  background: #2e5bff;
   border-radius: 999rpx;
 }
 .btn {
-  background: #3b6ff5;
+  background: #2e5bff;
   color: #fff;
   border-radius: 999rpx;
   font-size: 28rpx;
@@ -208,7 +208,7 @@ export default {
 .cov-n {
   font-size: 28rpx;
   font-weight: 700;
-  color: #3b6ff5;
+  color: #2e5bff;
 }
 .cov-t {
   font-size: 18rpx;
@@ -267,7 +267,7 @@ export default {
   color: #4b5163;
 }
 .tab.on {
-  background: #3b6ff5;
+  background: #2e5bff;
   color: #fff;
 }
 .tab-pct {
@@ -323,7 +323,7 @@ export default {
   background: #059669;
 }
 .tile.sel {
-  outline: 4rpx solid #3b6ff5;
+  outline: 4rpx solid #2e5bff;
 }
 .tile-name {
   font-size: 22rpx;
@@ -382,7 +382,7 @@ export default {
   margin-top: 4rpx;
 }
 .s-btn {
-  background: #3b6ff5;
+  background: #2e5bff;
   color: #fff;
   border-radius: 999rpx;
   font-size: 24rpx;
@@ -393,7 +393,7 @@ export default {
   flex-shrink: 0;
 }
 .s-btn.ghost {
-  background: #edf3fe;
-  color: #3b6ff5;
+  background: #eef3ff;
+  color: #2e5bff;
 }
 </style>

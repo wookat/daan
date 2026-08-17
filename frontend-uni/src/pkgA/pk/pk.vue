@@ -92,7 +92,7 @@
         </view>
       </view>
 
-      <view v-if="rivalDone" class="card hint"><l-icon name="zap" :size="15" color="#3b6ff5" /> 对手已完成全部作答 —— 锁定你的答案！</view>
+      <view v-if="rivalDone" class="card hint"><l-icon name="zap" :size="15" color="#2e5bff" /> 对手已完成全部作答 —— 锁定你的答案！</view>
 
       <view v-if="submitFailed" class="card hint">
         <text>提交未成功（作答已保留），网络恢复后可重试</text>
@@ -486,7 +486,7 @@ export default {
       // #ifdef H5
       const url = `${window.location.origin}${window.location.pathname}#/pkgA/pk/pk?code=${this.match.code}`;
       uni.setClipboardData({
-        data: `我在考公助手向你发起答题 PK（挑战码 ${this.match.code}），敢来应战吗？${url}`,
+        data: `我在上岸错题向你发起答题 PK（挑战码 ${this.match.code}），敢来应战吗？${url}`,
         success: () => uni.showToast({ title: '挑战链接已复制，发给考友吧', icon: 'none' }),
       });
       // #endif
@@ -534,7 +534,7 @@ export default {
 .card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 24rpx 28rpx; margin-bottom: 20rpx; }
 .empty { text-align: center; color: var(--ink-2); font-size: 25rpx; padding: 30rpx 0; }
 
-.hero { background: linear-gradient(135deg, #5b8af8, #3b6ff5); border-radius: 32rpx; padding: 36rpx 32rpx; margin-bottom: 24rpx; box-shadow: 0 12rpx 36rpx rgba(59, 111, 245, 0.3); }
+.hero { background: linear-gradient(135deg, #5b8af8, #2e5bff); border-radius: 32rpx; padding: 36rpx 32rpx; margin-bottom: 24rpx; box-shadow: 0 12rpx 36rpx rgba(46, 91, 255, 0.3); }
 .hero-t { display: flex; align-items: center; gap: 12rpx; color: #fff; font-size: 40rpx; font-weight: 800; }
 .hero-s { display: block; color: rgba(255, 255, 255, 0.85); font-size: 24rpx; margin-top: 10rpx; }
 
@@ -579,7 +579,7 @@ export default {
 .wait-hint { background: #fef3c7; color: #b45309; font-size: 25rpx; font-weight: 600; line-height: 1.6; }
 
 /* 答题页 */
-.pk-top { background: linear-gradient(135deg, #5b8af8, #3b6ff5); border-radius: 32rpx; padding: 30rpx 32rpx; margin-bottom: 20rpx; box-shadow: 0 12rpx 36rpx rgba(59, 111, 245, 0.3); }
+.pk-top { background: linear-gradient(135deg, #5b8af8, #2e5bff); border-radius: 32rpx; padding: 30rpx 32rpx; margin-bottom: 20rpx; box-shadow: 0 12rpx 36rpx rgba(46, 91, 255, 0.3); }
 .vs { display: flex; align-items: center; justify-content: space-between; }
 .p { display: flex; flex-direction: column; align-items: center; gap: 8rpx; width: 200rpx; }
 .av { width: 96rpx; height: 96rpx; border-radius: 50%; background: #fff; color: var(--brand); display: flex; align-items: center; justify-content: center; font-size: 36rpx; font-weight: 800; }
