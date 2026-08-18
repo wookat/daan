@@ -738,7 +738,7 @@ def sitemap_index():
 
 @root_router.get("/sitemap-pages.xml", include_in_schema=False)
 def sitemap_pages():
-    urls = [(_url("/tiku/"), None), (_url("/tiku/papers/"), None)]
+    urls = [(_url("/"), None), (_url("/tiku/"), None), (_url("/tiku/papers/"), None)]
     for r in db.question_counts():
         if not _module_name(r["module"]):
             continue
