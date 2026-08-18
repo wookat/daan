@@ -37,7 +37,7 @@
       </view>
 
       <view class="reg-tip" @click="goLogin">
-        <text class="reg-t">登录 / 注册考公助手，13 万题库免费刷 ›</text>
+        <text class="reg-t">登录 / 注册上岸错题，13 万题库免费刷 ›</text>
       </view>
     </template>
   </view>
@@ -91,7 +91,7 @@ export default {
         const d = await pkResult(this.rid);
         this.d = d;
         uni.setNavigationBarTitle({
-          title: `${this.creatorName} vs ${this.opponentName} 的答题 PK 战绩，不服来战！- 考公助手`,
+          title: `${this.creatorName} vs ${this.opponentName} 的答题 PK 战绩，不服来战！- 上岸错题`,
         });
       } catch (e) {
         this.errMsg = e.message || '战绩不存在或对局未结束';
@@ -118,7 +118,7 @@ export default {
 .card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 24rpx 28rpx; margin-bottom: 20rpx; }
 .empty { text-align: center; color: var(--ink-2); font-size: 25rpx; padding: 30rpx 0; }
 
-.hero { background: linear-gradient(135deg, #5b8af8, #3b6ff5); border-radius: 32rpx; padding: 36rpx 32rpx; margin-bottom: 24rpx; box-shadow: 0 12rpx 36rpx rgba(59, 111, 245, 0.3); }
+.hero { background: linear-gradient(135deg, #5b8af8, #2e5bff); border-radius: 32rpx; padding: 36rpx 32rpx; margin-bottom: 24rpx; box-shadow: 0 12rpx 36rpx rgba(46, 91, 255, 0.3); }
 .hero-t { display: block; color: #fff; font-size: 40rpx; font-weight: 800; }
 .hero-s { display: block; color: rgba(255, 255, 255, 0.85); font-size: 24rpx; margin-top: 10rpx; }
 

@@ -172,7 +172,7 @@
       </template>
       <view v-if="tab !== 'fav' && todoItems.length >= 3" class="card redoentry" @click="aiAnalysis">
         <view class="redo-l">
-          <view class="redo-ico"><l-icon name="bot-message-square" :size="16" color="#3b6ff5" /></view>
+          <view class="redo-ico"><l-icon name="bot-message-square" :size="16" color="#2e5bff" /></view>
           <view>
             <text class="redo-t">AI 错题分析</text>
             <text class="redo-s">基于你的错题分布与近期作答生成诊断与复习建议</text>
@@ -192,7 +192,7 @@
       </view>
       <view v-if="tab !== 'fav'" class="card redoentry" @click="scanSheetPick">
         <view class="redo-l">
-          <view class="redo-ico"><l-icon name="scan-line" :size="16" color="#3b6ff5" /></view>
+          <view class="redo-ico"><l-icon name="scan-line" :size="16" color="#2e5bff" /></view>
           <view>
             <text class="redo-t">扫描答题卡</text>
             <text class="redo-s">拍照导出卷的机读答题卡，自动对答案并记入做题记录</text>
@@ -202,7 +202,7 @@
       </view>
       <view v-if="tab !== 'fav'" class="card redoentry" @click="manualOpenSheet">
         <view class="redo-l">
-          <view class="redo-ico"><l-icon name="pencil-line" :size="16" color="#3b6ff5" /></view>
+          <view class="redo-ico"><l-icon name="pencil-line" :size="16" color="#2e5bff" /></view>
           <view>
             <text class="redo-t">手动录入答案</text>
             <text class="redo-s">打印卷做完后按题号点选答案，一键交卷自动判分记录</text>
@@ -260,7 +260,7 @@
       </view>
       <view v-if="tab !== 'fav' && todoItems.length" class="card redoentry" @click="redoAll">
         <view class="redo-l">
-          <view class="redo-ico"><l-icon name="rotate-ccw" :size="16" color="#3b6ff5" /></view>
+          <view class="redo-ico"><l-icon name="rotate-ccw" :size="16" color="#2e5bff" /></view>
           <view>
             <text class="redo-t">错题重练{{ kpFilter ? ' · ' + kpFilter : '' }}</text>
             <text class="redo-s">{{ kpFilter ? '只重练当前筛选题型的待掌握错题（最多 10 题）' : '把待掌握错题按刷题模式重做一遍（最多 10 题）' }}</text>
@@ -1193,7 +1193,7 @@ export default {
 .e-ico { font-size: 72rpx; margin-bottom: 16rpx; }
 .e-t { font-size: 32rpx; font-weight: 600; margin-bottom: 10rpx; }
 .e-s { font-size: 24rpx; color: var(--ink-2); line-height: 1.7; margin-bottom: 28rpx; }
-:deep(.e-btn2) { margin-top: 8rpx; min-width: 60%; border-radius: 18rpx !important; background: linear-gradient(135deg, #6c9bff, var(--brand)) !important; font-weight: 600; }
+:deep(.e-btn2) { margin-top: 8rpx; min-width: 60%; border-radius: 18rpx !important; background: linear-gradient(135deg, #5c82ff, var(--brand)) !important; font-weight: 600; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; border-left: none; }
 .searchbar { display: flex; align-items: center; gap: 12rpx; background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 14rpx 26rpx; margin-bottom: 20rpx; }
 .searchinput { flex: 1; font-size: 26rpx; color: var(--ink); height: 40rpx; line-height: 40rpx; }
@@ -1271,7 +1271,7 @@ export default {
 .rf-t { font-size: 26rpx; color: var(--ink-2, #646a73); }
 .rf-name { font-size: 34rpx; font-weight: 700; margin-top: 10rpx; }
 .rf-meta { font-size: 22rpx; color: var(--ink-2, #8a90a0); margin: 8rpx 0 26rpx; }
-.rf-btn { background: var(--brand, #3b6ff5); color: #fff; border-radius: 999rpx; font-size: 28rpx; }
+.rf-btn { background: var(--brand, #2e5bff); color: #fff; border-radius: 999rpx; font-size: 28rpx; }
 .rf-row2 { display: flex; justify-content: center; gap: 48rpx; margin-top: 22rpx; }
 .rf-alt { font-size: 24rpx; color: var(--ink-2, #8a90a0); padding: 8rpx 16rpx; }
 .sheet { width: 100%; background: var(--card); border-radius: 24rpx 24rpx 0 0; padding: 28rpx 28rpx 48rpx; max-height: 70vh; overflow-y: auto; box-sizing: border-box; }
@@ -1310,7 +1310,7 @@ export default {
 .op.reportop { color: var(--ink-3); text-decoration: underline; }
 .rp-types { display: flex; flex-wrap: wrap; gap: 16rpx; margin-bottom: 20rpx; }
 .rp-chip { padding: 18rpx 26rpx; border-radius: 999rpx; background: var(--soft-bg); font-size: 26rpx; color: var(--ink-2); }
-.rp-chip.on { background: rgba(59, 111, 245, 0.12); color: var(--brand); font-weight: 600; }
+.rp-chip.on { background: rgba(46, 91, 255, 0.12); color: var(--brand); font-weight: 600; }
 .rp-detail { width: 100%; box-sizing: border-box; min-height: 140rpx; background: var(--soft-bg); border-radius: 16rpx; padding: 20rpx; font-size: 26rpx; }
 .rp-submit { margin-bottom: 110rpx; }
 .rp-submit.off { opacity: 0.45; pointer-events: none; }
@@ -1320,7 +1320,7 @@ export default {
 .q { font-size: 26rpx; line-height: 1.5; margin-top: 10rpx; }
 .q.clamp { max-height: 120rpx; overflow: hidden; }
 .meta { font-size: 22rpx; color: var(--ink-2); }
-.duecard { background: linear-gradient(180deg, #4a7bf7, #3567ec); border: none; box-shadow: 0 6rpx 16rpx rgba(59, 111, 245, 0.25); display: flex; justify-content: space-between; align-items: center; }
+.duecard { background: linear-gradient(180deg, #4a7bf7, #3567ec); border: none; box-shadow: 0 6rpx 16rpx rgba(46, 91, 255, 0.25); display: flex; justify-content: space-between; align-items: center; }
 .redoentry { display: flex; justify-content: space-between; align-items: center; }
 .redo-l { display: flex; align-items: center; gap: 16rpx; }
 .redo-ico { width: 64rpx; height: 64rpx; border-radius: 50%; background: var(--brand-soft); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -1366,7 +1366,7 @@ export default {
 .opt.ok { background: var(--ok-soft); border-color: #3aa53a; color: #2a7a2a; }
 .opt.bad { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); }
 .opt.dim { opacity: 0.4; }
-.opt.sel { background: var(--brand-soft, #edf3fe); border-color: var(--brand, #3b6ff5); color: var(--brand, #3b6ff5); }
+.opt.sel { background: var(--brand-soft, #eef3ff); border-color: var(--brand, #2e5bff); color: var(--brand, #2e5bff); }
 .verdict { font-size: 26rpx; font-weight: 600; margin: 12rpx 0; }
 .verdict.good { color: #2a7a2a; }
 .verdict.badv { color: #b03030; }
@@ -1375,18 +1375,18 @@ export default {
 .rz-t { font-size: 23rpx; color: var(--ink-2); }
 .rz { font-size: 23rpx; color: var(--ink-2); border: 1rpx solid var(--line); background: var(--soft-bg); border-radius: 999rpx; padding: 8rpx 22rpx; }
 .rz.on { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
-.appended-tip { font-size: 23rpx; color: var(--brand, #3b6ff5); background: var(--brand-soft, #edf3fe); border-radius: 10rpx; padding: 10rpx 16rpx; margin-bottom: 12rpx; }
+.appended-tip { font-size: 23rpx; color: var(--brand, #2e5bff); background: var(--brand-soft, #eef3ff); border-radius: 10rpx; padding: 10rpx 16rpx; margin-bottom: 12rpx; }
 .sim-row { margin-top: 16rpx; text-align: center; }
-.sim-t { font-size: 25rpx; color: var(--brand, #3b6ff5); font-weight: 600; }
+.sim-t { font-size: 25rpx; color: var(--brand, #2e5bff); font-weight: 600; }
 .recap-h { display: flex; justify-content: space-between; align-items: center; }
 .recap-t { font-size: 26rpx; font-weight: 700; color: var(--ink-1, #1f2329); }
-.recap-x { font-size: 23rpx; color: var(--brand, #3b6ff5); }
+.recap-x { font-size: 23rpx; color: var(--brand, #2e5bff); }
 .recap-sec { margin-top: 16rpx; }
 .recap-st { font-size: 22rpx; color: var(--ink-2); }
 .recap-row { display: flex; align-items: center; gap: 12rpx; margin-top: 10rpx; }
 .recap-name { flex: 0 0 160rpx; font-size: 23rpx; color: var(--ink-1, #1f2329); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .recap-bar { flex: 1; height: 14rpx; background: var(--soft-bg); border-radius: 999rpx; overflow: hidden; }
-.recap-fill { height: 100%; background: var(--brand, #3b6ff5); border-radius: 999rpx; }
+.recap-fill { height: 100%; background: var(--brand, #2e5bff); border-radius: 999rpx; }
 .recap-fill.warnfill { background: #f59e0b; }
 .recap-n { flex: 0 0 40rpx; text-align: right; font-size: 22rpx; color: var(--ink-2); }
 .recap-tip { display: block; margin-top: 14rpx; font-size: 22rpx; color: var(--ink-2); }

@@ -90,7 +90,7 @@ export default {
 .list { display: flex; flex-direction: column; gap: 18rpx; }
 .item { background: var(--card); border-radius: 24rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 24rpx 28rpx; }
 .item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
-.tag { background: #e8effe; color: #3b6ff5; font-size: 22rpx; font-weight: 600; border-radius: 8rpx; padding: 4rpx 14rpx; }
+.tag { background: #e8effe; color: #2e5bff; font-size: 22rpx; font-weight: 600; border-radius: 8rpx; padding: 4rpx 14rpx; }
 .score { font-size: 30rpx; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
 .score.good { color: #16a34a; }
 .q { font-size: 27rpx; color: var(--ink); line-height: 1.6; }
@@ -100,7 +100,7 @@ export default {
 .empty { display: flex; flex-direction: column; align-items: center; gap: 16rpx; padding: 120rpx 0; }
 .empty-ico { font-size: 72rpx; }
 .empty-t { font-size: 27rpx; color: var(--ink-2); }
-.btn-primary { background: #3b6ff5; color: #fff; border-radius: 999rpx; font-size: 28rpx; font-weight: 600; min-height: 44px; display: flex; align-items: center; justify-content: center; padding: 0 60rpx; margin-top: 12rpx; }
+.btn-primary { background: #2e5bff; color: #fff; border-radius: 999rpx; font-size: 28rpx; font-weight: 600; min-height: 44px; display: flex; align-items: center; justify-content: center; padding: 0 60rpx; margin-top: 12rpx; }
 
 /* #ifdef H5 */
 @media (min-width: 768px) {

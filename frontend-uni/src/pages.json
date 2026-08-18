@@ -139,7 +139,7 @@
   },
   "tabBar": {
     "color": "#6b7280",
-    "selectedColor": "#3b6ff5",
+    "selectedColor": "#2e5bff",
     "backgroundColor": "#ffffff",
     "list": [
       { "pagePath": "pages/home/home", "text": "刷题", "iconPath": "static/tab/home.png", "selectedIconPath": "static/tab/home-on.png" },
@@ -151,7 +151,7 @@
   },
   "globalStyle": {
     "navigationBarTextStyle": "black",
-    "navigationBarTitleText": "考公错题助手",
+    "navigationBarTitleText": "上岸错题",
     "navigationBarBackgroundColor": "#f6f7fb",
     "backgroundColor": "#f5f6fa"
   }

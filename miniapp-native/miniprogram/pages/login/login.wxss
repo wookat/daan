@@ -53,8 +53,8 @@
 
 .l-btn {
   margin-top: 32rpx;
-  --td-button-primary-bg-color: #3b6ff5;
-  --td-button-primary-border-color: #3b6ff5;
+  --td-button-primary-bg-color: #2e5bff;
+  --td-button-primary-border-color: #2e5bff;
 }
 
 .l-wxbtn {

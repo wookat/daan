@@ -74,7 +74,7 @@
       </template>
 
       <view class="reg-tip" @click="goLogin">
-        <text class="reg-t">登录 / 注册考公助手，13 万题库免费刷 ›</text>
+        <text class="reg-t">登录 / 注册上岸错题，13 万题库免费刷 ›</text>
       </view>
     </template>
   </view>
@@ -148,7 +148,7 @@ export default {
         if (d.q_stats) this.qStats = d.q_stats;
         this.teamInvite = d.team_invite || null;
         this.startTs = Date.now();
-        uni.setNavigationBarTitle({ title: `${d.from_name} 考了你一道${d.question.submodule || modName(d.question.module)}题，你能做对吗？- 考公助手` });
+        uni.setNavigationBarTitle({ title: `${d.from_name} 考了你一道${d.question.submodule || modName(d.question.module)}题，你能做对吗？- 上岸错题` });
       } catch (e) {
         this.errMsg = e.message || '分享不存在或已过期';
       }
@@ -228,7 +228,7 @@ export default {
 .empty { text-align: center; color: var(--ink-2); font-size: 25rpx; padding: 30rpx 0; }
 .empty.small { padding: 16rpx 0; }
 
-.from-bar { display: flex; align-items: center; gap: 18rpx; background: linear-gradient(135deg, #5b8af8, #3b6ff5); border-radius: 28rpx; padding: 26rpx 28rpx; margin-bottom: 20rpx; box-shadow: 0 12rpx 36rpx rgba(59, 111, 245, 0.3); }
+.from-bar { display: flex; align-items: center; gap: 18rpx; background: linear-gradient(135deg, #5b8af8, #2e5bff); border-radius: 28rpx; padding: 26rpx 28rpx; margin-bottom: 20rpx; box-shadow: 0 12rpx 36rpx rgba(46, 91, 255, 0.3); }
 .from-av { width: 72rpx; height: 72rpx; border-radius: 50%; background: #fff; color: var(--brand); font-size: 30rpx; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .from-l { flex: 1; min-width: 0; }
 .from-t { display: block; color: #fff; font-size: 30rpx; font-weight: 700; }

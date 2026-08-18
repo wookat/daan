@@ -35,14 +35,14 @@
           </view>
           <view class="tx">{{ c.content }}</view>
           <view class="ft">
-            <view class="up" :class="{ on: c.liked }" @click="like(c)"><l-icon name="thumbs-up" :size="13" :color="c.liked ? '#3b6ff5' : '#8a90a0'" /><text>{{ c.likes || '赞' }}</text></view>
+            <view class="up" :class="{ on: c.liked }" @click="like(c)"><l-icon name="thumbs-up" :size="13" :color="c.liked ? '#2e5bff' : '#8a90a0'" /><text>{{ c.likes || '赞' }}</text></view>
             <text class="op" @click="startReply(c)">回复{{ c.replies.length ? ' ' + c.replies.length : '' }}</text>
             <text v-if="c.mine" class="op del" @click="removeOwn(c)">删除</text>
           </view>
           <view v-for="r in c.replies" :key="r.id" class="reply">
             <text class="rnm">{{ r.nickname }}：</text>{{ r.content }}
             <view class="rft">
-              <view class="up sm" :class="{ on: r.liked }" @click="like(r)"><l-icon name="thumbs-up" :size="12" :color="r.liked ? '#3b6ff5' : '#8a90a0'" /><text>{{ r.likes || '赞' }}</text></view>
+              <view class="up sm" :class="{ on: r.liked }" @click="like(r)"><l-icon name="thumbs-up" :size="12" :color="r.liked ? '#2e5bff' : '#8a90a0'" /><text>{{ r.likes || '赞' }}</text></view>
               <text class="op sm" @click="startReply(c, r)">回复</text>
               <text v-if="r.mine" class="op sm del" @click="removeOwn(r, c)">删除</text>
             </view>
@@ -131,7 +131,7 @@ export default {
       return NAMES[m] || m || '';
     },
     modColor(m) {
-      return COLORS[m] || { bg: '#EDF3FE', fg: '#3B6FF5' };
+      return COLORS[m] || { bg: '#EEF3FF', fg: '#2E5BFF' };
     },
     avatarStyle(nm) {
       let h = 0;

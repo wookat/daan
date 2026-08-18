@@ -1,8 +1,8 @@
 <template>
   <view class="wrap">
     <view class="hero">
-      <view class="hero-logo">📘</view>
-      <text class="hero-t">考公错题助手</text>
+      <image class="hero-logo" src="/static/brand/kaogong.svg" mode="aspectFit" />
+      <text class="hero-t">上岸错题</text>
       <text class="hero-s">登录后错题、做题记录多端同步，本机记录自动合并</text>
     </view>
 
@@ -103,13 +103,9 @@ export default {
   width: 144rpx;
   height: 144rpx;
   border-radius: 44rpx;
-  background: linear-gradient(135deg, #5b8af8, #3b6ff5);
   margin: 0 auto 28rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 68rpx;
-  box-shadow: 0 16rpx 40rpx rgba(59, 111, 245, 0.35);
+  display: block;
+  box-shadow: 0 16rpx 40rpx rgba(46, 91, 255, 0.35);
 }
 .hero-t {
   display: block;
@@ -148,7 +144,7 @@ export default {
   background: var(--card);
   color: var(--brand);
   font-weight: 600;
-  box-shadow: 0 2rpx 8rpx rgba(59, 111, 245, 0.15);
+  box-shadow: 0 2rpx 8rpx rgba(46, 91, 255, 0.15);
 }
 .field {
   margin-bottom: 28rpx;

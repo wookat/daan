@@ -32,7 +32,7 @@ from . import (
 )
 from .deps import ACCESS_CODE
 
-app = FastAPI(title="考公错题助手")
+app = FastAPI(title="上岸错题")
 # Android App（Capacitor WebView，origin 为 https://localhost）跨域访问 API
 APP_ORIGINS = os.environ.get(
     "APP_CORS_ORIGINS", "https://localhost,capacitor://localhost,http://localhost"

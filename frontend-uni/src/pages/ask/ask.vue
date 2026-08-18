@@ -14,12 +14,12 @@
 
     <!-- 空态引导 -->
     <view v-if="!results.length && !loading" class="empty-guide">
-      <view class="eg-ico"><l-icon name="message-circle" :size="34" color="#3b6ff5" /></view>
+      <view class="eg-ico"><l-icon name="message-circle" :size="34" color="#2e5bff" /></view>
       <text class="eg-t">拍下或粘贴一道题，AI 讲给你听</text>
       <text class="eg-s">答案 + 花生十三速解方法 + 可迁移技巧，支持追问和举一反三</text>
       <view class="eg-acts">
         <view class="eg-btn main" @click="pickImage"><l-icon name="camera" :size="16" color="#ffffff" /><text>拍题 / 相册</text></view>
-        <view class="eg-btn" @click="textOpen = true"><l-icon name="clipboard-list" :size="16" color="#3b6ff5" /><text>粘贴文字</text></view>
+        <view class="eg-btn" @click="textOpen = true"><l-icon name="clipboard-list" :size="16" color="#2e5bff" /><text>粘贴文字</text></view>
       </view>
       <view class="eg-iv" @click="goInterview"><l-icon name="mic" :size="14" color="#7c3aed" /><text>AI 面试陪练：抽真题 · 考官打分点评 ›</text></view>
       <view v-if="recent.length" class="card reccard">
@@ -63,7 +63,7 @@
           <view v-if="r.explain_key && !r.streaming" class="raterow">
             <text class="rate-q">{{ r.rated ? (r.rated === 'up' ? '已反馈：有用' : '已反馈：有误，我们会核查') : '这条解析有帮助吗？' }}</text>
             <view v-if="!r.rated" class="rate-btns">
-              <view class="rate-btn" @click="rate(r, true)"><l-icon name="thumbs-up" :size="13" color="#3b6ff5" /><text>有用</text></view>
+              <view class="rate-btn" @click="rate(r, true)"><l-icon name="thumbs-up" :size="13" color="#2e5bff" /><text>有用</text></view>
               <view class="rate-btn bad" @click="rate(r, false)"><l-icon name="thumbs-down" :size="13" color="#b91c1c" /><text>有误</text></view>
             </view>
           </view>
@@ -656,9 +656,9 @@ export default {
 .eg-t { display: block; font-size: 30rpx; font-weight: 700; color: var(--ink); margin-top: 16rpx; }
 .eg-s { display: block; font-size: 23rpx; color: var(--ink-2); margin-top: 10rpx; line-height: 1.7; }
 .eg-acts { display: flex; gap: 20rpx; margin: 32rpx 0 24rpx; }
-.eg-iv { min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 8rpx; border-radius: 20rpx; font-size: 26rpx; font-weight: 600; background: #eef4ff; color: #3b6ff5; margin-bottom: 40rpx; }
+.eg-iv { min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 8rpx; border-radius: 20rpx; font-size: 26rpx; font-weight: 600; background: #eef4ff; color: #2e5bff; margin-bottom: 40rpx; }
 .eg-btn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 8rpx; border-radius: 20rpx; font-size: 28rpx; font-weight: 600; background: var(--card); color: var(--ink); border: 1rpx solid var(--line); }
-.eg-btn.main { background: linear-gradient(135deg, #5b8af8, var(--brand)); color: #fff; border: none; box-shadow: 0 8rpx 24rpx rgba(59, 111, 245, 0.28); }
+.eg-btn.main { background: linear-gradient(135deg, #5b8af8, var(--brand)); color: #fff; border: none; box-shadow: 0 8rpx 24rpx rgba(46, 91, 255, 0.28); }
 .reccard { text-align: left; }
 
 .msgs { display: flex; flex-direction: column; }
@@ -701,7 +701,7 @@ export default {
 
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .label { font-size: 24rpx; color: var(--ink-2); display: block; margin: 20rpx 0 10rpx; }
-.btn { background: var(--brand); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(59, 111, 245, 0.25); min-height: 44px; line-height: 44px; }
+.btn { background: var(--brand); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(46, 91, 255, 0.25); min-height: 44px; line-height: 44px; }
 .btn[disabled] { opacity: 0.6; }
 .btn.ghost { background: var(--brand-soft); color: var(--brand); box-shadow: none; }
 .btn.sm { font-size: 26rpx; flex: 1; }
@@ -720,7 +720,7 @@ export default {
 .rate-btn { display: inline-flex; align-items: center; gap: 6rpx; font-size: 24rpx; color: var(--brand); border: 1rpx solid var(--brand); border-radius: 999rpx; padding: 8rpx 24rpx; }
 .rate-btn.bad { color: var(--bad); border-color: var(--bad); }
 .anscard { display: flex; align-items: center; gap: 22rpx; background: var(--brand-soft); border: 1rpx solid var(--brand-soft-2); border-radius: 20rpx; padding: 22rpx 26rpx; margin: 6rpx 0 16rpx; }
-.ans-big { flex-shrink: 0; min-width: 88rpx; height: 88rpx; padding: 0 14rpx; border-radius: 20rpx; background: var(--brand); color: #fff; font-size: 44rpx; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 6rpx 14rpx rgba(59, 111, 245, 0.3); }
+.ans-big { flex-shrink: 0; min-width: 88rpx; height: 88rpx; padding: 0 14rpx; border-radius: 20rpx; background: var(--brand); color: #fff; font-size: 44rpx; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 6rpx 14rpx rgba(46, 91, 255, 0.3); }
 .ans-r { flex: 1; min-width: 0; }
 .ans-method { display: inline-block; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 21rpx; font-weight: 600; padding: 4rpx 18rpx; margin-bottom: 8rpx; }
 .ans-brief { display: block; font-size: 25rpx; color: var(--ink); line-height: 1.5; }

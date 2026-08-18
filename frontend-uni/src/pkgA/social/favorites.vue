@@ -25,7 +25,7 @@
           <text class="chev">{{ folderId === f.id ? '✓' : '›' }}</text>
         </view>
         <view class="folder add" @click="newFolder">
-          <view class="fico"><l-icon name="folder-plus" :size="18" color="#3b6ff5" /></view>
+          <view class="fico"><l-icon name="folder-plus" :size="18" color="#2e5bff" /></view>
           <view class="fmain"><text class="fname add-t">新建收藏夹</text></view>
         </view>
       </view>
@@ -137,7 +137,7 @@ export default {
       return MODS[m] || m || '';
     },
     modColor(m) {
-      return COLORS[m] || { bg: '#EDF3FE', fg: '#3B6FF5' };
+      return COLORS[m] || { bg: '#EEF3FF', fg: '#2E5BFF' };
     },
     fmtDate(ts) {
       const d = new Date(ts * 1000);

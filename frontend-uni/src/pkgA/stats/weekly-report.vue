@@ -161,7 +161,7 @@ function drawShare(ctx, r) {
   ctx.textBaseline = 'top';
   ctx.fillStyle = 'rgba(255,255,255,0.85)';
   ctx.font = '24px sans-serif';
-  ctx.fillText('考公错题助手 · 周学习报告', pad, 52);
+  ctx.fillText('上岸错题 · 周学习报告', pad, 52);
   ctx.fillStyle = '#fff';
   ctx.font = '800 52px sans-serif';
   ctx.fillText(r.range, pad, 100);
@@ -389,7 +389,7 @@ export default {
 .empty-t { display: block; font-size: 32rpx; font-weight: 700; color: var(--ink); }
 .empty-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 12rpx; }
 .cta { margin-top: 32rpx; min-height: 44px; display: flex; align-items: center; justify-content: center; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 28rpx; font-weight: 600; }
-.hero { background: linear-gradient(135deg, var(--brand), #6c9bff); border: none; }
+.hero { background: linear-gradient(135deg, var(--brand), #5c82ff); border: none; }
 .hero-range { display: block; font-size: 25rpx; color: rgba(255, 255, 255, 0.85); text-align: center; }
 .hero-nums { display: flex; margin-top: 24rpx; }
 .hn { flex: 1; text-align: center; }

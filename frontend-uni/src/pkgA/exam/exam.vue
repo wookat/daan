@@ -340,8 +340,8 @@ export default {
 .top-btns { display: flex; gap: 10rpx; }
 .tbtn { min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; font-size: 23rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 22rpx; background: var(--card); }
 .tbtn.on { color: #d97706; border-color: #f59e0b; background: var(--warn-soft); font-weight: 600; }
-.progress { height: 6rpx; background: #e0e7ff; border-radius: 999rpx; overflow: hidden; margin-bottom: 20rpx; }
-.pfill { height: 100%; background: linear-gradient(90deg, #6c9bff, var(--brand)); border-radius: 999rpx; transition: width 0.3s ease; }
+.progress { height: 6rpx; background: #dbe6ff; border-radius: 999rpx; overflow: hidden; margin-bottom: 20rpx; }
+.pfill { height: 100%; background: linear-gradient(90deg, #5c82ff, var(--brand)); border-radius: 999rpx; transition: width 0.3s ease; }
 .q { font-size: 30rpx; line-height: 1.7; margin-bottom: 22rpx; white-space: pre-wrap; display: block; }
 .qimg { width: 100%; border-radius: 12rpx; margin-bottom: 16rpx; background: var(--fill); }
 .opt { display: flex; align-items: center; border: 2rpx solid var(--line); border-radius: 20rpx; padding: 22rpx 24rpx; margin-bottom: 20rpx; font-size: 29rpx; line-height: 1.6; min-height: 44px; box-sizing: border-box; }

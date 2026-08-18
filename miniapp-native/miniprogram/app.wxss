@@ -1,15 +1,15 @@
-/* design v2 token（docs/design/miniapp-v2/tokens.md），brand #3B6FF5 */
+/* design v2 token · 上岸 Zalize 岸蓝 #2E5BFF（@zalize/brand 对齐） */
 page {
-  --brand-50: #eef4ff;
-  --brand-100: #dce8ff;
-  --brand-200: #b9d0ff;
-  --brand-300: #8ab0ff;
-  --brand-400: #5c8cff;
-  --brand-500: #3b6ff5;
-  --brand-600: #2f57d4;
-  --brand-700: #2545ab;
-  --brand-grad: linear-gradient(160deg, #5c8cff 0%, #3b6ff5 52%, #2f57d4 100%);
-  --brand-grad-btn: linear-gradient(135deg, #5c8cff, #3457e0);
+  --brand-50: #eef3ff;
+  --brand-100: #dbe6ff;
+  --brand-200: #b8ccff;
+  --brand-300: #8aa9ff;
+  --brand-400: #5c82ff;
+  --brand-500: #2e5bff;
+  --brand-600: #1e44d9;
+  --brand-700: #1735ab;
+  --brand-grad: linear-gradient(160deg, #5c82ff 0%, #2e5bff 52%, #1e44d9 100%);
+  --brand-grad-btn: linear-gradient(135deg, #5c82ff, #1e44d9);
 
   --accent-500: #ff8a3d;
   --accent-600: #f2711c;
@@ -41,8 +41,8 @@ page {
 
   --mod-ziliao: #14b8a6;
   --mod-ziliao-bg: #e6f9f6;
-  --mod-shuliang: #3b6ff5;
-  --mod-shuliang-bg: #eef4ff;
+  --mod-shuliang: #2e5bff;
+  --mod-shuliang-bg: #eef3ff;
   --mod-yanyu: #f43f5e;
   --mod-yanyu-bg: #fef0f2;
   --mod-panduan: #8b5cf6;
@@ -59,7 +59,7 @@ page {
 
   --sh-1: 0 2rpx 4rpx rgba(23, 26, 35, 0.03), 0 8rpx 28rpx rgba(23, 26, 35, 0.05);
   --sh-2: 0 4rpx 12rpx rgba(23, 26, 35, 0.04), 0 20rpx 56rpx rgba(23, 26, 35, 0.08);
-  --sh-brand: 0 12rpx 32rpx rgba(59, 111, 245, 0.32);
+  --sh-brand: 0 12rpx 32rpx rgba(46, 91, 255, 0.32);
   --sh-accent: 0 12rpx 32rpx rgba(255, 138, 61, 0.32);
 
   background-color: var(--bg);

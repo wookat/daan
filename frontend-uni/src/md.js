@@ -18,7 +18,7 @@ export function md(s) {
     if (/^\s*```/.test(l)) {
       if (!inCode) { close(); inCode = 1; codeBuf = []; }
       else {
-        out += '<div style="font-family:ui-monospace,Menlo,Consolas,monospace;background:#edf3fe;border-left:5px solid #6c9bff;border-radius:8px;padding:10px 12px;font-size:14px;line-height:1.8;margin:10px 0;white-space:pre-wrap;word-break:break-all;color:#2f5cd8">' + codeBuf.join('\n') + '</div>';
+        out += '<div style="font-family:ui-monospace,Menlo,Consolas,monospace;background:#eef3ff;border-left:5px solid #5c82ff;border-radius:8px;padding:10px 12px;font-size:14px;line-height:1.8;margin:10px 0;white-space:pre-wrap;word-break:break-all;color:#2f5cd8">' + codeBuf.join('\n') + '</div>';
         inCode = 0;
       }
       continue;
@@ -38,20 +38,20 @@ export function md(s) {
       const t = l.slice(4).trim();
       const st = /^第\s*([0-9一二三四五六七八九十]+)\s*步\s*[：:]?\s*(.*)$/.exec(t);
       if (st) {
-        out += '<div style="display:flex;align-items:center;margin:16px 0 6px"><span style="background:#3b6ff5;color:#fff;border-radius:999px;font-size:12px;font-weight:600;padding:2px 12px;margin-right:8px;flex-shrink:0">第' + st[1] + '步</span><span style="font-size:15px;font-weight:700">' + inline(st[2]) + '</span></div>';
+        out += '<div style="display:flex;align-items:center;margin:16px 0 6px"><span style="background:#2e5bff;color:#fff;border-radius:999px;font-size:12px;font-weight:600;padding:2px 12px;margin-right:8px;flex-shrink:0">第' + st[1] + '步</span><span style="font-size:15px;font-weight:700">' + inline(st[2]) + '</span></div>';
       } else {
         out += '<h3 style="font-size:15px;margin:10px 0 4px">' + inline(t) + '</h3>';
       }
     }
-    else if (/^##\s/.test(l)) { close(); out += '<h2 style="font-size:16px;margin:14px 0 6px;color:#3b6ff5">' + inline(l.slice(3)) + '</h2>'; }
-    else if (/^#\s/.test(l)) { close(); out += '<h2 style="font-size:16px;margin:14px 0 6px;color:#3b6ff5">' + inline(l.slice(2)) + '</h2>'; }
+    else if (/^##\s/.test(l)) { close(); out += '<h2 style="font-size:16px;margin:14px 0 6px;color:#2e5bff">' + inline(l.slice(3)) + '</h2>'; }
+    else if (/^#\s/.test(l)) { close(); out += '<h2 style="font-size:16px;margin:14px 0 6px;color:#2e5bff">' + inline(l.slice(2)) + '</h2>'; }
     else if (/^\s*[-*]\s/.test(l)) { if (!inUl) { close(); out += '<ul style="padding-left:20px">'; inUl = 1; } out += '<li style="font-size:15px;line-height:1.65">' + inline(l.replace(/^\s*[-*]\s/, '')) + '</li>'; }
     else if (/^\s*\d+[.、]\s/.test(l)) { if (!inOl) { close(); out += '<ol style="padding-left:20px">'; inOl = 1; } out += '<li style="font-size:15px;line-height:1.65">' + inline(l.replace(/^\s*\d+[.、]\s/, '')) + '</li>'; }
     else if (l.trim() === '') { close(); }
     else { close(); out += '<p style="font-size:15px;line-height:1.65;margin:4px 0">' + inline(l) + '</p>'; }
   }
   if (inCode && codeBuf.length) {
-    out += '<div style="font-family:ui-monospace,Menlo,Consolas,monospace;background:#edf3fe;border-left:5px solid #6c9bff;border-radius:8px;padding:10px 12px;font-size:14px;line-height:1.8;margin:10px 0;white-space:pre-wrap;word-break:break-all;color:#2f5cd8">' + codeBuf.join('\n') + '</div>';
+    out += '<div style="font-family:ui-monospace,Menlo,Consolas,monospace;background:#eef3ff;border-left:5px solid #5c82ff;border-radius:8px;padding:10px 12px;font-size:14px;line-height:1.8;margin:10px 0;white-space:pre-wrap;word-break:break-all;color:#2f5cd8">' + codeBuf.join('\n') + '</div>';
   }
   close();
   return out;

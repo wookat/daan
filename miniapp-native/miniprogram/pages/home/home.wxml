@@ -32,7 +32,7 @@
     <view class="card taskcard">
       <view class="tk-h">
         <text class="tk-t">今日任务</text>
-        <view class="tk-ring" style="background: conic-gradient(#3b6ff5 0deg {{taskDoneN * 120}}deg, #f1f3f8 {{taskDoneN * 120}}deg 360deg)">
+        <view class="tk-ring" style="background: conic-gradient(#2e5bff 0deg {{taskDoneN * 120}}deg, #f1f3f8 {{taskDoneN * 120}}deg 360deg)">
           <view class="tk-ring-i">{{taskDoneN}}/3</view>
         </view>
       </view>

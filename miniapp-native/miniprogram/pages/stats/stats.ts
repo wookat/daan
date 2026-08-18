@@ -15,7 +15,7 @@ interface ModRow {
 
 const MOD_COLORS: Record<string, string> = {
   ziliao: '#14b8a6',
-  shuliang: '#3b6ff5',
+  shuliang: '#2e5bff',
   yanyu: '#f43f5e',
   panduan: '#8b5cf6',
   changshi: '#f59e0b',
@@ -79,7 +79,7 @@ Page({
         done: m.done,
         correct: m.correct,
         pct: m.done ? Math.round((m.correct / m.done) * 100) : 0,
-        color: MOD_COLORS[k] || '#3b6ff5',
+        color: MOD_COLORS[k] || '#2e5bff',
         weak: false,
         gap: 0,
       };

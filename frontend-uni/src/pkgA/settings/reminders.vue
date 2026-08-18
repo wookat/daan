@@ -2,15 +2,15 @@
   <view class="wrap reminders">
     <view class="card group">
       <view class="set-row">
-        <view class="ico"><l-icon name="alarm-clock" :size="18" color="#3b6ff5" /></view>
+        <view class="ico"><l-icon name="alarm-clock" :size="18" color="#2e5bff" /></view>
         <view class="grow">
           <text class="nm">每日刷题提醒</text>
           <text class="sub">每天 {{ time }} · 未完成今日目标时提醒</text>
         </view>
-        <wd-switch :model-value="on" active-color="#3b6ff5" size="22px" @change="toggle" />
+        <wd-switch :model-value="on" active-color="#2e5bff" size="22px" @change="toggle" />
       </view>
       <view class="set-row" :class="{ dim: !on }">
-        <view class="ico"><l-icon name="clock" :size="18" color="#3b6ff5" /></view>
+        <view class="ico"><l-icon name="clock" :size="18" color="#2e5bff" /></view>
         <view class="grow">
           <text class="nm">提醒时间</text>
           <text class="sub">建议安排在晚间黄金学习时段</text>
@@ -36,7 +36,7 @@
     <!-- #ifdef MP-WEIXIN -->
     <view v-if="mpSubscribeAvailable" class="card group">
       <view class="set-row" @click="mpSubscribe">
-        <view class="ico"><l-icon name="send" :size="18" color="#3b6ff5" /></view>
+        <view class="ico"><l-icon name="send" :size="18" color="#2e5bff" /></view>
         <view class="grow">
           <text class="nm">微信订阅提醒</text>
           <text class="sub">一次授权可收到一条服务通知</text>
@@ -48,13 +48,13 @@
 
     <view class="sec-t">提醒样式预览</view>
     <view class="push">
-      <view class="hd"><text class="appico">考</text><text>考公错题助手 · {{ time }}</text></view>
+      <view class="hd"><text class="appico">岸</text><text>上岸错题 · {{ time }}</text></view>
       <text class="tt">{{ done >= goal ? '今日目标已达成，保持手感再练一组？🎉' : '今晚还差 ' + previewLeft + ' 题就能守住连续打卡 🔥' }}</text>
       <text class="bd">今日目标 {{ goal }} 题已完成 {{ done }} 题{{ done >= goal ? '' : '，练完守住连续打卡～' }}</text>
     </view>
 
     <view class="card tip">
-      <text class="tip-t"><l-icon name="lightbulb" :size="14" color="#3b6ff5" /> 提醒只在「有事可做」时打扰你：当天已达成目标则改为轻量鼓励；H5 端需保持页面打开才能收到通知。</text>
+      <text class="tip-t"><l-icon name="lightbulb" :size="14" color="#2e5bff" /> 提醒只在「有事可做」时打扰你：当天已达成目标则改为轻量鼓励；H5 端需保持页面打开才能收到通知。</text>
     </view>
   </view>
 </template>
@@ -153,7 +153,7 @@ export default {
 .sec-t { font-size: 24rpx; color: var(--ink-2); margin: 28rpx 8rpx 14rpx; }
 .push { background: var(--card); border-radius: 24rpx; box-shadow: 0 6rpx 20rpx rgba(23, 24, 28, 0.08); padding: 24rpx 28rpx; margin-bottom: 20rpx; }
 .push .hd { display: flex; align-items: center; gap: 12rpx; font-size: 21rpx; color: var(--ink-2); margin-bottom: 10rpx; }
-.appico { width: 36rpx; height: 36rpx; border-radius: 10rpx; background: linear-gradient(135deg, #5b8af8, #3b6ff5); color: #fff; font-size: 20rpx; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.appico { width: 36rpx; height: 36rpx; border-radius: 10rpx; background: linear-gradient(135deg, #5b8af8, #2e5bff); color: #fff; font-size: 20rpx; font-weight: 800; display: flex; align-items: center; justify-content: center; }
 .tt { display: block; font-size: 27rpx; font-weight: 700; color: var(--ink); }
 .bd { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 6rpx; line-height: 1.6; }
 

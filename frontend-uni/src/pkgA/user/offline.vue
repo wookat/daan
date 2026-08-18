@@ -12,7 +12,7 @@
     </view>
 
     <view v-if="pending" class="card sync" @click="syncNow">
-      <text class="sync-t"><l-icon name="refresh-cw" :size="14" color="#3b6ff5" /> 待同步：离线作答 {{ pending }} 条 · 联网后自动上传并更新统计</text>
+      <text class="sync-t"><l-icon name="refresh-cw" :size="14" color="#2e5bff" /> 待同步：离线作答 {{ pending }} 条 · 联网后自动上传并更新统计</text>
       <text class="sync-btn">{{ syncing ? '同步中…' : '立即同步' }}</text>
     </view>
 
@@ -40,7 +40,7 @@
 <script>
 import { PACK_MODULES, PACK_SIZE, downloadPack, removePack, listPacks, packUsageBytes, pendingCount, flushOfflineQueue } from '../../offline.js';
 
-const MOD_BG = { ziliao: '#0d9488', shuliang: '#3b6ff5', yanyu: '#e11d48', panduan: '#7c3aed', changshi: '#d97706' };
+const MOD_BG = { ziliao: '#0d9488', shuliang: '#2e5bff', yanyu: '#e11d48', panduan: '#7c3aed', changshi: '#d97706' };
 
 export default {
   data() {

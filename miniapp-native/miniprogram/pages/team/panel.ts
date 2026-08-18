@@ -93,7 +93,7 @@ Page({
   inviteText(): string {
     const t = this.data.panel!.team;
     const url = `${SITE}/#/pages/team/join?code=${t.invite_code}`;
-    return `我在考公助手建了刷题小队「${t.name}」，一起打卡刷题冲上岸！邀请码 ${t.invite_code}，点链接直接加入：${url}`;
+    return `我在上岸错题建了刷题小队「${t.name}」，一起打卡刷题冲上岸！邀请码 ${t.invite_code}，点链接直接加入：${url}`;
   },
 
   onCopyInvite() {
@@ -135,7 +135,7 @@ Page({
     if (!m) return;
     const url = `${SITE}/#/pages/team/join?code=${p.team.invite_code}`;
     wx.setClipboardData({
-      data: `「${m.nickname}」今天还没刷题哦！我在考公助手小队「${p.team.name}」等你打卡，别掉队：${url}`,
+      data: `「${m.nickname}」今天还没刷题哦！我在上岸错题小队「${p.team.name}」等你打卡，别掉队：${url}`,
       success: () => wx.showToast({ title: '催打卡文案已复制，发给 TA 吧', icon: 'none' }),
     });
   },

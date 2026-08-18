@@ -22,14 +22,14 @@
   "themeLocation": "theme.json",
   "window": {
     "navigationStyle": "custom",
-    "navigationBarTitleText": "考公错题助手",
+    "navigationBarTitleText": "上岸错题",
     "backgroundColor": "@bgColor",
     "backgroundTextStyle": "@bgTxtStyle"
   },
   "tabBar": {
     "custom": true,
     "color": "#7D818F",
-    "selectedColor": "#3B6FF5",
+    "selectedColor": "#2e5bff",
     "backgroundColor": "#ffffff",
     "list": [
       { "pagePath": "pages/home/home", "text": "首页" },

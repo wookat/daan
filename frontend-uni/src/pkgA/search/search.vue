@@ -167,7 +167,7 @@ export default {
       const t = this.esc(text);
       const q = this.esc(this.result && this.result.q);
       if (!q) return t;
-      return t.split(q).join('<span style="color:#3b6ff5;font-weight:600">' + q + '</span>');
+      return t.split(q).join('<span style="color:#2e5bff;font-weight:600">' + q + '</span>');
     }
   }
 };

@@ -1,0 +1,84 @@
+/**
+ * @zalize/brand · 设计 token（CSS 变量层）
+ * 来源：company-internal docs/design/2026-08-17-brand-system §4.1-4.2（方案 A「上岸 Zalize」）
+ *
+ * 接入方式（任一）：
+ *  - Tailwind 4：@import '@zalize/brand/tokens.css';（本文件含 @theme 映射，token 自动成为 brand-* 工具类）
+ *  - Tailwind 3：presets: [require('@zalize/brand/tailwind.preset')]，再 import 本文件取 CSS 变量
+ *  - 任意栈：直接引用 var(--zl-brand-600) 等变量
+ *
+ * 规则（红线）：CTA / logo / 导航 / 按钮全矩阵统一岸蓝；线级点缀色仅用于插画背景与标签。
+ */
+
+:root {
+  /* 主色「岸蓝」 */
+  --zl-brand-50: #eef3ff;
+  --zl-brand-100: #dbe6ff;
+  --zl-brand-200: #b8ccff;
+  --zl-brand-300: #8aa9ff;
+  --zl-brand-400: #5c82ff;
+  --zl-brand-500: #3f69ff;
+  --zl-brand-600: #2e5bff; /* 主 CTA、链接、logo 底 */
+  --zl-brand-700: #1e44d9; /* hover / pressed */
+  --zl-brand-800: #1735ab;
+  --zl-brand-900: #142c85;
+  --zl-brand-950: #0d1d57;
+
+  /* 文字 ink */
+  --zl-ink-900: #101828; /* 标题 */
+  --zl-ink-600: #475467; /* 正文 */
+  --zl-ink-400: #98a2b3; /* 辅助 */
+
+  /* 页面 / 卡片底 */
+  --zl-surface: #ffffff;
+  --zl-surface-2: #f8fafc;
+
+  /* 功能色 */
+  --zl-success: #12b76a; /* 成功 / 免费标签 */
+  --zl-warning: #f79009; /* 倒计时 / 截止提醒 */
+
+  /* 线级点缀色（唯一允许的差异：仅插画背景与标签） */
+  --zl-line-kaoyan: #7a5af8; /* 考研线 · 紫 */
+  --zl-line-kaogong: #2e5bff; /* 考公考编线 · 蓝 */
+  --zl-line-qiuzhi: #0e9384; /* 求职校招线 · 青 */
+
+  /* 圆角与阴影 */
+  --zl-radius-card: 12px;
+  --zl-radius-btn: 8px;
+  --zl-shadow-sm: 0 1px 2px 0 rgb(16 24 40 / 0.05);
+  --zl-shadow-md: 0 4px 8px -2px rgb(16 24 40 / 0.1), 0 2px 4px -2px rgb(16 24 40 / 0.06);
+  --zl-shadow-lg: 0 12px 16px -4px rgb(16 24 40 / 0.08), 0 4px 6px -2px rgb(16 24 40 / 0.03);
+
+  /* 字体 */
+  --zl-font-sans:
+    'Inter', -apple-system, 'PingFang SC', 'HarmonyOS Sans', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif;
+}
+
+/* Tailwind 4 @theme 映射：引入本文件后可直接使用 bg-brand-600 / text-ink-600 等工具类 */
+@theme {
+  --color-brand-50: var(--zl-brand-50);
+  --color-brand-100: var(--zl-brand-100);
+  --color-brand-200: var(--zl-brand-200);
+  --color-brand-300: var(--zl-brand-300);
+  --color-brand-400: var(--zl-brand-400);
+  --color-brand-500: var(--zl-brand-500);
+  --color-brand-600: var(--zl-brand-600);
+  --color-brand-700: var(--zl-brand-700);
+  --color-brand-800: var(--zl-brand-800);
+  --color-brand-900: var(--zl-brand-900);
+  --color-brand-950: var(--zl-brand-950);
+  --color-ink-900: var(--zl-ink-900);
+  --color-ink-600: var(--zl-ink-600);
+  --color-ink-400: var(--zl-ink-400);
+  --color-success: var(--zl-success);
+  --color-warning: var(--zl-warning);
+  --color-line-kaoyan: var(--zl-line-kaoyan);
+  --color-line-kaogong: var(--zl-line-kaogong);
+  --color-line-qiuzhi: var(--zl-line-qiuzhi);
+  --font-sans: var(--zl-font-sans);
+  --radius-card: var(--zl-radius-card);
+  --radius-btn: var(--zl-radius-btn);
+  --shadow-card: var(--zl-shadow-sm);
+  --shadow-card-hover: var(--zl-shadow-md);
+}

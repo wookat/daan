@@ -1,7 +1,7 @@
 import { lucideIcon } from '../utils/icons';
 
 const GRAY = '#7D818F';
-const BRAND = '#3B6FF5';
+const BRAND = '#2e5bff';
 
 interface TabItem {
   pagePath: string;

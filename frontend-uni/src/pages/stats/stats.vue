@@ -76,7 +76,7 @@
         <view class="todo-btn" @click="goBook">去复习</view>
       </view>
       <view v-for="(r, i) in (reco ? reco.items : [])" :key="i" class="todo-row">
-        <view class="todo-ico"><l-icon name="target" :size="20" color="#3b6ff5" /></view>
+        <view class="todo-ico"><l-icon name="target" :size="20" color="#2e5bff" /></view>
         <view class="todo-main">
           <text class="todo-name">{{ r.label || r.submodule }}</text>
           <text class="todo-meta">{{ r.reason }} · 正确率 {{ Math.round(r.acc * 100) }}%（{{ r.n }}题）</text>
@@ -278,12 +278,12 @@
 
     <view class="card list-card">
       <view class="lrow" @click="goPlanSetup">
-        <view class="lrow-ico"><l-icon name="calendar" :size="20" color="#3b6ff5" /></view>
+        <view class="lrow-ico"><l-icon name="calendar" :size="20" color="#2e5bff" /></view>
         <text class="lrow-name">学习计划<text class="lrow-sub">报考画像与每日任务，可随时重新制定</text></text>
         <text class="lrow-arrow">›</text>
       </view>
       <view class="lrow" @click="secOpen.coach = !secOpen.coach">
-        <view class="lrow-ico"><l-icon name="bot-message-square" :size="20" color="#3b6ff5" /></view>
+        <view class="lrow-ico"><l-icon name="bot-message-square" :size="20" color="#2e5bff" /></view>
         <text class="lrow-name">AI 学习教练</text>
         <text class="lrow-arrow">{{ secOpen.coach ? '▾' : '›' }}</text>
       </view>
@@ -334,7 +334,7 @@ import { checkinStreak } from '../../checkin.js';
 
 // 旧版缓存的 AI 建议内联了旧紫色，读取时映射到品牌色
 function cleanCoach(s) {
-  return s.replace(/#4f46e5/g, '#3b6ff5').replace(/#6366f1/g, '#6c9bff').replace(/#3730a3/g, '#2f5cd8').replace(/#f4f5ff/g, '#edf3fe');
+  return s.replace(/#4f46e5/g, '#2e5bff').replace(/#6366f1/g, '#5c82ff').replace(/#3730a3/g, '#2f5cd8').replace(/#f4f5ff/g, '#eef3ff');
 }
 
 const MODS = [
@@ -862,7 +862,7 @@ export default {
 .rs-pct { font-size: 24rpx; color: var(--danger, #f04438); font-weight: 600; }
 .ghost-btn { margin-top: 16rpx; height: 72rpx; line-height: 68rpx; text-align: center; border: 2rpx solid var(--brand); color: var(--brand); border-radius: 999rpx; font-size: 25rpx; font-weight: 600; }
 .ring { position: absolute; border: 1rpx solid var(--line); border-radius: 50%; box-sizing: border-box; }
-.poly { position: absolute; inset: 0; background: rgba(59, 111, 245, 0.35); border-radius: 2rpx; }
+.poly { position: absolute; inset: 0; background: rgba(46, 91, 255, 0.35); border-radius: 2rpx; }
 .axis-label { position: absolute; transform: translate(-50%, -50%); text-align: center; white-space: nowrap; }
 .al-name { display: block; font-size: 23rpx; color: var(--ink); font-weight: 600; }
 .al-val { display: block; font-size: 20rpx; color: var(--brand); }
