@@ -1180,11 +1180,11 @@ export default {
 /* 宽屏（≥768px）双栏 */
 /* #ifdef H5 */
 @media (min-width: 768px) {
-  .wrap.home { max-width: 960px !important; display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; align-items: start; }
+  .wrap.home { max-width: 960px !important; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; align-items: start; }
   .hero, .sec-h, .ann, .riskbar, .duebar, .taskcard { grid-column: 1 / -1; }
-  .modlist { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; align-items: start; }
+  .modlist { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; align-items: start; }
   .modlist .card.smart { grid-column: 1 / -1; }
-  .more-grid { grid-column: 1 / -1; grid-template-columns: repeat(4, 1fr); }
+  .more-grid { grid-column: 1 / -1; grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .card.guide, .card.plancard, .card.szcard, .card.weekly-c, .card.spin { grid-column: 1 / -1; }
   .modrow:hover, .more-c:hover { box-shadow: 0 8rpx 24rpx rgba(23, 24, 28, 0.08); cursor: pointer; }
   .mask { position: fixed; align-items: center; justify-content: center; }

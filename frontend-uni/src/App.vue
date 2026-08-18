@@ -214,6 +214,9 @@ html.theme-dark body {
   uni-page-body .mask {
     left: 208px !important;
   }
+  #zalize-suite-nav {
+    margin-left: 208px;
+  }
 }
 /* #endif */
 </style>
