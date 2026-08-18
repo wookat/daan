@@ -1177,18 +1177,21 @@ export default {
 .sub-prog { font-size: 21rpx; color: var(--ink-3); margin-top: 4rpx; }
 .sub-n { font-size: 23rpx; color: var(--ink-3); flex-shrink: 0; }
 
-/* 宽屏（≥768px）双栏 */
+/* 宽屏交互（≥768px）；双栏留到 ≥1024px——768 时内容区仅 560px（侧栏占 208px），双栏放不下卡内固定宽元素 */
 /* #ifdef H5 */
 @media (min-width: 768px) {
-  .wrap.home { max-width: 960px !important; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; align-items: start; }
+  .wrap.home { max-width: 960px !important; }
+  .modrow:hover, .more-c:hover { box-shadow: 0 8rpx 24rpx rgba(23, 24, 28, 0.08); cursor: pointer; }
+  .mask { position: fixed; align-items: center; justify-content: center; }
+  .sheet { max-width: 520px; border-radius: 28rpx; padding-bottom: calc(36rpx + env(safe-area-inset-bottom)); }
+}
+@media (min-width: 1024px) {
+  .wrap.home { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; align-items: start; }
   .hero, .sec-h, .ann, .riskbar, .duebar, .taskcard { grid-column: 1 / -1; }
   .modlist { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; align-items: start; }
   .modlist .card.smart { grid-column: 1 / -1; }
   .more-grid { grid-column: 1 / -1; grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .card.guide, .card.plancard, .card.szcard, .card.weekly-c, .card.spin { grid-column: 1 / -1; }
-  .modrow:hover, .more-c:hover { box-shadow: 0 8rpx 24rpx rgba(23, 24, 28, 0.08); cursor: pointer; }
-  .mask { position: fixed; align-items: center; justify-content: center; }
-  .sheet { max-width: 520px; border-radius: 28rpx; padding-bottom: calc(36rpx + env(safe-area-inset-bottom)); }
 }
 /* #endif */
 .searchbar { display: flex; align-items: center; gap: 12rpx; background: var(--card); border-radius: 999rpx; padding: 16rpx 26rpx; margin-bottom: 20rpx; box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04); }
