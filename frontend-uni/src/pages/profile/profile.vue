@@ -115,6 +115,7 @@
       <view class="zl-links">
         <text class="zl-link" v-for="p in zlProducts" :key="p.url" @click="zlOpen(p.url)">{{ p.name }}</text>
       </view>
+      <text class="zl-promise">上岸承诺：免费的真免费 · 无广告不骚扰 · 数据可带走 · AI 如实降级 · <text class="zl-link" @click="zlOpen('https://career.zalize.com/promise/')">了解详情 →</text></text>
       <text class="zl-copy">© 2026 Zalize 上岸 · 上岸错题</text>
     </view>
   </view>
@@ -365,6 +366,8 @@ export default {
 .zl-footer { margin: 48rpx 0 16rpx; text-align: center; }
 .zl-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8rpx 28rpx; margin-bottom: 14rpx; }
 .zl-link { font-size: 24rpx; color: var(--brand); }
+.zl-promise { display: block; margin-bottom: 8rpx; font-size: 22rpx; color: var(--ink-3); }
+.zl-promise .zl-link { font-size: 22rpx; }
 .zl-copy { font-size: 22rpx; color: var(--ink-3); }
 
 /* #ifdef H5 */
