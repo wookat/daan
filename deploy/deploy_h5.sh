@@ -68,6 +68,16 @@ for u in "/api/stats" \
   echo "warm $u ${t}s"
 done
 
+step "4c CF Pages 部署（kaogong.zalize.com 静态层；动态路由经 functions 代理回源 kaogong-origin）"
+: "${CLOUDFLARE_API_TOKEN:?need CLOUDFLARE_API_TOKEN (Pages deploy)}"
+PAGES_DIR=$(mktemp -d)
+cp -r "$DIST" "$PAGES_DIR/dist"
+mkdir -p "$PAGES_DIR/functions"
+cp "$REPO_DIR/deploy/cf-pages/functions/[[path]].js" "$PAGES_DIR/functions/"
+cp "$REPO_DIR/deploy/cf-pages/_routes.json" "$REPO_DIR/deploy/cf-pages/_headers" "$PAGES_DIR/dist/"
+(cd "$PAGES_DIR" && npx wrangler pages deploy dist --project-name kaogong-h5 --branch main --commit-dirty=true)
+rm -rf "$PAGES_DIR"
+
 step "5/6 线上 bundle hash 校验"
 ONLINE_INDEX_REF=$(curl -s "$SITE/" | grep -o 'index-[^"]*\.js' | head -1)
 echo "线上 bundle: $ONLINE_INDEX_REF"
