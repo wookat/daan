@@ -2,7 +2,7 @@
   <view class="wrap">
     <view class="hero">
       <image class="hero-logo" src="/static/brand/kaogong.svg" mode="aspectFit" />
-      <text class="hero-t">上岸错题</text>
+      <text class="hero-t">错题邦</text>
       <text class="hero-s">登录后错题、做题记录多端同步，本机记录自动合并</text>
     </view>
 

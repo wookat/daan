@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 174 72" role="img" aria-label="错题邦">
+  <defs>
+    <linearGradient id="G-lkaogong" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3D6BFF"/><stop offset="1" stop-color="#1B3ECC"/></linearGradient>
+    <linearGradient id="L-lkaogong" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8FB0FF"/><stop offset="1" stop-color="#4E7CFF"/></linearGradient>
+  </defs>
+  <g transform="translate(0,4) scale(.6667)">
+  <path d="M69 20A34 34 0 1 0 81 51" fill="none" stroke="url(#G-lkaogong)" stroke-width="14" stroke-linecap="round"/>
+  <path d="M48 48l20-20" stroke="url(#G-lkaogong)" stroke-width="0"/>
+  <circle cx="80" cy="21" r="8.5" fill="url(#L-lkaogong)"/>
+  </g>
+  <text x="72" y="47" font-family="Inter,-apple-system,'PingFang SC','Microsoft YaHei',sans-serif" font-size="30" font-weight="700" fill="#101828">错题邦</text>
+</svg>

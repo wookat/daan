@@ -1515,7 +1515,7 @@ export default {
     shareResult() {
       const pct = Math.round((this.right / this.items.length) * 100);
       let txt =
-        '我在上岸错题刷了 ' + this.items.length + ' 道' + (this.lastModule ? this.modName(this.lastModule) : '行测') + '题，正确率 ' + pct + '%';
+        '我在错题邦刷了 ' + this.items.length + ' 道' + (this.lastModule ? this.modName(this.lastModule) : '行测') + '题，正确率 ' + pct + '%';
       if (this.bestStreak >= 3) txt += '，最高连对 ' + this.bestStreak + ' 题';
       if (this.percentile != null) txt += '，击败了 ' + this.percentile + '% 的刷题记录';
       txt += '！一起来刷：https://kaogong.zalize.com';

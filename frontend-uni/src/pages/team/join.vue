@@ -45,7 +45,7 @@ export default {
     const c = query && query.code ? String(query.code).trim().toUpperCase() : '';
     trackEvent('team_join_open', 'team', c || null);
     uni.setStorageSync('regSource', 'team');
-    uni.setNavigationBarTitle({ title: '队友邀请你加入刷题小队，一起打卡冲上岸 - 上岸错题' });
+    uni.setNavigationBarTitle({ title: '队友邀请你加入刷题小队，一起打卡冲上岸 - 错题邦' });
     if (c) {
       this.code = c;
       this.state = 'ready';

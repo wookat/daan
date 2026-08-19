@@ -62,7 +62,7 @@ function drawPoster(ctx, d) {
   ctx.textBaseline = 'top';
   ctx.fillStyle = 'rgba(255,255,255,0.85)';
   ctx.font = '24px sans-serif';
-  ctx.fillText(d.badge ? '上岸错题 · 里程碑徽章' : '上岸错题 · 学习打卡', pad, 52);
+  ctx.fillText(d.badge ? '错题邦 · 里程碑徽章' : '错题邦 · 学习打卡', pad, 52);
 
   ctx.fillStyle = '#ffffff';
   if (d.badge) {
@@ -170,7 +170,7 @@ export default {
   },
   // #ifdef MP-WEIXIN
   onShareAppMessage() {
-    return { title: '我在上岸错题打卡刷题，一起上岸！', path: '/pages/practice/practice' };
+    return { title: '我在错题邦打卡刷题，一起上岸！', path: '/pages/practice/practice' };
   },
   // #endif
   methods: {

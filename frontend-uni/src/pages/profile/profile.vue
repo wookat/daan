@@ -104,7 +104,7 @@
       <wd-cell title="反馈与纠错" is-link clickable @click="feedback">
         <template #icon><view class="cell-ico"><l-icon name="message-circle" :size="18" color="#d97706" /></view></template>
       </wd-cell>
-      <wd-cell title="关于" value="上岸错题" is-link clickable @click="about">
+      <wd-cell title="关于" value="错题邦" is-link clickable @click="about">
         <template #icon><view class="cell-ico"><l-icon name="info" :size="18" color="#d97706" /></view></template>
       </wd-cell>
     </wd-cell-group>
@@ -115,7 +115,7 @@
       <view class="zl-links">
         <text class="zl-link" v-for="p in zlProducts" :key="p.url" @click="zlOpen(p.url)">{{ p.name }}</text>
       </view>
-      <text class="zl-copy">© 2026 Zalize 上岸 · 上岸错题</text>
+      <text class="zl-copy">© 2026 Zalize 上岸 · 错题邦</text>
     </view>
   </view>
 </template>
@@ -148,10 +148,10 @@ export default {
       growth: null,
       zlProducts: [
         { name: '上岸 Zalize 门户', url: 'https://career.zalize.com' },
-        { name: '上岸题库', url: 'https://tiku.zalize.com' },
-        { name: '上岸真题', url: 'https://zhenti.zalize.com' },
-        { name: '上岸笔试', url: 'https://test.zalize.com' },
-        { name: '上岸面试', url: 'https://interview.zalize.com' },
+        { name: '刷题营', url: 'https://tiku.zalize.com' },
+        { name: '真题营', url: 'https://zhenti.zalize.com' },
+        { name: '答对笔试', url: 'https://test.zalize.com' },
+        { name: '面试鲸', url: 'https://interview.zalize.com' },
       ],
     };
   },
@@ -311,7 +311,7 @@ export default {
       // #endif
     },
     about() {
-      uni.showModal({ title: '上岸错题', content: '行测刷题 · 错题本 · AI 讲解 · 全真模考\nkaogong.zalize.com', showCancel: false, confirmText: '知道了' });
+      uni.showModal({ title: '错题邦', content: '行测刷题 · 错题本 · AI 讲解 · 全真模考\nkaogong.zalize.com', showCancel: false, confirmText: '知道了' });
     },
     doLogout() {
       uni.showModal({
