@@ -1,6 +1,22 @@
 # 部署说明
 
-## 方案：现有服务器 + Caddy/Nginx 反代 + kaogong.zalize.com
+## 当前架构（2026-08 起）：Cloudflare Pages 静态层 + 服务器回源
+
+- `kaogong.zalize.com` DNS = CNAME `kaogong-h5.pages.dev`（CF proxied）。
+- 静态层（`/`、`/index.html`、`/assets/*`、`/static/*`）由 Pages CDN 直出，
+  `/assets/*` 长缓存 immutable（`deploy/cf-pages/_headers`）。
+- 其余全部路径（`/api/*`、`/admin`、`/tiku/*`、`/sw.js`、`/robots.txt`、`/sitemap.xml`、
+  `/qimg/*`、`/s/*` …）由 Pages Functions 同源代理回源
+  `https://kaogong-origin.zalize.com`（服务器 Caddy 上的 origin 域，
+  A 记录 dns-only 指向服务器），见 `deploy/cf-pages/functions/[[path]].js`
+  与 `deploy/cf-pages/_routes.json`。同源代理 ⇒ 无 CORS 问题。
+- 安全头（CSP/HSTS 等）：静态层由 `_headers` 下发，动态层由 functions 注入，
+  与原 Caddyfile 口径一致；`/tiku/*` 保持可收录，`/api/*`、`/admin` noindex。
+- 部署：`deploy/deploy_h5.sh` 新增 4c 步（需 `CLOUDFLARE_API_TOKEN`），
+  服务器 rsync + 容器重建照旧（origin 仍需完整 dist 供 SSR/兜底）。
+- **回滚**：把 `kaogong.zalize.com` DNS 改回 `A 150.109.230.174 dns-only` 即恢复纯服务器架构。
+
+## 旧方案（仍是回源层）：现有服务器 + Caddy/Nginx 反代 + kaogong.zalize.com
 
 1. 服务器上准备 `deploy/.env`（勿提交）：
    ```
