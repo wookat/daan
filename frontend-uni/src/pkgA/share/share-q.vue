@@ -74,7 +74,7 @@
       </template>
 
       <view class="reg-tip" @click="goLogin">
-        <text class="reg-t">登录 / 注册上岸错题，13 万题库免费刷 ›</text>
+        <text class="reg-t">登录 / 注册错题邦，13 万题库免费刷 ›</text>
       </view>
     </template>
   </view>
@@ -148,7 +148,7 @@ export default {
         if (d.q_stats) this.qStats = d.q_stats;
         this.teamInvite = d.team_invite || null;
         this.startTs = Date.now();
-        uni.setNavigationBarTitle({ title: `${d.from_name} 考了你一道${d.question.submodule || modName(d.question.module)}题，你能做对吗？- 上岸错题` });
+        uni.setNavigationBarTitle({ title: `${d.from_name} 考了你一道${d.question.submodule || modName(d.question.module)}题，你能做对吗？- 错题邦` });
       } catch (e) {
         this.errMsg = e.message || '分享不存在或已过期';
       }

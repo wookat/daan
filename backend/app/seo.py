@@ -89,7 +89,7 @@ def _page(title: str, description: str, canonical_path: str, body: str, jsonld: 
         f"<style>{_CSS}</style>{ld}</head><body>"
         f'<header class="hdr"><div class="wrap"><a href="/tiku/">考公题库</a></div></header>'
         f'<main class="wrap">{body}</main>'
-        f'<footer class="ftr"><a href="{_e(SITE_BASE)}/">上岸错题</a> · 13万+行测真题在线刷题'
+        f'<footer class="ftr"><a href="{_e(SITE_BASE)}/">错题邦</a> · 13万+行测真题在线刷题'
         f' · <a href="/tiku/papers/">真题卷</a></footer></body></html>'
     )
 
@@ -212,7 +212,7 @@ def tiku_index():
         + f'<a class="cta" href="{_e(SITE_BASE)}/">进入刷题主站 →</a>'
     )
     return _page(
-        "公务员考试题库_行测真题在线刷题_上岸错题",
+        "公务员考试题库_行测真题在线刷题_错题邦",
         f"免费公务员考试题库，收录 {total} 道行测申论题目与历年真题，覆盖资料分析、数量关系、言语理解、判断推理、常识判断，附答案解析。",
         "/tiku/",
         body,
@@ -242,7 +242,7 @@ def tiku_papers():
         + f'<a class="cta" href="{_e(SITE_BASE)}/">进入主站全真模考 →</a>'
     )
     return _page(
-        "历年公务员考试真题卷_国考省考真题在线模考_上岸错题",
+        "历年公务员考试真题卷_国考省考真题在线模考_错题邦",
         f"{len(papers)} 套历年国考/省考行测真题卷，在线全真模考并生成成绩报告，附逐题答案解析。",
         "/tiku/papers/",
         body,
@@ -312,7 +312,7 @@ def tiku_paper_detail(pid: int):
         "name": title,
         "description": f"{title}，共 {len(rows)} 题，在线全真模考并查看逐题答案解析。",
         "url": _url(f"/tiku/papers/{pid}"),
-        "isPartOf": {"@type": "WebSite", "name": "上岸错题", "url": SITE_BASE},
+        "isPartOf": {"@type": "WebSite", "name": "错题邦", "url": SITE_BASE},
         "breadcrumb": {
             "@type": "BreadcrumbList",
             "itemListElement": [
@@ -323,7 +323,7 @@ def tiku_paper_detail(pid: int):
         },
     }
     return _page(
-        f"{title}_真题卷在线模考_上岸错题",
+        f"{title}_真题卷在线模考_错题邦",
         f"{title}，共 {len(rows)} 题（{dist_text}），在线全真模考并生成成绩报告，附逐题答案解析。" if dist_text
         else f"{title}，共 {len(rows)} 题，在线全真模考并查看逐题答案解析。",
         f"/tiku/papers/{pid}",
@@ -390,7 +390,7 @@ def _render_year(year: int, module: str, page: int) -> str:
         "name": f"{year}年{mod_name}真题题库",
         "description": f"{year}年公务员考试{mod_name}模块真题 {total} 题，附答案解析。",
         "url": _url(_year_path(year, module)),
-        "isPartOf": {"@type": "WebSite", "name": "上岸错题", "url": SITE_BASE},
+        "isPartOf": {"@type": "WebSite", "name": "错题邦", "url": SITE_BASE},
         "breadcrumb": {
             "@type": "BreadcrumbList",
             "itemListElement": [
@@ -401,7 +401,7 @@ def _render_year(year: int, module: str, page: int) -> str:
         },
     }
     return _page(
-        f"{year}年{mod_name}真题题库{suffix}_{year}年公务员考试{mod_name}真题及答案解析_上岸错题",
+        f"{year}年{mod_name}真题题库{suffix}_{year}年公务员考试{mod_name}真题及答案解析_错题邦",
         f"{year}年公务员考试{mod_name}模块真题共 {total} 题，附答案与花生十三方法讲解，可在线按年份刷真题。{suffix}",
         _year_path(year, module) + (f"?page={page}" if page > 1 else ""),
         body,
@@ -480,7 +480,7 @@ def _render_topic(code: str, page: int) -> str:
         "name": f"{name}考点题库",
         "description": (topic["desc"] or f"{mod_name}{name}考点真题练习")[:200],
         "url": _url(_topic_path(code)),
-        "isPartOf": {"@type": "WebSite", "name": "上岸错题", "url": SITE_BASE},
+        "isPartOf": {"@type": "WebSite", "name": "错题邦", "url": SITE_BASE},
         "breadcrumb": {
             "@type": "BreadcrumbList",
             "itemListElement": [
@@ -491,7 +491,7 @@ def _render_topic(code: str, page: int) -> str:
         },
     }
     return _page(
-        f"{name}考点题库{suffix}_{mod_name}{name}真题及解题方法_上岸错题",
+        f"{name}考点题库{suffix}_{mod_name}{name}真题及解题方法_错题邦",
         f"{name}考点专项题库共 {total} 题：{(topic['desc'] or '')[:60]}附答案解析与花生十三方法讲解，可在线按考点刷题。{suffix}",
         _topic_path(code) + (f"?page={page}" if page > 1 else ""),
         body,
@@ -618,7 +618,7 @@ def _render_question(qid: int) -> str:
         },
     }
     return _page(
-        f"{title_head}_{mod_name}题库_上岸错题",
+        f"{title_head}_{mod_name}题库_错题邦",
         f"{mod_name}{('·' + r['submodule']) if r['submodule'] else ''}{src}：{qtext[:70]} 附答案与解析，在线刷同考点题目。",
         f"/tiku/q/{qid}",
         body,
@@ -652,7 +652,7 @@ def tiku_module(module: str, page: int = 1):
     )
     suffix = f"（第{page}页）" if page > 1 else ""
     return _page(
-        f"{name}题库{suffix}_行测{name}真题及答案解析_上岸错题",
+        f"{name}题库{suffix}_行测{name}真题及答案解析_错题邦",
         f"{name}题库共 {total} 题（含历年真题），按题型分类，附答案与花生十三方法解析，支持在线刷题。{suffix}",
         f"/tiku/{module}/" + (f"?page={page}" if page > 1 else ""),
         body,
@@ -682,7 +682,7 @@ def tiku_submodule(module: str, submodule: str, page: int = 1):
     )
     suffix = f"（第{page}页）" if page > 1 else ""
     return _page(
-        f"{submodule}题库{suffix}_{name}{submodule}真题及答案解析_上岸错题",
+        f"{submodule}题库{suffix}_{name}{submodule}真题及答案解析_错题邦",
         f"{name}{submodule}专项题库共 {total} 题（含历年真题），附答案与解析，在线刷题提升正确率。{suffix}",
         _sub_path(module, submodule) + (f"?page={page}" if page > 1 else ""),
         body,
@@ -830,7 +830,7 @@ def share_landing(sid: str):
         f"<title>{_e(title)}</title>"
         f'<meta name="description" content="{_e(summary)}">'
         f'<meta property="og:type" content="website">'
-        f'<meta property="og:site_name" content="上岸错题">'
+        f'<meta property="og:site_name" content="错题邦">'
         f'<meta property="og:title" content="{_e(title)}">'
         f'<meta property="og:description" content="{_e(summary)}">'
         f'<meta property="og:url" content="{_e(page_url)}">'

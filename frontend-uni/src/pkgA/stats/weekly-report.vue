@@ -161,7 +161,7 @@ function drawShare(ctx, r) {
   ctx.textBaseline = 'top';
   ctx.fillStyle = 'rgba(255,255,255,0.85)';
   ctx.font = '24px sans-serif';
-  ctx.fillText('上岸错题 · 周学习报告', pad, 52);
+  ctx.fillText('错题邦 · 周学习报告', pad, 52);
   ctx.fillStyle = '#fff';
   ctx.font = '800 52px sans-serif';
   ctx.fillText(r.range, pad, 100);

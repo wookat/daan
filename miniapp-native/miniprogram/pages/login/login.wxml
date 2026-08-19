@@ -2,7 +2,7 @@
 <view class="wrap">
   <view class="l-logo-box">
     <view class="l-logo">岸</view>
-    <text class="l-app">上岸错题</text>
+    <text class="l-app">错题邦</text>
   </view>
   <view class="card">
     <text class="l-title">{{mode === 'login' ? '欢迎回来' : '创建账号'}}</text>

@@ -22,7 +22,7 @@
   "themeLocation": "theme.json",
   "window": {
     "navigationStyle": "custom",
-    "navigationBarTitleText": "上岸错题",
+    "navigationBarTitleText": "错题邦",
     "backgroundColor": "@bgColor",
     "backgroundTextStyle": "@bgTxtStyle"
   },

@@ -37,7 +37,7 @@
       </view>
 
       <view class="reg-tip" @click="goLogin">
-        <text class="reg-t">登录 / 注册上岸错题，13 万题库免费刷 ›</text>
+        <text class="reg-t">登录 / 注册错题邦，13 万题库免费刷 ›</text>
       </view>
     </template>
   </view>
@@ -91,7 +91,7 @@ export default {
         const d = await pkResult(this.rid);
         this.d = d;
         uni.setNavigationBarTitle({
-          title: `${this.creatorName} vs ${this.opponentName} 的答题 PK 战绩，不服来战！- 上岸错题`,
+          title: `${this.creatorName} vs ${this.opponentName} 的答题 PK 战绩，不服来战！- 错题邦`,
         });
       } catch (e) {
         this.errMsg = e.message || '战绩不存在或对局未结束';

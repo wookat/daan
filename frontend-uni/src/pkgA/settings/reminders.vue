@@ -48,7 +48,7 @@
 
     <view class="sec-t">提醒样式预览</view>
     <view class="push">
-      <view class="hd"><text class="appico">岸</text><text>上岸错题 · {{ time }}</text></view>
+      <view class="hd"><text class="appico">岸</text><text>错题邦 · {{ time }}</text></view>
       <text class="tt">{{ done >= goal ? '今日目标已达成，保持手感再练一组？🎉' : '今晚还差 ' + previewLeft + ' 题就能守住连续打卡 🔥' }}</text>
       <text class="bd">今日目标 {{ goal }} 题已完成 {{ done }} 题{{ done >= goal ? '' : '，练完守住连续打卡～' }}</text>
     </view>
