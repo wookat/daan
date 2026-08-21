@@ -38,7 +38,7 @@ export function applyTheme() {
   // #ifdef H5
   const dark = isDark();
   document.documentElement.classList.toggle('theme-dark', dark);
-  document.documentElement.dataset.theme = dark ? 'dark' : 'light'; // 供 career.zalize.com/nav.js 识别亮暗
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
 
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', dark ? '#15161c' : '#eef3ff');
