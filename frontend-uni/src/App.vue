@@ -215,5 +215,32 @@ html.theme-dark body {
     left: 208px !important;
   }
 }
+
+/* 大桌面（≥1280px）：整体应用壳限宽居中（参考粉笔 1100–1180px），
+   侧栏与各固定元素跟随壳体而非视口边缘 */
+@media (min-width: 1280px) {
+  uni-app {
+    max-width: 1140px;
+    margin: 0 auto;
+    box-shadow: 0 0 0 1px var(--line);
+  }
+  body {
+    overflow-x: hidden;
+  }
+  .uni-tabbar {
+    left: calc((100vw - 1140px) / 2) !important;
+  }
+  uni-page-body .banner,
+  uni-page-body .mask,
+  uni-page-body .inputbar,
+  uni-page-body .batchbar,
+  uni-page-body .navrow {
+    left: calc((100vw - 1140px) / 2 + 208px) !important;
+    right: calc((100vw - 1140px) / 2) !important;
+  }
+  uni-page-body .fabmenu {
+    right: calc((100vw - 1140px) / 2 + 24px) !important;
+  }
+}
 /* #endif */
 </style>

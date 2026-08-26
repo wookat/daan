@@ -1,22 +1,17 @@
 <template>
   <view class="wrap">
-    <view class="acct card">
-      <template v-if="authUser">
-        <view class="acct-ava">{{ (authUser.nickname || '考').slice(0, 1) }}</view>
-        <view class="acct-main">
-          <text class="acct-name">{{ authUser.nickname }}</text>
-          <text class="acct-sub">{{ authUser.phone }} · 多端同步已开启</text>
-        </view>
-        <view class="acct-btn ghost" @click="doLogout">退出</view>
-      </template>
-      <template v-else>
-        <view class="acct-ava anon">匿</view>
-        <view class="acct-main">
-          <text class="acct-name">未登录</text>
-          <text class="acct-sub">登录后错题与记录多端同步，本机数据自动合并</text>
-        </view>
-        <view class="acct-btn" @click="goLogin">登录/注册</view>
-      </template>
+    <view v-if="authUser" class="acct card">
+      <view class="acct-ava">{{ (authUser.nickname || '考').slice(0, 1) }}</view>
+      <view class="acct-main">
+        <text class="acct-name">{{ authUser.nickname }}</text>
+        <text class="acct-sub">{{ authUser.phone }} · 多端同步已开启</text>
+      </view>
+      <view class="acct-btn ghost" @click="doLogout">退出</view>
+    </view>
+    <!-- 未登录：轻量顶条，不占首屏大块 -->
+    <view v-else class="loginstrip" @click="goLogin">
+      <text class="ls-t">登录后错题与记录多端同步</text>
+      <text class="ls-btn">登录/注册 ›</text>
     </view>
 
     <view class="hero">
@@ -998,6 +993,9 @@ export default {
 .row2 { display: flex; gap: 16rpx; }
 .bk-btn { flex: 1; background: var(--brand-soft); color: var(--brand); border-radius: 16rpx; font-size: 25rpx; font-weight: 600; }
 .bk-btn.ghost { background: var(--brand-soft); color: var(--brand); }
+.loginstrip { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; min-height: 44px; box-sizing: border-box; background: var(--brand-soft); border-radius: 16rpx; padding: 8rpx 26rpx; margin-bottom: 20rpx; }
+.ls-t { font-size: 24rpx; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ls-btn { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: var(--brand); }
 .acct { display: flex; align-items: center; gap: 20rpx; }
 .acct-ava { width: 88rpx; height: 88rpx; border-radius: 50%; background: var(--brand); color: #fff; font-size: 36rpx; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .acct-ava.anon { background: var(--ink-4); }

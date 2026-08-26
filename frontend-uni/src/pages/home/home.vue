@@ -1,9 +1,15 @@
 <template>
   <view class="wrap home">
-    <!-- 全局搜索入口 -->
-    <view class="searchbar" @click="goSearch">
-      <l-icon name="search" :size="16" color="#9ca3af" />
-      <text class="searchbar-t">搜题目 / 考点 / 试卷，支持题号</text>
+    <!-- 考试切换 + 全局搜索入口 -->
+    <view class="toprow">
+      <view class="examsw" @click="openSetup">
+        <text class="examsw-t">{{ examLabel }}</text>
+        <text class="examsw-a">▾</text>
+      </view>
+      <view class="searchbar" @click="goSearch">
+        <l-icon name="search" :size="16" color="#9ca3af" />
+        <text class="searchbar-t">搜题目 / 考点 / 试卷</text>
+      </view>
     </view>
 
     <!-- 回访召回卡（7天以上未练习的老用户） -->
@@ -197,7 +203,10 @@
           <text class="mod-name">{{ modName(c.module) }}</text>
           <text class="mod-sub">{{ progText(c) }}</text>
         </view>
-        <view class="mod-bar"><view class="mod-fill" :style="{ width: progPct(c) + '%', background: modColor(c.module).fg }" /></view>
+        <view class="mod-r">
+          <text class="mod-prog"><text class="mod-prog-n">{{ modStat(c.module).done }}</text>/{{ c.n }}</text>
+          <view class="mod-bar"><view class="mod-fill" :style="{ width: progPct(c) + '%', background: modColor(c.module).fg }" /></view>
+        </view>
         <text class="mod-arrow">›</text>
       </view>
       <view v-if="counts.length" class="card modrow" @click="startPreset(null)">
@@ -497,6 +506,12 @@ export default {
     };
   },
   computed: {
+    examLabel() {
+      if (this.profile && this.profile.exam_type) {
+        return this.profile.exam_type + (this.profile.target_region ? ' · ' + this.profile.target_region : '');
+      }
+      return '选择考试';
+    },
     dueReview() {
       return (this.plan && this.plan.due_mistakes) || 0;
     },
@@ -592,6 +607,7 @@ export default {
     this.groupSize = uni.getStorageSync('groupSize') || 10;
     this.dailyGoal = uni.getStorageSync('dailyGoal') || 20;
     this.loadCounts();
+    this.prefetchNext();
     this.loadAnnounce();
     this.loadPlan();
     this.loadBadges();
@@ -651,8 +667,26 @@ export default {
     },
     progText(c) {
       const s = this.modStat(c.module);
-      if (!s.done) return c.n + ' 题';
-      return `已刷 ${s.done}/${c.n} · 正确率 ${Math.round((s.correct / s.done) * 100)}%`;
+      if (!s.done) return '共 ' + c.n + ' 题 · 未开始';
+      return `正确率 ${Math.round((s.correct / s.done) * 100)}%`;
+    },
+    prefetchNext() {
+      // 预取下一组题包：进刷题页命中时零等待开练（真题/资料分析分组参数不同，不预取）
+      if (this.realMode) return;
+      const module = uni.getStorageSync('lastModule') || '';
+      if (module === 'ziliao') return;
+      const limit = this.groupSize || 10;
+      const uid = anonUid() || '';
+      const pk = uni.getStorageSync('prefetchPack');
+      if (pk && pk.module === module && pk.limit === limit && pk.uid === uid && Date.now() - pk.ts < 5 * 60 * 1000) return;
+      request(
+        '/api/questions?limit=' + limit + (uid ? '&uid=' + encodeURIComponent(uid) : '') + (module ? '&module=' + module : ''),
+        { timeout: 15000 }
+      )
+        .then((d) => {
+          if (d.items && d.items.length) uni.setStorageSync('prefetchPack', { module, limit, uid, items: d.items, ts: Date.now() });
+        })
+        .catch(() => {});
     },
     progPct(c) {
       const s = this.modStat(c.module);
@@ -1194,6 +1228,13 @@ export default {
   .card.guide, .card.plancard, .card.szcard, .card.weekly-c, .card.spin { grid-column: 1 / -1; }
 }
 /* #endif */
-.searchbar { display: flex; align-items: center; gap: 12rpx; background: var(--card); border-radius: 999rpx; padding: 16rpx 26rpx; margin-bottom: 20rpx; box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04); }
+.toprow { display: flex; align-items: center; gap: 16rpx; margin-bottom: 20rpx; }
+.examsw { flex-shrink: 0; display: flex; align-items: center; gap: 6rpx; min-height: 44px; box-sizing: border-box; padding: 0 22rpx; background: var(--card); border-radius: 999rpx; box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04); }
+.examsw-t { font-size: 26rpx; font-weight: 600; color: var(--ink); max-width: 220rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.examsw-a { font-size: 20rpx; color: var(--ink-3); }
+.mod-r { display: flex; flex-direction: column; align-items: flex-end; gap: 8rpx; flex-shrink: 0; }
+.mod-prog { font-size: 22rpx; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.mod-prog-n { font-size: 26rpx; font-weight: 700; color: var(--ink); }
+.searchbar { flex: 1; display: flex; align-items: center; gap: 12rpx; background: var(--card); border-radius: 999rpx; padding: 16rpx 26rpx; box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04); }
 .searchbar-t { font-size: 26rpx; color: var(--ink-3); }
 </style>

@@ -1,7 +1,25 @@
 <template>
   <view class="wrap" :class="{ 'has-banner': picked }">
     <!-- 加载/空态（本页仅承载答题会话，选题在首页） -->
-    <view v-if="!session" class="card spin" @click="quit">正在准备练习…点此返回首页</view>
+    <view v-if="!session && loadState === 'fail'" class="card loadfail">
+      <text class="lf-t">题目加载失败</text>
+      <text class="lf-s">{{ loadFailMsg || '网络不稳定或服务暂时无响应' }}</text>
+      <view class="lf-acts">
+        <view class="lf-btn main" @click="retryStart">重试</view>
+        <view class="lf-btn" @click="quit">返回首页</view>
+      </view>
+    </view>
+    <view v-else-if="!session" class="pskel">
+      <view class="card">
+        <view class="sk-row"><view class="sk-line sk-w30" /><view class="sk-line sk-w15" /></view>
+        <view class="sk-line sk-w90" />
+        <view class="sk-line sk-w80" />
+        <view class="sk-line sk-w60" />
+        <view v-for="i in 4" :key="i" class="sk-opt" />
+      </view>
+      <view class="pskel-hint">{{ loadHint }}</view>
+      <view class="pskel-quit" @click="quit">返回首页</view>
+    </view>
     <!-- 答题 -->
     <view v-if="session && cur" class="card">
       <view v-if="beiMode || timedMode || cur.is_real" class="modechips">
@@ -265,6 +283,9 @@ export default {
     return {
       counts: [],
       session: false,
+      loadState: '',
+      loadSecs: 0,
+      loadFailMsg: '',
       offline: false,
       items: [],
       idx: 0,
@@ -495,6 +516,12 @@ export default {
       const color = pct >= 80 ? '#22c55e' : pct >= 60 ? '#f59e0b' : '#ef4444';
       return { background: `conic-gradient(${color} 0% ${pct}%, var(--brand-soft) ${pct}% 100%)` };
     },
+    loadHint() {
+      if (this.loadState !== 'loading') return '正在准备练习…';
+      if (this.loadSecs < 3) return '出题中…';
+      if (this.loadSecs < 10) return `题库首次加载稍慢，请稍候…（${this.loadSecs}秒）`;
+      return `网络较慢，仍在努力加载…（${this.loadSecs}秒）`;
+    },
   },
   onLoad(query) {
     // SEO 详情页「在线练习此考点」直链：/practice?tag3=xx&module=xx 自动开练
@@ -606,7 +633,10 @@ export default {
       this.start(pm);
       return;
     }
-    if (!this.session) this.tryResume();
+    if (!this.session && !this.tryResume()) {
+      // 裸直达路由（无任何启动参数）：直接按上次模块开练，避免停留在无反馈的准备页
+      this.start(uni.getStorageSync('lastModule') || null, null, null, false, undefined, null, 'direct');
+    }
   },
   onHide() {
     if (this.autoTimer) clearTimeout(this.autoTimer);
@@ -1096,16 +1126,44 @@ export default {
       }
       this.start(this.lastModule, this.lastSubmodule);
     },
+    beginLoadState() {
+      this.loadState = 'loading';
+      this.loadSecs = 0;
+      this.loadFailMsg = '';
+      if (this._loadTick) clearInterval(this._loadTick);
+      this._loadTick = setInterval(() => { this.loadSecs++; }, 1000);
+    },
+    endLoadState(failMsg) {
+      if (this._loadTick) { clearInterval(this._loadTick); this._loadTick = null; }
+      if (failMsg) {
+        this.loadState = 'fail';
+        this.loadFailMsg = failMsg;
+      } else {
+        this.loadState = '';
+      }
+    },
+    retryStart() {
+      if (this._lastStartArgs) this.start(...this._lastStartArgs);
+      else this.start(uni.getStorageSync('lastModule') || null);
+    },
+    takePrefetch(module, limit, uid, submodule, adaptive, forceReal, tag3) {
+      if (submodule || adaptive || forceReal || tag3 || this.realMode) return null;
+      const pk = uni.getStorageSync('prefetchPack');
+      if (!pk || !pk.items || !pk.items.length) return null;
+      if (pk.module !== (module || '') || pk.limit !== limit || pk.uid !== (uid || '')) return null;
+      if (Date.now() - pk.ts > 10 * 60 * 1000) return null;
+      uni.removeStorageSync('prefetchPack');
+      return pk.items;
+    },
     async start(module, submodule, count, adaptive, forceReal, tag3, source, year) {
       this._redoItems = null;
       if (this._starting) return;
       this._starting = true;
+      this._lastStartArgs = [module, submodule, count, adaptive, forceReal, tag3, source, year];
       // 推荐埋点：记录本次练习的入口来源（reco/weak 等），随 answer_log 落库
       this._source = source || null;
-      uni.showLoading({ title: '出题中…', mask: true });
-      this._slowTimer = setTimeout(() => {
-        if (this._starting) uni.showLoading({ title: '题库首次加载稍慢，请稍候…', mask: true });
-      }, 3000);
+      this.session = false;
+      this.beginLoadState();
       this.lastModule = module;
       this.lastSubmodule = submodule || null;
       this.subSelect = null;
@@ -1123,11 +1181,16 @@ export default {
       const grpQ = module === 'ziliao' && !submodule && !tag3 && !this.realMode ? '&grouped=1' : '';
       const tagQ = tag3 ? '&tag3=' + encodeURIComponent(tag3) : '';
       try {
-        let d = await request(
-          '/api/questions?limit=' + limit + realQ + uidQ + adQ + grpQ + tagQ +
-            (module ? '&module=' + module : '') +
-            (submodule ? '&submodule=' + encodeURIComponent(submodule) : '')
-        );
+        // 首页预取题包命中时零等待开练
+        const pre = this.takePrefetch(module, limit, uid, submodule, adaptive, forceReal, tag3);
+        let d = pre
+          ? { items: pre }
+          : await request(
+              '/api/questions?limit=' + limit + realQ + uidQ + adQ + grpQ + tagQ +
+                (module ? '&module=' + module : '') +
+                (submodule ? '&submodule=' + encodeURIComponent(submodule) : ''),
+              { timeout: 20000 }
+            );
         if (!d.items.length && tag3) {
           d = await request(
             '/api/questions?limit=' + limit + realQ + uidQ + adQ +
@@ -1148,9 +1211,8 @@ export default {
           d = await request('/api/questions?limit=' + limit + uidQ + (module ? '&module=' + module : ''));
         }
         if (!d.items.length) {
-          uni.hideLoading();
           this._starting = false;
-          uni.showToast({ title: '该模块暂无题目', icon: 'none' });
+          this.endLoadState('该模块暂无题目，换个模块试试');
           return;
         }
         this.items = d.items.map((q) => ({ ...q, _saved: false }));
@@ -1186,11 +1248,10 @@ export default {
           uni.setStorageSync('lastModule', module || '');
           uni.showToast({ title: '当前无网络，已切换离线题包模式', icon: 'none', duration: 1800 });
         } else {
-          uni.showToast({ title: '加载失败：' + e.message + '（可在我的→离线题包提前下载）', icon: 'none', duration: 2200 });
+          this.endLoadState((e.message || '网络错误') + '（可在我的→离线题包提前下载）');
         }
       } finally {
-        clearTimeout(this._slowTimer);
-        uni.hideLoading();
+        if (this.loadState !== 'fail') this.endLoadState();
         this._starting = false;
       }
     },
@@ -1843,10 +1904,28 @@ export default {
 .expchip.on { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); font-weight: 600; }
 .custom-export { margin-top: 16rpx; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; text-align: center; border: 1rpx solid var(--brand); color: var(--brand); border-radius: 999rpx; padding: 20rpx 0; font-size: 27rpx; font-weight: 500; }
 .custom-note { margin-top: 14rpx; text-align: center; font-size: 21rpx; color: var(--ink-3); }
-.wrap.has-banner { padding-bottom: 200rpx; }
+.wrap.has-banner { padding-bottom: calc(280rpx + env(safe-area-inset-bottom)); }
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 30rpx; font-weight: 600; margin-bottom: 20rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 24rpx; }
+.pskel { padding-top: 8rpx; }
+.sk-row { display: flex; justify-content: space-between; gap: 16rpx; }
+.sk-line { height: 28rpx; border-radius: 8rpx; background: var(--fill, #eceef3); margin-bottom: 20rpx; animation: sk-pulse 1.2s ease-in-out infinite; }
+.sk-w15 { width: 15%; }
+.sk-w30 { width: 30%; }
+.sk-w60 { width: 60%; }
+.sk-w80 { width: 80%; }
+.sk-w90 { width: 90%; }
+.sk-opt { height: 80rpx; border-radius: 12rpx; background: var(--fill, #eceef3); margin-top: 20rpx; animation: sk-pulse 1.2s ease-in-out infinite; }
+@keyframes sk-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+.pskel-hint { text-align: center; color: var(--ink-2); font-size: 26rpx; margin-top: 24rpx; }
+.pskel-quit { text-align: center; color: var(--brand); font-size: 26rpx; margin-top: 20rpx; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+.loadfail { text-align: center; padding: 56rpx 32rpx; }
+.lf-t { display: block; font-size: 32rpx; font-weight: 700; color: var(--ink); }
+.lf-s { display: block; font-size: 25rpx; color: var(--ink-2); margin-top: 12rpx; line-height: 1.6; }
+.lf-acts { display: flex; gap: 20rpx; margin-top: 36rpx; }
+.lf-btn { flex: 1; min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 16rpx; font-size: 28rpx; font-weight: 600; background: var(--fill, #eceef3); color: var(--ink-2); }
+.lf-btn.main { background: var(--brand); color: #fff; }
 .goal { margin-bottom: 22rpx; }
 .goal-top { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; margin-bottom: 10rpx; flex-wrap: wrap; }
 .goal-t { font-size: 24rpx; color: var(--ink-2); }
@@ -1990,7 +2069,7 @@ export default {
 /* #ifdef H5 */
 @media (max-width: 767px) {
   .banner { bottom: calc(50px + env(safe-area-inset-bottom)); padding-bottom: 28rpx; }
-  .wrap.has-banner { padding-bottom: calc(240rpx + 50px + env(safe-area-inset-bottom)); }
+  .wrap.has-banner { padding-bottom: calc(300rpx + 50px + env(safe-area-inset-bottom)); }
 }
 /* #endif */
 @keyframes slideup {
