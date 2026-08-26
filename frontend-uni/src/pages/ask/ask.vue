@@ -12,16 +12,28 @@
       </view>
     </view>
 
-    <!-- 空态引导 -->
-    <view v-if="!results.length && !loading" class="empty-guide">
-      <view class="eg-ico"><l-icon name="message-circle" :size="34" color="#2e5bff" /></view>
-      <text class="eg-t">拍下或粘贴一道题，AI 讲给你听</text>
-      <text class="eg-s">答案 + 花生十三速解方法 + 可迁移技巧，支持追问和举一反三</text>
-      <view class="eg-acts">
-        <view class="eg-btn main" @click="pickImage"><l-icon name="camera" :size="16" color="#ffffff" /><text>拍题 / 相册</text></view>
-        <view class="eg-btn" @click="textOpen = true"><l-icon name="clipboard-list" :size="16" color="#2e5bff" /><text>粘贴文字</text></view>
+    <!-- 空态：相机优先取景屏 -->
+    <view v-if="!results.length && !loading" class="camscreen">
+      <view class="cam-top">
+        <view class="cam-quick" @click="openHistory"><l-icon name="rotate-ccw" :size="14" color="#e5e9f5" /><text>历史</text></view>
+        <view class="cam-quick" @click="goBook"><l-icon name="book-open" :size="14" color="#e5e9f5" /><text>错题</text></view>
       </view>
-      <view class="eg-iv" @click="goInterview"><l-icon name="mic" :size="14" color="#7c3aed" /><text>AI 面试陪练：抽真题 · 考官打分点评 ›</text></view>
+      <view class="cam-frame" @click="openCamera">
+        <view class="cam-corner tl" /><view class="cam-corner tr" /><view class="cam-corner bl" /><view class="cam-corner br" />
+        <l-icon name="camera" :size="34" color="#8fa3d9" />
+        <text class="cam-tip">将题目放入框内拍下，AI 讲给你听</text>
+        <text class="cam-tip2">答案 + 花生十三速解方法 + 可迁移技巧</text>
+      </view>
+      <view class="cam-modes">
+        <text class="cam-mode on">拍单题</text>
+        <text class="cam-mode dim">整页批改 · 即将上线</text>
+        <text class="cam-mode" @click="textOpen = true">文字输入</text>
+      </view>
+      <view class="cam-acts">
+        <view class="cam-side" @click="openAlbum"><l-icon name="files" :size="22" color="#e5e9f5" /><text>相册</text></view>
+        <view class="cam-shutter" @click="openCamera"><view class="cam-shutter-in" /></view>
+        <view class="cam-side" @click="goInterview"><l-icon name="mic" :size="22" color="#e5e9f5" /><text>面试</text></view>
+      </view>
       <view v-if="recent.length" class="card reccard">
         <view class="rec-h">最近讲解</view>
         <view v-for="r in recent" :key="r.ts" class="rec-row">
@@ -130,9 +142,9 @@
 
     <view class="bottompad" />
 
-    <!-- 底部输入栏 -->
+    <!-- 底部输入栏（结果页持续行动栏：相机=再拍一题 / 文字 / 追问） -->
     <view class="inputbar">
-      <view class="ib-cam" @click="pickImage"><l-icon name="camera" :size="20" color="#40434e" /></view>
+      <view class="ib-cam" @click="openCamera"><l-icon name="camera" :size="20" color="#40434e" /></view>
       <view class="ib-txt" @click="textOpen = true"><l-icon name="clipboard-list" :size="20" color="#40434e" /></view>
       <input
         v-model="fuText"
@@ -317,6 +329,9 @@ export default {
       this.imagePath = '';
       this.imageFile = null;
     },
+    goBook() {
+      uni.switchTab({ url: '/pages/book/book' });
+    },
     pickImage() {
       // #ifdef H5
       if (isNativeApp()) {
@@ -337,6 +352,67 @@ export default {
         },
       });
     },
+    // 相机优先：H5 用 file input capture 直接拉起系统相机，小程序/App 用 sourceType camera
+    openCamera() {
+      // #ifdef H5
+      if (isNativeApp()) {
+        this.pickImage();
+        return;
+      }
+      this.h5Pick(true);
+      return;
+      // #endif
+      // eslint-disable-next-line no-unreachable
+      uni.chooseImage({
+        count: 1,
+        sourceType: ['camera'],
+        success: (res) => {
+          this.imagePath = res.tempFilePaths[0];
+          this.imageFile = (res.tempFiles && res.tempFiles[0]) || null;
+        },
+      });
+    },
+    openAlbum() {
+      // #ifdef H5
+      if (isNativeApp()) {
+        this.pickImage();
+        return;
+      }
+      this.h5Pick(false);
+      return;
+      // #endif
+      // eslint-disable-next-line no-unreachable
+      uni.chooseImage({
+        count: 1,
+        sourceType: ['album'],
+        success: (res) => {
+          this.imagePath = res.tempFilePaths[0];
+          this.imageFile = (res.tempFiles && res.tempFiles[0]) || null;
+        },
+      });
+    },
+    // #ifdef H5
+    h5Pick(camera) {
+      const old = document.getElementById('ask-cap-input');
+      if (old) old.remove();
+      const inp = document.createElement('input');
+      inp.type = 'file';
+      inp.accept = 'image/*';
+      if (camera) inp.setAttribute('capture', 'environment');
+      inp.id = 'ask-cap-input';
+      inp.style.display = 'none';
+      inp.onchange = () => {
+        const f = inp.files && inp.files[0];
+        if (f) {
+          this.imageFile = f;
+          this.imagePath = URL.createObjectURL(f);
+        }
+        inp.remove();
+      };
+      document.body.appendChild(inp);
+      inp.click();
+    },
+    // #endif
     startTimer() {
       let secs = 0;
       this.loadingText = '⏳ AI 识题中…（0秒）';
@@ -651,14 +727,25 @@ export default {
 .top-acts { display: flex; gap: 12rpx; }
 .top-btn { font-size: 24rpx; color: var(--brand); background: var(--brand-soft); border-radius: 999rpx; padding: 0 24rpx; min-height: 44px; display: inline-flex; align-items: center; }
 
-.empty-guide { text-align: center; padding: 40rpx 24rpx 0; }
-.eg-ico { font-size: 72rpx; }
-.eg-t { display: block; font-size: 30rpx; font-weight: 700; color: var(--ink); margin-top: 16rpx; }
-.eg-s { display: block; font-size: 23rpx; color: var(--ink-2); margin-top: 10rpx; line-height: 1.7; }
-.eg-acts { display: flex; gap: 20rpx; margin: 32rpx 0 24rpx; }
-.eg-iv { min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 8rpx; border-radius: 20rpx; font-size: 26rpx; font-weight: 600; background: #eef4ff; color: #2e5bff; margin-bottom: 40rpx; }
-.eg-btn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 8rpx; border-radius: 20rpx; font-size: 28rpx; font-weight: 600; background: var(--card); color: var(--ink); border: 1rpx solid var(--line); }
-.eg-btn.main { background: linear-gradient(135deg, #5b8af8, var(--brand)); color: #fff; border: none; box-shadow: 0 8rpx 24rpx rgba(46, 91, 255, 0.28); }
+.camscreen { background: linear-gradient(180deg, #171c2b, #1f2740); border-radius: 24rpx; padding: 24rpx 24rpx 32rpx; margin-bottom: 24rpx; }
+.cam-top { display: flex; justify-content: flex-end; gap: 14rpx; margin-bottom: 18rpx; }
+.cam-quick { display: inline-flex; align-items: center; gap: 6rpx; min-height: 44px; box-sizing: border-box; padding: 0 22rpx; border-radius: 999rpx; background: rgba(255, 255, 255, 0.1); color: #e5e9f5; font-size: 23rpx; }
+.cam-frame { position: relative; min-height: 380rpx; border-radius: 20rpx; background: rgba(255, 255, 255, 0.04); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14rpx; padding: 30rpx; }
+.cam-corner { position: absolute; width: 40rpx; height: 40rpx; border: 4rpx solid #5b8af8; }
+.cam-corner.tl { top: 18rpx; left: 18rpx; border-right: none; border-bottom: none; border-radius: 8rpx 0 0 0; }
+.cam-corner.tr { top: 18rpx; right: 18rpx; border-left: none; border-bottom: none; border-radius: 0 8rpx 0 0; }
+.cam-corner.bl { bottom: 18rpx; left: 18rpx; border-right: none; border-top: none; border-radius: 0 0 0 8rpx; }
+.cam-corner.br { bottom: 18rpx; right: 18rpx; border-left: none; border-top: none; border-radius: 0 0 8rpx 0; }
+.cam-tip { font-size: 27rpx; font-weight: 600; color: #e5e9f5; }
+.cam-tip2 { font-size: 22rpx; color: #8fa3d9; }
+.cam-modes { display: flex; justify-content: center; gap: 14rpx; margin: 24rpx 0 10rpx; }
+.cam-mode { font-size: 23rpx; color: #b9c4e2; min-height: 44px; display: inline-flex; align-items: center; padding: 0 20rpx; border-radius: 999rpx; }
+.cam-mode.on { color: #fff; font-weight: 700; background: rgba(91, 138, 248, 0.35); }
+.cam-mode.dim { opacity: 0.45; }
+.cam-acts { display: flex; align-items: center; justify-content: space-around; margin-top: 6rpx; }
+.cam-side { display: flex; flex-direction: column; align-items: center; gap: 6rpx; color: #e5e9f5; font-size: 22rpx; min-width: 44px; min-height: 44px; justify-content: center; }
+.cam-shutter { width: 128rpx; height: 128rpx; border-radius: 50%; border: 6rpx solid rgba(255, 255, 255, 0.85); display: flex; align-items: center; justify-content: center; }
+.cam-shutter-in { width: 96rpx; height: 96rpx; border-radius: 50%; background: linear-gradient(135deg, #5b8af8, var(--brand)); box-shadow: 0 8rpx 24rpx rgba(46, 91, 255, 0.45); }
 .reccard { text-align: left; }
 
 .msgs { display: flex; flex-direction: column; }

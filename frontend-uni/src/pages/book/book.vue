@@ -190,26 +190,7 @@
           <rich-text v-else :nodes="aiHtml" />
         </view>
       </view>
-      <view v-if="tab !== 'fav'" class="card redoentry" @click="scanSheetPick">
-        <view class="redo-l">
-          <view class="redo-ico"><l-icon name="scan-line" :size="16" color="#2e5bff" /></view>
-          <view>
-            <text class="redo-t">扫描答题卡</text>
-            <text class="redo-s">拍照导出卷的机读答题卡，自动对答案并记入做题记录</text>
-          </view>
-        </view>
-        <text class="redo-go">{{ scanning ? '识别中…' : '拍照' }}</text>
-      </view>
-      <view v-if="tab !== 'fav'" class="card redoentry" @click="manualOpenSheet">
-        <view class="redo-l">
-          <view class="redo-ico"><l-icon name="pencil-line" :size="16" color="#2e5bff" /></view>
-          <view>
-            <text class="redo-t">手动录入答案</text>
-            <text class="redo-s">打印卷做完后按题号点选答案，一键交卷自动判分记录</text>
-          </view>
-        </view>
-        <text class="redo-go">录入</text>
-      </view>
+      <!-- 扫描答题卡/手动录入已收进右下角 + 浮动菜单，错题列表作为页面主体 -->
       <view v-if="manualOpen" class="mask" @click="manualOpen = false">
         <view class="sheet" @click.stop>
           <view class="sheet-h">
@@ -425,6 +406,17 @@
           <view class="sheet-done rp-submit" :class="{ off: !reportType || reportBusy }" @click="submitReport">{{ reportBusy ? '提交中…' : '提交纠错' }}</view>
         </view>
       </view>
+      <view v-if="tab !== 'fav' && !batchMode" class="fabmenu">
+        <template v-if="fabOpen">
+          <view class="fab-item" @click="fabOpen = false; scanSheetPick()">
+            <l-icon name="scan-line" :size="16" color="#2e5bff" /><text>{{ scanning ? '识别中…' : '扫描答题卡' }}</text>
+          </view>
+          <view class="fab-item" @click="fabOpen = false; manualOpenSheet()">
+            <l-icon name="pencil-line" :size="16" color="#2e5bff" /><text>手动录入答案</text>
+          </view>
+        </template>
+        <view class="fab-main" :class="{ open: fabOpen }" @click="fabOpen = !fabOpen">＋</view>
+      </view>
     </template>
   </view>
 </template>
@@ -487,6 +479,7 @@ export default {
       manualPicks: {},
       manualLoading: false,
       manualSubmitting: false,
+      fabOpen: false,
       recentPapers: [],
       mgOpen: {},
       aiOpen: false,
@@ -1235,6 +1228,13 @@ export default {
 .bchk { width: 36rpx; height: 36rpx; border-radius: 50%; border: 3rpx solid var(--line); margin-right: 12rpx; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 24rpx; color: #fff; box-sizing: border-box; }
 .bchk.on { background: var(--brand); border-color: var(--brand); }
 .mcard.bsel { border-color: var(--brand); box-shadow: 0 0 0 2rpx var(--brand-soft); }
+.fabmenu { position: fixed; right: 32rpx; bottom: calc(50px + env(safe-area-inset-bottom) + 32rpx); z-index: 60; display: flex; flex-direction: column; align-items: flex-end; gap: 18rpx; }
+/* #ifndef H5 */
+.fabmenu { bottom: calc(env(safe-area-inset-bottom) + 32rpx); }
+/* #endif */
+.fab-item { display: inline-flex; align-items: center; gap: 10rpx; min-height: 44px; box-sizing: border-box; padding: 0 26rpx; background: var(--card); color: var(--ink); font-size: 26rpx; font-weight: 600; border: 1rpx solid var(--line); border-radius: 999rpx; box-shadow: 0 8rpx 24rpx rgba(31, 36, 48, 0.14); }
+.fab-main { width: 104rpx; height: 104rpx; border-radius: 50%; background: var(--brand); color: #fff; font-size: 52rpx; font-weight: 400; display: flex; align-items: center; justify-content: center; box-shadow: 0 10rpx 28rpx rgba(46, 91, 255, 0.35); transition: transform 0.3s ease; }
+.fab-main.open { transform: rotate(45deg); }
 .batchbar { position: fixed; left: 24rpx; right: 24rpx; bottom: calc(120rpx + env(safe-area-inset-bottom)); z-index: 50; background: var(--card); border: 1rpx solid var(--line); border-radius: 24rpx; box-shadow: 0 8rpx 32rpx rgba(31, 36, 48, 0.16); padding: 16rpx 24rpx; display: flex; align-items: center; gap: 16rpx; }
 .bb-sel { font-size: 24rpx; color: var(--brand); min-height: 44px; display: inline-flex; align-items: center; }
 .bb-n { font-size: 24rpx; color: var(--ink-2); flex: 1; }

@@ -73,7 +73,7 @@ step "4c CF Pages 部署（kaogong.zalize.com 静态层；动态路由经 functi
 PAGES_DIR=$(mktemp -d)
 cp -r "$DIST" "$PAGES_DIR/dist"
 mkdir -p "$PAGES_DIR/functions"
-cp "$REPO_DIR/deploy/cf-pages/functions/[[path]].js" "$PAGES_DIR/functions/"
+cp -r "$REPO_DIR/deploy/cf-pages/functions/." "$PAGES_DIR/functions/"
 cp "$REPO_DIR/deploy/cf-pages/_routes.json" "$REPO_DIR/deploy/cf-pages/_headers" "$PAGES_DIR/dist/"
 (cd "$PAGES_DIR" && npx wrangler pages deploy dist --project-name kaogong-h5 --branch main --commit-dirty=true)
 rm -rf "$PAGES_DIR"
@@ -91,6 +91,15 @@ if [[ -n "$ONLINE_HOME_CHUNK" && ! -f "$DIST/assets/$ONLINE_HOME_CHUNK" ]]; then
   exit 1
 fi
 echo "OK: 线上 bundle 与本机构建一致"
+
+step "5b 线上 bundle 各 Accept-Encoding 变体校验（防 HTML 回退缓存投毒）"
+ENC_FAIL=0
+for enc in "identity" "gzip" "br" "gzip, deflate" "gzip, deflate, br" "gzip, deflate, br, zstd" "zstd"; do
+  ct=$(curl -s -o /dev/null -w "%{content_type}" -H "Accept-Encoding: $enc" "$SITE/assets/$ONLINE_INDEX_REF")
+  echo "encoding [$enc] -> $ct"
+  [[ "$ct" == *javascript* ]] || ENC_FAIL=1
+done
+[[ "$ENC_FAIL" == "0" ]] || { echo "FAIL: 存在非 JS 变体（疑似 HTML 回退投毒），检查 /assets 守卫与边缘缓存！"; exit 1; }
 
 step "6/6 接口回归"
 FAIL=0

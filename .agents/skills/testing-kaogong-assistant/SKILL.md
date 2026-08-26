@@ -5,6 +5,13 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## 批次2·B/C 生产走查新经验（骨架屏 / 双视口 / 并发部署）
+- **生产验证前必须 curl `/` 核对 index bundle hash**（`curl -s https://kaogong.zalize.com/ | grep -o 'index-[^"]*\.js'`）：SW 缓存与**其他会话并发部署**都可能让线上跑旧 bundle（本轮实测被旧版覆盖过一次）；走查中途也要复核未回退。
+- 375/1440 双视口用 CDP `Emulation.setDeviceMetricsOverride`（常驻 daemon 保持 ws 连接，依赖 `pip install websocket-client`）。
+- 抓刷题直达骨架屏：`Network.emulateNetworkConditions`（~2500ms latency）放慢首题请求；触发「题目加载失败」重试面板：CDP `Fetch` 拦截 `*api/questions*` failRequest。
+- 裸直达 `/#/pages/practice/practice` 自 PR#163 起自动按 lastModule 开练（旧版停「正在准备练习…」的行为已废弃）；若存在未完成组会先弹「继续上次练习?」续练弹窗（tryResume，预期）。
+- 模考列表「N 人考过」数据源是 `/api/exam/papers` 的 `takers` 字段（非 `/api/papers`）。
+
 ## R28 审查轮新经验（SW v3 / 学习计划 / OMR 闭环 / 组队周报）
 - SW v3（kg-shell-v3）后 asset 不经 SW：验证用 CDP `Network.responseReceived` 的 `fromServiceWorker` + `performance.getEntriesByType('resource')` 的 transferSize（二次访问==0 即 memory/disk cache）。断网 F5 仍进壳（导航兜底），但 `/static/tab/*.png` 图标离线缺失属预期降级。
 - **懒加载 chunk 挂起与 SW 无关**：SW v3 不拦 asset 后周报页仍复现「spinner→连接服务器超时」，点击重试后 chunk 160ms 秒开——疑 HTTP/2 连接或反代层，别再拿 SW update 当修复手段。
