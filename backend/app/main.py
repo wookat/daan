@@ -8,9 +8,10 @@ import time
 
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.datastructures import Headers
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from . import (
     admin_api,
@@ -188,6 +189,32 @@ def api_sw_js(if_none_match: str | None = Header(None)):
     return FileResponse(p, media_type="application/javascript", headers=headers)
 
 
+_NOT_FOUND_HTML = """<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>页面不存在（404）｜错题邦</title>
+<style>
+body{margin:0;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:#f6f7fb;color:#1f2329;display:flex;min-height:100vh;align-items:center;justify-content:center}
+.card{max-width:420px;padding:40px 32px;text-align:center}
+h1{font-size:64px;margin:0;color:#3b6df0}
+p{color:#5a6472;line-height:1.7}
+a{display:inline-block;margin-top:16px;padding:10px 28px;background:#3b6df0;color:#fff;border-radius:24px;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="card">
+<h1>404</h1>
+<p>你要找的页面不存在或已被移动。<br>可以回到错题邦首页继续刷题。</p>
+<a href="/">返回首页</a>
+</div>
+</body>
+</html>
+"""
+
+
 class AssetStaticFiles(StaticFiles):
     """带 hash 的 /assets/* 长缓存；存在预压缩 .br 产物时优先返回（比 gzip 小约 15-20%）。"""
 
@@ -208,7 +235,12 @@ class AssetStaticFiles(StaticFiles):
                         "Cache-Control": self._CACHE,
                     },
                 )
-        resp = await super().get_response(path, scope)
+        try:
+            resp = await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            if exc.status_code == 404 and "text/html" in Headers(scope=scope).get("accept", ""):
+                return HTMLResponse(_NOT_FOUND_HTML, status_code=404, headers={"Cache-Control": "no-cache"})
+            raise
         if is_asset and resp.status_code == 200:
             resp.headers["Cache-Control"] = self._CACHE
         elif resp.status_code == 200 and "text/html" in (resp.headers.get("content-type") or ""):
