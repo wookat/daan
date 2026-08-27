@@ -8,6 +8,7 @@ import re
 import secrets
 import time
 
+import httpx
 from fastapi import APIRouter, Header, HTTPException, Request
 
 from . import db
@@ -140,6 +141,29 @@ def _issue_token(conn, user_id: int) -> str:
     return token
 
 
+_REVOKED_CACHE: dict[str, tuple[float, float]] = {}
+_REVOKED_CACHE_TTL = 60.0
+
+
+def _central_revoked_before(email: str) -> float:
+    """中心「退出全部设备」时间戳（秒）；进程内缓存 60s，中心不可达时 fail-open。"""
+    now = time.time()
+    hit = _REVOKED_CACHE.get(email)
+    if hit and now - hit[1] < _REVOKED_CACHE_TTL:
+        return hit[0]
+    try:
+        r = httpx.get(
+            "https://account.zalize.com/api/revoked-before",
+            params={"email": email},
+            timeout=5,
+        )
+        value = float((r.json() or {}).get("revokedBefore") or 0) / 1000.0 if r.status_code == 200 else 0.0
+    except Exception:
+        value = 0.0
+    _REVOKED_CACHE[email] = (value, now)
+    return value
+
+
 def get_user_by_token(authorization: str | None):
     """Bearer token -> user 行；无效返回 None。"""
     if not authorization or not authorization.startswith("Bearer "):
@@ -149,12 +173,29 @@ def get_user_by_token(authorization: str | None):
         return None
     conn = db.get_conn()
     row = conn.execute(
-        """SELECT u.* FROM auth_tokens t JOIN users u ON u.id=t.user_id
+        """SELECT u.*, t.created_at AS token_created_at FROM auth_tokens t JOIN users u ON u.id=t.user_id
            WHERE t.token=? AND t.expires_at>?""",
         (token, time.time()),
     ).fetchone()
+    if row:
+        binding = conn.execute(
+            "SELECT email FROM zalize_bindings WHERE user_id=?", (row["id"],)
+        ).fetchone() if _has_bindings_table(conn) else None
+        if binding and row["token_created_at"] < _central_revoked_before(binding["email"]):
+            conn.execute("DELETE FROM auth_tokens WHERE token=?", (token,))
+            conn.commit()
+            conn.close()
+            return None
     conn.close()
     return row
+
+
+def _has_bindings_table(conn) -> bool:
+    return bool(
+        conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='zalize_bindings'"
+        ).fetchone()
+    )
 
 
 _ACCOUNT_UID_RE = re.compile(r"^u\d+$")
