@@ -90,7 +90,10 @@ def _page(title: str, description: str, canonical_path: str, body: str, jsonld: 
         f'<header class="hdr"><div class="wrap"><a href="/tiku/">考公题库</a></div></header>'
         f'<main class="wrap">{body}</main>'
         f'<footer class="ftr"><a href="{_e(SITE_BASE)}/">错题邦</a> · 13万+行测真题在线刷题'
-        f' · <a href="/tiku/papers/">真题卷</a></footer></body></html>'
+        f' · <a href="/tiku/papers/">真题卷</a>'
+        f' · <a href="https://career.zalize.com/privacy/">隐私政策</a>'
+        f' · <a href="https://career.zalize.com/terms/">服务条款</a>'
+        f' · <a href="mailto:support@zalize.com">联系我们</a></footer></body></html>'
     )
 
 
