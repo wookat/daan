@@ -1228,6 +1228,7 @@ export default {
         this.startQTimer();
         uni.setStorageSync('lastModule', module || '');
         this.offline = false;
+        this._autoRetried = false;
         flushOfflineQueue();
       } catch (e) {
         // 无网络：尝试使用已下载的离线题包（本地判分，作答记录进队列待同步）
@@ -1247,6 +1248,9 @@ export default {
           this.startQTimer();
           uni.setStorageSync('lastModule', module || '');
           uni.showToast({ title: '当前无网络，已切换离线题包模式', icon: 'none', duration: 1800 });
+        } else if (!this._autoRetried) {
+          this._autoRetried = true;
+          setTimeout(() => { if (!this.session) this.retryStart(); }, 1500);
         } else {
           this.endLoadState((e.message || '网络错误') + '（可在我的→离线题包提前下载）');
         }
@@ -1492,6 +1496,7 @@ export default {
             this.startQTimer();
           } else {
             uni.removeStorageSync('pendingSession');
+            this.start(s.lastModule || uni.getStorageSync('lastModule') || null, null, null, false, undefined, null, 'direct');
           }
         },
       });
