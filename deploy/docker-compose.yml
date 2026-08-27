@@ -22,6 +22,8 @@ services:
       - IMPORT_TOKEN=${IMPORT_TOKEN:-}
       - ADMIN_TOKEN=${ADMIN_TOKEN:-}
       - INDEXNOW_KEY=${INDEXNOW_KEY:-}
+      - MONITOR_URL=${MONITOR_URL:-}
+      - MONITOR_KEY=${MONITOR_KEY:-}
     volumes:
       - kaogong-data:/data
 
