@@ -67,6 +67,11 @@ export function authLogin(phone, password) {
   return request('/api/auth/login', { method: 'POST', data: { phone, password } });
 }
 
+export function authSso() {
+  // Zalize 统一账号一键登录：H5 同域自动携带 .zalize.com 中心站 Cookie
+  return request('/api/auth/sso', { method: 'POST' });
+}
+
 export function authLogout() {
   return request('/api/auth/logout', { method: 'POST' }).catch(() => {});
 }

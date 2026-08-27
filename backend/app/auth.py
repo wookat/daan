@@ -113,15 +113,18 @@ def _mask_phone(phone: str) -> str:
 
 
 def _user_payload(row) -> dict:
-    is_wx = str(row["phone"]).startswith("wx:")
+    phone = str(row["phone"])
+    is_wx = phone.startswith("wx:")
+    is_za = phone.startswith("za:")  # Zalize 统一账号占位，不回显邮箱
     nick = str(row["nickname"] or "").strip()[:20]
     if nick.lower() in ("null", "undefined"):
         nick = ""
+    default_nick = "微信考友" if is_wx else "Zalize 考友" if is_za else "考友" + phone[-4:]
     return {
         "id": row["id"],
         "uid": user_uid(row["id"]),
-        "phone": None if is_wx else _mask_phone(row["phone"]),
-        "nickname": nick or ("微信考友" if is_wx else "考友" + str(row["phone"])[-4:]),
+        "phone": None if is_wx or is_za else _mask_phone(phone),
+        "nickname": nick or default_nick,
         "created_at": row["created_at"],
     }
 

@@ -29,19 +29,47 @@
       <button class="primary" :disabled="busy" @click="submit">
         {{ busy ? '请稍候…' : mode === 'login' ? '登录' : '注册并合并本机记录' }}
       </button>
+      <!-- #ifdef H5 -->
+      <button class="sso" :disabled="busy" @click="ssoLogin">Zalize 统一账号一键登录</button>
+      <view class="sso-note">已在 account.zalize.com 登录过心动简历/速申等站点？可直接一键登录并合并本机记录</view>
+      <!-- #endif -->
       <view v-if="err" class="err">{{ err }}</view>
     </view>
   </view>
 </template>
 
 <script>
-import { authLogin, authRegister, mergeAnon, setAuth, trackEvent } from '../../api.js';
+import { authLogin, authRegister, authSso, mergeAnon, setAuth, trackEvent } from '../../api.js';
 
 export default {
   data() {
     return { mode: 'login', phone: '', password: '', nickname: '', busy: false, err: '' };
   },
   methods: {
+    async ssoLogin() {
+      this.err = '';
+      this.busy = true;
+      try {
+        const anon = uni.getStorageSync('anonUid') || '';
+        const r = await authSso();
+        setAuth(r.token, r.user);
+        if (anon && anon !== r.user.uid) {
+          try {
+            await mergeAnon(anon);
+            uni.showToast({ title: '本机记录已合并到账号', icon: 'success', duration: 2000 });
+          } catch (e) {
+            /* 合并失败不阻断登录 */
+          }
+        } else {
+          uni.showToast({ title: '登录成功', icon: 'success' });
+        }
+        setTimeout(() => uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/stats/stats' }) }), 1200);
+      } catch (e) {
+        this.err = e.message === '未登录 Zalize 统一账号' ? '请先在 account.zalize.com 登录后再试' : e.message || '登录失败';
+      } finally {
+        this.busy = false;
+      }
+    },
     async submit() {
       this.err = '';
       if (!/^1\d{10}$/.test(this.phone)) {
@@ -181,6 +209,23 @@ export default {
 .primary[disabled] {
   opacity: 0.6;
   color: #fff;
+}
+.sso {
+  margin-top: 20rpx;
+  height: 92rpx;
+  line-height: 92rpx;
+  background: var(--card);
+  color: var(--brand);
+  border: 2rpx solid var(--brand);
+  font-size: 30rpx;
+  font-weight: 600;
+  border-radius: 18rpx;
+}
+.sso-note {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: var(--ink-4);
+  text-align: center;
 }
 .err {
   margin-top: 20rpx;
