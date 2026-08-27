@@ -115,6 +115,11 @@
       <view class="zl-links">
         <text class="zl-link" v-for="p in zlProducts" :key="p.url" @click="zlOpen(p.url)">{{ p.name }}</text>
       </view>
+      <view class="zl-links">
+        <text class="zl-link" @click="zlOpen('https://career.zalize.com/privacy/')">隐私政策</text>
+        <text class="zl-link" @click="zlOpen('https://career.zalize.com/terms/')">服务条款</text>
+        <text class="zl-link" @click="zlOpen('mailto:support@zalize.com')">联系我们</text>
+      </view>
       <text class="zl-copy">© 2026 Zalize 上岸 · 错题邦</text>
     </view>
   </view>
