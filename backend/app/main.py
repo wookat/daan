@@ -30,6 +30,7 @@ from . import (
     social,
     study_api,
     team,
+    zalize_sso,
 )
 from .deps import ACCESS_CODE
 
@@ -90,6 +91,7 @@ async def guard_account_uid(request, call_next):
 
 
 app.include_router(auth.router)
+app.include_router(zalize_sso.router)
 app.include_router(insights.router)
 app.include_router(social.router)
 app.include_router(interview.router)
