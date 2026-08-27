@@ -53,3 +53,14 @@ script-src 'self' 'unsafe-inline' https://career.zalize.com
 
 ## 数据
 SQLite 存于 docker volume `kaogong-data`（/data/data.db）。备份：`docker compose cp kaogong:/data/data.db ./backup.db`
+
+## 生产运营脚本（deploy/kaogong-ops.sh）
+- 部署位置：VPS `/home/ubuntu/kaogong-ops.sh`，cron `40 3 * * *`。
+- 每日 SQLite `.backup` → 本地 `~/kaogong-backups`（gz，保留 7 份）→ rclone 上传
+  `r2:zalize-backups/kaogong-sqlite/`（保留 30 天，远端字节数校验）→ 健康巡检
+  （`/api/questions?limit=1` 非 200 时 `docker compose up -d` 自愈）。
+- R2 凭证：VPS `/home/ubuntu/.env`（`R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_ENDPOINT`，不入库）。
+
+## API 文档开关
+生产默认关闭公网 API 文档：compose 注入 `DISABLE_API_DOCS=1`（`/docs`、`/redoc`、
+`/openapi.json` 返回 404）。本地开发（uvicorn 直跑，不设该变量）不受影响。

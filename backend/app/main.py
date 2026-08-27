@@ -34,7 +34,13 @@ from . import (
 )
 from .deps import ACCESS_CODE
 
-app = FastAPI(title="错题邦")
+_DOCS_OFF = os.environ.get("DISABLE_API_DOCS") == "1"
+app = FastAPI(
+    title="错题邦",
+    docs_url=None if _DOCS_OFF else "/docs",
+    redoc_url=None if _DOCS_OFF else "/redoc",
+    openapi_url=None if _DOCS_OFF else "/openapi.json",
+)
 # Android App（Capacitor WebView，origin 为 https://localhost）跨域访问 API
 APP_ORIGINS = os.environ.get(
     "APP_CORS_ORIGINS", "https://localhost,capacitor://localhost,http://localhost"
