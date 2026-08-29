@@ -1258,6 +1258,7 @@ export default {
   .more-grid { grid-column: 1 / -1; grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .card.guide, .card.plancard, .card.szcard, .card.weekly-c, .card.spin { grid-column: 1 / -1; }
   .card.landing { grid-column: 1 / -1; }
+  .hero-btn.main { flex: 0 0 auto; padding: 0 64rpx; }
   .landing .ld-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .landing .ld-btn.main { flex: 0 0 auto; padding: 0 56rpx; }
 }
