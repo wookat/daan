@@ -260,6 +260,7 @@
           <view class="mg-row" @click="toggleGroup(g.key)">
             <text class="mg-arrow">{{ mgOpen[g.key] ? '▾' : '▸' }}</text>
             <text class="mg-name">{{ g.name }}</text>
+            <text v-if="masteryMods[g.key]" class="mg-mst">掌握 {{ masteryMods[g.key].pct }}% · {{ masteryMods[g.key].level }}</text>
             <text class="mg-badge">{{ g.n }}</text>
             <text class="mg-go" @click.stop="pickGroup(g.key, '')">查看 ›</text>
           </view>
@@ -276,14 +277,16 @@
                 @click="pickGroup(g.key, s.name, t.name)"
               >
                 <text class="mg-sub-name">{{ t.name }}</text>
+                <text v-if="masteryT3[t.name] != null" class="mg-mst">{{ masteryT3[t.name] }}%</text>
                 <text class="mg-badge">{{ t.n }}</text>
               </view>
             </template>
           </view>
         </view>
       </view>
-      <view v-if="tab !== 'fav' && (filterMod || kpFilter || kp3Filter)" class="curfilter bk-main">
-        <text class="kpchip on" @click="filterMod = ''; kpFilter = ''; kp3Filter = ''">{{ kp3Filter || kpFilter || modName(filterMod) }} ✕</text>
+      <view v-if="tab !== 'fav' && (filterMod || kpFilter || kp3Filter || srcFilter)" class="curfilter bk-main">
+        <text v-if="filterMod || kpFilter || kp3Filter" class="kpchip on" @click="filterMod = ''; kpFilter = ''; kp3Filter = ''">{{ kp3Filter || kpFilter || modName(filterMod) }} ✕</text>
+        <text v-if="srcFilter" class="kpchip on" @click="srcFilter = ''">{{ srcFilter === 'exam' ? '模考错题' : '练习错题' }} ✕</text>
         <text v-if="sortBy !== 'time'" class="kpchip" @click="filterOpen = true">{{ (SORTS.find(s => s.k === sortBy) || {}).name }}</text>
       </view>
       <view v-else-if="tab !== 'fav' && sortBy !== 'time'" class="curfilter bk-main">
@@ -306,6 +309,12 @@
           <view v-if="typeGroups.length > 1" class="sheet-k">题型</view>
           <view v-if="typeGroups.length > 1" class="kpchips">
             <text v-for="g in typeGroups" :key="g.name" class="kpchip" :class="{ on: kpFilter === g.name }" @click="kpFilter = kpFilter === g.name ? '' : g.name; kp3Filter = ''">{{ g.name }} ×{{ g.n }}</text>
+          </view>
+          <view v-if="hasExamMistakes" class="sheet-k">来源</view>
+          <view v-if="hasExamMistakes" class="kpchips">
+            <text class="kpchip" :class="{ on: srcFilter === '' }" @click="srcFilter = ''">全部</text>
+            <text class="kpchip" :class="{ on: srcFilter === 'exam' }" @click="srcFilter = 'exam'">模考</text>
+            <text class="kpchip" :class="{ on: srcFilter === 'practice' }" @click="srcFilter = 'practice'">练习</text>
           </view>
           <view class="sheet-done" @click="filterOpen = false">完成</view>
           <view class="sheet-export" @click="exportConfirm = true">{{ exporting ? '正在生成 PDF…' : '导出当前筛选为错题卷 PDF' }}</view>
@@ -336,6 +345,7 @@
         <view class="mhead">
           <view v-if="batchMode" class="bchk" :class="{ on: selIds[m.id] }">{{ selIds[m.id] ? '✓' : '' }}</view>
           <text class="tag">{{ tagName(m) }}</text>
+          <text v-if="m.source === 'exam'" class="srcbadge">模考</text>
           <text v-if="m.times >= 2" class="timesbadge">错 {{ m.times }} 次</text>
           <text v-if="m.mastered" class="zhan">已掌握</text>
           <view v-else-if="nextReviewText(m)" class="duehint" :class="{ due: isDue(m) }">
@@ -461,6 +471,9 @@ export default {
       nextDays: 0,
       streak: 0,
       filterMod: '',
+      srcFilter: '',
+      masteryMods: {},
+      masteryT3: {},
       kw: '',
       kpFilter: '',
       kp3Filter: '',
@@ -533,6 +546,9 @@ export default {
     todoItems() {
       return this.items.filter((m) => !m.mastered);
     },
+    hasExamMistakes() {
+      return this.items.some((m) => m.source === 'exam');
+    },
     doneItems() {
       return this.items.filter((m) => m.mastered);
     },
@@ -542,6 +558,8 @@ export default {
       if (this.filterMod) base = base.filter((m) => m.module === this.filterMod);
       if (this.kpFilter) base = base.filter((m) => this.groupKey(m) === this.kpFilter);
       if (this.kp3Filter) base = base.filter((m) => m.tag3_name === this.kp3Filter);
+      if (this.srcFilter === 'exam') base = base.filter((m) => m.source === 'exam');
+      else if (this.srcFilter === 'practice') base = base.filter((m) => m.source !== 'exam');
       base = [...base];
       if (this.sortBy === 'times') base.sort((a, b) => (b.times || 1) - (a.times || 1));
       else if (this.sortBy === 'type') base.sort((a, b) => String(a.question_type || a.module || '').localeCompare(String(b.question_type || b.module || ''), 'zh'));
@@ -835,6 +853,7 @@ export default {
         }
         this.offlineView = false;
         cacheMistakes(d.items);
+        this.loadMastery();
         try {
           if (this.dueTotal > 0) uni.setTabBarBadge({ index: 1, text: String(this.dueTotal > 99 ? '99+' : this.dueTotal) });
           else uni.removeTabBarBadge({ index: 1 });
@@ -850,6 +869,23 @@ export default {
         }
       }
       this.loading = false;
+    },
+    async loadMastery() {
+      try {
+        const map = await request('/api/mastery/map?uid=' + encodeURIComponent(anonUid()));
+        const mods = {};
+        const t3s = {};
+        for (const m of map.modules || []) {
+          if (m.n) mods[m.module] = { pct: Math.round(m.mastery * 100), level: m.level_name };
+          for (const s of m.subs || []) {
+            for (const t of s.tag3s || []) {
+              if (t.n) t3s[t.name] = Math.round(t.mastery * 100);
+            }
+          }
+        }
+        this.masteryMods = mods;
+        this.masteryT3 = t3s;
+      } catch (e) { /* 掌握度为增强信息，失败静默降级 */ }
     },
     startReviewFromCard() {
       trackEvent('review_entry_click', 'book_card');
@@ -1210,6 +1246,7 @@ export default {
 .duehint.due .duedot { background: #f59e0b; }
 .rvbadge { font-size: 20rpx; color: var(--ink-2); background: var(--soft-bg); border-radius: 999rpx; padding: 4rpx 14rpx; }
 .rzbadge { font-size: 20rpx; color: #b45309; background: #fef3c7; border-radius: 999rpx; padding: 4rpx 14rpx; }
+.srcbadge { font-size: 20rpx; color: #6d28d9; background: #ede9fe; border-radius: 999rpx; padding: 4rpx 14rpx; }
 .zhan { margin-left: auto; font-size: 22rpx; font-weight: 700; color: var(--ok); border: 3rpx solid var(--ok); border-radius: 8rpx; padding: 2rpx 12rpx; transform: rotate(-8deg); }
 .anscmp { margin-top: 12rpx; font-size: 23rpx; display: flex; gap: 12rpx; align-items: center; flex-wrap: wrap; }
 .anscmp .ca { color: var(--ok); font-weight: 600; }
@@ -1250,6 +1287,7 @@ export default {
 .mg-arrow { font-size: 24rpx; color: var(--ink-3); width: 28rpx; }
 .mg-name { font-size: 29rpx; font-weight: 600; color: var(--ink); flex: 1; }
 .mg-badge { background: var(--fill); color: var(--ink-2); border-radius: 999rpx; font-size: 22rpx; padding: 4rpx 18rpx; }
+.mg-mst { font-size: 21rpx; color: var(--ink-3); white-space: nowrap; }
 .mg-go { font-size: 24rpx; color: var(--brand); padding: 18rpx 0 18rpx 24rpx; }
 .mg-sub { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding-left: 60rpx; border-bottom: 1rpx dashed var(--line); }
 .mg-sub-name { font-size: 26rpx; color: var(--ink); }
