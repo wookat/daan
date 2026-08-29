@@ -1400,9 +1400,11 @@ export default {
 @media (min-width: 1024px) {
   .bookwrap { max-width: 920px !important; }
   .bookwrap::after { content: ''; display: block; clear: both; }
-  .bookwrap .bk-main { float: left; clear: left; width: calc(100% - 344px); box-sizing: border-box; }
+  /* 主列走常规文档流（仅预留右侧栏宽度），侧栏用右浮动堆叠：
+     避免左列元素受“浮动框顶不得高于文档序更早浮动框顶”的约束被右列高卡推低形成空洞 */
+  .bookwrap .bk-main { margin-right: 344px; box-sizing: border-box; }
   .bookwrap .bk-side { float: right; clear: right; width: 320px; box-sizing: border-box; }
-  .bookwrap.noside .bk-main { float: none; width: 100%; }
+  .bookwrap.noside .bk-main { margin-right: 0; }
   .bookwrap-review { max-width: 760px !important; }
 }
 /* #endif */
