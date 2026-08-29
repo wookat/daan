@@ -12,6 +12,23 @@
       </view>
     </view>
 
+    <!-- 新访客价值主张首屏（无练习历史时展示，可关闭） -->
+    <view v-if="showLanding" class="card landing">
+      <text class="ld-x" @click="closeLanding">✕</text>
+      <text class="ld-t">免费刷 11万+ 行测真题</text>
+      <text class="ld-s">拍题 AI 讲解 · 错题本按遗忘曲线复习 · 迷你模考 —— 免注册，打开即练</text>
+      <view class="ld-grid">
+        <view class="ld-item"><text class="ld-in">11万+ 真题题库</text><text class="ld-id">五大模块 · 三级考点分类</text></view>
+        <view class="ld-item"><text class="ld-in">AI 拍题讲解</text><text class="ld-id">花生十三方法体系解析</text></view>
+        <view class="ld-item"><text class="ld-in">智能错题本</text><text class="ld-id">遗忘曲线复习 + 掌握度</text></view>
+        <view class="ld-item"><text class="ld-in">迷你模考</text><text class="ld-id">判分报告 · 错题自动入本</text></view>
+      </view>
+      <view class="ld-acts">
+        <view class="ld-btn main" @click="startDaily">免注册立即开练 ›</view>
+        <view class="ld-btn sub" @click="goTiku">浏览题库</view>
+      </view>
+    </view>
+
     <!-- 回访召回卡（7天以上未练习的老用户） -->
     <view v-if="comeback" class="card cbcard">
       <view class="cb-l">
@@ -473,6 +490,7 @@ export default {
       planSkel: uni.getStorageSync('homePlanCard') || !uni.getStorageSync('planGuideHide'),
       planToday: null,
       guideHide: uni.getStorageSync('planGuideHide') ? true : false,
+      landingHide: uni.getStorageSync('landingHide') ? true : false,
       setupOpen: false,
       setupStep: 1,
       setupBusy: false,
@@ -506,6 +524,10 @@ export default {
     };
   },
   computed: {
+    showLanding() {
+      if (this.landingHide) return false;
+      return !Object.keys((this.pstats && this.pstats.days) || {}).length;
+    },
     examLabel() {
       if (this.profile && this.profile.exam_type) {
         return this.profile.exam_type + (this.profile.target_region ? ' · ' + this.profile.target_region : '');
@@ -626,6 +648,15 @@ export default {
     if (this.realMode) this.loadRealFilters();
   },
   methods: {
+    closeLanding() {
+      this.landingHide = true;
+      uni.setStorageSync('landingHide', 1);
+    },
+    goTiku() {
+      // #ifdef H5
+      window.location.href = '/tiku/';
+      // #endif
+    },
     beforeExamDate(value, resolve) {
       // confirm 前拦截越界日期：钳回边界并提示，弹层保持打开
       if (value < this.dateStartTs || value > this.dateEndTs) {
@@ -1226,6 +1257,9 @@ export default {
   .modlist .card.smart { grid-column: 1 / -1; }
   .more-grid { grid-column: 1 / -1; grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .card.guide, .card.plancard, .card.szcard, .card.weekly-c, .card.spin { grid-column: 1 / -1; }
+  .card.landing { grid-column: 1 / -1; }
+  .landing .ld-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .landing .ld-btn.main { flex: 0 0 auto; padding: 0 56rpx; }
 }
 /* #endif */
 .toprow { display: flex; align-items: center; gap: 16rpx; margin-bottom: 20rpx; }
@@ -1237,4 +1271,18 @@ export default {
 .mod-prog-n { font-size: 26rpx; font-weight: 700; color: var(--ink); }
 .searchbar { flex: 1; display: flex; align-items: center; gap: 12rpx; background: var(--card); border-radius: 999rpx; padding: 16rpx 26rpx; box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04); }
 .searchbar-t { font-size: 26rpx; color: var(--ink-3); }
+
+/* 新访客价值主张首屏 */
+.landing { position: relative; background: linear-gradient(135deg, var(--brand), #4c7dff); color: #fff; padding: 36rpx 32rpx; }
+.ld-x { position: absolute; top: 16rpx; right: 24rpx; font-size: 26rpx; color: rgba(255, 255, 255, 0.75); padding: 8rpx; }
+.ld-t { display: block; font-size: 40rpx; font-weight: 700; line-height: 1.35; }
+.ld-s { display: block; font-size: 24rpx; color: rgba(255, 255, 255, 0.88); margin-top: 10rpx; line-height: 1.6; }
+.ld-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14rpx; margin-top: 24rpx; }
+.ld-item { background: rgba(255, 255, 255, 0.14); border-radius: 16rpx; padding: 18rpx 20rpx; display: flex; flex-direction: column; gap: 4rpx; }
+.ld-in { font-size: 26rpx; font-weight: 600; }
+.ld-id { font-size: 21rpx; color: rgba(255, 255, 255, 0.82); }
+.ld-acts { display: flex; gap: 16rpx; margin-top: 26rpx; }
+.ld-btn { min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; border-radius: 999rpx; padding: 0 34rpx; font-size: 27rpx; font-weight: 600; }
+.ld-btn.main { background: #fff; color: var(--brand); flex: 1; }
+.ld-btn.sub { background: rgba(255, 255, 255, 0.16); color: #fff; border: 1rpx solid rgba(255, 255, 255, 0.45); }
 </style>
