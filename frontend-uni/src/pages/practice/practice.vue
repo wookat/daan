@@ -158,6 +158,16 @@
       <view v-if="!beiMode" class="sub">答对 {{ right }}/{{ items.length }} · 最高连对 {{ bestStreak }} 题<template v-if="autoSaved">，错题已自动加入错题本</template></view>
       <view v-else class="sub">已浏览 {{ items.length }} 道题的答案与解析</view>
       <view v-if="!beiMode && percentile != null" class="beat">本组正确率击败了 {{ percentile }}% 的刷题记录</view>
+      <view v-if="!beiMode && redoReport" class="redoreport">
+        <view class="rr-t">错题重练效果</view>
+        <view class="rr-row">
+          <view class="rr-cell"><text class="rr-n rr-ok">{{ redoReport.fixed }}</text><text class="rr-l">已纠正</text></view>
+          <view class="rr-cell"><text class="rr-n rr-bad">{{ redoReport.still }}</text><text class="rr-l">仍错</text></view>
+          <view class="rr-cell"><text class="rr-n rr-master">{{ redoReport.mastered }}</text><text class="rr-l">达成掌握</text></view>
+        </view>
+        <text class="rr-tip">答对的已推进复习计划<template v-if="redoReport.still">；仍错的已重置复习，明天优先再练</template></text>
+        <view class="rr-go" @click="goReview">回错题本查看 ›</view>
+      </view>
       <view v-if="!beiMode" class="report">
         <view class="report-row">
           <view class="report-cell"><text class="report-n">{{ fmtSecs(totalSecs) }}</text><text class="report-t">总用时</text></view>
@@ -324,6 +334,7 @@ export default {
       dueReview: 0,
       resultSent: false,
       percentile: null,
+      redoReport: null,
       examMode: false,
       examLeft: 0,
       examTimer: null,
@@ -1785,8 +1796,33 @@ export default {
         if (d.percentile != null) this.percentile = d.percentile;
       } catch (e) { /* 非关键路径 */ }
       await this.logAttempts(this.items);
+      await this.syncRedoReviews();
       if (this.profile) this.loadPlanToday();
       this.loadDueReview();
+    },
+    // 错题重练场次：答对的题推进 SRS 复习计划（答错走既有自动存错题路径重置复习），并汇总效果报告
+    async syncRedoReviews() {
+      this.redoReport = null;
+      const isRedo = this._redoItems && this._redoItems.length && !this.lastModule;
+      if (!isRedo) return;
+      const answered = this.items.filter((q) => q._picked && q.mistake_id);
+      if (!answered.length) return;
+      const uid = anonUid();
+      let fixed = 0;
+      let still = 0;
+      let mastered = 0;
+      for (const q of answered) {
+        if (q._picked !== q.answer) {
+          still++;
+          continue;
+        }
+        fixed++;
+        try {
+          const r = await request('/api/review/' + q.mistake_id, { method: 'POST', data: { correct: true, uid } });
+          if (r && r.mastered) mastered++;
+        } catch (e) { /* 非关键路径 */ }
+      }
+      this.redoReport = { fixed, still, mastered };
     },
     async loadDueReview() {
       try {
@@ -2113,6 +2149,17 @@ export default {
 .opt.sel { border-color: var(--brand); background: var(--soft-bg); }
 .acard-n.skip { background: var(--line); color: var(--ink-2); }
 .beat { margin-top: 10rpx; font-size: 25rpx; color: var(--brand); background: var(--soft-bg); border-radius: 999rpx; padding: 10rpx 26rpx; }
+.redoreport { width: 100%; margin-top: 24rpx; background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 18rpx; padding: 24rpx 28rpx; box-sizing: border-box; text-align: left; }
+.rr-t { font-size: 27rpx; font-weight: 700; color: var(--ink); }
+.rr-row { display: flex; gap: 16rpx; margin: 18rpx 0 12rpx; }
+.rr-cell { flex: 1; text-align: center; background: var(--card-bg, #fff); border-radius: 14rpx; padding: 16rpx 0; }
+.rr-n { display: block; font-size: 40rpx; font-weight: 800; color: var(--ink); }
+.rr-n.rr-ok { color: #16a34a; }
+.rr-n.rr-bad { color: #dc2626; }
+.rr-n.rr-master { color: var(--brand); }
+.rr-l { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
+.rr-tip { display: block; font-size: 22rpx; color: var(--ink-2); line-height: 1.6; }
+.rr-go { margin-top: 10rpx; font-size: 24rpx; font-weight: 600; color: var(--brand); }
 .report { width: 100%; margin: 20rpx 0 28rpx; }
 .report-row { display: flex; gap: 16rpx; margin-bottom: 24rpx; }
 .report-cell { flex: 1; background: var(--soft-bg); border-radius: 16rpx; padding: 20rpx 0; display: flex; flex-direction: column; align-items: center; gap: 6rpx; }
