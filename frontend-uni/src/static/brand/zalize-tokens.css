@@ -1,6 +1,6 @@
 /**
  * @zalize/brand · 设计 token（CSS 变量层）
- * 来源：company-internal docs/design/2026-08-17-brand-system §4.1-4.2（方案 A「上岸 Zalize」）
+ * 来源：company-internal docs/design/2026-08-17-brand-system §4.1-4.2（方案 A「Zalize」）
  *
  * 接入方式（任一）：
  *  - Tailwind 4：@import '@zalize/brand/tokens.css';（本文件含 @theme 映射，token 自动成为 brand-* 工具类）
