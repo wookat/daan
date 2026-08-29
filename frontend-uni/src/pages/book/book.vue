@@ -91,17 +91,22 @@
         <text class="duego">开始复习</text>
       </view>
       <view v-if="weekTrend" class="card trendcard bk-side">
-        <text class="trend-t">错题趋势（近 4 周新增）</text>
+        <text class="trend-t">错题趋势（近 4 周）</text>
         <view class="trend-bars">
           <view v-for="w in weekTrend.weeks" :key="w.label" class="trend-col">
             <view class="trend-barwrap">
               <view class="trend-bar" :style="{ height: w.pct + '%' }" />
+              <view class="trend-bar killed" :style="{ height: w.kpct + '%' }" />
             </view>
-            <text class="trend-n">{{ w.n }}</text>
+            <text class="trend-n">{{ w.n }}<text v-if="w.k" class="trend-kn">/{{ w.k }}</text></text>
             <text class="trend-lb">{{ w.label }}</text>
           </view>
         </view>
-        <text class="trend-sum">近 7 天新增 {{ weekTrend.last7 }} 道 · 累计已掌握 {{ doneItems.length }} 道</text>
+        <view class="trend-legend">
+          <view class="trend-lg"><view class="trend-dot" /><text class="trend-lgt">新增</text></view>
+          <view class="trend-lg"><view class="trend-dot killed" /><text class="trend-lgt">消灭（达成掌握）</text></view>
+        </view>
+        <text class="trend-sum">近 7 天新增 {{ weekTrend.last7 }} 道 · 消灭 {{ weekTrend.klast7 }} 道 · 累计已掌握 {{ doneItems.length }} 道</text>
       </view>
       <view v-if="monthRecap.total" class="card recap bk-side">
         <view class="recap-h" @click="recapOpen = !recapOpen">
@@ -604,13 +609,19 @@ export default {
       for (let i = 3; i >= 0; i--) {
         const start = now - (i + 1) * 7 * DAY;
         const end = now - i * 7 * DAY;
-        const n = this.items.filter((m) => (m.created_at || 0) >= start && (m.created_at || 0) < end).length;
-        weeks.push({ label: i === 0 ? '本周' : i + '周前', n });
+        const inWin = (t) => t >= start && t < end;
+        const n = this.items.filter((m) => inWin(m.created_at || 0)).length;
+        const k = this.items.filter((m) => m.mastered && inWin(m.mastered_at || 0)).length;
+        weeks.push({ label: i === 0 ? '本周' : i + '周前', n, k });
       }
-      const max = Math.max(...weeks.map((w) => w.n), 1);
-      for (const w of weeks) w.pct = Math.max(Math.round((w.n / max) * 100), w.n ? 8 : 0);
+      const max = Math.max(...weeks.map((w) => Math.max(w.n, w.k)), 1);
+      for (const w of weeks) {
+        w.pct = Math.max(Math.round((w.n / max) * 100), w.n ? 8 : 0);
+        w.kpct = Math.max(Math.round((w.k / max) * 100), w.k ? 8 : 0);
+      }
       const last7 = this.items.filter((m) => (m.created_at || 0) >= now - 7 * DAY).length;
-      return { weeks, last7 };
+      const klast7 = this.items.filter((m) => m.mastered && (m.mastered_at || 0) >= now - 7 * DAY).length;
+      return { weeks, last7, klast7 };
     },
     monthRecap() {
       const now = new Date();
@@ -1467,10 +1478,17 @@ export default {
 .trend-t { font-size: 26rpx; font-weight: 600; color: var(--ink); }
 .trend-bars { display: flex; gap: 18rpx; align-items: flex-end; margin-top: 18rpx; }
 .trend-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4rpx; }
-.trend-barwrap { width: 100%; height: 96rpx; display: flex; align-items: flex-end; justify-content: center; }
-.trend-bar { width: 36rpx; background: var(--brand, #2e5bff); border-radius: 8rpx 8rpx 0 0; min-height: 0; }
+.trend-barwrap { width: 100%; height: 96rpx; display: flex; align-items: flex-end; justify-content: center; gap: 4rpx; }
+.trend-bar { width: 22rpx; background: var(--brand, #2e5bff); border-radius: 6rpx 6rpx 0 0; min-height: 0; }
+.trend-bar.killed { background: #22c55e; }
 .trend-n { font-size: 22rpx; font-weight: 600; color: var(--ink); }
+.trend-kn { font-size: 20rpx; font-weight: 600; color: #16a34a; }
 .trend-lb { font-size: 20rpx; color: var(--ink-3); }
+.trend-legend { display: flex; gap: 24rpx; margin-top: 12rpx; }
+.trend-lg { display: flex; align-items: center; gap: 6rpx; }
+.trend-dot { width: 14rpx; height: 14rpx; border-radius: 4rpx; background: var(--brand, #2e5bff); }
+.trend-dot.killed { background: #22c55e; }
+.trend-lgt { font-size: 20rpx; color: var(--ink-2); }
 .trend-sum { display: block; margin-top: 14rpx; font-size: 22rpx; color: var(--ink-2); }
 
 /* #ifdef H5 */
