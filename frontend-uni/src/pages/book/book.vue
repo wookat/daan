@@ -90,6 +90,19 @@
         </view>
         <text class="duego">开始复习</text>
       </view>
+      <view v-if="weekTrend" class="card trendcard bk-side">
+        <text class="trend-t">错题趋势（近 4 周新增）</text>
+        <view class="trend-bars">
+          <view v-for="w in weekTrend.weeks" :key="w.label" class="trend-col">
+            <view class="trend-barwrap">
+              <view class="trend-bar" :style="{ height: w.pct + '%' }" />
+            </view>
+            <text class="trend-n">{{ w.n }}</text>
+            <text class="trend-lb">{{ w.label }}</text>
+          </view>
+        </view>
+        <text class="trend-sum">近 7 天新增 {{ weekTrend.last7 }} 道 · 累计已掌握 {{ doneItems.length }} 道</text>
+      </view>
       <view v-if="monthRecap.total" class="card recap bk-side">
         <view class="recap-h" @click="recapOpen = !recapOpen">
           <text class="recap-t">本月错题复盘 · 新增 {{ monthRecap.total }} 道</text>
@@ -582,6 +595,22 @@ export default {
     },
     selCount() {
       return Object.keys(this.selIds).length;
+    },
+    weekTrend() {
+      if (!this.items.length) return null;
+      const DAY = 86400;
+      const now = Date.now() / 1000;
+      const weeks = [];
+      for (let i = 3; i >= 0; i--) {
+        const start = now - (i + 1) * 7 * DAY;
+        const end = now - i * 7 * DAY;
+        const n = this.items.filter((m) => (m.created_at || 0) >= start && (m.created_at || 0) < end).length;
+        weeks.push({ label: i === 0 ? '本周' : i + '周前', n });
+      }
+      const max = Math.max(...weeks.map((w) => w.n), 1);
+      for (const w of weeks) w.pct = Math.max(Math.round((w.n / max) * 100), w.n ? 8 : 0);
+      const last7 = this.items.filter((m) => (m.created_at || 0) >= now - 7 * DAY).length;
+      return { weeks, last7 };
     },
     monthRecap() {
       const now = new Date();
@@ -1433,6 +1462,17 @@ export default {
 .sj-row { display: flex; gap: 20rpx; }
 :deep(.sj-btn) { flex: 1; border-radius: 12rpx !important; }
 
+/* 错题趋势卡（仅桌面侧栏展示） */
+.trendcard { display: none; }
+.trend-t { font-size: 26rpx; font-weight: 600; color: var(--ink); }
+.trend-bars { display: flex; gap: 18rpx; align-items: flex-end; margin-top: 18rpx; }
+.trend-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4rpx; }
+.trend-barwrap { width: 100%; height: 96rpx; display: flex; align-items: flex-end; justify-content: center; }
+.trend-bar { width: 36rpx; background: var(--brand, #2e5bff); border-radius: 8rpx 8rpx 0 0; min-height: 0; }
+.trend-n { font-size: 22rpx; font-weight: 600; color: var(--ink); }
+.trend-lb { font-size: 20rpx; color: var(--ink-3); }
+.trend-sum { display: block; margin-top: 14rpx; font-size: 22rpx; color: var(--ink-2); }
+
 /* #ifdef H5 */
 /* 桌面操作台（round-3）：≥1024px 双栏工作台，主列=列表工作流，侧栏=统计/复盘/工具 */
 @media (min-width: 1024px) {
@@ -1442,6 +1482,7 @@ export default {
      避免左列元素受“浮动框顶不得高于文档序更早浮动框顶”的约束被右列高卡推低形成空洞 */
   .bookwrap .bk-main { margin-right: 344px; box-sizing: border-box; }
   .bookwrap .bk-side { float: right; clear: right; width: 320px; box-sizing: border-box; }
+  .bookwrap .trendcard { display: block; }
   .bookwrap.noside .bk-main { margin-right: 0; }
   .bookwrap-review { max-width: 760px !important; }
 }
