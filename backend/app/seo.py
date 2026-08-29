@@ -48,28 +48,35 @@ def _year_path(year: int, module: str) -> str:
 
 
 _CSS = (
-    "*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',"
-    "'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;color:#1f2329;background:#f7f8fa;"
-    "line-height:1.7;font-size:16px}a{color:" + BRAND + ";text-decoration:none}a:hover{text-decoration:underline}"
+    "*{box-sizing:border-box}body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,"
+    "'PingFang SC','HarmonyOS Sans','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif;"
+    "color:#17181c;background:#f6f7fb;line-height:1.7;font-size:16px}"
+    "a{color:" + BRAND + ";text-decoration:none}a:hover{text-decoration:underline}"
     ".wrap{max-width:860px;margin:0 auto;padding:16px}"
-    ".hdr{background:" + BRAND + ";color:#fff;padding:14px 0}.hdr a{color:#fff;font-weight:600;font-size:18px}"
-    ".hdr .wrap{padding-top:0;padding-bottom:0}"
-    ".card{background:#fff;border-radius:10px;padding:16px;margin:12px 0;box-shadow:0 1px 3px rgba(0,0,0,.06)}"
-    ".crumb{font-size:13px;color:#666;margin:10px 0}.crumb a{color:#666}"
+    ".hdr{background:#fff;border-bottom:1px solid #e7e9f0;padding:12px 0}"
+    ".hdr .wrap{padding-top:0;padding-bottom:0;display:flex;align-items:center;justify-content:space-between}"
+    ".hdr .brand{color:" + BRAND + ";font-weight:700;font-size:18px}.hdr .brand:hover{text-decoration:none}"
+    ".hdr-cta{background:" + BRAND + ";color:#fff!important;border-radius:999px;padding:6px 18px;"
+    "font-size:14px;font-weight:600}.hdr-cta:hover{text-decoration:none;opacity:.92}"
+    ".card{background:#fff;border:1px solid #e7e9f0;border-radius:12px;padding:16px;margin:12px 0;"
+    "box-shadow:0 1px 2px rgba(23,24,28,.05)}"
+    ".crumb{font-size:13px;color:#6b7280;margin:10px 0}.crumb a{color:#6b7280}"
     "h1{font-size:22px;margin:10px 0}h2{font-size:17px;margin:8px 0}"
-    ".qlist{list-style:none;padding:0;margin:0}.qlist li{border-bottom:1px solid #eee;padding:10px 0}"
+    ".qlist{list-style:none;padding:0;margin:0}.qlist li{border-bottom:1px solid #e7e9f0;padding:10px 0}"
     ".qlist li:last-child{border-bottom:none}"
     ".tags{display:flex;flex-wrap:wrap;gap:8px}.tags a{background:#eef3ff;border-radius:16px;padding:4px 12px;"
     "font-size:14px;white-space:nowrap}"
-    ".meta{color:#8a919f;font-size:13px}"
-    ".opt{margin:6px 0;padding:8px 12px;border:1px solid #e5e8ef;border-radius:8px}"
-    ".ans{background:#f0f7f0;border-radius:8px;padding:12px;margin-top:10px}"
-    ".cta{display:inline-block;background:" + BRAND + ";color:#fff!important;border-radius:8px;"
-    "padding:10px 22px;font-weight:600;margin:14px 0}"
+    ".meta{color:#6b7280;font-size:13px}"
+    ".opt{margin:6px 0;padding:8px 12px;border:1px solid #e7e9f0;border-radius:8px}"
+    ".ans{background:#ecfdf5;border-radius:8px;padding:12px;margin-top:10px}"
+    ".cta{display:inline-block;background:" + BRAND + ";color:#fff!important;border-radius:999px;"
+    "padding:10px 24px;font-weight:600;margin:14px 0}"
     ".pager{display:flex;gap:12px;justify-content:center;margin:16px 0}.pager a,.pager span{padding:6px 14px;"
-    "background:#fff;border-radius:8px;border:1px solid #e5e8ef}"
-    ".ftr{color:#8a919f;font-size:13px;text-align:center;padding:20px 0}"
+    "background:#fff;border-radius:8px;border:1px solid #e7e9f0}"
+    ".ftr{color:#6b7280;font-size:13px;text-align:center;padding:20px 0}"
     "details summary{cursor:pointer;font-weight:600}"
+    "@media(min-width:768px){.card{transition:box-shadow .15s ease}"
+    ".card:hover{box-shadow:0 4px 12px rgba(23,24,28,.1)}}"
     "@media(max-width:480px){.wrap{padding:12px}h1{font-size:19px}}"
 )
 
@@ -87,7 +94,8 @@ def _page(title: str, description: str, canonical_path: str, body: str, jsonld: 
         f'<meta name="description" content="{_e(description)}">'
         f'<link rel="canonical" href="{_e(_url(canonical_path))}">'
         f"<style>{_CSS}</style>{ld}</head><body>"
-        f'<header class="hdr"><div class="wrap"><a href="/tiku/">考公题库</a></div></header>'
+        f'<header class="hdr"><div class="wrap"><a class="brand" href="/tiku/">错题邦 · 考公题库</a>'
+        f'<a class="hdr-cta" href="/">去刷题</a></div></header>'
         f'<main class="wrap">{body}</main>'
         f'<footer class="ftr"><a href="{_e(SITE_BASE)}/">错题邦</a> · 13万+行测真题在线刷题'
         f' · <a href="/tiku/papers/">真题卷</a>'
