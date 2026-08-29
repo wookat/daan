@@ -29,7 +29,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 生产测试数据：匿名 uid `umteojq4sltdhorhm`（12 条错题，id 912–923），供各轮 1440/375 复验用，五轮闭环后清理（只删该 uid 数据）
 - 第 2 轮已上线（PR #175）：错题重练答对推进 SRS（复用 record_review 单一入口，redo 接口带 mistake_id），完成页「错题重练效果」卡（已纠正/仍错/达成掌握）
 - 第 3 轮已上线（PR #176）：错题本掌握度外显（按模块查看消费 /api/mastery/map，模块行「掌握 xx% · 等级」+考点行百分比，失败静默降级）+ 模考错题来源分区（mistakes.source 列，exam_api 判分入本 source='exam'，筛选 sheet「来源」段 + 卡片「模考」徽标；历史 NULL 按练习）
-- 后续轮次规划（见 docs/iter/round-3/competitor-audit.md）：R4 未登录落地页；R5 首页桌面双栏+打磨
+- 第 4 轮已上线（PR #177）：首页新访客价值主张首屏（.landing hero：标题+亮点网格 2×2/4 列+双 CTA；pstats.days 为空且未关闭时显示，✕ 写 landingHide 永久隐藏）。观察项：/tiku/ 生产首载约 30s 长尾（SSR 冷路径），R5 候选
+- 后续轮次规划（见 docs/iter/round-3/competitor-audit.md）：R5 首页桌面双栏+打磨（含 /tiku 首载长尾排查）
 
 ## 进行中/待办任务（按优先级）
 1. H5 静态前端迁 Cloudflare Pages 评估/实施（GV-1，API 留服务器）
