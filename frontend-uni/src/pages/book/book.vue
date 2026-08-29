@@ -870,7 +870,9 @@ export default {
     },
     async master(m, on = true) {
       await request('/api/mistakes/' + m.id, { method: 'PATCH', data: { uid: anonUid(), mastered: on ? 1 : 0 } });
-      if (on) uni.showToast({ title: '已掌握！', icon: 'success' });
+      m.mastered = on ? 1 : 0;
+      m.mastered_at = on ? (m.mastered_at || Date.now() / 1000) : null;
+      uni.showToast({ title: on ? '已掌握！' : '已恢复复习', icon: on ? 'success' : 'none' });
       this.load();
     },
     openFavPage() {
@@ -1154,6 +1156,7 @@ export default {
       if (m.question_id) acts.push({ t: '题目纠错', f: () => this.openReport(m) });
       if (m.question_id) acts.push({ t: '分享给队友', f: () => this.shareToMates(m) });
       if (!m.mastered) acts.push({ t: '标为已掌握', f: () => this.master(m) });
+      else acts.push({ t: '恢复复习', f: () => this.master(m, false) });
       acts.push({ t: '删除', f: () => this.del(m) });
       uni.showActionSheet({
         itemList: acts.map((a) => a.t),

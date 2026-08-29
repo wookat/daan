@@ -105,6 +105,24 @@ def _page(title: str, description: str, canonical_path: str, body: str, jsonld: 
     )
 
 
+def _collection_ld(name: str, description: str, path: str, crumbs: list[tuple[str, str]]) -> dict:
+    return {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "name": name,
+        "description": description[:200],
+        "url": _url(path),
+        "isPartOf": {"@type": "WebSite", "name": "错题邦", "url": SITE_BASE},
+        "breadcrumb": {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+                {"@type": "ListItem", "position": i + 1, "name": n, "item": _url(h)}
+                for i, (n, h) in enumerate(crumbs)
+            ],
+        },
+    }
+
+
 def _crumb(items: list[tuple[str, str | None]]) -> str:
     parts = []
     for name, href in items:
@@ -227,6 +245,12 @@ def tiku_index():
         f"免费公务员考试题库，收录 {total} 道行测申论题目与历年真题，覆盖资料分析、数量关系、言语理解、判断推理、常识判断，附答案解析。",
         "/tiku/",
         body,
+        _collection_ld(
+            "公务员考试题库",
+            f"免费公务员考试题库，收录 {total} 道行测申论题目与历年真题，附答案解析。",
+            "/tiku/",
+            [("题库", "/tiku/")],
+        ),
     )
 
 
@@ -257,6 +281,12 @@ def tiku_papers():
         f"{len(papers)} 套历年国考/省考行测真题卷，在线全真模考并生成成绩报告，附逐题答案解析。",
         "/tiku/papers/",
         body,
+        _collection_ld(
+            "历年公务员考试真题卷",
+            f"{len(papers)} 套历年国考/省考行测真题卷，在线全真模考，附逐题答案解析。",
+            "/tiku/papers/",
+            [("题库", "/tiku/"), ("真题卷", "/tiku/papers/")],
+        ),
     )
 
 
@@ -667,6 +697,12 @@ def tiku_module(module: str, page: int = 1):
         f"{name}题库共 {total} 题（含历年真题），按题型分类，附答案与花生十三方法解析，支持在线刷题。{suffix}",
         f"/tiku/{module}/" + (f"?page={page}" if page > 1 else ""),
         body,
+        _collection_ld(
+            f"{name}题库",
+            f"{name}题库共 {total} 题（含历年真题），按题型分类，附答案与解析。",
+            f"/tiku/{module}/",
+            [("题库", "/tiku/"), (name, f"/tiku/{module}/")],
+        ),
     )
 
 
@@ -697,6 +733,12 @@ def tiku_submodule(module: str, submodule: str, page: int = 1):
         f"{name}{submodule}专项题库共 {total} 题（含历年真题），附答案与解析，在线刷题提升正确率。{suffix}",
         _sub_path(module, submodule) + (f"?page={page}" if page > 1 else ""),
         body,
+        _collection_ld(
+            f"{name}·{submodule}题库",
+            f"{name}{submodule}专项题库共 {total} 题（含历年真题），附答案与解析。",
+            _sub_path(module, submodule),
+            [("题库", "/tiku/"), (name, f"/tiku/{module}/"), (submodule, _sub_path(module, submodule))],
+        ),
     )
 
 
