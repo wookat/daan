@@ -1,5 +1,5 @@
 <template>
-  <view class="wrap">
+  <view class="wrap" :class="[reviewing ? 'bookwrap-review' : 'bookwrap', { noside: !items.length }]">
     <view v-if="offlineView" class="offbar"><l-icon name="plane" :size="15" color="#b45309" /><text>当前离线 · 展示已缓存错题，联网后自动更新</text></view>
     <!-- 复习模式 -->
     <view v-if="reviewing" class="card review">
@@ -78,19 +78,19 @@
 
     <!-- 列表模式 -->
     <template v-if="!reviewing">
-      <view v-if="items.length" class="ovrow">
+      <view v-if="items.length" class="ovrow bk-side">
         <view class="ov-c"><text class="ov-n">{{ items.length }}</text><text class="ov-t">全部错题</text></view>
         <view class="ov-c"><text class="ov-n warn">{{ todoItems.length }}</text><text class="ov-t">待掌握</text></view>
         <view class="ov-c"><text class="ov-n ok">{{ doneItems.length }}</text><text class="ov-t">已掌握</text></view>
       </view>
-      <view v-if="due.length" class="card duecard" @click="startReviewFromCard">
+      <view v-if="due.length" class="card duecard bk-main" @click="startReviewFromCard">
         <view>
           <view class="duetxt"><l-icon name="calendar-check" :size="16" color="#ffffff" /><text class="duetxt-t">今日待复习 {{ dueTotal }} 道</text></view>
           <text class="duesub">按遗忘曲线安排 · 预计 {{ Math.max(1, Math.ceil(due.length * 0.8)) }} 分钟</text>
         </view>
         <text class="duego">开始复习</text>
       </view>
-      <view v-if="monthRecap.total" class="card recap">
+      <view v-if="monthRecap.total" class="card recap bk-side">
         <view class="recap-h" @click="recapOpen = !recapOpen">
           <text class="recap-t">本月错题复盘 · 新增 {{ monthRecap.total }} 道</text>
           <text class="recap-x">{{ recapOpen ? '收起' : '展开' }}</text>
@@ -115,7 +115,7 @@
           <text class="recap-tip">高频错因是提分洼地：优先复习对应模块的待掌握错题</text>
         </view>
       </view>
-      <view v-if="items.length" class="segrow">
+      <view v-if="items.length" class="segrow bk-main">
         <view class="seg">
           <view class="seg-i" :class="{ on: tab === 'todo' }" @click="tab = 'todo'">待掌握 {{ todoItems.length }}</view>
           <view class="seg-i" :class="{ on: tab === 'done' }" @click="tab = 'done'">已掌握 {{ doneItems.length }}</view>
@@ -129,7 +129,7 @@
         </view>
       </view>
       <template v-if="tab === 'fav'">
-        <view class="card redoentry" @click="openFavPage">
+        <view class="card redoentry bk-main" @click="openFavPage">
           <view class="redo-l">
             <view class="redo-ico"><l-icon name="star" :size="16" color="#f59e0b" /></view>
             <view>
@@ -139,16 +139,16 @@
           </view>
           <text class="redo-go">打开</text>
         </view>
-        <view v-if="!favs.length" class="card empty">
+        <view v-if="!favs.length" class="card empty bk-main">
           <view class="e-t">还没有本机收藏</view>
           <view class="e-s">刷题时点顶栏星星即可收藏好题</view>
         </view>
-        <view v-if="favs.length > 3" class="searchbar">
+        <view v-if="favs.length > 3" class="searchbar bk-main">
           <l-icon name="search" :size="16" color="#8a90a0" />
           <input v-model="favKw" class="searchinput" placeholder="搜收藏题干或题型" confirm-type="search" />
           <view v-if="favKw" class="searchclear" @click="favKw = ''"><l-icon name="x" :size="16" color="#8a90a0" /></view>
         </view>
-        <view v-for="(f, fi) in favShown" :key="f.t" class="card mcard" @click="f._open = !f._open">
+        <view v-for="(f, fi) in favShown" :key="f.t" class="card mcard bk-main" @click="f._open = !f._open">
           <view class="mhead">
             <text class="tag">{{ f.submodule || modName(f.module) }}</text>
             <text v-if="f.is_real" class="rvbadge">真题{{ f.exam_year ? ' · ' + f.exam_year : '' }}{{ f.exam_region ? ' · ' + f.exam_region : '' }}</text>
@@ -170,7 +170,7 @@
           </view>
         </view>
       </template>
-      <view v-if="tab !== 'fav' && todoItems.length >= 3" class="card redoentry" @click="aiAnalysis">
+      <view v-if="tab !== 'fav' && todoItems.length >= 3" class="card redoentry bk-side" @click="aiAnalysis">
         <view class="redo-l">
           <view class="redo-ico"><l-icon name="bot-message-square" :size="16" color="#2e5bff" /></view>
           <view>
@@ -239,7 +239,7 @@
           <view class="sheet-done" @click="scanOpen = false; load()">完成</view>
         </view>
       </view>
-      <view v-if="tab !== 'fav' && todoItems.length" class="card redoentry" @click="redoAll">
+      <view v-if="tab !== 'fav' && todoItems.length" class="card redoentry bk-side" @click="redoAll">
         <view class="redo-l">
           <view class="redo-ico"><l-icon name="rotate-ccw" :size="16" color="#2e5bff" /></view>
           <view>
@@ -249,12 +249,12 @@
         </view>
         <text class="redo-go">开始</text>
       </view>
-      <view v-if="tab !== 'fav' && items.length > 5" class="searchbar">
+      <view v-if="tab !== 'fav' && items.length > 5" class="searchbar bk-main">
         <l-icon name="search" :size="16" color="#8a90a0" />
         <input v-model="kw" class="searchinput" placeholder="搜题干关键词或题型，如：增长率 / 类比推理" confirm-type="search" />
         <view v-if="kw" class="searchclear" @click="kw = ''"><l-icon name="x" :size="16" color="#8a90a0" /></view>
       </view>
-      <view v-if="tab !== 'fav' && modGroups.length" class="card modgroup">
+      <view v-if="tab !== 'fav' && modGroups.length" class="card modgroup bk-side">
         <view class="mg-h">按模块查看</view>
         <view v-for="g in modGroups" :key="g.key" class="mg-blk">
           <view class="mg-row" @click="toggleGroup(g.key)">
@@ -282,11 +282,11 @@
           </view>
         </view>
       </view>
-      <view v-if="tab !== 'fav' && (filterMod || kpFilter || kp3Filter)" class="curfilter">
+      <view v-if="tab !== 'fav' && (filterMod || kpFilter || kp3Filter)" class="curfilter bk-main">
         <text class="kpchip on" @click="filterMod = ''; kpFilter = ''; kp3Filter = ''">{{ kp3Filter || kpFilter || modName(filterMod) }} ✕</text>
         <text v-if="sortBy !== 'time'" class="kpchip" @click="filterOpen = true">{{ (SORTS.find(s => s.k === sortBy) || {}).name }}</text>
       </view>
-      <view v-else-if="tab !== 'fav' && sortBy !== 'time'" class="curfilter">
+      <view v-else-if="tab !== 'fav' && sortBy !== 'time'" class="curfilter bk-main">
         <text class="kpchip on" @click="sortBy = 'time'">{{ (SORTS.find(s => s.k === sortBy) || {}).name }} ✕</text>
       </view>
       <view v-if="filterOpen" class="mask" @click="filterOpen = false">
@@ -321,18 +321,18 @@
         @close="exportConfirm = false"
         @confirm="exportMistakes"
       />
-      <view v-if="tab !== 'fav' && loading" class="card spin">加载中…</view>
-      <view v-else-if="tab !== 'fav' && !items.length" class="card empty">
+      <view v-if="tab !== 'fav' && loading" class="card spin bk-main">加载中…</view>
+      <view v-else-if="tab !== 'fav' && !items.length" class="card empty bk-main">
         <view class="e-ico"><l-icon name="folder-plus" :size="52" color="#c7cad4" :stroke-width="1.5" /></view>
         <view class="e-t">错题本还是空的</view>
         <view class="e-s">去拍题讲解或刷题，答错的题会汇集到这里，之后按遗忘曲线安排复习</view>
         <wd-button type="primary" custom-class="e-btn2" @click="goPractice">去刷题</wd-button>
       </view>
-      <view v-if="tab !== 'fav' && items.length && !shownItems.length && !loading" class="card empty">
+      <view v-if="tab !== 'fav' && items.length && !shownItems.length && !loading" class="card empty bk-main">
         <view class="e-t">没有匹配的错题</view>
         <view class="e-s">换个关键词或清除筛选试试</view>
       </view>
-      <view v-for="m in shownPage" :key="m.id" class="card mcard" :class="[masteryClass(m), { bsel: batchMode && selIds[m.id] }]" @click="batchMode ? toggleSel(m) : toggleCard(m)">
+      <view v-for="m in shownPage" :key="m.id" class="card mcard bk-main" :class="[masteryClass(m), { bsel: batchMode && selIds[m.id] }]" @click="batchMode ? toggleSel(m) : toggleCard(m)">
         <view class="mhead">
           <view v-if="batchMode" class="bchk" :class="{ on: selIds[m.id] }">{{ selIds[m.id] ? '✓' : '' }}</view>
           <text class="tag">{{ tagName(m) }}</text>
@@ -371,7 +371,7 @@
         </view>
         <rich-text v-if="m.open" :nodes="m.html" />
       </view>
-      <view v-if="tab !== 'fav' && pageN < shownItems.length" class="loadmore" @click="pageN += 20">上滑或点击加载更多（{{ shownPage.length }}/{{ shownItems.length }}）</view>
+      <view v-if="tab !== 'fav' && pageN < shownItems.length" class="loadmore bk-main" @click="pageN += 20">上滑或点击加载更多（{{ shownPage.length }}/{{ shownItems.length }}）</view>
       <!-- 批量操作条 -->
       <view v-if="batchMode && tab !== 'fav'" class="batchbar">
         <text class="bb-sel" @click="selAll">{{ selCount === shownPage.length ? '取消全选' : '全选本页' }}</text>
@@ -490,7 +490,7 @@ export default {
       batchMode: false,
       selIds: {},
       batchBusy: false,
-      recapOpen: false,
+      recapOpen: typeof window !== 'undefined' && window.innerWidth >= 1024,
       REASONS: ['粗心大意', '概念不清', '方法不会', '纯蒙的'],
       SORTS: [
         { k: 'time', name: '最新' },
@@ -1394,4 +1394,16 @@ export default {
 .q2 { font-size: 24rpx; color: var(--ink-2); margin-bottom: 12rpx; }
 .sj-row { display: flex; gap: 20rpx; }
 :deep(.sj-btn) { flex: 1; border-radius: 12rpx !important; }
+
+/* #ifdef H5 */
+/* 桌面操作台（round-3）：≥1024px 双栏工作台，主列=列表工作流，侧栏=统计/复盘/工具 */
+@media (min-width: 1024px) {
+  .bookwrap { max-width: 920px !important; }
+  .bookwrap::after { content: ''; display: block; clear: both; }
+  .bookwrap .bk-main { float: left; clear: left; width: calc(100% - 344px); box-sizing: border-box; }
+  .bookwrap .bk-side { float: right; clear: right; width: 320px; box-sizing: border-box; }
+  .bookwrap.noside .bk-main { float: none; width: 100%; }
+  .bookwrap-review { max-width: 760px !important; }
+}
+/* #endif */
 </style>
