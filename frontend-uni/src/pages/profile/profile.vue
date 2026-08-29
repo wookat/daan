@@ -152,7 +152,7 @@ export default {
       badgeInfo: null,
       growth: null,
       zlProducts: [
-        { name: '上岸 Zalize 门户', url: 'https://career.zalize.com' },
+        { name: 'Zalize 门户', url: 'https://career.zalize.com' },
         { name: '刷题营', url: 'https://tiku.zalize.com' },
         { name: '真题营', url: 'https://zhenti.zalize.com' },
         { name: '答对笔试', url: 'https://test.zalize.com' },

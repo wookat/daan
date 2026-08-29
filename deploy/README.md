@@ -40,7 +40,7 @@
 
 ### CSP 注意（服务器 /etc/caddy/Caddyfile 管理，不在本仓库）
 本站响应头 Content-Security-Policy 由服务器 Caddyfile 下发。前端引用的跨域脚本
-`https://career.zalize.com/nav.js`（上岸 Zalize 统一顶栏）要求 `script-src` 包含
+`https://career.zalize.com/nav.js`（Zalize 统一顶栏，已下线）要求 `script-src` 包含
 `https://career.zalize.com`，否则顶栏被浏览器拦截不渲染。若重建服务器/重写 Caddyfile，
 须保留：
 ```
