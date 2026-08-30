@@ -20,6 +20,11 @@
       <text class="chip" :class="{ on: sort === 'hot' }" @click="switchSort('hot')">最热</text>
       <text class="chip" :class="{ on: sort === 'new' }" @click="switchSort('new')">最新</text>
       <text class="cnt">共 {{ total }} 条讨论</text>
+      <view class="msg" @click="goInbox">
+        <l-icon name="bell" :size="15" color="#5a6072" />
+        <text>消息</text>
+        <text v-if="inboxUnread" class="msg-badge">{{ inboxUnread }}</text>
+      </view>
     </view>
 
     <!-- 评论列表 -->
@@ -85,7 +90,7 @@
 </template>
 
 <script>
-import { deleteOwnComment, fetchComments, getToken, likeComment, postComment, reportComment, request } from '../../api.js';
+import { deleteOwnComment, fetchCommentInbox, fetchComments, getToken, likeComment, postComment, reportComment, request } from '../../api.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -117,6 +122,7 @@ export default {
       busy: false,
       replyTo: null,
       logged: false,
+      inboxUnread: 0,
     };
   },
   onShow() {
@@ -125,6 +131,7 @@ export default {
       this.logged = l;
       if (this.qid) this.load();
     }
+    this.loadInbox();
   },
   onLoad(opts) {
     this.qid = Number(opts.qid || 0);
@@ -172,6 +179,20 @@ export default {
         uni.showToast({ title: e.message, icon: 'none' });
       }
       this.loading = false;
+    },
+    async loadInbox() {
+      if (!this.logged) {
+        this.inboxUnread = 0;
+        return;
+      }
+      try {
+        const d = await fetchCommentInbox();
+        this.inboxUnread = d.unread || 0;
+      } catch (e) { /* 非关键路径 */ }
+    },
+    goInbox() {
+      if (!this.ensureLogin()) return;
+      uni.navigateTo({ url: '/pkgA/social/inbox' });
     },
     switchSort(s) {
       if (this.sort === s) return;
@@ -278,6 +299,11 @@ export default {
 .chip { font-size: 24rpx; color: var(--ink-2); background: var(--fill); padding: 8rpx 26rpx; border-radius: 999rpx; }
 .chip.on { background: var(--brand-soft); color: var(--brand); font-weight: 700; }
 .cnt { font-size: 22rpx; color: var(--ink-3); margin-left: auto; }
+.msg { display: inline-flex; align-items: center; gap: 6rpx; font-size: 22rpx; color: var(--ink-2); margin-left: 20rpx; }
+.msg-badge { min-width: 30rpx; height: 30rpx; line-height: 30rpx; text-align: center; border-radius: 999rpx; background: #e5484d; color: #fff; font-size: 19rpx; padding: 0 8rpx; box-sizing: border-box; }
+/* #ifdef H5 */
+.msg { cursor: pointer; }
+/* #endif */
 .empty { text-align: center; color: var(--ink-3); font-size: 25rpx; padding: 60rpx 24rpx; }
 .empty-t { font-size: 28rpx; font-weight: 600; color: var(--ink-2); margin-bottom: 8rpx; }
 .cmlist { padding: 6rpx 24rpx; }
