@@ -98,6 +98,9 @@
       <wd-cell title="外观模式" :value="themeLabel" is-link clickable @click="cycleTheme">
         <template #icon><view class="cell-ico"><l-icon name="moon" :size="18" color="#0d9488" /></view></template>
       </wd-cell>
+      <wd-cell v-if="pwaInstallable" title="安装到桌面" value="像 App 一样从主屏打开" is-link clickable @click="installPwa">
+        <template #icon><view class="cell-ico"><l-icon name="monitor-down" :size="18" color="#0d9488" /></view></template>
+      </wd-cell>
       <!-- #endif -->
       <wd-cell title="离线题包" :value="offlineN ? offlineN + ' 个题包' : '未下载'" is-link clickable @click="goOffline">
         <template #icon><view class="cell-ico"><l-icon name="package" :size="18" color="#0d9488" /></view></template>
@@ -145,6 +148,9 @@
 import { request, getAuthUser, authLogout, clearAuth, anonUid, fetchCheckinBadges, fetchCommentInbox } from '../../api.js';
 import { getReminderSettings } from '../../reminder.js';
 import { cycleThemeMode, getThemeMode, THEME_LABELS } from '../../theme.js';
+// #ifdef H5
+import { canInstall, promptInstall, onInstallable } from '../../pwa.js';
+// #endif
 import { listPacks } from '../../offline.js';
 import { checkinStreak } from '../../checkin.js';
 
@@ -165,6 +171,7 @@ export default {
       remindOn: false,
       remindTime: '20:30',
       themeMode: 'system',
+      pwaInstallable: false,
       offlineN: 0,
       badgeInfo: null,
       growth: null,
@@ -208,9 +215,18 @@ export default {
       this.user = getAuthUser();
     };
     uni.$on('authChanged', this._onAuth);
+    // #ifdef H5
+    this.pwaInstallable = canInstall();
+    this._offInstallable = onInstallable(() => {
+      this.pwaInstallable = canInstall();
+    });
+    // #endif
   },
   onUnload() {
     if (this._onAuth) uni.$off('authChanged', this._onAuth);
+    // #ifdef H5
+    if (this._offInstallable) this._offInstallable();
+    // #endif
   },
   onShow() {
     this.user = getAuthUser();
@@ -233,6 +249,14 @@ export default {
     maskPhone(p) {
       return p ? p.slice(0, 3) + '****' + p.slice(-4) : '';
     },
+    // #ifdef H5
+    async installPwa() {
+      const outcome = await promptInstall();
+      if (outcome === 'accepted') {
+        uni.showToast({ title: '已安装，可从桌面直接打开', icon: 'none' });
+      }
+    },
+    // #endif
     async loadInbox() {
       if (!this.user) {
         this.inboxUnread = 0;
