@@ -32,4 +32,12 @@
 2. 不支持环境（无事件）：入口不渲染，profile 页与 375/1440 布局零回归；
 3. lint/build 全绿；console 0 error。
 
-## 验收结果（部署后回填）
+## 验收结果（2026-08-29 生产实测）
+
+- 部署后线上 bundle index-CvtH2RHp.js；CDP（Chromium 1440/375）「我的」页
+  「安装到桌面」cell 均出现（beforeinstallprompt 已捕获），375 无水平溢出，console 0 error；
+- 点击 cell → promptInstall() 无报错，Esc 关闭原生浮层后 cell 消失（deferred 已消费）；
+  重新加载页面事件重触发、cell 恢复出现——晚到事件通道（onInstallable）实证生效；
+- 原生安装浮层为浏览器 chrome 层 UI，页面截图无法捕获，accepted 路径（toast）
+  依赖真机点击「安装」，标 untested（同 R54 Android 真机遗留）；
+- lint 无新增告警（eslint 无 flat config 为存量状态）、build:h5 全绿。
