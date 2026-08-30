@@ -554,3 +554,7 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 原生导航栏返回箭头断言：选择器 `uni-page-head .uni-page-head-btn path` 的 computed fill（深色 rgb(242,243,247)、浅色 rgb(0,0,0)）。
 - CDP 后台 python 脚本 print 需 `-u` 或 `flush=True`，否则 sleep 持连时输出被缓冲。
 - `pgrep/pkill -f` 的模式若出现在本 shell 命令串会匹配自身导致自杀（exit -1）：用方括号转义（如 `pgrep -af 'holdv[w]'`）或先定位精确 PID 再 kill。
+
+## R47 内联关键 CSS 走查新经验
+- 断言「无 stylesheet link」须区分静态与运行时：curl 静态 HTML 应为 0 link/3 段 `<style>/* inlined: ... */`；SPA 启动后 Vite 会为懒加载 chunk 动态插入 `link[rel=stylesheet]`（l-icon/wd-*/home-*.css 等，首页约 6 个）——这是预期行为，非内联失败。运行时判据应改为「无 uni./index-/zalize-tokens 关键 CSS link」+ inlined 标记 3 个。
+- 内联 tokens 生效判据：`getComputedStyle(document.documentElement).getPropertyValue('--zl-brand-600')` 应为 `#2e5bff`（深浅色皆然）；深色 bodyBg=rgb(21,22,28)、浅色 rgb(246,247,251)。
