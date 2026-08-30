@@ -10,6 +10,7 @@ from fastapi import APIRouter, Header, HTTPException
 
 from . import db
 from .auth import rate_limit, require_user, user_uid
+from .deps import check_admin
 
 router = APIRouter(prefix="/api")
 
@@ -319,8 +320,6 @@ def api_comment_report(cid: int, body: dict, authorization: str | None = Header(
 # ---------- 管理端 ----------
 
 def _check_admin(x_admin_token: str | None):
-    from .main import check_admin
-
     check_admin(x_admin_token)
 
 
