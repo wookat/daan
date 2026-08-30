@@ -37,4 +37,11 @@ nav:90372;ttfb:xxx;dom:xxx;load:xxx;sw:1;tx:12345(;最慢资源:耗时)
 3. 1440/375 console 0 error、页面零视觉变化；
 4. build:h5 全绿、部署 hash 一致。
 
-## 验收结果（待部署后回填）
+## 验收结果（2026-08-29 实测，bundle index-DWjTOfsz.js）
+
+1. 本地节流（主 bundle 延迟 11s）实测上报：
+   `nav:11165;ttfb:7;dom:11079;load:11158;sw:0;tx:41856;index-DWjTOfsz.js:11016`
+   ——阶段字段齐全、数值与注入延迟一致；
+2. 正常快载（本地+生产 1440/375）均 0 条上报，阈值不变；
+3. 生产 1440/375 console 0 error、无水平溢出、textlen 正常（618）；
+4. build:h5 全绿，生产 bundle 与本机构建 hash 一致（index-DWjTOfsz.js）。
