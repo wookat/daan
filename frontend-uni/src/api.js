@@ -109,6 +109,18 @@ export function deleteOwnComment(cid) {
   return request(`/api/comments/${cid}`, { method: 'DELETE' });
 }
 
+export function reportComment(cid, reason) {
+  return request(`/api/comments/${cid}/report`, { method: 'POST', data: { reason } });
+}
+
+export function fetchCommentInbox() {
+  return request('/api/comments/inbox');
+}
+
+export function readCommentInbox() {
+  return request('/api/comments/inbox/read', { method: 'POST' });
+}
+
 // ---------- 收藏夹 / 笔记 ----------
 
 export function fetchFavFolders() {

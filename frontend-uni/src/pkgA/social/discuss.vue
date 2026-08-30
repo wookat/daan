@@ -42,6 +42,7 @@
             <view class="up" :class="{ on: c.liked }" @click="like(c)"><l-icon name="thumbs-up" :size="13" :color="c.liked ? '#2e5bff' : '#8a90a0'" /><text>{{ c.likes || '赞' }}</text></view>
             <text class="op" @click="startReply(c)">回复{{ c.replies.length ? ' ' + c.replies.length : '' }}</text>
             <text v-if="c.mine" class="op del" @click="removeOwn(c)">删除</text>
+            <text v-else class="op" @click="report(c)">举报</text>
           </view>
           <view v-for="r in c.replies" :key="r.id" class="reply">
             <text class="rnm">{{ r.nickname }}：</text>{{ r.content }}
@@ -49,6 +50,7 @@
               <view class="up sm" :class="{ on: r.liked }" @click="like(r)"><l-icon name="thumbs-up" :size="12" :color="r.liked ? '#2e5bff' : '#8a90a0'" /><text>{{ r.likes || '赞' }}</text></view>
               <text class="op sm" @click="startReply(c, r)">回复</text>
               <text v-if="r.mine" class="op sm del" @click="removeOwn(r, c)">删除</text>
+              <text v-else class="op sm" @click="report(r, c)">举报</text>
             </view>
           </view>
         </view>
@@ -83,7 +85,7 @@
 </template>
 
 <script>
-import { deleteOwnComment, fetchComments, getToken, likeComment, postComment, request } from '../../api.js';
+import { deleteOwnComment, fetchComments, getToken, likeComment, postComment, reportComment, request } from '../../api.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -93,6 +95,7 @@ const COLORS = {
   ziliao: { bg: '#D1FAE5', fg: '#047857' },
   yanyu: { bg: '#FEE2E2', fg: '#B91C1C' },
 };
+const REPORT_REASONS = ['广告导流', '人身攻击', '违法违规', '色情低俗', '其他'];
 const AV_COLORS = [
   { bg: '#FFF7E6', fg: '#D97706' },
   { bg: '#ECFDF5', fg: '#16A34A' },
@@ -222,6 +225,25 @@ export default {
       } catch (e) {
         uni.showToast({ title: e.message, icon: 'none' });
       }
+    },
+    report(c, parent) {
+      if (!this.ensureLogin()) return;
+      uni.showActionSheet({
+        itemList: REPORT_REASONS,
+        success: async ({ tapIndex }) => {
+          try {
+            const d = await reportComment(c.id, REPORT_REASONS[tapIndex]);
+            if (d.hidden) {
+              if (parent) parent.replies = parent.replies.filter((x) => x.id !== c.id);
+              else this.items = this.items.filter((x) => x.id !== c.id);
+              this.total = Math.max(0, this.total - 1);
+            }
+            uni.showToast({ title: d.already ? '你已举报过这条评论' : '已收到举报，我们会尽快处理', icon: 'none' });
+          } catch (e) {
+            uni.showToast({ title: e.message, icon: 'none' });
+          }
+        },
+      });
     },
     removeOwn(c, parent) {
       uni.showModal({

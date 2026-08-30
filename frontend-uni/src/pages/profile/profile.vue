@@ -60,6 +60,9 @@
       <wd-cell title="我的收藏" :value="favN + ' 题'" is-link clickable @click="goFavs">
         <template #icon><view class="cell-ico"><l-icon name="star" :size="18" color="#2e5bff" /></view></template>
       </wd-cell>
+      <wd-cell title="讨论消息" :value="inboxUnread ? inboxUnread + ' 条未读' : ''" is-link clickable @click="goInbox">
+        <template #icon><view class="cell-ico"><l-icon name="message-circle" :size="18" color="#2e5bff" /></view></template>
+      </wd-cell>
       <wd-cell title="模考记录" is-link clickable @click="goExamList">
         <template #icon><view class="cell-ico"><l-icon name="file-text" :size="18" color="#2e5bff" /></view></template>
       </wd-cell>
@@ -136,7 +139,7 @@
 </template>
 
 <script>
-import { request, getAuthUser, authLogout, clearAuth, anonUid, fetchCheckinBadges } from '../../api.js';
+import { request, getAuthUser, authLogout, clearAuth, anonUid, fetchCheckinBadges, fetchCommentInbox } from '../../api.js';
 import { getReminderSettings } from '../../reminder.js';
 import { cycleThemeMode, getThemeMode, THEME_LABELS } from '../../theme.js';
 import { listPacks } from '../../offline.js';
@@ -152,6 +155,7 @@ export default {
       pstats: { byModule: {}, days: {} },
       daily: { days: {} },
       favN: 0,
+      inboxUnread: 0,
       dailyGoal: 20,
       fontLv: 1,
       sfxOn: true,
@@ -211,10 +215,21 @@ export default {
     this.offlineN = listPacks().length;
     this.loadRemote();
     this.loadBadges();
+    this.loadInbox();
   },
   methods: {
     maskPhone(p) {
       return p ? p.slice(0, 3) + '****' + p.slice(-4) : '';
+    },
+    async loadInbox() {
+      if (!this.user) {
+        this.inboxUnread = 0;
+        return;
+      }
+      try {
+        const d = await fetchCommentInbox();
+        this.inboxUnread = d.unread || 0;
+      } catch (e) { /* 非关键路径 */ }
     },
     async loadBadges() {
       try {
@@ -265,6 +280,13 @@ export default {
     goFavs() {
       uni.setStorageSync('bookShowFavs', '1');
       uni.switchTab({ url: '/pages/book/book' });
+    },
+    goInbox() {
+      if (!this.user) {
+        this.goLogin();
+        return;
+      }
+      uni.navigateTo({ url: '/pkgA/social/inbox' });
     },
     goExamList() {
       uni.navigateTo({ url: '/pkgA/exam/list' });

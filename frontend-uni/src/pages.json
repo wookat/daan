@@ -89,6 +89,10 @@
           "style": { "navigationBarTitleText": "讨论区" }
         },
         {
+          "path": "social/inbox",
+          "style": { "navigationBarTitleText": "讨论消息" }
+        },
+        {
           "path": "social/favorites",
           "style": { "navigationBarTitleText": "收藏与笔记" }
         },
