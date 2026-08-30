@@ -236,7 +236,8 @@ def tiku_index():
     total = sum(counts.values())
     body = (
         "<h1>公务员考试题库</h1>"
-        f"<p>收录 {total} 道行测/申论题目（含历年真题），按模块、题型、考点分类，可在线刷题并查看花生十三方法讲解。</p>"
+        f"<p>收录 {total} 道行测/申论题目（含历年真题），按模块、题型、考点分类，可在线刷题并查看花生十三方法讲解。"
+        '· <a href="/tiku/discuss/">考友热议题目 →</a></p>'
         + "".join(sections)
         + f'<a class="cta" href="{_e(SITE_BASE)}/">进入刷题主站 →</a>'
     )
@@ -250,6 +251,67 @@ def tiku_index():
             f"免费公务员考试题库，收录 {total} 道行测申论题目与历年真题，附答案解析。",
             "/tiku/",
             [("题库", "/tiku/")],
+        ),
+    )
+
+
+@router.get("/discuss", include_in_schema=False)
+def tiku_discuss_noslash():
+    return RedirectResponse("/tiku/discuss/", status_code=301)
+
+
+@router.get("/discuss/", response_class=HTMLResponse, include_in_schema=False)
+def tiku_discuss():
+    conn = db.get_conn()
+    groups = conn.execute(
+        """SELECT question_id, COUNT(*) AS cnt, MAX(created_at) AS last_at
+           FROM question_comments WHERE status='ok'
+           GROUP BY question_id ORDER BY last_at DESC LIMIT 30"""
+    ).fetchall()
+    cards = []
+    for g in groups:
+        latest = conn.execute(
+            """SELECT nickname, content FROM question_comments
+               WHERE question_id=? AND status='ok' ORDER BY created_at DESC LIMIT 1""",
+            (g["question_id"],),
+        ).fetchone()
+        q = conn.execute(
+            "SELECT question, module FROM questions WHERE id=? AND disabled=0", (g["question_id"],)
+        ).fetchone()
+        if not q:
+            continue
+        stem = (q["question"] or "").strip().replace("\n", " ")[:70]
+        mod = _module_name(q["module"]) or "综合"
+        nick = (latest["nickname"] or "考友").strip()[:20] if latest else "考友"
+        cards.append(
+            '<section class="card">'
+            f'<h2><a href="/tiku/q/{g["question_id"]}">{_e(stem)}…</a></h2>'
+            f'<p class="meta">{_e(mod)} · {g["cnt"]} 条讨论</p>'
+            f'<p><b>{_e(nick)}：</b>{_e(latest["content"] if latest else "")}</p>'
+            "</section>"
+        )
+    conn.close()
+    if cards:
+        listing = "".join(cards)
+    else:
+        listing = '<section class="card"><p>还没有讨论，去刷题时对题目发表评论，这里会聚合全站热议。</p></section>'
+    body = (
+        _crumb([("题库", "/tiku/"), ("考友热议", None)])
+        + f"<h1>考友热议题目（{len(cards)} 题）</h1>"
+        + '<p class="meta">全站正在讨论的题目，按最近活跃排序，点题干看题目解析与全部讨论</p>'
+        + listing
+        + f'<a class="cta" href="{_e(SITE_BASE)}/#/pkgA/social/plaza">进入讨论广场参与互动（免费）→</a>'
+    )
+    return _page(
+        "考友热议题目_公务员考试题目讨论区_错题邦",
+        "公务员考试题库热议题目聚合：考友们正在讨论的行测/申论题目与解法交流，可在线查看解析并参与讨论。",
+        "/tiku/discuss/",
+        body,
+        _collection_ld(
+            "考友热议题目",
+            "公务员考试题库热议题目聚合，考友讨论与解法交流。",
+            "/tiku/discuss/",
+            [("题库", "/tiku/"), ("考友热议", "/tiku/discuss/")],
         ),
     )
 
@@ -825,7 +887,7 @@ def sitemap_index():
 
 @root_router.get("/sitemap-pages.xml", include_in_schema=False)
 def sitemap_pages():
-    urls = [(_url("/tiku/"), None), (_url("/tiku/papers/"), None)]
+    urls = [(_url("/tiku/"), None), (_url("/tiku/papers/"), None), (_url("/tiku/discuss/"), None)]
     for r in db.question_counts():
         if not _module_name(r["module"]):
             continue
