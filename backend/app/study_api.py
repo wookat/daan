@@ -94,6 +94,22 @@ def api_answer_log(body: dict):
     n = db.save_answer_log(uid[:64], items[:200])
     return {"saved": n}
 
+@router.get("/api/practice/history")
+def api_practice_history(uid: str):
+    uid = uid.strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    return {"items": db.practice_history(uid[:64])}
+
+
+@router.get("/api/practice/history/detail")
+def api_practice_history_detail(uid: str, start: float, end: float):
+    uid = uid.strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    return {"items": db.practice_history_detail(uid[:64], start, end)}
+
+
 @router.get("/api/growth")
 def api_growth(uid: str):
     uid = uid.strip()

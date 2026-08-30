@@ -63,6 +63,9 @@
       <wd-cell title="讨论消息" :value="inboxUnread ? inboxUnread + ' 条未读' : ''" is-link clickable @click="goInbox">
         <template #icon><view class="cell-ico"><l-icon name="message-circle" :size="18" color="#2e5bff" /></view></template>
       </wd-cell>
+      <wd-cell title="练习历史" value="逐题回看 · 错题重练" is-link clickable @click="goPracticeHistory">
+        <template #icon><view class="cell-ico"><l-icon name="clock" :size="18" color="#2e5bff" /></view></template>
+      </wd-cell>
       <wd-cell title="模考记录" is-link clickable @click="goExamList">
         <template #icon><view class="cell-ico"><l-icon name="file-text" :size="18" color="#2e5bff" /></view></template>
       </wd-cell>
@@ -285,6 +288,9 @@ export default {
     },
     goCalendar() {
       uni.navigateTo({ url: '/pages/stats/calendar' });
+    },
+    goPracticeHistory() {
+      uni.navigateTo({ url: '/pkgA/stats/practice-history' });
     },
     goFavs() {
       uni.setStorageSync('bookShowFavs', '1');

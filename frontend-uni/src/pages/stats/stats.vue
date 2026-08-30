@@ -240,7 +240,7 @@
     </view>
 
     <view v-if="history.length" class="card">
-      <view class="h">练习记录</view>
+      <view class="h hist-h">练习记录 <text class="hist-link" @click="goPracticeHistory">逐题回看 ›</text></view>
       <view v-for="(h, i) in history.slice(0, showAllHist ? 30 : 6)" :key="i" class="hist-row">
         <text class="hist-time">{{ fmtHist(h.t) }}</text>
         <text class="hist-mod" :class="{ exam: h.exam }">{{ h.exam ? (h.exam === 'full' ? '全真模考' : '迷你模考') : h.module ? modName(h.module) : h.n >= 100 ? '全真模考' : '混合' }}</text>
@@ -715,6 +715,9 @@ export default {
     goMasteryMap() {
       uni.navigateTo({ url: '/pkgA/stats/mastery-map' });
     },
+    goPracticeHistory() {
+      uni.navigateTo({ url: '/pkgA/stats/practice-history' });
+    },
     goSub(module, sub, tag3, source) {
       uni.setStorageSync('practicePreset', { module, submodule: sub, count: 10, adaptive: true, tag3: tag3 || null, source: source || null });
       uni.navigateTo({ url: '/pages/practice/practice' });
@@ -957,6 +960,8 @@ export default {
   line-height: 1.7;
   padding-top: 8rpx;
 }
+.hist-h { display: flex; align-items: center; justify-content: space-between; }
+.hist-link { font-size: 24rpx; font-weight: 500; color: #2e5bff; }
 .hist-row { display: flex; align-items: center; gap: 16rpx; padding: 14rpx 0; border-bottom: 1rpx solid var(--fill); }
 .hist-time { font-size: 22rpx; color: var(--ink-2); width: 170rpx; }
 .gw-row { display: flex; align-items: center; gap: 14rpx; margin-bottom: 12rpx; }

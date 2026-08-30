@@ -1984,6 +1984,77 @@ def save_answer_log(uid: str, items: list[dict]) -> int:
     return n
 
 
+_HISTORY_SESSION_GAP = 1800  # 相邻作答间隔超过该秒数即切分为新一次练习
+
+
+def practice_history(uid: str, limit: int = 50) -> list[dict]:
+    """把 answer_log 按时间间隔切分为练习会话（倒序）。"""
+    conn = get_conn()
+    _ensure_answer_log(conn)
+    rows = conn.execute(
+        "SELECT created_at, module, correct, secs, source FROM answer_log WHERE uid=? ORDER BY created_at DESC LIMIT 2000",
+        (uid,),
+    ).fetchall()
+    conn.close()
+    sessions: list[dict] = []
+    cur: dict | None = None
+    for r in rows:  # 倒序遍历：r 比 cur['start'] 更早
+        if cur is None or cur["start"] - r["created_at"] > _HISTORY_SESSION_GAP:
+            if len(sessions) >= limit:
+                break
+            cur = {
+                "start": r["created_at"],
+                "end": r["created_at"],
+                "n": 0,
+                "correct": 0,
+                "secs": 0,
+                "modules": [],
+                "source": r["source"],
+            }
+            sessions.append(cur)
+        cur["start"] = r["created_at"]
+        cur["n"] += 1
+        cur["correct"] += 1 if r["correct"] else 0
+        cur["secs"] += r["secs"] or 0
+        if r["module"] and r["module"] not in cur["modules"]:
+            cur["modules"].append(r["module"])
+    return sessions
+
+
+def practice_history_detail(uid: str, start: float, end: float) -> list[dict]:
+    """某次练习的逐题记录，附题库原题（供回看与重练）。"""
+    conn = get_conn()
+    _ensure_answer_log(conn)
+    rows = conn.execute(
+        """SELECT a.created_at, a.question_id, a.module, a.submodule, a.correct, a.secs, a.picked, q.id qid
+           FROM answer_log a LEFT JOIN questions q
+             ON q.id = a.question_id AND (q.disabled IS NULL OR q.disabled=0)
+           WHERE a.uid=? AND a.created_at BETWEEN ? AND ?
+           ORDER BY a.created_at LIMIT 100""",
+        (uid, start - 0.001, end + 0.001),
+    ).fetchall()
+    out = []
+    for r in rows:
+        item = {
+            "created_at": r["created_at"],
+            "module": r["module"],
+            "submodule": r["submodule"],
+            "correct": bool(r["correct"]),
+            "secs": r["secs"],
+            "picked": r["picked"],
+            "question": None,
+        }
+        if r["qid"]:
+            qrow = conn.execute("SELECT * FROM questions WHERE id=?", (r["qid"],)).fetchone()
+            if qrow:
+                d = dict(qrow)
+                d["options"] = json.loads(d.get("options") or "{}")
+                item["question"] = d
+        out.append(item)
+    conn.close()
+    return out
+
+
 def refresh_question_stats() -> int:
     """聚合 answer_log 为每题刷新全站作答人次/正确率/易错项。"""
     conn = get_conn()
