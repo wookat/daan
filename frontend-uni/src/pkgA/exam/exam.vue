@@ -3,6 +3,8 @@
     <view v-if="loading" class="spin">试卷加载中…</view>
 
     <template v-if="!loading && items.length">
+      <view class="ex-cols">
+      <view class="ex-main">
       <view class="topbar">
         <text class="mod">{{ modName(cur.module) }}</text>
         <text class="clock">⏱ {{ fmtLeft }}</text>
@@ -34,6 +36,36 @@
         <view class="nbtn acard-btn" @click="cardOpen = true">答题卡</view>
         <view v-if="idx + 1 < items.length" class="nbtn main" @click="next">下一题</view>
         <view v-else class="nbtn main" @click="confirmSubmit">交卷</view>
+      </view>
+      </view>
+
+      <!-- #ifdef H5 -->
+      <view class="ex-side">
+        <view class="card side-card">
+          <view class="side-h">
+            <text class="side-t">答题卡</text>
+            <text class="side-clock">⏱ {{ fmtLeft }}</text>
+          </view>
+          <view class="legend">
+            <text class="lg"><text class="dot done"></text>已答</text>
+            <text class="lg"><text class="dot"></text>未答</text>
+            <text class="lg"><text class="dot mark"></text>标记</text>
+          </view>
+          <view class="acard-grid side-grid">
+            <view
+              v-for="(q, i) in items"
+              :key="i"
+              class="acard-n"
+              :class="{ done: q._picked, mark: q._marked, cur: i === idx }"
+              @click="goto(i)"
+            >{{ i + 1 }}</view>
+          </view>
+          <view class="acard-foot">已答 {{ answeredCount }}/{{ items.length }}</view>
+          <button class="btn" @click="confirmSubmit">交卷</button>
+          <view class="kbd-note">A–D 选择 · ←/→ 翻题 · Enter 下一题/交卷</view>
+        </view>
+      </view>
+      <!-- #endif -->
       </view>
     </template>
 
@@ -130,12 +162,32 @@ export default {
     }
     await this.start(opt);
   },
+  onShow() {
+    // #ifdef H5
+    if (!this._exKeyHandler && typeof window !== 'undefined') {
+      this._exKeyHandler = (e) => this.onExKeydown(e);
+      window.addEventListener('keydown', this._exKeyHandler);
+    }
+    // #endif
+  },
   onUnload() {
     this.stopClock();
     this.saveProgress();
+    // #ifdef H5
+    if (this._exKeyHandler && typeof window !== 'undefined') {
+      window.removeEventListener('keydown', this._exKeyHandler);
+      this._exKeyHandler = null;
+    }
+    // #endif
   },
   onHide() {
     this.saveProgress();
+    // #ifdef H5
+    if (this._exKeyHandler && typeof window !== 'undefined') {
+      window.removeEventListener('keydown', this._exKeyHandler);
+      this._exKeyHandler = null;
+    }
+    // #endif
   },
   methods: {
     modName(m) { return MODS[m] || '行测'; },
@@ -288,6 +340,33 @@ export default {
       uni.hideLoading();
       uni.redirectTo({ url: '/pkgA/exam/report?attempt_id=' + attemptId });
     },
+    // #ifdef H5
+    onExKeydown(e) {
+      if (typeof window === 'undefined' || window.innerWidth < 1024) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const tag = (e.target && e.target.tagName) || '';
+      if (/INPUT|TEXTAREA|SELECT/.test(tag) || (e.target && e.target.isContentEditable)) return;
+      if (this.loading || !this.items.length || this.submitting || this.cardOpen) return;
+      const k = e.key;
+      if (/^[a-dA-D]$/.test(k)) {
+        const K = k.toUpperCase();
+        if (this.cur.options && this.cur.options[K] != null) {
+          e.preventDefault();
+          this.pick(K);
+        }
+      } else if (k === 'ArrowLeft' && this.idx > 0) {
+        e.preventDefault();
+        this.prev();
+      } else if (k === 'ArrowRight' && this.idx + 1 < this.items.length) {
+        e.preventDefault();
+        this.next();
+      } else if (k === 'Enter') {
+        e.preventDefault();
+        if (this.idx + 1 < this.items.length) this.next();
+        else this.confirmSubmit();
+      }
+    },
+    // #endif
     // 模考作答同步计入本地统计（统计页/打卡日历与练习同一口径）
     mergeIntoStats(d) {
       try {
@@ -372,4 +451,29 @@ export default {
 .acard-n.cur { box-shadow: 0 0 0 4rpx var(--brand-soft); border-color: var(--brand); }
 .acard-foot { text-align: center; font-size: 23rpx; color: var(--ink-2); padding: 8rpx 0 16rpx; }
 .btn { background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 28rpx; font-weight: 500; min-height: 44px; line-height: 44px; }
+
+/* #ifdef H5 */
+.ex-side { display: none; }
+
+@media (min-width: 768px) {
+  .wrap { max-width: 1044px; margin: 0 auto; }
+  .opt:hover, .tbtn:hover, .nbtn:hover, .acard-n:hover, .btn:hover { cursor: pointer; }
+  .opt:hover { border-color: var(--brand); }
+}
+
+@media (min-width: 1024px) {
+  .ex-cols { display: flex; gap: 32rpx; align-items: flex-start; }
+  .ex-main { flex: 1; min-width: 0; }
+  .ex-side { display: block; width: 320px; flex: none; position: sticky; top: 24rpx; }
+  .side-card { margin-bottom: 0; }
+  .side-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
+  .side-t { font-size: 30rpx; font-weight: 600; }
+  .side-clock { font-size: 28rpx; font-weight: 700; color: #ef4444; font-variant-numeric: tabular-nums; }
+  .side-grid { max-height: 46vh; overflow-y: auto; }
+  .kbd-note { text-align: center; font-size: 21rpx; color: var(--ink-2); margin-top: 16rpx; }
+  .navrow { position: static; padding: 0; background: transparent; border-top: none; margin-bottom: 24rpx; }
+  .navrow .acard-btn { display: none; }
+  .wrap { padding-bottom: 40rpx; }
+}
+/* #endif */
 </style>

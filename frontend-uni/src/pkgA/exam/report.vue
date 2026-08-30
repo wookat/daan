@@ -9,6 +9,8 @@
     </view>
 
     <template v-if="!loading && report">
+      <view class="rp2-cols">
+      <view class="rp2-side">
       <view class="card hero">
         <text class="hero-title">{{ report.paper.title }}</text>
         <view class="hero-score">
@@ -35,7 +37,9 @@
           <text class="mrow-v">{{ m.correct }}/{{ m.n }}</text>
         </view>
       </view>
+      </view>
 
+      <view class="rp2-main">
       <view v-if="history.length > 1" class="card">
         <view class="h">历次成绩</view>
         <view class="curve">
@@ -81,6 +85,8 @@
       <view class="btns">
         <view class="pbtn" @click="goList">返回卷库</view>
         <view class="pbtn main" @click="retake">再考一次</view>
+      </view>
+      </view>
       </view>
     </template>
 
@@ -256,4 +262,20 @@ export default {
 .wrow-t { font-size: 26rpx; color: var(--ink); font-weight: 500; }
 .wrow-s { font-size: 22rpx; color: var(--ink-2); }
 .wrow-go { font-size: 25rpx; color: var(--brand); font-weight: 600; }
+
+/* #ifdef H5 */
+@media (min-width: 768px) {
+  .wrap { max-width: 1044px; margin: 0 auto; }
+  .mask { justify-content: center; align-items: center; }
+  .sheet { width: 640px; border-radius: 24rpx; }
+  .wrow:hover, .qn:hover, .pbtn:hover, .curve-col:hover, .sheet-x:hover { cursor: pointer; }
+  .wrow:hover { background: var(--soft-bg, #f5f6fa); }
+}
+
+@media (min-width: 1024px) {
+  .rp2-cols { display: flex; gap: 32rpx; align-items: flex-start; }
+  .rp2-side { width: 420px; flex: none; position: sticky; top: 24rpx; }
+  .rp2-main { flex: 1; min-width: 0; }
+}
+/* #endif */
 </style>
