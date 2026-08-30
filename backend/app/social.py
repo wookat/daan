@@ -265,35 +265,34 @@ def api_comment_inbox_read(authorization: str | None = Header(None)):
 def api_comments_plaza(limit: int = 20):
     n = min(max(int(limit), 1), 50)
     conn = db.get_conn()
-    groups = conn.execute(
-        """SELECT question_id, COUNT(*) AS cnt, MAX(created_at) AS last_at
-           FROM question_comments WHERE status='ok'
-           GROUP BY question_id ORDER BY last_at DESC LIMIT ?""",
+    rows = conn.execute(
+        """SELECT g.question_id, g.cnt, g.last_at, c.nickname, c.content,
+                  q.question, q.module
+           FROM (SELECT question_id, COUNT(*) AS cnt, MAX(created_at) AS last_at
+                 FROM question_comments WHERE status='ok'
+                 GROUP BY question_id ORDER BY last_at DESC LIMIT ?) g
+           LEFT JOIN question_comments c ON c.id = (
+               SELECT id FROM question_comments
+               WHERE question_id = g.question_id AND status='ok'
+               ORDER BY created_at DESC, id DESC LIMIT 1)
+           LEFT JOIN questions q ON q.id = g.question_id
+           ORDER BY g.last_at DESC""",
         (n,),
     ).fetchall()
-    items = []
-    for g in groups:
-        latest = conn.execute(
-            """SELECT nickname, content FROM question_comments
-               WHERE question_id=? AND status='ok' ORDER BY created_at DESC LIMIT 1""",
-            (g["question_id"],),
-        ).fetchone()
-        q = conn.execute(
-            "SELECT question, module FROM questions WHERE id=?", (g["question_id"],)
-        ).fetchone()
-        items.append(
-            {
-                "question_id": g["question_id"],
-                "cnt": g["cnt"],
-                "last_at": g["last_at"],
-                "stem": (q["question"] or "")[:80] if q else "",
-                "module": q["module"] if q else "",
-                "latest": {
-                    "nickname": _clean_name(latest["nickname"]) if latest else "考友",
-                    "content": latest["content"] if latest else "",
-                },
-            }
-        )
+    items = [
+        {
+            "question_id": r["question_id"],
+            "cnt": r["cnt"],
+            "last_at": r["last_at"],
+            "stem": (r["question"] or "")[:80],
+            "module": r["module"] or "",
+            "latest": {
+                "nickname": _clean_name(r["nickname"]) if r["nickname"] is not None else "考友",
+                "content": r["content"] or "",
+            },
+        }
+        for r in rows
+    ]
     conn.close()
     return {"items": items}
 

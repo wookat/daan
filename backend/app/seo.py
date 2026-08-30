@@ -263,31 +263,30 @@ def tiku_discuss_noslash():
 @router.get("/discuss/", response_class=HTMLResponse, include_in_schema=False)
 def tiku_discuss():
     conn = db.get_conn()
-    groups = conn.execute(
-        """SELECT question_id, COUNT(*) AS cnt, MAX(created_at) AS last_at
-           FROM question_comments WHERE status='ok'
-           GROUP BY question_id ORDER BY last_at DESC LIMIT 30"""
+    rows = conn.execute(
+        """SELECT g.question_id, g.cnt, c.nickname, c.content, q.id AS q_id, q.question, q.module
+           FROM (SELECT question_id, COUNT(*) AS cnt, MAX(created_at) AS last_at
+                 FROM question_comments WHERE status='ok'
+                 GROUP BY question_id ORDER BY last_at DESC LIMIT 30) g
+           LEFT JOIN question_comments c ON c.id = (
+               SELECT id FROM question_comments
+               WHERE question_id = g.question_id AND status='ok'
+               ORDER BY created_at DESC, id DESC LIMIT 1)
+           LEFT JOIN questions q ON q.id = g.question_id AND q.disabled=0
+           ORDER BY g.last_at DESC"""
     ).fetchall()
     cards = []
-    for g in groups:
-        latest = conn.execute(
-            """SELECT nickname, content FROM question_comments
-               WHERE question_id=? AND status='ok' ORDER BY created_at DESC LIMIT 1""",
-            (g["question_id"],),
-        ).fetchone()
-        q = conn.execute(
-            "SELECT question, module FROM questions WHERE id=? AND disabled=0", (g["question_id"],)
-        ).fetchone()
-        if not q:
+    for r in rows:
+        if r["q_id"] is None:
             continue
-        stem = (q["question"] or "").strip().replace("\n", " ")[:70]
-        mod = _module_name(q["module"]) or "综合"
-        nick = (latest["nickname"] or "考友").strip()[:20] if latest else "考友"
+        stem = (r["question"] or "").strip().replace("\n", " ")[:70]
+        mod = _module_name(r["module"]) or "综合"
+        nick = (r["nickname"] or "考友").strip()[:20]
         cards.append(
             '<section class="card">'
-            f'<h2><a href="/tiku/q/{g["question_id"]}">{_e(stem)}…</a></h2>'
-            f'<p class="meta">{_e(mod)} · {g["cnt"]} 条讨论</p>'
-            f'<p><b>{_e(nick)}：</b>{_e(latest["content"] if latest else "")}</p>'
+            f'<h2><a href="/tiku/q/{r["question_id"]}">{_e(stem)}…</a></h2>'
+            f'<p class="meta">{_e(mod)} · {r["cnt"]} 条讨论</p>'
+            f'<p><b>{_e(nick)}：</b>{_e(r["content"] or "")}</p>'
             "</section>"
         )
     conn.close()
