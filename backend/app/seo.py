@@ -67,6 +67,7 @@ _CSS = (
     ".tags{display:flex;flex-wrap:wrap;gap:8px}.tags a{background:#eef3ff;border-radius:16px;padding:4px 12px;"
     "font-size:14px;white-space:nowrap}"
     ".meta{color:#6b7280;font-size:13px}"
+    ".meta a,.ftr a{text-decoration:underline}"
     ".opt{margin:6px 0;padding:8px 12px;border:1px solid #e7e9f0;border-radius:8px}"
     ".ans{background:#ecfdf5;border-radius:8px;padding:12px;margin-top:10px}"
     ".cta{display:inline-block;background:" + BRAND + ";color:#fff!important;border-radius:999px;"
