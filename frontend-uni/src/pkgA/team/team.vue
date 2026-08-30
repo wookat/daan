@@ -7,6 +7,8 @@
         <text class="hero-s">和队友一起打卡 · 看谁今天没刷题 · 互相催学</text>
       </view>
 
+      <view class="tm-cols">
+      <view class="tm-main">
       <view class="card" v-if="!teams.length && loaded">
         <view class="empty">还没有小队。创建一个小队，把邀请码发给考友，一起打卡刷题！</view>
       </view>
@@ -17,11 +19,15 @@
         </view>
         <text class="t-go">看队友 ›</text>
       </view>
+      </view>
 
+      <view class="tm-side">
       <view class="act-btn main" @click="showCreate = true">创建小队</view>
       <view class="join-row">
         <input v-model="joinCode" class="join-input" placeholder="输入 6 位邀请码" :maxlength="8" />
         <view class="join-btn" @click="joinByCode">加入</view>
+      </view>
+      </view>
       </view>
     </template>
 
@@ -36,6 +42,8 @@
         </view>
       </view>
 
+      <view class="tp-cols">
+      <view class="tp-side">
       <!-- 本周队内排行榜 -->
       <view v-if="weekRank.length" class="card rank-card">
         <view class="rank-head">
@@ -50,7 +58,9 @@
           <text class="rank-n">本周 {{ m.week_n }} 题</text>
         </view>
       </view>
+      </view>
 
+      <view class="tp-main">
       <view class="week-head">
         <text class="wh-name">队友</text>
         <view class="wh-days">
@@ -77,6 +87,8 @@
             <text v-if="n" class="wk-n">{{ n > 99 ? '99+' : n }}</text>
           </view>
         </view>
+      </view>
+      </view>
       </view>
     </template>
 
@@ -350,9 +362,23 @@ export default {
 
 /* #ifdef H5 */
 @media (min-width: 768px) {
-  .wrap.team { max-width: 680px; }
+  .wrap.team { max-width: 1044px; margin: 0 auto; }
   .mask { justify-content: center; align-items: center; }
   .sheet { width: 520px; border-radius: 24rpx; }
+  .t-row:hover, .act-btn:hover, .join-btn:hover, .hero-btn:hover, .remind-btn:hover, .rank-copy:hover, .sheet-btn:hover { cursor: pointer; }
+  .t-row:hover { background: var(--soft-bg, #f5f6fa); }
+}
+
+@media (min-width: 1024px) {
+  .tm-cols { display: flex; gap: 32rpx; align-items: flex-start; }
+  .tm-main { flex: 1; min-width: 0; }
+  .tm-side { width: 360px; flex: none; position: sticky; top: 24rpx; }
+  .tm-side .act-btn.main { margin-top: 0; }
+
+  .tp-cols { display: flex; gap: 32rpx; align-items: flex-start; }
+  .tp-side { width: 360px; flex: none; position: sticky; top: 24rpx; }
+  .tp-main { flex: 1; min-width: 0; }
+  .tp-main .week-head { margin-top: 0; }
 }
 /* #endif */
 </style>

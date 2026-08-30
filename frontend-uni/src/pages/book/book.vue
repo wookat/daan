@@ -91,17 +91,22 @@
         <text class="duego">开始复习</text>
       </view>
       <view v-if="weekTrend" class="card trendcard bk-side">
-        <text class="trend-t">错题趋势（近 4 周新增）</text>
+        <text class="trend-t">错题趋势（近 4 周）</text>
         <view class="trend-bars">
           <view v-for="w in weekTrend.weeks" :key="w.label" class="trend-col">
             <view class="trend-barwrap">
               <view class="trend-bar" :style="{ height: w.pct + '%' }" />
+              <view class="trend-bar killed" :style="{ height: w.kpct + '%' }" />
             </view>
-            <text class="trend-n">{{ w.n }}</text>
+            <text class="trend-n">{{ w.n }}<text v-if="w.k" class="trend-kn">/{{ w.k }}</text></text>
             <text class="trend-lb">{{ w.label }}</text>
           </view>
         </view>
-        <text class="trend-sum">近 7 天新增 {{ weekTrend.last7 }} 道 · 累计已掌握 {{ doneItems.length }} 道</text>
+        <view class="trend-legend">
+          <view class="trend-lg"><view class="trend-dot" /><text class="trend-lgt">新增</text></view>
+          <view class="trend-lg"><view class="trend-dot killed" /><text class="trend-lgt">消灭（达成掌握）</text></view>
+        </view>
+        <text class="trend-sum">近 7 天新增 {{ weekTrend.last7 }} 道 · 消灭 {{ weekTrend.klast7 }} 道 · 累计已掌握 {{ doneItems.length }} 道</text>
       </view>
       <view v-if="monthRecap.total" class="card recap bk-side">
         <view class="recap-h" @click="recapOpen = !recapOpen">
@@ -297,6 +302,33 @@
           </view>
         </view>
       </view>
+      <!-- #ifdef H5 -->
+      <view class="card kbdcard bk-side">
+        <view class="kbd-h">键盘快捷键</view>
+        <view class="kbd-row"><text class="kbd">J</text><text class="kbd">K</text><text class="kbd-d">上下切题</text></view>
+        <view class="kbd-row"><text class="kbd">Enter</text><text class="kbd-d">展开/收起详解</text></view>
+        <view class="kbd-row"><text class="kbd">A</text><text class="kbd">–</text><text class="kbd">D</text><text class="kbd-d">复习模式作答</text></view>
+        <text class="kbd-more" @click="kbdHelp = true">按 ? 查看全部 ›</text>
+      </view>
+      <view v-if="kbdHelp" class="mask" @click="kbdHelp = false">
+        <view class="sheet" @click.stop>
+          <view class="sheet-h">
+            <text class="sheet-t">键盘快捷键</text>
+            <view class="sheet-x" @click="kbdHelp = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+          </view>
+          <view class="sheet-k">错题列表</view>
+          <view class="kbd-row"><text class="kbd">J</text><text class="kbd">↓</text><text class="kbd-d">下一张错题</text></view>
+          <view class="kbd-row"><text class="kbd">K</text><text class="kbd">↑</text><text class="kbd-d">上一张错题</text></view>
+          <view class="kbd-row"><text class="kbd">Enter</text><text class="kbd">空格</text><text class="kbd-d">展开/收起当前错题详解</text></view>
+          <view class="sheet-k">复习模式</view>
+          <view class="kbd-row"><text class="kbd">A</text><text class="kbd">B</text><text class="kbd">C</text><text class="kbd">D</text><text class="kbd-d">直接作答（单选）</text></view>
+          <view class="kbd-row"><text class="kbd">Enter</text><text class="kbd-d">多选确认 / 已作答进入下一题</text></view>
+          <view class="sheet-k">通用</view>
+          <view class="kbd-row"><text class="kbd">?</text><text class="kbd-d">打开本面板</text></view>
+          <view class="kbd-row"><text class="kbd">Esc</text><text class="kbd-d">关闭本面板</text></view>
+        </view>
+      </view>
+      <!-- #endif -->
       <view v-if="tab !== 'fav' && (filterMod || kpFilter || kp3Filter || srcFilter)" class="curfilter bk-main">
         <text v-if="filterMod || kpFilter || kp3Filter" class="kpchip on" @click="filterMod = ''; kpFilter = ''; kp3Filter = ''">{{ kp3Filter || kpFilter || modName(filterMod) }} ✕</text>
         <text v-if="srcFilter" class="kpchip on" @click="srcFilter = ''">{{ srcFilter === 'exam' ? '模考错题' : '练习错题' }} ✕</text>
@@ -354,7 +386,7 @@
         <view class="e-t">没有匹配的错题</view>
         <view class="e-s">换个关键词或清除筛选试试</view>
       </view>
-      <view v-for="m in shownPage" :key="m.id" class="card mcard bk-main" :class="[masteryClass(m), { bsel: batchMode && selIds[m.id] }]" @click="batchMode ? toggleSel(m) : toggleCard(m)">
+      <view v-for="m in shownPage" :key="m.id" :id="'mc-' + m.id" class="card mcard bk-main" :class="[masteryClass(m), { bsel: batchMode && selIds[m.id], kbf: kbId === m.id }]" @click="batchMode ? toggleSel(m) : toggleCard(m)">
         <view class="mhead">
           <view v-if="batchMode" class="bchk" :class="{ on: selIds[m.id] }">{{ selIds[m.id] ? '✓' : '' }}</view>
           <text class="tag">{{ tagName(m) }}</text>
@@ -514,6 +546,8 @@ export default {
       sortBy: 'time',
       pageN: 20,
       batchMode: false,
+      kbId: null,
+      kbdHelp: false,
       selIds: {},
       batchBusy: false,
       recapOpen: typeof window !== 'undefined' && window.innerWidth >= 1024,
@@ -604,13 +638,19 @@ export default {
       for (let i = 3; i >= 0; i--) {
         const start = now - (i + 1) * 7 * DAY;
         const end = now - i * 7 * DAY;
-        const n = this.items.filter((m) => (m.created_at || 0) >= start && (m.created_at || 0) < end).length;
-        weeks.push({ label: i === 0 ? '本周' : i + '周前', n });
+        const inWin = (t) => t >= start && t < end;
+        const n = this.items.filter((m) => inWin(m.created_at || 0)).length;
+        const k = this.items.filter((m) => m.mastered && inWin(m.mastered_at || 0)).length;
+        weeks.push({ label: i === 0 ? '本周' : i + '周前', n, k });
       }
-      const max = Math.max(...weeks.map((w) => w.n), 1);
-      for (const w of weeks) w.pct = Math.max(Math.round((w.n / max) * 100), w.n ? 8 : 0);
+      const max = Math.max(...weeks.map((w) => Math.max(w.n, w.k)), 1);
+      for (const w of weeks) {
+        w.pct = Math.max(Math.round((w.n / max) * 100), w.n ? 8 : 0);
+        w.kpct = Math.max(Math.round((w.k / max) * 100), w.k ? 8 : 0);
+      }
       const last7 = this.items.filter((m) => (m.created_at || 0) >= now - 7 * DAY).length;
-      return { weeks, last7 };
+      const klast7 = this.items.filter((m) => m.mastered && (m.mastered_at || 0) >= now - 7 * DAY).length;
+      return { weeks, last7, klast7 };
     },
     monthRecap() {
       const now = new Date();
@@ -677,7 +717,7 @@ export default {
     },
   },
   watch: {
-    tab() { this.pageN = 20; this.batchMode = false; this.selIds = {}; },
+    tab() { this.pageN = 20; this.batchMode = false; this.selIds = {}; this.kbId = null; },
     filterMod() { this.pageN = 20; },
     kw() { this.pageN = 20; },
     kpFilter() { this.pageN = 20; },
@@ -699,8 +739,76 @@ export default {
       this.autoReview = true;
     }
     this.load();
+    // #ifdef H5
+    if (!this._kbHandler && typeof window !== 'undefined') {
+      this._kbHandler = (e) => this.onKeydown(e);
+      window.addEventListener('keydown', this._kbHandler);
+    }
+    // #endif
+  },
+  onHide() {
+    // #ifdef H5
+    if (this._kbHandler && typeof window !== 'undefined') {
+      window.removeEventListener('keydown', this._kbHandler);
+      this._kbHandler = null;
+    }
+    // #endif
+  },
+  onUnload() {
+    // #ifdef H5
+    if (this._kbHandler && typeof window !== 'undefined') {
+      window.removeEventListener('keydown', this._kbHandler);
+      this._kbHandler = null;
+    }
+    // #endif
   },
   methods: {
+    // #ifdef H5
+    onKeydown(e) {
+      if (typeof window === 'undefined' || window.innerWidth < 1024) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const tag = (e.target && e.target.tagName) || '';
+      if (/INPUT|TEXTAREA|SELECT/.test(tag) || (e.target && e.target.isContentEditable)) return;
+      const k = e.key;
+      if (this.kbdHelp) {
+        if (k === 'Escape' || k === '?') { e.preventDefault(); this.kbdHelp = false; }
+        return;
+      }
+      if (k === '?') {
+        e.preventDefault();
+        this.kbdHelp = true;
+        return;
+      }
+      if (this.reviewing) {
+        if (this.answered) {
+          if (k === 'Enter') { e.preventDefault(); this.nextReview(); }
+        } else if (this.curLetter && /^[a-dA-D]$/.test(k)) {
+          e.preventDefault();
+          this.pick(k.toUpperCase());
+        } else if (this.curMulti && k === 'Enter' && this.picked) {
+          e.preventDefault();
+          this.confirmMulti();
+        }
+        return;
+      }
+      if (this.batchMode || this.manualOpen || this.celebrate || this.reinforce || this.aiOpen) return;
+      const list = this.shownPage;
+      if (!list.length) return;
+      if (k === 'j' || k === 'k' || k === 'ArrowDown' || k === 'ArrowUp') {
+        e.preventDefault();
+        const dir = k === 'j' || k === 'ArrowDown' ? 1 : -1;
+        let idx = list.findIndex((m) => m.id === this.kbId);
+        idx = idx < 0 ? (dir > 0 ? 0 : list.length - 1) : Math.min(Math.max(idx + dir, 0), list.length - 1);
+        this.kbId = list[idx].id;
+        const el = document.getElementById('mc-' + this.kbId);
+        if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      } else if ((k === 'Enter' || k === ' ') && this.kbId != null) {
+        e.preventDefault();
+        const m = list.find((x) => x.id === this.kbId);
+        if (m) this.toggleCard(m);
+      }
+    },
+    // #endif
     manualOpenSheet() {
       this.recentPapers = uni.getStorageSync('recentPapers') || [];
       this.manualPaper = null;
@@ -859,7 +967,9 @@ export default {
     },
     async master(m, on = true) {
       await request('/api/mistakes/' + m.id, { method: 'PATCH', data: { uid: anonUid(), mastered: on ? 1 : 0 } });
-      if (on) uni.showToast({ title: '已掌握！', icon: 'success' });
+      m.mastered = on ? 1 : 0;
+      m.mastered_at = on ? (m.mastered_at || Date.now() / 1000) : null;
+      uni.showToast({ title: on ? '已掌握！' : '已恢复复习', icon: on ? 'success' : 'none' });
       this.load();
     },
     openFavPage() {
@@ -869,10 +979,12 @@ export default {
       uni.switchTab({ url: '/pages/home/home' });
     },
     async load() {
+      const seq = (this._loadSeq = (this._loadSeq || 0) + 1);
       this.loading = true;
       try {
         const uq = 'uid=' + encodeURIComponent(anonUid());
         const [d, r] = await Promise.all([request('/api/mistakes?' + uq), request('/api/review?' + uq)]);
+        if (seq !== this._loadSeq) return;
         this.items = d.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
         this.due = r.items;
         this.dueTotal = r.total || r.items.length;
@@ -888,6 +1000,7 @@ export default {
           else uni.removeTabBarBadge({ index: 1 });
         } catch (e) { /* tabBar 未就绪时忽略 */ }
       } catch (e) {
+        if (seq !== this._loadSeq) return;
         const c = getCachedMistakes();
         if (c && c.items && c.items.length) {
           this.items = c.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
@@ -1143,6 +1256,7 @@ export default {
       if (m.question_id) acts.push({ t: '题目纠错', f: () => this.openReport(m) });
       if (m.question_id) acts.push({ t: '分享给队友', f: () => this.shareToMates(m) });
       if (!m.mastered) acts.push({ t: '标为已掌握', f: () => this.master(m) });
+      else acts.push({ t: '恢复复习', f: () => this.master(m, false) });
       acts.push({ t: '删除', f: () => this.del(m) });
       uni.showActionSheet({
         itemList: acts.map((a) => a.t),
@@ -1462,27 +1576,44 @@ export default {
 .sj-row { display: flex; gap: 20rpx; }
 :deep(.sj-btn) { flex: 1; border-radius: 12rpx !important; }
 
+/* 快捷键提示卡（仅桌面侧栏展示）与速查面板 */
+.kbdcard { display: none; }
+.kbd-h { font-size: 26rpx; font-weight: 600; color: var(--ink); }
+.kbd-row { display: flex; align-items: center; gap: 8rpx; margin-top: 14rpx; }
+.kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 40rpx; height: 40rpx; padding: 0 10rpx; box-sizing: border-box; background: var(--card); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 8rpx; font-size: 21rpx; font-weight: 600; color: var(--ink-2); }
+.kbd-d { font-size: 22rpx; color: var(--ink-2); margin-left: 8rpx; }
+.kbd-more { display: block; margin-top: 16rpx; font-size: 22rpx; color: var(--brand); cursor: pointer; }
+
 /* 错题趋势卡（仅桌面侧栏展示） */
 .trendcard { display: none; }
 .trend-t { font-size: 26rpx; font-weight: 600; color: var(--ink); }
 .trend-bars { display: flex; gap: 18rpx; align-items: flex-end; margin-top: 18rpx; }
 .trend-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4rpx; }
-.trend-barwrap { width: 100%; height: 96rpx; display: flex; align-items: flex-end; justify-content: center; }
-.trend-bar { width: 36rpx; background: var(--brand, #2e5bff); border-radius: 8rpx 8rpx 0 0; min-height: 0; }
+.trend-barwrap { width: 100%; height: 96rpx; display: flex; align-items: flex-end; justify-content: center; gap: 4rpx; }
+.trend-bar { width: 22rpx; background: var(--brand, #2e5bff); border-radius: 6rpx 6rpx 0 0; min-height: 0; }
+.trend-bar.killed { background: #22c55e; }
 .trend-n { font-size: 22rpx; font-weight: 600; color: var(--ink); }
+.trend-kn { font-size: 20rpx; font-weight: 600; color: #16a34a; }
 .trend-lb { font-size: 20rpx; color: var(--ink-3); }
+.trend-legend { display: flex; gap: 24rpx; margin-top: 12rpx; }
+.trend-lg { display: flex; align-items: center; gap: 6rpx; }
+.trend-dot { width: 14rpx; height: 14rpx; border-radius: 4rpx; background: var(--brand, #2e5bff); }
+.trend-dot.killed { background: #22c55e; }
+.trend-lgt { font-size: 20rpx; color: var(--ink-2); }
 .trend-sum { display: block; margin-top: 14rpx; font-size: 22rpx; color: var(--ink-2); }
 
 /* #ifdef H5 */
 /* 桌面操作台（round-3）：≥1024px 双栏工作台，主列=列表工作流，侧栏=统计/复盘/工具 */
 @media (min-width: 1024px) {
   .bookwrap { max-width: 920px !important; }
+  .mcard.kbf { outline: 2px solid var(--brand); outline-offset: -2px; }
   .bookwrap::after { content: ''; display: block; clear: both; }
   /* 主列走常规文档流（仅预留右侧栏宽度），侧栏用右浮动堆叠：
      避免左列元素受“浮动框顶不得高于文档序更早浮动框顶”的约束被右列高卡推低形成空洞 */
   .bookwrap .bk-main { margin-right: 344px; box-sizing: border-box; }
   .bookwrap .bk-side { float: right; clear: right; width: 320px; box-sizing: border-box; }
   .bookwrap .trendcard { display: block; }
+  .bookwrap .kbdcard { display: block; }
   .bookwrap.noside .bk-main { margin-right: 0; }
   .bookwrap-review { max-width: 760px !important; }
 }

@@ -34,14 +34,38 @@
         <view class="cam-shutter" @click="openCamera"><view class="cam-shutter-in" /></view>
         <view class="cam-side" @click="goInterview"><l-icon name="mic" :size="22" color="#e5e9f5" /><text>面试</text></view>
       </view>
-      <view v-if="recent.length" class="card reccard">
-        <view class="rec-h">最近讲解</view>
-        <view v-for="r in recent" :key="r.ts" class="rec-row">
-          <view class="rec-ans">{{ r.ans || '？' }}</view>
-          <view class="rec-main">
-            <text class="rec-brief">{{ r.brief || '已讲解' }}</text>
-            <text class="rec-meta">{{ [r.module_name, r.question_type].filter(Boolean).join(' · ') || '拍题讲解' }} · {{ fmtRec(r.ts) }}</text>
-          </view>
+    </view>
+
+    <!-- 桌面空态操作台：粘贴/上传优先（仅 H5 ≥1024px） -->
+    <!-- #ifdef H5 -->
+    <view v-if="!results.length && !loading" class="deskstart card">
+      <view class="ds-col">
+        <view class="ds-h"><l-icon name="clipboard-list" :size="18" color="#2e5bff" /><text class="ds-t">粘贴题目文字</text></view>
+        <textarea v-model="qtext" class="ta ds-ta" placeholder="粘贴题干和选项…" :maxlength="-1" />
+        <text class="label">你选的答案（可选，填了会帮你分析错因）</text>
+        <view class="ans-chips">
+          <text v-for="o in ['A', 'B', 'C', 'D']" :key="o" class="ans-chip" :class="{ on: uanswer === o }" @click="uanswer = uanswer === o ? '' : o">{{ o }}</text>
+        </view>
+        <button class="btn sheetbtn" :disabled="loading" @click="submitText">用花生十三方法讲解</button>
+      </view>
+      <view class="ds-col">
+        <view class="ds-h"><l-icon name="camera" :size="18" color="#2e5bff" /><text class="ds-t">上传题目截图</text></view>
+        <view class="ds-drop" @click="openAlbum">
+          <l-icon name="files" :size="30" color="#8fa3d9" />
+          <text class="ds-d1">点击选择图片，或拖拽到这里</text>
+          <text class="ds-d2">也可直接 Ctrl+V 粘贴截图</text>
+        </view>
+      </view>
+    </view>
+    <!-- #endif -->
+
+    <view v-if="!results.length && !loading && recent.length" class="card reccard">
+      <view class="rec-h">最近讲解</view>
+      <view v-for="r in recent" :key="r.ts" class="rec-row">
+        <view class="rec-ans">{{ r.ans || '？' }}</view>
+        <view class="rec-main">
+          <text class="rec-brief">{{ r.brief || '已讲解' }}</text>
+          <text class="rec-meta">{{ [r.module_name, r.question_type].filter(Boolean).join(' · ') || '拍题讲解' }} · {{ fmtRec(r.ts) }}</text>
         </view>
       </view>
     </view>
@@ -245,6 +269,26 @@ export default {
     },
   },
   onShow() {
+    // #ifdef H5
+    if (!this._onPaste) {
+      this._onPaste = (e) => this.handlePaste(e);
+      window.addEventListener('paste', this._onPaste);
+    }
+    if (!this._onDragOver) {
+      // uni-app H5 不代理 drag 类事件，需原生监听
+      this._onDragOver = (e) => {
+        if (e.target.closest && e.target.closest('.ds-drop')) e.preventDefault();
+      };
+      this._onDrop = (e) => {
+        if (e.target.closest && e.target.closest('.ds-drop')) {
+          e.preventDefault();
+          this.onDrop(e);
+        }
+      };
+      document.addEventListener('dragover', this._onDragOver);
+      document.addEventListener('drop', this._onDrop);
+    }
+    // #endif
     this.loadDue();
     const redo = uni.getStorageSync('redoQuestion');
     if (redo) {
@@ -257,7 +301,51 @@ export default {
       uni.showToast({ title: '题目已填入，先自己做一遍再点讲解', icon: 'none', duration: 2500 });
     }
   },
+  // #ifdef H5
+  onHide() {
+    this.removePaste();
+  },
+  onUnload() {
+    this.removePaste();
+  },
+  // #endif
   methods: {
+    // #ifdef H5
+    removePaste() {
+      if (this._onPaste) {
+        window.removeEventListener('paste', this._onPaste);
+        this._onPaste = null;
+      }
+      if (this._onDragOver) {
+        document.removeEventListener('dragover', this._onDragOver);
+        document.removeEventListener('drop', this._onDrop);
+        this._onDragOver = null;
+        this._onDrop = null;
+      }
+    },
+    handlePaste(e) {
+      if (this.loading || window.innerWidth < 1024) return;
+      const items = (e.clipboardData && e.clipboardData.items) || [];
+      for (const it of items) {
+        if (it.kind === 'file' && it.type.startsWith('image/')) {
+          const f = it.getAsFile();
+          if (f) {
+            this.imageFile = f;
+            this.imagePath = URL.createObjectURL(f);
+            e.preventDefault();
+          }
+          return;
+        }
+      }
+    },
+    onDrop(e) {
+      const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (f && f.type.startsWith('image/')) {
+        this.imageFile = f;
+        this.imagePath = URL.createObjectURL(f);
+      }
+    },
+    // #endif
     goInterview() {
       uni.navigateTo({ url: '/pkgA/interview/interview' });
     },
@@ -828,11 +916,27 @@ export default {
 .rec-e2 { display: block; font-size: 23rpx; color: var(--ink-3); line-height: 1.7; margin-top: 8rpx; }
 
 /* #ifdef H5 */
+.deskstart { display: none; }
+
 @media (min-width: 768px) {
   .wrap.chatwrap { max-width: 760px; }
   .inputbar { left: 208px; bottom: 0; padding: 16rpx 15%; }
   .bubble { max-width: 72%; }
   .chip:hover, .top-btn:hover, .eg-btn:hover { cursor: pointer; filter: brightness(0.97); }
+}
+
+/* 桌面空态操作台：粘贴/上传优先，取景屏仅留移动端 */
+@media (min-width: 1024px) {
+  .camscreen { display: none; }
+  .deskstart { display: flex; gap: 32rpx; align-items: stretch; }
+  .ds-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .ds-h { display: flex; align-items: center; gap: 10rpx; margin-bottom: 16rpx; }
+  .ds-t { font-size: 28rpx; font-weight: 700; color: var(--ink); }
+  .ds-ta { flex: 1; min-height: 220rpx; }
+  .ds-drop { flex: 1; min-height: 300rpx; border: 2rpx dashed var(--brand-soft-2); border-radius: 20rpx; background: var(--brand-soft); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12rpx; cursor: pointer; }
+  .ds-drop:hover { border-color: var(--brand); }
+  .ds-d1 { font-size: 26rpx; font-weight: 600; color: var(--ink); }
+  .ds-d2 { font-size: 23rpx; color: var(--ink-2); }
 }
 /* #endif */
 </style>

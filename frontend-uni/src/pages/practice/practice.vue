@@ -1,5 +1,5 @@
 <template>
-  <view class="wrap" :class="{ 'has-banner': picked }">
+  <view class="wrap" :class="{ 'has-banner': picked, pdesk: session && cur }">
     <!-- 加载/空态（本页仅承载答题会话，选题在首页） -->
     <view v-if="!session && loadState === 'fail'" class="card loadfail">
       <text class="lf-t">题目加载失败</text>
@@ -20,8 +20,33 @@
       <view class="pskel-hint">{{ loadHint }}</view>
       <view class="pskel-quit" @click="quit">返回首页</view>
     </view>
+    <!-- 桌面常驻侧栏：答题卡 + 快捷键（仅 H5 ≥1024px 显示） -->
+    <!-- #ifdef H5 -->
+    <view v-if="session && cur" class="pside">
+      <view class="card pside-card">
+        <view class="ps-h">答题卡</view>
+        <view class="acard-grid">
+          <view
+            v-for="(q, i) in items"
+            :key="i"
+            class="acard-n"
+            :class="acardClass(q, i)"
+            @click="jumpTo(i)"
+          >{{ i + 1 }}</view>
+        </view>
+        <view class="acard-foot">已答 {{ answeredCount }}/{{ items.length }}<template v-if="!examMode"> · 正确 {{ right }}</template></view>
+        <button v-if="examMode" class="btn" style="margin-top: 16rpx" @click="confirmFinishExam">交卷</button>
+      </view>
+      <view class="card pside-card">
+        <view class="ps-h">键盘快捷键</view>
+        <view class="kbd-row"><text class="kbd">A</text><text class="kbd">–</text><text class="kbd">D</text><text class="kbd-d">选择答案</text></view>
+        <view class="kbd-row"><text class="kbd">Enter</text><text class="kbd-d">下一题</text></view>
+        <view class="kbd-row"><text class="kbd">←</text><text class="kbd">→</text><text class="kbd-d">上一题 / 下一题</text></view>
+      </view>
+    </view>
+    <!-- #endif -->
     <!-- 答题 -->
-    <view v-if="session && cur" class="card">
+    <view v-if="session && cur" class="card pmain">
       <view v-if="beiMode || timedMode || cur.is_real" class="modechips">
         <text v-if="beiMode" class="mchip brand">背题模式</text>
         <text v-if="timedMode && !beiMode && !examMode" class="mchip info">限时训练</text>
@@ -567,6 +592,12 @@ export default {
     }
   },
   onShow() {
+    // #ifdef H5
+    if (!this._pkHandler && typeof window !== 'undefined') {
+      this._pkHandler = (e) => this.onPKeydown(e);
+      window.addEventListener('keydown', this._pkHandler);
+    }
+    // #endif
     this.pstats = loadPStats();
     this.favs = uni.getStorageSync('favQuestions') || [];
     this.realMode = uni.getStorageSync('realMode') ? true : false;
@@ -652,6 +683,20 @@ export default {
   onHide() {
     if (this.autoTimer) clearTimeout(this.autoTimer);
     this.stopQTimer();
+    // #ifdef H5
+    if (this._pkHandler && typeof window !== 'undefined') {
+      window.removeEventListener('keydown', this._pkHandler);
+      this._pkHandler = null;
+    }
+    // #endif
+  },
+  onUnload() {
+    // #ifdef H5
+    if (this._pkHandler && typeof window !== 'undefined') {
+      window.removeEventListener('keydown', this._pkHandler);
+      this._pkHandler = null;
+    }
+    // #endif
   },
   methods: {
     modName(m) {
@@ -1412,6 +1457,33 @@ export default {
         } catch (e) { /* 非关键路径 */ }
       }
     },
+    // #ifdef H5
+    onPKeydown(e) {
+      if (typeof window === 'undefined' || window.innerWidth < 1024) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const tag = (e.target && e.target.tagName) || '';
+      if (/INPUT|TEXTAREA|SELECT/.test(tag) || (e.target && e.target.isContentEditable)) return;
+      if (!this.session || !this.cur) return;
+      if (this.cardOpen || this.toolsOpen || this.reportOpen || this.paperSheet || this.customOpen || this.setupOpen) return;
+      const k = e.key;
+      if (/^[a-dA-D]$/.test(k) && !this.picked && !this.beiMode) {
+        const K = k.toUpperCase();
+        if (this.cur.options && this.cur.options[K] != null) {
+          e.preventDefault();
+          this.pick(K);
+        }
+      } else if (k === 'Enter' && (this.picked || this.beiMode) && !this.examMode) {
+        e.preventDefault();
+        this.next();
+      } else if (k === 'ArrowLeft' && this.idx > 0) {
+        e.preventDefault();
+        this.jumpTo(this.idx - 1);
+      } else if (k === 'ArrowRight' && this.idx + 1 < this.items.length) {
+        e.preventDefault();
+        this.jumpTo(this.idx + 1);
+      }
+    },
+    // #endif
     pick(k) {
       if (this.picked) return;
       this.picked = k;
@@ -2206,4 +2278,20 @@ export default {
 .sub-n { font-size: 22rpx; color: var(--ink-2); }
 .searchbar { display: flex; align-items: center; gap: 12rpx; background: var(--card); border-radius: 999rpx; padding: 16rpx 26rpx; margin-bottom: 20rpx; box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04); }
 .searchbar-t { font-size: 26rpx; color: var(--ink-3); }
+
+/* 桌面常驻侧栏（答题卡 + 快捷键）——仅 H5 ≥1024px */
+.pside { display: none; }
+.ps-h { font-size: 26rpx; font-weight: 600; color: var(--ink); margin-bottom: 8rpx; }
+.kbd-row { display: flex; align-items: center; gap: 8rpx; margin-top: 14rpx; }
+.kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 40rpx; height: 40rpx; padding: 0 10rpx; box-sizing: border-box; background: var(--card); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 8rpx; font-size: 21rpx; font-weight: 600; color: var(--ink-2); }
+.kbd-d { font-size: 22rpx; color: var(--ink-2); margin-left: 8rpx; }
+/* #ifdef H5 */
+@media (min-width: 1024px) {
+  .wrap.pdesk { max-width: 1044px !important; margin: 0 auto; box-sizing: border-box; }
+  .wrap.pdesk::after { content: ''; display: block; clear: both; }
+  .pside { display: block; float: right; width: 320px; }
+  .pside-card { margin-bottom: 20rpx; }
+  .card.pmain { margin-right: 344px; }
+}
+/* #endif */
 </style>

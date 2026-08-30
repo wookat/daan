@@ -22,6 +22,7 @@ DIMENSIONS = ["内容针对性", "逻辑条理", "内容深度", "语言表达",
 
 ANSWER_MAX_LEN = 5000
 ANSWER_MIN_LEN = 20
+REVIEW_MIN_LEN = 300  # 短于此视为流截断/异常产出，保留重新生成入口
 
 _bank: dict | None = None
 
@@ -186,6 +187,13 @@ def _save_session(uid, q, answer, duration, scores, total, review) -> int:
     return sid
 
 
+def _update_review(sid: int, review: str) -> None:
+    conn = db.get_conn()
+    conn.execute("UPDATE interview_sessions SET review=? WHERE id=?", (review, sid))
+    conn.commit()
+    conn.close()
+
+
 def _validate(body: dict) -> tuple[str, dict, str, int]:
     uid = str(body.get("uid") or "").strip()
     if not uid:
@@ -227,13 +235,51 @@ async def api_answer_stream(body: dict):
                 "scores": scores, "total": total, "summary": summary,
                 "category": q["category"], "question_id": q["id"],
             }
+            sid = _save_session(uid, q, answer, duration, scores, total, "")
+            meta["session_id"] = sid
             yield "event: meta\ndata: " + json.dumps(meta, ensure_ascii=False) + "\n\n"
             full = ""
             async for delta in llm.chat_stream(_review_prompt(q, answer, scores, summary)):
                 full += delta
                 yield "data: " + json.dumps({"d": delta}, ensure_ascii=False) + "\n\n"
-            sid = _save_session(uid, q, answer, duration, scores, total, full)
+            _update_review(sid, full)
             yield "event: done\ndata: " + json.dumps({"session_id": sid, "summary": summary}) + "\n\n"
+        except Exception as e:  # noqa: BLE001
+            yield "event: error\ndata: " + json.dumps({"message": _friendly_ai_err(e)}, ensure_ascii=False) + "\n\n"
+
+    return StreamingResponse(gen(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+@router.post("/sessions/{sid}/review/stream")
+async def api_review_regen_stream(sid: int, body: dict):
+    """为点评缺失的 session（流中断）重新生成考官点评：SSE data 增量 → done，完成后回填 DB。"""
+    uid = str(body.get("uid") or "").strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    rate_limit(f"itv_regen:{uid[:64]}", 10, 600)
+    conn = db.get_conn()
+    row = conn.execute("SELECT * FROM interview_sessions WHERE id=? AND uid=?", (sid, uid)).fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(404, "记录不存在")
+    if len((row["review"] or "").strip()) >= REVIEW_MIN_LEN:
+        raise HTTPException(400, "点评已存在")
+    q = question_by_id(row["question_id"])
+    if not q:
+        raise HTTPException(404, "题目不存在")
+    scores = json.loads(row["scores"] or "{}")
+    answer = row["answer_text"] or ""
+
+    async def gen():
+        try:
+            full = ""
+            async for delta in llm.chat_stream(_review_prompt(q, answer, scores, "")):
+                full += delta
+                yield "data: " + json.dumps({"d": delta}, ensure_ascii=False) + "\n\n"
+            if full.strip():
+                _update_review(sid, full)
+            yield "event: done\ndata: " + json.dumps({"session_id": sid}) + "\n\n"
         except Exception as e:  # noqa: BLE001
             yield "event: error\ndata: " + json.dumps({"message": _friendly_ai_err(e)}, ensure_ascii=False) + "\n\n"
 

@@ -29,6 +29,8 @@
       </view>
     </view>
 
+    <view class="pgrid">
+    <view class="psec">
     <!-- 打卡徽章墙 -->
     <view class="sec-t">打卡徽章</view>
     <view class="card badges">
@@ -43,7 +45,9 @@
         </view>
       </view>
     </view>
+    </view>
 
+    <view class="psec">
     <!-- 学习 -->
     <view class="sec-t">学习</view>
     <wd-cell-group custom-class="cellcard" border>
@@ -69,7 +73,9 @@
         <template #icon><view class="cell-ico"><l-icon name="users" :size="18" color="#2e5bff" /></view></template>
       </wd-cell>
     </wd-cell-group>
+    </view>
 
+    <view class="psec">
     <!-- 偏好设置 -->
     <view class="sec-t">偏好设置</view>
     <wd-cell-group custom-class="cellcard" border>
@@ -94,7 +100,9 @@
         <template #icon><view class="cell-ico"><l-icon name="bell" :size="18" color="#0d9488" /></view></template>
       </wd-cell>
     </wd-cell-group>
+    </view>
 
+    <view class="psec">
     <!-- 其他 -->
     <view class="sec-t">其他</view>
     <wd-cell-group custom-class="cellcard" border>
@@ -108,6 +116,8 @@
         <template #icon><view class="cell-ico"><l-icon name="info" :size="18" color="#d97706" /></view></template>
       </wd-cell>
     </wd-cell-group>
+    </view>
+    </view>
 
     <view v-if="user" class="logout" @click="doLogout">退出登录</view>
 
@@ -376,6 +386,13 @@ export default {
 @media (min-width: 768px) {
   .wrap.profile { max-width: 680px; }
   .row:hover { cursor: pointer; }
+}
+
+/* 桌面双栏（仅 H5 ≥1024px）：四分组 masonry，账号卡/资产行/页脚保持整宽 */
+@media (min-width: 1024px) {
+  .wrap.profile { max-width: 1044px !important; margin: 0 auto; }
+  .pgrid { column-count: 2; column-gap: 24rpx; }
+  .pgrid > .psec { break-inside: avoid; }
 }
 /* #endif */
 </style>

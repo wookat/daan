@@ -48,28 +48,35 @@ def _year_path(year: int, module: str) -> str:
 
 
 _CSS = (
-    "*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',"
-    "'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;color:#1f2329;background:#f7f8fa;"
-    "line-height:1.7;font-size:16px}a{color:" + BRAND + ";text-decoration:none}a:hover{text-decoration:underline}"
+    "*{box-sizing:border-box}body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,"
+    "'PingFang SC','HarmonyOS Sans','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif;"
+    "color:#17181c;background:#f6f7fb;line-height:1.7;font-size:16px}"
+    "a{color:" + BRAND + ";text-decoration:none}a:hover{text-decoration:underline}"
     ".wrap{max-width:860px;margin:0 auto;padding:16px}"
-    ".hdr{background:" + BRAND + ";color:#fff;padding:14px 0}.hdr a{color:#fff;font-weight:600;font-size:18px}"
-    ".hdr .wrap{padding-top:0;padding-bottom:0}"
-    ".card{background:#fff;border-radius:10px;padding:16px;margin:12px 0;box-shadow:0 1px 3px rgba(0,0,0,.06)}"
-    ".crumb{font-size:13px;color:#666;margin:10px 0}.crumb a{color:#666}"
+    ".hdr{background:#fff;border-bottom:1px solid #e7e9f0;padding:12px 0}"
+    ".hdr .wrap{padding-top:0;padding-bottom:0;display:flex;align-items:center;justify-content:space-between}"
+    ".hdr .brand{color:" + BRAND + ";font-weight:700;font-size:18px}.hdr .brand:hover{text-decoration:none}"
+    ".hdr-cta{background:" + BRAND + ";color:#fff!important;border-radius:999px;padding:6px 18px;"
+    "font-size:14px;font-weight:600}.hdr-cta:hover{text-decoration:none;opacity:.92}"
+    ".card{background:#fff;border:1px solid #e7e9f0;border-radius:12px;padding:16px;margin:12px 0;"
+    "box-shadow:0 1px 2px rgba(23,24,28,.05)}"
+    ".crumb{font-size:13px;color:#6b7280;margin:10px 0}.crumb a{color:#6b7280}"
     "h1{font-size:22px;margin:10px 0}h2{font-size:17px;margin:8px 0}"
-    ".qlist{list-style:none;padding:0;margin:0}.qlist li{border-bottom:1px solid #eee;padding:10px 0}"
+    ".qlist{list-style:none;padding:0;margin:0}.qlist li{border-bottom:1px solid #e7e9f0;padding:10px 0}"
     ".qlist li:last-child{border-bottom:none}"
     ".tags{display:flex;flex-wrap:wrap;gap:8px}.tags a{background:#eef3ff;border-radius:16px;padding:4px 12px;"
     "font-size:14px;white-space:nowrap}"
-    ".meta{color:#8a919f;font-size:13px}"
-    ".opt{margin:6px 0;padding:8px 12px;border:1px solid #e5e8ef;border-radius:8px}"
-    ".ans{background:#f0f7f0;border-radius:8px;padding:12px;margin-top:10px}"
-    ".cta{display:inline-block;background:" + BRAND + ";color:#fff!important;border-radius:8px;"
-    "padding:10px 22px;font-weight:600;margin:14px 0}"
+    ".meta{color:#6b7280;font-size:13px}"
+    ".opt{margin:6px 0;padding:8px 12px;border:1px solid #e7e9f0;border-radius:8px}"
+    ".ans{background:#ecfdf5;border-radius:8px;padding:12px;margin-top:10px}"
+    ".cta{display:inline-block;background:" + BRAND + ";color:#fff!important;border-radius:999px;"
+    "padding:10px 24px;font-weight:600;margin:14px 0}"
     ".pager{display:flex;gap:12px;justify-content:center;margin:16px 0}.pager a,.pager span{padding:6px 14px;"
-    "background:#fff;border-radius:8px;border:1px solid #e5e8ef}"
-    ".ftr{color:#8a919f;font-size:13px;text-align:center;padding:20px 0}"
+    "background:#fff;border-radius:8px;border:1px solid #e7e9f0}"
+    ".ftr{color:#6b7280;font-size:13px;text-align:center;padding:20px 0}"
     "details summary{cursor:pointer;font-weight:600}"
+    "@media(min-width:768px){.card{transition:box-shadow .15s ease}"
+    ".card:hover{box-shadow:0 4px 12px rgba(23,24,28,.1)}}"
     "@media(max-width:480px){.wrap{padding:12px}h1{font-size:19px}}"
 )
 
@@ -87,7 +94,8 @@ def _page(title: str, description: str, canonical_path: str, body: str, jsonld: 
         f'<meta name="description" content="{_e(description)}">'
         f'<link rel="canonical" href="{_e(_url(canonical_path))}">'
         f"<style>{_CSS}</style>{ld}</head><body>"
-        f'<header class="hdr"><div class="wrap"><a href="/tiku/">考公题库</a></div></header>'
+        f'<header class="hdr"><div class="wrap"><a class="brand" href="/tiku/">错题邦 · 考公题库</a>'
+        f'<a class="hdr-cta" href="/">去刷题</a></div></header>'
         f'<main class="wrap">{body}</main>'
         f'<footer class="ftr"><a href="{_e(SITE_BASE)}/">错题邦</a> · 13万+行测真题在线刷题'
         f' · <a href="/tiku/papers/">真题卷</a>'
@@ -95,6 +103,24 @@ def _page(title: str, description: str, canonical_path: str, body: str, jsonld: 
         f' · <a href="https://career.zalize.com/terms/">服务条款</a>'
         f' · <a href="mailto:support@zalize.com">联系我们</a></footer></body></html>'
     )
+
+
+def _collection_ld(name: str, description: str, path: str, crumbs: list[tuple[str, str]]) -> dict:
+    return {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "name": name,
+        "description": description[:200],
+        "url": _url(path),
+        "isPartOf": {"@type": "WebSite", "name": "错题邦", "url": SITE_BASE},
+        "breadcrumb": {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+                {"@type": "ListItem", "position": i + 1, "name": n, "item": _url(h)}
+                for i, (n, h) in enumerate(crumbs)
+            ],
+        },
+    }
 
 
 def _crumb(items: list[tuple[str, str | None]]) -> str:
@@ -219,6 +245,12 @@ def tiku_index():
         f"免费公务员考试题库，收录 {total} 道行测申论题目与历年真题，覆盖资料分析、数量关系、言语理解、判断推理、常识判断，附答案解析。",
         "/tiku/",
         body,
+        _collection_ld(
+            "公务员考试题库",
+            f"免费公务员考试题库，收录 {total} 道行测申论题目与历年真题，附答案解析。",
+            "/tiku/",
+            [("题库", "/tiku/")],
+        ),
     )
 
 
@@ -249,6 +281,12 @@ def tiku_papers():
         f"{len(papers)} 套历年国考/省考行测真题卷，在线全真模考并生成成绩报告，附逐题答案解析。",
         "/tiku/papers/",
         body,
+        _collection_ld(
+            "历年公务员考试真题卷",
+            f"{len(papers)} 套历年国考/省考行测真题卷，在线全真模考，附逐题答案解析。",
+            "/tiku/papers/",
+            [("题库", "/tiku/"), ("真题卷", "/tiku/papers/")],
+        ),
     )
 
 
@@ -659,6 +697,12 @@ def tiku_module(module: str, page: int = 1):
         f"{name}题库共 {total} 题（含历年真题），按题型分类，附答案与花生十三方法解析，支持在线刷题。{suffix}",
         f"/tiku/{module}/" + (f"?page={page}" if page > 1 else ""),
         body,
+        _collection_ld(
+            f"{name}题库",
+            f"{name}题库共 {total} 题（含历年真题），按题型分类，附答案与解析。",
+            f"/tiku/{module}/",
+            [("题库", "/tiku/"), (name, f"/tiku/{module}/")],
+        ),
     )
 
 
@@ -689,6 +733,12 @@ def tiku_submodule(module: str, submodule: str, page: int = 1):
         f"{name}{submodule}专项题库共 {total} 题（含历年真题），附答案与解析，在线刷题提升正确率。{suffix}",
         _sub_path(module, submodule) + (f"?page={page}" if page > 1 else ""),
         body,
+        _collection_ld(
+            f"{name}·{submodule}题库",
+            f"{name}{submodule}专项题库共 {total} 题（含历年真题），附答案与解析。",
+            _sub_path(module, submodule),
+            [("题库", "/tiku/"), (name, f"/tiku/{module}/"), (submodule, _sub_path(module, submodule))],
+        ),
     )
 
 

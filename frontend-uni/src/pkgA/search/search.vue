@@ -24,6 +24,8 @@
           <text v-if="detail.explanation" class="q-exp">{{ detail.explanation }}</text>
         </view>
       </view>
+      <view class="res-cols" :class="{ two: tab === 'all' && hasSide }">
+      <view class="res-side">
       <!-- 考点 -->
       <view v-if="showSec('topic') && result.topics && result.topics.length" class="sec">
         <text class="sec-t">考点</text>
@@ -46,6 +48,8 @@
           <text class="t-go">去做卷 ›</text>
         </view>
       </view>
+      </view>
+      <view class="res-main">
       <!-- 题目 -->
       <view v-if="showSec('question') && result.questions && result.questions.items.length" class="sec">
         <text class="sec-t">题目（{{ result.questions.total }}）</text>
@@ -63,6 +67,8 @@
           </view>
         </view>
         <view v-if="result.questions.total > result.questions.items.length" class="more" @click="loadMore">加载更多</view>
+      </view>
+      </view>
       </view>
       <view v-if="isEmpty" class="empty">
         <text>没有找到「{{ result.q }}」相关内容</text>
@@ -96,6 +102,10 @@ export default {
     };
   },
   computed: {
+    hasSide() {
+      const r = this.result;
+      return !!(r && ((r.topics || []).length || (r.papers || []).length));
+    },
     isEmpty() {
       const r = this.result;
       if (!r) return false;
@@ -204,4 +214,23 @@ export default {
 .q-exp { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; }
 .more { text-align: center; font-size: 26rpx; color: var(--brand); padding: 16rpx; }
 .empty { display: flex; flex-direction: column; gap: 8rpx; text-align: center; color: var(--ink-3); font-size: 26rpx; padding: 100rpx 40rpx; }
+
+/* 桌面（H5）：≥1024 左考点/试卷侧栏 + 右题目列表（仅「全部」tab） */
+/* #ifdef H5 */
+@media (min-width: 768px) {
+  .wrap { max-width: 1044px; margin: 0 auto; }
+  .tab:hover, .titem:hover, .qitem:hover, .more:hover { cursor: pointer; }
+  .qitem:hover { box-shadow: 0 8rpx 24rpx rgba(31, 36, 48, 0.08); }
+}
+@media (min-width: 1024px) {
+  .res-cols.two { display: flex; gap: 32rpx; align-items: flex-start; }
+  .res-cols.two .res-side {
+    width: 300px;
+    flex: none;
+    position: sticky;
+    top: 24rpx;
+  }
+  .res-cols.two .res-main { flex: 1; min-width: 0; }
+}
+/* #endif */
 </style>

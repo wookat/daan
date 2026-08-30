@@ -22,30 +22,34 @@
     </view>
 
     <!-- 第二步：作答 -->
-    <view v-else-if="step === 'answer'">
-      <view class="q-card">
-        <view class="q-meta">
-          <text class="q-tag">{{ question.category }}</text>
-          <text class="q-src">{{ question.source }}</text>
+    <view v-else-if="step === 'answer'" class="iv-cols">
+      <view class="iv-left">
+        <view class="q-card">
+          <view class="q-meta">
+            <text class="q-tag">{{ question.category }}</text>
+            <text class="q-src">{{ question.source }}</text>
+          </view>
+          <view class="q-text">{{ question.question }}</view>
         </view>
-        <view class="q-text">{{ question.question }}</view>
+        <view class="timer-row">
+          <view class="timer"><l-icon name="timer" :size="15" color="#40434e" /><text>{{ fmtDur(elapsed) }}</text></view>
+          <text class="swap" @click="draw(pickedCategory, question.id)">换一题</text>
+        </view>
       </view>
-      <view class="timer-row">
-        <view class="timer"><l-icon name="timer" :size="15" color="#40434e" /><text>{{ fmtDur(elapsed) }}</text></view>
-        <text class="swap" @click="draw(pickedCategory, question.id)">换一题</text>
-      </view>
-      <textarea
-        v-model="answer"
-        class="ans-box"
-        :maxlength="5000"
-        placeholder="像面试现场一样组织语言作答（建议 200 字以上）…"
-      />
-      <view class="cnt">{{ answer.length }} / 5000</view>
-      <view class="btn-row">
-        <button class="btn-ghost" @click="voiceStub"><l-icon name="mic" :size="15" color="#2e5bff" /> 语音作答（即将上线）</button>
-        <button class="btn-primary grow" :disabled="answer.trim().length < 20 || submitting" @click="submit">
-          {{ submitting ? '考官点评中…' : '提交作答' }}
-        </button>
+      <view class="iv-right">
+        <textarea
+          v-model="answer"
+          class="ans-box"
+          :maxlength="5000"
+          placeholder="像面试现场一样组织语言作答（建议 200 字以上）…"
+        />
+        <view class="cnt">{{ answer.length }} / 5000</view>
+        <view class="btn-row">
+          <button class="btn-ghost" @click="voiceStub"><l-icon name="mic" :size="15" color="#2e5bff" /> 语音作答（即将上线）</button>
+          <button class="btn-primary grow" :disabled="answer.trim().length < 20 || submitting" @click="submit">
+            {{ submitting ? '考官点评中…' : '提交作答' }}
+          </button>
+        </view>
       </view>
     </view>
 
@@ -62,27 +66,38 @@
         <view v-if="report.summary" class="hero-sum">{{ report.summary }}</view>
       </view>
 
-      <view class="card">
-        <view class="card-t">五维评分</view>
-        <view v-for="(v, k) in report.scores" :key="k" class="dim-row">
-          <text class="dim-l">{{ k }}</text>
-          <view class="bar"><view class="bar-i" :style="{ width: v * 10 + '%' }" /></view>
-          <text class="dim-v">{{ v }}</text>
+      <view class="rp-cols">
+        <view class="rp-left">
+          <view class="card">
+            <view class="card-t">五维评分</view>
+            <view v-for="(v, k) in report.scores" :key="k" class="dim-row">
+              <text class="dim-l">{{ k }}</text>
+              <view class="bar"><view class="bar-i" :style="{ width: v * 10 + '%' }" /></view>
+              <text class="dim-v">{{ v }}</text>
+            </view>
+          </view>
+
+          <view class="sec-t">题目</view>
+          <view class="q-card"><view class="q-text">{{ question.question }}</view></view>
+
+          <view v-if="points.length" class="card">
+            <view class="card-t">参考思路要点</view>
+            <view v-for="(p, i) in points" :key="i" class="pt">{{ i + 1 }}. {{ p }}</view>
+          </view>
         </view>
-      </view>
-
-      <view class="sec-t">题目</view>
-      <view class="q-card"><view class="q-text">{{ question.question }}</view></view>
-
-      <view v-if="points.length" class="card">
-        <view class="card-t">参考思路要点</view>
-        <view v-for="(p, i) in points" :key="i" class="pt">{{ i + 1 }}. {{ p }}</view>
-      </view>
-
-      <view class="sec-t">考官点评{{ streaming ? '（生成中…）' : '' }}</view>
-      <view class="card review">
-        <rich-text v-if="reviewHtml" :nodes="reviewHtml" />
-        <view v-else class="loading">考官正在撰写点评…</view>
+        <view class="rp-right">
+          <view class="sec-t">考官点评{{ streaming ? '（生成中…）' : '' }}</view>
+          <view class="card review">
+            <rich-text v-if="reviewHtml" :nodes="reviewHtml" />
+            <view v-if="reviewMissing && !streaming" class="regen">
+              <view class="regen-tip">{{ review ? '点评可能不完整（生成被中断）' : '上次点评生成被中断，评分已保留' }}</view>
+              <!-- #ifdef H5 -->
+              <button class="btn-primary regen-btn" @click="regenReview">重新生成点评</button>
+              <!-- #endif -->
+            </view>
+            <view v-if="!reviewHtml && (!reviewMissing || streaming)" class="loading">考官正在撰写点评…</view>
+          </view>
+        </view>
       </view>
 
       <view class="btn-row">
@@ -96,6 +111,9 @@
 
 <script>
 import { interviewCategories, interviewDraw, interviewSession, streamInterview } from '../../api.js';
+// #ifdef H5
+import { streamInterviewReviewRegen } from '../../api.js';
+// #endif
 import { md } from '../../md.js';
 
 export default {
@@ -112,6 +130,7 @@ export default {
       streaming: false,
       report: { scores: {}, total: 0, summary: '', duration: 0, answerLen: 0, category: '' },
       review: '',
+      reviewMissing: false,
       points: [],
       _timer: null,
     };
@@ -206,6 +225,7 @@ export default {
     async loadSession(sid) {
       try {
         const d = await interviewSession(sid);
+        this._sid = sid;
         const s = d.session;
         this.question = { id: s.question_id, category: s.category, question: s.question_text, source: s.source };
         this.answer = s.answer_text || '';
@@ -218,6 +238,7 @@ export default {
           category: s.category,
         };
         this.review = s.review || '';
+        this.reviewMissing = this.review.trim().length < 300;
         this.points = s.points || [];
         this.step = 'report';
       } catch (e) {
@@ -225,6 +246,24 @@ export default {
         this.loadCategories();
       }
     },
+    // #ifdef H5
+    async regenReview() {
+      if (this.streaming) return;
+      this.streaming = true;
+      try {
+        const sid = this._sid;
+        await streamInterviewReviewRegen({
+          sessionId: sid,
+          onDelta: (full) => { this.review = full; },
+        });
+        this.reviewMissing = this.review.trim().length < 300;
+      } catch (e) {
+        uni.showToast({ title: e.message || '点评生成失败，请重试', icon: 'none' });
+      } finally {
+        this.streaming = false;
+      }
+    },
+    // #endif
     retry() {
       this.answer = '';
       this.review = '';
@@ -292,11 +331,27 @@ export default {
 .pt { font-size: 26rpx; color: var(--ink); line-height: 1.7; margin: 8rpx 0; }
 .review { font-size: 27rpx; line-height: 1.8; }
 .loading { font-size: 26rpx; color: var(--ink-2); padding: 20rpx 0; }
+.regen { padding: 16rpx 0; }
+.regen-tip { font-size: 26rpx; color: var(--ink-2); margin-bottom: 20rpx; }
+.regen-btn { max-width: 360rpx; }
 
 /* #ifdef H5 */
 @media (min-width: 768px) {
-  .wrap { max-width: 680px; margin: 0 auto; }
+  .wrap { max-width: 1044px; margin: 0 auto; }
   .cat:hover, .hist-link:hover, .swap:hover { cursor: pointer; }
+  .cat:hover { background: var(--soft-bg, #f5f6fa); border-radius: 16rpx; }
+}
+@media (min-width: 1024px) {
+  .cat-list { display: grid; grid-template-columns: 1fr 1fr; column-gap: 32rpx; padding: 12rpx 32rpx; }
+  .cat:nth-child(2) { border-top: none; }
+  .iv-cols { display: flex; gap: 32rpx; align-items: flex-start; }
+  .iv-left { width: 420px; flex: none; position: sticky; top: 24rpx; }
+  .iv-right { flex: 1; min-width: 0; }
+  .iv-right .ans-box { min-height: 480rpx; }
+  .rp-cols { display: flex; gap: 32rpx; align-items: flex-start; }
+  .rp-left { width: 420px; flex: none; }
+  .rp-right { flex: 1; min-width: 0; }
+  .rp-right .sec-t { margin-top: 0; }
 }
 /* #endif */
 </style>

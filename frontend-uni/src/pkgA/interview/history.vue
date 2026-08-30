@@ -104,8 +104,14 @@ export default {
 
 /* #ifdef H5 */
 @media (min-width: 768px) {
-  .wrap { max-width: 680px; margin: 0 auto; }
+  .wrap { max-width: 1044px; margin: 0 auto; }
   .item:hover { cursor: pointer; }
+  .btn-primary:hover { cursor: pointer; }
+}
+
+@media (min-width: 1024px) {
+  .list { display: grid; grid-template-columns: 1fr 1fr; gap: 24rpx; align-items: stretch; }
+  .item:hover { box-shadow: 0 6rpx 20rpx rgba(23, 24, 28, 0.1); }
 }
 /* #endif */
 </style>

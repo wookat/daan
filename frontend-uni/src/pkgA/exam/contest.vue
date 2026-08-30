@@ -3,6 +3,8 @@
     <view v-if="loading" class="spin">比赛信息加载中…</view>
 
     <template v-else>
+      <view class="ct-cols">
+      <view class="ct-main">
       <!-- 当前/下一场比赛卡 -->
       <view v-if="event" class="card hero">
         <view class="hero-top">
@@ -46,7 +48,9 @@
         </template>
       </view>
       <view v-else class="card spin">暂无比赛场次</view>
+      </view>
 
+      <view class="ct-side">
       <!-- 往期成绩 -->
       <view v-if="past.length" class="card">
         <view class="h">往期比赛</view>
@@ -96,6 +100,8 @@
           <text class="rule">4. 比赛结束后试卷转为普通试卷，可自由练习，不影响比赛榜单。</text>
           <text class="rule">5. 参赛人数较少时，报告会同时展示历史同卷分数池作为参照。</text>
         </view>
+      </view>
+      </view>
       </view>
     </template>
   </view>
@@ -261,4 +267,19 @@ export default {
 .brow-n { flex: 1; min-width: 0; font-size: 26rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .brow-me { color: var(--brand); font-size: 22rpx; }
 .brow-s { flex-shrink: 0; font-size: 26rpx; font-weight: 700; color: var(--brand); }
+
+/* #ifdef H5 */
+@media (min-width: 768px) {
+  .wrap { max-width: 1044px; margin: 0 auto; }
+  .prow:hover, .cta:hover, .rules-h:hover, .brow:hover, .sheet-x:hover { cursor: pointer; }
+  .prow:hover { background: var(--soft-bg, #f5f6fa); border-radius: 12rpx; }
+  .mask { align-items: center; justify-content: center; }
+  .sheet { max-width: 560px; border-radius: 32rpx; padding-bottom: 28rpx; }
+}
+@media (min-width: 1024px) {
+  .ct-cols { display: flex; gap: 32rpx; align-items: flex-start; }
+  .ct-main { flex: 1; min-width: 0; }
+  .ct-side { width: 360px; flex: none; position: sticky; top: 24rpx; }
+}
+/* #endif */
 </style>

@@ -23,6 +23,7 @@
     <view v-if="loading" class="spin">试卷加载中…</view>
     <view v-else-if="!items.length" class="spin">暂无成套真题卷{{ year || region ? '，试试放宽筛选' : '' }}</view>
 
+    <view class="plist">
     <view v-for="p in items" :key="p.id" class="card paper">
       <view class="paper-top" @click="startPaper(p)">
         <text class="paper-t">{{ p.title }}</text>
@@ -38,6 +39,7 @@
         <view class="pbtn main" @click="startPaper(p)">开始模考</view>
         <view class="pbtn" @click="askExport(p)">{{ exportingId === p.id ? '导出中…' : '导出 PDF' }}</view>
       </view>
+    </view>
     </view>
 
     <export-confirm
@@ -177,4 +179,14 @@ export default {
 .arow-t { display: block; font-size: 25rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .arow-s { display: block; font-size: 21rpx; color: var(--ink-2); margin-top: 4rpx; }
 .arow-score { flex-shrink: 0; font-size: 28rpx; font-weight: 700; color: var(--brand); }
+
+/* 桌面网格（仅 H5 ≥1024px） */
+/* #ifdef H5 */
+@media (min-width: 1024px) {
+  .wrap { max-width: 1044px !important; margin: 0 auto; }
+  .plist { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24rpx; align-items: stretch; margin-bottom: 24rpx; }
+  .plist .paper { margin-bottom: 0; display: flex; flex-direction: column; }
+  .plist .paper .paper-top { flex: 1; }
+}
+/* #endif */
 </style>

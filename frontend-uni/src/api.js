@@ -618,7 +618,7 @@ export function interviewSession(id) {
 export async function streamInterview({ questionId, answer, durationSec, onMeta, onDelta }) {
   const resp = await fetch(BASE_URL + '/api/interview/answer/stream', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-Access-Code': getCode(), ...authHeader() },
     body: JSON.stringify({ uid: anonUid(), question_id: questionId, answer, duration_sec: durationSec || 0 }),
   });
   if (!resp.ok) {
@@ -652,6 +652,44 @@ export async function streamInterview({ questionId, answer, durationSec, onMeta,
   }
   if (!state.meta) throw new Error('点评失败：无响应');
   return { ...state.meta, review: state.full, session_id: state.done && state.done.session_id };
+}
+
+// H5 中断 session 重新生成点评：onDelta(fullText) 增量，完成返回 { review }。
+export async function streamInterviewReviewRegen({ sessionId, onDelta }) {
+  const resp = await fetch(BASE_URL + '/api/interview/sessions/' + sessionId + '/review/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Access-Code': getCode(), ...authHeader() },
+    body: JSON.stringify({ uid: anonUid() }),
+  });
+  if (!resp.ok) {
+    let detail = `HTTP ${resp.status}`;
+    try { detail = (await resp.json()).detail || detail; } catch (e) { /* ignore */ }
+    throw new Error(detail);
+  }
+  const reader = resp.body.getReader();
+  const dec = new TextDecoder();
+  const state = { buf: '', full: '' };
+  const feed = (chunkText) => {
+    state.buf += chunkText;
+    const events = state.buf.split('\n\n');
+    state.buf = events.pop();
+    for (const ev of events) {
+      const typeM = ev.match(/^event: (\w+)/m);
+      const dataM = ev.match(/^data: (.*)$/m);
+      if (!dataM) continue;
+      const type = typeM ? typeM[1] : 'message';
+      const data = JSON.parse(dataM[1]);
+      if (type === 'error') throw new Error(data.message || '点评失败');
+      if (type === 'message') { state.full += data.d; onDelta && onDelta(state.full); }
+    }
+  };
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    feed(dec.decode(value, { stream: true }));
+  }
+  if (!state.full) throw new Error('点评失败：无响应');
+  return { review: state.full };
 }
 // #endif
 

@@ -72,6 +72,7 @@ def init_db():
         ("review_streak", "ALTER TABLE mistakes ADD COLUMN review_streak INTEGER DEFAULT 0"),
         ("next_review", "ALTER TABLE mistakes ADD COLUMN next_review REAL"),
         ("mastered", "ALTER TABLE mistakes ADD COLUMN mastered INTEGER DEFAULT 0"),
+        ("mastered_at", "ALTER TABLE mistakes ADD COLUMN mastered_at REAL"),
         ("times", "ALTER TABLE mistakes ADD COLUMN times INTEGER DEFAULT 1"),
         ("source", "ALTER TABLE mistakes ADD COLUMN source TEXT"),
     ]:
@@ -2458,7 +2459,7 @@ def save_mistake(rec: dict) -> int:
         ).fetchone()
     if dup:
         conn.execute(
-            "UPDATE mistakes SET times=COALESCE(times,1)+1, mastered=0, review_streak=0, "
+            "UPDATE mistakes SET times=COALESCE(times,1)+1, mastered=0, mastered_at=NULL, review_streak=0, "
             "next_review=?, user_answer=COALESCE(?, user_answer), "
             "question_id=COALESCE(question_id, ?), source=COALESCE(source, ?) WHERE id=?",
             (time.time(), rec.get("user_answer"), qid, rec.get("source"), dup["id"]),
@@ -2521,9 +2522,16 @@ def update_mistake(mid: int, fields: dict, uid: str | None = None) -> bool:
     conn = get_conn()
     _ensure_mistake_uid(conn)
     clause = ", ".join(f"{k}=?" for k in sets)
+    vals = list(sets.values())
+    if "mastered" in sets:
+        if sets["mastered"]:
+            clause += ", mastered_at=COALESCE(mastered_at, ?)"
+            vals.append(time.time())
+        else:
+            clause += ", mastered_at=NULL"
     cl, args = _uid_clause(uid)
     cur = conn.execute(
-        f"UPDATE mistakes SET {clause} WHERE id=?{cl}", (*sets.values(), mid, *args)
+        f"UPDATE mistakes SET {clause} WHERE id=?{cl}", (*vals, mid, *args)
     )
     conn.commit()
     conn.close()
@@ -2616,8 +2624,9 @@ def record_review(mid: int, correct: bool, uid: str | None = None) -> dict:
     mastered = 1 if streak > len(REVIEW_INTERVALS_DAYS) else 0
     conn.execute(
         "UPDATE mistakes SET review_count=review_count+1, review_streak=?, next_review=?, "
-        f"mastered=? WHERE id=?{cl}",
-        (streak, nxt, mastered, mid, *args),
+        "mastered=?, mastered_at=CASE WHEN ? THEN COALESCE(mastered_at, ?) ELSE NULL END "
+        f"WHERE id=?{cl}",
+        (streak, nxt, mastered, mastered, time.time(), mid, *args),
     )
     conn.commit()
     conn.close()

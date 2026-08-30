@@ -4,6 +4,8 @@
     <view v-else-if="err" class="spin">{{ err }}</view>
 
     <template v-else-if="r">
+      <view class="cr-cols">
+      <view class="cr-side">
       <!-- 1. 总分与排名 -->
       <view class="card hero">
         <text class="hero-title">{{ r.event.title }}{{ r.event.phase === 'ended' ? '（排名已冻结）' : '（实时排名）' }}</text>
@@ -30,7 +32,9 @@
         </view>
         <text class="note">你在 {{ r.my_bucket * 10 }}-{{ r.my_bucket * 10 + 10 }} 分段（蓝色）</text>
       </view>
+      </view>
 
+      <view class="cr-main">
       <!-- 2. 目标差距 -->
       <view v-if="r.target_score != null || r.top25_score != null" class="card">
         <view class="h">距离目标</view>
@@ -87,6 +91,8 @@
       <view class="btns">
         <view class="pbtn" @click="openAttempt">逐题回顾（错题已入本）</view>
         <view class="pbtn main" @click="goWeakPractice">弱项练 5 题</view>
+      </view>
+      </view>
       </view>
     </template>
   </view>
@@ -185,4 +191,17 @@ export default {
 .btns { display: flex; gap: 16rpx; }
 .pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand); border-radius: 999rpx; font-size: 27rpx; font-weight: 500; background: var(--card); }
 .pbtn.main { background: var(--brand); color: #fff; }
+
+/* #ifdef H5 */
+@media (min-width: 768px) {
+  .wrap { max-width: 1044px; margin: 0 auto; }
+  .pbtn:hover, .wrow:hover { cursor: pointer; }
+}
+
+@media (min-width: 1024px) {
+  .cr-cols { display: flex; gap: 32rpx; align-items: flex-start; }
+  .cr-side { width: 420px; flex: none; position: sticky; top: 24rpx; }
+  .cr-main { flex: 1; min-width: 0; }
+}
+/* #endif */
 </style>

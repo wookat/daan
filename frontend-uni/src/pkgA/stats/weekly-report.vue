@@ -32,6 +32,8 @@
     </template>
 
     <template v-else-if="r">
+      <view class="wr-cols">
+      <view class="wr-side">
       <!-- 1. 头部概览 -->
       <view class="card hero">
         <text class="hero-range">{{ r.range }}</text>
@@ -62,6 +64,9 @@
         <view class="cmp-row"><text class="cmp-k">学习时长</text><text class="cmp-v">{{ mins(r.compare.secs[0]) }}</text><text class="cmp-p">上周 {{ mins(r.compare.secs[1]) }}</text></view>
         <view class="cmp-row"><text class="cmp-k">学习天数</text><text class="cmp-v">{{ r.compare.days[0] }} 天</text><text class="cmp-p">上周 {{ r.compare.days[1] }} 天</text></view>
       </view>
+      </view>
+
+      <view class="wr-main">
 
       <!-- 4. 掌握度变化 -->
       <view v-if="r.mastery.up.length || r.mastery.down.length" class="card">
@@ -118,6 +123,8 @@
       <!-- 8. 分享 -->
       <view class="btns">
         <view class="pbtn main" @click="sharing = true; buildShare()">生成分享图</view>
+      </view>
+      </view>
       </view>
       <view v-if="sharing" class="mask" @click="sharing = false">
         <view class="sheet" @click.stop>
@@ -436,4 +443,19 @@ export default {
 .share-img { width: 100%; border-radius: 20rpx; }
 .btn { background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 28rpx; margin-top: 20rpx; min-height: 44px; line-height: 44px; }
 .hidden-canvas { position: fixed; left: -9999rpx; top: 0; width: 660px; height: 760px; }
+
+/* #ifdef H5 */
+@media (min-width: 768px) {
+  .wrap { max-width: 1044px; margin: 0 auto; }
+  .mask { justify-content: center; align-items: center; }
+  .sheet { width: 560px; border-radius: 24rpx; }
+  .cta:hover, .link:hover, .act-row:hover, .pbtn:hover, .sheet-x:hover, .btn:hover { cursor: pointer; }
+}
+
+@media (min-width: 1024px) {
+  .wr-cols { display: flex; gap: 32rpx; align-items: flex-start; }
+  .wr-side { width: 420px; flex: none; position: sticky; top: 24rpx; }
+  .wr-main { flex: 1; min-width: 0; }
+}
+/* #endif */
 </style>
