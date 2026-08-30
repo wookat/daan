@@ -1,5 +1,7 @@
 <template>
   <view class="wrap">
+    <view class="cd-cols">
+    <view class="cd-main">
     <view class="card">
       <view class="cal-head">
         <view class="cal-title">
@@ -22,6 +24,9 @@
         <text class="lg"><text class="dot today" /> 今天</text>
       </view>
     </view>
+    </view>
+
+    <view class="cd-side">
     <view v-if="badgeInfo" class="card ms">
       <view class="ms-h">
         <view class="h" style="margin-bottom: 0">连签里程碑</view>
@@ -41,6 +46,8 @@
       </view>
     </view>
     <button class="poster-btn" @click="openPoster">生成打卡海报</button>
+    </view>
+    </view>
   </view>
 </template>
 
@@ -179,4 +186,18 @@ export default {
 .dot.part { background: var(--brand-soft); border: 1rpx solid var(--brand); }
 .dot.full { background: var(--brand); }
 .dot.today { border: 2rpx solid var(--brand); background: var(--card); }
+
+/* #ifdef H5 */
+@media (min-width: 768px) {
+  .wrap { max-width: 1044px; margin: 0 auto; }
+  .cal-btn:hover, .poster-btn:hover, .cal-btn.dis:hover { cursor: pointer; }
+}
+
+@media (min-width: 1024px) {
+  .cd-cols { display: flex; gap: 32rpx; align-items: flex-start; }
+  .cd-main { flex: 1; min-width: 0; }
+  .cd-side { width: 420px; flex: none; position: sticky; top: 24rpx; }
+  .cd-side .ms { margin-top: 0; }
+}
+/* #endif */
 </style>
