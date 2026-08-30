@@ -375,7 +375,40 @@ def tiku_paper_detail(pid: int):
 
 @router.get("/q/{qid}", response_class=HTMLResponse, include_in_schema=False)
 def tiku_question(qid: int):
-    return HTMLResponse(_render_question(qid))
+    html = _render_question(qid).replace("<!--QCOMMENTS-->", _render_q_comments(qid))
+    return HTMLResponse(html)
+
+
+def _render_q_comments(qid: int) -> str:
+    conn = db.get_conn()
+    total = conn.execute(
+        "SELECT COUNT(*) FROM question_comments WHERE question_id=? AND status='ok'", (qid,)
+    ).fetchone()[0]
+    if not total:
+        conn.close()
+        return ""
+    rows = conn.execute(
+        "SELECT nickname, content, likes FROM question_comments "
+        "WHERE question_id=? AND status='ok' AND parent_id IS NULL "
+        "ORDER BY likes DESC, created_at DESC LIMIT 5",
+        (qid,),
+    ).fetchall()
+    conn.close()
+    if not rows:
+        return ""
+    items = "".join(
+        '<li><b>'
+        + _e((r["nickname"] or "考友").strip()[:20] or "考友")
+        + (f' \u00b7 \U0001f44d {r["likes"]}' if r["likes"] else "")
+        + "：</b>"
+        + _e(r["content"])
+        + "</li>"
+        for r in rows
+    )
+    cta = (
+        f'<a class="cta" href="{_e(SITE_BASE)}/#/pkgA/social/discuss?qid={qid}">参与讨论（免费）→</a>'
+    )
+    return f'<section class="card"><h2>考友讨论（{total} 条）</h2><ul class="qlist">{items}</ul>{cta}</section>'
 
 
 @router.get("/y/{year}/{module}", include_in_schema=False)
@@ -641,6 +674,7 @@ def _render_question(qid: int) -> str:
             if sim_html
             else ""
         )
+        + "<!--QCOMMENTS-->"
     )
     title_head = qtext.replace("\n", " ")[:50]
     jsonld = {
