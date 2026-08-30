@@ -261,8 +261,18 @@ function rawRequest(path, { method = 'GET', data, header = {}, timeout = 180000 
   });
 }
 
-export function request(path, opts) {
-  return withAuthRetry(() => rawRequest(path, opts));
+const isTimeoutErr = (e) => /timeout|超时/i.test(String(e && e.message));
+
+export function request(path, opts = {}) {
+  const method = (opts.method || 'GET').toUpperCase();
+  if (method !== 'GET' || opts.timeout != null) return withAuthRetry(() => rawRequest(path, opts));
+  // GET 默认 12s 超时；超时自动重试一次（幂等安全）——共享 origin 长尾为单请求级，重试大概率命中热路径
+  return withAuthRetry(() =>
+    rawRequest(path, { ...opts, timeout: 12000 }).catch((e) => {
+      if (!isTimeoutErr(e)) throw e;
+      return rawRequest(path, { ...opts, timeout: 20000 });
+    })
+  );
 }
 
 export function anonUid() {
