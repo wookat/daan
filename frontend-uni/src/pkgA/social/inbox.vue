@@ -1,23 +1,29 @@
 <template>
   <view class="wrap">
     <view v-if="items.length" class="list">
-      <view v-for="it in items" :key="it.id" class="item" @click="openDiscuss(it)">
+      <view v-for="(it, i) in items" :key="it.type + '-' + it.id + '-' + i" class="item" @click="openDiscuss(it)">
         <view class="item-top">
           <view class="who">
             <view v-if="it.unread" class="dot" />
-            <text class="nick">{{ it.nickname }}</text>
-            <text class="act">回复了我</text>
+            <template v-if="it.type === 'like'">
+              <text class="like-ico">👍</text>
+              <text class="act">有人赞了我的评论</text>
+            </template>
+            <template v-else>
+              <text class="nick">{{ it.nickname }}</text>
+              <text class="act">回复了我</text>
+            </template>
           </view>
           <text class="time">{{ fmtTime(it.created_at) }}</text>
         </view>
-        <view class="content ellip2">{{ it.content }}</view>
+        <view v-if="it.type !== 'like'" class="content ellip2">{{ it.content }}</view>
         <view class="quote ellip2">我的评论：{{ it.parent_content }}</view>
       </view>
     </view>
     <view v-else-if="loaded" class="empty">
       <view class="empty-ico">💬</view>
-      <text class="empty-t">暂无回复消息</text>
-      <text class="empty-d">去讨论区发表评论，收到回复会在这里提醒你</text>
+      <text class="empty-t">暂无消息</text>
+      <text class="empty-d">去讨论区发表评论，收到回复或点赞会在这里提醒你</text>
     </view>
   </view>
 </template>
@@ -63,6 +69,7 @@ export default {
 .who { display: flex; align-items: center; gap: 10rpx; }
 .dot { width: 14rpx; height: 14rpx; border-radius: 50%; background: #2e5bff; }
 .nick { font-size: 26rpx; font-weight: 700; color: var(--ink); }
+.like-ico { font-size: 26rpx; }
 .act { font-size: 24rpx; color: var(--ink-2); }
 .time { font-size: 22rpx; color: var(--ink-2); }
 .content { font-size: 27rpx; color: var(--ink); line-height: 1.6; }

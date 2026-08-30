@@ -207,23 +207,42 @@ def api_comment_inbox(authorization: str | None = Header(None)):
            ORDER BY r.created_at DESC LIMIT 50""",
         (uid, uid),
     ).fetchall()
+    like_rows = conn.execute(
+        """SELECT l.comment_id, l.created_at, c.question_id, c.content AS parent_content
+           FROM comment_likes l JOIN question_comments c ON l.comment_id = c.id
+           WHERE c.uid=? AND l.uid!=? AND c.status='ok'
+           ORDER BY l.created_at DESC LIMIT 50""",
+        (uid, uid),
+    ).fetchall()
     conn.close()
     items = []
-    unread = 0
     for r in rows:
-        is_unread = r["created_at"] > last_read
-        unread += 1 if is_unread else 0
         items.append(
             {
+                "type": "reply",
                 "id": r["id"],
                 "nickname": r["nickname"] or "考友",
                 "content": r["content"],
                 "created_at": r["created_at"],
                 "question_id": r["question_id"],
                 "parent_content": r["parent_content"],
-                "unread": is_unread,
+                "unread": r["created_at"] > last_read,
             }
         )
+    for r in like_rows:
+        items.append(
+            {
+                "type": "like",
+                "id": r["comment_id"],
+                "created_at": r["created_at"],
+                "question_id": r["question_id"],
+                "parent_content": r["parent_content"],
+                "unread": r["created_at"] > last_read,
+            }
+        )
+    items.sort(key=lambda x: -x["created_at"])
+    items = items[:50]
+    unread = sum(1 for x in items if x["unread"])
     return {"items": items, "unread": unread}
 
 
