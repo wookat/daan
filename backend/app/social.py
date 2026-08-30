@@ -359,6 +359,20 @@ def api_admin_comment_reports(limit: int = 100, x_admin_token: str | None = Head
     return {"items": [dict(r) for r in rows]}
 
 
+@router.post("/admin/comments/{cid}/restore")
+def api_admin_comment_restore(cid: int, x_admin_token: str | None = Header(None)):
+    _check_admin(x_admin_token)
+    conn = db.get_conn()
+    cur = conn.execute("UPDATE question_comments SET status='ok' WHERE id=?", (cid,))
+    if not cur.rowcount:
+        conn.close()
+        raise HTTPException(404, "评论不存在")
+    conn.execute("DELETE FROM comment_reports WHERE comment_id=?", (cid,))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+
 @router.delete("/admin/comments/{cid}")
 def api_admin_comment_delete(cid: int, x_admin_token: str | None = Header(None)):
     _check_admin(x_admin_token)
