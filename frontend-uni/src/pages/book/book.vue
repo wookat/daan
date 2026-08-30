@@ -90,6 +90,19 @@
         </view>
         <text class="duego">开始复习</text>
       </view>
+      <view v-if="weekTrend" class="card trendcard bk-side">
+        <text class="trend-t">错题趋势（近 4 周新增）</text>
+        <view class="trend-bars">
+          <view v-for="w in weekTrend.weeks" :key="w.label" class="trend-col">
+            <view class="trend-barwrap">
+              <view class="trend-bar" :style="{ height: w.pct + '%' }" />
+            </view>
+            <text class="trend-n">{{ w.n }}</text>
+            <text class="trend-lb">{{ w.label }}</text>
+          </view>
+        </view>
+        <text class="trend-sum">近 7 天新增 {{ weekTrend.last7 }} 道 · 累计已掌握 {{ doneItems.length }} 道</text>
+      </view>
       <view v-if="monthRecap.total" class="card recap bk-side">
         <view class="recap-h" @click="recapOpen = !recapOpen">
           <text class="recap-t">本月错题复盘 · 新增 {{ monthRecap.total }} 道</text>
@@ -260,6 +273,7 @@
           <view class="mg-row" @click="toggleGroup(g.key)">
             <text class="mg-arrow">{{ mgOpen[g.key] ? '▾' : '▸' }}</text>
             <text class="mg-name">{{ g.name }}</text>
+            <text v-if="masteryMods[g.key]" class="mg-mst">掌握 {{ masteryMods[g.key].pct }}% · {{ masteryMods[g.key].level }}</text>
             <text class="mg-badge">{{ g.n }}</text>
             <text class="mg-go" @click.stop="pickGroup(g.key, '')">查看 ›</text>
           </view>
@@ -276,14 +290,16 @@
                 @click="pickGroup(g.key, s.name, t.name)"
               >
                 <text class="mg-sub-name">{{ t.name }}</text>
+                <text v-if="masteryT3[t.name] != null" class="mg-mst">{{ masteryT3[t.name] }}%</text>
                 <text class="mg-badge">{{ t.n }}</text>
               </view>
             </template>
           </view>
         </view>
       </view>
-      <view v-if="tab !== 'fav' && (filterMod || kpFilter || kp3Filter)" class="curfilter bk-main">
-        <text class="kpchip on" @click="filterMod = ''; kpFilter = ''; kp3Filter = ''">{{ kp3Filter || kpFilter || modName(filterMod) }} ✕</text>
+      <view v-if="tab !== 'fav' && (filterMod || kpFilter || kp3Filter || srcFilter)" class="curfilter bk-main">
+        <text v-if="filterMod || kpFilter || kp3Filter" class="kpchip on" @click="filterMod = ''; kpFilter = ''; kp3Filter = ''">{{ kp3Filter || kpFilter || modName(filterMod) }} ✕</text>
+        <text v-if="srcFilter" class="kpchip on" @click="srcFilter = ''">{{ srcFilter === 'exam' ? '模考错题' : '练习错题' }} ✕</text>
         <text v-if="sortBy !== 'time'" class="kpchip" @click="filterOpen = true">{{ (SORTS.find(s => s.k === sortBy) || {}).name }}</text>
       </view>
       <view v-else-if="tab !== 'fav' && sortBy !== 'time'" class="curfilter bk-main">
@@ -306,6 +322,12 @@
           <view v-if="typeGroups.length > 1" class="sheet-k">题型</view>
           <view v-if="typeGroups.length > 1" class="kpchips">
             <text v-for="g in typeGroups" :key="g.name" class="kpchip" :class="{ on: kpFilter === g.name }" @click="kpFilter = kpFilter === g.name ? '' : g.name; kp3Filter = ''">{{ g.name }} ×{{ g.n }}</text>
+          </view>
+          <view v-if="hasExamMistakes" class="sheet-k">来源</view>
+          <view v-if="hasExamMistakes" class="kpchips">
+            <text class="kpchip" :class="{ on: srcFilter === '' }" @click="srcFilter = ''">全部</text>
+            <text class="kpchip" :class="{ on: srcFilter === 'exam' }" @click="srcFilter = 'exam'">模考</text>
+            <text class="kpchip" :class="{ on: srcFilter === 'practice' }" @click="srcFilter = 'practice'">练习</text>
           </view>
           <view class="sheet-done" @click="filterOpen = false">完成</view>
           <view class="sheet-export" @click="exportConfirm = true">{{ exporting ? '正在生成 PDF…' : '导出当前筛选为错题卷 PDF' }}</view>
@@ -336,6 +358,7 @@
         <view class="mhead">
           <view v-if="batchMode" class="bchk" :class="{ on: selIds[m.id] }">{{ selIds[m.id] ? '✓' : '' }}</view>
           <text class="tag">{{ tagName(m) }}</text>
+          <text v-if="m.source === 'exam'" class="srcbadge">模考</text>
           <text v-if="m.times >= 2" class="timesbadge">错 {{ m.times }} 次</text>
           <text v-if="m.mastered" class="zhan">已掌握</text>
           <view v-else-if="nextReviewText(m)" class="duehint" :class="{ due: isDue(m) }">
@@ -461,6 +484,9 @@ export default {
       nextDays: 0,
       streak: 0,
       filterMod: '',
+      srcFilter: '',
+      masteryMods: {},
+      masteryT3: {},
       kw: '',
       kpFilter: '',
       kp3Filter: '',
@@ -533,6 +559,9 @@ export default {
     todoItems() {
       return this.items.filter((m) => !m.mastered);
     },
+    hasExamMistakes() {
+      return this.items.some((m) => m.source === 'exam');
+    },
     doneItems() {
       return this.items.filter((m) => m.mastered);
     },
@@ -542,6 +571,8 @@ export default {
       if (this.filterMod) base = base.filter((m) => m.module === this.filterMod);
       if (this.kpFilter) base = base.filter((m) => this.groupKey(m) === this.kpFilter);
       if (this.kp3Filter) base = base.filter((m) => m.tag3_name === this.kp3Filter);
+      if (this.srcFilter === 'exam') base = base.filter((m) => m.source === 'exam');
+      else if (this.srcFilter === 'practice') base = base.filter((m) => m.source !== 'exam');
       base = [...base];
       if (this.sortBy === 'times') base.sort((a, b) => (b.times || 1) - (a.times || 1));
       else if (this.sortBy === 'type') base.sort((a, b) => String(a.question_type || a.module || '').localeCompare(String(b.question_type || b.module || ''), 'zh'));
@@ -564,6 +595,22 @@ export default {
     },
     selCount() {
       return Object.keys(this.selIds).length;
+    },
+    weekTrend() {
+      if (!this.items.length) return null;
+      const DAY = 86400;
+      const now = Date.now() / 1000;
+      const weeks = [];
+      for (let i = 3; i >= 0; i--) {
+        const start = now - (i + 1) * 7 * DAY;
+        const end = now - i * 7 * DAY;
+        const n = this.items.filter((m) => (m.created_at || 0) >= start && (m.created_at || 0) < end).length;
+        weeks.push({ label: i === 0 ? '本周' : i + '周前', n });
+      }
+      const max = Math.max(...weeks.map((w) => w.n), 1);
+      for (const w of weeks) w.pct = Math.max(Math.round((w.n / max) * 100), w.n ? 8 : 0);
+      const last7 = this.items.filter((m) => (m.created_at || 0) >= now - 7 * DAY).length;
+      return { weeks, last7 };
     },
     monthRecap() {
       const now = new Date();
@@ -835,6 +882,7 @@ export default {
         }
         this.offlineView = false;
         cacheMistakes(d.items);
+        this.loadMastery();
         try {
           if (this.dueTotal > 0) uni.setTabBarBadge({ index: 1, text: String(this.dueTotal > 99 ? '99+' : this.dueTotal) });
           else uni.removeTabBarBadge({ index: 1 });
@@ -850,6 +898,23 @@ export default {
         }
       }
       this.loading = false;
+    },
+    async loadMastery() {
+      try {
+        const map = await request('/api/mastery/map?uid=' + encodeURIComponent(anonUid()));
+        const mods = {};
+        const t3s = {};
+        for (const m of map.modules || []) {
+          if (m.n) mods[m.module] = { pct: Math.round(m.mastery * 100), level: m.level_name };
+          for (const s of m.subs || []) {
+            for (const t of s.tag3s || []) {
+              if (t.n) t3s[t.name] = Math.round(t.mastery * 100);
+            }
+          }
+        }
+        this.masteryMods = mods;
+        this.masteryT3 = t3s;
+      } catch (e) { /* 掌握度为增强信息，失败静默降级 */ }
     },
     startReviewFromCard() {
       trackEvent('review_entry_click', 'book_card');
@@ -1210,6 +1275,7 @@ export default {
 .duehint.due .duedot { background: #f59e0b; }
 .rvbadge { font-size: 20rpx; color: var(--ink-2); background: var(--soft-bg); border-radius: 999rpx; padding: 4rpx 14rpx; }
 .rzbadge { font-size: 20rpx; color: #b45309; background: #fef3c7; border-radius: 999rpx; padding: 4rpx 14rpx; }
+.srcbadge { font-size: 20rpx; color: #6d28d9; background: #ede9fe; border-radius: 999rpx; padding: 4rpx 14rpx; }
 .zhan { margin-left: auto; font-size: 22rpx; font-weight: 700; color: var(--ok); border: 3rpx solid var(--ok); border-radius: 8rpx; padding: 2rpx 12rpx; transform: rotate(-8deg); }
 .anscmp { margin-top: 12rpx; font-size: 23rpx; display: flex; gap: 12rpx; align-items: center; flex-wrap: wrap; }
 .anscmp .ca { color: var(--ok); font-weight: 600; }
@@ -1250,6 +1316,7 @@ export default {
 .mg-arrow { font-size: 24rpx; color: var(--ink-3); width: 28rpx; }
 .mg-name { font-size: 29rpx; font-weight: 600; color: var(--ink); flex: 1; }
 .mg-badge { background: var(--fill); color: var(--ink-2); border-radius: 999rpx; font-size: 22rpx; padding: 4rpx 18rpx; }
+.mg-mst { font-size: 21rpx; color: var(--ink-3); white-space: nowrap; }
 .mg-go { font-size: 24rpx; color: var(--brand); padding: 18rpx 0 18rpx 24rpx; }
 .mg-sub { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding-left: 60rpx; border-bottom: 1rpx dashed var(--line); }
 .mg-sub-name { font-size: 26rpx; color: var(--ink); }
@@ -1395,6 +1462,17 @@ export default {
 .sj-row { display: flex; gap: 20rpx; }
 :deep(.sj-btn) { flex: 1; border-radius: 12rpx !important; }
 
+/* 错题趋势卡（仅桌面侧栏展示） */
+.trendcard { display: none; }
+.trend-t { font-size: 26rpx; font-weight: 600; color: var(--ink); }
+.trend-bars { display: flex; gap: 18rpx; align-items: flex-end; margin-top: 18rpx; }
+.trend-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4rpx; }
+.trend-barwrap { width: 100%; height: 96rpx; display: flex; align-items: flex-end; justify-content: center; }
+.trend-bar { width: 36rpx; background: var(--brand, #2e5bff); border-radius: 8rpx 8rpx 0 0; min-height: 0; }
+.trend-n { font-size: 22rpx; font-weight: 600; color: var(--ink); }
+.trend-lb { font-size: 20rpx; color: var(--ink-3); }
+.trend-sum { display: block; margin-top: 14rpx; font-size: 22rpx; color: var(--ink-2); }
+
 /* #ifdef H5 */
 /* 桌面操作台（round-3）：≥1024px 双栏工作台，主列=列表工作流，侧栏=统计/复盘/工具 */
 @media (min-width: 1024px) {
@@ -1404,6 +1482,7 @@ export default {
      避免左列元素受“浮动框顶不得高于文档序更早浮动框顶”的约束被右列高卡推低形成空洞 */
   .bookwrap .bk-main { margin-right: 344px; box-sizing: border-box; }
   .bookwrap .bk-side { float: right; clear: right; width: 320px; box-sizing: border-box; }
+  .bookwrap .trendcard { display: block; }
   .bookwrap.noside .bk-main { margin-right: 0; }
   .bookwrap-review { max-width: 760px !important; }
 }

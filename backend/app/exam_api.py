@@ -123,6 +123,7 @@ def _judge_paper(uid: str, paper: dict, picks: dict[int, str], secs: dict[int, i
                         "user_answer": picked,
                         "correct_answer": correct_ans,
                         "explanation": q.get("explanation") or q.get("hs_explanation") or "",
+                        "source": "exam",
                     }
                 )
     if uid and log_items:
@@ -218,6 +219,7 @@ async def api_scan_sheet(request: Request, uid: str = Form(""), image: UploadFil
                         "user_answer": picked,
                         "correct_answer": correct_ans,
                         "explanation": q.get("explanation") or q.get("hs_explanation") or "",
+                        "source": "exam",
                     }
                 )
     if uid and log_items:

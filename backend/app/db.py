@@ -73,6 +73,7 @@ def init_db():
         ("next_review", "ALTER TABLE mistakes ADD COLUMN next_review REAL"),
         ("mastered", "ALTER TABLE mistakes ADD COLUMN mastered INTEGER DEFAULT 0"),
         ("times", "ALTER TABLE mistakes ADD COLUMN times INTEGER DEFAULT 1"),
+        ("source", "ALTER TABLE mistakes ADD COLUMN source TEXT"),
     ]:
         if col not in cols:
             conn.execute(ddl)
@@ -2459,8 +2460,8 @@ def save_mistake(rec: dict) -> int:
         conn.execute(
             "UPDATE mistakes SET times=COALESCE(times,1)+1, mastered=0, review_streak=0, "
             "next_review=?, user_answer=COALESCE(?, user_answer), "
-            "question_id=COALESCE(question_id, ?) WHERE id=?",
-            (time.time(), rec.get("user_answer"), qid, dup["id"]),
+            "question_id=COALESCE(question_id, ?), source=COALESCE(source, ?) WHERE id=?",
+            (time.time(), rec.get("user_answer"), qid, rec.get("source"), dup["id"]),
         )
         conn.commit()
         conn.close()
@@ -2468,8 +2469,8 @@ def save_mistake(rec: dict) -> int:
     cur = conn.execute(
         """INSERT INTO mistakes
            (created_at, module, question_type, question_text, user_answer,
-            correct_answer, methods, error_reason, explanation, uid, question_id)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            correct_answer, methods, error_reason, explanation, uid, question_id, source)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
         (
             time.time(),
             rec.get("module"),
@@ -2482,6 +2483,7 @@ def save_mistake(rec: dict) -> int:
             rec.get("explanation"),
             (rec.get("uid") or None),
             rec.get("question_id"),
+            rec.get("source"),
         ),
     )
     conn.commit()
