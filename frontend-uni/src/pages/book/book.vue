@@ -302,6 +302,33 @@
           </view>
         </view>
       </view>
+      <!-- #ifdef H5 -->
+      <view class="card kbdcard bk-side">
+        <view class="kbd-h">键盘快捷键</view>
+        <view class="kbd-row"><text class="kbd">J</text><text class="kbd">K</text><text class="kbd-d">上下切题</text></view>
+        <view class="kbd-row"><text class="kbd">Enter</text><text class="kbd-d">展开/收起详解</text></view>
+        <view class="kbd-row"><text class="kbd">A</text><text class="kbd">–</text><text class="kbd">D</text><text class="kbd-d">复习模式作答</text></view>
+        <text class="kbd-more" @click="kbdHelp = true">按 ? 查看全部 ›</text>
+      </view>
+      <view v-if="kbdHelp" class="mask" @click="kbdHelp = false">
+        <view class="sheet" @click.stop>
+          <view class="sheet-h">
+            <text class="sheet-t">键盘快捷键</text>
+            <view class="sheet-x" @click="kbdHelp = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+          </view>
+          <view class="sheet-k">错题列表</view>
+          <view class="kbd-row"><text class="kbd">J</text><text class="kbd">↓</text><text class="kbd-d">下一张错题</text></view>
+          <view class="kbd-row"><text class="kbd">K</text><text class="kbd">↑</text><text class="kbd-d">上一张错题</text></view>
+          <view class="kbd-row"><text class="kbd">Enter</text><text class="kbd">空格</text><text class="kbd-d">展开/收起当前错题详解</text></view>
+          <view class="sheet-k">复习模式</view>
+          <view class="kbd-row"><text class="kbd">A</text><text class="kbd">B</text><text class="kbd">C</text><text class="kbd">D</text><text class="kbd-d">直接作答（单选）</text></view>
+          <view class="kbd-row"><text class="kbd">Enter</text><text class="kbd-d">多选确认 / 已作答进入下一题</text></view>
+          <view class="sheet-k">通用</view>
+          <view class="kbd-row"><text class="kbd">?</text><text class="kbd-d">打开本面板</text></view>
+          <view class="kbd-row"><text class="kbd">Esc</text><text class="kbd-d">关闭本面板</text></view>
+        </view>
+      </view>
+      <!-- #endif -->
       <view v-if="tab !== 'fav' && (filterMod || kpFilter || kp3Filter || srcFilter)" class="curfilter bk-main">
         <text v-if="filterMod || kpFilter || kp3Filter" class="kpchip on" @click="filterMod = ''; kpFilter = ''; kp3Filter = ''">{{ kp3Filter || kpFilter || modName(filterMod) }} ✕</text>
         <text v-if="srcFilter" class="kpchip on" @click="srcFilter = ''">{{ srcFilter === 'exam' ? '模考错题' : '练习错题' }} ✕</text>
@@ -520,6 +547,7 @@ export default {
       pageN: 20,
       batchMode: false,
       kbId: null,
+      kbdHelp: false,
       selIds: {},
       batchBusy: false,
       recapOpen: typeof window !== 'undefined' && window.innerWidth >= 1024,
@@ -742,6 +770,15 @@ export default {
       const tag = (e.target && e.target.tagName) || '';
       if (/INPUT|TEXTAREA|SELECT/.test(tag) || (e.target && e.target.isContentEditable)) return;
       const k = e.key;
+      if (this.kbdHelp) {
+        if (k === 'Escape' || k === '?') { e.preventDefault(); this.kbdHelp = false; }
+        return;
+      }
+      if (k === '?') {
+        e.preventDefault();
+        this.kbdHelp = true;
+        return;
+      }
       if (this.reviewing) {
         if (this.answered) {
           if (k === 'Enter') { e.preventDefault(); this.nextReview(); }
@@ -1539,6 +1576,14 @@ export default {
 .sj-row { display: flex; gap: 20rpx; }
 :deep(.sj-btn) { flex: 1; border-radius: 12rpx !important; }
 
+/* 快捷键提示卡（仅桌面侧栏展示）与速查面板 */
+.kbdcard { display: none; }
+.kbd-h { font-size: 26rpx; font-weight: 600; color: var(--ink); }
+.kbd-row { display: flex; align-items: center; gap: 8rpx; margin-top: 14rpx; }
+.kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 40rpx; height: 40rpx; padding: 0 10rpx; box-sizing: border-box; background: var(--card); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 8rpx; font-size: 21rpx; font-weight: 600; color: var(--ink-2); }
+.kbd-d { font-size: 22rpx; color: var(--ink-2); margin-left: 8rpx; }
+.kbd-more { display: block; margin-top: 16rpx; font-size: 22rpx; color: var(--brand); cursor: pointer; }
+
 /* 错题趋势卡（仅桌面侧栏展示） */
 .trendcard { display: none; }
 .trend-t { font-size: 26rpx; font-weight: 600; color: var(--ink); }
@@ -1568,6 +1613,7 @@ export default {
   .bookwrap .bk-main { margin-right: 344px; box-sizing: border-box; }
   .bookwrap .bk-side { float: right; clear: right; width: 320px; box-sizing: border-box; }
   .bookwrap .trendcard { display: block; }
+  .bookwrap .kbdcard { display: block; }
   .bookwrap.noside .bk-main { margin-right: 0; }
   .bookwrap-review { max-width: 760px !important; }
 }
