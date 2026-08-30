@@ -1,5 +1,7 @@
 <template>
   <view class="wrap">
+    <view class="dc-cols">
+    <view class="dc-side">
     <!-- 题目摘要卡 -->
     <view v-if="q" class="card qcard">
       <view class="qtags">
@@ -10,7 +12,9 @@
       <view class="qtx">{{ q.question }}</view>
       <view class="qans">正确答案 {{ q.answer }}</view>
     </view>
+    </view>
 
+    <view class="dc-main">
     <!-- 排序 -->
     <view class="chips">
       <text class="chip" :class="{ on: sort === 'hot' }" @click="switchSort('hot')">最热</text>
@@ -52,6 +56,8 @@
     </view>
 
     <view class="pin"><l-icon name="info" :size="14" color="#2c5ad6" /> 社区公约：讨论解题思路，不传播付费课程内容；违规内容将被删除。</view>
+    </view>
+    </view>
     <view style="height: 140rpx" />
 
     <!-- 输入栏 -->
@@ -278,4 +284,18 @@ export default {
 .ipt { flex: 1; height: 72rpx; border-radius: 999rpx; background: var(--fill); font-size: 26rpx; padding: 0 28rpx; }
 .send { margin: 0; height: 72rpx; line-height: 72rpx; padding: 0 34rpx; border-radius: 999rpx; background: var(--brand); color: #fff; font-size: 26rpx; }
 .send[disabled] { background: var(--brand-soft-2); color: #fff; }
+
+/* #ifdef H5 */
+@media (min-width: 768px) {
+  .wrap { max-width: 1044px; margin: 0 auto; }
+  .replying, .inputrow { max-width: 1044px; margin-left: auto; margin-right: auto; }
+  .chip:hover, .up:hover, .op:hover, .send:hover, .rx:hover { cursor: pointer; }
+}
+
+@media (min-width: 1024px) {
+  .dc-cols { display: flex; gap: 32rpx; align-items: flex-start; }
+  .dc-side { width: 380px; flex: none; position: sticky; top: 24rpx; }
+  .dc-main { flex: 1; min-width: 0; }
+}
+/* #endif */
 </style>

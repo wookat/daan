@@ -186,6 +186,13 @@ def _save_session(uid, q, answer, duration, scores, total, review) -> int:
     return sid
 
 
+def _update_review(sid: int, review: str) -> None:
+    conn = db.get_conn()
+    conn.execute("UPDATE interview_sessions SET review=? WHERE id=?", (review, sid))
+    conn.commit()
+    conn.close()
+
+
 def _validate(body: dict) -> tuple[str, dict, str, int]:
     uid = str(body.get("uid") or "").strip()
     if not uid:
@@ -227,12 +234,14 @@ async def api_answer_stream(body: dict):
                 "scores": scores, "total": total, "summary": summary,
                 "category": q["category"], "question_id": q["id"],
             }
+            sid = _save_session(uid, q, answer, duration, scores, total, "")
+            meta["session_id"] = sid
             yield "event: meta\ndata: " + json.dumps(meta, ensure_ascii=False) + "\n\n"
             full = ""
             async for delta in llm.chat_stream(_review_prompt(q, answer, scores, summary)):
                 full += delta
                 yield "data: " + json.dumps({"d": delta}, ensure_ascii=False) + "\n\n"
-            sid = _save_session(uid, q, answer, duration, scores, total, full)
+            _update_review(sid, full)
             yield "event: done\ndata: " + json.dumps({"session_id": sid, "summary": summary}) + "\n\n"
         except Exception as e:  # noqa: BLE001
             yield "event: error\ndata: " + json.dumps({"message": _friendly_ai_err(e)}, ensure_ascii=False) + "\n\n"
