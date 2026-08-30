@@ -117,6 +117,10 @@ export function fetchCommentInbox() {
   return request('/api/comments/inbox');
 }
 
+export function fetchCommentsPlaza() {
+  return request('/api/comments/plaza');
+}
+
 export function readCommentInbox() {
   return request('/api/comments/inbox/read', { method: 'POST' });
 }

@@ -261,6 +261,43 @@ def api_comment_inbox_read(authorization: str | None = Header(None)):
     return {"ok": True}
 
 
+@router.get("/comments/plaza")
+def api_comments_plaza(limit: int = 20):
+    n = min(max(int(limit), 1), 50)
+    conn = db.get_conn()
+    groups = conn.execute(
+        """SELECT question_id, COUNT(*) AS cnt, MAX(created_at) AS last_at
+           FROM question_comments WHERE status='ok'
+           GROUP BY question_id ORDER BY last_at DESC LIMIT ?""",
+        (n,),
+    ).fetchall()
+    items = []
+    for g in groups:
+        latest = conn.execute(
+            """SELECT nickname, content FROM question_comments
+               WHERE question_id=? AND status='ok' ORDER BY created_at DESC LIMIT 1""",
+            (g["question_id"],),
+        ).fetchone()
+        q = conn.execute(
+            "SELECT question, module FROM questions WHERE id=?", (g["question_id"],)
+        ).fetchone()
+        items.append(
+            {
+                "question_id": g["question_id"],
+                "cnt": g["cnt"],
+                "last_at": g["last_at"],
+                "stem": (q["question"] or "")[:80] if q else "",
+                "module": q["module"] if q else "",
+                "latest": {
+                    "nickname": _clean_name(latest["nickname"]) if latest else "考友",
+                    "content": latest["content"] if latest else "",
+                },
+            }
+        )
+    conn.close()
+    return {"items": items}
+
+
 @router.get("/comments/count")
 def api_comments_count(question_id: int):
     conn = db.get_conn()
