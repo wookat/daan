@@ -15,6 +15,8 @@ router = APIRouter(prefix="/api")
 
 COMMENT_MAX_LEN = 500
 COMMENT_MIN_LEN = 2
+REPORT_HIDE_THRESHOLD = 3  # 去重举报人数达到即自动隐藏待审核
+REPORT_REASONS = ("广告导流", "人身攻击", "违法违规", "色情低俗", "其他")
 
 # 简单敏感词过滤（命中直接拒绝）
 _BANNED_WORDS = [
@@ -62,6 +64,16 @@ def init_social_db():
         )"""
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_cl_uid ON comment_likes(uid)")
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS comment_reports (
+            comment_id INTEGER NOT NULL,
+            uid TEXT NOT NULL,
+            reason TEXT,
+            created_at REAL NOT NULL,
+            PRIMARY KEY (comment_id, uid)
+        )"""
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_cr_cid ON comment_reports(comment_id)")
     conn.execute(
         """CREATE TABLE IF NOT EXISTS fav_folders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -269,6 +281,41 @@ def api_comment_delete_own(cid: int, authorization: str | None = Header(None)):
     return {"ok": True}
 
 
+@router.post("/comments/{cid}/report")
+def api_comment_report(cid: int, body: dict, authorization: str | None = Header(None)):
+    user = require_user(authorization)
+    uid = user_uid(user["id"])
+    rate_limit(f"cmt_report:{uid}", 10, 600)
+    reason = str(body.get("reason") or "").strip()
+    if reason not in REPORT_REASONS:
+        reason = "其他"
+    conn = db.get_conn()
+    row = conn.execute(
+        "SELECT id, uid FROM question_comments WHERE id=? AND status='ok'", (cid,)
+    ).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(404, "评论不存在")
+    if row["uid"] == uid:
+        conn.close()
+        raise HTTPException(400, "不能举报自己的评论")
+    cur = conn.execute(
+        "INSERT OR IGNORE INTO comment_reports (comment_id, uid, reason, created_at) VALUES (?,?,?,?)",
+        (cid, uid, reason, time.time()),
+    )
+    already = not cur.rowcount
+    n = conn.execute(
+        "SELECT COUNT(DISTINCT uid) FROM comment_reports WHERE comment_id=?", (cid,)
+    ).fetchone()[0]
+    hidden = False
+    if n >= REPORT_HIDE_THRESHOLD:
+        conn.execute("UPDATE question_comments SET status='hidden' WHERE id=? AND status='ok'", (cid,))
+        hidden = True
+    conn.commit()
+    conn.close()
+    return {"ok": True, "already": already, "hidden": hidden}
+
+
 # ---------- 管理端 ----------
 
 def _check_admin(x_admin_token: str | None):
@@ -284,13 +331,29 @@ def api_admin_comments(
 ):
     _check_admin(x_admin_token)
     conn = db.get_conn()
-    where, args = ["status=?"], [status if status in ("ok", "deleted") else "ok"]
+    where, args = ["status=?"], [status if status in ("ok", "deleted", "hidden") else "ok"]
     if question_id:
         where.append("question_id=?")
         args.append(question_id)
     rows = conn.execute(
         f"SELECT * FROM question_comments WHERE {' AND '.join(where)} ORDER BY id DESC LIMIT ? OFFSET ?",
         [*args, min(int(limit), 500), max(int(offset), 0)],
+    ).fetchall()
+    conn.close()
+    return {"items": [dict(r) for r in rows]}
+
+
+@router.get("/admin/comment-reports")
+def api_admin_comment_reports(limit: int = 100, x_admin_token: str | None = Header(None)):
+    _check_admin(x_admin_token)
+    conn = db.get_conn()
+    rows = conn.execute(
+        """SELECT r.comment_id, COUNT(DISTINCT r.uid) AS report_count,
+                  GROUP_CONCAT(r.reason) AS reasons, MAX(r.created_at) AS last_at,
+                  c.content, c.status, c.question_id, c.nickname
+           FROM comment_reports r JOIN question_comments c ON c.id = r.comment_id
+           GROUP BY r.comment_id ORDER BY last_at DESC LIMIT ?""",
+        (min(int(limit), 500),),
     ).fetchall()
     conn.close()
     return {"items": [dict(r) for r in rows]}

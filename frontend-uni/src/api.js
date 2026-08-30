@@ -109,6 +109,10 @@ export function deleteOwnComment(cid) {
   return request(`/api/comments/${cid}`, { method: 'DELETE' });
 }
 
+export function reportComment(cid, reason) {
+  return request(`/api/comments/${cid}/report`, { method: 'POST', data: { reason } });
+}
+
 // ---------- 收藏夹 / 笔记 ----------
 
 export function fetchFavFolders() {
