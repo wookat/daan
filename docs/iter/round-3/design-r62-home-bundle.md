@@ -32,7 +32,6 @@ def api_home_bundle(uid: str):
         "plan_today": plan.today_plan(u) if profile else None,
         "badges": api_checkin_badges(u),      # 复用 social.py 既有 handler 函数
         "summary": api_checkin_summary(u),
-        "counts_ver": None,  # 预留
     }
 ```
 
@@ -55,4 +54,14 @@ badgeInfo/svTodayN 既有状态（沿用各 loader 的后处理逻辑）；bundl
 4. 1440/375 console 0 error、无水平溢出；
 5. build:h5 全绿、部署 hash 一致。
 
-## 验收结果（待部署后回填）
+## 验收结果（2026-08-29 生产实测）
+
+1. 后端本地实测（uvicorn + 生产同构 db）：bundle 的 plan/profile/badges/summary/plan_today
+   与 5 个独立端点响应逐字段 MATCH；无画像 uid 返回 profile=None、plan_today=None。
+2. 生产首页抓包（1440/375）：API 请求 = /api/question_counts + /api/announcement（边缘缓存）
+   + /api/home_bundle 共 3 个，uid 专属请求 4–5 → 1；任务卡/今日计划/连签渲染正常，
+   due_mistakes=0 时 tabbar 无角标（与 bundle 数据一致）。
+3. 回退路径实测：拦截 bundle 返回 500 后自动回退 daily_plan/profile/badges/summary
+   四个独立请求，页面渲染正常。
+4. 1440/375 console 0 error、无水平溢出（scrollWidth ≤ innerWidth）。
+5. build:h5 全绿；生产 bundle index-DzhZ7CLW.js 与本机构建一致（zalize.com + pages.dev 双确认）。
