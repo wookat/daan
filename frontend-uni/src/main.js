@@ -76,7 +76,12 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && location
 				if ((!nav || nav.duration < 10000) && !worst) return;
 				rumSent = true;
 				const part = (e) => `${(e.name || 'nav').split('/').pop().split('?')[0].slice(0, 48)}:${Math.round(e.duration)}`;
-				const ref = `nav:${nav ? Math.round(nav.duration) : -1}` + (worst ? `;${part(worst)}` : '');
+				// 阶段拆解：ttfb=文档首字节（边缘/回源层），dom/load=解析与子资源层，sw=是否 SW 拦截，tx=传输字节（0=缓存/SW 直出）
+				const phases = nav
+					? `;ttfb:${Math.round(nav.responseStart)};dom:${Math.round(nav.domContentLoadedEventStart)};load:${Math.round(nav.loadEventStart)}` +
+					  `;sw:${navigator.serviceWorker && navigator.serviceWorker.controller ? 1 : 0};tx:${nav.transferSize || 0}`
+					: '';
+				const ref = `nav:${nav ? Math.round(nav.duration) : -1}${phases}` + (worst ? `;${part(worst)}` : '');
 				import('./api.js').then(({ trackEvent }) => trackEvent('slow_load', 'h5', ref));
 			} catch (e) { /* RUM 失败不影响主流程 */ }
 		};
