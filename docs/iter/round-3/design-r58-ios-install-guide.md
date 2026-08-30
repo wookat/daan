@@ -29,4 +29,12 @@
 2. 模拟微信 UA / 桌面 Chrome：iOS 引导不出现（Chrome 走 R57 原生 prompt 分支）；
 3. 375 无溢出；lint/build 全绿。
 
-## 验收结果（部署后回填）
+## 验收结果（2026-08-29 生产实测，bundle index-uAEIqtrA.js）
+
+- CDP 模拟 iOS Safari UA（并屏蔽 beforeinstallprompt 复现无事件环境）：
+  「安装到主屏幕」cell 出现、点击弹两步引导浮层、「知道了」关闭正常，
+  375 无水平溢出，console 0 error；
+- 模拟微信 UA（MicroMessenger）：两个安装 cell 均不出现（守卫生效）；
+- 桌面 Chrome（有 beforeinstallprompt）：仍走 R57「安装到桌面」原生 prompt 分支，
+  iOS 引导不出现（互斥生效）；
+- iOS 真机形态未实测（无真机，标 untested）；build:h5 全绿。
