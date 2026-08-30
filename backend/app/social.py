@@ -76,6 +76,12 @@ def init_social_db():
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_cr_cid ON comment_reports(comment_id)")
     conn.execute(
+        """CREATE TABLE IF NOT EXISTS comment_inbox_reads (
+            uid TEXT PRIMARY KEY,
+            last_read_at REAL NOT NULL
+        )"""
+    )
+    conn.execute(
         """CREATE TABLE IF NOT EXISTS fav_folders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             uid TEXT NOT NULL,
@@ -182,6 +188,58 @@ def api_comments(question_id: int, sort: str = "hot", uid: str = ""):
         items.append(item)
     total = len(tops) + sum(len(v) for v in by_parent.values())
     return {"items": items, "total": total}
+
+
+@router.get("/comments/inbox")
+def api_comment_inbox(authorization: str | None = Header(None)):
+    user = require_user(authorization)
+    uid = user_uid(user["id"])
+    conn = db.get_conn()
+    row = conn.execute(
+        "SELECT last_read_at FROM comment_inbox_reads WHERE uid=?", (uid,)
+    ).fetchone()
+    last_read = row["last_read_at"] if row else 0.0
+    rows = conn.execute(
+        """SELECT r.id, r.nickname, r.content, r.created_at, r.question_id,
+                  p.content AS parent_content
+           FROM question_comments r JOIN question_comments p ON r.parent_id = p.id
+           WHERE p.uid=? AND r.uid!=? AND r.status='ok' AND p.status='ok'
+           ORDER BY r.created_at DESC LIMIT 50""",
+        (uid, uid),
+    ).fetchall()
+    conn.close()
+    items = []
+    unread = 0
+    for r in rows:
+        is_unread = r["created_at"] > last_read
+        unread += 1 if is_unread else 0
+        items.append(
+            {
+                "id": r["id"],
+                "nickname": r["nickname"] or "考友",
+                "content": r["content"],
+                "created_at": r["created_at"],
+                "question_id": r["question_id"],
+                "parent_content": r["parent_content"],
+                "unread": is_unread,
+            }
+        )
+    return {"items": items, "unread": unread}
+
+
+@router.post("/comments/inbox/read")
+def api_comment_inbox_read(authorization: str | None = Header(None)):
+    user = require_user(authorization)
+    uid = user_uid(user["id"])
+    conn = db.get_conn()
+    conn.execute(
+        """INSERT INTO comment_inbox_reads (uid, last_read_at) VALUES (?, ?)
+           ON CONFLICT(uid) DO UPDATE SET last_read_at=excluded.last_read_at""",
+        (uid, time.time()),
+    )
+    conn.commit()
+    conn.close()
+    return {"ok": True}
 
 
 @router.get("/comments/count")
