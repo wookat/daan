@@ -17,8 +17,25 @@ const SECURITY_HEADERS = {
 // 避免每个请求（含爬虫抓取）穿透到共享 origin 产生长尾 TTFB。
 const EDGE_CACHE_TTL = 300;
 
+// uid 无关的公开只读 API（响应确定、不随登录态变化），短 TTL 边缘缓存，
+// 屏蔽共享 origin 的长尾抖动；带 Authorization/uid 的请求一律绕过。
+const API_EDGE_CACHE_TTL = 60;
+const API_CACHE_ALLOWLIST = new Set([
+  "/api/announcement",
+  "/api/submodules",
+  "/api/real_filters",
+  "/api/papers",
+  "/api/comments/plaza",
+]);
+
 function isEdgeCacheable(request, url) {
-  return request.method === "GET" && url.pathname.startsWith("/tiku");
+  if (request.method !== "GET") return false;
+  if (url.pathname.startsWith("/tiku")) return true;
+  return (
+    API_CACHE_ALLOWLIST.has(url.pathname) &&
+    !request.headers.has("Authorization") &&
+    !url.searchParams.has("uid")
+  );
 }
 
 export async function onRequest({ request, waitUntil }) {
@@ -42,18 +59,19 @@ export async function onRequest({ request, waitUntil }) {
   } else {
     resp.headers.delete("X-Robots-Tag");
   }
-  if (
-    cacheable &&
-    resp.status === 200 &&
-    (resp.headers.get("content-type") || "").includes("text/html")
-  ) {
+  const isApi = url.pathname.startsWith("/api/");
+  const ctOk = (resp.headers.get("content-type") || "").includes(
+    isApi ? "application/json" : "text/html"
+  );
+  if (cacheable && resp.status === 200 && ctOk) {
+    const ttl = isApi ? API_EDGE_CACHE_TTL : EDGE_CACHE_TTL;
     const [body, cacheBody] = resp.body.tee();
     const cacheCopy = new Response(cacheBody, resp);
-    cacheCopy.headers.set("Cache-Control", `public, max-age=${EDGE_CACHE_TTL}`);
+    cacheCopy.headers.set("Cache-Control", `public, max-age=${ttl}`);
     cacheCopy.headers.delete("Set-Cookie");
     waitUntil(caches.default.put(request.url, cacheCopy));
     const out = new Response(body, resp);
-    out.headers.set("Cache-Control", `public, max-age=${EDGE_CACHE_TTL}`);
+    out.headers.set("Cache-Control", `public, max-age=${ttl}`);
     out.headers.set("X-Edge-Cache", "MISS");
     return out;
   }
