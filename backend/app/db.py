@@ -133,6 +133,7 @@ def init_db():
         "CREATE INDEX IF NOT EXISTS idx_q_tag3_pick ON questions(tag3, disabled, is_real, has_hs, id)"
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_quality ON questions(quality_score)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_q_disabled_id ON questions(disabled, id)")
     if "correct_ratio" in qcols:
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_q_reinforce ON questions(tag3, disabled, correct_ratio, id)"
@@ -2803,13 +2804,21 @@ def upsert_exam_paper(title: str, kind: str, year: int | None, region: str | Non
     conn.commit()
     pid = conn.execute("SELECT id FROM exam_papers WHERE title=?", (title,)).fetchone()["id"]
     conn.close()
+    _papers_cache.clear()
     return pid
 
 
-def list_exam_papers(kind: str | None = None, year: int | None = None,
-                     region: str | None = None, uid: str | None = None) -> list[dict]:
-    conn = get_conn()
-    _ensure_exam_tables(conn)
+_PAPERS_CACHE_TTL = 300
+_papers_cache: dict[tuple, tuple[float, list[dict]]] = {}
+
+
+def _list_exam_papers_base(conn, kind: str | None, year: int | None,
+                           region: str | None) -> list[dict]:
+    """uid 无关的卷列表（含活跃题数 n / takers），按筛选键 TTL 缓存。"""
+    key = (kind, year, region)
+    hit = _papers_cache.get(key)
+    if hit and time.time() - hit[0] < _PAPERS_CACHE_TTL:
+        return hit[1]
     where = ["1=1"]
     args: list = []
     if kind:
@@ -2827,14 +2836,6 @@ def list_exam_papers(kind: str | None = None, year: int | None = None,
             ORDER BY year DESC, id DESC LIMIT 200""",
         args,
     ).fetchall()
-    best: dict[int, dict] = {}
-    if uid and rows:
-        for b in conn.execute(
-            """SELECT paper_id, MAX(score) s, COUNT(*) n FROM exam_attempts
-               WHERE uid=? AND submitted_at IS NOT NULL GROUP BY paper_id""",
-            (uid,),
-        ):
-            best[b["paper_id"]] = {"best_score": b["s"], "attempt_count": b["n"]}
     takers: dict[int, int] = {}
     if rows:
         for t in conn.execute(
@@ -2851,14 +2852,35 @@ def list_exam_papers(kind: str | None = None, year: int | None = None,
             f"SELECT id FROM questions WHERE disabled=0 AND id IN ({','.join('?' * len(chunk))})",
             chunk,
         ))
-    conn.close()
-    out = []
+    base = []
     for r in rows:
         d = dict(r)
         d.pop("question_ids")
         d["n"] = sum(1 for i in qids_by_paper[d["id"]] if i in active)
-        d.update(best.get(d["id"], {"best_score": None, "attempt_count": 0}))
         d["takers"] = takers.get(d["id"], 0)
+        base.append(d)
+    _papers_cache[key] = (time.time(), base)
+    return base
+
+
+def list_exam_papers(kind: str | None = None, year: int | None = None,
+                     region: str | None = None, uid: str | None = None) -> list[dict]:
+    conn = get_conn()
+    _ensure_exam_tables(conn)
+    base = _list_exam_papers_base(conn, kind, year, region)
+    best: dict[int, dict] = {}
+    if uid and base:
+        for b in conn.execute(
+            """SELECT paper_id, MAX(score) s, COUNT(*) n FROM exam_attempts
+               WHERE uid=? AND submitted_at IS NOT NULL GROUP BY paper_id""",
+            (uid,),
+        ):
+            best[b["paper_id"]] = {"best_score": b["s"], "attempt_count": b["n"]}
+    conn.close()
+    out = []
+    for d in base:
+        d = dict(d)
+        d.update(best.get(d["id"], {"best_score": None, "attempt_count": 0}))
         out.append(d)
     return out
 
@@ -2919,6 +2941,7 @@ def create_mock_paper(n: int = 30, duration_min: int = 30) -> int:
     conn.commit()
     pid = conn.execute("SELECT id FROM exam_papers WHERE title=?", (title,)).fetchone()["id"]
     conn.close()
+    _papers_cache.clear()
     return pid
 
 
