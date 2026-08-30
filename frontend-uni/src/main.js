@@ -33,6 +33,18 @@ if (typeof window !== 'undefined') {
 	});
 }
 
+// 未匹配路由兜底：无效/过期深链在 uni h5 router 无匹配时渲染为永久白屏，回落首页
+if (typeof window !== 'undefined') {
+	window.addEventListener('load', () => {
+		try {
+			const path = ((location.hash || '#/').slice(1).split('?')[0]) || '/';
+			const routes = window.__uniRoutes || [];
+			const known = routes.some((r) => r.path === path || r.alias === path);
+			if (!known) location.replace(location.origin + location.pathname + '#/');
+		} catch (e) { /* 兜底失败保持原状 */ }
+	});
+}
+
 // 离线壳：缓存静态资源，断网时仍能进入应用（离线做题依赖已下载题包）
 if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && location.protocol !== 'file:') {
 	window.addEventListener('load', () => {
