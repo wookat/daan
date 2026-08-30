@@ -36,4 +36,11 @@ main.js H5 块新增未匹配路由兜底：window load 后取 `location.hash` �
 3. 首页/tabbar 页正常，console 0 error；
 4. build:h5 全绿、部署 hash 一致。
 
-## 验收结果（待部署后回填）
+## 验收结果（2026-08-29 生产实测，bundle index-DgLw2b4k.js）
+
+- 无效深链 `#/pages/discuss/plaza`、`#/pages/search/search`：375/1440 均自动
+  落 `#/` 并正常渲染首页（textlen 686，改前白屏 textlen 23）；
+- 有效深链抽查 plaza/search/discuss?qid= 均保持原 hash 正常渲染，无误重定向；
+- 全部 12 组（6 用例 × 2 视口）console 0 error、无水平溢出；
+- build:h5 全绿，部署 hash 校验一致（初次校验为传播时序 FAIL，20s 后
+  生产站与 pages.dev 均返回本机 hash）。
