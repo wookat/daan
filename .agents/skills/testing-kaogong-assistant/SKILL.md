@@ -5,6 +5,14 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R50 刷题完成页/薄弱考点区块走查新经验
+- 直开 `/#/pages/practice/practice` 会自动出一组 10 题；键盘流 `a`→等 1.2s→`Enter` 循环可快速做完全组（全选 A 天然产生跨考点错题，适合制造 `.weakrf` 薄弱考点区块）。
+- 「全对完成一组」可行路径：完成页点某考点「强化 5 道新题」进入 5 题判断推理/定义判断强化组，逐题认真作答（定义判断类可推理答对）——5 题全对成本可接受，不要假设无法制造全对场景。
+- 背题模式入口：答题页头部「···」练习工具面板 →「背题模式」行点击切换；开启后每题直显答案，`Enter` 连按即可走完，完成页显示「本组背完」（无正确率环/无 weakrf）。背题开关不持久化，刷新后回普通模式。
+- 强化流取证：点强化按钮前用 CDP `Network.enable` 后台脚本捕获 `/api/questions?mode=reinforce&limit=5&module=…&tag3=…` 请求；toast「同考点强化开始：均为未做过的新题」出现约 1.5s，点击后立刻截图才能抓到。
+- 完成页「再来一组」是 uni 组件不是原生 button，断言选择器用 `uni-button,button` 兜底再按 textContent 过滤。
+- 「错题重练效果」卡（.redoreport）只在错题重练会话的完成页出现，普通新组完成页没有，勿据此判 weakrf 位置断言失败。
+
 ## R46 无障碍语义属性（role=main / aria-hidden）走查新经验
 - 断言集：`document.querySelector('uni-page-body').getAttribute('role')==='main'` 且 `querySelectorAll('[role="main"]').length===1`；l-icon 判据用 `document.querySelectorAll('uni-image.l-icon img')` 每个 `closest('[aria-hidden="true"]')` 非空（aria-hidden 落在 uni-image 根元素上，img 靠祖先覆盖）；tabbar 用 `.uni-tabbar__icon img` 逐个 aria-hidden==='true'。
 - navigateTo 栈测试注意：uni-h5 H5 端进入子页后 DOM 中可能只剩 1 个 uni-page-body（旧页被移除而非隐藏），所以「栈内旧页无 role」这一分支可能天然无从取证——用「进入/返回后 role=main 恒唯一且落在当前页」作为等价判据。
