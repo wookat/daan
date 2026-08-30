@@ -50,8 +50,10 @@ page {
   --ink-4: #b0b4c0;
   --ok: #16a34a;
   --ok-soft: #ecfdf5;
+  --ok-strong: #15803d;
   --bad: #dc2626;
   --bad-soft: #fef2f2;
+  --bad-strong: #b91c1c;
   --warn: #d97706;
   --warn-soft: #fffbeb;
   --info: #0284c7;
@@ -104,7 +106,9 @@ html.theme-dark body {
   --ink-3: #8a8ea0;
   --ink-4: #5c6070;
   --ok-soft: #0e2b1e;
+  --ok-strong: #4ade80;
   --bad-soft: #331416;
+  --bad-strong: #f87171;
   --warn-soft: #33260e;
   --info-soft: #0e2233;
   --line: #2b2e3a;

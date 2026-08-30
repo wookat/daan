@@ -2090,7 +2090,7 @@ export default {
 .mchip { font-size: 21rpx; border-radius: 12rpx; padding: 4rpx 16rpx; font-weight: 500; }
 .mchip.brand { background: var(--brand-soft); color: var(--brand); }
 .mchip.info { background: #cffafe; color: #0e7490; }
-.mchip.bad { background: var(--bad-soft); color: #dc2626; }
+.mchip.bad { background: var(--bad-soft); color: var(--bad-strong); }
 .rhead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14rpx; }
 .tag { display: inline-block; background: var(--brand-soft); color: var(--brand); border-radius: 12rpx; padding: 6rpx 20rpx; font-size: 22rpx; min-width: 0; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hstats { display: flex; align-items: center; gap: 12rpx; flex-shrink: 0; }
@@ -2100,8 +2100,8 @@ export default {
 .tool-val { font-size: 24rpx; color: var(--ink-2); }
 .tool-val.on { color: var(--brand); font-weight: 600; }
 .cnt { font-size: 22rpx; border-radius: 999rpx; padding: 2rpx 14rpx; font-weight: 600; }
-.okc { background: var(--ok-soft); color: var(--ok); }
-.badc { background: var(--bad-soft); color: var(--bad); }
+.okc { background: var(--ok-soft); color: var(--ok-strong); }
+.badc { background: var(--bad-soft); color: var(--bad-strong); }
 .fire { background: var(--warn-soft); color: #ea580c; display: inline-flex; align-items: center; gap: 2rpx; }
 .fire-n { font-size: 22rpx; color: #ea580c; font-weight: 700; }
 .iconbtn { display: inline-flex; align-items: center; }

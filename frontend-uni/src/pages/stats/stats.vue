@@ -981,7 +981,7 @@ export default {
 .sl-chip { font-size: 21rpx; color: var(--brand); background: var(--brand-soft); border-radius: 999rpx; padding: 8rpx 18rpx; }
 .sl-ih { font-size: 23rpx; color: var(--ink-2); margin-top: 16rpx; padding: 10rpx 0; }
 .sl-issue { display: flex; align-items: flex-start; gap: 10rpx; margin-bottom: 10rpx; }
-.sl-ik { font-size: 19rpx; color: #dc2626; background: var(--bad-soft); border-radius: 6rpx; padding: 2rpx 10rpx; flex-shrink: 0; margin-top: 2rpx; }
+.sl-ik { font-size: 19rpx; color: var(--bad-strong); background: var(--bad-soft); border-radius: 6rpx; padding: 2rpx 10rpx; flex-shrink: 0; margin-top: 2rpx; }
 .sl-ik.adv { color: #b45309; background: var(--warn-soft); }
 .sl-it { font-size: 22rpx; color: var(--ink-1); line-height: 1.6; }
 .trend { display: flex; align-items: flex-end; gap: 8rpx; height: 160rpx; padding-top: 12rpx; }
