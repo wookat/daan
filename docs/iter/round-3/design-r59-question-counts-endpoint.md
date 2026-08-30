@@ -30,4 +30,10 @@
 2. 首页/刷题页模块题数正常渲染，首屏不再请求 `/api/questions?limit=1`；
 3. 1440/375 console 0 error、无水平溢出；build:h5 全绿。
 
-## 验收结果（部署后回填）
+## 验收结果（2026-08-29 生产实测，bundle index-B3kngKtl.js）
+
+- `/api/question_counts` MISS→HIT（Cache-Control: public, max-age=60 +
+  X-Edge-Cache），HIT 体与 origin 逐字节一致（cmp 通过），实测 0.08–0.10s；
+- 首页 1440/375 模块题数正常渲染，首屏改请求新端点，
+  `/api/questions?limit=1` 不再出现（`limit=10` 预取为既有设计，保留）；
+- 两视口 console 0 error、无水平溢出；build:h5 全绿、部署 hash 校验一致。
