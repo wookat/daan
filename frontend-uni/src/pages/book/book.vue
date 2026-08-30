@@ -359,7 +359,7 @@
         <view class="e-t">没有匹配的错题</view>
         <view class="e-s">换个关键词或清除筛选试试</view>
       </view>
-      <view v-for="m in shownPage" :key="m.id" class="card mcard bk-main" :class="[masteryClass(m), { bsel: batchMode && selIds[m.id] }]" @click="batchMode ? toggleSel(m) : toggleCard(m)">
+      <view v-for="m in shownPage" :key="m.id" :id="'mc-' + m.id" class="card mcard bk-main" :class="[masteryClass(m), { bsel: batchMode && selIds[m.id], kbf: kbId === m.id }]" @click="batchMode ? toggleSel(m) : toggleCard(m)">
         <view class="mhead">
           <view v-if="batchMode" class="bchk" :class="{ on: selIds[m.id] }">{{ selIds[m.id] ? '✓' : '' }}</view>
           <text class="tag">{{ tagName(m) }}</text>
@@ -519,6 +519,7 @@ export default {
       sortBy: 'time',
       pageN: 20,
       batchMode: false,
+      kbId: null,
       selIds: {},
       batchBusy: false,
       recapOpen: typeof window !== 'undefined' && window.innerWidth >= 1024,
@@ -688,7 +689,7 @@ export default {
     },
   },
   watch: {
-    tab() { this.pageN = 20; this.batchMode = false; this.selIds = {}; },
+    tab() { this.pageN = 20; this.batchMode = false; this.selIds = {}; this.kbId = null; },
     filterMod() { this.pageN = 20; },
     kw() { this.pageN = 20; },
     kpFilter() { this.pageN = 20; },
@@ -710,8 +711,67 @@ export default {
       this.autoReview = true;
     }
     this.load();
+    // #ifdef H5
+    if (!this._kbHandler && typeof window !== 'undefined') {
+      this._kbHandler = (e) => this.onKeydown(e);
+      window.addEventListener('keydown', this._kbHandler);
+    }
+    // #endif
+  },
+  onHide() {
+    // #ifdef H5
+    if (this._kbHandler && typeof window !== 'undefined') {
+      window.removeEventListener('keydown', this._kbHandler);
+      this._kbHandler = null;
+    }
+    // #endif
+  },
+  onUnload() {
+    // #ifdef H5
+    if (this._kbHandler && typeof window !== 'undefined') {
+      window.removeEventListener('keydown', this._kbHandler);
+      this._kbHandler = null;
+    }
+    // #endif
   },
   methods: {
+    // #ifdef H5
+    onKeydown(e) {
+      if (typeof window === 'undefined' || window.innerWidth < 1024) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const tag = (e.target && e.target.tagName) || '';
+      if (/INPUT|TEXTAREA|SELECT/.test(tag) || (e.target && e.target.isContentEditable)) return;
+      const k = e.key;
+      if (this.reviewing) {
+        if (this.answered) {
+          if (k === 'Enter') { e.preventDefault(); this.nextReview(); }
+        } else if (this.curLetter && /^[a-dA-D]$/.test(k)) {
+          e.preventDefault();
+          this.pick(k.toUpperCase());
+        } else if (this.curMulti && k === 'Enter' && this.picked) {
+          e.preventDefault();
+          this.confirmMulti();
+        }
+        return;
+      }
+      if (this.batchMode || this.manualOpen || this.celebrate || this.reinforce || this.aiOpen) return;
+      const list = this.shownPage;
+      if (!list.length) return;
+      if (k === 'j' || k === 'k' || k === 'ArrowDown' || k === 'ArrowUp') {
+        e.preventDefault();
+        const dir = k === 'j' || k === 'ArrowDown' ? 1 : -1;
+        let idx = list.findIndex((m) => m.id === this.kbId);
+        idx = idx < 0 ? (dir > 0 ? 0 : list.length - 1) : Math.min(Math.max(idx + dir, 0), list.length - 1);
+        this.kbId = list[idx].id;
+        const el = document.getElementById('mc-' + this.kbId);
+        if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      } else if ((k === 'Enter' || k === ' ') && this.kbId != null) {
+        e.preventDefault();
+        const m = list.find((x) => x.id === this.kbId);
+        if (m) this.toggleCard(m);
+      }
+    },
+    // #endif
     manualOpenSheet() {
       this.recentPapers = uni.getStorageSync('recentPapers') || [];
       this.manualPaper = null;
@@ -1501,6 +1561,7 @@ export default {
 /* 桌面操作台（round-3）：≥1024px 双栏工作台，主列=列表工作流，侧栏=统计/复盘/工具 */
 @media (min-width: 1024px) {
   .bookwrap { max-width: 920px !important; }
+  .mcard.kbf { outline: 2px solid var(--brand); outline-offset: -2px; }
   .bookwrap::after { content: ''; display: block; clear: both; }
   /* 主列走常规文档流（仅预留右侧栏宽度），侧栏用右浮动堆叠：
      避免左列元素受“浮动框顶不得高于文档序更早浮动框顶”的约束被右列高卡推低形成空洞 */
