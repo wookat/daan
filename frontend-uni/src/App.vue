@@ -22,6 +22,12 @@ export default {
       })
       // tabbar 图标为装饰图（文字 label 承载语义），uni 生成的 img 无 alt
       document.querySelectorAll('.uni-tabbar__icon img').forEach((el) => el.setAttribute('aria-hidden', 'true'))
+      // uni 编译后的真实 input/textarea 无 label，把 placeholder 镜像为 aria-label
+      document.querySelectorAll('uni-input input:not([aria-label]), uni-textarea textarea:not([aria-label])').forEach((el) => {
+        const host = el.closest('uni-input, uni-textarea')
+        const ph = el.getAttribute('placeholder') || (host && (host.querySelector('.uni-input-placeholder, .uni-textarea-placeholder') || {}).textContent) || ''
+        if (ph.trim()) el.setAttribute('aria-label', ph.trim())
+      })
     }
     markMain()
     new MutationObserver(markMain).observe(document.body, { childList: true, subtree: true })

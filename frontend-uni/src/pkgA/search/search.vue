@@ -213,7 +213,7 @@ export default {
 .q-ans { font-size: 24rpx; color: #12b76a; font-weight: 600; margin-top: 4rpx; }
 .q-exp { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; }
 .more { text-align: center; font-size: 26rpx; color: var(--brand); padding: 16rpx; }
-.empty { display: flex; flex-direction: column; gap: 8rpx; text-align: center; color: var(--ink-3); font-size: 26rpx; padding: 100rpx 40rpx; }
+.empty { display: flex; flex-direction: column; gap: 8rpx; text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 100rpx 40rpx; }
 
 /* 桌面（H5）：≥1024 左考点/试卷侧栏 + 右题目列表（仅「全部」tab） */
 /* #ifdef H5 */

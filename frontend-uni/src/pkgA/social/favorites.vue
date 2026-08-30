@@ -298,7 +298,7 @@ export default {
 .wrap { padding: 24rpx; }
 .card { background: var(--card, #fff); border-radius: var(--radius, 24rpx); padding: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); margin-bottom: 20rpx; }
 .seg { display: flex; background: var(--line); border-radius: 18rpx; padding: 6rpx; margin-bottom: 20rpx; }
-.seg-i { flex: 1; text-align: center; padding: 14rpx 0; border-radius: 14rpx; font-size: 26rpx; color: var(--ink-3); }
+.seg-i { flex: 1; text-align: center; padding: 14rpx 0; border-radius: 14rpx; font-size: 26rpx; color: var(--ink-2); }
 .seg-i.on { background: var(--card); color: var(--ink); font-weight: 700; box-shadow: 0 2rpx 8rpx rgba(31, 36, 48, 0.08); }
 .folders { padding: 8rpx 24rpx; }
 .folder { display: flex; align-items: center; gap: 18rpx; padding: 22rpx 0; border-bottom: 1rpx solid var(--fill); }
