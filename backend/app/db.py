@@ -2810,14 +2810,32 @@ def upsert_exam_paper(title: str, kind: str, year: int | None, region: str | Non
 
 _PAPERS_CACHE_TTL = 300
 _papers_cache: dict[tuple, tuple[float, list[dict]]] = {}
+_papers_refreshing: set[tuple] = set()
+_papers_lock = threading.Lock()
+
+
+def _refresh_papers_cache(key: tuple) -> None:
+    conn = get_conn()
+    try:
+        _list_exam_papers_base(conn, *key, force=True)
+    finally:
+        conn.close()
+        with _papers_lock:
+            _papers_refreshing.discard(key)
 
 
 def _list_exam_papers_base(conn, kind: str | None, year: int | None,
-                           region: str | None) -> list[dict]:
-    """uid 无关的卷列表（含活跃题数 n / takers），按筛选键 TTL 缓存。"""
+                           region: str | None, force: bool = False) -> list[dict]:
+    """uid 无关的卷列表（含活跃题数 n / takers），按筛选键 TTL 缓存；
+    过期后返回旧值并起后台线程刷新（stale-while-revalidate）。"""
     key = (kind, year, region)
     hit = _papers_cache.get(key)
-    if hit and time.time() - hit[0] < _PAPERS_CACHE_TTL:
+    if hit and not force:
+        if time.time() - hit[0] >= _PAPERS_CACHE_TTL:
+            with _papers_lock:
+                if key not in _papers_refreshing:
+                    _papers_refreshing.add(key)
+                    threading.Thread(target=_refresh_papers_cache, args=(key,), daemon=True).start()
         return hit[1]
     where = ["1=1"]
     args: list = []
