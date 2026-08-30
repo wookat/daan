@@ -1785,7 +1785,7 @@ def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: s
     if noqt:
         where += " AND (question_type IS NULL OR question_type='')"
     rows = conn.execute(
-        f"SELECT question_text, question_id FROM mistakes WHERE {where} ORDER BY COALESCE(next_review, created_at), created_at DESC LIMIT ?",
+        f"SELECT id, question_text, question_id FROM mistakes WHERE {where} ORDER BY COALESCE(next_review, created_at), created_at DESC LIMIT ?",
         (*args, limit * 2),
     ).fetchall()
     out = []
@@ -1805,6 +1805,7 @@ def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: s
             if byid:
                 d = dict(byid)
                 d["options"] = json.loads(d.get("options") or "{}")
+                d["mistake_id"] = r["id"]
                 out.append(d)
                 if len(out) >= limit:
                     break
@@ -1839,6 +1840,7 @@ def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: s
             continue
         d = dict(q)
         d["options"] = json.loads(d.get("options") or "{}")
+        d["mistake_id"] = r["id"]
         out.append(d)
         if len(out) >= limit:
             break

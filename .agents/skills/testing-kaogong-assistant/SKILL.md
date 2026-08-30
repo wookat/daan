@@ -5,6 +5,12 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## 错题本桌面双栏走查新经验（PR#174 轮）
+- 错题本页 ≥1024px 双栏为 float 布局（.bk-main float:left+clear:left / .bk-side float:right+clear:right，容器 920px）。**float+clear 会让主列元素卡在更高的侧栏元素之下**：非空态 tab 与搜索栏之间出现大段垂直空白（左列空洞），检查布局时除了横向重叠还要量各 bk-main 元素间的纵向间隙。
+- 空态判定：`.wrap` 加 `noside` 类且 `.empty` 卡近容器满宽（1440px 时 ~908px）。切空态用随机新 `anonUid` + F5，测完恢复原值。
+- CDP 视口 daemon 的 websocket 会在 `location.reload()`/F5 后断开（eval 返回 null 或超时）：需 pkill 后按 `/json` 当前 target id 重启 daemon 再继续；页面 target id 也随刷新变化，勿硬编码。
+- 复习模式核验：进入后 `.wrap` 类变 `bookwrap-review`（max-width 760px 居中单列），只看不作答，「退出复习」应恢复双栏。批量模式只选择不点「标已掌握/删除」即可零数据变更。
+
 ## 批次2·B/C 生产走查新经验（骨架屏 / 双视口 / 并发部署）
 - **生产验证前必须 curl `/` 核对 index bundle hash**（`curl -s https://kaogong.zalize.com/ | grep -o 'index-[^"]*\.js'`）：SW 缓存与**其他会话并发部署**都可能让线上跑旧 bundle（本轮实测被旧版覆盖过一次）；走查中途也要复核未回退。
 - 375/1440 双视口用 CDP `Emulation.setDeviceMetricsOverride`（常驻 daemon 保持 ws 连接，依赖 `pip install websocket-client`）。
