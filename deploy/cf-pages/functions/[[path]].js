@@ -13,8 +13,25 @@ const SECURITY_HEADERS = {
     "base-uri 'self'; frame-ancestors 'self'; form-action 'self'",
 };
 
-export async function onRequest({ request }) {
+// /tiku* 为纯公开 SEO 页族（不随登录态/UA 变化），在边缘缓存 5 分钟，
+// 避免每个请求（含爬虫抓取）穿透到共享 origin 产生长尾 TTFB。
+const EDGE_CACHE_TTL = 300;
+
+function isEdgeCacheable(request, url) {
+  return request.method === "GET" && url.pathname.startsWith("/tiku");
+}
+
+export async function onRequest({ request, waitUntil }) {
   const url = new URL(request.url);
+  const cacheable = isEdgeCacheable(request, url);
+  if (cacheable) {
+    const hit = await caches.default.match(request.url);
+    if (hit) {
+      const resp = new Response(hit.body, hit);
+      resp.headers.set("X-Edge-Cache", "HIT");
+      return resp;
+    }
+  }
   const req = new Request(ORIGIN + url.pathname + url.search, request);
   req.headers.set("X-Forwarded-Host", url.hostname);
   const upstream = await fetch(req);
@@ -24,6 +41,20 @@ export async function onRequest({ request }) {
     resp.headers.set("X-Robots-Tag", "noindex, nofollow");
   } else {
     resp.headers.delete("X-Robots-Tag");
+  }
+  if (
+    cacheable &&
+    resp.status === 200 &&
+    (resp.headers.get("content-type") || "").includes("text/html")
+  ) {
+    const [body, cacheBody] = resp.body.tee();
+    const cacheCopy = new Response(cacheBody, resp);
+    cacheCopy.headers.set("Cache-Control", `public, max-age=${EDGE_CACHE_TTL}`);
+    cacheCopy.headers.delete("Set-Cookie");
+    waitUntil(caches.default.put(request.url, cacheCopy));
+    const out = new Response(body, resp);
+    out.headers.set("X-Edge-Cache", "MISS");
+    return out;
   }
   return resp;
 }
