@@ -32,6 +32,10 @@
       </view>
       <view class="hotc-body">{{ hot.content }}</view>
     </view>
+    <view v-else-if="count === 0" class="firstc" @click="openDiscuss(true)">
+      <text class="firstc-ph">这题还没有讨论，说说你的解法…</text>
+      <text class="firstc-cta">抢首评 →</text>
+    </view>
   </view>
 </template>
 
@@ -92,8 +96,8 @@ export default {
       }
       this.busy = false;
     },
-    openDiscuss() {
-      uni.navigateTo({ url: '/pkgA/social/discuss?qid=' + this.questionId });
+    openDiscuss(focus) {
+      uni.navigateTo({ url: '/pkgA/social/discuss?qid=' + this.questionId + (focus === true ? '&focus=1' : '') });
     },
     async shareToMates() {
       try {
@@ -134,7 +138,10 @@ export default {
 .hotc-nick { font-size: 22rpx; color: var(--ink-2); font-weight: 600; }
 .hotc-likes { font-size: 21rpx; color: var(--ink-3); margin-left: auto; }
 .hotc-body { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; margin-top: 8rpx; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.firstc { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; background: var(--fill); border: 1rpx dashed var(--line); border-radius: 999rpx; padding: 12rpx 24rpx; margin-top: 14rpx; }
+.firstc-ph { font-size: 23rpx; color: var(--ink-3); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.firstc-cta { font-size: 23rpx; color: var(--brand); font-weight: 600; flex-shrink: 0; }
 /* #ifdef H5 */
-.hotc { cursor: pointer; }
+.hotc, .firstc { cursor: pointer; }
 /* #endif */
 </style>

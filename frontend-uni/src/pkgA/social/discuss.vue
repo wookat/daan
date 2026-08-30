@@ -79,6 +79,7 @@
           class="ipt"
           :placeholder="logged ? '说说你的解法 / 吐槽这道题…' : '登录后参与讨论'"
           :maxlength="500"
+          :focus="autoFocus"
           confirm-type="send"
           @confirm="submit"
           @focus="ensureLogin"
@@ -122,6 +123,7 @@ export default {
       busy: false,
       replyTo: null,
       logged: false,
+      autoFocus: false,
       inboxUnread: 0,
     };
   },
@@ -138,6 +140,11 @@ export default {
     if (!this.qid) {
       uni.showToast({ title: '缺少题目参数', icon: 'none' });
       return;
+    }
+    if (opts.focus === '1' && getToken()) {
+      setTimeout(() => {
+        this.autoFocus = true;
+      }, 300);
     }
     this.loadQuestion();
     this.load();
