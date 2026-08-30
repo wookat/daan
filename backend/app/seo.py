@@ -237,7 +237,7 @@ def tiku_index():
     body = (
         "<h1>公务员考试题库</h1>"
         f"<p>收录 {total} 道行测/申论题目（含历年真题），按模块、题型、考点分类，可在线刷题并查看花生十三方法讲解。"
-        '· <a href="/tiku/discuss/">考友热议题目 →</a></p>'
+        '· <a href="/tiku/discuss/" style="white-space:nowrap">考友热议题目 →</a></p>'
         + "".join(sections)
         + f'<a class="cta" href="{_e(SITE_BASE)}/">进入刷题主站 →</a>'
     )
