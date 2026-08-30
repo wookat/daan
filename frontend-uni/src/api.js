@@ -243,7 +243,8 @@ function rawRequest(path, { method = 'GET', data, header = {}, timeout = 180000 
       success: (res) => {
         if (res.statusCode >= 200 && res.statusCode < 300) resolve(res.data);
         else {
-          const detail = (res.data && res.data.detail) || '';
+          // 422 校验错误等 detail 为对象数组，直接透出会渲染成 [object Object]
+          const detail = res.data && typeof res.data.detail === 'string' ? res.data.detail : '';
           // 仅登录态本身失效才清登录（访问码/管理令牌等 401 不应踢登录）
           const authExpired =
             (res.statusCode === 401 && !path.startsWith('/api/auth/') && (detail.includes('未登录') || detail.includes('登录已过期'))) ||
