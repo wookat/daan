@@ -193,6 +193,16 @@
         <text class="rr-tip">答对的已推进复习计划<template v-if="redoReport.still">；仍错的已重置复习，明天优先再练</template></text>
         <view class="rr-go" @click="goReview">回错题本查看 ›</view>
       </view>
+      <view v-if="!beiMode && !examMode && weakSpots.length" class="weakrf">
+        <view class="rr-t">薄弱考点 · 趁热打铁</view>
+        <view v-for="w in weakSpots" :key="w.key" class="wr-row">
+          <view class="wr-l">
+            <text class="wr-name">{{ w.name }}</text>
+            <text class="wr-meta">本组错 {{ w.n }} 题</text>
+          </view>
+          <view class="wr-btn" @click="reinforceWeak(w)">强化 5 道新题</view>
+        </view>
+      </view>
       <view v-if="!beiMode" class="report">
         <view class="report-row">
           <view class="report-cell"><text class="report-n">{{ fmtSecs(totalSecs) }}</text><text class="report-t">总用时</text></view>
@@ -488,6 +498,21 @@ export default {
     },
     wrongCount() {
       return this.items.filter((q) => q._picked && q._picked !== q.answer).length;
+    },
+    // 完成页薄弱考点：本组错题按考点聚合，错题数倒序取前 3
+    weakSpots() {
+      const map = {};
+      for (const q of this.items) {
+        if (!q._picked || q._picked === q.answer) continue;
+        const key = q.tag3 || q.question_type || q.module || 'other';
+        if (!map[key]) {
+          const qt = q.question_type || '';
+          const sub = qt.includes('-') ? qt.split('-').slice(1).join('-') : qt || null;
+          map[key] = { key, name: sub || this.modName(q.module), module: q.module, submodule: sub, tag3: q.tag3 || null, n: 0 };
+        }
+        map[key].n++;
+      }
+      return Object.values(map).sort((a, b) => b.n - a.n).slice(0, 3);
     },
     weakModule() {
       let worst = null;
@@ -1162,6 +1187,9 @@ export default {
         uni.hideLoading();
         this._starting = false;
       }
+    },
+    reinforceWeak(w) {
+      this.startReinforce({ module: w.module, submodule: w.submodule, tag3: w.tag3, count: 5, source: 'session-report' });
     },
     // 完成页「再来一组」：错题重练场次重用同一组错题，其余按原模块重新抽题
     retryGroup() {
@@ -2222,6 +2250,13 @@ export default {
 .acard-n.skip { background: var(--line); color: var(--ink-2); }
 .beat { margin-top: 10rpx; font-size: 25rpx; color: var(--brand); background: var(--soft-bg); border-radius: 999rpx; padding: 10rpx 26rpx; }
 .redoreport { width: 100%; margin-top: 24rpx; background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 18rpx; padding: 24rpx 28rpx; box-sizing: border-box; text-align: left; }
+.weakrf { width: 100%; margin-top: 24rpx; background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 18rpx; padding: 24rpx 28rpx; box-sizing: border-box; text-align: left; }
+.wr-row { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; margin-top: 18rpx; }
+.wr-l { display: flex; flex-direction: column; gap: 4rpx; min-width: 0; }
+.wr-name { font-size: 26rpx; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wr-meta { font-size: 22rpx; color: var(--bad-strong); }
+.wr-btn { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: var(--brand); border: 1rpx solid var(--brand); border-radius: 999rpx; padding: 8rpx 22rpx; }
+@media (min-width: 768px) { .wr-btn { cursor: pointer; } .wr-btn:hover { background: var(--brand); color: #fff; } }
 .rr-t { font-size: 27rpx; font-weight: 700; color: var(--ink); }
 .rr-row { display: flex; gap: 16rpx; margin: 18rpx 0 12rpx; }
 .rr-cell { flex: 1; text-align: center; background: var(--card-bg, #fff); border-radius: 14rpx; padding: 16rpx 0; }
