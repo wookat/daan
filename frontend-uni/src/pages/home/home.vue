@@ -636,8 +636,6 @@ export default {
     this.loadCounts();
     this.prefetchNext();
     this.loadAnnounce();
-    this.loadPlan();
-    this.loadBadges();
     this.calcWeeklyDot();
     this.checkComeback();
     this.checkReminder();
@@ -647,7 +645,7 @@ export default {
       // 立即弹出设置，不等 profile 请求返回（返回后表单会回填已有值）
       this.openSetup();
     }
-    this.loadProfile().then(() => {
+    this.loadHome().then(() => {
       if (wantSetup && this.setupOpen && this.profile) this.openSetup();
     });
     if (this.realMode) this.loadRealFilters();
@@ -821,12 +819,36 @@ export default {
         this.badgeInfo = await fetchCheckinBadges();
       } catch (e) { /* 非关键路径 */ }
       try {
-        const d = await fetchCheckinSummary();
-        if (d && d.today_n != null) {
-          this.svTodayN = d.today_n;
-          if (d.today_n > 0) this.reminderBanner = false;
-        }
+        this.applySummary(await fetchCheckinSummary());
       } catch (e) { /* 非关键路径 */ }
+    },
+    applySummary(d) {
+      if (d && d.today_n != null) {
+        this.svTodayN = d.today_n;
+        if (d.today_n > 0) this.reminderBanner = false;
+      }
+    },
+    // 首屏 uid 专属数据聚合拉取：bundle 一次取齐 plan/profile/plan_today/badges/summary，
+    // 失败时回退逐个端点（旧后端/部署窗口兼容）
+    async loadHome() {
+      const uid = anonUid();
+      if (!uid) return;
+      try {
+        const d = await request('/api/home_bundle?uid=' + encodeURIComponent(uid));
+        this.applyPlan(d.plan);
+        if (d.badges) this.badgeInfo = d.badges;
+        this.applySummary(d.summary);
+        this.profile = d.profile || null;
+        this.profileFetched = true;
+        if (this.profile) {
+          this.planToday = d.plan_today || null;
+          uni.setStorageSync('homePlanCard', this.planToday && this.planToday.profile ? '1' : '');
+        } else this.planToday = null;
+      } catch (e) {
+        this.loadPlan();
+        this.loadBadges();
+        await this.loadProfile();
+      }
     },
     taskGo(kind) {
       trackEvent('task_card_click', kind);
@@ -931,12 +953,16 @@ export default {
       const uid = uni.getStorageSync('anonUid');
       if (!uid) return;
       try {
-        this.plan = await request('/api/daily_plan?uid=' + encodeURIComponent(uid));
-        this.planFetched = true;
-        const due = (this.plan && this.plan.due_mistakes) || 0;
-        if (due > 0) uni.setTabBarBadge({ index: 1, text: String(due > 99 ? '99+' : due) });
-        else uni.removeTabBarBadge({ index: 1 });
+        this.applyPlan(await request('/api/daily_plan?uid=' + encodeURIComponent(uid)));
       } catch (e) { /* 非关键路径 */ }
+    },
+    applyPlan(plan) {
+      if (!plan) return;
+      this.plan = plan;
+      this.planFetched = true;
+      const due = plan.due_mistakes || 0;
+      if (due > 0) uni.setTabBarBadge({ index: 1, text: String(due > 99 ? '99+' : due) });
+      else uni.removeTabBarBadge({ index: 1 });
     },
     async loadProfile() {
       try {
