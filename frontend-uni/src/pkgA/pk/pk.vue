@@ -2,6 +2,8 @@
   <view class="wrap pk">
     <!-- 入口页 -->
     <template v-if="view === 'home'">
+      <view class="pk-cols">
+      <view class="pk-left">
       <view class="hero">
         <view class="hero-t"><l-icon name="swords" :size="22" color="#ffffff" /><text>答题 PK</text></view>
         <text class="hero-s">同组 10 题 · 比分数拼手速 · 答对 +80，越快加成越高</text>
@@ -20,7 +22,9 @@
         <input v-model="joinCode" class="join-input" placeholder="输入挑战码，如 A8X2QK" :maxlength="8" />
         <view class="join-btn" @click="joinByCode">应战</view>
       </view>
+      </view>
 
+      <view class="pk-right">
       <view class="sec-h">
         <text class="sec-t">本周胜场榜</text>
         <text v-if="lb.my_rank" class="sec-more">我的排名 #{{ lb.my_rank }} · {{ lb.my_wins }} 胜</text>
@@ -48,10 +52,13 @@
           <text class="m-badge" :class="matchBadge(m).cls">{{ matchBadge(m).t }}</text>
         </view>
       </view>
+      </view>
+      </view>
     </template>
 
     <!-- 答题页 -->
     <template v-else-if="view === 'quiz'">
+      <view class="pk-solo">
       <view class="pk-top">
         <view class="vs">
           <view class="p">
@@ -98,10 +105,12 @@
         <text>提交未成功（作答已保留），网络恢复后可重试</text>
         <view class="act-btn main" style="margin-top: 16rpx" @click="finishQuiz">重新提交</view>
       </view>
+      </view>
     </template>
 
     <!-- 结果 / 等待页 -->
     <template v-else-if="view === 'result'">
+      <view class="pk-solo">
       <view class="res-hero" :class="resCls">
         <text class="res-t">{{ resTitle }}</text>
         <text class="res-s">{{ MODS[match.module] || '混合模块' }} · 挑战码 {{ match.code }}</text>
@@ -142,6 +151,7 @@
         <view class="act-btn sub" @click="rematch">再来一局</view>
       </template>
       <view class="act-btn plain" @click="backHome">返回 PK 大厅</view>
+      </view>
     </template>
 
     <view v-else class="card empty">加载中…</view>
@@ -634,8 +644,16 @@ export default {
 
 /* #ifdef H5 */
 @media (min-width: 768px) {
-  .wrap.pk { max-width: 680px; }
-  .opt:hover, .chip:hover, .act-btn:hover, .m-row:hover { cursor: pointer; }
+  .wrap.pk { max-width: 1044px; margin: 0 auto; }
+  .pk-solo { max-width: 680px; margin: 0 auto; }
+  .opt:hover, .chip:hover, .act-btn:hover, .m-row:hover, .join-btn:hover, .lb-row:hover { cursor: pointer; }
+}
+
+@media (min-width: 1024px) {
+  .pk-cols { display: flex; gap: 32rpx; align-items: flex-start; }
+  .pk-left { width: 420px; flex: none; position: sticky; top: 24rpx; }
+  .pk-right { flex: 1; min-width: 0; }
+  .pk-right .sec-h:first-child { margin-top: 0; }
 }
 /* #endif */
 </style>
