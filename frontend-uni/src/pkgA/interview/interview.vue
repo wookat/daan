@@ -89,6 +89,12 @@
           <view class="sec-t">考官点评{{ streaming ? '（生成中…）' : '' }}</view>
           <view class="card review">
             <rich-text v-if="reviewHtml" :nodes="reviewHtml" />
+            <view v-else-if="reviewMissing && !streaming" class="regen">
+              <view class="regen-tip">上次点评生成被中断，评分已保留</view>
+              <!-- #ifdef H5 -->
+              <button class="btn-primary regen-btn" @click="regenReview">重新生成点评</button>
+              <!-- #endif -->
+            </view>
             <view v-else class="loading">考官正在撰写点评…</view>
           </view>
         </view>
@@ -105,6 +111,9 @@
 
 <script>
 import { interviewCategories, interviewDraw, interviewSession, streamInterview } from '../../api.js';
+// #ifdef H5
+import { streamInterviewReviewRegen } from '../../api.js';
+// #endif
 import { md } from '../../md.js';
 
 export default {
@@ -121,6 +130,7 @@ export default {
       streaming: false,
       report: { scores: {}, total: 0, summary: '', duration: 0, answerLen: 0, category: '' },
       review: '',
+      reviewMissing: false,
       points: [],
       _timer: null,
     };
@@ -215,6 +225,7 @@ export default {
     async loadSession(sid) {
       try {
         const d = await interviewSession(sid);
+        this._sid = sid;
         const s = d.session;
         this.question = { id: s.question_id, category: s.category, question: s.question_text, source: s.source };
         this.answer = s.answer_text || '';
@@ -227,6 +238,7 @@ export default {
           category: s.category,
         };
         this.review = s.review || '';
+        this.reviewMissing = !this.review;
         this.points = s.points || [];
         this.step = 'report';
       } catch (e) {
@@ -234,6 +246,24 @@ export default {
         this.loadCategories();
       }
     },
+    // #ifdef H5
+    async regenReview() {
+      if (this.streaming) return;
+      this.streaming = true;
+      try {
+        const sid = this._sid;
+        await streamInterviewReviewRegen({
+          sessionId: sid,
+          onDelta: (full) => { this.review = full; },
+        });
+        this.reviewMissing = false;
+      } catch (e) {
+        uni.showToast({ title: e.message || '点评生成失败，请重试', icon: 'none' });
+      } finally {
+        this.streaming = false;
+      }
+    },
+    // #endif
     retry() {
       this.answer = '';
       this.review = '';
@@ -301,6 +331,9 @@ export default {
 .pt { font-size: 26rpx; color: var(--ink); line-height: 1.7; margin: 8rpx 0; }
 .review { font-size: 27rpx; line-height: 1.8; }
 .loading { font-size: 26rpx; color: var(--ink-2); padding: 20rpx 0; }
+.regen { padding: 16rpx 0; }
+.regen-tip { font-size: 26rpx; color: var(--ink-2); margin-bottom: 20rpx; }
+.regen-btn { max-width: 360rpx; }
 
 /* #ifdef H5 */
 @media (min-width: 768px) {

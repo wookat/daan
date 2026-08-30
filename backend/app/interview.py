@@ -250,6 +250,41 @@ async def api_answer_stream(body: dict):
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
+@router.post("/sessions/{sid}/review/stream")
+async def api_review_regen_stream(sid: int, body: dict):
+    """为点评缺失的 session（流中断）重新生成考官点评：SSE data 增量 → done，完成后回填 DB。"""
+    uid = str(body.get("uid") or "").strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    rate_limit(f"itv_regen:{uid[:64]}", 10, 600)
+    conn = db.get_conn()
+    row = conn.execute("SELECT * FROM interview_sessions WHERE id=? AND uid=?", (sid, uid)).fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(404, "记录不存在")
+    if (row["review"] or "").strip():
+        raise HTTPException(400, "点评已存在")
+    q = question_by_id(row["question_id"])
+    if not q:
+        raise HTTPException(404, "题目不存在")
+    scores = json.loads(row["scores"] or "{}")
+    answer = row["answer_text"] or ""
+
+    async def gen():
+        try:
+            full = ""
+            async for delta in llm.chat_stream(_review_prompt(q, answer, scores, "")):
+                full += delta
+                yield "data: " + json.dumps({"d": delta}, ensure_ascii=False) + "\n\n"
+            _update_review(sid, full)
+            yield "event: done\ndata: " + json.dumps({"session_id": sid}) + "\n\n"
+        except Exception as e:  # noqa: BLE001
+            yield "event: error\ndata: " + json.dumps({"message": _friendly_ai_err(e)}, ensure_ascii=False) + "\n\n"
+
+    return StreamingResponse(gen(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
 @router.post("/answer")
 async def api_answer(body: dict):
     """非流式版（小程序/App 用）：一次返回打分 + 点评。"""
