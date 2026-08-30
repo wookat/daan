@@ -618,7 +618,7 @@ export function interviewSession(id) {
 export async function streamInterview({ questionId, answer, durationSec, onMeta, onDelta }) {
   const resp = await fetch(BASE_URL + '/api/interview/answer/stream', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-Access-Code': getCode(), ...authHeader() },
     body: JSON.stringify({ uid: anonUid(), question_id: questionId, answer, duration_sec: durationSec || 0 }),
   });
   if (!resp.ok) {
