@@ -22,6 +22,7 @@ const EDGE_CACHE_TTL = 300;
 const API_EDGE_CACHE_TTL = 60;
 const API_CACHE_ALLOWLIST = new Set([
   "/api/announcement",
+  "/api/question_counts",
   "/api/submodules",
   "/api/real_filters",
   "/api/papers",

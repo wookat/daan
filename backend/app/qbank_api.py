@@ -60,6 +60,12 @@ def api_questions_hs_import(body: dict, x_import_token: str | None = Header(None
     return {"updated": n}
 
 
+@router.get("/api/question_counts")
+def api_question_counts():
+    """各模块题数（uid 无关、确定性，供首屏轻量拉取与边缘缓存）。"""
+    return {"counts": db.question_counts()}
+
+
 @router.get("/api/questions")
 def api_questions(
     module: str | None = None,

@@ -861,7 +861,7 @@ export default {
     },
     async loadCounts() {
       try {
-        const d = await request('/api/questions?limit=1');
+        const d = await request('/api/question_counts');
         this.counts = d.counts || [];
       } catch (e) { /* 走下方重试 */ }
       if (this.counts.length) {
