@@ -147,6 +147,17 @@ export default {
     }
     this.loadQuestion();
     this.load();
+    this._onAuth = () => {
+      const l = !!getToken();
+      if (l !== this.logged) {
+        this.logged = l;
+        if (this.qid) this.load();
+      }
+    };
+    uni.$on('authChanged', this._onAuth);
+  },
+  onUnload() {
+    if (this._onAuth) uni.$off('authChanged', this._onAuth);
   },
   methods: {
     modName(m) {

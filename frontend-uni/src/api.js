@@ -43,6 +43,7 @@ export function setAuth(token, user) {
   uni.setStorageSync('authToken', token);
   uni.setStorageSync('authUser', user);
   uni.setStorageSync('anonUid', user.uid);
+  uni.$emit('authChanged');
 }
 
 // 退出/401：清登录态，回到本机匿名 uid
@@ -52,6 +53,7 @@ export function clearAuth() {
   const dev = uni.getStorageSync('deviceAnonUid');
   if (dev) uni.setStorageSync('anonUid', dev);
   else uni.removeStorageSync('anonUid');
+  uni.$emit('authChanged');
 }
 
 function authHeader() {

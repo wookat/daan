@@ -569,6 +569,15 @@ export default {
       return { clipPath: `polygon(${pts.join(',')})` };
     },
   },
+  onLoad() {
+    this._onAuth = () => {
+      this.authUser = getAuthUser();
+    };
+    uni.$on('authChanged', this._onAuth);
+  },
+  onUnload() {
+    if (this._onAuth) uni.$off('authChanged', this._onAuth);
+  },
   onShow() {
     this.authUser = getAuthUser();
     this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
