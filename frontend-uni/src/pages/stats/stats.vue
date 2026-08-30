@@ -37,6 +37,8 @@
 
     <predict-card ref="predict" />
 
+    <view class="sgrid">
+
     <view class="card">
       <view class="hm-h">
         <view class="h" style="margin-bottom: 0">学习热力图·近12周</view>
@@ -318,6 +320,7 @@
           <button class="bk-btn ghost" :disabled="bkLoading" @click="doRestore">输入恢复码恢复</button>
         </view>
       </view>
+    </view>
     </view>
   </view>
 </template>
@@ -1004,4 +1007,13 @@ export default {
 .acct-sub { font-size: 24rpx; color: var(--ink-3); margin-top: 6rpx; }
 .acct-btn { flex-shrink: 0; min-height: 88rpx; display: flex; align-items: center; padding: 0 30rpx; border-radius: 16rpx; background: var(--brand); color: #fff; font-size: 28rpx; font-weight: 600; }
 .acct-btn.ghost { background: var(--fill); color: var(--ink-2); }
+
+/* 桌面双栏仪表盘（仅 H5 ≥1024px） */
+/* #ifdef H5 */
+@media (min-width: 1024px) {
+  .wrap { max-width: 1044px !important; margin: 0 auto; }
+  .sgrid { column-count: 2; column-gap: 24rpx; }
+  .sgrid > .card { break-inside: avoid; margin-bottom: 24rpx; }
+}
+/* #endif */
 </style>
