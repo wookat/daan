@@ -20,7 +20,7 @@
 ### team.vue
 - ≥768px：`.wrap.team { max-width: 1044px; }`（创建弹层已居中）。
 - ≥1024px：
-  - home：hero 整宽；下方 `.tm-cols`（row-reverse）双栏——右 `.tm-side`（创建小队+邀请码加入，360px sticky）/ 左 `.tm-main`（我的小队列表）。DOM 顺序保持原单列（列表在前、创建/加入在后），移动端零变化。
+  - home：hero 整宽；下方 `.tm-cols` 双栏——左 `.tm-main`（我的小队列表）/ 右 `.tm-side`（创建小队+邀请码加入，360px sticky）。DOM 顺序保持原单列（列表在前、创建/加入在后），移动端零变化。
   - panel：hero 整宽；下方 `.tp-cols` 双栏——左 `.tp-side`（本周队内排行，360px sticky）/ 右 `.tp-main`（周打卡表头+队友卡列表）。
 - <1024px 包裹层退化纵向，DOM 顺序与原单列一致。
 

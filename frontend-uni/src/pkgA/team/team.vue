@@ -370,7 +370,7 @@ export default {
 }
 
 @media (min-width: 1024px) {
-  .tm-cols { display: flex; flex-direction: row-reverse; gap: 32rpx; align-items: flex-start; }
+  .tm-cols { display: flex; gap: 32rpx; align-items: flex-start; }
   .tm-main { flex: 1; min-width: 0; }
   .tm-side { width: 360px; flex: none; position: sticky; top: 24rpx; }
   .tm-side .act-btn.main { margin-top: 0; }
