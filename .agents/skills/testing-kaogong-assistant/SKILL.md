@@ -5,6 +5,13 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R51 a11y 扫尾走查新经验
+- **新部署后旧标签页仍跑旧 bundle**：SPA 标签页不会自动换 bundle，断言前必须 `Page.reload {ignoreCache:true}` 并用 `[...document.scripts].map(s=>s.src)` 核对 index-*.js 是否为本轮 bundle，否则新特性断言会假失败。
+- Lighthouse CLI 可直接后台批量跑：`npx lighthouse "https://kaogong.zalize.com/#/<page>" --only-categories=accessibility --chrome-flags="--headless=new" --output=json`，headless Chrome 是独立 profile（游客态），不影响测试浏览器。
+- 掌握度地图解锁态（≥30 题）无需重刷 30 题：复用此前轮次留下的一次性游客 uid（如作答过 30+ 题的 uid），`localStorage.setItem('anonUid', …)`+刷新即可；冷启动态则 removeItem('anonUid') 生成全新 uid。
+- placeholder→aria-label 镜像断言选择器：`uni-input input` / `uni-textarea textarea` 的 `aria-label` 应等于组件 placeholder 文本（App.vue markMain MutationObserver 全站生效）。
+- 灰阶 token 判据：--ink-2 浅色 rgb(95,101,117)、深色 rgb(155,160,176)；--ink-3 浅色 rgb(138,144,160)（旧低对比值，出现即回归失败）。
+
 ## R50 刷题完成页/薄弱考点区块走查新经验
 - 直开 `/#/pages/practice/practice` 会自动出一组 10 题；键盘流 `a`→等 1.2s→`Enter` 循环可快速做完全组（全选 A 天然产生跨考点错题，适合制造 `.weakrf` 薄弱考点区块）。
 - 「全对完成一组」可行路径：完成页点某考点「强化 5 道新题」进入 5 题判断推理/定义判断强化组，逐题认真作答（定义判断类可推理答对）——5 题全对成本可接受，不要假设无法制造全对场景。
