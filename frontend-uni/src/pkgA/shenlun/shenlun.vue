@@ -39,6 +39,7 @@
       </view>
       <view v-if="loading" class="spin">加载中…</view>
       <view v-else-if="!qs.length" class="spin">暂无题目，敬请期待</view>
+      <view class="qgrid">
       <view v-for="q in qs" :key="q.id" class="card q-item" @click="openQ(q.id)">
         <view class="q-top">
           <view class="q-tags">
@@ -53,12 +54,15 @@
           <text class="q-go" @click.stop="openQ(q.id)">去作答 ›</text>
         </view>
       </view>
+      </view>
       <view v-if="!qEnd && qs.length >= 20" class="more" @click="loadMore">加载更多</view>
     </template>
 
     <template v-if="tab === 'q' && detail">
       <view class="back" @click="detail = null">‹ 返回列表</view>
       <view class="card">
+        <view class="d-cols">
+        <view class="d-left">
         <view class="q-top">
           <text class="q-paper">{{ detail.paper || (detail.exam_year + ' · ' + (detail.exam_region || '')) }}</text>
           <text class="q-type">{{ detail.qtype }}</text>
@@ -67,6 +71,8 @@
         <text class="d-q">{{ detail.question }}</text>
         <view class="d-h toggle" @click="showMat = !showMat">给定资料 {{ showMat ? '▲' : '▼' }}</view>
         <text v-if="showMat" class="d-mat">{{ detail.material }}</text>
+        </view>
+        <view class="d-right">
         <view class="d-ans-h"><view class="d-h" style="margin: 0">我的作答</view><text v-if="myAnswer" class="d-save">已自动保存 · {{ myAnswer.length }} 字</text></view>
         <textarea v-model="myAnswer" class="d-ta" :maxlength="3000" placeholder="在此作答后点击下方按钮，AI 按采分点批改（大作文为结构点评+参考档位）。草稿自动保存在本机" auto-height @input="saveDraft" />
         <view class="grade-btn" :class="{ dis: grading || !myAnswer.trim() }" @click="grade">{{ grading ? 'AI 批改中…' : '提交 AI 批改' }}</view>
@@ -85,6 +91,8 @@
         <view class="d-h toggle ref" @click="showRef = !showRef">{{ showRef ? '收起参考要点 ▲' : '写完再看 · 参考要点 ▼' }}</view>
         <text v-if="showRef" class="d-ref">{{ detail.reference }}</text>
         <text v-if="showRef && detail.notes" class="d-notes">{{ detail.notes }}</text>
+        </view>
+        </view>
       </view>
     </template>
 
@@ -95,6 +103,7 @@
       </view>
       <view v-if="loading" class="spin">加载中…</view>
       <view v-else-if="!shownMats.length" class="spin">{{ favOnly ? '还没有收藏素材，点素材右上星标收藏' : '暂无素材，敬请期待' }}</view>
+      <view class="mgrid">
       <view v-for="m in shownMats" :key="m.id" class="card m-item">
         <view class="q-top">
           <text class="m-topic">{{ m.topic }}</text>
@@ -106,12 +115,14 @@
         <text class="m-content" :class="{ clamp: expanded !== m.id }" @click="expanded = expanded === m.id ? 0 : m.id">{{ m.content }}</text>
         <text v-if="m.source" class="m-src">出处：{{ m.source }}</text>
       </view>
+      </view>
       <view v-if="!favOnly && !mEnd && mats.length >= 20" class="more" @click="loadMoreMat">加载更多</view>
     </template>
 
     <template v-if="tab === 'r'">
       <view v-if="recLoading" class="spin">加载中…</view>
       <view v-else-if="!recs.length" class="spin">还没有作答记录，去题库作答并 AI 批改后会自动保存</view>
+      <view class="rgrid">
       <view v-for="r in recs" :key="r.id" class="card">
         <view class="q-top">
           <text class="hist-time">{{ fmtTime(r.created_at) }}</text>
@@ -119,6 +130,7 @@
         </view>
         <text class="q-text" @click="openQ(r.qid); tab = 'q'">{{ r.question || '（题目已下线）' }}</text>
         <text class="m-content" :class="{ clamp: expanded !== 'r' + r.id }" @click="expanded = expanded === 'r' + r.id ? 0 : 'r' + r.id">{{ '【我的作答】\n' + r.answer + (r.result ? '\n\n【批改结果】\n' + r.result : '') }}</text>
+      </view>
       </view>
     </template>
   </view>
@@ -472,4 +484,25 @@ page { background: var(--fill); }
 .d-grade { margin-top: 8rpx; }
 .g-note { font-size: 21rpx; color: var(--ink-3); font-weight: 400; }
 .g-body { font-size: 25rpx; color: var(--ink-1); background: var(--warn-soft); border-radius: 12rpx; padding: 18rpx; line-height: 1.8; white-space: pre-wrap; display: block; }
+.d-cols { display: flex; flex-direction: column; }
+
+/* 桌面（H5）：≥768 页宽收敛+居中弹窗；≥1024 列表两列+详情双栏工作台 */
+/* #ifdef H5 */
+@media (min-width: 768px) {
+  .page { max-width: 1044px; margin: 0 auto; }
+  .mask { align-items: center; justify-content: center; }
+  .sheet { max-width: 520px; border-radius: 28rpx; }
+  .q-item:hover, .m-item:hover, .chip:hover, .seg-i:hover { cursor: pointer; }
+  .q-item:hover { box-shadow: 0 8rpx 24rpx rgba(23, 24, 28, 0.08); }
+}
+@media (min-width: 1024px) {
+  .qgrid, .mgrid, .rgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; align-items: start; }
+  .q-item { display: flex; flex-direction: column; }
+  .q-item .q-text { flex: 1; }
+  .d-cols { flex-direction: row; gap: 40rpx; align-items: flex-start; }
+  .d-left { flex: 1; min-width: 0; }
+  .d-right { flex: 1; min-width: 0; position: sticky; top: 24rpx; }
+  .d-right .d-ans-h { margin-top: 0; }
+}
+/* #endif */
 </style>
