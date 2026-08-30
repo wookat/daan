@@ -50,7 +50,7 @@
       </view>
       <view class="ds-col">
         <view class="ds-h"><l-icon name="camera" :size="18" color="#2e5bff" /><text class="ds-t">上传题目截图</text></view>
-        <view class="ds-drop" @click="openAlbum" @dragover.prevent @drop.prevent="onDrop">
+        <view class="ds-drop" @click="openAlbum">
           <l-icon name="files" :size="30" color="#8fa3d9" />
           <text class="ds-d1">点击选择图片，或拖拽到这里</text>
           <text class="ds-d2">也可直接 Ctrl+V 粘贴截图</text>
@@ -274,6 +274,20 @@ export default {
       this._onPaste = (e) => this.handlePaste(e);
       window.addEventListener('paste', this._onPaste);
     }
+    if (!this._onDragOver) {
+      // uni-app H5 不代理 drag 类事件，需原生监听
+      this._onDragOver = (e) => {
+        if (e.target.closest && e.target.closest('.ds-drop')) e.preventDefault();
+      };
+      this._onDrop = (e) => {
+        if (e.target.closest && e.target.closest('.ds-drop')) {
+          e.preventDefault();
+          this.onDrop(e);
+        }
+      };
+      document.addEventListener('dragover', this._onDragOver);
+      document.addEventListener('drop', this._onDrop);
+    }
     // #endif
     this.loadDue();
     const redo = uni.getStorageSync('redoQuestion');
@@ -301,6 +315,12 @@ export default {
       if (this._onPaste) {
         window.removeEventListener('paste', this._onPaste);
         this._onPaste = null;
+      }
+      if (this._onDragOver) {
+        document.removeEventListener('dragover', this._onDragOver);
+        document.removeEventListener('drop', this._onDrop);
+        this._onDragOver = null;
+        this._onDrop = null;
       }
     },
     handlePaste(e) {
