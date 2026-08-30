@@ -37,6 +37,17 @@ export async function promptInstall() {
   return choice && choice.outcome; // 'accepted' | 'dismissed'
 }
 
+export function isIosSafariInstallable() {
+  if (typeof navigator === 'undefined' || typeof window === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  const isIpadOs = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+  if (!/iPhone|iPad|iPod/.test(ua) && !isIpadOs) return false;
+  if (/MicroMessenger|CriOS|FxiOS|EdgiOS/i.test(ua)) return false;
+  if (navigator.standalone) return false;
+  if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return false;
+  return true;
+}
+
 export function onInstallable(cb) {
   listeners.push(cb);
   return () => {

@@ -101,6 +101,9 @@
       <wd-cell v-if="pwaInstallable" title="安装到桌面" value="像 App 一样从主屏打开" is-link clickable @click="installPwa">
         <template #icon><view class="cell-ico"><l-icon name="monitor-down" :size="18" color="#0d9488" /></view></template>
       </wd-cell>
+      <wd-cell v-else-if="iosInstallable" title="安装到主屏幕" value="像 App 一样从主屏打开" is-link clickable @click="showIosGuide">
+        <template #icon><view class="cell-ico"><l-icon name="monitor-down" :size="18" color="#0d9488" /></view></template>
+      </wd-cell>
       <!-- #endif -->
       <wd-cell title="离线题包" :value="offlineN ? offlineN + ' 个题包' : '未下载'" is-link clickable @click="goOffline">
         <template #icon><view class="cell-ico"><l-icon name="package" :size="18" color="#0d9488" /></view></template>
@@ -149,7 +152,7 @@ import { request, getAuthUser, authLogout, clearAuth, anonUid, fetchCheckinBadge
 import { getReminderSettings } from '../../reminder.js';
 import { cycleThemeMode, getThemeMode, THEME_LABELS } from '../../theme.js';
 // #ifdef H5
-import { canInstall, promptInstall, onInstallable } from '../../pwa.js';
+import { canInstall, promptInstall, onInstallable, isIosSafariInstallable } from '../../pwa.js';
 // #endif
 import { listPacks } from '../../offline.js';
 import { checkinStreak } from '../../checkin.js';
@@ -172,6 +175,7 @@ export default {
       remindTime: '20:30',
       themeMode: 'system',
       pwaInstallable: false,
+      iosInstallable: false,
       offlineN: 0,
       badgeInfo: null,
       growth: null,
@@ -217,6 +221,7 @@ export default {
     uni.$on('authChanged', this._onAuth);
     // #ifdef H5
     this.pwaInstallable = canInstall();
+    this.iosInstallable = isIosSafariInstallable();
     this._offInstallable = onInstallable(() => {
       this.pwaInstallable = canInstall();
     });
@@ -255,6 +260,14 @@ export default {
       if (outcome === 'accepted') {
         uni.showToast({ title: '已安装，可从桌面直接打开', icon: 'none' });
       }
+    },
+    showIosGuide() {
+      uni.showModal({
+        title: '安装到主屏幕',
+        content: '1. 点浏览器底部的「分享」按钮（向上箭头）\n2. 在菜单中选择「添加到主屏幕」\n完成后可像 App 一样从主屏直接打开', 
+        showCancel: false,
+        confirmText: '知道了',
+      });
     },
     // #endif
     async loadInbox() {
