@@ -5,6 +5,14 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R52 练习历史页走查新经验
+- 练习历史页选择器：会话行 `.item`>`.row`（`.time`/`.chip`/`.meta`/`.pct`，pct 语义色 `.hi`=--ok-strong `.lo`=--bad-strong）；展开逐题 `.d-row`（`.d-mark.ok/.bad`、`.d-q`、错题 `.d-ans`「我的答案 X · 正解 Y」、`.d-secs`）；重练按钮 `.btn-redo`；空态 `.empty`+「去刷一组题」。
+- **逐题比对取证法**：作答时用 CDP 循环（Input.dispatchKeyEvent 'a'→sleep1.4s→读 `.omark.good` 所在 `.okey` 得正解、`.omark.badm` 判错→Enter）逐题记录 JSON 基准，再与历史 detail `.d-row` 全量比对——注意答对时 good 标记在 picked 选项上，若读到 ans=null&无 badm 即答对。
+- 同游客 30min 内多组会并成一个会话（题数/正确率合并、错题按 question.id 去重），断言按合并后口径；重练组题目顺序=历史错题顺序。
+- toast「错题重练开始」约 1.5s：点 `.btn-redo` 后 wait 0.8s 内截图才能抓到。
+- practice 页无侧栏，完成页左上返回箭头会回到导航栈上一页（如历史页），不是首页。
+- **pkill 自杀陷阱**：`pkill -f 'r45_ne[t].py'` 与 `nohup python3 r45_net.py …` 放同一条 exec 命令时，本 shell cmdline 含字面 r45_net.py 会被 pkill 匹配杀掉自己（exit -1）——kill 与重启必须分两次 exec。
+
 ## R51 a11y 扫尾走查新经验
 - **新部署后旧标签页仍跑旧 bundle**：SPA 标签页不会自动换 bundle，断言前必须 `Page.reload {ignoreCache:true}` 并用 `[...document.scripts].map(s=>s.src)` 核对 index-*.js 是否为本轮 bundle，否则新特性断言会假失败。
 - Lighthouse CLI 可直接后台批量跑：`npx lighthouse "https://kaogong.zalize.com/#/<page>" --only-categories=accessibility --chrome-flags="--headless=new" --output=json`，headless Chrome 是独立 profile（游客态），不影响测试浏览器。
