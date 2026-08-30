@@ -89,13 +89,13 @@
           <view class="sec-t">考官点评{{ streaming ? '（生成中…）' : '' }}</view>
           <view class="card review">
             <rich-text v-if="reviewHtml" :nodes="reviewHtml" />
-            <view v-else-if="reviewMissing && !streaming" class="regen">
-              <view class="regen-tip">上次点评生成被中断，评分已保留</view>
+            <view v-if="reviewMissing && !streaming" class="regen">
+              <view class="regen-tip">{{ review ? '点评可能不完整（生成被中断）' : '上次点评生成被中断，评分已保留' }}</view>
               <!-- #ifdef H5 -->
               <button class="btn-primary regen-btn" @click="regenReview">重新生成点评</button>
               <!-- #endif -->
             </view>
-            <view v-else class="loading">考官正在撰写点评…</view>
+            <view v-if="!reviewHtml && (!reviewMissing || streaming)" class="loading">考官正在撰写点评…</view>
           </view>
         </view>
       </view>
@@ -238,7 +238,7 @@ export default {
           category: s.category,
         };
         this.review = s.review || '';
-        this.reviewMissing = !this.review;
+        this.reviewMissing = this.review.trim().length < 300;
         this.points = s.points || [];
         this.step = 'report';
       } catch (e) {
@@ -256,7 +256,7 @@ export default {
           sessionId: sid,
           onDelta: (full) => { this.review = full; },
         });
-        this.reviewMissing = false;
+        this.reviewMissing = this.review.trim().length < 300;
       } catch (e) {
         uni.showToast({ title: e.message || '点评生成失败，请重试', icon: 'none' });
       } finally {

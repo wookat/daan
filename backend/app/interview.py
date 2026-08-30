@@ -22,6 +22,7 @@ DIMENSIONS = ["内容针对性", "逻辑条理", "内容深度", "语言表达",
 
 ANSWER_MAX_LEN = 5000
 ANSWER_MIN_LEN = 20
+REVIEW_MIN_LEN = 300  # 短于此视为流截断/异常产出，保留重新生成入口
 
 _bank: dict | None = None
 
@@ -262,7 +263,7 @@ async def api_review_regen_stream(sid: int, body: dict):
     conn.close()
     if not row:
         raise HTTPException(404, "记录不存在")
-    if (row["review"] or "").strip():
+    if len((row["review"] or "").strip()) >= REVIEW_MIN_LEN:
         raise HTTPException(400, "点评已存在")
     q = question_by_id(row["question_id"])
     if not q:
@@ -276,7 +277,8 @@ async def api_review_regen_stream(sid: int, body: dict):
             async for delta in llm.chat_stream(_review_prompt(q, answer, scores, "")):
                 full += delta
                 yield "data: " + json.dumps({"d": delta}, ensure_ascii=False) + "\n\n"
-            _update_review(sid, full)
+            if full.strip():
+                _update_review(sid, full)
             yield "event: done\ndata: " + json.dumps({"session_id": sid}) + "\n\n"
         except Exception as e:  # noqa: BLE001
             yield "event: error\ndata: " + json.dumps({"message": _friendly_ai_err(e)}, ensure_ascii=False) + "\n\n"
