@@ -20,6 +20,8 @@ export default {
         if (i === bodies.length - 1) el.setAttribute('role', 'main')
         else el.removeAttribute('role')
       })
+      // tabbar 图标为装饰图（文字 label 承载语义），uni 生成的 img 无 alt
+      document.querySelectorAll('.uni-tabbar__icon img').forEach((el) => el.setAttribute('aria-hidden', 'true'))
     }
     markMain()
     new MutationObserver(markMain).observe(document.body, { childList: true, subtree: true })
