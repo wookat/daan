@@ -123,6 +123,9 @@ html.theme-dark body {
 .theme-dark uni-page-head .uni-page-head__title {
   color: #f2f3f7 !important;
 }
+.theme-dark uni-page-head .uni-page-head-btn path {
+  fill: #f2f3f7;
+}
 .theme-dark input,
 .theme-dark textarea {
   color: var(--ink);
