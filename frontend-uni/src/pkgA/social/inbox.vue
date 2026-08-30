@@ -20,6 +20,12 @@
         <view class="quote ellip2">我的评论：{{ it.parent_content }}</view>
       </view>
     </view>
+    <view v-else-if="loaded && !logged" class="empty">
+      <view class="empty-ico">🔐</view>
+      <text class="empty-t">登录后查看消息</text>
+      <text class="empty-d">登录账号后，评论收到的回复和点赞会在这里提醒你</text>
+      <button class="login-btn" @click="goLogin">去登录</button>
+    </view>
     <view v-else-if="loaded" class="empty">
       <view class="empty-ico">💬</view>
       <text class="empty-t">暂无消息</text>
@@ -29,14 +35,16 @@
 </template>
 
 <script>
-import { fetchCommentInbox, readCommentInbox } from '../../api.js';
+import { fetchCommentInbox, readCommentInbox, getToken } from '../../api.js';
 
 export default {
   data() {
-    return { items: [], loaded: false };
+    return { items: [], loaded: false, logged: false };
   },
   onShow() {
-    this.load();
+    this.logged = !!getToken();
+    if (this.logged) this.load();
+    else this.loaded = true;
   },
   methods: {
     async load() {
@@ -48,6 +56,9 @@ export default {
         uni.showToast({ title: e.message || '加载失败', icon: 'none' });
       }
       this.loaded = true;
+    },
+    goLogin() {
+      uni.navigateTo({ url: '/pkgA/user/login' });
     },
     fmtTime(ts) {
       const d = new Date(ts * 1000);
@@ -79,6 +90,7 @@ export default {
 .empty-ico { font-size: 72rpx; }
 .empty-t { font-size: 28rpx; font-weight: 600; color: var(--ink); }
 .empty-d { font-size: 24rpx; color: var(--ink-2); }
+.login-btn { margin-top: 24rpx; background: var(--brand); color: #fff; font-size: 28rpx; border-radius: 18rpx; padding: 0 64rpx; }
 
 /* #ifdef H5 */
 @media (min-width: 768px) {
