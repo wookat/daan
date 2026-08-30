@@ -5,6 +5,107 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R43 CLS/横移类断言走查新经验
+- CLS/横移类断言取证法：用 CDP `Page.addScriptToEvaluateOnNewDocument` 注入 rAF 采样脚本（记录壳 rect.x + documentElement.clientWidth 去重序列），再 `Page.reload(ignoreCache)` 硬刷新，比对全程 x 零跳变。
+- `scrollbar-gutter: stable` 生效判据 = computed 值 + 有/无滚动条页 body 右缘一致（clientWidth 可能一页 1440 一页 1425，以 body 右缘为准）。
+- 375 overlay 滚动条下 iw=cw=sw=375 为零副作用判据。
+
+## R31 收件箱「赞我的」双流走查新经验
+- R31（bundle index-DBba9i5b.js 起）inbox 双流：like 条目匿名（type:"like"，无 nickname/content，仅 👍+「有人赞了我的评论」+我的评论摘要），reply/like 按 created_at 倒序混排取 50，unread 复用同一水位——进过一次收件箱后旧 like 已读，新 reply 到达时 badge 只计新增。取消点赞或删除回复后对应条目即时从 inbox 消失（like JOIN comment_likes、reply 要求双方 status='ok'）。空态文案「暂无消息／…收到回复或点赞会在这里提醒你」。
+- 测试机无 emoji 字体：👍/💬 渲染为方框（tofu），属环境问题不判失败，报告需注明。
+- 讨论页偶发卡「加载中…／共 0 条讨论」而 API 实际 200——Ctrl+Shift+R 硬刷即恢复，判断依据是页内 fetch /api/comments 返回 200 有数据。
+- 登录成功后页面偶尔不跳转（视觉停在登录页），localStorage authUser 实际已写入——以 uid 回读为准，直接导航目标页即可。
+
+## R30 讨论消息收件箱走查新经验
+- 收件箱链路（bundle index-BoJNejSP.js 起）：GET /api/comments/inbox 只统计「别人回复我的顶层评论」且双方 status='ok'——测试法：A 发顶层评论，B 回复（楼中楼），A 才收到；unread=created_at>last_read 水位。POST /api/comments/inbox/read 在 inbox.vue onShow 拉取后自动调用（unread>0 时）——**本次进入蓝点仍显示，再次进入才消失**，「我的」页返回后未读数即清零。
+- 「我的」页「讨论消息」cell 未登录时不发 inbox 请求且点击直接跳登录页（goInbox 守卫）；登录态 value 显示「n 条未读」。
+- 收件箱条目=蓝点(.dot)+昵称+「回复了我」+时间+回复内容+「我的评论：…」摘要，点击 navigateTo discuss?qid=。删除回复（admin）后条目即从 inbox 消失，空态「暂无回复消息」。
+- CDP websocket 直连 `webSocketDebuggerUrl` 需 `websocket.create_connection(url, suppress_origin=True)`，否则 403 Forbidden（Chrome 拒绝 localhost origin）。
+- 管理台 F5 后需重新填 token 登录（登录态不持久），按 R29 取 token 法重登即可。
+
+## R29 管理台「评论与举报」走查新经验
+- /admin 登录：密码框 `#login-token` 填 X-Admin-Token → `#login-btn`。ADMIN_TOKEN 只在生产 `/home/ubuntu/kaogong-assistant/deploy/.env`（本地仓库 deploy/ 无 .env）；取法：`SSHPASS="$TICKETS_VPS_SSH_CREDENTIAL" sshpass -e ssh $TICKETS_VPS_SSH_USER@$TICKETS_VPS_SSH_HOST "grep ADMIN_TOKEN ..."`（env 变量已在本机 shell 中）。填 token 用 CDP 原生 setter，避免值出现在录屏/日志。
+- 「评论与举报」页 `#/comments`（admin/pages/comments.js）：KPI 三卡（待审核=hidden 数/被举报评论/累计举报人次）+ 举报队列 + 评论浏览（status 下拉 ok/hidden/deleted）。恢复 confirm「恢复该评论（判定为误报，举报记录将清零）？」→ POST /api/admin/comments/{cid}/restore（status→ok + 清 comment_reports）→ toast「已恢复」；删除 confirm「删除该评论（判定为违规）？」→ DELETE → deleted。操作列按 status 显示：非 ok 有「恢复」、非 deleted 有「删除」。
+- admin 是原生 JS confirm/toast；confirm 弹窗是浏览器原生 dialog，OK 按钮约在 (616,120)。管理台 375 视口是侧栏收缩+内容横向滚动（非响应式），布局不崩即算过。
+
+## R28 评论举报/阈值隐藏走查新经验
+- R28（bundle index-DAfhaa2y.js / PR #202 起）：非本人评论/楼中楼操作行显示「举报」（本人仍「删除」，discuss.vue L44-45/52-53）；点击 → ensureLogin → uni.showActionSheet 五理由（广告导流/人身攻击/违法违规/色情低俗/其他）→ POST `/api/comments/{cid}/report`。首报 toast「已收到举报，我们会尽快处理」，重复举报（INSERT OR IGNORE 幂等）toast「你已举报过这条评论」；去重举报人数 ≥3 时评论 status ok→hidden，返回 hidden:true，前端就地从列表移除；GET /api/comments 只查 status='ok'，刷新后不再返回。自举报 400「不能举报自己的评论」；评论不存在/已删 404；限流 cmt_report 10/600s。
+- 多账号阈值测试法：注册 4 个测试账号（A 发评论、B/C/D 举报）。切换账号 = `localStorage.removeItem("authToken")+removeItem("authUser")` → 导航 `#/pkgA/user/login` UI 登录。**登录页会残留上一账号手机号**——先 triple_click+ctrl+a 全选再输入，否则「手机号或密码错误」。账号切换后讨论页有缓存（mine 标记不更新），需 F5 强刷。
+- uni-app localStorage 值是 `{"type":"object","data":{...}}` 包装格式，读 authUser 需取 `.data`。页内 fetch 验证 API 时 GET/POST 都要带 `Authorization: Bearer <authToken.data>` 和 `X-Access-Code`，否则 403「无权访问该账号数据」。
+- toast 约 1.5s 即消失：点击 actionSheet 选项后 wait 0.8s 截图才能拍到；wait 2s 会错过。
+- 评论输入框真实元素是 `input.uni-input-input`，用 HTMLInputElement 原生 value setter + dispatch input 事件填中文，再真实鼠标点「发布」。
+
+## R27 面试点评中断外显/重新生成走查新经验
+- R27（bundle index-lnBfJwrY.js 起）：review 为空的 session 详情页显示「上次点评生成被中断，评分已保留」+ H5「重新生成点评」按钮（interview.vue L92-96）；点按钮 POST `/api/interview/sessions/{sid}/review/stream`（body {uid}），流式回填 DB；review 非空返回 400「点评已存在」；限流 itv_regen 10/600s。
+- 制造中断 session：CDP 填 textarea + input 事件 → **真实鼠标点击**「提交作答」（JS 找 button 文本经常失败）→ 轮询 `document.body.innerText.includes("考官正在撰写点评")`（meta 已到）→ 立即 `location.href` 跳走。约 0.2s 轮询在 meta 后数秒内可完成中断。
+- 详情页 URL `interview?session_id=N` 直接刷新可正常渲染详情（与旧经验不同）；但「再练一题」后 URL 不变，新 session 状态要从 history 重新进。
+- R27b 守卫（bundle index-njTwWnwJ.js / PR #200 起）：`REVIEW_MIN_LEN=300`（interview.py L25/L266）——review.strip() <300 字仍允许 regen（不再被 400 锁死）；前端 `reviewMissing = review.trim().length<300`，短点评时正文 rich-text 与「点评可能不完整（生成被中断）」提示+按钮**同时显示**（interview.vue 两个独立 v-if，L91-98）。负例判据：≥300 字 session 直接调 regen API 应 400「点评已存在」。
+- 中文无法用 computer type 输入到 textarea（IME 缺失，只出 ASCII）；用 CDP `ta.value=...; ta.dispatchEvent(new Event("input",{bubbles:true}))` 填充，再真实鼠标点提交。
+- 点击地址栏坐标 (88,40) 会误开站点信息弹窗；导航建议用页面内链接（详情页底部「练习记录 ›」可回 history）。
+- **生产 LLM 点评流不稳**：正常不中断流也可能结束却零内容（详情变中断卡），regen 也可能产出截断文本并原样回填 DB（截断后按钮消失、无法再 regen——400 点评已存在）。判定回归失败前先重试一次，并把截断/空点评报为上游 LLM 问题而非 UI bug。
+
+## R26 学习日历 / 模考大赛赛后报告走查新经验
+- 赛事窗口由 `backend/app/mock_event.py` `_saturday_window()` 自动生成，平日 `/api/mock/events` 常为 `current:null`（enter 会 400「比赛尚未开始」）。要真实走 contest-report 流程需临时改生产 DB `mock_events.open_at` 为过去时间（记录原值、测后恢复）；不要伪造 report——`/events/{id}/report` 无 entry score/attempt_id 时 404「尚无比赛成绩」。
+- 真实流程：`/#/pkgA/exam/contest` 点「立即参赛」→ `exam?paper_id=&event_id=` 键盘 A-D 快速作答若干题 → 交卷确认 → 自动 redirectTo `contest-report?event_id=N`。禁止用保护 uid 打开 contest-report（ended 阶段 `_freeze_ranks` 会写库）。
+- 赛后报告断点期望（PR #199，bundle index-e1d0dr7T.js 起）：≥1024 `.cr-cols` flex、`.cr-side` 420px sticky 在**左**（总分 hero+小样本提示+分数分布）、`.cr-main` flex:1 右；≥768 `.wrap` 1044、`.pbtn/.wrow:hover` cursor（scoped，读 styleSheets）。「逐题回顾」→ `report?attempt_id=`、「弱项练 5 题」/「去练」→ practice 页。
+- 学习日历 `/#/pages/stats/calendar`：≥1024 `.cd-cols` flex、`.cd-main` 日历卡左 flex:1、`.cd-side` 420px sticky 右（里程碑卡→poster-btn）；375 为 block 单列 日历→里程碑→按钮。当月「›」按钮带 `dis` 类；「生成打卡海报」跳 `/pkgA/social/poster`。
+
+## R25 讨论页桌面化 / 面试评分即落库走查新经验
+- **面试落库行为自 PR #198 起变更**：`_save_session(review="")` 在评分完成后立即调用，SSE `event: meta` 的 JSON 带 `session_id`；点评流结束 `_update_review` 回填。中断 SSE（评分后硬刷/关页）记录仍在 history，详情评分在、点评显示「考官正在撰写点评…」空占位。R24 段的「流结束才落库」判据已过时。
+- **登录账号态提交面试会 403**：`streamInterview()`（api.js）裸 fetch 不带 `authHeader()`，而后端 `guard_account_uid` 中间件要求账号 uid（u<id>）POST 必带本人 Bearer token → `{"detail":"无权访问该账号数据，请重新登录"}`。该 bug 已由 commit 946f837（bundle index-BUebEHnd.js 起）修复：headers 补 `X-Access-Code + authHeader()`，登录态提交已实测 200。旧 bundle 下仍会 403，判定前先核 bundle 版本。登录页表单注意：页面顶部 Chrome 翻译弹窗可能抢走首次点击导致输入落空，先关弹窗再点输入框。
+- 讨论页 `#/pkgA/social/discuss?qid=N`：入口是刷题页/题目详情的社交栏「讨论」（q-social-bar）。≥1024 `.dc-cols` flex（`.dc-side` 380px sticky 题目摘要卡左 / `.dc-main` chips+评论+公约右）；≥768 `.wrap`/`.replying`/`.inputrow` max-width 1044 居中；<1024 单列。匿名用户输入框 placeholder「登录后参与讨论」、聚焦弹「需要登录」modal——发评论需真实注册（注册页无真实短信校验，任意手机号+密码即可）。hover cursor 规则只在 `:hover` 下（scoped `[data-v-...]`），静态 computedStyle 读不到，需读 document.styleSheets 或物理悬停。
+- 直接 URL `interview?session_id=N` 进不了详情（回分类页）；要看 session 详情需从 history 列表点卡片。
+- SSE meta 捕获法：页面上下文包一层 `window.fetch` tee response.body，匹配 `event: meta\ndata: (...)`；reload 会丢补丁需重注。
+
+## R24 周学习报告 / 面试练习记录走查新经验
+- ~~面试 session 只在点评 SSE 流式完整结束后才落库~~（**已被 PR #198 改为评分后即落占位，见 R25 段**）。分类页「已练 N」计数可作为落库与否的快速核对。
+- history 页 `#/pkgA/interview/history`：≥1024 `.list` grid `1fr 1fr`（1440 实测 514px×2、1280 444px×2）+ `.item:hover` 阴影；<1024 flex column 单列。`.wrap` ≥768 max-width 1044。
+- weekly-report 页 `#/pkgA/stats/weekly-report`：新游客必走空态卡（周报按上周聚合，本周作答无效），空态不渲染 `.wr-cols` 也无分享按钮——有数据双栏/分享弹层只能报 untested，可用 document.styleSheets 断言 ≥1024 `.wr-cols/.wr-side(420 sticky)` 与 ≥768 `.sheet(560px)/.mask(center)` 规则存在。注意 scoped 选择器带 `[data-v-xxx]` 后缀，正则匹配 selectorText 不要用 `\.sheet$`。保护 uid 不可打开周报页（会触发 markRead POST）。
+- Chrome 若被误关，可用 `google-chrome --remote-debugging-port=29229 --user-data-dir=~/.config/google-chrome-for-testing URL` 重启，localStorage/游客 uid 保持不丢；重启后需重新 wmctrl 最大化并重设 CDP metrics。
+
+## R22 答题 PK / 刷题小队走查新经验
+- PK 页 `#/pkgA/pk/pk`：点「发起好友挑战」或「随机匹配对手」都直接进入 quiz 视图（10 题、每题 30s 倒计时），答完才落到 result 等待页——不要预期先出等待页。quiz/result 视图 `.pk-solo` 期望 width 680 居中；home 视图 `.pk-cols` flex、`.pk-left` 420 sticky。
+- 双游客对局取证法：第一游客创建挑战记下挑战码 → `localStorage.clear()+reload` 变第二游客 → 输码「应战」→ 答完 10 题即出真实胜负结果页（对手比分来自服务端）。PK 页离开再回来会恢复上次 quiz/result 视图，需点「返回 PK 大厅」才能量 home 布局。
+- team 页 `#/pkgA/team/team`：初版 `.tm-cols` 曾是 `row-reverse`（视觉侧栏左/列表右），commit 1572c1f 起改为普通 `row`（bundle index-C-l8IPg_.js 及之后）——桌面视觉应为「列表 .tm-main 在左、创建侧栏 .tm-side 360 sticky 在右」；DOM 中 `.tm-main` 始终在前，375 单列即 DOM 顺序。若发现方位与描述不符，先核对实际 bundle 版本再判定。panel 视图 `.tp-cols` 普通 row：排行 `.tp-side` 360 sticky 在左。创建弹层 ≥768 居中 sheet 520px，<768 贴底抽屉（mask flex-end、sheet 全宽）。
+- 答题类页面用 computer-use 连点选项时选项 y 坐标随题干长度浮动，点前先截图校准；每题点击间隔 1.2s 足够。
+
+## R17 AI 问答桌面操作台走查新经验（round-3 R17 轮）
+- ask 页 `#/pages/ask/ask` 桌面空态：≥1024 时 `.camscreen` display:none、`.deskstart` display:flex（两 `.ds-col` 并排）；「最近讲解」`.reccard` 两端共用。textarea 中文输入用 CDP 设 value + 派发 bubbling input 事件（computer-use 打不出中文）。
+- **拖拽陷阱**：uni-app H5 编译后 `@drop`/`@dragover` 绑在 uni-view 上可能不触发——合成 DataTransfer drop、CDP Input.dispatchDragEvent、真实 OS 拖拽（drop 事件带 files=1 且 trusted 到达 .ds-drop）三种方式均无法令 Vue 的 onDrop 运行，直接调组件方法则正常。生产拖拽功能可能真实失效，测试时用 document 级监听器（记录 dragLog）取证再下结论。
+- Ctrl+V 图片：window paste 监听是原生 addEventListener，用合成 ClipboardEvent(paste, {clipboardData: DataTransfer含image File}) 可触发确认 sheet 且 defaultPrevented=true；纯文本 paste 应 defaultPrevented=false 无 sheet。
+- 文字 LLM 流式讲解生产可用（deepseek 长 reasoning，整题 1–3 分钟耐心等）；视觉/图片通道 key 缺失时提交图片报「AI 服务未配置」，且失败会重新弹出文本 sheet（doExplain catch 里 `if(txt) textOpen=true`）。
+- 文本讲解失败后 error banner 留在空态 deskstart 下方，重试点讲解按钮即可；错题本页偶发「连接服务器超时，点击屏幕重试」，点屏幕重试即恢复。
+- r12.py 视口子命令是 `metrics W H [true]`（不是 emulate），恢复用 `clear`。
+
+## R14 统计页双栏 masonry 走查新经验（round-3 R14 轮）
+- 统计页 `#/pages/stats/stats`：`.sgrid` masonry 用 `column-count:2`（非 grid），断言用 computed columnCount=2 + 各卡 rect.left 只出现两个值（1440 下 363/823，各卡宽 448）；展开折叠项（成就勋章/AI 教练 lrow、模块分布/练习记录「展开全部」）后 masonry 会左右重排，属正常，不算破版。
+- 折叠项可用性依赖数据量：错题模块分布「展开全部」需 >3 模块、练习记录卡需有 history、「展开全部 N 条」需 >6 条——数据少的游客 uid 下这些链接不出现，覆盖前先看数据形态。
+- 学习日历页 `#/pages/stats/calendar` 是异步分包组件，生产首次打开 spinner 可挂 50-60s 并在 console 抛「Async component timed out after 60000ms」error，但随后仍会渲染成功——遇到时耐心等 + 复跑干净 console 监听区分历史回放（Runtime.enable 会回放 buffered console 条目）。
+
+## R13 真题卷库桌面网格走查新经验（round-3 R13 轮）
+- 真题卷库页 `#/pkgA/exam/list`：`.plist` 桌面 grid 两列的 `.wrap` 虽设 `max-width:1044px`，但**全局壳 UNI-APP max-width:1140px − 左侧栏 padding 208px 只留 932px**，实测 wrap=932px、grid 列 448px×2——桌面宽度断言以 932 为准，未来若要真 1044 需改壳级样式。
+- 年份/地区筛选 chip 首次点击可能遇到 `/api/exam/papers?...` 网络级 `net::ERR_FAILED`（console 有 network error，页面停在「试卷加载中…」且保留旧列表）——重点同一 chip 或先点「全部」再点目标 chip 即恢复；console 监听脚本会回放历史 Log 条目，判断 0 error 要看时间戳是否属于本次 reload。
+- practice.vue 模考态（R12 examMode）触发路径：**首页 → 更多练习 →「真题卷练习」卡 → sheet 选卷**（launch kind:'paper'）；真题卷库页的「开始模考」走的是独立 exam.vue 页（无 .pside 侧栏），两者勿混。模考态验证序列：未答按 Enter 不动 → 按 A–D 作答后 200ms 自动流转 → ← 回已答题按 Enter 仍不动；侧栏答题卡底部有「交卷」button。退出用顶部「退出」不交卷即零成绩数据。
+- 列表页 bodyScrollHeight 取证：R13 后 1440 下约 10753（改前约 19822），是网格收敛最直观的量化证据。
+
+## R5 首页 CTA 收敛 + 错题趋势卡走查新经验（PR#178 轮）
+- 桌面/移动响应式 CSS（媒体查询）改视口即生效，无需 F5：`cdp.sh metrics 1440 900 false` / `375 812 true` 切换后直接量 `getBoundingClientRect()` 与 `getComputedStyle(el).display` 即可断言。
+- 「继续目标 ›」紧凑宽断言方法：量按钮 width（~131px @1440 为 compact；375 下按钮+邻居宽度之和 ≈ 行宽即 flex:1 拉满）。
+- 错题趋势卡 `.trendcard` 默认 display:none，≥1024 由 `@media` 改 block；柱状 DOM 顺序是 3周前→2周前→1周前→本周。数值口径：`created_at` 落入 [now-(i+1)*7d, now-i*7d)，可用 /api/mistakes 独立复算比对。
+- 后台 kill CDP daemon 时 `pgrep|xargs kill` 有时连自己 shell 一起挂（exit -1）——用具体 pid kill，且 nohup 后台启动要用子 shell `( ... & )` 包裹，否则 `cd &&` 链会被 `&` 截断导致后续命令在错误 cwd。
+
+## R4 首页新访客 landing 走查新经验（PR#177 轮）
+- 新访客态制造法：先 `JSON.stringify(localStorage)` 备份到磁盘文件（含 anonUid/pstats 等 7 键），再 `localStorage.clear()` + F5。uni-app storage 值是 `{"type":...,"data":...}` 包装格式，判断 pstats.days 要看 `data.days`。测完用备份逐键 setItem 恢复。
+- landing 显示条件 `!landingHide && pstats.days 为空`；✕ 写 `landingHide={"type":"number","data":1}`。清 landingHide 单键即可重现 hero，不必再次全清。
+- **F5 后立即截图可能是旧渲染帧**（页面 spinner 还在转时 hero 仍显示）——断言 landing 是否消失必须等加载完成（tab spinner 停止）再截图 + CDP 查 `.landing`，否则会误判 failed。
+- `/tiku/`（题库静态站）是整页跳转，生产首次加载可 30s+，曾出现 SPA 页面停在原地 spinner 长转——耐心等，curl 核 200 即非故障。
+- 主 CTA「免注册立即开练」进 /pages/practice/practice 出题即可断言通过；点「退出」不作答则 pstats 不写入，hero 回首页仍在。
+
+## R3 掌握度外显/模考分区走查新经验（PR#176 轮）
+- 制造 `source='exam'` 错题的最快路径：首页→更多练习→迷你模考（/pkgA/exam/exam?mini=1），**点选项会自动跳下一题**（点完选项再点「下一题」会跳过一题留空），答 5 题左右故意错 2-3 题→答题卡→交卷→「还有 N 题未作答」确认弹窗→判分 10-20s。后端只保存「已作答且答错」的题，空题不产生错题。
+- 掌握度断言先 curl `/api/mastery/map?uid=...` 取基线（modules[].mastery/level_name、subs[].tag3s[]），注意**交卷后 mastery 会立刻变化**（本轮常识 64%→63%），UI 复验要与交卷后的最新 API 对照而非旧基线；n=0 模块（如 shuliang）不应显示。
+- 来源筛选验证顺序：筛选 sheet「来源」段仅在存在 exam 错题时出现 → 选模考（只剩新题+chip「模考错题 ✕」）→ 选练习（互补旧题+chip「练习错题 ✕」）→ 点 chip ✕ 恢复全部。历史 source=NULL 不显紫色「模考」徽标。
+
 ## 错题本桌面双栏走查新经验（PR#174 轮）
 - 错题本页 ≥1024px 双栏为 float 布局（.bk-main float:left+clear:left / .bk-side float:right+clear:right，容器 920px）。**float+clear 会让主列元素卡在更高的侧栏元素之下**：非空态 tab 与搜索栏之间出现大段垂直空白（左列空洞），检查布局时除了横向重叠还要量各 bk-main 元素间的纵向间隙。
 - 空态判定：`.wrap` 加 `noside` 类且 `.empty` 卡近容器满宽（1440px 时 ~908px）。切空态用随机新 `anonUid` + F5，测完恢复原值。
@@ -279,3 +380,165 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 错题删除只有 `DELETE /api/mistakes/{id}?uid=`（`POST /api/mistakes/{id}/delete` 不存在且静默无效）。
 - 团队面板对本人显示「我」标签（is_me 优先于 is_creator）；验证队长身份需切队友视角或查 DB `teams.creator_uid`。
 - 本地统计缓存键名即 `pstats`（不带 uid 前缀）；R25 起统计页/我的页累计口径以 `/api/growth` modules 服务端为准，清 pstats 不再归零。
+
+## R7 走查新经验（/tiku SEO design-v3 + mastered_at 运行时）
+- /tiku SEO 页 JSON-LD 仅题目页（/tiku/q/{id}）注入；列表/考点/试卷页 `_page(jsonld=None)` 不输出 script——验证 SEO 时不要按"每页都有 JSON-LD"断言。
+- 「恢复复习」按钮不在 ··· action sheet（sheet 对已掌握项无该项），在已掌握 tab 点「点开看答案与详解」展开卡片后的操作行里。
+- 取消掌握后 UI 可能显示旧帧（趋势卡仍 3/1），API 已即时生效；F5 后 UI 回落。以 /api/mistakes 为准再核 UI。
+- 长驻 CDP daemon 会挂死；用 /tmp/cdp174/oneshot.py（每次从 /json 找 zalize tab 新建 ws）更可靠，偶发 timeout 直接重试即可。注意本机常开 localhost:8899 本地 tab，oneshot 按 URL 含 zalize 过滤，browser_console 工具则打到"当前活动 tab"，两者目标可能不同。
+- 生产 tab 偶发被关闭/崩溃（/json 里消失）；重开 tab 后 localStorage（同源）仍在，先核 anonUid 再继续。
+
+## R8 走查新经验（列表页 JSON-LD + 掌握即时更新）
+- R8 起 /tiku/、/tiku/papers/、模块页、题型页均有 CollectionPage+BreadcrumbList JSON-LD（`_collection_ld`）——R7 段"仅题目页有 JSON-LD"的说法自 R8 起过时；断言时核对 breadcrumb.itemListElement 名称与可见 `.crumb` 文本一致即可。
+- R8 起已掌握项 ··· action sheet 增补了「恢复复习」项（在「分享给队友」与「删除」之间），无需展开卡片。
+- action sheet 里点「恢复复习」可能首次点击 sheet 关闭但 PATCH 未发出/未生效——点完立即查 /api/mistakes；若 mastered 仍为 1，重开 sheet 再点一次。PATCH 生效到 API 可见也可能有数秒~20s 延迟，判失败前多等再查。
+- master() R8 已本地同步 m.mastered/m.mastered_at，趋势卡/摘要无需 F5 即时更新；toast（已掌握！/已恢复复习）持续极短，CDP 截图很难捕捉，靠趋势卡/API 证明即可，报告中如实标注 toast 未捕获。
+
+## R9 走查新经验（load() _loadSeq 并发防护）
+- R9 起 book.vue load() 有 _loadSeq 序号防护（L885/890/906），旧快照 GET 返回不再覆盖乐观更新——R8 段「首次点击可能不生效需重试」的现象在 R9 已修复；5 轮快速往返均首次点击即生效，API mastered/mastered_at 即时写入（无 R8 观察到的 ~20s 延迟）。
+- 快速往返测试节奏：待掌握 tab（284,157）↔ 已掌握 tab（391,157），首条卡片 ···（575,260），6 项 sheet 第 5 项「标为已掌握/恢复复习」（460,393）。tab 切换后 sheet 项位置一致，可组合成单次 actions 序列高效执行。
+
+## R10 走查新经验（桌面键盘快捷键）
+- R10 起 book.vue 有全局 keydown（仅 H5 且 innerWidth≥1024）：列表 J/↓、K/↑ 移动 .kbf 蓝描边（outline 2px var(--brand)），Enter/空格=toggleCard；复习模式未作答 A–D=pick、已作答 Enter=nextReview、多选已选 Enter=confirmMulti。批量/弹层/庆祝页不响应；INPUT/TEXTAREA/SELECT/contentEditable 与 ctrl/alt/meta 不拦截；切 tab 时 kbId=null 描边清除。
+- 验证 .kbf 用 `document.querySelectorAll('.kbf').length` + zoom 截图描边；描边较细，直接 zoom 卡片区域取证。
+- 列表搜索框仅在 items.length>5 时渲染——错题少时测输入保护可展开卡片点「纠错」，用纠错 sheet 的 textarea 输入 jk（不要提交，避免产生服务端数据）。注意卡片需先展开，收起状态点「纠错」不会开 sheet。
+- 复习键盘作答会真实推进 SRS/review 记录（服务端数据变化），只能在授权测试 uid 上做。
+- 复习完成后出现庆祝弹层「今日复习已清零！」，toast「本轮复习完成！」在切视口截图时偶可捕获。
+- CDP oneshot 在页面 reload 前后易连续 timeout：restore localStorage 脚本要循环重试并在执行后回读 `{n:localStorage.length,uid}` 确认再 reload，否则可能恢复未生效。
+
+## R11 走查新经验（快捷键提示卡与速查面板）
+- R11 起 book.vue 侧栏模块分组卡之后有 .kbdcard 提示卡（<1024 display:none），底部「按 ? 查看全部 ›」与 Shift+/ 均打开 .mask/.sheet 速查面板（三组：错题列表/复习模式/通用）；Esc、再按 ?、点遮罩、右上 ✕ 四种方式关闭；面板打开时其余快捷键（J/K/Enter）被阻断，可用 `{kbf:(document.querySelector('.kbf')||{}).id,mask:!!document.querySelector('.mask')}` 一次核对。
+- 纠错 sheet 的 textarea 同样可用于验证 `?` 输入保护（Shift+/ 应输入字符 `?` 而不开面板），验证后点 ✕ 关闭不提交。
+- 生产 tab 可能在长会话中崩溃关闭（CDP /json 里 zalize target 消失、oneshot StopIteration）：ctrl+t 重开生产 URL 即可，localStorage 同源保留；崩溃前旧 tab 的渲染可能停留在旧数据视图，以新 tab + localStorage 回读为准。
+- console 监听脚本不要硬编码 target id（会 500 No such target）：每次从 http://localhost:29229/json 取当前 zalize page target 再连 ws。
+
+## R12 走查新经验（刷题页桌面操作台）
+- R12 起 practice.vue ≥1024px 有常驻右侧栏 .pside（答题卡题号网格 + 键盘提示卡，<1024 display:none），.wrap.pdesk 拓宽 1044px。网格状态类：cur=蓝框当前、ok=绿答对、bad=红答错、未答灰（acardClass L1433）。
+- 键盘 onPKeydown（L1461）：A–D 仅未作答时 pick；Enter 已作答且非模考时 next；←/→ jumpTo；<1024、修饰键、INPUT/TEXTAREA/SELECT/contentEditable、任一弹层（cardOpen/toolsOpen/reportOpen/paperSheet/customOpen/setupOpen）均不响应。工具 sheet 阻断可用「开 ··· → 按 A → 已答数不变 → 关 ✕ → 按 A 生效」取证。
+- 裸直达 #/pages/practice/practice（无启动参数）会按 lastModule 自动开练（onShow L678-681），新游客 uid 也能直达开练，无需从首页选模块；题库首次加载有数秒 loading。
+- 「答对自动跳下一题」默认开启：按键答对会自动进下一题（无需 Enter）；答错停留在本题，此时才用 Enter 验证下一题。
+- websocket-client 直连 CDP ws 需 `suppress_origin=True`，否则 403 Forbidden（Rejected origin）；旧 oneshot.py 若超时可改用 /tmp/cdp174/r12.py（已带 suppress_origin + 动态 target）。
+- 模考态（examMode）不响应 Enter 由自动流转接管——普通练习流程无法触发，需真题卷模考入口，未覆盖时如实标 untested。
+
+## R13–R15 走查新经验（真题卷库网格 / 统计 masonry / 全局壳拓宽）
+- exam list `.plist`（R13）与 stats `.sgrid`（R14）的桌面双列断言法：computed columnCount/grid-template-columns + 各卡 rect.left 只应出现两个值；masonry 展开折叠项后重排属正常。
+- 页面级 `max-width:1044px` 会被全局壳约束：≥1366px 壳体 1280px（R15 App.vue）内容区≈1068-1072；1024-1365px 壳体 1140px 内容区≈932。断言 wrap 宽度时按视口档取对应期望值。
+- 滚动条 15px 使 `calc(100vw...)` 定位与壳体居中有 ~7px 理论差、scrollWidth 常为 1425(<1440)，均属正常非破版。
+- 学习日历分包首载偶发 50-60s spinner + 「Async component timed out after 60000ms」，重试/等待后仍能渲染；筛选类 API 偶发 net::ERR_FAILED 重试即成功——报告时区分历史 console 回放与本次干净 reload。
+
+## R16 走查新经验（我的页四分组 masonry）
+- profile.vue ≥1024px：`.wrap.profile` max-width 1044（1440 下实测 1072）、`.pgrid` column-count:2、4 个 `.psec`（打卡徽章/学习/偏好设置/其他）left 两值各宽≈514(1440)/444(1280)；账号卡/资产行/退出/页脚在 .pgrid 外整宽。375 下 columnCount=auto 单列。页高 1440 实测 1049（改前 ~1557）。
+- 游客态即可覆盖全部交互：每日目标 cell 点击 20→50→100 循环 + toast；锁定徽章点击 toast「连续打卡 N 天即可解锁」；未登录账号卡点击 → /pkgA/user/login；学习日历/我的收藏 cell 正常 navigateTo。已解锁徽章→poster 分支需有打卡数据的 uid 才能触发。
+- CDP ws 偶发连续 2 次 recv timeout（r12.py），间隔几秒重试即恢复，无需重开 tab。
+
+## R18 申论专区走查新经验
+- 申论路由 `#/pkgA/shenlun/shenlun`，桌面断点 ≥768 sheet 居中 / ≥1024 两列（1440 列宽 498px、1280 列宽 442px；详情 d-cols row、d-right sticky）。375 回退：qgrid/mgrid display=block、mask align-items=flex-end（贴底抽屉 sheet.bottom=视口高）。
+- 草稿存 `slDraft:{qid}`（localStorage，不写服务端）；批改 POST /api/shenlun/grade 会写服务端历史（游客 uid 可用）。生产文字 LLM 已恢复后批改可真实出结果（1-3 分钟）。
+
+## R19 收藏与笔记页走查新经验
+- 路由 `#/pkgA/social/favorites`。桌面断点：≥768 `.wrap` max-width 1044（1440 壳实测 1068、1280 壳 932）；≥1024 `.fav-cols` flex、`.fav-left` 300px sticky、`.ngrid` 笔记两列（1440 列宽 510px）。375 回退：`.fav-cols` display=block、fav-left 全宽 351、上下堆叠。
+- folder 行 `···`（.fops）是 H5 条件编译入口，仅自定义夹（f.id 非 0）显示，移动宽度也显示；点它弹 actionSheet（重命名/删除）。默认夹无 `···`。
+- **收藏页 API 可能瞬时极慢（实测 62s）**：新建夹/删除夹后 UI 「加载中…」滞留或新夹不显示 ≠ 失败——第一次 POST 往往已成功（重试会 409「已有同名收藏夹」），用 `performance.getEntriesByType("resource")` 看 /api/ 耗时，再 F5 核对。
+- 收藏数据自建：练习页星标 toggleFav；答对题在解析 q-social-bar「📝 写笔记」写笔记（需题有 id）。部分收藏为 `_local`（存 favQuestions 本地），展开卡只有「取消收藏」无「移动到…」，取消走 localStorage 无 XHR——别误判请求丢失。
+- **页面 F5 会清掉 CDP 的 setDeviceMetricsOverride**（视口回壳宽）；每次 reload 后需重新 `r12.py metrics W H` 再取证/点击，否则坐标全错。XHR hook 也随 reload 丢失需重装。
+- 部署后首次 reload 可能仍是旧 bundle，需 Ctrl+Shift+R 强刷并等待异步加载后再核对 script src。
+- 多 tab 时 r12.py 需按 URL 关键字（如 shenlun）选 CDP target，否则可能连到别的页面。
+
+## R21 面试陪练/模考大赛走查新经验
+- 面试页 `/#/pkgA/interview/interview` 三步态：分类（.cat-list ≥1024 grid 两列）→ 作答（.iv-cols flex，.iv-left 420px sticky）→ 报告（.rp-cols flex，.rp-left 420px）。提交按钮 ≥20 字启用；真实考官点评 LLM 流式约 2-4 分钟，报告页先出五维评分再流式点评，等 `生成中` 字样消失判定完成；「参考思路要点」在流式结束后才渲染。
+- 模考大赛 `/#/pkgA/exam/contest`：≥1024 .ct-cols flex、.ct-side 360px sticky；榜单 .sheet max-width 560px 但 box-sizing 是 content-box，含 padding 视觉宽约 588px——按 clientWidth-padding 断言 560，勿误报。375 下 mask align-items=flex-end 贴底抽屉。「预约报名」会写服务端报名数据，走查时禁点。
+- `location.reload()` 后 CDP 视口覆写可能被清且紧跟的 metrics 调用会竞态失败（ws timeout）——reload 后 sleep 数秒再重试 metrics 并回读 innerWidth。
+
+## R20b 搜索页桌面化走查新经验
+- 路由 `#/pkgA/search/search`。≥1024 且 tab=全部 且有考点/试卷命中时 `.res-cols` 加 `two` 类（flex 双栏：`.res-side` 300px sticky + `.res-main`）；tab≠全部或无侧栏命中时 `two` 不加、display=block 单列。**注意 375 下 `two` 类仍可能在（class 绑定只看 tab/hasSide），单列由媒体查询保证——判据看 computed display 而非 classList**。
+- 好用的搜索词：「成本」命中考点(利润折扣/最优方案)+21 题；「国考」命中试卷；纯题号 code（如 1274894）只命中题目→验证 hasSide=false 单列。
+- 中文搜索词输入：用 CDP 原生 value setter + dispatch input 事件最可靠（xdotool type 中文不稳）。
+- 干净 console 检查若需指定视口：在同一 CDP ws 会话里先 `Emulation.setDeviceMetricsOverride` 再 `Page.reload`，override 会随本次 reload 保留（脚本 `/tmp/cdp174/console_clean_vw.py W H`，会回读 innerWidth 验证）；而普通 F5/其他会话 reload 会清掉 override。
+
+## R23 真题做卷页/成绩报告页走查新经验
+- 做卷页 `#/pkgA/exam/exam?mini=1`（迷你模考 30 题 30 分钟，游客可开卷；会写 attempt 数据，务必用新游客 uid）。进入时若本地有未交卷进度会弹「继续上次模考？」——点「重新开始」开新卷，属正常流程非 bug。
+- ≥1024 桌面态：`.ex-cols` flex、`.ex-side` 320px sticky 常驻答题卡（倒计时/题号 grid/已答统计/交卷/快捷键提示）、navrow position=static 且 `.acard-btn` display=none；<1024 时 ex-side display=none、navrow fixed bottom 含「答题卡」按钮、答题卡浮层 mask flex-end 贴底。
+- H5 键盘（复刻 R12 practice）：A-D 选中即自动跳下一题、←/→ 翻题、Enter 下一题/最后一题交卷；焦点在 body 即可，xdotool key 直接可用。
+- 交卷有确认 modal（提示未答数量），确认后判分并 redirectTo `#/pkgA/exam/report?attempt_id=N`——report 页可用该 URL 直接重进（换视口取证方便）。
+- 报告页 ≥1024：`.rp2-cols` flex、`.rp2-side` 420px sticky 在左（分数 hero+排名+模块得分）、`.rp2-main` 右（历次成绩/薄弱考点/逐题）；≥768 逐题解析弹窗 mask center + sheet 640px、`.wrow` hover soft-bg；<768 解析退回贴底抽屉。
+- 页面刚加载或恢复弹窗未处理完时跑几何 eval 会因元素为 null 报 TypeError——先截图确认题目渲染完再量。
+
+## R32 讨论页「消息」入口走查新经验
+- R32（bundle index-BHj4cLVt.js 起）讨论页 chips 行右侧新增「消息」入口（.msg：铃铛+文字+v-if unread 的红色 .msg-badge）。unread 含 reply+like 双流，B 回复+点赞会让 badge 显示 2 而非 1，属预期。
+- 守卫判据：游客态 performance.getEntriesByType("resource") 无 /api/comments/inbox 即未发请求；点击入口应弹「需要登录」modal 而非跳 inbox。
+- 从 inbox 点左上返回箭头回讨论页，onShow 重拉 unread，badge 应立即消失（进 inbox 即打读水位）。
+- 375 挤压判定：取 .msg 与 .cnt 的 getBoundingClientRect，gap>0 且 sw==375 即无挤压/溢出。
+
+## R33 讨论广场走查新经验
+- R33（bundle index-QbEsMS27.js 起）：GET /api/comments/plaza 游客可直接 curl 验证（按题聚合 ok 评论，last_at 倒序）；C 端入口在首页「更多练习」grid 末尾「讨论广场」卡（home.vue goPlaza），页面 /pkgA/social/plaza，≥1024px .list 为 grid 两列（computedStyle gridTemplateColumns 出两值），窄屏 flex 单列。
+- CDP 多 tab 陷阱：按 'zalize' 过滤 tabs 会同时命中 /admin 管理台 tab，Emulation 清除/设置可能打到错误 tab——脚本应额外排除 '/admin'；且 clearDeviceMetricsOverride 后需 location.reload() 才恢复真实 innerWidth。
+
+## R34 解析区热评卡走查新经验
+- 在刷题页命中指定 qid 的通用方法：`/api/search/question/{id}`（需 curl 带默认 UA，python urllib 直连会 403）取完整题对象，CDP 写 localStorage `redoSet`（uni 包装 `{"type":"object","data":[题对象数组]}`），再开 /pages/practice/practice 即以该题组开练；可放「有评论题+无评论题」两题同时覆盖热评卡与切题清空。
+- 刷题页答对会自动跳下一题——要看解析可用 ← 键回上一题（解析状态保留）；热评卡 .hotc 位于解析区「写笔记/讨论(n)/分享给队友」行下方，count>0 才发 `/api/comments?sort=hot`（performance 资源列表可作零请求证据）。
+- 刷题页 reload 后会弹「继续上次练习?」对话框，且离开再进其他页面也可能弹——测试收尾应清 localStorage 的 redoSet/practiceSession/practicePreset/practiceLaunch。
+- 游客态请求会带 uid=保护 uid 参数（只读 GET 无害），mutation 类操作绝不可在该态执行。
+
+## R35 /tiku SSR 考友讨论区块走查新经验
+- /tiku/q/{qid} 为 SSR 纯 HTML，可先 curl grep「考友讨论（N 条）」「参与讨论（免费）」「discuss?qid=」做数据前提确认，再浏览器取视觉证据；无评论题应 grep 0 命中（含 QCOMMENTS 占位符——占位符残留即注入断）。
+- 区块位置：相似题「同考点相似题」卡之后、页脚之前；CTA 是 SPA hash 链接（#/pkgA/social/discuss?qid=），点击后直接落 App 讨论页。
+- 地址栏陷阱：ctrl+l 后 type URL 可能被历史自动补全劫持（回车进了补全项）；输前缀后按 Delete 删除内联补全再回车，或点击地址栏+ctrl+a 重输。
+- CDP Emulation override 在 websocket 断开后即失效——需要保持视口的交互期间脚本不要 close 连接，或每步重设；console_clean_vw.py 报的 VW 才是 reload 时真实生效宽度。
+
+## R36 抢首评引导条/focus 直达走查新经验
+- q-social-bar 状态判据：DOM 查 `.firstc`（count===0 引导条）与 `.hotc`（count>0 热评卡）数量即可量化互斥（应恰一为 1、另一为 0）。
+- 聚焦断言别只看截图：用 CDP `document.activeElement===document.querySelector('input.uni-input-input')` 佐证；游客态应为 BODY，登录+focus=1 约 300ms 后应为 INPUT。
+- practice 页 reload 会把当前会话重写回 practiceSession——想重进 redoSet 题组，必须先导航离开 practice（如首页），再 removeItem('practiceSession') + 注入 redoSet，最后重开 practice；页面开着时清 storage 会被页面回写覆盖。
+- 用 tty 后台脚本保持 375 override 时，测完务必 kill 该 shell，否则后续页面（含 SSR 页）会一直窄渲染；kill 后需 Ctrl+Shift+R 恢复真实宽度。
+- 登录 A 后回刷题页测题组，可用键盘 ← 回上一题看解析；答错停留当前题更省事（选明显错项）。
+
+## R37 /tiku/discuss/ 考友热议聚合页走查新经验
+- 数据前提 curl 判据：`/tiku/discuss`（无斜杠）应 301 → `/tiku/discuss/`；页面 grep「考友热议题目（N 题）」「/tiku/q/{qid}」「进入讨论广场参与互动」；首页 `/tiku/` grep「考友热议题目 →」；`/sitemap-pages.xml` grep `/tiku/discuss/`。
+- 首页入口链接在段落尾部会随文案换行断成两截（如「考/友热议题目 →」跨行）——点击要瞄准链接文本本体（第二行行首），点段落空白处不会导航。
+- SSR 卡片题干 h2 链接点击也要点在文本上；点卡片留白不导航（整卡非链接，与 App 端整卡可点不同）。
+
+## R38 讨论页多行 textarea 走查新经验
+- uni-app 的 `<textarea class="ipt">` 渲染为 `UNI-TEXTAREA` 自定义元素：`document.querySelector('textarea.ipt')` 命中 0，正确取法是 `document.querySelector('.ipt')`（wrapper）+ `w.querySelector('textarea')`（真实 textarea）；聚焦断言 `document.activeElement.tagName==='TEXTAREA'` 仍直接可用。
+- auto-height/封顶判据：wrapper `clientHeight` 单行约 52px、逐行长高、封顶 120px（240rpx@2）；封顶后 `textarea.scrollHeight > clientHeight` 即内滚生效。
+- 回车不发布判据：多次 Enter 后列表 `.tx` 数量不变、页顶「共 N 条讨论」不变即可，无需抓包。
+- ASCII 多行内容可直接用 computer type + Return 原生输入（中文才需 native setter），能同时天然验证「回车=换行」。
+- 删除评论/回复：每条的「删除」链接→弹「删除这条讨论?」确认框点「确定」；回复需与顶层评论分别删除（非级联一键）。
+- 坑：清 authToken/authUser 后浏览器另一 localStorage key 里 uid 仍是 u27，干净重载会出一条 `api/comments?...uid=u27` 403 console error——先跑 `restore_ls.py` 恢复保护 uid 再做 console 干净重载检查即可回 0 error。
+- practice?mode=redo 若打开的是残留 10 题会话而非注入题组：清 practiceSession → 重跑 r34_redoset.py → reload（同 R36 坑）。
+
+## R39 账号 uid 403 自动脱困走查新经验
+- 卡死态制造法：登录后仅删 authToken/authUser、保留 anonUid=u<id>，F5 即触发首个 403；伪 token 态则把 authToken 设为 `{"type":"string","data":"xxx"}`（uni storage 包裹格式）。
+- 保护 uid 隔离手法：**登录前**先把 anonUid 设成一次性随机值（uR39tmp…），登录 merge 与 deviceAnonUid 只关联该一次性值，保护 uid 全程零关联；收尾删 deviceAnonUid 后跑 restore_ls.py。
+- 复位判据：clearAuth 后 anonUid=deviceAnonUid（有）或删除（无，下次随机再生 L266-273）；「后续请求 200」用页面内点「最新」排序 tab 触发新 fetchComments 取证（performance.getEntriesByType('resource') 读 responseStatus）。
+- toast「登录已过期，请重新登录」duration=2500ms，F5 后 ~1.5s 内截图可稳定捕获。
+- 复位当页 Vue 的 logged 状态是 mount 时算的，clearAuth 后输入框 placeholder 可能仍显登录态文案，再刷新才更新——非 bug，断言以 storage/网络为准。
+- 收藏页路由是 `#/pkgA/social/favorites`（不是 /pkgA/user/favorites，后者白屏）。
+- 375 视口 override 随 CDP ws 断开即失效；要拍 375 截图需后台脚本保持连接（hold375.py 模式），拍完 pkill。
+
+## R40 查询收敛（N+1→单 SQL）类后端-only 改动走查经验
+- 这类「响应结构/语义不变」的 perf 改动，UI 断言锚点靠**逐卡配对**：先 curl `/api/comments/plaza` 与 `/tiku/discuss/` 记下每张卡的 题干↔模块↔cnt↔最新评论昵称/内容 配对与 last_at 倒序顺序，再在浏览器逐卡核对——JOIN 错配会表现为字段跨题串行，而非页面报错。
+- App 讨论广场入口：首页滚到「更多练习」网格最后一张卡「讨论广场（考友热议·每题讨论）」，点击直达 `#/pkgA/social/plaza`；广场整卡可点跳 discuss?qid=。
+- 已知讨论数据锚点（截至 R40）：三题 243872（R25 评论）/427044（考友0001）/319808（测试小助手），plaza 与 SSR 页应同为这 3 卡同序。
+- 地址栏输入 kaogong 首页 URL 极易被历史自动补全劫持到 /tiku/q/243872——输入完整 URL 后补一个多余字符再 Backspace 可绕过补全。
+
+## R41 authChanged 全局广播走查新经验
+- R41 起 setAuth/clearAuth 末尾 `uni.$emit('authChanged')`，discuss/profile/stats onLoad $on：403 复位后**当页不刷新**即时更新（placeholder 变「登录后参与讨论」、账号卡变未登录）——R39 记录的「刷新才更新」滞后已消除，旧断言注意更新。
+- 大坑：hash 路由 SPA 已加载的旧 bundle 常驻内存，仅 hash 导航不换 chunk——部署新 bundle 后先 `Ctrl+Shift+R` 硬刷新，否则新监听不存在会误判失败。可 curl 生产 index 确认 bundle 名、curl 对应 pkgA-social-discuss.*.js 确认含 `authChanged`。
+- 即时更新取证法：登录态打开 discuss → CDP 只删 authToken/authUser（保留 anonUid=u<id>）→ 页内点「最新」tab 触发 403 → 无需刷新观察 toast+placeholder 同帧变化，前后截图对比。
+- profile 页无被动请求时，切到 stats 再回来或直接看账号卡即可（profile/stats 均为监听者）。
+- 讨论页游客守卫弹窗「需要登录」的「去登录」直达 login 页，登录成功自动返回 discuss 且 placeholder 已是登录态（广播+onShow 双保险）。
+
+## R42 掌握度地图（mastery-map）走查新经验
+- 冷启动阈值 need=30 来自 `/api/mastery/map?uid=`；解锁最快法：一次性游客 anonUid → practice 页键盘 A/Enter 连按（每组 10 题，「再来一组」续组）。
+- **大坑：后端 `_MASTERY_CACHE` 60s 进程内缓存**（db.py MASTERY_CACHE_TTL=60）——刚答完题 map 页仍显旧 n_total/cold 态，等 60s 再刷新即可，勿误判为作答未入库。
+- 桌面（≥1024）判据：`.side-nav` display:block/width 220/sticky、`.tabs` display:none、首行 `.tile` 5 个 cursor:pointer、点格 `.sheet` w=720（含 padding 744）translateX 居中（左右差≈滚动条 15px 属正常）、`.cold` max-width 560 且作为 .page flex 子项内容收缩（宽<560 也正常，看页内左右 margin 相等即居中）。
+- 375 判据：side-nav display:none、tabs block、首行 tile 3 个、sheet x=12/rightGap=12 横贯。
+- 桌面 .page 有全局壳层偏移（x≈288/w≈1072 @1440），居中断言要相对 .page content box 算，不能只看 viewport 左右 gap。
+- 「练 10 题」写 practiceLaunch 跳 practice；出题接口偶尔 10s+ 慢加载（页面显「网络较慢」），耐心等待勿重试。
+- 坑：`pkill -f xxx.py` 若命令串含同样文本会杀掉自己的 bash（exit -1）——改用 pgrep 找 pid 再 kill，或 pattern 避开自身命令行。
+
+## R44 深色模式走查新经验
+- 深色开关：`localStorage.setItem('themeMode','dark')` 普通字符串+刷新（html 挂 `.theme-dark`）；测后 `removeItem('themeMode')`。
+- 原生导航栏返回箭头断言：选择器 `uni-page-head .uni-page-head-btn path` 的 computed fill（深色 rgb(242,243,247)、浅色 rgb(0,0,0)）。
+- CDP 后台 python 脚本 print 需 `-u` 或 `flush=True`，否则 sleep 持连时输出被缓冲。
+- `pgrep/pkill -f` 的模式若出现在本 shell 命令串会匹配自身导致自杀（exit -1）：用方括号转义（如 `pgrep -af 'holdv[w]'`）或先定位精确 PID 再 kill。

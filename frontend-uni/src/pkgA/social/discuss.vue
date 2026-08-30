@@ -20,6 +20,11 @@
       <text class="chip" :class="{ on: sort === 'hot' }" @click="switchSort('hot')">最热</text>
       <text class="chip" :class="{ on: sort === 'new' }" @click="switchSort('new')">最新</text>
       <text class="cnt">共 {{ total }} 条讨论</text>
+      <view class="msg" @click="goInbox">
+        <l-icon name="bell" :size="15" color="#5a6072" />
+        <text>消息</text>
+        <text v-if="inboxUnread" class="msg-badge">{{ inboxUnread }}</text>
+      </view>
     </view>
 
     <!-- 评论列表 -->
@@ -69,13 +74,13 @@
         <view class="rx" @click="replyTo = null"><l-icon name="x" :size="14" color="#8a90a0" /></view>
       </view>
       <view class="inputrow">
-        <input
+        <textarea
           v-model="draft"
           class="ipt"
           :placeholder="logged ? '说说你的解法 / 吐槽这道题…' : '登录后参与讨论'"
           :maxlength="500"
-          confirm-type="send"
-          @confirm="submit"
+          :focus="autoFocus"
+          :auto-height="true"
           @focus="ensureLogin"
         />
         <button class="send" :disabled="busy || !draft.trim()" @click="submit">发布</button>
@@ -85,7 +90,7 @@
 </template>
 
 <script>
-import { deleteOwnComment, fetchComments, getToken, likeComment, postComment, reportComment, request } from '../../api.js';
+import { deleteOwnComment, fetchCommentInbox, fetchComments, getToken, likeComment, postComment, reportComment, request } from '../../api.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -117,6 +122,8 @@ export default {
       busy: false,
       replyTo: null,
       logged: false,
+      autoFocus: false,
+      inboxUnread: 0,
     };
   },
   onShow() {
@@ -125,6 +132,7 @@ export default {
       this.logged = l;
       if (this.qid) this.load();
     }
+    this.loadInbox();
   },
   onLoad(opts) {
     this.qid = Number(opts.qid || 0);
@@ -132,8 +140,24 @@ export default {
       uni.showToast({ title: '缺少题目参数', icon: 'none' });
       return;
     }
+    if (opts.focus === '1' && getToken()) {
+      setTimeout(() => {
+        this.autoFocus = true;
+      }, 300);
+    }
     this.loadQuestion();
     this.load();
+    this._onAuth = () => {
+      const l = !!getToken();
+      if (l !== this.logged) {
+        this.logged = l;
+        if (this.qid) this.load();
+      }
+    };
+    uni.$on('authChanged', this._onAuth);
+  },
+  onUnload() {
+    if (this._onAuth) uni.$off('authChanged', this._onAuth);
   },
   methods: {
     modName(m) {
@@ -172,6 +196,20 @@ export default {
         uni.showToast({ title: e.message, icon: 'none' });
       }
       this.loading = false;
+    },
+    async loadInbox() {
+      if (!this.logged) {
+        this.inboxUnread = 0;
+        return;
+      }
+      try {
+        const d = await fetchCommentInbox();
+        this.inboxUnread = d.unread || 0;
+      } catch (e) { /* 非关键路径 */ }
+    },
+    goInbox() {
+      if (!this.ensureLogin()) return;
+      uni.navigateTo({ url: '/pkgA/social/inbox' });
     },
     switchSort(s) {
       if (this.sort === s) return;
@@ -278,6 +316,11 @@ export default {
 .chip { font-size: 24rpx; color: var(--ink-2); background: var(--fill); padding: 8rpx 26rpx; border-radius: 999rpx; }
 .chip.on { background: var(--brand-soft); color: var(--brand); font-weight: 700; }
 .cnt { font-size: 22rpx; color: var(--ink-3); margin-left: auto; }
+.msg { display: inline-flex; align-items: center; gap: 6rpx; font-size: 22rpx; color: var(--ink-2); margin-left: 20rpx; }
+.msg-badge { min-width: 30rpx; height: 30rpx; line-height: 30rpx; text-align: center; border-radius: 999rpx; background: #e5484d; color: #fff; font-size: 19rpx; padding: 0 8rpx; box-sizing: border-box; }
+/* #ifdef H5 */
+.msg { cursor: pointer; }
+/* #endif */
 .empty { text-align: center; color: var(--ink-3); font-size: 25rpx; padding: 60rpx 24rpx; }
 .empty-t { font-size: 28rpx; font-weight: 600; color: var(--ink-2); margin-bottom: 8rpx; }
 .cmlist { padding: 6rpx 24rpx; }
@@ -288,22 +331,22 @@ export default {
 .cm-hd { display: flex; align-items: center; gap: 10rpx; }
 .nm { font-size: 25rpx; font-weight: 600; color: var(--ink); }
 .tm { font-size: 21rpx; color: var(--ink-3); }
-.tx { font-size: 27rpx; color: var(--ink-2); line-height: 1.65; margin-top: 6rpx; word-break: break-all; }
+.tx { font-size: 27rpx; color: var(--ink-2); line-height: 1.65; margin-top: 6rpx; word-break: break-all; white-space: pre-wrap; }
 .ft { display: flex; gap: 30rpx; margin-top: 12rpx; align-items: center; }
 .up { display: inline-flex; align-items: center; gap: 6rpx; font-size: 23rpx; color: var(--ink-3); }
 .up.on { color: var(--brand); font-weight: 700; }
 .up.sm, .op.sm { font-size: 21rpx; }
 .op { font-size: 23rpx; color: var(--ink-3); }
 .op.del { color: #ef4444; }
-.reply { background: var(--fill); border-radius: 14rpx; padding: 14rpx 18rpx; font-size: 24rpx; color: var(--ink-2); margin-top: 12rpx; line-height: 1.6; word-break: break-all; }
+.reply { background: var(--fill); border-radius: 14rpx; padding: 14rpx 18rpx; font-size: 24rpx; color: var(--ink-2); margin-top: 12rpx; line-height: 1.6; word-break: break-all; white-space: pre-wrap; }
 .rnm { font-weight: 600; color: var(--ink); }
 .rft { display: flex; gap: 24rpx; margin-top: 6rpx; }
 .pin { border: 1rpx solid var(--brand-soft-2); background: var(--brand-soft); border-radius: 16rpx; padding: 18rpx 22rpx; font-size: 23rpx; color: #2c5ad6; line-height: 1.6; }
 .inputbar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 1rpx solid var(--line); padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom)); z-index: 20; }
 .replying { font-size: 22rpx; color: var(--ink-3); margin-bottom: 8rpx; display: flex; align-items: center; gap: 12rpx; }
 .rx { padding: 4rpx 12rpx; }
-.inputrow { display: flex; gap: 16rpx; align-items: center; }
-.ipt { flex: 1; height: 72rpx; border-radius: 999rpx; background: var(--fill); font-size: 26rpx; padding: 0 28rpx; }
+.inputrow { display: flex; gap: 16rpx; align-items: flex-end; }
+.ipt { flex: 1; min-height: 72rpx; max-height: 240rpx; overflow-y: auto; border-radius: 24rpx; background: var(--fill); font-size: 26rpx; line-height: 40rpx; padding: 16rpx 28rpx; box-sizing: border-box; }
 .send { margin: 0; height: 72rpx; line-height: 72rpx; padding: 0 34rpx; border-radius: 999rpx; background: var(--brand); color: #fff; font-size: 26rpx; }
 .send[disabled] { background: var(--brand-soft-2); color: #fff; }
 

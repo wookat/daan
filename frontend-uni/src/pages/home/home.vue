@@ -296,6 +296,11 @@
         <text class="more-t">真题卷练习</text>
         <text class="more-s">按卷连做 · 统一判分</text>
       </view>
+      <view class="card more-c" @click="goPlaza">
+        <view class="more-ico"><l-icon name="message-circle" :size="20" color="#7c3aed" /></view>
+        <text class="more-t">讨论广场</text>
+        <text class="more-s">考友热议 · 每题讨论</text>
+      </view>
     </view>
 
     <!-- 自定义练习 sheet -->
@@ -683,6 +688,9 @@ export default {
     },
     goPk() {
       uni.navigateTo({ url: '/pkgA/pk/pk' });
+    },
+    goPlaza() {
+      uni.navigateTo({ url: '/pkgA/social/plaza' });
     },
     modName(m) {
       return NAMES[m] || m || '未知';

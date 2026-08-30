@@ -24,11 +24,23 @@
       <text class="qsb-link" @click="openDiscuss">💬 讨论{{ count != null ? ' (' + count + ')' : '' }} ›</text>
       <text class="qsb-link" @click="shareToMates">🔗 分享给队友</text>
     </view>
+    <view v-if="hot" class="hotc" @click="openDiscuss">
+      <view class="hotc-top">
+        <text class="hotc-tag">🔥 热评</text>
+        <text class="hotc-nick">{{ hot.nickname }}</text>
+        <text v-if="hot.likes" class="hotc-likes">👍 {{ hot.likes }}</text>
+      </view>
+      <view class="hotc-body">{{ hot.content }}</view>
+    </view>
+    <view v-else-if="count === 0" class="firstc" @click="openDiscuss(true)">
+      <text class="firstc-ph">这题还没有讨论，说说你的解法…</text>
+      <text class="firstc-cta">抢首评 →</text>
+    </view>
   </view>
 </template>
 
 <script>
-import { fetchCommentCount, fetchNote, saveNote, shareCreate, qShareText, shareVariant, trackEvent } from '../../api.js';
+import { fetchCommentCount, fetchComments, fetchNote, saveNote, shareCreate, qShareText, shareVariant, trackEvent } from '../../api.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 
@@ -38,7 +50,7 @@ export default {
     questionId: { type: Number, required: true },
   },
   data() {
-    return { count: null, note: '', draft: '', editing: false, busy: false };
+    return { count: null, note: '', draft: '', editing: false, busy: false, hot: null };
   },
   watch: {
     questionId: {
@@ -47,6 +59,7 @@ export default {
         this.editing = false;
         this.note = '';
         this.count = null;
+        this.hot = null;
         this.load();
       },
     },
@@ -59,6 +72,11 @@ export default {
         if (qid !== this.questionId) return;
         this.count = c.total;
         this.note = (n.item && n.item.content) || '';
+        if (c.total > 0) {
+          const d = await fetchComments(qid, 'hot');
+          if (qid !== this.questionId) return;
+          this.hot = (d.items && d.items[0]) || null;
+        }
       } catch (e) { /* 非关键路径 */ }
     },
     startEdit() {
@@ -78,8 +96,8 @@ export default {
       }
       this.busy = false;
     },
-    openDiscuss() {
-      uni.navigateTo({ url: '/pkgA/social/discuss?qid=' + this.questionId });
+    openDiscuss(focus) {
+      uni.navigateTo({ url: '/pkgA/social/discuss?qid=' + this.questionId + (focus === true ? '&focus=1' : '') });
     },
     async shareToMates() {
       try {
@@ -114,4 +132,16 @@ export default {
 .nop.del { color: #ef4444; }
 .qsb-row { display: flex; gap: 40rpx; margin-top: 14rpx; }
 .qsb-link { font-size: 24rpx; color: var(--brand); }
+.hotc { background: var(--fill); border-radius: 14rpx; padding: 14rpx 18rpx; margin-top: 14rpx; }
+.hotc-top { display: flex; align-items: center; gap: 12rpx; }
+.hotc-tag { font-size: 21rpx; color: #ea580c; background: #ffedd5; border-radius: 999rpx; padding: 2rpx 12rpx; font-weight: 600; }
+.hotc-nick { font-size: 22rpx; color: var(--ink-2); font-weight: 600; }
+.hotc-likes { font-size: 21rpx; color: var(--ink-3); margin-left: auto; }
+.hotc-body { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; margin-top: 8rpx; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.firstc { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; background: var(--fill); border: 1rpx dashed var(--line); border-radius: 999rpx; padding: 12rpx 24rpx; margin-top: 14rpx; }
+.firstc-ph { font-size: 23rpx; color: var(--ink-3); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.firstc-cta { font-size: 23rpx; color: var(--brand); font-weight: 600; flex-shrink: 0; }
+/* #ifdef H5 */
+.hotc, .firstc { cursor: pointer; }
+/* #endif */
 </style>

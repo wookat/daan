@@ -93,6 +93,10 @@
           "style": { "navigationBarTitleText": "讨论消息" }
         },
         {
+          "path": "social/plaza",
+          "style": { "navigationBarTitleText": "讨论广场" }
+        },
+        {
           "path": "social/favorites",
           "style": { "navigationBarTitleText": "收藏与笔记" }
         },

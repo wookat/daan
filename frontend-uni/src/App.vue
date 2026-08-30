@@ -68,6 +68,10 @@ page {
 }
 
 /* #ifdef H5 */
+html {
+  /* 恒预留滚动条槽位：内容变长出现滚动条时居中壳不再横移（CLS） */
+  scrollbar-gutter: stable;
+}
 body {
   background: #f6f7fb;
 }
@@ -118,6 +122,9 @@ html.theme-dark body {
 }
 .theme-dark uni-page-head .uni-page-head__title {
   color: #f2f3f7 !important;
+}
+.theme-dark uni-page-head .uni-page-head-btn path {
+  fill: #f2f3f7;
 }
 .theme-dark input,
 .theme-dark textarea {

@@ -200,6 +200,15 @@ export default {
       return (p.exam_type || '') + (p.exam_date ? ' · ' + p.exam_date : '');
     },
   },
+  onLoad() {
+    this._onAuth = () => {
+      this.user = getAuthUser();
+    };
+    uni.$on('authChanged', this._onAuth);
+  },
+  onUnload() {
+    if (this._onAuth) uni.$off('authChanged', this._onAuth);
+  },
   onShow() {
     this.user = getAuthUser();
     this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };

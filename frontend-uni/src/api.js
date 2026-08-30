@@ -43,6 +43,7 @@ export function setAuth(token, user) {
   uni.setStorageSync('authToken', token);
   uni.setStorageSync('authUser', user);
   uni.setStorageSync('anonUid', user.uid);
+  uni.$emit('authChanged');
 }
 
 // 退出/401：清登录态，回到本机匿名 uid
@@ -52,6 +53,7 @@ export function clearAuth() {
   const dev = uni.getStorageSync('deviceAnonUid');
   if (dev) uni.setStorageSync('anonUid', dev);
   else uni.removeStorageSync('anonUid');
+  uni.$emit('authChanged');
 }
 
 function authHeader() {
@@ -115,6 +117,10 @@ export function reportComment(cid, reason) {
 
 export function fetchCommentInbox() {
   return request('/api/comments/inbox');
+}
+
+export function fetchCommentsPlaza() {
+  return request('/api/comments/plaza');
 }
 
 export function readCommentInbox() {
@@ -239,8 +245,10 @@ function rawRequest(path, { method = 'GET', data, header = {}, timeout = 180000 
         else {
           const detail = (res.data && res.data.detail) || '';
           // 仅登录态本身失效才清登录（访问码/管理令牌等 401 不应踢登录）
-          const authExpired = res.statusCode === 401 && !path.startsWith('/api/auth/') && (detail.includes('未登录') || detail.includes('登录已过期'));
-          if (authExpired && getToken()) {
+          const authExpired =
+            (res.statusCode === 401 && !path.startsWith('/api/auth/') && (detail.includes('未登录') || detail.includes('登录已过期'))) ||
+            (res.statusCode === 403 && detail.includes('无权访问该账号数据'));
+          if (authExpired && (getToken() || res.statusCode === 403)) {
             clearAuth();
             uni.showToast({ title: '登录已过期，请重新登录', icon: 'none', duration: 2500 });
           }

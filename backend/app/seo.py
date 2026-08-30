@@ -236,7 +236,8 @@ def tiku_index():
     total = sum(counts.values())
     body = (
         "<h1>公务员考试题库</h1>"
-        f"<p>收录 {total} 道行测/申论题目（含历年真题），按模块、题型、考点分类，可在线刷题并查看花生十三方法讲解。</p>"
+        f"<p>收录 {total} 道行测/申论题目（含历年真题），按模块、题型、考点分类，可在线刷题并查看花生十三方法讲解。"
+        '· <a href="/tiku/discuss/" style="white-space:nowrap">考友热议题目 →</a></p>'
         + "".join(sections)
         + f'<a class="cta" href="{_e(SITE_BASE)}/">进入刷题主站 →</a>'
     )
@@ -250,6 +251,66 @@ def tiku_index():
             f"免费公务员考试题库，收录 {total} 道行测申论题目与历年真题，附答案解析。",
             "/tiku/",
             [("题库", "/tiku/")],
+        ),
+    )
+
+
+@router.get("/discuss", include_in_schema=False)
+def tiku_discuss_noslash():
+    return RedirectResponse("/tiku/discuss/", status_code=301)
+
+
+@router.get("/discuss/", response_class=HTMLResponse, include_in_schema=False)
+def tiku_discuss():
+    conn = db.get_conn()
+    rows = conn.execute(
+        """SELECT g.question_id, g.cnt, c.nickname, c.content, q.id AS q_id, q.question, q.module
+           FROM (SELECT question_id, COUNT(*) AS cnt, MAX(created_at) AS last_at
+                 FROM question_comments WHERE status='ok'
+                 GROUP BY question_id ORDER BY last_at DESC LIMIT 30) g
+           LEFT JOIN question_comments c ON c.id = (
+               SELECT id FROM question_comments
+               WHERE question_id = g.question_id AND status='ok'
+               ORDER BY created_at DESC, id DESC LIMIT 1)
+           LEFT JOIN questions q ON q.id = g.question_id AND q.disabled=0
+           ORDER BY g.last_at DESC"""
+    ).fetchall()
+    cards = []
+    for r in rows:
+        if r["q_id"] is None:
+            continue
+        stem = (r["question"] or "").strip().replace("\n", " ")[:70]
+        mod = _module_name(r["module"]) or "综合"
+        nick = (r["nickname"] or "考友").strip()[:20]
+        cards.append(
+            '<section class="card">'
+            f'<h2><a href="/tiku/q/{r["question_id"]}">{_e(stem)}…</a></h2>'
+            f'<p class="meta">{_e(mod)} · {r["cnt"]} 条讨论</p>'
+            f'<p><b>{_e(nick)}：</b>{_e(r["content"] or "")}</p>'
+            "</section>"
+        )
+    conn.close()
+    if cards:
+        listing = "".join(cards)
+    else:
+        listing = '<section class="card"><p>还没有讨论，去刷题时对题目发表评论，这里会聚合全站热议。</p></section>'
+    body = (
+        _crumb([("题库", "/tiku/"), ("考友热议", None)])
+        + f"<h1>考友热议题目（{len(cards)} 题）</h1>"
+        + '<p class="meta">全站正在讨论的题目，按最近活跃排序，点题干看题目解析与全部讨论</p>'
+        + listing
+        + f'<a class="cta" href="{_e(SITE_BASE)}/#/pkgA/social/plaza">进入讨论广场参与互动（免费）→</a>'
+    )
+    return _page(
+        "考友热议题目_公务员考试题目讨论区_错题邦",
+        "公务员考试题库热议题目聚合：考友们正在讨论的行测/申论题目与解法交流，可在线查看解析并参与讨论。",
+        "/tiku/discuss/",
+        body,
+        _collection_ld(
+            "考友热议题目",
+            "公务员考试题库热议题目聚合，考友讨论与解法交流。",
+            "/tiku/discuss/",
+            [("题库", "/tiku/"), ("考友热议", "/tiku/discuss/")],
         ),
     )
 
@@ -375,7 +436,40 @@ def tiku_paper_detail(pid: int):
 
 @router.get("/q/{qid}", response_class=HTMLResponse, include_in_schema=False)
 def tiku_question(qid: int):
-    return HTMLResponse(_render_question(qid))
+    html = _render_question(qid).replace("<!--QCOMMENTS-->", _render_q_comments(qid))
+    return HTMLResponse(html)
+
+
+def _render_q_comments(qid: int) -> str:
+    conn = db.get_conn()
+    total = conn.execute(
+        "SELECT COUNT(*) FROM question_comments WHERE question_id=? AND status='ok'", (qid,)
+    ).fetchone()[0]
+    if not total:
+        conn.close()
+        return ""
+    rows = conn.execute(
+        "SELECT nickname, content, likes FROM question_comments "
+        "WHERE question_id=? AND status='ok' AND parent_id IS NULL "
+        "ORDER BY likes DESC, created_at DESC LIMIT 5",
+        (qid,),
+    ).fetchall()
+    conn.close()
+    if not rows:
+        return ""
+    items = "".join(
+        '<li><b>'
+        + _e((r["nickname"] or "考友").strip()[:20] or "考友")
+        + (f' \u00b7 \U0001f44d {r["likes"]}' if r["likes"] else "")
+        + "：</b>"
+        + _e(r["content"])
+        + "</li>"
+        for r in rows
+    )
+    cta = (
+        f'<a class="cta" href="{_e(SITE_BASE)}/#/pkgA/social/discuss?qid={qid}">参与讨论（免费）→</a>'
+    )
+    return f'<section class="card"><h2>考友讨论（{total} 条）</h2><ul class="qlist">{items}</ul>{cta}</section>'
 
 
 @router.get("/y/{year}/{module}", include_in_schema=False)
@@ -641,6 +735,7 @@ def _render_question(qid: int) -> str:
             if sim_html
             else ""
         )
+        + "<!--QCOMMENTS-->"
     )
     title_head = qtext.replace("\n", " ")[:50]
     jsonld = {
@@ -791,7 +886,7 @@ def sitemap_index():
 
 @root_router.get("/sitemap-pages.xml", include_in_schema=False)
 def sitemap_pages():
-    urls = [(_url("/tiku/"), None), (_url("/tiku/papers/"), None)]
+    urls = [(_url("/tiku/"), None), (_url("/tiku/papers/"), None), (_url("/tiku/discuss/"), None)]
     for r in db.question_counts():
         if not _module_name(r["module"]):
             continue
