@@ -74,14 +74,13 @@
         <view class="rx" @click="replyTo = null"><l-icon name="x" :size="14" color="#8a90a0" /></view>
       </view>
       <view class="inputrow">
-        <input
+        <textarea
           v-model="draft"
           class="ipt"
           :placeholder="logged ? '说说你的解法 / 吐槽这道题…' : '登录后参与讨论'"
           :maxlength="500"
           :focus="autoFocus"
-          confirm-type="send"
-          @confirm="submit"
+          :auto-height="true"
           @focus="ensureLogin"
         />
         <button class="send" :disabled="busy || !draft.trim()" @click="submit">发布</button>
@@ -321,22 +320,22 @@ export default {
 .cm-hd { display: flex; align-items: center; gap: 10rpx; }
 .nm { font-size: 25rpx; font-weight: 600; color: var(--ink); }
 .tm { font-size: 21rpx; color: var(--ink-3); }
-.tx { font-size: 27rpx; color: var(--ink-2); line-height: 1.65; margin-top: 6rpx; word-break: break-all; }
+.tx { font-size: 27rpx; color: var(--ink-2); line-height: 1.65; margin-top: 6rpx; word-break: break-all; white-space: pre-wrap; }
 .ft { display: flex; gap: 30rpx; margin-top: 12rpx; align-items: center; }
 .up { display: inline-flex; align-items: center; gap: 6rpx; font-size: 23rpx; color: var(--ink-3); }
 .up.on { color: var(--brand); font-weight: 700; }
 .up.sm, .op.sm { font-size: 21rpx; }
 .op { font-size: 23rpx; color: var(--ink-3); }
 .op.del { color: #ef4444; }
-.reply { background: var(--fill); border-radius: 14rpx; padding: 14rpx 18rpx; font-size: 24rpx; color: var(--ink-2); margin-top: 12rpx; line-height: 1.6; word-break: break-all; }
+.reply { background: var(--fill); border-radius: 14rpx; padding: 14rpx 18rpx; font-size: 24rpx; color: var(--ink-2); margin-top: 12rpx; line-height: 1.6; word-break: break-all; white-space: pre-wrap; }
 .rnm { font-weight: 600; color: var(--ink); }
 .rft { display: flex; gap: 24rpx; margin-top: 6rpx; }
 .pin { border: 1rpx solid var(--brand-soft-2); background: var(--brand-soft); border-radius: 16rpx; padding: 18rpx 22rpx; font-size: 23rpx; color: #2c5ad6; line-height: 1.6; }
 .inputbar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 1rpx solid var(--line); padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom)); z-index: 20; }
 .replying { font-size: 22rpx; color: var(--ink-3); margin-bottom: 8rpx; display: flex; align-items: center; gap: 12rpx; }
 .rx { padding: 4rpx 12rpx; }
-.inputrow { display: flex; gap: 16rpx; align-items: center; }
-.ipt { flex: 1; height: 72rpx; border-radius: 999rpx; background: var(--fill); font-size: 26rpx; padding: 0 28rpx; }
+.inputrow { display: flex; gap: 16rpx; align-items: flex-end; }
+.ipt { flex: 1; min-height: 72rpx; max-height: 240rpx; overflow-y: auto; border-radius: 24rpx; background: var(--fill); font-size: 26rpx; line-height: 40rpx; padding: 16rpx 28rpx; box-sizing: border-box; }
 .send { margin: 0; height: 72rpx; line-height: 72rpx; padding: 0 34rpx; border-radius: 999rpx; background: var(--brand); color: #fff; font-size: 26rpx; }
 .send[disabled] { background: var(--brand-soft-2); color: #fff; }
 
