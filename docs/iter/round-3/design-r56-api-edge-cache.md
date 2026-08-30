@@ -36,4 +36,13 @@
 3. /tiku 既有缓存与安全头零回归；
 4. 首页/讨论广场生产走查 console 0 error。
 
-## 验收结果（部署后回填）
+## 验收结果（2026-08-29 生产实测）
+
+- 5 个清单端点均 MISS→HIT，`cache-control: public, max-age=60`，HIT 响应体与 origin 直出逐字节一致（cmp）；
+- /api/stats?uid=… 无 X-Edge-Cache/Cache-Control（绕过缓存路径）；POST /api/comments/plaza 405 不进缓存；
+- /api/questions 不在清单：无缓存头、连续两次响应随机不同（随机组题不受影响）；
+- /tiku 既有缓存（HIT）与安全头（HSTS 等）零回归；
+- 首页/讨论广场 1440+375 生产走查：console 0 error、无水平溢出。
+
+边界：登录态请求若带 Authorization 头会绕过缓存（设计使然，游客与爬虫仍被屏蔽）；
+公告等内容更新最长 60s 边缘延迟。
