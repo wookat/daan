@@ -49,4 +49,12 @@ export function request(path, opts = {}) {
 5. 生产 1440/375 全页走查 console 0 error、功能无回归；
 6. build:h5 全绿、部署 hash 一致。
 
-## 验收结果（待部署后回填）
+## 验收结果（2026-08-29 生产实测）
+
+1. 生产拦截实测（1440）：home_bundle 首次挂起 14s → 客户端 12s 超时自动重试 →
+   第二次正常返回，20.3s 内页面数据完整渲染，console 0 error；
+2. 双超时路径（375）：两次均挂起 → 2 次尝试后走 R62 fallback 独立端点，页面正常渲染，
+   console 0 error、无溢出（不再 180s 干等）；
+3. POST 不重试、显式 timeout 调用点不受影响（代码路径静态确认：仅 GET 且未传 timeout 才走新逻辑）；
+4. 正常路径回归：home/practice/book/stats 四页 1440 console 0 error、无水平溢出；
+5. build:h5 全绿；生产 bundle index-BfohsEFb.js 与本机构建一致。
