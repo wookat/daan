@@ -882,10 +882,12 @@ export default {
       uni.switchTab({ url: '/pages/home/home' });
     },
     async load() {
+      const seq = (this._loadSeq = (this._loadSeq || 0) + 1);
       this.loading = true;
       try {
         const uq = 'uid=' + encodeURIComponent(anonUid());
         const [d, r] = await Promise.all([request('/api/mistakes?' + uq), request('/api/review?' + uq)]);
+        if (seq !== this._loadSeq) return;
         this.items = d.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
         this.due = r.items;
         this.dueTotal = r.total || r.items.length;
@@ -901,6 +903,7 @@ export default {
           else uni.removeTabBarBadge({ index: 1 });
         } catch (e) { /* tabBar 未就绪时忽略 */ }
       } catch (e) {
+        if (seq !== this._loadSeq) return;
         const c = getCachedMistakes();
         if (c && c.items && c.items.length) {
           this.items = c.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
