@@ -5,6 +5,13 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R45 /tiku 边缘缓存（CF Pages functions caches.default）走查新经验
+- 取证法：浏览器真实导航的文档响应头用 CDP `Network.enable` + `Network.responseReceived`（type=Document）捕获（helper 模式见 /tmp/cdp174/r45_net.py，可同时 hold 视口）；curl 结果与浏览器一致但报告以浏览器为准。
+- 判据：同一 /tiku URL 二访（300s TTL 内）`X-Edge-Cache: MISS→HIT`；HIT 响应带 `Cache-Control: public, max-age=300`。**实现细节大坑：首个 MISS 响应本身不带 Cache-Control/X- 也可能只带 X-Edge-Cache: MISS**——[[path]].js 只在缓存副本 cacheCopy 上 set Cache-Control，MISS 的直出 out 不带；断言时不要因 MISS 无 cc 判失败，用二访 HIT 证生效。
+- 非 /tiku 范围泄漏检查：`/` 首页文档响应应无 X-Edge-Cache（原生 `public, max-age=0, must-revalidate`）。
+- TTL 过期正常：隔 >300s 再访同 URL 会重新 MISS，非 bug。
+- 再次确认 pkill/pgrep 自杀坑：即使模式用了方括号转义，如果同一命令串后半段还包含未转义的同名字符串（如 `nohup python3 r45_net.py …`），pgrep -f 仍会匹配本 shell——kill 与重启必须拆成两次独立 exec。
+
 ## R43 CLS/横移类断言走查新经验
 - CLS/横移类断言取证法：用 CDP `Page.addScriptToEvaluateOnNewDocument` 注入 rAF 采样脚本（记录壳 rect.x + documentElement.clientWidth 去重序列），再 `Page.reload(ignoreCache)` 硬刷新，比对全程 x 零跳变。
 - `scrollbar-gutter: stable` 生效判据 = computed 值 + 有/无滚动条页 body 右缘一致（clientWidth 可能一页 1440 一页 1425，以 body 右缘为准）。

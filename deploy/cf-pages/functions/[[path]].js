@@ -53,6 +53,7 @@ export async function onRequest({ request, waitUntil }) {
     cacheCopy.headers.delete("Set-Cookie");
     waitUntil(caches.default.put(request.url, cacheCopy));
     const out = new Response(body, resp);
+    out.headers.set("Cache-Control", `public, max-age=${EDGE_CACHE_TTL}`);
     out.headers.set("X-Edge-Cache", "MISS");
     return out;
   }
