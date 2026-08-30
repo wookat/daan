@@ -7,6 +7,8 @@
     </view>
 
     <template v-if="tab === 'fav'">
+      <view class="fav-cols">
+      <view class="fav-left">
       <!-- 收藏夹列表 -->
       <view class="card folders">
         <view
@@ -22,6 +24,9 @@
             <text class="fname">{{ f.name }}</text>
             <text class="fsub">{{ f.n }} 题</text>
           </view>
+          <!-- #ifdef H5 -->
+          <text v-if="f.id" class="fops" @click.stop="folderOps(f)">···</text>
+          <!-- #endif -->
           <text class="chev">{{ folderId === f.id ? '✓' : '›' }}</text>
         </view>
         <view class="folder add" @click="newFolder">
@@ -29,7 +34,9 @@
           <view class="fmain"><text class="fname add-t">新建收藏夹</text></view>
         </view>
       </view>
+      </view>
 
+      <view class="fav-right">
       <!-- 模块筛选 -->
       <view class="chips">
         <text class="chip" :class="{ on: !modFilter }" @click="modFilter = ''">全部模块</text>
@@ -69,6 +76,8 @@
           </view>
         </view>
       </template>
+      </view>
+      </view>
     </template>
 
     <template v-else>
@@ -77,6 +86,7 @@
         <view class="empty-t">还没有笔记</view>
         <view class="empty-s">答题后在解析下方「写笔记」，方法心得随题沉淀</view>
       </view>
+      <view class="ngrid">
       <view v-for="n in notes" :key="n.question_id" class="card qitem">
         <view class="qtx">{{ n.question }}</view>
         <view class="meta">
@@ -85,6 +95,7 @@
           <text class="mtime">{{ fmtDate(n.updated_at) }}</text>
         </view>
         <view class="mynote"><text class="nb"><l-icon name="pencil-line" :size="13" color="#b45309" /> </text>{{ n.content }}</view>
+      </view>
       </view>
     </template>
     <view style="height: 40rpx" />
@@ -322,4 +333,21 @@ export default {
 .ops { display: flex; gap: 34rpx; margin-top: 16rpx; }
 .op { font-size: 24rpx; color: var(--brand); }
 .op.del { color: #ef4444; }
+.fops { color: var(--ink-4); font-size: 26rpx; padding: 0 10rpx; }
+
+/* 桌面（H5）：≥768 页宽收敛；≥1024 左收藏夹侧栏+右列表双栏，笔记两列 */
+/* #ifdef H5 */
+@media (min-width: 768px) {
+  .wrap { max-width: 1044px; margin: 0 auto; }
+  .folder:hover, .chip:hover, .qitem:hover, .seg-i:hover, .fops:hover { cursor: pointer; }
+  .qitem:hover { box-shadow: 0 8rpx 24rpx rgba(31, 36, 48, 0.08); }
+  .fops:hover { color: var(--brand); }
+}
+@media (min-width: 1024px) {
+  .fav-cols { display: flex; gap: 32rpx; align-items: flex-start; }
+  .fav-left { width: 300px; flex: none; position: sticky; top: 24rpx; }
+  .fav-right { flex: 1; min-width: 0; }
+  .ngrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; align-items: start; }
+}
+/* #endif */
 </style>
