@@ -95,6 +95,10 @@ html {
 body {
   background: #f6f7fb;
 }
+body::after {
+  /* 禁用 uni-h5 的 shadow-preload：本产品不用 page-head shadow，避免向 dcloud CDN 发第三方请求 */
+  animation: none !important;
+}
 html.theme-dark body {
   background: #15161c;
 }
