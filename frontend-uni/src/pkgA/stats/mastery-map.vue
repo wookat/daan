@@ -9,6 +9,15 @@
     </view>
 
     <template v-else-if="map">
+      <!-- 桌面侧栏模块导航（≥1024px 显示，与横向 tab 同状态） -->
+      <view class="side-nav">
+        <view v-for="m in map.modules" :key="'s-' + m.module" class="side-item" :class="{ on: curMod === m.module }" @click="curMod = m.module">
+          <text class="side-name">{{ m.name }}</text>
+          <text class="side-pct">{{ m.n ? Math.round(m.mastery * 100) + '%' : '未练' }}</text>
+        </view>
+      </view>
+
+      <view class="main-col">
       <!-- 覆盖度总览 -->
       <view class="card head">
         <view class="cov-ring" :style="covStyle">
@@ -60,6 +69,7 @@
       </view>
 
       <view class="safe-pad" />
+      </view>
 
       <!-- 选中考点吸底操作条 -->
       <view v-if="selected" class="sheet">
@@ -396,4 +406,84 @@ export default {
   background: #eef3ff;
   color: #2e5bff;
 }
+.side-nav {
+  display: none;
+}
+/* #ifdef H5 */
+@media (min-width: 1024px) {
+  .page {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+  }
+  .side-nav {
+    display: block;
+    width: 220px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 16px;
+    background: var(--card, #fff);
+    border-radius: 12px;
+    padding: 8px;
+  }
+  .side-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #4b5163;
+    font-size: 14px;
+  }
+  .side-item:hover {
+    background: #f2f5fc;
+  }
+  .side-item.on {
+    background: #2e5bff;
+    color: #fff;
+  }
+  .side-pct {
+    font-size: 12px;
+    opacity: 0.75;
+  }
+  .main-col {
+    flex: 1;
+    min-width: 0;
+  }
+  .tabs {
+    display: none;
+  }
+  .tiles {
+    gap: 10px;
+  }
+  .tile {
+    width: calc(20% - 8px);
+    cursor: pointer;
+    transition: filter 0.15s, transform 0.15s;
+  }
+  .tile:hover {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+  }
+  .cold {
+    max-width: 560px;
+    margin: 40px auto;
+  }
+  .cold .btn {
+    display: inline-block;
+    padding: 0 40px;
+  }
+  .sheet {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: 720px;
+    max-width: calc(100vw - 48px);
+  }
+  .s-btn {
+    cursor: pointer;
+  }
+}
+/* #endif */
 </style>
