@@ -242,5 +242,27 @@ html.theme-dark body {
     right: calc((100vw - 1140px) / 2 + 24px) !important;
   }
 }
+
+/* 超宽桌面（≥1366px）：壳体拓至 1280px，内容区 1072px，
+   使页面级 1044px 工作台声明真实生效 */
+@media (min-width: 1366px) {
+  uni-app {
+    max-width: 1280px;
+  }
+  .uni-tabbar {
+    left: calc((100vw - 1280px) / 2) !important;
+  }
+  uni-page-body .banner,
+  uni-page-body .mask,
+  uni-page-body .inputbar,
+  uni-page-body .batchbar,
+  uni-page-body .navrow {
+    left: calc((100vw - 1280px) / 2 + 208px) !important;
+    right: calc((100vw - 1280px) / 2) !important;
+  }
+  uni-page-body .fabmenu {
+    right: calc((100vw - 1280px) / 2 + 24px) !important;
+  }
+}
 /* #endif */
 </style>
