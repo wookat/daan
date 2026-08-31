@@ -38,6 +38,7 @@
         </view>
       </view>
       <view v-if="loading" class="spin">加载中…</view>
+      <view v-else-if="qErr" class="spin">加载失败：{{ qErr }}<view class="retry" @click="loadQs()">重试 ›</view></view>
       <view v-else-if="!qs.length" class="spin">暂无题目，敬请期待</view>
       <view class="qgrid">
       <view v-for="q in qs" :key="q.id" class="card q-item" @click="openQ(q.id)">
@@ -102,6 +103,7 @@
         <view class="chip fav" :class="{ on: favOnly }" @click="toggleFavOnly"><l-icon name="star" :size="13" :color="favOnly ? '#b45309' : '#8a90a0'" :fill="favOnly ? '#f59e0b' : 'none'" /><text>收藏{{ favIds.length ? ' ' + favIds.length : '' }}</text></view>
       </view>
       <view v-if="loading" class="spin">加载中…</view>
+      <view v-else-if="mErr" class="spin">加载失败：{{ mErr }}<view class="retry" @click="loadMats()">重试 ›</view></view>
       <view v-else-if="!shownMats.length" class="spin">{{ favOnly ? '还没有收藏素材，点素材右上星标收藏' : '暂无素材，敬请期待' }}</view>
       <view class="mgrid">
       <view v-for="m in shownMats" :key="m.id" class="card m-item">
@@ -121,6 +123,7 @@
 
     <template v-if="tab === 'r'">
       <view v-if="recLoading" class="spin">加载中…</view>
+      <view v-else-if="rErr" class="spin">加载失败：{{ rErr }}<view class="retry" @click="loadRecs()">重试 ›</view></view>
       <view v-else-if="!recs.length" class="spin">还没有作答记录，去题库作答并 AI 批改后会自动保存</view>
       <view class="rgrid">
       <view v-for="r in recs" :key="r.id" class="card">
@@ -157,6 +160,9 @@ export default {
       showRef: false,
       expanded: 0,
       loading: false,
+      qErr: '',
+      mErr: '',
+      rErr: '',
       myAnswer: '',
       grading: false,
       gradeResult: '',
@@ -198,6 +204,7 @@ export default {
   methods: {
     async loadQs(append) {
       this.loading = !append;
+      this.qErr = '';
       try {
         const t = this.qtype === '全部' ? '' : '&qtype=' + encodeURIComponent(this.qtype);
         const y = this.year ? '&year=' + this.year : '';
@@ -208,12 +215,14 @@ export default {
         this.qTotal = d.total || items.length;
         this.qs = append ? this.qs.concat(items) : items;
       } catch (e) {
+        this.qErr = e.message || '网络异常';
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
       this.loading = false;
     },
     async loadMats(append) {
       this.loading = !append;
+      this.mErr = '';
       try {
         const t = this.mtype === '全部' ? '' : '&type=' + encodeURIComponent(this.mtype);
         const d = await request('/api/shenlun/materials?limit=20&offset=' + this.mOffset + t);
@@ -221,6 +230,7 @@ export default {
         this.mEnd = items.length < 20;
         this.mats = append ? this.mats.concat(items) : items;
       } catch (e) {
+        this.mErr = e.message || '网络异常';
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
       this.loading = false;
@@ -272,10 +282,12 @@ export default {
         return;
       }
       this.recLoading = true;
+      this.rErr = '';
       try {
         const d = await request('/api/shenlun/history?limit=50&uid=' + encodeURIComponent(uid));
         this.recs = d.items || [];
       } catch (e) {
+        this.rErr = e.message || '网络异常';
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
       this.recLoading = false;
@@ -444,6 +456,7 @@ page { background: var(--fill); }
 .hist-ans { font-size: 24rpx; color: var(--ink-1); line-height: 1.7; white-space: pre-wrap; display: block; max-height: 240rpx; overflow: hidden; }
 .hist-res { font-size: 23rpx; color: var(--ink-2); background: var(--warn-soft); border-radius: 8rpx; padding: 12rpx 14rpx; margin-top: 10rpx; line-height: 1.7; white-space: pre-wrap; display: block; }
 .spin { text-align: center; color: var(--ink-3); font-size: 25rpx; padding: 60rpx 0; }
+.retry { margin-top: 12rpx; color: var(--brand); font-size: 26rpx; font-weight: 500; }
 .q-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
 .q-tags { display: flex; align-items: center; gap: 12rpx; flex-wrap: wrap; }
 .q-paper { font-size: 22rpx; color: var(--ink-2); background: var(--fill); border-radius: 8rpx; padding: 4rpx 14rpx; }

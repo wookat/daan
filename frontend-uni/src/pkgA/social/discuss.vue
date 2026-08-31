@@ -34,6 +34,10 @@
       <view class="plaza-btn" @click="goPlaza">去讨论广场</view>
     </view>
     <view v-else-if="loading" class="card empty">加载中…</view>
+    <view v-else-if="loadErr" class="card empty">
+      <view class="empty-t">加载失败：{{ loadErr }}</view>
+      <view class="retry" @click="load">重试 ›</view>
+    </view>
     <view v-else-if="!items.length" class="card empty">
       <view class="empty-t">还没有讨论</view>
       <view class="empty-s">说说你的解法、避坑经验，帮到下一位考友</view>
@@ -124,6 +128,7 @@ export default {
       total: 0,
       sort: 'hot',
       loading: true,
+      loadErr: '',
       draft: '',
       busy: false,
       replyTo: null,
@@ -195,11 +200,13 @@ export default {
     },
     async load() {
       this.loading = true;
+      this.loadErr = '';
       try {
         const d = await fetchComments(this.qid, this.sort);
         this.items = d.items;
         this.total = d.total;
       } catch (e) {
+        this.loadErr = e.message || '网络异常';
         uni.showToast({ title: e.message, icon: 'none' });
       }
       this.loading = false;
@@ -333,6 +340,7 @@ export default {
 /* #endif */
 .empty { text-align: center; color: var(--ink-3); font-size: 25rpx; padding: 60rpx 24rpx; }
 .empty-t { font-size: 28rpx; font-weight: 600; color: var(--ink-2); margin-bottom: 8rpx; }
+.retry { margin-top: 8rpx; color: var(--brand); font-size: 26rpx; font-weight: 500; }
 .plaza-btn { display: inline-block; margin-top: 24rpx; background: var(--brand); color: #fff; font-size: 26rpx; border-radius: 999rpx; padding: 14rpx 56rpx; }
 .cmlist { padding: 6rpx 24rpx; }
 .cm { display: flex; gap: 18rpx; padding: 24rpx 0; border-bottom: 1rpx solid var(--fill); }

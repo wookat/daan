@@ -30,7 +30,8 @@
         <text v-if="lb.my_rank" class="sec-more">我的排名 #{{ lb.my_rank }} · {{ lb.my_wins }} 胜</text>
       </view>
       <view class="card">
-        <view v-if="!lb.items.length" class="empty">本周还没有对局，快来抢占榜首！</view>
+        <view v-if="loadErr && !lb.items.length" class="empty">加载失败：{{ loadErr }}<view class="retry" @click="loadHome">重试 ›</view></view>
+        <view v-else-if="!lb.items.length" class="empty">本周还没有对局，快来抢占榜首！</view>
         <view v-for="e in lb.items" :key="e.rank" class="lb-row">
           <text class="lb-rank" :class="'r' + e.rank">{{ e.rank }}</text>
           <text class="lb-name">{{ e.name }}</text>
@@ -43,7 +44,8 @@
         <text v-if="mine.wins" class="sec-more">累计 {{ mine.wins }} 胜</text>
       </view>
       <view class="card">
-        <view v-if="!mine.items.length" class="empty">还没有对局记录</view>
+        <view v-if="loadErr && !mine.items.length" class="empty">加载失败：{{ loadErr }}<view class="retry" @click="loadHome">重试 ›</view></view>
+        <view v-else-if="!mine.items.length" class="empty">还没有对局记录</view>
         <view v-for="m in mine.items" :key="m.code" class="m-row" @click="openMatch(m)">
           <view class="m-l">
             <text class="m-t">{{ MODS[m.module] || '混合' }} · {{ m.code }}</text>
@@ -173,6 +175,7 @@ export default {
       joinCode: '',
       lb: { items: [], my_rank: null, my_wins: 0 },
       mine: { items: [], wins: 0 },
+      loadErr: '',
       // 对局
       code: '',
       match: null,
@@ -249,11 +252,14 @@ export default {
   // #endif
   methods: {
     async loadHome() {
+      this.loadErr = '';
       try {
         const [lb, mine] = await Promise.all([pkLeaderboard(), pkMine()]);
         this.lb = lb;
         this.mine = mine;
-      } catch (e) { /* 非关键路径 */ }
+      } catch (e) {
+        this.loadErr = e.message || '网络异常';
+      }
     },
     async createMatch() {
       try {
@@ -543,6 +549,7 @@ export default {
 .wrap { padding: 24rpx 32rpx 60rpx; }
 .card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 24rpx 28rpx; margin-bottom: 20rpx; }
 .empty { text-align: center; color: var(--ink-2); font-size: 25rpx; padding: 30rpx 0; }
+.retry { margin-top: 12rpx; color: var(--brand); font-size: 26rpx; font-weight: 500; }
 
 .hero { background: linear-gradient(135deg, #5b8af8, #2e5bff); border-radius: 32rpx; padding: 36rpx 32rpx; margin-bottom: 24rpx; box-shadow: 0 12rpx 36rpx rgba(46, 91, 255, 0.3); }
 .hero-t { display: flex; align-items: center; gap: 12rpx; color: #fff; font-size: 40rpx; font-weight: 800; }

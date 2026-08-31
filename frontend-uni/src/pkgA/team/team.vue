@@ -9,7 +9,10 @@
 
       <view class="tm-cols">
       <view class="tm-main">
-      <view class="card" v-if="!teams.length && loaded">
+      <view class="card" v-if="loadErr && loaded">
+        <view class="empty">加载失败：{{ loadErr }}<view class="retry" @click="loadHome">重试 ›</view></view>
+      </view>
+      <view class="card" v-else-if="!teams.length && loaded">
         <view class="empty">还没有小队。创建一个小队，把邀请码发给考友，一起打卡刷题！</view>
       </view>
       <view v-for="t in teams" :key="t.id" class="card t-row" @click="openPanel(t)">
@@ -115,6 +118,7 @@ export default {
     return {
       view: 'home',
       loaded: false,
+      loadErr: '',
       teams: [],
       joinCode: '',
       showCreate: false,
@@ -152,10 +156,13 @@ export default {
   },
   methods: {
     async loadHome() {
+      this.loadErr = '';
       try {
         const d = await teamMine();
         this.teams = d.items || [];
-      } catch (e) { /* 非关键路径 */ }
+      } catch (e) {
+        this.loadErr = e.message || '网络异常';
+      }
       this.loaded = true;
     },
     async refreshPanel() {
@@ -285,6 +292,7 @@ export default {
 .wrap { padding: 24rpx 32rpx 60rpx; }
 .card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 24rpx 28rpx; margin-bottom: 20rpx; }
 .empty { text-align: center; color: var(--ink-2); font-size: 25rpx; padding: 30rpx 0; line-height: 1.7; }
+.retry { margin-top: 12rpx; color: var(--brand); font-size: 26rpx; font-weight: 500; }
 
 .hero { background: linear-gradient(135deg, #5b8af8, #2e5bff); border-radius: 32rpx; padding: 36rpx 32rpx; margin-bottom: 24rpx; box-shadow: 0 12rpx 36rpx rgba(46, 91, 255, 0.3); }
 .hero-t { display: flex; align-items: center; gap: 12rpx; color: #fff; font-size: 40rpx; font-weight: 800; }
