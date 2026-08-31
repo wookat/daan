@@ -287,3 +287,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 本地验证：mock 端点实测核心页+2×10000 批、断点续传 1429 条、500 失败水位不动、恢复后续推；ruff 通过。
 - 生产验收：部署后首轮实录 api.indexnow.org 返回 200×3（核心 4 条 + 10000×2），水位落库 158705；/indexnow-key.txt 生产 200 可供引擎验证。设计文档 docs/iter/round-3/r89-indexnow-submit.md。
 - 边界：IndexNow 覆盖 Bing/Yandex/Seznam 等联盟引擎，Google 不参与（需 Search Console 站点验证，属独立待办）；提交≠必然收录，需后续观察 origin 日志 bingbot 到达与 site: 收录量变化。
+
+### R90（2026-08-31）：读接口最后一跳兜底——GET 双超时后回退本机最近成功快照
+- 取证：近 3 天 slow_load 49 条，真实用户请求级长尾样本 daily_plan:45s、mistakes:33s/24s、categories:21s、events:15s、questions:9–13.5s、history:8.7s——均为 uid 专属/随机端点，无法进边缘缓存，R63 双超时（12s+20s）耗尽后调用方只能拿错误态/空态。根因仍是共享宿主竞争（迁独立主机待老板决策），应用侧继续收窄受害面。
+- 实现：api.js request() GET 默认路径成功后快照落 uni storage（apiSnap:<path>，含 query/uid 天然隔离；>64KB 不缓存、LRU 40 条、24h 过期；/api/auth//api/admin 排除）；双超时/网络错误后有快照则 resolve 快照并上报 stale_fallback 埋点（track 白名单同步补充）；HTTP 业务错误（401/422/500）照旧透出不回退。
+- 生产验收：CDP 拦截 home_bundle abort → 页面渲染快照数据（今日计划/打卡等全出）、stale_fallback 落库 ref 正确；HTTP 500 拦截 → 不回退（走 R62 原有 fallback）；无快照新 uid 行为与现状一致。测试事件已清理（含 R89 遗留 r90probe），保护 uid 零 mutation。设计文档 docs/iter/round-3/r90-stale-fallback.md。
+- 边界：快照最长陈旧 24h，仅在「否则必然错误态」时才使用；POST/显式 timeout 请求不参与。

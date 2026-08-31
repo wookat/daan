@@ -263,16 +263,70 @@ function rawRequest(path, { method = 'GET', data, header = {}, timeout = 180000 
 }
 
 const isTimeoutErr = (e) => /timeout|超时/i.test(String(e && e.message));
+const isNetErr = (e) => isTimeoutErr(e) || /网络错误|request:fail/i.test(String(e && e.message));
+
+// ---------- GET 最近成功快照兜底 ----------
+// uid 专属/随机端点无法进边缘缓存，共享 origin 长尾下双超时后调用方只能拿错误态；
+// 快照按完整 path（含 query/uid）隔离，仅超时/网络错误回退，HTTP 业务错误照旧透出。
+const SNAP_PREFIX = 'apiSnap:';
+const SNAP_INDEX = 'apiSnapIndex';
+const SNAP_MAX = 40;
+const SNAP_TTL = 24 * 3600 * 1000;
+const SNAP_MAX_BYTES = 64 * 1024;
+
+function snapCacheable(path) {
+  return !path.startsWith('/api/auth/') && !path.startsWith('/api/admin');
+}
+
+function snapSave(path, data) {
+  try {
+    const body = JSON.stringify({ t: Date.now(), d: data });
+    if (body.length > SNAP_MAX_BYTES) return;
+    uni.setStorageSync(SNAP_PREFIX + path, body);
+    let idx = uni.getStorageSync(SNAP_INDEX) || [];
+    idx = idx.filter((p) => p !== path);
+    idx.push(path);
+    while (idx.length > SNAP_MAX) uni.removeStorageSync(SNAP_PREFIX + idx.shift());
+    uni.setStorageSync(SNAP_INDEX, idx);
+  } catch (e) {
+    /* storage 满/序列化失败：兜底是尽力而为 */
+  }
+}
+
+function snapLoad(path) {
+  try {
+    const body = uni.getStorageSync(SNAP_PREFIX + path);
+    if (!body) return null;
+    const snap = JSON.parse(body);
+    if (!snap || Date.now() - snap.t > SNAP_TTL) return null;
+    return snap;
+  } catch (e) {
+    return null;
+  }
+}
 
 export function request(path, opts = {}) {
   const method = (opts.method || 'GET').toUpperCase();
   if (method !== 'GET' || opts.timeout != null) return withAuthRetry(() => rawRequest(path, opts));
   // GET 默认 12s 超时；超时自动重试一次（幂等安全）——共享 origin 长尾为单请求级，重试大概率命中热路径
   return withAuthRetry(() =>
-    rawRequest(path, { ...opts, timeout: 12000 }).catch((e) => {
-      if (!isTimeoutErr(e)) throw e;
-      return rawRequest(path, { ...opts, timeout: 20000 });
-    })
+    rawRequest(path, { ...opts, timeout: 12000 })
+      .catch((e) => {
+        if (!isTimeoutErr(e)) throw e;
+        return rawRequest(path, { ...opts, timeout: 20000 });
+      })
+      .then((data) => {
+        if (snapCacheable(path)) snapSave(path, data);
+        return data;
+      })
+      .catch((e) => {
+        // 最后一跳：仅超时/网络错误回退最近成功快照，HTTP 业务错误（401/422 等）必须透出
+        if (!isNetErr(e) || !snapCacheable(path)) throw e;
+        const snap = snapLoad(path);
+        if (!snap) throw e;
+        trackEvent('stale_fallback', 'h5', path.slice(0, 120));
+        return snap.d;
+      })
   );
 }
 
