@@ -250,3 +250,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 实现（纯前端）：api.js submitDailySet 先写 storage dailyPendingSubmit 再 POST，成功清 pending 并落 dailyDone:<uid>；失败/超时保留；home.vue onShow flushDailySubmit() 静默补投（pending.date≠中国时区今天直接丢弃；服务端 (day,uid) 主键幂等重试安全）。
 - 生产复验（bundle index-B5E0ZuNG.js）：正常链路新 uid 落库恰一行；丢单链路拦截 submit abort → pending 保留 → 回首页自动补投 POST 200 → pending 清除 + hero「已完成 答对 2/10 · 第 1 名」；跨日 pending 丢弃零请求；重复提交 already=true 不覆盖；跨日 POST 400；375 溢出 0、console 0 error；测试数据（daily_set_entries 4 行/answer_log 43/growth_events 5）已清理，保护 uid 零 mutation。设计文档 docs/iter/round-3/r83-daily-submit-reliability.md。PR #259。
 - 同轮 ops 事件：部署后验证期 origin 全端点 524/125s+，uvicorn 主进程 State D（disk sleep），宿主 swap 3GB/si-so 数千/blocked 9–15，为宿主级内存-IO 颠簸（recruit-worker-heavy 常驻 99%），docker restart 恢复（daily_set 2.0s/announcement 0.4s）。非本仓代码问题，主机资源隔离待老板决策（同 R64）。
+
+### R84（2026-08-31）：origin 假死自愈 watchdog——/api/health + healthcheck + autoheal
+- 取证：origin「进程在、请求全挂」假死已复发 3 次（R64/R81/R83 实录：全端点 524/125s+、uvicorn State D、swap ~3GB），每次靠人工 docker restart，无人值守即全站不可用。R82 观察项：截至本轮无新 slow_load 样本（最新一条早于 R82 部署），;hs: 分布继续观察。
+- 实现：main.py 新增 GET /api/health（SELECT 1 走完整链路，区分假死）；compose kaogong 加 healthcheck（60s/25s/retries 5/start 180s，需持续 ≥5min 失败才判 unhealthy 防误杀）+ autoheal=true 标签 + willfarrell/autoheal sidecar（仅监管带标签容器）。
+- 生产故障演练：宿主 kill -STOP uvicorn 主 PID（容器内 PID1 收不到 SIGSTOP，须从宿主发）→ health 挂起 → 6min 后 autoheal 判 unhealthy 发起重启 → 容器重启完成 healthy、/api/health 200，全程零人工。注意 autoheal 日志会报 Restarting failed（API 客户端等待超时）但 docker 实际完成重启。设计文档 docs/iter/round-3/r84-origin-watchdog.md。PR #260。
+- 合并注意：#223–#259 又被链式合并未入 main（main 止于 R45b #222），已开 rollup PR #261（分支指向 R83 链尾 4b7b171），只需合并 #261 即收口 R46–R83；#260 合并后同理需收口。
