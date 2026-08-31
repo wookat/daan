@@ -2,7 +2,12 @@
   <view class="wrap">
     <view v-if="loading" class="spin">报告加载中…</view>
 
-    <view v-if="!loading && !report" class="card empty">
+    <view v-if="!loading && !report && loadErr" class="card empty">
+      <text class="empty-t">加载失败</text>
+      <text class="empty-s">{{ loadErr }}</text>
+      <view class="retry" @click="load(aid)">重试 ›</view>
+    </view>
+    <view v-else-if="!loading && !report" class="card empty">
       <text class="empty-t">暂无成绩报告</text>
       <text class="empty-s">请从模考交卷或「模考记录」进入查看报告</text>
       <view class="pbtn main" @click="goList">去卷库</view>
@@ -116,14 +121,14 @@
 </template>
 
 <script>
-import { request, anonUid } from '../../api.js';
+import { request, anonUid, isNetErr } from '../../api.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
 const MOD_ORDER = ['changshi', 'yanyu', 'shuliang', 'panduan', 'ziliao'];
 
 export default {
   data() {
-    return { loading: true, report: null, history: [], detail: null };
+    return { loading: true, loadErr: '', aid: null, report: null, history: [], detail: null };
   },
   computed: {
     accuracy() {
@@ -161,13 +166,17 @@ export default {
   },
   methods: {
     async load(aid) {
+      this.aid = aid;
       this.loading = true;
+      this.loadErr = '';
       try {
         const d = await request('/api/exam/report/' + aid + '?uid=' + encodeURIComponent(anonUid()));
         this.report = d;
         uni.setNavigationBarTitle({ title: '成绩报告' });
         this.loadHistory();
       } catch (e) {
+        // 仅网络层失败置错误态；HTTP 业务错误（如报告不存在）保持空态引导
+        if (isNetErr(e)) this.loadErr = e.message || '网络异常';
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
       this.loading = false;
@@ -240,6 +249,7 @@ export default {
 .btns { display: flex; gap: 16rpx; }
 .pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand); border-radius: 999rpx; font-size: 27rpx; font-weight: 500; background: var(--card); }
 .pbtn.main { background: var(--brand); color: #fff; }
+.retry { margin-top: 12rpx; color: var(--brand); font-size: 26rpx; font-weight: 500; }
 .mask { position: fixed; inset: 0; background: rgba(15, 18, 25, 0.45); z-index: 90; display: flex; align-items: flex-end; }
 .sheet { width: 100%; background: var(--card); border-radius: 28rpx 28rpx 0 0; padding: 28rpx 28rpx calc(28rpx + env(safe-area-inset-bottom)); max-height: 80vh; display: flex; flex-direction: column; box-sizing: border-box; }
 .sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }

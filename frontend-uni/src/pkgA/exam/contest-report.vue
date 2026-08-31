@@ -1,6 +1,11 @@
 <template>
   <view class="wrap">
     <view v-if="loading" class="spin">赛后报告加载中…</view>
+    <view v-else-if="loadErr" class="card empty">
+      <text class="empty-t">加载失败</text>
+      <text class="empty-s">{{ loadErr }}</text>
+      <view class="retry" @click="retry">重试 ›</view>
+    </view>
     <view v-else-if="err" class="card empty">
       <text class="empty-t">暂无大赛报告</text>
       <text class="empty-s">{{ err }}</text>
@@ -103,13 +108,13 @@
 </template>
 
 <script>
-import { request, anonUid } from '../../api.js';
+import { request, anonUid, isNetErr } from '../../api.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
 
 export default {
   data() {
-    return { loading: true, err: '', r: null, eventId: null };
+    return { loading: true, err: '', loadErr: '', r: null, eventId: null };
   },
   onLoad(opt) {
     this.eventId = opt.event_id ? Number(opt.event_id) : null;
@@ -124,12 +129,18 @@ export default {
     modName(m) { return MODS[m] || m; },
     round1(v) { return Math.round(v * 10) / 10; },
     async load() {
+      this.loadErr = '';
       try {
         this.r = await request('/api/mock/events/' + this.eventId + '/report?uid=' + encodeURIComponent(anonUid()));
       } catch (e) {
-        this.err = e.message || '报告不存在或已过期';
+        if (isNetErr(e)) this.loadErr = e.message || '网络异常';
+        else this.err = e.message || '报告不存在或已过期';
       }
       this.loading = false;
+    },
+    retry() {
+      this.loading = true;
+      this.load();
     },
     barH(n) {
       const max = Math.max(...this.r.distribution, 1);
@@ -161,6 +172,7 @@ export default {
 .wrap { padding: 24rpx; padding-bottom: 40rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 60rpx 24rpx; }
 .empty { text-align: center; padding: 80rpx 28rpx; }
+.retry { margin-top: 12rpx; color: var(--brand); font-size: 26rpx; font-weight: 500; }
 .empty-t { display: block; font-size: 30rpx; font-weight: 600; color: var(--ink); }
 .empty-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 12rpx; margin-bottom: 32rpx; }
 .empty .pbtn { margin: 0 auto; max-width: 320rpx; }

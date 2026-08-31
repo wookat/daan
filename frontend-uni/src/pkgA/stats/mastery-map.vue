@@ -85,7 +85,10 @@
       </view>
     </template>
 
-    <view v-else class="card cold"><view class="cold-s">{{ err || '加载中…' }}</view></view>
+    <view v-else class="card cold">
+      <view class="cold-s">{{ err || '加载中…' }}</view>
+      <view v-if="err" class="retry" @click="load">重试 ›</view>
+    </view>
   </view>
 </template>
 
@@ -111,6 +114,7 @@ export default {
   },
   methods: {
     async load() {
+      this.err = '';
       try {
         const d = await request('/api/mastery/map?uid=' + encodeURIComponent(anonUid()));
         this.nTotal = d.n_total || 0;
@@ -167,6 +171,7 @@ export default {
   font-weight: 700;
   color: var(--ink, #17181c);
 }
+.retry { margin-top: 12rpx; color: var(--brand); font-size: 26rpx; font-weight: 500; }
 .cold-s {
   font-size: 24rpx;
   color: var(--ink-2, #5f6575);

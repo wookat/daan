@@ -263,7 +263,7 @@ function rawRequest(path, { method = 'GET', data, header = {}, timeout = 180000 
 }
 
 const isTimeoutErr = (e) => /timeout|超时/i.test(String(e && e.message));
-const isNetErr = (e) => isTimeoutErr(e) || /网络错误|request:fail/i.test(String(e && e.message));
+export const isNetErr = (e) => isTimeoutErr(e) || /网络错误|request:fail/i.test(String(e && e.message));
 
 // ---------- GET 最近成功快照兜底 ----------
 // uid 专属/随机端点无法进边缘缓存，共享 origin 长尾下双超时后调用方只能拿错误态；
