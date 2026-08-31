@@ -26,6 +26,9 @@ services:
       - INDEXNOW_KEY=${INDEXNOW_KEY:-}
       - MONITOR_URL=${MONITOR_URL:-}
       - MONITOR_KEY=${MONITOR_KEY:-}
+      - KG_VAPID_PRIVATE=${KG_VAPID_PRIVATE:-}
+      - KG_VAPID_PUBLIC=${KG_VAPID_PUBLIC:-}
+      - KG_VAPID_SUB=${KG_VAPID_SUB:-mailto:support@zalize.com}
     volumes:
       - kaogong-data:/data
     labels:

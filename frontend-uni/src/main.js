@@ -33,6 +33,21 @@ if (typeof window !== 'undefined') {
 	});
 }
 
+// 根路径查询深链归一化：/?daily=1[&date=…] 是对外短链（推送/分享），uni h5 router 只识别 hash 路由，启动前改写为练习页 hash 深链
+if (typeof window !== 'undefined') {
+	try {
+		const qs = new URLSearchParams(location.search || '');
+		if (qs.get('daily') && (!location.hash || location.hash === '#/' || location.hash === '#')) {
+			const date = qs.get('date');
+			const src = qs.get('src');
+			location.replace(
+				location.origin + location.pathname +
+				'#/pages/practice/practice?daily=1' + (date ? '&date=' + encodeURIComponent(date) : '') + (src ? '&src=' + encodeURIComponent(src) : '')
+			);
+		}
+	} catch (e) { /* 归一化失败保持原状 */ }
+}
+
 // 未匹配路由兜底：无效/过期深链在 uni h5 router 无匹配时渲染为永久白屏，回落首页
 if (typeof window !== 'undefined') {
 	window.addEventListener('load', () => {
@@ -62,6 +77,12 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && location
 				if (document.visibilityState === 'visible') check();
 			});
 		}).catch(() => {});
+	});
+}
+
+// 可观测性与陈旧壳自愈：不依赖 SW，覆盖国内 App 内置 webview 等无 SW 环境
+if (typeof window !== 'undefined') {
+	window.addEventListener('load', () => {
 		// 当前运行 bundle 的 hash 段（主 chunk 文件名），用于 RUM 版本戳与陈旧壳自愈比对
 		const runningHash = () => {
 			try {
@@ -144,9 +165,11 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && location
 		setTimeout(staleShellHeal, 15000);
 		// SW 升级即校验：新 SW activate 后 postMessage，穿透缓存壳触达存量客户端
 		try {
-			navigator.serviceWorker.addEventListener('message', (e) => {
-				if (e.data && e.data.type === 'kg-sw-updated') staleShellHeal();
-			});
+			if (navigator.serviceWorker) {
+				navigator.serviceWorker.addEventListener('message', (e) => {
+					if (e.data && e.data.type === 'kg-sw-updated') staleShellHeal();
+				});
+			}
 		} catch (e) { /* 不支持则退回定时校验 */ }
 	});
 }

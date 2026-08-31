@@ -305,3 +305,70 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 实现：deploy 脚本 rsync 前写 backend/BUILD_REV（短 SHA，backend 有未提交改动加 -dirty，.gitignore 排除）；main.py /api/health 响应补 rev 字段（读不到回退 "dev"，healthcheck 行为不变）；脚本新增 step 4a 线上 rev != 本机即 FAIL。
 - 生产验收：部署后 /api/health 返回 {"ok":true,"rev":"99a8e1c-dirty"} 与本机一致；容器 healthy、关键路由全 200、/api/questions 冷 27.8s→热 0.4s（重建后冷池，R81 已知行为）。设计文档 docs/iter/round-3/r92-backend-rev-check.md。
 - 边界：rev 只证明容器代码=本次 rsync 代码；历史缺失的 slow_load 归因不可回填；本轮 deploy 脚本 step 4 ssh 挂起复现（第 4 次），已手动补跑 4a/4b/5/6 等价校验。
+
+### R93（2026-08-31）：deploy 脚本 step 4 ssh 挂起根治——远端 compose 后台化 + StartedAt/rev 轮询收敛
+- 取证：R65/R73/R91/R92 四轮部署均在 step 4 前台执行远端 `docker compose up -d --build` 后 ssh 通道长时间不返回（宿主 load ~6–12），而独立 ssh 检查显示 compose 实际早已完成、容器 healthy——挂起在通道层非部署层，每轮都被迫人工补跑后续步骤。
+- 实现：deploy_h5.sh ①全部 ssh 加 ConnectTimeout=15/ServerAliveInterval=15/ServerAliveCountMax=4；②step 4 改为远端 `nohup docker compose up -d --build >/tmp/kg-compose.log &` 后台化立即返回，随后每 10s 轮询容器 StartedAt 变化 + /api/health rev==本机 BUILD_REV，双条件收敛才继续，600s 未收敛打印 compose 日志尾并 FAIL；③step 5 的 home chunk 抓取补 `--compressed` 且 grep 无匹配不再触发 set -e 静默退出（本轮实测首跑在此处无输出退出，为历史「脚本没走完」的另一潜在因子）。
+- 生产验收：完整脚本 `--skip-build` 自然跑通两次，第二次全程 exit 0——step 4 一次 10s 轮询即收敛（poll 输出 started 变化+rev=9bf1193）、4a rev 一致、4b 预热、4c CF Pages 部署、5/6 bundle hash+七编码变体+接口回归全 200，无任何人工补跑。/api/health 实返 {"ok":true,"rev":"9bf1193"}。设计文档 docs/iter/round-3/r93-deploy-hang-fix.md。
+- 边界：共享 2GB 宿主高负载根因未变（迁独立主机/限 recruit-* 资源仍待老板决策）；600s 轮询上限基于历史 compose 实际完成时间（<2min）留 5 倍余量，宿主极端恶化时仍可能 FAIL（此时 FAIL 是正确行为，日志尾可诊断）。
+
+### R94（2026-08-31）：/api/daily_set 冷路径预热——每日一练首跳 27s→0.3s
+- 取证：R92/R93 部署后实测 `GET /api/daily_set` 冷请求 27.05s/200——`daily_set_ids` 进程内按日缓存只在首个请求填充（5 模块全量 id 扫描+Python md5 排序），容器每次重建/autoheal 重启后首个真实用户直面该长尾，且边缘缓存 TTL 仅 60s。同轮澄清一批历史谜团：R91 boot=0、login_nudge=0、stale_fallback=0、daily_set_entries=0 全部（或部分）由「生产后端长期跑旧代码、新事件被旧白名单 400 拒绝/新接口 404」解释——旧格式 slow_load（无 ;ua:）持续到 08-30 深夜，与 R92 部署时间线吻合；本轮起后端版本可信，参与漏斗数据才开始有意义，勿再拿历史 0 行下产品结论。
+- 实现：main.py `_warmup`（300s 周期）追加 `db.daily_set_ids(cn_day())` + 明日日期预热（选题 md5 确定性，预热明日=明日实际结果，跨日 00:00 首个用户也不吃冷扫描）。两行改动，零接口/依赖变化。
+- 生产验收：容器重建 1min 内 cache-busted 直连 origin 三连发 0.22–0.36s（对照改动前同条件 27s）；rev=b8860d9-dirty 一致、容器 healthy、部署脚本（R93 版）再次全程自然跑通 exit 0。设计文档 docs/iter/round-3/r94-daily-set-warmup.md。
+- 边界：真实 00:00 中国时区跨日边界未实测（代码路径与今日预热相同）；warmup 极端负载下变慢只影响后台线程。观察项：boot/daily_set_entries 自本轮起的真实增长曲线（下一轮取证输入）。
+
+### R95（2026-08-31）：边缘 stale-if-error——部署/假死窗口可缓存 GET 不再对外 502
+- 取证：origin 日志 24h 实录 502×85，按 10 分钟聚簇与 R92/R93/R94 三次部署容器重建窗口完全吻合（每窗 1–2 分钟），受害含 YandexBot（正在收录）与真实浏览器 UA；现状边缘缓存副本 TTL 一到即不可用，重建窗口无兜底。
+- 实现：CF 函数副本长存 24h（Cache-Control=86400）+ 自定义 X-Kg-Cached-At 判逻辑新鲜度——TTL 内 HIT（对外 Cache-Control 仍 60/300），过期回源，回源 5xx/fetch 异常回退陈旧副本标 X-Edge-Cache:STALE；uid API/POST/MISS/安全头/爬虫 403 全不动。仅改 deploy/cf-pages/functions/[[path]].js。
+- 生产验收：低峰受控演练 docker stop 容器 → 过期 /api/announcement 与 /api/question_counts 均 200+STALE，uid /api/home_bundle 照旧 502（R90 客户端快照兜底）；docker start 后 healthy 恢复。正常路径 MISS→HIT 语义与 R56 一致。设计文档 docs/iter/round-3/r95-edge-stale-if-error.md。
+- 边界：仅保护「曾被缓存过」的 URL（重建窗口首现 URL 仍 502）；STALE 最长陈旧 24h 仅在 origin 5xx 时使用。同轮复核：R88 爬虫拦截仍有效（Awario/Semrush 实测 403，日志中 07–08 时段的到达为当时窗口，09 时起仅 robots.txt）。
+
+### R96（2026-08-31）：部署前边缘缓存预热——收窄 R95「无副本」缺口 + 埋点零行归因收口
+- 取证：R95 只保护「曾被缓存过」的 URL，部署窗口首现可缓存 URL 仍 502，而 502 聚簇主因恰是部署窗口；入口级可缓存 URL 有限可穷举。同轮实证收口埋点谜团：boot 埋点链路本身有效（CDP 真实浏览器加载 6s 后 POST /api/track boot 200 落库，探针已清理），boot=0/daily_set_entries=0 只是「后端可信窗口（R92 部署后）内没有真实浏览器用户到访」——answer_log 48h 17 个 uid 的作答时间全部早于可信窗口。产品结论：当前真实 DAU 极小，增长/收录是主瓶颈而非功能面。另：growth_events.created_at 是 epoch 浮点，SQL 里用 datetime('now') 比较恒 false，取证必须用 epoch（本轮踩坑）。
+- 实现：deploy_h5.sh 新增 step 3b——rsync 后、容器重建前对入口级可缓存 URL（/tiku/ 三页、robots/sitemap、允许清单 API 含 submodules?module=×5）逐个 GET 刷新副本，重建窗口内 stale-if-error 必有副本可退；失败仅 WARN 不阻塞。设计文档 docs/iter/round-3/r96-deploy-edge-prime.md。
+- 生产验收：完整部署实跑 exit 0，step 3b 首跑暴露 submodules 无参 422（已改逐模块）与 /tiku/ 冷 origin 000（WARN 不阻塞设计生效），修正后清单实跑全 200。
+- 边界：/tiku/q/* 15 万题页不预热，靠自然流量沉淀副本；autoheal 重启窗口靠 ≤24h 日常副本兜底。
+
+### R97（2026-08-31）：/tiku SEO 页族补 Open Graph 标签 + /tiku/q/{id}/ 尾斜杠 301
+- 取证：origin 日志实证分发通道现状（YandexBot 958、Googlebot 1、bingbot/Baiduspider/Sogou/360=0），社交/IM 分享是唯一可自建的第二通道；而 /tiku 全页族（_page() 模板）无任何 og: 标签（首页 SPA 壳有、/s/* R68 有），分享出去无卡片；/tiku/q/{id}/ 带尾斜杠被 /{module}/{submodule}/ 路由吞掉 404「模块不存在」。
+- 实现：_page() 统一注入 og:type/site_name/title/description/url/image 六标签（og:url 复用 canonical）；新增 GET /q/{qid}/ → 301 无斜杠。仅改 backend/app/seo.py。设计文档 docs/iter/round-3/r97-seo-og-tags.md。
+- 资源申请（owner 一次性识别，不阻塞）：① Baidu/Bing/Sogou/360 站长平台账号验证（收录通道）；② 微信公众号 JS-SDK（微信内分享卡片）。到位前用 og 标签+IndexNow 降级先行。
+
+### R98（2026-08-31）：Web Push 每日一练提醒（关闭页面也可达）
+- 取证：现有「学习提醒」是页面内 Notification 轮询（页面一关即失效，reminders.vue 自我声明）；真实 DAU 极小、召回无通道，Web Push 是唯一可自建的离线触达。PWA 基建已就绪（manifest R54/安装入口 R57/sw v4 R71）。
+- 实现：backend/app/push_api.py（pywebpush + VAPID，GET /api/push/pubkey、POST subscribe/unsubscribe，表 push_subs；每日 08:00 中国时区定推「今日全站同题」深链 /?daily=1，410/404 清失效订阅，已完成今日一练的 uid 跳过，seo_meta push_last_day 幂等）；sw.js 加 push/notificationclick；reminders.vue 加「每日一练离线推送」开关（仅 PushManager+pubkey 可用时渲染）。VAPID 密钥在生产 deploy/.env（KG_VAPID_PRIVATE/PUBLIC，不入仓库），compose 已透传。未配置 VAPID 的环境接口降级、线程不启动。
+- 验收：本地+生产双 E2E 全过（UI 开关订阅→落库→容器内实发→真实 FCM→通知弹出 payload 正确→UI 关闭双端退订）；测试订阅已清理。设计文档 docs/iter/round-3/r98-web-push.md。
+- 边界：iOS Safari 需先安装到主屏（16.4+）；微信内置浏览器不支持（开关不渲染）；通知点击跳转 /?daily=1 复用 R72 深链。
+
+### R99（2026-08-31）：每日一练完成页「开启推送」引导卡——R98 通道接上转化时机
+- 取证：R98 推送入口埋在「我的 → 学习提醒」二级页，刚完成每日一练的用户（转化意愿最高时机）看不到任何提醒引导；完成页已有 streak/排行榜锚点可复用。
+- 实现：practice.vue 完成页（当日一练提交成功后，H5-only）追加轻量引导卡——渲染条件全满足才显示（PushManager 可用、permission 未 denied、/api/push/pubkey 非空、当前无订阅、未被 ✕ 永久关闭 localStorage pushNudgeOff）；streak≥2 文案「别断了连续 N 天」；点开启走权限→subscribe→POST /api/push/subscribe（成功态「已开启每日一练提醒 ✓」）；埋点 push_nudge_show/ok 入 team.py 白名单。往期补练/普通练习不显示。设计文档 docs/iter/round-3/r99-push-nudge.md。
+- 生产验收：375+1440 双视口真实完成 10 题 E2E 全过（卡片显示→点开启→FCM 订阅创建→subscribe 200→成功态渲染→push_nudge_show/ok 落库；✕ 关闭即隐藏且 pushNudgeOff 持久化，重看不再显示；溢出 0、console 0 error）；测试订阅/成绩/事件已清理、保护 uid 零 mutation。
+- 边界：已订阅用户不显示（代码守卫，未单独生产复验）；本轮宿主持续高负载（swap 颠簸+外部 pip/postgres 抢占），验证期间 origin 多次 502/524 由 autoheal 自愈——共享宿主根治仍待老板决策。
+- 观察项：push_nudge_show→ok 转化率、push_subs 真实增长、明早 08:00 定推实际送达。
+
+### R100（2026-08-31）：练习中场静默预取下一组——「再来一组」零等待
+- 取证：/api/questions 冷径长尾生产复现 17.2s/33.2s（宿主外部 IO 挤占时随机行读 D 态等待，R64/R81 只预热了 id 扫描）；RUM 最新 bundle 用户仍报 questions:10–13.5s；R70 预取只覆盖首页→首组，「再来一组」必然裸等网络。另证伪一条假设：kaogong 容器内存稳定 21–116MB，宿主 swap 颠簸确为外部进程（pip/postgres）所致，非我方泄漏。
+- 实现：practice.vue `next()` 答到倒数第 3 题触发 `prefetchNextGroup()`，复用 prefetchPack/takePrefetch（键 module/limit/uid 与 home 预取一致）；仅普通练习（_plainStart 守卫，排除 submodule/adaptive/real/tag3/ziliao/daily/shizheng/bei）；过滤本组已现题 id；失败静默、每组一次。纯前端零后端。
+- 生产验收：1440+375 新 uid 真实 10 题——第 7 题预取请求+pack 落地，「再来一组」0 网络请求即开新组；溢出 0、console 0 error；测试数据已清理、保护 uid 零 mutation。设计文档 docs/iter/round-3/r100-midsession-prefetch.md。
+- 边界：daily/shizheng/bei 不触发为代码守卫未单独复验；答完不重试时浪费一次 10 行读。
+
+### R104（2026-08-31）：非 SW 客户端可观测性盲区修复
+- 取证：近 3 天 14 个真实活跃 uid（heatmap_view）0 个上报过 boot；boot/RUM/hb-gap/陈旧壳自愈全部包在 `'serviceWorker' in navigator` 守卫内，无 SW 的国内 App 内置 webview 用户全程不可见、也无壳自愈。另清理本机遗留 28 个标签页造成的自噪声（uid umth5q5ax687m0vfh 等 19 条 growth_events，含 9 条 questions:10s slow_load——此前 RUM 长尾图景被自流量污染）。
+- 实现：main.js SW 守卫只留注册与更新校验；runningHash/boot/RUM/hb-gap/staleShellHeal 移入独立 `window load` 块，SW 引用全部判空。设计文档 docs/iter/round-3/r104-nonsw-telemetry.md。
+
+### R103（2026-08-31）：每日一练开练漏斗埋点 daily_open + 来源归因
+- 取证：daily_set_entries 全表 0 行（R69 上线至今零真实提交），growth_events 无任何开练事件——漏斗只有终点没有起点；明日 08:00 R98 首推，无来源归因无法度量推送转化。
+- 实现：practice.vue startDaily(archiveDate, src) 统一上报 daily_open（source=home/link/push/seo/share，往期 ref=archive:<date>）；push payload、SSR CTA、分享文案深链分别带 src=push/seo/share；main.js 根查询归一化透传 src；track 白名单补 daily_open。设计文档 docs/iter/round-3/r103-daily-funnel.md。
+- 生产验收：/?daily=1&src=push 深链→daily_open source=push 落库；首页 CTA→source=home 落库；SSR CTA 实测含 src=seo；console 0 error；测试事件已清理。
+
+### R102（2026-08-31）：/?daily=1 推送深链失效修复
+- 取证：生产实测 /?daily=1 落首页 #/ 未进每日一练（uni h5 router 只识别 hash 路由，根路径 query 从未被处理），而 R98 推送 payload url 恰为 /?daily=1——明日 08:00 首推点击落地全部失效。hash 形式 /#/pages/practice/practice?daily=1 实测正常直入。
+- 实现：双保险——push_api.py payload url 改 hash 深链（发送时生成，旧 bundle 也受益）+ main.js 启动前归一化（search 含 daily=1 且无实质 hash 时 location.replace 为练习页 hash 深链，透传 date）。设计文档 docs/iter/round-3/r102-daily-deeplink-fix.md。
+- 生产验收：375 /?daily=1 直入今日题组、&date=昨日直入往期题组（daily_set?date= 请求实证）、1440 直入+答题卡侧栏正常、首页无回归；溢出 0、console 0 error。
+
+### R101（2026-08-31）：首载静态启动屏——消除慢网络首访白屏
+- 取证：RUM 实录真实用户首载 nav:16s/dom:7.5s/tx:10.6s，index.html #app 为空、Vue 挂载前全程白屏（历史 60/90s 聚簇同理）；明日 08:00 推送深链 /?daily=1 也走该路径。
+- 实现：index.html #app 内静态启动屏（logo+错题邦+副标题+CSS spinner，纯内联零请求），prefers-color-scheme 深色适配，Vue mount 整树替换无需清理。设计文档 docs/iter/round-3/r101-boot-splash.md。
+- 生产验收：1440+375 新 context 60KB/s 节流实测——加载期启动屏全屏可见，挂载后移除、首页正常、溢出 0、console 0 error。已订阅 SW 的存量客户端拿旧壳无启动屏，随 R71 壳更新通道自然获得。
