@@ -274,3 +274,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 实现：db.py 增覆盖索引 idx_q_sitemap(disabled,id,updated_at)；sitemap_questions 改 LIMIT/OFFSET 只取本分片（响应逐字节不变，越界仍 404）；functions isEdgeCacheable 放行 /sitemap* 与 /robots.txt（TTL 300s），并修 content-type 缓存守卫（原只认 text/html，XML 永不入缓存）放行 xml/text-plain。
 - 生产验收：EXPLAIN 确认 COVERING INDEX idx_q_sitemap；shard8 冷 71.9s→16s（宿主 IO 下限）、MISS→HIT 0.1s、前后逐字节一致；shard 0/999 → 404；/tiku、/api/stats 回归 200。R86 复验：post-enable origin 日志零非边缘穿透（爬虫已被 403 挡停）。设计文档 docs/iter/round-3/r87-sitemap-cold-path.md。
 - 同轮观察：首条 R82 全格式 slow_load 落库，ua 含「ShapBot/0.1.0」、hs:fcorl（headless 浏览器爬虫，nav:16s 主因 wd-icon chunk 13s），非真实用户问题，不立项。
+
+### R88（2026-09-01）：无获客价值爬虫边缘拦截——robots 禁抓组 + CF 函数 UA 403
+- 取证：R85 origin 日志显示经主域（CF 函数代理）到达 origin 的请求中 AwarioBot 496 + SemrushBot 132 = 636 条 vs 真人仅 44 条；爬虫全打 /tiku/q/<id> SSR，URL 各异使 R45 边缘缓存无效，每条穿透共享宿主渲染（实测 ~16 条/分钟）。同窗口 Googlebot/Bingbot/Baiduspider 为 0（不受本轮影响）。
+- 实现：seo.py robots.txt 对 AwarioBot/SemrushBot/AhrefsBot/MJ12bot/DotBot/PetalBot 单独 Disallow: /（礼貌层）；functions [[path]].js 对 UA 命中名单直接 403 不回源（robots.txt 放行以便其读到禁抓声明）。
+- 生产验收：模拟 AwarioBot/SemrushBot UA /tiku/q/* → 403、robots.txt 200；Googlebot/普通浏览器全路径 200；部署传播后 origin 日志爬虫到达从 ~16 条/分钟降为最近 5 分钟 0 条。设计文档 docs/iter/round-3/r88-edge-bot-block.md。
+- 边界：robots.txt 被 CF zone 层 HTTP 缓存（cf-cache-status HIT，.txt 默认 TTL，无 cache-control 时约 2h），新禁抓组对外生效有最长 ~2h 延迟（带 query 已实证新内容）；本会话 CLOUDFLARE_API_TOKEN 无 zone purge 权限无法主动清除。
