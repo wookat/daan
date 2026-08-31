@@ -33,6 +33,19 @@
     </view>
     <!-- #endif -->
 
+    <!-- #ifdef H5 -->
+    <view v-if="pushSupported" class="card group">
+      <view class="set-row">
+        <view class="ico"><l-icon name="send" :size="18" color="#2e5bff" /></view>
+        <view class="grow">
+          <text class="nm">每日一练离线推送</text>
+          <text class="sub">每天早上推送全站同题 10 题，关闭页面也能收到</text>
+        </view>
+        <wd-switch :model-value="pushOn" :disabled="pushBusy" active-color="#2e5bff" size="22px" @change="togglePush" />
+      </view>
+    </view>
+    <!-- #endif -->
+
     <!-- #ifdef MP-WEIXIN -->
     <view v-if="mpSubscribeAvailable" class="card group">
       <view class="set-row" @click="mpSubscribe">
@@ -62,6 +75,9 @@
 <script>
 import { getReminderSettings, setReminderSettings } from '../../reminder.js';
 // #ifdef H5
+import { request, anonUid } from '../../api.js';
+// #endif
+// #ifdef H5
 import { notificationPermission, requestNotificationPermission } from '../../reminder.js';
 // #endif
 // #ifdef MP-WEIXIN
@@ -76,6 +92,10 @@ export default {
       perm: 'default',
       done: 0,
       goal: 20,
+      pushSupported: false,
+      pushOn: false,
+      pushBusy: false,
+      pushKey: '',
     };
   },
   computed: {
@@ -99,6 +119,7 @@ export default {
     this.done = (pstats.days || {})[new Date().toISOString().slice(0, 10)] || 0;
     // #ifdef H5
     this.perm = notificationPermission();
+    this.initPush();
     // #endif
   },
   methods: {
@@ -120,6 +141,62 @@ export default {
     async askPerm() {
       this.perm = await requestNotificationPermission();
       if (this.perm === 'granted') uni.showToast({ title: '通知权限已开启', icon: 'none' });
+    },
+    async initPush() {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+      try {
+        const { key } = await request('/api/push/pubkey');
+        if (!key) return;
+        this.pushKey = key;
+        this.pushSupported = true;
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        this.pushOn = !!sub;
+      } catch (e) { /* 推送不可用时不渲染入口 */ }
+    },
+    async togglePush({ value }) {
+      this.pushBusy = true;
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        if (value) {
+          const perm = await requestNotificationPermission();
+          if (perm !== 'granted') {
+            this.perm = perm;
+            this.pushOn = false;
+            uni.showToast({ title: '需要通知权限才能推送', icon: 'none' });
+            return;
+          }
+          this.perm = perm;
+          const sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: this.vapidKeyBytes(),
+          });
+          await request('/api/push/subscribe', { method: 'POST', data: { uid: anonUid(), sub: sub.toJSON() } });
+          this.pushOn = true;
+          uni.showToast({ title: '已开启每日一练推送', icon: 'none' });
+        } else {
+          const sub = await reg.pushManager.getSubscription();
+          if (sub) {
+            const endpoint = sub.endpoint;
+            await sub.unsubscribe();
+            request('/api/push/unsubscribe', { method: 'POST', data: { endpoint } }).catch(() => {});
+          }
+          this.pushOn = false;
+          uni.showToast({ title: '已关闭推送', icon: 'none' });
+        }
+      } catch (e) {
+        this.pushOn = false;
+        uni.showToast({ title: '开启失败，请稍后再试', icon: 'none' });
+      } finally {
+        this.pushBusy = false;
+      }
+    },
+    vapidKeyBytes() {
+      const pad = '='.repeat((4 - (this.pushKey.length % 4)) % 4);
+      const raw = atob((this.pushKey + pad).replace(/-/g, '+').replace(/_/g, '/'));
+      const out = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+      return out;
     },
     // #endif
     // #ifdef MP-WEIXIN

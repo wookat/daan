@@ -256,6 +256,16 @@
         <text class="duenudge-go" @click="loginNudgeGo">去登录 ›</text>
         <text class="loginnudge-x" @click="dismissLoginNudge">✕</text>
       </view>
+      <!-- #ifdef H5 -->
+      <view v-if="!beiMode && pushNudge" class="loginnudge">
+        <view class="duenudge-l">
+          <text class="duenudge-t">{{ pushNudgeDone ? '已开启每日一练提醒 ✓' : dailyStats && dailyStats.streak >= 2 ? '别断了连续 ' + dailyStats.streak + ' 天' : '开启每日一练提醒' }}</text>
+          <text class="duenudge-s">{{ pushNudgeDone ? '明早 8 点推送今日全站同题' : '明早 8 点推送全站同题 10 题，关闭页面也能收到' }}</text>
+        </view>
+        <text v-if="!pushNudgeDone" class="duenudge-go" @click="pushNudgeGo">开启 ›</text>
+        <text v-if="!pushNudgeDone" class="loginnudge-x" @click="dismissPushNudge">✕</text>
+      </view>
+      <!-- #endif -->
       <button class="btn" @click="retryGroup">再来一组</button>
       <button v-if="!beiMode" class="btn ghost" style="margin-top: 16rpx" @click="shareResult">分享成绩</button>
       <button class="btn plain" style="margin-top: 8rpx" @click="quit">返回首页</button>
@@ -328,6 +338,9 @@
 import { request, BASE_URL, anonUid, pkNickname, exportPdf, removeFav, setFav, fetchCheckinBadges, getAuthUser, trackEvent, submitDailySet } from '../../api.js';
 import { drawOffline, enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../offline.js';
 import { dayKey, loadSzDaily, saveSzDaily } from '../../checkin.js';
+// #ifdef H5
+import { requestNotificationPermission } from '../../reminder.js';
+// #endif
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -399,6 +412,8 @@ export default {
       examTimer: null,
       pstats: { byModule: {}, days: {} },
       loginNudgeOff: true,
+      pushNudge: false,
+      pushNudgeDone: false,
       autoTimer: null,
       cardOpen: false,
       toolsOpen: false,
@@ -639,7 +654,7 @@ export default {
       this._urlLaunch = { module, year: parseInt(query.year, 10) || null, source: query.source || 'seo' };
     } else if (query && query.daily) {
       // 每日一练直达深链（同题挑战分享/SEO 页 CTA），date 可选指向往期题组
-      this._urlLaunch = { daily: true, date: query.date || '' };
+      this._urlLaunch = { daily: true, date: query.date || '', src: query.src || 'link' };
     } else if (query && query.module) {
       // 仅带模块的深链（分享/外链直开）：直接开练该模块
       let module = query.module;
@@ -670,7 +685,7 @@ export default {
       const q = this._urlLaunch;
       this._urlLaunch = null;
       if (q.daily) {
-        this.startDaily(q.date);
+        this.startDaily(q.date, q.src);
         return;
       }
       this.start(q.module, null, null, false, q.year ? true : undefined, q.tag3, q.source, q.year);
@@ -680,7 +695,7 @@ export default {
     if (launch && launch.kind) {
       uni.removeStorageSync('practiceLaunch');
       if (launch.kind === 'daily') {
-        this.startDaily(launch.date);
+        this.startDaily(launch.date, 'home');
         return;
       }
       if (launch.kind === 'shizheng') {
@@ -1084,7 +1099,8 @@ export default {
       }
       uni.setStorageSync('favQuestions', this.favs);
     },
-    async startDaily(archiveDate) {
+    async startDaily(archiveDate, src) {
+      trackEvent('daily_open', src || 'app', archiveDate ? 'archive:' + archiveDate : '');
       this._daily = true;
       if (this.beiMode) {
         this.beiMode = false;
@@ -1150,6 +1166,9 @@ export default {
       submitDailySet({ uid: anonUid(), nickname: pkNickname(), date, right: this.right, total: this.items.length, secs: this.totalSecs })
         .then((d) => {
           this.dailyStats = d;
+          // #ifdef H5
+          this.initPushNudge();
+          // #endif
           return request('/api/daily_set/board').then((b) => { this.dailyBoard = (b && b.items) || []; });
         })
         .catch(() => {});
@@ -1297,6 +1316,47 @@ export default {
       this.loginNudgeOff = true;
       uni.setStorageSync('loginNudgeDismissed', '1');
     },
+    // #ifdef H5
+    async initPushNudge() {
+      if (this.pushNudge || uni.getStorageSync('pushNudgeOff')) return;
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+      if (typeof Notification !== 'undefined' && Notification.permission === 'denied') return;
+      try {
+        const { key } = await request('/api/push/pubkey');
+        if (!key) return;
+        this._pushKey = key;
+        const reg = await navigator.serviceWorker.ready;
+        if (await reg.pushManager.getSubscription()) return;
+        this.pushNudge = true;
+        trackEvent('push_nudge_show');
+      } catch (e) {
+        /* 推送不可用不打扰 */
+      }
+    },
+    async pushNudgeGo() {
+      try {
+        if ((await requestNotificationPermission()) !== 'granted') {
+          uni.showToast({ title: '需要通知权限才能推送', icon: 'none' });
+          return;
+        }
+        const pad = '='.repeat((4 - (this._pushKey.length % 4)) % 4);
+        const raw = atob((this._pushKey + pad).replace(/-/g, '+').replace(/_/g, '/'));
+        const bytes = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: bytes });
+        await request('/api/push/subscribe', { method: 'POST', data: { uid: anonUid(), sub: sub.toJSON() } });
+        this.pushNudgeDone = true;
+        trackEvent('push_nudge_ok');
+      } catch (e) {
+        uni.showToast({ title: '开启失败，请稍后再试', icon: 'none' });
+      }
+    },
+    dismissPushNudge() {
+      this.pushNudge = false;
+      uni.setStorageSync('pushNudgeOff', '1');
+    },
+    // #endif
     reinforceWeak(w) {
       this.startReinforce({ module: w.module, submodule: w.submodule, tag3: w.tag3, count: 5, source: 'session-report' });
     },
@@ -1338,6 +1398,26 @@ export default {
     retryStart() {
       if (this._lastStartArgs) this.start(...this._lastStartArgs);
       else this.start(uni.getStorageSync('lastModule') || null);
+    },
+    // 练习中场静默预取下一组，「再来一组」命中 prefetchPack 零等待
+    prefetchNextGroup() {
+      if (!this._plainStart || this._prefetched || this.beiMode || this._daily || this._shizheng) return;
+      this._prefetched = true;
+      const module = this.lastModule || '';
+      const limit = this.groupSize || 10;
+      const uid = uni.getStorageSync('anonUid') || '';
+      const pk = uni.getStorageSync('prefetchPack');
+      if (pk && pk.module === module && pk.limit === limit && pk.uid === uid && Date.now() - pk.ts < 5 * 60 * 1000) return;
+      const seen = new Set(this.items.map((q) => q.id));
+      request(
+        '/api/questions?limit=' + limit + (uid ? '&uid=' + encodeURIComponent(uid) : '') + (module ? '&module=' + module : ''),
+        { timeout: 45000 }
+      )
+        .then((d) => {
+          const items = ((d && d.items) || []).filter((q) => !seen.has(q.id));
+          if (items.length) uni.setStorageSync('prefetchPack', { module, limit, uid, items, ts: Date.now() });
+        })
+        .catch(() => {});
     },
     takePrefetch(module, limit, uid, submodule, adaptive, forceReal, tag3) {
       if (submodule || adaptive || forceReal || tag3 || this.realMode) return null;
@@ -1409,6 +1489,9 @@ export default {
           return;
         }
         this.items = d.items.map((q) => ({ ...q, _saved: false }));
+        this._plainStart =
+          !(submodule || adaptive || forceReal || tag3 || this.realMode) && module !== 'ziliao';
+        this._prefetched = false;
         this.idx = 0;
         this.picked = '';
         this.right = 0;
@@ -1803,7 +1886,7 @@ export default {
         let txt = '我完成了错题邦 ' + this._dailyDoneDate + ' 每日一练（全站同题 ' + this.items.length + ' 题），答对 ' + this.right + ' 题';
         if (this.dailyStats.beat_pct != null) txt += '，击败全站 ' + this.dailyStats.beat_pct + '%';
         if (this.dailyStats.streak >= 2) txt += '，已连续参与 ' + this.dailyStats.streak + ' 天';
-        txt += '！同题挑战我：https://kaogong.zalize.com/#/pages/practice/practice?daily=1';
+        txt += '！同题挑战我：https://kaogong.zalize.com/#/pages/practice/practice?daily=1&src=share';
         trackEvent('share_result_copy', 'practice', 'daily');
         uni.setClipboardData({
           data: txt,
@@ -1982,6 +2065,7 @@ export default {
       }
       this.idx++;
       this.picked = (this.items[this.idx] && this.items[this.idx]._picked) || '';
+      if (this.session && this.idx >= this.items.length - 3) this.prefetchNextGroup();
       if (this.cur && !this.picked) this.startQTimer();
       else this.stopQTimer();
       if (!this.cur) {
@@ -1995,6 +2079,8 @@ export default {
       this.dailyStats = null;
       this.resultSent = true;
       this.dailyBoard = [];
+      this.pushNudge = false;
+      this.pushNudgeDone = false;
       this.dueReview = 0;
       if (this.loginNudgeN) trackEvent('login_nudge_show');
       uni.removeStorageSync('pendingSession');
