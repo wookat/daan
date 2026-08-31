@@ -268,3 +268,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 实现：functions 回源附加共享密钥头 X-Kg-Edge（值在 Pages env KG_EDGE_KEY，wrangler secret 不入仓库）；宿主 Caddy kaogong-origin 块对无/错头请求 respond 403（备份 Caddyfile.bak-r86），access log format filter 删除该头防泄漏（启用前的历史泄漏行已离线清洗）。上线顺序：先函数带头→日志确认到达→再启 403，防自伤。
 - 生产验收：直连 origin /tiku/、/api/stats → 403；主域 /、/tiku/、/tiku/q/*、/api/stats、POST /api/track、/api/health 全 200；后续日志实证爬虫直连均 403、post-reload 行零密钥泄漏。测试事件已清理。设计文档 docs/iter/round-3/r86-origin-lockdown.md。
 - 边界：容器 healthcheck（容器内 localhost）与 deploy 预热（走主域）不受影响；DNS 回滚路径不走 origin 块。密钥轮换步骤见 deploy/README.md。
+
+### R87（2026-09-01）：sitemap 题目分片冷路径收敛——覆盖索引 + SQL 切片 + 边缘缓存
+- 取证：/sitemap-questions-8.xml 生产冷请求实测 71.9s（origin 日志此前另录 51.7s，两次独立复现）；根因 seo.py 每请求全量拉 15 万+行（SELECT 不含索引覆盖的 updated_at → 逐行回主表随机读）再 Python 切片，且 sitemap 路由不在边缘缓存清单，搜索引擎每次抓取都穿透 2GB 共享宿主冷路径。
+- 实现：db.py 增覆盖索引 idx_q_sitemap(disabled,id,updated_at)；sitemap_questions 改 LIMIT/OFFSET 只取本分片（响应逐字节不变，越界仍 404）；functions isEdgeCacheable 放行 /sitemap* 与 /robots.txt（TTL 300s），并修 content-type 缓存守卫（原只认 text/html，XML 永不入缓存）放行 xml/text-plain。
+- 生产验收：EXPLAIN 确认 COVERING INDEX idx_q_sitemap；shard8 冷 71.9s→16s（宿主 IO 下限）、MISS→HIT 0.1s、前后逐字节一致；shard 0/999 → 404；/tiku、/api/stats 回归 200。R86 复验：post-enable origin 日志零非边缘穿透（爬虫已被 403 挡停）。设计文档 docs/iter/round-3/r87-sitemap-cold-path.md。
+- 同轮观察：首条 R82 全格式 slow_load 落库，ua 含「ShapBot/0.1.0」、hs:fcorl（headless 浏览器爬虫，nav:16s 主因 wd-icon chunk 13s），非真实用户问题，不立项。
