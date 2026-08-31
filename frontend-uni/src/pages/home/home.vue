@@ -61,6 +61,8 @@
         <view v-else-if="streakShown" class="hero-streak"><l-icon name="flame" :size="13" color="#ffffff" /><text>连续打卡 {{ streakShown }} 天</text></view>
       </view>
       <view class="hero-bar"><view class="hero-fill" :style="{ width: Math.min((todayCount / dailyGoal) * 100, 100) + '%' }" /></view>
+      <text v-if="dsMeta && dsDone" class="hero-ds">今日全站同题 · 已完成 答对 {{ dsDone.right }}/{{ dsDone.total }}<template v-if="dsDone.rank"> · 第 {{ dsDone.rank }} 名</template><template v-if="dsDone.streak >= 2"> · 🔥 连 {{ dsDone.streak }} 天</template><text class="hero-ds-arc" @click.stop="openDailyArchive">补练往期 ›</text></text>
+      <text v-else-if="dsMeta" class="hero-ds">今日全站同题 10 题 · {{ dsMeta.participants ? '已有 ' + dsMeta.participants + ' 人完成' : '来做今天第 1 人' }}<text class="hero-ds-arc" @click.stop="openDailyArchive">补练往期 ›</text></text>
       <view class="hero-acts">
         <view class="hero-btn main" @click="startDaily">{{ todayDone ? '再练一组 ›' : '继续目标 ›' }}</view>
         <view class="hero-btn sub" @click="openSetup">今日计划</view>
@@ -199,7 +201,7 @@
       <view class="sz-ico"><l-icon name="newspaper" :size="24" color="#d97706" /></view>
       <view class="grow">
         <view class="sz-t">时政每日一练 <text v-if="!szTodayDone" class="tag warn">今日更新</text><text v-else class="tag ok">已完成</text></view>
-        <text class="sz-s">每日 10 题 · 近半年国内时政热点 · 全站同题</text>
+        <text class="sz-s">每日 10 题 · 近半年国内时政热点 · 全站同题<text class="sz-arc" @click.stop="openSzArchive">往期 ›</text></text>
       </view>
       <view class="mini-btn">{{ szTodayDone ? '回顾' : '去练习' }}</view>
     </view>
@@ -466,7 +468,7 @@
 </template>
 
 <script>
-import { request, anonUid, exportPdf, trackEvent, fetchCheckinBadges, fetchCheckinSummary } from '../../api.js';
+import { request, anonUid, exportPdf, trackEvent, fetchCheckinBadges, fetchCheckinSummary, flushDailySubmit } from '../../api.js';
 import { checkinStreak, dayKey, loadSzDaily } from '../../checkin.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
@@ -521,6 +523,8 @@ export default {
       weeklyDot: false,
       comeback: null,
       reminderBanner: false,
+      dsMeta: null,
+      dsDone: null,
       dateStart: new Date().toISOString().slice(0, 10),
       dateEnd: new Date(Date.now() + 3 * 366 * 86400000).toISOString().slice(0, 10),
       dateStartTs: Date.now(),
@@ -636,18 +640,18 @@ export default {
     this.loadCounts();
     this.prefetchNext();
     this.loadAnnounce();
-    this.loadPlan();
-    this.loadBadges();
     this.calcWeeklyDot();
     this.checkComeback();
     this.checkReminder();
+    this.loadDailySet();
+    flushDailySubmit();
     const wantSetup = uni.getStorageSync('openPlanSetup');
     if (wantSetup) {
       uni.removeStorageSync('openPlanSetup');
       // 立即弹出设置，不等 profile 请求返回（返回后表单会回填已有值）
       this.openSetup();
     }
-    this.loadProfile().then(() => {
+    this.loadHome().then(() => {
       if (wantSetup && this.setupOpen && this.profile) this.openSetup();
     });
     if (this.realMode) this.loadRealFilters();
@@ -679,6 +683,18 @@ export default {
       const d = new Date(ts);
       const p = (n) => (n < 10 ? '0' + n : '' + n);
       return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+    },
+    loadDailySet() {
+      // 全站同题题组：首页外显参与数 + 预取题组供 startDaily 秒开（边缘缓存 60s）
+      request('/api/daily_set')
+        .then((d) => {
+          if (!d || !d.date || !(d.items || []).length) return;
+          this.dsMeta = { date: d.date, participants: (d.stats && d.stats.participants) || 0 };
+          const done = uni.getStorageSync('dailyDone:' + anonUid());
+          this.dsDone = done && done.date === d.date ? done : null;
+          uni.setStorageSync('dailySet', d);
+        })
+        .catch(() => {});
     },
     goSearch() {
       uni.navigateTo({ url: '/pkgA/search/search' });
@@ -741,6 +757,29 @@ export default {
     },
     startDaily() {
       this.launch({ kind: 'daily' });
+    },
+    openSzArchive() {
+      this.pickArchiveDay((d) => {
+        trackEvent('daily_archive_open', 'sz:' + d);
+        this.launch({ kind: 'shizheng', date: d });
+      });
+    },
+    openDailyArchive() {
+      // 近 7 天往期每日一练（补练不计成绩/streak，复用 R78 往期链路）
+      this.pickArchiveDay((d) => {
+        trackEvent('daily_archive_open', d);
+        this.launch({ kind: 'daily', date: d });
+      });
+    },
+    pickArchiveDay(cb) {
+      const days = [];
+      for (let i = 1; i <= 7; i++) {
+        days.push(new Date(Date.now() + 8 * 3600e3 - i * 86400e3).toISOString().slice(0, 10));
+      }
+      uni.showActionSheet({
+        itemList: days.map((d, i) => d + (i === 0 ? '（昨天）' : i === 1 ? '（前天）' : '')),
+        success: (res) => cb(days[res.tapIndex]),
+      });
     },
     startPaper(p) {
       this.paperSheet = false;
@@ -821,12 +860,36 @@ export default {
         this.badgeInfo = await fetchCheckinBadges();
       } catch (e) { /* 非关键路径 */ }
       try {
-        const d = await fetchCheckinSummary();
-        if (d && d.today_n != null) {
-          this.svTodayN = d.today_n;
-          if (d.today_n > 0) this.reminderBanner = false;
-        }
+        this.applySummary(await fetchCheckinSummary());
       } catch (e) { /* 非关键路径 */ }
+    },
+    applySummary(d) {
+      if (d && d.today_n != null) {
+        this.svTodayN = d.today_n;
+        if (d.today_n > 0) this.reminderBanner = false;
+      }
+    },
+    // 首屏 uid 专属数据聚合拉取：bundle 一次取齐 plan/profile/plan_today/badges/summary，
+    // 失败时回退逐个端点（旧后端/部署窗口兼容）
+    async loadHome() {
+      const uid = anonUid();
+      if (!uid) return;
+      try {
+        const d = await request('/api/home_bundle?uid=' + encodeURIComponent(uid));
+        this.applyPlan(d.plan);
+        if (d.badges) this.badgeInfo = d.badges;
+        this.applySummary(d.summary);
+        this.profile = d.profile || null;
+        this.profileFetched = true;
+        if (this.profile) {
+          this.planToday = d.plan_today || null;
+          uni.setStorageSync('homePlanCard', this.planToday && this.planToday.profile ? '1' : '');
+        } else this.planToday = null;
+      } catch (e) {
+        this.loadPlan();
+        this.loadBadges();
+        await this.loadProfile();
+      }
     },
     taskGo(kind) {
       trackEvent('task_card_click', kind);
@@ -861,7 +924,7 @@ export default {
     },
     async loadCounts() {
       try {
-        const d = await request('/api/questions?limit=1');
+        const d = await request('/api/question_counts');
         this.counts = d.counts || [];
       } catch (e) { /* 走下方重试 */ }
       if (this.counts.length) {
@@ -931,12 +994,16 @@ export default {
       const uid = uni.getStorageSync('anonUid');
       if (!uid) return;
       try {
-        this.plan = await request('/api/daily_plan?uid=' + encodeURIComponent(uid));
-        this.planFetched = true;
-        const due = (this.plan && this.plan.due_mistakes) || 0;
-        if (due > 0) uni.setTabBarBadge({ index: 1, text: String(due > 99 ? '99+' : due) });
-        else uni.removeTabBarBadge({ index: 1 });
+        this.applyPlan(await request('/api/daily_plan?uid=' + encodeURIComponent(uid)));
       } catch (e) { /* 非关键路径 */ }
+    },
+    applyPlan(plan) {
+      if (!plan) return;
+      this.plan = plan;
+      this.planFetched = true;
+      const due = plan.due_mistakes || 0;
+      if (due > 0) uni.setTabBarBadge({ index: 1, text: String(due > 99 ? '99+' : due) });
+      else uni.removeTabBarBadge({ index: 1 });
     },
     async loadProfile() {
       try {
@@ -1067,6 +1134,9 @@ export default {
 .hero-n { font-size: 36rpx; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
 .hero-streak { display: inline-flex; align-items: center; gap: 8rpx; font-size: 22rpx; color: #fff; background: rgba(255, 255, 255, 0.18); border-radius: 8rpx; padding: 4rpx 16rpx; }
 .hero-bar { height: 12rpx; background: rgba(255, 255, 255, 0.25); border-radius: 999rpx; margin: 16rpx 0 24rpx; overflow: hidden; }
+.hero-ds { display: block; font-size: 22rpx; color: rgba(255, 255, 255, 0.85); margin: -8rpx 0 20rpx; }
+.hero-ds-arc { margin-left: 16rpx; text-decoration: underline; color: rgba(255, 255, 255, 0.75); }
+.sz-arc { margin-left: 12rpx; text-decoration: underline; color: var(--ink-2); }
 .hero-fill { height: 100%; background: var(--card); border-radius: 999rpx; transition: width 0.3s; }
 .hero-acts { display: flex; gap: 20rpx; }
 .hero-btn { min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 20rpx; font-size: 28rpx; font-weight: 600; }
@@ -1091,7 +1161,7 @@ export default {
 .sz-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
 .tag { display: inline-flex; align-items: center; height: 40rpx; padding: 0 16rpx; border-radius: 12rpx; font-size: 21rpx; font-weight: 500; }
 .tag.warn { background: var(--warn-soft); color: #b45309; }
-.tag.ok { background: var(--ok-soft); color: #16a34a; }
+.tag.ok { background: var(--ok-soft); color: var(--ok-strong); }
 .mini-btn { flex-shrink: 0; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 28rpx; background: var(--brand-soft); color: var(--brand); border-radius: 20rpx; font-size: 25rpx; font-weight: 600; }
 .grow { flex: 1; min-width: 0; }
 

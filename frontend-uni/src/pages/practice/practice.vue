@@ -183,6 +183,20 @@
       <view v-if="!beiMode" class="sub">答对 {{ right }}/{{ items.length }} · 最高连对 {{ bestStreak }} 题<template v-if="autoSaved">，错题已自动加入错题本</template></view>
       <view v-else class="sub">已浏览 {{ items.length }} 道题的答案与解析</view>
       <view v-if="!beiMode && percentile != null" class="beat">本组正确率击败了 {{ percentile }}% 的刷题记录</view>
+      <view v-if="!beiMode && dailyStats" class="beat dsbeat">
+        <template v-if="dailyStats.already">今日全站同题成绩已记录（首次 {{ dailyStats.my_right }} 对） · {{ dailyStats.participants }} 人完成</template>
+        <template v-else-if="dailyStats.beat_pct == null">今日全站同题 · 你是今天第 1 位完成者</template>
+        <template v-else>今日全站同题 · {{ dailyStats.participants }} 人完成 · 击败 {{ dailyStats.beat_pct }}%</template>
+        <template v-if="dailyStats.streak >= 2"> · 🔥 已连续参与 {{ dailyStats.streak }} 天</template>
+      </view>
+      <view v-if="!beiMode && dailyStats && dailyBoard.length" class="dsboard">
+        <view class="rr-t">今日排行榜<text v-if="dailyStats.my_rank" class="dsb-mine">我的名次：第 {{ dailyStats.my_rank }} 名</text></view>
+        <view v-for="r in dailyBoard.slice(0, 10)" :key="r.rank" class="dsb-row">
+          <text class="dsb-rank" :class="{ top: r.rank <= 3 }">{{ r.rank }}</text>
+          <text class="dsb-name">{{ r.name }}</text>
+          <text class="dsb-score">答对 {{ r.right }}/{{ r.total }}<template v-if="r.secs"> · {{ fmtSecs(r.secs) }}</template></text>
+        </view>
+      </view>
       <view v-if="!beiMode && redoReport" class="redoreport">
         <view class="rr-t">错题重练效果</view>
         <view class="rr-row">
@@ -192,6 +206,16 @@
         </view>
         <text class="rr-tip">答对的已推进复习计划<template v-if="redoReport.still">；仍错的已重置复习，明天优先再练</template></text>
         <view class="rr-go" @click="goReview">回错题本查看 ›</view>
+      </view>
+      <view v-if="!beiMode && !examMode && weakSpots.length" class="weakrf">
+        <view class="rr-t">薄弱考点 · 趁热打铁</view>
+        <view v-for="w in weakSpots" :key="w.key" class="wr-row">
+          <view class="wr-l">
+            <text class="wr-name">{{ w.name }}</text>
+            <text class="wr-meta">本组错 {{ w.n }} 题</text>
+          </view>
+          <view class="wr-btn" @click="reinforceWeak(w)">强化 5 道新题</view>
+        </view>
       </view>
       <view v-if="!beiMode" class="report">
         <view class="report-row">
@@ -223,6 +247,14 @@
           <text class="duenudge-s">趁热打铁，按遗忘曲线巩固一遍</text>
         </view>
         <text class="duenudge-go">去复习 ›</text>
+      </view>
+      <view v-if="!beiMode && loginNudgeN" class="loginnudge">
+        <view class="duenudge-l">
+          <text class="duenudge-t">已累计刷 {{ loginNudgeN }} 题 · 登录保进度</text>
+          <text class="duenudge-s">错题本、做题记录云同步，换设备/清缓存不丢</text>
+        </view>
+        <text class="duenudge-go" @click="loginNudgeGo">去登录 ›</text>
+        <text class="loginnudge-x" @click="dismissLoginNudge">✕</text>
       </view>
       <button class="btn" @click="retryGroup">再来一组</button>
       <button v-if="!beiMode" class="btn ghost" style="margin-top: 16rpx" @click="shareResult">分享成绩</button>
@@ -293,7 +325,7 @@
 </template>
 
 <script>
-import { request, BASE_URL, anonUid, exportPdf, removeFav, setFav, fetchCheckinBadges, trackEvent } from '../../api.js';
+import { request, BASE_URL, anonUid, pkNickname, exportPdf, removeFav, setFav, fetchCheckinBadges, getAuthUser, trackEvent, submitDailySet } from '../../api.js';
 import { drawOffline, enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../offline.js';
 import { dayKey, loadSzDaily, saveSzDaily } from '../../checkin.js';
 
@@ -359,11 +391,14 @@ export default {
       dueReview: 0,
       resultSent: false,
       percentile: null,
+      dailyStats: null,
+      dailyBoard: [],
       redoReport: null,
       examMode: false,
       examLeft: 0,
       examTimer: null,
       pstats: { byModule: {}, days: {} },
+      loginNudgeOff: true,
       autoTimer: null,
       cardOpen: false,
       toolsOpen: false,
@@ -489,6 +524,28 @@ export default {
     wrongCount() {
       return this.items.filter((q) => q._picked && q._picked !== q.answer).length;
     },
+    // 完成页登录引导：匿名重度用户（累计≥ 30 题）且未关闭过才显示，返回累计题数
+    loginNudgeN() {
+      if (this.loginNudgeOff) return 0;
+      let n = 0;
+      for (const s of Object.values(this.pstats.byModule || {})) n += s.done || 0;
+      return n >= 30 ? n : 0;
+    },
+    // 完成页薄弱考点：本组错题按考点聚合，错题数倒序取前 3
+    weakSpots() {
+      const map = {};
+      for (const q of this.items) {
+        if (!q._picked || q._picked === q.answer) continue;
+        const key = q.tag3 || q.question_type || q.module || 'other';
+        if (!map[key]) {
+          const qt = q.question_type || '';
+          const sub = qt.includes('-') ? qt.split('-').slice(1).join('-') : qt || null;
+          map[key] = { key, name: sub || this.modName(q.module), module: q.module, submodule: sub, tag3: q.tag3 || null, n: 0 };
+        }
+        map[key].n++;
+      }
+      return Object.values(map).sort((a, b) => b.n - a.n).slice(0, 3);
+    },
     weakModule() {
       let worst = null;
       let worstAcc = 1;
@@ -580,6 +637,9 @@ export default {
         /* 保留原值 */
       }
       this._urlLaunch = { module, year: parseInt(query.year, 10) || null, source: query.source || 'seo' };
+    } else if (query && query.daily) {
+      // 每日一练直达深链（同题挑战分享/SEO 页 CTA），date 可选指向往期题组
+      this._urlLaunch = { daily: true, date: query.date || '' };
     } else if (query && query.module) {
       // 仅带模块的深链（分享/外链直开）：直接开练该模块
       let module = query.module;
@@ -599,6 +659,7 @@ export default {
     }
     // #endif
     this.pstats = loadPStats();
+    this.loginNudgeOff = !!getAuthUser() || !!uni.getStorageSync('loginNudgeDismissed');
     this.favs = uni.getStorageSync('favQuestions') || [];
     this.realMode = uni.getStorageSync('realMode') ? true : false;
     this.realYear = uni.getStorageSync('realYear') || null;
@@ -608,6 +669,10 @@ export default {
     if (this._urlLaunch) {
       const q = this._urlLaunch;
       this._urlLaunch = null;
+      if (q.daily) {
+        this.startDaily(q.date);
+        return;
+      }
       this.start(q.module, null, null, false, q.year ? true : undefined, q.tag3, q.source, q.year);
       return;
     }
@@ -615,11 +680,11 @@ export default {
     if (launch && launch.kind) {
       uni.removeStorageSync('practiceLaunch');
       if (launch.kind === 'daily') {
-        this.startDaily();
+        this.startDaily(launch.date);
         return;
       }
       if (launch.kind === 'shizheng') {
-        this.startShizheng();
+        this.startShizheng(launch.date);
         return;
       }
       if (launch.kind === 'szreview') {
@@ -740,7 +805,7 @@ export default {
     },
     async loadCounts() {
       try {
-        const d = await request('/api/questions?limit=1');
+        const d = await request('/api/question_counts');
         this.counts = d.counts || [];
       } catch (e) { /* 走下方重试 */ }
       if (this.counts.length) {
@@ -1019,21 +1084,75 @@ export default {
       }
       uni.setStorageSync('favQuestions', this.favs);
     },
-    startDaily() {
+    async startDaily(archiveDate) {
       this._daily = true;
       if (this.beiMode) {
         this.beiMode = false;
         uni.setStorageSync('beiMode', '');
         uni.showToast({ title: '每日一练按做题模式进行', icon: 'none', duration: 1200 });
       }
-      this.start(this.dailyModule);
+      if (this._starting) return;
+      this._starting = true;
+      uni.showLoading({ title: '出题中…', mask: true });
+      try {
+        // 首页预取的题组按日确定，date 匹配当日即可复用（秒开，不再等网络）
+        const cnDay = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+        const past = archiveDate && archiveDate !== cnDay;
+        const cached = uni.getStorageSync('dailySet');
+        const d = past
+          ? await request('/api/daily_set?date=' + encodeURIComponent(archiveDate))
+          : cached && cached.date === cnDay && (cached.items || []).length ? cached : await request('/api/daily_set');
+        if (!d.items || !d.items.length) throw new Error('empty');
+        this._dailyDate = d.date;
+        this._dailyPast = d.date !== cnDay;
+        this.items = d.items.map((q) => ({ ...q, _saved: false }));
+        this.idx = 0;
+        this.picked = '';
+        this.right = 0;
+        this.streak = 0;
+        this.bestStreak = 0;
+        this.autoSaved = false;
+        this.resultSent = false;
+        this.percentile = null;
+        this.lastModule = null;
+        this.lastSubmodule = null;
+        this.session = true;
+        this.startQTimer();
+        uni.showToast({ title: this._dailyPast ? '往期每日一练 · ' + d.date : '每日一练 · 今日全站同题', icon: 'none' });
+      } catch (e) {
+        // 接口异常回退随机抽题，每日一练不因后端故障不可用
+        this._dailyDate = '';
+        this._dailyPast = false;
+        this.start(this.dailyModule);
+      } finally {
+        uni.hideLoading();
+        this._starting = false;
+      }
     },
     markDailyDone() {
       if (!this._daily) return;
       this._daily = false;
+      const past = this._dailyPast;
+      this._dailyPast = false;
+      if (past) {
+        // 往期补练：成绩/榜单/streak 均为当日语义，不提交不打卡，完成页走普通成绩展示
+        this._dailyDate = '';
+        uni.showToast({ title: '往期补练完成', icon: 'none' });
+        return;
+      }
       this.daily.days[dayKey()] = true;
       uni.setStorageSync('dailyPlan', this.daily);
       uni.showToast({ title: '今日一练完成，打卡成功！', icon: 'none' });
+      const date = this._dailyDate;
+      this._dailyDate = '';
+      if (!date) return;
+      this._dailyDoneDate = date;
+      submitDailySet({ uid: anonUid(), nickname: pkNickname(), date, right: this.right, total: this.items.length, secs: this.totalSecs })
+        .then((d) => {
+          this.dailyStats = d;
+          return request('/api/daily_set/board').then((b) => { this.dailyBoard = (b && b.items) || []; });
+        })
+        .catch(() => {});
     },
     _mapShizheng(q) {
       return {
@@ -1043,7 +1162,7 @@ export default {
         _saved: false,
       };
     },
-    async startShizheng() {
+    async startShizheng(archiveDate) {
       if (this._starting) return;
       this._starting = true;
       uni.showLoading({ title: '出题中…', mask: true });
@@ -1052,12 +1171,14 @@ export default {
         uni.setStorageSync('beiMode', '');
       }
       try {
-        const d = await request('/api/shizheng/daily');
+        const past = archiveDate && archiveDate !== dayKey();
+        const d = await request(past ? '/api/shizheng/daily?date=' + encodeURIComponent(archiveDate) : '/api/shizheng/daily');
         if (!d.items || !d.items.length) {
           uni.showToast({ title: '时政题库准备中，敬请期待', icon: 'none' });
           return;
         }
         this._shizheng = true;
+        this._szPast = past;
         this._szDate = d.date;
         this.lastModule = '时政';
         this.lastSubmodule = null;
@@ -1114,6 +1235,11 @@ export default {
     markShizhengDone() {
       if (!this._shizheng) return;
       this._shizheng = false;
+      if (this._szPast) {
+        this._szPast = false;
+        uni.showToast({ title: '往期时政补练完成', icon: 'none' });
+        return;
+      }
       const day = dayKey();
       this.szDaily.days[day] = { right: this.right, best: this.bestStreak, picks: this.items.map((q) => q._picked || ''), secs: this.items.map((q) => q._secs || 0) };
       saveSzDaily(anonUid(), this.szDaily);
@@ -1162,6 +1288,17 @@ export default {
         uni.hideLoading();
         this._starting = false;
       }
+    },
+    loginNudgeGo() {
+      trackEvent('login_nudge_click');
+      uni.navigateTo({ url: '/pkgA/user/login' });
+    },
+    dismissLoginNudge() {
+      this.loginNudgeOff = true;
+      uni.setStorageSync('loginNudgeDismissed', '1');
+    },
+    reinforceWeak(w) {
+      this.startReinforce({ module: w.module, submodule: w.submodule, tag3: w.tag3, count: 5, source: 'session-report' });
     },
     // 完成页「再来一组」：错题重练场次重用同一组错题，其余按原模块重新抽题
     retryGroup() {
@@ -1662,6 +1799,18 @@ export default {
       }
     },
     shareResult() {
+      if (this.dailyStats && this._dailyDoneDate) {
+        let txt = '我完成了错题邦 ' + this._dailyDoneDate + ' 每日一练（全站同题 ' + this.items.length + ' 题），答对 ' + this.right + ' 题';
+        if (this.dailyStats.beat_pct != null) txt += '，击败全站 ' + this.dailyStats.beat_pct + '%';
+        if (this.dailyStats.streak >= 2) txt += '，已连续参与 ' + this.dailyStats.streak + ' 天';
+        txt += '！同题挑战我：https://kaogong.zalize.com/#/pages/practice/practice?daily=1';
+        trackEvent('share_result_copy', 'practice', 'daily');
+        uni.setClipboardData({
+          data: txt,
+          success: () => uni.showToast({ title: '成绩已复制，去粘贴给研友吧', icon: 'none', duration: 1600 }),
+        });
+        return;
+      }
       const pct = Math.round((this.right / this.items.length) * 100);
       let txt =
         '我在错题邦刷了 ' + this.items.length + ' 道' + (this.lastModule ? this.modName(this.lastModule) : '行测') + '题，正确率 ' + pct + '%';
@@ -1843,8 +1992,11 @@ export default {
     },
     async submitResult() {
       if (this.beiMode || this.resultSent || !this.items.length) return;
+      this.dailyStats = null;
       this.resultSent = true;
+      this.dailyBoard = [];
       this.dueReview = 0;
+      if (this.loginNudgeN) trackEvent('login_nudge_show');
       uni.removeStorageSync('pendingSession');
       try {
         const hist = uni.getStorageSync('practiceHistory') || [];
@@ -2090,7 +2242,7 @@ export default {
 .mchip { font-size: 21rpx; border-radius: 12rpx; padding: 4rpx 16rpx; font-weight: 500; }
 .mchip.brand { background: var(--brand-soft); color: var(--brand); }
 .mchip.info { background: #cffafe; color: #0e7490; }
-.mchip.bad { background: var(--bad-soft); color: #dc2626; }
+.mchip.bad { background: var(--bad-soft); color: var(--bad-strong); }
 .rhead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14rpx; }
 .tag { display: inline-block; background: var(--brand-soft); color: var(--brand); border-radius: 12rpx; padding: 6rpx 20rpx; font-size: 22rpx; min-width: 0; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hstats { display: flex; align-items: center; gap: 12rpx; flex-shrink: 0; }
@@ -2100,8 +2252,8 @@ export default {
 .tool-val { font-size: 24rpx; color: var(--ink-2); }
 .tool-val.on { color: var(--brand); font-weight: 600; }
 .cnt { font-size: 22rpx; border-radius: 999rpx; padding: 2rpx 14rpx; font-weight: 600; }
-.okc { background: var(--ok-soft); color: var(--ok); }
-.badc { background: var(--bad-soft); color: var(--bad); }
+.okc { background: var(--ok-soft); color: var(--ok-strong); }
+.badc { background: var(--bad-soft); color: var(--bad-strong); }
 .fire { background: var(--warn-soft); color: #ea580c; display: inline-flex; align-items: center; gap: 2rpx; }
 .fire-n { font-size: 22rpx; color: #ea580c; font-weight: 700; }
 .iconbtn { display: inline-flex; align-items: center; }
@@ -2222,6 +2374,20 @@ export default {
 .acard-n.skip { background: var(--line); color: var(--ink-2); }
 .beat { margin-top: 10rpx; font-size: 25rpx; color: var(--brand); background: var(--soft-bg); border-radius: 999rpx; padding: 10rpx 26rpx; }
 .redoreport { width: 100%; margin-top: 24rpx; background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 18rpx; padding: 24rpx 28rpx; box-sizing: border-box; text-align: left; }
+.dsboard { width: 100%; margin-top: 24rpx; background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 18rpx; padding: 24rpx 28rpx; box-sizing: border-box; text-align: left; }
+.dsb-mine { float: right; font-size: 23rpx; font-weight: 600; color: var(--brand); }
+.dsb-row { display: flex; align-items: center; gap: 16rpx; margin-top: 14rpx; }
+.dsb-rank { flex-shrink: 0; width: 40rpx; text-align: center; font-size: 24rpx; font-weight: 700; color: var(--ink-2); }
+.dsb-rank.top { color: var(--brand); }
+.dsb-name { flex: 1; min-width: 0; font-size: 25rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dsb-score { flex-shrink: 0; font-size: 23rpx; color: var(--ink-2); }
+.weakrf { width: 100%; margin-top: 24rpx; background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 18rpx; padding: 24rpx 28rpx; box-sizing: border-box; text-align: left; }
+.wr-row { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; margin-top: 18rpx; }
+.wr-l { display: flex; flex-direction: column; gap: 4rpx; min-width: 0; }
+.wr-name { font-size: 26rpx; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wr-meta { font-size: 22rpx; color: var(--bad-strong); }
+.wr-btn { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: var(--brand); border: 1rpx solid var(--brand); border-radius: 999rpx; padding: 8rpx 22rpx; }
+@media (min-width: 768px) { .wr-btn { cursor: pointer; } .wr-btn:hover { background: var(--brand); color: #fff; } }
 .rr-t { font-size: 27rpx; font-weight: 700; color: var(--ink); }
 .rr-row { display: flex; gap: 16rpx; margin: 18rpx 0 12rpx; }
 .rr-cell { flex: 1; text-align: center; background: var(--card-bg, #fff); border-radius: 14rpx; padding: 16rpx 0; }
@@ -2256,6 +2422,11 @@ export default {
 .duenudge-t { display: block; font-size: 27rpx; font-weight: 700; color: #ffffff; }
 .duenudge-s { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.75); margin-top: 4rpx; }
 .duenudge-go { flex-shrink: 0; background: rgba(255, 255, 255, 0.18); color: #ffffff; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 12rpx 30rpx; }
+.loginnudge { display: flex; justify-content: space-between; align-items: center; gap: 16rpx; text-align: left; background: var(--card); border: 1rpx solid var(--line); border-radius: 18rpx; padding: 24rpx 28rpx; margin: 24rpx 0; }
+.loginnudge .duenudge-t { color: var(--ink); }
+.loginnudge .duenudge-s { color: var(--ink-2); }
+.loginnudge .duenudge-go { background: var(--brand-soft); color: var(--brand); }
+.loginnudge-x { flex-shrink: 0; color: var(--ink-3); font-size: 26rpx; padding: 8rpx; }
 .ring { width: 200rpx; height: 200rpx; border-radius: 50%; margin: 0 auto 24rpx; display: flex; align-items: center; justify-content: center; }
 .ring-in { width: 156rpx; height: 156rpx; border-radius: 50%; background: var(--card); display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .ring-n { font-size: 40rpx; font-weight: 700; color: var(--ink); }

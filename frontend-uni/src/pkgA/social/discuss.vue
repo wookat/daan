@@ -28,7 +28,12 @@
     </view>
 
     <!-- 评论列表 -->
-    <view v-if="loading" class="card empty">加载中…</view>
+    <view v-if="noQid" class="card empty">
+      <view class="empty-t">链接缺少题目参数</view>
+      <view class="empty-s">请从题目解析页进入讨论，或去讨论广场看看大家在聊什么</view>
+      <view class="plaza-btn" @click="goPlaza">去讨论广场</view>
+    </view>
+    <view v-else-if="loading" class="card empty">加载中…</view>
     <view v-else-if="!items.length" class="card empty">
       <view class="empty-t">还没有讨论</view>
       <view class="empty-s">说说你的解法、避坑经验，帮到下一位考友</view>
@@ -68,7 +73,7 @@
     <view style="height: 140rpx" />
 
     <!-- 输入栏 -->
-    <view class="inputbar">
+    <view v-if="!noQid" class="inputbar">
       <view v-if="replyTo" class="replying">
         回复 {{ replyTo.nickname }}
         <view class="rx" @click="replyTo = null"><l-icon name="x" :size="14" color="#8a90a0" /></view>
@@ -113,6 +118,7 @@ export default {
   data() {
     return {
       qid: null,
+      noQid: false,
       q: null,
       items: [],
       total: 0,
@@ -137,7 +143,8 @@ export default {
   onLoad(opts) {
     this.qid = Number(opts.qid || 0);
     if (!this.qid) {
-      uni.showToast({ title: '缺少题目参数', icon: 'none' });
+      this.noQid = true;
+      this.loading = false;
       return;
     }
     if (opts.focus === '1' && getToken()) {
@@ -206,6 +213,9 @@ export default {
         const d = await fetchCommentInbox();
         this.inboxUnread = d.unread || 0;
       } catch (e) { /* 非关键路径 */ }
+    },
+    goPlaza() {
+      uni.reLaunch({ url: '/pkgA/social/plaza' });
     },
     goInbox() {
       if (!this.ensureLogin()) return;
@@ -323,6 +333,7 @@ export default {
 /* #endif */
 .empty { text-align: center; color: var(--ink-3); font-size: 25rpx; padding: 60rpx 24rpx; }
 .empty-t { font-size: 28rpx; font-weight: 600; color: var(--ink-2); margin-bottom: 8rpx; }
+.plaza-btn { display: inline-block; margin-top: 24rpx; background: var(--brand); color: #fff; font-size: 26rpx; border-radius: 999rpx; padding: 14rpx 56rpx; }
 .cmlist { padding: 6rpx 24rpx; }
 .cm { display: flex; gap: 18rpx; padding: 24rpx 0; border-bottom: 1rpx solid var(--fill); }
 .cm:last-child { border-bottom: none; }

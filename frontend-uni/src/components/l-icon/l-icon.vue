@@ -1,5 +1,5 @@
 <template>
-  <image class="l-icon" :src="src" :style="{ width: px, height: px }" mode="aspectFit" />
+  <image class="l-icon" aria-hidden="true" :src="src" :style="{ width: px, height: px }" mode="aspectFit" />
 </template>
 
 <script>

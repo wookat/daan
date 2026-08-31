@@ -160,9 +160,9 @@ export default {
 .ms-sub { font-size: 22rpx; color: var(--ink-2); margin-top: 10rpx; }
 .ms-left { color: #d97706; font-weight: 700; }
 .ms-dots { display: flex; justify-content: space-between; margin-top: 20rpx; }
-.ms-dot { display: flex; flex-direction: column; align-items: center; gap: 4rpx; opacity: 0.45; }
-.ms-dot.on { opacity: 1; }
-.ms-dot-i { font-size: 30rpx; }
+.ms-dot { display: flex; flex-direction: column; align-items: center; gap: 4rpx; }
+.ms-dot-i { font-size: 30rpx; opacity: 0.45; }
+.ms-dot.on .ms-dot-i { opacity: 1; }
 .ms-dot-d { font-size: 20rpx; color: var(--ink-2); }
 .poster-btn { margin-top: 24rpx; background: var(--brand); color: #fff; font-size: 28rpx; border-radius: 18rpx; }
 .card { background: var(--card); border-radius: var(--radius); padding: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }

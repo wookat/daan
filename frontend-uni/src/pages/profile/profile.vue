@@ -63,6 +63,9 @@
       <wd-cell title="讨论消息" :value="inboxUnread ? inboxUnread + ' 条未读' : ''" is-link clickable @click="goInbox">
         <template #icon><view class="cell-ico"><l-icon name="message-circle" :size="18" color="#2e5bff" /></view></template>
       </wd-cell>
+      <wd-cell title="练习历史" value="逐题回看 · 错题重练" is-link clickable @click="goPracticeHistory">
+        <template #icon><view class="cell-ico"><l-icon name="clock" :size="18" color="#2e5bff" /></view></template>
+      </wd-cell>
       <wd-cell title="模考记录" is-link clickable @click="goExamList">
         <template #icon><view class="cell-ico"><l-icon name="file-text" :size="18" color="#2e5bff" /></view></template>
       </wd-cell>
@@ -94,6 +97,12 @@
       <!-- #ifdef H5 -->
       <wd-cell title="外观模式" :value="themeLabel" is-link clickable @click="cycleTheme">
         <template #icon><view class="cell-ico"><l-icon name="moon" :size="18" color="#0d9488" /></view></template>
+      </wd-cell>
+      <wd-cell v-if="pwaInstallable" title="安装到桌面" value="像 App 一样从主屏打开" is-link clickable @click="installPwa">
+        <template #icon><view class="cell-ico"><l-icon name="monitor-down" :size="18" color="#0d9488" /></view></template>
+      </wd-cell>
+      <wd-cell v-else-if="iosInstallable" title="安装到主屏幕" value="像 App 一样从主屏打开" is-link clickable @click="showIosGuide">
+        <template #icon><view class="cell-ico"><l-icon name="monitor-down" :size="18" color="#0d9488" /></view></template>
       </wd-cell>
       <!-- #endif -->
       <wd-cell title="离线题包" :value="offlineN ? offlineN + ' 个题包' : '未下载'" is-link clickable @click="goOffline">
@@ -142,6 +151,9 @@
 import { request, getAuthUser, authLogout, clearAuth, anonUid, fetchCheckinBadges, fetchCommentInbox } from '../../api.js';
 import { getReminderSettings } from '../../reminder.js';
 import { cycleThemeMode, getThemeMode, THEME_LABELS } from '../../theme.js';
+// #ifdef H5
+import { canInstall, promptInstall, onInstallable, isIosSafariInstallable } from '../../pwa.js';
+// #endif
 import { listPacks } from '../../offline.js';
 import { checkinStreak } from '../../checkin.js';
 
@@ -162,6 +174,8 @@ export default {
       remindOn: false,
       remindTime: '20:30',
       themeMode: 'system',
+      pwaInstallable: false,
+      iosInstallable: false,
       offlineN: 0,
       badgeInfo: null,
       growth: null,
@@ -205,9 +219,19 @@ export default {
       this.user = getAuthUser();
     };
     uni.$on('authChanged', this._onAuth);
+    // #ifdef H5
+    this.pwaInstallable = canInstall();
+    this.iosInstallable = isIosSafariInstallable();
+    this._offInstallable = onInstallable(() => {
+      this.pwaInstallable = canInstall();
+    });
+    // #endif
   },
   onUnload() {
     if (this._onAuth) uni.$off('authChanged', this._onAuth);
+    // #ifdef H5
+    if (this._offInstallable) this._offInstallable();
+    // #endif
   },
   onShow() {
     this.user = getAuthUser();
@@ -230,6 +254,22 @@ export default {
     maskPhone(p) {
       return p ? p.slice(0, 3) + '****' + p.slice(-4) : '';
     },
+    // #ifdef H5
+    async installPwa() {
+      const outcome = await promptInstall();
+      if (outcome === 'accepted') {
+        uni.showToast({ title: '已安装，可从桌面直接打开', icon: 'none' });
+      }
+    },
+    showIosGuide() {
+      uni.showModal({
+        title: '安装到主屏幕',
+        content: '1. 点浏览器底部的「分享」按钮（向上箭头）\n2. 在菜单中选择「添加到主屏幕」\n完成后可像 App 一样从主屏直接打开', 
+        showCancel: false,
+        confirmText: '知道了',
+      });
+    },
+    // #endif
     async loadInbox() {
       if (!this.user) {
         this.inboxUnread = 0;
@@ -285,6 +325,9 @@ export default {
     },
     goCalendar() {
       uni.navigateTo({ url: '/pages/stats/calendar' });
+    },
+    goPracticeHistory() {
+      uni.navigateTo({ url: '/pkgA/stats/practice-history' });
     },
     goFavs() {
       uni.setStorageSync('bookShowFavs', '1');

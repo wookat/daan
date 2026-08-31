@@ -13,6 +13,24 @@ export default {
     const m = h.match(/^#\/pages\/(exam|shenlun|user)\//)
     if (m) window.location.replace(window.location.pathname + h.replace('#/pages/', '#/pkgA/'))
     initReminderLoop()
+    // 无障碍：uni 运行时生成的页面结构无 main landmark，给当前页 uni-page-body 挂 role="main"
+    const markMain = () => {
+      const bodies = document.querySelectorAll('uni-page-body')
+      bodies.forEach((el, i) => {
+        if (i === bodies.length - 1) el.setAttribute('role', 'main')
+        else el.removeAttribute('role')
+      })
+      // tabbar 图标为装饰图（文字 label 承载语义），uni 生成的 img 无 alt
+      document.querySelectorAll('.uni-tabbar__icon img').forEach((el) => el.setAttribute('aria-hidden', 'true'))
+      // uni 编译后的真实 input/textarea 无 label，把 placeholder 镜像为 aria-label
+      document.querySelectorAll('uni-input input:not([aria-label]), uni-textarea textarea:not([aria-label])').forEach((el) => {
+        const host = el.closest('uni-input, uni-textarea')
+        const ph = el.getAttribute('placeholder') || (host && (host.querySelector('.uni-input-placeholder, .uni-textarea-placeholder') || {}).textContent) || ''
+        if (ph.trim()) el.setAttribute('aria-label', ph.trim())
+      })
+    }
+    markMain()
+    new MutationObserver(markMain).observe(document.body, { childList: true, subtree: true })
     // #endif
     applyTheme()
     watchSystemTheme()
@@ -38,8 +56,10 @@ page {
   --ink-4: #b0b4c0;
   --ok: #16a34a;
   --ok-soft: #ecfdf5;
+  --ok-strong: #15803d;
   --bad: #dc2626;
   --bad-soft: #fef2f2;
+  --bad-strong: #b91c1c;
   --warn: #d97706;
   --warn-soft: #fffbeb;
   --info: #0284c7;
@@ -75,6 +95,10 @@ html {
 body {
   background: #f6f7fb;
 }
+body::after {
+  /* 禁用 uni-h5 的 shadow-preload：本产品不用 page-head shadow，避免向 dcloud CDN 发第三方请求 */
+  animation: none !important;
+}
 html.theme-dark body {
   background: #15161c;
 }
@@ -92,7 +116,9 @@ html.theme-dark body {
   --ink-3: #8a8ea0;
   --ink-4: #5c6070;
   --ok-soft: #0e2b1e;
+  --ok-strong: #4ade80;
   --bad-soft: #331416;
+  --bad-strong: #f87171;
   --warn-soft: #33260e;
   --info-soft: #0e2233;
   --line: #2b2e3a;

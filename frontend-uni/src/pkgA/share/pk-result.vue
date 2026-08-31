@@ -1,7 +1,11 @@
 <template>
   <view class="wrap pkres">
     <view v-if="loading" class="card empty">加载中…</view>
-    <view v-else-if="errMsg" class="card empty">{{ errMsg }}</view>
+    <view v-else-if="errMsg" class="card empty err">
+      <text class="err-t">{{ errMsg }}</text>
+      <text class="err-s">对局可能未结束或链接不完整，也可以发起你自己的 PK</text>
+      <view class="act-btn main" @click="goChallenge">发起我的 PK 对局</view>
+    </view>
 
     <template v-else-if="d">
       <view class="hero">
@@ -117,6 +121,10 @@ export default {
 .wrap { padding: 24rpx 32rpx 60rpx; }
 .card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 24rpx 28rpx; margin-bottom: 20rpx; }
 .empty { text-align: center; color: var(--ink-2); font-size: 25rpx; padding: 30rpx 0; }
+.empty.err { padding: 70rpx 28rpx; }
+.err-t { display: block; font-size: 30rpx; font-weight: 600; color: var(--ink); }
+.err-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 12rpx; margin-bottom: 32rpx; }
+.empty.err .act-btn { max-width: 360rpx; margin: 0 auto; }
 
 .hero { background: linear-gradient(135deg, #5b8af8, #2e5bff); border-radius: 32rpx; padding: 36rpx 32rpx; margin-bottom: 24rpx; box-shadow: 0 12rpx 36rpx rgba(46, 91, 255, 0.3); }
 .hero-t { display: block; color: #fff; font-size: 40rpx; font-weight: 800; }

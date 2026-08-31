@@ -40,6 +40,41 @@ def api_shizheng_daily(date: str | None = None, limit: int = 10):
     items = db.shizheng_daily(day, min(max(limit, 1), 20))
     return {"date": day, "items": items, "total": db.shizheng_count()}
 
+
+@router.get("/api/daily_set")
+def api_daily_set(date: str | None = None):
+    """全站同题每日一练：uid 无关、按日确定，可边缘缓存；date 可选取近 7 天往期题组。"""
+    day = db.daily_archive_day(date) or db.cn_day()
+    return {"date": day, "items": db.daily_set_questions(day), "stats": db.daily_set_stats(day)}
+
+
+@router.get("/api/daily_set/board")
+def api_daily_set_board():
+    """今日排行榜：uid 无关（昵称/脱敏名），公开只读；不入边缘缓存，保证提交后即含本人。"""
+    day = db.cn_day()
+    return {"date": day, "items": db.daily_set_board(day)}
+
+
+@router.post("/api/daily_set/submit")
+def api_daily_set_submit(body: dict):
+    uid = str(body.get("uid") or "").strip()[:64]
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    day = db.cn_day()
+    if body.get("date") and str(body["date"]) != day:
+        raise HTTPException(400, "只接受当日成绩")
+    try:
+        right = max(0, min(int(body.get("right") or 0), 50))
+        total = max(1, min(int(body.get("total") or 0), 50))
+        secs = float(body.get("secs") or 0) or None
+    except (TypeError, ValueError):
+        raise HTTPException(400, "参数不合法") from None
+    nickname = str(body.get("nickname") or "").strip()[:20]
+    if nickname.lower() in ("null", "undefined"):
+        nickname = ""
+    return db.daily_set_submit(day, uid, min(right, total), total, secs, nickname or None)
+
+
 @router.get("/api/questions/export")
 def api_questions_export(offset: int = 0, limit: int = 200, module: str | None = None, all: int = 0):
     return {"items": db.export_questions(offset, min(limit, 500), module, missing_only=not all)}
@@ -58,6 +93,12 @@ def api_questions_hs_import(body: dict, x_import_token: str | None = Header(None
     check_import_token(x_import_token)
     n = db.import_hs_explanations(body.get("items") or [])
     return {"updated": n}
+
+
+@router.get("/api/question_counts")
+def api_question_counts():
+    """各模块题数（uid 无关、确定性，供首屏轻量拉取与边缘缓存）。"""
+    return {"counts": db.question_counts()}
 
 
 @router.get("/api/questions")

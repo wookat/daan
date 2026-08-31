@@ -168,12 +168,28 @@ report.init_report_db()
 team.init_team_db()
 
 
+_HOT_UID_TABLES = (
+    "answer_log", "review_log", "user_profile", "question_favs", "fav_folders",
+    "question_notes", "question_comments", "comment_likes", "growth_events",
+    "mistakes", "pk_matches", "interview_sessions", "shenlun_answers",
+)
+
+
 def _warmup():
-    """周期预热抽题 id 池与热点索引页，消除缓存被换出后的冷启动秒级延迟。"""
+    """周期预热抽题 id 池、热点索引页与 uid 热表（总量 <1MB），消除缓存被换出后的冷启动分钟级长尾。"""
     while True:
         try:
             for m in (None, "yanyu", "changshi", "panduan", "shuliang", "ziliao"):
                 db.random_questions(m, 1)
+            conn = db.get_conn()
+            try:
+                for t in _HOT_UID_TABLES:
+                    try:
+                        conn.execute(f"SELECT * FROM {t}").fetchall()
+                    except Exception:
+                        pass
+            finally:
+                conn.close()
         except Exception:
             pass
         time.sleep(300)

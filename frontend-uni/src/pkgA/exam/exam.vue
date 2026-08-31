@@ -192,6 +192,11 @@ export default {
   methods: {
     modName(m) { return MODS[m] || '行测'; },
     async start(opt) {
+      if (!opt.mini && !opt.paper_id) {
+        uni.showToast({ title: '链接缺少试卷参数，去卷库选卷', icon: 'none' });
+        setTimeout(() => uni.reLaunch({ url: '/pkgA/exam/list' }), 1200);
+        return;
+      }
       try {
         const data = opt.mini ? { uid: anonUid(), mini: true } : { uid: anonUid(), paper_id: Number(opt.paper_id) };
         const d = await request('/api/exam/start', { method: 'POST', data });
@@ -206,7 +211,8 @@ export default {
         this.saveProgress();
       } catch (e) {
         uni.showToast({ title: '开考失败：' + e.message, icon: 'none' });
-        setTimeout(() => uni.navigateBack(), 1200);
+        // 深链直达时无历史栈，navigateBack 会静默失败卡在加载页，兜底回卷库
+        setTimeout(() => uni.navigateBack({ fail: () => uni.reLaunch({ url: '/pkgA/exam/list' }) }), 1200);
       }
     },
     startClock() {

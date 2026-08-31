@@ -4,6 +4,8 @@ services:
       context: ..
       dockerfile: deploy/Dockerfile.runtime
     restart: unless-stopped
+    # 共享宿主 CPU 争抢时的相对调度权重（默认 1024），空闲时无影响
+    cpu_shares: 4096
     ports:
       - "127.0.0.1:8300:8000"
     environment:

@@ -3,7 +3,10 @@
     <view v-if="loading" class="loading">正在生成海报…</view>
     <template v-else>
       <image v-if="imgSrc" class="poster" :src="imgSrc" mode="widthFix" @longpress="save" />
-      <view v-else class="loading">{{ err || '生成失败' }}</view>
+      <view v-else class="loading">
+        <text>{{ err || '生成失败' }}</text>
+        <button class="btn retry" @click="retry">重新生成</button>
+      </view>
       <view class="bar">
         <button class="btn" :disabled="!imgSrc" @click="save">保存图片</button>
         <!-- #ifdef MP-WEIXIN -->
@@ -181,12 +184,17 @@ export default {
       if (d.today_n >= 50) return `“一天 ${d.today_n} 题，量变正在悄悄积累成质变。”`;
       return '“慢一点没关系，别停下来，上岸的人都是这么过来的。”';
     },
+    retry() {
+      this.loading = true;
+      this.err = '';
+      this.build();
+    },
     async build() {
       let d;
       try {
         d = await fetchCheckinSummary();
       } catch (e) {
-        this.err = e.message;
+        this.err = /timeout|超时|网络/i.test(String(e && e.message)) ? '网络不给力，打卡数据没取到' : e.message;
         this.loading = false;
         return;
       }
@@ -268,7 +276,8 @@ export default {
 
 <style scoped>
 .wrap { padding: 32rpx; display: flex; flex-direction: column; align-items: center; min-height: 100vh; background: var(--line); box-sizing: border-box; }
-.loading { color: var(--ink-3); font-size: 26rpx; padding: 120rpx 0; }
+.loading { color: var(--ink-3); font-size: 26rpx; padding: 120rpx 0; display: flex; flex-direction: column; align-items: center; gap: 24rpx; }
+.btn.retry { padding: 0 64rpx; }
 .poster { width: 640rpx; border-radius: 32rpx; box-shadow: 0 16rpx 48rpx rgba(44, 90, 214, 0.35); }
 .bar { width: 100%; margin-top: 32rpx; }
 .btn { background: var(--brand); color: #fff; font-size: 28rpx; border-radius: 18rpx; }

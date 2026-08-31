@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, Request
 
 from . import db, kb, plan, taxonomy
 from .deps import rl
+from .social import api_checkin_badges, api_checkin_summary
 
 router = APIRouter()
 
@@ -78,6 +79,27 @@ def api_daily_plan(uid: str):
     return db.daily_plan(uid[:64])
 
 
+@router.get("/api/home_bundle")
+def api_home_bundle(uid: str):
+    """首页首屏 uid 专属数据聚合：plan/profile/plan_today/badges/summary 一次取齐。
+
+    各子结构直接复用既有端点的实现函数，与独立端点响应逐字段一致；
+    独立端点保留，旧客户端零影响。
+    """
+    uid = uid.strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    u = uid[:64]
+    profile = db.get_user_profile(u)
+    return {
+        "plan": db.daily_plan(u),
+        "profile": profile,
+        "plan_today": plan.today_plan(u) if profile else None,
+        "badges": api_checkin_badges(u),
+        "summary": api_checkin_summary(u),
+    }
+
+
 @router.get("/api/attempts")
 def api_attempts(uid: str, question_id: int):
     uid = uid.strip()
@@ -93,6 +115,22 @@ def api_answer_log(body: dict):
         raise HTTPException(400, "缺少 uid 或答题记录")
     n = db.save_answer_log(uid[:64], items[:200])
     return {"saved": n}
+
+@router.get("/api/practice/history")
+def api_practice_history(uid: str):
+    uid = uid.strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    return {"items": db.practice_history(uid[:64])}
+
+
+@router.get("/api/practice/history/detail")
+def api_practice_history_detail(uid: str, start: float, end: float):
+    uid = uid.strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    return {"items": db.practice_history_detail(uid[:64], start, end)}
+
 
 @router.get("/api/growth")
 def api_growth(uid: str):

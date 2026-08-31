@@ -581,8 +581,8 @@ export default {
 .m-t { display: block; font-size: 27rpx; color: var(--ink); font-weight: 600; }
 .m-s { display: block; font-size: 23rpx; color: var(--ink-2); margin-top: 4rpx; }
 .m-badge { flex-shrink: 0; font-size: 22rpx; font-weight: 700; padding: 6rpx 18rpx; border-radius: 999rpx; }
-.m-badge.win { background: var(--ok-soft); color: var(--ok); }
-.m-badge.lose { background: var(--bad-soft); color: var(--bad); }
+.m-badge.win { background: var(--ok-soft); color: var(--ok-strong); }
+.m-badge.lose { background: var(--bad-soft); color: var(--bad-strong); }
 .m-badge.draw { background: var(--fill); color: var(--ink-2); }
 .m-badge.wait { background: var(--warn-soft); color: var(--warn); }
 

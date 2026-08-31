@@ -67,6 +67,7 @@ _CSS = (
     ".tags{display:flex;flex-wrap:wrap;gap:8px}.tags a{background:#eef3ff;border-radius:16px;padding:4px 12px;"
     "font-size:14px;white-space:nowrap}"
     ".meta{color:#6b7280;font-size:13px}"
+    ".meta a,.ftr a{text-decoration:underline}"
     ".opt{margin:6px 0;padding:8px 12px;border:1px solid #e7e9f0;border-radius:8px}"
     ".ans{background:#ecfdf5;border-radius:8px;padding:12px;margin-top:10px}"
     ".cta{display:inline-block;background:" + BRAND + ";color:#fff!important;border-radius:999px;"
@@ -237,7 +238,8 @@ def tiku_index():
     body = (
         "<h1>公务员考试题库</h1>"
         f"<p>收录 {total} 道行测/申论题目（含历年真题），按模块、题型、考点分类，可在线刷题并查看花生十三方法讲解。"
-        '· <a href="/tiku/discuss/" style="white-space:nowrap">考友热议题目 →</a></p>'
+        '· <a href="/tiku/daily/" style="white-space:nowrap">今日每日一练 →</a>'
+        ' · <a href="/tiku/discuss/" style="white-space:nowrap">考友热议题目 →</a></p>'
         + "".join(sections)
         + f'<a class="cta" href="{_e(SITE_BASE)}/">进入刷题主站 →</a>'
     )
@@ -253,6 +255,96 @@ def tiku_index():
             [("题库", "/tiku/")],
         ),
     )
+
+
+@router.get("/daily", include_in_schema=False)
+def tiku_daily_noslash():
+    return RedirectResponse("/tiku/daily/", status_code=301)
+
+
+def _daily_archive_days(n: int = 7) -> list[str]:
+    now = time.time() + 8 * 3600
+    return [time.strftime("%Y-%m-%d", time.gmtime(now - i * 86400)) for i in range(1, n + 1)]
+
+
+def _render_daily(day: str, archived: bool):
+    items = db.daily_set_questions(day)
+    stats = db.daily_set_stats(day)
+    cards = []
+    for i, q in enumerate(items, 1):
+        stem = (q.get("question") or "").strip().replace("\n", " ")[:70]
+        mod = _module_name(q.get("module")) or "综合"
+        cards.append(
+            '<section class="card">'
+            f'<h2>{i}. <a href="/tiku/q/{q["id"]}">{_e(stem)}…</a></h2>'
+            f'<p class="meta">{_e(mod)}{" · 真题" if q.get("is_real") else ""}</p>'
+            "</section>"
+        )
+    n = stats.get("participants") or 0
+    if archived:
+        part = f"当日 {n} 人完成" if n else "当日题组可随时补练"
+    else:
+        part = f"今天已有 {n} 人完成" if n else "来做今天第 1 位完成者"
+    board = db.daily_set_board(day, 10)
+    board_html = ""
+    if board:
+        rows = "".join(
+            f'<p class="meta">{r["rank"]}. {_e(r["name"])} · 答对 {r["right"]}/{r["total"]}'
+            + (f' · 用时 {int(r["secs"])}"' if r.get("secs") else "")
+            + "</p>"
+            for r in board
+        )
+        label = "当日排行榜" if archived else "今日排行榜"
+        board_html = f'<section class="card"><h2>{label}（前 {len(board)} 名）</h2>{rows}</section>'
+    if archived:
+        cta = (
+            f'<a class="cta" href="{_e(SITE_BASE)}/#/pages/practice/practice?daily=1&amp;date={_e(day)}">'
+            "去主站补练这期同题（免费）→</a>"
+        )
+        archive_html = '<p class="meta"><a href="/tiku/daily/">← 回今日每日一练</a></p>'
+    else:
+        cta = f'<a class="cta" href="{_e(SITE_BASE)}/#/pages/practice/practice?daily=1">去主站作答今日同题（免费）→</a>'
+        links = " · ".join(f'<a href="/tiku/daily/{d}/">{d}</a>' for d in _daily_archive_days())
+        archive_html = f'<section class="card"><h2>往期每日一练</h2><p class="meta">{links}</p></section>'
+    path = f"/tiku/daily/{day}/" if archived else "/tiku/daily/"
+    title_tag = "往期补练" if archived else "全站同题刷题"
+    crumbs = [("题库", "/tiku/"), ("每日一练", "/tiku/daily/" if archived else None)]
+    if archived:
+        crumbs.append((day, None))
+    body = (
+        _crumb(crumbs)
+        + f"<h1>每日一练（{_e(day)}）</h1>"
+        + f'<p class="meta">全站同题 · 五大模块各 2 题共 10 题 · {_e(part)}，完成后可查看击败全站百分比</p>'
+        + "".join(cards)
+        + board_html
+        + cta
+        + archive_html
+    )
+    return _page(
+        f"每日一练{day}_公务员考试{title_tag}_错题邦",
+        f"{day} 公务员考试每日一练：全站同题 10 道行测真题（五大模块各 2 题），在线作答查看解析，完成后可比较全站排名。",
+        path,
+        body,
+        _collection_ld(
+            f"每日一练（{day}）",
+            "公务员考试每日一练，全站同题 10 道行测题目，附答案解析。",
+            path,
+            [("题库", "/tiku/"), ("每日一练", "/tiku/daily/")] + ([(day, path)] if archived else []),
+        ),
+    )
+
+
+@router.get("/daily/", response_class=HTMLResponse, include_in_schema=False)
+def tiku_daily():
+    return _render_daily(db.cn_day(), archived=False)
+
+
+@router.get("/daily/{day}/", response_class=HTMLResponse, include_in_schema=False)
+def tiku_daily_archive(day: str):
+    valid = db.daily_archive_day(day)
+    if not valid:
+        return RedirectResponse("/tiku/daily/", status_code=301)
+    return _render_daily(valid, archived=True)
 
 
 @router.get("/discuss", include_in_schema=False)
@@ -886,7 +978,13 @@ def sitemap_index():
 
 @root_router.get("/sitemap-pages.xml", include_in_schema=False)
 def sitemap_pages():
-    urls = [(_url("/tiku/"), None), (_url("/tiku/papers/"), None), (_url("/tiku/discuss/"), None)]
+    urls = [
+        (_url("/tiku/"), None),
+        (_url("/tiku/papers/"), None),
+        (_url("/tiku/discuss/"), None),
+        (_url("/tiku/daily/"), None),
+    ]
+    urls += [(_url(f"/tiku/daily/{d}/"), None) for d in _daily_archive_days()]
     for r in db.question_counts():
         if not _module_name(r["module"]):
             continue

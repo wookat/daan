@@ -1,0 +1,15 @@
+{
+  "name": "错题邦 - 考公行测真题在线刷",
+  "short_name": "错题邦",
+  "description": "11万+行测真题免费在线练习，含讲解、错题本、迷你模考与打卡组队",
+  "lang": "zh-CN",
+  "start_url": "/?utm_source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#eef3ff",
+  "background_color": "#f6f7fb",
+  "icons": [
+    { "src": "/static/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/static/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -169,7 +169,7 @@ export default {
 }
 .cold-s {
   font-size: 24rpx;
-  color: #8a90a0;
+  color: var(--ink-2, #5f6575);
   margin-top: 12rpx;
 }
 .cold-bar {
@@ -222,7 +222,7 @@ export default {
 }
 .cov-t {
   font-size: 18rpx;
-  color: #8a90a0;
+  color: var(--ink-2, #5f6575);
 }
 .head-t {
   font-size: 30rpx;
@@ -231,7 +231,7 @@ export default {
 }
 .head-s {
   font-size: 22rpx;
-  color: #8a90a0;
+  color: var(--ink-2, #5f6575);
   margin: 6rpx 0 10rpx;
 }
 .legend {
@@ -297,7 +297,7 @@ export default {
 }
 .grp-meta {
   font-size: 22rpx;
-  color: #8a90a0;
+  color: var(--ink-2, #5f6575);
 }
 .tiles {
   display: flex;
@@ -388,7 +388,7 @@ export default {
 }
 .sheet-s {
   font-size: 20rpx;
-  color: #8a90a0;
+  color: var(--ink-2, #5f6575);
   margin-top: 4rpx;
 }
 .s-btn {

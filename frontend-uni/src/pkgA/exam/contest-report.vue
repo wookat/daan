@@ -1,7 +1,11 @@
 <template>
   <view class="wrap">
     <view v-if="loading" class="spin">赛后报告加载中…</view>
-    <view v-else-if="err" class="spin">{{ err }}</view>
+    <view v-else-if="err" class="card empty">
+      <text class="empty-t">暂无大赛报告</text>
+      <text class="empty-s">{{ err }}</text>
+      <view class="pbtn main" @click="goContest">去模考大赛</view>
+    </view>
 
     <template v-else-if="r">
       <view class="cr-cols">
@@ -108,7 +112,12 @@ export default {
     return { loading: true, err: '', r: null, eventId: null };
   },
   onLoad(opt) {
-    this.eventId = opt.event_id;
+    this.eventId = opt.event_id ? Number(opt.event_id) : null;
+    if (!this.eventId) {
+      this.err = '链接缺少赛事参数，请从模考大赛页进入';
+      this.loading = false;
+      return;
+    }
     this.load();
   },
   methods: {
@@ -118,7 +127,7 @@ export default {
       try {
         this.r = await request('/api/mock/events/' + this.eventId + '/report?uid=' + encodeURIComponent(anonUid()));
       } catch (e) {
-        this.err = e.message;
+        this.err = e.message || '报告不存在或已过期';
       }
       this.loading = false;
     },
@@ -141,6 +150,9 @@ export default {
     openAttempt() {
       uni.navigateTo({ url: '/pkgA/exam/report?attempt_id=' + this.r.attempt_id });
     },
+    goContest() {
+      uni.reLaunch({ url: '/pkgA/exam/contest' });
+    },
   },
 };
 </script>
@@ -148,6 +160,10 @@ export default {
 <style scoped>
 .wrap { padding: 24rpx; padding-bottom: 40rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 60rpx 24rpx; }
+.empty { text-align: center; padding: 80rpx 28rpx; }
+.empty-t { display: block; font-size: 30rpx; font-weight: 600; color: var(--ink); }
+.empty-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 12rpx; margin-bottom: 32rpx; }
+.empty .pbtn { margin: 0 auto; max-width: 320rpx; }
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 30rpx; font-weight: 600; margin-bottom: 20rpx; }
 .hero { background: linear-gradient(135deg, var(--brand), #5c82ff); border: none; text-align: center; }

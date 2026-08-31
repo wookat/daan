@@ -240,7 +240,7 @@
     </view>
 
     <view v-if="history.length" class="card">
-      <view class="h">练习记录</view>
+      <view class="h hist-h">练习记录 <text class="hist-link" @click="goPracticeHistory">逐题回看 ›</text></view>
       <view v-for="(h, i) in history.slice(0, showAllHist ? 30 : 6)" :key="i" class="hist-row">
         <text class="hist-time">{{ fmtHist(h.t) }}</text>
         <text class="hist-mod" :class="{ exam: h.exam }">{{ h.exam ? (h.exam === 'full' ? '全真模考' : '迷你模考') : h.module ? modName(h.module) : h.n >= 100 ? '全真模考' : '混合' }}</text>
@@ -715,6 +715,9 @@ export default {
     goMasteryMap() {
       uni.navigateTo({ url: '/pkgA/stats/mastery-map' });
     },
+    goPracticeHistory() {
+      uni.navigateTo({ url: '/pkgA/stats/practice-history' });
+    },
     goSub(module, sub, tag3, source) {
       uni.setStorageSync('practicePreset', { module, submodule: sub, count: 10, adaptive: true, tag3: tag3 || null, source: source || null });
       uni.navigateTo({ url: '/pages/practice/practice' });
@@ -957,6 +960,8 @@ export default {
   line-height: 1.7;
   padding-top: 8rpx;
 }
+.hist-h { display: flex; align-items: center; justify-content: space-between; }
+.hist-link { font-size: 24rpx; font-weight: 500; color: #2e5bff; }
 .hist-row { display: flex; align-items: center; gap: 16rpx; padding: 14rpx 0; border-bottom: 1rpx solid var(--fill); }
 .hist-time { font-size: 22rpx; color: var(--ink-2); width: 170rpx; }
 .gw-row { display: flex; align-items: center; gap: 14rpx; margin-bottom: 12rpx; }
@@ -981,7 +986,7 @@ export default {
 .sl-chip { font-size: 21rpx; color: var(--brand); background: var(--brand-soft); border-radius: 999rpx; padding: 8rpx 18rpx; }
 .sl-ih { font-size: 23rpx; color: var(--ink-2); margin-top: 16rpx; padding: 10rpx 0; }
 .sl-issue { display: flex; align-items: flex-start; gap: 10rpx; margin-bottom: 10rpx; }
-.sl-ik { font-size: 19rpx; color: #dc2626; background: var(--bad-soft); border-radius: 6rpx; padding: 2rpx 10rpx; flex-shrink: 0; margin-top: 2rpx; }
+.sl-ik { font-size: 19rpx; color: var(--bad-strong); background: var(--bad-soft); border-radius: 6rpx; padding: 2rpx 10rpx; flex-shrink: 0; margin-top: 2rpx; }
 .sl-ik.adv { color: #b45309; background: var(--warn-soft); }
 .sl-it { font-size: 22rpx; color: var(--ink-1); line-height: 1.6; }
 .trend { display: flex; align-items: flex-end; gap: 8rpx; height: 160rpx; padding-top: 12rpx; }

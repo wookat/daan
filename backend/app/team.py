@@ -11,7 +11,7 @@ import string
 import time
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
 from . import db
 from .auth import rate_limit
@@ -549,7 +549,7 @@ def api_share_answers(sid: str, uid: str):
 # ---------- 裂变埋点 ----------
 
 @router.post("/track")
-def api_track(body: dict):
+def api_track(body: dict, request: Request):
     event = str(body.get("event") or "").strip()[:32]
     if event not in {
         "share_open", "share_answer", "team_join_open", "register",
@@ -557,17 +557,28 @@ def api_track(body: dict):
         "pk_result_open", "pk_result_copy", "pk_result_challenge", "badge_unlock",
         "review_entry_click", "task_card_click", "heatmap_view", "review_done_celebrate",
         "comeback_view", "share_result_copy", "reminder_optin", "reminder_banner_click",
-        "slow_load",
+        "slow_load", "daily_archive_open", "login_nudge_show", "login_nudge_click",
     }:
         raise HTTPException(400, "无效事件")
     uid = str(body.get("uid") or "").strip()[:64] or None
     rate_limit(f"track:{uid or 'anon'}", 60, 300)
+    ref = str(body.get("ref") or "")[:200 if event == "slow_load" else 32]
+    if event == "slow_load":
+        # 慢载事件服务端补 UA：旧 bundle 客户端不会自报，只有入库侧追加才能全量归因
+        ua = " ".join((request.headers.get("user-agent") or "").split())[:80]
+        # 头指纹：区分「真浏览器但 UA 被剥」与「非浏览器客户端」（sec-fetch-* 浏览器强制携带）
+        hs = "".join(
+            flag for flag, h in (
+                ("f", "sec-fetch-mode"), ("c", "sec-ch-ua"), ("o", "origin"),
+                ("r", "referer"), ("l", "accept-language"),
+            ) if request.headers.get(h)
+        )
+        ref = f"{ref};ua:{ua or '-'};hs:{hs or '-'}"[:300]
     conn = db.get_conn()
     conn.execute(
         "INSERT INTO growth_events (uid, event, source, ref, created_at) VALUES (?,?,?,?,?)",
-        # slow_load 携带导航/最慢资源耗时明细，需要更长 ref
         (uid, event, str(body.get("source") or "")[:16] or None,
-         str(body.get("ref") or "")[:200 if event == "slow_load" else 32] or None, time.time()),
+         ref or None, time.time()),
     )
     conn.commit()
     conn.close()

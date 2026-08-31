@@ -5,6 +5,41 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R52 练习历史页走查新经验
+- 练习历史页选择器：会话行 `.item`>`.row`（`.time`/`.chip`/`.meta`/`.pct`，pct 语义色 `.hi`=--ok-strong `.lo`=--bad-strong）；展开逐题 `.d-row`（`.d-mark.ok/.bad`、`.d-q`、错题 `.d-ans`「我的答案 X · 正解 Y」、`.d-secs`）；重练按钮 `.btn-redo`；空态 `.empty`+「去刷一组题」。
+- **逐题比对取证法**：作答时用 CDP 循环（Input.dispatchKeyEvent 'a'→sleep1.4s→读 `.omark.good` 所在 `.okey` 得正解、`.omark.badm` 判错→Enter）逐题记录 JSON 基准，再与历史 detail `.d-row` 全量比对——注意答对时 good 标记在 picked 选项上，若读到 ans=null&无 badm 即答对。
+- 同游客 30min 内多组会并成一个会话（题数/正确率合并、错题按 question.id 去重），断言按合并后口径；重练组题目顺序=历史错题顺序。
+- toast「错题重练开始」约 1.5s：点 `.btn-redo` 后 wait 0.8s 内截图才能抓到。
+- practice 页无侧栏，完成页左上返回箭头会回到导航栈上一页（如历史页），不是首页。
+- **pkill 自杀陷阱**：`pkill -f 'r45_ne[t].py'` 与 `nohup python3 r45_net.py …` 放同一条 exec 命令时，本 shell cmdline 含字面 r45_net.py 会被 pkill 匹配杀掉自己（exit -1）——kill 与重启必须分两次 exec。
+
+## R51 a11y 扫尾走查新经验
+- **新部署后旧标签页仍跑旧 bundle**：SPA 标签页不会自动换 bundle，断言前必须 `Page.reload {ignoreCache:true}` 并用 `[...document.scripts].map(s=>s.src)` 核对 index-*.js 是否为本轮 bundle，否则新特性断言会假失败。
+- Lighthouse CLI 可直接后台批量跑：`npx lighthouse "https://kaogong.zalize.com/#/<page>" --only-categories=accessibility --chrome-flags="--headless=new" --output=json`，headless Chrome 是独立 profile（游客态），不影响测试浏览器。
+- 掌握度地图解锁态（≥30 题）无需重刷 30 题：复用此前轮次留下的一次性游客 uid（如作答过 30+ 题的 uid），`localStorage.setItem('anonUid', …)`+刷新即可；冷启动态则 removeItem('anonUid') 生成全新 uid。
+- placeholder→aria-label 镜像断言选择器：`uni-input input` / `uni-textarea textarea` 的 `aria-label` 应等于组件 placeholder 文本（App.vue markMain MutationObserver 全站生效）。
+- 灰阶 token 判据：--ink-2 浅色 rgb(95,101,117)、深色 rgb(155,160,176)；--ink-3 浅色 rgb(138,144,160)（旧低对比值，出现即回归失败）。
+
+## R50 刷题完成页/薄弱考点区块走查新经验
+- 直开 `/#/pages/practice/practice` 会自动出一组 10 题；键盘流 `a`→等 1.2s→`Enter` 循环可快速做完全组（全选 A 天然产生跨考点错题，适合制造 `.weakrf` 薄弱考点区块）。
+- 「全对完成一组」可行路径：完成页点某考点「强化 5 道新题」进入 5 题判断推理/定义判断强化组，逐题认真作答（定义判断类可推理答对）——5 题全对成本可接受，不要假设无法制造全对场景。
+- 背题模式入口：答题页头部「···」练习工具面板 →「背题模式」行点击切换；开启后每题直显答案，`Enter` 连按即可走完，完成页显示「本组背完」（无正确率环/无 weakrf）。背题开关不持久化，刷新后回普通模式。
+- 强化流取证：点强化按钮前用 CDP `Network.enable` 后台脚本捕获 `/api/questions?mode=reinforce&limit=5&module=…&tag3=…` 请求；toast「同考点强化开始：均为未做过的新题」出现约 1.5s，点击后立刻截图才能抓到。
+- 完成页「再来一组」是 uni 组件不是原生 button，断言选择器用 `uni-button,button` 兜底再按 textContent 过滤。
+- 「错题重练效果」卡（.redoreport）只在错题重练会话的完成页出现，普通新组完成页没有，勿据此判 weakrf 位置断言失败。
+
+## R46 无障碍语义属性（role=main / aria-hidden）走查新经验
+- 断言集：`document.querySelector('uni-page-body').getAttribute('role')==='main'` 且 `querySelectorAll('[role="main"]').length===1`；l-icon 判据用 `document.querySelectorAll('uni-image.l-icon img')` 每个 `closest('[aria-hidden="true"]')` 非空（aria-hidden 落在 uni-image 根元素上，img 靠祖先覆盖）；tabbar 用 `.uni-tabbar__icon img` 逐个 aria-hidden==='true'。
+- navigateTo 栈测试注意：uni-h5 H5 端进入子页后 DOM 中可能只剩 1 个 uni-page-body（旧页被移除而非隐藏），所以「栈内旧页无 role」这一分支可能天然无从取证——用「进入/返回后 role=main 恒唯一且落在当前页」作为等价判据。
+- MutationObserver 跟随验证走真实 UI：首页更多练习「讨论广场」入口（navigateTo）+ 左上返回 + 五 tab 切换（switchTab 重建节点），逐页断言 role。
+
+## R45 /tiku 边缘缓存（CF Pages functions caches.default）走查新经验
+- 取证法：浏览器真实导航的文档响应头用 CDP `Network.enable` + `Network.responseReceived`（type=Document）捕获（helper 模式见 /tmp/cdp174/r45_net.py，可同时 hold 视口）；curl 结果与浏览器一致但报告以浏览器为准。
+- 判据：同一 /tiku URL 二访（300s TTL 内）`X-Edge-Cache: MISS→HIT`；HIT 响应带 `Cache-Control: public, max-age=300`。**实现细节大坑：首个 MISS 响应本身不带 Cache-Control/X- 也可能只带 X-Edge-Cache: MISS**——[[path]].js 只在缓存副本 cacheCopy 上 set Cache-Control，MISS 的直出 out 不带；断言时不要因 MISS 无 cc 判失败，用二访 HIT 证生效。
+- 非 /tiku 范围泄漏检查：`/` 首页文档响应应无 X-Edge-Cache（原生 `public, max-age=0, must-revalidate`）。
+- TTL 过期正常：隔 >300s 再访同 URL 会重新 MISS，非 bug。
+- 再次确认 pkill/pgrep 自杀坑：即使模式用了方括号转义，如果同一命令串后半段还包含未转义的同名字符串（如 `nohup python3 r45_net.py …`），pgrep -f 仍会匹配本 shell——kill 与重启必须拆成两次独立 exec。
+
 ## R43 CLS/横移类断言走查新经验
 - CLS/横移类断言取证法：用 CDP `Page.addScriptToEvaluateOnNewDocument` 注入 rAF 采样脚本（记录壳 rect.x + documentElement.clientWidth 去重序列），再 `Page.reload(ignoreCache)` 硬刷新，比对全程 x 零跳变。
 - `scrollbar-gutter: stable` 生效判据 = computed 值 + 有/无滚动条页 body 右缘一致（clientWidth 可能一页 1440 一页 1425，以 body 右缘为准）。
@@ -542,3 +577,7 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 原生导航栏返回箭头断言：选择器 `uni-page-head .uni-page-head-btn path` 的 computed fill（深色 rgb(242,243,247)、浅色 rgb(0,0,0)）。
 - CDP 后台 python 脚本 print 需 `-u` 或 `flush=True`，否则 sleep 持连时输出被缓冲。
 - `pgrep/pkill -f` 的模式若出现在本 shell 命令串会匹配自身导致自杀（exit -1）：用方括号转义（如 `pgrep -af 'holdv[w]'`）或先定位精确 PID 再 kill。
+
+## R47 内联关键 CSS 走查新经验
+- 断言「无 stylesheet link」须区分静态与运行时：curl 静态 HTML 应为 0 link/3 段 `<style>/* inlined: ... */`；SPA 启动后 Vite 会为懒加载 chunk 动态插入 `link[rel=stylesheet]`（l-icon/wd-*/home-*.css 等，首页约 6 个）——这是预期行为，非内联失败。运行时判据应改为「无 uni./index-/zalize-tokens 关键 CSS link」+ inlined 标记 3 个。
+- 内联 tokens 生效判据：`getComputedStyle(document.documentElement).getPropertyValue('--zl-brand-600')` 应为 `#2e5bff`（深浅色皆然）；深色 bodyBg=rgb(21,22,28)、浅色 rgb(246,247,251)。

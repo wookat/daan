@@ -8,6 +8,7 @@ import secrets
 import sqlite3
 import threading
 import time
+from datetime import date, timedelta
 
 from . import quality, similarity, taxonomy
 from .tagging import classify_question
@@ -133,6 +134,7 @@ def init_db():
         "CREATE INDEX IF NOT EXISTS idx_q_tag3_pick ON questions(tag3, disabled, is_real, has_hs, id)"
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_quality ON questions(quality_score)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_q_disabled_id ON questions(disabled, id)")
     if "correct_ratio" in qcols:
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_q_reinforce ON questions(tag3, disabled, correct_ratio, id)"
@@ -341,16 +343,17 @@ _PICK_TTL = 600
 _pick_cache: dict[tuple, tuple[float, dict]] = {}
 _pick_lock = threading.Lock()
 _pick_refreshing: set = set()
+_pick_build_lock = threading.Lock()
 
 
 def _pick_rebuild(module, submodule, tag3, year, region):
     key = (module, submodule, tag3, year, region)
     try:
         conn = get_conn()
-        with _pick_lock:
-            _pick_cache.pop(key, None)
-        _pick_pools(conn, module, submodule, tag3, year, region)
+        pools = _pick_scan(conn, module, submodule, tag3, year, region)
         conn.close()
+        with _pick_lock:
+            _pick_cache[key] = (time.time(), pools)
     except Exception:
         pass
     finally:
@@ -374,6 +377,21 @@ def _pick_pools(conn, module, submodule, tag3, year, region) -> dict:
                     target=_pick_rebuild, args=(module, submodule, tag3, year, region), daemon=True
                 ).start()
             return ent[1]
+    # 冷 miss：单线程构建，并发请求等锁后直接吃缓存，避免同键多请求各自全表扫描（惊群）
+    with _pick_build_lock:
+        with _pick_lock:
+            ent = _pick_cache.get(key)
+            if ent:
+                return ent[1]
+        pools = _pick_scan(conn, module, submodule, tag3, year, region)
+        with _pick_lock:
+            if len(_pick_cache) >= 512:
+                _pick_cache.clear()
+            _pick_cache[key] = (time.time(), pools)
+        return pools
+
+
+def _pick_scan(conn, module, submodule, tag3, year, region) -> dict:
     where = ["disabled=0"]
     args: list = []
     for col, val in (
@@ -392,10 +410,6 @@ def _pick_pools(conn, module, submodule, tag3, year, region) -> dict:
         f"SELECT id, is_real, COALESCE(has_hs,0) hs FROM {src} WHERE {' AND '.join(where)}", args
     ):
         pools[(1 if r["is_real"] else 0, 1 if r["hs"] else 0)].append(r["id"])
-    with _pick_lock:
-        if len(_pick_cache) >= 512:
-            _pick_cache.clear()
-        _pick_cache[key] = (time.time(), pools)
     return pools
 
 
@@ -913,6 +927,180 @@ def question_counts() -> list[dict]:
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+_DAILY_SET_MODULES = ["yanyu", "panduan", "shuliang", "ziliao", "changshi"]
+_daily_set_cache: dict[str, list[int]] = {}
+_daily_set_lock = threading.Lock()
+
+
+def _ensure_daily_set(conn):
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS daily_set_entries (
+            day TEXT NOT NULL,
+            uid TEXT NOT NULL,
+            right INTEGER NOT NULL,
+            total INTEGER NOT NULL,
+            secs REAL,
+            created_at REAL NOT NULL,
+            PRIMARY KEY (day, uid)
+        )"""
+    )
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(daily_set_entries)").fetchall()}
+    if "nickname" not in cols:
+        conn.execute("ALTER TABLE daily_set_entries ADD COLUMN nickname TEXT")
+
+
+def cn_day() -> str:
+    """中国时区（UTC+8）当日日期 YYYY-MM-DD。"""
+    return time.strftime("%Y-%m-%d", time.gmtime(time.time() + 8 * 3600))
+
+
+def daily_archive_day(date: str | None) -> str | None:
+    """校验往期每日一练日期：仅接受今天之前 7 天内的 ISO 日期，否则 None。"""
+    if not date:
+        return None
+    try:
+        d = time.strptime(str(date)[:10], "%Y-%m-%d")
+    except ValueError:
+        return None
+    day = time.strftime("%Y-%m-%d", d)
+    today = cn_day()
+    if day >= today:
+        return None
+    earliest = time.strftime("%Y-%m-%d", time.gmtime(time.time() + 8 * 3600 - 7 * 86400))
+    return day if day >= earliest else None
+
+
+def daily_set_ids(day: str) -> list[int]:
+    """全站同题每日一练选题：每模块 2 题共 10 题，md5(day:qid) 最小者优先。
+
+    哈希选择对题库增删稳定（新增题最多顶掉一题），重启重算结果一致。
+    """
+    with _daily_set_lock:
+        if day in _daily_set_cache:
+            return _daily_set_cache[day]
+        conn = get_conn()
+        ids: list[int] = []
+        for mod in _DAILY_SET_MODULES:
+            pool = [
+                r["id"]
+                for r in conn.execute(
+                    "SELECT id FROM questions INDEXED BY idx_q_pick WHERE module=? AND disabled=0 AND is_real=1",
+                    (mod,),
+                )
+            ]
+            if len(pool) < 2:
+                pool = [
+                    r["id"]
+                    for r in conn.execute(
+                        "SELECT id FROM questions INDEXED BY idx_q_pick WHERE module=? AND disabled=0",
+                        (mod,),
+                    )
+                ]
+            pool.sort(key=lambda q: hashlib.md5(f"{day}:{q}".encode()).hexdigest())
+            ids.extend(pool[:2])
+        conn.close()
+        if len(_daily_set_cache) >= 16:
+            _daily_set_cache.clear()
+        _daily_set_cache[day] = ids
+        return ids
+
+
+def daily_set_questions(day: str) -> list[dict]:
+    ids = daily_set_ids(day)
+    if not ids:
+        return []
+    conn = get_conn()
+    rows = conn.execute(
+        f"SELECT * FROM questions WHERE id IN ({','.join('?' * len(ids))}) AND disabled=0",
+        ids,
+    ).fetchall()
+    conn.close()
+    by_id = {}
+    for r in rows:
+        d = dict(r)
+        d["options"] = json.loads(d.get("options") or "{}")
+        by_id[d["id"]] = d
+    return [by_id[i] for i in ids if i in by_id]
+
+
+def daily_set_stats(day: str) -> dict:
+    conn = get_conn()
+    _ensure_daily_set(conn)
+    row = conn.execute(
+        "SELECT COUNT(*) n, AVG(right) a FROM daily_set_entries WHERE day=?", (day,)
+    ).fetchone()
+    conn.close()
+    return {"participants": row["n"] or 0, "avg_right": round(row["a"], 1) if row["a"] is not None else None}
+
+
+def daily_set_submit(
+    day: str, uid: str, right: int, total: int, secs: float | None, nickname: str | None = None
+) -> dict:
+    conn = get_conn()
+    _ensure_daily_set(conn)
+    cur = conn.execute(
+        "INSERT OR IGNORE INTO daily_set_entries(day, uid, right, total, secs, nickname, created_at)"
+        " VALUES(?,?,?,?,?,?,?)",
+        (day, uid, right, total, secs, nickname, time.time()),
+    )
+    already = cur.rowcount == 0
+    conn.commit()
+    mine = conn.execute(
+        "SELECT right FROM daily_set_entries WHERE day=? AND uid=?", (day, uid)
+    ).fetchone()
+    my_right = mine["right"] if mine else right
+    row = conn.execute(
+        "SELECT COUNT(*) n, SUM(CASE WHEN right < ? THEN 1 ELSE 0 END) b, "
+        "SUM(CASE WHEN right > ? THEN 1 ELSE 0 END) a FROM daily_set_entries WHERE day=?",
+        (my_right, my_right, day),
+    ).fetchone()
+    days = {
+        r["day"]
+        for r in conn.execute(
+            "SELECT day FROM daily_set_entries WHERE uid=? ORDER BY day DESC LIMIT 60", (uid,)
+        ).fetchall()
+    }
+    conn.close()
+    streak = 0
+    d = date.fromisoformat(day)
+    while d.isoformat() in days:
+        streak += 1
+        d -= timedelta(days=1)
+    participants = row["n"] or 0
+    beat_pct = round(100 * (row["b"] or 0) / (participants - 1)) if participants > 1 else None
+    # 名次只按答对数（比我分高的人数 + 1），同分并列不计用时
+    my_rank = (row["a"] or 0) + 1 if participants else None
+    return {
+        "participants": participants,
+        "beat_pct": beat_pct,
+        "my_right": my_right,
+        "my_rank": my_rank,
+        "already": already,
+        "streak": streak,
+    }
+
+
+def daily_set_board(day: str, limit: int = 20) -> list[dict]:
+    conn = get_conn()
+    _ensure_daily_set(conn)
+    rows = conn.execute(
+        "SELECT uid, nickname, right, total, secs FROM daily_set_entries WHERE day=? "
+        "ORDER BY right DESC, COALESCE(secs, 9e9) ASC, created_at ASC LIMIT ?",
+        (day, limit),
+    ).fetchall()
+    conn.close()
+    return [
+        {
+            "rank": i + 1,
+            "name": (r["nickname"] or "").strip()[:20] or r["uid"][:6] + "***",
+            "right": r["right"],
+            "total": r["total"],
+            "secs": r["secs"],
+        }
+        for i, r in enumerate(rows)
+    ]
 
 
 def submodule_counts(module: str) -> list[dict]:
@@ -1984,6 +2172,77 @@ def save_answer_log(uid: str, items: list[dict]) -> int:
     return n
 
 
+_HISTORY_SESSION_GAP = 1800  # 相邻作答间隔超过该秒数即切分为新一次练习
+
+
+def practice_history(uid: str, limit: int = 50) -> list[dict]:
+    """把 answer_log 按时间间隔切分为练习会话（倒序）。"""
+    conn = get_conn()
+    _ensure_answer_log(conn)
+    rows = conn.execute(
+        "SELECT created_at, module, correct, secs, source FROM answer_log WHERE uid=? ORDER BY created_at DESC LIMIT 2000",
+        (uid,),
+    ).fetchall()
+    conn.close()
+    sessions: list[dict] = []
+    cur: dict | None = None
+    for r in rows:  # 倒序遍历：r 比 cur['start'] 更早
+        if cur is None or cur["start"] - r["created_at"] > _HISTORY_SESSION_GAP:
+            if len(sessions) >= limit:
+                break
+            cur = {
+                "start": r["created_at"],
+                "end": r["created_at"],
+                "n": 0,
+                "correct": 0,
+                "secs": 0,
+                "modules": [],
+                "source": r["source"],
+            }
+            sessions.append(cur)
+        cur["start"] = r["created_at"]
+        cur["n"] += 1
+        cur["correct"] += 1 if r["correct"] else 0
+        cur["secs"] += r["secs"] or 0
+        if r["module"] and r["module"] not in cur["modules"]:
+            cur["modules"].append(r["module"])
+    return sessions
+
+
+def practice_history_detail(uid: str, start: float, end: float) -> list[dict]:
+    """某次练习的逐题记录，附题库原题（供回看与重练）。"""
+    conn = get_conn()
+    _ensure_answer_log(conn)
+    rows = conn.execute(
+        """SELECT a.created_at, a.question_id, a.module, a.submodule, a.correct, a.secs, a.picked, q.id qid
+           FROM answer_log a LEFT JOIN questions q
+             ON q.id = a.question_id AND (q.disabled IS NULL OR q.disabled=0)
+           WHERE a.uid=? AND a.created_at BETWEEN ? AND ?
+           ORDER BY a.created_at LIMIT 100""",
+        (uid, start - 0.001, end + 0.001),
+    ).fetchall()
+    out = []
+    for r in rows:
+        item = {
+            "created_at": r["created_at"],
+            "module": r["module"],
+            "submodule": r["submodule"],
+            "correct": bool(r["correct"]),
+            "secs": r["secs"],
+            "picked": r["picked"],
+            "question": None,
+        }
+        if r["qid"]:
+            qrow = conn.execute("SELECT * FROM questions WHERE id=?", (r["qid"],)).fetchone()
+            if qrow:
+                d = dict(qrow)
+                d["options"] = json.loads(d.get("options") or "{}")
+                item["question"] = d
+        out.append(item)
+    conn.close()
+    return out
+
+
 def refresh_question_stats() -> int:
     """聚合 answer_log 为每题刷新全站作答人次/正确率/易错项。"""
     conn = get_conn()
@@ -2732,13 +2991,39 @@ def upsert_exam_paper(title: str, kind: str, year: int | None, region: str | Non
     conn.commit()
     pid = conn.execute("SELECT id FROM exam_papers WHERE title=?", (title,)).fetchone()["id"]
     conn.close()
+    _papers_cache.clear()
     return pid
 
 
-def list_exam_papers(kind: str | None = None, year: int | None = None,
-                     region: str | None = None, uid: str | None = None) -> list[dict]:
+_PAPERS_CACHE_TTL = 300
+_papers_cache: dict[tuple, tuple[float, list[dict]]] = {}
+_papers_refreshing: set[tuple] = set()
+_papers_lock = threading.Lock()
+
+
+def _refresh_papers_cache(key: tuple) -> None:
     conn = get_conn()
-    _ensure_exam_tables(conn)
+    try:
+        _list_exam_papers_base(conn, *key, force=True)
+    finally:
+        conn.close()
+        with _papers_lock:
+            _papers_refreshing.discard(key)
+
+
+def _list_exam_papers_base(conn, kind: str | None, year: int | None,
+                           region: str | None, force: bool = False) -> list[dict]:
+    """uid 无关的卷列表（含活跃题数 n / takers），按筛选键 TTL 缓存；
+    过期后返回旧值并起后台线程刷新（stale-while-revalidate）。"""
+    key = (kind, year, region)
+    hit = _papers_cache.get(key)
+    if hit and not force:
+        if time.time() - hit[0] >= _PAPERS_CACHE_TTL:
+            with _papers_lock:
+                if key not in _papers_refreshing:
+                    _papers_refreshing.add(key)
+                    threading.Thread(target=_refresh_papers_cache, args=(key,), daemon=True).start()
+        return hit[1]
     where = ["1=1"]
     args: list = []
     if kind:
@@ -2756,14 +3041,6 @@ def list_exam_papers(kind: str | None = None, year: int | None = None,
             ORDER BY year DESC, id DESC LIMIT 200""",
         args,
     ).fetchall()
-    best: dict[int, dict] = {}
-    if uid and rows:
-        for b in conn.execute(
-            """SELECT paper_id, MAX(score) s, COUNT(*) n FROM exam_attempts
-               WHERE uid=? AND submitted_at IS NOT NULL GROUP BY paper_id""",
-            (uid,),
-        ):
-            best[b["paper_id"]] = {"best_score": b["s"], "attempt_count": b["n"]}
     takers: dict[int, int] = {}
     if rows:
         for t in conn.execute(
@@ -2780,14 +3057,35 @@ def list_exam_papers(kind: str | None = None, year: int | None = None,
             f"SELECT id FROM questions WHERE disabled=0 AND id IN ({','.join('?' * len(chunk))})",
             chunk,
         ))
-    conn.close()
-    out = []
+    base = []
     for r in rows:
         d = dict(r)
         d.pop("question_ids")
         d["n"] = sum(1 for i in qids_by_paper[d["id"]] if i in active)
-        d.update(best.get(d["id"], {"best_score": None, "attempt_count": 0}))
         d["takers"] = takers.get(d["id"], 0)
+        base.append(d)
+    _papers_cache[key] = (time.time(), base)
+    return base
+
+
+def list_exam_papers(kind: str | None = None, year: int | None = None,
+                     region: str | None = None, uid: str | None = None) -> list[dict]:
+    conn = get_conn()
+    _ensure_exam_tables(conn)
+    base = _list_exam_papers_base(conn, kind, year, region)
+    best: dict[int, dict] = {}
+    if uid and base:
+        for b in conn.execute(
+            """SELECT paper_id, MAX(score) s, COUNT(*) n FROM exam_attempts
+               WHERE uid=? AND submitted_at IS NOT NULL GROUP BY paper_id""",
+            (uid,),
+        ):
+            best[b["paper_id"]] = {"best_score": b["s"], "attempt_count": b["n"]}
+    conn.close()
+    out = []
+    for d in base:
+        d = dict(d)
+        d.update(best.get(d["id"], {"best_score": None, "attempt_count": 0}))
         out.append(d)
     return out
 
@@ -2848,6 +3146,7 @@ def create_mock_paper(n: int = 30, duration_min: int = 30) -> int:
     conn.commit()
     pid = conn.execute("SELECT id FROM exam_papers WHERE title=?", (title,)).fetchone()["id"]
     conn.close()
+    _papers_cache.clear()
     return pid
 
 

@@ -135,6 +135,10 @@
         {
           "path": "stats/mastery-map",
           "style": { "navigationBarTitleText": "考点掌握度地图" }
+        },
+        {
+          "path": "stats/practice-history",
+          "style": { "navigationBarTitleText": "练习历史" }
         }
       ]
     }
