@@ -409,3 +409,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - R127（PR #305）：路由 chunk 空闲预取——build:h5 末尾 gen-precache-manifest.mjs 产出 precache.json（assets js/css 清单），运行期 precache.js load 后 8s 空闲逐个 fetch 温 HTTP 缓存（immutable 一年缓存可离线命中；省流/2g/离线跳过、同版本只跑一轮 kg_precache_done）。生产实测离线直入从未访问的 pkgA 路由可完整渲染。零 SW 改动（静态资源不经 SW 拦截的既定设计保持）。
 - R128（docs）：窗口复审计 docs/iter/round-3/r128-window-audit.md——Lighthouse /tiku 页族全 1.0、首页复跑 0.98（首跑 3.2s LCP 为宿主方差非回归）；内链/分页 canonical/卷详情/无效日期 301 全健康；错题本空态完整。无可立项缺陷，docs-only。
 - 合并链：#299→…→#304→#305 依序合并即收口 R121–R127。
+
+### R131–R133（2026-08-31）：嵌套弹层栈/分包页 axe 收口/弹层决策纯函数化
+- R131（PR #309）：多层嵌套弹层收口——a11y-focus.js 改「打开顺序栈」为唯一事实：每层独立 lastFocus 归还、入栈提升 z-index（BASE_Z+depth）保证后开在最上、Esc/Tab 只作用栈顶、空弹层补 tabindex=-1 落点。生产 1440 嵌套链路（筛选 sheet 内 ? 开速查）+ 375 单层回归通过。
+- R132（PR #310）：二级/分包页 axe 复扫——18 个分包路由生产双视口全扫，verified 8 节点/3 页：竞赛「即将开始」徽标（新增 --warn-strong token）、提醒页关闭态整行 opacity 改只弱化图标/开关+文字换安全色、登录页三处文字对比度+logo aria-hidden。复验 18 路由 × 1440/375 全 0 violations。⚠️ 探针路由必须以 pages.json 为准（如 social/discuss、stats/mastery-map），拼错路由被 R60 兜底重定向首页会产生 landmark 假阳性。
+- R133：弹层焦点管理决策纯函数化——新增 src/modal-policy.js（reconcileStack/zIndexFor/pickFocusTarget/nextTabIndex，present 判定注入），a11y-focus.js initModalKeys 改调纯函数（行为等价重构，DOM/MutationObserver/focus 副作用留在运行时）；tests/modal-policy.test.js 13 例锁定栈对帐逆序归还/层级/空弹层 fallback/Tab 循环边界（vitest 25→38 例，零新依赖不引 jsdom）。生产复验 R131 嵌套链路 1440/375 零回归。
+- 合并链：#299→…→#309→#310→R133 PR 依序合并即收口。

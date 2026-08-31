@@ -1,6 +1,8 @@
 // 键盘可达性：uni-app h5 把交互元素编译为无 tabindex 的 uni-view/uni-text div，
 // 整站无任何键盘落点。在 Vue runtime 挂 click 监听时给宿主补 tabindex + Enter/Space 激活；
 // role=button 延迟到 rAF 只给叶子级短文本元素，避免 button 角色扁平化容器子树语义。
+import { reconcileStack, zIndexFor, pickFocusTarget, nextTabIndex } from './modal-policy.js'
+
 const HOST_RE = /^UNI-(VIEW|TEXT|IMAGE|LABEL)$/
 
 let rolePending = []
@@ -33,31 +35,24 @@ function maskFocusables(mask) {
   )
 }
 
-const BASE_Z = 99
-
 // 弹层层级以「打开顺序栈」为唯一事实：多个 .mask 同 z-index 时 DOM 顺序
 // 决定层叠序，与打开顺序无关，会导致后开的弹层被盖住、Esc 关错层。
-// 入栈时按栈深提升 z-index，Esc/Tab/焦点均作用于栈顶。
+// 入栈时按栈深提升 z-index，Esc/Tab/焦点均作用于栈顶；决策见 modal-policy.js。
 function initModalKeys() {
-  const stack = []
+  let stack = []
   const sync = () => {
-    for (let i = stack.length - 1; i >= 0; i--) {
-      if (!stack[i].mask.isConnected || !visible(stack[i].mask)) {
-        const { lastFocus } = stack[i]
-        stack.splice(i, 1)
-        if (lastFocus && lastFocus.isConnected && typeof lastFocus.focus === 'function') lastFocus.focus()
-      }
-    }
+    const { removed, kept } = reconcileStack(stack, (s) => s.mask.isConnected && visible(s.mask))
+    stack = kept
+    removed.forEach(({ lastFocus }) => {
+      if (lastFocus && lastFocus.isConnected && typeof lastFocus.focus === 'function') lastFocus.focus()
+    })
     document.querySelectorAll('.mask').forEach((m) => {
       if (!visible(m) || stack.some((s) => s.mask === m)) return
       stack.push({ mask: m, lastFocus: document.activeElement })
-      m.style.zIndex = String(BASE_Z + stack.length)
-      let target = maskFocusables(m)[0]
-      if (!target) {
-        target = m.firstElementChild || m
-        target.setAttribute('tabindex', '-1')
-      }
-      target.focus()
+      m.style.zIndex = String(zIndexFor(stack.length))
+      const { el, needsTabindex } = pickFocusTarget(maskFocusables(m), m.firstElementChild || m)
+      if (needsTabindex) el.setAttribute('tabindex', '-1')
+      el.focus()
     })
   }
   const mo = new MutationObserver(sync)
@@ -78,12 +73,8 @@ function initModalKeys() {
       e.preventDefault()
       e.stopPropagation()
       const items = maskFocusables(m)
-      if (!items.length) return
-      const i = items.indexOf(document.activeElement)
-      let next
-      if (e.shiftKey) next = i <= 0 ? items[items.length - 1] : items[i - 1]
-      else next = i < 0 || i >= items.length - 1 ? items[0] : items[i + 1]
-      next.focus()
+      const ni = nextTabIndex(items.length, items.indexOf(document.activeElement), e.shiftKey)
+      if (ni >= 0) items[ni].focus()
     },
     true
   )
