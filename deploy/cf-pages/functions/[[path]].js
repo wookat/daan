@@ -24,7 +24,6 @@ const API_CACHE_ALLOWLIST = new Set([
   "/api/announcement",
   "/api/question_counts",
   "/api/daily_set",
-  "/api/daily_set/board",
   "/api/submodules",
   "/api/real_filters",
   "/api/papers",

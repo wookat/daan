@@ -190,7 +190,7 @@
       </view>
       <view v-if="!beiMode && dailyStats && dailyBoard.length" class="dsboard">
         <view class="rr-t">今日排行榜<text v-if="dailyStats.my_rank" class="dsb-mine">我的名次：第 {{ dailyStats.my_rank }} 名</text></view>
-        <view v-for="r in dailyBoard" :key="r.rank" class="dsb-row">
+        <view v-for="r in dailyBoard.slice(0, 10)" :key="r.rank" class="dsb-row">
           <text class="dsb-rank" :class="{ top: r.rank <= 3 }">{{ r.rank }}</text>
           <text class="dsb-name">{{ r.name }}</text>
           <text class="dsb-score">答对 {{ r.right }}/{{ r.total }}<template v-if="r.secs"> · {{ fmtSecs(r.secs) }}</template></text>
