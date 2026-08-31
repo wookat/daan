@@ -120,9 +120,11 @@ export default {
       qsecs: 0,
       qTimer: null,
       submitting: false,
-      _endAt: 0,
-      _tsx: 0,
     };
+  },
+  created() {
+    this._endAt = 0;
+    this._tsx = 0;
   },
   computed: {
     cur() { return this.items[this.idx] || {}; },

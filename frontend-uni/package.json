@@ -35,7 +35,8 @@
     "build:quickapp-webview": "uni build -p quickapp-webview",
     "build:quickapp-webview-huawei": "uni build -p quickapp-webview-huawei",
     "build:quickapp-webview-union": "uni build -p quickapp-webview-union",
-    "sync-brand": "node scripts/sync-brand-tokens.mjs"
+    "sync-brand": "node scripts/sync-brand-tokens.mjs",
+    "lint": "eslint src"
   },
   "dependencies": {
     "@capacitor-community/file-opener": "8.0.1",
@@ -74,6 +75,8 @@
     "@dcloudio/uni-stacktracey": "3.0.0-5010520260709002",
     "@dcloudio/vite-plugin-uni": "3.0.0-5010520260709002",
     "@vue/runtime-core": "^3.4.21",
+    "eslint": "^9.39.3",
+    "eslint-plugin-vue": "^10.6.2",
     "rollup": "4.63.0",
     "sass": "^1.99.0",
     "vite": "5.2.8"

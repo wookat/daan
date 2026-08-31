@@ -132,8 +132,10 @@ export default {
       review: '',
       reviewMissing: false,
       points: [],
-      _timer: null,
     };
+  },
+  created() {
+    this._timer = null;
   },
   computed: {
     reviewHtml() {

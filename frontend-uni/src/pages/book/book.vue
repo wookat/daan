@@ -166,7 +166,7 @@
           <input v-model="favKw" class="searchinput" placeholder="搜收藏题干或题型" confirm-type="search" />
           <view v-if="favKw" class="searchclear" @click="favKw = ''"><l-icon name="x" :size="16" color="#8a90a0" /></view>
         </view>
-        <view v-for="(f, fi) in favShown" :key="f.t" class="card mcard bk-main" @click="f._open = !f._open">
+        <view v-for="f in favShown" :key="f.t" class="card mcard bk-main" @click="f._open = !f._open">
           <view class="mhead">
             <text class="tag">{{ f.submodule || modName(f.module) }}</text>
             <text v-if="f.is_real" class="rvbadge">真题{{ f.exam_year ? ' · ' + f.exam_year : '' }}{{ f.exam_region ? ' · ' + f.exam_region : '' }}</text>
@@ -610,7 +610,7 @@ export default {
       base = [...base];
       if (this.sortBy === 'times') base.sort((a, b) => (b.times || 1) - (a.times || 1));
       else if (this.sortBy === 'type') base.sort((a, b) => String(a.question_type || a.module || '').localeCompare(String(b.question_type || b.module || ''), 'zh'));
-      else if (this.sortBy === 'reason') base.sort((a, b) => String(a.error_reason || '￿').localeCompare(String(b.error_reason || '￿'), 'zh'));
+      else if (this.sortBy === 'reason') base.sort((a, b) => String(a.error_reason || '\uffff').localeCompare(String(b.error_reason || '\uffff'), 'zh'));
       else if (this.sortBy === 'due') base.sort((a, b) => (a.next_review || 9e12) - (b.next_review || 9e12));
       const k = this.kw.trim().toLowerCase();
       if (k) {
