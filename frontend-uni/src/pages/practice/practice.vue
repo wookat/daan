@@ -256,6 +256,16 @@
         <text class="duenudge-go" @click="loginNudgeGo">去登录 ›</text>
         <text class="loginnudge-x" @click="dismissLoginNudge">✕</text>
       </view>
+      <!-- #ifdef H5 -->
+      <view v-if="!beiMode && pushNudge" class="loginnudge">
+        <view class="duenudge-l">
+          <text class="duenudge-t">{{ pushNudgeDone ? '已开启每日一练提醒 ✓' : dailyStats && dailyStats.streak >= 2 ? '别断了连续 ' + dailyStats.streak + ' 天' : '开启每日一练提醒' }}</text>
+          <text class="duenudge-s">{{ pushNudgeDone ? '明早 8 点推送今日全站同题' : '明早 8 点推送全站同题 10 题，关闭页面也能收到' }}</text>
+        </view>
+        <text v-if="!pushNudgeDone" class="duenudge-go" @click="pushNudgeGo">开启 ›</text>
+        <text v-if="!pushNudgeDone" class="loginnudge-x" @click="dismissPushNudge">✕</text>
+      </view>
+      <!-- #endif -->
       <button class="btn" @click="retryGroup">再来一组</button>
       <button v-if="!beiMode" class="btn ghost" style="margin-top: 16rpx" @click="shareResult">分享成绩</button>
       <button class="btn plain" style="margin-top: 8rpx" @click="quit">返回首页</button>
@@ -328,6 +338,9 @@
 import { request, BASE_URL, anonUid, pkNickname, exportPdf, removeFav, setFav, fetchCheckinBadges, getAuthUser, trackEvent, submitDailySet } from '../../api.js';
 import { drawOffline, enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../offline.js';
 import { dayKey, loadSzDaily, saveSzDaily } from '../../checkin.js';
+// #ifdef H5
+import { requestNotificationPermission } from '../../reminder.js';
+// #endif
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -399,6 +412,8 @@ export default {
       examTimer: null,
       pstats: { byModule: {}, days: {} },
       loginNudgeOff: true,
+      pushNudge: false,
+      pushNudgeDone: false,
       autoTimer: null,
       cardOpen: false,
       toolsOpen: false,
@@ -1150,6 +1165,9 @@ export default {
       submitDailySet({ uid: anonUid(), nickname: pkNickname(), date, right: this.right, total: this.items.length, secs: this.totalSecs })
         .then((d) => {
           this.dailyStats = d;
+          // #ifdef H5
+          this.initPushNudge();
+          // #endif
           return request('/api/daily_set/board').then((b) => { this.dailyBoard = (b && b.items) || []; });
         })
         .catch(() => {});
@@ -1297,6 +1315,47 @@ export default {
       this.loginNudgeOff = true;
       uni.setStorageSync('loginNudgeDismissed', '1');
     },
+    // #ifdef H5
+    async initPushNudge() {
+      if (this.pushNudge || uni.getStorageSync('pushNudgeOff')) return;
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+      if (typeof Notification !== 'undefined' && Notification.permission === 'denied') return;
+      try {
+        const { key } = await request('/api/push/pubkey');
+        if (!key) return;
+        this._pushKey = key;
+        const reg = await navigator.serviceWorker.ready;
+        if (await reg.pushManager.getSubscription()) return;
+        this.pushNudge = true;
+        trackEvent('push_nudge_show');
+      } catch (e) {
+        /* 推送不可用不打扰 */
+      }
+    },
+    async pushNudgeGo() {
+      try {
+        if ((await requestNotificationPermission()) !== 'granted') {
+          uni.showToast({ title: '需要通知权限才能推送', icon: 'none' });
+          return;
+        }
+        const pad = '='.repeat((4 - (this._pushKey.length % 4)) % 4);
+        const raw = atob((this._pushKey + pad).replace(/-/g, '+').replace(/_/g, '/'));
+        const bytes = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: bytes });
+        await request('/api/push/subscribe', { method: 'POST', data: { uid: anonUid(), sub: sub.toJSON() } });
+        this.pushNudgeDone = true;
+        trackEvent('push_nudge_ok');
+      } catch (e) {
+        uni.showToast({ title: '开启失败，请稍后再试', icon: 'none' });
+      }
+    },
+    dismissPushNudge() {
+      this.pushNudge = false;
+      uni.setStorageSync('pushNudgeOff', '1');
+    },
+    // #endif
     reinforceWeak(w) {
       this.startReinforce({ module: w.module, submodule: w.submodule, tag3: w.tag3, count: 5, source: 'session-report' });
     },
@@ -1995,6 +2054,8 @@ export default {
       this.dailyStats = null;
       this.resultSent = true;
       this.dailyBoard = [];
+      this.pushNudge = false;
+      this.pushNudgeDone = false;
       this.dueReview = 0;
       if (this.loginNudgeN) trackEvent('login_nudge_show');
       uni.removeStorageSync('pendingSession');
