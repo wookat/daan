@@ -2109,6 +2109,9 @@ export default {
       await this.syncRedoReviews();
       if (this.profile) this.loadPlanToday();
       this.loadDueReview();
+      // #ifdef H5
+      if (this.items.length >= 5) this.initPushNudge();
+      // #endif
     },
     // 错题重练场次：答对的题推进 SRS 复习计划（答错走既有自动存错题路径重置复习），并汇总效果报告
     async syncRedoReviews() {

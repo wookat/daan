@@ -354,6 +354,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 生产验收：1440+375 新 uid 真实 10 题——第 7 题预取请求+pack 落地，「再来一组」0 网络请求即开新组；溢出 0、console 0 error；测试数据已清理、保护 uid 零 mutation。设计文档 docs/iter/round-3/r100-midsession-prefetch.md。
 - 边界：daily/shizheng/bei 不触发为代码守卫未单独复验；答完不重试时浪费一次 10 行读。
 
+### R105（2026-08-31）：推送引导卡曝光盲区修复
+- 取证：push_subscriptions 全表 0 行、push_nudge_show 7 天 0 条；真实作答 uid（5–13/日）全部走普通专项练习完成页，而 R99 引导卡 initPushNudge 只挂在每日一练提交回调（daily_set_entries 全表 0 行）——引导卡从未被真实用户看到。
+- 实现：practice.vue submitResult() 末尾（H5、≥5 题）补调 initPushNudge()，复用 R99 全部守卫（已订阅/denied/✕ 永久关闭/无公钥/无 SW 均静默）。零后端。设计文档 docs/iter/round-3/r105-push-nudge-exposure.md。
+
 ### R104（2026-08-31）：非 SW 客户端可观测性盲区修复
 - 取证：近 3 天 14 个真实活跃 uid（heatmap_view）0 个上报过 boot；boot/RUM/hb-gap/陈旧壳自愈全部包在 `'serviceWorker' in navigator` 守卫内，无 SW 的国内 App 内置 webview 用户全程不可见、也无壳自愈。另清理本机遗留 28 个标签页造成的自噪声（uid umth5q5ax687m0vfh 等 19 条 growth_events，含 9 条 questions:10s slow_load——此前 RUM 长尾图景被自流量污染）。
 - 实现：main.js SW 守卫只留注册与更新校验；runningHash/boot/RUM/hb-gap/staleShellHeal 移入独立 `window load` 块，SW 引用全部判空。设计文档 docs/iter/round-3/r104-nonsw-telemetry.md。
