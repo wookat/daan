@@ -943,6 +943,25 @@ def tiku_submodule(module: str, submodule: str, page: int = 1):
     )
 
 
+@root_router.get("/tiku", include_in_schema=False)
+def tiku_index_noslash():
+    return RedirectResponse("/tiku/", status_code=301)
+
+
+@router.get("/{module}", include_in_schema=False)
+def tiku_module_noslash(module: str):
+    if not _module_name(module):
+        raise HTTPException(404, "模块不存在")
+    return RedirectResponse(f"/tiku/{quote(module)}/", status_code=301)
+
+
+@router.get("/{module}/{submodule}", include_in_schema=False)
+def tiku_submodule_noslash(module: str, submodule: str):
+    if not _module_name(module):
+        raise HTTPException(404, "模块不存在")
+    return RedirectResponse(_sub_path(module, submodule), status_code=301)
+
+
 # ---------- sitemap / robots ----------
 
 
