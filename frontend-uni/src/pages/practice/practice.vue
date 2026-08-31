@@ -248,6 +248,14 @@
         </view>
         <text class="duenudge-go">去复习 ›</text>
       </view>
+      <view v-if="!beiMode && loginNudgeN" class="loginnudge">
+        <view class="duenudge-l">
+          <text class="duenudge-t">已累计刷 {{ loginNudgeN }} 题 · 登录保进度</text>
+          <text class="duenudge-s">错题本、做题记录云同步，换设备/清缓存不丢</text>
+        </view>
+        <text class="duenudge-go" @click="loginNudgeGo">去登录 ›</text>
+        <text class="loginnudge-x" @click="dismissLoginNudge">✕</text>
+      </view>
       <button class="btn" @click="retryGroup">再来一组</button>
       <button v-if="!beiMode" class="btn ghost" style="margin-top: 16rpx" @click="shareResult">分享成绩</button>
       <button class="btn plain" style="margin-top: 8rpx" @click="quit">返回首页</button>
@@ -317,7 +325,7 @@
 </template>
 
 <script>
-import { request, BASE_URL, anonUid, pkNickname, exportPdf, removeFav, setFav, fetchCheckinBadges, trackEvent } from '../../api.js';
+import { request, BASE_URL, anonUid, pkNickname, exportPdf, removeFav, setFav, fetchCheckinBadges, getAuthUser, trackEvent } from '../../api.js';
 import { drawOffline, enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../offline.js';
 import { dayKey, loadSzDaily, saveSzDaily } from '../../checkin.js';
 
@@ -390,6 +398,7 @@ export default {
       examLeft: 0,
       examTimer: null,
       pstats: { byModule: {}, days: {} },
+      loginNudgeOff: true,
       autoTimer: null,
       cardOpen: false,
       toolsOpen: false,
@@ -514,6 +523,13 @@ export default {
     },
     wrongCount() {
       return this.items.filter((q) => q._picked && q._picked !== q.answer).length;
+    },
+    // 完成页登录引导：匯名重度用户（累计≥ 30 题）且未关闭过才显示，返回累计题数
+    loginNudgeN() {
+      if (this.loginNudgeOff) return 0;
+      let n = 0;
+      for (const s of Object.values(this.pstats.byModule || {})) n += s.done || 0;
+      return n >= 30 ? n : 0;
     },
     // 完成页薄弱考点：本组错题按考点聚合，错题数倒序取前 3
     weakSpots() {
@@ -643,6 +659,7 @@ export default {
     }
     // #endif
     this.pstats = loadPStats();
+    this.loginNudgeOff = !!getAuthUser() || !!uni.getStorageSync('loginNudgeDismissed');
     this.favs = uni.getStorageSync('favQuestions') || [];
     this.realMode = uni.getStorageSync('realMode') ? true : false;
     this.realYear = uni.getStorageSync('realYear') || null;
@@ -1277,6 +1294,14 @@ export default {
         uni.hideLoading();
         this._starting = false;
       }
+    },
+    loginNudgeGo() {
+      trackEvent('login_nudge_click');
+      uni.navigateTo({ url: '/pkgA/user/login' });
+    },
+    dismissLoginNudge() {
+      this.loginNudgeOff = true;
+      uni.setStorageSync('loginNudgeDismissed', '1');
     },
     reinforceWeak(w) {
       this.startReinforce({ module: w.module, submodule: w.submodule, tag3: w.tag3, count: 5, source: 'session-report' });
@@ -1977,6 +2002,7 @@ export default {
       this.resultSent = true;
       this.dailyBoard = [];
       this.dueReview = 0;
+      if (this.loginNudgeN) trackEvent('login_nudge_show');
       uni.removeStorageSync('pendingSession');
       try {
         const hist = uni.getStorageSync('practiceHistory') || [];
@@ -2402,6 +2428,11 @@ export default {
 .duenudge-t { display: block; font-size: 27rpx; font-weight: 700; color: #ffffff; }
 .duenudge-s { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.75); margin-top: 4rpx; }
 .duenudge-go { flex-shrink: 0; background: rgba(255, 255, 255, 0.18); color: #ffffff; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 12rpx 30rpx; }
+.loginnudge { display: flex; justify-content: space-between; align-items: center; gap: 16rpx; text-align: left; background: var(--card); border: 1rpx solid var(--line); border-radius: 18rpx; padding: 24rpx 28rpx; margin: 24rpx 0; }
+.loginnudge .duenudge-t { color: var(--ink); }
+.loginnudge .duenudge-s { color: var(--ink-2); }
+.loginnudge .duenudge-go { background: var(--brand-soft); color: var(--brand); }
+.loginnudge-x { flex-shrink: 0; color: var(--ink-3); font-size: 26rpx; padding: 8rpx; }
 .ring { width: 200rpx; height: 200rpx; border-radius: 50%; margin: 0 auto 24rpx; display: flex; align-items: center; justify-content: center; }
 .ring-in { width: 156rpx; height: 156rpx; border-radius: 50%; background: var(--card); display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .ring-n { font-size: 40rpx; font-weight: 700; color: var(--ink); }
