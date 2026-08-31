@@ -343,16 +343,17 @@ _PICK_TTL = 600
 _pick_cache: dict[tuple, tuple[float, dict]] = {}
 _pick_lock = threading.Lock()
 _pick_refreshing: set = set()
+_pick_build_lock = threading.Lock()
 
 
 def _pick_rebuild(module, submodule, tag3, year, region):
     key = (module, submodule, tag3, year, region)
     try:
         conn = get_conn()
-        with _pick_lock:
-            _pick_cache.pop(key, None)
-        _pick_pools(conn, module, submodule, tag3, year, region)
+        pools = _pick_scan(conn, module, submodule, tag3, year, region)
         conn.close()
+        with _pick_lock:
+            _pick_cache[key] = (time.time(), pools)
     except Exception:
         pass
     finally:
@@ -376,6 +377,21 @@ def _pick_pools(conn, module, submodule, tag3, year, region) -> dict:
                     target=_pick_rebuild, args=(module, submodule, tag3, year, region), daemon=True
                 ).start()
             return ent[1]
+    # 冷 miss：单线程构建，并发请求等锁后直接吃缓存，避免同键多请求各自全表扫描（惊群）
+    with _pick_build_lock:
+        with _pick_lock:
+            ent = _pick_cache.get(key)
+            if ent:
+                return ent[1]
+        pools = _pick_scan(conn, module, submodule, tag3, year, region)
+        with _pick_lock:
+            if len(_pick_cache) >= 512:
+                _pick_cache.clear()
+            _pick_cache[key] = (time.time(), pools)
+        return pools
+
+
+def _pick_scan(conn, module, submodule, tag3, year, region) -> dict:
     where = ["disabled=0"]
     args: list = []
     for col, val in (
@@ -394,10 +410,6 @@ def _pick_pools(conn, module, submodule, tag3, year, region) -> dict:
         f"SELECT id, is_real, COALESCE(has_hs,0) hs FROM {src} WHERE {' AND '.join(where)}", args
     ):
         pools[(1 if r["is_real"] else 0, 1 if r["hs"] else 0)].append(r["id"])
-    with _pick_lock:
-        if len(_pick_cache) >= 512:
-            _pick_cache.clear()
-        _pick_cache[key] = (time.time(), pools)
     return pools
 
 
