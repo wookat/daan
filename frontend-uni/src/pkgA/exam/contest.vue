@@ -225,7 +225,7 @@ export default {
 .hero-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
 .hero-series { font-size: 21rpx; color: var(--brand); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
 .hero-phase { font-size: 22rpx; font-weight: 600; border-radius: 999rpx; padding: 4rpx 18rpx; }
-.hero-phase.upcoming { color: #d97706; background: var(--warn-soft); }
+.hero-phase.upcoming { color: var(--warn-strong); background: var(--warn-soft); }
 .hero-phase.running { color: #15803d; background: var(--ok-soft); }
 .hero-phase.ended { color: var(--ink-2); background: var(--soft-bg); }
 .hero-title { display: block; font-size: 34rpx; font-weight: 800; color: var(--ink); }

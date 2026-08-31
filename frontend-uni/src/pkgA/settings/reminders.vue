@@ -215,7 +215,11 @@ export default {
 .group { padding: 4rpx 32rpx; }
 .set-row { display: flex; align-items: center; gap: 22rpx; min-height: 56px; border-top: 1rpx solid var(--line); }
 .set-row:first-child { border-top: none; }
-.set-row.dim { opacity: 0.5; }
+.set-row.dim .ico,
+.set-row.dim .wd-switch,
+.set-row.dim uni-switch { opacity: 0.5; }
+.set-row.dim .nm,
+.set-row.dim .time-v { color: var(--ink-2); }
 .ico { width: 68rpx; height: 68rpx; border-radius: 18rpx; background: var(--brand-soft); display: flex; align-items: center; justify-content: center; font-size: 32rpx; flex-shrink: 0; }
 .grow { flex: 1; min-width: 0; }
 .nm { display: block; font-size: 28rpx; font-weight: 600; color: var(--ink); }

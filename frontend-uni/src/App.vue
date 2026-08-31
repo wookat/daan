@@ -85,6 +85,7 @@ page {
   --ok: #16a34a;
   --ok-soft: #ecfdf5;
   --ok-strong: #15803d;
+  --warn-strong: #b45309;
   --bad: #dc2626;
   --bad-soft: #fef2f2;
   --bad-strong: #b91c1c;
@@ -145,6 +146,7 @@ html.theme-dark body {
   --ink-4: #5c6070;
   --ok-soft: #0e2b1e;
   --ok-strong: #4ade80;
+  --warn-strong: #fbbf24;
   --bad-soft: #331416;
   --bad-strong: #f87171;
   --warn-soft: #33260e;
