@@ -524,7 +524,7 @@ export default {
     wrongCount() {
       return this.items.filter((q) => q._picked && q._picked !== q.answer).length;
     },
-    // 完成页登录引导：匯名重度用户（累计≥ 30 题）且未关闭过才显示，返回累计题数
+    // 完成页登录引导：匿名重度用户（累计≥ 30 题）且未关闭过才显示，返回累计题数
     loginNudgeN() {
       if (this.loginNudgeOff) return 0;
       let n = 0;
