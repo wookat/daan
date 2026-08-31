@@ -280,3 +280,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 实现：seo.py robots.txt 对 AwarioBot/SemrushBot/AhrefsBot/MJ12bot/DotBot/PetalBot 单独 Disallow: /（礼貌层）；functions [[path]].js 对 UA 命中名单直接 403 不回源（robots.txt 放行以便其读到禁抓声明）。
 - 生产验收：模拟 AwarioBot/SemrushBot UA /tiku/q/* → 403、robots.txt 200；Googlebot/普通浏览器全路径 200；部署传播后 origin 日志爬虫到达从 ~16 条/分钟降为最近 5 分钟 0 条。设计文档 docs/iter/round-3/r88-edge-bot-block.md。
 - 边界：robots.txt 被 CF zone 层 HTTP 缓存（cf-cache-status HIT，.txt 默认 TTL，无 cache-control 时约 2h），新禁抓组对外生效有最长 ~2h 延迟（带 query 已实证新内容）；本会话 CLOUDFLARE_API_TOKEN 无 zone purge 权限无法主动清除。
+
+### R89（2026-09-01）：IndexNow 主动提交——打通半成品收录通道
+- 取证：R85/R88 origin 日志观察窗内 Googlebot/Bingbot/Baiduspider 到达为 0；Bing site: 收录仅个位数；仓库只有 /indexnow-key.txt 密钥端点（生产 200、INDEXNOW_KEY 已配），全库无任何向 api.indexnow.org 提交 URL 的代码——通道只建了验证端从未推送。
+- 实现：seo.py 新增守护线程（仅 INDEXNOW_KEY 配置时启动，本地/开发零影响），seo_meta(key,value) 表存水位 indexnow_last_qid；首轮先提交核心页（/、/tiku/、/tiku/daily/、/tiku/discuss/），之后每 6h 取 id>水位 的活跃题，每 POST ≤10000 条、每轮 ≤2 POST（≤2 万 URL/轮），2xx 才推进水位（HTTP 4xx/5xx/网络错误不推进，下轮重试同批）。
+- 本地验证：mock 端点实测核心页+2×10000 批、断点续传 1429 条、500 失败水位不动、恢复后续推；ruff 通过。
+- 生产验收：部署后首轮实录 api.indexnow.org 返回 200×3（核心 4 条 + 10000×2），水位落库 158705；/indexnow-key.txt 生产 200 可供引擎验证。设计文档 docs/iter/round-3/r89-indexnow-submit.md。
+- 边界：IndexNow 覆盖 Bing/Yandex/Seznam 等联盟引擎，Google 不参与（需 Search Console 站点验证，属独立待办）；提交≠必然收录，需后续观察 origin 日志 bingbot 到达与 site: 收录量变化。
