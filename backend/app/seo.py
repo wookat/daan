@@ -84,7 +84,7 @@ _CSS = (
 )
 
 
-def _page(title: str, description: str, canonical_path: str, body: str, jsonld: dict | None = None) -> str:
+def _page(title: str, description: str, canonical_path: str, body: str, jsonld: dict | list | None = None) -> str:
     ld = (
         '<script type="application/ld+json">' + json.dumps(jsonld, ensure_ascii=False) + "</script>"
         if jsonld
@@ -130,6 +130,17 @@ def _collection_ld(name: str, description: str, path: str, crumbs: list[tuple[st
                 for i, (n, h) in enumerate(crumbs)
             ],
         },
+    }
+
+
+def _breadcrumb_ld(crumbs: list[tuple[str, str | None]]) -> dict:
+    return {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": i + 1, "name": n, **({"item": _url(h)} if h else {})}
+            for i, (n, h) in enumerate(crumbs)
+        ],
     }
 
 
@@ -864,7 +875,7 @@ def _render_question(qid: int) -> str:
         f"{mod_name}{('·' + r['submodule']) if r['submodule'] else ''}{src}：{qtext[:70]} 附答案与解析，在线刷同考点题目。",
         f"/tiku/q/{qid}",
         body,
-        jsonld,
+        [jsonld, _breadcrumb_ld(crumbs)],
     )
 
 

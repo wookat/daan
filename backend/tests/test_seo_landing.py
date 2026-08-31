@@ -1,4 +1,23 @@
+import json
+import re
+
 from .conftest import seed_pk, seed_questions, seed_share
+
+
+def test_question_page_jsonld_qapage_and_breadcrumb(client):
+    qids = seed_questions()
+    r = client.get(f"/tiku/q/{qids[0]}")
+    assert r.status_code == 200
+    m = re.search(r'<script type="application/ld\+json">(.*?)</script>', r.text, re.DOTALL)
+    assert m
+    ld = json.loads(m.group(1))
+    types = {d["@type"] for d in ld}
+    assert types == {"QAPage", "BreadcrumbList"}
+    bc = next(d for d in ld if d["@type"] == "BreadcrumbList")
+    items = bc["itemListElement"]
+    assert items[0]["name"] == "题库"
+    assert items[0]["item"].endswith("/tiku/")
+    assert "item" not in items[-1]  # 末项（当前页）无链接
 
 
 def test_share_landing_valid(client):
