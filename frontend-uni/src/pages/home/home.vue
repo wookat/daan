@@ -726,9 +726,11 @@ export default {
       return `正确率 ${Math.round((s.correct / s.done) * 100)}%`;
     },
     prefetchNext() {
-      // 预取下一组题包：进刷题页命中时零等待开练（真题/资料分析分组参数不同，不预取）
+      this.prefetchModule(uni.getStorageSync('lastModule') || '');
+    },
+    prefetchModule(module) {
+      // 预取题包：进刷题页命中时零等待开练（真题/资料分析分组参数不同，不预取）
       if (this.realMode) return;
-      const module = uni.getStorageSync('lastModule') || '';
       if (module === 'ziliao') return;
       const limit = this.groupSize || 10;
       const uid = anonUid() || '';
@@ -944,6 +946,7 @@ export default {
         }
         this.submodules = items;
         this.subSelect = module;
+        this.prefetchModule(module);
         this.subProg = {};
         const uid = uni.getStorageSync('anonUid');
         if (uid) {
