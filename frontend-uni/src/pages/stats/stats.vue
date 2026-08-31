@@ -114,7 +114,8 @@
 
     <view class="card">
       <view class="h">错题模块分布</view>
-      <view v-if="!byModule.length" class="spin">暂无数据</view>
+      <view v-if="loadErr && !byModule.length" class="spin">加载失败：{{ loadErr }}<view class="retry" @click="load">重试 ›</view></view>
+      <view v-else-if="!byModule.length" class="spin">暂无数据</view>
       <view v-for="m in shownModules" :key="m.module" class="mrow" @click="goPractice(m.module)">
         <view class="mrow-main">
           <view class="blabel">
@@ -132,7 +133,8 @@
 
     <view class="card">
       <view class="h">高频错题型 TOP10</view>
-      <view v-if="!byType.length" class="spin">暂无数据</view>
+      <view v-if="loadErr && !byType.length" class="spin">加载失败：{{ loadErr }}<view class="retry" @click="load">重试 ›</view></view>
+      <view v-else-if="!byType.length" class="spin">暂无数据</view>
       <view v-else class="top-chips">
         <view v-for="t in shownTypes" :key="t.question_type" class="top-chip" @click="goPractice('')">
           <text class="tc-name">{{ typeName(t.question_type) }}</text>
@@ -345,7 +347,7 @@ const MODS = [
 
 export default {
   data() {
-    return { authUser: getAuthUser(), byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, kmCov: null, history: [], showAllHist: false, coachHtml: cleanCoach(uni.getStorageSync('coachAdvice') || ''), coachLoading: false, growth: null, reco: null, dueN: 0, gwMod: '', slStats: null, slIssuesOpen: false, modOpen: false, topOpen: false, secOpen: { coach: false, medal: false, bk: false }, hmDays: null, svStreak: null };
+    return { authUser: getAuthUser(), loadErr: '', byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, kmCov: null, history: [], showAllHist: false, coachHtml: cleanCoach(uni.getStorageSync('coachAdvice') || ''), coachLoading: false, growth: null, reco: null, dueN: 0, gwMod: '', slStats: null, slIssuesOpen: false, modOpen: false, topOpen: false, secOpen: { coach: false, medal: false, bk: false }, hmDays: null, svStreak: null };
   },
   computed: {
     shownModules() {
@@ -797,6 +799,7 @@ export default {
       } catch (e) { /* 非关键路径 */ }
     },
     async load() {
+      this.loadErr = '';
       try {
         const d = await request('/api/stats?uid=' + encodeURIComponent(anonUid()));
         this.byModule = d.by_module;
@@ -805,6 +808,7 @@ export default {
         const mk = await request('/api/mistakes?uid=' + encodeURIComponent(anonUid()));
         this.masteredCount = (mk.items || []).filter((m) => m.mastered).length;
       } catch (e) {
+        this.loadErr = e.message || '网络异常';
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
     },
@@ -845,6 +849,7 @@ export default {
 .cal-hr { display: flex; align-items: center; gap: 16rpx; }
 .h { font-size: 28rpx; font-weight: 600; margin-bottom: 14rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 20rpx; }
+.retry { margin-top: 12rpx; color: var(--brand); font-size: 26rpx; font-weight: 500; }
 .todo-row { display: flex; align-items: center; gap: 18rpx; min-height: 112rpx; border-bottom: 1rpx solid var(--line); }
 .todo-row:last-of-type { border-bottom: none; }
 .todo-ico { width: 88rpx; height: 88rpx; border-radius: 20rpx; background: var(--brand-soft); display: flex; align-items: center; justify-content: center; font-size: 40rpx; flex-shrink: 0; }

@@ -423,3 +423,7 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 ### R135（2026-08-31）：分包页加载失败误呈现为空态收口（二期）
 - 取证：同 R134 方法（生产壳 + API abort 逐页直入），verified 6 分包页失败时渲染「无数据」空态（interview/history、pk（loadHome 完全静默）、social/inbox（登录态）、team（loadHome 完全静默）、shenlun 三 tab、social/discuss）。主包 stats/book 同样存在但有快照兜底（R90/R108）且状态复杂，留 R136 单独取证。
 - 修复：6 页补驻留错误态+重试（shenlun 三 tab 独立 qErr/mErr/rErr；pk/team 原静默 catch 补驻留错误但不加 toast；inbox 错误卡置于登录引导之后，游客行为不变），零后端改动。生产双视口复验：5 个免登录页 × 1440/375 失败态均出错误卡、放行 API 点重试原位恢复、溢出 0；inbox 登录态失败路径为代码同构未生产实测（游客路径实测不变）。方案：docs/iter/round-3/r135-load-error-vs-empty-part2.md。
+
+### R136（2026-08-31）：主包 stats/book 加载失败误呈现为空态收口（三期·终）
+- 取证：源码逐 catch 核查 + 生产 API abort 探针。verified：stats.load()（/api/stats+/api/mistakes）失败后「错题模块分布/高频错题型」渲染「暂无数据」（无本地降级）；book.load() 无缓存回退（新设备/首访）时渲染「错题本还是空的」。stats 热力图/成长/推荐等有 pstats 降级或属增强信息、book 有缓存时 offlineView 横幅，均属既定设计不立项。
+- 修复：两页补 loadErr 驻留错误态+重试（book 仅无缓存分支置错，offlineView 语义不变），零后端改动。生产双视口复验：2 页 × 1440/375 失败态出错误卡不再伪装空态、放行 API 点重试原位恢复、溢出 0。方案：docs/iter/round-3/r136-load-error-vs-empty-mainpkg.md。

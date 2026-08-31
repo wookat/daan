@@ -376,6 +376,11 @@
         @confirm="exportMistakes"
       />
       <view v-if="tab !== 'fav' && loading" class="card spin bk-main">加载中…</view>
+      <view v-else-if="tab !== 'fav' && loadErr && !items.length" class="card empty bk-main">
+        <view class="e-t">加载失败</view>
+        <view class="e-s">{{ loadErr }}</view>
+        <view class="retry" @click="load">重试 ›</view>
+      </view>
       <view v-else-if="tab !== 'fav' && !items.length" class="card empty bk-main">
         <view class="e-ico"><l-icon name="folder-plus" :size="52" color="#c7cad4" :stroke-width="1.5" /></view>
         <view class="e-t">错题本还是空的</view>
@@ -493,6 +498,7 @@ export default {
     return {
       items: [],
       loading: true,
+      loadErr: '',
       offlineView: false,
       due: [],
       dueTotal: 0,
@@ -981,6 +987,7 @@ export default {
     async load() {
       const seq = (this._loadSeq = (this._loadSeq || 0) + 1);
       this.loading = true;
+      this.loadErr = '';
       try {
         const uq = 'uid=' + encodeURIComponent(anonUid());
         const [d, r] = await Promise.all([request('/api/mistakes?' + uq), request('/api/review?' + uq)]);
@@ -1007,6 +1014,7 @@ export default {
           this.offlineView = true;
           uni.showToast({ title: '当前无网络，展示已缓存的错题', icon: 'none' });
         } else {
+          this.loadErr = e.message || '网络异常';
           uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
         }
       }
@@ -1367,6 +1375,7 @@ export default {
 .e-s { font-size: 24rpx; color: var(--ink-2); line-height: 1.7; margin-bottom: 28rpx; }
 :deep(.e-btn2) { margin-top: 8rpx; min-width: 60%; border-radius: 18rpx !important; background: linear-gradient(135deg, #5c82ff, var(--brand)) !important; font-weight: 600; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; border-left: none; }
+.retry { margin-top: 12rpx; color: var(--brand); font-size: 26rpx; font-weight: 500; }
 .searchbar { display: flex; align-items: center; gap: 12rpx; background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 14rpx 26rpx; margin-bottom: 20rpx; }
 .searchinput { flex: 1; font-size: 26rpx; color: var(--ink); height: 40rpx; line-height: 40rpx; }
 .searchclear { display: flex; align-items: center; padding: 0 8rpx; }
