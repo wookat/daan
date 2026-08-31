@@ -85,7 +85,7 @@
 </template>
 
 <script>
-import { shareDetail, shareAnswer, trackEvent, teamJoin, qShareText } from '../../api.js';
+import { shareDetail, shareAnswer, trackEvent, teamJoin, qShareText, canonicalizeSharePath } from '../../api.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const modName = (m) => NAMES[m] || m || '行测';
@@ -134,6 +134,7 @@ export default {
     const v = query && query.v ? String(query.v) : '';
     this.variant = v === 'a' || v === 'b' ? v : '';
     trackEvent('share_open', this.variant ? 'share_' + this.variant : 'share', this.sid || null);
+    if (this.sid) canonicalizeSharePath('/s/' + encodeURIComponent(this.sid));
     uni.setStorageSync('regSource', 'share');
     this.load();
   },

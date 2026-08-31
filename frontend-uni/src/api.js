@@ -928,6 +928,23 @@ export function qShareText(mod, sid) {
   return `【${mod}】我刚做了一道题，你能做对吗？答完就能看到大家选了啥：${url}`;
 }
 
+// 把分享落地页地址栏回写为服务端短链（/s/{sid}、/p/{rid}），地址栏转发/浏览器原生分享
+// 不再携带聊天应用会截断的 #/? hash 路由；站内一旦导航即把 path 还原为 /，避免刷新误落分享页
+export function canonicalizeSharePath(path) {
+  // #ifdef H5
+  try {
+    window.history.replaceState(null, '', path);
+    window.addEventListener(
+      'hashchange',
+      () => window.history.replaceState(null, '', '/' + window.location.hash),
+      { once: true }
+    );
+  } catch (e) {
+    /* 老旧 webview 无 History API 时静默降级 */
+  }
+  // #endif
+}
+
 export function pkLeaderboard() {
   return request(`/api/pk/leaderboard?uid=${encodeURIComponent(anonUid())}`);
 }

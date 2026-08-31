@@ -34,7 +34,8 @@ self.addEventListener('fetch', (e) => {
   if (
     url.pathname.startsWith('/admin') ||
     url.pathname.startsWith('/tiku') ||
-    url.pathname.startsWith('/s/')
+    url.pathname.startsWith('/s/') ||
+    url.pathname.startsWith('/p/')
   )
     return;
 
