@@ -3,7 +3,9 @@ import html
 import json
 import math
 import os
+import threading
 import time
+import urllib.request
 from functools import lru_cache
 from urllib.parse import quote
 
@@ -1099,3 +1101,83 @@ def robots_txt():
         blocked + "User-agent: *\nAllow: /tiku/\nDisallow: /api/\nDisallow: /admin\n"
         f"Sitemap: {_url('/sitemap.xml')}\n"
     )
+
+
+# ---------- IndexNow 主动提交 ----------
+# 密钥文件端点早已上线但从未推送过 URL；搜索引擎（Bing/Yandex 等 IndexNow 联盟）
+# 对零外链新站不会主动抓取，主动提交是 /tiku/q/* 页族唯一可行的收录通道。
+INDEXNOW_ENDPOINT = "https://api.indexnow.org/indexnow"
+INDEXNOW_BATCH = 10000
+INDEXNOW_BATCHES_PER_CYCLE = 2
+INDEXNOW_INTERVAL = 6 * 3600
+
+
+def _indexnow_post(urls: list[str]) -> bool:
+    payload = json.dumps(
+        {
+            "host": SITE_BASE.split("//", 1)[-1],
+            "key": INDEXNOW_KEY,
+            "keyLocation": _url("/indexnow-key.txt"),
+            "urlList": urls,
+        }
+    ).encode()
+    req = urllib.request.Request(
+        INDEXNOW_ENDPOINT,
+        data=payload,
+        headers={"Content-Type": "application/json; charset=utf-8"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            print(f"[indexnow] submitted {len(urls)} urls -> {resp.status}", flush=True)
+            return 200 <= resp.status < 300
+    except OSError as exc:
+        print(f"[indexnow] submit failed: {exc}", flush=True)
+        return False
+
+
+def _indexnow_cycle():
+    conn = db.get_conn()
+    try:
+        conn.execute("CREATE TABLE IF NOT EXISTS seo_meta (key TEXT PRIMARY KEY, value TEXT)")
+        conn.commit()
+        row = conn.execute(
+            "SELECT value FROM seo_meta WHERE key='indexnow_last_qid'"
+        ).fetchone()
+        last_qid = int(row["value"]) if row else -1
+        if last_qid < 0:
+            core = [_url(p) for p in ("/", "/tiku/", "/tiku/daily/", "/tiku/discuss/")]
+            if not _indexnow_post(core):
+                return
+            last_qid = 0
+        for _ in range(INDEXNOW_BATCHES_PER_CYCLE):
+            rows = conn.execute(
+                "SELECT id FROM questions WHERE disabled=0 AND id>? ORDER BY id LIMIT ?",
+                (last_qid, INDEXNOW_BATCH),
+            ).fetchall()
+            if not rows:
+                break
+            if not _indexnow_post([_url(f'/tiku/q/{r["id"]}') for r in rows]):
+                break
+            last_qid = rows[-1]["id"]
+        conn.execute(
+            "INSERT INTO seo_meta (key, value) VALUES ('indexnow_last_qid', ?) "
+            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            (str(last_qid),),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _indexnow_submitter():
+    time.sleep(120)  # 让启动期预热先行
+    while True:
+        try:
+            _indexnow_cycle()
+        except (OSError, ValueError, db.sqlite3.Error) as exc:
+            print(f"[indexnow] cycle error: {exc}", flush=True)
+        time.sleep(INDEXNOW_INTERVAL)
+
+
+if INDEXNOW_KEY:
+    threading.Thread(target=_indexnow_submitter, daemon=True).start()
