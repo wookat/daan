@@ -380,6 +380,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 实现：双保险——push_api.py payload url 改 hash 深链（发送时生成，旧 bundle 也受益）+ main.js 启动前归一化（search 含 daily=1 且无实质 hash 时 location.replace 为练习页 hash 深链，透传 date）。设计文档 docs/iter/round-3/r102-daily-deeplink-fix.md。
 - 生产验收：375 /?daily=1 直入今日题组、&date=昨日直入往期题组（daily_set?date= 请求实证）、1440 直入+答题卡侧栏正常、首页无回归；溢出 0、console 0 error。
 
+### R108（2026-08-31）：首页专项练习入口去阻塞——counts 快照兜底 + 静态模块回退
+- 取证：原候选「首页到期复习数量不一致」被证伪（/api/review total=1 与 home_bundle.plan.due_mistakes=1 一致、duebar/任务行均显示）；真实问题是 /api/question_counts 生产长尾（高负载实录 524/125s、200/39.8s）时首页模块卡整体不渲染，专项练习入口不可用。
+- 实现：home.vue——成功 counts 落 countsSnap，onShow 先读快照预填；无快照且接口失败时用 NAMES 静态模块列表（n=0 隐藏进度、副文案「题库加载中…」）回退渲染；保留 3s×20 后台重试，真实数据原位替换。零后端/零 DB/零边缘改动。设计文档 docs/iter/round-3/r108-home-module-entry-resilience.md。
+- 生产验收（PR #286）：1440+375 拦截 question_counts——5 模块卡仍渲染、面板可开、可直入练习；放行后共 N 题原位刷新；溢出 0、console 0 error（仅被拦截请求本身）。测试 uid 4 个 13 行已清理、保护 uid 零 mutation。
+
 ### R101（2026-08-31）：首载静态启动屏——消除慢网络首访白屏
 - 取证：RUM 实录真实用户首载 nav:16s/dom:7.5s/tx:10.6s，index.html #app 为空、Vue 挂载前全程白屏（历史 60/90s 聚簇同理）；明日 08:00 推送深链 /?daily=1 也走该路径。
 - 实现：index.html #app 内静态启动屏（logo+错题邦+副标题+CSS spinner，纯内联零请求），prefers-color-scheme 深色适配，Vue mount 整树替换无需清理。设计文档 docs/iter/round-3/r101-boot-splash.md。

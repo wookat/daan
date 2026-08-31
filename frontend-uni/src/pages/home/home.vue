@@ -222,7 +222,7 @@
           <text class="mod-name">{{ modName(c.module) }}</text>
           <text class="mod-sub">{{ progText(c) }}</text>
         </view>
-        <view class="mod-r">
+        <view v-if="c.n" class="mod-r">
           <text class="mod-prog"><text class="mod-prog-n">{{ modStat(c.module).done }}</text>/{{ c.n }}</text>
           <view class="mod-bar"><view class="mod-fill" :style="{ width: progPct(c) + '%', background: modColor(c.module).fg }" /></view>
         </view>
@@ -637,6 +637,7 @@ export default {
     this.szDaily = loadSzDaily(anonUid());
     this.groupSize = uni.getStorageSync('groupSize') || 10;
     this.dailyGoal = uni.getStorageSync('dailyGoal') || 20;
+    if (!this.counts.length) this.counts = uni.getStorageSync('countsSnap') || [];
     this.loadCounts();
     this.prefetchNext();
     this.loadAnnounce();
@@ -722,6 +723,7 @@ export default {
     },
     progText(c) {
       const s = this.modStat(c.module);
+      if (!c.n && !s.done) return '题库加载中…';
       if (!s.done) return '共 ' + c.n + ' 题 · 未开始';
       return `正确率 ${Math.round((s.correct / s.done) * 100)}%`;
     },
@@ -927,11 +929,16 @@ export default {
     async loadCounts() {
       try {
         const d = await request('/api/question_counts');
-        this.counts = d.counts || [];
-      } catch (e) { /* 走下方重试 */ }
-      if (this.counts.length) {
-        this._countsTries = 0;
-        return;
+        if (d.counts && d.counts.length) {
+          this.counts = d.counts;
+          uni.setStorageSync('countsSnap', d.counts);
+          this._countsTries = 0;
+          return;
+        }
+      } catch (e) { /* 走下方快照/静态回退 + 重试 */ }
+      if (!this.counts.length) {
+        // 接口不可用时入口不阻塞：静态模块列表先渲染，题数后台刷新后原位替换
+        this.counts = Object.keys(NAMES).map((m) => ({ module: m, n: 0 }));
       }
       this._countsTries = (this._countsTries || 0) + 1;
       if (this._countsTries <= 20) setTimeout(() => this.loadCounts(), 3000);
