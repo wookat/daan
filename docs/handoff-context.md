@@ -394,3 +394,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：/s/{sid} 分享落地页 og:title/description/url 齐全但 og:image 为 0（curl 实测），og 抓取端分享卡无缩略图；root 与 /tiku 页族 og:image 指向 512×512 方形 logo.png（标准推荐 1200×630 横版）。分享回路有真实流量（近 3 日 share_open 15、pk_result_open 7）。首页新访客 CTA 复测 3 次 ~1s 直入题组（首次 33s 为孤例未立项）。
 - 实现：新增品牌分享卡 frontend-uni/src/static/og-card.png（1200×630，渐变 #2e5bff→#4c7dff+站名+价值主张+特性 chips），scripts/gen_og_card.py（PIL+仓库内 NotoSansSC-Bold）可复现生成；seo.py share_landing 补 og:image/twitter:image、twitter:card 升 summary_large_image；seo.py _page 与 index.html og:image 换 og-card.png。静态单图不做按题动态出图；零 DB/零边缘缓存改动。设计文档 docs/iter/round-3/r109-social-share-card.md。
 - 生产验收（PR #287）：/s/fsb75lki、/tiku/、/ 三处 og:image 均指向 og-card.png 且 twitter:card=summary_large_image；/static/og-card.png 200（40888B，实测 1200×630）；1440+375 首页与 375 分享落地页回归溢出 0、console 0 error。本轮无测试数据写入（30h 窗口 growth_events/answer_log/daily_set_entries 均 0 新增）、保护 uid 零 mutation。
+
+### R110（2026-08-31，纯取证轮，无代码改动）
+- 归因校正：近 7 天全部 share_open/share_copy/share_answer（18 条）来自保护 uid（内部账号）+1 个 uid，此前「有真实分享流量」判断不成立；活跃匿名作答 uid 经 origin 日志 UA 交叉（Linux Chrome 137 自动化特征/curl）多为非自然流量。当前站点近乎零自然用户，硬瓶颈在分发侧。
+- 搜索到达：origin 全量日志 Yandex 967 / Googlebot 1，bing/baidu/sogou/360/bytespider/petalbot 全为 0；增长通道待老板资源（站长账号、微信 JS-SDK、独立主机、视觉 LLM key），已按 SOP-04 申报。
+- 其余核验：/s/{sid}→SPA 保留 sid（ref=None 非深链缺陷）；index.html max-age=0 must-revalidate；_warmup 已覆盖全模块抽题池+daily_set；/tiku/q/* QAPage JSON-LD/canonical/og 齐备；ShapBot 仅 7 条不立项。详见 docs/iter/round-3/r110-evidence-audit.md。
+- R111 输入窗口：08:00 push 首推、R109 og 卡社交抓取、R92 后可信的 boot/slow_load 新样本。
