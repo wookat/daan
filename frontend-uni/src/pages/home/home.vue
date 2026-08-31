@@ -61,6 +61,7 @@
         <view v-else-if="streakShown" class="hero-streak"><l-icon name="flame" :size="13" color="#ffffff" /><text>连续打卡 {{ streakShown }} 天</text></view>
       </view>
       <view class="hero-bar"><view class="hero-fill" :style="{ width: Math.min((todayCount / dailyGoal) * 100, 100) + '%' }" /></view>
+      <text v-if="dsMeta" class="hero-ds">今日全站同题 10 题 · {{ dsMeta.participants ? '已有 ' + dsMeta.participants + ' 人完成' : '来做今天第 1 人' }}</text>
       <view class="hero-acts">
         <view class="hero-btn main" @click="startDaily">{{ todayDone ? '再练一组 ›' : '继续目标 ›' }}</view>
         <view class="hero-btn sub" @click="openSetup">今日计划</view>
@@ -521,6 +522,7 @@ export default {
       weeklyDot: false,
       comeback: null,
       reminderBanner: false,
+      dsMeta: null,
       dateStart: new Date().toISOString().slice(0, 10),
       dateEnd: new Date(Date.now() + 3 * 366 * 86400000).toISOString().slice(0, 10),
       dateStartTs: Date.now(),
@@ -639,6 +641,7 @@ export default {
     this.calcWeeklyDot();
     this.checkComeback();
     this.checkReminder();
+    this.loadDailySet();
     const wantSetup = uni.getStorageSync('openPlanSetup');
     if (wantSetup) {
       uni.removeStorageSync('openPlanSetup');
@@ -677,6 +680,16 @@ export default {
       const d = new Date(ts);
       const p = (n) => (n < 10 ? '0' + n : '' + n);
       return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+    },
+    loadDailySet() {
+      // 全站同题题组：首页外显参与数 + 预取题组供 startDaily 秒开（边缘缓存 60s）
+      request('/api/daily_set')
+        .then((d) => {
+          if (!d || !d.date || !(d.items || []).length) return;
+          this.dsMeta = { date: d.date, participants: (d.stats && d.stats.participants) || 0 };
+          uni.setStorageSync('dailySet', d);
+        })
+        .catch(() => {});
     },
     goSearch() {
       uni.navigateTo({ url: '/pkgA/search/search' });
@@ -1093,6 +1106,7 @@ export default {
 .hero-n { font-size: 36rpx; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
 .hero-streak { display: inline-flex; align-items: center; gap: 8rpx; font-size: 22rpx; color: #fff; background: rgba(255, 255, 255, 0.18); border-radius: 8rpx; padding: 4rpx 16rpx; }
 .hero-bar { height: 12rpx; background: rgba(255, 255, 255, 0.25); border-radius: 999rpx; margin: 16rpx 0 24rpx; overflow: hidden; }
+.hero-ds { display: block; font-size: 22rpx; color: rgba(255, 255, 255, 0.85); margin: -8rpx 0 20rpx; }
 .hero-fill { height: 100%; background: var(--card); border-radius: 999rpx; transition: width 0.3s; }
 .hero-acts { display: flex; gap: 20rpx; }
 .hero-btn { min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 20rpx; font-size: 28rpx; font-weight: 600; }

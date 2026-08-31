@@ -238,7 +238,8 @@ def tiku_index():
     body = (
         "<h1>公务员考试题库</h1>"
         f"<p>收录 {total} 道行测/申论题目（含历年真题），按模块、题型、考点分类，可在线刷题并查看花生十三方法讲解。"
-        '· <a href="/tiku/discuss/" style="white-space:nowrap">考友热议题目 →</a></p>'
+        '· <a href="/tiku/daily/" style="white-space:nowrap">今日每日一练 →</a>'
+        ' · <a href="/tiku/discuss/" style="white-space:nowrap">考友热议题目 →</a></p>'
         + "".join(sections)
         + f'<a class="cta" href="{_e(SITE_BASE)}/">进入刷题主站 →</a>'
     )
@@ -252,6 +253,49 @@ def tiku_index():
             f"免费公务员考试题库，收录 {total} 道行测申论题目与历年真题，附答案解析。",
             "/tiku/",
             [("题库", "/tiku/")],
+        ),
+    )
+
+
+@router.get("/daily", include_in_schema=False)
+def tiku_daily_noslash():
+    return RedirectResponse("/tiku/daily/", status_code=301)
+
+
+@router.get("/daily/", response_class=HTMLResponse, include_in_schema=False)
+def tiku_daily():
+    day = db.cn_day()
+    items = db.daily_set_questions(day)
+    stats = db.daily_set_stats(day)
+    cards = []
+    for i, q in enumerate(items, 1):
+        stem = (q.get("question") or "").strip().replace("\n", " ")[:70]
+        mod = _module_name(q.get("module")) or "综合"
+        cards.append(
+            '<section class="card">'
+            f'<h2>{i}. <a href="/tiku/q/{q["id"]}">{_e(stem)}…</a></h2>'
+            f'<p class="meta">{_e(mod)}{" · 真题" if q.get("is_real") else ""}</p>'
+            "</section>"
+        )
+    n = stats.get("participants") or 0
+    part = f"今天已有 {n} 人完成" if n else "来做今天第 1 位完成者"
+    body = (
+        _crumb([("题库", "/tiku/"), ("每日一练", None)])
+        + f"<h1>每日一练（{_e(day)}）</h1>"
+        + f'<p class="meta">全站同题 · 五大模块各 2 题共 10 题 · {_e(part)}，完成后可查看击败全站百分比</p>'
+        + "".join(cards)
+        + f'<a class="cta" href="{_e(SITE_BASE)}/">去主站作答今日同题（免费）→</a>'
+    )
+    return _page(
+        f"每日一练{day}_公务员考试全站同题刷题_错题邦",
+        f"{day} 公务员考试每日一练：全站同题 10 道行测真题（五大模块各 2 题），在线作答查看解析，完成后可比较全站排名。",
+        "/tiku/daily/",
+        body,
+        _collection_ld(
+            f"每日一练（{day}）",
+            "公务员考试每日一练，全站同题 10 道行测题目，附答案解析。",
+            "/tiku/daily/",
+            [("题库", "/tiku/"), ("每日一练", "/tiku/daily/")],
         ),
     )
 
@@ -887,7 +931,12 @@ def sitemap_index():
 
 @root_router.get("/sitemap-pages.xml", include_in_schema=False)
 def sitemap_pages():
-    urls = [(_url("/tiku/"), None), (_url("/tiku/papers/"), None), (_url("/tiku/discuss/"), None)]
+    urls = [
+        (_url("/tiku/"), None),
+        (_url("/tiku/papers/"), None),
+        (_url("/tiku/discuss/"), None),
+        (_url("/tiku/daily/"), None),
+    ]
     for r in db.question_counts():
         if not _module_name(r["module"]):
             continue

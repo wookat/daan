@@ -1061,7 +1061,10 @@ export default {
       this._starting = true;
       uni.showLoading({ title: '出题中…', mask: true });
       try {
-        const d = await request('/api/daily_set');
+        // 首页预取的题组按日确定，date 匹配当日即可复用（秒开，不再等网络）
+        const cnDay = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+        const cached = uni.getStorageSync('dailySet');
+        const d = cached && cached.date === cnDay && (cached.items || []).length ? cached : await request('/api/daily_set');
         if (!d.items || !d.items.length) throw new Error('empty');
         this._dailyDate = d.date;
         this.items = d.items.map((q) => ({ ...q, _saved: false }));

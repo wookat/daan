@@ -935,6 +935,11 @@ def _ensure_daily_set(conn):
     )
 
 
+def cn_day() -> str:
+    """中国时区（UTC+8）当日日期 YYYY-MM-DD。"""
+    return time.strftime("%Y-%m-%d", time.gmtime(time.time() + 8 * 3600))
+
+
 def daily_set_ids(day: str) -> list[int]:
     """全站同题每日一练选题：每模块 2 题共 10 题，md5(day:qid) 最小者优先。
 
