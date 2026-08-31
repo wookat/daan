@@ -354,6 +354,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 生产验收：1440+375 新 uid 真实 10 题——第 7 题预取请求+pack 落地，「再来一组」0 网络请求即开新组；溢出 0、console 0 error；测试数据已清理、保护 uid 零 mutation。设计文档 docs/iter/round-3/r100-midsession-prefetch.md。
 - 边界：daily/shizheng/bei 不触发为代码守卫未单独复验；答完不重试时浪费一次 10 行读。
 
+### R102（2026-08-31）：/?daily=1 推送深链失效修复
+- 取证：生产实测 /?daily=1 落首页 #/ 未进每日一练（uni h5 router 只识别 hash 路由，根路径 query 从未被处理），而 R98 推送 payload url 恰为 /?daily=1——明日 08:00 首推点击落地全部失效。hash 形式 /#/pages/practice/practice?daily=1 实测正常直入。
+- 实现：双保险——push_api.py payload url 改 hash 深链（发送时生成，旧 bundle 也受益）+ main.js 启动前归一化（search 含 daily=1 且无实质 hash 时 location.replace 为练习页 hash 深链，透传 date）。设计文档 docs/iter/round-3/r102-daily-deeplink-fix.md。
+- 生产验收：375 /?daily=1 直入今日题组、&date=昨日直入往期题组（daily_set?date= 请求实证）、1440 直入+答题卡侧栏正常、首页无回归；溢出 0、console 0 error。
+
 ### R101（2026-08-31）：首载静态启动屏——消除慢网络首访白屏
 - 取证：RUM 实录真实用户首载 nav:16s/dom:7.5s/tx:10.6s，index.html #app 为空、Vue 挂载前全程白屏（历史 60/90s 聚簇同理）；明日 08:00 推送深链 /?daily=1 也走该路径。
 - 实现：index.html #app 内静态启动屏（logo+错题邦+副标题+CSS spinner，纯内联零请求），prefers-color-scheme 深色适配，Vue mount 整树替换无需清理。设计文档 docs/iter/round-3/r101-boot-splash.md。

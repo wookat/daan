@@ -33,6 +33,20 @@ if (typeof window !== 'undefined') {
 	});
 }
 
+// 根路径查询深链归一化：/?daily=1[&date=…] 是对外短链（推送/分享），uni h5 router 只识别 hash 路由，启动前改写为练习页 hash 深链
+if (typeof window !== 'undefined') {
+	try {
+		const qs = new URLSearchParams(location.search || '');
+		if (qs.get('daily') && (!location.hash || location.hash === '#/' || location.hash === '#')) {
+			const date = qs.get('date');
+			location.replace(
+				location.origin + location.pathname +
+				'#/pages/practice/practice?daily=1' + (date ? '&date=' + encodeURIComponent(date) : '')
+			);
+		}
+	} catch (e) { /* 归一化失败保持原状 */ }
+}
+
 // 未匹配路由兜底：无效/过期深链在 uni h5 router 无匹配时渲染为永久白屏，回落首页
 if (typeof window !== 'undefined') {
 	window.addEventListener('load', () => {
