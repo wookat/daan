@@ -201,6 +201,10 @@ def _warmup():
         try:
             for m in (None, "yanyu", "changshi", "panduan", "shuliang", "ziliao"):
                 db.random_questions(m, 1)
+            db.daily_set_ids(db.cn_day())
+            db.daily_set_ids(
+                time.strftime("%Y-%m-%d", time.gmtime(time.time() + 8 * 3600 + 86400))
+            )
             conn = db.get_conn()
             try:
                 for t in _HOT_UID_TABLES:
