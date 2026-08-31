@@ -1,9 +1,15 @@
 // H5 离线壳：仅缓存 SPA 壳（/），静态资源走 HTTP immutable 长缓存；
 // API 请求不缓存（离线做题由页面内离线题包逻辑处理）。
-const CACHE = 'kg-shell-v3';
+const CACHE = 'kg-shell-v4';
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/'])).then(() => self.skipWaiting()));
+  // cache:'reload' 绕过 HTTP 缓存，保证入库的壳是最新 HTML
+  e.waitUntil(
+    caches
+      .open(CACHE)
+      .then((c) => c.add(new Request('/', { cache: 'reload' })))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (e) => {
@@ -12,6 +18,9 @@ self.addEventListener('activate', (e) => {
       .keys()
       .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
+      // 通知受控页面：SW 已更新，页面可比对 bundle hash 决定是否自愈 reload
+      .then(() => self.clients.matchAll({ type: 'window' }))
+      .then((cs) => cs.forEach((cl) => cl.postMessage({ type: 'kg-sw-updated' })))
   );
 });
 

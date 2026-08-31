@@ -112,8 +112,8 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && location
 			}, 5000);
 		} catch (e) { /* 取证失败不影响主流程 */ }
 		// 陈旧壳自愈：SW 导航兜底（8s 超时回退缓存壳）会让慢链路用户持续跑旧 bundle；
-		// 载入 15s 后拉一次最新 HTML 比对主 chunk hash，不一致则 reload 一次（会话内防重入）
-		setTimeout(() => {
+		// 拉一次最新 HTML 比对主 chunk hash，不一致则 reload 一次（会话内防重入）
+		const staleShellHeal = () => {
 			try {
 				if (document.visibilityState !== 'visible') return;
 				if (sessionStorage.getItem('kg_sh_reload')) return;
@@ -130,7 +130,14 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && location
 					})
 					.catch(() => {});
 			} catch (e) { /* 自愈失败保持原状 */ }
-		}, 15000);
+		};
+		setTimeout(staleShellHeal, 15000);
+		// SW 升级即校验：新 SW activate 后 postMessage，穿透缓存壳触达存量客户端
+		try {
+			navigator.serviceWorker.addEventListener('message', (e) => {
+				if (e.data && e.data.type === 'kg-sw-updated') staleShellHeal();
+			});
+		} catch (e) { /* 不支持则退回定时校验 */ }
 	});
 }
 // #endif
