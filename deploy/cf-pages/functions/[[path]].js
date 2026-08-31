@@ -73,9 +73,11 @@ export async function onRequest({ request, env, waitUntil }) {
     resp.headers.delete("X-Robots-Tag");
   }
   const isApi = url.pathname.startsWith("/api/");
-  const ctOk = (resp.headers.get("content-type") || "").includes(
-    isApi ? "application/json" : "text/html"
-  );
+  const ct = resp.headers.get("content-type") || "";
+  const ctOk =
+    url.pathname.startsWith("/sitemap") || url.pathname === "/robots.txt"
+      ? ct.includes("xml") || ct.includes("text/plain")
+      : ct.includes(isApi ? "application/json" : "text/html");
   if (cacheable && resp.status === 200 && ctOk) {
     const ttl = isApi ? API_EDGE_CACHE_TTL : EDGE_CACHE_TTL;
     const [body, cacheBody] = resp.body.tee();
