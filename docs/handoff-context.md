@@ -262,3 +262,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 实现：functions 回源请求附加 X-Kg-Ip（CF-Connecting-IP）/X-Kg-Ua（原始 UA）；api_track slow_load 的 ;ua: 空则回退 X-Kg-Ua 并标 ;uav:f；宿主 Caddyfile kaogong-origin 块补 JSON access log（50MiB/14 份/336h，运维步骤入 deploy/README.md，备份 /etc/caddy/Caddyfile.bak-r85）。
 - 生产验收：无 UA 探针→;ua:-、带 UA 探针→;ua:R85-Probe/1.0（经函数代理 UA 直达，未触发回退）、heatmap_view 零变化；origin access log 落盘且含 X-Kg-Ip/X-Kg-Ua（已见真实爬虫 AwarioBot+真实 IP）。untested：;uav:f 回退分支（无法在生产制造「UA 在边缘→origin 一跳丢失」）。测试事件已清理，保护 uid 零 mutation。设计文档 docs/iter/round-3/r85-origin-observability.md。
 - 同轮清理：R83/R84 验证残留 answer_log 80 行（12 个机器速答 uid，题序与当日每日一练一致、9–15s 完成）+ growth_events 1 行已删除。
+
+### R86（2026-08-31）：origin 域收口——仅接受 CF 函数代理流量，直连爬虫 403
+- 取证（基于 R85 新落盘 origin 日志）：启用后 ~1h 145 条请求中 ~95 条（66%）为绕过 CF 函数的直连爬虫（AwarioBot 73 + SemrushBot 19），全打 /tiku/q/* SSR（单条实测最高 4.7s、/tiku/ 直连 6.0s），在 2GB 共享宿主上完全绕过 R45/R56/R68 边缘缓存，属无谓 IO/CPU 挤占；X-Robots-Tag noindex 挡不住第三方持续抓取。
+- 实现：functions 回源附加共享密钥头 X-Kg-Edge（值在 Pages env KG_EDGE_KEY，wrangler secret 不入仓库）；宿主 Caddy kaogong-origin 块对无/错头请求 respond 403（备份 Caddyfile.bak-r86），access log format filter 删除该头防泄漏（启用前的历史泄漏行已离线清洗）。上线顺序：先函数带头→日志确认到达→再启 403，防自伤。
+- 生产验收：直连 origin /tiku/、/api/stats → 403；主域 /、/tiku/、/tiku/q/*、/api/stats、POST /api/track、/api/health 全 200；后续日志实证爬虫直连均 403、post-reload 行零密钥泄漏。测试事件已清理。设计文档 docs/iter/round-3/r86-origin-lockdown.md。
+- 边界：容器 healthcheck（容器内 localhost）与 deploy 预热（走主域）不受影响；DNS 回滚路径不走 origin 块。密钥轮换步骤见 deploy/README.md。

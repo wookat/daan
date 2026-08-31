@@ -20,6 +20,12 @@
   输出 `/var/log/caddy/kaogong-origin.zalize.com-access.log`；functions 代理层会
   在回源请求上附加 `X-Kg-Ip`（真实客户端 IP）与 `X-Kg-Ua`（原始 UA），
   归因故障时以该日志为准（`kaogong.zalize.com` 块的日志自 CF Pages 迁移后不再有流量）。
+- **origin 域收口**（R86）：functions 回源请求带共享密钥头 `X-Kg-Edge`
+  （值在 Pages 项目环境变量 `KG_EDGE_KEY`，`npx wrangler pages secret put KG_EDGE_KEY
+  --project-name kaogong-h5` 设置，不入仓库）；宿主 Caddy `kaogong-origin` 块对
+  无/错该头的请求直接 403（拒绝绕过边缘缓存的直连爬虫），并在 access log 中
+  filter 删除该头防泄漏。轮换密钥：先 `wrangler pages secret put` 新值并重新部署
+  functions，再改 Caddyfile matcher 值 reload（顺序不可反，否则 403 自伤）。
 
 ## 旧方案（仍是回源层）：现有服务器 + Caddy/Nginx 反代 + kaogong.zalize.com
 

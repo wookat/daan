@@ -42,7 +42,7 @@ function isEdgeCacheable(request, url) {
   );
 }
 
-export async function onRequest({ request, waitUntil }) {
+export async function onRequest({ request, env, waitUntil }) {
   const url = new URL(request.url);
   const cacheable = isEdgeCacheable(request, url);
   if (cacheable) {
@@ -61,6 +61,8 @@ export async function onRequest({ request, waitUntil }) {
   if (clientIp) req.headers.set("X-Kg-Ip", clientIp);
   const clientUa = request.headers.get("User-Agent");
   if (clientUa) req.headers.set("X-Kg-Ua", clientUa);
+  // 共享密钥头：origin Caddy 只放行带此头的请求，拒绝绕过边缘缓存的直连爬虫
+  if (env.KG_EDGE_KEY) req.headers.set("X-Kg-Edge", env.KG_EDGE_KEY);
   const upstream = await fetch(req);
   const resp = new Response(upstream.body, upstream);
   for (const [k, v] of Object.entries(SECURITY_HEADERS)) resp.headers.set(k, v);
