@@ -30,6 +30,10 @@ const API_CACHE_ALLOWLIST = new Set([
   "/api/comments/plaza",
 ]);
 
+// 无获客价值的商业爬虫（舆情/SEO 工具）：每条 /tiku/q/* URL 各异使边缘缓存失效，
+// 全部穿透共享 origin SSR；在边缘直接 403，robots.txt 放行以便其读到禁抓声明。
+const BLOCKED_BOT_UA = /awariobot|semrushbot|ahrefsbot|mj12bot|dotbot|petalbot/i;
+
 function isEdgeCacheable(request, url) {
   if (request.method !== "GET") return false;
   if (url.pathname.startsWith("/tiku")) return true;
@@ -45,6 +49,12 @@ function isEdgeCacheable(request, url) {
 
 export async function onRequest({ request, env, waitUntil }) {
   const url = new URL(request.url);
+  if (
+    url.pathname !== "/robots.txt" &&
+    BLOCKED_BOT_UA.test(request.headers.get("User-Agent") || "")
+  ) {
+    return new Response("Forbidden", { status: 403 });
+  }
   const cacheable = isEdgeCacheable(request, url);
   if (cacheable) {
     const hit = await caches.default.match(request.url);

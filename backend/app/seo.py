@@ -1091,7 +1091,11 @@ def share_landing(sid: str):
 
 @root_router.get("/robots.txt", include_in_schema=False)
 def robots_txt():
+    blocked = "".join(
+        f"User-agent: {b}\nDisallow: /\n\n"
+        for b in ("AwarioBot", "SemrushBot", "AhrefsBot", "MJ12bot", "DotBot", "PetalBot")
+    )
     return PlainTextResponse(
-        "User-agent: *\nAllow: /tiku/\nDisallow: /api/\nDisallow: /admin\n"
+        blocked + "User-agent: *\nAllow: /tiku/\nDisallow: /api/\nDisallow: /admin\n"
         f"Sitemap: {_url('/sitemap.xml')}\n"
     )
