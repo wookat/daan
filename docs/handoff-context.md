@@ -354,6 +354,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 生产验收：1440+375 新 uid 真实 10 题——第 7 题预取请求+pack 落地，「再来一组」0 网络请求即开新组；溢出 0、console 0 error；测试数据已清理、保护 uid 零 mutation。设计文档 docs/iter/round-3/r100-midsession-prefetch.md。
 - 边界：daily/shizheng/bei 不触发为代码守卫未单独复验；答完不重试时浪费一次 10 行读。
 
+### R106（2026-08-31）：生产测试 uid 数据全库清理
+- 取证：全库 uid 审计发现 85 个历轮验证遗留测试 uid（r18-a/qa-r31-*/r83dailytest*/uR42tmp* 等 + 2 个机器速答爆发 uid），跨 12 表 646 行，其中 uR42tmp 30 条速答混入 48h 活跃统计污染取证。
+- 实现：scripts/clean_test_data.py（命名模式 + 机器速答双标准、PROTECTED/已登录豁免、26 表覆盖、默认 dry-run），已 --apply 清理生产 646 行，复清 0 行、保护 uid 前后行数不变。每轮验证后应执行本脚本。设计文档 docs/iter/round-3/r106-test-data-cleanup.md。
+
 ### R105（2026-08-31）：推送引导卡曝光盲区修复
 - 取证：push_subscriptions 全表 0 行、push_nudge_show 7 天 0 条；真实作答 uid（5–13/日）全部走普通专项练习完成页，而 R99 引导卡 initPushNudge 只挂在每日一练提交回调（daily_set_entries 全表 0 行）——引导卡从未被真实用户看到。
 - 实现：practice.vue submitResult() 末尾（H5、≥5 题）补调 initPushNudge()，复用 R99 全部守卫（已订阅/denied/✕ 永久关闭/无公钥/无 SW 均静默）。零后端。设计文档 docs/iter/round-3/r105-push-nudge-exposure.md。
