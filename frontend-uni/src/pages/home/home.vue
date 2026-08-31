@@ -61,7 +61,8 @@
         <view v-else-if="streakShown" class="hero-streak"><l-icon name="flame" :size="13" color="#ffffff" /><text>连续打卡 {{ streakShown }} 天</text></view>
       </view>
       <view class="hero-bar"><view class="hero-fill" :style="{ width: Math.min((todayCount / dailyGoal) * 100, 100) + '%' }" /></view>
-      <text v-if="dsMeta" class="hero-ds">今日全站同题 10 题 · {{ dsMeta.participants ? '已有 ' + dsMeta.participants + ' 人完成' : '来做今天第 1 人' }}</text>
+      <text v-if="dsMeta && dsDone" class="hero-ds">今日全站同题 · 已完成 答对 {{ dsDone.right }}/{{ dsDone.total }}<template v-if="dsDone.rank"> · 第 {{ dsDone.rank }} 名</template><template v-if="dsDone.streak >= 2"> · 🔥 连 {{ dsDone.streak }} 天</template></text>
+      <text v-else-if="dsMeta" class="hero-ds">今日全站同题 10 题 · {{ dsMeta.participants ? '已有 ' + dsMeta.participants + ' 人完成' : '来做今天第 1 人' }}</text>
       <view class="hero-acts">
         <view class="hero-btn main" @click="startDaily">{{ todayDone ? '再练一组 ›' : '继续目标 ›' }}</view>
         <view class="hero-btn sub" @click="openSetup">今日计划</view>
@@ -523,6 +524,7 @@ export default {
       comeback: null,
       reminderBanner: false,
       dsMeta: null,
+      dsDone: null,
       dateStart: new Date().toISOString().slice(0, 10),
       dateEnd: new Date(Date.now() + 3 * 366 * 86400000).toISOString().slice(0, 10),
       dateStartTs: Date.now(),
@@ -687,6 +689,8 @@ export default {
         .then((d) => {
           if (!d || !d.date || !(d.items || []).length) return;
           this.dsMeta = { date: d.date, participants: (d.stats && d.stats.participants) || 0 };
+          const done = uni.getStorageSync('dailyDone:' + anonUid());
+          this.dsDone = done && done.date === d.date ? done : null;
           uni.setStorageSync('dailySet', d);
         })
         .catch(() => {});

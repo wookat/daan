@@ -1123,6 +1123,9 @@ export default {
       })
         .then((d) => {
           this.dailyStats = d;
+          uni.setStorageSync('dailyDone:' + anonUid(), {
+            date, right: d.my_right, total: this.items.length, rank: d.my_rank, streak: d.streak,
+          });
           return request('/api/daily_set/board').then((b) => { this.dailyBoard = (b && b.items) || []; });
         })
         .catch(() => {});
