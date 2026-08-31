@@ -152,6 +152,13 @@ app.include_router(shenlun_api.router)
 app.include_router(admin_api.router)
 
 
+@app.get("/api/health")
+def api_health():
+    """存活探针：走完整请求链路（事件循环→线程池→SQLite 读），供容器 healthcheck 判定假死。"""
+    db.get_conn().execute("SELECT 1").fetchone()
+    return {"ok": True}
+
+
 @app.get("/api/access_info")
 def api_access_info():
     """客户端进入 AI 功能前查询是否需要访问码（不泄露访问码本身）。"""
