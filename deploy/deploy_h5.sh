@@ -11,7 +11,7 @@ SITE="https://kaogong.zalize.com"
 : "${TICKETS_VPS_SSH_HOST:?need TICKETS_VPS_SSH_HOST}"
 : "${TICKETS_VPS_SSH_CREDENTIAL:?need TICKETS_VPS_SSH_CREDENTIAL}"
 export SSHPASS="$TICKETS_VPS_SSH_CREDENTIAL"
-SSH_OPTS=(-o StrictHostKeyChecking=no)
+SSH_OPTS=(-o StrictHostKeyChecking=no -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4)
 REMOTE="$TICKETS_VPS_SSH_USER@$TICKETS_VPS_SSH_HOST"
 
 step() { echo; echo "==> $*"; }
@@ -51,10 +51,27 @@ step "3/6 rsync backend/deploy/dist 到生产"
   backend deploy frontend knowledge frontend-uni/dist "$REMOTE:$REMOTE_DIR/" \
   --exclude '.git' --exclude '__pycache__' --exclude 'node_modules' --exclude '.env')
 
-step "4/6 重建容器"
+step "4/6 重建容器（远端后台执行 + rev/StartedAt 轮询收敛，防高负载宿主 ssh 通道挂起）"
+PREV_STARTED=$(sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" \
+  "docker inspect deploy-kaogong-1 --format '{{.State.StartedAt}}' 2>/dev/null" || true)
 sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" \
-  "cd $REMOTE_DIR/deploy && docker compose up -d --build 2>&1 | tail -2"
-sleep 8
+  "cd $REMOTE_DIR/deploy && nohup docker compose up -d --build > /tmp/kg-compose.log 2>&1 < /dev/null & echo compose-started"
+DEADLINE=$((SECONDS + 600))
+REBUILT=0
+while (( SECONDS < DEADLINE )); do
+  sleep 10
+  CUR_STARTED=$(sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" \
+    "docker inspect deploy-kaogong-1 --format '{{.State.StartedAt}}' 2>/dev/null" || true)
+  CUR_REV=$(curl -s --max-time 15 "$SITE/api/health" | grep -o '"rev":"[^"]*"' | cut -d'"' -f4 || true)
+  echo "  poll: started=${CUR_STARTED:-?} rev=${CUR_REV:-?}"
+  if [[ -n "$CUR_STARTED" && "$CUR_STARTED" != "$PREV_STARTED" && "$CUR_REV" == "$BUILD_REV" ]]; then
+    REBUILT=1; break
+  fi
+done
+sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" "tail -3 /tmp/kg-compose.log" || true
+if [[ "$REBUILT" != "1" ]]; then
+  echo "FAIL: 600s 内容器未完成重建或线上 rev 未收敛到 $BUILD_REV！"; exit 1
+fi
 sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" \
   "docker inspect deploy-kaogong-1 --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -q '^ADMIN_TOKEN=..'" \
   || { echo "FAIL: 容器 ADMIN_TOKEN 为空，.env 未正确注入！"; exit 1; }
@@ -99,7 +116,7 @@ if [[ "$ONLINE_INDEX_REF" != "$LOCAL_INDEX_REF" ]]; then
   echo "FAIL: 线上 bundle ($ONLINE_INDEX_REF) != 本机构建 ($LOCAL_INDEX_REF)，部署未生效！"
   exit 1
 fi
-ONLINE_HOME_CHUNK=$(curl -s "$SITE/assets/$ONLINE_INDEX_REF" | grep -o 'pages-home-home\.[^"]*\.js' | head -1)
+ONLINE_HOME_CHUNK=$(curl -s --compressed "$SITE/assets/$ONLINE_INDEX_REF" | grep -o 'pages-home-home\.[^"]*\.js' | head -1 || true)
 if [[ -n "$ONLINE_HOME_CHUNK" && ! -f "$DIST/assets/$ONLINE_HOME_CHUNK" ]]; then
   echo "FAIL: 线上 home chunk $ONLINE_HOME_CHUNK 不在本机构建产物中！"
   exit 1
