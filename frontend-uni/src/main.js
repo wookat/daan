@@ -62,6 +62,14 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && location
 				if (document.visibilityState === 'visible') check();
 			});
 		}).catch(() => {});
+		// 当前运行 bundle 的 hash 段（主 chunk 文件名），用于 RUM 版本戳与陈旧壳自愈比对
+		const runningHash = () => {
+			try {
+				const s = document.querySelector('script[src*="/assets/index-"]');
+				const m = s && s.src.match(/index-([\w-]+)\.js/);
+				return m ? m[1] : '';
+			} catch (e) { return ''; }
+		};
 		// 慢加载 RUM：偶发 ~40s 壳/chunk 长尾在服务端无痕（疑 SW/客户端侧），上报导航与最慢资源耗时取证。
 		// 5s 首查 + 65s 复查（捕捉 40s 级迟到完成的资源，只上报一次）
 		let rumSent = false;
@@ -81,7 +89,8 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && location
 					? `;ttfb:${Math.round(nav.responseStart)};dom:${Math.round(nav.domContentLoadedEventStart)};load:${Math.round(nav.loadEventStart)}` +
 					  `;sw:${navigator.serviceWorker && navigator.serviceWorker.controller ? 1 : 0};tx:${nav.transferSize || 0}`
 					: '';
-				const ref = `nav:${nav ? Math.round(nav.duration) : -1}${phases}` + (worst ? `;${part(worst)}` : '');
+				const ver = runningHash();
+				const ref = `nav:${nav ? Math.round(nav.duration) : -1}${phases}` + (worst ? `;${part(worst)}` : '') + (ver ? `;v:${ver}` : '');
 				import('./api.js').then(({ trackEvent }) => trackEvent('slow_load', 'h5', ref));
 			} catch (e) { /* RUM 失败不影响主流程 */ }
 		};
@@ -102,6 +111,26 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && location
 				if (document.visibilityState === 'visible') sessionStorage.setItem('kg_hb', String(Date.now()));
 			}, 5000);
 		} catch (e) { /* 取证失败不影响主流程 */ }
+		// 陈旧壳自愈：SW 导航兜底（8s 超时回退缓存壳）会让慢链路用户持续跑旧 bundle；
+		// 载入 15s 后拉一次最新 HTML 比对主 chunk hash，不一致则 reload 一次（会话内防重入）
+		setTimeout(() => {
+			try {
+				if (document.visibilityState !== 'visible') return;
+				if (sessionStorage.getItem('kg_sh_reload')) return;
+				const cur = runningHash();
+				if (!cur) return;
+				fetch('/', { cache: 'no-store' })
+					.then((r) => (r.ok ? r.text() : ''))
+					.then((html) => {
+						const m = html && html.match(/assets\/index-([\w-]+)\.js/);
+						if (m && m[1] !== cur) {
+							sessionStorage.setItem('kg_sh_reload', '1');
+							location.reload();
+						}
+					})
+					.catch(() => {});
+			} catch (e) { /* 自愈失败保持原状 */ }
+		}, 15000);
 	});
 }
 // #endif
