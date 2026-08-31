@@ -325,7 +325,7 @@
 </template>
 
 <script>
-import { request, BASE_URL, anonUid, pkNickname, exportPdf, removeFav, setFav, fetchCheckinBadges, getAuthUser, trackEvent } from '../../api.js';
+import { request, BASE_URL, anonUid, pkNickname, exportPdf, removeFav, setFav, fetchCheckinBadges, getAuthUser, trackEvent, submitDailySet } from '../../api.js';
 import { drawOffline, enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../offline.js';
 import { dayKey, loadSzDaily, saveSzDaily } from '../../checkin.js';
 
@@ -1147,15 +1147,9 @@ export default {
       this._dailyDate = '';
       if (!date) return;
       this._dailyDoneDate = date;
-      request('/api/daily_set/submit', {
-        method: 'POST',
-        data: { uid: anonUid(), nickname: pkNickname(), date, right: this.right, total: this.items.length, secs: this.totalSecs },
-      })
+      submitDailySet({ uid: anonUid(), nickname: pkNickname(), date, right: this.right, total: this.items.length, secs: this.totalSecs })
         .then((d) => {
           this.dailyStats = d;
-          uni.setStorageSync('dailyDone:' + anonUid(), {
-            date, right: d.my_right, total: this.items.length, rank: d.my_rank, streak: d.streak,
-          });
           return request('/api/daily_set/board').then((b) => { this.dailyBoard = (b && b.items) || []; });
         })
         .catch(() => {});
