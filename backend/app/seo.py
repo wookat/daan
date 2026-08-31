@@ -96,6 +96,12 @@ def _page(title: str, description: str, canonical_path: str, body: str, jsonld: 
         f"<title>{_e(title)}</title>"
         f'<meta name="description" content="{_e(description)}">'
         f'<link rel="canonical" href="{_e(_url(canonical_path))}">'
+        '<meta property="og:type" content="website">'
+        '<meta property="og:site_name" content="错题邦">'
+        f'<meta property="og:title" content="{_e(title)}">'
+        f'<meta property="og:description" content="{_e(description)}">'
+        f'<meta property="og:url" content="{_e(_url(canonical_path))}">'
+        f'<meta property="og:image" content="{_e(SITE_BASE)}/static/logo.png">'
         f"<style>{_CSS}</style>{ld}</head><body>"
         f'<header class="hdr"><div class="wrap"><a class="brand" href="/tiku/">错题邦 · 考公题库</a>'
         f'<a class="hdr-cta" href="/">去刷题</a></div></header>'
@@ -526,6 +532,11 @@ def tiku_paper_detail(pid: int):
         body,
         jsonld,
     )
+
+
+@router.get("/q/{qid}/", include_in_schema=False)
+def tiku_question_slash(qid: int):
+    return RedirectResponse(f"/tiku/q/{qid}", status_code=301)
 
 
 @router.get("/q/{qid}", response_class=HTMLResponse, include_in_schema=False)

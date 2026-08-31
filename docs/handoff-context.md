@@ -329,3 +329,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 实现：deploy_h5.sh 新增 step 3b——rsync 后、容器重建前对入口级可缓存 URL（/tiku/ 三页、robots/sitemap、允许清单 API 含 submodules?module=×5）逐个 GET 刷新副本，重建窗口内 stale-if-error 必有副本可退；失败仅 WARN 不阻塞。设计文档 docs/iter/round-3/r96-deploy-edge-prime.md。
 - 生产验收：完整部署实跑 exit 0，step 3b 首跑暴露 submodules 无参 422（已改逐模块）与 /tiku/ 冷 origin 000（WARN 不阻塞设计生效），修正后清单实跑全 200。
 - 边界：/tiku/q/* 15 万题页不预热，靠自然流量沉淀副本；autoheal 重启窗口靠 ≤24h 日常副本兜底。
+
+### R97（2026-08-31）：/tiku SEO 页族补 Open Graph 标签 + /tiku/q/{id}/ 尾斜杠 301
+- 取证：origin 日志实证分发通道现状（YandexBot 958、Googlebot 1、bingbot/Baiduspider/Sogou/360=0），社交/IM 分享是唯一可自建的第二通道；而 /tiku 全页族（_page() 模板）无任何 og: 标签（首页 SPA 壳有、/s/* R68 有），分享出去无卡片；/tiku/q/{id}/ 带尾斜杠被 /{module}/{submodule}/ 路由吞掉 404「模块不存在」。
+- 实现：_page() 统一注入 og:type/site_name/title/description/url/image 六标签（og:url 复用 canonical）；新增 GET /q/{qid}/ → 301 无斜杠。仅改 backend/app/seo.py。设计文档 docs/iter/round-3/r97-seo-og-tags.md。
+- 资源申请（owner 一次性识别，不阻塞）：① Baidu/Bing/Sogou/360 站长平台账号验证（收录通道）；② 微信公众号 JS-SDK（微信内分享卡片）。到位前用 og 标签+IndexNow 降级先行。
