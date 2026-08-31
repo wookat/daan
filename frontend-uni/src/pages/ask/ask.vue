@@ -26,7 +26,7 @@
       </view>
       <view class="cam-modes">
         <text class="cam-mode on">拍单题</text>
-        <text class="cam-mode dim">整页批改 · 即将上线</text>
+        <text class="cam-mode dim" aria-disabled="true">整页批改 · 即将上线</text>
         <text class="cam-mode" @click="textOpen = true">文字输入</text>
       </view>
       <view class="cam-acts">
@@ -106,7 +106,7 @@
           <!-- 追问建议 + 操作 chips -->
           <view v-if="!r.streaming" class="chips">
             <text class="chip" @click="quickFollowup(r, '请再讲得更细一点，逐步推导每一步')">再讲细一点</text>
-            <text class="chip" :class="{ dim: r.simLoading }" @click="genSimilar(r)">{{ r.simLoading ? '出题中…' + r.simSecs + 's' : '出一道同款题' }}</text>
+            <text class="chip" :class="{ dim: r.simLoading }" :aria-disabled="String(!!r.simLoading)" @click="genSimilar(r)">{{ r.simLoading ? '出题中…' + r.simSecs + 's' : '出一道同款题' }}</text>
             <text class="chip" :class="{ ok: r.saved }" @click="save(r)">{{ r.saved ? '✓ 已存错题本' : '存入错题本' }}</text>
           </view>
         </view>
@@ -178,7 +178,7 @@
         :disabled="!results.length"
         @confirm="sendFollowup"
       />
-      <view class="ib-send" :class="{ dim: !results.length || !fuText.trim() }" @click="sendFollowup">发送</view>
+      <view class="ib-send" :class="{ dim: !results.length || !fuText.trim() }" :aria-disabled="String(!results.length || !fuText.trim())" @click="sendFollowup">发送</view>
     </view>
 
     <!-- 新题文字输入 sheet -->

@@ -234,7 +234,7 @@
                 <text v-for="L in ['A','B','C','D']" :key="L" class="manual-opt" :class="{ on: manualPicks[no] === L }" @click="manualPick(no, L)">{{ L }}</text>
               </view>
             </scroll-view>
-            <view class="sheet-done" :class="{ dim: !manualPickedCount }" @click="manualSubmit">{{ manualSubmitting ? '判分中…' : '交卷判分（' + manualPickedCount + ' 题）' }}</view>
+            <view class="sheet-done" :class="{ dim: !manualPickedCount }" :aria-disabled="String(!manualPickedCount)" @click="manualSubmit">{{ manualSubmitting ? '判分中…' : '交卷判分（' + manualPickedCount + ' 题）' }}</view>
             <view class="manual-back" @click="manualPaper = null">‹ 换一份试卷</view>
           </template>
         </view>

@@ -19,7 +19,7 @@
         <text class="expchip" :class="{ on: withSheet && !only }" @click="only = false; withSheet = !withSheet">含答题卡</text>
       </view>
       <view class="opt-note">{{ only ? '只导出参考答案页，不含题目' : '导出题目' + (withAns ? ' + 答案解析' : '') + (withSheet ? ' + 机读答题卡' : '') }}</view>
-      <view class="confirm-btn" :class="{ dim: busy }" @click="onConfirm">{{ busy ? '正在生成 PDF…' : '确认导出' }}</view>
+      <view class="confirm-btn" :class="{ dim: busy }" :aria-disabled="String(!!busy)" @click="onConfirm">{{ busy ? '正在生成 PDF…' : '确认导出' }}</view>
     </view>
   </view>
 </template>
