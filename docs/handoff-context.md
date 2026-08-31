@@ -353,3 +353,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 实现：practice.vue `next()` 答到倒数第 3 题触发 `prefetchNextGroup()`，复用 prefetchPack/takePrefetch（键 module/limit/uid 与 home 预取一致）；仅普通练习（_plainStart 守卫，排除 submodule/adaptive/real/tag3/ziliao/daily/shizheng/bei）；过滤本组已现题 id；失败静默、每组一次。纯前端零后端。
 - 生产验收：1440+375 新 uid 真实 10 题——第 7 题预取请求+pack 落地，「再来一组」0 网络请求即开新组；溢出 0、console 0 error；测试数据已清理、保护 uid 零 mutation。设计文档 docs/iter/round-3/r100-midsession-prefetch.md。
 - 边界：daily/shizheng/bei 不触发为代码守卫未单独复验；答完不重试时浪费一次 10 行读。
+
+### R101（2026-08-31）：首载静态启动屏——消除慢网络首访白屏
+- 取证：RUM 实录真实用户首载 nav:16s/dom:7.5s/tx:10.6s，index.html #app 为空、Vue 挂载前全程白屏（历史 60/90s 聚簇同理）；明日 08:00 推送深链 /?daily=1 也走该路径。
+- 实现：index.html #app 内静态启动屏（logo+错题邦+副标题+CSS spinner，纯内联零请求），prefers-color-scheme 深色适配，Vue mount 整树替换无需清理。设计文档 docs/iter/round-3/r101-boot-splash.md。
+- 生产验收：1440+375 新 context 60KB/s 节流实测——加载期启动屏全屏可见，挂载后移除、首页正常、溢出 0、console 0 error。已订阅 SW 的存量客户端拿旧壳无启动屏，随 R71 壳更新通道自然获得。
