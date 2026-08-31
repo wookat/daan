@@ -394,3 +394,12 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：/s/{sid} 分享落地页 og:title/description/url 齐全但 og:image 为 0（curl 实测），og 抓取端分享卡无缩略图；root 与 /tiku 页族 og:image 指向 512×512 方形 logo.png（标准推荐 1200×630 横版）。分享回路有真实流量（近 3 日 share_open 15、pk_result_open 7）。首页新访客 CTA 复测 3 次 ~1s 直入题组（首次 33s 为孤例未立项）。
 - 实现：新增品牌分享卡 frontend-uni/src/static/og-card.png（1200×630，渐变 #2e5bff→#4c7dff+站名+价值主张+特性 chips），scripts/gen_og_card.py（PIL+仓库内 NotoSansSC-Bold）可复现生成；seo.py share_landing 补 og:image/twitter:image、twitter:card 升 summary_large_image；seo.py _page 与 index.html og:image 换 og-card.png。静态单图不做按题动态出图；零 DB/零边缘缓存改动。设计文档 docs/iter/round-3/r109-social-share-card.md。
 - 生产验收（PR #287）：/s/fsb75lki、/tiku/、/ 三处 og:image 均指向 og-card.png 且 twitter:card=summary_large_image；/static/og-card.png 200（40888B，实测 1200×630）；1440+375 首页与 375 分享落地页回归溢出 0、console 0 error。本轮无测试数据写入（30h 窗口 growth_events/answer_log/daily_set_entries 均 0 新增）、保护 uid 零 mutation。
+
+### R121–R125（2026-08-31）：离线错误态/首页 LCP/键盘可达性/SSR 深色模式/窗口复审计
+- R121（PR #299）：断网直入未缓存路由的 uni async-error 死胡同——仅离线替换文案+online 事件自动重试（App.vue 复用 markMain MutationObserver）；sw.js 静态资源不拦截策略保持。
+- R122（PR #300）：首页 LCP 3.2s→0.8s、perf 0.91→0.98——index.html 启动屏副标题扩为完整价值主张（16px/限宽），首绘制即承载最大文本块；/tiku 页族 Lighthouse 全绿无立项。
+- R123（PR #301）：SPA 键盘可达性从 0 到全站——src/a11y-focus.js 包一层 Element.addEventListener，click 绑定的 UNI-VIEW/TEXT/IMAGE/LABEL 自动 tabindex=0 + Enter/Space 激活 + :focus-visible 焦点环；role=button 延迟 rAF 只给叶子级短文本元素。axe 复扫 0 violations。
+- R124（PR #302）：/tiku SSR 页族深色模式——seo.py _CSS 颜色 token 化（:root 变量，亮色取值零变化）+ prefers-color-scheme 深色覆盖 + color-scheme meta；对比度 AA 自查通过。
+- R125（docs）：窗口复审计 docs/iter/round-3/r125-window-audit.md——48h 真实作答 16 uid/93 条；slow_load 仅 1 条慢网旧 bundle 样本不立项；push_subs 仍 0。
+- ⚠️ 观测陷阱：growth_events/answer_log 的 created_at 是 epoch float，`created_at > datetime('now',…)` 字符串比较静默返回空集（会误判零事件）；时间过滤必须用 time.time()-N 数值参数。
+- 合并链：#299→#300→#301→#302 依序合并即收口 R121–R124。
