@@ -61,8 +61,8 @@
         <view v-else-if="streakShown" class="hero-streak"><l-icon name="flame" :size="13" color="#ffffff" /><text>连续打卡 {{ streakShown }} 天</text></view>
       </view>
       <view class="hero-bar"><view class="hero-fill" :style="{ width: Math.min((todayCount / dailyGoal) * 100, 100) + '%' }" /></view>
-      <text v-if="dsMeta && dsDone" class="hero-ds">今日全站同题 · 已完成 答对 {{ dsDone.right }}/{{ dsDone.total }}<template v-if="dsDone.rank"> · 第 {{ dsDone.rank }} 名</template><template v-if="dsDone.streak >= 2"> · 🔥 连 {{ dsDone.streak }} 天</template></text>
-      <text v-else-if="dsMeta" class="hero-ds">今日全站同题 10 题 · {{ dsMeta.participants ? '已有 ' + dsMeta.participants + ' 人完成' : '来做今天第 1 人' }}</text>
+      <text v-if="dsMeta && dsDone" class="hero-ds">今日全站同题 · 已完成 答对 {{ dsDone.right }}/{{ dsDone.total }}<template v-if="dsDone.rank"> · 第 {{ dsDone.rank }} 名</template><template v-if="dsDone.streak >= 2"> · 🔥 连 {{ dsDone.streak }} 天</template><text class="hero-ds-arc" @click.stop="openDailyArchive">补练往期 ›</text></text>
+      <text v-else-if="dsMeta" class="hero-ds">今日全站同题 10 题 · {{ dsMeta.participants ? '已有 ' + dsMeta.participants + ' 人完成' : '来做今天第 1 人' }}<text class="hero-ds-arc" @click.stop="openDailyArchive">补练往期 ›</text></text>
       <view class="hero-acts">
         <view class="hero-btn main" @click="startDaily">{{ todayDone ? '再练一组 ›' : '继续目标 ›' }}</view>
         <view class="hero-btn sub" @click="openSetup">今日计划</view>
@@ -757,6 +757,22 @@ export default {
     startDaily() {
       this.launch({ kind: 'daily' });
     },
+    openDailyArchive() {
+      // 近 7 天往期每日一练（补练不计成绩/streak，复用 R78 往期链路）
+      const days = [];
+      for (let i = 1; i <= 7; i++) {
+        const d = new Date(Date.now() + 8 * 3600e3 - i * 86400e3).toISOString().slice(0, 10);
+        days.push(d);
+      }
+      const label = (d, i) => d + (i === 0 ? '（昨天）' : i === 1 ? '（前天）' : '');
+      uni.showActionSheet({
+        itemList: days.map(label),
+        success: (res) => {
+          trackEvent('daily_archive_open', days[res.tapIndex]);
+          this.launch({ kind: 'daily', date: days[res.tapIndex] });
+        },
+      });
+    },
     startPaper(p) {
       this.paperSheet = false;
       this.launch({ kind: 'paper', source: p.source, title: p.title });
@@ -1111,6 +1127,7 @@ export default {
 .hero-streak { display: inline-flex; align-items: center; gap: 8rpx; font-size: 22rpx; color: #fff; background: rgba(255, 255, 255, 0.18); border-radius: 8rpx; padding: 4rpx 16rpx; }
 .hero-bar { height: 12rpx; background: rgba(255, 255, 255, 0.25); border-radius: 999rpx; margin: 16rpx 0 24rpx; overflow: hidden; }
 .hero-ds { display: block; font-size: 22rpx; color: rgba(255, 255, 255, 0.85); margin: -8rpx 0 20rpx; }
+.hero-ds-arc { margin-left: 16rpx; text-decoration: underline; color: rgba(255, 255, 255, 0.75); }
 .hero-fill { height: 100%; background: var(--card); border-radius: 999rpx; transition: width 0.3s; }
 .hero-acts { display: flex; gap: 20rpx; }
 .hero-btn { min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 20rpx; font-size: 28rpx; font-weight: 600; }

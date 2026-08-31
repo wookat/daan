@@ -663,7 +663,7 @@ export default {
     if (launch && launch.kind) {
       uni.removeStorageSync('practiceLaunch');
       if (launch.kind === 'daily') {
-        this.startDaily();
+        this.startDaily(launch.date);
         return;
       }
       if (launch.kind === 'shizheng') {
