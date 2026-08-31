@@ -11,7 +11,7 @@ import string
 import time
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
 from . import db
 from .auth import rate_limit
@@ -549,7 +549,7 @@ def api_share_answers(sid: str, uid: str):
 # ---------- 裂变埋点 ----------
 
 @router.post("/track")
-def api_track(body: dict):
+def api_track(body: dict, request: Request):
     event = str(body.get("event") or "").strip()[:32]
     if event not in {
         "share_open", "share_answer", "team_join_open", "register",
@@ -562,12 +562,17 @@ def api_track(body: dict):
         raise HTTPException(400, "无效事件")
     uid = str(body.get("uid") or "").strip()[:64] or None
     rate_limit(f"track:{uid or 'anon'}", 60, 300)
+    ref = str(body.get("ref") or "")[:200 if event == "slow_load" else 32]
+    if event == "slow_load":
+        # 慢载事件服务端补 UA：旧 bundle 客户端不会自报，只有入库侧追加才能全量归因
+        ua = " ".join((request.headers.get("user-agent") or "").split())[:80]
+        if ua:
+            ref = f"{ref};ua:{ua}"[:300]
     conn = db.get_conn()
     conn.execute(
         "INSERT INTO growth_events (uid, event, source, ref, created_at) VALUES (?,?,?,?,?)",
-        # slow_load 携带导航/最慢资源耗时明细，需要更长 ref
         (uid, event, str(body.get("source") or "")[:16] or None,
-         str(body.get("ref") or "")[:200 if event == "slow_load" else 32] or None, time.time()),
+         ref or None, time.time()),
     )
     conn.commit()
     conn.close()
