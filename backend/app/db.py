@@ -944,6 +944,22 @@ def cn_day() -> str:
     return time.strftime("%Y-%m-%d", time.gmtime(time.time() + 8 * 3600))
 
 
+def daily_archive_day(date: str | None) -> str | None:
+    """校验往期每日一练日期：仅接受今天之前 7 天内的 ISO 日期，否则 None。"""
+    if not date:
+        return None
+    try:
+        d = time.strptime(str(date)[:10], "%Y-%m-%d")
+    except ValueError:
+        return None
+    day = time.strftime("%Y-%m-%d", d)
+    today = cn_day()
+    if day >= today:
+        return None
+    earliest = time.strftime("%Y-%m-%d", time.gmtime(time.time() + 8 * 3600 - 7 * 86400))
+    return day if day >= earliest else None
+
+
 def daily_set_ids(day: str) -> list[int]:
     """全站同题每日一练选题：每模块 2 题共 10 题，md5(day:qid) 最小者优先。
 
@@ -973,7 +989,8 @@ def daily_set_ids(day: str) -> list[int]:
             pool.sort(key=lambda q: hashlib.md5(f"{day}:{q}".encode()).hexdigest())
             ids.extend(pool[:2])
         conn.close()
-        _daily_set_cache.clear()
+        if len(_daily_set_cache) >= 16:
+            _daily_set_cache.clear()
         _daily_set_cache[day] = ids
         return ids
 

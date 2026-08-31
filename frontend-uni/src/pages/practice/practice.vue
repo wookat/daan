@@ -622,8 +622,8 @@ export default {
       }
       this._urlLaunch = { module, year: parseInt(query.year, 10) || null, source: query.source || 'seo' };
     } else if (query && query.daily) {
-      // 每日一练直达深链（同题挑战分享/SEO 页 CTA）
-      this._urlLaunch = { daily: true };
+      // 每日一练直达深链（同题挑战分享/SEO 页 CTA），date 可选指向往期题组
+      this._urlLaunch = { daily: true, date: query.date || '' };
     } else if (query && query.module) {
       // 仅带模块的深链（分享/外链直开）：直接开练该模块
       let module = query.module;
@@ -653,7 +653,7 @@ export default {
       const q = this._urlLaunch;
       this._urlLaunch = null;
       if (q.daily) {
-        this.startDaily();
+        this.startDaily(q.date);
         return;
       }
       this.start(q.module, null, null, false, q.year ? true : undefined, q.tag3, q.source, q.year);
@@ -1067,7 +1067,7 @@ export default {
       }
       uni.setStorageSync('favQuestions', this.favs);
     },
-    async startDaily() {
+    async startDaily(archiveDate) {
       this._daily = true;
       if (this.beiMode) {
         this.beiMode = false;
@@ -1080,10 +1080,14 @@ export default {
       try {
         // 首页预取的题组按日确定，date 匹配当日即可复用（秒开，不再等网络）
         const cnDay = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+        const past = archiveDate && archiveDate !== cnDay;
         const cached = uni.getStorageSync('dailySet');
-        const d = cached && cached.date === cnDay && (cached.items || []).length ? cached : await request('/api/daily_set');
+        const d = past
+          ? await request('/api/daily_set?date=' + encodeURIComponent(archiveDate))
+          : cached && cached.date === cnDay && (cached.items || []).length ? cached : await request('/api/daily_set');
         if (!d.items || !d.items.length) throw new Error('empty');
         this._dailyDate = d.date;
+        this._dailyPast = d.date !== cnDay;
         this.items = d.items.map((q) => ({ ...q, _saved: false }));
         this.idx = 0;
         this.picked = '';
@@ -1097,10 +1101,11 @@ export default {
         this.lastSubmodule = null;
         this.session = true;
         this.startQTimer();
-        uni.showToast({ title: '每日一练 · 今日全站同题', icon: 'none' });
+        uni.showToast({ title: this._dailyPast ? '往期每日一练 · ' + d.date : '每日一练 · 今日全站同题', icon: 'none' });
       } catch (e) {
         // 接口异常回退随机抽题，每日一练不因后端故障不可用
         this._dailyDate = '';
+        this._dailyPast = false;
         this.start(this.dailyModule);
       } finally {
         uni.hideLoading();
@@ -1110,6 +1115,14 @@ export default {
     markDailyDone() {
       if (!this._daily) return;
       this._daily = false;
+      const past = this._dailyPast;
+      this._dailyPast = false;
+      if (past) {
+        // 往期补练：成绩/榜单/streak 均为当日语义，不提交不打卡，完成页走普通成绩展示
+        this._dailyDate = '';
+        uni.showToast({ title: '往期补练完成', icon: 'none' });
+        return;
+      }
       this.daily.days[dayKey()] = true;
       uni.setStorageSync('dailyPlan', this.daily);
       uni.showToast({ title: '今日一练完成，打卡成功！', icon: 'none' });

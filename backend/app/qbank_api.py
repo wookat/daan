@@ -42,9 +42,9 @@ def api_shizheng_daily(date: str | None = None, limit: int = 10):
 
 
 @router.get("/api/daily_set")
-def api_daily_set():
-    """全站同题每日一练：uid 无关、当日确定，可边缘缓存。"""
-    day = db.cn_day()
+def api_daily_set(date: str | None = None):
+    """全站同题每日一练：uid 无关、按日确定，可边缘缓存；date 可选取近 7 天往期题组。"""
+    day = db.daily_archive_day(date) or db.cn_day()
     return {"date": day, "items": db.daily_set_questions(day), "stats": db.daily_set_stats(day)}
 
 

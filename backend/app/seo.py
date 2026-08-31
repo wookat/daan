@@ -262,9 +262,12 @@ def tiku_daily_noslash():
     return RedirectResponse("/tiku/daily/", status_code=301)
 
 
-@router.get("/daily/", response_class=HTMLResponse, include_in_schema=False)
-def tiku_daily():
-    day = db.cn_day()
+def _daily_archive_days(n: int = 7) -> list[str]:
+    now = time.time() + 8 * 3600
+    return [time.strftime("%Y-%m-%d", time.gmtime(now - i * 86400)) for i in range(1, n + 1)]
+
+
+def _render_daily(day: str, archived: bool):
     items = db.daily_set_questions(day)
     stats = db.daily_set_stats(day)
     cards = []
@@ -278,7 +281,10 @@ def tiku_daily():
             "</section>"
         )
     n = stats.get("participants") or 0
-    part = f"今天已有 {n} 人完成" if n else "来做今天第 1 位完成者"
+    if archived:
+        part = f"当日 {n} 人完成" if n else "当日题组可随时补练"
+    else:
+        part = f"今天已有 {n} 人完成" if n else "来做今天第 1 位完成者"
     board = db.daily_set_board(day, 10)
     board_html = ""
     if board:
@@ -288,27 +294,57 @@ def tiku_daily():
             + "</p>"
             for r in board
         )
-        board_html = f'<section class="card"><h2>今日排行榜（前 {len(board)} 名）</h2>{rows}</section>'
+        label = "当日排行榜" if archived else "今日排行榜"
+        board_html = f'<section class="card"><h2>{label}（前 {len(board)} 名）</h2>{rows}</section>'
+    if archived:
+        cta = (
+            f'<a class="cta" href="{_e(SITE_BASE)}/#/pages/practice/practice?daily=1&amp;date={_e(day)}">'
+            "去主站补练这期同题（免费）→</a>"
+        )
+        archive_html = '<p class="meta"><a href="/tiku/daily/">← 回今日每日一练</a></p>'
+    else:
+        cta = f'<a class="cta" href="{_e(SITE_BASE)}/#/pages/practice/practice?daily=1">去主站作答今日同题（免费）→</a>'
+        links = " · ".join(f'<a href="/tiku/daily/{d}/">{d}</a>' for d in _daily_archive_days())
+        archive_html = f'<section class="card"><h2>往期每日一练</h2><p class="meta">{links}</p></section>'
+    path = f"/tiku/daily/{day}/" if archived else "/tiku/daily/"
+    title_tag = "往期补练" if archived else "全站同题刷题"
+    crumbs = [("题库", "/tiku/"), ("每日一练", "/tiku/daily/" if archived else None)]
+    if archived:
+        crumbs.append((day, None))
     body = (
-        _crumb([("题库", "/tiku/"), ("每日一练", None)])
+        _crumb(crumbs)
         + f"<h1>每日一练（{_e(day)}）</h1>"
         + f'<p class="meta">全站同题 · 五大模块各 2 题共 10 题 · {_e(part)}，完成后可查看击败全站百分比</p>'
         + "".join(cards)
         + board_html
-        + f'<a class="cta" href="{_e(SITE_BASE)}/#/pages/practice/practice?daily=1">去主站作答今日同题（免费）→</a>'
+        + cta
+        + archive_html
     )
     return _page(
-        f"每日一练{day}_公务员考试全站同题刷题_错题邦",
+        f"每日一练{day}_公务员考试{title_tag}_错题邦",
         f"{day} 公务员考试每日一练：全站同题 10 道行测真题（五大模块各 2 题），在线作答查看解析，完成后可比较全站排名。",
-        "/tiku/daily/",
+        path,
         body,
         _collection_ld(
             f"每日一练（{day}）",
             "公务员考试每日一练，全站同题 10 道行测题目，附答案解析。",
-            "/tiku/daily/",
-            [("题库", "/tiku/"), ("每日一练", "/tiku/daily/")],
+            path,
+            [("题库", "/tiku/"), ("每日一练", "/tiku/daily/")] + ([(day, path)] if archived else []),
         ),
     )
+
+
+@router.get("/daily/", response_class=HTMLResponse, include_in_schema=False)
+def tiku_daily():
+    return _render_daily(db.cn_day(), archived=False)
+
+
+@router.get("/daily/{day}/", response_class=HTMLResponse, include_in_schema=False)
+def tiku_daily_archive(day: str):
+    valid = db.daily_archive_day(day)
+    if not valid:
+        return RedirectResponse("/tiku/daily/", status_code=301)
+    return _render_daily(valid, archived=True)
 
 
 @router.get("/discuss", include_in_schema=False)
@@ -948,6 +984,7 @@ def sitemap_pages():
         (_url("/tiku/discuss/"), None),
         (_url("/tiku/daily/"), None),
     ]
+    urls += [(_url(f"/tiku/daily/{d}/"), None) for d in _daily_archive_days()]
     for r in db.question_counts():
         if not _module_name(r["module"]):
             continue
