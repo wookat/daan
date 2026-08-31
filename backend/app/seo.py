@@ -101,7 +101,8 @@ def _page(title: str, description: str, canonical_path: str, body: str, jsonld: 
         f'<meta property="og:title" content="{_e(title)}">'
         f'<meta property="og:description" content="{_e(description)}">'
         f'<meta property="og:url" content="{_e(_url(canonical_path))}">'
-        f'<meta property="og:image" content="{_e(SITE_BASE)}/static/logo.png">'
+        f'<meta property="og:image" content="{_e(SITE_BASE)}/static/og-card.png">'
+        '<meta name="twitter:card" content="summary_large_image">'
         f"<style>{_CSS}</style>{ld}</head><body>"
         f'<header class="hdr"><div class="wrap"><a class="brand" href="/tiku/">错题邦 · 考公题库</a>'
         f'<a class="hdr-cta" href="/">去刷题</a></div></header>'
@@ -1092,9 +1093,11 @@ def share_landing(sid: str):
         f'<meta property="og:title" content="{_e(title)}">'
         f'<meta property="og:description" content="{_e(summary)}">'
         f'<meta property="og:url" content="{_e(page_url)}">'
-        f'<meta name="twitter:card" content="summary">'
+        f'<meta property="og:image" content="{_e(SITE_BASE)}/static/og-card.png">'
+        f'<meta name="twitter:card" content="summary_large_image">'
         f'<meta name="twitter:title" content="{_e(title)}">'
         f'<meta name="twitter:description" content="{_e(summary)}">'
+        f'<meta name="twitter:image" content="{_e(SITE_BASE)}/static/og-card.png">'
         f'<meta http-equiv="refresh" content="0;url={_e(spa)}">'
         f'<script>location.replace("{spa}"+location.search.replace("?","&"))</script>'
         f"</head><body><p>正在打开分享题目… "
