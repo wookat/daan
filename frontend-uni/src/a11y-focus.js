@@ -27,36 +27,38 @@ function visible(el) {
   return el.getClientRects().length > 0
 }
 
-function topMask() {
-  const masks = document.querySelectorAll('.mask')
-  for (let i = masks.length - 1; i >= 0; i--) {
-    if (visible(masks[i])) return masks[i]
-  }
-  return null
-}
-
 function maskFocusables(mask) {
   return Array.from(mask.querySelectorAll('[tabindex]')).filter(
     (el) => el !== mask && visible(el) && el.getAttribute('tabindex') !== '-1'
   )
 }
 
+const BASE_Z = 99
+
+// 弹层层级以「打开顺序栈」为唯一事实：多个 .mask 同 z-index 时 DOM 顺序
+// 决定层叠序，与打开顺序无关，会导致后开的弹层被盖住、Esc 关错层。
+// 入栈时按栈深提升 z-index，Esc/Tab/焦点均作用于栈顶。
 function initModalKeys() {
-  let openMask = null
-  let lastFocus = null
+  const stack = []
   const sync = () => {
-    const m = topMask()
-    if (m === openMask) return
-    if (m) {
-      if (!openMask) lastFocus = document.activeElement
-      openMask = m
-      const first = maskFocusables(m)[0]
-      if (first) first.focus()
-    } else {
-      openMask = null
-      if (lastFocus && lastFocus.isConnected && typeof lastFocus.focus === 'function') lastFocus.focus()
-      lastFocus = null
+    for (let i = stack.length - 1; i >= 0; i--) {
+      if (!stack[i].mask.isConnected || !visible(stack[i].mask)) {
+        const { lastFocus } = stack[i]
+        stack.splice(i, 1)
+        if (lastFocus && lastFocus.isConnected && typeof lastFocus.focus === 'function') lastFocus.focus()
+      }
     }
+    document.querySelectorAll('.mask').forEach((m) => {
+      if (!visible(m) || stack.some((s) => s.mask === m)) return
+      stack.push({ mask: m, lastFocus: document.activeElement })
+      m.style.zIndex = String(BASE_Z + stack.length)
+      let target = maskFocusables(m)[0]
+      if (!target) {
+        target = m.firstElementChild || m
+        target.setAttribute('tabindex', '-1')
+      }
+      target.focus()
+    })
   }
   const mo = new MutationObserver(sync)
   mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] })
@@ -64,18 +66,19 @@ function initModalKeys() {
     'keydown',
     (e) => {
       if (e.key !== 'Escape' && e.key !== 'Tab') return
-      const m = topMask()
-      if (!m) return
+      const top = stack.length ? stack[stack.length - 1] : null
+      if (!top) return
+      const m = top.mask
       if (e.key === 'Escape') {
         e.preventDefault()
         e.stopPropagation()
         m.click()
         return
       }
-      const items = maskFocusables(m)
-      if (!items.length) return
       e.preventDefault()
       e.stopPropagation()
+      const items = maskFocusables(m)
+      if (!items.length) return
       const i = items.indexOf(document.activeElement)
       let next
       if (e.shiftKey) next = i <= 0 ? items[items.length - 1] : items[i - 1]
