@@ -39,9 +39,10 @@ if (typeof window !== 'undefined') {
 		const qs = new URLSearchParams(location.search || '');
 		if (qs.get('daily') && (!location.hash || location.hash === '#/' || location.hash === '#')) {
 			const date = qs.get('date');
+			const src = qs.get('src');
 			location.replace(
 				location.origin + location.pathname +
-				'#/pages/practice/practice?daily=1' + (date ? '&date=' + encodeURIComponent(date) : '')
+				'#/pages/practice/practice?daily=1' + (date ? '&date=' + encodeURIComponent(date) : '') + (src ? '&src=' + encodeURIComponent(src) : '')
 			);
 		}
 	} catch (e) { /* 归一化失败保持原状 */ }

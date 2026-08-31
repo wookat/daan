@@ -92,7 +92,7 @@ def _send_daily():
         {
             "title": "每日一练已更新",
             "body": f"{day} 全站同题 10 题，来试试今天能击败多少人",
-            "url": "/#/pages/practice/practice?daily=1",
+            "url": "/#/pages/practice/practice?daily=1&src=push",
         },
         ensure_ascii=False,
     )

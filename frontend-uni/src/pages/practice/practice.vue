@@ -654,7 +654,7 @@ export default {
       this._urlLaunch = { module, year: parseInt(query.year, 10) || null, source: query.source || 'seo' };
     } else if (query && query.daily) {
       // 每日一练直达深链（同题挑战分享/SEO 页 CTA），date 可选指向往期题组
-      this._urlLaunch = { daily: true, date: query.date || '' };
+      this._urlLaunch = { daily: true, date: query.date || '', src: query.src || 'link' };
     } else if (query && query.module) {
       // 仅带模块的深链（分享/外链直开）：直接开练该模块
       let module = query.module;
@@ -685,7 +685,7 @@ export default {
       const q = this._urlLaunch;
       this._urlLaunch = null;
       if (q.daily) {
-        this.startDaily(q.date);
+        this.startDaily(q.date, q.src);
         return;
       }
       this.start(q.module, null, null, false, q.year ? true : undefined, q.tag3, q.source, q.year);
@@ -695,7 +695,7 @@ export default {
     if (launch && launch.kind) {
       uni.removeStorageSync('practiceLaunch');
       if (launch.kind === 'daily') {
-        this.startDaily(launch.date);
+        this.startDaily(launch.date, 'home');
         return;
       }
       if (launch.kind === 'shizheng') {
@@ -1099,7 +1099,8 @@ export default {
       }
       uni.setStorageSync('favQuestions', this.favs);
     },
-    async startDaily(archiveDate) {
+    async startDaily(archiveDate, src) {
+      trackEvent('daily_open', src || 'app', archiveDate ? 'archive:' + archiveDate : '');
       this._daily = true;
       if (this.beiMode) {
         this.beiMode = false;
@@ -1885,7 +1886,7 @@ export default {
         let txt = '我完成了错题邦 ' + this._dailyDoneDate + ' 每日一练（全站同题 ' + this.items.length + ' 题），答对 ' + this.right + ' 题';
         if (this.dailyStats.beat_pct != null) txt += '，击败全站 ' + this.dailyStats.beat_pct + '%';
         if (this.dailyStats.streak >= 2) txt += '，已连续参与 ' + this.dailyStats.streak + ' 天';
-        txt += '！同题挑战我：https://kaogong.zalize.com/#/pages/practice/practice?daily=1';
+        txt += '！同题挑战我：https://kaogong.zalize.com/#/pages/practice/practice?daily=1&src=share';
         trackEvent('share_result_copy', 'practice', 'daily');
         uni.setClipboardData({
           data: txt,

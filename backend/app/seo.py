@@ -306,12 +306,12 @@ def _render_daily(day: str, archived: bool):
         board_html = f'<section class="card"><h2>{label}（前 {len(board)} 名）</h2>{rows}</section>'
     if archived:
         cta = (
-            f'<a class="cta" href="{_e(SITE_BASE)}/#/pages/practice/practice?daily=1&amp;date={_e(day)}">'
+            f'<a class="cta" href="{_e(SITE_BASE)}/#/pages/practice/practice?daily=1&amp;date={_e(day)}&amp;src=seo">'
             "去主站补练这期同题（免费）→</a>"
         )
         archive_html = '<p class="meta"><a href="/tiku/daily/">← 回今日每日一练</a></p>'
     else:
-        cta = f'<a class="cta" href="{_e(SITE_BASE)}/#/pages/practice/practice?daily=1">去主站作答今日同题（免费）→</a>'
+        cta = f'<a class="cta" href="{_e(SITE_BASE)}/#/pages/practice/practice?daily=1&amp;src=seo">去主站作答今日同题（免费）→</a>'
         links = " · ".join(f'<a href="/tiku/daily/{d}/">{d}</a>' for d in _daily_archive_days())
         archive_html = f'<section class="card"><h2>往期每日一练</h2><p class="meta">{links}</p></section>'
     path = f"/tiku/daily/{day}/" if archived else "/tiku/daily/"
