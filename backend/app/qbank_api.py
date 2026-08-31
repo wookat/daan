@@ -48,6 +48,13 @@ def api_daily_set():
     return {"date": day, "items": db.daily_set_questions(day), "stats": db.daily_set_stats(day)}
 
 
+@router.get("/api/daily_set/board")
+def api_daily_set_board():
+    """今日排行榜：uid 无关（脱敏名），可边缘缓存。"""
+    day = db.cn_day()
+    return {"date": day, "items": db.daily_set_board(day)}
+
+
 @router.post("/api/daily_set/submit")
 def api_daily_set_submit(body: dict):
     uid = str(body.get("uid") or "").strip()[:64]

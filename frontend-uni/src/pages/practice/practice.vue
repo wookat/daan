@@ -188,6 +188,14 @@
         <template v-else-if="dailyStats.beat_pct == null">今日全站同题 · 你是今天第 1 位完成者</template>
         <template v-else>今日全站同题 · {{ dailyStats.participants }} 人完成 · 击败 {{ dailyStats.beat_pct }}%</template>
       </view>
+      <view v-if="!beiMode && dailyStats && dailyBoard.length" class="dsboard">
+        <view class="rr-t">今日排行榜<text v-if="dailyStats.my_rank" class="dsb-mine">我的名次：第 {{ dailyStats.my_rank }} 名</text></view>
+        <view v-for="r in dailyBoard" :key="r.rank" class="dsb-row">
+          <text class="dsb-rank" :class="{ top: r.rank <= 3 }">{{ r.rank }}</text>
+          <text class="dsb-name">{{ r.name }}</text>
+          <text class="dsb-score">答对 {{ r.right }}/{{ r.total }}<template v-if="r.secs"> · {{ fmtSecs(r.secs) }}</template></text>
+        </view>
+      </view>
       <view v-if="!beiMode && redoReport" class="redoreport">
         <view class="rr-t">错题重练效果</view>
         <view class="rr-row">
@@ -375,6 +383,7 @@ export default {
       resultSent: false,
       percentile: null,
       dailyStats: null,
+      dailyBoard: [],
       redoReport: null,
       examMode: false,
       examLeft: 0,
@@ -1111,7 +1120,10 @@ export default {
         method: 'POST',
         data: { uid: anonUid(), date, right: this.right, total: this.items.length, secs: this.totalSecs },
       })
-        .then((d) => { this.dailyStats = d; })
+        .then((d) => {
+          this.dailyStats = d;
+          return request('/api/daily_set/board').then((b) => { this.dailyBoard = (b && b.items) || []; });
+        })
         .catch(() => {});
     },
     _mapShizheng(q) {
@@ -1938,6 +1950,7 @@ export default {
       if (this.beiMode || this.resultSent || !this.items.length) return;
       this.dailyStats = null;
       this.resultSent = true;
+      this.dailyBoard = [];
       this.dueReview = 0;
       uni.removeStorageSync('pendingSession');
       try {
@@ -2316,6 +2329,13 @@ export default {
 .acard-n.skip { background: var(--line); color: var(--ink-2); }
 .beat { margin-top: 10rpx; font-size: 25rpx; color: var(--brand); background: var(--soft-bg); border-radius: 999rpx; padding: 10rpx 26rpx; }
 .redoreport { width: 100%; margin-top: 24rpx; background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 18rpx; padding: 24rpx 28rpx; box-sizing: border-box; text-align: left; }
+.dsboard { width: 100%; margin-top: 24rpx; background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 18rpx; padding: 24rpx 28rpx; box-sizing: border-box; text-align: left; }
+.dsb-mine { float: right; font-size: 23rpx; font-weight: 600; color: var(--brand); }
+.dsb-row { display: flex; align-items: center; gap: 16rpx; margin-top: 14rpx; }
+.dsb-rank { flex-shrink: 0; width: 40rpx; text-align: center; font-size: 24rpx; font-weight: 700; color: var(--ink-2); }
+.dsb-rank.top { color: var(--brand); }
+.dsb-name { flex: 1; min-width: 0; font-size: 25rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dsb-score { flex-shrink: 0; font-size: 23rpx; color: var(--ink-2); }
 .weakrf { width: 100%; margin-top: 24rpx; background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 18rpx; padding: 24rpx 28rpx; box-sizing: border-box; text-align: left; }
 .wr-row { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; margin-top: 18rpx; }
 .wr-l { display: flex; flex-direction: column; gap: 4rpx; min-width: 0; }

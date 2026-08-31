@@ -1016,13 +1016,31 @@ def daily_set_submit(day: str, uid: str, right: int, total: int, secs: float | N
     ).fetchone()
     my_right = mine["right"] if mine else right
     row = conn.execute(
-        "SELECT COUNT(*) n, SUM(CASE WHEN right < ? THEN 1 ELSE 0 END) b FROM daily_set_entries WHERE day=?",
-        (my_right, day),
+        "SELECT COUNT(*) n, SUM(CASE WHEN right < ? THEN 1 ELSE 0 END) b, "
+        "SUM(CASE WHEN right > ? THEN 1 ELSE 0 END) a FROM daily_set_entries WHERE day=?",
+        (my_right, my_right, day),
     ).fetchone()
     conn.close()
     participants = row["n"] or 0
     beat_pct = round(100 * (row["b"] or 0) / (participants - 1)) if participants > 1 else None
-    return {"participants": participants, "beat_pct": beat_pct, "my_right": my_right, "already": already}
+    # 名次只按答对数（比我分高的人数 + 1），同分并列不计用时
+    my_rank = (row["a"] or 0) + 1 if participants else None
+    return {"participants": participants, "beat_pct": beat_pct, "my_right": my_right, "my_rank": my_rank, "already": already}
+
+
+def daily_set_board(day: str, limit: int = 20) -> list[dict]:
+    conn = get_conn()
+    _ensure_daily_set(conn)
+    rows = conn.execute(
+        "SELECT uid, right, total, secs FROM daily_set_entries WHERE day=? "
+        "ORDER BY right DESC, COALESCE(secs, 9e9) ASC, created_at ASC LIMIT ?",
+        (day, limit),
+    ).fetchall()
+    conn.close()
+    return [
+        {"rank": i + 1, "name": r["uid"][:6] + "***", "right": r["right"], "total": r["total"], "secs": r["secs"]}
+        for i, r in enumerate(rows)
+    ]
 
 
 def submodule_counts(module: str) -> list[dict]:

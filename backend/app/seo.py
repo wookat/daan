@@ -279,11 +279,22 @@ def tiku_daily():
         )
     n = stats.get("participants") or 0
     part = f"今天已有 {n} 人完成" if n else "来做今天第 1 位完成者"
+    board = db.daily_set_board(day, 10)
+    board_html = ""
+    if board:
+        rows = "".join(
+            f'<p class="meta">{r["rank"]}. {_e(r["name"])} · 答对 {r["right"]}/{r["total"]}'
+            + (f' · 用时 {int(r["secs"])}"' if r.get("secs") else "")
+            + "</p>"
+            for r in board
+        )
+        board_html = f'<section class="card"><h2>今日排行榜（前 {len(board)} 名）</h2>{rows}</section>'
     body = (
         _crumb([("题库", "/tiku/"), ("每日一练", None)])
         + f"<h1>每日一练（{_e(day)}）</h1>"
         + f'<p class="meta">全站同题 · 五大模块各 2 题共 10 题 · {_e(part)}，完成后可查看击败全站百分比</p>'
         + "".join(cards)
+        + board_html
         + f'<a class="cta" href="{_e(SITE_BASE)}/#/pages/practice/practice?daily=1">去主站作答今日同题（免费）→</a>'
     )
     return _page(
