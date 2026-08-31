@@ -317,3 +317,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 实现：main.py `_warmup`（300s 周期）追加 `db.daily_set_ids(cn_day())` + 明日日期预热（选题 md5 确定性，预热明日=明日实际结果，跨日 00:00 首个用户也不吃冷扫描）。两行改动，零接口/依赖变化。
 - 生产验收：容器重建 1min 内 cache-busted 直连 origin 三连发 0.22–0.36s（对照改动前同条件 27s）；rev=b8860d9-dirty 一致、容器 healthy、部署脚本（R93 版）再次全程自然跑通 exit 0。设计文档 docs/iter/round-3/r94-daily-set-warmup.md。
 - 边界：真实 00:00 中国时区跨日边界未实测（代码路径与今日预热相同）；warmup 极端负载下变慢只影响后台线程。观察项：boot/daily_set_entries 自本轮起的真实增长曲线（下一轮取证输入）。
+
+### R95（2026-08-31）：边缘 stale-if-error——部署/假死窗口可缓存 GET 不再对外 502
+- 取证：origin 日志 24h 实录 502×85，按 10 分钟聚簇与 R92/R93/R94 三次部署容器重建窗口完全吻合（每窗 1–2 分钟），受害含 YandexBot（正在收录）与真实浏览器 UA；现状边缘缓存副本 TTL 一到即不可用，重建窗口无兜底。
+- 实现：CF 函数副本长存 24h（Cache-Control=86400）+ 自定义 X-Kg-Cached-At 判逻辑新鲜度——TTL 内 HIT（对外 Cache-Control 仍 60/300），过期回源，回源 5xx/fetch 异常回退陈旧副本标 X-Edge-Cache:STALE；uid API/POST/MISS/安全头/爬虫 403 全不动。仅改 deploy/cf-pages/functions/[[path]].js。
+- 生产验收：低峰受控演练 docker stop 容器 → 过期 /api/announcement 与 /api/question_counts 均 200+STALE，uid /api/home_bundle 照旧 502（R90 客户端快照兜底）；docker start 后 healthy 恢复。正常路径 MISS→HIT 语义与 R56 一致。设计文档 docs/iter/round-3/r95-edge-stale-if-error.md。
+- 边界：仅保护「曾被缓存过」的 URL（重建窗口首现 URL 仍 502）；STALE 最长陈旧 24h 仅在 origin 5xx 时使用。同轮复核：R88 爬虫拦截仍有效（Awario/Semrush 实测 403，日志中 07–08 时段的到达为当时窗口，09 时起仅 robots.txt）。
