@@ -4,8 +4,6 @@ import math
 import os
 import time
 
-from . import omr, qcode
-
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
@@ -21,6 +19,8 @@ from reportlab.platypus import (
     Table,
     TableStyle,
 )
+
+from . import omr, qcode
 
 _FONT = "KGSans"
 _MOD_NAMES = {
@@ -171,7 +171,7 @@ def build_paper_pdf(
         tag = f'<font size="7.5" color="#8F959E">[{code}]</font> ' if code else ""
         block = [Paragraph(f"<b>{i}.</b> {tag}{_esc(qtext)}", st["q"])]
         opts = q.get("options") or {}
-        keys = [k for k in ["A", "B", "C", "D", "E", "F"] if k in opts and opts[k]]
+        keys = [k for k in ["A", "B", "C", "D", "E", "F"] if opts.get(k)]
         segs = [f"{k}. {str(opts[k]).strip()}" for k in keys]
         per = _opts_per_line(segs, font, 10.5, avail=A4[0] - 32 * mm - 16)
         for j in range(0, len(keys), per):

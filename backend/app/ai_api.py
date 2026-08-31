@@ -142,7 +142,7 @@ async def api_explain_stream(
                     if raw_key and raw_key != key:
                         db.save_explain_cache(raw_key, meta, full)
             yield "event: done\ndata: {}\n\n"
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             yield "event: error\ndata: " + json.dumps({"message": friendly_ai_err(e)}, ensure_ascii=False) + "\n\n"
 
     return StreamingResponse(gen(), media_type="text/event-stream",

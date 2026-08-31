@@ -73,7 +73,7 @@ def bands(sh: int):
 
 
 def hamming(a: int, b: int) -> int:
-    return bin((a ^ b) & _MASK64).count("1")
+    return ((a ^ b) & _MASK64).bit_count()
 
 
 def jaccard(a: set, b: set) -> float:

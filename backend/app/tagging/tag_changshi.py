@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """常识判断（changshi）三级考点规则打标脚本。
 
 方法：
@@ -18,7 +17,8 @@ from collections import Counter
 # ---------------- taxonomy ----------------
 
 def load_taxonomy(path):
-    t = json.load(open(path, encoding="utf-8"))
+    with open(path, encoding="utf-8") as f:
+        t = json.load(f)
     mod = next(m for m in t["modules"] if m["key"] == "changshi")
     groups = {}       # group_code -> [topic codes]
     alias2group = {}  # submodule alias -> group_code

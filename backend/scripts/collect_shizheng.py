@@ -19,7 +19,7 @@ import re
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from app import llm  # noqa: E402
+from app import llm
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
 TOPICS_PATH = os.path.join(ROOT, "data", "shizheng_topics.json")
@@ -55,9 +55,7 @@ def _valid(q: dict) -> bool:
         return False
     if q.get("answer") not in ("A", "B", "C", "D"):
         return False
-    if not q.get("question") or not q.get("explanation"):
-        return False
-    return True
+    return bool(q.get("question") and q.get("explanation"))
 
 
 async def gen_topic(t: dict) -> list[dict]:
@@ -81,7 +79,7 @@ async def gen_topic(t: dict) -> list[dict]:
                         q["source_note"] = t["source_note"]
                     q["question"] = re.sub(r"\s+", " ", q["question"]).strip()
                 return qs
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             print(f"  [{t['id']}] 第{attempt + 1}次生成失败: {e}")
             await asyncio.sleep(RATE_LIMIT_SECS * 2)
     return []

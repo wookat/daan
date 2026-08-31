@@ -12,9 +12,10 @@ os.environ.pop("INDEXNOW_KEY", None)
 os.environ.pop("KG_VAPID_PRIVATE", None)
 os.environ.pop("KG_VAPID_PUBLIC", None)
 
+from fastapi.testclient import TestClient
+
 from app import db
 from app.main import app
-from fastapi.testclient import TestClient
 
 
 @pytest.fixture(scope="session")

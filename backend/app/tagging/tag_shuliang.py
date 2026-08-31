@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """数量关系（shuliang）三级考点规则打标脚本。
 
 两阶段：
@@ -15,7 +14,8 @@ from collections import Counter
 
 
 def load_taxonomy(path):
-    t = json.load(open(path, encoding="utf-8"))
+    with open(path, encoding="utf-8") as f:
+        t = json.load(f)
     for m in t["modules"]:
         if m["key"] == "shuliang":
             return m
@@ -444,11 +444,6 @@ def classify(d):
     q = d.get("question") or ""
     e = d.get("explanation") or ""
     sub = (d.get("submodule") or "").strip() or None
-    opts = d.get("options") or {}
-    if isinstance(opts, dict):
-        opt_text = " ".join(str(v) for v in opts.values())
-    else:
-        opt_text = str(opts)
     t = q + "\n" + e
     group = SUBMODULE_GROUP.get(sub) if sub else None
     if group is None:
@@ -468,8 +463,8 @@ def main():
     valid = {tp["code"] for g in mod["groups"] for tp in g["topics"]}
     stats = Counter()
     n = 0
-    with open(out_path, "w", encoding="utf-8") as out:
-        for line in open(untagged, encoding="utf-8"):
+    with open(out_path, "w", encoding="utf-8") as out, open(untagged, encoding="utf-8") as src:
+        for line in src:
             d = json.loads(line)
             code, conf = classify(d)
             if code != "UNKNOWN" and code not in valid:

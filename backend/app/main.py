@@ -22,6 +22,7 @@ from . import (
     insights,
     interview,
     mock_event,
+    monitor,
     pk,
     push_api,
     qbank_api,
@@ -33,7 +34,6 @@ from . import (
     team,
     zalize_sso,
 )
-from . import monitor
 from .deps import ACCESS_CODE
 
 _DOCS_OFF = os.environ.get("DISABLE_API_DOCS") == "1"

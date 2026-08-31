@@ -244,13 +244,13 @@ def _fts_ready(conn) -> bool:
         # 回填进度必须单独记在 fts_sync。
         conn.execute("CREATE TABLE IF NOT EXISTS fts_sync (k TEXT PRIMARY KEY, last_id INTEGER NOT NULL)")
         for name, ddl in [
-            ("question_fts_ai", "CREATE TRIGGER question_fts_ai AFTER INSERT ON questions BEGIN "
-                                "INSERT INTO question_fts(rowid, question) VALUES (new.id, new.question); END"),
-            ("question_fts_ad", "CREATE TRIGGER question_fts_ad AFTER DELETE ON questions BEGIN "
-                                "INSERT INTO question_fts(question_fts, rowid, question) VALUES ('delete', old.id, old.question); END"),
-            ("question_fts_au", "CREATE TRIGGER question_fts_au AFTER UPDATE OF question ON questions BEGIN "
-                                "INSERT INTO question_fts(question_fts, rowid, question) VALUES ('delete', old.id, old.question); "
-                                "INSERT INTO question_fts(rowid, question) VALUES (new.id, new.question); END"),
+            ("question_fts_ai", ("CREATE TRIGGER question_fts_ai AFTER INSERT ON questions BEGIN "
+                                 "INSERT INTO question_fts(rowid, question) VALUES (new.id, new.question); END")),
+            ("question_fts_ad", ("CREATE TRIGGER question_fts_ad AFTER DELETE ON questions BEGIN "
+                                 "INSERT INTO question_fts(question_fts, rowid, question) VALUES ('delete', old.id, old.question); END")),
+            ("question_fts_au", ("CREATE TRIGGER question_fts_au AFTER UPDATE OF question ON questions BEGIN "
+                                 "INSERT INTO question_fts(question_fts, rowid, question) VALUES ('delete', old.id, old.question); "
+                                 "INSERT INTO question_fts(rowid, question) VALUES (new.id, new.question); END")),
         ]:
             if not conn.execute("SELECT 1 FROM sqlite_master WHERE type='trigger' AND name=?", (name,)).fetchone():
                 conn.execute(ddl)

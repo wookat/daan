@@ -244,7 +244,7 @@ async def api_answer_stream(body: dict):
                 yield "data: " + json.dumps({"d": delta}, ensure_ascii=False) + "\n\n"
             _update_review(sid, full)
             yield "event: done\ndata: " + json.dumps({"session_id": sid, "summary": summary}) + "\n\n"
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             yield "event: error\ndata: " + json.dumps({"message": _friendly_ai_err(e)}, ensure_ascii=False) + "\n\n"
 
     return StreamingResponse(gen(), media_type="text/event-stream",
@@ -280,7 +280,7 @@ async def api_review_regen_stream(sid: int, body: dict):
             if full.strip():
                 _update_review(sid, full)
             yield "event: done\ndata: " + json.dumps({"session_id": sid}) + "\n\n"
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             yield "event: error\ndata: " + json.dumps({"message": _friendly_ai_err(e)}, ensure_ascii=False) + "\n\n"
 
     return StreamingResponse(gen(), media_type="text/event-stream",
@@ -294,7 +294,7 @@ async def api_answer(body: dict):
     try:
         scores, total, summary = await _grade(q, answer)
         review = await llm.chat(_review_prompt(q, answer, scores, summary))
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         raise HTTPException(502, _friendly_ai_err(e)) from e
     sid = _save_session(uid, q, answer, duration, scores, total, review)
     return {
