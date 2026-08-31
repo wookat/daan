@@ -23,6 +23,7 @@ from . import (
     interview,
     mock_event,
     pk,
+    push_api,
     qbank_api,
     report,
     seo,
@@ -142,6 +143,7 @@ app.include_router(mock_event.router)
 app.include_router(mock_event.admin_router)
 app.include_router(report.router)
 app.include_router(team.router)
+app.include_router(push_api.router)
 app.include_router(seo.router)
 app.include_router(seo.root_router)
 app.include_router(ai_api.router)
@@ -249,6 +251,8 @@ def _fts_backfiller():
 
 
 threading.Thread(target=_fts_backfiller, daemon=True).start()
+
+push_api.start_push_thread()
 
 _ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
 _H5_DIR = os.path.join(_ROOT, "frontend-uni", "dist", "build", "h5")

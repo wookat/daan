@@ -56,3 +56,37 @@ self.addEventListener('fetch', (e) => {
   // 静态资源（带 hash）不拦截：immutable 长缓存由 HTTP 缓存承担；
   // SW 内 Cache Storage 偶发挂起时连兜底 fetch 都发不出去，不 respondWith 让浏览器原生处理，挂起面归零
 });
+
+// Web Push：每日一练提醒（payload 由后端 push_api 下发 {title, body, url}）
+self.addEventListener('push', (e) => {
+  let d = {};
+  try {
+    d = e.data ? e.data.json() : {};
+  } catch (err) {
+    d = {};
+  }
+  e.waitUntil(
+    self.registration.showNotification(d.title || '错题邦', {
+      body: d.body || '',
+      icon: '/static/logo.png',
+      badge: '/static/logo.png',
+      data: { url: d.url || '/' },
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || '/';
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((cs) => {
+      for (const c of cs) {
+        if (c.url.startsWith(self.location.origin) && 'focus' in c) {
+          c.navigate(url);
+          return c.focus();
+        }
+      }
+      return self.clients.openWindow(url);
+    })
+  );
+});
