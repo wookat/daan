@@ -50,36 +50,42 @@ def _year_path(year: int, module: str) -> str:
 
 
 _CSS = (
+    ":root{--bg:#f6f7fb;--surface:#fff;--border:#e7e9f0;--text:#17181c;--muted:#6b7280;"
+    "--link:" + BRAND + ";--tag-bg:#eef3ff;--ans-bg:#ecfdf5;"
+    "--shadow:0 1px 2px rgba(23,24,28,.05);--shadow-hover:0 4px 12px rgba(23,24,28,.1)}"
+    "@media(prefers-color-scheme:dark){:root{--bg:#111827;--surface:#1f2937;--border:#374151;"
+    "--text:#f3f4f6;--muted:#9ca3af;--link:#7c9aff;--tag-bg:#26324d;--ans-bg:#123527;"
+    "--shadow:0 1px 2px rgba(0,0,0,.4);--shadow-hover:0 4px 12px rgba(0,0,0,.5)}}"
     "*{box-sizing:border-box}body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,"
     "'PingFang SC','HarmonyOS Sans','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif;"
-    "color:#17181c;background:#f6f7fb;line-height:1.7;font-size:16px}"
-    "a{color:" + BRAND + ";text-decoration:none}a:hover{text-decoration:underline}"
+    "color:var(--text);background:var(--bg);line-height:1.7;font-size:16px}"
+    "a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}"
     ".wrap{max-width:860px;margin:0 auto;padding:16px}"
-    ".hdr{background:#fff;border-bottom:1px solid #e7e9f0;padding:12px 0}"
+    ".hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 0}"
     ".hdr .wrap{padding-top:0;padding-bottom:0;display:flex;align-items:center;justify-content:space-between}"
-    ".hdr .brand{color:" + BRAND + ";font-weight:700;font-size:18px}.hdr .brand:hover{text-decoration:none}"
+    ".hdr .brand{color:var(--link);font-weight:700;font-size:18px}.hdr .brand:hover{text-decoration:none}"
     ".hdr-cta{background:" + BRAND + ";color:#fff!important;border-radius:999px;padding:6px 18px;"
     "font-size:14px;font-weight:600}.hdr-cta:hover{text-decoration:none;opacity:.92}"
-    ".card{background:#fff;border:1px solid #e7e9f0;border-radius:12px;padding:16px;margin:12px 0;"
-    "box-shadow:0 1px 2px rgba(23,24,28,.05)}"
-    ".crumb{font-size:13px;color:#6b7280;margin:10px 0}.crumb a{color:#6b7280}"
+    ".card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin:12px 0;"
+    "box-shadow:var(--shadow)}"
+    ".crumb{font-size:13px;color:var(--muted);margin:10px 0}.crumb a{color:var(--muted)}"
     "h1{font-size:22px;margin:10px 0}h2{font-size:17px;margin:8px 0}"
-    ".qlist{list-style:none;padding:0;margin:0}.qlist li{border-bottom:1px solid #e7e9f0;padding:10px 0}"
+    ".qlist{list-style:none;padding:0;margin:0}.qlist li{border-bottom:1px solid var(--border);padding:10px 0}"
     ".qlist li:last-child{border-bottom:none}"
-    ".tags{display:flex;flex-wrap:wrap;gap:8px}.tags a{background:#eef3ff;border-radius:16px;padding:4px 12px;"
+    ".tags{display:flex;flex-wrap:wrap;gap:8px}.tags a{background:var(--tag-bg);border-radius:16px;padding:4px 12px;"
     "font-size:14px;white-space:nowrap}"
-    ".meta{color:#6b7280;font-size:13px}"
+    ".meta{color:var(--muted);font-size:13px}"
     ".meta a,.ftr a{text-decoration:underline}"
-    ".opt{margin:6px 0;padding:8px 12px;border:1px solid #e7e9f0;border-radius:8px}"
-    ".ans{background:#ecfdf5;border-radius:8px;padding:12px;margin-top:10px}"
+    ".opt{margin:6px 0;padding:8px 12px;border:1px solid var(--border);border-radius:8px}"
+    ".ans{background:var(--ans-bg);border-radius:8px;padding:12px;margin-top:10px}"
     ".cta{display:inline-block;background:" + BRAND + ";color:#fff!important;border-radius:999px;"
     "padding:10px 24px;font-weight:600;margin:14px 0}"
     ".pager{display:flex;gap:12px;justify-content:center;margin:16px 0}.pager a,.pager span{padding:6px 14px;"
-    "background:#fff;border-radius:8px;border:1px solid #e7e9f0}"
-    ".ftr{color:#6b7280;font-size:13px;text-align:center;padding:20px 0}"
+    "background:var(--surface);border-radius:8px;border:1px solid var(--border)}"
+    ".ftr{color:var(--muted);font-size:13px;text-align:center;padding:20px 0}"
     "details summary{cursor:pointer;font-weight:600}"
     "@media(min-width:768px){.card{transition:box-shadow .15s ease}"
-    ".card:hover{box-shadow:0 4px 12px rgba(23,24,28,.1)}}"
+    ".card:hover{box-shadow:var(--shadow-hover)}}"
     "@media(max-width:480px){.wrap{padding:12px}h1{font-size:19px}}"
 )
 
@@ -109,6 +115,7 @@ def _page(
     return (
         '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        '<meta name="color-scheme" content="light dark">'
         f"<title>{_e(title)}</title>"
         f'<meta name="description" content="{_e(description)}">'
         '<meta property="og:type" content="website">'
