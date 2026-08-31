@@ -74,7 +74,7 @@
       <view class="sheet" @click.stop>
         <view class="sheet-h">
           <text class="sheet-t">答题卡</text>
-          <view class="sheet-x" @click="cardOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+          <view class="sheet-x" role="button" aria-label="关闭" @click="cardOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <view class="legend">
           <text class="lg"><text class="dot done"></text>已答</text>

@@ -76,7 +76,7 @@
     <view v-if="!noQid" class="inputbar">
       <view v-if="replyTo" class="replying">
         回复 {{ replyTo.nickname }}
-        <view class="rx" @click="replyTo = null"><l-icon name="x" :size="14" color="#8a90a0" /></view>
+        <view class="rx" role="button" aria-label="取消回复" @click="replyTo = null"><l-icon name="x" :size="14" color="#8a90a0" /></view>
       </view>
       <view class="inputrow">
         <textarea

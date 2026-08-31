@@ -68,7 +68,7 @@
         <view class="sheet" @click.stop>
           <view class="sheet-h">
             <text class="sheet-t">练习工具</text>
-            <view class="sheet-x" @click="toolsOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+            <view class="sheet-x" role="button" aria-label="关闭" @click="toolsOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
           </view>
           <view class="tool-row" @click="cycleFont">
             <text class="tool-name">字号大小</text>
@@ -276,7 +276,7 @@
       <view class="sheet" @click.stop>
         <view class="sheet-h">
           <text class="sheet-t">答题卡</text>
-          <view class="sheet-x" @click="cardOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+          <view class="sheet-x" role="button" aria-label="关闭" @click="cardOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <view class="acard-grid">
           <view
@@ -297,7 +297,7 @@
       <view class="sheet" @click.stop>
         <view class="sheet-h">
           <text class="sheet-t">题目纠错</text>
-          <view class="sheet-x" @click="reportOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+          <view class="sheet-x" role="button" aria-label="关闭" @click="reportOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <view class="rp-types">
           <text

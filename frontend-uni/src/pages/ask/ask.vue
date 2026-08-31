@@ -186,7 +186,7 @@
       <view class="sheet" @click.stop>
         <view class="sheet-h">
           <text class="sheet-t">粘贴题目文字</text>
-          <view class="sheet-x" @click="textOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+          <view class="sheet-x" role="button" aria-label="关闭" @click="textOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <textarea v-model="qtext" class="ta" placeholder="粘贴题干和选项…" :maxlength="-1" auto-height />
         <text class="label">你选的答案（可选，填了会帮你分析错因）</text>
@@ -202,7 +202,7 @@
       <view class="sheet" @click.stop>
         <view class="sheet-h">
           <text class="sheet-t">确认题目图片</text>
-          <view class="sheet-x" @click="clearImage"><l-icon name="x" :size="20" color="#6b7280" /></view>
+          <view class="sheet-x" role="button" aria-label="移除图片" @click="clearImage"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <image :src="imagePath" mode="widthFix" class="preview" />
         <text class="label">你选的答案（可选，填了会帮你分析错因）</text>
@@ -218,7 +218,7 @@
       <view class="sheet" @click.stop>
         <view class="sheet-h">
           <text class="sheet-t">历史会话</text>
-          <view class="sheet-x" @click="historyOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+          <view class="sheet-x" role="button" aria-label="关闭" @click="historyOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <view v-if="!sessions.length" class="rec-empty">
           <text class="rec-e1">还没有历史会话</text>

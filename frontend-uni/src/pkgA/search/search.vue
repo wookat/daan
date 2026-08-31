@@ -4,7 +4,7 @@
       <view class="sbox">
         <l-icon name="search" :size="18" color="#9ca3af" />
         <input v-model="kw" class="sinput" placeholder="题号 / 题干关键词 / 考点名" confirm-type="search" focus @confirm="doSearch" @input="onInput" />
-        <view v-if="kw" class="sclear" @click="kw = ''; result = null"><l-icon name="x" :size="16" color="#8a90a0" /></view>
+        <view v-if="kw" class="sclear" role="button" aria-label="清空搜索" @click="kw = ''; result = null"><l-icon name="x" :size="16" color="#8a90a0" /></view>
       </view>
       <text class="scancel" @click="goBack">取消</text>
     </view>

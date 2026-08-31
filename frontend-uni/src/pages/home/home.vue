@@ -192,7 +192,7 @@
         <text class="ann-t">{{ announce.title }}</text>
         <text v-if="announce.body" class="ann-b">{{ announce.body }}</text>
       </view>
-      <view class="ann-x" @click="dismissAnn"><l-icon name="x" :size="16" color="#0369a1" /></view>
+      <view class="ann-x" role="button" aria-label="关闭公告" @click="dismissAnn"><l-icon name="x" :size="16" color="#0369a1" /></view>
     </view>
 
     <!-- 时政每日一练 -->
@@ -311,7 +311,7 @@
         <view class="grab" />
         <view class="sheet-h">
           <text class="sheet-t">练习设置</text>
-          <view class="sheet-x" @click="customOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+          <view class="sheet-x" role="button" aria-label="关闭" @click="customOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <view class="setrow">
           <view class="set-kwrap"><text class="set-k">每日目标</text><text class="set-sub">今天合计要练的题数</text></view>
@@ -368,7 +368,7 @@
         <view class="grab" />
         <view class="sheet-h">
           <text class="sheet-t">制定学习计划 · {{ ['考试信息', '目标', '每日时长'][setupStep - 1] }}（{{ setupStep }}/3）</text>
-          <view class="sheet-x" @click="setupOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+          <view class="sheet-x" role="button" aria-label="关闭" @click="setupOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <template v-if="setupStep === 1">
           <view class="setrow">
@@ -429,7 +429,7 @@
         <view class="grab" />
         <view class="sheet-h">
           <text class="sheet-t">真题卷库 · 选择试卷</text>
-          <view class="sheet-x" @click="paperSheet = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+          <view class="sheet-x" role="button" aria-label="关闭" @click="paperSheet = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <view v-if="!papers.length" class="spin">试卷加载中…</view>
         <scroll-view v-if="paperRegions.length > 1" scroll-x class="pr-scroll">
@@ -449,7 +449,7 @@
         <view class="grab" />
         <view class="sheet-h">
           <text class="sheet-t">{{ modName(subSelect) }} · 选择题型</text>
-          <view class="sheet-x" @click="subSelect = null"><l-icon name="x" :size="20" color="#6b7280" /></view>
+          <view class="sheet-x" role="button" aria-label="关闭" @click="subSelect = null"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <view class="sub-chip all-chip" @click="startPreset(subSelect)">
           <text class="sub-name">全部随机</text>

@@ -16,7 +16,7 @@
       </view>
       <view v-if="fltOpen" class="mask" @click="fltOpen = false">
         <view class="sheet" @click.stop>
-          <view class="sheet-h"><text class="sheet-t">筛选</text><view class="sheet-x" @click="fltOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view></view>
+          <view class="sheet-h"><text class="sheet-t">筛选</text><view class="sheet-x" role="button" aria-label="关闭" @click="fltOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view></view>
           <view class="sheet-k">题型</view>
           <view class="chips">
             <text v-for="t in QTYPES" :key="t" class="chip sm" :class="{ on: qtype === t }" @click="setQtype(t)">{{ t }}</text>
