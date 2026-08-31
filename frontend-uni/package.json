@@ -36,7 +36,8 @@
     "build:quickapp-webview-huawei": "uni build -p quickapp-webview-huawei",
     "build:quickapp-webview-union": "uni build -p quickapp-webview-union",
     "sync-brand": "node scripts/sync-brand-tokens.mjs",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "test": "vitest run"
   },
   "dependencies": {
     "@capacitor-community/file-opener": "8.0.1",
@@ -79,7 +80,8 @@
     "eslint-plugin-vue": "^10.6.2",
     "rollup": "4.63.0",
     "sass": "^1.99.0",
-    "vite": "5.2.8"
+    "vite": "5.2.8",
+    "vitest": "^4.1.11"
   },
   "overrides": {
     "adm-zip": ">=0.6.0",

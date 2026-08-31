@@ -5,6 +5,7 @@ import App from "./App.vue";
 
 // #ifdef H5
 import "./pwa.js"; // 尽早注册 beforeinstallprompt 监听，供「我的」页安装入口使用
+import { normalizeDailyDeepLink } from "./deeplink.js";
 // 集中式错误监控（审计 P1-7）：未捕获 JS 错误同源上报 /api/monitor/report，由后端转发中心收集器
 if (typeof window !== 'undefined') {
 	const mSeen = new Set();
@@ -36,15 +37,8 @@ if (typeof window !== 'undefined') {
 // 根路径查询深链归一化：/?daily=1[&date=…] 是对外短链（推送/分享），uni h5 router 只识别 hash 路由，启动前改写为练习页 hash 深链
 if (typeof window !== 'undefined') {
 	try {
-		const qs = new URLSearchParams(location.search || '');
-		if (qs.get('daily') && (!location.hash || location.hash === '#/' || location.hash === '#')) {
-			const date = qs.get('date');
-			const src = qs.get('src');
-			location.replace(
-				location.origin + location.pathname +
-				'#/pages/practice/practice?daily=1' + (date ? '&date=' + encodeURIComponent(date) : '') + (src ? '&src=' + encodeURIComponent(src) : '')
-			);
-		}
+		const target = normalizeDailyDeepLink(location.search, location.hash);
+		if (target) location.replace(location.origin + location.pathname + target);
 	} catch (e) { /* 归一化失败保持原状 */ }
 }
 
