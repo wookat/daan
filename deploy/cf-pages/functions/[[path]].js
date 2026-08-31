@@ -55,6 +55,12 @@ export async function onRequest({ request, waitUntil }) {
   }
   const req = new Request(ORIGIN + url.pathname + url.search, request);
   req.headers.set("X-Forwarded-Host", url.hostname);
+  // 显式透传真实客户端 IP/UA：Workers 出网会重写 CF-Connecting-IP，
+  // 自定义头不受影响，供 origin 访问日志与 slow_load 归因使用
+  const clientIp = request.headers.get("CF-Connecting-IP");
+  if (clientIp) req.headers.set("X-Kg-Ip", clientIp);
+  const clientUa = request.headers.get("User-Agent");
+  if (clientUa) req.headers.set("X-Kg-Ua", clientUa);
   const upstream = await fetch(req);
   const resp = new Response(upstream.body, upstream);
   for (const [k, v] of Object.entries(SECURITY_HEADERS)) resp.headers.set(k, v);

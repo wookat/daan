@@ -15,6 +15,11 @@
 - 部署：`deploy/deploy_h5.sh` 新增 4c 步（需 `CLOUDFLARE_API_TOKEN`），
   服务器 rsync + 容器重建照旧（origin 仍需完整 dist 供 SSR/兜底）。
 - **回滚**：把 `kaogong.zalize.com` DNS 改回 `A 150.109.230.174 dns-only` 即恢复纯服务器架构。
+- **origin 访问日志**（R85）：全量真实流量经 `kaogong-origin.zalize.com` 回源，该
+  Caddy 站点块须配置 access log（JSON、roll_size 50MiB、roll_keep 14、336h），
+  输出 `/var/log/caddy/kaogong-origin.zalize.com-access.log`；functions 代理层会
+  在回源请求上附加 `X-Kg-Ip`（真实客户端 IP）与 `X-Kg-Ua`（原始 UA），
+  归因故障时以该日志为准（`kaogong.zalize.com` 块的日志自 CF Pages 迁移后不再有流量）。
 
 ## 旧方案（仍是回源层）：现有服务器 + Caddy/Nginx 反代 + kaogong.zalize.com
 
