@@ -1398,6 +1398,26 @@ export default {
       if (this._lastStartArgs) this.start(...this._lastStartArgs);
       else this.start(uni.getStorageSync('lastModule') || null);
     },
+    // 练习中场静默预取下一组，「再来一组」命中 prefetchPack 零等待
+    prefetchNextGroup() {
+      if (!this._plainStart || this._prefetched || this.beiMode || this._daily || this._shizheng) return;
+      this._prefetched = true;
+      const module = this.lastModule || '';
+      const limit = this.groupSize || 10;
+      const uid = uni.getStorageSync('anonUid') || '';
+      const pk = uni.getStorageSync('prefetchPack');
+      if (pk && pk.module === module && pk.limit === limit && pk.uid === uid && Date.now() - pk.ts < 5 * 60 * 1000) return;
+      const seen = new Set(this.items.map((q) => q.id));
+      request(
+        '/api/questions?limit=' + limit + (uid ? '&uid=' + encodeURIComponent(uid) : '') + (module ? '&module=' + module : ''),
+        { timeout: 45000 }
+      )
+        .then((d) => {
+          const items = ((d && d.items) || []).filter((q) => !seen.has(q.id));
+          if (items.length) uni.setStorageSync('prefetchPack', { module, limit, uid, items, ts: Date.now() });
+        })
+        .catch(() => {});
+    },
     takePrefetch(module, limit, uid, submodule, adaptive, forceReal, tag3) {
       if (submodule || adaptive || forceReal || tag3 || this.realMode) return null;
       const pk = uni.getStorageSync('prefetchPack');
@@ -1468,6 +1488,9 @@ export default {
           return;
         }
         this.items = d.items.map((q) => ({ ...q, _saved: false }));
+        this._plainStart =
+          !(submodule || adaptive || forceReal || tag3 || this.realMode) && module !== 'ziliao';
+        this._prefetched = false;
         this.idx = 0;
         this.picked = '';
         this.right = 0;
@@ -2041,6 +2064,7 @@ export default {
       }
       this.idx++;
       this.picked = (this.items[this.idx] && this.items[this.idx]._picked) || '';
+      if (this.session && this.idx >= this.items.length - 3) this.prefetchNextGroup();
       if (this.cur && !this.picked) this.startQTimer();
       else this.stopQTimer();
       if (!this.cur) {
