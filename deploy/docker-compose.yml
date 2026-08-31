@@ -28,6 +28,25 @@ services:
       - MONITOR_KEY=${MONITOR_KEY:-}
     volumes:
       - kaogong-data:/data
+    labels:
+      - autoheal=true
+    # 宿主级内存-IO 颠簸可致 uvicorn 假死（进程在、请求全挂），健康检查持续失败时由 autoheal 重启
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=20)"]
+      interval: 60s
+      timeout: 25s
+      retries: 5
+      start_period: 180s
+
+  autoheal:
+    image: willfarrell/autoheal:latest
+    restart: always
+    environment:
+      - AUTOHEAL_CONTAINER_LABEL=autoheal
+      - AUTOHEAL_INTERVAL=30
+      - AUTOHEAL_DEFAULT_STOP_TIMEOUT=30
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 
 volumes:
   kaogong-data:

@@ -70,6 +70,16 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && location
 				return m ? m[1] : '';
 			} catch (e) { return ''; }
 		};
+		// boot 版本心跳：每客户端每日至多 1 条，度量活跃客户端的 bundle 版本分布（陈旧壳自愈效果/功能投放面分母）
+		setTimeout(() => {
+			try {
+				const day = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+				if (localStorage.getItem('kg_boot_day') === day) return;
+				localStorage.setItem('kg_boot_day', day);
+				const sw = navigator.serviceWorker && navigator.serviceWorker.controller ? 1 : 0;
+				import('./api.js').then(({ trackEvent }) => trackEvent('boot', 'h5', `v:${runningHash() || '-'};sw:${sw}`));
+			} catch (e) { /* 心跳失败不影响主流程 */ }
+		}, 6000);
 		// 慢加载 RUM：偶发 ~40s 壳/chunk 长尾在服务端无痕（疑 SW/客户端侧），上报导航与最慢资源耗时取证。
 		// 5s 首查 + 65s 复查（捕捉 40s 级迟到完成的资源，只上报一次）
 		let rumSent = false;

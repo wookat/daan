@@ -30,11 +30,16 @@ const API_CACHE_ALLOWLIST = new Set([
   "/api/comments/plaza",
 ]);
 
+// 无获客价值的商业爬虫（舆情/SEO 工具）：每条 /tiku/q/* URL 各异使边缘缓存失效，
+// 全部穿透共享 origin SSR；在边缘直接 403，robots.txt 放行以便其读到禁抓声明。
+const BLOCKED_BOT_UA = /awariobot|semrushbot|ahrefsbot|mj12bot|dotbot|petalbot/i;
+
 function isEdgeCacheable(request, url) {
   if (request.method !== "GET") return false;
   if (url.pathname.startsWith("/tiku")) return true;
   // /s/* 分享落地页：输出仅依赖 sid（OG + 跳 SPA），动态内容都在 SPA 内走 API
   if (url.pathname.startsWith("/s/")) return true;
+  if (url.pathname.startsWith("/sitemap") || url.pathname === "/robots.txt") return true;
   return (
     API_CACHE_ALLOWLIST.has(url.pathname) &&
     !request.headers.has("Authorization") &&
@@ -42,8 +47,14 @@ function isEdgeCacheable(request, url) {
   );
 }
 
-export async function onRequest({ request, waitUntil }) {
+export async function onRequest({ request, env, waitUntil }) {
   const url = new URL(request.url);
+  if (
+    url.pathname !== "/robots.txt" &&
+    BLOCKED_BOT_UA.test(request.headers.get("User-Agent") || "")
+  ) {
+    return new Response("Forbidden", { status: 403 });
+  }
   const cacheable = isEdgeCacheable(request, url);
   if (cacheable) {
     const hit = await caches.default.match(request.url);
@@ -55,6 +66,14 @@ export async function onRequest({ request, waitUntil }) {
   }
   const req = new Request(ORIGIN + url.pathname + url.search, request);
   req.headers.set("X-Forwarded-Host", url.hostname);
+  // 显式透传真实客户端 IP/UA：Workers 出网会重写 CF-Connecting-IP，
+  // 自定义头不受影响，供 origin 访问日志与 slow_load 归因使用
+  const clientIp = request.headers.get("CF-Connecting-IP");
+  if (clientIp) req.headers.set("X-Kg-Ip", clientIp);
+  const clientUa = request.headers.get("User-Agent");
+  if (clientUa) req.headers.set("X-Kg-Ua", clientUa);
+  // 共享密钥头：origin Caddy 只放行带此头的请求，拒绝绕过边缘缓存的直连爬虫
+  if (env.KG_EDGE_KEY) req.headers.set("X-Kg-Edge", env.KG_EDGE_KEY);
   const upstream = await fetch(req);
   const resp = new Response(upstream.body, upstream);
   for (const [k, v] of Object.entries(SECURITY_HEADERS)) resp.headers.set(k, v);
@@ -64,9 +83,11 @@ export async function onRequest({ request, waitUntil }) {
     resp.headers.delete("X-Robots-Tag");
   }
   const isApi = url.pathname.startsWith("/api/");
-  const ctOk = (resp.headers.get("content-type") || "").includes(
-    isApi ? "application/json" : "text/html"
-  );
+  const ct = resp.headers.get("content-type") || "";
+  const ctOk =
+    url.pathname.startsWith("/sitemap") || url.pathname === "/robots.txt"
+      ? ct.includes("xml") || ct.includes("text/plain")
+      : ct.includes(isApi ? "application/json" : "text/html");
   if (cacheable && resp.status === 200 && ctOk) {
     const ttl = isApi ? API_EDGE_CACHE_TTL : EDGE_CACHE_TTL;
     const [body, cacheBody] = resp.body.tee();

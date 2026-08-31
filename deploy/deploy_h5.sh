@@ -41,6 +41,11 @@ step "2/6 生产 .env 预检"
 sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" "test -s $REMOTE_DIR/deploy/.env" \
   || { echo "FAIL: 生产 $REMOTE_DIR/deploy/.env 不存在或为空（轮40曾被 rsync --delete 误删导致密钥丢失），先恢复再部署！"; exit 1; }
 
+BUILD_REV=$(git -C "$REPO_DIR" rev-parse --short HEAD)
+git -C "$REPO_DIR" diff --quiet HEAD -- backend || BUILD_REV="$BUILD_REV-dirty"
+echo "$BUILD_REV" > "$REPO_DIR/backend/BUILD_REV"
+echo "本机后端 rev: $BUILD_REV"
+
 step "3/6 rsync backend/deploy/dist 到生产"
 (cd "$REPO_DIR" && sshpass -e rsync -azR --delete -e "ssh ${SSH_OPTS[*]}" \
   backend deploy frontend knowledge frontend-uni/dist "$REMOTE:$REMOTE_DIR/" \
@@ -53,6 +58,15 @@ sleep 8
 sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" \
   "docker inspect deploy-kaogong-1 --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -q '^ADMIN_TOKEN=..'" \
   || { echo "FAIL: 容器 ADMIN_TOKEN 为空，.env 未正确注入！"; exit 1; }
+
+step "4a 线上后端 rev 校验"
+ONLINE_REV=$(curl -s "$SITE/api/health" | grep -o '"rev":"[^"]*"' | cut -d'"' -f4)
+echo "线上后端 rev: $ONLINE_REV"
+if [[ "$ONLINE_REV" != "$BUILD_REV" ]]; then
+  echo "FAIL: 线上后端 rev ($ONLINE_REV) != 本机 ($BUILD_REV)，容器未用新代码重建！"
+  exit 1
+fi
+echo "OK: 线上后端与本机代码一致"
 
 step "4b 容器预热（读接口拉升 OS 页缓存，消除冷启动长尾）"
 for u in "/api/stats" \
