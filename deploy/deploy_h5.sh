@@ -51,6 +51,18 @@ step "3/6 rsync backend/deploy/dist 到生产"
   backend deploy frontend knowledge frontend-uni/dist "$REMOTE:$REMOTE_DIR/" \
   --exclude '.git' --exclude '__pycache__' --exclude 'node_modules' --exclude '.env')
 
+step "3b 边缘缓存预热（重建前刷新入口级可缓存副本，容器重建窗口内 stale-if-error 必有副本可退）"
+for u in "/tiku/" "/tiku/daily/" "/tiku/discuss/" "/robots.txt" "/sitemap.xml" \
+         "/api/announcement" "/api/question_counts" "/api/daily_set" \
+         "/api/submodules?module=yanyu" "/api/submodules?module=changshi" \
+         "/api/submodules?module=panduan" "/api/submodules?module=shuliang" \
+         "/api/submodules?module=ziliao" \
+         "/api/real_filters" "/api/papers" "/api/comments/plaza"; do
+  code=$(curl -s -o /dev/null --max-time 30 -w "%{http_code}" "$SITE$u" || true)
+  echo "prime $u -> ${code:-fail}"
+  [[ "$code" == "200" ]] || echo "  WARN: 预热非 200（不阻塞部署）"
+done
+
 step "4/6 重建容器（远端后台执行 + rev/StartedAt 轮询收敛，防高负载宿主 ssh 通道挂起）"
 PREV_STARTED=$(sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" \
   "docker inspect deploy-kaogong-1 --format '{{.State.StartedAt}}' 2>/dev/null" || true)
