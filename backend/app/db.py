@@ -916,6 +916,110 @@ def question_counts() -> list[dict]:
     return [dict(r) for r in rows]
 
 
+_DAILY_SET_MODULES = ["yanyu", "panduan", "shuliang", "ziliao", "changshi"]
+_daily_set_cache: dict[str, list[int]] = {}
+_daily_set_lock = threading.Lock()
+
+
+def _ensure_daily_set(conn):
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS daily_set_entries (
+            day TEXT NOT NULL,
+            uid TEXT NOT NULL,
+            right INTEGER NOT NULL,
+            total INTEGER NOT NULL,
+            secs REAL,
+            created_at REAL NOT NULL,
+            PRIMARY KEY (day, uid)
+        )"""
+    )
+
+
+def daily_set_ids(day: str) -> list[int]:
+    """全站同题每日一练选题：每模块 2 题共 10 题，md5(day:qid) 最小者优先。
+
+    哈希选择对题库增删稳定（新增题最多顶掉一题），重启重算结果一致。
+    """
+    with _daily_set_lock:
+        if day in _daily_set_cache:
+            return _daily_set_cache[day]
+        conn = get_conn()
+        ids: list[int] = []
+        for mod in _DAILY_SET_MODULES:
+            pool = [
+                r["id"]
+                for r in conn.execute(
+                    "SELECT id FROM questions INDEXED BY idx_q_pick WHERE module=? AND disabled=0 AND is_real=1",
+                    (mod,),
+                )
+            ]
+            if len(pool) < 2:
+                pool = [
+                    r["id"]
+                    for r in conn.execute(
+                        "SELECT id FROM questions INDEXED BY idx_q_pick WHERE module=? AND disabled=0",
+                        (mod,),
+                    )
+                ]
+            pool.sort(key=lambda q: hashlib.md5(f"{day}:{q}".encode()).hexdigest())
+            ids.extend(pool[:2])
+        conn.close()
+        _daily_set_cache.clear()
+        _daily_set_cache[day] = ids
+        return ids
+
+
+def daily_set_questions(day: str) -> list[dict]:
+    ids = daily_set_ids(day)
+    if not ids:
+        return []
+    conn = get_conn()
+    rows = conn.execute(
+        f"SELECT * FROM questions WHERE id IN ({','.join('?' * len(ids))}) AND disabled=0",
+        ids,
+    ).fetchall()
+    conn.close()
+    by_id = {}
+    for r in rows:
+        d = dict(r)
+        d["options"] = json.loads(d.get("options") or "{}")
+        by_id[d["id"]] = d
+    return [by_id[i] for i in ids if i in by_id]
+
+
+def daily_set_stats(day: str) -> dict:
+    conn = get_conn()
+    _ensure_daily_set(conn)
+    row = conn.execute(
+        "SELECT COUNT(*) n, AVG(right) a FROM daily_set_entries WHERE day=?", (day,)
+    ).fetchone()
+    conn.close()
+    return {"participants": row["n"] or 0, "avg_right": round(row["a"], 1) if row["a"] is not None else None}
+
+
+def daily_set_submit(day: str, uid: str, right: int, total: int, secs: float | None) -> dict:
+    conn = get_conn()
+    _ensure_daily_set(conn)
+    cur = conn.execute(
+        "INSERT OR IGNORE INTO daily_set_entries(day, uid, right, total, secs, created_at) VALUES(?,?,?,?,?,?)",
+        (day, uid, right, total, secs, time.time()),
+    )
+    already = cur.rowcount == 0
+    conn.commit()
+    mine = conn.execute(
+        "SELECT right FROM daily_set_entries WHERE day=? AND uid=?", (day, uid)
+    ).fetchone()
+    my_right = mine["right"] if mine else right
+    row = conn.execute(
+        "SELECT COUNT(*) n, SUM(CASE WHEN right < ? THEN 1 ELSE 0 END) b FROM daily_set_entries WHERE day=?",
+        (my_right, day),
+    ).fetchone()
+    conn.close()
+    participants = row["n"] or 0
+    beat_pct = round(100 * (row["b"] or 0) / (participants - 1)) if participants > 1 else None
+    return {"participants": participants, "beat_pct": beat_pct, "my_right": my_right, "already": already}
+
+
 def submodule_counts(module: str) -> list[dict]:
     conn = get_conn()
     rows = conn.execute(

@@ -40,6 +40,34 @@ def api_shizheng_daily(date: str | None = None, limit: int = 10):
     items = db.shizheng_daily(day, min(max(limit, 1), 20))
     return {"date": day, "items": items, "total": db.shizheng_count()}
 
+def _cn_day() -> str:
+    return time.strftime("%Y-%m-%d", time.gmtime(time.time() + 8 * 3600))
+
+
+@router.get("/api/daily_set")
+def api_daily_set():
+    """全站同题每日一练：uid 无关、当日确定，可边缘缓存。"""
+    day = _cn_day()
+    return {"date": day, "items": db.daily_set_questions(day), "stats": db.daily_set_stats(day)}
+
+
+@router.post("/api/daily_set/submit")
+def api_daily_set_submit(body: dict):
+    uid = str(body.get("uid") or "").strip()[:64]
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    day = _cn_day()
+    if body.get("date") and str(body["date"]) != day:
+        raise HTTPException(400, "只接受当日成绩")
+    try:
+        right = max(0, min(int(body.get("right") or 0), 50))
+        total = max(1, min(int(body.get("total") or 0), 50))
+        secs = float(body.get("secs") or 0) or None
+    except (TypeError, ValueError):
+        raise HTTPException(400, "参数不合法") from None
+    return db.daily_set_submit(day, uid, min(right, total), total, secs)
+
+
 @router.get("/api/questions/export")
 def api_questions_export(offset: int = 0, limit: int = 200, module: str | None = None, all: int = 0):
     return {"items": db.export_questions(offset, min(limit, 500), module, missing_only=not all)}

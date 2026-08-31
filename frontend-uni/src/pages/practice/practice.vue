@@ -183,6 +183,11 @@
       <view v-if="!beiMode" class="sub">答对 {{ right }}/{{ items.length }} · 最高连对 {{ bestStreak }} 题<template v-if="autoSaved">，错题已自动加入错题本</template></view>
       <view v-else class="sub">已浏览 {{ items.length }} 道题的答案与解析</view>
       <view v-if="!beiMode && percentile != null" class="beat">本组正确率击败了 {{ percentile }}% 的刷题记录</view>
+      <view v-if="!beiMode && dailyStats" class="beat dsbeat">
+        <template v-if="dailyStats.already">今日全站同题成绩已记录（首次 {{ dailyStats.my_right }} 对） · {{ dailyStats.participants }} 人完成</template>
+        <template v-else-if="dailyStats.beat_pct == null">今日全站同题 · 你是今天第 1 位完成者</template>
+        <template v-else>今日全站同题 · {{ dailyStats.participants }} 人完成 · 击败 {{ dailyStats.beat_pct }}%</template>
+      </view>
       <view v-if="!beiMode && redoReport" class="redoreport">
         <view class="rr-t">错题重练效果</view>
         <view class="rr-row">
@@ -369,6 +374,7 @@ export default {
       dueReview: 0,
       resultSent: false,
       percentile: null,
+      dailyStats: null,
       redoReport: null,
       examMode: false,
       examLeft: 0,
@@ -1044,14 +1050,42 @@ export default {
       }
       uni.setStorageSync('favQuestions', this.favs);
     },
-    startDaily() {
+    async startDaily() {
       this._daily = true;
       if (this.beiMode) {
         this.beiMode = false;
         uni.setStorageSync('beiMode', '');
         uni.showToast({ title: '每日一练按做题模式进行', icon: 'none', duration: 1200 });
       }
-      this.start(this.dailyModule);
+      if (this._starting) return;
+      this._starting = true;
+      uni.showLoading({ title: '出题中…', mask: true });
+      try {
+        const d = await request('/api/daily_set');
+        if (!d.items || !d.items.length) throw new Error('empty');
+        this._dailyDate = d.date;
+        this.items = d.items.map((q) => ({ ...q, _saved: false }));
+        this.idx = 0;
+        this.picked = '';
+        this.right = 0;
+        this.streak = 0;
+        this.bestStreak = 0;
+        this.autoSaved = false;
+        this.resultSent = false;
+        this.percentile = null;
+        this.lastModule = null;
+        this.lastSubmodule = null;
+        this.session = true;
+        this.startQTimer();
+        uni.showToast({ title: '每日一练 · 今日全站同题', icon: 'none' });
+      } catch (e) {
+        // 接口异常回退随机抽题，每日一练不因后端故障不可用
+        this._dailyDate = '';
+        this.start(this.dailyModule);
+      } finally {
+        uni.hideLoading();
+        this._starting = false;
+      }
     },
     markDailyDone() {
       if (!this._daily) return;
@@ -1059,6 +1093,15 @@ export default {
       this.daily.days[dayKey()] = true;
       uni.setStorageSync('dailyPlan', this.daily);
       uni.showToast({ title: '今日一练完成，打卡成功！', icon: 'none' });
+      const date = this._dailyDate;
+      this._dailyDate = '';
+      if (!date) return;
+      request('/api/daily_set/submit', {
+        method: 'POST',
+        data: { uid: anonUid(), date, right: this.right, total: this.items.length, secs: this.totalSecs },
+      })
+        .then((d) => { this.dailyStats = d; })
+        .catch(() => {});
     },
     _mapShizheng(q) {
       return {
@@ -1871,6 +1914,7 @@ export default {
     },
     async submitResult() {
       if (this.beiMode || this.resultSent || !this.items.length) return;
+      this.dailyStats = null;
       this.resultSent = true;
       this.dueReview = 0;
       uni.removeStorageSync('pendingSession');
