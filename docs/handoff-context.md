@@ -340,3 +340,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 实现：backend/app/push_api.py（pywebpush + VAPID，GET /api/push/pubkey、POST subscribe/unsubscribe，表 push_subs；每日 08:00 中国时区定推「今日全站同题」深链 /?daily=1，410/404 清失效订阅，已完成今日一练的 uid 跳过，seo_meta push_last_day 幂等）；sw.js 加 push/notificationclick；reminders.vue 加「每日一练离线推送」开关（仅 PushManager+pubkey 可用时渲染）。VAPID 密钥在生产 deploy/.env（KG_VAPID_PRIVATE/PUBLIC，不入仓库），compose 已透传。未配置 VAPID 的环境接口降级、线程不启动。
 - 验收：本地+生产双 E2E 全过（UI 开关订阅→落库→容器内实发→真实 FCM→通知弹出 payload 正确→UI 关闭双端退订）；测试订阅已清理。设计文档 docs/iter/round-3/r98-web-push.md。
 - 边界：iOS Safari 需先安装到主屏（16.4+）；微信内置浏览器不支持（开关不渲染）；通知点击跳转 /?daily=1 复用 R72 深链。
+
+### R99（2026-08-31）：每日一练完成页「开启推送」引导卡——R98 通道接上转化时机
+- 取证：R98 推送入口埋在「我的 → 学习提醒」二级页，刚完成每日一练的用户（转化意愿最高时机）看不到任何提醒引导；完成页已有 streak/排行榜锚点可复用。
+- 实现：practice.vue 完成页（当日一练提交成功后，H5-only）追加轻量引导卡——渲染条件全满足才显示（PushManager 可用、permission 未 denied、/api/push/pubkey 非空、当前无订阅、未被 ✕ 永久关闭 localStorage pushNudgeOff）；streak≥2 文案「别断了连续 N 天」；点开启走权限→subscribe→POST /api/push/subscribe（成功态「已开启每日一练提醒 ✓」）；埋点 push_nudge_show/ok 入 team.py 白名单。往期补练/普通练习不显示。设计文档 docs/iter/round-3/r99-push-nudge.md。
+- 生产验收：375+1440 双视口真实完成 10 题 E2E 全过（卡片显示→点开启→FCM 订阅创建→subscribe 200→成功态渲染→push_nudge_show/ok 落库；✕ 关闭即隐藏且 pushNudgeOff 持久化，重看不再显示；溢出 0、console 0 error）；测试订阅/成绩/事件已清理、保护 uid 零 mutation。
+- 边界：已订阅用户不显示（代码守卫，未单独生产复验）；本轮宿主持续高负载（swap 颠簸+外部 pip/postgres 抢占），验证期间 origin 多次 502/524 由 autoheal 自愈——共享宿主根治仍待老板决策。
+- 观察项：push_nudge_show→ok 转化率、push_subs 真实增长、明早 08:00 定推实际送达。
