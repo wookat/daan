@@ -48,6 +48,14 @@ export default {
         const ph = el.getAttribute('placeholder') || (host && (host.querySelector('.uni-input-placeholder, .uni-textarea-placeholder') || {}).textContent) || ''
         if (ph.trim()) el.setAttribute('aria-label', ph.trim())
       })
+      // 离线直入未缓存路由时，uni 内置 async-error 文案（连接服务器超时）误导且无自动恢复；
+      // 仅离线时替换文案并在网络恢复后自动触发其点击重试，在线时保持 uni 原生语义
+      document.querySelectorAll('.uni-async-error').forEach((el) => {
+        if (navigator.onLine || el.dataset.kgOffline) return
+        el.dataset.kgOffline = '1'
+        el.textContent = '当前无网络，该页面尚未缓存到本机；网络恢复后将自动重试'
+        window.addEventListener('online', () => { if (el.isConnected) el.click() }, { once: true })
+      })
     }
     markMain()
     new MutationObserver(markMain).observe(document.body, { childList: true, subtree: true })
