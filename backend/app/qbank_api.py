@@ -50,7 +50,7 @@ def api_daily_set():
 
 @router.get("/api/daily_set/board")
 def api_daily_set_board():
-    """今日排行榜：uid 无关（脱敏名），可边缘缓存。"""
+    """今日排行榜：uid 无关（昵称/脱敏名），公开只读；不入边缘缓存，保证提交后即含本人。"""
     day = db.cn_day()
     return {"date": day, "items": db.daily_set_board(day)}
 
@@ -69,7 +69,10 @@ def api_daily_set_submit(body: dict):
         secs = float(body.get("secs") or 0) or None
     except (TypeError, ValueError):
         raise HTTPException(400, "参数不合法") from None
-    return db.daily_set_submit(day, uid, min(right, total), total, secs)
+    nickname = str(body.get("nickname") or "").strip()[:20]
+    if nickname.lower() in ("null", "undefined"):
+        nickname = ""
+    return db.daily_set_submit(day, uid, min(right, total), total, secs, nickname or None)
 
 
 @router.get("/api/questions/export")

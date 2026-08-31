@@ -316,7 +316,7 @@
 </template>
 
 <script>
-import { request, BASE_URL, anonUid, exportPdf, removeFav, setFav, fetchCheckinBadges, trackEvent } from '../../api.js';
+import { request, BASE_URL, anonUid, pkNickname, exportPdf, removeFav, setFav, fetchCheckinBadges, trackEvent } from '../../api.js';
 import { drawOffline, enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../offline.js';
 import { dayKey, loadSzDaily, saveSzDaily } from '../../checkin.js';
 
@@ -1118,7 +1118,7 @@ export default {
       this._dailyDoneDate = date;
       request('/api/daily_set/submit', {
         method: 'POST',
-        data: { uid: anonUid(), date, right: this.right, total: this.items.length, secs: this.totalSecs },
+        data: { uid: anonUid(), nickname: pkNickname(), date, right: this.right, total: this.items.length, secs: this.totalSecs },
       })
         .then((d) => {
           this.dailyStats = d;

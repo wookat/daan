@@ -933,6 +933,9 @@ def _ensure_daily_set(conn):
             PRIMARY KEY (day, uid)
         )"""
     )
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(daily_set_entries)").fetchall()}
+    if "nickname" not in cols:
+        conn.execute("ALTER TABLE daily_set_entries ADD COLUMN nickname TEXT")
 
 
 def cn_day() -> str:
@@ -1002,12 +1005,15 @@ def daily_set_stats(day: str) -> dict:
     return {"participants": row["n"] or 0, "avg_right": round(row["a"], 1) if row["a"] is not None else None}
 
 
-def daily_set_submit(day: str, uid: str, right: int, total: int, secs: float | None) -> dict:
+def daily_set_submit(
+    day: str, uid: str, right: int, total: int, secs: float | None, nickname: str | None = None
+) -> dict:
     conn = get_conn()
     _ensure_daily_set(conn)
     cur = conn.execute(
-        "INSERT OR IGNORE INTO daily_set_entries(day, uid, right, total, secs, created_at) VALUES(?,?,?,?,?,?)",
-        (day, uid, right, total, secs, time.time()),
+        "INSERT OR IGNORE INTO daily_set_entries(day, uid, right, total, secs, nickname, created_at)"
+        " VALUES(?,?,?,?,?,?,?)",
+        (day, uid, right, total, secs, nickname, time.time()),
     )
     already = cur.rowcount == 0
     conn.commit()
@@ -1032,13 +1038,19 @@ def daily_set_board(day: str, limit: int = 20) -> list[dict]:
     conn = get_conn()
     _ensure_daily_set(conn)
     rows = conn.execute(
-        "SELECT uid, right, total, secs FROM daily_set_entries WHERE day=? "
+        "SELECT uid, nickname, right, total, secs FROM daily_set_entries WHERE day=? "
         "ORDER BY right DESC, COALESCE(secs, 9e9) ASC, created_at ASC LIMIT ?",
         (day, limit),
     ).fetchall()
     conn.close()
     return [
-        {"rank": i + 1, "name": r["uid"][:6] + "***", "right": r["right"], "total": r["total"], "secs": r["secs"]}
+        {
+            "rank": i + 1,
+            "name": (r["nickname"] or "").strip()[:20] or r["uid"][:6] + "***",
+            "right": r["right"],
+            "total": r["total"],
+            "secs": r["secs"],
+        }
         for i, r in enumerate(rows)
     ]
 
