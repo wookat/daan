@@ -8,6 +8,7 @@ import secrets
 import sqlite3
 import threading
 import time
+from datetime import date, timedelta
 
 from . import quality, similarity, taxonomy
 from .tagging import classify_question
@@ -1026,12 +1027,30 @@ def daily_set_submit(
         "SUM(CASE WHEN right > ? THEN 1 ELSE 0 END) a FROM daily_set_entries WHERE day=?",
         (my_right, my_right, day),
     ).fetchone()
+    days = {
+        r["day"]
+        for r in conn.execute(
+            "SELECT day FROM daily_set_entries WHERE uid=? ORDER BY day DESC LIMIT 60", (uid,)
+        ).fetchall()
+    }
     conn.close()
+    streak = 0
+    d = date.fromisoformat(day)
+    while d.isoformat() in days:
+        streak += 1
+        d -= timedelta(days=1)
     participants = row["n"] or 0
     beat_pct = round(100 * (row["b"] or 0) / (participants - 1)) if participants > 1 else None
     # 名次只按答对数（比我分高的人数 + 1），同分并列不计用时
     my_rank = (row["a"] or 0) + 1 if participants else None
-    return {"participants": participants, "beat_pct": beat_pct, "my_right": my_right, "my_rank": my_rank, "already": already}
+    return {
+        "participants": participants,
+        "beat_pct": beat_pct,
+        "my_right": my_right,
+        "my_rank": my_rank,
+        "already": already,
+        "streak": streak,
+    }
 
 
 def daily_set_board(day: str, limit: int = 20) -> list[dict]:

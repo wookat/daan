@@ -187,6 +187,7 @@
         <template v-if="dailyStats.already">今日全站同题成绩已记录（首次 {{ dailyStats.my_right }} 对） · {{ dailyStats.participants }} 人完成</template>
         <template v-else-if="dailyStats.beat_pct == null">今日全站同题 · 你是今天第 1 位完成者</template>
         <template v-else>今日全站同题 · {{ dailyStats.participants }} 人完成 · 击败 {{ dailyStats.beat_pct }}%</template>
+        <template v-if="dailyStats.streak >= 2"> · 🔥 已连续参与 {{ dailyStats.streak }} 天</template>
       </view>
       <view v-if="!beiMode && dailyStats && dailyBoard.length" class="dsboard">
         <view class="rr-t">今日排行榜<text v-if="dailyStats.my_rank" class="dsb-mine">我的名次：第 {{ dailyStats.my_rank }} 名</text></view>
@@ -1759,6 +1760,7 @@ export default {
       if (this.dailyStats && this._dailyDoneDate) {
         let txt = '我完成了错题邦 ' + this._dailyDoneDate + ' 每日一练（全站同题 ' + this.items.length + ' 题），答对 ' + this.right + ' 题';
         if (this.dailyStats.beat_pct != null) txt += '，击败全站 ' + this.dailyStats.beat_pct + '%';
+        if (this.dailyStats.streak >= 2) txt += '，已连续参与 ' + this.dailyStats.streak + ' 天';
         txt += '！同题挑战我：https://kaogong.zalize.com/#/pages/practice/practice?daily=1';
         trackEvent('share_result_copy', 'practice', 'daily');
         uni.setClipboardData({
