@@ -1020,16 +1020,15 @@ def sitemap_years():
 @root_router.get("/sitemap-questions-{shard}.xml", include_in_schema=False)
 def sitemap_questions(shard: int):
     conn = db.get_conn()
+    lo = (shard - 1) * SITEMAP_SHARD
     rows = conn.execute(
-        "SELECT id, updated_at FROM questions WHERE disabled=0 ORDER BY id"
+        "SELECT id, updated_at FROM questions WHERE disabled=0 ORDER BY id LIMIT ? OFFSET ?",
+        (SITEMAP_SHARD, lo),
     ).fetchall()
     conn.close()
-    lo = (shard - 1) * SITEMAP_SHARD
-    if shard < 1 or lo >= len(rows):
+    if shard < 1 or not rows:
         raise HTTPException(404, "分片不存在")
-    return _urlset([
-        (_url(f'/tiku/q/{r["id"]}'), r["updated_at"]) for r in rows[lo : lo + SITEMAP_SHARD]
-    ])
+    return _urlset([(_url(f'/tiku/q/{r["id"]}'), r["updated_at"]) for r in rows])
 
 
 @root_router.get("/indexnow-key.txt", include_in_schema=False)

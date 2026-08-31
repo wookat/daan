@@ -35,6 +35,7 @@ function isEdgeCacheable(request, url) {
   if (url.pathname.startsWith("/tiku")) return true;
   // /s/* 分享落地页：输出仅依赖 sid（OG + 跳 SPA），动态内容都在 SPA 内走 API
   if (url.pathname.startsWith("/s/")) return true;
+  if (url.pathname.startsWith("/sitemap") || url.pathname === "/robots.txt") return true;
   return (
     API_CACHE_ALLOWLIST.has(url.pathname) &&
     !request.headers.has("Authorization") &&
