@@ -403,3 +403,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - R125（docs）：窗口复审计 docs/iter/round-3/r125-window-audit.md——48h 真实作答 16 uid/93 条；slow_load 仅 1 条慢网旧 bundle 样本不立项；push_subs 仍 0。
 - ⚠️ 观测陷阱：growth_events/answer_log 的 created_at 是 epoch float，`created_at > datetime('now',…)` 字符串比较静默返回空集（会误判零事件）；时间过滤必须用 time.time()-N 数值参数。
 - 合并链：#299→#300→#301→#302 依序合并即收口 R121–R124。
+
+### R126–R128（2026-08-31）：弹层键盘/路由预取/窗口复审计
+- R126（PR #304）：全站 25 处 `.mask` 弹层统一键盘支持——a11y-focus.js 增 initModalKeys()：MutationObserver 侦测弹层出现即焦点移入、Tab/Shift+Tab 圈定在最顶层 mask 内、Esc 等价点遮罩关闭、关闭后焦点归还触发元素。fixed 遮罩可见性必须用 getClientRects().length（offsetParent 恒 null）。
+- R127（PR #305）：路由 chunk 空闲预取——build:h5 末尾 gen-precache-manifest.mjs 产出 precache.json（assets js/css 清单），运行期 precache.js load 后 8s 空闲逐个 fetch 温 HTTP 缓存（immutable 一年缓存可离线命中；省流/2g/离线跳过、同版本只跑一轮 kg_precache_done）。生产实测离线直入从未访问的 pkgA 路由可完整渲染。零 SW 改动（静态资源不经 SW 拦截的既定设计保持）。
+- R128（docs）：窗口复审计 docs/iter/round-3/r128-window-audit.md——Lighthouse /tiku 页族全 1.0、首页复跑 0.98（首跑 3.2s LCP 为宿主方差非回归）；内链/分页 canonical/卷详情/无效日期 301 全健康；错题本空态完整。无可立项缺陷，docs-only。
+- 合并链：#299→…→#304→#305 依序合并即收口 R121–R127。
