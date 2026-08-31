@@ -29,6 +29,10 @@
         </view>
       </view>
     </view>
+    <view v-else-if="loadErr" class="empty">
+      <text class="empty-t">加载失败：{{ loadErr }}</text>
+      <view class="retry" @click="load">重试 ›</view>
+    </view>
     <view v-else-if="loaded" class="empty">
       <view class="empty-ico"><l-icon name="edit-3" :size="30" color="#b0b4c0" /></view>
       <text class="empty-t">还没有练习记录</text>
@@ -44,7 +48,7 @@ const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语
 
 export default {
   data() {
-    return { items: [], loaded: false, openIdx: -1, detail: [], detailLoading: false };
+    return { items: [], loaded: false, loadErr: '', openIdx: -1, detail: [], detailLoading: false };
   },
   computed: {
     wrongQs() {
@@ -67,10 +71,12 @@ export default {
       return NAMES[m] || m || '混合';
     },
     async load() {
+      this.loadErr = '';
       try {
         const d = await request('/api/practice/history?uid=' + encodeURIComponent(anonUid()));
         this.items = d.items || [];
       } catch (e) {
+        this.loadErr = e.message || '网络异常';
         uni.showToast({ title: e.message || '加载失败', icon: 'none' });
       }
       this.loaded = true;
@@ -154,6 +160,7 @@ export default {
 
 .empty { display: flex; flex-direction: column; align-items: center; gap: 16rpx; padding: 120rpx 0; }
 .empty-t { font-size: 27rpx; color: var(--ink-2); }
+.retry { margin-top: 8rpx; color: var(--brand); font-size: 26rpx; font-weight: 500; }
 .btn-primary { background: #2e5bff; color: #fff; border-radius: 999rpx; font-size: 28rpx; font-weight: 600; min-height: 44px; display: flex; align-items: center; justify-content: center; padding: 0 60rpx; margin-top: 12rpx; }
 
 /* #ifdef H5 */

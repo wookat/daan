@@ -415,3 +415,7 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - R132（PR #310）：二级/分包页 axe 复扫——18 个分包路由生产双视口全扫，verified 8 节点/3 页：竞赛「即将开始」徽标（新增 --warn-strong token）、提醒页关闭态整行 opacity 改只弱化图标/开关+文字换安全色、登录页三处文字对比度+logo aria-hidden。复验 18 路由 × 1440/375 全 0 violations。⚠️ 探针路由必须以 pages.json 为准（如 social/discuss、stats/mastery-map），拼错路由被 R60 兜底重定向首页会产生 landmark 假阳性。
 - R133：弹层焦点管理决策纯函数化——新增 src/modal-policy.js（reconcileStack/zIndexFor/pickFocusTarget/nextTabIndex，present 判定注入），a11y-focus.js initModalKeys 改调纯函数（行为等价重构，DOM/MutationObserver/focus 副作用留在运行时）；tests/modal-policy.test.js 13 例锁定栈对帐逆序归还/层级/空弹层 fallback/Tab 循环边界（vitest 25→38 例，零新依赖不引 jsdom）。生产复验 R131 嵌套链路 1440/375 零回归。
 - 合并链：#299→…→#309→#310→R133 PR 依序合并即收口。
+
+### R134（2026-08-31）：分包页加载失败误呈现为空态收口
+- 取证：生产壳 + `page.route('**/api/**', abort)` 逐页直入，verified 5 页失败时渲染「无数据」空态（plaza「还没有讨论」、practice-history「还没有练习记录」、favorites「这里还没有收藏/还没有笔记」、exam/list「暂无成套真题卷」、exam/contest「暂无比赛场次」）；根因：catch 只 toast（~1.5s 消失）后 loaded/loading 落空态分支。weekly-report 的「加载失败+重试 ›」为参照模式；calendar 本地 pstats 降级属既定设计不立项。
+- 修复：5 页统一补驻留错误态（loadErr/favErr/noteErr + 空态分支前 v-else-if 错误卡 + 重试点击重载），零后端改动。生产双视口复验：5 页 × 1440/375 失败态均出错误卡不再伪装空态、放行 API 点重试原位恢复、溢出 0。方案：docs/iter/round-3/r134-load-error-vs-empty.md。

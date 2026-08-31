@@ -47,6 +47,7 @@
           </template>
         </template>
       </view>
+      <view v-else-if="loadErr" class="card spin">加载失败：{{ loadErr }}<view class="retry" @click="load">重试 ›</view></view>
       <view v-else class="card spin">暂无比赛场次</view>
       </view>
 
@@ -114,6 +115,7 @@ export default {
   data() {
     return {
       loading: true,
+      loadErr: '',
       event: null,
       past: [],
       rulesOpen: false,
@@ -158,11 +160,13 @@ export default {
       if (this.timer) { clearInterval(this.timer); this.timer = null; }
     },
     async load() {
+      this.loadErr = '';
       try {
         const d = await request('/api/mock/events?uid=' + encodeURIComponent(anonUid()));
         this.event = d.current || d.next;
         this.past = d.past || [];
       } catch (e) {
+        this.loadErr = e.message || '网络异常';
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
       this.loading = false;
@@ -218,6 +222,7 @@ export default {
 <style scoped>
 .wrap { padding: 24rpx; padding-bottom: 40rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 60rpx 24rpx; }
+.retry { margin-top: 12rpx; color: var(--brand); font-size: 26rpx; font-weight: 500; }
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 30rpx; font-weight: 600; margin-bottom: 20rpx; }
 .hero { background: linear-gradient(135deg, #eef3ff, #fdfbf3); }

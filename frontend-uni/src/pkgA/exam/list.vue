@@ -21,6 +21,7 @@
     </view>
 
     <view v-if="loading" class="spin">试卷加载中…</view>
+    <view v-else-if="loadErr" class="spin">加载失败：{{ loadErr }}<view class="retry" @click="load">重试 ›</view></view>
     <view v-else-if="!items.length" class="spin">暂无成套真题卷{{ year || region ? '，试试放宽筛选' : '' }}</view>
 
     <view class="plist">
@@ -76,6 +77,7 @@ export default {
       year: null,
       region: null,
       loading: true,
+      loadErr: '',
       exportingId: null,
       exportTarget: null,
     };
@@ -90,6 +92,7 @@ export default {
   methods: {
     async load() {
       this.loading = true;
+      this.loadErr = '';
       try {
         const q = ['kind=zhenti', 'uid=' + encodeURIComponent(anonUid())];
         if (this.year) q.push('year=' + this.year);
@@ -98,6 +101,7 @@ export default {
         this.items = d.items || [];
         this.filters = d.filters || { years: [], regions: [] };
       } catch (e) {
+        this.loadErr = e.message || '网络异常';
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
       this.loading = false;
@@ -155,6 +159,7 @@ export default {
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 30rpx; font-weight: 600; margin-bottom: 20rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 40rpx 24rpx; }
+.retry { margin-top: 12rpx; color: var(--brand); font-size: 26rpx; font-weight: 500; }
 .mini { display: flex; align-items: center; gap: 20rpx; background: linear-gradient(135deg, var(--warn-soft), var(--card)); border: 1rpx solid var(--line); }
 .mini-ico { flex-shrink: 0; font-size: 48rpx; }
 .mini-l { flex: 1; min-width: 0; }

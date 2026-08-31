@@ -50,6 +50,10 @@
       </view>
 
       <view v-if="loading" class="card empty">加载中…</view>
+      <view v-else-if="favErr" class="card empty">
+        <view class="empty-t">加载失败：{{ favErr }}</view>
+        <view class="retry" @click="load">重试 ›</view>
+      </view>
       <view v-else-if="!shownItems.length" class="card empty">
         <view class="empty-t">这里还没有收藏</view>
         <view class="empty-s">刷题时点右上角收藏星标收藏好题，收藏后可在这里「移动到…」选收藏夹</view>
@@ -82,6 +86,10 @@
 
     <template v-else>
       <view v-if="loading" class="card empty">加载中…</view>
+      <view v-else-if="noteErr" class="card empty">
+        <view class="empty-t">加载失败：{{ noteErr }}</view>
+        <view class="retry" @click="switchNote">重试 ›</view>
+      </view>
       <view v-else-if="!notes.length" class="card empty">
         <view class="empty-t">还没有笔记</view>
         <view class="empty-s">答题后在解析下方「写笔记」，方法心得随题沉淀</view>
@@ -119,6 +127,8 @@ export default {
     return {
       MODS,
       tab: 'fav',
+      favErr: '',
+      noteErr: '',
       folders: [],
       folderId: null,
       items: [],
@@ -156,6 +166,7 @@ export default {
     },
     async load() {
       this.loading = true;
+      this.favErr = '';
       try {
         const [f, v] = await Promise.all([fetchFavFolders(), fetchFavs()]);
         this.folders = f.items;
@@ -169,6 +180,7 @@ export default {
         const def = this.folders.find((x) => x.id === 0);
         if (def) def.n += locals.length;
       } catch (e) {
+        this.favErr = e.message || '网络异常';
         uni.showToast({ title: e.message, icon: 'none' });
       }
       this.loading = false;
@@ -176,10 +188,12 @@ export default {
     async switchNote() {
       this.tab = 'note';
       this.loading = true;
+      this.noteErr = '';
       try {
         const d = await fetchNotes();
         this.notes = d.items;
       } catch (e) {
+        this.noteErr = e.message || '网络异常';
         uni.showToast({ title: e.message, icon: 'none' });
       }
       this.loading = false;
@@ -315,6 +329,7 @@ export default {
 .chip { font-size: 23rpx; color: var(--ink-2); background: var(--fill); padding: 8rpx 22rpx; border-radius: 999rpx; }
 .chip.on { background: var(--brand-soft); color: var(--brand); font-weight: 700; }
 .empty { text-align: center; color: var(--ink-3); font-size: 25rpx; padding: 60rpx 24rpx; }
+.retry { margin-top: 12rpx; color: var(--brand); font-size: 26rpx; font-weight: 500; }
 .empty-t { font-size: 28rpx; font-weight: 600; color: var(--ink-2); margin-bottom: 8rpx; }
 .btn { background: var(--brand); color: #fff; font-size: 28rpx; border-radius: 18rpx; margin-bottom: 20rpx; }
 .qtx { font-size: 27rpx; line-height: 1.65; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

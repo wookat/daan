@@ -11,6 +11,11 @@
         <view class="time">{{ fmtTime(it.last_at) }} 活跃</view>
       </view>
     </view>
+    <view v-else-if="loadErr" class="empty">
+      <text class="empty-t">加载失败</text>
+      <text class="empty-d">{{ loadErr }}</text>
+      <view class="retry" @click="load">重试 ›</view>
+    </view>
     <view v-else-if="loaded" class="empty">
       <view class="empty-ico">💬</view>
       <text class="empty-t">还没有讨论</text>
@@ -26,17 +31,19 @@ const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语
 
 export default {
   data() {
-    return { items: [], loaded: false };
+    return { items: [], loaded: false, loadErr: '' };
   },
   onShow() {
     this.load();
   },
   methods: {
     async load() {
+      this.loadErr = '';
       try {
         const d = await fetchCommentsPlaza();
         this.items = d.items || [];
       } catch (e) {
+        this.loadErr = e.message || '网络异常';
         uni.showToast({ title: e.message || '加载失败', icon: 'none' });
       }
       this.loaded = true;
@@ -72,6 +79,7 @@ export default {
 .empty-ico { font-size: 72rpx; }
 .empty-t { font-size: 28rpx; font-weight: 600; color: var(--ink); }
 .empty-d { font-size: 24rpx; color: var(--ink-2); }
+.retry { margin-top: 8rpx; color: var(--brand); font-size: 26rpx; font-weight: 500; }
 
 /* #ifdef H5 */
 @media (min-width: 768px) {
