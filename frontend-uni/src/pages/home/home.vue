@@ -201,7 +201,7 @@
       <view class="sz-ico"><l-icon name="newspaper" :size="24" color="#d97706" /></view>
       <view class="grow">
         <view class="sz-t">时政每日一练 <text v-if="!szTodayDone" class="tag warn">今日更新</text><text v-else class="tag ok">已完成</text></view>
-        <text class="sz-s">每日 10 题 · 近半年国内时政热点 · 全站同题</text>
+        <text class="sz-s">每日 10 题 · 近半年国内时政热点 · 全站同题<text class="sz-arc" @click.stop="openSzArchive">往期 ›</text></text>
       </view>
       <view class="mini-btn">{{ szTodayDone ? '回顾' : '去练习' }}</view>
     </view>
@@ -757,20 +757,27 @@ export default {
     startDaily() {
       this.launch({ kind: 'daily' });
     },
+    openSzArchive() {
+      this.pickArchiveDay((d) => {
+        trackEvent('daily_archive_open', 'sz:' + d);
+        this.launch({ kind: 'shizheng', date: d });
+      });
+    },
     openDailyArchive() {
       // 近 7 天往期每日一练（补练不计成绩/streak，复用 R78 往期链路）
+      this.pickArchiveDay((d) => {
+        trackEvent('daily_archive_open', d);
+        this.launch({ kind: 'daily', date: d });
+      });
+    },
+    pickArchiveDay(cb) {
       const days = [];
       for (let i = 1; i <= 7; i++) {
-        const d = new Date(Date.now() + 8 * 3600e3 - i * 86400e3).toISOString().slice(0, 10);
-        days.push(d);
+        days.push(new Date(Date.now() + 8 * 3600e3 - i * 86400e3).toISOString().slice(0, 10));
       }
-      const label = (d, i) => d + (i === 0 ? '（昨天）' : i === 1 ? '（前天）' : '');
       uni.showActionSheet({
-        itemList: days.map(label),
-        success: (res) => {
-          trackEvent('daily_archive_open', days[res.tapIndex]);
-          this.launch({ kind: 'daily', date: days[res.tapIndex] });
-        },
+        itemList: days.map((d, i) => d + (i === 0 ? '（昨天）' : i === 1 ? '（前天）' : '')),
+        success: (res) => cb(days[res.tapIndex]),
       });
     },
     startPaper(p) {
@@ -1128,6 +1135,7 @@ export default {
 .hero-bar { height: 12rpx; background: rgba(255, 255, 255, 0.25); border-radius: 999rpx; margin: 16rpx 0 24rpx; overflow: hidden; }
 .hero-ds { display: block; font-size: 22rpx; color: rgba(255, 255, 255, 0.85); margin: -8rpx 0 20rpx; }
 .hero-ds-arc { margin-left: 16rpx; text-decoration: underline; color: rgba(255, 255, 255, 0.75); }
+.sz-arc { margin-left: 12rpx; text-decoration: underline; color: var(--ink-2); }
 .hero-fill { height: 100%; background: var(--card); border-radius: 999rpx; transition: width 0.3s; }
 .hero-acts { display: flex; gap: 20rpx; }
 .hero-btn { min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 20rpx; font-size: 28rpx; font-weight: 600; }

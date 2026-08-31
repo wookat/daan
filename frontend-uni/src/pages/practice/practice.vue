@@ -667,7 +667,7 @@ export default {
         return;
       }
       if (launch.kind === 'shizheng') {
-        this.startShizheng();
+        this.startShizheng(launch.date);
         return;
       }
       if (launch.kind === 'szreview') {
@@ -1151,7 +1151,7 @@ export default {
         _saved: false,
       };
     },
-    async startShizheng() {
+    async startShizheng(archiveDate) {
       if (this._starting) return;
       this._starting = true;
       uni.showLoading({ title: '出题中…', mask: true });
@@ -1160,12 +1160,14 @@ export default {
         uni.setStorageSync('beiMode', '');
       }
       try {
-        const d = await request('/api/shizheng/daily');
+        const past = archiveDate && archiveDate !== dayKey();
+        const d = await request(past ? '/api/shizheng/daily?date=' + encodeURIComponent(archiveDate) : '/api/shizheng/daily');
         if (!d.items || !d.items.length) {
           uni.showToast({ title: '时政题库准备中，敬请期待', icon: 'none' });
           return;
         }
         this._shizheng = true;
+        this._szPast = past;
         this._szDate = d.date;
         this.lastModule = '时政';
         this.lastSubmodule = null;
@@ -1222,6 +1224,11 @@ export default {
     markShizhengDone() {
       if (!this._shizheng) return;
       this._shizheng = false;
+      if (this._szPast) {
+        this._szPast = false;
+        uni.showToast({ title: '往期时政补练完成', icon: 'none' });
+        return;
+      }
       const day = dayKey();
       this.szDaily.days[day] = { right: this.right, best: this.bestStreak, picks: this.items.map((q) => q._picked || ''), secs: this.items.map((q) => q._secs || 0) };
       saveSzDaily(anonUid(), this.szDaily);
