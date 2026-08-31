@@ -284,7 +284,7 @@ def tiku_daily():
         + f"<h1>每日一练（{_e(day)}）</h1>"
         + f'<p class="meta">全站同题 · 五大模块各 2 题共 10 题 · {_e(part)}，完成后可查看击败全站百分比</p>'
         + "".join(cards)
-        + f'<a class="cta" href="{_e(SITE_BASE)}/">去主站作答今日同题（免费）→</a>'
+        + f'<a class="cta" href="{_e(SITE_BASE)}/#/pages/practice/practice?daily=1">去主站作答今日同题（免费）→</a>'
     )
     return _page(
         f"每日一练{day}_公务员考试全站同题刷题_错题邦",

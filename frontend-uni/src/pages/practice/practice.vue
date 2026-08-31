@@ -611,6 +611,9 @@ export default {
         /* 保留原值 */
       }
       this._urlLaunch = { module, year: parseInt(query.year, 10) || null, source: query.source || 'seo' };
+    } else if (query && query.daily) {
+      // 每日一练直达深链（同题挑战分享/SEO 页 CTA）
+      this._urlLaunch = { daily: true };
     } else if (query && query.module) {
       // 仅带模块的深链（分享/外链直开）：直接开练该模块
       let module = query.module;
@@ -639,6 +642,10 @@ export default {
     if (this._urlLaunch) {
       const q = this._urlLaunch;
       this._urlLaunch = null;
+      if (q.daily) {
+        this.startDaily();
+        return;
+      }
       this.start(q.module, null, null, false, q.year ? true : undefined, q.tag3, q.source, q.year);
       return;
     }
@@ -1099,6 +1106,7 @@ export default {
       const date = this._dailyDate;
       this._dailyDate = '';
       if (!date) return;
+      this._dailyDoneDate = date;
       request('/api/daily_set/submit', {
         method: 'POST',
         data: { uid: anonUid(), date, right: this.right, total: this.items.length, secs: this.totalSecs },
@@ -1736,6 +1744,17 @@ export default {
       }
     },
     shareResult() {
+      if (this.dailyStats && this._dailyDoneDate) {
+        let txt = '我完成了错题邦 ' + this._dailyDoneDate + ' 每日一练（全站同题 ' + this.items.length + ' 题），答对 ' + this.right + ' 题';
+        if (this.dailyStats.beat_pct != null) txt += '，击败全站 ' + this.dailyStats.beat_pct + '%';
+        txt += '！同题挑战我：https://kaogong.zalize.com/#/pages/practice/practice?daily=1';
+        trackEvent('share_result_copy', 'practice', 'daily');
+        uni.setClipboardData({
+          data: txt,
+          success: () => uni.showToast({ title: '成绩已复制，去粘贴给研友吧', icon: 'none', duration: 1600 }),
+        });
+        return;
+      }
       const pct = Math.round((this.right / this.items.length) * 100);
       let txt =
         '我在错题邦刷了 ' + this.items.length + ' 道' + (this.lastModule ? this.modName(this.lastModule) : '行测') + '题，正确率 ' + pct + '%';
