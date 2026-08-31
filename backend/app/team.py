@@ -566,8 +566,14 @@ def api_track(body: dict, request: Request):
     if event == "slow_load":
         # 慢载事件服务端补 UA：旧 bundle 客户端不会自报，只有入库侧追加才能全量归因
         ua = " ".join((request.headers.get("user-agent") or "").split())[:80]
-        if ua:
-            ref = f"{ref};ua:{ua}"[:300]
+        # 头指纹：区分「真浏览器但 UA 被剥」与「非浏览器客户端」（sec-fetch-* 浏览器强制携带）
+        hs = "".join(
+            flag for flag, h in (
+                ("f", "sec-fetch-mode"), ("c", "sec-ch-ua"), ("o", "origin"),
+                ("r", "referer"), ("l", "accept-language"),
+            ) if request.headers.get(h)
+        )
+        ref = f"{ref};ua:{ua or '-'};hs:{hs or '-'}"[:300]
     conn = db.get_conn()
     conn.execute(
         "INSERT INTO growth_events (uid, event, source, ref, created_at) VALUES (?,?,?,?,?)",
