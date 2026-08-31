@@ -1,7 +1,11 @@
 <template>
   <view class="wrap shareq">
     <view v-if="loading" class="card empty">加载中…</view>
-    <view v-else-if="errMsg" class="card empty">{{ errMsg }}</view>
+    <view v-else-if="errMsg" class="card empty err">
+      <text class="err-t">{{ errMsg }}</text>
+      <text class="err-s">题目可能已被删除或链接不完整，13 万题库仍可免费刷</text>
+      <view class="act-btn main" @click="goHome">去刷题</view>
+    </view>
 
     <template v-else-if="d">
       <view class="from-bar">
@@ -215,6 +219,9 @@ export default {
     goTeamPage() {
       uni.navigateTo({ url: '/pkgA/team/team?id=' + this.joinedTeamId });
     },
+    goHome() {
+      uni.reLaunch({ url: '/pages/home/home' });
+    },
     goLogin() {
       uni.navigateTo({ url: '/pkgA/user/login' });
     },
@@ -227,6 +234,10 @@ export default {
 .card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 24rpx 28rpx; margin-bottom: 20rpx; }
 .empty { text-align: center; color: var(--ink-2); font-size: 25rpx; padding: 30rpx 0; }
 .empty.small { padding: 16rpx 0; }
+.empty.err { padding: 70rpx 28rpx; }
+.err-t { display: block; font-size: 30rpx; font-weight: 600; color: var(--ink); }
+.err-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 12rpx; margin-bottom: 32rpx; }
+.empty.err .act-btn { max-width: 320rpx; margin: 0 auto; }
 
 .from-bar { display: flex; align-items: center; gap: 18rpx; background: linear-gradient(135deg, #5b8af8, #2e5bff); border-radius: 28rpx; padding: 26rpx 28rpx; margin-bottom: 20rpx; box-shadow: 0 12rpx 36rpx rgba(46, 91, 255, 0.3); }
 .from-av { width: 72rpx; height: 72rpx; border-radius: 50%; background: #fff; color: var(--brand); font-size: 30rpx; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
