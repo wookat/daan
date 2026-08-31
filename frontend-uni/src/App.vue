@@ -20,6 +20,26 @@ export default {
         if (i === bodies.length - 1) el.setAttribute('role', 'main')
         else el.removeAttribute('role')
       })
+      // 页头/tabbar 挂 landmark，页头标题镜像为 sr-only h1（uni 编译产物无任何 heading）
+      const heads = document.querySelectorAll('uni-page-head')
+      heads.forEach((el, i) => {
+        if (i === heads.length - 1) el.setAttribute('role', 'banner')
+        else el.removeAttribute('role')
+      })
+      const bar = document.querySelector('.uni-tabbar')
+      if (bar && !bar.getAttribute('role')) {
+        bar.setAttribute('role', 'navigation')
+        bar.setAttribute('aria-label', '主导航')
+      }
+      const cur = bodies[bodies.length - 1]
+      if (cur && !cur.querySelector('h1')) {
+        const headTitle = heads.length ? (heads[heads.length - 1].querySelector('.uni-page-head__title') || {}).textContent : ''
+        const h1 = document.createElement('h1')
+        h1.setAttribute('data-a11y', '1')
+        h1.style.cssText = 'position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0'
+        h1.textContent = (headTitle || document.title || '').trim() || '错题邦'
+        cur.prepend(h1)
+      }
       // tabbar 图标为装饰图（文字 label 承载语义），uni 生成的 img 无 alt
       document.querySelectorAll('.uni-tabbar__icon img').forEach((el) => el.setAttribute('aria-hidden', 'true'))
       // uni 编译后的真实 input/textarea 无 label，把 placeholder 镜像为 aria-label
