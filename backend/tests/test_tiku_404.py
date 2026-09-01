@@ -38,6 +38,12 @@ def test_malformed_params_html_404(client):
     _assert_html_404(client.get("/tiku/y/abcd/changshi/"))
 
 
+def test_empty_module_hub_html_404(client):
+    seed_questions()
+    _assert_html_404(client.get("/tiku/shenlun/"))
+    assert client.get("/tiku/changshi/").status_code == 200
+
+
 def test_api_malformed_params_stay_json_422(client):
     r = client.get("/api/questions", params={"limit": "abc"})
     assert r.status_code == 422

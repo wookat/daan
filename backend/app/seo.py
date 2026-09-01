@@ -1029,6 +1029,8 @@ def tiku_module(module: str, page: int = 1):
         return _not_found("模块不存在")
     page = max(1, page)
     total = _count_questions(module)
+    if not total:
+        return _not_found("该模块暂无题目")
     rows = _list_questions(module, None, page)
     if not rows and page > 1:
         return _not_found("页码超出范围")
