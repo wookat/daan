@@ -153,10 +153,20 @@ def _page(
     )
 
 
-def _not_found(msg: str) -> HTMLResponse:
+# 题库无题但 App 内有对应专区的模块：404 页给专区直达出路，而非死胡同
+_EMPTY_MODULE_OUTLET = {
+    "shenlun": (
+        '<p><a class="cta" href="/#/pkgA/shenlun/shenlun">'
+        "申论请前往「申论专区」：历年真题 + 素材范文 + 在线作答 →</a></p>"
+    ),
+}
+
+
+def _not_found(msg: str, cta_html: str = "") -> HTMLResponse:
     """页族品牌 404：失效链接（题目下架/外链拼错）给出壳+出路，而非裸 JSON 报文。"""
     body = (
         f"<h1>{_e(msg)}</h1>"
+        f"{cta_html}"
         "<p>你访问的页面不存在或已下架，可从以下入口继续：</p>"
         '<p><a href="/tiku/">题库首页</a> · <a href="/tiku/papers/">真题卷</a>'
         ' · <a href="/tiku/daily/">每日一练</a> · <a href="/">去刷题</a></p>'
@@ -1030,7 +1040,8 @@ def tiku_module(module: str, page: int = 1):
     page = max(1, page)
     total = _count_questions(module)
     if not total:
-        return _not_found("该模块暂无题目")
+        outlet = _EMPTY_MODULE_OUTLET.get(module, "")
+        return _not_found("该模块暂无题目", outlet)
     rows = _list_questions(module, None, page)
     if not rows and page > 1:
         return _not_found("页码超出范围")

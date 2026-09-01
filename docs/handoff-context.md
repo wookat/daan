@@ -732,3 +732,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 收口一（seo.py）：tiku_module 在 _count_questions(module)==0 时返回既有 _not_found("该模块暂无题目")（品牌 404 + noindex + 出路），有题模块/API/301 行为零变化；不删 kb.MODULES["shenlun"]（App 内申论专区仍依赖）。
 - 收口二（边缘，部署后追加取证发现）：origin 已 404 但边缘持续回旧 200 副本——revalidate() 仅 200 覆盖、404 直接 return，旧副本永久驻留且每次 SWR 续命。改为 404/410（origin 确定性下架答复）时 caches.default.delete(cacheKey)，下一请求同步回源；5xx/网络异常 stale-if-error 语义不变。
 - 验证：pytest 新增空模块 hub 404/noindex + 有题模块 200 回归；vitest edge-handler 新增「后台刷新遇 404 清副本 → 下一请求 404」集成例。本地全绿（ruff/pytest 111(+1)/pyright 0/lint/vitest 133(+1)/build）；生产 rev d384fce 部署后实测 /tiku/shenlun/ 首访回旧副本随即清除、后续稳定品牌 404+noindex，/tiku/changshi/ 200，1440/375 双视口溢出 0、console 仅页面自身 404 资源行，性能预算全过。详见 docs/iter/round-3/design-r232-empty-module-404.md。
+
+### R233（空模块 404 页补 App 专区直达出路）
+- 取证 verified：本窗口 origin 无新缺陷（78 条 >1s 全部为部署 prime 触发的 SWR 并发回源、4 条 502 中 3 条自有探针 1 条爬虫 retry 后恢复 200）；App 内存在完整申论专区（pkgA/shenlun：真题题库+素材范文+在线作答），而 /tiku/shenlun/ 品牌 404 只给通用出路——搜索申论的用户被引向行测入口，产品真实能力被藏起来的死胡同。
+- 收口（seo.py）：_not_found 增可选 cta_html 槽位（默认空、既有调用零变化）+ _EMPTY_MODULE_OUTLET 映射（当前仅 shenlun），空模块 404 页顶部给「申论专区：历年真题 + 素材范文 + 在线作答 →」.cta 直达 /#/pkgA/shenlun/shenlun；404 状态/noindex/无 canonical/通用出路不变。
+- 验证：pytest +1 例（空模块 404 含 CTA、通用 404 不含），112 passed/ruff/pyright 0；前端门禁回归全绿。详见 docs/iter/round-3/design-r233-empty-module-outlet.md。

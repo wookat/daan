@@ -40,8 +40,17 @@ def test_malformed_params_html_404(client):
 
 def test_empty_module_hub_html_404(client):
     seed_questions()
-    _assert_html_404(client.get("/tiku/shenlun/"))
+    r = client.get("/tiku/shenlun/")
+    _assert_html_404(r)
+    assert 'href="/#/pkgA/shenlun/shenlun"' in r.text
+    assert '申论专区' in r.text
     assert client.get("/tiku/changshi/").status_code == 200
+
+
+def test_generic_404_has_no_shenlun_outlet(client):
+    r = client.get("/tiku/whatever/")
+    _assert_html_404(r)
+    assert 'pkgA/shenlun' not in r.text
 
 
 def test_api_malformed_params_stay_json_422(client):
