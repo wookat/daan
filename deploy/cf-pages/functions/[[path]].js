@@ -105,6 +105,11 @@ async function revalidate(req, cacheKey, pathname, isApi, prev) {
     return;
   }
   const resp = decorate(new Response(upstream.body, upstream), pathname);
+  // 内容已下架（404/410 为 origin 确定性答复）：清除旧副本，避免陈旧 200 永久外泄
+  if (resp.status === 404 || resp.status === 410) {
+    await caches.default.delete(cacheKey);
+    return;
+  }
   const ctOk = isCacheableContentType(pathname, isApi, resp.headers.get("content-type"));
   if (resp.status !== 200 || !ctOk) return;
   await caches.default.put(cacheKey, toCacheCopy(resp.body, stampLastModified(resp, prev)));

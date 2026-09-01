@@ -18,6 +18,7 @@ function makeCaches() {
       put: async (key, resp) => {
         store.set(typeof key === 'string' ? key : key.url, resp);
       },
+      delete: async (key) => store.delete(typeof key === 'string' ? key : key.url),
     },
   };
 }
@@ -144,6 +145,25 @@ describe('onRequest 缓存生命周期', () => {
     await b.flush();
     const copy = cachesStub.store.get(`${EDGE}/tiku/`);
     expect(await copy.clone().text()).toBe('<html>v1</html>');
+  });
+
+  it('后台刷新遇 404 清除旧副本：下架内容不再以陈旧 200 外泄（R232）', async () => {
+    queueFetch(
+      originOk('<html>v1</html>'),
+      new Response('gone', { status: 404, headers: { 'content-type': 'text/html' } }),
+      new Response('gone', { status: 404, headers: { 'content-type': 'text/html' } })
+    );
+    const a = ctx(new Request(`${EDGE}/tiku/shenlun/`));
+    await run(onRequest(a.args));
+    await a.flush();
+    vi.setSystemTime(Date.now() + 301 * 1000);
+    const b = ctx(new Request(`${EDGE}/tiku/shenlun/`));
+    const resp = await run(onRequest(b.args));
+    expect(resp.headers.get('X-Edge-Cache')).toBe('REVALIDATE'); // 本次仍回旧副本
+    await b.flush();
+    expect(cachesStub.store.has(`${EDGE}/tiku/shenlun/`)).toBe(false); // 副本已清除
+    const c = ctx(new Request(`${EDGE}/tiku/shenlun/`));
+    expect((await run(onRequest(c.args))).status).toBe(404); // 下一请求同步回源拿到 404
   });
 });
 

@@ -13,6 +13,10 @@
 - 不从 kb.MODULES 删除 shenlun（App 内申论专区仍依赖其知识库配置）。
 - 不为申论建设 SSR 内容（无题目数据，属内容管线级立项，见 R166 审计）。
 
+## 追加取证与收口（部署后发现的边缘缓存缺口）
+- origin 部署后实测 `/tiku/shenlun/` 已 404，但边缘（kaogong.zalize.com）持续回 200 旧副本：SWR `revalidate()` 仅在 200 时覆盖副本，404 直接 return（stale-if-error 语义误伤了「内容确定性下架」），旧 200 副本永久驻留、TTL 过期后每次 SWR 都续命。
+- 收口：`revalidate()` 对 404/410（origin 确定性答复）执行 `caches.default.delete(cacheKey)`，下一请求同步回源拿到真实 404；5xx/网络异常仍保留旧副本（stale-if-error 不变）。edge-handler 集成测试 +1 例。
+
 ## 验证
 - pytest 新增：0 题模块 hub 404 + noindex；有题模块 200 回归。
 - 本地全绿门禁 + 部署后生产实测 /tiku/shenlun/ 404、/tiku/changshi/ 200、性能预算、1440/375 双视口。
