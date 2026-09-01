@@ -756,4 +756,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 ### R237（部署预热清单补齐入口级公开页）
 - 取证 verified：旧 rev 部署重建窗口内五大模块 hub（/tiku/yanyu/ 等）出现 502[miss]→502[retry]（R235 lb_try 生效前样本；R236 部署窗口零 502），deploy_h5.sh 3b 预热清单未覆盖模块 hub、R236 /tiku/shenlun/、R231 /llms.txt——这些入口页无自然流量副本时缺 stale-if-error 第一道退路。
 - 收口：3b 清单追加五大模块 hub + /tiku/shenlun/ + /llms.txt（同语义可缓存 GET）；深层分页页不预热（数量无界，非入口级）。
-- 验证：bash -n；下一次部署实跑 prime 行全 200。详见 docs/iter/round-3/design-r237-prime-coverage.md。
+- 验证：bash -n；下一次部署实跑 prime 行全 200。详见 docs/iter/round-3/design-r237-prime-coverage.md。生产 rev 1c5d827 部署实跑 12 个公开页 prime 全 200、性能预算全过。
+
+### R238（管理台重查询端点外显缓存态头 X-Kg-Cache）
+- 取证 verified：R230 后 origin 仍有 /api/admin/governance 5–8.8s、/api/admin/stats 2–6s 慢样本（含距容器重建 5 分钟的样本，按 R229/R230 设计应亚秒命中），但日志只有 duration，无法区分命中/回旧值/冷 miss——预热是否真正生效、慢样本是否宿主争用只能标 unknown。
+- 收口：db._cached 拆出 _cached_state 返回 (data, cold|hit|stale)（语义零变化），stats/dashboard/governance 三端点响应加 X-Kg-Cache 头，借 Caddy origin 日志（14 天 resp_headers）逐请求持久取证（同 R225 X-Kg-Guard / R226 X-Kg-Fetch 手法）；仅管理端出头，公开端点不加。
+- 验证：pytest +2 例（三态转换 + 端点头断言），116 passed/ruff/pyright 0。详见 docs/iter/round-3/design-r238-admin-cache-state-header.md。

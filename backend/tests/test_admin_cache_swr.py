@@ -74,6 +74,40 @@ def test_startup_prime_fills_admin_caches():
     assert db._cached("governance", 600, boom) is db._ADMIN_CACHE["governance"][1]
 
 
+def test_cached_state_transitions():
+    """R238：_cached_state 外显命中态 cold→hit→stale。"""
+    _reset("t_state")
+    assert db._cached_state("t_state", 60, lambda: "v1") == ("v1", "cold")
+    assert db._cached_state("t_state", 60, lambda: "v2") == ("v1", "hit")
+    with db._admin_cache_lock:
+        db._ADMIN_CACHE["t_state"] = (time.time() - 120, "v1")
+    val, state = db._cached_state("t_state", 60, lambda: "v3")
+    assert (val, state) == ("v1", "stale")
+
+
+def test_admin_endpoints_expose_cache_state_header(client, monkeypatch):
+    """R238：stats/dashboard/governance 响应带 X-Kg-Cache 头（origin 日志逐请求取证）。"""
+    from app import deps
+
+    monkeypatch.setattr(deps, "ADMIN_TOKEN", "t0ken")
+    for path, key in (
+        ("/api/admin/stats", "stats"),
+        ("/api/admin/dashboard", "dashboard"),
+        ("/api/admin/governance", "governance"),
+    ):
+        _reset(key)
+        r = client.get(path, headers={"X-Admin-Token": "t0ken"})
+        assert r.status_code == 200
+        assert r.headers["X-Kg-Cache"] == "cold"
+        r2 = client.get(path, headers={"X-Admin-Token": "t0ken"})
+        assert r2.headers["X-Kg-Cache"] == "hit"
+        with db._admin_cache_lock:
+            ts, data = db._ADMIN_CACHE[key]
+            db._ADMIN_CACHE[key] = (ts - 3600, data)
+        r3 = client.get(path, headers={"X-Admin-Token": "t0ken"})
+        assert r3.headers["X-Kg-Cache"] == "stale"
+
+
 def test_refresh_failure_keeps_old_value():
     _reset("t_fail")
     db._cached("t_fail", 60, lambda: "old")

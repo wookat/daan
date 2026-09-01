@@ -1485,6 +1485,10 @@ def admin_stats() -> dict:
     return _cached("stats", 300, _admin_stats_uncached)
 
 
+def admin_stats_state() -> tuple[dict, str]:
+    return _cached_state("stats", 300, _admin_stats_uncached)
+
+
 def _admin_stats_uncached() -> dict:
     conn = get_conn()
     q = conn.execute
@@ -3391,31 +3395,40 @@ def _cached_refresh(key: str, fn):
 
 
 def _cached(key: str, ttl: float, fn):
+    return _cached_state(key, ttl, fn)[0]
+
+
+def _cached_state(key: str, ttl: float, fn):
     """2G 小服务器上重查询的进程内缓存：过期先回旧值并后台单飞重算
-    （stale-while-revalidate，对齐 _pick_pools），请求不承担秒级重查询。"""
+    （stale-while-revalidate，对齐 _pick_pools），请求不承担秒级重查询。
+    返回 (数据, 命中态)：hit=TTL 内命中，stale=过期回旧值，cold=进程启动后首次同步构建。"""
     with _admin_cache_lock:
         hit = _ADMIN_CACHE.get(key)
         if hit:
             if time.time() - hit[0] < ttl:
-                return hit[1]
+                return hit[1], "hit"
             if key not in _admin_refreshing:
                 _admin_refreshing.add(key)
                 threading.Thread(target=_cached_refresh, args=(key, fn), daemon=True).start()
-            return hit[1]
+            return hit[1], "stale"
     # 冷 miss（进程启动后首次）：单线程构建，同键并发等锁后直接吃缓存
     with _admin_build_lock:
         with _admin_cache_lock:
             hit = _ADMIN_CACHE.get(key)
             if hit:
-                return hit[1]
+                return hit[1], "cold"
         data = fn()
         with _admin_cache_lock:
             _ADMIN_CACHE[key] = (time.time(), data)
-        return data
+        return data, "cold"
 
 
 def admin_dashboard() -> dict:
     return _cached("dashboard", 300, _admin_dashboard_uncached)
+
+
+def admin_dashboard_state() -> tuple[dict, str]:
+    return _cached_state("dashboard", 300, _admin_dashboard_uncached)
 
 
 def _admin_dashboard_uncached() -> dict:
@@ -3627,6 +3640,10 @@ def tag3_review_reopen(question_id: int) -> bool:
 
 def governance_scan() -> dict:
     return _cached("governance", 600, _governance_scan_uncached)
+
+
+def governance_scan_state() -> tuple[dict, str]:
+    return _cached_state("governance", 600, _governance_scan_uncached)
 
 
 def _governance_scan_uncached() -> dict:
