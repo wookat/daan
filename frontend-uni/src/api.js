@@ -298,6 +298,14 @@ function snapLoad(path) {
   }
 }
 
+// 快照即显（客户端 stale-while-revalidate）：同步读取最近成功快照供页面先行渲染，
+// 调用方随后照常 request()，真实响应到达后覆盖；无快照/超白名单返回 null
+export function snapPeek(path) {
+  if (!snapCacheable(path)) return null;
+  const snap = snapLoad(path);
+  return snap ? snap.d : null;
+}
+
 export function request(path, opts = {}) {
   const method = (opts.method || 'GET').toUpperCase();
   if (method !== 'GET' || opts.timeout != null) return withAuthRetry(() => rawRequest(path, opts));

@@ -328,7 +328,7 @@
 </template>
 
 <script>
-import { request, anonUid, getAuthUser, authLogout, clearAuth, fetchCheckinSummary, trackEvent } from '../../api.js';
+import { request, snapPeek, anonUid, getAuthUser, authLogout, clearAuth, fetchCheckinSummary, trackEvent } from '../../api.js';
 import { md } from '../../md.js';
 import { checkinStreak } from '../../checkin.js';
 
@@ -709,8 +709,11 @@ export default {
       uni.switchTab({ url: '/pages/book/book' });
     },
     async loadMastery() {
+      const p = '/api/mastery/map?uid=' + encodeURIComponent(anonUid());
+      const snap = snapPeek(p);
+      if (snap) this.kmCov = snap.cold ? null : snap.coverage.pct;
       try {
-        const d = await request('/api/mastery/map?uid=' + encodeURIComponent(anonUid()));
+        const d = await request(p);
         this.kmCov = d.cold ? null : d.coverage.pct;
       } catch (e) { /* 非关键路径 */ }
     },
@@ -773,8 +776,11 @@ export default {
     async loadSlStats() {
       const uid = uni.getStorageSync('anonUid');
       if (!uid) return;
+      const p = '/api/shenlun/stats?uid=' + encodeURIComponent(uid);
+      const snap = snapPeek(p);
+      if (snap) this.slStats = snap;
       try {
-        this.slStats = await request('/api/shenlun/stats?uid=' + encodeURIComponent(uid));
+        this.slStats = await request(p);
       } catch (e) { /* 非关键路径 */ }
     },
     goShenlun() {
@@ -783,29 +789,47 @@ export default {
     async loadGrowth() {
       const uid = uni.getStorageSync('anonUid');
       if (!uid) return;
+      const p = '/api/growth?uid=' + encodeURIComponent(uid);
+      const snap = snapPeek(p);
+      if (snap) this.growth = snap;
       try {
-        this.growth = await request('/api/growth?uid=' + encodeURIComponent(uid));
+        this.growth = await request(p);
       } catch (e) { /* 非关键路径 */ }
     },
     async loadReco() {
       const uid = uni.getStorageSync('anonUid');
       if (!uid) return;
+      const rp = '/api/recommend?uid=' + encodeURIComponent(uid);
+      const rSnap = snapPeek(rp);
+      if (rSnap) this.reco = rSnap;
+      const vp = '/api/review?uid=' + encodeURIComponent(anonUid());
+      const vSnap = snapPeek(vp);
+      if (vSnap) this.dueN = vSnap.total || 0;
       try {
-        this.reco = await request('/api/recommend?uid=' + encodeURIComponent(uid));
+        this.reco = await request(rp);
       } catch (e) { /* 非关键路径 */ }
       try {
-        const d = await request('/api/review?uid=' + encodeURIComponent(anonUid()));
+        const d = await request(vp);
         this.dueN = d.total || 0;
       } catch (e) { /* 非关键路径 */ }
     },
+    applyStats(d) {
+      this.byModule = d.by_module;
+      this.byType = d.by_type;
+      this.byReason = d.by_reason || [];
+    },
     async load() {
       this.loadErr = '';
+      const sp = '/api/stats?uid=' + encodeURIComponent(anonUid());
+      const mp = '/api/mistakes?uid=' + encodeURIComponent(anonUid());
+      // 快照即显：先用最近成功快照铺屏，真实响应到达后覆盖，避免 origin 长尾下长时间空白
+      const sSnap = snapPeek(sp);
+      if (sSnap) this.applyStats(sSnap);
+      const mSnap = snapPeek(mp);
+      if (mSnap) this.masteredCount = (mSnap.items || []).filter((m) => m.mastered).length;
       try {
-        const d = await request('/api/stats?uid=' + encodeURIComponent(anonUid()));
-        this.byModule = d.by_module;
-        this.byType = d.by_type;
-        this.byReason = d.by_reason || [];
-        const mk = await request('/api/mistakes?uid=' + encodeURIComponent(anonUid()));
+        this.applyStats(await request(sp));
+        const mk = await request(mp);
         this.masteredCount = (mk.items || []).filter((m) => m.mastered).length;
       } catch (e) {
         this.loadErr = e.message || '网络异常';
