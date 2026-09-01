@@ -79,7 +79,18 @@
         <text>可尝试题号（如 ZL-JQ-2024-000914）、题干关键词或考点名</text>
       </view>
     </template>
-    <view v-else class="empty">支持搜索：题号语义码、题干关键词、考点名、试卷名</view>
+    <template v-else>
+      <view v-if="hist.length" class="hist">
+        <view class="hist-top">
+          <text class="hist-t">搜索历史</text>
+          <view class="hist-clear" role="button" aria-label="清空搜索历史" @click="clearHist">清空</view>
+        </view>
+        <view class="hist-chips">
+          <text v-for="h in hist" :key="h" class="hist-chip" role="button" :aria-label="'搜索 ' + h" @click="kw = h; doSearch()">{{ h }}</text>
+        </view>
+      </view>
+      <view class="empty">支持搜索：题号语义码、题干关键词、考点名、试卷名</view>
+    </template>
   </view>
 </template>
 
@@ -103,7 +114,8 @@ export default {
       loadErr: '',
       result: null,
       detail: null,
-      timer: null
+      timer: null,
+      hist: uni.getStorageSync('kgSearchHist') || []
     };
   },
   computed: {
@@ -125,6 +137,16 @@ export default {
     showSec(k) {
       return this.tab === 'all' || this.tab === k;
     },
+    saveHist(q) {
+      const h = this.hist.filter((x) => x !== q);
+      h.unshift(q);
+      this.hist = h.slice(0, 10);
+      uni.setStorageSync('kgSearchHist', this.hist);
+    },
+    clearHist() {
+      this.hist = [];
+      uni.removeStorageSync('kgSearchHist');
+    },
     onInput() {
       clearTimeout(this.timer);
       this.timer = setTimeout(() => this.doSearch(), 400);
@@ -141,6 +163,7 @@ export default {
       try {
         this.result = await request('/api/search?q=' + encodeURIComponent(q) + '&type=' + this.tab);
         this.loadErr = '';
+        this.saveHist(q);
       } catch (e) {
         if (this.result) {
           uni.showToast({ title: e.message || '搜索失败', icon: 'none' });
@@ -227,6 +250,12 @@ export default {
 .empty { display: flex; flex-direction: column; gap: 8rpx; text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 100rpx 40rpx; }
 .empty-t { font-size: 26rpx; color: var(--ink-2); }
 .retry { margin-top: 8rpx; font-size: 26rpx; color: var(--brand); font-weight: 600; }
+.hist { margin-top: 28rpx; }
+.hist-top { display: flex; align-items: center; justify-content: space-between; }
+.hist-t { font-size: 26rpx; font-weight: 600; color: var(--ink-2); }
+.hist-clear { font-size: 24rpx; color: var(--ink-3, #8a90a0); padding: 8rpx; }
+.hist-chips { display: flex; flex-wrap: wrap; gap: 16rpx; margin-top: 16rpx; }
+.hist-chip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 26rpx; color: var(--ink-1, #1f2430); background: var(--card, #fff); border: 1px solid var(--line, #e5e7eb); border-radius: 999rpx; padding: 10rpx 24rpx; }
 
 /* 桌面（H5）：≥1024 左考点/试卷侧栏 + 右题目列表（仅「全部」tab） */
 /* #ifdef H5 */
