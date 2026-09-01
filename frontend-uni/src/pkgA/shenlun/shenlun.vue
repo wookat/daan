@@ -118,7 +118,10 @@
           </view>
         </view>
         <text class="m-content" :class="{ clamp: expanded !== m.id }" @click="expanded = expanded === m.id ? 0 : m.id">{{ m.content }}</text>
-        <text v-if="m.source" class="m-src">出处：{{ m.source }}</text>
+        <view class="m-foot">
+          <text v-if="m.source" class="m-src">出处：{{ m.source }}</text>
+          <text class="d-copy" role="button" :aria-label="'复制素材链接：' + m.topic" @click="copyMatLink(m)">复制链接</text>
+        </view>
       </view>
       </view>
       <view v-if="!favOnly && !mEnd && mats.length >= 20" class="more" @click="loadMoreMat">加载更多</view>
@@ -144,7 +147,7 @@
 
 <script>
 import { request, snapPeek, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api';
-import { buildShenlunUrl } from '../../shenlun-url.js';
+import { buildShenlunUrl, buildShenlunMatUrl } from '../../shenlun-url.js';
 
 const QTYPES = ['全部', '归纳概括', '综合分析', '提出对策', '贯彻执行', '大作文'];
 const MTYPES = ['全部', '金句', '案例', '政策理论', '范文'];
@@ -428,6 +431,10 @@ export default {
       const url = (typeof window !== 'undefined' ? window.location.origin : '') + buildShenlunUrl(this.detail.id);
       uni.setClipboardData({ data: url, success: () => uni.showToast({ title: '链接已复制，发给考友直达本题', icon: 'none' }) });
     },
+    copyMatLink(m) {
+      const url = (typeof window !== 'undefined' ? window.location.origin : '') + buildShenlunMatUrl(m.id, m.type);
+      uni.setClipboardData({ data: url, success: () => uni.showToast({ title: '链接已复制，发给考友直达本条素材', icon: 'none' }) });
+    },
     saveDraft() {
       if (!this.detail) return;
       const k = 'slDraft:' + this.detail.id;
@@ -539,6 +546,9 @@ page { background: var(--fill); }
 .sheet-x { font-size: 26rpx; color: var(--brand-text); font-weight: 600; padding: 10rpx 0 10rpx 24rpx; }
 .sheet-k { font-size: 23rpx; color: var(--ink-3); margin: 14rpx 0 10rpx; }
 .m-src { font-size: 22rpx; color: var(--ink-3); word-break: break-all; overflow-wrap: anywhere; display: block; }
+.m-foot { display: flex; align-items: baseline; justify-content: space-between; gap: 12rpx; margin-top: 4rpx; }
+.m-foot .m-src { flex: 1; }
+.m-foot .d-copy { flex-shrink: 0; margin-left: auto; }
 .m-hit { margin-left: 8rpx; padding: 2rpx 10rpx; font-size: 20rpx; color: var(--brand-text); background: var(--fill); border-radius: 8rpx; font-weight: 400; }
 .d-ans-h { display: flex; justify-content: space-between; align-items: baseline; margin: 22rpx 0 10rpx; }
 .d-save { font-size: 21rpx; color: var(--ink-3); }

@@ -5,3 +5,10 @@ export function buildShenlunUrl(id) {
   const n = Number(id);
   return Number.isInteger(n) && n > 0 ? SHENLUN_PATH + '?id=' + n : SHENLUN_PATH;
 }
+
+export function buildShenlunMatUrl(id, type) {
+  const n = Number(id);
+  if (!Number.isInteger(n) || n <= 0) return SHENLUN_PATH + '?tab=m';
+  const t = typeof type === 'string' && type ? '&mtype=' + encodeURIComponent(type) : '';
+  return SHENLUN_PATH + '?tab=m&mid=' + n + t;
+}
