@@ -103,7 +103,20 @@
           <view class="sheet-x" role="button" aria-label="关闭" @click="detail = null"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <scroll-view scroll-y class="detail-scroll">
-          <text class="dq">{{ detail.question }}</text>
+          <template v-if="detailMat">
+            <view
+              class="mat-fold"
+              role="button"
+              :aria-label="matOpen ? '收起材料' : '展开材料'"
+              @click="matOpen = !matOpen"
+            >
+              <text class="mat-fold-t">📄 资料材料</text>
+              <text class="mat-fold-a">{{ matOpen ? '收起 ‹' : '展开 ›' }}</text>
+            </view>
+            <text v-if="matOpen" class="dq">{{ detailMat.material }}</text>
+            <text class="dq">{{ detailMat.stem }}</text>
+          </template>
+          <text v-else class="dq">{{ detail.question }}</text>
           <view v-for="(v, k) in detail.options" :key="k" class="dopt" :class="{ right: k === detail.answer, wrong: k === detail.picked && k !== detail.answer }">
             <text>{{ k }}. {{ v }}</text>
           </view>
@@ -122,13 +135,14 @@
 
 <script>
 import { request, anonUid, isNetErr } from '../../api.js';
+import { splitMaterial } from '../../material.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
 const MOD_ORDER = ['changshi', 'yanyu', 'shuliang', 'panduan', 'ziliao'];
 
 export default {
   data() {
-    return { loading: true, loadErr: '', aid: null, report: null, history: [], detail: null };
+    return { loading: true, loadErr: '', aid: null, report: null, history: [], detail: null, matOpen: false };
   },
   computed: {
     accuracy() {
@@ -144,6 +158,11 @@ export default {
       if (!a || !a.submitted_at) return '-';
       const s = Math.max(0, Math.round(a.submitted_at - a.started_at));
       return Math.floor(s / 60) + ' 分 ' + (s % 60) + ' 秒';
+    },
+    detailMat() {
+      const d = this.detail;
+      if (!d || d.module !== 'ziliao') return null;
+      return splitMaterial(d.question);
     },
     modules() {
       const pm = (this.report && this.report.attempt.per_module) || {};
@@ -189,7 +208,7 @@ export default {
         this.history = (d.items || []).slice().reverse();
       } catch (e) { /* 非关键路径 */ }
     },
-    openQ(it) { this.detail = it; },
+    openQ(it) { this.matOpen = false; this.detail = it; },
     openAttempt(a) {
       if (a.id === this.report.attempt.id) return;
       this.load(a.id);
@@ -256,6 +275,9 @@ export default {
 .sheet-t { font-size: 30rpx; font-weight: 600; }
 .sheet-x { font-size: 30rpx; color: var(--ink-2); padding: 8rpx 16rpx; }
 .detail-scroll { max-height: 62vh; }
+.mat-fold { display: flex; justify-content: space-between; align-items: center; background: #f0fdfa; border: 1rpx solid #99f6e4; border-radius: 12rpx; padding: 14rpx 20rpx; margin-bottom: 14rpx; }
+.mat-fold-t { font-size: 24rpx; color: #0f766e; }
+.mat-fold-a { font-size: 24rpx; color: #0d9488; font-weight: 600; flex-shrink: 0; margin-left: 16rpx; }
 .dq { display: block; font-size: 28rpx; line-height: 1.7; white-space: pre-wrap; margin-bottom: 20rpx; }
 .dopt { border: 2rpx solid var(--line); border-radius: 16rpx; padding: 16rpx 20rpx; margin-bottom: 14rpx; font-size: 26rpx; line-height: 1.6; }
 .dopt.right { border-color: var(--ok, #16a34a); background: var(--ok-soft); }
