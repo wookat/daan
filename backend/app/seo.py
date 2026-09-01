@@ -88,8 +88,10 @@ _CSS = (
     ".ans{background:var(--ans-bg);border-radius:8px;padding:12px;margin-top:10px}"
     ".cta{display:inline-block;background:" + BRAND + ";color:#fff!important;border-radius:999px;"
     "padding:10px 24px;font-weight:600;margin:14px 0}"
-    ".pager{display:flex;gap:12px;justify-content:center;margin:16px 0}.pager a,.pager span{padding:6px 14px;"
+    ".pager{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:16px 0}.pager a,.pager span{padding:6px 12px;"
     "background:var(--surface);border-radius:8px;border:1px solid var(--border)}"
+    ".pager .gap{border:none;background:none;padding:6px 2px}"
+    ".pager [aria-current]{background:" + BRAND + ";color:#fff;border-color:" + BRAND + "}"
     ".ftr{color:var(--muted);font-size:13px;text-align:center;padding:20px 0}"
     "details summary{cursor:pointer;font-weight:600}"
     "@media(min-width:768px){.card{transition:box-shadow .15s ease}"
@@ -203,17 +205,30 @@ def _crumb(items: list[tuple[str, str | None]]) -> str:
 
 def _pager(base_path: str, page: int, total: int) -> str:
     pages = max(1, math.ceil(total / PAGE_SIZE))
+
+    def href(p: int) -> str:
+        return _e(base_path) if p == 1 else f"{_e(base_path)}?page={p}"
+
     out = []
-    if page > 2:
-        out.append(f'<a href="{_e(base_path)}">首页</a>')
     if page > 1:
-        out.append(f'<a href="{_e(base_path)}?page={page - 1}" rel="prev">上一页</a>')
-    out.append(f"<span>{page} / {pages}</span>")
+        out.append(f'<a href="{href(page - 1)}" rel="prev">上一页</a>')
+    lo, hi = max(1, page - 2), min(pages, page + 2)
+    if lo > 1:
+        out.append(f'<a href="{href(1)}">1</a>')
+        if lo > 2:
+            out.append('<span class="gap">…</span>')
+    for p in range(lo, hi + 1):
+        if p == page:
+            out.append(f'<span aria-current="page">{p}</span>')
+        else:
+            out.append(f'<a href="{href(p)}">{p}</a>')
+    if hi < pages:
+        if hi < pages - 1:
+            out.append('<span class="gap">…</span>')
+        out.append(f'<a href="{href(pages)}">{pages}</a>')
     if page < pages:
-        out.append(f'<a href="{_e(base_path)}?page={page + 1}" rel="next">下一页</a>')
-    if page < pages - 1:
-        out.append(f'<a href="{_e(base_path)}?page={pages}">末页</a>')
-    return '<div class="pager">' + "".join(out) + "</div>"
+        out.append(f'<a href="{href(page + 1)}" rel="next">下一页</a>')
+    return '<nav class="pager" aria-label="分页">' + "".join(out) + "</nav>"
 
 
 def _q_items(rows) -> str:
