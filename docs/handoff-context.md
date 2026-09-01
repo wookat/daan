@@ -675,3 +675,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 收口：`_cached` 对齐 `_pick_pools` 语义——过期先回旧值 + 后台单飞重算，冷 miss（进程启动后首次）仍同步且 build 锁防惊群；零调用方/契约改动。+4 例 pytest（旧值不阻塞/单飞/冷 miss/重算异常不污染缓存）。
 - 验证：本地全绿（ruff/pytest 104/pyright 0）；生产 rev 35f6e11 部署后 governance 冷 miss 4.1s（仅重启后首次）、后续 0.07–0.25s；性能预算全过。
 - 明确不做：不 SQL 化 governance_scan（独立候选）、不加常驻预热线程（2G 内存高压宿主）。详见 docs/iter/round-3/design-r222-admin-cache-swr.md。
+
+### R223（管理台无障碍收口，已部署）
+- 取证 verified：生产认证 axe（12 个管理台路由 × 1440）全部存在 serious 级 color-contrast 违规（重复根因为 admin.css 全局 token：--t3/--t4/状态色/模块色低于 WCAG AA），另有 questions/comments/review/users/settings 表单控件缺 accessible name、侧栏 4 组 nav landmark 未唯一命名、`.main` 非语义 main、多处操作列空表头。
+- 收口（纯 admin 静态资源，零 API/路由/行为变化）：① 全局颜色 token 提对比度（--t3 #5D6270、--t4 #6E7280、success/error/warning/info 及模块色全部 AA 达标，dashboard 一处硬编码 warning 色改 token）；② 控件 aria-label（全选/行选 checkbox、模块/质量分/排序/举报状态 select、用户/公告/全局搜索输入框）；③ `<main class="main">` + 4 组 `<nav aria-label>`；④ 新增 .sr-only，操作/选择列空表头补隐藏文本。
+- 返工两处：首轮生产 axe 残留 settings 公告表空表头（minor，已补 sr-only）；.sr-only 绝对定位在横滚表格 th 内以 html 为包含块，375 视口 4 路由页面级 scrollWidth 溢出 296–349px，`.tbl th{position:relative}` 收进包含块后清零。
+- 验证：本地全绿（ruff/pytest 104/pyright 0/lint/vitest/build）；生产 rev 05496bd 部署后 12 路由认证 axe 全部零违规，1440/375 × 12 路由页面级溢出全 0，性能预算全过。
+- 明确不做：管理台深色模式（挂候选）、SPA 端无障碍（此前已清零）、布局/交互重设计。详见 docs/iter/round-3/design-r223-admin-a11y.md。
