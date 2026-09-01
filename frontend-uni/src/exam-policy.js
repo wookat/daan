@@ -1,11 +1,11 @@
 // 做卷交卷失败的重试决策纯函数：无 uni/window 依赖，exam.vue 委托调用；
 // 单测见 tests/exam-policy.test.js。
-import { isNetMsg } from './api-policy';
+import { trackRetryable } from './api-policy';
 
 export const SUBMIT_MAX_AUTO_RETRIES = 5;
 
-// 与埋点离线队列同口径：网络失败/超时/HTTP 5xx 可重试；4xx 属确定性拒绝。
-const retryable = (msg) => isNetMsg(msg) || /^HTTP 5\d\d$/.test(String(msg));
+// 与埋点离线队列同口径：网络失败/超时/HTTP 5xx/429 限流可重试；其余 4xx 属确定性拒绝。
+const retryable = trackRetryable;
 
 // 交卷失败分流：
 // - terminal：确定性错误（如「答题记录不存在」404）——会话已失效，重试永不成功；

@@ -35,6 +35,7 @@ from . import (
     zalize_sso,
 )
 from .deps import ACCESS_CODE
+from .storm_guard import ErrorStormGuard
 
 _DOCS_OFF = os.environ.get("DISABLE_API_DOCS") == "1"
 app = FastAPI(
@@ -114,6 +115,32 @@ async def head_as_get(request, call_next):
         async for _ in response.body_iterator:
             pass
     return Response(status_code=response.status_code, headers=dict(response.headers))
+
+
+_storm_guard = ErrorStormGuard()
+
+
+@app.middleware("http")
+async def error_storm_middleware(request, call_next):
+    """错误风暴防护：单 IP 短窗口内 /api 错误响应超阈值后临时 429，不落线程池/SQLite。
+
+    IP 取边缘透传的 X-Kg-Ip（真实客户端 IP），回退 socket 对端；
+    /api/health 豁免封禁（容器 healthcheck/watchdog 不受影响）。
+    """
+    path = request.url.path
+    if not path.startswith("/api/"):
+        return await call_next(request)
+    ip = request.headers.get("x-kg-ip") or (request.client.host if request.client else "")
+    now = time.time()
+    if path != "/api/health" and _storm_guard.blocked(ip, now):
+        return JSONResponse(
+            {"detail": "请求过于频繁，请稍后重试"},
+            status_code=429,
+            headers={"Retry-After": "60"},
+        )
+    response = await call_next(request)
+    _storm_guard.record(ip, response.status_code, now)
+    return response
 
 
 @app.middleware("http")

@@ -16,6 +16,7 @@ describe('submitFailPlan', () => {
   it('时间到 + 可重试错误按指数退避自动重试（5s 起步 60s 封顶）', () => {
     expect(submitFailPlan({ message: '网络错误', timeUp: true, tries: 0 })).toEqual({ action: 'retry', delayMs: 5000 });
     expect(submitFailPlan({ message: 'HTTP 503', timeUp: true, tries: 1 })).toEqual({ action: 'retry', delayMs: 10000 });
+    expect(submitFailPlan({ message: '请求过于频繁，请稍后重试', timeUp: true, tries: 1 })).toEqual({ action: 'retry', delayMs: 10000 });
     expect(submitFailPlan({ message: 'request:fail', timeUp: true, tries: 3 })).toEqual({ action: 'retry', delayMs: 40000 });
     expect(submitFailPlan({ message: 'request:fail', timeUp: true, tries: 4 })).toEqual({ action: 'retry', delayMs: 60000 });
   });
