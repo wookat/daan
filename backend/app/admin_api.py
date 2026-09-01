@@ -7,7 +7,7 @@ import httpx
 from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import Response
 
-from . import db, llm, similarity, taxonomy
+from . import db, llm, ops_status, similarity, taxonomy
 from .deps import ACCESS_CODE, IMPORT_TOKEN, check_admin
 
 router = APIRouter()
@@ -160,6 +160,12 @@ def admin_page():
 def api_admin_dashboard(x_admin_token: str | None = Header(None)):
     check_admin(x_admin_token)
     return db.admin_dashboard()
+
+
+@router.get("/api/admin/ops_status")
+def api_admin_ops_status(x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return ops_status.parse_ops_status(os.environ.get("OPS_REPORTS_DIR", "/reports"))
 
 
 @router.get("/api/admin/governance")

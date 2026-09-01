@@ -3,7 +3,9 @@
 # 部署位置：VPS /home/ubuntu/kaogong-ops.sh，cron `40 3 * * *`。
 # R2 凭证从 /home/ubuntu/.env 读取（R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / R2_ENDPOINT），不入库不打印。
 set -u
-LOG=/home/ubuntu/kaogong-ops.log
+# 与部署/生命周期审计同目录，容器只读挂载 /reports 供管理台 ops_status 外显
+LOG=/home/ubuntu/kaogong-reports/kaogong-ops.log
+mkdir -p "$(dirname "$LOG")"
 TS=$(date '+%F %T')
 # 1. 每日 DB 备份（本地保留 7 份）
 BK=/home/ubuntu/kaogong-backups

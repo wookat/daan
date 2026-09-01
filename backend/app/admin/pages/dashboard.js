@@ -76,7 +76,41 @@
             <span class="n"${low ? ' style="color:var(--error)"' : ''}>${r.acc == null ? '—' : r.acc + '%'}</span></div>`;
         }).join('') : '<div class="empty" style="padding:20px 0">近 7 天暂无作答</div>'}
       </div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div class="card-h"><span class="t">运维状态</span><span class="tag tag-gray">审计日志汇总</span></div>
+      <div id="dash-ops"><span style="color:var(--t3);font-size:12px">加载中…</span></div>
     </div>`;
+    api('/api/admin/ops_status').then((o) => {
+      const box = document.getElementById('dash-ops');
+      if (!box) return;
+      if (!o.available) {
+        box.innerHTML = '<span style="color:var(--t3);font-size:12px">审计日志目录不可用（本地环境无 /reports 挂载）</span>';
+        return;
+      }
+      const tag = (it, label) => it
+        ? `<div class="hbar"><span class="lb" style="width:auto;flex:1">${label}<span class="sub" style="margin-left:6px;font-size:11px;color:var(--t4)">${esc(it.ts || '')}</span></span>
+           <span class="tag ${it.ok ? 'tag-ok' : 'tag-bad'}">${it.ok ? '●' : '✕'} ${esc((it.detail || it.rev || '').slice(0, 60))}</span></div>`
+        : `<div class="hbar"><span class="lb" style="width:auto;flex:1">${label}</span><span class="tag tag-gray">无记录</span></div>`;
+      const dep = o.last_deploy
+        ? `<div class="hbar"><span class="lb" style="width:auto;flex:1">最近部署<span class="sub" style="margin-left:6px;font-size:11px;color:var(--t4)">${esc(o.last_deploy.ts)}</span></span>
+           <span class="tag tag-brand">rev ${esc(o.last_deploy.rev)}</span></div>`
+        : '';
+      box.innerHTML = dep
+        + tag(o.backup, '每日备份上传 R2')
+        + tag(o.restore_verify, '备份可恢复验证')
+        + tag(o.r2_verify, 'R2 副本周验证')
+        + tag(o.mem, '宿主内存水位')
+        + `<div class="hbar"><span class="lb" style="width:auto;flex:1">24h 容器变更</span>
+           <span class="tag ${o.container_changes_24h ? 'tag-warn' : 'tag-gray'}">${o.container_changes_24h} 次</span></div>`
+        + ((o.alerts || []).length
+          ? `<div style="margin-top:8px;font-size:11px;color:var(--error)">近 7 天告警：</div>`
+            + o.alerts.slice(0, 5).map((a) => `<div style="font-size:11px;color:var(--error);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(a)}">${esc(a)}</div>`).join('')
+          : '<div style="margin-top:8px;font-size:11px;color:var(--t4)">近 7 天无告警</div>');
+    }).catch(() => {
+      const box = document.getElementById('dash-ops');
+      if (box) box.innerHTML = '<span style="color:var(--error);font-size:12px">加载失败</span>';
+    });
     api('/api/admin/llm_health').then((r) => {
       const box = document.getElementById('dash-llm');
       if (!box) return;
