@@ -63,6 +63,12 @@ export default {
         this.load();
       },
     },
+    draft(v) {
+      if (!this.editing) return;
+      const k = 'qNoteDraft:' + this.questionId;
+      if (v && v !== this.note) uni.setStorageSync(k, v);
+      else uni.removeStorageSync(k);
+    },
   },
   methods: {
     async load() {
@@ -80,7 +86,7 @@ export default {
       } catch (e) { /* 非关键路径 */ }
     },
     startEdit() {
-      this.draft = this.note;
+      this.draft = uni.getStorageSync('qNoteDraft:' + this.questionId) || this.note;
       this.editing = true;
     },
     async saveIt(content) {
@@ -90,6 +96,7 @@ export default {
         const d = await saveNote(this.questionId, content.trim());
         this.note = d.content || '';
         this.editing = false;
+        uni.removeStorageSync('qNoteDraft:' + this.questionId);
         uni.showToast({ title: this.note ? '笔记已保存' : '笔记已删除', icon: 'none', duration: 900 });
       } catch (e) {
         uni.showToast({ title: e.message, icon: 'none' });

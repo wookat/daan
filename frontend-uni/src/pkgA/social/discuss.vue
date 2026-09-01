@@ -137,6 +137,14 @@ export default {
       inboxUnread: 0,
     };
   },
+  watch: {
+    draft(v) {
+      if (!this.qid) return;
+      const k = 'dcDraft:' + this.qid;
+      if (v) uni.setStorageSync(k, v);
+      else uni.removeStorageSync(k);
+    },
+  },
   onShow() {
     const l = !!getToken();
     if (l !== this.logged) {
@@ -152,6 +160,7 @@ export default {
       this.loading = false;
       return;
     }
+    this.draft = uni.getStorageSync('dcDraft:' + this.qid) || '';
     if (opts.focus === '1' && getToken()) {
       setTimeout(() => {
         this.autoFocus = true;
@@ -257,6 +266,7 @@ export default {
       try {
         const d = await postComment(this.qid, content, this.replyTo && this.replyTo.id);
         this.draft = '';
+        uni.removeStorageSync('dcDraft:' + this.qid);
         if (this.replyTo) {
           const top = this.items.find((c) => c.id === d.item.parent_id);
           if (top) top.replies.push(d.item);

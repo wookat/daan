@@ -439,3 +439,7 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 ### R139（2026-09-01）：api.js 网络层决策纯函数化 + vitest 回归覆盖
 - 取证：api.js（950 行）是全站唯一网络入口，承载六类关键决策零单测——isNetErr 错误分类（R134–R137 全站失败态分流依据）、401/403 登录失效判定（R39）、非 2xx detail 提取（R66 防 [object Object]）、GET 快照兜底 LRU/TTL（R90）、SSE 解析（feedSse + 两处 interview feed 三份复制）；历轮回归全靠生产实测。
 - 修复：对称 R118/R133 模式抽出 src/api-policy.js 纯函数（isTimeoutMsg/isNetMsg/classifyHttpError/snapCacheable/snapFresh/snapPushIndex/parseSseEvents），api.js 委托调用、SSE 三处 feed 统一为 feedSse 消费 parseSseEvents（state.errMsg 定制错误文案、done 事件透出）；新增 tests/api-policy.test.js 16 例（vitest 38→54），行为等价重构零生产行为变化、零新依赖。生产双视口复验：1440/375 首页/刷题/AI问答加载回归 + 真实面试流式点评全程正常、console 0 error、溢出 0（测试 uid 4 行已清理，保护 uid 零 mutation）。方案：docs/iter/round-3/r139-api-policy-tests.md。
+
+### R140（2026-09-01）：讨论/笔记 UGC 输入草稿保护
+- 取证：延续 R138 探针对全站剩余长文本输入逐处核查。verified：讨论页 discuss.vue 发言/回复 draft（500 字）纯内存，刷新/标签页回收即丢；q-social-bar 笔记编辑 draft（1000 字）纯内存且「取消」误触即整篇丢弃无恢复。申论 slDraft/面试 ivDraft 为存量能力；book 纠错补充说明为选填短文本不立项。
+- 修复：沿用 slDraft 键模式——讨论 dcDraft:<qid> 逐题草稿（onLoad 恢复、watch 即存空即删、发布成功清除）；笔记 qNoteDraft:<qid>（startEdit 优先草稿回落笔记原文、编辑中即存且与已存笔记一致时删键、保存成功清除、取消保留草稿）。零后端改动。生产双视口复验：讨论页 1440/375 输入→刷新草稿恢复、清空后键删除；笔记输入→取消→再编辑恢复、清空退出键删除、console 0 error、溢出 0（测试 uid 3 行已清理，保护 uid 零 mutation）。方案：docs/iter/round-3/r140-ugc-draft-persist.md。
