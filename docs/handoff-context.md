@@ -481,3 +481,16 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 
 ### R155（2026-08-29）：数据窗口复审计（docs-only）
 - 7d：answer_log 23 uid/152 条、exam 12、pk 3；push_subs 仍 0；daily_set_entries 全表 0 行——真实 API 探针验证提交链路正常落库（测试行已清理），0 行系参与率为零非工程缺陷；slow_load 47 条仍以 nav:90s 已归因族群为主。无新 verified 缺陷可立项。方案：docs/iter/round-3/r155-window-audit.md。
+
+### R156–R180（2026-08-29/09-01）：搜索可发现性与竞态、对比度治理、快照即显、HTTP 语义收口
+- R156–R161 搜索 golden path：深链消费 + /tiku 搜索表单 + SearchAction（#334）、URL 同步（#335）、换词/分页/详情三条竞态防护与加载反馈（#336–#339）。
+- R162–R164 对比度治理三连：结果态/内容态/深色全站 token（--brand-text 等，#340–#342）；R165 复审计确认 axe/Lighthouse 全清零（#343）。
+- R166 功能面竞品复审计：剩余差距为内容管线级（招考公告聚合/职位表/备考资料），申报立项（#344）；R167 深色 tabbar 滤镜（#345）。
+- R168–R174「长尾韧性」家族：边缘 SWR（#346）+ 客户端快照即显全站收口（统计/错题本/首页/我的/分包三页/周报/申论历史，#347–#350、#352）；R173 部署脚本传播窗口轮询（#351）。
+- R176–R180 HTTP 语义：埋点离线重放 ago_ms（#355）、HEAD 按 GET 处理（#356）、条件请求 304（origin 强 ETag+边缘 INM/IMS，注意 CF Email Obfuscation 剥 HTML ETag，#357）、边缘 Last-Modified 稳定化（#359）。R175/R179 复审计 docs-only（#353/#358）。
+- 合并注意：老板批量合并常把链式 PR 各自并进基分支而非 main，需 rollup PR 收口（#354 收 R122–R175、#360 收 R176–R180）。
+
+### R181–R183（2026-09-01）：交卷重试风暴（客户端根治 + 服务端兜底 + 归因校正）
+- R181（#361）：exam.vue 自动交卷失败后 startClock() 重启过期时钟致每秒重交、确定性 404 也无限重试（源码 verified 真实可触发）；新增 exam-policy.js submitFailPlan 三态：terminal（清 examProgress+会话失效 modal）/manual/retry（5s→60s 退避 ≤5 次）。
+- R182（#362）：服务端兜底——storm_guard.py ErrorStormGuard（30 错误/60s/IP，X-Kg-Ip 维度，LRU 1024）+ main.py 中间件超阈值 429+Retry-After:60，/api/health 豁免；前端 429/「请求过于频繁」归入可重试口径（trackRetryable 复用）。生产复验第 31 个错误起 429、65s 自动恢复。
+- R183 归因校正（重要，不造假数据）：origin 日志按 X-Kg-Ip 复核，风暴 ~20.9k 错误行 100% 来自本会话探针 IP（140.232.64.5，R181 复现/验证期间旧 bundle 触发真实 bug 所致）；同窗口 551 个 502 也全部来自该 IP（风暴过载症状，非独立缺陷），非探针错误仅 4 条 403 /tiku/（R86 直连拒绝，预期行为）。结论：bug 真实存在且已根治+兜底，但无证据表明真实用户曾触发；后续观察真实用户窗口挂后台。

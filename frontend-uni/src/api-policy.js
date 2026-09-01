@@ -39,8 +39,9 @@ export function snapPushIndex(idx, path, max) {
 
 // ---------- 埋点失败离线队列（R176）----------
 
-// 可重试判定：网络失败/超时/HTTP 5xx（瞬时窗口）可重放；4xx 属确定性拒绝不重试。
-export const trackRetryable = (msg) => isNetMsg(msg) || /^HTTP 5\d\d$/.test(String(msg));
+// 可重试判定：网络失败/超时/HTTP 5xx（瞬时窗口）/429 限流可重放；其余 4xx 属确定性拒绝不重试。
+export const trackRetryable = (msg) =>
+  isNetMsg(msg) || /^HTTP (5\d\d|429)$/.test(String(msg)) || /请求过于频繁/.test(String(msg));
 
 // 入队：追加一条，超上限丢最旧（最近事件分析价值更高）。
 export function trackQueuePush(q, item, max = 30) {

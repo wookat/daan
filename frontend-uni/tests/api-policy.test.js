@@ -128,6 +128,8 @@ describe('埋点失败离线队列（R176）', () => {
     expect(trackRetryable('request:fail')).toBe(true);
     expect(trackRetryable('timeout of 12000ms')).toBe(true);
     expect(trackRetryable('HTTP 502')).toBe(true);
+    expect(trackRetryable('HTTP 429')).toBe(true);
+    expect(trackRetryable('请求过于频繁，请稍后重试')).toBe(true);
     expect(trackRetryable('HTTP 400')).toBe(false);
     expect(trackRetryable('无效事件')).toBe(false);
     expect(trackRetryable(undefined)).toBe(false);
