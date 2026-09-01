@@ -432,6 +432,11 @@ def tiku_daily():
     return _render_daily(db.cn_day(), archived=False)
 
 
+@router.get("/daily/{day}", include_in_schema=False)
+def tiku_daily_archive_noslash(day: str):
+    return RedirectResponse(f"/tiku/daily/{quote(day)}/", status_code=301)
+
+
 @router.get("/daily/{day}/", response_class=HTMLResponse, include_in_schema=False)
 def tiku_daily_archive(day: str):
     valid = db.daily_archive_day(day)
@@ -534,6 +539,11 @@ def tiku_papers():
             [("题库", "/tiku/"), ("真题卷", "/tiku/papers/")],
         ),
     )
+
+
+@router.get("/papers/{pid}/", include_in_schema=False)
+def tiku_paper_detail_slash(pid: int):
+    return RedirectResponse(f"/tiku/papers/{pid}", status_code=301)
 
 
 @router.get("/papers/{pid}", response_class=HTMLResponse, include_in_schema=False)
