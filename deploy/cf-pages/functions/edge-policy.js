@@ -32,7 +32,7 @@ export function isEdgeCacheable(method, pathname, hasAuth, hasUid) {
   // /s/* 分享落地页：输出仅依赖 sid（OG + 跳 SPA），动态内容都在 SPA 内走 API
   if (pathname.startsWith("/s/")) return true;
   if (pathname.startsWith("/p/")) return true;
-  if (pathname.startsWith("/sitemap") || pathname === "/robots.txt") return true;
+  if (pathname.startsWith("/sitemap") || pathname === "/robots.txt" || pathname === "/llms.txt") return true;
   return API_CACHE_ALLOWLIST.has(pathname) && !hasAuth && !hasUid;
 }
 
@@ -98,8 +98,8 @@ export function shouldServeOutage(method, pathname, status, hasStale) {
 
 export function isCacheableContentType(pathname, isApi, contentType) {
   const ct = contentType || "";
-  if (pathname.startsWith("/sitemap") || pathname === "/robots.txt") {
-    return ct.includes("xml") || ct.includes("text/plain");
+  if (pathname.startsWith("/sitemap") || pathname === "/robots.txt" || pathname === "/llms.txt") {
+    return ct.includes("xml") || ct.includes("text/plain") || ct.includes("text/markdown");
   }
   return ct.includes(isApi ? "application/json" : "text/html");
 }

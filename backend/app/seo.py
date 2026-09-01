@@ -1343,6 +1343,31 @@ def pk_landing(rid: str):
     )
 
 
+@root_router.get("/llms.txt", include_in_schema=False)
+def llms_txt():
+    """llmstxt.org 站点导览：面向 LLM 爬虫的公开内容入口清单。"""
+    mods = "\n".join(
+        f"- [{m['name']}题库]({_url(f'/tiku/{key}/')}): {m['name']}模块真题与练习题，含考点子分类与年份归档"
+        for key, m in kb.MODULES.items()
+        if key != "shenlun"
+    )
+    return PlainTextResponse(
+        "# 错题邦公考题库\n\n"
+        "> 免费公务员考试在线刷题与错题本：行测五大模块真题题库（每题含答案与解析）、"
+        "每日一练、历年真题卷、考友讨论。\n\n"
+        "## 题库\n\n"
+        f"- [题库首页]({_url('/tiku/')}): 全部模块、考点与年份入口\n"
+        f"{mods}\n"
+        f"- [历年真题卷]({_url('/tiku/papers/')}): 按年份/地区的完整真题卷列表\n\n"
+        "## 动态内容\n\n"
+        f"- [每日一练]({_url('/tiku/daily/')}): 全站同题每日题组与排行榜\n"
+        f"- [考友热议]({_url('/tiku/discuss/')}): 题目讨论区热门评论聚合\n\n"
+        "## 说明\n\n"
+        f"- [站点地图]({_url('/sitemap.xml')}): 全部可收录页面\n",
+        media_type="text/markdown; charset=utf-8",
+    )
+
+
 @root_router.get("/robots.txt", include_in_schema=False)
 def robots_txt():
     blocked = "".join(

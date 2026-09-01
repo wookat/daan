@@ -41,7 +41,7 @@ describe('isBlockedBot', () => {
 
 describe('isEdgeCacheable', () => {
   it('SEO 页族 / 分享落地页 / sitemap / robots 可缓存', () => {
-    for (const p of ['/tiku/', '/tiku/q/3', '/s/abc123', '/p/og433f', '/sitemap.xml', '/sitemap-questions-8.xml', '/robots.txt']) {
+    for (const p of ['/tiku/', '/tiku/q/3', '/s/abc123', '/p/og433f', '/sitemap.xml', '/sitemap-questions-8.xml', '/robots.txt', '/llms.txt']) {
       expect(isEdgeCacheable('GET', p, false, false)).toBe(true);
     }
   });
@@ -99,6 +99,10 @@ describe('isCacheableContentType', () => {
     expect(isCacheableContentType('/sitemap.xml', false, 'application/xml')).toBe(true);
     expect(isCacheableContentType('/robots.txt', false, 'text/plain; charset=utf-8')).toBe(true);
     expect(isCacheableContentType('/sitemap.xml', false, 'text/html')).toBe(false);
+  });
+  it('llms.txt 接受 text/markdown，拒绝 html 错误页', () => {
+    expect(isCacheableContentType('/llms.txt', false, 'text/markdown; charset=utf-8')).toBe(true);
+    expect(isCacheableContentType('/llms.txt', false, 'text/html')).toBe(false);
   });
   it('API 只入 json，页面只入 html（错误页/网关页不入缓存）', () => {
     expect(isCacheableContentType('/api/daily_set', true, 'application/json')).toBe(true);
