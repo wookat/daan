@@ -7,6 +7,8 @@ import threading
 import time
 
 from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -56,6 +58,15 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["X-Paper-Code"],
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def _validation_handler(request: Request, exc: RequestValidationError):
+    """公开 HTML 页族的畸形参数（如 ?page=abc、/tiku/q/abc/）返回品牌 404，
+    而非 FastAPI 原始 JSON 422；/api 契约保持默认 JSON 422 不变。"""
+    if request.url.path.startswith(("/tiku", "/s/", "/p/")):
+        return seo._not_found("页面不存在")
+    return await request_validation_exception_handler(request, exc)
 
 
 _ETAG_TYPES = ("text/html", "xml", "text/plain")
