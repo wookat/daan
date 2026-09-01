@@ -584,4 +584,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 ### R205（边缘无副本 MISS 路径 origin 重启窗口 5xx 单次重试）
 - 取证：非探针 24h 日志实见 ClaudeBot 抓 /tiku/panduan/?page=254 得 502（duration 0.05s，连接被拒量级）；dockerd journal 同窗口容器 13:57/14:07/14:24/14:34 反复重建（每次 ~15–25s 不可用）；源码复核确认有副本时已有 stale-if-error（R95），但深页/10 万+ 题目页多数无边缘副本，MISS 同步回源 fetch 异常直 throw、5xx 原样透传。
 - 收口：edge-policy.js 新增纯函数 shouldRetryOrigin（仅 GET/HEAD、无 stale、首次尝试、status 0/502–504 才重试），[[path]].js MISS 路径单次 1200ms 退避重试；有副本路径与 500/501/4xx 语义不变。
-- 验证：vitest 100（+5 例）/lint/build 全绿；生产部署后正常路径回归无额外延迟，重启窗口自然复验挂后台。详见 docs/iter/round-3/r205-edge-origin-retry.md。
+- 验证：vitest 100（+5 例）/lint/build 全绿；生产部署后正常路径回归无额外延迟；受控 docker restart 窗口实测无副本深页首访 1.72s 返回 200（旧行为 0.05s 502 直漏）、同窗口 6 深页零 5xx。详见 docs/iter/round-3/r205-edge-origin-retry.md。
+
+### R206（边缘函数 onRequest 集成级回归测试，测试补强无行为变化）
+- 取证：本轮生产复审计无新 verified 缺陷（24h 非探针 origin 干净、SSR 页族 light/dark axe clean）；RUM slow_load 的 8–45s API 长尾样本无 v: 版本戳（疑旧 bundle 客户端），对应时段 origin 日志已被探针轮转无法归因，挂观察。真实缺口为流程性：[[path]].js（全站唯一入口，HIT/SWR/stale-if-error/重试/304/tee 入缓存/安全头）零集成测试，历史上只能靠部署后生产探测验证。
+- 收口：tests/edge-handler.test.js 直接 import onRequest，桩 caches.default/fetch/waitUntil + 假时钟，12 例覆盖爬虫 403、MISS 入缓存（剥 Set-Cookie/盖 Cached-At）、HIT、SWR 刷新与 stale-if-error（5xx/异常两路）、R205 重试全分支、边缘 304（HIT/MISS 两路）、安全头与 /api noindex。
+- 验证：vitest 112（+12 例）/lint/build/ruff/pytest 87 全绿；纯测试新增无源码改动，无需部署。详见 docs/iter/round-3/r206-edge-handler-tests.md。
