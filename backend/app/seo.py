@@ -350,6 +350,13 @@ def tiku_search(q: str = ""):
     return RedirectResponse(dest, status_code=302)
 
 
+@router.get("/search/", include_in_schema=False)
+def tiku_search_slash(q: str = ""):
+    q = q.strip()[:64]
+    dest = "/tiku/search" + (f"?q={quote(q)}" if q else "")
+    return RedirectResponse(dest, status_code=301)
+
+
 @router.get("/daily", include_in_schema=False)
 def tiku_daily_noslash():
     return RedirectResponse("/tiku/daily/", status_code=301)
@@ -677,6 +684,8 @@ def _render_q_comments(qid: int) -> str:
 
 @router.get("/y/{year}/{module}", include_in_schema=False)
 def tiku_year_noslash(year: int, module: str):
+    if not _module_name(module) or not db.year_module_counts().get((year, module), (0, None))[0]:
+        return _not_found("页面不存在")
     return RedirectResponse(_year_path(year, module), status_code=301)
 
 
@@ -752,6 +761,8 @@ def _render_year(year: int, module: str, page: int) -> str:
 
 @router.get("/t/{code}", include_in_schema=False)
 def tiku_topic_noslash(code: str):
+    if code not in taxonomy.topic_index() or not db.tag3_counts().get(code, 0):
+        return _not_found("页面不存在")
     return RedirectResponse(_topic_path(code), status_code=301)
 
 
