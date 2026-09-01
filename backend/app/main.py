@@ -220,7 +220,7 @@ async def guard_account_uid(request, call_next):
             uid = parsed.get("uid") if isinstance(parsed, dict) else None
         except (ValueError, TypeError):
             uid = None
-    if auth.is_account_uid(uid) and not auth.owns_uid(uid, request.headers.get("authorization")):
+    if uid and auth.is_account_uid(uid) and not auth.owns_uid(uid, request.headers.get("authorization")):
         return JSONResponse({"detail": "无权访问该账号数据，请重新登录"}, status_code=403)
     if body:
         async def _receive():
@@ -407,7 +407,7 @@ class AssetStaticFiles(StaticFiles):
 
     async def get_response(self, path: str, scope):
         is_asset = path.startswith("assets/")
-        if is_asset and "br" in Headers(scope=scope).get("accept-encoding", ""):
+        if is_asset and self.directory and "br" in Headers(scope=scope).get("accept-encoding", ""):
             br = os.path.join(self.directory, path + ".br")
             if os.path.isfile(br):
                 media_type = mimetypes.guess_type(path)[0] or "application/octet-stream"

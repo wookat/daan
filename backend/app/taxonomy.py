@@ -14,7 +14,7 @@ def tree() -> dict:
     if _tree is None:
         with open(PATH, encoding="utf-8") as f:
             _tree = json.load(f)
-    return _tree
+    return _tree or {}
 
 
 def _build():
@@ -39,15 +39,19 @@ def _build():
 def topic_index() -> dict:
     if _topic_idx is None:
         _build()
-    return _topic_idx
+    return _topic_idx or {}
+
+
+def alias_index() -> dict:
+    if _alias_idx is None:
+        _build()
+    return _alias_idx or {}
 
 
 def groups_for(module: str, submodule: str | None) -> list[dict]:
     """按题目 submodule 找到二级题型分组；找不到时回退整模块所有分组。"""
-    if _alias_idx is None:
-        _build()
     if submodule:
-        gs = _alias_idx.get((module, submodule.strip()))
+        gs = alias_index().get((module, submodule.strip()))
         if gs:
             return gs
     return [g for m in tree()["modules"] if m["key"] == module for g in m["groups"]]

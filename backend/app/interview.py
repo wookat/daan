@@ -32,7 +32,7 @@ def bank() -> dict:
     if _bank is None:
         with open(BANK_PATH, encoding="utf-8") as f:
             _bank = json.load(f)
-    return _bank
+    return _bank or {}
 
 
 def question_by_id(qid: int) -> dict | None:

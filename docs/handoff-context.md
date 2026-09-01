@@ -640,3 +640,7 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - R214 只验本地 .gz，远端副本从未独立下载验证；手工演练下载→md5 一致→quick_check ok questions=156792。
 - 收口：ops 1b' 每周日（FORCE_R2_VERIFY=1 可强制）从 R2 真实下载当日备份、md5 比对入 R2-VERIFY 日志行（已 VPS 实装，成功/缺失对象两路径受控验证）。
 - 陷阱：rclone copyto 远端对象缺失 exit 0 不落文件，判定以产物存在性为准。详见 docs/iter/round-3/r216-r2-remote-verify.md。
+
+### R217（pyright 存量清零 + 基线固化，已部署）
+- 39 errors 逐项甄别清零：实义修复（mock_event 赛后报告 attempt/paper 缺失 500→404、llm.chat 重试耗尽显式 RuntimeError、main uid=None 不进 owns_uid、db 直摸 taxonomy._alias_idx 改 alias_index() 访问器）+ 等价改写 + cv2/pypdf 可选依赖定点豁免。
+- 新增 backend/pyrightconfig.json（basic/py3.12）；门禁新增 `cd backend && npx -y pyright app`（基线 0 errors）。详见 docs/iter/round-3/r217-pyright-baseline.md。

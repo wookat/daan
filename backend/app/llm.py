@@ -96,6 +96,7 @@ async def chat(messages: list, temperature: float = 0.2, max_tokens: int = 4000)
             resp.raise_for_status()
             data = resp.json()
             return data["choices"][0]["message"]["content"]
+    raise RuntimeError("LLM 请求重试耗尽")
 
 
 async def chat_stream(messages: list, temperature: float = 0.2, max_tokens: int = 4000):

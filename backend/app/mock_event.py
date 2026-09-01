@@ -430,9 +430,11 @@ def api_event_report(event_id: int, uid: str = ""):
             raise HTTPException(404, "尚无比赛成绩")
         if _phase(ev, now) == "ended":
             _freeze_ranks(conn, event_id)
-            entry = _entry(conn, event_id, uid)
+            entry = _entry(conn, event_id, uid) or entry
         attempt = db.get_exam_attempt(entry["attempt_id"])
         paper = db.get_exam_paper(ev["paper_id"])
+        if not attempt or not paper:
+            raise HTTPException(404, "成绩数据缺失")
         rows = conn.execute(
             "SELECT score FROM mock_event_entries WHERE event_id=? AND score IS NOT NULL",
             (event_id,),

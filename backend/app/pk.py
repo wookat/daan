@@ -104,7 +104,7 @@ def _grade(qids: list[int], items: list[dict]) -> tuple[int, int, int, list[dict
     by_qid = {}
     for it in items or []:
         try:
-            qid = int(it.get("question_id"))
+            qid = int(it.get("question_id"))  # pyright: ignore[reportArgumentType]
         except (TypeError, ValueError):
             continue
         if qid in answers and qid not in by_qid:
