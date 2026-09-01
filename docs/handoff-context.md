@@ -560,3 +560,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：R199 后对 seo.py 全部路由斜杠变体穷举复测，剩三处不一致——`/tiku/search/` 落 `/{module}/` catch-all 直接 404（query 一并丢）；`/y/{year}/{module}` 与 `/t/{code}` 无斜杠路由无条件 301，无效输入产生 301→404 两跳链（与 `/{module}` 无斜杠「先验证再 301」约定不一致）。
 - 收口：`/search/` 301 → `/tiku/search`（保 q）；y/t 无斜杠先验证（module 名+年份有量 / topic 存在+有量）再 301，无效直接 404。内容路由/sitemap/canonical 零变化；+4 pytest（79 全绿）。
 - 验证：生产 rev d7fe5d6 部署后全表复测（search/ 带 q 301、无效 y/t 无斜杠 404、有效仍 301、R199 回归集不变）；1440/375 year/topic 页溢出 0、console 0 error；R196 性能预算全过。详见 docs/iter/round-3/r200-slash-canonical-tail.md。
+
+### R201（模块 hub 页补考点/年份内链）
+- 取证：sitemap-topics 收录 156 个考点页，但 /tiku/ 首页每模块考点截断 [:12] 实际只链 60 个；模块 hub 页（如 /tiku/changshi/ 30907 题）零考点/零年份内链——约 96 个考点页无稳定 hub 入链，只靠题目页标签与同组兄弟互链弱连通。
+- 收口：tiku_module 渲染新增「按考点刷题」（本模块全量考点+题数）与「按年份刷真题」两卡，复用 tag3_counts/year_module_counts 既有取数；首页 [:12] 截断与考点/年份页自身渲染不动，零新路由。
+- 验证：ruff/pytest 80（+1 例）全绿；生产 rev 964dce9 部署后五模块页考点内链合计 156（=sitemap 全量）、年份链接齐全；1440/375 模块页溢出 0、console 0 error；R196 性能预算全过。详见 docs/iter/round-3/r201-module-hub-internal-links.md。
