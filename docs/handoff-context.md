@@ -789,3 +789,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证 verified：R241/R242 打通入向深链后出向缺失——App 内打开申论详情地址栏无 ?id，刷新回列表、复制地址栏只能分享到专区列表；详情页为全站唯一零分享出口的内容面（行测/PK/成绩单均有复制链接）。本轮 origin 复审计无新缺陷（慢样本聚簇部署重建窗口，为 R235 lb_try 排队设计行为；tag3 22s 样本落 21:25/21:47 部署窗口）。
 - 收口：新增 src/shenlun-url.js 纯函数 buildShenlunUrl（对齐 R157 search-url 手法）+ shenlun.vue watch detail 经 history.replaceState 同步 ?id（打开/返回/切筛选全路径覆盖，刷新直达同题走既有 onLoad 校验）+ 详情头部「复制本题链接」（setClipboardData + toast，对齐 profile/pk 交互）。零后端/SSR/SEO 变化。
 - 验证：vitest +1 文件（合法/非法 id 分支），lint/vitest/build/lint:edge/ruff/pytest 118/pyright 0 全绿。详见 docs/iter/round-3/design-r243-shenlun-detail-url-share.md。
+
+### R244（站内搜索覆盖申论素材 + 素材库 mtype 直达过滤）
+- 取证 verified：生产只读库 shenlun_materials 实有 166 条（政策理论 73/金句 41/案例 32/范文 20），App 素材 tab 已消费，但 /api/search 不覆盖素材——搜「乡村振兴」等主题词无任何素材命中（R241 明确挂候选项）。本轮复审计：/llms.txt 公网 200（历史 66 条 404 均早于当前 200 样本，属旧部署窗口）；R243 详情复制/返回控件生产键盘可达（tabindex=0 + Enter 触发 toast）；origin 502/慢样本均落部署窗口。
+- 收口：db.search_shenlun_materials(q)（topic/content/source LIKE + disabled 守卫，≤10 条，166 行小表不建 FTS）+ api_search 附 shenlun_mats 段；搜索页新增「申论素材」区块（topic+类型徽标+内容 clamp 3 行），点击直达 /pkgA/shenlun/shenlun?tab=m&mtype=<type>（MTYPES 白名单校验后置 mtype 再 switchMat）；不做素材单条落地页/SSR 页，SEO 零变化。
+- 验证：pytest +1 例（topic/content 命中、disabled 排除、type=question 无素材段、清空为空），119 passed/ruff/pyright 0/lint/lint:edge/vitest 135/build 全绿；生产 1440/375 实测素材区块 5 条渲染、点击直达素材 tab 且「政策理论」chip 激活+列表过滤、溢出 0、console 0 error、性能预算全过。详见 docs/iter/round-3/design-r244-search-shenlun-materials.md。
