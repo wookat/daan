@@ -86,6 +86,16 @@ export function shouldRetryOrigin(method, status, hasStale, attempt) {
   return status === 0 || (status >= 502 && status <= 504);
 }
 
+// 重试耗尽后的临时不可用判定：无副本可退的页面请求（非 /api）在 origin
+// 重启窗口内不透传裸 5xx，改由边缘出品牌 503 + Retry-After（对爬虫是
+// 正确的临时不可用语义，对用户给自动重试出路）。/api 保持 JSON 契约透传。
+export function shouldServeOutage(method, pathname, status, hasStale) {
+  if (method !== "GET" && method !== "HEAD") return false;
+  if (pathname.startsWith("/api/")) return false;
+  if (hasStale) return false;
+  return status === 0 || (status >= 502 && status <= 504);
+}
+
 export function isCacheableContentType(pathname, isApi, contentType) {
   const ct = contentType || "";
   if (pathname.startsWith("/sitemap") || pathname === "/robots.txt") {

@@ -9,6 +9,7 @@ import {
   notModified,
   carryLastModified,
   shouldRetryOrigin,
+  shouldServeOutage,
   EDGE_CACHE_TTL,
   API_EDGE_CACHE_TTL,
 } from '../../deploy/cf-pages/functions/edge-policy.js';
@@ -174,5 +175,23 @@ describe('shouldRetryOrigin', () => {
   it('非 GET/HEAD（有副作用）不重试', () => {
     expect(shouldRetryOrigin('POST', 502, false, 0)).toBe(false);
     expect(shouldRetryOrigin('PUT', 0, false, 0)).toBe(false);
+  });
+});
+
+describe('shouldServeOutage', () => {
+  it('无副本页面 GET/HEAD 遇 fetch 异常(0)/502–504 出品牌 503', () => {
+    expect(shouldServeOutage('GET', '/tiku/panduan/', 0, false)).toBe(true);
+    expect(shouldServeOutage('GET', '/tiku/panduan/', 502, false)).toBe(true);
+    expect(shouldServeOutage('HEAD', '/', 504, false)).toBe(true);
+  });
+  it('/api 保持 JSON 契约透传，不出 503 页', () => {
+    expect(shouldServeOutage('GET', '/api/question_counts', 502, false)).toBe(false);
+  });
+  it('有陈旧副本已被 stale-if-error 覆盖，不出 503 页', () => {
+    expect(shouldServeOutage('GET', '/tiku/', 502, true)).toBe(false);
+  });
+  it('应用级 5xx（500/501）与非 GET/HEAD 不出 503 页', () => {
+    expect(shouldServeOutage('GET', '/tiku/', 500, false)).toBe(false);
+    expect(shouldServeOutage('POST', '/tiku/', 502, false)).toBe(false);
   });
 });

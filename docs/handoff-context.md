@@ -644,3 +644,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 ### R217（pyright 存量清零 + 基线固化，已部署）
 - 39 errors 逐项甄别清零：实义修复（mock_event 赛后报告 attempt/paper 缺失 500→404、llm.chat 重试耗尽显式 RuntimeError、main uid=None 不进 owns_uid、db 直摸 taxonomy._alias_idx 改 alias_index() 访问器）+ 等价改写 + cv2/pypdf 可选依赖定点豁免。
 - 新增 backend/pyrightconfig.json（basic/py3.12）；门禁新增 `cd backend && npx -y pyright app`（基线 0 errors）。详见 docs/iter/round-3/r217-pyright-baseline.md。
+- 后补回归测试：mock 报告成绩数据缺失 404 + llm.chat 5xx 显式抛错（tests/test_mock_report_missing_data.py，pytest 94）。
+
+### R218（边缘无副本 5xx 直漏收口为品牌 503 + Retry-After，已部署）
+- 取证：origin 24h 日志 verified 深页（/tiku/panduan/?page=254 等）在容器重启窗口 R205 单次重试失败后裸 502（origin Caddy text 错误页）直漏给爬虫/用户；重启窗口 15–25s 单次重试无法全覆盖。
+- 收口：edge-policy 新增纯函数 shouldServeOutage（仅 GET/HEAD、非 /api、无副本、status 0/502–504）；[[path]].js 重试耗尽后改出自包含品牌 503 页（Retry-After: 30 + meta refresh 30s + 返回首页 + 深浅色适配，no-store 不入缓存）。/api 5xx 契约与有副本 stale-if-error 路径零变化。
+- 明确不做：不扩重试次数/时长；不动 /api 语义；origin 零停机部署挂候选（2GB 共享机双容器窗口风险）。详见 docs/iter/round-3/design-r218-edge-outage-503.md。
