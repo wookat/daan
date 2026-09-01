@@ -195,6 +195,13 @@ html.theme-dark body {
 .theme-dark uni-tabbar .uni-tabbar__label[style*='rgb(46, 91, 255)'] {
   color: #8fa8ff !important;
 }
+/* tabbar 图标为浅色主题静态 PNG（选中蓝 #3060f0 深底偏沉、未选灰偏暗），深色下滤镜提亮对齐 --brand-text/--ink-2 色感 */
+.theme-dark uni-tabbar .uni-tabbar__icon img {
+  filter: brightness(1.25);
+}
+.theme-dark uni-tabbar .uni-tabbar__icon img[src*='-on'] {
+  filter: saturate(0.6) brightness(1.45);
+}
 .theme-dark uni-page-head .uni-page-head {
   background: #15161c !important;
   color: #f2f3f7;
