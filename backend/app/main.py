@@ -58,6 +58,23 @@ app.add_middleware(
 
 
 @app.middleware("http")
+async def head_as_get(request, call_next):
+    """HEAD 请求按 GET 路由处理，仅返回状态与响应头（RFC 9110 HEAD 语义）。
+
+    FastAPI 的 @router.get() 只注册 GET，不自动附加 HEAD；爬虫/链接检查器/
+    社交卡片抓取普遍以 HEAD 预检，404 会被判定为死链。
+    """
+    if request.method != "HEAD":
+        return await call_next(request)
+    request.scope["method"] = "GET"
+    response = await call_next(request)
+    if hasattr(response, "body_iterator"):
+        async for _ in response.body_iterator:
+            pass
+    return Response(status_code=response.status_code, headers=dict(response.headers))
+
+
+@app.middleware("http")
 async def report_5xx(request, call_next):
     """集中式错误监控（审计 P1-7）：后端 5xx 与未捕获异常转发中心收集器。"""
     try:
