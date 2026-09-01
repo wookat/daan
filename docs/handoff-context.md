@@ -784,3 +784,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证 verified：hub 题目列表为纯文本 li 无逐题出口，唯一 App 出口为底部整页 CTA（进专区还需自行找题）；R241 已具备 /#/pkgA/shenlun/shenlun?id=N 深链能力。本轮 14h origin 复审计无新缺陷（14k /api/exam/* 404 全为 09-01 风暴与共享 NAT 受控测试，429 均为 rl() 路径）。
 - 收口：_tiku_shenlun 每个 li 追加「去作答 →」深链（hash 片段路由，不新增可收录 URL，无 thin pages）；canonical/JSON-LD/sitemap/分页零变化，底部整页 CTA 保留。
 - 验证：hub 回归测试补逐题深链断言，118 passed/ruff/pyright 0。详见 docs/iter/round-3/design-r242-shenlun-hub-deeplink.md。
+
+### R243（申论详情 URL 同步 + 复制本题链接）
+- 取证 verified：R241/R242 打通入向深链后出向缺失——App 内打开申论详情地址栏无 ?id，刷新回列表、复制地址栏只能分享到专区列表；详情页为全站唯一零分享出口的内容面（行测/PK/成绩单均有复制链接）。本轮 origin 复审计无新缺陷（慢样本聚簇部署重建窗口，为 R235 lb_try 排队设计行为；tag3 22s 样本落 21:25/21:47 部署窗口）。
+- 收口：新增 src/shenlun-url.js 纯函数 buildShenlunUrl（对齐 R157 search-url 手法）+ shenlun.vue watch detail 经 history.replaceState 同步 ?id（打开/返回/切筛选全路径覆盖，刷新直达同题走既有 onLoad 校验）+ 详情头部「复制本题链接」（setClipboardData + toast，对齐 profile/pk 交互）。零后端/SSR/SEO 变化。
+- 验证：vitest +1 文件（合法/非法 id 分支），lint/vitest/build/lint:edge/ruff/pytest 118/pyright 0 全绿。详见 docs/iter/round-3/design-r243-shenlun-detail-url-share.md。

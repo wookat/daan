@@ -66,7 +66,10 @@
         <view class="d-left">
         <view class="q-top">
           <text class="q-paper">{{ detail.paper || (detail.exam_year + ' · ' + (detail.exam_region || '')) }}</text>
-          <text class="q-type">{{ detail.qtype }}</text>
+          <view class="q-top-r">
+            <text class="q-type">{{ detail.qtype }}</text>
+            <text class="d-copy" role="button" aria-label="复制本题链接" @click="copyQLink">复制本题链接</text>
+          </view>
         </view>
         <view class="d-h">作答要求</view>
         <text class="d-q">{{ detail.question }}</text>
@@ -141,6 +144,7 @@
 
 <script>
 import { request, snapPeek, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api';
+import { buildShenlunUrl } from '../../shenlun-url.js';
 
 const QTYPES = ['全部', '归纳概括', '综合分析', '提出对策', '贯彻执行', '大作文'];
 const MTYPES = ['全部', '金句', '案例', '政策理论', '范文'];
@@ -186,6 +190,15 @@ export default {
       region: '',
       fltOpen: false,
     };
+  },
+  watch: {
+    detail(v) {
+      // #ifdef H5
+      if (typeof window !== 'undefined' && window.history) {
+        window.history.replaceState(null, '', buildShenlunUrl(v && v.id));
+      }
+      // #endif
+    },
   },
   computed: {
     shownMats() {
@@ -386,6 +399,11 @@ export default {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
     },
+    copyQLink() {
+      if (!this.detail) return;
+      const url = (typeof window !== 'undefined' ? window.location.origin : '') + buildShenlunUrl(this.detail.id);
+      uni.setClipboardData({ data: url, success: () => uni.showToast({ title: '链接已复制，发给考友直达本题', icon: 'none' }) });
+    },
     saveDraft() {
       if (!this.detail) return;
       const k = 'slDraft:' + this.detail.id;
@@ -481,6 +499,7 @@ page { background: var(--fill); }
 .d-notes { font-size: 23rpx; color: var(--ink-2); margin-top: 12rpx; line-height: 1.7; white-space: pre-wrap; display: block; }
 .m-topic { font-size: 24rpx; font-weight: 600; color: var(--ink-1); }
 .q-top-r { display: flex; align-items: center; gap: 12rpx; }
+.d-copy { font-size: 22rpx; color: var(--brand-text); text-decoration: underline; cursor: pointer; padding: 4rpx 6rpx; }
 .m-star { font-size: 34rpx; color: var(--ink-3); display: inline-flex; align-items: center; justify-content: center; min-width: 88rpx; min-height: 88rpx; margin: -24rpx -20rpx -24rpx -8rpx; }
 .m-star.on { color: #f59e0b; }
 .chip.fav.on { background: var(--warn-soft); color: #b45309; border-color: #fcd34d; }
