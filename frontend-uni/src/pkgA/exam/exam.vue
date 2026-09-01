@@ -111,6 +111,7 @@
 
 <script>
 import { request, anonUid } from '../../api.js';
+import { submitFailPlan } from '../../exam-policy.js';
 import { dayKey } from '../../checkin.js';
 import { splitMaterial, sameMaterial } from '../../material.js';
 
@@ -137,6 +138,8 @@ export default {
   created() {
     this._endAt = 0;
     this._tsx = 0;
+    this._submitTries = 0;
+    this._retryTimer = null;
   },
   computed: {
     cur() { return this.items[this.idx] || {}; },
@@ -193,6 +196,7 @@ export default {
   },
   onUnload() {
     this.stopClock();
+    if (this._retryTimer) { clearTimeout(this._retryTimer); this._retryTimer = null; }
     this.saveProgress();
     // #ifdef H5
     if (this._exKeyHandler && typeof window !== 'undefined') {
@@ -252,6 +256,7 @@ export default {
         this.leftSecs = Math.max(0, Math.round((this._endAt - Date.now()) / 1000));
         this.qsecs++;
         if (this.leftSecs <= 0) {
+          this.stopClock();
           uni.showToast({ title: '时间到，自动交卷', icon: 'none' });
           this.submit();
         }
@@ -318,7 +323,7 @@ export default {
         content: blank ? '还有 ' + blank + ' 题未作答，交卷后不能再修改' : '已全部作答，交卷查看成绩报告',
         confirmText: '交卷',
         cancelText: '再检查',
-        success: (r) => { if (r.confirm) this.submit(); },
+        success: (r) => { if (r.confirm) { this._submitTries = 0; this.submit(); } },
       });
     },
     async submit() {
@@ -350,11 +355,29 @@ export default {
           await this.gotoReport(this.attemptId);
           return;
         } catch (e2) {
-          /* 未判分，回到可重交状态 */
+          /* 未判分，按失败分流决定重试方式 */
         }
         uni.hideLoading();
+        const plan = submitFailPlan({ message: e.message, timeUp: this._endAt <= Date.now(), tries: this._submitTries });
+        this._submitTries += 1;
+        if (plan.action === 'terminal') {
+          uni.removeStorageSync(PROG_KEY);
+          uni.showModal({
+            title: '交卷失败',
+            content: '试卷会话已失效，本次作答无法判分（' + e.message + '）',
+            showCancel: false,
+            confirmText: '返回卷库',
+            success: () => uni.reLaunch({ url: '/pkgA/exam/list' }),
+          });
+          return;
+        }
         this.submitting = false;
-        this.startClock();
+        if (plan.action === 'retry') {
+          uni.showToast({ title: '交卷失败：' + e.message + '，' + Math.round(plan.delayMs / 1000) + ' 秒后自动重试', icon: 'none', duration: 3000 });
+          this._retryTimer = setTimeout(() => { this._retryTimer = null; this.submit(); }, plan.delayMs);
+          return;
+        }
+        if (this._endAt > Date.now()) this.startClock();
         uni.showToast({ title: '交卷失败：' + e.message + '，作答已保留，可再次交卷', icon: 'none', duration: 3000 });
       }
     },
