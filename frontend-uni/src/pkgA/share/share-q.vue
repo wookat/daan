@@ -241,20 +241,20 @@ export default {
 .empty.err .act-btn { max-width: 320rpx; margin: 0 auto; }
 
 .from-bar { display: flex; align-items: center; gap: 18rpx; background: linear-gradient(135deg, #5b8af8, #2e5bff); border-radius: 28rpx; padding: 26rpx 28rpx; margin-bottom: 20rpx; box-shadow: 0 12rpx 36rpx rgba(46, 91, 255, 0.3); }
-.from-av { width: 72rpx; height: 72rpx; border-radius: 50%; background: #fff; color: var(--brand); font-size: 30rpx; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.from-av { width: 72rpx; height: 72rpx; border-radius: 50%; background: #fff; color: var(--brand-text); font-size: 30rpx; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .from-l { flex: 1; min-width: 0; }
 .from-t { display: block; color: #fff; font-size: 30rpx; font-weight: 700; }
 .from-s { display: block; color: rgba(255, 255, 255, 0.85); font-size: 22rpx; margin-top: 4rpx; }
 
 .q-tags { display: flex; gap: 12rpx; margin-bottom: 16rpx; }
-.tag { font-size: 21rpx; color: var(--brand); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
+.tag { font-size: 21rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
 .tag.gray { color: var(--ink-2); background: var(--fill); }
 .stem { display: block; font-size: 29rpx; color: var(--ink); line-height: 1.7; margin-bottom: 22rpx; white-space: pre-wrap; }
 
 .opt { display: flex; gap: 16rpx; align-items: flex-start; border: 1rpx solid var(--line); border-radius: 18rpx; padding: 20rpx 22rpx; margin-bottom: 14rpx; }
 .opt .k { font-weight: 700; color: var(--ink-2); }
 .opt .t { flex: 1; font-size: 27rpx; color: var(--ink); line-height: 1.6; }
-.opt.pick { border-color: var(--brand); background: var(--brand-soft); }
+.opt.pick { border-color: var(--brand-text); background: var(--brand-soft); }
 .opt.right { border-color: var(--ok); background: var(--ok-soft); }
 .opt.wrong { border-color: var(--bad); background: var(--bad-soft); }
 
@@ -271,7 +271,7 @@ export default {
 .tc-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; }
 .tc-btn { flex-shrink: 0; min-height: 40px; display: flex; align-items: center; padding: 0 30rpx; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 25rpx; font-weight: 600; }
 .tc-btn.off { opacity: 0.6; }
-.tc-btn.ghost { background: var(--brand-soft); color: var(--brand); }
+.tc-btn.ghost { background: var(--brand-soft); color: var(--brand-text); }
 
 .exp-k { display: block; font-size: 23rpx; color: var(--ink-2); font-weight: 600; margin-bottom: 10rpx; }
 .exp { font-size: 26rpx; color: var(--ink); line-height: 1.7; white-space: pre-wrap; }
@@ -286,10 +286,10 @@ export default {
 
 .act-btn { min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; font-size: 29rpx; font-weight: 600; margin-bottom: 18rpx; }
 .act-btn.main { background: var(--brand); color: #fff; }
-.act-btn.sub { background: var(--brand-soft); color: var(--brand); }
+.act-btn.sub { background: var(--brand-soft); color: var(--brand-text); }
 
 .reg-tip { text-align: center; padding: 20rpx 0; }
-.reg-t { font-size: 24rpx; color: var(--brand); }
+.reg-t { font-size: 24rpx; color: var(--brand-text); }
 
 /* #ifdef H5 */
 @media (min-width: 768px) {

@@ -97,7 +97,7 @@ export default {
 .empty-t { font-size: 28rpx; font-weight: 600; color: var(--ink); }
 .retry {
   margin-top: 8rpx;
-  color: var(--brand);
+  color: var(--brand-text);
   font-size: 26rpx;
   font-weight: 500;
 }

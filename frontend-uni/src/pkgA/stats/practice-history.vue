@@ -136,7 +136,7 @@ export default {
 .row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8rpx; }
 .row-top { display: flex; align-items: center; gap: 10rpx; flex-wrap: wrap; }
 .time { font-size: 26rpx; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
-.chip { background: #e8effe; color: #2e5bff; font-size: 20rpx; font-weight: 600; border-radius: 8rpx; padding: 2rpx 12rpx; }
+.chip { background: #e8effe; color: var(--brand-text); font-size: 20rpx; font-weight: 600; border-radius: 8rpx; padding: 2rpx 12rpx; }
 .meta { font-size: 22rpx; color: var(--ink-2); }
 .pct { font-size: 32rpx; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
 .pct.hi { color: var(--ok-strong, #15803d); }
@@ -160,7 +160,7 @@ export default {
 
 .empty { display: flex; flex-direction: column; align-items: center; gap: 16rpx; padding: 120rpx 0; }
 .empty-t { font-size: 27rpx; color: var(--ink-2); }
-.retry { margin-top: 8rpx; color: var(--brand); font-size: 26rpx; font-weight: 500; }
+.retry { margin-top: 8rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 .btn-primary { background: #2e5bff; color: #fff; border-radius: 999rpx; font-size: 28rpx; font-weight: 600; min-height: 44px; display: flex; align-items: center; justify-content: center; padding: 0 60rpx; margin-top: 12rpx; }
 
 /* #ifdef H5 */

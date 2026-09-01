@@ -425,15 +425,15 @@ export default {
 .rs-p { font-size: 20rpx; color: var(--ink-3); font-weight: 400; }
 .mk-line { font-size: 26rpx; color: var(--ink); margin-bottom: 10rpx; }
 .mk-line.sub { font-size: 23rpx; color: var(--ink-2); }
-.mk-n { font-size: 34rpx; font-weight: 800; color: var(--brand); }
+.mk-n { font-size: 34rpx; font-weight: 800; color: var(--brand-text); }
 .mk-none { display: block; font-size: 25rpx; color: var(--ink-2); margin-bottom: 12rpx; }
-.link { font-size: 24rpx; color: var(--brand); font-weight: 600; min-height: 44px; display: flex; align-items: center; }
+.link { font-size: 24rpx; color: var(--brand-text); font-weight: 600; min-height: 44px; display: flex; align-items: center; }
 .act-row { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 10rpx 0; border-bottom: 1rpx solid var(--line); }
 .act-row:last-child { border-bottom: none; }
 .act-t { font-size: 25rpx; color: var(--ink); }
-.act-go { flex-shrink: 0; font-size: 24rpx; color: var(--brand); font-weight: 600; }
+.act-go { flex-shrink: 0; font-size: 24rpx; color: var(--brand-text); font-weight: 600; }
 .btns { display: flex; }
-.pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand); border-radius: 999rpx; font-size: 27rpx; font-weight: 500; background: var(--card); }
+.pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 27rpx; font-weight: 500; background: var(--card); }
 .pbtn.main { background: var(--brand); color: #fff; }
 .mask { position: fixed; inset: 0; background: rgba(15, 18, 25, 0.45); z-index: 90; display: flex; align-items: flex-end; }
 .sheet { width: 100%; background: var(--card); border-radius: 28rpx 28rpx 0 0; padding: 28rpx 28rpx calc(28rpx + env(safe-area-inset-bottom)); max-height: 85vh; box-sizing: border-box; overflow-y: auto; }

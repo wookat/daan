@@ -266,9 +266,9 @@ export default {
 .dot.ok { background: #86efac; border-color: #86efac; }
 .dot.bad { background: #fca5a5; border-color: #fca5a5; }
 .btns { display: flex; gap: 16rpx; }
-.pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand); border-radius: 999rpx; font-size: 27rpx; font-weight: 500; background: var(--card); }
+.pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 27rpx; font-weight: 500; background: var(--card); }
 .pbtn.main { background: var(--brand); color: #fff; }
-.retry { margin-top: 12rpx; color: var(--brand); font-size: 26rpx; font-weight: 500; }
+.retry { margin-top: 12rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 .mask { position: fixed; inset: 0; background: rgba(15, 18, 25, 0.45); z-index: 90; display: flex; align-items: flex-end; }
 .sheet { width: 100%; background: var(--card); border-radius: 28rpx 28rpx 0 0; padding: 28rpx 28rpx calc(28rpx + env(safe-area-inset-bottom)); max-height: 80vh; display: flex; flex-direction: column; box-sizing: border-box; }
 .sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
@@ -293,7 +293,7 @@ export default {
 .wrow-l { display: flex; flex-direction: column; gap: 4rpx; }
 .wrow-t { font-size: 26rpx; color: var(--ink); font-weight: 500; }
 .wrow-s { font-size: 22rpx; color: var(--ink-2); }
-.wrow-go { font-size: 25rpx; color: var(--brand); font-weight: 600; }
+.wrow-go { font-size: 25rpx; color: var(--brand-text); font-weight: 600; }
 
 /* #ifdef H5 */
 @media (min-width: 768px) {

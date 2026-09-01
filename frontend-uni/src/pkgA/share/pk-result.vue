@@ -134,12 +134,12 @@ export default {
 .vs { display: flex; align-items: stretch; padding: 32rpx 20rpx; }
 .p { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8rpx; position: relative; padding-top: 30rpx; }
 .crown { position: absolute; top: -6rpx; font-size: 34rpx; }
-.av { width: 96rpx; height: 96rpx; border-radius: 50%; background: var(--brand-soft); color: var(--brand); display: flex; align-items: center; justify-content: center; font-size: 36rpx; font-weight: 800; }
+.av { width: 96rpx; height: 96rpx; border-radius: 50%; background: var(--brand-soft); color: var(--brand-text); display: flex; align-items: center; justify-content: center; font-size: 36rpx; font-weight: 800; }
 .av.rival { background: #fef3c7; color: #d97706; }
 .p.win .av { box-shadow: 0 0 0 6rpx #fbbf24; }
 .nm { font-size: 24rpx; color: var(--ink); max-width: 220rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sc { font-size: 52rpx; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
-.p.win .sc { color: var(--brand); }
+.p.win .sc { color: var(--brand-text); }
 .meta { font-size: 21rpx; color: var(--ink-2); }
 .mid { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10rpx; padding: 0 12rpx; }
 .mid-vs { font-size: 36rpx; font-weight: 800; color: var(--ink-3); }
@@ -152,7 +152,7 @@ export default {
 .act-btn.main { background: var(--brand); color: #fff; }
 
 .reg-tip { text-align: center; padding: 20rpx 0; }
-.reg-t { font-size: 24rpx; color: var(--brand); }
+.reg-t { font-size: 24rpx; color: var(--brand-text); }
 
 /* #ifdef H5 */
 @media (min-width: 768px) {

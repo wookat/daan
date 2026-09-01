@@ -79,6 +79,8 @@ page {
   --brand-soft: #eef3ff;
   --brand-soft-2: #dce7fd;
   --brand-strong: #1d4ed8;
+  --brand-text: #2e5bff;
+  --info-strong: #075985;
   --ink: #17181c;
   --ink-2: #5f6575;
   --ink-3: #6b7280;
@@ -152,6 +154,8 @@ html.theme-dark body {
   --brand-soft: #1e2a4a;
   --brand-soft-2: #24345c;
   --brand-strong: #b9ccff;
+  --brand-text: #8fa8ff;
+  --info-strong: #7dd3fc;
   --ink: #f2f3f7;
   --ink-2: #9ba0b0;
   --ink-3: #8a8ea0;
@@ -236,7 +240,7 @@ html.theme-dark body {
     box-shadow: none;
   }
   uni-page-body .searchbar:hover {
-    border-color: var(--brand);
+    border-color: var(--brand-text);
     cursor: pointer;
   }
 }

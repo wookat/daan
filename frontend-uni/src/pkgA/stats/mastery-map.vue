@@ -171,7 +171,7 @@ export default {
   font-weight: 700;
   color: var(--ink, #17181c);
 }
-.retry { margin-top: 12rpx; color: var(--brand); font-size: 26rpx; font-weight: 500; }
+.retry { margin-top: 12rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 .cold-s {
   font-size: 24rpx;
   color: var(--ink-2, #5f6575);
@@ -223,7 +223,7 @@ export default {
 .cov-n {
   font-size: 28rpx;
   font-weight: 700;
-  color: #2e5bff;
+  color: var(--brand-text);
 }
 .cov-t {
   font-size: 18rpx;
@@ -409,7 +409,7 @@ export default {
 }
 .s-btn.ghost {
   background: #eef3ff;
-  color: #2e5bff;
+  color: var(--brand-text);
 }
 .side-nav {
   display: none;

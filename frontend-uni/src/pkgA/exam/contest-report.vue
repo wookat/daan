@@ -172,7 +172,7 @@ export default {
 .wrap { padding: 24rpx; padding-bottom: 40rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 60rpx 24rpx; }
 .empty { text-align: center; padding: 80rpx 28rpx; }
-.retry { margin-top: 12rpx; color: var(--brand); font-size: 26rpx; font-weight: 500; }
+.retry { margin-top: 12rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 .empty-t { display: block; font-size: 30rpx; font-weight: 600; color: var(--ink); }
 .empty-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 12rpx; margin-bottom: 32rpx; }
 .empty .pbtn { margin: 0 auto; max-width: 320rpx; }
@@ -209,7 +209,7 @@ export default {
 .wrow:last-child { border-bottom: none; }
 .wrow-t { display: block; font-size: 25rpx; color: var(--ink); }
 .wrow-s { display: block; font-size: 21rpx; color: #b91c1c; margin-top: 2rpx; }
-.wrow-go { flex-shrink: 0; font-size: 24rpx; color: var(--brand); font-weight: 600; }
+.wrow-go { flex-shrink: 0; font-size: 24rpx; color: var(--brand-text); font-weight: 600; }
 .curve { display: flex; align-items: flex-end; gap: 14rpx; height: 220rpx; padding: 10rpx 0; }
 .curve-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 44rpx; }
 .curve-v { font-size: 20rpx; color: var(--ink-2); margin-bottom: 4rpx; }
@@ -217,7 +217,7 @@ export default {
 .curve-bar.cur { background: var(--brand); }
 .curve-x { font-size: 20rpx; color: var(--ink-2); margin-top: 6rpx; }
 .btns { display: flex; gap: 16rpx; }
-.pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand); border-radius: 999rpx; font-size: 27rpx; font-weight: 500; background: var(--card); }
+.pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 27rpx; font-weight: 500; background: var(--card); }
 .pbtn.main { background: var(--brand); color: #fff; }
 
 /* #ifdef H5 */

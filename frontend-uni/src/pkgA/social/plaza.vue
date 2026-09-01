@@ -68,7 +68,7 @@ export default {
 .list { display: flex; flex-direction: column; gap: 18rpx; }
 .item { background: var(--card); border-radius: 24rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 24rpx 28rpx; }
 .item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
-.mod { font-size: 22rpx; color: var(--brand); background: var(--brand-soft); border-radius: 999rpx; padding: 4rpx 18rpx; font-weight: 600; }
+.mod { font-size: 22rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 999rpx; padding: 4rpx 18rpx; font-weight: 600; }
 .cnt { font-size: 22rpx; color: var(--ink-2); display: inline-flex; align-items: center; gap: 6rpx; }
 .stem { font-size: 27rpx; color: var(--ink); line-height: 1.6; font-weight: 600; }
 .latest { font-size: 24rpx; color: var(--ink-2); background: var(--bg); border-radius: 12rpx; padding: 12rpx 18rpx; margin-top: 14rpx; line-height: 1.6; }
@@ -79,7 +79,7 @@ export default {
 .empty-ico { font-size: 72rpx; }
 .empty-t { font-size: 28rpx; font-weight: 600; color: var(--ink); }
 .empty-d { font-size: 24rpx; color: var(--ink-2); }
-.retry { margin-top: 8rpx; color: var(--brand); font-size: 26rpx; font-weight: 500; }
+.retry { margin-top: 8rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 
 /* #ifdef H5 */
 @media (min-width: 768px) {

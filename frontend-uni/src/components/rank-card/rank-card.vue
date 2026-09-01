@@ -68,7 +68,7 @@ export default {
 .r-tag { font-size: 22rpx; color: #b45309; background: var(--warn-soft); border-radius: 999rpx; padding: 4rpx 16rpx; }
 .r-main { display: flex; align-items: center; gap: 40rpx; margin: 22rpx 0 10rpx; }
 .r-beat { display: flex; flex-direction: column; }
-.r-beat-n { font-size: 64rpx; font-weight: 700; color: var(--brand); line-height: 1.1; }
+.r-beat-n { font-size: 64rpx; font-weight: 700; color: var(--brand-text); line-height: 1.1; }
 .r-beat-l { font-size: 22rpx; color: var(--ink-2); }
 .r-beat-tiny { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; }
 .r-kv { display: flex; gap: 40rpx; }

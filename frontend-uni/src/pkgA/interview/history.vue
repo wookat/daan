@@ -96,7 +96,7 @@ export default {
 .list { display: flex; flex-direction: column; gap: 18rpx; }
 .item { background: var(--card); border-radius: 24rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 24rpx 28rpx; }
 .item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
-.tag { background: #e8effe; color: #2e5bff; font-size: 22rpx; font-weight: 600; border-radius: 8rpx; padding: 4rpx 14rpx; }
+.tag { background: #e8effe; color: var(--brand-text); font-size: 22rpx; font-weight: 600; border-radius: 8rpx; padding: 4rpx 14rpx; }
 .score { font-size: 30rpx; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
 .score.good { color: #16a34a; }
 .q { font-size: 27rpx; color: var(--ink); line-height: 1.6; }
@@ -108,7 +108,7 @@ export default {
 .empty-t { font-size: 27rpx; color: var(--ink-2); }
 .retry {
   margin-top: 8rpx;
-  color: var(--brand);
+  color: var(--brand-text);
   font-size: 26rpx;
   font-weight: 500;
 }

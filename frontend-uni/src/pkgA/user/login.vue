@@ -170,7 +170,7 @@ export default {
 }
 .seg-item.on {
   background: var(--card);
-  color: var(--brand);
+  color: var(--brand-text);
   font-weight: 600;
   box-shadow: 0 2rpx 8rpx rgba(46, 91, 255, 0.15);
 }
@@ -215,7 +215,7 @@ export default {
   height: 92rpx;
   line-height: 92rpx;
   background: var(--card);
-  color: var(--brand);
+  color: var(--brand-text);
   border: 2rpx solid var(--brand);
   font-size: 30rpx;
   font-weight: 600;

@@ -324,13 +324,13 @@ export default {
 
 .q-card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 28rpx 32rpx; margin-bottom: 20rpx; }
 .q-meta { display: flex; align-items: center; gap: 16rpx; margin-bottom: 14rpx; }
-.q-tag { background: #e8effe; color: #2e5bff; font-size: 22rpx; font-weight: 600; border-radius: 8rpx; padding: 4rpx 14rpx; }
+.q-tag { background: #e8effe; color: var(--brand-text); font-size: 22rpx; font-weight: 600; border-radius: 8rpx; padding: 4rpx 14rpx; }
 .q-src { font-size: 22rpx; color: var(--ink-2); }
 .q-text { font-size: 29rpx; line-height: 1.7; color: var(--ink); }
 
 .timer-row { display: flex; justify-content: space-between; align-items: center; margin: 0 8rpx 14rpx; }
 .timer { display: flex; align-items: center; gap: 8rpx; font-size: 26rpx; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-.swap { font-size: 25rpx; color: #2e5bff; }
+.swap { font-size: 25rpx; color: var(--brand-text); }
 .ans-box { width: 100%; box-sizing: border-box; min-height: 320rpx; background: var(--card); border-radius: 24rpx; padding: 24rpx 28rpx; font-size: 28rpx; line-height: 1.7; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); }
 .cnt { text-align: right; font-size: 22rpx; color: var(--ink-2); margin: 10rpx 8rpx 24rpx; }
 .cnt-save { color: var(--ink-3); }
@@ -341,7 +341,7 @@ export default {
 .btn-primary[disabled] { opacity: 0.5; }
 .btn-ghost { background: var(--card); color: var(--ink); border-radius: 999rpx; font-size: 26rpx; min-height: 44px; display: flex; align-items: center; justify-content: center; padding: 0 24rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); }
 .btn-ghost[disabled] { opacity: 0.5; }
-.hist-link { text-align: center; font-size: 26rpx; color: #2e5bff; margin-top: 28rpx; }
+.hist-link { text-align: center; font-size: 26rpx; color: var(--brand-text); margin-top: 28rpx; }
 
 .card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 28rpx 32rpx; margin-bottom: 20rpx; }
 .card-t { font-size: 29rpx; font-weight: 700; color: var(--ink); margin-bottom: 12rpx; }

@@ -453,7 +453,7 @@ export default {
 
 .zl-footer { margin: 48rpx 0 16rpx; text-align: center; }
 .zl-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8rpx 28rpx; margin-bottom: 14rpx; }
-.zl-link { font-size: 24rpx; color: var(--brand); }
+.zl-link { font-size: 24rpx; color: var(--brand-text); }
 .zl-copy { font-size: 22rpx; color: var(--ink-3); }
 
 /* #ifdef H5 */

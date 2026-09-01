@@ -94,7 +94,7 @@ export default {
 .p-conf { font-size: 22rpx; color: var(--ink-2); background: var(--fill); border-radius: 999rpx; padding: 4rpx 16rpx; }
 .p-hero { display: flex; align-items: flex-end; gap: 24rpx; margin: 20rpx 0 8rpx; }
 .p-score-w { display: flex; align-items: baseline; }
-.p-score { font-size: 76rpx; font-weight: 700; color: var(--brand); line-height: 1; }
+.p-score { font-size: 76rpx; font-weight: 700; color: var(--brand-text); line-height: 1; }
 .p-unit { font-size: 24rpx; color: var(--ink-2); margin-left: 6rpx; }
 .p-meta { display: flex; flex-direction: column; gap: 6rpx; padding-bottom: 6rpx; }
 .p-delta { font-size: 24rpx; color: #12b76a; font-weight: 600; }
@@ -103,7 +103,7 @@ export default {
 .p-chart { display: flex; align-items: flex-end; gap: 8rpx; height: 200rpx; margin: 20rpx 0 8rpx; }
 .p-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
 .p-col-v { font-size: 20rpx; color: var(--ink-3); }
-.p-col-v.hot { color: var(--brand); font-weight: 600; }
+.p-col-v.hot { color: var(--brand-text); font-weight: 600; }
 .p-bar-w { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
 .p-bar { width: 40%; max-width: 24rpx; min-height: 8rpx; background: var(--brand-soft-2); border-radius: 6rpx 6rpx 0 0; }
 .p-bar.hot { background: var(--brand); }

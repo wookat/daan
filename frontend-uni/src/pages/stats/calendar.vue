@@ -170,14 +170,14 @@ export default {
 .cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10rpx; }
 .cal-title { display: flex; align-items: center; gap: 16rpx; }
 .cal-badge { font-size: 21rpx; color: #166534; background: var(--ok-soft, #dcfce7); border-radius: 8rpx; padding: 4rpx 14rpx; }
-.cal-btn { font-size: 30rpx; color: var(--brand); font-weight: 600; padding: 8rpx 16rpx; }
+.cal-btn { font-size: 30rpx; color: var(--brand-text); font-weight: 600; padding: 8rpx 16rpx; }
 .cal-btn.dis { color: var(--ink-3); }
 .cal-sub { font-size: 23rpx; color: var(--ink-2); margin-bottom: 18rpx; }
 .cal-week { display: flex; margin-bottom: 8rpx; }
 .cal-w { flex: 1; text-align: center; font-size: 20rpx; color: var(--ink-2); }
 .cal-grid { display: flex; flex-wrap: wrap; }
 .cal-c { width: 14.28%; height: 80rpx; line-height: 80rpx; text-align: center; font-size: 24rpx; color: var(--ink-2); box-sizing: border-box; border-radius: 50%; }
-.cal-c.part { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+.cal-c.part { background: var(--brand-soft); color: var(--brand-text); font-weight: 600; }
 .cal-c.full { background: var(--brand); color: #fff; font-weight: 700; }
 .cal-c.today { border: 2rpx solid var(--brand); }
 .cal-legend { display: flex; gap: 26rpx; margin-top: 18rpx; }
