@@ -219,7 +219,8 @@ button{font-family:inherit}
   .kpis{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
   .kpi .v{font-size:22px}
   .drawer{width:100vw}
-  .tbl-wrap{overflow-x:auto}
+  .tbl-wrap,.card{overflow-x:auto}
   table.tbl{min-width:640px}
+  .filterbar{flex-wrap:wrap}
   .wb-body{padding:14px 12px}
 }
