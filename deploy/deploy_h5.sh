@@ -97,6 +97,13 @@ if [[ "$ONLINE_REV" != "$BUILD_REV" ]]; then
 fi
 echo "OK: 线上后端与本机代码一致"
 
+step "4a2 部署审计记录（服务器侧 deploy-history.log，事后可追溯任意时刻线上 rev 与部署来源）"
+sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" \
+  "mkdir -p /home/ubuntu/kaogong-reports && printf '%s rev=%s bundle=%s by=%s\n' \
+   \"\$(date -u +%Y-%m-%dT%H:%M:%SZ)\" '$BUILD_REV' '$LOCAL_INDEX_REF' '$(hostname)' \
+   >> /home/ubuntu/kaogong-reports/deploy-history.log" \
+  || echo "WARN: 部署审计记录写入失败（不阻塞部署）"
+
 step "4b 容器预热（读接口拉升 OS 页缓存，消除冷启动长尾）"
 for u in "/api/stats" \
          "/api/questions?limit=10&module=yanyu" \

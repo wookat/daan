@@ -77,6 +77,15 @@ export function carryLastModified(prevEtag, prevLm, newEtag, now) {
   return new Date(now).toUTCString();
 }
 
+// 无副本 MISS 同步回源时的单次重试判定：origin 容器重启窗口（秒级）内
+// fetch 异常（status 传 0）或 502/503/504 直漏给客户端/爬虫；有陈旧副本
+// 走 stale-if-error 不重试。仅 GET/HEAD（无副作用）且首次尝试才重试。
+export function shouldRetryOrigin(method, status, hasStale, attempt) {
+  if (attempt !== 0 || hasStale) return false;
+  if (method !== "GET" && method !== "HEAD") return false;
+  return status === 0 || (status >= 502 && status <= 504);
+}
+
 export function isCacheableContentType(pathname, isApi, contentType) {
   const ct = contentType || "";
   if (pathname.startsWith("/sitemap") || pathname === "/robots.txt") {
