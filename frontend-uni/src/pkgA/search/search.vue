@@ -271,7 +271,7 @@ export default {
 .tab.on { color: #fff; background: var(--brand); font-weight: 600; }
 .card { background: var(--card); border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx; }
 .sec { margin-bottom: 12rpx; }
-.sec-t { display: block; font-size: 24rpx; color: var(--ink-3); margin: 12rpx 4rpx; }
+.sec-t { display: block; font-size: 24rpx; color: var(--ink-2); margin: 12rpx 4rpx; }
 .titem { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }
 .t-l { flex: 1; display: flex; flex-direction: column; gap: 6rpx; }
 .t-name { font-size: 28rpx; color: var(--ink); font-weight: 600; }
