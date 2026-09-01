@@ -463,3 +463,21 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：seo.py 全文无 material_hash 引用——App 练习已有材料题组能力（grouped_ziliao_questions），但 SSR 题目页对资料分析题只有「同考点相似题」（tag3 跨材料），同材料其余小题零互链；生产库实测存在 6 题/组的有效分组（样本 min id 37 等三组）。
 - 修复：_render_question 对 module=ziliao 且 material_hash 有效（非 NULL/'-'）查同 hash 小题（ORDER BY id LIMIT 8，≥2 题才输出），题目 article 后新增「同材料题组（共 n 题）」card：当前题标「本题」、其余 /tiku/q/{id} 链接；不加 noprint（打印整组材料题是真实场景）。material_hash 列迁移补入 db.init 基线（防新库首请求先于 refresh 线程）。附带：body 补 overflow-wrap:anywhere 收口长算式 375 横向溢出 103px 存量问题。
 - 本地 ruff 全绿 + pytest 28 passed（+2 例）；生产双视口复验 /tiku/q/37：区块+5 互链+「本题」、溢出 0、console 0 error、print/screen 回归 R143。纯 SSR 读路径无测试数据。方案：docs/iter/round-3/r144-material-group.md。
+
+### R145–R148（2026-09-01）：资料分析同材料题组体验（练习/做卷折叠 + PDF 去重/聚组）
+- R145 练习页 material.js 材料折叠（PR #323）、R146 真题做卷页同折叠（PR #324）、R147 PDF _split_material 兜底去重（PR #325）、R148 PDF group_by_material 同材料聚组排版（PR #326）。方案见 docs/iter/round-3/r145–r148。
+
+### R149–R150（2026-09-01）：questions 聚合查询计划治理
+- R149 三条 /tiku 聚合覆盖索引 34/49/12s→亚秒（PR #327）；R150 tag3_lastmod 69.5s→0.059s、real_regions 5.2s→0.024s（PR #328）。pytest 查询计划回归锁定 COVERING INDEX。
+
+### R151（2026-09-01）：成绩报告详情弹层资料题材料折叠
+- report.vue 复用 material.js splitMaterial，默认小题干+「📄 资料材料」折叠条（PR #329）。方案：docs/iter/round-3/r151-report-material-fold.md。
+
+### R152（2026-09-01）：短关键词搜索单字分词 FTS
+- verified 1–2 字搜索固定走 LIKE 全表扫描（drop_caches 冷测 97.7–270.3s）；新增 contentless question_fts_cjk 单字空格分词 + phrase 查询，回填复用后台线程，未追平期间 LIKE 兜底。生产冷测 隧道 15–20s→0.19s（PR #330）。方案：docs/iter/round-3/r152-short-query-search-fts.md。
+
+### R153–R154（2026-08-29）：搜索页失败态收口 + 搜索历史
+- R153 搜索失败驻留错误卡+重试（原先 toast 1.5s 后伪装成闲置提示，PR #331）；R154 本地 kgSearchHist 历史 chips 一键重搜+清空（PR #332）。方案：docs/iter/round-3/r153-search-error-state.md、r154-search-history.md。
+
+### R155（2026-08-29）：数据窗口复审计（docs-only）
+- 7d：answer_log 23 uid/152 条、exam 12、pk 3；push_subs 仍 0；daily_set_entries 全表 0 行——真实 API 探针验证提交链路正常落库（测试行已清理），0 行系参与率为零非工程缺陷；slow_load 47 条仍以 nav:90s 已归因族群为主。无新 verified 缺陷可立项。方案：docs/iter/round-3/r155-window-audit.md。
