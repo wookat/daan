@@ -630,3 +630,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 复审计无新缺陷：深页 Lighthouse 全 1.0、JSON-LD 全可解析、hub 页内链抽样 60/60 全 200。
 - verified 缺口：每日备份从未验证可恢复；手工演练最新备份 quick_check ok / questions=156792。
 - 收口：ops 1c' 每日解压当日 .gz → quick_check + questions 行数 → RESTORE-VERIFY ok/FAILED 入日志（已 VPS 实装实跑，坏 .gz 走 FAILED 分支已受控验证）。详见 docs/iter/round-3/r214-backup-restore-verify.md。
+
+### R215（PK 随机匹配新建分支 500 + 模考管理端 ImportError，已部署）
+- pyright 全量甄别出两处真实运行时缺陷：R188 后 random_match 新建分支调 api_pk_create 缺 request 实参必 500；mock_event 管理端 `from .main import check_admin` 自 R114 门禁集中化后即 ImportError 500（周赛靠 ensure_weekly_event 兜底所以未暴露）。
+- 收口：random_match 透传 request（pk_create 限速桶顺带对新建路径生效）；mock_event 顶部改 `from .deps import check_admin`。+2 pytest（92）。
+- pyright 其余 40 处为 Optional/stub 噪声，纳门禁需基线（挂候选）。详见 docs/iter/round-3/r215-pk-random-match-500.md。

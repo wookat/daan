@@ -226,7 +226,7 @@ def api_pk_join(body: dict):
 
 
 @router.post("/random_match")
-def api_pk_random(body: dict):
+def api_pk_random(body: dict, request: Request):
     """随机匹配：优先接入最近一份同模块、发起者已完成作答的等待中挑战；无则新建等待。"""
     uid = _clean_uid(body.get("uid"))
     module = (body.get("module") or "").strip() or None
@@ -246,7 +246,7 @@ def api_pk_random(body: dict):
     conn.close()
     if m:
         return {"matched": True, **api_pk_join({"uid": uid, "code": m["code"], "nickname": body.get("nickname")})}
-    return {"matched": False, **api_pk_create(body)}
+    return {"matched": False, **api_pk_create(body, request)}
 
 
 @router.get("/match/{code}")

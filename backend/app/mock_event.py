@@ -12,6 +12,7 @@ import time
 from fastapi import APIRouter, Header, HTTPException
 
 from . import db, taxonomy
+from .deps import check_admin
 
 router = APIRouter(prefix="/api/mock")
 admin_router = APIRouter(prefix="/api/admin/mock")
@@ -537,7 +538,6 @@ def api_event_report(event_id: int, uid: str = ""):
 
 @admin_router.post("/events")
 def api_admin_create_event(body: dict, x_admin_token: str | None = Header(None)):
-    from .main import check_admin
     check_admin(x_admin_token)
     title = str(body.get("title") or "").strip()
     paper_id = body.get("paper_id")
@@ -565,7 +565,6 @@ def api_admin_create_event(body: dict, x_admin_token: str | None = Header(None))
 
 @admin_router.delete("/events/{event_id}")
 def api_admin_delete_event(event_id: int, x_admin_token: str | None = Header(None)):
-    from .main import check_admin
     check_admin(x_admin_token)
     conn = db.get_conn()
     try:
