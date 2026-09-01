@@ -58,6 +58,23 @@ case "$VR" in
   "ok questions="*) echo "$TS RESTORE-VERIFY $VR" >> "$LOG" ;;
   *) echo "$TS RESTORE-VERIFY FAILED $VR" >> "$LOG" ;;
 esac
+# 1b'. R2 副本每周独立验证（周日）：从远端真实下载 → 与本地 md5 比对，防「上传成功但远端不可恢复」
+if [ -f "$ENV_FILE" ] && [ "$(date +%u)" = "7" -o "${FORCE_R2_VERIFY:-}" = "1" ]; then
+  RF=/tmp/.kg-r2-verify.db.gz
+  F="$BK/data-$(date +%F).db.gz"
+  rclone copyto "r2:$BUCKET_PREFIX/$(basename "$F")" "$RF" 2>/dev/null
+  # rclone copyto 对远端缺失对象 exit 0 且不落文件（v1.75 实测），以产物存在性为准
+  if [ -s "$RF" ]; then
+    if [ "$(md5sum "$RF" | cut -d' ' -f1)" = "$(md5sum "$F" | cut -d' ' -f1)" ]; then
+      echo "$TS R2-VERIFY ok md5 match $(basename "$F")" >> "$LOG"
+    else
+      echo "$TS R2-VERIFY FAILED md5 mismatch $(basename "$F")" >> "$LOG"
+    fi
+  else
+    echo "$TS R2-VERIFY FAILED download $(basename "$F")" >> "$LOG"
+  fi
+  rm -f "$RF"
+fi
 # 1c. 磁盘水位巡检：共享宿主根分区 ≥90% 时告警入日志（DB 快照/日志膨胀早发现）
 PCT=$(df --output=pcent / | tail -1 | tr -dc '0-9')
 if [ "${PCT:-0}" -ge 90 ]; then

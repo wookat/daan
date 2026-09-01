@@ -635,3 +635,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - pyright 全量甄别出两处真实运行时缺陷：R188 后 random_match 新建分支调 api_pk_create 缺 request 实参必 500；mock_event 管理端 `from .main import check_admin` 自 R114 门禁集中化后即 ImportError 500（周赛靠 ensure_weekly_event 兜底所以未暴露）。
 - 收口：random_match 透传 request（pk_create 限速桶顺带对新建路径生效）；mock_event 顶部改 `from .deps import check_admin`。+2 pytest（92）。
 - pyright 其余 40 处为 Optional/stub 噪声，纳门禁需基线（挂候选）。详见 docs/iter/round-3/r215-pk-random-match-500.md。
+
+### R216（R2 远端备份副本每周独立恢复验证，纯 ops 不部署）
+- R214 只验本地 .gz，远端副本从未独立下载验证；手工演练下载→md5 一致→quick_check ok questions=156792。
+- 收口：ops 1b' 每周日（FORCE_R2_VERIFY=1 可强制）从 R2 真实下载当日备份、md5 比对入 R2-VERIFY 日志行（已 VPS 实装，成功/缺失对象两路径受控验证）。
+- 陷阱：rclone copyto 远端对象缺失 exit 0 不落文件，判定以产物存在性为准。详见 docs/iter/round-3/r216-r2-remote-verify.md。
