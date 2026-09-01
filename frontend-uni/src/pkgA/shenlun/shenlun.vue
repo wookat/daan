@@ -212,7 +212,10 @@ export default {
     this.loadQs();
     this.loadFilters();
     if (opts && opts.tab === 'r') this.switchRec();
-    else if (opts && opts.tab === 'm') this.switchMat();
+    else if (opts && opts.tab === 'm') {
+      if (MTYPES.includes(opts.mtype || '')) this.mtype = opts.mtype;
+      this.switchMat();
+    }
     if (opts && /^\d+$/.test(opts.id || '')) this.openQ(Number(opts.id));
   },
   methods: {

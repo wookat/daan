@@ -781,6 +781,20 @@ def search_shenlun(q: str, limit: int = 5) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def search_shenlun_materials(q: str, limit: int = 5) -> list[dict]:
+    conn = get_conn()
+    rows = conn.execute(
+        """SELECT id, type, topic, content, source
+            FROM shenlun_materials
+            WHERE (disabled IS NULL OR disabled=0)
+              AND (topic LIKE '%' || ? || '%' OR content LIKE '%' || ? || '%' OR source LIKE '%' || ? || '%')
+            ORDER BY id LIMIT ?""",
+        (q, q, q, min(max(limit, 1), 10)),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 def shenlun_filters() -> dict:
     conn = get_conn()
     years = [r[0] for r in conn.execute(

@@ -64,6 +64,17 @@
           <text class="t-go">去作答 ›</text>
         </view>
       </view>
+      <!-- 申论素材 -->
+      <view v-if="showSec('shenlun') && result.shenlun_mats && result.shenlun_mats.length" class="sec">
+        <text class="sec-t">申论素材</text>
+        <view v-for="m in result.shenlun_mats" :key="m.id" class="card titem" @click="goShenlunMat(m)">
+          <view class="t-l">
+            <text class="t-sub">{{ m.topic }}{{ m.type ? ' · ' + m.type : '' }}</text>
+            <rich-text class="mt-content" :nodes="hl(m.content)" />
+          </view>
+          <text class="t-go">素材库 ›</text>
+        </view>
+      </view>
       </view>
       <view class="res-main">
       <!-- 题目 -->
@@ -102,7 +113,7 @@
           <text v-for="h in hist" :key="h" class="hist-chip" role="button" :aria-label="'搜索 ' + h" @click="kw = h; doSearch()">{{ h }}</text>
         </view>
       </view>
-      <view class="empty">支持搜索：题号语义码、题干关键词、考点名、试卷名、申论真题</view>
+      <view class="empty">支持搜索：题号语义码、题干关键词、考点名、试卷名、申论真题/素材</view>
     </template>
   </view>
 </template>
@@ -145,13 +156,13 @@ export default {
   computed: {
     hasSide() {
       const r = this.result;
-      return !!(r && ((r.topics || []).length || (r.papers || []).length || (r.shenlun || []).length));
+      return !!(r && ((r.topics || []).length || (r.papers || []).length || (r.shenlun || []).length || (r.shenlun_mats || []).length));
     },
     isEmpty() {
       const r = this.result;
       if (!r) return false;
       if (r.code_hit) return false;
-      return !((r.topics || []).length || (r.papers || []).length || (r.shenlun || []).length || (r.questions && r.questions.items.length));
+      return !((r.topics || []).length || (r.papers || []).length || (r.shenlun || []).length || (r.shenlun_mats || []).length || (r.questions && r.questions.items.length));
     }
   },
   methods: {
@@ -257,6 +268,10 @@ export default {
     goShenlun(s) {
       uni.navigateTo({ url: '/pkgA/shenlun/shenlun?id=' + s.id });
     },
+    goShenlunMat(m) {
+      const t = m && m.type ? '&mtype=' + encodeURIComponent(m.type) : '';
+      uni.navigateTo({ url: '/pkgA/shenlun/shenlun?tab=m' + t });
+    },
     goBack() {
       uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/home/home' }) });
     },
@@ -290,6 +305,7 @@ export default {
 .t-l { flex: 1; display: flex; flex-direction: column; gap: 6rpx; }
 .t-name { font-size: 28rpx; color: var(--ink); font-weight: 600; }
 .t-sub { font-size: 22rpx; color: var(--ink-3); }
+.mt-content { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .t-go { font-size: 24rpx; color: var(--brand-text); flex-shrink: 0; }
 .qitem { display: flex; flex-direction: column; gap: 10rpx; }
 .q-top { display: flex; align-items: center; gap: 12rpx; flex-wrap: wrap; }
