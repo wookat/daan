@@ -13,10 +13,13 @@ def test_guard_threshold_and_window():
     assert g.blocked("1.2.3.4", 3.0)
     # 窗口滑出后自动解除
     assert not g.blocked("1.2.3.4", 100.0)
-    # 2xx 不计数
+    # 2xx / 429（限速响应）不计数，4xx 计数
     g2 = ErrorStormGuard(threshold=1)
     g2.record("a", 200, 0.0)
+    g2.record("a", 429, 0.0)
     assert not g2.blocked("a", 0.0)
+    g2.record("a", 404, 0.0)
+    assert g2.blocked("a", 0.0)
 
 
 def test_guard_ip_isolation_and_lru():

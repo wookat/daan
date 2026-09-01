@@ -508,3 +508,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 数据卷内 5 个 8 月手工 DB 快照（~1.85GB）已归档至 `r2:zalize-backups/kaogong-sqlite/archive/`（字节校验一致后删本地），卷 2.29GB→450MB，根分区 86%→84%。
 - kaogong-ops.sh 新增磁盘水位巡检（≥90% 写 DISK HIGH 入 /home/ubuntu/kaogong-ops.log），已同步 VPS 实跑验证。
 - 未来手工快照请直接放 R2 archive 前缀或用 pre-*.db.gz 命名（3 天自动清理），勿在 /data 卷内长期堆放。
+
+### R192（storm guard 429 连坐收口）
+- 复盘 09-01 探针风暴（本机遗留旧 exam 标签页 ~57k 404，已关闭）：当时零 429 系容器运行 R182 前旧镜像，守卫逻辑本身无缺陷。
+- verified 缺陷：rl() 的 429 被 storm guard 计入错误窗口，单端点限速 35×429 后整 IP 全 /api 连坐封禁（生产实测无关端点也 429）；record() 已排除 429。
+- 生产复验方式：先触发 /api/report rl 至 429，再请求无关端点确认不连坐。
