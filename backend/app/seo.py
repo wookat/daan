@@ -1019,10 +1019,26 @@ def tiku_module(module: str, page: int = 1):
     sub_links = "".join(
         f'<a href="{_e(_sub_path(module, s["submodule"]))}">{_e(s["submodule"])}（{s["n"]}）</a>' for s in subs
     )
+    t3counts = db.tag3_counts()
+    topic_links = "".join(
+        f'<a href="{_e(_topic_path(t["code"]))}">{_e(t["name"])}（{t3counts[t["code"]]}）</a>'
+        for m in taxonomy.tree()["modules"]
+        if m["key"] == module
+        for g in m["groups"]
+        for t in g["topics"]
+        if t3counts.get(t["code"])
+    )
+    year_links = "".join(
+        f'<a href="{_e(_year_path(y, module))}">{y}年（{n}）</a>'
+        for (y, mk), (n, _mu) in sorted(db.year_module_counts().items(), reverse=True)
+        if mk == module
+    )
     body = (
         _crumb([("题库", "/tiku/"), (name, None)])
         + f"<h1>{_e(name)}题库（{total} 题）</h1>"
         + (f'<div class="card"><h2>按题型刷题</h2><div class="tags">{sub_links}</div></div>' if sub_links else "")
+        + (f'<div class="card"><h2>按考点刷题</h2><div class="tags">{topic_links}</div></div>' if topic_links else "")
+        + (f'<div class="card"><h2>按年份刷真题</h2><div class="tags">{year_links}</div></div>' if year_links else "")
         + '<div class="card">'
         + _q_items(rows)
         + "</div>"
