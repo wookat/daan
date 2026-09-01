@@ -737,3 +737,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证 verified：本窗口 origin 无新缺陷（78 条 >1s 全部为部署 prime 触发的 SWR 并发回源、4 条 502 中 3 条自有探针 1 条爬虫 retry 后恢复 200）；App 内存在完整申论专区（pkgA/shenlun：真题题库+素材范文+在线作答），而 /tiku/shenlun/ 品牌 404 只给通用出路——搜索申论的用户被引向行测入口，产品真实能力被藏起来的死胡同。
 - 收口（seo.py）：_not_found 增可选 cta_html 槽位（默认空、既有调用零变化）+ _EMPTY_MODULE_OUTLET 映射（当前仅 shenlun），空模块 404 页顶部给「申论专区：历年真题 + 素材范文 + 在线作答 →」.cta 直达 /#/pkgA/shenlun/shenlun；404 状态/noindex/无 canonical/通用出路不变。
 - 验证：pytest +1 例（空模块 404 含 CTA、通用 404 不含），112 passed/ruff/pyright 0；前端门禁回归全绿。详见 docs/iter/round-3/design-r233-empty-module-outlet.md。
+
+### R234（/tiku 公开页文案计数口径校正）
+- 取证 verified：生产库 shenlun 0 题，而 /tiku/ 与 /tiku/discuss/ 的 description/JSON-LD/正文写「收录 113107 道行测申论题目」——total 只统计行测五模块，计数口径不实；本窗口 origin 无新缺陷（慢样本/502/llms.txt 404 全部对应今日旧 rev 部署窗口，部署后消失，stats 现 0.24–1.5s、llms.txt 200）。
+- 收口（seo.py）：四处文案「行测/申论题目」「行测申论题目」→「行测题目」，计数逻辑/路由/JSON-LD 结构不动。
+- 验证：pytest +1 例（两页不得再现旧口径、/tiku/ 须现「道行测题目」），113 passed/ruff/pyright 0；前端门禁回归全绿。详见 docs/iter/round-3/design-r234-tiku-copy-accuracy.md。
