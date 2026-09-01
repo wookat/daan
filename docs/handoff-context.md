@@ -799,3 +799,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证 verified：/api/search type=shenlun 后端分支（R241/R244）已返回 {q, shenlun, shenlun_mats}，搜索页 onLoad tab 白名单/syncUrl/showSec('shenlun') 全部现成，但 TABS 无申论项——用户无法只看申论结果。本轮 origin 复审计无新缺陷：近窗口 5xx 与 container-events.log 容器重建时刻逐条对时吻合（全为今日 R241–R244 部署窗口，边缘按 R218/R226 出 miss→retry→品牌 503 链），容器 RestartCount=0/OOM=false。
 - 收口：TABS 追加 { k:'shenlun', n:'申论' }，1 行改动，其余走既有链路（请求 &type= 透传/区块显隐/空态/深链白名单/URL 同步）。不改后端，SEO 零变化。
 - 验证：lint/vitest/build + ruff/pytest 119 全绿；生产 1440/375 实测 tab 渲染、点击后仅申论区块、URL 带 tab=shenlun、深链刷新 tab 激活、溢出 0、console 0 error、性能预算全过。详见 docs/iter/round-3/design-r245-search-shenlun-tab.md。
+
+### R246（搜索素材命中 mid 深链直达具体素材）
+- 取证 verified：R244 搜索素材点击只带 mtype 进类型列表首页（分页 20 条），命中素材 id 在最后一跳被丢弃；政策理论 73 条时目标素材可能翻数页才可见（id=35 实测不在该类型首页 20 条内）。
+- 收口：db.shenlun_materials 增可选 mid 参数（AND id=?，disabled 守卫不变）+ /api/shenlun/materials 增可选 id 透传；搜索页 goShenlunMat 追加 &mid=<id>；申论页 onLoad 纯数字校验 pinMid，loadMats 首屏后命中项不在当前页则按 ?id= 拉单条，置顶+去重+自动展开+「搜索命中」角标（仅本次会话置顶，不改常规排序）；单条拉取失败不阻断列表。不新增素材详情页，SSR/SEO 零变化。
+- 验证：pytest +1 例（id 单条命中/下架 id 空），120 passed/ruff/pyright 0/lint/vitest 135/build 全绿；生产 rev ad2ebb0 1440/375 实测目标素材置顶展开带角标、chip 激活、单条兜底路径 verified、无 mid 入口无角标零变化、?id=999999 空 items、溢出 0、console 0 error、性能预算全过。详见 docs/iter/round-3/design-r246-search-mat-mid-deeplink.md。
