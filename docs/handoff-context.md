@@ -721,3 +721,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证 verified：R229 部署后近 2h origin 所有 >3s 慢样本全部为 /api/admin/stats（2.0–5.1s × 8 条，管理台首屏必请求端点），governance/dashboard/batches 已 0.13–0.27s；代码实证 db.admin_stats() 直查 156k questions 全表 5 次 COUNT（含 hs_explanation 文本扫描）+ 多表聚合，无任何缓存。另验证 R205/R218 链路正常：19:43 外部爬虫深页 502[miss]→2s 后 200[retry]。
 - 收口：admin_stats() 改 `_cached("stats", 300, _admin_stats_uncached)`（复用 R222 SWR），并加入 R229 `_prime_admin_caches()` 启动预热清单。零契约变化；300s 陈旧度与 dashboard 一致，POST /api/admin/refresh_stats 是题目统计重算与本缓存无关。
 - 验证：test_startup_prime_fills_admin_caches 扩为三键；本地全绿（ruff/pytest 109/pyright 0/lint/vitest 131/build）。详见 docs/iter/round-3/design-r230-admin-stats-swr-cache.md。
+
+### R231（/llms.txt 站点导览）
+- 取证 verified：R230 部署后 origin 日志 stats/dashboard/governance/batches 全部亚秒（0.005–0.099s），管理台慢端点收口确认；`/llms.txt` 历史被请求 66 次全部 404（来源为共享 NAT IP，外部真实需求 unknown），站点已具备 robots/sitemap/公开页族但缺 llmstxt.org 标准的 LLM 爬虫站点导览文件。
+- 收口：seo.py 新增 GET /llms.txt（静态 Markdown：站名+摘要+五模块 hub/papers/daily/discuss/sitemap 链接，text/markdown，无 DB 查询）；edge-policy.js 把 /llms.txt 与 robots/sitemap 同组纳入边缘缓存（isCacheableContentType 新增接受 text/markdown）。
+- 验证：pytest 新增 test_llms_txt.py（状态/类型/链接契约）、vitest edge-policy 断言扩展；本地全绿（ruff/pytest 110(+1)/pyright 0/lint/vitest 132(+1)/build）；生产实测 200 + text/markdown + X-Edge-Cache HIT，1440/375 双视口溢出 0、console 0 error，性能预算全过。详见 docs/iter/round-3/design-r231-llms-txt.md。不声称已产生任何收录/流量效果。
