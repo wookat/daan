@@ -78,6 +78,7 @@ page {
   --brand: #2e5bff;
   --brand-soft: #eef3ff;
   --brand-soft-2: #dce7fd;
+  --brand-strong: #1d4ed8;
   --ink: #17181c;
   --ink-2: #5f6575;
   --ink-3: #6b7280;
@@ -150,6 +151,7 @@ html.theme-dark body {
   background: #15161c;
   --brand-soft: #1e2a4a;
   --brand-soft-2: #24345c;
+  --brand-strong: #b9ccff;
   --ink: #f2f3f7;
   --ink-2: #9ba0b0;
   --ink-3: #8a8ea0;

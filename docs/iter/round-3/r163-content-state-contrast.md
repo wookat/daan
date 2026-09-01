@@ -11,7 +11,7 @@
 ## 方案（零后端、零依赖）
 
 - search.vue：`.q-opt.ans`/`.q-ans` 颜色 #12b76a → var(--ok-strong)（对称 R49 token，深色模式自动适配）；
-- discuss.vue：`.send[disabled]` 白字 → var(--brand)（浅蓝底深蓝字 ≈4.6:1，禁用视觉弱化语义保留）。
+- discuss.vue：`.send[disabled]` 白字 → 新增 --brand-strong token（浅色 #1d4ed8 落 #dce7fd ≈5.1:1；深色 #b9ccff 落 #24345c），禁用视觉弱化语义保留（生产实测 var(--brand) #2e5bff 仅 4.16:1 不达标，故补 token）。
 
 ## 验收
 
