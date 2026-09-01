@@ -12,7 +12,8 @@
 - App.vue 新增 `--brand-text` token：浅色 #2e5bff（现状不变）、深色 #8fa8ff（#1d1f28 上 ≈7.2:1、#1e2a4a 上合规）；
 - 全站 `color: var(--brand);` → `color: var(--brand-text);`（机械替换，浅色零视觉变化）；硬编码 #2e5bff 文字色同步 token 化（含 search.vue hl() 内联样式改 var(--brand-text)，CSS 变量可穿透 rich-text span）；
 - 零散硬编码收口：.pin → --brand-text；.ann-t/.ann-b → 新增 --info-strong（浅 #075985 / 深 #7dd3fc）；.q-real、.tag.warn → 既有 --warn-strong；
-- theme.js applyTheme() 补 uni.setTabBarStyle：深色 selectedColor #8fa8ff / color #9ba0b0，浅色还原 pages.json 值。
+- tabbar 文字色：uni-h5 构建产物无 uni.setTabBarStyle（生产实测 `uni.setTabBarStyle is not a function`），改 App.vue CSS 按 pages.json 配置色值定向覆盖内联样式：`.theme-dark .uni-tabbar__label` → #9ba0b0，`[style*='rgb(46, 91, 255)']`（选中）→ #8fa8ff；
+- 例外回退：首页 hero 白底主按钮 .ld-btn.main（背景硬编码 #fff 双主题不变）保持 `var(--brand)`——机械替换为 --brand-text 后深色 #8fa8ff 落白底仅 2.27:1，实测回归发现后回退。
 
 ## 验收
 
