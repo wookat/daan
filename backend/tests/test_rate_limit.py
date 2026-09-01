@@ -90,3 +90,34 @@ def test_auth_register_rate_per_real_ip():
     with pytest.raises(HTTPException):
         auth.rate_limit(f"reg:{auth.client_ip(_req({'X-Kg-Ip': '6.6.6.6'}))}", 10, 3600)
     auth.rate_limit(f"reg:{auth.client_ip(_req({'X-Kg-Ip': '7.7.7.7'}))}", 10, 3600)
+
+
+def test_answer_log_uid_rotation_capped_by_ip_bucket():
+    """R189：零限速匿名写端点接入 rl()，answer_log 轮换 uid 由 IP 桶（3×120/3600s）封顶。"""
+    from app.study_api import api_answer_log
+
+    r = _req({"X-Kg-Ip": "9.9.9.9"})
+    for i in range(360):
+        with pytest.raises(HTTPException) as ei:
+            api_answer_log({"uid": f"u{i}", "items": []}, r)
+        assert ei.value.status_code == 400  # 通过限速，止步空 items 校验，不插行
+    with pytest.raises(HTTPException) as ei:
+        api_answer_log({"uid": "u-new", "items": []}, r)
+    assert ei.value.status_code == 429
+
+
+def test_report_anonymous_per_ip():
+    """R189：/api/report 匿名按真实 IP 20/3600，另一 IP 不受影响。"""
+    from app.study_api import api_report
+
+    a = _req({"X-Kg-Ip": "10.10.10.10"})
+    for _ in range(20):
+        with pytest.raises(HTTPException) as ei:
+            api_report({"reason": "bogus"}, a)
+        assert ei.value.status_code == 400  # 通过限速，止步无效 reason 校验，不插行
+    with pytest.raises(HTTPException) as ei:
+        api_report({"reason": "bogus"}, a)
+    assert ei.value.status_code == 429
+    with pytest.raises(HTTPException) as ei:
+        api_report({"reason": "bogus"}, _req({"X-Kg-Ip": "11.11.11.11"}))
+    assert ei.value.status_code == 400
