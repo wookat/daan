@@ -96,8 +96,19 @@
       <view v-if="offline" class="offline-tag"><l-icon name="plane" :size="14" color="#b45309" /> 离线题包模式 · 本地判分，作答记录联网后自动同步（AI 讲解等需联网）</view>
       <view v-if="cur.is_real" class="real-tag">真题{{ cur.exam_year ? ' · ' + cur.exam_year : '' }}{{ cur.exam_region ? ' · ' + cur.exam_region : '' }}</view>
       <view v-if="cur.group_seq" class="grp-tag">同材料题组 {{ cur.group_seq }}</view>
+      <view
+        v-if="matInfo"
+        class="mat-fold"
+        role="button"
+        :aria-label="matOpen[idx] ? '收起材料' : '展开材料'"
+        @click="toggleMat"
+      >
+        <text class="mat-fold-t">📄 同上材料（与上一题相同）</text>
+        <text class="mat-fold-a">{{ matOpen[idx] ? '收起 ‹' : '展开 ›' }}</text>
+      </view>
       <view class="q" :style="qStyle">
-        <template v-if="qSegs"><text v-for="(s, si) in qSegs" :key="si" :class="{ qhl: s.hl }">{{ s.t }}</text></template>
+        <template v-if="matInfo && !matOpen[idx]">{{ matInfo.stem }}</template>
+        <template v-else-if="qSegs"><text v-for="(s, si) in qSegs" :key="si" :class="{ qhl: s.hl }">{{ s.t }}</text></template>
         <template v-else>{{ cur.question }}</template>
       </view>
       <view v-if="qSegs && qSegs.some(s => s.hl)" class="qhl-tip">已标注题干重点（解析涉及的关键数字/关键词），对照检查是否找对了信息</view>
@@ -338,6 +349,7 @@
 import { request, BASE_URL, anonUid, pkNickname, exportPdf, removeFav, setFav, fetchCheckinBadges, getAuthUser, trackEvent, submitDailySet } from '../../api.js';
 import { drawOffline, enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../offline.js';
 import { dayKey, loadSzDaily, saveSzDaily } from '../../checkin.js';
+import { splitMaterial, sameMaterial } from '../../material.js';
 // #ifdef H5
 import { requestNotificationPermission } from '../../reminder.js';
 import { announce } from '../../a11y-live.js';
@@ -438,6 +450,7 @@ export default {
       dailyGoal: uni.getStorageSync('dailyGoal') || 20,
       hsRated: {},
       announce: null,
+      matOpen: {},
       REASONS: ['粗心大意', '概念不清', '方法不会', '纯蒙的'],
     };
   },
@@ -484,6 +497,13 @@ export default {
       let s = `难度${stars} · 全站正确率 ${r}%（${q.attempt_count} 人次）`;
       if (q.most_wrong && q.most_wrong !== q.answer) s += ` · 易错项 ${q.most_wrong}`;
       return s;
+    },
+    matInfo() {
+      const q = this.cur;
+      if (!q || q.module !== 'ziliao' || this.idx === 0) return null;
+      const prev = this.items[this.idx - 1];
+      if (!prev || prev.module !== 'ziliao' || !sameMaterial(prev.question, q.question)) return null;
+      return splitMaterial(q.question);
     },
     qSegs() {
       const q = this.cur;
@@ -780,7 +800,15 @@ export default {
     }
     // #endif
   },
+  watch: {
+    items() {
+      this.matOpen = {};
+    },
+  },
   methods: {
+    toggleMat() {
+      this.matOpen = { ...this.matOpen, [this.idx]: !this.matOpen[this.idx] };
+    },
     modName(m) {
       return NAMES[m] || m || '未知';
     },
@@ -2306,6 +2334,9 @@ export default {
 .new-tag { font-size: 19rpx; color: #fff; background: #f43f5e; border-radius: 999rpx; padding: 2rpx 12rpx; margin-left: 10rpx; }
 .real-tag { display: inline-block; font-size: 21rpx; color: #b45309; background: #fef3c7; border-radius: 8rpx; padding: 4rpx 14rpx; margin-bottom: 10rpx; }
 .offline-tag { font-size: 21rpx; color: var(--warn); background: var(--warn-soft); border-radius: 8rpx; padding: 8rpx 14rpx; margin-bottom: 10rpx; line-height: 1.5; }
+.mat-fold { display: flex; justify-content: space-between; align-items: center; background: #f0fdfa; border: 1rpx solid #99f6e4; border-radius: 12rpx; padding: 14rpx 20rpx; margin-bottom: 14rpx; }
+.mat-fold-t { font-size: 24rpx; color: #0f766e; }
+.mat-fold-a { font-size: 24rpx; color: #0d9488; font-weight: 600; flex-shrink: 0; margin-left: 16rpx; }
 .grp-tag { display: inline-block; font-size: 21rpx; color: #0e7490; background: #cffafe; border-radius: 8rpx; padding: 4rpx 14rpx; margin-bottom: 10rpx; margin-left: 10rpx; }
 .daily { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(120deg, var(--brand), #5c82ff); border-radius: 20rpx; padding: 24rpx 28rpx; margin-bottom: 20rpx; }
 .daily.done { background: linear-gradient(135deg, #10b981, #059669); }
