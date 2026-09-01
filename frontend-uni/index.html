@@ -56,6 +56,7 @@
           s.classList.add('kg-splash-fail')
           var e = document.createElement('div')
           e.className = 'e'
+          e.setAttribute('role', 'alert')
           e.textContent = '页面加载失败，请检查网络后重试'
           var b = document.createElement('button')
           b.className = 'rb'
@@ -64,6 +65,7 @@
           b.onclick = function () { location.reload() }
           s.appendChild(e)
           s.appendChild(b)
+          b.focus()
         }
         var t = setTimeout(fail, 20000)
         window.__kgSplashOk = function () { fired = true; clearTimeout(t) }

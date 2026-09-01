@@ -526,3 +526,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 收口：index.html 内联 watchdog（不依赖 bundle）：capture 阶段 error 监听 `/assets/` script 加载失败即触发失败态，20s 超时兜底；失败态隐藏 spinner、追加「页面加载失败，请检查网络后重试」+「重新加载」按钮（location.reload）；main.js dismissSplash() 调 `window.__kgSplashOk()` 取消 watchdog，失败态若已出现而 bundle 晚到成功挂载，`.kg-splash-done` 连同失败态一起隐藏无残留。
 - 生产复验（rev 5f2a45b / bundle index-D-Jearwy.js）：拦截 bundle 后 375/1440-dark 均出失败态（spinner 停、提示+按钮），点重新加载放行后正常水合；正常路径 watchdog 被取消无失败态闪现；Lighthouse perf 0.97–0.98/LCP 0.9–1.8s 与 R193 一致；溢出 0、console 无非预期 error。
 - 如实局限：20s 阈值为经验值，极端慢网正常加载会先见失败提示（点重载即恢复，不阻断晚到挂载）。详见 docs/iter/round-3/r194-splash-load-failure.md。
+
+### R195（深色 /tiku 正文链接可辨识性 + 启动屏失败态读屏可达性）
+- 取证：全站 axe 复扫（light/dark × 7 页）仅 dark `/tiku/` 违例 link-in-text-block serious×7——深色 `--link:#7c9aff` 对正文 `#f3f4f6` 对比仅 2.4:1 且无下划线（h2 模块标题链接 + 首段两个内文链接；R48 只补了 `.meta a,.ftr a`）。颜色方案不可行（对 surface ≥4.5:1 与对正文差 ≥3:1 的亮度区间刚好相抵）。另实证 R194 失败态提示 role/aria-live 均无、焦点为空，读屏用户听不到失败通报。
+- 收口：seo.py `_CSS` 下划线规则扩为 `.meta a,.ftr a,h2 a,p a`（双配色一致），豁免 `p a.cta,.crumb a`；index.html watchdog 失败提示加 `role="alert"`、追加后 `b.focus()` 焦点直达重试按钮。
+- 生产复验：dark/light `/tiku/` axe 清零、溢出 0；拦截 bundle 后失败态 role=alert 生效、焦点落在重试按钮。
+- 如实局限：下划线全页族生效（含浅色）属视觉语言统一；读屏收口验证方式为 DOM 断言非真实读屏实测。详见 docs/iter/round-3/r195-dark-link-a11y.md。
