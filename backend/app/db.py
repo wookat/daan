@@ -3369,17 +3369,45 @@ def mock_done_this_week(uid: str) -> bool:
 # ===== 管理后台 v3：看板统计 / 批次抽检 / 内容治理 / 用户运营 =====
 
 _ADMIN_CACHE: dict = {}
+_admin_cache_lock = threading.Lock()
+_admin_refreshing: set = set()
+_admin_build_lock = threading.Lock()
+
+
+def _cached_refresh(key: str, fn):
+    try:
+        data = fn()
+        with _admin_cache_lock:
+            _ADMIN_CACHE[key] = (time.time(), data)
+    except Exception:
+        pass
+    finally:
+        with _admin_cache_lock:
+            _admin_refreshing.discard(key)
 
 
 def _cached(key: str, ttl: float, fn):
-    """2G 小服务器上重查询的简单进程内缓存。"""
-    now = time.time()
-    hit = _ADMIN_CACHE.get(key)
-    if hit and now - hit[0] < ttl:
-        return hit[1]
-    data = fn()
-    _ADMIN_CACHE[key] = (now, data)
-    return data
+    """2G 小服务器上重查询的进程内缓存：过期先回旧值并后台单飞重算
+    （stale-while-revalidate，对齐 _pick_pools），请求不承担秒级重查询。"""
+    with _admin_cache_lock:
+        hit = _ADMIN_CACHE.get(key)
+        if hit:
+            if time.time() - hit[0] < ttl:
+                return hit[1]
+            if key not in _admin_refreshing:
+                _admin_refreshing.add(key)
+                threading.Thread(target=_cached_refresh, args=(key, fn), daemon=True).start()
+            return hit[1]
+    # 冷 miss（进程启动后首次）：单线程构建，同键并发等锁后直接吃缓存
+    with _admin_build_lock:
+        with _admin_cache_lock:
+            hit = _ADMIN_CACHE.get(key)
+            if hit:
+                return hit[1]
+        data = fn()
+        with _admin_cache_lock:
+            _ADMIN_CACHE[key] = (time.time(), data)
+        return data
 
 
 def admin_dashboard() -> dict:
