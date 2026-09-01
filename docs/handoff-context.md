@@ -751,4 +751,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 ### R236（申论真题公开 SSR hub：/tiku/shenlun/ 以真实语料恢复 200）
 - 取证 verified：生产 shenlun_questions 实有 208 道申论真题（materials 166、answers 6，App 申论专区同源数据），R232 判 404 的依据只是 questions 表 xingce 计数；origin 日志 /tiku/shenlun/ 仍持续有爬虫 404 命中。
 - 收口：seo.py tiku_module 对 shenlun 分流 _tiku_shenlun（shenlun_questions 语料呈现：年份/地区概览 chips + 题干列表 + 分页 + App 专区 CTA；不造详情/过滤子页）；/tiku/ 首页与 sitemap-pages 在语料非空时补入口；total=0 守卫回落品牌 404 + CTA（R232 语义不回退，R234 行测计数口径不动）。
-- 验证：pytest +1 例（200 呈现 + 清空回落 404 双分支），114 passed/ruff/pyright 0。详见 docs/iter/round-3/design-r236-shenlun-public-hub.md。
+- 验证：pytest +1 例（200 呈现 + 清空回落 404 双分支），114 passed/ruff/pyright 0。详见 docs/iter/round-3/design-r236-shenlun-public-hub.md。生产 rev b35aa31 实测 200 + canonical + 208 题、sitemap/首页入口就位、1440/375 溢出 0、console 0 error、性能预算全过。
+
+### R237（部署预热清单补齐入口级公开页）
+- 取证 verified：旧 rev 部署重建窗口内五大模块 hub（/tiku/yanyu/ 等）出现 502[miss]→502[retry]（R235 lb_try 生效前样本；R236 部署窗口零 502），deploy_h5.sh 3b 预热清单未覆盖模块 hub、R236 /tiku/shenlun/、R231 /llms.txt——这些入口页无自然流量副本时缺 stale-if-error 第一道退路。
+- 收口：3b 清单追加五大模块 hub + /tiku/shenlun/ + /llms.txt（同语义可缓存 GET）；深层分页页不预热（数量无界，非入口级）。
+- 验证：bash -n；下一次部署实跑 prime 行全 200。详见 docs/iter/round-3/design-r237-prime-coverage.md。
