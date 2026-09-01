@@ -243,6 +243,13 @@ def _fts_ready(conn) -> bool:
         # 注意：外部内容表的非 MATCH 查询（COUNT/MAX(rowid)）读的是 content 表而非索引，
         # 回填进度必须单独记在 fts_sync。
         conn.execute("CREATE TABLE IF NOT EXISTS fts_sync (k TEXT PRIMARY KEY, last_id INTEGER NOT NULL)")
+        # 短词（1–2 字）搜索：trigram MATCH 仅支持 ≥3 字，单字空格分词 + phrase
+        # 查询覆盖短词。contentless（content=''）：题干文本生产中不会 UPDATE，
+        # 下架/删除由 JOIN questions 过滤，无需触发器，后台线程分批回填。
+        conn.execute(
+            "CREATE VIRTUAL TABLE IF NOT EXISTS question_fts_cjk USING fts5("
+            "question, content='')"
+        )
         for name, ddl in [
             ("question_fts_ai", ("CREATE TRIGGER question_fts_ai AFTER INSERT ON questions BEGIN "
                                  "INSERT INTO question_fts(rowid, question) VALUES (new.id, new.question); END")),
@@ -281,9 +288,33 @@ def fts_backfill(batch: int = 5000) -> int:
             "ON CONFLICT(k) DO UPDATE SET last_id=excluded.last_id",
             (rows[-1]["id"],),
         )
+        conn.commit()
+        conn.close()
+        return len(rows)
+    row = conn.execute("SELECT last_id FROM fts_sync WHERE k='questions_cjk'").fetchone()
+    last = row["last_id"] if row else 0
+    rows = conn.execute(
+        "SELECT id, question FROM questions WHERE id>? ORDER BY id LIMIT ?", (last, batch)
+    ).fetchall()
+    for r in rows:
+        conn.execute(
+            "INSERT INTO question_fts_cjk(rowid, question) VALUES (?,?)",
+            (r["id"], _cjk_pad(r["question"] or "")),
+        )
+    if rows:
+        conn.execute(
+            "INSERT INTO fts_sync (k, last_id) VALUES ('questions_cjk', ?) "
+            "ON CONFLICT(k) DO UPDATE SET last_id=excluded.last_id",
+            (rows[-1]["id"],),
+        )
     conn.commit()
     conn.close()
     return len(rows)
+
+
+def _cjk_pad(s: str) -> str:
+    """逐字空格分隔，供 unicode61 单字分词；原有空白压缩丢弃。"""
+    return " ".join(ch for ch in s if not ch.isspace())
 
 
 _QCODE_RE = re.compile(r"^[A-Za-z]{2}(-[A-Za-z0-9]{1,6})*-\d{1,6}$")
@@ -362,23 +393,30 @@ def api_search_question(qid: int):
 
 def _search_questions(q: str, limit: int, offset: int) -> dict:
     conn = db.get_conn()
-    use_fts = len(q) >= 3 and _fts_ready(conn)
+    use_fts = _fts_ready(conn)
     if use_fts:
         # 回填未完成时 FTS 结果不全，剩余部分仍走 LIKE 兜底
-        row = conn.execute("SELECT last_id FROM fts_sync WHERE k='questions'").fetchone()
+        sync_key = "questions" if len(q) >= 3 else "questions_cjk"
+        row = conn.execute("SELECT last_id FROM fts_sync WHERE k=?", (sync_key,)).fetchone()
         total_q = conn.execute("SELECT COALESCE(MAX(id),0) FROM questions").fetchone()[0]
         use_fts = bool(row) and row["last_id"] >= total_q
     try:
         if use_fts:
-            match = '"' + q.replace('"', '""') + '"'
+            if len(q) >= 3:
+                tbl = "question_fts"
+                match = '"' + q.replace('"', '""') + '"'
+            else:
+                # trigram MATCH 仅支持 ≥3 字；短词走单字分词表 phrase 查询
+                tbl = "question_fts_cjk"
+                match = '"' + _cjk_pad(q).replace('"', '""') + '"'
             total = conn.execute(
-                """SELECT COUNT(*) FROM question_fts f JOIN questions x ON x.id=f.rowid
-                   WHERE question_fts MATCH ? AND (x.disabled IS NULL OR x.disabled=0)""",
+                f"""SELECT COUNT(*) FROM {tbl} f JOIN questions x ON x.id=f.rowid
+                   WHERE {tbl} MATCH ? AND (x.disabled IS NULL OR x.disabled=0)""",
                 (match,),
             ).fetchone()[0]
             rows = conn.execute(
-                """SELECT x.* FROM question_fts f JOIN questions x ON x.id=f.rowid
-                   WHERE question_fts MATCH ? AND (x.disabled IS NULL OR x.disabled=0)
+                f"""SELECT x.* FROM {tbl} f JOIN questions x ON x.id=f.rowid
+                   WHERE {tbl} MATCH ? AND (x.disabled IS NULL OR x.disabled=0)
                    ORDER BY x.is_real DESC, x.id DESC LIMIT ? OFFSET ?""",
                 (match, limit, offset),
             ).fetchall()
