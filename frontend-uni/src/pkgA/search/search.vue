@@ -133,7 +133,8 @@ export default {
         { k: 'all', n: '全部' },
         { k: 'question', n: '题目' },
         { k: 'topic', n: '考点' },
-        { k: 'paper', n: '试卷' }
+        { k: 'paper', n: '试卷' },
+        { k: 'shenlun', n: '申论' }
       ],
       loading: false,
       loadErr: '',
