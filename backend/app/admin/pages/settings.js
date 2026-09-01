@@ -6,7 +6,7 @@
     const box = document.getElementById('st-ann');
     const r = await api('/api/admin/announcements');
     box.innerHTML = r.items.length ? `<table class="tbl"><thead><tr>
-      <th>标题</th><th>内容</th><th style="width:110px">创建时间</th><th style="width:70px">状态</th><th style="width:70px"></th></tr></thead><tbody>
+      <th>标题</th><th>内容</th><th style="width:110px">创建时间</th><th style="width:70px">状态</th><th style="width:70px"><span class="sr-only">操作</span></th></tr></thead><tbody>
       ${r.items.map((a) => `<tr><td><b>${esc(a.title)}</b></td>
         <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.body || '')}</td>
         <td style="font-size:12px">${fmtTime(a.created_at)}</td>
