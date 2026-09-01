@@ -69,6 +69,20 @@ def test_interview_answer_uid_rotation_capped_by_ip_bucket():
     assert ei.value.status_code == 429
 
 
+def test_team_create_uid_rotation_capped_by_ip_bucket():
+    """R188：UGC DB 写端点接入 rl()，轮换 uid 由 IP 桶（3×5/3600s）封顶，不再无限插行。"""
+    from app.team import api_team_create
+
+    r = _req({"X-Kg-Ip": "8.8.8.8"})
+    for i in range(15):
+        with pytest.raises(HTTPException) as ei:
+            api_team_create({"uid": f"u{i}", "name": ""}, r)
+        assert ei.value.status_code == 400  # 通过限速，止步小队名校验
+    with pytest.raises(HTTPException) as ei:
+        api_team_create({"uid": "u-new", "name": ""}, r)
+    assert ei.value.status_code == 429
+
+
 def test_auth_register_rate_per_real_ip():
     """R187：注册限速按 X-Kg-Ip 计数，不再全站共享固定代理 IP 桶。"""
     for _ in range(10):

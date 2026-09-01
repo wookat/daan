@@ -15,6 +15,7 @@ from fastapi import APIRouter, HTTPException, Request
 
 from . import db
 from .auth import client_ip, rate_limit
+from .deps import rl
 from .social import CN_DAY_SQL, CN_TZ
 
 router = APIRouter(prefix="/api")
@@ -133,9 +134,9 @@ def _team_payload(conn, t, uid: str) -> dict:
 # ---------- 小队 ----------
 
 @router.post("/team/create")
-def api_team_create(body: dict):
+def api_team_create(body: dict, request: Request):
     uid = _clean_uid(body.get("uid"))
-    rate_limit(f"team_create:{uid}", 5, 3600)
+    rl(request, "team_create", 5, 3600, uid)
     name = str(body.get("name") or "").strip()[:TEAM_NAME_MAX]
     if not name:
         raise HTTPException(400, "小队名不能为空")
@@ -162,9 +163,9 @@ def api_team_create(body: dict):
 
 
 @router.post("/team/join")
-def api_team_join(body: dict):
+def api_team_join(body: dict, request: Request):
     uid = _clean_uid(body.get("uid"))
-    rate_limit(f"team_join:{uid}", 10, 300)
+    rl(request, "team_join", 10, 300, uid)
     code = str(body.get("code") or "").strip().upper()[:12]
     if not code:
         raise HTTPException(400, "缺少邀请码")
@@ -393,9 +394,9 @@ def _answers_payload(conn, share_id: int) -> list[dict]:
 
 
 @router.post("/share/create")
-def api_share_create(body: dict):
+def api_share_create(body: dict, request: Request):
     uid = _clean_uid(body.get("uid"))
-    rate_limit(f"share_create:{uid}", 30, 3600)
+    rl(request, "share_create", 30, 3600, uid)
     qid = body.get("question_id")
     if not qid:
         raise HTTPException(400, "缺少 question_id")
@@ -473,9 +474,9 @@ def api_share_detail(sid: str, uid: str = ""):
 
 
 @router.post("/share/{sid}/answer")
-def api_share_answer(sid: str, body: dict):
+def api_share_answer(sid: str, body: dict, request: Request):
     uid = _clean_uid(body.get("uid"))
-    rate_limit(f"share_answer:{uid}", 60, 3600)
+    rl(request, "share_answer", 60, 3600, uid)
     picked = str(body.get("picked") or "").strip().upper()[:2]
     if not picked:
         raise HTTPException(400, "缺少作答选项")

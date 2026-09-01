@@ -11,10 +11,10 @@ import string
 import time
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
 from . import db
-from .auth import rate_limit
+from .deps import rl
 from .social import CN_TZ
 
 router = APIRouter(prefix="/api/pk")
@@ -164,9 +164,9 @@ def _match_payload(m, uid: str | None = None, with_detail: bool = False) -> dict
 
 
 @router.post("/create")
-def api_pk_create(body: dict):
+def api_pk_create(body: dict, request: Request):
     uid = _clean_uid(body.get("uid"))
-    rate_limit(f"pk_create:{uid}", 10, 300)
+    rl(request, "pk_create", 10, 300, uid)
     module = (body.get("module") or "").strip() or None
     if module and module not in PK_MODULES:
         raise HTTPException(400, "模块无效")
