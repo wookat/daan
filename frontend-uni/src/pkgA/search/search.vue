@@ -70,7 +70,7 @@
             <text v-if="detail.explanation" class="q-exp">{{ detail.explanation }}</text>
           </view>
         </view>
-        <view v-if="result.questions.total > result.questions.items.length" class="more" @click="loadMore">加载更多</view>
+        <view v-if="result.questions.total > result.questions.items.length" class="more" @click="loadMore">{{ moreLoading ? '加载中…' : '加载更多' }}</view>
       </view>
       </view>
       </view>
@@ -117,6 +117,7 @@ export default {
       detail: null,
       timer: null,
       searchSeq: 0,
+      moreLoading: false,
       hist: uni.getStorageSync('kgSearchHist') || []
     };
   },
@@ -194,16 +195,23 @@ export default {
       if (seq === this.searchSeq) this.loading = false;
     },
     async loadMore() {
+      if (this.moreLoading) return;
+      this.moreLoading = true;
       const r = this.result;
       const q = r.q;
       const off = r.questions.items.length;
       try {
         const d = await request('/api/search?q=' + encodeURIComponent(q) + '&type=question&offset=' + off);
         if (r !== this.result) return;
-        if (d.questions) r.questions.items.push(...d.questions.items);
+        if (d.questions) {
+          const seen = new Set(r.questions.items.map((x) => x.id));
+          r.questions.items.push(...d.questions.items.filter((x) => !seen.has(x.id)));
+        }
       } catch (e) {
         if (r !== this.result) return;
         uni.showToast({ title: '加载失败', icon: 'none' });
+      } finally {
+        this.moreLoading = false;
       }
     },
     async toggleDetail(it) {
