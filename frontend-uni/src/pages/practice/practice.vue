@@ -399,15 +399,6 @@ export default {
       expSheet: true,
       expAns: true,
       expOnly: false,
-      plan: null,
-      profile: undefined,
-      planToday: null,
-      guideHide: uni.getStorageSync('planGuideHide') ? true : false,
-      setupOpen: false,
-      setupStep: 1,
-      setupBusy: false,
-      pf: { exam_type: '国考', target_region: '', exam_date: '', target_score: 70, daily_minutes: 60, base_level: '零基础' },
-      FOCUS_MODS: { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断' },
       papers: [],
       paperRegion: null,
       subProg: {},
@@ -1714,7 +1705,7 @@ export default {
       const tag = (e.target && e.target.tagName) || '';
       if (/INPUT|TEXTAREA|SELECT/.test(tag) || (e.target && e.target.isContentEditable)) return;
       if (!this.session || !this.cur) return;
-      if (this.cardOpen || this.toolsOpen || this.reportOpen || this.paperSheet || this.customOpen || this.setupOpen) return;
+      if (this.cardOpen || this.toolsOpen || this.reportOpen || this.paperSheet || this.customOpen) return;
       const k = e.key;
       if (/^[a-dA-D]$/.test(k) && !this.picked && !this.beiMode) {
         const K = k.toUpperCase();
@@ -1970,80 +1961,6 @@ export default {
       uni.setStorageSync('redoQuestion', q.question + '\n' + optText);
       uni.switchTab({ url: '/pages/ask/ask' });
     },
-    async loadPlan() {
-      const uid = uni.getStorageSync('anonUid');
-      if (!uid) return;
-      try {
-        this.plan = await request('/api/daily_plan?uid=' + encodeURIComponent(uid));
-      } catch (e) { /* 非关键路径 */ }
-    },
-    async loadProfile() {
-      try {
-        const d = await request('/api/profile?uid=' + encodeURIComponent(anonUid()));
-        this.profile = d.profile || null;
-        if (this.profile) await this.loadPlanToday();
-        else this.planToday = null;
-      } catch (e) { /* 非关键路径 */ }
-    },
-    async loadPlanToday() {
-      try {
-        this.planToday = await request('/api/plan/today?uid=' + encodeURIComponent(anonUid()));
-      } catch (e) { /* 非关键路径 */ }
-    },
-    openSetup() {
-      const p = this.profile || {};
-      this.pf = {
-        exam_type: p.exam_type || '国考',
-        target_region: p.target_region || '',
-        exam_date: p.exam_date || '',
-        target_score: p.target_score || 70,
-        daily_minutes: p.daily_minutes || 60,
-        base_level: p.base_level || '零基础',
-      };
-      this.setupStep = 1;
-      this.setupOpen = true;
-    },
-    skipGuide() {
-      this.guideHide = true;
-      uni.setStorageSync('planGuideHide', '1');
-      uni.showToast({ title: '已跳过，可在统计页随时制定', icon: 'none', duration: 1500 });
-    },
-    async setupNext() {
-      if (this.setupStep === 1 && !this.pf.exam_date) {
-        uni.showToast({ title: '请先选择考试日期', icon: 'none' });
-        return;
-      }
-      if (this.setupStep < 3) {
-        this.setupStep++;
-        return;
-      }
-      if (this.setupBusy) return;
-      this.setupBusy = true;
-      try {
-        const d = await request('/api/profile', { method: 'POST', data: { uid: anonUid(), ...this.pf } });
-        this.profile = d.profile;
-        await this.loadPlanToday();
-        this.setupOpen = false;
-        uni.showToast({ title: '学习计划已生成', icon: 'none' });
-      } catch (e) {
-        uni.showToast({ title: '保存失败：' + e.message, icon: 'none' });
-      } finally {
-        this.setupBusy = false;
-      }
-    },
-    goTask(t) {
-      if (t.done) return;
-      if (t.type === 'mock') {
-        this.goMini();
-        return;
-      }
-      if (t.type === 'review') {
-        this.goBook();
-        return;
-      }
-      const remain = Math.max(t.target - (t.done_n || 0), 5);
-      this.start(t.module || null, t.submodule || null, remain, !!t.submodule, t.real);
-    },
     async exportPaper() {
       if (this.exporting) return;
       this.exporting = true;
@@ -2072,17 +1989,6 @@ export default {
         uni.showToast({ title: '导出失败：' + e.message, icon: 'none' });
       }
       this.exporting = false;
-    },
-    async setFocus(mod) {
-      const uid = uni.getStorageSync('anonUid');
-      if (!uid) return;
-      const next = this.plan && this.plan.focus === mod ? '' : mod;
-      try {
-        await request('/api/user_state', { method: 'POST', data: { uid, focus: next } });
-        this.plan = await request('/api/daily_plan?uid=' + encodeURIComponent(uid));
-        if (this.profile) this.loadPlanToday();
-        if (next) uni.showToast({ title: '今日主攻已设为' + (this.FOCUS_MODS[next] || next) + '，推荐已更新', icon: 'none' });
-      } catch (e) { /* 非关键路径 */ }
     },
     goBook() {
       uni.switchTab({ url: '/pages/book/book' });
@@ -2140,7 +2046,6 @@ export default {
       } catch (e) { /* 非关键路径 */ }
       await this.logAttempts(this.items);
       await this.syncRedoReviews();
-      if (this.profile) this.loadPlanToday();
       this.loadDueReview();
       // #ifdef H5
       if (this.items.length >= 5) this.initPushNudge();
@@ -2233,53 +2138,6 @@ export default {
 
 <style scoped>
 .wrap { padding: 24rpx; padding-bottom: 40rpx; }
-.home { padding-bottom: 40rpx; }
-.plancard { padding: 22rpx 26rpx; }
-.guide { display: flex; align-items: center; gap: 16rpx; background: linear-gradient(120deg, var(--brand-soft), var(--brand-soft)); border: 1rpx solid var(--brand-soft-2); padding: 24rpx 26rpx; }
-.guide-l { flex: 1; min-height: 44px; display: flex; flex-direction: column; justify-content: center; }
-.guide-t { font-size: 28rpx; font-weight: 600; color: var(--brand-text); }
-.guide-s { font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; }
-.guide-btn { flex-shrink: 0; background: var(--brand); color: #fff; border-radius: 999rpx; padding: 0 26rpx; font-size: 24rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
-.guide-x { flex-shrink: 0; font-size: 22rpx; color: var(--ink-3); min-height: 44px; display: inline-flex; align-items: center; padding: 0 8rpx; }
-.plan-hr { display: flex; align-items: center; gap: 14rpx; }
-.plan-days { font-size: 21rpx; color: var(--brand-text); background: var(--brand-50); border-radius: 999rpx; padding: 4rpx 14rpx; }
-.plan-edit { font-size: 22rpx; color: var(--ink-3); min-height: 44px; display: inline-flex; align-items: center; }
-.plan-prog { display: flex; align-items: center; gap: 14rpx; margin: 8rpx 0 6rpx; }
-.plan-prog-bar { flex: 1; height: 10rpx; background: var(--brand-soft); border-radius: 999rpx; overflow: hidden; }
-.plan-prog-fill { height: 100%; background: var(--brand); border-radius: 999rpx; transition: width 0.3s; }
-.plan-prog-t { font-size: 21rpx; color: var(--ink-3); flex-shrink: 0; }
-.plan-row.task { gap: 16rpx; }
-.task-ck { width: 36rpx; height: 36rpx; border-radius: 50%; border: 2rpx solid var(--ink-4); flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 22rpx; color: #fff; box-sizing: border-box; }
-.task-ck.on { background: #16a34a; border-color: #16a34a; }
-.task-main { flex: 1; display: flex; flex-direction: column; padding: 10rpx 0; }
-.plan-txt.tdone { color: var(--ink-3); text-decoration: line-through; }
-.task-sub { font-size: 21rpx; color: var(--ink-3); margin-top: 4rpx; }
-.pf-input { flex: 1; min-height: 44px; border: 1rpx solid var(--line); border-radius: 12rpx; padding: 0 20rpx; font-size: 26rpx; background: var(--fill); box-sizing: border-box; }
-.pf-date { min-height: 44px; display: inline-flex; align-items: center; border: 1rpx solid var(--line); border-radius: 12rpx; padding: 0 24rpx; font-size: 26rpx; color: var(--ink); background: var(--fill); box-sizing: border-box; }
-.pf-date.empty { color: var(--ink-3); }
-.pf-summary { margin-top: 8rpx; font-size: 23rpx; color: var(--ink-2); background: var(--brand-50); border-radius: 12rpx; padding: 18rpx 22rpx; }
-.pf-back { margin-top: 16rpx; text-align: center; font-size: 24rpx; color: var(--ink-3); min-height: 44px; display: flex; align-items: center; justify-content: center; }
-.plan-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6rpx; }
-.plan-t { font-size: 27rpx; font-weight: 600; color: var(--ink); }
-.plan-y { font-size: 21rpx; color: var(--ink-3); }
-.plan-row { display: flex; align-items: center; gap: 14rpx; min-height: 44px; border-top: 1rpx solid var(--line); }
-.plan-row:first-of-type { border-top: none; }
-.plan-dot { width: 12rpx; height: 12rpx; border-radius: 50%; background: var(--brand); flex-shrink: 0; }
-.plan-dot.due { background: #f59e0b; }
-.plan-txt { flex: 1; font-size: 25rpx; color: var(--ink); }
-.plan-go { font-size: 24rpx; color: var(--brand-text); flex-shrink: 0; }
-.plan-focus { display: flex; align-items: center; gap: 10rpx; flex-wrap: wrap; border-top: 1rpx solid var(--line); padding-top: 14rpx; margin-top: 6rpx; }
-.plan-focus-k { font-size: 22rpx; color: var(--ink-3); margin-right: 4rpx; }
-.plan-fchip { font-size: 22rpx; color: var(--ink-2); background: var(--fill); border-radius: 999rpx; padding: 0 20rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
-.plan-fchip.on { background: var(--brand-50); color: var(--brand-text); font-weight: 600; }
-.hbanner { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(120deg, var(--brand), #5c82ff); border-radius: 24rpx; padding: 28rpx; margin-bottom: 24rpx; }
-.hbanner-l { flex: 1; margin-right: 20rpx; }
-.hbanner-t { display: block; font-size: 30rpx; font-weight: 600; color: #fff; }
-.hbanner-s { display: block; font-size: 23rpx; color: rgba(255, 255, 255, 0.82); margin-top: 6rpx; }
-.hbanner-poster { color: #fff; font-weight: 700; text-decoration: underline; }
-.hbanner-bar { height: 10rpx; background: rgba(255, 255, 255, 0.25); border-radius: 999rpx; margin-top: 14rpx; overflow: hidden; }
-.hbanner-fill { height: 100%; background: var(--card); border-radius: 999rpx; }
-.hbanner-btn { flex-shrink: 0; background: var(--card); color: var(--brand-text); border-radius: 999rpx; padding: 22rpx 28rpx; font-size: 26rpx; font-weight: 500; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
 .grid4 { display: flex; padding: 20rpx 8rpx; }
 .g4 { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 10rpx 0; }
 .g4-ic { width: 88rpx; height: 88rpx; border-radius: 24rpx; display: flex; align-items: center; justify-content: center; margin-bottom: 10rpx; }
