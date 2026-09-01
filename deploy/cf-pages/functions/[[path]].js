@@ -58,6 +58,11 @@ function fromCache(hit, ttl, label, request) {
 // 安全头 + robots 语义：前台直出与后台刷新入缓存的副本共用，保证两条路径逐字节同构
 function decorate(resp, pathname) {
   for (const [k, v] of Object.entries(SECURITY_HEADERS)) resp.headers.set(k, v);
+  // HTML 的 ETag 会被 Cloudflare 前端（Email Obfuscation 内容改写）剥离，
+  // 补 Last-Modified 兜底验证器：取本次回源时刻，副本存续期内 If-Modified-Since 可 304
+  if (!resp.headers.get("Last-Modified")) {
+    resp.headers.set("Last-Modified", new Date().toUTCString());
+  }
   if (pathname.startsWith("/admin") || pathname.startsWith("/api/")) {
     resp.headers.set("X-Robots-Tag", "noindex, nofollow");
   } else {
