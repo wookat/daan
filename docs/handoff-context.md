@@ -700,3 +700,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 收口（纯边缘函数，零响应/缓存/重试语义变化）：边缘每个回源请求附 X-Kg-Fetch 请求头：miss（可缓存无副本同步回源）/ pass（不可缓存透传）/ swr（后台刷新）/ retry（R205 重试第二跳），由 Caddy 访问日志（记录全部请求头，14 天）自然持久化。
 - 验证：本地全绿（vitest 131(+3)/lint(src+tests+edge)/build/ruff/pytest 106/pyright 0）；生产部署后 origin 日志实录四种模式：novel 深页 miss、/api/stats pass、TTL 过期后台刷新 swr；受控重启窗口实测两条完整链：有副本页 客户端 200(STALE)+日志 502[swr]（即历史 sitemap 502 的无害形态），无副本页 502[miss]→502[retry]→客户端品牌 503，窗口结束恢复 200。1440/375 双视口溢出 0、console 0 error、性能预算全过。
 - 明确不做：不回溯归因历史两条 502（证据不可得）、origin 不读取该头做行为分支。详见 docs/iter/round-3/design-r226-edge-fetch-mode-header.md。
+
+### R227（管理台折叠侧栏导航可访问名称 + tooltip，已部署）
+- 取证 verified：Playwright 768px 生产实测，admin.css ≤1023px 折叠图标栏下 `.side nav a .txt{display:none}`，全部 12 个侧栏导航链接可访问名称只剩 emoji（📊/📚/…），aria-label/title 均无——读屏用户听到的是 emoji 描述而非「数据看板/题库管理」，明眼用户悬停无 tooltip。axe link-name 不报（emoji 也算名称），R223 扫描在 1440 全宽下覆盖不到该形态。
+- 收口（纯静态 admin/index.html + admin.css）：12 个导航 `<a>` 补 title tooltip；折叠态 `.txt` 由 display:none 改 sr-only 式 clip 隐藏（保留可访问性树，包含块为既有 position:relative 的 `<a>`，无 R223 溢出陷阱）。CSS 缓存由 admin_assets_version() mtime 重写自动生效，无需手动 bump ?v。
+- 验证：本地全绿（ruff/pytest 106/pyright 0/lint/vitest 131/build）；生产 rev 964f0c1 实测 1440 全宽零变化（.txt static 可见）、768/375 折叠态 12 链接名称全为完整中文 + title 齐全、375 溢出 0；768 的 15px「溢出」为存量 body{min-width:768px}+滚动条固有形态（widest 元素即 body），非本轮引入。性能预算全过。
+- 本轮复审计其余结论：近 7 天 slow_load 46/47 样本无 `;v:` 版本戳（旧 bundle 客户端族群，boot 心跳同期版本戳齐全），当前 bundle 无新 verified 缺陷；/api/admin/governance 单条 4s 样本证据不足不改动，挂观察。
