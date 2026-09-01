@@ -5,6 +5,7 @@ import {
   edgeTtl,
   cacheFreshness,
   isCacheableContentType,
+  serveMode,
   EDGE_CACHE_TTL,
   API_EDGE_CACHE_TTL,
 } from '../../deploy/cf-pages/functions/edge-policy.js';
@@ -73,6 +74,19 @@ describe('cacheFreshness', () => {
   it('无 X-Kg-Cached-At（历史副本）视为过期', () => {
     expect(cacheFreshness(null, 1e9, 300)).toBe('stale');
     expect(cacheFreshness('', 1e9, 300)).toBe('stale');
+  });
+});
+
+describe('serveMode', () => {
+  it('无副本同步回源 fetch（无论新鲜度）', () => {
+    expect(serveMode(false, 'hit')).toBe('fetch');
+    expect(serveMode(false, 'stale')).toBe('fetch');
+  });
+  it('有副本且 TTL 内直接 hit', () => {
+    expect(serveMode(true, 'hit')).toBe('hit');
+  });
+  it('有副本但过期走 stale-while-revalidate', () => {
+    expect(serveMode(true, 'stale')).toBe('swr');
   });
 });
 

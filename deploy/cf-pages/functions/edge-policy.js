@@ -46,6 +46,13 @@ export function cacheFreshness(cachedAt, nowSec, ttl) {
   return nowSec - Number(cachedAt || 0) <= ttl ? "hit" : "stale";
 }
 
+// stale-while-revalidate：有副本且 TTL 内直接 HIT；过期先回陈旧副本并后台回源刷新（swr）；
+// 无副本才同步回源（fetch）。
+export function serveMode(hasCopy, freshness) {
+  if (!hasCopy) return "fetch";
+  return freshness === "hit" ? "hit" : "swr";
+}
+
 export function isCacheableContentType(pathname, isApi, contentType) {
   const ct = contentType || "";
   if (pathname.startsWith("/sitemap") || pathname === "/robots.txt") {
