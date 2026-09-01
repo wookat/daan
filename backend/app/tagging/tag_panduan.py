@@ -233,10 +233,10 @@ def classify(r):
         code, fn = DIRECT_SUB[sub]
         c2, conf = fn(q, e, t)
         return (c2, conf, "rule") if c2 != "UNKNOWN" else (code, 0.7, "rule")
-    fn = GROUP_BY_SUB.get(sub)
+    fn = GROUP_BY_SUB.get(sub or "")
     if fn is None:
         gsub = guess_submodule(r)
-        fn = GROUP_BY_SUB.get(gsub)
+        fn = GROUP_BY_SUB.get(gsub or "")
         if fn is None:
             return "UNKNOWN", 0.0, "rule"
     code, conf = fn(q, e, t)

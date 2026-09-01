@@ -12,6 +12,7 @@ import time
 from fastapi import APIRouter, Header, HTTPException
 
 from . import db, taxonomy
+from .deps import check_admin
 
 router = APIRouter(prefix="/api/mock")
 admin_router = APIRouter(prefix="/api/admin/mock")
@@ -429,9 +430,11 @@ def api_event_report(event_id: int, uid: str = ""):
             raise HTTPException(404, "尚无比赛成绩")
         if _phase(ev, now) == "ended":
             _freeze_ranks(conn, event_id)
-            entry = _entry(conn, event_id, uid)
+            entry = _entry(conn, event_id, uid) or entry
         attempt = db.get_exam_attempt(entry["attempt_id"])
         paper = db.get_exam_paper(ev["paper_id"])
+        if not attempt or not paper:
+            raise HTTPException(404, "成绩数据缺失")
         rows = conn.execute(
             "SELECT score FROM mock_event_entries WHERE event_id=? AND score IS NOT NULL",
             (event_id,),
@@ -537,7 +540,6 @@ def api_event_report(event_id: int, uid: str = ""):
 
 @admin_router.post("/events")
 def api_admin_create_event(body: dict, x_admin_token: str | None = Header(None)):
-    from .main import check_admin
     check_admin(x_admin_token)
     title = str(body.get("title") or "").strip()
     paper_id = body.get("paper_id")
@@ -565,7 +567,6 @@ def api_admin_create_event(body: dict, x_admin_token: str | None = Header(None))
 
 @admin_router.delete("/events/{event_id}")
 def api_admin_delete_event(event_id: int, x_admin_token: str | None = Header(None)):
-    from .main import check_admin
     check_admin(x_admin_token)
     conn = db.get_conn()
     try:

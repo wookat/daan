@@ -40,11 +40,50 @@ if [ -f "$ENV_FILE" ]; then
 else
   echo "$TS r2 upload SKIPPED (no $ENV_FILE)" >> "$LOG"
 fi
+# 1c'. 备份可恢复性验证：解压当日备份 → quick_check + 题目行数，坏备份当天暴露而非灾难恢复时
+VF="$BK/.verify.db"
+if gunzip -c "$BK/data-$(date +%F).db.gz" > "$VF" 2>/dev/null; then
+  VR=$(python3 -c "
+import sqlite3
+c = sqlite3.connect('$VF')
+q = c.execute('PRAGMA quick_check').fetchone()[0]
+n = c.execute('SELECT count(*) FROM questions').fetchone()[0]
+print(f'{q} questions={n}')
+" 2>&1) || VR="verify-script-failed: $VR"
+else
+  VR="gunzip-failed"
+fi
+rm -f "$VF"
+case "$VR" in
+  "ok questions="*) echo "$TS RESTORE-VERIFY $VR" >> "$LOG" ;;
+  *) echo "$TS RESTORE-VERIFY FAILED $VR" >> "$LOG" ;;
+esac
+# 1b'. R2 副本每周独立验证（周日）：从远端真实下载 → 与本地 md5 比对，防「上传成功但远端不可恢复」
+if [ -f "$ENV_FILE" ] && [ "$(date +%u)" = "7" -o "${FORCE_R2_VERIFY:-}" = "1" ]; then
+  RF=/tmp/.kg-r2-verify.db.gz
+  F="$BK/data-$(date +%F).db.gz"
+  rclone copyto "r2:$BUCKET_PREFIX/$(basename "$F")" "$RF" 2>/dev/null
+  # rclone copyto 对远端缺失对象 exit 0 且不落文件（v1.75 实测），以产物存在性为准
+  if [ -s "$RF" ]; then
+    if [ "$(md5sum "$RF" | cut -d' ' -f1)" = "$(md5sum "$F" | cut -d' ' -f1)" ]; then
+      echo "$TS R2-VERIFY ok md5 match $(basename "$F")" >> "$LOG"
+    else
+      echo "$TS R2-VERIFY FAILED md5 mismatch $(basename "$F")" >> "$LOG"
+    fi
+  else
+    echo "$TS R2-VERIFY FAILED download $(basename "$F")" >> "$LOG"
+  fi
+  rm -f "$RF"
+fi
 # 1c. 磁盘水位巡检：共享宿主根分区 ≥90% 时告警入日志（DB 快照/日志膨胀早发现）
 PCT=$(df --output=pcent / | tail -1 | tr -dc '0-9')
 if [ "${PCT:-0}" -ge 90 ]; then
   echo "$TS DISK HIGH ${PCT}% used on /" >> "$LOG"
 fi
+# 1d. 宿主内存压力巡检：可用内存/交换占用/后端 RSS 每日一行（共享宿主 earlyoom 误杀早发现）
+MEMLINE=$(free -m | awk '/^Mem:/{printf "mem_avail=%sMiB", $7} /^Swap:/{printf " swap_used=%sMiB", $3}')
+RSS=$(docker exec deploy-kaogong-1 sh -c "awk '/VmRSS/{print \$2}' /proc/1/status" 2>/dev/null || echo "?")
+echo "$TS MEM $MEMLINE uvicorn_rss=${RSS}kB" >> "$LOG"
 # 2. 健康巡检
 CODE=$(curl -s -o /dev/null -w '%{http_code}' -m 15 https://kaogong.zalize.com/api/questions?limit=1)
 if [ "$CODE" != "200" ]; then

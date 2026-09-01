@@ -390,7 +390,7 @@ def _render_daily(day: str, archived: bool):
     cards = []
     for i, q in enumerate(items, 1):
         stem = (q.get("question") or "").strip().replace("\n", " ")[:70]
-        mod = _module_name(q.get("module")) or "综合"
+        mod = _module_name(q.get("module") or "") or "综合"
         cards.append(
             '<section class="card">'
             f'<h2>{i}. <a href="/tiku/q/{q["id"]}">{_e(stem)}…</a></h2>'
@@ -1181,7 +1181,7 @@ def sitemap_index():
 
 @root_router.get("/sitemap-pages.xml", include_in_schema=False)
 def sitemap_pages():
-    urls = [
+    urls: list[tuple[str, float | None]] = [
         (_url("/tiku/"), None),
         (_url("/tiku/papers/"), None),
         (_url("/tiku/discuss/"), None),

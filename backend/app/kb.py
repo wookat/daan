@@ -120,5 +120,5 @@ def guess_module(question_text: str) -> str | None:
     scores = {}
     for key, mod in MODULES.items():
         scores[key] = sum(1 for kw in mod["keywords"] if kw in question_text)
-    best = max(scores, key=scores.get)
+    best = max(scores, key=lambda k: scores[k])
     return best if scores[best] > 0 else None

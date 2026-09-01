@@ -615,3 +615,32 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：`npm run lint` 只跑 `eslint src`，tests/ 12 个测试文件游离在 lint 门禁外；实测 `npx eslint tests` 27 errors（全部 no-undef：Request×20/Response×7，Fetch API 全局未声明，R209 已记录该债务）。deploy/cf-pages 边缘源码在 eslint flat config base path 之外无法直接纳管（需配置上移仓库根，挂候选不做）。
 - 收口：eslint.config.mjs globals 补 Request/Response/Headers/caches/self；lint 脚本改 `eslint src tests`。零测试/源码改动，27 errors 全部由 globals 声明消解。
 - 验证：npm run lint（src+tests）0 error、vitest 122、build 全绿；无生产行为变化不部署。从本轮起「lint 全绿」口径覆盖 src+tests。详见 docs/iter/round-3/r211-lint-scope-tests.md。
+
+### R212（容器生命周期审计 + 宿主内存压力观测，纯 ops 工具链不部署）
+- 取证：verified 宿主 2GB 内存跑 13 容器长期高压（mem avail 224–291MiB、swap ~2.3GB、zram 近满）；earlyoom 曾多次 SIGTERM/SIGKILL kaogong uvicorn（badness ~944、VmRSS 峰值 462MiB，08-31 journal 实证）——即部分 502/重启窗口的直接成因；09-01 晚容器每 10–20 分钟重启（dockerd sbJoin 48h×171 次、实查 Up 11 minutes），但该宿主 docker events 历史查询返回空、autoheal/ops 日志均无对应记录，重启归因存在系统性观测盲区（发起者 unknown）。
+- 收口：新增 deploy/kaogong-lifecycle-watch.sh（cron 每分钟轮询比对 ContainerID/StartedAt/健康态，变化即落审计行：UTC、旧→新、内存/交换水位、近 10 分钟 earlyoom kill 数 → kaogong-reports/container-events.log）；kaogong-ops.sh 每日巡检追加 MEM 行（mem avail/swap used/uvicorn RSS）。明确不做：容器内存 limit、无 profile 的缓存压缩、动宿主级 earlyoom。
+- 验证：bash -n 通过；VPS 实装 cron 并手跑两次（首次落基线、二次幂等 0 新行），MEM 行实测输出正常（重启后 uvicorn RSS 基线 ~17MiB）。无生产产物变更不部署。独立主机/内存扩容资源申报本轮新增硬证据。详见 docs/iter/round-3/r212-container-lifecycle-audit.md。
+
+### R213（deploy/cf-pages 边缘源码纳入 lint 门禁，纯工具链不部署）
+- 取证：R211 挂候选的边缘源码 lint 盲区实测复现（flat config base path 限制，frontend-uni 下无法触达 ../deploy）；从仓库根纳管后立即发现 WritableStream no-undef 1 处（真实用法、globals 缺声明）。
+- 收口：仓库根新增转发型 eslint.config.mjs（base path 提根，规则仍单一来源维护在 frontend-uni/eslint.config.mjs）；ignores 补 frontend-uni/ 前缀镜像组、globals 补 ReadableStream/WritableStream；lint 脚本改 `eslint src tests && npm run lint:edge`。
+- 验证：npm run lint（src+tests+edge）0 error、vitest 122、build:h5 全绿；无生产行为变化不部署。从本轮起「lint 全绿」口径覆盖 src+tests+边缘函数。详见 docs/iter/round-3/r213-edge-lint-coverage.md。
+
+### R214（每日备份可恢复性验证，纯 ops 不部署）
+- 复审计无新缺陷：深页 Lighthouse 全 1.0、JSON-LD 全可解析、hub 页内链抽样 60/60 全 200。
+- verified 缺口：每日备份从未验证可恢复；手工演练最新备份 quick_check ok / questions=156792。
+- 收口：ops 1c' 每日解压当日 .gz → quick_check + questions 行数 → RESTORE-VERIFY ok/FAILED 入日志（已 VPS 实装实跑，坏 .gz 走 FAILED 分支已受控验证）。详见 docs/iter/round-3/r214-backup-restore-verify.md。
+
+### R215（PK 随机匹配新建分支 500 + 模考管理端 ImportError，已部署）
+- pyright 全量甄别出两处真实运行时缺陷：R188 后 random_match 新建分支调 api_pk_create 缺 request 实参必 500；mock_event 管理端 `from .main import check_admin` 自 R114 门禁集中化后即 ImportError 500（周赛靠 ensure_weekly_event 兜底所以未暴露）。
+- 收口：random_match 透传 request（pk_create 限速桶顺带对新建路径生效）；mock_event 顶部改 `from .deps import check_admin`。+2 pytest（92）。
+- pyright 其余 40 处为 Optional/stub 噪声，纳门禁需基线（挂候选）。详见 docs/iter/round-3/r215-pk-random-match-500.md。
+
+### R216（R2 远端备份副本每周独立恢复验证，纯 ops 不部署）
+- R214 只验本地 .gz，远端副本从未独立下载验证；手工演练下载→md5 一致→quick_check ok questions=156792。
+- 收口：ops 1b' 每周日（FORCE_R2_VERIFY=1 可强制）从 R2 真实下载当日备份、md5 比对入 R2-VERIFY 日志行（已 VPS 实装，成功/缺失对象两路径受控验证）。
+- 陷阱：rclone copyto 远端对象缺失 exit 0 不落文件，判定以产物存在性为准。详见 docs/iter/round-3/r216-r2-remote-verify.md。
+
+### R217（pyright 存量清零 + 基线固化，已部署）
+- 39 errors 逐项甄别清零：实义修复（mock_event 赛后报告 attempt/paper 缺失 500→404、llm.chat 重试耗尽显式 RuntimeError、main uid=None 不进 owns_uid、db 直摸 taxonomy._alias_idx 改 alias_index() 访问器）+ 等价改写 + cv2/pypdf 可选依赖定点豁免。
+- 新增 backend/pyrightconfig.json（basic/py3.12）；门禁新增 `cd backend && npx -y pyright app`（基线 0 errors）。详见 docs/iter/round-3/r217-pyright-baseline.md。

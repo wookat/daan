@@ -37,7 +37,7 @@ async def api_explain(
         if hit:
             return {
                 "module": hit.get("module"),
-                "module_name": kb.MODULES.get(hit.get("module"), {}).get("name"),
+                "module_name": kb.MODULES.get(hit.get("module") or "", {}).get("name"),
                 "question_type": hit.get("question_type"),
                 "question_text": hit.get("question_text"),
                 "user_answer": hit.get("user_answer") or user_answer,
@@ -60,7 +60,7 @@ async def api_explain(
     suspect = engine.is_suspect(extracted.get("question_text", ""))
     meta = {
         "module": None if suspect else extracted.get("module"),
-        "module_name": None if suspect else kb.MODULES.get(extracted.get("module"), {}).get("name"),
+        "module_name": None if suspect else kb.MODULES.get(extracted.get("module") or "", {}).get("name"),
         "question_type": None if suspect else extracted.get("question_type"),
         "question_text": extracted.get("question_text"),
         "user_answer": ua,
@@ -103,7 +103,7 @@ async def api_explain_stream(
                 if hit:
                     meta0 = {
                         "module": hit.get("module"),
-                        "module_name": kb.MODULES.get(hit.get("module"), {}).get("name"),
+                        "module_name": kb.MODULES.get(hit.get("module") or "", {}).get("name"),
                         "question_type": hit.get("question_type"),
                         "question_text": hit.get("question_text"),
                         "user_answer": hit.get("user_answer") or user_answer,
@@ -122,7 +122,7 @@ async def api_explain_stream(
             suspect = engine.is_suspect(extracted.get("question_text", ""))
             meta = {
                 "module": None if suspect else extracted.get("module"),
-                "module_name": None if suspect else kb.MODULES.get(extracted.get("module"), {}).get("name"),
+                "module_name": None if suspect else kb.MODULES.get(extracted.get("module") or "", {}).get("name"),
                 "question_type": None if suspect else extracted.get("question_type"),
                 "question_text": extracted.get("question_text"),
                 "user_answer": ua,

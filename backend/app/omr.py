@@ -89,7 +89,7 @@ def slot_label_pos(slot: int) -> tuple[float, float, float]:
 
 def recognize(image_bytes: bytes) -> dict:
     """返回 {code, page, picks: {slot: 'A'|'AB'|''}} 或抛 ValueError。"""
-    import cv2
+    import cv2  # pyright: ignore[reportMissingImports]
     import numpy as np
 
     arr = np.frombuffer(image_bytes, dtype=np.uint8)
@@ -132,7 +132,7 @@ def recognize(image_bytes: bytes) -> dict:
 
 
 def _find_fiducials(thr, shape):
-    import cv2
+    import cv2  # pyright: ignore[reportMissingImports]
 
     h, w = shape
     contours, _ = cv2.findContours(thr, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)

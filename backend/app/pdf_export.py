@@ -219,7 +219,7 @@ def build_paper_pdf(
         last_mat = _mat_key(mat) or last_mat
         code = qcode.build_code(q)
         tag = f'<font size="7.5" color="#8F959E">[{code}]</font> ' if code else ""
-        block = [Paragraph(f"<b>{i}.</b> {tag}{_esc(qtext)}", st["q"])]
+        block: list = [Paragraph(f"<b>{i}.</b> {tag}{_esc(qtext)}", st["q"])]
         opts = q.get("options") or {}
         keys = [k for k in ["A", "B", "C", "D", "E", "F"] if opts.get(k)]
         segs = [f"{k}. {str(opts[k]).strip()}" for k in keys]
@@ -258,7 +258,7 @@ def build_paper_pdf(
 
 
 def _append_pdf(main: bytes, extra: bytes) -> bytes:
-    from pypdf import PdfReader, PdfWriter
+    from pypdf import PdfReader, PdfWriter  # pyright: ignore[reportMissingImports]
 
     w = PdfWriter()
     for src in (main, extra):

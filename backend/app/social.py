@@ -443,7 +443,8 @@ def api_admin_comments(
 ):
     _check_admin(x_admin_token)
     conn = db.get_conn()
-    where, args = ["status=?"], [status if status in ("ok", "deleted", "hidden") else "ok"]
+    where = ["status=?"]
+    args: list = [status if status in ("ok", "deleted", "hidden") else "ok"]
     if question_id:
         where.append("question_id=?")
         args.append(question_id)
@@ -583,7 +584,8 @@ def api_fav_folder_delete(fid: int, uid: str):
 def api_favs(uid: str, folder_id: int | None = None, module: str | None = None, limit: int = 200):
     u = _clean_uid(uid)
     conn = db.get_conn()
-    where, args = ["uid=?"], [u]
+    where = ["uid=?"]
+    args: list = [u]
     if folder_id is not None:
         where.append("COALESCE(folder_id, 0)=?")
         args.append(int(folder_id))

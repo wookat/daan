@@ -3296,7 +3296,7 @@ def save_user_profile(uid: str, fields: dict) -> dict:
         )
     conn.commit()
     conn.close()
-    return get_user_profile(uid)
+    return get_user_profile(uid) or {}
 
 
 def _day_start(offset_days: int = 0) -> float:
@@ -3868,8 +3868,7 @@ def mastery_snapshot(uid: str, fresh: bool = False) -> dict:
         else:
             gcode = None
             if r["submodule"]:
-                taxonomy.topic_index()  # 触发别名索引构建
-                gs = taxonomy._alias_idx.get((r["module"], r["submodule"].strip()))
+                gs = taxonomy.alias_index().get((r["module"], r["submodule"].strip()))
                 if gs:
                     gcode = gs[0]["code"]
         if gcode:
