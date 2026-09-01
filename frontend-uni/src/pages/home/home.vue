@@ -468,7 +468,7 @@
 </template>
 
 <script>
-import { request, anonUid, exportPdf, trackEvent, fetchCheckinBadges, fetchCheckinSummary, flushDailySubmit } from '../../api.js';
+import { request, snapPeek, anonUid, exportPdf, trackEvent, fetchCheckinBadges, fetchCheckinSummary, flushDailySubmit } from '../../api.js';
 import { checkinStreak, dayKey, loadSzDaily } from '../../checkin.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
@@ -878,22 +878,28 @@ export default {
     async loadHome() {
       const uid = anonUid();
       if (!uid) return;
+      const p = '/api/home_bundle?uid=' + encodeURIComponent(uid);
+      const snap = snapPeek(p);
+      if (snap) this.applyBundle(snap, true);
       try {
-        const d = await request('/api/home_bundle?uid=' + encodeURIComponent(uid));
-        this.applyPlan(d.plan);
-        if (d.badges) this.badgeInfo = d.badges;
-        this.applySummary(d.summary);
-        this.profile = d.profile || null;
-        this.profileFetched = true;
-        if (this.profile) {
-          this.planToday = d.plan_today || null;
-          uni.setStorageSync('homePlanCard', this.planToday && this.planToday.profile ? '1' : '');
-        } else this.planToday = null;
+        this.applyBundle(await request(p));
       } catch (e) {
         this.loadPlan();
         this.loadBadges();
         await this.loadProfile();
       }
+    },
+    // stale=true 为快照即显：跳过日界敏感的 summary（今日刷题数/提醒横幅），防昨日快照误报今日进度
+    applyBundle(d, stale) {
+      this.applyPlan(d.plan);
+      if (d.badges) this.badgeInfo = d.badges;
+      if (!stale) this.applySummary(d.summary);
+      this.profile = d.profile || null;
+      this.profileFetched = true;
+      if (this.profile) {
+        this.planToday = d.plan_today || null;
+        uni.setStorageSync('homePlanCard', this.planToday && this.planToday.profile ? '1' : '');
+      } else this.planToday = null;
     },
     taskGo(kind) {
       trackEvent('task_card_click', kind);
