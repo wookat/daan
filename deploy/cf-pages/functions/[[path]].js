@@ -164,6 +164,9 @@ export async function onRequest({ request, env, waitUntil }) {
   }
   const req = new Request(ORIGIN + url.pathname + url.search, request);
   req.headers.set("X-Forwarded-Host", url.hostname);
+  // 回源模式头：origin 访问日志据此区分用户可见回源（miss/pass/retry）与
+  // 后台刷新（swr，失败无用户影响），供事后审计 5xx 是否真实外泄
+  req.headers.set("X-Kg-Fetch", cacheable ? "miss" : "pass");
   // 回源请求剥离条件头：确保拿到 200 全量以刷新/建立副本（条件评估在边缘完成）
   req.headers.delete("If-None-Match");
   req.headers.delete("If-Modified-Since");
@@ -177,6 +180,7 @@ export async function onRequest({ request, env, waitUntil }) {
   if (env.KG_EDGE_KEY) req.headers.set("X-Kg-Edge", env.KG_EDGE_KEY);
   // stale-while-revalidate：立即回陈旧副本，后台回源刷新，用户不等待 origin 长尾
   if (mode === "swr") {
+    req.headers.set("X-Kg-Fetch", "swr");
     waitUntil(revalidate(req, request.url, url.pathname, isApi, stale));
     return fromCache(stale, ttl, "REVALIDATE", request);
   }
@@ -186,7 +190,9 @@ export async function onRequest({ request, env, waitUntil }) {
   for (let attempt = 0; ; attempt++) {
     let status = 0;
     try {
-      upstream = await fetch(attempt === 0 ? req : req.clone());
+      const r = attempt === 0 ? req : new Request(req);
+      if (attempt > 0) r.headers.set("X-Kg-Fetch", "retry");
+      upstream = await fetch(r);
       status = upstream.status;
     } catch (e) {
       if (stale) return fromCache(stale, ttl, "STALE", request);

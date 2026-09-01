@@ -224,6 +224,40 @@ describe('onRequest 无副本回源重试（R205）', () => {
   });
 });
 
+describe('onRequest 回源模式头 X-Kg-Fetch（R226）', () => {
+  it('可缓存路径无副本同步回源 → miss；不可缓存 /api → pass', async () => {
+    const a = ctx(new Request(`${EDGE}/tiku/`));
+    let q = queueFetch(originOk());
+    await run(onRequest(a.args));
+    expect(q.calls[0].headers.get('X-Kg-Fetch')).toBe('miss');
+
+    q = queueFetch(new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }));
+    const b = ctx(new Request(`${EDGE}/api/stats`));
+    await run(onRequest(b.args));
+    expect(q.calls[0].headers.get('X-Kg-Fetch')).toBe('pass');
+  });
+
+  it('TTL 过期后台刷新 → swr', async () => {
+    const q = queueFetch(originOk('<html>v1</html>'), originOk('<html>v2</html>'));
+    const a = ctx(new Request(`${EDGE}/tiku/`));
+    await run(onRequest(a.args));
+    await a.flush();
+    vi.setSystemTime(Date.now() + 301 * 1000);
+    const b = ctx(new Request(`${EDGE}/tiku/`));
+    await run(onRequest(b.args));
+    await b.flush();
+    expect(q.calls[1].headers.get('X-Kg-Fetch')).toBe('swr');
+  });
+
+  it('无副本 502 重试第二跳 → retry（首跳仍为 miss）', async () => {
+    const q = queueFetch(new Response('bad', { status: 502 }), originOk('<html>ok</html>'));
+    const a = ctx(new Request(`${EDGE}/tiku/c/`));
+    await run(onRequest(a.args));
+    expect(q.calls[0].headers.get('X-Kg-Fetch')).toBe('miss');
+    expect(q.calls[1].headers.get('X-Kg-Fetch')).toBe('retry');
+  });
+});
+
 describe('onRequest 边缘条件请求 304', () => {
   it('HIT 命中 If-Modified-Since → 304 空 body', async () => {
     const lm = new Date(Date.now() - 1000).toUTCString();
