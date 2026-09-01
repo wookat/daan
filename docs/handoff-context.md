@@ -694,3 +694,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 收口（最小可观测性，不改守卫语义/阈值）：ErrorStormGuard.record() 返回记录后窗口计数；中间件对 /api status≥400 响应加 X-Kg-Guard: <计数> 头、守卫 429 加 X-Kg-Guard: blocked，2xx/3xx 不加头；Caddy origin 访问日志完整记录响应头（roll_keep 14 天），下次风暴可逐请求区分「ip 为空 / 计数不涨 / 到阈值未拦截」。
 - 验证：本地全绿（ruff/pytest 106(+2)/pyright 0/lint/vitest/build）；生产部署后错误响应带计数头、第 31 个起 429+blocked、200 无头，Caddy 日志实际记录到该头。
 - 明确不做：不改 threshold/window、不做根因未知的猜测性修复、不持久化守卫状态。详见 docs/iter/round-3/design-r225-storm-guard-observability.md。
+
+### R226（边缘回源 X-Kg-Fetch 模式头，已部署）
+- 取证 verified：24h origin 日志仅两条 5xx——09-01T18:19:39Z bingbot /sitemap.xml 502（0.02s，R223 部署容器重建窗口）与 14:00:51Z 爬虫 /tiku/panduan/?page=254 502；两条均单条记录（无 R205 重试对），且 /sitemap.xml 18:17:40 有部署预热 200 副本。origin 日志无法区分该 502 是「swr 后台刷新失败（用户已拿陈旧副本，无影响）」还是「MISS 同步回源（用户可见失败）」——与 R225 同类观测缺口，历史两条 502 是否外泄如实标 unknown。
+- 收口（纯边缘函数，零响应/缓存/重试语义变化）：边缘每个回源请求附 X-Kg-Fetch 请求头：miss（可缓存无副本同步回源）/ pass（不可缓存透传）/ swr（后台刷新）/ retry（R205 重试第二跳），由 Caddy 访问日志（记录全部请求头，14 天）自然持久化。
+- 验证：本地全绿（vitest 131(+3)/lint(src+tests+edge)/build/ruff/pytest 106/pyright 0）；生产部署后 origin 日志实录四种模式：novel 深页 miss、/api/stats pass、TTL 过期后台刷新 swr；受控重启窗口实测两条完整链：有副本页 客户端 200(STALE)+日志 502[swr]（即历史 sitemap 502 的无害形态），无副本页 502[miss]→502[retry]→客户端品牌 503，窗口结束恢复 200。1440/375 双视口溢出 0、console 0 error、性能预算全过。
+- 明确不做：不回溯归因历史两条 502（证据不可得）、origin 不读取该头做行为分支。详见 docs/iter/round-3/design-r226-edge-fetch-mode-header.md。
