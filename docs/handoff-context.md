@@ -706,3 +706,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 收口（纯静态 admin/index.html + admin.css）：12 个导航 `<a>` 补 title tooltip；折叠态 `.txt` 由 display:none 改 sr-only 式 clip 隐藏（保留可访问性树，包含块为既有 position:relative 的 `<a>`，无 R223 溢出陷阱）。CSS 缓存由 admin_assets_version() mtime 重写自动生效，无需手动 bump ?v。
 - 验证：本地全绿（ruff/pytest 106/pyright 0/lint/vitest 131/build）；生产 rev 964f0c1 实测 1440 全宽零变化（.txt static 可见）、768/375 折叠态 12 链接名称全为完整中文 + title 齐全、375 溢出 0；768 的 15px「溢出」为存量 body{min-width:768px}+滚动条固有形态（widest 元素即 body），非本轮引入。性能预算全过。
 - 本轮复审计其余结论：近 7 天 slow_load 46/47 样本无 `;v:` 版本戳（旧 bundle 客户端族群，boot 心跳同期版本戳齐全），当前 bundle 无新 verified 缺陷；/api/admin/governance 单条 4s 样本证据不足不改动，挂观察。
+
+### R228（管理台侧栏可访问名称静态契约回归测试，测试+docs，无部署）
+- 取证：24h origin 复审计——20.5k /api/exam/* 404、562 条 502、146 条 429 全部对应历史 09-01 08:11–10:00 风暴（R225 部署前，X-Kg-Guard 头缺失符合预期）与共享 NAT 受控测试流量；X-Kg-Fetch 四模式（pass/swr/miss/retry）正常落日志，19:29 无副本深页 miss→retry→品牌 503 链路按 R218 设计工作。无新 verified 产品缺陷。
+- 流程缺口收口：R227 修复只有生产 Playwright 验证、仓库零回归覆盖。新增 backend/tests/test_admin_nav_names.py 静态契约 2 例：12 个导航 title == .txt 文案；≤1023px 折叠块 .txt 不得 display:none 且须 clip 式 sr-only。受控验证：改回 display:none / 删 title 均失败，还原后通过。顺带修正 design-r227 文档「13 个 <a>」为 12。
+- 本地全绿（ruff/pytest 108(+2)/pyright 0/lint/vitest 131/build）。详见 docs/iter/round-3/design-r228-admin-nav-regression-test.md。
