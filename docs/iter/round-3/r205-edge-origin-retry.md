@@ -33,5 +33,6 @@
 
 - vitest：shouldRetryOrigin 全分支（attempt/hasStale/status 组合 + 非 GET）。
 - 本地：ESLint + vitest + 前端 build（wrangler functions 无独立 build）。
-- 生产：部署后正常路径回归（无额外延迟：X-Edge-Cache MISS 一次回源）；
-  重启窗口自然复验挂后台（下次部署 step 4 期间用深页探测重试生效）。
+- 生产：部署后正常路径回归（深页 MISS 200 亚秒、无效页 404 不重试无额外延迟）；
+  受控重启窗口复验：docker restart 期间无副本深页 /tiku/panduan/?page=201 首访
+  1.72s 返回 200（含 1.2s 退避重试；旧行为为 0.05s 502 直漏），同窗口 6 个深页零 5xx。
