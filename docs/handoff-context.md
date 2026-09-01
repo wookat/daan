@@ -394,3 +394,90 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：/s/{sid} 分享落地页 og:title/description/url 齐全但 og:image 为 0（curl 实测），og 抓取端分享卡无缩略图；root 与 /tiku 页族 og:image 指向 512×512 方形 logo.png（标准推荐 1200×630 横版）。分享回路有真实流量（近 3 日 share_open 15、pk_result_open 7）。首页新访客 CTA 复测 3 次 ~1s 直入题组（首次 33s 为孤例未立项）。
 - 实现：新增品牌分享卡 frontend-uni/src/static/og-card.png（1200×630，渐变 #2e5bff→#4c7dff+站名+价值主张+特性 chips），scripts/gen_og_card.py（PIL+仓库内 NotoSansSC-Bold）可复现生成；seo.py share_landing 补 og:image/twitter:image、twitter:card 升 summary_large_image；seo.py _page 与 index.html og:image 换 og-card.png。静态单图不做按题动态出图；零 DB/零边缘缓存改动。设计文档 docs/iter/round-3/r109-social-share-card.md。
 - 生产验收（PR #287）：/s/fsb75lki、/tiku/、/ 三处 og:image 均指向 og-card.png 且 twitter:card=summary_large_image；/static/og-card.png 200（40888B，实测 1200×630）；1440+375 首页与 375 分享落地页回归溢出 0、console 0 error。本轮无测试数据写入（30h 窗口 growth_events/answer_log/daily_set_entries 均 0 新增）、保护 uid 零 mutation。
+
+### R121–R125（2026-08-31）：离线错误态/首页 LCP/键盘可达性/SSR 深色模式/窗口复审计
+- R121（PR #299）：断网直入未缓存路由的 uni async-error 死胡同——仅离线替换文案+online 事件自动重试（App.vue 复用 markMain MutationObserver）；sw.js 静态资源不拦截策略保持。
+- R122（PR #300）：首页 LCP 3.2s→0.8s、perf 0.91→0.98——index.html 启动屏副标题扩为完整价值主张（16px/限宽），首绘制即承载最大文本块；/tiku 页族 Lighthouse 全绿无立项。
+- R123（PR #301）：SPA 键盘可达性从 0 到全站——src/a11y-focus.js 包一层 Element.addEventListener，click 绑定的 UNI-VIEW/TEXT/IMAGE/LABEL 自动 tabindex=0 + Enter/Space 激活 + :focus-visible 焦点环；role=button 延迟 rAF 只给叶子级短文本元素。axe 复扫 0 violations。
+- R124（PR #302）：/tiku SSR 页族深色模式——seo.py _CSS 颜色 token 化（:root 变量，亮色取值零变化）+ prefers-color-scheme 深色覆盖 + color-scheme meta；对比度 AA 自查通过。
+- R125（docs）：窗口复审计 docs/iter/round-3/r125-window-audit.md——48h 真实作答 16 uid/93 条；slow_load 仅 1 条慢网旧 bundle 样本不立项；push_subs 仍 0。
+- ⚠️ 观测陷阱：growth_events/answer_log 的 created_at 是 epoch float，`created_at > datetime('now',…)` 字符串比较静默返回空集（会误判零事件）；时间过滤必须用 time.time()-N 数值参数。
+- 合并链：#299→#300→#301→#302 依序合并即收口 R121–R124。
+
+### R126–R128（2026-08-31）：弹层键盘/路由预取/窗口复审计
+- R126（PR #304）：全站 25 处 `.mask` 弹层统一键盘支持——a11y-focus.js 增 initModalKeys()：MutationObserver 侦测弹层出现即焦点移入、Tab/Shift+Tab 圈定在最顶层 mask 内、Esc 等价点遮罩关闭、关闭后焦点归还触发元素。fixed 遮罩可见性必须用 getClientRects().length（offsetParent 恒 null）。
+- R127（PR #305）：路由 chunk 空闲预取——build:h5 末尾 gen-precache-manifest.mjs 产出 precache.json（assets js/css 清单），运行期 precache.js load 后 8s 空闲逐个 fetch 温 HTTP 缓存（immutable 一年缓存可离线命中；省流/2g/离线跳过、同版本只跑一轮 kg_precache_done）。生产实测离线直入从未访问的 pkgA 路由可完整渲染。零 SW 改动（静态资源不经 SW 拦截的既定设计保持）。
+- R128（docs）：窗口复审计 docs/iter/round-3/r128-window-audit.md——Lighthouse /tiku 页族全 1.0、首页复跑 0.98（首跑 3.2s LCP 为宿主方差非回归）；内链/分页 canonical/卷详情/无效日期 301 全健康；错题本空态完整。无可立项缺陷，docs-only。
+- 合并链：#299→…→#304→#305 依序合并即收口 R121–R127。
+
+### R131–R133（2026-08-31）：嵌套弹层栈/分包页 axe 收口/弹层决策纯函数化
+- R131（PR #309）：多层嵌套弹层收口——a11y-focus.js 改「打开顺序栈」为唯一事实：每层独立 lastFocus 归还、入栈提升 z-index（BASE_Z+depth）保证后开在最上、Esc/Tab 只作用栈顶、空弹层补 tabindex=-1 落点。生产 1440 嵌套链路（筛选 sheet 内 ? 开速查）+ 375 单层回归通过。
+- R132（PR #310）：二级/分包页 axe 复扫——18 个分包路由生产双视口全扫，verified 8 节点/3 页：竞赛「即将开始」徽标（新增 --warn-strong token）、提醒页关闭态整行 opacity 改只弱化图标/开关+文字换安全色、登录页三处文字对比度+logo aria-hidden。复验 18 路由 × 1440/375 全 0 violations。⚠️ 探针路由必须以 pages.json 为准（如 social/discuss、stats/mastery-map），拼错路由被 R60 兜底重定向首页会产生 landmark 假阳性。
+- R133：弹层焦点管理决策纯函数化——新增 src/modal-policy.js（reconcileStack/zIndexFor/pickFocusTarget/nextTabIndex，present 判定注入），a11y-focus.js initModalKeys 改调纯函数（行为等价重构，DOM/MutationObserver/focus 副作用留在运行时）；tests/modal-policy.test.js 13 例锁定栈对帐逆序归还/层级/空弹层 fallback/Tab 循环边界（vitest 25→38 例，零新依赖不引 jsdom）。生产复验 R131 嵌套链路 1440/375 零回归。
+- 合并链：#299→…→#309→#310→R133 PR 依序合并即收口。
+
+### R134（2026-08-31）：分包页加载失败误呈现为空态收口
+- 取证：生产壳 + `page.route('**/api/**', abort)` 逐页直入，verified 5 页失败时渲染「无数据」空态（plaza「还没有讨论」、practice-history「还没有练习记录」、favorites「这里还没有收藏/还没有笔记」、exam/list「暂无成套真题卷」、exam/contest「暂无比赛场次」）；根因：catch 只 toast（~1.5s 消失）后 loaded/loading 落空态分支。weekly-report 的「加载失败+重试 ›」为参照模式；calendar 本地 pstats 降级属既定设计不立项。
+- 修复：5 页统一补驻留错误态（loadErr/favErr/noteErr + 空态分支前 v-else-if 错误卡 + 重试点击重载），零后端改动。生产双视口复验：5 页 × 1440/375 失败态均出错误卡不再伪装空态、放行 API 点重试原位恢复、溢出 0。方案：docs/iter/round-3/r134-load-error-vs-empty.md。
+
+### R135（2026-08-31）：分包页加载失败误呈现为空态收口（二期）
+- 取证：同 R134 方法（生产壳 + API abort 逐页直入），verified 6 分包页失败时渲染「无数据」空态（interview/history、pk（loadHome 完全静默）、social/inbox（登录态）、team（loadHome 完全静默）、shenlun 三 tab、social/discuss）。主包 stats/book 同样存在但有快照兜底（R90/R108）且状态复杂，留 R136 单独取证。
+- 修复：6 页补驻留错误态+重试（shenlun 三 tab 独立 qErr/mErr/rErr；pk/team 原静默 catch 补驻留错误但不加 toast；inbox 错误卡置于登录引导之后，游客行为不变），零后端改动。生产双视口复验：5 个免登录页 × 1440/375 失败态均出错误卡、放行 API 点重试原位恢复、溢出 0；inbox 登录态失败路径为代码同构未生产实测（游客路径实测不变）。方案：docs/iter/round-3/r135-load-error-vs-empty-part2.md。
+
+### R136（2026-08-31）：主包 stats/book 加载失败误呈现为空态收口（三期·终）
+- 取证：源码逐 catch 核查 + 生产 API abort 探针。verified：stats.load()（/api/stats+/api/mistakes）失败后「错题模块分布/高频错题型」渲染「暂无数据」（无本地降级）；book.load() 无缓存回退（新设备/首访）时渲染「错题本还是空的」。stats 热力图/成长/推荐等有 pstats 降级或属增强信息、book 有缓存时 offlineView 横幅，均属既定设计不立项。
+- 修复：两页补 loadErr 驻留错误态+重试（book 仅无缓存分支置错，offlineView 语义不变），零后端改动。生产双视口复验：2 页 × 1440/375 失败态出错误卡不再伪装空态、放行 API 点重试原位恢复、溢出 0。方案：docs/iter/round-3/r136-load-error-vs-empty-mainpkg.md。
+
+### R137（2026-08-31）：详情/报告页失败态收口（成绩报告/赛后报告/掌握度地图）
+- 取证：生产 API abort 探针 + 源码核查。verified：report.vue 网络失败误呈现「暂无成绩报告」引导空态；contest-report.vue 失败标题固定「暂无大赛报告」且副文案直出 request:fail（网络失败与报告不存在混淆）；mastery-map.vue 已有驻留错误文案但无重试出口。
+- 修复：导出 api.js 既有 isNetErr 分流——网络层失败置 loadErr 错误卡+重试 ›，HTTP 业务错误（404 报告不存在等）保持「暂无…」空态引导语义；mastery-map 补重试+load 清空 err。零后端改动。生产双视口复验：3 页 × 1440/375 abort 出错误卡、放行后重试 mastery-map 原位恢复、不存在 id 正确落回空态引导、溢出 0。方案：docs/iter/round-3/r137-report-pages-error-state.md。
+
+### R138（2026-09-01）：面试作答草稿自动保存
+- 取证：源码核查 interview.vue——作答 textarea（5000 字上限）为纯内存 answer，刷新/标签页回收/误触返回长文全丢；对照 shenlun 已有 slDraft:<qid> 逐题草稿模式。面试是随机抽题，刷新后重抽大概率非原题，逐题键无法自然恢复。
+- 修复：单键 ivDraft 整体快照 { q, cat, answer }——@input 非空 set/空 remove；onLoad 无 session_id 时有草稿直接恢复原题+分类+作答进入作答步（toast 提示）；批改流成功后 remove、失败保留；draw 换题不动旧快照（新题输入后自然覆盖）；计数行补「已自动保存 ·」外显。零后端改动。生产双视口复验：1440/375 输入→刷新原题+作答整体恢复、提交成功后草稿清除刷新不再恢复、console 0 error、溢出 0（测试 uid 数据已清理）。方案：docs/iter/round-3/r138-interview-answer-draft.md。
+
+### R139（2026-09-01）：api.js 网络层决策纯函数化 + vitest 回归覆盖
+- 取证：api.js（950 行）是全站唯一网络入口，承载六类关键决策零单测——isNetErr 错误分类（R134–R137 全站失败态分流依据）、401/403 登录失效判定（R39）、非 2xx detail 提取（R66 防 [object Object]）、GET 快照兜底 LRU/TTL（R90）、SSE 解析（feedSse + 两处 interview feed 三份复制）；历轮回归全靠生产实测。
+- 修复：对称 R118/R133 模式抽出 src/api-policy.js 纯函数（isTimeoutMsg/isNetMsg/classifyHttpError/snapCacheable/snapFresh/snapPushIndex/parseSseEvents），api.js 委托调用、SSE 三处 feed 统一为 feedSse 消费 parseSseEvents（state.errMsg 定制错误文案、done 事件透出）；新增 tests/api-policy.test.js 16 例（vitest 38→54），行为等价重构零生产行为变化、零新依赖。生产双视口复验：1440/375 首页/刷题/AI问答加载回归 + 真实面试流式点评全程正常、console 0 error、溢出 0（测试 uid 4 行已清理，保护 uid 零 mutation）。方案：docs/iter/round-3/r139-api-policy-tests.md。
+
+### R140（2026-09-01）：讨论/笔记 UGC 输入草稿保护
+- 取证：延续 R138 探针对全站剩余长文本输入逐处核查。verified：讨论页 discuss.vue 发言/回复 draft（500 字）纯内存，刷新/标签页回收即丢；q-social-bar 笔记编辑 draft（1000 字）纯内存且「取消」误触即整篇丢弃无恢复。申论 slDraft/面试 ivDraft 为存量能力；book 纠错补充说明为选填短文本不立项。
+- 修复：沿用 slDraft 键模式——讨论 dcDraft:<qid> 逐题草稿（onLoad 恢复、watch 即存空即删、发布成功清除）；笔记 qNoteDraft:<qid>（startEdit 优先草稿回落笔记原文、编辑中即存且与已存笔记一致时删键、保存成功清除、取消保留草稿）。零后端改动。生产双视口复验：讨论页 1440/375 输入→刷新草稿恢复、清空后键删除；笔记输入→取消→再编辑恢复、清空退出键删除、console 0 error、溢出 0（测试 uid 3 行已清理，保护 uid 零 mutation）。方案：docs/iter/round-3/r140-ugc-draft-persist.md。
+
+### R141（2026-09-01）：读屏动态反馈通报（aria-live）
+- 取证：全仓源码 grep——frontend-uni/src 与 deploy/cf-pages 中 aria-live/role="alert"/role="status" 均 0 处，uni-h5 编译产物亦无；全站 212 处 uni.showToast 是唯一操作反馈通道，刷题判分横幅（回答正确/错误+正确答案）纯视觉。即读屏用户对全站动态反馈完全无感知。
+- 修复：H5-only 零后端零依赖——新增 src/a11y-live.js（body 常驻 role=status aria-live=polite 隐藏 region；MutationObserver 镜像 uni-toast 可见文案，含后挂载 toast；announce() 供页面显式通报）+ src/live-policy.js 纯函数（toastAnnounceText 可见/非空/去重决策、pickAnnounceText 判分文案含连对≥3 外显）+ practice.vue pick() 后 announce 判分结果；main.js initA11yLive()。tests/live-policy.test.js 8 例（vitest 54→62）。
+- 生产双视口复验（bundle fv7249MF / rev d3f0356）：1440/375 region 在位；每日一练作答后 region='回答错误，正确答案 C'；真实 toast（练习工具切音效）两次切换 region 依次镜像「音效已关闭/已开启」；console 0 error、溢出 0（测试 uid 数据 15 行已清理，保护 uid 零 mutation）。方案：docs/iter/round-3/r141-a11y-live-announce.md。
+
+### R142（2026-09-01）：prefers-reduced-motion 全站减弱动态效果
+- 取证：源码 grep——全仓（src + deploy/cf-pages）prefers-reduced-motion 0 处；动效存量 @keyframes 8 处（骨架无限呼吸、答对 pop、答错 shake、弹层/横幅 slideup、完成卡 bounce）+ transition 16 处，系统开启「减弱动态效果」后仍全量播放（WCAG 2.3.3 未满足）。
+- 修复：App.vue H5 段全局 `@media (prefers-reduced-motion: reduce)`——animation/transition duration 压至 0.01ms + iteration-count 1（保留 keyframes 终态，标准 reset 做法），零组件级改造零后端。/tiku SSR 页族纯静态无动效不改。
+- 生产双视口复验（bundle BtXyRqJF）：reduce 模拟下 1440/375 首页骨架 duration=1e-05s、iteration=1；normal 模式 1.4s/infinite 零回归；console 0 error、溢出 0（测试 boot 3 行已清理，保护 uid 零 mutation）。方案：docs/iter/round-3/r142-reduced-motion.md。
+
+### R143（2026-09-01）：/tiku SSR 页族打印样式（@media print）
+- 取证：全仓 @media print 0 处；考公用户线下打印真题是真实场景（粉笔以错题导出打印为招牌），题目页打印现状：顶栏/题面 CTA、pager、面包屑、页脚、讨论/相似题区块全随题面打印，灰底+卡片阴影+绿色答案底整页耗墨，.card 无分页约束可能截断题面。
+- 修复：_CSS 追加 @media print——CSS 变量压平白底黑字、.hdr-cta/.cta/.pager/.crumb/.tags/.ftr/.noprint 隐藏（讨论/相似题 section 加 noprint 类）、.card break-inside:avoid、.ans 灰框保留答案解析可打印。后端 pytest +2 例（26 passed）。
+- 生产双视口复验（rev 11b9a4e-dirty）：emulate_media print 下 /tiku/q/3 上述元素全部 display:none、body 白底、.ans 保留；screen 模式零回归；console 0 error、溢出 0。纯 SSR 改动无测试数据产生。方案：docs/iter/round-3/r143-print-styles.md。
+
+### R144（2026-09-01）：/tiku/q 资料分析题「同材料题组」SSR 互链
+- 取证：seo.py 全文无 material_hash 引用——App 练习已有材料题组能力（grouped_ziliao_questions），但 SSR 题目页对资料分析题只有「同考点相似题」（tag3 跨材料），同材料其余小题零互链；生产库实测存在 6 题/组的有效分组（样本 min id 37 等三组）。
+- 修复：_render_question 对 module=ziliao 且 material_hash 有效（非 NULL/'-'）查同 hash 小题（ORDER BY id LIMIT 8，≥2 题才输出），题目 article 后新增「同材料题组（共 n 题）」card：当前题标「本题」、其余 /tiku/q/{id} 链接；不加 noprint（打印整组材料题是真实场景）。material_hash 列迁移补入 db.init 基线（防新库首请求先于 refresh 线程）。附带：body 补 overflow-wrap:anywhere 收口长算式 375 横向溢出 103px 存量问题。
+- 本地 ruff 全绿 + pytest 28 passed（+2 例）；生产双视口复验 /tiku/q/37：区块+5 互链+「本题」、溢出 0、console 0 error、print/screen 回归 R143。纯 SSR 读路径无测试数据。方案：docs/iter/round-3/r144-material-group.md。
+
+### R145–R148（2026-09-01）：资料分析同材料题组体验（练习/做卷折叠 + PDF 去重/聚组）
+- R145 练习页 material.js 材料折叠（PR #323）、R146 真题做卷页同折叠（PR #324）、R147 PDF _split_material 兜底去重（PR #325）、R148 PDF group_by_material 同材料聚组排版（PR #326）。方案见 docs/iter/round-3/r145–r148。
+
+### R149–R150（2026-09-01）：questions 聚合查询计划治理
+- R149 三条 /tiku 聚合覆盖索引 34/49/12s→亚秒（PR #327）；R150 tag3_lastmod 69.5s→0.059s、real_regions 5.2s→0.024s（PR #328）。pytest 查询计划回归锁定 COVERING INDEX。
+
+### R151（2026-09-01）：成绩报告详情弹层资料题材料折叠
+- report.vue 复用 material.js splitMaterial，默认小题干+「📄 资料材料」折叠条（PR #329）。方案：docs/iter/round-3/r151-report-material-fold.md。
+
+### R152（2026-09-01）：短关键词搜索单字分词 FTS
+- verified 1–2 字搜索固定走 LIKE 全表扫描（drop_caches 冷测 97.7–270.3s）；新增 contentless question_fts_cjk 单字空格分词 + phrase 查询，回填复用后台线程，未追平期间 LIKE 兜底。生产冷测 隧道 15–20s→0.19s（PR #330）。方案：docs/iter/round-3/r152-short-query-search-fts.md。
+
+### R153–R154（2026-08-29）：搜索页失败态收口 + 搜索历史
+- R153 搜索失败驻留错误卡+重试（原先 toast 1.5s 后伪装成闲置提示，PR #331）；R154 本地 kgSearchHist 历史 chips 一键重搜+清空（PR #332）。方案：docs/iter/round-3/r153-search-error-state.md、r154-search-history.md。
+
+### R155（2026-08-29）：数据窗口复审计（docs-only）
+- 7d：answer_log 23 uid/152 条、exam 12、pk 3；push_subs 仍 0；daily_set_entries 全表 0 行——真实 API 探针验证提交链路正常落库（测试行已清理），0 行系参与率为零非工程缺陷；slow_load 47 条仍以 nav:90s 已归因族群为主。无新 verified 缺陷可立项。方案：docs/iter/round-3/r155-window-audit.md。

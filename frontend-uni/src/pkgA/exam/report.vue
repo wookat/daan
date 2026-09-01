@@ -2,7 +2,12 @@
   <view class="wrap">
     <view v-if="loading" class="spin">报告加载中…</view>
 
-    <view v-if="!loading && !report" class="card empty">
+    <view v-if="!loading && !report && loadErr" class="card empty">
+      <text class="empty-t">加载失败</text>
+      <text class="empty-s">{{ loadErr }}</text>
+      <view class="retry" @click="load(aid)">重试 ›</view>
+    </view>
+    <view v-else-if="!loading && !report" class="card empty">
       <text class="empty-t">暂无成绩报告</text>
       <text class="empty-s">请从模考交卷或「模考记录」进入查看报告</text>
       <view class="pbtn main" @click="goList">去卷库</view>
@@ -95,10 +100,23 @@
       <view class="sheet" @click.stop>
         <view class="sheet-h">
           <text class="sheet-t">第 {{ detail.no }} 题 · {{ detail.correct ? '答对' : (detail.picked ? '答错' : '未答') }}</text>
-          <view class="sheet-x" @click="detail = null"><l-icon name="x" :size="20" color="#6b7280" /></view>
+          <view class="sheet-x" role="button" aria-label="关闭" @click="detail = null"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <scroll-view scroll-y class="detail-scroll">
-          <text class="dq">{{ detail.question }}</text>
+          <template v-if="detailMat">
+            <view
+              class="mat-fold"
+              role="button"
+              :aria-label="matOpen ? '收起材料' : '展开材料'"
+              @click="matOpen = !matOpen"
+            >
+              <text class="mat-fold-t">📄 资料材料</text>
+              <text class="mat-fold-a">{{ matOpen ? '收起 ‹' : '展开 ›' }}</text>
+            </view>
+            <text v-if="matOpen" class="dq">{{ detailMat.material }}</text>
+            <text class="dq">{{ detailMat.stem }}</text>
+          </template>
+          <text v-else class="dq">{{ detail.question }}</text>
           <view v-for="(v, k) in detail.options" :key="k" class="dopt" :class="{ right: k === detail.answer, wrong: k === detail.picked && k !== detail.answer }">
             <text>{{ k }}. {{ v }}</text>
           </view>
@@ -116,14 +134,15 @@
 </template>
 
 <script>
-import { request, anonUid } from '../../api.js';
+import { request, anonUid, isNetErr } from '../../api.js';
+import { splitMaterial } from '../../material.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
 const MOD_ORDER = ['changshi', 'yanyu', 'shuliang', 'panduan', 'ziliao'];
 
 export default {
   data() {
-    return { loading: true, report: null, history: [], detail: null };
+    return { loading: true, loadErr: '', aid: null, report: null, history: [], detail: null, matOpen: false };
   },
   computed: {
     accuracy() {
@@ -139,6 +158,11 @@ export default {
       if (!a || !a.submitted_at) return '-';
       const s = Math.max(0, Math.round(a.submitted_at - a.started_at));
       return Math.floor(s / 60) + ' 分 ' + (s % 60) + ' 秒';
+    },
+    detailMat() {
+      const d = this.detail;
+      if (!d || d.module !== 'ziliao') return null;
+      return splitMaterial(d.question);
     },
     modules() {
       const pm = (this.report && this.report.attempt.per_module) || {};
@@ -161,13 +185,17 @@ export default {
   },
   methods: {
     async load(aid) {
+      this.aid = aid;
       this.loading = true;
+      this.loadErr = '';
       try {
         const d = await request('/api/exam/report/' + aid + '?uid=' + encodeURIComponent(anonUid()));
         this.report = d;
         uni.setNavigationBarTitle({ title: '成绩报告' });
         this.loadHistory();
       } catch (e) {
+        // 仅网络层失败置错误态；HTTP 业务错误（如报告不存在）保持空态引导
+        if (isNetErr(e)) this.loadErr = e.message || '网络异常';
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
       this.loading = false;
@@ -180,7 +208,7 @@ export default {
         this.history = (d.items || []).slice().reverse();
       } catch (e) { /* 非关键路径 */ }
     },
-    openQ(it) { this.detail = it; },
+    openQ(it) { this.matOpen = false; this.detail = it; },
     openAttempt(a) {
       if (a.id === this.report.attempt.id) return;
       this.load(a.id);
@@ -238,14 +266,18 @@ export default {
 .dot.ok { background: #86efac; border-color: #86efac; }
 .dot.bad { background: #fca5a5; border-color: #fca5a5; }
 .btns { display: flex; gap: 16rpx; }
-.pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand); border-radius: 999rpx; font-size: 27rpx; font-weight: 500; background: var(--card); }
+.pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 27rpx; font-weight: 500; background: var(--card); }
 .pbtn.main { background: var(--brand); color: #fff; }
+.retry { margin-top: 12rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 .mask { position: fixed; inset: 0; background: rgba(15, 18, 25, 0.45); z-index: 90; display: flex; align-items: flex-end; }
 .sheet { width: 100%; background: var(--card); border-radius: 28rpx 28rpx 0 0; padding: 28rpx 28rpx calc(28rpx + env(safe-area-inset-bottom)); max-height: 80vh; display: flex; flex-direction: column; box-sizing: border-box; }
 .sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
 .sheet-t { font-size: 30rpx; font-weight: 600; }
 .sheet-x { font-size: 30rpx; color: var(--ink-2); padding: 8rpx 16rpx; }
 .detail-scroll { max-height: 62vh; }
+.mat-fold { display: flex; justify-content: space-between; align-items: center; background: #f0fdfa; border: 1rpx solid #99f6e4; border-radius: 12rpx; padding: 14rpx 20rpx; margin-bottom: 14rpx; }
+.mat-fold-t { font-size: 24rpx; color: #0f766e; }
+.mat-fold-a { font-size: 24rpx; color: #0d9488; font-weight: 600; flex-shrink: 0; margin-left: 16rpx; }
 .dq { display: block; font-size: 28rpx; line-height: 1.7; white-space: pre-wrap; margin-bottom: 20rpx; }
 .dopt { border: 2rpx solid var(--line); border-radius: 16rpx; padding: 16rpx 20rpx; margin-bottom: 14rpx; font-size: 26rpx; line-height: 1.6; }
 .dopt.right { border-color: var(--ok, #16a34a); background: var(--ok-soft); }
@@ -261,7 +293,7 @@ export default {
 .wrow-l { display: flex; flex-direction: column; gap: 4rpx; }
 .wrow-t { font-size: 26rpx; color: var(--ink); font-weight: 500; }
 .wrow-s { font-size: 22rpx; color: var(--ink-2); }
-.wrow-go { font-size: 25rpx; color: var(--brand); font-weight: 600; }
+.wrow-go { font-size: 25rpx; color: var(--brand-text); font-weight: 600; }
 
 /* #ifdef H5 */
 @media (min-width: 768px) {

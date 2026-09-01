@@ -1,0 +1,31 @@
+import { describe, it, expect } from 'vitest';
+import { buildSearchUrl, SEARCH_PATH } from '../src/search-url.js';
+
+describe('buildSearchUrl', () => {
+  it('空关键词回到搜索页本身', () => {
+    expect(buildSearchUrl('', 'all')).toBe(SEARCH_PATH);
+    expect(buildSearchUrl('   ', 'question')).toBe(SEARCH_PATH);
+    expect(buildSearchUrl(null, 'all')).toBe(SEARCH_PATH);
+  });
+
+  it('中文关键词编码进 q', () => {
+    expect(buildSearchUrl('隧道', 'all')).toBe(SEARCH_PATH + '?q=%E9%9A%A7%E9%81%93');
+  });
+
+  it('首尾空白裁剪', () => {
+    expect(buildSearchUrl('  隧道 ', 'all')).toBe(SEARCH_PATH + '?q=%E9%9A%A7%E9%81%93');
+  });
+
+  it('非 all tab 附加 tab 参数', () => {
+    expect(buildSearchUrl('隧道', 'question')).toBe(SEARCH_PATH + '?q=%E9%9A%A7%E9%81%93&tab=question');
+  });
+
+  it('all tab 不附加 tab 参数', () => {
+    expect(buildSearchUrl('隧道', 'all')).toBe(SEARCH_PATH + '?q=%E9%9A%A7%E9%81%93');
+  });
+
+  it('关键词截断到 64 字', () => {
+    const long = 'a'.repeat(80);
+    expect(buildSearchUrl(long, 'all')).toBe(SEARCH_PATH + '?q=' + 'a'.repeat(64));
+  });
+});

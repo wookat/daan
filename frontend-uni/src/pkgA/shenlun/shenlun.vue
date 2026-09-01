@@ -16,7 +16,7 @@
       </view>
       <view v-if="fltOpen" class="mask" @click="fltOpen = false">
         <view class="sheet" @click.stop>
-          <view class="sheet-h"><text class="sheet-t">筛选</text><view class="sheet-x" @click="fltOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view></view>
+          <view class="sheet-h"><text class="sheet-t">筛选</text><view class="sheet-x" role="button" aria-label="关闭" @click="fltOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view></view>
           <view class="sheet-k">题型</view>
           <view class="chips">
             <text v-for="t in QTYPES" :key="t" class="chip sm" :class="{ on: qtype === t }" @click="setQtype(t)">{{ t }}</text>
@@ -38,6 +38,7 @@
         </view>
       </view>
       <view v-if="loading" class="spin">加载中…</view>
+      <view v-else-if="qErr" class="spin">加载失败：{{ qErr }}<view class="retry" @click="loadQs()">重试 ›</view></view>
       <view v-else-if="!qs.length" class="spin">暂无题目，敬请期待</view>
       <view class="qgrid">
       <view v-for="q in qs" :key="q.id" class="card q-item" @click="openQ(q.id)">
@@ -102,6 +103,7 @@
         <view class="chip fav" :class="{ on: favOnly }" @click="toggleFavOnly"><l-icon name="star" :size="13" :color="favOnly ? '#b45309' : '#8a90a0'" :fill="favOnly ? '#f59e0b' : 'none'" /><text>收藏{{ favIds.length ? ' ' + favIds.length : '' }}</text></view>
       </view>
       <view v-if="loading" class="spin">加载中…</view>
+      <view v-else-if="mErr" class="spin">加载失败：{{ mErr }}<view class="retry" @click="loadMats()">重试 ›</view></view>
       <view v-else-if="!shownMats.length" class="spin">{{ favOnly ? '还没有收藏素材，点素材右上星标收藏' : '暂无素材，敬请期待' }}</view>
       <view class="mgrid">
       <view v-for="m in shownMats" :key="m.id" class="card m-item">
@@ -121,6 +123,7 @@
 
     <template v-if="tab === 'r'">
       <view v-if="recLoading" class="spin">加载中…</view>
+      <view v-else-if="rErr" class="spin">加载失败：{{ rErr }}<view class="retry" @click="loadRecs()">重试 ›</view></view>
       <view v-else-if="!recs.length" class="spin">还没有作答记录，去题库作答并 AI 批改后会自动保存</view>
       <view class="rgrid">
       <view v-for="r in recs" :key="r.id" class="card">
@@ -137,7 +140,7 @@
 </template>
 
 <script>
-import { request, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api';
+import { request, snapPeek, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api';
 
 const QTYPES = ['全部', '归纳概括', '综合分析', '提出对策', '贯彻执行', '大作文'];
 const MTYPES = ['全部', '金句', '案例', '政策理论', '范文'];
@@ -157,6 +160,9 @@ export default {
       showRef: false,
       expanded: 0,
       loading: false,
+      qErr: '',
+      mErr: '',
+      rErr: '',
       myAnswer: '',
       grading: false,
       gradeResult: '',
@@ -198,6 +204,7 @@ export default {
   methods: {
     async loadQs(append) {
       this.loading = !append;
+      this.qErr = '';
       try {
         const t = this.qtype === '全部' ? '' : '&qtype=' + encodeURIComponent(this.qtype);
         const y = this.year ? '&year=' + this.year : '';
@@ -208,12 +215,14 @@ export default {
         this.qTotal = d.total || items.length;
         this.qs = append ? this.qs.concat(items) : items;
       } catch (e) {
+        this.qErr = e.message || '网络异常';
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
       this.loading = false;
     },
     async loadMats(append) {
       this.loading = !append;
+      this.mErr = '';
       try {
         const t = this.mtype === '全部' ? '' : '&type=' + encodeURIComponent(this.mtype);
         const d = await request('/api/shenlun/materials?limit=20&offset=' + this.mOffset + t);
@@ -221,6 +230,7 @@ export default {
         this.mEnd = items.length < 20;
         this.mats = append ? this.mats.concat(items) : items;
       } catch (e) {
+        this.mErr = e.message || '网络异常';
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
       this.loading = false;
@@ -271,11 +281,19 @@ export default {
         this.recs = [];
         return;
       }
-      this.recLoading = true;
+      this.rErr = '';
+      const p = '/api/shenlun/history?limit=50&uid=' + encodeURIComponent(uid);
+
+      // 快照即显：uid API 长尾下先用最近成功快照铺屏，真实响应到达后覆盖
+      const snap = snapPeek(p);
+      if (snap) this.recs = snap.items || [];
+      this.recLoading = !snap;
+
       try {
-        const d = await request('/api/shenlun/history?limit=50&uid=' + encodeURIComponent(uid));
+        const d = await request(p);
         this.recs = d.items || [];
       } catch (e) {
+        this.rErr = e.message || '网络异常';
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
       this.recLoading = false;
@@ -426,7 +444,7 @@ page { background: var(--fill); }
 .page { padding: 20rpx 24rpx 40rpx; background: var(--fill); min-height: 100vh; box-sizing: border-box; }
 .seg { display: flex; gap: 12rpx; margin-bottom: 20rpx; }
 .seg-i { display: inline-flex; align-items: center; justify-content: center; font-size: 24rpx; color: var(--ink-2); background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 12rpx 28rpx; }
-.seg-i.on { background: var(--brand-soft); color: var(--brand); border-color: transparent; font-weight: 600; }
+.seg-i.on { background: var(--brand-soft); color: var(--brand-text); border-color: transparent; font-weight: 600; }
 .chips { display: flex; gap: 12rpx; flex-wrap: wrap; margin-bottom: 20rpx; }
 .fltbar { display: flex; align-items: center; gap: 12rpx; margin-bottom: 20rpx; }
 .grow { flex: 1; }
@@ -435,25 +453,26 @@ page { background: var(--fill); }
 .sf-btn.ghost { flex: 0 0 30%; background: var(--card); color: var(--ink-2); border: 1rpx solid var(--line); box-sizing: border-box; }
 .q-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 14rpx; }
 .q-meta { font-size: 22rpx; color: var(--ink-3); }
-.q-go { color: var(--brand); font-size: 24rpx; font-weight: 500; padding: 12rpx 0 12rpx 24rpx; }
+.q-go { color: var(--brand-text); font-size: 24rpx; font-weight: 500; padding: 12rpx 0 12rpx 24rpx; }
 .chip { display: inline-flex; align-items: center; gap: 6rpx; font-size: 23rpx; color: var(--ink-2); background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 12rpx 24rpx; }
-.chip.on { color: #fff; background: var(--brand); border-color: var(--brand); }
+.chip.on { color: #fff; background: var(--brand); border-color: var(--brand-text); }
 .card { background: var(--card); border-radius: 20rpx; padding: 26rpx 28rpx; margin-bottom: 18rpx; }
 .hist-item { background: var(--fill); border-radius: 12rpx; padding: 16rpx 18rpx; margin-bottom: 12rpx; }
 .hist-time { font-size: 21rpx; color: var(--ink-3); display: block; margin-bottom: 6rpx; }
 .hist-ans { font-size: 24rpx; color: var(--ink-1); line-height: 1.7; white-space: pre-wrap; display: block; max-height: 240rpx; overflow: hidden; }
 .hist-res { font-size: 23rpx; color: var(--ink-2); background: var(--warn-soft); border-radius: 8rpx; padding: 12rpx 14rpx; margin-top: 10rpx; line-height: 1.7; white-space: pre-wrap; display: block; }
 .spin { text-align: center; color: var(--ink-3); font-size: 25rpx; padding: 60rpx 0; }
+.retry { margin-top: 12rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 .q-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
 .q-tags { display: flex; align-items: center; gap: 12rpx; flex-wrap: wrap; }
 .q-paper { font-size: 22rpx; color: var(--ink-2); background: var(--fill); border-radius: 8rpx; padding: 4rpx 14rpx; }
-.q-type { font-size: 22rpx; color: var(--brand); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
+.q-type { font-size: 22rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
 .q-item .q-text { font-size: 26rpx; color: var(--ink-1); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .q-text { font-size: 26rpx; color: var(--ink-1); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.more { text-align: center; color: var(--brand); font-size: 25rpx; padding: 20rpx 0 40rpx; }
-.back { color: var(--brand); font-size: 26rpx; padding: 6rpx 0 18rpx; }
+.more { text-align: center; color: var(--brand-text); font-size: 25rpx; padding: 20rpx 0 40rpx; }
+.back { color: var(--brand-text); font-size: 26rpx; padding: 6rpx 0 18rpx; }
 .d-h { font-size: 25rpx; font-weight: 700; color: var(--ink-1); margin: 22rpx 0 10rpx; }
-.d-h.toggle { color: var(--brand); }
+.d-h.toggle { color: var(--brand-text); }
 .d-h.ref { color: #b45309; }
 .d-q { font-size: 26rpx; color: var(--ink-1); line-height: 1.7; white-space: pre-wrap; }
 .d-mat { font-size: 25rpx; color: var(--ink-2); line-height: 1.8; white-space: pre-wrap; }
@@ -473,7 +492,7 @@ page { background: var(--fill); }
 .sheet { width: 100%; background: var(--card); border-radius: 24rpx 24rpx 0 0; padding: 26rpx 28rpx 50rpx; box-sizing: border-box; max-height: 70vh; overflow-y: auto; }
 .sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18rpx; }
 .sheet-t { font-size: 30rpx; font-weight: 700; }
-.sheet-x { font-size: 26rpx; color: var(--brand); font-weight: 600; padding: 10rpx 0 10rpx 24rpx; }
+.sheet-x { font-size: 26rpx; color: var(--brand-text); font-weight: 600; padding: 10rpx 0 10rpx 24rpx; }
 .sheet-k { font-size: 23rpx; color: var(--ink-3); margin: 14rpx 0 10rpx; }
 .m-src { font-size: 22rpx; color: var(--ink-3); word-break: break-all; overflow-wrap: anywhere; display: block; }
 .d-ans-h { display: flex; justify-content: space-between; align-items: baseline; margin: 22rpx 0 10rpx; }

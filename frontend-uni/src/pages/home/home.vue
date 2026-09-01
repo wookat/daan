@@ -192,7 +192,7 @@
         <text class="ann-t">{{ announce.title }}</text>
         <text v-if="announce.body" class="ann-b">{{ announce.body }}</text>
       </view>
-      <view class="ann-x" @click="dismissAnn"><l-icon name="x" :size="16" color="#0369a1" /></view>
+      <view class="ann-x" role="button" aria-label="关闭公告" @click="dismissAnn"><l-icon name="x" :size="16" color="#0369a1" /></view>
     </view>
 
     <!-- 时政每日一练 -->
@@ -311,7 +311,7 @@
         <view class="grab" />
         <view class="sheet-h">
           <text class="sheet-t">练习设置</text>
-          <view class="sheet-x" @click="customOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+          <view class="sheet-x" role="button" aria-label="关闭" @click="customOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <view class="setrow">
           <view class="set-kwrap"><text class="set-k">每日目标</text><text class="set-sub">今天合计要练的题数</text></view>
@@ -368,7 +368,7 @@
         <view class="grab" />
         <view class="sheet-h">
           <text class="sheet-t">制定学习计划 · {{ ['考试信息', '目标', '每日时长'][setupStep - 1] }}（{{ setupStep }}/3）</text>
-          <view class="sheet-x" @click="setupOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+          <view class="sheet-x" role="button" aria-label="关闭" @click="setupOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <template v-if="setupStep === 1">
           <view class="setrow">
@@ -429,7 +429,7 @@
         <view class="grab" />
         <view class="sheet-h">
           <text class="sheet-t">真题卷库 · 选择试卷</text>
-          <view class="sheet-x" @click="paperSheet = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+          <view class="sheet-x" role="button" aria-label="关闭" @click="paperSheet = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <view v-if="!papers.length" class="spin">试卷加载中…</view>
         <scroll-view v-if="paperRegions.length > 1" scroll-x class="pr-scroll">
@@ -449,7 +449,7 @@
         <view class="grab" />
         <view class="sheet-h">
           <text class="sheet-t">{{ modName(subSelect) }} · 选择题型</text>
-          <view class="sheet-x" @click="subSelect = null"><l-icon name="x" :size="20" color="#6b7280" /></view>
+          <view class="sheet-x" role="button" aria-label="关闭" @click="subSelect = null"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <view class="sub-chip all-chip" @click="startPreset(subSelect)">
           <text class="sub-name">全部随机</text>
@@ -468,7 +468,7 @@
 </template>
 
 <script>
-import { request, anonUid, exportPdf, trackEvent, fetchCheckinBadges, fetchCheckinSummary, flushDailySubmit } from '../../api.js';
+import { request, snapPeek, anonUid, exportPdf, trackEvent, fetchCheckinBadges, fetchCheckinSummary, flushDailySubmit } from '../../api.js';
 import { checkinStreak, dayKey, loadSzDaily } from '../../checkin.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
@@ -878,22 +878,28 @@ export default {
     async loadHome() {
       const uid = anonUid();
       if (!uid) return;
+      const p = '/api/home_bundle?uid=' + encodeURIComponent(uid);
+      const snap = snapPeek(p);
+      if (snap) this.applyBundle(snap, true);
       try {
-        const d = await request('/api/home_bundle?uid=' + encodeURIComponent(uid));
-        this.applyPlan(d.plan);
-        if (d.badges) this.badgeInfo = d.badges;
-        this.applySummary(d.summary);
-        this.profile = d.profile || null;
-        this.profileFetched = true;
-        if (this.profile) {
-          this.planToday = d.plan_today || null;
-          uni.setStorageSync('homePlanCard', this.planToday && this.planToday.profile ? '1' : '');
-        } else this.planToday = null;
+        this.applyBundle(await request(p));
       } catch (e) {
         this.loadPlan();
         this.loadBadges();
         await this.loadProfile();
       }
+    },
+    // stale=true 为快照即显：跳过日界敏感的 summary（今日刷题数/提醒横幅），防昨日快照误报今日进度
+    applyBundle(d, stale) {
+      this.applyPlan(d.plan);
+      if (d.badges) this.badgeInfo = d.badges;
+      if (!stale) this.applySummary(d.summary);
+      this.profile = d.profile || null;
+      this.profileFetched = true;
+      if (this.profile) {
+        this.planToday = d.plan_today || null;
+        uni.setStorageSync('homePlanCard', this.planToday && this.planToday.profile ? '1' : '');
+      } else this.planToday = null;
     },
     taskGo(kind) {
       trackEvent('task_card_click', kind);
@@ -1150,7 +1156,7 @@ export default {
 .hero-fill { height: 100%; background: var(--card); border-radius: 999rpx; transition: width 0.3s; }
 .hero-acts { display: flex; gap: 20rpx; }
 .hero-btn { min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 20rpx; font-size: 28rpx; font-weight: 600; }
-.hero-btn.main { flex: 1; background: var(--card); color: var(--brand); }
+.hero-btn.main { flex: 1; background: var(--card); color: var(--brand-text); }
 .hero-btn.sub { padding: 0 32rpx; background: rgba(255, 255, 255, 0.16); color: #fff; }
 
 /* Section header */
@@ -1170,9 +1176,9 @@ export default {
 .sz-t { font-size: 29rpx; font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 8rpx; }
 .sz-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
 .tag { display: inline-flex; align-items: center; height: 40rpx; padding: 0 16rpx; border-radius: 12rpx; font-size: 21rpx; font-weight: 500; }
-.tag.warn { background: var(--warn-soft); color: #b45309; }
+.tag.warn { background: var(--warn-soft); color: var(--warn-strong); }
 .tag.ok { background: var(--ok-soft); color: var(--ok-strong); }
-.mini-btn { flex-shrink: 0; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 28rpx; background: var(--brand-soft); color: var(--brand); border-radius: 20rpx; font-size: 25rpx; font-weight: 600; }
+.mini-btn { flex-shrink: 0; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 28rpx; background: var(--brand-soft); color: var(--brand-text); border-radius: 20rpx; font-size: 25rpx; font-weight: 600; }
 .grow { flex: 1; min-width: 0; }
 
 /* 模块列表 */
@@ -1186,9 +1192,9 @@ export default {
 .mod-arrow { color: var(--ink-4); font-size: 30rpx; flex-shrink: 0; }
 
 .smart { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(120deg, var(--brand-soft), var(--brand-soft)); border: 1rpx solid var(--brand-soft-2); padding: 26rpx 32rpx; margin-bottom: 20rpx; }
-.smart-t { display: block; font-size: 28rpx; font-weight: 600; color: var(--brand); }
+.smart-t { display: block; font-size: 28rpx; font-weight: 600; color: var(--brand-text); }
 .smart-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; }
-.smart-go { flex-shrink: 0; font-size: 26rpx; font-weight: 600; color: var(--brand); min-height: 44px; display: inline-flex; align-items: center; }
+.smart-go { flex-shrink: 0; font-size: 26rpx; font-weight: 600; color: var(--brand-text); min-height: 44px; display: inline-flex; align-items: center; }
 
 /* 更多练习 */
 .more-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20rpx; }
@@ -1216,7 +1222,7 @@ export default {
 .plancard { padding: 22rpx 26rpx; }
 .guide { display: flex; align-items: center; gap: 16rpx; background: linear-gradient(120deg, var(--brand-soft), var(--brand-soft)); border: 1rpx solid var(--brand-soft-2); padding: 24rpx 26rpx; }
 .guide-l { flex: 1; min-height: 44px; display: flex; flex-direction: column; justify-content: center; }
-.guide-t { font-size: 28rpx; font-weight: 600; color: var(--brand); }
+.guide-t { font-size: 28rpx; font-weight: 600; color: var(--brand-text); }
 .guide-s { font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; }
 .guide-btn { flex-shrink: 0; background: var(--brand); color: #fff; border-radius: 999rpx; padding: 0 26rpx; font-size: 24rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
 .guide-x { flex-shrink: 0; font-size: 22rpx; color: var(--ink-3); min-height: 44px; display: inline-flex; align-items: center; padding: 0 8rpx; }
@@ -1224,7 +1230,7 @@ export default {
 .plan-t { font-size: 27rpx; font-weight: 600; color: var(--ink); }
 .plan-y { font-size: 21rpx; color: var(--ink-3); }
 .plan-hr { display: flex; align-items: center; gap: 14rpx; }
-.plan-days { font-size: 21rpx; color: var(--brand); background: var(--brand-soft); border-radius: 999rpx; padding: 4rpx 14rpx; }
+.plan-days { font-size: 21rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 999rpx; padding: 4rpx 14rpx; }
 .plan-edit { font-size: 22rpx; color: var(--ink-3); min-height: 44px; display: inline-flex; align-items: center; }
 .plan-prog { display: flex; align-items: center; gap: 14rpx; margin: 8rpx 0 6rpx; }
 .plan-prog-bar { flex: 1; height: 10rpx; background: var(--brand-soft); border-radius: 999rpx; overflow: hidden; }
@@ -1241,11 +1247,11 @@ export default {
 .task-sub { font-size: 21rpx; color: var(--ink-3); margin-top: 4rpx; }
 .plan-dot { width: 12rpx; height: 12rpx; border-radius: 50%; background: var(--brand); flex-shrink: 0; }
 .plan-dot.due { background: #f59e0b; }
-.plan-go { font-size: 24rpx; color: var(--brand); flex-shrink: 0; }
+.plan-go { font-size: 24rpx; color: var(--brand-text); flex-shrink: 0; }
 .plan-focus { display: flex; align-items: center; gap: 10rpx; flex-wrap: wrap; border-top: 1rpx solid var(--line); padding-top: 14rpx; margin-top: 6rpx; }
 .plan-focus-k { font-size: 22rpx; color: var(--ink-3); margin-right: 4rpx; }
 .plan-fchip { font-size: 22rpx; color: var(--ink-2); background: var(--fill); border-radius: 999rpx; padding: 0 20rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
-.plan-fchip.on { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+.plan-fchip.on { background: var(--brand-soft); color: var(--brand-text); font-weight: 600; }
 .pf-input { flex: 1; min-height: 44px; border: 1rpx solid var(--line); border-radius: 12rpx; padding: 0 20rpx; font-size: 26rpx; background: var(--fill); box-sizing: border-box; }
 .pf-date { min-height: 44px; display: inline-flex; align-items: center; border: 1rpx solid var(--line); border-radius: 12rpx; padding: 0 24rpx; font-size: 26rpx; color: var(--ink); background: var(--fill); box-sizing: border-box; }
 .pf-date.empty { color: var(--ink-3); }
@@ -1274,7 +1280,7 @@ export default {
 .taskcard { padding: 24rpx 28rpx; }
 .tk-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8rpx; }
 .tk-t { font-size: 28rpx; font-weight: 700; }
-.tk-n { font-size: 22rpx; color: var(--brand); font-weight: 700; background: var(--brand-soft); border-radius: 8rpx; padding: 2rpx 14rpx; }
+.tk-n { font-size: 22rpx; color: var(--brand-text); font-weight: 700; background: var(--brand-soft); border-radius: 8rpx; padding: 2rpx 14rpx; }
 .tk-row { display: flex; align-items: center; gap: 18rpx; padding: 16rpx 0; border-top: 1rpx solid var(--line); }
 .tk-row:first-of-type { border-top: none; }
 .tk-ck { flex-shrink: 0; width: 34rpx; height: 34rpx; line-height: 34rpx; text-align: center; border-radius: 50%; border: 2rpx solid var(--line); font-size: 22rpx; color: #fff; }
@@ -1286,7 +1292,7 @@ export default {
 .tk-sub { display: block; font-size: 21rpx; color: var(--ink-2); margin-top: 4rpx; }
 .tk-bar { height: 10rpx; background: var(--line); border-radius: 999rpx; margin-top: 10rpx; overflow: hidden; }
 .tk-fill { height: 100%; background: linear-gradient(90deg, #f59e0b, #d97706); border-radius: 999rpx; }
-.tk-go { flex-shrink: 0; font-size: 23rpx; color: var(--brand); font-weight: 600; }
+.tk-go { flex-shrink: 0; font-size: 23rpx; color: var(--brand-text); font-weight: 600; }
 
 /* 断卡风险提示 */
 .riskbar { display: flex; align-items: center; gap: 20rpx; background: var(--warn-soft); border: 1rpx solid #fde68a; padding: 22rpx 26rpx; }
@@ -1298,8 +1304,8 @@ export default {
 /* 公告 */
 .ann { display: flex; align-items: flex-start; gap: 14rpx; background: var(--info-soft); border: 1rpx solid #bae6fd; padding: 22rpx 26rpx; }
 .ann-c { flex: 1; }
-.ann-t { display: block; font-size: 25rpx; font-weight: 600; color: #0369a1; }
-.ann-b { display: block; font-size: 22rpx; color: #075985; margin-top: 4rpx; white-space: pre-wrap; }
+.ann-t { display: block; font-size: 25rpx; font-weight: 600; color: var(--info-strong); }
+.ann-b { display: block; font-size: 22rpx; color: var(--info-strong); margin-top: 4rpx; white-space: pre-wrap; }
 .ann-x { flex-shrink: 0; display: flex; align-items: center; padding: 4rpx 8rpx; }
 
 /* Sheet */
@@ -1316,7 +1322,7 @@ export default {
 .set-chips { display: flex; gap: 12rpx; flex-wrap: wrap; justify-content: flex-end; }
 .set-chips.scrollx { flex-wrap: nowrap; overflow-x: auto; max-width: 65%; }
 .set-chip { font-size: 24rpx; color: var(--ink-2); background: var(--soft-bg); border-radius: 999rpx; padding: 0 22rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; white-space: nowrap; }
-.set-chip.on { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+.set-chip.on { background: var(--brand-soft); color: var(--brand-text); font-weight: 600; }
 :deep(.sheet-cta) { margin-top: 24rpx; width: 100%; border-radius: 20rpx !important; background: linear-gradient(135deg, #5b8af8, var(--brand)) !important; box-shadow: 0 8rpx 24rpx rgba(46, 91, 255, 0.28); font-weight: 600; }
 :deep(.sheet-cta2) { margin-top: 16rpx; width: 100%; border-radius: 20rpx !important; }
 .custom-note { margin-top: 14rpx; text-align: center; font-size: 21rpx; color: var(--ink-3); }
@@ -1324,7 +1330,7 @@ export default {
 .pr-scroll .set-chip { margin-right: 12rpx; }
 .sub-chip { display: flex; justify-content: space-between; align-items: center; gap: 16rpx; padding: 22rpx 8rpx; min-height: 44px; border-top: 1rpx solid var(--line); box-sizing: border-box; }
 .sub-chip:first-of-type { border-top: none; }
-.sub-chip.all-chip .sub-name { color: var(--brand); font-weight: 600; }
+.sub-chip.all-chip .sub-name { color: var(--brand-text); font-weight: 600; }
 .sub-l { flex: 1; display: flex; flex-direction: column; }
 .sub-name { font-size: 27rpx; color: var(--ink); }
 .sub-prog { font-size: 21rpx; color: var(--ink-3); margin-top: 4rpx; }

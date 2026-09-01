@@ -26,7 +26,7 @@
       </view>
       <view class="cam-modes">
         <text class="cam-mode on">拍单题</text>
-        <text class="cam-mode dim">整页批改 · 即将上线</text>
+        <text class="cam-mode dim" aria-disabled="true">整页批改 · 即将上线</text>
         <text class="cam-mode" @click="textOpen = true">文字输入</text>
       </view>
       <view class="cam-acts">
@@ -106,7 +106,7 @@
           <!-- 追问建议 + 操作 chips -->
           <view v-if="!r.streaming" class="chips">
             <text class="chip" @click="quickFollowup(r, '请再讲得更细一点，逐步推导每一步')">再讲细一点</text>
-            <text class="chip" :class="{ dim: r.simLoading }" @click="genSimilar(r)">{{ r.simLoading ? '出题中…' + r.simSecs + 's' : '出一道同款题' }}</text>
+            <text class="chip" :class="{ dim: r.simLoading }" :aria-disabled="String(!!r.simLoading)" @click="genSimilar(r)">{{ r.simLoading ? '出题中…' + r.simSecs + 's' : '出一道同款题' }}</text>
             <text class="chip" :class="{ ok: r.saved }" @click="save(r)">{{ r.saved ? '✓ 已存错题本' : '存入错题本' }}</text>
           </view>
         </view>
@@ -178,7 +178,7 @@
         :disabled="!results.length"
         @confirm="sendFollowup"
       />
-      <view class="ib-send" :class="{ dim: !results.length || !fuText.trim() }" @click="sendFollowup">发送</view>
+      <view class="ib-send" :class="{ dim: !results.length || !fuText.trim() }" :aria-disabled="String(!results.length || !fuText.trim())" @click="sendFollowup">发送</view>
     </view>
 
     <!-- 新题文字输入 sheet -->
@@ -186,7 +186,7 @@
       <view class="sheet" @click.stop>
         <view class="sheet-h">
           <text class="sheet-t">粘贴题目文字</text>
-          <view class="sheet-x" @click="textOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+          <view class="sheet-x" role="button" aria-label="关闭" @click="textOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <textarea v-model="qtext" class="ta" placeholder="粘贴题干和选项…" :maxlength="-1" auto-height />
         <text class="label">你选的答案（可选，填了会帮你分析错因）</text>
@@ -202,7 +202,7 @@
       <view class="sheet" @click.stop>
         <view class="sheet-h">
           <text class="sheet-t">确认题目图片</text>
-          <view class="sheet-x" @click="clearImage"><l-icon name="x" :size="20" color="#6b7280" /></view>
+          <view class="sheet-x" role="button" aria-label="移除图片" @click="clearImage"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <image :src="imagePath" mode="widthFix" class="preview" />
         <text class="label">你选的答案（可选，填了会帮你分析错因）</text>
@@ -218,7 +218,7 @@
       <view class="sheet" @click.stop>
         <view class="sheet-h">
           <text class="sheet-t">历史会话</text>
-          <view class="sheet-x" @click="historyOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+          <view class="sheet-x" role="button" aria-label="关闭" @click="historyOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <view v-if="!sessions.length" class="rec-empty">
           <text class="rec-e1">还没有历史会话</text>
@@ -813,7 +813,7 @@ export default {
 .top-t { display: block; font-size: 34rpx; font-weight: 700; color: var(--ink); }
 .top-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
 .top-acts { display: flex; gap: 12rpx; }
-.top-btn { font-size: 24rpx; color: var(--brand); background: var(--brand-soft); border-radius: 999rpx; padding: 0 24rpx; min-height: 44px; display: inline-flex; align-items: center; }
+.top-btn { font-size: 24rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 999rpx; padding: 0 24rpx; min-height: 44px; display: inline-flex; align-items: center; }
 
 .camscreen { background: linear-gradient(180deg, #171c2b, #1f2740); border-radius: 24rpx; padding: 24rpx 24rpx 32rpx; margin-bottom: 24rpx; }
 .cam-top { display: flex; justify-content: flex-end; gap: 14rpx; margin-bottom: 18rpx; }
@@ -848,7 +848,7 @@ export default {
 .ab { background: var(--card); color: var(--ink); border: 1rpx solid var(--line); border-bottom-left-radius: 8rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); max-width: 94%; }
 
 .chips { display: flex; gap: 12rpx; flex-wrap: wrap; margin-top: 16rpx; }
-.chip { font-size: 24rpx; color: var(--brand); background: var(--brand-soft); border-radius: 999rpx; padding: 0 24rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
+.chip { font-size: 24rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 999rpx; padding: 0 24rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
 .chip.ok { color: var(--ok); background: var(--ok-soft); }
 .chip.dim { opacity: 0.5; }
 
@@ -878,7 +878,7 @@ export default {
 .label { font-size: 24rpx; color: var(--ink-2); display: block; margin: 20rpx 0 10rpx; }
 .btn { background: var(--brand); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(46, 91, 255, 0.25); min-height: 44px; line-height: 44px; }
 .btn[disabled] { opacity: 0.6; }
-.btn.ghost { background: var(--brand-soft); color: var(--brand); box-shadow: none; }
+.btn.ghost { background: var(--brand-soft); color: var(--brand-text); box-shadow: none; }
 .btn.sm { font-size: 26rpx; flex: 1; }
 .btn.ok { background: var(--ok); color: #fff; opacity: 1 !important; box-shadow: none; }
 .btn.bad { background: var(--bad); color: #fff; box-shadow: none; }
@@ -886,13 +886,13 @@ export default {
 .ta { width: 100%; min-height: 160rpx; border: 1rpx solid var(--line); border-radius: 18rpx; padding: 18rpx; font-size: 28rpx; box-sizing: border-box; background: var(--soft-bg); }
 .ans-chips { display: flex; gap: 16rpx; }
 .ans-chip { flex: 1; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; font-size: 28rpx; font-weight: 600; color: var(--ink-2); background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 16rpx; }
-.ans-chip.on { color: var(--brand); background: var(--brand-soft); border-color: var(--brand); }
+.ans-chip.on { color: var(--brand-text); background: var(--brand-soft); border-color: var(--brand-text); }
 .preview { width: 100%; border-radius: 18rpx; margin-top: 8rpx; }
 .spin { color: var(--ink-2); font-size: 25rpx; }
 .raterow { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; background: var(--soft-bg); border-radius: 14rpx; padding: 16rpx 22rpx; margin-top: 16rpx; flex-wrap: wrap; }
 .rate-q { font-size: 24rpx; color: var(--ink-2); }
 .rate-btns { display: flex; gap: 14rpx; }
-.rate-btn { display: inline-flex; align-items: center; gap: 6rpx; font-size: 24rpx; color: var(--brand); border: 1rpx solid var(--brand); border-radius: 999rpx; padding: 8rpx 24rpx; }
+.rate-btn { display: inline-flex; align-items: center; gap: 6rpx; font-size: 24rpx; color: var(--brand-text); border: 1rpx solid var(--brand); border-radius: 999rpx; padding: 8rpx 24rpx; }
 .rate-btn.bad { color: var(--bad); border-color: var(--bad); }
 .anscard { display: flex; align-items: center; gap: 22rpx; background: var(--brand-soft); border: 1rpx solid var(--brand-soft-2); border-radius: 20rpx; padding: 22rpx 26rpx; margin: 6rpx 0 16rpx; }
 .ans-big { flex-shrink: 0; min-width: 88rpx; height: 88rpx; padding: 0 14rpx; border-radius: 20rpx; background: var(--brand); color: #fff; font-size: 44rpx; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 6rpx 14rpx rgba(46, 91, 255, 0.3); }
@@ -901,12 +901,12 @@ export default {
 .ans-brief { display: block; font-size: 25rpx; color: var(--ink); line-height: 1.5; }
 .err { color: var(--bad); background: var(--bad-soft); font-size: 26rpx; }
 .tags { margin-bottom: 10rpx; }
-.tag { display: inline-block; background: var(--brand-soft); color: var(--brand); border-radius: 999rpx; padding: 6rpx 20rpx; font-size: 22rpx; margin-right: 10rpx; }
+.tag { display: inline-block; background: var(--brand-soft); color: var(--brand-text); border-radius: 999rpx; padding: 6rpx 20rpx; font-size: 22rpx; margin-right: 10rpx; }
 .row { display: flex; gap: 14rpx; margin: 10rpx 0; }
 .rec-h { font-size: 28rpx; font-weight: 600; margin-bottom: 14rpx; }
 .rec-row { display: flex; align-items: center; gap: 18rpx; min-height: 112rpx; border-bottom: 1rpx solid var(--line); }
 .rec-row:last-of-type { border-bottom: none; }
-.rec-ans { width: 72rpx; height: 72rpx; border-radius: 16rpx; background: var(--brand-soft); color: var(--brand); font-size: 32rpx; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.rec-ans { width: 72rpx; height: 72rpx; border-radius: 16rpx; background: var(--brand-soft); color: var(--brand-text); font-size: 32rpx; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .rec-main { flex: 1; min-width: 0; }
 .rec-brief { display: block; font-size: 25rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rec-meta { display: block; font-size: 21rpx; color: var(--ink-2); margin-top: 4rpx; }
@@ -934,7 +934,7 @@ export default {
   .ds-t { font-size: 28rpx; font-weight: 700; color: var(--ink); }
   .ds-ta { flex: 1; min-height: 220rpx; }
   .ds-drop { flex: 1; min-height: 300rpx; border: 2rpx dashed var(--brand-soft-2); border-radius: 20rpx; background: var(--brand-soft); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12rpx; cursor: pointer; }
-  .ds-drop:hover { border-color: var(--brand); }
+  .ds-drop:hover { border-color: var(--brand-text); }
   .ds-d1 { font-size: 26rpx; font-weight: 600; color: var(--ink); }
   .ds-d2 { font-size: 23rpx; color: var(--ink-2); }
 }

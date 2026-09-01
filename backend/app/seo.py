@@ -50,37 +50,52 @@ def _year_path(year: int, module: str) -> str:
 
 
 _CSS = (
+    ":root{--bg:#f6f7fb;--surface:#fff;--border:#e7e9f0;--text:#17181c;--muted:#6b7280;"
+    "--link:" + BRAND + ";--tag-bg:#eef3ff;--ans-bg:#ecfdf5;"
+    "--shadow:0 1px 2px rgba(23,24,28,.05);--shadow-hover:0 4px 12px rgba(23,24,28,.1)}"
+    "@media(prefers-color-scheme:dark){:root{--bg:#111827;--surface:#1f2937;--border:#374151;"
+    "--text:#f3f4f6;--muted:#9ca3af;--link:#7c9aff;--tag-bg:#26324d;--ans-bg:#123527;"
+    "--shadow:0 1px 2px rgba(0,0,0,.4);--shadow-hover:0 4px 12px rgba(0,0,0,.5)}}"
     "*{box-sizing:border-box}body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,"
     "'PingFang SC','HarmonyOS Sans','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif;"
-    "color:#17181c;background:#f6f7fb;line-height:1.7;font-size:16px}"
-    "a{color:" + BRAND + ";text-decoration:none}a:hover{text-decoration:underline}"
+    "color:var(--text);background:var(--bg);line-height:1.7;font-size:16px;overflow-wrap:anywhere}"
+    "a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}"
     ".wrap{max-width:860px;margin:0 auto;padding:16px}"
-    ".hdr{background:#fff;border-bottom:1px solid #e7e9f0;padding:12px 0}"
+    ".hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 0}"
     ".hdr .wrap{padding-top:0;padding-bottom:0;display:flex;align-items:center;justify-content:space-between}"
-    ".hdr .brand{color:" + BRAND + ";font-weight:700;font-size:18px}.hdr .brand:hover{text-decoration:none}"
+    ".hdr .brand{color:var(--link);font-weight:700;font-size:18px}.hdr .brand:hover{text-decoration:none}"
     ".hdr-cta{background:" + BRAND + ";color:#fff!important;border-radius:999px;padding:6px 18px;"
     "font-size:14px;font-weight:600}.hdr-cta:hover{text-decoration:none;opacity:.92}"
-    ".card{background:#fff;border:1px solid #e7e9f0;border-radius:12px;padding:16px;margin:12px 0;"
-    "box-shadow:0 1px 2px rgba(23,24,28,.05)}"
-    ".crumb{font-size:13px;color:#6b7280;margin:10px 0}.crumb a{color:#6b7280}"
+    ".hdr-s{flex:1;display:flex;margin:0 12px;min-width:0}"
+    ".hdr-s input{flex:1;min-width:0;max-width:280px;margin-left:auto;font-size:14px;color:var(--text);"
+    "background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:6px 14px;outline:none}"
+    ".hdr-s input:focus{border-color:var(--link)}"
+    "@media(max-width:480px){.hdr-s input{max-width:none}}"
+    ".card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin:12px 0;"
+    "box-shadow:var(--shadow)}"
+    ".crumb{font-size:13px;color:var(--muted);margin:10px 0}.crumb a{color:var(--muted)}"
     "h1{font-size:22px;margin:10px 0}h2{font-size:17px;margin:8px 0}"
-    ".qlist{list-style:none;padding:0;margin:0}.qlist li{border-bottom:1px solid #e7e9f0;padding:10px 0}"
+    ".qlist{list-style:none;padding:0;margin:0}.qlist li{border-bottom:1px solid var(--border);padding:10px 0}"
     ".qlist li:last-child{border-bottom:none}"
-    ".tags{display:flex;flex-wrap:wrap;gap:8px}.tags a{background:#eef3ff;border-radius:16px;padding:4px 12px;"
+    ".tags{display:flex;flex-wrap:wrap;gap:8px}.tags a{background:var(--tag-bg);border-radius:16px;padding:4px 12px;"
     "font-size:14px;white-space:nowrap}"
-    ".meta{color:#6b7280;font-size:13px}"
+    ".meta{color:var(--muted);font-size:13px}"
     ".meta a,.ftr a{text-decoration:underline}"
-    ".opt{margin:6px 0;padding:8px 12px;border:1px solid #e7e9f0;border-radius:8px}"
-    ".ans{background:#ecfdf5;border-radius:8px;padding:12px;margin-top:10px}"
+    ".opt{margin:6px 0;padding:8px 12px;border:1px solid var(--border);border-radius:8px}"
+    ".ans{background:var(--ans-bg);border-radius:8px;padding:12px;margin-top:10px}"
     ".cta{display:inline-block;background:" + BRAND + ";color:#fff!important;border-radius:999px;"
     "padding:10px 24px;font-weight:600;margin:14px 0}"
     ".pager{display:flex;gap:12px;justify-content:center;margin:16px 0}.pager a,.pager span{padding:6px 14px;"
-    "background:#fff;border-radius:8px;border:1px solid #e7e9f0}"
-    ".ftr{color:#6b7280;font-size:13px;text-align:center;padding:20px 0}"
+    "background:var(--surface);border-radius:8px;border:1px solid var(--border)}"
+    ".ftr{color:var(--muted);font-size:13px;text-align:center;padding:20px 0}"
     "details summary{cursor:pointer;font-weight:600}"
     "@media(min-width:768px){.card{transition:box-shadow .15s ease}"
-    ".card:hover{box-shadow:0 4px 12px rgba(23,24,28,.1)}}"
+    ".card:hover{box-shadow:var(--shadow-hover)}}"
     "@media(max-width:480px){.wrap{padding:12px}h1{font-size:19px}}"
+    "@media print{:root{--bg:#fff;--surface:#fff;--text:#000;--muted:#444;--ans-bg:#fff}"
+    ".hdr-cta,.hdr-s,.cta,.pager,.crumb,.tags,.ftr,.noprint{display:none!important}"
+    "body{background:#fff}.card{border:none;box-shadow:none;break-inside:avoid;padding:8px 0}"
+    ".ans{border:1px solid #999;padding:8px}a{color:#000}}"
 )
 
 
@@ -109,6 +124,7 @@ def _page(
     return (
         '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        '<meta name="color-scheme" content="light dark">'
         f"<title>{_e(title)}</title>"
         f'<meta name="description" content="{_e(description)}">'
         '<meta property="og:type" content="website">'
@@ -120,6 +136,8 @@ def _page(
         f"{head_meta}"
         f"<style>{_CSS}</style>{ld}</head><body>"
         f'<header class="hdr"><div class="wrap"><a class="brand" href="/tiku/">错题邦 · 考公题库</a>'
+        f'<form class="hdr-s" action="/tiku/search" method="get" role="search">'
+        f'<input name="q" type="search" placeholder="搜题目 / 考点 / 试卷" aria-label="搜索题库"></form>'
         f'<a class="hdr-cta" href="/">去刷题</a></div></header>'
         f'<main class="wrap">{body}</main>'
         f'<footer class="ftr"><a href="{_e(SITE_BASE)}/">错题邦</a> · 13万+行测真题在线刷题'
@@ -297,13 +315,36 @@ def tiku_index():
         f"免费公务员考试题库，收录 {total} 道行测申论题目与历年真题，覆盖资料分析、数量关系、言语理解、判断推理、常识判断，附答案解析。",
         "/tiku/",
         body,
-        _collection_ld(
-            "公务员考试题库",
-            f"免费公务员考试题库，收录 {total} 道行测申论题目与历年真题，附答案解析。",
-            "/tiku/",
-            [("题库", "/tiku/")],
-        ),
+        [
+            _collection_ld(
+                "公务员考试题库",
+                f"免费公务员考试题库，收录 {total} 道行测申论题目与历年真题，附答案解析。",
+                "/tiku/",
+                [("题库", "/tiku/")],
+            ),
+            {
+                "@context": "https://schema.org",
+                "@type": "WebSite",
+                "name": "错题邦",
+                "url": SITE_BASE,
+                "potentialAction": {
+                    "@type": "SearchAction",
+                    "target": {
+                        "@type": "EntryPoint",
+                        "urlTemplate": SITE_BASE + "/tiku/search?q={search_term_string}",
+                    },
+                    "query-input": "required name=search_term_string",
+                },
+            },
+        ],
     )
+
+
+@router.get("/search", include_in_schema=False)
+def tiku_search(q: str = ""):
+    q = q.strip()[:64]
+    dest = "/#/pkgA/search/search" + (f"?q={quote(q)}" if q else "")
+    return RedirectResponse(dest, status_code=302)
 
 
 @router.get("/daily", include_in_schema=False)
@@ -618,7 +659,7 @@ def _render_q_comments(qid: int) -> str:
     cta = (
         f'<a class="cta" href="{_e(SITE_BASE)}/#/pkgA/social/discuss?qid={qid}">参与讨论（免费）→</a>'
     )
-    return f'<section class="card"><h2>考友讨论（{total} 条）</h2><ul class="qlist">{items}</ul>{cta}</section>'
+    return f'<section class="card noprint"><h2>考友讨论（{total} 条）</h2><ul class="qlist">{items}</ul>{cta}</section>'
 
 
 @router.get("/y/{year}/{module}", include_in_schema=False)
@@ -794,12 +835,22 @@ def _render_question(qid: int) -> str:
     conn = db.get_conn()
     r = conn.execute(
         "SELECT id, module, submodule, tag3, question, options, answer, explanation, hs_explanation, "
-        "is_real, exam_year, exam_region, image, image_credit FROM questions WHERE id=? AND disabled=0",
+        "is_real, exam_year, exam_region, image, image_credit, material_hash "
+        "FROM questions WHERE id=? AND disabled=0",
         (qid,),
     ).fetchone()
     if not r:
         conn.close()
         raise HTTPException(404, "题目不存在")
+    group = []
+    if r["module"] == "ziliao" and r["material_hash"] and r["material_hash"] != "-":
+        group = conn.execute(
+            "SELECT id, question FROM questions WHERE material_hash=? AND disabled=0 "
+            "ORDER BY id LIMIT 8",
+            (r["material_hash"],),
+        ).fetchall()
+        if len(group) < 2:
+            group = []
     similar = []
     if r["tag3"]:
         similar = conn.execute(
@@ -845,6 +896,14 @@ def _render_question(qid: int) -> str:
     else:
         exp_html = f"<p>{hs_html or raw_html or '暂无解析'}</p>"
     src = " ".join(filter(None, [f'{r["exam_year"]}年' if r["exam_year"] else "", r["exam_region"] or "", "真题" if r["is_real"] else "练习题"]))
+    group_html = "".join(
+        (
+            f'<li><b>本题</b> {_e((g["question"] or "").strip().replace(chr(10), " ")[:60])}…</li>'
+            if g["id"] == qid
+            else f'<li><a href="/tiku/q/{g["id"]}">{_e((g["question"] or "").strip().replace(chr(10), " ")[:60])}…</a></li>'
+        )
+        for g in group
+    )
     sim_html = "".join(
         f'<li><a href="/tiku/q/{s["id"]}">{_e((s["question"] or "").strip().replace(chr(10), " ")[:60])}…</a></li>'
         for s in similar
@@ -880,7 +939,12 @@ def _render_question(qid: int) -> str:
         )
         + "</article>"
         + (
-            f'<section class="card"><h2>同考点相似题</h2><ul class="qlist">{sim_html}</ul>'
+            f'<section class="card"><h2>同材料题组（共 {len(group)} 题）</h2><ul class="qlist">{group_html}</ul></section>'
+            if group_html
+            else ""
+        )
+        + (
+            f'<section class="card noprint"><h2>同考点相似题</h2><ul class="qlist">{sim_html}</ul>'
             + (
                 f'<p><a href="{_e(_topic_path(r["tag3"]))}">查看「{_e(topic["name"])}」考点全部题目 →</a></p>'
                 if topic

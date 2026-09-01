@@ -9,7 +9,10 @@
 
       <view class="tm-cols">
       <view class="tm-main">
-      <view class="card" v-if="!teams.length && loaded">
+      <view class="card" v-if="loadErr && loaded">
+        <view class="empty">加载失败：{{ loadErr }}<view class="retry" @click="loadHome">重试 ›</view></view>
+      </view>
+      <view class="card" v-else-if="!teams.length && loaded">
         <view class="empty">还没有小队。创建一个小队，把邀请码发给考友，一起打卡刷题！</view>
       </view>
       <view v-for="t in teams" :key="t.id" class="card t-row" @click="openPanel(t)">
@@ -115,6 +118,7 @@ export default {
     return {
       view: 'home',
       loaded: false,
+      loadErr: '',
       teams: [],
       joinCode: '',
       showCreate: false,
@@ -152,10 +156,13 @@ export default {
   },
   methods: {
     async loadHome() {
+      this.loadErr = '';
       try {
         const d = await teamMine();
         this.teams = d.items || [];
-      } catch (e) { /* 非关键路径 */ }
+      } catch (e) {
+        this.loadErr = e.message || '网络异常';
+      }
       this.loaded = true;
     },
     async refreshPanel() {
@@ -285,32 +292,33 @@ export default {
 .wrap { padding: 24rpx 32rpx 60rpx; }
 .card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 24rpx 28rpx; margin-bottom: 20rpx; }
 .empty { text-align: center; color: var(--ink-2); font-size: 25rpx; padding: 30rpx 0; line-height: 1.7; }
+.retry { margin-top: 12rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 
 .hero { background: linear-gradient(135deg, #5b8af8, #2e5bff); border-radius: 32rpx; padding: 36rpx 32rpx; margin-bottom: 24rpx; box-shadow: 0 12rpx 36rpx rgba(46, 91, 255, 0.3); }
 .hero-t { display: flex; align-items: center; gap: 12rpx; color: #fff; font-size: 40rpx; font-weight: 800; }
 .hero-s { display: block; color: rgba(255, 255, 255, 0.85); font-size: 24rpx; margin-top: 10rpx; }
 .hero-btns { display: flex; gap: 16rpx; margin-top: 22rpx; }
-.hero-btn { flex: 1; min-height: 40px; display: flex; align-items: center; justify-content: center; background: #fff; color: var(--brand); border-radius: 999rpx; font-size: 25rpx; font-weight: 600; }
+.hero-btn { flex: 1; min-height: 40px; display: flex; align-items: center; justify-content: center; background: #fff; color: var(--brand-text); border-radius: 999rpx; font-size: 25rpx; font-weight: 600; }
 .hero-btn.ghost { background: rgba(255, 255, 255, 0.16); color: #fff; }
 
 .t-row { display: flex; align-items: center; gap: 16rpx; }
 .t-l { flex: 1; min-width: 0; }
 .t-name { display: block; font-size: 30rpx; font-weight: 700; color: var(--ink); }
 .t-sub { display: block; font-size: 23rpx; color: var(--ink-2); margin-top: 6rpx; }
-.t-go { flex-shrink: 0; font-size: 25rpx; color: var(--brand); font-weight: 600; }
+.t-go { flex-shrink: 0; font-size: 25rpx; color: var(--brand-text); font-weight: 600; }
 
 .act-btn { min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; font-size: 29rpx; font-weight: 600; margin-bottom: 18rpx; }
 .act-btn.main { background: var(--brand); color: #fff; }
 
 .join-row { display: flex; gap: 16rpx; }
 .join-input { flex: 1; background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 30rpx; min-height: 44px; font-size: 27rpx; box-sizing: border-box; }
-.join-btn { min-height: 44px; display: flex; align-items: center; padding: 0 40rpx; background: var(--brand-soft); color: var(--brand); border-radius: 999rpx; font-size: 27rpx; font-weight: 600; }
+.join-btn { min-height: 44px; display: flex; align-items: center; padding: 0 40rpx; background: var(--brand-soft); color: var(--brand-text); border-radius: 999rpx; font-size: 27rpx; font-weight: 600; }
 
 /* 本周排行榜 */
 .rank-card { padding: 24rpx 28rpx; }
 .rank-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8rpx; }
 .rank-t { font-size: 27rpx; font-weight: 700; color: var(--ink); }
-.rank-copy { min-height: 32px; display: flex; align-items: center; padding: 0 22rpx; background: var(--brand-soft); color: var(--brand); border-radius: 999rpx; font-size: 22rpx; font-weight: 600; }
+.rank-copy { min-height: 32px; display: flex; align-items: center; padding: 0 22rpx; background: var(--brand-soft); color: var(--brand-text); border-radius: 999rpx; font-size: 22rpx; font-weight: 600; }
 .rank-row { display: flex; align-items: center; gap: 14rpx; padding: 14rpx 0; border-bottom: 1rpx solid var(--fill); }
 .rank-row:last-child { border-bottom: none; }
 .rank-no { width: 40rpx; text-align: center; font-size: 24rpx; font-weight: 800; color: var(--ink-3); }
@@ -319,7 +327,7 @@ export default {
 .rank-no.no3 { color: #b45309; }
 .rank-name { flex: 1; min-width: 0; font-size: 26rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rank-king { font-size: 20rpx; color: #d97706; background: #fef3c7; border-radius: 8rpx; padding: 2rpx 12rpx; font-weight: 700; }
-.rank-me { font-size: 20rpx; color: var(--brand); background: var(--brand-soft); border-radius: 8rpx; padding: 2rpx 10rpx; }
+.rank-me { font-size: 20rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 2rpx 10rpx; }
 .rank-n { font-size: 24rpx; color: var(--ink-2); font-weight: 600; }
 
 /* 打卡矩阵 */
@@ -327,17 +335,17 @@ export default {
 .wh-name { width: 96rpx; font-size: 22rpx; color: var(--ink-3); }
 .wh-days { flex: 1; display: flex; gap: 10rpx; margin-left: 20rpx; }
 .wh-d { flex: 1; text-align: center; font-size: 22rpx; color: var(--ink-3); }
-.wh-d.today { color: var(--brand); font-weight: 700; }
+.wh-d.today { color: var(--brand-text); font-weight: 700; }
 
 .mem { padding: 22rpx 28rpx; }
 .mem-top { display: flex; align-items: center; gap: 18rpx; }
-.mem-av { width: 72rpx; height: 72rpx; border-radius: 50%; background: var(--brand-soft); color: var(--brand); font-size: 30rpx; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.mem-av { width: 72rpx; height: 72rpx; border-radius: 50%; background: var(--brand-soft); color: var(--brand-text); font-size: 30rpx; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .mem-av.me { background: linear-gradient(135deg, #5b8af8, #2e5bff); color: #fff; }
 .mem-l { flex: 1; min-width: 0; }
 .mem-name-row { display: flex; align-items: center; gap: 10rpx; }
 .mem-name { font-size: 28rpx; font-weight: 700; color: var(--ink); max-width: 260rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mem-tag { font-size: 20rpx; color: #d97706; background: #fef3c7; border-radius: 8rpx; padding: 2rpx 10rpx; }
-.mem-tag.me { color: var(--brand); background: var(--brand-soft); }
+.mem-tag.me { color: var(--brand-text); background: var(--brand-soft); }
 .mem-sub { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; }
 .remind-btn { flex-shrink: 0; min-height: 36px; display: flex; align-items: center; padding: 0 24rpx; background: #fef3c7; color: #b45309; border-radius: 999rpx; font-size: 23rpx; font-weight: 600; }
 .mem-done { flex-shrink: 0; font-size: 23rpx; color: var(--ok); font-weight: 700; }
@@ -350,7 +358,7 @@ export default {
 .wk-cell.miss { background: var(--fill); }
 .wk-cell.today-empty { background: var(--fill); border: 1rpx dashed var(--brand); box-sizing: border-box; }
 .wk-cell.future { background: transparent; border: 1rpx dashed var(--line); box-sizing: border-box; }
-.wk-n { font-size: 20rpx; color: var(--brand); font-weight: 700; }
+.wk-n { font-size: 20rpx; color: var(--brand-text); font-weight: 700; }
 
 /* 弹层 */
 .mask { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 99; display: flex; align-items: flex-end; }

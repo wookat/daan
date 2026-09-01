@@ -1,6 +1,11 @@
 <template>
   <view class="wrap">
     <view v-if="loading" class="spin">赛后报告加载中…</view>
+    <view v-else-if="loadErr" class="card empty">
+      <text class="empty-t">加载失败</text>
+      <text class="empty-s">{{ loadErr }}</text>
+      <view class="retry" @click="retry">重试 ›</view>
+    </view>
     <view v-else-if="err" class="card empty">
       <text class="empty-t">暂无大赛报告</text>
       <text class="empty-s">{{ err }}</text>
@@ -103,13 +108,13 @@
 </template>
 
 <script>
-import { request, anonUid } from '../../api.js';
+import { request, anonUid, isNetErr } from '../../api.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
 
 export default {
   data() {
-    return { loading: true, err: '', r: null, eventId: null };
+    return { loading: true, err: '', loadErr: '', r: null, eventId: null };
   },
   onLoad(opt) {
     this.eventId = opt.event_id ? Number(opt.event_id) : null;
@@ -124,12 +129,18 @@ export default {
     modName(m) { return MODS[m] || m; },
     round1(v) { return Math.round(v * 10) / 10; },
     async load() {
+      this.loadErr = '';
       try {
         this.r = await request('/api/mock/events/' + this.eventId + '/report?uid=' + encodeURIComponent(anonUid()));
       } catch (e) {
-        this.err = e.message || '报告不存在或已过期';
+        if (isNetErr(e)) this.loadErr = e.message || '网络异常';
+        else this.err = e.message || '报告不存在或已过期';
       }
       this.loading = false;
+    },
+    retry() {
+      this.loading = true;
+      this.load();
     },
     barH(n) {
       const max = Math.max(...this.r.distribution, 1);
@@ -161,6 +172,7 @@ export default {
 .wrap { padding: 24rpx; padding-bottom: 40rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 60rpx 24rpx; }
 .empty { text-align: center; padding: 80rpx 28rpx; }
+.retry { margin-top: 12rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 .empty-t { display: block; font-size: 30rpx; font-weight: 600; color: var(--ink); }
 .empty-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 12rpx; margin-bottom: 32rpx; }
 .empty .pbtn { margin: 0 auto; max-width: 320rpx; }
@@ -197,7 +209,7 @@ export default {
 .wrow:last-child { border-bottom: none; }
 .wrow-t { display: block; font-size: 25rpx; color: var(--ink); }
 .wrow-s { display: block; font-size: 21rpx; color: #b91c1c; margin-top: 2rpx; }
-.wrow-go { flex-shrink: 0; font-size: 24rpx; color: var(--brand); font-weight: 600; }
+.wrow-go { flex-shrink: 0; font-size: 24rpx; color: var(--brand-text); font-weight: 600; }
 .curve { display: flex; align-items: flex-end; gap: 14rpx; height: 220rpx; padding: 10rpx 0; }
 .curve-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 44rpx; }
 .curve-v { font-size: 20rpx; color: var(--ink-2); margin-bottom: 4rpx; }
@@ -205,7 +217,7 @@ export default {
 .curve-bar.cur { background: var(--brand); }
 .curve-x { font-size: 20rpx; color: var(--ink-2); margin-top: 6rpx; }
 .btns { display: flex; gap: 16rpx; }
-.pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand); border-radius: 999rpx; font-size: 27rpx; font-weight: 500; background: var(--card); }
+.pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 27rpx; font-weight: 500; background: var(--card); }
 .pbtn.main { background: var(--brand); color: #fff; }
 
 /* #ifdef H5 */

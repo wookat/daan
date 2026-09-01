@@ -114,7 +114,8 @@
 
     <view class="card">
       <view class="h">错题模块分布</view>
-      <view v-if="!byModule.length" class="spin">暂无数据</view>
+      <view v-if="loadErr && !byModule.length" class="spin">加载失败：{{ loadErr }}<view class="retry" @click="load">重试 ›</view></view>
+      <view v-else-if="!byModule.length" class="spin">暂无数据</view>
       <view v-for="m in shownModules" :key="m.module" class="mrow" @click="goPractice(m.module)">
         <view class="mrow-main">
           <view class="blabel">
@@ -132,7 +133,8 @@
 
     <view class="card">
       <view class="h">高频错题型 TOP10</view>
-      <view v-if="!byType.length" class="spin">暂无数据</view>
+      <view v-if="loadErr && !byType.length" class="spin">加载失败：{{ loadErr }}<view class="retry" @click="load">重试 ›</view></view>
+      <view v-else-if="!byType.length" class="spin">暂无数据</view>
       <view v-else class="top-chips">
         <view v-for="t in shownTypes" :key="t.question_type" class="top-chip" @click="goPractice('')">
           <text class="tc-name">{{ typeName(t.question_type) }}</text>
@@ -326,7 +328,7 @@
 </template>
 
 <script>
-import { request, anonUid, getAuthUser, authLogout, clearAuth, fetchCheckinSummary, trackEvent } from '../../api.js';
+import { request, snapPeek, anonUid, getAuthUser, authLogout, clearAuth, fetchCheckinSummary, trackEvent } from '../../api.js';
 import { md } from '../../md.js';
 import { checkinStreak } from '../../checkin.js';
 
@@ -345,7 +347,7 @@ const MODS = [
 
 export default {
   data() {
-    return { authUser: getAuthUser(), byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, kmCov: null, history: [], showAllHist: false, coachHtml: cleanCoach(uni.getStorageSync('coachAdvice') || ''), coachLoading: false, growth: null, reco: null, dueN: 0, gwMod: '', slStats: null, slIssuesOpen: false, modOpen: false, topOpen: false, secOpen: { coach: false, medal: false, bk: false }, hmDays: null, svStreak: null };
+    return { authUser: getAuthUser(), loadErr: '', byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, kmCov: null, history: [], showAllHist: false, coachHtml: cleanCoach(uni.getStorageSync('coachAdvice') || ''), coachLoading: false, growth: null, reco: null, dueN: 0, gwMod: '', slStats: null, slIssuesOpen: false, modOpen: false, topOpen: false, secOpen: { coach: false, medal: false, bk: false }, hmDays: null, svStreak: null };
   },
   computed: {
     shownModules() {
@@ -707,8 +709,11 @@ export default {
       uni.switchTab({ url: '/pages/book/book' });
     },
     async loadMastery() {
+      const p = '/api/mastery/map?uid=' + encodeURIComponent(anonUid());
+      const snap = snapPeek(p);
+      if (snap) this.kmCov = snap.cold ? null : snap.coverage.pct;
       try {
-        const d = await request('/api/mastery/map?uid=' + encodeURIComponent(anonUid()));
+        const d = await request(p);
         this.kmCov = d.cold ? null : d.coverage.pct;
       } catch (e) { /* 非关键路径 */ }
     },
@@ -771,8 +776,11 @@ export default {
     async loadSlStats() {
       const uid = uni.getStorageSync('anonUid');
       if (!uid) return;
+      const p = '/api/shenlun/stats?uid=' + encodeURIComponent(uid);
+      const snap = snapPeek(p);
+      if (snap) this.slStats = snap;
       try {
-        this.slStats = await request('/api/shenlun/stats?uid=' + encodeURIComponent(uid));
+        this.slStats = await request(p);
       } catch (e) { /* 非关键路径 */ }
     },
     goShenlun() {
@@ -781,30 +789,50 @@ export default {
     async loadGrowth() {
       const uid = uni.getStorageSync('anonUid');
       if (!uid) return;
+      const p = '/api/growth?uid=' + encodeURIComponent(uid);
+      const snap = snapPeek(p);
+      if (snap) this.growth = snap;
       try {
-        this.growth = await request('/api/growth?uid=' + encodeURIComponent(uid));
+        this.growth = await request(p);
       } catch (e) { /* 非关键路径 */ }
     },
     async loadReco() {
       const uid = uni.getStorageSync('anonUid');
       if (!uid) return;
+      const rp = '/api/recommend?uid=' + encodeURIComponent(uid);
+      const rSnap = snapPeek(rp);
+      if (rSnap) this.reco = rSnap;
+      const vp = '/api/review?uid=' + encodeURIComponent(anonUid());
+      const vSnap = snapPeek(vp);
+      if (vSnap) this.dueN = vSnap.total || 0;
       try {
-        this.reco = await request('/api/recommend?uid=' + encodeURIComponent(uid));
+        this.reco = await request(rp);
       } catch (e) { /* 非关键路径 */ }
       try {
-        const d = await request('/api/review?uid=' + encodeURIComponent(anonUid()));
+        const d = await request(vp);
         this.dueN = d.total || 0;
       } catch (e) { /* 非关键路径 */ }
     },
+    applyStats(d) {
+      this.byModule = d.by_module;
+      this.byType = d.by_type;
+      this.byReason = d.by_reason || [];
+    },
     async load() {
+      this.loadErr = '';
+      const sp = '/api/stats?uid=' + encodeURIComponent(anonUid());
+      const mp = '/api/mistakes?uid=' + encodeURIComponent(anonUid());
+      // 快照即显：先用最近成功快照铺屏，真实响应到达后覆盖，避免 origin 长尾下长时间空白
+      const sSnap = snapPeek(sp);
+      if (sSnap) this.applyStats(sSnap);
+      const mSnap = snapPeek(mp);
+      if (mSnap) this.masteredCount = (mSnap.items || []).filter((m) => m.mastered).length;
       try {
-        const d = await request('/api/stats?uid=' + encodeURIComponent(anonUid()));
-        this.byModule = d.by_module;
-        this.byType = d.by_type;
-        this.byReason = d.by_reason || [];
-        const mk = await request('/api/mistakes?uid=' + encodeURIComponent(anonUid()));
+        this.applyStats(await request(sp));
+        const mk = await request(mp);
         this.masteredCount = (mk.items || []).filter((m) => m.mastered).length;
       } catch (e) {
+        this.loadErr = e.message || '网络异常';
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
     },
@@ -835,16 +863,17 @@ export default {
 .hero { background: var(--card); border: 1rpx solid var(--line); border-radius: var(--radius); padding: 30rpx 28rpx; margin-bottom: 24rpx; box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .hero-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22rpx; }
 .hero-t { font-size: 30rpx; font-weight: 700; color: var(--ink); }
-.hero-cal { font-size: 24rpx; color: var(--brand); padding: 14rpx 0 14rpx 20rpx; }
+.hero-cal { font-size: 24rpx; color: var(--brand-text); padding: 14rpx 0 14rpx 20rpx; }
 .hero-kpis { display: flex; }
 .hk { flex: 1; text-align: center; }
 .hk-n { display: block; font-size: 44rpx; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
 .hk:nth-child(2) .hk-n { color: var(--ok); }
-.hk:nth-child(3) .hk-n { color: var(--brand); }
+.hk:nth-child(3) .hk-n { color: var(--brand-text); }
 .hk-t { display: block; font-size: 22rpx; color: var(--ink-3); margin-top: 4rpx; }
 .cal-hr { display: flex; align-items: center; gap: 16rpx; }
 .h { font-size: 28rpx; font-weight: 600; margin-bottom: 14rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 20rpx; }
+.retry { margin-top: 12rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 .todo-row { display: flex; align-items: center; gap: 18rpx; min-height: 112rpx; border-bottom: 1rpx solid var(--line); }
 .todo-row:last-of-type { border-bottom: none; }
 .todo-ico { width: 88rpx; height: 88rpx; border-radius: 20rpx; background: var(--brand-soft); display: flex; align-items: center; justify-content: center; font-size: 40rpx; flex-shrink: 0; }
@@ -870,12 +899,12 @@ export default {
 .rs-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8rpx; }
 .rs-name { font-size: 25rpx; font-weight: 600; }
 .rs-pct { font-size: 24rpx; color: var(--danger, #f04438); font-weight: 600; }
-.ghost-btn { margin-top: 16rpx; height: 72rpx; line-height: 68rpx; text-align: center; border: 2rpx solid var(--brand); color: var(--brand); border-radius: 999rpx; font-size: 25rpx; font-weight: 600; }
+.ghost-btn { margin-top: 16rpx; height: 72rpx; line-height: 68rpx; text-align: center; border: 2rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 25rpx; font-weight: 600; }
 .ring { position: absolute; border: 1rpx solid var(--line); border-radius: 50%; box-sizing: border-box; }
 .poly { position: absolute; inset: 0; background: rgba(46, 91, 255, 0.35); border-radius: 2rpx; }
 .axis-label { position: absolute; transform: translate(-50%, -50%); text-align: center; white-space: nowrap; }
 .al-name { display: block; font-size: 23rpx; color: var(--ink); font-weight: 600; }
-.al-val { display: block; font-size: 20rpx; color: var(--brand); }
+.al-val { display: block; font-size: 20rpx; color: var(--brand-text); }
 .mrow { display: flex; align-items: center; gap: 16rpx; min-height: 112rpx; border-bottom: 1rpx solid var(--line); }
 .mrow:last-of-type { border-bottom: none; }
 .mrow-main { flex: 1; min-width: 0; }
@@ -887,13 +916,13 @@ export default {
 .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--brand); border-radius: 999rpx; transition: width 0.6s ease; }
 .top-chips { display: flex; flex-wrap: wrap; gap: 14rpx; }
 .top-chip { display: flex; align-items: center; gap: 8rpx; background: var(--brand-soft); border-radius: 999rpx; padding: 14rpx 24rpx; min-height: 44rpx; }
-.tc-name { font-size: 24rpx; color: var(--brand); font-weight: 600; }
+.tc-name { font-size: 24rpx; color: var(--brand-text); font-weight: 600; }
 .tc-n { font-size: 21rpx; color: var(--ink-2); }
 .top-chip.more { background: var(--soft-bg); color: var(--ink-2); font-size: 24rpx; font-weight: 600; }
 .fill.rz { background: #f59e0b; }
 .trend { display: flex; align-items: flex-end; gap: 12rpx; height: 220rpx; padding-top: 8rpx; }
 .tcol { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
-.tpct { font-size: 18rpx; color: var(--brand); height: 28rpx; }
+.tpct { font-size: 18rpx; color: var(--brand-text); height: 28rpx; }
 .tbar { flex: 1; width: 36rpx; background: var(--soft-bg); border-radius: 999rpx; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
 .tfill { width: 100%; background: var(--brand); border-radius: 999rpx; }
 .tfill.lo { background: #f59e0b; }
@@ -914,13 +943,13 @@ export default {
 .m-name { display: block; font-size: 22rpx; font-weight: 600; margin-top: 6rpx; }
 .m-sub { display: block; font-size: 18rpx; color: var(--ink-2); margin-top: 4rpx; }
 .cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
-.n { color: var(--brand); font-weight: 600; }
+.n { color: var(--brand-text); font-weight: 600; }
 .km-entry { display: flex; align-items: center; gap: 20rpx; }
 .km-entry .grow { flex: 1; min-width: 0; }
 .km-entry-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; }
 .km-entry-go { font-size: 36rpx; color: var(--ink-3); }
 .km-cov { width: 92rpx; height: 92rpx; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.km-cov-in { width: 68rpx; height: 68rpx; border-radius: 50%; background: var(--card); display: flex; align-items: center; justify-content: center; font-size: 20rpx; font-weight: 700; color: var(--brand); }
+.km-cov-in { width: 68rpx; height: 68rpx; border-radius: 50%; background: var(--card); display: flex; align-items: center; justify-content: center; font-size: 20rpx; font-weight: 700; color: var(--brand-text); }
 .km-group { margin-bottom: 18rpx; }
 .km-mod { font-size: 24rpx; font-weight: 600; color: var(--ink-2); margin-bottom: 10rpx; }
 .km-items { display: flex; flex-wrap: wrap; gap: 12rpx; }
@@ -944,7 +973,7 @@ export default {
 .lrow-body { padding: 6rpx 0 24rpx; border-bottom: 1rpx solid var(--line); }
 .coach-btn {
   font-size: 24rpx;
-  color: var(--brand);
+  color: var(--brand-text);
   background: var(--brand-soft);
   border-radius: 999rpx;
   padding: 8rpx 22rpx;
@@ -961,7 +990,7 @@ export default {
   padding-top: 8rpx;
 }
 .hist-h { display: flex; align-items: center; justify-content: space-between; }
-.hist-link { font-size: 24rpx; font-weight: 500; color: #2e5bff; }
+.hist-link { font-size: 24rpx; font-weight: 500; color: var(--brand-text); }
 .hist-row { display: flex; align-items: center; gap: 16rpx; padding: 14rpx 0; border-bottom: 1rpx solid var(--fill); }
 .hist-time { font-size: 22rpx; color: var(--ink-2); width: 170rpx; }
 .gw-row { display: flex; align-items: center; gap: 14rpx; margin-bottom: 12rpx; }
@@ -974,16 +1003,16 @@ export default {
 .gw-n { color: var(--ink-2); }
 .gw-tabs { display: flex; gap: 10rpx; margin-bottom: 14rpx; flex-wrap: wrap; }
 .gw-tab { font-size: 22rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 4rpx 18rpx; background: var(--card); }
-.gw-tab.on { color: #fff; background: var(--brand); border-color: var(--brand); }
+.gw-tab.on { color: #fff; background: var(--brand); border-color: var(--brand-text); }
 .gw-delta { font-size: 23rpx; color: #dc2626; margin-top: 6rpx; }
 .gw-delta.up { color: #16a34a; }
 .rc-note { font-size: 20rpx; color: var(--ink-2); margin-top: 10rpx; }
 .sl-row { display: flex; align-items: baseline; gap: 10rpx; margin: 16rpx 0 12rpx; }
-.sl-num { font-size: 44rpx; font-weight: 700; color: var(--brand); }
+.sl-num { font-size: 44rpx; font-weight: 700; color: var(--brand-text); }
 .sl-lab { font-size: 23rpx; color: var(--ink-2); }
 .sl-last { font-size: 21rpx; color: var(--ink-3); margin-left: auto; }
 .sl-types { display: flex; flex-wrap: wrap; gap: 10rpx; }
-.sl-chip { font-size: 21rpx; color: var(--brand); background: var(--brand-soft); border-radius: 999rpx; padding: 8rpx 18rpx; }
+.sl-chip { font-size: 21rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 999rpx; padding: 8rpx 18rpx; }
 .sl-ih { font-size: 23rpx; color: var(--ink-2); margin-top: 16rpx; padding: 10rpx 0; }
 .sl-issue { display: flex; align-items: flex-start; gap: 10rpx; margin-bottom: 10rpx; }
 .sl-ik { font-size: 19rpx; color: var(--bad-strong); background: var(--bad-soft); border-radius: 6rpx; padding: 2rpx 10rpx; flex-shrink: 0; margin-top: 2rpx; }
@@ -1000,19 +1029,19 @@ export default {
 .hist-n { font-size: 24rpx; color: var(--ink-2); }
 .hist-pct { font-size: 26rpx; font-weight: 700; color: #16a34a; width: 90rpx; text-align: right; }
 .hist-pct.lo { color: #dc2626; }
-.hist-more { text-align: center; font-size: 24rpx; color: var(--brand); padding: 14rpx 0 2rpx; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; }
+.hist-more { text-align: center; font-size: 24rpx; color: var(--brand-text); padding: 14rpx 0 2rpx; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; }
 .km-lg { font-size: 20rpx; color: var(--ink-2); }
 .km-lg.r { color: #ef4444; }
 .km-lg.y { color: #f59e0b; }
 .km-lg.g { color: #10b981; }
 .bk-tip { font-size: 23rpx; color: var(--ink-2); line-height: 1.6; margin-bottom: 14rpx; }
-.bk-code { font-size: 26rpx; font-weight: 700; color: var(--brand); background: var(--brand-soft); border-radius: 14rpx; padding: 14rpx 22rpx; margin-bottom: 14rpx; }
+.bk-code { font-size: 26rpx; font-weight: 700; color: var(--brand-text); background: var(--brand-soft); border-radius: 14rpx; padding: 14rpx 22rpx; margin-bottom: 14rpx; }
 .row2 { display: flex; gap: 16rpx; }
-.bk-btn { flex: 1; background: var(--brand-soft); color: var(--brand); border-radius: 16rpx; font-size: 25rpx; font-weight: 600; }
-.bk-btn.ghost { background: var(--brand-soft); color: var(--brand); }
+.bk-btn { flex: 1; background: var(--brand-soft); color: var(--brand-text); border-radius: 16rpx; font-size: 25rpx; font-weight: 600; }
+.bk-btn.ghost { background: var(--brand-soft); color: var(--brand-text); }
 .loginstrip { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; min-height: 44px; box-sizing: border-box; background: var(--brand-soft); border-radius: 16rpx; padding: 8rpx 26rpx; margin-bottom: 20rpx; }
 .ls-t { font-size: 24rpx; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ls-btn { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: var(--brand); }
+.ls-btn { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: var(--brand-text); }
 .acct { display: flex; align-items: center; gap: 20rpx; }
 .acct-ava { width: 88rpx; height: 88rpx; border-radius: 50%; background: var(--brand); color: #fff; font-size: 36rpx; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .acct-ava.anon { background: var(--ink-4); }

@@ -26,6 +26,10 @@
       <text class="empty-d">登录账号后，评论收到的回复和点赞会在这里提醒你</text>
       <button class="login-btn" @click="goLogin">去登录</button>
     </view>
+    <view v-else-if="loadErr" class="empty">
+      <text class="empty-t">加载失败：{{ loadErr }}</text>
+      <view class="retry" @click="load">重试 ›</view>
+    </view>
     <view v-else-if="loaded" class="empty">
       <view class="empty-ico">💬</view>
       <text class="empty-t">暂无消息</text>
@@ -39,7 +43,7 @@ import { fetchCommentInbox, readCommentInbox, getToken } from '../../api.js';
 
 export default {
   data() {
-    return { items: [], loaded: false, logged: false };
+    return { items: [], loaded: false, logged: false, loadErr: '' };
   },
   onShow() {
     this.logged = !!getToken();
@@ -48,11 +52,13 @@ export default {
   },
   methods: {
     async load() {
+      this.loadErr = '';
       try {
         const d = await fetchCommentInbox();
         this.items = d.items || [];
         if (d.unread) readCommentInbox().catch(() => {});
       } catch (e) {
+        this.loadErr = e.message || '网络异常';
         uni.showToast({ title: e.message || '加载失败', icon: 'none' });
       }
       this.loaded = true;
@@ -89,6 +95,12 @@ export default {
 .empty { display: flex; flex-direction: column; align-items: center; gap: 12rpx; padding: 120rpx 0; }
 .empty-ico { font-size: 72rpx; }
 .empty-t { font-size: 28rpx; font-weight: 600; color: var(--ink); }
+.retry {
+  margin-top: 8rpx;
+  color: var(--brand-text);
+  font-size: 26rpx;
+  font-weight: 500;
+}
 .empty-d { font-size: 24rpx; color: var(--ink-2); }
 .login-btn { margin-top: 24rpx; background: var(--brand); color: #fff; font-size: 28rpx; border-radius: 18rpx; padding: 0 64rpx; }
 

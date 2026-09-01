@@ -1,7 +1,7 @@
 <template>
   <view class="wrap">
     <view class="hero">
-      <image class="hero-logo" src="/static/brand/kaogong.svg" mode="aspectFit" />
+      <image class="hero-logo" src="/static/brand/kaogong.svg" mode="aspectFit" aria-hidden="true" />
       <text class="hero-t">错题邦</text>
       <text class="hero-s">登录后错题、做题记录多端同步，本机记录自动合并</text>
     </view>
@@ -145,7 +145,7 @@ export default {
   display: block;
   margin-top: 8rpx;
   font-size: 26rpx;
-  color: var(--ink-3);
+  color: var(--ink-2);
 }
 .card {
   background: var(--card);
@@ -165,12 +165,12 @@ export default {
   text-align: center;
   padding: 18rpx 0;
   font-size: 30rpx;
-  color: var(--ink-3);
+  color: var(--ink-2);
   border-radius: 12rpx;
 }
 .seg-item.on {
   background: var(--card);
-  color: var(--brand);
+  color: var(--brand-text);
   font-weight: 600;
   box-shadow: 0 2rpx 8rpx rgba(46, 91, 255, 0.15);
 }
@@ -215,7 +215,7 @@ export default {
   height: 92rpx;
   line-height: 92rpx;
   background: var(--card);
-  color: var(--brand);
+  color: var(--brand-text);
   border: 2rpx solid var(--brand);
   font-size: 30rpx;
   font-weight: 600;
@@ -224,7 +224,7 @@ export default {
 .sso-note {
   margin-top: 12rpx;
   font-size: 24rpx;
-  color: var(--ink-4);
+  color: var(--ink-3);
   text-align: center;
 }
 .err {

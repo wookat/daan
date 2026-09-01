@@ -21,6 +21,7 @@
     </view>
 
     <view v-if="loading" class="spin">试卷加载中…</view>
+    <view v-else-if="loadErr" class="spin">加载失败：{{ loadErr }}<view class="retry" @click="load">重试 ›</view></view>
     <view v-else-if="!items.length" class="spin">暂无成套真题卷{{ year || region ? '，试试放宽筛选' : '' }}</view>
 
     <view class="plist">
@@ -65,7 +66,7 @@
 </template>
 
 <script>
-import { request, anonUid, exportPdf } from '../../api.js';
+import { request, snapPeek, anonUid, exportPdf } from '../../api.js';
 
 export default {
   data() {
@@ -76,6 +77,7 @@ export default {
       year: null,
       region: null,
       loading: true,
+      loadErr: '',
       exportingId: null,
       exportTarget: null,
     };
@@ -89,22 +91,34 @@ export default {
   },
   methods: {
     async load() {
-      this.loading = true;
+      this.loadErr = '';
+      const q = ['kind=zhenti', 'uid=' + encodeURIComponent(anonUid())];
+      if (this.year) q.push('year=' + this.year);
+      if (this.region) q.push('region=' + encodeURIComponent(this.region));
+      const p = '/api/exam/papers?' + q.join('&');
+      // 快照即显：uid 请求绕过公开边缘缓存，长尾下先用最近成功快照铺屏，真实响应到达后覆盖
+      const snap = snapPeek(p);
+      if (snap) {
+        this.items = snap.items || [];
+        this.filters = snap.filters || { years: [], regions: [] };
+      }
+      this.loading = !snap;
       try {
-        const q = ['kind=zhenti', 'uid=' + encodeURIComponent(anonUid())];
-        if (this.year) q.push('year=' + this.year);
-        if (this.region) q.push('region=' + encodeURIComponent(this.region));
-        const d = await request('/api/exam/papers?' + q.join('&'));
+        const d = await request(p);
         this.items = d.items || [];
         this.filters = d.filters || { years: [], regions: [] };
       } catch (e) {
+        this.loadErr = e.message || '网络异常';
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
       this.loading = false;
     },
     async loadAttempts() {
+      const p = '/api/exam/attempts?uid=' + encodeURIComponent(anonUid()) + '&limit=10';
+      const snap = snapPeek(p);
+      if (snap) this.attempts = snap.items || [];
       try {
-        const d = await request('/api/exam/attempts?uid=' + encodeURIComponent(anonUid()) + '&limit=10');
+        const d = await request(p);
         this.attempts = d.items || [];
       } catch (e) { /* 非关键路径 */ }
     },
@@ -155,6 +169,7 @@ export default {
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 30rpx; font-weight: 600; margin-bottom: 20rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 40rpx 24rpx; }
+.retry { margin-top: 12rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 .mini { display: flex; align-items: center; gap: 20rpx; background: linear-gradient(135deg, var(--warn-soft), var(--card)); border: 1rpx solid var(--line); }
 .mini-ico { flex-shrink: 0; font-size: 48rpx; }
 .mini-l { flex: 1; min-width: 0; }
@@ -164,23 +179,23 @@ export default {
 .filters { margin-bottom: 20rpx; }
 .fscroll { white-space: nowrap; margin-bottom: 12rpx; }
 .fchip { display: inline-flex; align-items: center; min-height: 44px; box-sizing: border-box; font-size: 24rpx; color: var(--ink-2); background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 26rpx; margin-right: 12rpx; }
-.fchip.on { color: #fff; background: var(--brand); border-color: var(--brand); font-weight: 600; }
+.fchip.on { color: #fff; background: var(--brand); border-color: var(--brand-text); font-weight: 600; }
 .paper-top { min-height: 44px; }
 .paper-t { font-size: 29rpx; font-weight: 600; color: var(--ink); line-height: 1.5; }
 .paper-meta { display: flex; align-items: center; gap: 12rpx; margin-top: 10rpx; flex-wrap: wrap; }
-.ptag { font-size: 21rpx; color: var(--brand); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
+.ptag { font-size: 21rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
 .pmeta { font-size: 23rpx; color: var(--ink-2); }
 .pbest { display: block; font-size: 22rpx; color: var(--warn); margin-top: 10rpx; }
 .pbest.none { color: var(--ink-2); }
 .paper-btns { display: flex; gap: 16rpx; margin-top: 20rpx; }
-.pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand); border-radius: 999rpx; font-size: 25rpx; font-weight: 500; }
-.pbtn.main { background: var(--brand); color: #fff; border-color: var(--brand); }
+.pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 25rpx; font-weight: 500; }
+.pbtn.main { background: var(--brand); color: #fff; border-color: var(--brand-text); }
 .arow { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 12rpx 0; border-bottom: 1rpx solid var(--line); }
 .arow:last-child { border-bottom: none; }
 .arow-l { flex: 1; min-width: 0; margin-right: 16rpx; }
 .arow-t { display: block; font-size: 25rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .arow-s { display: block; font-size: 21rpx; color: var(--ink-2); margin-top: 4rpx; }
-.arow-score { flex-shrink: 0; font-size: 28rpx; font-weight: 700; color: var(--brand); }
+.arow-score { flex-shrink: 0; font-size: 28rpx; font-weight: 700; color: var(--brand-text); }
 
 /* 桌面网格（仅 H5 ≥1024px） */
 /* #ifdef H5 */

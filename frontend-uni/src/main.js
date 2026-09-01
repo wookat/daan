@@ -6,6 +6,13 @@ import App from "./App.vue";
 // #ifdef H5
 import "./pwa.js"; // 尽早注册 beforeinstallprompt 监听，供「我的」页安装入口使用
 import { normalizeDailyDeepLink } from "./deeplink.js";
+import { initKeyboardFocus } from "./a11y-focus.js";
+import { initA11yLive } from "./a11y-live.js";
+import { initRoutePrecache } from "./precache.js";
+initKeyboardFocus(); // 必须先于 app 挂载：拦截 Vue runtime 的 click addEventListener
+initA11yLive();
+initRoutePrecache();
+
 // 集中式错误监控（审计 P1-7）：未捕获 JS 错误同源上报 /api/monitor/report，由后端转发中心收集器
 if (typeof window !== 'undefined') {
 	const mSeen = new Set();

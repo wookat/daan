@@ -29,6 +29,10 @@
         </view>
       </view>
     </view>
+    <view v-else-if="loadErr" class="empty">
+      <text class="empty-t">加载失败：{{ loadErr }}</text>
+      <view class="retry" @click="load">重试 ›</view>
+    </view>
     <view v-else-if="loaded" class="empty">
       <view class="empty-ico"><l-icon name="edit-3" :size="30" color="#b0b4c0" /></view>
       <text class="empty-t">还没有练习记录</text>
@@ -38,13 +42,13 @@
 </template>
 
 <script>
-import { request, anonUid } from '../../api.js';
+import { request, snapPeek, anonUid } from '../../api.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论', shizheng: '时事政治' };
 
 export default {
   data() {
-    return { items: [], loaded: false, openIdx: -1, detail: [], detailLoading: false };
+    return { items: [], loaded: false, loadErr: '', openIdx: -1, detail: [], detailLoading: false };
   },
   computed: {
     wrongQs() {
@@ -67,10 +71,19 @@ export default {
       return NAMES[m] || m || '混合';
     },
     async load() {
+      this.loadErr = '';
+      const p = '/api/practice/history?uid=' + encodeURIComponent(anonUid());
+      // 快照即显：uid API 长尾下先用最近成功快照铺屏，真实响应到达后覆盖
+      const snap = snapPeek(p);
+      if (snap) {
+        this.items = snap.items || [];
+        this.loaded = true;
+      }
       try {
-        const d = await request('/api/practice/history?uid=' + encodeURIComponent(anonUid()));
+        const d = await request(p);
         this.items = d.items || [];
       } catch (e) {
+        this.loadErr = e.message || '网络异常';
         uni.showToast({ title: e.message || '加载失败', icon: 'none' });
       }
       this.loaded = true;
@@ -130,7 +143,7 @@ export default {
 .row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8rpx; }
 .row-top { display: flex; align-items: center; gap: 10rpx; flex-wrap: wrap; }
 .time { font-size: 26rpx; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
-.chip { background: #e8effe; color: #2e5bff; font-size: 20rpx; font-weight: 600; border-radius: 8rpx; padding: 2rpx 12rpx; }
+.chip { background: #e8effe; color: var(--brand-text); font-size: 20rpx; font-weight: 600; border-radius: 8rpx; padding: 2rpx 12rpx; }
 .meta { font-size: 22rpx; color: var(--ink-2); }
 .pct { font-size: 32rpx; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
 .pct.hi { color: var(--ok-strong, #15803d); }
@@ -154,6 +167,7 @@ export default {
 
 .empty { display: flex; flex-direction: column; align-items: center; gap: 16rpx; padding: 120rpx 0; }
 .empty-t { font-size: 27rpx; color: var(--ink-2); }
+.retry { margin-top: 8rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 .btn-primary { background: #2e5bff; color: #fff; border-radius: 999rpx; font-size: 28rpx; font-weight: 600; min-height: 44px; display: flex; align-items: center; justify-content: center; padding: 0 60rpx; margin-top: 12rpx; }
 
 /* #ifdef H5 */

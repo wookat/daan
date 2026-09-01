@@ -116,6 +116,7 @@ def init_db():
         ("tag3", "ALTER TABLE questions ADD COLUMN tag3 TEXT"),
         ("quality_score", "ALTER TABLE questions ADD COLUMN quality_score INTEGER"),
         ("updated_at", "ALTER TABLE questions ADD COLUMN updated_at REAL"),
+        ("material_hash", "ALTER TABLE questions ADD COLUMN material_hash TEXT"),
     ]:
         if col not in qcols:
             conn.execute(ddl)
@@ -137,6 +138,19 @@ def init_db():
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_disabled_id ON questions(disabled, id)")
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_q_sitemap ON questions(disabled, id, updated_at)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_q_disabled_module ON questions(disabled, module)"
+    )
+    conn.execute("DROP INDEX IF EXISTS idx_q_disabled_tag3")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_q_disabled_tag3_upd ON questions(disabled, tag3, updated_at)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_q_real_region ON questions(is_real, exam_region)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_q_real_year ON questions(is_real, disabled, exam_year, module, updated_at)"
     )
     if "correct_ratio" in qcols:
         conn.execute(

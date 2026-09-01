@@ -47,6 +47,7 @@
           </template>
         </template>
       </view>
+      <view v-else-if="loadErr" class="card spin">加载失败：{{ loadErr }}<view class="retry" @click="load">重试 ›</view></view>
       <view v-else class="card spin">暂无比赛场次</view>
       </view>
 
@@ -114,6 +115,7 @@ export default {
   data() {
     return {
       loading: true,
+      loadErr: '',
       event: null,
       past: [],
       rulesOpen: false,
@@ -158,11 +160,13 @@ export default {
       if (this.timer) { clearInterval(this.timer); this.timer = null; }
     },
     async load() {
+      this.loadErr = '';
       try {
         const d = await request('/api/mock/events?uid=' + encodeURIComponent(anonUid()));
         this.event = d.current || d.next;
         this.past = d.past || [];
       } catch (e) {
+        this.loadErr = e.message || '网络异常';
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
       this.loading = false;
@@ -218,14 +222,15 @@ export default {
 <style scoped>
 .wrap { padding: 24rpx; padding-bottom: 40rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 60rpx 24rpx; }
+.retry { margin-top: 12rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 30rpx; font-weight: 600; margin-bottom: 20rpx; }
 .hero { background: linear-gradient(135deg, #eef3ff, #fdfbf3); }
 .theme-dark .hero { background: linear-gradient(135deg, #232a3d, #262330); }
 .hero-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
-.hero-series { font-size: 21rpx; color: var(--brand); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
+.hero-series { font-size: 21rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
 .hero-phase { font-size: 22rpx; font-weight: 600; border-radius: 999rpx; padding: 4rpx 18rpx; }
-.hero-phase.upcoming { color: #d97706; background: var(--warn-soft); }
+.hero-phase.upcoming { color: var(--warn-strong); background: var(--warn-soft); }
 .hero-phase.running { color: #15803d; background: var(--ok-soft); }
 .hero-phase.ended { color: var(--ink-2); background: var(--soft-bg); }
 .hero-title { display: block; font-size: 34rpx; font-weight: 800; color: var(--ink); }
@@ -236,16 +241,16 @@ export default {
 .count-n { font-size: 30rpx; font-weight: 700; color: #d97706; }
 .cta { margin-top: 20rpx; min-height: 44px; display: flex; align-items: center; justify-content: center; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 28rpx; font-weight: 600; }
 .cta.done { background: var(--ok-soft); color: #15803d; }
-.cta.ghost { background: var(--card); color: var(--brand); border: 1rpx solid var(--brand); }
-.cta.sub { margin-top: 12rpx; background: var(--card); color: var(--brand); border: 1rpx solid var(--brand); }
+.cta.ghost { background: var(--card); color: var(--brand-text); border: 1rpx solid var(--brand); }
+.cta.sub { margin-top: 12rpx; background: var(--card); color: var(--brand-text); border: 1rpx solid var(--brand); }
 .score-line { margin-top: 20rpx; font-size: 26rpx; color: var(--ink); }
-.score-n { font-size: 40rpx; font-weight: 800; color: var(--brand); }
+.score-n { font-size: 40rpx; font-weight: 800; color: var(--brand-text); }
 .prow { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 12rpx 0; border-bottom: 1rpx solid var(--line); }
 .prow:last-child { border-bottom: none; }
 .prow-l { flex: 1; min-width: 0; margin-right: 16rpx; }
 .prow-t { display: block; font-size: 25rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .prow-s { display: block; font-size: 21rpx; color: var(--ink-2); margin-top: 4rpx; }
-.prow-score { flex-shrink: 0; font-size: 26rpx; font-weight: 700; color: var(--brand); }
+.prow-score { flex-shrink: 0; font-size: 26rpx; font-weight: 700; color: var(--brand-text); }
 .prow-none { flex-shrink: 0; font-size: 23rpx; color: var(--ink-3); }
 .rules-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0; }
 .rules-arrow { font-size: 22rpx; color: var(--ink-2); font-weight: 400; }
@@ -265,8 +270,8 @@ export default {
 .brow-r.r2 { color: #6b7280; }
 .brow-r.r3 { color: #b45309; }
 .brow-n { flex: 1; min-width: 0; font-size: 26rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.brow-me { color: var(--brand); font-size: 22rpx; }
-.brow-s { flex-shrink: 0; font-size: 26rpx; font-weight: 700; color: var(--brand); }
+.brow-me { color: var(--brand-text); font-size: 22rpx; }
+.brow-s { flex-shrink: 0; font-size: 26rpx; font-weight: 700; color: var(--brand-text); }
 
 /* #ifdef H5 */
 @media (min-width: 768px) {

@@ -78,6 +78,9 @@ page {
   --brand: #2e5bff;
   --brand-soft: #eef3ff;
   --brand-soft-2: #dce7fd;
+  --brand-strong: #1d4ed8;
+  --brand-text: #2e5bff;
+  --info-strong: #075985;
   --ink: #17181c;
   --ink-2: #5f6575;
   --ink-3: #6b7280;
@@ -85,6 +88,7 @@ page {
   --ok: #16a34a;
   --ok-soft: #ecfdf5;
   --ok-strong: #15803d;
+  --warn-strong: #b45309;
   --bad: #dc2626;
   --bad-soft: #fef2f2;
   --bad-strong: #b91c1c;
@@ -130,6 +134,16 @@ body::after {
 html.theme-dark body {
   background: #15161c;
 }
+/* 系统「减弱动态效果」：动画/过渡压至瞬时并只跑单次，保留 keyframes 终态 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
 /* #endif */
 
 /* 深色模式（三档设置见 theme.js；.theme-dark 挂在 html 上，H5/App 生效）
@@ -139,12 +153,16 @@ html.theme-dark body {
   background: #15161c;
   --brand-soft: #1e2a4a;
   --brand-soft-2: #24345c;
+  --brand-strong: #b9ccff;
+  --brand-text: #8fa8ff;
+  --info-strong: #7dd3fc;
   --ink: #f2f3f7;
   --ink-2: #9ba0b0;
   --ink-3: #8a8ea0;
   --ink-4: #5c6070;
   --ok-soft: #0e2b1e;
   --ok-strong: #4ade80;
+  --warn-strong: #fbbf24;
   --bad-soft: #331416;
   --bad-strong: #f87171;
   --warn-soft: #33260e;
@@ -169,6 +187,20 @@ html.theme-dark body {
 .theme-dark uni-tabbar .uni-tabbar__border {
   background: #1d1f28 !important;
   border-color: #2b2e3a;
+}
+/* tabbar 文字色为 pages.json 静态配置的内联样式（uni-h5 无 setTabBarStyle），按配置色值定向覆盖 */
+.theme-dark uni-tabbar .uni-tabbar__label {
+  color: #9ba0b0 !important;
+}
+.theme-dark uni-tabbar .uni-tabbar__label[style*='rgb(46, 91, 255)'] {
+  color: #8fa8ff !important;
+}
+/* tabbar 图标为浅色主题静态 PNG（选中蓝 #3060f0 深底偏沉、未选灰偏暗），深色下滤镜提亮对齐 --brand-text/--ink-2 色感 */
+.theme-dark uni-tabbar .uni-tabbar__icon img {
+  filter: brightness(1.25);
+}
+.theme-dark uni-tabbar .uni-tabbar__icon img[src*='-on'] {
+  filter: saturate(0.6) brightness(1.45);
 }
 .theme-dark uni-page-head .uni-page-head {
   background: #15161c !important;
@@ -222,7 +254,7 @@ html.theme-dark body {
     box-shadow: none;
   }
   uni-page-body .searchbar:hover {
-    border-color: var(--brand);
+    border-color: var(--brand-text);
     cursor: pointer;
   }
 }

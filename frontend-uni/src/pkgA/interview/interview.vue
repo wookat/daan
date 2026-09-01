@@ -41,9 +41,10 @@
           v-model="answer"
           class="ans-box"
           :maxlength="5000"
-          placeholder="像面试现场一样组织语言作答（建议 200 字以上）…"
+          placeholder="像面试现场一样组织语言作答（建议 200 字以上）…草稿自动保存在本机"
+          @input="saveDraft"
         />
-        <view class="cnt">{{ answer.length }} / 5000</view>
+        <view class="cnt"><text v-if="answer" class="cnt-save">已自动保存 · </text>{{ answer.length }} / 5000</view>
         <view class="btn-row">
           <button class="btn-ghost" @click="voiceStub"><l-icon name="mic" :size="15" color="#2e5bff" /> 语音作答（即将上线）</button>
           <button class="btn-primary grow" :disabled="answer.trim().length < 20 || submitting" @click="submit">
@@ -144,7 +145,7 @@ export default {
   },
   onLoad(opts) {
     if (opts && opts.session_id) this.loadSession(opts.session_id);
-    else this.loadCategories();
+    else if (!this.restoreDraft()) this.loadCategories();
   },
   onUnload() {
     this.stopTimer();
@@ -185,6 +186,23 @@ export default {
     stopTimer() {
       if (this._timer) { clearInterval(this._timer); this._timer = null; }
     },
+    saveDraft() {
+      if (!this.question.id) return;
+      if (this.answer) uni.setStorageSync('ivDraft', { q: this.question, cat: this.pickedCategory, answer: this.answer });
+      else uni.removeStorageSync('ivDraft');
+    },
+    restoreDraft() {
+      const d = uni.getStorageSync('ivDraft');
+      if (!d || !d.q || !d.q.id || !(d.answer || '').trim()) return false;
+      this.question = d.q;
+      this.pickedCategory = d.cat || '';
+      this.answer = d.answer;
+      this.step = 'answer';
+      this.startTimer();
+      uni.showToast({ title: '已恢复上次未提交的作答', icon: 'none' });
+      this.loadCategories();
+      return true;
+    },
     voiceStub() {
       uni.showToast({ title: '语音作答即将上线，先用文字练起来吧', icon: 'none' });
     },
@@ -209,6 +227,7 @@ export default {
           onDelta: (full) => { this.review = full; },
         });
         this.review = res.review || this.review;
+        uni.removeStorageSync('ivDraft');
         if (res.session_id) this.loadPoints(res.session_id);
       } catch (e) {
         uni.showToast({ title: e.message || '点评失败，请重试', icon: 'none' });
@@ -305,15 +324,16 @@ export default {
 
 .q-card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 28rpx 32rpx; margin-bottom: 20rpx; }
 .q-meta { display: flex; align-items: center; gap: 16rpx; margin-bottom: 14rpx; }
-.q-tag { background: #e8effe; color: #2e5bff; font-size: 22rpx; font-weight: 600; border-radius: 8rpx; padding: 4rpx 14rpx; }
+.q-tag { background: #e8effe; color: var(--brand-text); font-size: 22rpx; font-weight: 600; border-radius: 8rpx; padding: 4rpx 14rpx; }
 .q-src { font-size: 22rpx; color: var(--ink-2); }
 .q-text { font-size: 29rpx; line-height: 1.7; color: var(--ink); }
 
 .timer-row { display: flex; justify-content: space-between; align-items: center; margin: 0 8rpx 14rpx; }
 .timer { display: flex; align-items: center; gap: 8rpx; font-size: 26rpx; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-.swap { font-size: 25rpx; color: #2e5bff; }
+.swap { font-size: 25rpx; color: var(--brand-text); }
 .ans-box { width: 100%; box-sizing: border-box; min-height: 320rpx; background: var(--card); border-radius: 24rpx; padding: 24rpx 28rpx; font-size: 28rpx; line-height: 1.7; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); }
 .cnt { text-align: right; font-size: 22rpx; color: var(--ink-2); margin: 10rpx 8rpx 24rpx; }
+.cnt-save { color: var(--ink-3); }
 
 .btn-row { display: flex; gap: 20rpx; margin-top: 10rpx; }
 .grow { flex: 1; }
@@ -321,7 +341,7 @@ export default {
 .btn-primary[disabled] { opacity: 0.5; }
 .btn-ghost { background: var(--card); color: var(--ink); border-radius: 999rpx; font-size: 26rpx; min-height: 44px; display: flex; align-items: center; justify-content: center; padding: 0 24rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); }
 .btn-ghost[disabled] { opacity: 0.5; }
-.hist-link { text-align: center; font-size: 26rpx; color: #2e5bff; margin-top: 28rpx; }
+.hist-link { text-align: center; font-size: 26rpx; color: var(--brand-text); margin-top: 28rpx; }
 
 .card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 28rpx 32rpx; margin-bottom: 20rpx; }
 .card-t { font-size: 29rpx; font-weight: 700; color: var(--ink); margin-bottom: 12rpx; }

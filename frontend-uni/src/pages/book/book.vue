@@ -164,7 +164,7 @@
         <view v-if="favs.length > 3" class="searchbar bk-main">
           <l-icon name="search" :size="16" color="#8a90a0" />
           <input v-model="favKw" class="searchinput" placeholder="搜收藏题干或题型" confirm-type="search" />
-          <view v-if="favKw" class="searchclear" @click="favKw = ''"><l-icon name="x" :size="16" color="#8a90a0" /></view>
+          <view v-if="favKw" class="searchclear" role="button" aria-label="清空搜索" @click="favKw = ''"><l-icon name="x" :size="16" color="#8a90a0" /></view>
         </view>
         <view v-for="f in favShown" :key="f.t" class="card mcard bk-main" @click="f._open = !f._open">
           <view class="mhead">
@@ -202,7 +202,7 @@
         <view class="sheet" @click.stop>
           <view class="sheet-h">
             <text class="sheet-t">AI 错题分析</text>
-            <view class="sheet-x" @click="aiOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+            <view class="sheet-x" role="button" aria-label="关闭" @click="aiOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
           </view>
           <view v-if="aiLoading" class="ai-loading">正在分析你的错题与作答数据，约需 30-60 秒…</view>
           <rich-text v-else :nodes="aiHtml" />
@@ -213,7 +213,7 @@
         <view class="sheet" @click.stop>
           <view class="sheet-h">
             <text class="sheet-t">手动录入答案</text>
-            <view class="sheet-x" @click="manualOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+            <view class="sheet-x" role="button" aria-label="关闭" @click="manualOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
           </view>
           <template v-if="!manualPaper">
             <view v-if="recentPapers.length" class="sheet-k">最近导出的试卷</view>
@@ -234,7 +234,7 @@
                 <text v-for="L in ['A','B','C','D']" :key="L" class="manual-opt" :class="{ on: manualPicks[no] === L }" @click="manualPick(no, L)">{{ L }}</text>
               </view>
             </scroll-view>
-            <view class="sheet-done" :class="{ dim: !manualPickedCount }" @click="manualSubmit">{{ manualSubmitting ? '判分中…' : '交卷判分（' + manualPickedCount + ' 题）' }}</view>
+            <view class="sheet-done" :class="{ dim: !manualPickedCount }" :aria-disabled="String(!manualPickedCount)" @click="manualSubmit">{{ manualSubmitting ? '判分中…' : '交卷判分（' + manualPickedCount + ' 题）' }}</view>
             <view class="manual-back" @click="manualPaper = null">‹ 换一份试卷</view>
           </template>
         </view>
@@ -243,7 +243,7 @@
         <view class="sheet" @click.stop>
           <view class="sheet-h">
             <text class="sheet-t">对答案结果 · {{ scanResult.title || '试卷' }}</text>
-            <view class="sheet-x" @click="scanOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+            <view class="sheet-x" role="button" aria-label="关闭" @click="scanOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
           </view>
           <view class="scan-sum">卷码 {{ scanResult.code }}{{ scanResult.page ? ' · 第 ' + scanResult.page + ' 页' : '' }} · 已作答 {{ scanResult.answered }}/{{ scanResult.total }} · 答对 <text class="scan-good">{{ scanResult.correct }}</text> 题{{ scanResult.saved ? ' · 已记入做题记录' : '' }}</view>
           <scroll-view scroll-y class="scan-list">
@@ -270,7 +270,7 @@
       <view v-if="tab !== 'fav' && items.length > 5" class="searchbar bk-main">
         <l-icon name="search" :size="16" color="#8a90a0" />
         <input v-model="kw" class="searchinput" placeholder="搜题干关键词或题型，如：增长率 / 类比推理" confirm-type="search" />
-        <view v-if="kw" class="searchclear" @click="kw = ''"><l-icon name="x" :size="16" color="#8a90a0" /></view>
+        <view v-if="kw" class="searchclear" role="button" aria-label="清空搜索" @click="kw = ''"><l-icon name="x" :size="16" color="#8a90a0" /></view>
       </view>
       <view v-if="tab !== 'fav' && modGroups.length" class="card modgroup bk-side">
         <view class="mg-h">按模块查看</view>
@@ -314,7 +314,7 @@
         <view class="sheet" @click.stop>
           <view class="sheet-h">
             <text class="sheet-t">键盘快捷键</text>
-            <view class="sheet-x" @click="kbdHelp = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+            <view class="sheet-x" role="button" aria-label="关闭" @click="kbdHelp = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
           </view>
           <view class="sheet-k">错题列表</view>
           <view class="kbd-row"><text class="kbd">J</text><text class="kbd">↓</text><text class="kbd-d">下一张错题</text></view>
@@ -341,7 +341,7 @@
         <view class="sheet" @click.stop>
           <view class="sheet-h">
             <text class="sheet-t">筛选与排序</text>
-            <view class="sheet-x" @click="filterOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+            <view class="sheet-x" role="button" aria-label="关闭" @click="filterOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
           </view>
           <view class="sheet-k">排序</view>
           <view class="kpchips">
@@ -376,6 +376,11 @@
         @confirm="exportMistakes"
       />
       <view v-if="tab !== 'fav' && loading" class="card spin bk-main">加载中…</view>
+      <view v-else-if="tab !== 'fav' && loadErr && !items.length" class="card empty bk-main">
+        <view class="e-t">加载失败</view>
+        <view class="e-s">{{ loadErr }}</view>
+        <view class="retry" @click="load">重试 ›</view>
+      </view>
       <view v-else-if="tab !== 'fav' && !items.length" class="card empty bk-main">
         <view class="e-ico"><l-icon name="folder-plus" :size="52" color="#c7cad4" :stroke-width="1.5" /></view>
         <view class="e-t">错题本还是空的</view>
@@ -441,7 +446,7 @@
         <view class="sheet" @click.stop>
           <view class="sheet-h">
             <text class="sheet-t">题目纠错</text>
-            <view class="sheet-x" @click="reportOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+            <view class="sheet-x" role="button" aria-label="关闭" @click="reportOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
           </view>
           <view class="rp-types">
             <text
@@ -493,6 +498,7 @@ export default {
     return {
       items: [],
       loading: true,
+      loadErr: '',
       offlineView: false,
       due: [],
       dueTotal: 0,
@@ -981,6 +987,15 @@ export default {
     async load() {
       const seq = (this._loadSeq = (this._loadSeq || 0) + 1);
       this.loading = true;
+      this.loadErr = '';
+      // 快照即显：屏上已有列表或本地缓存有错题时先铺屏（uid API 长尾下不再停留 spinner），真实响应到达后覆盖
+      if (!this.items.length) {
+        const snap = getCachedMistakes(anonUid());
+        if (snap && snap.items && snap.items.length) {
+          this.items = snap.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
+        }
+      }
+      if (this.items.length) this.loading = false;
       try {
         const uq = 'uid=' + encodeURIComponent(anonUid());
         const [d, r] = await Promise.all([request('/api/mistakes?' + uq), request('/api/review?' + uq)]);
@@ -993,7 +1008,7 @@ export default {
           if (this.due.length && !this.reviewing) this.startReview();
         }
         this.offlineView = false;
-        cacheMistakes(d.items);
+        cacheMistakes(d.items, anonUid());
         this.loadMastery();
         try {
           if (this.dueTotal > 0) uni.setTabBarBadge({ index: 1, text: String(this.dueTotal > 99 ? '99+' : this.dueTotal) });
@@ -1001,12 +1016,13 @@ export default {
         } catch (e) { /* tabBar 未就绪时忽略 */ }
       } catch (e) {
         if (seq !== this._loadSeq) return;
-        const c = getCachedMistakes();
+        const c = getCachedMistakes(anonUid());
         if (c && c.items && c.items.length) {
           this.items = c.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
           this.offlineView = true;
           uni.showToast({ title: '当前无网络，展示已缓存的错题', icon: 'none' });
         } else {
+          this.loadErr = e.message || '网络异常';
           uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
         }
       }
@@ -1367,20 +1383,21 @@ export default {
 .e-s { font-size: 24rpx; color: var(--ink-2); line-height: 1.7; margin-bottom: 28rpx; }
 :deep(.e-btn2) { margin-top: 8rpx; min-width: 60%; border-radius: 18rpx !important; background: linear-gradient(135deg, #5c82ff, var(--brand)) !important; font-weight: 600; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; border-left: none; }
+.retry { margin-top: 12rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 .searchbar { display: flex; align-items: center; gap: 12rpx; background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 14rpx 26rpx; margin-bottom: 20rpx; }
 .searchinput { flex: 1; font-size: 26rpx; color: var(--ink); height: 40rpx; line-height: 40rpx; }
 .searchclear { display: flex; align-items: center; padding: 0 8rpx; }
 .sortrow { display: flex; align-items: center; gap: 10rpx; margin-bottom: 16rpx; flex-wrap: wrap; }
 .sort-k { font-size: 22rpx; color: var(--ink-2); }
 .sort-chip { font-size: 22rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 4rpx 18rpx; background: var(--card); }
-.sort-chip.on { color: #fff; background: var(--brand); border-color: var(--brand); }
+.sort-chip.on { color: #fff; background: var(--brand); border-color: var(--brand-text); }
 .kpwrap { margin-bottom: 16rpx; }
 .kpchips { display: flex; flex-wrap: wrap; gap: 10rpx; margin-top: 8rpx; }
 .kpchip { font-size: 22rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 6rpx 18rpx; background: var(--card); }
-.kpchip.on { color: #fff; background: var(--brand); border-color: var(--brand); }
+.kpchip.on { color: #fff; background: var(--brand); border-color: var(--brand-text); }
 .chips { white-space: nowrap; margin-bottom: 24rpx; }
 .chip { display: inline-block; padding: 10rpx 30rpx; margin-right: 16rpx; border-radius: 999rpx; background: var(--card); border: 1rpx solid var(--line); font-size: 25rpx; color: var(--ink-2); }
-.chip.on { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
+.chip.on { background: var(--brand); border-color: var(--brand-text); color: #fff; font-weight: 600; }
 .mhead { display: flex; align-items: center; gap: 12rpx; flex-wrap: wrap; }
 .mtime { margin-left: auto; white-space: nowrap; }
 .duehint { display: inline-flex; align-items: center; gap: 8rpx; font-size: 21rpx; color: var(--ink-2); }
@@ -1403,11 +1420,11 @@ export default {
 .seg-i.on { background: var(--card); color: var(--ink); font-weight: 600; box-shadow: 0 2rpx 8rpx rgba(31, 35, 41, 0.08); }
 .filterbtn { display: inline-flex; align-items: center; gap: 6rpx; background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 24rpx; min-height: 44px; box-sizing: border-box; flex-shrink: 0; }
 .filterbtn-t { font-size: 24rpx; color: var(--ink-2); }
-.filterbtn.bon { background: var(--brand); border-color: var(--brand); }
+.filterbtn.bon { background: var(--brand); border-color: var(--brand-text); }
 .filterbtn-t.bont { color: #fff; font-weight: 600; }
 .bchk { width: 36rpx; height: 36rpx; border-radius: 50%; border: 3rpx solid var(--line); margin-right: 12rpx; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 24rpx; color: #fff; box-sizing: border-box; }
-.bchk.on { background: var(--brand); border-color: var(--brand); }
-.mcard.bsel { border-color: var(--brand); box-shadow: 0 0 0 2rpx var(--brand-soft); }
+.bchk.on { background: var(--brand); border-color: var(--brand-text); }
+.mcard.bsel { border-color: var(--brand-text); box-shadow: 0 0 0 2rpx var(--brand-soft); }
 .fabmenu { position: fixed; right: 32rpx; bottom: calc(50px + env(safe-area-inset-bottom) + 32rpx); z-index: 60; display: flex; flex-direction: column; align-items: flex-end; gap: 18rpx; }
 /* #ifndef H5 */
 .fabmenu { bottom: calc(env(safe-area-inset-bottom) + 32rpx); }
@@ -1416,7 +1433,7 @@ export default {
 .fab-main { width: 104rpx; height: 104rpx; border-radius: 50%; background: var(--brand); color: #fff; font-size: 52rpx; font-weight: 400; display: flex; align-items: center; justify-content: center; box-shadow: 0 10rpx 28rpx rgba(46, 91, 255, 0.35); transition: transform 0.3s ease; }
 .fab-main.open { transform: rotate(45deg); }
 .batchbar { position: fixed; left: 24rpx; right: 24rpx; bottom: calc(120rpx + env(safe-area-inset-bottom)); z-index: 50; background: var(--card); border: 1rpx solid var(--line); border-radius: 24rpx; box-shadow: 0 8rpx 32rpx rgba(31, 36, 48, 0.16); padding: 16rpx 24rpx; display: flex; align-items: center; gap: 16rpx; }
-.bb-sel { font-size: 24rpx; color: var(--brand); min-height: 44px; display: inline-flex; align-items: center; }
+.bb-sel { font-size: 24rpx; color: var(--brand-text); min-height: 44px; display: inline-flex; align-items: center; }
 .bb-n { font-size: 24rpx; color: var(--ink-2); flex: 1; }
 .bb-acts { display: flex; gap: 12rpx; }
 .bb-btn { font-size: 24rpx; font-weight: 600; border-radius: 999rpx; padding: 0 24rpx; min-height: 44px; display: inline-flex; align-items: center; }
@@ -1431,7 +1448,7 @@ export default {
 .mg-name { font-size: 29rpx; font-weight: 600; color: var(--ink); flex: 1; }
 .mg-badge { background: var(--fill); color: var(--ink-2); border-radius: 999rpx; font-size: 22rpx; padding: 4rpx 18rpx; }
 .mg-mst { font-size: 21rpx; color: var(--ink-3); white-space: nowrap; }
-.mg-go { font-size: 24rpx; color: var(--brand); padding: 18rpx 0 18rpx 24rpx; }
+.mg-go { font-size: 24rpx; color: var(--brand-text); padding: 18rpx 0 18rpx 24rpx; }
 .mg-sub { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding-left: 60rpx; border-bottom: 1rpx dashed var(--line); }
 .mg-sub-name { font-size: 26rpx; color: var(--ink); }
 .mg-sub3 { padding-left: 110rpx; min-height: 42px; }
@@ -1474,11 +1491,11 @@ export default {
 .manual-list { max-height: 44vh; }
 .manual-row { display: flex; align-items: center; gap: 16rpx; min-height: 88rpx; border-bottom: 1rpx solid var(--fill); }
 .manual-opt { flex: 1; text-align: center; line-height: 68rpx; border: 1rpx solid var(--line); border-radius: 12rpx; font-size: 28rpx; color: var(--ink-2); }
-.manual-opt.on { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
+.manual-opt.on { background: var(--brand); border-color: var(--brand-text); color: #fff; font-weight: 600; }
 .manual-codebar { margin: 0; }
 .manual-back { text-align: center; color: var(--ink-2); font-size: 25rpx; padding: 20rpx 0 4rpx; }
 .sheet-done.dim { opacity: 0.45; }
-.sheet-export { margin-top: 16rpx; margin-bottom: 110rpx; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand); text-align: center; border-radius: 999rpx; padding: 20rpx 0; font-size: 27rpx; font-weight: 500; }
+.sheet-export { margin-top: 16rpx; margin-bottom: 110rpx; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand-text); text-align: center; border-radius: 999rpx; padding: 20rpx 0; font-size: 27rpx; font-weight: 500; }
 .xp-k { margin-top: 12rpx; font-size: 22rpx; font-weight: 700; color: #ea580c; border-left: 6rpx solid #ea580c; padding-left: 10rpx; }
 .xp-body { margin-top: 6rpx; font-size: 23rpx; color: var(--ink); background: var(--warn-soft); border-radius: 10rpx; padding: 12rpx; line-height: 1.6; }
 .mfoot { display: flex; justify-content: space-between; align-items: center; margin-top: 12rpx; border-top: 1rpx solid var(--line); padding-top: 8rpx; }
@@ -1487,17 +1504,17 @@ export default {
 .loadmore { text-align: center; font-size: 24rpx; color: var(--ink-2); padding: 24rpx 0 140rpx; }
 .acts { display: flex; gap: 8rpx; }
 .op { font-size: 24rpx; margin-left: 16rpx; padding: 18rpx 24rpx; border-radius: 999rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
-.op.sim { background: var(--brand-soft); color: var(--brand); }
+.op.sim { background: var(--brand-soft); color: var(--brand-text); }
 .op.reportop { color: var(--ink-3); text-decoration: underline; }
 .rp-types { display: flex; flex-wrap: wrap; gap: 16rpx; margin-bottom: 20rpx; }
 .rp-chip { padding: 18rpx 26rpx; border-radius: 999rpx; background: var(--soft-bg); font-size: 26rpx; color: var(--ink-2); }
-.rp-chip.on { background: rgba(46, 91, 255, 0.12); color: var(--brand); font-weight: 600; }
+.rp-chip.on { background: rgba(46, 91, 255, 0.12); color: var(--brand-text); font-weight: 600; }
 .rp-detail { width: 100%; box-sizing: border-box; min-height: 140rpx; background: var(--soft-bg); border-radius: 16rpx; padding: 20rpx; font-size: 26rpx; }
 .rp-submit { margin-bottom: 110rpx; }
 .rp-submit.off { opacity: 0.45; pointer-events: none; }
-.redo { color: var(--brand); border: 1rpx solid var(--brand); }
+.redo { color: var(--brand-text); border: 1rpx solid var(--brand); }
 .del { color: #c33; }
-.tag { display: inline-block; background: var(--brand-soft); color: var(--brand); border-radius: 10rpx; padding: 4rpx 14rpx; font-size: 22rpx; }
+.tag { display: inline-block; background: var(--brand-soft); color: var(--brand-text); border-radius: 10rpx; padding: 4rpx 14rpx; font-size: 22rpx; }
 .q { font-size: 26rpx; line-height: 1.5; margin-top: 10rpx; }
 .q.clamp { max-height: 120rpx; overflow: hidden; }
 .meta { font-size: 22rpx; color: var(--ink-2); }
@@ -1507,11 +1524,11 @@ export default {
 .redo-ico { width: 64rpx; height: 64rpx; border-radius: 50%; background: var(--brand-soft); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .redo-t { display: block; font-size: 27rpx; font-weight: 600; color: var(--ink); }
 .redo-s { display: block; font-size: 21rpx; color: var(--ink-2); margin-top: 4rpx; }
-.redo-go { background: var(--brand-soft); color: var(--brand); font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 0 34rpx; min-height: 44px; line-height: 44px; flex-shrink: 0; box-sizing: border-box; }
+.redo-go { background: var(--brand-soft); color: var(--brand-text); font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 0 34rpx; min-height: 44px; line-height: 44px; flex-shrink: 0; box-sizing: border-box; }
 .nrbadge {
   display: inline-block;
   background: var(--brand-soft);
-  color: var(--brand);
+  color: var(--brand-text);
   border-radius: 10rpx;
   padding: 4rpx 14rpx;
   font-size: 22rpx;
@@ -1525,7 +1542,7 @@ export default {
 .duetxt { display: flex; align-items: center; gap: 8rpx; font-size: 28rpx; font-weight: 700; color: #fff; }
 .duetxt-t { font-size: 28rpx; font-weight: 700; color: #fff; }
 .duesub { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.75); margin-top: 6rpx; }
-.duego { background: var(--card); color: var(--brand); font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 0 34rpx; min-height: 44px; line-height: 44px; display: inline-block; box-sizing: border-box; }
+.duego { background: var(--card); color: var(--brand-text); font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 0 34rpx; min-height: 44px; line-height: 44px; display: inline-block; box-sizing: border-box; }
 .review { border-left-color: #f5a623; }
 .cb-card { background: var(--card); border-radius: 28rpx; padding: 56rpx 44rpx 40rpx; margin: 0 60rpx calc(env(safe-area-inset-bottom) + 120rpx); text-align: center; max-width: 560rpx; animation: cb-pop 0.35s ease-out; }
 .cb-emoji { font-size: 88rpx; line-height: 1; animation: cb-bounce 0.8s ease-out; }
@@ -1555,7 +1572,7 @@ export default {
 .reasons { display: flex; flex-wrap: wrap; align-items: center; gap: 12rpx; margin: 8rpx 0 16rpx; }
 .rz-t { font-size: 23rpx; color: var(--ink-2); }
 .rz { font-size: 23rpx; color: var(--ink-2); border: 1rpx solid var(--line); background: var(--soft-bg); border-radius: 999rpx; padding: 8rpx 22rpx; }
-.rz.on { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
+.rz.on { background: var(--brand); border-color: var(--brand-text); color: #fff; font-weight: 600; }
 .appended-tip { font-size: 23rpx; color: var(--brand, #2e5bff); background: var(--brand-soft, #eef3ff); border-radius: 10rpx; padding: 10rpx 16rpx; margin-bottom: 12rpx; }
 .sim-row { margin-top: 16rpx; text-align: center; }
 .sim-t { font-size: 25rpx; color: var(--brand, #2e5bff); font-weight: 600; }
@@ -1582,7 +1599,7 @@ export default {
 .kbd-row { display: flex; align-items: center; gap: 8rpx; margin-top: 14rpx; }
 .kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 40rpx; height: 40rpx; padding: 0 10rpx; box-sizing: border-box; background: var(--card); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 8rpx; font-size: 21rpx; font-weight: 600; color: var(--ink-2); }
 .kbd-d { font-size: 22rpx; color: var(--ink-2); margin-left: 8rpx; }
-.kbd-more { display: block; margin-top: 16rpx; font-size: 22rpx; color: var(--brand); cursor: pointer; }
+.kbd-more { display: block; margin-top: 16rpx; font-size: 22rpx; color: var(--brand-text); cursor: pointer; }
 
 /* 错题趋势卡（仅桌面侧栏展示） */
 .trendcard { display: none; }

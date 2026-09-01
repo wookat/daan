@@ -17,7 +17,17 @@
       <view class="progress"><view class="pfill" :style="{ width: ((idx + 1) / items.length) * 100 + '%' }"></view></view>
 
       <view class="card qcard" @touchstart="touchStart" @touchend="touchEnd">
-        <text class="q">{{ cur.question }}</text>
+        <view
+          v-if="matInfo"
+          class="mat-fold"
+          role="button"
+          :aria-label="matOpen[idx] ? '收起材料' : '展开材料'"
+          @click="toggleMat"
+        >
+          <text class="mat-fold-t">📄 同上材料（与上一题相同）</text>
+          <text class="mat-fold-a">{{ matOpen[idx] ? '收起 ‹' : '展开 ›' }}</text>
+        </view>
+        <text class="q">{{ matInfo && !matOpen[idx] ? matInfo.stem : cur.question }}</text>
         <image v-if="cur.image" :src="cur.image" class="qimg" mode="widthFix" />
         <view
           v-for="(v, k) in cur.options"
@@ -74,7 +84,7 @@
       <view class="sheet" @click.stop>
         <view class="sheet-h">
           <text class="sheet-t">答题卡</text>
-          <view class="sheet-x" @click="cardOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+          <view class="sheet-x" role="button" aria-label="关闭" @click="cardOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
         </view>
         <view class="legend">
           <text class="lg"><text class="dot done"></text>已答</text>
@@ -102,6 +112,7 @@
 <script>
 import { request, anonUid } from '../../api.js';
 import { dayKey } from '../../checkin.js';
+import { splitMaterial, sameMaterial } from '../../material.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
 const PROG_KEY = 'examProgress';
@@ -120,6 +131,7 @@ export default {
       qsecs: 0,
       qTimer: null,
       submitting: false,
+      matOpen: {},
     };
   },
   created() {
@@ -128,6 +140,13 @@ export default {
   },
   computed: {
     cur() { return this.items[this.idx] || {}; },
+    matInfo() {
+      const q = this.cur;
+      if (!q || q.module !== 'ziliao' || this.idx === 0) return null;
+      const prev = this.items[this.idx - 1];
+      if (!prev || prev.module !== 'ziliao' || !sameMaterial(prev.question, q.question)) return null;
+      return splitMaterial(q.question);
+    },
     answeredCount() { return this.items.filter((q) => q._picked).length; },
     fmtLeft() {
       const s = Math.max(0, this.leftSecs);
@@ -191,8 +210,16 @@ export default {
     }
     // #endif
   },
+  watch: {
+    items() {
+      this.matOpen = {};
+    },
+  },
   methods: {
     modName(m) { return MODS[m] || '行测'; },
+    toggleMat() {
+      this.matOpen = { ...this.matOpen, [this.idx]: !this.matOpen[this.idx] };
+    },
     async start(opt) {
       if (!opt.mini && !opt.paper_id) {
         uni.showToast({ title: '链接缺少试卷参数，去卷库选卷', icon: 'none' });
@@ -422,7 +449,7 @@ export default {
 .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; gap: 12rpx; }
 .meta-row { display: flex; justify-content: flex-end; margin-bottom: 8rpx; }
 .pos { font-size: 24rpx; font-weight: 600; color: var(--ink-2); }
-.mod { font-size: 21rpx; color: var(--brand); background: var(--brand-soft); border-radius: 8rpx; padding: 2rpx 12rpx; }
+.mod { font-size: 21rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 2rpx 12rpx; }
 .clock { font-size: 32rpx; font-weight: 700; color: #ef4444; font-variant-numeric: tabular-nums; }
 .top-btns { display: flex; gap: 10rpx; }
 .tbtn { min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; font-size: 23rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 22rpx; background: var(--card); }
@@ -430,14 +457,32 @@ export default {
 .progress { height: 6rpx; background: #dbe6ff; border-radius: 999rpx; overflow: hidden; margin-bottom: 20rpx; }
 .pfill { height: 100%; background: linear-gradient(90deg, #5c82ff, var(--brand)); border-radius: 999rpx; transition: width 0.3s ease; }
 .q { font-size: 30rpx; line-height: 1.7; margin-bottom: 22rpx; white-space: pre-wrap; display: block; }
+.mat-fold {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f0fdfa;
+  border: 1rpx solid #99f6e4;
+  border-radius: 12rpx;
+  padding: 14rpx 20rpx;
+  margin-bottom: 14rpx;
+}
+.mat-fold-t { font-size: 24rpx; color: #0f766e; }
+.mat-fold-a {
+  font-size: 24rpx;
+  color: #0d9488;
+  font-weight: 600;
+  flex-shrink: 0;
+  margin-left: 16rpx;
+}
 .qimg { width: 100%; border-radius: 12rpx; margin-bottom: 16rpx; background: var(--fill); }
 .opt { display: flex; align-items: center; border: 2rpx solid var(--line); border-radius: 20rpx; padding: 22rpx 24rpx; margin-bottom: 20rpx; font-size: 29rpx; line-height: 1.6; min-height: 44px; box-sizing: border-box; }
-.opt.sel { border-color: var(--brand); background: var(--brand-soft); }
+.opt.sel { border-color: var(--brand-text); background: var(--brand-soft); }
 .okey { flex-shrink: 0; width: 52rpx; height: 52rpx; line-height: 52rpx; text-align: center; border-radius: 50%; background: var(--soft-bg); color: var(--ink-2); font-weight: 600; font-size: 26rpx; margin-right: 20rpx; border: 1rpx solid var(--line); }
-.opt.sel .okey { background: var(--brand); color: #fff; border-color: var(--brand); }
+.opt.sel .okey { background: var(--brand); color: #fff; border-color: var(--brand-text); }
 .otext { flex: 1; }
 .navrow { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: flex; gap: 16rpx; padding: 20rpx 24rpx calc(20rpx + env(safe-area-inset-bottom)); background: var(--card); border-top: 1rpx solid var(--line); }
-.nbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand); border-radius: 999rpx; font-size: 27rpx; font-weight: 500; background: var(--card); }
+.nbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 27rpx; font-weight: 500; background: var(--card); }
 .nbtn.acard-btn { flex: 0 0 176rpx; border-color: var(--line); color: var(--ink-2); }
 .nbtn.main { background: var(--brand); color: #fff; }
 .nbtn.dis { opacity: 0.4; }
@@ -449,14 +494,14 @@ export default {
 .legend { display: flex; gap: 24rpx; margin-bottom: 16rpx; }
 .lg { display: inline-flex; align-items: center; gap: 8rpx; font-size: 22rpx; color: var(--ink-2); }
 .dot { width: 20rpx; height: 20rpx; border-radius: 50%; background: var(--soft-bg); border: 2rpx solid var(--line); display: inline-block; }
-.dot.done { background: var(--brand); border-color: var(--brand); }
+.dot.done { background: var(--brand); border-color: var(--brand-text); }
 .dot.mark { background: var(--warn-soft); border-color: #f59e0b; }
 .acard-scroll { max-height: 40vh; }
 .acard-grid { display: flex; flex-wrap: wrap; gap: 20rpx; padding: 8rpx 0 20rpx; }
 .acard-n { width: 80rpx; height: 80rpx; line-height: 80rpx; text-align: center; border-radius: 50%; background: var(--soft-bg); border: 2rpx solid var(--line); font-size: 27rpx; font-weight: 600; color: var(--ink-2); box-sizing: border-box; }
-.acard-n.done { background: var(--brand); border-color: var(--brand); color: #fff; }
+.acard-n.done { background: var(--brand); border-color: var(--brand-text); color: #fff; }
 .acard-n.mark { border-color: #f59e0b; }
-.acard-n.cur { box-shadow: 0 0 0 4rpx var(--brand-soft); border-color: var(--brand); }
+.acard-n.cur { box-shadow: 0 0 0 4rpx var(--brand-soft); border-color: var(--brand-text); }
 .acard-foot { text-align: center; font-size: 23rpx; color: var(--ink-2); padding: 8rpx 0 16rpx; }
 .btn { background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 28rpx; font-weight: 500; min-height: 44px; line-height: 44px; }
 
@@ -466,7 +511,7 @@ export default {
 @media (min-width: 768px) {
   .wrap { max-width: 1044px; margin: 0 auto; }
   .opt:hover, .tbtn:hover, .nbtn:hover, .acard-n:hover, .btn:hover { cursor: pointer; }
-  .opt:hover { border-color: var(--brand); }
+  .opt:hover { border-color: var(--brand-text); }
 }
 
 @media (min-width: 1024px) {

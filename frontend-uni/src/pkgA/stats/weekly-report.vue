@@ -142,7 +142,7 @@
 </template>
 
 <script>
-import { request, anonUid } from '../../api.js';
+import { request, snapPeek, anonUid } from '../../api.js';
 
 const W = 660;
 const H = 760;
@@ -233,26 +233,40 @@ export default {
     pct(v) { return Math.round((v || 0) * 100); },
     mins(s) { return Math.round((s || 0) / 60) + ' 分钟'; },
     async load() {
+      const p = '/api/report/weekly?uid=' + encodeURIComponent(anonUid()) + (this.week ? '&week=' + this.week : '');
+
+      // 快照即显：uid API 长尾下先用最近成功快照铺屏，真实响应到达后覆盖
+      const snap = snapPeek(p);
+      if (snap) {
+        this.applyReport(snap, true);
+        this.loading = false;
+      }
+
       try {
-        const q = '?uid=' + encodeURIComponent(anonUid()) + (this.week ? '&week=' + this.week : '');
-        const d = await request('/api/report/weekly' + q);
-        if (d.status === 'empty') {
-          this.empty = true;
-          this.range = d.range || '';
-        } else if (d.status === 'pending') {
-          this.pending = true;
-          this.range = d.range || '';
-          this.prevWeek = d.prev_week || '';
-        } else {
-          this.r = d;
-          this.markRead(d);
-          this.loadNextEvent();
-        }
+        this.applyReport(await request(p));
       } catch (e) {
         this.error = e.message || '网络异常';
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
       this.loading = false;
+    },
+    applyReport(d, stale) {
+      this.empty = false;
+      this.pending = false;
+      if (d.status === 'empty') {
+        this.empty = true;
+        this.range = d.range || '';
+      } else if (d.status === 'pending') {
+        this.pending = true;
+        this.range = d.range || '';
+        this.prevWeek = d.prev_week || '';
+      } else {
+        this.r = d;
+        if (!stale) {
+          this.markRead(d);
+          this.loadNextEvent();
+        }
+      }
     },
     async markRead(d) {
       try {
@@ -425,15 +439,15 @@ export default {
 .rs-p { font-size: 20rpx; color: var(--ink-3); font-weight: 400; }
 .mk-line { font-size: 26rpx; color: var(--ink); margin-bottom: 10rpx; }
 .mk-line.sub { font-size: 23rpx; color: var(--ink-2); }
-.mk-n { font-size: 34rpx; font-weight: 800; color: var(--brand); }
+.mk-n { font-size: 34rpx; font-weight: 800; color: var(--brand-text); }
 .mk-none { display: block; font-size: 25rpx; color: var(--ink-2); margin-bottom: 12rpx; }
-.link { font-size: 24rpx; color: var(--brand); font-weight: 600; min-height: 44px; display: flex; align-items: center; }
+.link { font-size: 24rpx; color: var(--brand-text); font-weight: 600; min-height: 44px; display: flex; align-items: center; }
 .act-row { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 10rpx 0; border-bottom: 1rpx solid var(--line); }
 .act-row:last-child { border-bottom: none; }
 .act-t { font-size: 25rpx; color: var(--ink); }
-.act-go { flex-shrink: 0; font-size: 24rpx; color: var(--brand); font-weight: 600; }
+.act-go { flex-shrink: 0; font-size: 24rpx; color: var(--brand-text); font-weight: 600; }
 .btns { display: flex; }
-.pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand); border-radius: 999rpx; font-size: 27rpx; font-weight: 500; background: var(--card); }
+.pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 27rpx; font-weight: 500; background: var(--card); }
 .pbtn.main { background: var(--brand); color: #fff; }
 .mask { position: fixed; inset: 0; background: rgba(15, 18, 25, 0.45); z-index: 90; display: flex; align-items: flex-end; }
 .sheet { width: 100%; background: var(--card); border-radius: 28rpx 28rpx 0 0; padding: 28rpx 28rpx calc(28rpx + env(safe-area-inset-bottom)); max-height: 85vh; box-sizing: border-box; overflow-y: auto; }

@@ -148,7 +148,7 @@
 </template>
 
 <script>
-import { request, getAuthUser, authLogout, clearAuth, anonUid, fetchCheckinBadges, fetchCommentInbox } from '../../api.js';
+import { request, snapPeek, getAuthUser, authLogout, clearAuth, anonUid, fetchCheckinBadges, fetchCommentInbox } from '../../api.js';
 import { getReminderSettings } from '../../reminder.js';
 import { cycleThemeMode, getThemeMode, THEME_LABELS } from '../../theme.js';
 // #ifdef H5
@@ -294,16 +294,26 @@ export default {
     },
     async loadRemote() {
       const uid = anonUid();
+      // 快照即显：uid API 长尾下先用最近成功快照铺屏，真实响应到达后覆盖
+      const mp = '/api/mistakes?uid=' + encodeURIComponent(uid) + '&limit=1';
+      const pp = '/api/profile?uid=' + encodeURIComponent(uid);
+      const gp = '/api/growth?uid=' + encodeURIComponent(uid);
+      const mSnap = snapPeek(mp);
+      if (mSnap) this.mistakeN = mSnap.total != null ? mSnap.total : (mSnap.items || []).length;
+      const pSnap = snapPeek(pp);
+      if (pSnap) this.profile = pSnap.profile || null;
+      const gSnap = snapPeek(gp);
+      if (gSnap) this.growth = gSnap;
       try {
-        const d = await request('/api/mistakes?uid=' + encodeURIComponent(uid) + '&limit=1');
+        const d = await request(mp);
         this.mistakeN = d.total != null ? d.total : (d.items || []).length;
       } catch (e) { /* 非关键路径 */ }
       try {
-        const d = await request('/api/profile?uid=' + encodeURIComponent(uid));
+        const d = await request(pp);
         this.profile = d.profile || null;
       } catch (e) { /* 非关键路径 */ }
       try {
-        this.growth = await request('/api/growth?uid=' + encodeURIComponent(uid));
+        this.growth = await request(gp);
       } catch (e) { /* 非关键路径 */ }
       try {
         const d = await request('/api/announcement');
@@ -453,7 +463,7 @@ export default {
 
 .zl-footer { margin: 48rpx 0 16rpx; text-align: center; }
 .zl-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8rpx 28rpx; margin-bottom: 14rpx; }
-.zl-link { font-size: 24rpx; color: var(--brand); }
+.zl-link { font-size: 24rpx; color: var(--brand-text); }
 .zl-copy { font-size: 22rpx; color: var(--ink-3); }
 
 /* #ifdef H5 */

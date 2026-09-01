@@ -90,19 +90,19 @@ export default {
 
 .card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 40rpx 32rpx; margin-bottom: 20rpx; display: flex; flex-direction: column; align-items: center; }
 .code-l { font-size: 24rpx; color: var(--ink-2); margin-bottom: 14rpx; }
-.code { font-size: 56rpx; font-weight: 800; color: var(--brand); letter-spacing: 8rpx; margin-bottom: 30rpx; }
+.code { font-size: 56rpx; font-weight: 800; color: var(--brand-text); letter-spacing: 8rpx; margin-bottom: 30rpx; }
 .ok-t { font-size: 34rpx; font-weight: 700; color: var(--ink); margin-bottom: 12rpx; }
 .ok-s { font-size: 24rpx; color: var(--ink-2); margin-bottom: 30rpx; }
 .err { font-size: 27rpx; color: #dc2626; margin-bottom: 26rpx; }
 
 .act-btn { width: 100%; min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; font-size: 29rpx; font-weight: 600; margin-bottom: 18rpx; box-sizing: border-box; }
 .act-btn.main { background: var(--brand); color: #fff; }
-.act-btn.sub { background: var(--brand-soft); color: var(--brand); }
+.act-btn.sub { background: var(--brand-soft); color: var(--brand-text); }
 
 .join-input { width: 100%; background: var(--fill); border-radius: 999rpx; padding: 0 30rpx; min-height: 44px; font-size: 28rpx; margin-bottom: 26rpx; box-sizing: border-box; text-align: center; }
 
 .reg-tip { text-align: center; padding: 20rpx 0; }
-.reg-t { font-size: 24rpx; color: var(--brand); }
+.reg-t { font-size: 24rpx; color: var(--brand-text); }
 
 /* #ifdef H5 */
 @media (min-width: 768px) {

@@ -138,7 +138,7 @@ export default {
 .fill { height: 100%; background: var(--brand); border-radius: 999rpx; min-width: 6rpx; }
 .hint { font-size: 23rpx; color: var(--ink-3); margin-top: 14rpx; line-height: 1.6; }
 .sync { display: flex; align-items: center; gap: 16rpx; background: var(--brand-soft); box-shadow: none; }
-.sync-t { flex: 1; font-size: 24rpx; color: var(--brand); line-height: 1.6; }
+.sync-t { flex: 1; font-size: 24rpx; color: var(--brand-text); line-height: 1.6; }
 .sync-btn { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: #fff; background: var(--brand); border-radius: 999rpx; padding: 10rpx 26rpx; }
 .sec-t { font-size: 24rpx; color: var(--ink-2); margin: 28rpx 8rpx 14rpx; }
 .group { padding: 6rpx 28rpx; }
@@ -148,7 +148,7 @@ export default {
 .grow { flex: 1; min-width: 0; }
 .nm { display: block; font-size: 27rpx; font-weight: 600; color: var(--ink); }
 .sub2 { display: block; font-size: 22rpx; color: var(--ink-3); margin-top: 4rpx; }
-.act { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: var(--brand); padding: 12rpx 16rpx; }
+.act { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: var(--brand-text); padding: 12rpx 16rpx; }
 .act.del { color: var(--bad); }
 .act.dim { color: var(--ink-4); }
 .hint2 { font-size: 23rpx; color: var(--ink-3); line-height: 1.7; margin: 8rpx 10rpx; }

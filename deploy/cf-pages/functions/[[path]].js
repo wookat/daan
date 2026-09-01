@@ -4,6 +4,7 @@ import {
   edgeTtl,
   cacheFreshness,
   isCacheableContentType,
+  serveMode,
 } from "./edge-policy.js";
 
 const ORIGIN = "https://kaogong-origin.zalize.com";
@@ -21,7 +22,8 @@ const SECURITY_HEADERS = {
     "base-uri 'self'; frame-ancestors 'self'; form-action 'self'",
 };
 
-// stale-if-error：缓存副本在边缘长存 24h，TTL 过期后仅在回源 5xx/不可达时回退陈旧副本
+// 缓存副本在边缘长存 24h：TTL 过期后先回陈旧副本并后台刷新（stale-while-revalidate），
+// 后台刷新失败/5xx 时保留旧副本继续兜底（stale-if-error）
 const STALE_KEEP = 86400;
 
 // 副本自身 Cache-Control 为长存值，对外输出时改回逻辑 TTL，避免下游/浏览器长缓存
@@ -32,6 +34,41 @@ function fromCache(hit, ttl, label) {
   resp.headers.set("X-Edge-Cache", label);
   return resp;
 }
+
+// 安全头 + robots 语义：前台直出与后台刷新入缓存的副本共用，保证两条路径逐字节同构
+function decorate(resp, pathname) {
+  for (const [k, v] of Object.entries(SECURITY_HEADERS)) resp.headers.set(k, v);
+  if (pathname.startsWith("/admin") || pathname.startsWith("/api/")) {
+    resp.headers.set("X-Robots-Tag", "noindex, nofollow");
+  } else {
+    resp.headers.delete("X-Robots-Tag");
+  }
+  return resp;
+}
+
+// 长存副本：Cache-Control 为 STALE_KEEP，对外新鲜度由 X-Kg-Cached-At + TTL 判定
+function toCacheCopy(body, resp) {
+  const copy = new Response(body, resp);
+  copy.headers.set("Cache-Control", `public, max-age=${STALE_KEEP}`);
+  copy.headers.set("X-Kg-Cached-At", String(Math.floor(Date.now() / 1000)));
+  copy.headers.delete("Set-Cookie");
+  return copy;
+}
+
+// 后台回源刷新副本：200 且 content-type 合法才覆盖，失败保留旧副本（stale-if-error）
+async function revalidate(req, cacheKey, pathname, isApi) {
+  let upstream;
+  try {
+    upstream = await fetch(req);
+  } catch {
+    return;
+  }
+  const resp = decorate(new Response(upstream.body, upstream), pathname);
+  const ctOk = isCacheableContentType(pathname, isApi, resp.headers.get("content-type"));
+  if (resp.status !== 200 || !ctOk) return;
+  await caches.default.put(cacheKey, toCacheCopy(resp.body, resp));
+}
+
 export async function onRequest({ request, env, waitUntil }) {
   const url = new URL(request.url);
   if (isBlockedBot(url.pathname, request.headers.get("User-Agent"))) {
@@ -46,18 +83,15 @@ export async function onRequest({ request, env, waitUntil }) {
   const isApi = url.pathname.startsWith("/api/");
   const ttl = edgeTtl(url.pathname);
   // 副本按 STALE_KEEP 长存，逻辑新鲜度由 X-Kg-Cached-At 判定：
-  // TTL 内直接 HIT；过期后回源，origin 5xx/不可达时回退陈旧副本（stale-if-error），
-  // 消除部署容器重建/autoheal 重启窗口对可缓存 GET 的 502 外泄。
+  // TTL 内直接 HIT；过期且有副本先回陈旧副本并后台刷新（swr）；无副本才同步回源。
   let stale = null;
+  let mode = "fetch";
   if (cacheable) {
     const hit = await caches.default.match(request.url);
-    if (hit) {
-      const cachedAt = hit.headers.get("X-Kg-Cached-At");
-      if (cacheFreshness(cachedAt, Date.now() / 1000, ttl) === "hit") {
-        return fromCache(hit, ttl, "HIT");
-      }
-      stale = hit;
-    }
+    const cachedAt = hit && hit.headers.get("X-Kg-Cached-At");
+    mode = serveMode(!!hit, cacheFreshness(cachedAt, Date.now() / 1000, ttl));
+    if (mode === "hit") return fromCache(hit, ttl, "HIT");
+    stale = hit;
   }
   const req = new Request(ORIGIN + url.pathname + url.search, request);
   req.headers.set("X-Forwarded-Host", url.hostname);
@@ -69,6 +103,11 @@ export async function onRequest({ request, env, waitUntil }) {
   if (clientUa) req.headers.set("X-Kg-Ua", clientUa);
   // 共享密钥头：origin Caddy 只放行带此头的请求，拒绝绕过边缘缓存的直连爬虫
   if (env.KG_EDGE_KEY) req.headers.set("X-Kg-Edge", env.KG_EDGE_KEY);
+  // stale-while-revalidate：立即回陈旧副本，后台回源刷新，用户不等待 origin 长尾
+  if (mode === "swr") {
+    waitUntil(revalidate(req, request.url, url.pathname, isApi));
+    return fromCache(stale, ttl, "REVALIDATE");
+  }
   let upstream;
   try {
     upstream = await fetch(req);
@@ -77,22 +116,11 @@ export async function onRequest({ request, env, waitUntil }) {
     throw e;
   }
   if (stale && upstream.status >= 500) return fromCache(stale, ttl, "STALE");
-  const resp = new Response(upstream.body, upstream);
-  for (const [k, v] of Object.entries(SECURITY_HEADERS)) resp.headers.set(k, v);
-  if (url.pathname.startsWith("/admin") || url.pathname.startsWith("/api/")) {
-    resp.headers.set("X-Robots-Tag", "noindex, nofollow");
-  } else {
-    resp.headers.delete("X-Robots-Tag");
-  }
+  const resp = decorate(new Response(upstream.body, upstream), url.pathname);
   const ctOk = isCacheableContentType(url.pathname, isApi, resp.headers.get("content-type"));
   if (cacheable && resp.status === 200 && ctOk) {
     const [body, cacheBody] = resp.body.tee();
-    const cacheCopy = new Response(cacheBody, resp);
-    // 副本长存 24h 供 stale-if-error 兜底；对外新鲜度由 X-Kg-Cached-At + TTL 判定
-    cacheCopy.headers.set("Cache-Control", `public, max-age=${STALE_KEEP}`);
-    cacheCopy.headers.set("X-Kg-Cached-At", String(Math.floor(Date.now() / 1000)));
-    cacheCopy.headers.delete("Set-Cookie");
-    waitUntil(caches.default.put(request.url, cacheCopy));
+    waitUntil(caches.default.put(request.url, toCacheCopy(cacheBody, resp)));
     const out = new Response(body, resp);
     out.headers.set("Cache-Control", `public, max-age=${ttl}`);
     out.headers.set("X-Edge-Cache", "MISS");

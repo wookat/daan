@@ -85,12 +85,15 @@
       </view>
     </template>
 
-    <view v-else class="card cold"><view class="cold-s">{{ err || '加载中…' }}</view></view>
+    <view v-else class="card cold">
+      <view class="cold-s">{{ err || '加载中…' }}</view>
+      <view v-if="err" class="retry" @click="load">重试 ›</view>
+    </view>
   </view>
 </template>
 
 <script>
-import { request, anonUid } from '../../api.js';
+import { request, snapPeek, anonUid } from '../../api.js';
 
 export default {
   data() {
@@ -111,20 +114,27 @@ export default {
   },
   methods: {
     async load() {
+      this.err = '';
+      const p = '/api/mastery/map?uid=' + encodeURIComponent(anonUid());
+      // 快照即显：uid API 长尾下先用最近成功快照铺屏，真实响应到达后覆盖
+      const snap = snapPeek(p);
+      if (snap) this.applyMap(snap);
       try {
-        const d = await request('/api/mastery/map?uid=' + encodeURIComponent(anonUid()));
-        this.nTotal = d.n_total || 0;
-        this.need = d.need || 30;
-        if (d.cold) {
-          this.cold = true;
-          return;
-        }
-        this.cold = false;
-        this.map = d;
-        if (!this.curMod && d.modules.length) this.curMod = d.modules[0].module;
+        this.applyMap(await request(p));
       } catch (e) {
         this.err = '加载失败：' + e.message;
       }
+    },
+    applyMap(d) {
+      this.nTotal = d.n_total || 0;
+      this.need = d.need || 30;
+      if (d.cold) {
+        this.cold = true;
+        return;
+      }
+      this.cold = false;
+      this.map = d;
+      if (!this.curMod && d.modules.length) this.curMod = d.modules[0].module;
     },
     pick(g, t) {
       this.selected = this.selected && this.selected.code === t.code ? null : t;
@@ -167,6 +177,7 @@ export default {
   font-weight: 700;
   color: var(--ink, #17181c);
 }
+.retry { margin-top: 12rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 .cold-s {
   font-size: 24rpx;
   color: var(--ink-2, #5f6575);
@@ -218,7 +229,7 @@ export default {
 .cov-n {
   font-size: 28rpx;
   font-weight: 700;
-  color: #2e5bff;
+  color: var(--brand-text);
 }
 .cov-t {
   font-size: 18rpx;
@@ -404,7 +415,7 @@ export default {
 }
 .s-btn.ghost {
   background: #eef3ff;
-  color: #2e5bff;
+  color: var(--brand-text);
 }
 .side-nav {
   display: none;

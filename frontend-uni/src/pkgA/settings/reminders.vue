@@ -215,12 +215,16 @@ export default {
 .group { padding: 4rpx 32rpx; }
 .set-row { display: flex; align-items: center; gap: 22rpx; min-height: 56px; border-top: 1rpx solid var(--line); }
 .set-row:first-child { border-top: none; }
-.set-row.dim { opacity: 0.5; }
+.set-row.dim .ico,
+.set-row.dim .wd-switch,
+.set-row.dim uni-switch { opacity: 0.5; }
+.set-row.dim .nm,
+.set-row.dim .time-v { color: var(--ink-2); }
 .ico { width: 68rpx; height: 68rpx; border-radius: 18rpx; background: var(--brand-soft); display: flex; align-items: center; justify-content: center; font-size: 32rpx; flex-shrink: 0; }
 .grow { flex: 1; min-width: 0; }
 .nm { display: block; font-size: 28rpx; font-weight: 600; color: var(--ink); }
 .sub { display: block; font-size: 23rpx; color: var(--ink-2); margin-top: 4rpx; }
-.time-v { font-size: 27rpx; color: var(--brand); font-weight: 600; }
+.time-v { font-size: 27rpx; color: var(--brand-text); font-weight: 600; }
 
 .warn-card { padding: 26rpx 30rpx; background: var(--warn-soft); }
 .warn-t { display: flex; align-items: center; gap: 8rpx; font-size: 27rpx; font-weight: 600; color: var(--warn); }
@@ -235,7 +239,7 @@ export default {
 .bd { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 6rpx; line-height: 1.6; }
 
 .tip { background: var(--brand-soft); box-shadow: none; padding: 22rpx 28rpx; }
-.tip-t { font-size: 24rpx; color: var(--brand); line-height: 1.6; }
+.tip-t { font-size: 24rpx; color: var(--brand-text); line-height: 1.6; }
 
 /* #ifdef H5 */
 @media (min-width: 768px) {

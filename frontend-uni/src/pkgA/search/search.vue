@@ -4,7 +4,7 @@
       <view class="sbox">
         <l-icon name="search" :size="18" color="#9ca3af" />
         <input v-model="kw" class="sinput" placeholder="题号 / 题干关键词 / 考点名" confirm-type="search" focus @confirm="doSearch" @input="onInput" />
-        <view v-if="kw" class="sclear" @click="kw = ''; result = null"><l-icon name="x" :size="16" color="#8a90a0" /></view>
+        <view v-if="kw" class="sclear" role="button" aria-label="清空搜索" @click="kw = ''; result = null; loadErr = ''; syncUrl()"><l-icon name="x" :size="16" color="#8a90a0" /></view>
       </view>
       <text class="scancel" @click="goBack">取消</text>
     </view>
@@ -13,11 +13,16 @@
     </view>
 
     <view v-if="loading" class="empty">搜索中…</view>
+    <view v-else-if="loadErr" class="empty">
+      <text class="empty-t">搜索失败：{{ loadErr }}</text>
+      <view class="retry" role="button" aria-label="重试搜索" @click="doSearch">重试 ›</view>
+    </view>
     <template v-else-if="result">
       <!-- 题号直达 -->
       <view v-if="result.code_hit" class="card qitem" @click="toggleDetail(result.code_hit)">
         <view class="q-top"><text class="q-code">{{ result.code_hit.code }}</text><text class="q-mod">{{ modName(result.code_hit.module) }}</text></view>
         <rich-text class="q-text" :nodes="hl(result.code_hit.question)" />
+        <view v-if="detailWant === result.code_hit.id && !(detail && detail.id === result.code_hit.id)" class="q-loading">解析加载中…</view>
         <view v-if="detail && detail.id === result.code_hit.id" class="q-detail">
           <text v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: k === detail.answer }">{{ k }}. {{ v }}</text>
           <text class="q-ans">答案：{{ detail.answer }}</text>
@@ -60,13 +65,14 @@
             <text class="q-mod">{{ modName(it.module) }}{{ it.submodule ? ' · ' + it.submodule : '' }}</text>
           </view>
           <rich-text class="q-text" :nodes="hl(it.question)" />
+          <view v-if="detailWant === it.id && !(detail && detail.id === it.id)" class="q-loading">解析加载中…</view>
           <view v-if="detail && detail.id === it.id" class="q-detail">
             <text v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: k === detail.answer }">{{ k }}. {{ v }}</text>
             <text class="q-ans">答案：{{ detail.answer }}</text>
             <text v-if="detail.explanation" class="q-exp">{{ detail.explanation }}</text>
           </view>
         </view>
-        <view v-if="result.questions.total > result.questions.items.length" class="more" @click="loadMore">加载更多</view>
+        <view v-if="result.questions.total > result.questions.items.length" class="more" @click="loadMore">{{ moreLoading ? '加载中…' : '加载更多' }}</view>
       </view>
       </view>
       </view>
@@ -75,12 +81,24 @@
         <text>可尝试题号（如 ZL-JQ-2024-000914）、题干关键词或考点名</text>
       </view>
     </template>
-    <view v-else class="empty">支持搜索：题号语义码、题干关键词、考点名、试卷名</view>
+    <template v-else>
+      <view v-if="hist.length" class="hist">
+        <view class="hist-top">
+          <text class="hist-t">搜索历史</text>
+          <view class="hist-clear" role="button" aria-label="清空搜索历史" @click="clearHist">清空</view>
+        </view>
+        <view class="hist-chips">
+          <text v-for="h in hist" :key="h" class="hist-chip" role="button" :aria-label="'搜索 ' + h" @click="kw = h; doSearch()">{{ h }}</text>
+        </view>
+      </view>
+      <view class="empty">支持搜索：题号语义码、题干关键词、考点名、试卷名</view>
+    </template>
   </view>
 </template>
 
 <script>
 import { request } from '../../api.js';
+import { buildSearchUrl } from '../../search-url.js';
 
 const MODS = { ziliao: '资料', shuliang: '数量', yanyu: '言语', panduan: '判断', changshi: '常识', shenlun: '申论' };
 
@@ -96,10 +114,22 @@ export default {
         { k: 'paper', n: '试卷' }
       ],
       loading: false,
+      loadErr: '',
       result: null,
       detail: null,
-      timer: null
+      detailWant: null,
+      timer: null,
+      searchSeq: 0,
+      moreLoading: false,
+      hist: uni.getStorageSync('kgSearchHist') || []
     };
+  },
+  onLoad(options) {
+    const q = decodeURIComponent(options && options.q ? options.q : '').trim();
+    if (!q) return;
+    if (options.tab && this.TABS.some((t) => t.k === options.tab)) this.tab = options.tab;
+    this.kw = q.slice(0, 64);
+    this.doSearch();
   },
   computed: {
     hasSide() {
@@ -120,43 +150,89 @@ export default {
     showSec(k) {
       return this.tab === 'all' || this.tab === k;
     },
+    saveHist(q) {
+      const h = this.hist.filter((x) => x !== q);
+      h.unshift(q);
+      this.hist = h.slice(0, 10);
+      uni.setStorageSync('kgSearchHist', this.hist);
+    },
+    syncUrl() {
+      // #ifdef H5
+      if (typeof window === 'undefined' || !window.history) return;
+      window.history.replaceState(null, '', buildSearchUrl(this.kw, this.tab));
+      // #endif
+    },
+    clearHist() {
+      this.hist = [];
+      uni.removeStorageSync('kgSearchHist');
+    },
     onInput() {
       clearTimeout(this.timer);
       this.timer = setTimeout(() => this.doSearch(), 400);
     },
     async doSearch() {
       const q = this.kw.trim();
+      const seq = ++this.searchSeq;
       if (!q) {
         this.result = null;
+        this.loadErr = '';
         return;
       }
       this.loading = true;
       this.detail = null;
+      this.detailWant = null;
       try {
-        this.result = await request('/api/search?q=' + encodeURIComponent(q) + '&type=' + this.tab);
+        const d = await request('/api/search?q=' + encodeURIComponent(q) + '&type=' + this.tab);
+        if (seq !== this.searchSeq) return;
+        this.result = d;
+        this.loadErr = '';
+        this.saveHist(q);
+        this.syncUrl();
       } catch (e) {
-        uni.showToast({ title: e.message || '搜索失败', icon: 'none' });
+        if (seq !== this.searchSeq) return;
+        if (this.result) {
+          uni.showToast({ title: e.message || '搜索失败', icon: 'none' });
+        } else {
+          this.loadErr = e.message || '搜索失败';
+        }
       }
-      this.loading = false;
+      if (seq === this.searchSeq) this.loading = false;
     },
     async loadMore() {
-      const q = this.result.q;
-      const off = this.result.questions.items.length;
+      if (this.moreLoading) return;
+      this.moreLoading = true;
+      const r = this.result;
+      const q = r.q;
+      const off = r.questions.items.length;
       try {
         const d = await request('/api/search?q=' + encodeURIComponent(q) + '&type=question&offset=' + off);
-        if (d.questions) this.result.questions.items.push(...d.questions.items);
+        if (r !== this.result) return;
+        if (d.questions) {
+          const seen = new Set(r.questions.items.map((x) => x.id));
+          r.questions.items.push(...d.questions.items.filter((x) => !seen.has(x.id)));
+        }
       } catch (e) {
+        if (r !== this.result) return;
         uni.showToast({ title: '加载失败', icon: 'none' });
+      } finally {
+        this.moreLoading = false;
       }
     },
     async toggleDetail(it) {
       if (this.detail && this.detail.id === it.id) {
         this.detail = null;
+        this.detailWant = null;
         return;
       }
+      if (this.detailWant === it.id) return;
+      this.detailWant = it.id;
       try {
-        this.detail = await request('/api/search/question/' + it.id);
+        const d = await request('/api/search/question/' + it.id);
+        if (this.detailWant !== it.id) return;
+        this.detail = d;
       } catch (e) {
+        if (this.detailWant !== it.id) return;
+        this.detailWant = null;
         uni.showToast({ title: '加载失败', icon: 'none' });
       }
     },
@@ -177,7 +253,7 @@ export default {
       const t = this.esc(text);
       const q = this.esc(this.result && this.result.q);
       if (!q) return t;
-      return t.split(q).join('<span style="color:#2e5bff;font-weight:600">' + q + '</span>');
+      return t.split(q).join('<span style="color:var(--brand-text);font-weight:600">' + q + '</span>');
     }
   }
 };
@@ -195,25 +271,34 @@ export default {
 .tab.on { color: #fff; background: var(--brand); font-weight: 600; }
 .card { background: var(--card); border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx; }
 .sec { margin-bottom: 12rpx; }
-.sec-t { display: block; font-size: 24rpx; color: var(--ink-3); margin: 12rpx 4rpx; }
+.sec-t { display: block; font-size: 24rpx; color: var(--ink-2); margin: 12rpx 4rpx; }
 .titem { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }
 .t-l { flex: 1; display: flex; flex-direction: column; gap: 6rpx; }
 .t-name { font-size: 28rpx; color: var(--ink); font-weight: 600; }
 .t-sub { font-size: 22rpx; color: var(--ink-3); }
-.t-go { font-size: 24rpx; color: var(--brand); flex-shrink: 0; }
+.t-go { font-size: 24rpx; color: var(--brand-text); flex-shrink: 0; }
 .qitem { display: flex; flex-direction: column; gap: 10rpx; }
 .q-top { display: flex; align-items: center; gap: 12rpx; flex-wrap: wrap; }
 .q-code { font-size: 20rpx; color: var(--ink-2); background: var(--fill); border-radius: 6rpx; padding: 2rpx 10rpx; font-family: monospace; }
-.q-real { font-size: 20rpx; color: #b45309; background: var(--warn-soft); border-radius: 6rpx; padding: 2rpx 10rpx; }
+.q-real { font-size: 20rpx; color: var(--warn-strong); background: var(--warn-soft); border-radius: 6rpx; padding: 2rpx 10rpx; }
 .q-mod { font-size: 20rpx; color: var(--ink-3); }
 .q-text { font-size: 26rpx; color: var(--ink-2); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.q-loading { font-size: 24rpx; color: var(--ink-3); padding-top: 10rpx; }
 .q-detail { border-top: 1rpx solid var(--fill); padding-top: 14rpx; display: flex; flex-direction: column; gap: 8rpx; }
 .q-opt { font-size: 24rpx; color: var(--ink-2); }
-.q-opt.ans { color: #12b76a; font-weight: 600; }
-.q-ans { font-size: 24rpx; color: #12b76a; font-weight: 600; margin-top: 4rpx; }
+.q-opt.ans { color: var(--ok-strong); font-weight: 600; }
+.q-ans { font-size: 24rpx; color: var(--ok-strong); font-weight: 600; margin-top: 4rpx; }
 .q-exp { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; }
-.more { text-align: center; font-size: 26rpx; color: var(--brand); padding: 16rpx; }
+.more { text-align: center; font-size: 26rpx; color: var(--brand-text); padding: 16rpx; }
 .empty { display: flex; flex-direction: column; gap: 8rpx; text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 100rpx 40rpx; }
+.empty-t { font-size: 26rpx; color: var(--ink-2); }
+.retry { margin-top: 8rpx; font-size: 26rpx; color: var(--brand-text); font-weight: 600; }
+.hist { margin-top: 28rpx; }
+.hist-top { display: flex; align-items: center; justify-content: space-between; }
+.hist-t { font-size: 26rpx; font-weight: 600; color: var(--ink-2); }
+.hist-clear { font-size: 24rpx; color: var(--ink-3, #8a90a0); padding: 8rpx; }
+.hist-chips { display: flex; flex-wrap: wrap; gap: 16rpx; margin-top: 16rpx; }
+.hist-chip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 26rpx; color: var(--ink-1, #1f2430); background: var(--card, #fff); border: 1px solid var(--line, #e5e7eb); border-radius: 999rpx; padding: 10rpx 24rpx; }
 
 /* 桌面（H5）：≥1024 左考点/试卷侧栏 + 右题目列表（仅「全部」tab） */
 /* #ifdef H5 */
