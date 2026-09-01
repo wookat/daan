@@ -142,8 +142,12 @@ def init_db():
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_q_disabled_module ON questions(disabled, module)"
     )
+    conn.execute("DROP INDEX IF EXISTS idx_q_disabled_tag3")
     conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_q_disabled_tag3 ON questions(disabled, tag3)"
+        "CREATE INDEX IF NOT EXISTS idx_q_disabled_tag3_upd ON questions(disabled, tag3, updated_at)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_q_real_region ON questions(is_real, exam_region)"
     )
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_q_real_year ON questions(is_real, disabled, exam_year, module, updated_at)"
