@@ -580,11 +580,16 @@ def api_track(body: dict, request: Request):
             ) if request.headers.get(h)
         )
         ref = f"{ref};ua:{ua or '-'}{uav};hs:{hs or '-'}"[:300]
+    # 离线重放：客户端补报时携带 ago_ms，还原事件真实发生时刻（钳制 0–7 天）
+    try:
+        ago_ms = min(max(int(body.get("ago_ms") or 0), 0), 7 * 86400 * 1000)
+    except (TypeError, ValueError):
+        ago_ms = 0
     conn = db.get_conn()
     conn.execute(
         "INSERT INTO growth_events (uid, event, source, ref, created_at) VALUES (?,?,?,?,?)",
         (uid, event, str(body.get("source") or "")[:16] or None,
-         ref or None, time.time()),
+         ref or None, time.time() - ago_ms / 1000),
     )
     conn.commit()
     conn.close()

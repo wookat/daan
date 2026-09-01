@@ -7,6 +7,9 @@ import {
   snapFresh,
   snapPushIndex,
   parseSseEvents,
+  trackRetryable,
+  trackQueuePush,
+  trackReplayPayload,
 } from '../src/api-policy';
 
 describe('错误消息分类', () => {
@@ -117,5 +120,29 @@ describe('parseSseEvents', () => {
       { type: 'done', data: { session_id: 7 } },
       { type: 'error', data: { message: 'x' } },
     ]);
+  });
+});
+
+describe('埋点失败离线队列（R176）', () => {
+  it('网络失败/超时/5xx 可重试，4xx/业务错误不重试', () => {
+    expect(trackRetryable('request:fail')).toBe(true);
+    expect(trackRetryable('timeout of 12000ms')).toBe(true);
+    expect(trackRetryable('HTTP 502')).toBe(true);
+    expect(trackRetryable('HTTP 400')).toBe(false);
+    expect(trackRetryable('无效事件')).toBe(false);
+    expect(trackRetryable(undefined)).toBe(false);
+  });
+
+  it('入队超上限丢最旧', () => {
+    const q = trackQueuePush([{ event: 'a' }, { event: 'b' }], { event: 'c' }, 2);
+    expect(q.map((x) => x.event)).toEqual(['b', 'c']);
+    expect(trackQueuePush(null, { event: 'x' }, 2)).toEqual([{ event: 'x' }]);
+  });
+
+  it('重放载荷携带 ago_ms，缺 t/时钟回拨按 0', () => {
+    const p = trackReplayPayload({ uid: 'u', event: 'boot', t: 1000 }, 4000);
+    expect(p).toEqual({ uid: 'u', event: 'boot', source: null, ref: null, ago_ms: 3000 });
+    expect(trackReplayPayload({ uid: 'u', event: 'boot' }, 4000).ago_ms).toBe(0);
+    expect(trackReplayPayload({ uid: 'u', event: 'boot', t: 9000 }, 4000).ago_ms).toBe(0);
   });
 });
