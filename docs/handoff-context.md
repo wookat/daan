@@ -532,3 +532,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 收口：seo.py `_CSS` 下划线规则扩为 `.meta a,.ftr a,h2 a,p a`（双配色一致），豁免 `p a.cta,.crumb a`；index.html watchdog 失败提示加 `role="alert"`、追加后 `b.focus()` 焦点直达重试按钮。
 - 生产复验：dark/light `/tiku/` axe 清零、溢出 0；拦截 bundle 后失败态 role=alert 生效、焦点落在重试按钮。
 - 如实局限：下划线全页族生效（含浅色）属视觉语言统一；读屏收口验证方式为 DOM 断言非真实读屏实测。详见 docs/iter/round-3/r195-dark-link-a11y.md。
+
+### R196（性能预算回归护栏）
+- 取证：7d 窗口无新缺陷（slow_load 47 条均已知模式）；初次探测 `/tiku/search?q=比重` 400 复核为误报——curl 原始 UTF-8 未编码写入请求行所致，规范编码/浏览器路径均 302，非生产缺陷；真实缺口为流程性：perf/a11y 水位只靠隔轮手工 Lighthouse 维持（R193 LCP 双峰曾长期未被发现），部署校验对性能/无障碍回归零感知。
+- 收口：新增 `deploy/perf-budget.sh`（Lighthouse 跑 `/`、`/tiku/`，预算 perf≥0.90/a11y≥1.00/bp≥0.90/seo≥0.95/LCP≤2500ms/CLS≤0.10 + 主 bundle gzip≤160KB，阈值均可环境变量覆盖）；deploy_h5.sh 新增 step 6b 部署后自动跑，默认 WARN 不阻塞（防单次抖动假红，R173 教训），`PERF_BUDGET_STRICT=1` 严格模式、`SKIP_PERF_BUDGET=1` 跳过。
+- 验证：bash -n 双脚本；对当前生产实跑全部通过（/ perf 0.98/LCP 795ms，/tiku/ perf 1.0/LCP 939ms）；篡改阈值验证违例路径 exit 1；部署路径 step 6b 下轮部署自然复验。
+- 如实局限：实验室指标非 RUM（真实用户长尾另有 slow_load 埋点观察）；默认 WARN 模式违例仍需人工复核。详见 docs/iter/round-3/r196-perf-budget.md。

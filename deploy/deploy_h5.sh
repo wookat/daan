@@ -174,5 +174,16 @@ for u in "/api/stats" \
   [[ "$code" == "200" ]] || FAIL=1
 done
 [[ "$FAIL" == "0" ]] || { echo "FAIL: 回归存在非200"; exit 1; }
+
+step "6b 性能预算回归（Lighthouse；默认 WARN 不阻塞，PERF_BUDGET_STRICT=1 时违例即失败）"
+if [[ "${SKIP_PERF_BUDGET:-}" == "1" ]]; then
+  echo "跳过（SKIP_PERF_BUDGET=1）"
+elif bash "$REPO_DIR/deploy/perf-budget.sh"; then
+  :
+elif [[ "${PERF_BUDGET_STRICT:-}" == "1" ]]; then
+  echo "FAIL: 性能预算违例（strict 模式）"; exit 1
+else
+  echo "WARN: 性能预算违例（不阻塞部署，请人工复核；strict 请设 PERF_BUDGET_STRICT=1）"
+fi
 echo
 echo "部署完成，回归全部 200。"
