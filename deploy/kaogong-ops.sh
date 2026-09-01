@@ -45,6 +45,10 @@ PCT=$(df --output=pcent / | tail -1 | tr -dc '0-9')
 if [ "${PCT:-0}" -ge 90 ]; then
   echo "$TS DISK HIGH ${PCT}% used on /" >> "$LOG"
 fi
+# 1d. 宿主内存压力巡检：可用内存/交换占用/后端 RSS 每日一行（共享宿主 earlyoom 误杀早发现）
+MEMLINE=$(free -m | awk '/^Mem:/{printf "mem_avail=%sMiB", $7} /^Swap:/{printf " swap_used=%sMiB", $3}')
+RSS=$(docker exec deploy-kaogong-1 sh -c "awk '/VmRSS/{print \$2}' /proc/1/status" 2>/dev/null || echo "?")
+echo "$TS MEM $MEMLINE uvicorn_rss=${RSS}kB" >> "$LOG"
 # 2. 健康巡检
 CODE=$(curl -s -o /dev/null -w '%{http_code}' -m 15 https://kaogong.zalize.com/api/questions?limit=1)
 if [ "$CODE" != "200" ]; then

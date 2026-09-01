@@ -615,3 +615,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：`npm run lint` 只跑 `eslint src`，tests/ 12 个测试文件游离在 lint 门禁外；实测 `npx eslint tests` 27 errors（全部 no-undef：Request×20/Response×7，Fetch API 全局未声明，R209 已记录该债务）。deploy/cf-pages 边缘源码在 eslint flat config base path 之外无法直接纳管（需配置上移仓库根，挂候选不做）。
 - 收口：eslint.config.mjs globals 补 Request/Response/Headers/caches/self；lint 脚本改 `eslint src tests`。零测试/源码改动，27 errors 全部由 globals 声明消解。
 - 验证：npm run lint（src+tests）0 error、vitest 122、build 全绿；无生产行为变化不部署。从本轮起「lint 全绿」口径覆盖 src+tests。详见 docs/iter/round-3/r211-lint-scope-tests.md。
+
+### R212（容器生命周期审计 + 宿主内存压力观测，纯 ops 工具链不部署）
+- 取证：verified 宿主 2GB 内存跑 13 容器长期高压（mem avail 224–291MiB、swap ~2.3GB、zram 近满）；earlyoom 曾多次 SIGTERM/SIGKILL kaogong uvicorn（badness ~944、VmRSS 峰值 462MiB，08-31 journal 实证）——即部分 502/重启窗口的直接成因；09-01 晚容器每 10–20 分钟重启（dockerd sbJoin 48h×171 次、实查 Up 11 minutes），但该宿主 docker events 历史查询返回空、autoheal/ops 日志均无对应记录，重启归因存在系统性观测盲区（发起者 unknown）。
+- 收口：新增 deploy/kaogong-lifecycle-watch.sh（cron 每分钟轮询比对 ContainerID/StartedAt/健康态，变化即落审计行：UTC、旧→新、内存/交换水位、近 10 分钟 earlyoom kill 数 → kaogong-reports/container-events.log）；kaogong-ops.sh 每日巡检追加 MEM 行（mem avail/swap used/uvicorn RSS）。明确不做：容器内存 limit、无 profile 的缓存压缩、动宿主级 earlyoom。
+- 验证：bash -n 通过；VPS 实装 cron 并手跑两次（首次落基线、二次幂等 0 新行），MEM 行实测输出正常（重启后 uvicorn RSS 基线 ~17MiB）。无生产产物变更不部署。独立主机/内存扩容资源申报本轮新增硬证据。详见 docs/iter/round-3/r212-container-lifecycle-audit.md。
