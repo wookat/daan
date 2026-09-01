@@ -44,8 +44,11 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(
       Promise.race([
         fetch(req).then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put('/', copy));
+          // 仅 2xx 回写壳缓存：错误页（故障窗口 5xx 等）直出给页面但不得污染离线兜底壳
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put('/', copy));
+          }
           return res;
         }),
         new Promise((_, rej) => setTimeout(() => rej(new Error('sw-nav-timeout')), 8000)),

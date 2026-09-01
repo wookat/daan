@@ -30,6 +30,21 @@ def test_page_out_of_range_html_404(client):
     _assert_html_404(client.get("/tiku/changshi/?page=999"))
 
 
+def test_malformed_params_html_404(client):
+    seed_questions()
+    _assert_html_404(client.get("/tiku/changshi/?page=abc"))
+    _assert_html_404(client.get("/tiku/q/abc"))
+    _assert_html_404(client.get("/tiku/papers/abc/"))
+    _assert_html_404(client.get("/tiku/y/abcd/changshi/"))
+
+
+def test_api_malformed_params_stay_json_422(client):
+    r = client.get("/api/questions", params={"limit": "abc"})
+    assert r.status_code == 422
+    assert r.headers["content-type"].startswith("application/json")
+    assert "detail" in r.json()
+
+
 def test_sitemap_shard_404_stays_non_html(client):
     seed_questions()
     r = client.get("/sitemap-questions-999.xml")

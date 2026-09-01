@@ -36,7 +36,7 @@
     "build:quickapp-webview-huawei": "uni build -p quickapp-webview-huawei",
     "build:quickapp-webview-union": "uni build -p quickapp-webview-union",
     "sync-brand": "node scripts/sync-brand-tokens.mjs",
-    "lint": "eslint src",
+    "lint": "eslint src tests",
     "test": "vitest run"
   },
   "dependencies": {

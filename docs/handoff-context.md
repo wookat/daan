@@ -584,4 +584,34 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 ### R205（边缘无副本 MISS 路径 origin 重启窗口 5xx 单次重试）
 - 取证：非探针 24h 日志实见 ClaudeBot 抓 /tiku/panduan/?page=254 得 502（duration 0.05s，连接被拒量级）；dockerd journal 同窗口容器 13:57/14:07/14:24/14:34 反复重建（每次 ~15–25s 不可用）；源码复核确认有副本时已有 stale-if-error（R95），但深页/10 万+ 题目页多数无边缘副本，MISS 同步回源 fetch 异常直 throw、5xx 原样透传。
 - 收口：edge-policy.js 新增纯函数 shouldRetryOrigin（仅 GET/HEAD、无 stale、首次尝试、status 0/502–504 才重试），[[path]].js MISS 路径单次 1200ms 退避重试；有副本路径与 500/501/4xx 语义不变。
-- 验证：vitest 100（+5 例）/lint/build 全绿；生产部署后正常路径回归无额外延迟，重启窗口自然复验挂后台。详见 docs/iter/round-3/r205-edge-origin-retry.md。
+- 验证：vitest 100（+5 例）/lint/build 全绿；生产部署后正常路径回归无额外延迟；受控 docker restart 窗口实测无副本深页首访 1.72s 返回 200（旧行为 0.05s 502 直漏）、同窗口 6 深页零 5xx。详见 docs/iter/round-3/r205-edge-origin-retry.md。
+
+### R206（边缘函数 onRequest 集成级回归测试，测试补强无行为变化）
+- 取证：本轮生产复审计无新 verified 缺陷（24h 非探针 origin 干净、SSR 页族 light/dark axe clean）；RUM slow_load 的 8–45s API 长尾样本无 v: 版本戳（疑旧 bundle 客户端），对应时段 origin 日志已被探针轮转无法归因，挂观察。真实缺口为流程性：[[path]].js（全站唯一入口，HIT/SWR/stale-if-error/重试/304/tee 入缓存/安全头）零集成测试，历史上只能靠部署后生产探测验证。
+- 收口：tests/edge-handler.test.js 直接 import onRequest，桩 caches.default/fetch/waitUntil + 假时钟，12 例覆盖爬虫 403、MISS 入缓存（剥 Set-Cookie/盖 Cached-At）、HIT、SWR 刷新与 stale-if-error（5xx/异常两路）、R205 重试全分支、边缘 304（HIT/MISS 两路）、安全头与 /api noindex。
+- 验证：vitest 112（+12 例）/lint/build/ruff/pytest 87 全绿；纯测试新增无源码改动，无需部署。详见 docs/iter/round-3/r206-edge-handler-tests.md。
+
+### R207（SW 离线壳缓存污染收口）
+- 取证：src/static/sw.js 导航分支对任何同源导航响应无条件 `cache.put('/', copy)` 不检查 res.ok；故障窗口（R205 取证的容器重建 502 等）错误页可覆盖壳缓存，之后离线/超时兜底 `caches.match('/')` 回的是 502 页且离线用户无恢复路径。SW Cache Storage 服务端不可观测，按防御性收口。
+- 收口：回写前加 `res.ok` 守卫（仅 2xx 入壳缓存，错误响应直出不入缓存）；缓存名/离线兜底/不拦截清单语义不变。新增 tests/sw-shell.test.js（源码沙箱执行 + 桩 caches/fetch，4 例：200 回写、502 不污染、异常回退旧壳、路径不拦截）。
+- 验证：vitest 116（+4 例）/lint/build 全绿；生产 rev 193f0a0 部署后 1440/375（深色）SW 受控、壳缓存 200、溢出 0、console 0 error；R196 性能预算全过。详见 docs/iter/round-3/r207-sw-shell-cache-poisoning.md。
+
+### R208（/tiku 畸形参数 422 裸 JSON 收口）
+- 取证：公开 SEO 页族对畸形 int 参数直出 FastAPI 原始 JSON 422（/tiku/xx/?page=abc、/tiku/q/abc/、/tiku/papers/abc/、/tiku/y/abcd/xx/），与 R119「失效链接给品牌壳+出路」约定不一致；本轮 origin 日志复审计无其他新 verified 缺陷。
+- 收口：main.py 全局 RequestValidationError 处理器按路径分流——/tiku、/s/、/p/ 返回品牌 404（noindex），/api 保持默认 JSON 422 契约不变。
+- 验证：ruff/pytest 89（+2 例）全绿；生产 rev 052c76a 部署后 4 类畸形 URL 全部 404 品牌页、正常分页/API 422 不变，R196 性能预算全过。详见 docs/iter/round-3/r208-tiku-422-branded-404.md。
+
+### R209（启动屏内联 watchdog 测试补强，无生产行为变化）
+- 取证：生产复审计无新 verified 缺陷（sitemap 60 URL 抽样 canonical/状态全对、边缘 304 验证器正常、slow_load 长尾为旧 bundle/爬虫族群且同名端点实测亚秒）；真实缺口为流程性——index.html 内联 watchdog（R194 失败态+重试、R195 role=alert/焦点直达）是启动链路唯一不依赖 bundle 的自愈路径，此前 vitest 零覆盖，行为只能靠部署后生产受控拦截验证。
+- 收口：新增 tests/splash-watchdog.test.js，沿用 sw-shell 源码沙箱模式（从 index.html 正则提取内联 IIFE + 注入桩 window/document + 假时钟），6 例覆盖：20s 超时失败态/alert/焦点、__kgSplashOk 取消、/assets/ script error 即时触发、幂等、非 assets 不触发、kg-splash-done 不注入。
+- 验证：vitest 122（+6 例）/lint/build 全绿；无生产产物变更不部署。详见 docs/iter/round-3/r209-splash-watchdog-tests.md。
+
+### R210（dark /tiku/papers/ 列表链接 link-in-text-block 收口）
+- 取证：生产 axe 复扫 light/dark × 7 页（panduan?page=254、daily、papers、search、q/1、discuss、y/2023），唯一违例为 dark /tiku/papers/ link-in-text-block serious×61——papers 列表 li 为「短标题链接 + 较长 .meta 文本」构成 text block，深色 --link 仅靠颜色区分；R195 下划线规则未覆盖 .qlist li>a。origin 24h 非探针错误仅零星扫描/直连 403，无其他新缺陷。
+- 收口：seo.py 下划线选择器扩一项 `.qlist li>a`（papers 与题目列表统一，light/dark 一致，胶囊 CTA/面包屑豁免不变）；+1 pytest。
+- 验证：ruff/pytest 90（+1 例）全绿；生产 rev c3aba55 部署后 14 组合 axe 全 CLEAN，1440/375 × light/dark papers/模块页下划线生效、溢出 0、console 0 error，R196 性能预算全过。详见 docs/iter/round-3/r210-papers-dark-link-underline.md。
+
+### R211（前端 lint 覆盖面缺口收口：tests/ 纳入官方门禁，纯工具链不部署）
+- 取证：`npm run lint` 只跑 `eslint src`，tests/ 12 个测试文件游离在 lint 门禁外；实测 `npx eslint tests` 27 errors（全部 no-undef：Request×20/Response×7，Fetch API 全局未声明，R209 已记录该债务）。deploy/cf-pages 边缘源码在 eslint flat config base path 之外无法直接纳管（需配置上移仓库根，挂候选不做）。
+- 收口：eslint.config.mjs globals 补 Request/Response/Headers/caches/self；lint 脚本改 `eslint src tests`。零测试/源码改动，27 errors 全部由 globals 声明消解。
+- 验证：npm run lint（src+tests）0 error、vitest 122、build 全绿；无生产行为变化不部署。从本轮起「lint 全绿」口径覆盖 src+tests。详见 docs/iter/round-3/r211-lint-scope-tests.md。
