@@ -494,3 +494,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - R181（#361）：exam.vue 自动交卷失败后 startClock() 重启过期时钟致每秒重交、确定性 404 也无限重试（源码 verified 真实可触发）；新增 exam-policy.js submitFailPlan 三态：terminal（清 examProgress+会话失效 modal）/manual/retry（5s→60s 退避 ≤5 次）。
 - R182（#362）：服务端兜底——storm_guard.py ErrorStormGuard（30 错误/60s/IP，X-Kg-Ip 维度，LRU 1024）+ main.py 中间件超阈值 429+Retry-After:60，/api/health 豁免；前端 429/「请求过于频繁」归入可重试口径（trackRetryable 复用）。生产复验第 31 个错误起 429、65s 自动恢复。
 - R183 归因校正（重要，不造假数据）：origin 日志按 X-Kg-Ip 复核，风暴 ~20.9k 错误行 100% 来自本会话探针 IP（140.232.64.5，R181 复现/验证期间旧 bundle 触发真实 bug 所致）；同窗口 551 个 502 也全部来自该 IP（风暴过载症状，非独立缺陷），非探针错误仅 4 条 403 /tiku/（R86 直连拒绝，预期行为）。结论：bug 真实存在且已根治+兜底，但无证据表明真实用户曾触发；后续观察真实用户窗口挂后台。
+
+### R184–R186（2026-09-01）：观测管线修复 + AI 限速身份修复
+- R184（#364）：CF Pages 迁移后周报 cron/小时归档仍指向已死的 kaogong.zalize.com 边缘日志（8-31 周报仅 329 字节）；切到 /var/log/caddy/kaogong-origin.zalize.com-access*.log*（标题注明「回源流量，不含边缘缓存 HIT」），服务器 crontab 已同步。全量视图需 CF Analytics 权限（挂申报）。
+- R185（#365）：周报被探针淹没（82889 中 ~81k 探针，UA 无法区分）；access_log_report.py 新增 --exclude-ip-file 按 X-Kg-Ip 剔除并外显剔除量，服务器 /home/ubuntu/kaogong-reports/probe-ips.txt（首条本会话 IP 140.232.64.5，新探针 IP 须手动登记否则混入）。原始日志/归档不动可复算。
+- R186（#367）：verified LLM 端点匿名开放（ACCESS_CODE 空为产品决策）且 rl() 身份取 uid or client.host——生产架构下 client.host 是代理对端固定 IP，导致匿名端点全网共享一个桶（扫描器打光额度殃及真实用户）+ uid 轮换无限绕过烧 token。deps.py 新增 client_ip()（X-Kg-Ip 优先）、rl() IP 桶恒生效（带 uid 放宽 3 倍容忍 NAT）+ uid 桶保持。生产复验：缺参 400 探测（不烧 token）第 21 次起 429、health 不受影响。局限：内存限速重启清零；分布式多 IP 仍可消耗，彻底防御需 CF WAF（token 无权限，挂申报）。
+- 合并注意：#361–#365 又各自并进链式基分支，main 停在 #360；rollup #366 收 R181–R185，R186 为 #367（基于 #366 分支）。
