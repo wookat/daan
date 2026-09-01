@@ -550,3 +550,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 收口：只删不改（-143 行），home.vue 活代码与 percentile/goBook/goMini 等活引用不动。
 - 验证：删除后全文 grep 零残留；ESLint/vitest 95/build 全绿；生产 rev 19236e7 部署后 1440/375 练习页自动开题、作答正常、无横向溢出、console 0 error；R196 step 6b 性能预算全部通过（/ perf 0.99/LCP 826ms，/tiku/ perf 1.0/LCP 944ms）。
 - 如实局限：仅清理本页取证确认的死集群，未逐页扫全站死代码。详见 docs/iter/round-3/r198-practice-dead-plan-code.md。
+
+### R199（/tiku 尾斜杠规范化缺口收口）
+- 取证：生产逐路由复测 verified 两个 404 缺口——`/tiku/papers/{pid}/`（带斜杠无路由直接 404）与 `/tiku/daily/{day}`（无斜杠落 `/{module}` catch-all → 模块不存在 404），与 q/{id}（带斜杠 301 去斜杠）及列表页族（无斜杠 301 补斜杠）既有约定不一致，外链斜杠变体把 121 张卷详情页/滚动归档页判成硬 404。
+- 收口：只补两条 301 路由（papers 详情带斜杠→无斜杠、daily 归档无斜杠→带斜杠），规范 URL/sitemap/canonical 零变化；+2 pytest。
+- 验证：ruff/pytest 76 全绿；生产 rev f149cb0 部署后全表复测（papers/5/ 301、daily/{day} 301、q//discuss//papers/ 既有语义不变、unknown 仍 404、坏日期仍 301 回 /tiku/daily/）；1440/375 两页溢出 0、console 0 error；R196 性能预算全过。详见 docs/iter/round-3/r199-tiku-slash-canonical-gaps.md。
