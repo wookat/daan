@@ -78,8 +78,10 @@ export default {
       loading: true,
       exportingId: null,
       exportTarget: null,
-      _starting: false,
     };
+  },
+  created() {
+    this._starting = false;
   },
   onShow() {
     this.load();

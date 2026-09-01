@@ -20,6 +20,26 @@ export default {
         if (i === bodies.length - 1) el.setAttribute('role', 'main')
         else el.removeAttribute('role')
       })
+      // 页头/tabbar 挂 landmark，页头标题镜像为 sr-only h1（uni 编译产物无任何 heading）
+      const heads = document.querySelectorAll('uni-page-head')
+      heads.forEach((el, i) => {
+        if (i === heads.length - 1) el.setAttribute('role', 'banner')
+        else el.removeAttribute('role')
+      })
+      const bar = document.querySelector('.uni-tabbar')
+      if (bar && !bar.getAttribute('role')) {
+        bar.setAttribute('role', 'navigation')
+        bar.setAttribute('aria-label', '主导航')
+      }
+      const cur = bodies[bodies.length - 1]
+      if (cur && !cur.querySelector('h1')) {
+        const headTitle = heads.length ? (heads[heads.length - 1].querySelector('.uni-page-head__title') || {}).textContent : ''
+        const h1 = document.createElement('h1')
+        h1.setAttribute('data-a11y', '1')
+        h1.style.cssText = 'position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0'
+        h1.textContent = (headTitle || document.title || '').trim() || '错题邦'
+        cur.prepend(h1)
+      }
       // tabbar 图标为装饰图（文字 label 承载语义），uni 生成的 img 无 alt
       document.querySelectorAll('.uni-tabbar__icon img').forEach((el) => el.setAttribute('aria-hidden', 'true'))
       // uni 编译后的真实 input/textarea 无 label，把 placeholder 镜像为 aria-label
@@ -27,6 +47,14 @@ export default {
         const host = el.closest('uni-input, uni-textarea')
         const ph = el.getAttribute('placeholder') || (host && (host.querySelector('.uni-input-placeholder, .uni-textarea-placeholder') || {}).textContent) || ''
         if (ph.trim()) el.setAttribute('aria-label', ph.trim())
+      })
+      // 离线直入未缓存路由时，uni 内置 async-error 文案（连接服务器超时）误导且无自动恢复；
+      // 仅离线时替换文案并在网络恢复后自动触发其点击重试，在线时保持 uni 原生语义
+      document.querySelectorAll('.uni-async-error').forEach((el) => {
+        if (navigator.onLine || el.dataset.kgOffline) return
+        el.dataset.kgOffline = '1'
+        el.textContent = '当前无网络，该页面尚未缓存到本机；网络恢复后将自动重试'
+        window.addEventListener('online', () => { if (el.isConnected) el.click() }, { once: true })
       })
     }
     markMain()

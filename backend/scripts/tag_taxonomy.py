@@ -21,7 +21,7 @@ import time
 
 sys.path.insert(0, ".")
 
-from backend.app import db, llm, taxonomy  # noqa: E402
+from backend.app import db, llm, taxonomy
 
 CONF_THRESHOLD = 0.6
 
@@ -97,7 +97,7 @@ async def tag_one(q: dict, dry_run: bool) -> dict:
                 if review:
                     db.tag3_review_add(q["id"], code, conf, reason)
             return {"id": q["id"], "code": code, "confidence": conf, "reason": reason, "review": review}
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             last_err = e
             await asyncio.sleep(2 * (attempt + 1))
     return {"id": q["id"], "code": None, "confidence": 0.0, "reason": f"失败：{last_err}", "review": False}

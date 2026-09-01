@@ -1,0 +1,16 @@
+# 后端 lint 基线（R114 起固化）：`ruff check backend` 必须全绿，本文件为唯一规则来源。
+
+[lint]
+ignore = [
+    "BLE001",   # 防御式 except Exception 是本仓库降级兜底的既定风格
+    "S110",     # try-except-pass 同上（静默降级路径）
+    "S112",     # try-except-continue 同上
+    "SIM102",   # 嵌套 if 保留可读性，不强制合并
+    "B008",     # FastAPI File()/Depends() 参数默认值惯用法
+    "ASYNC230", # 少量 async 端点内同步小文件读取，可接受
+    "EXE001",   # 脚本 shebang 不要求可执行位（经 python 显式调用）
+    "DTZ007",   # 中国时区换算按 +8h 偏移显式处理，naive strptime 为既定用法
+]
+
+[lint.isort]
+known-first-party = ["app"]

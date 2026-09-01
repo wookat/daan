@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """资料分析（ziliao）三级考点规则打标脚本。
 
 用法：python3 tag_ziliao.py <taxonomy.json> <untagged_ziliao.jsonl> <out.jsonl>
@@ -16,7 +15,8 @@ import sys
 
 
 def load_taxonomy(path):
-    t = json.load(open(path, encoding="utf-8"))
+    with open(path, encoding="utf-8") as f:
+        t = json.load(f)
     mod = next(m for m in t["modules"] if m["key"] == "ziliao")
     alias2group = {}
     all_topics = []

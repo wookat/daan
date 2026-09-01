@@ -116,7 +116,7 @@ def _send_daily():
                 gone += 1
             else:
                 log.warning("push 发送失败 %s: %s", code, e)
-        except Exception as e:  # noqa: BLE001 — 单条推送失败不阻塞其余订阅
+        except Exception as e:
             log.warning("push 发送异常: %s", e)
     conn.execute(
         "INSERT INTO seo_meta (key, value) VALUES ('push_last_day', ?) "
@@ -140,7 +140,7 @@ def _push_loop():
                 conn.close()
                 if not row or row[0] != day:
                     _send_daily()
-        except Exception as e:  # noqa: BLE001 — 常驻线程不因单轮异常退出
+        except Exception as e:
             log.warning("push loop 异常: %s", e)
         time.sleep(300)
 

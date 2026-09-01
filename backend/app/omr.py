@@ -4,8 +4,6 @@
 识别时统一透视纠偏到 4px/mm 的标准图（840x1188）。
 """
 
-import io
-import math
 
 PAGE_W, PAGE_H = 210.0, 297.0
 SCALE = 4  # px per mm（识别标准图）
@@ -135,7 +133,6 @@ def recognize(image_bytes: bytes) -> dict:
 
 def _find_fiducials(thr, shape):
     import cv2
-    import numpy as np
 
     h, w = shape
     contours, _ = cv2.findContours(thr, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)

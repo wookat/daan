@@ -84,25 +84,40 @@ _CSS = (
 )
 
 
-def _page(title: str, description: str, canonical_path: str, body: str, jsonld: dict | None = None) -> str:
+def _page(
+    title: str,
+    description: str,
+    canonical_path: str,
+    body: str,
+    jsonld: dict | list | None = None,
+    noindex: bool = False,
+) -> str:
     ld = (
         '<script type="application/ld+json">' + json.dumps(jsonld, ensure_ascii=False) + "</script>"
         if jsonld
         else ""
+    )
+    # 404 等错误态页不声明规范地址/og:url，并显式 noindex
+    head_meta = (
+        '<meta name="robots" content="noindex">'
+        if noindex
+        else (
+            f'<link rel="canonical" href="{_e(_url(canonical_path))}">'
+            f'<meta property="og:url" content="{_e(_url(canonical_path))}">'
+        )
     )
     return (
         '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
         f"<title>{_e(title)}</title>"
         f'<meta name="description" content="{_e(description)}">'
-        f'<link rel="canonical" href="{_e(_url(canonical_path))}">'
         '<meta property="og:type" content="website">'
         '<meta property="og:site_name" content="错题邦">'
         f'<meta property="og:title" content="{_e(title)}">'
         f'<meta property="og:description" content="{_e(description)}">'
-        f'<meta property="og:url" content="{_e(_url(canonical_path))}">'
         f'<meta property="og:image" content="{_e(SITE_BASE)}/static/og-card.png">'
         '<meta name="twitter:card" content="summary_large_image">'
+        f"{head_meta}"
         f"<style>{_CSS}</style>{ld}</head><body>"
         f'<header class="hdr"><div class="wrap"><a class="brand" href="/tiku/">错题邦 · 考公题库</a>'
         f'<a class="hdr-cta" href="/">去刷题</a></div></header>'
@@ -112,6 +127,20 @@ def _page(title: str, description: str, canonical_path: str, body: str, jsonld: 
         f' · <a href="https://career.zalize.com/privacy/">隐私政策</a>'
         f' · <a href="https://career.zalize.com/terms/">服务条款</a>'
         f' · <a href="mailto:support@zalize.com">联系我们</a></footer></body></html>'
+    )
+
+
+def _not_found(msg: str) -> HTMLResponse:
+    """页族品牌 404：失效链接（题目下架/外链拼错）给出壳+出路，而非裸 JSON 报文。"""
+    body = (
+        f"<h1>{_e(msg)}</h1>"
+        "<p>你访问的页面不存在或已下架，可从以下入口继续：</p>"
+        '<p><a href="/tiku/">题库首页</a> · <a href="/tiku/papers/">真题卷</a>'
+        ' · <a href="/tiku/daily/">每日一练</a> · <a href="/">去刷题</a></p>'
+    )
+    return HTMLResponse(
+        _page(f"{msg}_错题邦", "页面不存在或已下架。", "/tiku/", body, noindex=True),
+        status_code=404,
     )
 
 
@@ -130,6 +159,17 @@ def _collection_ld(name: str, description: str, path: str, crumbs: list[tuple[st
                 for i, (n, h) in enumerate(crumbs)
             ],
         },
+    }
+
+
+def _breadcrumb_ld(crumbs: list[tuple[str, str | None]]) -> dict:
+    return {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": i + 1, "name": n, **({"item": _url(h)} if h else {})}
+            for i, (n, h) in enumerate(crumbs)
+        ],
     }
 
 
@@ -456,7 +496,7 @@ def tiku_papers():
 def tiku_paper_detail(pid: int):
     p = db.get_exam_paper(pid)
     if not p or p.get("kind") != "zhenti":
-        raise HTTPException(404, "试卷不存在")
+        return _not_found("试卷不存在")
     qids = p["question_ids"]
     rows = []
     if qids:
@@ -542,8 +582,11 @@ def tiku_question_slash(qid: int):
 
 @router.get("/q/{qid}", response_class=HTMLResponse, include_in_schema=False)
 def tiku_question(qid: int):
-    html = _render_question(qid).replace("<!--QCOMMENTS-->", _render_q_comments(qid))
-    return HTMLResponse(html)
+    try:
+        html = _render_question(qid)
+    except HTTPException:
+        return _not_found("题目不存在")
+    return HTMLResponse(html.replace("<!--QCOMMENTS-->", _render_q_comments(qid)))
 
 
 def _render_q_comments(qid: int) -> str:
@@ -585,7 +628,10 @@ def tiku_year_noslash(year: int, module: str):
 
 @router.get("/y/{year}/{module}/", response_class=HTMLResponse, include_in_schema=False)
 def tiku_year(year: int, module: str, page: int = 1):
-    return HTMLResponse(_render_year(year, module, max(1, page)))
+    try:
+        return HTMLResponse(_render_year(year, module, max(1, page)))
+    except HTTPException as e:
+        return _not_found(e.detail)
 
 
 @lru_cache(maxsize=512)
@@ -657,7 +703,10 @@ def tiku_topic_noslash(code: str):
 
 @router.get("/t/{code}/", response_class=HTMLResponse, include_in_schema=False)
 def tiku_topic(code: str, page: int = 1):
-    return HTMLResponse(_render_topic(code, max(1, page)))
+    try:
+        return HTMLResponse(_render_topic(code, max(1, page)))
+    except HTTPException as e:
+        return _not_found(e.detail)
 
 
 def _sibling_topics(code: str, topic: dict) -> str:
@@ -864,7 +913,7 @@ def _render_question(qid: int) -> str:
         f"{mod_name}{('·' + r['submodule']) if r['submodule'] else ''}{src}：{qtext[:70]} 附答案与解析，在线刷同考点题目。",
         f"/tiku/q/{qid}",
         body,
-        jsonld,
+        [jsonld, _breadcrumb_ld(crumbs)],
     )
 
 
@@ -872,12 +921,12 @@ def _render_question(qid: int) -> str:
 def tiku_module(module: str, page: int = 1):
     name = _module_name(module)
     if not name:
-        raise HTTPException(404, "模块不存在")
+        return _not_found("模块不存在")
     page = max(1, page)
     total = _count_questions(module)
     rows = _list_questions(module, None, page)
     if not rows and page > 1:
-        raise HTTPException(404, "页码超出范围")
+        return _not_found("页码超出范围")
     subs = db.submodule_counts(module)
     sub_links = "".join(
         f'<a href="{_e(_sub_path(module, s["submodule"]))}">{_e(s["submodule"])}（{s["n"]}）</a>' for s in subs
@@ -911,14 +960,14 @@ def tiku_module(module: str, page: int = 1):
 def tiku_submodule(module: str, submodule: str, page: int = 1):
     name = _module_name(module)
     if not name:
-        raise HTTPException(404, "模块不存在")
+        return _not_found("模块不存在")
     page = max(1, page)
     total = _count_questions(module, submodule)
     if not total:
-        raise HTTPException(404, "题型不存在")
+        return _not_found("题型不存在")
     rows = _list_questions(module, submodule, page)
     if not rows and page > 1:
-        raise HTTPException(404, "页码超出范围")
+        return _not_found("页码超出范围")
     body = (
         _crumb([("题库", "/tiku/"), (name, f"/tiku/{module}/"), (submodule, None)])
         + f"<h1>{_e(name)}·{_e(submodule)}题库（{total} 题）</h1>"
@@ -941,6 +990,25 @@ def tiku_submodule(module: str, submodule: str, page: int = 1):
             [("题库", "/tiku/"), (name, f"/tiku/{module}/"), (submodule, _sub_path(module, submodule))],
         ),
     )
+
+
+@root_router.get("/tiku", include_in_schema=False)
+def tiku_index_noslash():
+    return RedirectResponse("/tiku/", status_code=301)
+
+
+@router.get("/{module}", include_in_schema=False)
+def tiku_module_noslash(module: str):
+    if not _module_name(module):
+        return _not_found("模块不存在")
+    return RedirectResponse(f"/tiku/{quote(module)}/", status_code=301)
+
+
+@router.get("/{module}/{submodule}", include_in_schema=False)
+def tiku_submodule_noslash(module: str, submodule: str):
+    if not _module_name(module):
+        return _not_found("模块不存在")
+    return RedirectResponse(_sub_path(module, submodule), status_code=301)
 
 
 # ---------- sitemap / robots ----------

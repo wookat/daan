@@ -3,12 +3,11 @@
 // 小程序 storage 上限 10MB → 小包（20 题/包）；H5/App 用 50 题/包。
 import { request, anonUid } from './api.js';
 
+let packSize = 50;
 // #ifdef MP-WEIXIN
-export const PACK_SIZE = 20;
+packSize = 20;
 // #endif
-// #ifndef MP-WEIXIN
-export const PACK_SIZE = 50;
-// #endif
+export const PACK_SIZE = packSize;
 
 export const PACK_MODULES = [
   { module: 'ziliao', name: '资料分析' },

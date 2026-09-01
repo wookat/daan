@@ -18,7 +18,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from app import db  # noqa: E402
+from app import db
 
 MODULE_ORDER = ["changshi", "yanyu", "shuliang", "panduan", "ziliao"]
 MOD_NAMES = {"changshi": "常识", "yanyu": "言语", "shuliang": "数量", "panduan": "判断", "ziliao": "资料"}

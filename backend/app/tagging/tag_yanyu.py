@@ -7,10 +7,10 @@
 规则设计说明见 report_yanyu.md。
 """
 import argparse
-import json
-import re
 import collections
+import json
 import os
+import re
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -341,7 +341,7 @@ def classify(q, opts, exp, allowed):
     # --- 单考点组兜底（组内只有一个考点，允许直接映射） ---
     single = [c for c in allowed if c in ("YY-BT-01", "YY-PZ-01")]
     if len(allowed) == 1:
-        return list(allowed)[0], 0.85, "submodule 组内唯一考点"
+        return next(iter(allowed)), 0.85, "submodule 组内唯一考点"
     if single and len(allowed) == len(single):
         return single[0], 0.85, "候选仅单考点组"
 
@@ -377,7 +377,7 @@ def main():
             reasons[reason] += 1
             w.write(json.dumps({
                 "id": d["id"], "tag3": code, "confidence": round(conf, 2),
-                "method": "rule" if code != "UNKNOWN" else "rule",
+                "method": "rule",
             }, ensure_ascii=False) + "\n")
 
     total = sum(dist.values())

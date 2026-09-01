@@ -854,7 +854,7 @@ def shenlun_answer_history(uid: str, qid: int | None = None, limit: int = 20) ->
 
 
 def _shenlun_issue_lines(result: str, section: str, limit: int = 3) -> list[str]:
-    m = re.search(rf"【{section}】(.*?)(?=【|$)", result or "", re.S)
+    m = re.search(rf"【{section}】(.*?)(?=【|$)", result or "", re.DOTALL)
     if not m:
         return []
     lines = []
@@ -1855,7 +1855,7 @@ def normalize_submodule(sub: str | None) -> str | None:
         return sub
     s = str(sub).strip()
     for c in _SUB_COLLAPSE:
-        if s.startswith(c + "-") or s.startswith(c + "："):
+        if s.startswith((c + "-", c + "：")):
             return c
     for p in _SUB_PREFIXES:
         if s.startswith(p):

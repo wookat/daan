@@ -1,3 +1,11 @@
+import {
+  isBlockedBot,
+  isEdgeCacheable,
+  edgeTtl,
+  cacheFreshness,
+  isCacheableContentType,
+} from "./edge-policy.js";
+
 const ORIGIN = "https://kaogong-origin.zalize.com";
 
 const SECURITY_HEADERS = {
@@ -13,14 +21,6 @@ const SECURITY_HEADERS = {
     "base-uri 'self'; frame-ancestors 'self'; form-action 'self'",
 };
 
-// /tiku* 为纯公开 SEO 页族（不随登录态/UA 变化），在边缘缓存 5 分钟，
-// 避免每个请求（含爬虫抓取）穿透到共享 origin 产生长尾 TTFB。
-const EDGE_CACHE_TTL = 300;
-
-// uid 无关的公开只读 API（响应确定、不随登录态变化），短 TTL 边缘缓存，
-// 屏蔽共享 origin 的长尾抖动；带 Authorization/uid 的请求一律绕过。
-const API_EDGE_CACHE_TTL = 60;
-
 // stale-if-error：缓存副本在边缘长存 24h，TTL 过期后仅在回源 5xx/不可达时回退陈旧副本
 const STALE_KEEP = 86400;
 
@@ -32,45 +32,19 @@ function fromCache(hit, ttl, label) {
   resp.headers.set("X-Edge-Cache", label);
   return resp;
 }
-const API_CACHE_ALLOWLIST = new Set([
-  "/api/announcement",
-  "/api/question_counts",
-  "/api/daily_set",
-  "/api/submodules",
-  "/api/real_filters",
-  "/api/papers",
-  "/api/comments/plaza",
-]);
-
-// 无获客价值的商业爬虫（舆情/SEO 工具）：每条 /tiku/q/* URL 各异使边缘缓存失效，
-// 全部穿透共享 origin SSR；在边缘直接 403，robots.txt 放行以便其读到禁抓声明。
-const BLOCKED_BOT_UA = /awariobot|semrushbot|ahrefsbot|mj12bot|dotbot|petalbot/i;
-
-function isEdgeCacheable(request, url) {
-  if (request.method !== "GET") return false;
-  if (url.pathname.startsWith("/tiku")) return true;
-  // /s/* 分享落地页：输出仅依赖 sid（OG + 跳 SPA），动态内容都在 SPA 内走 API
-  if (url.pathname.startsWith("/s/")) return true;
-  if (url.pathname.startsWith("/p/")) return true;
-  if (url.pathname.startsWith("/sitemap") || url.pathname === "/robots.txt") return true;
-  return (
-    API_CACHE_ALLOWLIST.has(url.pathname) &&
-    !request.headers.has("Authorization") &&
-    !url.searchParams.has("uid")
-  );
-}
-
 export async function onRequest({ request, env, waitUntil }) {
   const url = new URL(request.url);
-  if (
-    url.pathname !== "/robots.txt" &&
-    BLOCKED_BOT_UA.test(request.headers.get("User-Agent") || "")
-  ) {
+  if (isBlockedBot(url.pathname, request.headers.get("User-Agent"))) {
     return new Response("Forbidden", { status: 403 });
   }
-  const cacheable = isEdgeCacheable(request, url);
+  const cacheable = isEdgeCacheable(
+    request.method,
+    url.pathname,
+    request.headers.has("Authorization"),
+    url.searchParams.has("uid")
+  );
   const isApi = url.pathname.startsWith("/api/");
-  const ttl = isApi ? API_EDGE_CACHE_TTL : EDGE_CACHE_TTL;
+  const ttl = edgeTtl(url.pathname);
   // 副本按 STALE_KEEP 长存，逻辑新鲜度由 X-Kg-Cached-At 判定：
   // TTL 内直接 HIT；过期后回源，origin 5xx/不可达时回退陈旧副本（stale-if-error），
   // 消除部署容器重建/autoheal 重启窗口对可缓存 GET 的 502 外泄。
@@ -78,9 +52,10 @@ export async function onRequest({ request, env, waitUntil }) {
   if (cacheable) {
     const hit = await caches.default.match(request.url);
     if (hit) {
-      const cachedAt = Number(hit.headers.get("X-Kg-Cached-At") || 0);
-      const age = Date.now() / 1000 - cachedAt;
-      if (age <= ttl) return fromCache(hit, ttl, "HIT");
+      const cachedAt = hit.headers.get("X-Kg-Cached-At");
+      if (cacheFreshness(cachedAt, Date.now() / 1000, ttl) === "hit") {
+        return fromCache(hit, ttl, "HIT");
+      }
       stale = hit;
     }
   }
@@ -109,11 +84,7 @@ export async function onRequest({ request, env, waitUntil }) {
   } else {
     resp.headers.delete("X-Robots-Tag");
   }
-  const ct = resp.headers.get("content-type") || "";
-  const ctOk =
-    url.pathname.startsWith("/sitemap") || url.pathname === "/robots.txt"
-      ? ct.includes("xml") || ct.includes("text/plain")
-      : ct.includes(isApi ? "application/json" : "text/html");
+  const ctOk = isCacheableContentType(url.pathname, isApi, resp.headers.get("content-type"));
   if (cacheable && resp.status === 200 && ctOk) {
     const [body, cacheBody] = resp.body.tee();
     const cacheCopy = new Response(cacheBody, resp);
