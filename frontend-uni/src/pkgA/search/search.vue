@@ -116,6 +116,7 @@ export default {
       result: null,
       detail: null,
       timer: null,
+      searchSeq: 0,
       hist: uni.getStorageSync('kgSearchHist') || []
     };
   },
@@ -167,6 +168,7 @@ export default {
     },
     async doSearch() {
       const q = this.kw.trim();
+      const seq = ++this.searchSeq;
       if (!q) {
         this.result = null;
         this.loadErr = '';
@@ -175,26 +177,32 @@ export default {
       this.loading = true;
       this.detail = null;
       try {
-        this.result = await request('/api/search?q=' + encodeURIComponent(q) + '&type=' + this.tab);
+        const d = await request('/api/search?q=' + encodeURIComponent(q) + '&type=' + this.tab);
+        if (seq !== this.searchSeq) return;
+        this.result = d;
         this.loadErr = '';
         this.saveHist(q);
         this.syncUrl();
       } catch (e) {
+        if (seq !== this.searchSeq) return;
         if (this.result) {
           uni.showToast({ title: e.message || '搜索失败', icon: 'none' });
         } else {
           this.loadErr = e.message || '搜索失败';
         }
       }
-      this.loading = false;
+      if (seq === this.searchSeq) this.loading = false;
     },
     async loadMore() {
-      const q = this.result.q;
-      const off = this.result.questions.items.length;
+      const r = this.result;
+      const q = r.q;
+      const off = r.questions.items.length;
       try {
         const d = await request('/api/search?q=' + encodeURIComponent(q) + '&type=question&offset=' + off);
-        if (d.questions) this.result.questions.items.push(...d.questions.items);
+        if (r !== this.result) return;
+        if (d.questions) r.questions.items.push(...d.questions.items);
       } catch (e) {
+        if (r !== this.result) return;
         uni.showToast({ title: '加载失败', icon: 'none' });
       }
     },
