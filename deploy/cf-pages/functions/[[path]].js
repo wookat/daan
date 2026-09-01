@@ -7,6 +7,7 @@ import {
   serveMode,
   notModified,
   carryLastModified,
+  shouldRetryOrigin,
 } from "./edge-policy.js";
 
 const ORIGIN = "https://kaogong-origin.zalize.com";
@@ -150,14 +151,24 @@ export async function onRequest({ request, env, waitUntil }) {
     waitUntil(revalidate(req, request.url, url.pathname, isApi, stale));
     return fromCache(stale, ttl, "REVALIDATE", request);
   }
-  let upstream;
-  try {
-    upstream = await fetch(req);
-  } catch (e) {
-    if (stale) return fromCache(stale, ttl, "STALE", request);
-    throw e;
+  // 无副本 MISS 且 origin 处于容器重启窗口（fetch 异常/502–504）时单次退避重试：
+  // 深页无边缘副本可退，不重试则 5xx 直漏给用户/爬虫
+  let upstream = null;
+  for (let attempt = 0; ; attempt++) {
+    let status = 0;
+    try {
+      upstream = await fetch(attempt === 0 ? req : req.clone());
+      status = upstream.status;
+    } catch (e) {
+      if (stale) return fromCache(stale, ttl, "STALE", request);
+      if (!shouldRetryOrigin(request.method, 0, !!stale, attempt)) throw e;
+      upstream = null;
+    }
+    if (upstream && stale && status >= 500) return fromCache(stale, ttl, "STALE", request);
+    if (upstream && !shouldRetryOrigin(request.method, status, !!stale, attempt)) break;
+    if (upstream && upstream.body) waitUntil(upstream.body.cancel().catch(() => {}));
+    await new Promise((r) => setTimeout(r, 1200));
   }
-  if (stale && upstream.status >= 500) return fromCache(stale, ttl, "STALE", request);
   const resp = decorate(new Response(upstream.body, upstream), url.pathname);
   const ctOk = isCacheableContentType(url.pathname, isApi, resp.headers.get("content-type"));
   if (cacheable && resp.status === 200 && ctOk) {

@@ -83,3 +83,23 @@ def test_module_page_topic_and_year_links(client):
     assert r.status_code == 200
     assert 'href="/tiku/t/CS-FL-01/"' in r.text
     assert 'href="/tiku/y/2025/changshi/"' in r.text
+
+
+def test_home_truncated_topics_have_more_link(client):
+    from app import db, taxonomy
+
+    seed_questions()
+    db._TAG3_COUNTS_CACHE[1] = None
+    t3counts = db.tag3_counts()
+    n = sum(
+        1
+        for m in taxonomy.tree()["modules"]
+        if m["key"] == "changshi"
+        for g in m["groups"]
+        for t in g["topics"]
+        if t3counts.get(t["code"])
+    )
+    r = client.get("/tiku/")
+    assert r.status_code == 200
+    link = f'<a href="/tiku/changshi/">全部 {n} 个考点 →</a>'
+    assert (link in r.text) == (n > 12)
