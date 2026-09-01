@@ -82,7 +82,7 @@ _CSS = (
     ".tags{display:flex;flex-wrap:wrap;gap:8px}.tags a{background:var(--tag-bg);border-radius:16px;padding:4px 12px;"
     "font-size:14px;white-space:nowrap}"
     ".meta{color:var(--muted);font-size:13px}"
-    ".meta a,.ftr a,h2 a,p a{text-decoration:underline}"
+    ".meta a,.ftr a,h2 a,p a,.qlist li>a{text-decoration:underline}"
     "p a.cta,.crumb a{text-decoration:none}"
     ".opt{margin:6px 0;padding:8px 12px;border:1px solid var(--border);border-radius:8px}"
     ".ans{background:var(--ans-bg);border-radius:8px;padding:12px;margin-top:10px}"
