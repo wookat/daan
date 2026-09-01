@@ -503,3 +503,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - R188（#369）：收口剩余 uid-only 桶——team_create/team_join/share_create/share_answer/pk_create 五个匿名可写 DB 端点（uid 自报可轮换→无限插行/垃圾数据膨胀）接入 rl()，阈值/窗口零变化。生产复验（rev 49ddbe1）：team/create 空名 400 探测（不写行）同 uid 第 6 次起 429。不动：social cmt/cmt_report（uid 服务端换算不可轮换）；pk join/submit/random 现状无限速（新增限速属扩权决策，挂观察）。
 - R189：全量核对 @router.post × 限速调用点，verified 五个**完全零限速**的匿名可写端点：answer_log（每请求最多插 200 行）、backup（每请求 500KB blob）、report（孪生 question_report 已有 30/3600 而它漏网）、mistakes、practice_result；接入 rl()（阈值按 golden path 用量上界放宽数倍：alog 120/h、backup 10/h、report 20/h、mistake 240/h、presult 60/h）。生产复验（rev 1798efc）：/api/report 无效 reason 400 探测（不插行）第 21 次起 429，health/stats 同期 200。复核明确 bounded 不动：user_state/profile/reminders/mat_favs/daily_set submit/mock_event（upsert）、pk join/submit（UPDATE）、monitor/report（不落本地 DB）。
 - 合并注意：#361–#365 又各自并进链式基分支，main 停在 #360；rollup #366 收 R181–R185，R186 为 #367（基于 #366 分支）。
+
+### R191（磁盘治理）
+- 数据卷内 5 个 8 月手工 DB 快照（~1.85GB）已归档至 `r2:zalize-backups/kaogong-sqlite/archive/`（字节校验一致后删本地），卷 2.29GB→450MB，根分区 86%→84%。
+- kaogong-ops.sh 新增磁盘水位巡检（≥90% 写 DISK HIGH 入 /home/ubuntu/kaogong-ops.log），已同步 VPS 实跑验证。
+- 未来手工快照请直接放 R2 archive 前缀或用 pre-*.db.gz 命名（3 天自动清理），勿在 /data 卷内长期堆放。
