@@ -747,3 +747,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证 verified：今日每轮部署的容器 Recreate 窗口（10–20s）内，无副本深页与 /api/track 均即时 502（dial 拒绝，duration 0.01–0.08s），爬虫/用户最终收品牌 503；同机 jobs.zalize.com 已有 lb_try_duration 成熟先例。
 - 收口：/etc/caddy/Caddyfile 两个 kaogong 块 reverse_proxy 127.0.0.1:8300 增加 lb_try_duration 25s + lb_try_interval 1s（拨号失败窗口内重试，POST 安全；备份 Caddyfile.bak-r235），validate+reload。
 - 验证：受控 docker stop 10s 演练，/api/health 停机窗口内请求等待 12.4s 后 200（原即时 502），容器恢复 healthy、公开页 200。仓库仅落文档（Caddyfile 为共享服务器配置，与 R85/R86 同口径）。详见 docs/iter/round-3/design-r235-origin-lb-retry.md。
+
+### R236（申论真题公开 SSR hub：/tiku/shenlun/ 以真实语料恢复 200）
+- 取证 verified：生产 shenlun_questions 实有 208 道申论真题（materials 166、answers 6，App 申论专区同源数据），R232 判 404 的依据只是 questions 表 xingce 计数；origin 日志 /tiku/shenlun/ 仍持续有爬虫 404 命中。
+- 收口：seo.py tiku_module 对 shenlun 分流 _tiku_shenlun（shenlun_questions 语料呈现：年份/地区概览 chips + 题干列表 + 分页 + App 专区 CTA；不造详情/过滤子页）；/tiku/ 首页与 sitemap-pages 在语料非空时补入口；total=0 守卫回落品牌 404 + CTA（R232 语义不回退，R234 行测计数口径不动）。
+- 验证：pytest +1 例（200 呈现 + 清空回落 404 双分支），114 passed/ruff/pyright 0。详见 docs/iter/round-3/design-r236-shenlun-public-hub.md。

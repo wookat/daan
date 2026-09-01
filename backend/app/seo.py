@@ -331,6 +331,14 @@ def tiku_index():
             + (f'<p class="meta">按年份刷真题：</p><div class="tags">{years}</div>' if years else "")
             + "</section>"
         )
+    sl_total = db.shenlun_questions(limit=1)["total"]
+    if sl_total:
+        sections.append(
+            '<section class="card"><h2><a href="/tiku/shenlun/">申论</a>'
+            f'<span class="meta">（{sl_total} 道真题）</span></h2>'
+            '<p class="meta">历年申论真题与参考解析，可在 <a href="/tiku/shenlun/">申论真题库</a> 浏览。</p>'
+            "</section>"
+        )
     total = sum(counts.values())
     body = (
         "<h1>公务员考试题库</h1>"
@@ -1032,12 +1040,67 @@ def _render_question(qid: int) -> str:
     )
 
 
+def _tiku_shenlun(page: int):
+    """申论真题 hub：以 shenlun_questions 真实语料呈现；语料清空时回落品牌 404。"""
+    res = db.shenlun_questions(limit=PAGE_SIZE, offset=(page - 1) * PAGE_SIZE)
+    total = res["total"]
+    if not total:
+        return _not_found("该模块暂无题目", _EMPTY_MODULE_OUTLET.get("shenlun", ""))
+    items = res["items"]
+    if not items and page > 1:
+        return _not_found("页码超出范围")
+    filters = db.shenlun_filters()
+    year_chips = "".join(f"<span>{y}年</span>" for y in filters["years"])
+    region_chips = "".join(f"<span>{_e(r)}</span>" for r in filters["regions"][:12])
+    lis = []
+    for it in items:
+        text = (it["question"] or "").strip().replace("\n", " ")
+        if len(text) > 80:
+            text = text[:80] + "…"
+        meta = " · ".join(
+            s for s in (
+                f'{it["exam_year"]}年' if it["exam_year"] else "",
+                it["exam_region"] or "",
+                it["paper"] or "",
+                it["qtype"] or "",
+            ) if s
+        )
+        lis.append(f'<li><span class="meta">【{_e(meta)}】</span>{_e(text)}</li>')
+    body = (
+        _crumb([("题库", "/tiku/"), ("申论", None)])
+        + f"<h1>申论真题库（{total} 题）</h1>"
+        + "<p>历年公务员考试申论真题（概括、对策、公文、大作文等题型），附参考解析，可在 App 申论专区在线作答。</p>"
+        + (f'<div class="card"><h2>覆盖年份</h2><div class="tags">{year_chips}</div></div>' if year_chips else "")
+        + (f'<div class="card"><h2>覆盖地区</h2><div class="tags">{region_chips}</div></div>' if region_chips else "")
+        + '<div class="card"><ul class="qlist">'
+        + "".join(lis)
+        + "</ul></div>"
+        + _pager("/tiku/shenlun/", page, total)
+        + '<a class="cta" href="/#/pkgA/shenlun/shenlun">进入申论专区在线作答（真题 + 素材范文）→</a>'
+    )
+    suffix = f"（第{page}页）" if page > 1 else ""
+    return _page(
+        f"申论真题库{suffix}_历年申论真题及参考解析_错题邦",
+        f"申论真题库共 {total} 题，覆盖概括、对策、公文、大作文等题型，附参考解析，可在线作答。{suffix}",
+        "/tiku/shenlun/" + (f"?page={page}" if page > 1 else ""),
+        body,
+        _collection_ld(
+            "申论真题库",
+            f"申论真题库共 {total} 题，覆盖概括、对策、公文、大作文等题型，附参考解析。",
+            "/tiku/shenlun/",
+            [("题库", "/tiku/"), ("申论", "/tiku/shenlun/")],
+        ),
+    )
+
+
 @router.get("/{module}/", response_class=HTMLResponse, include_in_schema=False)
 def tiku_module(module: str, page: int = 1):
     name = _module_name(module)
     if not name:
         return _not_found("模块不存在")
     page = max(1, page)
+    if module == "shenlun":
+        return _tiku_shenlun(page)
     total = _count_questions(module)
     if not total:
         outlet = _EMPTY_MODULE_OUTLET.get(module, "")
@@ -1207,6 +1270,8 @@ def sitemap_pages():
         urls.append((_url(f'/tiku/{quote(r["module"])}/'), None))
         for s in db.submodule_counts(r["module"]):
             urls.append((_url(_sub_path(r["module"], s["submodule"])), None))
+    if db.shenlun_questions(limit=1)["total"]:
+        urls.append((_url("/tiku/shenlun/"), None))
     urls += [(_url(f'/tiku/papers/{p["id"]}'), p["created_at"]) for p in db.list_exam_papers(kind="zhenti")]
     return _urlset(urls)
 
