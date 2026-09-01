@@ -575,3 +575,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：09-01 16:11–18:37 origin 出现 ~21k 条 exam submit/report 404 风暴（60s 滚动窗口峰值 262 错误）期间零 429，而当日 22:08 生产实测与本地 pytest 均确认 ErrorStormGuard 第 31 个错误起 429 正常生效；同窗口 dockerd journal 显示容器被反复重建（约每 10–25 分钟），但无任何持久记录能回答「某时刻线上跑的是哪个 rev、由谁部署」，风暴窗口守卫失效无法定案。
 - 口径校正（重要）：140.232.64.5 为 Devin 基础设施共享 NAT 出口，多个会话共用；此前 R183/R185 按该 IP 的「本会话探针」归因实为「全部 Devin 会话」口径。另实证当日有本会话之外的操作者在做 kaogong 部署/备份（19:33 手工 ops、20:55/22:00 部署，产物与 R202 树一致，线上 rev 5f45dc9 健康）。
 - 收口：deploy_h5.sh rev 校验后追加一行部署审计记录（UTC 时间/rev/bundle/部署机 hostname）到服务器侧 /home/ubuntu/kaogong-reports/deploy-history.log，写失败不阻塞。详见 docs/iter/round-3/r203-deploy-audit-trail.md。
+
+### R204（SSR 分页导航补页码窗口）
+- 取证：SSR 分页页族（模块/子题型/考点/年份，共用 _pager()）只有 首页/上一页/下一页/末页，无页码直达；/tiku/panduan/ 共 459 页，到第 50 页需 ~49 连跳，非探针日志 24h 实见爬虫磨 ?page=254 深页。
+- 收口：_pager() 改页码窗口（上一页 | 1 … 当前±2 … 末页码 | 下一页），当前页 <span aria-current="page">，page=1 链接用干净 base_path（无 ?page=1），保留 rel=prev/next；既有 canonical/noindex 404/唯一 title 语义不变。
+- 验证：ruff/pytest 87（+6 例）全绿；生产 rev c0beeae 分页窗口/aria-current 实测生效，1440/375（含 375 深色）分页页溢出 0、console 0 error；R196 性能预算全过。详见 docs/iter/round-3/r204-pager-numbered-window.md。
