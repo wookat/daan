@@ -32,10 +32,20 @@ def check_import_token(x_import_token: str | None):
         raise HTTPException(401, "无效导入令牌")
 
 
+client_ip = auth.client_ip
+
+
 def rl(request: Request, bucket: str, limit: int, window: int, uid: str | None = None):
-    """高成本接口（AI/OCR/导出/纠错）按 uid 或来源 IP 限速，防单机刷量。"""
-    who = (uid or "").strip()[:64] or (request.client.host if request.client else "anon")
-    auth.rate_limit(f"{bucket}:{who}", limit, window)
+    """高成本接口（AI/OCR/导出/纠错）限速，防单机刷量。
+
+    IP 桶恒生效（uid 为客户端自报，可轮换绕过 uid 桶；带 uid 时放宽 3 倍容忍 NAT 共享出口）；
+    uid 桶在提供 uid 时叠加，保持原有按账号的精细口径。
+    """
+    ip = client_ip(request)
+    who = (uid or "").strip()[:64]
+    auth.rate_limit(f"{bucket}:ip:{ip}", limit * 3 if who else limit, window)
+    if who:
+        auth.rate_limit(f"{bucket}:{who}", limit, window)
 
 
 def friendly_ai_err(e: Exception) -> str:
