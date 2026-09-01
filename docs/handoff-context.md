@@ -555,3 +555,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：生产逐路由复测 verified 两个 404 缺口——`/tiku/papers/{pid}/`（带斜杠无路由直接 404）与 `/tiku/daily/{day}`（无斜杠落 `/{module}` catch-all → 模块不存在 404），与 q/{id}（带斜杠 301 去斜杠）及列表页族（无斜杠 301 补斜杠）既有约定不一致，外链斜杠变体把 121 张卷详情页/滚动归档页判成硬 404。
 - 收口：只补两条 301 路由（papers 详情带斜杠→无斜杠、daily 归档无斜杠→带斜杠），规范 URL/sitemap/canonical 零变化；+2 pytest。
 - 验证：ruff/pytest 76 全绿；生产 rev f149cb0 部署后全表复测（papers/5/ 301、daily/{day} 301、q//discuss//papers/ 既有语义不变、unknown 仍 404、坏日期仍 301 回 /tiku/daily/）；1440/375 两页溢出 0、console 0 error；R196 性能预算全过。详见 docs/iter/round-3/r199-tiku-slash-canonical-gaps.md。
+
+### R200（/tiku 尾斜杠规范化扫尾）
+- 取证：R199 后对 seo.py 全部路由斜杠变体穷举复测，剩三处不一致——`/tiku/search/` 落 `/{module}/` catch-all 直接 404（query 一并丢）；`/y/{year}/{module}` 与 `/t/{code}` 无斜杠路由无条件 301，无效输入产生 301→404 两跳链（与 `/{module}` 无斜杠「先验证再 301」约定不一致）。
+- 收口：`/search/` 301 → `/tiku/search`（保 q）；y/t 无斜杠先验证（module 名+年份有量 / topic 存在+有量）再 301，无效直接 404。内容路由/sitemap/canonical 零变化；+4 pytest（79 全绿）。
+- 验证：生产 rev d7fe5d6 部署后全表复测（search/ 带 q 301、无效 y/t 无斜杠 404、有效仍 301、R199 回归集不变）；1440/375 year/topic 页溢出 0、console 0 error；R196 性能预算全过。详见 docs/iter/round-3/r200-slash-canonical-tail.md。
