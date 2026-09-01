@@ -41,9 +41,10 @@
           v-model="answer"
           class="ans-box"
           :maxlength="5000"
-          placeholder="像面试现场一样组织语言作答（建议 200 字以上）…"
+          placeholder="像面试现场一样组织语言作答（建议 200 字以上）…草稿自动保存在本机"
+          @input="saveDraft"
         />
-        <view class="cnt">{{ answer.length }} / 5000</view>
+        <view class="cnt"><text v-if="answer" class="cnt-save">已自动保存 · </text>{{ answer.length }} / 5000</view>
         <view class="btn-row">
           <button class="btn-ghost" @click="voiceStub"><l-icon name="mic" :size="15" color="#2e5bff" /> 语音作答（即将上线）</button>
           <button class="btn-primary grow" :disabled="answer.trim().length < 20 || submitting" @click="submit">
@@ -144,7 +145,7 @@ export default {
   },
   onLoad(opts) {
     if (opts && opts.session_id) this.loadSession(opts.session_id);
-    else this.loadCategories();
+    else if (!this.restoreDraft()) this.loadCategories();
   },
   onUnload() {
     this.stopTimer();
@@ -185,6 +186,23 @@ export default {
     stopTimer() {
       if (this._timer) { clearInterval(this._timer); this._timer = null; }
     },
+    saveDraft() {
+      if (!this.question.id) return;
+      if (this.answer) uni.setStorageSync('ivDraft', { q: this.question, cat: this.pickedCategory, answer: this.answer });
+      else uni.removeStorageSync('ivDraft');
+    },
+    restoreDraft() {
+      const d = uni.getStorageSync('ivDraft');
+      if (!d || !d.q || !d.q.id || !(d.answer || '').trim()) return false;
+      this.question = d.q;
+      this.pickedCategory = d.cat || '';
+      this.answer = d.answer;
+      this.step = 'answer';
+      this.startTimer();
+      uni.showToast({ title: '已恢复上次未提交的作答', icon: 'none' });
+      this.loadCategories();
+      return true;
+    },
     voiceStub() {
       uni.showToast({ title: '语音作答即将上线，先用文字练起来吧', icon: 'none' });
     },
@@ -209,6 +227,7 @@ export default {
           onDelta: (full) => { this.review = full; },
         });
         this.review = res.review || this.review;
+        uni.removeStorageSync('ivDraft');
         if (res.session_id) this.loadPoints(res.session_id);
       } catch (e) {
         uni.showToast({ title: e.message || '点评失败，请重试', icon: 'none' });
@@ -314,6 +333,7 @@ export default {
 .swap { font-size: 25rpx; color: #2e5bff; }
 .ans-box { width: 100%; box-sizing: border-box; min-height: 320rpx; background: var(--card); border-radius: 24rpx; padding: 24rpx 28rpx; font-size: 28rpx; line-height: 1.7; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); }
 .cnt { text-align: right; font-size: 22rpx; color: var(--ink-2); margin: 10rpx 8rpx 24rpx; }
+.cnt-save { color: var(--ink-3); }
 
 .btn-row { display: flex; gap: 20rpx; margin-top: 10rpx; }
 .grow { flex: 1; }

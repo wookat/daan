@@ -431,3 +431,7 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 ### R137（2026-08-31）：详情/报告页失败态收口（成绩报告/赛后报告/掌握度地图）
 - 取证：生产 API abort 探针 + 源码核查。verified：report.vue 网络失败误呈现「暂无成绩报告」引导空态；contest-report.vue 失败标题固定「暂无大赛报告」且副文案直出 request:fail（网络失败与报告不存在混淆）；mastery-map.vue 已有驻留错误文案但无重试出口。
 - 修复：导出 api.js 既有 isNetErr 分流——网络层失败置 loadErr 错误卡+重试 ›，HTTP 业务错误（404 报告不存在等）保持「暂无…」空态引导语义；mastery-map 补重试+load 清空 err。零后端改动。生产双视口复验：3 页 × 1440/375 abort 出错误卡、放行后重试 mastery-map 原位恢复、不存在 id 正确落回空态引导、溢出 0。方案：docs/iter/round-3/r137-report-pages-error-state.md。
+
+### R138（2026-09-01）：面试作答草稿自动保存
+- 取证：源码核查 interview.vue——作答 textarea（5000 字上限）为纯内存 answer，刷新/标签页回收/误触返回长文全丢；对照 shenlun 已有 slDraft:<qid> 逐题草稿模式。面试是随机抽题，刷新后重抽大概率非原题，逐题键无法自然恢复。
+- 修复：单键 ivDraft 整体快照 { q, cat, answer }——@input 非空 set/空 remove；onLoad 无 session_id 时有草稿直接恢复原题+分类+作答进入作答步（toast 提示）；批改流成功后 remove、失败保留；draw 换题不动旧快照（新题输入后自然覆盖）；计数行补「已自动保存 ·」外显。零后端改动。生产双视口复验：1440/375 输入→刷新原题+作答整体恢复、提交成功后草稿清除刷新不再恢复、console 0 error、溢出 0（测试 uid 数据已清理）。方案：docs/iter/round-3/r138-interview-answer-draft.md。
