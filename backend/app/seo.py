@@ -58,7 +58,7 @@ _CSS = (
     "--shadow:0 1px 2px rgba(0,0,0,.4);--shadow-hover:0 4px 12px rgba(0,0,0,.5)}}"
     "*{box-sizing:border-box}body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,"
     "'PingFang SC','HarmonyOS Sans','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif;"
-    "color:var(--text);background:var(--bg);line-height:1.7;font-size:16px}"
+    "color:var(--text);background:var(--bg);line-height:1.7;font-size:16px;overflow-wrap:anywhere}"
     "a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}"
     ".wrap{max-width:860px;margin:0 auto;padding:16px}"
     ".hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 0}"
@@ -805,12 +805,22 @@ def _render_question(qid: int) -> str:
     conn = db.get_conn()
     r = conn.execute(
         "SELECT id, module, submodule, tag3, question, options, answer, explanation, hs_explanation, "
-        "is_real, exam_year, exam_region, image, image_credit FROM questions WHERE id=? AND disabled=0",
+        "is_real, exam_year, exam_region, image, image_credit, material_hash "
+        "FROM questions WHERE id=? AND disabled=0",
         (qid,),
     ).fetchone()
     if not r:
         conn.close()
         raise HTTPException(404, "题目不存在")
+    group = []
+    if r["module"] == "ziliao" and r["material_hash"] and r["material_hash"] != "-":
+        group = conn.execute(
+            "SELECT id, question FROM questions WHERE material_hash=? AND disabled=0 "
+            "ORDER BY id LIMIT 8",
+            (r["material_hash"],),
+        ).fetchall()
+        if len(group) < 2:
+            group = []
     similar = []
     if r["tag3"]:
         similar = conn.execute(
@@ -856,6 +866,14 @@ def _render_question(qid: int) -> str:
     else:
         exp_html = f"<p>{hs_html or raw_html or '暂无解析'}</p>"
     src = " ".join(filter(None, [f'{r["exam_year"]}年' if r["exam_year"] else "", r["exam_region"] or "", "真题" if r["is_real"] else "练习题"]))
+    group_html = "".join(
+        (
+            f'<li><b>本题</b> {_e((g["question"] or "").strip().replace(chr(10), " ")[:60])}…</li>'
+            if g["id"] == qid
+            else f'<li><a href="/tiku/q/{g["id"]}">{_e((g["question"] or "").strip().replace(chr(10), " ")[:60])}…</a></li>'
+        )
+        for g in group
+    )
     sim_html = "".join(
         f'<li><a href="/tiku/q/{s["id"]}">{_e((s["question"] or "").strip().replace(chr(10), " ")[:60])}…</a></li>'
         for s in similar
@@ -890,6 +908,11 @@ def _render_question(qid: int) -> str:
             else ""
         )
         + "</article>"
+        + (
+            f'<section class="card"><h2>同材料题组（共 {len(group)} 题）</h2><ul class="qlist">{group_html}</ul></section>'
+            if group_html
+            else ""
+        )
         + (
             f'<section class="card noprint"><h2>同考点相似题</h2><ul class="qlist">{sim_html}</ul>'
             + (

@@ -116,6 +116,7 @@ def init_db():
         ("tag3", "ALTER TABLE questions ADD COLUMN tag3 TEXT"),
         ("quality_score", "ALTER TABLE questions ADD COLUMN quality_score INTEGER"),
         ("updated_at", "ALTER TABLE questions ADD COLUMN updated_at REAL"),
+        ("material_hash", "ALTER TABLE questions ADD COLUMN material_hash TEXT"),
     ]:
         if col not in qcols:
             conn.execute(ddl)
