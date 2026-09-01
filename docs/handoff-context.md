@@ -610,3 +610,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：生产 axe 复扫 light/dark × 7 页（panduan?page=254、daily、papers、search、q/1、discuss、y/2023），唯一违例为 dark /tiku/papers/ link-in-text-block serious×61——papers 列表 li 为「短标题链接 + 较长 .meta 文本」构成 text block，深色 --link 仅靠颜色区分；R195 下划线规则未覆盖 .qlist li>a。origin 24h 非探针错误仅零星扫描/直连 403，无其他新缺陷。
 - 收口：seo.py 下划线选择器扩一项 `.qlist li>a`（papers 与题目列表统一，light/dark 一致，胶囊 CTA/面包屑豁免不变）；+1 pytest。
 - 验证：ruff/pytest 90（+1 例）全绿；生产 rev c3aba55 部署后 14 组合 axe 全 CLEAN，1440/375 × light/dark papers/模块页下划线生效、溢出 0、console 0 error，R196 性能预算全过。详见 docs/iter/round-3/r210-papers-dark-link-underline.md。
+
+### R211（前端 lint 覆盖面缺口收口：tests/ 纳入官方门禁，纯工具链不部署）
+- 取证：`npm run lint` 只跑 `eslint src`，tests/ 12 个测试文件游离在 lint 门禁外；实测 `npx eslint tests` 27 errors（全部 no-undef：Request×20/Response×7，Fetch API 全局未声明，R209 已记录该债务）。deploy/cf-pages 边缘源码在 eslint flat config base path 之外无法直接纳管（需配置上移仓库根，挂候选不做）。
+- 收口：eslint.config.mjs globals 补 Request/Response/Headers/caches/self；lint 脚本改 `eslint src tests`。零测试/源码改动，27 errors 全部由 globals 声明消解。
+- 验证：npm run lint（src+tests）0 error、vitest 122、build 全绿；无生产行为变化不部署。从本轮起「lint 全绿」口径覆盖 src+tests。详见 docs/iter/round-3/r211-lint-scope-tests.md。

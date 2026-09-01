@@ -69,6 +69,11 @@ export default [
         webkitSpeechRecognition: 'readonly',
         getApp: 'readonly',
         process: 'readonly',
+        Request: 'readonly',
+        Response: 'readonly',
+        Headers: 'readonly',
+        caches: 'readonly',
+        self: 'readonly',
       },
     },
     rules: {
