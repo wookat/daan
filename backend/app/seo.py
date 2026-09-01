@@ -291,6 +291,8 @@ def tiku_index():
                         f'<a href="{_e(_topic_path(t["code"]))}">{_e(t["name"])}</a>'
                     )
         topics = "".join(topic_links[:12])
+        if len(topic_links) > 12:
+            topics += f'<a href="/tiku/{_e(key)}/">全部 {len(topic_links)} 个考点 →</a>'
         years = "".join(
             f'<a href="{_e(_year_path(y, key))}">{y}年（{n}）</a>'
             for (y, m), (n, _mu) in sorted(ycounts.items(), reverse=True)
