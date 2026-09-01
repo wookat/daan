@@ -57,6 +57,11 @@ def verify_password(password: str, stored: str) -> bool:
 
 # ---------- 简单内存限速 ----------
 
+def client_ip(request: Request) -> str:
+    """真实客户端 IP：边缘代理透传的 X-Kg-Ip 优先（origin 域拒绝直连，头可信），回退 socket 对端。"""
+    return request.headers.get("x-kg-ip") or (request.client.host if request.client else "anon")
+
+
 _RATE: dict[str, list[float]] = {}
 
 
@@ -233,8 +238,7 @@ def api_register(body: dict, request: Request):
         raise HTTPException(400, "手机号格式不正确")
     if len(password) < 6 or len(password) > 64:
         raise HTTPException(400, "密码长度需为 6-64 位")
-    ip = request.client.host if request.client else "?"
-    rate_limit(f"reg:{ip}", 10, 3600)
+    rate_limit(f"reg:{client_ip(request)}", 10, 3600)
     if not sms_provider.verify(phone, code):  # TODO: 接入短信后启用真实校验
         raise HTTPException(400, "验证码错误")
     conn = db.get_conn()
@@ -258,8 +262,7 @@ def api_register(body: dict, request: Request):
 def api_login(body: dict, request: Request):
     phone = str(body.get("phone") or "").strip()
     password = str(body.get("password") or "")
-    ip = request.client.host if request.client else "?"
-    rate_limit(f"login:{ip}:{phone}", 10, 300)
+    rate_limit(f"login:{client_ip(request)}:{phone}", 10, 300)
     conn = db.get_conn()
     row = conn.execute("SELECT * FROM users WHERE phone=?", (phone,)).fetchone()
     if not row or not verify_password(password, row["password_hash"]):
@@ -286,8 +289,7 @@ def api_wxlogin(body: dict, request: Request):
     secret = os.environ.get("WX_MINIAPP_SECRET", "")
     if not secret:
         raise HTTPException(503, "微信登录暂未开通（服务端未配置小程序密钥）")
-    ip = request.client.host if request.client else "?"
-    rate_limit(f"wxlogin:{ip}", 20, 300)
+    rate_limit(f"wxlogin:{client_ip(request)}", 20, 300)
     try:
         r = httpx.get(
             "https://api.weixin.qq.com/sns/jscode2session",

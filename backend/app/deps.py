@@ -32,9 +32,7 @@ def check_import_token(x_import_token: str | None):
         raise HTTPException(401, "无效导入令牌")
 
 
-def client_ip(request: Request) -> str:
-    """真实客户端 IP：边缘代理透传的 X-Kg-Ip 优先（origin 域拒绝直连，头可信），回退 socket 对端。"""
-    return request.headers.get("x-kg-ip") or (request.client.host if request.client else "anon")
+client_ip = auth.client_ip
 
 
 def rl(request: Request, bucket: str, limit: int, window: int, uid: str | None = None):

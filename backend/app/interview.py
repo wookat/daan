@@ -8,11 +8,11 @@ import os
 import random
 import time
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from . import db, llm
-from .auth import rate_limit
+from .deps import rl
 
 router = APIRouter(prefix="/api/interview")
 
@@ -194,11 +194,11 @@ def _update_review(sid: int, review: str) -> None:
     conn.close()
 
 
-def _validate(body: dict) -> tuple[str, dict, str, int]:
+def _validate(request: Request, body: dict) -> tuple[str, dict, str, int]:
     uid = str(body.get("uid") or "").strip()
     if not uid:
         raise HTTPException(400, "缺少 uid")
-    rate_limit(f"itv_answer:{uid[:64]}", 20, 600)
+    rl(request, "itv_answer", 20, 600, uid)
     q = question_by_id(int(body.get("question_id") or 0))
     if not q:
         raise HTTPException(404, "题目不存在")
@@ -224,9 +224,9 @@ def _friendly_ai_err(e: Exception) -> str:
 
 
 @router.post("/answer/stream")
-async def api_answer_stream(body: dict):
+async def api_answer_stream(body: dict, request: Request):
     """SSE：event meta（scores/total/summary/session 占位）→ data 点评增量 → event done（session_id）。"""
-    uid, q, answer, duration = _validate(body)
+    uid, q, answer, duration = _validate(request, body)
 
     async def gen():
         try:
@@ -252,12 +252,12 @@ async def api_answer_stream(body: dict):
 
 
 @router.post("/sessions/{sid}/review/stream")
-async def api_review_regen_stream(sid: int, body: dict):
+async def api_review_regen_stream(sid: int, body: dict, request: Request):
     """为点评缺失的 session（流中断）重新生成考官点评：SSE data 增量 → done，完成后回填 DB。"""
     uid = str(body.get("uid") or "").strip()
     if not uid:
         raise HTTPException(400, "缺少 uid")
-    rate_limit(f"itv_regen:{uid[:64]}", 10, 600)
+    rl(request, "itv_regen", 10, 600, uid)
     conn = db.get_conn()
     row = conn.execute("SELECT * FROM interview_sessions WHERE id=? AND uid=?", (sid, uid)).fetchone()
     conn.close()
@@ -288,9 +288,9 @@ async def api_review_regen_stream(sid: int, body: dict):
 
 
 @router.post("/answer")
-async def api_answer(body: dict):
+async def api_answer(body: dict, request: Request):
     """非流式版（小程序/App 用）：一次返回打分 + 点评。"""
-    uid, q, answer, duration = _validate(body)
+    uid, q, answer, duration = _validate(request, body)
     try:
         scores, total, summary = await _grade(q, answer)
         review = await llm.chat(_review_prompt(q, answer, scores, summary))

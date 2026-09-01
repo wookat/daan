@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Request
 
 from . import db
-from .auth import rate_limit
+from .auth import client_ip, rate_limit
 from .social import CN_DAY_SQL, CN_TZ
 
 router = APIRouter(prefix="/api")
@@ -562,7 +562,7 @@ def api_track(body: dict, request: Request):
     }:
         raise HTTPException(400, "无效事件")
     uid = str(body.get("uid") or "").strip()[:64] or None
-    rate_limit(f"track:{uid or 'anon'}", 60, 300)
+    rate_limit(f"track:{uid or client_ip(request)}", 60, 300)
     ref = str(body.get("ref") or "")[:200 if event == "slow_load" else 32]
     if event == "slow_load":
         # 慢载事件服务端补 UA：旧 bundle 客户端不会自报，只有入库侧追加才能全量归因
