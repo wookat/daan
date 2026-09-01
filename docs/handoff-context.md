@@ -774,3 +774,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证 verified：R231 llms.txt 生成逻辑显式排除 shenlun 且导语只写行测五模块（早于 R236 申论 hub 恢复 200），生产实测无 /tiku/shenlun/ 条目——首页/sitemap/llms.txt 三个内容发现渠道口径不一致；本轮复审计无新缺陷（/tiku/shenlun/ light/dark×1440/375 axe 全零、溢出 0，Lighthouse 四项 1.00/LCP 930ms/CLS 0；origin 近 8h 5xx 全落旧部署窗口/共享 NAT 探针）。
 - 收口：llms_txt() 与首页/sitemap 同守卫（shenlun_questions total 非零输出申论条目 + 导语补「历年申论真题」，清空自动回落）；不加申论子页链接（详情页不存在，防死链）。
 - 验证：pytest +1 例（有语料出现/清空消失；清理用 DELETE——question UNIQUE 使 disabled 后无法 OR IGNORE 复种），117 passed/ruff/pyright 0。详见 docs/iter/round-3/design-r240-llms-shenlun.md。
+
+### R241（站内搜索覆盖申论真题 + 申论专区 id 深链）
+- 取证 verified：生产 /api/search?q=给定资料 返回全空——搜索只覆盖行测 questions/exam_papers/考点，208 道申论真题（R236 已恢复公开 hub）完全不可搜，申论关键词成站内死胡同；App 申论专区 openQ(id) 已具备详情能力但 onLoad 不收 id，无法从搜索直达。本轮 12h origin 复审计无新缺陷（5xx 全落 R235 lb_try 实施前的部署窗口；20:41 慢样本簇为部署 rsync/prime 窗口自致）。
+- 收口：db.search_shenlun(q)（question/paper LIKE，disabled 守卫，≤5 条，208 行小表不建 FTS）+ api_search type in (all, shenlun) 附 shenlun 段；搜索页侧栏「申论真题」区块点击直达 /pkgA/shenlun/shenlun?id=N（onLoad 校验纯数字后 openQ）；不新增搜索 tab、不搜 shenlun_materials（挂候选）。
+- 验证：pytest +1 例（命中字段契约/卷名命中/type=question 无申论段/清空为空），118 passed/ruff/pyright 0/lint/vitest 133/build。详见 docs/iter/round-3/design-r241-search-shenlun.md。

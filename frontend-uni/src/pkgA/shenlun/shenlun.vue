@@ -200,6 +200,7 @@ export default {
     this.loadFilters();
     if (opts && opts.tab === 'r') this.switchRec();
     else if (opts && opts.tab === 'm') this.switchMat();
+    if (opts && /^\d+$/.test(opts.id || '')) this.openQ(Number(opts.id));
   },
   methods: {
     async loadQs(append) {

@@ -767,6 +767,20 @@ def shenlun_questions(qtype: str | None = None, year: int | None = None, region:
     return {"items": [dict(r) for r in rows], "total": total}
 
 
+def search_shenlun(q: str, limit: int = 5) -> list[dict]:
+    conn = get_conn()
+    rows = conn.execute(
+        """SELECT id, exam_year, exam_region, paper, qtype, question
+            FROM shenlun_questions
+            WHERE (disabled IS NULL OR disabled=0)
+              AND (question LIKE '%' || ? || '%' OR paper LIKE '%' || ? || '%')
+            ORDER BY exam_year DESC, id LIMIT ?""",
+        (q, q, min(max(limit, 1), 10)),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 def shenlun_filters() -> dict:
     conn = get_conn()
     years = [r[0] for r in conn.execute(

@@ -378,6 +378,8 @@ def api_search(q: str, type: str = "all", limit: int = 20, offset: int = 0):
         out["papers"] = [dict(r) for r in rows]
     if type in ("all", "question"):
         out["questions"] = _search_questions(q, limit, offset)
+    if type in ("all", "shenlun"):
+        out["shenlun"] = db.search_shenlun(q)
     return out
 
 

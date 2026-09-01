@@ -3,7 +3,7 @@
     <view class="sbar">
       <view class="sbox">
         <l-icon name="search" :size="18" color="#9ca3af" />
-        <input v-model="kw" class="sinput" placeholder="题号 / 题干关键词 / 考点名" confirm-type="search" focus @confirm="doSearch" @input="onInput" />
+        <input v-model="kw" class="sinput" placeholder="题号 / 题干关键词 / 考点 / 申论" confirm-type="search" focus @confirm="doSearch" @input="onInput" />
         <view v-if="kw" class="sclear" role="button" aria-label="清空搜索" @click="kw = ''; result = null; loadErr = ''; syncUrl()"><l-icon name="x" :size="16" color="#8a90a0" /></view>
       </view>
       <text class="scancel" @click="goBack">取消</text>
@@ -53,6 +53,17 @@
           <text class="t-go">去做卷 ›</text>
         </view>
       </view>
+      <!-- 申论真题 -->
+      <view v-if="showSec('shenlun') && result.shenlun && result.shenlun.length" class="sec">
+        <text class="sec-t">申论真题</text>
+        <view v-for="s in result.shenlun" :key="s.id" class="card titem" @click="goShenlun(s)">
+          <view class="t-l">
+            <rich-text class="t-name" :nodes="hl(s.question)" />
+            <text class="t-sub">{{ s.exam_year || '' }}{{ s.exam_region ? ' · ' + s.exam_region : '' }}{{ s.qtype ? ' · ' + s.qtype : '' }}</text>
+          </view>
+          <text class="t-go">去作答 ›</text>
+        </view>
+      </view>
       </view>
       <view class="res-main">
       <!-- 题目 -->
@@ -91,7 +102,7 @@
           <text v-for="h in hist" :key="h" class="hist-chip" role="button" :aria-label="'搜索 ' + h" @click="kw = h; doSearch()">{{ h }}</text>
         </view>
       </view>
-      <view class="empty">支持搜索：题号语义码、题干关键词、考点名、试卷名</view>
+      <view class="empty">支持搜索：题号语义码、题干关键词、考点名、试卷名、申论真题</view>
     </template>
   </view>
 </template>
@@ -134,13 +145,13 @@ export default {
   computed: {
     hasSide() {
       const r = this.result;
-      return !!(r && ((r.topics || []).length || (r.papers || []).length));
+      return !!(r && ((r.topics || []).length || (r.papers || []).length || (r.shenlun || []).length));
     },
     isEmpty() {
       const r = this.result;
       if (!r) return false;
       if (r.code_hit) return false;
-      return !((r.topics || []).length || (r.papers || []).length || (r.questions && r.questions.items.length));
+      return !((r.topics || []).length || (r.papers || []).length || (r.shenlun || []).length || (r.questions && r.questions.items.length));
     }
   },
   methods: {
@@ -242,6 +253,9 @@ export default {
     },
     goPaper(p) {
       uni.navigateTo({ url: '/pkgA/exam/exam?paper_id=' + p.id });
+    },
+    goShenlun(s) {
+      uni.navigateTo({ url: '/pkgA/shenlun/shenlun?id=' + s.id });
     },
     goBack() {
       uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/home/home' }) });
