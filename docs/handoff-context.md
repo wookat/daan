@@ -570,3 +570,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：首页每模块考点标签截断 [:12] 后无任何「更多」入口（生产 grep「更多/查看全部」零命中），R201 模块 hub 全量考点卡与首页截断列表之间无显式引导。
 - 收口：截断（>12）时在标签尾部追加「全部 N 个考点 →」链至 /tiku/{module}/；≤12 不加。零路由/canonical/sitemap 变化。
 - 验证：ruff/pytest 81（+1 例，测试库因启动自动导入题库非空，断言按实际考点数条件判定）全绿；生产 rev 5f45dc9 五模块入口齐全（27/56/18/22/33），1440/375 /tiku/ 溢出 0、console 0 error；R196 性能预算全过。详见 docs/iter/round-3/r202-home-topic-more-link.md。
+
+### R203（部署审计日志 + 观测口径校正）
+- 取证：09-01 16:11–18:37 origin 出现 ~21k 条 exam submit/report 404 风暴（60s 滚动窗口峰值 262 错误）期间零 429，而当日 22:08 生产实测与本地 pytest 均确认 ErrorStormGuard 第 31 个错误起 429 正常生效；同窗口 dockerd journal 显示容器被反复重建（约每 10–25 分钟），但无任何持久记录能回答「某时刻线上跑的是哪个 rev、由谁部署」，风暴窗口守卫失效无法定案。
+- 口径校正（重要）：140.232.64.5 为 Devin 基础设施共享 NAT 出口，多个会话共用；此前 R183/R185 按该 IP 的「本会话探针」归因实为「全部 Devin 会话」口径。另实证当日有本会话之外的操作者在做 kaogong 部署/备份（19:33 手工 ops、20:55/22:00 部署，产物与 R202 树一致，线上 rev 5f45dc9 健康）。
+- 收口：deploy_h5.sh rev 校验后追加一行部署审计记录（UTC 时间/rev/bundle/部署机 hostname）到服务器侧 /home/ubuntu/kaogong-reports/deploy-history.log，写失败不阻塞。详见 docs/iter/round-3/r203-deploy-audit-trail.md。
