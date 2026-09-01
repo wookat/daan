@@ -42,17 +42,6 @@ export function applyTheme() {
 
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', dark ? '#15161c' : '#eef3ff');
-
-  // tabbar 文字色为 pages.json 静态配置的内联样式，CSS token 无法覆盖，走 API 设置
-  try {
-    uni.setTabBarStyle(
-      dark
-        ? { color: '#9ba0b0', selectedColor: '#8fa8ff' }
-        : { color: '#6b7280', selectedColor: '#2e5bff' }
-    );
-  } catch (e) {
-    /* 非 tabbar 环境忽略 */
-  }
   // #endif
 }
 

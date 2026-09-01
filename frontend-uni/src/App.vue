@@ -188,6 +188,13 @@ html.theme-dark body {
   background: #1d1f28 !important;
   border-color: #2b2e3a;
 }
+/* tabbar 文字色为 pages.json 静态配置的内联样式（uni-h5 无 setTabBarStyle），按配置色值定向覆盖 */
+.theme-dark uni-tabbar .uni-tabbar__label {
+  color: #9ba0b0 !important;
+}
+.theme-dark uni-tabbar .uni-tabbar__label[style*='rgb(46, 91, 255)'] {
+  color: #8fa8ff !important;
+}
 .theme-dark uni-page-head .uni-page-head {
   background: #15161c !important;
   color: #f2f3f7;

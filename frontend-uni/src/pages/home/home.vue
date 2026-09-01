@@ -1372,6 +1372,6 @@ export default {
 .ld-id { font-size: 21rpx; color: rgba(255, 255, 255, 0.82); }
 .ld-acts { display: flex; gap: 16rpx; margin-top: 26rpx; }
 .ld-btn { min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; border-radius: 999rpx; padding: 0 34rpx; font-size: 27rpx; font-weight: 600; }
-.ld-btn.main { background: #fff; color: var(--brand-text); flex: 1; }
+.ld-btn.main { background: #fff; color: var(--brand); flex: 1; }
 .ld-btn.sub { background: rgba(255, 255, 255, 0.16); color: #fff; border: 1rpx solid rgba(255, 255, 255, 0.45); }
 </style>
