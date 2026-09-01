@@ -53,6 +53,21 @@ export function serveMode(hasCopy, freshness) {
   return freshness === "hit" ? "hit" : "swr";
 }
 
+// 条件请求评估（RFC 9110）：If-None-Match 优先于 If-Modified-Since；
+// ETag 弱比较（忽略 W/ 前缀），支持逗号列表与 `*`。
+export function notModified(ifNoneMatch, ifModifiedSince, etag, lastModified) {
+  const weak = (v) => (v || "").trim().replace(/^W\//, "");
+  if (ifNoneMatch) {
+    if (!etag) return false;
+    if (ifNoneMatch.trim() === "*") return true;
+    return ifNoneMatch.split(",").some((v) => weak(v) === weak(etag));
+  }
+  if (!ifModifiedSince || !lastModified) return false;
+  const ims = Date.parse(ifModifiedSince);
+  const lm = Date.parse(lastModified);
+  return Number.isFinite(ims) && Number.isFinite(lm) && lm <= ims;
+}
+
 export function isCacheableContentType(pathname, isApi, contentType) {
   const ct = contentType || "";
   if (pathname.startsWith("/sitemap") || pathname === "/robots.txt") {

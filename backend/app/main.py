@@ -57,6 +57,41 @@ app.add_middleware(
 )
 
 
+_ETAG_TYPES = ("text/html", "xml", "text/plain")
+
+
+@app.middleware("http")
+async def etag_conditional(request, call_next):
+    """公开小文本响应（SSR/sitemap/robots）补内容指纹 ETag，命中 If-None-Match 回 304。
+
+    仅缓冲 GET 200 的 html/xml/plain 小文本；/api JSON 不参与，
+    静态文件由 StaticFiles 自带 ETag/304。md5 仅作缓存验证器非安全用途。
+    """
+    response = await call_next(request)
+    ct = response.headers.get("content-type") or ""
+    if (
+        request.method != "GET"
+        or response.status_code != 200
+        or request.url.path.startswith("/api/")
+        or not any(t in ct for t in _ETAG_TYPES)
+        or "etag" in response.headers
+        or not hasattr(response, "body_iterator")
+    ):
+        return response
+    chunks = []
+    async for chunk in response.body_iterator:
+        chunks.append(chunk)
+    body = b"".join(chunks)
+    etag = f'W/"{hashlib.md5(body).hexdigest()}"'
+    inm = request.headers.get("if-none-match")
+    headers = dict(response.headers)
+    headers["etag"] = etag
+    if inm == "*" or (inm and etag in [v.strip() for v in inm.split(",")]):
+        headers.pop("content-length", None)
+        return Response(status_code=304, headers=headers)
+    return Response(content=body, status_code=200, headers=headers)
+
+
 @app.middleware("http")
 async def head_as_get(request, call_next):
     """HEAD 请求按 GET 路由处理，仅返回状态与响应头（RFC 9110 HEAD 语义）。
