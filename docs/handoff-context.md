@@ -656,3 +656,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 收口：ops 日志迁至 /home/ubuntu/kaogong-reports/（与部署/生命周期同目录，旧日志已 cp 迁移 + 原文件留 .migrated-r219）；compose 只读挂载该目录为 /reports；新增 backend/app/ops_status.py 尾部容错解析（64KB tail、CST/UTC 双时间轴、FAILED/DISK HIGH/UNHEALTHY/SIZE MISMATCH 告警正则）+ `/api/admin/ops_status`（check_admin 门禁，OPS_REPORTS_DIR 可配）；看板新增「运维状态」卡（部署 rev/备份/恢复验证/R2 周验证/内存/24h 容器变更/近 7 天告警）。
 - 验证：pytest 98（+4 例解析器）/ruff/pyright 0/lint/vitest 128/build 全绿；生产 rev dcb87b7 实测无 token 401、带 token 返回全部真实审计数据（backup/restore/r2 ok、24h 容器变更 9 次、告警 1 条），看板卡 1440/375 均渲染（375 下管理台整体 min-width 768 横向溢出为存量桌面化设计，非本轮引入），性能预算全过。
 - 明确不做：不动告警阈值；不加外部通知通道（挂资源项）；不回溯已轮转日志。详见 docs/iter/round-3/design-r219-admin-ops-status.md。
+
+### R220（管理台 ≤767px 手机档，已部署）
+- 取证 verified：/admin 375×667 横向溢出 408px，根因 admin.css `body{min-width:768px}`；受控移除 R219 运维卡溢出不变，证实存量布局缺陷；既有响应式只有 ≤1023 平板档（64px 图标侧栏）。
+- 收口（纯 CSS + 1 行 HTML）：admin.css 追加 `@media(max-width:767px)` 手机档——body min-width 解除、topbar search 隐藏、content padding 12、pagehead/row/filterbar 换行、kpis minmax(140px,1fr)!important（覆盖 dedup/governance 页内联 repeat(4,1fr)）、drawer 100vw、`.tbl-wrap,.card{overflow-x:auto}`+`table.tbl{min-width:640px}` 表格容器内横滚（questions 等页表格直接渲染在 .card 内不在 .tbl-wrap）。
+- 缓存击穿：index.html 的 admin.css 链接原本无 `?v=`，后端 mtime 重写机制不生效，边缘缓存旧 CSS；补 `?v=r38` 收口（部署后实测重写为 mtime 版本号）。
+- 验证：本地全绿（ruff/pytest 98/pyright 0/lint/vitest 128/build）；生产 375/320 全部 12 个管理台路由 scrollWidth-clientWidth=0，1440 桌面零变化（min-width:768 仍生效、侧栏 232px）。
+- 明确不做：侧栏抽屉/汉堡菜单（需 JS）、管理台深色模式（挂候选）。详见 docs/iter/round-3/design-r220-admin-mobile.md。

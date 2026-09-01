@@ -25,6 +25,12 @@
 - 不动任何 pages/*.js 的 DOM 结构与接口。
 - 不做管理台深色模式（独立候选）。
 
-## 验收
+## 实施中新发现（verified）与增量收口
 
-- 本地全绿门禁；生产部署后 375×667 与 320 宽 `/admin` 登录页+看板 scrollWidth ≤ 视口（表格容器内横滚除外），1440 桌面布局零变化。
+- 缓存击穿缺口：`index.html` 里 JS 均带 `?v=`（后端按 admin 目录 mtime 重写），唯独 `admin.css` 链接裸引用，边缘/浏览器缓存导致新 CSS 上线后仍命中旧副本（实测 cf-cache-status: HIT、旧内容）。收口：CSS 链接补 `?v=r38` 进入同一重写机制。
+- 首版验收发现三页仍溢出：questions/comments/users/settings（表格不在 `.tbl-wrap` 内而在 `.card` 内）、taxonomy（`#t-chips` 的 `.row` 不换行）、dedup/governance（页面内联 `grid-template-columns:repeat(4,1fr)` 覆盖媒体查询）。增量收口（仍纯 CSS）：手机档 `.card{overflow-x:auto}`、`.row/.filterbar{flex-wrap:wrap}`、`.kpis` 列规则加 `!important`。
+
+## 验收（生产实测结果）
+
+- 本地全绿：ruff / pytest 98 / pyright 0 / lint(src+tests+edge) / vitest 128 / build。
+- 生产（rev 5462eb5 + admin 静态增量同步）：375×667 与 320×568 下管理台全部 12 个路由 `scrollWidth-clientWidth = 0`（登录页+看板+全部列表页；数据表在卡片容器内横滚）；1440 桌面 `body min-width:768px` 生效、侧栏 232px、布局零变化。
