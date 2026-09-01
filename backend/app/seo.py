@@ -1429,13 +1429,19 @@ def llms_txt():
         for key, m in kb.MODULES.items()
         if key != "shenlun"
     )
+    shenlun = (
+        f"- [申论真题库]({_url('/tiku/shenlun/')}): 历年申论真题与参考解析，按年份/地区归档\n"
+        if db.shenlun_questions(limit=1)["total"]
+        else ""
+    )
     return PlainTextResponse(
         "# 错题邦公考题库\n\n"
         "> 免费公务员考试在线刷题与错题本：行测五大模块真题题库（每题含答案与解析）、"
-        "每日一练、历年真题卷、考友讨论。\n\n"
+        "历年申论真题、每日一练、历年真题卷、考友讨论。\n\n"
         "## 题库\n\n"
         f"- [题库首页]({_url('/tiku/')}): 全部模块、考点与年份入口\n"
         f"{mods}\n"
+        f"{shenlun}"
         f"- [历年真题卷]({_url('/tiku/papers/')}): 按年份/地区的完整真题卷列表\n\n"
         "## 动态内容\n\n"
         f"- [每日一练]({_url('/tiku/daily/')}): 全站同题每日题组与排行榜\n"

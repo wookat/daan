@@ -769,3 +769,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证 verified：24h origin 复审计无新产品缺陷（4xx 全为历史探针，/llms.txt、/tiku/shenlun/ 404 均早于对应轮部署时刻，当前 200；慢样本聚簇部署窗口属 lb_try 排队设计行为）；真实缺口为流程性——5 个 shell 脚本历轮只有 bash -n 纯语法检查，shellcheck 全量实扫 4 处，其中 kaogong-ops.sh SC2166（`[ p -o q ]` POSIX 未定义）触及 R2 周验证触发条件，属真实正确性风险。
 - 收口：SC2166 重写为 `{ [ p ] || [ q ]; }`；SC1090/SC2012/SC2086 三处有意为之定点 directive 豁免并注明理由（对齐 R217 pyright 手法）。门禁基线：`shellcheck deploy/*.sh` 0 输出，与 bash -n 并列为 shell 变更验收项（本地门禁，不引入 CI）。
 - 验证：shellcheck 0 输出 + bash -n 5 脚本全过；VPS 同步 kaogong-ops.sh/cron_access_report.sh 后 FORCE_R2_VERIFY=1 实跑，R2-VERIFY ok md5 match 正常入日志（重写后触发条件 verified）。详见 docs/iter/round-3/design-r239-shellcheck-gate.md。
+
+### R240（/llms.txt 补申论真题库入口，对齐 R236）
+- 取证 verified：R231 llms.txt 生成逻辑显式排除 shenlun 且导语只写行测五模块（早于 R236 申论 hub 恢复 200），生产实测无 /tiku/shenlun/ 条目——首页/sitemap/llms.txt 三个内容发现渠道口径不一致；本轮复审计无新缺陷（/tiku/shenlun/ light/dark×1440/375 axe 全零、溢出 0，Lighthouse 四项 1.00/LCP 930ms/CLS 0；origin 近 8h 5xx 全落旧部署窗口/共享 NAT 探针）。
+- 收口：llms_txt() 与首页/sitemap 同守卫（shenlun_questions total 非零输出申论条目 + 导语补「历年申论真题」，清空自动回落）；不加申论子页链接（详情页不存在，防死链）。
+- 验证：pytest +1 例（有语料出现/清空消失；清理用 DELETE——question UNIQUE 使 disabled 后无法 OR IGNORE 复种），117 passed/ruff/pyright 0。详见 docs/iter/round-3/design-r240-llms-shenlun.md。
