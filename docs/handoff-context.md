@@ -443,3 +443,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 ### R140（2026-09-01）：讨论/笔记 UGC 输入草稿保护
 - 取证：延续 R138 探针对全站剩余长文本输入逐处核查。verified：讨论页 discuss.vue 发言/回复 draft（500 字）纯内存，刷新/标签页回收即丢；q-social-bar 笔记编辑 draft（1000 字）纯内存且「取消」误触即整篇丢弃无恢复。申论 slDraft/面试 ivDraft 为存量能力；book 纠错补充说明为选填短文本不立项。
 - 修复：沿用 slDraft 键模式——讨论 dcDraft:<qid> 逐题草稿（onLoad 恢复、watch 即存空即删、发布成功清除）；笔记 qNoteDraft:<qid>（startEdit 优先草稿回落笔记原文、编辑中即存且与已存笔记一致时删键、保存成功清除、取消保留草稿）。零后端改动。生产双视口复验：讨论页 1440/375 输入→刷新草稿恢复、清空后键删除；笔记输入→取消→再编辑恢复、清空退出键删除、console 0 error、溢出 0（测试 uid 3 行已清理，保护 uid 零 mutation）。方案：docs/iter/round-3/r140-ugc-draft-persist.md。
+
+### R141（2026-09-01）：读屏动态反馈通报（aria-live）
+- 取证：全仓源码 grep——frontend-uni/src 与 deploy/cf-pages 中 aria-live/role="alert"/role="status" 均 0 处，uni-h5 编译产物亦无；全站 212 处 uni.showToast 是唯一操作反馈通道，刷题判分横幅（回答正确/错误+正确答案）纯视觉。即读屏用户对全站动态反馈完全无感知。
+- 修复：H5-only 零后端零依赖——新增 src/a11y-live.js（body 常驻 role=status aria-live=polite 隐藏 region；MutationObserver 镜像 uni-toast 可见文案，含后挂载 toast；announce() 供页面显式通报）+ src/live-policy.js 纯函数（toastAnnounceText 可见/非空/去重决策、pickAnnounceText 判分文案含连对≥3 外显）+ practice.vue pick() 后 announce 判分结果；main.js initA11yLive()。tests/live-policy.test.js 8 例（vitest 54→62）。
+- 生产双视口复验（bundle fv7249MF / rev d3f0356）：1440/375 region 在位；每日一练作答后 region='回答错误，正确答案 C'；真实 toast（练习工具切音效）两次切换 region 依次镜像「音效已关闭/已开启」；console 0 error、溢出 0（测试 uid 数据 15 行已清理，保护 uid 零 mutation）。方案：docs/iter/round-3/r141-a11y-live-announce.md。

@@ -340,6 +340,8 @@ import { drawOffline, enqueueAnswers, enqueueMistake, flushOfflineQueue } from '
 import { dayKey, loadSzDaily, saveSzDaily } from '../../checkin.js';
 // #ifdef H5
 import { requestNotificationPermission } from '../../reminder.js';
+import { announce } from '../../a11y-live.js';
+import { pickAnnounceText } from '../../live-policy.js';
 // #endif
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
@@ -1726,6 +1728,9 @@ export default {
         return;
       }
       const correct = k === this.cur.answer;
+      // #ifdef H5
+      announce(pickAnnounceText(correct, this.cur.answer, this.streak + (correct ? 1 : 0)));
+      // #endif
       if (!this.beiMode) this.logAttempts([this.cur]);
       this.recordStat(this.cur.module, correct, this.cur.submodule);
       this.playSfx(correct);
