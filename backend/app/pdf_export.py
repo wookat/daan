@@ -121,6 +121,27 @@ def _mat_key(mat: str) -> str:
     return re.sub(r"\s+", "", mat or "")
 
 
+def group_by_material(questions: list[dict]) -> list[dict]:
+    """资料分析题按同材料聚组：同材料小题聚到该材料首现处，其余题保持原相对顺序。"""
+    slots: list[list[dict]] = []
+    by_key: dict[str, list[dict]] = {}
+    for q in questions:
+        key = ""
+        if (q.get("module") or "") == "ziliao":
+            key = q.get("material_hash") or ""
+            if not key or key == "-":
+                sp = _split_material(q.get("question") or "")
+                key = _mat_key(sp[0]) if sp else ""
+        if key and key in by_key:
+            by_key[key].append(q)
+        else:
+            group = [q]
+            slots.append(group)
+            if key:
+                by_key[key] = group
+    return [q for group in slots for q in group]
+
+
 def _esc(s: str) -> str:
     return (s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 

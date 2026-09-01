@@ -31,6 +31,7 @@ def api_export_pdf(body: dict, request: Request):
             )
     if not questions:
         raise HTTPException(400, "没有可导出的题目")
+    questions = pdf_export.group_by_material(questions)
     code = hashlib.md5(
         (",".join(str(q.get("id") or q.get("question", "")[:20]) for q in questions)).encode()
     ).hexdigest()[:8].upper()
