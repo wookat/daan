@@ -544,3 +544,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 收口：seo.py `_CSS` 新增 `:focus-visible{outline:2px solid var(--link);outline-offset:2px}`（token 化深浅色自适应），搜索框去 outline 抑制、保留 `:focus:not(:focus-visible)` 鼠标静默；+2 pytest 断言。
 - 验证：ruff/pytest 74 全绿；生产 rev 00b0253 部署后 1440/375 × light/dark Tab 走查全部焦点元素出 2px 环（light #2e5bff / dark #7c9aff）、溢出 0；本次部署首次真实复验 R196 step 6b：性能预算全部通过（/ perf 0.99/LCP 806ms，/tiku/ perf 1.0/LCP 944ms）。
 - 如实局限：文本输入框在 Chrome 按规范恒为 focus-visible，鼠标点击输入框也出环（与原生行为一致，非缺陷）；边缘 SWR 副本在 TTL 窗口内仍供旧 CSS，自然过期刷新。详见 docs/iter/round-3/r197-ssr-focus-visible.md。
+
+### R198（练习页 v3 IA 迁移遗留死代码清理）
+- 取证：7d 窗口无新缺陷，选代码治理轮。`git log -S plancard` verified：30a2b54（v3 5-tab IA）把「今日计划卡+报考画像引导/设置」迁至首页 tab 时只删了 practice.vue 模板，脚本与样式整段遗留——`loadPlan/loadProfile/loadPlanToday/openSetup/skipGuide/setupNext/goTask/setFocus` 8 个方法与 9 个 data 字段模板零引用（`this.loadProfile()` 全文不存在→`this.profile` 恒 undefined→两处 `if (this.profile)` 守卫永假），~140 行不可达 JS + ~40 行死 CSS 打进 practice chunk，且在练习页留下 daily_plan/profile/plan/today 幽灵调用面（R197 取证时曾被误判为活调用）。
+- 收口：只删不改（-143 行），home.vue 活代码与 percentile/goBook/goMini 等活引用不动。
+- 验证：删除后全文 grep 零残留；ESLint/vitest 95/build 全绿；生产 rev 19236e7 部署后 1440/375 练习页自动开题、作答正常、无横向溢出、console 0 error；R196 step 6b 性能预算全部通过（/ perf 0.99/LCP 826ms，/tiku/ perf 1.0/LCP 944ms）。
+- 如实局限：仅清理本页取证确认的死集群，未逐页扫全站死代码。详见 docs/iter/round-3/r198-practice-dead-plan-code.md。
