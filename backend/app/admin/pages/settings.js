@@ -43,8 +43,8 @@
     <div class="card" style="margin-bottom:14px">
       <div class="card-h"><span class="t">公告管理</span></div>
       <div class="row" style="gap:10px;margin-bottom:12px;flex-wrap:wrap">
-        <input class="ipt" id="ann-title" style="width:200px" placeholder="公告标题">
-        <input class="ipt" id="ann-body" style="flex:1;min-width:200px" placeholder="公告内容（可留空）">
+        <input class="ipt" id="ann-title" aria-label="公告标题" style="width:200px" placeholder="公告标题">
+        <input class="ipt" id="ann-body" aria-label="公告内容" style="flex:1;min-width:200px" placeholder="公告内容（可留空）">
         <button class="btn btn-primary" id="ann-add">发布公告</button>
       </div>
       <div id="st-ann" style="margin:0 -20px -16px"></div>

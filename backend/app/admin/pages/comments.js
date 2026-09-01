@@ -60,7 +60,7 @@
     </div>
     <div class="card" style="padding:0">
       <div class="card-h" style="padding:14px 16px 0"><span class="t">评论浏览</span>
-        <select id="cm-st" class="ipt" style="width:120px;margin-left:auto">
+        <select id="cm-st" class="ipt" aria-label="举报状态筛选" style="width:120px;margin-left:auto">
           <option value="ok">正常</option><option value="hidden">已隐藏</option><option value="deleted">已删除</option>
         </select>
       </div>
@@ -70,7 +70,7 @@
     const rbox = el.querySelector('#cm-reports');
     rbox.innerHTML = reports.items.length ? `<table class="tbl"><thead><tr>
       <th style="width:56px">ID</th><th>内容</th><th style="width:110px">作者</th><th style="width:70px">题目</th>
-      <th style="width:56px">举报</th><th>理由</th><th style="width:70px">状态</th><th style="width:110px">最近举报</th><th style="width:90px"></th></tr></thead><tbody>
+      <th style="width:56px">举报</th><th>理由</th><th style="width:70px">状态</th><th style="width:110px">最近举报</th><th style="width:90px"><span class="sr-only">操作</span></th></tr></thead><tbody>
       ${reports.items.map((r) => `<tr>
         <td>#${r.comment_id}</td>
         <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.content)}">${esc(r.content)}</td>
@@ -91,7 +91,7 @@
       const d = await api('/api/admin/comments?status=' + st);
       box.innerHTML = d.items.length ? `<table class="tbl"><thead><tr>
         <th style="width:56px">ID</th><th>内容</th><th style="width:110px">作者</th><th style="width:70px">题目</th>
-        <th style="width:52px">赞</th><th style="width:110px">时间</th><th style="width:90px"></th></tr></thead><tbody>
+        <th style="width:52px">赞</th><th style="width:110px">时间</th><th style="width:90px"><span class="sr-only">操作</span></th></tr></thead><tbody>
         ${d.items.map((c) => `<tr>
           <td>#${c.id}</td>
           <td style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(c.content)}">${esc(c.content)}</td>

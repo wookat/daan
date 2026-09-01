@@ -43,7 +43,7 @@
     <div class="split-2" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
       <div class="card" style="padding:0">
         <div class="card-h" style="padding:14px 16px 0"><span class="t">损坏题清单</span></div>
-        ${g.broken.length ? `<table class="tbl"><thead><tr><th style="width:66px">ID</th><th>题干</th><th>问题</th><th style="width:56px"></th></tr></thead><tbody>
+        ${g.broken.length ? `<table class="tbl"><thead><tr><th style="width:66px">ID</th><th>题干</th><th>问题</th><th style="width:56px"><span class="sr-only">操作</span></th></tr></thead><tbody>
           ${g.broken.slice(0, 30).map((b) => `<tr><td>#${b.id}</td>
             <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.question || '（空）')}</td>
             <td>${b.problems.map((p) => `<span class="tag tag-bad">${esc(p)}</span>`).join(' ')}</td>
@@ -69,7 +69,7 @@
       const box = document.getElementById('gv-cache');
       if (!box) return;
       box.innerHTML = r.items.length ? `<table class="tbl"><thead><tr>
-        <th>题干</th><th style="width:80px">模块</th><th style="width:100px">👍/👎/命中</th><th style="width:70px"></th></tr></thead><tbody>
+        <th>题干</th><th style="width:80px">模块</th><th style="width:100px">👍/👎/命中</th><th style="width:70px"><span class="sr-only">操作</span></th></tr></thead><tbody>
         ${r.items.map((c) => `<tr>
           <td style="max-width:380px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(c.question_text)}">${esc(c.question_text)}</td>
           <td>${modTag(c.module)}</td><td>${c.up} / <b style="color:var(--error)">${c.down}</b> / ${c.hits}</td>

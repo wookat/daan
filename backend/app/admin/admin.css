@@ -3,11 +3,11 @@
   --brand-50:#EEF3FF; --brand-100:#DBE6FF; --brand-200:#B8CCFF; --brand-300:#8AA9FF;
   --brand-400:#5C82FF; --brand-500:#2E5BFF; --brand-600:#1E44D9; --brand-700:#1735AB;
   --grad-brand:linear-gradient(135deg,#5C82FF,#2E5BFF);
-  --success:#16A34A; --success-bg:#ECFDF5; --error:#DC2626; --error-bg:#FEF2F2;
-  --warning:#D97706; --warning-bg:#FFFBEB; --info:#0284C7; --info-bg:#F0F9FF;
-  --t1:#17181C; --t2:#40434E; --t3:#7D818F; --t4:#B0B4C0;
+  --success:#047857; --success-bg:#ECFDF5; --error:#B91C1C; --error-bg:#FEF2F2;
+  --warning:#B45309; --warning-bg:#FFFBEB; --info:#0369A1; --info-bg:#F0F9FF;
+  --t1:#17181C; --t2:#40434E; --t3:#5D6270; --t4:#6E7280;
   --border:#E7E9F0; --fill:#F2F3F7; --bg:#F6F7FB; --surface:#FFF;
-  --mod-ziliao:#0D9488; --mod-shuliang:#2E5BFF; --mod-yanyu:#E11D48; --mod-panduan:#7C3AED; --mod-changshi:#D97706;
+  --mod-ziliao:#0F766E; --mod-shuliang:#2E5BFF; --mod-yanyu:#BE123C; --mod-panduan:#7C3AED; --mod-changshi:#B45309;
   --r-s:6px; --r-m:10px; --r-l:14px; --r-xl:20px; --r-full:999px;
   --sh-1:0 1px 4px rgba(23,24,28,.05); --sh-2:0 4px 12px rgba(23,24,28,.08); --sh-3:0 8px 24px rgba(23,24,28,.16);
   --side-w:232px;
@@ -19,6 +19,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue"
 a{color:var(--brand-500);text-decoration:none}
 b,strong{font-weight:600}
 .num{font-variant-numeric:tabular-nums}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 
 /* ===== 布局：左侧边导航 + 顶栏 + 内容区 ===== */
 .layout{display:flex;min-height:100vh}
