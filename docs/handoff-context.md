@@ -716,3 +716,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证 verified：近 3h origin 无外部用户 5xx（9 条 502 为共享 NAT 受控探针集束）；17:39–17:44 的 /api/admin/batches 6–7s 样本时间戳在 R221 索引部署之前，当前实测 0.05–0.16s（idx_q_batch 在库生效，非回退）；/api/admin/governance 实测首次命中 5.1s、随后 0.16s——R222 设计中的「进程启动后首次同步冷 miss」，而 container-events.log 显示当日容器重建 ≥8 次（每次部署都重建），每次重启后首个管理员请求都承担秒级冷查询。
 - 收口：main.py `_prime_admin_caches()`（预热 admin_dashboard/governance_scan 两个 `_cached` 键），`_warmup` 线程进循环前一次性调用；不做周期化重复预热（governance 全表体检 ~3–5s CPU，2G 高压宿主不引入常驻后台负载，与 R222 按需+SWR 语义一致）。零契约变化。
 - 验证：pytest 新增 test_startup_prime_fills_admin_caches（预热后两键在缓存、后续调用直接命中不再同步构建）；本地全绿（ruff/pytest 109(+1)/pyright 0/lint/vitest 131/build）。详见 docs/iter/round-3/design-r229-admin-cache-startup-prime.md。
+
+### R230（/api/admin/stats 接入 SWR 缓存并纳入启动预热）
+- 取证 verified：R229 部署后近 2h origin 所有 >3s 慢样本全部为 /api/admin/stats（2.0–5.1s × 8 条，管理台首屏必请求端点），governance/dashboard/batches 已 0.13–0.27s；代码实证 db.admin_stats() 直查 156k questions 全表 5 次 COUNT（含 hs_explanation 文本扫描）+ 多表聚合，无任何缓存。另验证 R205/R218 链路正常：19:43 外部爬虫深页 502[miss]→2s 后 200[retry]。
+- 收口：admin_stats() 改 `_cached("stats", 300, _admin_stats_uncached)`（复用 R222 SWR），并加入 R229 `_prime_admin_caches()` 启动预热清单。零契约变化；300s 陈旧度与 dashboard 一致，POST /api/admin/refresh_stats 是题目统计重算与本缓存无关。
+- 验证：test_startup_prime_fills_admin_caches 扩为三键；本地全绿（ruff/pytest 109/pyright 0/lint/vitest 131/build）。详见 docs/iter/round-3/design-r230-admin-stats-swr-cache.md。

@@ -1482,6 +1482,10 @@ def admin_set_announcement(aid: int, active: bool) -> bool:
 
 
 def admin_stats() -> dict:
+    return _cached("stats", 300, _admin_stats_uncached)
+
+
+def _admin_stats_uncached() -> dict:
     conn = get_conn()
     q = conn.execute
     stats = {
