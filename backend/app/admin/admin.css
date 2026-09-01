@@ -216,7 +216,8 @@ button{font-family:inherit}
   .topbar .search{display:none}
   .content{padding:12px 12px 48px}
   .pagehead{flex-wrap:wrap}
-  .kpis{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+  .kpis{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))!important;gap:10px}
+  .row{flex-wrap:wrap}
   .kpi .v{font-size:22px}
   .drawer{width:100vw}
   .tbl-wrap,.card{overflow-x:auto}
