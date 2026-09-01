@@ -271,7 +271,7 @@ export default {
     },
     goShenlunMat(m) {
       const t = m && m.type ? '&mtype=' + encodeURIComponent(m.type) : '';
-      uni.navigateTo({ url: '/pkgA/shenlun/shenlun?tab=m' + t });
+      uni.navigateTo({ url: '/pkgA/shenlun/shenlun?tab=m&mid=' + m.id + t });
     },
     goBack() {
       uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/home/home' }) });

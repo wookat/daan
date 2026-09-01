@@ -111,7 +111,7 @@
       <view class="mgrid">
       <view v-for="m in shownMats" :key="m.id" class="card m-item">
         <view class="q-top">
-          <text class="m-topic">{{ m.topic }}</text>
+          <text class="m-topic">{{ m.topic }}<text v-if="m.id === hitMid" class="m-hit">搜索命中</text></text>
           <view class="q-top-r">
             <text class="q-type">{{ m.type }}</text>
             <view class="m-star" :class="{ on: favIds.includes(m.id) }" @click="toggleFav(m)"><l-icon name="star" :size="17" :color="favIds.includes(m.id) ? '#f59e0b' : '#8a90a0'" :fill="favIds.includes(m.id) ? '#f59e0b' : 'none'" /></view>
@@ -174,6 +174,8 @@ export default {
       showHist: false,
       recs: [],
       recLoading: false,
+      pinMid: 0,
+      hitMid: 0,
       favOnly: false,
       favIds: uni.getStorageSync('slMatFavIds') || [],
       favMats: uni.getStorageSync('slMatFavs') || [],
@@ -214,6 +216,7 @@ export default {
     if (opts && opts.tab === 'r') this.switchRec();
     else if (opts && opts.tab === 'm') {
       if (MTYPES.includes(opts.mtype || '')) this.mtype = opts.mtype;
+      if (/^\d+$/.test(opts.mid || '')) this.pinMid = Number(opts.mid);
       this.switchMat();
     }
     if (opts && /^\d+$/.test(opts.id || '')) this.openQ(Number(opts.id));
@@ -246,6 +249,24 @@ export default {
         const items = d.items || [];
         this.mEnd = items.length < 20;
         this.mats = append ? this.mats.concat(items) : items;
+        if (!append && this.pinMid) {
+          const midv = this.pinMid;
+          this.pinMid = 0;
+          let hit = this.mats.find((m) => m.id === midv);
+          if (!hit) {
+            try {
+              const r = await request('/api/shenlun/materials?id=' + midv);
+              hit = (r.items || [])[0];
+            } catch (e2) {
+              /* 深链命中拉取失败不阻断列表 */
+            }
+          }
+          if (hit) {
+            this.mats = [hit].concat(this.mats.filter((m) => m.id !== midv));
+            this.hitMid = midv;
+            this.expanded = midv;
+          }
+        }
       } catch (e) {
         this.mErr = e.message || '网络异常';
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
@@ -518,6 +539,7 @@ page { background: var(--fill); }
 .sheet-x { font-size: 26rpx; color: var(--brand-text); font-weight: 600; padding: 10rpx 0 10rpx 24rpx; }
 .sheet-k { font-size: 23rpx; color: var(--ink-3); margin: 14rpx 0 10rpx; }
 .m-src { font-size: 22rpx; color: var(--ink-3); word-break: break-all; overflow-wrap: anywhere; display: block; }
+.m-hit { margin-left: 8rpx; padding: 2rpx 10rpx; font-size: 20rpx; color: var(--brand-text); background: var(--fill); border-radius: 8rpx; font-weight: 400; }
 .d-ans-h { display: flex; justify-content: space-between; align-items: baseline; margin: 22rpx 0 10rpx; }
 .d-save { font-size: 21rpx; color: var(--ink-3); }
 .d-ta { width: 100%; box-sizing: border-box; min-height: 220rpx; background: var(--fill); border: 1rpx solid var(--line); border-radius: 12rpx; padding: 18rpx; font-size: 25rpx; line-height: 1.7; }

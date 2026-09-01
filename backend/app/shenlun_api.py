@@ -119,5 +119,6 @@ def api_shenlun_mat_fav_set(body: dict):
 
 
 @router.get("/api/shenlun/materials")
-def api_shenlun_materials(topic: str | None = None, type: str | None = None, limit: int = 20, offset: int = 0):
-    return {"items": db.shenlun_materials(topic, type, limit, offset)}
+def api_shenlun_materials(topic: str | None = None, type: str | None = None, limit: int = 20, offset: int = 0,
+                          id: int | None = None):
+    return {"items": db.shenlun_materials(topic, type, limit, offset, mid=id)}

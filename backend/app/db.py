@@ -950,10 +950,14 @@ def shenlun_question(qid: int) -> dict | None:
     return dict(r) if r else None
 
 
-def shenlun_materials(topic: str | None = None, mtype: str | None = None, limit: int = 20, offset: int = 0) -> list[dict]:
+def shenlun_materials(topic: str | None = None, mtype: str | None = None, limit: int = 20, offset: int = 0,
+                      mid: int | None = None) -> list[dict]:
     conn = get_conn()
     where = ["(disabled IS NULL OR disabled=0)"]
     args: list = []
+    if mid is not None:
+        where.append("id=?")
+        args.append(mid)
     if topic:
         where.append("topic=?")
         args.append(topic)

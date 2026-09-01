@@ -38,3 +38,27 @@ def test_search_returns_shenlun_material_hits(client):
         conn.commit()
         conn.close()
     assert client.get("/api/search", params={"q": "测试素材乡村振兴"}).json()["shenlun_mats"] == []
+
+
+def test_materials_by_id_deeplink(client):
+    """R246：/api/shenlun/materials?id=N 按 id 取单条；下架 id 取不到。"""
+    _seed_mats()
+    try:
+        conn = db.get_conn()
+        ok_id = conn.execute(
+            "SELECT id FROM shenlun_materials WHERE topic='测试素材乡村振兴'"
+        ).fetchone()[0]
+        off_id = conn.execute(
+            "SELECT id FROM shenlun_materials WHERE topic='测试素材乡村振兴已下架'"
+        ).fetchone()[0]
+        conn.close()
+        r = client.get("/api/shenlun/materials", params={"id": ok_id})
+        items = r.json()["items"]
+        assert len(items) == 1 and items[0]["id"] == ok_id
+        r2 = client.get("/api/shenlun/materials", params={"id": off_id})
+        assert r2.json()["items"] == []
+    finally:
+        conn = db.get_conn()
+        conn.execute("DELETE FROM shenlun_materials WHERE topic LIKE '%测试素材%' OR content LIKE '%测试素材%'")
+        conn.commit()
+        conn.close()
