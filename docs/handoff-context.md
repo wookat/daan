@@ -600,3 +600,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：公开 SEO 页族对畸形 int 参数直出 FastAPI 原始 JSON 422（/tiku/xx/?page=abc、/tiku/q/abc/、/tiku/papers/abc/、/tiku/y/abcd/xx/），与 R119「失效链接给品牌壳+出路」约定不一致；本轮 origin 日志复审计无其他新 verified 缺陷。
 - 收口：main.py 全局 RequestValidationError 处理器按路径分流——/tiku、/s/、/p/ 返回品牌 404（noindex），/api 保持默认 JSON 422 契约不变。
 - 验证：ruff/pytest 89（+2 例）全绿；生产 rev 052c76a 部署后 4 类畸形 URL 全部 404 品牌页、正常分页/API 422 不变，R196 性能预算全过。详见 docs/iter/round-3/r208-tiku-422-branded-404.md。
+
+### R209（启动屏内联 watchdog 测试补强，无生产行为变化）
+- 取证：生产复审计无新 verified 缺陷（sitemap 60 URL 抽样 canonical/状态全对、边缘 304 验证器正常、slow_load 长尾为旧 bundle/爬虫族群且同名端点实测亚秒）；真实缺口为流程性——index.html 内联 watchdog（R194 失败态+重试、R195 role=alert/焦点直达）是启动链路唯一不依赖 bundle 的自愈路径，此前 vitest 零覆盖，行为只能靠部署后生产受控拦截验证。
+- 收口：新增 tests/splash-watchdog.test.js，沿用 sw-shell 源码沙箱模式（从 index.html 正则提取内联 IIFE + 注入桩 window/document + 假时钟），6 例覆盖：20s 超时失败态/alert/焦点、__kgSplashOk 取消、/assets/ script error 即时触发、幂等、非 assets 不触发、kg-splash-done 不注入。
+- 验证：vitest 122（+6 例）/lint/build 全绿；无生产产物变更不部署。详见 docs/iter/round-3/r209-splash-watchdog-tests.md。
