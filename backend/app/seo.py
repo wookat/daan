@@ -87,6 +87,10 @@ _CSS = (
     "@media(min-width:768px){.card{transition:box-shadow .15s ease}"
     ".card:hover{box-shadow:var(--shadow-hover)}}"
     "@media(max-width:480px){.wrap{padding:12px}h1{font-size:19px}}"
+    "@media print{:root{--bg:#fff;--surface:#fff;--text:#000;--muted:#444;--ans-bg:#fff}"
+    ".hdr-cta,.cta,.pager,.crumb,.tags,.ftr,.noprint{display:none!important}"
+    "body{background:#fff}.card{border:none;box-shadow:none;break-inside:avoid;padding:8px 0}"
+    ".ans{border:1px solid #999;padding:8px}a{color:#000}}"
 )
 
 
@@ -625,7 +629,7 @@ def _render_q_comments(qid: int) -> str:
     cta = (
         f'<a class="cta" href="{_e(SITE_BASE)}/#/pkgA/social/discuss?qid={qid}">参与讨论（免费）→</a>'
     )
-    return f'<section class="card"><h2>考友讨论（{total} 条）</h2><ul class="qlist">{items}</ul>{cta}</section>'
+    return f'<section class="card noprint"><h2>考友讨论（{total} 条）</h2><ul class="qlist">{items}</ul>{cta}</section>'
 
 
 @router.get("/y/{year}/{module}", include_in_schema=False)
@@ -887,7 +891,7 @@ def _render_question(qid: int) -> str:
         )
         + "</article>"
         + (
-            f'<section class="card"><h2>同考点相似题</h2><ul class="qlist">{sim_html}</ul>'
+            f'<section class="card noprint"><h2>同考点相似题</h2><ul class="qlist">{sim_html}</ul>'
             + (
                 f'<p><a href="{_e(_topic_path(r["tag3"]))}">查看「{_e(topic["name"])}」考点全部题目 →</a></p>'
                 if topic

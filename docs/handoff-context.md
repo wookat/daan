@@ -453,3 +453,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：源码 grep——全仓（src + deploy/cf-pages）prefers-reduced-motion 0 处；动效存量 @keyframes 8 处（骨架无限呼吸、答对 pop、答错 shake、弹层/横幅 slideup、完成卡 bounce）+ transition 16 处，系统开启「减弱动态效果」后仍全量播放（WCAG 2.3.3 未满足）。
 - 修复：App.vue H5 段全局 `@media (prefers-reduced-motion: reduce)`——animation/transition duration 压至 0.01ms + iteration-count 1（保留 keyframes 终态，标准 reset 做法），零组件级改造零后端。/tiku SSR 页族纯静态无动效不改。
 - 生产双视口复验（bundle BtXyRqJF）：reduce 模拟下 1440/375 首页骨架 duration=1e-05s、iteration=1；normal 模式 1.4s/infinite 零回归；console 0 error、溢出 0（测试 boot 3 行已清理，保护 uid 零 mutation）。方案：docs/iter/round-3/r142-reduced-motion.md。
+
+### R143（2026-09-01）：/tiku SSR 页族打印样式（@media print）
+- 取证：全仓 @media print 0 处；考公用户线下打印真题是真实场景（粉笔以错题导出打印为招牌），题目页打印现状：顶栏/题面 CTA、pager、面包屑、页脚、讨论/相似题区块全随题面打印，灰底+卡片阴影+绿色答案底整页耗墨，.card 无分页约束可能截断题面。
+- 修复：_CSS 追加 @media print——CSS 变量压平白底黑字、.hdr-cta/.cta/.pager/.crumb/.tags/.ftr/.noprint 隐藏（讨论/相似题 section 加 noprint 类）、.card break-inside:avoid、.ans 灰框保留答案解析可打印。后端 pytest +2 例（26 passed）。
+- 生产双视口复验（rev 11b9a4e-dirty）：emulate_media print 下 /tiku/q/3 上述元素全部 display:none、body 白底、.ans 保留；screen 模式零回归；console 0 error、溢出 0。纯 SSR 改动无测试数据产生。方案：docs/iter/round-3/r143-print-styles.md。
