@@ -286,8 +286,8 @@ export default {
 .q-loading { font-size: 24rpx; color: var(--ink-3); padding-top: 10rpx; }
 .q-detail { border-top: 1rpx solid var(--fill); padding-top: 14rpx; display: flex; flex-direction: column; gap: 8rpx; }
 .q-opt { font-size: 24rpx; color: var(--ink-2); }
-.q-opt.ans { color: #12b76a; font-weight: 600; }
-.q-ans { font-size: 24rpx; color: #12b76a; font-weight: 600; margin-top: 4rpx; }
+.q-opt.ans { color: var(--ok-strong); font-weight: 600; }
+.q-ans { font-size: 24rpx; color: var(--ok-strong); font-weight: 600; margin-top: 4rpx; }
 .q-exp { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; }
 .more { text-align: center; font-size: 26rpx; color: var(--brand); padding: 16rpx; }
 .empty { display: flex; flex-direction: column; gap: 8rpx; text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 100rpx 40rpx; }

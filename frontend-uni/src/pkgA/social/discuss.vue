@@ -377,7 +377,7 @@ export default {
 .inputrow { display: flex; gap: 16rpx; align-items: flex-end; }
 .ipt { flex: 1; min-height: 72rpx; max-height: 240rpx; overflow-y: auto; border-radius: 24rpx; background: var(--fill); font-size: 26rpx; line-height: 40rpx; padding: 16rpx 28rpx; box-sizing: border-box; }
 .send { margin: 0; height: 72rpx; line-height: 72rpx; padding: 0 34rpx; border-radius: 999rpx; background: var(--brand); color: #fff; font-size: 26rpx; }
-.send[disabled] { background: var(--brand-soft-2); color: #fff; }
+.send[disabled] { background: var(--brand-soft-2); color: var(--brand); }
 
 /* #ifdef H5 */
 @media (min-width: 768px) {
