@@ -103,3 +103,16 @@ def test_home_truncated_topics_have_more_link(client):
     assert r.status_code == 200
     link = f'<a href="/tiku/changshi/">全部 {n} 个考点 →</a>'
     assert (link in r.text) == (n > 12)
+
+
+def test_tiku_copy_claims_xingce_only(client):
+    """题库计数只含行测题（申论 0 题），文案不得把计数说成含申论题目。"""
+    seed_questions()
+    r = client.get("/tiku/")
+    assert r.status_code == 200
+    assert "行测申论题目" not in r.text
+    assert "行测/申论题目" not in r.text
+    assert "道行测题目" in r.text
+    r2 = client.get("/tiku/discuss/")
+    assert r2.status_code == 200
+    assert "行测/申论题目" not in r2.text
