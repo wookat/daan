@@ -140,7 +140,7 @@
 </template>
 
 <script>
-import { request, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api';
+import { request, snapPeek, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api';
 
 const QTYPES = ['全部', '归纳概括', '综合分析', '提出对策', '贯彻执行', '大作文'];
 const MTYPES = ['全部', '金句', '案例', '政策理论', '范文'];
@@ -281,10 +281,16 @@ export default {
         this.recs = [];
         return;
       }
-      this.recLoading = true;
       this.rErr = '';
+      const p = '/api/shenlun/history?limit=50&uid=' + encodeURIComponent(uid);
+
+      // 快照即显：uid API 长尾下先用最近成功快照铺屏，真实响应到达后覆盖
+      const snap = snapPeek(p);
+      if (snap) this.recs = snap.items || [];
+      this.recLoading = !snap;
+
       try {
-        const d = await request('/api/shenlun/history?limit=50&uid=' + encodeURIComponent(uid));
+        const d = await request(p);
         this.recs = d.items || [];
       } catch (e) {
         this.rErr = e.message || '网络异常';

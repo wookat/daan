@@ -142,7 +142,7 @@
 </template>
 
 <script>
-import { request, anonUid } from '../../api.js';
+import { request, snapPeek, anonUid } from '../../api.js';
 
 const W = 660;
 const H = 760;
@@ -233,26 +233,40 @@ export default {
     pct(v) { return Math.round((v || 0) * 100); },
     mins(s) { return Math.round((s || 0) / 60) + ' 分钟'; },
     async load() {
+      const p = '/api/report/weekly?uid=' + encodeURIComponent(anonUid()) + (this.week ? '&week=' + this.week : '');
+
+      // 快照即显：uid API 长尾下先用最近成功快照铺屏，真实响应到达后覆盖
+      const snap = snapPeek(p);
+      if (snap) {
+        this.applyReport(snap, true);
+        this.loading = false;
+      }
+
       try {
-        const q = '?uid=' + encodeURIComponent(anonUid()) + (this.week ? '&week=' + this.week : '');
-        const d = await request('/api/report/weekly' + q);
-        if (d.status === 'empty') {
-          this.empty = true;
-          this.range = d.range || '';
-        } else if (d.status === 'pending') {
-          this.pending = true;
-          this.range = d.range || '';
-          this.prevWeek = d.prev_week || '';
-        } else {
-          this.r = d;
-          this.markRead(d);
-          this.loadNextEvent();
-        }
+        this.applyReport(await request(p));
       } catch (e) {
         this.error = e.message || '网络异常';
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
       this.loading = false;
+    },
+    applyReport(d, stale) {
+      this.empty = false;
+      this.pending = false;
+      if (d.status === 'empty') {
+        this.empty = true;
+        this.range = d.range || '';
+      } else if (d.status === 'pending') {
+        this.pending = true;
+        this.range = d.range || '';
+        this.prevWeek = d.prev_week || '';
+      } else {
+        this.r = d;
+        if (!stale) {
+          this.markRead(d);
+          this.loadNextEvent();
+        }
+      }
     },
     async markRead(d) {
       try {
