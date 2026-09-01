@@ -508,7 +508,7 @@ export default {
       const code = this.match.code;
       trackEvent('pk_result_copy', 'pk_share', code);
       // #ifdef H5
-      const url = `${window.location.origin}${window.location.pathname}#/pkgA/share/pk-result?rid=${code}`;
+      const url = `${window.location.origin}/p/${code}`;
       const me = this.myP();
       const them = this.theirP() || {};
       uni.setClipboardData({
@@ -518,7 +518,7 @@ export default {
       // #endif
       // #ifndef H5
       uni.setClipboardData({
-        data: `【答题PK战绩】不服来战：https://kaogong.zalize.com/#/pkgA/share/pk-result?rid=${code}`,
+        data: `【答题PK战绩】不服来战：https://kaogong.zalize.com/p/${code}`,
         success: () => uni.showToast({ title: '战绩链接已复制，发给考友吧', icon: 'none' }),
       });
       // #endif

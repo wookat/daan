@@ -48,7 +48,7 @@
 </template>
 
 <script>
-import { pkResult, trackEvent } from '../../api.js';
+import { pkResult, trackEvent, canonicalizeSharePath } from '../../api.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断' };
 
@@ -81,6 +81,7 @@ export default {
   onLoad(query) {
     this.rid = query && query.rid ? String(query.rid) : '';
     trackEvent('pk_result_open', 'pk_share', this.rid || null);
+    if (this.rid) canonicalizeSharePath('/p/' + encodeURIComponent(this.rid));
     uni.setStorageSync('regSource', 'pk_share');
     this.load();
   },
