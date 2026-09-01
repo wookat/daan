@@ -8,6 +8,7 @@ import {
   serveMode,
   notModified,
   carryLastModified,
+  shouldRetryOrigin,
   EDGE_CACHE_TTL,
   API_EDGE_CACHE_TTL,
 } from '../../deploy/cf-pages/functions/edge-policy.js';
@@ -148,5 +149,30 @@ describe('carryLastModified', () => {
     expect(carryLastModified(null, PREV_LM, '"abc"', NOW)).toBe('Tue, 01 Sep 2026 10:00:00 GMT');
     expect(carryLastModified('"abc"', PREV_LM, null, NOW)).toBe('Tue, 01 Sep 2026 10:00:00 GMT');
     expect(carryLastModified('"abc"', null, '"abc"', NOW)).toBe('Tue, 01 Sep 2026 10:00:00 GMT');
+  });
+});
+
+describe('shouldRetryOrigin', () => {
+  it('无副本首次 GET 遇 fetch 异常(0)/502/503/504 重试', () => {
+    expect(shouldRetryOrigin('GET', 0, false, 0)).toBe(true);
+    expect(shouldRetryOrigin('GET', 502, false, 0)).toBe(true);
+    expect(shouldRetryOrigin('GET', 503, false, 0)).toBe(true);
+    expect(shouldRetryOrigin('HEAD', 504, false, 0)).toBe(true);
+  });
+  it('应用级 5xx（500/501）与 4xx/2xx 不重试', () => {
+    expect(shouldRetryOrigin('GET', 500, false, 0)).toBe(false);
+    expect(shouldRetryOrigin('GET', 501, false, 0)).toBe(false);
+    expect(shouldRetryOrigin('GET', 404, false, 0)).toBe(false);
+    expect(shouldRetryOrigin('GET', 200, false, 0)).toBe(false);
+  });
+  it('有陈旧副本走 stale-if-error 不重试', () => {
+    expect(shouldRetryOrigin('GET', 502, true, 0)).toBe(false);
+  });
+  it('仅首次尝试重试（单次上限）', () => {
+    expect(shouldRetryOrigin('GET', 502, false, 1)).toBe(false);
+  });
+  it('非 GET/HEAD（有副作用）不重试', () => {
+    expect(shouldRetryOrigin('POST', 502, false, 0)).toBe(false);
+    expect(shouldRetryOrigin('PUT', 0, false, 0)).toBe(false);
   });
 });
