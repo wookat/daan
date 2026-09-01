@@ -513,3 +513,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 复盘 09-01 探针风暴（本机遗留旧 exam 标签页 ~57k 404，已关闭）：当时零 429 系容器运行 R182 前旧镜像，守卫逻辑本身无缺陷。
 - verified 缺陷：rl() 的 429 被 storm guard 计入错误窗口，单端点限速 35×429 后整 IP 全 /api 连坐封禁（生产实测无关端点也 429）；record() 已排除 429。
 - 生产复验方式：先触发 /api/report rl 至 429，再请求无关端点确认不连坐。
+
+### R193（首页 Lighthouse LCP 双峰收口）
+- 现象：首页 Lighthouse LCP 双峰（~0.8s 归属静态启动屏字幕 vs ~3.5s 归属水合后 hero 副标题），perf 分随之 0.99/0.89 摆动。
+- 排错：先试放大启动屏字幕面积（16px/340px→17px/392px）不解决；本地对照实验 verified 关键变量是「启动屏节点被物理移除」——节点移除后 trace 侧 LCP 候选失效回退水合后内容（4/5 次归属 hero），保留节点仅隐藏则 4/4 次稳定归属启动屏。
+- 收口：启动屏移出 `#app` 挂载根（防 Vue 挂载清空）；main.js H5-only mixin 首个组件 mounted 后等两帧加 `.kg-splash-done`（opacity/visibility/pointer-events 隐藏 + spinner 停转），只隐藏不移除。
+- 生产复验（rev 8da5ae5 / bundle index-9wsrn0Pe.js）：5 次 Lighthouse 全部归属 `#kg-splash > div.s`，LCP 0.8–1.8s、perf 0.97–0.99，3.5s hero 峰消失；1440/375/375-dark 启动屏正常隐藏（visibility:hidden/opacity:0）、溢出 0、console 0 error。
+- 如实局限：这是 LCP 归属稳定化，不缩短真实水合时间；隐藏节点常驻 DOM（零可见性、spinner 停转）。详见 docs/iter/round-3/r193-lcp-bimodal-splash.md。
