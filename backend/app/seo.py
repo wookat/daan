@@ -350,6 +350,13 @@ def tiku_search(q: str = ""):
     return RedirectResponse(dest, status_code=302)
 
 
+@router.get("/search/", include_in_schema=False)
+def tiku_search_slash(q: str = ""):
+    q = q.strip()[:64]
+    dest = "/tiku/search" + (f"?q={quote(q)}" if q else "")
+    return RedirectResponse(dest, status_code=301)
+
+
 @router.get("/daily", include_in_schema=False)
 def tiku_daily_noslash():
     return RedirectResponse("/tiku/daily/", status_code=301)
@@ -677,6 +684,8 @@ def _render_q_comments(qid: int) -> str:
 
 @router.get("/y/{year}/{module}", include_in_schema=False)
 def tiku_year_noslash(year: int, module: str):
+    if not _module_name(module) or not db.year_module_counts().get((year, module), (0, None))[0]:
+        return _not_found("页面不存在")
     return RedirectResponse(_year_path(year, module), status_code=301)
 
 
@@ -752,6 +761,8 @@ def _render_year(year: int, module: str, page: int) -> str:
 
 @router.get("/t/{code}", include_in_schema=False)
 def tiku_topic_noslash(code: str):
+    if code not in taxonomy.topic_index() or not db.tag3_counts().get(code, 0):
+        return _not_found("页面不存在")
     return RedirectResponse(_topic_path(code), status_code=301)
 
 
@@ -1008,10 +1019,26 @@ def tiku_module(module: str, page: int = 1):
     sub_links = "".join(
         f'<a href="{_e(_sub_path(module, s["submodule"]))}">{_e(s["submodule"])}（{s["n"]}）</a>' for s in subs
     )
+    t3counts = db.tag3_counts()
+    topic_links = "".join(
+        f'<a href="{_e(_topic_path(t["code"]))}">{_e(t["name"])}（{t3counts[t["code"]]}）</a>'
+        for m in taxonomy.tree()["modules"]
+        if m["key"] == module
+        for g in m["groups"]
+        for t in g["topics"]
+        if t3counts.get(t["code"])
+    )
+    year_links = "".join(
+        f'<a href="{_e(_year_path(y, module))}">{y}年（{n}）</a>'
+        for (y, mk), (n, _mu) in sorted(db.year_module_counts().items(), reverse=True)
+        if mk == module
+    )
     body = (
         _crumb([("题库", "/tiku/"), (name, None)])
         + f"<h1>{_e(name)}题库（{total} 题）</h1>"
         + (f'<div class="card"><h2>按题型刷题</h2><div class="tags">{sub_links}</div></div>' if sub_links else "")
+        + (f'<div class="card"><h2>按考点刷题</h2><div class="tags">{topic_links}</div></div>' if topic_links else "")
+        + (f'<div class="card"><h2>按年份刷真题</h2><div class="tags">{year_links}</div></div>' if year_links else "")
         + '<div class="card">'
         + _q_items(rows)
         + "</div>"

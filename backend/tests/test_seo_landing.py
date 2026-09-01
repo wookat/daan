@@ -64,3 +64,22 @@ def test_pk_landing_invalid_redirects_home(client):
     for rid in ("NOPE99", "%27%20OR%201%3D1"):
         r = client.get(f"/p/{rid}", follow_redirects=False)
         assert r.status_code == 302
+
+
+def test_module_page_topic_and_year_links(client):
+    from app import db
+
+    seed_questions()
+    conn = db.get_conn()
+    conn.execute(
+        "UPDATE questions SET tag3='CS-FL-01', is_real=1, exam_year=2025 "
+        "WHERE module='changshi' AND id=(SELECT id FROM questions WHERE module='changshi' LIMIT 1)"
+    )
+    conn.commit()
+    conn.close()
+    db._TAG3_COUNTS_CACHE[1] = None
+    db._YEAR_MODULE_CACHE[1] = None
+    r = client.get("/tiku/changshi/")
+    assert r.status_code == 200
+    assert 'href="/tiku/t/CS-FL-01/"' in r.text
+    assert 'href="/tiku/y/2025/changshi/"' in r.text
