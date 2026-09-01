@@ -520,3 +520,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 收口：启动屏移出 `#app` 挂载根（防 Vue 挂载清空）；main.js H5-only mixin 首个组件 mounted 后等两帧加 `.kg-splash-done`（opacity/visibility/pointer-events 隐藏 + spinner 停转），只隐藏不移除。
 - 生产复验（rev 8da5ae5 / bundle index-9wsrn0Pe.js）：5 次 Lighthouse 全部归属 `#kg-splash > div.s`，LCP 0.8–1.8s、perf 0.97–0.99，3.5s hero 峰消失；1440/375/375-dark 启动屏正常隐藏（visibility:hidden/opacity:0）、溢出 0、console 0 error。
 - 如实局限：这是 LCP 归属稳定化，不缩短真实水合时间；隐藏节点常驻 DOM（零可见性、spinner 停转）。详见 docs/iter/round-3/r193-lcp-bimodal-splash.md。
+
+### R194（启动屏加载失败死胡同收口）
+- 取证：生产拦截 `/assets/index-*.js` 模拟 bundle 加载失败，25s 后仍停留启动屏 + spinner 旋转，无失败提示无出路——既有自愈链路（陈旧壳自愈/错误监控/离线兜底）全在 main.js 内，bundle 失败时一行不执行，属结构性盲区。
+- 收口：index.html 内联 watchdog（不依赖 bundle）：capture 阶段 error 监听 `/assets/` script 加载失败即触发失败态，20s 超时兜底；失败态隐藏 spinner、追加「页面加载失败，请检查网络后重试」+「重新加载」按钮（location.reload）；main.js dismissSplash() 调 `window.__kgSplashOk()` 取消 watchdog，失败态若已出现而 bundle 晚到成功挂载，`.kg-splash-done` 连同失败态一起隐藏无残留。
+- 生产复验（rev 5f2a45b / bundle index-D-Jearwy.js）：拦截 bundle 后 375/1440-dark 均出失败态（spinner 停、提示+按钮），点重新加载放行后正常水合；正常路径 watchdog 被取消无失败态闪现；Lighthouse perf 0.97–0.98/LCP 0.9–1.8s 与 R193 一致；溢出 0、console 无非预期 error。
+- 如实局限：20s 阈值为经验值，极端慢网正常加载会先见失败提示（点重载即恢复，不阻断晚到挂载）。详见 docs/iter/round-3/r194-splash-load-failure.md。

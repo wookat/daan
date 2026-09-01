@@ -183,6 +183,7 @@ let splashDismissed = false;
 function dismissSplash() {
 	if (splashDismissed || typeof document === 'undefined') return;
 	splashDismissed = true;
+	if (typeof window !== 'undefined' && typeof window.__kgSplashOk === 'function') window.__kgSplashOk();
 	requestAnimationFrame(() => requestAnimationFrame(() => {
 		const el = document.getElementById('kg-splash');
 		if (el) el.classList.add('kg-splash-done');

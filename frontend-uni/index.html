@@ -43,8 +43,36 @@
   </head>
   <body>
     <div id="app"><!--app-html--></div>
-    <style>#kg-splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#fff}#kg-splash img{width:64px;height:64px}#kg-splash .t{font:600 18px/1.4 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:#111827}#kg-splash .s{font:400 17px/1.55 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:#6b7280;max-width:392px;padding:0 16px;text-align:center}#kg-splash .sp{width:22px;height:22px;margin-top:6px;border:2.5px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;animation:kgspin .8s linear infinite}@keyframes kgspin{to{transform:rotate(360deg)}}@media (prefers-color-scheme:dark){#kg-splash{background:#111827}#kg-splash .t{color:#f9fafb}#kg-splash .s{color:#9ca3af}#kg-splash .sp{border-color:#374151;border-top-color:#60a5fa}}#kg-splash.kg-splash-done{opacity:0;visibility:hidden;pointer-events:none;transition:opacity .15s,visibility .15s}#kg-splash.kg-splash-done .sp{animation:none}</style>
+    <style>#kg-splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#fff}#kg-splash img{width:64px;height:64px}#kg-splash .t{font:600 18px/1.4 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:#111827}#kg-splash .s{font:400 17px/1.55 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:#6b7280;max-width:392px;padding:0 16px;text-align:center}#kg-splash .sp{width:22px;height:22px;margin-top:6px;border:2.5px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;animation:kgspin .8s linear infinite}@keyframes kgspin{to{transform:rotate(360deg)}}@media (prefers-color-scheme:dark){#kg-splash{background:#111827}#kg-splash .t{color:#f9fafb}#kg-splash .s{color:#9ca3af}#kg-splash .sp{border-color:#374151;border-top-color:#60a5fa}}#kg-splash.kg-splash-done{opacity:0;visibility:hidden;pointer-events:none;transition:opacity .15s,visibility .15s}#kg-splash.kg-splash-done .sp{animation:none}#kg-splash.kg-splash-fail .sp{display:none}#kg-splash .e{font:400 14px/1.5 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:#b91c1c;margin-top:6px}#kg-splash .rb{margin-top:10px;padding:8px 22px;border:0;border-radius:999px;background:#2563eb;color:#fff;font:500 15px/1 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;cursor:pointer}@media (prefers-color-scheme:dark){#kg-splash .e{color:#f87171}#kg-splash .rb{background:#3b82f6}}</style>
     <div id="kg-splash"><img src="/static/brand/kaogong.svg" alt="" /><div class="t">错题邦</div><div class="s">免费刷 11万+ 行测真题，拍题 AI 讲解 · 错题本按遗忘曲线复习 · 迷你模考</div><div class="sp"></div></div>
+    <script>
+      (function () {
+        var fired = false
+        function fail () {
+          if (fired) return
+          fired = true
+          var s = document.getElementById('kg-splash')
+          if (!s || s.classList.contains('kg-splash-done')) return
+          s.classList.add('kg-splash-fail')
+          var e = document.createElement('div')
+          e.className = 'e'
+          e.textContent = '页面加载失败，请检查网络后重试'
+          var b = document.createElement('button')
+          b.className = 'rb'
+          b.type = 'button'
+          b.textContent = '重新加载'
+          b.onclick = function () { location.reload() }
+          s.appendChild(e)
+          s.appendChild(b)
+        }
+        var t = setTimeout(fail, 20000)
+        window.__kgSplashOk = function () { fired = true; clearTimeout(t) }
+        window.addEventListener('error', function (ev) {
+          var el = ev && ev.target
+          if (el && el.tagName === 'SCRIPT' && /\/assets\/|\/src\/main/.test(el.src || '')) { clearTimeout(t); fail() }
+        }, true)
+      })()
+    </script>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
