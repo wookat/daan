@@ -50,3 +50,22 @@ def test_year_module_counts_uses_covering_index():
     )
     assert "COVERING INDEX idx_q_real_year" in plan
     assert "TEMP B-TREE" not in plan
+
+
+def test_admin_batches_uses_covering_index():
+    plan = _plan(
+        "SELECT import_batch AS batch, COUNT(*) AS n, "
+        "SUM(CASE WHEN disabled=2 THEN 1 ELSE 0 END) AS pending, SUM(is_real) AS real_n "
+        "FROM questions WHERE import_batch IS NOT NULL "
+        "GROUP BY import_batch ORDER BY import_batch DESC LIMIT 50"
+    )
+    assert "COVERING INDEX idx_q_batch" in plan
+    assert "TEMP B-TREE" not in plan
+
+
+def test_batch_answer_dist_uses_covering_index():
+    plan = _plan(
+        "SELECT UPPER(SUBSTR(TRIM(answer),1,1)) a, COUNT(*) n FROM questions "
+        "WHERE import_batch='b1' GROUP BY a"
+    )
+    assert "COVERING INDEX idx_q_batch" in plan

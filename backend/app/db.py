@@ -150,6 +150,9 @@ def init_db():
         "CREATE INDEX IF NOT EXISTS idx_q_real_region ON questions(is_real, exam_region)"
     )
     conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_q_batch ON questions(import_batch, disabled, is_real, answer)"
+    )
+    conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_q_real_year ON questions(is_real, disabled, exam_year, module, updated_at)"
     )
     if "correct_ratio" in qcols:
