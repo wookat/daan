@@ -66,6 +66,11 @@ _CSS = (
     ".hdr .brand{color:var(--link);font-weight:700;font-size:18px}.hdr .brand:hover{text-decoration:none}"
     ".hdr-cta{background:" + BRAND + ";color:#fff!important;border-radius:999px;padding:6px 18px;"
     "font-size:14px;font-weight:600}.hdr-cta:hover{text-decoration:none;opacity:.92}"
+    ".hdr-s{flex:1;display:flex;margin:0 12px;min-width:0}"
+    ".hdr-s input{flex:1;min-width:0;max-width:280px;margin-left:auto;font-size:14px;color:var(--text);"
+    "background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:6px 14px;outline:none}"
+    ".hdr-s input:focus{border-color:var(--link)}"
+    "@media(max-width:480px){.hdr-s input{max-width:none}}"
     ".card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin:12px 0;"
     "box-shadow:var(--shadow)}"
     ".crumb{font-size:13px;color:var(--muted);margin:10px 0}.crumb a{color:var(--muted)}"
@@ -88,7 +93,7 @@ _CSS = (
     ".card:hover{box-shadow:var(--shadow-hover)}}"
     "@media(max-width:480px){.wrap{padding:12px}h1{font-size:19px}}"
     "@media print{:root{--bg:#fff;--surface:#fff;--text:#000;--muted:#444;--ans-bg:#fff}"
-    ".hdr-cta,.cta,.pager,.crumb,.tags,.ftr,.noprint{display:none!important}"
+    ".hdr-cta,.hdr-s,.cta,.pager,.crumb,.tags,.ftr,.noprint{display:none!important}"
     "body{background:#fff}.card{border:none;box-shadow:none;break-inside:avoid;padding:8px 0}"
     ".ans{border:1px solid #999;padding:8px}a{color:#000}}"
 )
@@ -131,6 +136,8 @@ def _page(
         f"{head_meta}"
         f"<style>{_CSS}</style>{ld}</head><body>"
         f'<header class="hdr"><div class="wrap"><a class="brand" href="/tiku/">错题邦 · 考公题库</a>'
+        f'<form class="hdr-s" action="/tiku/search" method="get" role="search">'
+        f'<input name="q" type="search" placeholder="搜题目 / 考点 / 试卷" aria-label="搜索题库"></form>'
         f'<a class="hdr-cta" href="/">去刷题</a></div></header>'
         f'<main class="wrap">{body}</main>'
         f'<footer class="ftr"><a href="{_e(SITE_BASE)}/">错题邦</a> · 13万+行测真题在线刷题'
@@ -308,13 +315,36 @@ def tiku_index():
         f"免费公务员考试题库，收录 {total} 道行测申论题目与历年真题，覆盖资料分析、数量关系、言语理解、判断推理、常识判断，附答案解析。",
         "/tiku/",
         body,
-        _collection_ld(
-            "公务员考试题库",
-            f"免费公务员考试题库，收录 {total} 道行测申论题目与历年真题，附答案解析。",
-            "/tiku/",
-            [("题库", "/tiku/")],
-        ),
+        [
+            _collection_ld(
+                "公务员考试题库",
+                f"免费公务员考试题库，收录 {total} 道行测申论题目与历年真题，附答案解析。",
+                "/tiku/",
+                [("题库", "/tiku/")],
+            ),
+            {
+                "@context": "https://schema.org",
+                "@type": "WebSite",
+                "name": "错题邦",
+                "url": SITE_BASE,
+                "potentialAction": {
+                    "@type": "SearchAction",
+                    "target": {
+                        "@type": "EntryPoint",
+                        "urlTemplate": SITE_BASE + "/tiku/search?q={search_term_string}",
+                    },
+                    "query-input": "required name=search_term_string",
+                },
+            },
+        ],
     )
+
+
+@router.get("/search", include_in_schema=False)
+def tiku_search(q: str = ""):
+    q = q.strip()[:64]
+    dest = "/#/pkgA/search/search" + (f"?q={quote(q)}" if q else "")
+    return RedirectResponse(dest, status_code=302)
 
 
 @router.get("/daily", include_in_schema=False)

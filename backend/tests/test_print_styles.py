@@ -12,4 +12,4 @@ def test_question_page_has_print_styles(client):
 def test_question_page_noise_sections_marked_noprint(client):
     seed_questions()
     r = client.get("/tiku/q/1")
-    assert ".hdr-cta,.cta,.pager,.crumb,.tags,.ftr,.noprint{display:none!important}" in r.text
+    assert ".hdr-cta,.hdr-s,.cta,.pager,.crumb,.tags,.ftr,.noprint{display:none!important}" in r.text

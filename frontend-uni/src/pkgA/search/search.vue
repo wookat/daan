@@ -118,6 +118,13 @@ export default {
       hist: uni.getStorageSync('kgSearchHist') || []
     };
   },
+  onLoad(options) {
+    const q = decodeURIComponent(options && options.q ? options.q : '').trim();
+    if (!q) return;
+    if (options.tab && this.TABS.some((t) => t.k === options.tab)) this.tab = options.tab;
+    this.kw = q.slice(0, 64);
+    this.doSearch();
+  },
   computed: {
     hasSide() {
       const r = this.result;
