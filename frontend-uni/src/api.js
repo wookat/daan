@@ -1,5 +1,6 @@
 // API 封装：H5 同源相对路径；小程序 / App 必须用绝对域名（可用 VITE_API_BASE 覆盖）
 import { isNativeApp, savePdfNative } from './native';
+import { isTimeoutMsg, isNetMsg, classifyHttpError, snapCacheable, snapFresh, snapPushIndex, parseSseEvents } from './api-policy';
 
 const REMOTE_BASE = 'https://kaogong.zalize.com';
 
@@ -243,18 +244,17 @@ function rawRequest(path, { method = 'GET', data, header = {}, timeout = 180000 
       success: (res) => {
         if (res.statusCode >= 200 && res.statusCode < 300) resolve(res.data);
         else {
-          // 422 校验错误等 detail 为对象数组，直接透出会渲染成 [object Object]
-          const detail = res.data && typeof res.data.detail === 'string' ? res.data.detail : '';
-          // 仅登录态本身失效才清登录（访问码/管理令牌等 401 不应踢登录）
-          const authExpired =
-            (res.statusCode === 401 && !path.startsWith('/api/auth/') && (detail.includes('未登录') || detail.includes('登录已过期'))) ||
-            (res.statusCode === 403 && detail.includes('无权访问该账号数据'));
+          // detail 提取 / 登录态失效判定 / 对外文案统一，决策见 api-policy.classifyHttpError
+          const { authExpired, message } = classifyHttpError({
+            status: res.statusCode,
+            detail: res.data && res.data.detail,
+            path,
+          });
           if (authExpired && (getToken() || res.statusCode === 403)) {
             clearAuth();
             uni.showToast({ title: '登录已过期，请重新登录', icon: 'none', duration: 2500 });
           }
-          // 统一登录过期文案，避免调用方 toast 直接透出后端 detail
-          reject(new Error(authExpired ? '登录已过期，请重新登录' : detail || `HTTP ${res.statusCode}`));
+          reject(new Error(message));
         }
       },
       fail: (err) => reject(new Error(err.errMsg || '网络错误')),
@@ -262,8 +262,8 @@ function rawRequest(path, { method = 'GET', data, header = {}, timeout = 180000 
   });
 }
 
-const isTimeoutErr = (e) => /timeout|超时/i.test(String(e && e.message));
-export const isNetErr = (e) => isTimeoutErr(e) || /网络错误|request:fail/i.test(String(e && e.message));
+const isTimeoutErr = (e) => isTimeoutMsg(e && e.message);
+export const isNetErr = (e) => isNetMsg(e && e.message);
 
 // ---------- GET 最近成功快照兜底 ----------
 // uid 专属/随机端点无法进边缘缓存，共享 origin 长尾下双超时后调用方只能拿错误态；
@@ -274,19 +274,13 @@ const SNAP_MAX = 40;
 const SNAP_TTL = 24 * 3600 * 1000;
 const SNAP_MAX_BYTES = 64 * 1024;
 
-function snapCacheable(path) {
-  return !path.startsWith('/api/auth/') && !path.startsWith('/api/admin');
-}
-
 function snapSave(path, data) {
   try {
     const body = JSON.stringify({ t: Date.now(), d: data });
     if (body.length > SNAP_MAX_BYTES) return;
     uni.setStorageSync(SNAP_PREFIX + path, body);
-    let idx = uni.getStorageSync(SNAP_INDEX) || [];
-    idx = idx.filter((p) => p !== path);
-    idx.push(path);
-    while (idx.length > SNAP_MAX) uni.removeStorageSync(SNAP_PREFIX + idx.shift());
+    const { idx, evict } = snapPushIndex(uni.getStorageSync(SNAP_INDEX) || [], path, SNAP_MAX);
+    evict.forEach((p) => uni.removeStorageSync(SNAP_PREFIX + p));
     uni.setStorageSync(SNAP_INDEX, idx);
   } catch (e) {
     /* storage 满/序列化失败：兜底是尽力而为 */
@@ -298,8 +292,7 @@ function snapLoad(path) {
     const body = uni.getStorageSync(SNAP_PREFIX + path);
     if (!body) return null;
     const snap = JSON.parse(body);
-    if (!snap || Date.now() - snap.t > SNAP_TTL) return null;
-    return snap;
+    return snapFresh(snap, Date.now(), SNAP_TTL) ? snap : null;
   } catch (e) {
     return null;
   }
@@ -475,19 +468,14 @@ export async function exportPdf(body) {
 }
 // #endif
 
-// SSE 文本 → 事件回调；返回是否已收到 meta。
+// SSE 文本 → 事件回调；解析见 api-policy.parseSseEvents。
 function feedSse(chunkText, state, onMeta, onDelta) {
-  state.buf += chunkText;
-  const events = state.buf.split('\n\n');
-  state.buf = events.pop();
-  for (const ev of events) {
-    const typeM = ev.match(/^event: (\w+)/m);
-    const dataM = ev.match(/^data: (.*)$/m);
-    if (!dataM) continue;
-    const type = typeM ? typeM[1] : 'message';
-    const data = JSON.parse(dataM[1]);
+  const { rest, events } = parseSseEvents(state.buf + chunkText);
+  state.buf = rest;
+  for (const { type, data } of events) {
     if (type === 'meta') { state.meta = data; onMeta && onMeta(data); }
-    else if (type === 'error') throw new Error(data.message || '生成失败');
+    else if (type === 'done') { state.done = data; }
+    else if (type === 'error') throw new Error(data.message || state.errMsg || '生成失败');
     else if (type === 'message') { state.full += data.d; onDelta && onDelta(state.full); }
   }
 }
@@ -740,27 +728,11 @@ export async function streamInterview({ questionId, answer, durationSec, onMeta,
   }
   const reader = resp.body.getReader();
   const dec = new TextDecoder();
-  const state = { buf: '', full: '', meta: null, done: null };
-  const feed = (chunkText) => {
-    state.buf += chunkText;
-    const events = state.buf.split('\n\n');
-    state.buf = events.pop();
-    for (const ev of events) {
-      const typeM = ev.match(/^event: (\w+)/m);
-      const dataM = ev.match(/^data: (.*)$/m);
-      if (!dataM) continue;
-      const type = typeM ? typeM[1] : 'message';
-      const data = JSON.parse(dataM[1]);
-      if (type === 'meta') { state.meta = data; onMeta && onMeta(data); }
-      else if (type === 'done') { state.done = data; }
-      else if (type === 'error') throw new Error(data.message || '点评失败');
-      else { state.full += data.d; onDelta && onDelta(state.full); }
-    }
-  };
+  const state = { buf: '', full: '', meta: null, done: null, errMsg: '点评失败' };
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
-    feed(dec.decode(value, { stream: true }));
+    feedSse(dec.decode(value, { stream: true }), state, onMeta, onDelta);
   }
   if (!state.meta) throw new Error('点评失败：无响应');
   return { ...state.meta, review: state.full, session_id: state.done && state.done.session_id };
@@ -780,25 +752,11 @@ export async function streamInterviewReviewRegen({ sessionId, onDelta }) {
   }
   const reader = resp.body.getReader();
   const dec = new TextDecoder();
-  const state = { buf: '', full: '' };
-  const feed = (chunkText) => {
-    state.buf += chunkText;
-    const events = state.buf.split('\n\n');
-    state.buf = events.pop();
-    for (const ev of events) {
-      const typeM = ev.match(/^event: (\w+)/m);
-      const dataM = ev.match(/^data: (.*)$/m);
-      if (!dataM) continue;
-      const type = typeM ? typeM[1] : 'message';
-      const data = JSON.parse(dataM[1]);
-      if (type === 'error') throw new Error(data.message || '点评失败');
-      if (type === 'message') { state.full += data.d; onDelta && onDelta(state.full); }
-    }
-  };
+  const state = { buf: '', full: '', errMsg: '点评失败' };
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
-    feed(dec.decode(value, { stream: true }));
+    feedSse(dec.decode(value, { stream: true }), state, null, onDelta);
   }
   if (!state.full) throw new Error('点评失败：无响应');
   return { review: state.full };

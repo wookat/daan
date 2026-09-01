@@ -435,3 +435,7 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 ### R138（2026-09-01）：面试作答草稿自动保存
 - 取证：源码核查 interview.vue——作答 textarea（5000 字上限）为纯内存 answer，刷新/标签页回收/误触返回长文全丢；对照 shenlun 已有 slDraft:<qid> 逐题草稿模式。面试是随机抽题，刷新后重抽大概率非原题，逐题键无法自然恢复。
 - 修复：单键 ivDraft 整体快照 { q, cat, answer }——@input 非空 set/空 remove；onLoad 无 session_id 时有草稿直接恢复原题+分类+作答进入作答步（toast 提示）；批改流成功后 remove、失败保留；draw 换题不动旧快照（新题输入后自然覆盖）；计数行补「已自动保存 ·」外显。零后端改动。生产双视口复验：1440/375 输入→刷新原题+作答整体恢复、提交成功后草稿清除刷新不再恢复、console 0 error、溢出 0（测试 uid 数据已清理）。方案：docs/iter/round-3/r138-interview-answer-draft.md。
+
+### R139（2026-09-01）：api.js 网络层决策纯函数化 + vitest 回归覆盖
+- 取证：api.js（950 行）是全站唯一网络入口，承载六类关键决策零单测——isNetErr 错误分类（R134–R137 全站失败态分流依据）、401/403 登录失效判定（R39）、非 2xx detail 提取（R66 防 [object Object]）、GET 快照兜底 LRU/TTL（R90）、SSE 解析（feedSse + 两处 interview feed 三份复制）；历轮回归全靠生产实测。
+- 修复：对称 R118/R133 模式抽出 src/api-policy.js 纯函数（isTimeoutMsg/isNetMsg/classifyHttpError/snapCacheable/snapFresh/snapPushIndex/parseSseEvents），api.js 委托调用、SSE 三处 feed 统一为 feedSse 消费 parseSseEvents（state.errMsg 定制错误文案、done 事件透出）；新增 tests/api-policy.test.js 16 例（vitest 38→54），行为等价重构零生产行为变化、零新依赖。生产双视口复验：1440/375 首页/刷题/AI问答加载回归 + 真实面试流式点评全程正常、console 0 error、溢出 0（测试 uid 4 行已清理，保护 uid 零 mutation）。方案：docs/iter/round-3/r139-api-policy-tests.md。
