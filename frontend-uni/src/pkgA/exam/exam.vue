@@ -17,7 +17,17 @@
       <view class="progress"><view class="pfill" :style="{ width: ((idx + 1) / items.length) * 100 + '%' }"></view></view>
 
       <view class="card qcard" @touchstart="touchStart" @touchend="touchEnd">
-        <text class="q">{{ cur.question }}</text>
+        <view
+          v-if="matInfo"
+          class="mat-fold"
+          role="button"
+          :aria-label="matOpen[idx] ? '收起材料' : '展开材料'"
+          @click="toggleMat"
+        >
+          <text class="mat-fold-t">📄 同上材料（与上一题相同）</text>
+          <text class="mat-fold-a">{{ matOpen[idx] ? '收起 ‹' : '展开 ›' }}</text>
+        </view>
+        <text class="q">{{ matInfo && !matOpen[idx] ? matInfo.stem : cur.question }}</text>
         <image v-if="cur.image" :src="cur.image" class="qimg" mode="widthFix" />
         <view
           v-for="(v, k) in cur.options"
@@ -102,6 +112,7 @@
 <script>
 import { request, anonUid } from '../../api.js';
 import { dayKey } from '../../checkin.js';
+import { splitMaterial, sameMaterial } from '../../material.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
 const PROG_KEY = 'examProgress';
@@ -120,6 +131,7 @@ export default {
       qsecs: 0,
       qTimer: null,
       submitting: false,
+      matOpen: {},
     };
   },
   created() {
@@ -128,6 +140,13 @@ export default {
   },
   computed: {
     cur() { return this.items[this.idx] || {}; },
+    matInfo() {
+      const q = this.cur;
+      if (!q || q.module !== 'ziliao' || this.idx === 0) return null;
+      const prev = this.items[this.idx - 1];
+      if (!prev || prev.module !== 'ziliao' || !sameMaterial(prev.question, q.question)) return null;
+      return splitMaterial(q.question);
+    },
     answeredCount() { return this.items.filter((q) => q._picked).length; },
     fmtLeft() {
       const s = Math.max(0, this.leftSecs);
@@ -191,8 +210,16 @@ export default {
     }
     // #endif
   },
+  watch: {
+    items() {
+      this.matOpen = {};
+    },
+  },
   methods: {
     modName(m) { return MODS[m] || '行测'; },
+    toggleMat() {
+      this.matOpen = { ...this.matOpen, [this.idx]: !this.matOpen[this.idx] };
+    },
     async start(opt) {
       if (!opt.mini && !opt.paper_id) {
         uni.showToast({ title: '链接缺少试卷参数，去卷库选卷', icon: 'none' });
@@ -430,6 +457,24 @@ export default {
 .progress { height: 6rpx; background: #dbe6ff; border-radius: 999rpx; overflow: hidden; margin-bottom: 20rpx; }
 .pfill { height: 100%; background: linear-gradient(90deg, #5c82ff, var(--brand)); border-radius: 999rpx; transition: width 0.3s ease; }
 .q { font-size: 30rpx; line-height: 1.7; margin-bottom: 22rpx; white-space: pre-wrap; display: block; }
+.mat-fold {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f0fdfa;
+  border: 1rpx solid #99f6e4;
+  border-radius: 12rpx;
+  padding: 14rpx 20rpx;
+  margin-bottom: 14rpx;
+}
+.mat-fold-t { font-size: 24rpx; color: #0f766e; }
+.mat-fold-a {
+  font-size: 24rpx;
+  color: #0d9488;
+  font-weight: 600;
+  flex-shrink: 0;
+  margin-left: 16rpx;
+}
 .qimg { width: 100%; border-radius: 12rpx; margin-bottom: 16rpx; background: var(--fill); }
 .opt { display: flex; align-items: center; border: 2rpx solid var(--line); border-radius: 20rpx; padding: 22rpx 24rpx; margin-bottom: 20rpx; font-size: 29rpx; line-height: 1.6; min-height: 44px; box-sizing: border-box; }
 .opt.sel { border-color: var(--brand); background: var(--brand-soft); }
