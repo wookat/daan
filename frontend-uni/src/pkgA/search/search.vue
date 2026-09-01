@@ -22,6 +22,7 @@
       <view v-if="result.code_hit" class="card qitem" @click="toggleDetail(result.code_hit)">
         <view class="q-top"><text class="q-code">{{ result.code_hit.code }}</text><text class="q-mod">{{ modName(result.code_hit.module) }}</text></view>
         <rich-text class="q-text" :nodes="hl(result.code_hit.question)" />
+        <view v-if="detailWant === result.code_hit.id && !(detail && detail.id === result.code_hit.id)" class="q-loading">解析加载中…</view>
         <view v-if="detail && detail.id === result.code_hit.id" class="q-detail">
           <text v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: k === detail.answer }">{{ k }}. {{ v }}</text>
           <text class="q-ans">答案：{{ detail.answer }}</text>
@@ -64,6 +65,7 @@
             <text class="q-mod">{{ modName(it.module) }}{{ it.submodule ? ' · ' + it.submodule : '' }}</text>
           </view>
           <rich-text class="q-text" :nodes="hl(it.question)" />
+          <view v-if="detailWant === it.id && !(detail && detail.id === it.id)" class="q-loading">解析加载中…</view>
           <view v-if="detail && detail.id === it.id" class="q-detail">
             <text v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: k === detail.answer }">{{ k }}. {{ v }}</text>
             <text class="q-ans">答案：{{ detail.answer }}</text>
@@ -222,6 +224,7 @@ export default {
         this.detailWant = null;
         return;
       }
+      if (this.detailWant === it.id) return;
       this.detailWant = it.id;
       try {
         const d = await request('/api/search/question/' + it.id);
@@ -229,6 +232,7 @@ export default {
         this.detail = d;
       } catch (e) {
         if (this.detailWant !== it.id) return;
+        this.detailWant = null;
         uni.showToast({ title: '加载失败', icon: 'none' });
       }
     },
@@ -279,6 +283,7 @@ export default {
 .q-real { font-size: 20rpx; color: #b45309; background: var(--warn-soft); border-radius: 6rpx; padding: 2rpx 10rpx; }
 .q-mod { font-size: 20rpx; color: var(--ink-3); }
 .q-text { font-size: 26rpx; color: var(--ink-2); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.q-loading { font-size: 24rpx; color: var(--ink-3); padding-top: 10rpx; }
 .q-detail { border-top: 1rpx solid var(--fill); padding-top: 14rpx; display: flex; flex-direction: column; gap: 8rpx; }
 .q-opt { font-size: 24rpx; color: var(--ink-2); }
 .q-opt.ans { color: #12b76a; font-weight: 600; }
