@@ -669,3 +669,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 收口：db.py 追加覆盖索引 idx_q_batch(import_batch, disabled, is_real, answer)，聚合与 answer 分布均整索引覆盖不回表；零查询改写零契约变化。备份副本实测建索引 2.3s、全查询 6–8s→0.01s。
 - 验证：本地全绿（ruff/pytest 100(+2 查询计划例)/pyright 0/lint/vitest 128）；生产 rev 1fe2a48 部署后 /api/admin/batches 实测 0.11–0.19s，索引已建。
 - 明确不做：governance_scan（600s 缓存兜底，Python 逐行体检 SQL 化挂候选）；/api/exam/* 历史 502 根因证据仍不足（unknown，不猜测性改动）。详见 docs/iter/round-3/design-r221-admin-batches-index.md。
+
+### R222（管理台重查询缓存 stale-while-revalidate，已部署）
+- 取证 verified：/api/admin/governance 慢请求 4.0–7.1s 全部为 `_cached` 600s TTL 过期后的同步重算路径（Python 全表逐行体检），即每 10 分钟必有一个管理台请求吃 4–7s；`_cached` 同时服务 dashboard(300s) 等重查询，且无锁有同键小惊群。
+- 收口：`_cached` 对齐 `_pick_pools` 语义——过期先回旧值 + 后台单飞重算，冷 miss（进程启动后首次）仍同步且 build 锁防惊群；零调用方/契约改动。+4 例 pytest（旧值不阻塞/单飞/冷 miss/重算异常不污染缓存）。
+- 验证：本地全绿（ruff/pytest 104/pyright 0）；生产 rev 35f6e11 部署后 governance 冷 miss 4.1s（仅重启后首次）、后续 0.07–0.25s；性能预算全过。
+- 明确不做：不 SQL 化 governance_scan（独立候选）、不加常驻预热线程（2G 内存高压宿主）。详见 docs/iter/round-3/design-r222-admin-cache-swr.md。
