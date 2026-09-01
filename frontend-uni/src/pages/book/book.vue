@@ -988,6 +988,14 @@ export default {
       const seq = (this._loadSeq = (this._loadSeq || 0) + 1);
       this.loading = true;
       this.loadErr = '';
+      // 快照即显：屏上已有列表或本地缓存有错题时先铺屏（uid API 长尾下不再停留 spinner），真实响应到达后覆盖
+      if (!this.items.length) {
+        const snap = getCachedMistakes(anonUid());
+        if (snap && snap.items && snap.items.length) {
+          this.items = snap.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
+        }
+      }
+      if (this.items.length) this.loading = false;
       try {
         const uq = 'uid=' + encodeURIComponent(anonUid());
         const [d, r] = await Promise.all([request('/api/mistakes?' + uq), request('/api/review?' + uq)]);
@@ -1000,7 +1008,7 @@ export default {
           if (this.due.length && !this.reviewing) this.startReview();
         }
         this.offlineView = false;
-        cacheMistakes(d.items);
+        cacheMistakes(d.items, anonUid());
         this.loadMastery();
         try {
           if (this.dueTotal > 0) uni.setTabBarBadge({ index: 1, text: String(this.dueTotal > 99 ? '99+' : this.dueTotal) });
@@ -1008,7 +1016,7 @@ export default {
         } catch (e) { /* tabBar 未就绪时忽略 */ }
       } catch (e) {
         if (seq !== this._loadSeq) return;
-        const c = getCachedMistakes();
+        const c = getCachedMistakes(anonUid());
         if (c && c.items && c.items.length) {
           this.items = c.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
           this.offlineView = true;

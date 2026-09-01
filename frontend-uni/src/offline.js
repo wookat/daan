@@ -149,12 +149,14 @@ export function watchNetwork() {
 
 // ---------- 错题本离线缓存 ----------
 
-export function cacheMistakes(items) {
+export function cacheMistakes(items, uid) {
   try {
-    uni.setStorageSync('mistakesCache', { ts: Date.now(), items: (items || []).slice(0, 200) });
+    uni.setStorageSync('mistakesCache', { ts: Date.now(), uid: uid || '', items: (items || []).slice(0, 200) });
   } catch (e) { /* 存储满则跳过 */ }
 }
 
-export function getCachedMistakes() {
-  return uni.getStorageSync('mistakesCache') || null;
+export function getCachedMistakes(uid) {
+  const c = uni.getStorageSync('mistakesCache') || null;
+  if (c && uid && c.uid && c.uid !== uid) return null;
+  return c;
 }
