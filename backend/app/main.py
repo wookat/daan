@@ -82,11 +82,18 @@ async def etag_conditional(request, call_next):
     async for chunk in response.body_iterator:
         chunks.append(chunk)
     body = b"".join(chunks)
-    etag = f'W/"{hashlib.md5(body).hexdigest()}"'
+    # 强 ETag：Cloudflare 会剥离弱 ETag（W/ 前缀），强 ETag 经其压缩后至多被弱化，
+    # 比较时剥 W/ 前缀做弱比较即可兼容
+    etag = f'"{hashlib.md5(body).hexdigest()}"'
     inm = request.headers.get("if-none-match")
     headers = dict(response.headers)
     headers["etag"] = etag
-    if inm == "*" or (inm and etag in [v.strip() for v in inm.split(",")]):
+
+    def _weak(v):
+        v = v.strip()
+        return v.removeprefix("W/")
+
+    if inm == "*" or (inm and _weak(etag) in [_weak(v) for v in inm.split(",")]):
         headers.pop("content-length", None)
         return Response(status_code=304, headers=headers)
     return Response(content=body, status_code=200, headers=headers)
