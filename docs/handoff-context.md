@@ -779,3 +779,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证 verified：生产 /api/search?q=给定资料 返回全空——搜索只覆盖行测 questions/exam_papers/考点，208 道申论真题（R236 已恢复公开 hub）完全不可搜，申论关键词成站内死胡同；App 申论专区 openQ(id) 已具备详情能力但 onLoad 不收 id，无法从搜索直达。本轮 12h origin 复审计无新缺陷（5xx 全落 R235 lb_try 实施前的部署窗口；20:41 慢样本簇为部署 rsync/prime 窗口自致）。
 - 收口：db.search_shenlun(q)（question/paper LIKE，disabled 守卫，≤5 条，208 行小表不建 FTS）+ api_search type in (all, shenlun) 附 shenlun 段；搜索页侧栏「申论真题」区块点击直达 /pkgA/shenlun/shenlun?id=N（onLoad 校验纯数字后 openQ）；不新增搜索 tab、不搜 shenlun_materials（挂候选）。
 - 验证：pytest +1 例（命中字段契约/卷名命中/type=question 无申论段/清空为空），118 passed/ruff/pyright 0/lint/vitest 133/build。详见 docs/iter/round-3/design-r241-search-shenlun.md。
+
+### R242（/tiku/shenlun/ hub 列表项逐题深链直达 App 详情）
+- 取证 verified：hub 题目列表为纯文本 li 无逐题出口，唯一 App 出口为底部整页 CTA（进专区还需自行找题）；R241 已具备 /#/pkgA/shenlun/shenlun?id=N 深链能力。本轮 14h origin 复审计无新缺陷（14k /api/exam/* 404 全为 09-01 风暴与共享 NAT 受控测试，429 均为 rl() 路径）。
+- 收口：_tiku_shenlun 每个 li 追加「去作答 →」深链（hash 片段路由，不新增可收录 URL，无 thin pages）；canonical/JSON-LD/sitemap/分页零变化，底部整页 CTA 保留。
+- 验证：hub 回归测试补逐题深链断言，118 passed/ruff/pyright 0。详见 docs/iter/round-3/design-r242-shenlun-hub-deeplink.md。

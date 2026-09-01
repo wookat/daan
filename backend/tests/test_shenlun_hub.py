@@ -1,4 +1,6 @@
 """申论真题公开 hub：有语料时 200 呈现，语料清空回落品牌 404（R232 守卫不回退）。"""
+import re
+
 from app import db
 
 from .conftest import seed_questions
@@ -36,6 +38,8 @@ def test_shenlun_hub_renders_with_corpus_and_falls_back_when_empty(client):
         assert "申论真题库（3 题）" in r.text
         assert "测试申论题干 0" in r.text
         assert 'href="/#/pkgA/shenlun/shenlun"' in r.text
+        # 逐题深链直达 App 详情（R242）
+        assert re.search(r'href="/#/pkgA/shenlun/shenlun\?id=\d+">去作答', r.text)
         # 首页与 sitemap 出现入口
         home = client.get("/tiku/")
         assert 'href="/tiku/shenlun/"' in home.text

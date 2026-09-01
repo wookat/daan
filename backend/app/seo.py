@@ -1065,7 +1065,10 @@ def _tiku_shenlun(page: int):
                 it["qtype"] or "",
             ) if s
         )
-        lis.append(f'<li><span class="meta">【{_e(meta)}】</span>{_e(text)}</li>')
+        lis.append(
+            f'<li><span class="meta">【{_e(meta)}】</span>{_e(text)} '
+            f'<a href="/#/pkgA/shenlun/shenlun?id={it["id"]}">去作答 →</a></li>'
+        )
     body = (
         _crumb([("题库", "/tiku/"), ("申论", None)])
         + f"<h1>申论真题库（{total} 题）</h1>"
