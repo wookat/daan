@@ -35,3 +35,39 @@ def test_track_slow_load_server_side_enrichment(client):
     ref = _rows("utesttrack3")[0]["ref"]
     assert ref.startswith("nav:12s;ua:TestUA/1.0")
     assert ";hs:" in ref and ref.endswith("l")
+
+
+def _created_at(uid):
+    conn = db.get_conn()
+    v = conn.execute(
+        "SELECT created_at FROM growth_events WHERE uid=?", (uid,)
+    ).fetchone()[0]
+    conn.close()
+    return v
+
+
+def test_track_ago_ms_backdates_created_at(client):
+    import time
+
+    r = client.post(
+        "/api/track", json={"event": "boot", "uid": "utesttrack4", "ago_ms": 60000}
+    )
+    assert r.status_code == 200
+    assert abs(_created_at("utesttrack4") - (time.time() - 60)) < 5
+
+
+def test_track_ago_ms_clamped_and_tolerant(client):
+    import time
+
+    r = client.post(
+        "/api/track",
+        json={"event": "boot", "uid": "utesttrack5", "ago_ms": 999 * 86400 * 1000},
+    )
+    assert r.status_code == 200
+    assert abs(_created_at("utesttrack5") - (time.time() - 7 * 86400)) < 5
+
+    r = client.post(
+        "/api/track", json={"event": "boot", "uid": "utesttrack6", "ago_ms": "junk"}
+    )
+    assert r.status_code == 200
+    assert abs(_created_at("utesttrack6") - time.time()) < 5

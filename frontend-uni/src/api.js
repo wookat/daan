@@ -1,6 +1,6 @@
 // API 封装：H5 同源相对路径；小程序 / App 必须用绝对域名（可用 VITE_API_BASE 覆盖）
 import { isNativeApp, savePdfNative } from './native';
-import { isTimeoutMsg, isNetMsg, classifyHttpError, snapCacheable, snapFresh, snapPushIndex, parseSseEvents } from './api-policy';
+import { isTimeoutMsg, isNetMsg, classifyHttpError, snapCacheable, snapFresh, snapPushIndex, parseSseEvents, trackRetryable, trackQueuePush, trackReplayPayload } from './api-policy';
 
 const REMOTE_BASE = 'https://kaogong.zalize.com';
 
@@ -870,11 +870,55 @@ export function shareAnswer(sid, picked, secs) {
   });
 }
 
+// 埋点失败离线队列：瞬时失败（部署重启窗口/弱网）入队，下次成功上报后重放（决策见 api-policy）
+const TRACK_Q_KEY = 'kgTrackQ';
+let trackFlushing = false;
+
+function trackQueueLoad() {
+  const q = uni.getStorageSync(TRACK_Q_KEY);
+  return Array.isArray(q) ? q : [];
+}
+
+function trackQueueSave(q) {
+  if (q.length) uni.setStorageSync(TRACK_Q_KEY, q);
+  else uni.removeStorageSync(TRACK_Q_KEY);
+}
+
+export function flushTrackQueue() {
+  if (trackFlushing) return Promise.resolve();
+  const q = trackQueueLoad();
+  if (!q.length) return Promise.resolve();
+  trackFlushing = true;
+  trackQueueSave([]);
+  const run = (i) => {
+    if (i >= q.length) return Promise.resolve();
+    return request('/api/track', { method: 'POST', data: trackReplayPayload(q[i], Date.now()) })
+      .then(() => run(i + 1))
+      .catch((e) => {
+        if (trackRetryable(e && e.message)) {
+          trackQueueSave(trackQueueLoad().concat(q.slice(i)));
+          return Promise.resolve();
+        }
+        return run(i + 1);
+      });
+  };
+  return run(0).finally(() => {
+    trackFlushing = false;
+  });
+}
+
 export function trackEvent(event, source, ref) {
-  return request('/api/track', {
-    method: 'POST',
-    data: { uid: anonUid(), event, source: source || null, ref: ref || null },
-  }).catch(() => {});
+  const data = { uid: anonUid(), event, source: source || null, ref: ref || null };
+  return request('/api/track', { method: 'POST', data })
+    .then((d) => {
+      flushTrackQueue();
+      return d;
+    })
+    .catch((e) => {
+      if (trackRetryable(e && e.message)) {
+        trackQueueSave(trackQueuePush(trackQueueLoad(), { ...data, t: Date.now() }));
+      }
+    });
 }
 
 // 分享文案 A/B：按 uid 稳定分桶（a=好奇型，b=挑战型），用于 share_open/share_answer/share_copy 漏斗对比

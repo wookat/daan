@@ -6,6 +6,8 @@ import {
   cacheFreshness,
   isCacheableContentType,
   serveMode,
+  notModified,
+  carryLastModified,
   EDGE_CACHE_TTL,
   API_EDGE_CACHE_TTL,
 } from '../../deploy/cf-pages/functions/edge-policy.js';
@@ -102,5 +104,49 @@ describe('isCacheableContentType', () => {
     expect(isCacheableContentType('/tiku/q/3', false, 'text/html; charset=utf-8')).toBe(true);
     expect(isCacheableContentType('/tiku/q/3', false, 'application/json')).toBe(false);
     expect(isCacheableContentType('/tiku/q/3', false, null)).toBe(false);
+  });
+});
+
+describe('notModified', () => {
+  const ET = 'W/"abc123"';
+  const LM = 'Tue, 01 Sep 2026 08:00:00 GMT';
+  it('If-None-Match 精确/弱比较/列表/星号命中', () => {
+    expect(notModified(ET, null, ET, null)).toBe(true);
+    expect(notModified('"abc123"', null, ET, null)).toBe(true);
+    expect(notModified('W/"x", W/"abc123"', null, ET, null)).toBe(true);
+    expect(notModified('*', null, ET, null)).toBe(true);
+  });
+  it('If-None-Match 不匹配或副本无 ETag 不 304', () => {
+    expect(notModified('W/"other"', null, ET, null)).toBe(false);
+    expect(notModified(ET, LM, null, LM)).toBe(false);
+  });
+  it('If-None-Match 存在时忽略 If-Modified-Since（RFC 9110）', () => {
+    expect(notModified('W/"other"', LM, ET, LM)).toBe(false);
+  });
+  it('If-Modified-Since：晚于/等于 Last-Modified 命中，早于不命中', () => {
+    expect(notModified(null, LM, null, LM)).toBe(true);
+    expect(notModified(null, 'Tue, 01 Sep 2026 09:00:00 GMT', null, LM)).toBe(true);
+    expect(notModified(null, 'Tue, 01 Sep 2026 07:00:00 GMT', null, LM)).toBe(false);
+  });
+  it('缺头/非法日期不 304', () => {
+    expect(notModified(null, null, ET, LM)).toBe(false);
+    expect(notModified(null, 'garbage', null, LM)).toBe(false);
+  });
+});
+
+describe('carryLastModified', () => {
+  const NOW = Date.UTC(2026, 8, 1, 10, 0, 0);
+  const PREV_LM = 'Tue, 01 Sep 2026 08:00:00 GMT';
+  it('指纹未变沿用旧 Last-Modified（含弱化形态）', () => {
+    expect(carryLastModified('"abc"', PREV_LM, '"abc"', NOW)).toBe(PREV_LM);
+    expect(carryLastModified('W/"abc"', PREV_LM, '"abc"', NOW)).toBe(PREV_LM);
+  });
+  it('指纹变化取本次回源时刻', () => {
+    expect(carryLastModified('"abc"', PREV_LM, '"def"', NOW)).toBe('Tue, 01 Sep 2026 10:00:00 GMT');
+  });
+  it('任一侧缺 ETag/旧 LM 缺失取本次回源时刻', () => {
+    expect(carryLastModified(null, PREV_LM, '"abc"', NOW)).toBe('Tue, 01 Sep 2026 10:00:00 GMT');
+    expect(carryLastModified('"abc"', PREV_LM, null, NOW)).toBe('Tue, 01 Sep 2026 10:00:00 GMT');
+    expect(carryLastModified('"abc"', null, '"abc"', NOW)).toBe('Tue, 01 Sep 2026 10:00:00 GMT');
   });
 });

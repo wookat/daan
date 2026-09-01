@@ -37,6 +37,29 @@ export function snapPushIndex(idx, path, max) {
   return { idx: next, evict };
 }
 
+// ---------- 埋点失败离线队列（R176）----------
+
+// 可重试判定：网络失败/超时/HTTP 5xx（瞬时窗口）可重放；4xx 属确定性拒绝不重试。
+export const trackRetryable = (msg) => isNetMsg(msg) || /^HTTP 5\d\d$/.test(String(msg));
+
+// 入队：追加一条，超上限丢最旧（最近事件分析价值更高）。
+export function trackQueuePush(q, item, max = 30) {
+  const next = (Array.isArray(q) ? q : []).concat([item]);
+  return next.length > max ? next.slice(next.length - max) : next;
+}
+
+// 重放载荷：携带 ago_ms 让服务端还原真实发生时刻；缺 t/时钟回拨按 0 处理。
+export function trackReplayPayload(item, now) {
+  const t = item && typeof item.t === 'number' ? item.t : now;
+  return {
+    uid: item.uid,
+    event: item.event,
+    source: item.source || null,
+    ref: item.ref || null,
+    ago_ms: Math.max(0, Math.round(now - t)),
+  };
+}
+
 // ---------- SSE 解析 ----------
 
 // 按空行切分事件，尾部不完整片段留在 rest 供下一 chunk 续接；无 data 行的事件忽略。
