@@ -131,6 +131,16 @@ body::after {
 html.theme-dark body {
   background: #15161c;
 }
+/* 系统「减弱动态效果」：动画/过渡压至瞬时并只跑单次，保留 keyframes 终态 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
 /* #endif */
 
 /* 深色模式（三档设置见 theme.js；.theme-dark 挂在 html 上，H5/App 生效）
