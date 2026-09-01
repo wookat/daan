@@ -4,7 +4,7 @@
       <view class="sbox">
         <l-icon name="search" :size="18" color="#9ca3af" />
         <input v-model="kw" class="sinput" placeholder="题号 / 题干关键词 / 考点名" confirm-type="search" focus @confirm="doSearch" @input="onInput" />
-        <view v-if="kw" class="sclear" role="button" aria-label="清空搜索" @click="kw = ''; result = null; loadErr = ''"><l-icon name="x" :size="16" color="#8a90a0" /></view>
+        <view v-if="kw" class="sclear" role="button" aria-label="清空搜索" @click="kw = ''; result = null; loadErr = ''; syncUrl()"><l-icon name="x" :size="16" color="#8a90a0" /></view>
       </view>
       <text class="scancel" @click="goBack">取消</text>
     </view>
@@ -96,6 +96,7 @@
 
 <script>
 import { request } from '../../api.js';
+import { buildSearchUrl } from '../../search-url.js';
 
 const MODS = { ziliao: '资料', shuliang: '数量', yanyu: '言语', panduan: '判断', changshi: '常识', shenlun: '申论' };
 
@@ -150,6 +151,12 @@ export default {
       this.hist = h.slice(0, 10);
       uni.setStorageSync('kgSearchHist', this.hist);
     },
+    syncUrl() {
+      // #ifdef H5
+      if (typeof window === 'undefined' || !window.history) return;
+      window.history.replaceState(null, '', buildSearchUrl(this.kw, this.tab));
+      // #endif
+    },
     clearHist() {
       this.hist = [];
       uni.removeStorageSync('kgSearchHist');
@@ -171,6 +178,7 @@ export default {
         this.result = await request('/api/search?q=' + encodeURIComponent(q) + '&type=' + this.tab);
         this.loadErr = '';
         this.saveHist(q);
+        this.syncUrl();
       } catch (e) {
         if (this.result) {
           uni.showToast({ title: e.message || '搜索失败', icon: 'none' });
