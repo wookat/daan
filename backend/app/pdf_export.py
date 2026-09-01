@@ -2,6 +2,7 @@
 import io
 import math
 import os
+import re
 import time
 
 from reportlab.lib import colors
@@ -96,6 +97,30 @@ def _styles(font: str) -> dict:
     }
 
 
+_MAT_SEP = re.compile(r"问题\s*[：:]")
+
+
+def _split_material(qtext: str) -> tuple[str, str] | None:
+    """「材料…问题：小题干」形态切分（镜像 db._material_key 语义），材料过短/无分隔不切。"""
+    t = qtext or ""
+    pre = ""
+    if "【资料】" in t:
+        head, _, t = t.partition("【资料】")
+        pre = head + "【资料】"
+    m = _MAT_SEP.search(t)
+    if not m:
+        return None
+    material = t[: m.start()]
+    stem = t[m.start():]
+    if len(re.sub(r"\s+", "", material)) < 120:
+        return None
+    return pre + material, stem
+
+
+def _mat_key(mat: str) -> str:
+    return re.sub(r"\s+", "", mat or "")
+
+
 def _esc(s: str) -> str:
     return (s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
@@ -158,15 +183,19 @@ def build_paper_pdf(
             story.append(Paragraph(f"第{zh}部分　{_esc(mod)}", st["sec"]))
         qtext = q.get("question") or ""
         mat = q.get("material") or ""
-        if not mat and "【资料】" in qtext:
+        if not mat and "【资料】" in qtext and "【问题】" in qtext:
             mat, _, rest = qtext.partition("【资料】")[2].partition("【问题】")
             if rest.strip():
                 qtext = rest.strip()
             else:
                 mat = ""
-        if mat and mat != last_mat:
-            story.append(Paragraph("【资料】" + _esc(mat.strip()), st["mat"]))
-        last_mat = mat or last_mat
+        if not mat:
+            sp = _split_material(qtext)
+            if sp:
+                mat, qtext = sp
+        if mat and _mat_key(mat) != last_mat:
+            story.append(Paragraph("【资料】" + _esc(mat.strip().removeprefix("【资料】")), st["mat"]))
+        last_mat = _mat_key(mat) or last_mat
         code = qcode.build_code(q)
         tag = f'<font size="7.5" color="#8F959E">[{code}]</font> ' if code else ""
         block = [Paragraph(f"<b>{i}.</b> {tag}{_esc(qtext)}", st["q"])]
