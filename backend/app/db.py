@@ -139,6 +139,15 @@ def init_db():
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_q_sitemap ON questions(disabled, id, updated_at)"
     )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_q_disabled_module ON questions(disabled, module)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_q_disabled_tag3 ON questions(disabled, tag3)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_q_real_year ON questions(is_real, disabled, exam_year, module, updated_at)"
+    )
     if "correct_ratio" in qcols:
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_q_reinforce ON questions(tag3, disabled, correct_ratio, id)"
