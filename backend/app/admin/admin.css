@@ -95,7 +95,7 @@ input.ipt:focus,select.ipt:focus,textarea.ipt:focus{border-color:var(--brand-500
 /* 表格 */
 .tbl-wrap{background:var(--surface);border-radius:var(--r-l);box-shadow:var(--sh-1);overflow:hidden}
 table.tbl{width:100%;border-collapse:collapse}
-.tbl th{background:#FAFBFD;color:var(--t3);font-size:12px;font-weight:600;text-align:left;
+.tbl th{position:relative;background:#FAFBFD;color:var(--t3);font-size:12px;font-weight:600;text-align:left;
   padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
 .tbl td{padding:12px 14px;border-bottom:1px solid var(--fill);font-size:13px;vertical-align:middle}
 .tbl tr:hover td{background:#FAFBFE}
