@@ -538,3 +538,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 收口：新增 `deploy/perf-budget.sh`（Lighthouse 跑 `/`、`/tiku/`，预算 perf≥0.90/a11y≥1.00/bp≥0.90/seo≥0.95/LCP≤2500ms/CLS≤0.10 + 主 bundle gzip≤160KB，阈值均可环境变量覆盖）；deploy_h5.sh 新增 step 6b 部署后自动跑，默认 WARN 不阻塞（防单次抖动假红，R173 教训），`PERF_BUDGET_STRICT=1` 严格模式、`SKIP_PERF_BUDGET=1` 跳过。
 - 验证：bash -n 双脚本；对当前生产实跑全部通过（/ perf 0.98/LCP 795ms，/tiku/ perf 1.0/LCP 939ms）；篡改阈值验证违例路径 exit 1；部署路径 step 6b 下轮部署自然复验。
 - 如实局限：实验室指标非 RUM（真实用户长尾另有 slow_load 埋点观察）；默认 WARN 模式违例仍需人工复核。详见 docs/iter/round-3/r196-perf-budget.md。
+
+### R197（/tiku SSR 页族键盘焦点可见性）
+- 取证：7d 窗口无新缺陷；SPA 侧 a11y-focus.js 已有全局 2px focus-visible 焦点环（R123 约定），SSR /tiku 页族 verified 缺口——全文唯一焦点样式为搜索框 `outline:none`+1px 边框变色，链接/CTA 无自定义环且风格不一致（axe/Lighthouse 动态态盲区，对照 WCAG 2.4.7/2.4.11）。
+- 收口：seo.py `_CSS` 新增 `:focus-visible{outline:2px solid var(--link);outline-offset:2px}`（token 化深浅色自适应），搜索框去 outline 抑制、保留 `:focus:not(:focus-visible)` 鼠标静默；+2 pytest 断言。
+- 验证：ruff/pytest 74 全绿；生产 rev 00b0253 部署后 1440/375 × light/dark Tab 走查全部焦点元素出 2px 环（light #2e5bff / dark #7c9aff）、溢出 0；本次部署首次真实复验 R196 step 6b：性能预算全部通过（/ perf 0.99/LCP 806ms，/tiku/ perf 1.0/LCP 944ms）。
+- 如实局限：文本输入框在 Chrome 按规范恒为 focus-visible，鼠标点击输入框也出环（与原生行为一致，非缺陷）；边缘 SWR 副本在 TTL 窗口内仍供旧 CSS，自然过期刷新。详见 docs/iter/round-3/r197-ssr-focus-visible.md。
