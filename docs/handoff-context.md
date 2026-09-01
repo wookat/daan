@@ -494,3 +494,22 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - R181（#361）：exam.vue 自动交卷失败后 startClock() 重启过期时钟致每秒重交、确定性 404 也无限重试（源码 verified 真实可触发）；新增 exam-policy.js submitFailPlan 三态：terminal（清 examProgress+会话失效 modal）/manual/retry（5s→60s 退避 ≤5 次）。
 - R182（#362）：服务端兜底——storm_guard.py ErrorStormGuard（30 错误/60s/IP，X-Kg-Ip 维度，LRU 1024）+ main.py 中间件超阈值 429+Retry-After:60，/api/health 豁免；前端 429/「请求过于频繁」归入可重试口径（trackRetryable 复用）。生产复验第 31 个错误起 429、65s 自动恢复。
 - R183 归因校正（重要，不造假数据）：origin 日志按 X-Kg-Ip 复核，风暴 ~20.9k 错误行 100% 来自本会话探针 IP（140.232.64.5，R181 复现/验证期间旧 bundle 触发真实 bug 所致）；同窗口 551 个 502 也全部来自该 IP（风暴过载症状，非独立缺陷），非探针错误仅 4 条 403 /tiku/（R86 直连拒绝，预期行为）。结论：bug 真实存在且已根治+兜底，但无证据表明真实用户曾触发；后续观察真实用户窗口挂后台。
+
+### R184–R186（2026-09-01）：观测管线修复 + AI 限速身份修复
+- R184（#364）：CF Pages 迁移后周报 cron/小时归档仍指向已死的 kaogong.zalize.com 边缘日志（8-31 周报仅 329 字节）；切到 /var/log/caddy/kaogong-origin.zalize.com-access*.log*（标题注明「回源流量，不含边缘缓存 HIT」），服务器 crontab 已同步。全量视图需 CF Analytics 权限（挂申报）。
+- R185（#365）：周报被探针淹没（82889 中 ~81k 探针，UA 无法区分）；access_log_report.py 新增 --exclude-ip-file 按 X-Kg-Ip 剔除并外显剔除量，服务器 /home/ubuntu/kaogong-reports/probe-ips.txt（首条本会话 IP 140.232.64.5，新探针 IP 须手动登记否则混入）。原始日志/归档不动可复算。
+- R186（#367）：verified LLM 端点匿名开放（ACCESS_CODE 空为产品决策）且 rl() 身份取 uid or client.host——生产架构下 client.host 是代理对端固定 IP，导致匿名端点全网共享一个桶（扫描器打光额度殃及真实用户）+ uid 轮换无限绕过烧 token。deps.py 新增 client_ip()（X-Kg-Ip 优先）、rl() IP 桶恒生效（带 uid 放宽 3 倍容忍 NAT）+ uid 桶保持。生产复验：缺参 400 探测（不烧 token）第 21 次起 429、health 不受影响。局限：内存限速重启清零；分布式多 IP 仍可消耗，彻底防御需 CF WAF（token 无权限，挂申报）。
+- R187（#368）：R186 只覆盖 rl() 的 11 个调用点；全库 grep 复核三类同源缺陷并修复——面试 LLM 端点（itv_answer/itv_regen，单请求 2 次 LLM 调用）uid-only 可轮换绕过→接入 rl() IP 桶；auth 注册/登录/微信登录 client.host 固定代理 IP→client_ip()（reg 10/h 原为全站共享名额）；/api/track 匿名全站共享桶→按真实 IP 隔离。client_ip() 移入 auth.py（deps import auth 防成环，deps 保留转发）。阈值/窗口/语义零变化。生产复验：匿名同 uid 面试探测（缺题 404 不烧 token）第 21 次起 429。未改动：team/pk/share 纯 DB 写 uid 桶（无 LLM 成本，观察项）。
+- R188（#369）：收口剩余 uid-only 桶——team_create/team_join/share_create/share_answer/pk_create 五个匿名可写 DB 端点（uid 自报可轮换→无限插行/垃圾数据膨胀）接入 rl()，阈值/窗口零变化。生产复验（rev 49ddbe1）：team/create 空名 400 探测（不写行）同 uid 第 6 次起 429。不动：social cmt/cmt_report（uid 服务端换算不可轮换）；pk join/submit/random 现状无限速（新增限速属扩权决策，挂观察）。
+- R189：全量核对 @router.post × 限速调用点，verified 五个**完全零限速**的匿名可写端点：answer_log（每请求最多插 200 行）、backup（每请求 500KB blob）、report（孪生 question_report 已有 30/3600 而它漏网）、mistakes、practice_result；接入 rl()（阈值按 golden path 用量上界放宽数倍：alog 120/h、backup 10/h、report 20/h、mistake 240/h、presult 60/h）。生产复验（rev 1798efc）：/api/report 无效 reason 400 探测（不插行）第 21 次起 429，health/stats 同期 200。复核明确 bounded 不动：user_state/profile/reminders/mat_favs/daily_set submit/mock_event（upsert）、pk join/submit（UPDATE）、monitor/report（不落本地 DB）。
+- 合并注意：#361–#365 又各自并进链式基分支，main 停在 #360；rollup #366 收 R181–R185，R186 为 #367（基于 #366 分支）。
+
+### R191（磁盘治理）
+- 数据卷内 5 个 8 月手工 DB 快照（~1.85GB）已归档至 `r2:zalize-backups/kaogong-sqlite/archive/`（字节校验一致后删本地），卷 2.29GB→450MB，根分区 86%→84%。
+- kaogong-ops.sh 新增磁盘水位巡检（≥90% 写 DISK HIGH 入 /home/ubuntu/kaogong-ops.log），已同步 VPS 实跑验证。
+- 未来手工快照请直接放 R2 archive 前缀或用 pre-*.db.gz 命名（3 天自动清理），勿在 /data 卷内长期堆放。
+
+### R192（storm guard 429 连坐收口）
+- 复盘 09-01 探针风暴（本机遗留旧 exam 标签页 ~57k 404，已关闭）：当时零 429 系容器运行 R182 前旧镜像，守卫逻辑本身无缺陷。
+- verified 缺陷：rl() 的 429 被 storm guard 计入错误窗口，单端点限速 35×429 后整 IP 全 /api 连坐封禁（生产实测无关端点也 429）；record() 已排除 429。
+- 生产复验方式：先触发 /api/report rl 至 429，再请求无关端点确认不连坐。

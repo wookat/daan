@@ -3,7 +3,8 @@
 正常客户端不会在短窗口内产出大量 4xx/5xx（生产基线：单 IP 每 10s 最多 12 个
 /api 请求且几乎全 2xx）；故障/陈旧 bundle/恶意客户端的错误重试风暴则可打到
 ~3 req/s 持续数小时，把 2 vCPU 共享宿主排队到分钟级并殃及其他端点（R182 取证）。
-封禁只依赖错误计数，与正常行为零重叠；429 不计入窗口，封禁随窗口滑出自然解除。
+封禁只依赖错误计数，与正常行为零重叠；429（本守卫或接口级限速产出）不计入窗口，
+避免单端点限速被升级为整 IP 全 API 封禁（NAT 共享出口连坐）；封禁随窗口滑出自然解除。
 """
 import threading
 from collections import OrderedDict, deque
@@ -22,7 +23,7 @@ class ErrorStormGuard:
             dq.popleft()
 
     def record(self, ip: str, status: int, now: float) -> None:
-        if status < 400 or not ip:
+        if status < 400 or status == 429 or not ip:
             return
         with self._lock:
             dq = self._errs.get(ip)

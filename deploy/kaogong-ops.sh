@@ -40,6 +40,11 @@ if [ -f "$ENV_FILE" ]; then
 else
   echo "$TS r2 upload SKIPPED (no $ENV_FILE)" >> "$LOG"
 fi
+# 1c. 磁盘水位巡检：共享宿主根分区 ≥90% 时告警入日志（DB 快照/日志膨胀早发现）
+PCT=$(df --output=pcent / | tail -1 | tr -dc '0-9')
+if [ "${PCT:-0}" -ge 90 ]; then
+  echo "$TS DISK HIGH ${PCT}% used on /" >> "$LOG"
+fi
 # 2. 健康巡检
 CODE=$(curl -s -o /dev/null -w '%{http_code}' -m 15 https://kaogong.zalize.com/api/questions?limit=1)
 if [ "$CODE" != "200" ]; then

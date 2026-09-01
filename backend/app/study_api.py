@@ -108,8 +108,9 @@ def api_attempts(uid: str, question_id: int):
     return {"items": db.question_attempts(uid[:64], question_id)}
 
 @router.post("/api/answer_log")
-def api_answer_log(body: dict):
+def api_answer_log(body: dict, request: Request):
     uid = (body.get("uid") or "").strip()
+    rl(request, "alog", 120, 3600, uid)
     items = body.get("items")
     if not uid or not isinstance(items, list) or not items:
         raise HTTPException(400, "缺少 uid 或答题记录")
@@ -149,7 +150,8 @@ def api_recommend(uid: str):
 
 
 @router.post("/api/backup")
-def api_backup_save(body: dict):
+def api_backup_save(body: dict, request: Request):
+    rl(request, "backup", 10, 3600)
     data = body.get("data")
     if not isinstance(data, dict):
         raise HTTPException(400, "缺少备份数据")
@@ -172,7 +174,8 @@ _REPORT_REASONS = {"答案有误", "题目有错字/乱码", "选项有问题", 
 
 
 @router.post("/api/report")
-def api_report(body: dict):
+def api_report(body: dict, request: Request):
+    rl(request, "report", 20, 3600)
     reason = str(body.get("reason") or "").strip()
     if reason not in _REPORT_REASONS:
         raise HTTPException(400, "无效的反馈类型")
@@ -206,7 +209,8 @@ def api_question_report(body: dict, request: Request):
     return {"id": rid, "updated": updated}
 
 @router.post("/api/practice_result")
-def api_practice_result(body: dict):
+def api_practice_result(body: dict, request: Request):
+    rl(request, "presult", 60, 3600)
     n = int(body.get("n") or 0)
     if not (0 < n <= 200):
         raise HTTPException(400, "无效题量")
@@ -215,7 +219,8 @@ def api_practice_result(body: dict):
     return db.save_practice_result(body.get("module"), n, correct, secs)
 
 @router.post("/api/mistakes")
-def api_save_mistake(rec: dict):
+def api_save_mistake(rec: dict, request: Request):
+    rl(request, "mistake", 240, 3600, str(rec.get("uid") or "").strip() or None)
     mid = db.save_mistake(rec)
     return {"id": mid}
 
