@@ -742,3 +742,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证 verified：生产库 shenlun 0 题，而 /tiku/ 与 /tiku/discuss/ 的 description/JSON-LD/正文写「收录 113107 道行测申论题目」——total 只统计行测五模块，计数口径不实；本窗口 origin 无新缺陷（慢样本/502/llms.txt 404 全部对应今日旧 rev 部署窗口，部署后消失，stats 现 0.24–1.5s、llms.txt 200）。
 - 收口（seo.py）：四处文案「行测/申论题目」「行测申论题目」→「行测题目」，计数逻辑/路由/JSON-LD 结构不动。
 - 验证：pytest +1 例（两页不得再现旧口径、/tiku/ 须现「道行测题目」），113 passed/ruff/pyright 0；前端门禁回归全绿。详见 docs/iter/round-3/design-r234-tiku-copy-accuracy.md。
+
+### R235（部署容器重建窗口 origin 502 收口，纯 VPS Caddy 配置）
+- 取证 verified：今日每轮部署的容器 Recreate 窗口（10–20s）内，无副本深页与 /api/track 均即时 502（dial 拒绝，duration 0.01–0.08s），爬虫/用户最终收品牌 503；同机 jobs.zalize.com 已有 lb_try_duration 成熟先例。
+- 收口：/etc/caddy/Caddyfile 两个 kaogong 块 reverse_proxy 127.0.0.1:8300 增加 lb_try_duration 25s + lb_try_interval 1s（拨号失败窗口内重试，POST 安全；备份 Caddyfile.bak-r235），validate+reload。
+- 验证：受控 docker stop 10s 演练，/api/health 停机窗口内请求等待 12.4s 后 200（原即时 502），容器恢复 healthy、公开页 200。仓库仅落文档（Caddyfile 为共享服务器配置，与 R85/R86 同口径）。详见 docs/iter/round-3/design-r235-origin-lb-retry.md。
