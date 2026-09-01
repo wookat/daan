@@ -590,3 +590,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：本轮生产复审计无新 verified 缺陷（24h 非探针 origin 干净、SSR 页族 light/dark axe clean）；RUM slow_load 的 8–45s API 长尾样本无 v: 版本戳（疑旧 bundle 客户端），对应时段 origin 日志已被探针轮转无法归因，挂观察。真实缺口为流程性：[[path]].js（全站唯一入口，HIT/SWR/stale-if-error/重试/304/tee 入缓存/安全头）零集成测试，历史上只能靠部署后生产探测验证。
 - 收口：tests/edge-handler.test.js 直接 import onRequest，桩 caches.default/fetch/waitUntil + 假时钟，12 例覆盖爬虫 403、MISS 入缓存（剥 Set-Cookie/盖 Cached-At）、HIT、SWR 刷新与 stale-if-error（5xx/异常两路）、R205 重试全分支、边缘 304（HIT/MISS 两路）、安全头与 /api noindex。
 - 验证：vitest 112（+12 例）/lint/build/ruff/pytest 87 全绿；纯测试新增无源码改动，无需部署。详见 docs/iter/round-3/r206-edge-handler-tests.md。
+
+### R207（SW 离线壳缓存污染收口）
+- 取证：src/static/sw.js 导航分支对任何同源导航响应无条件 `cache.put('/', copy)` 不检查 res.ok；故障窗口（R205 取证的容器重建 502 等）错误页可覆盖壳缓存，之后离线/超时兜底 `caches.match('/')` 回的是 502 页且离线用户无恢复路径。SW Cache Storage 服务端不可观测，按防御性收口。
+- 收口：回写前加 `res.ok` 守卫（仅 2xx 入壳缓存，错误响应直出不入缓存）；缓存名/离线兜底/不拦截清单语义不变。新增 tests/sw-shell.test.js（源码沙箱执行 + 桩 caches/fetch，4 例：200 回写、502 不污染、异常回退旧壳、路径不拦截）。
+- 验证：vitest 116（+4 例）/lint/build 全绿；生产 rev 193f0a0 部署后 1440/375（深色）SW 受控、壳缓存 200、溢出 0、console 0 error；R196 性能预算全过。详见 docs/iter/round-3/r207-sw-shell-cache-poisoning.md。
