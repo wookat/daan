@@ -19,7 +19,8 @@
   Caddy 站点块须配置 access log（JSON、roll_size 50MiB、roll_keep 14、336h），
   输出 `/var/log/caddy/kaogong-origin.zalize.com-access.log`；functions 代理层会
   在回源请求上附加 `X-Kg-Ip`（真实客户端 IP）与 `X-Kg-Ua`（原始 UA），
-  归因故障时以该日志为准（`kaogong.zalize.com` 块的日志自 CF Pages 迁移后不再有流量）。
+  归因故障时以该日志为准（`kaogong.zalize.com` 块的日志自 CF Pages 迁移后不再有流量；
+  周报 `cron_access_report.sh` 与小时级归档 crontab 条目已切到 origin 日志 glob，R184）。
 - **origin 域收口**（R86）：functions 回源请求带共享密钥头 `X-Kg-Edge`
   （值在 Pages 项目环境变量 `KG_EDGE_KEY`，`npx wrangler pages secret put KG_EDGE_KEY
   --project-name kaogong-h5` 设置，不入仓库）；宿主 Caddy `kaogong-origin` 块对

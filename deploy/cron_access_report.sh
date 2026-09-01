@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# kaogong.zalize.com access log 周报（crontab：每周一 UTC 0 点 = 北京时间周一 08:00）
+# kaogong origin access log 周报（crontab：每周一 UTC 0 点 = 北京时间周一 08:00）
+# CF Pages 迁移后 kaogong.zalize.com 站点块无流量，真实回源流量在 kaogong-origin 日志；
+# 统计范围为回源流量（不含 Pages 静态直出与边缘缓存 HIT）。
 # 输出到 /home/ubuntu/kaogong-reports/access-weekly-YYYYMMDD.txt，只含聚合统计，不含敏感信息。
 set -u
 
 OUT_DIR=/home/ubuntu/kaogong-reports
-LOG_GLOB='/var/log/caddy/kaogong.zalize.com-access*.log*'
+LOG_GLOB='/var/log/caddy/kaogong-origin.zalize.com-access*.log*'
 ARCHIVE_DIR=/home/ubuntu/kaogong-reports/access-archive
 SCRIPT=/home/ubuntu/kaogong-assistant/scripts/access_log_report.py
 ARCHIVER=/home/ubuntu/kaogong-assistant/scripts/archive_access_log.py
@@ -16,7 +18,7 @@ OUT="$OUT_DIR/access-weekly-$(date -u +%Y%m%d).txt"
 python3 "$ARCHIVER" "$LOG_GLOB" "$ARCHIVE_DIR" >/dev/null 2>&1 || true
 
 {
-  echo "# kaogong.zalize.com access log 周报（近7天，生成于 $(date -u '+%F %T') UTC）"
+  echo "# kaogong origin 回源流量周报（近7天，不含边缘缓存 HIT，生成于 $(date -u '+%F %T') UTC）"
   if ls "$ARCHIVE_DIR"/access-*.jsonl >/dev/null 2>&1; then
     cat "$ARCHIVE_DIR"/access-*.jsonl | python3 "$SCRIPT" - --days 7
   elif ls $LOG_GLOB >/dev/null 2>&1; then
