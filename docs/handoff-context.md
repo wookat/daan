@@ -688,3 +688,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 收口（纯 admin.css 静态，零 API/JS/行为变化）：① 表面色 token 化（--th-bg/--row-hover/--toast-t/--mod-*-bg，#fff 面板底统一 var(--surface)）；② @media(prefers-color-scheme:dark) :root 重映射，色板对齐客户端 v3 深色 token（bg #15161C/card #1D1F28/fill #23252F/line #2B2E3A/状态色亮变体）；③ 白字压亮色组合定向覆盖（.pager a.on/.ck.on::after/侧栏 badge/toast 反色）；④ color-scheme:light dark 原生控件随主题。
 - 验证：本地全绿（ruff/pytest 104/pyright 0/lint/vitest/build/bash -n）；生产 rev ffe8cdc 部署后 12 管理台路由 × light/dark 认证 axe 全零违规，dark 1440/375 × 12 路由页面级溢出全 0，性能预算全过。
 - 明确不做：管理台手动三档主题切换（系统偏好足够，挂候选）；不动客户端/SSR 深色实现。详见 docs/iter/round-3/design-r224-admin-dark-mode.md。
+
+### R225（storm guard 可观测性：X-Kg-Guard 头，已部署）
+- 取证 verified：09-01 08:11–10:00 origin 日志 ~20.3k 条 /api/exam/* 404 风暴（submit ~10.1k + report/72|73|75 ~10.1k，X-Kg-Ip=140.232.64.5 共享 NAT、headless Chrome UA、Server: uvicorn 证实后端真实响应）期间**零 429**——ErrorStormGuard 未触发；当晚以相同三种请求形态在生产容器（127.0.0.1:8300，注意 8000 是无关 k12team）逐一实测均第 31 个起 429，守卫现行正常；风暴窗口与当前守卫代码零 diff。SPA 现行 submitFailPlan 对 404 直接 terminal，不会产生该风暴（风暴客户端为自动化浏览器属 inference）。守卫未触发根因 unknown：纯内存态 + 容器 stdout 随 autoheal 重建销毁，风暴期进程内部状态零留存。
+- 收口（最小可观测性，不改守卫语义/阈值）：ErrorStormGuard.record() 返回记录后窗口计数；中间件对 /api status≥400 响应加 X-Kg-Guard: <计数> 头、守卫 429 加 X-Kg-Guard: blocked，2xx/3xx 不加头；Caddy origin 访问日志完整记录响应头（roll_keep 14 天），下次风暴可逐请求区分「ip 为空 / 计数不涨 / 到阈值未拦截」。
+- 验证：本地全绿（ruff/pytest 106(+2)/pyright 0/lint/vitest/build）；生产部署后错误响应带计数头、第 31 个起 429+blocked、200 无头，Caddy 日志实际记录到该头。
+- 明确不做：不改 threshold/window、不做根因未知的猜测性修复、不持久化守卫状态。详见 docs/iter/round-3/design-r225-storm-guard-observability.md。

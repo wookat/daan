@@ -22,9 +22,10 @@ class ErrorStormGuard:
         while dq and now - dq[0] > self.window:
             dq.popleft()
 
-    def record(self, ip: str, status: int, now: float) -> None:
+    def record(self, ip: str, status: int, now: float) -> int:
+        """记录一次错误响应，返回该 ip 记录后的窗口计数（未记录返回 0）。"""
         if status < 400 or status == 429 or not ip:
-            return
+            return 0
         with self._lock:
             dq = self._errs.get(ip)
             if dq is None:
@@ -35,6 +36,7 @@ class ErrorStormGuard:
                 self._errs.move_to_end(ip)
             self._prune(dq, now)
             dq.append(now)
+            return len(dq)
 
     def blocked(self, ip: str, now: float) -> bool:
         with self._lock:
