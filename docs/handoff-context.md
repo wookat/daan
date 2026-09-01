@@ -605,3 +605,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：生产复审计无新 verified 缺陷（sitemap 60 URL 抽样 canonical/状态全对、边缘 304 验证器正常、slow_load 长尾为旧 bundle/爬虫族群且同名端点实测亚秒）；真实缺口为流程性——index.html 内联 watchdog（R194 失败态+重试、R195 role=alert/焦点直达）是启动链路唯一不依赖 bundle 的自愈路径，此前 vitest 零覆盖，行为只能靠部署后生产受控拦截验证。
 - 收口：新增 tests/splash-watchdog.test.js，沿用 sw-shell 源码沙箱模式（从 index.html 正则提取内联 IIFE + 注入桩 window/document + 假时钟），6 例覆盖：20s 超时失败态/alert/焦点、__kgSplashOk 取消、/assets/ script error 即时触发、幂等、非 assets 不触发、kg-splash-done 不注入。
 - 验证：vitest 122（+6 例）/lint/build 全绿；无生产产物变更不部署。详见 docs/iter/round-3/r209-splash-watchdog-tests.md。
+
+### R210（dark /tiku/papers/ 列表链接 link-in-text-block 收口）
+- 取证：生产 axe 复扫 light/dark × 7 页（panduan?page=254、daily、papers、search、q/1、discuss、y/2023），唯一违例为 dark /tiku/papers/ link-in-text-block serious×61——papers 列表 li 为「短标题链接 + 较长 .meta 文本」构成 text block，深色 --link 仅靠颜色区分；R195 下划线规则未覆盖 .qlist li>a。origin 24h 非探针错误仅零星扫描/直连 403，无其他新缺陷。
+- 收口：seo.py 下划线选择器扩一项 `.qlist li>a`（papers 与题目列表统一，light/dark 一致，胶囊 CTA/面包屑豁免不变）；+1 pytest。
+- 验证：ruff/pytest 90（+1 例）全绿；生产 rev c3aba55 部署后 14 组合 axe 全 CLEAN，1440/375 × light/dark papers/模块页下划线生效、溢出 0、console 0 error，R196 性能预算全过。详见 docs/iter/round-3/r210-papers-dark-link-underline.md。
