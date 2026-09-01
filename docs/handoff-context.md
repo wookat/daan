@@ -625,3 +625,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：R211 挂候选的边缘源码 lint 盲区实测复现（flat config base path 限制，frontend-uni 下无法触达 ../deploy）；从仓库根纳管后立即发现 WritableStream no-undef 1 处（真实用法、globals 缺声明）。
 - 收口：仓库根新增转发型 eslint.config.mjs（base path 提根，规则仍单一来源维护在 frontend-uni/eslint.config.mjs）；ignores 补 frontend-uni/ 前缀镜像组、globals 补 ReadableStream/WritableStream；lint 脚本改 `eslint src tests && npm run lint:edge`。
 - 验证：npm run lint（src+tests+edge）0 error、vitest 122、build:h5 全绿；无生产行为变化不部署。从本轮起「lint 全绿」口径覆盖 src+tests+边缘函数。详见 docs/iter/round-3/r213-edge-lint-coverage.md。
+
+### R214（每日备份可恢复性验证，纯 ops 不部署）
+- 复审计无新缺陷：深页 Lighthouse 全 1.0、JSON-LD 全可解析、hub 页内链抽样 60/60 全 200。
+- verified 缺口：每日备份从未验证可恢复；手工演练最新备份 quick_check ok / questions=156792。
+- 收口：ops 1c' 每日解压当日 .gz → quick_check + questions 行数 → RESTORE-VERIFY ok/FAILED 入日志（已 VPS 实装实跑，坏 .gz 走 FAILED 分支已受控验证）。详见 docs/iter/round-3/r214-backup-restore-verify.md。

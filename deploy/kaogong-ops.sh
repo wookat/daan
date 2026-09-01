@@ -40,6 +40,24 @@ if [ -f "$ENV_FILE" ]; then
 else
   echo "$TS r2 upload SKIPPED (no $ENV_FILE)" >> "$LOG"
 fi
+# 1c'. 备份可恢复性验证：解压当日备份 → quick_check + 题目行数，坏备份当天暴露而非灾难恢复时
+VF="$BK/.verify.db"
+if gunzip -c "$BK/data-$(date +%F).db.gz" > "$VF" 2>/dev/null; then
+  VR=$(python3 -c "
+import sqlite3
+c = sqlite3.connect('$VF')
+q = c.execute('PRAGMA quick_check').fetchone()[0]
+n = c.execute('SELECT count(*) FROM questions').fetchone()[0]
+print(f'{q} questions={n}')
+" 2>&1) || VR="verify-script-failed: $VR"
+else
+  VR="gunzip-failed"
+fi
+rm -f "$VF"
+case "$VR" in
+  "ok questions="*) echo "$TS RESTORE-VERIFY $VR" >> "$LOG" ;;
+  *) echo "$TS RESTORE-VERIFY FAILED $VR" >> "$LOG" ;;
+esac
 # 1c. 磁盘水位巡检：共享宿主根分区 ≥90% 时告警入日志（DB 快照/日志膨胀早发现）
 PCT=$(df --output=pcent / | tail -1 | tr -dc '0-9')
 if [ "${PCT:-0}" -ge 90 ]; then
