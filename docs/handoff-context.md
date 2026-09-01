@@ -662,4 +662,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 收口（纯 CSS + 1 行 HTML）：admin.css 追加 `@media(max-width:767px)` 手机档——body min-width 解除、topbar search 隐藏、content padding 12、pagehead/row/filterbar 换行、kpis minmax(140px,1fr)!important（覆盖 dedup/governance 页内联 repeat(4,1fr)）、drawer 100vw、`.tbl-wrap,.card{overflow-x:auto}`+`table.tbl{min-width:640px}` 表格容器内横滚（questions 等页表格直接渲染在 .card 内不在 .tbl-wrap）。
 - 缓存击穿：index.html 的 admin.css 链接原本无 `?v=`，后端 mtime 重写机制不生效，边缘缓存旧 CSS；补 `?v=r38` 收口（部署后实测重写为 mtime 版本号）。
 - 验证：本地全绿（ruff/pytest 98/pyright 0/lint/vitest 128/build）；生产 375/320 全部 12 个管理台路由 scrollWidth-clientWidth=0，1440 桌面零变化（min-width:768 仍生效、侧栏 232px）。
-- 明确不做：侧栏抽屉/汉堡菜单（需 JS）、管理台深色模式（挂候选）。详见 docs/iter/round-3/design-r220-admin-mobile.md。
+- 明确不做：侧栏抽屉/汉堡菜单（需 JS）、管理台深色模式（挂候选）。
+
+### R221（/api/admin/batches 慢查询收口，已部署）
+- 取证 verified：origin 24h 慢请求中 /api/admin/batches 8 次 6.0–7.6s；生产只读 DB 实测 GROUP BY import_batch 全表扫 2.8s（questions 15 个索引无一覆盖 import_batch）+ 50×batch_answer_dist 各 0.11s，与线上耗时吻合；distinct batch=1000。
+- 收口：db.py 追加覆盖索引 idx_q_batch(import_batch, disabled, is_real, answer)，聚合与 answer 分布均整索引覆盖不回表；零查询改写零契约变化。备份副本实测建索引 2.3s、全查询 6–8s→0.01s。
+- 验证：本地全绿（ruff/pytest 100(+2 查询计划例)/pyright 0/lint/vitest 128）；生产 rev 1fe2a48 部署后 /api/admin/batches 实测 0.11–0.19s，索引已建。
+- 明确不做：governance_scan（600s 缓存兜底，Python 逐行体检 SQL 化挂候选）；/api/exam/* 历史 502 根因证据仍不足（unknown，不猜测性改动）。详见 docs/iter/round-3/design-r221-admin-batches-index.md。
