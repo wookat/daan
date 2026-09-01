@@ -21,10 +21,10 @@ python3 "$ARCHIVER" "$LOG_GLOB" "$ARCHIVE_DIR" >/dev/null 2>&1 || true
 
 {
   echo "# kaogong origin 回源流量周报（近7天，不含边缘缓存 HIT，生成于 $(date -u '+%F %T') UTC）"
+  # shellcheck disable=SC2086  # LOG_GLOB 为故意展开的 glob
   if ls "$ARCHIVE_DIR"/access-*.jsonl >/dev/null 2>&1; then
     cat "$ARCHIVE_DIR"/access-*.jsonl | python3 "$SCRIPT" - --days 7 --exclude-ip-file "$PROBE_IPS"
   elif ls $LOG_GLOB >/dev/null 2>&1; then
-    # shellcheck disable=SC2086
     zcat -f $LOG_GLOB 2>/dev/null | python3 "$SCRIPT" - --days 7 --exclude-ip-file "$PROBE_IPS"
   else
     echo "未找到日志文件（$LOG_GLOB）"

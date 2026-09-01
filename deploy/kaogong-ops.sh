@@ -14,13 +14,18 @@ docker exec deploy-kaogong-1 sqlite3 /data/data.db ".backup /data/daily.db" 2>/d
   || docker exec deploy-kaogong-1 python3 -c "import sqlite3;s=sqlite3.connect('/data/data.db');d=sqlite3.connect('/data/daily.db');s.backup(d)"
 docker cp deploy-kaogong-1:/data/daily.db "$BK/data-$(date +%F).db" && docker exec deploy-kaogong-1 rm -f /data/daily.db
 gzip -f "$BK/data-$(date +%F).db"
+# 文件名为 data-YYYY-MM-DD.db.gz，按名排序即按日期排序
+# shellcheck disable=SC2012
 ls -t "$BK"/data-*.db.gz 2>/dev/null | tail -n +8 | xargs -r rm -f
 find "$BK" -name "pre-*.db.gz" -mtime +3 -delete 2>/dev/null
 # 1b. R2 离站上传（zalize-backups/kaogong-sqlite，保留 30 天）
 ENV_FILE=/home/ubuntu/.env
 BUCKET_PREFIX=zalize-backups/kaogong-sqlite
 if [ -f "$ENV_FILE" ]; then
-  set -a; . "$ENV_FILE"; set +a
+  set -a
+  # shellcheck disable=SC1090
+  . "$ENV_FILE"
+  set +a
   export RCLONE_CONFIG_R2_TYPE=s3
   export RCLONE_CONFIG_R2_PROVIDER=Cloudflare
   export RCLONE_CONFIG_R2_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID"
@@ -61,7 +66,7 @@ case "$VR" in
   *) echo "$TS RESTORE-VERIFY FAILED $VR" >> "$LOG" ;;
 esac
 # 1b'. R2 副本每周独立验证（周日）：从远端真实下载 → 与本地 md5 比对，防「上传成功但远端不可恢复」
-if [ -f "$ENV_FILE" ] && [ "$(date +%u)" = "7" -o "${FORCE_R2_VERIFY:-}" = "1" ]; then
+if [ -f "$ENV_FILE" ] && { [ "$(date +%u)" = "7" ] || [ "${FORCE_R2_VERIFY:-}" = "1" ]; }; then
   RF=/tmp/.kg-r2-verify.db.gz
   F="$BK/data-$(date +%F).db.gz"
   rclone copyto "r2:$BUCKET_PREFIX/$(basename "$F")" "$RF" 2>/dev/null

@@ -764,3 +764,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：pytest +2 例（三态转换 + 端点头断言），116 passed/ruff/pyright 0。详见 docs/iter/round-3/design-r238-admin-cache-state-header.md。
 - 生产 rev 69a0004：重启窗口内三端点全 hit（R229/R230 预热 verified 生效）；TTL 过期后实测 stats/dashboard `stale`(0.01–0.03s 回旧值)→下一请求 `hit`（后台刷新 verified）；经边缘访问 origin 日志 resp_headers 实录 X-Kg-Cache；错误令牌 401 无头。cold 态仅 pytest 覆盖（生产被预热吃掉，正是设计意图）。
 - 另取证：R235 lb_try 实际实施时刻为 09-01 21:31 UTC（bak-r235），此前 21:04/21:26 仍有即时 502 属实施前样本；实施后历经 3 次容器重建（21:46/21:53/22:01）origin 零 502，R235 verified 生效。
+
+### R239（deploy shell 脚本 shellcheck 门禁 + 存量清零）
+- 取证 verified：24h origin 复审计无新产品缺陷（4xx 全为历史探针，/llms.txt、/tiku/shenlun/ 404 均早于对应轮部署时刻，当前 200；慢样本聚簇部署窗口属 lb_try 排队设计行为）；真实缺口为流程性——5 个 shell 脚本历轮只有 bash -n 纯语法检查，shellcheck 全量实扫 4 处，其中 kaogong-ops.sh SC2166（`[ p -o q ]` POSIX 未定义）触及 R2 周验证触发条件，属真实正确性风险。
+- 收口：SC2166 重写为 `{ [ p ] || [ q ]; }`；SC1090/SC2012/SC2086 三处有意为之定点 directive 豁免并注明理由（对齐 R217 pyright 手法）。门禁基线：`shellcheck deploy/*.sh` 0 输出，与 bash -n 并列为 shell 变更验收项（本地门禁，不引入 CI）。
+- 验证：shellcheck 0 输出 + bash -n 5 脚本全过；VPS 同步 kaogong-ops.sh/cron_access_report.sh 后 FORCE_R2_VERIFY=1 实跑，R2-VERIFY ok md5 match 正常入日志（重写后触发条件 verified）。详见 docs/iter/round-3/design-r239-shellcheck-gate.md。
