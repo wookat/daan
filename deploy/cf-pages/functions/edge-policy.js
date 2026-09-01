@@ -68,6 +68,15 @@ export function notModified(ifNoneMatch, ifModifiedSince, etag, lastModified) {
   return Number.isFinite(ims) && Number.isFinite(lm) && lm <= ims;
 }
 
+// 副本刷新时的 Last-Modified 延续：内容指纹（origin ETag）未变则沿用旧副本的
+// Last-Modified，保证验证器跨刷新稳定（HTML 的 ETag 被 CF 前端剥离，
+// If-Modified-Since 是其唯一对客验证器）；指纹变化或缺失则取本次回源时刻。
+export function carryLastModified(prevEtag, prevLm, newEtag, now) {
+  const weak = (v) => (v || "").trim().replace(/^W\//, "");
+  if (prevEtag && prevLm && newEtag && weak(prevEtag) === weak(newEtag)) return prevLm;
+  return new Date(now).toUTCString();
+}
+
 export function isCacheableContentType(pathname, isApi, contentType) {
   const ct = contentType || "";
   if (pathname.startsWith("/sitemap") || pathname === "/robots.txt") {

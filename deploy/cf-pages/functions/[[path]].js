@@ -6,6 +6,7 @@ import {
   isCacheableContentType,
   serveMode,
   notModified,
+  carryLastModified,
 } from "./edge-policy.js";
 
 const ORIGIN = "https://kaogong-origin.zalize.com";
@@ -58,11 +59,6 @@ function fromCache(hit, ttl, label, request) {
 // 安全头 + robots 语义：前台直出与后台刷新入缓存的副本共用，保证两条路径逐字节同构
 function decorate(resp, pathname) {
   for (const [k, v] of Object.entries(SECURITY_HEADERS)) resp.headers.set(k, v);
-  // HTML 的 ETag 会被 Cloudflare 前端（Email Obfuscation 内容改写）剥离，
-  // 补 Last-Modified 兜底验证器：取本次回源时刻，副本存续期内 If-Modified-Since 可 304
-  if (!resp.headers.get("Last-Modified")) {
-    resp.headers.set("Last-Modified", new Date().toUTCString());
-  }
   if (pathname.startsWith("/admin") || pathname.startsWith("/api/")) {
     resp.headers.set("X-Robots-Tag", "noindex, nofollow");
   } else {
@@ -80,8 +76,26 @@ function toCacheCopy(body, resp) {
   return copy;
 }
 
+// HTML 的 ETag 会被 Cloudflare 前端（Email Obfuscation 内容改写）剥离，
+// Last-Modified 是其唯一对客验证器：内容指纹未变时沿用旧副本的 Last-Modified，
+// 保证验证器跨副本刷新稳定（If-Modified-Since 不被 TTL 周期性清零）
+function stampLastModified(resp, prev) {
+  if (!resp.headers.get("Last-Modified")) {
+    resp.headers.set(
+      "Last-Modified",
+      carryLastModified(
+        prev && prev.headers.get("ETag"),
+        prev && prev.headers.get("Last-Modified"),
+        resp.headers.get("ETag"),
+        Date.now()
+      )
+    );
+  }
+  return resp;
+}
+
 // 后台回源刷新副本：200 且 content-type 合法才覆盖，失败保留旧副本（stale-if-error）
-async function revalidate(req, cacheKey, pathname, isApi) {
+async function revalidate(req, cacheKey, pathname, isApi, prev) {
   let upstream;
   try {
     upstream = await fetch(req);
@@ -91,7 +105,7 @@ async function revalidate(req, cacheKey, pathname, isApi) {
   const resp = decorate(new Response(upstream.body, upstream), pathname);
   const ctOk = isCacheableContentType(pathname, isApi, resp.headers.get("content-type"));
   if (resp.status !== 200 || !ctOk) return;
-  await caches.default.put(cacheKey, toCacheCopy(resp.body, resp));
+  await caches.default.put(cacheKey, toCacheCopy(resp.body, stampLastModified(resp, prev)));
 }
 
 export async function onRequest({ request, env, waitUntil }) {
@@ -133,7 +147,7 @@ export async function onRequest({ request, env, waitUntil }) {
   if (env.KG_EDGE_KEY) req.headers.set("X-Kg-Edge", env.KG_EDGE_KEY);
   // stale-while-revalidate：立即回陈旧副本，后台回源刷新，用户不等待 origin 长尾
   if (mode === "swr") {
-    waitUntil(revalidate(req, request.url, url.pathname, isApi));
+    waitUntil(revalidate(req, request.url, url.pathname, isApi, stale));
     return fromCache(stale, ttl, "REVALIDATE", request);
   }
   let upstream;
@@ -147,6 +161,7 @@ export async function onRequest({ request, env, waitUntil }) {
   const resp = decorate(new Response(upstream.body, upstream), url.pathname);
   const ctOk = isCacheableContentType(url.pathname, isApi, resp.headers.get("content-type"));
   if (cacheable && resp.status === 200 && ctOk) {
+    stampLastModified(resp, stale);
     const [body, cacheBody] = resp.body.tee();
     waitUntil(caches.default.put(request.url, toCacheCopy(cacheBody, resp)));
     // 无副本但 origin 新鲜响应指纹与客户端持有一致：仍可 304（body 已 tee 入缓存）
