@@ -513,3 +513,45 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 复盘 09-01 探针风暴（本机遗留旧 exam 标签页 ~57k 404，已关闭）：当时零 429 系容器运行 R182 前旧镜像，守卫逻辑本身无缺陷。
 - verified 缺陷：rl() 的 429 被 storm guard 计入错误窗口，单端点限速 35×429 后整 IP 全 /api 连坐封禁（生产实测无关端点也 429）；record() 已排除 429。
 - 生产复验方式：先触发 /api/report rl 至 429，再请求无关端点确认不连坐。
+
+### R193（首页 Lighthouse LCP 双峰收口）
+- 现象：首页 Lighthouse LCP 双峰（~0.8s 归属静态启动屏字幕 vs ~3.5s 归属水合后 hero 副标题），perf 分随之 0.99/0.89 摆动。
+- 排错：先试放大启动屏字幕面积（16px/340px→17px/392px）不解决；本地对照实验 verified 关键变量是「启动屏节点被物理移除」——节点移除后 trace 侧 LCP 候选失效回退水合后内容（4/5 次归属 hero），保留节点仅隐藏则 4/4 次稳定归属启动屏。
+- 收口：启动屏移出 `#app` 挂载根（防 Vue 挂载清空）；main.js H5-only mixin 首个组件 mounted 后等两帧加 `.kg-splash-done`（opacity/visibility/pointer-events 隐藏 + spinner 停转），只隐藏不移除。
+- 生产复验（rev 8da5ae5 / bundle index-9wsrn0Pe.js）：5 次 Lighthouse 全部归属 `#kg-splash > div.s`，LCP 0.8–1.8s、perf 0.97–0.99，3.5s hero 峰消失；1440/375/375-dark 启动屏正常隐藏（visibility:hidden/opacity:0）、溢出 0、console 0 error。
+- 如实局限：这是 LCP 归属稳定化，不缩短真实水合时间；隐藏节点常驻 DOM（零可见性、spinner 停转）。详见 docs/iter/round-3/r193-lcp-bimodal-splash.md。
+
+### R194（启动屏加载失败死胡同收口）
+- 取证：生产拦截 `/assets/index-*.js` 模拟 bundle 加载失败，25s 后仍停留启动屏 + spinner 旋转，无失败提示无出路——既有自愈链路（陈旧壳自愈/错误监控/离线兜底）全在 main.js 内，bundle 失败时一行不执行，属结构性盲区。
+- 收口：index.html 内联 watchdog（不依赖 bundle）：capture 阶段 error 监听 `/assets/` script 加载失败即触发失败态，20s 超时兜底；失败态隐藏 spinner、追加「页面加载失败，请检查网络后重试」+「重新加载」按钮（location.reload）；main.js dismissSplash() 调 `window.__kgSplashOk()` 取消 watchdog，失败态若已出现而 bundle 晚到成功挂载，`.kg-splash-done` 连同失败态一起隐藏无残留。
+- 生产复验（rev 5f2a45b / bundle index-D-Jearwy.js）：拦截 bundle 后 375/1440-dark 均出失败态（spinner 停、提示+按钮），点重新加载放行后正常水合；正常路径 watchdog 被取消无失败态闪现；Lighthouse perf 0.97–0.98/LCP 0.9–1.8s 与 R193 一致；溢出 0、console 无非预期 error。
+- 如实局限：20s 阈值为经验值，极端慢网正常加载会先见失败提示（点重载即恢复，不阻断晚到挂载）。详见 docs/iter/round-3/r194-splash-load-failure.md。
+
+### R195（深色 /tiku 正文链接可辨识性 + 启动屏失败态读屏可达性）
+- 取证：全站 axe 复扫（light/dark × 7 页）仅 dark `/tiku/` 违例 link-in-text-block serious×7——深色 `--link:#7c9aff` 对正文 `#f3f4f6` 对比仅 2.4:1 且无下划线（h2 模块标题链接 + 首段两个内文链接；R48 只补了 `.meta a,.ftr a`）。颜色方案不可行（对 surface ≥4.5:1 与对正文差 ≥3:1 的亮度区间刚好相抵）。另实证 R194 失败态提示 role/aria-live 均无、焦点为空，读屏用户听不到失败通报。
+- 收口：seo.py `_CSS` 下划线规则扩为 `.meta a,.ftr a,h2 a,p a`（双配色一致），豁免 `p a.cta,.crumb a`；index.html watchdog 失败提示加 `role="alert"`、追加后 `b.focus()` 焦点直达重试按钮。
+- 生产复验：dark/light `/tiku/` axe 清零、溢出 0；拦截 bundle 后失败态 role=alert 生效、焦点落在重试按钮。
+- 如实局限：下划线全页族生效（含浅色）属视觉语言统一；读屏收口验证方式为 DOM 断言非真实读屏实测。详见 docs/iter/round-3/r195-dark-link-a11y.md。
+
+### R196（性能预算回归护栏）
+- 取证：7d 窗口无新缺陷（slow_load 47 条均已知模式）；初次探测 `/tiku/search?q=比重` 400 复核为误报——curl 原始 UTF-8 未编码写入请求行所致，规范编码/浏览器路径均 302，非生产缺陷；真实缺口为流程性：perf/a11y 水位只靠隔轮手工 Lighthouse 维持（R193 LCP 双峰曾长期未被发现），部署校验对性能/无障碍回归零感知。
+- 收口：新增 `deploy/perf-budget.sh`（Lighthouse 跑 `/`、`/tiku/`，预算 perf≥0.90/a11y≥1.00/bp≥0.90/seo≥0.95/LCP≤2500ms/CLS≤0.10 + 主 bundle gzip≤160KB，阈值均可环境变量覆盖）；deploy_h5.sh 新增 step 6b 部署后自动跑，默认 WARN 不阻塞（防单次抖动假红，R173 教训），`PERF_BUDGET_STRICT=1` 严格模式、`SKIP_PERF_BUDGET=1` 跳过。
+- 验证：bash -n 双脚本；对当前生产实跑全部通过（/ perf 0.98/LCP 795ms，/tiku/ perf 1.0/LCP 939ms）；篡改阈值验证违例路径 exit 1；部署路径 step 6b 下轮部署自然复验。
+- 如实局限：实验室指标非 RUM（真实用户长尾另有 slow_load 埋点观察）；默认 WARN 模式违例仍需人工复核。详见 docs/iter/round-3/r196-perf-budget.md。
+
+### R197（/tiku SSR 页族键盘焦点可见性）
+- 取证：7d 窗口无新缺陷；SPA 侧 a11y-focus.js 已有全局 2px focus-visible 焦点环（R123 约定），SSR /tiku 页族 verified 缺口——全文唯一焦点样式为搜索框 `outline:none`+1px 边框变色，链接/CTA 无自定义环且风格不一致（axe/Lighthouse 动态态盲区，对照 WCAG 2.4.7/2.4.11）。
+- 收口：seo.py `_CSS` 新增 `:focus-visible{outline:2px solid var(--link);outline-offset:2px}`（token 化深浅色自适应），搜索框去 outline 抑制、保留 `:focus:not(:focus-visible)` 鼠标静默；+2 pytest 断言。
+- 验证：ruff/pytest 74 全绿；生产 rev 00b0253 部署后 1440/375 × light/dark Tab 走查全部焦点元素出 2px 环（light #2e5bff / dark #7c9aff）、溢出 0；本次部署首次真实复验 R196 step 6b：性能预算全部通过（/ perf 0.99/LCP 806ms，/tiku/ perf 1.0/LCP 944ms）。
+- 如实局限：文本输入框在 Chrome 按规范恒为 focus-visible，鼠标点击输入框也出环（与原生行为一致，非缺陷）；边缘 SWR 副本在 TTL 窗口内仍供旧 CSS，自然过期刷新。详见 docs/iter/round-3/r197-ssr-focus-visible.md。
+
+### R198（练习页 v3 IA 迁移遗留死代码清理）
+- 取证：7d 窗口无新缺陷，选代码治理轮。`git log -S plancard` verified：30a2b54（v3 5-tab IA）把「今日计划卡+报考画像引导/设置」迁至首页 tab 时只删了 practice.vue 模板，脚本与样式整段遗留——`loadPlan/loadProfile/loadPlanToday/openSetup/skipGuide/setupNext/goTask/setFocus` 8 个方法与 9 个 data 字段模板零引用（`this.loadProfile()` 全文不存在→`this.profile` 恒 undefined→两处 `if (this.profile)` 守卫永假），~140 行不可达 JS + ~40 行死 CSS 打进 practice chunk，且在练习页留下 daily_plan/profile/plan/today 幽灵调用面（R197 取证时曾被误判为活调用）。
+- 收口：只删不改（-143 行），home.vue 活代码与 percentile/goBook/goMini 等活引用不动。
+- 验证：删除后全文 grep 零残留；ESLint/vitest 95/build 全绿；生产 rev 19236e7 部署后 1440/375 练习页自动开题、作答正常、无横向溢出、console 0 error；R196 step 6b 性能预算全部通过（/ perf 0.99/LCP 826ms，/tiku/ perf 1.0/LCP 944ms）。
+- 如实局限：仅清理本页取证确认的死集群，未逐页扫全站死代码。详见 docs/iter/round-3/r198-practice-dead-plan-code.md。
+
+### R199（/tiku 尾斜杠规范化缺口收口）
+- 取证：生产逐路由复测 verified 两个 404 缺口——`/tiku/papers/{pid}/`（带斜杠无路由直接 404）与 `/tiku/daily/{day}`（无斜杠落 `/{module}` catch-all → 模块不存在 404），与 q/{id}（带斜杠 301 去斜杠）及列表页族（无斜杠 301 补斜杠）既有约定不一致，外链斜杠变体把 121 张卷详情页/滚动归档页判成硬 404。
+- 收口：只补两条 301 路由（papers 详情带斜杠→无斜杠、daily 归档无斜杠→带斜杠），规范 URL/sitemap/canonical 零变化；+2 pytest。
+- 验证：ruff/pytest 76 全绿；生产 rev f149cb0 部署后全表复测（papers/5/ 301、daily/{day} 301、q//discuss//papers/ 既有语义不变、unknown 仍 404、坏日期仍 301 回 /tiku/daily/）；1440/375 两页溢出 0、console 0 error；R196 性能预算全过。详见 docs/iter/round-3/r199-tiku-slash-canonical-gaps.md。

@@ -68,8 +68,10 @@ _CSS = (
     "font-size:14px;font-weight:600}.hdr-cta:hover{text-decoration:none;opacity:.92}"
     ".hdr-s{flex:1;display:flex;margin:0 12px;min-width:0}"
     ".hdr-s input{flex:1;min-width:0;max-width:280px;margin-left:auto;font-size:14px;color:var(--text);"
-    "background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:6px 14px;outline:none}"
+    "background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:6px 14px}"
     ".hdr-s input:focus{border-color:var(--link)}"
+    ":focus-visible{outline:2px solid var(--link);outline-offset:2px;border-radius:4px}"
+    ".hdr-s input:focus:not(:focus-visible){outline:none}"
     "@media(max-width:480px){.hdr-s input{max-width:none}}"
     ".card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin:12px 0;"
     "box-shadow:var(--shadow)}"
@@ -80,7 +82,8 @@ _CSS = (
     ".tags{display:flex;flex-wrap:wrap;gap:8px}.tags a{background:var(--tag-bg);border-radius:16px;padding:4px 12px;"
     "font-size:14px;white-space:nowrap}"
     ".meta{color:var(--muted);font-size:13px}"
-    ".meta a,.ftr a{text-decoration:underline}"
+    ".meta a,.ftr a,h2 a,p a{text-decoration:underline}"
+    "p a.cta,.crumb a{text-decoration:none}"
     ".opt{margin:6px 0;padding:8px 12px;border:1px solid var(--border);border-radius:8px}"
     ".ans{background:var(--ans-bg);border-radius:8px;padding:12px;margin-top:10px}"
     ".cta{display:inline-block;background:" + BRAND + ";color:#fff!important;border-radius:999px;"
@@ -429,6 +432,11 @@ def tiku_daily():
     return _render_daily(db.cn_day(), archived=False)
 
 
+@router.get("/daily/{day}", include_in_schema=False)
+def tiku_daily_archive_noslash(day: str):
+    return RedirectResponse(f"/tiku/daily/{quote(day)}/", status_code=301)
+
+
 @router.get("/daily/{day}/", response_class=HTMLResponse, include_in_schema=False)
 def tiku_daily_archive(day: str):
     valid = db.daily_archive_day(day)
@@ -531,6 +539,11 @@ def tiku_papers():
             [("题库", "/tiku/"), ("真题卷", "/tiku/papers/")],
         ),
     )
+
+
+@router.get("/papers/{pid}/", include_in_schema=False)
+def tiku_paper_detail_slash(pid: int):
+    return RedirectResponse(f"/tiku/papers/{pid}", status_code=301)
 
 
 @router.get("/papers/{pid}", response_class=HTMLResponse, include_in_schema=False)

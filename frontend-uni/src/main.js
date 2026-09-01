@@ -176,8 +176,30 @@ if (typeof window !== 'undefined') {
 }
 // #endif
 
+// #ifdef H5
+// 静态启动屏隐藏：首个组件挂载后等两帧加隐藏类，只隐藏不移除——
+// 节点从 DOM 移除会使 trace 侧 LCP 候选失效回退到水合后内容，保留节点让 LCP 稳定归属启动屏首绘
+let splashDismissed = false;
+function dismissSplash() {
+	if (splashDismissed || typeof document === 'undefined') return;
+	splashDismissed = true;
+	if (typeof window !== 'undefined' && typeof window.__kgSplashOk === 'function') window.__kgSplashOk();
+	requestAnimationFrame(() => requestAnimationFrame(() => {
+		const el = document.getElementById('kg-splash');
+		if (el) el.classList.add('kg-splash-done');
+	}));
+}
+// #endif
+
 export function createApp() {
 	const app = createSSRApp(App);
+	// #ifdef H5
+	app.mixin({
+		mounted() {
+			dismissSplash();
+		},
+	});
+	// #endif
 	return {
 		app,
 	};
