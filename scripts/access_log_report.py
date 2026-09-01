@@ -6,6 +6,8 @@
 或从 stdin（远程日志）:
     ssh <host> 'cat /var/log/caddy/kaogong.zalize.com-access.log*' | python3 scripts/access_log_report.py -
 可选参数 --days N 只统计最近 N 天（默认全部）。
+可选参数 --exclude-ip-file PATH：逐行 IP 清单（# 注释），按 X-Kg-Ip（回退
+remote_ip）剔除探针/自测流量，剔除量单独计数外显，保证统计不混入开发探针。
 
 输出：总请求量、/tiku/ 请求量、UA 分类（搜索引擎爬虫/其他 bot/疑似真人）、
 爬虫明细、/tiku/ Top20 URL、状态码分布、时间范围。
@@ -38,7 +40,19 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("logfile", help="日志路径，- 表示 stdin")
     ap.add_argument("--days", type=int, default=0, help="只统计最近N天")
+    ap.add_argument("--exclude-ip-file", default="", help="探针IP清单文件，逐行IP，#注释")
     args = ap.parse_args()
+
+    exclude_ips = set()
+    if args.exclude_ip_file:
+        try:
+            with open(args.exclude_ip_file, errors="ignore") as ef:
+                for raw in ef:
+                    ip = raw.split("#")[0].strip()
+                    if ip:
+                        exclude_ips.add(ip)
+        except OSError:
+            pass
 
     fh = sys.stdin if args.logfile == "-" else open(args.logfile, errors="ignore")
     cutoff = None
@@ -55,6 +69,7 @@ def main():
     tiku_engine = 0
     seg_counter = Counter()
     seg_engine = Counter()
+    probe_excluded = 0
 
     for line in fh:
         line = line.strip()
@@ -71,6 +86,11 @@ def main():
             ts_min = ts if ts_min is None else min(ts_min, ts)
             ts_max = ts if ts_max is None else max(ts_max, ts)
         req = rec.get("request", {})
+        if exclude_ips:
+            ip = (req.get("headers", {}).get("X-Kg-Ip") or [""])[0] or req.get("remote_ip", "")
+            if ip in exclude_ips:
+                probe_excluded += 1
+                continue
         uri = req.get("uri", "")
         ua = (req.get("headers", {}).get("User-Agent") or [""])[0]
         cat, name = classify(ua)
@@ -103,6 +123,8 @@ def main():
 
     print(f"时间范围: {fmt(ts_min)} ~ {fmt(ts_max)}")
     print(f"总请求: {total}")
+    if exclude_ips:
+        print(f"探针流量已剔除: {probe_excluded}（IP 清单 {len(exclude_ips)} 个，不计入以上/以下统计）")
     print(f"/tiku/ 请求: {tiku}（其中搜索引擎爬虫 {tiku_engine}）")
     if seg_counter:
         print("/tiku/ 分段命中（总/爬虫）:", {k: f"{v}/{seg_engine.get(k, 0)}" for k, v in seg_counter.most_common()})
