@@ -726,3 +726,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证 verified：R230 部署后 origin 日志 stats/dashboard/governance/batches 全部亚秒（0.005–0.099s），管理台慢端点收口确认；`/llms.txt` 历史被请求 66 次全部 404（来源为共享 NAT IP，外部真实需求 unknown），站点已具备 robots/sitemap/公开页族但缺 llmstxt.org 标准的 LLM 爬虫站点导览文件。
 - 收口：seo.py 新增 GET /llms.txt（静态 Markdown：站名+摘要+五模块 hub/papers/daily/discuss/sitemap 链接，text/markdown，无 DB 查询）；edge-policy.js 把 /llms.txt 与 robots/sitemap 同组纳入边缘缓存（isCacheableContentType 新增接受 text/markdown）。
 - 验证：pytest 新增 test_llms_txt.py（状态/类型/链接契约）、vitest edge-policy 断言扩展；本地全绿（ruff/pytest 110(+1)/pyright 0/lint/vitest 132(+1)/build）；生产实测 200 + text/markdown + X-Edge-Cache HIT，1440/375 双视口溢出 0、console 0 error，性能预算全过。详见 docs/iter/round-3/design-r231-llms-txt.md。不声称已产生任何收录/流量效果。
+
+### R232（空模块 SSR hub 品牌 404 + 边缘 SWR 下架副本清除）
+- 取证 verified：生产 /tiku/shenlun/ 返回 200、带 canonical 无 noindex，正文「申论题库（0 题）」；/api/questions?module=shenlun 0 题、sitemap 与 /tiku/ 内链均已排除 shenlun——可猜测直达的空洞门页（thin content + 用户死胡同）。tiku_submodule 已有空结果 404 守卫，tiku_module 缺失，属不一致缺口。
+- 收口一（seo.py）：tiku_module 在 _count_questions(module)==0 时返回既有 _not_found("该模块暂无题目")（品牌 404 + noindex + 出路），有题模块/API/301 行为零变化；不删 kb.MODULES["shenlun"]（App 内申论专区仍依赖）。
+- 收口二（边缘，部署后追加取证发现）：origin 已 404 但边缘持续回旧 200 副本——revalidate() 仅 200 覆盖、404 直接 return，旧副本永久驻留且每次 SWR 续命。改为 404/410（origin 确定性下架答复）时 caches.default.delete(cacheKey)，下一请求同步回源；5xx/网络异常 stale-if-error 语义不变。
+- 验证：pytest 新增空模块 hub 404/noindex + 有题模块 200 回归；vitest edge-handler 新增「后台刷新遇 404 清副本 → 下一请求 404」集成例。本地全绿（ruff/pytest 111(+1)/pyright 0/lint/vitest 133(+1)/build）；生产 rev d384fce 部署后实测 /tiku/shenlun/ 首访回旧副本随即清除、后续稳定品牌 404+noindex，/tiku/changshi/ 200，1440/375 双视口溢出 0、console 仅页面自身 404 资源行，性能预算全过。详见 docs/iter/round-3/design-r232-empty-module-404.md。
