@@ -762,3 +762,5 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证 verified：R230 后 origin 仍有 /api/admin/governance 5–8.8s、/api/admin/stats 2–6s 慢样本（含距容器重建 5 分钟的样本，按 R229/R230 设计应亚秒命中），但日志只有 duration，无法区分命中/回旧值/冷 miss——预热是否真正生效、慢样本是否宿主争用只能标 unknown。
 - 收口：db._cached 拆出 _cached_state 返回 (data, cold|hit|stale)（语义零变化），stats/dashboard/governance 三端点响应加 X-Kg-Cache 头，借 Caddy origin 日志（14 天 resp_headers）逐请求持久取证（同 R225 X-Kg-Guard / R226 X-Kg-Fetch 手法）；仅管理端出头，公开端点不加。
 - 验证：pytest +2 例（三态转换 + 端点头断言），116 passed/ruff/pyright 0。详见 docs/iter/round-3/design-r238-admin-cache-state-header.md。
+- 生产 rev 69a0004：重启窗口内三端点全 hit（R229/R230 预热 verified 生效）；TTL 过期后实测 stats/dashboard `stale`(0.01–0.03s 回旧值)→下一请求 `hit`（后台刷新 verified）；经边缘访问 origin 日志 resp_headers 实录 X-Kg-Cache；错误令牌 401 无头。cold 态仅 pytest 覆盖（生产被预热吃掉，正是设计意图）。
+- 另取证：R235 lb_try 实际实施时刻为 09-01 21:31 UTC（bak-r235），此前 21:04/21:26 仍有即时 502 属实施前样本；实施后历经 3 次容器重建（21:46/21:53/22:01）origin 零 502，R235 verified 生效。
