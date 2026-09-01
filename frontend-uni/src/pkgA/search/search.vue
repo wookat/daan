@@ -4,7 +4,7 @@
       <view class="sbox">
         <l-icon name="search" :size="18" color="#9ca3af" />
         <input v-model="kw" class="sinput" placeholder="题号 / 题干关键词 / 考点名" confirm-type="search" focus @confirm="doSearch" @input="onInput" />
-        <view v-if="kw" class="sclear" role="button" aria-label="清空搜索" @click="kw = ''; result = null"><l-icon name="x" :size="16" color="#8a90a0" /></view>
+        <view v-if="kw" class="sclear" role="button" aria-label="清空搜索" @click="kw = ''; result = null; loadErr = ''"><l-icon name="x" :size="16" color="#8a90a0" /></view>
       </view>
       <text class="scancel" @click="goBack">取消</text>
     </view>
@@ -13,6 +13,10 @@
     </view>
 
     <view v-if="loading" class="empty">搜索中…</view>
+    <view v-else-if="loadErr" class="empty">
+      <text class="empty-t">搜索失败：{{ loadErr }}</text>
+      <view class="retry" role="button" aria-label="重试搜索" @click="doSearch">重试 ›</view>
+    </view>
     <template v-else-if="result">
       <!-- 题号直达 -->
       <view v-if="result.code_hit" class="card qitem" @click="toggleDetail(result.code_hit)">
@@ -96,6 +100,7 @@ export default {
         { k: 'paper', n: '试卷' }
       ],
       loading: false,
+      loadErr: '',
       result: null,
       detail: null,
       timer: null
@@ -128,14 +133,20 @@ export default {
       const q = this.kw.trim();
       if (!q) {
         this.result = null;
+        this.loadErr = '';
         return;
       }
       this.loading = true;
       this.detail = null;
       try {
         this.result = await request('/api/search?q=' + encodeURIComponent(q) + '&type=' + this.tab);
+        this.loadErr = '';
       } catch (e) {
-        uni.showToast({ title: e.message || '搜索失败', icon: 'none' });
+        if (this.result) {
+          uni.showToast({ title: e.message || '搜索失败', icon: 'none' });
+        } else {
+          this.loadErr = e.message || '搜索失败';
+        }
       }
       this.loading = false;
     },
@@ -214,6 +225,8 @@ export default {
 .q-exp { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; }
 .more { text-align: center; font-size: 26rpx; color: var(--brand); padding: 16rpx; }
 .empty { display: flex; flex-direction: column; gap: 8rpx; text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 100rpx 40rpx; }
+.empty-t { font-size: 26rpx; color: var(--ink-2); }
+.retry { margin-top: 8rpx; font-size: 26rpx; color: var(--brand); font-weight: 600; }
 
 /* 桌面（H5）：≥1024 左考点/试卷侧栏 + 右题目列表（仅「全部」tab） */
 /* #ifdef H5 */
