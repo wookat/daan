@@ -565,3 +565,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：sitemap-topics 收录 156 个考点页，但 /tiku/ 首页每模块考点截断 [:12] 实际只链 60 个；模块 hub 页（如 /tiku/changshi/ 30907 题）零考点/零年份内链——约 96 个考点页无稳定 hub 入链，只靠题目页标签与同组兄弟互链弱连通。
 - 收口：tiku_module 渲染新增「按考点刷题」（本模块全量考点+题数）与「按年份刷真题」两卡，复用 tag3_counts/year_module_counts 既有取数；首页 [:12] 截断与考点/年份页自身渲染不动，零新路由。
 - 验证：ruff/pytest 80（+1 例）全绿；生产 rev 964dce9 部署后五模块页考点内链合计 156（=sitemap 全量）、年份链接齐全；1440/375 模块页溢出 0、console 0 error；R196 性能预算全过。详见 docs/iter/round-3/r201-module-hub-internal-links.md。
+
+### R202（首页考点截断补「全部考点」入口）
+- 取证：首页每模块考点标签截断 [:12] 后无任何「更多」入口（生产 grep「更多/查看全部」零命中），R201 模块 hub 全量考点卡与首页截断列表之间无显式引导。
+- 收口：截断（>12）时在标签尾部追加「全部 N 个考点 →」链至 /tiku/{module}/；≤12 不加。零路由/canonical/sitemap 变化。
+- 验证：ruff/pytest 81（+1 例，测试库因启动自动导入题库非空，断言按实际考点数条件判定）全绿；生产 rev 5f45dc9 五模块入口齐全（27/56/18/22/33），1440/375 /tiku/ 溢出 0、console 0 error；R196 性能预算全过。详见 docs/iter/round-3/r202-home-topic-more-link.md。
