@@ -115,6 +115,7 @@ export default {
       loadErr: '',
       result: null,
       detail: null,
+      detailWant: null,
       timer: null,
       searchSeq: 0,
       moreLoading: false,
@@ -177,6 +178,7 @@ export default {
       }
       this.loading = true;
       this.detail = null;
+      this.detailWant = null;
       try {
         const d = await request('/api/search?q=' + encodeURIComponent(q) + '&type=' + this.tab);
         if (seq !== this.searchSeq) return;
@@ -217,11 +219,16 @@ export default {
     async toggleDetail(it) {
       if (this.detail && this.detail.id === it.id) {
         this.detail = null;
+        this.detailWant = null;
         return;
       }
+      this.detailWant = it.id;
       try {
-        this.detail = await request('/api/search/question/' + it.id);
+        const d = await request('/api/search/question/' + it.id);
+        if (this.detailWant !== it.id) return;
+        this.detail = d;
       } catch (e) {
+        if (this.detailWant !== it.id) return;
         uni.showToast({ title: '加载失败', icon: 'none' });
       }
     },
