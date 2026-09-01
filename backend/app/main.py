@@ -298,8 +298,18 @@ _HOT_UID_TABLES = (
 )
 
 
+def _prime_admin_caches():
+    """启动时预热管理台重查询 SWR 缓存，重启后首个管理员请求不承担秒级冷 miss。"""
+    for fn in (db.admin_dashboard, db.governance_scan):
+        try:
+            fn()
+        except Exception:
+            pass
+
+
 def _warmup():
     """周期预热抽题 id 池、热点索引页与 uid 热表（总量 <1MB），消除缓存被换出后的冷启动分钟级长尾。"""
+    _prime_admin_caches()
     while True:
         try:
             for m in (None, "yanyu", "changshi", "panduan", "shuliang", "ziliao"):

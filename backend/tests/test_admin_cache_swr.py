@@ -54,6 +54,24 @@ def test_stale_returns_old_and_refreshes_in_background():
     assert db._cached("t_stale", 60, lambda: "x") == "new"
 
 
+def test_startup_prime_fills_admin_caches():
+    """R229：启动预热后 dashboard/governance 进缓存，首个管理员请求不再同步冷构建。"""
+    from app import main
+
+    for key in ("dashboard", "governance"):
+        _reset(key)
+    main._prime_admin_caches()
+    with db._admin_cache_lock:
+        assert "dashboard" in db._ADMIN_CACHE
+        assert "governance" in db._ADMIN_CACHE
+
+    def boom():
+        raise AssertionError("primed key should hit cache")
+
+    assert db._cached("dashboard", 300, boom) is db._ADMIN_CACHE["dashboard"][1]
+    assert db._cached("governance", 600, boom) is db._ADMIN_CACHE["governance"][1]
+
+
 def test_refresh_failure_keeps_old_value():
     _reset("t_fail")
     db._cached("t_fail", 60, lambda: "old")
