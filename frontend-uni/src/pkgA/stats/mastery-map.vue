@@ -93,7 +93,7 @@
 </template>
 
 <script>
-import { request, anonUid } from '../../api.js';
+import { request, snapPeek, anonUid } from '../../api.js';
 
 export default {
   data() {
@@ -115,20 +115,26 @@ export default {
   methods: {
     async load() {
       this.err = '';
+      const p = '/api/mastery/map?uid=' + encodeURIComponent(anonUid());
+      // 快照即显：uid API 长尾下先用最近成功快照铺屏，真实响应到达后覆盖
+      const snap = snapPeek(p);
+      if (snap) this.applyMap(snap);
       try {
-        const d = await request('/api/mastery/map?uid=' + encodeURIComponent(anonUid()));
-        this.nTotal = d.n_total || 0;
-        this.need = d.need || 30;
-        if (d.cold) {
-          this.cold = true;
-          return;
-        }
-        this.cold = false;
-        this.map = d;
-        if (!this.curMod && d.modules.length) this.curMod = d.modules[0].module;
+        this.applyMap(await request(p));
       } catch (e) {
         this.err = '加载失败：' + e.message;
       }
+    },
+    applyMap(d) {
+      this.nTotal = d.n_total || 0;
+      this.need = d.need || 30;
+      if (d.cold) {
+        this.cold = true;
+        return;
+      }
+      this.cold = false;
+      this.map = d;
+      if (!this.curMod && d.modules.length) this.curMod = d.modules[0].module;
     },
     pick(g, t) {
       this.selected = this.selected && this.selected.code === t.code ? null : t;

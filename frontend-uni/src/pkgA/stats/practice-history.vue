@@ -42,7 +42,7 @@
 </template>
 
 <script>
-import { request, anonUid } from '../../api.js';
+import { request, snapPeek, anonUid } from '../../api.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论', shizheng: '时事政治' };
 
@@ -72,8 +72,15 @@ export default {
     },
     async load() {
       this.loadErr = '';
+      const p = '/api/practice/history?uid=' + encodeURIComponent(anonUid());
+      // 快照即显：uid API 长尾下先用最近成功快照铺屏，真实响应到达后覆盖
+      const snap = snapPeek(p);
+      if (snap) {
+        this.items = snap.items || [];
+        this.loaded = true;
+      }
       try {
-        const d = await request('/api/practice/history?uid=' + encodeURIComponent(anonUid()));
+        const d = await request(p);
         this.items = d.items || [];
       } catch (e) {
         this.loadErr = e.message || '网络异常';

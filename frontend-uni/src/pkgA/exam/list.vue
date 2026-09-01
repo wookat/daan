@@ -66,7 +66,7 @@
 </template>
 
 <script>
-import { request, anonUid, exportPdf } from '../../api.js';
+import { request, snapPeek, anonUid, exportPdf } from '../../api.js';
 
 export default {
   data() {
@@ -91,13 +91,20 @@ export default {
   },
   methods: {
     async load() {
-      this.loading = true;
       this.loadErr = '';
+      const q = ['kind=zhenti', 'uid=' + encodeURIComponent(anonUid())];
+      if (this.year) q.push('year=' + this.year);
+      if (this.region) q.push('region=' + encodeURIComponent(this.region));
+      const p = '/api/exam/papers?' + q.join('&');
+      // 快照即显：uid 请求绕过公开边缘缓存，长尾下先用最近成功快照铺屏，真实响应到达后覆盖
+      const snap = snapPeek(p);
+      if (snap) {
+        this.items = snap.items || [];
+        this.filters = snap.filters || { years: [], regions: [] };
+      }
+      this.loading = !snap;
       try {
-        const q = ['kind=zhenti', 'uid=' + encodeURIComponent(anonUid())];
-        if (this.year) q.push('year=' + this.year);
-        if (this.region) q.push('region=' + encodeURIComponent(this.region));
-        const d = await request('/api/exam/papers?' + q.join('&'));
+        const d = await request(p);
         this.items = d.items || [];
         this.filters = d.filters || { years: [], regions: [] };
       } catch (e) {
@@ -107,8 +114,11 @@ export default {
       this.loading = false;
     },
     async loadAttempts() {
+      const p = '/api/exam/attempts?uid=' + encodeURIComponent(anonUid()) + '&limit=10';
+      const snap = snapPeek(p);
+      if (snap) this.attempts = snap.items || [];
       try {
-        const d = await request('/api/exam/attempts?uid=' + encodeURIComponent(anonUid()) + '&limit=10');
+        const d = await request(p);
         this.attempts = d.items || [];
       } catch (e) { /* 非关键路径 */ }
     },
