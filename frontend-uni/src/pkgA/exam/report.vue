@@ -27,10 +27,19 @@
           <text class="hm">已答正确率 {{ accuracy }}%</text>
           <text class="hm">全卷正确率 {{ fullAccuracy }}%</text>
           <text class="hm">用时 {{ usedTime }}</text>
+          <text v-if="prevDeltaText" class="hm">较上次同卷 {{ prevDeltaText }}</text>
         </view>
       </view>
 
       <rank-card v-if="report.attempt && report.attempt.id" :attempt-id="report.attempt.id" />
+
+      <view v-if="goal" class="card">
+        <view class="h">距离目标</view>
+        <view class="gap-row">
+          <text class="gap-k">目标分 {{ goal.target }}</text>
+          <text class="gap-v" :class="{ ok: goal.gap <= 0 }">{{ goal.gap <= 0 ? '已达标 🎉' : '还差 ' + goal.gap + ' 分' }}</text>
+        </view>
+      </view>
 
       <view v-if="shareText" class="share-cta" role="button" aria-label="邀考友挑战本卷" @click="copyShare">
         <text class="share-cta-t">邀考友挑战本卷</text>
@@ -178,13 +187,14 @@ import { buildExamReportShareText } from '../../exam-share.js';
 import { reviewStep } from '../../exam-review.js';
 import { isFaved, toggleFav } from '../../exam-fav.js';
 import { qStatLine } from '../../q-stat.js';
+import { goalGap, prevScoreDelta } from '../../exam-goal.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
 const MOD_ORDER = ['changshi', 'yanyu', 'shuliang', 'panduan', 'ziliao'];
 
 export default {
   data() {
-    return { loading: true, loadErr: '', aid: null, report: null, history: [], detail: null, matOpen: false, wrongOnly: false, favs: uni.getStorageSync('favQuestions') || [] };
+    return { loading: true, loadErr: '', aid: null, report: null, history: [], targetScore: null, detail: null, matOpen: false, wrongOnly: false, favs: uni.getStorageSync('favQuestions') || [] };
   },
   computed: {
     accuracy() {
@@ -249,6 +259,15 @@ export default {
       const origin = typeof window !== 'undefined' ? window.location.origin : '';
       return buildExamReportShareText(this.report, origin);
     },
+    goal() {
+      return this.report ? goalGap(this.report.attempt.score, this.targetScore) : null;
+    },
+    prevDeltaText() {
+      if (!this.report) return '';
+      const d = prevScoreDelta(this.history, this.report.attempt.id);
+      if (!d) return '';
+      return d.delta > 0 ? '+' + d.delta + ' 分' : d.delta < 0 ? d.delta + ' 分' : '持平';
+    },
     hasPrevQ() {
       return !!(this.report && this.detail && reviewStep(this.report.items, this.detail.no, -1, this.wrongOnly));
     },
@@ -297,6 +316,7 @@ export default {
         this.report = d;
         uni.setNavigationBarTitle({ title: '成绩报告' });
         this.loadHistory();
+        this.loadProfile();
       } catch (e) {
         // 仅网络层失败置错误态；HTTP 业务错误（如报告不存在）保持空态引导
         if (isNetErr(e)) this.loadErr = e.message || '网络异常';
@@ -311,6 +331,12 @@ export default {
         );
         this.history = (d.items || []).slice().reverse();
       } catch (e) { /* 非关键路径 */ }
+    },
+    async loadProfile() {
+      try {
+        const d = await request('/api/profile?uid=' + encodeURIComponent(anonUid()));
+        this.targetScore = (d.profile && d.profile.target_score) != null ? d.profile.target_score : null;
+      } catch (e) { /* 非关键路径：未设/失败不渲染 */ }
     },
     openQ(it) { this.matOpen = false; this.detail = it; },
     toggleDetailFav() {
@@ -394,6 +420,11 @@ export default {
 .score-u { font-size: 26rpx; color: rgba(255, 255, 255, 0.85); margin-left: 6rpx; }
 .hero-meta { display: flex; justify-content: center; gap: 28rpx; flex-wrap: wrap; }
 .hm { font-size: 23rpx; color: rgba(255, 255, 255, 0.9); }
+
+.gap-row { display: flex; justify-content: space-between; align-items: center; min-height: 44px; }
+.gap-k { font-size: 26rpx; color: var(--ink); }
+.gap-v { font-size: 26rpx; font-weight: 700; color: var(--warn-strong); }
+.gap-v.ok { color: var(--ok-strong); }
 .mrow { display: flex; align-items: center; gap: 16rpx; min-height: 44px; }
 .mrow-name { flex-shrink: 0; width: 130rpx; font-size: 24rpx; color: var(--ink-2); }
 .mrow-bar { flex: 1; height: 16rpx; background: var(--brand-soft); border-radius: 999rpx; overflow: hidden; }
