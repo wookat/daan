@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildShenlunUrl, buildShenlunPaperUrl, buildShenlunFilterUrl, buildShenlunMatUrl, SHENLUN_PATH } from '../src/shenlun-url.js';
+import { buildShenlunUrl, buildShenlunPaperUrl, buildShenlunFilterUrl, buildShenlunTabUrl, buildShenlunMatUrl, SHENLUN_PATH } from '../src/shenlun-url.js';
 
 describe('buildShenlunPaperUrl', () => {
   it('encodes paper name into ?paper deeplink', () => {
@@ -25,6 +25,21 @@ describe('buildShenlunFilterUrl', () => {
     expect(buildShenlunFilterUrl({ paper: '', qtype: '全部', year: 0, region: '' })).toBe(SHENLUN_PATH);
     expect(buildShenlunFilterUrl({ paper: 'x'.repeat(101), qtype: null, year: 'abc', region: 0 })).toBe(SHENLUN_PATH);
     expect(buildShenlunFilterUrl({ year: 2023 })).toBe(SHENLUN_PATH + '?year=2023');
+  });
+});
+
+describe('buildShenlunTabUrl', () => {
+  it('素材 tab 生成 ?tab=m，非全部类型追加 mtype 编码', () => {
+    expect(buildShenlunTabUrl('m')).toBe(SHENLUN_PATH + '?tab=m');
+    expect(buildShenlunTabUrl('m', '全部')).toBe(SHENLUN_PATH + '?tab=m');
+    expect(buildShenlunTabUrl('m', '政策理论')).toBe(SHENLUN_PATH + '?tab=m&mtype=' + encodeURIComponent('政策理论'));
+    expect(buildShenlunTabUrl('m', 0)).toBe(SHENLUN_PATH + '?tab=m');
+  });
+  it('作答记录 tab 生成 ?tab=r，其余回落基础路径', () => {
+    expect(buildShenlunTabUrl('r')).toBe(SHENLUN_PATH + '?tab=r');
+    expect(buildShenlunTabUrl('r', '金句')).toBe(SHENLUN_PATH + '?tab=r');
+    expect(buildShenlunTabUrl('q')).toBe(SHENLUN_PATH);
+    expect(buildShenlunTabUrl()).toBe(SHENLUN_PATH);
   });
 });
 

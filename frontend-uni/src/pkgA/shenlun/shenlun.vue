@@ -1,9 +1,9 @@
 <template>
   <view class="page">
     <view class="seg">
-      <text class="seg-i" :class="{ on: tab === 'q' }" @click="tab = 'q'">真题题库</text>
-      <text class="seg-i" :class="{ on: tab === 'm' }" @click="switchMat">素材/范文</text>
-      <text class="seg-i" :class="{ on: tab === 'r' }" @click="switchRec">作答记录</text>
+      <text class="seg-i" :class="{ on: tab === 'q' }" @click="tapQ">真题题库</text>
+      <text class="seg-i" :class="{ on: tab === 'm' }" @click="tapMat">素材/范文</text>
+      <text class="seg-i" :class="{ on: tab === 'r' }" @click="tapRec">作答记录</text>
     </view>
 
     <template v-if="tab === 'q' && !detail">
@@ -149,7 +149,7 @@
 
 <script>
 import { request, snapPeek, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api';
-import { buildShenlunUrl, buildShenlunFilterUrl, buildShenlunMatUrl } from '../../shenlun-url.js';
+import { buildShenlunUrl, buildShenlunFilterUrl, buildShenlunTabUrl, buildShenlunMatUrl } from '../../shenlun-url.js';
 
 const QTYPES = ['全部', '归纳概括', '综合分析', '提出对策', '贯彻执行', '大作文'];
 const MTYPES = ['全部', '金句', '案例', '政策理论', '范文'];
@@ -317,6 +317,7 @@ export default {
       this.loadQs();
     },
     filterUrl() {
+      if (this.tab !== 'q') return buildShenlunTabUrl(this.tab, this.mtype);
       return buildShenlunFilterUrl({ paper: this.paper, qtype: this.qtype, year: this.year, region: this.region });
     },
     syncFilterUrl() {
@@ -325,6 +326,18 @@ export default {
         window.history.replaceState(null, '', this.filterUrl());
       }
       // #endif
+    },
+    tapQ() {
+      this.tab = 'q';
+      this.syncFilterUrl();
+    },
+    tapMat() {
+      this.switchMat();
+      this.syncFilterUrl();
+    },
+    tapRec() {
+      this.switchRec();
+      this.syncFilterUrl();
     },
     clearFlt() {
       this.qtype = '全部';
@@ -439,6 +452,7 @@ export default {
       this.mtype = t;
       this.mOffset = 0;
       this.mEnd = false;
+      this.syncFilterUrl();
       this.loadMats();
     },
     loadMore() {

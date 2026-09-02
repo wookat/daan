@@ -22,6 +22,13 @@ export function buildShenlunFilterUrl(f) {
   return parts.length ? SHENLUN_PATH + '?' + parts.join('&') : SHENLUN_PATH;
 }
 
+export function buildShenlunTabUrl(tab, mtype) {
+  if (tab === 'r') return SHENLUN_PATH + '?tab=r';
+  if (tab !== 'm') return SHENLUN_PATH;
+  const t = typeof mtype === 'string' && mtype && mtype !== '全部' ? '&mtype=' + encodeURIComponent(mtype) : '';
+  return SHENLUN_PATH + '?tab=m' + t;
+}
+
 export function buildShenlunMatUrl(id, type) {
   const n = Number(id);
   if (!Number.isInteger(n) || n <= 0) return SHENLUN_PATH + '?tab=m';

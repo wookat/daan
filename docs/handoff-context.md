@@ -894,3 +894,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：R251/R252 入向深链就位后，App 内 setQtype/setYear/setRegion 变更不同步 URL（复制地址栏得旧链接，刷新/分享丢筛选上下文），R261 只收了 paper 维度。
 - 收口：shenlun-url.js 增 buildShenlunFilterUrl 纯函数（四维组合，缺省/非法不带参）；syncPaperUrl 升级为 syncFilterUrl，setQtype/setYear/setRegion/applyPaper/clearFlt 统一走它；detail watch 关详情回落完整 filter URL。
 - 详见 docs/iter/round-3/design-r262-filter-url-sync.md。
+## R263（申论专区 tab / 素材类型出向 URL 同步）
+- 取证：R246/R251/R252 入向 tab/mtype/mid 深链就位后，App 内切 tab（素材/作答记录/回真题）与素材类型 chip 不同步 URL——地址栏停留旧筛选深链，刷新/分享丢 tab 与类型上下文（R262 明确挂起的对称缺口）。
+- 收口：shenlun-url.js 增 buildShenlunTabUrl 纯函数（m/r tab + 非全部 mtype 编码）；filterUrl() 变 tab 感知；seg 点击改 tapQ/tapMat/tapRec（原逻辑+sync），setMtype 补 sync；onLoad 入向路径不动（?tab=m&mid 深链地址栏保留 mid）。
+- 详见 docs/iter/round-3/design-r263-tab-url-sync.md。
+
