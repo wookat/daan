@@ -1147,6 +1147,14 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 观察项：排除态跨设备同步（可仿 R317/R318 marks/secs 模式服务端化）；刷题页同交互补齐。
 - 详见 docs/iter/round-3/design-r319-exam-option-exclude.md。
 
+### R321：刷题页「排除干扰项」——长按选项划掉/恢复（PR #518）
+- 取证（SOP-10）：收口 R319/R320 观察项——刷题页（pages/practice/practice.vue）选项仅 @click pick，无 longpress/_excl，两个核心做题模式交互不一致（粉笔练习/模考同构支持长按排除）。语义差异：刷题 pick 一次性锁定立即判分，排除仅未作答时有意义；beiMode 显示答案不适用；无服务端练习进度协议，不做服务端同步（本机态定位）。
+- 收口纯前端零后端/零契约：复用 exam-excl.js（toggleExcl/pickWithExcl 不改），新增纯函数 exclVisible(excl,k,picked,beiMode)——排除视觉仅未作答且非背题呈现，作答后判分视觉（right/wrong/dim）接管避免混叠；practice.vue 选项补 @longpress toggleExclOpt（beiMode||picked no-op，toggle 后 saveSession() 落快照）；pick(k) 前置 pickWithExcl（点击被排除项自动解除并选中）；.opt.excl 0.45 弱化+删除线与做卷页同视觉；_excl 随 pendingSession 整 items 快照持久化，旧快照 fail-closed 回落 []。
+- 验证：lint/vitest 373(+4)/build 全绿；生产 rev 5632ec3、bundle index-BcpMI5gO.js；testing agent 1440/375 实测：长按排除/再长按恢复（opacity 0.45+line-through computedStyle 实证）、排除后作答判分接管无混叠+autoNext 正常、点击被排除项自动解除并选中、硬刷 pendingSession 恢复排除态、背题模式长按无效且关闭后排除态重现、examMode（真题卷练习模考态）长按生效、双视口溢出 0、console 0 error。清理 test-r321-ui。
+- 未生产实测：真实触屏手势（CDP touch 模拟，同 R319 口径）。
+- 走查发现补丁：初版 toggleExclOpt 不落快照（「排除后不作答直接刷新」丢排除态），已补 saveSession()；方向键 jumpTo() 不保存为既有行为未改。
+- 详见 docs/iter/round-3/design-r321-practice-option-exclude.md。
+
 ### R320：未交卷模考「排除干扰项」跨设备同步（PR #517）
 - 取证（SOP-10）：收口 R319 观察项——_excl 仅随本机 examProgress 快照持久化，pushProgress 只上传 picks/idx/marks/secs、adoptServerExamProgress 恢复的 items 不含 _excl；换设备续考后设备 A 的排除态全丢。R317/R318 已建立同构续考状态同步模式，_excl 是最后一块未同步做题过程态。
 - 收口零新 endpoint/表/URL 状态：db _ensure_exam_progress 幂等补列 exam_progress.excl TEXT（JSON {question_id:[选项字母]}，与本协议 picks/marks/secs 同 question_id 口径；交卷协议不涉及排除态无口径冲突）；save_exam_progress(..., excl=None) 非空存 JSON 空存 NULL（UPSERT 整体覆盖，空即清除）；latest_exam_progress 回读 dict（旧行 {}）；POST /api/exam/progress 可选 excl（缺省 {}；提供时必须 dict ≤300、key 可 int 化、value 为 list ≤4 且逐项 ∈{A,B,C,D} 字符串，否则 400 不静默转换；落库去重保序、空 value 行不落库）；GET /api/exam/resume 应答补 excl。前端 pushProgress 补收集非空 Array q._excl 的 {q.id: _excl}；adoptServerExamProgress 按 excl 对象恢复 _excl（字符串键 Number 归一、非数组/非法字母项 fail-closed 过滤、未命中 []），本机快照优先不变；交卷 payload/报告协议零变化。

@@ -614,3 +614,6 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 
 ## R319 长按排除干扰项走查新经验
 - uni-app H5 的 longpress 由 touchstart 起 350ms 定时器派发（单指、位移 <10px）；CDP 自动化长按用 `Input.dispatchTouchEvent touchStart → 等 ≥500ms → touchCancel`——必须以 touchCancel 结束而非 touchEnd：touchEnd 会补发合成 click 触发选项 pick，把刚排除的选项又选中（真机手指长按无此 click）。helper 存 /tmp/cdp174/longpress.py（参数：选项 0-based 序号）。
+
+## R321 刷题页排除干扰项走查新经验
+- 刷题页 `pendingSession` 仅在作答/`next()` 等路径 `saveSession()`（R321 后长按排除也触发保存）；方向键 `jumpTo()` 不保存——验证刷新持久化时若走旧 bundle 或依赖 jumpTo 切题，可能得到假失败，先作答一题或长按排除后再刷新。

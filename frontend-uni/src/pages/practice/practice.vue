@@ -1761,6 +1761,7 @@ export default {
       if (this.beiMode || this.picked) return;
       this.cur._excl = toggleExcl(this.cur._excl, k, '').excl;
       this.$forceUpdate();
+      this.saveSession();
     },
     pick(k) {
       if (this.picked) return;
