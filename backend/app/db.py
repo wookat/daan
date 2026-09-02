@@ -3208,6 +3208,9 @@ def _ensure_exam_tables(conn):
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ep_kind ON exam_papers(kind, year, region)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ea_uid ON exam_attempts(uid, paper_id, id)")
+    acols = {r["name"] for r in conn.execute("PRAGMA table_info(exam_attempts)")}
+    if "secs" not in acols:
+        conn.execute("ALTER TABLE exam_attempts ADD COLUMN secs TEXT")
 
 
 def upsert_exam_paper(title: str, kind: str, year: int | None, region: str | None,
@@ -3435,14 +3438,16 @@ def start_exam_attempt(uid: str, paper_id: int) -> int:
     return aid
 
 
-def finish_exam_attempt(attempt_id: int, answers: dict, score: float, per_module: dict) -> bool:
+def finish_exam_attempt(attempt_id: int, answers: dict, score: float, per_module: dict,
+                        secs: dict | None = None) -> bool:
     conn = get_conn()
     _ensure_exam_tables(conn)
     cur = conn.execute(
-        "UPDATE exam_attempts SET submitted_at=?, answers=?, score=?, per_module=? "
+        "UPDATE exam_attempts SET submitted_at=?, answers=?, score=?, per_module=?, secs=? "
         "WHERE id=? AND submitted_at IS NULL",
         (time.time(), json.dumps(answers, ensure_ascii=False), score,
-         json.dumps(per_module, ensure_ascii=False), attempt_id),
+         json.dumps(per_module, ensure_ascii=False),
+         json.dumps({str(k): v for k, v in (secs or {}).items()}) if secs else None, attempt_id),
     )
     conn.commit()
     ok = cur.rowcount > 0
@@ -3460,6 +3465,7 @@ def get_exam_attempt(attempt_id: int) -> dict | None:
     d = dict(row)
     d["answers"] = json.loads(d["answers"] or "{}")
     d["per_module"] = json.loads(d["per_module"] or "{}")
+    d["secs"] = json.loads(d.get("secs") or "{}")
     return d
 
 

@@ -233,6 +233,7 @@
             <template v-if="detail.picked">，你选了 <text class="da" :class="detail.correct ? 'ok' : 'bad'">{{ detail.picked }}</text></template>
           </view>
           <view v-if="detailStatLine" class="dstat">{{ detailStatLine }}</view>
+          <view v-if="detailTimeLine" class="dstat">{{ detailTimeLine }}</view>
           <view v-if="detail.mistake_id" class="dreasons">
             <text class="drz-t">错因自评：</text>
             <text
@@ -274,6 +275,7 @@ import { buildExamReportShareText } from '../../exam-share.js';
 import { reviewStep } from '../../exam-review.js';
 import { isFaved, toggleFav } from '../../exam-fav.js';
 import { qStatLine } from '../../q-stat.js';
+import { qTimeLine, paperAvgSecs } from '../../exam-time.js';
 import { goalGap, prevScoreDelta } from '../../exam-goal.js';
 import { modAvgPct } from '../../exam-mod-avg.js';
 import { weakModule } from '../../exam-weak.js';
@@ -303,6 +305,11 @@ export default {
     },
     detailStatLine() {
       return qStatLine(this.detail);
+    },
+    detailTimeLine() {
+      const d = this.detail;
+      if (!d) return null;
+      return qTimeLine(d.secs, paperAvgSecs(this.report && this.report.items));
     },
     detailReported() {
       return !!(this.detail && this.detail.question_id && this.reportedIds[this.detail.question_id]);

@@ -398,7 +398,7 @@ def api_exam_submit(body: dict):
         pm["secs"] += r.get("secs") or 0
     total = judged["total"] or 1
     score = round(100.0 * judged["correct"] / total, 1)
-    db.finish_exam_attempt(int(attempt_id), {str(k): v for k, v in picks.items()}, score, per_module)
+    db.finish_exam_attempt(int(attempt_id), {str(k): v for k, v in picks.items()}, score, per_module, secs)
     db.clear_exam_progress(int(attempt_id))
     return {
         "attempt_id": int(attempt_id),
@@ -435,6 +435,7 @@ def api_exam_report(attempt_id: int, uid: str = ""):
     qids = db.exam_active_qids(paper["question_ids"])
     questions = {q["id"]: q for q in db.questions_by_ids(qids)}
     picks = {int(k): v for k, v in attempt["answers"].items()}
+    smap = {int(k): v for k, v in (attempt.get("secs") or {}).items()}
     mmap = db.mistakes_by_qids(attempt["uid"] or "", qids)
     items = []
     for i, qid in enumerate(qids):
@@ -454,6 +455,7 @@ def api_exam_report(attempt_id: int, uid: str = ""):
             "picked": picked,
             "answer": correct_ans,
             "correct": bool(picked) and len(picked) == 1 and picked == correct_ans,
+            "secs": smap[i + 1] if isinstance(smap.get(i + 1), int) and smap[i + 1] > 0 else None,
             "mistake_id": (mmap.get(qid) or {}).get("id") if picked and picked != correct_ans else None,
             "error_reason": (mmap.get(qid) or {}).get("error_reason") if picked and picked != correct_ans else None,
             "explanation": q.get("explanation"),
