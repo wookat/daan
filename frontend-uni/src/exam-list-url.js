@@ -20,8 +20,10 @@ export function parseExamListOpts(opts) {
   } catch {
     region = '';
   }
+  const pid = Number(o.pid);
   return {
     year: Number.isInteger(y) && y >= 1990 && y <= 2099 ? y : 0,
     region,
+    pid: Number.isInteger(pid) && pid > 0 ? pid : 0,
   };
 }

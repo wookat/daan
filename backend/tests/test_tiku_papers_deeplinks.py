@@ -34,11 +34,14 @@ def test_paper_detail_cta_carries_year_region(client):
     qids = seed_questions()
     pid = _seed_paper("2024年上海公务员考试《行测》真题", 2024, "上海", qids[:3])
     html = client.get(f"/tiku/papers/{pid}").text
-    assert f'href="{SITE_BASE}/#/pkgA/exam/list?year=2024&region={quote("上海")}">在线模考本卷' in html
+    assert (
+        f'href="{SITE_BASE}/#/pkgA/exam/list?pid={pid}&year=2024&region={quote("上海")}">在线模考本卷'
+        in html
+    )
 
 
 def test_paper_detail_cta_omits_missing_fields(client):
     qids = seed_questions()
     pid = _seed_paper("无年份地区测试卷", None, None, qids[:3])
     html = client.get(f"/tiku/papers/{pid}").text
-    assert f'href="{SITE_BASE}/#/pkgA/exam/list">在线模考本卷' in html
+    assert f'href="{SITE_BASE}/#/pkgA/exam/list?pid={pid}">在线模考本卷' in html

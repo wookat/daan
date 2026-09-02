@@ -25,8 +25,9 @@
     <view v-else-if="!items.length" class="spin">暂无成套真题卷{{ year || region ? '，试试放宽筛选' : '' }}</view>
 
     <view class="plist">
-    <view v-for="p in items" :key="p.id" class="card paper">
+    <view v-for="p in items" :key="p.id" :id="'paper-' + p.id" class="card paper" :class="{ pinned: p.id === pinnedId }">
       <view class="paper-top" @click="startPaper(p)">
+        <text v-if="p.id === pinnedId" class="pin-badge">邀你挑战的卷</text>
         <text class="paper-t">{{ p.title }}</text>
         <view class="paper-meta">
           <text v-if="p.year" class="ptag">{{ p.year }}年</text>
@@ -81,13 +82,16 @@ export default {
       loadErr: '',
       exportingId: null,
       exportTarget: null,
+      pinnedId: 0,
     };
   },
   created() {
     this._starting = false;
   },
   onLoad(opts) {
-    this._pendingFilter = parseExamListOpts(opts);
+    const p = parseExamListOpts(opts);
+    this._pendingFilter = p;
+    this._pendingPid = p.pid;
   },
   onShow() {
     this.load();
@@ -112,6 +116,7 @@ export default {
         this.items = d.items || [];
         this.filters = d.filters || { years: [], regions: [] };
         if (this.applyPendingFilter()) return;
+        this.applyPendingPin();
       } catch (e) {
         this.loadErr = e.message || '网络异常';
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
@@ -141,6 +146,22 @@ export default {
       this.load();
       return true;
     },
+    // 入向定位深链：列表真实返回后若含目标卷则高亮定位一次（列表不含时静默忽略）
+    applyPendingPin() {
+      const pid = this._pendingPid;
+      if (!pid) return;
+      this._pendingPid = 0;
+      if (!this.items.some((p) => p.id === pid)) return;
+      this.pinnedId = pid;
+      // #ifdef H5
+      this.$nextTick(() => {
+        if (typeof document !== 'undefined') {
+          const el = document.getElementById('paper-' + pid);
+          if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' });
+        }
+      });
+      // #endif
+    },
     syncUrl() {
       // #ifdef H5
       if (typeof window !== 'undefined' && window.history) {
@@ -148,8 +169,8 @@ export default {
       }
       // #endif
     },
-    setYear(y) { this.year = y; this.syncUrl(); this.load(); },
-    setRegion(r) { this.region = r; this.syncUrl(); this.load(); },
+    setYear(y) { this.year = y; this.pinnedId = 0; this.syncUrl(); this.load(); },
+    setRegion(r) { this.region = r; this.pinnedId = 0; this.syncUrl(); this.load(); },
     startPaper(p) {
       if (this._starting) return;
       uni.navigateTo({ url: '/pkgA/exam/exam?paper_id=' + p.id });
@@ -207,6 +228,8 @@ export default {
 .fchip { display: inline-flex; align-items: center; min-height: 44px; box-sizing: border-box; font-size: 24rpx; color: var(--ink-2); background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 26rpx; margin-right: 12rpx; }
 .fchip.on { color: #fff; background: var(--brand); border-color: var(--brand-text); font-weight: 600; }
 .paper-top { min-height: 44px; }
+.paper.pinned { border-color: var(--brand); box-shadow: 0 4rpx 20rpx rgba(37, 99, 235, 0.18); }
+.pin-badge { display: inline-block; font-size: 21rpx; color: #fff; background: var(--brand); border-radius: 8rpx; padding: 4rpx 14rpx; margin-bottom: 10rpx; }
 .paper-t { font-size: 29rpx; font-weight: 600; color: var(--ink); line-height: 1.5; }
 .paper-meta { display: flex; align-items: center; gap: 12rpx; margin-top: 10rpx; flex-wrap: wrap; }
 .ptag { font-size: 21rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }

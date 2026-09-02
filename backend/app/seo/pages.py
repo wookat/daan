@@ -355,6 +355,8 @@ def tiku_papers():
 
 def _exam_list_query(p: dict) -> str:
     parts = []
+    if p.get("id"):
+        parts.append(f'pid={p["id"]}')
     if p.get("year"):
         parts.append(f'year={p["year"]}')
     if p.get("region"):
