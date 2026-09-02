@@ -21,11 +21,21 @@ export function adoptServerExamProgress(localSaved, server, now) {
     const v = Number(rawSecs[k]);
     if (Number.isFinite(id) && Number.isFinite(v) && v > 0) secsById[id] = Math.floor(v);
   });
+  const rawExcl = server.excl && typeof server.excl === 'object' && !Array.isArray(server.excl) ? server.excl : {};
+  const exclById = {};
+  Object.keys(rawExcl).forEach((k) => {
+    const id = Number(k);
+    const v = rawExcl[k];
+    if (!Number.isFinite(id) || !Array.isArray(v)) return;
+    const letters = v.filter((x) => typeof x === 'string' && ['A', 'B', 'C', 'D'].includes(x));
+    if (letters.length) exclById[id] = letters;
+  });
   const items = server.items.map((q) => ({
     ...q,
     _picked: typeof picks[q.id] === 'string' ? picks[q.id] : (typeof picks[String(q.id)] === 'string' ? picks[String(q.id)] : ''),
     _marked: marked.has(Number(q.id)),
     _secs: secsById[Number(q.id)] || 0,
+    _excl: exclById[Number(q.id)] || [],
   }));
   const idx = Number.isInteger(server.idx) && server.idx > 0 ? Math.min(server.idx, items.length - 1) : 0;
   return {

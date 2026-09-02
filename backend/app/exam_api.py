@@ -380,7 +380,27 @@ def api_exam_progress(body: dict):
             if isinstance(v, bool) or not isinstance(v, int) or v <= 0:
                 raise HTTPException(400, "无效的作答进度")
             secs[str(sqid)] = v
-    db.save_exam_progress(int(attempt_id), uid, picks, idx, marks, secs)
+    raw_excl = body.get("excl")
+    excl: dict[str, list[str]] = {}
+    if raw_excl is not None:
+        if not isinstance(raw_excl, dict) or len(raw_excl) > 300:
+            raise HTTPException(400, "无效的作答进度")
+        for k, v in raw_excl.items():
+            try:
+                eqid = int(k)
+            except (TypeError, ValueError):
+                raise HTTPException(400, "无效的作答进度") from None
+            if not isinstance(v, list) or len(v) > 4:
+                raise HTTPException(400, "无效的作答进度")
+            letters = []
+            for x in v:
+                if not isinstance(x, str) or x not in ("A", "B", "C", "D"):
+                    raise HTTPException(400, "无效的作答进度")
+                if x not in letters:
+                    letters.append(x)
+            if letters:
+                excl[str(eqid)] = letters
+    db.save_exam_progress(int(attempt_id), uid, picks, idx, marks, secs, excl)
     return {"ok": True}
 
 
@@ -405,6 +425,7 @@ def api_exam_resume(uid: str):
         "picks": prog["picks"],
         "marks": prog["marks"],
         "secs": prog["secs"],
+        "excl": prog["excl"],
         "idx": prog["idx"],
         "end_at_ms": int((prog["started_at"] + paper["duration_min"] * 60) * 1000),
     }

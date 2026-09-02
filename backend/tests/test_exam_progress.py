@@ -176,3 +176,35 @@ def test_progress_secs_roundtrip_and_validation(client):
             json={"uid": uid, "attempt_id": aid, "picks": {}, "secs": bad},
         ).status_code == 400
     _cleanup()
+
+
+def test_progress_excl_roundtrip_and_validation(client):
+    """R320：未交卷进度 excl（question_id→排除选项字母）同步与校验。"""
+    qids = seed_questions()[:5]
+    pid = _seed_paper("进度排除同步测试卷", qids)
+    uid = "test-eprog-u7"
+    aid = _start(client, uid, pid)
+    # 缺省 excl → resume 回 {}
+    client.post("/api/exam/progress", json={"uid": uid, "attempt_id": aid, "picks": {}})
+    assert client.get(f"/api/exam/resume?uid={uid}").json()["excl"] == {}
+    # 带 excl（含重复字母）→ 按 question_id 回读去重保序
+    r = client.post("/api/exam/progress", json={
+        "uid": uid, "attempt_id": aid, "picks": {str(qids[0]): "A"},
+        "excl": {str(qids[0]): ["B", "D", "B"], str(qids[2]): ["A"]},
+    })
+    assert r.status_code == 200
+    assert client.get(f"/api/exam/resume?uid={uid}").json()["excl"] == {
+        str(qids[0]): ["B", "D"], str(qids[2]): ["A"]}
+    # 空 value 行不落库；覆盖更新为空 → 回 {}
+    client.post("/api/exam/progress", json={
+        "uid": uid, "attempt_id": aid, "picks": {}, "excl": {str(qids[0]): []}})
+    assert client.get(f"/api/exam/resume?uid={uid}").json()["excl"] == {}
+    # 非法 excl：非 dict / 非 int 键 / value 非 list / 非法字母 / 非字符串 / 超 4 项 / 超 300 行 → 400
+    bads = ([1], {"abc": ["A"]}, {"1": "A"}, {"1": ["E"]}, {"1": [1]},
+            {"1": ["A", "B", "C", "D", "A"]}, {str(i): ["A"] for i in range(301)})
+    for bad in bads:
+        assert client.post(
+            "/api/exam/progress",
+            json={"uid": uid, "attempt_id": aid, "picks": {}, "excl": bad},
+        ).status_code == 400
+    _cleanup()
