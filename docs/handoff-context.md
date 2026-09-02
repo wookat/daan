@@ -829,3 +829,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证 verified：生产 208 题按题型分布：贯彻执行 55/归纳概括 55/大作文 43/综合分析 36/提出对策 19（五类全 ≥19 非 thin）；行测有 /tiku/{module}/{子题型}/ 页族入 sitemap-pages，申论 hub 正文/meta 反复提「概括、对策、公文、大作文等题型」却无任何题型页与入口；/tiku/shenlun/{qtype}/ 现状走行测 questions 表计数 0→404 分流安全；App 申论专区已有 QTYPES chips+qtype API 筛选但 onLoad 不收 ?qtype。
 - 收口：db.shenlun_qtype_counts()（disabled 守卫+排除空 qtype，按量降序）；seo.py tiku_submodule 对 shenlun 分流 _render_shenlun_qtype（真实计数+shenlun_questions(qtype=...) 列表、_shenlun_q_items 逐题去作答深链、_pager、其他题型内链、面包屑、CollectionPage JSON-LD、canonical、App ?qtype CTA；未知题型/清空/越界页码品牌 404，无斜杠 301 前置存在性守卫防 301→404 链）；hub 增「按题型刷题」卡（计数链接）；sitemap-pages 收录（清空自动消失，不做题型×年份/地区交叉）；shenlun.vue onLoad 收 opts.qtype（QTYPES 白名单校验后走既有 setQtype）。
 - 验证：pytest +1 例（200+计数+深链+canonical+qtype CTA/301/hub 链接/sitemap 收录/未知 404/无斜杠未知 404/越界 404/清空回落），124 passed/ruff/pyright 0/前端 lint/vitest 137/build；生产 rev c1526d8 实测归纳概括页 200（55 题）+canonical+CTA、未知题型 404、无斜杠 301，hub/sitemap 部署后即查为边缘 SWR 旧副本（TTL 过期后 hub 5 题型链接+sitemap 5 条就位），light/dark×1440/375 axe serious+ 全零、溢出 0、console 0 error，App ?qtype 深链 chip 激活+结果按类型过滤，性能预算全过（/ perf 0.98、/tiku/ perf 1.00）。详见 docs/iter/round-3/design-r251-shenlun-qtype-pages.md。
+
+## R252（申论年份/地区筛选深链闭环，PR #440）
+- 取证：208 题分布 15 地区（国考 103/江苏 16/北京 16/四川 14…尾部 3–5 题）；R250 年份页 CTA 无 ?year、hub 地区 chips 纯文本；App 已有 setYear/setRegion + API year/region 但 onLoad 不收。
+- 收口：年份页 CTA ?year={year}；hub 地区 chips 改 App ?region 深链（hash 深链不新增可收录 URL，不做地区 SSR 页族——thin page 风险且行测无先例）；shenlun.vue onLoad 在 loadFilters() 返回后按真实 filters 白名单应用 year/region，非法忽略。
+- 本地：ruff/pytest 124/pyright 0/lint/vitest 137/build/shellcheck 全绿。
+- 生产 rev faaae5c：年份页 CTA ?year=2023 就位；hub 首查为边缘 SWR 旧副本（已知 TTL 形态），nocache 实证 origin 已出 15 个 ?region 链接；App ?year=2023 → 2023 chip 激活列表全 2023、?region=江苏 → 江苏 chip 激活列表全江苏、非法 year/region 忽略与无参一致；light/dark×1440/375 溢出 0、console 0 error、axe serious/critical 0；Lighthouse 预算全过（/ 0.99、/tiku/ 1.00）。
+- 验证陷阱：hash SPA 同 page 连续 goto 不重跑 onLoad，深链复验须每例新开 page（r252app.py）。
+- 复审计：05:05–05:47 慢样本簇为共享宿主争用窗口（探针 22s 与静态/health 同窗齐慢，06:00 后恢复 0.3–1.0s），非代码缺陷不改。
