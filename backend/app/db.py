@@ -962,6 +962,42 @@ def qfav_items(uid: str) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def _ensure_sl_drafts(conn):
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS shenlun_drafts (
+            uid TEXT NOT NULL,
+            qid INTEGER NOT NULL,
+            content TEXT NOT NULL,
+            updated_at REAL NOT NULL,
+            PRIMARY KEY (uid, qid)
+        )"""
+    )
+
+
+def sl_draft_get(uid: str, qid: int) -> dict:
+    conn = get_conn()
+    _ensure_sl_drafts(conn)
+    row = conn.execute(
+        "SELECT content, updated_at FROM shenlun_drafts WHERE uid=? AND qid=?", (uid, qid)
+    ).fetchone()
+    conn.close()
+    return {"content": row[0], "updated_at": row[1]} if row else {"content": "", "updated_at": 0}
+
+
+def sl_draft_set(uid: str, qid: int, content: str):
+    conn = get_conn()
+    _ensure_sl_drafts(conn)
+    if content:
+        conn.execute(
+            "INSERT INTO shenlun_drafts (uid, qid, content, updated_at) VALUES (?,?,?,?) "
+            "ON CONFLICT(uid, qid) DO UPDATE SET content=excluded.content, updated_at=excluded.updated_at",
+            (uid, qid, content, time.time()))
+    else:
+        conn.execute("DELETE FROM shenlun_drafts WHERE uid=? AND qid=?", (uid, qid))
+    conn.commit()
+    conn.close()
+
+
 def save_shenlun_answer(uid: str, qid: int, answer: str, result: str) -> int:
     conn = get_conn()
     _ensure_shenlun_answers(conn)

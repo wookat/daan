@@ -82,7 +82,7 @@
         </view>
         <view class="d-right">
         <view class="d-ans-h"><view class="d-h" style="margin: 0">我的作答</view><text v-if="qWordLim" class="d-save d-wc" :class="qWordSt">{{ myAnswer ? (myAnswer.length + ' / 限' + qWordLim.label + (qWordSt === 'over' ? '，已超 ' + (myAnswer.length - qWordLim.max) + ' 字' : '')) : '限' + qWordLim.label }}</text><text v-else-if="myAnswer" class="d-save">已自动保存 · {{ myAnswer.length }} 字</text></view>
-        <textarea v-model="myAnswer" class="d-ta" :maxlength="3000" placeholder="在此作答后点击下方按钮，AI 按采分点批改（大作文为结构点评+参考档位）。草稿自动保存在本机" auto-height @input="saveDraft" />
+        <textarea v-model="myAnswer" class="d-ta" :maxlength="3000" placeholder="在此作答后点击下方按钮，AI 按采分点批改（大作文为结构点评+参考档位）。草稿自动保存，换设备可续写" auto-height @input="saveDraft" />
         <view class="grade-btn" :class="{ dis: grading || !myAnswer.trim() }" @click="grade">{{ grading ? 'AI 批改中…' : '提交 AI 批改' }}</view>
         <view v-if="gradeResult" class="d-grade">
           <view class="d-h">批改结果<text class="g-note">（AI 参考，非官方评分）</text></view>
@@ -160,6 +160,7 @@ import { buildShenlunUrl, buildShenlunFilterUrl, buildShenlunTabUrl, buildShenlu
 import { toggleQFav as qfavToggle, missingSnapIds, mergeQFavSync } from '../../shenlun-qfav.js';
 import { qNavState } from '../../shenlun-qnav.js';
 import { parseWordLimit, wordState } from '../../shenlun-words.js';
+import { adoptServerDraft } from '../../shenlun-draft.js';
 
 const QTYPES = ['全部', '归纳概括', '综合分析', '提出对策', '贯彻执行', '大作文'];
 const MTYPES = ['全部', '金句', '案例', '政策理论', '范文'];
@@ -575,6 +576,7 @@ export default {
         this.showMat = true;
         this.showRef = false;
         this.myAnswer = uni.getStorageSync('slDraft:' + id) || '';
+        this.syncDraft(id);
         this.gradeResult = '';
         this.history = [];
         this.showHist = false;
@@ -597,6 +599,28 @@ export default {
       const k = 'slDraft:' + this.detail.id;
       if (this.myAnswer) uni.setStorageSync(k, this.myAnswer);
       else uni.removeStorageSync(k);
+      const qid = this.detail.id;
+      clearTimeout(this._draftTimer);
+      this._draftTimer = setTimeout(() => this.pushDraft(qid), 1500);
+    },
+    pushDraft(qid, content) {
+      const uid = uni.getStorageSync('anonUid');
+      if (!uid) return;
+      const c = content !== undefined ? content : (this.detail && this.detail.id === qid ? this.myAnswer : uni.getStorageSync('slDraft:' + qid) || '');
+      request('/api/shenlun/draft', { method: 'POST', data: { uid, qid, content: c } }).catch(() => {});
+    },
+    async syncDraft(id) {
+      const uid = uni.getStorageSync('anonUid');
+      if (!uid) return;
+      try {
+        const d = await request('/api/shenlun/draft?uid=' + encodeURIComponent(uid) + '&qid=' + id);
+        if (!this.detail || this.detail.id !== id) return;
+        const adopted = adoptServerDraft(this.myAnswer, d);
+        if (adopted !== null) {
+          this.myAnswer = adopted;
+          uni.setStorageSync('slDraft:' + id, adopted);
+        }
+      } catch (e) { /* 非关键路径 */ }
     },
     async loadHistory(id) {
       const uid = uni.getStorageSync('anonUid');
@@ -637,6 +661,8 @@ export default {
         this.gradeResult = d.result;
         this.loadHistory(this.detail.id);
         uni.removeStorageSync('slDraft:' + this.detail.id);
+        clearTimeout(this._draftTimer);
+        this.pushDraft(this.detail.id, '');
       } catch (e) {
         uni.showToast({ title: e.message || '批改失败，请稍后重试', icon: 'none' });
       }
