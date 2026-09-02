@@ -211,7 +211,34 @@ def api_exam_rank(attempt_id: int, uid: str = ""):
             }
         except sqlite3.OperationalError:
             names = {}
+    # 模块级全站均值：per-user-best attempt 的 per_module，按模块聚合各用户正确率均值
+    pm_rows = conn.execute(
+        """SELECT a.uid, a.per_module FROM exam_attempts a
+           JOIN (SELECT uid u, MAX(score) s FROM exam_attempts
+                 WHERE paper_id=? AND submitted_at IS NOT NULL GROUP BY uid) b
+             ON a.uid=b.u AND a.score=b.s
+           WHERE a.paper_id=? AND a.submitted_at IS NOT NULL GROUP BY a.uid""",
+        (attempt["paper_id"], attempt["paper_id"]),
+    ).fetchall()
     conn.close()
+    mod_ratios: dict[str, list[float]] = {}
+    for r in pm_rows:
+        try:
+            pm = json.loads(r["per_module"] or "{}")
+        except (ValueError, TypeError):
+            continue
+        for mod, v in pm.items():
+            if not isinstance(v, dict):
+                continue
+            qn, correct = v.get("n"), v.get("correct")
+            if (isinstance(qn, (int, float)) and isinstance(correct, (int, float))
+                    and not isinstance(qn, bool) and not isinstance(correct, bool) and qn > 0):
+                mod_ratios.setdefault(mod, []).append(min(1.0, max(0.0, correct / qn)))
+    module_avg = {
+        mod: {"pct": round(100 * sum(rs) / len(rs)), "n_users": len(rs)}
+        for mod, rs in mod_ratios.items()
+        if len(rs) >= 2
+    }
     board = [
         {
             "rank": i + 1,
@@ -245,6 +272,7 @@ def api_exam_rank(attempt_id: int, uid: str = ""):
         "my_bucket": my_bucket,
         "small_sample": n < 100,
         "board": board,
+        "module_avg": module_avg,
     }
 
 

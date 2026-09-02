@@ -62,6 +62,7 @@ export default {
     async load() {
       try {
         this.data = await request('/api/exam/rank/' + this.attemptId + '?uid=' + encodeURIComponent(anonUid()));
+        if (this.data) this.$emit('loaded', this.data);
       } catch (e) {
         this.data = null;
       }

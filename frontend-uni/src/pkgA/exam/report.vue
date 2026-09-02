@@ -31,7 +31,7 @@
         </view>
       </view>
 
-      <rank-card v-if="report.attempt && report.attempt.id" :attempt-id="report.attempt.id" />
+      <rank-card v-if="report.attempt && report.attempt.id" :attempt-id="report.attempt.id" @loaded="rankData = $event" />
 
       <view v-if="goal" class="card">
         <view class="h">距离目标</view>
@@ -58,7 +58,10 @@
           <view class="mrow-bar">
             <view class="mrow-fill" :style="{ width: m.pct + '%' }"></view>
           </view>
-          <text class="mrow-v">{{ m.correct }}/{{ m.n }}</text>
+          <view class="mrow-r">
+            <text class="mrow-v">{{ m.correct }}/{{ m.n }}</text>
+            <text v-if="m.avgPct != null" class="mrow-avg">全站 {{ m.avgPct }}%</text>
+          </view>
         </view>
       </view>
 
@@ -193,13 +196,14 @@ import { reviewStep } from '../../exam-review.js';
 import { isFaved, toggleFav } from '../../exam-fav.js';
 import { qStatLine } from '../../q-stat.js';
 import { goalGap, prevScoreDelta } from '../../exam-goal.js';
+import { modAvgPct } from '../../exam-mod-avg.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
 const MOD_ORDER = ['changshi', 'yanyu', 'shuliang', 'panduan', 'ziliao'];
 
 export default {
   data() {
-    return { loading: true, loadErr: '', aid: null, report: null, history: [], targetScore: null, detail: null, matOpen: false, wrongOnly: false, favs: uni.getStorageSync('favQuestions') || [] };
+    return { loading: true, loadErr: '', aid: null, report: null, history: [], targetScore: null, detail: null, matOpen: false, wrongOnly: false, favs: uni.getStorageSync('favQuestions') || [], rankData: null };
   },
   computed: {
     accuracy() {
@@ -236,6 +240,7 @@ export default {
         n: pm[k].n,
         correct: pm[k].correct,
         pct: pm[k].n ? Math.round((pm[k].correct / pm[k].n) * 100) : 0,
+        avgPct: modAvgPct(this.rankData, k),
       }));
     },
     paceRows() {
@@ -439,6 +444,9 @@ export default {
 .mrow-bar { flex: 1; height: 16rpx; background: var(--brand-soft); border-radius: 999rpx; overflow: hidden; }
 .mrow-fill { height: 100%; background: var(--brand); border-radius: 999rpx; transition: width 0.4s ease; }
 .mrow-v { flex-shrink: 0; width: 90rpx; text-align: right; font-size: 24rpx; color: var(--ink); font-weight: 600; }
+.mrow-r { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; }
+.mrow-r .mrow-v { width: auto; }
+.mrow-avg { font-size: 20rpx; color: var(--ink-3); white-space: nowrap; }
 .curve { display: flex; align-items: flex-end; gap: 14rpx; height: 220rpx; padding: 10rpx 0; }
 .curve-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 44rpx; }
 .curve-v { font-size: 20rpx; color: var(--ink-2); margin-bottom: 4rpx; }
