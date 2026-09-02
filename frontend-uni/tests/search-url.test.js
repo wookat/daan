@@ -40,6 +40,15 @@ describe('buildSearchUrl', () => {
     expect(buildSearchUrl('隧道', 'all')).toBe(SEARCH_PATH + '?q=%E9%9A%A7%E9%81%93');
   });
 
+  it('合法 qid 追加 &qid，非法/缺省不带；空关键词忽略 qid', () => {
+    expect(buildSearchUrl('隧道', 'all', 118)).toBe(SEARCH_PATH + '?q=%E9%9A%A7%E9%81%93&qid=118');
+    expect(buildSearchUrl('隧道', 'question', '42')).toBe(SEARCH_PATH + '?q=%E9%9A%A7%E9%81%93&tab=question&qid=42');
+    expect(buildSearchUrl('隧道', 'all', 0)).toBe(SEARCH_PATH + '?q=%E9%9A%A7%E9%81%93');
+    expect(buildSearchUrl('隧道', 'all', null)).toBe(SEARCH_PATH + '?q=%E9%9A%A7%E9%81%93');
+    expect(buildSearchUrl('隧道', 'all', 'abc')).toBe(SEARCH_PATH + '?q=%E9%9A%A7%E9%81%93');
+    expect(buildSearchUrl('', 'all', 118)).toBe(SEARCH_PATH);
+  });
+
   it('关键词截断到 64 字', () => {
     const long = 'a'.repeat(80);
     expect(buildSearchUrl(long, 'all')).toBe(SEARCH_PATH + '?q=' + 'a'.repeat(64));

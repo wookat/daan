@@ -153,6 +153,7 @@ export default {
     const q = decodeURIComponent(options && options.q ? options.q : '').trim();
     if (!q) return;
     if (options.tab && this.TABS.some((t) => t.k === options.tab)) this.tab = options.tab;
+    if (/^\d+$/.test(options.qid || '')) this._urlQid = Number(options.qid);
     this.kw = q.slice(0, 64);
     this.doSearch();
   },
@@ -188,7 +189,7 @@ export default {
     syncUrl() {
       // #ifdef H5
       if (typeof window === 'undefined' || !window.history) return;
-      window.history.replaceState(null, '', buildSearchUrl(this.kw, this.tab));
+      window.history.replaceState(null, '', buildSearchUrl(this.kw, this.tab, this.detail && this.detail.id));
       // #endif
     },
     clearHist() {
@@ -217,6 +218,12 @@ export default {
         this.loadErr = '';
         this.saveHist(q);
         this.syncUrl();
+        if (this._urlQid) {
+          const qid = this._urlQid;
+          this._urlQid = null;
+          const hit = (d.code_hit && d.code_hit.id === qid && d.code_hit) || (d.questions && d.questions.items.find((x) => x.id === qid));
+          if (hit) this.toggleDetail(hit);
+        }
       } catch (e) {
         if (seq !== this.searchSeq) return;
         if (this.result) {
@@ -251,6 +258,7 @@ export default {
       if (this.detail && this.detail.id === it.id) {
         this.detail = null;
         this.detailWant = null;
+        this.syncUrl();
         return;
       }
       if (this.detailWant === it.id) return;
@@ -259,6 +267,7 @@ export default {
         const d = await request('/api/search/question/' + it.id);
         if (this.detailWant !== it.id) return;
         this.detail = d;
+        this.syncUrl();
       } catch (e) {
         if (this.detailWant !== it.id) return;
         this.detailWant = null;
@@ -309,7 +318,7 @@ export default {
 .sec { margin-bottom: 12rpx; }
 .sec-t { display: block; font-size: 24rpx; color: var(--ink-2); margin: 12rpx 4rpx; }
 .titem { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }
-.t-l { flex: 1; display: flex; flex-direction: column; gap: 6rpx; }
+.t-l { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6rpx; }
 .t-name { font-size: 28rpx; color: var(--ink); font-weight: 600; }
 .t-sub { font-size: 22rpx; color: var(--ink-3); }
 .mt-content { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }

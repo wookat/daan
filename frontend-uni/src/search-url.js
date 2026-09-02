@@ -8,10 +8,12 @@ export function buildTikuQPath(id) {
   return '/tiku/q/' + n + '/';
 }
 
-export function buildSearchUrl(kw, tab) {
+export function buildSearchUrl(kw, tab, qid) {
   const q = String(kw || '').trim();
   if (!q) return SEARCH_PATH;
   let url = SEARCH_PATH + '?q=' + encodeURIComponent(q.slice(0, 64));
   if (tab && tab !== 'all') url += '&tab=' + tab;
+  const n = Number(qid);
+  if (Number.isInteger(n) && n > 0) url += '&qid=' + n;
   return url;
 }

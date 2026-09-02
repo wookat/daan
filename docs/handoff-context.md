@@ -926,3 +926,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：R243/R247 已为申论真题详情、素材卡建立复制链接出向分享，行测侧每题有公开 SSR 页 /tiku/q/{id}/（canonical+og+App CTA）作现成分享落点，但搜索页两处 q-detail 展开块（code_hit 直达 + 题目列表）只有选项/答案/解析，零出向出口。
 - 收口：search-url.js 增纯函数 buildTikuQPath（非法 id 回落 /tiku/）+ 两处 q-detail 尾部「复制本题链接」控件（d-copy 样式/aria 对齐申论先例，@click.stop 不触发折叠），纯前端零后端/SSR/SEO 变化。
 - 详见 docs/iter/round-3/design-r269-search-qlink.md。
+
+## R270（搜索题目详情展开态 URL 同步 + ?qid 入向深链）
+- 取证：R157 已同步 q/tab，但 toggleDetail 展开详情只翻本地状态不进 URL——刷新即收起、复制地址栏丢展开上下文；申论侧同类状态（?id/?mid）R243/R246 已闭环，搜索页是最后一个详情态不进 URL 的页面。
+- 收口：buildSearchUrl 增第三参 qid（合法正整数追加 &qid，空关键词回落基础路径）+ toggleDetail 展开/收起后 syncUrl + onLoad 收 qid（纯数字校验）搜索完成后命中即自动展开；纯前端零后端/SSR/SEO 变化。
+- 详见 docs/iter/round-3/design-r270-search-qid-sync.md。
