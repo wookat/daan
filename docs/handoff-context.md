@@ -909,3 +909,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 收口：Dockerfile.runtime CMD 追加 `--timeout-keep-alive 130`（> Caddy 120s idle，陈旧连接恒由 Caddy 先弃）。不改 Caddy、不改应用代码。
 - 未归因残留：1 条 /api/track POST 13.2s 后 EOF（时长特征不符本根因，挂共享宿主争用观察项）。
 - 详见 docs/iter/round-3/design-r265-keepalive-502.md。
+
+## R266（/tiku 首页与 llms.txt 补素材类型页内链）
+- 取证：R264 sucai 页族上线后，/tiku/ 首页素材行仍是纯文本「详见申论真题库页」（素材页距首页 2 跳）、/llms.txt 素材说明无 URL（llms.txt 是 URL 导览文件，无链接条目对 LLM 爬虫零可发现性）——与 R249/R254 同构的发现渠道口径收尾缺口。
+- 收口：pages.py 素材行类型名改带计数链接指 _shenlun_sucai_path；llms.txt 素材说明改逐类型 markdown 链接条目；沿既有 mats 非空守卫（清空自动回落）。零路由/契约变化。
+- 详见 docs/iter/round-3/design-r266-sucai-links.md。
