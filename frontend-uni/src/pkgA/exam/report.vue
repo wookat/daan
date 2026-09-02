@@ -32,6 +32,11 @@
 
       <rank-card v-if="report.attempt && report.attempt.id" :attempt-id="report.attempt.id" />
 
+      <view v-if="shareText" class="share-cta" role="button" aria-label="邀考友挑战本卷" @click="copyShare">
+        <text class="share-cta-t">邀考友挑战本卷</text>
+        <text class="share-cta-s">复制成绩与同卷模考链接，发给考友比一比</text>
+      </view>
+
       <view v-if="modules.length" class="card">
         <view class="h">模块得分</view>
         <view v-for="m in modules" :key="m.key" class="mrow">
@@ -155,10 +160,11 @@
 </template>
 
 <script>
-import { request, anonUid, isNetErr, BASE_URL } from '../../api.js';
+import { request, anonUid, isNetErr, trackEvent, BASE_URL } from '../../api.js';
 import { splitMaterial } from '../../material.js';
 import { buildPaceRows, fmtMin } from '../../exam-pace.js';
 import { buildExamRedoSet } from '../../exam-redo.js';
+import { buildExamReportShareText } from '../../exam-share.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
 const MOD_ORDER = ['changshi', 'yanyu', 'shuliang', 'panduan', 'ziliao'];
@@ -220,6 +226,10 @@ export default {
       const r = this.report;
       return r ? buildExamRedoSet(r.items).length : 0;
     },
+    shareText() {
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      return buildExamReportShareText(this.report, origin);
+    },
   },
   onLoad(opt) {
     if (opt && opt.attempt_id) {
@@ -271,6 +281,14 @@ export default {
     },
     previewImg(p) {
       uni.previewImage({ urls: [this.imgUrl(p)] });
+    },
+    copyShare() {
+      if (!this.shareText) return;
+      trackEvent('share_copy', 'exam_report', String(this.report.paper.id));
+      uni.setClipboardData({
+        data: this.shareText,
+        success: () => uni.showToast({ title: '挑战链接已复制，发给考友吧', icon: 'none' }),
+      });
     },
     redoWrong() {
       const set = buildExamRedoSet(this.report.items);
@@ -324,6 +342,9 @@ export default {
 .redo-cta { margin-top: 20rpx; border: 2rpx solid var(--brand); border-radius: 16rpx; padding: 18rpx 22rpx; background: var(--brand-soft); cursor: pointer; }
 .redo-cta-t { display: block; font-size: 26rpx; font-weight: 600; color: var(--brand); }
 .redo-cta-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
+.share-cta { margin-top: 20rpx; border: 2rpx solid var(--brand); border-radius: 16rpx; padding: 18rpx 22rpx; background: var(--brand-soft); cursor: pointer; }
+.share-cta-t { display: block; font-size: 26rpx; font-weight: 600; color: var(--brand); }
+.share-cta-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
 .dimg { width: 100%; border-radius: 12rpx; margin-bottom: 8rpx; }
 .dimg-credit { font-size: 21rpx; color: var(--ink-2); margin-bottom: 16rpx; }
 .dot.ok { background: #86efac; border-color: #86efac; }
