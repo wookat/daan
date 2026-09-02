@@ -837,3 +837,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 生产 rev faaae5c：年份页 CTA ?year=2023 就位；hub 首查为边缘 SWR 旧副本（已知 TTL 形态），nocache 实证 origin 已出 15 个 ?region 链接；App ?year=2023 → 2023 chip 激活列表全 2023、?region=江苏 → 江苏 chip 激活列表全江苏、非法 year/region 忽略与无参一致；light/dark×1440/375 溢出 0、console 0 error、axe serious/critical 0；Lighthouse 预算全过（/ 0.99、/tiku/ 1.00）。
 - 验证陷阱：hash SPA 同 page 连续 goto 不重跑 onLoad，深链复验须每例新开 page（r252app.py）。
 - 复审计：05:05–05:47 慢样本簇为共享宿主争用窗口（探针 22s 与静态/health 同窗齐慢，06:00 后恢复 0.3–1.0s），非代码缺陷不改。
+
+## R253（申论按套卷详情页 /tiku/shenlun/p/{paper}/，PR 待填）
+- 取证（生产只读库 /data/data.db）：208 题分布 49 套卷（paper 全非空，每套 3–5 题）；distinct(material)=49 与 paper 一一对应——一套卷一份给定资料；material 平均 7134 字（最短 4714）、reference 平均 372 字，无空值。现状缺口：hub/年份/题型三页族只出题干 80 字截断，给定资料+参考解析（内容资产主体）公开页零外显。
+- 收口：db.shenlun_paper_counts()/shenlun_paper_questions(paper)；/tiku/shenlun/p/{paper}/ SSR（面包屑+给定资料一次呈现+逐题卡 details 参考解析+逐题去作答深链+其他套卷内链+CollectionPage JSON-LD+App CTA；未知/清空套卷品牌 404，无斜杠 301 前置存在性守卫）；_shenlun_q_items 卷名改套卷页链接；hub 第 1 页「按套卷刷题」卡；sitemap-pages 收录 49 套卷 URL（清空自动消失）。不做逐题详情页（同套 4–5 题共享 7k 字材料会产生重复正文）、不做套卷×题型交叉页。
+- 本地：ruff/pytest 125(+1)/pyright 0/lint/vitest 137/build/shellcheck 全绿。
+- 生产 rev e8a2327：套卷页 200（2025国考·副省级 5 题、38KB、canonical 编码正确）、无斜杠 301、未知套卷带/无斜杠均 404、hub 套卷链接与 sitemap 条目就位（nocache 实证）；light/dark×1440/375 溢出 0、console 0 error、axe serious/critical 0、5 个 details.ans 就位；Lighthouse 预算全过（/ 0.98、/tiku/ 1.00）。
