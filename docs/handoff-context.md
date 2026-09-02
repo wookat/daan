@@ -994,3 +994,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：报告页看完错题后无一键重练出口（只有返回卷库/再考一次，粉笔模考报告核心 CTA 即错题重练）；且 /api/exam/report items 不含 image/image_credit，带图题（图形推理等）解析浮层图片缺失。重练机制已存在（book.vue redoAll → redoSet storage → practice.vue 消费，上限 10 题）。
 - 收口：后端 report items 增补 image/image_credit 两字段（向后兼容）；前端新增 src/exam-redo.js 纯函数 buildExamRedoSet（只收 picked&&!correct、脏数据过滤、字段映射 id←question_id、上限 10）；report.vue 逐题对错卡下新增重练 CTA（无错题不显示、超 10 题外显「本轮先练前 10 题」）+ 解析浮层渲染图片（BASE_URL 拼接 + 点击预览，对齐 practice.vue）。未答题不算错题不进组。
 - 详见 docs/iter/round-3/design-r282-exam-report-redo.md。
+
+## R283（模考成绩报告「邀考友挑战本卷」分享出口）
+- 取证：模考报告是全站主要成果页中唯一零分享出口的页面（练习完成/PK/小队/搜索/申论详情均有出向分享），粉笔模考报告以晒成绩/邀好友同考为核心传播出口；报告数据 attempt_id+uid 鉴权不可公开，R278 后 /tiku/papers/{id} 真题卷 SSR 页（无 hash/query、自带 OG + 在线模考 CTA）是现成抗截断公开落点。
+- 收口：纯前端。新增 src/exam-share.js 纯函数 buildExamReportShareText(report, origin)：paper.kind!=='zhenti' 或缺 id/title 返回 ''（mini/mock 卷无公开落点不外显）；否则输出成绩摘要+/tiku/papers/{id} 链接。report.vue rank-card 下新增 share-cta（v-if=shareText，role=button+aria-label），点击复制+toast+trackEvent('share_copy','exam_report',paper_id)。不新增后端接口/分享表/短码，不公开私有报告数据。
+- 详见 docs/iter/round-3/design-r283-exam-report-share.md。
