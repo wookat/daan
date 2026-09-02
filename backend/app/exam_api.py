@@ -396,6 +396,9 @@ def api_exam_report(attempt_id: int, uid: str = ""):
             "hs_explanation": q.get("hs_explanation"),
             "image": q.get("image"),
             "image_credit": q.get("image_credit"),
+            "is_real": q.get("is_real"),
+            "exam_year": q.get("exam_year"),
+            "exam_region": q.get("exam_region"),
         })
     answered = sum(1 for r in items if r["picked"] and len(r["picked"]) == 1)
     tag_stats: dict[str, list[int]] = {}

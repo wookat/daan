@@ -124,7 +124,10 @@
       <view class="sheet" @click.stop>
         <view class="sheet-h">
           <text class="sheet-t">第 {{ detail.no }} 题 · {{ detail.correct ? '答对' : (detail.picked ? '答错' : '未答') }}</text>
-          <view class="sheet-x" role="button" aria-label="关闭" @click="detail = null"><l-icon name="x" :size="20" color="#6b7280" /></view>
+          <view class="sheet-acts">
+            <view class="sheet-x" role="button" :aria-label="detailFaved ? '取消收藏本题' : '收藏本题'" @click="toggleDetailFav"><l-icon name="star" :size="20" :color="detailFaved ? '#f59e0b' : '#8a90a0'" :fill="detailFaved ? '#f59e0b' : 'none'" /></view>
+            <view class="sheet-x" role="button" aria-label="关闭" @click="detail = null"><l-icon name="x" :size="20" color="#6b7280" /></view>
+          </view>
         </view>
         <scroll-view scroll-y class="detail-scroll">
           <template v-if="detailMat">
@@ -165,19 +168,20 @@
 </template>
 
 <script>
-import { request, anonUid, isNetErr, trackEvent, BASE_URL } from '../../api.js';
+import { request, anonUid, isNetErr, trackEvent, BASE_URL, setFav, removeFav } from '../../api.js';
 import { splitMaterial } from '../../material.js';
 import { buildPaceRows, fmtMin } from '../../exam-pace.js';
 import { buildExamRedoSet } from '../../exam-redo.js';
 import { buildExamReportShareText } from '../../exam-share.js';
 import { reviewStep } from '../../exam-review.js';
+import { isFaved, toggleFav } from '../../exam-fav.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
 const MOD_ORDER = ['changshi', 'yanyu', 'shuliang', 'panduan', 'ziliao'];
 
 export default {
   data() {
-    return { loading: true, loadErr: '', aid: null, report: null, history: [], detail: null, matOpen: false, wrongOnly: false };
+    return { loading: true, loadErr: '', aid: null, report: null, history: [], detail: null, matOpen: false, wrongOnly: false, favs: uni.getStorageSync('favQuestions') || [] };
   },
   computed: {
     accuracy() {
@@ -193,6 +197,9 @@ export default {
       if (!a || !a.submitted_at) return '-';
       const s = Math.max(0, Math.round(a.submitted_at - a.started_at));
       return Math.floor(s / 60) + ' 分 ' + (s % 60) + ' 秒';
+    },
+    detailFaved() {
+      return !!this.detail && isFaved(this.favs, this.detail.question);
     },
     detailMat() {
       const d = this.detail;
@@ -300,6 +307,15 @@ export default {
       } catch (e) { /* 非关键路径 */ }
     },
     openQ(it) { this.matOpen = false; this.detail = it; },
+    toggleDetailFav() {
+      const d = this.detail;
+      if (!d) return;
+      const { list, added } = toggleFav(this.favs, d);
+      this.favs = list;
+      uni.setStorageSync('favQuestions', list);
+      if (d.question_id) (added ? setFav(d.question_id) : removeFav(d.question_id)).catch(() => {});
+      uni.showToast({ title: added ? '已收藏，可在收藏与笔记查看' : '已取消收藏', icon: 'none', duration: 900 });
+    },
     stepQ(dir) {
       if (!this.report || !this.detail) return;
       const nxt = reviewStep(this.report.items, this.detail.no, dir, this.wrongOnly);
@@ -408,6 +424,7 @@ export default {
 .mask { position: fixed; inset: 0; background: rgba(15, 18, 25, 0.45); z-index: 90; display: flex; align-items: flex-end; }
 .sheet { width: 100%; background: var(--card); border-radius: 28rpx 28rpx 0 0; padding: 28rpx 28rpx calc(28rpx + env(safe-area-inset-bottom)); max-height: 80vh; display: flex; flex-direction: column; box-sizing: border-box; }
 .sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
+.sheet-acts { display: flex; align-items: center; }
 .sheet-t { font-size: 30rpx; font-weight: 600; }
 .sheet-x { font-size: 30rpx; color: var(--ink-2); padding: 8rpx 16rpx; }
 .detail-scroll { max-height: 62vh; }
