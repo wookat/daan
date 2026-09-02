@@ -2457,10 +2457,7 @@ def practice_history_detail(uid: str, start: float, end: float) -> list[dict]:
     return out
 
 
-def refresh_question_stats() -> int:
-    """聚合 answer_log 为每题刷新全站作答人次/正确率/易错项。"""
-    conn = get_conn()
-    _ensure_answer_log(conn)
+def _ensure_question_stat_cols(conn) -> None:
     qcols = {r["name"] for r in conn.execute("PRAGMA table_info(questions)")}
     for col, ddl in [
         ("attempt_count", "ALTER TABLE questions ADD COLUMN attempt_count INTEGER"),
@@ -2469,6 +2466,13 @@ def refresh_question_stats() -> int:
     ]:
         if col not in qcols:
             conn.execute(ddl)
+
+
+def refresh_question_stats() -> int:
+    """聚合 answer_log 为每题刷新全站作答人次/正确率/易错项。"""
+    conn = get_conn()
+    _ensure_answer_log(conn)
+    _ensure_question_stat_cols(conn)
     rows = conn.execute(
         """SELECT question_id qid, COUNT(*) n, SUM(correct) c
            FROM answer_log WHERE question_id IS NOT NULL GROUP BY question_id"""
@@ -2969,10 +2973,12 @@ def save_mistake(rec: dict) -> int:
 def list_mistakes(limit: int = 500, uid: str | None = None) -> list[dict]:
     conn = get_conn()
     _ensure_mistake_uid(conn)
+    _ensure_question_stat_cols(conn)
     cl = " AND m.uid=?" if uid else " AND m.uid IS NULL"
     args = (uid,) if uid else ()
     rows = conn.execute(
-        f"""SELECT m.*, q.tag3, q.options AS q_options FROM mistakes m
+        f"""SELECT m.*, q.tag3, q.options AS q_options,
+            q.attempt_count, q.correct_ratio, q.most_wrong FROM mistakes m
             LEFT JOIN questions q ON q.id=m.question_id
             WHERE 1=1{cl} ORDER BY m.created_at DESC LIMIT ?""",
         (*args, limit),
@@ -3428,6 +3434,63 @@ def get_exam_attempt(attempt_id: int) -> dict | None:
     return d
 
 
+def _ensure_exam_progress(conn):
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS exam_progress (
+            attempt_id INTEGER PRIMARY KEY,
+            uid TEXT NOT NULL,
+            picks TEXT NOT NULL,
+            idx INTEGER NOT NULL DEFAULT 0,
+            updated_at REAL NOT NULL
+        )"""
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_egp_uid ON exam_progress(uid)")
+
+
+def save_exam_progress(attempt_id: int, uid: str, picks: dict, idx: int) -> None:
+    conn = get_conn()
+    _ensure_exam_progress(conn)
+    conn.execute(
+        """INSERT INTO exam_progress (attempt_id, uid, picks, idx, updated_at)
+           VALUES (?,?,?,?,?)
+           ON CONFLICT(attempt_id) DO UPDATE SET
+             picks=excluded.picks, idx=excluded.idx, updated_at=excluded.updated_at""",
+        (attempt_id, uid, json.dumps(picks), idx, time.time()),
+    )
+    conn.commit()
+    conn.close()
+
+
+def clear_exam_progress(attempt_id: int) -> None:
+    conn = get_conn()
+    _ensure_exam_progress(conn)
+    conn.execute("DELETE FROM exam_progress WHERE attempt_id=?", (attempt_id,))
+    conn.commit()
+    conn.close()
+
+
+def latest_exam_progress(uid: str) -> dict | None:
+    """最近一场未交卷且未超时、有进度行的模考（供跨设备续考）。"""
+    conn = get_conn()
+    _ensure_exam_tables(conn)
+    _ensure_exam_progress(conn)
+    row = conn.execute(
+        """SELECT g.attempt_id, g.picks, g.idx, a.paper_id, a.started_at, p.duration_min
+           FROM exam_progress g
+           JOIN exam_attempts a ON a.id = g.attempt_id
+           JOIN exam_papers p ON p.id = a.paper_id
+           WHERE g.uid=? AND a.submitted_at IS NULL AND a.started_at + p.duration_min * 60 > ?
+           ORDER BY g.attempt_id DESC LIMIT 1""",
+        (uid, time.time()),
+    ).fetchone()
+    conn.close()
+    if not row:
+        return None
+    d = dict(row)
+    d["picks"] = json.loads(d["picks"] or "{}")
+    return d
+
+
 def list_exam_attempts(uid: str, paper_id: int | None = None, limit: int = 50) -> list[dict]:
     conn = get_conn()
     _ensure_exam_tables(conn)
@@ -3454,7 +3517,18 @@ def list_exam_attempts(uid: str, paper_id: int | None = None, limit: int = 50) -
 
 # ---------- 报考画像 & 学习计划数据 ----------
 
-PROFILE_FIELDS = ("exam_type", "target_region", "exam_date", "target_score", "daily_minutes", "base_level")
+PROFILE_FIELDS = (
+    "exam_type",
+    "target_region",
+    "exam_date",
+    "target_score",
+    "daily_minutes",
+    "base_level",
+    "daily_goal",
+    "group_size",
+    "timed_mode",
+    "auto_next",
+)
 
 
 def _ensure_user_profile(conn):
@@ -3467,9 +3541,17 @@ def _ensure_user_profile(conn):
             target_score INTEGER,
             daily_minutes INTEGER,
             base_level TEXT,
+            daily_goal INTEGER,
+            group_size INTEGER,
+            timed_mode INTEGER,
+            auto_next INTEGER,
             created_at REAL,
             updated_at REAL)"""
     )
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(user_profile)")}
+    for col in ("daily_goal", "group_size", "timed_mode", "auto_next"):
+        if col not in cols:
+            conn.execute(f"ALTER TABLE user_profile ADD COLUMN {col} INTEGER")
 
 
 def get_user_profile(uid: str) -> dict | None:
@@ -3496,8 +3578,9 @@ def save_user_profile(uid: str, fields: dict) -> dict:
     else:
         conn.execute(
             """INSERT INTO user_profile
-               (uid, exam_type, target_region, exam_date, target_score, daily_minutes, base_level, created_at, updated_at)
-               VALUES (?,?,?,?,?,?,?,?,?)""",
+               (uid, exam_type, target_region, exam_date, target_score, daily_minutes, base_level,
+                daily_goal, group_size, timed_mode, auto_next, created_at, updated_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 uid,
                 vals.get("exam_type"),
@@ -3506,6 +3589,10 @@ def save_user_profile(uid: str, fields: dict) -> dict:
                 vals.get("target_score"),
                 vals.get("daily_minutes"),
                 vals.get("base_level"),
+                vals.get("daily_goal"),
+                vals.get("group_size"),
+                vals.get("timed_mode"),
+                vals.get("auto_next"),
                 now,
                 now,
             ),

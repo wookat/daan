@@ -1,5 +1,6 @@
 """模考/真题卷域：PDF 导出卷、答题卡/卷码判分、整卷模考（同一套判分落库逻辑）。"""
 import hashlib
+import time
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
@@ -288,24 +289,82 @@ def api_exam_start(body: dict):
     paper = db.get_exam_paper(pid)
     if not paper:
         raise HTTPException(404, "试卷不存在")
-    qids = db.exam_active_qids(paper["question_ids"])
-    items = {q["id"]: q for q in db.questions_by_ids(qids)}
-    ordered = [{k: items[i].get(k) for k in _EXAM_ITEM_FIELDS} for i in qids if i in items]
+    pinfo, ordered = _exam_paper_payload(paper)
     if len(ordered) < 5:
         raise HTTPException(400, "试卷题目不足")
     attempt_id = db.start_exam_attempt(uid, pid)
+    return {"attempt_id": attempt_id, "paper": pinfo, "items": ordered}
+
+
+def _exam_paper_payload(paper: dict) -> tuple[dict, list[dict]]:
+    qids = db.exam_active_qids(paper["question_ids"])
+    items = {q["id"]: q for q in db.questions_by_ids(qids)}
+    ordered = [{k: items[i].get(k) for k in _EXAM_ITEM_FIELDS} for i in qids if i in items]
+    pinfo = {
+        "id": paper["id"],
+        "title": paper["title"],
+        "kind": paper["kind"],
+        "year": paper["year"],
+        "region": paper["region"],
+        "duration_min": paper["duration_min"],
+        "n": len(ordered),
+    }
+    return pinfo, ordered
+
+
+@router.post("/api/exam/progress")
+def api_exam_progress(body: dict):
+    uid = (body.get("uid") or "").strip()[:64]
+    attempt_id = body.get("attempt_id")
+    if not uid or not attempt_id:
+        raise HTTPException(400, "缺少 uid 或 attempt_id")
+    attempt = db.get_exam_attempt(int(attempt_id))
+    if not attempt or attempt["uid"] != uid:
+        raise HTTPException(404, "答题记录不存在")
+    if attempt["submitted_at"]:
+        raise HTTPException(400, "该次模考已交卷")
+    paper = db.get_exam_paper(attempt["paper_id"])
+    if not paper or attempt["started_at"] + paper["duration_min"] * 60 <= time.time():
+        raise HTTPException(400, "该场模考已超时")
+    raw = body.get("picks")
+    if not isinstance(raw, dict) or len(raw) > 300:
+        raise HTTPException(400, "无效的作答进度")
+    picks: dict[str, str] = {}
+    for k, v in raw.items():
+        try:
+            qid = int(k)
+        except (TypeError, ValueError):
+            raise HTTPException(400, "无效的作答进度") from None
+        if not isinstance(v, str) or v not in ("A", "B", "C", "D"):
+            raise HTTPException(400, "无效的作答进度")
+        picks[str(qid)] = v
+    idx = body.get("idx")
+    idx = idx if isinstance(idx, int) and 0 <= idx < 1000 else 0
+    db.save_exam_progress(int(attempt_id), uid, picks, idx)
+    return {"ok": True}
+
+
+@router.get("/api/exam/resume")
+def api_exam_resume(uid: str):
+    uid = uid.strip()[:64]
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    prog = db.latest_exam_progress(uid)
+    if not prog:
+        return {}
+    paper = db.get_exam_paper(prog["paper_id"])
+    if not paper:
+        return {}
+    pinfo, ordered = _exam_paper_payload(paper)
+    if len(ordered) < 5:
+        return {}
     return {
-        "attempt_id": attempt_id,
-        "paper": {
-            "id": paper["id"],
-            "title": paper["title"],
-            "kind": paper["kind"],
-            "year": paper["year"],
-            "region": paper["region"],
-            "duration_min": paper["duration_min"],
-            "n": len(ordered),
-        },
+        "attempt_id": prog["attempt_id"],
+        "paper": pinfo,
         "items": ordered,
+        "picks": prog["picks"],
+        "idx": prog["idx"],
+        "end_at_ms": int((prog["started_at"] + paper["duration_min"] * 60) * 1000),
     }
 
 
@@ -340,6 +399,7 @@ def api_exam_submit(body: dict):
     total = judged["total"] or 1
     score = round(100.0 * judged["correct"] / total, 1)
     db.finish_exam_attempt(int(attempt_id), {str(k): v for k, v in picks.items()}, score, per_module)
+    db.clear_exam_progress(int(attempt_id))
     return {
         "attempt_id": int(attempt_id),
         "paper_id": paper["id"],
@@ -399,6 +459,9 @@ def api_exam_report(attempt_id: int, uid: str = ""):
             "is_real": q.get("is_real"),
             "exam_year": q.get("exam_year"),
             "exam_region": q.get("exam_region"),
+            "attempt_count": q.get("attempt_count"),
+            "correct_ratio": q.get("correct_ratio"),
+            "most_wrong": q.get("most_wrong"),
         })
     answered = sum(1 for r in items if r["picked"] and len(r["picked"]) == 1)
     tag_stats: dict[str, list[int]] = {}

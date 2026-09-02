@@ -156,6 +156,7 @@ import { canInstall, promptInstall, onInstallable, isIosSafariInstallable } from
 // #endif
 import { listPacks } from '../../offline.js';
 import { checkinStreak } from '../../checkin.js';
+import { DAILY_GOALS, adoptServerDailyGoal } from '../../daily-goal.js';
 
 export default {
   data() {
@@ -311,6 +312,11 @@ export default {
       try {
         const d = await request(pp);
         this.profile = d.profile || null;
+        const g = adoptServerDailyGoal(this.dailyGoal, this.profile);
+        if (g != null) {
+          this.dailyGoal = g;
+          uni.setStorageSync('dailyGoal', g);
+        }
       } catch (e) { /* 非关键路径 */ }
       try {
         this.growth = await request(gp);
@@ -366,10 +372,11 @@ export default {
       uni.navigateTo({ url: '/pkgA/settings/reminders' });
     },
     cycleGoal() {
-      const opts = [20, 50, 100];
+      const opts = DAILY_GOALS;
       const next = opts[(opts.indexOf(this.dailyGoal) + 1) % opts.length];
       this.dailyGoal = next;
       uni.setStorageSync('dailyGoal', next);
+      request('/api/profile', { method: 'POST', data: { uid: anonUid(), daily_goal: next } }).catch(() => {});
       uni.showToast({ title: '每日目标：' + next + ' 题', icon: 'none' });
     },
     cycleFont() {

@@ -200,6 +200,7 @@ export default {
     this.stopClock();
     if (this._retryTimer) { clearTimeout(this._retryTimer); this._retryTimer = null; }
     this.saveProgress();
+    this.flushProgress();
     // #ifdef H5
     if (this._exKeyHandler && typeof window !== 'undefined') {
       window.removeEventListener('keydown', this._exKeyHandler);
@@ -209,6 +210,7 @@ export default {
   },
   onHide() {
     this.saveProgress();
+    this.flushProgress();
     // #ifdef H5
     if (this._exKeyHandler && typeof window !== 'undefined') {
       window.removeEventListener('keydown', this._exKeyHandler);
@@ -323,6 +325,21 @@ export default {
         idx: this.idx,
         endAt: this._endAt,
       });
+      clearTimeout(this._progTimer);
+      this._progTimer = setTimeout(() => this.pushProgress(), 1500);
+    },
+    flushProgress() {
+      clearTimeout(this._progTimer);
+      this.pushProgress();
+    },
+    pushProgress() {
+      if (!this.attemptId || this.submitting) return;
+      const picks = {};
+      this.items.forEach((q) => { if (q && q._picked) picks[q.id] = q._picked; });
+      request('/api/exam/progress', {
+        method: 'POST',
+        data: { uid: anonUid(), attempt_id: this.attemptId, picks, idx: this.idx },
+      }).catch(() => {});
     },
     confirmSubmit() {
       const blank = this.items.length - this.answeredCount;

@@ -1004,3 +1004,36 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：R283 分享落点 /tiku/papers/{pid} meta 行只有「年份 地区 · 共 N 题 · 限时 M 分钟」，零社会证明，被挑战者看不到「多少人考过/平均多少分」对比锚点（粉笔卷详情核心转化元素）；聚合数据已在 exam_attempts（api_exam_rank 同口径）。
 - 收口：db.exam_paper_social(pid) 同卷每人取最高分聚合返回 {n, avg}；tiku_paper_detail n>0 时 meta 行追加「· 已有 {n} 人模考 · 平均 {avg} 分」+ JSON-LD description 同步；n=0 不渲染不伪造。顺手收口 SSR .tags a 长标题 375px 存量溢出（max-width:100%+ellipsis，pid 96/133 实测 142/160px→0）。零 App 前端/API 契约/路由变化。
 - 详见 docs/iter/round-3/design-r284-paper-social-proof.md。
+
+## R285–R295（模考/申论深度补齐，逐轮独立 PR #473–#483）
+- R285 卷库列表（App+SSR）社会证明口径统一（per-user-best takers+avg_score）；R286 SSR 详情 CTA ?pid= 直达目标卷高亮定位；R287 卷库「未交卷模考」续考横幅 + 过期进度清理（exam-resume.js）；R288 首页续考卡复用同函数；R289 模考 5/1 分钟低时预警（exam-alert.js，穿越判定+时钟脉冲态）；R290 报告解析浮层逐题连看（exam-review.js，只看错题过滤+桌面←/→）；R291 浮层收藏本题（exam-fav.js，report items 补 is_real/exam_year/exam_region）；R292 浮层挂 q-social-bar（笔记/讨论/热评）；R293 申论真题收藏闭环（shenlun-qfav.js，星标+收藏视图+?fav=1）；R294 申论详情上一题/下一题连看（shenlun-qnav.js）；R295 申论作答限字联动（shenlun-words.js，parseWordLimit 四类表达）。
+- 均本地全绿+生产 1440/375 双视口实测；种子测试 uid 验后全库清理 leftover 0。
+
+## R296–R298（本地资产服务端化三连，PR #484/#485/#487；R221–R297 rollup #486）
+- R296 申论真题收藏服务端同步：shenlun_qfavs 表 + GET/POST /api/shenlun/qfavs + 匿名归并（_UID_PK_TABLES）；前端 syncQFavs 双向合并（本地独有回推、服务端为权威、兼容 id-only 历史）。
+- R297 申论草稿服务端同步：shenlun_drafts (uid,qid) + /api/shenlun/draft（3000 字上限、空 content 删除）；输入 1.5s 去抖推送，「本机非空一律本机优先」，批改成功双端清除。
+- R298 模考未交卷进度服务端同步：exam_progress 表 + POST /api/exam/progress（attempt 归属/未交卷/未超时校验）+ GET /api/exam/resume（同构 _exam_paper_payload，不进边缘缓存）+ 交卷即清；前端 adoptServerExamProgress「本机快照有效一律本机优先」，首页/卷库无本机快照时服务端恢复。
+
+## R299（每日刷题目标服务端同步，PR #488）
+- 取证：dailyGoal 只存 local storage（home/profile/practice 三页各自读写），清缓存/换设备即回默认 20，与 R296–R298 服务端化口径不一致；user_profile+/api/profile 是现成最小复用点。
+- 收口：user_profile 补 daily_goal 列（新表直建 + PRAGMA 幂等 ALTER 迁移旧库）；POST /api/profile 严格白名单 {20,50,100}（显式拒 bool/浮点/数字字符串/越档整数，None 清除，缺 key 不改）；前端共享 src/daily-goal.js（DAILY_GOALS/normalizeDailyGoal/adoptServerDailyGoal），三页 local-first 即显 + 服务端合法值覆盖本地 + setGoal fire-and-forget POST 失败静默。顺手：backend/tests/conftest.py autouse fixture 每例清 storm guard 错误计数（修复全量 pytest 跨用例 429 连坐 4 failures）。
+- 验证：ruff/pytest 155/pyright 0/lint/vitest 254/build 全绿；生产 rev 485e997 实测：API 合法 200/非法 400 逐项、1440 设置 50→POST 200、375 全新 context 同 uid 恢复 50、三页 storage 一致、断 /api/profile+/api/home_bundle 后本地值保留页面正常、双视口溢出 0、console 0 error、性能预算全过；测试 uid 全库清理 leftover 0。注意：home_bundle 的 profile 也会被 adoptServerDailyGoal 采用（与独立 profile 请求同口径，无竞态：相同值返回 null 不写）。
+- 详见 docs/iter/round-3/design-r299-daily-goal-sync.md。
+
+## R300（练习偏好服务端同步，PR #489）
+- 取证：R296–R299 服务端化后，练习偏好三项（groupSize/timedMode/autoNextOff）仍只存 local storage（home 设置面板 + practice 工具面板双入口），清缓存/换设备即回默认；beiMode/fontLv/sfxOff 属设备级瞬时偏好不收。
+- 收口：user_profile 补 group_size/timed_mode/auto_next 列（新表直建 + PRAGMA 幂等 ALTER）；POST /api/profile 严格白名单（group_size∈{10,20,30,50}、flags∈{0,1}，拒 bool/浮点/字符串/越档，None 清除，缺 key 不改）；前端共享 src/practice-prefs.js（GROUP_SIZES/normalizeGroupSize/normalizeFlag/adoptServerPracticePrefs），home adoptPrefs 只收 groupSize、practice 复用 syncDailyGoal 同一 profile 响应采用三项；setGroup/toggleTimed/toggleAutoNext local-first + fire-and-forget POST 失败静默。
+- 验证：ruff/pytest 161/pyright 0/lint/vitest 264/build 全绿；生产 rev 7f9e26b 实测：API 合法/非法逐项（400 矩阵）、None 清除、缺 key 保留；1440/375 全新 context 同 uid 三项恢复（groupSize 50 + timedMode '1' + autoNextOff '1'）、home 设置面板 setGroup(20) POST 200 服务端更新、practice 工具面板双 toggle POST 200 服务端翻转、断 /api/profile+/api/home_bundle 后本地值保留页面正常、双视口溢出 0、console 0 error；部署脚本首个 Lighthouse 样本 a11y 0.94，独立复跑 a11y 1.0（无违例项，仅 informational），性能/SEO/LCP/CLS 均过。测试 uid（含一次误建 fresh uid）全库清理 deleted 4 / leftover 0。注意：练习页 UI 恢复验证用 storage key 是 anonUid（非 anon_uid）；home 的 profile 经 /api/home_bundle 下发，fallback 测试需同时断两端点。
+- 详见 docs/iter/round-3/design-r300-practice-prefs-sync.md。
+
+## R301（复盘场景补题目全站数据锚点，PR #490）
+- 取证（SOP-10 四维复审计）：刷题页早有题目级全站统计外显（难度星级/全站正确率/样本人次/易错项，attempt_count>=5 才显示），但模考成绩报告逐题解析浮层与错题本展开态零统计锚点——复盘时无法区分「大家都错的难题」与「基础题失分」（粉笔错题本/解析页核心复盘锚点）。生产 questions 表已有 17 题真实聚合 >=5 人次。
+- 收口：后端 report items 补 attempt_count/correct_ratio/most_wrong 三字段（纯增量）；db.list_mistakes() JOIN questions 补同三列；抽取 _ensure_question_stat_cols(conn) 幂等补列（refresh_question_stats/list_mistakes 共用，兼容旧库/测试库）。前端抽共享纯函数 src/q-stat.js qStatLine(q)（<5 人次或 ratio null 返回 ''、星级 >85→1★…否则 5★、most_wrong 存在且≠answer 才显易错项），practice.vue 切换为共享函数（行为不变），report.vue 浮层 detailStatLine + book.vue 展开态 mStatLine（correct_answer 需 ansLetter 转字母后作 answer 传入）。零新端点/零聚合口径变化/不伪造低样本。
+- 验证：ruff/pytest 163/pyright 0/lint/vitest 270/build 全绿；生产 rev c0bdf74 实测：真实接口临时 uid 走 /api/exam/start|submit|report 链路，report item（qid 262555，23 人次/0%/易错 A）与 /api/mistakes（qid 8，5 人次/60%/易错 A）字段逐项一致；1440/375 双视口报告浮层 .dstat 与错题本 .mstat 文案与口径逐字正确、低样本卡正确不渲染、溢出 0、console 0 error；性能预算全过（/ 0.98、/tiku/ 1.00）。测试 uid 全库清理 deleted 13 / leftover 0。注意：/api/exam/start 对大卷会抽子集出题（87 题卷 report 只有 67 items），验证含特定题的报告需选题目确实被出到的卷（paper 44 含 262555）。
+- 详见 docs/iter/round-3/design-r301-review-qstat-anchor.md。
+
+## R302（模考报告补「距离目标」卡 + 较上次同卷成绩锚点，PR #491）
+- 取证（SOP-10 四维复审计）：用户画像早收 target_score（home 学习计划三步，POST /api/profile 白名单），模考大赛赛后报告已有「距离目标」卡，但使用频次远高的日常模考成绩报告完全不消费画像目标分；同卷历史曲线只画柱不给「较上次 ±X 分」结论——模考后无法一眼回答「离目标差多少 / 比上次进步没」（粉笔模考报告核心复盘锚点）。
+- 收口（纯前端零后端）：src/exam-goal.js 纯函数 goalGap(score,target)（target 非法/未设/≤0 或 score 空→null，否则 {target,gap}，1 位小数）与 prevScoreDelta(history,curId)（正序 history 定位当前 attempt，无前次→null）；report.vue load 后并行 GET /api/profile（失败静默 targetScore=null），hero-meta 补「较上次同卷 +X/−X 分/持平」，rank-card 下补「距离目标」卡（对齐 contest-report gap-row 视觉：目标分 Y → 已达标 🎉 / 还差 Z 分）；缺数据一律不渲染不伪造。
+- 验证：lint/vitest 280(+10)/build/diff-check 全绿（后端零改动）；生产 rev dd488be 部署 + API/Lighthouse 回归全过；真实接口种子（profile target 70 + paper 24 两次模考 5.9→17.6）实测 1440/375：目标卡「目标分 70 还差 52.4 分」、hero「较上次同卷 +11.7 分」、首次 attempt 不显较上次、清除 target 后目标卡与目标行均不渲染、溢出 0、console 0 error。测试 uid 全库清理 deleted 57 / leftover 0。注意：report.vue 的 uid 取 anonUid()，UI 验证需把测试 uid 写入 localStorage anonUid 后再开报告深链。
+- 详见 docs/iter/round-3/design-r302-report-goal-anchor.md。

@@ -81,6 +81,7 @@
 import { request, snapPeek, anonUid, exportPdf } from '../../api.js';
 import { buildExamListUrl, parseExamListOpts } from '../../exam-list-url.js';
 import { parseExamProgress, fmtLeftSecs } from '../../exam-resume.js';
+import { adoptServerExamProgress } from '../../exam-progress-sync.js';
 
 export default {
   data() {
@@ -180,6 +181,17 @@ export default {
       const saved = uni.getStorageSync('examProgress');
       this.resume = parseExamProgress(saved, Date.now());
       if (saved && saved.attemptId && !this.resume) uni.removeStorageSync('examProgress');
+      if (!this.resume) this.syncResume();
+    },
+    async syncResume() {
+      try {
+        const d = await request('/api/exam/resume?uid=' + encodeURIComponent(anonUid()));
+        const now = Date.now();
+        const snap = adoptServerExamProgress(uni.getStorageSync('examProgress'), d, now);
+        if (!snap) return;
+        uni.setStorageSync('examProgress', snap);
+        this.resume = parseExamProgress(snap, now);
+      } catch (e) { /* 非关键路径 */ }
     },
     continueExam() {
       const r = this.resume;
