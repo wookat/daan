@@ -70,9 +70,11 @@ def test_material_discovery_copy_alignment(client):
     try:
         home = client.get("/tiku/")
         assert "另收录申论写作素材" in home.text and "金句" in home.text
+        assert f'href="/tiku/shenlun/sucai/{quote("金句")}/"' in home.text  # R266
         assert "按套卷（含给定资料与参考解析）、年份、题型" in home.text  # R254
         llms = client.get("/llms.txt")
-        assert "条写作素材" in llms.text
+        assert "申论写作素材·金句" in llms.text  # R266
+        assert f"/tiku/shenlun/sucai/{quote('金句')}/" in llms.text
         assert "按套卷（含给定资料与参考解析）、年份、题型归档" in llms.text  # R254
         assert "年份/地区归档" not in llms.text  # 地区无 SSR 页族，旧口径不实
         hub = client.get("/tiku/shenlun/")
@@ -87,7 +89,7 @@ def test_material_discovery_copy_alignment(client):
         conn.commit()
         conn.close()
         assert "另收录申论写作素材" not in client.get("/tiku/").text
-        assert "条写作素材" not in client.get("/llms.txt").text
+        assert "申论写作素材·" not in client.get("/llms.txt").text
         assert "另有写作素材" not in client.get("/tiku/shenlun/").text
         _clear_shenlun()
 

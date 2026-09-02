@@ -20,6 +20,7 @@ from .common import (
     _page,
     _pager,
     _q_items,
+    _shenlun_sucai_path,
     _sub_path,
     _topic_path,
     _url,
@@ -73,8 +74,10 @@ def tiku_index():
         sl_mat_line = ""
         if sl_mats:
             sl_mat_total = sum(n for _, n in sl_mats)
-            sl_mat_types = "、".join(t for t, _ in sl_mats)
-            sl_mat_line = f'<p class="meta">另收录申论写作素材 {sl_mat_total} 条（{_e(sl_mat_types)}），详见申论真题库页。</p>'
+            sl_mat_types = "、".join(
+                f'<a href="{_e(_shenlun_sucai_path(t))}">{_e(t)}（{n} 条）</a>' for t, n in sl_mats
+            )
+            sl_mat_line = f'<p class="meta">另收录申论写作素材 {sl_mat_total} 条：{sl_mat_types}。</p>'
         sections.append(
             '<section class="card"><h2><a href="/tiku/shenlun/">申论</a>'
             f'<span class="meta">（{sl_total} 道真题）</span></h2>'

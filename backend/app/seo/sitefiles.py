@@ -161,8 +161,13 @@ def llms_txt():
     shenlun = ""
     if db.shenlun_questions(limit=1)["total"]:
         mats = db.shenlun_material_type_counts()
-        mat_note = f"；另收录 {sum(n for _, n in mats)} 条写作素材（按类型归档）" if mats else ""
-        shenlun = f"- [申论真题库]({_url('/tiku/shenlun/')}): 历年申论真题与参考解析，按套卷（含给定资料与参考解析）、年份、题型归档{mat_note}\n"
+        shenlun = "- [申论真题库]({}): 历年申论真题与参考解析，按套卷（含给定资料与参考解析）、年份、题型归档\n".format(
+            _url("/tiku/shenlun/")
+        )
+        shenlun += "".join(
+            f"- [申论写作素材·{t}]({_url(_shenlun_sucai_path(t))}): {t}写作素材 {n} 条，按主题归类并附权威出处\n"
+            for t, n in mats
+        )
     return PlainTextResponse(
         "# 错题邦公考题库\n\n"
         "> 免费公务员考试在线刷题与错题本：行测五大模块真题题库（每题含答案与解析）、"
