@@ -1131,3 +1131,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：ruff/pytest 183(+1)/pyright 0/lint/vitest 355(+3)/build 全绿；生产 rev 9eb2288、bundle index-CE5TDek-.js；API 实测 marks 乱序+重复 → resume 去重升序、缺省覆盖为 []、非法（非 list/[True]/["3"]/[1.5]）逐项 400；testing agent 跨设备实测：设备 A 1440 标记题1(答A)+题3(未答)，去抖 POST 实抓 body 含 marks；设备 B 375 全新 CDP 隔离 context 同 uid 首页续考卡→恢复弹窗→做卷页标记完整恢复（网格与设备 A 逐题一致、「已标记」激活态、idx 一致）；本机快照优先/本机标记切换/交卷后 resume={} 回归；双视口溢出 0、console 0 error；Lighthouse 全过（/ 0.99/LCP 823ms、/tiku/ 1.00）。清理 r317verify1+r317ui-me DELETED 10 / LEFTOVER 0，保护 uid 30 表快照前后逐表一致。
 - 未生产实测：卷库横幅续考入口（与首页续考卡同 adoptServerExamProgress 路径）。
 - 详见 docs/iter/round-3/design-r317-progress-marks-sync.md。
+
+### R318：未交卷模考「逐题用时」跨设备同步（PR #515）
+- 取证（SOP-10）：R315 报告外显逐题用时、R281 模块配速均消费交卷 secs，但 R298/R317 服务端续考协议只同步 picks/idx/marks——exam.vue pushProgress 不发 _secs、adoptServerExamProgress 恢复固定 _secs:0；换设备续考后设备 A 段用时全丢，交卷报告/配速失真。
+- 收口零新 endpoint/表/URL 状态：db _ensure_exam_progress 幂等补列 exam_progress.secs TEXT（JSON {question_id:秒}，与本协议 picks/marks 同口径；区别于交卷 secs 的 1-based 题号口径，互不混用）；save_exam_progress(..., secs=None) 非空存 JSON 空存 NULL（UPSERT 整体覆盖，空即清除）；latest_exam_progress 回读 dict（旧行 {}）；POST /api/exam/progress 可选 secs（缺省 {}；提供时必须 dict ≤300、key 可 int 化、value 正 int 拒 bool/字符串/浮点/0/负数，否则 400 不做静默转换）；GET /api/exam/resume 应答补 secs。前端 pushProgress 补收集 Number.isInteger(q._secs)&&q._secs>0 的 {q.id: _secs}（当前题计时按既有逻辑在切题时 flush）；adoptServerExamProgress 按 secs 对象恢复 _secs（字符串键 Number 归一、非有限正数/未命中/非对象 fail-closed 0），本机快照优先不变。
+- 验证：ruff/pytest 184(+1)/pyright 0/lint/vitest 358(+3)/build 全绿；生产 rev ebe60f8、bundle index-aaFA1QHz.js；API 实测乱序 secs roundtrip、缺省覆盖 {}、非法 8 类逐项 400；testing agent 跨设备实测：设备 A 1440 去抖 POST 实抓 secs {27,5}，设备 B 375 全新 CDP 隔离 context 同 uid 恢复 _secs 并继承累计（再切题抓包 {27,5,21}），首页续考卡与卷库横幅两入口分别实测（收口 R317 观察项），交卷报告题1「本题用时 27 秒」含设备 A 累计、R281 配速正常，交卷后 resume={}，双视口溢出 0、console 0 error；Lighthouse 全过（/ 0.98/LCP 819ms、/tiku/ 1.00）。清理 test-r318-api+test-r318ui-me DELETED 8 / LEFTOVER 0，保护 uid 30 表快照前后逐表一致。
+- 未生产实测：secs 非法值 400 分支的 UI 侧路径（API 已逐项自测）。
+- 详见 docs/iter/round-3/design-r318-progress-secs-sync.md。

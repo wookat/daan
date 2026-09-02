@@ -607,3 +607,7 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 ## R317 跨设备续考走查新经验
 - 跨设备/多身份场景可用 CDP `Target.createBrowserContext` + `Target.createTarget` 建全新隔离浏览器 context（helper /tmp/cdp174/devb.py），给新 context 的 URL 加 `?devb=1` 之类标记便于按 URL 选 tab；所有按 `'zalize' in url` 选 tab 的老 helper 会误选新 context 的 tab，多 context 时必须加排除过滤。
 - 新 context 是独立 Chrome 窗口：不要用 ctrl+w（会整窗关闭销毁 context）；硬刷会清掉 CDP 设的模拟视口，需要重施。
+
+## R318 逐题用时同步走查新经验
+- SPA 内部路由跳转会抹掉 URL 上人为附加的 `?devb=1` 之类标记，按 URL 过滤 tab 的 helper 会失配：可用 `history.replaceState(null,'',带标记的URL)` 无副作用重打标记，或改按 targetId/浏览器 context 选 tab。
+- 做卷页当前题计时在切题时才 flush 到 `_secs`：验证 secs 上报必须答完并切到下一题后再抓去抖 POST 包，否则当前题秒数尚未计入 payload。
