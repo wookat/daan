@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isQFaved, toggleQFav, missingSnapIds } from '../src/shenlun-qfav.js';
+import { isQFaved, toggleQFav, missingSnapIds, mergeQFavSync } from '../src/shenlun-qfav.js';
 
 const q = (id) => ({ id, qtype: '归纳概括', paper: 'P', exam_year: 2023, exam_region: '国考', question: '题' + id });
 
@@ -47,5 +47,35 @@ describe('shenlun-qfav', () => {
     expect(isQFaved(null, 1)).toBe(false);
     expect(missingSnapIds([1, 2, 3], [q(2)])).toEqual([1, 3]);
     expect(missingSnapIds(null, null)).toEqual([]);
+  });
+
+  it('mergeQFavSync：本地独有在前回推、其余以服务端为准', () => {
+    const local = { ids: [3, 1], snaps: [q(3), q(1)] };
+    const server = { ids: [1, 2], items: [q(1), q(2)] };
+    const r = mergeQFavSync(local, server);
+    expect(r.pushIds).toEqual([3]);
+    expect(r.snaps.map((x) => x.id)).toEqual([3, 1, 2]);
+    expect(r.ids).toEqual([3, 1, 2]);
+  });
+
+  it('mergeQFavSync：空本地直接采用服务端', () => {
+    const r = mergeQFavSync({ ids: [], snaps: [] }, { ids: [5], items: [q(5)] });
+    expect(r.pushIds).toEqual([]);
+    expect(r.ids).toEqual([5]);
+    expect(r.snaps[0]).toMatchObject({ id: 5 });
+  });
+
+  it('mergeQFavSync：本地 id-only 历史条目不丢（无快照仍保留 id 并回推）', () => {
+    const r = mergeQFavSync({ ids: [7], snaps: [] }, { ids: [], items: [] });
+    expect(r.pushIds).toEqual([7]);
+    expect(r.ids).toEqual([7]);
+    expect(r.snaps).toEqual([]);
+  });
+
+  it('mergeQFavSync：入参容错不抛错', () => {
+    const r = mergeQFavSync(null, null);
+    expect(r.ids).toEqual([]);
+    expect(r.snaps).toEqual([]);
+    expect(r.pushIds).toEqual([]);
   });
 });

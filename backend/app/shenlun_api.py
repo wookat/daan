@@ -118,6 +118,24 @@ def api_shenlun_mat_fav_set(body: dict):
     return {"ok": True}
 
 
+@router.get("/api/shenlun/qfavs")
+def api_shenlun_qfavs(uid: str):
+    uid = uid.strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    return {"ids": db.qfav_ids(uid[:64]), "items": db.qfav_items(uid[:64])}
+
+
+@router.post("/api/shenlun/qfavs")
+def api_shenlun_qfav_set(body: dict):
+    uid = (body.get("uid") or "").strip()[:64]
+    qid = body.get("qid")
+    if not uid or not qid:
+        raise HTTPException(400, "缺少 uid 或题目 id")
+    db.qfav_set(uid, int(qid), bool(body.get("on")))
+    return {"ok": True}
+
+
 @router.get("/api/shenlun/materials")
 def api_shenlun_materials(topic: str | None = None, type: str | None = None, limit: int = 20, offset: int = 0,
                           id: int | None = None):

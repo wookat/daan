@@ -157,7 +157,7 @@
 <script>
 import { request, snapPeek, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api';
 import { buildShenlunUrl, buildShenlunFilterUrl, buildShenlunTabUrl, buildShenlunMatUrl } from '../../shenlun-url.js';
-import { toggleQFav as qfavToggle, missingSnapIds } from '../../shenlun-qfav.js';
+import { toggleQFav as qfavToggle, missingSnapIds, mergeQFavSync } from '../../shenlun-qfav.js';
 import { qNavState } from '../../shenlun-qnav.js';
 import { parseWordLimit, wordState } from '../../shenlun-words.js';
 
@@ -283,6 +283,7 @@ export default {
     if (opts && QTYPES.includes(opts.qtype || '')) this.setQtype(opts.qtype);
     if (opts && (!opts.tab || opts.tab === 'q') && opts.fav === '1') this.enterQFavView();
     if (opts && /^\d+$/.test(opts.id || '')) this.openQ(Number(opts.id));
+    this.syncQFavs();
   },
   methods: {
     async loadQs(append) {
@@ -467,6 +468,23 @@ export default {
       this.qFavs = r.snaps;
       uni.setStorageSync('slQFavIds', this.qFavIds);
       uni.setStorageSync('slQFavs', this.qFavs);
+      const uid = uni.getStorageSync('anonUid');
+      if (uid) request('/api/shenlun/qfavs', { method: 'POST', data: { uid, qid: q.id, on: r.added } }).catch(() => {});
+    },
+    async syncQFavs() {
+      const uid = uni.getStorageSync('anonUid');
+      if (!uid) return;
+      try {
+        const d = await request('/api/shenlun/qfavs?uid=' + encodeURIComponent(uid));
+        const r = mergeQFavSync({ ids: this.qFavIds, snaps: this.qFavs }, d);
+        for (const id of r.pushIds) {
+          request('/api/shenlun/qfavs', { method: 'POST', data: { uid, qid: id, on: true } }).catch(() => {});
+        }
+        this.qFavIds = r.ids;
+        this.qFavs = r.snaps;
+        uni.setStorageSync('slQFavIds', this.qFavIds);
+        uni.setStorageSync('slQFavs', this.qFavs);
+      } catch (e) { /* 非关键路径 */ }
     },
     toggleQFavOnly() {
       if (this.qFavOnly) this.qFavOnly = false;

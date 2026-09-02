@@ -915,6 +915,53 @@ def mat_fav_items(uid: str) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def _ensure_qfavs(conn):
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS shenlun_qfavs (
+            uid TEXT NOT NULL,
+            qid INTEGER NOT NULL,
+            created_at REAL NOT NULL,
+            PRIMARY KEY (uid, qid)
+        )"""
+    )
+
+
+def qfav_ids(uid: str) -> list[int]:
+    conn = get_conn()
+    _ensure_qfavs(conn)
+    ids = [r[0] for r in conn.execute(
+        "SELECT qid FROM shenlun_qfavs WHERE uid=? ORDER BY created_at DESC", (uid,))]
+    conn.close()
+    return ids
+
+
+def qfav_set(uid: str, qid: int, on: bool):
+    conn = get_conn()
+    _ensure_qfavs(conn)
+    if on:
+        conn.execute(
+            "INSERT OR IGNORE INTO shenlun_qfavs (uid, qid, created_at) VALUES (?,?,?)",
+            (uid, qid, time.time()))
+    else:
+        conn.execute("DELETE FROM shenlun_qfavs WHERE uid=? AND qid=?", (uid, qid))
+    conn.commit()
+    conn.close()
+
+
+def qfav_items(uid: str) -> list[dict]:
+    conn = get_conn()
+    _ensure_qfavs(conn)
+    rows = conn.execute(
+        """SELECT q.id, q.qtype, q.paper, q.exam_year, q.exam_region, q.question
+           FROM shenlun_qfavs f
+           JOIN shenlun_questions q ON q.id=f.qid AND (q.disabled IS NULL OR q.disabled=0)
+           WHERE f.uid=? ORDER BY f.created_at DESC LIMIT 200""",
+        (uid,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 def save_shenlun_answer(uid: str, qid: int, answer: str, result: str) -> int:
     conn = get_conn()
     _ensure_shenlun_answers(conn)
