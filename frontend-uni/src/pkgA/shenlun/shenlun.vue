@@ -101,6 +101,11 @@
         <text v-if="showRef && detail.notes" class="d-notes">{{ detail.notes }}</text>
         </view>
         </view>
+        <view v-if="qNav.idx >= 0 && qNav.total > 1" class="d-nav">
+          <text class="d-nav-btn" :class="{ dis: !qNav.prevId }" role="button" aria-label="上一题" :aria-disabled="!qNav.prevId" @click="qNav.prevId && openQ(qNav.prevId)">‹ 上一题</text>
+          <text class="d-nav-pos">{{ qNav.idx + 1 }} / {{ qNav.total }}</text>
+          <text class="d-nav-btn" :class="{ dis: !qNav.nextId }" role="button" aria-label="下一题" :aria-disabled="!qNav.nextId" @click="qNav.nextId && openQ(qNav.nextId)">下一题 ›</text>
+        </view>
       </view>
     </template>
 
@@ -153,6 +158,7 @@
 import { request, snapPeek, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api';
 import { buildShenlunUrl, buildShenlunFilterUrl, buildShenlunTabUrl, buildShenlunMatUrl } from '../../shenlun-url.js';
 import { toggleQFav as qfavToggle, missingSnapIds } from '../../shenlun-qfav.js';
+import { qNavState } from '../../shenlun-qnav.js';
 
 const QTYPES = ['全部', '归纳概括', '综合分析', '提出对策', '贯彻执行', '大作文'];
 const MTYPES = ['全部', '金句', '案例', '政策理论', '范文'];
@@ -223,6 +229,33 @@ export default {
     fltCount() {
       return (this.year ? 1 : 0) + (this.region ? 1 : 0);
     },
+    qNav() {
+      return qNavState(this.shownQs.map((q) => q && q.id), this.detail ? this.detail.id : 0);
+    },
+  },
+  onShow() {
+    // #ifdef H5
+    if (!this._slKeyHandler && typeof window !== 'undefined') {
+      this._slKeyHandler = (e) => this.onSlKeydown(e);
+      window.addEventListener('keydown', this._slKeyHandler);
+    }
+    // #endif
+  },
+  onHide() {
+    // #ifdef H5
+    if (this._slKeyHandler && typeof window !== 'undefined') {
+      window.removeEventListener('keydown', this._slKeyHandler);
+      this._slKeyHandler = null;
+    }
+    // #endif
+  },
+  onUnload() {
+    // #ifdef H5
+    if (this._slKeyHandler && typeof window !== 'undefined') {
+      window.removeEventListener('keydown', this._slKeyHandler);
+      this._slKeyHandler = null;
+    }
+    // #endif
   },
   onLoad(opts) {
     if (opts && typeof opts.paper === 'string' && opts.paper && opts.paper.length <= 100) this.paper = opts.paper;
@@ -500,6 +533,16 @@ export default {
       this.mOffset += 20;
       this.loadMats(true);
     },
+    // #ifdef H5
+    onSlKeydown(e) {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const tag = (e.target && e.target.tagName) || '';
+      if (/INPUT|TEXTAREA|SELECT/.test(tag) || (e.target && e.target.isContentEditable)) return;
+      if (this.tab !== 'q' || !this.detail) return;
+      if (e.key === 'ArrowLeft' && this.qNav.prevId) { e.preventDefault(); this.openQ(this.qNav.prevId); }
+      else if (e.key === 'ArrowRight' && this.qNav.nextId) { e.preventDefault(); this.openQ(this.qNav.nextId); }
+    },
+    // #endif
     async openQ(id) {
       try {
         const d = await request('/api/shenlun/questions/' + id);
@@ -611,6 +654,10 @@ page { background: var(--fill); }
 .q-text { font-size: 26rpx; color: var(--ink-1); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .more { text-align: center; color: var(--brand-text); font-size: 25rpx; padding: 20rpx 0 40rpx; }
 .back { color: var(--brand-text); font-size: 26rpx; padding: 6rpx 0 18rpx; }
+.d-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 24rpx; padding-top: 20rpx; border-top: 1rpx solid var(--line); }
+.d-nav-btn { font-size: 25rpx; color: var(--brand-text); padding: 10rpx 18rpx; cursor: pointer; }
+.d-nav-btn.dis { color: var(--ink-3); cursor: default; }
+.d-nav-pos { font-size: 23rpx; color: var(--ink-2); }
 .d-h { font-size: 25rpx; font-weight: 700; color: var(--ink-1); margin: 22rpx 0 10rpx; }
 .d-h.toggle { color: var(--brand-text); }
 .d-h.ref { color: #b45309; }
