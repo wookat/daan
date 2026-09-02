@@ -581,3 +581,8 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 ## R47 内联关键 CSS 走查新经验
 - 断言「无 stylesheet link」须区分静态与运行时：curl 静态 HTML 应为 0 link/3 段 `<style>/* inlined: ... */`；SPA 启动后 Vite 会为懒加载 chunk 动态插入 `link[rel=stylesheet]`（l-icon/wd-*/home-*.css 等，首页约 6 个）——这是预期行为，非内联失败。运行时判据应改为「无 uni./index-/zalize-tokens 关键 CSS link」+ inlined 标记 3 个。
 - 内联 tokens 生效判据：`getComputedStyle(document.documentElement).getPropertyValue('--zl-brand-600')` 应为 `#2e5bff`（深浅色皆然）；深色 bodyBg=rgb(21,22,28)、浅色 rgb(246,247,251)。
+
+## R304 成绩海报走查新经验
+- Canvas 海报类功能的 QR 客观取证法：img.src 为 data:image/png;base64 时，base64 落盘 PNG 后用 `zbarimg -q <file>` 解码二维码落点（`sudo apt-get install -y zbar-tools`），不要目测推断。
+- uid 注入的 localStorage 实际键为 `anonUid`（api.js anonUid() 读该键），不是 `uid`。
+- 模考报告接口为路径参数 `/api/exam/report/{attempt_id}?uid=`；成绩在 `attempt.score`，顶层无 score。

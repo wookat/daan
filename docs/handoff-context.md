@@ -1043,3 +1043,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 收口（纯前端零后端）：src/exam-trend.js examTrend(items,target,cap=10)——过滤 score 空/未交卷、最近 cap 条反转正序、<2 条 null 不渲染；scaleMax=max(scores,合法 target,10) 取整到 10 封顶 100；target 合法性复用 exam-goal goalGap 语义，非法不画参考线。stats.vue onShow 并行 loadExamTrend()（attempts limit=20 + profile，失败静默），「正确率趋势」前插趋势卡：复用 .trend 柱状视觉 + 虚线目标线（--warn-strong）+「最好 X 分 · 最近 Y 分」底注 + 「不同卷难度不同，仅供参考」口径注明；柱 role=button 可点/Enter 进对应报告深链。
 - 验证：lint/vitest 287(+7)/build/diff-check 全绿（后端零改动）；生产 rev cfb991f 部署 + API/Lighthouse 回归全过（/ 0.98、/tiku/ 1.00）；真实接口种子（target 70 + paper 24 三次模考 23.5→5.9→17.6）实测 1440/375：趋势卡 3 柱正序、目标线「目标 70 分」就位、底注「最好 23.5 分 · 最近 17.6 分」、点柱进对应报告（分数一致）、单次/零模考不渲染、清除 target 后目标线消失柱保留、溢出 0、console 0 error。测试 uid 全库清理 deleted 116 / leftover 0。
 - 详见 docs/iter/round-3/design-r303-stats-exam-trend.md。
+
+## R304（模考成绩海报，PR #493）
+- 取证（SOP-10）：模考报告唯一分享出口是 R283 纯文本复制；全站唯一海报能力 poster.vue 只支持打卡/徽章，成绩零图片出口（粉笔模考有成绩海报，微信场景图片传播力强于文本）。数据全部现成（report+rank），纯前端收口，不新增图片服务端渲染/存储，不泄露 uid。
+- 收口：src/exam-poster.js 纯函数 examPosterData(report,rank)——成绩取 **report.attempt.score**（顶层无 score！），total<=0/score 非法→null；beatenPct 仅 rank.total>=10 且 beaten_pct 有限时给出（低样本 fail-closed）；QR 落点 zhenti+合法 paperId → /tiku/papers/{id}，否则站点根。poster.vue 增 ?mode=exam&attempt_id=N 模式（报告接口是**路径参数** /api/exam/report/{attempt_id}?uid=，非 query），rank 失败降级基础海报；H5/小程序绘制分支调用动态 draw(ctx,d)（勿硬编码 drawPoster）。report.vue share 区补「生成成绩海报」CTA + share_poster 埋点。
+- 契约纠偏（生产实测发现，追加提交 c282c52）：初版误用 query 参数路径与顶层 score，生产 404/取值失败；以 backend/app/exam_api.py 与真实生产响应为准修正，测试 fixture 同步改为 attempt:{id,score} 形状。
+- 验证：lint/vitest 292(+5)/build/diff-check 全绿；生产 rev c282c52、bundle index-77hv-Tcy.js；testing agent 双视口实测全过：报告页 CTA→海报页 35.3 分/6/17/73%、QR zbarimg 客观解码（真题→/tiku/papers/24、mock→站点根）、低样本 rank.total=1 击败栏正确隐藏、H5 PNG data URL、1440/375 溢出 0、console 0 error。测试 uid（12 个 r304*）全库清理 deleted 391 / leftover 0。注意：uid 注入 localStorage 键是 anonUid（非 uid）。
+- 详见 docs/iter/round-3/design-r304-exam-poster.md。
