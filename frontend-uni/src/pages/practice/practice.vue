@@ -728,6 +728,10 @@ export default {
         this.startReinforce(launch);
         return;
       }
+      if (launch.kind === 'resume') {
+        this.resumeNow();
+        return;
+      }
       if (launch.kind === 'start') {
         this.start(launch.module || null, launch.submodule || null, launch.count || null, !!launch.adaptive, launch.forceReal, launch.tag3 || null, launch.source || null);
         return;
@@ -1852,6 +1856,62 @@ export default {
       if (this.session) return;
       this.start(uni.getStorageSync('lastModule') || null, null, null, false, undefined, null, 'direct');
     },
+    adoptLocalPending(s) {
+      s.items.forEach((q) => { if (q._picked) q._logged = true; });
+      this.items = s.items;
+      this.idx = Math.min(s.idx, s.items.length - 1);
+      this.picked = this.items[this.idx]._picked || '';
+      this.right = s.right;
+      this.streak = s.streak;
+      this.bestStreak = s.bestStreak;
+      this.lastModule = s.lastModule;
+      this.lastSubmodule = s.lastSubmodule;
+      this.autoSaved = false;
+      this.resultSent = false;
+      this.percentile = null;
+      this.session = true;
+      this.startQTimer();
+    },
+    adoptRemoteSnap(snap) {
+      this.items = snap.items;
+      this.idx = snap.idx;
+      this.picked = this.items[this.idx]._picked || '';
+      this.right = snap.right;
+      this.streak = snap.streak;
+      this.bestStreak = snap.bestStreak;
+      this.lastModule = snap.module || null;
+      this.lastSubmodule = snap.submodule || null;
+      this.autoSaved = false;
+      this.resultSent = false;
+      this.percentile = null;
+      this.session = true;
+      this.startQTimer();
+      this.saveSession();
+    },
+    resumeNow() {
+      const s = uni.getStorageSync('pendingSession');
+      if (s && s.items && s.items.length && Date.now() - s.t <= 24 * 3600 * 1000) {
+        this.adoptLocalPending(s);
+        return;
+      }
+      if (this._srvResuming) return;
+      this._srvResuming = true;
+      request('/api/practice/resume?uid=' + anonUid())
+        .then((d) => {
+          this._srvResuming = false;
+          if (this.session) return;
+          const snap = adoptPracticeResume(d);
+          if (!snap) {
+            this.startDefault();
+            return;
+          }
+          this.adoptRemoteSnap(snap);
+        })
+        .catch(() => {
+          this._srvResuming = false;
+          this.startDefault();
+        });
+    },
     tryServerResume() {
       if (this._srvResuming) return;
       const clearedAt = uni.getStorageSync('ppClearedAt');
@@ -1877,20 +1937,7 @@ export default {
             cancelText: '不用了',
             success: (res) => {
               if (res.confirm) {
-                this.items = snap.items;
-                this.idx = snap.idx;
-                this.picked = this.items[this.idx]._picked || '';
-                this.right = snap.right;
-                this.streak = snap.streak;
-                this.bestStreak = snap.bestStreak;
-                this.lastModule = snap.module || null;
-                this.lastSubmodule = snap.submodule || null;
-                this.autoSaved = false;
-                this.resultSent = false;
-                this.percentile = null;
-                this.session = true;
-                this.startQTimer();
-                this.saveSession();
+                this.adoptRemoteSnap(snap);
               } else {
                 this.clearServerProgress();
                 this.startDefault();
@@ -1922,20 +1969,7 @@ export default {
         cancelText: '不用了',
         success: (res) => {
           if (res.confirm) {
-            s.items.forEach((q) => { if (q._picked) q._logged = true; });
-            this.items = s.items;
-            this.idx = Math.min(s.idx, s.items.length - 1);
-            this.picked = this.items[this.idx]._picked || '';
-            this.right = s.right;
-            this.streak = s.streak;
-            this.bestStreak = s.bestStreak;
-            this.lastModule = s.lastModule;
-            this.lastSubmodule = s.lastSubmodule;
-            this.autoSaved = false;
-            this.resultSent = false;
-            this.percentile = null;
-            this.session = true;
-            this.startQTimer();
+            this.adoptLocalPending(s);
           } else {
             uni.removeStorageSync('pendingSession');
             this.clearServerProgress();

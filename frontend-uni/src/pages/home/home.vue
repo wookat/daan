@@ -41,6 +41,18 @@
       </view>
     </view>
 
+    <!-- 未完成普通练习续练卡 -->
+    <view v-if="practiceResume" class="card ercard">
+      <view class="cb-l">
+        <text class="cb-t">有一组未做完的练习</text>
+        <text class="cb-s">{{ prModName(practiceResume.module) }} · 已做 {{ practiceResume.done }}/{{ practiceResume.total }} 题</text>
+      </view>
+      <view class="cb-r">
+        <text class="cb-go" role="button" aria-label="继续未做完的练习" @click="prContinue">去继续 ›</text>
+        <text class="cb-x" role="button" aria-label="放弃未完成练习" @click="prDrop">✕</text>
+      </view>
+    </view>
+
     <!-- 回访召回卡（7天以上未练习的老用户） -->
     <view v-if="comeback" class="card cbcard">
       <view class="cb-l">
@@ -484,6 +496,7 @@ import { request, snapPeek, anonUid, exportPdf, trackEvent, fetchCheckinBadges, 
 import { checkinStreak, dayKey, loadSzDaily } from '../../checkin.js';
 import { parseExamProgress, fmtLeftSecs } from '../../exam-resume.js';
 import { adoptServerExamProgress } from '../../exam-progress-sync.js';
+import { parsePendingPractice, parseRemotePractice } from '../../practice-progress.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 
@@ -540,6 +553,7 @@ export default {
       comeback: null,
       reminderBanner: false,
       examResume: null,
+      practiceResume: null,
       dsMeta: null,
       dsDone: null,
       dateStart: new Date().toISOString().slice(0, 10),
@@ -662,6 +676,7 @@ export default {
     this.checkComeback();
     this.checkReminder();
     this.loadExamResume();
+    this.loadPracticeResume();
     this.loadDailySet();
     flushDailySubmit();
     const wantSetup = uni.getStorageSync('openPlanSetup');
@@ -818,6 +833,43 @@ export default {
     },
     goWeeklyReport() {
       uni.navigateTo({ url: '/pkgA/stats/weekly-report' });
+    },
+    loadPracticeResume() {
+      const local = parsePendingPractice(uni.getStorageSync('pendingSession'), Date.now());
+      if (local) {
+        this.practiceResume = local;
+        return;
+      }
+      this.practiceResume = null;
+      const clearedAt = uni.getStorageSync('ppClearedAt');
+      if (clearedAt && Date.now() - clearedAt < 30 * 1000) return;
+      request('/api/practice/resume?uid=' + encodeURIComponent(anonUid()))
+        .then((d) => {
+          this.practiceResume = parseRemotePractice(d);
+        })
+        .catch(() => {});
+    },
+    prModName(m) {
+      return NAMES[m] || '上次练习';
+    },
+    prContinue() {
+      uni.setStorageSync('practiceLaunch', { kind: 'resume' });
+      uni.navigateTo({ url: '/pages/practice/practice' });
+    },
+    prDrop() {
+      uni.showModal({
+        title: '放弃未完成练习？',
+        content: '放弃后这组题的作答进度不再保留',
+        confirmText: '放弃',
+        cancelText: '再想想',
+        success: (res) => {
+          if (!res.confirm) return;
+          uni.removeStorageSync('pendingSession');
+          uni.setStorageSync('ppClearedAt', Date.now());
+          request('/api/practice/progress', { method: 'POST', data: { uid: anonUid(), qids: [] } }).catch(() => {});
+          this.practiceResume = null;
+        },
+      });
     },
     loadExamResume() {
       const saved = uni.getStorageSync('examProgress');

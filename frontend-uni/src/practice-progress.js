@@ -30,6 +30,35 @@ export function collectPracticeProgress(items, idx, right, streak, bestStreak, m
   };
 }
 
+// R323：首页续练卡数据——本机 pendingSession 快照 -> {done,total,module}（无效/超期/已做完返回 null）
+export function parsePendingPractice(saved, now) {
+  if (!saved || !Array.isArray(saved.items) || !saved.items.length) return null;
+  const t = Number(saved.t);
+  if (!Number.isFinite(t) || now - t > 24 * 3600 * 1000) return null;
+  const done = saved.items.filter((q) => q && q._picked).length;
+  if (done >= saved.items.length) return null;
+  return {
+    done,
+    total: saved.items.length,
+    module: typeof saved.lastModule === 'string' ? saved.lastModule : '',
+  };
+}
+
+// R323：首页续练卡数据——/api/practice/resume 应答 -> {done,total,module}（无效/空/已做完返回 null）
+export function parseRemotePractice(d) {
+  if (!d || !Array.isArray(d.items) || !d.items.length) return null;
+  const picks = d.picks && typeof d.picks === 'object' ? d.picks : {};
+  const done = d.items.filter(
+    (q) => q && (picks[q.id] != null || picks[String(q.id)] != null)
+  ).length;
+  if (done >= d.items.length) return null;
+  return {
+    done,
+    total: d.items.length,
+    module: typeof d.module === 'string' ? d.module : '',
+  };
+}
+
 export function adoptPracticeResume(d) {
   if (!d || !Array.isArray(d.items) || !d.items.length) return null;
   const picks = d.picks && typeof d.picks === 'object' ? d.picks : {};

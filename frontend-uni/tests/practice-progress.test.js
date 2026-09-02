@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { adoptPracticeResume, collectPracticeProgress } from '../src/practice-progress.js';
+import { adoptPracticeResume, collectPracticeProgress, parsePendingPractice, parseRemotePractice } from '../src/practice-progress.js';
 
 const q = (id, extra = {}) => ({ id, stem: 's' + id, options: { A: 'a', B: 'b' }, answer: 'A', ...extra });
 
@@ -65,5 +65,51 @@ describe('adoptPracticeResume', () => {
     expect(s.idx).toBe(0);
     expect(s.right).toBe(0);
     expect(s.bestStreak).toBe(0);
+  });
+});
+
+describe('parsePendingPractice（R323 首页续练卡·本机快照）', () => {
+  const now = 1700000000000;
+  const items = [
+    { id: 1, _picked: 'A' },
+    { id: 2, _picked: '' },
+    { id: 3 },
+  ];
+
+  it('有效快照返回 done/total/module', () => {
+    const r = parsePendingPractice({ t: now - 1000, items, lastModule: 'yanyu' }, now);
+    expect(r).toEqual({ done: 1, total: 3, module: 'yanyu' });
+  });
+
+  it('fail-closed：空/无 items/超 24h/全部已答返回 null', () => {
+    expect(parsePendingPractice(null, now)).toBeNull();
+    expect(parsePendingPractice({ t: now, items: [] }, now)).toBeNull();
+    expect(parsePendingPractice({ t: now - 25 * 3600 * 1000, items }, now)).toBeNull();
+    expect(parsePendingPractice({ t: 'bad', items }, now)).toBeNull();
+    expect(parsePendingPractice({ t: now, items: [{ id: 1, _picked: 'A' }] }, now)).toBeNull();
+  });
+
+  it('lastModule 非字符串回落空串', () => {
+    const r = parsePendingPractice({ t: now, items, lastModule: 7 }, now);
+    expect(r.module).toBe('');
+  });
+});
+
+describe('parseRemotePractice（R323 首页续练卡·服务端应答）', () => {
+  it('有效应答返回 done/total/module（picks 字符串键兼容）', () => {
+    const d = { items: [{ id: 1 }, { id: 2 }, { id: 3 }], picks: { 1: 'A', '3': 'B' }, module: 'ziliao' };
+    expect(parseRemotePractice(d)).toEqual({ done: 2, total: 3, module: 'ziliao' });
+  });
+
+  it('fail-closed：空/无 items/全部已答返回 null', () => {
+    expect(parseRemotePractice(null)).toBeNull();
+    expect(parseRemotePractice({})).toBeNull();
+    expect(parseRemotePractice({ items: [] })).toBeNull();
+    expect(parseRemotePractice({ items: [{ id: 1 }], picks: { 1: 'A' } })).toBeNull();
+  });
+
+  it('picks 非对象按无作答处理、module 非字符串回落空串', () => {
+    const d = { items: [{ id: 1 }], picks: 'x', module: null };
+    expect(parseRemotePractice(d)).toEqual({ done: 0, total: 1, module: '' });
   });
 });
