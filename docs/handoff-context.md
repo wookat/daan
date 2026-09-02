@@ -999,3 +999,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：模考报告是全站主要成果页中唯一零分享出口的页面（练习完成/PK/小队/搜索/申论详情均有出向分享），粉笔模考报告以晒成绩/邀好友同考为核心传播出口；报告数据 attempt_id+uid 鉴权不可公开，R278 后 /tiku/papers/{id} 真题卷 SSR 页（无 hash/query、自带 OG + 在线模考 CTA）是现成抗截断公开落点。
 - 收口：纯前端。新增 src/exam-share.js 纯函数 buildExamReportShareText(report, origin)：paper.kind!=='zhenti' 或缺 id/title 返回 ''（mini/mock 卷无公开落点不外显）；否则输出成绩摘要+/tiku/papers/{id} 链接。report.vue rank-card 下新增 share-cta（v-if=shareText，role=button+aria-label），点击复制+toast+trackEvent('share_copy','exam_report',paper_id)。不新增后端接口/分享表/短码，不公开私有报告数据。
 - 详见 docs/iter/round-3/design-r283-exam-report-share.md。
+
+## R284（真题卷 SSR 详情页「已有 N 人模考 · 平均分」社会证明）
+- 取证：R283 分享落点 /tiku/papers/{pid} meta 行只有「年份 地区 · 共 N 题 · 限时 M 分钟」，零社会证明，被挑战者看不到「多少人考过/平均多少分」对比锚点（粉笔卷详情核心转化元素）；聚合数据已在 exam_attempts（api_exam_rank 同口径）。
+- 收口：db.exam_paper_social(pid) 同卷每人取最高分聚合返回 {n, avg}；tiku_paper_detail n>0 时 meta 行追加「· 已有 {n} 人模考 · 平均 {avg} 分」+ JSON-LD description 同步；n=0 不渲染不伪造。顺手收口 SSR .tags a 长标题 375px 存量溢出（max-width:100%+ellipsis，pid 96/133 实测 142/160px→0）。零 App 前端/API 契约/路由变化。
+- 详见 docs/iter/round-3/design-r284-paper-social-proof.md。
