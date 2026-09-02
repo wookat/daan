@@ -1138,3 +1138,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：ruff/pytest 184(+1)/pyright 0/lint/vitest 358(+3)/build 全绿；生产 rev ebe60f8、bundle index-aaFA1QHz.js；API 实测乱序 secs roundtrip、缺省覆盖 {}、非法 8 类逐项 400；testing agent 跨设备实测：设备 A 1440 去抖 POST 实抓 secs {27,5}，设备 B 375 全新 CDP 隔离 context 同 uid 恢复 _secs 并继承累计（再切题抓包 {27,5,21}），首页续考卡与卷库横幅两入口分别实测（收口 R317 观察项），交卷报告题1「本题用时 27 秒」含设备 A 累计、R281 配速正常，交卷后 resume={}，双视口溢出 0、console 0 error；Lighthouse 全过（/ 0.98/LCP 819ms、/tiku/ 1.00）。清理 test-r318-api+test-r318ui-me DELETED 8 / LEFTOVER 0，保护 uid 30 表快照前后逐表一致。
 - 未生产实测：secs 非法值 400 分支的 UI 侧路径（API 已逐项自测）。
 - 详见 docs/iter/round-3/design-r318-progress-secs-sync.md。
+
+### R319：做卷页「排除干扰项」——长按选项划掉/恢复（PR #516）
+- 取证（SOP-10）：粉笔计时做题支持长按选项排除干扰项（缩小范围、二次回看不重复推理），本站做卷页选项只有选中/未选中两态。
+- 收口纯前端零后端/零契约/零 URL 状态：新纯函数 frontend-uni/src/exam-excl.js——toggleExcl(excl,k,picked)->{excl,picked}（长按切换排除；排除当前已选项时同时清空选择；输入不可变、非法入参 fail-closed）、pickWithExcl(excl,k)（选中即解除该项排除）。exam.vue 选项补 @longpress + .opt.excl（opacity 0.45 + otext 删除线，不改选中/未选中底色语义）；pick(k) 前置 pickWithExcl。_excl 为本机做题过程态：随既有 saveProgress() 整 items 快照持久化，pushProgress 不上传（服务端 progress 协议不动），交卷 payload 不变。
+- 验证：vitest 366(+8)/lint/build 全绿；生产 rev f4b9df7、bundle index-C1eUHopI.js；testing agent 真实做卷实测（1440/375）：长按排除/再长按恢复/排除已选项清空选择（答题卡变未答）/点击被排除项自动解除并选中/硬刷恢复弹窗后排除态保留；去抖 POST payload 键恰为 uid/attempt_id/picks/idx/marks/secs 无 excl；交卷报告无回归；双视口溢出 0、console 0 error；Lighthouse 独立复跑全过。清理 test-r319ui-me DELETED 7 / LEFTOVER 0，保护 uid 30 表快照一致。
+- 未生产实测：真实触屏设备长按手势（自动化 CDP touch 模拟，见 SKILL 经验）。
+- 观察项：排除态跨设备同步（可仿 R317/R318 marks/secs 模式服务端化）；刷题页同交互补齐。
+- 详见 docs/iter/round-3/design-r319-exam-option-exclude.md。
