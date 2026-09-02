@@ -740,6 +740,7 @@ export default {
     if (p.mod) this.filterMod = p.mod;
     if (p.src) this.srcFilter = p.src;
     if (p.sort) this.sortBy = p.sort;
+    if (p.review) uni.setStorageSync('autoStartReview', 1);
   },
   onReachBottom() {
     if (this.tab !== 'fav' && this.pageN < this.shownItems.length) this.pageN += 20;

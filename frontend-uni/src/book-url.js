@@ -25,5 +25,6 @@ export function parseBookOpts(opts) {
     mod: MODS.includes(o.mod) ? o.mod : '',
     src: SRCS.includes(o.src) ? o.src : '',
     sort: SORTS.includes(o.sort) ? o.sort : '',
+    review: o.review === '1',
   };
 }

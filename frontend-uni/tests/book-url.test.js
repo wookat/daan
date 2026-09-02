@@ -32,13 +32,22 @@ describe('parseBookOpts', () => {
       mod: 'yanyu',
       src: 'practice',
       sort: 'reason',
+      review: false,
     });
     expect(parseBookOpts({ tab: 'nope', mod: '<x>', src: '1', sort: 'DESC' })).toEqual({
       tab: '',
       mod: '',
       src: '',
       sort: '',
+      review: false,
     });
-    expect(parseBookOpts()).toEqual({ tab: '', mod: '', src: '', sort: '' });
+    expect(parseBookOpts()).toEqual({ tab: '', mod: '', src: '', sort: '', review: false });
+  });
+
+  it('review 仅 "1" 生效', () => {
+    expect(parseBookOpts({ review: '1' }).review).toBe(true);
+    expect(parseBookOpts({ review: '0' }).review).toBe(false);
+    expect(parseBookOpts({ review: 'true' }).review).toBe(false);
+    expect(parseBookOpts({ review: 1 }).review).toBe(false);
   });
 });
