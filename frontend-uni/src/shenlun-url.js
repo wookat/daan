@@ -22,9 +22,10 @@ export function buildShenlunFilterUrl(f) {
   return parts.length ? SHENLUN_PATH + '?' + parts.join('&') : SHENLUN_PATH;
 }
 
-export function buildShenlunTabUrl(tab, mtype) {
+export function buildShenlunTabUrl(tab, mtype, fav) {
   if (tab === 'r') return SHENLUN_PATH + '?tab=r';
   if (tab !== 'm') return SHENLUN_PATH;
+  if (fav) return SHENLUN_PATH + '?tab=m&fav=1';
   const t = typeof mtype === 'string' && mtype && mtype !== '全部' ? '&mtype=' + encodeURIComponent(mtype) : '';
   return SHENLUN_PATH + '?tab=m' + t;
 }

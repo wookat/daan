@@ -229,6 +229,7 @@ export default {
     else if (opts && opts.tab === 'm') {
       if (MTYPES.includes(opts.mtype || '')) this.mtype = opts.mtype;
       if (/^\d+$/.test(opts.mid || '')) this.pinMid = Number(opts.mid);
+      else if (opts.fav === '1') this.favOnly = true;
       this.switchMat();
     }
     if (opts && QTYPES.includes(opts.qtype || '')) this.setQtype(opts.qtype);
@@ -317,7 +318,7 @@ export default {
       this.loadQs();
     },
     filterUrl() {
-      if (this.tab !== 'q') return buildShenlunTabUrl(this.tab, this.mtype);
+      if (this.tab !== 'q') return buildShenlunTabUrl(this.tab, this.mtype, this.favOnly);
       return buildShenlunFilterUrl({ paper: this.paper, qtype: this.qtype, year: this.year, region: this.region });
     },
     syncFilterUrl() {
@@ -446,6 +447,7 @@ export default {
     },
     toggleFavOnly() {
       this.favOnly = !this.favOnly;
+      this.syncFilterUrl();
     },
     setMtype(t) {
       this.favOnly = false;

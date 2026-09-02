@@ -41,6 +41,13 @@ describe('buildShenlunTabUrl', () => {
     expect(buildShenlunTabUrl('q')).toBe(SHENLUN_PATH);
     expect(buildShenlunTabUrl()).toBe(SHENLUN_PATH);
   });
+  it('收藏视图生成 ?tab=m&fav=1，不叠 mtype；非素材 tab 忽略 fav', () => {
+    expect(buildShenlunTabUrl('m', '全部', true)).toBe(SHENLUN_PATH + '?tab=m&fav=1');
+    expect(buildShenlunTabUrl('m', '金句', true)).toBe(SHENLUN_PATH + '?tab=m&fav=1');
+    expect(buildShenlunTabUrl('m', '金句', false)).toBe(SHENLUN_PATH + '?tab=m&mtype=' + encodeURIComponent('金句'));
+    expect(buildShenlunTabUrl('r', '', true)).toBe(SHENLUN_PATH + '?tab=r');
+    expect(buildShenlunTabUrl('q', '', true)).toBe(SHENLUN_PATH);
+  });
 });
 
 describe('buildShenlunUrl', () => {
