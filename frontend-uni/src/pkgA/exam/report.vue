@@ -100,6 +100,10 @@
           <text class="lg"><text class="dot bad"></text>答错</text>
           <text class="lg"><text class="dot"></text>未答</text>
         </view>
+        <view v-if="redoCount" class="redo-cta" role="button" aria-label="本卷错题重练" @click="redoWrong">
+          <text class="redo-cta-t">本卷错题重练（{{ redoCount }} 题）</text>
+          <text class="redo-cta-s">按刷题模式把本卷答错的题重做一遍{{ wrongTotal > redoCount ? '（本轮先练前 ' + redoCount + ' 题）' : '' }}</text>
+        </view>
       </view>
 
       <view class="btns">
@@ -132,6 +136,8 @@
             <text class="dq">{{ detailMat.stem }}</text>
           </template>
           <text v-else class="dq">{{ detail.question }}</text>
+          <image v-if="detail.image" class="dimg" :src="imgUrl(detail.image)" mode="widthFix" @click="previewImg(detail.image)" />
+          <view v-if="detail.image && detail.image_credit" class="dimg-credit">图源：{{ detail.image_credit }}</view>
           <view v-for="(v, k) in detail.options" :key="k" class="dopt" :class="{ right: k === detail.answer, wrong: k === detail.picked && k !== detail.answer }">
             <text>{{ k }}. {{ v }}</text>
           </view>
@@ -149,9 +155,10 @@
 </template>
 
 <script>
-import { request, anonUid, isNetErr } from '../../api.js';
+import { request, anonUid, isNetErr, BASE_URL } from '../../api.js';
 import { splitMaterial } from '../../material.js';
 import { buildPaceRows, fmtMin } from '../../exam-pace.js';
+import { buildExamRedoSet } from '../../exam-redo.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
 const MOD_ORDER = ['changshi', 'yanyu', 'shuliang', 'panduan', 'ziliao'];
@@ -205,6 +212,14 @@ export default {
           pct: Math.max(4, Math.round((p.secs / Math.max(p.secs, p.refSecs, 1)) * 100)),
         }));
     },
+    wrongTotal() {
+      const r = this.report;
+      return r ? r.items.filter((it) => it.picked && !it.correct).length : 0;
+    },
+    redoCount() {
+      const r = this.report;
+      return r ? buildExamRedoSet(r.items).length : 0;
+    },
   },
   onLoad(opt) {
     if (opt && opt.attempt_id) {
@@ -251,6 +266,18 @@ export default {
       uni.redirectTo({ url: p.kind === 'mock' ? '/pkgA/exam/exam?mini=1' : '/pkgA/exam/exam?paper_id=' + p.id });
     },
     fmtMin,
+    imgUrl(p) {
+      return /^https?:/.test(p) ? p : (BASE_URL || '') + p;
+    },
+    previewImg(p) {
+      uni.previewImage({ urls: [this.imgUrl(p)] });
+    },
+    redoWrong() {
+      const set = buildExamRedoSet(this.report.items);
+      if (!set.length) return;
+      uni.setStorageSync('redoSet', set);
+      uni.navigateTo({ url: '/pages/practice/practice' });
+    },
     goPractice(tag3) {
       uni.setStorageSync('practiceLaunch', { kind: 'start', tag3: tag3 || null, count: 10, adaptive: true });
       uni.navigateTo({ url: '/pages/practice/practice' });
@@ -294,6 +321,11 @@ export default {
 .legend { display: flex; gap: 24rpx; }
 .lg { display: inline-flex; align-items: center; gap: 8rpx; font-size: 22rpx; color: var(--ink-2); }
 .dot { width: 20rpx; height: 20rpx; border-radius: 50%; background: var(--soft-bg); border: 2rpx solid var(--line); display: inline-block; }
+.redo-cta { margin-top: 20rpx; border: 2rpx solid var(--brand); border-radius: 16rpx; padding: 18rpx 22rpx; background: var(--brand-soft); cursor: pointer; }
+.redo-cta-t { display: block; font-size: 26rpx; font-weight: 600; color: var(--brand); }
+.redo-cta-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
+.dimg { width: 100%; border-radius: 12rpx; margin-bottom: 8rpx; }
+.dimg-credit { font-size: 21rpx; color: var(--ink-2); margin-bottom: 16rpx; }
 .dot.ok { background: #86efac; border-color: #86efac; }
 .dot.bad { background: #fca5a5; border-color: #fca5a5; }
 .btns { display: flex; gap: 16rpx; }

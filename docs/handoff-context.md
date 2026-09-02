@@ -989,3 +989,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：SOP-10 四维复审计（生产 1440/375 十路由截图 + 源码核查）定位核心功能深度缺口——交卷链路 per_module 已聚合 secs 并随 attempt 落库，报告页从未呈现（只有得分维度）；粉笔模考报告核心维度之一即各模块用时 vs 参考用时。SSR 题目页全站正确率外显候选被否决（生产 attempt_count>=5 仅 17 题，覆盖面不足）。
 - 收口纯前端：新增 src/exam-pace.js 纯函数 buildPaceRows（参考用时按题量占比折算自本卷限时；>1.2× 超时/<0.6× 偏快/其余合理；durationMin/total 非法或全模块 secs=0 返回空不伪造）+ fmtMin；report.vue 侧栏「模块得分」下新增配速卡（status 着色条 + 用时/参考双值 + 折算口径底注），空 rows 整卡不渲染（历史无 secs attempt 自然隐藏）。零后端/契约变化。
 - 详见 docs/iter/round-3/design-r281-exam-report-pace.md。
+
+## R282（模考报告「本卷错题重练」CTA + 逐题解析补图片）
+- 取证：报告页看完错题后无一键重练出口（只有返回卷库/再考一次，粉笔模考报告核心 CTA 即错题重练）；且 /api/exam/report items 不含 image/image_credit，带图题（图形推理等）解析浮层图片缺失。重练机制已存在（book.vue redoAll → redoSet storage → practice.vue 消费，上限 10 题）。
+- 收口：后端 report items 增补 image/image_credit 两字段（向后兼容）；前端新增 src/exam-redo.js 纯函数 buildExamRedoSet（只收 picked&&!correct、脏数据过滤、字段映射 id←question_id、上限 10）；report.vue 逐题对错卡下新增重练 CTA（无错题不显示、超 10 题外显「本轮先练前 10 题」）+ 解析浮层渲染图片（BASE_URL 拼接 + 点击预览，对齐 practice.vue）。未答题不算错题不进组。
+- 详见 docs/iter/round-3/design-r282-exam-report-redo.md。
