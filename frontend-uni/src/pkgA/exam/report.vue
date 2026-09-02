@@ -153,6 +153,7 @@
             正确答案 <text class="da ok">{{ detail.answer }}</text>
             <template v-if="detail.picked">，你选了 <text class="da" :class="detail.correct ? 'ok' : 'bad'">{{ detail.picked }}</text></template>
           </view>
+          <view v-if="detailStatLine" class="dstat">{{ detailStatLine }}</view>
           <view v-if="detail.hs_explanation || detail.explanation" class="dexp">
             <text>{{ detail.hs_explanation || detail.explanation }}</text>
           </view>
@@ -176,6 +177,7 @@ import { buildExamRedoSet } from '../../exam-redo.js';
 import { buildExamReportShareText } from '../../exam-share.js';
 import { reviewStep } from '../../exam-review.js';
 import { isFaved, toggleFav } from '../../exam-fav.js';
+import { qStatLine } from '../../q-stat.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
 const MOD_ORDER = ['changshi', 'yanyu', 'shuliang', 'panduan', 'ziliao'];
@@ -198,6 +200,9 @@ export default {
       if (!a || !a.submitted_at) return '-';
       const s = Math.max(0, Math.round(a.submitted_at - a.started_at));
       return Math.floor(s / 60) + ' 分 ' + (s % 60) + ' 秒';
+    },
+    detailStatLine() {
+      return qStatLine(this.detail);
     },
     detailFaved() {
       return !!this.detail && isFaved(this.favs, this.detail.question);
@@ -441,6 +446,7 @@ export default {
 .dopt.right { border-color: var(--ok, #16a34a); background: var(--ok-soft); }
 .dopt.wrong { border-color: var(--bad, #dc2626); background: var(--bad-soft); }
 .dans { font-size: 25rpx; color: var(--ink-2); margin: 10rpx 0 16rpx; }
+.dstat { font-size: 23rpx; color: var(--ink-2); margin: -6rpx 0 16rpx; }
 .da { font-weight: 800; font-size: 28rpx; }
 .da.ok { color: var(--ok, #16a34a); }
 .da.bad { color: var(--bad, #dc2626); }

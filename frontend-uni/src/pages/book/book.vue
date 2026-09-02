@@ -408,6 +408,7 @@
           <text class="rpill wrong">我选 {{ ansLetter(m.user_answer) }}</text>
           <text v-if="ansLetter(m.correct_answer)" class="rpill right">答案 {{ ansLetter(m.correct_answer) }}</text>
         </view>
+        <view v-if="m.open && mStatLine(m)" class="mstat">{{ mStatLine(m) }}</view>
         <view v-if="m.open && m.attempts && m.attempts.length" class="attempts">
           <view class="att-h">历次作答 · {{ m.attempts.length }} 次</view>
           <view v-for="(a, ai) in m.attempts" :key="ai" class="att-row">
@@ -486,6 +487,7 @@ import { md } from '../../md.js';
 import { request, anonUid, exportPdf, scanSheet, shareCreate, trackEvent, qShareText, shareVariant } from '../../api.js';
 import { buildBookUrl, parseBookOpts } from '../../book-url.js';
 import { cacheMistakes, getCachedMistakes } from '../../offline.js';
+import { qStatLine } from '../../q-stat.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 
@@ -983,6 +985,14 @@ export default {
       if (!m.review_count) return 'lv-new';
       return m.review_count >= 2 ? 'lv-good' : 'lv-mid';
     },
+    mStatLine(m) {
+      return qStatLine({
+        attempt_count: m.attempt_count,
+        correct_ratio: m.correct_ratio,
+        most_wrong: m.most_wrong,
+        answer: this.ansLetter(m.correct_answer),
+      });
+    },
     ansLetter(s) {
       const m = /[A-D]+/.exec(String(s || '').toUpperCase());
       return m ? [...new Set(m[0])].sort().join('') : '';
@@ -1425,6 +1435,7 @@ export default {
 .srcbadge { font-size: 20rpx; color: #6d28d9; background: #ede9fe; border-radius: 999rpx; padding: 4rpx 14rpx; }
 .zhan { margin-left: auto; font-size: 22rpx; font-weight: 700; color: var(--ok); border: 3rpx solid var(--ok); border-radius: 8rpx; padding: 2rpx 12rpx; transform: rotate(-8deg); }
 .anscmp { margin-top: 12rpx; font-size: 23rpx; display: flex; gap: 12rpx; align-items: center; flex-wrap: wrap; }
+.mstat { margin-top: 10rpx; font-size: 22rpx; color: var(--ink-2); }
 .anscmp .ca { color: var(--ok); font-weight: 600; }
 .rpill { font-size: 22rpx; font-weight: 600; border-radius: 999rpx; padding: 6rpx 20rpx; }
 .rpill.wrong { background: #fee2e2; color: #b91c1c; }

@@ -2457,10 +2457,7 @@ def practice_history_detail(uid: str, start: float, end: float) -> list[dict]:
     return out
 
 
-def refresh_question_stats() -> int:
-    """聚合 answer_log 为每题刷新全站作答人次/正确率/易错项。"""
-    conn = get_conn()
-    _ensure_answer_log(conn)
+def _ensure_question_stat_cols(conn) -> None:
     qcols = {r["name"] for r in conn.execute("PRAGMA table_info(questions)")}
     for col, ddl in [
         ("attempt_count", "ALTER TABLE questions ADD COLUMN attempt_count INTEGER"),
@@ -2469,6 +2466,13 @@ def refresh_question_stats() -> int:
     ]:
         if col not in qcols:
             conn.execute(ddl)
+
+
+def refresh_question_stats() -> int:
+    """聚合 answer_log 为每题刷新全站作答人次/正确率/易错项。"""
+    conn = get_conn()
+    _ensure_answer_log(conn)
+    _ensure_question_stat_cols(conn)
     rows = conn.execute(
         """SELECT question_id qid, COUNT(*) n, SUM(correct) c
            FROM answer_log WHERE question_id IS NOT NULL GROUP BY question_id"""
@@ -2969,10 +2973,12 @@ def save_mistake(rec: dict) -> int:
 def list_mistakes(limit: int = 500, uid: str | None = None) -> list[dict]:
     conn = get_conn()
     _ensure_mistake_uid(conn)
+    _ensure_question_stat_cols(conn)
     cl = " AND m.uid=?" if uid else " AND m.uid IS NULL"
     args = (uid,) if uid else ()
     rows = conn.execute(
-        f"""SELECT m.*, q.tag3, q.options AS q_options FROM mistakes m
+        f"""SELECT m.*, q.tag3, q.options AS q_options,
+            q.attempt_count, q.correct_ratio, q.most_wrong FROM mistakes m
             LEFT JOIN questions q ON q.id=m.question_id
             WHERE 1=1{cl} ORDER BY m.created_at DESC LIMIT ?""",
         (*args, limit),

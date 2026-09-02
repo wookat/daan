@@ -357,6 +357,7 @@ import { pickAnnounceText } from '../../live-policy.js';
 // #endif
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
+import { qStatLine } from '../../q-stat.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -483,13 +484,7 @@ export default {
       return parts.filter(Boolean).join(' › ');
     },
     qStatLine() {
-      const q = this.cur;
-      if (!q || !q.attempt_count || q.attempt_count < 5 || q.correct_ratio == null) return '';
-      const r = q.correct_ratio;
-      const stars = '★'.repeat(r > 85 ? 1 : r > 70 ? 2 : r > 55 ? 3 : r > 40 ? 4 : 5);
-      let s = `难度${stars} · 全站正确率 ${r}%（${q.attempt_count} 人次）`;
-      if (q.most_wrong && q.most_wrong !== q.answer) s += ` · 易错项 ${q.most_wrong}`;
-      return s;
+      return qStatLine(this.cur);
     },
     matInfo() {
       const q = this.cur;
