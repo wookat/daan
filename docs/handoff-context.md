@@ -1077,3 +1077,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：lint/vitest 326(+11)/build/diff-check 全绿；生产 rev 0ef3f65、bundle index-B92FBO3H.js；testing agent 双视口实测：交卷后「考过的」120→1、「没考过」119 不含该卷、?st= 硬刷恢复、?st=abc 回退全部、year+region+st 三参组合与空态放宽提示、?pid 可见 pin/隐藏静默双分支、双视口溢出 0、console 0 error；性能预算全过（/ 0.98、/tiku/ 1.00）。测试数据清理 test-r309-*（DELETED 2 / leftover 0）。
 - 陷阱：切 chips 属 hash query-only 变化不触发 uni onLoad，验证入向恢复需硬 reload/新开页（同 R307 经验）。
 - 详见 docs/iter/round-3/design-r309-exam-list-status-filter.md。
+## R310（真题卷库刷卷进度外显——「已刷 X/N 卷」进度条 + 状态 chips 计数，PR #501）
+- 取证（SOP-10）：R309 状态筛选后 chips 无计数、页面无刷卷总进度锚点（粉笔卷库外显「已做 N 套」）；数据早在客户端 items[].best_score，纯本地可算零请求。
+- 收口纯前端零后端：src/exam-list-progress.js 纯函数 paperProgress(items)（非数组 fail-closed {0,0,0}；done=best_score!=null 与 R309 同口径；pct 四舍五入；输入不可变）。list.vue 筛选区上方进度卡（total>0 渲染，「已刷 X/N 卷」+pct+细进度条 role=progressbar 全套 aria，done===total 显「全部刷完 🎉」）+ 状态 chips 带计数「没考过 N / 考过的 M」；口径为当前 year/region 服务端筛选范围内进度。
+- 验证：lint/vitest 331(+5)/build/diff-check 全绿；生产 rev 19d822c、bundle index-PCGlgYRK.js；testing agent 双视口实测：0/120→交卷（0 分实证算考过）→1/120·1% 最小填充、year/region 收窄口径一致、2025+贵州命中「全部刷完 🎉」100% 分支（生产可安全构造：选仅含 1 张已考卷的范围）、R309 st 筛选回归且进度卡不受 st 影响、aria valuenow 一致、溢出 0、console 0 error；性能预算全过（/ 0.98、/tiku/ 1.00）。测试数据清理 DELETED 2 / leftover 0。
+- 观察项：🎉 在无 emoji 字体设备渲染为方框（DOM 正确，测试机即如此），后续可考虑纯文本兜底。
+- 详见 docs/iter/round-3/design-r310-exam-list-progress.md。
