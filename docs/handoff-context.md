@@ -961,3 +961,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：错题本 tab（待掌握/已掌握/收藏）、模块筛选、模考/练习来源、排序均为纯本地状态，刷新即丢、不可分享；申论/搜索侧同类状态 R261–R263/R270 已闭环，错题本是最后一个主要筛选态不进 URL 的页面。
 - 收口：新增 book-url.js 纯函数（buildBookUrl/parseBookOpts，白名单 tab=done|fav、mod 六模块、src=exam|practice、sort=due|times|type|reason；默认省略、fav 不叠筛选/排序、非法忽略）+ book.vue watcher replaceState 同步 + onLoad 白名单恢复；不收 kw/kpFilter/kp3Filter（依赖动态加载数据）。纯前端零后端/SSR/SEO 变化。
 - 详见 docs/iter/round-3/design-r276-book-filter-url-sync.md。
+
+## R277（真题卷库 year/region 筛选 URL 同步 + 入向深链）
+- 取证：pkgA/exam/list 的 year/region 筛选为纯本地状态（setYear/setRegion 只重拉 /api/exam/papers，不进 URL、无 onLoad 恢复），刷新/复制/分享即丢；生产 API filters 实证 years 11 档、regions 26 地区可作白名单。
+- 收口：新增 exam-list-url.js 纯函数（buildExamListUrl/parseExamListOpts，年份 1990–2099 整数、region encodeURIComponent、malformed URI 不抛错）+ list.vue onLoad 暂存入向参数、首次真实 filters 返回后按 API 白名单应用一次并重拉列表、setYear/setRegion 经 syncUrl() replaceState 同步（#ifdef H5 守卫）。顺手清零 edge-handler.test.js:318 两处 no-useless-escape lint 基线。纯前端零后端/SSR/SEO 变化。
+- 详见 docs/iter/round-3/design-r277-exam-list-filter-url-sync.md。
