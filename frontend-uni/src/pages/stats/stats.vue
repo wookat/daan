@@ -213,6 +213,33 @@
       </template>
     </view>
 
+    <view v-if="examTrendD" class="card">
+      <view class="h">模考成绩趋势（近 {{ examTrendD.points.length }} 次）</view>
+      <view class="trend et-wrap">
+        <view v-if="examTrendD.targetPct != null" class="et-target" :style="{ bottom: examTrendD.targetPct + '%' }">
+          <text class="et-target-t">目标 {{ examTrendD.target }} 分</text>
+        </view>
+        <view
+          v-for="p in examTrendD.points"
+          :key="p.id"
+          class="trend-col"
+          role="button"
+          :aria-label="'查看这次模考报告，得分 ' + p.score + ' 分'"
+          :tabindex="0"
+          @click="goExamReport(p.id)"
+          @keydown.enter="goExamReport(p.id)"
+        >
+          <view class="trend-bar" :class="{ lo: p.score < examTrendD.scaleMax * 0.6, mid: p.score >= examTrendD.scaleMax * 0.6 && p.score < examTrendD.scaleMax * 0.8 }" :style="{ height: Math.max((p.score / examTrendD.scaleMax) * 100, 4) + '%' }" />
+        </view>
+      </view>
+      <view class="trend-x">
+        <text>旧</text>
+        <text>最好 {{ examTrendD.best }} 分 · 最近 {{ examTrendD.latest }} 分</text>
+        <text>新</text>
+      </view>
+      <view class="et-note">点柱查看单次报告 · 不同卷难度不同，仅供参考</view>
+    </view>
+
     <view v-if="history.length >= 3" class="card">
       <view class="h">正确率趋势（近 {{ trendData.length }} 次）</view>
       <view class="trend">
@@ -331,6 +358,7 @@
 import { request, snapPeek, anonUid, getAuthUser, authLogout, clearAuth, fetchCheckinSummary, trackEvent } from '../../api.js';
 import { md } from '../../md.js';
 import { checkinStreak } from '../../checkin.js';
+import { examTrend } from '../../exam-trend.js';
 
 // 旧版缓存的 AI 建议内联了旧紫色，读取时映射到品牌色
 function cleanCoach(s) {
@@ -347,7 +375,7 @@ const MODS = [
 
 export default {
   data() {
-    return { authUser: getAuthUser(), loadErr: '', byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, kmCov: null, history: [], showAllHist: false, coachHtml: cleanCoach(uni.getStorageSync('coachAdvice') || ''), coachLoading: false, growth: null, reco: null, dueN: 0, gwMod: '', slStats: null, slIssuesOpen: false, modOpen: false, topOpen: false, secOpen: { coach: false, medal: false, bk: false }, hmDays: null, svStreak: null };
+    return { authUser: getAuthUser(), loadErr: '', byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, kmCov: null, history: [], showAllHist: false, coachHtml: cleanCoach(uni.getStorageSync('coachAdvice') || ''), coachLoading: false, growth: null, reco: null, dueN: 0, gwMod: '', slStats: null, slIssuesOpen: false, modOpen: false, topOpen: false, secOpen: { coach: false, medal: false, bk: false }, hmDays: null, svStreak: null, examAttempts: null, examTarget: null };
   },
   computed: {
     shownModules() {
@@ -367,6 +395,9 @@ export default {
       const d = new Date(this.slStats.last_at * 1000);
       const p = (n) => (n < 10 ? '0' + n : n);
       return p(d.getMonth() + 1) + '-' + p(d.getDate());
+    },
+    examTrendD() {
+      return examTrend(this.examAttempts, this.examTarget);
     },
     speedData() {
       return this.history
@@ -590,6 +621,7 @@ export default {
     this.loadReco();
     this.loadSlStats();
     this.loadMastery();
+    this.loadExamTrend();
     this.load();
   },
   methods: {
@@ -606,6 +638,22 @@ export default {
       } catch (e) {
         return [];
       }
+    },
+    async loadExamTrend() {
+      try {
+        const uid = encodeURIComponent(anonUid());
+        const [att, prof] = await Promise.all([
+          request('/api/exam/attempts?uid=' + uid + '&limit=20'),
+          request('/api/profile?uid=' + uid)
+        ]);
+        this.examAttempts = att.items || [];
+        this.examTarget = prof.profile && prof.profile.target_score != null ? prof.profile.target_score : null;
+      } catch (e) {
+        /* 非关键路径：失败不渲染 */
+      }
+    },
+    goExamReport(id) {
+      uni.navigateTo({ url: '/pkgA/exam/report?attempt_id=' + id });
     },
     async loadHeatmap() {
       try {
@@ -1024,6 +1072,10 @@ export default {
 .trend-bar.mid { background: #f59e0b; }
 .trend-bar.lo { background: #dc2626; }
 .trend-x { display: flex; justify-content: space-between; font-size: 22rpx; color: var(--ink-2); margin-top: 10rpx; }
+.et-wrap { position: relative; }
+.et-target { position: absolute; left: 0; right: 0; border-top: 2rpx dashed var(--warn-strong); z-index: 1; pointer-events: none; }
+.et-target-t { position: absolute; right: 0; top: -30rpx; font-size: 20rpx; color: var(--warn-strong); }
+.et-note { font-size: 20rpx; color: var(--ink-2); margin-top: 8rpx; }
 .hist-mod { font-size: 24rpx; flex: 1; }
 .hist-mod.exam { color: #b45309; font-weight: 600; }
 .hist-n { font-size: 24rpx; color: var(--ink-2); }

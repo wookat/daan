@@ -1037,3 +1037,23 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 收口（纯前端零后端）：src/exam-goal.js 纯函数 goalGap(score,target)（target 非法/未设/≤0 或 score 空→null，否则 {target,gap}，1 位小数）与 prevScoreDelta(history,curId)（正序 history 定位当前 attempt，无前次→null）；report.vue load 后并行 GET /api/profile（失败静默 targetScore=null），hero-meta 补「较上次同卷 +X/−X 分/持平」，rank-card 下补「距离目标」卡（对齐 contest-report gap-row 视觉：目标分 Y → 已达标 🎉 / 还差 Z 分）；缺数据一律不渲染不伪造。
 - 验证：lint/vitest 280(+10)/build/diff-check 全绿（后端零改动）；生产 rev dd488be 部署 + API/Lighthouse 回归全过；真实接口种子（profile target 70 + paper 24 两次模考 5.9→17.6）实测 1440/375：目标卡「目标分 70 还差 52.4 分」、hero「较上次同卷 +11.7 分」、首次 attempt 不显较上次、清除 target 后目标卡与目标行均不渲染、溢出 0、console 0 error。测试 uid 全库清理 deleted 57 / leftover 0。注意：report.vue 的 uid 取 anonUid()，UI 验证需把测试 uid 写入 localStorage anonUid 后再开报告深链。
 - 详见 docs/iter/round-3/design-r302-report-goal-anchor.md。
+
+## R303（学习统计页补「模考成绩趋势」卡，PR #492）
+- 取证（SOP-10）：stats.vue 已有热力图/雷达/错题分布/正确率与速度趋势等 10+ 视图，但对模考只在「练习记录」混排单条 attempt，跨卷成绩趋势全站无处可看（报告页历史曲线只限同卷 R281；卷库列表只有最近 attempt 行）；数据早已齐备：GET /api/exam/attempts?uid=（DESC，含 score/kind/submitted_at）+ /api/profile target_score（R302 已消费）。
+- 收口（纯前端零后端）：src/exam-trend.js examTrend(items,target,cap=10)——过滤 score 空/未交卷、最近 cap 条反转正序、<2 条 null 不渲染；scaleMax=max(scores,合法 target,10) 取整到 10 封顶 100；target 合法性复用 exam-goal goalGap 语义，非法不画参考线。stats.vue onShow 并行 loadExamTrend()（attempts limit=20 + profile，失败静默），「正确率趋势」前插趋势卡：复用 .trend 柱状视觉 + 虚线目标线（--warn-strong）+「最好 X 分 · 最近 Y 分」底注 + 「不同卷难度不同，仅供参考」口径注明；柱 role=button 可点/Enter 进对应报告深链。
+- 验证：lint/vitest 287(+7)/build/diff-check 全绿（后端零改动）；生产 rev cfb991f 部署 + API/Lighthouse 回归全过（/ 0.98、/tiku/ 1.00）；真实接口种子（target 70 + paper 24 三次模考 23.5→5.9→17.6）实测 1440/375：趋势卡 3 柱正序、目标线「目标 70 分」就位、底注「最好 23.5 分 · 最近 17.6 分」、点柱进对应报告（分数一致）、单次/零模考不渲染、清除 target 后目标线消失柱保留、溢出 0、console 0 error。测试 uid 全库清理 deleted 116 / leftover 0。
+- 详见 docs/iter/round-3/design-r303-stats-exam-trend.md。
+
+## R304（模考成绩海报，PR #493）
+- 取证（SOP-10）：模考报告唯一分享出口是 R283 纯文本复制；全站唯一海报能力 poster.vue 只支持打卡/徽章，成绩零图片出口（粉笔模考有成绩海报，微信场景图片传播力强于文本）。数据全部现成（report+rank），纯前端收口，不新增图片服务端渲染/存储，不泄露 uid。
+- 收口：src/exam-poster.js 纯函数 examPosterData(report,rank)——成绩取 **report.attempt.score**（顶层无 score！），total<=0/score 非法→null；beatenPct 仅 rank.total>=10 且 beaten_pct 有限时给出（低样本 fail-closed）；QR 落点 zhenti+合法 paperId → /tiku/papers/{id}，否则站点根。poster.vue 增 ?mode=exam&attempt_id=N 模式（报告接口是**路径参数** /api/exam/report/{attempt_id}?uid=，非 query），rank 失败降级基础海报；H5/小程序绘制分支调用动态 draw(ctx,d)（勿硬编码 drawPoster）。report.vue share 区补「生成成绩海报」CTA + share_poster 埋点。
+- 契约纠偏（生产实测发现，追加提交 c282c52）：初版误用 query 参数路径与顶层 score，生产 404/取值失败；以 backend/app/exam_api.py 与真实生产响应为准修正，测试 fixture 同步改为 attempt:{id,score} 形状。
+- 验证：lint/vitest 292(+5)/build/diff-check 全绿；生产 rev c282c52、bundle index-77hv-Tcy.js；testing agent 双视口实测全过：报告页 CTA→海报页 35.3 分/6/17/73%、QR zbarimg 客观解码（真题→/tiku/papers/24、mock→站点根）、低样本 rank.total=1 击败栏正确隐藏、H5 PNG data URL、1440/375 溢出 0、console 0 error。测试 uid（12 个 r304*）全库清理 deleted 391 / leftover 0。注意：uid 注入 localStorage 键是 anonUid（非 uid）。
+- 详见 docs/iter/round-3/design-r304-exam-poster.md。
+
+## R305（模考报告同卷排行榜 Top 10，PR #494）
+- 取证（SOP-10）：rank 接口早有个人排名/击败百分比/分布，但报告不外显同卷高分者与差距（粉笔成绩报告有排行）；每日一练已有榜单+昵称脱敏先例，R283/R284/R304 分享与社会证明线的自然下一步。
+- 收口：后端 /api/exam/rank/{attempt_id} 纯增量补 `board`（同卷已交卷 attempts 按 uid 聚合每人取最高分 MAX(score)、同分按 MIN(submitted_at) 先参与在前、Top 10；昵称源 users.nickname 仅对 `u\d+` uid 批量查、strip+20 字截断、空昵称/匿名回落 uid[:6]+"***"，不外泄完整 uid；me 标记查询者本人；仍仅限本人查询自己 attempt，不进公开 SSR）。前端 exam-board.js 纯函数（board 缺失/有效行 <2 → null 不渲染；无效 score 行过滤（注意 Number(null)=0 陷阱，用 num() 归 NaN）；本人不在前十且 rank/score 合法时追加「我」行），rank-card.vue 分布图下渲染榜单，复用既有请求零新增。
+- 验证：ruff/pytest 167(+7)/pyright 0/lint/vitest 300(+13)/build/diff-check 全绿；生产 rev b33f12e、bundle index-DgyXb4Ot.js；API 实测 5 uid 种子（含同分先参与在前、per-user-best 低分重考不占行）逐项符合契约；UI 双视口实测榜单顺序/脱敏/本人高亮（--brand-soft）/solo 单人隐藏/溢出 0/console 0 error（「本人不在前十」分支仅 vitest 覆盖未生产实测）。测试数据全库清理 deleted 284 行 + mock 卷 2 张 / leftover 0。
+- 陷阱：直接 python 探针调生产 API 需带浏览器 UA 否则 R88 边缘 403；conftest seed_questions 改为 insert-or-ignore 后按 module+题干回查稳定 id（lastrowid 跨连接不可靠曾致全量跑随机 KeyError）。
+- 详见 docs/iter/round-3/design-r305-exam-board.md。

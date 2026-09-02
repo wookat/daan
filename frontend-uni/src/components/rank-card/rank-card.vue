@@ -25,11 +25,21 @@
       </view>
     </view>
     <text class="r-hint">你在 {{ data.my_bucket * 10 }}-{{ data.my_bucket * 10 + 10 }} 分段（蓝色）</text>
+    <!-- 同卷排行榜（每人取最高分口径，与击败比例一致） -->
+    <view v-if="boardRows" class="r-board">
+      <text class="r-board-t">同卷排行榜</text>
+      <view v-for="b in boardRows" :key="b.rank + b.name" class="r-brow" :class="{ me: b.me }">
+        <text class="r-brank">{{ b.rank }}</text>
+        <text class="r-bname">{{ b.name }}<text v-if="b.me && b.name !== '我'" class="r-bme">（我）</text></text>
+        <text class="r-bscore">{{ b.score }} 分</text>
+      </view>
+    </view>
   </view>
 </template>
 
 <script>
 import { request, anonUid } from '../../api.js';
+import { examBoardRows } from '../../exam-board.js';
 
 export default {
   name: 'RankCard',
@@ -40,6 +50,9 @@ export default {
   computed: {
     tinySample() {
       return !!this.data && this.data.total < 10;
+    },
+    boardRows() {
+      return examBoardRows(this.data);
     },
   },
   mounted() {
@@ -83,4 +96,13 @@ export default {
 .r-bar.me { background: var(--brand); }
 .r-col-l { font-size: 18rpx; color: var(--ink-3); margin-top: 4rpx; }
 .r-hint { font-size: 22rpx; color: var(--ink-3); margin-top: 8rpx; }
+.r-board { margin-top: 22rpx; border-top: 1rpx solid var(--line); padding-top: 18rpx; }
+.r-board-t { font-size: 26rpx; font-weight: 600; color: var(--ink); display: block; margin-bottom: 10rpx; }
+.r-brow { display: flex; align-items: center; gap: 16rpx; padding: 10rpx 12rpx; border-radius: 10rpx; }
+.r-brow.me { background: var(--brand-soft); }
+.r-brank { width: 44rpx; font-size: 26rpx; font-weight: 700; color: var(--ink-3); text-align: center; }
+.r-brow.me .r-brank { color: var(--brand-text); }
+.r-bname { flex: 1; font-size: 26rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.r-bme { font-size: 22rpx; color: var(--brand-text); }
+.r-bscore { font-size: 26rpx; font-weight: 600; color: var(--ink); }
 </style>

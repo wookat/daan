@@ -37,7 +37,7 @@ def seed_questions(per_module: int = 3, modules=("ziliao", "shuliang", "yanyu", 
     ids = []
     for mod in modules:
         for i in range(per_module):
-            cur = conn.execute(
+            conn.execute(
                 "INSERT OR IGNORE INTO questions (module, question_type, question, options, answer,"
                 " explanation, is_real, disabled) VALUES (?,?,?,?,?,?,1,0)",
                 (
@@ -49,8 +49,12 @@ def seed_questions(per_module: int = 3, modules=("ziliao", "shuliang", "yanyu", 
                     "测试解析：选 A。",
                 ),
             )
-            if cur.lastrowid:
-                ids.append(cur.lastrowid)
+            row = conn.execute(
+                "SELECT id FROM questions WHERE module=? AND question=?",
+                (mod, f"测试题干 {mod}-{i}：以下说法正确的是？"),
+            ).fetchone()
+            if row:
+                ids.append(row["id"])
     conn.commit()
     conn.close()
     return ids
