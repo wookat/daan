@@ -591,3 +591,4 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 生产 DB 清理可走 TICKETS_VPS_SSH_* 环境变量 + `sshpass -e ssh … "docker exec -i deploy-kaogong-1 python3 -"` 内联脚本：全表 PRAGMA table_info 扫 uid/user_id 列按测试前缀 DELETE，并回读 leftover=0。
 - 报告页键盘断言注意：逐题 75 个对错圆圈均在 Tab 序列内，Tab 至页尾 CTA 需 ~75 次；用 CDP Input.dispatchKeyEvent 循环 + activeElement 轮询客观定位目标。
 - 卷库横滚 chips 行（年份/地区 scroll-view）滚动后各 chip 屏幕坐标会变：点击前先截图核对当前坐标，误点后用「全部年份/全部地区」复位；「全部刷完 🎉」分支可在生产安全构造——选一个仅含 1 张已考卷的 year+region 范围即可。
+- 模考交卷 API 的 picks 以题号（1 起）为 key、选项字母为值（如 `{"1":"A",…,"75":"A"}`）：全选 A 可稳定得到 >0 分，配合空 picks 0 分即可构造同卷高低分双 attempt，验证 best_attempt_id 类契约。

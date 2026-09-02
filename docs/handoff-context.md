@@ -1083,3 +1083,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：lint/vitest 331(+5)/build/diff-check 全绿；生产 rev 19d822c、bundle index-PCGlgYRK.js；testing agent 双视口实测：0/120→交卷（0 分实证算考过）→1/120·1% 最小填充、year/region 收窄口径一致、2025+贵州命中「全部刷完 🎉」100% 分支（生产可安全构造：选仅含 1 张已考卷的范围）、R309 st 筛选回归且进度卡不受 st 影响、aria valuenow 一致、溢出 0、console 0 error；性能预算全过（/ 0.98、/tiku/ 1.00）。测试数据清理 DELETED 2 / leftover 0。
 - 观察项：🎉 在无 emoji 字体设备渲染为方框（DOM 正确，测试机即如此），后续可考虑纯文本兜底。
 - 详见 docs/iter/round-3/design-r310-exam-list-progress.md。
+
+### R311：考过的卷卡直达成绩报告（PR #503）
+- 取证（SOP-10）：卷卡外显最好成绩但零回看入口，只能翻页底模考记录（limit 10）或重新交卷；报告页 ?attempt_id= 深链早已就绪（粉笔已做卷有「查看报告」）。
+- 收口：后端 list_exam_papers uid 合并段改单查询 Python 聚合，契约纯增量补 best_attempt_id（最高分 attempt，同分取 id 更大即更近；未考 null；best_score/attempt_count 语义不变，未交卷不参与）；前端 list.vue 卷卡 best_attempt_id 存在时增「看报告」按钮 → /pkgA/exam/report?attempt_id=，fail-closed 缺字段不渲染。零新 API。
+- 验证：ruff/pytest 174(+4)/pyright 0/lint/vitest 331/build 全绿；生产 rev e5484a1、bundle index-BQPBH1qz.js；testing agent 双视口实测：同卷 0 分/24 分双 attempt，best_attempt_id 指向最高分、已考卡 3 键/未考卡 2 键、点击直达 hero 24 分、R309/R310 回归、375 无溢出、console 0 error；清理 DELETED 137 / leftover 0。部署首跑首页 a11y 单样本 0.94，独立复跑 1.0 无违例项（采样波动）。
+- 未生产实测：同分平手取更近 attempt 分支（pytest 覆盖）。
+- 详见 docs/iter/round-3/design-r311-paper-card-report-entry.md。
