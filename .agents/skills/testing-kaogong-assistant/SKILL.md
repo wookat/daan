@@ -603,3 +603,7 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 ## R316 标记贯穿走查新经验
 - 做卷页点选选项会自动跳到下一题：需要「答某题并标记」时应先点「标记」再选选项（或标错后用顶部标记按钮当场取消）。
 - 解析浮层底部导航（.dnav-mid/.dnav-btn）屏幕坐标随浮层内容高度浮动：点击前用 CDP 读 getBoundingClientRect 并按「屏幕x≈css_x*0.64, 屏幕y≈css_y*0.64+88」（1600 视口最大化窗口）换算，避免点到遮罩误关浮层。
+
+## R317 跨设备续考走查新经验
+- 跨设备/多身份场景可用 CDP `Target.createBrowserContext` + `Target.createTarget` 建全新隔离浏览器 context（helper /tmp/cdp174/devb.py），给新 context 的 URL 加 `?devb=1` 之类标记便于按 URL 选 tab；所有按 `'zalize' in url` 选 tab 的老 helper 会误选新 context 的 tab，多 context 时必须加排除过滤。
+- 新 context 是独立 Chrome 窗口：不要用 ctrl+w（会整窗关闭销毁 context）；硬刷会清掉 CDP 设的模拟视口，需要重施。
