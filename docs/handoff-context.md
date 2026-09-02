@@ -903,3 +903,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 收口：db.shenlun_materials_by_type + /tiku/shenlun/sucai/{mtype}/ SSR 页（topic 分组正文+出处、逐条 mid 深链、其他类型内链、CTA、JSON-LD；未知/清空 404、无斜杠 301 前置存在性守卫）+ hub 板块链接改指 SSR 页 + sitemap-pages 收录（IndexNow 走 R255 变化驱动通道）。
 - 详见 docs/iter/round-3/design-r264-sucai-ssr.md。
 
+## R265（uvicorn keep-alive 竞态即时 502 收口）
+- 取证：origin 8h 内 7 条即时 502（0.006–0.08s）全为已建立连接上的 `connection reset by peer`/`EOF`（容器 healthy、非部署窗口，命中 ClaudeBot 真实爬虫；边缘 retry 复用另一条陈旧连接仍 502）。R235 lb_try/R257 health check 只覆盖 dial/不健康路径，对此形态不生效。
+- 根因（本地 socket 复现 verified）：uvicorn 默认 `--timeout-keep-alive 5s` < Caddy 连接池 idle 默认 2min——Caddy 复用已被 uvicorn 关闭的池化连接即遇 reset。默认参数空闲 6s 二次请求 EOF；130s 参数空闲 6s/20s 均 OK。
+- 收口：Dockerfile.runtime CMD 追加 `--timeout-keep-alive 130`（> Caddy 120s idle，陈旧连接恒由 Caddy 先弃）。不改 Caddy、不改应用代码。
+- 未归因残留：1 条 /api/track POST 13.2s 后 EOF（时长特征不符本根因，挂共享宿主争用观察项）。
+- 详见 docs/iter/round-3/design-r265-keepalive-502.md。
