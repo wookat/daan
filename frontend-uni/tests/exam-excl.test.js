@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toggleExcl, pickWithExcl } from '../src/exam-excl.js';
+import { toggleExcl, pickWithExcl, exclVisible } from '../src/exam-excl.js';
 
 describe('toggleExcl（R319 排除干扰项）', () => {
   it('长按未排除项加入排除，不改已选', () => {
@@ -40,5 +40,26 @@ describe('pickWithExcl（R319 选择即恢复）', () => {
   it('非法入参 fail-closed', () => {
     expect(pickWithExcl(undefined, 'A')).toEqual([]);
     expect(pickWithExcl([2, 'B'], '')).toEqual(['B']);
+  });
+});
+
+describe('exclVisible（R321 刷题页排除态呈现）', () => {
+  it('未作答且非背题模式时按 excl 命中呈现', () => {
+    expect(exclVisible(['B', 'D'], 'B', '', false)).toBe(true);
+    expect(exclVisible(['B', 'D'], 'A', '', false)).toBe(false);
+  });
+
+  it('已作答后整体退出排除视觉', () => {
+    expect(exclVisible(['B'], 'B', 'A', false)).toBe(false);
+  });
+
+  it('背题模式不呈现', () => {
+    expect(exclVisible(['B'], 'B', '', true)).toBe(false);
+  });
+
+  it('非法入参 fail-closed', () => {
+    expect(exclVisible(undefined, 'B', '', false)).toBe(false);
+    expect(exclVisible('bad', 'B', '', false)).toBe(false);
+    expect(exclVisible(['B'], '', '', false)).toBe(false);
   });
 });

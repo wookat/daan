@@ -118,9 +118,10 @@
         v-for="(v, k) in cur.options"
         :key="k"
         class="opt"
-        :class="optClass(k)"
+        :class="[optClass(k), exclVisible(cur._excl, k, picked, beiMode) ? 'excl' : '']"
         :style="optStyle"
         @click="beiMode ? null : pick(k)"
+        @longpress="toggleExclOpt(k)"
       >
         <text class="okey">{{ k }}</text>
         <text class="otext">{{ v }}</text>
@@ -358,6 +359,7 @@ import { pickAnnounceText } from '../../live-policy.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 import { qStatLine } from '../../q-stat.js';
+import { toggleExcl, pickWithExcl, exclVisible } from '../../exam-excl.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -795,6 +797,7 @@ export default {
     },
   },
   methods: {
+    exclVisible,
     toggleMat() {
       this.matOpen = { ...this.matOpen, [this.idx]: !this.matOpen[this.idx] };
     },
@@ -1754,8 +1757,14 @@ export default {
       }
     },
     // #endif
+    toggleExclOpt(k) {
+      if (this.beiMode || this.picked) return;
+      this.cur._excl = toggleExcl(this.cur._excl, k, '').excl;
+      this.$forceUpdate();
+    },
     pick(k) {
       if (this.picked) return;
+      this.cur._excl = pickWithExcl(this.cur._excl, k);
       this.picked = k;
       this.cur._picked = k;
       this.cur._secs = this.qsecs;
@@ -2307,6 +2316,8 @@ export default {
 .opt.wrong { background: var(--bad-soft); border-color: var(--bad); animation: shake 0.3s; }
 .opt.wrong .okey { background: var(--bad); color: #fff; border-color: var(--bad); }
 .opt.dim { opacity: 0.5; }
+.opt.excl { opacity: 0.45; }
+.opt.excl .otext { text-decoration: line-through; }
 @keyframes shake {
   25% { transform: translateX(-8rpx); }
   75% { transform: translateX(8rpx); }

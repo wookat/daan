@@ -14,3 +14,11 @@ export function pickWithExcl(excl, k) {
   if (typeof k !== 'string' || !k) return list;
   return list.filter((x) => x !== k);
 }
+
+// 刷题页排除态是否呈现（R321）：仅未作答且非背题模式时显示，作答后判分视觉接管。
+export function exclVisible(excl, k, picked, beiMode) {
+  if (beiMode) return false;
+  if (typeof picked === 'string' && picked) return false;
+  if (typeof k !== 'string' || !k || !Array.isArray(excl)) return false;
+  return excl.includes(k);
+}
