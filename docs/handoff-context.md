@@ -884,3 +884,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：R253 套卷页 CTA 只 ?id 直达第一题详情，本套其余小题需自行翻找；App 三维筛选缺「套卷」维度且 onLoad 不收 ?paper。
 - 收口：/api/shenlun/questions 增可选 paper 精确过滤（契约向后兼容）+ 套卷页 CTA 改 ?paper= + App paper 状态/chip 外显可清除；逐题 ?id 深链不变。
 - 详见 docs/iter/round-3/design-r260-shenlun-paper-deeplink.md。
+
+## R261（申论列表卡套卷标签可点筛选 + paper 筛选 URL 同步）
+- 取证：R260 后 App 内进入套卷筛选只有站外入口（SSR CTA/分享链接），列表卡 q-paper 纯展示；paper 状态不同步 URL（清除/切换后不可分享刷新）。
+- 收口：shenlun-url.js 增 buildShenlunPaperUrl 纯函数 + 列表卡套卷标签可点（role=button，@click.stop）走 applyPaper 统一入口 + paper 变更 H5 replaceState 同步 URL（详情打开时让位 ?id，关详情回落 paper 深链）。
+- 详见 docs/iter/round-3/design-r261-paper-tag-entry.md。

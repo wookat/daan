@@ -46,7 +46,8 @@
         <view class="q-top">
           <view class="q-tags">
             <text class="q-type">{{ q.qtype }}</text>
-            <text class="q-paper">{{ q.paper || (q.exam_year + ' · ' + (q.exam_region || '')) }}</text>
+            <text v-if="q.paper" class="q-paper tappable" role="button" :aria-label="'只看本套卷：' + q.paper" @click.stop="applyPaper(q.paper)">{{ q.paper }}</text>
+            <text v-else class="q-paper">{{ q.exam_year + ' · ' + (q.exam_region || '') }}</text>
           </view>
           <view class="m-star" :class="{ on: qFavIds.includes(q.id) }" @click.stop="toggleQFav(q)"><l-icon name="star" :size="17" :color="qFavIds.includes(q.id) ? '#f59e0b' : '#8a90a0'" :fill="qFavIds.includes(q.id) ? '#f59e0b' : 'none'" /></view>
         </view>
@@ -148,7 +149,7 @@
 
 <script>
 import { request, snapPeek, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api';
-import { buildShenlunUrl, buildShenlunMatUrl } from '../../shenlun-url.js';
+import { buildShenlunUrl, buildShenlunPaperUrl, buildShenlunMatUrl } from '../../shenlun-url.js';
 
 const QTYPES = ['全部', '归纳概括', '综合分析', '提出对策', '贯彻执行', '大作文'];
 const MTYPES = ['全部', '金句', '案例', '政策理论', '范文'];
@@ -202,7 +203,7 @@ export default {
     detail(v) {
       // #ifdef H5
       if (typeof window !== 'undefined' && window.history) {
-        window.history.replaceState(null, '', buildShenlunUrl(v && v.id));
+        window.history.replaceState(null, '', v && v.id ? buildShenlunUrl(v.id) : buildShenlunPaperUrl(this.paper));
       }
       // #endif
     },
@@ -303,16 +304,30 @@ export default {
       this.loadQs();
     },
     clearPaper() {
-      this.paper = '';
+      this.applyPaper('');
+    },
+    applyPaper(p) {
+      const next = typeof p === 'string' && p.length <= 100 ? p : '';
+      if (next === this.paper) return;
+      this.paper = next;
       this.qOffset = 0;
       this.qEnd = false;
+      this.syncPaperUrl();
       this.loadQs();
+    },
+    syncPaperUrl() {
+      // #ifdef H5
+      if (typeof window !== 'undefined' && window.history && !this.detail) {
+        window.history.replaceState(null, '', buildShenlunPaperUrl(this.paper));
+      }
+      // #endif
     },
     clearFlt() {
       this.qtype = '全部';
       this.year = 0;
       this.region = '';
       this.paper = '';
+      this.syncPaperUrl();
       this.qOffset = 0;
       this.qEnd = false;
       this.loadQs();
@@ -533,6 +548,7 @@ page { background: var(--fill); }
 .q-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
 .q-tags { display: flex; align-items: center; gap: 12rpx; flex-wrap: wrap; }
 .q-paper { font-size: 22rpx; color: var(--ink-2); background: var(--fill); border-radius: 8rpx; padding: 4rpx 14rpx; }
+.q-paper.tappable { cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .q-type { font-size: 22rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
 .q-item .q-text { font-size: 26rpx; color: var(--ink-1); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .q-text { font-size: 26rpx; color: var(--ink-1); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }

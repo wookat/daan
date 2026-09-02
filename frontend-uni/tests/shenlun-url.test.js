@@ -1,5 +1,17 @@
 import { describe, it, expect } from 'vitest';
-import { buildShenlunUrl, buildShenlunMatUrl, SHENLUN_PATH } from '../src/shenlun-url.js';
+import { buildShenlunUrl, buildShenlunPaperUrl, buildShenlunMatUrl, SHENLUN_PATH } from '../src/shenlun-url.js';
+
+describe('buildShenlunPaperUrl', () => {
+  it('encodes paper name into ?paper deeplink', () => {
+    expect(buildShenlunPaperUrl('2026广东省考·省市卷')).toBe(SHENLUN_PATH + '?paper=' + encodeURIComponent('2026广东省考·省市卷'));
+  });
+  it('falls back to base path for empty/non-string/overlong', () => {
+    expect(buildShenlunPaperUrl('')).toBe(SHENLUN_PATH);
+    expect(buildShenlunPaperUrl(null)).toBe(SHENLUN_PATH);
+    expect(buildShenlunPaperUrl(123)).toBe(SHENLUN_PATH);
+    expect(buildShenlunPaperUrl('x'.repeat(101))).toBe(SHENLUN_PATH);
+  });
+});
 
 describe('buildShenlunUrl', () => {
   it('合法 id 生成 ?id 深链', () => {

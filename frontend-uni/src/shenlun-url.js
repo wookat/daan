@@ -6,6 +6,11 @@ export function buildShenlunUrl(id) {
   return Number.isInteger(n) && n > 0 ? SHENLUN_PATH + '?id=' + n : SHENLUN_PATH;
 }
 
+export function buildShenlunPaperUrl(paper) {
+  if (typeof paper !== 'string' || !paper || paper.length > 100) return SHENLUN_PATH;
+  return SHENLUN_PATH + '?paper=' + encodeURIComponent(paper);
+}
+
 export function buildShenlunMatUrl(id, type) {
   const n = Number(id);
   if (!Number.isInteger(n) || n <= 0) return SHENLUN_PATH + '?tab=m';
