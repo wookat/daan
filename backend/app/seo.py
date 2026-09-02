@@ -1097,7 +1097,7 @@ def _render_shenlun_year(year: int, page: int) -> str:
         + "</ul></div>"
         + _pager(_year_path(year, "shenlun"), page, total)
         + (f'<div class="card"><h2>其他年份申论真题</h2><div class="tags">{other_years}</div></div>' if other_years else "")
-        + '<a class="cta" href="/#/pkgA/shenlun/shenlun">进入申论专区在线作答（真题 + 素材范文）→</a>'
+        + f'<a class="cta" href="/#/pkgA/shenlun/shenlun?year={year}">进入申论专区在线作答{year}年申论真题 →</a>'
     )
     suffix = f"（第{page}页）" if page > 1 else ""
     return _page(
@@ -1168,7 +1168,10 @@ def _tiku_shenlun(page: int):
         f'<a href="{_e(_year_path(y, "shenlun"))}">{y}年（{n}）</a>'
         for y, n in db.shenlun_year_counts()
     )
-    region_chips = "".join(f"<span>{_e(r)}</span>" for r in filters["regions"][:12])
+    region_chips = "".join(
+        f'<a href="/#/pkgA/shenlun/shenlun?region={quote(r)}">{_e(r)}</a>'
+        for r in filters["regions"][:12]
+    )
     qtype_chips = "".join(
         f'<a href="{_e(_sub_path("shenlun", t))}">{_e(t)}（{n}）</a>'
         for t, n in db.shenlun_qtype_counts()

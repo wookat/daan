@@ -102,9 +102,12 @@ def test_shenlun_year_pages(client):
         # 无斜杠 301
         r301 = client.get("/tiku/y/2023/shenlun", follow_redirects=False)
         assert r301.status_code == 301 and r301.headers["location"].endswith("/tiku/y/2023/shenlun/")
-        # hub 年份 chips 为链接
+        # 年份页 CTA 带 ?year 深链（R252）
+        assert 'href="/#/pkgA/shenlun/shenlun?year=2023"' in r.text
+        # hub 年份 chips 为链接、地区 chips 为 ?region 深链（R252）
         hub = client.get("/tiku/shenlun/")
         assert 'href="/tiku/y/2023/shenlun/"' in hub.text
+        assert f'href="/#/pkgA/shenlun/shenlun?region={quote("国考")}"' in hub.text
         # sitemap-years 收录
         sm = client.get("/sitemap-years.xml")
         assert "/tiku/y/2023/shenlun/" in sm.text

@@ -215,7 +215,12 @@ export default {
   },
   onLoad(opts) {
     this.loadQs();
-    this.loadFilters();
+    this.loadFilters().then(() => {
+      if (!opts) return;
+      const y = Number(opts.year || '');
+      if (this.years.includes(y)) this.setYear(y);
+      if (this.regions.includes(opts.region || '')) this.setRegion(opts.region);
+    });
     if (opts && opts.tab === 'r') this.switchRec();
     else if (opts && opts.tab === 'm') {
       if (MTYPES.includes(opts.mtype || '')) this.mtype = opts.mtype;
