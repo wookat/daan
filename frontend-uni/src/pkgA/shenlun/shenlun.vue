@@ -81,7 +81,7 @@
         <text v-if="showMat" class="d-mat">{{ detail.material }}</text>
         </view>
         <view class="d-right">
-        <view class="d-ans-h"><view class="d-h" style="margin: 0">我的作答</view><text v-if="myAnswer" class="d-save">已自动保存 · {{ myAnswer.length }} 字</text></view>
+        <view class="d-ans-h"><view class="d-h" style="margin: 0">我的作答</view><text v-if="qWordLim" class="d-save d-wc" :class="qWordSt">{{ myAnswer ? (myAnswer.length + ' / 限' + qWordLim.label + (qWordSt === 'over' ? '，已超 ' + (myAnswer.length - qWordLim.max) + ' 字' : '')) : '限' + qWordLim.label }}</text><text v-else-if="myAnswer" class="d-save">已自动保存 · {{ myAnswer.length }} 字</text></view>
         <textarea v-model="myAnswer" class="d-ta" :maxlength="3000" placeholder="在此作答后点击下方按钮，AI 按采分点批改（大作文为结构点评+参考档位）。草稿自动保存在本机" auto-height @input="saveDraft" />
         <view class="grade-btn" :class="{ dis: grading || !myAnswer.trim() }" @click="grade">{{ grading ? 'AI 批改中…' : '提交 AI 批改' }}</view>
         <view v-if="gradeResult" class="d-grade">
@@ -159,6 +159,7 @@ import { request, snapPeek, hasAccessCode, fetchAccessInfo, promptAccessCode } f
 import { buildShenlunUrl, buildShenlunFilterUrl, buildShenlunTabUrl, buildShenlunMatUrl } from '../../shenlun-url.js';
 import { toggleQFav as qfavToggle, missingSnapIds } from '../../shenlun-qfav.js';
 import { qNavState } from '../../shenlun-qnav.js';
+import { parseWordLimit, wordState } from '../../shenlun-words.js';
 
 const QTYPES = ['全部', '归纳概括', '综合分析', '提出对策', '贯彻执行', '大作文'];
 const MTYPES = ['全部', '金句', '案例', '政策理论', '范文'];
@@ -231,6 +232,12 @@ export default {
     },
     qNav() {
       return qNavState(this.shownQs.map((q) => q && q.id), this.detail ? this.detail.id : 0);
+    },
+    qWordLim() {
+      return this.detail ? parseWordLimit(this.detail.question) : null;
+    },
+    qWordSt() {
+      return wordState(this.myAnswer.length, this.qWordLim);
     },
   },
   onShow() {
@@ -658,6 +665,8 @@ page { background: var(--fill); }
 .d-nav-btn { font-size: 25rpx; color: var(--brand-text); padding: 10rpx 18rpx; cursor: pointer; }
 .d-nav-btn.dis { color: var(--ink-3); cursor: default; }
 .d-nav-pos { font-size: 23rpx; color: var(--ink-2); }
+.d-wc.near { color: var(--warn-strong); }
+.d-wc.over { color: var(--bad-strong); }
 .d-h { font-size: 25rpx; font-weight: 700; color: var(--ink-1); margin: 22rpx 0 10rpx; }
 .d-h.toggle { color: var(--brand-text); }
 .d-h.ref { color: #b45309; }
