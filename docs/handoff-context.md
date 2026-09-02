@@ -1037,3 +1037,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 收口（纯前端零后端）：src/exam-goal.js 纯函数 goalGap(score,target)（target 非法/未设/≤0 或 score 空→null，否则 {target,gap}，1 位小数）与 prevScoreDelta(history,curId)（正序 history 定位当前 attempt，无前次→null）；report.vue load 后并行 GET /api/profile（失败静默 targetScore=null），hero-meta 补「较上次同卷 +X/−X 分/持平」，rank-card 下补「距离目标」卡（对齐 contest-report gap-row 视觉：目标分 Y → 已达标 🎉 / 还差 Z 分）；缺数据一律不渲染不伪造。
 - 验证：lint/vitest 280(+10)/build/diff-check 全绿（后端零改动）；生产 rev dd488be 部署 + API/Lighthouse 回归全过；真实接口种子（profile target 70 + paper 24 两次模考 5.9→17.6）实测 1440/375：目标卡「目标分 70 还差 52.4 分」、hero「较上次同卷 +11.7 分」、首次 attempt 不显较上次、清除 target 后目标卡与目标行均不渲染、溢出 0、console 0 error。测试 uid 全库清理 deleted 57 / leftover 0。注意：report.vue 的 uid 取 anonUid()，UI 验证需把测试 uid 写入 localStorage anonUid 后再开报告深链。
 - 详见 docs/iter/round-3/design-r302-report-goal-anchor.md。
+
+## R303（学习统计页补「模考成绩趋势」卡，PR #492）
+- 取证（SOP-10）：stats.vue 已有热力图/雷达/错题分布/正确率与速度趋势等 10+ 视图，但对模考只在「练习记录」混排单条 attempt，跨卷成绩趋势全站无处可看（报告页历史曲线只限同卷 R281；卷库列表只有最近 attempt 行）；数据早已齐备：GET /api/exam/attempts?uid=（DESC，含 score/kind/submitted_at）+ /api/profile target_score（R302 已消费）。
+- 收口（纯前端零后端）：src/exam-trend.js examTrend(items,target,cap=10)——过滤 score 空/未交卷、最近 cap 条反转正序、<2 条 null 不渲染；scaleMax=max(scores,合法 target,10) 取整到 10 封顶 100；target 合法性复用 exam-goal goalGap 语义，非法不画参考线。stats.vue onShow 并行 loadExamTrend()（attempts limit=20 + profile，失败静默），「正确率趋势」前插趋势卡：复用 .trend 柱状视觉 + 虚线目标线（--warn-strong）+「最好 X 分 · 最近 Y 分」底注 + 「不同卷难度不同，仅供参考」口径注明；柱 role=button 可点/Enter 进对应报告深链。
+- 验证：lint/vitest 287(+7)/build/diff-check 全绿（后端零改动）；生产 rev cfb991f 部署 + API/Lighthouse 回归全过（/ 0.98、/tiku/ 1.00）；真实接口种子（target 70 + paper 24 三次模考 23.5→5.9→17.6）实测 1440/375：趋势卡 3 柱正序、目标线「目标 70 分」就位、底注「最好 23.5 分 · 最近 17.6 分」、点柱进对应报告（分数一致）、单次/零模考不渲染、清除 target 后目标线消失柱保留、溢出 0、console 0 error。测试 uid 全库清理 deleted 116 / leftover 0。
+- 详见 docs/iter/round-3/design-r303-stats-exam-trend.md。
