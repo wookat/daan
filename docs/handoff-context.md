@@ -1071,3 +1071,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：lint/vitest 320(+9)/build/diff-check 全绿；生产 rev d79ce20、bundle index-DkzBjMNb.js；testing agent 双视口实测：交卷贵州卷（全库唯一贵州卷）后 CTA 推荐 pid 5（year↓→takers↓ 路径命中）文案与实时 papers 数据一致、点击/Tab+Enter 均落 list?pid=5 高亮+角标未开考、375 无溢出、console 0 error、反例 attempt 99999 空态无 CTA；同 region 优先与全卷考完隐藏分支未生产实测（vitest 已覆盖）。测试数据清理 test-r308-*（DELETED 2 / leftover 0）。
 - a11y 线索：报告页逐题 75 个圆圈全在 Tab 序列内，键盘到 CTA 需 ~75 次 Tab，后续可考虑逐题区 roving tabindex。
 - 详见 docs/iter/round-3/design-r308-report-next-paper-cta.md。
+## R309（真题卷库「没考过/考过的」做题状态筛选 + ?st= URL 同步，PR #499）
+- 取证（SOP-10）：生产卷库 118+ 张卷，卷卡已外显 best_score/attempt_count（R284/R285），但筛选条只有年份/地区（R277），找「下一张没考过的卷」只能逐卡辨认；粉笔卷库有「未做/已做」状态筛选。
+- 收口纯前端零后端：src/exam-list-status.js 纯函数 filterPapersByStatus(items,st)（非数组→[]；st 非 'todo'|'done'→原数组引用；todo=best_score==null（0 分算考过）、done 反之；输入不可变）。exam-list-url.js build/parse 增 st 白名单。list.vue 筛选区首行「全部/没考过/考过的」chips，列表/空态改用 shown computed（本地过滤不重拉，与 year/region 服务端筛选自由组合），setSt 清 pinnedId+syncUrl，onLoad 入向 ?st= 恢复，applyPendingPin 改判 shown（?pid 目标被状态筛选隐藏时静默不 pin）。
+- 验证：lint/vitest 326(+11)/build/diff-check 全绿；生产 rev 0ef3f65、bundle index-B92FBO3H.js；testing agent 双视口实测：交卷后「考过的」120→1、「没考过」119 不含该卷、?st= 硬刷恢复、?st=abc 回退全部、year+region+st 三参组合与空态放宽提示、?pid 可见 pin/隐藏静默双分支、双视口溢出 0、console 0 error；性能预算全过（/ 0.98、/tiku/ 1.00）。测试数据清理 test-r309-*（DELETED 2 / leftover 0）。
+- 陷阱：切 chips 属 hash query-only 变化不触发 uni onLoad，验证入向恢复需硬 reload/新开页（同 R307 经验）。
+- 详见 docs/iter/round-3/design-r309-exam-list-status-filter.md。
