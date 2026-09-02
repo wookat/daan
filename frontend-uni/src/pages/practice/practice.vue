@@ -2149,13 +2149,13 @@ export default {
       uni.navigateTo({ url: '/pkgA/shenlun/shenlun' });
     },
     next() {
-      this.saveSession();
       if (this.autoTimer) {
         clearTimeout(this.autoTimer);
         this.autoTimer = null;
       }
       this.idx++;
       this.picked = (this.items[this.idx] && this.items[this.idx]._picked) || '';
+      this.saveSession();
       if (this.session && this.idx >= this.items.length - 3) this.prefetchNextGroup();
       if (this.cur && !this.picked) this.startQTimer();
       else this.stopQTimer();
