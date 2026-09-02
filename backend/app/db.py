@@ -950,6 +950,17 @@ def shenlun_question(qid: int) -> dict | None:
     return dict(r) if r else None
 
 
+def shenlun_material_type_counts() -> list[tuple[str, int]]:
+    conn = get_conn()
+    rows = conn.execute(
+        """SELECT type, COUNT(*) n FROM shenlun_materials
+           WHERE (disabled IS NULL OR disabled=0) AND type IS NOT NULL AND type<>''
+           GROUP BY type ORDER BY n DESC"""
+    ).fetchall()
+    conn.close()
+    return [(r["type"], r["n"]) for r in rows]
+
+
 def shenlun_materials(topic: str | None = None, mtype: str | None = None, limit: int = 20, offset: int = 0,
                       mid: int | None = None) -> list[dict]:
     conn = get_conn()

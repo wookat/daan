@@ -1069,6 +1069,20 @@ def _tiku_shenlun(page: int):
             f'<li><span class="meta">【{_e(meta)}】</span>{_e(text)} '
             f'<a href="/#/pkgA/shenlun/shenlun?id={it["id"]}">去作答 →</a></li>'
         )
+    mat_html = ""
+    if page == 1:
+        mat_counts = db.shenlun_material_type_counts()
+        if mat_counts:
+            mat_total = sum(n for _, n in mat_counts)
+            mat_links = "".join(
+                f'<a href="/#/pkgA/shenlun/shenlun?tab=m&amp;mtype={quote(t)}">{_e(t)}（{n} 条）</a> '
+                for t, n in mat_counts
+            )
+            mat_html = (
+                f'<div class="card"><h2>申论素材库（{mat_total} 条）</h2>'
+                "<p>政策理论、金句、案例、范文等写作素材，可在 App 申论专区按类型浏览、收藏与分享：</p>"
+                f'<p class="tags">{mat_links}</p></div>'
+            )
     body = (
         _crumb([("题库", "/tiku/"), ("申论", None)])
         + f"<h1>申论真题库（{total} 题）</h1>"
@@ -1078,6 +1092,7 @@ def _tiku_shenlun(page: int):
         + '<div class="card"><ul class="qlist">'
         + "".join(lis)
         + "</ul></div>"
+        + mat_html
         + _pager("/tiku/shenlun/", page, total)
         + '<a class="cta" href="/#/pkgA/shenlun/shenlun">进入申论专区在线作答（真题 + 素材范文）→</a>'
     )

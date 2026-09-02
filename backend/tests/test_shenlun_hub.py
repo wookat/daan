@@ -16,6 +16,7 @@ def _seed_shenlun(n: int = 3):
             (2023, "国考", "2023年国考申论（副省级）", "概括归纳",
              f"给定资料测试 {i}", f"测试申论题干 {i}：请概括给定资料的主要问题。", "参考解析：略。"),
         )
+    conn.execute("UPDATE shenlun_questions SET disabled=0 WHERE question LIKE '测试申论题干%'")
     conn.commit()
     conn.close()
 
@@ -25,6 +26,32 @@ def _clear_shenlun():
     conn.execute("UPDATE shenlun_questions SET disabled=1")
     conn.commit()
     conn.close()
+
+
+def test_shenlun_hub_materials_section(client):
+    """R248：hub 首页外显素材库板块（类型计数 + mtype 深链）；无素材/分页页不渲染。"""
+    seed_questions()
+    _seed_shenlun()
+    conn = db.get_conn()
+    conn.execute(
+        "INSERT OR IGNORE INTO shenlun_materials (type, topic, content, source, disabled)"
+        " VALUES ('金句', '测试素材金句', '测试素材内容', '', 0)"
+    )
+    conn.commit()
+    conn.close()
+    try:
+        r = client.get("/tiku/shenlun/")
+        assert "申论素材库（" in r.text
+        assert "tab=m&amp;mtype=" in r.text and "金句" in r.text
+    finally:
+        conn = db.get_conn()
+        conn.execute("DELETE FROM shenlun_materials WHERE topic LIKE '%测试素材%'")
+        conn.commit()
+        conn.close()
+        # 素材清空后板块不渲染（真题 hub 本身不受影响）
+        r2 = client.get("/tiku/shenlun/")
+        assert r2.status_code == 200 and "申论素材库（" not in r2.text
+        _clear_shenlun()
 
 
 def test_shenlun_hub_renders_with_corpus_and_falls_back_when_empty(client):
