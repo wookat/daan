@@ -936,3 +936,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：08-29 共享宿主争用窗口（wa 80–88%、load 12+、swap/zram 满）实测 /api/search 经边缘 503（53s），同窗口边缘有副本的页面 0.1–0.2s 正常——搜索是争用窗口内唯一完全不可用的公开高频路径；源码实查 API_CACHE_ALLOWLIST 仅 7 个精确 pathname，search 全穿透。
 - 收口：edge-policy.js 允许清单加 /api/search（精确）+ API_CACHE_PREFIXES 前缀匹配 /api/search/question/（两端点均 uid 无关公开 GET，缓存 key 为完整 URL 含 query，按查询变体自然分 key），复用既有 60s TTL + SWR + stale-if-error 链路零新逻辑；带 Authorization/uid 仍绕过。
 - 详见 docs/iter/round-3/design-r271-search-api-edge-cache.md。
+
+## R272（申论公开 API 页族纳入边缘缓存）
+- 取证：origin 10h 日志实测 /api/shenlun/questions 99、filters 73、materials 62 次全穿透；09-02 04:35–04:37 争用窗口内与 /api/search 同样无副本可退，而 R250–R264 申论 SSR 页族深链落地即打这组 API。
+- 收口：允许清单加 shenlun questions/filters/materials（源码实查均 uid 无关公开 GET）+ 前缀 /api/shenlun/questions/（qid 详情），复用 R271 链路零新逻辑；不缓存 /api/exam/papers（uid 变体混流另轮评估）。
+- 详见 docs/iter/round-3/design-r272-shenlun-api-edge-cache.md。

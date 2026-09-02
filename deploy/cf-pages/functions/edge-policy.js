@@ -17,10 +17,13 @@ export const API_CACHE_ALLOWLIST = new Set([
   "/api/papers",
   "/api/comments/plaza",
   "/api/search",
+  "/api/shenlun/questions",
+  "/api/shenlun/filters",
+  "/api/shenlun/materials",
 ]);
 
 // uid 无关公开 GET 的前缀匹配端点（路径参数型，如 /api/search/question/{qid}）
-export const API_CACHE_PREFIXES = ["/api/search/question/"];
+export const API_CACHE_PREFIXES = ["/api/search/question/", "/api/shenlun/questions/"];
 
 // 无获客价值的商业爬虫（舆情/SEO 工具）：每条 /tiku/q/* URL 各异使边缘缓存失效，
 // 全部穿透共享 origin SSR；在边缘直接 403，robots.txt 放行以便其读到禁抓声明。

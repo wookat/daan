@@ -58,6 +58,16 @@ describe('isEdgeCacheable', () => {
     expect(isEdgeCacheable('GET', '/api/search/question/118', false, true)).toBe(false);
     expect(isEdgeCacheable('POST', '/api/search', false, false)).toBe(false);
   });
+
+  it('申论公开端点可缓存（含 qid 详情前缀），带 Authorization/uid 绕过', () => {
+    expect(isEdgeCacheable('GET', '/api/shenlun/questions', false, false)).toBe(true);
+    expect(isEdgeCacheable('GET', '/api/shenlun/filters', false, false)).toBe(true);
+    expect(isEdgeCacheable('GET', '/api/shenlun/materials', false, false)).toBe(true);
+    expect(isEdgeCacheable('GET', '/api/shenlun/questions/26', false, false)).toBe(true);
+    expect(isEdgeCacheable('GET', '/api/shenlun/questions', false, true)).toBe(false);
+    expect(isEdgeCacheable('GET', '/api/shenlun/materials', true, false)).toBe(false);
+    expect(isEdgeCacheable('POST', '/api/shenlun/questions', false, false)).toBe(false);
+  });
   it('带 Authorization 或 uid 的 API 一律绕过', () => {
     expect(isEdgeCacheable('GET', '/api/question_counts', true, false)).toBe(false);
     expect(isEdgeCacheable('GET', '/api/daily_set', false, true)).toBe(false);
