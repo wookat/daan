@@ -360,13 +360,15 @@ export default {
       try {
         const picks = {};
         const secs = {};
+        const marks = [];
         this.items.forEach((q, i) => {
           if (q._picked) picks[i + 1] = q._picked;
           if (q._secs) secs[i + 1] = q._secs;
+          if (q._marked) marks.push(i + 1);
         });
         const d = await request('/api/exam/submit', {
           method: 'POST',
-          data: { uid: anonUid(), attempt_id: this.attemptId, picks, secs },
+          data: { uid: anonUid(), attempt_id: this.attemptId, picks, secs, marks },
           timeout: 20000,
         });
         uni.removeStorageSync(PROG_KEY);

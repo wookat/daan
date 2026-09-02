@@ -3211,6 +3211,8 @@ def _ensure_exam_tables(conn):
     acols = {r["name"] for r in conn.execute("PRAGMA table_info(exam_attempts)")}
     if "secs" not in acols:
         conn.execute("ALTER TABLE exam_attempts ADD COLUMN secs TEXT")
+    if "marks" not in acols:
+        conn.execute("ALTER TABLE exam_attempts ADD COLUMN marks TEXT")
 
 
 def upsert_exam_paper(title: str, kind: str, year: int | None, region: str | None,
@@ -3439,15 +3441,16 @@ def start_exam_attempt(uid: str, paper_id: int) -> int:
 
 
 def finish_exam_attempt(attempt_id: int, answers: dict, score: float, per_module: dict,
-                        secs: dict | None = None) -> bool:
+                        secs: dict | None = None, marks: list | None = None) -> bool:
     conn = get_conn()
     _ensure_exam_tables(conn)
     cur = conn.execute(
-        "UPDATE exam_attempts SET submitted_at=?, answers=?, score=?, per_module=?, secs=? "
+        "UPDATE exam_attempts SET submitted_at=?, answers=?, score=?, per_module=?, secs=?, marks=? "
         "WHERE id=? AND submitted_at IS NULL",
         (time.time(), json.dumps(answers, ensure_ascii=False), score,
          json.dumps(per_module, ensure_ascii=False),
-         json.dumps({str(k): v for k, v in (secs or {}).items()}) if secs else None, attempt_id),
+         json.dumps({str(k): v for k, v in (secs or {}).items()}) if secs else None,
+         json.dumps(marks) if marks else None, attempt_id),
     )
     conn.commit()
     ok = cur.rowcount > 0
@@ -3466,6 +3469,7 @@ def get_exam_attempt(attempt_id: int) -> dict | None:
     d["answers"] = json.loads(d["answers"] or "{}")
     d["per_module"] = json.loads(d["per_module"] or "{}")
     d["secs"] = json.loads(d.get("secs") or "{}")
+    d["marks"] = json.loads(d.get("marks") or "[]")
     return d
 
 
