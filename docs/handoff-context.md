@@ -855,3 +855,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 收口：sitemap 三个非题目端点抽出 _sitemap_page_urls/_sitemap_topic_urls/_sitemap_year_urls 纯列表构造（端点行为零变化）；_indexnow_submit_pages 拼接首页+三族 URL，sha256 与 seo_meta['indexnow_pages_hash'] 比对，集合变化时单批提交（当前 529 条 << 单批上限 10000），未变化零提交不刷 API。题目游标通道不动。
 - 本地：ruff/pytest 127(+2)/pyright 0 全绿（后端-only）。
 - 生产 rev cf92cfb：容器启动 120s 后实录 `[indexnow] submitted 529 urls -> 200`，seo_meta 落 indexnow_pages_hash；接口回归全 200、Lighthouse 预算全过（/ 0.99、/tiku/ 1.00）。提交 ≠ 抓取 ≠ 收录，效果不做任何声称。详见 docs/iter/round-3/design-r255-indexnow-page-families.md。
+
+## R256（seo.py 单文件拆包为 app/seo/ 包，PR #444）
+- 取证：backend/app/seo.py 膨胀至 1802 行，聚合五类职责（公共 helpers/行测页族/申论页族/站点文件/分享落地页），R236–R255 每轮申论改动都要在单文件内定位 render/route/sitemap 三处。外部引用面小：main.py 仅 router/root_router/_not_found；tests 仅 _url/_sitemap_*/_indexnow_*。
+- 收口：纯移动式拆包 app/seo/{common,pages,shenlun,catchall,landings,sitefiles}.py；__init__.py 显式导入顺序 shenlun→pages→catchall→landings/sitefiles（Starlette 按注册顺序匹配，/{module} 兜底必须最后，注释+isort: skip 防字母序重排）并 re-export 全部兼容符号。唯一测试调整：test_seo_landing.py monkeypatch 目标改 seo.sitefiles._indexnow_post（函数物理位置移动）。
+- 坑：common.py 须 `from .. import db, kb`（`from .` 会在部分初始化的 app.seo 包上解析触发循环导入）。
+- 行为零变化实证：pre/post TestClient 对 19 个 SEO/站点文件端点 sha256 逐一比对全部字节一致（/ 为静态 mount 非本包路由，worktree 无构建产物差异与拆包无关）。
+- 本地：ruff/pytest 127/pyright 0 全绿（后端-only）。
+- 生产 rev 6d8c95c：容器内确认 seo/ 包就位、旧 seo.py 不存在；19 端点状态语义全对（含题型/年份/套卷页 200、无斜杠 301、未知模块 404）、sitemap 四端点与 robots/llms/indexnow-key 200、IndexNow 无重复提交（URL 集合未变 hash 命中零提交，符合设计）；Lighthouse 预算全过（/ 0.99、/tiku/ 1.00）。详见 docs/iter/round-3/design-r256-seo-package-split.md。
