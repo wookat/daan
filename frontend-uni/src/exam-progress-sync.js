@@ -9,10 +9,15 @@ export function adoptServerExamProgress(localSaved, server, now) {
   const endAt = Number(server.end_at_ms);
   if (!Number.isFinite(endAt) || endAt <= now) return null;
   const picks = server.picks && typeof server.picks === 'object' ? server.picks : {};
+  const marked = new Set(
+    (Array.isArray(server.marks) ? server.marks : [])
+      .map((m) => Number(m))
+      .filter((m) => Number.isFinite(m)),
+  );
   const items = server.items.map((q) => ({
     ...q,
     _picked: typeof picks[q.id] === 'string' ? picks[q.id] : (typeof picks[String(q.id)] === 'string' ? picks[String(q.id)] : ''),
-    _marked: false,
+    _marked: marked.has(Number(q.id)),
     _secs: 0,
   }));
   const idx = Number.isInteger(server.idx) && server.idx > 0 ? Math.min(server.idx, items.length - 1) : 0;

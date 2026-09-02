@@ -71,3 +71,22 @@ describe('adoptServerExamProgress', () => {
     expect(snap && snap.attemptId).toBe(42);
   });
 });
+
+describe('adoptServerExamProgress marks（R317）', () => {
+  it('server.marks 按 question_id 命中恢复 _marked', () => {
+    const snap = adoptServerExamProgress(null, server({ marks: [102] }), NOW);
+    expect(snap.items[0]._marked).toBe(false);
+    expect(snap.items[1]._marked).toBe(true);
+  });
+
+  it('字符串 id 归一命中，非法项忽略', () => {
+    const snap = adoptServerExamProgress(null, server({ marks: ['101', 'x', null] }), NOW);
+    expect(snap.items[0]._marked).toBe(true);
+    expect(snap.items[1]._marked).toBe(false);
+  });
+
+  it('marks 缺省/非数组 fail-closed 全 false', () => {
+    expect(adoptServerExamProgress(null, server(), NOW).items.every((q) => q._marked === false)).toBe(true);
+    expect(adoptServerExamProgress(null, server({ marks: 'bad' }), NOW).items.every((q) => q._marked === false)).toBe(true);
+  });
+});

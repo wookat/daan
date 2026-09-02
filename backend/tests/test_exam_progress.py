@@ -117,3 +117,31 @@ def test_progress_param_validation(client):
     client.post("/api/exam/progress", json={"uid": uid, "attempt_id": aid, "picks": {}, "idx": -3})
     assert client.get(f"/api/exam/resume?uid={uid}").json()["idx"] == 0
     _cleanup()
+
+
+def test_progress_marks_roundtrip_and_validation(client):
+    """R317：未交卷进度 marks（question_id 数组）同步与校验。"""
+    qids = seed_questions()[:5]
+    pid = _seed_paper("进度标记同步测试卷", qids)
+    uid = "test-eprog-u5"
+    aid = _start(client, uid, pid)
+    # 缺省 marks → resume 回 []
+    client.post("/api/exam/progress", json={"uid": uid, "attempt_id": aid, "picks": {}})
+    assert client.get(f"/api/exam/resume?uid={uid}").json()["marks"] == []
+    # 带 marks（乱序/重复）→ 去重升序回读
+    r = client.post("/api/exam/progress", json={
+        "uid": uid, "attempt_id": aid, "picks": {str(qids[0]): "A"},
+        "marks": [qids[2], qids[0], qids[2]],
+    })
+    assert r.status_code == 200
+    assert client.get(f"/api/exam/resume?uid={uid}").json()["marks"] == sorted({qids[0], qids[2]})
+    # 覆盖更新为无标记 → 回 []
+    client.post("/api/exam/progress", json={"uid": uid, "attempt_id": aid, "picks": {}, "marks": []})
+    assert client.get(f"/api/exam/resume?uid={uid}").json()["marks"] == []
+    # 非法 marks：非 list / 含 bool / 含非 int / 超上限 → 400
+    for bad in ({"1": True}, [True], ["3"], [1.5], list(range(301))):
+        assert client.post(
+            "/api/exam/progress",
+            json={"uid": uid, "attempt_id": aid, "picks": {}, "marks": bad},
+        ).status_code == 400
+    _cleanup()

@@ -335,10 +335,14 @@ export default {
     pushProgress() {
       if (!this.attemptId || this.submitting) return;
       const picks = {};
-      this.items.forEach((q) => { if (q && q._picked) picks[q.id] = q._picked; });
+      const marks = [];
+      this.items.forEach((q) => {
+        if (q && q._picked) picks[q.id] = q._picked;
+        if (q && q._marked) marks.push(q.id);
+      });
       request('/api/exam/progress', {
         method: 'POST',
-        data: { uid: anonUid(), attempt_id: this.attemptId, picks, idx: this.idx },
+        data: { uid: anonUid(), attempt_id: this.attemptId, picks, idx: this.idx, marks },
       }).catch(() => {});
     },
     confirmSubmit() {

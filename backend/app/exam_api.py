@@ -357,7 +357,17 @@ def api_exam_progress(body: dict):
         picks[str(qid)] = v
     idx = body.get("idx")
     idx = idx if isinstance(idx, int) and 0 <= idx < 1000 else 0
-    db.save_exam_progress(int(attempt_id), uid, picks, idx)
+    raw_marks = body.get("marks")
+    marks: list[int] = []
+    if raw_marks is not None:
+        if not isinstance(raw_marks, list) or len(raw_marks) > 300:
+            raise HTTPException(400, "无效的作答进度")
+        for m in raw_marks:
+            if isinstance(m, bool) or not isinstance(m, int):
+                raise HTTPException(400, "无效的作答进度")
+            marks.append(m)
+        marks = sorted(set(marks))
+    db.save_exam_progress(int(attempt_id), uid, picks, idx, marks)
     return {"ok": True}
 
 
@@ -380,6 +390,7 @@ def api_exam_resume(uid: str):
         "paper": pinfo,
         "items": ordered,
         "picks": prog["picks"],
+        "marks": prog["marks"],
         "idx": prog["idx"],
         "end_at_ms": int((prog["started_at"] + paper["duration_min"] * 60) * 1000),
     }
