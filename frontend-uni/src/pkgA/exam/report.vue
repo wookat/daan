@@ -156,6 +156,7 @@
           <view v-if="detail.hs_explanation || detail.explanation" class="dexp">
             <text>{{ detail.hs_explanation || detail.explanation }}</text>
           </view>
+          <q-social-bar v-if="detail.question_id" :question-id="detail.question_id" />
         </scroll-view>
         <view class="dnav">
           <view class="dnav-btn" :class="{ dis: !hasPrevQ }" role="button" aria-label="上一题解析" :aria-disabled="!hasPrevQ" @click="stepQ(-1)">‹ 上一题</view>
