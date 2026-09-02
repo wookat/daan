@@ -972,3 +972,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 收口：tiku_papers() 基于真实 db.exam_paper_filters() 输出「按年份筛卷/按地区筛卷」chips（App hash 深链，region quote 编码，空 filters 自动消失）+ 详情 CTA 经 _exam_list_query(p) 携带本卷 year/region（缺失字段省略、全缺回落基础路径）。不新增可收录 URL/不改 sitemap/canonical/边缘缓存/App 前端。新增 backend/tests/test_tiku_papers_deeplinks.py 3 例契约测试。
 - 验证：ruff/pytest 138(+3)/pyright 0 全绿；生产 rev 420bf10 实测 chips 11 年份+28 地区就位、详情 CTA ?year=2025&region=黑龙江 编码正确、点击 ?year=2022 深链后 App chip 激活+列表仅 6 张 2022 卷、1440/375 溢出 0、console 0 error、性能预算全过。
 - 详见 docs/iter/round-3/design-r278-papers-ssr-filter-deeplinks.md。
+
+## R279（收藏与笔记页 tab/收藏夹/模块筛选 URL 同步 + 入向深链）
+- 取证：favorites.vue 的 tab（收藏/笔记）、folderId（收藏夹）、modFilter（模块 chips）均为纯本地状态，无 onLoad 恢复无 URL 同步，是 R276/R277 后 App 内剩余未闭环的主要筛选态页面；本轮 origin 窗口无新增用户可见 5xx。
+- 收口纯前端：新增 src/favorites-url.js 纯函数（tab=note 不叠 fav 侧参数；mod 六键白名单含中文键「时政」encodeURIComponent；folder ≥0 整数、0=默认夹合法；全默认回落基础路径）+ onLoad 恢复（mod 静态白名单立即应用、folder 暂存 load() 收藏夹返回后按真实 folders 校验存在才应用、tab=note 直切）+ tab/folderId/modFilter watcher 统一 replaceState。零后端/SSR/SEO 变化。
+- 验证：lint/vitest 170(+6)/build 全绿；生产双视口实测出向同步（点模块→?mod、点夹→&folder=0、切笔记→?tab=note）与入向深链（note/时政编码/folder=0/组合）chip/夹/seg 激活、非法参数回落与无参一致、溢出 0、console 0 error、性能预算全过。注意：uni-app H5 同页 hash query 变化不重挂载（不触发 onLoad），验证入向深链必须新开页。
+- 详见 docs/iter/round-3/design-r279-favorites-filter-url-sync.md。

@@ -112,6 +112,7 @@
 
 <script>
 import { createFavFolder, deleteFavFolder, fetchFavFolders, fetchFavs, fetchNotes, removeFav, renameFavFolder, setFav } from '../../api.js';
+import { buildFavoritesUrl, parseFavoritesOpts } from '../../favorites-url.js';
 
 const MODS = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', 时政: '时政' };
 const COLORS = {
@@ -150,10 +151,34 @@ export default {
       return f ? '「' + f.name + '」' : '本夹';
     },
   },
+  onLoad(opts) {
+    const p = parseFavoritesOpts(opts);
+    if (p.mod) this.modFilter = p.mod;
+    this._pendingFolder = p.folder;
+    if (p.tab === 'note') this.switchNote();
+  },
   onShow() {
     this.load();
   },
+  watch: {
+    tab() {
+      this.syncUrl();
+    },
+    folderId() {
+      this.syncUrl();
+    },
+    modFilter() {
+      this.syncUrl();
+    },
+  },
   methods: {
+    syncUrl() {
+      // #ifdef H5
+      if (typeof window !== 'undefined' && window.history) {
+        window.history.replaceState(null, '', buildFavoritesUrl({ tab: this.tab === 'note' ? 'note' : '', mod: this.modFilter, folder: this.folderId }));
+      }
+      // #endif
+    },
     modName(m) {
       return MODS[m] || m || '';
     },
@@ -179,6 +204,11 @@ export default {
         this.items = [...this.items, ...locals].sort((a, b) => b.faved_at - a.faved_at);
         const def = this.folders.find((x) => x.id === 0);
         if (def) def.n += locals.length;
+        if (this._pendingFolder != null) {
+          const want = this._pendingFolder;
+          this._pendingFolder = null;
+          if (this.folders.some((x) => x.id === want)) this.folderId = want;
+        }
       } catch (e) {
         this.favErr = e.message || '网络异常';
         uni.showToast({ title: e.message, icon: 'none' });
