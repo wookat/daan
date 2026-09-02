@@ -1162,3 +1162,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 未生产实测：卷库横幅续考入口（同 adoptServerExamProgress 路径，R318 已验）；excl 非法值 400 分支的 UI 侧路径（API 已逐项自测）。
 - 观察项：部署后旧 SPA 标签页仍跑旧 bundle 不上传 excl（硬刷后正常，SPA 固有行为）；刷题页排除交互补齐仍挂起。
 - 详见 docs/iter/round-3/design-r320-progress-excl-sync.md。
+
+### R322：普通刷题「未完成练习」跨设备同步（PR #519）
+- 取证（SOP-10）：普通刷题 pendingSession 仅存本机 storage（24h TTL），换设备/清缓存丢未完成题组；模考已有 exam_progress 服务端续考（R298–R320），画像/每日目标/练习偏好/申论草稿均已服务端化，普通刷题快照是最后的服务端化缺口（粉笔练习进度绑定账号云恢复）。
+- 收口：新表 practice_progress（uid 主键单快照：qids/picks/excl/idx/right_n/streak/best_streak/module/submodule/updated_at）+ POST /api/practice/progress（uid 64 截断、qids ≤100 正整数拒 bool、picks/excl 仅 A–D 且 key ∈ qids、excl ≤4、qids:[] 即清除、idx/stat clamp、rl "ppro" 120/3600）+ GET /api/practice/resume（>24h 或全下架返回 {}，items 按原 qids 顺序，下架题跳过）。前端 practice-progress.js 纯函数 collectPracticeProgress/adoptPracticeResume（非法 fail-closed）；saveSession() 落本机快照后 1.5s 去抖 pushPracticeProgress；本机快照优先，无本机快照时 tryServerResume 复用「继续上次练习？」弹窗；完成/退出/「不用了」clearServerProgress；恢复题 _logged=!!picked 防重复写 answer_log；beiMode/examMode/时政组不进同步；失败静默不阻塞。
+- 竞态补丁（走查发现，commit 0a78a78）：quit 清除 POST 与立即再入的 resume GET 竞争，实测 2/10 陈旧弹窗——clearServerProgress 本机记 ppClearedAt，30s 内 tryServerResume 跳过远端直接开练（本机 storage 判断无时钟偏差）；守卫过期后远端路径复测正常。
+- 验证：ruff/pytest 191(+6)/pyright 0/lint/vitest 378(+5)/build 全绿；生产 rev 0a78a78、bundle index-DBEBlZtd.js；API 实测 roundtrip/非法 7 类 400/清除；testing agent 跨设备实测：设备 A 1440 作答+排除去抖 POST 实抓，设备 B 375 全新隔离 context 同 uid 恢复（顺序/判分/排除/idx/统计逐项一致），完成后 resume={}，新 uid 直开、本机优先 0 resume 请求，竞态修复复测通过；双视口溢出 0、console 0 error、Lighthouse 全过（/ 0.98/LCP 796ms、/tiku/ 1.00）。清理 test-r322-api/-ui/-ui-b/r322b-ui DELETED 27 / LEFTOVER 0，保护 uid 31 表快照一致。
+- 未生产实测：excl 非法值 UI 侧路径（API 已验）；真实触屏长按（CDP 模拟，同 R319/R321 口径）。
+- 详见 docs/iter/round-3/design-r322-practice-progress-sync.md。
