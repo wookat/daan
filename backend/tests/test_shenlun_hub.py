@@ -69,8 +69,11 @@ def test_material_discovery_copy_alignment(client):
     try:
         home = client.get("/tiku/")
         assert "另收录申论写作素材" in home.text and "金句" in home.text
+        assert "按套卷（含给定资料与参考解析）、年份、题型" in home.text  # R254
         llms = client.get("/llms.txt")
         assert "条写作素材" in llms.text
+        assert "按套卷（含给定资料与参考解析）、年份、题型归档" in llms.text  # R254
+        assert "年份/地区归档" not in llms.text  # 地区无 SSR 页族，旧口径不实
         hub = client.get("/tiku/shenlun/")
         assert "另有写作素材" in hub.text  # description + JSON-LD
         # 分页页 description 不带素材口径（板块也不渲染）

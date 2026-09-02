@@ -346,7 +346,8 @@ def tiku_index():
         sections.append(
             '<section class="card"><h2><a href="/tiku/shenlun/">申论</a>'
             f'<span class="meta">（{sl_total} 道真题）</span></h2>'
-            '<p class="meta">历年申论真题与参考解析，可在 <a href="/tiku/shenlun/">申论真题库</a> 浏览。</p>'
+            '<p class="meta">历年申论真题与参考解析，可在 <a href="/tiku/shenlun/">申论真题库</a> '
+            "按套卷（含给定资料与参考解析）、年份、题型浏览。</p>"
             + sl_mat_line
             + "</section>"
         )
@@ -1651,7 +1652,7 @@ def llms_txt():
     if db.shenlun_questions(limit=1)["total"]:
         mats = db.shenlun_material_type_counts()
         mat_note = f"；另收录 {sum(n for _, n in mats)} 条写作素材（按类型归档）" if mats else ""
-        shenlun = f"- [申论真题库]({_url('/tiku/shenlun/')}): 历年申论真题与参考解析，按年份/地区归档{mat_note}\n"
+        shenlun = f"- [申论真题库]({_url('/tiku/shenlun/')}): 历年申论真题与参考解析，按套卷（含给定资料与参考解析）、年份、题型归档{mat_note}\n"
     return PlainTextResponse(
         "# 错题邦公考题库\n\n"
         "> 免费公务员考试在线刷题与错题本：行测五大模块真题题库（每题含答案与解析）、"
