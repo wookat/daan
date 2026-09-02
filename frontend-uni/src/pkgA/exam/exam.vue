@@ -33,8 +33,9 @@
           v-for="(v, k) in cur.options"
           :key="k"
           class="opt"
-          :class="{ sel: cur._picked === k }"
+          :class="{ sel: cur._picked === k, excl: (cur._excl || []).includes(k) }"
           @click="pick(k)"
+          @longpress="toggleExcl(k)"
         >
           <text class="okey">{{ k }}</text>
           <text class="otext">{{ v }}</text>
@@ -115,6 +116,7 @@ import { submitFailPlan } from '../../exam-policy.js';
 import { dayKey } from '../../checkin.js';
 import { splitMaterial, sameMaterial } from '../../material.js';
 import { crossedTimeAlert } from '../../exam-alert.js';
+import { toggleExcl, pickWithExcl } from '../../exam-excl.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
 const PROG_KEY = 'examProgress';
@@ -282,11 +284,18 @@ export default {
       }
     },
     pick(k) {
+      this.cur._excl = pickWithExcl(this.cur._excl, k);
       this.cur._picked = this.cur._picked === k ? '' : k;
       this.saveProgress();
       if (this.cur._picked && this.idx + 1 < this.items.length) {
         setTimeout(() => this.next(), 180);
       }
+    },
+    toggleExcl(k) {
+      const r = toggleExcl(this.cur._excl, k, this.cur._picked);
+      this.cur._excl = r.excl;
+      this.cur._picked = r.picked;
+      this.saveProgress();
     },
     toggleMark() {
       this.cur._marked = !this.cur._marked;
@@ -541,6 +550,8 @@ export default {
 .opt.sel { border-color: var(--brand-text); background: var(--brand-soft); }
 .okey { flex-shrink: 0; width: 52rpx; height: 52rpx; line-height: 52rpx; text-align: center; border-radius: 50%; background: var(--soft-bg); color: var(--ink-2); font-weight: 600; font-size: 26rpx; margin-right: 20rpx; border: 1rpx solid var(--line); }
 .opt.sel .okey { background: var(--brand); color: #fff; border-color: var(--brand-text); }
+.opt.excl { opacity: 0.45; }
+.opt.excl .otext { text-decoration: line-through; }
 .otext { flex: 1; }
 .navrow { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: flex; gap: 16rpx; padding: 20rpx 24rpx calc(20rpx + env(safe-area-inset-bottom)); background: var(--card); border-top: 1rpx solid var(--line); }
 .nbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 27rpx; font-weight: 500; background: var(--card); }
