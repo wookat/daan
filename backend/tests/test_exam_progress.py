@@ -145,3 +145,34 @@ def test_progress_marks_roundtrip_and_validation(client):
             json={"uid": uid, "attempt_id": aid, "picks": {}, "marks": bad},
         ).status_code == 400
     _cleanup()
+
+
+def test_progress_secs_roundtrip_and_validation(client):
+    """R318：未交卷进度 secs（question_id→秒）同步与校验。"""
+    qids = seed_questions()[:5]
+    pid = _seed_paper("进度用时同步测试卷", qids)
+    uid = "test-eprog-u6"
+    aid = _start(client, uid, pid)
+    # 缺省 secs → resume 回 {}
+    client.post("/api/exam/progress", json={"uid": uid, "attempt_id": aid, "picks": {}})
+    assert client.get(f"/api/exam/resume?uid={uid}").json()["secs"] == {}
+    # 带 secs → 按 question_id 回读
+    r = client.post("/api/exam/progress", json={
+        "uid": uid, "attempt_id": aid, "picks": {str(qids[0]): "A"},
+        "secs": {str(qids[0]): 45, str(qids[2]): 80},
+    })
+    assert r.status_code == 200
+    assert client.get(f"/api/exam/resume?uid={uid}").json()["secs"] == {
+        str(qids[0]): 45, str(qids[2]): 80}
+    # 覆盖更新为空 → 回 {}
+    client.post("/api/exam/progress", json={"uid": uid, "attempt_id": aid, "picks": {}, "secs": {}})
+    assert client.get(f"/api/exam/resume?uid={uid}").json()["secs"] == {}
+    # 非法 secs：非 dict / 非 int 键 / bool 值 / 字符串值 / 浮点 / 0 / 负数 / 超上限 → 400
+    bads = ([1], {"abc": 5}, {"1": True}, {"1": "5"}, {"1": 1.5}, {"1": 0}, {"1": -3},
+            {str(i): 1 for i in range(301)})
+    for bad in bads:
+        assert client.post(
+            "/api/exam/progress",
+            json={"uid": uid, "attempt_id": aid, "picks": {}, "secs": bad},
+        ).status_code == 400
+    _cleanup()

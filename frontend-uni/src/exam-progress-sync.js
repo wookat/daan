@@ -14,11 +14,18 @@ export function adoptServerExamProgress(localSaved, server, now) {
       .map((m) => Number(m))
       .filter((m) => Number.isFinite(m)),
   );
+  const rawSecs = server.secs && typeof server.secs === 'object' && !Array.isArray(server.secs) ? server.secs : {};
+  const secsById = {};
+  Object.keys(rawSecs).forEach((k) => {
+    const id = Number(k);
+    const v = Number(rawSecs[k]);
+    if (Number.isFinite(id) && Number.isFinite(v) && v > 0) secsById[id] = Math.floor(v);
+  });
   const items = server.items.map((q) => ({
     ...q,
     _picked: typeof picks[q.id] === 'string' ? picks[q.id] : (typeof picks[String(q.id)] === 'string' ? picks[String(q.id)] : ''),
     _marked: marked.has(Number(q.id)),
-    _secs: 0,
+    _secs: secsById[Number(q.id)] || 0,
   }));
   const idx = Number.isInteger(server.idx) && server.idx > 0 ? Math.min(server.idx, items.length - 1) : 0;
   return {

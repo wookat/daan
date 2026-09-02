@@ -3487,20 +3487,23 @@ def _ensure_exam_progress(conn):
     gcols = {r["name"] for r in conn.execute("PRAGMA table_info(exam_progress)")}
     if "marks" not in gcols:
         conn.execute("ALTER TABLE exam_progress ADD COLUMN marks TEXT")
+    if "secs" not in gcols:
+        conn.execute("ALTER TABLE exam_progress ADD COLUMN secs TEXT")
 
 
 def save_exam_progress(attempt_id: int, uid: str, picks: dict, idx: int,
-                       marks: list | None = None) -> None:
+                       marks: list | None = None, secs: dict | None = None) -> None:
     conn = get_conn()
     _ensure_exam_progress(conn)
     conn.execute(
-        """INSERT INTO exam_progress (attempt_id, uid, picks, idx, marks, updated_at)
-           VALUES (?,?,?,?,?,?)
+        """INSERT INTO exam_progress (attempt_id, uid, picks, idx, marks, secs, updated_at)
+           VALUES (?,?,?,?,?,?,?)
            ON CONFLICT(attempt_id) DO UPDATE SET
              picks=excluded.picks, idx=excluded.idx, marks=excluded.marks,
-             updated_at=excluded.updated_at""",
+             secs=excluded.secs, updated_at=excluded.updated_at""",
         (attempt_id, uid, json.dumps(picks), idx,
-         json.dumps(marks) if marks else None, time.time()),
+         json.dumps(marks) if marks else None,
+         json.dumps(secs) if secs else None, time.time()),
     )
     conn.commit()
     conn.close()
@@ -3520,7 +3523,7 @@ def latest_exam_progress(uid: str) -> dict | None:
     _ensure_exam_tables(conn)
     _ensure_exam_progress(conn)
     row = conn.execute(
-        """SELECT g.attempt_id, g.picks, g.idx, g.marks, a.paper_id, a.started_at, p.duration_min
+        """SELECT g.attempt_id, g.picks, g.idx, g.marks, g.secs, a.paper_id, a.started_at, p.duration_min
            FROM exam_progress g
            JOIN exam_attempts a ON a.id = g.attempt_id
            JOIN exam_papers p ON p.id = a.paper_id
@@ -3534,6 +3537,7 @@ def latest_exam_progress(uid: str) -> dict | None:
     d = dict(row)
     d["picks"] = json.loads(d["picks"] or "{}")
     d["marks"] = json.loads(d.get("marks") or "[]")
+    d["secs"] = json.loads(d.get("secs") or "{}")
     return d
 
 

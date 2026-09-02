@@ -336,13 +336,15 @@ export default {
       if (!this.attemptId || this.submitting) return;
       const picks = {};
       const marks = [];
+      const secs = {};
       this.items.forEach((q) => {
         if (q && q._picked) picks[q.id] = q._picked;
         if (q && q._marked) marks.push(q.id);
+        if (q && Number.isInteger(q._secs) && q._secs > 0) secs[q.id] = q._secs;
       });
       request('/api/exam/progress', {
         method: 'POST',
-        data: { uid: anonUid(), attempt_id: this.attemptId, picks, idx: this.idx, marks },
+        data: { uid: anonUid(), attempt_id: this.attemptId, picks, idx: this.idx, marks, secs },
       }).catch(() => {});
     },
     confirmSubmit() {

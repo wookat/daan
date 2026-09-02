@@ -90,3 +90,28 @@ describe('adoptServerExamProgress marks（R317）', () => {
     expect(adoptServerExamProgress(null, server({ marks: 'bad' }), NOW).items.every((q) => q._marked === false)).toBe(true);
   });
 });
+
+describe('adoptServerExamProgress secs（R318）', () => {
+  it('server.secs 按 question_id 命中恢复 _secs', () => {
+    const snap = adoptServerExamProgress(null, server({ secs: { 101: 45, 102: 80 } }), NOW);
+    expect(snap.items[0]._secs).toBe(45);
+    expect(snap.items[1]._secs).toBe(80);
+  });
+
+  it('字符串键归一命中，非法值/未命中回 0', () => {
+    const snap = adoptServerExamProgress(
+      null,
+      server({ secs: { '101': 30, 102: 'x', 999: 5 } }),
+      NOW,
+    );
+    expect(snap.items[0]._secs).toBe(30);
+    expect(snap.items[1]._secs).toBe(0);
+  });
+
+  it('secs 缺省/非对象/数组 fail-closed 全 0', () => {
+    for (const secs of [undefined, 'bad', [45, 80], null]) {
+      const snap = adoptServerExamProgress(null, server({ secs }), NOW);
+      expect(snap.items.every((q) => q._secs === 0)).toBe(true);
+    }
+  });
+});
