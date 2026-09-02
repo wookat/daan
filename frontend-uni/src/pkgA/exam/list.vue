@@ -65,6 +65,7 @@
       </view>
       <view class="paper-btns">
         <view class="pbtn main" @click="startPaper(p)">开始模考</view>
+        <view v-if="p.best_attempt_id" class="pbtn" @click="openBestReport(p)">看报告</view>
         <view class="pbtn" @click="askExport(p)">{{ exportingId === p.id ? '导出中…' : '导出 PDF' }}</view>
       </view>
     </view>
@@ -254,6 +255,9 @@ export default {
     startPaper(p) {
       if (this._starting) return;
       uni.navigateTo({ url: '/pkgA/exam/exam?paper_id=' + p.id });
+    },
+    openBestReport(p) {
+      uni.navigateTo({ url: '/pkgA/exam/report?attempt_id=' + p.best_attempt_id });
     },
     startMini() {
       uni.navigateTo({ url: '/pkgA/exam/exam?mini=1' });

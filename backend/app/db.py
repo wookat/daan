@@ -3300,16 +3300,30 @@ def list_exam_papers(kind: str | None = None, year: int | None = None,
     best: dict[int, dict] = {}
     if uid and base:
         for b in conn.execute(
-            """SELECT paper_id, MAX(score) s, COUNT(*) n FROM exam_attempts
-               WHERE uid=? AND submitted_at IS NOT NULL GROUP BY paper_id""",
+            """SELECT paper_id, id, score FROM exam_attempts
+               WHERE uid=? AND submitted_at IS NOT NULL""",
             (uid,),
         ):
-            best[b["paper_id"]] = {"best_score": b["s"], "attempt_count": b["n"]}
+            cur = best.get(b["paper_id"])
+            if cur is None:
+                best[b["paper_id"]] = {
+                    "best_score": b["score"], "attempt_count": 1,
+                    "best_attempt_id": b["id"],
+                }
+            else:
+                cur["attempt_count"] += 1
+                s = b["score"] if b["score"] is not None else 0
+                bs = cur["best_score"] if cur["best_score"] is not None else 0
+                if s > bs or (s == bs and b["id"] > cur["best_attempt_id"]):
+                    cur["best_score"] = b["score"]
+                    cur["best_attempt_id"] = b["id"]
     conn.close()
     out = []
     for d in base:
         d = dict(d)
-        d.update(best.get(d["id"], {"best_score": None, "attempt_count": 0}))
+        d.update(best.get(d["id"], {
+            "best_score": None, "attempt_count": 0, "best_attempt_id": None,
+        }))
         out.append(d)
     return out
 
