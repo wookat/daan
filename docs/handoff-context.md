@@ -984,3 +984,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 收口纯前端：新增 src/mastery-url.js 纯函数（mod 非空 trim 后 encodeURIComponent，缺省回落基础路径；parse decodeURIComponent 容错）+ onLoad 暂存 _pendingMod、applyMap() 在 API 返回的 d.modules 中真实存在才应用（模块列表为动态数据，对齐 R277/R279 API 白名单模式）+ curMod watcher replaceState。默认选中首模块同样外显 ?mod（replaceState 不污染历史）。零后端/SSR/SEO 变化。
 - 验证：lint/vitest 174(+4)/build 全绿；生产双视口实测（种子测试 uid 40 题跨 4 模块解锁地图，验后已删）：点第二模块→?mod=shuliang、?mod=shuliang 深链新开页恢复选中、?mod=nope 回落首模块且 URL 重同步 ?mod=ziliao、溢出 0、console 0 error、性能预算全过（/ 0.99、/tiku/ 1.00）。冷启动态（<30 题）无模块列表，_pendingMod 自然不应用。
 - 详见 docs/iter/round-3/design-r280-mastery-map-mod-url-sync.md。
+
+## R281（模考成绩报告补「模块用时 · 配速分析」）
+- 取证：SOP-10 四维复审计（生产 1440/375 十路由截图 + 源码核查）定位核心功能深度缺口——交卷链路 per_module 已聚合 secs 并随 attempt 落库，报告页从未呈现（只有得分维度）；粉笔模考报告核心维度之一即各模块用时 vs 参考用时。SSR 题目页全站正确率外显候选被否决（生产 attempt_count>=5 仅 17 题，覆盖面不足）。
+- 收口纯前端：新增 src/exam-pace.js 纯函数 buildPaceRows（参考用时按题量占比折算自本卷限时；>1.2× 超时/<0.6× 偏快/其余合理；durationMin/total 非法或全模块 secs=0 返回空不伪造）+ fmtMin；report.vue 侧栏「模块得分」下新增配速卡（status 着色条 + 用时/参考双值 + 折算口径底注），空 rows 整卡不渲染（历史无 secs attempt 自然隐藏）。零后端/契约变化。
+- 详见 docs/iter/round-3/design-r281-exam-report-pace.md。

@@ -42,6 +42,21 @@
           <text class="mrow-v">{{ m.correct }}/{{ m.n }}</text>
         </view>
       </view>
+
+      <view v-if="paceRows.length" class="card">
+        <view class="h">模块用时 · 配速</view>
+        <view v-for="p in paceRows" :key="p.key" class="prow">
+          <view class="prow-top">
+            <text class="prow-name">{{ p.name }}</text>
+            <text class="prow-tag" :class="p.status">{{ p.status === 'over' ? '超时' : p.status === 'fast' ? '偏快' : '合理' }}</text>
+          </view>
+          <view class="prow-bar">
+            <view class="prow-fill" :class="p.status" :style="{ width: p.pct + '%' }"></view>
+          </view>
+          <text class="prow-v">用时 {{ fmtMin(p.secs) }} · 参考 {{ fmtMin(p.refSecs) }}</text>
+        </view>
+        <text class="note">参考用时按各模块题量占比折算自本卷限时</text>
+      </view>
       </view>
 
       <view class="rp2-main">
@@ -136,6 +151,7 @@
 <script>
 import { request, anonUid, isNetErr } from '../../api.js';
 import { splitMaterial } from '../../material.js';
+import { buildPaceRows, fmtMin } from '../../exam-pace.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
 const MOD_ORDER = ['changshi', 'yanyu', 'shuliang', 'panduan', 'ziliao'];
@@ -174,6 +190,20 @@ export default {
         correct: pm[k].correct,
         pct: pm[k].n ? Math.round((pm[k].correct / pm[k].n) * 100) : 0,
       }));
+    },
+    paceRows() {
+      const r = this.report;
+      if (!r) return [];
+      const rows = buildPaceRows(r.attempt.per_module, r.paper.duration_min, r.total);
+      const order = (k) => { const i = MOD_ORDER.indexOf(k); return i < 0 ? MOD_ORDER.length : i; };
+      return rows
+        .slice()
+        .sort((a, b) => order(a.key) - order(b.key))
+        .map((p) => ({
+          ...p,
+          name: MODS[p.key] || p.key,
+          pct: Math.max(4, Math.round((p.secs / Math.max(p.secs, p.refSecs, 1)) * 100)),
+        }));
     },
   },
   onLoad(opt) {
@@ -220,6 +250,7 @@ export default {
       const p = this.report.paper;
       uni.redirectTo({ url: p.kind === 'mock' ? '/pkgA/exam/exam?mini=1' : '/pkgA/exam/exam?paper_id=' + p.id });
     },
+    fmtMin,
     goPractice(tag3) {
       uni.setStorageSync('practiceLaunch', { kind: 'start', tag3: tag3 || null, count: 10, adaptive: true });
       uni.navigateTo({ url: '/pages/practice/practice' });
@@ -294,6 +325,16 @@ export default {
 .wrow-t { font-size: 26rpx; color: var(--ink); font-weight: 500; }
 .wrow-s { font-size: 22rpx; color: var(--ink-2); }
 .wrow-go { font-size: 25rpx; color: var(--brand-text); font-weight: 600; }
+.prow { padding: 10rpx 0; }
+.prow-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8rpx; }
+.prow-name { font-size: 24rpx; color: var(--ink-2); }
+.prow-tag { font-size: 21rpx; font-weight: 600; border-radius: 999rpx; padding: 2rpx 14rpx; background: var(--ok-soft); color: var(--ok-strong, #15803d); }
+.prow-tag.over { background: var(--bad-soft); color: var(--bad-strong, #b91c1c); }
+.prow-tag.fast { background: var(--soft-bg); color: var(--ink-2); }
+.prow-bar { height: 14rpx; background: var(--brand-soft); border-radius: 999rpx; overflow: hidden; }
+.prow-fill { height: 100%; background: var(--brand); border-radius: 999rpx; transition: width 0.4s ease; }
+.prow-fill.over { background: var(--bad, #dc2626); }
+.prow-v { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; font-variant-numeric: tabular-nums; }
 
 /* #ifdef H5 */
 @media (min-width: 768px) {
