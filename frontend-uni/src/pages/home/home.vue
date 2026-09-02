@@ -485,6 +485,7 @@ import { checkinStreak, dayKey, loadSzDaily } from '../../checkin.js';
 import { parseExamProgress, fmtLeftSecs } from '../../exam-resume.js';
 import { adoptServerExamProgress } from '../../exam-progress-sync.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
+import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -955,6 +956,7 @@ export default {
         this.dailyGoal = g;
         uni.setStorageSync('dailyGoal', g);
       }
+      this.adoptPrefs(this.profile);
       if (this.profile) {
         this.planToday = d.plan_today || null;
         uni.setStorageSync('homePlanCard', this.planToday && this.planToday.profile ? '1' : '');
@@ -1054,6 +1056,14 @@ export default {
     setGroup(n) {
       this.groupSize = n;
       uni.setStorageSync('groupSize', n);
+      request('/api/profile', { method: 'POST', data: { uid: anonUid(), group_size: n } }).catch(() => {});
+    },
+    adoptPrefs(profile) {
+      const p = adoptServerPracticePrefs({ groupSize: this.groupSize }, profile);
+      if (p.groupSize != null) {
+        this.groupSize = p.groupSize;
+        uni.setStorageSync('groupSize', p.groupSize);
+      }
     },
     async openPapers() {
       this.paperSheet = true;
@@ -1090,6 +1100,7 @@ export default {
           this.dailyGoal = g;
           uni.setStorageSync('dailyGoal', g);
         }
+        this.adoptPrefs(this.profile);
         if (this.profile) await this.loadPlanToday();
         else this.planToday = null;
       } catch (e) { /* 非关键路径 */ } finally {

@@ -3511,7 +3511,18 @@ def list_exam_attempts(uid: str, paper_id: int | None = None, limit: int = 50) -
 
 # ---------- 报考画像 & 学习计划数据 ----------
 
-PROFILE_FIELDS = ("exam_type", "target_region", "exam_date", "target_score", "daily_minutes", "base_level", "daily_goal")
+PROFILE_FIELDS = (
+    "exam_type",
+    "target_region",
+    "exam_date",
+    "target_score",
+    "daily_minutes",
+    "base_level",
+    "daily_goal",
+    "group_size",
+    "timed_mode",
+    "auto_next",
+)
 
 
 def _ensure_user_profile(conn):
@@ -3525,12 +3536,16 @@ def _ensure_user_profile(conn):
             daily_minutes INTEGER,
             base_level TEXT,
             daily_goal INTEGER,
+            group_size INTEGER,
+            timed_mode INTEGER,
+            auto_next INTEGER,
             created_at REAL,
             updated_at REAL)"""
     )
     cols = {r["name"] for r in conn.execute("PRAGMA table_info(user_profile)")}
-    if "daily_goal" not in cols:
-        conn.execute("ALTER TABLE user_profile ADD COLUMN daily_goal INTEGER")
+    for col in ("daily_goal", "group_size", "timed_mode", "auto_next"):
+        if col not in cols:
+            conn.execute(f"ALTER TABLE user_profile ADD COLUMN {col} INTEGER")
 
 
 def get_user_profile(uid: str) -> dict | None:
@@ -3557,8 +3572,9 @@ def save_user_profile(uid: str, fields: dict) -> dict:
     else:
         conn.execute(
             """INSERT INTO user_profile
-               (uid, exam_type, target_region, exam_date, target_score, daily_minutes, base_level, daily_goal, created_at, updated_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+               (uid, exam_type, target_region, exam_date, target_score, daily_minutes, base_level,
+                daily_goal, group_size, timed_mode, auto_next, created_at, updated_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 uid,
                 vals.get("exam_type"),
@@ -3568,6 +3584,9 @@ def save_user_profile(uid: str, fields: dict) -> dict:
                 vals.get("daily_minutes"),
                 vals.get("base_level"),
                 vals.get("daily_goal"),
+                vals.get("group_size"),
+                vals.get("timed_mode"),
+                vals.get("auto_next"),
                 now,
                 now,
             ),

@@ -356,6 +356,7 @@ import { announce } from '../../a11y-live.js';
 import { pickAnnounceText } from '../../live-policy.js';
 // #endif
 import { adoptServerDailyGoal } from '../../daily-goal.js';
+import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -848,6 +849,22 @@ export default {
             this.dailyGoal = g;
             uni.setStorageSync('dailyGoal', g);
           }
+          const p = adoptServerPracticePrefs(
+            { groupSize: this.groupSize, timedMode: this.timedMode, autoNext: this.autoNext },
+            d && d.profile
+          );
+          if (p.groupSize != null) {
+            this.groupSize = p.groupSize;
+            uni.setStorageSync('groupSize', p.groupSize);
+          }
+          if (p.timedMode != null) {
+            this.timedMode = p.timedMode;
+            uni.setStorageSync('timedMode', p.timedMode ? '1' : '');
+          }
+          if (p.autoNext != null) {
+            this.autoNext = p.autoNext;
+            uni.setStorageSync('autoNextOff', p.autoNext ? '' : '1');
+          }
         })
         .catch(() => {});
     },
@@ -911,6 +928,7 @@ export default {
     setGroup(n) {
       this.groupSize = n;
       uni.setStorageSync('groupSize', n);
+      request('/api/profile', { method: 'POST', data: { uid: anonUid(), group_size: n } }).catch(() => {});
     },
     goMini() {
       uni.navigateTo({ url: '/pkgA/exam/exam?mini=1' });
@@ -1861,11 +1879,13 @@ export default {
     toggleAutoNext() {
       this.autoNext = !this.autoNext;
       uni.setStorageSync('autoNextOff', this.autoNext ? '' : '1');
+      request('/api/profile', { method: 'POST', data: { uid: anonUid(), auto_next: this.autoNext ? 1 : 0 } }).catch(() => {});
       uni.showToast({ title: this.autoNext ? '答对自动跳下一题' : '答对后停留看解析', icon: 'none', duration: 1200 });
     },
     toggleTimed() {
       this.timedMode = !this.timedMode;
       uni.setStorageSync('timedMode', this.timedMode ? '1' : '');
+      request('/api/profile', { method: 'POST', data: { uid: anonUid(), timed_mode: this.timedMode ? 1 : 0 } }).catch(() => {});
       uni.showToast({ title: this.timedMode ? '限时训练开启：按考场建议用时倒计时' : '已关闭限时训练', icon: 'none', duration: 1500 });
     },
     toggleBei() {
