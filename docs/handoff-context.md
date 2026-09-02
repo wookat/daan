@@ -814,3 +814,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证 verified：生产 shenlun_materials 166 条（政策理论 73/金句 41/案例 32/范文 20）已具备搜索/深链/分享全链路（R244–R247），但公开 SSR hub /tiku/shenlun/ 仅底部 CTA 文案提及素材，素材资产对搜索引擎/未装 App 用户零外显。
 - 收口：db.shenlun_material_type_counts()（disabled 守卫 + 排除空类型，按数量降序）+ _tiku_shenlun 第 1 页渲染「申论素材库（N 条）」卡片，各类型链接 /#/pkgA/shenlun/shenlun?tab=m&mtype=<quote(type)>（hash 深链不新增可收录 URL）；空 counts 整卡不渲染，分页页不重复；canonical/JSON-LD/sitemap/分页零变化。
 - 验证：pytest +1 例（板块存在/mtype 链接/素材清空不渲染），121 passed/ruff/pyright 0；生产 rev 4813237 实测 hub 素材板块 166 条 + 4 类型链接（page=2 无板块），1440/375 点击类型链接直达 App 素材 tab 且「政策理论」chip 激活过滤 20 条、溢出 0、console 0 error、性能预算全过（/ perf 0.99、/tiku/ perf 1.00）。详见 docs/iter/round-3/design-r248-shenlun-hub-materials.md。
+
+### R249（内容发现渠道口径对齐：首页/llms.txt/hub 元信息补素材库）
+- 取证 verified：R248 上线后 /tiku/ 首页申论条目与 /llms.txt 申论条目仍只写真题、零素材提及；/tiku/shenlun/ meta description 与 JSON-LD description 只写「共 N 题」，与页面正文素材板块不一致（对照 R234/R240 口径一致先例）。
+- 收口：三处均以真实计数守卫（素材清空自动回落纯真题口径）——_tiku_index 申论 section 补「另收录申论写作素材 N 条（类型清单）」；llms_txt 申论条目追加「；另收录 N 条写作素材（按类型归档）」；_tiku_shenlun 第 1 页 description/JSON-LD 追加「另有写作素材 N 条。」（分页页不带）。canonical/sitemap/分页零变化，不新增素材 URL。
+- 验证：pytest +1 例（三渠道口径存在/清空回落/分页页不带），122 passed/ruff/pyright 0；生产 rev 4111a11 实测三渠道文案就位（166 条）、page=2 不带、1440/375 溢出 0、console 0 error、性能预算全过（/ perf 0.99、/tiku/ perf 1.00）。详见 docs/iter/round-3/design-r249-material-discovery-copy.md。
