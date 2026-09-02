@@ -43,7 +43,8 @@ def test_shenlun_hub_materials_section(client):
     try:
         r = client.get("/tiku/shenlun/")
         assert "申论素材库（" in r.text
-        assert "tab=m&amp;mtype=" in r.text and "金句" in r.text
+        # R264：板块类型链接指向素材 SSR 页族
+        assert f'href="/tiku/shenlun/sucai/{quote("金句")}/"' in r.text
     finally:
         conn = db.get_conn()
         conn.execute("DELETE FROM shenlun_materials WHERE topic LIKE '%测试素材%'")
@@ -190,6 +191,51 @@ def test_shenlun_paper_pages(client):
         _clear_shenlun()
     assert client.get(path).status_code == 404
     assert path not in client.get("/sitemap-pages.xml").text
+
+
+def test_shenlun_sucai_pages(client):
+    """R264：申论素材按类型聚合 SSR 页；正文/出处外显、hub 链接、sitemap 收录；未知/清空类型 404。"""
+    seed_questions()
+    _seed_shenlun()
+    conn = db.get_conn()
+    conn.execute(
+        "INSERT OR IGNORE INTO shenlun_materials (type, topic, content, source, disabled)"
+        " VALUES ('金句', '测试素材金句', '测试素材内容第一行\n第二行', '测试出处文献', 0)"
+    )
+    conn.commit()
+    conn.close()
+    path = f"/tiku/shenlun/sucai/{quote('金句')}/"
+    try:
+        r = client.get(path)
+        assert r.status_code == 200
+        assert "申论写作素材·金句（1 条）" in r.text
+        assert "测试素材金句" in r.text
+        assert "测试素材内容第一行<br>第二行" in r.text
+        assert "出处：测试出处文献" in r.text
+        assert 'rel="canonical"' in r.text and path in r.text
+        # 逐条 App 深链（mid+mtype）与 CTA
+        assert re.search(r'href="/#/pkgA/shenlun/shenlun\?tab=m&amp;mid=\d+&amp;mtype=', r.text)
+        assert f'class="cta" href="/#/pkgA/shenlun/shenlun?tab=m&amp;mtype={quote("金句")}"' in r.text
+        # 无斜杠 301；未知类型无斜杠直接 404（不产生 301→404 链）
+        r301 = client.get(path.rstrip("/"), follow_redirects=False)
+        assert r301.status_code == 301 and r301.headers["location"].endswith(path)
+        assert client.get("/tiku/shenlun/sucai/不存在类型", follow_redirects=False).status_code == 404
+        assert client.get("/tiku/shenlun/sucai/不存在类型/").status_code == 404
+        # hub 素材板块链接改为 SSR 页
+        hub = client.get("/tiku/shenlun/")
+        assert f'href="{path}"' in hub.text
+        # sitemap-pages 收录
+        sm = client.get("/sitemap-pages.xml")
+        assert path in sm.text
+    finally:
+        conn = db.get_conn()
+        conn.execute("DELETE FROM shenlun_materials WHERE topic LIKE '%测试素材%'")
+        conn.commit()
+        conn.close()
+        # 类型清空后 404 + sitemap 消失
+        assert client.get(path).status_code == 404
+        assert path not in client.get("/sitemap-pages.xml").text
+        _clear_shenlun()
 
 
 def test_shenlun_hub_renders_with_corpus_and_falls_back_when_empty(client):

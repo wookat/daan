@@ -15,6 +15,7 @@ from .common import (
     _page,
     _pager,
     _shenlun_paper_path,
+    _shenlun_sucai_path,
     _sub_path,
     _year_path,
     router,
@@ -178,6 +179,65 @@ def _render_shenlun_qtype(qtype: str, page: int) -> str:
     )
 
 
+def _render_shenlun_sucai(mtype: str) -> str:
+    """申论素材按类型聚合页：正文与出处一次呈现；未知/清空类型回落 404。"""
+    items = db.shenlun_materials_by_type(mtype)
+    if not items:
+        raise HTTPException(404, "素材类型不存在")
+    cards = []
+    topic = None
+    for m in items:
+        if m["topic"] != topic:
+            topic = m["topic"]
+            cards.append(f"<h2>{_e(topic or '其他')}</h2>")
+        content = _e((m["content"] or "").strip()).replace("\n", "<br>")
+        source = (m["source"] or "").strip()
+        cards.append(
+            f'<div class="card"><p>{content}</p>'
+            + (f'<p class="meta">出处：{_e(source)}</p>' if source else "")
+            + f'<p><a href="/#/pkgA/shenlun/shenlun?tab=m&amp;mid={m["id"]}&amp;mtype={quote(mtype)}">在 App 中查看/收藏 →</a></p></div>'
+        )
+    others = "".join(
+        f'<a href="{_e(_shenlun_sucai_path(t))}">{_e(t)}（{n} 条）</a>'
+        for t, n in db.shenlun_material_type_counts() if t != mtype
+    )
+    body = (
+        _crumb([("题库", "/tiku/"), ("申论", "/tiku/shenlun/"), (f"{mtype}素材", None)])
+        + f"<h1>申论写作素材·{_e(mtype)}（{len(items)} 条）</h1>"
+        + f'<p class="meta">申论{_e(mtype)}写作素材，按主题归类并附权威出处，可在 App 申论专区浏览、收藏与分享</p>'
+        + "".join(cards)
+        + (f'<div class="card"><h2>其他类型写作素材</h2><div class="tags">{others}</div></div>' if others else "")
+        + f'<a class="cta" href="/#/pkgA/shenlun/shenlun?tab=m&amp;mtype={quote(mtype)}">进入申论专区浏览{_e(mtype)}素材 →</a>'
+    )
+    return _page(
+        f"申论{mtype}写作素材（{len(items)} 条）_申论素材库_错题邦",
+        f"申论{mtype}写作素材共 {len(items)} 条，按主题归类并附权威出处，可在 App 申论专区浏览、收藏与分享。",
+        _shenlun_sucai_path(mtype),
+        body,
+        _collection_ld(
+            f"申论写作素材·{mtype}",
+            f"申论{mtype}写作素材 {len(items)} 条，按主题归类并附权威出处。",
+            _shenlun_sucai_path(mtype),
+            [("题库", "/tiku/"), ("申论", "/tiku/shenlun/"), (f"{mtype}素材", _shenlun_sucai_path(mtype))],
+        ),
+    )
+
+
+@router.get("/shenlun/sucai/{mtype}", include_in_schema=False)
+def tiku_shenlun_sucai_noslash(mtype: str):
+    if not db.shenlun_materials_by_type(mtype):
+        return _not_found("素材类型不存在")
+    return RedirectResponse(_shenlun_sucai_path(mtype), status_code=301)
+
+
+@router.get("/shenlun/sucai/{mtype}/", response_class=HTMLResponse, include_in_schema=False)
+def tiku_shenlun_sucai(mtype: str):
+    try:
+        return HTMLResponse(_render_shenlun_sucai(mtype))
+    except HTTPException as e:
+        return _not_found(e.detail)
+
+
 @router.get("/shenlun/p/{paper}", include_in_schema=False)
 def tiku_shenlun_paper_noslash(paper: str):
     if not db.shenlun_paper_questions(paper):
@@ -227,12 +287,12 @@ def _tiku_shenlun(page: int):
             mat_total = sum(n for _, n in mat_counts)
             mat_desc = f"另有写作素材 {mat_total} 条。"
             mat_links = "".join(
-                f'<a href="/#/pkgA/shenlun/shenlun?tab=m&amp;mtype={quote(t)}">{_e(t)}（{n} 条）</a> '
+                f'<a href="{_e(_shenlun_sucai_path(t))}">{_e(t)}（{n} 条）</a> '
                 for t, n in mat_counts
             )
             mat_html = (
                 f'<div class="card"><h2>申论素材库（{mat_total} 条）</h2>'
-                "<p>政策理论、金句、案例、范文等写作素材，可在 App 申论专区按类型浏览、收藏与分享：</p>"
+                "<p>政策理论、金句、案例、范文等写作素材，按主题归类并附权威出处，可在 App 申论专区收藏与分享：</p>"
                 f'<p class="tags">{mat_links}</p></div>'
             )
     body = (

@@ -46,6 +46,10 @@ def _shenlun_paper_path(paper: str) -> str:
     return f"/tiku/shenlun/p/{quote(paper)}/"
 
 
+def _shenlun_sucai_path(mtype: str) -> str:
+    return f"/tiku/shenlun/sucai/{quote(mtype)}/"
+
+
 _CSS = (
     ":root{--bg:#f6f7fb;--surface:#fff;--border:#e7e9f0;--text:#17181c;--muted:#6b7280;"
     "--link:" + BRAND + ";--tag-bg:#eef3ff;--ans-bg:#ecfdf5;"

@@ -1032,6 +1032,17 @@ def shenlun_materials(topic: str | None = None, mtype: str | None = None, limit:
     return [dict(r) for r in rows]
 
 
+def shenlun_materials_by_type(mtype: str) -> list[dict]:
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT id, type, topic, content, source FROM shenlun_materials"
+        " WHERE (disabled IS NULL OR disabled=0) AND type=? ORDER BY id",
+        (mtype,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 def question_counts() -> list[dict]:
     conn = get_conn()
     rows = conn.execute(

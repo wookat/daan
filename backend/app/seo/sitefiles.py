@@ -18,6 +18,7 @@ from .common import (
     _e,
     _module_name,
     _shenlun_paper_path,
+    _shenlun_sucai_path,
     _sub_path,
     _topic_path,
     _url,
@@ -89,6 +90,7 @@ def _sitemap_page_urls() -> list[tuple[str, float | None]]:
         urls.append((_url("/tiku/shenlun/"), None))
         urls += [(_url(_sub_path("shenlun", t)), None) for t, _n in db.shenlun_qtype_counts()]
         urls += [(_url(_shenlun_paper_path(p)), None) for p, _y, _rg, _n in db.shenlun_paper_counts()]
+        urls += [(_url(_shenlun_sucai_path(t)), None) for t, _n in db.shenlun_material_type_counts()]
     urls += [(_url(f'/tiku/papers/{p["id"]}'), p["created_at"]) for p in db.list_exam_papers(kind="zhenti")]
     return urls
 
