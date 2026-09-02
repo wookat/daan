@@ -1845,6 +1845,7 @@ export default {
     },
     clearServerProgress() {
       clearTimeout(this._ppTimer);
+      uni.setStorageSync('ppClearedAt', Date.now());
       request('/api/practice/progress', { method: 'POST', data: { uid: anonUid(), qids: [] } }).catch(() => {});
     },
     startDefault() {
@@ -1853,6 +1854,11 @@ export default {
     },
     tryServerResume() {
       if (this._srvResuming) return;
+      const clearedAt = uni.getStorageSync('ppClearedAt');
+      if (clearedAt && Date.now() - clearedAt < 30 * 1000) {
+        this.startDefault();
+        return;
+      }
       this._srvResuming = true;
       request('/api/practice/resume?uid=' + anonUid())
         .then((d) => {
