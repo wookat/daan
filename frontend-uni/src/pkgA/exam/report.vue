@@ -143,6 +143,22 @@
         </view>
       </view>
 
+      <view
+        v-if="nextReco"
+        class="next-cta"
+        role="button"
+        tabindex="0"
+        :aria-label="'继续模考' + nextReco.title"
+        @click="goNext"
+        @keydown.enter="goNext"
+      >
+        <view class="next-l">
+          <text class="next-t">继续模考：{{ nextReco.title }}</text>
+          <text class="next-d">{{ nextReco.takers > 0 ? '已有 ' + nextReco.takers + ' 人模考' + (nextReco.avgScore != null ? ' · 平均 ' + nextReco.avgScore + ' 分' : '') : '换一卷继续练手感' }}</text>
+        </view>
+        <text class="next-btn">去看这卷</text>
+      </view>
+
       <view class="btns">
         <view class="pbtn" @click="goList">返回卷库</view>
         <view class="pbtn main" @click="retake">再考一次</view>
@@ -213,13 +229,14 @@ import { qStatLine } from '../../q-stat.js';
 import { goalGap, prevScoreDelta } from '../../exam-goal.js';
 import { modAvgPct } from '../../exam-mod-avg.js';
 import { weakModule } from '../../exam-weak.js';
+import { nextPaper } from '../../exam-next.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
 const MOD_ORDER = ['changshi', 'yanyu', 'shuliang', 'panduan', 'ziliao'];
 
 export default {
   data() {
-    return { loading: true, loadErr: '', aid: null, report: null, history: [], targetScore: null, detail: null, matOpen: false, wrongOnly: false, favs: uni.getStorageSync('favQuestions') || [], rankData: null };
+    return { loading: true, loadErr: '', aid: null, report: null, history: [], targetScore: null, detail: null, matOpen: false, wrongOnly: false, favs: uni.getStorageSync('favQuestions') || [], rankData: null, nextReco: null };
   },
   computed: {
     accuracy() {
@@ -346,6 +363,7 @@ export default {
         uni.setNavigationBarTitle({ title: '成绩报告' });
         this.loadHistory();
         this.loadProfile();
+        this.loadNext();
       } catch (e) {
         // 仅网络层失败置错误态；HTTP 业务错误（如报告不存在）保持空态引导
         if (isNetErr(e)) this.loadErr = e.message || '网络异常';
@@ -366,6 +384,20 @@ export default {
         const d = await request('/api/profile?uid=' + encodeURIComponent(anonUid()));
         this.targetScore = (d.profile && d.profile.target_score) != null ? d.profile.target_score : null;
       } catch (e) { /* 非关键路径：未设/失败不渲染 */ }
+    },
+    async loadNext() {
+      try {
+        const uid = encodeURIComponent(anonUid());
+        const [papers, attempts] = await Promise.all([
+          request('/api/exam/papers?kind=zhenti&uid=' + uid),
+          request('/api/exam/attempts?uid=' + uid),
+        ]);
+        this.nextReco = nextPaper(papers.items, attempts.items, this.report.paper);
+      } catch (e) { /* 非关键路径：失败不渲染 */ }
+    },
+    goNext() {
+      if (!this.nextReco) return;
+      uni.navigateTo({ url: '/pkgA/exam/list?pid=' + this.nextReco.id });
     },
     openQ(it) { this.matOpen = false; this.detail = it; },
     toggleDetailFav() {
@@ -476,6 +508,11 @@ export default {
 .weak-t { font-size: 26rpx; font-weight: 600; color: var(--ink); }
 .weak-d { font-size: 22rpx; color: var(--ink-2); }
 .weak-btn { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: var(--brand-strong); white-space: nowrap; }
+.next-cta { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; margin-top: 24rpx; padding: 20rpx 22rpx; background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 18rpx; cursor: pointer; }
+.next-l { display: flex; flex-direction: column; gap: 4rpx; min-width: 0; }
+.next-t { font-size: 26rpx; font-weight: 600; color: var(--ink); }
+.next-d { font-size: 22rpx; color: var(--ink-2); }
+.next-btn { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: var(--brand-strong); white-space: nowrap; }
 .curve { display: flex; align-items: flex-end; gap: 14rpx; height: 220rpx; padding: 10rpx 0; }
 .curve-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 44rpx; }
 .curve-v { font-size: 20rpx; color: var(--ink-2); margin-bottom: 4rpx; }
