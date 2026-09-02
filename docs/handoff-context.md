@@ -978,3 +978,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 收口纯前端：新增 src/favorites-url.js 纯函数（tab=note 不叠 fav 侧参数；mod 六键白名单含中文键「时政」encodeURIComponent；folder ≥0 整数、0=默认夹合法；全默认回落基础路径）+ onLoad 恢复（mod 静态白名单立即应用、folder 暂存 load() 收藏夹返回后按真实 folders 校验存在才应用、tab=note 直切）+ tab/folderId/modFilter watcher 统一 replaceState。零后端/SSR/SEO 变化。
 - 验证：lint/vitest 170(+6)/build 全绿；生产双视口实测出向同步（点模块→?mod、点夹→&folder=0、切笔记→?tab=note）与入向深链（note/时政编码/folder=0/组合）chip/夹/seg 激活、非法参数回落与无参一致、溢出 0、console 0 error、性能预算全过。注意：uni-app H5 同页 hash query 变化不重挂载（不触发 onLoad），验证入向深链必须新开页。
 - 详见 docs/iter/round-3/design-r279-favorites-filter-url-sync.md。
+
+## R280（考点掌握度地图模块 tab URL 同步 + 入向深链）
+- 取证：origin 12h 无新增用户可见 5xx（04:3x 503 簇为 R275 已收口历史形态）；mastery-map.vue 的 curMod（模块 tab/桌面侧栏双入口同状态）纯本地态，无 onLoad 恢复无 URL 同步，是 R276–R279 后 App 内最后一个主要筛选态未闭环页面（selected 考点吸底条为瞬时交互态不收）。
+- 收口纯前端：新增 src/mastery-url.js 纯函数（mod 非空 trim 后 encodeURIComponent，缺省回落基础路径；parse decodeURIComponent 容错）+ onLoad 暂存 _pendingMod、applyMap() 在 API 返回的 d.modules 中真实存在才应用（模块列表为动态数据，对齐 R277/R279 API 白名单模式）+ curMod watcher replaceState。默认选中首模块同样外显 ?mod（replaceState 不污染历史）。零后端/SSR/SEO 变化。
+- 验证：lint/vitest 174(+4)/build 全绿；生产双视口实测（种子测试 uid 40 题跨 4 模块解锁地图，验后已删）：点第二模块→?mod=shuliang、?mod=shuliang 深链新开页恢复选中、?mod=nope 回落首模块且 URL 重同步 ?mod=ziliao、溢出 0、console 0 error、性能预算全过（/ 0.99、/tiku/ 1.00）。冷启动态（<30 题）无模块列表，_pendingMod 自然不应用。
+- 详见 docs/iter/round-3/design-r280-mastery-map-mod-url-sync.md。
