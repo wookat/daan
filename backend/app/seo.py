@@ -1114,6 +1114,46 @@ def _render_shenlun_year(year: int, page: int) -> str:
     )
 
 
+def _render_shenlun_qtype(qtype: str, page: int) -> str:
+    """申论按题型真题页：与行测 /tiku/{module}/{子题型}/ 同 URL 家族；未知题型/清空回落 404。"""
+    counts = db.shenlun_qtype_counts()
+    total = dict(counts).get(qtype, 0)
+    if not total:
+        raise HTTPException(404, "题型不存在")
+    res = db.shenlun_questions(qtype=qtype, limit=PAGE_SIZE, offset=(page - 1) * PAGE_SIZE)
+    items = res["items"]
+    if not items and page > 1:
+        raise HTTPException(404, "页码超出范围")
+    other_types = "".join(
+        f'<a href="{_e(_sub_path("shenlun", t))}">{_e(t)}（{n}）</a>'
+        for t, n in counts if t != qtype
+    )
+    body = (
+        _crumb([("题库", "/tiku/"), ("申论", "/tiku/shenlun/"), (qtype, None)])
+        + f"<h1>申论·{_e(qtype)}真题（{total} 题）</h1>"
+        + f'<p class="meta">历年国考/省考申论{_e(qtype)}题型真题，附参考解析</p>'
+        + '<div class="card"><ul class="qlist">'
+        + _shenlun_q_items(items)
+        + "</ul></div>"
+        + _pager(_sub_path("shenlun", qtype), page, total)
+        + (f'<div class="card"><h2>其他题型申论真题</h2><div class="tags">{other_types}</div></div>' if other_types else "")
+        + f'<a class="cta" href="/#/pkgA/shenlun/shenlun?qtype={quote(qtype)}">进入申论专区在线作答{_e(qtype)}真题 →</a>'
+    )
+    suffix = f"（第{page}页）" if page > 1 else ""
+    return _page(
+        f"申论{qtype}真题{suffix}_历年申论{qtype}题型真题及参考解析_错题邦",
+        f"申论{qtype}题型真题共 {total} 题，附参考解析，可在线作答。{suffix}",
+        _sub_path("shenlun", qtype) + (f"?page={page}" if page > 1 else ""),
+        body,
+        _collection_ld(
+            f"申论·{qtype}真题",
+            f"历年申论{qtype}题型真题 {total} 题，附参考解析。",
+            _sub_path("shenlun", qtype),
+            [("题库", "/tiku/"), ("申论", "/tiku/shenlun/"), (qtype, _sub_path("shenlun", qtype))],
+        ),
+    )
+
+
 def _tiku_shenlun(page: int):
     """申论真题 hub：以 shenlun_questions 真实语料呈现；语料清空时回落品牌 404。"""
     res = db.shenlun_questions(limit=PAGE_SIZE, offset=(page - 1) * PAGE_SIZE)
@@ -1129,6 +1169,10 @@ def _tiku_shenlun(page: int):
         for y, n in db.shenlun_year_counts()
     )
     region_chips = "".join(f"<span>{_e(r)}</span>" for r in filters["regions"][:12])
+    qtype_chips = "".join(
+        f'<a href="{_e(_sub_path("shenlun", t))}">{_e(t)}（{n}）</a>'
+        for t, n in db.shenlun_qtype_counts()
+    )
     mat_html = ""
     mat_desc = ""
     if page == 1:
@@ -1149,6 +1193,7 @@ def _tiku_shenlun(page: int):
         _crumb([("题库", "/tiku/"), ("申论", None)])
         + f"<h1>申论真题库（{total} 题）</h1>"
         + "<p>历年公务员考试申论真题（概括、对策、公文、大作文等题型），附参考解析，可在 App 申论专区在线作答。</p>"
+        + (f'<div class="card"><h2>按题型刷题</h2><div class="tags">{qtype_chips}</div></div>' if qtype_chips else "")
         + (f'<div class="card"><h2>覆盖年份</h2><div class="tags">{year_chips}</div></div>' if year_chips else "")
         + (f'<div class="card"><h2>覆盖地区</h2><div class="tags">{region_chips}</div></div>' if region_chips else "")
         + '<div class="card"><ul class="qlist">'
@@ -1239,6 +1284,11 @@ def tiku_submodule(module: str, submodule: str, page: int = 1):
     if not name:
         return _not_found("模块不存在")
     page = max(1, page)
+    if module == "shenlun":
+        try:
+            return HTMLResponse(_render_shenlun_qtype(submodule, page))
+        except HTTPException as e:
+            return _not_found(e.detail)
     total = _count_questions(module, submodule)
     if not total:
         return _not_found("题型不存在")
@@ -1285,6 +1335,8 @@ def tiku_module_noslash(module: str):
 def tiku_submodule_noslash(module: str, submodule: str):
     if not _module_name(module):
         return _not_found("模块不存在")
+    if module == "shenlun" and not dict(db.shenlun_qtype_counts()).get(submodule):
+        return _not_found("题型不存在")
     return RedirectResponse(_sub_path(module, submodule), status_code=301)
 
 
@@ -1352,6 +1404,7 @@ def sitemap_pages():
             urls.append((_url(_sub_path(r["module"], s["submodule"])), None))
     if db.shenlun_questions(limit=1)["total"]:
         urls.append((_url("/tiku/shenlun/"), None))
+        urls += [(_url(_sub_path("shenlun", t)), None) for t, _n in db.shenlun_qtype_counts()]
     urls += [(_url(f'/tiku/papers/{p["id"]}'), p["created_at"]) for p in db.list_exam_papers(kind="zhenti")]
     return _urlset(urls)
 

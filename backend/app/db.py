@@ -817,6 +817,17 @@ def shenlun_year_counts() -> list[tuple[int, int]]:
     return [(r["exam_year"], r["n"]) for r in rows]
 
 
+def shenlun_qtype_counts() -> list[tuple[str, int]]:
+    conn = get_conn()
+    rows = conn.execute(
+        """SELECT qtype, COUNT(*) n FROM shenlun_questions
+           WHERE (disabled IS NULL OR disabled=0) AND qtype IS NOT NULL AND qtype != ''
+           GROUP BY qtype ORDER BY n DESC"""
+    ).fetchall()
+    conn.close()
+    return [(r["qtype"], r["n"]) for r in rows]
+
+
 def _ensure_shenlun_answers(conn):
     conn.execute(
         """CREATE TABLE IF NOT EXISTS shenlun_answers (

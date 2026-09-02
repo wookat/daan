@@ -222,6 +222,7 @@ export default {
       if (/^\d+$/.test(opts.mid || '')) this.pinMid = Number(opts.mid);
       this.switchMat();
     }
+    if (opts && QTYPES.includes(opts.qtype || '')) this.setQtype(opts.qtype);
     if (opts && /^\d+$/.test(opts.id || '')) this.openQ(Number(opts.id));
   },
   methods: {

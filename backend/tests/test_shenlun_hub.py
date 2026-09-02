@@ -1,5 +1,6 @@
 """申论真题公开 hub：有语料时 200 呈现，语料清空回落品牌 404（R232 守卫不回退）。"""
 import re
+from urllib.parse import quote
 
 from app import db
 
@@ -114,6 +115,39 @@ def test_shenlun_year_pages(client):
         _clear_shenlun()
     assert client.get("/tiku/y/2023/shenlun/").status_code == 404
     assert "/tiku/y/2023/shenlun/" not in client.get("/sitemap-years.xml").text
+
+
+def test_shenlun_qtype_pages(client):
+    """R251：申论按题型真题页；hub 题型链接、sitemap-pages 收录；未知题型 404。"""
+    seed_questions()
+    _seed_shenlun()
+    path = f"/tiku/shenlun/{quote('概括归纳')}/"
+    try:
+        r = client.get(path)
+        assert r.status_code == 200
+        assert "申论·概括归纳真题（3 题）" in r.text
+        assert "测试申论题干 0" in r.text
+        assert re.search(r'href="/#/pkgA/shenlun/shenlun\?id=\d+">去作答', r.text)
+        assert 'rel="canonical"' in r.text and path in r.text
+        # App CTA 带类型深链
+        assert f'href="/#/pkgA/shenlun/shenlun?qtype={quote("概括归纳")}"' in r.text
+        # 无斜杠 301
+        r301 = client.get(path.rstrip("/"), follow_redirects=False)
+        assert r301.status_code == 301 and r301.headers["location"].endswith(path)
+        # hub 题型 chips 为链接
+        hub = client.get("/tiku/shenlun/")
+        assert f'href="{path}"' in hub.text
+        # sitemap-pages 收录
+        sm = client.get("/sitemap-pages.xml")
+        assert path in sm.text
+        # 未知题型/越界页码 404
+        assert client.get("/tiku/shenlun/不存在题型/").status_code == 404
+        assert client.get("/tiku/shenlun/不存在题型", follow_redirects=False).status_code == 404
+        assert client.get(f"{path}?page=999").status_code == 404
+    finally:
+        _clear_shenlun()
+    assert client.get(path).status_code == 404
+    assert path not in client.get("/sitemap-pages.xml").text
 
 
 def test_shenlun_hub_renders_with_corpus_and_falls_back_when_empty(client):
