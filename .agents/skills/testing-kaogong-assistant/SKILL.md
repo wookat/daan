@@ -586,3 +586,16 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - Canvas 海报类功能的 QR 客观取证法：img.src 为 data:image/png;base64 时，base64 落盘 PNG 后用 `zbarimg -q <file>` 解码二维码落点（`sudo apt-get install -y zbar-tools`），不要目测推断。
 - uid 注入的 localStorage 实际键为 `anonUid`（api.js anonUid() 读该键），不是 `uid`。
 - 模考报告接口为路径参数 `/api/exam/report/{attempt_id}?uid=`；成绩在 `attempt.score`，顶层无 score。
+
+## R308 走查新经验
+- 生产 DB 清理可走 TICKETS_VPS_SSH_* 环境变量 + `sshpass -e ssh … "docker exec -i deploy-kaogong-1 python3 -"` 内联脚本：全表 PRAGMA table_info 扫 uid/user_id 列按测试前缀 DELETE，并回读 leftover=0。
+- 报告页键盘断言注意：逐题 75 个对错圆圈均在 Tab 序列内，Tab 至页尾 CTA 需 ~75 次；用 CDP Input.dispatchKeyEvent 循环 + activeElement 轮询客观定位目标。
+- 卷库横滚 chips 行（年份/地区 scroll-view）滚动后各 chip 屏幕坐标会变：点击前先截图核对当前坐标，误点后用「全部年份/全部地区」复位；「全部刷完 🎉」分支可在生产安全构造——选一个仅含 1 张已考卷的 year+region 范围即可。
+- 模考交卷 API 的 picks 以题号（1 起）为 key、选项字母为值（如 `{"1":"A",…,"75":"A"}`）：全选 A 可稳定得到 >0 分，配合空 picks 0 分即可构造同卷高低分双 attempt，验证 best_attempt_id 类契约。
+
+## R312 纠错弹层走查新经验
+- computer type 向 uni-app textarea 键入中文可能丢字（仅落 ASCII）；可改在页内对聚焦元素执行 `document.execCommand('insertText', false, '中文内容')`——会触发 input 事件、v-model 正常更新，提交内容以 DOM value 回读为准。
+
+## R314 错因自评走查新经验
+- 注入临时 uid 时 `anonUid` 必须存纯字符串（`localStorage.setItem('anonUid','test-xxx')`）；存 JSON 包裹形式会被 api.js anonUid() 原样当 uid 拼进请求，报告页表现为「暂无成绩报告」空态。
+- 错题本 book 页的错因 chips 只在复习流答错后出现；快速同源取证可直接看侧栏「按错因」聚合卡计数，不必走完整复习流。

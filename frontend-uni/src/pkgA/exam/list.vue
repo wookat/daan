@@ -20,7 +20,22 @@
       <view class="mini-go">开始</view>
     </view>
 
+    <view v-if="prog.total > 0" class="card progcard">
+      <view class="prog-row">
+        <text class="prog-t">{{ prog.done === prog.total ? '全部刷完 🎉' : '已刷 ' + prog.done + '/' + prog.total + ' 卷' }}</text>
+        <text class="prog-p">{{ prog.pct }}%</text>
+      </view>
+      <view class="prog-bar" role="progressbar" :aria-valuenow="prog.pct" aria-valuemin="0" aria-valuemax="100" :aria-label="'已刷 ' + prog.done + '/' + prog.total + ' 卷'">
+        <view class="prog-fill" :style="{ width: prog.pct + '%' }" />
+      </view>
+    </view>
+
     <view v-if="filters.years.length || filters.regions.length" class="filters">
+      <scroll-view scroll-x class="fscroll">
+        <text class="fchip" :class="{ on: !st }" @click="setSt('')">全部</text>
+        <text class="fchip" :class="{ on: st === 'todo' }" @click="setSt('todo')">没考过 {{ prog.total - prog.done }}</text>
+        <text class="fchip" :class="{ on: st === 'done' }" @click="setSt('done')">考过的 {{ prog.done }}</text>
+      </scroll-view>
       <scroll-view v-if="filters.years.length" scroll-x class="fscroll">
         <text class="fchip" :class="{ on: !year }" @click="setYear(null)">全部年份</text>
         <text v-for="y in filters.years" :key="y.y" class="fchip" :class="{ on: year === y.y }" @click="setYear(y.y)">{{ y.y }}年</text>
@@ -33,10 +48,10 @@
 
     <view v-if="loading" class="spin">试卷加载中…</view>
     <view v-else-if="loadErr" class="spin">加载失败：{{ loadErr }}<view class="retry" @click="load">重试 ›</view></view>
-    <view v-else-if="!items.length" class="spin">暂无成套真题卷{{ year || region ? '，试试放宽筛选' : '' }}</view>
+    <view v-else-if="!shown.length" class="spin">暂无成套真题卷{{ year || region || st ? '，试试放宽筛选' : '' }}</view>
 
     <view class="plist">
-    <view v-for="p in items" :key="p.id" :id="'paper-' + p.id" class="card paper" :class="{ pinned: p.id === pinnedId }">
+    <view v-for="p in shown" :key="p.id" :id="'paper-' + p.id" class="card paper" :class="{ pinned: p.id === pinnedId }">
       <view class="paper-top" @click="startPaper(p)">
         <text v-if="p.id === pinnedId" class="pin-badge">邀你挑战的卷</text>
         <text class="paper-t">{{ p.title }}</text>
@@ -50,6 +65,7 @@
       </view>
       <view class="paper-btns">
         <view class="pbtn main" @click="startPaper(p)">开始模考</view>
+        <view v-if="p.best_attempt_id" class="pbtn" @click="openBestReport(p)">看报告</view>
         <view class="pbtn" @click="askExport(p)">{{ exportingId === p.id ? '导出中…' : '导出 PDF' }}</view>
       </view>
     </view>
@@ -81,6 +97,8 @@
 import { request, snapPeek, anonUid, exportPdf } from '../../api.js';
 import { buildExamListUrl, parseExamListOpts } from '../../exam-list-url.js';
 import { parseExamProgress, fmtLeftSecs } from '../../exam-resume.js';
+import { filterPapersByStatus } from '../../exam-list-status.js';
+import { paperProgress } from '../../exam-list-progress.js';
 import { adoptServerExamProgress } from '../../exam-progress-sync.js';
 
 export default {
@@ -91,6 +109,7 @@ export default {
       attempts: [],
       year: null,
       region: null,
+      st: '',
       loading: true,
       loadErr: '',
       exportingId: null,
@@ -102,10 +121,22 @@ export default {
   created() {
     this._starting = false;
   },
+  computed: {
+    shown() {
+      return filterPapersByStatus(this.items, this.st);
+    },
+    prog() {
+      return paperProgress(this.items);
+    },
+  },
   onLoad(opts) {
     const p = parseExamListOpts(opts);
     this._pendingFilter = p;
     this._pendingPid = p.pid;
+    if (p.st) {
+      this.st = p.st;
+      this.syncUrl();
+    }
   },
   onShow() {
     this.load();
@@ -166,7 +197,7 @@ export default {
       const pid = this._pendingPid;
       if (!pid) return;
       this._pendingPid = 0;
-      if (!this.items.some((p) => p.id === pid)) return;
+      if (!this.shown.some((p) => p.id === pid)) return;
       this.pinnedId = pid;
       // #ifdef H5
       this.$nextTick(() => {
@@ -214,15 +245,19 @@ export default {
     syncUrl() {
       // #ifdef H5
       if (typeof window !== 'undefined' && window.history) {
-        window.history.replaceState(null, '', buildExamListUrl({ year: this.year, region: this.region }));
+        window.history.replaceState(null, '', buildExamListUrl({ year: this.year, region: this.region, st: this.st }));
       }
       // #endif
     },
     setYear(y) { this.year = y; this.pinnedId = 0; this.syncUrl(); this.load(); },
     setRegion(r) { this.region = r; this.pinnedId = 0; this.syncUrl(); this.load(); },
+    setSt(s) { this.st = s; this.pinnedId = 0; this.syncUrl(); },
     startPaper(p) {
       if (this._starting) return;
       uni.navigateTo({ url: '/pkgA/exam/exam?paper_id=' + p.id });
+    },
+    openBestReport(p) {
+      uni.navigateTo({ url: '/pkgA/exam/report?attempt_id=' + p.best_attempt_id });
     },
     startMini() {
       uni.navigateTo({ url: '/pkgA/exam/exam?mini=1' });
@@ -272,6 +307,12 @@ export default {
 .mini-t { display: block; font-size: 30rpx; font-weight: 700; color: var(--ink); }
 .mini-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; }
 .mini-go { flex-shrink: 0; background: var(--brand); color: #fff; border-radius: 999rpx; padding: 0 36rpx; min-height: 38px; line-height: 38px; font-size: 26rpx; font-weight: 600; }
+.progcard { padding: 22rpx 28rpx; }
+.prog-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
+.prog-t { font-size: 25rpx; font-weight: 600; color: var(--ink); }
+.prog-p { font-size: 23rpx; font-weight: 600; color: var(--brand-text); }
+.prog-bar { height: 12rpx; background: var(--brand-soft); border-radius: 999rpx; overflow: hidden; }
+.prog-fill { height: 100%; min-width: 4rpx; background: var(--brand); border-radius: 999rpx; }
 .filters { margin-bottom: 20rpx; }
 .fscroll { white-space: nowrap; margin-bottom: 12rpx; }
 .fchip { display: inline-flex; align-items: center; min-height: 44px; box-sizing: border-box; font-size: 24rpx; color: var(--ink-2); background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 26rpx; margin-right: 12rpx; }

@@ -31,7 +31,7 @@
         </view>
       </view>
 
-      <rank-card v-if="report.attempt && report.attempt.id" :attempt-id="report.attempt.id" />
+      <rank-card v-if="report.attempt && report.attempt.id" :attempt-id="report.attempt.id" @loaded="rankData = $event" />
 
       <view v-if="goal" class="card">
         <view class="h">距离目标</view>
@@ -58,7 +58,25 @@
           <view class="mrow-bar">
             <view class="mrow-fill" :style="{ width: m.pct + '%' }"></view>
           </view>
-          <text class="mrow-v">{{ m.correct }}/{{ m.n }}</text>
+          <view class="mrow-r">
+            <text class="mrow-v">{{ m.correct }}/{{ m.n }}</text>
+            <text v-if="m.avgPct != null" class="mrow-avg">全站 {{ m.avgPct }}%</text>
+          </view>
+        </view>
+        <view
+          v-if="weakMod"
+          class="weak-cta"
+          role="button"
+          tabindex="0"
+          :aria-label="'去专项强化' + weakMod.name"
+          @click="goWeak"
+          @keydown.enter="goWeak"
+        >
+          <view class="weak-l">
+            <text class="weak-t">薄弱模块：{{ weakMod.name }}</text>
+            <text class="weak-d">{{ weakMod.reason }}</text>
+          </view>
+          <text class="weak-btn">去专项强化</text>
         </view>
       </view>
 
@@ -125,6 +143,22 @@
         </view>
       </view>
 
+      <view
+        v-if="nextReco"
+        class="next-cta"
+        role="button"
+        tabindex="0"
+        :aria-label="'继续模考' + nextReco.title"
+        @click="goNext"
+        @keydown.enter="goNext"
+      >
+        <view class="next-l">
+          <text class="next-t">继续模考：{{ nextReco.title }}</text>
+          <text class="next-d">{{ nextReco.takers > 0 ? '已有 ' + nextReco.takers + ' 人模考' + (nextReco.avgScore != null ? ' · 平均 ' + nextReco.avgScore + ' 分' : '') : '换一卷继续练手感' }}</text>
+        </view>
+        <text class="next-btn">去看这卷</text>
+      </view>
+
       <view class="btns">
         <view class="pbtn" @click="goList">返回卷库</view>
         <view class="pbtn main" @click="retake">再考一次</view>
@@ -132,6 +166,37 @@
       </view>
       </view>
     </template>
+
+    <!-- 题目纠错弹层 -->
+    <view v-if="reportOpen" class="mask qr-mask" @click="reportOpen = false">
+      <view class="sheet" @click.stop>
+        <view class="sheet-h">
+          <text class="sheet-t">题目纠错</text>
+          <view class="sheet-x" role="button" aria-label="关闭" @click="reportOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+        </view>
+        <view class="rp-types">
+          <text
+            v-for="t in reportTypes"
+            :key="t"
+            class="rp-chip"
+            :class="{ on: reportType === t }"
+            role="button"
+            :aria-label="'纠错类型：' + t"
+            @click="reportType = t"
+          >{{ t }}</text>
+        </view>
+        <textarea
+          v-model="reportDetail"
+          class="rp-detail"
+          aria-label="纠错补充说明"
+          placeholder="补充说明（选填，500 字以内）"
+          :maxlength="500"
+        />
+        <button class="btn rp-submit" :disabled="!reportType || reportBusy" @click="submitQcReport">
+          {{ reportBusy ? '提交中…' : '提交纠错' }}
+        </button>
+      </view>
+    </view>
 
     <!-- 解析浮层 -->
     <view v-if="detail" class="mask" @click="detail = null">
@@ -168,9 +233,26 @@
             <template v-if="detail.picked">，你选了 <text class="da" :class="detail.correct ? 'ok' : 'bad'">{{ detail.picked }}</text></template>
           </view>
           <view v-if="detailStatLine" class="dstat">{{ detailStatLine }}</view>
+          <view v-if="detail.mistake_id" class="dreasons">
+            <text class="drz-t">错因自评：</text>
+            <text
+              v-for="rz in reasonOpts"
+              :key="rz"
+              class="drz"
+              :class="{ on: detail.error_reason === rz }"
+              role="button"
+              :aria-label="'错因自评：' + rz + (detail.error_reason === rz ? '，已选中' : '')"
+              @click="setDetailReason(rz)"
+            >{{ rz }}</text>
+          </view>
           <view v-if="detail.hs_explanation || detail.explanation" class="dexp">
             <text>{{ detail.hs_explanation || detail.explanation }}</text>
           </view>
+          <view v-if="detail.tag3" class="dreinf" role="button" :aria-label="'练同类题：' + detail.tag3 + '，同考点强化 5 道新题'" @click="reinforceDetail">
+            <text class="dreinf-t">练同类题：{{ detail.tag3 }}</text>
+            <text class="dreinf-go">强化 5 道新题 ›</text>
+          </view>
+          <view v-if="detail.question_id" class="report-link" role="button" :aria-disabled="detailReported" @click="openQcReport">{{ detailReported ? '已提交纠错，感谢反馈' : '题目有问题？纠错' }}</view>
           <q-social-bar v-if="detail.question_id" :question-id="detail.question_id" />
         </scroll-view>
         <view class="dnav">
@@ -193,13 +275,16 @@ import { reviewStep } from '../../exam-review.js';
 import { isFaved, toggleFav } from '../../exam-fav.js';
 import { qStatLine } from '../../q-stat.js';
 import { goalGap, prevScoreDelta } from '../../exam-goal.js';
+import { modAvgPct } from '../../exam-mod-avg.js';
+import { weakModule } from '../../exam-weak.js';
+import { nextPaper } from '../../exam-next.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
 const MOD_ORDER = ['changshi', 'yanyu', 'shuliang', 'panduan', 'ziliao'];
 
 export default {
   data() {
-    return { loading: true, loadErr: '', aid: null, report: null, history: [], targetScore: null, detail: null, matOpen: false, wrongOnly: false, favs: uni.getStorageSync('favQuestions') || [] };
+    return { loading: true, loadErr: '', aid: null, report: null, history: [], targetScore: null, detail: null, matOpen: false, wrongOnly: false, favs: uni.getStorageSync('favQuestions') || [], rankData: null, nextReco: null, reportOpen: false, reportType: '', reportDetail: '', reportBusy: false, reportedIds: {}, reportTypes: ['答案错误', '解析错误', '题干或选项错字', '图片缺失', '分类错误', '重复题', '其他'], reasonOpts: ['粗心大意', '概念不清', '方法不会', '纯蒙的'] };
   },
   computed: {
     accuracy() {
@@ -219,6 +304,9 @@ export default {
     detailStatLine() {
       return qStatLine(this.detail);
     },
+    detailReported() {
+      return !!(this.detail && this.detail.question_id && this.reportedIds[this.detail.question_id]);
+    },
     detailFaved() {
       return !!this.detail && isFaved(this.favs, this.detail.question);
     },
@@ -236,7 +324,11 @@ export default {
         n: pm[k].n,
         correct: pm[k].correct,
         pct: pm[k].n ? Math.round((pm[k].correct / pm[k].n) * 100) : 0,
+        avgPct: modAvgPct(this.rankData, k),
       }));
+    },
+    weakMod() {
+      return weakModule(this.modules);
     },
     paceRows() {
       const r = this.report;
@@ -312,6 +404,30 @@ export default {
     // #endif
   },
   methods: {
+    openQcReport() {
+      if (!this.detail || !this.detail.question_id || this.detailReported) return;
+      this.reportType = '';
+      this.reportDetail = '';
+      this.reportOpen = true;
+    },
+    async submitQcReport() {
+      const qid = this.detail && this.detail.question_id;
+      if (!qid || !this.reportType || this.reportBusy) return;
+      this.reportBusy = true;
+      try {
+        await request('/api/question_report', {
+          method: 'POST',
+          data: { question_id: qid, uid: anonUid(), type: this.reportType, detail: this.reportDetail.slice(0, 500) },
+        });
+        this.reportedIds = { ...this.reportedIds, [qid]: true };
+        this.reportOpen = false;
+        uni.showToast({ title: '感谢反馈，我们会尽快核查', icon: 'none' });
+      } catch (e) {
+        uni.showToast({ title: '提交失败：' + e.message, icon: 'none' });
+      } finally {
+        this.reportBusy = false;
+      }
+    },
     async load(aid) {
       this.aid = aid;
       this.loading = true;
@@ -322,6 +438,7 @@ export default {
         uni.setNavigationBarTitle({ title: '成绩报告' });
         this.loadHistory();
         this.loadProfile();
+        this.loadNext();
       } catch (e) {
         // 仅网络层失败置错误态；HTTP 业务错误（如报告不存在）保持空态引导
         if (isNetErr(e)) this.loadErr = e.message || '网络异常';
@@ -342,6 +459,20 @@ export default {
         const d = await request('/api/profile?uid=' + encodeURIComponent(anonUid()));
         this.targetScore = (d.profile && d.profile.target_score) != null ? d.profile.target_score : null;
       } catch (e) { /* 非关键路径：未设/失败不渲染 */ }
+    },
+    async loadNext() {
+      try {
+        const uid = encodeURIComponent(anonUid());
+        const [papers, attempts] = await Promise.all([
+          request('/api/exam/papers?kind=zhenti&uid=' + uid),
+          request('/api/exam/attempts?uid=' + uid),
+        ]);
+        this.nextReco = nextPaper(papers.items, attempts.items, this.report.paper);
+      } catch (e) { /* 非关键路径：失败不渲染 */ }
+    },
+    goNext() {
+      if (!this.nextReco) return;
+      uni.navigateTo({ url: '/pkgA/exam/list?pid=' + this.nextReco.id });
     },
     openQ(it) { this.matOpen = false; this.detail = it; },
     toggleDetailFav() {
@@ -405,8 +536,39 @@ export default {
       uni.setStorageSync('redoSet', set);
       uni.navigateTo({ url: '/pages/practice/practice' });
     },
+    async setDetailReason(rz) {
+      const d = this.detail;
+      if (!d || !d.mistake_id) return;
+      const prev = d.error_reason || null;
+      if (prev === rz) return;
+      d.error_reason = rz;
+      try {
+        await request('/api/mistakes/' + d.mistake_id, { method: 'PATCH', data: { uid: anonUid(), error_reason: rz } });
+      } catch (e) {
+        d.error_reason = prev;
+        uni.showToast({ title: '错因保存失败：' + e.message, icon: 'none' });
+      }
+    },
+    reinforceDetail() {
+      const d = this.detail;
+      if (!d || !d.tag3) return;
+      uni.setStorageSync('practiceLaunch', {
+        kind: 'reinforce',
+        module: d.module || null,
+        submodule: d.submodule || null,
+        tag3: d.tag3,
+        count: 5,
+        source: 'exam_report',
+      });
+      uni.navigateTo({ url: '/pages/practice/practice' });
+    },
     goPractice(tag3) {
       uni.setStorageSync('practiceLaunch', { kind: 'start', tag3: tag3 || null, count: 10, adaptive: true });
+      uni.navigateTo({ url: '/pages/practice/practice' });
+    },
+    goWeak() {
+      if (!this.weakMod) return;
+      uni.setStorageSync('practiceLaunch', { kind: 'start', module: this.weakMod.key, count: 10 });
       uni.navigateTo({ url: '/pages/practice/practice' });
     },
   },
@@ -439,6 +601,19 @@ export default {
 .mrow-bar { flex: 1; height: 16rpx; background: var(--brand-soft); border-radius: 999rpx; overflow: hidden; }
 .mrow-fill { height: 100%; background: var(--brand); border-radius: 999rpx; transition: width 0.4s ease; }
 .mrow-v { flex-shrink: 0; width: 90rpx; text-align: right; font-size: 24rpx; color: var(--ink); font-weight: 600; }
+.mrow-r { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; }
+.mrow-r .mrow-v { width: auto; }
+.mrow-avg { font-size: 20rpx; color: var(--ink-3); white-space: nowrap; }
+.weak-cta { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; margin-top: 20rpx; padding: 18rpx 20rpx; background: var(--brand-soft); border-radius: 16rpx; cursor: pointer; }
+.weak-l { display: flex; flex-direction: column; gap: 4rpx; min-width: 0; }
+.weak-t { font-size: 26rpx; font-weight: 600; color: var(--ink); }
+.weak-d { font-size: 22rpx; color: var(--ink-2); }
+.weak-btn { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: var(--brand-strong); white-space: nowrap; }
+.next-cta { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; margin-top: 24rpx; padding: 20rpx 22rpx; background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 18rpx; cursor: pointer; }
+.next-l { display: flex; flex-direction: column; gap: 4rpx; min-width: 0; }
+.next-t { font-size: 26rpx; font-weight: 600; color: var(--ink); }
+.next-d { font-size: 22rpx; color: var(--ink-2); }
+.next-btn { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: var(--brand-strong); white-space: nowrap; }
 .curve { display: flex; align-items: flex-end; gap: 14rpx; height: 220rpx; padding: 10rpx 0; }
 .curve-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 44rpx; }
 .curve-v { font-size: 20rpx; color: var(--ink-2); margin-bottom: 4rpx; }
@@ -490,6 +665,10 @@ export default {
 .da { font-weight: 800; font-size: 28rpx; }
 .da.ok { color: var(--ok, #16a34a); }
 .da.bad { color: var(--bad, #dc2626); }
+.dreasons { display: flex; flex-wrap: wrap; align-items: center; gap: 12rpx; margin: 0 0 16rpx; }
+.drz-t { font-size: 23rpx; color: var(--ink-2); }
+.drz { font-size: 23rpx; color: var(--ink-2); border: 1rpx solid var(--line); background: var(--soft-bg); border-radius: 999rpx; padding: 8rpx 22rpx; cursor: pointer; }
+.drz.on { background: var(--brand); border-color: var(--brand-text); color: #fff; font-weight: 600; }
 .dexp { background: var(--soft-bg); border-left: 5rpx solid var(--brand); border-radius: 14rpx; padding: 20rpx; font-size: 25rpx; line-height: 1.7; white-space: pre-wrap; margin-bottom: 20rpx; }
 .note { display: block; font-size: 23rpx; color: var(--ink-2); }
 .wrow { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 10rpx 0; border-bottom: 1rpx solid var(--line); }
@@ -524,4 +703,16 @@ export default {
   .rp2-main { flex: 1; min-width: 0; }
 }
 /* #endif */
+.qr-mask { z-index: 95; }
+.btn { background: linear-gradient(135deg, #5c82ff, var(--brand)); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(46, 91, 255, 0.25); min-height: 44px; line-height: 44px; }
+.dreinf { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; background: var(--brand-soft); border-radius: 14rpx; padding: 18rpx 20rpx; margin-bottom: 6rpx; cursor: pointer; }
+.dreinf-t { font-size: 25rpx; color: var(--ink); font-weight: 600; min-width: 0; }
+.dreinf-go { font-size: 24rpx; color: var(--brand-strong); font-weight: 600; flex-shrink: 0; white-space: nowrap; }
+.report-link { text-align: center; font-size: 22rpx; color: var(--ink-2); padding-top: 14rpx; text-decoration: underline; }
+.rp-types { display: flex; flex-wrap: wrap; gap: 16rpx; margin-bottom: 20rpx; }
+.rp-chip { padding: 18rpx 26rpx; min-height: 44rpx; border-radius: 999rpx; background: var(--soft-bg); font-size: 26rpx; color: var(--ink-2); }
+.rp-chip.on { background: rgba(46, 91, 255, 0.12); color: var(--brand-text); font-weight: 600; }
+.rp-detail { width: 100%; box-sizing: border-box; min-height: 140rpx; background: var(--soft-bg); border-radius: 16rpx; padding: 20rpx; font-size: 26rpx; margin-bottom: 24rpx; }
+.rp-submit { width: 100%; }
+.rp-submit[disabled] { opacity: 0.5; }
 </style>

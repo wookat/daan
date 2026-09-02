@@ -1057,3 +1057,57 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：ruff/pytest 167(+7)/pyright 0/lint/vitest 300(+13)/build/diff-check 全绿；生产 rev b33f12e、bundle index-DgyXb4Ot.js；API 实测 5 uid 种子（含同分先参与在前、per-user-best 低分重考不占行）逐项符合契约；UI 双视口实测榜单顺序/脱敏/本人高亮（--brand-soft）/solo 单人隐藏/溢出 0/console 0 error（「本人不在前十」分支仅 vitest 覆盖未生产实测）。测试数据全库清理 deleted 284 行 + mock 卷 2 张 / leftover 0。
 - 陷阱：直接 python 探针调生产 API 需带浏览器 UA 否则 R88 边缘 403；conftest seed_questions 改为 insert-or-ignore 后按 module+题干回查稳定 id（lastrowid 跨连接不可靠曾致全量跑随机 KeyError）。
 - 详见 docs/iter/round-3/design-r305-exam-board.md。
+
+## R306（模考报告模块得分补全站同卷模块平均，PR #495）
+- 取证（SOP-10）：report.vue 模块得分卡只显示个人 correct/n，无法区分「个人薄弱」与「整卷该模块普遍难」；rank 接口已被报告页请求、exam_attempts.per_module 已存真实模块数据；mock_event.py 有模块平均先例（粉笔模块诊断锚点）。
+- 收口：后端 /api/exam/rank/{attempt_id} 纯增量补 `module_avg`（同卷已交卷、每 uid 取最高分 attempt；逐用户先算 correct/n 再求用户级均值，不按题目池化；malformed JSON/非 dict 模块值/bool 伪数字/n<=0 逐行跳过；每模块 ≥2 合法用户才返回 {pct,n_users}；仍 self-only、不进公开 SSR）。前端 exam-mod-avg.js 纯函数 modAvgPct（缺失/非法/越界/n_users<2 → null 不渲染），rank-card.vue 请求成功 $emit('loaded')，report.vue 模块行右侧 stack 补「全站 N%」小字（--ink-3），复用既有请求零新增。
+- 验证：ruff/pytest 170(+3)/pyright 0/lint/vitest 306(+6)/build/diff-check 全绿；生产 rev 69d52dc、bundle index-CNKuN0WS.js；API 实测种子 3 uid + 1 真实用户同卷（pid 5）module_avg 五模块 n_users=4 契约符合、既有 total/rank/board 不回归；UI 双视口实测模块行「全站 1%/0%」逐行与 API 一致、rank 卡回归正常、溢出 0、console 0 error（低样本 n_users<2 隐藏分支仅单测覆盖未生产实测）；性能预算全过（/ 0.98、/tiku/ 1.00）。测试数据清理 test-r306-*（DELETED 4 / leftover 0）。
+- 陷阱：scripts/clean_test_data.py 在部分表结构下（practice_results/users 无 uid 列）需先 PRAGMA 检查列再删，且 sqlite 未 commit 前异常会整体回滚。
+- 详见 docs/iter/round-3/design-r306-report-module-avg.md。
+
+## R308（模考报告「继续模考」下一卷推荐 CTA，PR #498）
+- 取证（SOP-10）：报告页尾部动作只有返回卷库/再考一次（R307 薄弱模块 CTA 仅覆盖诊断成立场景），复盘后无「下一张未考卷」出口；数据现成（/api/exam/papers?kind=zhenti 含 takers/avg_score、/api/exam/attempts 只回已交卷），R286 ?pid= 深链可作安全落点（不走 exam.vue ?paper_id= 即建 attempt）。
+- 收口纯前端零后端：src/exam-next.js 纯函数 nextPaper(papers,attempts,cur)（候选=id 正整数+title 非空+非本卷+不在已交卷集合；排序同 cur.region 优先→year 降序（缺排后）→takers 降序→id 降序；非法输入/无候选→null 不渲染不伪造；输入不可变）。report.vue loadNext() 并行拉双接口（任一失败静默），CTA 副文案 takers>0 显「已有 N 人模考 · 平均 X 分」否则「换一卷继续练手感」，role=button/tabindex=0/Enter，goNext→/pkgA/exam/list?pid={id}。
+- 验证：lint/vitest 320(+9)/build/diff-check 全绿；生产 rev d79ce20、bundle index-DkzBjMNb.js；testing agent 双视口实测：交卷贵州卷（全库唯一贵州卷）后 CTA 推荐 pid 5（year↓→takers↓ 路径命中）文案与实时 papers 数据一致、点击/Tab+Enter 均落 list?pid=5 高亮+角标未开考、375 无溢出、console 0 error、反例 attempt 99999 空态无 CTA；同 region 优先与全卷考完隐藏分支未生产实测（vitest 已覆盖）。测试数据清理 test-r308-*（DELETED 2 / leftover 0）。
+- a11y 线索：报告页逐题 75 个圆圈全在 Tab 序列内，键盘到 CTA 需 ~75 次 Tab，后续可考虑逐题区 roving tabindex。
+- 详见 docs/iter/round-3/design-r308-report-next-paper-cta.md。
+## R309（真题卷库「没考过/考过的」做题状态筛选 + ?st= URL 同步，PR #499）
+- 取证（SOP-10）：生产卷库 118+ 张卷，卷卡已外显 best_score/attempt_count（R284/R285），但筛选条只有年份/地区（R277），找「下一张没考过的卷」只能逐卡辨认；粉笔卷库有「未做/已做」状态筛选。
+- 收口纯前端零后端：src/exam-list-status.js 纯函数 filterPapersByStatus(items,st)（非数组→[]；st 非 'todo'|'done'→原数组引用；todo=best_score==null（0 分算考过）、done 反之；输入不可变）。exam-list-url.js build/parse 增 st 白名单。list.vue 筛选区首行「全部/没考过/考过的」chips，列表/空态改用 shown computed（本地过滤不重拉，与 year/region 服务端筛选自由组合），setSt 清 pinnedId+syncUrl，onLoad 入向 ?st= 恢复，applyPendingPin 改判 shown（?pid 目标被状态筛选隐藏时静默不 pin）。
+- 验证：lint/vitest 326(+11)/build/diff-check 全绿；生产 rev 0ef3f65、bundle index-B92FBO3H.js；testing agent 双视口实测：交卷后「考过的」120→1、「没考过」119 不含该卷、?st= 硬刷恢复、?st=abc 回退全部、year+region+st 三参组合与空态放宽提示、?pid 可见 pin/隐藏静默双分支、双视口溢出 0、console 0 error；性能预算全过（/ 0.98、/tiku/ 1.00）。测试数据清理 test-r309-*（DELETED 2 / leftover 0）。
+- 陷阱：切 chips 属 hash query-only 变化不触发 uni onLoad，验证入向恢复需硬 reload/新开页（同 R307 经验）。
+- 详见 docs/iter/round-3/design-r309-exam-list-status-filter.md。
+## R310（真题卷库刷卷进度外显——「已刷 X/N 卷」进度条 + 状态 chips 计数，PR #501）
+- 取证（SOP-10）：R309 状态筛选后 chips 无计数、页面无刷卷总进度锚点（粉笔卷库外显「已做 N 套」）；数据早在客户端 items[].best_score，纯本地可算零请求。
+- 收口纯前端零后端：src/exam-list-progress.js 纯函数 paperProgress(items)（非数组 fail-closed {0,0,0}；done=best_score!=null 与 R309 同口径；pct 四舍五入；输入不可变）。list.vue 筛选区上方进度卡（total>0 渲染，「已刷 X/N 卷」+pct+细进度条 role=progressbar 全套 aria，done===total 显「全部刷完 🎉」）+ 状态 chips 带计数「没考过 N / 考过的 M」；口径为当前 year/region 服务端筛选范围内进度。
+- 验证：lint/vitest 331(+5)/build/diff-check 全绿；生产 rev 19d822c、bundle index-PCGlgYRK.js；testing agent 双视口实测：0/120→交卷（0 分实证算考过）→1/120·1% 最小填充、year/region 收窄口径一致、2025+贵州命中「全部刷完 🎉」100% 分支（生产可安全构造：选仅含 1 张已考卷的范围）、R309 st 筛选回归且进度卡不受 st 影响、aria valuenow 一致、溢出 0、console 0 error；性能预算全过（/ 0.98、/tiku/ 1.00）。测试数据清理 DELETED 2 / leftover 0。
+- 观察项：🎉 在无 emoji 字体设备渲染为方框（DOM 正确，测试机即如此），后续可考虑纯文本兜底。
+- 详见 docs/iter/round-3/design-r310-exam-list-progress.md。
+
+### R311：考过的卷卡直达成绩报告（PR #503）
+- 取证（SOP-10）：卷卡外显最好成绩但零回看入口，只能翻页底模考记录（limit 10）或重新交卷；报告页 ?attempt_id= 深链早已就绪（粉笔已做卷有「查看报告」）。
+- 收口：后端 list_exam_papers uid 合并段改单查询 Python 聚合，契约纯增量补 best_attempt_id（最高分 attempt，同分取 id 更大即更近；未考 null；best_score/attempt_count 语义不变，未交卷不参与）；前端 list.vue 卷卡 best_attempt_id 存在时增「看报告」按钮 → /pkgA/exam/report?attempt_id=，fail-closed 缺字段不渲染。零新 API。
+- 验证：ruff/pytest 174(+4)/pyright 0/lint/vitest 331/build 全绿；生产 rev e5484a1、bundle index-BQPBH1qz.js；testing agent 双视口实测：同卷 0 分/24 分双 attempt，best_attempt_id 指向最高分、已考卡 3 键/未考卡 2 键、点击直达 hero 24 分、R309/R310 回归、375 无溢出、console 0 error；清理 DELETED 137 / leftover 0。部署首跑首页 a11y 单样本 0.94，独立复跑 1.0 无违例项（采样波动）。
+- 未生产实测：同分平手取更近 attempt 分支（pytest 覆盖）。
+- 详见 docs/iter/round-3/design-r311-paper-card-report-entry.md。
+
+### R312：成绩报告解析浮层补「题目纠错」入口（PR #505）
+- 取证（SOP-10）：刷题页/错题本均有完整纠错链路（入口→7 类型 sheet→POST /api/question_report→管理台审核），但报告解析浮层（R290 连看/R291 收藏/R292 社交条后的复盘工作台）零纠错入口；复盘恰是最易发现「答案/解析有误」的场景（粉笔逐题解析有同权入口）。
+- 收口：纯前端零后端/零契约。report.vue 解析块后、q-social-bar 前挂 report-link「题目有问题？纠错」（detail.question_id 缺失 fail-closed 不渲染）；与 practice/book 同构纠错 sheet（同 7 类型 + 500 字上限 + reportBusy 防重），.qr-mask z-index 95 盖过解析浮层（z 90）；已提交态按 question_id 记页面级 reportedIds（瞬时态不进 storage/URL），连看切题各题独立；失败 toast 可重试不置已提交态。
+- 验证：lint/vitest 331/build 全绿；生产 rev 3dca609、bundle index-B1JixCtG.js；testing agent 双视口实测：入口位置（解析后/社交条前 DOM 实证）、弹层层叠/7 chips/未选禁用、提交→toast→已提交态→防重 guard、question_reports 落库逐字段一致、连看切题独立、R290/R291/R292 回归、双视口溢出 0、console 0 error；清理 DELETED 136（含 question_reports 1 行）/ leftover 0。
+- 未生产实测：提交失败 toast 重试分支（无法构造生产失败）、同 uid 同题后端去重 UPDATE 分支（前端 guard 阻断 UI 二次提交路径；两者 vitest/既有 pytest 覆盖）。
+- 详见 docs/iter/round-3/design-r312-report-overlay-qc-report.md。
+
+### R313：成绩报告解析浮层逐题「练同类题」CTA（PR #507）
+- 取证（SOP-10）：报告浮层已是复盘工作台（连看/收藏/统计锚点/社交条/纠错），但「这题不会→当场练同类」零出口；错题本早有同考点强化 5 道新题先例；生产实查 tag3 覆盖 113063/113264=99.8%。
+- 收口零新 API：report items 纯增量补 tag3；report.vue 解析后、纠错入口前挂 CTA（缺 tag3 fail-closed 不渲染），复用既有 practiceLaunch {kind:'reinforce', module, submodule, tag3, count:5, source:'exam_report'} 直入 5 道未做新题。
+- 验证：ruff/pytest 176(+1)/pyright 0/lint/vitest 331/build 全绿；生产 rev 22bb927；testing agent 双视口实测：CTA 文案与 API tag3 逐题一致、点击直达强化流 1/5 + toast、连看切题 CTA 随题切换、R290/R291/R292/R312 回归、溢出 0、console 0 error；性能预算全过。清理 DELETED 135 / LEFTOVER 0。
+- 未生产实测：tag3=null 隐藏分支与空题池兜底（单测/既有逻辑覆盖）。
+- 详见 docs/iter/round-3/design-r313-report-overlay-reinforce.md。
+
+### R314：成绩报告解析浮层错题「错因自评」（PR #508）
+- 取证（SOP-10）：错题本早有错因自评四选项（粗心大意/概念不清/方法不会/纯蒙的）+ 按错因筛选/聚合/学习建议，模考答错题自动进错题本；但报告浮层（记忆最鲜明时刻）无法直接标错因，须离开报告去错题本找同题补标，复盘断点。
+- 收口零新 API/表/URL 状态：db.mistakes_by_qids(uid,qids) 映射本人错题 {question_id:{id,error_reason}}；report items 纯增量补 mistake_id/error_reason（仅答错且有错题记录时非 null，答对/未答/无记录 fail-closed null）；report.vue 浮层答案统计后、解析前渲染错因 chips（v-if=detail.mistake_id，role=button+aria），点击乐观更新 + PATCH /api/mistakes/{mid} {uid,error_reason}，失败回滚+toast，已选同项不重复请求；与错题本同一 mistakes 记录同源（错因排序/聚合/学习建议即时生效）。
+- 验证：ruff/pytest 177(+2)/pyright 0/lint/vitest 331/build 全绿；生产 rev 80bbfd7、bundle index-U1GUVn8d.js；testing agent 双视口实测：API 契约（答错 mistake_id 非 null 初始 error_reason null，答对/未答双 null）、chips 位置/点击 PATCH 200/硬刷回显/错题本同源（按错因聚合+复习流同显）、连看不串态、fail-closed 无 chips、R291/R292/R312/R313 回归、双视口溢出 0、console 0 error；Lighthouse 全过（部署首跑 / a11y 单样本 0.94、独立复跑 1.0，采样波动）。清理 test-r314-me DELETED 10 / LEFTOVER 0，保护 uid 各表计数前后快照逐表一致。
+- 未生产实测：PATCH 失败回滚 toast 分支（生产无法构造失败，逻辑代码核实）。
+- 详见 docs/iter/round-3/design-r314-report-overlay-error-reason.md。
