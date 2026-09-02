@@ -355,6 +355,7 @@ import { requestNotificationPermission } from '../../reminder.js';
 import { announce } from '../../a11y-live.js';
 import { pickAnnounceText } from '../../live-policy.js';
 // #endif
+import { adoptServerDailyGoal } from '../../daily-goal.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -694,6 +695,7 @@ export default {
     this.realRegion = uni.getStorageSync('realRegion') || null;
     this.groupSize = uni.getStorageSync('groupSize') || 10;
     this.dailyGoal = uni.getStorageSync('dailyGoal') || 20;
+    this.syncDailyGoal();
     if (this._urlLaunch) {
       const q = this._urlLaunch;
       this._urlLaunch = null;
@@ -834,6 +836,20 @@ export default {
     setGoal(g) {
       this.dailyGoal = g;
       uni.setStorageSync('dailyGoal', g);
+      request('/api/profile', { method: 'POST', data: { uid: anonUid(), daily_goal: g } }).catch(() => {});
+    },
+    syncDailyGoal() {
+      if (this._goalSynced) return;
+      this._goalSynced = true;
+      request('/api/profile?uid=' + anonUid())
+        .then((d) => {
+          const g = adoptServerDailyGoal(this.dailyGoal, d && d.profile);
+          if (g != null) {
+            this.dailyGoal = g;
+            uni.setStorageSync('dailyGoal', g);
+          }
+        })
+        .catch(() => {});
     },
     dismissAnn() {
       if (this.announce) uni.setStorageSync('annDismissed', String(this.announce.id));

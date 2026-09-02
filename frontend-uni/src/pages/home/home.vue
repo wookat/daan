@@ -484,6 +484,7 @@ import { request, snapPeek, anonUid, exportPdf, trackEvent, fetchCheckinBadges, 
 import { checkinStreak, dayKey, loadSzDaily } from '../../checkin.js';
 import { parseExamProgress, fmtLeftSecs } from '../../exam-resume.js';
 import { adoptServerExamProgress } from '../../exam-progress-sync.js';
+import { adoptServerDailyGoal } from '../../daily-goal.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -949,6 +950,11 @@ export default {
       if (!stale) this.applySummary(d.summary);
       this.profile = d.profile || null;
       this.profileFetched = true;
+      const g = adoptServerDailyGoal(this.dailyGoal, this.profile);
+      if (g != null) {
+        this.dailyGoal = g;
+        uni.setStorageSync('dailyGoal', g);
+      }
       if (this.profile) {
         this.planToday = d.plan_today || null;
         uni.setStorageSync('homePlanCard', this.planToday && this.planToday.profile ? '1' : '');
@@ -984,6 +990,7 @@ export default {
     setGoal(g) {
       this.dailyGoal = g;
       uni.setStorageSync('dailyGoal', g);
+      request('/api/profile', { method: 'POST', data: { uid: anonUid(), daily_goal: g } }).catch(() => {});
     },
     async loadCounts() {
       try {
@@ -1078,6 +1085,11 @@ export default {
       try {
         const d = await request('/api/profile?uid=' + encodeURIComponent(anonUid()));
         this.profile = d.profile || null;
+        const g = adoptServerDailyGoal(this.dailyGoal, this.profile);
+        if (g != null) {
+          this.dailyGoal = g;
+          uni.setStorageSync('dailyGoal', g);
+        }
         if (this.profile) await this.loadPlanToday();
         else this.planToday = null;
       } catch (e) { /* 非关键路径 */ } finally {

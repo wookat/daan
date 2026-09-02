@@ -3511,7 +3511,7 @@ def list_exam_attempts(uid: str, paper_id: int | None = None, limit: int = 50) -
 
 # ---------- 报考画像 & 学习计划数据 ----------
 
-PROFILE_FIELDS = ("exam_type", "target_region", "exam_date", "target_score", "daily_minutes", "base_level")
+PROFILE_FIELDS = ("exam_type", "target_region", "exam_date", "target_score", "daily_minutes", "base_level", "daily_goal")
 
 
 def _ensure_user_profile(conn):
@@ -3524,9 +3524,13 @@ def _ensure_user_profile(conn):
             target_score INTEGER,
             daily_minutes INTEGER,
             base_level TEXT,
+            daily_goal INTEGER,
             created_at REAL,
             updated_at REAL)"""
     )
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(user_profile)")}
+    if "daily_goal" not in cols:
+        conn.execute("ALTER TABLE user_profile ADD COLUMN daily_goal INTEGER")
 
 
 def get_user_profile(uid: str) -> dict | None:
@@ -3553,8 +3557,8 @@ def save_user_profile(uid: str, fields: dict) -> dict:
     else:
         conn.execute(
             """INSERT INTO user_profile
-               (uid, exam_type, target_region, exam_date, target_score, daily_minutes, base_level, created_at, updated_at)
-               VALUES (?,?,?,?,?,?,?,?,?)""",
+               (uid, exam_type, target_region, exam_date, target_score, daily_minutes, base_level, daily_goal, created_at, updated_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
             (
                 uid,
                 vals.get("exam_type"),
@@ -3563,6 +3567,7 @@ def save_user_profile(uid: str, fields: dict) -> dict:
                 vals.get("target_score"),
                 vals.get("daily_minutes"),
                 vals.get("base_level"),
+                vals.get("daily_goal"),
                 now,
                 now,
             ),

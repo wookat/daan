@@ -21,6 +21,7 @@ def api_user_state(body: dict):
 
 PROFILE_EXAM_TYPES = {"国考", "省考", "事业单位", "其他"}
 PROFILE_BASE_LEVELS = {"零基础", "有基础", "二战"}
+PROFILE_DAILY_GOALS = {20, 50, 100}
 
 
 @router.get("/api/profile")
@@ -55,6 +56,14 @@ def api_profile_save(body: dict):
     if "daily_minutes" in body:
         v = body.get("daily_minutes")
         fields["daily_minutes"] = max(10, min(600, int(v))) if v is not None else None
+    if "daily_goal" in body:
+        v = body.get("daily_goal")
+        if v is None:
+            fields["daily_goal"] = None
+        else:
+            if isinstance(v, bool) or not isinstance(v, int) or v not in PROFILE_DAILY_GOALS:
+                raise HTTPException(400, "每日目标无效")
+            fields["daily_goal"] = v
     if "base_level" in body:
         v = (body.get("base_level") or "").strip()
         if v and v not in PROFILE_BASE_LEVELS:

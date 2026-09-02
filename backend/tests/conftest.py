@@ -15,12 +15,21 @@ os.environ.pop("KG_VAPID_PUBLIC", None)
 from fastapi.testclient import TestClient
 
 from app import db
+from app import main as app_main
 from app.main import app
 
 
 @pytest.fixture(scope="session")
 def client():
     return TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _reset_storm_guard():
+    """错误风暴 guard 按 IP 累计 4xx；测试同源 IP，跨用例清零避免连坐 429。"""
+    with app_main._storm_guard._lock:
+        app_main._storm_guard._errs.clear()
+    yield
 
 
 def seed_questions(per_module: int = 3, modules=("ziliao", "shuliang", "yanyu", "panduan", "changshi")):
