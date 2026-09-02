@@ -918,3 +918,7 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：行测五模块 section 均有子题型/考点/年份 chips，申论 section 仅 hub 链接+文案——R251 题型页族（5 类）与 R250 年份页族（12 年份）在首页零链接（距首页 2 跳）。
 - 收口：tiku_index 申论 section 沿行测同构 markup 渲染题型 chips（shenlun_qtype_counts + _sub_path）与年份 chips（shenlun_year_counts + _year_path），空语料自动回落。零路由/契约变化，不加套卷 chips（49 个撑爆首页，hub 卡已覆盖）。
 - 详见 docs/iter/round-3/design-r267-home-shenlun-chips.md。
+## R268（申论素材收藏视图 URL 同步 + ?fav=1 入向深链）
+- 取证：R261–R263 后申论专区 paper/qtype/year/region/tab/mtype/mid 均双向同步 URL，素材「收藏」视图（favOnly）是唯一剩余不同步态——toggleFavOnly 只翻本地状态、buildShenlunTabUrl 不感知 fav、onLoad 不收 ?fav，收藏视图不可分享/刷新即丢。
+- 收口：buildShenlunTabUrl 增第三参 fav（tab=m 且 fav 输出 ?tab=m&fav=1，不叠 mtype——收藏视图本身不按类型过滤）；toggleFavOnly 后 syncFilterUrl；onLoad tab=m 分支无 mid 时收 fav=1（mid 置顶优先级不变）。纯前端 hash 深链，零后端/SSR/SEO 变化。
+- 详见 docs/iter/round-3/design-r268-fav-url-sync.md。
