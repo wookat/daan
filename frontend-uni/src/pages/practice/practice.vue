@@ -360,6 +360,7 @@ import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 import { qStatLine } from '../../q-stat.js';
 import { toggleExcl, pickWithExcl, exclVisible } from '../../exam-excl.js';
+import { collectPracticeProgress, adoptPracticeResume } from '../../practice-progress.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -1818,6 +1819,7 @@ export default {
       if (this.examMode || this.beiMode || this._shizheng || !this.session || !this.items.length) return;
       if (this.items.every((q) => q._picked)) {
         uni.removeStorageSync('pendingSession');
+        this.clearServerProgress();
         return;
       }
       uni.setStorageSync('pendingSession', {
@@ -1830,13 +1832,81 @@ export default {
         lastModule: this.lastModule,
         lastSubmodule: this.lastSubmodule,
       });
+      clearTimeout(this._ppTimer);
+      this._ppTimer = setTimeout(() => this.pushPracticeProgress(), 1500);
+    },
+    pushPracticeProgress() {
+      const payload = collectPracticeProgress(
+        this.items, this.idx, this.right, this.streak, this.bestStreak,
+        this.lastModule || '', this.lastSubmodule || ''
+      );
+      if (!payload) return;
+      request('/api/practice/progress', { method: 'POST', data: { uid: anonUid(), ...payload } }).catch(() => {});
+    },
+    clearServerProgress() {
+      clearTimeout(this._ppTimer);
+      request('/api/practice/progress', { method: 'POST', data: { uid: anonUid(), qids: [] } }).catch(() => {});
+    },
+    startDefault() {
+      if (this.session) return;
+      this.start(uni.getStorageSync('lastModule') || null, null, null, false, undefined, null, 'direct');
+    },
+    tryServerResume() {
+      if (this._srvResuming) return;
+      this._srvResuming = true;
+      request('/api/practice/resume?uid=' + anonUid())
+        .then((d) => {
+          this._srvResuming = false;
+          if (this.session) return;
+          const snap = adoptPracticeResume(d);
+          if (!snap) {
+            this.startDefault();
+            return;
+          }
+          const done = snap.items.filter((q) => q._picked).length;
+          uni.showModal({
+            title: '继续上次练习？',
+            content: '在其他设备还有一组未做完（' + done + '/' + snap.items.length + ' 题），是否继续？',
+            confirmText: '继续',
+            cancelText: '不用了',
+            success: (res) => {
+              if (res.confirm) {
+                this.items = snap.items;
+                this.idx = snap.idx;
+                this.picked = this.items[this.idx]._picked || '';
+                this.right = snap.right;
+                this.streak = snap.streak;
+                this.bestStreak = snap.bestStreak;
+                this.lastModule = snap.module || null;
+                this.lastSubmodule = snap.submodule || null;
+                this.autoSaved = false;
+                this.resultSent = false;
+                this.percentile = null;
+                this.session = true;
+                this.startQTimer();
+                this.saveSession();
+              } else {
+                this.clearServerProgress();
+                this.startDefault();
+              }
+            },
+          });
+        })
+        .catch(() => {
+          this._srvResuming = false;
+          this.startDefault();
+        });
     },
     tryResume() {
       const s = uni.getStorageSync('pendingSession');
-      if (!s || !s.items || !s.items.length) return false;
+      if (!s || !s.items || !s.items.length) {
+        this.tryServerResume();
+        return true;
+      }
       if (Date.now() - s.t > 24 * 3600 * 1000) {
         uni.removeStorageSync('pendingSession');
-        return false;
+        this.tryServerResume();
+        return true;
       }
       const done = s.items.filter((q) => q._picked).length;
       uni.showModal({
@@ -1862,6 +1932,7 @@ export default {
             this.startQTimer();
           } else {
             uni.removeStorageSync('pendingSession');
+            this.clearServerProgress();
             this.start(s.lastModule || uni.getStorageSync('lastModule') || null, null, null, false, undefined, null, 'direct');
           }
         },
@@ -2064,6 +2135,7 @@ export default {
       this.dueReview = 0;
       if (this.loginNudgeN) trackEvent('login_nudge_show');
       uni.removeStorageSync('pendingSession');
+      this.clearServerProgress();
       try {
         const hist = uni.getStorageSync('practiceHistory') || [];
         hist.unshift({
@@ -2159,6 +2231,7 @@ export default {
     quit() {
       if (!this.beiMode && this.items.length) this.logAttempts(this.items);
       uni.removeStorageSync('pendingSession');
+      if (!this.beiMode && !this.examMode && !this._shizheng) this.clearServerProgress();
       this.examMode = false;
       if (this.examTimer) {
         clearInterval(this.examTimer);

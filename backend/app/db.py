@@ -3546,6 +3546,66 @@ def latest_exam_progress(uid: str) -> dict | None:
     return d
 
 
+def _ensure_practice_progress(conn):
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS practice_progress (
+            uid TEXT PRIMARY KEY,
+            qids TEXT NOT NULL,
+            picks TEXT NOT NULL,
+            excl TEXT,
+            idx INTEGER NOT NULL DEFAULT 0,
+            right_n INTEGER NOT NULL DEFAULT 0,
+            streak INTEGER NOT NULL DEFAULT 0,
+            best_streak INTEGER NOT NULL DEFAULT 0,
+            module TEXT,
+            submodule TEXT,
+            updated_at REAL NOT NULL
+        )"""
+    )
+
+
+def save_practice_progress(uid: str, qids: list[int], picks: dict, excl: dict, idx: int,
+                           right: int, streak: int, best_streak: int,
+                           module: str | None, submodule: str | None) -> None:
+    conn = get_conn()
+    _ensure_practice_progress(conn)
+    conn.execute(
+        """INSERT INTO practice_progress (uid, qids, picks, excl, idx, right_n, streak, best_streak,
+                                          module, submodule, updated_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?)
+           ON CONFLICT(uid) DO UPDATE SET
+             qids=excluded.qids, picks=excluded.picks, excl=excluded.excl, idx=excluded.idx,
+             right_n=excluded.right_n, streak=excluded.streak, best_streak=excluded.best_streak,
+             module=excluded.module, submodule=excluded.submodule, updated_at=excluded.updated_at""",
+        (uid, json.dumps(qids), json.dumps(picks), json.dumps(excl) if excl else None,
+         idx, right, streak, best_streak, module, submodule, time.time()),
+    )
+    conn.commit()
+    conn.close()
+
+
+def clear_practice_progress(uid: str) -> None:
+    conn = get_conn()
+    _ensure_practice_progress(conn)
+    conn.execute("DELETE FROM practice_progress WHERE uid=?", (uid,))
+    conn.commit()
+    conn.close()
+
+
+def get_practice_progress(uid: str) -> dict | None:
+    conn = get_conn()
+    _ensure_practice_progress(conn)
+    row = conn.execute("SELECT * FROM practice_progress WHERE uid=?", (uid,)).fetchone()
+    conn.close()
+    if not row:
+        return None
+    d = dict(row)
+    d["qids"] = json.loads(d["qids"] or "[]")
+    d["picks"] = json.loads(d["picks"] or "{}")
+    d["excl"] = json.loads(d.get("excl") or "{}")
+    return d
+
+
 def list_exam_attempts(uid: str, paper_id: int | None = None, limit: int = 50) -> list[dict]:
     conn = get_conn()
     _ensure_exam_tables(conn)

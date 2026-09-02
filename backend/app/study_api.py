@@ -1,5 +1,6 @@
 """学习记录域：画像/计划、作答日志、错题本、SRS 复习、提醒、统计与反馈纠错。"""
 import re
+import time
 
 from fastapi import APIRouter, HTTPException, Request
 
@@ -244,6 +245,102 @@ def api_practice_result(body: dict, request: Request):
     correct = max(0, min(int(body.get("correct") or 0), n))
     secs = max(0, min(int(body.get("secs") or 0), 86400))
     return db.save_practice_result(body.get("module"), n, correct, secs)
+
+@router.post("/api/practice/progress")
+def api_practice_progress(body: dict, request: Request):
+    uid = (body.get("uid") or "").strip()[:64]
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    rl(request, "ppro", 120, 3600, uid)
+    raw_qids = body.get("qids")
+    if not isinstance(raw_qids, list) or len(raw_qids) > 100:
+        raise HTTPException(400, "无效的练习进度")
+    if not raw_qids:
+        db.clear_practice_progress(uid)
+        return {"ok": True}
+    qids: list[int] = []
+    for q in raw_qids:
+        if isinstance(q, bool) or not isinstance(q, int) or q <= 0:
+            raise HTTPException(400, "无效的练习进度")
+        qids.append(q)
+    qid_set = {str(q) for q in qids}
+    raw_picks = body.get("picks")
+    picks: dict[str, str] = {}
+    if raw_picks is not None:
+        if not isinstance(raw_picks, dict) or len(raw_picks) > 100:
+            raise HTTPException(400, "无效的练习进度")
+        for k, v in raw_picks.items():
+            try:
+                pk = str(int(k))
+            except (TypeError, ValueError):
+                raise HTTPException(400, "无效的练习进度") from None
+            if pk not in qid_set or not isinstance(v, str) or v not in ("A", "B", "C", "D"):
+                raise HTTPException(400, "无效的练习进度")
+            picks[pk] = v
+    raw_excl = body.get("excl")
+    excl: dict[str, list[str]] = {}
+    if raw_excl is not None:
+        if not isinstance(raw_excl, dict) or len(raw_excl) > 100:
+            raise HTTPException(400, "无效的练习进度")
+        for k, v in raw_excl.items():
+            try:
+                ek = str(int(k))
+            except (TypeError, ValueError):
+                raise HTTPException(400, "无效的练习进度") from None
+            if ek not in qid_set or not isinstance(v, list) or len(v) > 4:
+                raise HTTPException(400, "无效的练习进度")
+            letters = []
+            for x in v:
+                if not isinstance(x, str) or x not in ("A", "B", "C", "D"):
+                    raise HTTPException(400, "无效的练习进度")
+                if x not in letters:
+                    letters.append(x)
+            if letters:
+                excl[ek] = letters
+    idx = body.get("idx")
+    idx = idx if isinstance(idx, int) and not isinstance(idx, bool) and 0 <= idx < len(qids) else 0
+
+    def _bounded(key: str, hi: int) -> int:
+        v = body.get(key)
+        if isinstance(v, bool) or not isinstance(v, int):
+            return 0
+        return max(0, min(v, hi))
+
+    module = str(body.get("module") or "").strip()[:64] or None
+    submodule = str(body.get("submodule") or "").strip()[:64] or None
+    db.save_practice_progress(uid, qids, picks, excl, idx,
+                              _bounded("right", len(qids)), _bounded("streak", len(qids)),
+                              _bounded("best_streak", 10000),
+                              module, submodule)
+    return {"ok": True}
+
+
+@router.get("/api/practice/resume")
+def api_practice_resume(uid: str):
+    uid = uid.strip()[:64]
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    prog = db.get_practice_progress(uid)
+    if not prog or time.time() - prog["updated_at"] > 24 * 3600:
+        return {}
+    items = db.questions_by_ids(prog["qids"])
+    by_id = {q["id"]: q for q in items}
+    ordered = [by_id[q] for q in prog["qids"] if q in by_id]
+    if not ordered:
+        return {}
+    return {
+        "items": ordered,
+        "picks": prog["picks"],
+        "excl": prog["excl"],
+        "idx": prog["idx"],
+        "right": prog["right_n"],
+        "streak": prog["streak"],
+        "best_streak": prog["best_streak"],
+        "module": prog["module"],
+        "submodule": prog["submodule"],
+        "t": prog["updated_at"],
+    }
+
 
 @router.post("/api/mistakes")
 def api_save_mistake(rec: dict, request: Request):
