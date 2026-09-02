@@ -26,6 +26,11 @@ describe('buildShenlunFilterUrl', () => {
     expect(buildShenlunFilterUrl({ paper: 'x'.repeat(101), qtype: null, year: 'abc', region: 0 })).toBe(SHENLUN_PATH);
     expect(buildShenlunFilterUrl({ year: 2023 })).toBe(SHENLUN_PATH + '?year=2023');
   });
+  it('收藏视图 fav=1 不叠其他筛选（与素材收藏行为一致）', () => {
+    expect(buildShenlunFilterUrl({ fav: true })).toBe(SHENLUN_PATH + '?fav=1');
+    expect(buildShenlunFilterUrl({ fav: true, qtype: '归纳概括', year: 2023 })).toBe(SHENLUN_PATH + '?fav=1');
+    expect(buildShenlunFilterUrl({ fav: false, year: 2023 })).toBe(SHENLUN_PATH + '?year=2023');
+  });
 });
 
 describe('buildShenlunTabUrl', () => {

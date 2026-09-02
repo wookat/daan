@@ -13,6 +13,7 @@ export function buildShenlunPaperUrl(paper) {
 
 export function buildShenlunFilterUrl(f) {
   const o = f || {};
+  if (o.fav) return SHENLUN_PATH + '?fav=1';
   const parts = [];
   if (typeof o.paper === 'string' && o.paper && o.paper.length <= 100) parts.push('paper=' + encodeURIComponent(o.paper));
   if (typeof o.qtype === 'string' && o.qtype && o.qtype !== '全部') parts.push('qtype=' + encodeURIComponent(o.qtype));

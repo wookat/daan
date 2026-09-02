@@ -12,6 +12,7 @@
         <text class="chip" :class="{ on: !!region }" @click="fltOpen = true">{{ region || '地区' }} ▾</text>
         <text class="chip" :class="{ on: !!year }" @click="fltOpen = true">{{ year || '年份' }} ▾</text>
         <text class="chip" :class="{ on: qtype !== '全部' }" @click="fltOpen = true">{{ qtype === '全部' ? '题型' : qtype }} ▾</text>
+        <view class="chip fav" :class="{ on: qFavOnly }" @click="toggleQFavOnly"><l-icon name="star" :size="13" :color="qFavOnly ? '#b45309' : '#8a90a0'" :fill="qFavOnly ? '#f59e0b' : 'none'" /><text>收藏{{ qFavIds.length ? ' ' + qFavIds.length : '' }}</text></view>
         <view class="grow"></view>
         <text class="chip clr" @click="clearFlt">重置</text>
       </view>
@@ -40,9 +41,9 @@
       </view>
       <view v-if="loading" class="spin">加载中…</view>
       <view v-else-if="qErr" class="spin">加载失败：{{ qErr }}<view class="retry" @click="loadQs()">重试 ›</view></view>
-      <view v-else-if="!qs.length" class="spin">暂无题目，敬请期待</view>
+      <view v-else-if="!shownQs.length" class="spin">{{ qFavOnly ? '还没有收藏真题，点题目右上星标收藏' : '暂无题目，敬请期待' }}</view>
       <view class="qgrid">
-      <view v-for="q in qs" :key="q.id" class="card q-item" @click="openQ(q.id)">
+      <view v-for="q in shownQs" :key="q.id" class="card q-item" @click="openQ(q.id)">
         <view class="q-top">
           <view class="q-tags">
             <text class="q-type">{{ q.qtype }}</text>
@@ -58,7 +59,7 @@
         </view>
       </view>
       </view>
-      <view v-if="!qEnd && qs.length >= 20" class="more" @click="loadMore">加载更多</view>
+      <view v-if="!qFavOnly && !qEnd && qs.length >= 20" class="more" @click="loadMore">加载更多</view>
     </template>
 
     <template v-if="tab === 'q' && detail">
@@ -70,6 +71,7 @@
           <text class="q-paper">{{ detail.paper || (detail.exam_year + ' · ' + (detail.exam_region || '')) }}</text>
           <view class="q-top-r">
             <text class="q-type">{{ detail.qtype }}</text>
+            <view class="m-star" :class="{ on: qFavIds.includes(detail.id) }" role="button" :aria-label="qFavIds.includes(detail.id) ? '取消收藏本题' : '收藏本题'" @click="toggleQFav(detail)"><l-icon name="star" :size="17" :color="qFavIds.includes(detail.id) ? '#f59e0b' : '#8a90a0'" :fill="qFavIds.includes(detail.id) ? '#f59e0b' : 'none'" /></view>
             <text class="d-copy" role="button" aria-label="复制本题链接" @click="copyQLink">复制本题链接</text>
           </view>
         </view>
@@ -150,6 +152,7 @@
 <script>
 import { request, snapPeek, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api';
 import { buildShenlunUrl, buildShenlunFilterUrl, buildShenlunTabUrl, buildShenlunMatUrl } from '../../shenlun-url.js';
+import { toggleQFav as qfavToggle, missingSnapIds } from '../../shenlun-qfav.js';
 
 const QTYPES = ['全部', '归纳概括', '综合分析', '提出对策', '贯彻执行', '大作文'];
 const MTYPES = ['全部', '金句', '案例', '政策理论', '范文'];
@@ -191,6 +194,8 @@ export default {
       mEnd: false,
       qTotal: 0,
       qFavIds: uni.getStorageSync('slQFavIds') || [],
+      qFavs: uni.getStorageSync('slQFavs') || [],
+      qFavOnly: false,
       years: [],
       regions: [],
       year: 0,
@@ -211,6 +216,9 @@ export default {
   computed: {
     shownMats() {
       return this.favOnly ? this.favMats : this.mats;
+    },
+    shownQs() {
+      return this.qFavOnly ? this.qFavs : this.qs;
     },
     fltCount() {
       return (this.year ? 1 : 0) + (this.region ? 1 : 0);
@@ -233,6 +241,7 @@ export default {
       this.switchMat();
     }
     if (opts && QTYPES.includes(opts.qtype || '')) this.setQtype(opts.qtype);
+    if (opts && (!opts.tab || opts.tab === 'q') && opts.fav === '1') this.enterQFavView();
     if (opts && /^\d+$/.test(opts.id || '')) this.openQ(Number(opts.id));
   },
   methods: {
@@ -298,6 +307,7 @@ export default {
       }
     },
     setYear(y) {
+      this.qFavOnly = false;
       this.year = y;
       this.qOffset = 0;
       this.qEnd = false;
@@ -311,6 +321,7 @@ export default {
     applyPaper(p) {
       const next = typeof p === 'string' && p.length <= 100 ? p : '';
       if (next === this.paper) return;
+      this.qFavOnly = false;
       this.paper = next;
       this.qOffset = 0;
       this.qEnd = false;
@@ -319,7 +330,7 @@ export default {
     },
     filterUrl() {
       if (this.tab !== 'q') return buildShenlunTabUrl(this.tab, this.mtype, this.favOnly);
-      return buildShenlunFilterUrl({ paper: this.paper, qtype: this.qtype, year: this.year, region: this.region });
+      return buildShenlunFilterUrl({ paper: this.paper, qtype: this.qtype, year: this.year, region: this.region, fav: this.qFavOnly });
     },
     syncFilterUrl() {
       // #ifdef H5
@@ -341,6 +352,7 @@ export default {
       this.syncFilterUrl();
     },
     clearFlt() {
+      this.qFavOnly = false;
       this.qtype = '全部';
       this.year = 0;
       this.region = '';
@@ -351,6 +363,7 @@ export default {
       this.loadQs();
     },
     setRegion(r) {
+      this.qFavOnly = false;
       this.region = r;
       this.qOffset = 0;
       this.qEnd = false;
@@ -391,6 +404,7 @@ export default {
       this.recLoading = false;
     },
     setQtype(t) {
+      this.qFavOnly = false;
       this.qtype = t;
       this.qOffset = 0;
       this.qEnd = false;
@@ -408,10 +422,31 @@ export default {
       return parts.join(' · ');
     },
     toggleQFav(q) {
-      const i = this.qFavIds.indexOf(q.id);
-      if (i < 0) this.qFavIds.push(q.id);
-      else this.qFavIds.splice(i, 1);
+      const r = qfavToggle({ ids: this.qFavIds, snaps: this.qFavs }, q);
+      this.qFavIds = r.ids;
+      this.qFavs = r.snaps;
       uni.setStorageSync('slQFavIds', this.qFavIds);
+      uni.setStorageSync('slQFavs', this.qFavs);
+    },
+    toggleQFavOnly() {
+      if (this.qFavOnly) this.qFavOnly = false;
+      else this.enterQFavView();
+      this.syncFilterUrl();
+    },
+    enterQFavView() {
+      this.qFavOnly = true;
+      this.detail = null;
+      for (const id of missingSnapIds(this.qFavIds, this.qFavs).slice(0, 20)) {
+        request('/api/shenlun/questions/' + id)
+          .then((d) => {
+            const it = d && d.item;
+            if (it && !this.qFavs.some((x) => x && x.id === it.id)) {
+              this.qFavs = this.qFavs.concat([{ id: it.id, qtype: it.qtype, paper: it.paper, exam_year: it.exam_year, exam_region: it.exam_region, question: it.question }]);
+              uni.setStorageSync('slQFavs', this.qFavs);
+            }
+          })
+          .catch(() => {});
+      }
     },
     toggleFav(m) {
       const i = this.favIds.indexOf(m.id);
