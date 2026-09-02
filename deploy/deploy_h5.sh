@@ -52,7 +52,9 @@ step "3/6 rsync backend/deploy/dist 到生产"
   --exclude '.git' --exclude '__pycache__' --exclude 'node_modules' --exclude '.env')
 
 step "3b 边缘缓存预热（重建前刷新入口级可缓存副本，容器重建窗口内 stale-if-error 必有副本可退）"
-for u in "/tiku/" "/tiku/daily/" "/tiku/discuss/" "/robots.txt" "/sitemap.xml" \
+for u in "/tiku/" "/tiku/daily/" "/tiku/discuss/" "/robots.txt" "/sitemap.xml" "/llms.txt" \
+         "/tiku/yanyu/" "/tiku/changshi/" "/tiku/panduan/" "/tiku/shuliang/" \
+         "/tiku/ziliao/" "/tiku/shenlun/" \
          "/api/announcement" "/api/question_counts" "/api/daily_set" \
          "/api/submodules?module=yanyu" "/api/submodules?module=changshi" \
          "/api/submodules?module=panduan" "/api/submodules?module=shuliang" \

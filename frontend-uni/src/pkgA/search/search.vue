@@ -3,7 +3,7 @@
     <view class="sbar">
       <view class="sbox">
         <l-icon name="search" :size="18" color="#9ca3af" />
-        <input v-model="kw" class="sinput" placeholder="题号 / 题干关键词 / 考点名" confirm-type="search" focus @confirm="doSearch" @input="onInput" />
+        <input v-model="kw" class="sinput" placeholder="题号 / 题干关键词 / 考点 / 申论" confirm-type="search" focus @confirm="doSearch" @input="onInput" />
         <view v-if="kw" class="sclear" role="button" aria-label="清空搜索" @click="kw = ''; result = null; loadErr = ''; syncUrl()"><l-icon name="x" :size="16" color="#8a90a0" /></view>
       </view>
       <text class="scancel" @click="goBack">取消</text>
@@ -27,6 +27,7 @@
           <text v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: k === detail.answer }">{{ k }}. {{ v }}</text>
           <text class="q-ans">答案：{{ detail.answer }}</text>
           <text v-if="detail.explanation" class="q-exp">{{ detail.explanation }}</text>
+          <text class="d-copy" role="button" aria-label="复制本题链接" @click.stop="copyQLink(detail.id)">复制本题链接</text>
         </view>
       </view>
       <view class="res-cols" :class="{ two: tab === 'all' && hasSide }">
@@ -53,6 +54,28 @@
           <text class="t-go">去做卷 ›</text>
         </view>
       </view>
+      <!-- 申论真题 -->
+      <view v-if="showSec('shenlun') && result.shenlun && result.shenlun.length" class="sec">
+        <text class="sec-t">申论真题</text>
+        <view v-for="s in result.shenlun" :key="s.id" class="card titem" @click="goShenlun(s)">
+          <view class="t-l">
+            <rich-text class="t-name" :nodes="hl(s.question)" />
+            <text class="t-sub">{{ s.exam_year || '' }}{{ s.exam_region ? ' · ' + s.exam_region : '' }}{{ s.qtype ? ' · ' + s.qtype : '' }}</text>
+          </view>
+          <text class="t-go">去作答 ›</text>
+        </view>
+      </view>
+      <!-- 申论素材 -->
+      <view v-if="showSec('shenlun') && result.shenlun_mats && result.shenlun_mats.length" class="sec">
+        <text class="sec-t">申论素材</text>
+        <view v-for="m in result.shenlun_mats" :key="m.id" class="card titem" @click="goShenlunMat(m)">
+          <view class="t-l">
+            <text class="t-sub">{{ m.topic }}{{ m.type ? ' · ' + m.type : '' }}</text>
+            <rich-text class="mt-content" :nodes="hl(m.content)" />
+          </view>
+          <text class="t-go">素材库 ›</text>
+        </view>
+      </view>
       </view>
       <view class="res-main">
       <!-- 题目 -->
@@ -70,6 +93,7 @@
             <text v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: k === detail.answer }">{{ k }}. {{ v }}</text>
             <text class="q-ans">答案：{{ detail.answer }}</text>
             <text v-if="detail.explanation" class="q-exp">{{ detail.explanation }}</text>
+            <text class="d-copy" role="button" aria-label="复制本题链接" @click.stop="copyQLink(detail.id)">复制本题链接</text>
           </view>
         </view>
         <view v-if="result.questions.total > result.questions.items.length" class="more" @click="loadMore">{{ moreLoading ? '加载中…' : '加载更多' }}</view>
@@ -91,14 +115,14 @@
           <text v-for="h in hist" :key="h" class="hist-chip" role="button" :aria-label="'搜索 ' + h" @click="kw = h; doSearch()">{{ h }}</text>
         </view>
       </view>
-      <view class="empty">支持搜索：题号语义码、题干关键词、考点名、试卷名</view>
+      <view class="empty">支持搜索：题号语义码、题干关键词、考点名、试卷名、申论真题/素材</view>
     </template>
   </view>
 </template>
 
 <script>
 import { request } from '../../api.js';
-import { buildSearchUrl } from '../../search-url.js';
+import { buildSearchUrl, buildTikuQPath } from '../../search-url.js';
 
 const MODS = { ziliao: '资料', shuliang: '数量', yanyu: '言语', panduan: '判断', changshi: '常识', shenlun: '申论' };
 
@@ -111,7 +135,8 @@ export default {
         { k: 'all', n: '全部' },
         { k: 'question', n: '题目' },
         { k: 'topic', n: '考点' },
-        { k: 'paper', n: '试卷' }
+        { k: 'paper', n: '试卷' },
+        { k: 'shenlun', n: '申论' }
       ],
       loading: false,
       loadErr: '',
@@ -128,24 +153,29 @@ export default {
     const q = decodeURIComponent(options && options.q ? options.q : '').trim();
     if (!q) return;
     if (options.tab && this.TABS.some((t) => t.k === options.tab)) this.tab = options.tab;
+    if (/^\d+$/.test(options.qid || '')) this._urlQid = Number(options.qid);
     this.kw = q.slice(0, 64);
     this.doSearch();
   },
   computed: {
     hasSide() {
       const r = this.result;
-      return !!(r && ((r.topics || []).length || (r.papers || []).length));
+      return !!(r && ((r.topics || []).length || (r.papers || []).length || (r.shenlun || []).length || (r.shenlun_mats || []).length));
     },
     isEmpty() {
       const r = this.result;
       if (!r) return false;
       if (r.code_hit) return false;
-      return !((r.topics || []).length || (r.papers || []).length || (r.questions && r.questions.items.length));
+      return !((r.topics || []).length || (r.papers || []).length || (r.shenlun || []).length || (r.shenlun_mats || []).length || (r.questions && r.questions.items.length));
     }
   },
   methods: {
     modName(m) {
       return MODS[m] || m || '';
+    },
+    copyQLink(id) {
+      const url = (typeof window !== 'undefined' ? window.location.origin : '') + buildTikuQPath(id);
+      uni.setClipboardData({ data: url, success: () => uni.showToast({ title: '链接已复制，发给考友直达本题', icon: 'none' }) });
     },
     showSec(k) {
       return this.tab === 'all' || this.tab === k;
@@ -159,7 +189,7 @@ export default {
     syncUrl() {
       // #ifdef H5
       if (typeof window === 'undefined' || !window.history) return;
-      window.history.replaceState(null, '', buildSearchUrl(this.kw, this.tab));
+      window.history.replaceState(null, '', buildSearchUrl(this.kw, this.tab, this.detail && this.detail.id));
       // #endif
     },
     clearHist() {
@@ -188,6 +218,12 @@ export default {
         this.loadErr = '';
         this.saveHist(q);
         this.syncUrl();
+        if (this._urlQid) {
+          const qid = this._urlQid;
+          this._urlQid = null;
+          const hit = (d.code_hit && d.code_hit.id === qid && d.code_hit) || (d.questions && d.questions.items.find((x) => x.id === qid));
+          if (hit) this.toggleDetail(hit);
+        }
       } catch (e) {
         if (seq !== this.searchSeq) return;
         if (this.result) {
@@ -222,6 +258,7 @@ export default {
       if (this.detail && this.detail.id === it.id) {
         this.detail = null;
         this.detailWant = null;
+        this.syncUrl();
         return;
       }
       if (this.detailWant === it.id) return;
@@ -230,6 +267,7 @@ export default {
         const d = await request('/api/search/question/' + it.id);
         if (this.detailWant !== it.id) return;
         this.detail = d;
+        this.syncUrl();
       } catch (e) {
         if (this.detailWant !== it.id) return;
         this.detailWant = null;
@@ -242,6 +280,13 @@ export default {
     },
     goPaper(p) {
       uni.navigateTo({ url: '/pkgA/exam/exam?paper_id=' + p.id });
+    },
+    goShenlun(s) {
+      uni.navigateTo({ url: '/pkgA/shenlun/shenlun?id=' + s.id });
+    },
+    goShenlunMat(m) {
+      const t = m && m.type ? '&mtype=' + encodeURIComponent(m.type) : '';
+      uni.navigateTo({ url: '/pkgA/shenlun/shenlun?tab=m&mid=' + m.id + t });
     },
     goBack() {
       uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/home/home' }) });
@@ -273,9 +318,10 @@ export default {
 .sec { margin-bottom: 12rpx; }
 .sec-t { display: block; font-size: 24rpx; color: var(--ink-2); margin: 12rpx 4rpx; }
 .titem { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }
-.t-l { flex: 1; display: flex; flex-direction: column; gap: 6rpx; }
+.t-l { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6rpx; }
 .t-name { font-size: 28rpx; color: var(--ink); font-weight: 600; }
 .t-sub { font-size: 22rpx; color: var(--ink-3); }
+.mt-content { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .t-go { font-size: 24rpx; color: var(--brand-text); flex-shrink: 0; }
 .qitem { display: flex; flex-direction: column; gap: 10rpx; }
 .q-top { display: flex; align-items: center; gap: 12rpx; flex-wrap: wrap; }
@@ -289,6 +335,7 @@ export default {
 .q-opt.ans { color: var(--ok-strong); font-weight: 600; }
 .q-ans { font-size: 24rpx; color: var(--ok-strong); font-weight: 600; margin-top: 4rpx; }
 .q-exp { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; }
+.d-copy { font-size: 22rpx; color: var(--brand-text); text-decoration: underline; cursor: pointer; padding: 4rpx 6rpx; align-self: flex-start; }
 .more { text-align: center; font-size: 26rpx; color: var(--brand-text); padding: 16rpx; }
 .empty { display: flex; flex-direction: column; gap: 8rpx; text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 100rpx 40rpx; }
 .empty-t { font-size: 26rpx; color: var(--ink-2); }

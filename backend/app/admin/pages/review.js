@@ -146,7 +146,7 @@
     el.innerHTML = `
     <div class="pagehead">
       <div><h1>考点抽审</h1><div class="sub">待抽审 <b id="rv-count">…</b> 题 · 全键盘流：<span class="kbd">J</span>/<span class="kbd">K</span> 切题 · <span class="kbd">1</span>-<span class="kbd">9</span> 选考点 · <span class="kbd">Enter</span> 保存 · <span class="kbd">A</span> 采纳 AI · <span class="kbd">X</span> 解析 · <span class="kbd">Z</span> 撤销</div></div>
-      <div class="acts"><select class="sel" id="rv-mod"><option value="">全部模块</option>
+      <div class="acts"><select class="sel" id="rv-mod" aria-label="模块筛选"><option value="">全部模块</option>
         ${Object.entries(MODS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
     </div>
     <div id="rv-wb"></div>`;

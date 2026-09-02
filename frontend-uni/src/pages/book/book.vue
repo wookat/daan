@@ -484,6 +484,7 @@
 <script>
 import { md } from '../../md.js';
 import { request, anonUid, exportPdf, scanSheet, shareCreate, trackEvent, qShareText, shareVariant } from '../../api.js';
+import { buildBookUrl, parseBookOpts } from '../../book-url.js';
 import { cacheMistakes, getCachedMistakes } from '../../offline.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
@@ -723,12 +724,20 @@ export default {
     },
   },
   watch: {
-    tab() { this.pageN = 20; this.batchMode = false; this.selIds = {}; this.kbId = null; },
-    filterMod() { this.pageN = 20; },
+    tab() { this.pageN = 20; this.batchMode = false; this.selIds = {}; this.kbId = null; this.syncBookUrl(); },
+    filterMod() { this.pageN = 20; this.syncBookUrl(); },
     kw() { this.pageN = 20; },
     kpFilter() { this.pageN = 20; },
     kp3Filter() { this.pageN = 20; },
-    sortBy() { this.pageN = 20; },
+    sortBy() { this.pageN = 20; this.syncBookUrl(); },
+    srcFilter() { this.syncBookUrl(); },
+  },
+  onLoad(opts) {
+    const p = parseBookOpts(opts);
+    if (p.tab) this.tab = p.tab;
+    if (p.mod) this.filterMod = p.mod;
+    if (p.src) this.srcFilter = p.src;
+    if (p.sort) this.sortBy = p.sort;
   },
   onReachBottom() {
     if (this.tab !== 'fav' && this.pageN < this.shownItems.length) this.pageN += 20;
@@ -769,6 +778,13 @@ export default {
     // #endif
   },
   methods: {
+    syncBookUrl() {
+      // #ifdef H5
+      if (typeof window !== 'undefined' && window.history) {
+        window.history.replaceState(null, '', buildBookUrl({ tab: this.tab, mod: this.filterMod, src: this.srcFilter, sort: this.sortBy }));
+      }
+      // #endif
+    },
     // #ifdef H5
     onKeydown(e) {
       if (typeof window === 'undefined' || window.innerWidth < 1024) return;

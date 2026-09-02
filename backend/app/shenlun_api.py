@@ -17,8 +17,8 @@ def api_shenlun_import(body: dict, x_import_token: str | None = Header(None)):
 
 
 @router.get("/api/shenlun/questions")
-def api_shenlun_questions(qtype: str | None = None, year: int | None = None, region: str | None = None, limit: int = 20, offset: int = 0):
-    return db.shenlun_questions(qtype, year, region, limit, offset)
+def api_shenlun_questions(qtype: str | None = None, year: int | None = None, region: str | None = None, limit: int = 20, offset: int = 0, paper: str | None = None):
+    return db.shenlun_questions(qtype, year, region, limit, offset, paper)
 
 
 @router.get("/api/shenlun/filters")
@@ -118,6 +118,46 @@ def api_shenlun_mat_fav_set(body: dict):
     return {"ok": True}
 
 
+@router.get("/api/shenlun/qfavs")
+def api_shenlun_qfavs(uid: str):
+    uid = uid.strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    return {"ids": db.qfav_ids(uid[:64]), "items": db.qfav_items(uid[:64])}
+
+
+@router.post("/api/shenlun/qfavs")
+def api_shenlun_qfav_set(body: dict):
+    uid = (body.get("uid") or "").strip()[:64]
+    qid = body.get("qid")
+    if not uid or not qid:
+        raise HTTPException(400, "缺少 uid 或题目 id")
+    db.qfav_set(uid, int(qid), bool(body.get("on")))
+    return {"ok": True}
+
+
+@router.get("/api/shenlun/draft")
+def api_shenlun_draft_get(uid: str, qid: int):
+    uid = uid.strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    return db.sl_draft_get(uid[:64], qid)
+
+
+@router.post("/api/shenlun/draft")
+def api_shenlun_draft_set(body: dict):
+    uid = (body.get("uid") or "").strip()[:64]
+    qid = body.get("qid")
+    if not uid or not qid:
+        raise HTTPException(400, "缺少 uid 或题目 id")
+    content = str(body.get("content") or "")
+    if len(content) > 3000:
+        raise HTTPException(400, "草稿内容过长")
+    db.sl_draft_set(uid, int(qid), content)
+    return {"ok": True}
+
+
 @router.get("/api/shenlun/materials")
-def api_shenlun_materials(topic: str | None = None, type: str | None = None, limit: int = 20, offset: int = 0):
-    return {"items": db.shenlun_materials(topic, type, limit, offset)}
+def api_shenlun_materials(topic: str | None = None, type: str | None = None, limit: int = 20, offset: int = 0,
+                          id: int | None = None):
+    return {"items": db.shenlun_materials(topic, type, limit, offset, mid=id)}

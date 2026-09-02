@@ -18,6 +18,7 @@ function makeCaches() {
       put: async (key, resp) => {
         store.set(typeof key === 'string' ? key : key.url, resp);
       },
+      delete: async (key) => store.delete(typeof key === 'string' ? key : key.url),
     },
   };
 }
@@ -145,6 +146,25 @@ describe('onRequest 缓存生命周期', () => {
     const copy = cachesStub.store.get(`${EDGE}/tiku/`);
     expect(await copy.clone().text()).toBe('<html>v1</html>');
   });
+
+  it('后台刷新遇 404 清除旧副本：下架内容不再以陈旧 200 外泄（R232）', async () => {
+    queueFetch(
+      originOk('<html>v1</html>'),
+      new Response('gone', { status: 404, headers: { 'content-type': 'text/html' } }),
+      new Response('gone', { status: 404, headers: { 'content-type': 'text/html' } })
+    );
+    const a = ctx(new Request(`${EDGE}/tiku/shenlun/`));
+    await run(onRequest(a.args));
+    await a.flush();
+    vi.setSystemTime(Date.now() + 301 * 1000);
+    const b = ctx(new Request(`${EDGE}/tiku/shenlun/`));
+    const resp = await run(onRequest(b.args));
+    expect(resp.headers.get('X-Edge-Cache')).toBe('REVALIDATE'); // 本次仍回旧副本
+    await b.flush();
+    expect(cachesStub.store.has(`${EDGE}/tiku/shenlun/`)).toBe(false); // 副本已清除
+    const c = ctx(new Request(`${EDGE}/tiku/shenlun/`));
+    expect((await run(onRequest(c.args))).status).toBe(404); // 下一请求同步回源拿到 404
+  });
 });
 
 describe('onRequest 无副本回源重试（R205）', () => {
@@ -221,6 +241,100 @@ describe('onRequest 无副本回源重试（R205）', () => {
     await b.flush();
     expect(await cachesStub.store.get(`${EDGE}/tiku/`).clone().text()).toBe('<html>v1</html>');
     expect(fn).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('onRequest 回源模式头 X-Kg-Fetch（R226）', () => {
+  it('可缓存路径无副本同步回源 → miss；不可缓存 /api → pass', async () => {
+    const a = ctx(new Request(`${EDGE}/tiku/`));
+    let q = queueFetch(originOk());
+    await run(onRequest(a.args));
+    expect(q.calls[0].headers.get('X-Kg-Fetch')).toBe('miss');
+
+    q = queueFetch(new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }));
+    const b = ctx(new Request(`${EDGE}/api/stats`));
+    await run(onRequest(b.args));
+    expect(q.calls[0].headers.get('X-Kg-Fetch')).toBe('pass');
+  });
+
+  it('TTL 过期后台刷新 → swr', async () => {
+    const q = queueFetch(originOk('<html>v1</html>'), originOk('<html>v2</html>'));
+    const a = ctx(new Request(`${EDGE}/tiku/`));
+    await run(onRequest(a.args));
+    await a.flush();
+    vi.setSystemTime(Date.now() + 301 * 1000);
+    const b = ctx(new Request(`${EDGE}/tiku/`));
+    await run(onRequest(b.args));
+    await b.flush();
+    expect(q.calls[1].headers.get('X-Kg-Fetch')).toBe('swr');
+  });
+
+  it('无副本 502 重试第二跳 → retry（首跳仍为 miss）', async () => {
+    const q = queueFetch(new Response('bad', { status: 502 }), originOk('<html>ok</html>'));
+    const a = ctx(new Request(`${EDGE}/tiku/c/`));
+    await run(onRequest(a.args));
+    expect(q.calls[0].headers.get('X-Kg-Fetch')).toBe('miss');
+    expect(q.calls[1].headers.get('X-Kg-Fetch')).toBe('retry');
+  });
+});
+
+describe('onRequest shell 静态件边缘缓存（R273）', () => {
+  const js = (body) =>
+    new Response(body, { status: 200, headers: { 'content-type': 'application/javascript' } });
+  const json = (body) =>
+    new Response(body, { status: 200, headers: { 'content-type': 'application/json' } });
+
+  it('/sw.js MISS 200 js 入缓存、对外 max-age=60；TTL 内二访 HIT 不回源', async () => {
+    const { fn } = queueFetch(js('self.x=1'));
+    const a = ctx(new Request(`${EDGE}/sw.js`));
+    const resp = await run(onRequest(a.args));
+    expect(resp.headers.get('X-Edge-Cache')).toBe('MISS');
+    expect(resp.headers.get('Cache-Control')).toBe('public, max-age=60');
+    await a.flush();
+    expect(cachesStub.store.has(`${EDGE}/sw.js`)).toBe(true);
+    const b = ctx(new Request(`${EDGE}/sw.js`));
+    const hit = await run(onRequest(b.args));
+    expect(hit.headers.get('X-Edge-Cache')).toBe('HIT');
+    expect(await hit.text()).toBe('self.x=1');
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('/sw.js origin 回 HTML → 直出但不写副本（content-type 守卫防投毒）', async () => {
+    queueFetch(originOk('<html>fallback</html>'));
+    const a = ctx(new Request(`${EDGE}/sw.js`));
+    const resp = await run(onRequest(a.args));
+    expect(resp.status).toBe(200);
+    await a.flush();
+    expect(cachesStub.store.has(`${EDGE}/sw.js`)).toBe(false);
+  });
+
+  it('/precache.json HTML 不写副本；JSON 200 正常入缓存', async () => {
+    queueFetch(originOk('<html>oops</html>'));
+    const a = ctx(new Request(`${EDGE}/precache.json`));
+    await run(onRequest(a.args));
+    await a.flush();
+    expect(cachesStub.store.has(`${EDGE}/precache.json`)).toBe(false);
+
+    queueFetch(json('["/static/a.js"]'));
+    const b = ctx(new Request(`${EDGE}/precache.json`));
+    const resp = await run(onRequest(b.args));
+    expect(resp.headers.get('Cache-Control')).toBe('public, max-age=60');
+    await b.flush();
+    expect(cachesStub.store.has(`${EDGE}/precache.json`)).toBe(true);
+  });
+
+  it('/sw.js TTL 过期 + origin 5xx → SWR 回旧副本且不被覆盖（stale-if-error）', async () => {
+    queueFetch(js('self.v=1'), new Response('bad', { status: 503 }));
+    const a = ctx(new Request(`${EDGE}/sw.js`));
+    await run(onRequest(a.args));
+    await a.flush();
+    vi.setSystemTime(Date.now() + 61 * 1000);
+    const b = ctx(new Request(`${EDGE}/sw.js`));
+    const resp = await run(onRequest(b.args));
+    expect(resp.headers.get('X-Edge-Cache')).toBe('REVALIDATE');
+    expect(await resp.text()).toBe('self.v=1');
+    await b.flush();
+    expect(await cachesStub.store.get(`${EDGE}/sw.js`).clone().text()).toBe('self.v=1');
   });
 });
 

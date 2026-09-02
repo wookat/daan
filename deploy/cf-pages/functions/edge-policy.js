@@ -16,7 +16,19 @@ export const API_CACHE_ALLOWLIST = new Set([
   "/api/real_filters",
   "/api/papers",
   "/api/comments/plaza",
+  "/api/search",
+  "/api/shenlun/questions",
+  "/api/shenlun/filters",
+  "/api/shenlun/materials",
 ]);
+
+// uid 无关公开 GET 的前缀匹配端点（路径参数型，如 /api/search/question/{qid}）
+export const API_CACHE_PREFIXES = ["/api/search/question/", "/api/shenlun/questions/"];
+
+// app 壳静态件（构建产物直出，uid 无关）：短 TTL 缓存，争用/重启窗口有
+// stale 副本可退；sw.js 新版生效延迟被 TTL 上界约束（浏览器对 SW 主脚本的
+// 更新检查默认绕过浏览器 HTTP 缓存，但不绕过 CDN）。
+export const SHELL_CACHE_ALLOWLIST = new Set(["/sw.js", "/precache.json"]);
 
 // 无获客价值的商业爬虫（舆情/SEO 工具）：每条 /tiku/q/* URL 各异使边缘缓存失效，
 // 全部穿透共享 origin SSR；在边缘直接 403，robots.txt 放行以便其读到禁抓声明。
@@ -32,12 +44,16 @@ export function isEdgeCacheable(method, pathname, hasAuth, hasUid) {
   // /s/* 分享落地页：输出仅依赖 sid（OG + 跳 SPA），动态内容都在 SPA 内走 API
   if (pathname.startsWith("/s/")) return true;
   if (pathname.startsWith("/p/")) return true;
-  if (pathname.startsWith("/sitemap") || pathname === "/robots.txt") return true;
-  return API_CACHE_ALLOWLIST.has(pathname) && !hasAuth && !hasUid;
+  if (pathname.startsWith("/sitemap") || pathname === "/robots.txt" || pathname === "/llms.txt") return true;
+  if (SHELL_CACHE_ALLOWLIST.has(pathname)) return true;
+  if (hasAuth || hasUid) return false;
+  return API_CACHE_ALLOWLIST.has(pathname) || API_CACHE_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
 export function edgeTtl(pathname) {
-  return pathname.startsWith("/api/") ? API_EDGE_CACHE_TTL : EDGE_CACHE_TTL;
+  return pathname.startsWith("/api/") || SHELL_CACHE_ALLOWLIST.has(pathname)
+    ? API_EDGE_CACHE_TTL
+    : EDGE_CACHE_TTL;
 }
 
 // 副本按 STALE_KEEP 长存，逻辑新鲜度由 X-Kg-Cached-At 判定：
@@ -98,8 +114,10 @@ export function shouldServeOutage(method, pathname, status, hasStale) {
 
 export function isCacheableContentType(pathname, isApi, contentType) {
   const ct = contentType || "";
-  if (pathname.startsWith("/sitemap") || pathname === "/robots.txt") {
-    return ct.includes("xml") || ct.includes("text/plain");
+  if (pathname === "/sw.js") return ct.includes("javascript");
+  if (pathname === "/precache.json") return ct.includes("json");
+  if (pathname.startsWith("/sitemap") || pathname === "/robots.txt" || pathname === "/llms.txt") {
+    return ct.includes("xml") || ct.includes("text/plain") || ct.includes("text/markdown");
   }
   return ct.includes(isApi ? "application/json" : "text/html");
 }

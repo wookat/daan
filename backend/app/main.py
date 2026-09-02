@@ -137,6 +137,8 @@ async def error_storm_middleware(request, call_next):
 
     IP 取边缘透传的 X-Kg-Ip（真实客户端 IP），回退 socket 对端；
     /api/health 豁免封禁（容器 healthcheck/watchdog 不受影响）。
+    错误响应附带 X-Kg-Guard 头外显守卫窗口计数，由 origin 访问日志持久化，
+    供事后逐请求审计守卫实际看到的计数轨迹（2xx/3xx 不加头）。
     """
     path = request.url.path
     if not path.startswith("/api/"):
@@ -147,10 +149,12 @@ async def error_storm_middleware(request, call_next):
         return JSONResponse(
             {"detail": "请求过于频繁，请稍后重试"},
             status_code=429,
-            headers={"Retry-After": "60"},
+            headers={"Retry-After": "60", "X-Kg-Guard": "blocked"},
         )
     response = await call_next(request)
-    _storm_guard.record(ip, response.status_code, now)
+    n = _storm_guard.record(ip, response.status_code, now)
+    if response.status_code >= 400:
+        response.headers["X-Kg-Guard"] = str(n)
     return response
 
 
@@ -294,8 +298,18 @@ _HOT_UID_TABLES = (
 )
 
 
+def _prime_admin_caches():
+    """启动时预热管理台重查询 SWR 缓存，重启后首个管理员请求不承担秒级冷 miss。"""
+    for fn in (db.admin_stats, db.admin_dashboard, db.governance_scan):
+        try:
+            fn()
+        except Exception:
+            pass
+
+
 def _warmup():
     """周期预热抽题 id 池、热点索引页与 uid 热表（总量 <1MB），消除缓存被换出后的冷启动分钟级长尾。"""
+    _prime_admin_caches()
     while True:
         try:
             for m in (None, "yanyu", "changshi", "panduan", "shuliang", "ziliao"):

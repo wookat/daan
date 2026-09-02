@@ -46,13 +46,13 @@
     const box = document.getElementById('q-tbl');
     if (!items.length) { box.innerHTML = '<div class="empty"><div class="eico">📭</div>没有匹配的题目</div>'; renderBar(); return; }
     box.innerHTML = `<table class="tbl"><thead><tr>
-      <th style="width:36px"><input type="checkbox" id="q-all"></th>
+      <th style="width:36px"><span class="sr-only">选择</span><input type="checkbox" id="q-all" aria-label="全选本页题目"></th>
       <th style="width:70px">ID</th><th>题干</th><th style="width:90px">模块</th>
       <th style="width:120px">考点</th><th style="width:60px">答案</th>
       <th style="width:66px">质量分</th>
       <th style="width:80px">状态</th><th style="width:110px">操作</th></tr></thead><tbody>
       ${items.map((q) => `<tr>
-        <td><input type="checkbox" class="q-ck" data-id="${q.id}" ${selected.has(q.id) ? 'checked' : ''}></td>
+        <td><input type="checkbox" class="q-ck" data-id="${q.id}" aria-label="选择题目 ${q.id}" ${selected.has(q.id) ? 'checked' : ''}></td>
         <td>#${q.id}</td>
         <td style="max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(q.question)}">${esc(q.question)}</td>
         <td>${modTag(q.module)}</td>
@@ -167,18 +167,18 @@
     </div>
     <div class="card" style="margin-bottom:12px">
       <div class="row" style="gap:10px;flex-wrap:wrap">
-        <input class="ipt" id="q-kw" style="width:260px" placeholder="题干关键词 / 题目 ID" value="${esc(state.qid || state.kw)}">
-        <select class="sel" id="q-module"><option value="">全部模块</option>
+        <input class="ipt" id="q-kw" aria-label="题干关键词 / 题目 ID" style="width:260px" placeholder="题干关键词 / 题目 ID" value="${esc(state.qid || state.kw)}">
+        <select class="sel" id="q-module" aria-label="模块筛选"><option value="">全部模块</option>
           ${Object.entries(MODS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
         <div class="row" style="gap:6px">
           <span class="chip on" data-f="all">全部</span>
           <span class="chip" data-f="flagged">差评待处理</span>
           <span class="chip" data-f="disabled">已下架</span>
         </div>
-        <select class="sel" id="q-score"><option value="">全部质量分</option>
+        <select class="sel" id="q-score" aria-label="质量分筛选"><option value="">全部质量分</option>
           <option value="80-100">优 80-100</option><option value="60-79">良 60-79</option>
           <option value="40-59">中 40-59</option><option value="0-39">差 0-39</option></select>
-        <select class="sel" id="q-sort"><option value="">默认排序</option>
+        <select class="sel" id="q-sort" aria-label="排序方式"><option value="">默认排序</option>
           <option value="score_asc">质量分 ↑</option><option value="score_desc">质量分 ↓</option></select>
         <button class="btn btn-primary" id="q-go">查询</button>
       </div>

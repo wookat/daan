@@ -150,6 +150,9 @@ def init_db():
         "CREATE INDEX IF NOT EXISTS idx_q_real_region ON questions(is_real, exam_region)"
     )
     conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_q_batch ON questions(import_batch, disabled, is_real, answer)"
+    )
+    conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_q_real_year ON questions(is_real, disabled, exam_year, module, updated_at)"
     )
     if "correct_ratio" in qcols:
@@ -737,10 +740,13 @@ def import_shenlun(questions: list[dict], materials: list[dict], batch: str) -> 
     return {"questions": qn, "materials": mn, "batch": batch}
 
 
-def shenlun_questions(qtype: str | None = None, year: int | None = None, region: str | None = None, limit: int = 20, offset: int = 0) -> dict:
+def shenlun_questions(qtype: str | None = None, year: int | None = None, region: str | None = None, limit: int = 20, offset: int = 0, paper: str | None = None) -> dict:
     conn = get_conn()
     where = ["(disabled IS NULL OR disabled=0)"]
     args: list = []
+    if paper:
+        where.append("paper=?")
+        args.append(paper)
     if qtype:
         where.append("qtype LIKE ? || '%'")
         args.append(qtype)
@@ -764,6 +770,34 @@ def shenlun_questions(qtype: str | None = None, year: int | None = None, region:
     return {"items": [dict(r) for r in rows], "total": total}
 
 
+def search_shenlun(q: str, limit: int = 5) -> list[dict]:
+    conn = get_conn()
+    rows = conn.execute(
+        """SELECT id, exam_year, exam_region, paper, qtype, question
+            FROM shenlun_questions
+            WHERE (disabled IS NULL OR disabled=0)
+              AND (question LIKE '%' || ? || '%' OR paper LIKE '%' || ? || '%')
+            ORDER BY exam_year DESC, id LIMIT ?""",
+        (q, q, min(max(limit, 1), 10)),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def search_shenlun_materials(q: str, limit: int = 5) -> list[dict]:
+    conn = get_conn()
+    rows = conn.execute(
+        """SELECT id, type, topic, content, source
+            FROM shenlun_materials
+            WHERE (disabled IS NULL OR disabled=0)
+              AND (topic LIKE '%' || ? || '%' OR content LIKE '%' || ? || '%' OR source LIKE '%' || ? || '%')
+            ORDER BY id LIMIT ?""",
+        (q, q, q, min(max(limit, 1), 10)),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 def shenlun_filters() -> dict:
     conn = get_conn()
     years = [r[0] for r in conn.execute(
@@ -773,6 +807,52 @@ def shenlun_filters() -> dict:
         "GROUP BY exam_region ORDER BY COUNT(*) DESC")]
     conn.close()
     return {"years": years, "regions": regions}
+
+
+def shenlun_year_counts() -> list[tuple[int, int]]:
+    conn = get_conn()
+    rows = conn.execute(
+        """SELECT exam_year, COUNT(*) n FROM shenlun_questions
+           WHERE (disabled IS NULL OR disabled=0) AND exam_year IS NOT NULL
+           GROUP BY exam_year ORDER BY exam_year DESC"""
+    ).fetchall()
+    conn.close()
+    return [(r["exam_year"], r["n"]) for r in rows]
+
+
+def shenlun_qtype_counts() -> list[tuple[str, int]]:
+    conn = get_conn()
+    rows = conn.execute(
+        """SELECT qtype, COUNT(*) n FROM shenlun_questions
+           WHERE (disabled IS NULL OR disabled=0) AND qtype IS NOT NULL AND qtype != ''
+           GROUP BY qtype ORDER BY n DESC"""
+    ).fetchall()
+    conn.close()
+    return [(r["qtype"], r["n"]) for r in rows]
+
+
+def shenlun_paper_counts() -> list[tuple[str, int | None, str | None, int]]:
+    conn = get_conn()
+    rows = conn.execute(
+        """SELECT paper, MAX(exam_year) y, MAX(exam_region) rg, COUNT(*) n
+           FROM shenlun_questions
+           WHERE (disabled IS NULL OR disabled=0) AND paper IS NOT NULL AND paper != ''
+           GROUP BY paper ORDER BY y DESC, paper"""
+    ).fetchall()
+    conn.close()
+    return [(r["paper"], r["y"], r["rg"], r["n"]) for r in rows]
+
+
+def shenlun_paper_questions(paper: str) -> list[dict]:
+    conn = get_conn()
+    rows = conn.execute(
+        """SELECT id, exam_year, exam_region, paper, qtype, material, question, reference
+           FROM shenlun_questions
+           WHERE (disabled IS NULL OR disabled=0) AND paper=? ORDER BY id""",
+        (paper,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 
 def _ensure_shenlun_answers(conn):
@@ -833,6 +913,89 @@ def mat_fav_items(uid: str) -> list[dict]:
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+def _ensure_qfavs(conn):
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS shenlun_qfavs (
+            uid TEXT NOT NULL,
+            qid INTEGER NOT NULL,
+            created_at REAL NOT NULL,
+            PRIMARY KEY (uid, qid)
+        )"""
+    )
+
+
+def qfav_ids(uid: str) -> list[int]:
+    conn = get_conn()
+    _ensure_qfavs(conn)
+    ids = [r[0] for r in conn.execute(
+        "SELECT qid FROM shenlun_qfavs WHERE uid=? ORDER BY created_at DESC", (uid,))]
+    conn.close()
+    return ids
+
+
+def qfav_set(uid: str, qid: int, on: bool):
+    conn = get_conn()
+    _ensure_qfavs(conn)
+    if on:
+        conn.execute(
+            "INSERT OR IGNORE INTO shenlun_qfavs (uid, qid, created_at) VALUES (?,?,?)",
+            (uid, qid, time.time()))
+    else:
+        conn.execute("DELETE FROM shenlun_qfavs WHERE uid=? AND qid=?", (uid, qid))
+    conn.commit()
+    conn.close()
+
+
+def qfav_items(uid: str) -> list[dict]:
+    conn = get_conn()
+    _ensure_qfavs(conn)
+    rows = conn.execute(
+        """SELECT q.id, q.qtype, q.paper, q.exam_year, q.exam_region, q.question
+           FROM shenlun_qfavs f
+           JOIN shenlun_questions q ON q.id=f.qid AND (q.disabled IS NULL OR q.disabled=0)
+           WHERE f.uid=? ORDER BY f.created_at DESC LIMIT 200""",
+        (uid,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def _ensure_sl_drafts(conn):
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS shenlun_drafts (
+            uid TEXT NOT NULL,
+            qid INTEGER NOT NULL,
+            content TEXT NOT NULL,
+            updated_at REAL NOT NULL,
+            PRIMARY KEY (uid, qid)
+        )"""
+    )
+
+
+def sl_draft_get(uid: str, qid: int) -> dict:
+    conn = get_conn()
+    _ensure_sl_drafts(conn)
+    row = conn.execute(
+        "SELECT content, updated_at FROM shenlun_drafts WHERE uid=? AND qid=?", (uid, qid)
+    ).fetchone()
+    conn.close()
+    return {"content": row[0], "updated_at": row[1]} if row else {"content": "", "updated_at": 0}
+
+
+def sl_draft_set(uid: str, qid: int, content: str):
+    conn = get_conn()
+    _ensure_sl_drafts(conn)
+    if content:
+        conn.execute(
+            "INSERT INTO shenlun_drafts (uid, qid, content, updated_at) VALUES (?,?,?,?) "
+            "ON CONFLICT(uid, qid) DO UPDATE SET content=excluded.content, updated_at=excluded.updated_at",
+            (uid, qid, content, time.time()))
+    else:
+        conn.execute("DELETE FROM shenlun_drafts WHERE uid=? AND qid=?", (uid, qid))
+    conn.commit()
+    conn.close()
 
 
 def save_shenlun_answer(uid: str, qid: int, answer: str, result: str) -> int:
@@ -919,10 +1082,25 @@ def shenlun_question(qid: int) -> dict | None:
     return dict(r) if r else None
 
 
-def shenlun_materials(topic: str | None = None, mtype: str | None = None, limit: int = 20, offset: int = 0) -> list[dict]:
+def shenlun_material_type_counts() -> list[tuple[str, int]]:
+    conn = get_conn()
+    rows = conn.execute(
+        """SELECT type, COUNT(*) n FROM shenlun_materials
+           WHERE (disabled IS NULL OR disabled=0) AND type IS NOT NULL AND type<>''
+           GROUP BY type ORDER BY n DESC"""
+    ).fetchall()
+    conn.close()
+    return [(r["type"], r["n"]) for r in rows]
+
+
+def shenlun_materials(topic: str | None = None, mtype: str | None = None, limit: int = 20, offset: int = 0,
+                      mid: int | None = None) -> list[dict]:
     conn = get_conn()
     where = ["(disabled IS NULL OR disabled=0)"]
     args: list = []
+    if mid is not None:
+        where.append("id=?")
+        args.append(mid)
     if topic:
         where.append("topic=?")
         args.append(topic)
@@ -932,6 +1110,17 @@ def shenlun_materials(topic: str | None = None, mtype: str | None = None, limit:
     rows = conn.execute(
         f"SELECT * FROM shenlun_materials WHERE {' AND '.join(where)} ORDER BY id LIMIT ? OFFSET ?",
         (*args, min(limit, 50), offset),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def shenlun_materials_by_type(mtype: str) -> list[dict]:
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT id, type, topic, content, source FROM shenlun_materials"
+        " WHERE (disabled IS NULL OR disabled=0) AND type=? ORDER BY id",
+        (mtype,),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -1479,6 +1668,14 @@ def admin_set_announcement(aid: int, active: bool) -> bool:
 
 
 def admin_stats() -> dict:
+    return _cached("stats", 300, _admin_stats_uncached)
+
+
+def admin_stats_state() -> tuple[dict, str]:
+    return _cached_state("stats", 300, _admin_stats_uncached)
+
+
+def _admin_stats_uncached() -> dict:
     conn = get_conn()
     q = conn.execute
     stats = {
@@ -3058,13 +3255,15 @@ def _list_exam_papers_base(conn, kind: str | None, year: int | None,
             ORDER BY year DESC, id DESC LIMIT 200""",
         args,
     ).fetchall()
-    takers: dict[int, int] = {}
+    takers: dict[int, dict] = {}
     if rows:
         for t in conn.execute(
-            """SELECT paper_id, COUNT(DISTINCT uid) n FROM exam_attempts
-               WHERE submitted_at IS NOT NULL GROUP BY paper_id"""
+            """SELECT paper_id, COUNT(*) n, ROUND(AVG(s), 1) avg FROM (
+                 SELECT paper_id, uid, MAX(score) s FROM exam_attempts
+                 WHERE submitted_at IS NOT NULL GROUP BY paper_id, uid
+               ) GROUP BY paper_id"""
         ):
-            takers[t["paper_id"]] = t["n"]
+            takers[t["paper_id"]] = {"n": t["n"], "avg": t["avg"]}
     qids_by_paper = {r["id"]: json.loads(r["question_ids"] or "[]") for r in rows}
     all_ids = list({i for ids in qids_by_paper.values() for i in ids})
     active: set[int] = set()
@@ -3079,7 +3278,9 @@ def _list_exam_papers_base(conn, kind: str | None, year: int | None,
         d = dict(r)
         d.pop("question_ids")
         d["n"] = sum(1 for i in qids_by_paper[d["id"]] if i in active)
-        d["takers"] = takers.get(d["id"], 0)
+        soc = takers.get(d["id"])
+        d["takers"] = soc["n"] if soc else 0
+        d["avg_score"] = soc["avg"] if soc else None
         base.append(d)
     _papers_cache[key] = (time.time(), base)
     return base
@@ -3123,6 +3324,21 @@ def exam_paper_filters() -> dict:
         "GROUP BY region ORDER BY n DESC")]
     conn.close()
     return {"years": years, "regions": regions}
+
+
+def exam_paper_social(pid: int) -> dict:
+    """同卷全体用户社会证明：每人取最高分（与模考排名口径一致）。"""
+    conn = get_conn()
+    _ensure_exam_tables(conn)
+    rows = conn.execute(
+        """SELECT uid, MAX(score) s FROM exam_attempts
+           WHERE paper_id=? AND submitted_at IS NOT NULL GROUP BY uid""",
+        (pid,),
+    ).fetchall()
+    conn.close()
+    n = len(rows)
+    avg = round(sum(r["s"] for r in rows) / n, 1) if n else 0
+    return {"n": n, "avg": avg}
 
 
 def get_exam_paper(pid: int) -> dict | None:
@@ -3366,21 +3582,58 @@ def mock_done_this_week(uid: str) -> bool:
 # ===== 管理后台 v3：看板统计 / 批次抽检 / 内容治理 / 用户运营 =====
 
 _ADMIN_CACHE: dict = {}
+_admin_cache_lock = threading.Lock()
+_admin_refreshing: set = set()
+_admin_build_lock = threading.Lock()
+
+
+def _cached_refresh(key: str, fn):
+    try:
+        data = fn()
+        with _admin_cache_lock:
+            _ADMIN_CACHE[key] = (time.time(), data)
+    except Exception:
+        pass
+    finally:
+        with _admin_cache_lock:
+            _admin_refreshing.discard(key)
 
 
 def _cached(key: str, ttl: float, fn):
-    """2G 小服务器上重查询的简单进程内缓存。"""
-    now = time.time()
-    hit = _ADMIN_CACHE.get(key)
-    if hit and now - hit[0] < ttl:
-        return hit[1]
-    data = fn()
-    _ADMIN_CACHE[key] = (now, data)
-    return data
+    return _cached_state(key, ttl, fn)[0]
+
+
+def _cached_state(key: str, ttl: float, fn):
+    """2G 小服务器上重查询的进程内缓存：过期先回旧值并后台单飞重算
+    （stale-while-revalidate，对齐 _pick_pools），请求不承担秒级重查询。
+    返回 (数据, 命中态)：hit=TTL 内命中，stale=过期回旧值，cold=进程启动后首次同步构建。"""
+    with _admin_cache_lock:
+        hit = _ADMIN_CACHE.get(key)
+        if hit:
+            if time.time() - hit[0] < ttl:
+                return hit[1], "hit"
+            if key not in _admin_refreshing:
+                _admin_refreshing.add(key)
+                threading.Thread(target=_cached_refresh, args=(key, fn), daemon=True).start()
+            return hit[1], "stale"
+    # 冷 miss（进程启动后首次）：单线程构建，同键并发等锁后直接吃缓存
+    with _admin_build_lock:
+        with _admin_cache_lock:
+            hit = _ADMIN_CACHE.get(key)
+            if hit:
+                return hit[1], "cold"
+        data = fn()
+        with _admin_cache_lock:
+            _ADMIN_CACHE[key] = (time.time(), data)
+        return data, "cold"
 
 
 def admin_dashboard() -> dict:
     return _cached("dashboard", 300, _admin_dashboard_uncached)
+
+
+def admin_dashboard_state() -> tuple[dict, str]:
+    return _cached_state("dashboard", 300, _admin_dashboard_uncached)
 
 
 def _admin_dashboard_uncached() -> dict:
@@ -3592,6 +3845,10 @@ def tag3_review_reopen(question_id: int) -> bool:
 
 def governance_scan() -> dict:
     return _cached("governance", 600, _governance_scan_uncached)
+
+
+def governance_scan_state() -> tuple[dict, str]:
+    return _cached_state("governance", 600, _governance_scan_uncached)
 
 
 def _governance_scan_uncached() -> dict:

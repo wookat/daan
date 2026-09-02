@@ -11,4 +11,5 @@ ENV DB_PATH=/data/data.db
 VOLUME /data
 EXPOSE 8000
 WORKDIR /app/backend
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# keep-alive 空闲时限须大于反代连接池 idle 上限（Caddy 默认 2min），避免复用陈旧连接 reset 即时 502
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-keep-alive", "130"]

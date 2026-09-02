@@ -14,9 +14,11 @@ router = APIRouter()
 
 
 @router.get("/api/admin/stats")
-def api_admin_stats(x_admin_token: str | None = Header(None)):
+def api_admin_stats(response: Response, x_admin_token: str | None = Header(None)):
     check_admin(x_admin_token)
-    return db.admin_stats()
+    data, state = db.admin_stats_state()
+    response.headers["X-Kg-Cache"] = state
+    return data
 
 
 @router.get("/api/admin/llm_health")
@@ -157,9 +159,11 @@ def admin_page():
     return Response(html, media_type="text/html", headers={"Cache-Control": "no-cache"})
 
 @router.get("/api/admin/dashboard")
-def api_admin_dashboard(x_admin_token: str | None = Header(None)):
+def api_admin_dashboard(response: Response, x_admin_token: str | None = Header(None)):
     check_admin(x_admin_token)
-    return db.admin_dashboard()
+    data, state = db.admin_dashboard_state()
+    response.headers["X-Kg-Cache"] = state
+    return data
 
 
 @router.get("/api/admin/ops_status")
@@ -169,9 +173,11 @@ def api_admin_ops_status(x_admin_token: str | None = Header(None)):
 
 
 @router.get("/api/admin/governance")
-def api_admin_governance(x_admin_token: str | None = Header(None)):
+def api_admin_governance(response: Response, x_admin_token: str | None = Header(None)):
     check_admin(x_admin_token)
-    return db.governance_scan()
+    data, state = db.governance_scan_state()
+    response.headers["X-Kg-Cache"] = state
+    return data
 
 
 @router.get("/api/admin/users")

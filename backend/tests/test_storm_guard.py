@@ -53,3 +53,34 @@ def test_middleware_429_and_health_exempt():
         assert c.get("/api/stats", headers={"X-Kg-Ip": "8.8.8.8"}).status_code == 200
     finally:
         m._storm_guard = orig
+
+
+def test_record_returns_window_count():
+    g = ErrorStormGuard(threshold=30, window=60.0)
+    assert g.record("a", 404, 0.0) == 1
+    assert g.record("a", 500, 1.0) == 2
+    # 未记录路径返回 0
+    assert g.record("a", 200, 2.0) == 0
+    assert g.record("a", 429, 2.0) == 0
+    assert g.record("", 404, 2.0) == 0
+    # 窗口滑出后计数回落
+    assert g.record("a", 404, 100.0) == 1
+
+
+def test_middleware_guard_header(monkeypatch):
+    from app import main as m
+
+    monkeypatch.setattr(m, "_storm_guard", ErrorStormGuard(threshold=2, window=60.0))
+    c = TestClient(app)
+    h = {"X-Kg-Ip": "7.7.7.7"}
+    # 错误响应逐个外显窗口计数
+    assert c.get("/api/exam/report/999999999?uid=x", headers=h).headers.get("x-kg-guard") == "1"
+    assert c.get("/api/exam/report/999999999?uid=x", headers=h).headers.get("x-kg-guard") == "2"
+    # 触发封禁后 429 标记 blocked
+    r = c.get("/api/stats", headers=h)
+    assert r.status_code == 429
+    assert r.headers.get("x-kg-guard") == "blocked"
+    # 正常响应不加头
+    ok = c.get("/api/stats", headers={"X-Kg-Ip": "6.6.6.6"})
+    assert ok.status_code == 200
+    assert "x-kg-guard" not in ok.headers

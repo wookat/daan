@@ -29,6 +29,18 @@
       </view>
     </view>
 
+    <!-- 未交卷模考续考卡 -->
+    <view v-if="examResume" class="card ercard">
+      <view class="cb-l">
+        <text class="cb-t">有一场未交卷的模考</text>
+        <text class="cb-s">{{ examResume.title }} · 已答 {{ examResume.answered }}/{{ examResume.total }} 题 · 剩余 {{ fmtErLeft(examResume.leftSecs) }}</text>
+      </view>
+      <view class="cb-r">
+        <text class="cb-go" role="button" aria-label="继续未交卷的模考" @click="erContinue">去继续 ›</text>
+        <text class="cb-x" role="button" aria-label="放弃未交卷进度" @click="erDrop">✕</text>
+      </view>
+    </view>
+
     <!-- 回访召回卡（7天以上未练习的老用户） -->
     <view v-if="comeback" class="card cbcard">
       <view class="cb-l">
@@ -470,6 +482,7 @@
 <script>
 import { request, snapPeek, anonUid, exportPdf, trackEvent, fetchCheckinBadges, fetchCheckinSummary, flushDailySubmit } from '../../api.js';
 import { checkinStreak, dayKey, loadSzDaily } from '../../checkin.js';
+import { parseExamProgress, fmtLeftSecs } from '../../exam-resume.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -523,6 +536,7 @@ export default {
       weeklyDot: false,
       comeback: null,
       reminderBanner: false,
+      examResume: null,
       dsMeta: null,
       dsDone: null,
       dateStart: new Date().toISOString().slice(0, 10),
@@ -644,6 +658,7 @@ export default {
     this.calcWeeklyDot();
     this.checkComeback();
     this.checkReminder();
+    this.loadExamResume();
     this.loadDailySet();
     flushDailySubmit();
     const wantSetup = uni.getStorageSync('openPlanSetup');
@@ -800,6 +815,32 @@ export default {
     },
     goWeeklyReport() {
       uni.navigateTo({ url: '/pkgA/stats/weekly-report' });
+    },
+    loadExamResume() {
+      const saved = uni.getStorageSync('examProgress');
+      this.examResume = parseExamProgress(saved, Date.now());
+      if (saved && saved.attemptId && !this.examResume) uni.removeStorageSync('examProgress');
+    },
+    erContinue() {
+      const r = this.examResume;
+      if (!r) return;
+      uni.navigateTo({ url: r.mini ? '/pkgA/exam/exam?mini=1' : '/pkgA/exam/exam?paper_id=' + r.paperId });
+    },
+    erDrop() {
+      uni.showModal({
+        title: '放弃未交卷进度？',
+        content: '放弃后本次作答记录不再保留',
+        confirmText: '放弃',
+        cancelText: '再想想',
+        success: (res) => {
+          if (!res.confirm) return;
+          uni.removeStorageSync('examProgress');
+          this.examResume = null;
+        },
+      });
+    },
+    fmtErLeft(s) {
+      return fmtLeftSecs(s);
     },
     checkComeback() {
       const days = (this.pstats && this.pstats.days) || {};
@@ -1259,6 +1300,7 @@ export default {
 .pf-back { margin-top: 16rpx; text-align: center; font-size: 24rpx; color: var(--ink-3); min-height: 44px; display: flex; align-items: center; justify-content: center; }
 
 /* 回访召回卡 */
+.ercard { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; box-shadow: 0 6rpx 16rpx rgba(37, 99, 235, 0.25); padding: 24rpx 28rpx; }
 .cbcard { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #f59e0b, #f97316); border: none; box-shadow: 0 6rpx 16rpx rgba(249, 115, 22, 0.25); padding: 24rpx 28rpx; }
 .cb-l { min-width: 0; }
 .cb-t { display: block; font-size: 28rpx; font-weight: 700; color: #ffffff; }

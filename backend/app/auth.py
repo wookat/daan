@@ -341,7 +341,7 @@ def api_me(authorization: str | None = Header(None)):
 
 # 各 uid 数据表：uid 直接可改列的表 + 有 (uid,...) 主键需去重的表
 _UID_TABLES = ["answer_log", "mistakes", "shenlun_answers", "review_log", "exam_attempts"]
-_UID_PK_TABLES = ["shenlun_mat_favs", "user_state", "question_favs", "question_notes", "fav_folders", "comment_likes", "user_profile", "reminder_prefs", "reinforce_log"]
+_UID_PK_TABLES = ["shenlun_mat_favs", "shenlun_qfavs", "shenlun_drafts", "user_state", "question_favs", "question_notes", "fav_folders", "comment_likes", "user_profile", "reminder_prefs", "reinforce_log"]
 
 
 @router.post("/merge_anon")
@@ -360,6 +360,8 @@ def api_merge_anon(body: dict, authorization: str | None = Header(None)):
     db._ensure_mistake_uid(conn)
     db._ensure_shenlun_answers(conn)
     db._ensure_mat_favs(conn)
+    db._ensure_qfavs(conn)
+    db._ensure_sl_drafts(conn)
     db._ensure_user_state(conn)
     db._ensure_review_log(conn)
     db._ensure_exam_tables(conn)

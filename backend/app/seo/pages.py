@@ -1,286 +1,33 @@
-"""SEO 题库落地页：服务端渲染 HTML（/tiku/*）+ sitemap/robots，承接搜索长尾流量导流主站。"""
-import html
+"""行测 SSR 页族：/tiku 首页、search、daily、discuss、papers、q、year、topic。"""
 import json
-import math
-import os
-import threading
 import time
-import urllib.request
 from functools import lru_cache
 from urllib.parse import quote
 
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import (
-    HTMLResponse,
-    PlainTextResponse,
-    RedirectResponse,
-    Response,
+from fastapi import HTTPException
+from fastapi.responses import HTMLResponse, RedirectResponse
+
+from .. import db, taxonomy
+from .common import (
+    PAGE_SIZE,
+    SITE_BASE,
+    _breadcrumb_ld,
+    _collection_ld,
+    _crumb,
+    _e,
+    _module_name,
+    _not_found,
+    _page,
+    _pager,
+    _q_items,
+    _shenlun_sucai_path,
+    _sub_path,
+    _topic_path,
+    _url,
+    _year_path,
+    router,
 )
-
-from . import db, kb, taxonomy
-
-SITE_BASE = os.environ.get("SITE_BASE_URL", "https://kaogong.zalize.com").rstrip("/")
-INDEXNOW_KEY = os.environ.get("INDEXNOW_KEY", "")
-PAGE_SIZE = 50
-SITEMAP_SHARD = 10000
-BRAND = "#2E5BFF"
-
-router = APIRouter(prefix="/tiku")
-root_router = APIRouter()
-
-
-def _e(s) -> str:
-    return html.escape(str(s or ""))
-
-
-def _url(path: str) -> str:
-    return SITE_BASE + path
-
-
-def _sub_path(module: str, submodule: str) -> str:
-    return f"/tiku/{quote(module)}/{quote(submodule)}/"
-
-
-def _topic_path(code: str) -> str:
-    return f"/tiku/t/{quote(code)}/"
-
-
-def _year_path(year: int, module: str) -> str:
-    return f"/tiku/y/{year}/{quote(module)}/"
-
-
-_CSS = (
-    ":root{--bg:#f6f7fb;--surface:#fff;--border:#e7e9f0;--text:#17181c;--muted:#6b7280;"
-    "--link:" + BRAND + ";--tag-bg:#eef3ff;--ans-bg:#ecfdf5;"
-    "--shadow:0 1px 2px rgba(23,24,28,.05);--shadow-hover:0 4px 12px rgba(23,24,28,.1)}"
-    "@media(prefers-color-scheme:dark){:root{--bg:#111827;--surface:#1f2937;--border:#374151;"
-    "--text:#f3f4f6;--muted:#9ca3af;--link:#7c9aff;--tag-bg:#26324d;--ans-bg:#123527;"
-    "--shadow:0 1px 2px rgba(0,0,0,.4);--shadow-hover:0 4px 12px rgba(0,0,0,.5)}}"
-    "*{box-sizing:border-box}body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,"
-    "'PingFang SC','HarmonyOS Sans','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif;"
-    "color:var(--text);background:var(--bg);line-height:1.7;font-size:16px;overflow-wrap:anywhere}"
-    "a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}"
-    ".wrap{max-width:860px;margin:0 auto;padding:16px}"
-    ".hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 0}"
-    ".hdr .wrap{padding-top:0;padding-bottom:0;display:flex;align-items:center;justify-content:space-between}"
-    ".hdr .brand{color:var(--link);font-weight:700;font-size:18px}.hdr .brand:hover{text-decoration:none}"
-    ".hdr-cta{background:" + BRAND + ";color:#fff!important;border-radius:999px;padding:6px 18px;"
-    "font-size:14px;font-weight:600}.hdr-cta:hover{text-decoration:none;opacity:.92}"
-    ".hdr-s{flex:1;display:flex;margin:0 12px;min-width:0}"
-    ".hdr-s input{flex:1;min-width:0;max-width:280px;margin-left:auto;font-size:14px;color:var(--text);"
-    "background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:6px 14px}"
-    ".hdr-s input:focus{border-color:var(--link)}"
-    ":focus-visible{outline:2px solid var(--link);outline-offset:2px;border-radius:4px}"
-    ".hdr-s input:focus:not(:focus-visible){outline:none}"
-    "@media(max-width:480px){.hdr-s input{max-width:none}}"
-    ".card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin:12px 0;"
-    "box-shadow:var(--shadow)}"
-    ".crumb{font-size:13px;color:var(--muted);margin:10px 0}.crumb a{color:var(--muted)}"
-    "h1{font-size:22px;margin:10px 0}h2{font-size:17px;margin:8px 0}"
-    ".qlist{list-style:none;padding:0;margin:0}.qlist li{border-bottom:1px solid var(--border);padding:10px 0}"
-    ".qlist li:last-child{border-bottom:none}"
-    ".tags{display:flex;flex-wrap:wrap;gap:8px}.tags a{background:var(--tag-bg);border-radius:16px;padding:4px 12px;"
-    "font-size:14px;white-space:nowrap}"
-    ".meta{color:var(--muted);font-size:13px}"
-    ".meta a,.ftr a,h2 a,p a,.qlist li>a{text-decoration:underline}"
-    "p a.cta,.crumb a{text-decoration:none}"
-    ".opt{margin:6px 0;padding:8px 12px;border:1px solid var(--border);border-radius:8px}"
-    ".ans{background:var(--ans-bg);border-radius:8px;padding:12px;margin-top:10px}"
-    ".cta{display:inline-block;background:" + BRAND + ";color:#fff!important;border-radius:999px;"
-    "padding:10px 24px;font-weight:600;margin:14px 0}"
-    ".pager{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:16px 0}.pager a,.pager span{padding:6px 12px;"
-    "background:var(--surface);border-radius:8px;border:1px solid var(--border)}"
-    ".pager .gap{border:none;background:none;padding:6px 2px}"
-    ".pager [aria-current]{background:" + BRAND + ";color:#fff;border-color:" + BRAND + "}"
-    ".ftr{color:var(--muted);font-size:13px;text-align:center;padding:20px 0}"
-    "details summary{cursor:pointer;font-weight:600}"
-    "@media(min-width:768px){.card{transition:box-shadow .15s ease}"
-    ".card:hover{box-shadow:var(--shadow-hover)}}"
-    "@media(max-width:480px){.wrap{padding:12px}h1{font-size:19px}}"
-    "@media print{:root{--bg:#fff;--surface:#fff;--text:#000;--muted:#444;--ans-bg:#fff}"
-    ".hdr-cta,.hdr-s,.cta,.pager,.crumb,.tags,.ftr,.noprint{display:none!important}"
-    "body{background:#fff}.card{border:none;box-shadow:none;break-inside:avoid;padding:8px 0}"
-    ".ans{border:1px solid #999;padding:8px}a{color:#000}}"
-)
-
-
-def _page(
-    title: str,
-    description: str,
-    canonical_path: str,
-    body: str,
-    jsonld: dict | list | None = None,
-    noindex: bool = False,
-) -> str:
-    ld = (
-        '<script type="application/ld+json">' + json.dumps(jsonld, ensure_ascii=False) + "</script>"
-        if jsonld
-        else ""
-    )
-    # 404 等错误态页不声明规范地址/og:url，并显式 noindex
-    head_meta = (
-        '<meta name="robots" content="noindex">'
-        if noindex
-        else (
-            f'<link rel="canonical" href="{_e(_url(canonical_path))}">'
-            f'<meta property="og:url" content="{_e(_url(canonical_path))}">'
-        )
-    )
-    return (
-        '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">'
-        '<meta name="viewport" content="width=device-width,initial-scale=1">'
-        '<meta name="color-scheme" content="light dark">'
-        f"<title>{_e(title)}</title>"
-        f'<meta name="description" content="{_e(description)}">'
-        '<meta property="og:type" content="website">'
-        '<meta property="og:site_name" content="错题邦">'
-        f'<meta property="og:title" content="{_e(title)}">'
-        f'<meta property="og:description" content="{_e(description)}">'
-        f'<meta property="og:image" content="{_e(SITE_BASE)}/static/og-card.png">'
-        '<meta name="twitter:card" content="summary_large_image">'
-        f"{head_meta}"
-        f"<style>{_CSS}</style>{ld}</head><body>"
-        f'<header class="hdr"><div class="wrap"><a class="brand" href="/tiku/">错题邦 · 考公题库</a>'
-        f'<form class="hdr-s" action="/tiku/search" method="get" role="search">'
-        f'<input name="q" type="search" placeholder="搜题目 / 考点 / 试卷" aria-label="搜索题库"></form>'
-        f'<a class="hdr-cta" href="/">去刷题</a></div></header>'
-        f'<main class="wrap">{body}</main>'
-        f'<footer class="ftr"><a href="{_e(SITE_BASE)}/">错题邦</a> · 13万+行测真题在线刷题'
-        f' · <a href="/tiku/papers/">真题卷</a>'
-        f' · <a href="https://career.zalize.com/privacy/">隐私政策</a>'
-        f' · <a href="https://career.zalize.com/terms/">服务条款</a>'
-        f' · <a href="mailto:support@zalize.com">联系我们</a></footer></body></html>'
-    )
-
-
-def _not_found(msg: str) -> HTMLResponse:
-    """页族品牌 404：失效链接（题目下架/外链拼错）给出壳+出路，而非裸 JSON 报文。"""
-    body = (
-        f"<h1>{_e(msg)}</h1>"
-        "<p>你访问的页面不存在或已下架，可从以下入口继续：</p>"
-        '<p><a href="/tiku/">题库首页</a> · <a href="/tiku/papers/">真题卷</a>'
-        ' · <a href="/tiku/daily/">每日一练</a> · <a href="/">去刷题</a></p>'
-    )
-    return HTMLResponse(
-        _page(f"{msg}_错题邦", "页面不存在或已下架。", "/tiku/", body, noindex=True),
-        status_code=404,
-    )
-
-
-def _collection_ld(name: str, description: str, path: str, crumbs: list[tuple[str, str]]) -> dict:
-    return {
-        "@context": "https://schema.org",
-        "@type": "CollectionPage",
-        "name": name,
-        "description": description[:200],
-        "url": _url(path),
-        "isPartOf": {"@type": "WebSite", "name": "错题邦", "url": SITE_BASE},
-        "breadcrumb": {
-            "@type": "BreadcrumbList",
-            "itemListElement": [
-                {"@type": "ListItem", "position": i + 1, "name": n, "item": _url(h)}
-                for i, (n, h) in enumerate(crumbs)
-            ],
-        },
-    }
-
-
-def _breadcrumb_ld(crumbs: list[tuple[str, str | None]]) -> dict:
-    return {
-        "@context": "https://schema.org",
-        "@type": "BreadcrumbList",
-        "itemListElement": [
-            {"@type": "ListItem", "position": i + 1, "name": n, **({"item": _url(h)} if h else {})}
-            for i, (n, h) in enumerate(crumbs)
-        ],
-    }
-
-
-def _crumb(items: list[tuple[str, str | None]]) -> str:
-    parts = []
-    for name, href in items:
-        parts.append(f'<a href="{_e(href)}">{_e(name)}</a>' if href else _e(name))
-    return '<nav class="crumb">' + " › ".join(parts) + "</nav>"
-
-
-def _pager(base_path: str, page: int, total: int) -> str:
-    pages = max(1, math.ceil(total / PAGE_SIZE))
-
-    def href(p: int) -> str:
-        return _e(base_path) if p == 1 else f"{_e(base_path)}?page={p}"
-
-    out = []
-    if page > 1:
-        out.append(f'<a href="{href(page - 1)}" rel="prev">上一页</a>')
-    lo, hi = max(1, page - 2), min(pages, page + 2)
-    if lo > 1:
-        out.append(f'<a href="{href(1)}">1</a>')
-        if lo > 2:
-            out.append('<span class="gap">…</span>')
-    for p in range(lo, hi + 1):
-        if p == page:
-            out.append(f'<span aria-current="page">{p}</span>')
-        else:
-            out.append(f'<a href="{href(p)}">{p}</a>')
-    if hi < pages:
-        if hi < pages - 1:
-            out.append('<span class="gap">…</span>')
-        out.append(f'<a href="{href(pages)}">{pages}</a>')
-    if page < pages:
-        out.append(f'<a href="{href(page + 1)}" rel="next">下一页</a>')
-    return '<nav class="pager" aria-label="分页">' + "".join(out) + "</nav>"
-
-
-def _q_items(rows) -> str:
-    lis = []
-    for r in rows:
-        text = (r["question"] or "").strip().replace("\n", " ")
-        if len(text) > 80:
-            text = text[:80] + "…"
-        tag = "真题" if r["is_real"] else "练习"
-        yr = f'{r["exam_year"]}年' if r["exam_year"] else ""
-        lis.append(
-            f'<li><a href="/tiku/q/{r["id"]}">{_e(text)}</a>'
-            f'<div class="meta">{_e(yr)}{_e(r["exam_region"] or "")}{_e(tag)} · {_e(r["submodule"] or "")}</div></li>'
-        )
-    return '<ul class="qlist">' + "".join(lis) + "</ul>"
-
-
-def _module_name(module: str) -> str | None:
-    m = kb.MODULES.get(module)
-    return m["name"] if m else None
-
-
-def _count_questions(module: str, submodule: str | None = None) -> int:
-    conn = db.get_conn()
-    if submodule:
-        n = conn.execute(
-            "SELECT COUNT(*) FROM questions WHERE module=? AND submodule=? AND disabled=0",
-            (module, submodule),
-        ).fetchone()[0]
-    else:
-        n = conn.execute(
-            "SELECT COUNT(*) FROM questions WHERE module=? AND disabled=0",
-            (module,),
-        ).fetchone()[0]
-    conn.close()
-    return n
-
-
-def _list_questions(module: str, submodule: str | None, page: int) -> list:
-    conn = db.get_conn()
-    cond = "module=? AND disabled=0"
-    args: list = [module]
-    if submodule:
-        cond += " AND submodule=?"
-        args.append(submodule)
-    rows = conn.execute(
-        f"SELECT id, question, submodule, is_real, exam_year, exam_region FROM questions "
-        f"WHERE {cond} ORDER BY id LIMIT ? OFFSET ?",
-        args + [PAGE_SIZE, (page - 1) * PAGE_SIZE],
-    ).fetchall()
-    conn.close()
-    return rows
+from .shenlun import _render_shenlun_year
 
 
 @router.get("/", response_class=HTMLResponse, include_in_schema=False)
@@ -321,10 +68,38 @@ def tiku_index():
             + (f'<p class="meta">按年份刷真题：</p><div class="tags">{years}</div>' if years else "")
             + "</section>"
         )
+    sl_total = db.shenlun_questions(limit=1)["total"]
+    if sl_total:
+        sl_mats = db.shenlun_material_type_counts()
+        sl_mat_line = ""
+        if sl_mats:
+            sl_mat_total = sum(n for _, n in sl_mats)
+            sl_mat_types = "、".join(
+                f'<a href="{_e(_shenlun_sucai_path(t))}">{_e(t)}（{n} 条）</a>' for t, n in sl_mats
+            )
+            sl_mat_line = f'<p class="meta">另收录申论写作素材 {sl_mat_total} 条：{sl_mat_types}。</p>'
+        sl_qtypes = "".join(
+            f'<a href="{_e(_sub_path("shenlun", t))}">{_e(t)}（{n}）</a>'
+            for t, n in db.shenlun_qtype_counts()
+        )
+        sl_years = "".join(
+            f'<a href="{_e(_year_path(y, "shenlun"))}">{y}年（{n}）</a>'
+            for y, n in db.shenlun_year_counts()
+        )
+        sections.append(
+            '<section class="card"><h2><a href="/tiku/shenlun/">申论</a>'
+            f'<span class="meta">（{sl_total} 道真题）</span></h2>'
+            '<p class="meta">历年申论真题与参考解析，可在 <a href="/tiku/shenlun/">申论真题库</a> '
+            "按套卷（含给定资料与参考解析）、年份、题型浏览。</p>"
+            + (f'<p class="meta">按题型刷题：</p><div class="tags">{sl_qtypes}</div>' if sl_qtypes else "")
+            + (f'<p class="meta">按年份刷真题：</p><div class="tags">{sl_years}</div>' if sl_years else "")
+            + sl_mat_line
+            + "</section>"
+        )
     total = sum(counts.values())
     body = (
         "<h1>公务员考试题库</h1>"
-        f"<p>收录 {total} 道行测/申论题目（含历年真题），按模块、题型、考点分类，可在线刷题并查看花生十三方法讲解。"
+        f"<p>收录 {total} 道行测题目（含历年真题），按模块、题型、考点分类，可在线刷题并查看花生十三方法讲解。"
         '· <a href="/tiku/daily/" style="white-space:nowrap">今日每日一练 →</a>'
         ' · <a href="/tiku/discuss/" style="white-space:nowrap">考友热议题目 →</a></p>'
         + "".join(sections)
@@ -332,13 +107,13 @@ def tiku_index():
     )
     return _page(
         "公务员考试题库_行测真题在线刷题_错题邦",
-        f"免费公务员考试题库，收录 {total} 道行测申论题目与历年真题，覆盖资料分析、数量关系、言语理解、判断推理、常识判断，附答案解析。",
+        f"免费公务员考试题库，收录 {total} 道行测题目与历年真题，覆盖资料分析、数量关系、言语理解、判断推理、常识判断，附答案解析。",
         "/tiku/",
         body,
         [
             _collection_ld(
                 "公务员考试题库",
-                f"免费公务员考试题库，收录 {total} 道行测申论题目与历年真题，附答案解析。",
+                f"免费公务员考试题库，收录 {total} 道行测题目与历年真题，附答案解析。",
                 "/tiku/",
                 [("题库", "/tiku/")],
             ),
@@ -517,7 +292,7 @@ def tiku_discuss():
     )
     return _page(
         "考友热议题目_公务员考试题目讨论区_错题邦",
-        "公务员考试题库热议题目聚合：考友们正在讨论的行测/申论题目与解法交流，可在线查看解析并参与讨论。",
+        "公务员考试题库热议题目聚合：考友们正在讨论的行测题目与解法交流，可在线查看解析并参与讨论。",
         "/tiku/discuss/",
         body,
         _collection_ld(
@@ -537,15 +312,28 @@ def tiku_papers_noslash():
 @router.get("/papers/", response_class=HTMLResponse, include_in_schema=False)
 def tiku_papers():
     papers = db.list_exam_papers(kind="zhenti")
+    filters = db.exam_paper_filters()
+    year_chips = "".join(
+        f'<a href="/#/pkgA/exam/list?year={f["y"]}">{f["y"]}年（{f["n"]}）</a>'
+        for f in filters["years"]
+    )
+    region_chips = "".join(
+        f'<a href="/#/pkgA/exam/list?region={quote(f["r"])}">{_e(f["r"])}（{f["n"]}）</a>'
+        for f in filters["regions"]
+    )
     lis = "".join(
         f'<li><a href="/tiku/papers/{p["id"]}">{_e(p["title"])}</a>'
         f'<div class="meta">{_e(p["year"] or "")} {_e(p["region"] or "")} · {p["n"]} 题'
-        f'{" · 限时 " + str(p["duration_min"]) + " 分钟" if p["duration_min"] else ""}</div></li>'
+        + (" · 限时 " + str(p["duration_min"]) + " 分钟" if p["duration_min"] else "")
+        + (f' · 已有 {p["takers"]} 人模考 · 平均 {p["avg_score"]} 分' if p["takers"] else "")
+        + "</div></li>"
         for p in papers
     )
     body = (
         _crumb([("题库", "/tiku/"), ("真题卷", None)])
         + f"<h1>历年公务员考试真题卷（{len(papers)} 套）</h1>"
+        + (f'<div class="card"><h2>按年份筛卷</h2><div class="tags">{year_chips}</div></div>' if year_chips else "")
+        + (f'<div class="card"><h2>按地区筛卷</h2><div class="tags">{region_chips}</div></div>' if region_chips else "")
         + '<div class="card"><ul class="qlist">'
         + lis
         + "</ul></div>"
@@ -563,6 +351,17 @@ def tiku_papers():
             [("题库", "/tiku/"), ("真题卷", "/tiku/papers/")],
         ),
     )
+
+
+def _exam_list_query(p: dict) -> str:
+    parts = []
+    if p.get("id"):
+        parts.append(f'pid={p["id"]}')
+    if p.get("year"):
+        parts.append(f'year={p["year"]}')
+    if p.get("region"):
+        parts.append(f'region={quote(p["region"])}')
+    return "?" + "&".join(parts) if parts else ""
 
 
 @router.get("/papers/{pid}/", include_in_schema=False)
@@ -591,6 +390,10 @@ def tiku_paper_detail(pid: int):
         conn.close()
         rows = [got[i] for i in qids if i in got]
     title = p["title"]
+    social = db.exam_paper_social(pid)
+    social_text = (
+        f" · 已有 {social['n']} 人模考 · 平均 {social['avg']} 分" if social["n"] else ""
+    )
     mod_dist: dict[str, int] = {}
     for r in rows:
         if _module_name(r["module"]):
@@ -618,9 +421,10 @@ def tiku_paper_detail(pid: int):
         + f"<h1>{_e(title)}</h1>"
         + f'<p class="meta">{_e(p["year"] or "")} {_e(p["region"] or "")} · 共 {len(rows)} 题'
         + (f' · 限时 {p["duration_min"]} 分钟' if p["duration_min"] else "")
+        + _e(social_text)
         + "</p>"
         + (f'<div class="card"><h2>模块分布</h2><div class="tags">{dist_links}</div></div>' if dist_links else "")
-        + f'<a class="cta" href="{_e(SITE_BASE)}/#/pkgA/exam/list">在线模考本卷 →</a>'
+        + f'<a class="cta" href="{_e(SITE_BASE)}/#/pkgA/exam/list{_exam_list_query(p)}">在线模考本卷 →</a>'
         + '<div class="card">'
         + _q_items(rows)
         + "</div>"
@@ -631,7 +435,7 @@ def tiku_paper_detail(pid: int):
         "@context": "https://schema.org",
         "@type": "CollectionPage",
         "name": title,
-        "description": f"{title}，共 {len(rows)} 题，在线全真模考并查看逐题答案解析。",
+        "description": f"{title}，共 {len(rows)} 题{social_text}，在线全真模考并查看逐题答案解析。",
         "url": _url(f"/tiku/papers/{pid}"),
         "isPartOf": {"@type": "WebSite", "name": "错题邦", "url": SITE_BASE},
         "breadcrumb": {
@@ -701,6 +505,10 @@ def _render_q_comments(qid: int) -> str:
 
 @router.get("/y/{year}/{module}", include_in_schema=False)
 def tiku_year_noslash(year: int, module: str):
+    if module == "shenlun":
+        if not dict(db.shenlun_year_counts()).get(year):
+            return _not_found("页面不存在")
+        return RedirectResponse(_year_path(year, module), status_code=301)
     if not _module_name(module) or not db.year_module_counts().get((year, module), (0, None))[0]:
         return _not_found("页面不存在")
     return RedirectResponse(_year_path(year, module), status_code=301)
@@ -709,6 +517,8 @@ def tiku_year_noslash(year: int, module: str):
 @router.get("/y/{year}/{module}/", response_class=HTMLResponse, include_in_schema=False)
 def tiku_year(year: int, module: str, page: int = 1):
     try:
+        if module == "shenlun":
+            return HTMLResponse(_render_shenlun_year(year, max(1, page)))
         return HTMLResponse(_render_year(year, module, max(1, page)))
     except HTTPException as e:
         return _not_found(e.detail)
@@ -1021,415 +831,3 @@ def _render_question(qid: int) -> str:
         [jsonld, _breadcrumb_ld(crumbs)],
     )
 
-
-@router.get("/{module}/", response_class=HTMLResponse, include_in_schema=False)
-def tiku_module(module: str, page: int = 1):
-    name = _module_name(module)
-    if not name:
-        return _not_found("模块不存在")
-    page = max(1, page)
-    total = _count_questions(module)
-    rows = _list_questions(module, None, page)
-    if not rows and page > 1:
-        return _not_found("页码超出范围")
-    subs = db.submodule_counts(module)
-    sub_links = "".join(
-        f'<a href="{_e(_sub_path(module, s["submodule"]))}">{_e(s["submodule"])}（{s["n"]}）</a>' for s in subs
-    )
-    t3counts = db.tag3_counts()
-    topic_links = "".join(
-        f'<a href="{_e(_topic_path(t["code"]))}">{_e(t["name"])}（{t3counts[t["code"]]}）</a>'
-        for m in taxonomy.tree()["modules"]
-        if m["key"] == module
-        for g in m["groups"]
-        for t in g["topics"]
-        if t3counts.get(t["code"])
-    )
-    year_links = "".join(
-        f'<a href="{_e(_year_path(y, module))}">{y}年（{n}）</a>'
-        for (y, mk), (n, _mu) in sorted(db.year_module_counts().items(), reverse=True)
-        if mk == module
-    )
-    body = (
-        _crumb([("题库", "/tiku/"), (name, None)])
-        + f"<h1>{_e(name)}题库（{total} 题）</h1>"
-        + (f'<div class="card"><h2>按题型刷题</h2><div class="tags">{sub_links}</div></div>' if sub_links else "")
-        + (f'<div class="card"><h2>按考点刷题</h2><div class="tags">{topic_links}</div></div>' if topic_links else "")
-        + (f'<div class="card"><h2>按年份刷真题</h2><div class="tags">{year_links}</div></div>' if year_links else "")
-        + '<div class="card">'
-        + _q_items(rows)
-        + "</div>"
-        + _pager(f"/tiku/{module}/", page, total)
-        + f'<a class="cta" href="{_e(SITE_BASE)}/">进入主站刷{_e(name)} →</a>'
-    )
-    suffix = f"（第{page}页）" if page > 1 else ""
-    return _page(
-        f"{name}题库{suffix}_行测{name}真题及答案解析_错题邦",
-        f"{name}题库共 {total} 题（含历年真题），按题型分类，附答案与花生十三方法解析，支持在线刷题。{suffix}",
-        f"/tiku/{module}/" + (f"?page={page}" if page > 1 else ""),
-        body,
-        _collection_ld(
-            f"{name}题库",
-            f"{name}题库共 {total} 题（含历年真题），按题型分类，附答案与解析。",
-            f"/tiku/{module}/",
-            [("题库", "/tiku/"), (name, f"/tiku/{module}/")],
-        ),
-    )
-
-
-@router.get("/{module}/{submodule}/", response_class=HTMLResponse, include_in_schema=False)
-def tiku_submodule(module: str, submodule: str, page: int = 1):
-    name = _module_name(module)
-    if not name:
-        return _not_found("模块不存在")
-    page = max(1, page)
-    total = _count_questions(module, submodule)
-    if not total:
-        return _not_found("题型不存在")
-    rows = _list_questions(module, submodule, page)
-    if not rows and page > 1:
-        return _not_found("页码超出范围")
-    body = (
-        _crumb([("题库", "/tiku/"), (name, f"/tiku/{module}/"), (submodule, None)])
-        + f"<h1>{_e(name)}·{_e(submodule)}题库（{total} 题）</h1>"
-        + '<div class="card">'
-        + _q_items(rows)
-        + "</div>"
-        + _pager(_sub_path(module, submodule), page, total)
-        + f'<a class="cta" href="{_e(SITE_BASE)}/">进入主站刷{_e(submodule)} →</a>'
-    )
-    suffix = f"（第{page}页）" if page > 1 else ""
-    return _page(
-        f"{submodule}题库{suffix}_{name}{submodule}真题及答案解析_错题邦",
-        f"{name}{submodule}专项题库共 {total} 题（含历年真题），附答案与解析，在线刷题提升正确率。{suffix}",
-        _sub_path(module, submodule) + (f"?page={page}" if page > 1 else ""),
-        body,
-        _collection_ld(
-            f"{name}·{submodule}题库",
-            f"{name}{submodule}专项题库共 {total} 题（含历年真题），附答案与解析。",
-            _sub_path(module, submodule),
-            [("题库", "/tiku/"), (name, f"/tiku/{module}/"), (submodule, _sub_path(module, submodule))],
-        ),
-    )
-
-
-@root_router.get("/tiku", include_in_schema=False)
-def tiku_index_noslash():
-    return RedirectResponse("/tiku/", status_code=301)
-
-
-@router.get("/{module}", include_in_schema=False)
-def tiku_module_noslash(module: str):
-    if not _module_name(module):
-        return _not_found("模块不存在")
-    return RedirectResponse(f"/tiku/{quote(module)}/", status_code=301)
-
-
-@router.get("/{module}/{submodule}", include_in_schema=False)
-def tiku_submodule_noslash(module: str, submodule: str):
-    if not _module_name(module):
-        return _not_found("模块不存在")
-    return RedirectResponse(_sub_path(module, submodule), status_code=301)
-
-
-# ---------- sitemap / robots ----------
-
-
-def _question_ids() -> list[int]:
-    conn = db.get_conn()
-    ids = [r["id"] for r in conn.execute(
-        "SELECT id FROM questions WHERE disabled=0 ORDER BY id"
-    )]
-    conn.close()
-    return ids
-
-
-def _lastmod(ts: float | str | None) -> str:
-    if not ts:
-        return ""
-    if isinstance(ts, str):
-        # 历史数据存在 ISO8601 文本（如 2026-08-09T18:23:19Z），取日期部分
-        return "<lastmod>" + ts[:10] + "</lastmod>" if len(ts) >= 10 else ""
-    return "<lastmod>" + time.strftime("%Y-%m-%d", time.gmtime(ts)) + "</lastmod>"
-
-
-def _urlset(urls: list[tuple[str, float | None]]) -> Response:
-    body = (
-        '<?xml version="1.0" encoding="UTF-8"?>'
-        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-        + "".join(f"<url><loc>{_e(u)}</loc>{_lastmod(ts)}</url>" for u, ts in urls)
-        + "</urlset>"
-    )
-    return Response(content=body, media_type="application/xml")
-
-
-@root_router.get("/sitemap.xml", include_in_schema=False)
-def sitemap_index():
-    n_shards = max(1, math.ceil(len(_question_ids()) / SITEMAP_SHARD))
-    maps = (
-        [_url("/sitemap-pages.xml"), _url("/sitemap-topics.xml"), _url("/sitemap-years.xml")]
-        + [_url(f"/sitemap-questions-{i}.xml") for i in range(1, n_shards + 1)]
-    )
-    body = (
-        '<?xml version="1.0" encoding="UTF-8"?>'
-        '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-        + "".join(f"<sitemap><loc>{_e(u)}</loc></sitemap>" for u in maps)
-        + "</sitemapindex>"
-    )
-    return Response(content=body, media_type="application/xml")
-
-
-@root_router.get("/sitemap-pages.xml", include_in_schema=False)
-def sitemap_pages():
-    urls: list[tuple[str, float | None]] = [
-        (_url("/tiku/"), None),
-        (_url("/tiku/papers/"), None),
-        (_url("/tiku/discuss/"), None),
-        (_url("/tiku/daily/"), None),
-    ]
-    urls += [(_url(f"/tiku/daily/{d}/"), None) for d in _daily_archive_days()]
-    for r in db.question_counts():
-        if not _module_name(r["module"]):
-            continue
-        urls.append((_url(f'/tiku/{quote(r["module"])}/'), None))
-        for s in db.submodule_counts(r["module"]):
-            urls.append((_url(_sub_path(r["module"], s["submodule"])), None))
-    urls += [(_url(f'/tiku/papers/{p["id"]}'), p["created_at"]) for p in db.list_exam_papers(kind="zhenti")]
-    return _urlset(urls)
-
-
-@root_router.get("/sitemap-topics.xml", include_in_schema=False)
-def sitemap_topics():
-    counts = db.tag3_counts()
-    lastmod = db.tag3_lastmod()
-    urls = [
-        (_url(_topic_path(code)), lastmod.get(code))
-        for code in taxonomy.topic_index()
-        if counts.get(code)
-    ]
-    return _urlset(urls)
-
-
-@root_router.get("/sitemap-years.xml", include_in_schema=False)
-def sitemap_years():
-    urls = [
-        (_url(_year_path(y, m)), mu)
-        for (y, m), (n, mu) in sorted(db.year_module_counts().items(), reverse=True)
-        if n and _module_name(m)
-    ]
-    return _urlset(urls)
-
-
-@root_router.get("/sitemap-questions-{shard}.xml", include_in_schema=False)
-def sitemap_questions(shard: int):
-    conn = db.get_conn()
-    lo = (shard - 1) * SITEMAP_SHARD
-    rows = conn.execute(
-        "SELECT id, updated_at FROM questions WHERE disabled=0 ORDER BY id LIMIT ? OFFSET ?",
-        (SITEMAP_SHARD, lo),
-    ).fetchall()
-    conn.close()
-    if shard < 1 or not rows:
-        raise HTTPException(404, "分片不存在")
-    return _urlset([(_url(f'/tiku/q/{r["id"]}'), r["updated_at"]) for r in rows])
-
-
-@root_router.get("/indexnow-key.txt", include_in_schema=False)
-def indexnow_key():
-    if not INDEXNOW_KEY:
-        raise HTTPException(404, "未配置")
-    return PlainTextResponse(INDEXNOW_KEY)
-
-
-@root_router.get("/s/{sid}", response_class=HTMLResponse, include_in_schema=False)
-def share_landing(sid: str):
-    """分享落地页：服务端输出动态 OG（题干摘要作 og:description）后跳转 SPA 分享页。
-
-    社交爬虫（微信/QQ/微博/Telegram 等）抓 head 里的 OG；真实用户被 JS 立即带去
-    /#/pkgA/share/share-q。不含答案/解析，noindex 避免瘦内容进索引。
-    """
-    sid = sid.strip()[:16]
-    conn = db.get_conn()
-    try:
-        s = conn.execute(
-            "SELECT question_id, from_name FROM shared_questions WHERE sid=?", (sid,)
-        ).fetchone()
-        q = conn.execute(
-            "SELECT question, module FROM questions WHERE id=? AND disabled=0", (s["question_id"],)
-        ).fetchone() if s else None
-    except db.sqlite3.OperationalError:
-        s = q = None
-    finally:
-        conn.close()
-    if not s or not q:
-        return RedirectResponse(SITE_BASE + "/", status_code=302)
-    mod = _module_name(q["module"]) or "行测"
-    summary = " ".join((q["question"] or "").split())
-    if len(summary) > 90:
-        summary = summary[:90] + "…"
-    from_name = (s["from_name"] or "考友").strip()[:20]
-    title = f"{from_name}分享了一道{mod}题，敢来挑战吗？"
-    spa = f"/#/pkgA/share/share-q?sid={quote(sid)}"
-    page_url = _url(f"/s/{quote(sid)}")
-    return HTMLResponse(
-        '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">'
-        '<meta name="viewport" content="width=device-width,initial-scale=1">'
-        '<meta name="robots" content="noindex">'
-        f"<title>{_e(title)}</title>"
-        f'<meta name="description" content="{_e(summary)}">'
-        f'<meta property="og:type" content="website">'
-        f'<meta property="og:site_name" content="错题邦">'
-        f'<meta property="og:title" content="{_e(title)}">'
-        f'<meta property="og:description" content="{_e(summary)}">'
-        f'<meta property="og:url" content="{_e(page_url)}">'
-        f'<meta property="og:image" content="{_e(SITE_BASE)}/static/og-card.png">'
-        f'<meta name="twitter:card" content="summary_large_image">'
-        f'<meta name="twitter:title" content="{_e(title)}">'
-        f'<meta name="twitter:description" content="{_e(summary)}">'
-        f'<meta name="twitter:image" content="{_e(SITE_BASE)}/static/og-card.png">'
-        f'<meta http-equiv="refresh" content="0;url={_e(spa)}">'
-        f'<script>location.replace("{spa}"+location.search.replace("?","&"))</script>'
-        f"</head><body><p>正在打开分享题目… "
-        f'<a href="{_e(spa)}">点此继续</a></p></body></html>'
-    )
-
-
-@root_router.get("/p/{rid}", response_class=HTMLResponse, include_in_schema=False)
-def pk_landing(rid: str):
-    """PK 战绩短链落地页：服务端输出动态 OG 后跳转 SPA 战绩页。
-
-    短链路径不含 # / ?，聊天应用链接识别不会截断 rid。noindex 避免瘦内容进索引。
-    """
-    code = rid.strip().upper()[:12]
-    conn = db.get_conn()
-    try:
-        m = conn.execute(
-            "SELECT creator_name, opponent_name, creator_score, opponent_score, module, status "
-            "FROM pk_matches WHERE code=?",
-            (code,),
-        ).fetchone()
-    except db.sqlite3.OperationalError:
-        m = None
-    finally:
-        conn.close()
-    if not m or m["status"] != "finished":
-        return RedirectResponse(SITE_BASE + "/", status_code=302)
-    creator = (m["creator_name"] or "匿名考友").strip()[:20]
-    opponent = (m["opponent_name"] or "匿名考友").strip()[:20]
-    mod = _module_name(m["module"]) or "行测"
-    title = f"{creator} {m['creator_score']} : {m['opponent_score']} {opponent}｜答题PK战绩，不服来战！"
-    summary = f"错题邦答题 PK（{mod}）实时对局战绩，免注册打开即可应战。"
-    spa = f"/#/pkgA/share/pk-result?rid={quote(code)}"
-    page_url = _url(f"/p/{quote(code)}")
-    return HTMLResponse(
-        '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">'
-        '<meta name="viewport" content="width=device-width,initial-scale=1">'
-        '<meta name="robots" content="noindex">'
-        f"<title>{_e(title)}</title>"
-        f'<meta name="description" content="{_e(summary)}">'
-        f'<meta property="og:type" content="website">'
-        f'<meta property="og:site_name" content="错题邦">'
-        f'<meta property="og:title" content="{_e(title)}">'
-        f'<meta property="og:description" content="{_e(summary)}">'
-        f'<meta property="og:url" content="{_e(page_url)}">'
-        f'<meta property="og:image" content="{_e(SITE_BASE)}/static/og-card.png">'
-        f'<meta name="twitter:card" content="summary_large_image">'
-        f'<meta name="twitter:title" content="{_e(title)}">'
-        f'<meta name="twitter:description" content="{_e(summary)}">'
-        f'<meta http-equiv="refresh" content="0;url={_e(spa)}">'
-        f'<script>location.replace("{spa}"+location.search.replace("?","&"))</script>'
-        f"</head><body><p>正在打开 PK 战绩… "
-        f'<a href="{_e(spa)}">点此继续</a></p></body></html>'
-    )
-
-
-@root_router.get("/robots.txt", include_in_schema=False)
-def robots_txt():
-    blocked = "".join(
-        f"User-agent: {b}\nDisallow: /\n\n"
-        for b in ("AwarioBot", "SemrushBot", "AhrefsBot", "MJ12bot", "DotBot", "PetalBot")
-    )
-    return PlainTextResponse(
-        blocked + "User-agent: *\nAllow: /tiku/\nDisallow: /api/\nDisallow: /admin\n"
-        f"Sitemap: {_url('/sitemap.xml')}\n"
-    )
-
-
-# ---------- IndexNow 主动提交 ----------
-# 密钥文件端点早已上线但从未推送过 URL；搜索引擎（Bing/Yandex 等 IndexNow 联盟）
-# 对零外链新站不会主动抓取，主动提交是 /tiku/q/* 页族唯一可行的收录通道。
-INDEXNOW_ENDPOINT = "https://api.indexnow.org/indexnow"
-INDEXNOW_BATCH = 10000
-INDEXNOW_BATCHES_PER_CYCLE = 2
-INDEXNOW_INTERVAL = 6 * 3600
-
-
-def _indexnow_post(urls: list[str]) -> bool:
-    payload = json.dumps(
-        {
-            "host": SITE_BASE.split("//", 1)[-1],
-            "key": INDEXNOW_KEY,
-            "keyLocation": _url("/indexnow-key.txt"),
-            "urlList": urls,
-        }
-    ).encode()
-    req = urllib.request.Request(
-        INDEXNOW_ENDPOINT,
-        data=payload,
-        headers={"Content-Type": "application/json; charset=utf-8"},
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            print(f"[indexnow] submitted {len(urls)} urls -> {resp.status}", flush=True)
-            return 200 <= resp.status < 300
-    except OSError as exc:
-        print(f"[indexnow] submit failed: {exc}", flush=True)
-        return False
-
-
-def _indexnow_cycle():
-    conn = db.get_conn()
-    try:
-        conn.execute("CREATE TABLE IF NOT EXISTS seo_meta (key TEXT PRIMARY KEY, value TEXT)")
-        conn.commit()
-        row = conn.execute(
-            "SELECT value FROM seo_meta WHERE key='indexnow_last_qid'"
-        ).fetchone()
-        last_qid = int(row["value"]) if row else -1
-        if last_qid < 0:
-            core = [_url(p) for p in ("/", "/tiku/", "/tiku/daily/", "/tiku/discuss/")]
-            if not _indexnow_post(core):
-                return
-            last_qid = 0
-        for _ in range(INDEXNOW_BATCHES_PER_CYCLE):
-            rows = conn.execute(
-                "SELECT id FROM questions WHERE disabled=0 AND id>? ORDER BY id LIMIT ?",
-                (last_qid, INDEXNOW_BATCH),
-            ).fetchall()
-            if not rows:
-                break
-            if not _indexnow_post([_url(f'/tiku/q/{r["id"]}') for r in rows]):
-                break
-            last_qid = rows[-1]["id"]
-        conn.execute(
-            "INSERT INTO seo_meta (key, value) VALUES ('indexnow_last_qid', ?) "
-            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-            (str(last_qid),),
-        )
-        conn.commit()
-    finally:
-        conn.close()
-
-
-def _indexnow_submitter():
-    time.sleep(120)  # 让启动期预热先行
-    while True:
-        try:
-            _indexnow_cycle()
-        except (OSError, ValueError, db.sqlite3.Error) as exc:
-            print(f"[indexnow] cycle error: {exc}", flush=True)
-        time.sleep(INDEXNOW_INTERVAL)
-
-
-if INDEXNOW_KEY:
-    threading.Thread(target=_indexnow_submitter, daemon=True).start()

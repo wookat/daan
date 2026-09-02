@@ -18,7 +18,7 @@
     const now = Date.now() / 1000;
     box.innerHTML = `<table class="tbl"><thead><tr>
       <th>用户</th><th style="width:90px">累计作答</th><th style="width:80px">正确率</th>
-      <th style="width:80px">错题本</th><th style="width:110px">首次使用</th><th style="width:130px">最近活跃</th><th style="width:60px"></th></tr></thead><tbody>
+      <th style="width:80px">错题本</th><th style="width:110px">首次使用</th><th style="width:130px">最近活跃</th><th style="width:60px"><span class="sr-only">操作</span></th></tr></thead><tbody>
       ${r.items.map((u) => {
         const idle = (now - u.last_seen) / 86400;
         const act = idle < 1 ? '<span class="tag tag-ok">今日活跃</span>' : idle < 7 ? `<span class="tag tag-info">${Math.floor(idle)} 天前</span>` : `<span class="tag tag-warn">流失风险 ${Math.floor(idle)} 天</span>`;
@@ -70,7 +70,7 @@
     </div>
     <div class="card" style="margin-bottom:12px">
       <div class="row" style="gap:10px;flex-wrap:wrap">
-        <input class="ipt" id="u-kw" style="width:220px" placeholder="按用户 ID 前缀搜索">
+        <input class="ipt" id="u-kw" aria-label="按用户 ID 前缀搜索" style="width:220px" placeholder="按用户 ID 前缀搜索">
         <div class="row" style="gap:6px">
           <span class="chip on" data-in="0">全部</span>
           <span class="chip" data-in="7">7 天未活跃</span>

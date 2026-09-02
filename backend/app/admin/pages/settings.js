@@ -6,7 +6,7 @@
     const box = document.getElementById('st-ann');
     const r = await api('/api/admin/announcements');
     box.innerHTML = r.items.length ? `<table class="tbl"><thead><tr>
-      <th>标题</th><th>内容</th><th style="width:110px">创建时间</th><th style="width:70px">状态</th><th style="width:70px"></th></tr></thead><tbody>
+      <th>标题</th><th>内容</th><th style="width:110px">创建时间</th><th style="width:70px">状态</th><th style="width:70px"><span class="sr-only">操作</span></th></tr></thead><tbody>
       ${r.items.map((a) => `<tr><td><b>${esc(a.title)}</b></td>
         <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.body || '')}</td>
         <td style="font-size:12px">${fmtTime(a.created_at)}</td>
@@ -43,8 +43,8 @@
     <div class="card" style="margin-bottom:14px">
       <div class="card-h"><span class="t">公告管理</span></div>
       <div class="row" style="gap:10px;margin-bottom:12px;flex-wrap:wrap">
-        <input class="ipt" id="ann-title" style="width:200px" placeholder="公告标题">
-        <input class="ipt" id="ann-body" style="flex:1;min-width:200px" placeholder="公告内容（可留空）">
+        <input class="ipt" id="ann-title" aria-label="公告标题" style="width:200px" placeholder="公告标题">
+        <input class="ipt" id="ann-body" aria-label="公告内容" style="flex:1;min-width:200px" placeholder="公告内容（可留空）">
         <button class="btn btn-primary" id="ann-add">发布公告</button>
       </div>
       <div id="st-ann" style="margin:0 -20px -16px"></div>

@@ -41,7 +41,7 @@ describe('isBlockedBot', () => {
 
 describe('isEdgeCacheable', () => {
   it('SEO 页族 / 分享落地页 / sitemap / robots 可缓存', () => {
-    for (const p of ['/tiku/', '/tiku/q/3', '/s/abc123', '/p/og433f', '/sitemap.xml', '/sitemap-questions-8.xml', '/robots.txt']) {
+    for (const p of ['/tiku/', '/tiku/q/3', '/s/abc123', '/p/og433f', '/sitemap.xml', '/sitemap-questions-8.xml', '/robots.txt', '/llms.txt']) {
       expect(isEdgeCacheable('GET', p, false, false)).toBe(true);
     }
   });
@@ -50,6 +50,34 @@ describe('isEdgeCacheable', () => {
     expect(isEdgeCacheable('GET', '/api/daily_set', false, false)).toBe(true);
     expect(isEdgeCacheable('GET', '/api/questions', false, false)).toBe(false);
     expect(isEdgeCacheable('GET', '/api/home_bundle', false, false)).toBe(false);
+  });
+  it('搜索端点可缓存（含 qid 详情前缀），带 Authorization/uid 绕过', () => {
+    expect(isEdgeCacheable('GET', '/api/search', false, false)).toBe(true);
+    expect(isEdgeCacheable('GET', '/api/search/question/118', false, false)).toBe(true);
+    expect(isEdgeCacheable('GET', '/api/search', true, false)).toBe(false);
+    expect(isEdgeCacheable('GET', '/api/search/question/118', false, true)).toBe(false);
+    expect(isEdgeCacheable('POST', '/api/search', false, false)).toBe(false);
+  });
+
+  it('申论公开端点可缓存（含 qid 详情前缀），带 Authorization/uid 绕过', () => {
+    expect(isEdgeCacheable('GET', '/api/shenlun/questions', false, false)).toBe(true);
+    expect(isEdgeCacheable('GET', '/api/shenlun/filters', false, false)).toBe(true);
+    expect(isEdgeCacheable('GET', '/api/shenlun/materials', false, false)).toBe(true);
+    expect(isEdgeCacheable('GET', '/api/shenlun/questions/26', false, false)).toBe(true);
+    expect(isEdgeCacheable('GET', '/api/shenlun/questions', false, true)).toBe(false);
+    expect(isEdgeCacheable('GET', '/api/shenlun/materials', true, false)).toBe(false);
+    expect(isEdgeCacheable('POST', '/api/shenlun/questions', false, false)).toBe(false);
+  });
+  it('app 壳静态件 /sw.js、/precache.json 可缓存（60s TTL，仅限对应 content-type），POST 绕过', () => {
+    expect(isEdgeCacheable('GET', '/sw.js', false, false)).toBe(true);
+    expect(isEdgeCacheable('GET', '/precache.json', false, false)).toBe(true);
+    expect(isEdgeCacheable('POST', '/sw.js', false, false)).toBe(false);
+    expect(edgeTtl('/sw.js')).toBe(API_EDGE_CACHE_TTL);
+    expect(edgeTtl('/precache.json')).toBe(API_EDGE_CACHE_TTL);
+    expect(isCacheableContentType('/sw.js', false, 'application/javascript')).toBe(true);
+    expect(isCacheableContentType('/sw.js', false, 'text/html')).toBe(false);
+    expect(isCacheableContentType('/precache.json', false, 'application/json')).toBe(true);
+    expect(isCacheableContentType('/precache.json', false, 'text/html')).toBe(false);
   });
   it('带 Authorization 或 uid 的 API 一律绕过', () => {
     expect(isEdgeCacheable('GET', '/api/question_counts', true, false)).toBe(false);
@@ -99,6 +127,10 @@ describe('isCacheableContentType', () => {
     expect(isCacheableContentType('/sitemap.xml', false, 'application/xml')).toBe(true);
     expect(isCacheableContentType('/robots.txt', false, 'text/plain; charset=utf-8')).toBe(true);
     expect(isCacheableContentType('/sitemap.xml', false, 'text/html')).toBe(false);
+  });
+  it('llms.txt 接受 text/markdown，拒绝 html 错误页', () => {
+    expect(isCacheableContentType('/llms.txt', false, 'text/markdown; charset=utf-8')).toBe(true);
+    expect(isCacheableContentType('/llms.txt', false, 'text/html')).toBe(false);
   });
   it('API 只入 json，页面只入 html（错误页/网关页不入缓存）', () => {
     expect(isCacheableContentType('/api/daily_set', true, 'application/json')).toBe(true);

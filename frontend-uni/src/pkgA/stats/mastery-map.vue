@@ -94,6 +94,7 @@
 
 <script>
 import { request, snapPeek, anonUid } from '../../api.js';
+import { buildMasteryUrl, parseMasteryOpts } from '../../mastery-url.js';
 
 export default {
   data() {
@@ -109,8 +110,16 @@ export default {
       return { background: `conic-gradient(#2e5bff 0% ${pct}%, #e8ecf5 ${pct}% 100%)` };
     },
   },
+  onLoad(opts) {
+    this._pendingMod = parseMasteryOpts(opts).mod;
+  },
   onShow() {
     this.load();
+  },
+  watch: {
+    curMod() {
+      this.syncUrl();
+    },
   },
   methods: {
     async load() {
@@ -134,7 +143,18 @@ export default {
       }
       this.cold = false;
       this.map = d;
+      if (this._pendingMod && d.modules.some((x) => x.module === this._pendingMod)) {
+        this.curMod = this._pendingMod;
+        this._pendingMod = '';
+      }
       if (!this.curMod && d.modules.length) this.curMod = d.modules[0].module;
+    },
+    syncUrl() {
+      // #ifdef H5
+      if (typeof window !== 'undefined' && window.history) {
+        window.history.replaceState(null, '', buildMasteryUrl({ mod: this.curMod }));
+      }
+      // #endif
     },
     pick(g, t) {
       this.selected = this.selected && this.selected.code === t.code ? null : t;

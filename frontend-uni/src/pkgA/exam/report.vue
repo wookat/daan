@@ -32,6 +32,11 @@
 
       <rank-card v-if="report.attempt && report.attempt.id" :attempt-id="report.attempt.id" />
 
+      <view v-if="shareText" class="share-cta" role="button" aria-label="邀考友挑战本卷" @click="copyShare">
+        <text class="share-cta-t">邀考友挑战本卷</text>
+        <text class="share-cta-s">复制成绩与同卷模考链接，发给考友比一比</text>
+      </view>
+
       <view v-if="modules.length" class="card">
         <view class="h">模块得分</view>
         <view v-for="m in modules" :key="m.key" class="mrow">
@@ -41,6 +46,21 @@
           </view>
           <text class="mrow-v">{{ m.correct }}/{{ m.n }}</text>
         </view>
+      </view>
+
+      <view v-if="paceRows.length" class="card">
+        <view class="h">模块用时 · 配速</view>
+        <view v-for="p in paceRows" :key="p.key" class="prow">
+          <view class="prow-top">
+            <text class="prow-name">{{ p.name }}</text>
+            <text class="prow-tag" :class="p.status">{{ p.status === 'over' ? '超时' : p.status === 'fast' ? '偏快' : '合理' }}</text>
+          </view>
+          <view class="prow-bar">
+            <view class="prow-fill" :class="p.status" :style="{ width: p.pct + '%' }"></view>
+          </view>
+          <text class="prow-v">用时 {{ fmtMin(p.secs) }} · 参考 {{ fmtMin(p.refSecs) }}</text>
+        </view>
+        <text class="note">参考用时按各模块题量占比折算自本卷限时</text>
       </view>
       </view>
 
@@ -85,6 +105,10 @@
           <text class="lg"><text class="dot bad"></text>答错</text>
           <text class="lg"><text class="dot"></text>未答</text>
         </view>
+        <view v-if="redoCount" class="redo-cta" role="button" aria-label="本卷错题重练" @click="redoWrong">
+          <text class="redo-cta-t">本卷错题重练（{{ redoCount }} 题）</text>
+          <text class="redo-cta-s">按刷题模式把本卷答错的题重做一遍{{ wrongTotal > redoCount ? '（本轮先练前 ' + redoCount + ' 题）' : '' }}</text>
+        </view>
       </view>
 
       <view class="btns">
@@ -100,7 +124,10 @@
       <view class="sheet" @click.stop>
         <view class="sheet-h">
           <text class="sheet-t">第 {{ detail.no }} 题 · {{ detail.correct ? '答对' : (detail.picked ? '答错' : '未答') }}</text>
-          <view class="sheet-x" role="button" aria-label="关闭" @click="detail = null"><l-icon name="x" :size="20" color="#6b7280" /></view>
+          <view class="sheet-acts">
+            <view class="sheet-x" role="button" :aria-label="detailFaved ? '取消收藏本题' : '收藏本题'" @click="toggleDetailFav"><l-icon name="star" :size="20" :color="detailFaved ? '#f59e0b' : '#8a90a0'" :fill="detailFaved ? '#f59e0b' : 'none'" /></view>
+            <view class="sheet-x" role="button" aria-label="关闭" @click="detail = null"><l-icon name="x" :size="20" color="#6b7280" /></view>
+          </view>
         </view>
         <scroll-view scroll-y class="detail-scroll">
           <template v-if="detailMat">
@@ -117,6 +144,8 @@
             <text class="dq">{{ detailMat.stem }}</text>
           </template>
           <text v-else class="dq">{{ detail.question }}</text>
+          <image v-if="detail.image" class="dimg" :src="imgUrl(detail.image)" mode="widthFix" @click="previewImg(detail.image)" />
+          <view v-if="detail.image && detail.image_credit" class="dimg-credit">图源：{{ detail.image_credit }}</view>
           <view v-for="(v, k) in detail.options" :key="k" class="dopt" :class="{ right: k === detail.answer, wrong: k === detail.picked && k !== detail.answer }">
             <text>{{ k }}. {{ v }}</text>
           </view>
@@ -127,22 +156,33 @@
           <view v-if="detail.hs_explanation || detail.explanation" class="dexp">
             <text>{{ detail.hs_explanation || detail.explanation }}</text>
           </view>
+          <q-social-bar v-if="detail.question_id" :question-id="detail.question_id" />
         </scroll-view>
+        <view class="dnav">
+          <view class="dnav-btn" :class="{ dis: !hasPrevQ }" role="button" aria-label="上一题解析" :aria-disabled="!hasPrevQ" @click="stepQ(-1)">‹ 上一题</view>
+          <view class="dnav-mid" role="button" :aria-label="wrongOnly ? '切换为看全部题解析' : '切换为只看错题与未答解析'" @click="wrongOnly = !wrongOnly">{{ wrongOnly ? '只看错题/未答' : '全部题目' }}</view>
+          <view class="dnav-btn" :class="{ dis: !hasNextQ }" role="button" aria-label="下一题解析" :aria-disabled="!hasNextQ" @click="stepQ(1)">下一题 ›</view>
+        </view>
       </view>
     </view>
   </view>
 </template>
 
 <script>
-import { request, anonUid, isNetErr } from '../../api.js';
+import { request, anonUid, isNetErr, trackEvent, BASE_URL, setFav, removeFav } from '../../api.js';
 import { splitMaterial } from '../../material.js';
+import { buildPaceRows, fmtMin } from '../../exam-pace.js';
+import { buildExamRedoSet } from '../../exam-redo.js';
+import { buildExamReportShareText } from '../../exam-share.js';
+import { reviewStep } from '../../exam-review.js';
+import { isFaved, toggleFav } from '../../exam-fav.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
 const MOD_ORDER = ['changshi', 'yanyu', 'shuliang', 'panduan', 'ziliao'];
 
 export default {
   data() {
-    return { loading: true, loadErr: '', aid: null, report: null, history: [], detail: null, matOpen: false };
+    return { loading: true, loadErr: '', aid: null, report: null, history: [], detail: null, matOpen: false, wrongOnly: false, favs: uni.getStorageSync('favQuestions') || [] };
   },
   computed: {
     accuracy() {
@@ -158,6 +198,9 @@ export default {
       if (!a || !a.submitted_at) return '-';
       const s = Math.max(0, Math.round(a.submitted_at - a.started_at));
       return Math.floor(s / 60) + ' 分 ' + (s % 60) + ' 秒';
+    },
+    detailFaved() {
+      return !!this.detail && isFaved(this.favs, this.detail.question);
     },
     detailMat() {
       const d = this.detail;
@@ -175,6 +218,38 @@ export default {
         pct: pm[k].n ? Math.round((pm[k].correct / pm[k].n) * 100) : 0,
       }));
     },
+    paceRows() {
+      const r = this.report;
+      if (!r) return [];
+      const rows = buildPaceRows(r.attempt.per_module, r.paper.duration_min, r.total);
+      const order = (k) => { const i = MOD_ORDER.indexOf(k); return i < 0 ? MOD_ORDER.length : i; };
+      return rows
+        .slice()
+        .sort((a, b) => order(a.key) - order(b.key))
+        .map((p) => ({
+          ...p,
+          name: MODS[p.key] || p.key,
+          pct: Math.max(4, Math.round((p.secs / Math.max(p.secs, p.refSecs, 1)) * 100)),
+        }));
+    },
+    wrongTotal() {
+      const r = this.report;
+      return r ? r.items.filter((it) => it.picked && !it.correct).length : 0;
+    },
+    redoCount() {
+      const r = this.report;
+      return r ? buildExamRedoSet(r.items).length : 0;
+    },
+    shareText() {
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      return buildExamReportShareText(this.report, origin);
+    },
+    hasPrevQ() {
+      return !!(this.report && this.detail && reviewStep(this.report.items, this.detail.no, -1, this.wrongOnly));
+    },
+    hasNextQ() {
+      return !!(this.report && this.detail && reviewStep(this.report.items, this.detail.no, 1, this.wrongOnly));
+    },
   },
   onLoad(opt) {
     if (opt && opt.attempt_id) {
@@ -182,6 +257,30 @@ export default {
     } else {
       this.loading = false;
     }
+  },
+  onShow() {
+    // #ifdef H5
+    if (!this._rpKeyHandler && typeof window !== 'undefined') {
+      this._rpKeyHandler = (e) => this.onRpKeydown(e);
+      window.addEventListener('keydown', this._rpKeyHandler);
+    }
+    // #endif
+  },
+  onUnload() {
+    // #ifdef H5
+    if (this._rpKeyHandler && typeof window !== 'undefined') {
+      window.removeEventListener('keydown', this._rpKeyHandler);
+      this._rpKeyHandler = null;
+    }
+    // #endif
+  },
+  onHide() {
+    // #ifdef H5
+    if (this._rpKeyHandler && typeof window !== 'undefined') {
+      window.removeEventListener('keydown', this._rpKeyHandler);
+      this._rpKeyHandler = null;
+    }
+    // #endif
   },
   methods: {
     async load(aid) {
@@ -209,6 +308,31 @@ export default {
       } catch (e) { /* 非关键路径 */ }
     },
     openQ(it) { this.matOpen = false; this.detail = it; },
+    toggleDetailFav() {
+      const d = this.detail;
+      if (!d) return;
+      const { list, added } = toggleFav(this.favs, d);
+      this.favs = list;
+      uni.setStorageSync('favQuestions', list);
+      if (d.question_id) (added ? setFav(d.question_id) : removeFav(d.question_id)).catch(() => {});
+      uni.showToast({ title: added ? '已收藏，可在收藏与笔记查看' : '已取消收藏', icon: 'none', duration: 900 });
+    },
+    stepQ(dir) {
+      if (!this.report || !this.detail) return;
+      const nxt = reviewStep(this.report.items, this.detail.no, dir, this.wrongOnly);
+      if (nxt) this.openQ(nxt);
+    },
+    // #ifdef H5
+    onRpKeydown(e) {
+      if (typeof window === 'undefined' || window.innerWidth < 1024) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const tag = (e.target && e.target.tagName) || '';
+      if (/INPUT|TEXTAREA|SELECT/.test(tag) || (e.target && e.target.isContentEditable)) return;
+      if (!this.detail) return;
+      if (e.key === 'ArrowLeft') { e.preventDefault(); this.stepQ(-1); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); this.stepQ(1); }
+    },
+    // #endif
     openAttempt(a) {
       if (a.id === this.report.attempt.id) return;
       this.load(a.id);
@@ -219,6 +343,27 @@ export default {
     retake() {
       const p = this.report.paper;
       uni.redirectTo({ url: p.kind === 'mock' ? '/pkgA/exam/exam?mini=1' : '/pkgA/exam/exam?paper_id=' + p.id });
+    },
+    fmtMin,
+    imgUrl(p) {
+      return /^https?:/.test(p) ? p : (BASE_URL || '') + p;
+    },
+    previewImg(p) {
+      uni.previewImage({ urls: [this.imgUrl(p)] });
+    },
+    copyShare() {
+      if (!this.shareText) return;
+      trackEvent('share_copy', 'exam_report', String(this.report.paper.id));
+      uni.setClipboardData({
+        data: this.shareText,
+        success: () => uni.showToast({ title: '挑战链接已复制，发给考友吧', icon: 'none' }),
+      });
+    },
+    redoWrong() {
+      const set = buildExamRedoSet(this.report.items);
+      if (!set.length) return;
+      uni.setStorageSync('redoSet', set);
+      uni.navigateTo({ url: '/pages/practice/practice' });
     },
     goPractice(tag3) {
       uni.setStorageSync('practiceLaunch', { kind: 'start', tag3: tag3 || null, count: 10, adaptive: true });
@@ -263,6 +408,14 @@ export default {
 .legend { display: flex; gap: 24rpx; }
 .lg { display: inline-flex; align-items: center; gap: 8rpx; font-size: 22rpx; color: var(--ink-2); }
 .dot { width: 20rpx; height: 20rpx; border-radius: 50%; background: var(--soft-bg); border: 2rpx solid var(--line); display: inline-block; }
+.redo-cta { margin-top: 20rpx; border: 2rpx solid var(--brand); border-radius: 16rpx; padding: 18rpx 22rpx; background: var(--brand-soft); cursor: pointer; }
+.redo-cta-t { display: block; font-size: 26rpx; font-weight: 600; color: var(--brand); }
+.redo-cta-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
+.share-cta { margin-top: 20rpx; border: 2rpx solid var(--brand); border-radius: 16rpx; padding: 18rpx 22rpx; background: var(--brand-soft); cursor: pointer; }
+.share-cta-t { display: block; font-size: 26rpx; font-weight: 600; color: var(--brand); }
+.share-cta-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
+.dimg { width: 100%; border-radius: 12rpx; margin-bottom: 8rpx; }
+.dimg-credit { font-size: 21rpx; color: var(--ink-2); margin-bottom: 16rpx; }
 .dot.ok { background: #86efac; border-color: #86efac; }
 .dot.bad { background: #fca5a5; border-color: #fca5a5; }
 .btns { display: flex; gap: 16rpx; }
@@ -272,9 +425,14 @@ export default {
 .mask { position: fixed; inset: 0; background: rgba(15, 18, 25, 0.45); z-index: 90; display: flex; align-items: flex-end; }
 .sheet { width: 100%; background: var(--card); border-radius: 28rpx 28rpx 0 0; padding: 28rpx 28rpx calc(28rpx + env(safe-area-inset-bottom)); max-height: 80vh; display: flex; flex-direction: column; box-sizing: border-box; }
 .sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
+.sheet-acts { display: flex; align-items: center; }
 .sheet-t { font-size: 30rpx; font-weight: 600; }
 .sheet-x { font-size: 30rpx; color: var(--ink-2); padding: 8rpx 16rpx; }
 .detail-scroll { max-height: 62vh; }
+.dnav { display: flex; align-items: center; gap: 16rpx; margin-top: 20rpx; }
+.dnav-btn { flex: 1; text-align: center; padding: 18rpx 0; border: 1rpx solid var(--line); border-radius: 14rpx; font-size: 26rpx; color: var(--ink); background: var(--bg); }
+.dnav-btn.dis { color: var(--ink-3); opacity: 0.55; }
+.dnav-mid { flex: none; padding: 18rpx 22rpx; border-radius: 14rpx; font-size: 24rpx; color: var(--brand-text); background: var(--brand-soft); }
 .mat-fold { display: flex; justify-content: space-between; align-items: center; background: #f0fdfa; border: 1rpx solid #99f6e4; border-radius: 12rpx; padding: 14rpx 20rpx; margin-bottom: 14rpx; }
 .mat-fold-t { font-size: 24rpx; color: #0f766e; }
 .mat-fold-a { font-size: 24rpx; color: #0d9488; font-weight: 600; flex-shrink: 0; margin-left: 16rpx; }
@@ -294,6 +452,16 @@ export default {
 .wrow-t { font-size: 26rpx; color: var(--ink); font-weight: 500; }
 .wrow-s { font-size: 22rpx; color: var(--ink-2); }
 .wrow-go { font-size: 25rpx; color: var(--brand-text); font-weight: 600; }
+.prow { padding: 10rpx 0; }
+.prow-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8rpx; }
+.prow-name { font-size: 24rpx; color: var(--ink-2); }
+.prow-tag { font-size: 21rpx; font-weight: 600; border-radius: 999rpx; padding: 2rpx 14rpx; background: var(--ok-soft); color: var(--ok-strong, #15803d); }
+.prow-tag.over { background: var(--bad-soft); color: var(--bad-strong, #b91c1c); }
+.prow-tag.fast { background: var(--soft-bg); color: var(--ink-2); }
+.prow-bar { height: 14rpx; background: var(--brand-soft); border-radius: 999rpx; overflow: hidden; }
+.prow-fill { height: 100%; background: var(--brand); border-radius: 999rpx; transition: width 0.4s ease; }
+.prow-fill.over { background: var(--bad, #dc2626); }
+.prow-v { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; font-variant-numeric: tabular-nums; }
 
 /* #ifdef H5 */
 @media (min-width: 768px) {

@@ -662,4 +662,345 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 收口（纯 CSS + 1 行 HTML）：admin.css 追加 `@media(max-width:767px)` 手机档——body min-width 解除、topbar search 隐藏、content padding 12、pagehead/row/filterbar 换行、kpis minmax(140px,1fr)!important（覆盖 dedup/governance 页内联 repeat(4,1fr)）、drawer 100vw、`.tbl-wrap,.card{overflow-x:auto}`+`table.tbl{min-width:640px}` 表格容器内横滚（questions 等页表格直接渲染在 .card 内不在 .tbl-wrap）。
 - 缓存击穿：index.html 的 admin.css 链接原本无 `?v=`，后端 mtime 重写机制不生效，边缘缓存旧 CSS；补 `?v=r38` 收口（部署后实测重写为 mtime 版本号）。
 - 验证：本地全绿（ruff/pytest 98/pyright 0/lint/vitest 128/build）；生产 375/320 全部 12 个管理台路由 scrollWidth-clientWidth=0，1440 桌面零变化（min-width:768 仍生效、侧栏 232px）。
-- 明确不做：侧栏抽屉/汉堡菜单（需 JS）、管理台深色模式（挂候选）。详见 docs/iter/round-3/design-r220-admin-mobile.md。
+- 明确不做：侧栏抽屉/汉堡菜单（需 JS）、管理台深色模式（挂候选）。
+
+### R221（/api/admin/batches 慢查询收口，已部署）
+- 取证 verified：origin 24h 慢请求中 /api/admin/batches 8 次 6.0–7.6s；生产只读 DB 实测 GROUP BY import_batch 全表扫 2.8s（questions 15 个索引无一覆盖 import_batch）+ 50×batch_answer_dist 各 0.11s，与线上耗时吻合；distinct batch=1000。
+- 收口：db.py 追加覆盖索引 idx_q_batch(import_batch, disabled, is_real, answer)，聚合与 answer 分布均整索引覆盖不回表；零查询改写零契约变化。备份副本实测建索引 2.3s、全查询 6–8s→0.01s。
+- 验证：本地全绿（ruff/pytest 100(+2 查询计划例)/pyright 0/lint/vitest 128）；生产 rev 1fe2a48 部署后 /api/admin/batches 实测 0.11–0.19s，索引已建。
+- 明确不做：governance_scan（600s 缓存兜底，Python 逐行体检 SQL 化挂候选）；/api/exam/* 历史 502 根因证据仍不足（unknown，不猜测性改动）。详见 docs/iter/round-3/design-r221-admin-batches-index.md。
+
+### R222（管理台重查询缓存 stale-while-revalidate，已部署）
+- 取证 verified：/api/admin/governance 慢请求 4.0–7.1s 全部为 `_cached` 600s TTL 过期后的同步重算路径（Python 全表逐行体检），即每 10 分钟必有一个管理台请求吃 4–7s；`_cached` 同时服务 dashboard(300s) 等重查询，且无锁有同键小惊群。
+- 收口：`_cached` 对齐 `_pick_pools` 语义——过期先回旧值 + 后台单飞重算，冷 miss（进程启动后首次）仍同步且 build 锁防惊群；零调用方/契约改动。+4 例 pytest（旧值不阻塞/单飞/冷 miss/重算异常不污染缓存）。
+- 验证：本地全绿（ruff/pytest 104/pyright 0）；生产 rev 35f6e11 部署后 governance 冷 miss 4.1s（仅重启后首次）、后续 0.07–0.25s；性能预算全过。
+- 明确不做：不 SQL 化 governance_scan（独立候选）、不加常驻预热线程（2G 内存高压宿主）。详见 docs/iter/round-3/design-r222-admin-cache-swr.md。
+
+### R223（管理台无障碍收口，已部署）
+- 取证 verified：生产认证 axe（12 个管理台路由 × 1440）全部存在 serious 级 color-contrast 违规（重复根因为 admin.css 全局 token：--t3/--t4/状态色/模块色低于 WCAG AA），另有 questions/comments/review/users/settings 表单控件缺 accessible name、侧栏 4 组 nav landmark 未唯一命名、`.main` 非语义 main、多处操作列空表头。
+- 收口（纯 admin 静态资源，零 API/路由/行为变化）：① 全局颜色 token 提对比度（--t3 #5D6270、--t4 #6E7280、success/error/warning/info 及模块色全部 AA 达标，dashboard 一处硬编码 warning 色改 token）；② 控件 aria-label（全选/行选 checkbox、模块/质量分/排序/举报状态 select、用户/公告/全局搜索输入框）；③ `<main class="main">` + 4 组 `<nav aria-label>`；④ 新增 .sr-only，操作/选择列空表头补隐藏文本。
+- 返工两处：首轮生产 axe 残留 settings 公告表空表头（minor，已补 sr-only）；.sr-only 绝对定位在横滚表格 th 内以 html 为包含块，375 视口 4 路由页面级 scrollWidth 溢出 296–349px，`.tbl th{position:relative}` 收进包含块后清零。
+- 验证：本地全绿（ruff/pytest 104/pyright 0/lint/vitest/build）；生产 rev 05496bd 部署后 12 路由认证 axe 全部零违规，1440/375 × 12 路由页面级溢出全 0，性能预算全过。
+- 明确不做：管理台深色模式（挂候选）、SPA 端无障碍（此前已清零）、布局/交互重设计。详见 docs/iter/round-3/design-r223-admin-a11y.md。
+
+### R224（管理台深色模式，已部署）
+- 取证 verified：客户端 SPA 与 /tiku SSR 均已支持深色，管理台是全站唯一无深色适配界面（admin.css 无任何 prefers-color-scheme）；R220/R223 后 pages/*.js、core.js 零硬编码色，admin.css 硬编码 hex 仅剩表面色一类，深色模式收敛为「补 token + :root 重映射」低风险收尾。本轮 origin 24h 复审计无新增 verified 产品缺陷（/api/submodules 2–8s 慢样本来自共享 NAT 且查询实测 0.1s 索引覆盖 idx_q_pick，判定宿主瞬时争用为 inference，挂观察）。
+- 收口（纯 admin.css 静态，零 API/JS/行为变化）：① 表面色 token 化（--th-bg/--row-hover/--toast-t/--mod-*-bg，#fff 面板底统一 var(--surface)）；② @media(prefers-color-scheme:dark) :root 重映射，色板对齐客户端 v3 深色 token（bg #15161C/card #1D1F28/fill #23252F/line #2B2E3A/状态色亮变体）；③ 白字压亮色组合定向覆盖（.pager a.on/.ck.on::after/侧栏 badge/toast 反色）；④ color-scheme:light dark 原生控件随主题。
+- 验证：本地全绿（ruff/pytest 104/pyright 0/lint/vitest/build/bash -n）；生产 rev ffe8cdc 部署后 12 管理台路由 × light/dark 认证 axe 全零违规，dark 1440/375 × 12 路由页面级溢出全 0，性能预算全过。
+- 明确不做：管理台手动三档主题切换（系统偏好足够，挂候选）；不动客户端/SSR 深色实现。详见 docs/iter/round-3/design-r224-admin-dark-mode.md。
+
+### R225（storm guard 可观测性：X-Kg-Guard 头，已部署）
+- 取证 verified：09-01 08:11–10:00 origin 日志 ~20.3k 条 /api/exam/* 404 风暴（submit ~10.1k + report/72|73|75 ~10.1k，X-Kg-Ip=140.232.64.5 共享 NAT、headless Chrome UA、Server: uvicorn 证实后端真实响应）期间**零 429**——ErrorStormGuard 未触发；当晚以相同三种请求形态在生产容器（127.0.0.1:8300，注意 8000 是无关 k12team）逐一实测均第 31 个起 429，守卫现行正常；风暴窗口与当前守卫代码零 diff。SPA 现行 submitFailPlan 对 404 直接 terminal，不会产生该风暴（风暴客户端为自动化浏览器属 inference）。守卫未触发根因 unknown：纯内存态 + 容器 stdout 随 autoheal 重建销毁，风暴期进程内部状态零留存。
+- 收口（最小可观测性，不改守卫语义/阈值）：ErrorStormGuard.record() 返回记录后窗口计数；中间件对 /api status≥400 响应加 X-Kg-Guard: <计数> 头、守卫 429 加 X-Kg-Guard: blocked，2xx/3xx 不加头；Caddy origin 访问日志完整记录响应头（roll_keep 14 天），下次风暴可逐请求区分「ip 为空 / 计数不涨 / 到阈值未拦截」。
+- 验证：本地全绿（ruff/pytest 106(+2)/pyright 0/lint/vitest/build）；生产部署后错误响应带计数头、第 31 个起 429+blocked、200 无头，Caddy 日志实际记录到该头。
+- 明确不做：不改 threshold/window、不做根因未知的猜测性修复、不持久化守卫状态。详见 docs/iter/round-3/design-r225-storm-guard-observability.md。
+
+### R226（边缘回源 X-Kg-Fetch 模式头，已部署）
+- 取证 verified：24h origin 日志仅两条 5xx——09-01T18:19:39Z bingbot /sitemap.xml 502（0.02s，R223 部署容器重建窗口）与 14:00:51Z 爬虫 /tiku/panduan/?page=254 502；两条均单条记录（无 R205 重试对），且 /sitemap.xml 18:17:40 有部署预热 200 副本。origin 日志无法区分该 502 是「swr 后台刷新失败（用户已拿陈旧副本，无影响）」还是「MISS 同步回源（用户可见失败）」——与 R225 同类观测缺口，历史两条 502 是否外泄如实标 unknown。
+- 收口（纯边缘函数，零响应/缓存/重试语义变化）：边缘每个回源请求附 X-Kg-Fetch 请求头：miss（可缓存无副本同步回源）/ pass（不可缓存透传）/ swr（后台刷新）/ retry（R205 重试第二跳），由 Caddy 访问日志（记录全部请求头，14 天）自然持久化。
+- 验证：本地全绿（vitest 131(+3)/lint(src+tests+edge)/build/ruff/pytest 106/pyright 0）；生产部署后 origin 日志实录四种模式：novel 深页 miss、/api/stats pass、TTL 过期后台刷新 swr；受控重启窗口实测两条完整链：有副本页 客户端 200(STALE)+日志 502[swr]（即历史 sitemap 502 的无害形态），无副本页 502[miss]→502[retry]→客户端品牌 503，窗口结束恢复 200。1440/375 双视口溢出 0、console 0 error、性能预算全过。
+- 明确不做：不回溯归因历史两条 502（证据不可得）、origin 不读取该头做行为分支。详见 docs/iter/round-3/design-r226-edge-fetch-mode-header.md。
+
+### R227（管理台折叠侧栏导航可访问名称 + tooltip，已部署）
+- 取证 verified：Playwright 768px 生产实测，admin.css ≤1023px 折叠图标栏下 `.side nav a .txt{display:none}`，全部 12 个侧栏导航链接可访问名称只剩 emoji（📊/📚/…），aria-label/title 均无——读屏用户听到的是 emoji 描述而非「数据看板/题库管理」，明眼用户悬停无 tooltip。axe link-name 不报（emoji 也算名称），R223 扫描在 1440 全宽下覆盖不到该形态。
+- 收口（纯静态 admin/index.html + admin.css）：12 个导航 `<a>` 补 title tooltip；折叠态 `.txt` 由 display:none 改 sr-only 式 clip 隐藏（保留可访问性树，包含块为既有 position:relative 的 `<a>`，无 R223 溢出陷阱）。CSS 缓存由 admin_assets_version() mtime 重写自动生效，无需手动 bump ?v。
+- 验证：本地全绿（ruff/pytest 106/pyright 0/lint/vitest 131/build）；生产 rev 964f0c1 实测 1440 全宽零变化（.txt static 可见）、768/375 折叠态 12 链接名称全为完整中文 + title 齐全、375 溢出 0；768 的 15px「溢出」为存量 body{min-width:768px}+滚动条固有形态（widest 元素即 body），非本轮引入。性能预算全过。
+- 本轮复审计其余结论：近 7 天 slow_load 46/47 样本无 `;v:` 版本戳（旧 bundle 客户端族群，boot 心跳同期版本戳齐全），当前 bundle 无新 verified 缺陷；/api/admin/governance 单条 4s 样本证据不足不改动，挂观察。
+
+### R228（管理台侧栏可访问名称静态契约回归测试，测试+docs，无部署）
+- 取证：24h origin 复审计——20.5k /api/exam/* 404、562 条 502、146 条 429 全部对应历史 09-01 08:11–10:00 风暴（R225 部署前，X-Kg-Guard 头缺失符合预期）与共享 NAT 受控测试流量；X-Kg-Fetch 四模式（pass/swr/miss/retry）正常落日志，19:29 无副本深页 miss→retry→品牌 503 链路按 R218 设计工作。无新 verified 产品缺陷。
+- 流程缺口收口：R227 修复只有生产 Playwright 验证、仓库零回归覆盖。新增 backend/tests/test_admin_nav_names.py 静态契约 2 例：12 个导航 title == .txt 文案；≤1023px 折叠块 .txt 不得 display:none 且须 clip 式 sr-only。受控验证：改回 display:none / 删 title 均失败，还原后通过。顺带修正 design-r227 文档「13 个 <a>」为 12。
+- 本地全绿（ruff/pytest 108(+2)/pyright 0/lint/vitest 131/build）。详见 docs/iter/round-3/design-r228-admin-nav-regression-test.md。
+
+### R229（管理台重查询缓存启动预热）
+- 取证 verified：近 3h origin 无外部用户 5xx（9 条 502 为共享 NAT 受控探针集束）；17:39–17:44 的 /api/admin/batches 6–7s 样本时间戳在 R221 索引部署之前，当前实测 0.05–0.16s（idx_q_batch 在库生效，非回退）；/api/admin/governance 实测首次命中 5.1s、随后 0.16s——R222 设计中的「进程启动后首次同步冷 miss」，而 container-events.log 显示当日容器重建 ≥8 次（每次部署都重建），每次重启后首个管理员请求都承担秒级冷查询。
+- 收口：main.py `_prime_admin_caches()`（预热 admin_dashboard/governance_scan 两个 `_cached` 键），`_warmup` 线程进循环前一次性调用；不做周期化重复预热（governance 全表体检 ~3–5s CPU，2G 高压宿主不引入常驻后台负载，与 R222 按需+SWR 语义一致）。零契约变化。
+- 验证：pytest 新增 test_startup_prime_fills_admin_caches（预热后两键在缓存、后续调用直接命中不再同步构建）；本地全绿（ruff/pytest 109(+1)/pyright 0/lint/vitest 131/build）。详见 docs/iter/round-3/design-r229-admin-cache-startup-prime.md。
+
+### R230（/api/admin/stats 接入 SWR 缓存并纳入启动预热）
+- 取证 verified：R229 部署后近 2h origin 所有 >3s 慢样本全部为 /api/admin/stats（2.0–5.1s × 8 条，管理台首屏必请求端点），governance/dashboard/batches 已 0.13–0.27s；代码实证 db.admin_stats() 直查 156k questions 全表 5 次 COUNT（含 hs_explanation 文本扫描）+ 多表聚合，无任何缓存。另验证 R205/R218 链路正常：19:43 外部爬虫深页 502[miss]→2s 后 200[retry]。
+- 收口：admin_stats() 改 `_cached("stats", 300, _admin_stats_uncached)`（复用 R222 SWR），并加入 R229 `_prime_admin_caches()` 启动预热清单。零契约变化；300s 陈旧度与 dashboard 一致，POST /api/admin/refresh_stats 是题目统计重算与本缓存无关。
+- 验证：test_startup_prime_fills_admin_caches 扩为三键；本地全绿（ruff/pytest 109/pyright 0/lint/vitest 131/build）。详见 docs/iter/round-3/design-r230-admin-stats-swr-cache.md。
+
+### R231（/llms.txt 站点导览）
+- 取证 verified：R230 部署后 origin 日志 stats/dashboard/governance/batches 全部亚秒（0.005–0.099s），管理台慢端点收口确认；`/llms.txt` 历史被请求 66 次全部 404（来源为共享 NAT IP，外部真实需求 unknown），站点已具备 robots/sitemap/公开页族但缺 llmstxt.org 标准的 LLM 爬虫站点导览文件。
+- 收口：seo.py 新增 GET /llms.txt（静态 Markdown：站名+摘要+五模块 hub/papers/daily/discuss/sitemap 链接，text/markdown，无 DB 查询）；edge-policy.js 把 /llms.txt 与 robots/sitemap 同组纳入边缘缓存（isCacheableContentType 新增接受 text/markdown）。
+- 验证：pytest 新增 test_llms_txt.py（状态/类型/链接契约）、vitest edge-policy 断言扩展；本地全绿（ruff/pytest 110(+1)/pyright 0/lint/vitest 132(+1)/build）；生产实测 200 + text/markdown + X-Edge-Cache HIT，1440/375 双视口溢出 0、console 0 error，性能预算全过。详见 docs/iter/round-3/design-r231-llms-txt.md。不声称已产生任何收录/流量效果。
+
+### R232（空模块 SSR hub 品牌 404 + 边缘 SWR 下架副本清除）
+- 取证 verified：生产 /tiku/shenlun/ 返回 200、带 canonical 无 noindex，正文「申论题库（0 题）」；/api/questions?module=shenlun 0 题、sitemap 与 /tiku/ 内链均已排除 shenlun——可猜测直达的空洞门页（thin content + 用户死胡同）。tiku_submodule 已有空结果 404 守卫，tiku_module 缺失，属不一致缺口。
+- 收口一（seo.py）：tiku_module 在 _count_questions(module)==0 时返回既有 _not_found("该模块暂无题目")（品牌 404 + noindex + 出路），有题模块/API/301 行为零变化；不删 kb.MODULES["shenlun"]（App 内申论专区仍依赖）。
+- 收口二（边缘，部署后追加取证发现）：origin 已 404 但边缘持续回旧 200 副本——revalidate() 仅 200 覆盖、404 直接 return，旧副本永久驻留且每次 SWR 续命。改为 404/410（origin 确定性下架答复）时 caches.default.delete(cacheKey)，下一请求同步回源；5xx/网络异常 stale-if-error 语义不变。
+- 验证：pytest 新增空模块 hub 404/noindex + 有题模块 200 回归；vitest edge-handler 新增「后台刷新遇 404 清副本 → 下一请求 404」集成例。本地全绿（ruff/pytest 111(+1)/pyright 0/lint/vitest 133(+1)/build）；生产 rev d384fce 部署后实测 /tiku/shenlun/ 首访回旧副本随即清除、后续稳定品牌 404+noindex，/tiku/changshi/ 200，1440/375 双视口溢出 0、console 仅页面自身 404 资源行，性能预算全过。详见 docs/iter/round-3/design-r232-empty-module-404.md。
+
+### R233（空模块 404 页补 App 专区直达出路）
+- 取证 verified：本窗口 origin 无新缺陷（78 条 >1s 全部为部署 prime 触发的 SWR 并发回源、4 条 502 中 3 条自有探针 1 条爬虫 retry 后恢复 200）；App 内存在完整申论专区（pkgA/shenlun：真题题库+素材范文+在线作答），而 /tiku/shenlun/ 品牌 404 只给通用出路——搜索申论的用户被引向行测入口，产品真实能力被藏起来的死胡同。
+- 收口（seo.py）：_not_found 增可选 cta_html 槽位（默认空、既有调用零变化）+ _EMPTY_MODULE_OUTLET 映射（当前仅 shenlun），空模块 404 页顶部给「申论专区：历年真题 + 素材范文 + 在线作答 →」.cta 直达 /#/pkgA/shenlun/shenlun；404 状态/noindex/无 canonical/通用出路不变。
+- 验证：pytest +1 例（空模块 404 含 CTA、通用 404 不含），112 passed/ruff/pyright 0；前端门禁回归全绿。详见 docs/iter/round-3/design-r233-empty-module-outlet.md。
+
+### R234（/tiku 公开页文案计数口径校正）
+- 取证 verified：生产库 shenlun 0 题，而 /tiku/ 与 /tiku/discuss/ 的 description/JSON-LD/正文写「收录 113107 道行测申论题目」——total 只统计行测五模块，计数口径不实；本窗口 origin 无新缺陷（慢样本/502/llms.txt 404 全部对应今日旧 rev 部署窗口，部署后消失，stats 现 0.24–1.5s、llms.txt 200）。
+- 收口（seo.py）：四处文案「行测/申论题目」「行测申论题目」→「行测题目」，计数逻辑/路由/JSON-LD 结构不动。
+- 验证：pytest +1 例（两页不得再现旧口径、/tiku/ 须现「道行测题目」），113 passed/ruff/pyright 0；前端门禁回归全绿。详见 docs/iter/round-3/design-r234-tiku-copy-accuracy.md。
+
+### R235（部署容器重建窗口 origin 502 收口，纯 VPS Caddy 配置）
+- 取证 verified：今日每轮部署的容器 Recreate 窗口（10–20s）内，无副本深页与 /api/track 均即时 502（dial 拒绝，duration 0.01–0.08s），爬虫/用户最终收品牌 503；同机 jobs.zalize.com 已有 lb_try_duration 成熟先例。
+- 收口：/etc/caddy/Caddyfile 两个 kaogong 块 reverse_proxy 127.0.0.1:8300 增加 lb_try_duration 25s + lb_try_interval 1s（拨号失败窗口内重试，POST 安全；备份 Caddyfile.bak-r235），validate+reload。
+- 验证：受控 docker stop 10s 演练，/api/health 停机窗口内请求等待 12.4s 后 200（原即时 502），容器恢复 healthy、公开页 200。仓库仅落文档（Caddyfile 为共享服务器配置，与 R85/R86 同口径）。详见 docs/iter/round-3/design-r235-origin-lb-retry.md。
+
+### R236（申论真题公开 SSR hub：/tiku/shenlun/ 以真实语料恢复 200）
+- 取证 verified：生产 shenlun_questions 实有 208 道申论真题（materials 166、answers 6，App 申论专区同源数据），R232 判 404 的依据只是 questions 表 xingce 计数；origin 日志 /tiku/shenlun/ 仍持续有爬虫 404 命中。
+- 收口：seo.py tiku_module 对 shenlun 分流 _tiku_shenlun（shenlun_questions 语料呈现：年份/地区概览 chips + 题干列表 + 分页 + App 专区 CTA；不造详情/过滤子页）；/tiku/ 首页与 sitemap-pages 在语料非空时补入口；total=0 守卫回落品牌 404 + CTA（R232 语义不回退，R234 行测计数口径不动）。
+- 验证：pytest +1 例（200 呈现 + 清空回落 404 双分支），114 passed/ruff/pyright 0。详见 docs/iter/round-3/design-r236-shenlun-public-hub.md。生产 rev b35aa31 实测 200 + canonical + 208 题、sitemap/首页入口就位、1440/375 溢出 0、console 0 error、性能预算全过。
+
+### R237（部署预热清单补齐入口级公开页）
+- 取证 verified：旧 rev 部署重建窗口内五大模块 hub（/tiku/yanyu/ 等）出现 502[miss]→502[retry]（R235 lb_try 生效前样本；R236 部署窗口零 502），deploy_h5.sh 3b 预热清单未覆盖模块 hub、R236 /tiku/shenlun/、R231 /llms.txt——这些入口页无自然流量副本时缺 stale-if-error 第一道退路。
+- 收口：3b 清单追加五大模块 hub + /tiku/shenlun/ + /llms.txt（同语义可缓存 GET）；深层分页页不预热（数量无界，非入口级）。
+- 验证：bash -n；下一次部署实跑 prime 行全 200。详见 docs/iter/round-3/design-r237-prime-coverage.md。生产 rev 1c5d827 部署实跑 12 个公开页 prime 全 200、性能预算全过。
+
+### R238（管理台重查询端点外显缓存态头 X-Kg-Cache）
+- 取证 verified：R230 后 origin 仍有 /api/admin/governance 5–8.8s、/api/admin/stats 2–6s 慢样本（含距容器重建 5 分钟的样本，按 R229/R230 设计应亚秒命中），但日志只有 duration，无法区分命中/回旧值/冷 miss——预热是否真正生效、慢样本是否宿主争用只能标 unknown。
+- 收口：db._cached 拆出 _cached_state 返回 (data, cold|hit|stale)（语义零变化），stats/dashboard/governance 三端点响应加 X-Kg-Cache 头，借 Caddy origin 日志（14 天 resp_headers）逐请求持久取证（同 R225 X-Kg-Guard / R226 X-Kg-Fetch 手法）；仅管理端出头，公开端点不加。
+- 验证：pytest +2 例（三态转换 + 端点头断言），116 passed/ruff/pyright 0。详见 docs/iter/round-3/design-r238-admin-cache-state-header.md。
+- 生产 rev 69a0004：重启窗口内三端点全 hit（R229/R230 预热 verified 生效）；TTL 过期后实测 stats/dashboard `stale`(0.01–0.03s 回旧值)→下一请求 `hit`（后台刷新 verified）；经边缘访问 origin 日志 resp_headers 实录 X-Kg-Cache；错误令牌 401 无头。cold 态仅 pytest 覆盖（生产被预热吃掉，正是设计意图）。
+- 另取证：R235 lb_try 实际实施时刻为 09-01 21:31 UTC（bak-r235），此前 21:04/21:26 仍有即时 502 属实施前样本；实施后历经 3 次容器重建（21:46/21:53/22:01）origin 零 502，R235 verified 生效。
+
+### R239（deploy shell 脚本 shellcheck 门禁 + 存量清零）
+- 取证 verified：24h origin 复审计无新产品缺陷（4xx 全为历史探针，/llms.txt、/tiku/shenlun/ 404 均早于对应轮部署时刻，当前 200；慢样本聚簇部署窗口属 lb_try 排队设计行为）；真实缺口为流程性——5 个 shell 脚本历轮只有 bash -n 纯语法检查，shellcheck 全量实扫 4 处，其中 kaogong-ops.sh SC2166（`[ p -o q ]` POSIX 未定义）触及 R2 周验证触发条件，属真实正确性风险。
+- 收口：SC2166 重写为 `{ [ p ] || [ q ]; }`；SC1090/SC2012/SC2086 三处有意为之定点 directive 豁免并注明理由（对齐 R217 pyright 手法）。门禁基线：`shellcheck deploy/*.sh` 0 输出，与 bash -n 并列为 shell 变更验收项（本地门禁，不引入 CI）。
+- 验证：shellcheck 0 输出 + bash -n 5 脚本全过；VPS 同步 kaogong-ops.sh/cron_access_report.sh 后 FORCE_R2_VERIFY=1 实跑，R2-VERIFY ok md5 match 正常入日志（重写后触发条件 verified）。详见 docs/iter/round-3/design-r239-shellcheck-gate.md。
+
+### R240（/llms.txt 补申论真题库入口，对齐 R236）
+- 取证 verified：R231 llms.txt 生成逻辑显式排除 shenlun 且导语只写行测五模块（早于 R236 申论 hub 恢复 200），生产实测无 /tiku/shenlun/ 条目——首页/sitemap/llms.txt 三个内容发现渠道口径不一致；本轮复审计无新缺陷（/tiku/shenlun/ light/dark×1440/375 axe 全零、溢出 0，Lighthouse 四项 1.00/LCP 930ms/CLS 0；origin 近 8h 5xx 全落旧部署窗口/共享 NAT 探针）。
+- 收口：llms_txt() 与首页/sitemap 同守卫（shenlun_questions total 非零输出申论条目 + 导语补「历年申论真题」，清空自动回落）；不加申论子页链接（详情页不存在，防死链）。
+- 验证：pytest +1 例（有语料出现/清空消失；清理用 DELETE——question UNIQUE 使 disabled 后无法 OR IGNORE 复种），117 passed/ruff/pyright 0。详见 docs/iter/round-3/design-r240-llms-shenlun.md。
+
+### R241（站内搜索覆盖申论真题 + 申论专区 id 深链）
+- 取证 verified：生产 /api/search?q=给定资料 返回全空——搜索只覆盖行测 questions/exam_papers/考点，208 道申论真题（R236 已恢复公开 hub）完全不可搜，申论关键词成站内死胡同；App 申论专区 openQ(id) 已具备详情能力但 onLoad 不收 id，无法从搜索直达。本轮 12h origin 复审计无新缺陷（5xx 全落 R235 lb_try 实施前的部署窗口；20:41 慢样本簇为部署 rsync/prime 窗口自致）。
+- 收口：db.search_shenlun(q)（question/paper LIKE，disabled 守卫，≤5 条，208 行小表不建 FTS）+ api_search type in (all, shenlun) 附 shenlun 段；搜索页侧栏「申论真题」区块点击直达 /pkgA/shenlun/shenlun?id=N（onLoad 校验纯数字后 openQ）；不新增搜索 tab、不搜 shenlun_materials（挂候选）。
+- 验证：pytest +1 例（命中字段契约/卷名命中/type=question 无申论段/清空为空），118 passed/ruff/pyright 0/lint/vitest 133/build。详见 docs/iter/round-3/design-r241-search-shenlun.md。
+
+### R242（/tiku/shenlun/ hub 列表项逐题深链直达 App 详情）
+- 取证 verified：hub 题目列表为纯文本 li 无逐题出口，唯一 App 出口为底部整页 CTA（进专区还需自行找题）；R241 已具备 /#/pkgA/shenlun/shenlun?id=N 深链能力。本轮 14h origin 复审计无新缺陷（14k /api/exam/* 404 全为 09-01 风暴与共享 NAT 受控测试，429 均为 rl() 路径）。
+- 收口：_tiku_shenlun 每个 li 追加「去作答 →」深链（hash 片段路由，不新增可收录 URL，无 thin pages）；canonical/JSON-LD/sitemap/分页零变化，底部整页 CTA 保留。
+- 验证：hub 回归测试补逐题深链断言，118 passed/ruff/pyright 0。详见 docs/iter/round-3/design-r242-shenlun-hub-deeplink.md。
+
+### R243（申论详情 URL 同步 + 复制本题链接）
+- 取证 verified：R241/R242 打通入向深链后出向缺失——App 内打开申论详情地址栏无 ?id，刷新回列表、复制地址栏只能分享到专区列表；详情页为全站唯一零分享出口的内容面（行测/PK/成绩单均有复制链接）。本轮 origin 复审计无新缺陷（慢样本聚簇部署重建窗口，为 R235 lb_try 排队设计行为；tag3 22s 样本落 21:25/21:47 部署窗口）。
+- 收口：新增 src/shenlun-url.js 纯函数 buildShenlunUrl（对齐 R157 search-url 手法）+ shenlun.vue watch detail 经 history.replaceState 同步 ?id（打开/返回/切筛选全路径覆盖，刷新直达同题走既有 onLoad 校验）+ 详情头部「复制本题链接」（setClipboardData + toast，对齐 profile/pk 交互）。零后端/SSR/SEO 变化。
+- 验证：vitest +1 文件（合法/非法 id 分支），lint/vitest/build/lint:edge/ruff/pytest 118/pyright 0 全绿。详见 docs/iter/round-3/design-r243-shenlun-detail-url-share.md。
+
+### R244（站内搜索覆盖申论素材 + 素材库 mtype 直达过滤）
+- 取证 verified：生产只读库 shenlun_materials 实有 166 条（政策理论 73/金句 41/案例 32/范文 20），App 素材 tab 已消费，但 /api/search 不覆盖素材——搜「乡村振兴」等主题词无任何素材命中（R241 明确挂候选项）。本轮复审计：/llms.txt 公网 200（历史 66 条 404 均早于当前 200 样本，属旧部署窗口）；R243 详情复制/返回控件生产键盘可达（tabindex=0 + Enter 触发 toast）；origin 502/慢样本均落部署窗口。
+- 收口：db.search_shenlun_materials(q)（topic/content/source LIKE + disabled 守卫，≤10 条，166 行小表不建 FTS）+ api_search 附 shenlun_mats 段；搜索页新增「申论素材」区块（topic+类型徽标+内容 clamp 3 行），点击直达 /pkgA/shenlun/shenlun?tab=m&mtype=<type>（MTYPES 白名单校验后置 mtype 再 switchMat）；不做素材单条落地页/SSR 页，SEO 零变化。
+- 验证：pytest +1 例（topic/content 命中、disabled 排除、type=question 无素材段、清空为空），119 passed/ruff/pyright 0/lint/lint:edge/vitest 135/build 全绿；生产 1440/375 实测素材区块 5 条渲染、点击直达素材 tab 且「政策理论」chip 激活+列表过滤、溢出 0、console 0 error、性能预算全过。详见 docs/iter/round-3/design-r244-search-shenlun-materials.md。
+
+### R245（搜索页补「申论」筛选 tab）
+- 取证 verified：/api/search type=shenlun 后端分支（R241/R244）已返回 {q, shenlun, shenlun_mats}，搜索页 onLoad tab 白名单/syncUrl/showSec('shenlun') 全部现成，但 TABS 无申论项——用户无法只看申论结果。本轮 origin 复审计无新缺陷：近窗口 5xx 与 container-events.log 容器重建时刻逐条对时吻合（全为今日 R241–R244 部署窗口，边缘按 R218/R226 出 miss→retry→品牌 503 链），容器 RestartCount=0/OOM=false。
+- 收口：TABS 追加 { k:'shenlun', n:'申论' }，1 行改动，其余走既有链路（请求 &type= 透传/区块显隐/空态/深链白名单/URL 同步）。不改后端，SEO 零变化。
+- 验证：lint/vitest/build + ruff/pytest 119 全绿；生产 1440/375 实测 tab 渲染、点击后仅申论区块、URL 带 tab=shenlun、深链刷新 tab 激活、溢出 0、console 0 error、性能预算全过。详见 docs/iter/round-3/design-r245-search-shenlun-tab.md。
+
+### R246（搜索素材命中 mid 深链直达具体素材）
+- 取证 verified：R244 搜索素材点击只带 mtype 进类型列表首页（分页 20 条），命中素材 id 在最后一跳被丢弃；政策理论 73 条时目标素材可能翻数页才可见（id=35 实测不在该类型首页 20 条内）。
+- 收口：db.shenlun_materials 增可选 mid 参数（AND id=?，disabled 守卫不变）+ /api/shenlun/materials 增可选 id 透传；搜索页 goShenlunMat 追加 &mid=<id>；申论页 onLoad 纯数字校验 pinMid，loadMats 首屏后命中项不在当前页则按 ?id= 拉单条，置顶+去重+自动展开+「搜索命中」角标（仅本次会话置顶，不改常规排序）；单条拉取失败不阻断列表。不新增素材详情页，SSR/SEO 零变化。
+- 验证：pytest +1 例（id 单条命中/下架 id 空），120 passed/ruff/pyright 0/lint/vitest 135/build 全绿；生产 rev ad2ebb0 1440/375 实测目标素材置顶展开带角标、chip 激活、单条兜底路径 verified、无 mid 入口无角标零变化、?id=999999 空 items、溢出 0、console 0 error、性能预算全过。详见 docs/iter/round-3/design-r246-search-mat-mid-deeplink.md。
+
+### R247（申论素材卡「复制素材链接」出向分享）
+- 取证 verified：R246 打通入向 mid 深链后，App 素材卡无任何出向出口（真题详情侧 R243 已有对称能力）；生产实测 mtype 双重编码边界（搜索跳转后 URL mtype=%25E6...）功能无害——chip 激活/类型过滤/目标命中均正常，不做猜测性修复。
+- 收口：shenlun-url.js 增纯函数 buildShenlunMatUrl(id, type)（非法 id 回落 ?tab=m）+ 素材卡 m-foot「复制链接」控件（role=button + aria-label，对齐 d-copy 样式），收链接端走 R246 既有 mid 置顶展开链路。零后端/SSR/SEO 变化。
+- 验证：vitest +2 例（合法/非法 id 与 type 编码分支），137 passed/lint/build 全绿（后端零改动）；生产 rev 22d2532 1440/375 实测复制控件可点、剪贴板实读完整 origin+hash 深链、新开链接目标素材置顶展开带「搜索命中」角标、溢出 0、console 0 error、性能预算全过。详见 docs/iter/round-3/design-r247-shenlun-mat-share-link.md。
+
+### R248（/tiku/shenlun/ hub 首页外显申论素材库板块）
+- 取证 verified：生产 shenlun_materials 166 条（政策理论 73/金句 41/案例 32/范文 20）已具备搜索/深链/分享全链路（R244–R247），但公开 SSR hub /tiku/shenlun/ 仅底部 CTA 文案提及素材，素材资产对搜索引擎/未装 App 用户零外显。
+- 收口：db.shenlun_material_type_counts()（disabled 守卫 + 排除空类型，按数量降序）+ _tiku_shenlun 第 1 页渲染「申论素材库（N 条）」卡片，各类型链接 /#/pkgA/shenlun/shenlun?tab=m&mtype=<quote(type)>（hash 深链不新增可收录 URL）；空 counts 整卡不渲染，分页页不重复；canonical/JSON-LD/sitemap/分页零变化。
+- 验证：pytest +1 例（板块存在/mtype 链接/素材清空不渲染），121 passed/ruff/pyright 0；生产 rev 4813237 实测 hub 素材板块 166 条 + 4 类型链接（page=2 无板块），1440/375 点击类型链接直达 App 素材 tab 且「政策理论」chip 激活过滤 20 条、溢出 0、console 0 error、性能预算全过（/ perf 0.99、/tiku/ perf 1.00）。详见 docs/iter/round-3/design-r248-shenlun-hub-materials.md。
+
+### R249（内容发现渠道口径对齐：首页/llms.txt/hub 元信息补素材库）
+- 取证 verified：R248 上线后 /tiku/ 首页申论条目与 /llms.txt 申论条目仍只写真题、零素材提及；/tiku/shenlun/ meta description 与 JSON-LD description 只写「共 N 题」，与页面正文素材板块不一致（对照 R234/R240 口径一致先例）。
+- 收口：三处均以真实计数守卫（素材清空自动回落纯真题口径）——_tiku_index 申论 section 补「另收录申论写作素材 N 条（类型清单）」；llms_txt 申论条目追加「；另收录 N 条写作素材（按类型归档）」；_tiku_shenlun 第 1 页 description/JSON-LD 追加「另有写作素材 N 条。」（分页页不带）。canonical/sitemap/分页零变化，不新增素材 URL。
+- 验证：pytest +1 例（三渠道口径存在/清空回落/分页页不带），122 passed/ruff/pyright 0；生产 rev 4111a11 实测三渠道文案就位（166 条）、page=2 不带、1440/375 溢出 0、console 0 error、性能预算全过（/ perf 0.99、/tiku/ perf 1.00）。详见 docs/iter/round-3/design-r249-material-discovery-copy.md。
+
+### R250（申论按年份真题页 /tiku/y/{year}/shenlun/ + hub 年份链接 + sitemap-years 收录）
+- 取证 verified：生产 208 题分布 12 个年份（2026:26/2025:51/…/2015:10，每年 5–51 题非 thin）；行测五模块自 R201 有 /tiku/y/{year}/{module}/ 年份页族，而申论 hub「覆盖年份」只是纯文本 span、无对应页面、sitemap-years 零覆盖。先做慢样本复审计：admin stats/governance 慢样本均落旧 rev 部署窗口/共享宿主争用（X-Kg-Cache 佐证当前 hit/stale 亚秒），非代码缺口，不做猜测性改动。
+- 收口：db.shenlun_year_counts()（disabled 守卫 + exam_year 非空）；seo.py /y/{year}/{module}(/) 对 shenlun 分流 _render_shenlun_year（复用 shenlun_questions(year=...)，列表项与 hub 共用 _shenlun_q_items 抽出、逐题去作答深链、_pager、其他年份内链、面包屑、CollectionPage JSON-LD、App CTA；无语料年份品牌 404、无斜杠 301）；hub 年份 chips 改真实计数链接；sitemap-years.xml 收录申论年份页（语料清空自动消失）。不做地区/题型子页。
+- 验证：pytest +1 例（200+计数+深链+canonical/301/hub 链接/sitemap 收录/无语料 404/越界页码 404/清空回落），123 passed/ruff/pyright 0；生产 rev e49fea0 实测 2023（24 题）/2026（26 题）200、1999 404、越界 404、无斜杠 301，light/dark×1440/375 axe serious+ 全零、溢出 0、console 0 error，性能预算全过（/ perf 0.99、/tiku/ perf 1.00）。部署后即查 hub/sitemap 无新链接为边缘 SWR 旧副本（观测陷阱：TTL 300s 过期后复验 hub 12 年份链接 + sitemap 12 条申论条目就位，非代码缺口）。详见 docs/iter/round-3/design-r250-shenlun-year-pages.md。PR #438。
+
+### R251（申论按题型真题页 /tiku/shenlun/{题型}/ + hub 题型链接 + App qtype 深链）
+- 取证 verified：生产 208 题按题型分布：贯彻执行 55/归纳概括 55/大作文 43/综合分析 36/提出对策 19（五类全 ≥19 非 thin）；行测有 /tiku/{module}/{子题型}/ 页族入 sitemap-pages，申论 hub 正文/meta 反复提「概括、对策、公文、大作文等题型」却无任何题型页与入口；/tiku/shenlun/{qtype}/ 现状走行测 questions 表计数 0→404 分流安全；App 申论专区已有 QTYPES chips+qtype API 筛选但 onLoad 不收 ?qtype。
+- 收口：db.shenlun_qtype_counts()（disabled 守卫+排除空 qtype，按量降序）；seo.py tiku_submodule 对 shenlun 分流 _render_shenlun_qtype（真实计数+shenlun_questions(qtype=...) 列表、_shenlun_q_items 逐题去作答深链、_pager、其他题型内链、面包屑、CollectionPage JSON-LD、canonical、App ?qtype CTA；未知题型/清空/越界页码品牌 404，无斜杠 301 前置存在性守卫防 301→404 链）；hub 增「按题型刷题」卡（计数链接）；sitemap-pages 收录（清空自动消失，不做题型×年份/地区交叉）；shenlun.vue onLoad 收 opts.qtype（QTYPES 白名单校验后走既有 setQtype）。
+- 验证：pytest +1 例（200+计数+深链+canonical+qtype CTA/301/hub 链接/sitemap 收录/未知 404/无斜杠未知 404/越界 404/清空回落），124 passed/ruff/pyright 0/前端 lint/vitest 137/build；生产 rev c1526d8 实测归纳概括页 200（55 题）+canonical+CTA、未知题型 404、无斜杠 301，hub/sitemap 部署后即查为边缘 SWR 旧副本（TTL 过期后 hub 5 题型链接+sitemap 5 条就位），light/dark×1440/375 axe serious+ 全零、溢出 0、console 0 error，App ?qtype 深链 chip 激活+结果按类型过滤，性能预算全过（/ perf 0.98、/tiku/ perf 1.00）。详见 docs/iter/round-3/design-r251-shenlun-qtype-pages.md。
+
+## R252（申论年份/地区筛选深链闭环，PR #440）
+- 取证：208 题分布 15 地区（国考 103/江苏 16/北京 16/四川 14…尾部 3–5 题）；R250 年份页 CTA 无 ?year、hub 地区 chips 纯文本；App 已有 setYear/setRegion + API year/region 但 onLoad 不收。
+- 收口：年份页 CTA ?year={year}；hub 地区 chips 改 App ?region 深链（hash 深链不新增可收录 URL，不做地区 SSR 页族——thin page 风险且行测无先例）；shenlun.vue onLoad 在 loadFilters() 返回后按真实 filters 白名单应用 year/region，非法忽略。
+- 本地：ruff/pytest 124/pyright 0/lint/vitest 137/build/shellcheck 全绿。
+- 生产 rev faaae5c：年份页 CTA ?year=2023 就位；hub 首查为边缘 SWR 旧副本（已知 TTL 形态），nocache 实证 origin 已出 15 个 ?region 链接；App ?year=2023 → 2023 chip 激活列表全 2023、?region=江苏 → 江苏 chip 激活列表全江苏、非法 year/region 忽略与无参一致；light/dark×1440/375 溢出 0、console 0 error、axe serious/critical 0；Lighthouse 预算全过（/ 0.99、/tiku/ 1.00）。
+- 验证陷阱：hash SPA 同 page 连续 goto 不重跑 onLoad，深链复验须每例新开 page（r252app.py）。
+- 复审计：05:05–05:47 慢样本簇为共享宿主争用窗口（探针 22s 与静态/health 同窗齐慢，06:00 后恢复 0.3–1.0s），非代码缺陷不改。
+
+## R253（申论按套卷详情页 /tiku/shenlun/p/{paper}/，PR #441）
+- 取证（生产只读库 /data/data.db）：208 题分布 49 套卷（paper 全非空，每套 3–5 题）；distinct(material)=49 与 paper 一一对应——一套卷一份给定资料；material 平均 7134 字（最短 4714）、reference 平均 372 字，无空值。现状缺口：hub/年份/题型三页族只出题干 80 字截断，给定资料+参考解析（内容资产主体）公开页零外显。
+- 收口：db.shenlun_paper_counts()/shenlun_paper_questions(paper)；/tiku/shenlun/p/{paper}/ SSR（面包屑+给定资料一次呈现+逐题卡 details 参考解析+逐题去作答深链+其他套卷内链+CollectionPage JSON-LD+App CTA；未知/清空套卷品牌 404，无斜杠 301 前置存在性守卫）；_shenlun_q_items 卷名改套卷页链接；hub 第 1 页「按套卷刷题」卡；sitemap-pages 收录 49 套卷 URL（清空自动消失）。不做逐题详情页（同套 4–5 题共享 7k 字材料会产生重复正文）、不做套卷×题型交叉页。
+- 本地：ruff/pytest 125(+1)/pyright 0/lint/vitest 137/build/shellcheck 全绿。
+- 生产 rev e8a2327：套卷页 200（2025国考·副省级 5 题、38KB、canonical 编码正确）、无斜杠 301、未知套卷带/无斜杠均 404、hub 套卷链接与 sitemap 条目就位（nocache 实证）；light/dark×1440/375 溢出 0、console 0 error、axe serious/critical 0、5 个 details.ans 就位；Lighthouse 预算全过（/ 0.98、/tiku/ 1.00）。
+
+## R254（内容发现渠道口径对齐：套卷/题型页族入 /tiku 与 llms.txt，PR #442）
+- 取证：R253 上线后 llms.txt 申论条目仍写「按年份/地区归档」——地区并无 SSR 页族（R252 决策仅 App 深链），口径不实；且题型（R251）/套卷（R253）页族未提及；/tiku/ 首页申论 section 无套卷/题型入口提示（grep shenlun/p/ = 0）。同窗口 origin 6h 复审计：5xx 5 条与 >10s 慢样本簇均落 20:41/21:26 共享宿主争用窗口（静态/health 同窗齐慢，X-Kg-Fetch swr/pass 佐证），无新产品缺陷。
+- 收口：纯文案两处——llms.txt 申论条目与 /tiku/ 首页申论 section 改「按套卷（含给定资料与参考解析）、年份、题型」口径；沿既有语料非空守卫。零路由/契约变化。
+- 本地：ruff/pytest 125（R249 用例 +3 断言）/pyright 0 全绿（后端-only 改动）。
+- 生产 rev 5021594：两渠道新口径就位（nocache 实证）、light/dark×1440/375 溢出 0、console 0 error、axe serious/critical 0、性能预算全过（/ 0.99、/tiku/ 1.00）。详见 docs/iter/round-3/design-r254-discovery-copy-paper-alignment.md。
+
+## R255（IndexNow 主动提交覆盖非题目 SSR 页族，PR #443）
+- 取证：_indexnow_cycle 只推 /tiku/q/*（游标）+ 首轮一次性 4 个核心页；R201 以来新增的模块 hub/子题型/考点/年份/申论 hub/题型/套卷/papers 详情/daily 归档全部只进 sitemap，从未主动提交。R89 立项结论不变：零外链新站，IndexNow 是触发联盟引擎抓取的唯一可行通道。
+- 收口：sitemap 三个非题目端点抽出 _sitemap_page_urls/_sitemap_topic_urls/_sitemap_year_urls 纯列表构造（端点行为零变化）；_indexnow_submit_pages 拼接首页+三族 URL，sha256 与 seo_meta['indexnow_pages_hash'] 比对，集合变化时单批提交（当前 529 条 << 单批上限 10000），未变化零提交不刷 API。题目游标通道不动。
+- 本地：ruff/pytest 127(+2)/pyright 0 全绿（后端-only）。
+- 生产 rev cf92cfb：容器启动 120s 后实录 `[indexnow] submitted 529 urls -> 200`，seo_meta 落 indexnow_pages_hash；接口回归全 200、Lighthouse 预算全过（/ 0.99、/tiku/ 1.00）。提交 ≠ 抓取 ≠ 收录，效果不做任何声称。详见 docs/iter/round-3/design-r255-indexnow-page-families.md。
+
+## R256（seo.py 单文件拆包为 app/seo/ 包，PR #444）
+- 取证：backend/app/seo.py 膨胀至 1802 行，聚合五类职责（公共 helpers/行测页族/申论页族/站点文件/分享落地页），R236–R255 每轮申论改动都要在单文件内定位 render/route/sitemap 三处。外部引用面小：main.py 仅 router/root_router/_not_found；tests 仅 _url/_sitemap_*/_indexnow_*。
+- 收口：纯移动式拆包 app/seo/{common,pages,shenlun,catchall,landings,sitefiles}.py；__init__.py 显式导入顺序 shenlun→pages→catchall→landings/sitefiles（Starlette 按注册顺序匹配，/{module} 兜底必须最后，注释+isort: skip 防字母序重排）并 re-export 全部兼容符号。唯一测试调整：test_seo_landing.py monkeypatch 目标改 seo.sitefiles._indexnow_post（函数物理位置移动）。
+- 坑：common.py 须 `from .. import db, kb`（`from .` 会在部分初始化的 app.seo 包上解析触发循环导入）。
+- 行为零变化实证：pre/post TestClient 对 19 个 SEO/站点文件端点 sha256 逐一比对全部字节一致（/ 为静态 mount 非本包路由，worktree 无构建产物差异与拆包无关）。
+- 本地：ruff/pytest 127/pyright 0 全绿（后端-only）。
+- 生产 rev 6d8c95c：容器内确认 seo/ 包就位、旧 seo.py 不存在；19 端点状态语义全对（含题型/年份/套卷页 200、无斜杠 301、未知模块 404）、sitemap 四端点与 robots/llms/indexnow-key 200、IndexNow 无重复提交（URL 集合未变 hash 命中零提交，符合设计）；Lighthouse 预算全过（/ 0.99、/tiku/ 1.00）。详见 docs/iter/round-3/design-r256-seo-package-split.md。
+
+## R257（容器 app-boot 窗口即时 502 收口：Caddy 主动健康检查，VPS 配置 + docs PR）
+- 取证：R235 lb_try 只覆盖 dial 拒绝；09-01 origin 日志 9 条即时 502（0.01–0.08s）逐条与 container-events 对时全部落在新容器 StartedAt 后 ~1s——docker-proxy 已监听 8300 接受连接但 uvicorn 未就绪即重置，非 dial 失败不触发 lb_try 重试。
+- 收口：两个 kaogong 站点块 reverse_proxy 增加 `health_uri /api/health` + `health_interval 2s` + `health_timeout 10s`（备份 Caddyfile.bak-r257，validate+reload）。boot 窗口上游被标 unhealthy → 请求进入既有 lb_try 25s 等待循环，健康后放行。health_timeout 取 10s 防共享宿主争用窗口误伤（实测争用时 health 可慢至 14s 级）。
+- 演练 verified：`docker restart deploy-kaogong-1` 全窗口 12 条并发 nocache 请求全部等待（最长 12.3s）后 200，零 502（R235 演练时同场景为即时 502）。健康探针噪声 ~26/min/站点块，容器日志受 daemon.json 20m×3 轮转封顶。
+- 回滚：恢复 /etc/caddy/Caddyfile.bak-r257 + reload。详见 docs/iter/round-3/design-r257-caddy-health-gated-upstream.md。
+
+## R258（SEO 包路由注册顺序契约测试：测试补强，不部署）
+- 取证：R257 上线后 origin 窗口零 5xx、无新产品缺陷；架构缺口为 R256 拆包的导入顺序副作用（shenlun→pages→catchall）仅注释约束，重排即 catch-all 吞掉具体页族且无测试防线。
+- 收口：tests/test_seo_route_order.py 两例——按 endpoint.__module__ 断言 catchall 路由注册序号全大于具体路由 + TestClient 实测申论 hub/套卷/年份/题型页 200、未知模块 404。零产品代码变化。
+- 本地：ruff/pytest 129(+2)/pyright 0 全绿。详见 docs/iter/round-3/design-r258-seo-route-order-contract.md。
+
+## R259（周报 /tiku 页族分段补齐：观测治理，VPS 脚本同步）
+- 取证：周报分段停留在 R184 四族，R236–R253 新页族（申论 hub/题型/套卷、daily、discuss、search、模块 hub）全落「其他/导航」——生产 7.5h 样本 381 条 /tiku 请求约 89% 无法归段。
+- 收口：SEGMENTS 前缀首匹配表（长前缀在前）补 6 类新分段；统计口径/探针剔除/Top20 零变化。VPS 脚本已同步并实跑验证（探针剔除 81100 条后新分段正常归段）。
+- 详见 docs/iter/round-3/design-r259-access-report-segments.md。
+
+## R260（申论套卷筛选深链闭环：?paper 深链 + 套卷页 CTA 直达整套）
+- 取证：R253 套卷页 CTA 只 ?id 直达第一题详情，本套其余小题需自行翻找；App 三维筛选缺「套卷」维度且 onLoad 不收 ?paper。
+- 收口：/api/shenlun/questions 增可选 paper 精确过滤（契约向后兼容）+ 套卷页 CTA 改 ?paper= + App paper 状态/chip 外显可清除；逐题 ?id 深链不变。
+- 详见 docs/iter/round-3/design-r260-shenlun-paper-deeplink.md。
+
+## R261（申论列表卡套卷标签可点筛选 + paper 筛选 URL 同步）
+- 取证：R260 后 App 内进入套卷筛选只有站外入口（SSR CTA/分享链接），列表卡 q-paper 纯展示；paper 状态不同步 URL（清除/切换后不可分享刷新）。
+- 收口：shenlun-url.js 增 buildShenlunPaperUrl 纯函数 + 列表卡套卷标签可点（role=button，@click.stop）走 applyPaper 统一入口 + paper 变更 H5 replaceState 同步 URL（详情打开时让位 ?id，关详情回落 paper 深链）。
+- 详见 docs/iter/round-3/design-r261-paper-tag-entry.md。
+
+## R262（申论题型/年份/地区筛选 URL 同步）
+- 取证：R251/R252 入向深链就位后，App 内 setQtype/setYear/setRegion 变更不同步 URL（复制地址栏得旧链接，刷新/分享丢筛选上下文），R261 只收了 paper 维度。
+- 收口：shenlun-url.js 增 buildShenlunFilterUrl 纯函数（四维组合，缺省/非法不带参）；syncPaperUrl 升级为 syncFilterUrl，setQtype/setYear/setRegion/applyPaper/clearFlt 统一走它；detail watch 关详情回落完整 filter URL。
+- 详见 docs/iter/round-3/design-r262-filter-url-sync.md。
+## R263（申论专区 tab / 素材类型出向 URL 同步）
+- 取证：R246/R251/R252 入向 tab/mtype/mid 深链就位后，App 内切 tab（素材/作答记录/回真题）与素材类型 chip 不同步 URL——地址栏停留旧筛选深链，刷新/分享丢 tab 与类型上下文（R262 明确挂起的对称缺口）。
+- 收口：shenlun-url.js 增 buildShenlunTabUrl 纯函数（m/r tab + 非全部 mtype 编码）；filterUrl() 变 tab 感知；seg 点击改 tapQ/tapMat/tapRec（原逻辑+sync），setMtype 补 sync；onLoad 入向路径不动（?tab=m&mid 深链地址栏保留 mid）。
+- 详见 docs/iter/round-3/design-r263-tab-url-sync.md。
+## R264（申论素材库公开 SSR 页族 /tiku/shenlun/sucai/{type}/）
+- 取证：生产 166 条素材（政策理论 73/金句 41/案例 32/范文 20，含 topic 归类与权威出处）经 R244–R248 打通站内链路，但正文对爬虫/未装 App 用户零外显（hub 板块链接是 App hash 深链）；R248 只否决了逐条落地页（78–250 字 thin），按类型聚合单页 3.2k–21k 字非 thin。
+- 收口：db.shenlun_materials_by_type + /tiku/shenlun/sucai/{mtype}/ SSR 页（topic 分组正文+出处、逐条 mid 深链、其他类型内链、CTA、JSON-LD；未知/清空 404、无斜杠 301 前置存在性守卫）+ hub 板块链接改指 SSR 页 + sitemap-pages 收录（IndexNow 走 R255 变化驱动通道）。
+- 详见 docs/iter/round-3/design-r264-sucai-ssr.md。
+
+## R265（uvicorn keep-alive 竞态即时 502 收口）
+- 取证：origin 8h 内 7 条即时 502（0.006–0.08s）全为已建立连接上的 `connection reset by peer`/`EOF`（容器 healthy、非部署窗口，命中 ClaudeBot 真实爬虫；边缘 retry 复用另一条陈旧连接仍 502）。R235 lb_try/R257 health check 只覆盖 dial/不健康路径，对此形态不生效。
+- 根因（本地 socket 复现 verified）：uvicorn 默认 `--timeout-keep-alive 5s` < Caddy 连接池 idle 默认 2min——Caddy 复用已被 uvicorn 关闭的池化连接即遇 reset。默认参数空闲 6s 二次请求 EOF；130s 参数空闲 6s/20s 均 OK。
+- 收口：Dockerfile.runtime CMD 追加 `--timeout-keep-alive 130`（> Caddy 120s idle，陈旧连接恒由 Caddy 先弃）。不改 Caddy、不改应用代码。
+- 未归因残留：1 条 /api/track POST 13.2s 后 EOF（时长特征不符本根因，挂共享宿主争用观察项）。
+- 详见 docs/iter/round-3/design-r265-keepalive-502.md。
+
+## R266（/tiku 首页与 llms.txt 补素材类型页内链）
+- 取证：R264 sucai 页族上线后，/tiku/ 首页素材行仍是纯文本「详见申论真题库页」（素材页距首页 2 跳）、/llms.txt 素材说明无 URL（llms.txt 是 URL 导览文件，无链接条目对 LLM 爬虫零可发现性）——与 R249/R254 同构的发现渠道口径收尾缺口。
+- 收口：pages.py 素材行类型名改带计数链接指 _shenlun_sucai_path；llms.txt 素材说明改逐类型 markdown 链接条目；沿既有 mats 非空守卫（清空自动回落）。零路由/契约变化。
+- 详见 docs/iter/round-3/design-r266-sucai-links.md。
+## R267（/tiku 首页申论 section 补题型/年份 chips）
+- 取证：行测五模块 section 均有子题型/考点/年份 chips，申论 section 仅 hub 链接+文案——R251 题型页族（5 类）与 R250 年份页族（12 年份）在首页零链接（距首页 2 跳）。
+- 收口：tiku_index 申论 section 沿行测同构 markup 渲染题型 chips（shenlun_qtype_counts + _sub_path）与年份 chips（shenlun_year_counts + _year_path），空语料自动回落。零路由/契约变化，不加套卷 chips（49 个撑爆首页，hub 卡已覆盖）。
+- 详见 docs/iter/round-3/design-r267-home-shenlun-chips.md。
+## R268（申论素材收藏视图 URL 同步 + ?fav=1 入向深链）
+- 取证：R261–R263 后申论专区 paper/qtype/year/region/tab/mtype/mid 均双向同步 URL，素材「收藏」视图（favOnly）是唯一剩余不同步态——toggleFavOnly 只翻本地状态、buildShenlunTabUrl 不感知 fav、onLoad 不收 ?fav，收藏视图不可分享/刷新即丢。
+- 收口：buildShenlunTabUrl 增第三参 fav（tab=m 且 fav 输出 ?tab=m&fav=1，不叠 mtype——收藏视图本身不按类型过滤）；toggleFavOnly 后 syncFilterUrl；onLoad tab=m 分支无 mid 时收 fav=1（mid 置顶优先级不变）。纯前端 hash 深链，零后端/SSR/SEO 变化。
+- 详见 docs/iter/round-3/design-r268-fav-url-sync.md。
+## R269（搜索行测题详情「复制本题链接」出向分享）
+- 取证：R243/R247 已为申论真题详情、素材卡建立复制链接出向分享，行测侧每题有公开 SSR 页 /tiku/q/{id}/（canonical+og+App CTA）作现成分享落点，但搜索页两处 q-detail 展开块（code_hit 直达 + 题目列表）只有选项/答案/解析，零出向出口。
+- 收口：search-url.js 增纯函数 buildTikuQPath（非法 id 回落 /tiku/）+ 两处 q-detail 尾部「复制本题链接」控件（d-copy 样式/aria 对齐申论先例，@click.stop 不触发折叠），纯前端零后端/SSR/SEO 变化。
+- 详见 docs/iter/round-3/design-r269-search-qlink.md。
+
+## R270（搜索题目详情展开态 URL 同步 + ?qid 入向深链）
+- 取证：R157 已同步 q/tab，但 toggleDetail 展开详情只翻本地状态不进 URL——刷新即收起、复制地址栏丢展开上下文；申论侧同类状态（?id/?mid）R243/R246 已闭环，搜索页是最后一个详情态不进 URL 的页面。
+- 收口：buildSearchUrl 增第三参 qid（合法正整数追加 &qid，空关键词回落基础路径）+ toggleDetail 展开/收起后 syncUrl + onLoad 收 qid（纯数字校验）搜索完成后命中即自动展开；纯前端零后端/SSR/SEO 变化。
+- 详见 docs/iter/round-3/design-r270-search-qid-sync.md。
+
+## R271（/api/search 页族纳入边缘缓存）
+- 取证：08-29 共享宿主争用窗口（wa 80–88%、load 12+、swap/zram 满）实测 /api/search 经边缘 503（53s），同窗口边缘有副本的页面 0.1–0.2s 正常——搜索是争用窗口内唯一完全不可用的公开高频路径；源码实查 API_CACHE_ALLOWLIST 仅 7 个精确 pathname，search 全穿透。
+- 收口：edge-policy.js 允许清单加 /api/search（精确）+ API_CACHE_PREFIXES 前缀匹配 /api/search/question/（两端点均 uid 无关公开 GET，缓存 key 为完整 URL 含 query，按查询变体自然分 key），复用既有 60s TTL + SWR + stale-if-error 链路零新逻辑；带 Authorization/uid 仍绕过。
+- 详见 docs/iter/round-3/design-r271-search-api-edge-cache.md。
+
+## R272（申论公开 API 页族纳入边缘缓存）
+- 取证：origin 10h 日志实测 /api/shenlun/questions 99、filters 73、materials 62 次全穿透；09-02 04:35–04:37 争用窗口内与 /api/search 同样无副本可退，而 R250–R264 申论 SSR 页族深链落地即打这组 API。
+- 收口：允许清单加 shenlun questions/filters/materials（源码实查均 uid 无关公开 GET）+ 前缀 /api/shenlun/questions/（qid 详情），复用 R271 链路零新逻辑；不缓存 /api/exam/papers（uid 变体混流另轮评估）。
+- 详见 docs/iter/round-3/design-r272-shenlun-api-edge-cache.md。
+
+## R273（app 壳静态件 /sw.js、/precache.json 纳入边缘缓存）
+- 取证：origin 11.5h 日志 /sw.js 541 次 304 + 48 次 200、/precache.json 全部同步穿透（_routes.json 只留 / 与 /static/* 给 Pages 静态层）；09-02 04:35–04:37 争用窗口内两者各 4–5 条 25s 503，无 stale 副本可退，是 R271/R272 后同窗口剩余未收口的公开 GET。
+- 收口：SHELL_CACHE_ALLOWLIST 两路径 60s TTL（sw.js 新版生效延迟被 TTL 上界约束；浏览器 SW 主脚本更新检查默认绕过浏览器缓存但不绕过 CDN，60s 边缘缓存安全）+ content-type 守卫 js/json，复用既有 SWR/stale-if-error/重试链路零新逻辑。不动 /api/health（探针语义须实时）。
+- 详见 docs/iter/round-3/design-r273-shell-static-edge-cache.md。
+
+## R274（shell 静态件边缘缓存集成级回归测试，tests-only 不部署）
+- 取证：R271–R273 部署后 6h origin 窗口无新增用户可见 5xx/慢样本（04:34–04:37 争用窗口 pass 均发生在当轮边缘部署前，属已收口历史形态）；真实缺口为 R273 策略函数只有孤立单测，[[path]].js 编排交互（守卫先于 put、TTL 透传、stale-if-error 对 shell 生效）无集成防线——/sw.js 若被 HTML 投毒入缓存是全站级故障放大器。
+- 收口：edge-handler.test.js 新增 4 例（MISS→HIT+max-age=60、/sw.js HTML 不写副本、/precache.json HTML 拒/JSON 收、TTL 过期+503 SWR 回旧副本不覆盖），vitest 154(+4) 全绿；零产品代码变化（先例 R258）。
+- 详见 docs/iter/round-3/design-r274-shell-static-edge-handler-tests.md。
+
+## R275（复审计 + 观察项收口，docs-only）
+- R273 遗留 /sw.js「x-edge-cache: MISS 但 age 增长」收口：cf-cache-status HIT 实证 CF 前置 HTTP 缓存（.js 默认可缓存扩展名）在函数层之前接管，回放头为入缓存快照——非缺陷且双层防护更强；/precache.json（.json 不在默认扩展名）仍走函数层 SWR 正常。
+- 09-02 04:34–04:37 窗口 31 条 503 归因：全部早于 R271（04:54）/R272（05:00）/R273（05:12）边缘部署提交，pass 属部署前预期形态；部署后窗口 origin 无新增用户可见 5xx。深分页慢样本为 VPS 本机 curl 冷缓存探针（无 X-Kg-Ip/X-Kg-Fetch），warm 复测 0.02–0.17s 非缺陷。
+- 详见 docs/iter/round-3/audit-r275-shell-cache-observation-closeout.md。
+
+## R276（错题本 tab/筛选/排序状态 URL 同步 + 入向深链）
+- 取证：错题本 tab（待掌握/已掌握/收藏）、模块筛选、模考/练习来源、排序均为纯本地状态，刷新即丢、不可分享；申论/搜索侧同类状态 R261–R263/R270 已闭环，错题本是最后一个主要筛选态不进 URL 的页面。
+- 收口：新增 book-url.js 纯函数（buildBookUrl/parseBookOpts，白名单 tab=done|fav、mod 六模块、src=exam|practice、sort=due|times|type|reason；默认省略、fav 不叠筛选/排序、非法忽略）+ book.vue watcher replaceState 同步 + onLoad 白名单恢复；不收 kw/kpFilter/kp3Filter（依赖动态加载数据）。纯前端零后端/SSR/SEO 变化。
+- 详见 docs/iter/round-3/design-r276-book-filter-url-sync.md。
+
+## R277（真题卷库 year/region 筛选 URL 同步 + 入向深链）
+- 取证：pkgA/exam/list 的 year/region 筛选为纯本地状态（setYear/setRegion 只重拉 /api/exam/papers，不进 URL、无 onLoad 恢复），刷新/复制/分享即丢；生产 API filters 实证 years 11 档、regions 26 地区可作白名单。
+- 收口：新增 exam-list-url.js 纯函数（buildExamListUrl/parseExamListOpts，年份 1990–2099 整数、region encodeURIComponent、malformed URI 不抛错）+ list.vue onLoad 暂存入向参数、首次真实 filters 返回后按 API 白名单应用一次并重拉列表、setYear/setRegion 经 syncUrl() replaceState 同步（#ifdef H5 守卫）。顺手清零 edge-handler.test.js:318 两处 no-useless-escape lint 基线。纯前端零后端/SSR/SEO 变化。
+- 详见 docs/iter/round-3/design-r277-exam-list-filter-url-sync.md。
+
+## R278（真题卷 SSR 页族接入卷库 year/region 深链）
+- 取证：/tiku/papers/ SSR 列表只展示年份/地区文本无筛选入口，/tiku/papers/{pid} 的「在线模考本卷」CTA 为不带上下文的通用卷库链接；R277 已打通 App 卷库 ?year/?region 入向白名单，SSR 侧发现入口与上下文落地是对称缺口。
+- 收口：tiku_papers() 基于真实 db.exam_paper_filters() 输出「按年份筛卷/按地区筛卷」chips（App hash 深链，region quote 编码，空 filters 自动消失）+ 详情 CTA 经 _exam_list_query(p) 携带本卷 year/region（缺失字段省略、全缺回落基础路径）。不新增可收录 URL/不改 sitemap/canonical/边缘缓存/App 前端。新增 backend/tests/test_tiku_papers_deeplinks.py 3 例契约测试。
+- 验证：ruff/pytest 138(+3)/pyright 0 全绿；生产 rev 420bf10 实测 chips 11 年份+28 地区就位、详情 CTA ?year=2025&region=黑龙江 编码正确、点击 ?year=2022 深链后 App chip 激活+列表仅 6 张 2022 卷、1440/375 溢出 0、console 0 error、性能预算全过。
+- 详见 docs/iter/round-3/design-r278-papers-ssr-filter-deeplinks.md。
+
+## R279（收藏与笔记页 tab/收藏夹/模块筛选 URL 同步 + 入向深链）
+- 取证：favorites.vue 的 tab（收藏/笔记）、folderId（收藏夹）、modFilter（模块 chips）均为纯本地状态，无 onLoad 恢复无 URL 同步，是 R276/R277 后 App 内剩余未闭环的主要筛选态页面；本轮 origin 窗口无新增用户可见 5xx。
+- 收口纯前端：新增 src/favorites-url.js 纯函数（tab=note 不叠 fav 侧参数；mod 六键白名单含中文键「时政」encodeURIComponent；folder ≥0 整数、0=默认夹合法；全默认回落基础路径）+ onLoad 恢复（mod 静态白名单立即应用、folder 暂存 load() 收藏夹返回后按真实 folders 校验存在才应用、tab=note 直切）+ tab/folderId/modFilter watcher 统一 replaceState。零后端/SSR/SEO 变化。
+- 验证：lint/vitest 170(+6)/build 全绿；生产双视口实测出向同步（点模块→?mod、点夹→&folder=0、切笔记→?tab=note）与入向深链（note/时政编码/folder=0/组合）chip/夹/seg 激活、非法参数回落与无参一致、溢出 0、console 0 error、性能预算全过。注意：uni-app H5 同页 hash query 变化不重挂载（不触发 onLoad），验证入向深链必须新开页。
+- 详见 docs/iter/round-3/design-r279-favorites-filter-url-sync.md。
+
+## R280（考点掌握度地图模块 tab URL 同步 + 入向深链）
+- 取证：origin 12h 无新增用户可见 5xx（04:3x 503 簇为 R275 已收口历史形态）；mastery-map.vue 的 curMod（模块 tab/桌面侧栏双入口同状态）纯本地态，无 onLoad 恢复无 URL 同步，是 R276–R279 后 App 内最后一个主要筛选态未闭环页面（selected 考点吸底条为瞬时交互态不收）。
+- 收口纯前端：新增 src/mastery-url.js 纯函数（mod 非空 trim 后 encodeURIComponent，缺省回落基础路径；parse decodeURIComponent 容错）+ onLoad 暂存 _pendingMod、applyMap() 在 API 返回的 d.modules 中真实存在才应用（模块列表为动态数据，对齐 R277/R279 API 白名单模式）+ curMod watcher replaceState。默认选中首模块同样外显 ?mod（replaceState 不污染历史）。零后端/SSR/SEO 变化。
+- 验证：lint/vitest 174(+4)/build 全绿；生产双视口实测（种子测试 uid 40 题跨 4 模块解锁地图，验后已删）：点第二模块→?mod=shuliang、?mod=shuliang 深链新开页恢复选中、?mod=nope 回落首模块且 URL 重同步 ?mod=ziliao、溢出 0、console 0 error、性能预算全过（/ 0.99、/tiku/ 1.00）。冷启动态（<30 题）无模块列表，_pendingMod 自然不应用。
+- 详见 docs/iter/round-3/design-r280-mastery-map-mod-url-sync.md。
+
+## R281（模考成绩报告补「模块用时 · 配速分析」）
+- 取证：SOP-10 四维复审计（生产 1440/375 十路由截图 + 源码核查）定位核心功能深度缺口——交卷链路 per_module 已聚合 secs 并随 attempt 落库，报告页从未呈现（只有得分维度）；粉笔模考报告核心维度之一即各模块用时 vs 参考用时。SSR 题目页全站正确率外显候选被否决（生产 attempt_count>=5 仅 17 题，覆盖面不足）。
+- 收口纯前端：新增 src/exam-pace.js 纯函数 buildPaceRows（参考用时按题量占比折算自本卷限时；>1.2× 超时/<0.6× 偏快/其余合理；durationMin/total 非法或全模块 secs=0 返回空不伪造）+ fmtMin；report.vue 侧栏「模块得分」下新增配速卡（status 着色条 + 用时/参考双值 + 折算口径底注），空 rows 整卡不渲染（历史无 secs attempt 自然隐藏）。零后端/契约变化。
+- 详见 docs/iter/round-3/design-r281-exam-report-pace.md。
+
+## R282（模考报告「本卷错题重练」CTA + 逐题解析补图片）
+- 取证：报告页看完错题后无一键重练出口（只有返回卷库/再考一次，粉笔模考报告核心 CTA 即错题重练）；且 /api/exam/report items 不含 image/image_credit，带图题（图形推理等）解析浮层图片缺失。重练机制已存在（book.vue redoAll → redoSet storage → practice.vue 消费，上限 10 题）。
+- 收口：后端 report items 增补 image/image_credit 两字段（向后兼容）；前端新增 src/exam-redo.js 纯函数 buildExamRedoSet（只收 picked&&!correct、脏数据过滤、字段映射 id←question_id、上限 10）；report.vue 逐题对错卡下新增重练 CTA（无错题不显示、超 10 题外显「本轮先练前 10 题」）+ 解析浮层渲染图片（BASE_URL 拼接 + 点击预览，对齐 practice.vue）。未答题不算错题不进组。
+- 详见 docs/iter/round-3/design-r282-exam-report-redo.md。
+
+## R283（模考成绩报告「邀考友挑战本卷」分享出口）
+- 取证：模考报告是全站主要成果页中唯一零分享出口的页面（练习完成/PK/小队/搜索/申论详情均有出向分享），粉笔模考报告以晒成绩/邀好友同考为核心传播出口；报告数据 attempt_id+uid 鉴权不可公开，R278 后 /tiku/papers/{id} 真题卷 SSR 页（无 hash/query、自带 OG + 在线模考 CTA）是现成抗截断公开落点。
+- 收口：纯前端。新增 src/exam-share.js 纯函数 buildExamReportShareText(report, origin)：paper.kind!=='zhenti' 或缺 id/title 返回 ''（mini/mock 卷无公开落点不外显）；否则输出成绩摘要+/tiku/papers/{id} 链接。report.vue rank-card 下新增 share-cta（v-if=shareText，role=button+aria-label），点击复制+toast+trackEvent('share_copy','exam_report',paper_id)。不新增后端接口/分享表/短码，不公开私有报告数据。
+- 详见 docs/iter/round-3/design-r283-exam-report-share.md。
+
+## R284（真题卷 SSR 详情页「已有 N 人模考 · 平均分」社会证明）
+- 取证：R283 分享落点 /tiku/papers/{pid} meta 行只有「年份 地区 · 共 N 题 · 限时 M 分钟」，零社会证明，被挑战者看不到「多少人考过/平均多少分」对比锚点（粉笔卷详情核心转化元素）；聚合数据已在 exam_attempts（api_exam_rank 同口径）。
+- 收口：db.exam_paper_social(pid) 同卷每人取最高分聚合返回 {n, avg}；tiku_paper_detail n>0 时 meta 行追加「· 已有 {n} 人模考 · 平均 {avg} 分」+ JSON-LD description 同步；n=0 不渲染不伪造。顺手收口 SSR .tags a 长标题 375px 存量溢出（max-width:100%+ellipsis，pid 96/133 实测 142/160px→0）。零 App 前端/API 契约/路由变化。
+- 详见 docs/iter/round-3/design-r284-paper-social-proof.md。

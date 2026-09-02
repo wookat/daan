@@ -1,16 +1,18 @@
 <template>
   <view class="page">
     <view class="seg">
-      <text class="seg-i" :class="{ on: tab === 'q' }" @click="tab = 'q'">真题题库</text>
-      <text class="seg-i" :class="{ on: tab === 'm' }" @click="switchMat">素材/范文</text>
-      <text class="seg-i" :class="{ on: tab === 'r' }" @click="switchRec">作答记录</text>
+      <text class="seg-i" :class="{ on: tab === 'q' }" @click="tapQ">真题题库</text>
+      <text class="seg-i" :class="{ on: tab === 'm' }" @click="tapMat">素材/范文</text>
+      <text class="seg-i" :class="{ on: tab === 'r' }" @click="tapRec">作答记录</text>
     </view>
 
     <template v-if="tab === 'q' && !detail">
       <view class="fltbar">
+        <text v-if="paper" class="chip on" role="button" :aria-label="'清除套卷筛选：' + paper" @click="clearPaper">{{ paper }} ✕</text>
         <text class="chip" :class="{ on: !!region }" @click="fltOpen = true">{{ region || '地区' }} ▾</text>
         <text class="chip" :class="{ on: !!year }" @click="fltOpen = true">{{ year || '年份' }} ▾</text>
         <text class="chip" :class="{ on: qtype !== '全部' }" @click="fltOpen = true">{{ qtype === '全部' ? '题型' : qtype }} ▾</text>
+        <view class="chip fav" :class="{ on: qFavOnly }" @click="toggleQFavOnly"><l-icon name="star" :size="13" :color="qFavOnly ? '#b45309' : '#8a90a0'" :fill="qFavOnly ? '#f59e0b' : 'none'" /><text>收藏{{ qFavIds.length ? ' ' + qFavIds.length : '' }}</text></view>
         <view class="grow"></view>
         <text class="chip clr" @click="clearFlt">重置</text>
       </view>
@@ -39,13 +41,14 @@
       </view>
       <view v-if="loading" class="spin">加载中…</view>
       <view v-else-if="qErr" class="spin">加载失败：{{ qErr }}<view class="retry" @click="loadQs()">重试 ›</view></view>
-      <view v-else-if="!qs.length" class="spin">暂无题目，敬请期待</view>
+      <view v-else-if="!shownQs.length" class="spin">{{ qFavOnly ? '还没有收藏真题，点题目右上星标收藏' : '暂无题目，敬请期待' }}</view>
       <view class="qgrid">
-      <view v-for="q in qs" :key="q.id" class="card q-item" @click="openQ(q.id)">
+      <view v-for="q in shownQs" :key="q.id" class="card q-item" @click="openQ(q.id)">
         <view class="q-top">
           <view class="q-tags">
             <text class="q-type">{{ q.qtype }}</text>
-            <text class="q-paper">{{ q.paper || (q.exam_year + ' · ' + (q.exam_region || '')) }}</text>
+            <text v-if="q.paper" class="q-paper tappable" role="button" :aria-label="'只看本套卷：' + q.paper" @click.stop="applyPaper(q.paper)">{{ q.paper }}</text>
+            <text v-else class="q-paper">{{ q.exam_year + ' · ' + (q.exam_region || '') }}</text>
           </view>
           <view class="m-star" :class="{ on: qFavIds.includes(q.id) }" @click.stop="toggleQFav(q)"><l-icon name="star" :size="17" :color="qFavIds.includes(q.id) ? '#f59e0b' : '#8a90a0'" :fill="qFavIds.includes(q.id) ? '#f59e0b' : 'none'" /></view>
         </view>
@@ -56,7 +59,7 @@
         </view>
       </view>
       </view>
-      <view v-if="!qEnd && qs.length >= 20" class="more" @click="loadMore">加载更多</view>
+      <view v-if="!qFavOnly && !qEnd && qs.length >= 20" class="more" @click="loadMore">加载更多</view>
     </template>
 
     <template v-if="tab === 'q' && detail">
@@ -66,7 +69,11 @@
         <view class="d-left">
         <view class="q-top">
           <text class="q-paper">{{ detail.paper || (detail.exam_year + ' · ' + (detail.exam_region || '')) }}</text>
-          <text class="q-type">{{ detail.qtype }}</text>
+          <view class="q-top-r">
+            <text class="q-type">{{ detail.qtype }}</text>
+            <view class="m-star" :class="{ on: qFavIds.includes(detail.id) }" role="button" :aria-label="qFavIds.includes(detail.id) ? '取消收藏本题' : '收藏本题'" @click="toggleQFav(detail)"><l-icon name="star" :size="17" :color="qFavIds.includes(detail.id) ? '#f59e0b' : '#8a90a0'" :fill="qFavIds.includes(detail.id) ? '#f59e0b' : 'none'" /></view>
+            <text class="d-copy" role="button" aria-label="复制本题链接" @click="copyQLink">复制本题链接</text>
+          </view>
         </view>
         <view class="d-h">作答要求</view>
         <text class="d-q">{{ detail.question }}</text>
@@ -74,8 +81,8 @@
         <text v-if="showMat" class="d-mat">{{ detail.material }}</text>
         </view>
         <view class="d-right">
-        <view class="d-ans-h"><view class="d-h" style="margin: 0">我的作答</view><text v-if="myAnswer" class="d-save">已自动保存 · {{ myAnswer.length }} 字</text></view>
-        <textarea v-model="myAnswer" class="d-ta" :maxlength="3000" placeholder="在此作答后点击下方按钮，AI 按采分点批改（大作文为结构点评+参考档位）。草稿自动保存在本机" auto-height @input="saveDraft" />
+        <view class="d-ans-h"><view class="d-h" style="margin: 0">我的作答</view><text v-if="qWordLim" class="d-save d-wc" :class="qWordSt">{{ myAnswer ? (myAnswer.length + ' / 限' + qWordLim.label + (qWordSt === 'over' ? '，已超 ' + (myAnswer.length - qWordLim.max) + ' 字' : '')) : '限' + qWordLim.label }}</text><text v-else-if="myAnswer" class="d-save">已自动保存 · {{ myAnswer.length }} 字</text></view>
+        <textarea v-model="myAnswer" class="d-ta" :maxlength="3000" placeholder="在此作答后点击下方按钮，AI 按采分点批改（大作文为结构点评+参考档位）。草稿自动保存，换设备可续写" auto-height @input="saveDraft" />
         <view class="grade-btn" :class="{ dis: grading || !myAnswer.trim() }" @click="grade">{{ grading ? 'AI 批改中…' : '提交 AI 批改' }}</view>
         <view v-if="gradeResult" class="d-grade">
           <view class="d-h">批改结果<text class="g-note">（AI 参考，非官方评分）</text></view>
@@ -94,6 +101,11 @@
         <text v-if="showRef && detail.notes" class="d-notes">{{ detail.notes }}</text>
         </view>
         </view>
+        <view v-if="qNav.idx >= 0 && qNav.total > 1" class="d-nav">
+          <text class="d-nav-btn" :class="{ dis: !qNav.prevId }" role="button" aria-label="上一题" :aria-disabled="!qNav.prevId" @click="qNav.prevId && openQ(qNav.prevId)">‹ 上一题</text>
+          <text class="d-nav-pos">{{ qNav.idx + 1 }} / {{ qNav.total }}</text>
+          <text class="d-nav-btn" :class="{ dis: !qNav.nextId }" role="button" aria-label="下一题" :aria-disabled="!qNav.nextId" @click="qNav.nextId && openQ(qNav.nextId)">下一题 ›</text>
+        </view>
       </view>
     </template>
 
@@ -108,14 +120,17 @@
       <view class="mgrid">
       <view v-for="m in shownMats" :key="m.id" class="card m-item">
         <view class="q-top">
-          <text class="m-topic">{{ m.topic }}</text>
+          <text class="m-topic">{{ m.topic }}<text v-if="m.id === hitMid" class="m-hit">搜索命中</text></text>
           <view class="q-top-r">
             <text class="q-type">{{ m.type }}</text>
             <view class="m-star" :class="{ on: favIds.includes(m.id) }" @click="toggleFav(m)"><l-icon name="star" :size="17" :color="favIds.includes(m.id) ? '#f59e0b' : '#8a90a0'" :fill="favIds.includes(m.id) ? '#f59e0b' : 'none'" /></view>
           </view>
         </view>
         <text class="m-content" :class="{ clamp: expanded !== m.id }" @click="expanded = expanded === m.id ? 0 : m.id">{{ m.content }}</text>
-        <text v-if="m.source" class="m-src">出处：{{ m.source }}</text>
+        <view class="m-foot">
+          <text v-if="m.source" class="m-src">出处：{{ m.source }}</text>
+          <text class="d-copy" role="button" :aria-label="'复制素材链接：' + m.topic" @click="copyMatLink(m)">复制链接</text>
+        </view>
       </view>
       </view>
       <view v-if="!favOnly && !mEnd && mats.length >= 20" class="more" @click="loadMoreMat">加载更多</view>
@@ -141,6 +156,11 @@
 
 <script>
 import { request, snapPeek, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api';
+import { buildShenlunUrl, buildShenlunFilterUrl, buildShenlunTabUrl, buildShenlunMatUrl } from '../../shenlun-url.js';
+import { toggleQFav as qfavToggle, missingSnapIds, mergeQFavSync } from '../../shenlun-qfav.js';
+import { qNavState } from '../../shenlun-qnav.js';
+import { parseWordLimit, wordState } from '../../shenlun-words.js';
+import { adoptServerDraft } from '../../shenlun-draft.js';
 
 const QTYPES = ['全部', '归纳概括', '综合分析', '提出对策', '贯彻执行', '大作文'];
 const MTYPES = ['全部', '金句', '案例', '政策理论', '范文'];
@@ -170,6 +190,8 @@ export default {
       showHist: false,
       recs: [],
       recLoading: false,
+      pinMid: 0,
+      hitMid: 0,
       favOnly: false,
       favIds: uni.getStorageSync('slMatFavIds') || [],
       favMats: uni.getStorageSync('slMatFavs') || [],
@@ -180,26 +202,89 @@ export default {
       mEnd: false,
       qTotal: 0,
       qFavIds: uni.getStorageSync('slQFavIds') || [],
+      qFavs: uni.getStorageSync('slQFavs') || [],
+      qFavOnly: false,
       years: [],
       regions: [],
       year: 0,
       region: '',
+      paper: '',
       fltOpen: false,
     };
+  },
+  watch: {
+    detail(v) {
+      // #ifdef H5
+      if (typeof window !== 'undefined' && window.history) {
+        window.history.replaceState(null, '', v && v.id ? buildShenlunUrl(v.id) : this.filterUrl());
+      }
+      // #endif
+    },
   },
   computed: {
     shownMats() {
       return this.favOnly ? this.favMats : this.mats;
     },
+    shownQs() {
+      return this.qFavOnly ? this.qFavs : this.qs;
+    },
     fltCount() {
       return (this.year ? 1 : 0) + (this.region ? 1 : 0);
     },
+    qNav() {
+      return qNavState(this.shownQs.map((q) => q && q.id), this.detail ? this.detail.id : 0);
+    },
+    qWordLim() {
+      return this.detail ? parseWordLimit(this.detail.question) : null;
+    },
+    qWordSt() {
+      return wordState(this.myAnswer.length, this.qWordLim);
+    },
+  },
+  onShow() {
+    // #ifdef H5
+    if (!this._slKeyHandler && typeof window !== 'undefined') {
+      this._slKeyHandler = (e) => this.onSlKeydown(e);
+      window.addEventListener('keydown', this._slKeyHandler);
+    }
+    // #endif
+  },
+  onHide() {
+    // #ifdef H5
+    if (this._slKeyHandler && typeof window !== 'undefined') {
+      window.removeEventListener('keydown', this._slKeyHandler);
+      this._slKeyHandler = null;
+    }
+    // #endif
+  },
+  onUnload() {
+    // #ifdef H5
+    if (this._slKeyHandler && typeof window !== 'undefined') {
+      window.removeEventListener('keydown', this._slKeyHandler);
+      this._slKeyHandler = null;
+    }
+    // #endif
   },
   onLoad(opts) {
+    if (opts && typeof opts.paper === 'string' && opts.paper && opts.paper.length <= 100) this.paper = opts.paper;
     this.loadQs();
-    this.loadFilters();
+    this.loadFilters().then(() => {
+      if (!opts) return;
+      const y = Number(opts.year || '');
+      if (this.years.includes(y)) this.setYear(y);
+      if (this.regions.includes(opts.region || '')) this.setRegion(opts.region);
+    });
     if (opts && opts.tab === 'r') this.switchRec();
-    else if (opts && opts.tab === 'm') this.switchMat();
+    else if (opts && opts.tab === 'm') {
+      if (MTYPES.includes(opts.mtype || '')) this.mtype = opts.mtype;
+      if (/^\d+$/.test(opts.mid || '')) this.pinMid = Number(opts.mid);
+      else if (opts.fav === '1') this.favOnly = true;
+      this.switchMat();
+    }
+    if (opts && QTYPES.includes(opts.qtype || '')) this.setQtype(opts.qtype);
+    if (opts && (!opts.tab || opts.tab === 'q') && opts.fav === '1') this.enterQFavView();
+    if (opts && /^\d+$/.test(opts.id || '')) this.openQ(Number(opts.id));
+    this.syncQFavs();
   },
   methods: {
     async loadQs(append) {
@@ -209,7 +294,8 @@ export default {
         const t = this.qtype === '全部' ? '' : '&qtype=' + encodeURIComponent(this.qtype);
         const y = this.year ? '&year=' + this.year : '';
         const rg = this.region ? '&region=' + encodeURIComponent(this.region) : '';
-        const d = await request('/api/shenlun/questions?limit=20&offset=' + this.qOffset + t + y + rg);
+        const pp = this.paper ? '&paper=' + encodeURIComponent(this.paper) : '';
+        const d = await request('/api/shenlun/questions?limit=20&offset=' + this.qOffset + t + y + rg + pp);
         const items = d.items || [];
         this.qEnd = items.length < 20;
         this.qTotal = d.total || items.length;
@@ -229,6 +315,24 @@ export default {
         const items = d.items || [];
         this.mEnd = items.length < 20;
         this.mats = append ? this.mats.concat(items) : items;
+        if (!append && this.pinMid) {
+          const midv = this.pinMid;
+          this.pinMid = 0;
+          let hit = this.mats.find((m) => m.id === midv);
+          if (!hit) {
+            try {
+              const r = await request('/api/shenlun/materials?id=' + midv);
+              hit = (r.items || [])[0];
+            } catch (e2) {
+              /* 深链命中拉取失败不阻断列表 */
+            }
+          }
+          if (hit) {
+            this.mats = [hit].concat(this.mats.filter((m) => m.id !== midv));
+            this.hitMid = midv;
+            this.expanded = midv;
+          }
+        }
       } catch (e) {
         this.mErr = e.message || '网络异常';
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
@@ -245,25 +349,68 @@ export default {
       }
     },
     setYear(y) {
+      this.qFavOnly = false;
       this.year = y;
       this.qOffset = 0;
       this.qEnd = false;
       this.detail = null;
+      this.syncFilterUrl();
       this.loadQs();
     },
+    clearPaper() {
+      this.applyPaper('');
+    },
+    applyPaper(p) {
+      const next = typeof p === 'string' && p.length <= 100 ? p : '';
+      if (next === this.paper) return;
+      this.qFavOnly = false;
+      this.paper = next;
+      this.qOffset = 0;
+      this.qEnd = false;
+      this.syncFilterUrl();
+      this.loadQs();
+    },
+    filterUrl() {
+      if (this.tab !== 'q') return buildShenlunTabUrl(this.tab, this.mtype, this.favOnly);
+      return buildShenlunFilterUrl({ paper: this.paper, qtype: this.qtype, year: this.year, region: this.region, fav: this.qFavOnly });
+    },
+    syncFilterUrl() {
+      // #ifdef H5
+      if (typeof window !== 'undefined' && window.history && !this.detail) {
+        window.history.replaceState(null, '', this.filterUrl());
+      }
+      // #endif
+    },
+    tapQ() {
+      this.tab = 'q';
+      this.syncFilterUrl();
+    },
+    tapMat() {
+      this.switchMat();
+      this.syncFilterUrl();
+    },
+    tapRec() {
+      this.switchRec();
+      this.syncFilterUrl();
+    },
     clearFlt() {
+      this.qFavOnly = false;
       this.qtype = '全部';
       this.year = 0;
       this.region = '';
+      this.paper = '';
+      this.syncFilterUrl();
       this.qOffset = 0;
       this.qEnd = false;
       this.loadQs();
     },
     setRegion(r) {
+      this.qFavOnly = false;
       this.region = r;
       this.qOffset = 0;
       this.qEnd = false;
       this.detail = null;
+      this.syncFilterUrl();
       this.loadQs();
     },
     switchMat() {
@@ -299,10 +446,12 @@ export default {
       this.recLoading = false;
     },
     setQtype(t) {
+      this.qFavOnly = false;
       this.qtype = t;
       this.qOffset = 0;
       this.qEnd = false;
       this.detail = null;
+      this.syncFilterUrl();
       this.loadQs();
     },
     qMeta(text) {
@@ -315,10 +464,48 @@ export default {
       return parts.join(' · ');
     },
     toggleQFav(q) {
-      const i = this.qFavIds.indexOf(q.id);
-      if (i < 0) this.qFavIds.push(q.id);
-      else this.qFavIds.splice(i, 1);
+      const r = qfavToggle({ ids: this.qFavIds, snaps: this.qFavs }, q);
+      this.qFavIds = r.ids;
+      this.qFavs = r.snaps;
       uni.setStorageSync('slQFavIds', this.qFavIds);
+      uni.setStorageSync('slQFavs', this.qFavs);
+      const uid = uni.getStorageSync('anonUid');
+      if (uid) request('/api/shenlun/qfavs', { method: 'POST', data: { uid, qid: q.id, on: r.added } }).catch(() => {});
+    },
+    async syncQFavs() {
+      const uid = uni.getStorageSync('anonUid');
+      if (!uid) return;
+      try {
+        const d = await request('/api/shenlun/qfavs?uid=' + encodeURIComponent(uid));
+        const r = mergeQFavSync({ ids: this.qFavIds, snaps: this.qFavs }, d);
+        for (const id of r.pushIds) {
+          request('/api/shenlun/qfavs', { method: 'POST', data: { uid, qid: id, on: true } }).catch(() => {});
+        }
+        this.qFavIds = r.ids;
+        this.qFavs = r.snaps;
+        uni.setStorageSync('slQFavIds', this.qFavIds);
+        uni.setStorageSync('slQFavs', this.qFavs);
+      } catch (e) { /* 非关键路径 */ }
+    },
+    toggleQFavOnly() {
+      if (this.qFavOnly) this.qFavOnly = false;
+      else this.enterQFavView();
+      this.syncFilterUrl();
+    },
+    enterQFavView() {
+      this.qFavOnly = true;
+      this.detail = null;
+      for (const id of missingSnapIds(this.qFavIds, this.qFavs).slice(0, 20)) {
+        request('/api/shenlun/questions/' + id)
+          .then((d) => {
+            const it = d && d.item;
+            if (it && !this.qFavs.some((x) => x && x.id === it.id)) {
+              this.qFavs = this.qFavs.concat([{ id: it.id, qtype: it.qtype, paper: it.paper, exam_year: it.exam_year, exam_region: it.exam_region, question: it.question }]);
+              uni.setStorageSync('slQFavs', this.qFavs);
+            }
+          })
+          .catch(() => {});
+      }
     },
     toggleFav(m) {
       const i = this.favIds.indexOf(m.id);
@@ -354,12 +541,14 @@ export default {
     },
     toggleFavOnly() {
       this.favOnly = !this.favOnly;
+      this.syncFilterUrl();
     },
     setMtype(t) {
       this.favOnly = false;
       this.mtype = t;
       this.mOffset = 0;
       this.mEnd = false;
+      this.syncFilterUrl();
       this.loadMats();
     },
     loadMore() {
@@ -370,6 +559,16 @@ export default {
       this.mOffset += 20;
       this.loadMats(true);
     },
+    // #ifdef H5
+    onSlKeydown(e) {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const tag = (e.target && e.target.tagName) || '';
+      if (/INPUT|TEXTAREA|SELECT/.test(tag) || (e.target && e.target.isContentEditable)) return;
+      if (this.tab !== 'q' || !this.detail) return;
+      if (e.key === 'ArrowLeft' && this.qNav.prevId) { e.preventDefault(); this.openQ(this.qNav.prevId); }
+      else if (e.key === 'ArrowRight' && this.qNav.nextId) { e.preventDefault(); this.openQ(this.qNav.nextId); }
+    },
+    // #endif
     async openQ(id) {
       try {
         const d = await request('/api/shenlun/questions/' + id);
@@ -377,6 +576,7 @@ export default {
         this.showMat = true;
         this.showRef = false;
         this.myAnswer = uni.getStorageSync('slDraft:' + id) || '';
+        this.syncDraft(id);
         this.gradeResult = '';
         this.history = [];
         this.showHist = false;
@@ -385,11 +585,42 @@ export default {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
     },
+    copyQLink() {
+      if (!this.detail) return;
+      const url = (typeof window !== 'undefined' ? window.location.origin : '') + buildShenlunUrl(this.detail.id);
+      uni.setClipboardData({ data: url, success: () => uni.showToast({ title: '链接已复制，发给考友直达本题', icon: 'none' }) });
+    },
+    copyMatLink(m) {
+      const url = (typeof window !== 'undefined' ? window.location.origin : '') + buildShenlunMatUrl(m.id, m.type);
+      uni.setClipboardData({ data: url, success: () => uni.showToast({ title: '链接已复制，发给考友直达本条素材', icon: 'none' }) });
+    },
     saveDraft() {
       if (!this.detail) return;
       const k = 'slDraft:' + this.detail.id;
       if (this.myAnswer) uni.setStorageSync(k, this.myAnswer);
       else uni.removeStorageSync(k);
+      const qid = this.detail.id;
+      clearTimeout(this._draftTimer);
+      this._draftTimer = setTimeout(() => this.pushDraft(qid), 1500);
+    },
+    pushDraft(qid, content) {
+      const uid = uni.getStorageSync('anonUid');
+      if (!uid) return;
+      const c = content !== undefined ? content : (this.detail && this.detail.id === qid ? this.myAnswer : uni.getStorageSync('slDraft:' + qid) || '');
+      request('/api/shenlun/draft', { method: 'POST', data: { uid, qid, content: c } }).catch(() => {});
+    },
+    async syncDraft(id) {
+      const uid = uni.getStorageSync('anonUid');
+      if (!uid) return;
+      try {
+        const d = await request('/api/shenlun/draft?uid=' + encodeURIComponent(uid) + '&qid=' + id);
+        if (!this.detail || this.detail.id !== id) return;
+        const adopted = adoptServerDraft(this.myAnswer, d);
+        if (adopted !== null) {
+          this.myAnswer = adopted;
+          uni.setStorageSync('slDraft:' + id, adopted);
+        }
+      } catch (e) { /* 非关键路径 */ }
     },
     async loadHistory(id) {
       const uid = uni.getStorageSync('anonUid');
@@ -430,6 +661,8 @@ export default {
         this.gradeResult = d.result;
         this.loadHistory(this.detail.id);
         uni.removeStorageSync('slDraft:' + this.detail.id);
+        clearTimeout(this._draftTimer);
+        this.pushDraft(this.detail.id, '');
       } catch (e) {
         uni.showToast({ title: e.message || '批改失败，请稍后重试', icon: 'none' });
       }
@@ -466,11 +699,18 @@ page { background: var(--fill); }
 .q-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
 .q-tags { display: flex; align-items: center; gap: 12rpx; flex-wrap: wrap; }
 .q-paper { font-size: 22rpx; color: var(--ink-2); background: var(--fill); border-radius: 8rpx; padding: 4rpx 14rpx; }
+.q-paper.tappable { cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .q-type { font-size: 22rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
 .q-item .q-text { font-size: 26rpx; color: var(--ink-1); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .q-text { font-size: 26rpx; color: var(--ink-1); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .more { text-align: center; color: var(--brand-text); font-size: 25rpx; padding: 20rpx 0 40rpx; }
 .back { color: var(--brand-text); font-size: 26rpx; padding: 6rpx 0 18rpx; }
+.d-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 24rpx; padding-top: 20rpx; border-top: 1rpx solid var(--line); }
+.d-nav-btn { font-size: 25rpx; color: var(--brand-text); padding: 10rpx 18rpx; cursor: pointer; }
+.d-nav-btn.dis { color: var(--ink-3); cursor: default; }
+.d-nav-pos { font-size: 23rpx; color: var(--ink-2); }
+.d-wc.near { color: var(--warn-strong); }
+.d-wc.over { color: var(--bad-strong); }
 .d-h { font-size: 25rpx; font-weight: 700; color: var(--ink-1); margin: 22rpx 0 10rpx; }
 .d-h.toggle { color: var(--brand-text); }
 .d-h.ref { color: #b45309; }
@@ -480,6 +720,7 @@ page { background: var(--fill); }
 .d-notes { font-size: 23rpx; color: var(--ink-2); margin-top: 12rpx; line-height: 1.7; white-space: pre-wrap; display: block; }
 .m-topic { font-size: 24rpx; font-weight: 600; color: var(--ink-1); }
 .q-top-r { display: flex; align-items: center; gap: 12rpx; }
+.d-copy { font-size: 22rpx; color: var(--brand-text); text-decoration: underline; cursor: pointer; padding: 4rpx 6rpx; }
 .m-star { font-size: 34rpx; color: var(--ink-3); display: inline-flex; align-items: center; justify-content: center; min-width: 88rpx; min-height: 88rpx; margin: -24rpx -20rpx -24rpx -8rpx; }
 .m-star.on { color: #f59e0b; }
 .chip.fav.on { background: var(--warn-soft); color: #b45309; border-color: #fcd34d; }
@@ -495,6 +736,10 @@ page { background: var(--fill); }
 .sheet-x { font-size: 26rpx; color: var(--brand-text); font-weight: 600; padding: 10rpx 0 10rpx 24rpx; }
 .sheet-k { font-size: 23rpx; color: var(--ink-3); margin: 14rpx 0 10rpx; }
 .m-src { font-size: 22rpx; color: var(--ink-3); word-break: break-all; overflow-wrap: anywhere; display: block; }
+.m-foot { display: flex; align-items: baseline; justify-content: space-between; gap: 12rpx; margin-top: 4rpx; }
+.m-foot .m-src { flex: 1; }
+.m-foot .d-copy { flex-shrink: 0; margin-left: auto; }
+.m-hit { margin-left: 8rpx; padding: 2rpx 10rpx; font-size: 20rpx; color: var(--brand-text); background: var(--fill); border-radius: 8rpx; font-weight: 400; }
 .d-ans-h { display: flex; justify-content: space-between; align-items: baseline; margin: 22rpx 0 10rpx; }
 .d-save { font-size: 21rpx; color: var(--ink-3); }
 .d-ta { width: 100%; box-sizing: border-box; min-height: 220rpx; background: var(--fill); border: 1rpx solid var(--line); border-radius: 12rpx; padding: 18rpx; font-size: 25rpx; line-height: 1.7; }
