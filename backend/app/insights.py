@@ -4,6 +4,7 @@
 """
 import json
 import re
+import sqlite3
 import time
 
 from fastapi import APIRouter, HTTPException
@@ -191,11 +192,35 @@ def api_exam_rank(attempt_id: int, uid: str = ""):
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ea_paper ON exam_attempts(paper_id, submitted_at)")
     # 同卷全体用户：每人取该卷最高分（含历史作答者，冷启动分母）
     rows = conn.execute(
-        """SELECT uid, MAX(score) s FROM exam_attempts
+        """SELECT uid, MAX(score) s, MIN(submitted_at) t FROM exam_attempts
            WHERE paper_id=? AND submitted_at IS NOT NULL GROUP BY uid""",
         (attempt["paper_id"],),
     ).fetchall()
+    top = sorted(rows, key=lambda r: (-r["s"], r["t"]))[:10]
+    # 登录用户 uid 形如 u<id>，昵称在 users 表；匿名 uid 回落脱敏
+    user_ids = [int(r["uid"][1:]) for r in top if re.fullmatch(r"u\d+", r["uid"])]
+    names = {}
+    if user_ids:
+        marks = ",".join("?" * len(user_ids))
+        try:
+            names = {
+                f"u{r['id']}": r["nickname"]
+                for r in conn.execute(
+                    f"SELECT id, nickname FROM users WHERE id IN ({marks})", user_ids
+                ).fetchall()
+            }
+        except sqlite3.OperationalError:
+            names = {}
     conn.close()
+    board = [
+        {
+            "rank": i + 1,
+            "name": (names.get(r["uid"]) or "").strip()[:20] or r["uid"][:6] + "***",
+            "score": r["s"],
+            "me": r["uid"] == attempt["uid"],
+        }
+        for i, r in enumerate(top)
+    ]
     scores = sorted((r["s"] for r in rows), reverse=True)
     n = len(scores)
     my = attempt["score"]
@@ -219,6 +244,7 @@ def api_exam_rank(attempt_id: int, uid: str = ""):
         "distribution": dist,
         "my_bucket": my_bucket,
         "small_sample": n < 100,
+        "board": board,
     }
 
 
