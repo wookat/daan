@@ -54,6 +54,39 @@ def test_shenlun_hub_materials_section(client):
         _clear_shenlun()
 
 
+def test_material_discovery_copy_alignment(client):
+    """R249：首页/llms.txt/hub 元信息补素材口径；素材清空自动回落纯真题口径。"""
+    seed_questions()
+    _seed_shenlun()
+    conn = db.get_conn()
+    conn.execute(
+        "INSERT OR IGNORE INTO shenlun_materials (type, topic, content, source, disabled)"
+        " VALUES ('金句', '测试素材金句', '测试素材内容', '', 0)"
+    )
+    conn.commit()
+    conn.close()
+    try:
+        home = client.get("/tiku/")
+        assert "另收录申论写作素材" in home.text and "金句" in home.text
+        llms = client.get("/llms.txt")
+        assert "条写作素材" in llms.text
+        hub = client.get("/tiku/shenlun/")
+        assert "另有写作素材" in hub.text  # description + JSON-LD
+        # 分页页 description 不带素材口径（板块也不渲染）
+        p2 = client.get("/tiku/shenlun/?page=2")
+        if p2.status_code == 200:
+            assert "另有写作素材" not in p2.text
+    finally:
+        conn = db.get_conn()
+        conn.execute("DELETE FROM shenlun_materials WHERE topic LIKE '%测试素材%'")
+        conn.commit()
+        conn.close()
+        assert "另收录申论写作素材" not in client.get("/tiku/").text
+        assert "条写作素材" not in client.get("/llms.txt").text
+        assert "另有写作素材" not in client.get("/tiku/shenlun/").text
+        _clear_shenlun()
+
+
 def test_shenlun_hub_renders_with_corpus_and_falls_back_when_empty(client):
     seed_questions()
     _seed_shenlun()

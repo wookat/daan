@@ -333,11 +333,18 @@ def tiku_index():
         )
     sl_total = db.shenlun_questions(limit=1)["total"]
     if sl_total:
+        sl_mats = db.shenlun_material_type_counts()
+        sl_mat_line = ""
+        if sl_mats:
+            sl_mat_total = sum(n for _, n in sl_mats)
+            sl_mat_types = "、".join(t for t, _ in sl_mats)
+            sl_mat_line = f'<p class="meta">另收录申论写作素材 {sl_mat_total} 条（{_e(sl_mat_types)}），详见申论真题库页。</p>'
         sections.append(
             '<section class="card"><h2><a href="/tiku/shenlun/">申论</a>'
             f'<span class="meta">（{sl_total} 道真题）</span></h2>'
             '<p class="meta">历年申论真题与参考解析，可在 <a href="/tiku/shenlun/">申论真题库</a> 浏览。</p>'
-            "</section>"
+            + sl_mat_line
+            + "</section>"
         )
     total = sum(counts.values())
     body = (
@@ -1070,10 +1077,12 @@ def _tiku_shenlun(page: int):
             f'<a href="/#/pkgA/shenlun/shenlun?id={it["id"]}">去作答 →</a></li>'
         )
     mat_html = ""
+    mat_desc = ""
     if page == 1:
         mat_counts = db.shenlun_material_type_counts()
         if mat_counts:
             mat_total = sum(n for _, n in mat_counts)
+            mat_desc = f"另有写作素材 {mat_total} 条。"
             mat_links = "".join(
                 f'<a href="/#/pkgA/shenlun/shenlun?tab=m&amp;mtype={quote(t)}">{_e(t)}（{n} 条）</a> '
                 for t, n in mat_counts
@@ -1099,12 +1108,12 @@ def _tiku_shenlun(page: int):
     suffix = f"（第{page}页）" if page > 1 else ""
     return _page(
         f"申论真题库{suffix}_历年申论真题及参考解析_错题邦",
-        f"申论真题库共 {total} 题，覆盖概括、对策、公文、大作文等题型，附参考解析，可在线作答。{suffix}",
+        f"申论真题库共 {total} 题，覆盖概括、对策、公文、大作文等题型，附参考解析，可在线作答。{mat_desc}{suffix}",
         "/tiku/shenlun/" + (f"?page={page}" if page > 1 else ""),
         body,
         _collection_ld(
             "申论真题库",
-            f"申论真题库共 {total} 题，覆盖概括、对策、公文、大作文等题型，附参考解析。",
+            f"申论真题库共 {total} 题，覆盖概括、对策、公文、大作文等题型，附参考解析。{mat_desc}",
             "/tiku/shenlun/",
             [("题库", "/tiku/"), ("申论", "/tiku/shenlun/")],
         ),
@@ -1447,11 +1456,11 @@ def llms_txt():
         for key, m in kb.MODULES.items()
         if key != "shenlun"
     )
-    shenlun = (
-        f"- [申论真题库]({_url('/tiku/shenlun/')}): 历年申论真题与参考解析，按年份/地区归档\n"
-        if db.shenlun_questions(limit=1)["total"]
-        else ""
-    )
+    shenlun = ""
+    if db.shenlun_questions(limit=1)["total"]:
+        mats = db.shenlun_material_type_counts()
+        mat_note = f"；另收录 {sum(n for _, n in mats)} 条写作素材（按类型归档）" if mats else ""
+        shenlun = f"- [申论真题库]({_url('/tiku/shenlun/')}): 历年申论真题与参考解析，按年份/地区归档{mat_note}\n"
     return PlainTextResponse(
         "# 错题邦公考题库\n\n"
         "> 免费公务员考试在线刷题与错题本：行测五大模块真题题库（每题含答案与解析）、"
