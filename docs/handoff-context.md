@@ -946,3 +946,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：origin 11.5h 日志 /sw.js 541 次 304 + 48 次 200、/precache.json 全部同步穿透（_routes.json 只留 / 与 /static/* 给 Pages 静态层）；09-02 04:35–04:37 争用窗口内两者各 4–5 条 25s 503，无 stale 副本可退，是 R271/R272 后同窗口剩余未收口的公开 GET。
 - 收口：SHELL_CACHE_ALLOWLIST 两路径 60s TTL（sw.js 新版生效延迟被 TTL 上界约束；浏览器 SW 主脚本更新检查默认绕过浏览器缓存但不绕过 CDN，60s 边缘缓存安全）+ content-type 守卫 js/json，复用既有 SWR/stale-if-error/重试链路零新逻辑。不动 /api/health（探针语义须实时）。
 - 详见 docs/iter/round-3/design-r273-shell-static-edge-cache.md。
+
+## R274（shell 静态件边缘缓存集成级回归测试，tests-only 不部署）
+- 取证：R271–R273 部署后 6h origin 窗口无新增用户可见 5xx/慢样本（04:34–04:37 争用窗口 pass 均发生在当轮边缘部署前，属已收口历史形态）；真实缺口为 R273 策略函数只有孤立单测，[[path]].js 编排交互（守卫先于 put、TTL 透传、stale-if-error 对 shell 生效）无集成防线——/sw.js 若被 HTML 投毒入缓存是全站级故障放大器。
+- 收口：edge-handler.test.js 新增 4 例（MISS→HIT+max-age=60、/sw.js HTML 不写副本、/precache.json HTML 拒/JSON 收、TTL 过期+503 SWR 回旧副本不覆盖），vitest 154(+4) 全绿；零产品代码变化（先例 R258）。
+- 详见 docs/iter/round-3/design-r274-shell-static-edge-handler-tests.md。

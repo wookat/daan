@@ -278,6 +278,66 @@ describe('onRequest 回源模式头 X-Kg-Fetch（R226）', () => {
   });
 });
 
+describe('onRequest shell 静态件边缘缓存（R273）', () => {
+  const js = (body) =>
+    new Response(body, { status: 200, headers: { 'content-type': 'application/javascript' } });
+  const json = (body) =>
+    new Response(body, { status: 200, headers: { 'content-type': 'application/json' } });
+
+  it('/sw.js MISS 200 js 入缓存、对外 max-age=60；TTL 内二访 HIT 不回源', async () => {
+    const { fn } = queueFetch(js('self.x=1'));
+    const a = ctx(new Request(`${EDGE}/sw.js`));
+    const resp = await run(onRequest(a.args));
+    expect(resp.headers.get('X-Edge-Cache')).toBe('MISS');
+    expect(resp.headers.get('Cache-Control')).toBe('public, max-age=60');
+    await a.flush();
+    expect(cachesStub.store.has(`${EDGE}/sw.js`)).toBe(true);
+    const b = ctx(new Request(`${EDGE}/sw.js`));
+    const hit = await run(onRequest(b.args));
+    expect(hit.headers.get('X-Edge-Cache')).toBe('HIT');
+    expect(await hit.text()).toBe('self.x=1');
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('/sw.js origin 回 HTML → 直出但不写副本（content-type 守卫防投毒）', async () => {
+    queueFetch(originOk('<html>fallback</html>'));
+    const a = ctx(new Request(`${EDGE}/sw.js`));
+    const resp = await run(onRequest(a.args));
+    expect(resp.status).toBe(200);
+    await a.flush();
+    expect(cachesStub.store.has(`${EDGE}/sw.js`)).toBe(false);
+  });
+
+  it('/precache.json HTML 不写副本；JSON 200 正常入缓存', async () => {
+    queueFetch(originOk('<html>oops</html>'));
+    const a = ctx(new Request(`${EDGE}/precache.json`));
+    await run(onRequest(a.args));
+    await a.flush();
+    expect(cachesStub.store.has(`${EDGE}/precache.json`)).toBe(false);
+
+    queueFetch(json('["\/static\/a.js"]'));
+    const b = ctx(new Request(`${EDGE}/precache.json`));
+    const resp = await run(onRequest(b.args));
+    expect(resp.headers.get('Cache-Control')).toBe('public, max-age=60');
+    await b.flush();
+    expect(cachesStub.store.has(`${EDGE}/precache.json`)).toBe(true);
+  });
+
+  it('/sw.js TTL 过期 + origin 5xx → SWR 回旧副本且不被覆盖（stale-if-error）', async () => {
+    queueFetch(js('self.v=1'), new Response('bad', { status: 503 }));
+    const a = ctx(new Request(`${EDGE}/sw.js`));
+    await run(onRequest(a.args));
+    await a.flush();
+    vi.setSystemTime(Date.now() + 61 * 1000);
+    const b = ctx(new Request(`${EDGE}/sw.js`));
+    const resp = await run(onRequest(b.args));
+    expect(resp.headers.get('X-Edge-Cache')).toBe('REVALIDATE');
+    expect(await resp.text()).toBe('self.v=1');
+    await b.flush();
+    expect(await cachesStub.store.get(`${EDGE}/sw.js`).clone().text()).toBe('self.v=1');
+  });
+});
+
 describe('onRequest 边缘条件请求 304', () => {
   it('HIT 命中 If-Modified-Since → 304 空 body', async () => {
     const lm = new Date(Date.now() - 1000).toUTCString();
