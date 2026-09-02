@@ -136,6 +136,27 @@ def api_shenlun_qfav_set(body: dict):
     return {"ok": True}
 
 
+@router.get("/api/shenlun/draft")
+def api_shenlun_draft_get(uid: str, qid: int):
+    uid = uid.strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    return db.sl_draft_get(uid[:64], qid)
+
+
+@router.post("/api/shenlun/draft")
+def api_shenlun_draft_set(body: dict):
+    uid = (body.get("uid") or "").strip()[:64]
+    qid = body.get("qid")
+    if not uid or not qid:
+        raise HTTPException(400, "缺少 uid 或题目 id")
+    content = str(body.get("content") or "")
+    if len(content) > 3000:
+        raise HTTPException(400, "草稿内容过长")
+    db.sl_draft_set(uid, int(qid), content)
+    return {"ok": True}
+
+
 @router.get("/api/shenlun/materials")
 def api_shenlun_materials(topic: str | None = None, type: str | None = None, limit: int = 20, offset: int = 0,
                           id: int | None = None):
