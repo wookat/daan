@@ -23,7 +23,8 @@
 
 <script>
 import qrcode from 'qrcode-generator';
-import { fetchCheckinSummary } from '../../api.js';
+import { fetchCheckinSummary, request, anonUid } from '../../api.js';
+import { examPosterData } from '../../exam-poster.js';
 
 const SITE_URL = 'https://kaogong.zalize.com';
 const W = 660;
@@ -143,9 +144,13 @@ function drawPoster(ctx, d) {
   ctx.font = '20px sans-serif';
   ctx.fillText('kaogong.zalize.com', pad, H - 108);
 
-  // 二维码
+  drawQr(ctx, SITE_URL);
+}
+
+function drawQr(ctx, url) {
+  const pad = 44;
   const qr = qrcode(0, 'M');
-  qr.addData(SITE_URL);
+  qr.addData(url);
   qr.make();
   const n = qr.getModuleCount();
   const qsize = 170;
@@ -163,12 +168,91 @@ function drawPoster(ctx, d) {
   }
 }
 
+function drawExamPoster(ctx, d) {
+  const g = ctx.createLinearGradient(0, 0, W * 0.7, H);
+  g.addColorStop(0, '#5B8AF8');
+  g.addColorStop(0.55, '#2E5BFF');
+  g.addColorStop(1, '#2C5AD6');
+  roundRect(ctx, 0, 0, W, H, 36);
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.save();
+  roundRect(ctx, 0, 0, W, H, 36);
+  ctx.clip();
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.beginPath();
+  ctx.arc(W - 20, 40, 130, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(60, H - 60, 90, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  const pad = 44;
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.font = '24px sans-serif';
+  ctx.fillText('错题邦 · 模考成绩单', pad, 52);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '600 34px sans-serif';
+  let title = d.title;
+  while (ctx.measureText(title).width > W - pad * 2 && title.length > 4) title = title.slice(0, -2);
+  if (title !== d.title) title += '…';
+  ctx.fillText(title, pad, 110);
+
+  const date = new Date();
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.font = '24px sans-serif';
+  ctx.fillText(`${date.getMonth() + 1} 月 ${date.getDate()} 日 · 花生上岸`, pad, 168);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '800 120px sans-serif';
+  ctx.fillText(String(d.score), pad, 240);
+  const sw = ctx.measureText(String(d.score)).width;
+  ctx.font = '600 36px sans-serif';
+  ctx.fillText('分', pad + sw + 14, 318);
+
+  const stats = [[`${d.correct}/${d.total}`, '答对题数']];
+  if (d.beatenPct != null) stats.push([d.beatenPct + '%', '已击败考生']);
+  roundRect(ctx, pad, 420, W - pad * 2, 128, 20);
+  ctx.fillStyle = 'rgba(255,255,255,0.12)';
+  ctx.fill();
+  const cw = (W - pad * 2) / stats.length;
+  stats.forEach(([v, l], i) => {
+    const cx = pad + cw * i + cw / 2;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '800 40px sans-serif';
+    ctx.fillText(v, cx, 446);
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.font = '20px sans-serif';
+    ctx.fillText(l, cx, 502);
+  });
+  ctx.textAlign = 'left';
+
+  ctx.fillStyle = 'rgba(255,255,255,0.8)';
+  ctx.font = '22px sans-serif';
+  ctx.fillText('每一次模考，都是上岸前的彩排', pad, 588);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.font = '24px sans-serif';
+  ctx.fillText(d.kind === 'zhenti' && d.paperId ? '扫码同卷模考' : '扫码一起刷题', pad, H - 190);
+  ctx.fillText('和我比一比 →', pad, H - 152);
+  ctx.fillStyle = 'rgba(255,255,255,0.65)';
+  ctx.font = '20px sans-serif';
+  ctx.fillText('kaogong.zalize.com', pad, H - 108);
+  drawQr(ctx, d.qrUrl);
+}
+
 export default {
   data() {
-    return { loading: true, imgSrc: '', err: '', tmpPath: '', badge: 0 };
+    return { loading: true, imgSrc: '', err: '', tmpPath: '', badge: 0, mode: '', attemptId: 0 };
   },
   onLoad(query) {
     this.badge = Number(query && query.badge) || 0;
+    this.mode = (query && query.mode) || '';
+    this.attemptId = Number(query && query.attempt_id) || 0;
     this.build();
   },
   // #ifdef MP-WEIXIN
@@ -191,15 +275,31 @@ export default {
     },
     async build() {
       let d;
-      try {
-        d = await fetchCheckinSummary();
-      } catch (e) {
-        this.err = /timeout|超时|网络/i.test(String(e && e.message)) ? '网络不给力，打卡数据没取到' : e.message;
-        this.loading = false;
-        return;
+      let draw = drawPoster;
+      if (this.mode === 'exam') {
+        draw = drawExamPoster;
+        try {
+          const uid = encodeURIComponent(anonUid());
+          const report = await request('/api/exam/report?attempt_id=' + this.attemptId + '&uid=' + uid);
+          const rank = await request('/api/exam/rank/' + this.attemptId + '?uid=' + uid).catch(() => null);
+          d = examPosterData(report, rank);
+          if (!d) throw new Error('成绩数据不完整');
+        } catch (e) {
+          this.err = /timeout|超时|网络/i.test(String(e && e.message)) ? '网络不给力，成绩数据没取到' : e.message;
+          this.loading = false;
+          return;
+        }
+      } else {
+        try {
+          d = await fetchCheckinSummary();
+        } catch (e) {
+          this.err = /timeout|超时|网络/i.test(String(e && e.message)) ? '网络不给力，打卡数据没取到' : e.message;
+          this.loading = false;
+          return;
+        }
+        d.badge = this.badge;
+        d.quote = this.makeQuote(d);
       }
-      d.badge = this.badge;
-      d.quote = this.makeQuote(d);
       try {
         // #ifdef H5
         const dpr = Math.min(window.devicePixelRatio || 2, 3);
@@ -208,7 +308,7 @@ export default {
         canvas.height = H * dpr;
         const ctx = canvas.getContext('2d');
         ctx.scale(dpr, dpr);
-        drawPoster(ctx, d);
+        draw(ctx, d);
         this.imgSrc = canvas.toDataURL('image/png');
         // #endif
         // #ifdef MP-WEIXIN
@@ -224,7 +324,7 @@ export default {
         node.height = H * dpr;
         const ctx = node.getContext('2d');
         ctx.scale(dpr, dpr);
-        drawPoster(ctx, d);
+        draw(ctx, d);
         const tmp = await new Promise((resolve, reject) => {
           uni.canvasToTempFilePath({
             canvas: node,

@@ -46,6 +46,11 @@
         <text class="share-cta-s">复制成绩与同卷模考链接，发给考友比一比</text>
       </view>
 
+      <view v-if="report.attempt && report.attempt.id" class="share-cta" role="button" aria-label="生成成绩海报" @click="goPoster">
+        <text class="share-cta-t">生成成绩海报</text>
+        <text class="share-cta-s">一张图晒出得分与排名，保存后发给考友 / 朋友圈</text>
+      </view>
+
       <view v-if="modules.length" class="card">
         <view class="h">模块得分</view>
         <view v-for="m in modules" :key="m.key" class="mrow">
@@ -389,6 +394,10 @@ export default {
         data: this.shareText,
         success: () => uni.showToast({ title: '挑战链接已复制，发给考友吧', icon: 'none' }),
       });
+    },
+    goPoster() {
+      trackEvent('share_poster', 'exam_report', String(this.report.attempt.id));
+      uni.navigateTo({ url: '/pkgA/social/poster?mode=exam&attempt_id=' + this.report.attempt.id });
     },
     redoWrong() {
       const set = buildExamRedoSet(this.report.items);
