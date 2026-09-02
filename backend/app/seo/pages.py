@@ -324,7 +324,9 @@ def tiku_papers():
     lis = "".join(
         f'<li><a href="/tiku/papers/{p["id"]}">{_e(p["title"])}</a>'
         f'<div class="meta">{_e(p["year"] or "")} {_e(p["region"] or "")} · {p["n"]} 题'
-        f'{" · 限时 " + str(p["duration_min"]) + " 分钟" if p["duration_min"] else ""}</div></li>'
+        + (" · 限时 " + str(p["duration_min"]) + " 分钟" if p["duration_min"] else "")
+        + (f' · 已有 {p["takers"]} 人模考 · 平均 {p["avg_score"]} 分' if p["takers"] else "")
+        + "</div></li>"
         for p in papers
     )
     body = (

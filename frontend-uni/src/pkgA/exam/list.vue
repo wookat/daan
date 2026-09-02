@@ -31,7 +31,7 @@
         <view class="paper-meta">
           <text v-if="p.year" class="ptag">{{ p.year }}年</text>
           <text v-if="p.region" class="ptag">{{ p.region }}</text>
-          <text class="pmeta">{{ p.n }} 题 · {{ p.duration_min }} 分钟{{ p.takers ? ' · ' + p.takers + ' 人考过' : '' }}</text>
+          <text class="pmeta">{{ p.n }} 题 · {{ p.duration_min }} 分钟{{ p.takers ? ' · ' + p.takers + ' 人考过' + (p.avg_score != null ? ' · 平均 ' + p.avg_score + ' 分' : '') : '' }}</text>
         </view>
         <text v-if="p.best_score != null" class="pbest">我的最好成绩 {{ p.best_score }} 分 · 已考 {{ p.attempt_count }} 次</text>
         <text v-else class="pbest none">还没考过，来挑战一下</text>

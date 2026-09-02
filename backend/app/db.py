@@ -3172,13 +3172,15 @@ def _list_exam_papers_base(conn, kind: str | None, year: int | None,
             ORDER BY year DESC, id DESC LIMIT 200""",
         args,
     ).fetchall()
-    takers: dict[int, int] = {}
+    takers: dict[int, dict] = {}
     if rows:
         for t in conn.execute(
-            """SELECT paper_id, COUNT(DISTINCT uid) n FROM exam_attempts
-               WHERE submitted_at IS NOT NULL GROUP BY paper_id"""
+            """SELECT paper_id, COUNT(*) n, ROUND(AVG(s), 1) avg FROM (
+                 SELECT paper_id, uid, MAX(score) s FROM exam_attempts
+                 WHERE submitted_at IS NOT NULL GROUP BY paper_id, uid
+               ) GROUP BY paper_id"""
         ):
-            takers[t["paper_id"]] = t["n"]
+            takers[t["paper_id"]] = {"n": t["n"], "avg": t["avg"]}
     qids_by_paper = {r["id"]: json.loads(r["question_ids"] or "[]") for r in rows}
     all_ids = list({i for ids in qids_by_paper.values() for i in ids})
     active: set[int] = set()
@@ -3193,7 +3195,9 @@ def _list_exam_papers_base(conn, kind: str | None, year: int | None,
         d = dict(r)
         d.pop("question_ids")
         d["n"] = sum(1 for i in qids_by_paper[d["id"]] if i in active)
-        d["takers"] = takers.get(d["id"], 0)
+        soc = takers.get(d["id"])
+        d["takers"] = soc["n"] if soc else 0
+        d["avg_score"] = soc["avg"] if soc else None
         base.append(d)
     _papers_cache[key] = (time.time(), base)
     return base
