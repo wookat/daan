@@ -157,13 +157,39 @@ describe('onRequest 无副本回源重试（R205）', () => {
     expect(fn).toHaveBeenCalledTimes(2);
   });
 
-  it('连续两次 fetch 异常向上抛出（单次上限）', async () => {
+  it('页面请求连续两次 fetch 异常 → 品牌 503 + Retry-After（R218）', async () => {
     queueFetch(new Error('down'), new Error('down'));
     const a = ctx(new Request(`${EDGE}/tiku/`));
+    const resp = await run(onRequest(a.args));
+    expect(resp.status).toBe(503);
+    expect(resp.headers.get('Retry-After')).toBe('30');
+    expect(resp.headers.get('Cache-Control')).toBe('no-store');
+    expect(resp.headers.get('Strict-Transport-Security')).toBeTruthy();
+    expect(await resp.text()).toContain('服务暂时不可用');
+  });
+
+  it('POST fetch 异常仍向上抛出（不出 503 页）', async () => {
+    queueFetch(new Error('down'));
+    const a = ctx(new Request(`${EDGE}/tiku/export`, { method: 'POST', body: '{}' }));
     const p = onRequest(a.args);
     p.catch(() => {}); // 立即挂接，避免假时钟推进期间成为未处理拒绝
     await vi.runAllTimersAsync();
     await expect(p).rejects.toThrow('down');
+  });
+
+  it('页面 502 重试耗尽 → 品牌 503；/api 502 仍原样透传（R218）', async () => {
+    let q = queueFetch(new Response('bad', { status: 502 }), new Response('bad', { status: 502 }));
+    let a = ctx(new Request(`${EDGE}/tiku/panduan/?page=254`));
+    let resp = await run(onRequest(a.args));
+    expect(resp.status).toBe(503);
+    expect(resp.headers.get('Retry-After')).toBe('30');
+    expect(q.fn).toHaveBeenCalledTimes(2);
+
+    q = queueFetch(new Response('bad', { status: 502 }), new Response('bad', { status: 502 }));
+    a = ctx(new Request(`${EDGE}/api/question_counts?x=1`));
+    resp = await run(onRequest(a.args));
+    expect(resp.status).toBe(502);
+    expect(await resp.text()).toBe('bad');
   });
 
   it('502 重试成功；500 不重试原样透传；POST 不重试', async () => {

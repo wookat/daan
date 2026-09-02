@@ -208,3 +208,20 @@ button{font-family:inherit}
 @media(max-width:1023px){
   .split-2{grid-template-columns:1fr!important}
 }
+
+/* ===== 767px 手机档：解除 768 硬底，页面按真实视口流式布局 ===== */
+@media(max-width:767px){
+  body{min-width:0}
+  .topbar{padding:0 12px;gap:10px}
+  .topbar .search{display:none}
+  .content{padding:12px 12px 48px}
+  .pagehead{flex-wrap:wrap}
+  .kpis{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))!important;gap:10px}
+  .row{flex-wrap:wrap}
+  .kpi .v{font-size:22px}
+  .drawer{width:100vw}
+  .tbl-wrap,.card{overflow-x:auto}
+  table.tbl{min-width:640px}
+  .filterbar{flex-wrap:wrap}
+  .wb-body{padding:14px 12px}
+}

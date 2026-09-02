@@ -644,3 +644,22 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 ### R217（pyright 存量清零 + 基线固化，已部署）
 - 39 errors 逐项甄别清零：实义修复（mock_event 赛后报告 attempt/paper 缺失 500→404、llm.chat 重试耗尽显式 RuntimeError、main uid=None 不进 owns_uid、db 直摸 taxonomy._alias_idx 改 alias_index() 访问器）+ 等价改写 + cv2/pypdf 可选依赖定点豁免。
 - 新增 backend/pyrightconfig.json（basic/py3.12）；门禁新增 `cd backend && npx -y pyright app`（基线 0 errors）。详见 docs/iter/round-3/r217-pyright-baseline.md。
+- 后补回归测试：mock 报告成绩数据缺失 404 + llm.chat 5xx 显式抛错（tests/test_mock_report_missing_data.py，pytest 94）。
+
+### R218（边缘无副本 5xx 直漏收口为品牌 503 + Retry-After，已部署）
+- 取证：origin 24h 日志 verified 深页（/tiku/panduan/?page=254 等）在容器重启窗口 R205 单次重试失败后裸 502（origin Caddy text 错误页）直漏给爬虫/用户；重启窗口 15–25s 单次重试无法全覆盖。
+- 收口：edge-policy 新增纯函数 shouldServeOutage（仅 GET/HEAD、非 /api、无副本、status 0/502–504）；[[path]].js 重试耗尽后改出自包含品牌 503 页（Retry-After: 30 + meta refresh 30s + 返回首页 + 深浅色适配，no-store 不入缓存）。/api 5xx 契约与有副本 stale-if-error 路径零变化。
+- 明确不做：不扩重试次数/时长；不动 /api 语义；origin 零停机部署挂候选（2GB 共享机双容器窗口风险）。详见 docs/iter/round-3/design-r218-edge-outage-503.md。
+
+### R219（运维审计状态外显到管理台，已部署）
+- 取证 verified：R203/R212/R214/R216 建立的部署/生命周期/备份/R2/内存审计数据只在 VPS 三个日志文件里（SSH 才可见），管理台看板无任何运维状态区块；日志已有真实告警行（如 09-01 UNHEALTHY api=000）无人可见。
+- 收口：ops 日志迁至 /home/ubuntu/kaogong-reports/（与部署/生命周期同目录，旧日志已 cp 迁移 + 原文件留 .migrated-r219）；compose 只读挂载该目录为 /reports；新增 backend/app/ops_status.py 尾部容错解析（64KB tail、CST/UTC 双时间轴、FAILED/DISK HIGH/UNHEALTHY/SIZE MISMATCH 告警正则）+ `/api/admin/ops_status`（check_admin 门禁，OPS_REPORTS_DIR 可配）；看板新增「运维状态」卡（部署 rev/备份/恢复验证/R2 周验证/内存/24h 容器变更/近 7 天告警）。
+- 验证：pytest 98（+4 例解析器）/ruff/pyright 0/lint/vitest 128/build 全绿；生产 rev dcb87b7 实测无 token 401、带 token 返回全部真实审计数据（backup/restore/r2 ok、24h 容器变更 9 次、告警 1 条），看板卡 1440/375 均渲染（375 下管理台整体 min-width 768 横向溢出为存量桌面化设计，非本轮引入），性能预算全过。
+- 明确不做：不动告警阈值；不加外部通知通道（挂资源项）；不回溯已轮转日志。详见 docs/iter/round-3/design-r219-admin-ops-status.md。
+
+### R220（管理台 ≤767px 手机档，已部署）
+- 取证 verified：/admin 375×667 横向溢出 408px，根因 admin.css `body{min-width:768px}`；受控移除 R219 运维卡溢出不变，证实存量布局缺陷；既有响应式只有 ≤1023 平板档（64px 图标侧栏）。
+- 收口（纯 CSS + 1 行 HTML）：admin.css 追加 `@media(max-width:767px)` 手机档——body min-width 解除、topbar search 隐藏、content padding 12、pagehead/row/filterbar 换行、kpis minmax(140px,1fr)!important（覆盖 dedup/governance 页内联 repeat(4,1fr)）、drawer 100vw、`.tbl-wrap,.card{overflow-x:auto}`+`table.tbl{min-width:640px}` 表格容器内横滚（questions 等页表格直接渲染在 .card 内不在 .tbl-wrap）。
+- 缓存击穿：index.html 的 admin.css 链接原本无 `?v=`，后端 mtime 重写机制不生效，边缘缓存旧 CSS；补 `?v=r38` 收口（部署后实测重写为 mtime 版本号）。
+- 验证：本地全绿（ruff/pytest 98/pyright 0/lint/vitest 128/build）；生产 375/320 全部 12 个管理台路由 scrollWidth-clientWidth=0，1440 桌面零变化（min-width:768 仍生效、侧栏 232px）。
+- 明确不做：侧栏抽屉/汉堡菜单（需 JS）、管理台深色模式（挂候选）。详见 docs/iter/round-3/design-r220-admin-mobile.md。

@@ -31,6 +31,8 @@ services:
       - KG_VAPID_SUB=${KG_VAPID_SUB:-mailto:support@zalize.com}
     volumes:
       - kaogong-data:/data
+      # 运维审计日志目录（部署/生命周期/备份巡检），只读供 /api/admin/ops_status 外显
+      - /home/ubuntu/kaogong-reports:/reports:ro
     labels:
       - autoheal=true
     # 宿主级内存-IO 颠簸可致 uvicorn 假死（进程在、请求全挂），健康检查持续失败时由 autoheal 重启

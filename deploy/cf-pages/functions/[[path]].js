@@ -8,6 +8,7 @@ import {
   notModified,
   carryLastModified,
   shouldRetryOrigin,
+  shouldServeOutage,
 } from "./edge-policy.js";
 
 const ORIGIN = "https://kaogong-origin.zalize.com";
@@ -109,6 +110,34 @@ async function revalidate(req, cacheKey, pathname, isApi, prev) {
   await caches.default.put(cacheKey, toCacheCopy(resp.body, stampLastModified(resp, prev)));
 }
 
+// 自包含品牌 503：origin 重启窗口内无副本可退时的临时不可用页，
+// Retry-After + meta refresh 自动重试，不入任何缓存
+function outageResponse() {
+  const html =
+    '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<meta http-equiv="refresh" content="30"><title>服务暂时不可用 - 考公助手</title>' +
+    "<style>body{margin:0;font-family:system-ui,sans-serif;background:#f6f7fb;color:#1f2430;" +
+    "display:flex;min-height:100vh;align-items:center;justify-content:center;text-align:center}" +
+    "@media (prefers-color-scheme:dark){body{background:#15181f;color:#e7eaf2}}" +
+    "main{padding:32px}h1{font-size:20px;margin:0 0 8px}p{margin:0 0 16px;font-size:14px;opacity:.8}" +
+    "a{color:#2e5bff;text-decoration:underline}@media (prefers-color-scheme:dark){a{color:#7c9aff}}</style>" +
+    '</head><body><main><h1>服务暂时不可用</h1>' +
+    "<p>正在恢复中，页面将在 30 秒后自动重试。</p>" +
+    '<p><a href="/">返回首页</a></p></main></body></html>';
+  const resp = new Response(html, {
+    status: 503,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Retry-After": "30",
+      "Cache-Control": "no-store",
+      "X-Edge-Outage": "1",
+    },
+  });
+  for (const [k, v] of Object.entries(SECURITY_HEADERS)) resp.headers.set(k, v);
+  return resp;
+}
+
 export async function onRequest({ request, env, waitUntil }) {
   const url = new URL(request.url);
   if (isBlockedBot(url.pathname, request.headers.get("User-Agent"))) {
@@ -161,11 +190,20 @@ export async function onRequest({ request, env, waitUntil }) {
       status = upstream.status;
     } catch (e) {
       if (stale) return fromCache(stale, ttl, "STALE", request);
-      if (!shouldRetryOrigin(request.method, 0, !!stale, attempt)) throw e;
+      if (!shouldRetryOrigin(request.method, 0, !!stale, attempt)) {
+        if (shouldServeOutage(request.method, url.pathname, 0, !!stale)) return outageResponse();
+        throw e;
+      }
       upstream = null;
     }
     if (upstream && stale && status >= 500) return fromCache(stale, ttl, "STALE", request);
-    if (upstream && !shouldRetryOrigin(request.method, status, !!stale, attempt)) break;
+    if (upstream && !shouldRetryOrigin(request.method, status, !!stale, attempt)) {
+      if (shouldServeOutage(request.method, url.pathname, status, !!stale)) {
+        if (upstream.body) waitUntil(upstream.body.cancel().catch(() => {}));
+        return outageResponse();
+      }
+      break;
+    }
     if (upstream && upstream.body) waitUntil(upstream.body.cancel().catch(() => {}));
     await new Promise((r) => setTimeout(r, 1200));
   }
