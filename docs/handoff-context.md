@@ -1004,3 +1004,18 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：R283 分享落点 /tiku/papers/{pid} meta 行只有「年份 地区 · 共 N 题 · 限时 M 分钟」，零社会证明，被挑战者看不到「多少人考过/平均多少分」对比锚点（粉笔卷详情核心转化元素）；聚合数据已在 exam_attempts（api_exam_rank 同口径）。
 - 收口：db.exam_paper_social(pid) 同卷每人取最高分聚合返回 {n, avg}；tiku_paper_detail n>0 时 meta 行追加「· 已有 {n} 人模考 · 平均 {avg} 分」+ JSON-LD description 同步；n=0 不渲染不伪造。顺手收口 SSR .tags a 长标题 375px 存量溢出（max-width:100%+ellipsis，pid 96/133 实测 142/160px→0）。零 App 前端/API 契约/路由变化。
 - 详见 docs/iter/round-3/design-r284-paper-social-proof.md。
+
+## R285–R295（模考/申论深度补齐，逐轮独立 PR #473–#483）
+- R285 卷库列表（App+SSR）社会证明口径统一（per-user-best takers+avg_score）；R286 SSR 详情 CTA ?pid= 直达目标卷高亮定位；R287 卷库「未交卷模考」续考横幅 + 过期进度清理（exam-resume.js）；R288 首页续考卡复用同函数；R289 模考 5/1 分钟低时预警（exam-alert.js，穿越判定+时钟脉冲态）；R290 报告解析浮层逐题连看（exam-review.js，只看错题过滤+桌面←/→）；R291 浮层收藏本题（exam-fav.js，report items 补 is_real/exam_year/exam_region）；R292 浮层挂 q-social-bar（笔记/讨论/热评）；R293 申论真题收藏闭环（shenlun-qfav.js，星标+收藏视图+?fav=1）；R294 申论详情上一题/下一题连看（shenlun-qnav.js）；R295 申论作答限字联动（shenlun-words.js，parseWordLimit 四类表达）。
+- 均本地全绿+生产 1440/375 双视口实测；种子测试 uid 验后全库清理 leftover 0。
+
+## R296–R298（本地资产服务端化三连，PR #484/#485/#487；R221–R297 rollup #486）
+- R296 申论真题收藏服务端同步：shenlun_qfavs 表 + GET/POST /api/shenlun/qfavs + 匿名归并（_UID_PK_TABLES）；前端 syncQFavs 双向合并（本地独有回推、服务端为权威、兼容 id-only 历史）。
+- R297 申论草稿服务端同步：shenlun_drafts (uid,qid) + /api/shenlun/draft（3000 字上限、空 content 删除）；输入 1.5s 去抖推送，「本机非空一律本机优先」，批改成功双端清除。
+- R298 模考未交卷进度服务端同步：exam_progress 表 + POST /api/exam/progress（attempt 归属/未交卷/未超时校验）+ GET /api/exam/resume（同构 _exam_paper_payload，不进边缘缓存）+ 交卷即清；前端 adoptServerExamProgress「本机快照有效一律本机优先」，首页/卷库无本机快照时服务端恢复。
+
+## R299（每日刷题目标服务端同步，PR #488）
+- 取证：dailyGoal 只存 local storage（home/profile/practice 三页各自读写），清缓存/换设备即回默认 20，与 R296–R298 服务端化口径不一致；user_profile+/api/profile 是现成最小复用点。
+- 收口：user_profile 补 daily_goal 列（新表直建 + PRAGMA 幂等 ALTER 迁移旧库）；POST /api/profile 严格白名单 {20,50,100}（显式拒 bool/浮点/数字字符串/越档整数，None 清除，缺 key 不改）；前端共享 src/daily-goal.js（DAILY_GOALS/normalizeDailyGoal/adoptServerDailyGoal），三页 local-first 即显 + 服务端合法值覆盖本地 + setGoal fire-and-forget POST 失败静默。顺手：backend/tests/conftest.py autouse fixture 每例清 storm guard 错误计数（修复全量 pytest 跨用例 429 连坐 4 failures）。
+- 验证：ruff/pytest 155/pyright 0/lint/vitest 254/build 全绿；生产 rev 485e997 实测：API 合法 200/非法 400 逐项、1440 设置 50→POST 200、375 全新 context 同 uid 恢复 50、三页 storage 一致、断 /api/profile+/api/home_bundle 后本地值保留页面正常、双视口溢出 0、console 0 error、性能预算全过；测试 uid 全库清理 leftover 0。注意：home_bundle 的 profile 也会被 adoptServerDailyGoal 采用（与独立 profile 请求同口径，无竞态：相同值返回 null 不写）。
+- 详见 docs/iter/round-3/design-r299-daily-goal-sync.md。
