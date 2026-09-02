@@ -435,6 +435,7 @@ def api_exam_report(attempt_id: int, uid: str = ""):
     qids = db.exam_active_qids(paper["question_ids"])
     questions = {q["id"]: q for q in db.questions_by_ids(qids)}
     picks = {int(k): v for k, v in attempt["answers"].items()}
+    mmap = db.mistakes_by_qids(attempt["uid"] or "", qids)
     items = []
     for i, qid in enumerate(qids):
         q = questions.get(qid)
@@ -453,6 +454,8 @@ def api_exam_report(attempt_id: int, uid: str = ""):
             "picked": picked,
             "answer": correct_ans,
             "correct": bool(picked) and len(picked) == 1 and picked == correct_ans,
+            "mistake_id": (mmap.get(qid) or {}).get("id") if picked and picked != correct_ans else None,
+            "error_reason": (mmap.get(qid) or {}).get("error_reason") if picked and picked != correct_ans else None,
             "explanation": q.get("explanation"),
             "hs_explanation": q.get("hs_explanation"),
             "image": q.get("image"),

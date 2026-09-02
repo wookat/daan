@@ -2970,6 +2970,21 @@ def save_mistake(rec: dict) -> int:
     return rowid
 
 
+def mistakes_by_qids(uid: str, qids: list[int]) -> dict[int, dict]:
+    """本人错题按题目 id 映射 {question_id: {id, error_reason}}，供成绩报告透出错因自评状态。"""
+    if not uid or not qids:
+        return {}
+    conn = get_conn()
+    _ensure_mistake_uid(conn)
+    ph = ",".join("?" * len(qids))
+    rows = conn.execute(
+        f"SELECT id, question_id, error_reason FROM mistakes WHERE uid=? AND question_id IN ({ph})",
+        (uid, *qids),
+    ).fetchall()
+    conn.close()
+    return {r["question_id"]: {"id": r["id"], "error_reason": r["error_reason"]} for r in rows}
+
+
 def list_mistakes(limit: int = 500, uid: str | None = None) -> list[dict]:
     conn = get_conn()
     _ensure_mistake_uid(conn)

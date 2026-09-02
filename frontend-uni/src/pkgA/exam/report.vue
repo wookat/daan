@@ -233,6 +233,18 @@
             <template v-if="detail.picked">，你选了 <text class="da" :class="detail.correct ? 'ok' : 'bad'">{{ detail.picked }}</text></template>
           </view>
           <view v-if="detailStatLine" class="dstat">{{ detailStatLine }}</view>
+          <view v-if="detail.mistake_id" class="dreasons">
+            <text class="drz-t">错因自评：</text>
+            <text
+              v-for="rz in reasonOpts"
+              :key="rz"
+              class="drz"
+              :class="{ on: detail.error_reason === rz }"
+              role="button"
+              :aria-label="'错因自评：' + rz + (detail.error_reason === rz ? '，已选中' : '')"
+              @click="setDetailReason(rz)"
+            >{{ rz }}</text>
+          </view>
           <view v-if="detail.hs_explanation || detail.explanation" class="dexp">
             <text>{{ detail.hs_explanation || detail.explanation }}</text>
           </view>
@@ -272,7 +284,7 @@ const MOD_ORDER = ['changshi', 'yanyu', 'shuliang', 'panduan', 'ziliao'];
 
 export default {
   data() {
-    return { loading: true, loadErr: '', aid: null, report: null, history: [], targetScore: null, detail: null, matOpen: false, wrongOnly: false, favs: uni.getStorageSync('favQuestions') || [], rankData: null, nextReco: null, reportOpen: false, reportType: '', reportDetail: '', reportBusy: false, reportedIds: {}, reportTypes: ['答案错误', '解析错误', '题干或选项错字', '图片缺失', '分类错误', '重复题', '其他'] };
+    return { loading: true, loadErr: '', aid: null, report: null, history: [], targetScore: null, detail: null, matOpen: false, wrongOnly: false, favs: uni.getStorageSync('favQuestions') || [], rankData: null, nextReco: null, reportOpen: false, reportType: '', reportDetail: '', reportBusy: false, reportedIds: {}, reportTypes: ['答案错误', '解析错误', '题干或选项错字', '图片缺失', '分类错误', '重复题', '其他'], reasonOpts: ['粗心大意', '概念不清', '方法不会', '纯蒙的'] };
   },
   computed: {
     accuracy() {
@@ -524,6 +536,19 @@ export default {
       uni.setStorageSync('redoSet', set);
       uni.navigateTo({ url: '/pages/practice/practice' });
     },
+    async setDetailReason(rz) {
+      const d = this.detail;
+      if (!d || !d.mistake_id) return;
+      const prev = d.error_reason || null;
+      if (prev === rz) return;
+      d.error_reason = rz;
+      try {
+        await request('/api/mistakes/' + d.mistake_id, { method: 'PATCH', data: { uid: anonUid(), error_reason: rz } });
+      } catch (e) {
+        d.error_reason = prev;
+        uni.showToast({ title: '错因保存失败：' + e.message, icon: 'none' });
+      }
+    },
     reinforceDetail() {
       const d = this.detail;
       if (!d || !d.tag3) return;
@@ -640,6 +665,10 @@ export default {
 .da { font-weight: 800; font-size: 28rpx; }
 .da.ok { color: var(--ok, #16a34a); }
 .da.bad { color: var(--bad, #dc2626); }
+.dreasons { display: flex; flex-wrap: wrap; align-items: center; gap: 12rpx; margin: 0 0 16rpx; }
+.drz-t { font-size: 23rpx; color: var(--ink-2); }
+.drz { font-size: 23rpx; color: var(--ink-2); border: 1rpx solid var(--line); background: var(--soft-bg); border-radius: 999rpx; padding: 8rpx 22rpx; cursor: pointer; }
+.drz.on { background: var(--brand); border-color: var(--brand-text); color: #fff; font-weight: 600; }
 .dexp { background: var(--soft-bg); border-left: 5rpx solid var(--brand); border-radius: 14rpx; padding: 20rpx; font-size: 25rpx; line-height: 1.7; white-space: pre-wrap; margin-bottom: 20rpx; }
 .note { display: block; font-size: 23rpx; color: var(--ink-2); }
 .wrow { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 10rpx 0; border-bottom: 1rpx solid var(--line); }
