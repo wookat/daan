@@ -599,3 +599,7 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 ## R314 错因自评走查新经验
 - 注入临时 uid 时 `anonUid` 必须存纯字符串（`localStorage.setItem('anonUid','test-xxx')`）；存 JSON 包裹形式会被 api.js anonUid() 原样当 uid 拼进请求，报告页表现为「暂无成绩报告」空态。
 - 错题本 book 页的错因 chips 只在复习流答错后出现；快速同源取证可直接看侧栏「按错因」聚合卡计数，不必走完整复习流。
+
+## R316 标记贯穿走查新经验
+- 做卷页点选选项会自动跳到下一题：需要「答某题并标记」时应先点「标记」再选选项（或标错后用顶部标记按钮当场取消）。
+- 解析浮层底部导航（.dnav-mid/.dnav-btn）屏幕坐标随浮层内容高度浮动：点击前用 CDP 读 getBoundingClientRect 并按「屏幕x≈css_x*0.64, 屏幕y≈css_y*0.64+88」（1600 视口最大化窗口）换算，避免点到遮罩误关浮层。
