@@ -819,3 +819,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证 verified：R248 上线后 /tiku/ 首页申论条目与 /llms.txt 申论条目仍只写真题、零素材提及；/tiku/shenlun/ meta description 与 JSON-LD description 只写「共 N 题」，与页面正文素材板块不一致（对照 R234/R240 口径一致先例）。
 - 收口：三处均以真实计数守卫（素材清空自动回落纯真题口径）——_tiku_index 申论 section 补「另收录申论写作素材 N 条（类型清单）」；llms_txt 申论条目追加「；另收录 N 条写作素材（按类型归档）」；_tiku_shenlun 第 1 页 description/JSON-LD 追加「另有写作素材 N 条。」（分页页不带）。canonical/sitemap/分页零变化，不新增素材 URL。
 - 验证：pytest +1 例（三渠道口径存在/清空回落/分页页不带），122 passed/ruff/pyright 0；生产 rev 4111a11 实测三渠道文案就位（166 条）、page=2 不带、1440/375 溢出 0、console 0 error、性能预算全过（/ perf 0.99、/tiku/ perf 1.00）。详见 docs/iter/round-3/design-r249-material-discovery-copy.md。
+
+### R250（申论按年份真题页 /tiku/y/{year}/shenlun/ + hub 年份链接 + sitemap-years 收录）
+- 取证 verified：生产 208 题分布 12 个年份（2026:26/2025:51/…/2015:10，每年 5–51 题非 thin）；行测五模块自 R201 有 /tiku/y/{year}/{module}/ 年份页族，而申论 hub「覆盖年份」只是纯文本 span、无对应页面、sitemap-years 零覆盖。先做慢样本复审计：admin stats/governance 慢样本均落旧 rev 部署窗口/共享宿主争用（X-Kg-Cache 佐证当前 hit/stale 亚秒），非代码缺口，不做猜测性改动。
+- 收口：db.shenlun_year_counts()（disabled 守卫 + exam_year 非空）；seo.py /y/{year}/{module}(/) 对 shenlun 分流 _render_shenlun_year（复用 shenlun_questions(year=...)，列表项与 hub 共用 _shenlun_q_items 抽出、逐题去作答深链、_pager、其他年份内链、面包屑、CollectionPage JSON-LD、App CTA；无语料年份品牌 404、无斜杠 301）；hub 年份 chips 改真实计数链接；sitemap-years.xml 收录申论年份页（语料清空自动消失）。不做地区/题型子页。
+- 验证：pytest +1 例（200+计数+深链+canonical/301/hub 链接/sitemap 收录/无语料 404/越界页码 404/清空回落），123 passed/ruff/pyright 0；生产 rev e49fea0 实测 2023（24 题）/2026（26 题）200、1999 404、越界 404、无斜杠 301，light/dark×1440/375 axe serious+ 全零、溢出 0、console 0 error，性能预算全过（/ perf 0.99、/tiku/ perf 1.00）。部署后即查 hub/sitemap 无新链接为边缘 SWR 旧副本（观测陷阱：TTL 300s 过期后复验 hub 12 年份链接 + sitemap 12 条申论条目就位，非代码缺口）。详见 docs/iter/round-3/design-r250-shenlun-year-pages.md。PR #438。
