@@ -51,6 +51,13 @@ describe('isEdgeCacheable', () => {
     expect(isEdgeCacheable('GET', '/api/questions', false, false)).toBe(false);
     expect(isEdgeCacheable('GET', '/api/home_bundle', false, false)).toBe(false);
   });
+  it('搜索端点可缓存（含 qid 详情前缀），带 Authorization/uid 绕过', () => {
+    expect(isEdgeCacheable('GET', '/api/search', false, false)).toBe(true);
+    expect(isEdgeCacheable('GET', '/api/search/question/118', false, false)).toBe(true);
+    expect(isEdgeCacheable('GET', '/api/search', true, false)).toBe(false);
+    expect(isEdgeCacheable('GET', '/api/search/question/118', false, true)).toBe(false);
+    expect(isEdgeCacheable('POST', '/api/search', false, false)).toBe(false);
+  });
   it('带 Authorization 或 uid 的 API 一律绕过', () => {
     expect(isEdgeCacheable('GET', '/api/question_counts', true, false)).toBe(false);
     expect(isEdgeCacheable('GET', '/api/daily_set', false, true)).toBe(false);
