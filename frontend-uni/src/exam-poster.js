@@ -2,7 +2,8 @@
 const SITE_URL = 'https://kaogong.zalize.com';
 
 export function examPosterData(report, rank) {
-  if (!report || !report.attempt || report.score == null || !Number.isFinite(Number(report.score))) return null;
+  const score = report && report.attempt ? report.attempt.score : null;
+  if (score == null || !Number.isFinite(Number(score))) return null;
   const total = Number(report.total) || 0;
   if (total <= 0) return null;
   const paper = report.paper || {};
@@ -14,7 +15,7 @@ export function examPosterData(report, rank) {
   }
   return {
     title: paper.title || '模拟考试',
-    score: Math.round(Number(report.score) * 10) / 10,
+    score: Math.round(Number(score) * 10) / 10,
     correct: Number(report.correct) || 0,
     total,
     beatenPct,

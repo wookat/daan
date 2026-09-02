@@ -280,7 +280,7 @@ export default {
         draw = drawExamPoster;
         try {
           const uid = encodeURIComponent(anonUid());
-          const report = await request('/api/exam/report?attempt_id=' + this.attemptId + '&uid=' + uid);
+          const report = await request('/api/exam/report/' + this.attemptId + '?uid=' + uid);
           const rank = await request('/api/exam/rank/' + this.attemptId + '?uid=' + uid).catch(() => null);
           d = examPosterData(report, rank);
           if (!d) throw new Error('成绩数据不完整');

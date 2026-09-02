@@ -2,8 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { examPosterData } from '../src/exam-poster.js';
 
 const rep = (over = {}) => ({
-  attempt: { id: 9 },
-  score: 61.55,
+  attempt: { id: 9, score: 61.55 },
   correct: 40,
   total: 75,
   paper: { id: 5, title: '2025年国考行测', kind: 'zhenti' },
@@ -15,8 +14,8 @@ describe('examPosterData', () => {
     expect(examPosterData(null, null)).toBeNull();
     expect(examPosterData({}, null)).toBeNull();
     expect(examPosterData(rep({ attempt: null }), null)).toBeNull();
-    expect(examPosterData(rep({ score: null }), null)).toBeNull();
-    expect(examPosterData(rep({ score: 'x' }), null)).toBeNull();
+    expect(examPosterData(rep({ attempt: { id: 9, score: null } }), null)).toBeNull();
+    expect(examPosterData(rep({ attempt: { id: 9, score: 'x' } }), null)).toBeNull();
     expect(examPosterData(rep({ total: 0 }), null)).toBeNull();
   });
 
