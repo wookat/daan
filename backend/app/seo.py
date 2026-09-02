@@ -726,6 +726,10 @@ def _render_q_comments(qid: int) -> str:
 
 @router.get("/y/{year}/{module}", include_in_schema=False)
 def tiku_year_noslash(year: int, module: str):
+    if module == "shenlun":
+        if not dict(db.shenlun_year_counts()).get(year):
+            return _not_found("页面不存在")
+        return RedirectResponse(_year_path(year, module), status_code=301)
     if not _module_name(module) or not db.year_module_counts().get((year, module), (0, None))[0]:
         return _not_found("页面不存在")
     return RedirectResponse(_year_path(year, module), status_code=301)
@@ -734,6 +738,8 @@ def tiku_year_noslash(year: int, module: str):
 @router.get("/y/{year}/{module}/", response_class=HTMLResponse, include_in_schema=False)
 def tiku_year(year: int, module: str, page: int = 1):
     try:
+        if module == "shenlun":
+            return HTMLResponse(_render_shenlun_year(year, max(1, page)))
         return HTMLResponse(_render_year(year, module, max(1, page)))
     except HTTPException as e:
         return _not_found(e.detail)
@@ -1047,18 +1053,7 @@ def _render_question(qid: int) -> str:
     )
 
 
-def _tiku_shenlun(page: int):
-    """申论真题 hub：以 shenlun_questions 真实语料呈现；语料清空时回落品牌 404。"""
-    res = db.shenlun_questions(limit=PAGE_SIZE, offset=(page - 1) * PAGE_SIZE)
-    total = res["total"]
-    if not total:
-        return _not_found("该模块暂无题目", _EMPTY_MODULE_OUTLET.get("shenlun", ""))
-    items = res["items"]
-    if not items and page > 1:
-        return _not_found("页码超出范围")
-    filters = db.shenlun_filters()
-    year_chips = "".join(f"<span>{y}年</span>" for y in filters["years"])
-    region_chips = "".join(f"<span>{_e(r)}</span>" for r in filters["regions"][:12])
+def _shenlun_q_items(items) -> str:
     lis = []
     for it in items:
         text = (it["question"] or "").strip().replace("\n", " ")
@@ -1076,6 +1071,64 @@ def _tiku_shenlun(page: int):
             f'<li><span class="meta">【{_e(meta)}】</span>{_e(text)} '
             f'<a href="/#/pkgA/shenlun/shenlun?id={it["id"]}">去作答 →</a></li>'
         )
+    return "".join(lis)
+
+
+def _render_shenlun_year(year: int, page: int) -> str:
+    """申论按年份真题页：与行测 /y/{year}/{module}/ 同 URL 家族；该年份无语料回落 404。"""
+    counts = db.shenlun_year_counts()
+    total = dict(counts).get(year, 0)
+    if not total:
+        raise HTTPException(404, "页面不存在")
+    res = db.shenlun_questions(year=year, limit=PAGE_SIZE, offset=(page - 1) * PAGE_SIZE)
+    items = res["items"]
+    if not items and page > 1:
+        raise HTTPException(404, "页码超出范围")
+    other_years = "".join(
+        f'<a href="{_e(_year_path(y, "shenlun"))}">{y}年（{n}）</a>'
+        for y, n in counts if y != year
+    )
+    body = (
+        _crumb([("题库", "/tiku/"), ("申论", "/tiku/shenlun/"), (f"{year}年真题", None)])
+        + f"<h1>{year}年申论真题（{total} 题）</h1>"
+        + f'<p class="meta">{year}年国考/省考申论真题（概括、对策、公文、大作文等题型），附参考解析</p>'
+        + '<div class="card"><ul class="qlist">'
+        + _shenlun_q_items(items)
+        + "</ul></div>"
+        + _pager(_year_path(year, "shenlun"), page, total)
+        + (f'<div class="card"><h2>其他年份申论真题</h2><div class="tags">{other_years}</div></div>' if other_years else "")
+        + '<a class="cta" href="/#/pkgA/shenlun/shenlun">进入申论专区在线作答（真题 + 素材范文）→</a>'
+    )
+    suffix = f"（第{page}页）" if page > 1 else ""
+    return _page(
+        f"{year}年申论真题{suffix}_{year}年公务员考试申论真题及参考解析_错题邦",
+        f"{year}年公务员考试申论真题共 {total} 题，覆盖概括、对策、公文、大作文等题型，附参考解析，可在线作答。{suffix}",
+        _year_path(year, "shenlun") + (f"?page={page}" if page > 1 else ""),
+        body,
+        _collection_ld(
+            f"{year}年申论真题",
+            f"{year}年公务员考试申论真题 {total} 题，附参考解析。",
+            _year_path(year, "shenlun"),
+            [("题库", "/tiku/"), ("申论", "/tiku/shenlun/"), (f"{year}年真题", _year_path(year, "shenlun"))],
+        ),
+    )
+
+
+def _tiku_shenlun(page: int):
+    """申论真题 hub：以 shenlun_questions 真实语料呈现；语料清空时回落品牌 404。"""
+    res = db.shenlun_questions(limit=PAGE_SIZE, offset=(page - 1) * PAGE_SIZE)
+    total = res["total"]
+    if not total:
+        return _not_found("该模块暂无题目", _EMPTY_MODULE_OUTLET.get("shenlun", ""))
+    items = res["items"]
+    if not items and page > 1:
+        return _not_found("页码超出范围")
+    filters = db.shenlun_filters()
+    year_chips = "".join(
+        f'<a href="{_e(_year_path(y, "shenlun"))}">{y}年（{n}）</a>'
+        for y, n in db.shenlun_year_counts()
+    )
+    region_chips = "".join(f"<span>{_e(r)}</span>" for r in filters["regions"][:12])
     mat_html = ""
     mat_desc = ""
     if page == 1:
@@ -1099,7 +1152,7 @@ def _tiku_shenlun(page: int):
         + (f'<div class="card"><h2>覆盖年份</h2><div class="tags">{year_chips}</div></div>' if year_chips else "")
         + (f'<div class="card"><h2>覆盖地区</h2><div class="tags">{region_chips}</div></div>' if region_chips else "")
         + '<div class="card"><ul class="qlist">'
-        + "".join(lis)
+        + _shenlun_q_items(items)
         + "</ul></div>"
         + mat_html
         + _pager("/tiku/shenlun/", page, total)
@@ -1317,11 +1370,12 @@ def sitemap_topics():
 
 @root_router.get("/sitemap-years.xml", include_in_schema=False)
 def sitemap_years():
-    urls = [
+    urls: list[tuple[str, float | None]] = [
         (_url(_year_path(y, m)), mu)
         for (y, m), (n, mu) in sorted(db.year_module_counts().items(), reverse=True)
         if n and _module_name(m)
     ]
+    urls += [(_url(_year_path(y, "shenlun")), None) for y, _n in db.shenlun_year_counts()]
     return _urlset(urls)
 
 

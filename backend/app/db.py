@@ -806,6 +806,17 @@ def shenlun_filters() -> dict:
     return {"years": years, "regions": regions}
 
 
+def shenlun_year_counts() -> list[tuple[int, int]]:
+    conn = get_conn()
+    rows = conn.execute(
+        """SELECT exam_year, COUNT(*) n FROM shenlun_questions
+           WHERE (disabled IS NULL OR disabled=0) AND exam_year IS NOT NULL
+           GROUP BY exam_year ORDER BY exam_year DESC"""
+    ).fetchall()
+    conn.close()
+    return [(r["exam_year"], r["n"]) for r in rows]
+
+
 def _ensure_shenlun_answers(conn):
     conn.execute(
         """CREATE TABLE IF NOT EXISTS shenlun_answers (

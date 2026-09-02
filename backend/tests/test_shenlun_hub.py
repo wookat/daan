@@ -87,6 +87,35 @@ def test_material_discovery_copy_alignment(client):
         _clear_shenlun()
 
 
+def test_shenlun_year_pages(client):
+    """R250：申论按年份真题页；hub 年份链接、sitemap-years 收录；无语料年份 404。"""
+    seed_questions()
+    _seed_shenlun()
+    try:
+        r = client.get("/tiku/y/2023/shenlun/")
+        assert r.status_code == 200
+        assert "2023年申论真题（3 题）" in r.text
+        assert "测试申论题干 0" in r.text
+        assert re.search(r'href="/#/pkgA/shenlun/shenlun\?id=\d+">去作答', r.text)
+        assert 'rel="canonical"' in r.text and "/tiku/y/2023/shenlun/" in r.text
+        # 无斜杠 301
+        r301 = client.get("/tiku/y/2023/shenlun", follow_redirects=False)
+        assert r301.status_code == 301 and r301.headers["location"].endswith("/tiku/y/2023/shenlun/")
+        # hub 年份 chips 为链接
+        hub = client.get("/tiku/shenlun/")
+        assert 'href="/tiku/y/2023/shenlun/"' in hub.text
+        # sitemap-years 收录
+        sm = client.get("/sitemap-years.xml")
+        assert "/tiku/y/2023/shenlun/" in sm.text
+        # 无语料年份/越界页码 404
+        assert client.get("/tiku/y/1999/shenlun/").status_code == 404
+        assert client.get("/tiku/y/2023/shenlun/?page=999").status_code == 404
+    finally:
+        _clear_shenlun()
+    assert client.get("/tiku/y/2023/shenlun/").status_code == 404
+    assert "/tiku/y/2023/shenlun/" not in client.get("/sitemap-years.xml").text
+
+
 def test_shenlun_hub_renders_with_corpus_and_falls_back_when_empty(client):
     seed_questions()
     _seed_shenlun()
