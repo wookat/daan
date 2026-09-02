@@ -1064,3 +1064,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：ruff/pytest 170(+3)/pyright 0/lint/vitest 306(+6)/build/diff-check 全绿；生产 rev 69d52dc、bundle index-CNKuN0WS.js；API 实测种子 3 uid + 1 真实用户同卷（pid 5）module_avg 五模块 n_users=4 契约符合、既有 total/rank/board 不回归；UI 双视口实测模块行「全站 1%/0%」逐行与 API 一致、rank 卡回归正常、溢出 0、console 0 error（低样本 n_users<2 隐藏分支仅单测覆盖未生产实测）；性能预算全过（/ 0.98、/tiku/ 1.00）。测试数据清理 test-r306-*（DELETED 4 / leftover 0）。
 - 陷阱：scripts/clean_test_data.py 在部分表结构下（practice_results/users 无 uid 列）需先 PRAGMA 检查列再删，且 sqlite 未 commit 前异常会整体回滚。
 - 详见 docs/iter/round-3/design-r306-report-module-avg.md。
+
+## R307（模考报告薄弱模块「去专项强化」CTA，PR #496）
+- 取证（SOP-10）：R306 后模块得分卡已能对比「个人 x/n vs 全站 N%」，但纯展示零行动出口，用户看出薄弱模块后只能手动退回刷题页选模块（粉笔模块诊断带直练出口）；practice 页早有 practiceLaunch {kind:'start',module} storage 启动协议（onShow 消费即删）。
+- 收口（纯前端零后端）：src/exam-weak.js weakModule(modules)——候选 fail-closed 过滤（行测五模块白名单、n>=3、pct∈[0,100] 有限数）；主判 avgPct-pct>=5 中差距最大者（reason「低于全站均值 X 个百分点」）；兜底 avgPct 缺失/全不达标时取本卷最低且 pct<60（reason「本卷正确率 X%，全卷最低」）；全不满足→null 不渲染不伪造。report.vue 模块卡尾部渲染单个 CTA（一次只推一个模块避免噪音），role=button/tabindex=0/Enter 可达，点击写 practiceLaunch {kind:'start',module,count:10} 进练习页。不新增 API/埋点，不动 rank/module_avg 契约。
+- 验证：lint/vitest 312(+6)/build/diff-check 全绿（后端零改动）；生产 rev 47692aa、bundle index-QVPG32J1.js；真实接口种子（判断推理 0/18 vs 全站 50%）testing agent 双视口实测：CTA 文案精确、点击/Enter 均直入判断推理 1/10 自动开组、practiceLaunch 消费即删、375 无溢出、反例（不存在 attempt）无 CTA、console 双视口 0 error；性能预算全过（/ perf 1.00、LCP 951ms；部署首跑 a11y 单样本 0.94 独立复跑 1.00，采样波动同 R300 先例）。fallback 文案分支与全模块良好隐藏分支未生产实测（仅 vitest 覆盖）。测试数据清理 test-r307-*（DELETED 252 / leftover 0）。
+- 陷阱：/api/exam/submit 的 picks 键是**1 起始题号**（非 question_id），值为字母；用 question_id 提交会全判 0 分。报告页同路由换 query 不触发 uni onLoad，需硬 reload。
+- 详见 docs/iter/round-3/design-r307-report-weak-module-cta.md。

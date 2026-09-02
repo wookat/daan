@@ -586,3 +586,7 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - Canvas 海报类功能的 QR 客观取证法：img.src 为 data:image/png;base64 时，base64 落盘 PNG 后用 `zbarimg -q <file>` 解码二维码落点（`sudo apt-get install -y zbar-tools`），不要目测推断。
 - uid 注入的 localStorage 实际键为 `anonUid`（api.js anonUid() 读该键），不是 `uid`。
 - 模考报告接口为路径参数 `/api/exam/report/{attempt_id}?uid=`；成绩在 `attempt.score`，顶层无 score。
+
+## R307 走查新经验
+- 报告页同路由只换 query（hash 变化）不会触发 uni onLoad 重载，验证不同 attempt 必须 `location.reload(true)`。
+- CDP `Emulation.setDeviceMetricsOverride` 在 ignoreCache 重载后可能失效，视口断言前须重新施加并核对 innerWidth。
