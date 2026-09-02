@@ -20,11 +20,21 @@
       <view class="mini-go">开始</view>
     </view>
 
+    <view v-if="prog.total > 0" class="card progcard">
+      <view class="prog-row">
+        <text class="prog-t">{{ prog.done === prog.total ? '全部刷完 🎉' : '已刷 ' + prog.done + '/' + prog.total + ' 卷' }}</text>
+        <text class="prog-p">{{ prog.pct }}%</text>
+      </view>
+      <view class="prog-bar" role="progressbar" :aria-valuenow="prog.pct" aria-valuemin="0" aria-valuemax="100" :aria-label="'已刷 ' + prog.done + '/' + prog.total + ' 卷'">
+        <view class="prog-fill" :style="{ width: prog.pct + '%' }" />
+      </view>
+    </view>
+
     <view v-if="filters.years.length || filters.regions.length" class="filters">
       <scroll-view scroll-x class="fscroll">
         <text class="fchip" :class="{ on: !st }" @click="setSt('')">全部</text>
-        <text class="fchip" :class="{ on: st === 'todo' }" @click="setSt('todo')">没考过</text>
-        <text class="fchip" :class="{ on: st === 'done' }" @click="setSt('done')">考过的</text>
+        <text class="fchip" :class="{ on: st === 'todo' }" @click="setSt('todo')">没考过 {{ prog.total - prog.done }}</text>
+        <text class="fchip" :class="{ on: st === 'done' }" @click="setSt('done')">考过的 {{ prog.done }}</text>
       </scroll-view>
       <scroll-view v-if="filters.years.length" scroll-x class="fscroll">
         <text class="fchip" :class="{ on: !year }" @click="setYear(null)">全部年份</text>
@@ -87,6 +97,7 @@ import { request, snapPeek, anonUid, exportPdf } from '../../api.js';
 import { buildExamListUrl, parseExamListOpts } from '../../exam-list-url.js';
 import { parseExamProgress, fmtLeftSecs } from '../../exam-resume.js';
 import { filterPapersByStatus } from '../../exam-list-status.js';
+import { paperProgress } from '../../exam-list-progress.js';
 import { adoptServerExamProgress } from '../../exam-progress-sync.js';
 
 export default {
@@ -112,6 +123,9 @@ export default {
   computed: {
     shown() {
       return filterPapersByStatus(this.items, this.st);
+    },
+    prog() {
+      return paperProgress(this.items);
     },
   },
   onLoad(opts) {
@@ -289,6 +303,12 @@ export default {
 .mini-t { display: block; font-size: 30rpx; font-weight: 700; color: var(--ink); }
 .mini-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; }
 .mini-go { flex-shrink: 0; background: var(--brand); color: #fff; border-radius: 999rpx; padding: 0 36rpx; min-height: 38px; line-height: 38px; font-size: 26rpx; font-weight: 600; }
+.progcard { padding: 22rpx 28rpx; }
+.prog-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
+.prog-t { font-size: 25rpx; font-weight: 600; color: var(--ink); }
+.prog-p { font-size: 23rpx; font-weight: 600; color: var(--brand-text); }
+.prog-bar { height: 12rpx; background: var(--brand-soft); border-radius: 999rpx; overflow: hidden; }
+.prog-fill { height: 100%; min-width: 4rpx; background: var(--brand); border-radius: 999rpx; }
 .filters { margin-bottom: 20rpx; }
 .fscroll { white-space: nowrap; margin-bottom: 12rpx; }
 .fchip { display: inline-flex; align-items: center; min-height: 44px; box-sizing: border-box; font-size: 24rpx; color: var(--ink-2); background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 26rpx; margin-right: 12rpx; }
