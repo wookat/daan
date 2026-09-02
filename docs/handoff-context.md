@@ -1170,3 +1170,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：ruff/pytest 191(+6)/pyright 0/lint/vitest 378(+5)/build 全绿；生产 rev 0a78a78、bundle index-DBEBlZtd.js；API 实测 roundtrip/非法 7 类 400/清除；testing agent 跨设备实测：设备 A 1440 作答+排除去抖 POST 实抓，设备 B 375 全新隔离 context 同 uid 恢复（顺序/判分/排除/idx/统计逐项一致），完成后 resume={}，新 uid 直开、本机优先 0 resume 请求，竞态修复复测通过；双视口溢出 0、console 0 error、Lighthouse 全过（/ 0.98/LCP 796ms、/tiku/ 1.00）。清理 test-r322-api/-ui/-ui-b/r322b-ui DELETED 27 / LEFTOVER 0，保护 uid 31 表快照一致。
 - 未生产实测：excl 非法值 UI 侧路径（API 已验）；真实触屏长按（CDP 模拟，同 R319/R321 口径）。
 - 详见 docs/iter/round-3/design-r322-practice-progress-sync.md。
+
+### R323 首页「未完成练习」续练卡（2026-08-29，PR #520，基于 #520 分支 devin/1788386699-r323-home-practice-resume）
+- 取证：首页只有模考续考卡（R288），普通刷题未完成进度（pendingSession + R322 practice_progress）在默认回流入口不可见，须进刷题页才触发恢复弹窗；粉笔首页有「继续练习」外显入口。
+- 收口（纯前端零后端/零契约）：practice-progress.js 新增 fail-closed 纯函数 parsePendingPractice（本机快照→{done,total,module}，24h TTL/全部已答 null）与 parseRemotePractice（resume 应答同构）；home.vue 模考卡下同构续练卡（本机快照优先，无本机且 ppClearedAt 30s 守卫未命中才 GET resume，失败静默；「去继续」写 practiceLaunch {kind:'resume'} 直达恢复不二次弹窗；「✕」确认后清本机+记 ppClearedAt+POST qids:[]）；practice.vue launch 链新增 kind:'resume'→resumeNow()（本机优先直接采纳，否则服务端快照直接采纳），恢复采纳逻辑抽出 adoptLocalPending/adoptRemoteSnap 供既有弹窗路径复用。
+- 走查发现并修复（commit c139171）：next() 原在 idx++ 前 saveSession()，本机快照 idx 比服务端去抖 POST 落后一步，「去继续」回到已答题——改为切题后落快照，专项复测 idx=1 直达第 2 题未答态。
+- 验证：lint/vitest 384(+6)/build 全绿；生产 rev 0dec21a→c139171 两轮 testing agent 实测：本机命中 0 resume 请求、跨设备 375 隔离 context 服务端出卡直达恢复、放弃流程、完成/新 uid 反例、模考卡双卡共存、裸进入弹窗回归、双视口溢出 0/console 0 error、Lighthouse 全过。清理两轮 DELETED 29+3 / LEFTOVER 0，保护 uid 31 表快照一致。
+- 未生产实测：resume 失败静默分支、24h TTL 过期分支（vitest 覆盖）、真实触屏。
+- 详见 docs/iter/round-3/design-r323-home-practice-resume.md。
