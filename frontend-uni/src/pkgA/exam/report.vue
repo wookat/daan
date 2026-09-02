@@ -167,6 +167,37 @@
       </view>
     </template>
 
+    <!-- 题目纠错弹层 -->
+    <view v-if="reportOpen" class="mask qr-mask" @click="reportOpen = false">
+      <view class="sheet" @click.stop>
+        <view class="sheet-h">
+          <text class="sheet-t">题目纠错</text>
+          <view class="sheet-x" role="button" aria-label="关闭" @click="reportOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+        </view>
+        <view class="rp-types">
+          <text
+            v-for="t in reportTypes"
+            :key="t"
+            class="rp-chip"
+            :class="{ on: reportType === t }"
+            role="button"
+            :aria-label="'纠错类型：' + t"
+            @click="reportType = t"
+          >{{ t }}</text>
+        </view>
+        <textarea
+          v-model="reportDetail"
+          class="rp-detail"
+          aria-label="纠错补充说明"
+          placeholder="补充说明（选填，500 字以内）"
+          :maxlength="500"
+        />
+        <button class="btn rp-submit" :disabled="!reportType || reportBusy" @click="submitQcReport">
+          {{ reportBusy ? '提交中…' : '提交纠错' }}
+        </button>
+      </view>
+    </view>
+
     <!-- 解析浮层 -->
     <view v-if="detail" class="mask" @click="detail = null">
       <view class="sheet" @click.stop>
@@ -205,6 +236,7 @@
           <view v-if="detail.hs_explanation || detail.explanation" class="dexp">
             <text>{{ detail.hs_explanation || detail.explanation }}</text>
           </view>
+          <view v-if="detail.question_id" class="report-link" role="button" :aria-disabled="detailReported" @click="openQcReport">{{ detailReported ? '已提交纠错，感谢反馈' : '题目有问题？纠错' }}</view>
           <q-social-bar v-if="detail.question_id" :question-id="detail.question_id" />
         </scroll-view>
         <view class="dnav">
@@ -236,7 +268,7 @@ const MOD_ORDER = ['changshi', 'yanyu', 'shuliang', 'panduan', 'ziliao'];
 
 export default {
   data() {
-    return { loading: true, loadErr: '', aid: null, report: null, history: [], targetScore: null, detail: null, matOpen: false, wrongOnly: false, favs: uni.getStorageSync('favQuestions') || [], rankData: null, nextReco: null };
+    return { loading: true, loadErr: '', aid: null, report: null, history: [], targetScore: null, detail: null, matOpen: false, wrongOnly: false, favs: uni.getStorageSync('favQuestions') || [], rankData: null, nextReco: null, reportOpen: false, reportType: '', reportDetail: '', reportBusy: false, reportedIds: {}, reportTypes: ['答案错误', '解析错误', '题干或选项错字', '图片缺失', '分类错误', '重复题', '其他'] };
   },
   computed: {
     accuracy() {
@@ -255,6 +287,9 @@ export default {
     },
     detailStatLine() {
       return qStatLine(this.detail);
+    },
+    detailReported() {
+      return !!(this.detail && this.detail.question_id && this.reportedIds[this.detail.question_id]);
     },
     detailFaved() {
       return !!this.detail && isFaved(this.favs, this.detail.question);
@@ -353,6 +388,30 @@ export default {
     // #endif
   },
   methods: {
+    openQcReport() {
+      if (!this.detail || !this.detail.question_id || this.detailReported) return;
+      this.reportType = '';
+      this.reportDetail = '';
+      this.reportOpen = true;
+    },
+    async submitQcReport() {
+      const qid = this.detail && this.detail.question_id;
+      if (!qid || !this.reportType || this.reportBusy) return;
+      this.reportBusy = true;
+      try {
+        await request('/api/question_report', {
+          method: 'POST',
+          data: { question_id: qid, uid: anonUid(), type: this.reportType, detail: this.reportDetail.slice(0, 500) },
+        });
+        this.reportedIds = { ...this.reportedIds, [qid]: true };
+        this.reportOpen = false;
+        uni.showToast({ title: '感谢反馈，我们会尽快核查', icon: 'none' });
+      } catch (e) {
+        uni.showToast({ title: '提交失败：' + e.message, icon: 'none' });
+      } finally {
+        this.reportBusy = false;
+      }
+    },
     async load(aid) {
       this.aid = aid;
       this.loading = true;
@@ -598,4 +657,13 @@ export default {
   .rp2-main { flex: 1; min-width: 0; }
 }
 /* #endif */
+.qr-mask { z-index: 95; }
+.btn { background: linear-gradient(135deg, #5c82ff, var(--brand)); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(46, 91, 255, 0.25); min-height: 44px; line-height: 44px; }
+.report-link { text-align: center; font-size: 22rpx; color: var(--ink-2); padding-top: 14rpx; text-decoration: underline; }
+.rp-types { display: flex; flex-wrap: wrap; gap: 16rpx; margin-bottom: 20rpx; }
+.rp-chip { padding: 18rpx 26rpx; min-height: 44rpx; border-radius: 999rpx; background: var(--soft-bg); font-size: 26rpx; color: var(--ink-2); }
+.rp-chip.on { background: rgba(46, 91, 255, 0.12); color: var(--brand-text); font-weight: 600; }
+.rp-detail { width: 100%; box-sizing: border-box; min-height: 140rpx; background: var(--soft-bg); border-radius: 16rpx; padding: 20rpx; font-size: 26rpx; margin-bottom: 24rpx; }
+.rp-submit { width: 100%; }
+.rp-submit[disabled] { opacity: 0.5; }
 </style>
