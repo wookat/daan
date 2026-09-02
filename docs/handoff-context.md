@@ -966,3 +966,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：pkgA/exam/list 的 year/region 筛选为纯本地状态（setYear/setRegion 只重拉 /api/exam/papers，不进 URL、无 onLoad 恢复），刷新/复制/分享即丢；生产 API filters 实证 years 11 档、regions 26 地区可作白名单。
 - 收口：新增 exam-list-url.js 纯函数（buildExamListUrl/parseExamListOpts，年份 1990–2099 整数、region encodeURIComponent、malformed URI 不抛错）+ list.vue onLoad 暂存入向参数、首次真实 filters 返回后按 API 白名单应用一次并重拉列表、setYear/setRegion 经 syncUrl() replaceState 同步（#ifdef H5 守卫）。顺手清零 edge-handler.test.js:318 两处 no-useless-escape lint 基线。纯前端零后端/SSR/SEO 变化。
 - 详见 docs/iter/round-3/design-r277-exam-list-filter-url-sync.md。
+
+## R278（真题卷 SSR 页族接入卷库 year/region 深链）
+- 取证：/tiku/papers/ SSR 列表只展示年份/地区文本无筛选入口，/tiku/papers/{pid} 的「在线模考本卷」CTA 为不带上下文的通用卷库链接；R277 已打通 App 卷库 ?year/?region 入向白名单，SSR 侧发现入口与上下文落地是对称缺口。
+- 收口：tiku_papers() 基于真实 db.exam_paper_filters() 输出「按年份筛卷/按地区筛卷」chips（App hash 深链，region quote 编码，空 filters 自动消失）+ 详情 CTA 经 _exam_list_query(p) 携带本卷 year/region（缺失字段省略、全缺回落基础路径）。不新增可收录 URL/不改 sitemap/canonical/边缘缓存/App 前端。新增 backend/tests/test_tiku_papers_deeplinks.py 3 例契约测试。
+- 验证：ruff/pytest 138(+3)/pyright 0 全绿；生产 rev 420bf10 实测 chips 11 年份+28 地区就位、详情 CTA ?year=2025&region=黑龙江 编码正确、点击 ?year=2022 深链后 App chip 激活+列表仅 6 张 2022 卷、1440/375 溢出 0、console 0 error、性能预算全过。
+- 详见 docs/iter/round-3/design-r278-papers-ssr-filter-deeplinks.md。
