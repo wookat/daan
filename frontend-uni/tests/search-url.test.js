@@ -1,5 +1,21 @@
 import { describe, it, expect } from 'vitest';
-import { buildSearchUrl, SEARCH_PATH } from '../src/search-url.js';
+import { buildSearchUrl, buildTikuQPath, SEARCH_PATH } from '../src/search-url.js';
+
+describe('buildTikuQPath', () => {
+  it('合法正整数 id 生成 /tiku/q/{id}/', () => {
+    expect(buildTikuQPath(118)).toBe('/tiku/q/118/');
+    expect(buildTikuQPath('42')).toBe('/tiku/q/42/');
+  });
+
+  it('非法 id 回落题库首页', () => {
+    expect(buildTikuQPath(0)).toBe('/tiku/');
+    expect(buildTikuQPath(-3)).toBe('/tiku/');
+    expect(buildTikuQPath(1.5)).toBe('/tiku/');
+    expect(buildTikuQPath('abc')).toBe('/tiku/');
+    expect(buildTikuQPath(null)).toBe('/tiku/');
+    expect(buildTikuQPath(undefined)).toBe('/tiku/');
+  });
+});
 
 describe('buildSearchUrl', () => {
   it('空关键词回到搜索页本身', () => {

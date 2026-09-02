@@ -922,3 +922,7 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：R261–R263 后申论专区 paper/qtype/year/region/tab/mtype/mid 均双向同步 URL，素材「收藏」视图（favOnly）是唯一剩余不同步态——toggleFavOnly 只翻本地状态、buildShenlunTabUrl 不感知 fav、onLoad 不收 ?fav，收藏视图不可分享/刷新即丢。
 - 收口：buildShenlunTabUrl 增第三参 fav（tab=m 且 fav 输出 ?tab=m&fav=1，不叠 mtype——收藏视图本身不按类型过滤）；toggleFavOnly 后 syncFilterUrl；onLoad tab=m 分支无 mid 时收 fav=1（mid 置顶优先级不变）。纯前端 hash 深链，零后端/SSR/SEO 变化。
 - 详见 docs/iter/round-3/design-r268-fav-url-sync.md。
+## R269（搜索行测题详情「复制本题链接」出向分享）
+- 取证：R243/R247 已为申论真题详情、素材卡建立复制链接出向分享，行测侧每题有公开 SSR 页 /tiku/q/{id}/（canonical+og+App CTA）作现成分享落点，但搜索页两处 q-detail 展开块（code_hit 直达 + 题目列表）只有选项/答案/解析，零出向出口。
+- 收口：search-url.js 增纯函数 buildTikuQPath（非法 id 回落 /tiku/）+ 两处 q-detail 尾部「复制本题链接」控件（d-copy 样式/aria 对齐申论先例，@click.stop 不触发折叠），纯前端零后端/SSR/SEO 变化。
+- 详见 docs/iter/round-3/design-r269-search-qlink.md。

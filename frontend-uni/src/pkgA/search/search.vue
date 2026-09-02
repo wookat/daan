@@ -27,6 +27,7 @@
           <text v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: k === detail.answer }">{{ k }}. {{ v }}</text>
           <text class="q-ans">答案：{{ detail.answer }}</text>
           <text v-if="detail.explanation" class="q-exp">{{ detail.explanation }}</text>
+          <text class="d-copy" role="button" aria-label="复制本题链接" @click.stop="copyQLink(detail.id)">复制本题链接</text>
         </view>
       </view>
       <view class="res-cols" :class="{ two: tab === 'all' && hasSide }">
@@ -92,6 +93,7 @@
             <text v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: k === detail.answer }">{{ k }}. {{ v }}</text>
             <text class="q-ans">答案：{{ detail.answer }}</text>
             <text v-if="detail.explanation" class="q-exp">{{ detail.explanation }}</text>
+            <text class="d-copy" role="button" aria-label="复制本题链接" @click.stop="copyQLink(detail.id)">复制本题链接</text>
           </view>
         </view>
         <view v-if="result.questions.total > result.questions.items.length" class="more" @click="loadMore">{{ moreLoading ? '加载中…' : '加载更多' }}</view>
@@ -120,7 +122,7 @@
 
 <script>
 import { request } from '../../api.js';
-import { buildSearchUrl } from '../../search-url.js';
+import { buildSearchUrl, buildTikuQPath } from '../../search-url.js';
 
 const MODS = { ziliao: '资料', shuliang: '数量', yanyu: '言语', panduan: '判断', changshi: '常识', shenlun: '申论' };
 
@@ -169,6 +171,10 @@ export default {
   methods: {
     modName(m) {
       return MODS[m] || m || '';
+    },
+    copyQLink(id) {
+      const url = (typeof window !== 'undefined' ? window.location.origin : '') + buildTikuQPath(id);
+      uni.setClipboardData({ data: url, success: () => uni.showToast({ title: '链接已复制，发给考友直达本题', icon: 'none' }) });
     },
     showSec(k) {
       return this.tab === 'all' || this.tab === k;
@@ -320,6 +326,7 @@ export default {
 .q-opt.ans { color: var(--ok-strong); font-weight: 600; }
 .q-ans { font-size: 24rpx; color: var(--ok-strong); font-weight: 600; margin-top: 4rpx; }
 .q-exp { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; }
+.d-copy { font-size: 22rpx; color: var(--brand-text); text-decoration: underline; cursor: pointer; padding: 4rpx 6rpx; align-self: flex-start; }
 .more { text-align: center; font-size: 26rpx; color: var(--brand-text); padding: 16rpx; }
 .empty { display: flex; flex-direction: column; gap: 8rpx; text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 100rpx 40rpx; }
 .empty-t { font-size: 26rpx; color: var(--ink-2); }
