@@ -951,3 +951,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：R271–R273 部署后 6h origin 窗口无新增用户可见 5xx/慢样本（04:34–04:37 争用窗口 pass 均发生在当轮边缘部署前，属已收口历史形态）；真实缺口为 R273 策略函数只有孤立单测，[[path]].js 编排交互（守卫先于 put、TTL 透传、stale-if-error 对 shell 生效）无集成防线——/sw.js 若被 HTML 投毒入缓存是全站级故障放大器。
 - 收口：edge-handler.test.js 新增 4 例（MISS→HIT+max-age=60、/sw.js HTML 不写副本、/precache.json HTML 拒/JSON 收、TTL 过期+503 SWR 回旧副本不覆盖），vitest 154(+4) 全绿；零产品代码变化（先例 R258）。
 - 详见 docs/iter/round-3/design-r274-shell-static-edge-handler-tests.md。
+
+## R275（复审计 + 观察项收口，docs-only）
+- R273 遗留 /sw.js「x-edge-cache: MISS 但 age 增长」收口：cf-cache-status HIT 实证 CF 前置 HTTP 缓存（.js 默认可缓存扩展名）在函数层之前接管，回放头为入缓存快照——非缺陷且双层防护更强；/precache.json（.json 不在默认扩展名）仍走函数层 SWR 正常。
+- 09-02 04:34–04:37 窗口 31 条 503 归因：全部早于 R271（04:54）/R272（05:00）/R273（05:12）边缘部署提交，pass 属部署前预期形态；部署后窗口 origin 无新增用户可见 5xx。深分页慢样本为 VPS 本机 curl 冷缓存探针（无 X-Kg-Ip/X-Kg-Fetch），warm 复测 0.02–0.17s 非缺陷。
+- 详见 docs/iter/round-3/audit-r275-shell-cache-observation-closeout.md。
