@@ -11,6 +11,17 @@ export function buildShenlunPaperUrl(paper) {
   return SHENLUN_PATH + '?paper=' + encodeURIComponent(paper);
 }
 
+export function buildShenlunFilterUrl(f) {
+  const o = f || {};
+  const parts = [];
+  if (typeof o.paper === 'string' && o.paper && o.paper.length <= 100) parts.push('paper=' + encodeURIComponent(o.paper));
+  if (typeof o.qtype === 'string' && o.qtype && o.qtype !== '全部') parts.push('qtype=' + encodeURIComponent(o.qtype));
+  const y = Number(o.year);
+  if (Number.isInteger(y) && y > 0) parts.push('year=' + y);
+  if (typeof o.region === 'string' && o.region) parts.push('region=' + encodeURIComponent(o.region));
+  return parts.length ? SHENLUN_PATH + '?' + parts.join('&') : SHENLUN_PATH;
+}
+
 export function buildShenlunMatUrl(id, type) {
   const n = Number(id);
   if (!Number.isInteger(n) || n <= 0) return SHENLUN_PATH + '?tab=m';

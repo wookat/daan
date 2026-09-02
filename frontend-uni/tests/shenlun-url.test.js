@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildShenlunUrl, buildShenlunPaperUrl, buildShenlunMatUrl, SHENLUN_PATH } from '../src/shenlun-url.js';
+import { buildShenlunUrl, buildShenlunPaperUrl, buildShenlunFilterUrl, buildShenlunMatUrl, SHENLUN_PATH } from '../src/shenlun-url.js';
 
 describe('buildShenlunPaperUrl', () => {
   it('encodes paper name into ?paper deeplink', () => {
@@ -10,6 +10,21 @@ describe('buildShenlunPaperUrl', () => {
     expect(buildShenlunPaperUrl(null)).toBe(SHENLUN_PATH);
     expect(buildShenlunPaperUrl(123)).toBe(SHENLUN_PATH);
     expect(buildShenlunPaperUrl('x'.repeat(101))).toBe(SHENLUN_PATH);
+  });
+});
+
+describe('buildShenlunFilterUrl', () => {
+  it('组合多维筛选为深链，值编码', () => {
+    expect(buildShenlunFilterUrl({ paper: '2026广东省考·省市卷' })).toBe(SHENLUN_PATH + '?paper=' + encodeURIComponent('2026广东省考·省市卷'));
+    expect(buildShenlunFilterUrl({ qtype: '归纳概括', year: 2023, region: '江苏' })).toBe(
+      SHENLUN_PATH + '?qtype=' + encodeURIComponent('归纳概括') + '&year=2023&region=' + encodeURIComponent('江苏'),
+    );
+  });
+  it('缺省/非法维度不带参，全缺省回落基础路径', () => {
+    expect(buildShenlunFilterUrl()).toBe(SHENLUN_PATH);
+    expect(buildShenlunFilterUrl({ paper: '', qtype: '全部', year: 0, region: '' })).toBe(SHENLUN_PATH);
+    expect(buildShenlunFilterUrl({ paper: 'x'.repeat(101), qtype: null, year: 'abc', region: 0 })).toBe(SHENLUN_PATH);
+    expect(buildShenlunFilterUrl({ year: 2023 })).toBe(SHENLUN_PATH + '?year=2023');
   });
 });
 

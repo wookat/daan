@@ -889,3 +889,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：R260 后 App 内进入套卷筛选只有站外入口（SSR CTA/分享链接），列表卡 q-paper 纯展示；paper 状态不同步 URL（清除/切换后不可分享刷新）。
 - 收口：shenlun-url.js 增 buildShenlunPaperUrl 纯函数 + 列表卡套卷标签可点（role=button，@click.stop）走 applyPaper 统一入口 + paper 变更 H5 replaceState 同步 URL（详情打开时让位 ?id，关详情回落 paper 深链）。
 - 详见 docs/iter/round-3/design-r261-paper-tag-entry.md。
+
+## R262（申论题型/年份/地区筛选 URL 同步）
+- 取证：R251/R252 入向深链就位后，App 内 setQtype/setYear/setRegion 变更不同步 URL（复制地址栏得旧链接，刷新/分享丢筛选上下文），R261 只收了 paper 维度。
+- 收口：shenlun-url.js 增 buildShenlunFilterUrl 纯函数（四维组合，缺省/非法不带参）；syncPaperUrl 升级为 syncFilterUrl，setQtype/setYear/setRegion/applyPaper/clearFlt 统一走它；detail watch 关详情回落完整 filter URL。
+- 详见 docs/iter/round-3/design-r262-filter-url-sync.md。

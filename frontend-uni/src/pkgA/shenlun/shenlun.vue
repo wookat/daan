@@ -149,7 +149,7 @@
 
 <script>
 import { request, snapPeek, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api';
-import { buildShenlunUrl, buildShenlunPaperUrl, buildShenlunMatUrl } from '../../shenlun-url.js';
+import { buildShenlunUrl, buildShenlunFilterUrl, buildShenlunMatUrl } from '../../shenlun-url.js';
 
 const QTYPES = ['全部', '归纳概括', '综合分析', '提出对策', '贯彻执行', '大作文'];
 const MTYPES = ['全部', '金句', '案例', '政策理论', '范文'];
@@ -203,7 +203,7 @@ export default {
     detail(v) {
       // #ifdef H5
       if (typeof window !== 'undefined' && window.history) {
-        window.history.replaceState(null, '', v && v.id ? buildShenlunUrl(v.id) : buildShenlunPaperUrl(this.paper));
+        window.history.replaceState(null, '', v && v.id ? buildShenlunUrl(v.id) : this.filterUrl());
       }
       // #endif
     },
@@ -301,6 +301,7 @@ export default {
       this.qOffset = 0;
       this.qEnd = false;
       this.detail = null;
+      this.syncFilterUrl();
       this.loadQs();
     },
     clearPaper() {
@@ -312,13 +313,16 @@ export default {
       this.paper = next;
       this.qOffset = 0;
       this.qEnd = false;
-      this.syncPaperUrl();
+      this.syncFilterUrl();
       this.loadQs();
     },
-    syncPaperUrl() {
+    filterUrl() {
+      return buildShenlunFilterUrl({ paper: this.paper, qtype: this.qtype, year: this.year, region: this.region });
+    },
+    syncFilterUrl() {
       // #ifdef H5
       if (typeof window !== 'undefined' && window.history && !this.detail) {
-        window.history.replaceState(null, '', buildShenlunPaperUrl(this.paper));
+        window.history.replaceState(null, '', this.filterUrl());
       }
       // #endif
     },
@@ -327,7 +331,7 @@ export default {
       this.year = 0;
       this.region = '';
       this.paper = '';
-      this.syncPaperUrl();
+      this.syncFilterUrl();
       this.qOffset = 0;
       this.qEnd = false;
       this.loadQs();
@@ -337,6 +341,7 @@ export default {
       this.qOffset = 0;
       this.qEnd = false;
       this.detail = null;
+      this.syncFilterUrl();
       this.loadQs();
     },
     switchMat() {
@@ -376,6 +381,7 @@ export default {
       this.qOffset = 0;
       this.qEnd = false;
       this.detail = null;
+      this.syncFilterUrl();
       this.loadQs();
     },
     qMeta(text) {
