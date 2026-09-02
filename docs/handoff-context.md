@@ -1097,3 +1097,17 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：lint/vitest 331/build 全绿；生产 rev 3dca609、bundle index-B1JixCtG.js；testing agent 双视口实测：入口位置（解析后/社交条前 DOM 实证）、弹层层叠/7 chips/未选禁用、提交→toast→已提交态→防重 guard、question_reports 落库逐字段一致、连看切题独立、R290/R291/R292 回归、双视口溢出 0、console 0 error；清理 DELETED 136（含 question_reports 1 行）/ leftover 0。
 - 未生产实测：提交失败 toast 重试分支（无法构造生产失败）、同 uid 同题后端去重 UPDATE 分支（前端 guard 阻断 UI 二次提交路径；两者 vitest/既有 pytest 覆盖）。
 - 详见 docs/iter/round-3/design-r312-report-overlay-qc-report.md。
+
+### R313：成绩报告解析浮层逐题「练同类题」CTA（PR #507）
+- 取证（SOP-10）：报告浮层已是复盘工作台（连看/收藏/统计锚点/社交条/纠错），但「这题不会→当场练同类」零出口；错题本早有同考点强化 5 道新题先例；生产实查 tag3 覆盖 113063/113264=99.8%。
+- 收口零新 API：report items 纯增量补 tag3；report.vue 解析后、纠错入口前挂 CTA（缺 tag3 fail-closed 不渲染），复用既有 practiceLaunch {kind:'reinforce', module, submodule, tag3, count:5, source:'exam_report'} 直入 5 道未做新题。
+- 验证：ruff/pytest 176(+1)/pyright 0/lint/vitest 331/build 全绿；生产 rev 22bb927；testing agent 双视口实测：CTA 文案与 API tag3 逐题一致、点击直达强化流 1/5 + toast、连看切题 CTA 随题切换、R290/R291/R292/R312 回归、溢出 0、console 0 error；性能预算全过。清理 DELETED 135 / LEFTOVER 0。
+- 未生产实测：tag3=null 隐藏分支与空题池兜底（单测/既有逻辑覆盖）。
+- 详见 docs/iter/round-3/design-r313-report-overlay-reinforce.md。
+
+### R314：成绩报告解析浮层错题「错因自评」（PR #508）
+- 取证（SOP-10）：错题本早有错因自评四选项（粗心大意/概念不清/方法不会/纯蒙的）+ 按错因筛选/聚合/学习建议，模考答错题自动进错题本；但报告浮层（记忆最鲜明时刻）无法直接标错因，须离开报告去错题本找同题补标，复盘断点。
+- 收口零新 API/表/URL 状态：db.mistakes_by_qids(uid,qids) 映射本人错题 {question_id:{id,error_reason}}；report items 纯增量补 mistake_id/error_reason（仅答错且有错题记录时非 null，答对/未答/无记录 fail-closed null）；report.vue 浮层答案统计后、解析前渲染错因 chips（v-if=detail.mistake_id，role=button+aria），点击乐观更新 + PATCH /api/mistakes/{mid} {uid,error_reason}，失败回滚+toast，已选同项不重复请求；与错题本同一 mistakes 记录同源（错因排序/聚合/学习建议即时生效）。
+- 验证：ruff/pytest 177(+2)/pyright 0/lint/vitest 331/build 全绿；生产 rev 80bbfd7、bundle index-U1GUVn8d.js；testing agent 双视口实测：API 契约（答错 mistake_id 非 null 初始 error_reason null，答对/未答双 null）、chips 位置/点击 PATCH 200/硬刷回显/错题本同源（按错因聚合+复习流同显）、连看不串态、fail-closed 无 chips、R291/R292/R312/R313 回归、双视口溢出 0、console 0 error；Lighthouse 全过（部署首跑 / a11y 单样本 0.94、独立复跑 1.0，采样波动）。清理 test-r314-me DELETED 10 / LEFTOVER 0，保护 uid 各表计数前后快照逐表一致。
+- 未生产实测：PATCH 失败回滚 toast 分支（生产无法构造失败，逻辑代码核实）。
+- 详见 docs/iter/round-3/design-r314-report-overlay-error-reason.md。

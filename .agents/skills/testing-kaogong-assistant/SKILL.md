@@ -595,3 +595,7 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 
 ## R312 纠错弹层走查新经验
 - computer type 向 uni-app textarea 键入中文可能丢字（仅落 ASCII）；可改在页内对聚焦元素执行 `document.execCommand('insertText', false, '中文内容')`——会触发 input 事件、v-model 正常更新，提交内容以 DOM value 回读为准。
+
+## R314 错因自评走查新经验
+- 注入临时 uid 时 `anonUid` 必须存纯字符串（`localStorage.setItem('anonUid','test-xxx')`）；存 JSON 包裹形式会被 api.js anonUid() 原样当 uid 拼进请求，报告页表现为「暂无成绩报告」空态。
+- 错题本 book 页的错因 chips 只在复习流答错后出现；快速同源取证可直接看侧栏「按错因」聚合卡计数，不必走完整复习流。
