@@ -804,3 +804,13 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证 verified：R244 搜索素材点击只带 mtype 进类型列表首页（分页 20 条），命中素材 id 在最后一跳被丢弃；政策理论 73 条时目标素材可能翻数页才可见（id=35 实测不在该类型首页 20 条内）。
 - 收口：db.shenlun_materials 增可选 mid 参数（AND id=?，disabled 守卫不变）+ /api/shenlun/materials 增可选 id 透传；搜索页 goShenlunMat 追加 &mid=<id>；申论页 onLoad 纯数字校验 pinMid，loadMats 首屏后命中项不在当前页则按 ?id= 拉单条，置顶+去重+自动展开+「搜索命中」角标（仅本次会话置顶，不改常规排序）；单条拉取失败不阻断列表。不新增素材详情页，SSR/SEO 零变化。
 - 验证：pytest +1 例（id 单条命中/下架 id 空），120 passed/ruff/pyright 0/lint/vitest 135/build 全绿；生产 rev ad2ebb0 1440/375 实测目标素材置顶展开带角标、chip 激活、单条兜底路径 verified、无 mid 入口无角标零变化、?id=999999 空 items、溢出 0、console 0 error、性能预算全过。详见 docs/iter/round-3/design-r246-search-mat-mid-deeplink.md。
+
+### R247（申论素材卡「复制素材链接」出向分享）
+- 取证 verified：R246 打通入向 mid 深链后，App 素材卡无任何出向出口（真题详情侧 R243 已有对称能力）；生产实测 mtype 双重编码边界（搜索跳转后 URL mtype=%25E6...）功能无害——chip 激活/类型过滤/目标命中均正常，不做猜测性修复。
+- 收口：shenlun-url.js 增纯函数 buildShenlunMatUrl(id, type)（非法 id 回落 ?tab=m）+ 素材卡 m-foot「复制链接」控件（role=button + aria-label，对齐 d-copy 样式），收链接端走 R246 既有 mid 置顶展开链路。零后端/SSR/SEO 变化。
+- 验证：vitest +2 例（合法/非法 id 与 type 编码分支），137 passed/lint/build 全绿（后端零改动）；生产 rev 22d2532 1440/375 实测复制控件可点、剪贴板实读完整 origin+hash 深链、新开链接目标素材置顶展开带「搜索命中」角标、溢出 0、console 0 error、性能预算全过。详见 docs/iter/round-3/design-r247-shenlun-mat-share-link.md。
+
+### R248（/tiku/shenlun/ hub 首页外显申论素材库板块）
+- 取证 verified：生产 shenlun_materials 166 条（政策理论 73/金句 41/案例 32/范文 20）已具备搜索/深链/分享全链路（R244–R247），但公开 SSR hub /tiku/shenlun/ 仅底部 CTA 文案提及素材，素材资产对搜索引擎/未装 App 用户零外显。
+- 收口：db.shenlun_material_type_counts()（disabled 守卫 + 排除空类型，按数量降序）+ _tiku_shenlun 第 1 页渲染「申论素材库（N 条）」卡片，各类型链接 /#/pkgA/shenlun/shenlun?tab=m&mtype=<quote(type)>（hash 深链不新增可收录 URL）；空 counts 整卡不渲染，分页页不重复；canonical/JSON-LD/sitemap/分页零变化。
+- 验证：pytest +1 例（板块存在/mtype 链接/素材清空不渲染），121 passed/ruff/pyright 0；生产 rev 4813237 实测 hub 素材板块 166 条 + 4 类型链接（page=2 无板块），1440/375 点击类型链接直达 App 素材 tab 且「政策理论」chip 激活过滤 20 条、溢出 0、console 0 error、性能预算全过（/ perf 0.99、/tiku/ perf 1.00）。详见 docs/iter/round-3/design-r248-shenlun-hub-materials.md。
