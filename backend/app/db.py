@@ -3239,6 +3239,21 @@ def exam_paper_filters() -> dict:
     return {"years": years, "regions": regions}
 
 
+def exam_paper_social(pid: int) -> dict:
+    """同卷全体用户社会证明：每人取最高分（与模考排名口径一致）。"""
+    conn = get_conn()
+    _ensure_exam_tables(conn)
+    rows = conn.execute(
+        """SELECT uid, MAX(score) s FROM exam_attempts
+           WHERE paper_id=? AND submitted_at IS NOT NULL GROUP BY uid""",
+        (pid,),
+    ).fetchall()
+    conn.close()
+    n = len(rows)
+    avg = round(sum(r["s"] for r in rows) / n, 1) if n else 0
+    return {"n": n, "avg": avg}
+
+
 def get_exam_paper(pid: int) -> dict | None:
     conn = get_conn()
     _ensure_exam_tables(conn)

@@ -386,6 +386,10 @@ def tiku_paper_detail(pid: int):
         conn.close()
         rows = [got[i] for i in qids if i in got]
     title = p["title"]
+    social = db.exam_paper_social(pid)
+    social_text = (
+        f" · 已有 {social['n']} 人模考 · 平均 {social['avg']} 分" if social["n"] else ""
+    )
     mod_dist: dict[str, int] = {}
     for r in rows:
         if _module_name(r["module"]):
@@ -413,6 +417,7 @@ def tiku_paper_detail(pid: int):
         + f"<h1>{_e(title)}</h1>"
         + f'<p class="meta">{_e(p["year"] or "")} {_e(p["region"] or "")} · 共 {len(rows)} 题'
         + (f' · 限时 {p["duration_min"]} 分钟' if p["duration_min"] else "")
+        + _e(social_text)
         + "</p>"
         + (f'<div class="card"><h2>模块分布</h2><div class="tags">{dist_links}</div></div>' if dist_links else "")
         + f'<a class="cta" href="{_e(SITE_BASE)}/#/pkgA/exam/list{_exam_list_query(p)}">在线模考本卷 →</a>'
@@ -426,7 +431,7 @@ def tiku_paper_detail(pid: int):
         "@context": "https://schema.org",
         "@type": "CollectionPage",
         "name": title,
-        "description": f"{title}，共 {len(rows)} 题，在线全真模考并查看逐题答案解析。",
+        "description": f"{title}，共 {len(rows)} 题{social_text}，在线全真模考并查看逐题答案解析。",
         "url": _url(f"/tiku/papers/{pid}"),
         "isPartOf": {"@type": "WebSite", "name": "错题邦", "url": SITE_BASE},
         "breadcrumb": {
