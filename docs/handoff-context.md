@@ -1090,3 +1090,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：ruff/pytest 174(+4)/pyright 0/lint/vitest 331/build 全绿；生产 rev e5484a1、bundle index-BQPBH1qz.js；testing agent 双视口实测：同卷 0 分/24 分双 attempt，best_attempt_id 指向最高分、已考卡 3 键/未考卡 2 键、点击直达 hero 24 分、R309/R310 回归、375 无溢出、console 0 error；清理 DELETED 137 / leftover 0。部署首跑首页 a11y 单样本 0.94，独立复跑 1.0 无违例项（采样波动）。
 - 未生产实测：同分平手取更近 attempt 分支（pytest 覆盖）。
 - 详见 docs/iter/round-3/design-r311-paper-card-report-entry.md。
+
+### R312：成绩报告解析浮层补「题目纠错」入口（PR #505）
+- 取证（SOP-10）：刷题页/错题本均有完整纠错链路（入口→7 类型 sheet→POST /api/question_report→管理台审核），但报告解析浮层（R290 连看/R291 收藏/R292 社交条后的复盘工作台）零纠错入口；复盘恰是最易发现「答案/解析有误」的场景（粉笔逐题解析有同权入口）。
+- 收口：纯前端零后端/零契约。report.vue 解析块后、q-social-bar 前挂 report-link「题目有问题？纠错」（detail.question_id 缺失 fail-closed 不渲染）；与 practice/book 同构纠错 sheet（同 7 类型 + 500 字上限 + reportBusy 防重），.qr-mask z-index 95 盖过解析浮层（z 90）；已提交态按 question_id 记页面级 reportedIds（瞬时态不进 storage/URL），连看切题各题独立；失败 toast 可重试不置已提交态。
+- 验证：lint/vitest 331/build 全绿；生产 rev 3dca609、bundle index-B1JixCtG.js；testing agent 双视口实测：入口位置（解析后/社交条前 DOM 实证）、弹层层叠/7 chips/未选禁用、提交→toast→已提交态→防重 guard、question_reports 落库逐字段一致、连看切题独立、R290/R291/R292 回归、双视口溢出 0、console 0 error；清理 DELETED 136（含 question_reports 1 行）/ leftover 0。
+- 未生产实测：提交失败 toast 重试分支（无法构造生产失败）、同 uid 同题后端去重 UPDATE 分支（前端 guard 阻断 UI 二次提交路径；两者 vitest/既有 pytest 覆盖）。
+- 详见 docs/iter/round-3/design-r312-report-overlay-qc-report.md。
