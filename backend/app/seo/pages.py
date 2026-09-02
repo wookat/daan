@@ -312,6 +312,15 @@ def tiku_papers_noslash():
 @router.get("/papers/", response_class=HTMLResponse, include_in_schema=False)
 def tiku_papers():
     papers = db.list_exam_papers(kind="zhenti")
+    filters = db.exam_paper_filters()
+    year_chips = "".join(
+        f'<a href="/#/pkgA/exam/list?year={f["y"]}">{f["y"]}年（{f["n"]}）</a>'
+        for f in filters["years"]
+    )
+    region_chips = "".join(
+        f'<a href="/#/pkgA/exam/list?region={quote(f["r"])}">{_e(f["r"])}（{f["n"]}）</a>'
+        for f in filters["regions"]
+    )
     lis = "".join(
         f'<li><a href="/tiku/papers/{p["id"]}">{_e(p["title"])}</a>'
         f'<div class="meta">{_e(p["year"] or "")} {_e(p["region"] or "")} · {p["n"]} 题'
@@ -321,6 +330,8 @@ def tiku_papers():
     body = (
         _crumb([("题库", "/tiku/"), ("真题卷", None)])
         + f"<h1>历年公务员考试真题卷（{len(papers)} 套）</h1>"
+        + (f'<div class="card"><h2>按年份筛卷</h2><div class="tags">{year_chips}</div></div>' if year_chips else "")
+        + (f'<div class="card"><h2>按地区筛卷</h2><div class="tags">{region_chips}</div></div>' if region_chips else "")
         + '<div class="card"><ul class="qlist">'
         + lis
         + "</ul></div>"
@@ -338,6 +349,15 @@ def tiku_papers():
             [("题库", "/tiku/"), ("真题卷", "/tiku/papers/")],
         ),
     )
+
+
+def _exam_list_query(p: dict) -> str:
+    parts = []
+    if p.get("year"):
+        parts.append(f'year={p["year"]}')
+    if p.get("region"):
+        parts.append(f'region={quote(p["region"])}')
+    return "?" + "&".join(parts) if parts else ""
 
 
 @router.get("/papers/{pid}/", include_in_schema=False)
@@ -395,7 +415,7 @@ def tiku_paper_detail(pid: int):
         + (f' · 限时 {p["duration_min"]} 分钟' if p["duration_min"] else "")
         + "</p>"
         + (f'<div class="card"><h2>模块分布</h2><div class="tags">{dist_links}</div></div>' if dist_links else "")
-        + f'<a class="cta" href="{_e(SITE_BASE)}/#/pkgA/exam/list">在线模考本卷 →</a>'
+        + f'<a class="cta" href="{_e(SITE_BASE)}/#/pkgA/exam/list{_exam_list_query(p)}">在线模考本卷 →</a>'
         + '<div class="card">'
         + _q_items(rows)
         + "</div>"
