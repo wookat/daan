@@ -7,7 +7,7 @@
       <view class="ex-main">
       <view class="topbar">
         <text class="mod">{{ modName(cur.module) }}</text>
-        <text class="clock">⏱ {{ fmtLeft }}</text>
+        <text class="clock" :class="{ low: lowTime }">⏱ {{ fmtLeft }}</text>
         <view class="top-btns">
           <view class="tbtn" :class="{ on: cur._marked }" @click="toggleMark">{{ cur._marked ? '已标记' : '标记' }}</view>
         </view>
@@ -54,7 +54,7 @@
         <view class="card side-card">
           <view class="side-h">
             <text class="side-t">答题卡</text>
-            <text class="side-clock">⏱ {{ fmtLeft }}</text>
+            <text class="side-clock" :class="{ low: lowTime }">⏱ {{ fmtLeft }}</text>
           </view>
           <view class="legend">
             <text class="lg"><text class="dot done"></text>已答</text>
@@ -114,6 +114,7 @@ import { request, anonUid } from '../../api.js';
 import { submitFailPlan } from '../../exam-policy.js';
 import { dayKey } from '../../checkin.js';
 import { splitMaterial, sameMaterial } from '../../material.js';
+import { crossedTimeAlert } from '../../exam-alert.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
 const PROG_KEY = 'examProgress';
@@ -151,6 +152,7 @@ export default {
       return splitMaterial(q.question);
     },
     answeredCount() { return this.items.filter((q) => q._picked).length; },
+    lowTime() { return this.leftSecs > 0 && this.leftSecs <= 300; },
     fmtLeft() {
       const s = Math.max(0, this.leftSecs);
       return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
@@ -253,7 +255,13 @@ export default {
       this.leftSecs = Math.max(0, Math.round((this._endAt - Date.now()) / 1000));
       this.qsecs = 0;
       this.timer = setInterval(() => {
+        const prev = this.leftSecs;
         this.leftSecs = Math.max(0, Math.round((this._endAt - Date.now()) / 1000));
+        const alert = crossedTimeAlert(prev, this.leftSecs);
+        if (alert) {
+          const blank = this.items.length - this.answeredCount;
+          uni.showToast({ title: alert.label + (blank ? '，还有 ' + blank + ' 题未作答' : ''), icon: 'none', duration: 3500 });
+        }
         this.qsecs++;
         if (this.leftSecs <= 0) {
           this.stopClock();
@@ -474,6 +482,11 @@ export default {
 .pos { font-size: 24rpx; font-weight: 600; color: var(--ink-2); }
 .mod { font-size: 21rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 2rpx 12rpx; }
 .clock { font-size: 32rpx; font-weight: 700; color: #ef4444; font-variant-numeric: tabular-nums; }
+.clock.low, .side-clock.low { animation: clock-pulse 1s ease-in-out infinite; }
+@keyframes clock-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) {
+  .clock.low, .side-clock.low { animation: none; }
+}
 .top-btns { display: flex; gap: 10rpx; }
 .tbtn { min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; font-size: 23rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 22rpx; background: var(--card); }
 .tbtn.on { color: #d97706; border-color: #f59e0b; background: var(--warn-soft); font-weight: 600; }
