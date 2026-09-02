@@ -81,7 +81,7 @@ _CSS = (
     ".qlist{list-style:none;padding:0;margin:0}.qlist li{border-bottom:1px solid var(--border);padding:10px 0}"
     ".qlist li:last-child{border-bottom:none}"
     ".tags{display:flex;flex-wrap:wrap;gap:8px}.tags a{background:var(--tag-bg);border-radius:16px;padding:4px 12px;"
-    "font-size:14px;white-space:nowrap}"
+    "font-size:14px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}"
     ".meta{color:var(--muted);font-size:13px}"
     ".meta a,.ftr a,h2 a,p a,.qlist li>a{text-decoration:underline}"
     "p a.cta,.crumb a{text-decoration:none}"
