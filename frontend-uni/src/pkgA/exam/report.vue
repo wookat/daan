@@ -236,6 +236,10 @@
           <view v-if="detail.hs_explanation || detail.explanation" class="dexp">
             <text>{{ detail.hs_explanation || detail.explanation }}</text>
           </view>
+          <view v-if="detail.tag3" class="dreinf" role="button" :aria-label="'练同类题：' + detail.tag3 + '，同考点强化 5 道新题'" @click="reinforceDetail">
+            <text class="dreinf-t">练同类题：{{ detail.tag3 }}</text>
+            <text class="dreinf-go">强化 5 道新题 ›</text>
+          </view>
           <view v-if="detail.question_id" class="report-link" role="button" :aria-disabled="detailReported" @click="openQcReport">{{ detailReported ? '已提交纠错，感谢反馈' : '题目有问题？纠错' }}</view>
           <q-social-bar v-if="detail.question_id" :question-id="detail.question_id" />
         </scroll-view>
@@ -520,6 +524,19 @@ export default {
       uni.setStorageSync('redoSet', set);
       uni.navigateTo({ url: '/pages/practice/practice' });
     },
+    reinforceDetail() {
+      const d = this.detail;
+      if (!d || !d.tag3) return;
+      uni.setStorageSync('practiceLaunch', {
+        kind: 'reinforce',
+        module: d.module || null,
+        submodule: d.submodule || null,
+        tag3: d.tag3,
+        count: 5,
+        source: 'exam_report',
+      });
+      uni.navigateTo({ url: '/pages/practice/practice' });
+    },
     goPractice(tag3) {
       uni.setStorageSync('practiceLaunch', { kind: 'start', tag3: tag3 || null, count: 10, adaptive: true });
       uni.navigateTo({ url: '/pages/practice/practice' });
@@ -659,6 +676,9 @@ export default {
 /* #endif */
 .qr-mask { z-index: 95; }
 .btn { background: linear-gradient(135deg, #5c82ff, var(--brand)); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(46, 91, 255, 0.25); min-height: 44px; line-height: 44px; }
+.dreinf { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; background: var(--brand-soft); border-radius: 14rpx; padding: 18rpx 20rpx; margin-bottom: 6rpx; cursor: pointer; }
+.dreinf-t { font-size: 25rpx; color: var(--ink); font-weight: 600; min-width: 0; }
+.dreinf-go { font-size: 24rpx; color: var(--brand-strong); font-weight: 600; flex-shrink: 0; white-space: nowrap; }
 .report-link { text-align: center; font-size: 22rpx; color: var(--ink-2); padding-top: 14rpx; text-decoration: underline; }
 .rp-types { display: flex; flex-wrap: wrap; gap: 16rpx; margin-bottom: 20rpx; }
 .rp-chip { padding: 18rpx 26rpx; min-height: 44rpx; border-radius: 999rpx; background: var(--soft-bg); font-size: 26rpx; color: var(--ink-2); }

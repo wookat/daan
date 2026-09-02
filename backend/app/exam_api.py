@@ -447,6 +447,7 @@ def api_exam_report(attempt_id: int, uid: str = ""):
             "question_id": qid,
             "module": q.get("module"),
             "submodule": q.get("submodule"),
+            "tag3": q.get("tag3"),
             "question": q.get("question"),
             "options": q.get("options"),
             "picked": picked,
