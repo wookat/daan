@@ -1,4 +1,5 @@
 """SEO 题库落地页：服务端渲染 HTML（/tiku/*）+ sitemap/robots，承接搜索长尾流量导流主站。"""
+import hashlib
 import html
 import json
 import math
@@ -1471,8 +1472,7 @@ def sitemap_index():
     return Response(content=body, media_type="application/xml")
 
 
-@root_router.get("/sitemap-pages.xml", include_in_schema=False)
-def sitemap_pages():
+def _sitemap_page_urls() -> list[tuple[str, float | None]]:
     urls: list[tuple[str, float | None]] = [
         (_url("/tiku/"), None),
         (_url("/tiku/papers/"), None),
@@ -1491,30 +1491,42 @@ def sitemap_pages():
         urls += [(_url(_sub_path("shenlun", t)), None) for t, _n in db.shenlun_qtype_counts()]
         urls += [(_url(_shenlun_paper_path(p)), None) for p, _y, _rg, _n in db.shenlun_paper_counts()]
     urls += [(_url(f'/tiku/papers/{p["id"]}'), p["created_at"]) for p in db.list_exam_papers(kind="zhenti")]
-    return _urlset(urls)
+    return urls
 
 
-@root_router.get("/sitemap-topics.xml", include_in_schema=False)
-def sitemap_topics():
+@root_router.get("/sitemap-pages.xml", include_in_schema=False)
+def sitemap_pages():
+    return _urlset(_sitemap_page_urls())
+
+
+def _sitemap_topic_urls() -> list[tuple[str, float | None]]:
     counts = db.tag3_counts()
     lastmod = db.tag3_lastmod()
-    urls = [
+    return [
         (_url(_topic_path(code)), lastmod.get(code))
         for code in taxonomy.topic_index()
         if counts.get(code)
     ]
-    return _urlset(urls)
 
 
-@root_router.get("/sitemap-years.xml", include_in_schema=False)
-def sitemap_years():
+@root_router.get("/sitemap-topics.xml", include_in_schema=False)
+def sitemap_topics():
+    return _urlset(_sitemap_topic_urls())
+
+
+def _sitemap_year_urls() -> list[tuple[str, float | None]]:
     urls: list[tuple[str, float | None]] = [
         (_url(_year_path(y, m)), mu)
         for (y, m), (n, mu) in sorted(db.year_module_counts().items(), reverse=True)
         if n and _module_name(m)
     ]
     urls += [(_url(_year_path(y, "shenlun")), None) for y, _n in db.shenlun_year_counts()]
-    return _urlset(urls)
+    return urls
+
+
+@root_router.get("/sitemap-years.xml", include_in_schema=False)
+def sitemap_years():
+    return _urlset(_sitemap_year_urls())
 
 
 @root_router.get("/sitemap-questions-{shard}.xml", include_in_schema=False)
@@ -1715,11 +1727,38 @@ def _indexnow_post(urls: list[str]) -> bool:
         return False
 
 
+def _indexnow_page_urls() -> list[str]:
+    urls = [_url("/")]
+    urls += [u for u, _ts in _sitemap_page_urls()]
+    urls += [u for u, _ts in _sitemap_topic_urls()]
+    urls += [u for u, _ts in _sitemap_year_urls()]
+    return urls
+
+
+def _indexnow_submit_pages(conn) -> None:
+    urls = sorted(set(_indexnow_page_urls()))
+    digest = hashlib.sha256("\n".join(urls).encode()).hexdigest()
+    row = conn.execute(
+        "SELECT value FROM seo_meta WHERE key='indexnow_pages_hash'"
+    ).fetchone()
+    if row and row["value"] == digest:
+        return
+    if not _indexnow_post(urls):
+        return
+    conn.execute(
+        "INSERT INTO seo_meta (key, value) VALUES ('indexnow_pages_hash', ?) "
+        "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        (digest,),
+    )
+    conn.commit()
+
+
 def _indexnow_cycle():
     conn = db.get_conn()
     try:
         conn.execute("CREATE TABLE IF NOT EXISTS seo_meta (key TEXT PRIMARY KEY, value TEXT)")
         conn.commit()
+        _indexnow_submit_pages(conn)
         row = conn.execute(
             "SELECT value FROM seo_meta WHERE key='indexnow_last_qid'"
         ).fetchone()
