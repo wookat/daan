@@ -49,6 +49,10 @@ def _year_path(year: int, module: str) -> str:
     return f"/tiku/y/{year}/{quote(module)}/"
 
 
+def _shenlun_paper_path(paper: str) -> str:
+    return f"/tiku/shenlun/p/{quote(paper)}/"
+
+
 _CSS = (
     ":root{--bg:#f6f7fb;--surface:#fff;--border:#e7e9f0;--text:#17181c;--muted:#6b7280;"
     "--link:" + BRAND + ";--tag-bg:#eef3ff;--ans-bg:#ecfdf5;"
@@ -1063,15 +1067,71 @@ def _shenlun_q_items(items) -> str:
             s for s in (
                 f'{it["exam_year"]}年' if it["exam_year"] else "",
                 it["exam_region"] or "",
-                it["paper"] or "",
                 it["qtype"] or "",
             ) if s
         )
+        paper_link = (
+            f'<a href="{_e(_shenlun_paper_path(it["paper"]))}">{_e(it["paper"])}</a> '
+            if it["paper"] else ""
+        )
         lis.append(
-            f'<li><span class="meta">【{_e(meta)}】</span>{_e(text)} '
+            f'<li><span class="meta">【{_e(meta)}】</span>{paper_link}{_e(text)} '
             f'<a href="/#/pkgA/shenlun/shenlun?id={it["id"]}">去作答 →</a></li>'
         )
     return "".join(lis)
+
+
+def _render_shenlun_paper(paper: str) -> str:
+    """申论按套卷详情页：给定资料一次呈现 + 全部小题与参考解析；未知套卷回落 404。"""
+    items = db.shenlun_paper_questions(paper)
+    if not items:
+        raise HTTPException(404, "套卷不存在")
+    first = items[0]
+    material_html = _e((first["material"] or "").strip()).replace("\n", "<br>")
+    q_cards = "".join(
+        f'<div class="card"><h2>第{i}题{(" · " + _e(q["qtype"])) if q["qtype"] else ""}</h2>'
+        f'<p>{_e((q["question"] or "").strip()).replace(chr(10), "<br>")}</p>'
+        + (
+            '<details class="ans"><summary>参考解析</summary>'
+            f'<p>{_e((q["reference"] or "").strip()).replace(chr(10), "<br>")}</p></details>'
+            if (q["reference"] or "").strip() else ""
+        )
+        + f'<p><a href="/#/pkgA/shenlun/shenlun?id={q["id"]}">去作答本题 →</a></p></div>'
+        for i, q in enumerate(items, 1)
+    )
+    other_papers = [pc for pc in db.shenlun_paper_counts() if pc[0] != paper]
+    other_papers.sort(key=lambda pc: (pc[1] != first["exam_year"], -(pc[1] or 0)))
+    others = "".join(
+        f'<a href="{_e(_shenlun_paper_path(p))}">{_e(p)}（{n}）</a>'
+        for p, _y, _rg, n in other_papers[:12]
+    )
+    meta = " · ".join(
+        s for s in (
+            f'{first["exam_year"]}年' if first["exam_year"] else "",
+            first["exam_region"] or "",
+        ) if s
+    )
+    body = (
+        _crumb([("题库", "/tiku/"), ("申论", "/tiku/shenlun/"), (paper, None)])
+        + f"<h1>{_e(paper)}申论真题（{len(items)} 题）</h1>"
+        + f'<p class="meta">{_e(meta)} · 给定资料 + {len(items)} 道小题，附参考解析，可在 App 申论专区在线作答</p>'
+        + f'<div class="card"><h2>给定资料</h2><p>{material_html}</p></div>'
+        + q_cards
+        + (f'<div class="card"><h2>其他套卷申论真题</h2><div class="tags">{others}</div></div>' if others else "")
+        + f'<a class="cta" href="/#/pkgA/shenlun/shenlun?id={first["id"]}">进入申论专区在线作答本套真题 →</a>'
+    )
+    return _page(
+        f"{paper}申论真题_给定资料与参考解析_错题邦",
+        f"{paper}申论真题共 {len(items)} 题，含完整给定资料与参考解析，可在线作答。",
+        _shenlun_paper_path(paper),
+        body,
+        _collection_ld(
+            f"{paper}申论真题",
+            f"{paper}申论真题 {len(items)} 题，含给定资料与参考解析。",
+            _shenlun_paper_path(paper),
+            [("题库", "/tiku/"), ("申论", "/tiku/shenlun/"), (paper, _shenlun_paper_path(paper))],
+        ),
+    )
 
 
 def _render_shenlun_year(year: int, page: int) -> str:
@@ -1154,6 +1214,21 @@ def _render_shenlun_qtype(qtype: str, page: int) -> str:
     )
 
 
+@router.get("/shenlun/p/{paper}", include_in_schema=False)
+def tiku_shenlun_paper_noslash(paper: str):
+    if not db.shenlun_paper_questions(paper):
+        return _not_found("套卷不存在")
+    return RedirectResponse(_shenlun_paper_path(paper), status_code=301)
+
+
+@router.get("/shenlun/p/{paper}/", response_class=HTMLResponse, include_in_schema=False)
+def tiku_shenlun_paper(paper: str):
+    try:
+        return HTMLResponse(_render_shenlun_paper(paper))
+    except HTTPException as e:
+        return _not_found(e.detail)
+
+
 def _tiku_shenlun(page: int):
     """申论真题 hub：以 shenlun_questions 真实语料呈现；语料清空时回落品牌 404。"""
     res = db.shenlun_questions(limit=PAGE_SIZE, offset=(page - 1) * PAGE_SIZE)
@@ -1176,6 +1251,10 @@ def _tiku_shenlun(page: int):
         f'<a href="{_e(_sub_path("shenlun", t))}">{_e(t)}（{n}）</a>'
         for t, n in db.shenlun_qtype_counts()
     )
+    paper_chips = "".join(
+        f'<a href="{_e(_shenlun_paper_path(p))}">{_e(p)}（{n}）</a>'
+        for p, _y, _rg, n in db.shenlun_paper_counts()
+    ) if page == 1 else ""
     mat_html = ""
     mat_desc = ""
     if page == 1:
@@ -1199,6 +1278,7 @@ def _tiku_shenlun(page: int):
         + (f'<div class="card"><h2>按题型刷题</h2><div class="tags">{qtype_chips}</div></div>' if qtype_chips else "")
         + (f'<div class="card"><h2>覆盖年份</h2><div class="tags">{year_chips}</div></div>' if year_chips else "")
         + (f'<div class="card"><h2>覆盖地区</h2><div class="tags">{region_chips}</div></div>' if region_chips else "")
+        + (f'<div class="card"><h2>按套卷刷题（含给定资料与解析）</h2><div class="tags">{paper_chips}</div></div>' if paper_chips else "")
         + '<div class="card"><ul class="qlist">'
         + _shenlun_q_items(items)
         + "</ul></div>"
@@ -1408,6 +1488,7 @@ def sitemap_pages():
     if db.shenlun_questions(limit=1)["total"]:
         urls.append((_url("/tiku/shenlun/"), None))
         urls += [(_url(_sub_path("shenlun", t)), None) for t, _n in db.shenlun_qtype_counts()]
+        urls += [(_url(_shenlun_paper_path(p)), None) for p, _y, _rg, _n in db.shenlun_paper_counts()]
     urls += [(_url(f'/tiku/papers/{p["id"]}'), p["created_at"]) for p in db.list_exam_papers(kind="zhenti")]
     return _urlset(urls)
 

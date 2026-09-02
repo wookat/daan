@@ -828,6 +828,30 @@ def shenlun_qtype_counts() -> list[tuple[str, int]]:
     return [(r["qtype"], r["n"]) for r in rows]
 
 
+def shenlun_paper_counts() -> list[tuple[str, int | None, str | None, int]]:
+    conn = get_conn()
+    rows = conn.execute(
+        """SELECT paper, MAX(exam_year) y, MAX(exam_region) rg, COUNT(*) n
+           FROM shenlun_questions
+           WHERE (disabled IS NULL OR disabled=0) AND paper IS NOT NULL AND paper != ''
+           GROUP BY paper ORDER BY y DESC, paper"""
+    ).fetchall()
+    conn.close()
+    return [(r["paper"], r["y"], r["rg"], r["n"]) for r in rows]
+
+
+def shenlun_paper_questions(paper: str) -> list[dict]:
+    conn = get_conn()
+    rows = conn.execute(
+        """SELECT id, exam_year, exam_region, paper, qtype, material, question, reference
+           FROM shenlun_questions
+           WHERE (disabled IS NULL OR disabled=0) AND paper=? ORDER BY id""",
+        (paper,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 def _ensure_shenlun_answers(conn):
     conn.execute(
         """CREATE TABLE IF NOT EXISTS shenlun_answers (

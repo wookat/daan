@@ -153,6 +153,42 @@ def test_shenlun_qtype_pages(client):
     assert path not in client.get("/sitemap-pages.xml").text
 
 
+def test_shenlun_paper_pages(client):
+    """R253：申论按套卷详情页；材料+逐题解析、hub 套卷链接、sitemap 收录；未知套卷 404。"""
+    seed_questions()
+    _seed_shenlun()
+    path = f"/tiku/shenlun/p/{quote('2023年国考申论（副省级）')}/"
+    try:
+        r = client.get(path)
+        assert r.status_code == 200
+        assert "2023年国考申论（副省级）申论真题（3 题）" in r.text
+        assert "给定资料" in r.text and "给定资料测试 0" in r.text
+        assert "参考解析" in r.text and "参考解析：略。" in r.text
+        assert re.search(r'href="/#/pkgA/shenlun/shenlun\?id=\d+">去作答本题', r.text)
+        assert re.search(r'class="cta" href="/#/pkgA/shenlun/shenlun\?id=\d+"', r.text)
+        assert 'rel="canonical"' in r.text and path in r.text
+        # 无斜杠 301（未知套卷无斜杠直接 404，不产生 301→404 链）
+        r301 = client.get(path.rstrip("/"), follow_redirects=False)
+        assert r301.status_code == 301 and r301.headers["location"].endswith(path)
+        assert client.get("/tiku/shenlun/p/不存在套卷", follow_redirects=False).status_code == 404
+        assert client.get("/tiku/shenlun/p/不存在套卷/").status_code == 404
+        # hub 套卷板块链接 + 列表项卷名链接
+        hub = client.get("/tiku/shenlun/")
+        assert f'href="{path}"' in hub.text
+        assert "按套卷刷题" in hub.text
+        # 分页页不渲染套卷板块
+        p2 = client.get("/tiku/shenlun/?page=2")
+        if p2.status_code == 200:
+            assert "按套卷刷题" not in p2.text
+        # sitemap-pages 收录
+        sm = client.get("/sitemap-pages.xml")
+        assert path in sm.text
+    finally:
+        _clear_shenlun()
+    assert client.get(path).status_code == 404
+    assert path not in client.get("/sitemap-pages.xml").text
+
+
 def test_shenlun_hub_renders_with_corpus_and_falls_back_when_empty(client):
     seed_questions()
     _seed_shenlun()
