@@ -1146,3 +1146,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 未生产实测：真实触屏设备长按手势（自动化 CDP touch 模拟，见 SKILL 经验）。
 - 观察项：排除态跨设备同步（可仿 R317/R318 marks/secs 模式服务端化）；刷题页同交互补齐。
 - 详见 docs/iter/round-3/design-r319-exam-option-exclude.md。
+
+### R320：未交卷模考「排除干扰项」跨设备同步（PR #517）
+- 取证（SOP-10）：收口 R319 观察项——_excl 仅随本机 examProgress 快照持久化，pushProgress 只上传 picks/idx/marks/secs、adoptServerExamProgress 恢复的 items 不含 _excl；换设备续考后设备 A 的排除态全丢。R317/R318 已建立同构续考状态同步模式，_excl 是最后一块未同步做题过程态。
+- 收口零新 endpoint/表/URL 状态：db _ensure_exam_progress 幂等补列 exam_progress.excl TEXT（JSON {question_id:[选项字母]}，与本协议 picks/marks/secs 同 question_id 口径；交卷协议不涉及排除态无口径冲突）；save_exam_progress(..., excl=None) 非空存 JSON 空存 NULL（UPSERT 整体覆盖，空即清除）；latest_exam_progress 回读 dict（旧行 {}）；POST /api/exam/progress 可选 excl（缺省 {}；提供时必须 dict ≤300、key 可 int 化、value 为 list ≤4 且逐项 ∈{A,B,C,D} 字符串，否则 400 不静默转换；落库去重保序、空 value 行不落库）；GET /api/exam/resume 应答补 excl。前端 pushProgress 补收集非空 Array q._excl 的 {q.id: _excl}；adoptServerExamProgress 按 excl 对象恢复 _excl（字符串键 Number 归一、非数组/非法字母项 fail-closed 过滤、未命中 []），本机快照优先不变；交卷 payload/报告协议零变化。
+- 验证：ruff/pytest 185(+1)/pyright 0/lint/vitest 369(+3)/build 全绿；生产 rev 551cfc9、bundle index-Bpp2JadM.js；API 实测 excl 重复字母 roundtrip 去重保序、空 value 行不落库、缺省覆盖 {}、非法 7 类逐项 400；testing agent 跨设备实测：设备 A 1440 题1 排除 B/D 后选 A、题2 排除 C，去抖 POST 实抓 body 含 excl 与页面一致；设备 B 375 全新 CDP 隔离 context 同 uid 首页续考卡→恢复弹窗→排除态完整恢复（弱化+删除线逐题逐选项一致，picks/secs 继承、marks 无扰动）；恢复后点击被排除项自动解除并选中（R319 行为不变）；交卷后 resume={}；双视口溢出 0、console 0 error；Lighthouse 全过（/ 0.98/LCP 810ms、/tiku/ 1.00）。清理 test-r320-api+test-r320-ui DELETED 9 / LEFTOVER 0，保护 uid 30 表快照前后逐表一致。
+- 未生产实测：卷库横幅续考入口（同 adoptServerExamProgress 路径，R318 已验）；excl 非法值 400 分支的 UI 侧路径（API 已逐项自测）。
+- 观察项：部署后旧 SPA 标签页仍跑旧 bundle 不上传 excl（硬刷后正常，SPA 固有行为）；刷题页排除交互补齐仍挂起。
+- 详见 docs/iter/round-3/design-r320-progress-excl-sync.md。
