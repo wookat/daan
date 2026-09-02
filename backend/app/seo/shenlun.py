@@ -82,7 +82,7 @@ def _render_shenlun_paper(paper: str) -> str:
         + f'<div class="card"><h2>给定资料</h2><p>{material_html}</p></div>'
         + q_cards
         + (f'<div class="card"><h2>其他套卷申论真题</h2><div class="tags">{others}</div></div>' if others else "")
-        + f'<a class="cta" href="/#/pkgA/shenlun/shenlun?id={first["id"]}">进入申论专区在线作答本套真题 →</a>'
+        + f'<a class="cta" href="/#/pkgA/shenlun/shenlun?paper={quote(paper)}">进入申论专区在线作答本套真题 →</a>'
     )
     return _page(
         f"{paper}申论真题_给定资料与参考解析_错题邦",

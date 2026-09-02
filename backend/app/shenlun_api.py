@@ -17,8 +17,8 @@ def api_shenlun_import(body: dict, x_import_token: str | None = Header(None)):
 
 
 @router.get("/api/shenlun/questions")
-def api_shenlun_questions(qtype: str | None = None, year: int | None = None, region: str | None = None, limit: int = 20, offset: int = 0):
-    return db.shenlun_questions(qtype, year, region, limit, offset)
+def api_shenlun_questions(qtype: str | None = None, year: int | None = None, region: str | None = None, limit: int = 20, offset: int = 0, paper: str | None = None):
+    return db.shenlun_questions(qtype, year, region, limit, offset, paper)
 
 
 @router.get("/api/shenlun/filters")

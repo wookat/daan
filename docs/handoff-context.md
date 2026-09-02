@@ -879,3 +879,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：周报分段停留在 R184 四族，R236–R253 新页族（申论 hub/题型/套卷、daily、discuss、search、模块 hub）全落「其他/导航」——生产 7.5h 样本 381 条 /tiku 请求约 89% 无法归段。
 - 收口：SEGMENTS 前缀首匹配表（长前缀在前）补 6 类新分段；统计口径/探针剔除/Top20 零变化。VPS 脚本已同步并实跑验证（探针剔除 81100 条后新分段正常归段）。
 - 详见 docs/iter/round-3/design-r259-access-report-segments.md。
+
+## R260（申论套卷筛选深链闭环：?paper 深链 + 套卷页 CTA 直达整套）
+- 取证：R253 套卷页 CTA 只 ?id 直达第一题详情，本套其余小题需自行翻找；App 三维筛选缺「套卷」维度且 onLoad 不收 ?paper。
+- 收口：/api/shenlun/questions 增可选 paper 精确过滤（契约向后兼容）+ 套卷页 CTA 改 ?paper= + App paper 状态/chip 外显可清除；逐题 ?id 深链不变。
+- 详见 docs/iter/round-3/design-r260-shenlun-paper-deeplink.md。

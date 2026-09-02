@@ -168,7 +168,7 @@ def test_shenlun_paper_pages(client):
         assert "给定资料" in r.text and "给定资料测试 0" in r.text
         assert "参考解析" in r.text and "参考解析：略。" in r.text
         assert re.search(r'href="/#/pkgA/shenlun/shenlun\?id=\d+">去作答本题', r.text)
-        assert re.search(r'class="cta" href="/#/pkgA/shenlun/shenlun\?id=\d+"', r.text)
+        assert 'class="cta" href="/#/pkgA/shenlun/shenlun?paper=' in r.text
         assert 'rel="canonical"' in r.text and path in r.text
         # 无斜杠 301（未知套卷无斜杠直接 404，不产生 301→404 链）
         r301 = client.get(path.rstrip("/"), follow_redirects=False)
@@ -220,3 +220,18 @@ def test_shenlun_hub_renders_with_corpus_and_falls_back_when_empty(client):
     assert 'href="/#/pkgA/shenlun/shenlun"' in r404.text
     assert 'href="/tiku/shenlun/"' not in client.get("/tiku/").text
     assert "/tiku/shenlun/" not in client.get("/sitemap-pages.xml").text
+
+
+def test_shenlun_questions_paper_filter(client):
+    """R260：/api/shenlun/questions 支持 paper 精确筛选；未知套卷空结果。"""
+    _seed_shenlun()
+    try:
+        r = client.get("/api/shenlun/questions", params={"paper": "2023年国考申论（副省级）"})
+        assert r.status_code == 200
+        d = r.json()
+        assert d["total"] >= 1
+        assert all(it["paper"] == "2023年国考申论（副省级）" for it in d["items"])
+        r = client.get("/api/shenlun/questions", params={"paper": "不存在的套卷"})
+        assert r.json()["total"] == 0
+    finally:
+        _clear_shenlun()

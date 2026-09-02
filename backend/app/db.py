@@ -740,10 +740,13 @@ def import_shenlun(questions: list[dict], materials: list[dict], batch: str) -> 
     return {"questions": qn, "materials": mn, "batch": batch}
 
 
-def shenlun_questions(qtype: str | None = None, year: int | None = None, region: str | None = None, limit: int = 20, offset: int = 0) -> dict:
+def shenlun_questions(qtype: str | None = None, year: int | None = None, region: str | None = None, limit: int = 20, offset: int = 0, paper: str | None = None) -> dict:
     conn = get_conn()
     where = ["(disabled IS NULL OR disabled=0)"]
     args: list = []
+    if paper:
+        where.append("paper=?")
+        args.append(paper)
     if qtype:
         where.append("qtype LIKE ? || '%'")
         args.append(qtype)

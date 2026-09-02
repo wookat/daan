@@ -8,6 +8,7 @@
 
     <template v-if="tab === 'q' && !detail">
       <view class="fltbar">
+        <text v-if="paper" class="chip on" role="button" :aria-label="'清除套卷筛选：' + paper" @click="clearPaper">{{ paper }} ✕</text>
         <text class="chip" :class="{ on: !!region }" @click="fltOpen = true">{{ region || '地区' }} ▾</text>
         <text class="chip" :class="{ on: !!year }" @click="fltOpen = true">{{ year || '年份' }} ▾</text>
         <text class="chip" :class="{ on: qtype !== '全部' }" @click="fltOpen = true">{{ qtype === '全部' ? '题型' : qtype }} ▾</text>
@@ -193,6 +194,7 @@ export default {
       regions: [],
       year: 0,
       region: '',
+      paper: '',
       fltOpen: false,
     };
   },
@@ -214,6 +216,7 @@ export default {
     },
   },
   onLoad(opts) {
+    if (opts && typeof opts.paper === 'string' && opts.paper && opts.paper.length <= 100) this.paper = opts.paper;
     this.loadQs();
     this.loadFilters().then(() => {
       if (!opts) return;
@@ -238,7 +241,8 @@ export default {
         const t = this.qtype === '全部' ? '' : '&qtype=' + encodeURIComponent(this.qtype);
         const y = this.year ? '&year=' + this.year : '';
         const rg = this.region ? '&region=' + encodeURIComponent(this.region) : '';
-        const d = await request('/api/shenlun/questions?limit=20&offset=' + this.qOffset + t + y + rg);
+        const pp = this.paper ? '&paper=' + encodeURIComponent(this.paper) : '';
+        const d = await request('/api/shenlun/questions?limit=20&offset=' + this.qOffset + t + y + rg + pp);
         const items = d.items || [];
         this.qEnd = items.length < 20;
         this.qTotal = d.total || items.length;
@@ -298,10 +302,17 @@ export default {
       this.detail = null;
       this.loadQs();
     },
+    clearPaper() {
+      this.paper = '';
+      this.qOffset = 0;
+      this.qEnd = false;
+      this.loadQs();
+    },
     clearFlt() {
       this.qtype = '全部';
       this.year = 0;
       this.region = '';
+      this.paper = '';
       this.qOffset = 0;
       this.qEnd = false;
       this.loadQs();
