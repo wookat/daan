@@ -67,6 +67,7 @@
 
 <script>
 import { request, snapPeek, anonUid, exportPdf } from '../../api.js';
+import { buildExamListUrl, parseExamListOpts } from '../../exam-list-url.js';
 
 export default {
   data() {
@@ -84,6 +85,9 @@ export default {
   },
   created() {
     this._starting = false;
+  },
+  onLoad(opts) {
+    this._pendingFilter = parseExamListOpts(opts);
   },
   onShow() {
     this.load();
@@ -107,6 +111,7 @@ export default {
         const d = await request(p);
         this.items = d.items || [];
         this.filters = d.filters || { years: [], regions: [] };
+        if (this.applyPendingFilter()) return;
       } catch (e) {
         this.loadErr = e.message || '网络异常';
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
@@ -122,8 +127,29 @@ export default {
         this.attempts = d.items || [];
       } catch (e) { /* 非关键路径 */ }
     },
-    setYear(y) { this.year = y; this.load(); },
-    setRegion(r) { this.region = r; this.load(); },
+    // 入向深链：filters 真实返回后按白名单应用一次（非法忽略），应用则重拉列表
+    applyPendingFilter() {
+      const p = this._pendingFilter;
+      if (!p) return false;
+      this._pendingFilter = null;
+      const y = p.year && (this.filters.years || []).some((o) => o.y === p.year) ? p.year : null;
+      const r = p.region && (this.filters.regions || []).some((o) => o.r === p.region) ? p.region : null;
+      if (!y && !r) return false;
+      if (y) this.year = y;
+      if (r) this.region = r;
+      this.syncUrl();
+      this.load();
+      return true;
+    },
+    syncUrl() {
+      // #ifdef H5
+      if (typeof window !== 'undefined' && window.history) {
+        window.history.replaceState(null, '', buildExamListUrl({ year: this.year, region: this.region }));
+      }
+      // #endif
+    },
+    setYear(y) { this.year = y; this.syncUrl(); this.load(); },
+    setRegion(r) { this.region = r; this.syncUrl(); this.load(); },
     startPaper(p) {
       if (this._starting) return;
       uni.navigateTo({ url: '/pkgA/exam/exam?paper_id=' + p.id });

@@ -315,7 +315,7 @@ describe('onRequest shell 静态件边缘缓存（R273）', () => {
     await a.flush();
     expect(cachesStub.store.has(`${EDGE}/precache.json`)).toBe(false);
 
-    queueFetch(json('["\/static\/a.js"]'));
+    queueFetch(json('["/static/a.js"]'));
     const b = ctx(new Request(`${EDGE}/precache.json`));
     const resp = await run(onRequest(b.args));
     expect(resp.headers.get('Cache-Control')).toBe('public, max-age=60');
