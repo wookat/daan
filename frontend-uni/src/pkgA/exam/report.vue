@@ -154,6 +154,11 @@
             <text>{{ detail.hs_explanation || detail.explanation }}</text>
           </view>
         </scroll-view>
+        <view class="dnav">
+          <view class="dnav-btn" :class="{ dis: !hasPrevQ }" role="button" aria-label="上一题解析" :aria-disabled="!hasPrevQ" @click="stepQ(-1)">‹ 上一题</view>
+          <view class="dnav-mid" role="button" :aria-label="wrongOnly ? '切换为看全部题解析' : '切换为只看错题与未答解析'" @click="wrongOnly = !wrongOnly">{{ wrongOnly ? '只看错题/未答' : '全部题目' }}</view>
+          <view class="dnav-btn" :class="{ dis: !hasNextQ }" role="button" aria-label="下一题解析" :aria-disabled="!hasNextQ" @click="stepQ(1)">下一题 ›</view>
+        </view>
       </view>
     </view>
   </view>
@@ -165,13 +170,14 @@ import { splitMaterial } from '../../material.js';
 import { buildPaceRows, fmtMin } from '../../exam-pace.js';
 import { buildExamRedoSet } from '../../exam-redo.js';
 import { buildExamReportShareText } from '../../exam-share.js';
+import { reviewStep } from '../../exam-review.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
 const MOD_ORDER = ['changshi', 'yanyu', 'shuliang', 'panduan', 'ziliao'];
 
 export default {
   data() {
-    return { loading: true, loadErr: '', aid: null, report: null, history: [], detail: null, matOpen: false };
+    return { loading: true, loadErr: '', aid: null, report: null, history: [], detail: null, matOpen: false, wrongOnly: false };
   },
   computed: {
     accuracy() {
@@ -230,6 +236,12 @@ export default {
       const origin = typeof window !== 'undefined' ? window.location.origin : '';
       return buildExamReportShareText(this.report, origin);
     },
+    hasPrevQ() {
+      return !!(this.report && this.detail && reviewStep(this.report.items, this.detail.no, -1, this.wrongOnly));
+    },
+    hasNextQ() {
+      return !!(this.report && this.detail && reviewStep(this.report.items, this.detail.no, 1, this.wrongOnly));
+    },
   },
   onLoad(opt) {
     if (opt && opt.attempt_id) {
@@ -237,6 +249,30 @@ export default {
     } else {
       this.loading = false;
     }
+  },
+  onShow() {
+    // #ifdef H5
+    if (!this._rpKeyHandler && typeof window !== 'undefined') {
+      this._rpKeyHandler = (e) => this.onRpKeydown(e);
+      window.addEventListener('keydown', this._rpKeyHandler);
+    }
+    // #endif
+  },
+  onUnload() {
+    // #ifdef H5
+    if (this._rpKeyHandler && typeof window !== 'undefined') {
+      window.removeEventListener('keydown', this._rpKeyHandler);
+      this._rpKeyHandler = null;
+    }
+    // #endif
+  },
+  onHide() {
+    // #ifdef H5
+    if (this._rpKeyHandler && typeof window !== 'undefined') {
+      window.removeEventListener('keydown', this._rpKeyHandler);
+      this._rpKeyHandler = null;
+    }
+    // #endif
   },
   methods: {
     async load(aid) {
@@ -264,6 +300,22 @@ export default {
       } catch (e) { /* 非关键路径 */ }
     },
     openQ(it) { this.matOpen = false; this.detail = it; },
+    stepQ(dir) {
+      if (!this.report || !this.detail) return;
+      const nxt = reviewStep(this.report.items, this.detail.no, dir, this.wrongOnly);
+      if (nxt) this.openQ(nxt);
+    },
+    // #ifdef H5
+    onRpKeydown(e) {
+      if (typeof window === 'undefined' || window.innerWidth < 1024) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const tag = (e.target && e.target.tagName) || '';
+      if (/INPUT|TEXTAREA|SELECT/.test(tag) || (e.target && e.target.isContentEditable)) return;
+      if (!this.detail) return;
+      if (e.key === 'ArrowLeft') { e.preventDefault(); this.stepQ(-1); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); this.stepQ(1); }
+    },
+    // #endif
     openAttempt(a) {
       if (a.id === this.report.attempt.id) return;
       this.load(a.id);
@@ -359,6 +411,10 @@ export default {
 .sheet-t { font-size: 30rpx; font-weight: 600; }
 .sheet-x { font-size: 30rpx; color: var(--ink-2); padding: 8rpx 16rpx; }
 .detail-scroll { max-height: 62vh; }
+.dnav { display: flex; align-items: center; gap: 16rpx; margin-top: 20rpx; }
+.dnav-btn { flex: 1; text-align: center; padding: 18rpx 0; border: 1rpx solid var(--line); border-radius: 14rpx; font-size: 26rpx; color: var(--ink); background: var(--bg); }
+.dnav-btn.dis { color: var(--ink-3); opacity: 0.55; }
+.dnav-mid { flex: none; padding: 18rpx 22rpx; border-radius: 14rpx; font-size: 24rpx; color: var(--brand-text); background: var(--brand-soft); }
 .mat-fold { display: flex; justify-content: space-between; align-items: center; background: #f0fdfa; border: 1rpx solid #99f6e4; border-radius: 12rpx; padding: 14rpx 20rpx; margin-bottom: 14rpx; }
 .mat-fold-t { font-size: 24rpx; color: #0f766e; }
 .mat-fold-a { font-size: 24rpx; color: #0d9488; font-weight: 600; flex-shrink: 0; margin-left: 16rpx; }
