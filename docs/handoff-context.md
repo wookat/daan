@@ -838,8 +838,14 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证陷阱：hash SPA 同 page 连续 goto 不重跑 onLoad，深链复验须每例新开 page（r252app.py）。
 - 复审计：05:05–05:47 慢样本簇为共享宿主争用窗口（探针 22s 与静态/health 同窗齐慢，06:00 后恢复 0.3–1.0s），非代码缺陷不改。
 
-## R253（申论按套卷详情页 /tiku/shenlun/p/{paper}/，PR 待填）
+## R253（申论按套卷详情页 /tiku/shenlun/p/{paper}/，PR #441）
 - 取证（生产只读库 /data/data.db）：208 题分布 49 套卷（paper 全非空，每套 3–5 题）；distinct(material)=49 与 paper 一一对应——一套卷一份给定资料；material 平均 7134 字（最短 4714）、reference 平均 372 字，无空值。现状缺口：hub/年份/题型三页族只出题干 80 字截断，给定资料+参考解析（内容资产主体）公开页零外显。
 - 收口：db.shenlun_paper_counts()/shenlun_paper_questions(paper)；/tiku/shenlun/p/{paper}/ SSR（面包屑+给定资料一次呈现+逐题卡 details 参考解析+逐题去作答深链+其他套卷内链+CollectionPage JSON-LD+App CTA；未知/清空套卷品牌 404，无斜杠 301 前置存在性守卫）；_shenlun_q_items 卷名改套卷页链接；hub 第 1 页「按套卷刷题」卡；sitemap-pages 收录 49 套卷 URL（清空自动消失）。不做逐题详情页（同套 4–5 题共享 7k 字材料会产生重复正文）、不做套卷×题型交叉页。
 - 本地：ruff/pytest 125(+1)/pyright 0/lint/vitest 137/build/shellcheck 全绿。
 - 生产 rev e8a2327：套卷页 200（2025国考·副省级 5 题、38KB、canonical 编码正确）、无斜杠 301、未知套卷带/无斜杠均 404、hub 套卷链接与 sitemap 条目就位（nocache 实证）；light/dark×1440/375 溢出 0、console 0 error、axe serious/critical 0、5 个 details.ans 就位；Lighthouse 预算全过（/ 0.98、/tiku/ 1.00）。
+
+## R254（内容发现渠道口径对齐：套卷/题型页族入 /tiku 与 llms.txt，PR 待填）
+- 取证：R253 上线后 llms.txt 申论条目仍写「按年份/地区归档」——地区并无 SSR 页族（R252 决策仅 App 深链），口径不实；且题型（R251）/套卷（R253）页族未提及；/tiku/ 首页申论 section 无套卷/题型入口提示（grep shenlun/p/ = 0）。同窗口 origin 6h 复审计：5xx 5 条与 >10s 慢样本簇均落 20:41/21:26 共享宿主争用窗口（静态/health 同窗齐慢，X-Kg-Fetch swr/pass 佐证），无新产品缺陷。
+- 收口：纯文案两处——llms.txt 申论条目与 /tiku/ 首页申论 section 改「按套卷（含给定资料与参考解析）、年份、题型」口径；沿既有语料非空守卫。零路由/契约变化。
+- 本地：ruff/pytest 125（R249 用例 +3 断言）/pyright 0 全绿（后端-only 改动）。
+- 生产 rev 5021594：两渠道新口径就位（nocache 实证）、light/dark×1440/375 溢出 0、console 0 error、axe serious/critical 0、性能预算全过（/ 0.99、/tiku/ 1.00）。详见 docs/iter/round-3/design-r254-discovery-copy-paper-alignment.md。
