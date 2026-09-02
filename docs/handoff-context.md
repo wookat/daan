@@ -869,3 +869,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 收口：两个 kaogong 站点块 reverse_proxy 增加 `health_uri /api/health` + `health_interval 2s` + `health_timeout 10s`（备份 Caddyfile.bak-r257，validate+reload）。boot 窗口上游被标 unhealthy → 请求进入既有 lb_try 25s 等待循环，健康后放行。health_timeout 取 10s 防共享宿主争用窗口误伤（实测争用时 health 可慢至 14s 级）。
 - 演练 verified：`docker restart deploy-kaogong-1` 全窗口 12 条并发 nocache 请求全部等待（最长 12.3s）后 200，零 502（R235 演练时同场景为即时 502）。健康探针噪声 ~26/min/站点块，容器日志受 daemon.json 20m×3 轮转封顶。
 - 回滚：恢复 /etc/caddy/Caddyfile.bak-r257 + reload。详见 docs/iter/round-3/design-r257-caddy-health-gated-upstream.md。
+
+## R258（SEO 包路由注册顺序契约测试：测试补强，不部署）
+- 取证：R257 上线后 origin 窗口零 5xx、无新产品缺陷；架构缺口为 R256 拆包的导入顺序副作用（shenlun→pages→catchall）仅注释约束，重排即 catch-all 吞掉具体页族且无测试防线。
+- 收口：tests/test_seo_route_order.py 两例——按 endpoint.__module__ 断言 catchall 路由注册序号全大于具体路由 + TestClient 实测申论 hub/套卷/年份/题型页 200、未知模块 404。零产品代码变化。
+- 本地：ruff/pytest 129(+2)/pyright 0 全绿。详见 docs/iter/round-3/design-r258-seo-route-order-contract.md。
