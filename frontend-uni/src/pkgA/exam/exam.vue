@@ -117,7 +117,7 @@ import { dayKey } from '../../checkin.js';
 import { splitMaterial, sameMaterial } from '../../material.js';
 import { crossedTimeAlert } from '../../exam-alert.js';
 import { toggleExcl, pickWithExcl } from '../../exam-excl.js';
-import { fontSizes } from '../../font-size.js';
+import { fontSizes, normFontLv } from '../../font-size.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
 const PROG_KEY = 'examProgress';
@@ -137,7 +137,7 @@ export default {
       qTimer: null,
       submitting: false,
       matOpen: {},
-      fontLv: uni.getStorageSync('fontLv') || 1,
+      fontLv: normFontLv(uni.getStorageSync('fontLv')),
     };
   },
   created() {
@@ -195,7 +195,7 @@ export default {
     await this.start(opt);
   },
   onShow() {
-    this.fontLv = uni.getStorageSync('fontLv') || 1;
+    this.fontLv = normFontLv(uni.getStorageSync('fontLv'));
     // #ifdef H5
     if (!this._exKeyHandler && typeof window !== 'undefined') {
       this._exKeyHandler = (e) => this.onExKeydown(e);

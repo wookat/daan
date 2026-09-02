@@ -488,7 +488,7 @@ import { request, anonUid, exportPdf, scanSheet, shareCreate, trackEvent, qShare
 import { buildBookUrl, parseBookOpts } from '../../book-url.js';
 import { cacheMistakes, getCachedMistakes } from '../../offline.js';
 import { qStatLine } from '../../q-stat.js';
-import { fontSizes } from '../../font-size.js';
+import { fontSizes, normFontLv } from '../../font-size.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 
@@ -508,7 +508,7 @@ export default {
       dueTotal: 0,
       autoReview: false,
       reviewing: false,
-      fontLv: uni.getStorageSync('fontLv') || 1,
+      fontLv: normFontLv(uni.getStorageSync('fontLv')),
       celebrate: false,
       celebrateN: 0,
       reinforce: null,
@@ -750,7 +750,7 @@ export default {
     if (this.tab !== 'fav' && this.pageN < this.shownItems.length) this.pageN += 20;
   },
   onShow() {
-    this.fontLv = uni.getStorageSync('fontLv') || 1;
+    this.fontLv = normFontLv(uni.getStorageSync('fontLv'));
     this.favs = (uni.getStorageSync('favQuestions') || []).map((f) => ({ ...f, _open: false }));
     if (uni.getStorageSync('bookShowFavs')) {
       uni.removeStorageSync('bookShowFavs');

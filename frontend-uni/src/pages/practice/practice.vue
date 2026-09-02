@@ -351,7 +351,7 @@ import { request, BASE_URL, anonUid, pkNickname, exportPdf, removeFav, setFav, f
 import { drawOffline, enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../offline.js';
 import { dayKey, loadSzDaily, saveSzDaily } from '../../checkin.js';
 import { splitMaterial, sameMaterial } from '../../material.js';
-import { fontSizes } from '../../font-size.js';
+import { fontSizes, normFontLv } from '../../font-size.js';
 // #ifdef H5
 import { requestNotificationPermission } from '../../reminder.js';
 import { announce } from '../../a11y-live.js';
@@ -431,7 +431,7 @@ export default {
       toolsOpen: false,
       qsecs: 0,
       qTimer: null,
-      fontLv: uni.getStorageSync('fontLv') || 1,
+      fontLv: normFontLv(uni.getStorageSync('fontLv')),
       sfxOn: uni.getStorageSync('sfxOff') ? false : true,
       beiMode: false,
       timedMode: uni.getStorageSync('timedMode') ? true : false,

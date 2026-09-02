@@ -151,6 +151,7 @@
 import { request, snapPeek, getAuthUser, authLogout, clearAuth, anonUid, fetchCheckinBadges, fetchCommentInbox } from '../../api.js';
 import { getReminderSettings } from '../../reminder.js';
 import { cycleThemeMode, getThemeMode, THEME_LABELS } from '../../theme.js';
+import { normFontLv } from '../../font-size.js';
 // #ifdef H5
 import { canInstall, promptInstall, onInstallable, isIosSafariInstallable } from '../../pwa.js';
 // #endif
@@ -240,7 +241,7 @@ export default {
     this.daily = uni.getStorageSync('dailyPlan') || { days: {} };
     this.favN = (uni.getStorageSync('favQuestions') || []).length;
     this.dailyGoal = uni.getStorageSync('dailyGoal') || 20;
-    this.fontLv = uni.getStorageSync('fontLv') || 1;
+    this.fontLv = normFontLv(uni.getStorageSync('fontLv'));
     this.sfxOn = uni.getStorageSync('sfxOff') ? false : true;
     const rs = getReminderSettings();
     this.remindOn = rs.on;
