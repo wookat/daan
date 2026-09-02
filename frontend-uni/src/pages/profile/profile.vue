@@ -382,7 +382,7 @@ export default {
     cycleFont() {
       this.fontLv = (this.fontLv + 1) % 3;
       uni.setStorageSync('fontLv', this.fontLv);
-      uni.showToast({ title: '字号：' + ['小', '标准', '大'][this.fontLv] + '（练习页生效）', icon: 'none' });
+      uni.showToast({ title: '字号：' + ['小', '标准', '大'][this.fontLv] + '（做题与复习页生效）', icon: 'none' });
     },
     cycleTheme() {
       this.themeMode = cycleThemeMode();

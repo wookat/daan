@@ -351,6 +351,7 @@ import { request, BASE_URL, anonUid, pkNickname, exportPdf, removeFav, setFav, f
 import { drawOffline, enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../offline.js';
 import { dayKey, loadSzDaily, saveSzDaily } from '../../checkin.js';
 import { splitMaterial, sameMaterial } from '../../material.js';
+import { fontSizes } from '../../font-size.js';
 // #ifdef H5
 import { requestNotificationPermission } from '../../reminder.js';
 import { announce } from '../../a11y-live.js';
@@ -621,10 +622,10 @@ export default {
       return this.items.filter((q) => q._picked).length;
     },
     qStyle() {
-      return { fontSize: [26, 30, 34][this.fontLv] + 'rpx' };
+      return { fontSize: fontSizes(this.fontLv).q };
     },
     optStyle() {
-      return { fontSize: [25, 29, 33][this.fontLv] + 'rpx' };
+      return { fontSize: fontSizes(this.fontLv).opt };
     },
     totalSecs() {
       return this.items.reduce((a, q) => a + (q._secs || 0), 0);

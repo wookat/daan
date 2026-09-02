@@ -7,7 +7,7 @@
         <text class="tag">{{ cur._extra ? '加练同类' : '复习' }} {{ rIdx + 1 }}/{{ rItems.length }}</text>
         <text class="op" @click="exitReview">退出复习</text>
       </view>
-      <view class="q">{{ cur.question_text }}</view>
+      <view class="q" :style="qStyle">{{ cur.question_text }}</view>
       <view v-if="curLetter" class="opts">
         <view
           v-for="o in ['A', 'B', 'C', 'D']"
@@ -33,7 +33,7 @@
             @click="setReviewReason(rz)"
           >{{ rz }}</text>
         </view>
-        <rich-text :nodes="curHtml" />
+        <view :style="optStyle"><rich-text :nodes="curHtml" /></view>
         <view v-if="!wasCorrect && cur.module && !cur._extra" class="sim-row" @click="similarFromReview">
           <text class="sim-t">还不稳？练 3 道同类题巩固 ›</text>
         </view>
@@ -488,6 +488,7 @@ import { request, anonUid, exportPdf, scanSheet, shareCreate, trackEvent, qShare
 import { buildBookUrl, parseBookOpts } from '../../book-url.js';
 import { cacheMistakes, getCachedMistakes } from '../../offline.js';
 import { qStatLine } from '../../q-stat.js';
+import { fontSizes } from '../../font-size.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 
@@ -507,6 +508,7 @@ export default {
       dueTotal: 0,
       autoReview: false,
       reviewing: false,
+      fontLv: uni.getStorageSync('fontLv') || 1,
       celebrate: false,
       celebrateN: 0,
       reinforce: null,
@@ -571,6 +573,8 @@ export default {
     };
   },
   computed: {
+    qStyle() { return { fontSize: fontSizes(this.fontLv).q }; },
+    optStyle() { return { fontSize: fontSizes(this.fontLv).opt }; },
     manualPickedCount() {
       return Object.keys(this.manualPicks).length;
     },
@@ -746,6 +750,7 @@ export default {
     if (this.tab !== 'fav' && this.pageN < this.shownItems.length) this.pageN += 20;
   },
   onShow() {
+    this.fontLv = uni.getStorageSync('fontLv') || 1;
     this.favs = (uni.getStorageSync('favQuestions') || []).map((f) => ({ ...f, _open: false }));
     if (uni.getStorageSync('bookShowFavs')) {
       uni.removeStorageSync('bookShowFavs');

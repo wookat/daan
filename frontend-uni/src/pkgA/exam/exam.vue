@@ -27,7 +27,7 @@
           <text class="mat-fold-t">📄 同上材料（与上一题相同）</text>
           <text class="mat-fold-a">{{ matOpen[idx] ? '收起 ‹' : '展开 ›' }}</text>
         </view>
-        <text class="q">{{ matInfo && !matOpen[idx] ? matInfo.stem : cur.question }}</text>
+        <text class="q" :style="qStyle">{{ matInfo && !matOpen[idx] ? matInfo.stem : cur.question }}</text>
         <image v-if="cur.image" :src="cur.image" class="qimg" mode="widthFix" />
         <view
           v-for="(v, k) in cur.options"
@@ -38,7 +38,7 @@
           @longpress="toggleExcl(k)"
         >
           <text class="okey">{{ k }}</text>
-          <text class="otext">{{ v }}</text>
+          <text class="otext" :style="optStyle">{{ v }}</text>
         </view>
       </view>
 
@@ -117,6 +117,7 @@ import { dayKey } from '../../checkin.js';
 import { splitMaterial, sameMaterial } from '../../material.js';
 import { crossedTimeAlert } from '../../exam-alert.js';
 import { toggleExcl, pickWithExcl } from '../../exam-excl.js';
+import { fontSizes } from '../../font-size.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
 const PROG_KEY = 'examProgress';
@@ -136,6 +137,7 @@ export default {
       qTimer: null,
       submitting: false,
       matOpen: {},
+      fontLv: uni.getStorageSync('fontLv') || 1,
     };
   },
   created() {
@@ -146,6 +148,8 @@ export default {
   },
   computed: {
     cur() { return this.items[this.idx] || {}; },
+    qStyle() { return { fontSize: fontSizes(this.fontLv).q }; },
+    optStyle() { return { fontSize: fontSizes(this.fontLv).opt }; },
     matInfo() {
       const q = this.cur;
       if (!q || q.module !== 'ziliao' || this.idx === 0) return null;
@@ -191,6 +195,7 @@ export default {
     await this.start(opt);
   },
   onShow() {
+    this.fontLv = uni.getStorageSync('fontLv') || 1;
     // #ifdef H5
     if (!this._exKeyHandler && typeof window !== 'undefined') {
       this._exKeyHandler = (e) => this.onExKeydown(e);
