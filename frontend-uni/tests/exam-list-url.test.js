@@ -29,7 +29,18 @@ describe('parseExamListOpts', () => {
       year: 2023,
       region: '江苏',
       pid: 0,
+      st: '',
     });
+  });
+
+  it('st 状态筛选：白名单收，非法回空，build 产出', () => {
+    expect(parseExamListOpts({ st: 'todo' }).st).toBe('todo');
+    expect(parseExamListOpts({ st: 'done' }).st).toBe('done');
+    expect(parseExamListOpts({ st: 'x' }).st).toBe('');
+    expect(parseExamListOpts({ st: 1 }).st).toBe('');
+    expect(buildExamListUrl({ st: 'todo' })).toBe(EXAM_LIST_PATH + '?st=todo');
+    expect(buildExamListUrl({ year: 2023, st: 'done' })).toBe(EXAM_LIST_PATH + '?year=2023&st=done');
+    expect(buildExamListUrl({ st: 'x' })).toBe(EXAM_LIST_PATH);
   });
 
   it('pid 定位参数：正整数收，非法为 0，build 不产出', () => {
@@ -42,10 +53,10 @@ describe('parseExamListOpts', () => {
   });
 
   it('非法回空', () => {
-    expect(parseExamListOpts({ year: 'x', region: 3 })).toEqual({ year: 0, region: '', pid: 0 });
-    expect(parseExamListOpts({ year: '1899' })).toEqual({ year: 0, region: '', pid: 0 });
-    expect(parseExamListOpts()).toEqual({ year: 0, region: '', pid: 0 });
-    expect(parseExamListOpts({ region: '%E4%B8%8A%E6%B5%B7' })).toEqual({ year: 0, region: '上海', pid: 0 });
-    expect(parseExamListOpts({ region: '%zz' })).toEqual({ year: 0, region: '', pid: 0 });
+    expect(parseExamListOpts({ year: 'x', region: 3 })).toEqual({ year: 0, region: '', pid: 0, st: '' });
+    expect(parseExamListOpts({ year: '1899' })).toEqual({ year: 0, region: '', pid: 0, st: '' });
+    expect(parseExamListOpts()).toEqual({ year: 0, region: '', pid: 0, st: '' });
+    expect(parseExamListOpts({ region: '%E4%B8%8A%E6%B5%B7' })).toEqual({ year: 0, region: '上海', pid: 0, st: '' });
+    expect(parseExamListOpts({ region: '%zz' })).toEqual({ year: 0, region: '', pid: 0, st: '' });
   });
 });

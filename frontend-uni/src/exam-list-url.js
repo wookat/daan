@@ -1,4 +1,4 @@
-// 真题卷库 URL 同步：year/region 筛选状态生成可刷新恢复的 hash 深链
+// 真题卷库 URL 同步：year/region/st 筛选状态生成可刷新恢复的 hash 深链
 export const EXAM_LIST_PATH = '/#/pkgA/exam/list';
 
 export function buildExamListUrl(f) {
@@ -8,6 +8,7 @@ export function buildExamListUrl(f) {
   if (Number.isInteger(y) && y >= 1990 && y <= 2099) parts.push('year=' + y);
   const r = typeof o.region === 'string' ? o.region.trim() : '';
   if (r) parts.push('region=' + encodeURIComponent(r));
+  if (o.st === 'todo' || o.st === 'done') parts.push('st=' + o.st);
   return parts.length ? EXAM_LIST_PATH + '?' + parts.join('&') : EXAM_LIST_PATH;
 }
 
@@ -25,5 +26,6 @@ export function parseExamListOpts(opts) {
     year: Number.isInteger(y) && y >= 1990 && y <= 2099 ? y : 0,
     region,
     pid: Number.isInteger(pid) && pid > 0 ? pid : 0,
+    st: o.st === 'todo' || o.st === 'done' ? o.st : '',
   };
 }
