@@ -483,6 +483,7 @@
 import { request, snapPeek, anonUid, exportPdf, trackEvent, fetchCheckinBadges, fetchCheckinSummary, flushDailySubmit } from '../../api.js';
 import { checkinStreak, dayKey, loadSzDaily } from '../../checkin.js';
 import { parseExamProgress, fmtLeftSecs } from '../../exam-resume.js';
+import { adoptServerExamProgress } from '../../exam-progress-sync.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -820,6 +821,17 @@ export default {
       const saved = uni.getStorageSync('examProgress');
       this.examResume = parseExamProgress(saved, Date.now());
       if (saved && saved.attemptId && !this.examResume) uni.removeStorageSync('examProgress');
+      if (!this.examResume) this.syncExamResume();
+    },
+    async syncExamResume() {
+      try {
+        const d = await request('/api/exam/resume?uid=' + encodeURIComponent(anonUid()));
+        const now = Date.now();
+        const snap = adoptServerExamProgress(uni.getStorageSync('examProgress'), d, now);
+        if (!snap) return;
+        uni.setStorageSync('examProgress', snap);
+        this.examResume = parseExamProgress(snap, now);
+      } catch (e) { /* 非关键路径 */ }
     },
     erContinue() {
       const r = this.examResume;
