@@ -844,8 +844,14 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 本地：ruff/pytest 125(+1)/pyright 0/lint/vitest 137/build/shellcheck 全绿。
 - 生产 rev e8a2327：套卷页 200（2025国考·副省级 5 题、38KB、canonical 编码正确）、无斜杠 301、未知套卷带/无斜杠均 404、hub 套卷链接与 sitemap 条目就位（nocache 实证）；light/dark×1440/375 溢出 0、console 0 error、axe serious/critical 0、5 个 details.ans 就位；Lighthouse 预算全过（/ 0.98、/tiku/ 1.00）。
 
-## R254（内容发现渠道口径对齐：套卷/题型页族入 /tiku 与 llms.txt，PR 待填）
+## R254（内容发现渠道口径对齐：套卷/题型页族入 /tiku 与 llms.txt，PR #442）
 - 取证：R253 上线后 llms.txt 申论条目仍写「按年份/地区归档」——地区并无 SSR 页族（R252 决策仅 App 深链），口径不实；且题型（R251）/套卷（R253）页族未提及；/tiku/ 首页申论 section 无套卷/题型入口提示（grep shenlun/p/ = 0）。同窗口 origin 6h 复审计：5xx 5 条与 >10s 慢样本簇均落 20:41/21:26 共享宿主争用窗口（静态/health 同窗齐慢，X-Kg-Fetch swr/pass 佐证），无新产品缺陷。
 - 收口：纯文案两处——llms.txt 申论条目与 /tiku/ 首页申论 section 改「按套卷（含给定资料与参考解析）、年份、题型」口径；沿既有语料非空守卫。零路由/契约变化。
 - 本地：ruff/pytest 125（R249 用例 +3 断言）/pyright 0 全绿（后端-only 改动）。
 - 生产 rev 5021594：两渠道新口径就位（nocache 实证）、light/dark×1440/375 溢出 0、console 0 error、axe serious/critical 0、性能预算全过（/ 0.99、/tiku/ 1.00）。详见 docs/iter/round-3/design-r254-discovery-copy-paper-alignment.md。
+
+## R255（IndexNow 主动提交覆盖非题目 SSR 页族，PR #443）
+- 取证：_indexnow_cycle 只推 /tiku/q/*（游标）+ 首轮一次性 4 个核心页；R201 以来新增的模块 hub/子题型/考点/年份/申论 hub/题型/套卷/papers 详情/daily 归档全部只进 sitemap，从未主动提交。R89 立项结论不变：零外链新站，IndexNow 是触发联盟引擎抓取的唯一可行通道。
+- 收口：sitemap 三个非题目端点抽出 _sitemap_page_urls/_sitemap_topic_urls/_sitemap_year_urls 纯列表构造（端点行为零变化）；_indexnow_submit_pages 拼接首页+三族 URL，sha256 与 seo_meta['indexnow_pages_hash'] 比对，集合变化时单批提交（当前 529 条 << 单批上限 10000），未变化零提交不刷 API。题目游标通道不动。
+- 本地：ruff/pytest 127(+2)/pyright 0 全绿（后端-only）。
+- 生产 rev cf92cfb：容器启动 120s 后实录 `[indexnow] submitted 529 urls -> 200`，seo_meta 落 indexnow_pages_hash；接口回归全 200、Lighthouse 预算全过（/ 0.99、/tiku/ 1.00）。提交 ≠ 抓取 ≠ 收录，效果不做任何声称。详见 docs/iter/round-3/design-r255-indexnow-page-families.md。
