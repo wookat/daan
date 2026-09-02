@@ -141,7 +141,9 @@ def test_indexnow_submit_pages_hash_dedup(client, monkeypatch):
 
     seed_questions()
     calls = []
-    monkeypatch.setattr(seo, "_indexnow_post", lambda urls: calls.append(list(urls)) or True)
+    monkeypatch.setattr(
+        seo.sitefiles, "_indexnow_post", lambda urls: calls.append(list(urls)) or True
+    )
     conn = adb.get_conn()
     try:
         conn.execute("CREATE TABLE IF NOT EXISTS seo_meta (key TEXT PRIMARY KEY, value TEXT)")
