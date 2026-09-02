@@ -863,3 +863,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 行为零变化实证：pre/post TestClient 对 19 个 SEO/站点文件端点 sha256 逐一比对全部字节一致（/ 为静态 mount 非本包路由，worktree 无构建产物差异与拆包无关）。
 - 本地：ruff/pytest 127/pyright 0 全绿（后端-only）。
 - 生产 rev 6d8c95c：容器内确认 seo/ 包就位、旧 seo.py 不存在；19 端点状态语义全对（含题型/年份/套卷页 200、无斜杠 301、未知模块 404）、sitemap 四端点与 robots/llms/indexnow-key 200、IndexNow 无重复提交（URL 集合未变 hash 命中零提交，符合设计）；Lighthouse 预算全过（/ 0.99、/tiku/ 1.00）。详见 docs/iter/round-3/design-r256-seo-package-split.md。
+
+## R257（容器 app-boot 窗口即时 502 收口：Caddy 主动健康检查，VPS 配置 + docs PR）
+- 取证：R235 lb_try 只覆盖 dial 拒绝；09-01 origin 日志 9 条即时 502（0.01–0.08s）逐条与 container-events 对时全部落在新容器 StartedAt 后 ~1s——docker-proxy 已监听 8300 接受连接但 uvicorn 未就绪即重置，非 dial 失败不触发 lb_try 重试。
+- 收口：两个 kaogong 站点块 reverse_proxy 增加 `health_uri /api/health` + `health_interval 2s` + `health_timeout 10s`（备份 Caddyfile.bak-r257，validate+reload）。boot 窗口上游被标 unhealthy → 请求进入既有 lb_try 25s 等待循环，健康后放行。health_timeout 取 10s 防共享宿主争用窗口误伤（实测争用时 health 可慢至 14s 级）。
+- 演练 verified：`docker restart deploy-kaogong-1` 全窗口 12 条并发 nocache 请求全部等待（最长 12.3s）后 200，零 502（R235 演练时同场景为即时 502）。健康探针噪声 ~26/min/站点块，容器日志受 daemon.json 20m×3 轮转封顶。
+- 回滚：恢复 /etc/caddy/Caddyfile.bak-r257 + reload。详见 docs/iter/round-3/design-r257-caddy-health-gated-upstream.md。
