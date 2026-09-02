@@ -956,3 +956,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - R273 遗留 /sw.js「x-edge-cache: MISS 但 age 增长」收口：cf-cache-status HIT 实证 CF 前置 HTTP 缓存（.js 默认可缓存扩展名）在函数层之前接管，回放头为入缓存快照——非缺陷且双层防护更强；/precache.json（.json 不在默认扩展名）仍走函数层 SWR 正常。
 - 09-02 04:34–04:37 窗口 31 条 503 归因：全部早于 R271（04:54）/R272（05:00）/R273（05:12）边缘部署提交，pass 属部署前预期形态；部署后窗口 origin 无新增用户可见 5xx。深分页慢样本为 VPS 本机 curl 冷缓存探针（无 X-Kg-Ip/X-Kg-Fetch），warm 复测 0.02–0.17s 非缺陷。
 - 详见 docs/iter/round-3/audit-r275-shell-cache-observation-closeout.md。
+
+## R276（错题本 tab/筛选/排序状态 URL 同步 + 入向深链）
+- 取证：错题本 tab（待掌握/已掌握/收藏）、模块筛选、模考/练习来源、排序均为纯本地状态，刷新即丢、不可分享；申论/搜索侧同类状态 R261–R263/R270 已闭环，错题本是最后一个主要筛选态不进 URL 的页面。
+- 收口：新增 book-url.js 纯函数（buildBookUrl/parseBookOpts，白名单 tab=done|fav、mod 六模块、src=exam|practice、sort=due|times|type|reason；默认省略、fav 不叠筛选/排序、非法忽略）+ book.vue watcher replaceState 同步 + onLoad 白名单恢复；不收 kw/kpFilter/kp3Filter（依赖动态加载数据）。纯前端零后端/SSR/SEO 变化。
+- 详见 docs/iter/round-3/design-r276-book-filter-url-sync.md。
