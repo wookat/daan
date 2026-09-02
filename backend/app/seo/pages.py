@@ -78,11 +78,21 @@ def tiku_index():
                 f'<a href="{_e(_shenlun_sucai_path(t))}">{_e(t)}（{n} 条）</a>' for t, n in sl_mats
             )
             sl_mat_line = f'<p class="meta">另收录申论写作素材 {sl_mat_total} 条：{sl_mat_types}。</p>'
+        sl_qtypes = "".join(
+            f'<a href="{_e(_sub_path("shenlun", t))}">{_e(t)}（{n}）</a>'
+            for t, n in db.shenlun_qtype_counts()
+        )
+        sl_years = "".join(
+            f'<a href="{_e(_year_path(y, "shenlun"))}">{y}年（{n}）</a>'
+            for y, n in db.shenlun_year_counts()
+        )
         sections.append(
             '<section class="card"><h2><a href="/tiku/shenlun/">申论</a>'
             f'<span class="meta">（{sl_total} 道真题）</span></h2>'
             '<p class="meta">历年申论真题与参考解析，可在 <a href="/tiku/shenlun/">申论真题库</a> '
             "按套卷（含给定资料与参考解析）、年份、题型浏览。</p>"
+            + (f'<p class="meta">按题型刷题：</p><div class="tags">{sl_qtypes}</div>' if sl_qtypes else "")
+            + (f'<p class="meta">按年份刷真题：</p><div class="tags">{sl_years}</div>' if sl_years else "")
             + sl_mat_line
             + "</section>"
         )

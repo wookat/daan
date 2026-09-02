@@ -94,6 +94,22 @@ def test_material_discovery_copy_alignment(client):
         _clear_shenlun()
 
 
+def test_home_shenlun_qtype_year_chips(client):
+    """R267：/tiku 首页申论 section 补题型/年份 chips（与行测模块同构）；语料清空整 section 回落。"""
+    seed_questions()
+    _seed_shenlun()
+    try:
+        home = client.get("/tiku/")
+        assert "按题型刷题：" in home.text
+        assert f'href="/tiku/shenlun/{quote("概括归纳")}/">概括归纳（3）</a>' in home.text
+        assert 'href="/tiku/y/2023/shenlun/">2023年（3）</a>' in home.text
+    finally:
+        _clear_shenlun()
+        home2 = client.get("/tiku/")
+        assert "/tiku/y/2023/shenlun/" not in home2.text
+        assert f"/tiku/shenlun/{quote('概括归纳')}/" not in home2.text
+
+
 def test_shenlun_year_pages(client):
     """R250：申论按年份真题页；hub 年份链接、sitemap-years 收录；无语料年份 404。"""
     seed_questions()
