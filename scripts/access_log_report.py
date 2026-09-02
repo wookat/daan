@@ -24,6 +24,24 @@ BOT_ENGINES = {
 BOT_GENERIC = ("bot", "spider", "crawl", "curl", "python", "wget", "httpx",
                "headless", "phantom", "scrapy", "go-http", "okhttp", "libwww")
 
+# /tiku/ 页族分段（前缀首匹配，长前缀在前）
+SEGMENTS = (
+    ("/tiku/y/", "年份页"),
+    ("/tiku/t/", "考点页"),
+    ("/tiku/q/", "题目页"),
+    ("/tiku/papers", "真题卷"),
+    ("/tiku/shenlun/p/", "申论套卷页"),
+    ("/tiku/shenlun", "申论hub/题型页"),
+    ("/tiku/daily", "每日一练页"),
+    ("/tiku/discuss", "讨论聚合页"),
+    ("/tiku/search", "站内搜索页"),
+    ("/tiku/ziliao", "模块页"),
+    ("/tiku/shuliang", "模块页"),
+    ("/tiku/yanyu", "模块页"),
+    ("/tiku/panduan", "模块页"),
+    ("/tiku/changshi", "模块页"),
+)
+
 
 def classify(ua: str):
     low = ua.lower()
@@ -107,7 +125,7 @@ def main():
             tiku_urls[path] += 1
             if cat == "engine":
                 tiku_engine += 1
-            for pre, seg in (("/tiku/y/", "年份页"), ("/tiku/t/", "考点页"), ("/tiku/q/", "题目页"), ("/tiku/papers", "真题卷")):
+            for pre, seg in SEGMENTS:
                 if path.startswith(pre):
                     seg_counter[seg] += 1
                     if cat == "engine":
