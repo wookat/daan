@@ -63,6 +63,21 @@
             <text v-if="m.avgPct != null" class="mrow-avg">全站 {{ m.avgPct }}%</text>
           </view>
         </view>
+        <view
+          v-if="weakMod"
+          class="weak-cta"
+          role="button"
+          tabindex="0"
+          :aria-label="'去专项强化' + weakMod.name"
+          @click="goWeak"
+          @keydown.enter="goWeak"
+        >
+          <view class="weak-l">
+            <text class="weak-t">薄弱模块：{{ weakMod.name }}</text>
+            <text class="weak-d">{{ weakMod.reason }}</text>
+          </view>
+          <text class="weak-btn">去专项强化</text>
+        </view>
       </view>
 
       <view v-if="paceRows.length" class="card">
@@ -197,6 +212,7 @@ import { isFaved, toggleFav } from '../../exam-fav.js';
 import { qStatLine } from '../../q-stat.js';
 import { goalGap, prevScoreDelta } from '../../exam-goal.js';
 import { modAvgPct } from '../../exam-mod-avg.js';
+import { weakModule } from '../../exam-weak.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
 const MOD_ORDER = ['changshi', 'yanyu', 'shuliang', 'panduan', 'ziliao'];
@@ -242,6 +258,9 @@ export default {
         pct: pm[k].n ? Math.round((pm[k].correct / pm[k].n) * 100) : 0,
         avgPct: modAvgPct(this.rankData, k),
       }));
+    },
+    weakMod() {
+      return weakModule(this.modules);
     },
     paceRows() {
       const r = this.report;
@@ -414,6 +433,11 @@ export default {
       uni.setStorageSync('practiceLaunch', { kind: 'start', tag3: tag3 || null, count: 10, adaptive: true });
       uni.navigateTo({ url: '/pages/practice/practice' });
     },
+    goWeak() {
+      if (!this.weakMod) return;
+      uni.setStorageSync('practiceLaunch', { kind: 'start', module: this.weakMod.key, count: 10 });
+      uni.navigateTo({ url: '/pages/practice/practice' });
+    },
   },
 };
 </script>
@@ -447,6 +471,11 @@ export default {
 .mrow-r { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; }
 .mrow-r .mrow-v { width: auto; }
 .mrow-avg { font-size: 20rpx; color: var(--ink-3); white-space: nowrap; }
+.weak-cta { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; margin-top: 20rpx; padding: 18rpx 20rpx; background: var(--brand-soft); border-radius: 16rpx; cursor: pointer; }
+.weak-l { display: flex; flex-direction: column; gap: 4rpx; min-width: 0; }
+.weak-t { font-size: 26rpx; font-weight: 600; color: var(--ink); }
+.weak-d { font-size: 22rpx; color: var(--ink-2); }
+.weak-btn { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: var(--brand-strong); white-space: nowrap; }
 .curve { display: flex; align-items: flex-end; gap: 14rpx; height: 220rpx; padding: 10rpx 0; }
 .curve-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 44rpx; }
 .curve-v { font-size: 20rpx; color: var(--ink-2); margin-bottom: 4rpx; }
