@@ -914,3 +914,7 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：R264 sucai 页族上线后，/tiku/ 首页素材行仍是纯文本「详见申论真题库页」（素材页距首页 2 跳）、/llms.txt 素材说明无 URL（llms.txt 是 URL 导览文件，无链接条目对 LLM 爬虫零可发现性）——与 R249/R254 同构的发现渠道口径收尾缺口。
 - 收口：pages.py 素材行类型名改带计数链接指 _shenlun_sucai_path；llms.txt 素材说明改逐类型 markdown 链接条目；沿既有 mats 非空守卫（清空自动回落）。零路由/契约变化。
 - 详见 docs/iter/round-3/design-r266-sucai-links.md。
+## R267（/tiku 首页申论 section 补题型/年份 chips）
+- 取证：行测五模块 section 均有子题型/考点/年份 chips，申论 section 仅 hub 链接+文案——R251 题型页族（5 类）与 R250 年份页族（12 年份）在首页零链接（距首页 2 跳）。
+- 收口：tiku_index 申论 section 沿行测同构 markup 渲染题型 chips（shenlun_qtype_counts + _sub_path）与年份 chips（shenlun_year_counts + _year_path），空语料自动回落。零路由/契约变化，不加套卷 chips（49 个撑爆首页，hub 卡已覆盖）。
+- 详见 docs/iter/round-3/design-r267-home-shenlun-chips.md。
