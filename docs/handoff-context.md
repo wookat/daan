@@ -941,3 +941,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：origin 10h 日志实测 /api/shenlun/questions 99、filters 73、materials 62 次全穿透；09-02 04:35–04:37 争用窗口内与 /api/search 同样无副本可退，而 R250–R264 申论 SSR 页族深链落地即打这组 API。
 - 收口：允许清单加 shenlun questions/filters/materials（源码实查均 uid 无关公开 GET）+ 前缀 /api/shenlun/questions/（qid 详情），复用 R271 链路零新逻辑；不缓存 /api/exam/papers（uid 变体混流另轮评估）。
 - 详见 docs/iter/round-3/design-r272-shenlun-api-edge-cache.md。
+
+## R273（app 壳静态件 /sw.js、/precache.json 纳入边缘缓存）
+- 取证：origin 11.5h 日志 /sw.js 541 次 304 + 48 次 200、/precache.json 全部同步穿透（_routes.json 只留 / 与 /static/* 给 Pages 静态层）；09-02 04:35–04:37 争用窗口内两者各 4–5 条 25s 503，无 stale 副本可退，是 R271/R272 后同窗口剩余未收口的公开 GET。
+- 收口：SHELL_CACHE_ALLOWLIST 两路径 60s TTL（sw.js 新版生效延迟被 TTL 上界约束；浏览器 SW 主脚本更新检查默认绕过浏览器缓存但不绕过 CDN，60s 边缘缓存安全）+ content-type 守卫 js/json，复用既有 SWR/stale-if-error/重试链路零新逻辑。不动 /api/health（探针语义须实时）。
+- 详见 docs/iter/round-3/design-r273-shell-static-edge-cache.md。

@@ -68,6 +68,17 @@ describe('isEdgeCacheable', () => {
     expect(isEdgeCacheable('GET', '/api/shenlun/materials', true, false)).toBe(false);
     expect(isEdgeCacheable('POST', '/api/shenlun/questions', false, false)).toBe(false);
   });
+  it('app 壳静态件 /sw.js、/precache.json 可缓存（60s TTL，仅限对应 content-type），POST 绕过', () => {
+    expect(isEdgeCacheable('GET', '/sw.js', false, false)).toBe(true);
+    expect(isEdgeCacheable('GET', '/precache.json', false, false)).toBe(true);
+    expect(isEdgeCacheable('POST', '/sw.js', false, false)).toBe(false);
+    expect(edgeTtl('/sw.js')).toBe(API_EDGE_CACHE_TTL);
+    expect(edgeTtl('/precache.json')).toBe(API_EDGE_CACHE_TTL);
+    expect(isCacheableContentType('/sw.js', false, 'application/javascript')).toBe(true);
+    expect(isCacheableContentType('/sw.js', false, 'text/html')).toBe(false);
+    expect(isCacheableContentType('/precache.json', false, 'application/json')).toBe(true);
+    expect(isCacheableContentType('/precache.json', false, 'text/html')).toBe(false);
+  });
   it('带 Authorization 或 uid 的 API 一律绕过', () => {
     expect(isEdgeCacheable('GET', '/api/question_counts', true, false)).toBe(false);
     expect(isEdgeCacheable('GET', '/api/daily_set', false, true)).toBe(false);
