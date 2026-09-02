@@ -1064,3 +1064,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：ruff/pytest 170(+3)/pyright 0/lint/vitest 306(+6)/build/diff-check 全绿；生产 rev 69d52dc、bundle index-CNKuN0WS.js；API 实测种子 3 uid + 1 真实用户同卷（pid 5）module_avg 五模块 n_users=4 契约符合、既有 total/rank/board 不回归；UI 双视口实测模块行「全站 1%/0%」逐行与 API 一致、rank 卡回归正常、溢出 0、console 0 error（低样本 n_users<2 隐藏分支仅单测覆盖未生产实测）；性能预算全过（/ 0.98、/tiku/ 1.00）。测试数据清理 test-r306-*（DELETED 4 / leftover 0）。
 - 陷阱：scripts/clean_test_data.py 在部分表结构下（practice_results/users 无 uid 列）需先 PRAGMA 检查列再删，且 sqlite 未 commit 前异常会整体回滚。
 - 详见 docs/iter/round-3/design-r306-report-module-avg.md。
+
+## R308（模考报告「继续模考」下一卷推荐 CTA，PR #498）
+- 取证（SOP-10）：报告页尾部动作只有返回卷库/再考一次（R307 薄弱模块 CTA 仅覆盖诊断成立场景），复盘后无「下一张未考卷」出口；数据现成（/api/exam/papers?kind=zhenti 含 takers/avg_score、/api/exam/attempts 只回已交卷），R286 ?pid= 深链可作安全落点（不走 exam.vue ?paper_id= 即建 attempt）。
+- 收口纯前端零后端：src/exam-next.js 纯函数 nextPaper(papers,attempts,cur)（候选=id 正整数+title 非空+非本卷+不在已交卷集合；排序同 cur.region 优先→year 降序（缺排后）→takers 降序→id 降序；非法输入/无候选→null 不渲染不伪造；输入不可变）。report.vue loadNext() 并行拉双接口（任一失败静默），CTA 副文案 takers>0 显「已有 N 人模考 · 平均 X 分」否则「换一卷继续练手感」，role=button/tabindex=0/Enter，goNext→/pkgA/exam/list?pid={id}。
+- 验证：lint/vitest 320(+9)/build/diff-check 全绿；生产 rev d79ce20、bundle index-DkzBjMNb.js；testing agent 双视口实测：交卷贵州卷（全库唯一贵州卷）后 CTA 推荐 pid 5（year↓→takers↓ 路径命中）文案与实时 papers 数据一致、点击/Tab+Enter 均落 list?pid=5 高亮+角标未开考、375 无溢出、console 0 error、反例 attempt 99999 空态无 CTA；同 region 优先与全卷考完隐藏分支未生产实测（vitest 已覆盖）。测试数据清理 test-r308-*（DELETED 2 / leftover 0）。
+- a11y 线索：报告页逐题 75 个圆圈全在 Tab 序列内，键盘到 CTA 需 ~75 次 Tab，后续可考虑逐题区 roving tabindex。
+- 详见 docs/iter/round-3/design-r308-report-next-paper-cta.md。
