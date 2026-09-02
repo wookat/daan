@@ -1111,3 +1111,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：ruff/pytest 177(+2)/pyright 0/lint/vitest 331/build 全绿；生产 rev 80bbfd7、bundle index-U1GUVn8d.js；testing agent 双视口实测：API 契约（答错 mistake_id 非 null 初始 error_reason null，答对/未答双 null）、chips 位置/点击 PATCH 200/硬刷回显/错题本同源（按错因聚合+复习流同显）、连看不串态、fail-closed 无 chips、R291/R292/R312/R313 回归、双视口溢出 0、console 0 error；Lighthouse 全过（部署首跑 / a11y 单样本 0.94、独立复跑 1.0，采样波动）。清理 test-r314-me DELETED 10 / LEFTOVER 0，保护 uid 各表计数前后快照逐表一致。
 - 未生产实测：PATCH 失败回滚 toast 分支（生产无法构造失败，逻辑代码核实）。
 - 详见 docs/iter/round-3/design-r314-report-overlay-error-reason.md。
+
+### R315：成绩报告解析浮层逐题「本题用时」（PR #510）
+- 取证（SOP-10）：做卷页早已逐题计时（exam.vue qsecs→q._secs，交卷带 secs {题号:秒}），但后端只用于 answer_log 与模块级配速（R281），exam_attempts 不持久化逐题 secs、report items 无用时字段；用户模考后无法回答「这道题花了多久、是不是太慢」（粉笔逐题解析外显每题用时并与平均对比），纯数据链路断点。
+- 收口零新 endpoint/表/URL 状态：db _ensure_exam_tables 幂等补列 exam_attempts.secs TEXT；finish_exam_attempt(..., secs=None) 落 JSON；get_exam_attempt 解析回 dict（旧记录 {}）；submit 把 _clean_int_map 清洗后的 secs 传入；report items 纯增量补 secs（仅 int 且 >0 返回，否则 null fail-closed）。前端纯函数 exam-time.js（fmtSecs：45 秒/1 分 20 秒/2 分，非正数 null；paperAvgSecs：secs>0 均值、有效题 <3 null 防小样本；qTimeLine：本题无效整行 null，均值无效只出前半句）；report.vue 统计行后、错因自评前插 detailTimeLine（复用 .dstat），连看随 detail 切换。
+- 验证：ruff/pytest 179(+2)/pyright 0/lint/vitest 343(+13)/build 全绿；生产 rev f2f0aa2、bundle index-CXRnuOYr.js；API 实测 secs {45,80,12,-3,"bad"} → report {45,80,12,null,null}、无 secs 旧 attempt 全 null；testing agent 双视口实测：题1「本题用时 45 秒 · 全卷平均 46 秒/题」、题2 分秒格式、题4 无 secs 整行不渲染、旧报告全隐藏、DOM 顺序 用时→错因→解析→CTA→纠错→社交条、R290/R291/R312/R313/R314 回归、双视口溢出 0、console 0 error；Lighthouse 独立复跑全过（部署首跑 / a11y 0.94/LCP 2645 单样本波动）。清理 test-r315-* DELETED 7 / LEFTOVER 0，保护 uid 30 表快照前后逐表一致。
+- 未生产实测：有效 secs <3 隐藏全卷平均分支（预置数据恰为 3 题阈值下限；vitest 覆盖）。
+- 详见 docs/iter/round-3/design-r315-report-per-question-secs.md。
