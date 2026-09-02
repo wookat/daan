@@ -1,5 +1,16 @@
 <template>
   <view class="wrap">
+    <view v-if="resume" class="card resume">
+      <view class="resume-l">
+        <text class="resume-t">未交卷：{{ resume.title }}</text>
+        <text class="resume-s">已答 {{ resume.answered }}/{{ resume.total }} 题 · 剩余 {{ fmtLeft(resume.leftSecs) }}</text>
+      </view>
+      <view class="resume-btns">
+        <view class="pbtn main rbtn" @click="continueExam">继续模考</view>
+        <view class="pbtn rbtn" role="button" aria-label="放弃未交卷进度" @click="dropResume">放弃</view>
+      </view>
+    </view>
+
     <view class="mini card" @click="startMini">
       <text class="mini-ico">⚡</text>
       <view class="mini-l">
@@ -69,6 +80,7 @@
 <script>
 import { request, snapPeek, anonUid, exportPdf } from '../../api.js';
 import { buildExamListUrl, parseExamListOpts } from '../../exam-list-url.js';
+import { parseExamProgress, fmtLeftSecs } from '../../exam-resume.js';
 
 export default {
   data() {
@@ -83,6 +95,7 @@ export default {
       exportingId: null,
       exportTarget: null,
       pinnedId: 0,
+      resume: null,
     };
   },
   created() {
@@ -96,6 +109,7 @@ export default {
   onShow() {
     this.load();
     this.loadAttempts();
+    this.loadResume();
   },
   methods: {
     async load() {
@@ -162,6 +176,29 @@ export default {
       });
       // #endif
     },
+    loadResume() {
+      const saved = uni.getStorageSync('examProgress');
+      this.resume = parseExamProgress(saved, Date.now());
+      if (saved && saved.attemptId && !this.resume) uni.removeStorageSync('examProgress');
+    },
+    continueExam() {
+      const r = this.resume;
+      if (!r) return;
+      uni.navigateTo({ url: r.mini ? '/pkgA/exam/exam?mini=1' : '/pkgA/exam/exam?paper_id=' + r.paperId });
+    },
+    dropResume() {
+      uni.showModal({
+        title: '放弃未交卷进度？',
+        content: '放弃后本次作答记录不再保留',
+        confirmText: '放弃', cancelText: '再想想',
+        success: (res) => {
+          if (!res.confirm) return;
+          uni.removeStorageSync('examProgress');
+          this.resume = null;
+        },
+      });
+    },
+    fmtLeft(s) { return fmtLeftSecs(s); },
     syncUrl() {
       // #ifdef H5
       if (typeof window !== 'undefined' && window.history) {
@@ -245,6 +282,12 @@ export default {
 .arow-t { display: block; font-size: 25rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .arow-s { display: block; font-size: 21rpx; color: var(--ink-2); margin-top: 4rpx; }
 .arow-score { flex-shrink: 0; font-size: 28rpx; font-weight: 700; color: var(--brand-text); }
+.resume { display: flex; align-items: center; gap: 20rpx; border-color: var(--brand); }
+.resume-l { flex: 1; min-width: 0; }
+.resume-t { display: block; font-size: 27rpx; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.resume-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; }
+.resume-btns { flex-shrink: 0; display: flex; gap: 12rpx; }
+.rbtn { flex: none; padding: 0 26rpx; }
 
 /* 桌面网格（仅 H5 ≥1024px） */
 /* #ifdef H5 */
