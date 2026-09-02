@@ -619,3 +619,10 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 刷题页 `pendingSession` 仅在作答/`next()` 等路径 `saveSession()`（R321 后长按排除也触发保存）；方向键 `jumpTo()` 不保存——验证刷新持久化时若走旧 bundle 或依赖 jumpTo 切题，可能得到假失败，先作答一题或长按排除后再刷新。
 - 伪造/校验 uni storage 键（如把 ppClearedAt 改为过去时间模拟 30s 守卫过期）必须读写包装格式 `{"type":"number","data":<ms>}`；直接 `localStorage.getItem` 断言原始数字会得到 null/误判。
 - 多 tab CDP 场景：devb 隔离 tab 一旦整页导航会丢失 `?devb=1` URL 标记，「取第一个 zalize tab」的 helper 会命中错 tab——应记录 `Target.createTarget` 返回的 targetId 并按 id 定向连 WebSocket，勿依赖 URL 标记。
+
+## R324 Web Push 走查新经验
+- 定向发推送必须用 `docker exec deploy-kaogong-1 python -c "from app.push_api import _send_daily; _send_daily(only_endpoint='<ep>')"`（只发该 endpoint 且不写 push_last_day 水位）；**绝不裸调 `_send_daily()`**，会推给全体订阅用户。
+- 订阅入口：我的→学习提醒（/#/pkgA/settings/reminders）→「每日一练离线推送」switch。先 CDP `Browser.grantPermissions`(notifications) 再点开关；首次点开关可能不落订阅（perm granted 但 endpoint=null），可在页面内手动 `reg.pushManager.subscribe()` 打通后再点 UI 开关即成。endpoint 从生产 `push_subs` 表查。
+- 通知点击→SW `notificationclick`→`c.navigate(url)` 只对**被 SW 控制**的页面窗口生效：硬刷（Ctrl+Shift+R）后页面 `navigator.serviceWorker.controller=null`，点通知会消费掉但不导航——先普通刷新确认 `controlled:true` 再点；并关掉多余同源 tab 防止 navigate 落错窗口。
+- 后端「今日」用 CN_TZ（Asia/Shanghai）`strftime('%Y-%m-%d')`；SSH 造 `daily_set_entries` 行时勿用 sqlite `date('now')`（UTC），日期可能差一天导致分支误判，应在 python 里用 `datetime.now(CN_TZ)` 生成 day。
+- 错题到期口径 `db.due_review_count`：mastered 空/0 且 next_review 空或 <=now；SSH 改 `mistakes.next_review` 到过去/未来即可切 due>0/due=0。

@@ -1178,3 +1178,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：lint/vitest 384(+6)/build 全绿；生产 rev 0dec21a→c139171 两轮 testing agent 实测：本机命中 0 resume 请求、跨设备 375 隔离 context 服务端出卡直达恢复、放弃流程、完成/新 uid 反例、模考卡双卡共存、裸进入弹窗回归、双视口溢出 0/console 0 error、Lighthouse 全过。清理两轮 DELETED 29+3 / LEFTOVER 0，保护 uid 31 表快照一致。
 - 未生产实测：resume 失败静默分支、24h TTL 过期分支（vitest 覆盖）、真实触屏。
 - 详见 docs/iter/round-3/design-r323-home-practice-resume.md。
+
+### R324 每日推送个性化——「今日到期错题」复习提醒（2026-08-29，PR #521，基于 #520 分支 devin/1788389576-r324-push-due-review）
+- 取证：R98 每日 08:00 Web Push 对全体订阅者构造同一份「每日一练」payload（循环外构造），已完成当日每日一练者直接 skip；错题到期数据（db.due_review_count）与首页「今日到期复习 N 题」卡早已存在，但离开 App 后零触达。
+- 收口：push_api.py 新增纯函数 build_push_payload(day, daily_done, due_n)（bool/非法 due 按 0 fail-closed）四分支：未完成每日+due=0→原文案不变；未完成每日+due>0→「今日学习提醒」合并文案仍深链每日一练；已完成每日+due>0→「错题复习提醒」深链 /#/pages/book/book?review=1&src=push；双完成→None 不打扰。_send_daily(only_endpoint=None) 循环内逐 uid 查 due_review_count（异常按 0），only_endpoint 为定向验证钩子（指定时不写 push_last_day 水位）。前端 parseBookOpts 白名单新增 review（仅 '1'，不进 buildBookUrl 状态 URL），book.vue onLoad 命中设 autoStartReview 复用既有 onShow 自动复习流。无新表/新调度/订阅协议不变。
+- 验证：ruff/pytest 196(+5)/pyright 0/lint/vitest 385(+6)/build 全绿；生产 rev 90486d3、bundle index-C6UX06VT.js；testing agent 真实订阅+定向触发四分支全过（A：错题复习提醒点击自动进复习流 1/1；B：合并文案落每日一练；C：原文案不回归；D：sent=0 无通知），首页到期卡回归、review=abc/0 反例不触发、console 0 error；Lighthouse 独立复跑全过（部署首跑 / a11y 0.94/LCP 2648 单样本波动，复跑 1.0/1826ms）。清理 test-r324-push DELETED 9 / LEFTOVER 0，保护 uid 31 表快照一致。
+- 未生产实测：cron 全量发送路径（出于安全只走 only_endpoint 定向；全量循环逻辑同一函数）；375 视口（本轮以通知点击流为主）；SW 未控页点通知不导航为浏览器已知行为非缺陷。
+- 详见 docs/iter/round-3/design-r324-push-due-review.md。
