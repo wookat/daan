@@ -1057,3 +1057,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：ruff/pytest 167(+7)/pyright 0/lint/vitest 300(+13)/build/diff-check 全绿；生产 rev b33f12e、bundle index-DgyXb4Ot.js；API 实测 5 uid 种子（含同分先参与在前、per-user-best 低分重考不占行）逐项符合契约；UI 双视口实测榜单顺序/脱敏/本人高亮（--brand-soft）/solo 单人隐藏/溢出 0/console 0 error（「本人不在前十」分支仅 vitest 覆盖未生产实测）。测试数据全库清理 deleted 284 行 + mock 卷 2 张 / leftover 0。
 - 陷阱：直接 python 探针调生产 API 需带浏览器 UA 否则 R88 边缘 403；conftest seed_questions 改为 insert-or-ignore 后按 module+题干回查稳定 id（lastrowid 跨连接不可靠曾致全量跑随机 KeyError）。
 - 详见 docs/iter/round-3/design-r305-exam-board.md。
+
+## R306（模考报告模块得分补全站同卷模块平均，PR #495）
+- 取证（SOP-10）：report.vue 模块得分卡只显示个人 correct/n，无法区分「个人薄弱」与「整卷该模块普遍难」；rank 接口已被报告页请求、exam_attempts.per_module 已存真实模块数据；mock_event.py 有模块平均先例（粉笔模块诊断锚点）。
+- 收口：后端 /api/exam/rank/{attempt_id} 纯增量补 `module_avg`（同卷已交卷、每 uid 取最高分 attempt；逐用户先算 correct/n 再求用户级均值，不按题目池化；malformed JSON/非 dict 模块值/bool 伪数字/n<=0 逐行跳过；每模块 ≥2 合法用户才返回 {pct,n_users}；仍 self-only、不进公开 SSR）。前端 exam-mod-avg.js 纯函数 modAvgPct（缺失/非法/越界/n_users<2 → null 不渲染），rank-card.vue 请求成功 $emit('loaded')，report.vue 模块行右侧 stack 补「全站 N%」小字（--ink-3），复用既有请求零新增。
+- 验证：ruff/pytest 170(+3)/pyright 0/lint/vitest 306(+6)/build/diff-check 全绿；生产 rev 69d52dc、bundle index-CNKuN0WS.js；API 实测种子 3 uid + 1 真实用户同卷（pid 5）module_avg 五模块 n_users=4 契约符合、既有 total/rank/board 不回归；UI 双视口实测模块行「全站 1%/0%」逐行与 API 一致、rank 卡回归正常、溢出 0、console 0 error（低样本 n_users<2 隐藏分支仅单测覆盖未生产实测）；性能预算全过（/ 0.98、/tiku/ 1.00）。测试数据清理 test-r306-*（DELETED 4 / leftover 0）。
+- 陷阱：scripts/clean_test_data.py 在部分表结构下（practice_results/users 无 uid 列）需先 PRAGMA 检查列再删，且 sqlite 未 commit 前异常会整体回滚。
+- 详见 docs/iter/round-3/design-r306-report-module-avg.md。
