@@ -53,6 +53,18 @@
       </view>
     </view>
 
+    <!-- 未完成错题复习续复习卡 -->
+    <view v-if="reviewResume" class="card ercard">
+      <view class="cb-l">
+        <text class="cb-t">有一次未完成的错题复习</text>
+        <text class="cb-s">中断在第 {{ reviewResume.rIdx + 1 }}/{{ reviewResume.items.length }} 题</text>
+      </view>
+      <view class="cb-r">
+        <text class="cb-go" role="button" aria-label="继续未完成的错题复习" @click="rvContinue">去继续 ›</text>
+        <text class="cb-x" role="button" aria-label="放弃未完成复习" @click="rvDrop">✕</text>
+      </view>
+    </view>
+
     <!-- 回访召回卡（7天以上未练习的老用户） -->
     <view v-if="comeback" class="card cbcard">
       <view class="cb-l">
@@ -497,6 +509,7 @@ import { checkinStreak, dayKey, loadSzDaily } from '../../checkin.js';
 import { parseExamProgress, fmtLeftSecs } from '../../exam-resume.js';
 import { adoptServerExamProgress } from '../../exam-progress-sync.js';
 import { parsePendingPractice, parseRemotePractice } from '../../practice-progress.js';
+import { parseReviewSnap } from '../../review-snap.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 
@@ -554,6 +567,7 @@ export default {
       reminderBanner: false,
       examResume: null,
       practiceResume: null,
+      reviewResume: null,
       dsMeta: null,
       dsDone: null,
       dateStart: new Date().toISOString().slice(0, 10),
@@ -677,6 +691,7 @@ export default {
     this.checkReminder();
     this.loadExamResume();
     this.loadPracticeResume();
+    this.loadReviewResume();
     this.loadDailySet();
     flushDailySubmit();
     const wantSetup = uni.getStorageSync('openPlanSetup');
@@ -855,6 +870,42 @@ export default {
     prContinue() {
       uni.setStorageSync('practiceLaunch', { kind: 'resume' });
       uni.navigateTo({ url: '/pages/practice/practice' });
+    },
+    loadReviewResume() {
+      const uid = anonUid();
+      const local = parseReviewSnap(uni.getStorageSync('reviewSnap'), uid, Date.now() / 1000);
+      if (local) {
+        this.reviewResume = local;
+        return;
+      }
+      this.reviewResume = null;
+      const clearedAt = uni.getStorageSync('rvClearedAt');
+      if (clearedAt && Date.now() - clearedAt < 30 * 1000) return;
+      request('/api/review/cur?uid=' + encodeURIComponent(uid))
+        .then((r) => {
+          this.reviewResume = parseReviewSnap(r && r.snap, uid, Date.now() / 1000);
+        })
+        .catch(() => {});
+    },
+    rvContinue() {
+      trackEvent('home_review_resume_click', 'home');
+      uni.setStorageSync('bookReviewIntent', 1);
+      uni.switchTab({ url: '/pages/book/book' });
+    },
+    rvDrop() {
+      uni.showModal({
+        title: '放弃未完成复习？',
+        content: '放弃后这轮复习的进度不再保留',
+        confirmText: '放弃',
+        cancelText: '再想想',
+        success: (res) => {
+          if (!res.confirm) return;
+          uni.removeStorageSync('reviewSnap');
+          uni.setStorageSync('rvClearedAt', Date.now());
+          request('/api/review/cur', { method: 'POST', data: { uid: anonUid(), snap: null } }).catch(() => {});
+          this.reviewResume = null;
+        },
+      });
     },
     prDrop() {
       uni.showModal({
