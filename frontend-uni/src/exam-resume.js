@@ -8,6 +8,7 @@ export function parseExamProgress(saved, now) {
   const mini = !!saved.mini;
   const title = (saved.paper && saved.paper.title) || (mini ? '迷你模考' : '真题模考');
   return {
+    attemptId: Number(saved.attemptId) || 0,
     paperId: mini ? 0 : Number(saved.paperId) || 0,
     mini,
     title,
