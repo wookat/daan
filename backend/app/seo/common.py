@@ -146,7 +146,7 @@ def _page(
         f'<input name="q" type="search" placeholder="搜题目 / 考点 / 试卷" aria-label="搜索题库"></form>'
         f'<a class="hdr-cta" href="/">去刷题</a></div></header>'
         f'<main class="wrap">{body}</main>'
-        f'<footer class="ftr"><a href="{_e(SITE_BASE)}/">错题邦</a> · 13万+行测真题在线刷题'
+        f'<footer class="ftr"><a href="{_e(SITE_BASE)}/">错题邦</a> · 10万+ 行测题 · 1.5万+ 历年真题'
         f' · <a href="/tiku/papers/">真题卷</a>'
         f' · <a href="https://career.zalize.com/privacy/">隐私政策</a>'
         f' · <a href="https://career.zalize.com/terms/">服务条款</a>'
