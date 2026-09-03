@@ -28,6 +28,7 @@
           <text class="q-ans">答案：{{ detail.answer }}</text>
           <text v-if="detail.explanation" class="q-exp">{{ detail.explanation }}</text>
           <view class="d-acts">
+            <text v-if="detailAskSeen" class="d-copy seen" role="button" aria-label="回看 AI 详解" @click.stop="openSeenAsk">回看 AI 详解</text>
             <text class="d-copy" role="button" aria-label="AI 详解本题" @click.stop="askFromSearch(detail)">AI 详解本题</text>
             <text class="d-copy" role="button" aria-label="复制本题链接" @click.stop="copyQLink(detail.id)">复制本题链接</text>
           </view>
@@ -97,6 +98,7 @@
             <text class="q-ans">答案：{{ detail.answer }}</text>
             <text v-if="detail.explanation" class="q-exp">{{ detail.explanation }}</text>
             <view class="d-acts">
+              <text v-if="detailAskSeen" class="d-copy seen" role="button" aria-label="回看 AI 详解" @click.stop="openSeenAsk">回看 AI 详解</text>
               <text class="d-copy" role="button" aria-label="AI 详解本题" @click.stop="askFromSearch(detail)">AI 详解本题</text>
               <text class="d-copy" role="button" aria-label="复制本题链接" @click.stop="copyQLink(detail.id)">复制本题链接</text>
             </view>
@@ -130,7 +132,7 @@
 import { request, trackEvent } from '../../api.js';
 import { buildSearchUrl, buildTikuQPath } from '../../search-url.js';
 import { askPrefill } from '../../ask-prefill.js';
-import { askQid } from '../../ask-link.js';
+import { askQid, findAskSid } from '../../ask-link.js';
 
 const MODS = { ziliao: '资料', shuliang: '数量', yanyu: '言语', panduan: '判断', changshi: '常识', shenlun: '申论' };
 
@@ -154,6 +156,7 @@ export default {
       timer: null,
       searchSeq: 0,
       moreLoading: false,
+      askSeenTick: 0,
       hist: uni.getStorageSync('kgSearchHist') || []
     };
   },
@@ -165,7 +168,14 @@ export default {
     this.kw = q.slice(0, 64);
     this.doSearch();
   },
+  onShow() {
+    this.askSeenTick++;
+  },
   computed: {
+    detailAskSeen() {
+      void this.askSeenTick;
+      return findAskSid(uni.getStorageSync('askSessions'), uni.getStorageSync('askCurSession'), this.detail && this.detail.id);
+    },
     hasSide() {
       const r = this.result;
       return !!(r && ((r.topics || []).length || (r.papers || []).length || (r.shenlun || []).length || (r.shenlun_mats || []).length));
@@ -180,6 +190,11 @@ export default {
   methods: {
     modName(m) {
       return MODS[m] || m || '';
+    },
+    openSeenAsk() {
+      if (!this.detailAskSeen) return;
+      if (this.detailAskSeen.sid > 0) uni.setStorageSync('askOpenSid', this.detailAskSeen.sid);
+      uni.switchTab({ url: '/pages/ask/ask' });
     },
     askFromSearch(d) {
       const text = askPrefill(d && d.question, d && d.options);
@@ -356,6 +371,7 @@ export default {
 .q-exp { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; }
 .d-acts { display: flex; gap: 20rpx; }
 .d-copy { font-size: 22rpx; color: var(--brand-text); text-decoration: underline; cursor: pointer; padding: 4rpx 6rpx; align-self: flex-start; }
+.d-copy.seen { color: var(--ok-strong); }
 .more { text-align: center; font-size: 26rpx; color: var(--brand-text); padding: 16rpx; }
 .empty { display: flex; flex-direction: column; gap: 8rpx; text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 100rpx 40rpx; }
 .empty-t { font-size: 26rpx; color: var(--ink-2); }
