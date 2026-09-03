@@ -1287,3 +1287,12 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 测试数据清理：test-r337-replay 全库 DELETED 5 / LEFTOVER 0；保护 uid umteojq4sltdhorhm 快照验前验后逐项一致（PROTECTED_MATCH True）。
 - 边界（如实）：本地时政收藏 id:null fail-closed 分支未生产构造（vitest 覆盖 askQid）；真实触屏未测（CDP 模拟）；「回看」入口无独立埋点（与 R336 口径一致）；ask 常驻 tab 注入时序注意事项已入测试 SKILL。
 - 详见 docs/iter/round-3/design-r337-ask-seen-everywhere.md。
+
+### R338 「回看 AI 详解」命中态收尾：刷题页解析区/错题本列表展开态（2026-08-29，PR #536 + 样式修复 PR #537）
+- 取证：全代码库 redoQid 写入点复查，R337 后仅剩两处场景写有效 redoQid 但无已有讲解命中态——practice.vue 解析区 deepExplain（qid=cur.id）与 book.vue 列表展开态 redo(m)（qid=m.question_id）。
+- 收口（纯前端，零新 endpoint/表/URL 契约，不改 /api/explain）：两页复用 ask-link.js findAskSid + askOpenSid 协议——practice.vue curAskSeen computed（askSeenTick onShow 重算）+ 解析区「回看 AI 详解 ›」（.deep.seen 绿色，位于「用花生十三方法详解这道题」上方）+ openSeenAsk()（sid>0 写 askOpenSid、sid=0 直切 ask tab）；book.vue 列表展开卡 mAskSeen(m) 方法查 + 「回看 AI 详解」（.op.seen）+ openSeenAskM(m) 同构导航，@click.stop 防收起。未命中/legacy 无 qid/非法 id fail-closed 不显示。
+- P2（首版 94ce6a3 生产走查发现，PR #537 修复 069eefc）：book.vue 模板用了 class="op seen" 但漏加 .op.seen CSS——错题本回看入口渲染默认黑色 rgb(23,24,28) 而非绿色。补 `.op.seen { color: var(--ok-strong); }` 后生产复验 getComputedStyle = rgb(21,128,61)（--ok-strong #15803d）。
+- 验证：lint/vitest 424/build 全绿（纯前端）；生产 rev 069eefc、bundle index-Dpq4U62M.js，部署脚本 API 回归+Lighthouse 预算全过。testing agent 两轮实测（uid test-r338-replay / test-r338b-css）：刷题页归档命中导航+sid=0 直切+切无关题消失、错题本列表命中（含 mastered 项）/未命中反例、@click.stop 不冒泡（bubble listener 客观验证）、askOpenSid 写入/消费、原 AI 详解预填与 redoQid 消费回归、375/1440 溢出 0、console 0 error、全程 0 次 /api/explain。
+- 测试数据清理：两轮 uid 全库合并清理 DELETED 15 / LEFTOVER 0；保护 uid umteojq4sltdhorhm 37 项快照验前验后逐项一致（PROTECTED_MATCH True）。
+- 边界（如实）：真实触屏未测（CDP 模拟）；真实 LLM 刻意未触发（CDP 注入已有讲解模拟）；askSeenTick 独立隔离路径经换题/重进会话等价覆盖；ask onShow 会回写覆盖注入的 askSessions（测试注入需整页硬刷，已入测试 SKILL）。
+- 详见 docs/iter/round-3/design-r338-ask-seen-final.md。
