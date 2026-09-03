@@ -48,6 +48,16 @@ def rl(request: Request, bucket: str, limit: int, window: int, uid: str | None =
         auth.rate_limit(f"{bucket}:{who}", limit, window)
 
 
+def as_int(v, default: int = 0) -> int:
+    """客户端整数参数：缺省/空回 default，非法（如 "abc"、列表）回 400 而非 500。"""
+    if v is None or v == "":
+        return default
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        raise HTTPException(400, "参数格式错误") from None
+
+
 def friendly_ai_err(e: Exception) -> str:
     if isinstance(e, httpx.HTTPStatusError):
         code = e.response.status_code

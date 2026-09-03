@@ -5,7 +5,7 @@
     <block wx:else>
       <image wx:if="{{imgSrc}}" class="poster" src="{{imgSrc}}" mode="widthFix" bind:longpress="onSave" />
       <view wx:else class="loading">{{err || '生成失败'}}</view>
-      <view class="bar">
+      <view class="actions">
         <view class="btn {{imgSrc ? '' : 'off'}}" bind:tap="onSave">保存图片</view>
         <button class="btn ghost" open-type="share">分享给好友</button>
         <text class="tip">保存后可分享到朋友圈 / 小红书，和考友一起上岸</text>

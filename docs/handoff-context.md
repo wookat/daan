@@ -1297,6 +1297,7 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 边界（如实）：真实触屏未测（CDP 模拟）；真实 LLM 刻意未触发（CDP 注入已有讲解模拟）；askSeenTick 独立隔离路径经换题/重进会话等价覆盖；ask onShow 会回写覆盖注入的 askSessions（测试注入需整页硬刷，已入测试 SKILL）。
 - 详见 docs/iter/round-3/design-r338-ask-seen-final.md。
 
+
 ### R339 AI 问答会话「查看原题」反向闭环 + 历史空态文案修正（2026-08-29，PR #538，分支 devin/1788428478-r339-ask-view-question）
 - 取证：R336–R338 打通「题 → AI」（六场景入口 + 回看命中态），反向为零——AI 讲解 bubble chips 仅「再讲细一点/出同款题/存错题本」，item 级 qid 已就位但用户无法从讲解回到原题继续收藏/纠错/看讨论/复制链接；历史会话空态仍宣称「仅保存在本机」，与 R328 起服务端跨设备同步事实不符（错误承诺）。
 - 收口（纯前端 + 埋点白名单一行，零新 endpoint/表/URL 契约，不改 /api/explain）：ask-link.js 新增 fail-closed 纯函数 askViewUrl(qid)——askQid>0 返回 `/pkgA/search/search?q=<qid>&qid=<qid>` 否则 null，复用 /api/search 纯数字 code_hit 直达 + 搜索页 ?qid 自动 toggleDetail（R270）；ask.vue chips 行尾 v-if="viewUrl(r)" 追加「查看原题」，点击 trackEvent('ask_view_question') → uni.navigateTo；空态文案改「同一账号换设备也能看」；team.py 白名单补 ask_view_question（防 R333 式静默 400）。不改 findAskSid/askOpenSid/redoQuestion/redoAnswer/redoQid 协议。
@@ -1417,3 +1418,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 测试数据清理：test-r353-ui 全库 DELETED {mistakes 2/answer_log 5/exam_attempts 1/review_log 1/growth_events 14/exam_progress 1/practice_progress 1}，LEFTOVER {}，review_cur 0 行；保护 uid DB 34 表+localStorage 前后一致（EXACT MATCH n=28）。
 - 边界（如实）：真实触屏未测（CDP 模拟）；C context 无独立 metrics holder 以桌面宽验证「无卡/无横幅」（断言与视口无关）。
 - 详见 docs/iter/round-3/r353-home-review-resume-card.md。
+
+### W1（R348 交叉复核集成轮，分支 devin/wf-w1-integration，未建 PR/未部署）
+- 集成：origin/main 2cae38f 切 `devin/wf-w1-integration`，依次 merge R348-B1（cce7cf4）/ C1（664a21f）/ M1（858622d），三次无冲突；dropped 无。全量本地验证：backend ruff / pytest 232 passed / pyright 0；frontend-uni lint / vitest 424 passed / build:h5（产物与生产 R338 同 hash，本轮 H5 零改动）；miniapp typecheck 0 错、lint 需 `ESLINT_USE_FLAT_CONFIG=false`（根 eslint.config.mjs 误切 flat config，既有问题）。
+- B1：guard_account_uid 改「写方法 && 非 multipart/urlencoded 即 json.loads」，scan_sheet 入口 owns_uid，deps.as_int 统一畸形数字 400，badges 连签补 review_log 日。本地 uvicorn 实测五种 Content-Type + multipart uid=u999999 无 token 均 403 且不落库、匿名 200、n=abc 400、badges==summary streak。
+- C1：quality.py 三类扣分 + sanitize_hs，db.import_hs_explanations 源头过滤，scripts/r348_content_cleanup.py 默认 dry-run / `--apply` 写前 backup。临时库 dry-run→apply→复扫 0 一致；生产只读 dry-run 量级 17/2438/3728。**生产 --apply 未执行**：需部署本分支后由负责人确认备份路径；且 `数据矛盾` 词单独触发 12/17、≥6 条疑误杀，apply 前先决策词表。
+- M1：poster `.bar`→`.actions`、request.ts 403「重新登录」清登录态回退匿名、practice 题图渲染/预览、share 模块名中文。真机/开发者工具走查未做。
+- 遗留台账：docs/iter/workflow/backlog.md（含 H5 三处一行修、yanyu 抽审、17 条复核、quality_score 闸门、60 秒等待取证、guard 三路径入 SKILL 等）；详证 docs/iter/workflow/w1.md。
+

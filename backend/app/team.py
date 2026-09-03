@@ -15,7 +15,7 @@ from fastapi import APIRouter, HTTPException, Request
 
 from . import db
 from .auth import client_ip, rate_limit
-from .deps import rl
+from .deps import as_int, rl
 from .social import CN_DAY_SQL, CN_TZ
 
 router = APIRouter(prefix="/api")
@@ -480,6 +480,7 @@ def api_share_answer(sid: str, body: dict, request: Request):
     picked = str(body.get("picked") or "").strip().upper()[:2]
     if not picked:
         raise HTTPException(400, "缺少作答选项")
+    secs = as_int(body.get("secs"))
     conn = db.get_conn()
     s = conn.execute("SELECT * FROM shared_questions WHERE sid=?", (sid.strip()[:16],)).fetchone()
     if not s:
@@ -510,7 +511,7 @@ def api_share_answer(sid: str, body: dict, request: Request):
     db.save_answer_log(uid, [{
         "qid": s["question_id"],
         "correct": correct,
-        "secs": int(body.get("secs") or 0),
+        "secs": secs,
         "picked": picked,
         "source": "share",
     }])

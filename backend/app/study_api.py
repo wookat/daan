@@ -6,7 +6,7 @@ import time
 from fastapi import APIRouter, HTTPException, Request
 
 from . import db, kb, plan, taxonomy
-from .deps import rl
+from .deps import as_int, rl
 from .social import api_checkin_badges, api_checkin_summary
 
 router = APIRouter()
@@ -250,11 +250,11 @@ def api_question_report(body: dict, request: Request):
 @router.post("/api/practice_result")
 def api_practice_result(body: dict, request: Request):
     rl(request, "presult", 60, 3600)
-    n = int(body.get("n") or 0)
+    n = as_int(body.get("n"))
     if not (0 < n <= 200):
         raise HTTPException(400, "无效题量")
-    correct = max(0, min(int(body.get("correct") or 0), n))
-    secs = max(0, min(int(body.get("secs") or 0), 86400))
+    correct = max(0, min(as_int(body.get("correct")), n))
+    secs = max(0, min(as_int(body.get("secs")), 86400))
     return db.save_practice_result(body.get("module"), n, correct, secs)
 
 @router.post("/api/practice/progress")
