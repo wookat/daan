@@ -321,6 +321,8 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 - tag3 覆盖率核对须过滤 disabled（已下架题 tag3 恒空属预期）。
 - 抽审队列 API `/api/admin/tag3_review`（x-admin-token=容器 IMPORT_TOKEN）；容器内无 curl，用 python urllib。
 - 错题本三级子行仅对有 question_id 的错题显示（tag3_name 由 /api/mistakes join questions 注入）。
+- POST /api/mistakes 造数时 `question_type` 必须用前端分组名（如「历史人文」，勿带「常识判断-」模块前缀），否则错题本 kp3 行选中后列表为空/redo 集合不全（kp3 态 redoAll 仍带 qtype 参数）。
+- 测 t3 过滤要构造「同二级分组不同 tag3」对抗样本（如 CS-LS-01 vs CS-LS-02），以区分 t3 过滤生效与 qtype 转发的既有效果。
 
 ## P7 多端分包路由
 - P7 起 exam 三页/shenlun/login 在 pkgA 分包，H5 路由为 `#/pkgA/exam/list|exam|report`、`#/pkgA/shenlun/shenlun`、`#/pkgA/user/login`；旧 `#/pages/...` 路径由 App.vue onLaunch 重定向到 pkgA。

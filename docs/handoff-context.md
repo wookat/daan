@@ -1330,6 +1330,15 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 边界（如实）：真实触屏未测（CDP 模拟）；kpFilter+rzFilter 叠加态未生产实测（代码三元 kpFilter 优先未改，vitest/代码走查覆盖）。
 - 详见 docs/iter/round-3/r342-redo-reason-filter.md。
 
+### R344 错题重练遵循三级考点筛选：/api/mistakes/redo 补 t3 参数 + redoAll 透传 + CTA 文案对齐（2026-08-29，PR #543，分支 devin/1788437508-r344-redo-tag3-filter）
+- 取证：错题本三级考点筛选（kp3Filter，按模块查看三级行）就位，但 redoAll() 只透传 qtype/module——kp3 态点重练拉到整个二级分组集合，与 R342/R343 同构的「所见≠所练」缺口（且粒度差最大）。
+- 收口：backend `/api/mistakes/redo` 新增可选 t3（白名单 taxonomy.topic_index() 正式考点 code，非法 400「无效的考点」，不传行为不变）；db.mistakes_redo_questions 补 tag3 参数（`question_id IN (SELECT id FROM questions WHERE tag3=?)`，无 question_id 手录错题被排除——本就不在 kp3 可见列表）；book.vue redoAll() kp3Filter 时从 shownItems 中 tag3_name 匹配项取 stable tag3 code 追加 `&t3=`（找不到 code 则回退不加，兼容策略），重练卡文案优先级 kp3Filter > kpFilter > rzFilter > srcFilter。redoSet/practice 消费不改。
+- 验证：ruff 0/pytest 216(+4，test_redo_tag3.py：精确过滤/非法 400+缺省不变/无 question_id 排除/t3+rz 叠加)/pyright 0/lint/vitest 428/build 全绿；生产 rev 7284d96、bundle index-DVHbltOg.js，部署脚本回归全过。testing agent 实测（uid test-r344-t3，5 错题覆盖 CS-LS-01×2/CS-LS-02/YY-JB-02×2）：kp3「中国古代史」态 `&t3=CS-LS-01` 集合 [136,646]、同 qtype 对抗样本 649 被排除（证明 t3 生效非 qtype）、YY-JB-02 交叉 [97,498]、无筛选回归无 t3 全 5 题、非法 t3=HACK-00 400、t3+rz 叠加集合唯一交集 [136] 且卡标题只显考点、375/1440 溢出 0、console 0 error、0 次 /api/explain。
+- 测试数据清理：test-r344-t3 DELETED mistakes 5/growth_events 1，LEFTOVER 空；保护 uid DB 计数与 localStorage 逐键前后一致。
+- 边界（如实）：真实触屏未测（CDP 模拟）；kp3+src 叠加态未生产实测（代码三元 kp3 最前，走查覆盖）。
+- 测试造数经验：POST /api/mistakes 的 question_type 须用前端分组名（如「历史人文」），带模块前缀会导致 kp3 行选中后列表异常（已入测试 SKILL）。
+- 详见 docs/iter/round-3/r344-redo-tag3-filter.md。
+
 ### R343 错题重练遵循来源筛选：/api/mistakes/redo 补 src 参数 + redoAll 透传 + CTA 文案对齐（2026-08-29，PR #542，分支 devin/1788435349-r343-redo-source-filter）
 - 取证：错题本来源筛选（srcFilter：模考/练习，含 ?src= URL 同步）就位，但 redoAll() 不透传——与 R342 同构的「所见≠所练」缺口。
 - 收口：backend `/api/mistakes/redo` 新增可选 src（白名单 exam/practice，非法 400「无效的来源」，不传行为不变）；db.mistakes_redo_questions 补 source 参数（exam→`source='exam'`，practice→`source IS NULL OR source!='exam'`，与前端列表口径一致，可与 reason 叠加）；book.vue redoAll() srcFilter 时追加 `&src=`，重练卡文案优先级 kpFilter > rzFilter > srcFilter（组合态取最高优先级文案，参数全透传）。redoSet/practice 消费不改。
