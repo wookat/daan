@@ -71,3 +71,72 @@ describe('adoptServerExamProgress', () => {
     expect(snap && snap.attemptId).toBe(42);
   });
 });
+
+describe('adoptServerExamProgress marks（R317）', () => {
+  it('server.marks 按 question_id 命中恢复 _marked', () => {
+    const snap = adoptServerExamProgress(null, server({ marks: [102] }), NOW);
+    expect(snap.items[0]._marked).toBe(false);
+    expect(snap.items[1]._marked).toBe(true);
+  });
+
+  it('字符串 id 归一命中，非法项忽略', () => {
+    const snap = adoptServerExamProgress(null, server({ marks: ['101', 'x', null] }), NOW);
+    expect(snap.items[0]._marked).toBe(true);
+    expect(snap.items[1]._marked).toBe(false);
+  });
+
+  it('marks 缺省/非数组 fail-closed 全 false', () => {
+    expect(adoptServerExamProgress(null, server(), NOW).items.every((q) => q._marked === false)).toBe(true);
+    expect(adoptServerExamProgress(null, server({ marks: 'bad' }), NOW).items.every((q) => q._marked === false)).toBe(true);
+  });
+});
+
+describe('adoptServerExamProgress secs（R318）', () => {
+  it('server.secs 按 question_id 命中恢复 _secs', () => {
+    const snap = adoptServerExamProgress(null, server({ secs: { 101: 45, 102: 80 } }), NOW);
+    expect(snap.items[0]._secs).toBe(45);
+    expect(snap.items[1]._secs).toBe(80);
+  });
+
+  it('字符串键归一命中，非法值/未命中回 0', () => {
+    const snap = adoptServerExamProgress(
+      null,
+      server({ secs: { '101': 30, 102: 'x', 999: 5 } }),
+      NOW,
+    );
+    expect(snap.items[0]._secs).toBe(30);
+    expect(snap.items[1]._secs).toBe(0);
+  });
+
+  it('secs 缺省/非对象/数组 fail-closed 全 0', () => {
+    for (const secs of [undefined, 'bad', [45, 80], null]) {
+      const snap = adoptServerExamProgress(null, server({ secs }), NOW);
+      expect(snap.items.every((q) => q._secs === 0)).toBe(true);
+    }
+  });
+});
+
+describe('adoptServerExamProgress excl（R320）', () => {
+  it('server.excl 按 question_id 命中恢复 _excl', () => {
+    const snap = adoptServerExamProgress(null, server({ excl: { 101: ['B', 'D'], 102: ['A'] } }), NOW);
+    expect(snap.items[0]._excl).toEqual(['B', 'D']);
+    expect(snap.items[1]._excl).toEqual(['A']);
+  });
+
+  it('字符串键归一命中，非法项过滤、未命中回 []', () => {
+    const snap = adoptServerExamProgress(
+      null,
+      server({ excl: { '101': ['A', 'E', 1, 'C'], 102: 'bad', 999: ['B'] } }),
+      NOW,
+    );
+    expect(snap.items[0]._excl).toEqual(['A', 'C']);
+    expect(snap.items[1]._excl).toEqual([]);
+  });
+
+  it('excl 缺省/非对象/数组 fail-closed 全 []', () => {
+    for (const excl of [undefined, 'bad', [['A']], null]) {
+      const snap = adoptServerExamProgress(null, server({ excl }), NOW);
+      expect(snap.items.every((q) => Array.isArray(q._excl) && q._excl.length === 0)).toBe(true);
+    }
+  });
+});

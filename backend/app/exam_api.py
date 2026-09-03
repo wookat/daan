@@ -251,6 +251,23 @@ def _clean_int_map(raw: dict, as_str: bool = False) -> dict:
             continue
     return out
 
+
+def _clean_marks(raw, total: int) -> list[int]:
+    """标记题号清洗：仅接受 1..total 范围内整数，去重升序，非法项跳过。"""
+    if not isinstance(raw, list):
+        return []
+    out: set[int] = set()
+    for v in raw:
+        try:
+            n = int(v)
+        except (TypeError, ValueError):
+            continue
+        if isinstance(v, bool):
+            continue
+        if 1 <= n <= total:
+            out.add(n)
+    return sorted(out)
+
 _EXAM_ITEM_FIELDS = ("id", "question", "options", "module", "submodule", "image",
                      "is_real", "exam_year", "exam_region")
 
@@ -340,7 +357,50 @@ def api_exam_progress(body: dict):
         picks[str(qid)] = v
     idx = body.get("idx")
     idx = idx if isinstance(idx, int) and 0 <= idx < 1000 else 0
-    db.save_exam_progress(int(attempt_id), uid, picks, idx)
+    raw_marks = body.get("marks")
+    marks: list[int] = []
+    if raw_marks is not None:
+        if not isinstance(raw_marks, list) or len(raw_marks) > 300:
+            raise HTTPException(400, "无效的作答进度")
+        for m in raw_marks:
+            if isinstance(m, bool) or not isinstance(m, int):
+                raise HTTPException(400, "无效的作答进度")
+            marks.append(m)
+        marks = sorted(set(marks))
+    raw_secs = body.get("secs")
+    secs: dict[str, int] = {}
+    if raw_secs is not None:
+        if not isinstance(raw_secs, dict) or len(raw_secs) > 300:
+            raise HTTPException(400, "无效的作答进度")
+        for k, v in raw_secs.items():
+            try:
+                sqid = int(k)
+            except (TypeError, ValueError):
+                raise HTTPException(400, "无效的作答进度") from None
+            if isinstance(v, bool) or not isinstance(v, int) or v <= 0:
+                raise HTTPException(400, "无效的作答进度")
+            secs[str(sqid)] = v
+    raw_excl = body.get("excl")
+    excl: dict[str, list[str]] = {}
+    if raw_excl is not None:
+        if not isinstance(raw_excl, dict) or len(raw_excl) > 300:
+            raise HTTPException(400, "无效的作答进度")
+        for k, v in raw_excl.items():
+            try:
+                eqid = int(k)
+            except (TypeError, ValueError):
+                raise HTTPException(400, "无效的作答进度") from None
+            if not isinstance(v, list) or len(v) > 4:
+                raise HTTPException(400, "无效的作答进度")
+            letters = []
+            for x in v:
+                if not isinstance(x, str) or x not in ("A", "B", "C", "D"):
+                    raise HTTPException(400, "无效的作答进度")
+                if x not in letters:
+                    letters.append(x)
+            if letters:
+                excl[str(eqid)] = letters
+    db.save_exam_progress(int(attempt_id), uid, picks, idx, marks, secs, excl)
     return {"ok": True}
 
 
@@ -363,6 +423,9 @@ def api_exam_resume(uid: str):
         "paper": pinfo,
         "items": ordered,
         "picks": prog["picks"],
+        "marks": prog["marks"],
+        "secs": prog["secs"],
+        "excl": prog["excl"],
         "idx": prog["idx"],
         "end_at_ms": int((prog["started_at"] + paper["duration_min"] * 60) * 1000),
     }
@@ -384,6 +447,7 @@ def api_exam_submit(body: dict):
         raise HTTPException(404, "试卷不存在")
     picks = _clean_int_map(body.get("picks") or {}, as_str=True)
     secs = _clean_int_map(body.get("secs") or {})
+    marks = _clean_marks(body.get("marks"), len(db.exam_active_qids(paper["question_ids"])))
     judged = _judge_paper(uid, {"code": None, "title": paper["title"],
                                 "question_ids": db.exam_active_qids(paper["question_ids"])}, picks, secs)
     per_module: dict = {}
@@ -398,7 +462,8 @@ def api_exam_submit(body: dict):
         pm["secs"] += r.get("secs") or 0
     total = judged["total"] or 1
     score = round(100.0 * judged["correct"] / total, 1)
-    db.finish_exam_attempt(int(attempt_id), {str(k): v for k, v in picks.items()}, score, per_module)
+    db.finish_exam_attempt(int(attempt_id), {str(k): v for k, v in picks.items()}, score, per_module,
+                           secs, marks)
     db.clear_exam_progress(int(attempt_id))
     return {
         "attempt_id": int(attempt_id),
@@ -435,6 +500,8 @@ def api_exam_report(attempt_id: int, uid: str = ""):
     qids = db.exam_active_qids(paper["question_ids"])
     questions = {q["id"]: q for q in db.questions_by_ids(qids)}
     picks = {int(k): v for k, v in attempt["answers"].items()}
+    smap = {int(k): v for k, v in (attempt.get("secs") or {}).items()}
+    marked = {m for m in attempt.get("marks") or [] if isinstance(m, int)}
     mmap = db.mistakes_by_qids(attempt["uid"] or "", qids)
     items = []
     for i, qid in enumerate(qids):
@@ -454,6 +521,8 @@ def api_exam_report(attempt_id: int, uid: str = ""):
             "picked": picked,
             "answer": correct_ans,
             "correct": bool(picked) and len(picked) == 1 and picked == correct_ans,
+            "secs": smap[i + 1] if isinstance(smap.get(i + 1), int) and smap[i + 1] > 0 else None,
+            "marked": (i + 1) in marked,
             "mistake_id": (mmap.get(qid) or {}).get("id") if picked and picked != correct_ans else None,
             "error_reason": (mmap.get(qid) or {}).get("error_reason") if picked and picked != correct_ans else None,
             "explanation": q.get("explanation"),

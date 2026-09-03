@@ -27,17 +27,18 @@
           <text class="mat-fold-t">📄 同上材料（与上一题相同）</text>
           <text class="mat-fold-a">{{ matOpen[idx] ? '收起 ‹' : '展开 ›' }}</text>
         </view>
-        <text class="q">{{ matInfo && !matOpen[idx] ? matInfo.stem : cur.question }}</text>
+        <text class="q" :style="qStyle">{{ matInfo && !matOpen[idx] ? matInfo.stem : cur.question }}</text>
         <image v-if="cur.image" :src="cur.image" class="qimg" mode="widthFix" />
         <view
           v-for="(v, k) in cur.options"
           :key="k"
           class="opt"
-          :class="{ sel: cur._picked === k }"
+          :class="{ sel: cur._picked === k, excl: (cur._excl || []).includes(k) }"
           @click="pick(k)"
+          @longpress="toggleExcl(k)"
         >
           <text class="okey">{{ k }}</text>
-          <text class="otext">{{ v }}</text>
+          <text class="otext" :style="optStyle">{{ v }}</text>
         </view>
       </view>
 
@@ -115,6 +116,8 @@ import { submitFailPlan } from '../../exam-policy.js';
 import { dayKey } from '../../checkin.js';
 import { splitMaterial, sameMaterial } from '../../material.js';
 import { crossedTimeAlert } from '../../exam-alert.js';
+import { toggleExcl, pickWithExcl } from '../../exam-excl.js';
+import { fontSizes, normFontLv } from '../../font-size.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
 const PROG_KEY = 'examProgress';
@@ -134,6 +137,7 @@ export default {
       qTimer: null,
       submitting: false,
       matOpen: {},
+      fontLv: normFontLv(uni.getStorageSync('fontLv')),
     };
   },
   created() {
@@ -144,6 +148,8 @@ export default {
   },
   computed: {
     cur() { return this.items[this.idx] || {}; },
+    qStyle() { return { fontSize: fontSizes(this.fontLv).q }; },
+    optStyle() { return { fontSize: fontSizes(this.fontLv).opt }; },
     matInfo() {
       const q = this.cur;
       if (!q || q.module !== 'ziliao' || this.idx === 0) return null;
@@ -189,6 +195,7 @@ export default {
     await this.start(opt);
   },
   onShow() {
+    this.fontLv = normFontLv(uni.getStorageSync('fontLv'));
     // #ifdef H5
     if (!this._exKeyHandler && typeof window !== 'undefined') {
       this._exKeyHandler = (e) => this.onExKeydown(e);
@@ -282,11 +289,18 @@ export default {
       }
     },
     pick(k) {
+      this.cur._excl = pickWithExcl(this.cur._excl, k);
       this.cur._picked = this.cur._picked === k ? '' : k;
       this.saveProgress();
       if (this.cur._picked && this.idx + 1 < this.items.length) {
         setTimeout(() => this.next(), 180);
       }
+    },
+    toggleExcl(k) {
+      const r = toggleExcl(this.cur._excl, k, this.cur._picked);
+      this.cur._excl = r.excl;
+      this.cur._picked = r.picked;
+      this.saveProgress();
     },
     toggleMark() {
       this.cur._marked = !this.cur._marked;
@@ -335,10 +349,18 @@ export default {
     pushProgress() {
       if (!this.attemptId || this.submitting) return;
       const picks = {};
-      this.items.forEach((q) => { if (q && q._picked) picks[q.id] = q._picked; });
+      const marks = [];
+      const secs = {};
+      const excl = {};
+      this.items.forEach((q) => {
+        if (q && q._picked) picks[q.id] = q._picked;
+        if (q && q._marked) marks.push(q.id);
+        if (q && Number.isInteger(q._secs) && q._secs > 0) secs[q.id] = q._secs;
+        if (q && Array.isArray(q._excl) && q._excl.length) excl[q.id] = q._excl;
+      });
       request('/api/exam/progress', {
         method: 'POST',
-        data: { uid: anonUid(), attempt_id: this.attemptId, picks, idx: this.idx },
+        data: { uid: anonUid(), attempt_id: this.attemptId, picks, idx: this.idx, marks, secs, excl },
       }).catch(() => {});
     },
     confirmSubmit() {
@@ -360,13 +382,15 @@ export default {
       try {
         const picks = {};
         const secs = {};
+        const marks = [];
         this.items.forEach((q, i) => {
           if (q._picked) picks[i + 1] = q._picked;
           if (q._secs) secs[i + 1] = q._secs;
+          if (q._marked) marks.push(i + 1);
         });
         const d = await request('/api/exam/submit', {
           method: 'POST',
-          data: { uid: anonUid(), attempt_id: this.attemptId, picks, secs },
+          data: { uid: anonUid(), attempt_id: this.attemptId, picks, secs, marks },
           timeout: 20000,
         });
         uni.removeStorageSync(PROG_KEY);
@@ -533,6 +557,8 @@ export default {
 .opt.sel { border-color: var(--brand-text); background: var(--brand-soft); }
 .okey { flex-shrink: 0; width: 52rpx; height: 52rpx; line-height: 52rpx; text-align: center; border-radius: 50%; background: var(--soft-bg); color: var(--ink-2); font-weight: 600; font-size: 26rpx; margin-right: 20rpx; border: 1rpx solid var(--line); }
 .opt.sel .okey { background: var(--brand); color: #fff; border-color: var(--brand-text); }
+.opt.excl { opacity: 0.45; }
+.opt.excl .otext { text-decoration: line-through; }
 .otext { flex: 1; }
 .navrow { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: flex; gap: 16rpx; padding: 20rpx 24rpx calc(20rpx + env(safe-area-inset-bottom)); background: var(--card); border-top: 1rpx solid var(--line); }
 .nbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 27rpx; font-weight: 500; background: var(--card); }

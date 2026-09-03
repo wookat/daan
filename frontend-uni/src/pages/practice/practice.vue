@@ -118,9 +118,10 @@
         v-for="(v, k) in cur.options"
         :key="k"
         class="opt"
-        :class="optClass(k)"
+        :class="[optClass(k), exclVisible(cur._excl, k, picked, beiMode) ? 'excl' : '']"
         :style="optStyle"
         @click="beiMode ? null : pick(k)"
+        @longpress="toggleExclOpt(k)"
       >
         <text class="okey">{{ k }}</text>
         <text class="otext">{{ v }}</text>
@@ -350,6 +351,8 @@ import { request, BASE_URL, anonUid, pkNickname, exportPdf, removeFav, setFav, f
 import { drawOffline, enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../offline.js';
 import { dayKey, loadSzDaily, saveSzDaily } from '../../checkin.js';
 import { splitMaterial, sameMaterial } from '../../material.js';
+import { fontSizes, normFontLv } from '../../font-size.js';
+import { askPrefill } from '../../ask-prefill.js';
 // #ifdef H5
 import { requestNotificationPermission } from '../../reminder.js';
 import { announce } from '../../a11y-live.js';
@@ -358,6 +361,8 @@ import { pickAnnounceText } from '../../live-policy.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 import { qStatLine } from '../../q-stat.js';
+import { toggleExcl, pickWithExcl, exclVisible } from '../../exam-excl.js';
+import { collectPracticeProgress, adoptPracticeResume } from '../../practice-progress.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -427,7 +432,7 @@ export default {
       toolsOpen: false,
       qsecs: 0,
       qTimer: null,
-      fontLv: uni.getStorageSync('fontLv') || 1,
+      fontLv: normFontLv(uni.getStorageSync('fontLv')),
       sfxOn: uni.getStorageSync('sfxOff') ? false : true,
       beiMode: false,
       timedMode: uni.getStorageSync('timedMode') ? true : false,
@@ -618,10 +623,10 @@ export default {
       return this.items.filter((q) => q._picked).length;
     },
     qStyle() {
-      return { fontSize: [26, 30, 34][this.fontLv] + 'rpx' };
+      return { fontSize: fontSizes(this.fontLv).q };
     },
     optStyle() {
-      return { fontSize: [25, 29, 33][this.fontLv] + 'rpx' };
+      return { fontSize: fontSizes(this.fontLv).opt };
     },
     totalSecs() {
       return this.items.reduce((a, q) => a + (q._secs || 0), 0);
@@ -725,6 +730,10 @@ export default {
         this.startReinforce(launch);
         return;
       }
+      if (launch.kind === 'resume') {
+        this.resumeNow();
+        return;
+      }
       if (launch.kind === 'start') {
         this.start(launch.module || null, launch.submodule || null, launch.count || null, !!launch.adaptive, launch.forceReal, launch.tag3 || null, launch.source || null);
         return;
@@ -795,6 +804,7 @@ export default {
     },
   },
   methods: {
+    exclVisible,
     toggleMat() {
       this.matOpen = { ...this.matOpen, [this.idx]: !this.matOpen[this.idx] };
     },
@@ -1754,8 +1764,15 @@ export default {
       }
     },
     // #endif
+    toggleExclOpt(k) {
+      if (this.beiMode || this.picked) return;
+      this.cur._excl = toggleExcl(this.cur._excl, k, '').excl;
+      this.$forceUpdate();
+      this.saveSession();
+    },
     pick(k) {
       if (this.picked) return;
+      this.cur._excl = pickWithExcl(this.cur._excl, k);
       this.picked = k;
       this.cur._picked = k;
       this.cur._secs = this.qsecs;
@@ -1808,6 +1825,7 @@ export default {
       if (this.examMode || this.beiMode || this._shizheng || !this.session || !this.items.length) return;
       if (this.items.every((q) => q._picked)) {
         uni.removeStorageSync('pendingSession');
+        this.clearServerProgress();
         return;
       }
       uni.setStorageSync('pendingSession', {
@@ -1820,13 +1838,130 @@ export default {
         lastModule: this.lastModule,
         lastSubmodule: this.lastSubmodule,
       });
+      clearTimeout(this._ppTimer);
+      this._ppTimer = setTimeout(() => this.pushPracticeProgress(), 1500);
+    },
+    pushPracticeProgress() {
+      const payload = collectPracticeProgress(
+        this.items, this.idx, this.right, this.streak, this.bestStreak,
+        this.lastModule || '', this.lastSubmodule || ''
+      );
+      if (!payload) return;
+      request('/api/practice/progress', { method: 'POST', data: { uid: anonUid(), ...payload } }).catch(() => {});
+    },
+    clearServerProgress() {
+      clearTimeout(this._ppTimer);
+      uni.setStorageSync('ppClearedAt', Date.now());
+      request('/api/practice/progress', { method: 'POST', data: { uid: anonUid(), qids: [] } }).catch(() => {});
+    },
+    startDefault() {
+      if (this.session) return;
+      this.start(uni.getStorageSync('lastModule') || null, null, null, false, undefined, null, 'direct');
+    },
+    adoptLocalPending(s) {
+      s.items.forEach((q) => { if (q._picked) q._logged = true; });
+      this.items = s.items;
+      this.idx = Math.min(s.idx, s.items.length - 1);
+      this.picked = this.items[this.idx]._picked || '';
+      this.right = s.right;
+      this.streak = s.streak;
+      this.bestStreak = s.bestStreak;
+      this.lastModule = s.lastModule;
+      this.lastSubmodule = s.lastSubmodule;
+      this.autoSaved = false;
+      this.resultSent = false;
+      this.percentile = null;
+      this.session = true;
+      this.startQTimer();
+    },
+    adoptRemoteSnap(snap) {
+      this.items = snap.items;
+      this.idx = snap.idx;
+      this.picked = this.items[this.idx]._picked || '';
+      this.right = snap.right;
+      this.streak = snap.streak;
+      this.bestStreak = snap.bestStreak;
+      this.lastModule = snap.module || null;
+      this.lastSubmodule = snap.submodule || null;
+      this.autoSaved = false;
+      this.resultSent = false;
+      this.percentile = null;
+      this.session = true;
+      this.startQTimer();
+      this.saveSession();
+    },
+    resumeNow() {
+      const s = uni.getStorageSync('pendingSession');
+      if (s && s.items && s.items.length && Date.now() - s.t <= 24 * 3600 * 1000) {
+        this.adoptLocalPending(s);
+        return;
+      }
+      if (this._srvResuming) return;
+      this._srvResuming = true;
+      request('/api/practice/resume?uid=' + anonUid())
+        .then((d) => {
+          this._srvResuming = false;
+          if (this.session) return;
+          const snap = adoptPracticeResume(d);
+          if (!snap) {
+            this.startDefault();
+            return;
+          }
+          this.adoptRemoteSnap(snap);
+        })
+        .catch(() => {
+          this._srvResuming = false;
+          this.startDefault();
+        });
+    },
+    tryServerResume() {
+      if (this._srvResuming) return;
+      const clearedAt = uni.getStorageSync('ppClearedAt');
+      if (clearedAt && Date.now() - clearedAt < 30 * 1000) {
+        this.startDefault();
+        return;
+      }
+      this._srvResuming = true;
+      request('/api/practice/resume?uid=' + anonUid())
+        .then((d) => {
+          this._srvResuming = false;
+          if (this.session) return;
+          const snap = adoptPracticeResume(d);
+          if (!snap) {
+            this.startDefault();
+            return;
+          }
+          const done = snap.items.filter((q) => q._picked).length;
+          uni.showModal({
+            title: '继续上次练习？',
+            content: '在其他设备还有一组未做完（' + done + '/' + snap.items.length + ' 题），是否继续？',
+            confirmText: '继续',
+            cancelText: '不用了',
+            success: (res) => {
+              if (res.confirm) {
+                this.adoptRemoteSnap(snap);
+              } else {
+                this.clearServerProgress();
+                this.startDefault();
+              }
+            },
+          });
+        })
+        .catch(() => {
+          this._srvResuming = false;
+          this.startDefault();
+        });
     },
     tryResume() {
       const s = uni.getStorageSync('pendingSession');
-      if (!s || !s.items || !s.items.length) return false;
+      if (!s || !s.items || !s.items.length) {
+        this.tryServerResume();
+        return true;
+      }
       if (Date.now() - s.t > 24 * 3600 * 1000) {
         uni.removeStorageSync('pendingSession');
-        return false;
+        this.tryServerResume();
+        return true;
       }
       const done = s.items.filter((q) => q._picked).length;
       uni.showModal({
@@ -1836,22 +1971,10 @@ export default {
         cancelText: '不用了',
         success: (res) => {
           if (res.confirm) {
-            s.items.forEach((q) => { if (q._picked) q._logged = true; });
-            this.items = s.items;
-            this.idx = Math.min(s.idx, s.items.length - 1);
-            this.picked = this.items[this.idx]._picked || '';
-            this.right = s.right;
-            this.streak = s.streak;
-            this.bestStreak = s.bestStreak;
-            this.lastModule = s.lastModule;
-            this.lastSubmodule = s.lastSubmodule;
-            this.autoSaved = false;
-            this.resultSent = false;
-            this.percentile = null;
-            this.session = true;
-            this.startQTimer();
+            this.adoptLocalPending(s);
           } else {
             uni.removeStorageSync('pendingSession');
+            this.clearServerProgress();
             this.start(s.lastModule || uni.getStorageSync('lastModule') || null, null, null, false, undefined, null, 'direct');
           }
         },
@@ -1988,8 +2111,9 @@ export default {
     },
     deepExplain() {
       const q = this.cur;
-      const optText = Object.entries(q.options).map(([k, v]) => `${k}.${v}`).join(' ');
-      uni.setStorageSync('redoQuestion', q.question + '\n' + optText);
+      const text = askPrefill(q.question, q.options);
+      if (!text) return;
+      uni.setStorageSync('redoQuestion', text);
       uni.switchTab({ url: '/pages/ask/ask' });
     },
     async exportPaper() {
@@ -2028,13 +2152,13 @@ export default {
       uni.navigateTo({ url: '/pkgA/shenlun/shenlun' });
     },
     next() {
-      this.saveSession();
       if (this.autoTimer) {
         clearTimeout(this.autoTimer);
         this.autoTimer = null;
       }
       this.idx++;
       this.picked = (this.items[this.idx] && this.items[this.idx]._picked) || '';
+      this.saveSession();
       if (this.session && this.idx >= this.items.length - 3) this.prefetchNextGroup();
       if (this.cur && !this.picked) this.startQTimer();
       else this.stopQTimer();
@@ -2054,6 +2178,7 @@ export default {
       this.dueReview = 0;
       if (this.loginNudgeN) trackEvent('login_nudge_show');
       uni.removeStorageSync('pendingSession');
+      this.clearServerProgress();
       try {
         const hist = uni.getStorageSync('practiceHistory') || [];
         hist.unshift({
@@ -2149,6 +2274,7 @@ export default {
     quit() {
       if (!this.beiMode && this.items.length) this.logAttempts(this.items);
       uni.removeStorageSync('pendingSession');
+      if (!this.beiMode && !this.examMode && !this._shizheng) this.clearServerProgress();
       this.examMode = false;
       if (this.examTimer) {
         clearInterval(this.examTimer);
@@ -2307,6 +2433,8 @@ export default {
 .opt.wrong { background: var(--bad-soft); border-color: var(--bad); animation: shake 0.3s; }
 .opt.wrong .okey { background: var(--bad); color: #fff; border-color: var(--bad); }
 .opt.dim { opacity: 0.5; }
+.opt.excl { opacity: 0.45; }
+.opt.excl .otext { text-decoration: line-through; }
 @keyframes shake {
   25% { transform: translateX(-8rpx); }
   75% { transform: translateX(8rpx); }

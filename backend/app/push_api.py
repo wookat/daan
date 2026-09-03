@@ -76,7 +76,31 @@ async def push_unsubscribe(request: Request):
     return {"ok": True}
 
 
-def _send_daily():
+def build_push_payload(day: str, daily_done: bool, due_n: int) -> dict | None:
+    """按用户状态构造推送内容：每日一练 / 每日+到期错题 / 仅错题复习 / 不打扰。"""
+    n = due_n if isinstance(due_n, int) and not isinstance(due_n, bool) and due_n > 0 else 0
+    if not daily_done:
+        if n:
+            return {
+                "title": "今日学习提醒",
+                "body": f"{day} 全站同题 10 题；另有 {n} 道错题今日到期",
+                "url": "/#/pages/practice/practice?daily=1&src=push",
+            }
+        return {
+            "title": "每日一练已更新",
+            "body": f"{day} 全站同题 10 题，来试试今天能击败多少人",
+            "url": "/#/pages/practice/practice?daily=1&src=push",
+        }
+    if n:
+        return {
+            "title": "错题复习提醒",
+            "body": f"你有 {n} 道错题今日到期，趁热复习巩固",
+            "url": "/#/pages/book/book?review=1&src=push",
+        }
+    return None
+
+
+def _send_daily(only_endpoint: str | None = None):
     from pywebpush import WebPushException, webpush
 
     conn = db.get_conn()
@@ -88,22 +112,21 @@ def _send_daily():
         for r in conn.execute("SELECT uid FROM daily_set_entries WHERE day=?", (day,)).fetchall()
     }
     subs = conn.execute("SELECT endpoint, uid, sub_json FROM push_subs").fetchall()
-    payload = json.dumps(
-        {
-            "title": "每日一练已更新",
-            "body": f"{day} 全站同题 10 题，来试试今天能击败多少人",
-            "url": "/#/pages/practice/practice?daily=1&src=push",
-        },
-        ensure_ascii=False,
-    )
     sent = gone = 0
     for endpoint, uid, sub_json in subs:
-        if uid in done:
+        if only_endpoint is not None and endpoint != only_endpoint:
+            continue
+        try:
+            due_n = db.due_review_count(uid)
+        except Exception:
+            due_n = 0
+        payload = build_push_payload(day, uid in done, due_n)
+        if payload is None:
             continue
         try:
             webpush(
                 subscription_info=json.loads(sub_json),
-                data=payload,
+                data=json.dumps(payload, ensure_ascii=False),
                 vapid_private_key=VAPID_PRIVATE,
                 vapid_claims={"sub": VAPID_SUB},
                 timeout=10,
@@ -118,11 +141,12 @@ def _send_daily():
                 log.warning("push 发送失败 %s: %s", code, e)
         except Exception as e:
             log.warning("push 发送异常: %s", e)
-    conn.execute(
-        "INSERT INTO seo_meta (key, value) VALUES ('push_last_day', ?) "
-        "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-        (day,),
-    )
+    if only_endpoint is None:
+        conn.execute(
+            "INSERT INTO seo_meta (key, value) VALUES ('push_last_day', ?) "
+            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            (day,),
+        )
     conn.commit()
     conn.close()
     log.info("push 日推完成 day=%s sent=%d gone=%d subs=%d", day, sent, gone, len(subs))

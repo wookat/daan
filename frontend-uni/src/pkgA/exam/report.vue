@@ -128,7 +128,7 @@
             v-for="it in report.items"
             :key="it.no"
             class="qn"
-            :class="it.picked ? (it.correct ? 'ok' : 'bad') : 'blank'"
+            :class="[it.picked ? (it.correct ? 'ok' : 'bad') : 'blank', it.marked ? 'mk' : '']"
             @click="openQ(it)"
           >{{ it.no }}</view>
         </view>
@@ -136,6 +136,7 @@
           <text class="lg"><text class="dot ok"></text>答对</text>
           <text class="lg"><text class="dot bad"></text>答错</text>
           <text class="lg"><text class="dot"></text>未答</text>
+          <text v-if="markCount" class="lg"><text class="dot mk"></text>考中标记</text>
         </view>
         <view v-if="redoCount" class="redo-cta" role="button" aria-label="本卷错题重练" @click="redoWrong">
           <text class="redo-cta-t">本卷错题重练（{{ redoCount }} 题）</text>
@@ -232,7 +233,9 @@
             正确答案 <text class="da ok">{{ detail.answer }}</text>
             <template v-if="detail.picked">，你选了 <text class="da" :class="detail.correct ? 'ok' : 'bad'">{{ detail.picked }}</text></template>
           </view>
+          <view v-if="detail.marked" class="dmark">⛳ 考试时标记过本题</view>
           <view v-if="detailStatLine" class="dstat">{{ detailStatLine }}</view>
+          <view v-if="detailTimeLine" class="dstat">{{ detailTimeLine }}</view>
           <view v-if="detail.mistake_id" class="dreasons">
             <text class="drz-t">错因自评：</text>
             <text
@@ -252,12 +255,13 @@
             <text class="dreinf-t">练同类题：{{ detail.tag3 }}</text>
             <text class="dreinf-go">强化 5 道新题 ›</text>
           </view>
+          <view v-if="detailAskable" class="dask" role="button" aria-label="看不懂？AI 详解本题" @click="askDetail">看不懂？AI 详解本题 ›</view>
           <view v-if="detail.question_id" class="report-link" role="button" :aria-disabled="detailReported" @click="openQcReport">{{ detailReported ? '已提交纠错，感谢反馈' : '题目有问题？纠错' }}</view>
           <q-social-bar v-if="detail.question_id" :question-id="detail.question_id" />
         </scroll-view>
         <view class="dnav">
           <view class="dnav-btn" :class="{ dis: !hasPrevQ }" role="button" aria-label="上一题解析" :aria-disabled="!hasPrevQ" @click="stepQ(-1)">‹ 上一题</view>
-          <view class="dnav-mid" role="button" :aria-label="wrongOnly ? '切换为看全部题解析' : '切换为只看错题与未答解析'" @click="wrongOnly = !wrongOnly">{{ wrongOnly ? '只看错题/未答' : '全部题目' }}</view>
+          <view class="dnav-mid" role="button" :aria-label="navModeAria" @click="cycleNavMode">{{ navModeLabel }}</view>
           <view class="dnav-btn" :class="{ dis: !hasNextQ }" role="button" aria-label="下一题解析" :aria-disabled="!hasNextQ" @click="stepQ(1)">下一题 ›</view>
         </view>
       </view>
@@ -272,8 +276,11 @@ import { buildPaceRows, fmtMin } from '../../exam-pace.js';
 import { buildExamRedoSet } from '../../exam-redo.js';
 import { buildExamReportShareText } from '../../exam-share.js';
 import { reviewStep } from '../../exam-review.js';
+import { markedNos, nextNavMode } from '../../exam-marks.js';
 import { isFaved, toggleFav } from '../../exam-fav.js';
 import { qStatLine } from '../../q-stat.js';
+import { qTimeLine, paperAvgSecs } from '../../exam-time.js';
+import { askPrefill } from '../../ask-prefill.js';
 import { goalGap, prevScoreDelta } from '../../exam-goal.js';
 import { modAvgPct } from '../../exam-mod-avg.js';
 import { weakModule } from '../../exam-weak.js';
@@ -284,7 +291,7 @@ const MOD_ORDER = ['changshi', 'yanyu', 'shuliang', 'panduan', 'ziliao'];
 
 export default {
   data() {
-    return { loading: true, loadErr: '', aid: null, report: null, history: [], targetScore: null, detail: null, matOpen: false, wrongOnly: false, favs: uni.getStorageSync('favQuestions') || [], rankData: null, nextReco: null, reportOpen: false, reportType: '', reportDetail: '', reportBusy: false, reportedIds: {}, reportTypes: ['答案错误', '解析错误', '题干或选项错字', '图片缺失', '分类错误', '重复题', '其他'], reasonOpts: ['粗心大意', '概念不清', '方法不会', '纯蒙的'] };
+    return { loading: true, loadErr: '', aid: null, report: null, history: [], targetScore: null, detail: null, matOpen: false, navMode: 'all', favs: uni.getStorageSync('favQuestions') || [], rankData: null, nextReco: null, reportOpen: false, reportType: '', reportDetail: '', reportBusy: false, reportedIds: {}, reportTypes: ['答案错误', '解析错误', '题干或选项错字', '图片缺失', '分类错误', '重复题', '其他'], reasonOpts: ['粗心大意', '概念不清', '方法不会', '纯蒙的'] };
   },
   computed: {
     accuracy() {
@@ -301,8 +308,24 @@ export default {
       const s = Math.max(0, Math.round(a.submitted_at - a.started_at));
       return Math.floor(s / 60) + ' 分 ' + (s % 60) + ' 秒';
     },
+    markCount() {
+      return markedNos(this.report && this.report.items).length;
+    },
+    navModeLabel() {
+      return this.navMode === 'wrong' ? '只看错题/未答' : this.navMode === 'marked' ? '只看标记题' : '全部题目';
+    },
+    navModeAria() {
+      const nxt = nextNavMode(this.navMode, this.markCount > 0);
+      const names = { all: '全部题', wrong: '只看错题与未答', marked: '只看考中标记题' };
+      return '当前' + names[this.navMode] + '解析，点击切换为' + names[nxt];
+    },
     detailStatLine() {
       return qStatLine(this.detail);
+    },
+    detailTimeLine() {
+      const d = this.detail;
+      if (!d) return null;
+      return qTimeLine(d.secs, paperAvgSecs(this.report && this.report.items));
     },
     detailReported() {
       return !!(this.detail && this.detail.question_id && this.reportedIds[this.detail.question_id]);
@@ -314,6 +337,12 @@ export default {
       const d = this.detail;
       if (!d || d.module !== 'ziliao') return null;
       return splitMaterial(d.question);
+    },
+    detailAskable() {
+      const d = this.detail;
+      if (!d) return false;
+      const stem = this.detailMat ? this.detailMat.stem : d.question;
+      return !!askPrefill(stem, d.options);
     },
     modules() {
       const pm = (this.report && this.report.attempt.per_module) || {};
@@ -366,10 +395,10 @@ export default {
       return d.delta > 0 ? '+' + d.delta + ' 分' : d.delta < 0 ? d.delta + ' 分' : '持平';
     },
     hasPrevQ() {
-      return !!(this.report && this.detail && reviewStep(this.report.items, this.detail.no, -1, this.wrongOnly));
+      return !!(this.report && this.detail && reviewStep(this.report.items, this.detail.no, -1, this.navMode));
     },
     hasNextQ() {
-      return !!(this.report && this.detail && reviewStep(this.report.items, this.detail.no, 1, this.wrongOnly));
+      return !!(this.report && this.detail && reviewStep(this.report.items, this.detail.no, 1, this.navMode));
     },
   },
   onLoad(opt) {
@@ -404,6 +433,16 @@ export default {
     // #endif
   },
   methods: {
+    askDetail() {
+      const d = this.detail;
+      if (!d) return;
+      const stem = this.detailMat ? this.detailMat.stem : d.question;
+      const text = askPrefill(stem, d.options);
+      if (!text) return;
+      trackEvent('report_ask_click', String(d.question_id || ''));
+      uni.setStorageSync('redoQuestion', text);
+      uni.switchTab({ url: '/pages/ask/ask' });
+    },
     openQcReport() {
       if (!this.detail || !this.detail.question_id || this.detailReported) return;
       this.reportType = '';
@@ -435,6 +474,7 @@ export default {
       try {
         const d = await request('/api/exam/report/' + aid + '?uid=' + encodeURIComponent(anonUid()));
         this.report = d;
+        this.navMode = 'all';
         uni.setNavigationBarTitle({ title: '成绩报告' });
         this.loadHistory();
         this.loadProfile();
@@ -484,9 +524,12 @@ export default {
       if (d.question_id) (added ? setFav(d.question_id) : removeFav(d.question_id)).catch(() => {});
       uni.showToast({ title: added ? '已收藏，可在收藏与笔记查看' : '已取消收藏', icon: 'none', duration: 900 });
     },
+    cycleNavMode() {
+      this.navMode = nextNavMode(this.navMode, this.markCount > 0);
+    },
     stepQ(dir) {
       if (!this.report || !this.detail) return;
-      const nxt = reviewStep(this.report.items, this.detail.no, dir, this.wrongOnly);
+      const nxt = reviewStep(this.report.items, this.detail.no, dir, this.navMode);
       if (nxt) this.openQ(nxt);
     },
     // #ifdef H5
@@ -638,6 +681,10 @@ export default {
 .dimg-credit { font-size: 21rpx; color: var(--ink-2); margin-bottom: 16rpx; }
 .dot.ok { background: #86efac; border-color: #86efac; }
 .dot.bad { background: #fca5a5; border-color: #fca5a5; }
+.dot.mk { background: #fcd34d; border-color: #fcd34d; }
+.qn.mk { position: relative; }
+.qn.mk::after { content: ''; position: absolute; top: -4rpx; right: -4rpx; width: 18rpx; height: 18rpx; border-radius: 50%; background: #fcd34d; border: 2rpx solid var(--card); }
+.dmark { display: inline-block; font-size: 22rpx; color: #92400e; background: #fef3c7; border-radius: 8rpx; padding: 4rpx 12rpx; margin: -6rpx 0 16rpx; }
 .btns { display: flex; gap: 16rpx; }
 .pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 27rpx; font-weight: 500; background: var(--card); }
 .pbtn.main { background: var(--brand); color: #fff; }
@@ -709,6 +756,7 @@ export default {
 .dreinf-t { font-size: 25rpx; color: var(--ink); font-weight: 600; min-width: 0; }
 .dreinf-go { font-size: 24rpx; color: var(--brand-strong); font-weight: 600; flex-shrink: 0; white-space: nowrap; }
 .report-link { text-align: center; font-size: 22rpx; color: var(--ink-2); padding-top: 14rpx; text-decoration: underline; }
+.dask { margin-top: 16rpx; text-align: center; font-size: 26rpx; color: var(--brand-text); font-weight: 600; }
 .rp-types { display: flex; flex-wrap: wrap; gap: 16rpx; margin-bottom: 20rpx; }
 .rp-chip { padding: 18rpx 26rpx; min-height: 44rpx; border-radius: 999rpx; background: var(--soft-bg); font-size: 26rpx; color: var(--ink-2); }
 .rp-chip.on { background: rgba(46, 91, 255, 0.12); color: var(--brand-text); font-weight: 600; }

@@ -3208,6 +3208,11 @@ def _ensure_exam_tables(conn):
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ep_kind ON exam_papers(kind, year, region)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ea_uid ON exam_attempts(uid, paper_id, id)")
+    acols = {r["name"] for r in conn.execute("PRAGMA table_info(exam_attempts)")}
+    if "secs" not in acols:
+        conn.execute("ALTER TABLE exam_attempts ADD COLUMN secs TEXT")
+    if "marks" not in acols:
+        conn.execute("ALTER TABLE exam_attempts ADD COLUMN marks TEXT")
 
 
 def upsert_exam_paper(title: str, kind: str, year: int | None, region: str | None,
@@ -3435,14 +3440,17 @@ def start_exam_attempt(uid: str, paper_id: int) -> int:
     return aid
 
 
-def finish_exam_attempt(attempt_id: int, answers: dict, score: float, per_module: dict) -> bool:
+def finish_exam_attempt(attempt_id: int, answers: dict, score: float, per_module: dict,
+                        secs: dict | None = None, marks: list | None = None) -> bool:
     conn = get_conn()
     _ensure_exam_tables(conn)
     cur = conn.execute(
-        "UPDATE exam_attempts SET submitted_at=?, answers=?, score=?, per_module=? "
+        "UPDATE exam_attempts SET submitted_at=?, answers=?, score=?, per_module=?, secs=?, marks=? "
         "WHERE id=? AND submitted_at IS NULL",
         (time.time(), json.dumps(answers, ensure_ascii=False), score,
-         json.dumps(per_module, ensure_ascii=False), attempt_id),
+         json.dumps(per_module, ensure_ascii=False),
+         json.dumps({str(k): v for k, v in (secs or {}).items()}) if secs else None,
+         json.dumps(marks) if marks else None, attempt_id),
     )
     conn.commit()
     ok = cur.rowcount > 0
@@ -3460,6 +3468,8 @@ def get_exam_attempt(attempt_id: int) -> dict | None:
     d = dict(row)
     d["answers"] = json.loads(d["answers"] or "{}")
     d["per_module"] = json.loads(d["per_module"] or "{}")
+    d["secs"] = json.loads(d.get("secs") or "{}")
+    d["marks"] = json.loads(d.get("marks") or "[]")
     return d
 
 
@@ -3474,17 +3484,30 @@ def _ensure_exam_progress(conn):
         )"""
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_egp_uid ON exam_progress(uid)")
+    gcols = {r["name"] for r in conn.execute("PRAGMA table_info(exam_progress)")}
+    if "marks" not in gcols:
+        conn.execute("ALTER TABLE exam_progress ADD COLUMN marks TEXT")
+    if "secs" not in gcols:
+        conn.execute("ALTER TABLE exam_progress ADD COLUMN secs TEXT")
+    if "excl" not in gcols:
+        conn.execute("ALTER TABLE exam_progress ADD COLUMN excl TEXT")
 
 
-def save_exam_progress(attempt_id: int, uid: str, picks: dict, idx: int) -> None:
+def save_exam_progress(attempt_id: int, uid: str, picks: dict, idx: int,
+                       marks: list | None = None, secs: dict | None = None,
+                       excl: dict | None = None) -> None:
     conn = get_conn()
     _ensure_exam_progress(conn)
     conn.execute(
-        """INSERT INTO exam_progress (attempt_id, uid, picks, idx, updated_at)
-           VALUES (?,?,?,?,?)
+        """INSERT INTO exam_progress (attempt_id, uid, picks, idx, marks, secs, excl, updated_at)
+           VALUES (?,?,?,?,?,?,?,?)
            ON CONFLICT(attempt_id) DO UPDATE SET
-             picks=excluded.picks, idx=excluded.idx, updated_at=excluded.updated_at""",
-        (attempt_id, uid, json.dumps(picks), idx, time.time()),
+             picks=excluded.picks, idx=excluded.idx, marks=excluded.marks,
+             secs=excluded.secs, excl=excluded.excl, updated_at=excluded.updated_at""",
+        (attempt_id, uid, json.dumps(picks), idx,
+         json.dumps(marks) if marks else None,
+         json.dumps(secs) if secs else None,
+         json.dumps(excl) if excl else None, time.time()),
     )
     conn.commit()
     conn.close()
@@ -3504,7 +3527,7 @@ def latest_exam_progress(uid: str) -> dict | None:
     _ensure_exam_tables(conn)
     _ensure_exam_progress(conn)
     row = conn.execute(
-        """SELECT g.attempt_id, g.picks, g.idx, a.paper_id, a.started_at, p.duration_min
+        """SELECT g.attempt_id, g.picks, g.idx, g.marks, g.secs, g.excl, a.paper_id, a.started_at, p.duration_min
            FROM exam_progress g
            JOIN exam_attempts a ON a.id = g.attempt_id
            JOIN exam_papers p ON p.id = a.paper_id
@@ -3517,6 +3540,69 @@ def latest_exam_progress(uid: str) -> dict | None:
         return None
     d = dict(row)
     d["picks"] = json.loads(d["picks"] or "{}")
+    d["marks"] = json.loads(d.get("marks") or "[]")
+    d["secs"] = json.loads(d.get("secs") or "{}")
+    d["excl"] = json.loads(d.get("excl") or "{}")
+    return d
+
+
+def _ensure_practice_progress(conn):
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS practice_progress (
+            uid TEXT PRIMARY KEY,
+            qids TEXT NOT NULL,
+            picks TEXT NOT NULL,
+            excl TEXT,
+            idx INTEGER NOT NULL DEFAULT 0,
+            right_n INTEGER NOT NULL DEFAULT 0,
+            streak INTEGER NOT NULL DEFAULT 0,
+            best_streak INTEGER NOT NULL DEFAULT 0,
+            module TEXT,
+            submodule TEXT,
+            updated_at REAL NOT NULL
+        )"""
+    )
+
+
+def save_practice_progress(uid: str, qids: list[int], picks: dict, excl: dict, idx: int,
+                           right: int, streak: int, best_streak: int,
+                           module: str | None, submodule: str | None) -> None:
+    conn = get_conn()
+    _ensure_practice_progress(conn)
+    conn.execute(
+        """INSERT INTO practice_progress (uid, qids, picks, excl, idx, right_n, streak, best_streak,
+                                          module, submodule, updated_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?)
+           ON CONFLICT(uid) DO UPDATE SET
+             qids=excluded.qids, picks=excluded.picks, excl=excluded.excl, idx=excluded.idx,
+             right_n=excluded.right_n, streak=excluded.streak, best_streak=excluded.best_streak,
+             module=excluded.module, submodule=excluded.submodule, updated_at=excluded.updated_at""",
+        (uid, json.dumps(qids), json.dumps(picks), json.dumps(excl) if excl else None,
+         idx, right, streak, best_streak, module, submodule, time.time()),
+    )
+    conn.commit()
+    conn.close()
+
+
+def clear_practice_progress(uid: str) -> None:
+    conn = get_conn()
+    _ensure_practice_progress(conn)
+    conn.execute("DELETE FROM practice_progress WHERE uid=?", (uid,))
+    conn.commit()
+    conn.close()
+
+
+def get_practice_progress(uid: str) -> dict | None:
+    conn = get_conn()
+    _ensure_practice_progress(conn)
+    row = conn.execute("SELECT * FROM practice_progress WHERE uid=?", (uid,)).fetchone()
+    conn.close()
+    if not row:
+        return None
+    d = dict(row)
+    d["qids"] = json.loads(d["qids"] or "[]")
+    d["picks"] = json.loads(d["picks"] or "{}")
+    d["excl"] = json.loads(d.get("excl") or "{}")
     return d
 
 

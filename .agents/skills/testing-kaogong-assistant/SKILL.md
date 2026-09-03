@@ -5,6 +5,12 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R326 AI 详解预填走查新经验
+- **数据口径陷阱：mistakes.question_text 本身已含选项行**（practice.vue 写入时即 `q.question + '\n' + optText`），任何在错题本侧再拼 options 的预填逻辑都会把选项重复两遍——断言预填内容时必须检查选项行只出现一次，不能只 grep 到 "A." 就判过。报告浮层的 d.question 与刷题页 q.question 则是纯题干，无此问题。
+- 错题本列表卡「AI 详解」op 不在「···」sheet 菜单里，而在**卡片展开态**（先点卡片「点开看答案与详解」）的 `.acts` 行（redo op，仅未掌握时显示）。
+- ask 页跳转用 switchTab，浏览器后退回不了来源页；回报告页直接改 URL `/#/pkgA/exam/report?attempt_id=N`。报告 detail 浮层内「上一题/下一题」可切题，未答题同样能开浮层。
+- 迷你模考可直开 `/#/pkgA/exam/exam?mini=1`（30 题），答 2 题即可交卷生成报告；报告题号 27+ 通常是资料分析题（detailMat 折叠材料），适合验证小题干口径。
+
 ## R52 练习历史页走查新经验
 - 练习历史页选择器：会话行 `.item`>`.row`（`.time`/`.chip`/`.meta`/`.pct`，pct 语义色 `.hi`=--ok-strong `.lo`=--bad-strong）；展开逐题 `.d-row`（`.d-mark.ok/.bad`、`.d-q`、错题 `.d-ans`「我的答案 X · 正解 Y」、`.d-secs`）；重练按钮 `.btn-redo`；空态 `.empty`+「去刷一组题」。
 - **逐题比对取证法**：作答时用 CDP 循环（Input.dispatchKeyEvent 'a'→sleep1.4s→读 `.omark.good` 所在 `.okey` 得正解、`.omark.badm` 判错→Enter）逐题记录 JSON 基准，再与历史 detail `.d-row` 全量比对——注意答对时 good 标记在 picked 选项上，若读到 ans=null&无 badm 即答对。
@@ -599,3 +605,36 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 ## R314 错因自评走查新经验
 - 注入临时 uid 时 `anonUid` 必须存纯字符串（`localStorage.setItem('anonUid','test-xxx')`）；存 JSON 包裹形式会被 api.js anonUid() 原样当 uid 拼进请求，报告页表现为「暂无成绩报告」空态。
 - 错题本 book 页的错因 chips 只在复习流答错后出现；快速同源取证可直接看侧栏「按错因」聚合卡计数，不必走完整复习流。
+
+## R316 标记贯穿走查新经验
+- 做卷页点选选项会自动跳到下一题：需要「答某题并标记」时应先点「标记」再选选项（或标错后用顶部标记按钮当场取消）。
+- 解析浮层底部导航（.dnav-mid/.dnav-btn）屏幕坐标随浮层内容高度浮动：点击前用 CDP 读 getBoundingClientRect 并按「屏幕x≈css_x*0.64, 屏幕y≈css_y*0.64+88」（1600 视口最大化窗口）换算，避免点到遮罩误关浮层。
+
+## R317 跨设备续考走查新经验
+- 跨设备/多身份场景可用 CDP `Target.createBrowserContext` + `Target.createTarget` 建全新隔离浏览器 context（helper /tmp/cdp174/devb.py），给新 context 的 URL 加 `?devb=1` 之类标记便于按 URL 选 tab；所有按 `'zalize' in url` 选 tab 的老 helper 会误选新 context 的 tab，多 context 时必须加排除过滤。
+- 新 context 是独立 Chrome 窗口：不要用 ctrl+w（会整窗关闭销毁 context）；硬刷会清掉 CDP 设的模拟视口，需要重施。
+
+## R318 逐题用时同步走查新经验
+- SPA 内部路由跳转会抹掉 URL 上人为附加的 `?devb=1` 之类标记，按 URL 过滤 tab 的 helper 会失配：可用 `history.replaceState(null,'',带标记的URL)` 无副作用重打标记，或改按 targetId/浏览器 context 选 tab。
+- 做卷页当前题计时在切题时才 flush 到 `_secs`：验证 secs 上报必须答完并切到下一题后再抓去抖 POST 包，否则当前题秒数尚未计入 payload。
+
+## R319 长按排除干扰项走查新经验
+- uni-app H5 的 longpress 由 touchstart 起 350ms 定时器派发（单指、位移 <10px）；CDP 自动化长按用 `Input.dispatchTouchEvent touchStart → 等 ≥500ms → touchCancel`——必须以 touchCancel 结束而非 touchEnd：touchEnd 会补发合成 click 触发选项 pick，把刚排除的选项又选中（真机手指长按无此 click）。helper 存 /tmp/cdp174/longpress.py（参数：选项 0-based 序号）。
+
+## R321 刷题页排除干扰项走查新经验
+- 刷题页 `pendingSession` 仅在作答/`next()` 等路径 `saveSession()`（R321 后长按排除也触发保存）；方向键 `jumpTo()` 不保存——验证刷新持久化时若走旧 bundle 或依赖 jumpTo 切题，可能得到假失败，先作答一题或长按排除后再刷新。
+- 伪造/校验 uni storage 键（如把 ppClearedAt 改为过去时间模拟 30s 守卫过期）必须读写包装格式 `{"type":"number","data":<ms>}`；直接 `localStorage.getItem` 断言原始数字会得到 null/误判。
+- 多 tab CDP 场景：devb 隔离 tab 一旦整页导航会丢失 `?devb=1` URL 标记，「取第一个 zalize tab」的 helper 会命中错 tab——应记录 `Target.createTarget` 返回的 targetId 并按 id 定向连 WebSocket，勿依赖 URL 标记。
+
+## R324 Web Push 走查新经验
+- 定向发推送必须用 `docker exec deploy-kaogong-1 python -c "from app.push_api import _send_daily; _send_daily(only_endpoint='<ep>')"`（只发该 endpoint 且不写 push_last_day 水位）；**绝不裸调 `_send_daily()`**，会推给全体订阅用户。
+- 订阅入口：我的→学习提醒（/#/pkgA/settings/reminders）→「每日一练离线推送」switch。先 CDP `Browser.grantPermissions`(notifications) 再点开关；首次点开关可能不落订阅（perm granted 但 endpoint=null），可在页面内手动 `reg.pushManager.subscribe()` 打通后再点 UI 开关即成。endpoint 从生产 `push_subs` 表查。
+- 通知点击→SW `notificationclick`→`c.navigate(url)` 只对**被 SW 控制**的页面窗口生效：硬刷（Ctrl+Shift+R）后页面 `navigator.serviceWorker.controller=null`，点通知会消费掉但不导航——先普通刷新确认 `controlled:true` 再点；并关掉多余同源 tab 防止 navigate 落错窗口。
+- 后端「今日」用 CN_TZ（Asia/Shanghai）`strftime('%Y-%m-%d')`；SSH 造 `daily_set_entries` 行时勿用 sqlite `date('now')`（UTC），日期可能差一天导致分支误判，应在 python 里用 `datetime.now(CN_TZ)` 生成 day。
+- 错题到期口径 `db.due_review_count`：mastered 空/0 且 next_review 空或 <=now；SSH 改 `mistakes.next_review` 到过去/未来即可切 due>0/due=0。
+
+## R325 字号三档走查新经验
+- 字号口径统一在 `frontend-uni/src/font-size.js`（Q=[26,30,34]rpx、OPT=[25,29,33]rpx，1440 视口折算 .q=13/15/17px、.otext=12.5/14.5/16.5px）；断言用相邻档 computed fontSize 严格递增，勿只看单档。
+- **`uni.getStorageSync('fontLv') || 1` 会把合法的 0（小档）吞成 1**——exam/book/practice/profile 均如此，测「小」档必然回落标准；这类 falsy 陷阱在其它数值型 storage 键也可能出现，遇到 0 值不生效先查 `||` 兜底。
+- 做卷页 `pkgA/exam/exam.vue` 有未交卷 attempt 时进页会弹「继续上次模考？」uni-modal，此时 `.q/.otext` 查询返回 null——CDP 度量前先查 `!!document.querySelector('uni-modal')` 并先在 UI 上处理弹窗；临时 uid 若开过卷未交，后续任何进 exam 页（含刷新）都会弹。
+- 错题本列表态 `.q`（约13px）不绑字号，复习态 `.q`/解析 rich-text 外层才绑——量错元素会误判「列表态被影响」。

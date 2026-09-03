@@ -1111,3 +1111,93 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：ruff/pytest 177(+2)/pyright 0/lint/vitest 331/build 全绿；生产 rev 80bbfd7、bundle index-U1GUVn8d.js；testing agent 双视口实测：API 契约（答错 mistake_id 非 null 初始 error_reason null，答对/未答双 null）、chips 位置/点击 PATCH 200/硬刷回显/错题本同源（按错因聚合+复习流同显）、连看不串态、fail-closed 无 chips、R291/R292/R312/R313 回归、双视口溢出 0、console 0 error；Lighthouse 全过（部署首跑 / a11y 单样本 0.94、独立复跑 1.0，采样波动）。清理 test-r314-me DELETED 10 / LEFTOVER 0，保护 uid 各表计数前后快照逐表一致。
 - 未生产实测：PATCH 失败回滚 toast 分支（生产无法构造失败，逻辑代码核实）。
 - 详见 docs/iter/round-3/design-r314-report-overlay-error-reason.md。
+
+### R315：成绩报告解析浮层逐题「本题用时」（PR #510）
+- 取证（SOP-10）：做卷页早已逐题计时（exam.vue qsecs→q._secs，交卷带 secs {题号:秒}），但后端只用于 answer_log 与模块级配速（R281），exam_attempts 不持久化逐题 secs、report items 无用时字段；用户模考后无法回答「这道题花了多久、是不是太慢」（粉笔逐题解析外显每题用时并与平均对比），纯数据链路断点。
+- 收口零新 endpoint/表/URL 状态：db _ensure_exam_tables 幂等补列 exam_attempts.secs TEXT；finish_exam_attempt(..., secs=None) 落 JSON；get_exam_attempt 解析回 dict（旧记录 {}）；submit 把 _clean_int_map 清洗后的 secs 传入；report items 纯增量补 secs（仅 int 且 >0 返回，否则 null fail-closed）。前端纯函数 exam-time.js（fmtSecs：45 秒/1 分 20 秒/2 分，非正数 null；paperAvgSecs：secs>0 均值、有效题 <3 null 防小样本；qTimeLine：本题无效整行 null，均值无效只出前半句）；report.vue 统计行后、错因自评前插 detailTimeLine（复用 .dstat），连看随 detail 切换。
+- 验证：ruff/pytest 179(+2)/pyright 0/lint/vitest 343(+13)/build 全绿；生产 rev f2f0aa2、bundle index-CXRnuOYr.js；API 实测 secs {45,80,12,-3,"bad"} → report {45,80,12,null,null}、无 secs 旧 attempt 全 null；testing agent 双视口实测：题1「本题用时 45 秒 · 全卷平均 46 秒/题」、题2 分秒格式、题4 无 secs 整行不渲染、旧报告全隐藏、DOM 顺序 用时→错因→解析→CTA→纠错→社交条、R290/R291/R312/R313/R314 回归、双视口溢出 0、console 0 error；Lighthouse 独立复跑全过（部署首跑 / a11y 0.94/LCP 2645 单样本波动）。清理 test-r315-* DELETED 7 / LEFTOVER 0，保护 uid 30 表快照前后逐表一致。
+- 未生产实测：有效 secs <3 隐藏全卷平均分支（预置数据恰为 3 题阈值下限；vitest 覆盖）。
+- 详见 docs/iter/round-3/design-r315-report-per-question-secs.md。
+
+### R316：模考「标记」贯穿到成绩报告（PR #512）
+- 取证（SOP-10）：做卷页早有逐题「标记」（q._marked，答题卡黄点+本机 examProgress 保存），但交卷 payload 丢弃标记，exam_attempts 无 marks、report items 无 marked——考中「不确定、回头看」的题在报告里无法定位，做对但蒙的题连看只有全部/错题两档覆盖不到（粉笔标记贯穿到解析）。
+- 收口零新 endpoint/表/URL 状态：db _ensure_exam_tables 幂等补列 exam_attempts.marks TEXT；finish_exam_attempt(..., marks=None) 落 JSON 数组；get_exam_attempt 解析回 list（旧记录 []）；exam_api _clean_marks(raw,total) 仅接受 list、逐项 int 化、拒 bool、1..total 限界、去重升序；report items 纯增量补 marked boolean（旧数据 fail-closed false）。前端 exam.vue 交卷收集 1-based marks；纯函数 exam-marks.js（markedNos/nextNavMode 三态循环 all→wrong→marked，无标记跳过 marked）；exam-review.js reviewFilter/reviewStep 升级三态（兼容旧布尔调用）；report.vue 网格 .qn.mk 黄色角标（不改对/错/未答底色）+ legend「考中标记」+ 浮层 ⛳ badge + 中键 navMode 三态（aria 同步）。R298 服务端续考协议不变（未交卷标记跨设备不同步，挂观察项）。
+- 验证：ruff/pytest 182(+3)/pyright 0/lint/vitest 352(+9)/build 全绿；生产 rev f2d103b、bundle index-Emoj0Q6E.js；API 实测 marks [1,3,3,0,9999,'x',None,True] → report marked_nos [1,3]（题1 做对且 marked=True）、旧 attempt 全 false；testing agent 双视口实测：真实 UI 做卷标记 题1错/题3未答/题9对，网格角标三种底色不变、legend 第4项、浮层 badge、只看标记步进 1→3→9 边界禁用、无标记卷两态循环无标记 UI、R290/R291/R292/R312/R313/R314/R315 回归（顺带实证 R315 <3 题隐藏均值分支）、双视口溢出 0、console 0 error；Lighthouse 独立复跑全过（部署首跑 / a11y 0.94 单样本波动）。清理 test-r316-* DELETED 13 / LEFTOVER 0，保护 uid 30 表快照前后逐表一致。
+- 详见 docs/iter/round-3/design-r316-report-marked-questions.md。
+
+### R317：未交卷模考「标记」跨设备同步（PR #514）
+- 取证（SOP-10）：收口 R316 观察项——R298 服务端续考只同步 picks/idx，exam.vue pushProgress 不发标记、save_exam_progress 无 marks 参数、adoptServerExamProgress 恢复时硬编码 _marked:false；换设备续考后考中标记全丢，R316「只看标记」价值在跨设备场景被截断（本机快照续考不受影响）。
+- 收口零新 endpoint/表/URL 状态：db _ensure_exam_progress 幂等补列 exam_progress.marks TEXT（JSON 数组，question_id 口径，与本协议 picks 一致；区别于交卷 marks 的 1-based 题号口径，互不混用）；save_exam_progress(..., marks=None) 非空存 JSON 空存 NULL；latest_exam_progress 回读 list（旧行 []）；POST /api/exam/progress 可选 marks（缺省 []；提供时必须 list ≤300 且逐项 int 拒 bool，否则 400，与本端点 picks 严格语义一致），去重升序落库；GET /api/exam/resume 应答补 marks。前端 pushProgress 补收集 q._marked 的 q.id 数组；adoptServerExamProgress 按 marks 集合恢复 _marked（Number 归一兼容字符串 id，非法项 fail-closed false），本机快照优先不变。
+- 验证：ruff/pytest 183(+1)/pyright 0/lint/vitest 355(+3)/build 全绿；生产 rev 9eb2288、bundle index-CE5TDek-.js；API 实测 marks 乱序+重复 → resume 去重升序、缺省覆盖为 []、非法（非 list/[True]/["3"]/[1.5]）逐项 400；testing agent 跨设备实测：设备 A 1440 标记题1(答A)+题3(未答)，去抖 POST 实抓 body 含 marks；设备 B 375 全新 CDP 隔离 context 同 uid 首页续考卡→恢复弹窗→做卷页标记完整恢复（网格与设备 A 逐题一致、「已标记」激活态、idx 一致）；本机快照优先/本机标记切换/交卷后 resume={} 回归；双视口溢出 0、console 0 error；Lighthouse 全过（/ 0.99/LCP 823ms、/tiku/ 1.00）。清理 r317verify1+r317ui-me DELETED 10 / LEFTOVER 0，保护 uid 30 表快照前后逐表一致。
+- 未生产实测：卷库横幅续考入口（与首页续考卡同 adoptServerExamProgress 路径）。
+- 详见 docs/iter/round-3/design-r317-progress-marks-sync.md。
+
+### R318：未交卷模考「逐题用时」跨设备同步（PR #515）
+- 取证（SOP-10）：R315 报告外显逐题用时、R281 模块配速均消费交卷 secs，但 R298/R317 服务端续考协议只同步 picks/idx/marks——exam.vue pushProgress 不发 _secs、adoptServerExamProgress 恢复固定 _secs:0；换设备续考后设备 A 段用时全丢，交卷报告/配速失真。
+- 收口零新 endpoint/表/URL 状态：db _ensure_exam_progress 幂等补列 exam_progress.secs TEXT（JSON {question_id:秒}，与本协议 picks/marks 同口径；区别于交卷 secs 的 1-based 题号口径，互不混用）；save_exam_progress(..., secs=None) 非空存 JSON 空存 NULL（UPSERT 整体覆盖，空即清除）；latest_exam_progress 回读 dict（旧行 {}）；POST /api/exam/progress 可选 secs（缺省 {}；提供时必须 dict ≤300、key 可 int 化、value 正 int 拒 bool/字符串/浮点/0/负数，否则 400 不做静默转换）；GET /api/exam/resume 应答补 secs。前端 pushProgress 补收集 Number.isInteger(q._secs)&&q._secs>0 的 {q.id: _secs}（当前题计时按既有逻辑在切题时 flush）；adoptServerExamProgress 按 secs 对象恢复 _secs（字符串键 Number 归一、非有限正数/未命中/非对象 fail-closed 0），本机快照优先不变。
+- 验证：ruff/pytest 184(+1)/pyright 0/lint/vitest 358(+3)/build 全绿；生产 rev ebe60f8、bundle index-aaFA1QHz.js；API 实测乱序 secs roundtrip、缺省覆盖 {}、非法 8 类逐项 400；testing agent 跨设备实测：设备 A 1440 去抖 POST 实抓 secs {27,5}，设备 B 375 全新 CDP 隔离 context 同 uid 恢复 _secs 并继承累计（再切题抓包 {27,5,21}），首页续考卡与卷库横幅两入口分别实测（收口 R317 观察项），交卷报告题1「本题用时 27 秒」含设备 A 累计、R281 配速正常，交卷后 resume={}，双视口溢出 0、console 0 error；Lighthouse 全过（/ 0.98/LCP 819ms、/tiku/ 1.00）。清理 test-r318-api+test-r318ui-me DELETED 8 / LEFTOVER 0，保护 uid 30 表快照前后逐表一致。
+- 未生产实测：secs 非法值 400 分支的 UI 侧路径（API 已逐项自测）。
+- 详见 docs/iter/round-3/design-r318-progress-secs-sync.md。
+
+### R319：做卷页「排除干扰项」——长按选项划掉/恢复（PR #516）
+- 取证（SOP-10）：粉笔计时做题支持长按选项排除干扰项（缩小范围、二次回看不重复推理），本站做卷页选项只有选中/未选中两态。
+- 收口纯前端零后端/零契约/零 URL 状态：新纯函数 frontend-uni/src/exam-excl.js——toggleExcl(excl,k,picked)->{excl,picked}（长按切换排除；排除当前已选项时同时清空选择；输入不可变、非法入参 fail-closed）、pickWithExcl(excl,k)（选中即解除该项排除）。exam.vue 选项补 @longpress + .opt.excl（opacity 0.45 + otext 删除线，不改选中/未选中底色语义）；pick(k) 前置 pickWithExcl。_excl 为本机做题过程态：随既有 saveProgress() 整 items 快照持久化，pushProgress 不上传（服务端 progress 协议不动），交卷 payload 不变。
+- 验证：vitest 366(+8)/lint/build 全绿；生产 rev f4b9df7、bundle index-C1eUHopI.js；testing agent 真实做卷实测（1440/375）：长按排除/再长按恢复/排除已选项清空选择（答题卡变未答）/点击被排除项自动解除并选中/硬刷恢复弹窗后排除态保留；去抖 POST payload 键恰为 uid/attempt_id/picks/idx/marks/secs 无 excl；交卷报告无回归；双视口溢出 0、console 0 error；Lighthouse 独立复跑全过。清理 test-r319ui-me DELETED 7 / LEFTOVER 0，保护 uid 30 表快照一致。
+- 未生产实测：真实触屏设备长按手势（自动化 CDP touch 模拟，见 SKILL 经验）。
+- 观察项：排除态跨设备同步（可仿 R317/R318 marks/secs 模式服务端化）；刷题页同交互补齐。
+- 详见 docs/iter/round-3/design-r319-exam-option-exclude.md。
+
+### R321：刷题页「排除干扰项」——长按选项划掉/恢复（PR #518）
+- 取证（SOP-10）：收口 R319/R320 观察项——刷题页（pages/practice/practice.vue）选项仅 @click pick，无 longpress/_excl，两个核心做题模式交互不一致（粉笔练习/模考同构支持长按排除）。语义差异：刷题 pick 一次性锁定立即判分，排除仅未作答时有意义；beiMode 显示答案不适用；无服务端练习进度协议，不做服务端同步（本机态定位）。
+- 收口纯前端零后端/零契约：复用 exam-excl.js（toggleExcl/pickWithExcl 不改），新增纯函数 exclVisible(excl,k,picked,beiMode)——排除视觉仅未作答且非背题呈现，作答后判分视觉（right/wrong/dim）接管避免混叠；practice.vue 选项补 @longpress toggleExclOpt（beiMode||picked no-op，toggle 后 saveSession() 落快照）；pick(k) 前置 pickWithExcl（点击被排除项自动解除并选中）；.opt.excl 0.45 弱化+删除线与做卷页同视觉；_excl 随 pendingSession 整 items 快照持久化，旧快照 fail-closed 回落 []。
+- 验证：lint/vitest 373(+4)/build 全绿；生产 rev 5632ec3、bundle index-BcpMI5gO.js；testing agent 1440/375 实测：长按排除/再长按恢复（opacity 0.45+line-through computedStyle 实证）、排除后作答判分接管无混叠+autoNext 正常、点击被排除项自动解除并选中、硬刷 pendingSession 恢复排除态、背题模式长按无效且关闭后排除态重现、examMode（真题卷练习模考态）长按生效、双视口溢出 0、console 0 error。清理 test-r321-ui。
+- 未生产实测：真实触屏手势（CDP touch 模拟，同 R319 口径）。
+- 走查发现补丁：初版 toggleExclOpt 不落快照（「排除后不作答直接刷新」丢排除态），已补 saveSession()；方向键 jumpTo() 不保存为既有行为未改。
+- 详见 docs/iter/round-3/design-r321-practice-option-exclude.md。
+
+### R320：未交卷模考「排除干扰项」跨设备同步（PR #517）
+- 取证（SOP-10）：收口 R319 观察项——_excl 仅随本机 examProgress 快照持久化，pushProgress 只上传 picks/idx/marks/secs、adoptServerExamProgress 恢复的 items 不含 _excl；换设备续考后设备 A 的排除态全丢。R317/R318 已建立同构续考状态同步模式，_excl 是最后一块未同步做题过程态。
+- 收口零新 endpoint/表/URL 状态：db _ensure_exam_progress 幂等补列 exam_progress.excl TEXT（JSON {question_id:[选项字母]}，与本协议 picks/marks/secs 同 question_id 口径；交卷协议不涉及排除态无口径冲突）；save_exam_progress(..., excl=None) 非空存 JSON 空存 NULL（UPSERT 整体覆盖，空即清除）；latest_exam_progress 回读 dict（旧行 {}）；POST /api/exam/progress 可选 excl（缺省 {}；提供时必须 dict ≤300、key 可 int 化、value 为 list ≤4 且逐项 ∈{A,B,C,D} 字符串，否则 400 不静默转换；落库去重保序、空 value 行不落库）；GET /api/exam/resume 应答补 excl。前端 pushProgress 补收集非空 Array q._excl 的 {q.id: _excl}；adoptServerExamProgress 按 excl 对象恢复 _excl（字符串键 Number 归一、非数组/非法字母项 fail-closed 过滤、未命中 []），本机快照优先不变；交卷 payload/报告协议零变化。
+- 验证：ruff/pytest 185(+1)/pyright 0/lint/vitest 369(+3)/build 全绿；生产 rev 551cfc9、bundle index-Bpp2JadM.js；API 实测 excl 重复字母 roundtrip 去重保序、空 value 行不落库、缺省覆盖 {}、非法 7 类逐项 400；testing agent 跨设备实测：设备 A 1440 题1 排除 B/D 后选 A、题2 排除 C，去抖 POST 实抓 body 含 excl 与页面一致；设备 B 375 全新 CDP 隔离 context 同 uid 首页续考卡→恢复弹窗→排除态完整恢复（弱化+删除线逐题逐选项一致，picks/secs 继承、marks 无扰动）；恢复后点击被排除项自动解除并选中（R319 行为不变）；交卷后 resume={}；双视口溢出 0、console 0 error；Lighthouse 全过（/ 0.98/LCP 810ms、/tiku/ 1.00）。清理 test-r320-api+test-r320-ui DELETED 9 / LEFTOVER 0，保护 uid 30 表快照前后逐表一致。
+- 未生产实测：卷库横幅续考入口（同 adoptServerExamProgress 路径，R318 已验）；excl 非法值 400 分支的 UI 侧路径（API 已逐项自测）。
+- 观察项：部署后旧 SPA 标签页仍跑旧 bundle 不上传 excl（硬刷后正常，SPA 固有行为）；刷题页排除交互补齐仍挂起。
+- 详见 docs/iter/round-3/design-r320-progress-excl-sync.md。
+
+### R322：普通刷题「未完成练习」跨设备同步（PR #519）
+- 取证（SOP-10）：普通刷题 pendingSession 仅存本机 storage（24h TTL），换设备/清缓存丢未完成题组；模考已有 exam_progress 服务端续考（R298–R320），画像/每日目标/练习偏好/申论草稿均已服务端化，普通刷题快照是最后的服务端化缺口（粉笔练习进度绑定账号云恢复）。
+- 收口：新表 practice_progress（uid 主键单快照：qids/picks/excl/idx/right_n/streak/best_streak/module/submodule/updated_at）+ POST /api/practice/progress（uid 64 截断、qids ≤100 正整数拒 bool、picks/excl 仅 A–D 且 key ∈ qids、excl ≤4、qids:[] 即清除、idx/stat clamp、rl "ppro" 120/3600）+ GET /api/practice/resume（>24h 或全下架返回 {}，items 按原 qids 顺序，下架题跳过）。前端 practice-progress.js 纯函数 collectPracticeProgress/adoptPracticeResume（非法 fail-closed）；saveSession() 落本机快照后 1.5s 去抖 pushPracticeProgress；本机快照优先，无本机快照时 tryServerResume 复用「继续上次练习？」弹窗；完成/退出/「不用了」clearServerProgress；恢复题 _logged=!!picked 防重复写 answer_log；beiMode/examMode/时政组不进同步；失败静默不阻塞。
+- 竞态补丁（走查发现，commit 0a78a78）：quit 清除 POST 与立即再入的 resume GET 竞争，实测 2/10 陈旧弹窗——clearServerProgress 本机记 ppClearedAt，30s 内 tryServerResume 跳过远端直接开练（本机 storage 判断无时钟偏差）；守卫过期后远端路径复测正常。
+- 验证：ruff/pytest 191(+6)/pyright 0/lint/vitest 378(+5)/build 全绿；生产 rev 0a78a78、bundle index-DBEBlZtd.js；API 实测 roundtrip/非法 7 类 400/清除；testing agent 跨设备实测：设备 A 1440 作答+排除去抖 POST 实抓，设备 B 375 全新隔离 context 同 uid 恢复（顺序/判分/排除/idx/统计逐项一致），完成后 resume={}，新 uid 直开、本机优先 0 resume 请求，竞态修复复测通过；双视口溢出 0、console 0 error、Lighthouse 全过（/ 0.98/LCP 796ms、/tiku/ 1.00）。清理 test-r322-api/-ui/-ui-b/r322b-ui DELETED 27 / LEFTOVER 0，保护 uid 31 表快照一致。
+- 未生产实测：excl 非法值 UI 侧路径（API 已验）；真实触屏长按（CDP 模拟，同 R319/R321 口径）。
+- 详见 docs/iter/round-3/design-r322-practice-progress-sync.md。
+
+### R323 首页「未完成练习」续练卡（2026-08-29，PR #520，基于 #520 分支 devin/1788386699-r323-home-practice-resume）
+- 取证：首页只有模考续考卡（R288），普通刷题未完成进度（pendingSession + R322 practice_progress）在默认回流入口不可见，须进刷题页才触发恢复弹窗；粉笔首页有「继续练习」外显入口。
+- 收口（纯前端零后端/零契约）：practice-progress.js 新增 fail-closed 纯函数 parsePendingPractice（本机快照→{done,total,module}，24h TTL/全部已答 null）与 parseRemotePractice（resume 应答同构）；home.vue 模考卡下同构续练卡（本机快照优先，无本机且 ppClearedAt 30s 守卫未命中才 GET resume，失败静默；「去继续」写 practiceLaunch {kind:'resume'} 直达恢复不二次弹窗；「✕」确认后清本机+记 ppClearedAt+POST qids:[]）；practice.vue launch 链新增 kind:'resume'→resumeNow()（本机优先直接采纳，否则服务端快照直接采纳），恢复采纳逻辑抽出 adoptLocalPending/adoptRemoteSnap 供既有弹窗路径复用。
+- 走查发现并修复（commit c139171）：next() 原在 idx++ 前 saveSession()，本机快照 idx 比服务端去抖 POST 落后一步，「去继续」回到已答题——改为切题后落快照，专项复测 idx=1 直达第 2 题未答态。
+- 验证：lint/vitest 384(+6)/build 全绿；生产 rev 0dec21a→c139171 两轮 testing agent 实测：本机命中 0 resume 请求、跨设备 375 隔离 context 服务端出卡直达恢复、放弃流程、完成/新 uid 反例、模考卡双卡共存、裸进入弹窗回归、双视口溢出 0/console 0 error、Lighthouse 全过。清理两轮 DELETED 29+3 / LEFTOVER 0，保护 uid 31 表快照一致。
+- 未生产实测：resume 失败静默分支、24h TTL 过期分支（vitest 覆盖）、真实触屏。
+- 详见 docs/iter/round-3/design-r323-home-practice-resume.md。
+
+### R324 每日推送个性化——「今日到期错题」复习提醒（2026-08-29，PR #521，基于 #520 分支 devin/1788389576-r324-push-due-review）
+- 取证：R98 每日 08:00 Web Push 对全体订阅者构造同一份「每日一练」payload（循环外构造），已完成当日每日一练者直接 skip；错题到期数据（db.due_review_count）与首页「今日到期复习 N 题」卡早已存在，但离开 App 后零触达。
+- 收口：push_api.py 新增纯函数 build_push_payload(day, daily_done, due_n)（bool/非法 due 按 0 fail-closed）四分支：未完成每日+due=0→原文案不变；未完成每日+due>0→「今日学习提醒」合并文案仍深链每日一练；已完成每日+due>0→「错题复习提醒」深链 /#/pages/book/book?review=1&src=push；双完成→None 不打扰。_send_daily(only_endpoint=None) 循环内逐 uid 查 due_review_count（异常按 0），only_endpoint 为定向验证钩子（指定时不写 push_last_day 水位）。前端 parseBookOpts 白名单新增 review（仅 '1'，不进 buildBookUrl 状态 URL），book.vue onLoad 命中设 autoStartReview 复用既有 onShow 自动复习流。无新表/新调度/订阅协议不变。
+- 验证：ruff/pytest 196(+5)/pyright 0/lint/vitest 385(+6)/build 全绿；生产 rev 90486d3、bundle index-C6UX06VT.js；testing agent 真实订阅+定向触发四分支全过（A：错题复习提醒点击自动进复习流 1/1；B：合并文案落每日一练；C：原文案不回归；D：sent=0 无通知），首页到期卡回归、review=abc/0 反例不触发、console 0 error；Lighthouse 独立复跑全过（部署首跑 / a11y 0.94/LCP 2648 单样本波动，复跑 1.0/1826ms）。清理 test-r324-push DELETED 9 / LEFTOVER 0，保护 uid 31 表快照一致。
+- 未生产实测：cron 全量发送路径（出于安全只走 only_endpoint 定向；全量循环逻辑同一函数）；375 视口（本轮以通知点击流为主）；SW 未控页点通知不导航为浏览器已知行为非缺陷。
+- 详见 docs/iter/round-3/design-r324-push-due-review.md。
+
+### R325 字号设置扩展到做卷页与错题本复习流（2026-08-29，PR #522，基于 #521 分支 devin/1788391747-r325-fontlv-global）
+- 取证：个人页字号三档（小/标准/大）只在普通刷题页生效，pkgA/exam/exam.vue 与 pages/book/book.vue 均不消费 fontLv，且个人页 toast 承诺「练习页生效」范围与实际不符；粉笔在做题/做卷/解析等精读场景字号一致。
+- 收口（纯前端零后端/零契约）：新增 src/font-size.js 共用口径（normFontLv 仅接受 0/1/2 非法回落 1；fontSizes → {q:26/30/34rpx, opt:25/29/33rpx}）；做卷页题干/选项（含材料折叠态小题干）与错题本复习流题干/解析接入 qStyle/optStyle，onShow 重读 storage 使从个人页返回立即生效；复习列表扫描态不变；practice.vue 改复用同一纯函数；profile toast 改「（做题与复习页生效）」。
+- 走查发现并修复（commit a3b2800）：「小」档全站失效——各页 `uni.getStorageSync('fontLv') || 1` 把数值 0 当 falsy 吞成标准档（旧 practice.vue 同样写法，属既有缺陷，入口收敛后成必踩路径）；四页读取全部改为 `normFontLv(uni.getStorageSync('fontLv'))`，复测小档 13/12.5px 精确命中、个人页刷新回显「小」。
+- 验证：lint/vitest 389(+4)/build 全绿（修复后复跑）；生产 rev e10c472→a3b2800、bundle index-BwG3QXxG.js；testing agent 两轮实测：三档 computed px 逐档精确（13/12.5、15/14.5、17/16.5）、切档返回即时生效、材料折叠题干、复习流题干+解析、列表态不变、非法值('abc'/5)回落、1440/375 溢出 0/console 0 error；Lighthouse 全过（/ 0.98、/tiku/ 1.00）。清理 test-r325-font DELETED 19 / LEFTOVER 0，保护 uid 31 表快照一致。
+- 未生产实测：375 视口小档专项（375 已覆盖标准/大与溢出）；真实触屏。
+- 详见 docs/iter/round-3/design-r325-fontlv-global.md。
+
+### R326 复盘场景补「AI 详解本题」入口——报告解析浮层 + 错题本复习流 + 共享 askPrefill（2026-08-29，PR #523，分支 devin/1788394706-r326-ask-from-review）
+- SOP-10 四维复审后取证：普通刷题页已有 AI 深度讲解出口（redoQuestion → /pages/ask/ask），但成绩报告解析浮层（已是复盘工作台）与错题本复习流「看完解析仍不懂」的高价值时刻零 AI 出口（粉笔逐题 AI 讲题、夸克 AI 讲解+追问）。
+- 收口（纯前端零后端/零契约/零 URL 状态）：新增 src/ask-prefill.js 纯函数 askPrefill(stem, options)（题干非字符串/空白返回 ''、options 非法容错、空串不跳转 fail-closed）；practice.vue deepExplain 改共用口径；book.vue 列表卡「AI 详解」与复习流判分后新增「看不懂？AI 详解本题」；report.vue 浮层解析后、纠错前新增同名入口（材料题取 detailMat.stem 小题干，连看随题切换）。
+- 走查发现并修复（commit 674b272）：错题本侧预填选项重复两遍——mistakes.question_text 写入口径本就是题干+选项（practice.vue 与 exam_api._mistake_text 同构），初版再传 m.options 二次拼接；修正为 askPrefill(question_text, null)。
+- 验证：lint/vitest 394(+5)/build 全绿；生产 rev 80dce10→674b272、bundle index-CkDDJQ_o.js；testing agent 两轮双视口实测：三入口预填单份选项（textarea A. 计数=1）、报告连看切题不串题、资料分析只填小题干、既有练同类/纠错/收藏/social bar 回归、1440/375 溢出 0、console 0 error、Lighthouse 全过；未点「讲解」零 LLM 请求。清理 test-r326-ask 两轮累计 DELETED 14 / LEFTOVER 0，保护 uid 快照一致。
+- 未生产实测：真实触屏；askPrefill 空 stem fail-closed 生产分支（vitest 覆盖）；真实 LLM 讲解请求（刻意不触发）。
+- 详见 docs/iter/round-3/design-r326-ask-from-review.md。
