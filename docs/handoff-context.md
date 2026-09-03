@@ -1304,3 +1304,12 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 测试数据清理：test-r339-view + test-r339-api 全库 DELETED 5（mistakes 1 + growth_events 4）/ LEFTOVER 0 / 保护 uid 快照一致（PROTECTED_MATCH True）。
 - 边界（如实）：真实触屏未测（CDP 模拟）；真实 LLM 刻意未触发（注入快照构造讲解）；「再讲细一点/出同款题」真实点击未测（会触发 LLM，仅验证存在）；题目下架时深链降级为搜索空结果（code_hit 缺失自然降级，未生产构造）。
 - 详见 docs/iter/round-3/r339-ask-view-question.md。
+
+### R340 错题本「按错因筛选」：月度复盘错因行直达 + 筛选 sheet 错因组 + ?rz= URL 同步（2026-08-29，PR #539，分支 devin/1788429993-r340-book-reason-filter）
+- 取证：error_reason 数据与月度复盘 byReason 统计早已就位（R314 报告错因自评、复习流自评、sortBy=reason），但错因统计行不可点、筛选 sheet 无错因组、shownItems 不按错因过滤——「复盘定位高频错因 → 直接复习对应错题」链路断裂（粉笔错题本支持按错因筛选）。
+- 收口（纯前端，零新 endpoint/表/契约，不改错因写入路径与月度统计口径）：book-url.js 白名单 RZS=[四正式错因,'未标注']，buildBookUrl 非 fav 输出 rz=encodeURIComponent(值)，parseBookOpts 先安全 decodeURIComponent 再白名单校验（畸形编码/非字符串 fail-closed 回 ''）；book.vue 新 rzFilter data（'未标注' 过滤 !error_reason，其他精确匹配）+ 筛选 sheet 来源组后「错因」组（hasReasonTagged 守卫：存在已标注错因才显示）+ 当前筛选 chip「错因：X ✕」+ 月度复盘按错因行可点 filterByReason（tab='todo'、rzFilter=name、收起复盘区）+ watcher/onLoad/syncBookUrl 接入 rz。
+- 口径（如实）：复盘统计=本月新增，点击直达后的筛选=全部待掌握全集中该错因集合，两者口径不同属有意设计。PDF 导出自动跟随筛选（既有 shownItems 消费）。
+- 验证：lint/vitest 428(+8)/build:h5 全绿（纯前端）；生产 bundle index-CEvL_QVo.js，部署脚本 API 回归+Lighthouse 预算全过（/ 0.98、/tiku/ 1.00）。testing agent 实测（uid test-r340-rz，真实 UI 刷题答错 3 题 + 复习流错因自评打标 2 条）：守卫反例（全未标注无错因组）→打标后 6 chips 出现、精确过滤/未标注桶、chip 清除、复盘行直达（tab 切回+复盘收起+过滤+URL 同步）、?rz= 硬刷恢复、?rz=hack fail-closed、tab=fav 无 rz、按错因排序/PDF 计数跟随/复习流回归、375/1440 溢出 0、console 0 error、全程 0 次 /api/explain。
+- 测试数据清理：test-r340-rz 全库 16 表扫描 DELETED 10（mistakes 3/answer_log 3/review_log 2/growth_events 2）/ LEFTOVER 0；保护 uid umteojq4sltdhorhm DB 计数与 localStorage 逐键前后一致。
+- 边界（如实）：真实触屏未测（CDP 模拟）；主流程窗口无逐请求抓包（daemon 迟启，补窗口重放核心交互 0 次 /api/explain、0 条 4xx/5xx；主流程未点任何 AI 按钮，录屏佐证）；「来源组后」相对位置因测试 uid 无模考错题未直接可见（hasExamMistakes 守卫，错因组正确出现在题型组后）。
+- 详见 docs/iter/round-3/r340-book-reason-filter.md。

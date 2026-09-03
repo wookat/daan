@@ -708,3 +708,7 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 
 ## R339 查看原题反向深链走查新经验
 - 清空服务端 ask_cur 的可靠路径是走 UI「新对话 → 删除新归档会话」：直接删本机 askCurSession 后 reload 会被 `GET /api/ask/cur` 从服务端拉回，越清越回。
+
+## R340 错题本错因筛选走查新经验
+- 错因打标最省 UI 路径：错题本「开始复习」→ 答错后点「错因自评」chip（book.vue 复习流，自动 PATCH /api/mistakes/:id 持久化），无需手工 curl。
+- 服务端清理可复用模式：docker cp 或容器内 python sqlite 按 `uid LIKE 'test-<round>-%'` 扫 16 张业务表；刷题+复习场景最常见写入面是 mistakes/answer_log/review_log/growth_events 四表。
