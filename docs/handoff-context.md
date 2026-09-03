@@ -1476,3 +1476,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 环境观察：测试期间共宿 recruit postgres 负载尖峰（load 15-21）致 8 条瞬时 503 + 20s 超时，answer_log 靠前端重试队列自愈；建议对共宿应用 cgroup 限资源。
 - 测试数据清理：test-r360-ui DELETED 8（answer_log 3/mistakes 2/exam_attempts 1/growth_events 2），LEFTOVER 0，PROTECTED_MATCH True，review_cur 0 行；保护 uid DB 37 表行数一致+localStorage EXACT n=30。
 - 详见 docs/iter/round-3/r360-paper-practice-continue.md。
+
+### R361 按卷练习「已练完」完成态闭环（2026-08-29，PR #567，分支 devin/1788472379-r361）
+- 取证（SOP-10 四维窗口）：R359/R360 后仍有三缺口——卷卡全练完仍显普通「已练 X/N 题」无完成态；全练完再点按卷练习无确认直接从头；startPaper() 不设 _source，按卷练习 answer_log.source 继承上一会话残值（如 reinforce）。
+- 收口（纯前端零契约）：a) paper-continue.js 补 paperPracticedState(practiced, n) fail-closed 纯函数（非整数/≤0 不显示；p>=n → done 完成态「已练完全部 N 题 ✓」）；b) list.vue 卷卡消费该函数 + .ppracticed.done 品牌色加粗；c) practice.vue startPaper() untimed 全练完时弹「重新练一遍？」，取消不进会话；部分/零完成与 timed 路径零变化；d) this._source = untimed ? p.source : null——按卷练习落库归卷、timed 清残值。
+- 验证：ruff/pytest 264/pyright 0/lint/vitest 470(+4)/build 全绿；祖先链核对（3dc7b38/1550a65/5f41fc2）通过；生产 rev 0f4bfc5、bundle index-BHaFSRfo.js、Lighthouse 全过。testing agent 实测（uid test-r361-ui）：零态无进度行无弹窗；部分完成绿色非加粗+R360 弹窗回归；DB 构造全练完→完成态样式（品牌色 fw600）+重练弹窗（取消停留不进会话/确认 1/75 从头）；source 归因序列 卷source→reinforce→卷source 无泄漏；模考无弹窗倒计时正常+R358 drop 回归；97 条全 200、console 0 error、0 次 /api/explain、375/1440 无溢出。
+- 观察项（既有非本轮）：部分卷卡 n（question_ids∩活跃题，如 2015 新疆卷 38）≠ paper_questions?src= 会话题数（同 source 120 题）——完成态分母与全练完弹窗 N 可能对不上，候选后续轮对齐。
+- 测试数据清理：test-r361-ui DELETED {mistakes:2, answer_log:76(含72构造行), exam_attempts:1, reinforce_log:1, growth_events:1}，LEFTOVER 空，review_cur 0 行；保护 uid DB 37 表+localStorage EXACT n=30。
+- 详见 docs/iter/round-3/r361-paper-complete-state.md。

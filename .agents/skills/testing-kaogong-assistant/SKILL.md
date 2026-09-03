@@ -5,6 +5,13 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R361 卷卡完成态/重练弹窗/source 归因走查新经验
+- 完成态断言点：`.ppracticed.done` 文案精确「已练完全部 N 题 ✓」、computed color rgb(46,91,255)（--brand-text 在 :root 上 getPropertyValue 可能取空，直接比 computed color）+ font-weight 600；部分完成为绿 rgb(21,128,61) fw400 无 done class。
+- 全练完弹窗：title「本卷已练完」content「本卷 N 题已全部练过，重新练一遍？」按钮 不用了/重新练；「不用了」停留在练习页准备骨架（无 1/N 会话计数即为未进会话）；timed 模考不弹（走 exam 页）。
+- source 归因验证路径：错题卡「…」菜单→「同考点强化 5 道新题」（reinforceFromMistake → _source='reinforce'）答 1 题，再进按卷练习答 1 题，DB `answer_log.source` 应=卷 psource、无 'reinforce' 残值。
+- **卷卡 n 与按卷练习会话题数可能不一致**：卡 n=卷 question_ids ∩ 活跃题（如 2015 新疆卷 n=38），但 paper_questions?src= 按 source 查询可返回更多题（同 source 120 题）——完成态构造/全练完弹窗以 **src 响应题数** 为准，选卷前先核对两者一致（2025 四川卷 75/75 一致，最稳）。
+- DB 构造全练完：向 answer_log 插 `(uid,created_at,question_id,module,submodule,correct,secs,picked,source)`，qid 集取页面内 paper_questions 响应的 id；用独特 source 标记（如 r361-construct）便于追溯，清理按 uid 删即可。
+
 ## R360 按卷练习「只练剩余」走查新经验
 - `GET /api/paper_questions?src=…&uid=` 带 uid 时每题含 `done:bool`（该 uid answer_log DISTINCT 命中）；只有 practice.vue untimed 分支拼 uid，模考走 `/api/exam/start`（paper_id），**根本不请求 paper_questions**——timed 回归断言应写成「无带 uid 的 paper_questions 新请求」而非「paper_questions 无 uid」。
 - 续练弹窗断言：标题「继续上次进度？」内容「本卷已练过 X 题，只练剩下的 N-X 题？」确认=只练剩余/取消=从头练；只练剩余后核对三点：进度总数=N-X、当前题 qid==响应里首个 done!=true 的题（顺序保持=原第 X+1 题）、done:true 集合==抓包已答 qids。
