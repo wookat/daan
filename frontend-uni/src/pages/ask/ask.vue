@@ -241,7 +241,7 @@
 import { md } from '../../md.js';
 import { request, uploadExplain, streamExplain, anonUid, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api.js';
 import { isNativeApp, pickImageNative } from '../../native.js';
-import { mergeAskSessions, upsertLocalSession, addTombstone, removeTombstone, pruneTombstones, filterTombstoned, sanitizeCurItems } from '../../ask-sessions.js';
+import { mergeAskSessions, upsertLocalSession, addTombstone, removeTombstone, pruneTombstones, filterTombstoned, sanitizeCurItems, parseRemoteCur } from '../../ask-sessions.js';
 
 export default {
   data() {
@@ -756,6 +756,18 @@ export default {
         fu: (r.fu || []).map((m) => ({ role: m.role, content: m.content })),
       }));
       uni.setStorageSync('askCurSession', items);
+      this.pushCurSession();
+    },
+    pushCurSession() {
+      clearTimeout(this._curPushT);
+      this._curPushT = setTimeout(() => {
+        const items = uni.getStorageSync('askCurSession') || [];
+        if (!Array.isArray(items) || !items.length) return;
+        request('/api/ask/cur', {
+          method: 'POST',
+          data: { uid: anonUid(), sid: this.curSid || Number(uni.getStorageSync('askCurSid')) || 0, ts: Date.now(), items },
+        }).catch(() => {});
+      }, 1500);
     },
     newSession() {
       this.archiveCurrent();
@@ -764,6 +776,9 @@ export default {
       uni.removeStorageSync('askCurSession');
       this.curSid = 0;
       uni.removeStorageSync('askCurSid');
+      this._curCleared = true;
+      clearTimeout(this._curPushT);
+      request('/api/ask/cur', { method: 'POST', data: { uid: anonUid(), items: [] } }).catch(() => {});
     },
     archiveCurrent() {
       if (!this.results.length) return;
@@ -807,9 +822,26 @@ export default {
     restoreCurSession() {
       if (this.results.length) return;
       const items = sanitizeCurItems(uni.getStorageSync('askCurSession'));
-      if (!items.length) return;
-      this.results = this.adoptItems(items);
-      this.persistSession();
+      if (items.length) {
+        this.results = this.adoptItems(items);
+        this.persistSession();
+        return;
+      }
+      // 本机无快照：异步取服务端进行中快照（R332，失败静默）
+      request('/api/ask/cur?uid=' + encodeURIComponent(anonUid()))
+        .then((r) => {
+          if (this.results.length || this._curCleared) return;
+          if (sanitizeCurItems(uni.getStorageSync('askCurSession')).length) return;
+          const cur = parseRemoteCur(r);
+          if (!cur) return;
+          if (cur.sid > 0) {
+            this.curSid = cur.sid;
+            uni.setStorageSync('askCurSid', cur.sid);
+          }
+          this.results = this.adoptItems(cur.items);
+          this.persistSession();
+        })
+        .catch(() => {});
     },
     adoptItems(items) {
       return items.map((r) => {

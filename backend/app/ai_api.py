@@ -1,6 +1,7 @@
 """AI 能力面：拍照/文字解析、追问、教练建议、错题分析（LLM 调用统一友好降级）。"""
 import base64
 import json
+import time
 
 from fastapi import APIRouter, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
@@ -190,6 +191,44 @@ def api_ask_sessions_delete(sid: int, uid: str = ""):
         raise HTTPException(400, "缺少 uid")
     db.delete_ask_session(uid, sid)
     return {"ok": True}
+
+
+@router.post("/api/ask/cur")
+def api_ask_cur_save(body: dict, request: Request):
+    uid = str(body.get("uid") or "").strip()[:64]
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    rl(request, "askcur", 120, 3600, uid)
+    items = body.get("items")
+    if not isinstance(items, list) or len(items) > 50 or not all(isinstance(x, dict) for x in items):
+        raise HTTPException(400, "无效的会话")
+    if not items:
+        db.clear_ask_cur(uid)
+        return {"ok": True}
+    sid = body.get("sid")
+    if sid is None:
+        sid = 0
+    if isinstance(sid, bool) or not isinstance(sid, int) or sid < 0:
+        raise HTTPException(400, "无效的会话")
+    ts = body.get("ts")
+    if isinstance(ts, bool) or not isinstance(ts, int) or ts <= 0:
+        raise HTTPException(400, "无效的会话")
+    items_json = json.dumps(items, ensure_ascii=False)
+    if len(items_json) > 200_000:
+        raise HTTPException(400, "会话过大")
+    db.save_ask_cur(uid, sid, ts, items_json)
+    return {"ok": True}
+
+
+@router.get("/api/ask/cur")
+def api_ask_cur_get(uid: str = ""):
+    uid = uid.strip()[:64]
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    d = db.get_ask_cur(uid)
+    if not d or time.time() - d["updated_at"] > 7 * 24 * 3600:
+        return {}
+    return {"sid": d["sid"], "ts": d["ts"], "items": d["items"]}
 
 
 @router.post("/api/similar")

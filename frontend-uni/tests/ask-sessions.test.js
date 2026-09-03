@@ -57,7 +57,7 @@ describe('upsertLocalSession', () => {
   });
 });
 
-import { addTombstone, removeTombstone, pruneTombstones, filterTombstoned, sanitizeCurItems } from '../src/ask-sessions.js';
+import { addTombstone, removeTombstone, pruneTombstones, filterTombstoned, sanitizeCurItems, parseRemoteCur } from '../src/ask-sessions.js';
 
 describe('tombstones (R330)', () => {
   it('adds, removes, and normalizes invalid inputs', () => {
@@ -113,5 +113,28 @@ describe('sanitizeCurItems (R331)', () => {
     expect(sanitizeCurItems(null)).toEqual([]);
     expect(sanitizeCurItems('junk')).toEqual([]);
     expect(sanitizeCurItems({ 0: { explanation: 'x' } })).toEqual([]);
+  });
+});
+
+describe('parseRemoteCur (R332)', () => {
+  it('parses valid remote snapshot with positive sid', () => {
+    const out = parseRemoteCur({ sid: 555, ts: 1, items: [{ explanation: '解析A' }, { explanation: '' }] });
+    expect(out.sid).toBe(555);
+    expect(out.items.map((r) => r.explanation)).toEqual(['解析A']);
+  });
+
+  it('normalizes invalid sid to 0', () => {
+    for (const sid of [0, -1, 1.5, '9', true, undefined]) {
+      expect(parseRemoteCur({ sid, items: [{ explanation: 'x' }] }).sid).toBe(0);
+    }
+  });
+
+  it('fail-closed on invalid input or empty items', () => {
+    expect(parseRemoteCur(null)).toBeNull();
+    expect(parseRemoteCur('junk')).toBeNull();
+    expect(parseRemoteCur([1])).toBeNull();
+    expect(parseRemoteCur({})).toBeNull();
+    expect(parseRemoteCur({ sid: 1, items: [] })).toBeNull();
+    expect(parseRemoteCur({ sid: 1, items: [{ explanation: '' }, 'junk'] })).toBeNull();
   });
 });

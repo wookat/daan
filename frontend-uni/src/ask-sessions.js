@@ -105,3 +105,12 @@ export function sanitizeCurItems(items) {
     (r) => r && typeof r === 'object' && !Array.isArray(r) && typeof r.explanation === 'string' && r.explanation.length > 0,
   );
 }
+
+// 进行中会话远端快照解析（R332）：GET /api/ask/cur 应答 fail-closed。
+// items 经 sanitizeCurItems 后为空视为无可恢复内容；sid 仅接受正整数（衔接 R329 同 sid 回写），否则归 0。
+export function parseRemoteCur(data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+  const items = sanitizeCurItems(data.items);
+  if (!items.length) return null;
+  return { sid: validSid(data.sid) ? data.sid : 0, items };
+}
