@@ -27,7 +27,10 @@
           <text v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: k === detail.answer }">{{ k }}. {{ v }}</text>
           <text class="q-ans">答案：{{ detail.answer }}</text>
           <text v-if="detail.explanation" class="q-exp">{{ detail.explanation }}</text>
-          <text class="d-copy" role="button" aria-label="复制本题链接" @click.stop="copyQLink(detail.id)">复制本题链接</text>
+          <view class="d-acts">
+            <text class="d-copy" role="button" aria-label="AI 详解本题" @click.stop="askFromSearch(detail)">AI 详解本题</text>
+            <text class="d-copy" role="button" aria-label="复制本题链接" @click.stop="copyQLink(detail.id)">复制本题链接</text>
+          </view>
         </view>
       </view>
       <view class="res-cols" :class="{ two: tab === 'all' && hasSide }">
@@ -93,7 +96,10 @@
             <text v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: k === detail.answer }">{{ k }}. {{ v }}</text>
             <text class="q-ans">答案：{{ detail.answer }}</text>
             <text v-if="detail.explanation" class="q-exp">{{ detail.explanation }}</text>
-            <text class="d-copy" role="button" aria-label="复制本题链接" @click.stop="copyQLink(detail.id)">复制本题链接</text>
+            <view class="d-acts">
+              <text class="d-copy" role="button" aria-label="AI 详解本题" @click.stop="askFromSearch(detail)">AI 详解本题</text>
+              <text class="d-copy" role="button" aria-label="复制本题链接" @click.stop="copyQLink(detail.id)">复制本题链接</text>
+            </view>
           </view>
         </view>
         <view v-if="result.questions.total > result.questions.items.length" class="more" @click="loadMore">{{ moreLoading ? '加载中…' : '加载更多' }}</view>
@@ -121,8 +127,9 @@
 </template>
 
 <script>
-import { request } from '../../api.js';
+import { request, trackEvent } from '../../api.js';
 import { buildSearchUrl, buildTikuQPath } from '../../search-url.js';
+import { askPrefill } from '../../ask-prefill.js';
 
 const MODS = { ziliao: '资料', shuliang: '数量', yanyu: '言语', panduan: '判断', changshi: '常识', shenlun: '申论' };
 
@@ -172,6 +179,14 @@ export default {
   methods: {
     modName(m) {
       return MODS[m] || m || '';
+    },
+    askFromSearch(d) {
+      const text = askPrefill(d && d.question, d && d.options);
+      if (!text) return;
+      trackEvent('search_ask_click', d.module || '');
+      uni.setStorageSync('redoQuestion', text);
+      uni.removeStorageSync('redoAnswer');
+      uni.switchTab({ url: '/pages/ask/ask' });
     },
     copyQLink(id) {
       const url = (typeof window !== 'undefined' ? window.location.origin : '') + buildTikuQPath(id);
@@ -335,6 +350,7 @@ export default {
 .q-opt.ans { color: var(--ok-strong); font-weight: 600; }
 .q-ans { font-size: 24rpx; color: var(--ok-strong); font-weight: 600; margin-top: 4rpx; }
 .q-exp { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; }
+.d-acts { display: flex; gap: 20rpx; }
 .d-copy { font-size: 22rpx; color: var(--brand-text); text-decoration: underline; cursor: pointer; padding: 4rpx 6rpx; align-self: flex-start; }
 .more { text-align: center; font-size: 26rpx; color: var(--brand-text); padding: 16rpx; }
 .empty { display: flex; flex-direction: column; gap: 8rpx; text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 100rpx 40rpx; }
