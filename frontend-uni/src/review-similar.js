@@ -1,5 +1,13 @@
 // 复习流「加练同类题」条目与错题记录构造（fail-closed 纯函数）
 
+import { askAnswerLetter } from './ask-prefill.js';
+
+/** 复习流条目 → AI 详解携带的用户作答：加练条目取本轮作答，普通条目取历史作答。 */
+export function reviewAskAnswer(cur, picked) {
+  if (!cur || typeof cur !== 'object') return '';
+  return askAnswerLetter(cur._extra === true ? picked : cur.user_answer);
+}
+
 /** /api/questions item → 复习流 _extra 加练条目；无题干返回 null。 */
 export function similarItemFromQuestion(x) {
   if (!x || typeof x !== 'object' || !x.question) return null;

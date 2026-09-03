@@ -510,7 +510,7 @@ import { qStatLine } from '../../q-stat.js';
 import { fontSizes, normFontLv } from '../../font-size.js';
 import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
 import { askQid, findAskSid } from '../../ask-link.js';
-import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid } from '../../review-similar.js';
+import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid, reviewAskAnswer } from '../../review-similar.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 
@@ -1280,7 +1280,7 @@ export default {
       const qid = askQid(this.cur.question_id);
       if (qid) uni.setStorageSync('redoQid', qid);
       else uni.removeStorageSync('redoQid');
-      const ans = askAnswerLetter(this.cur.user_answer);
+      const ans = reviewAskAnswer(this.cur, this.picked);
       if (ans) uni.setStorageSync('redoAnswer', ans);
       else uni.removeStorageSync('redoAnswer');
       uni.switchTab({ url: '/pages/ask/ask' });

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid } from '../src/review-similar.js';
+import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid, reviewAskAnswer } from '../src/review-similar.js';
 
 const Q = {
   id: 646,
@@ -81,5 +81,25 @@ describe('reviewReasonMid', () => {
     expect(reviewReasonMid({ id: 'x' })).toBe(null);
     expect(reviewReasonMid({})).toBe(null);
     expect(reviewReasonMid(null)).toBe(null);
+  });
+});
+
+describe('reviewAskAnswer', () => {
+  it('加练条目取本轮作答 picked', () => {
+    expect(reviewAskAnswer({ _extra: true }, 'B')).toBe('B');
+    expect(reviewAskAnswer({ _extra: true, user_answer: 'A' }, 'C')).toBe('C');
+  });
+  it('普通条目取历史作答 user_answer', () => {
+    expect(reviewAskAnswer({ user_answer: 'D' }, 'A')).toBe('D');
+  });
+  it('加练无本轮作答/多选/非法 fail-closed 空串', () => {
+    expect(reviewAskAnswer({ _extra: true }, null)).toBe('');
+    expect(reviewAskAnswer({ _extra: true }, 'ABD')).toBe('');
+    expect(reviewAskAnswer({ _extra: true }, 'x')).toBe('');
+  });
+  it('普通条目无/非法 user_answer 与非对象 fail-closed 空串', () => {
+    expect(reviewAskAnswer({}, 'B')).toBe('');
+    expect(reviewAskAnswer(null, 'B')).toBe('');
+    expect(reviewAskAnswer('x', 'B')).toBe('');
   });
 });
