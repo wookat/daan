@@ -107,7 +107,7 @@ Page({
     const mod = String(e.currentTarget.dataset.mod || '');
     wx.navigateTo({ url: `/pages/practice/practice?module=${mod}` });
   },
-  // 热力图：服务端 answer_log（按 uid）为准，失败降级本机 pstats
+  // 热力图与连签：服务端 answer_log（按 uid）为准，失败降级本机 pstats
   async loadHeatmap() {
     let days: Record<string, number> = {};
     try {
@@ -115,6 +115,7 @@ Page({
       for (const k of Object.keys(d.days || {})) {
         days[k] = (d.days as Record<string, { n: number }>)[k].n || 0;
       }
+      if (d.streak != null) this.setData({ streak: d.streak });
       if (!this._hmTracked) {
         this._hmTracked = true;
         trackEvent('heatmap_view', 'stats');

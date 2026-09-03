@@ -5,7 +5,7 @@
 ## 技术栈
 
 - 微信原生小程序框架 + **TypeScript**（官方 typescript 模板规范：`miniprogram/` 目录 + `tsconfig.json` + npm 构建）
-- 渲染层：**Skyline**（`app.json` 全局 `renderer: "skyline"`，glass-easel 组件框架；登录页因使用 TDesign 表单组件页面级降级 `webview`）
+- 渲染层：**webview**（`app.json` 全局 `renderer: "webview"`，glass-easel 组件框架；team/login 页级配置同为 `webview`；Linux 版开发者工具开启 Skyline 调试会卡死在 theme.json，勿勾选）
 - 组件库：**TDesign 小程序组件库**（`tdesign-miniprogram`，npm 引入）
 - 设计对齐 `docs/design-v3/` 原型；design token 见 `miniprogram/app.wxss`（brand `#3B6FF5`，浅色 + 深色）
 - 后端复用现有 FastAPI：`https://kaogong.zalize.com/api/*`
@@ -15,7 +15,7 @@
 1. `cd miniapp-native && npm install`
 2. 打开微信开发者工具 → 导入项目 → 选择 `miniapp-native/` 目录（`project.config.json` 所在层级），AppID 已配置为正式号 `wx01f2f29cfe51baba`
 3. 菜单「工具 → 构建 npm」（生成 `miniprogram/miniprogram_npm/tdesign-miniprogram`）
-4. 详情 → 本地设置：勾选「将 JS 编译成 ES5」「使用 npm 模块」；基础库选 3.x（Skyline 需要）
+4. 详情 → 本地设置：勾选「将 JS 编译成 ES5」「使用 npm 模块」；不要勾选「开启 Skyline 渲染调试」
 5. 编译预览。真机预览需在小程序后台把 `kaogong.zalize.com` 加入 request 合法域名（开发阶段可勾选「不校验合法域名」）
 
 ## 发布前配置清单（小程序后台，需管理员）
@@ -33,7 +33,8 @@
 
 ```bash
 npm run typecheck   # tsc --noEmit
-npm run lint        # eslint miniprogram --ext .ts
+npm run lint        # eslint miniprogram --ext .ts（仓库根有 flat config 时需 ESLINT_USE_FLAT_CONFIG=false）
+../frontend-uni/node_modules/.bin/vitest run --config scripts/vitest.config.mts   # utils 单测（复用 frontend-uni 的 vitest，scripts/ 不打包）
 ```
 
 ## 目录结构
@@ -44,10 +45,10 @@ miniapp-native/
 ├── tsconfig.json / .eslintrc.js
 ├── package.json               # tdesign-miniprogram + typescript 工具链
 └── miniprogram/
-    ├── app.ts / app.json / app.wxss / theme.json   # Skyline、darkmode、design token
+    ├── app.ts / app.json / app.wxss / theme.json   # webview 渲染、darkmode、design token、page 高度约束
     ├── custom-tab-bar/        # 自定义 TabBar（Lucide 风格线性图标，data-URI SVG）
-    ├── components/navbar/     # 自定义导航栏（Skyline 要求 navigationStyle: custom）
-    ├── utils/                 # request 封装 / 登录态+匿名 uid / 本地统计 / 图标
+    ├── components/navbar/     # 自定义导航栏（全局 navigationStyle: custom）
+    ├── utils/                 # request 封装 / 登录态+匿名 uid / 本地统计 / 离线上报队列 / 图标
     ├── api/                   # 类型化 API 层（复用现有 FastAPI 字段）
     └── pages/
         ├── home/              # 首页：今日目标 hero、学习计划卡、专项练习入口
@@ -63,7 +64,8 @@ miniapp-native/
 
 - **请求封装**（`utils/request.ts`）：`X-Access-Code` / `Authorization: Bearer` 头；401「未登录/登录已过期」才清登录态；「访问码」错误弹窗输入后自动重试一次。
 - **匿名 uid**（`utils/auth.ts`）：storage key（`anonUid`/`deviceAnonUid`/`authToken`/`authUser`/`accessCode`）与 `frontend-uni/src/api.js` 完全一致；登录时保留本机匿名 uid 供 `merge_anon` 合并。
-- **answer_log 去重**（`pages/practice/practice.ts`）：每题作答即上报 + 完成/退出时兜底批量补报；发送前先标记 `_logged`，避免在途并发重复落库；携带 `source` 埋点（如错题重练 `source=redo`）。
+- **answer_log 去重**（`pages/practice/practice.ts`）：每题作答即上报 + 完成/退出时兜底批量补报；发送前先标记 `_logged`，避免在途并发重复落库；携带 `source` 埋点（如错题重练 `source=redo`）。上报失败进 `utils/offline.ts` 本地队列（镜像 H5 `src/offline.js`，按 uid|qid|t 去重），App onShow / 网络恢复 / 进入刷题页时单飞补传。
+- **连签口径**：首页 hero / 任务卡 / 统计页均以服务端 `/api/checkin/badges` 与 `/api/checkin/summary` 的 `streak` 为准，本机 pstats 仅作接口失败降级。
 - **错题自动入本**：答错即 `POST /api/mistakes`（题干+选项文本、我的答案、正确答案、解析）。
 
 ## 一期未覆盖项

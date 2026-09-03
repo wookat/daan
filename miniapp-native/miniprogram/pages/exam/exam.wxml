@@ -15,7 +15,13 @@
 
     <view class="sec-h"><text class="sec-t"><view class="sec-bar" />真题卷库</text></view>
     <view wx:if="{{loading}}" class="card spin">加载中…</view>
-    <view wx:if="{{!loading && !papers.length}}" class="empty">
+    <view wx:if="{{!loading && loadErr && !papers.length}}" class="empty">
+      <view class="eico">📶</view>
+      <text>真题卷库加载失败，请检查网络</text>
+      <text class="tag tag-gray" style="margin-top: 12rpx">{{loadErr}}</text>
+      <view class="btn-ghost" style="margin-top: 32rpx; padding: 18rpx 64rpx" bind:tap="onRetry">重试</view>
+    </view>
+    <view wx:elif="{{!loading && !papers.length}}" class="empty">
       <view class="eico">📄</view>
       <text>真题卷搜集中，全真模考将在二期上线</text>
     </view>
