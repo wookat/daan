@@ -1004,6 +1004,7 @@ export default {
         }
         this.paperSheet = false;
         this._source = untimed ? (p.source || null) : null;
+        this._ptitle = untimed ? (p.title || null) : null;
         this.items = items;
         this.idx = 0;
         this.picked = '';
@@ -1368,6 +1369,7 @@ export default {
       if (this._starting) return;
       this._starting = true;
       this._source = launch.source || 'reinforce';
+      this._ptitle = null;
       uni.showLoading({ title: '组题中…', mask: true });
       if (this.beiMode) {
         this.beiMode = false;
@@ -1535,6 +1537,7 @@ export default {
       this._lastStartArgs = [module, submodule, count, adaptive, forceReal, tag3, source, year];
       // 推荐埋点：记录本次练习的入口来源（reco/weak 等），随 answer_log 落库
       this._source = source || null;
+      this._ptitle = null;
       this.session = false;
       this.beginLoadState();
       this.lastModule = module;
@@ -1877,6 +1880,8 @@ export default {
         bestStreak: this.bestStreak,
         lastModule: this.lastModule,
         lastSubmodule: this.lastSubmodule,
+        source: this._source || '',
+        ptitle: this._ptitle || '',
       });
       clearTimeout(this._ppTimer);
       this._ppTimer = setTimeout(() => this.pushPracticeProgress(), 1500);
@@ -1884,7 +1889,8 @@ export default {
     pushPracticeProgress() {
       const payload = collectPracticeProgress(
         this.items, this.idx, this.right, this.streak, this.bestStreak,
-        this.lastModule || '', this.lastSubmodule || ''
+        this.lastModule || '', this.lastSubmodule || '',
+        this._source || '', this._ptitle || ''
       );
       if (!payload) return;
       request('/api/practice/progress', { method: 'POST', data: { uid: anonUid(), ...payload } }).catch(() => {});
@@ -1908,6 +1914,8 @@ export default {
       this.bestStreak = s.bestStreak;
       this.lastModule = s.lastModule;
       this.lastSubmodule = s.lastSubmodule;
+      this._source = (typeof s.source === 'string' && s.source) || null;
+      this._ptitle = (typeof s.ptitle === 'string' && s.ptitle) || null;
       this.autoSaved = false;
       this.resultSent = false;
       this.percentile = null;
@@ -1923,6 +1931,8 @@ export default {
       this.bestStreak = snap.bestStreak;
       this.lastModule = snap.module || null;
       this.lastSubmodule = snap.submodule || null;
+      this._source = snap.source || null;
+      this._ptitle = snap.ptitle || null;
       this.autoSaved = false;
       this.resultSent = false;
       this.percentile = null;
@@ -1974,7 +1984,7 @@ export default {
           const done = snap.items.filter((q) => q._picked).length;
           uni.showModal({
             title: '继续上次练习？',
-            content: '在其他设备还有一组未做完（' + done + '/' + snap.items.length + ' 题），是否继续？',
+            content: (snap.ptitle ? '「' + snap.ptitle + '」' : '') + '在其他设备还有一组未做完（' + done + '/' + snap.items.length + ' 题），是否继续？',
             confirmText: '继续',
             cancelText: '不用了',
             success: (res) => {
@@ -2006,7 +2016,7 @@ export default {
       const done = s.items.filter((q) => q._picked).length;
       uni.showModal({
         title: '继续上次练习？',
-        content: '上次还有一组未做完（' + done + '/' + s.items.length + ' 题），是否继续？',
+        content: (s.ptitle ? '「' + s.ptitle + '」' : '') + '上次还有一组未做完（' + done + '/' + s.items.length + ' 题），是否继续？',
         confirmText: '继续',
         cancelText: '不用了',
         success: (res) => {

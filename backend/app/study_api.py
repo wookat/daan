@@ -319,10 +319,18 @@ def api_practice_progress(body: dict, request: Request):
 
     module = str(body.get("module") or "").strip()[:64] or None
     submodule = str(body.get("submodule") or "").strip()[:64] or None
+
+    def _opt_str(key: str, hi: int) -> str | None:
+        v = body.get(key)
+        if not isinstance(v, str):
+            return None
+        return v.strip()[:hi] or None
+
     db.save_practice_progress(uid, qids, picks, excl, idx,
                               _bounded("right", len(qids)), _bounded("streak", len(qids)),
                               _bounded("best_streak", 10000),
-                              module, submodule)
+                              module, submodule,
+                              psource=_opt_str("source", 64), ptitle=_opt_str("ptitle", 80))
     return {"ok": True}
 
 
@@ -349,6 +357,8 @@ def api_practice_resume(uid: str):
         "best_streak": prog["best_streak"],
         "module": prog["module"],
         "submodule": prog["submodule"],
+        "source": prog.get("psource"),
+        "ptitle": prog.get("ptitle"),
         "t": prog["updated_at"],
     }
 

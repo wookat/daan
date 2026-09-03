@@ -45,7 +45,7 @@
     <view v-if="practiceResume" class="card ercard">
       <view class="cb-l">
         <text class="cb-t">有一组未做完的练习</text>
-        <text class="cb-s">{{ prModName(practiceResume.module) }} · 已做 {{ practiceResume.done }}/{{ practiceResume.total }} 题</text>
+        <text class="cb-s">{{ practiceResume.ptitle || prModName(practiceResume.module) }} · 已做 {{ practiceResume.done }}/{{ practiceResume.total }} 题</text>
       </view>
       <view class="cb-r">
         <text class="cb-go" role="button" aria-label="继续未做完的练习" @click="prContinue">去继续 ›</text>

@@ -78,7 +78,7 @@ describe('parsePendingPractice（R323 首页续练卡·本机快照）', () => {
 
   it('有效快照返回 done/total/module', () => {
     const r = parsePendingPractice({ t: now - 1000, items, lastModule: 'yanyu' }, now);
-    expect(r).toEqual({ done: 1, total: 3, module: 'yanyu' });
+    expect(r).toEqual({ done: 1, total: 3, module: 'yanyu', ptitle: '' });
   });
 
   it('fail-closed：空/无 items/超 24h/全部已答返回 null', () => {
@@ -98,7 +98,7 @@ describe('parsePendingPractice（R323 首页续练卡·本机快照）', () => {
 describe('parseRemotePractice（R323 首页续练卡·服务端应答）', () => {
   it('有效应答返回 done/total/module（picks 字符串键兼容）', () => {
     const d = { items: [{ id: 1 }, { id: 2 }, { id: 3 }], picks: { 1: 'A', '3': 'B' }, module: 'ziliao' };
-    expect(parseRemotePractice(d)).toEqual({ done: 2, total: 3, module: 'ziliao' });
+    expect(parseRemotePractice(d)).toEqual({ done: 2, total: 3, module: 'ziliao', ptitle: '' });
   });
 
   it('fail-closed：空/无 items/全部已答返回 null', () => {
@@ -110,6 +110,42 @@ describe('parseRemotePractice（R323 首页续练卡·服务端应答）', () =>
 
   it('picks 非对象按无作答处理、module 非字符串回落空串', () => {
     const d = { items: [{ id: 1 }], picks: 'x', module: null };
-    expect(parseRemotePractice(d)).toEqual({ done: 0, total: 1, module: '' });
+    expect(parseRemotePractice(d)).toEqual({ done: 0, total: 1, module: '', ptitle: '' });
+  });
+});
+
+describe('R363 按卷练习中断续练保留归卷 source/卷名', () => {
+  const items = [{ id: 1, _picked: 'A' }, { id: 2 }];
+
+  it('collectPracticeProgress 透传 source/ptitle（截断 64/80）', () => {
+    const p = collectPracticeProgress(items, 0, 1, 1, 1, 'm', '', 'zhenti', '2015 新疆卷');
+    expect(p.source).toBe('zhenti');
+    expect(p.ptitle).toBe('2015 新疆卷');
+    const long = collectPracticeProgress(items, 0, 1, 1, 1, 'm', '', 'x'.repeat(100), 'y'.repeat(100));
+    expect(long.source).toBe('x'.repeat(64));
+    expect(long.ptitle).toBe('y'.repeat(80));
+  });
+
+  it('collectPracticeProgress 非字符串 source/ptitle 回落空串', () => {
+    const p = collectPracticeProgress(items, 0, 1, 1, 1, 'm', '', 7, null);
+    expect(p.source).toBe('');
+    expect(p.ptitle).toBe('');
+  });
+
+  it('adoptPracticeResume 透出 source/ptitle（非字符串回落空串）', () => {
+    const s = adoptPracticeResume({ items: [{ id: 1 }], source: 'zhenti', ptitle: '卷名' });
+    expect(s.source).toBe('zhenti');
+    expect(s.ptitle).toBe('卷名');
+    const bad = adoptPracticeResume({ items: [{ id: 1 }], source: 7, ptitle: {} });
+    expect(bad.source).toBe('');
+    expect(bad.ptitle).toBe('');
+  });
+
+  it('parsePendingPractice/parseRemotePractice 透出 ptitle', () => {
+    const now = 1700000000000;
+    const local = parsePendingPractice({ t: now, items: [{ id: 1 }], ptitle: '卷名' }, now);
+    expect(local.ptitle).toBe('卷名');
+    const remote = parseRemotePractice({ items: [{ id: 1 }], ptitle: '卷名' });
+    expect(remote.ptitle).toBe('卷名');
   });
 });
