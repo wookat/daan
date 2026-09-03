@@ -732,3 +732,9 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 ## R350 复习流 AI 详解走查新经验
 - ask 页对 `redoAnswer`/`redoQuestion` 是消费型读取（onShow 读后立即 removeStorageSync）：断言预填要看 UI 上的作答 chip，事后查 localStorage 必为 null，不能作为反证。
 - 从复习流切走 tab（含点「AI 详解本题」跳 ask 页）后返回错题本，复习会话不保留（回列表态）、本轮加练题作废：多步复习断言尽量一轮内完成；中断后需重造错题开新复习轮续测。
+
+## R351 复习会话快照恢复走查新经验
+- `reviewSnap`（localStorage 裸 JSON 字符串）由 book.vue 各判分/换题/入库写点维护；exitReview（完成复习/退出）与「放弃」都会清。断言横幅用 `document.querySelector('.resumecard')`。
+- fail-closed 注入测试可先注入一条**合法快照作阳性对照**（v:1、uid=当前 anonUid、ts=now、rIdx 合法、items[].question_text 非空）确认横幅检测有效，再逐个注入坏 JSON/uid 不符/ts 超 2h/rIdx 越界，reload 期间用 Log.enable+Runtime.exceptionThrown 监听 console error。
+- 与 R350 结论相反：从复习流点「AI 详解本题」跳 ask 页后**点错题本 tab 返回，内存会话可能保留**（R351 实测保留、复习卡原位）；整页硬刷才是稳定的丢失路径，测横幅恢复用 Ctrl+Shift+R。
+- 复习第 1 题答错（原有 2 道 due）触发加练后总数为 5（2 原题 + 1 requeue + 2 加练）；横幅题号 x/n 的 n 含加练与 requeue。

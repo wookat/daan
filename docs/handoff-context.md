@@ -1393,3 +1393,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：lint/vitest 446/build + ruff/pytest 218/pyright 0 全绿；生产 rev af80192、bundle index-DKVlbzEI.js；testing agent 实测：加练答错选 B→ask 页预填+作答 chip B（旧版必无 chip）、加练答对选 A→chip A、普通条目历史 A 不串本轮 B、R349 回归；0 次 /api/explain、抓包 71 条全 200。测试 uid test-r350-ui 全库清理 LEFTOVER {}；保护 uid 前后一致（EXACT MATCH n=28）。
 - 体验观察（候选迭代）：从复习流点 AI 详解跳走后返回错题本，复习会话不保留、加练题作废——「复习中场跳出再回来续复习」未收口。
 - 详见 docs/iter/round-3/r350-extra-ask-answer.md。
+
+### R351 错题本复习会话中断可恢复：本机快照 + 「继续复习」横幅（2026-08-29，PR #553，分支 devin/1788451482-r351-review-resume）
+- 取证（SOP-10 功能深度维度）：复习会话（rItems/rIdx/picked/answered/wasCorrect/nextDays）纯组件内存态，整页刷新必丢；R350 生产实测观察从复习流跳 AI 详解再返回丢会话（本轮复测 tab 切回实际保留，硬刷才是稳定丢失路径，横幅正为此兜底）。
+- 收口（纯前端零后端/零契约，埋点白名单 +1 review_resume_click）：新增 review-snap.js fail-closed 纯函数 buildReviewSnap/parseReviewSnap（v1、uid 绑定、TTL 2h、≤80 条、序列化 ≤200KB、剥离 open/html 渲染态、rIdx 越界/畸形/未来 ts 一律 null）；book.vue startReview/判分/换题/加练追加/入库/错因打标各写点 saveReviewSnap，exitReview 清快照，onShow 非复习态解析快照出橙色 resumecard（继续复习/放弃）；resumeReview 整体恢复内存态原位续答，不自动强拉。顺手收口 R349 残余：saveExtraWrong 经 reviewReasonMid 正整数校验 res.id 后才置 _mid/_saved。
+- 验证：lint/vitest 452(+10)/build + ruff/pytest 218/pyright 0 全绿；生产 rev b1338d9、bundle index-DGAyeTEz.js（浏览器实载核对），部署脚本回归+Lighthouse 全过、review_resume_click curl 200/bogus 400。testing agent 实测（375px+桌面）：答错触发加练 1/5→硬刷→横幅 1/5→继续复习原位恢复（answered/错选/加练队尾原样）+埋点 200→续答完成；放弃清快照重开新轮；完成复习无横幅；fail-closed 注入（坏 JSON/uid 不符/超 2h/rIdx 越界，含合法阳性对照）全部无横幅 0 console error；R349/R350 回归；0 次 /api/explain、105 条 /api 全 200、双视口溢出 0。
+- 测试数据清理：测试 uid（因 storage 键笔误实为页面自生成 umtlq40aq7y4zsrmz，anon_uid≠anonUid 教训再次验证）全库 DELETED {mistakes 4/answer_log 2/review_log 5/growth_events 13}，LEFTOVER {}；保护 uid DB+localStorage 前后一致（EXACT MATCH n=28）。
+- 边界（如实）：真实触屏未测（CDP 模拟）；跨设备复习会话同步不在本轮范围（本机快照 first iteration）。
+- 详见 docs/iter/round-3/r351-review-session-resume.md。
