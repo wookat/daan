@@ -1444,3 +1444,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 测试数据清理：test-r356-ui 全库 DELETED {answer_log 1/growth_events 3}，LEFTOVER {}，review_cur 0 行；保护 uid DB diff 逐表一致 + localStorage EXACT MATCH n=28。
 - 经验：uni.getStorageSync 注入必须用 `{"type":...,"data":...}` 包装格式（裸 JSON 静默读不出）；UTC→本地日键类修复需 CDP 时区覆写制造跨日差做鉴别试验（override 随 socket 关闭即丢，需常驻 holder）。
 - 详见 docs/iter/round-3/r356-w1-h5-followups.md。
+
+### W2（可信度收口集成轮，分支 devin/wf-w2-integration，未建 PR/未部署）
+- 集成：origin/main 0c71fdd（含 R356 8cf2628）切 `devin/wf-w2-integration`，依次 merge W2-A（3d36bcb）/ W2-B（d3ebaf0）/ W2-C（e3e871f），三次无冲突；dropped 无；HEAD 上 merge-base --is-ancestor 8cf2628 / 7a9bb2f / 4bf10bb / 02a0adb 均为真（R355 教训）。全量本地验证：backend ruff / pytest 266 passed / pyright 0；frontend-uni lint / vitest 469 / build:h5（bundle index-tRw-HLw2.js）；miniapp typecheck 0 / lint（`ESLINT_USE_FLAT_CONFIG=false`）0 / offline 单测 7。
+- W2-A（backend）：main.py ValueError/TypeError → `/api/*` 统一 400「参数格式错误」；api_save_mistake question_id as_int；`idx_mist_uid(uid, created_at)`；SEO 页脚「10万+ 行测题 · 1.5万+ 历年真题」；quality.normalize_cjk_spaces / HS_META_RE + scripts/w2_content_cleanup.py（dry-run 默认、--apply 备份 .bak-w2、rescore、不下线不改 explanation 不触发 LLM）。本地 uvicorn 实测 export/pdf ['abc'] 400、mistakes 'abc' 400 / '7149' 落 INTEGER / '' 落 NULL、EXPLAIN 命中 idx_mist_uid、/tiku/ 新页脚；临时库 dry-run 1836 → apply → 复扫 0，构造题元句剥离 / SKIP 跳过。生产广场 3 条测试评论已由 W2-A 实施方管理端软删（/api/comments/plaza items:[]）。**生产 export/pdf 仍 500、/tiku/ 仍 13万+、清洗脚本生产 dry-run/apply 未做——待部署。**
+- W2-B（H5）：index.html×4 / manifest / og-card / share-q / pk-result 口径清零；weak-spots.js 薄弱考点按 tag3 聚合后同名合并；exp-dup.js 隐藏被 hs 全文包含的 explanation；contest 零人数「本场首批报名开放中 · 全站同卷」。本地 build 产物 Chrome 375 走查：share-q 不存在 id 新文案、contest 零人数/报名后 1 人两分支、practice 20 题解析显隐与预期一致、完成页薄弱考点无重名。生产 view-source/SW 待部署核对。
+- W2-C（小程序）：hero/stats 连签服务端优先；utils/offline.ts answer_log/mistakes 离线队列（去重/持久化/单飞/联网触发）；exam 错误态+重试；app.wxss page 高度约束；首页题数 /api/question_counts 动态化（静态回退改当前口径）；README Skyline→webview。**微信开发者工具走查未做**（断网→恢复落库、连签一致、14 页滚到底 + login、page 高度对 navbar/底栏影响）。
+- 数据纪律：全部在本机临时库完成，未触碰生产库/配置、未触发 LLM、生产未新增 test-w2-* 数据。
+- 遗留台账：docs/iter/workflow/backlog.md（W2 追加：SMS 凭证资源缺口、original 题 hs 人审、题干模板家族去重设计、mock_event 唯一约束、mock 冗余卷计数、db.py 按域拆分、tag3_name 后端统一、小程序统一「数据非最新」提示、contest 历史累计人数、部署后回归清单）；详证 docs/iter/workflow/w2.md。
