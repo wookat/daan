@@ -5,6 +5,13 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R328 ask 历史会话跨设备同步走查新经验
+- 多设备模拟：browser WS `Target.createBrowserContext`+`Target.createTarget{browserContextId}` 造隔离"设备"，各自注入同 anonUid（纯字符串）。注意 `Emulation.setDeviceMetricsOverride` 随 CDP 连接断开而失效——需常驻 holder 进程保持 ws 连接（见 /tmp/r328_holdB.py 模式）。
+- 造数不触 LLM：注入本地 askSessions 一条造数会话 → UI 历史点开恢复（loadSession 会移除该条并 DELETE 远端）→ 点「新对话」走真实 archiveCurrent → POST /api/ask/sessions。全程 0 次 /api/explain 可用网络抓包 grep 断言。
+- merge 语义本机优先（fail-open）：远端删除不会清掉本机已有副本；验证"远端已空"要用全新 context 同 uid 看历史空态。
+- 归档 POST 失败静默（503 也不报错、本地照常归档）；重试回传 = 恢复该条再「新对话」（会产生新 sid）。
+- 全新 context 首次加载会自动生成随机 anonUid 并发 GET（home_bundle/review 等），注入测试 uid 前的这些请求会带一次性随机 uid，报告清理时可说明。
+
 ## R327 redoAnswer 带作答走查新经验
 - 断言口径：四入口（practice deepExplain=this.picked、book redo/askFromReview=历史 user_answer、report askDetail=detail.picked）跳 ask 页后，「你选的答案」chip 应高亮对应字母；storage `redoAnswer`/`redoQuestion` 在 ask onShow 消费后必须均为 null（CDP 读 localStorage 即可客观取证）。
 - 串题清理分支验证法：先从有作答题进入一次，再从**未作答**题（mini mock 交卷时留 1 题不答）进入——chip 必须全不选中，若继承上一字母即缺陷。

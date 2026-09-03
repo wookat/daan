@@ -1209,3 +1209,12 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 未生产实测：detailMat 折叠材料分支（本卷未遇到，R326 已验）；askAnswerLetter 多选/非法字母分支（生产 UI 不可达，vitest 覆盖）；真实触屏。
 - 环境观察项：测试期间生产 VPS 被同机 recruit 应用（postgres 长查询 + 长跑 pip install）打到 load ~21、两次 503；未动任何服务，恢复后重试通过；同机资源争抢需老板关注。
 - 详见 docs/iter/round-3/design-r327-ask-user-answer.md。
+
+### R328 AI 问答历史会话跨设备同步——ask_sessions 表 + /api/ask/sessions CRUD + 本机优先 merge（2026-08-29，PR #525，基于 #524 分支 devin/1788401713-r328-ask-sessions-sync）
+- 取证：ask 页历史会话（askSessions，讲解+追问，用户已消耗真实 LLM 成本）纯本机 uni storage，换设备/清缓存全丢；R296/R297/R322 已建立「服务端权威 + 本机快照优先 + 失败静默」同步口径，AI 会话是最后一块高价值本地资产。
+- 收口：后端新表 ask_sessions(uid,sid,ts,title,n,items JSON,updated_at,PK(uid,sid))；GET /api/ask/sessions?uid=（ts DESC,sid DESC 最新 20）；POST upsert（严格校验：uid≤64 必填、sid/ts 正整数拒 bool、title 截 60、n∈1..50、items 非空 list[dict]≤50 且序列化≤200K，uid 限速 rl("asksess",60,3600)，upsert 后每 uid 只留最新 20）；DELETE /{sid}?uid= 按 uid 隔离。前端新纯函数 src/ask-sessions.js mergeAskSessions（按 id 去重并集、本机优先、ts 降序、cap20、非法 fail-closed）；ask.vue onShow syncSessions 异步 GET+merge 回写、archiveCurrent 本地成功后异步 POST、loadSession/delSession 后异步 DELETE，全部失败静默。不改 /api/explain、不同步进行中 askCurSession。
+- 验证：ruff/pytest 200(+4)/pyright 0（npx pyright，本机无全局装）/lint/vitest 401(+4)/build 全绿；生产 rev 61b20c4、bundle index-DfsHZs41.js；API 层临时 uid 实测 roundtrip/upsert/隔离/非法逐项 400/超 200K 400；testing agent 三 context 模拟三设备：A 归档 POST 200→B(375) 历史出现并完整恢复讲解+追问→B 再归档+UI 删除 DELETE 200→C 全新 context 远端空态；fail-open 实证（远端删后 A 本机副本保留属本机优先设计；测试中真实遇 503，POST 静默失败本地不受影响）；双视口溢出 0、console 0 error、零 /api/explain；Lighthouse 全过（/ 0.99、/tiku/ 1.00）。清理 test-r328-* + 2 个附带随机 uid：DELETED 3 / LEFTOVER 0 / PROTECTED_MATCH True（32 表）。
+- 未生产实测：真实触屏；限速 60/h 分支；本机残留副本删除时远端 404 分支（DELETE 幂等 ok）。
+- 环境观察项（本轮第 3 次）：测试期间生产因同机 recruit/softcopyright 负载（load ~20）503 约 15 分钟，watchdog 自愈；未动任何服务；同机资源争抢持续需老板关注。
+- 语义注意：loadSession（恢复历史）本地既有行为就是把该条移出历史，现同步删服务端对应条；远端删除不强制删本机副本（fail-open，本机优先）。
+- 详见 docs/iter/round-3/design-r328-ask-sessions-sync.md。
