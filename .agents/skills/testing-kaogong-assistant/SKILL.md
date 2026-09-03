@@ -698,3 +698,10 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - ask 页是常驻 tab：`restoreCurSession()` 在 `results.length` 非空时直接 return——仅改 storage 里的 `askCurSession` 后切回 ask tab 内存态可能不刷新，注入快照前必须让整页硬刷再断言。
 - 复杂中文/嵌套 JSON 注入 localStorage 勿用 shell 单引号 oneshot（引号/转义必坏）：用 Python WebSocket 脚本 + `json.dumps(json.dumps(snap))` 双重编码后经 `Runtime.evaluate` 注入。
 - `pkill -f <脚本名>` 可能匹配并杀掉承载它的 bash 自身：先 `pgrep -f` 过滤确认，或用精确进程名/记录 pid 后 kill。
+
+## R338 刷题/错题本回看入口走查新经验
+- ask 常驻 tab 的 onShow 会把内存中的会话列表**回写覆盖** localStorage 的 `askSessions`——切到 ask tab 一次后再断言注入数据会发现被清空。正确顺序：注入 → `location.reload()` 整页硬刷 → 再走 UI；切 tab 触发 onShow 不算安全。
+- 刷题页练习中界面隐藏侧栏 tab，切页需先点右上「退出」回刷题首页；重进用「去继续」可恢复会话与作答态（含解析区）。刷题页 computed（如 curAskSeen）依赖 askSeenTick/cur，注入 storage 后按 →/← 换题一次即可强制重算，无需整页刷新。
+- 展开卡内小按钮（.op）点击易差几像素命中卡片本体导致收起：先 CDP 读 `getBoundingClientRect()` 换算工具坐标再点（1600 实宽→1024 工具坐标 ×0.64，浏览器 chrome 顶部偏移约 157 实 px）。
+- 验证 `@click.stop` 不收起卡片的客观方法：CDP 给 `.mcard` 挂 bubble 阶段计数 listener，UI 点击子按钮后读计数=0 即证明冒泡被阻断（book onShow 会 reload 列表重置 open 态，返回后卡片收起不能作为反证）。
+- 造「无命中」错题反例最省路径：CDP 只读 `cur.answer` 后 UI 故意点错选项，错题自动入本（无需 API 造数）。

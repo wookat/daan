@@ -1591,6 +1591,7 @@ export default {
 .acts { display: flex; gap: 8rpx; }
 .op { font-size: 24rpx; margin-left: 16rpx; padding: 18rpx 24rpx; border-radius: 999rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
 .op.sim { background: var(--brand-soft); color: var(--brand-text); }
+.op.seen { color: var(--ok-strong); }
 .op.reportop { color: var(--ink-3); text-decoration: underline; }
 .rp-types { display: flex; flex-wrap: wrap; gap: 16rpx; margin-bottom: 20rpx; }
 .rp-chip { padding: 18rpx 26rpx; border-radius: 999rpx; background: var(--soft-bg); font-size: 26rpx; color: var(--ink-2); }
