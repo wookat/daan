@@ -22,6 +22,8 @@
           <view wx:if="{{cur.submodule}}" class="tag tag-brand">{{cur.submodule}}</view>
         </view>
         <text class="q" style="font-size: {{qFs}}rpx" user-select>{{cur.question}}</text>
+        <image wx:if="{{curImg}}" class="qimg" src="{{curImg}}" mode="widthFix" bind:tap="onPreviewImg" />
+        <text wx:if="{{curImg && cur.image_credit}}" class="qimg-credit">图源：{{cur.image_credit}}</text>
         <view
           wx:for="{{cur.optList}}"
           wx:key="k"
