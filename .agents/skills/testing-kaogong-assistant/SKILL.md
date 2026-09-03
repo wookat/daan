@@ -743,3 +743,6 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 双设备模拟：`Target.createBrowserContext` + `createTarget` 造隔离 context（独立 localStorage），注入相同 `anonUid` 即同一账号；每个 context 的 `Emulation.setDeviceMetricsOverride` 绑定在发它的 CDP websocket 上，**socket 一关 override 就丢**——需要每个 context 各挂一个常驻 holder 进程（参照 holdvw.py / r352_devB.py 模式）。
 - `/api/review/cur` 断言点：saveReviewSnap 去抖 1.5s 后 POST（抓包看 body.snap.rIdx/items）；本机快照命中时 onShow 0 次远端 GET（本机优先）；「放弃/完成」POST `{"snap":null}`；跨设备清除用全新 context 验 GET 后无 `.resumecard`。
 - 地址栏改 `?rz=` 等 hash query 不触发 onLoad，需 F5 一次才生效（同 R342 深链经验）。
+
+## R353 首页续卡回归数据构造经验
+- R323 续练卡/R288 模考卡的触发前提是**非主动中断**（答题后硬刷/关页）；练习页「退出」按钮的 quit() 会清 pendingSession 与服务端进度，tab 切换也可能不落盘——造首页续卡回归数据一律用「答 1 题 + 硬刷」路径。

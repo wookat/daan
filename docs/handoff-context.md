@@ -1409,3 +1409,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 测试数据清理：test-r352-api（curl，snap:null 自清）+ test-r352-ui 全库 DELETED {mistakes 2/answer_log 2/review_log 3/growth_events 7/practice_progress 1}，LEFTOVER {}，review_cur 全表 0 行；保护 uid DB 34 表+localStorage 前后一致（EXACT MATCH n=28）。
 - 边界（如实）：真实触屏未测（CDP 模拟）；限速 429 分支以 pytest 覆盖未生产实测；多设备并发写为 last-write-wins 语义（刻意不合并）。
 - 详见 docs/iter/round-3/r352-review-cur-sync.md。
+
+### R353 首页「未完成错题复习」续复习卡（2026-08-29，PR #556，分支 devin/1788455376-r353-home-review-resume）
+- 取证：首页已有模考续考卡（R288）/练习续练卡（R323），但 R351/R352 的复习中断进度只在错题本页内可见——回流首页零外显，2h TTL 召回窗口浪费，三类「未完成学习资产」IA 口径不一致。
+- 收口（纯前端 + track 白名单 1 行，零新 endpoint/表/协议）：home.vue loadReviewResume()（本机 reviewSnap parseReviewSnap 优先命中 0 远端 GET；无本机才 GET /api/review/cur 再过一层 parseReviewSnap；rvClearedAt 30s 防放弃后回填，同 ppClearedAt 口径）+ ercard「有一次未完成的错题复习 · 中断在第 X/N 题」+ rvContinue()（home_review_resume_click 埋点 → 一次性 bookReviewIntent → switchTab book）+ rvDrop()（showModal 确认 → 清本机 + POST snap:null）。book.vue onShow 消费即删 bookReviewIntent：本机快照命中直接 resumeReview() 原位恢复（跳过横幅二次点击）；未命中 _reviewIntent 传入 restoreRemoteSnap()，远端回填成功后自动恢复，失败 fail-closed 落正常错题本页。team.py 白名单 + home_review_resume_click。
+- 验证：lint/vitest 452/build + ruff/pytest 223/pyright 0 全绿；生产 rev 999102d、bundle index-Ddepn9Ev.js（浏览器实载核对）、Lighthouse 全过、埋点 curl 200/bogus 400。testing agent 双设备实测（uid test-r353-ui）：A 1440 中断→首页出卡 1/5 且本机命中 0 远端 GET→去继续直达原位恢复（跳横幅，埋点 200）；B 375 全新 context 远端 GET 出卡→去继续远端回填自动恢复；放弃 ✕→弹窗→snap:null 200→C 全新 context 首页无卡错题本无横幅、review_cur 0 行；回归：直接进错题本 R351 横幅+手动继续不变、首页三卡并存（R288/R323/R353）互不挤占；0 次 /api/explain、145 条全 200、console 0 error、双视口溢出 0。
+- 测试数据清理：test-r353-ui 全库 DELETED {mistakes 2/answer_log 5/exam_attempts 1/review_log 1/growth_events 14/exam_progress 1/practice_progress 1}，LEFTOVER {}，review_cur 0 行；保护 uid DB 34 表+localStorage 前后一致（EXACT MATCH n=28）。
+- 边界（如实）：真实触屏未测（CDP 模拟）；C context 无独立 metrics holder 以桌面宽验证「无卡/无横幅」（断言与视口无关）。
+- 详见 docs/iter/round-3/r353-home-review-resume-card.md。
