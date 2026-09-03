@@ -241,7 +241,7 @@
 import { md } from '../../md.js';
 import { request, uploadExplain, streamExplain, anonUid, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api.js';
 import { isNativeApp, pickImageNative } from '../../native.js';
-import { mergeAskSessions } from '../../ask-sessions.js';
+import { mergeAskSessions, upsertLocalSession } from '../../ask-sessions.js';
 
 export default {
   data() {
@@ -260,6 +260,7 @@ export default {
       error: '',
       results: [],
       sessions: uni.getStorageSync('askSessions') || [],
+      curSid: Number(uni.getStorageSync('askCurSid')) || 0,
       timer: null,
       recent: uni.getStorageSync('recentExplains') || [],
     };
@@ -760,6 +761,8 @@ export default {
       this.results = [];
       this.error = '';
       uni.removeStorageSync('askCurSession');
+      this.curSid = 0;
+      uni.removeStorageSync('askCurSid');
     },
     archiveCurrent() {
       if (!this.results.length) return;
@@ -767,9 +770,12 @@ export default {
       const title = ((first.ansCard && first.ansCard.brief) || first.userText || first.question_text || '问答会话').slice(0, 30);
       const items = uni.getStorageSync('askCurSession') || [];
       if (!items.length) return;
-      const sess = { id: Date.now(), ts: Date.now(), title, n: items.length, items };
-      this.sessions = [sess, ...this.sessions].slice(0, 20);
+      const sid = this.curSid || Number(uni.getStorageSync('askCurSid')) || Date.now();
+      const sess = { id: sid, ts: Date.now(), title, n: items.length, items };
+      this.sessions = upsertLocalSession(this.sessions, sess);
       uni.setStorageSync('askSessions', this.sessions);
+      this.curSid = 0;
+      uni.removeStorageSync('askCurSid');
       request('/api/ask/sessions', {
         method: 'POST',
         data: { uid: anonUid(), sid: sess.id, ts: sess.ts, title: sess.title, n: sess.n, items: sess.items },
@@ -793,9 +799,8 @@ export default {
       const s = this.sessions[i];
       if (!s) return;
       this.archiveCurrent();
-      this.sessions.splice(i, 1);
-      uni.setStorageSync('askSessions', this.sessions);
-      this.dropRemoteSession(s.id);
+      this.curSid = s.id;
+      uni.setStorageSync('askCurSid', s.id);
       this.results = s.items.map((r) => {
         const nr = {
           ...r,

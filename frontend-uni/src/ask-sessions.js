@@ -31,3 +31,10 @@ export function mergeAskSessions(local, remote) {
   merged.sort((a, b) => b.ts - a.ts || b.id - a.id);
   return merged.slice(0, 20);
 }
+
+// 归档写入本机列表（R329）：同 id 去重后置顶，上限 20 条；非法 sess 原样返回副本
+export function upsertLocalSession(sessions, sess) {
+  const list = Array.isArray(sessions) ? sessions.filter(valid) : [];
+  if (!valid(sess)) return list;
+  return [sess, ...list.filter((s) => s.id !== sess.id)].slice(0, 20);
+}
