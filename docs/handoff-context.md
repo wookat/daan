@@ -1247,3 +1247,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：ruff/pytest 204(+4 test_ask_cur.py)/pyright 0/lint/vitest 413(+3)/build 全绿；生产 rev 8a9b70d、bundle index-u8FD-V0M.js；API curl 逐项实测（roundtrip/lww 覆盖/uid 隔离/7 类非法 400/items:[] 清除）；testing agent 双设备实测（uid test-r332-cursync）：A 1440 loadSession 产生进行中态→去抖 POST 实抓含 sid+items；B 375 全新隔离 context 同 uid 无本机快照→打开 ask 页自动 GET 回填讲解+追问、askCurSid 恢复；A 硬刷本机优先 0 GET；A「新对话」POST items:[] 后 B 硬刷空态；R328/R329/R330/R331 回归；1440/375 溢出 0、console 0 error、零 /api/explain；Lighthouse 全过（/ 0.98、/tiku/ 1.00）。清理 DELETED 2 / LEFTOVER 0（按 test-r332-% 前缀删除，保护 uid 不可触及）。
 - 边界（如实）：单快照 last-write-wins，多设备同时进行中会话互相覆盖（同 exam/practice 口径，不做合并）；7 天 TTL/限速分支未生产实测（pytest 覆盖）；去抖多次快速操作合并未专项实测；真实触屏未实测；网络失败静默分支未生产实测。
 - 详见 docs/iter/round-3/design-r332-ask-cur-cross-device.md。
+
+### R333 搜索题目详情补「AI 详解本题」入口（2026-08-29，PR #530，基于 #529 分支 devin/1788413330-r333-search-ask-entry）
+- 取证：搜索页两处题目详情展开态（code_hit 直达 + 题目列表）已有题干/选项/答案/解析/复制链接，但零 AI 出口；R326 已铺报告浮层/错题本，R327 建立 redoAnswer 协议；/api/search/question/{qid} 已返回 question/options，可直接复用 askPrefill。
+- 收口（纯前端零后端契约）：两处详情态 .d-acts 行「AI 详解本题」+「复制本题链接」并排；askFromSearch(d)=askPrefill 预填（空 no-op）→ setStorageSync redoQuestion → removeStorageSync redoAnswer（搜索无作答语义，防串用上一题作答）→ trackEvent('search_ask_click', module) → switchTab /pages/ask/ask；@click.stop 防冒泡收起详情；R158/R160 竞态防护不变。
+- 走查发现并修复：/api/track 事件白名单缺 search_ask_click 致埋点 400 丢失，且既有 review_ask_click/report_ask_click（R326/R327 入口）同样不在白名单、一直在 400——team.py 白名单三事件一并补入。
+- 验证：ruff/pytest 204/pyright 0/lint/vitest 413/build 全绿；生产 rev b65ac08 testing agent 双视口实测（uid test-r333-search）：1440 关键词入口 + 375 code_hit（纯数字 id 命中）详情均出 AI 按钮；点击预填题干+选项单份不重复；预置 redoAnswer=B 后走搜索入口 ask 页无 B chip、storage 已清；复制链接/详情收起展开回归；全程 0 次 /api/explain、console 0 error（除埋点 400，修复后消除）、双视口溢出 0；Lighthouse 全过（/ 0.98/LCP 804、/tiku/ 1.00）。
+- 边界（如实）：语义码形式 code（如 YY-LJTK-2017-1274831）不命中 code_hit 走全文搜索（既有 parse 逻辑，非本轮改动）；真实触屏未实测；埋点白名单修复后的 200 回归待下次部署复验。
+- 详见 docs/iter/round-3/design-r333-search-ask-entry.md。

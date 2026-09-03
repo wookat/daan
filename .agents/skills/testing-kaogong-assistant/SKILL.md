@@ -5,6 +5,11 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R333 搜索页走查新经验
+- 搜索框输入中文 CJK 用 computer type 会失败（xdotool 打不出汉字）：先 UI 点击聚焦输入框，再 CDP `Input.insertText` 注入文本（等价真实 input 事件，会触发 uni 的 v-model 与去抖搜索）。ASCII/数字可直接 type。
+- code_hit 直达可用**纯数字题目 id**（如 `1274831`），带字母的语义码需匹配后端 `_QCODE_RE`（insights.py）且 parse 成功才命中。
+- 埋点断言坑：新前端 trackEvent 事件名必须在后端 `/api/track` 白名单（backend/app/team.py api_track）内，否则 400「无效事件」——前端静默无感知，只有抓包/console 能发现。核对新增 *_click 类埋点时务必查白名单。
+
 ## R331 进行中会话刷新恢复走查新经验
 - 测试 uid 注入的 localStorage 键是 **`anonUid`**（驼峰），不是 `anon_uid`——写错键页面会自动生成随机 uid，历史同步 GET 拿不到数据（表现为 askSessions 为空）。注入后须回读 `localStorage.getItem('anonUid')` 核对。
 - 「进行中会话」快照键：`askCurSession`（uni 包裹 `{"type":"object","data":[...]}`）+ `askCurSid`（`{"type":"number","data":sid}`）；构造进行中态最省法 = API 造数历史会话后 UI loadSession 恢复。刷新恢复的强证据 = 硬刷后无任何点击讲解+追问自动呈现 + askCurSid 保留 + 「新对话」POST body sid 复用。
