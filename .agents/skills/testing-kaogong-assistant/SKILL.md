@@ -728,3 +728,7 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 ## R348 部署基线与 SW 缓存走查新经验
 - 每轮生产验证前先核对部署基线：`git merge-base --is-ancestor <前几轮修复 commit> <本轮部署 rev>`——R348 首版 f33c79f 从旧基线切出，R346/R347 已上线功能生产静默回退（q-social-bar 消失、track 事件 400），仅靠 UI 回归测试才发现。
 - 每轮部署验证前必须核对页面真实运行的 bundle：`performance.getEntriesByType('resource')` 看实际加载的 `index-*.js`，而非只 curl 首页 HTML；PWA service worker 会继续服务旧 bundle，需 Ctrl+Shift+R 硬刷后再开始断言，否则会把缓存旧版误判为功能回退。
+
+## R350 复习流 AI 详解走查新经验
+- ask 页对 `redoAnswer`/`redoQuestion` 是消费型读取（onShow 读后立即 removeStorageSync）：断言预填要看 UI 上的作答 chip，事后查 localStorage 必为 null，不能作为反证。
+- 从复习流切走 tab（含点「AI 详解本题」跳 ask 页）后返回错题本，复习会话不保留（回列表态）、本轮加练题作废：多步复习断言尽量一轮内完成；中断后需重造错题开新复习轮续测。

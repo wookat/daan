@@ -1379,3 +1379,17 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 测试数据清理：两轮合计 DELETED {mistakes 3/answer_log 2/review_log 3/growth_events 7/practice_progress 2}，LEFTOVER {}；保护 uid umteojq4sltdhorhm DB+localStorage 前后一致。
 - 边界（如实）：真实触屏未测（CDP 模拟）；SW 缓存使老客户端需一次刷新周期才拿到新 bundle（旧 bundle 期间断言会误判回退，经验已入测试 SKILL）。
 - 详见 docs/iter/round-3/r348-similar-extra-mistake-capture.md。
+
+### R349 加练同类题答错入库后支持错因自评：reviewReasonMid 纯函数 + _mid 记录 + chips 放开（2026-08-29，PR #550，分支 devin/1788447810-r349-extra-reason）
+- 取证：R348 saveExtraWrong 未保留 POST /api/mistakes 返回 id，错因 chips 条件 `!cur._extra` 一刀切排除——加练新沉淀错题恒「未标注」，稀释 R340 筛选/R341 画像/R342 按错因重练闭环。
+- 收口（纯前端，零后端/零契约/零新埋点）：review-similar.js 新增 fail-closed 纯函数 reviewReasonMid（普通条目→cur.id、_extra→入库后 _mid，非正整数一律 null）；saveExtraWrong 记录 res.id 为 item._mid；chips 条件放开为 `!wasCorrect && reviewReasonMid(cur)`（模板方法调用而非 computed，规避 _mid 直赋值+$forceUpdate 下 computed 缓存不失效）；setReviewReason PATCH 目标经 reviewReasonMid 解析（null no-op），复用既有 review_reason_tag 事件。
+- 验证：lint/vitest 442/build 全绿；生产 rev d093816、bundle index-CaEuIhi8.js；testing agent 双视口实测：加练答错 POST 200 后 chips 出现、点 chip PATCH /api/mistakes/<新 mid> 200（≠复习原条目 id）+ review_reason_tag 200、?rz= 筛选命中回显、答对反例无 POST 无 chips、普通条目打标回归、R348/R346 回归；0 次 /api/explain、console 0 error。测试 uid test-r349-ui 全库清理 LEFTOVER {}；保护 uid DB+localStorage 前后一致。
+- 已知残余（低优）：saveExtraWrong 先置 _saved 再记 _mid，未对 res.id 做正整数校验——畸形响应下条目会被视为已存但 chips fail-closed 不出现（行为安全，语义待收口）。
+- 详见 docs/iter/round-3/r349-extra-mistake-reason-tag.md。
+
+### R350 加练同类题「AI 详解本题」带上本轮作答：reviewAskAnswer 纯函数（2026-08-29，PR #551，分支 devin/1788449466-r350-extra-ask-answer）
+- 取证：askFromReview 取作答只读 cur.user_answer——_extra 加练条目无该字段，用户刚在本轮作答（picked）却被丢弃、redoAnswer 被清，AI 讲解拿不到「我选了什么」（R335 练习历史同场景已有透传 picked 先例）。
+- 收口（纯前端，零后端/零契约/零新埋点）：review-similar.js 新增 reviewAskAnswer(cur, picked)——_extra 取 picked、普通条目取 user_answer，经 askAnswerLetter 单选语义 fail-closed；askFromReview 一行替换。普通条目行为零变化。
+- 验证：lint/vitest 446/build + ruff/pytest 218/pyright 0 全绿；生产 rev af80192、bundle index-DKVlbzEI.js；testing agent 实测：加练答错选 B→ask 页预填+作答 chip B（旧版必无 chip）、加练答对选 A→chip A、普通条目历史 A 不串本轮 B、R349 回归；0 次 /api/explain、抓包 71 条全 200。测试 uid test-r350-ui 全库清理 LEFTOVER {}；保护 uid 前后一致（EXACT MATCH n=28）。
+- 体验观察（候选迭代）：从复习流点 AI 详解跳走后返回错题本，复习会话不保留、加练题作废——「复习中场跳出再回来续复习」未收口。
+- 详见 docs/iter/round-3/r350-extra-ask-answer.md。
