@@ -1306,3 +1306,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - R346（PR #545）：错题本挂 q-social-bar——列表展开态+复习流补逐题笔记/讨论/热评/分享；无 question_id（手录/加练）fail-closed 不渲染；列表内嵌交互需 `<view @click.stop>` 容器防外层卡片 toggleCard 吞点击（首轮生产实测发现并修复）。
 - R347（PR #546）：/api/track 白名单缺口收口——补 review_similar_auto / review_similar_click / review_reason_tag / share_poster 四个前端在发事件（此前静默 400 丢埋点，R346 测试实景发现）；新增 backend/tests/test_track_whitelist_sync.py 静态契约测试（扫描 frontend-uni/src 全部 trackEvent 字面量断言均在白名单，未来前端新增埋点漏同步会直接挂测试）。生产 rev 997e61b 复验：4 事件 curl 200、bogus 400、真实 UI 复习流加练触发 review_similar_auto 200、错因打标 review_reason_tag 200、全程 0 非 200/0 console error；测试 uid（test-r347 前缀）全库清理 LEFTOVER {}，保护 uid umteojq4sltdhorhm DB+localStorage 前后一致。
 - 各轮详证见对应 PR 评论与 docs/iter/round-3/ 设计文档。
+
+### W1（R348 交叉复核集成轮，分支 devin/wf-w1-integration，未建 PR/未部署）
+- 集成：origin/main 2cae38f 切 `devin/wf-w1-integration`，依次 merge R348-B1（cce7cf4）/ C1（664a21f）/ M1（858622d），三次无冲突；dropped 无。全量本地验证：backend ruff / pytest 232 passed / pyright 0；frontend-uni lint / vitest 424 passed / build:h5（产物与生产 R338 同 hash，本轮 H5 零改动）；miniapp typecheck 0 错、lint 需 `ESLINT_USE_FLAT_CONFIG=false`（根 eslint.config.mjs 误切 flat config，既有问题）。
+- B1：guard_account_uid 改「写方法 && 非 multipart/urlencoded 即 json.loads」，scan_sheet 入口 owns_uid，deps.as_int 统一畸形数字 400，badges 连签补 review_log 日。本地 uvicorn 实测五种 Content-Type + multipart uid=u999999 无 token 均 403 且不落库、匿名 200、n=abc 400、badges==summary streak。
+- C1：quality.py 三类扣分 + sanitize_hs，db.import_hs_explanations 源头过滤，scripts/r348_content_cleanup.py 默认 dry-run / `--apply` 写前 backup。临时库 dry-run→apply→复扫 0 一致；生产只读 dry-run 量级 17/2438/3728。**生产 --apply 未执行**：需部署本分支后由负责人确认备份路径；且 `数据矛盾` 词单独触发 12/17、≥6 条疑误杀，apply 前先决策词表。
+- M1：poster `.bar`→`.actions`、request.ts 403「重新登录」清登录态回退匿名、practice 题图渲染/预览、share 模块名中文。真机/开发者工具走查未做。
+- 遗留台账：docs/iter/workflow/backlog.md（含 H5 三处一行修、yanyu 抽审、17 条复核、quality_score 闸门、60 秒等待取证、guard 三路径入 SKILL 等）；详证 docs/iter/workflow/w1.md。

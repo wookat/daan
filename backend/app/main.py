@@ -210,13 +210,15 @@ async def guard_account_uid(request, call_next):
     """账号态 uid（u<id>）可被枚举，统一要求携带本人 Bearer token 才可按该 uid 读写。
 
     匿名随机 uid 不受影响（其本身即凭据）。覆盖 query 与 JSON body 两处 uid。
+    表单体（multipart/urlencoded）不在此解析，Form(uid) 端点自行校验 owns_uid。
     """
     uid = request.query_params.get("uid")
     body = b""
+    ct = (request.headers.get("content-type") or "").lower()
     if (
         not auth.is_account_uid(uid)
         and request.method in ("POST", "PATCH", "PUT", "DELETE")
-        and "json" in (request.headers.get("content-type") or "")
+        and not ct.startswith(("multipart/form-data", "application/x-www-form-urlencoded"))
     ):
         body = await request.body()
         try:

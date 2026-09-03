@@ -2304,7 +2304,9 @@ def import_hs_explanations(items: list[dict]) -> int:
         qid = it.get("id")
         if not qid:
             continue
-        text = (it.get("hs_explanation") or "").strip()
+        text = quality.sanitize_hs(it.get("hs_explanation"))
+        if text is None:
+            continue
         xp = (it.get("xp_explanation") or "").strip()
         school = (it.get("xp_school") or "").strip()
         if text:

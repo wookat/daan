@@ -1,11 +1,52 @@
 """题目质量打分（规则综合，0-100）。
 
-维度：题干/选项/解析完整性、解析长度与结构、来源可信度、用户反馈信号。
+维度：题干/选项/解析完整性、解析长度与结构、来源可信度、用户反馈信号、
+内容自证缺陷（hs 自检失败词 / 管线括注 / yanyu 伪中文机器句）。
 """
 import json
 import re
 
 _STRUCT_HINTS = ("因此", "所以", "故选", "故答案", "综上", "第一步", "第二步", "步骤", "代入", "排除", "由题", "根据")
+
+# hs 生成管线自检失败留下的内话（题干/答案自相矛盾，讲解不可信）
+HS_SELFCHECK_WORDS = ("SKIP:", "数据矛盾", "官方解析有误", "无法用给定")
+# 管线括注「（通用解法，该题型花生方法不在库中）」及其变体
+HS_PIPELINE_NOTE_RE = re.compile(r"（通用解法，[^）]*不在库中）")
+# AI 批次 yanyu 伪中文机器句特征「X着Y的Z」；命中 ≥ PSEUDO_ZH_MIN_HITS 判定为机器句
+PSEUDO_ZH_RE = re.compile(r"[一-龥]{1,3}着[一-龥]{1,5}的[一-龥]{1,4}")
+PSEUDO_ZH_MIN_HITS = 3
+
+PENALTY_HS_SELFCHECK = 40
+PENALTY_HS_PIPELINE_NOTE = 15
+PENALTY_PSEUDO_ZH = 30
+
+
+def hs_selfcheck_failed(hs: str) -> bool:
+    return any(w in hs for w in HS_SELFCHECK_WORDS)
+
+
+def pseudo_zh_hits(text: str) -> int:
+    return len(PSEUDO_ZH_RE.findall(text or ""))
+
+
+def question_text(row: dict) -> str:
+    """题干 + 选项文本拼接（伪中文判定口径）。"""
+    opts = _parse_options(row.get("options"))
+    return "\n".join([row.get("question") or "", *(str(v) for v in opts.values())])
+
+
+def sanitize_hs(text: str | None) -> str | None:
+    """剥离管线括注并归一空白；含自检失败词返回 None（不应落库）。"""
+    hs = (text or "").strip()
+    if not hs:
+        return ""
+    if hs_selfcheck_failed(hs):
+        return None
+    hs = HS_PIPELINE_NOTE_RE.sub("", hs)
+    hs = re.sub(r"[ \t\u3000]+\n", "\n", hs)
+    hs = re.sub(r"[ \t\u3000]{2,}", " ", hs)
+    hs = re.sub(r"\n{3,}", "\n\n", hs)
+    return hs.strip()
 
 
 def _parse_options(options) -> dict:
@@ -19,7 +60,7 @@ def _parse_options(options) -> dict:
 
 
 def score_question(row: dict) -> int:
-    """row 需含 question/options/answer/explanation/hs_explanation/source/is_real/exam_year/exam_region/hs_down/hs_up。"""
+    """row 需含 module/question/options/answer/explanation/hs_explanation/source/is_real/exam_year/exam_region/hs_down/hs_up。"""
     score = 0
     question = (row.get("question") or "").strip()
     opts = _parse_options(row.get("options"))
@@ -80,6 +121,14 @@ def score_question(row: dict) -> int:
         score += 2
     score -= min(10, hs_down * 2)  # 用户差评扣分
 
+    # 5) 内容自证缺陷扣分
+    if hs_selfcheck_failed(hs):
+        score -= PENALTY_HS_SELFCHECK
+    if HS_PIPELINE_NOTE_RE.search(hs):
+        score -= PENALTY_HS_PIPELINE_NOTE
+    if row.get("module") == "yanyu" and pseudo_zh_hits(question_text(row)) >= PSEUDO_ZH_MIN_HITS:
+        score -= PENALTY_PSEUDO_ZH
+
     return max(0, min(100, score))
 
 
@@ -89,7 +138,7 @@ def score_all(conn, log=None) -> dict:
 
     t0 = time.time()
     rows = conn.execute(
-        "SELECT id, question, options, answer, explanation, hs_explanation, "
+        "SELECT id, module, question, options, answer, explanation, hs_explanation, "
         "source, is_real, exam_year, exam_region, hs_down, hs_up, image FROM questions"
     ).fetchall()
     updates = []
