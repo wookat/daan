@@ -5,6 +5,13 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R360 按卷练习「只练剩余」走查新经验
+- `GET /api/paper_questions?src=…&uid=` 带 uid 时每题含 `done:bool`（该 uid answer_log DISTINCT 命中）；只有 practice.vue untimed 分支拼 uid，模考走 `/api/exam/start`（paper_id），**根本不请求 paper_questions**——timed 回归断言应写成「无带 uid 的 paper_questions 新请求」而非「paper_questions 无 uid」。
+- 续练弹窗断言：标题「继续上次进度？」内容「本卷已练过 X 题，只练剩下的 N-X 题？」确认=只练剩余/取消=从头练；只练剩余后核对三点：进度总数=N-X、当前题 qid==响应里首个 done!=true 的题（顺序保持=原第 X+1 题）、done:true 集合==抓包已答 qids。
+- **同 VPS 共宿 recruit(postgres) 应用会周期性把 load 打到 15-21**，kaogong /api 会 12-20s 超时（前端 20s abort 后页面停在「正在准备练习…」）；answer_log 会 503 但**前端有本地重试队列**，等 load 回落（`uptime` 核对 `ps aux --sort=-%cpu` 看是否 recruit postgres）后重试队列会补写成功——practiced 计数暂时偏低不是产品 bug，先查 load 再判定。
+- 本 app 的 `anonUid` 在 localStorage 里是**裸字符串**（非 uni 包装 JSON）——对它 JSON.parse 会抛异常导致 CDP eval 返回 null；直接 getItem 比较。
+- 恢复保护 uid localStorage 后页面 reload 会刷新 `apiSnap:*` 缓存键值（apiSnapIndex + 各 apiSnap:URL）——想要 EXACT MATCH 需在恢复后把这几个键从备份再覆写一遍（属应用自身缓存，非用户数据漂移）。
+
 ## R359 卷卡「已练 X/N 题」走查新经验
 - `GET /api/exam/papers?uid=` 每卷恒含 `practiced`（DISTINCT answer_log.question_id ∩ 卷内活跃题）；UI 行 `.ppracticed`（绿 rgb(21,128,61)）仅 `psource && practiced>0` 渲染。断言三角：UI 显示值 == 响应 practiced == DB `count(distinct question_id)` 交集（重复作答行不重复计，重答同题前先记 qid）。
 - 构造「无 psource 卷 practiced>0」的合法 UI 路径：对该卷**交模考卷**（开始模考→答 1 题→立即交卷确认）——模考交卷会写 answer_log，从而 practiced>0 但卡上无已练行（fail-closed 强证），同时顺带构造 best_score/看报告 四按钮态。
