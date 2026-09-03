@@ -43,6 +43,7 @@
         <view v-if="reviewAskSeen" class="sim-row" role="button" aria-label="回看 AI 详解" @click="openSeenAsk">
           <text class="sim-t">回看 AI 详解 ›</text>
         </view>
+        <q-social-bar v-if="cur.question_id" :question-id="cur.question_id" />
         <wd-button type="primary" block custom-class="next-btn" @click="nextReview">{{ rIdx + 1 < rItems.length ? '下一题' : '完成复习' }}</wd-button>
       </view>
       <view v-else-if="curMulti" class="selfjudge">
@@ -445,6 +446,7 @@
           <text class="op more" @click.stop="itemSheet(m)">···</text>
         </view>
         <rich-text v-if="m.open" :nodes="m.html" />
+        <q-social-bar v-if="m.open && m.question_id" :question-id="m.question_id" />
       </view>
       <view v-if="tab !== 'fav' && pageN < shownItems.length" class="loadmore bk-main" @click="pageN += 20">上滑或点击加载更多（{{ shownPage.length }}/{{ shownItems.length }}）</view>
       <!-- 批量操作条 -->
