@@ -73,6 +73,7 @@
             <view class="ansline">正确答案 {{ it.answer }}</view>
             <view v-if="it.hs_explanation || it.explanation" class="exp">{{ it.hs_explanation || it.explanation }}</view>
             <view class="ops">
+              <text class="op" role="button" aria-label="AI 详解本题" @click.stop="askFromFav(it)">AI 详解本题</text>
               <text v-if="!it._local" class="op" @click.stop="moveItem(it)">移动到…</text>
               <text v-if="!it._local" class="op" @click.stop="openDiscuss(it)">讨论区</text>
               <text class="op del" @click.stop="unfav(it)">取消收藏</text>
@@ -111,7 +112,8 @@
 </template>
 
 <script>
-import { createFavFolder, deleteFavFolder, fetchFavFolders, fetchFavs, fetchNotes, removeFav, renameFavFolder, setFav } from '../../api.js';
+import { createFavFolder, deleteFavFolder, fetchFavFolders, fetchFavs, fetchNotes, removeFav, renameFavFolder, setFav, trackEvent } from '../../api.js';
+import { askPrefill } from '../../ask-prefill.js';
 import { buildFavoritesUrl, parseFavoritesOpts } from '../../favorites-url.js';
 
 const MODS = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', 时政: '时政' };
@@ -285,6 +287,14 @@ export default {
           }
         },
       });
+    },
+    askFromFav(it) {
+      const text = askPrefill(it && it.question, it && it.options);
+      if (!text) return;
+      trackEvent('fav_ask_click', (it && it.module) || '');
+      uni.setStorageSync('redoQuestion', text);
+      uni.removeStorageSync('redoAnswer');
+      uni.switchTab({ url: '/pages/ask/ask' });
     },
     moveItem(it) {
       const opts = this.folders.map((f) => f.icon + ' ' + f.name);
