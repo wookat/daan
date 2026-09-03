@@ -5,6 +5,13 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R327 redoAnswer 带作答走查新经验
+- 断言口径：四入口（practice deepExplain=this.picked、book redo/askFromReview=历史 user_answer、report askDetail=detail.picked）跳 ask 页后，「你选的答案」chip 应高亮对应字母；storage `redoAnswer`/`redoQuestion` 在 ask onShow 消费后必须均为 null（CDP 读 localStorage 即可客观取证）。
+- 串题清理分支验证法：先从有作答题进入一次，再从**未作答**题（mini mock 交卷时留 1 题不答）进入——chip 必须全不选中，若继承上一字母即缺陷。
+- 复习流恢复的是**当初答错的 user_answer**，不是本次复习作答（本次答对也应恢复历史错选）。
+- CDP websocket 直连新版 Chrome 需 `websocket.create_connection(url, suppress_origin=True)`，否则 403 Forbidden（remote-allow-origins 限制）。
+- 生产 VPS 与 recruit 应用同机：遇 /api 大面积 503/超时先 curl /api/health + SSH 看 uptime/pip install，多为同机负载，等待恢复重试即可，不要误判为本轮前端缺陷。
+
 ## R326 AI 详解预填走查新经验
 - **数据口径陷阱：mistakes.question_text 本身已含选项行**（practice.vue 写入时即 `q.question + '\n' + optText`），任何在错题本侧再拼 options 的预填逻辑都会把选项重复两遍——断言预填内容时必须检查选项行只出现一次，不能只 grep 到 "A." 就判过。报告浮层的 d.question 与刷题页 q.question 则是纯题干，无此问题。
 - 错题本列表卡「AI 详解」op 不在「···」sheet 菜单里，而在**卡片展开态**（先点卡片「点开看答案与详解」）的 `.acts` 行（redo op，仅未掌握时显示）。

@@ -1201,3 +1201,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：lint/vitest 394(+5)/build 全绿；生产 rev 80dce10→674b272、bundle index-CkDDJQ_o.js；testing agent 两轮双视口实测：三入口预填单份选项（textarea A. 计数=1）、报告连看切题不串题、资料分析只填小题干、既有练同类/纠错/收藏/social bar 回归、1440/375 溢出 0、console 0 error、Lighthouse 全过；未点「讲解」零 LLM 请求。清理 test-r326-ask 两轮累计 DELETED 14 / LEFTOVER 0，保护 uid 快照一致。
 - 未生产实测：真实触屏；askPrefill 空 stem fail-closed 生产分支（vitest 覆盖）；真实 LLM 讲解请求（刻意不触发）。
 - 详见 docs/iter/round-3/design-r326-ask-from-review.md。
+
+### R327 AI 详解入口带上用户作答——redoAnswer 协议 + askAnswerLetter 纯函数（2026-08-29，PR #524，分支 devin/1788396969-r327-ask-user-answer）
+- 取证：ask 页早有 uanswer A–D chips 且 doExplain 已把 user_answer 传 /api/explain（讲解质量随作答上下文提升），但 R326 四个入口只写 redoQuestion、进入后 uanswer 恒空，用户须手动重选自己的错选。
+- 收口（纯前端零后端/零契约）：ask-prefill.js 新增 askAnswerLetter(v)（提取恰好一个 A–D 字母，多选/非法/空 fail-closed 返回 ''）；四入口（practice deepExplain 用 picked、book redo/askFromReview 用 user_answer、report askDetail 用 d.picked）有效值写 redoAnswer、无效 removeStorageSync 防串题；ask 页消费 redoAnswer（严格 /^[A-D]$/ 白名单）后即删。
+- 验证：lint/vitest 397(+3)/build 全绿；生产 rev 418bcf7、bundle index-uYRj2nkH.js；testing agent 双视口实测：四入口 chip 恢复（复习流恢复历史 user_answer=A 不被本次作答污染）、未答无 chip、先 B 后未答题不继承（清理生效）、消费后 storage null（CDP 实测）、手动 chips 无回归、1440 console 0 error、375 无溢出、零 LLM 请求。清理 test-r327-ans DELETED 46 / LEFTOVER 0，保护 uid 31 表快照一致。
+- 未生产实测：detailMat 折叠材料分支（本卷未遇到，R326 已验）；askAnswerLetter 多选/非法字母分支（生产 UI 不可达，vitest 覆盖）；真实触屏。
+- 环境观察项：测试期间生产 VPS 被同机 recruit 应用（postgres 长查询 + 长跑 pip install）打到 load ~21、两次 503；未动任何服务，恢复后重试通过；同机资源争抢需老板关注。
+- 详见 docs/iter/round-3/design-r327-ask-user-answer.md。
