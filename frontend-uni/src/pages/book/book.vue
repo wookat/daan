@@ -91,6 +91,16 @@
         <view class="ov-c"><text class="ov-n warn">{{ todoItems.length }}</text><text class="ov-t">待掌握</text></view>
         <view class="ov-c"><text class="ov-n ok">{{ doneItems.length }}</text><text class="ov-t">已掌握</text></view>
       </view>
+      <view v-if="resumeInfo" class="card resumecard bk-main" role="button" aria-label="继续刚才的复习" @click="resumeReview">
+        <view>
+          <view class="duetxt"><l-icon name="clock" :size="16" color="#ffffff" /><text class="duetxt-t">上次复习中断在第 {{ resumeInfo.rIdx + 1 }}/{{ resumeInfo.items.length }} 题</text></view>
+          <text class="duesub">进度已保留，可原位继续</text>
+        </view>
+        <view class="resume-ops">
+          <text class="duego">继续复习</text>
+          <text class="resume-drop" role="button" aria-label="放弃本轮复习进度" @click.stop="discardResume">放弃</text>
+        </view>
+      </view>
       <view v-if="due.length" class="card duecard bk-main" @click="startReviewFromCard">
         <view>
           <view class="duetxt"><l-icon name="calendar-check" :size="16" color="#ffffff" /><text class="duetxt-t">今日待复习 {{ dueTotal }} 道</text></view>
@@ -511,6 +521,7 @@ import { fontSizes, normFontLv } from '../../font-size.js';
 import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
 import { askQid, findAskSid } from '../../ask-link.js';
 import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid, reviewAskAnswer } from '../../review-similar.js';
+import { buildReviewSnap, parseReviewSnap } from '../../review-snap.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 
@@ -537,6 +548,7 @@ export default {
       reinforce: null,
       reinforceItems: [],
       rItems: [],
+      resumeInfo: null,
       rIdx: 0,
       picked: null,
       answered: false,
@@ -802,6 +814,9 @@ export default {
     if (uni.getStorageSync('autoStartReview')) {
       uni.removeStorageSync('autoStartReview');
       this.autoReview = true;
+    }
+    if (!this.reviewing) {
+      this.resumeInfo = parseReviewSnap(uni.getStorageSync('reviewSnap'), anonUid(), Date.now() / 1000);
     }
     const rzIntent = uni.getStorageSync('bookRzIntent');
     if (rzIntent) {
@@ -1172,6 +1187,32 @@ export default {
       this.rIdx = 0;
       this.resetQ();
       this.reviewing = true;
+      this.resumeInfo = null;
+      this.saveReviewSnap();
+    },
+    saveReviewSnap() {
+      const snap = buildReviewSnap(this, anonUid(), Date.now() / 1000);
+      if (snap) uni.setStorageSync('reviewSnap', snap);
+    },
+    clearReviewSnap() {
+      uni.removeStorageSync('reviewSnap');
+      this.resumeInfo = null;
+    },
+    resumeReview() {
+      const r = this.resumeInfo;
+      if (!r) return;
+      trackEvent('review_resume_click', 'book');
+      this.rItems = r.items.map((x) => ({ ...x }));
+      this.rIdx = r.rIdx;
+      this.picked = r.picked;
+      this.answered = r.answered;
+      this.wasCorrect = r.wasCorrect;
+      this.nextDays = r.nextDays;
+      this.reviewing = true;
+      this.resumeInfo = null;
+    },
+    discardResume() {
+      this.clearReviewSnap();
     },
     resetQ() {
       this.picked = null;
@@ -1190,13 +1231,16 @@ export default {
       }
       this.picked = o;
       await this.record(o === this.curLetter);
+      this.saveReviewSnap();
     },
     async confirmMulti() {
       if (this.answered || !this.picked) return;
       await this.record(this.picked === this.curLetter);
+      this.saveReviewSnap();
     },
     async selfJudge(correct) {
       await this.record(correct);
+      this.saveReviewSnap();
     },
     async record(correct) {
       this.wasCorrect = correct;
@@ -1236,6 +1280,7 @@ export default {
           this.rItems.push(...add);
           m._appended = add.length;
           this.$forceUpdate();
+          this.saveReviewSnap();
           trackEvent('review_similar_auto', m.module || '');
         }
       } catch (e) { /* 非关键路径 */ }
@@ -1249,6 +1294,7 @@ export default {
       this.$forceUpdate();
       try {
         await request('/api/mistakes/' + mid, { method: 'PATCH', data: { uid: anonUid(), error_reason: rz } });
+        this.saveReviewSnap();
         trackEvent('review_reason_tag', rz);
       } catch (e) { /* 非关键路径 */ }
     },
@@ -1258,9 +1304,12 @@ export default {
       if (!rec) return;
       try {
         const res = await request('/api/mistakes', { method: 'POST', data: rec });
+        const mid = reviewReasonMid({ id: res && res.id });
+        if (!mid) return;
+        item._mid = mid;
         item._saved = true;
-        if (res && res.id) item._mid = res.id;
         this.$forceUpdate();
+        this.saveReviewSnap();
       } catch (e) { /* 非关键路径 */ }
     },
     similarFromReview() {
@@ -1289,6 +1338,7 @@ export default {
       if (this.rIdx + 1 < this.rItems.length) {
         this.rIdx++;
         this.resetQ();
+        this.saveReviewSnap();
       } else {
         this.celebrateN = this.rItems.filter((q) => !q._extra && !q._requeued).length;
         this.exitReview();
@@ -1329,6 +1379,7 @@ export default {
     },
     exitReview() {
       this.reviewing = false;
+      this.clearReviewSnap();
       this.load();
     },
     optClass(o) {
@@ -1692,6 +1743,10 @@ export default {
 .q.clamp { max-height: 120rpx; overflow: hidden; }
 .meta { font-size: 22rpx; color: var(--ink-2); }
 .duecard { background: linear-gradient(180deg, #4a7bf7, #3567ec); border: none; box-shadow: 0 6rpx 16rpx rgba(46, 91, 255, 0.25); display: flex; justify-content: space-between; align-items: center; }
+.resumecard { background: linear-gradient(180deg, #f59e0b, #d97706); border: none; box-shadow: 0 6rpx 16rpx rgba(217, 119, 6, 0.25); display: flex; justify-content: space-between; align-items: center; }
+.resume-ops { display: flex; flex-direction: column; align-items: center; gap: 8rpx; }
+.resumecard .duego { color: #b45309; }
+.resume-drop { font-size: 22rpx; color: rgba(255, 255, 255, 0.85); text-decoration: underline; padding: 4rpx 12rpx; }
 .redoentry { display: flex; justify-content: space-between; align-items: center; }
 .redo-l { display: flex; align-items: center; gap: 16rpx; }
 .redo-ico { width: 64rpx; height: 64rpx; border-radius: 50%; background: var(--brand-soft); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
