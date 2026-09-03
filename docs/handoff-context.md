@@ -1363,3 +1363,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 边界（如实）：保存 toast 视觉（900ms 未截到，以 API 200+回显为证）、真实触屏未测（CDP 模拟）。
 - 观察项（既有，非本轮引入）：加练埋点 POST /api/track event=review_similar_auto ref:null → 400（疑似白名单缺 review_similar_auto 或 ref null 校验），候选后续轮收口。
 - 详见 docs/iter/round-3/r346-book-social-bar.md。
+
+### R347 /api/track 白名单缺口收口：补 4 个在发事件 + 前端发点契约同步测试（2026-08-29，PR #546，分支 devin/1788444032-r347-track-whitelist）
+- 取证：R346 测试实景抓到 review_similar_auto 400；全量对账前端 trackEvent 字面量 vs team.py 白名单，共 4 事件在发被静默 400 丢弃：review_similar_auto / review_similar_click（复习流加练）、review_reason_tag（错因自评）、share_poster（成绩海报，R304 起）。
+- 收口：team.py 白名单补 4 事件（其余行为零变化）；新增 backend/tests/test_track_whitelist_sync.py 静态契约测试——扫描 frontend-uni/src 全部 trackEvent('<event>' 字面量断言 ⊆ 白名单（R333 后第二次同构缝隙，此测试根治「前端新增发点漏同步白名单」再犯路径），另含 4 事件 200 入库用例。前端已不发的 reminder_optin 保留存量口径；历史丢失埋点不补发。
+- 验证：ruff 0/pytest 218(+2)/pyright 0/lint/vitest 430/build 全绿；生产 rev 997e61b 复验：4 事件 curl 200、bogus 400；真实 UI（uid test-r347-ui，375px）复习流加练触发 review_similar_auto 200、错因打标 review_reason_tag 200，全程 0 非 200、0 console error、0 次 /api/explain。share_poster/review_similar_click 未 UI 实测（curl 已验）。
+- 测试数据清理：test-r347 前缀全库 DELETED {mistakes 1/answer_log 1/review_log 1/growth_events 8/practice_progress 1}，LEFTOVER {}；保护 uid umteojq4sltdhorhm DB+localStorage 前后一致。
+- 详见 docs/iter/round-3/r347-track-whitelist-gap.md。
