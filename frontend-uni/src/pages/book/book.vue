@@ -23,6 +23,7 @@
           <template v-else>{{ wasCorrect ? (cur._requeued ? '这次答对了，本轮已纠正 ✓' : '答对了！连对 ' + streak + ' 次') : '又错了，看讲解（稍后本轮会再出现）' }}（下次复习：{{ nextDays }} 天后）</template>
         </view>
         <view v-if="wasCorrect === false && cur._appended" class="appended-tip">已为你在本轮末尾加练 {{ cur._appended }} 道同类题</view>
+        <view v-if="cur._extra && !wasCorrect && cur._saved" class="appended-tip">已加入错题本，之后会安排复习</view>
         <view v-if="!wasCorrect && !cur._extra" class="reasons">
           <text class="rz-t">错因自评：</text>
           <text
@@ -509,6 +510,7 @@ import { qStatLine } from '../../q-stat.js';
 import { fontSizes, normFontLv } from '../../font-size.js';
 import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
 import { askQid, findAskSid } from '../../ask-link.js';
+import { similarItemFromQuestion, mistakeRecFromExtra } from '../../review-similar.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 
@@ -1199,7 +1201,10 @@ export default {
     async record(correct) {
       this.wasCorrect = correct;
       this.answered = true;
-      if (this.cur._extra) return;
+      if (this.cur._extra) {
+        if (!correct) this.saveExtraWrong(this.cur);
+        return;
+      }
       if (!correct && !this.cur._requeued) {
         this.rItems.push({ ...this.cur, _requeued: true });
       }
@@ -1225,13 +1230,8 @@ export default {
         const add = (d.items || [])
           .filter((x) => x.id !== m.question_id)
           .slice(0, 2)
-          .map((x) => ({
-            _extra: true,
-            module: x.module,
-            question_text: x.question + '\n' + Object.entries(x.options || {}).map(([k, v]) => `${k}.${v}`).join(' '),
-            correct_answer: x.answer,
-            explanation: x.hs_explanation || x.explanation || '',
-          }));
+          .map(similarItemFromQuestion)
+          .filter(Boolean);
         if (add.length) {
           this.rItems.push(...add);
           m._appended = add.length;
@@ -1247,6 +1247,16 @@ export default {
       try {
         await request('/api/mistakes/' + m.id, { method: 'PATCH', data: { uid: anonUid(), error_reason: rz } });
         trackEvent('review_reason_tag', rz);
+      } catch (e) { /* 非关键路径 */ }
+    },
+    async saveExtraWrong(item) {
+      if (item._saved) return;
+      const rec = mistakeRecFromExtra(item, this.picked, anonUid());
+      if (!rec) return;
+      try {
+        await request('/api/mistakes', { method: 'POST', data: rec });
+        item._saved = true;
+        this.$forceUpdate();
       } catch (e) { /* 非关键路径 */ }
     },
     similarFromReview() {
