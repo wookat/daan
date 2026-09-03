@@ -128,7 +128,7 @@ export default {
       if (!d || !d.question) return;
       this.openDetailIdx = this.openDetailIdx === j ? -1 : j;
       this.seenAsk = this.openDetailIdx === j
-        ? findAskSid(uni.getStorageSync('askSessions'), uni.getStorageSync('askCurSession'), d.question_id)
+        ? findAskSid(uni.getStorageSync('askSessions'), uni.getStorageSync('askCurSession'), d.question && d.question.id)
         : null;
     },
     openSeenAsk() {
@@ -142,7 +142,7 @@ export default {
       if (!text) return;
       trackEvent('history_ask_click', d.module || '');
       uni.setStorageSync('redoQuestion', text);
-      const qid = askQid(d.question_id);
+      const qid = askQid(d.question && d.question.id);
       if (qid) uni.setStorageSync('redoQid', qid);
       else uni.removeStorageSync('redoQid');
       const ans = askAnswerLetter(d.picked);

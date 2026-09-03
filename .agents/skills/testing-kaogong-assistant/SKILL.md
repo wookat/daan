@@ -5,6 +5,12 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R336 ask-link 走查新经验
+- **分包 chunk 陈旧缓存坑**：主 bundle（index-*.js）核对为新版 ≠ 分包 chunk 也是新版。pkgA 异步 chunk（如 pkgA-stats-practice-history.*.js）可能命中浏览器/预取缓存跑旧代码，表现为"新功能不出现"。判别法：`performance.getEntriesByType("resource")` 看实际加载的 chunk 文件名，与 `fetch('/assets/index-*.js')` 里引用的 chunk 名比对；不一致就 CDP `Network.clearBrowserCache` + `Page.reload {ignoreCache:true}` 再测，避免把缓存误报为 bug。
+- 断言 storage 驱动的 UI 入口时，可用 `el.__vueParentComponent`（沿 .parent 上溯）直读页面组件 data（如 seenAsk/pendingQid/detail 行字段），能精确定位是"数据没到"还是"渲染没做"。
+- `/api/practice/history/detail` 返回行**顶层无 question_id**（题目 id 在 `d.question.id`），前端若用 `d.question_id` 恒 undefined——R336 曾因此练习历史回看入口全灭（P1）。造类似"字段名对不上"断言时先 dump 行 keys。
+- ask 页 onShow 会把本地 askCurSession **自动 POST /api/ask/cur 回传服务端**：CDP 构造快照后只要进过 ask 页，测试 uid 就会留服务端 ask_cur 数据，清理清单要包含它。
+
 ## R335 练习历史走查新经验
 - 练习历史造数最省路径：`POST /api/answer_log {uid,items:[{qid,correct,picked,secs}]}`（study_api.py:138）；同批写入同一时间戳即成一个会话（分组间隔 1800s，db.py `_HISTORY_SESSION_GAP`）。picked 省略即「未答」分支（askAnswerLetter 无效 → 删 redoAnswer 无 chip）。取有效题 id/正解用 `GET /api/questions?module=yanyu&limit=5`（/api/search/question/{id} 对不存在 id 可能长挂/非 JSON）。
 - localStorage 恢复大备份（28+ keys）不要经 CLI 参数传 oneshot.py（Argument list too long），要在 python 内直连 ws 发 Runtime.evaluate。备份文件若是双重 JSON 编码字符串需 json.loads 两次。
