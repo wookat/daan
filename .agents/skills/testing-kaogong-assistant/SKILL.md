@@ -5,6 +5,13 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R362 按卷练习 pid 对齐走查新经验
+- pid 对齐最强对抗卷：2015 新疆卷 pid=133（卷卡 n=38，psource「2015年新疆省考行测真题」src 全集 120 题）——请求带 `pid=133` 时会话应 1/38，前端漏带 pid 会退回旧行为 1/120，一眼可辨。
+- 断言四点一线：抓包 `paper_questions?src=…&pid=…&uid=…` → 会话 1/N → 卷卡「已练 X/N」→ R360/R361 弹窗分母同 N（三方分母一致即对齐成功）。
+- DB 构造全练完必须用 **pid 响应的 qid 集**（页面内 fetch 带 pid 存 window 变量），不能用 src 全集 120 qids，否则分母被污染。
+- 计时模考路径断言：`POST /api/exam/start {paper_id}`，该导航不发任何 paper_questions 请求（无 pid/uid 均正常）。
+- Emulation.setDeviceMetricsOverride 在设它的 ws session 断开后可能残留 375：另开 session clearDeviceMetricsOverride 可能无效，重启 holdvw holder（重新 hold 1440）才恢复。
+
 ## R361 卷卡完成态/重练弹窗/source 归因走查新经验
 - 完成态断言点：`.ppracticed.done` 文案精确「已练完全部 N 题 ✓」、computed color rgb(46,91,255)（--brand-text 在 :root 上 getPropertyValue 可能取空，直接比 computed color）+ font-weight 600；部分完成为绿 rgb(21,128,61) fw400 无 done class。
 - 全练完弹窗：title「本卷已练完」content「本卷 N 题已全部练过，重新练一遍？」按钮 不用了/重新练；「不用了」停留在练习页准备骨架（无 1/N 会话计数即为未进会话）；timed 模考不弹（走 exam 页）。
