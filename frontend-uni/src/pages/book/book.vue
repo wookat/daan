@@ -579,7 +579,7 @@ export default {
   computed: {
     qStyle() { return { fontSize: fontSizes(this.fontLv).q }; },
     askableReview() {
-      return !!askPrefill(this.cur && this.cur.question_text, this.cur && this.cur.options);
+      return !!askPrefill(this.cur && this.cur.question_text, null);
     },
     optStyle() { return { fontSize: fontSizes(this.fontLv).opt }; },
     manualPickedCount() {
@@ -1177,7 +1177,7 @@ export default {
       this.practiceSimilar(this.cur);
     },
     askFromReview() {
-      const text = askPrefill(this.cur.question_text, this.cur.options);
+      const text = askPrefill(this.cur.question_text, null);
       if (!text) return;
       trackEvent('review_ask_click', this.cur.module || '');
       uni.setStorageSync('redoQuestion', text);
@@ -1272,7 +1272,7 @@ export default {
       }
     },
     redo(m) {
-      const text = askPrefill(m.question_text, m.options);
+      const text = askPrefill(m.question_text, null);
       if (!text) return;
       uni.setStorageSync('redoQuestion', text);
       uni.switchTab({ url: '/pages/ask/ask' });

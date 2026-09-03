@@ -33,6 +33,10 @@
 
 不做：不新增后端接口/表/URL 契约；不改 ask.vue 消费逻辑；列表扫描态不动。
 
+## 生产走查修正（P0）
+
+`mistakes.question_text` 写入口径本就是题干+选项（practice.vue 与 exam_api `_mistake_text` 同构），错题本侧再传 options 会重复两遍——生产实测证实。修正：错题本两处入口改 `askPrefill(question_text, null)`，只做非法/空守卫不再拼选项；报告浮层（`d.question` 纯题干）与刷题页不受影响。
+
 ## 验收
 
 - 生产 1440/375：报告浮层与复习流入口点击后 ask 页题干+选项已填入 toast 提示；
