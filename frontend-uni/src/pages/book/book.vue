@@ -267,8 +267,8 @@
         <view class="redo-l">
           <view class="redo-ico"><l-icon name="rotate-ccw" :size="16" color="#2e5bff" /></view>
           <view>
-            <text class="redo-t">错题重练{{ kpFilter ? ' · ' + kpFilter : rzFilter ? ' · ' + rzFilter : '' }}</text>
-            <text class="redo-s">{{ kpFilter ? '只重练当前筛选题型的待掌握错题（最多 10 题）' : rzFilter ? '只重练当前筛选错因的待掌握错题（最多 10 题）' : '把待掌握错题按刷题模式重做一遍（最多 10 题）' }}</text>
+            <text class="redo-t">错题重练{{ kpFilter ? ' · ' + kpFilter : rzFilter ? ' · ' + rzFilter : srcFilter ? ' · ' + (srcFilter === 'exam' ? '模考错题' : '练习错题') : '' }}</text>
+            <text class="redo-s">{{ kpFilter ? '只重练当前筛选题型的待掌握错题（最多 10 题）' : rzFilter ? '只重练当前筛选错因的待掌握错题（最多 10 题）' : srcFilter ? '只重练当前筛选来源的待掌握错题（最多 10 题）' : '把待掌握错题按刷题模式重做一遍（最多 10 题）' }}</text>
           </view>
         </view>
         <text class="redo-go">开始</text>
@@ -1312,6 +1312,7 @@ export default {
           q += '&module=' + this.filterMod;
         }
         if (this.rzFilter) q += '&rz=' + encodeURIComponent(this.rzFilter);
+        if (this.srcFilter) q += '&src=' + this.srcFilter;
         const d = await request(q);
         if (!d.items || !d.items.length) {
           uni.showToast({ title: '错题未能匹配到题库原题', icon: 'none' });
