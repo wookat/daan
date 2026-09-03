@@ -24,7 +24,7 @@
         </view>
         <view v-if="wasCorrect === false && cur._appended" class="appended-tip">已为你在本轮末尾加练 {{ cur._appended }} 道同类题</view>
         <view v-if="cur._extra && !wasCorrect && cur._saved" class="appended-tip">已加入错题本，之后会安排复习</view>
-        <view v-if="!wasCorrect && !cur._extra" class="reasons">
+        <view v-if="!wasCorrect && reviewReasonMid(cur)" class="reasons">
           <text class="rz-t">错因自评：</text>
           <text
             v-for="rz in REASONS"
@@ -510,7 +510,7 @@ import { qStatLine } from '../../q-stat.js';
 import { fontSizes, normFontLv } from '../../font-size.js';
 import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
 import { askQid, findAskSid } from '../../ask-link.js';
-import { similarItemFromQuestion, mistakeRecFromExtra } from '../../review-similar.js';
+import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid } from '../../review-similar.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 
@@ -1240,12 +1240,15 @@ export default {
         }
       } catch (e) { /* 非关键路径 */ }
     },
+    reviewReasonMid,
     async setReviewReason(rz) {
       const m = this.cur;
+      const mid = reviewReasonMid(m);
+      if (!mid) return;
       m.error_reason = rz;
       this.$forceUpdate();
       try {
-        await request('/api/mistakes/' + m.id, { method: 'PATCH', data: { uid: anonUid(), error_reason: rz } });
+        await request('/api/mistakes/' + mid, { method: 'PATCH', data: { uid: anonUid(), error_reason: rz } });
         trackEvent('review_reason_tag', rz);
       } catch (e) { /* 非关键路径 */ }
     },
@@ -1254,8 +1257,9 @@ export default {
       const rec = mistakeRecFromExtra(item, this.picked, anonUid());
       if (!rec) return;
       try {
-        await request('/api/mistakes', { method: 'POST', data: rec });
+        const res = await request('/api/mistakes', { method: 'POST', data: rec });
         item._saved = true;
+        if (res && res.id) item._mid = res.id;
         this.$forceUpdate();
       } catch (e) { /* 非关键路径 */ }
     },

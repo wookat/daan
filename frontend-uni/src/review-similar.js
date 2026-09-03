@@ -18,6 +18,17 @@ export function similarItemFromQuestion(x) {
   };
 }
 
+/** 复习流条目 → 错因打标目标错题 id；加练条目未入库返回 null。 */
+export function reviewReasonMid(cur) {
+  if (!cur || typeof cur !== 'object') return null;
+  if (cur._extra === true) {
+    const mid = Number(cur._mid);
+    return Number.isInteger(mid) && mid > 0 ? mid : null;
+  }
+  const id = Number(cur.id);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
 /** _extra 加练条目 → POST /api/mistakes 请求体；非加练/缺题干/缺正解返回 null。 */
 export function mistakeRecFromExtra(item, userAnswer, uid) {
   if (!item || item._extra !== true || !item.question_text || !item.correct_answer) return null;

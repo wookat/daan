@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { similarItemFromQuestion, mistakeRecFromExtra } from '../src/review-similar.js';
+import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid } from '../src/review-similar.js';
 
 const Q = {
   id: 646,
@@ -62,5 +62,24 @@ describe('mistakeRecFromExtra', () => {
     expect(mistakeRecFromExtra({ ...item, question_text: '' }, 'A', 'u1')).toBe(null);
     expect(mistakeRecFromExtra({ ...item, correct_answer: '' }, 'A', 'u1')).toBe(null);
     expect(mistakeRecFromExtra(null, 'A', 'u1')).toBe(null);
+  });
+});
+
+describe('reviewReasonMid', () => {
+  it('普通复习条目返回错题 id', () => {
+    expect(reviewReasonMid({ id: 12 })).toBe(12);
+  });
+  it('加练条目入库后返回 _mid', () => {
+    expect(reviewReasonMid({ _extra: true, _mid: 88 })).toBe(88);
+  });
+  it('加练条目未入库/非法 _mid fail-closed 返回 null', () => {
+    expect(reviewReasonMid({ _extra: true })).toBe(null);
+    expect(reviewReasonMid({ _extra: true, _mid: 0 })).toBe(null);
+    expect(reviewReasonMid({ _extra: true, _mid: 'x' })).toBe(null);
+  });
+  it('非法 id/非对象 fail-closed 返回 null', () => {
+    expect(reviewReasonMid({ id: 'x' })).toBe(null);
+    expect(reviewReasonMid({})).toBe(null);
+    expect(reviewReasonMid(null)).toBe(null);
   });
 });
