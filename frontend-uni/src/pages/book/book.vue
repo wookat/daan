@@ -430,6 +430,7 @@
         </view>
         <view v-else class="mfoot">
           <view class="acts">
+            <text v-if="askSeenTick >= 0 && mAskSeen(m)" class="op seen" role="button" aria-label="回看 AI 详解" @click.stop="openSeenAskM(m)">回看 AI 详解</text>
             <text v-if="!m.mastered" class="op redo" @click.stop="redo(m)">AI 详解</text>
             <text v-else class="op redo" @click.stop="master(m, false)">恢复复习</text>
             <text v-if="m.question_id" class="op reportop" @click.stop="openReport(m)">{{ m._reported ? '已纠错' : '纠错' }}</text>
@@ -1291,6 +1292,15 @@ export default {
       } catch (e) {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
+    },
+    mAskSeen(m) {
+      return findAskSid(uni.getStorageSync('askSessions'), uni.getStorageSync('askCurSession'), m && m.question_id);
+    },
+    openSeenAskM(m) {
+      const seen = this.mAskSeen(m);
+      if (!seen) return;
+      if (seen.sid > 0) uni.setStorageSync('askOpenSid', seen.sid);
+      uni.switchTab({ url: '/pages/ask/ask' });
     },
     redo(m) {
       const text = askPrefill(m.question_text, null);
