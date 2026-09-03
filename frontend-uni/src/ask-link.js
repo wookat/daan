@@ -10,6 +10,12 @@ function hasQid(items, q) {
   return Array.isArray(items) && items.some((it) => it && typeof it === 'object' && !Array.isArray(it) && askQid(it.qid) === q);
 }
 
+// 会话讲解条目回到题目本体的搜索深链（code_hit 直达 + ?qid 自动展开详情）
+export function askViewUrl(qid) {
+  const q = askQid(qid);
+  return q ? '/pkgA/search/search?q=' + q + '&qid=' + q : null;
+}
+
 // 返回 {sid}：sid=0 表示命中进行中会话；无命中返回 null
 export function findAskSid(sessions, curItems, qid) {
   const q = askQid(qid);
