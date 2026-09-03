@@ -492,7 +492,7 @@ import { buildBookUrl, parseBookOpts } from '../../book-url.js';
 import { cacheMistakes, getCachedMistakes } from '../../offline.js';
 import { qStatLine } from '../../q-stat.js';
 import { fontSizes, normFontLv } from '../../font-size.js';
-import { askPrefill } from '../../ask-prefill.js';
+import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 
@@ -1181,6 +1181,9 @@ export default {
       if (!text) return;
       trackEvent('review_ask_click', this.cur.module || '');
       uni.setStorageSync('redoQuestion', text);
+      const ans = askAnswerLetter(this.cur.user_answer);
+      if (ans) uni.setStorageSync('redoAnswer', ans);
+      else uni.removeStorageSync('redoAnswer');
       uni.switchTab({ url: '/pages/ask/ask' });
     },
     nextReview() {
@@ -1275,6 +1278,9 @@ export default {
       const text = askPrefill(m.question_text, null);
       if (!text) return;
       uni.setStorageSync('redoQuestion', text);
+      const ans = askAnswerLetter(m.user_answer);
+      if (ans) uni.setStorageSync('redoAnswer', ans);
+      else uni.removeStorageSync('redoAnswer');
       uni.switchTab({ url: '/pages/ask/ask' });
     },
     reinforceFromMistake(m) {

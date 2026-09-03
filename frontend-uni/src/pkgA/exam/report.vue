@@ -280,7 +280,7 @@ import { markedNos, nextNavMode } from '../../exam-marks.js';
 import { isFaved, toggleFav } from '../../exam-fav.js';
 import { qStatLine } from '../../q-stat.js';
 import { qTimeLine, paperAvgSecs } from '../../exam-time.js';
-import { askPrefill } from '../../ask-prefill.js';
+import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
 import { goalGap, prevScoreDelta } from '../../exam-goal.js';
 import { modAvgPct } from '../../exam-mod-avg.js';
 import { weakModule } from '../../exam-weak.js';
@@ -441,6 +441,9 @@ export default {
       if (!text) return;
       trackEvent('report_ask_click', String(d.question_id || ''));
       uni.setStorageSync('redoQuestion', text);
+      const ans = askAnswerLetter(d.picked);
+      if (ans) uni.setStorageSync('redoAnswer', ans);
+      else uni.removeStorageSync('redoAnswer');
       uni.switchTab({ url: '/pages/ask/ask' });
     },
     openQcReport() {

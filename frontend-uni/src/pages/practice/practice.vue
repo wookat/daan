@@ -352,7 +352,7 @@ import { drawOffline, enqueueAnswers, enqueueMistake, flushOfflineQueue } from '
 import { dayKey, loadSzDaily, saveSzDaily } from '../../checkin.js';
 import { splitMaterial, sameMaterial } from '../../material.js';
 import { fontSizes, normFontLv } from '../../font-size.js';
-import { askPrefill } from '../../ask-prefill.js';
+import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
 // #ifdef H5
 import { requestNotificationPermission } from '../../reminder.js';
 import { announce } from '../../a11y-live.js';
@@ -2114,6 +2114,9 @@ export default {
       const text = askPrefill(q.question, q.options);
       if (!text) return;
       uni.setStorageSync('redoQuestion', text);
+      const ans = askAnswerLetter(this.picked);
+      if (ans) uni.setStorageSync('redoAnswer', ans);
+      else uni.removeStorageSync('redoAnswer');
       uni.switchTab({ url: '/pages/ask/ask' });
     },
     async exportPaper() {

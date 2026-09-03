@@ -293,7 +293,9 @@ export default {
     const redo = uni.getStorageSync('redoQuestion');
     if (redo) {
       this.qtext = redo;
-      this.uanswer = '';
+      const ra = uni.getStorageSync('redoAnswer');
+      this.uanswer = /^[A-D]$/.test(ra) ? ra : '';
+      uni.removeStorageSync('redoAnswer');
       this.imagePath = '';
       this.imageFile = null;
       this.textOpen = true;

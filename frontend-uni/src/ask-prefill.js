@@ -11,3 +11,11 @@ export function askPrefill(stem, options) {
   }
   return opt ? s + '\n' + opt : s;
 }
+
+// 用户作答归一化：恰好单个 A–D 字母才返回，多选/非法/空一律 ''（uanswer 仅单选语义）
+export function askAnswerLetter(v) {
+  const m = /[A-D]+/.exec(String(v == null ? '' : v).toUpperCase());
+  if (!m) return '';
+  const uniq = [...new Set(m[0])];
+  return uniq.length === 1 ? uniq[0] : '';
+}
