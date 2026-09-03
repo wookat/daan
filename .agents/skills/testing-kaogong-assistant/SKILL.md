@@ -5,6 +5,11 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R358 放弃未交卷（drop:true）走查新经验
+- R358 起「放弃未交卷」是服务端真删：卷库 dropResume()/首页 erDrop() 确认后 POST `/api/exam/progress` body `{uid, attempt_id, drop:true}` → 200 `{ok:true}`，后端 clear_exam_progress；断言点=抓包 drop 请求 + DB `exam_progress` 行删除 + **等 35s 越过 erClearedAt 30s 本地守卫后再硬刷**（30s 内不回填只证明本地守卫，30s 后不回填才证明服务端删除）。
+- 全新 browser context 验证不回填：`Target.createBrowserContext`+`Target.createTarget` 会开**新窗口**（taskbar 出现第二个 Chrome 图标），且 CDP helper（oneshot/holdvw）按 `/json` 列表第一个 zalize tab 匹配，可能误连新 context 的 tab——用完立即 `Target.disposeBrowserContext`，或按 targetId 精确连。
+- 模考未交卷阶段答案只存 `exam_progress`（drop 后连 answer_log 都没有）；留存数据主要是 `exam_attempts`（submitted_at NULL）+ growth_events boot。
+
 ## R357 卷库/按卷练习走查新经验
 - 生产 SQLite 是 `/data/data.db`（容器 env `DB_PATH=/data/data.db`）；`/data/kaogong.db`、`/data/app.db` 是 0 字节空壳，连上查表会得 `TABLES: []`——查数前先 `printenv DB_PATH` 确认。
 - practice.vue 的 `startPaper()`（practiceLaunch kind:'paper' 协议）R357 首版**无条件进模考态**（`examMode=true` + 120min 倒计时），卷名只以 toast 1.8s 一闪；任何声称「不计时逐题练」的按卷入口都要实际点进去核对计时 chip。R357b 后 `startPaper(p, untimed)` 有 untimed 分支——untimed 按卷练习断言点是 toast「不计时逐题练」+ 正计时 0:00 起 + 答错即时判分。

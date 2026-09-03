@@ -341,6 +341,9 @@ def api_exam_progress(body: dict):
     attempt = db.get_exam_attempt(int(attempt_id))
     if not attempt or attempt["uid"] != uid:
         raise HTTPException(404, "答题记录不存在")
+    if body.get("drop") is True:
+        db.clear_exam_progress(int(attempt_id))
+        return {"ok": True}
     if attempt["submitted_at"]:
         raise HTTPException(400, "该次模考已交卷")
     paper = db.get_exam_paper(attempt["paper_id"])

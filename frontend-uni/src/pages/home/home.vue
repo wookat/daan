@@ -892,6 +892,8 @@ export default {
       if (!this.examResume) this.syncExamResume();
     },
     async syncExamResume() {
+      const clearedAt = uni.getStorageSync('erClearedAt');
+      if (clearedAt && Date.now() - clearedAt < 30 * 1000) return;
       try {
         const d = await request('/api/exam/resume?uid=' + encodeURIComponent(anonUid()));
         const now = Date.now();
@@ -914,6 +916,10 @@ export default {
         cancelText: '再想想',
         success: (res) => {
           if (!res.confirm) return;
+          uni.setStorageSync('erClearedAt', Date.now());
+          if (this.examResume && this.examResume.attemptId) {
+            request('/api/exam/progress', { method: 'POST', data: { uid: anonUid(), attempt_id: this.examResume.attemptId, drop: true } }).catch(() => {});
+          }
           uni.removeStorageSync('examProgress');
           this.examResume = null;
         },
