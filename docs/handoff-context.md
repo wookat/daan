@@ -1313,3 +1313,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 测试数据清理：test-r340-rz 全库 16 表扫描 DELETED 10（mistakes 3/answer_log 3/review_log 2/growth_events 2）/ LEFTOVER 0；保护 uid umteojq4sltdhorhm DB 计数与 localStorage 逐键前后一致。
 - 边界（如实）：真实触屏未测（CDP 模拟）；主流程窗口无逐请求抓包（daemon 迟启，补窗口重放核心交互 0 次 /api/explain、0 条 4xx/5xx；主流程未点任何 AI 按钮，录屏佐证）；「来源组后」相对位置因测试 uid 无模考错题未直接可见（hasExamMistakes 守卫，错因组正确出现在题型组后）。
 - 详见 docs/iter/round-3/r340-book-reason-filter.md。
+
+### R341 模考报告「本卷错因画像」卡 + 直达错题本按错因复习（2026-08-29，PR #540，分支 devin/1788431785-r341-report-reason-recap）
+- 取证：R314 报告浮层逐题错因自评、R340 错题本按错因筛选均就位，但报告页零错因汇总——打完标看不到本卷错因构成，也无从报告直达错题本复习同错因，标注投入无 payoff。
+- 收口（纯前端，零新 endpoint/表/契约）：report.vue computed reasonRecap（答错题按 error_reason||'未标注' 分组降序，非法值归未标注 fail-closed，0 错题不渲染）+「逐题对错」卡后「本卷错因画像」卡（行可点）+ goBookReason 白名单写 bookRzIntent → switchTab（tab 页无法带参，沿用 autoStartReview 式 storage 握手）；book.vue onShow 消费 bookRzIntent（读到即删，白名单通过 tab='todo'+rzFilter，复用 R340 过滤与 ?rz= URL 同步，非法仅删除）。tip 如实说明口径（直达=全部待掌握该错因集合，不限本卷）。
+- 验证：lint/vitest 428/build:h5 全绿；生产 rev 0391d95、bundle index-CRhgmiOt.js，部署脚本回归+Lighthouse 全过。testing agent 实测（uid test-r341-rz，真实 UI 迷你模考 4 错 1 对）：初始未标注=4、浮层打标实时更新分组降序、错因行/未标注行直达（chip+?rz=+过滤+intent 消费即删）、0 答卷反例无卡、bookRzIntent='hack' fail-closed、重练 CTA/浮层导航/R340 sheet 回归、375/1440 溢出 0、console 0 error、0 次 /api/explain。
+- 测试数据清理：test-r341-rz DELETED mistakes 4/answer_log 5/exam_attempts 2/growth_events 1，LEFTOVER 空；保护 uid DB 计数与 localStorage 逐键前后一致。
+- 边界（如实）：真实触屏未测；主流程窗口抓包 daemon 白名单缺陷漏抓（发现后改捕全 /api/ 并重放核心交互补齐，缺陷经验已入测试 SKILL）。
+- 详见 docs/iter/round-3/r341-report-reason-recap.md。

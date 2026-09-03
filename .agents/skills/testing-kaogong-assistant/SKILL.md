@@ -712,3 +712,7 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 ## R340 错题本错因筛选走查新经验
 - 错因打标最省 UI 路径：错题本「开始复习」→ 答错后点「错因自评」chip（book.vue 复习流，自动 PATCH /api/mistakes/:id 持久化），无需手工 curl。
 - 服务端清理可复用模式：docker cp 或容器内 python sqlite 按 `uid LIKE 'test-<round>-%'` 扫 16 张业务表；刷题+复习场景最常见写入面是 mistakes/answer_log/review_log/growth_events 四表。
+
+## R341 报告错因画像走查新经验
+- 抓包 daemon 复制 r335 模板时必须检查 URL 白名单：旧模板只捕 track/explain/practice/answer_log/ask，模考交卷与 /api/mistakes PATCH 会静默漏抓——直接用 `PAT=('/api/',)` 捕全量。
+- 「无错题报告」反例最省真实 UI 路径：mini 模考 0 答直接交卷（picked 空 → reasonRecap/redoCount 均不渲染），无需 CDP 注入。
