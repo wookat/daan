@@ -7,6 +7,7 @@ type PaperVM = Paper & { yearShort: string; regionShort: string };
 Page({
   data: {
     loading: true,
+    loadErr: '',
     papers: [] as PaperVM[],
   },
   onShow() {
@@ -14,6 +15,7 @@ Page({
     this.load();
   },
   async load() {
+    this.setData({ loadErr: '' });
     try {
       const d = await fetchPapers();
       const papers: PaperVM[] = (d.items || []).map((p) => {
@@ -27,10 +29,15 @@ Page({
       });
       this.setData({ papers });
     } catch (e) {
-      /* 静默失败，展示空态 */
+      this.setData({ loadErr: (e as Error).message || '网络错误' });
     } finally {
       this.setData({ loading: false });
     }
+  },
+  onRetry() {
+    if (this.data.loading) return;
+    this.setData({ loading: true });
+    this.load();
   },
   onPaperTap(e: WechatMiniprogram.TouchEvent) {
     const title = String(e.currentTarget.dataset.title || '该卷');
