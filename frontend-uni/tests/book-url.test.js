@@ -31,6 +31,7 @@ describe('parseBookOpts', () => {
       tab: 'done',
       mod: 'yanyu',
       src: 'practice',
+      rz: '',
       sort: 'reason',
       review: false,
     });
@@ -38,10 +39,26 @@ describe('parseBookOpts', () => {
       tab: '',
       mod: '',
       src: '',
+      rz: '',
       sort: '',
       review: false,
     });
-    expect(parseBookOpts()).toEqual({ tab: '', mod: '', src: '', sort: '', review: false });
+    expect(parseBookOpts()).toEqual({ tab: '', mod: '', src: '', rz: '', sort: '', review: false });
+  });
+
+  it('rz 错因白名单，非法 fail-closed，支持 URL 编码', () => {
+    expect(parseBookOpts({ rz: '概念不清' }).rz).toBe('概念不清');
+    expect(parseBookOpts({ rz: '未标注' }).rz).toBe('未标注');
+    expect(parseBookOpts({ rz: encodeURIComponent('粗心大意') }).rz).toBe('粗心大意');
+    expect(parseBookOpts({ rz: '不存在错因' }).rz).toBe('');
+    expect(parseBookOpts({ rz: '%E0%A4%A' }).rz).toBe('');
+    expect(parseBookOpts({ rz: 1 }).rz).toBe('');
+  });
+
+  it('rz 拼接与 fav 不叠加', () => {
+    expect(buildBookUrl({ rz: '方法不会' })).toBe(BOOK_PATH + '?rz=' + encodeURIComponent('方法不会'));
+    expect(buildBookUrl({ tab: 'fav', rz: '方法不会' })).toBe(BOOK_PATH + '?tab=fav');
+    expect(buildBookUrl({ rz: '不存在' })).toBe(BOOK_PATH);
   });
 
   it('review 仅 "1" 生效', () => {

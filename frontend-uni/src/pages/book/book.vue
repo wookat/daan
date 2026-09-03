@@ -130,8 +130,8 @@
           </view>
           <view class="recap-sec">
             <text class="recap-st">按错因</text>
-            <view v-for="g in monthRecap.byReason" :key="g.name" class="recap-row">
-              <text class="recap-name">{{ g.name }}</text>
+            <view v-for="g in monthRecap.byReason" :key="g.name" class="recap-row recap-link" role="button" :aria-label="'筛选错因：' + g.name" @click="filterByReason(g.name)">
+              <text class="recap-name">{{ g.name }} ›</text>
               <view class="recap-bar"><view class="recap-fill warnfill" :style="{ width: Math.round((g.n / monthRecap.total) * 100) + '%' }" /></view>
               <text class="recap-n">{{ g.n }}</text>
             </view>
@@ -335,9 +335,10 @@
         </view>
       </view>
       <!-- #endif -->
-      <view v-if="tab !== 'fav' && (filterMod || kpFilter || kp3Filter || srcFilter)" class="curfilter bk-main">
+      <view v-if="tab !== 'fav' && (filterMod || kpFilter || kp3Filter || srcFilter || rzFilter)" class="curfilter bk-main">
         <text v-if="filterMod || kpFilter || kp3Filter" class="kpchip on" @click="filterMod = ''; kpFilter = ''; kp3Filter = ''">{{ kp3Filter || kpFilter || modName(filterMod) }} ✕</text>
         <text v-if="srcFilter" class="kpchip on" @click="srcFilter = ''">{{ srcFilter === 'exam' ? '模考错题' : '练习错题' }} ✕</text>
+        <text v-if="rzFilter" class="kpchip on" @click="rzFilter = ''">错因：{{ rzFilter }} ✕</text>
         <text v-if="sortBy !== 'time'" class="kpchip" @click="filterOpen = true">{{ (SORTS.find(s => s.k === sortBy) || {}).name }}</text>
       </view>
       <view v-else-if="tab !== 'fav' && sortBy !== 'time'" class="curfilter bk-main">
@@ -366,6 +367,12 @@
             <text class="kpchip" :class="{ on: srcFilter === '' }" @click="srcFilter = ''">全部</text>
             <text class="kpchip" :class="{ on: srcFilter === 'exam' }" @click="srcFilter = 'exam'">模考</text>
             <text class="kpchip" :class="{ on: srcFilter === 'practice' }" @click="srcFilter = 'practice'">练习</text>
+          </view>
+          <view v-if="hasReasonTagged" class="sheet-k">错因</view>
+          <view v-if="hasReasonTagged" class="kpchips">
+            <text class="kpchip" :class="{ on: rzFilter === '' }" @click="rzFilter = ''">全部</text>
+            <text v-for="rz in REASONS" :key="rz" class="kpchip" :class="{ on: rzFilter === rz }" @click="rzFilter = rzFilter === rz ? '' : rz">{{ rz }}</text>
+            <text class="kpchip" :class="{ on: rzFilter === '未标注' }" @click="rzFilter = rzFilter === '未标注' ? '' : '未标注'">未标注</text>
           </view>
           <view class="sheet-done" @click="filterOpen = false">完成</view>
           <view class="sheet-export" @click="exportConfirm = true">{{ exporting ? '正在生成 PDF…' : '导出当前筛选为错题卷 PDF' }}</view>
@@ -538,6 +545,7 @@ export default {
       streak: 0,
       filterMod: '',
       srcFilter: '',
+      rzFilter: '',
       masteryMods: {},
       masteryT3: {},
       kw: '',
@@ -626,6 +634,9 @@ export default {
     hasExamMistakes() {
       return this.items.some((m) => m.source === 'exam');
     },
+    hasReasonTagged() {
+      return this.items.some((m) => m.error_reason);
+    },
     doneItems() {
       return this.items.filter((m) => m.mastered);
     },
@@ -637,6 +648,8 @@ export default {
       if (this.kp3Filter) base = base.filter((m) => m.tag3_name === this.kp3Filter);
       if (this.srcFilter === 'exam') base = base.filter((m) => m.source === 'exam');
       else if (this.srcFilter === 'practice') base = base.filter((m) => m.source !== 'exam');
+      if (this.rzFilter === '未标注') base = base.filter((m) => !m.error_reason);
+      else if (this.rzFilter) base = base.filter((m) => m.error_reason === this.rzFilter);
       base = [...base];
       if (this.sortBy === 'times') base.sort((a, b) => (b.times || 1) - (a.times || 1));
       else if (this.sortBy === 'type') base.sort((a, b) => String(a.question_type || a.module || '').localeCompare(String(b.question_type || b.module || ''), 'zh'));
@@ -754,12 +767,14 @@ export default {
     kp3Filter() { this.pageN = 20; },
     sortBy() { this.pageN = 20; this.syncBookUrl(); },
     srcFilter() { this.syncBookUrl(); },
+    rzFilter() { this.pageN = 20; this.syncBookUrl(); },
   },
   onLoad(opts) {
     const p = parseBookOpts(opts);
     if (p.tab) this.tab = p.tab;
     if (p.mod) this.filterMod = p.mod;
     if (p.src) this.srcFilter = p.src;
+    if (p.rz) this.rzFilter = p.rz;
     if (p.sort) this.sortBy = p.sort;
     if (p.review) uni.setStorageSync('autoStartReview', 1);
   },
@@ -804,10 +819,16 @@ export default {
     // #endif
   },
   methods: {
+    filterByReason(name) {
+      if (!name) return;
+      this.tab = 'todo';
+      this.rzFilter = name;
+      this.recapOpen = false;
+    },
     syncBookUrl() {
       // #ifdef H5
       if (typeof window !== 'undefined' && window.history) {
-        window.history.replaceState(null, '', buildBookUrl({ tab: this.tab, mod: this.filterMod, src: this.srcFilter, sort: this.sortBy }));
+        window.history.replaceState(null, '', buildBookUrl({ tab: this.tab, mod: this.filterMod, src: this.srcFilter, rz: this.rzFilter, sort: this.sortBy }));
       }
       // #endif
     },
@@ -1669,6 +1690,8 @@ export default {
 .recap-sec { margin-top: 16rpx; }
 .recap-st { font-size: 22rpx; color: var(--ink-2); }
 .recap-row { display: flex; align-items: center; gap: 12rpx; margin-top: 10rpx; }
+.recap-link { cursor: pointer; }
+.recap-link .recap-name { color: var(--brand-text, #2e5bff); }
 .recap-name { flex: 0 0 160rpx; font-size: 23rpx; color: var(--ink-1, #1f2329); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .recap-bar { flex: 1; height: 14rpx; background: var(--soft-bg); border-radius: 999rpx; overflow: hidden; }
 .recap-fill { height: 100%; background: var(--brand, #2e5bff); border-radius: 999rpx; }
