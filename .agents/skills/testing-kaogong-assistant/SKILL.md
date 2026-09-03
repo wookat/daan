@@ -693,3 +693,8 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 收藏造数最省路径：`POST /api/favs {uid, question_id}`（题 id 可用 1274831），收藏页即显「默认收藏夹 1 题」，无需真实 UI 刷题收藏。
 - Lighthouse 需用 `npx --no-install lighthouse`（PATH 无全局 bin），headless flags `--headless=new --no-sandbox`。
 - 375 视口 holder 结束后 `Emulation.clearDeviceMetricsOverride` 需再 `Page.reload` 一次才真正恢复桌面宽度（首次 clear 后 innerWidth 仍 375）。
+
+## R337 「回看 AI 详解」多场景走查新经验
+- ask 页是常驻 tab：`restoreCurSession()` 在 `results.length` 非空时直接 return——仅改 storage 里的 `askCurSession` 后切回 ask tab 内存态可能不刷新，注入快照前必须让整页硬刷再断言。
+- 复杂中文/嵌套 JSON 注入 localStorage 勿用 shell 单引号 oneshot（引号/转义必坏）：用 Python WebSocket 脚本 + `json.dumps(json.dumps(snap))` 双重编码后经 `Runtime.evaluate` 注入。
+- `pkill -f <脚本名>` 可能匹配并杀掉承载它的 bash 自身：先 `pgrep -f` 过滤确认，或用精确进程名/记录 pid 后 kill。

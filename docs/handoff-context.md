@@ -1279,3 +1279,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 测试数据清理：test-r336-asklink 全库（含 uid/user_id 的 37 表字段）DELETED 17 / LEFTOVER 0；保护 uid umteojq4sltdhorhm 37 项计数+内容哈希验前验后逐项一致。
 - 边界（如实）：关联以「预填后首次文本讲解」为锚，用户清空重写题目再讲解仍会挂原 qid（提示性关联，非强一致）；跨设备新会话首扫依赖 syncSessions 异步完成后再进入页面才可见（fail-closed 不误报）；回看入口首批只铺练习历史+错题本复习流，其余场景待后续轮次；真实 LLM 请求刻意未触发（用 CDP/localStorage 注入既有讲解模拟）、真实触屏未测（CDP touch 模拟）、图片讲解 qid=0 分支未生产实测（vitest 覆盖）。
 - 详见 docs/iter/round-3/design-r336-ask-qid-link.md。
+
+### R337 「回看 AI 详解」入口铺满剩余复盘场景：报告解析浮层/搜索详情/收藏详情（2026-08-29，PR #535，分支 devin/1788423125-r337-ask-seen）
+- 取证：R336 已建立 item 级 qid 关联协议（ask-link.js askQid/findAskSid + askOpenSid 导航），report.vue/search.vue/favorites.vue 三场景已写有效 redoQid，但均未用 findAskSid 检查已有 AI 讲解——用户在成绩报告浮层/搜索详情/收藏详情再遇同一题只见「AI 详解本题」，不知已问过，可能重复触发 LLM。
+- 收口（纯前端，零新 endpoint/表/URL 契约，不改 /api/explain）：三页复用 findAskSid——report.vue detailAskSeen computed（qid=detail.question_id）+ askSeenTick onShow 重算 + openSeenAsk()（sid>0 写 askOpenSid、sid=0 直切 ask tab）；search.vue 同构（qid=detail.id，code-hit 与列表详情两处模板）；favorites.vue 收藏卡可多开改按 item 查 favAskSeen(it)（qid=it.id，本地时政收藏 id:null 由 askQid fail-closed 不显示）。命中态「回看 AI 详解」绿色（--ok-strong），未命中/legacy 无 qid/非法 id 不显示。
+- 验证：lint/vitest 424/build 全绿（纯前端，后端基线沿用 R336）；生产 rev 0943b6b、bundle index-CNuYvyjz.js，部署脚本 API 回归+Lighthouse 预算全过（/ 0.99/LCP 805ms、/tiku/ 1.00/LCP 931ms）。testing agent 实测（uid test-r337-replay，CDP 注入 askSessions/askCurSession 模拟已有讲解）：报告浮层归档命中（入口位于「AI 详解本题」上方、点击自动打开归档会话、askOpenSid 被消费）、sid=0 当前会话直切不写 askOpenSid、切无关题入口消失；搜索 code-hit 命中/无关题反例；收藏详情命中/未问过反例；既有「AI 详解本题」预填与 redoQid 消费回归；375/1440 溢出 0、console 0 error、全程 0 次 /api/explain。
+- 测试数据清理：test-r337-replay 全库 DELETED 5 / LEFTOVER 0；保护 uid umteojq4sltdhorhm 快照验前验后逐项一致（PROTECTED_MATCH True）。
+- 边界（如实）：本地时政收藏 id:null fail-closed 分支未生产构造（vitest 覆盖 askQid）；真实触屏未测（CDP 模拟）；「回看」入口无独立埋点（与 R336 口径一致）；ask 常驻 tab 注入时序注意事项已入测试 SKILL。
+- 详见 docs/iter/round-3/design-r337-ask-seen-everywhere.md。
