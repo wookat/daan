@@ -5,7 +5,7 @@ import time
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 
-from . import db, omr, pdf_export, taxonomy
+from . import auth, db, omr, pdf_export, taxonomy
 from .deps import rl
 
 router = APIRouter()
@@ -162,6 +162,9 @@ def api_paper_answers(body: dict):
 
 @router.post("/api/scan_sheet")
 async def api_scan_sheet(request: Request, uid: str = Form(""), image: UploadFile = File(...)):
+    # multipart 不经 guard_account_uid 中间件解析，账号 uid 归属在此校验
+    if not auth.owns_uid(uid, request.headers.get("authorization")):
+        raise HTTPException(403, "无权访问该账号数据，请重新登录")
     rl(request, "scan_sheet", 20, 300, uid)
     raw = await image.read()
     if len(raw) > 12 * 1024 * 1024:

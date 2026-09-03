@@ -743,7 +743,7 @@ def _cn_now() -> datetime:
 
 @router.get("/checkin/badges")
 def api_checkin_badges(uid: str):
-    """连续打卡里程碑徽章：按 answer_log 的做题日期计算当前连击与历史最长连击。"""
+    """连续打卡里程碑徽章：按 answer_log + review_log 的学习日期计算当前连击与历史最长连击（与 summary 同口径）。"""
     u = _clean_uid(uid)
     conn = db.get_conn()
     days = {
@@ -753,6 +753,16 @@ def api_checkin_badges(uid: str):
             (u,),
         )
     }
+    if conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='review_log'"
+    ).fetchone():
+        days.update(
+            r["d"]
+            for r in conn.execute(
+                f"SELECT DISTINCT {CN_DAY_SQL} AS d FROM review_log WHERE uid=?",
+                (u,),
+            )
+        )
     conn.close()
     streak = 0
     d = _cn_now()

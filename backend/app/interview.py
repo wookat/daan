@@ -12,7 +12,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from . import db, llm
-from .deps import rl
+from .deps import as_int, rl
 
 router = APIRouter(prefix="/api/interview")
 
@@ -199,7 +199,7 @@ def _validate(request: Request, body: dict) -> tuple[str, dict, str, int]:
     if not uid:
         raise HTTPException(400, "缺少 uid")
     rl(request, "itv_answer", 20, 600, uid)
-    q = question_by_id(int(body.get("question_id") or 0))
+    q = question_by_id(as_int(body.get("question_id")))
     if not q:
         raise HTTPException(404, "题目不存在")
     answer = str(body.get("answer") or "").strip()
@@ -207,7 +207,7 @@ def _validate(request: Request, body: dict) -> tuple[str, dict, str, int]:
         raise HTTPException(400, f"作答太短（至少 {ANSWER_MIN_LEN} 字）")
     if len(answer) > ANSWER_MAX_LEN:
         raise HTTPException(400, f"作答过长（限 {ANSWER_MAX_LEN} 字）")
-    duration = int(body.get("duration_sec") or 0)
+    duration = as_int(body.get("duration_sec"))
     return uid, q, answer, duration
 
 
