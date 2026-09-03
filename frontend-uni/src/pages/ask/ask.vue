@@ -241,7 +241,7 @@
 import { md } from '../../md.js';
 import { request, uploadExplain, streamExplain, anonUid, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api.js';
 import { isNativeApp, pickImageNative } from '../../native.js';
-import { mergeAskSessions, upsertLocalSession } from '../../ask-sessions.js';
+import { mergeAskSessions, upsertLocalSession, addTombstone, removeTombstone, pruneTombstones, filterTombstoned } from '../../ask-sessions.js';
 
 export default {
   data() {
@@ -772,6 +772,7 @@ export default {
       if (!items.length) return;
       const sid = this.curSid || Number(uni.getStorageSync('askCurSid')) || Date.now();
       const sess = { id: sid, ts: Date.now(), title, n: items.length, items };
+      uni.setStorageSync('askDelTombs', removeTombstone(uni.getStorageSync('askDelTombs'), sid));
       this.sessions = upsertLocalSession(this.sessions, sess);
       uni.setStorageSync('askSessions', this.sessions);
       this.curSid = 0;
@@ -782,15 +783,22 @@ export default {
       }).catch(() => {});
     },
     syncSessions() {
+      const tombs = pruneTombstones(uni.getStorageSync('askDelTombs'));
+      uni.setStorageSync('askDelTombs', tombs);
       request('/api/ask/sessions?uid=' + encodeURIComponent(anonUid()))
         .then((r) => {
-          this.sessions = mergeAskSessions(this.sessions, (r && r.items) || []);
+          this.sessions = mergeAskSessions(this.sessions, filterTombstoned((r && r.items) || [], tombs));
           uni.setStorageSync('askSessions', this.sessions);
         })
         .catch(() => {});
+      for (const k of Object.keys(tombs)) this.dropRemoteSession(Number(k));
     },
     dropRemoteSession(sid) {
-      request('/api/ask/sessions/' + sid + '?uid=' + encodeURIComponent(anonUid()), { method: 'DELETE' }).catch(() => {});
+      request('/api/ask/sessions/' + sid + '?uid=' + encodeURIComponent(anonUid()), { method: 'DELETE' })
+        .then(() => {
+          uni.setStorageSync('askDelTombs', removeTombstone(uni.getStorageSync('askDelTombs'), sid));
+        })
+        .catch(() => {});
     },
     openHistory() {
       this.historyOpen = true;
@@ -826,7 +834,10 @@ export default {
       const s = this.sessions[i];
       this.sessions.splice(i, 1);
       uni.setStorageSync('askSessions', this.sessions);
-      if (s) this.dropRemoteSession(s.id);
+      if (s) {
+        uni.setStorageSync('askDelTombs', addTombstone(uni.getStorageSync('askDelTombs'), s.id));
+        this.dropRemoteSession(s.id);
+      }
     },
   },
 };

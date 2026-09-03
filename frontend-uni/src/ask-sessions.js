@@ -38,3 +38,61 @@ export function upsertLocalSession(sessions, sess) {
   if (!valid(sess)) return list;
   return [sess, ...list.filter((s) => s.id !== sess.id)].slice(0, 20);
 }
+
+// 删除墓碑（R330）：{sid: deletedAtMs}，防止服务端 DELETE 失败后 sync 把已删会话并回本机。
+
+const TOMB_TTL = 7 * 24 * 3600 * 1000;
+const TOMB_CAP = 40;
+
+function validSid(sid) {
+  return typeof sid === 'number' && Number.isInteger(sid) && sid > 0;
+}
+
+function normTombs(tombs) {
+  const out = {};
+  if (!tombs || typeof tombs !== 'object' || Array.isArray(tombs)) return out;
+  for (const k of Object.keys(tombs)) {
+    const sid = Number(k);
+    const at = tombs[k];
+    if (validSid(sid) && typeof at === 'number' && Number.isFinite(at) && at > 0) out[sid] = at;
+  }
+  return out;
+}
+
+// 记墓碑：非法 sid 返回规范化副本；超上限剔除最旧
+export function addTombstone(tombs, sid, now) {
+  const out = normTombs(tombs);
+  if (!validSid(sid)) return out;
+  out[sid] = typeof now === 'number' && now > 0 ? now : Date.now();
+  const keys = Object.keys(out);
+  if (keys.length > TOMB_CAP) {
+    keys
+      .sort((a, b) => out[a] - out[b])
+      .slice(0, keys.length - TOMB_CAP)
+      .forEach((k) => delete out[k]);
+  }
+  return out;
+}
+
+export function removeTombstone(tombs, sid) {
+  const out = normTombs(tombs);
+  delete out[Number(sid)];
+  return out;
+}
+
+// TTL 过期清理：7 天未能送达的墓碑放弃（避免永久膨胀）
+export function pruneTombstones(tombs, now) {
+  const out = normTombs(tombs);
+  const t = typeof now === 'number' && now > 0 ? now : Date.now();
+  for (const k of Object.keys(out)) {
+    if (t - out[k] > TOMB_TTL) delete out[k];
+  }
+  return out;
+}
+
+// merge 前过滤远端已删条目
+export function filterTombstoned(sessions, tombs) {
+  const list = Array.isArray(sessions) ? sessions.filter(valid) : [];
+  const tb = normTombs(tombs);
+  return list.filter((s) => !(s.id in tb));
+}

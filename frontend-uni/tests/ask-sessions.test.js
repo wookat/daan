@@ -56,3 +56,40 @@ describe('upsertLocalSession', () => {
     expect(upsertLocalSession([s(1), { id: 2, ts: 2 }], null).map((x) => x.id)).toEqual([1]);
   });
 });
+
+import { addTombstone, removeTombstone, pruneTombstones, filterTombstoned } from '../src/ask-sessions.js';
+
+describe('tombstones (R330)', () => {
+  it('adds, removes, and normalizes invalid inputs', () => {
+    const t1 = addTombstone(null, 5, 100);
+    expect(t1).toEqual({ 5: 100 });
+    expect(addTombstone(t1, -1, 100)).toEqual({ 5: 100 });
+    expect(addTombstone([1, 2], 7, 50)).toEqual({ 7: 50 });
+    expect(removeTombstone(t1, 5)).toEqual({});
+    expect(t1).toEqual({ 5: 100 });
+    expect(addTombstone({ bad: 'x', 3: -1, 4: 'y', 6: 60 }, 8, 80)).toEqual({ 6: 60, 8: 80 });
+  });
+
+  it('caps at 40 dropping oldest', () => {
+    let t = {};
+    for (let i = 1; i <= 41; i++) t = addTombstone(t, i, i);
+    expect(Object.keys(t)).toHaveLength(40);
+    expect(t[1]).toBeUndefined();
+    expect(t[41]).toBe(41);
+  });
+
+  it('prunes entries older than 7 days', () => {
+    const now = 10 * 24 * 3600 * 1000;
+    const t = { 1: now - 8 * 24 * 3600 * 1000, 2: now - 3600 * 1000 };
+    expect(pruneTombstones(t, now)).toEqual({ 2: now - 3600 * 1000 });
+    expect(pruneTombstones('junk', now)).toEqual({});
+  });
+
+  it('filters tombstoned sessions fail-closed', () => {
+    const list = [s(1, 100), s(2, 200)];
+    expect(filterTombstoned(list, { 2: 50 }).map((x) => x.id)).toEqual([1]);
+    expect(filterTombstoned(list, null).map((x) => x.id)).toEqual([1, 2]);
+    expect(filterTombstoned('junk', { 1: 1 })).toEqual([]);
+    expect(list).toHaveLength(2);
+  });
+});
