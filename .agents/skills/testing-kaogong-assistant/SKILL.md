@@ -738,3 +738,8 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - fail-closed 注入测试可先注入一条**合法快照作阳性对照**（v:1、uid=当前 anonUid、ts=now、rIdx 合法、items[].question_text 非空）确认横幅检测有效，再逐个注入坏 JSON/uid 不符/ts 超 2h/rIdx 越界，reload 期间用 Log.enable+Runtime.exceptionThrown 监听 console error。
 - 与 R350 结论相反：从复习流点「AI 详解本题」跳 ask 页后**点错题本 tab 返回，内存会话可能保留**（R351 实测保留、复习卡原位）；整页硬刷才是稳定的丢失路径，测横幅恢复用 Ctrl+Shift+R。
 - 复习第 1 题答错（原有 2 道 due）触发加练后总数为 5（2 原题 + 1 requeue + 2 加练）；横幅题号 x/n 的 n 含加练与 requeue。
+
+## R352 跨设备复习同步走查新经验
+- 双设备模拟：`Target.createBrowserContext` + `createTarget` 造隔离 context（独立 localStorage），注入相同 `anonUid` 即同一账号；每个 context 的 `Emulation.setDeviceMetricsOverride` 绑定在发它的 CDP websocket 上，**socket 一关 override 就丢**——需要每个 context 各挂一个常驻 holder 进程（参照 holdvw.py / r352_devB.py 模式）。
+- `/api/review/cur` 断言点：saveReviewSnap 去抖 1.5s 后 POST（抓包看 body.snap.rIdx/items）；本机快照命中时 onShow 0 次远端 GET（本机优先）；「放弃/完成」POST `{"snap":null}`；跨设备清除用全新 context 验 GET 后无 `.resumecard`。
+- 地址栏改 `?rz=` 等 hash query 不触发 onLoad，需 F5 一次才生效（同 R342 深链经验）。

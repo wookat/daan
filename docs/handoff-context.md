@@ -1401,3 +1401,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 测试数据清理：测试 uid（因 storage 键笔误实为页面自生成 umtlq40aq7y4zsrmz，anon_uid≠anonUid 教训再次验证）全库 DELETED {mistakes 4/answer_log 2/review_log 5/growth_events 13}，LEFTOVER {}；保护 uid DB+localStorage 前后一致（EXACT MATCH n=28）。
 - 边界（如实）：真实触屏未测（CDP 模拟）；跨设备复习会话同步不在本轮范围（本机快照 first iteration）。
 - 详见 docs/iter/round-3/r351-review-session-resume.md。
+
+### R352 错题本复习会话跨设备同步：review_cur 单快照 + /api/review/cur（2026-08-29，PR #554，分支 devin/1788453580-r352-review-cur-sync）
+- 取证：R351 reviewSnap 只存本机 storage——换设备/清缓存后中断复习会话（含 _extra 加练队列、已答态）无法恢复，而 practice_progress/exam_progress/ask_cur 均已服务端化，资产语义不一致。
+- 收口（复用 ask_cur uid 单快照模式，零 UI 改动、review-snap.js 契约不变）：后端新表 review_cur(uid PK, snap, updated_at) + save/clear/get_review_cur；POST /api/review/cur（snap:null 清除；_valid_review_snap fail-closed：v===1、snap.uid===uid、ts 正整数、items 1–80 且逐项 question_text 非空、rIdx 界内、序列化 ≤200KB、bool 不冒充 int；rl "rcur" 120/h）；GET ?uid= TTL 2h 过期/无记录返回 {}；路由注册在 /api/review/{mid} 之前（有测试锁定防 "cur" 被 int 路径吞）。前端 book.vue：saveReviewSnap 本机写入后去抖 1.5s POST（失败静默）；clearReviewSnap 清本机+取消 pending timer+POST snap:null；onShow 本机快照命中零远端 GET，未命中才 restoreRemoteSnap()（GET 后 reviewing/resumeInfo/本机快照三重竞态复查，远端快照再过 parseReviewSnap 二层 fail-closed）。uid 单快照 last-write-wins，不做多设备并发合并。
+- 验证：ruff/pytest 223(+5 test_review_cur.py：round-trip/清除/uid 隔离/2h TTL/15 类非法 400/超大 400/路由次序)/pyright 0 + lint/vitest 452/build 全绿；生产 rev 66580ac、bundle index-B5ESHVc1.js（部署脚本+浏览器实载核对），生产 curl 逐项实测（空 GET {} / 保存 / round-trip / 坏版本·uid 不符·rIdx 越界·缺 uid 全 400 / snap:null 清除 / {mid} 路由不受影响）。testing agent 三 context 双设备实测：A 1440 答错中断→去抖 POST 200；B 375 全新 context 同 anonUid 无本机快照→自动 GET→横幅 1/5→继续复习原位恢复（answered/错选 B/加练队尾原序 4/5 带 tag）+ review_resume_click 200；A 硬刷本机优先 0 远端 GET；B 放弃→snap:null→C 全新 context 无横幅、DB review_cur 0 行；R351/R346/?rz= 回归；0 次 /api/explain、78 条全 200、console 0 error、双视口溢出 0。
+- 测试数据清理：test-r352-api（curl，snap:null 自清）+ test-r352-ui 全库 DELETED {mistakes 2/answer_log 2/review_log 3/growth_events 7/practice_progress 1}，LEFTOVER {}，review_cur 全表 0 行；保护 uid DB 34 表+localStorage 前后一致（EXACT MATCH n=28）。
+- 边界（如实）：真实触屏未测（CDP 模拟）；限速 429 分支以 pytest 覆盖未生产实测；多设备并发写为 last-write-wins 语义（刻意不合并）。
+- 详见 docs/iter/round-3/r352-review-cur-sync.md。
