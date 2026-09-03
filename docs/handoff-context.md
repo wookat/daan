@@ -1346,3 +1346,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 测试数据清理：test-r343-src DELETED mistakes 5/answer_log 8/exam_attempts 1/growth_events 1，LEFTOVER 空；保护 uid DB 计数与 localStorage 逐键前后一致。
 - 边界（如实）：真实触屏未测（CDP 模拟）；kpFilter+srcFilter 叠加态未生产实测（代码三元 kpFilter 优先未改）。
 - 详见 docs/iter/round-3/r343-redo-source-filter.md。
+
+### R345 错题本题型/三级考点筛选 URL 同步：?kp=/?kp3= 深链 + load 后语义校验 fail-closed（2026-08-29，PR #544，分支 devin/1788439371-r345-book-kp-url-sync）
+- 取证：错题本 URL 同步（R276 tab/mod/src/sort、R340 rz）缺 kpFilter/kp3Filter 两维——筛到「语句填空」/「中国古代史」后硬刷/分享链接筛选态即丢，与 rz/src 行为不一致；R344 刚接通 kp3 重练透传使该缺口用户可感。
+- 收口（纯前端零后端/零契约）：book-url.js buildBookUrl/parseBookOpts 补 kp/kp3（动态数据无静态白名单，URL 层只做形状校验：非空≤40 字符、encodeURIComponent、畸形编码/非字符串 fail-closed；fav tab 不输出）；book.vue onLoad 暂存 _pendingKp/_pendingKp3（不直接设 filter），load() 成功后 applyPendingKp() 语义校验——kp3 须命中某项 tag3_name（命中一并设 filterMod）、kp 须命中 groupKey，无命中丢弃并 syncBookUrl() 纠正 URL；kpFilter/kp3Filter watcher 补 syncBookUrl（顺带清掉历史遗留重复 kpFilter watcher key）。R345b（f400afb）补 _pendingKpFix：原始 opts 带 kp/kp3 但 parse 后均空（畸形编码）时也纠正 URL。
+- 验证：lint/vitest 430(+2 组 kp/kp3 用例)/build 全绿；生产两轮 rev d4e6b4d→f400afb、bundle index-tdpTu_ly.js，部署脚本回归+Lighthouse 全过。testing agent 两轮实测（uid test-r345-kp/test-r345b-kp，4+2 错题含 CS-LS-01 vs CS-LS-02 同二级组对抗样本）：出向点行 URL 实时带 kp/kp3、chip 清除参数消失、硬刷恢复列表/chip/重练卡文案且对抗样本被排除、新 context 深链直达并自动补 mod、未知考点与畸形编码均 fail-closed 且 URL 被纠正（后者为 R345b 修复项，首轮实测发现 URL 残留）、?kp3=&rz= 叠加恢复、kp3 态重练仍带 t3=CS-LS-01（R344 回归）、fav 不输出、375/1440 溢出 0、console 0 error、0 次 /api/explain、0 条非 200。
+- 测试数据清理：两轮合计 DELETED mistakes 6/growth_events 3，LEFTOVER 空；保护 uid DB 计数与 localStorage 逐键前后一致。
+- 边界（如实）：真实触屏未测（CDP 模拟）；kp/kp3 语义合法性依赖当前 uid 错题数据，换设备无该题型数据时深链 fail-closed 回全量（预期，「所见即所筛」）；R340 ?rz= 单独硬刷本轮未单测（叠加用例等价覆盖）。
+- 详见 docs/iter/round-3/r345-book-kp-url-sync.md。
