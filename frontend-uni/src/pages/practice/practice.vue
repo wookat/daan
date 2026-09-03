@@ -192,7 +192,8 @@
           <text class="ring-t">正确率</text>
         </view>
       </view>
-      <view class="big">{{ beiMode ? '本组背完' : '本组完成' }}</view>
+      <view class="big">{{ beiMode ? '本组背完' : paperFinish().big }}</view>
+      <view v-if="!beiMode && paperFinish().isPaper" class="sub ptl">「{{ paperFinish().title }}」</view>
       <view v-if="!beiMode" class="sub">答对 {{ right }}/{{ items.length }} · 最高连对 {{ bestStreak }} 题<template v-if="autoSaved">，错题已自动加入错题本</template></view>
       <view v-else class="sub">已浏览 {{ items.length }} 道题的答案与解析</view>
       <view v-if="!beiMode && percentile != null" class="beat">本组正确率击败了 {{ percentile }}% 的刷题记录</view>
@@ -279,7 +280,8 @@
         <text v-if="!pushNudgeDone" class="loginnudge-x" @click="dismissPushNudge">✕</text>
       </view>
       <!-- #endif -->
-      <button class="btn" @click="retryGroup">再来一组</button>
+      <button v-if="paperFinish().isPaper" class="btn" @click="goExamList">回卷库</button>
+      <button v-else class="btn" @click="retryGroup">再来一组</button>
       <button v-if="!beiMode" class="btn ghost" style="margin-top: 16rpx" @click="shareResult">分享成绩</button>
       <button class="btn plain" style="margin-top: 8rpx" @click="quit">返回首页</button>
     </view>
@@ -360,7 +362,7 @@ import { requestNotificationPermission } from '../../reminder.js';
 import { announce } from '../../a11y-live.js';
 import { pickAnnounceText } from '../../live-policy.js';
 // #endif
-import { paperContinuePlan, paperQuery } from '../../paper-continue.js';
+import { paperContinuePlan, paperQuery, paperFinishState } from '../../paper-continue.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 import { qStatLine } from '../../q-stat.js';
@@ -1461,6 +1463,10 @@ export default {
     // #endif
     reinforceWeak(w) {
       this.startReinforce({ module: w.module, submodule: w.submodule, tag3: w.tag3, count: 5, source: 'session-report' });
+    },
+    // 完成页归卷态：按卷会话（_ptitle 非空）显卷名与回卷库出路；模板方法调用规避非响应式 _ptitle
+    paperFinish() {
+      return paperFinishState(this._ptitle);
     },
     // 完成页「再来一组」：错题重练场次重用同一组错题，其余按原模块重新抽题
     retryGroup() {
@@ -2637,6 +2643,7 @@ export default {
 .ring-t { font-size: 20rpx; color: var(--ink-2); }
 .big { font-size: 40rpx; font-weight: 700; margin-bottom: 12rpx; }
 .sub { font-size: 26rpx; color: var(--ink-2); margin-bottom: 28rpx; }
+.sub.ptl { margin-bottom: 8rpx; color: var(--brand-text); font-weight: 600; word-break: break-all; }
 .mask { position: fixed; inset: 0; background: rgba(15, 18, 30, 0.5); z-index: 90; display: flex; align-items: flex-end; }
 .sheet { width: 100%; box-sizing: border-box; background: var(--card); border-radius: 32rpx 32rpx 0 0; padding: 32rpx 28rpx calc(130rpx + env(safe-area-inset-bottom)); max-height: 70vh; overflow-y: auto; animation: slideup 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20rpx; }
