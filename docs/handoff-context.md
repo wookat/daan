@@ -1296,3 +1296,13 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 测试数据清理：两轮 uid 全库合并清理 DELETED 15 / LEFTOVER 0；保护 uid umteojq4sltdhorhm 37 项快照验前验后逐项一致（PROTECTED_MATCH True）。
 - 边界（如实）：真实触屏未测（CDP 模拟）；真实 LLM 刻意未触发（CDP 注入已有讲解模拟）；askSeenTick 独立隔离路径经换题/重进会话等价覆盖；ask onShow 会回写覆盖注入的 askSessions（测试注入需整页硬刷，已入测试 SKILL）。
 - 详见 docs/iter/round-3/design-r338-ask-seen-final.md。
+
+### R339–R347 摘要增补（2026-08-29，补记：R339–R346 各轮 PR 合并时 handoff 未随分支带入，此处统一补齐）
+- R339（PR #538）：AI 会话「查看原题」反向深链——ask-link.js askViewUrl（qid>0 → /pkgA/search/search?q=<qid>&qid=<qid> code_hit 直达）+ chips「查看原题」+ ask_view_question 埋点入白名单 + 历史空态文案修正。
+- R340（PR #539）：错题本按错因筛选——book-url.js 白名单 rz（四正式错因+未标注，fail-closed）+ 筛选 sheet 错因组 + 月度复盘错因行直达 + ?rz= URL 同步。
+- R341（PR #540）：模考报告「本卷错因画像」卡——reasonRecap 分组降序 + 画像行 bookRzIntent storage 握手直达错题本（onShow 消费即删）。
+- R342/R343/R344（PR #541/#542/#543）：错题重练遵循筛选三连——/api/mistakes/redo 补 rz / src / t3 可选白名单参数（非法 400 fail-closed，不传零变化），redoAll 透传 + 重练卡文案优先级 kp3 > kpFilter > rz > src。src 口径：exam→source='exam'，practice→source IS NULL OR !='exam'。
+- R345（PR #544）：错题本 kp/kp3 筛选 URL 同步——动态数据无静态白名单，onLoad 暂存 pending、load() 后按真实列表语义校验（无命中丢弃并纠正 URL，_pendingKpFix 修复畸形编码 URL 残留）。
+- R346（PR #545）：错题本挂 q-social-bar——列表展开态+复习流补逐题笔记/讨论/热评/分享；无 question_id（手录/加练）fail-closed 不渲染；列表内嵌交互需 `<view @click.stop>` 容器防外层卡片 toggleCard 吞点击（首轮生产实测发现并修复）。
+- R347（PR #546）：/api/track 白名单缺口收口——补 review_similar_auto / review_similar_click / review_reason_tag / share_poster 四个前端在发事件（此前静默 400 丢埋点，R346 测试实景发现）；新增 backend/tests/test_track_whitelist_sync.py 静态契约测试（扫描 frontend-uni/src 全部 trackEvent 字面量断言均在白名单，未来前端新增埋点漏同步会直接挂测试）。生产 rev 997e61b 复验：4 事件 curl 200、bogus 400、真实 UI 复习流加练触发 review_similar_auto 200、错因打标 review_reason_tag 200、全程 0 非 200/0 console error；测试 uid（test-r347 前缀）全库清理 LEFTOVER {}，保护 uid umteojq4sltdhorhm DB+localStorage 前后一致。
+- 各轮详证见对应 PR 评论与 docs/iter/round-3/ 设计文档。
