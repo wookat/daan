@@ -722,3 +722,5 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 ## R342 重练错因过滤走查新经验
 - report 深链为 `/#/pkgA/exam/report?attempt_id=<id>`；地址栏输入 hash 深链不触发 onLoad，需再硬刷一次才加载。
 - `redoSet` 被 practice 页消费即删：重练集合断言不要读 storage，改核对抓包里 `/api/mistakes/redo` 响应 items（或 apiSnap 缓存）与练习页题数。
+
+- 内嵌交互组件（如 q-social-bar）挂进带整卡 click toggle 的容器（如错题本列表卡）时，必测「内部链接点击是否被冒泡吞掉」（R346 实景抓到写笔记被 toggleCard 收起）；笔记类文本断言用 ASCII 内容（xdotool type 中文丢字）。

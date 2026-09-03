@@ -1354,3 +1354,12 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 测试数据清理：两轮合计 DELETED mistakes 6/growth_events 3，LEFTOVER 空；保护 uid DB 计数与 localStorage 逐键前后一致。
 - 边界（如实）：真实触屏未测（CDP 模拟）；kp/kp3 语义合法性依赖当前 uid 错题数据，换设备无该题型数据时深链 fail-closed 回全量（预期，「所见即所筛」）；R340 ?rz= 单独硬刷本轮未单测（叠加用例等价覆盖）。
 - 详见 docs/iter/round-3/r345-book-kp-url-sync.md。
+
+### R346 错题本挂 q-social-bar：列表展开态+复习流补逐题笔记/讨论/热评（2026-08-29，PR #545，分支 devin/1788441490-r346-book-social-bar）
+- 取证（SOP-10 功能深度维度）：q-social-bar（我的笔记/讨论计数/热评/分享给队友，R292 组件）只挂在刷题页解析区与模考报告解析浮层；错题本列表展开态与复习流 answered 态（题面/解析/历次作答俱全的两个核心复盘场景）均无逐题笔记/讨论出口，粉笔错题本支持错题逐题笔记。
+- 收口（纯前端零后端/零契约）：book.vue 两处模板级挂载——列表展开态 rich-text 之后 `v-if="m.open && m.question_id"`；复习流「回看 AI 详解」行之后 `v-if="cur.question_id"`。fail-closed：手录错题（无 question_id）与加练同类题（_extra 无 question_id）不渲染；组件 watch questionId immediate 随切题重载不串题。R346b（d9b6b9b）修复首轮实测缺陷：列表挂载处包 `<view @click.stop>` 容器——点「写笔记」曾冒泡触发外层卡片 toggleCard 收起卡片、编辑器打不开。
+- 验证：lint/vitest 430/build 全绿；生产两轮 rev 426a7c7（bundle index-V-U-cy2g.js）→ d9b6b9b（index-OIl6xaBS.js），部署脚本回归+Lighthouse 全过。testing agent 两轮实测（uid test-r346-sb/test-r346b-sb）：列表展开态 bar 渲染+笔记回显、手录/加练 fail-closed 无 bar、复习流写笔记 POST /api/notes 200+回显+切题不串（两 qid 独立笔记）、同源验证（重练刷题页同 qid 同笔记）、讨论入口跳转、修复后点「写笔记」编辑器打开卡片不收起且 .stop 不影响外部 toggle、R345 kp3 深链回归、375/1440 溢出 0、console 0 error、0 次 /api/explain。
+- 测试数据清理：两轮合计 DELETED mistakes 4/question_notes 3/review_log 4/answer_log 1/growth_events 5/practice_progress 1，LEFTOVER 空；保护 uid DB 计数与 localStorage 逐键前后一致。
+- 边界（如实）：保存 toast 视觉（900ms 未截到，以 API 200+回显为证）、真实触屏未测（CDP 模拟）。
+- 观察项（既有，非本轮引入）：加练埋点 POST /api/track event=review_similar_auto ref:null → 400（疑似白名单缺 review_similar_auto 或 ref null 校验），候选后续轮收口。
+- 详见 docs/iter/round-3/r346-book-social-bar.md。
