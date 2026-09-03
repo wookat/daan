@@ -149,6 +149,49 @@ async def api_explain_stream(
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
+@router.get("/api/ask/sessions")
+def api_ask_sessions_list(uid: str = ""):
+    uid = uid.strip()[:64]
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    return {"items": db.list_ask_sessions(uid)}
+
+
+@router.post("/api/ask/sessions")
+def api_ask_sessions_save(body: dict, request: Request):
+    uid = str(body.get("uid") or "").strip()[:64]
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    rl(request, "asksess", 60, 3600, uid)
+    sid = body.get("sid")
+    ts = body.get("ts")
+    if not isinstance(sid, int) or isinstance(sid, bool) or sid <= 0:
+        raise HTTPException(400, "无效的会话")
+    if not isinstance(ts, int) or isinstance(ts, bool) or ts <= 0:
+        raise HTTPException(400, "无效的会话")
+    title = str(body.get("title") or "").strip()[:60] or "问答会话"
+    n = body.get("n")
+    if isinstance(n, bool) or not isinstance(n, int) or not (1 <= n <= 50):
+        raise HTTPException(400, "无效的会话")
+    items = body.get("items")
+    if not isinstance(items, list) or not items or len(items) > 50 or not all(isinstance(x, dict) for x in items):
+        raise HTTPException(400, "无效的会话")
+    items_json = json.dumps(items, ensure_ascii=False)
+    if len(items_json) > 200_000:
+        raise HTTPException(400, "会话过大")
+    db.save_ask_session(uid, sid, ts, title, n, items_json)
+    return {"ok": True}
+
+
+@router.delete("/api/ask/sessions/{sid}")
+def api_ask_sessions_delete(sid: int, uid: str = ""):
+    uid = uid.strip()[:64]
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    db.delete_ask_session(uid, sid)
+    return {"ok": True}
+
+
 @router.post("/api/similar")
 async def api_similar(body: dict, request: Request, x_access_code: str | None = Header(None)):
     check_access(x_access_code)

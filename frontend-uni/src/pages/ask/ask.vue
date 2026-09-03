@@ -241,6 +241,7 @@
 import { md } from '../../md.js';
 import { request, uploadExplain, streamExplain, anonUid, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api.js';
 import { isNativeApp, pickImageNative } from '../../native.js';
+import { mergeAskSessions } from '../../ask-sessions.js';
 
 export default {
   data() {
@@ -290,6 +291,7 @@ export default {
     }
     // #endif
     this.loadDue();
+    this.syncSessions();
     const redo = uni.getStorageSync('redoQuestion');
     if (redo) {
       this.qtext = redo;
@@ -765,8 +767,24 @@ export default {
       const title = ((first.ansCard && first.ansCard.brief) || first.userText || first.question_text || '问答会话').slice(0, 30);
       const items = uni.getStorageSync('askCurSession') || [];
       if (!items.length) return;
-      this.sessions = [{ id: Date.now(), ts: Date.now(), title, n: items.length, items }, ...this.sessions].slice(0, 20);
+      const sess = { id: Date.now(), ts: Date.now(), title, n: items.length, items };
+      this.sessions = [sess, ...this.sessions].slice(0, 20);
       uni.setStorageSync('askSessions', this.sessions);
+      request('/api/ask/sessions', {
+        method: 'POST',
+        data: { uid: anonUid(), sid: sess.id, ts: sess.ts, title: sess.title, n: sess.n, items: sess.items },
+      }).catch(() => {});
+    },
+    syncSessions() {
+      request('/api/ask/sessions?uid=' + encodeURIComponent(anonUid()))
+        .then((r) => {
+          this.sessions = mergeAskSessions(this.sessions, (r && r.items) || []);
+          uni.setStorageSync('askSessions', this.sessions);
+        })
+        .catch(() => {});
+    },
+    dropRemoteSession(sid) {
+      request('/api/ask/sessions/' + sid + '?uid=' + encodeURIComponent(anonUid()), { method: 'DELETE' }).catch(() => {});
     },
     openHistory() {
       this.historyOpen = true;
@@ -777,6 +795,7 @@ export default {
       this.archiveCurrent();
       this.sessions.splice(i, 1);
       uni.setStorageSync('askSessions', this.sessions);
+      this.dropRemoteSession(s.id);
       this.results = s.items.map((r) => {
         const nr = {
           ...r,
@@ -799,8 +818,10 @@ export default {
       this.scrollBottom();
     },
     delSession(i) {
+      const s = this.sessions[i];
       this.sessions.splice(i, 1);
       uni.setStorageSync('askSessions', this.sessions);
+      if (s) this.dropRemoteSession(s.id);
     },
   },
 };
