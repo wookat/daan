@@ -241,6 +241,8 @@
 import { md } from '../../md.js';
 import { request, uploadExplain, streamExplain, anonUid, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api.js';
 import { isNativeApp, pickImageNative } from '../../native.js';
+import { mergeAskSessions, upsertLocalSession, addTombstone, removeTombstone, pruneTombstones, filterTombstoned, sanitizeCurItems, parseRemoteCur } from '../../ask-sessions.js';
+import { askQid } from '../../ask-link.js';
 
 export default {
   data() {
@@ -259,7 +261,9 @@ export default {
       error: '',
       results: [],
       sessions: uni.getStorageSync('askSessions') || [],
+      curSid: Number(uni.getStorageSync('askCurSid')) || 0,
       timer: null,
+      pendingQid: 0,
       recent: uni.getStorageSync('recentExplains') || [],
     };
   },
@@ -290,10 +294,17 @@ export default {
     }
     // #endif
     this.loadDue();
+    this.restoreCurSession();
+    this.syncSessions();
+    this.openLinkedSession();
     const redo = uni.getStorageSync('redoQuestion');
     if (redo) {
       this.qtext = redo;
-      this.uanswer = '';
+      const ra = uni.getStorageSync('redoAnswer');
+      this.uanswer = /^[A-D]$/.test(ra) ? ra : '';
+      uni.removeStorageSync('redoAnswer');
+      this.pendingQid = askQid(uni.getStorageSync('redoQid'));
+      uni.removeStorageSync('redoQid');
       this.imagePath = '';
       this.imageFile = null;
       this.textOpen = true;
@@ -545,11 +556,14 @@ export default {
       this.stagedImage = img || '';
       this.stagedText = txt || '';
       const uans = this.uanswer.trim();
+      const qid = txt ? this.pendingQid || 0 : 0;
+      this.pendingQid = 0;
       this.startTimer();
       try {
         let d;
         const rec = {
           ts: Date.now(),
+          qid,
           module_name: '',
           question_type: '',
           html: '',
@@ -738,6 +752,7 @@ export default {
     persistSession() {
       const items = this.results.map((r) => ({
         ts: r.ts,
+        qid: askQid(r.qid),
         module: r.module || '',
         module_name: r.module_name || '',
         question_type: r.question_type || '',
@@ -750,12 +765,29 @@ export default {
         fu: (r.fu || []).map((m) => ({ role: m.role, content: m.content })),
       }));
       uni.setStorageSync('askCurSession', items);
+      this.pushCurSession();
+    },
+    pushCurSession() {
+      clearTimeout(this._curPushT);
+      this._curPushT = setTimeout(() => {
+        const items = uni.getStorageSync('askCurSession') || [];
+        if (!Array.isArray(items) || !items.length) return;
+        request('/api/ask/cur', {
+          method: 'POST',
+          data: { uid: anonUid(), sid: this.curSid || Number(uni.getStorageSync('askCurSid')) || 0, ts: Date.now(), items },
+        }).catch(() => {});
+      }, 1500);
     },
     newSession() {
       this.archiveCurrent();
       this.results = [];
       this.error = '';
       uni.removeStorageSync('askCurSession');
+      this.curSid = 0;
+      uni.removeStorageSync('askCurSid');
+      this._curCleared = true;
+      clearTimeout(this._curPushT);
+      request('/api/ask/cur', { method: 'POST', data: { uid: anonUid(), items: [] } }).catch(() => {});
     },
     archiveCurrent() {
       if (!this.results.length) return;
@@ -763,19 +795,72 @@ export default {
       const title = ((first.ansCard && first.ansCard.brief) || first.userText || first.question_text || '问答会话').slice(0, 30);
       const items = uni.getStorageSync('askCurSession') || [];
       if (!items.length) return;
-      this.sessions = [{ id: Date.now(), ts: Date.now(), title, n: items.length, items }, ...this.sessions].slice(0, 20);
+      const sid = this.curSid || Number(uni.getStorageSync('askCurSid')) || Date.now();
+      const sess = { id: sid, ts: Date.now(), title, n: items.length, items };
+      uni.setStorageSync('askDelTombs', removeTombstone(uni.getStorageSync('askDelTombs'), sid));
+      this.sessions = upsertLocalSession(this.sessions, sess);
       uni.setStorageSync('askSessions', this.sessions);
+      this.curSid = 0;
+      uni.removeStorageSync('askCurSid');
+      request('/api/ask/sessions', {
+        method: 'POST',
+        data: { uid: anonUid(), sid: sess.id, ts: sess.ts, title: sess.title, n: sess.n, items: sess.items },
+      }).catch(() => {});
+    },
+    syncSessions() {
+      const tombs = pruneTombstones(uni.getStorageSync('askDelTombs'));
+      uni.setStorageSync('askDelTombs', tombs);
+      request('/api/ask/sessions?uid=' + encodeURIComponent(anonUid()))
+        .then((r) => {
+          this.sessions = mergeAskSessions(this.sessions, filterTombstoned((r && r.items) || [], tombs));
+          uni.setStorageSync('askSessions', this.sessions);
+        })
+        .catch(() => {});
+      for (const k of Object.keys(tombs)) this.dropRemoteSession(Number(k));
+    },
+    dropRemoteSession(sid) {
+      request('/api/ask/sessions/' + sid + '?uid=' + encodeURIComponent(anonUid()), { method: 'DELETE' })
+        .then(() => {
+          uni.setStorageSync('askDelTombs', removeTombstone(uni.getStorageSync('askDelTombs'), sid));
+        })
+        .catch(() => {});
     },
     openHistory() {
       this.historyOpen = true;
     },
-    loadSession(i) {
-      const s = this.sessions[i];
-      if (!s) return;
-      this.archiveCurrent();
-      this.sessions.splice(i, 1);
-      uni.setStorageSync('askSessions', this.sessions);
-      this.results = s.items.map((r) => {
+    openLinkedSession() {
+      const sid = askQid(uni.getStorageSync('askOpenSid'));
+      uni.removeStorageSync('askOpenSid');
+      if (!sid) return;
+      const i = this.sessions.findIndex((s) => s && s.id === sid);
+      if (i >= 0) this.loadSession(i);
+    },
+    restoreCurSession() {
+      if (this.results.length) return;
+      const items = sanitizeCurItems(uni.getStorageSync('askCurSession'));
+      if (items.length) {
+        this.results = this.adoptItems(items);
+        this.persistSession();
+        return;
+      }
+      // 本机无快照：异步取服务端进行中快照（R332，失败静默）
+      request('/api/ask/cur?uid=' + encodeURIComponent(anonUid()))
+        .then((r) => {
+          if (this.results.length || this._curCleared) return;
+          if (sanitizeCurItems(uni.getStorageSync('askCurSession')).length) return;
+          const cur = parseRemoteCur(r);
+          if (!cur) return;
+          if (cur.sid > 0) {
+            this.curSid = cur.sid;
+            uni.setStorageSync('askCurSid', cur.sid);
+          }
+          this.results = this.adoptItems(cur.items);
+          this.persistSession();
+        })
+        .catch(() => {});
+    },
+    adoptItems(items) {
+      return items.map((r) => {
         const nr = {
           ...r,
           html: '',
@@ -792,13 +877,26 @@ export default {
         this.applyExplain(nr, r.explanation);
         return nr;
       });
+    },
+    loadSession(i) {
+      const s = this.sessions[i];
+      if (!s) return;
+      this.archiveCurrent();
+      this.curSid = s.id;
+      uni.setStorageSync('askCurSid', s.id);
+      this.results = this.adoptItems(s.items);
       this.persistSession();
       this.historyOpen = false;
       this.scrollBottom();
     },
     delSession(i) {
+      const s = this.sessions[i];
       this.sessions.splice(i, 1);
       uni.setStorageSync('askSessions', this.sessions);
+      if (s) {
+        uni.setStorageSync('askDelTombs', addTombstone(uni.getStorageSync('askDelTombs'), s.id));
+        this.dropRemoteSession(s.id);
+      }
     },
   },
 };

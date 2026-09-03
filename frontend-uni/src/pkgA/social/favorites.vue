@@ -73,6 +73,8 @@
             <view class="ansline">正确答案 {{ it.answer }}</view>
             <view v-if="it.hs_explanation || it.explanation" class="exp">{{ it.hs_explanation || it.explanation }}</view>
             <view class="ops">
+              <text v-if="askSeenTick >= 0 && favAskSeen(it)" class="op seen" role="button" aria-label="回看 AI 详解" @click.stop="openSeenAskFav(it)">回看 AI 详解</text>
+              <text class="op" role="button" aria-label="AI 详解本题" @click.stop="askFromFav(it)">AI 详解本题</text>
               <text v-if="!it._local" class="op" @click.stop="moveItem(it)">移动到…</text>
               <text v-if="!it._local" class="op" @click.stop="openDiscuss(it)">讨论区</text>
               <text class="op del" @click.stop="unfav(it)">取消收藏</text>
@@ -111,7 +113,9 @@
 </template>
 
 <script>
-import { createFavFolder, deleteFavFolder, fetchFavFolders, fetchFavs, fetchNotes, removeFav, renameFavFolder, setFav } from '../../api.js';
+import { createFavFolder, deleteFavFolder, fetchFavFolders, fetchFavs, fetchNotes, removeFav, renameFavFolder, setFav, trackEvent } from '../../api.js';
+import { askPrefill } from '../../ask-prefill.js';
+import { askQid, findAskSid } from '../../ask-link.js';
 import { buildFavoritesUrl, parseFavoritesOpts } from '../../favorites-url.js';
 
 const MODS = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', 时政: '时政' };
@@ -135,6 +139,7 @@ export default {
       items: [],
       notes: [],
       modFilter: '',
+      askSeenTick: 0,
       loading: true,
     };
   },
@@ -158,6 +163,7 @@ export default {
     if (p.tab === 'note') this.switchNote();
   },
   onShow() {
+    this.askSeenTick++;
     this.load();
   },
   watch: {
@@ -286,6 +292,26 @@ export default {
         },
       });
     },
+    favAskSeen(it) {
+      return findAskSid(uni.getStorageSync('askSessions'), uni.getStorageSync('askCurSession'), it && it.id);
+    },
+    openSeenAskFav(it) {
+      const seen = this.favAskSeen(it);
+      if (!seen) return;
+      if (seen.sid > 0) uni.setStorageSync('askOpenSid', seen.sid);
+      uni.switchTab({ url: '/pages/ask/ask' });
+    },
+    askFromFav(it) {
+      const text = askPrefill(it && it.question, it && it.options);
+      if (!text) return;
+      trackEvent('fav_ask_click', (it && it.module) || '');
+      uni.setStorageSync('redoQuestion', text);
+      const qid = askQid(it && it.id);
+      if (qid) uni.setStorageSync('redoQid', qid);
+      else uni.removeStorageSync('redoQid');
+      uni.removeStorageSync('redoAnswer');
+      uni.switchTab({ url: '/pages/ask/ask' });
+    },
     moveItem(it) {
       const opts = this.folders.map((f) => f.icon + ' ' + f.name);
       uni.showActionSheet({
@@ -377,6 +403,7 @@ export default {
 .exp { font-size: 24rpx; color: var(--ink-2); line-height: 1.7; background: var(--fill); border-radius: 14rpx; padding: 16rpx 20rpx; }
 .ops { display: flex; gap: 34rpx; margin-top: 16rpx; }
 .op { font-size: 24rpx; color: var(--brand-text); }
+.op.seen { color: var(--ok-strong); }
 .op.del { color: #ef4444; }
 .fops { color: var(--ink-4); font-size: 26rpx; padding: 0 10rpx; }
 

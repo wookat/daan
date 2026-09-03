@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { askPrefill } from '../src/ask-prefill.js';
+import { askPrefill, askAnswerLetter } from '../src/ask-prefill.js';
 
 describe('askPrefill', () => {
   it('joins stem and options', () => {
@@ -21,5 +21,25 @@ describe('askPrefill', () => {
   });
   it('trims stem', () => {
     expect(askPrefill('  题干  ', null)).toBe('题干');
+  });
+});
+
+describe('askAnswerLetter', () => {
+  it('extracts single letter', () => {
+    expect(askAnswerLetter('A')).toBe('A');
+    expect(askAnswerLetter(' b ')).toBe('B');
+    expect(askAnswerLetter('C.选项文字')).toBe('C');
+  });
+  it('fails closed on multi-select', () => {
+    expect(askAnswerLetter('AC')).toBe('');
+    expect(askAnswerLetter('ABD')).toBe('');
+  });
+  it('fails closed on invalid or empty', () => {
+    expect(askAnswerLetter('')).toBe('');
+    expect(askAnswerLetter(null)).toBe('');
+    expect(askAnswerLetter(undefined)).toBe('');
+    expect(askAnswerLetter('E')).toBe('');
+    expect(askAnswerLetter(5)).toBe('');
+    expect(askAnswerLetter('正确')).toBe('');
   });
 });

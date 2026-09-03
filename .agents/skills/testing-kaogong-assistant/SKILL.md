@@ -5,6 +5,46 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R336 ask-link 走查新经验
+- **分包 chunk 陈旧缓存坑**：主 bundle（index-*.js）核对为新版 ≠ 分包 chunk 也是新版。pkgA 异步 chunk（如 pkgA-stats-practice-history.*.js）可能命中浏览器/预取缓存跑旧代码，表现为"新功能不出现"。判别法：`performance.getEntriesByType("resource")` 看实际加载的 chunk 文件名，与 `fetch('/assets/index-*.js')` 里引用的 chunk 名比对；不一致就 CDP `Network.clearBrowserCache` + `Page.reload {ignoreCache:true}` 再测，避免把缓存误报为 bug。
+- 断言 storage 驱动的 UI 入口时，可用 `el.__vueParentComponent`（沿 .parent 上溯）直读页面组件 data（如 seenAsk/pendingQid/detail 行字段），能精确定位是"数据没到"还是"渲染没做"。
+- `/api/practice/history/detail` 返回行**顶层无 question_id**（题目 id 在 `d.question.id`），前端若用 `d.question_id` 恒 undefined——R336 曾因此练习历史回看入口全灭（P1）。造类似"字段名对不上"断言时先 dump 行 keys。
+- ask 页 onShow 会把本地 askCurSession **自动 POST /api/ask/cur 回传服务端**：CDP 构造快照后只要进过 ask 页，测试 uid 就会留服务端 ask_cur 数据，清理清单要包含它。
+
+## R335 练习历史走查新经验
+- 练习历史造数最省路径：`POST /api/answer_log {uid,items:[{qid,correct,picked,secs}]}`（study_api.py:138）；同批写入同一时间戳即成一个会话（分组间隔 1800s，db.py `_HISTORY_SESSION_GAP`）。picked 省略即「未答」分支（askAnswerLetter 无效 → 删 redoAnswer 无 chip）。取有效题 id/正解用 `GET /api/questions?module=yanyu&limit=5`（/api/search/question/{id} 对不存在 id 可能长挂/非 JSON）。
+- localStorage 恢复大备份（28+ keys）不要经 CLI 参数传 oneshot.py（Argument list too long），要在 python 内直连 ws 发 Runtime.evaluate。备份文件若是双重 JSON 编码字符串需 json.loads 两次。
+- 生产共享宿主偶发不可达（HTTP 000/503 数分钟）：等待重试即可恢复，勿归因应用。
+
+## R333 搜索页走查新经验
+- 搜索框输入中文 CJK 用 computer type 会失败（xdotool 打不出汉字）：先 UI 点击聚焦输入框，再 CDP `Input.insertText` 注入文本（等价真实 input 事件，会触发 uni 的 v-model 与去抖搜索）。ASCII/数字可直接 type。
+- code_hit 直达可用**纯数字题目 id**（如 `1274831`），带字母的语义码需匹配后端 `_QCODE_RE`（insights.py）且 parse 成功才命中。
+- 埋点断言坑：新前端 trackEvent 事件名必须在后端 `/api/track` 白名单（backend/app/team.py api_track）内，否则 400「无效事件」——前端静默无感知，只有抓包/console 能发现。核对新增 *_click 类埋点时务必查白名单。
+
+## R331 进行中会话刷新恢复走查新经验
+- 测试 uid 注入的 localStorage 键是 **`anonUid`**（驼峰），不是 `anon_uid`——写错键页面会自动生成随机 uid，历史同步 GET 拿不到数据（表现为 askSessions 为空）。注入后须回读 `localStorage.getItem('anonUid')` 核对。
+- 「进行中会话」快照键：`askCurSession`（uni 包裹 `{"type":"object","data":[...]}`）+ `askCurSid`（`{"type":"number","data":sid}`）；构造进行中态最省法 = API 造数历史会话后 UI loadSession 恢复。刷新恢复的强证据 = 硬刷后无任何点击讲解+追问自动呈现 + askCurSid 保留 + 「新对话」POST body sid 复用。
+- 非法快照 fail-closed 断言：CDP 写 `askCurSession` 为字符串/含缺失、空 explanation 条目的数组后硬刷，sanitizeCurItems 仅回填合法条目；console error 用 Log.enable+Runtime.exceptionThrown 在 reload 期间监听取证。
+
+## R330 删除墓碑/网络失败模拟走查新经验
+- 模拟某类请求失败（弱网）：对目标 tab 的 CDP 连接 `Fetch.enable{patterns:[{urlPattern:'*api/ask/sessions*',requestStage:'Request'}]}`，对 method=DELETE `Fetch.failRequest(ConnectionFailed)`、其余 `continueRequest`；拦截随该 ws 连接存活，需常驻进程（硬刷不掉）。杀进程后拦截自动解除。注意 `pgrep -f 脚本名` 会匹配到自身 bash -c 命令行，判存活要用完整命令串或先 pgrep -a 核对。
+- 墓碑断言口径：删除后读 localStorage `askDelTombs`（uni storage 包一层 `{"type":"object","data":{...}}`）；「不复活」的强证据 = 服务端 GET 仍返回该 sid + 硬刷后 UI 列表无该条（证明是 filterTombstoned 而非远端已删）。
+- 多窗口切换前台不可靠时用 browser WS `Target.activateTarget{targetId}` 精确置前，再截图取证。
+
+## R328 ask 历史会话跨设备同步走查新经验
+- 多设备模拟：browser WS `Target.createBrowserContext`+`Target.createTarget{browserContextId}` 造隔离"设备"，各自注入同 anonUid（纯字符串）。注意 `Emulation.setDeviceMetricsOverride` 随 CDP 连接断开而失效——需常驻 holder 进程保持 ws 连接（见 /tmp/r328_holdB.py 模式）。
+- 造数不触 LLM：注入本地 askSessions 一条造数会话 → UI 历史点开恢复（loadSession 会移除该条并 DELETE 远端）→ 点「新对话」走真实 archiveCurrent → POST /api/ask/sessions。全程 0 次 /api/explain 可用网络抓包 grep 断言。
+- merge 语义本机优先（fail-open）：远端删除不会清掉本机已有副本；验证"远端已空"要用全新 context 同 uid 看历史空态。
+- 归档 POST 失败静默（503 也不报错、本地照常归档）；重试回传 = 恢复该条再「新对话」（会产生新 sid）。
+- 全新 context 首次加载会自动生成随机 anonUid 并发 GET（home_bundle/review 等），注入测试 uid 前的这些请求会带一次性随机 uid，报告清理时可说明。
+
+## R327 redoAnswer 带作答走查新经验
+- 断言口径：四入口（practice deepExplain=this.picked、book redo/askFromReview=历史 user_answer、report askDetail=detail.picked）跳 ask 页后，「你选的答案」chip 应高亮对应字母；storage `redoAnswer`/`redoQuestion` 在 ask onShow 消费后必须均为 null（CDP 读 localStorage 即可客观取证）。
+- 串题清理分支验证法：先从有作答题进入一次，再从**未作答**题（mini mock 交卷时留 1 题不答）进入——chip 必须全不选中，若继承上一字母即缺陷。
+- 复习流恢复的是**当初答错的 user_answer**，不是本次复习作答（本次答对也应恢复历史错选）。
+- CDP websocket 直连新版 Chrome 需 `websocket.create_connection(url, suppress_origin=True)`，否则 403 Forbidden（remote-allow-origins 限制）。
+- 生产 VPS 与 recruit 应用同机：遇 /api 大面积 503/超时先 curl /api/health + SSH 看 uptime/pip install，多为同机负载，等待恢复重试即可，不要误判为本轮前端缺陷。
+
 ## R326 AI 详解预填走查新经验
 - **数据口径陷阱：mistakes.question_text 本身已含选项行**（practice.vue 写入时即 `q.question + '\n' + optText`），任何在错题本侧再拼 options 的预填逻辑都会把选项重复两遍——断言预填内容时必须检查选项行只出现一次，不能只 grep 到 "A." 就判过。报告浮层的 d.question 与刷题页 q.question 则是纯题干，无此问题。
 - 错题本列表卡「AI 详解」op 不在「···」sheet 菜单里，而在**卡片展开态**（先点卡片「点开看答案与详解」）的 `.acts` 行（redo op，仅未掌握时显示）。
@@ -638,3 +678,30 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - **`uni.getStorageSync('fontLv') || 1` 会把合法的 0（小档）吞成 1**——exam/book/practice/profile 均如此，测「小」档必然回落标准；这类 falsy 陷阱在其它数值型 storage 键也可能出现，遇到 0 值不生效先查 `||` 兜底。
 - 做卷页 `pkgA/exam/exam.vue` 有未交卷 attempt 时进页会弹「继续上次模考？」uni-modal，此时 `.q/.otext` 查询返回 null——CDP 度量前先查 `!!document.querySelector('uni-modal')` 并先在 UI 上处理弹窗；临时 uid 若开过卷未交，后续任何进 exam 页（含刷新）都会弹。
 - 错题本列表态 `.q`（约13px）不绑字号，复习态 `.q`/解析 rich-text 外层才绑——量错元素会误判「列表态被影响」。
+
+## R329 会话同步删除类功能走查新经验
+- 测删除/清除类功能务必抓包核对响应码而非只看 UI：失败静默口径下 DELETE 503 时 UI 照常本机移除，但服务端残留，刷新后条目会从远端重新同步「复活」——UI 断言应配合刷新后复核 + GET 服务端回读。
+- 生产同机 recruit 负载（postgres 长查询+pip install）过载时 503/health 超时可持续 10+ 分钟，watchdog 会自愈；遇到时每几分钟重试即可，勿误判为被测代码问题。
+
+## R332 进行中会话跨设备同步（/api/ask/cur）取证口径
+- storage 键名是 `anonUid`（驼峰），不是 `anon_uid`——R328/R332 两轮都踩过，注入前先 `localStorage.getItem('anonUid')` 核对。
+- 进行中态最省构造法：API 造数一条 ask_sessions 历史会话（POST /api/ask/sessions），真实 UI loadSession 恢复即产生进行中态并触发去抖回传，无需触发 /api/explain。
+- cur 同步断言四件套：A 去抖 POST /api/ask/cur body 含 sid+非空 items；B（无本机快照隔离 context 同 uid）打开 ask 页自动 GET 并无点击回填；A 硬刷本机优先 0 次 GET；「新对话」POST items:[] 后对端硬刷空态。
+- askCurSid 恢复断言用 CDP 读 storage：`uni` storage 实际落 localStorage，键 `askCurSid`。
+
+## R334 收藏页 AI 入口走查新经验
+- 收藏造数最省路径：`POST /api/favs {uid, question_id}`（题 id 可用 1274831），收藏页即显「默认收藏夹 1 题」，无需真实 UI 刷题收藏。
+- Lighthouse 需用 `npx --no-install lighthouse`（PATH 无全局 bin），headless flags `--headless=new --no-sandbox`。
+- 375 视口 holder 结束后 `Emulation.clearDeviceMetricsOverride` 需再 `Page.reload` 一次才真正恢复桌面宽度（首次 clear 后 innerWidth 仍 375）。
+
+## R337 「回看 AI 详解」多场景走查新经验
+- ask 页是常驻 tab：`restoreCurSession()` 在 `results.length` 非空时直接 return——仅改 storage 里的 `askCurSession` 后切回 ask tab 内存态可能不刷新，注入快照前必须让整页硬刷再断言。
+- 复杂中文/嵌套 JSON 注入 localStorage 勿用 shell 单引号 oneshot（引号/转义必坏）：用 Python WebSocket 脚本 + `json.dumps(json.dumps(snap))` 双重编码后经 `Runtime.evaluate` 注入。
+- `pkill -f <脚本名>` 可能匹配并杀掉承载它的 bash 自身：先 `pgrep -f` 过滤确认，或用精确进程名/记录 pid 后 kill。
+
+## R338 刷题/错题本回看入口走查新经验
+- ask 常驻 tab 的 onShow 会把内存中的会话列表**回写覆盖** localStorage 的 `askSessions`——切到 ask tab 一次后再断言注入数据会发现被清空。正确顺序：注入 → `location.reload()` 整页硬刷 → 再走 UI；切 tab 触发 onShow 不算安全。
+- 刷题页练习中界面隐藏侧栏 tab，切页需先点右上「退出」回刷题首页；重进用「去继续」可恢复会话与作答态（含解析区）。刷题页 computed（如 curAskSeen）依赖 askSeenTick/cur，注入 storage 后按 →/← 换题一次即可强制重算，无需整页刷新。
+- 展开卡内小按钮（.op）点击易差几像素命中卡片本体导致收起：先 CDP 读 `getBoundingClientRect()` 换算工具坐标再点（1600 实宽→1024 工具坐标 ×0.64，浏览器 chrome 顶部偏移约 157 实 px）。
+- 验证 `@click.stop` 不收起卡片的客观方法：CDP 给 `.mcard` 挂 bubble 阶段计数 listener，UI 点击子按钮后读计数=0 即证明冒泡被阻断（book onShow 会 reload 列表重置 open 态，返回后卡片收起不能作为反证）。
+- 造「无命中」错题反例最省路径：CDP 只读 `cur.answer` 后 UI 故意点错选项，错题自动入本（无需 API 造数）。

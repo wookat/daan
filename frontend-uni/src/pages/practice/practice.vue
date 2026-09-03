@@ -177,6 +177,7 @@
             <text class="exp-v">{{ cur.source }}</text>
           </view>
         </view>
+        <view v-if="curAskSeen" class="deep seen" role="button" aria-label="回看 AI 详解" @click="openSeenAsk">回看 AI 详解 ›</view>
         <view class="deep" @click="deepExplain">用花生十三方法详解这道题 ›</view>
         <view v-if="!cur._sz" class="report-link" @click="reportQuestion">{{ cur._reported ? '已提交纠错，感谢反馈' : '题目有问题？纠错' }}</view>
         <q-social-bar v-if="cur.id && !cur._sz" :question-id="cur.id" />
@@ -352,7 +353,8 @@ import { drawOffline, enqueueAnswers, enqueueMistake, flushOfflineQueue } from '
 import { dayKey, loadSzDaily, saveSzDaily } from '../../checkin.js';
 import { splitMaterial, sameMaterial } from '../../material.js';
 import { fontSizes, normFontLv } from '../../font-size.js';
-import { askPrefill } from '../../ask-prefill.js';
+import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
+import { askQid, findAskSid } from '../../ask-link.js';
 // #ifdef H5
 import { requestNotificationPermission } from '../../reminder.js';
 import { announce } from '../../a11y-live.js';
@@ -383,6 +385,7 @@ function savePStats(s) {
 export default {
   data() {
     return {
+      askSeenTick: 0,
       counts: [],
       session: false,
       loadState: '',
@@ -454,6 +457,10 @@ export default {
     };
   },
   computed: {
+    curAskSeen() {
+      void this.askSeenTick;
+      return findAskSid(uni.getStorageSync('askSessions'), uni.getStorageSync('askCurSession'), this.cur && this.cur.id);
+    },
     moduleBreakdown() {
       const map = {};
       for (const q of this.items) {
@@ -682,6 +689,7 @@ export default {
     }
   },
   onShow() {
+    this.askSeenTick++;
     // #ifdef H5
     if (!this._pkHandler && typeof window !== 'undefined') {
       this._pkHandler = (e) => this.onPKeydown(e);
@@ -2109,11 +2117,22 @@ export default {
         this.reportBusy = false;
       }
     },
+    openSeenAsk() {
+      if (!this.curAskSeen) return;
+      if (this.curAskSeen.sid > 0) uni.setStorageSync('askOpenSid', this.curAskSeen.sid);
+      uni.switchTab({ url: '/pages/ask/ask' });
+    },
     deepExplain() {
       const q = this.cur;
       const text = askPrefill(q.question, q.options);
       if (!text) return;
       uni.setStorageSync('redoQuestion', text);
+      const qid = askQid(q.id);
+      if (qid) uni.setStorageSync('redoQid', qid);
+      else uni.removeStorageSync('redoQid');
+      const ans = askAnswerLetter(this.picked);
+      if (ans) uni.setStorageSync('redoAnswer', ans);
+      else uni.removeStorageSync('redoAnswer');
       uni.switchTab({ url: '/pages/ask/ask' });
     },
     async exportPaper() {
@@ -2472,6 +2491,7 @@ export default {
   text-decoration: underline;
 }
 .deep { margin-top: 6rpx; text-align: center; font-size: 25rpx; color: var(--brand-text); border: 1rpx solid var(--brand); border-radius: 999rpx; padding: 14rpx 0; }
+.deep.seen { color: var(--ok-strong); border-color: var(--ok-strong); }
 .banner { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between; gap: 20rpx; padding: 28rpx 32rpx calc(28rpx + env(safe-area-inset-bottom)); animation: slideup 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
 /* #ifdef H5 */
 @media (max-width: 767px) {

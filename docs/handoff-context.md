@@ -1201,3 +1201,98 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：lint/vitest 394(+5)/build 全绿；生产 rev 80dce10→674b272、bundle index-CkDDJQ_o.js；testing agent 两轮双视口实测：三入口预填单份选项（textarea A. 计数=1）、报告连看切题不串题、资料分析只填小题干、既有练同类/纠错/收藏/social bar 回归、1440/375 溢出 0、console 0 error、Lighthouse 全过；未点「讲解」零 LLM 请求。清理 test-r326-ask 两轮累计 DELETED 14 / LEFTOVER 0，保护 uid 快照一致。
 - 未生产实测：真实触屏；askPrefill 空 stem fail-closed 生产分支（vitest 覆盖）；真实 LLM 讲解请求（刻意不触发）。
 - 详见 docs/iter/round-3/design-r326-ask-from-review.md。
+
+### R327 AI 详解入口带上用户作答——redoAnswer 协议 + askAnswerLetter 纯函数（2026-08-29，PR #524，分支 devin/1788396969-r327-ask-user-answer）
+- 取证：ask 页早有 uanswer A–D chips 且 doExplain 已把 user_answer 传 /api/explain（讲解质量随作答上下文提升），但 R326 四个入口只写 redoQuestion、进入后 uanswer 恒空，用户须手动重选自己的错选。
+- 收口（纯前端零后端/零契约）：ask-prefill.js 新增 askAnswerLetter(v)（提取恰好一个 A–D 字母，多选/非法/空 fail-closed 返回 ''）；四入口（practice deepExplain 用 picked、book redo/askFromReview 用 user_answer、report askDetail 用 d.picked）有效值写 redoAnswer、无效 removeStorageSync 防串题；ask 页消费 redoAnswer（严格 /^[A-D]$/ 白名单）后即删。
+- 验证：lint/vitest 397(+3)/build 全绿；生产 rev 418bcf7、bundle index-uYRj2nkH.js；testing agent 双视口实测：四入口 chip 恢复（复习流恢复历史 user_answer=A 不被本次作答污染）、未答无 chip、先 B 后未答题不继承（清理生效）、消费后 storage null（CDP 实测）、手动 chips 无回归、1440 console 0 error、375 无溢出、零 LLM 请求。清理 test-r327-ans DELETED 46 / LEFTOVER 0，保护 uid 31 表快照一致。
+- 未生产实测：detailMat 折叠材料分支（本卷未遇到，R326 已验）；askAnswerLetter 多选/非法字母分支（生产 UI 不可达，vitest 覆盖）；真实触屏。
+- 环境观察项：测试期间生产 VPS 被同机 recruit 应用（postgres 长查询 + 长跑 pip install）打到 load ~21、两次 503；未动任何服务，恢复后重试通过；同机资源争抢需老板关注。
+- 详见 docs/iter/round-3/design-r327-ask-user-answer.md。
+
+### R328 AI 问答历史会话跨设备同步——ask_sessions 表 + /api/ask/sessions CRUD + 本机优先 merge（2026-08-29，PR #525，基于 #524 分支 devin/1788401713-r328-ask-sessions-sync）
+- 取证：ask 页历史会话（askSessions，讲解+追问，用户已消耗真实 LLM 成本）纯本机 uni storage，换设备/清缓存全丢；R296/R297/R322 已建立「服务端权威 + 本机快照优先 + 失败静默」同步口径，AI 会话是最后一块高价值本地资产。
+- 收口：后端新表 ask_sessions(uid,sid,ts,title,n,items JSON,updated_at,PK(uid,sid))；GET /api/ask/sessions?uid=（ts DESC,sid DESC 最新 20）；POST upsert（严格校验：uid≤64 必填、sid/ts 正整数拒 bool、title 截 60、n∈1..50、items 非空 list[dict]≤50 且序列化≤200K，uid 限速 rl("asksess",60,3600)，upsert 后每 uid 只留最新 20）；DELETE /{sid}?uid= 按 uid 隔离。前端新纯函数 src/ask-sessions.js mergeAskSessions（按 id 去重并集、本机优先、ts 降序、cap20、非法 fail-closed）；ask.vue onShow syncSessions 异步 GET+merge 回写、archiveCurrent 本地成功后异步 POST、loadSession/delSession 后异步 DELETE，全部失败静默。不改 /api/explain、不同步进行中 askCurSession。
+- 验证：ruff/pytest 200(+4)/pyright 0（npx pyright，本机无全局装）/lint/vitest 401(+4)/build 全绿；生产 rev 61b20c4、bundle index-DfsHZs41.js；API 层临时 uid 实测 roundtrip/upsert/隔离/非法逐项 400/超 200K 400；testing agent 三 context 模拟三设备：A 归档 POST 200→B(375) 历史出现并完整恢复讲解+追问→B 再归档+UI 删除 DELETE 200→C 全新 context 远端空态；fail-open 实证（远端删后 A 本机副本保留属本机优先设计；测试中真实遇 503，POST 静默失败本地不受影响）；双视口溢出 0、console 0 error、零 /api/explain；Lighthouse 全过（/ 0.99、/tiku/ 1.00）。清理 test-r328-* + 2 个附带随机 uid：DELETED 3 / LEFTOVER 0 / PROTECTED_MATCH True（32 表）。
+- 未生产实测：真实触屏；限速 60/h 分支；本机残留副本删除时远端 404 分支（DELETE 幂等 ok）。
+- 环境观察项（本轮第 3 次）：测试期间生产因同机 recruit/softcopyright 负载（load ~20）503 约 15 分钟，watchdog 自愈；未动任何服务；同机资源争抢持续需老板关注。
+- 语义注意：loadSession（恢复历史）本地既有行为就是把该条移出历史，现同步删服务端对应条；远端删除不强制删本机副本（fail-open，本机优先）。
+- 详见 docs/iter/round-3/design-r328-ask-sessions-sync.md。
+
+### R329 AI 问答历史会话「查看不销毁」+ 再归档回写同一会话（2026-08-29，PR #526，基于 #525 分支 devin/1788405768-r329-ask-session-view-keep）
+- 取证：loadSession(i) 旧语义为「取出销毁」——点开历史即 splice 出本机列表 + dropRemoteSession 删服务端；回看一条讲解若不重新归档就永久丢失，重新归档又生成新 Date.now() sid 造成重复条目+ts 重置。粉笔/夸克历史会话均为「点开查看、列表保留、显式删除」。R328 服务端 POST 已按 (uid,sid) upsert，纯前端收口。
+- 收口（零后端/零契约）：ask-sessions.js 新增纯函数 upsertLocalSession(sessions,sess)（同 id 去重置顶、cap20、非法 fail-closed、输入不可变）；ask.vue data 补 curSid（初始化读 askCurSid storage 防刷新丢 sid）；loadSession 不再 splice/DELETE，记录 curSid=s.id 并写 askCurSid；archiveCurrent sid = curSid || storage(askCurSid) || Date.now()，本机改 upsertLocalSession，POST 同 sid upsert，归档后清 curSid/askCurSid；newSession 同步清；delSession 显式删除语义不变。
+- 验证：lint/vitest 404(+3)/build 全绿（纯前端未动后端，后端门禁沿用 R328 全绿基线）；生产 rev 3551a28、bundle index-D9AjcS4H.js；testing agent 实测（uid test-r329-keep）：A(1440) 恢复后历史仍保留、0 DELETE；「新对话」再归档 POST sid=原 sid、本机不重复、服务端同 sid ts 更新；B(375 隔离 context) 同步、恢复保留；B 显式删除→DELETE 200→C 全新 context 空态；双视口溢出 0、console 0 error、零 /api/explain；Lighthouse 全过（/ 1.00、/tiku/ 1.00）。清理 DELETED 2 / LEFTOVER 0 / PROTECTED_MATCH True（32 表）。
+- 实景发现（fail-open 边界，挂观察项）：弱网下显式删除首次 DELETE 503 时本机已移除但服务端残留，刷新后会话从远端「复活」，重删成功——符合失败静默设计但用户可感知，后续可考虑删除失败重试/墓碑。
+- 未生产实测：cap20 截断分支（vitest 覆盖）；真实触屏。
+- 环境观察项（本阶段第 4 次）：测试期间生产两次因同机 recruit 负载（postgres 长查询+长跑 pip install，load ~17）503/超时，watchdog 自愈重启 kaogong 容器；未动任何服务；持续建议独立主机。
+- 详见 docs/iter/round-3/design-r329-ask-session-view-keep.md。
+### R330 AI 问答历史删除墓碑 + 失败重试——收口 DELETE 失败后会话「复活」（2026-08-29，PR #527，基于 #526 分支 devin/1788408896-r330-ask-del-tombstone）
+- 取证：R329 生产实景发现 delSession 的 dropRemoteSession 失败静默（.catch(()=>{})），503 窗口本机已移除但服务端残留，下次 syncSessions union merge 把已删会话并回本机——「删除复活」；本阶段同机负载 503 已 4 次实景出现，缺陷真实可感知。粉笔/夸克删除历史即终态。
+- 收口（纯前端零后端/零契约）：ask-sessions.js 新增墓碑纯函数 addTombstone/removeTombstone/pruneTombstones/filterTombstoned（storage 键 askDelTombs={sid:deletedAtMs}，TTL 7 天、cap 40 剔最旧、fail-closed、输入不可变）；ask.vue delSession 先记墓碑再 DELETE，成功才消墓碑；syncSessions 先 prune、远端 items 经 filterTombstoned 再 merge、对每个墓碑 sid 补发 DELETE 重试；archiveCurrent 同 sid 再归档消墓碑（撤销删除）。
+- 验证：lint/vitest 408(+4)/build 全绿（纯前端，后端门禁沿用 R328 基线）；生产 rev e5c4ae3、bundle index-B0kkHHfg.js；testing agent 实测（uid test-r330-tomb，CDP Fetch.failRequest 定向拦截 DELETE 模拟弱网）：拦截下删除→墓碑落 storage→硬刷后服务端仍返回该 sid（curl 实证残留）但列表不复活（核心断言，改动前必复活）；恢复网络 onShow 自动补发 DELETE 200、墓碑清空、服务端回读已删；正常删除墓碑即时消除；R329 查看不销毁/R328 跨设备回归；双视口溢出 0、console 0 error、零 /api/explain；Lighthouse 全过（/ 0.98、/tiku/ 1.00）。清理 DELETED 3 / LEFTOVER 0 / PROTECTED_MATCH True（32 表）。
+- 边界（如实）：墓碑仅本机——B 删、A 弱网窗口时 A 无墓碑仍可能短暂看到远端残留（无服务端墓碑的固有限制，本轮不改契约）；未生产实测：TTL 7 天/cap 40 分支（vitest 覆盖）、archiveCurrent 撤销分支（生产 UI 不可达）。
+- 详见 docs/iter/round-3/design-r330-ask-session-del-tombstone.md。
+
+### R331 AI 问答进行中会话刷新恢复——askCurSession 快照回填（2026-08-29，PR #528，基于 #527 分支 devin/1788410294-r331-ask-cur-restore）
+- 取证：persistSession() 每次讲解/追问后写本机 askCurSession，但全页无回填路径——刷新后 results=[]，进行中会话 UI 消失；且 archiveCurrent 首行短路使快照进不了历史，「新对话」还会物理删除快照，已消耗真实 LLM 成本的问答永久丢失。粉笔/夸克刷新后会话上下文保留。
+- 收口（纯前端零后端/零契约）：ask-sessions.js 新增纯函数 sanitizeCurItems（非数组 fail-closed []，仅保留 explanation 非空 string 的 object 条目，输入不可变）；ask.vue loadSession 映射抽出 adoptItems 复用；新增 restoreCurSession()（onShow 中 syncSessions 前调用，results 为空守卫防重复回填）；curSid 由 data() 读 askCurSid 恢复，R329 同 sid 再归档自然衔接。
+- 验证：lint/vitest 410(+2)/build 全绿（纯前端，后端基线沿用 R330）；生产 rev 076df65、bundle index-CyabKi9q.js；testing agent 实测（uid test-r331-restore）：loadSession 产生进行中态→硬刷后讲解+追问自动回填（改动前必空态）、askCurSid 保留、「新对话」POST 复用原 sid 服务端不产生重复；无快照/字符串快照/混合非法快照 fail-closed；R328/R329/R330 回归；1440/375 溢出 0、console 0 error、零 /api/explain；Lighthouse 全过（/ 0.98、/tiku/ 1.00）。清理 DELETED 1 / LEFTOVER 0 / PROTECTED_MATCH True（32 表）。
+- 边界（如实）：进行中会话仍仅本机（R328 只服务端化已归档会话）；恢复后 ansCard/sim 等瞬态不还原（与 loadSession 同口径）；字符串非法快照被忽略但不主动清 storage（无害，候选顺手清理）；真实触屏未实测。
+- 详见 docs/iter/round-3/design-r331-ask-cur-session-restore.md。
+
+### R332 AI 问答进行中会话跨设备同步——ask_cur 单快照 + /api/ask/cur（2026-08-29，PR #529，基于 #528 分支 devin/1788411812-r332-ask-cur-sync）
+- 取证：R331 后进行中会话可刷新恢复但 askCurSession 仍纯本机 storage——换设备/清缓存后进行中讲解+追问（已消耗真实 LLM 成本）全丢；已归档会话 R328 起可跨设备，语义不一致。粉笔/夸克进行中上下文跨端保留。
+- 收口（复用 R298/R322 uid 单快照模式）：后端新表 ask_cur(uid PK, sid, ts, items JSON, updated_at)+save/clear/get_ask_cur；POST /api/ask/cur（items 非 list/>50/非 dict/序列化>200k→400，items:[]=清除，sid 0=未归档或正整数衔接 R329 同 sid，ts 正整数，rl askcur 120/h uid 桶）；GET 无快照或超 7 天→{}。前端 parseRemoteCur 纯函数 fail-closed（items 经 sanitizeCurItems 后空→null，sid 非正整数归 0）；persistSession 末尾去抖 1.5s pushCurSession POST 整份快照；newSession 清本机+取消未决去抖+POST items:[] 清服务端+_curCleared 守卫；restoreCurSession 本机快照优先（命中 0 GET），无本机才异步 GET 回填（回调三重守卫：results 非空/已点新对话/本机已有快照则丢弃），sid>0 恢复 curSid/askCurSid。
+- 验证：ruff/pytest 204(+4 test_ask_cur.py)/pyright 0/lint/vitest 413(+3)/build 全绿；生产 rev 8a9b70d、bundle index-u8FD-V0M.js；API curl 逐项实测（roundtrip/lww 覆盖/uid 隔离/7 类非法 400/items:[] 清除）；testing agent 双设备实测（uid test-r332-cursync）：A 1440 loadSession 产生进行中态→去抖 POST 实抓含 sid+items；B 375 全新隔离 context 同 uid 无本机快照→打开 ask 页自动 GET 回填讲解+追问、askCurSid 恢复；A 硬刷本机优先 0 GET；A「新对话」POST items:[] 后 B 硬刷空态；R328/R329/R330/R331 回归；1440/375 溢出 0、console 0 error、零 /api/explain；Lighthouse 全过（/ 0.98、/tiku/ 1.00）。清理 DELETED 2 / LEFTOVER 0（按 test-r332-% 前缀删除，保护 uid 不可触及）。
+- 边界（如实）：单快照 last-write-wins，多设备同时进行中会话互相覆盖（同 exam/practice 口径，不做合并）；7 天 TTL/限速分支未生产实测（pytest 覆盖）；去抖多次快速操作合并未专项实测；真实触屏未实测；网络失败静默分支未生产实测。
+- 详见 docs/iter/round-3/design-r332-ask-cur-cross-device.md。
+
+### R333 搜索题目详情补「AI 详解本题」入口（2026-08-29，PR #530，基于 #529 分支 devin/1788413330-r333-search-ask-entry）
+- 取证：搜索页两处题目详情展开态（code_hit 直达 + 题目列表）已有题干/选项/答案/解析/复制链接，但零 AI 出口；R326 已铺报告浮层/错题本，R327 建立 redoAnswer 协议；/api/search/question/{qid} 已返回 question/options，可直接复用 askPrefill。
+- 收口（纯前端零后端契约）：两处详情态 .d-acts 行「AI 详解本题」+「复制本题链接」并排；askFromSearch(d)=askPrefill 预填（空 no-op）→ setStorageSync redoQuestion → removeStorageSync redoAnswer（搜索无作答语义，防串用上一题作答）→ trackEvent('search_ask_click', module) → switchTab /pages/ask/ask；@click.stop 防冒泡收起详情；R158/R160 竞态防护不变。
+- 走查发现并修复：/api/track 事件白名单缺 search_ask_click 致埋点 400 丢失，且既有 review_ask_click/report_ask_click（R326/R327 入口）同样不在白名单、一直在 400——team.py 白名单三事件一并补入。
+- 验证：ruff/pytest 204/pyright 0/lint/vitest 413/build 全绿；生产 rev b65ac08 testing agent 双视口实测（uid test-r333-search）：1440 关键词入口 + 375 code_hit（纯数字 id 命中）详情均出 AI 按钮；点击预填题干+选项单份不重复；预置 redoAnswer=B 后走搜索入口 ask 页无 B chip、storage 已清；复制链接/详情收起展开回归；全程 0 次 /api/explain、console 0 error（除埋点 400，修复后消除）、双视口溢出 0；Lighthouse 全过（/ 0.98/LCP 804、/tiku/ 1.00）。
+- 边界（如实）：语义码形式 code（如 YY-LJTK-2017-1274831）不命中 code_hit 走全文搜索（既有 parse 逻辑，非本轮改动）；真实触屏未实测；埋点白名单修复后的 200 回归待下次部署复验。
+- 详见 docs/iter/round-3/design-r333-search-ask-entry.md。
+
+### R334 收藏题目详情补「AI 详解本题」入口（2026-08-29，PR #531，分支 devin/1788415680-r334-fav-ask-entry）
+- 取证：收藏与笔记页收藏题目卡展开态已有题干/选项/答案/解析与 移动到…/讨论区/取消收藏 操作，但零 AI 出口——是最后一个有完整题面却无 AI 出口的复盘场景（刷题/错题本/报告浮层 R326、搜索 R333 均已就位）。
+- 收口（复用协议，零新 endpoint/表/URL 契约）：ops 行行首「AI 详解本题」；askFromFav(it)=askPrefill(it.question, it.options) 预填（空 no-op）→ trackEvent('fav_ask_click', module) → setStorageSync redoQuestion + removeStorageSync redoAnswer（收藏无本次作答语义，防串用旧作答）→ switchTab /pages/ask/ask；@click.stop 防收起卡片；本地收藏 _local 同 schema 直接可用；team.py /api/track 白名单同步补 fav_ask_click（吸取 R333 教训，避免静默 400 丢埋点）。
+- 验证：ruff/pytest 204/pyright 0/lint/vitest 413/build 全绿；生产 rev 2bb985c testing agent 双视口实测（uid test-r334-fav）：1440/375 入口出现、点击不收起直接跳 ask 页、预填单份、预置 redoAnswer=B 被清（无 chip、storage null）、fav_ask_click 200×2、三个既有操作回归、0 次 /api/explain、console 0 error、双视口溢出 0；Lighthouse / 独立复跑×2 a11y 1.00、LCP 1811/1924ms（部署首跑 0.94/2643ms 为单样本波动）。
+- 边界（如实）：真实触屏未实测；「移动到…」仅验弹层未执行实际移动；375 下三个回归操作未单测（1440 已验）；测试 uid 全库清理 DELETED 4 / LEFTOVER 0、保护 uid 快照一致。
+- 详见 docs/iter/round-3/design-r334-fav-ask-entry.md。
+
+### R335 练习历史逐题回看展开态 + 「AI 详解本题」入口（2026-08-29，PR #532，分支 devin/1788416965-r335-history-detail-expand）
+- 取证：练习历史会话详情逐题行只有 ✓/✗ + 两行截断题干 + 错题「我的答案 X · 正解 Y」+ 用时，不可点开；后端 practice_history_detail 每行早已附完整题库原题（options/answer/explanation/hs_explanation），数据就位纯呈现缺口；用户想弄懂错题只能「重练」重做。粉笔练习历史支持逐题点开看解析。
+- 收口（纯前端 + 埋点白名单，零新 endpoint/表/URL 契约）：有 d.question 的逐题行可点展开（openDetailIdx 单开互斥，切会话重置）：题干去截断 + 选项（正解绿 ans/我的错选红 bad）+ 正确答案/我的答案行 + 解析；question=null（下架题）行不可展开无箭头；展开态「AI 详解本题」= askPrefill 预填（空 no-op）→ trackEvent('history_ask_click', module) → 写 redoQuestion；picked 经 askAnswerLetter 有效写 redoAnswer（本场景有真实作答语义，区别 R333 搜索/R334 收藏）、无效显式 remove → switchTab ask 页；@click.stop 防冒泡；team.py 白名单补 history_ask_click。
+- 验证：ruff/pytest 204/pyright 0/lint/vitest 413/build 全绿；生产 rev c7a6dd9 testing agent 双视口实测（uid test-r335-history，API 造数 1错+1对+1未答）：逐题展开呈现/单开互斥/再点收起、错题进 ask chip=B 错选、对题 chip=A 不串题、未答（预置 redoAnswer=D）无 chip 且 storage 被清、history_ask_click 200×4、重练/会话折叠/快照即显回归、0 次 /api/explain、双视口溢出 0、console 0 error。
+- 边界（如实）：真实触屏未实测；下架题（question=null）行分支无法安全构造未生产实测（代码 fail-closed）；Lighthouse 本轮跳过（分包 hash 路由无独立文档，R334 刚复跑首页基线）；测试期间宿主一度整体不可达 4–5 分钟（共享宿主负载，自行恢复，未归因本应用）；测试数据全库清理 DELETED 10 / LEFTOVER 0、保护 uid 快照一致。
+- 详见 docs/iter/round-3/design-r335-history-detail-expand.md。
+
+### R336 AI 问答会话与题目关联：item 级 qid + 「回看 AI 详解」（2026-08-29，分支 devin/1788420168-r336-ask-qid-link）
+- 取证（SOP-10 审计窗口，四维复查后选定功能深度缺口）：R326–R335 六个复盘场景 AI 入口只写 redoQuestion 文本，题目 id 在跳转时丢弃；ask 会话 item（本机/ask_sessions/ask_cur）无任何题目关联字段——用户回到同一题无法知道已问过 AI，只能翻历史列表或再触发一次 LLM 讲解（重复成本）。后端 /api/ask/sessions 与 /api/ask/cur 的 items 是不透明 dict 列表，天然可带新字段，零后端改动。
+- 收口（纯前端，零新 endpoint/表/URL 契约，不改 /api/explain）：新纯函数 ask-link.js——askQid(v) 仅接受正整数（number 或纯数字字符串）否则 0；findAskSid(sessions, curItems, qid) 先扫进行中 items（命中 {sid:0}）再按列表序扫归档 sessions（命中 {sid:s.id}），非法输入/无命中 null，全部 fail-closed。六入口（practice/book 复习+列表/report/search/favorites/practice-history）写 redoQuestion 同时有效写 redoQid、无效显式 remove；ask 页消费 redoQid→pendingQid，doExplain 仅文本讲解首条消费（qid 挂 rec 后即清零，图片讲解恒 0），persistSession 序列化补 qid: askQid(r.qid)，adoptItems 展开透传；askOpenSid 导航协议：回看入口写目标 sid（sid=0 进行中会话不写，直接切 tab 即见）→ ask onShow openLinkedSession() 消费并 loadSession 定位，非法/缺失静默。首批外显两处「回看 AI 详解」：练习历史展开态（toggleDetail 时算 seenAsk）+ 错题本复习流（reviewAskSeen computed + onShow tick 重算），仅命中才显示，点开零 LLM 请求。存量无 qid 会话不误命中、行为不变。
+- 验证：ruff/pytest 204/pyright 0/lint/vitest 424(+11)/build 全绿。生产验证与测试数据清理见 PR 评论。
+- P1（首版 753a187 生产走查发现并修复）：practice-history detail 行的题目 id 在 d.question.id（API 行结构 created_at/module/submodule/correct/secs/picked/question），首版误用不存在的顶层 d.question_id——toggleDetail 恒不出「回看 AI 详解」、askFromHistory 恒清 redoQid。修复：两处改 d.question && d.question.id（e91973b）。测试代理先证伪了「旧 split chunk 缓存」假设（清缓存+ignore-cache 重载后仍复现）才定位到字段契约问题。
+- 生产复测（rev e91973b，bundle index-CHHA_PFm.js）：T1 进行中会话关联+练习历史「回看 AI 详解」+历史 AI 入口 pendingQid 透传、T2 归档会话 askOpenSid 写入/消费/定位、T3 错题本复习流命中/不误报/存量无 qid 不误命中、T4 有效 redoQid 透传+陈旧 redoQid 进无关题清除、T5 375 视口+归档/恢复/删除回归——全部通过；全程 0 次 /api/explain、track 无 4xx/5xx、console 0 error、无横向溢出；Lighthouse 预算部署脚本复验通过。
+- 测试数据清理：test-r336-asklink 全库（含 uid/user_id 的 37 表字段）DELETED 17 / LEFTOVER 0；保护 uid umteojq4sltdhorhm 37 项计数+内容哈希验前验后逐项一致。
+- 边界（如实）：关联以「预填后首次文本讲解」为锚，用户清空重写题目再讲解仍会挂原 qid（提示性关联，非强一致）；跨设备新会话首扫依赖 syncSessions 异步完成后再进入页面才可见（fail-closed 不误报）；回看入口首批只铺练习历史+错题本复习流，其余场景待后续轮次；真实 LLM 请求刻意未触发（用 CDP/localStorage 注入既有讲解模拟）、真实触屏未测（CDP touch 模拟）、图片讲解 qid=0 分支未生产实测（vitest 覆盖）。
+- 详见 docs/iter/round-3/design-r336-ask-qid-link.md。
+
+### R337 「回看 AI 详解」入口铺满剩余复盘场景：报告解析浮层/搜索详情/收藏详情（2026-08-29，PR #535，分支 devin/1788423125-r337-ask-seen）
+- 取证：R336 已建立 item 级 qid 关联协议（ask-link.js askQid/findAskSid + askOpenSid 导航），report.vue/search.vue/favorites.vue 三场景已写有效 redoQid，但均未用 findAskSid 检查已有 AI 讲解——用户在成绩报告浮层/搜索详情/收藏详情再遇同一题只见「AI 详解本题」，不知已问过，可能重复触发 LLM。
+- 收口（纯前端，零新 endpoint/表/URL 契约，不改 /api/explain）：三页复用 findAskSid——report.vue detailAskSeen computed（qid=detail.question_id）+ askSeenTick onShow 重算 + openSeenAsk()（sid>0 写 askOpenSid、sid=0 直切 ask tab）；search.vue 同构（qid=detail.id，code-hit 与列表详情两处模板）；favorites.vue 收藏卡可多开改按 item 查 favAskSeen(it)（qid=it.id，本地时政收藏 id:null 由 askQid fail-closed 不显示）。命中态「回看 AI 详解」绿色（--ok-strong），未命中/legacy 无 qid/非法 id 不显示。
+- 验证：lint/vitest 424/build 全绿（纯前端，后端基线沿用 R336）；生产 rev 0943b6b、bundle index-CNuYvyjz.js，部署脚本 API 回归+Lighthouse 预算全过（/ 0.99/LCP 805ms、/tiku/ 1.00/LCP 931ms）。testing agent 实测（uid test-r337-replay，CDP 注入 askSessions/askCurSession 模拟已有讲解）：报告浮层归档命中（入口位于「AI 详解本题」上方、点击自动打开归档会话、askOpenSid 被消费）、sid=0 当前会话直切不写 askOpenSid、切无关题入口消失；搜索 code-hit 命中/无关题反例；收藏详情命中/未问过反例；既有「AI 详解本题」预填与 redoQid 消费回归；375/1440 溢出 0、console 0 error、全程 0 次 /api/explain。
+- 测试数据清理：test-r337-replay 全库 DELETED 5 / LEFTOVER 0；保护 uid umteojq4sltdhorhm 快照验前验后逐项一致（PROTECTED_MATCH True）。
+- 边界（如实）：本地时政收藏 id:null fail-closed 分支未生产构造（vitest 覆盖 askQid）；真实触屏未测（CDP 模拟）；「回看」入口无独立埋点（与 R336 口径一致）；ask 常驻 tab 注入时序注意事项已入测试 SKILL。
+- 详见 docs/iter/round-3/design-r337-ask-seen-everywhere.md。
+
+### R338 「回看 AI 详解」命中态收尾：刷题页解析区/错题本列表展开态（2026-08-29，PR #536 + 样式修复 PR #537）
+- 取证：全代码库 redoQid 写入点复查，R337 后仅剩两处场景写有效 redoQid 但无已有讲解命中态——practice.vue 解析区 deepExplain（qid=cur.id）与 book.vue 列表展开态 redo(m)（qid=m.question_id）。
+- 收口（纯前端，零新 endpoint/表/URL 契约，不改 /api/explain）：两页复用 ask-link.js findAskSid + askOpenSid 协议——practice.vue curAskSeen computed（askSeenTick onShow 重算）+ 解析区「回看 AI 详解 ›」（.deep.seen 绿色，位于「用花生十三方法详解这道题」上方）+ openSeenAsk()（sid>0 写 askOpenSid、sid=0 直切 ask tab）；book.vue 列表展开卡 mAskSeen(m) 方法查 + 「回看 AI 详解」（.op.seen）+ openSeenAskM(m) 同构导航，@click.stop 防收起。未命中/legacy 无 qid/非法 id fail-closed 不显示。
+- P2（首版 94ce6a3 生产走查发现，PR #537 修复 069eefc）：book.vue 模板用了 class="op seen" 但漏加 .op.seen CSS——错题本回看入口渲染默认黑色 rgb(23,24,28) 而非绿色。补 `.op.seen { color: var(--ok-strong); }` 后生产复验 getComputedStyle = rgb(21,128,61)（--ok-strong #15803d）。
+- 验证：lint/vitest 424/build 全绿（纯前端）；生产 rev 069eefc、bundle index-Dpq4U62M.js，部署脚本 API 回归+Lighthouse 预算全过。testing agent 两轮实测（uid test-r338-replay / test-r338b-css）：刷题页归档命中导航+sid=0 直切+切无关题消失、错题本列表命中（含 mastered 项）/未命中反例、@click.stop 不冒泡（bubble listener 客观验证）、askOpenSid 写入/消费、原 AI 详解预填与 redoQid 消费回归、375/1440 溢出 0、console 0 error、全程 0 次 /api/explain。
+- 测试数据清理：两轮 uid 全库合并清理 DELETED 15 / LEFTOVER 0；保护 uid umteojq4sltdhorhm 37 项快照验前验后逐项一致（PROTECTED_MATCH True）。
+- 边界（如实）：真实触屏未测（CDP 模拟）；真实 LLM 刻意未触发（CDP 注入已有讲解模拟）；askSeenTick 独立隔离路径经换题/重进会话等价覆盖；ask onShow 会回写覆盖注入的 askSessions（测试注入需整页硬刷，已入测试 SKILL）。
+- 详见 docs/iter/round-3/design-r338-ask-seen-final.md。

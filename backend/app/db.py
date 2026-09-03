@@ -3606,6 +3606,117 @@ def get_practice_progress(uid: str) -> dict | None:
     return d
 
 
+def _ensure_ask_sessions(conn):
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS ask_sessions (
+            uid TEXT NOT NULL,
+            sid INTEGER NOT NULL,
+            ts INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            n INTEGER NOT NULL,
+            items TEXT NOT NULL,
+            updated_at REAL NOT NULL,
+            PRIMARY KEY (uid, sid)
+        )"""
+    )
+
+
+def save_ask_session(uid: str, sid: int, ts: int, title: str, n: int, items_json: str) -> None:
+    conn = get_conn()
+    _ensure_ask_sessions(conn)
+    conn.execute(
+        """INSERT INTO ask_sessions (uid, sid, ts, title, n, items, updated_at)
+           VALUES (?,?,?,?,?,?,?)
+           ON CONFLICT(uid, sid) DO UPDATE SET
+             ts=excluded.ts, title=excluded.title, n=excluded.n,
+             items=excluded.items, updated_at=excluded.updated_at""",
+        (uid, sid, ts, title, n, items_json, time.time()),
+    )
+    conn.execute(
+        """DELETE FROM ask_sessions WHERE uid=? AND sid NOT IN (
+             SELECT sid FROM ask_sessions WHERE uid=? ORDER BY ts DESC, sid DESC LIMIT 20)""",
+        (uid, uid),
+    )
+    conn.commit()
+    conn.close()
+
+
+def delete_ask_session(uid: str, sid: int) -> None:
+    conn = get_conn()
+    _ensure_ask_sessions(conn)
+    conn.execute("DELETE FROM ask_sessions WHERE uid=? AND sid=?", (uid, sid))
+    conn.commit()
+    conn.close()
+
+
+def list_ask_sessions(uid: str) -> list[dict]:
+    conn = get_conn()
+    _ensure_ask_sessions(conn)
+    rows = conn.execute(
+        "SELECT sid, ts, title, n, items FROM ask_sessions WHERE uid=? ORDER BY ts DESC, sid DESC LIMIT 20",
+        (uid,),
+    ).fetchall()
+    conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        try:
+            items = json.loads(d["items"] or "[]")
+        except ValueError:
+            items = []
+        out.append({"id": d["sid"], "ts": d["ts"], "title": d["title"], "n": d["n"], "items": items})
+    return out
+
+
+def _ensure_ask_cur(conn):
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS ask_cur (
+            uid TEXT PRIMARY KEY,
+            sid INTEGER NOT NULL DEFAULT 0,
+            ts INTEGER NOT NULL,
+            items TEXT NOT NULL,
+            updated_at REAL NOT NULL
+        )"""
+    )
+
+
+def save_ask_cur(uid: str, sid: int, ts: int, items_json: str) -> None:
+    conn = get_conn()
+    _ensure_ask_cur(conn)
+    conn.execute(
+        """INSERT INTO ask_cur (uid, sid, ts, items, updated_at)
+           VALUES (?,?,?,?,?)
+           ON CONFLICT(uid) DO UPDATE SET
+             sid=excluded.sid, ts=excluded.ts, items=excluded.items, updated_at=excluded.updated_at""",
+        (uid, sid, ts, items_json, time.time()),
+    )
+    conn.commit()
+    conn.close()
+
+
+def clear_ask_cur(uid: str) -> None:
+    conn = get_conn()
+    _ensure_ask_cur(conn)
+    conn.execute("DELETE FROM ask_cur WHERE uid=?", (uid,))
+    conn.commit()
+    conn.close()
+
+
+def get_ask_cur(uid: str) -> dict | None:
+    conn = get_conn()
+    _ensure_ask_cur(conn)
+    row = conn.execute("SELECT sid, ts, items, updated_at FROM ask_cur WHERE uid=?", (uid,)).fetchone()
+    conn.close()
+    if not row:
+        return None
+    d = dict(row)
+    try:
+        d["items"] = json.loads(d["items"] or "[]")
+    except ValueError:
+        d["items"] = []
+    return d
+
+
 def list_exam_attempts(uid: str, paper_id: int | None = None, limit: int = 50) -> list[dict]:
     conn = get_conn()
     _ensure_exam_tables(conn)
