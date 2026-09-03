@@ -1453,3 +1453,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 测试数据清理：test-r357-ui 两轮 DELETED {mistakes 1/answer_log 3/exam_attempts 3/growth_events 1/exam_progress 2}，LEFTOVER {}，review_cur 0 行；保护 uid DB 34 表+localStorage EXACT MATCH n=28。
 - 遗留观察（候选下轮）：卷库「未交卷」条「放弃」只清本地，服务端 exam_progress 行不删，刷新/跨设备会回填复活（本轮实测 attempt 217 再现）。
 - 详见 docs/iter/round-3/r357-paper-console-merge.md。
+
+### R358 模考「放弃未交卷」同步删除服务端进度（2026-08-29，PR #563，分支 devin/1788465149-r358-exam-drop-server-clear）
+- 取证：R357 遗留观察实证——放弃只删本地 examProgress，服务端 exam_progress 仅在交卷时 clear_exam_progress()，放弃后刷新/跨设备 /api/exam/resume 回填复活；练习（R323）/复习（R353）均已有服务端清除语义，模考是唯一缺口。
+- 收口（零新 endpoint/表/协议）：a) POST /api/exam/progress body drop:true 时，在 uid/attempt 归属校验后、已交卷/超时校验前直接 clear_exam_progress 返回 {ok:true}——已交卷 drop 幂等 200、已超时进度也能放弃；b) parseExamProgress 补 attemptId（非法回落 0，drop 时 fail-closed 不发请求）；c) 卷库 dropResume/首页 erDrop 确认后写 erClearedAt + POST drop（失败静默本地照删，最终一致性同练习/复习）+ 删本地快照；d) syncResume/syncExamResume 远端回填前 erClearedAt 30s 守卫。
+- 验证：ruff/pytest 256(+1)/pyright 0/lint/vitest 461(+1)/build 全绿；部署前 merge-base --is-ancestor ee8834a 核对通过；生产 rev 0c1d732、bundle index-bQpred1S.js、Lighthouse 全过。testing agent 实测（uid test-r358-ui）：放弃→抓包 drop:true 200→生产 DB exam_progress 行真删；不回填强证据（立即硬刷 + 35s 越过 30s 守卫再硬刷 + 全新 context 同 uid 均无）；继续模考原位恢复回归（picks/idx/倒计时接续）；首页 erDrop 同过；45 条全 200、console 0 error、0 次 /api/explain、375/1440 无溢出。
+- 测试数据清理：test-r358-ui DELETED {exam_attempts 2/growth_events 1}，LEFTOVER {}，review_cur 0 行；保护 uid DB 34 表+localStorage EXACT MATCH n=28。
+- 详见 docs/iter/round-3/r358-exam-drop-server-clear.md。
