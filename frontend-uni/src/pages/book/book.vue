@@ -37,6 +37,9 @@
         <view v-if="!wasCorrect && cur.module && !cur._extra" class="sim-row" @click="similarFromReview">
           <text class="sim-t">还不稳？练 3 道同类题巩固 ›</text>
         </view>
+        <view v-if="askableReview" class="sim-row" role="button" aria-label="看不懂？AI 详解本题" @click="askFromReview">
+          <text class="sim-t">看不懂？AI 详解本题 ›</text>
+        </view>
         <wd-button type="primary" block custom-class="next-btn" @click="nextReview">{{ rIdx + 1 < rItems.length ? '下一题' : '完成复习' }}</wd-button>
       </view>
       <view v-else-if="curMulti" class="selfjudge">
@@ -489,6 +492,7 @@ import { buildBookUrl, parseBookOpts } from '../../book-url.js';
 import { cacheMistakes, getCachedMistakes } from '../../offline.js';
 import { qStatLine } from '../../q-stat.js';
 import { fontSizes, normFontLv } from '../../font-size.js';
+import { askPrefill } from '../../ask-prefill.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 
@@ -574,6 +578,9 @@ export default {
   },
   computed: {
     qStyle() { return { fontSize: fontSizes(this.fontLv).q }; },
+    askableReview() {
+      return !!askPrefill(this.cur && this.cur.question_text, this.cur && this.cur.options);
+    },
     optStyle() { return { fontSize: fontSizes(this.fontLv).opt }; },
     manualPickedCount() {
       return Object.keys(this.manualPicks).length;
@@ -1169,6 +1176,13 @@ export default {
       trackEvent('review_similar_click', this.cur.module || '');
       this.practiceSimilar(this.cur);
     },
+    askFromReview() {
+      const text = askPrefill(this.cur.question_text, this.cur.options);
+      if (!text) return;
+      trackEvent('review_ask_click', this.cur.module || '');
+      uni.setStorageSync('redoQuestion', text);
+      uni.switchTab({ url: '/pages/ask/ask' });
+    },
     nextReview() {
       if (this.rIdx + 1 < this.rItems.length) {
         this.rIdx++;
@@ -1258,7 +1272,9 @@ export default {
       }
     },
     redo(m) {
-      uni.setStorageSync('redoQuestion', m.question_text || '');
+      const text = askPrefill(m.question_text, m.options);
+      if (!text) return;
+      uni.setStorageSync('redoQuestion', text);
       uni.switchTab({ url: '/pages/ask/ask' });
     },
     reinforceFromMistake(m) {

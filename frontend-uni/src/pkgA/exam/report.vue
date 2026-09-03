@@ -255,6 +255,7 @@
             <text class="dreinf-t">练同类题：{{ detail.tag3 }}</text>
             <text class="dreinf-go">强化 5 道新题 ›</text>
           </view>
+          <view v-if="detailAskable" class="dask" role="button" aria-label="看不懂？AI 详解本题" @click="askDetail">看不懂？AI 详解本题 ›</view>
           <view v-if="detail.question_id" class="report-link" role="button" :aria-disabled="detailReported" @click="openQcReport">{{ detailReported ? '已提交纠错，感谢反馈' : '题目有问题？纠错' }}</view>
           <q-social-bar v-if="detail.question_id" :question-id="detail.question_id" />
         </scroll-view>
@@ -279,6 +280,7 @@ import { markedNos, nextNavMode } from '../../exam-marks.js';
 import { isFaved, toggleFav } from '../../exam-fav.js';
 import { qStatLine } from '../../q-stat.js';
 import { qTimeLine, paperAvgSecs } from '../../exam-time.js';
+import { askPrefill } from '../../ask-prefill.js';
 import { goalGap, prevScoreDelta } from '../../exam-goal.js';
 import { modAvgPct } from '../../exam-mod-avg.js';
 import { weakModule } from '../../exam-weak.js';
@@ -335,6 +337,12 @@ export default {
       const d = this.detail;
       if (!d || d.module !== 'ziliao') return null;
       return splitMaterial(d.question);
+    },
+    detailAskable() {
+      const d = this.detail;
+      if (!d) return false;
+      const stem = this.detailMat ? this.detailMat.stem : d.question;
+      return !!askPrefill(stem, d.options);
     },
     modules() {
       const pm = (this.report && this.report.attempt.per_module) || {};
@@ -425,6 +433,16 @@ export default {
     // #endif
   },
   methods: {
+    askDetail() {
+      const d = this.detail;
+      if (!d) return;
+      const stem = this.detailMat ? this.detailMat.stem : d.question;
+      const text = askPrefill(stem, d.options);
+      if (!text) return;
+      trackEvent('report_ask_click', String(d.question_id || ''));
+      uni.setStorageSync('redoQuestion', text);
+      uni.switchTab({ url: '/pages/ask/ask' });
+    },
     openQcReport() {
       if (!this.detail || !this.detail.question_id || this.detailReported) return;
       this.reportType = '';
@@ -738,6 +756,7 @@ export default {
 .dreinf-t { font-size: 25rpx; color: var(--ink); font-weight: 600; min-width: 0; }
 .dreinf-go { font-size: 24rpx; color: var(--brand-strong); font-weight: 600; flex-shrink: 0; white-space: nowrap; }
 .report-link { text-align: center; font-size: 22rpx; color: var(--ink-2); padding-top: 14rpx; text-decoration: underline; }
+.dask { margin-top: 16rpx; text-align: center; font-size: 26rpx; color: var(--brand-text); font-weight: 600; }
 .rp-types { display: flex; flex-wrap: wrap; gap: 16rpx; margin-bottom: 20rpx; }
 .rp-chip { padding: 18rpx 26rpx; min-height: 44rpx; border-radius: 999rpx; background: var(--soft-bg); font-size: 26rpx; color: var(--ink-2); }
 .rp-chip.on { background: rgba(46, 91, 255, 0.12); color: var(--brand-text); font-weight: 600; }
