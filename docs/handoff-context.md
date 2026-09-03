@@ -1329,3 +1329,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 测试数据清理：test-r342-rz DELETED mistakes 4/answer_log 5/exam_attempts 1/growth_events 1，LEFTOVER 空；保护 uid DB 计数前后一致（PROTECTED_MATCH True）+ localStorage 逐键恢复 exact match。
 - 边界（如实）：真实触屏未测（CDP 模拟）；kpFilter+rzFilter 叠加态未生产实测（代码三元 kpFilter 优先未改，vitest/代码走查覆盖）。
 - 详见 docs/iter/round-3/r342-redo-reason-filter.md。
+
+### R343 错题重练遵循来源筛选：/api/mistakes/redo 补 src 参数 + redoAll 透传 + CTA 文案对齐（2026-08-29，PR #542，分支 devin/1788435349-r343-redo-source-filter）
+- 取证：错题本来源筛选（srcFilter：模考/练习，含 ?src= URL 同步）就位，但 redoAll() 不透传——与 R342 同构的「所见≠所练」缺口。
+- 收口：backend `/api/mistakes/redo` 新增可选 src（白名单 exam/practice，非法 400「无效的来源」，不传行为不变）；db.mistakes_redo_questions 补 source 参数（exam→`source='exam'`，practice→`source IS NULL OR source!='exam'`，与前端列表口径一致，可与 reason 叠加）；book.vue redoAll() srcFilter 时追加 `&src=`，重练卡文案优先级 kpFilter > rzFilter > srcFilter（组合态取最高优先级文案，参数全透传）。redoSet/practice 消费不改。
+- 验证：ruff 0/pytest 212(+4，test_redo_source.py：exam/practice 含 NULL/非法 400+缺省不变/src+rz 叠加)/pyright 0/lint/vitest 428/build 全绿；生产 rev af374db、bundle index-Bw4tiS9x.js，部署脚本回归全过（首跑 Lighthouse / a11y 0.94/LCP 2707 为单样本波动，独立复跑 perf 0.97/a11y 1.0/LCP 1829 全过）。testing agent 实测（uid test-r343-src，真实 UI 造 3 模考错题+2 练习 NULL-source 错题）：模考态 `&src=exam` 集合仅 3 模考题、练习态 `&src=practice` 集合仅 2 NULL-source 题、无筛选回归无 src 全 5 题、非法 src=hack 400、叠加 rz+src 集合唯一交集且卡标题只显错因、?src=exam 硬刷恢复、375/1440 溢出 0、console 0 error、0 次 /api/explain。
+- 测试数据清理：test-r343-src DELETED mistakes 5/answer_log 8/exam_attempts 1/growth_events 1，LEFTOVER 空；保护 uid DB 计数与 localStorage 逐键前后一致。
+- 边界（如实）：真实触屏未测（CDP 模拟）；kpFilter+srcFilter 叠加态未生产实测（代码三元 kpFilter 优先未改）。
+- 详见 docs/iter/round-3/r343-redo-source-filter.md。
