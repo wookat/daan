@@ -788,3 +788,10 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 长流程生产测试中若突然出现成批 4xx 或接口行为突变，先复查 `/api/health` 的 rev 与浏览器实载 bundle——生产可能被其他会话并发重新部署（本例 b26cc70 中途被 PR #558 旧基线 merge 覆盖为 a4fa410，R339–R354 全被回退）。发现后立即 message_parent 上报并中断本轮录制，不要把两种 rev 的证据混在一起。
 - `/api/review/cur` 对 FastAPI 路由注册顺序敏感：必须先于 `/api/review/{mid}` 注册。回归指纹：`POST /api/review/cur → 422 {"type":"int_parsing","loc":["path","mid"],"input":"cur"}`、`GET /api/review/cur → 404`。
 - R354 庆祝卡小结断言点：混合轮（首答对 X（P%）/答错 Y·纠正 Z/加练 M·答对 K）三行逐字核对；全对轮仅第 1 行 100%；`_res` 会随 reviewSnap 持久化并出现在 POST /api/review/cur 的 items 里（抓包可直接验证 `"_res":true`）。
+
+## R363 按卷练习续练归卷 source/卷名走查新经验
+- 归卷断言四点一线：POST `/api/practice/progress` body 含 `source`/`ptitle` → 首页续练卡副标题=卷名（ptitle || prModName）→「继续上次练习？」弹窗 content 前缀「卷名」→ 恢复后新答行 `answer_log.source == psource`。旧版 broken 指纹：卡显通用模块文案 + 恢复后 source=NULL。
+- 反向残留断言：从首页「去刷题」起普通练习后，progress body 应为 `"source":"","ptitle":""`，新答行 source=NULL（≠psource）；首页卡无卷名残留。注意服务端 practice_progress 只有一个槽位——起普通练习会覆盖卷练进度，需先测完卷路径再测普通路径（或重造）。
+- 跨设备弹窗用 `Target.createBrowserContext` 新 context 注同 uid 进 /pages/practice/practice 即触发（同 R352 模式）；answer_log 表 uid 列名是 `uid` 非 `user_id`。
+- 首页续练卡与普通练习入口：module 为空时副标题回落「上次练习」，属正常而非缺陷。
+- holdvw.py 用 `(setsid nohup … &)` 起，普通 nohup 后台在同 shell 里可能随命令退出被回收导致 override 立即丢失（表现：打印 held 但 iw 不变/进程消失）。

@@ -1484,3 +1484,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 观察项（既有非本轮）：部分卷卡 n（question_ids∩活跃题，如 2015 新疆卷 38）≠ paper_questions?src= 会话题数（同 source 120 题）——完成态分母与全练完弹窗 N 可能对不上，候选后续轮对齐。
 - 测试数据清理：test-r361-ui DELETED {mistakes:2, answer_log:76(含72构造行), exam_attempts:1, reinforce_log:1, growth_events:1}，LEFTOVER 空，review_cur 0 行；保护 uid DB 37 表+localStorage EXACT n=30。
 - 详见 docs/iter/round-3/r361-paper-complete-state.md。
+
+### R363 按卷练习中断续练保留归卷 source 与卷名（2026-08-29，PR #570，分支 devin/1788476955-r363-paper-resume-source）
+- 取证（SOP-10 窗口内）：R361 startPaper() 设 _source 后，中断续练两条恢复路径均不还原——本机 pendingSession 与服务端 practice_progress 都不含 source/卷名，adoptLocalPending/adoptRemoteSnap 恢复后 _source undefined，续答 answer_log.source 变 NULL（卷卡进度断档）；首页续练卡/「继续上次练习？」弹窗只能显示通用文案。
+- 收口：a) practice_progress PRAGMA 守卫式补列 psource/ptitle（存量库无损）；POST /api/practice/progress 可选 source(≤64)/ptitle(≤80) 非字符串按 NULL fail-closed，GET resume 透出；b) saveSession/pushPracticeProgress 带 source/ptitle，adoptLocalPending/adoptRemoteSnap 还原 _source/_ptitle，start()/startReinforce() 清 _ptitle 防非卷会话残留；c) 首页续练卡副标题 ptitle||prModName(module)、两处续练弹窗前缀「卷名」。旧客户端/普通练习/计时模考零变化。
+- 验证：ruff/pytest 271(+2)/pyright 0/lint/vitest 478(+4)/build 全绿；祖先链核对（3dc7b38/0f4bfc5/5f41fc2/1550a65/644d31b）通过；生产 rev 67a227a、bundle index-CYBWn0zz.js、Lighthouse 全过；curl 实证生产 source/ptitle 往返/非法忽略/清空。testing agent 实测（uid test-r363-ui）：中断→首页卡显卷名「2015年0711新疆公务员考试《行测》真题 · 已做 2/38 题」→恢复续答 DB source='2015年新疆省考行测真题'（旧版 NULL）；跨设备弹窗带卷名前缀且续答归卷；普通练习无卷名残留（source:""→DB NULL）；计时模考/R358 drop/R360 弹窗/R359 卷卡回归；94 条全 200、console 0 error、0 次 /api/explain、375/1440 无溢出。
+- 测试数据清理：test-r363-ui DELETED {mistakes:2, answer_log:7, user_state:1, exam_attempts:1, growth_events:4, practice_progress:1}，LEFTOVER 空，review_cur 0 行；保护 uid DB 37 表+localStorage EXACT n=30。
+- 详见 docs/iter/round-3/r363-paper-resume-source.md。
