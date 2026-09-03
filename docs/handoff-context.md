@@ -1426,3 +1426,14 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - M1：poster `.bar`→`.actions`、request.ts 403「重新登录」清登录态回退匿名、practice 题图渲染/预览、share 模块名中文。真机/开发者工具走查未做。
 - 遗留台账：docs/iter/workflow/backlog.md（含 H5 三处一行修、yanyu 抽审、17 条复核、quality_score 闸门、60 秒等待取证、guard 三路径入 SKILL 等）；详证 docs/iter/workflow/w1.md。
 
+### R354 复习完成小结：庆祝卡升级首答正确率/纠正/加练成绩（2026-08-29，PR #557，分支 devin/1788457084-r354-review-summary）
+- 取证：复习轮末庆祝卡只报「N 道到期错题全部复习完成」，本轮首答对错/答错纠正/加练成绩全部丢弃——用户跑完复习拿不到任何效果反馈（粉笔有轮末小结）。
+- 收口（纯前端零后端/零契约/零新埋点）：record() 给 cur 写 `_res`（首答判分留痕，requeue 副本剥离 `_res` 独立判分）；review-summary.js 纯函数 reviewSummary(rItems)（due/dueRight/dueWrong/corrected/uncorrected/extra/extraRight/pct，fail-closed：非数组/空→null、无 `_res` 条目不入分子分母）；庆祝卡三行模板（到期+首答对 pct / 答错重出+纠正 / 加练+答对），legacy 快照无 `_res` 退化为原单行。`_res` 随 reviewSnap/review_cur 快照持久化，中断恢复后判分不丢。
+- 验证：lint/vitest 457/build + ruff/pytest 251/pyright 0；生产实测 T1 混合小结三行逐字精确（3 到期 2 对 1 错→纠正 1+加练 2 一对一错，67%）、T2 全对单行 100%、T3 硬刷横幅恢复后判分计入小结（抓包 POST /api/review/cur items 带 `"_res":true`）、T4 R353 首页卡直达恢复回归；375/1440 无溢出、0 次 /api/explain、console 0 error。测试 uid 全库清理 LEFTOVER 空、review_cur 0 行、保护 uid 前后一致。
+- 详见 docs/iter/round-3/r354-review-summary.md。
+
+### R355 生产事故修复：#558 旧基线合并覆盖回退 R339–R354（2026-08-29，PR #560，分支 devin/1788458679-r355-restore-w1-clobber）
+- 事故：W1 集成分支（devin/wf-w1-integration，基线 ~R338 的 2cae38f）经 PR #558 直接合入 main 并部署（rev a4fa410），把 R339–R354 十六轮功能整体覆盖回退——生产 `GET /api/review/cur` 404、POST 422（被 `/api/review/{mid}` int 路径吞）、redo 丢 rz/src/t3、复习恢复/首页续卡/加练闭环/轮末小结全部消失（R354 生产测试中途实测发现）。
+- 修复：从 02a0adb（#557 合并点）重新 merge W1 头 85ae35a——自动合并干净，唯一冲突 handoff 手工保留双方；W1 的 B1/C1/M1 改动全部保留。diff vs a4fa410 +2001/-38 恢复 41 文件。本地 pytest 251/vitest 457 双方测试并存全绿。部署 rev 4bf10bb 后生产逐项复验 + T3/T4 补测通过。
+- 教训（第二次同类事故，R348 是分支级、本次是 merge-to-main 级）：任何集成分支合并部署前必须 `git merge-base --is-ancestor <近期各轮 merge 点> <待部署 rev>` 逐项核对；长流程生产测试遇成批 4xx 先复查 /api/health rev 与实载 bundle（可能被并发部署覆盖）。
+
