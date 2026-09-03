@@ -716,3 +716,7 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 ## R341 报告错因画像走查新经验
 - 抓包 daemon 复制 r335 模板时必须检查 URL 白名单：旧模板只捕 track/explain/practice/answer_log/ask，模考交卷与 /api/mistakes PATCH 会静默漏抓——直接用 `PAT=('/api/',)` 捕全量。
 - 「无错题报告」反例最省真实 UI 路径：mini 模考 0 答直接交卷（picked 空 → reasonRecap/redoCount 均不渲染），无需 CDP 注入。
+
+## R342 重练错因过滤走查新经验
+- report 深链为 `/#/pkgA/exam/report?attempt_id=<id>`；地址栏输入 hash 深链不触发 onLoad，需再硬刷一次才加载。
+- `redoSet` 被 practice 页消费即删：重练集合断言不要读 storage，改核对抓包里 `/api/mistakes/redo` 响应 items（或 apiSnap 缓存）与练习页题数。

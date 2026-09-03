@@ -1321,3 +1321,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 测试数据清理：test-r341-rz DELETED mistakes 4/answer_log 5/exam_attempts 2/growth_events 1，LEFTOVER 空；保护 uid DB 计数与 localStorage 逐键前后一致。
 - 边界（如实）：真实触屏未测；主流程窗口抓包 daemon 白名单缺陷漏抓（发现后改捕全 /api/ 并重放核心交互补齐，缺陷经验已入测试 SKILL）。
 - 详见 docs/iter/round-3/r341-report-reason-recap.md。
+
+### R342 错题重练遵循错因筛选：/api/mistakes/redo 补 rz 参数 + redoAll 透传 + CTA 文案对齐（2026-08-29，PR #541，分支 devin/1788433748-r342-redo-reason-filter）
+- 取证：R340 错题本按错因筛选、R341 报告错因画像直达均就位，但 redoAll() 只透传 kpFilter/filterMod，rzFilter 被无声忽略——按「概念不清」筛出 N 题点重练，实际拉全量待掌握错题，所见≠所练；重练卡文案也不反映错因态。
+- 收口：backend study_api.py `/api/mistakes/redo` 新增可选 rz（白名单五值：四正式错因+未标注，非法 400 fail-closed，不传行为不变）；db.mistakes_redo_questions 补 reason 参数（'未标注'→`error_reason IS NULL OR ''`，其他→`error_reason=?`，匹配/去重/排序/limit 零变化）；book.vue redoAll() rzFilter 时追加 `&rz=`，重练卡标题「错题重练 · <错因>」+描述对齐（kpFilter 优先级不变）。redoSet 协议/practice 消费不改；srcFilter 不在本轮（redo 无来源维度）。
+- 验证：ruff 0/pytest 208(+3，test_redo_reason.py 覆盖四错因/未标注 NULL+空串/非法 400/缺省不变)/pyright 0/lint/vitest 428/build 全绿；生产 rev f6d99b4、bundle index-B22QSvzn.js，部署脚本回归+Lighthouse 全过。testing agent 实测（uid test-r342-rz，真实 UI 迷你模考造 4 错题+浮层打标）：概念不清筛选重练集=仅该错因 2 题（抓包 rz= 编码正确）、未标注桶仅 NULL 题、无筛选回归无 rz 全 4 题、非法 rz=hack 400、R341 画像行→筛选态→重练全链路、?rz= 硬刷恢复、375/1440 溢出 0、console 0 error、0 次 /api/explain。
+- 测试数据清理：test-r342-rz DELETED mistakes 4/answer_log 5/exam_attempts 1/growth_events 1，LEFTOVER 空；保护 uid DB 计数前后一致（PROTECTED_MATCH True）+ localStorage 逐键恢复 exact match。
+- 边界（如实）：真实触屏未测（CDP 模拟）；kpFilter+rzFilter 叠加态未生产实测（代码三元 kpFilter 优先未改，vitest/代码走查覆盖）。
+- 详见 docs/iter/round-3/r342-redo-reason-filter.md。
