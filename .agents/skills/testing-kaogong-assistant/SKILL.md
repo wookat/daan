@@ -666,3 +666,9 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 ## R329 会话同步删除类功能走查新经验
 - 测删除/清除类功能务必抓包核对响应码而非只看 UI：失败静默口径下 DELETE 503 时 UI 照常本机移除，但服务端残留，刷新后条目会从远端重新同步「复活」——UI 断言应配合刷新后复核 + GET 服务端回读。
 - 生产同机 recruit 负载（postgres 长查询+pip install）过载时 503/health 超时可持续 10+ 分钟，watchdog 会自愈；遇到时每几分钟重试即可，勿误判为被测代码问题。
+
+## R332 进行中会话跨设备同步（/api/ask/cur）取证口径
+- storage 键名是 `anonUid`（驼峰），不是 `anon_uid`——R328/R332 两轮都踩过，注入前先 `localStorage.getItem('anonUid')` 核对。
+- 进行中态最省构造法：API 造数一条 ask_sessions 历史会话（POST /api/ask/sessions），真实 UI loadSession 恢复即产生进行中态并触发去抖回传，无需触发 /api/explain。
+- cur 同步断言四件套：A 去抖 POST /api/ask/cur body 含 sid+非空 items；B（无本机快照隔离 context 同 uid）打开 ask 页自动 GET 并无点击回填；A 硬刷本机优先 0 次 GET；「新对话」POST items:[] 后对端硬刷空态。
+- askCurSid 恢复断言用 CDP 读 storage：`uni` storage 实际落 localStorage，键 `askCurSid`。

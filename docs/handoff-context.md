@@ -1240,3 +1240,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：lint/vitest 410(+2)/build 全绿（纯前端，后端基线沿用 R330）；生产 rev 076df65、bundle index-CyabKi9q.js；testing agent 实测（uid test-r331-restore）：loadSession 产生进行中态→硬刷后讲解+追问自动回填（改动前必空态）、askCurSid 保留、「新对话」POST 复用原 sid 服务端不产生重复；无快照/字符串快照/混合非法快照 fail-closed；R328/R329/R330 回归；1440/375 溢出 0、console 0 error、零 /api/explain；Lighthouse 全过（/ 0.98、/tiku/ 1.00）。清理 DELETED 1 / LEFTOVER 0 / PROTECTED_MATCH True（32 表）。
 - 边界（如实）：进行中会话仍仅本机（R328 只服务端化已归档会话）；恢复后 ansCard/sim 等瞬态不还原（与 loadSession 同口径）；字符串非法快照被忽略但不主动清 storage（无害，候选顺手清理）；真实触屏未实测。
 - 详见 docs/iter/round-3/design-r331-ask-cur-session-restore.md。
+
+### R332 AI 问答进行中会话跨设备同步——ask_cur 单快照 + /api/ask/cur（2026-08-29，PR #529，基于 #528 分支 devin/1788411812-r332-ask-cur-sync）
+- 取证：R331 后进行中会话可刷新恢复但 askCurSession 仍纯本机 storage——换设备/清缓存后进行中讲解+追问（已消耗真实 LLM 成本）全丢；已归档会话 R328 起可跨设备，语义不一致。粉笔/夸克进行中上下文跨端保留。
+- 收口（复用 R298/R322 uid 单快照模式）：后端新表 ask_cur(uid PK, sid, ts, items JSON, updated_at)+save/clear/get_ask_cur；POST /api/ask/cur（items 非 list/>50/非 dict/序列化>200k→400，items:[]=清除，sid 0=未归档或正整数衔接 R329 同 sid，ts 正整数，rl askcur 120/h uid 桶）；GET 无快照或超 7 天→{}。前端 parseRemoteCur 纯函数 fail-closed（items 经 sanitizeCurItems 后空→null，sid 非正整数归 0）；persistSession 末尾去抖 1.5s pushCurSession POST 整份快照；newSession 清本机+取消未决去抖+POST items:[] 清服务端+_curCleared 守卫；restoreCurSession 本机快照优先（命中 0 GET），无本机才异步 GET 回填（回调三重守卫：results 非空/已点新对话/本机已有快照则丢弃），sid>0 恢复 curSid/askCurSid。
+- 验证：ruff/pytest 204(+4 test_ask_cur.py)/pyright 0/lint/vitest 413(+3)/build 全绿；生产 rev 8a9b70d、bundle index-u8FD-V0M.js；API curl 逐项实测（roundtrip/lww 覆盖/uid 隔离/7 类非法 400/items:[] 清除）；testing agent 双设备实测（uid test-r332-cursync）：A 1440 loadSession 产生进行中态→去抖 POST 实抓含 sid+items；B 375 全新隔离 context 同 uid 无本机快照→打开 ask 页自动 GET 回填讲解+追问、askCurSid 恢复；A 硬刷本机优先 0 GET；A「新对话」POST items:[] 后 B 硬刷空态；R328/R329/R330/R331 回归；1440/375 溢出 0、console 0 error、零 /api/explain；Lighthouse 全过（/ 0.98、/tiku/ 1.00）。清理 DELETED 2 / LEFTOVER 0（按 test-r332-% 前缀删除，保护 uid 不可触及）。
+- 边界（如实）：单快照 last-write-wins，多设备同时进行中会话互相覆盖（同 exam/practice 口径，不做合并）；7 天 TTL/限速分支未生产实测（pytest 覆盖）；去抖多次快速操作合并未专项实测；真实触屏未实测；网络失败静默分支未生产实测。
+- 详见 docs/iter/round-3/design-r332-ask-cur-cross-device.md。
