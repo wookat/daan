@@ -981,6 +981,16 @@ export default {
         }
         if (untimed) {
           const plan = paperContinuePlan(items);
+          if (plan.doneN > 0 && plan.remaining.length === 0) {
+            const again = await new Promise((resolve) => uni.showModal({
+              title: '本卷已练完',
+              content: `本卷 ${items.length} 题已全部练过，重新练一遍？`,
+              confirmText: '重新练', cancelText: '不用了',
+              success: (r) => resolve(!!r.confirm),
+              fail: () => resolve(false),
+            }));
+            if (!again) return;
+          }
           if (plan.doneN > 0 && plan.remaining.length > 0) {
             const cont = await new Promise((resolve) => uni.showModal({
               title: '继续上次进度？',
@@ -993,6 +1003,7 @@ export default {
           }
         }
         this.paperSheet = false;
+        this._source = untimed ? (p.source || null) : null;
         this.items = items;
         this.idx = 0;
         this.picked = '';

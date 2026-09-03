@@ -9,3 +9,12 @@ export function paperContinuePlan(items) {
   }
   return { doneN, remaining };
 }
+
+// 卷卡按卷练习进度外显：全练完给完成态，fail-closed（非法输入不显示）
+export function paperPracticedState(practiced, n) {
+  const p = Number.isInteger(practiced) ? practiced : 0;
+  const total = Number.isInteger(n) ? n : 0;
+  if (total <= 0 || p <= 0) return { show: false, done: false, text: '' };
+  if (p >= total) return { show: true, done: true, text: `已练完全部 ${total} 题 ✓` };
+  return { show: true, done: false, text: `已练 ${p}/${total} 题` };
+}

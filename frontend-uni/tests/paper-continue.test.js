@@ -1,6 +1,6 @@
 // R360：按卷练习「只练剩余」——paperContinuePlan fail-closed 纯函数
 import { describe, it, expect } from 'vitest';
-import { paperContinuePlan } from '../src/paper-continue.js';
+import { paperContinuePlan, paperPracticedState } from '../src/paper-continue.js';
 
 describe('paperContinuePlan', () => {
   it('非数组 fail-closed 空计划', () => {
@@ -35,5 +35,31 @@ describe('paperContinuePlan', () => {
     const p = paperContinuePlan(items);
     expect(p.doneN).toBe(2);
     expect(p.remaining).toEqual([]);
+  });
+});
+
+// R361：卷卡按卷练习完成态——paperPracticedState fail-closed 纯函数
+describe('paperPracticedState', () => {
+  it('非法输入 fail-closed 不显示', () => {
+    expect(paperPracticedState(null, 75)).toEqual({ show: false, done: false, text: '' });
+    expect(paperPracticedState('3', 75).show).toBe(false);
+    expect(paperPracticedState(3.5, 75).show).toBe(false);
+    expect(paperPracticedState(3, null).show).toBe(false);
+    expect(paperPracticedState(3, 0).show).toBe(false);
+    expect(paperPracticedState(3, -1).show).toBe(false);
+  });
+
+  it('零练过不显示', () => {
+    expect(paperPracticedState(0, 75).show).toBe(false);
+    expect(paperPracticedState(-2, 75).show).toBe(false);
+  });
+
+  it('部分完成显示进度文案', () => {
+    expect(paperPracticedState(3, 75)).toEqual({ show: true, done: false, text: '已练 3/75 题' });
+  });
+
+  it('全练完（含超出）显示完成态', () => {
+    expect(paperPracticedState(75, 75)).toEqual({ show: true, done: true, text: '已练完全部 75 题 ✓' });
+    expect(paperPracticedState(80, 75).done).toBe(true);
   });
 });
