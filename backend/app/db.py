@@ -3729,6 +3729,53 @@ def get_ask_cur(uid: str) -> dict | None:
     return d
 
 
+def _ensure_review_cur(conn):
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS review_cur (
+            uid TEXT PRIMARY KEY,
+            snap TEXT NOT NULL,
+            updated_at REAL NOT NULL
+        )"""
+    )
+
+
+def save_review_cur(uid: str, snap_json: str) -> None:
+    conn = get_conn()
+    _ensure_review_cur(conn)
+    conn.execute(
+        """INSERT INTO review_cur (uid, snap, updated_at)
+           VALUES (?,?,?)
+           ON CONFLICT(uid) DO UPDATE SET
+             snap=excluded.snap, updated_at=excluded.updated_at""",
+        (uid, snap_json, time.time()),
+    )
+    conn.commit()
+    conn.close()
+
+
+def clear_review_cur(uid: str) -> None:
+    conn = get_conn()
+    _ensure_review_cur(conn)
+    conn.execute("DELETE FROM review_cur WHERE uid=?", (uid,))
+    conn.commit()
+    conn.close()
+
+
+def get_review_cur(uid: str) -> dict | None:
+    conn = get_conn()
+    _ensure_review_cur(conn)
+    row = conn.execute("SELECT snap, updated_at FROM review_cur WHERE uid=?", (uid,)).fetchone()
+    conn.close()
+    if not row:
+        return None
+    d = dict(row)
+    try:
+        d["snap"] = json.loads(d["snap"] or "null")
+    except ValueError:
+        d["snap"] = None
+    return d
+
+
 def list_exam_attempts(uid: str, paper_id: int | None = None, limit: int = 50) -> list[dict]:
     conn = get_conn()
     _ensure_exam_tables(conn)

@@ -817,6 +817,7 @@ export default {
     }
     if (!this.reviewing) {
       this.resumeInfo = parseReviewSnap(uni.getStorageSync('reviewSnap'), anonUid(), Date.now() / 1000);
+      if (!this.resumeInfo) this.restoreRemoteSnap();
     }
     const rzIntent = uni.getStorageSync('bookRzIntent');
     if (rzIntent) {
@@ -1192,11 +1193,32 @@ export default {
     },
     saveReviewSnap() {
       const snap = buildReviewSnap(this, anonUid(), Date.now() / 1000);
-      if (snap) uni.setStorageSync('reviewSnap', snap);
+      if (!snap) return;
+      uni.setStorageSync('reviewSnap', snap);
+      if (this._snapPostTimer) clearTimeout(this._snapPostTimer);
+      this._snapPostTimer = setTimeout(() => {
+        this._snapPostTimer = null;
+        request('/api/review/cur', { method: 'POST', data: { uid: anonUid(), snap } }).catch(() => {});
+      }, 1500);
     },
     clearReviewSnap() {
       uni.removeStorageSync('reviewSnap');
       this.resumeInfo = null;
+      if (this._snapPostTimer) {
+        clearTimeout(this._snapPostTimer);
+        this._snapPostTimer = null;
+      }
+      request('/api/review/cur', { method: 'POST', data: { uid: anonUid(), snap: null } }).catch(() => {});
+    },
+    restoreRemoteSnap() {
+      const uid = anonUid();
+      request('/api/review/cur?uid=' + encodeURIComponent(uid))
+        .then((r) => {
+          if (this.reviewing || this.resumeInfo) return;
+          if (parseReviewSnap(uni.getStorageSync('reviewSnap'), uid, Date.now() / 1000)) return;
+          this.resumeInfo = parseReviewSnap(r && r.snap, uid, Date.now() / 1000);
+        })
+        .catch(() => {});
     },
     resumeReview() {
       const r = this.resumeInfo;
