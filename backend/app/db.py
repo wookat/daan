@@ -2546,14 +2546,30 @@ def list_papers() -> list[dict]:
     return papers[:120]
 
 
-def paper_questions(source: str, limit: int = 140, uid: str | None = None) -> list[dict]:
+def paper_questions(source: str, limit: int = 140, uid: str | None = None,
+                    pid: int | None = None) -> list[dict]:
     conn = get_conn()
-    rows = conn.execute(
-        """SELECT * FROM questions
-           WHERE source=? AND is_real=1 AND disabled=0
-           ORDER BY id LIMIT ?""",
-        (source, limit),
-    ).fetchall()
+    rows: list[sqlite3.Row] = []
+    if pid:
+        paper = get_exam_paper(pid)
+        qids: list[int] = (paper or {}).get("question_ids") or []
+        if qids:
+            by_id: dict[int, sqlite3.Row] = {}
+            for chunk_start in range(0, len(qids), 900):
+                chunk = qids[chunk_start:chunk_start + 900]
+                for r in conn.execute(
+                    f"SELECT * FROM questions WHERE disabled=0 AND id IN ({','.join('?' * len(chunk))})",
+                    chunk,
+                ):
+                    by_id[r["id"]] = r
+            rows = [by_id[i] for i in qids if i in by_id]
+    if not rows:
+        rows = conn.execute(
+            """SELECT * FROM questions
+               WHERE source=? AND is_real=1 AND disabled=0
+               ORDER BY id LIMIT ?""",
+            (source, limit),
+        ).fetchall()
     done_qids: set[int] = set()
     if uid and rows:
         _ensure_answer_log(conn)

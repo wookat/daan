@@ -360,7 +360,7 @@ import { requestNotificationPermission } from '../../reminder.js';
 import { announce } from '../../a11y-live.js';
 import { pickAnnounceText } from '../../live-policy.js';
 // #endif
-import { paperContinuePlan } from '../../paper-continue.js';
+import { paperContinuePlan, paperQuery } from '../../paper-continue.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 import { qStatLine } from '../../q-stat.js';
@@ -732,7 +732,7 @@ export default {
         return;
       }
       if (launch.kind === 'paper') {
-        this.startPaper({ source: launch.source, title: launch.title || '真题卷' }, !!launch.untimed);
+        this.startPaper({ source: launch.source, pid: launch.pid, title: launch.title || '真题卷' }, !!launch.untimed);
         return;
       }
       if (launch.kind === 'reinforce') {
@@ -973,7 +973,7 @@ export default {
       }
       uni.showLoading({ title: '加载试卷…', mask: true });
       try {
-        const d = await request('/api/paper_questions?src=' + encodeURIComponent(p.source) + (untimed ? '&uid=' + encodeURIComponent(anonUid()) : ''));
+        const d = await request('/api/paper_questions?' + paperQuery(p, untimed, anonUid()));
         let items = d.items || [];
         if (items.length < 20) {
           uni.showToast({ title: '试卷题目不足，换一张试试', icon: 'none' });

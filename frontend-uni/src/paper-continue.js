@@ -10,6 +10,14 @@ export function paperContinuePlan(items) {
   return { doneN, remaining };
 }
 
+// 按卷练习请求 query：src 必带；pid 仅正整数才带（卷面题集对齐卷卡口径）；uid 仅不计时带
+export function paperQuery(p, untimed, uid) {
+  let q = 'src=' + encodeURIComponent((p && p.source) || '');
+  if (p && Number.isInteger(p.pid) && p.pid > 0) q += '&pid=' + p.pid;
+  if (untimed && uid) q += '&uid=' + encodeURIComponent(uid);
+  return q;
+}
+
 // 卷卡按卷练习进度外显：全练完给完成态，fail-closed（非法输入不显示）
 export function paperPracticedState(practiced, n) {
   const p = Number.isInteger(practiced) ? practiced : 0;

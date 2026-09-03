@@ -597,8 +597,12 @@ def api_exam_report(attempt_id: int, uid: str = ""):
     }
 
 @router.get("/api/paper_questions")
-def api_paper_questions(src: str, uid: str | None = None):
-    items = db.paper_questions(src, uid=(uid or "").strip()[:64] or None)
+def api_paper_questions(src: str, uid: str | None = None, pid: int | None = None):
+    items = db.paper_questions(
+        src,
+        uid=(uid or "").strip()[:64] or None,
+        pid=pid if pid and pid > 0 else None,
+    )
     if not items:
         raise HTTPException(404, "试卷不存在或题目不足")
     return {"items": items}
