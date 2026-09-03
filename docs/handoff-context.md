@@ -1460,3 +1460,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：ruff/pytest 256(+1)/pyright 0/lint/vitest 461(+1)/build 全绿；部署前 merge-base --is-ancestor ee8834a 核对通过；生产 rev 0c1d732、bundle index-bQpred1S.js、Lighthouse 全过。testing agent 实测（uid test-r358-ui）：放弃→抓包 drop:true 200→生产 DB exam_progress 行真删；不回填强证据（立即硬刷 + 35s 越过 30s 守卫再硬刷 + 全新 context 同 uid 均无）；继续模考原位恢复回归（picks/idx/倒计时接续）；首页 erDrop 同过；45 条全 200、console 0 error、0 次 /api/explain、375/1440 无溢出。
 - 测试数据清理：test-r358-ui DELETED {exam_attempts 2/growth_events 1}，LEFTOVER {}，review_cur 0 行；保护 uid DB 34 表+localStorage EXACT MATCH n=28。
 - 详见 docs/iter/round-3/r358-exam-drop-server-clear.md。
+
+### R359 卷库卷卡外显按卷练习进度（2026-08-29，PR #565，分支 devin/1788467179-r359-paper-practiced）
+- 取证：R357「按卷练习」上线后练习维度零外显——卷卡只有模考态（best_score/attempt_count/已刷 X/N 卷），按卷练习做到一半回卷库无任何痕迹；数据已就位（answer_log 逐题落库、_list_exam_papers_base 已逐卷算活跃题集）。
+- 收口（零新 endpoint/表）：a) base 缓存每卷保留 _qids（活跃题 id，现有循环算出零新增查询）；b) list_exam_papers(uid) 一次 SELECT DISTINCT question_id FROM answer_log WHERE uid=? 后逐卷交集得 practiced，输出剥 _qids；无 uid practiced=0 fail-closed；c) 卷卡 v-if="p.psource && p.practiced" 绿色（--ok-strong）「已练 X/N 题」。口径如实：answer_log 覆盖所有练习场景，不限按卷练习入口。
+- 验证：ruff/pytest 260(+4)/pyright 0/lint/vitest 461/build 全绿；生产 rev 18c4f02、bundle index-Deng7wBk.js、Lighthouse 全过。testing agent 实测（uid test-r359-ui）：零态 120 卷全含 practiced=0 无行；答 3 题→「已练 3/75 题」精确且全页唯一；重答同 qid 去重不变（DB DISTINCT=3）；无 psource 卷经模考构造 practiced=1 仍不显示（fail-closed 强证）；模考/看报告/R358 放弃回归；84 条全 200、console 0 error、0 次 /api/explain、375/1440 无溢出。
+- 测试数据清理：test-r359-ui DELETED 10（mistakes 3/answer_log 5/exam_attempts 2），LEFTOVER 0，review_cur 0 行；保护 uid DB 34 表+localStorage EXACT MATCH n=28。
+- 详见 docs/iter/round-3/r359-paper-practice-progress.md。

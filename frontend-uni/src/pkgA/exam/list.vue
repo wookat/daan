@@ -62,6 +62,7 @@
         </view>
         <text v-if="p.best_score != null" class="pbest">我的最好成绩 {{ p.best_score }} 分 · 已考 {{ p.attempt_count }} 次</text>
         <text v-else class="pbest none">还没考过，来挑战一下</text>
+        <text v-if="p.psource && p.practiced" class="ppracticed">已练 {{ p.practiced }}/{{ p.n }} 题</text>
       </view>
       <view class="paper-btns">
         <view class="pbtn main" @click="startPaper(p)">开始模考</view>
@@ -338,6 +339,7 @@ export default {
 .pmeta { font-size: 23rpx; color: var(--ink-2); }
 .pbest { display: block; font-size: 22rpx; color: var(--warn); margin-top: 10rpx; }
 .pbest.none { color: var(--ink-2); }
+.ppracticed { display: block; font-size: 22rpx; color: var(--ok-strong); margin-top: 6rpx; }
 .paper-btns { display: flex; gap: 16rpx; margin-top: 20rpx; }
 .pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 25rpx; font-weight: 500; }
 .pbtn.main { background: var(--brand); color: #fff; border-color: var(--brand-text); }

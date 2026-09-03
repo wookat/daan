@@ -3337,7 +3337,8 @@ def _list_exam_papers_base(conn, kind: str | None, year: int | None,
     for r in rows:
         d = dict(r)
         d.pop("question_ids")
-        d["n"] = sum(1 for i in qids_by_paper[d["id"]] if i in active)
+        d["_qids"] = [i for i in qids_by_paper[d["id"]] if i in active]
+        d["n"] = len(d["_qids"])
         d["psource"] = _dominant_paper_source(qids_by_paper[d["id"]], src_by_qid)
         soc = takers.get(d["id"])
         d["takers"] = soc["n"] if soc else 0
@@ -3372,10 +3373,21 @@ def list_exam_papers(kind: str | None = None, year: int | None = None,
                 if s > bs or (s == bs and b["id"] > cur["best_attempt_id"]):
                     cur["best_score"] = b["score"]
                     cur["best_attempt_id"] = b["id"]
+    done_qids: set[int] = set()
+    if uid and base:
+        done_qids = {
+            r["question_id"] for r in conn.execute(
+                "SELECT DISTINCT question_id FROM answer_log"
+                " WHERE uid=? AND question_id IS NOT NULL",
+                (uid,),
+            )
+        }
     conn.close()
     out = []
     for d in base:
         d = dict(d)
+        qids = d.pop("_qids", [])
+        d["practiced"] = sum(1 for i in qids if i in done_qids) if done_qids else 0
         d.update(best.get(d["id"], {
             "best_score": None, "attempt_count": 0, "best_attempt_id": None,
         }))
