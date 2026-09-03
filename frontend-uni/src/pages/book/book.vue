@@ -775,6 +775,7 @@ export default {
     if (p.mod) this.filterMod = p.mod;
     if (p.kp) this._pendingKp = p.kp;
     if (p.kp3) this._pendingKp3 = p.kp3;
+    this._pendingKpFix = !!(opts && (opts.kp || opts.kp3)) && !p.kp && !p.kp3;
     if (p.src) this.srcFilter = p.src;
     if (p.rz) this.rzFilter = p.rz;
     if (p.sort) this.sortBy = p.sort;
@@ -1114,7 +1115,13 @@ export default {
     applyPendingKp() {
       const kp = this._pendingKp;
       const kp3 = this._pendingKp3;
-      if (!kp && !kp3) return;
+      if (!kp && !kp3) {
+        if (this._pendingKpFix) {
+          this._pendingKpFix = false;
+          this.syncBookUrl();
+        }
+        return;
+      }
       this._pendingKp = '';
       this._pendingKp3 = '';
       if (kp3) {
