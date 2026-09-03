@@ -65,6 +65,7 @@
       </view>
       <view class="paper-btns">
         <view class="pbtn main" @click="startPaper(p)">开始模考</view>
+        <view v-if="p.psource" class="pbtn" @click="practicePaper(p)">按卷练习</view>
         <view v-if="p.best_attempt_id" class="pbtn" @click="openBestReport(p)">看报告</view>
         <view class="pbtn" @click="askExport(p)">{{ exportingId === p.id ? '导出中…' : '导出 PDF' }}</view>
       </view>
@@ -255,6 +256,11 @@ export default {
     startPaper(p) {
       if (this._starting) return;
       uni.navigateTo({ url: '/pkgA/exam/exam?paper_id=' + p.id });
+    },
+    practicePaper(p) {
+      // 不计时逐题练习，复用刷题页既有按卷练习协议
+      uni.setStorageSync('practiceLaunch', { kind: 'paper', source: p.psource, title: p.title, untimed: true });
+      uni.navigateTo({ url: '/pages/practice/practice' });
     },
     openBestReport(p) {
       uni.navigateTo({ url: '/pkgA/exam/report?attempt_id=' + p.best_attempt_id });
