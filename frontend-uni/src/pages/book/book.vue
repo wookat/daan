@@ -446,7 +446,9 @@
           <text class="op more" @click.stop="itemSheet(m)">···</text>
         </view>
         <rich-text v-if="m.open" :nodes="m.html" />
-        <q-social-bar v-if="m.open && m.question_id" :question-id="m.question_id" />
+        <view v-if="m.open && m.question_id" @click.stop>
+          <q-social-bar :question-id="m.question_id" />
+        </view>
       </view>
       <view v-if="tab !== 'fav' && pageN < shownItems.length" class="loadmore bk-main" @click="pageN += 20">上滑或点击加载更多（{{ shownPage.length }}/{{ shownItems.length }}）</view>
       <!-- 批量操作条 -->
