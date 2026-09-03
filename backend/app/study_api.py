@@ -199,12 +199,14 @@ _REDO_SOURCES = {"exam", "practice"}
 
 
 @router.get("/api/mistakes/redo")
-def api_mistakes_redo(limit: int = 10, qtype: str | None = None, module: str | None = None, noqt: int = 0, uid: str | None = None, rz: str | None = None, src: str | None = None):
+def api_mistakes_redo(limit: int = 10, qtype: str | None = None, module: str | None = None, noqt: int = 0, uid: str | None = None, rz: str | None = None, src: str | None = None, t3: str | None = None):
     if rz is not None and rz not in _REDO_REASONS:
         raise HTTPException(400, "无效的错因")
     if src is not None and src not in _REDO_SOURCES:
         raise HTTPException(400, "无效的来源")
-    return {"items": db.mistakes_redo_questions(min(limit, 25), qtype=qtype, module=module, noqt=bool(noqt), uid=uid, reason=rz, source=src)}
+    if t3 is not None and t3 not in taxonomy.topic_index():
+        raise HTTPException(400, "无效的考点")
+    return {"items": db.mistakes_redo_questions(min(limit, 25), qtype=qtype, module=module, noqt=bool(noqt), uid=uid, reason=rz, source=src, tag3=t3)}
 
 _REPORT_REASONS = {"答案有误", "题目有错字/乱码", "选项有问题", "图片不清晰/缺失", "解析有误", "其他"}
 

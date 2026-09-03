@@ -2173,7 +2173,7 @@ def import_questions(items: list[dict], batch: str | None = None) -> dict:
     return {"inserted": inserted, "skipped": skipped, "batch": batch}
 
 
-def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: str | None = None, noqt: bool = False, uid: str | None = None, reason: str | None = None, source: str | None = None) -> list[dict]:
+def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: str | None = None, noqt: bool = False, uid: str | None = None, reason: str | None = None, source: str | None = None, tag3: str | None = None) -> list[dict]:
     """把待掌握错题匹配回题库原题，供刷题页重练。"""
     conn = get_conn()
     _ensure_mistake_uid(conn)
@@ -2197,6 +2197,9 @@ def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: s
         where += " AND source='exam'"
     elif source == "practice":
         where += " AND (source IS NULL OR source!='exam')"
+    if tag3:
+        where += " AND question_id IN (SELECT id FROM questions WHERE tag3=?)"
+        args.append(tag3)
     rows = conn.execute(
         f"SELECT id, question_text, question_id FROM mistakes WHERE {where} ORDER BY COALESCE(next_review, created_at), created_at DESC LIMIT ?",
         (*args, limit * 2),
