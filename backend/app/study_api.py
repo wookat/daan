@@ -194,9 +194,14 @@ def api_backup_get(code: str):
         raise HTTPException(404, "恢复码不存在")
     return {"data": data}
 
+_REDO_REASONS = {"粗心大意", "概念不清", "方法不会", "纯蒙的", "未标注"}
+
+
 @router.get("/api/mistakes/redo")
-def api_mistakes_redo(limit: int = 10, qtype: str | None = None, module: str | None = None, noqt: int = 0, uid: str | None = None):
-    return {"items": db.mistakes_redo_questions(min(limit, 25), qtype=qtype, module=module, noqt=bool(noqt), uid=uid)}
+def api_mistakes_redo(limit: int = 10, qtype: str | None = None, module: str | None = None, noqt: int = 0, uid: str | None = None, rz: str | None = None):
+    if rz is not None and rz not in _REDO_REASONS:
+        raise HTTPException(400, "无效的错因")
+    return {"items": db.mistakes_redo_questions(min(limit, 25), qtype=qtype, module=module, noqt=bool(noqt), uid=uid, reason=rz)}
 
 _REPORT_REASONS = {"答案有误", "题目有错字/乱码", "选项有问题", "图片不清晰/缺失", "解析有误", "其他"}
 
