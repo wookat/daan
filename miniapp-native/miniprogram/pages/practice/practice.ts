@@ -10,6 +10,7 @@ import {
   trackEvent,
 } from '../../api/index';
 import type { AnswerLogItem, Question } from '../../api/types';
+import { BASE_URL } from '../../utils/request';
 import { modName, recordStat, streakDays } from '../../utils/stats';
 
 const BADGE_MILESTONES = [3, 7, 14, 30, 60, 100];
@@ -33,6 +34,11 @@ interface PQuestion extends Question {
   optList: Array<{ k: string; v: string }>;
 }
 
+function imgUrl(p: string | null | undefined): string {
+  if (!p) return '';
+  return /^https?:/.test(p) ? p : BASE_URL + p;
+}
+
 function toPQ(q: Question): PQuestion {
   return {
     ...q,
@@ -52,6 +58,7 @@ Page({
     items: [] as PQuestion[],
     idx: 0,
     cur: null as PQuestion | null,
+    curImg: '',
     picked: '',
     right: 0,
     finished: false,
@@ -116,7 +123,7 @@ Page({
         return;
       }
       const items = d.items.map(toPQ);
-      this.setData({ loading: false, items, idx: 0, cur: items[0], picked: '', right: 0 });
+      this.setData({ loading: false, items, idx: 0, cur: items[0], curImg: imgUrl(items[0].image), picked: '', right: 0 });
       this.startTimer();
     } catch (e) {
       wx.showToast({ title: '加载失败：' + (e as Error).message, icon: 'none' });
@@ -148,6 +155,10 @@ Page({
       optFs: OPT_FS[lv],
       expFs: EXP_FS[lv],
     });
+  },
+  onPreviewImg() {
+    const url = this.data.curImg;
+    if (url) wx.previewImage({ urls: [url] });
   },
   onCycleFont() {
     const lv = (this.data.fontLv + 1) % 3;
@@ -230,7 +241,7 @@ Page({
     const { idx, items } = this.data;
     const next = idx + 1;
     if (next < items.length) {
-      this.setData({ idx: next, cur: items[next], picked: items[next]._picked || '' });
+      this.setData({ idx: next, cur: items[next], curImg: imgUrl(items[next].image), picked: items[next]._picked || '' });
       if (!items[next]._picked) this.startTimer();
       return;
     }
@@ -244,6 +255,7 @@ Page({
     this.setData({
       finished: true,
       cur: null,
+      curImg: '',
       pct: Math.round((right / items.length) * 100),
       totalSecs,
       wrongCount: items.filter((q) => q._picked && q._picked !== q.answer).length,

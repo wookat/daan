@@ -19,6 +19,7 @@ Page({
     loading: true,
     errMsg: '',
     d: null as ShareDetailResp | null,
+    modLabel: '',
     optList: [] as Array<{ k: string; v: string }>,
     picked: '',
     myResult: null as { picked: string; correct: boolean } | null,
@@ -55,6 +56,7 @@ Page({
       this._qStats = d.q_stats || null;
       this.setData({
         d,
+        modLabel: modName(d.question.module || ''),
         optList: Object.keys(d.question.options)
           .sort()
           .map((k) => ({ k, v: d.question.options[k] })),

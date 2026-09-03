@@ -1,6 +1,6 @@
 // 请求封装：与 frontend-uni/src/api.js 的 request 行为对齐
 // - X-Access-Code / Authorization 头
-// - 401 登录过期清登录态
+// - 401 登录过期 / 403 账号 uid 无 token（api-policy.classifyHttpError 同口径）清登录态回退匿名 uid
 // - 「访问码」错误弹窗输入后自动重试一次
 
 import { clearAccessCode, clearAuth, getAccessCode, getToken, setAccessCode } from './auth';
@@ -61,10 +61,12 @@ function rawRequest<T>(path: string, opts: RequestOptions = {}): Promise<T> {
         const detail = (body && body.detail) || '';
         // 仅登录态本身失效才清登录（访问码等 401 不应踢登录）
         const authExpired =
-          res.statusCode === 401 &&
-          !path.startsWith('/api/auth/') &&
-          (detail.includes('未登录') || detail.includes('登录已过期'));
-        if (authExpired && getToken()) {
+          (res.statusCode === 401 &&
+            !path.startsWith('/api/auth/') &&
+            (detail.includes('未登录') || detail.includes('登录已过期'))) ||
+          (res.statusCode === 403 && detail.includes('重新登录'));
+        // 403 场景 token 通常已丢失而 anonUid 仍为 u<id>，不以 token 为前提
+        if (authExpired && (getToken() || res.statusCode === 403)) {
           clearAuth();
           wx.showToast({ title: '登录已过期，请重新登录', icon: 'none', duration: 2500 });
         }

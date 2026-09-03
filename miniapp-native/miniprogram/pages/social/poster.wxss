@@ -23,7 +23,7 @@
   box-shadow: var(--sh-brand);
 }
 
-.bar {
+.actions {
   width: 620rpx;
   margin-top: 28rpx;
   display: flex;

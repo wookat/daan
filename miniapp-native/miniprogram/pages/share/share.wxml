@@ -15,7 +15,7 @@
 
       <view class="card">
         <view class="q-tags">
-          <text class="tag tag-brand">{{d.question.module || '行测'}}</text>
+          <text class="tag tag-brand">{{modLabel}}</text>
           <text wx:if="{{d.question.submodule}}" class="tag tag-gray">{{d.question.submodule}}</text>
         </view>
         <text class="stem" user-select>{{d.question.question}}</text>
