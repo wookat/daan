@@ -57,7 +57,7 @@ describe('upsertLocalSession', () => {
   });
 });
 
-import { addTombstone, removeTombstone, pruneTombstones, filterTombstoned } from '../src/ask-sessions.js';
+import { addTombstone, removeTombstone, pruneTombstones, filterTombstoned, sanitizeCurItems } from '../src/ask-sessions.js';
 
 describe('tombstones (R330)', () => {
   it('adds, removes, and normalizes invalid inputs', () => {
@@ -91,5 +91,27 @@ describe('tombstones (R330)', () => {
     expect(filterTombstoned(list, null).map((x) => x.id)).toEqual([1, 2]);
     expect(filterTombstoned('junk', { 1: 1 })).toEqual([]);
     expect(list).toHaveLength(2);
+  });
+});
+
+describe('sanitizeCurItems (R331)', () => {
+  it('keeps only items with non-empty explanation', () => {
+    const items = [
+      { explanation: '解析A', fu: [] },
+      { explanation: '' },
+      { explanation: 42 },
+      null,
+      'junk',
+      [1],
+      { explanation: '解析B', saved: true },
+    ];
+    expect(sanitizeCurItems(items).map((r) => r.explanation)).toEqual(['解析A', '解析B']);
+    expect(items).toHaveLength(7);
+  });
+
+  it('fail-closed on invalid input', () => {
+    expect(sanitizeCurItems(null)).toEqual([]);
+    expect(sanitizeCurItems('junk')).toEqual([]);
+    expect(sanitizeCurItems({ 0: { explanation: 'x' } })).toEqual([]);
   });
 });

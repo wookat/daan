@@ -96,3 +96,12 @@ export function filterTombstoned(sessions, tombs) {
   const tb = normTombs(tombs);
   return list.filter((s) => !(s.id in tb));
 }
+
+// 进行中会话快照清洗（R331）：刷新恢复 askCurSession 前过滤非法条目。
+// 回填渲染依赖 explanation 正文，缺失/空串的条目无法呈现，直接剔除。
+export function sanitizeCurItems(items) {
+  if (!Array.isArray(items)) return [];
+  return items.filter(
+    (r) => r && typeof r === 'object' && !Array.isArray(r) && typeof r.explanation === 'string' && r.explanation.length > 0,
+  );
+}

@@ -241,7 +241,7 @@
 import { md } from '../../md.js';
 import { request, uploadExplain, streamExplain, anonUid, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api.js';
 import { isNativeApp, pickImageNative } from '../../native.js';
-import { mergeAskSessions, upsertLocalSession, addTombstone, removeTombstone, pruneTombstones, filterTombstoned } from '../../ask-sessions.js';
+import { mergeAskSessions, upsertLocalSession, addTombstone, removeTombstone, pruneTombstones, filterTombstoned, sanitizeCurItems } from '../../ask-sessions.js';
 
 export default {
   data() {
@@ -292,6 +292,7 @@ export default {
     }
     // #endif
     this.loadDue();
+    this.restoreCurSession();
     this.syncSessions();
     const redo = uni.getStorageSync('redoQuestion');
     if (redo) {
@@ -803,13 +804,15 @@ export default {
     openHistory() {
       this.historyOpen = true;
     },
-    loadSession(i) {
-      const s = this.sessions[i];
-      if (!s) return;
-      this.archiveCurrent();
-      this.curSid = s.id;
-      uni.setStorageSync('askCurSid', s.id);
-      this.results = s.items.map((r) => {
+    restoreCurSession() {
+      if (this.results.length) return;
+      const items = sanitizeCurItems(uni.getStorageSync('askCurSession'));
+      if (!items.length) return;
+      this.results = this.adoptItems(items);
+      this.persistSession();
+    },
+    adoptItems(items) {
+      return items.map((r) => {
         const nr = {
           ...r,
           html: '',
@@ -826,6 +829,14 @@ export default {
         this.applyExplain(nr, r.explanation);
         return nr;
       });
+    },
+    loadSession(i) {
+      const s = this.sessions[i];
+      if (!s) return;
+      this.archiveCurrent();
+      this.curSid = s.id;
+      uni.setStorageSync('askCurSid', s.id);
+      this.results = this.adoptItems(s.items);
       this.persistSession();
       this.historyOpen = false;
       this.scrollBottom();
