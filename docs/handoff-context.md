@@ -1185,3 +1185,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：ruff/pytest 196(+5)/pyright 0/lint/vitest 385(+6)/build 全绿；生产 rev 90486d3、bundle index-C6UX06VT.js；testing agent 真实订阅+定向触发四分支全过（A：错题复习提醒点击自动进复习流 1/1；B：合并文案落每日一练；C：原文案不回归；D：sent=0 无通知），首页到期卡回归、review=abc/0 反例不触发、console 0 error；Lighthouse 独立复跑全过（部署首跑 / a11y 0.94/LCP 2648 单样本波动，复跑 1.0/1826ms）。清理 test-r324-push DELETED 9 / LEFTOVER 0，保护 uid 31 表快照一致。
 - 未生产实测：cron 全量发送路径（出于安全只走 only_endpoint 定向；全量循环逻辑同一函数）；375 视口（本轮以通知点击流为主）；SW 未控页点通知不导航为浏览器已知行为非缺陷。
 - 详见 docs/iter/round-3/design-r324-push-due-review.md。
+
+### R325 字号设置扩展到做卷页与错题本复习流（2026-08-29，PR #522，基于 #521 分支 devin/1788391747-r325-fontlv-global）
+- 取证：个人页字号三档（小/标准/大）只在普通刷题页生效，pkgA/exam/exam.vue 与 pages/book/book.vue 均不消费 fontLv，且个人页 toast 承诺「练习页生效」范围与实际不符；粉笔在做题/做卷/解析等精读场景字号一致。
+- 收口（纯前端零后端/零契约）：新增 src/font-size.js 共用口径（normFontLv 仅接受 0/1/2 非法回落 1；fontSizes → {q:26/30/34rpx, opt:25/29/33rpx}）；做卷页题干/选项（含材料折叠态小题干）与错题本复习流题干/解析接入 qStyle/optStyle，onShow 重读 storage 使从个人页返回立即生效；复习列表扫描态不变；practice.vue 改复用同一纯函数；profile toast 改「（做题与复习页生效）」。
+- 走查发现并修复（commit a3b2800）：「小」档全站失效——各页 `uni.getStorageSync('fontLv') || 1` 把数值 0 当 falsy 吞成标准档（旧 practice.vue 同样写法，属既有缺陷，入口收敛后成必踩路径）；四页读取全部改为 `normFontLv(uni.getStorageSync('fontLv'))`，复测小档 13/12.5px 精确命中、个人页刷新回显「小」。
+- 验证：lint/vitest 389(+4)/build 全绿（修复后复跑）；生产 rev e10c472→a3b2800、bundle index-BwG3QXxG.js；testing agent 两轮实测：三档 computed px 逐档精确（13/12.5、15/14.5、17/16.5）、切档返回即时生效、材料折叠题干、复习流题干+解析、列表态不变、非法值('abc'/5)回落、1440/375 溢出 0/console 0 error；Lighthouse 全过（/ 0.98、/tiku/ 1.00）。清理 test-r325-font DELETED 19 / LEFTOVER 0，保护 uid 31 表快照一致。
+- 未生产实测：375 视口小档专项（375 已覆盖标准/大与溢出）；真实触屏。
+- 详见 docs/iter/round-3/design-r325-fontlv-global.md。

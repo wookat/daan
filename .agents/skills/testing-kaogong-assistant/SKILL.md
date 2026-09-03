@@ -626,3 +626,9 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 通知点击→SW `notificationclick`→`c.navigate(url)` 只对**被 SW 控制**的页面窗口生效：硬刷（Ctrl+Shift+R）后页面 `navigator.serviceWorker.controller=null`，点通知会消费掉但不导航——先普通刷新确认 `controlled:true` 再点；并关掉多余同源 tab 防止 navigate 落错窗口。
 - 后端「今日」用 CN_TZ（Asia/Shanghai）`strftime('%Y-%m-%d')`；SSH 造 `daily_set_entries` 行时勿用 sqlite `date('now')`（UTC），日期可能差一天导致分支误判，应在 python 里用 `datetime.now(CN_TZ)` 生成 day。
 - 错题到期口径 `db.due_review_count`：mastered 空/0 且 next_review 空或 <=now；SSH 改 `mistakes.next_review` 到过去/未来即可切 due>0/due=0。
+
+## R325 字号三档走查新经验
+- 字号口径统一在 `frontend-uni/src/font-size.js`（Q=[26,30,34]rpx、OPT=[25,29,33]rpx，1440 视口折算 .q=13/15/17px、.otext=12.5/14.5/16.5px）；断言用相邻档 computed fontSize 严格递增，勿只看单档。
+- **`uni.getStorageSync('fontLv') || 1` 会把合法的 0（小档）吞成 1**——exam/book/practice/profile 均如此，测「小」档必然回落标准；这类 falsy 陷阱在其它数值型 storage 键也可能出现，遇到 0 值不生效先查 `||` 兜底。
+- 做卷页 `pkgA/exam/exam.vue` 有未交卷 attempt 时进页会弹「继续上次模考？」uni-modal，此时 `.q/.otext` 查询返回 null——CDP 度量前先查 `!!document.querySelector('uni-modal')` 并先在 UI 上处理弹窗；临时 uid 若开过卷未交，后续任何进 exam 页（含刷新）都会弹。
+- 错题本列表态 `.q`（约13px）不绑字号，复习态 `.q`/解析 rich-text 外层才绑——量错元素会误判「列表态被影响」。
