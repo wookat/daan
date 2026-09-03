@@ -2173,7 +2173,7 @@ def import_questions(items: list[dict], batch: str | None = None) -> dict:
     return {"inserted": inserted, "skipped": skipped, "batch": batch}
 
 
-def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: str | None = None, noqt: bool = False, uid: str | None = None) -> list[dict]:
+def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: str | None = None, noqt: bool = False, uid: str | None = None, reason: str | None = None, source: str | None = None, tag3: str | None = None) -> list[dict]:
     """把待掌握错题匹配回题库原题，供刷题页重练。"""
     conn = get_conn()
     _ensure_mistake_uid(conn)
@@ -2188,6 +2188,18 @@ def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: s
         args.append(module)
     if noqt:
         where += " AND (question_type IS NULL OR question_type='')"
+    if reason == "未标注":
+        where += " AND (error_reason IS NULL OR error_reason='')"
+    elif reason:
+        where += " AND error_reason=?"
+        args.append(reason)
+    if source == "exam":
+        where += " AND source='exam'"
+    elif source == "practice":
+        where += " AND (source IS NULL OR source!='exam')"
+    if tag3:
+        where += " AND question_id IN (SELECT id FROM questions WHERE tag3=?)"
+        args.append(tag3)
     rows = conn.execute(
         f"SELECT id, question_text, question_id FROM mistakes WHERE {where} ORDER BY COALESCE(next_review, created_at), created_at DESC LIMIT ?",
         (*args, limit * 2),
@@ -3716,6 +3728,53 @@ def get_ask_cur(uid: str) -> dict | None:
         d["items"] = json.loads(d["items"] or "[]")
     except ValueError:
         d["items"] = []
+    return d
+
+
+def _ensure_review_cur(conn):
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS review_cur (
+            uid TEXT PRIMARY KEY,
+            snap TEXT NOT NULL,
+            updated_at REAL NOT NULL
+        )"""
+    )
+
+
+def save_review_cur(uid: str, snap_json: str) -> None:
+    conn = get_conn()
+    _ensure_review_cur(conn)
+    conn.execute(
+        """INSERT INTO review_cur (uid, snap, updated_at)
+           VALUES (?,?,?)
+           ON CONFLICT(uid) DO UPDATE SET
+             snap=excluded.snap, updated_at=excluded.updated_at""",
+        (uid, snap_json, time.time()),
+    )
+    conn.commit()
+    conn.close()
+
+
+def clear_review_cur(uid: str) -> None:
+    conn = get_conn()
+    _ensure_review_cur(conn)
+    conn.execute("DELETE FROM review_cur WHERE uid=?", (uid,))
+    conn.commit()
+    conn.close()
+
+
+def get_review_cur(uid: str) -> dict | None:
+    conn = get_conn()
+    _ensure_review_cur(conn)
+    row = conn.execute("SELECT snap, updated_at FROM review_cur WHERE uid=?", (uid,)).fetchone()
+    conn.close()
+    if not row:
+        return None
+    d = dict(row)
+    try:
+        d["snap"] = json.loads(d["snap"] or "null")
+    except ValueError:
+        d["snap"] = None
     return d
 
 

@@ -321,6 +321,8 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 - tag3 覆盖率核对须过滤 disabled（已下架题 tag3 恒空属预期）。
 - 抽审队列 API `/api/admin/tag3_review`（x-admin-token=容器 IMPORT_TOKEN）；容器内无 curl，用 python urllib。
 - 错题本三级子行仅对有 question_id 的错题显示（tag3_name 由 /api/mistakes join questions 注入）。
+- POST /api/mistakes 造数时 `question_type` 必须用前端分组名（如「历史人文」，勿带「常识判断-」模块前缀），否则错题本 kp3 行选中后列表为空/redo 集合不全（kp3 态 redoAll 仍带 qtype 参数）。
+- 测 t3 过滤要构造「同二级分组不同 tag3」对抗样本（如 CS-LS-01 vs CS-LS-02），以区分 t3 过滤生效与 qtype 转发的既有效果。
 
 ## P7 多端分包路由
 - P7 起 exam 三页/shenlun/login 在 pkgA 分包，H5 路由为 `#/pkgA/exam/list|exam|report`、`#/pkgA/shenlun/shenlun`、`#/pkgA/user/login`；旧 `#/pages/...` 路径由 App.vue onLaunch 重定向到 pkgA。
@@ -705,3 +707,47 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 展开卡内小按钮（.op）点击易差几像素命中卡片本体导致收起：先 CDP 读 `getBoundingClientRect()` 换算工具坐标再点（1600 实宽→1024 工具坐标 ×0.64，浏览器 chrome 顶部偏移约 157 实 px）。
 - 验证 `@click.stop` 不收起卡片的客观方法：CDP 给 `.mcard` 挂 bubble 阶段计数 listener，UI 点击子按钮后读计数=0 即证明冒泡被阻断（book onShow 会 reload 列表重置 open 态，返回后卡片收起不能作为反证）。
 - 造「无命中」错题反例最省路径：CDP 只读 `cur.answer` 后 UI 故意点错选项，错题自动入本（无需 API 造数）。
+
+## R339 查看原题反向深链走查新经验
+- 清空服务端 ask_cur 的可靠路径是走 UI「新对话 → 删除新归档会话」：直接删本机 askCurSession 后 reload 会被 `GET /api/ask/cur` 从服务端拉回，越清越回。
+
+## R340 错题本错因筛选走查新经验
+- 错因打标最省 UI 路径：错题本「开始复习」→ 答错后点「错因自评」chip（book.vue 复习流，自动 PATCH /api/mistakes/:id 持久化），无需手工 curl。
+- 服务端清理可复用模式：docker cp 或容器内 python sqlite 按 `uid LIKE 'test-<round>-%'` 扫 16 张业务表；刷题+复习场景最常见写入面是 mistakes/answer_log/review_log/growth_events 四表。
+
+## R341 报告错因画像走查新经验
+- 抓包 daemon 复制 r335 模板时必须检查 URL 白名单：旧模板只捕 track/explain/practice/answer_log/ask，模考交卷与 /api/mistakes PATCH 会静默漏抓——直接用 `PAT=('/api/',)` 捕全量。
+- 「无错题报告」反例最省真实 UI 路径：mini 模考 0 答直接交卷（picked 空 → reasonRecap/redoCount 均不渲染），无需 CDP 注入。
+
+## R342 重练错因过滤走查新经验
+- report 深链为 `/#/pkgA/exam/report?attempt_id=<id>`；地址栏输入 hash 深链不触发 onLoad，需再硬刷一次才加载。
+- `redoSet` 被 practice 页消费即删：重练集合断言不要读 storage，改核对抓包里 `/api/mistakes/redo` 响应 items（或 apiSnap 缓存）与练习页题数。
+
+- 内嵌交互组件（如 q-social-bar）挂进带整卡 click toggle 的容器（如错题本列表卡）时，必测「内部链接点击是否被冒泡吞掉」（R346 实景抓到写笔记被 toggleCard 收起）；笔记类文本断言用 ASCII 内容（xdotool type 中文丢字）。
+
+## R348 部署基线与 SW 缓存走查新经验
+- 每轮生产验证前先核对部署基线：`git merge-base --is-ancestor <前几轮修复 commit> <本轮部署 rev>`——R348 首版 f33c79f 从旧基线切出，R346/R347 已上线功能生产静默回退（q-social-bar 消失、track 事件 400），仅靠 UI 回归测试才发现。
+- 每轮部署验证前必须核对页面真实运行的 bundle：`performance.getEntriesByType('resource')` 看实际加载的 `index-*.js`，而非只 curl 首页 HTML；PWA service worker 会继续服务旧 bundle，需 Ctrl+Shift+R 硬刷后再开始断言，否则会把缓存旧版误判为功能回退。
+
+## R350 复习流 AI 详解走查新经验
+- ask 页对 `redoAnswer`/`redoQuestion` 是消费型读取（onShow 读后立即 removeStorageSync）：断言预填要看 UI 上的作答 chip，事后查 localStorage 必为 null，不能作为反证。
+- 从复习流切走 tab（含点「AI 详解本题」跳 ask 页）后返回错题本，复习会话不保留（回列表态）、本轮加练题作废：多步复习断言尽量一轮内完成；中断后需重造错题开新复习轮续测。
+
+## R351 复习会话快照恢复走查新经验
+- `reviewSnap`（localStorage 裸 JSON 字符串）由 book.vue 各判分/换题/入库写点维护；exitReview（完成复习/退出）与「放弃」都会清。断言横幅用 `document.querySelector('.resumecard')`。
+- fail-closed 注入测试可先注入一条**合法快照作阳性对照**（v:1、uid=当前 anonUid、ts=now、rIdx 合法、items[].question_text 非空）确认横幅检测有效，再逐个注入坏 JSON/uid 不符/ts 超 2h/rIdx 越界，reload 期间用 Log.enable+Runtime.exceptionThrown 监听 console error。
+- 与 R350 结论相反：从复习流点「AI 详解本题」跳 ask 页后**点错题本 tab 返回，内存会话可能保留**（R351 实测保留、复习卡原位）；整页硬刷才是稳定的丢失路径，测横幅恢复用 Ctrl+Shift+R。
+- 复习第 1 题答错（原有 2 道 due）触发加练后总数为 5（2 原题 + 1 requeue + 2 加练）；横幅题号 x/n 的 n 含加练与 requeue。
+
+## R352 跨设备复习同步走查新经验
+- 双设备模拟：`Target.createBrowserContext` + `createTarget` 造隔离 context（独立 localStorage），注入相同 `anonUid` 即同一账号；每个 context 的 `Emulation.setDeviceMetricsOverride` 绑定在发它的 CDP websocket 上，**socket 一关 override 就丢**——需要每个 context 各挂一个常驻 holder 进程（参照 holdvw.py / r352_devB.py 模式）。
+- `/api/review/cur` 断言点：saveReviewSnap 去抖 1.5s 后 POST（抓包看 body.snap.rIdx/items）；本机快照命中时 onShow 0 次远端 GET（本机优先）；「放弃/完成」POST `{"snap":null}`；跨设备清除用全新 context 验 GET 后无 `.resumecard`。
+- 地址栏改 `?rz=` 等 hash query 不触发 onLoad，需 F5 一次才生效（同 R342 深链经验）。
+
+## R353 首页续卡回归数据构造经验
+- R323 续练卡/R288 模考卡的触发前提是**非主动中断**（答题后硬刷/关页）；练习页「退出」按钮的 quit() 会清 pendingSession 与服务端进度，tab 切换也可能不落盘——造首页续卡回归数据一律用「答 1 题 + 硬刷」路径。
+
+## R354/R355 生产并发部署与路由顺序回归经验
+- 长流程生产测试中若突然出现成批 4xx 或接口行为突变，先复查 `/api/health` 的 rev 与浏览器实载 bundle——生产可能被其他会话并发重新部署（本例 b26cc70 中途被 PR #558 旧基线 merge 覆盖为 a4fa410，R339–R354 全被回退）。发现后立即 message_parent 上报并中断本轮录制，不要把两种 rev 的证据混在一起。
+- `/api/review/cur` 对 FastAPI 路由注册顺序敏感：必须先于 `/api/review/{mid}` 注册。回归指纹：`POST /api/review/cur → 422 {"type":"int_parsing","loc":["path","mid"],"input":"cur"}`、`GET /api/review/cur → 404`。
+- R354 庆祝卡小结断言点：混合轮（首答对 X（P%）/答错 Y·纠正 Z/加练 M·答对 K）三行逐字核对；全对轮仅第 1 行 100%；`_res` 会随 reviewSnap 持久化并出现在 POST /api/review/cur 的 items 里（抓包可直接验证 `"_res":true`）。

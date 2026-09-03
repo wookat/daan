@@ -23,7 +23,8 @@
           <template v-else>{{ wasCorrect ? (cur._requeued ? '这次答对了，本轮已纠正 ✓' : '答对了！连对 ' + streak + ' 次') : '又错了，看讲解（稍后本轮会再出现）' }}（下次复习：{{ nextDays }} 天后）</template>
         </view>
         <view v-if="wasCorrect === false && cur._appended" class="appended-tip">已为你在本轮末尾加练 {{ cur._appended }} 道同类题</view>
-        <view v-if="!wasCorrect && !cur._extra" class="reasons">
+        <view v-if="cur._extra && !wasCorrect && cur._saved" class="appended-tip">已加入错题本，之后会安排复习</view>
+        <view v-if="!wasCorrect && reviewReasonMid(cur)" class="reasons">
           <text class="rz-t">错因自评：</text>
           <text
             v-for="rz in REASONS"
@@ -43,6 +44,7 @@
         <view v-if="reviewAskSeen" class="sim-row" role="button" aria-label="回看 AI 详解" @click="openSeenAsk">
           <text class="sim-t">回看 AI 详解 ›</text>
         </view>
+        <q-social-bar v-if="cur.question_id" :question-id="cur.question_id" />
         <wd-button type="primary" block custom-class="next-btn" @click="nextReview">{{ rIdx + 1 < rItems.length ? '下一题' : '完成复习' }}</wd-button>
       </view>
       <view v-else-if="curMulti" class="selfjudge">
@@ -63,7 +65,12 @@
       <view class="cb-card" @click.stop>
         <view class="cb-emoji">🎉</view>
         <view class="cb-t">今日复习已清零！</view>
-        <view class="cb-s">{{ celebrateN }} 道到期错题全部复习完成，遗忘曲线稳住了</view>
+        <template v-if="rSummary">
+          <view class="cb-s">到期 {{ celebrateN }} 道全部复习完成<template v-if="rSummary.pct !== null"> · 首答对 {{ rSummary.dueRight }} 道（{{ rSummary.pct }}%）</template></view>
+          <view v-if="rSummary.dueWrong" class="cb-s">答错 {{ rSummary.dueWrong }} 道已重出巩固<template v-if="rSummary.corrected"> · 纠正 {{ rSummary.corrected }} 道</template></view>
+          <view v-if="rSummary.extra" class="cb-s">加练同类题 {{ rSummary.extra }} 道 · 答对 {{ rSummary.extraRight }} 道</view>
+        </template>
+        <view v-else class="cb-s">{{ celebrateN }} 道到期错题全部复习完成，遗忘曲线稳住了</view>
         <button class="cb-btn" @click="closeCelebrate">太棒了，继续 ›</button>
       </view>
     </view>
@@ -88,6 +95,16 @@
         <view class="ov-c"><text class="ov-n">{{ items.length }}</text><text class="ov-t">全部错题</text></view>
         <view class="ov-c"><text class="ov-n warn">{{ todoItems.length }}</text><text class="ov-t">待掌握</text></view>
         <view class="ov-c"><text class="ov-n ok">{{ doneItems.length }}</text><text class="ov-t">已掌握</text></view>
+      </view>
+      <view v-if="resumeInfo" class="card resumecard bk-main" role="button" aria-label="继续刚才的复习" @click="resumeReview">
+        <view>
+          <view class="duetxt"><l-icon name="clock" :size="16" color="#ffffff" /><text class="duetxt-t">上次复习中断在第 {{ resumeInfo.rIdx + 1 }}/{{ resumeInfo.items.length }} 题</text></view>
+          <text class="duesub">进度已保留，可原位继续</text>
+        </view>
+        <view class="resume-ops">
+          <text class="duego">继续复习</text>
+          <text class="resume-drop" role="button" aria-label="放弃本轮复习进度" @click.stop="discardResume">放弃</text>
+        </view>
       </view>
       <view v-if="due.length" class="card duecard bk-main" @click="startReviewFromCard">
         <view>
@@ -130,8 +147,8 @@
           </view>
           <view class="recap-sec">
             <text class="recap-st">按错因</text>
-            <view v-for="g in monthRecap.byReason" :key="g.name" class="recap-row">
-              <text class="recap-name">{{ g.name }}</text>
+            <view v-for="g in monthRecap.byReason" :key="g.name" class="recap-row recap-link" role="button" :aria-label="'筛选错因：' + g.name" @click="filterByReason(g.name)">
+              <text class="recap-name">{{ g.name }} ›</text>
               <view class="recap-bar"><view class="recap-fill warnfill" :style="{ width: Math.round((g.n / monthRecap.total) * 100) + '%' }" /></view>
               <text class="recap-n">{{ g.n }}</text>
             </view>
@@ -267,8 +284,8 @@
         <view class="redo-l">
           <view class="redo-ico"><l-icon name="rotate-ccw" :size="16" color="#2e5bff" /></view>
           <view>
-            <text class="redo-t">错题重练{{ kpFilter ? ' · ' + kpFilter : '' }}</text>
-            <text class="redo-s">{{ kpFilter ? '只重练当前筛选题型的待掌握错题（最多 10 题）' : '把待掌握错题按刷题模式重做一遍（最多 10 题）' }}</text>
+            <text class="redo-t">错题重练{{ kp3Filter ? ' · ' + kp3Filter : kpFilter ? ' · ' + kpFilter : rzFilter ? ' · ' + rzFilter : srcFilter ? ' · ' + (srcFilter === 'exam' ? '模考错题' : '练习错题') : '' }}</text>
+            <text class="redo-s">{{ kp3Filter ? '只重练当前筛选考点的待掌握错题（最多 10 题）' : kpFilter ? '只重练当前筛选题型的待掌握错题（最多 10 题）' : rzFilter ? '只重练当前筛选错因的待掌握错题（最多 10 题）' : srcFilter ? '只重练当前筛选来源的待掌握错题（最多 10 题）' : '把待掌握错题按刷题模式重做一遍（最多 10 题）' }}</text>
           </view>
         </view>
         <text class="redo-go">开始</text>
@@ -335,9 +352,10 @@
         </view>
       </view>
       <!-- #endif -->
-      <view v-if="tab !== 'fav' && (filterMod || kpFilter || kp3Filter || srcFilter)" class="curfilter bk-main">
+      <view v-if="tab !== 'fav' && (filterMod || kpFilter || kp3Filter || srcFilter || rzFilter)" class="curfilter bk-main">
         <text v-if="filterMod || kpFilter || kp3Filter" class="kpchip on" @click="filterMod = ''; kpFilter = ''; kp3Filter = ''">{{ kp3Filter || kpFilter || modName(filterMod) }} ✕</text>
         <text v-if="srcFilter" class="kpchip on" @click="srcFilter = ''">{{ srcFilter === 'exam' ? '模考错题' : '练习错题' }} ✕</text>
+        <text v-if="rzFilter" class="kpchip on" @click="rzFilter = ''">错因：{{ rzFilter }} ✕</text>
         <text v-if="sortBy !== 'time'" class="kpchip" @click="filterOpen = true">{{ (SORTS.find(s => s.k === sortBy) || {}).name }}</text>
       </view>
       <view v-else-if="tab !== 'fav' && sortBy !== 'time'" class="curfilter bk-main">
@@ -366,6 +384,12 @@
             <text class="kpchip" :class="{ on: srcFilter === '' }" @click="srcFilter = ''">全部</text>
             <text class="kpchip" :class="{ on: srcFilter === 'exam' }" @click="srcFilter = 'exam'">模考</text>
             <text class="kpchip" :class="{ on: srcFilter === 'practice' }" @click="srcFilter = 'practice'">练习</text>
+          </view>
+          <view v-if="hasReasonTagged" class="sheet-k">错因</view>
+          <view v-if="hasReasonTagged" class="kpchips">
+            <text class="kpchip" :class="{ on: rzFilter === '' }" @click="rzFilter = ''">全部</text>
+            <text v-for="rz in REASONS" :key="rz" class="kpchip" :class="{ on: rzFilter === rz }" @click="rzFilter = rzFilter === rz ? '' : rz">{{ rz }}</text>
+            <text class="kpchip" :class="{ on: rzFilter === '未标注' }" @click="rzFilter = rzFilter === '未标注' ? '' : '未标注'">未标注</text>
           </view>
           <view class="sheet-done" @click="filterOpen = false">完成</view>
           <view class="sheet-export" @click="exportConfirm = true">{{ exporting ? '正在生成 PDF…' : '导出当前筛选为错题卷 PDF' }}</view>
@@ -438,6 +462,9 @@
           <text class="op more" @click.stop="itemSheet(m)">···</text>
         </view>
         <rich-text v-if="m.open" :nodes="m.html" />
+        <view v-if="m.open && m.question_id" @click.stop>
+          <q-social-bar :question-id="m.question_id" />
+        </view>
       </view>
       <view v-if="tab !== 'fav' && pageN < shownItems.length" class="loadmore bk-main" @click="pageN += 20">上滑或点击加载更多（{{ shownPage.length }}/{{ shownItems.length }}）</view>
       <!-- 批量操作条 -->
@@ -498,6 +525,9 @@ import { qStatLine } from '../../q-stat.js';
 import { fontSizes, normFontLv } from '../../font-size.js';
 import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
 import { askQid, findAskSid } from '../../ask-link.js';
+import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid, reviewAskAnswer } from '../../review-similar.js';
+import { buildReviewSnap, parseReviewSnap } from '../../review-snap.js';
+import { reviewSummary } from '../../review-summary.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 
@@ -521,9 +551,11 @@ export default {
       fontLv: normFontLv(uni.getStorageSync('fontLv')),
       celebrate: false,
       celebrateN: 0,
+      rSummary: null,
       reinforce: null,
       reinforceItems: [],
       rItems: [],
+      resumeInfo: null,
       rIdx: 0,
       picked: null,
       answered: false,
@@ -538,6 +570,7 @@ export default {
       streak: 0,
       filterMod: '',
       srcFilter: '',
+      rzFilter: '',
       masteryMods: {},
       masteryT3: {},
       kw: '',
@@ -626,6 +659,9 @@ export default {
     hasExamMistakes() {
       return this.items.some((m) => m.source === 'exam');
     },
+    hasReasonTagged() {
+      return this.items.some((m) => m.error_reason);
+    },
     doneItems() {
       return this.items.filter((m) => m.mastered);
     },
@@ -637,6 +673,8 @@ export default {
       if (this.kp3Filter) base = base.filter((m) => m.tag3_name === this.kp3Filter);
       if (this.srcFilter === 'exam') base = base.filter((m) => m.source === 'exam');
       else if (this.srcFilter === 'practice') base = base.filter((m) => m.source !== 'exam');
+      if (this.rzFilter === '未标注') base = base.filter((m) => !m.error_reason);
+      else if (this.rzFilter) base = base.filter((m) => m.error_reason === this.rzFilter);
       base = [...base];
       if (this.sortBy === 'times') base.sort((a, b) => (b.times || 1) - (a.times || 1));
       else if (this.sortBy === 'type') base.sort((a, b) => String(a.question_type || a.module || '').localeCompare(String(b.question_type || b.module || ''), 'zh'));
@@ -749,17 +787,22 @@ export default {
   watch: {
     tab() { this.pageN = 20; this.batchMode = false; this.selIds = {}; this.kbId = null; this.syncBookUrl(); },
     filterMod() { this.pageN = 20; this.syncBookUrl(); },
+    kpFilter() { this.pageN = 20; this.syncBookUrl(); },
     kw() { this.pageN = 20; },
-    kpFilter() { this.pageN = 20; },
-    kp3Filter() { this.pageN = 20; },
+    kp3Filter() { this.pageN = 20; this.syncBookUrl(); },
     sortBy() { this.pageN = 20; this.syncBookUrl(); },
     srcFilter() { this.syncBookUrl(); },
+    rzFilter() { this.pageN = 20; this.syncBookUrl(); },
   },
   onLoad(opts) {
     const p = parseBookOpts(opts);
     if (p.tab) this.tab = p.tab;
     if (p.mod) this.filterMod = p.mod;
+    if (p.kp) this._pendingKp = p.kp;
+    if (p.kp3) this._pendingKp3 = p.kp3;
+    this._pendingKpFix = !!(opts && (opts.kp || opts.kp3)) && !p.kp && !p.kp3;
     if (p.src) this.srcFilter = p.src;
+    if (p.rz) this.rzFilter = p.rz;
     if (p.sort) this.sortBy = p.sort;
     if (p.review) uni.setStorageSync('autoStartReview', 1);
   },
@@ -778,6 +821,25 @@ export default {
     if (uni.getStorageSync('autoStartReview')) {
       uni.removeStorageSync('autoStartReview');
       this.autoReview = true;
+    }
+    const rvIntent = uni.getStorageSync('bookReviewIntent');
+    if (rvIntent) uni.removeStorageSync('bookReviewIntent');
+    if (!this.reviewing) {
+      this.resumeInfo = parseReviewSnap(uni.getStorageSync('reviewSnap'), anonUid(), Date.now() / 1000);
+      if (this.resumeInfo && rvIntent) {
+        this.resumeReview();
+      } else if (!this.resumeInfo) {
+        this._reviewIntent = !!rvIntent;
+        this.restoreRemoteSnap();
+      }
+    }
+    const rzIntent = uni.getStorageSync('bookRzIntent');
+    if (rzIntent) {
+      uni.removeStorageSync('bookRzIntent');
+      if (this.REASONS.includes(rzIntent) || rzIntent === '未标注') {
+        this.tab = 'todo';
+        this.rzFilter = rzIntent;
+      }
     }
     this.load();
     // #ifdef H5
@@ -804,10 +866,16 @@ export default {
     // #endif
   },
   methods: {
+    filterByReason(name) {
+      if (!name) return;
+      this.tab = 'todo';
+      this.rzFilter = name;
+      this.recapOpen = false;
+    },
     syncBookUrl() {
       // #ifdef H5
       if (typeof window !== 'undefined' && window.history) {
-        window.history.replaceState(null, '', buildBookUrl({ tab: this.tab, mod: this.filterMod, src: this.srcFilter, sort: this.sortBy }));
+        window.history.replaceState(null, '', buildBookUrl({ tab: this.tab, mod: this.filterMod, kp: this.kpFilter, kp3: this.kp3Filter, src: this.srcFilter, rz: this.rzFilter, sort: this.sortBy }));
       }
       // #endif
     },
@@ -1058,6 +1126,7 @@ export default {
           if (this.due.length && !this.reviewing) this.startReview();
         }
         this.offlineView = false;
+        this.applyPendingKp();
         cacheMistakes(d.items, anonUid());
         this.loadMastery();
         try {
@@ -1077,6 +1146,35 @@ export default {
         }
       }
       this.loading = false;
+    },
+    // 入向 ?kp=/?kp3= 深链：列表到达后校验命中才生效（fail-closed：无命中丢弃并纠正 URL）
+    applyPendingKp() {
+      const kp = this._pendingKp;
+      const kp3 = this._pendingKp3;
+      if (!kp && !kp3) {
+        if (this._pendingKpFix) {
+          this._pendingKpFix = false;
+          this.syncBookUrl();
+        }
+        return;
+      }
+      this._pendingKp = '';
+      this._pendingKp3 = '';
+      if (kp3) {
+        const hit = this.items.find((m) => m.tag3_name === kp3);
+        if (hit) {
+          this.filterMod = hit.module || this.filterMod;
+          this.kpFilter = kp && this.items.some((m) => this.groupKey(m) === kp) ? kp : '';
+          this.kp3Filter = kp3;
+          return;
+        }
+      }
+      if (kp && this.items.some((m) => this.groupKey(m) === kp)) {
+        this.kpFilter = kp;
+        this.kp3Filter = '';
+        return;
+      }
+      this.syncBookUrl();
     },
     async loadMastery() {
       try {
@@ -1104,6 +1202,56 @@ export default {
       this.rIdx = 0;
       this.resetQ();
       this.reviewing = true;
+      this.resumeInfo = null;
+      this.saveReviewSnap();
+    },
+    saveReviewSnap() {
+      const snap = buildReviewSnap(this, anonUid(), Date.now() / 1000);
+      if (!snap) return;
+      uni.setStorageSync('reviewSnap', snap);
+      if (this._snapPostTimer) clearTimeout(this._snapPostTimer);
+      this._snapPostTimer = setTimeout(() => {
+        this._snapPostTimer = null;
+        request('/api/review/cur', { method: 'POST', data: { uid: anonUid(), snap } }).catch(() => {});
+      }, 1500);
+    },
+    clearReviewSnap() {
+      uni.removeStorageSync('reviewSnap');
+      this.resumeInfo = null;
+      if (this._snapPostTimer) {
+        clearTimeout(this._snapPostTimer);
+        this._snapPostTimer = null;
+      }
+      request('/api/review/cur', { method: 'POST', data: { uid: anonUid(), snap: null } }).catch(() => {});
+    },
+    restoreRemoteSnap() {
+      const uid = anonUid();
+      const wantResume = this._reviewIntent;
+      this._reviewIntent = false;
+      request('/api/review/cur?uid=' + encodeURIComponent(uid))
+        .then((r) => {
+          if (this.reviewing || this.resumeInfo) return;
+          if (parseReviewSnap(uni.getStorageSync('reviewSnap'), uid, Date.now() / 1000)) return;
+          this.resumeInfo = parseReviewSnap(r && r.snap, uid, Date.now() / 1000);
+          if (this.resumeInfo && wantResume) this.resumeReview();
+        })
+        .catch(() => {});
+    },
+    resumeReview() {
+      const r = this.resumeInfo;
+      if (!r) return;
+      trackEvent('review_resume_click', 'book');
+      this.rItems = r.items.map((x) => ({ ...x }));
+      this.rIdx = r.rIdx;
+      this.picked = r.picked;
+      this.answered = r.answered;
+      this.wasCorrect = r.wasCorrect;
+      this.nextDays = r.nextDays;
+      this.reviewing = true;
+      this.resumeInfo = null;
+    },
+    discardResume() {
+      this.clearReviewSnap();
     },
     resetQ() {
       this.picked = null;
@@ -1122,20 +1270,29 @@ export default {
       }
       this.picked = o;
       await this.record(o === this.curLetter);
+      this.saveReviewSnap();
     },
     async confirmMulti() {
       if (this.answered || !this.picked) return;
       await this.record(this.picked === this.curLetter);
+      this.saveReviewSnap();
     },
     async selfJudge(correct) {
       await this.record(correct);
+      this.saveReviewSnap();
     },
     async record(correct) {
       this.wasCorrect = correct;
       this.answered = true;
-      if (this.cur._extra) return;
+      this.cur._res = correct;
+      if (this.cur._extra) {
+        if (!correct) this.saveExtraWrong(this.cur);
+        return;
+      }
       if (!correct && !this.cur._requeued) {
-        this.rItems.push({ ...this.cur, _requeued: true });
+        const { _res, ...rest } = this.cur;
+        void _res;
+        this.rItems.push({ ...rest, _requeued: true });
       }
       if (!correct) this.appendSimilar(this.cur);
       try {
@@ -1159,28 +1316,42 @@ export default {
         const add = (d.items || [])
           .filter((x) => x.id !== m.question_id)
           .slice(0, 2)
-          .map((x) => ({
-            _extra: true,
-            module: x.module,
-            question_text: x.question + '\n' + Object.entries(x.options || {}).map(([k, v]) => `${k}.${v}`).join(' '),
-            correct_answer: x.answer,
-            explanation: x.hs_explanation || x.explanation || '',
-          }));
+          .map(similarItemFromQuestion)
+          .filter(Boolean);
         if (add.length) {
           this.rItems.push(...add);
           m._appended = add.length;
           this.$forceUpdate();
+          this.saveReviewSnap();
           trackEvent('review_similar_auto', m.module || '');
         }
       } catch (e) { /* 非关键路径 */ }
     },
+    reviewReasonMid,
     async setReviewReason(rz) {
       const m = this.cur;
+      const mid = reviewReasonMid(m);
+      if (!mid) return;
       m.error_reason = rz;
       this.$forceUpdate();
       try {
-        await request('/api/mistakes/' + m.id, { method: 'PATCH', data: { uid: anonUid(), error_reason: rz } });
+        await request('/api/mistakes/' + mid, { method: 'PATCH', data: { uid: anonUid(), error_reason: rz } });
+        this.saveReviewSnap();
         trackEvent('review_reason_tag', rz);
+      } catch (e) { /* 非关键路径 */ }
+    },
+    async saveExtraWrong(item) {
+      if (item._saved) return;
+      const rec = mistakeRecFromExtra(item, this.picked, anonUid());
+      if (!rec) return;
+      try {
+        const res = await request('/api/mistakes', { method: 'POST', data: rec });
+        const mid = reviewReasonMid({ id: res && res.id });
+        if (!mid) return;
+        item._mid = mid;
+        item._saved = true;
+        this.$forceUpdate();
+        this.saveReviewSnap();
       } catch (e) { /* 非关键路径 */ }
     },
     similarFromReview() {
@@ -1200,7 +1371,7 @@ export default {
       const qid = askQid(this.cur.question_id);
       if (qid) uni.setStorageSync('redoQid', qid);
       else uni.removeStorageSync('redoQid');
-      const ans = askAnswerLetter(this.cur.user_answer);
+      const ans = reviewAskAnswer(this.cur, this.picked);
       if (ans) uni.setStorageSync('redoAnswer', ans);
       else uni.removeStorageSync('redoAnswer');
       uni.switchTab({ url: '/pages/ask/ask' });
@@ -1209,8 +1380,10 @@ export default {
       if (this.rIdx + 1 < this.rItems.length) {
         this.rIdx++;
         this.resetQ();
+        this.saveReviewSnap();
       } else {
         this.celebrateN = this.rItems.filter((q) => !q._extra && !q._requeued).length;
+        this.rSummary = reviewSummary(this.rItems);
         this.exitReview();
         this.celebrate = true;
         trackEvent('review_done_celebrate', 'book');
@@ -1249,6 +1422,7 @@ export default {
     },
     exitReview() {
       this.reviewing = false;
+      this.clearReviewSnap();
       this.load();
     },
     optClass(o) {
@@ -1281,6 +1455,12 @@ export default {
           }
         } else if (this.filterMod) {
           q += '&module=' + this.filterMod;
+        }
+        if (this.rzFilter) q += '&rz=' + encodeURIComponent(this.rzFilter);
+        if (this.srcFilter) q += '&src=' + this.srcFilter;
+        if (this.kp3Filter) {
+          const hit = this.shownItems.find((m) => m.tag3_name === this.kp3Filter && m.tag3);
+          if (hit) q += '&t3=' + encodeURIComponent(hit.tag3);
         }
         const d = await request(q);
         if (!d.items || !d.items.length) {
@@ -1606,6 +1786,10 @@ export default {
 .q.clamp { max-height: 120rpx; overflow: hidden; }
 .meta { font-size: 22rpx; color: var(--ink-2); }
 .duecard { background: linear-gradient(180deg, #4a7bf7, #3567ec); border: none; box-shadow: 0 6rpx 16rpx rgba(46, 91, 255, 0.25); display: flex; justify-content: space-between; align-items: center; }
+.resumecard { background: linear-gradient(180deg, #f59e0b, #d97706); border: none; box-shadow: 0 6rpx 16rpx rgba(217, 119, 6, 0.25); display: flex; justify-content: space-between; align-items: center; }
+.resume-ops { display: flex; flex-direction: column; align-items: center; gap: 8rpx; }
+.resumecard .duego { color: #b45309; }
+.resume-drop { font-size: 22rpx; color: rgba(255, 255, 255, 0.85); text-decoration: underline; padding: 4rpx 12rpx; }
 .redoentry { display: flex; justify-content: space-between; align-items: center; }
 .redo-l { display: flex; align-items: center; gap: 16rpx; }
 .redo-ico { width: 64rpx; height: 64rpx; border-radius: 50%; background: var(--brand-soft); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -1669,6 +1853,8 @@ export default {
 .recap-sec { margin-top: 16rpx; }
 .recap-st { font-size: 22rpx; color: var(--ink-2); }
 .recap-row { display: flex; align-items: center; gap: 12rpx; margin-top: 10rpx; }
+.recap-link { cursor: pointer; }
+.recap-link .recap-name { color: var(--brand-text, #2e5bff); }
 .recap-name { flex: 0 0 160rpx; font-size: 23rpx; color: var(--ink-1, #1f2329); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .recap-bar { flex: 1; height: 14rpx; background: var(--soft-bg); border-radius: 999rpx; overflow: hidden; }
 .recap-fill { height: 100%; background: var(--brand, #2e5bff); border-radius: 999rpx; }

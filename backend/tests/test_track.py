@@ -25,6 +25,15 @@ def test_track_whitelisted_event_persisted(client):
     assert _rows("utesttrack2") == [{"event": "share_open", "source": "share", "ref": "sid123"}]
 
 
+def test_track_ask_view_question_whitelisted(client):
+    r = client.post(
+        "/api/track",
+        json={"event": "ask_view_question", "uid": "utesttrack_avq", "source": "ask"},
+    )
+    assert r.status_code == 200
+    assert _rows("utesttrack_avq") == [{"event": "ask_view_question", "source": "ask", "ref": None}]
+
+
 def test_track_slow_load_server_side_enrichment(client):
     r = client.post(
         "/api/track",

@@ -1,5 +1,20 @@
 import { describe, it, expect } from 'vitest';
-import { askQid, findAskSid } from '../src/ask-link.js';
+import { askQid, askViewUrl, findAskSid } from '../src/ask-link.js';
+
+describe('askViewUrl', () => {
+  it('合法 qid 返回搜索深链', () => {
+    expect(askViewUrl(914)).toBe('/pkgA/search/search?q=914&qid=914');
+    expect(askViewUrl('914')).toBe('/pkgA/search/search?q=914&qid=914');
+  });
+  it('非法/缺失 qid 一律 fail-closed 返回 null', () => {
+    expect(askViewUrl(0)).toBeNull();
+    expect(askViewUrl(-1)).toBeNull();
+    expect(askViewUrl('abc')).toBeNull();
+    expect(askViewUrl(null)).toBeNull();
+    expect(askViewUrl(undefined)).toBeNull();
+    expect(askViewUrl(1.5)).toBeNull();
+  });
+});
 
 describe('askQid', () => {
   it('接受正整数 number', () => {

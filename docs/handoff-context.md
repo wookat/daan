@@ -1297,15 +1297,127 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 边界（如实）：真实触屏未测（CDP 模拟）；真实 LLM 刻意未触发（CDP 注入已有讲解模拟）；askSeenTick 独立隔离路径经换题/重进会话等价覆盖；ask onShow 会回写覆盖注入的 askSessions（测试注入需整页硬刷，已入测试 SKILL）。
 - 详见 docs/iter/round-3/design-r338-ask-seen-final.md。
 
-### R339–R347 摘要增补（2026-08-29，补记：R339–R346 各轮 PR 合并时 handoff 未随分支带入，此处统一补齐）
-- R339（PR #538）：AI 会话「查看原题」反向深链——ask-link.js askViewUrl（qid>0 → /pkgA/search/search?q=<qid>&qid=<qid> code_hit 直达）+ chips「查看原题」+ ask_view_question 埋点入白名单 + 历史空态文案修正。
-- R340（PR #539）：错题本按错因筛选——book-url.js 白名单 rz（四正式错因+未标注，fail-closed）+ 筛选 sheet 错因组 + 月度复盘错因行直达 + ?rz= URL 同步。
-- R341（PR #540）：模考报告「本卷错因画像」卡——reasonRecap 分组降序 + 画像行 bookRzIntent storage 握手直达错题本（onShow 消费即删）。
-- R342/R343/R344（PR #541/#542/#543）：错题重练遵循筛选三连——/api/mistakes/redo 补 rz / src / t3 可选白名单参数（非法 400 fail-closed，不传零变化），redoAll 透传 + 重练卡文案优先级 kp3 > kpFilter > rz > src。src 口径：exam→source='exam'，practice→source IS NULL OR !='exam'。
-- R345（PR #544）：错题本 kp/kp3 筛选 URL 同步——动态数据无静态白名单，onLoad 暂存 pending、load() 后按真实列表语义校验（无命中丢弃并纠正 URL，_pendingKpFix 修复畸形编码 URL 残留）。
-- R346（PR #545）：错题本挂 q-social-bar——列表展开态+复习流补逐题笔记/讨论/热评/分享；无 question_id（手录/加练）fail-closed 不渲染；列表内嵌交互需 `<view @click.stop>` 容器防外层卡片 toggleCard 吞点击（首轮生产实测发现并修复）。
-- R347（PR #546）：/api/track 白名单缺口收口——补 review_similar_auto / review_similar_click / review_reason_tag / share_poster 四个前端在发事件（此前静默 400 丢埋点，R346 测试实景发现）；新增 backend/tests/test_track_whitelist_sync.py 静态契约测试（扫描 frontend-uni/src 全部 trackEvent 字面量断言均在白名单，未来前端新增埋点漏同步会直接挂测试）。生产 rev 997e61b 复验：4 事件 curl 200、bogus 400、真实 UI 复习流加练触发 review_similar_auto 200、错因打标 review_reason_tag 200、全程 0 非 200/0 console error；测试 uid（test-r347 前缀）全库清理 LEFTOVER {}，保护 uid umteojq4sltdhorhm DB+localStorage 前后一致。
-- 各轮详证见对应 PR 评论与 docs/iter/round-3/ 设计文档。
+
+### R339 AI 问答会话「查看原题」反向闭环 + 历史空态文案修正（2026-08-29，PR #538，分支 devin/1788428478-r339-ask-view-question）
+- 取证：R336–R338 打通「题 → AI」（六场景入口 + 回看命中态），反向为零——AI 讲解 bubble chips 仅「再讲细一点/出同款题/存错题本」，item 级 qid 已就位但用户无法从讲解回到原题继续收藏/纠错/看讨论/复制链接；历史会话空态仍宣称「仅保存在本机」，与 R328 起服务端跨设备同步事实不符（错误承诺）。
+- 收口（纯前端 + 埋点白名单一行，零新 endpoint/表/URL 契约，不改 /api/explain）：ask-link.js 新增 fail-closed 纯函数 askViewUrl(qid)——askQid>0 返回 `/pkgA/search/search?q=<qid>&qid=<qid>` 否则 null，复用 /api/search 纯数字 code_hit 直达 + 搜索页 ?qid 自动 toggleDetail（R270）；ask.vue chips 行尾 v-if="viewUrl(r)" 追加「查看原题」，点击 trackEvent('ask_view_question') → uni.navigateTo；空态文案改「同一账号换设备也能看」；team.py 白名单补 ask_view_question（防 R333 式静默 400）。不改 findAskSid/askOpenSid/redoQuestion/redoAnswer/redoQid 协议。
+- 验证：ruff 0/pytest 205(+1)/pyright 0/lint/vitest 426(+2)/build 全绿；生产 rev 0323231、bundle index-COlLAc83.js，部署脚本 API 回归+Lighthouse 预算全过（/ 0.99/LCP 810ms、/tiku/ 1.00）；curl 实测 ask_view_question 200/bogus 400。testing agent 双视口实测（uid test-r339-view，注入合法 qid/legacy 无 qid/qid=0 三类 item）：合法 qid 出第 4 chip、深链 ?q=333140&qid=333140 code_hit 直达详情自动展开（题目编码与 qid 对应）、埋点 200；legacy/qid=0 fail-closed 无 chip；空态新文案、全页无旧文案；既有 chips 回归（存错题本 /api/mistakes 200）；375/1440 溢出 0、console 0 error、全程 0 次 /api/explain。
+- 测试数据清理：test-r339-view + test-r339-api 全库 DELETED 5（mistakes 1 + growth_events 4）/ LEFTOVER 0 / 保护 uid 快照一致（PROTECTED_MATCH True）。
+- 边界（如实）：真实触屏未测（CDP 模拟）；真实 LLM 刻意未触发（注入快照构造讲解）；「再讲细一点/出同款题」真实点击未测（会触发 LLM，仅验证存在）；题目下架时深链降级为搜索空结果（code_hit 缺失自然降级，未生产构造）。
+- 详见 docs/iter/round-3/r339-ask-view-question.md。
+
+### R340 错题本「按错因筛选」：月度复盘错因行直达 + 筛选 sheet 错因组 + ?rz= URL 同步（2026-08-29，PR #539，分支 devin/1788429993-r340-book-reason-filter）
+- 取证：error_reason 数据与月度复盘 byReason 统计早已就位（R314 报告错因自评、复习流自评、sortBy=reason），但错因统计行不可点、筛选 sheet 无错因组、shownItems 不按错因过滤——「复盘定位高频错因 → 直接复习对应错题」链路断裂（粉笔错题本支持按错因筛选）。
+- 收口（纯前端，零新 endpoint/表/契约，不改错因写入路径与月度统计口径）：book-url.js 白名单 RZS=[四正式错因,'未标注']，buildBookUrl 非 fav 输出 rz=encodeURIComponent(值)，parseBookOpts 先安全 decodeURIComponent 再白名单校验（畸形编码/非字符串 fail-closed 回 ''）；book.vue 新 rzFilter data（'未标注' 过滤 !error_reason，其他精确匹配）+ 筛选 sheet 来源组后「错因」组（hasReasonTagged 守卫：存在已标注错因才显示）+ 当前筛选 chip「错因：X ✕」+ 月度复盘按错因行可点 filterByReason（tab='todo'、rzFilter=name、收起复盘区）+ watcher/onLoad/syncBookUrl 接入 rz。
+- 口径（如实）：复盘统计=本月新增，点击直达后的筛选=全部待掌握全集中该错因集合，两者口径不同属有意设计。PDF 导出自动跟随筛选（既有 shownItems 消费）。
+- 验证：lint/vitest 428(+8)/build:h5 全绿（纯前端）；生产 bundle index-CEvL_QVo.js，部署脚本 API 回归+Lighthouse 预算全过（/ 0.98、/tiku/ 1.00）。testing agent 实测（uid test-r340-rz，真实 UI 刷题答错 3 题 + 复习流错因自评打标 2 条）：守卫反例（全未标注无错因组）→打标后 6 chips 出现、精确过滤/未标注桶、chip 清除、复盘行直达（tab 切回+复盘收起+过滤+URL 同步）、?rz= 硬刷恢复、?rz=hack fail-closed、tab=fav 无 rz、按错因排序/PDF 计数跟随/复习流回归、375/1440 溢出 0、console 0 error、全程 0 次 /api/explain。
+- 测试数据清理：test-r340-rz 全库 16 表扫描 DELETED 10（mistakes 3/answer_log 3/review_log 2/growth_events 2）/ LEFTOVER 0；保护 uid umteojq4sltdhorhm DB 计数与 localStorage 逐键前后一致。
+- 边界（如实）：真实触屏未测（CDP 模拟）；主流程窗口无逐请求抓包（daemon 迟启，补窗口重放核心交互 0 次 /api/explain、0 条 4xx/5xx；主流程未点任何 AI 按钮，录屏佐证）；「来源组后」相对位置因测试 uid 无模考错题未直接可见（hasExamMistakes 守卫，错因组正确出现在题型组后）。
+- 详见 docs/iter/round-3/r340-book-reason-filter.md。
+
+### R341 模考报告「本卷错因画像」卡 + 直达错题本按错因复习（2026-08-29，PR #540，分支 devin/1788431785-r341-report-reason-recap）
+- 取证：R314 报告浮层逐题错因自评、R340 错题本按错因筛选均就位，但报告页零错因汇总——打完标看不到本卷错因构成，也无从报告直达错题本复习同错因，标注投入无 payoff。
+- 收口（纯前端，零新 endpoint/表/契约）：report.vue computed reasonRecap（答错题按 error_reason||'未标注' 分组降序，非法值归未标注 fail-closed，0 错题不渲染）+「逐题对错」卡后「本卷错因画像」卡（行可点）+ goBookReason 白名单写 bookRzIntent → switchTab（tab 页无法带参，沿用 autoStartReview 式 storage 握手）；book.vue onShow 消费 bookRzIntent（读到即删，白名单通过 tab='todo'+rzFilter，复用 R340 过滤与 ?rz= URL 同步，非法仅删除）。tip 如实说明口径（直达=全部待掌握该错因集合，不限本卷）。
+- 验证：lint/vitest 428/build:h5 全绿；生产 rev 0391d95、bundle index-CRhgmiOt.js，部署脚本回归+Lighthouse 全过。testing agent 实测（uid test-r341-rz，真实 UI 迷你模考 4 错 1 对）：初始未标注=4、浮层打标实时更新分组降序、错因行/未标注行直达（chip+?rz=+过滤+intent 消费即删）、0 答卷反例无卡、bookRzIntent='hack' fail-closed、重练 CTA/浮层导航/R340 sheet 回归、375/1440 溢出 0、console 0 error、0 次 /api/explain。
+- 测试数据清理：test-r341-rz DELETED mistakes 4/answer_log 5/exam_attempts 2/growth_events 1，LEFTOVER 空；保护 uid DB 计数与 localStorage 逐键前后一致。
+- 边界（如实）：真实触屏未测；主流程窗口抓包 daemon 白名单缺陷漏抓（发现后改捕全 /api/ 并重放核心交互补齐，缺陷经验已入测试 SKILL）。
+- 详见 docs/iter/round-3/r341-report-reason-recap.md。
+
+### R342 错题重练遵循错因筛选：/api/mistakes/redo 补 rz 参数 + redoAll 透传 + CTA 文案对齐（2026-08-29，PR #541，分支 devin/1788433748-r342-redo-reason-filter）
+- 取证：R340 错题本按错因筛选、R341 报告错因画像直达均就位，但 redoAll() 只透传 kpFilter/filterMod，rzFilter 被无声忽略——按「概念不清」筛出 N 题点重练，实际拉全量待掌握错题，所见≠所练；重练卡文案也不反映错因态。
+- 收口：backend study_api.py `/api/mistakes/redo` 新增可选 rz（白名单五值：四正式错因+未标注，非法 400 fail-closed，不传行为不变）；db.mistakes_redo_questions 补 reason 参数（'未标注'→`error_reason IS NULL OR ''`，其他→`error_reason=?`，匹配/去重/排序/limit 零变化）；book.vue redoAll() rzFilter 时追加 `&rz=`，重练卡标题「错题重练 · <错因>」+描述对齐（kpFilter 优先级不变）。redoSet 协议/practice 消费不改；srcFilter 不在本轮（redo 无来源维度）。
+- 验证：ruff 0/pytest 208(+3，test_redo_reason.py 覆盖四错因/未标注 NULL+空串/非法 400/缺省不变)/pyright 0/lint/vitest 428/build 全绿；生产 rev f6d99b4、bundle index-B22QSvzn.js，部署脚本回归+Lighthouse 全过。testing agent 实测（uid test-r342-rz，真实 UI 迷你模考造 4 错题+浮层打标）：概念不清筛选重练集=仅该错因 2 题（抓包 rz= 编码正确）、未标注桶仅 NULL 题、无筛选回归无 rz 全 4 题、非法 rz=hack 400、R341 画像行→筛选态→重练全链路、?rz= 硬刷恢复、375/1440 溢出 0、console 0 error、0 次 /api/explain。
+- 测试数据清理：test-r342-rz DELETED mistakes 4/answer_log 5/exam_attempts 1/growth_events 1，LEFTOVER 空；保护 uid DB 计数前后一致（PROTECTED_MATCH True）+ localStorage 逐键恢复 exact match。
+- 边界（如实）：真实触屏未测（CDP 模拟）；kpFilter+rzFilter 叠加态未生产实测（代码三元 kpFilter 优先未改，vitest/代码走查覆盖）。
+- 详见 docs/iter/round-3/r342-redo-reason-filter.md。
+
+### R344 错题重练遵循三级考点筛选：/api/mistakes/redo 补 t3 参数 + redoAll 透传 + CTA 文案对齐（2026-08-29，PR #543，分支 devin/1788437508-r344-redo-tag3-filter）
+- 取证：错题本三级考点筛选（kp3Filter，按模块查看三级行）就位，但 redoAll() 只透传 qtype/module——kp3 态点重练拉到整个二级分组集合，与 R342/R343 同构的「所见≠所练」缺口（且粒度差最大）。
+- 收口：backend `/api/mistakes/redo` 新增可选 t3（白名单 taxonomy.topic_index() 正式考点 code，非法 400「无效的考点」，不传行为不变）；db.mistakes_redo_questions 补 tag3 参数（`question_id IN (SELECT id FROM questions WHERE tag3=?)`，无 question_id 手录错题被排除——本就不在 kp3 可见列表）；book.vue redoAll() kp3Filter 时从 shownItems 中 tag3_name 匹配项取 stable tag3 code 追加 `&t3=`（找不到 code 则回退不加，兼容策略），重练卡文案优先级 kp3Filter > kpFilter > rzFilter > srcFilter。redoSet/practice 消费不改。
+- 验证：ruff 0/pytest 216(+4，test_redo_tag3.py：精确过滤/非法 400+缺省不变/无 question_id 排除/t3+rz 叠加)/pyright 0/lint/vitest 428/build 全绿；生产 rev 7284d96、bundle index-DVHbltOg.js，部署脚本回归全过。testing agent 实测（uid test-r344-t3，5 错题覆盖 CS-LS-01×2/CS-LS-02/YY-JB-02×2）：kp3「中国古代史」态 `&t3=CS-LS-01` 集合 [136,646]、同 qtype 对抗样本 649 被排除（证明 t3 生效非 qtype）、YY-JB-02 交叉 [97,498]、无筛选回归无 t3 全 5 题、非法 t3=HACK-00 400、t3+rz 叠加集合唯一交集 [136] 且卡标题只显考点、375/1440 溢出 0、console 0 error、0 次 /api/explain。
+- 测试数据清理：test-r344-t3 DELETED mistakes 5/growth_events 1，LEFTOVER 空；保护 uid DB 计数与 localStorage 逐键前后一致。
+- 边界（如实）：真实触屏未测（CDP 模拟）；kp3+src 叠加态未生产实测（代码三元 kp3 最前，走查覆盖）。
+- 测试造数经验：POST /api/mistakes 的 question_type 须用前端分组名（如「历史人文」），带模块前缀会导致 kp3 行选中后列表异常（已入测试 SKILL）。
+- 详见 docs/iter/round-3/r344-redo-tag3-filter.md。
+
+### R343 错题重练遵循来源筛选：/api/mistakes/redo 补 src 参数 + redoAll 透传 + CTA 文案对齐（2026-08-29，PR #542，分支 devin/1788435349-r343-redo-source-filter）
+- 取证：错题本来源筛选（srcFilter：模考/练习，含 ?src= URL 同步）就位，但 redoAll() 不透传——与 R342 同构的「所见≠所练」缺口。
+- 收口：backend `/api/mistakes/redo` 新增可选 src（白名单 exam/practice，非法 400「无效的来源」，不传行为不变）；db.mistakes_redo_questions 补 source 参数（exam→`source='exam'`，practice→`source IS NULL OR source!='exam'`，与前端列表口径一致，可与 reason 叠加）；book.vue redoAll() srcFilter 时追加 `&src=`，重练卡文案优先级 kpFilter > rzFilter > srcFilter（组合态取最高优先级文案，参数全透传）。redoSet/practice 消费不改。
+- 验证：ruff 0/pytest 212(+4，test_redo_source.py：exam/practice 含 NULL/非法 400+缺省不变/src+rz 叠加)/pyright 0/lint/vitest 428/build 全绿；生产 rev af374db、bundle index-Bw4tiS9x.js，部署脚本回归全过（首跑 Lighthouse / a11y 0.94/LCP 2707 为单样本波动，独立复跑 perf 0.97/a11y 1.0/LCP 1829 全过）。testing agent 实测（uid test-r343-src，真实 UI 造 3 模考错题+2 练习 NULL-source 错题）：模考态 `&src=exam` 集合仅 3 模考题、练习态 `&src=practice` 集合仅 2 NULL-source 题、无筛选回归无 src 全 5 题、非法 src=hack 400、叠加 rz+src 集合唯一交集且卡标题只显错因、?src=exam 硬刷恢复、375/1440 溢出 0、console 0 error、0 次 /api/explain。
+- 测试数据清理：test-r343-src DELETED mistakes 5/answer_log 8/exam_attempts 1/growth_events 1，LEFTOVER 空；保护 uid DB 计数与 localStorage 逐键前后一致。
+- 边界（如实）：真实触屏未测（CDP 模拟）；kpFilter+srcFilter 叠加态未生产实测（代码三元 kpFilter 优先未改）。
+- 详见 docs/iter/round-3/r343-redo-source-filter.md。
+
+### R345 错题本题型/三级考点筛选 URL 同步：?kp=/?kp3= 深链 + load 后语义校验 fail-closed（2026-08-29，PR #544，分支 devin/1788439371-r345-book-kp-url-sync）
+- 取证：错题本 URL 同步（R276 tab/mod/src/sort、R340 rz）缺 kpFilter/kp3Filter 两维——筛到「语句填空」/「中国古代史」后硬刷/分享链接筛选态即丢，与 rz/src 行为不一致；R344 刚接通 kp3 重练透传使该缺口用户可感。
+- 收口（纯前端零后端/零契约）：book-url.js buildBookUrl/parseBookOpts 补 kp/kp3（动态数据无静态白名单，URL 层只做形状校验：非空≤40 字符、encodeURIComponent、畸形编码/非字符串 fail-closed；fav tab 不输出）；book.vue onLoad 暂存 _pendingKp/_pendingKp3（不直接设 filter），load() 成功后 applyPendingKp() 语义校验——kp3 须命中某项 tag3_name（命中一并设 filterMod）、kp 须命中 groupKey，无命中丢弃并 syncBookUrl() 纠正 URL；kpFilter/kp3Filter watcher 补 syncBookUrl（顺带清掉历史遗留重复 kpFilter watcher key）。R345b（f400afb）补 _pendingKpFix：原始 opts 带 kp/kp3 但 parse 后均空（畸形编码）时也纠正 URL。
+- 验证：lint/vitest 430(+2 组 kp/kp3 用例)/build 全绿；生产两轮 rev d4e6b4d→f400afb、bundle index-tdpTu_ly.js，部署脚本回归+Lighthouse 全过。testing agent 两轮实测（uid test-r345-kp/test-r345b-kp，4+2 错题含 CS-LS-01 vs CS-LS-02 同二级组对抗样本）：出向点行 URL 实时带 kp/kp3、chip 清除参数消失、硬刷恢复列表/chip/重练卡文案且对抗样本被排除、新 context 深链直达并自动补 mod、未知考点与畸形编码均 fail-closed 且 URL 被纠正（后者为 R345b 修复项，首轮实测发现 URL 残留）、?kp3=&rz= 叠加恢复、kp3 态重练仍带 t3=CS-LS-01（R344 回归）、fav 不输出、375/1440 溢出 0、console 0 error、0 次 /api/explain、0 条非 200。
+- 测试数据清理：两轮合计 DELETED mistakes 6/growth_events 3，LEFTOVER 空；保护 uid DB 计数与 localStorage 逐键前后一致。
+- 边界（如实）：真实触屏未测（CDP 模拟）；kp/kp3 语义合法性依赖当前 uid 错题数据，换设备无该题型数据时深链 fail-closed 回全量（预期，「所见即所筛」）；R340 ?rz= 单独硬刷本轮未单测（叠加用例等价覆盖）。
+- 详见 docs/iter/round-3/r345-book-kp-url-sync.md。
+
+### R346 错题本挂 q-social-bar：列表展开态+复习流补逐题笔记/讨论/热评（2026-08-29，PR #545，分支 devin/1788441490-r346-book-social-bar）
+- 取证（SOP-10 功能深度维度）：q-social-bar（我的笔记/讨论计数/热评/分享给队友，R292 组件）只挂在刷题页解析区与模考报告解析浮层；错题本列表展开态与复习流 answered 态（题面/解析/历次作答俱全的两个核心复盘场景）均无逐题笔记/讨论出口，粉笔错题本支持错题逐题笔记。
+- 收口（纯前端零后端/零契约）：book.vue 两处模板级挂载——列表展开态 rich-text 之后 `v-if="m.open && m.question_id"`；复习流「回看 AI 详解」行之后 `v-if="cur.question_id"`。fail-closed：手录错题（无 question_id）与加练同类题（_extra 无 question_id）不渲染；组件 watch questionId immediate 随切题重载不串题。R346b（d9b6b9b）修复首轮实测缺陷：列表挂载处包 `<view @click.stop>` 容器——点「写笔记」曾冒泡触发外层卡片 toggleCard 收起卡片、编辑器打不开。
+- 验证：lint/vitest 430/build 全绿；生产两轮 rev 426a7c7（bundle index-V-U-cy2g.js）→ d9b6b9b（index-OIl6xaBS.js），部署脚本回归+Lighthouse 全过。testing agent 两轮实测（uid test-r346-sb/test-r346b-sb）：列表展开态 bar 渲染+笔记回显、手录/加练 fail-closed 无 bar、复习流写笔记 POST /api/notes 200+回显+切题不串（两 qid 独立笔记）、同源验证（重练刷题页同 qid 同笔记）、讨论入口跳转、修复后点「写笔记」编辑器打开卡片不收起且 .stop 不影响外部 toggle、R345 kp3 深链回归、375/1440 溢出 0、console 0 error、0 次 /api/explain。
+- 测试数据清理：两轮合计 DELETED mistakes 4/question_notes 3/review_log 4/answer_log 1/growth_events 5/practice_progress 1，LEFTOVER 空；保护 uid DB 计数与 localStorage 逐键前后一致。
+- 边界（如实）：保存 toast 视觉（900ms 未截到，以 API 200+回显为证）、真实触屏未测（CDP 模拟）。
+- 观察项（既有，非本轮引入）：加练埋点 POST /api/track event=review_similar_auto ref:null → 400（疑似白名单缺 review_similar_auto 或 ref null 校验），候选后续轮收口。
+- 详见 docs/iter/round-3/r346-book-social-bar.md。
+
+### R347 /api/track 白名单缺口收口：补 4 个在发事件 + 前端发点契约同步测试（2026-08-29，PR #546，分支 devin/1788444032-r347-track-whitelist）
+- 取证：R346 测试实景抓到 review_similar_auto 400；全量对账前端 trackEvent 字面量 vs team.py 白名单，共 4 事件在发被静默 400 丢弃：review_similar_auto / review_similar_click（复习流加练）、review_reason_tag（错因自评）、share_poster（成绩海报，R304 起）。
+- 收口：team.py 白名单补 4 事件（其余行为零变化）；新增 backend/tests/test_track_whitelist_sync.py 静态契约测试——扫描 frontend-uni/src 全部 trackEvent('<event>' 字面量断言 ⊆ 白名单（R333 后第二次同构缝隙，此测试根治「前端新增发点漏同步白名单」再犯路径），另含 4 事件 200 入库用例。前端已不发的 reminder_optin 保留存量口径；历史丢失埋点不补发。
+- 验证：ruff 0/pytest 218(+2)/pyright 0/lint/vitest 430/build 全绿；生产 rev 997e61b 复验：4 事件 curl 200、bogus 400；真实 UI（uid test-r347-ui，375px）复习流加练触发 review_similar_auto 200、错因打标 review_reason_tag 200，全程 0 非 200、0 console error、0 次 /api/explain。share_poster/review_similar_click 未 UI 实测（curl 已验）。
+- 测试数据清理：test-r347 前缀全库 DELETED {mistakes 1/answer_log 1/review_log 1/growth_events 8/practice_progress 1}，LEFTOVER {}；保护 uid umteojq4sltdhorhm DB+localStorage 前后一致。
+- 详见 docs/iter/round-3/r347-track-whitelist-gap.md。
+
+### R348 加练同类题答错入错题本：_extra 条目保留 qid/题型 + 复用 /api/mistakes 收录（2026-08-29，PR #548，分支 devin/1788445318-r348-similar-extra-mistake）
+- 取证：复习流答错自动加练的 `_extra` 条目丢弃 `x.id`/`x.question_type`，且 record() 首行 `if (this.cur._extra) return;`——加练题答错后完全丢弃，不入错题本、不进错因统计/重练/AI 关联（用户已暴露的新薄弱点练了白练；粉笔加练答错会沉淀）。
+- 收口（纯前端零后端/零契约/零新埋点）：新增 review-similar.js fail-closed 纯函数——similarItemFromQuestion（/api/questions item → _extra 条目，保留 question_id/question_type，非正整数 id 归 null，无题干返回 null）+ mistakeRecFromExtra（仅 _extra===true 且有题干+正解才产出 /api/mistakes body）；book.vue appendSimilar 改用纯函数构造、record() _extra 答错时 saveExtraWrong（_saved 防重复、失败静默非关键路径）、答对不写；入库成功提示「已加入错题本，之后会安排复习」；_extra 保留 qid 后 askFromReview 自动获得 redoQid（AI 详解关联）。加练题仍不写 SRS、不 requeue（语义不变）。
+- 部署基线事故（本轮重要教训）：首版部署 rev f33c79f 从旧基线（#537 链）切出，缺 R346/R346b/R347——生产 q-social-bar 静默消失、review_similar_auto/review_reason_tag 回退 400，仅靠 UI 回归测试发现。已 rebase 到 devin/1788444032-r347-track-whitelist 重新部署 rev 618b100，`git merge-base --is-ancestor` 逐项验证 426a7c7/d9b6b9b/997e61b 均为祖先后复验恢复。**每轮部署前必须核对部署 rev 祖先链包含近期已验修复。**
+- 验证：lint/vitest 438(+8)/build 全绿（rebase 后 ruff/pytest 218/顺跑）；生产 rev 618b100、bundle index-CY7iKnTF.js，部署脚本回归+Lighthouse 全过。testing agent 两轮实测（uid test-r348-ui / test-r348c-ui，375px）：加练题答错 POST /api/mistakes 200（body 含 question_id/question_type/user_answer）+ 提示出现、答对反例 0 次 POST、完成复习后加练题出现在错题列表可展开、原题 review 200 requeue 不变；基线修复后 q-social-bar 恢复渲染、review_similar_auto/review_reason_tag 200；console 0 error、0 次 /api/explain。
+- 测试数据清理：两轮合计 DELETED {mistakes 3/answer_log 2/review_log 3/growth_events 7/practice_progress 2}，LEFTOVER {}；保护 uid umteojq4sltdhorhm DB+localStorage 前后一致。
+- 边界（如实）：真实触屏未测（CDP 模拟）；SW 缓存使老客户端需一次刷新周期才拿到新 bundle（旧 bundle 期间断言会误判回退，经验已入测试 SKILL）。
+- 详见 docs/iter/round-3/r348-similar-extra-mistake-capture.md。
+
+### R349 加练同类题答错入库后支持错因自评：reviewReasonMid 纯函数 + _mid 记录 + chips 放开（2026-08-29，PR #550，分支 devin/1788447810-r349-extra-reason）
+- 取证：R348 saveExtraWrong 未保留 POST /api/mistakes 返回 id，错因 chips 条件 `!cur._extra` 一刀切排除——加练新沉淀错题恒「未标注」，稀释 R340 筛选/R341 画像/R342 按错因重练闭环。
+- 收口（纯前端，零后端/零契约/零新埋点）：review-similar.js 新增 fail-closed 纯函数 reviewReasonMid（普通条目→cur.id、_extra→入库后 _mid，非正整数一律 null）；saveExtraWrong 记录 res.id 为 item._mid；chips 条件放开为 `!wasCorrect && reviewReasonMid(cur)`（模板方法调用而非 computed，规避 _mid 直赋值+$forceUpdate 下 computed 缓存不失效）；setReviewReason PATCH 目标经 reviewReasonMid 解析（null no-op），复用既有 review_reason_tag 事件。
+- 验证：lint/vitest 442/build 全绿；生产 rev d093816、bundle index-CaEuIhi8.js；testing agent 双视口实测：加练答错 POST 200 后 chips 出现、点 chip PATCH /api/mistakes/<新 mid> 200（≠复习原条目 id）+ review_reason_tag 200、?rz= 筛选命中回显、答对反例无 POST 无 chips、普通条目打标回归、R348/R346 回归；0 次 /api/explain、console 0 error。测试 uid test-r349-ui 全库清理 LEFTOVER {}；保护 uid DB+localStorage 前后一致。
+- 已知残余（低优）：saveExtraWrong 先置 _saved 再记 _mid，未对 res.id 做正整数校验——畸形响应下条目会被视为已存但 chips fail-closed 不出现（行为安全，语义待收口）。
+- 详见 docs/iter/round-3/r349-extra-mistake-reason-tag.md。
+
+### R350 加练同类题「AI 详解本题」带上本轮作答：reviewAskAnswer 纯函数（2026-08-29，PR #551，分支 devin/1788449466-r350-extra-ask-answer）
+- 取证：askFromReview 取作答只读 cur.user_answer——_extra 加练条目无该字段，用户刚在本轮作答（picked）却被丢弃、redoAnswer 被清，AI 讲解拿不到「我选了什么」（R335 练习历史同场景已有透传 picked 先例）。
+- 收口（纯前端，零后端/零契约/零新埋点）：review-similar.js 新增 reviewAskAnswer(cur, picked)——_extra 取 picked、普通条目取 user_answer，经 askAnswerLetter 单选语义 fail-closed；askFromReview 一行替换。普通条目行为零变化。
+- 验证：lint/vitest 446/build + ruff/pytest 218/pyright 0 全绿；生产 rev af80192、bundle index-DKVlbzEI.js；testing agent 实测：加练答错选 B→ask 页预填+作答 chip B（旧版必无 chip）、加练答对选 A→chip A、普通条目历史 A 不串本轮 B、R349 回归；0 次 /api/explain、抓包 71 条全 200。测试 uid test-r350-ui 全库清理 LEFTOVER {}；保护 uid 前后一致（EXACT MATCH n=28）。
+- 体验观察（候选迭代）：从复习流点 AI 详解跳走后返回错题本，复习会话不保留、加练题作废——「复习中场跳出再回来续复习」未收口。
+- 详见 docs/iter/round-3/r350-extra-ask-answer.md。
+
+### R351 错题本复习会话中断可恢复：本机快照 + 「继续复习」横幅（2026-08-29，PR #553，分支 devin/1788451482-r351-review-resume）
+- 取证（SOP-10 功能深度维度）：复习会话（rItems/rIdx/picked/answered/wasCorrect/nextDays）纯组件内存态，整页刷新必丢；R350 生产实测观察从复习流跳 AI 详解再返回丢会话（本轮复测 tab 切回实际保留，硬刷才是稳定丢失路径，横幅正为此兜底）。
+- 收口（纯前端零后端/零契约，埋点白名单 +1 review_resume_click）：新增 review-snap.js fail-closed 纯函数 buildReviewSnap/parseReviewSnap（v1、uid 绑定、TTL 2h、≤80 条、序列化 ≤200KB、剥离 open/html 渲染态、rIdx 越界/畸形/未来 ts 一律 null）；book.vue startReview/判分/换题/加练追加/入库/错因打标各写点 saveReviewSnap，exitReview 清快照，onShow 非复习态解析快照出橙色 resumecard（继续复习/放弃）；resumeReview 整体恢复内存态原位续答，不自动强拉。顺手收口 R349 残余：saveExtraWrong 经 reviewReasonMid 正整数校验 res.id 后才置 _mid/_saved。
+- 验证：lint/vitest 452(+10)/build + ruff/pytest 218/pyright 0 全绿；生产 rev b1338d9、bundle index-DGAyeTEz.js（浏览器实载核对），部署脚本回归+Lighthouse 全过、review_resume_click curl 200/bogus 400。testing agent 实测（375px+桌面）：答错触发加练 1/5→硬刷→横幅 1/5→继续复习原位恢复（answered/错选/加练队尾原样）+埋点 200→续答完成；放弃清快照重开新轮；完成复习无横幅；fail-closed 注入（坏 JSON/uid 不符/超 2h/rIdx 越界，含合法阳性对照）全部无横幅 0 console error；R349/R350 回归；0 次 /api/explain、105 条 /api 全 200、双视口溢出 0。
+- 测试数据清理：测试 uid（因 storage 键笔误实为页面自生成 umtlq40aq7y4zsrmz，anon_uid≠anonUid 教训再次验证）全库 DELETED {mistakes 4/answer_log 2/review_log 5/growth_events 13}，LEFTOVER {}；保护 uid DB+localStorage 前后一致（EXACT MATCH n=28）。
+- 边界（如实）：真实触屏未测（CDP 模拟）；跨设备复习会话同步不在本轮范围（本机快照 first iteration）。
+- 详见 docs/iter/round-3/r351-review-session-resume.md。
+
+### R352 错题本复习会话跨设备同步：review_cur 单快照 + /api/review/cur（2026-08-29，PR #554，分支 devin/1788453580-r352-review-cur-sync）
+- 取证：R351 reviewSnap 只存本机 storage——换设备/清缓存后中断复习会话（含 _extra 加练队列、已答态）无法恢复，而 practice_progress/exam_progress/ask_cur 均已服务端化，资产语义不一致。
+- 收口（复用 ask_cur uid 单快照模式，零 UI 改动、review-snap.js 契约不变）：后端新表 review_cur(uid PK, snap, updated_at) + save/clear/get_review_cur；POST /api/review/cur（snap:null 清除；_valid_review_snap fail-closed：v===1、snap.uid===uid、ts 正整数、items 1–80 且逐项 question_text 非空、rIdx 界内、序列化 ≤200KB、bool 不冒充 int；rl "rcur" 120/h）；GET ?uid= TTL 2h 过期/无记录返回 {}；路由注册在 /api/review/{mid} 之前（有测试锁定防 "cur" 被 int 路径吞）。前端 book.vue：saveReviewSnap 本机写入后去抖 1.5s POST（失败静默）；clearReviewSnap 清本机+取消 pending timer+POST snap:null；onShow 本机快照命中零远端 GET，未命中才 restoreRemoteSnap()（GET 后 reviewing/resumeInfo/本机快照三重竞态复查，远端快照再过 parseReviewSnap 二层 fail-closed）。uid 单快照 last-write-wins，不做多设备并发合并。
+- 验证：ruff/pytest 223(+5 test_review_cur.py：round-trip/清除/uid 隔离/2h TTL/15 类非法 400/超大 400/路由次序)/pyright 0 + lint/vitest 452/build 全绿；生产 rev 66580ac、bundle index-B5ESHVc1.js（部署脚本+浏览器实载核对），生产 curl 逐项实测（空 GET {} / 保存 / round-trip / 坏版本·uid 不符·rIdx 越界·缺 uid 全 400 / snap:null 清除 / {mid} 路由不受影响）。testing agent 三 context 双设备实测：A 1440 答错中断→去抖 POST 200；B 375 全新 context 同 anonUid 无本机快照→自动 GET→横幅 1/5→继续复习原位恢复（answered/错选 B/加练队尾原序 4/5 带 tag）+ review_resume_click 200；A 硬刷本机优先 0 远端 GET；B 放弃→snap:null→C 全新 context 无横幅、DB review_cur 0 行；R351/R346/?rz= 回归；0 次 /api/explain、78 条全 200、console 0 error、双视口溢出 0。
+- 测试数据清理：test-r352-api（curl，snap:null 自清）+ test-r352-ui 全库 DELETED {mistakes 2/answer_log 2/review_log 3/growth_events 7/practice_progress 1}，LEFTOVER {}，review_cur 全表 0 行；保护 uid DB 34 表+localStorage 前后一致（EXACT MATCH n=28）。
+- 边界（如实）：真实触屏未测（CDP 模拟）；限速 429 分支以 pytest 覆盖未生产实测；多设备并发写为 last-write-wins 语义（刻意不合并）。
+- 详见 docs/iter/round-3/r352-review-cur-sync.md。
+
+### R353 首页「未完成错题复习」续复习卡（2026-08-29，PR #556，分支 devin/1788455376-r353-home-review-resume）
+- 取证：首页已有模考续考卡（R288）/练习续练卡（R323），但 R351/R352 的复习中断进度只在错题本页内可见——回流首页零外显，2h TTL 召回窗口浪费，三类「未完成学习资产」IA 口径不一致。
+- 收口（纯前端 + track 白名单 1 行，零新 endpoint/表/协议）：home.vue loadReviewResume()（本机 reviewSnap parseReviewSnap 优先命中 0 远端 GET；无本机才 GET /api/review/cur 再过一层 parseReviewSnap；rvClearedAt 30s 防放弃后回填，同 ppClearedAt 口径）+ ercard「有一次未完成的错题复习 · 中断在第 X/N 题」+ rvContinue()（home_review_resume_click 埋点 → 一次性 bookReviewIntent → switchTab book）+ rvDrop()（showModal 确认 → 清本机 + POST snap:null）。book.vue onShow 消费即删 bookReviewIntent：本机快照命中直接 resumeReview() 原位恢复（跳过横幅二次点击）；未命中 _reviewIntent 传入 restoreRemoteSnap()，远端回填成功后自动恢复，失败 fail-closed 落正常错题本页。team.py 白名单 + home_review_resume_click。
+- 验证：lint/vitest 452/build + ruff/pytest 223/pyright 0 全绿；生产 rev 999102d、bundle index-Ddepn9Ev.js（浏览器实载核对）、Lighthouse 全过、埋点 curl 200/bogus 400。testing agent 双设备实测（uid test-r353-ui）：A 1440 中断→首页出卡 1/5 且本机命中 0 远端 GET→去继续直达原位恢复（跳横幅，埋点 200）；B 375 全新 context 远端 GET 出卡→去继续远端回填自动恢复；放弃 ✕→弹窗→snap:null 200→C 全新 context 首页无卡错题本无横幅、review_cur 0 行；回归：直接进错题本 R351 横幅+手动继续不变、首页三卡并存（R288/R323/R353）互不挤占；0 次 /api/explain、145 条全 200、console 0 error、双视口溢出 0。
+- 测试数据清理：test-r353-ui 全库 DELETED {mistakes 2/answer_log 5/exam_attempts 1/review_log 1/growth_events 14/exam_progress 1/practice_progress 1}，LEFTOVER {}，review_cur 0 行；保护 uid DB 34 表+localStorage 前后一致（EXACT MATCH n=28）。
+- 边界（如实）：真实触屏未测（CDP 模拟）；C context 无独立 metrics holder 以桌面宽验证「无卡/无横幅」（断言与视口无关）。
+- 详见 docs/iter/round-3/r353-home-review-resume-card.md。
 
 ### W1（R348 交叉复核集成轮，分支 devin/wf-w1-integration，未建 PR/未部署）
 - 集成：origin/main 2cae38f 切 `devin/wf-w1-integration`，依次 merge R348-B1（cce7cf4）/ C1（664a21f）/ M1（858622d），三次无冲突；dropped 无。全量本地验证：backend ruff / pytest 232 passed / pyright 0；frontend-uni lint / vitest 424 passed / build:h5（产物与生产 R338 同 hash，本轮 H5 零改动）；miniapp typecheck 0 错、lint 需 `ESLINT_USE_FLAT_CONFIG=false`（根 eslint.config.mjs 误切 flat config，既有问题）。
@@ -1313,3 +1425,15 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - C1：quality.py 三类扣分 + sanitize_hs，db.import_hs_explanations 源头过滤，scripts/r348_content_cleanup.py 默认 dry-run / `--apply` 写前 backup。临时库 dry-run→apply→复扫 0 一致；生产只读 dry-run 量级 17/2438/3728。**生产 --apply 未执行**：需部署本分支后由负责人确认备份路径；且 `数据矛盾` 词单独触发 12/17、≥6 条疑误杀，apply 前先决策词表。
 - M1：poster `.bar`→`.actions`、request.ts 403「重新登录」清登录态回退匿名、practice 题图渲染/预览、share 模块名中文。真机/开发者工具走查未做。
 - 遗留台账：docs/iter/workflow/backlog.md（含 H5 三处一行修、yanyu 抽审、17 条复核、quality_score 闸门、60 秒等待取证、guard 三路径入 SKILL 等）；详证 docs/iter/workflow/w1.md。
+
+### R354 复习完成小结：庆祝卡升级首答正确率/纠正/加练成绩（2026-08-29，PR #557，分支 devin/1788457084-r354-review-summary）
+- 取证：复习轮末庆祝卡只报「N 道到期错题全部复习完成」，本轮首答对错/答错纠正/加练成绩全部丢弃——用户跑完复习拿不到任何效果反馈（粉笔有轮末小结）。
+- 收口（纯前端零后端/零契约/零新埋点）：record() 给 cur 写 `_res`（首答判分留痕，requeue 副本剥离 `_res` 独立判分）；review-summary.js 纯函数 reviewSummary(rItems)（due/dueRight/dueWrong/corrected/uncorrected/extra/extraRight/pct，fail-closed：非数组/空→null、无 `_res` 条目不入分子分母）；庆祝卡三行模板（到期+首答对 pct / 答错重出+纠正 / 加练+答对），legacy 快照无 `_res` 退化为原单行。`_res` 随 reviewSnap/review_cur 快照持久化，中断恢复后判分不丢。
+- 验证：lint/vitest 457/build + ruff/pytest 251/pyright 0；生产实测 T1 混合小结三行逐字精确（3 到期 2 对 1 错→纠正 1+加练 2 一对一错，67%）、T2 全对单行 100%、T3 硬刷横幅恢复后判分计入小结（抓包 POST /api/review/cur items 带 `"_res":true`）、T4 R353 首页卡直达恢复回归；375/1440 无溢出、0 次 /api/explain、console 0 error。测试 uid 全库清理 LEFTOVER 空、review_cur 0 行、保护 uid 前后一致。
+- 详见 docs/iter/round-3/r354-review-summary.md。
+
+### R355 生产事故修复：#558 旧基线合并覆盖回退 R339–R354（2026-08-29，PR #560，分支 devin/1788458679-r355-restore-w1-clobber）
+- 事故：W1 集成分支（devin/wf-w1-integration，基线 ~R338 的 2cae38f）经 PR #558 直接合入 main 并部署（rev a4fa410），把 R339–R354 十六轮功能整体覆盖回退——生产 `GET /api/review/cur` 404、POST 422（被 `/api/review/{mid}` int 路径吞）、redo 丢 rz/src/t3、复习恢复/首页续卡/加练闭环/轮末小结全部消失（R354 生产测试中途实测发现）。
+- 修复：从 02a0adb（#557 合并点）重新 merge W1 头 85ae35a——自动合并干净，唯一冲突 handoff 手工保留双方；W1 的 B1/C1/M1 改动全部保留。diff vs a4fa410 +2001/-38 恢复 41 文件。本地 pytest 251/vitest 457 双方测试并存全绿。部署 rev 4bf10bb 后生产逐项复验 + T3/T4 补测通过。
+- 教训（第二次同类事故，R348 是分支级、本次是 merge-to-main 级）：任何集成分支合并部署前必须 `git merge-base --is-ancestor <近期各轮 merge 点> <待部署 rev>` 逐项核对；长流程生产测试遇成批 4xx 先复查 /api/health rev 与实载 bundle（可能被并发部署覆盖）。
+

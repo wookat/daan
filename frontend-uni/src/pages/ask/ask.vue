@@ -108,6 +108,7 @@
             <text class="chip" @click="quickFollowup(r, '请再讲得更细一点，逐步推导每一步')">再讲细一点</text>
             <text class="chip" :class="{ dim: r.simLoading }" :aria-disabled="String(!!r.simLoading)" @click="genSimilar(r)">{{ r.simLoading ? '出题中…' + r.simSecs + 's' : '出一道同款题' }}</text>
             <text class="chip" :class="{ ok: r.saved }" @click="save(r)">{{ r.saved ? '✓ 已存错题本' : '存入错题本' }}</text>
+            <text v-if="viewUrl(r)" class="chip" @click="viewQuestion(r)">查看原题</text>
           </view>
         </view>
       </view>
@@ -222,7 +223,7 @@
         </view>
         <view v-if="!sessions.length" class="rec-empty">
           <text class="rec-e1">还没有历史会话</text>
-          <text class="rec-e2">每次「新对话」后，之前的问答会自动存到这里（仅保存在本机）</text>
+          <text class="rec-e2">每次「新对话」后，之前的问答会自动存到这里（同一账号换设备也能看）</text>
         </view>
         <view v-for="(s, si) in sessions" :key="s.id" class="rec-row" @click="loadSession(si)">
           <view class="rec-ans">{{ s.n }}</view>
@@ -239,10 +240,10 @@
 
 <script>
 import { md } from '../../md.js';
-import { request, uploadExplain, streamExplain, anonUid, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api.js';
+import { request, uploadExplain, streamExplain, anonUid, hasAccessCode, fetchAccessInfo, promptAccessCode, trackEvent } from '../../api.js';
 import { isNativeApp, pickImageNative } from '../../native.js';
 import { mergeAskSessions, upsertLocalSession, addTombstone, removeTombstone, pruneTombstones, filterTombstoned, sanitizeCurItems, parseRemoteCur } from '../../ask-sessions.js';
-import { askQid } from '../../ask-link.js';
+import { askQid, askViewUrl } from '../../ask-link.js';
 
 export default {
   data() {
@@ -321,6 +322,15 @@ export default {
   },
   // #endif
   methods: {
+    viewUrl(r) {
+      return askViewUrl(r && r.qid);
+    },
+    viewQuestion(r) {
+      const url = this.viewUrl(r);
+      if (!url) return;
+      trackEvent('ask_view_question');
+      uni.navigateTo({ url });
+    },
     // #ifdef H5
     removePaste() {
       if (this._onPaste) {

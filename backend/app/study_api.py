@@ -1,4 +1,5 @@
 """学习记录域：画像/计划、作答日志、错题本、SRS 复习、提醒、统计与反馈纠错。"""
+import json
 import re
 import time
 
@@ -194,9 +195,19 @@ def api_backup_get(code: str):
         raise HTTPException(404, "恢复码不存在")
     return {"data": data}
 
+_REDO_REASONS = {"粗心大意", "概念不清", "方法不会", "纯蒙的", "未标注"}
+_REDO_SOURCES = {"exam", "practice"}
+
+
 @router.get("/api/mistakes/redo")
-def api_mistakes_redo(limit: int = 10, qtype: str | None = None, module: str | None = None, noqt: int = 0, uid: str | None = None):
-    return {"items": db.mistakes_redo_questions(min(limit, 25), qtype=qtype, module=module, noqt=bool(noqt), uid=uid)}
+def api_mistakes_redo(limit: int = 10, qtype: str | None = None, module: str | None = None, noqt: int = 0, uid: str | None = None, rz: str | None = None, src: str | None = None, t3: str | None = None):
+    if rz is not None and rz not in _REDO_REASONS:
+        raise HTTPException(400, "无效的错因")
+    if src is not None and src not in _REDO_SOURCES:
+        raise HTTPException(400, "无效的来源")
+    if t3 is not None and t3 not in taxonomy.topic_index():
+        raise HTTPException(400, "无效的考点")
+    return {"items": db.mistakes_redo_questions(min(limit, 25), qtype=qtype, module=module, noqt=bool(noqt), uid=uid, reason=rz, source=src, tag3=t3)}
 
 _REPORT_REASONS = {"答案有误", "题目有错字/乱码", "选项有问题", "图片不清晰/缺失", "解析有误", "其他"}
 
@@ -408,6 +419,57 @@ def api_get_reminders(uid: str = ""):
 def api_review_due(uid: str = ""):
     u = uid.strip()[:64] or None
     return {"items": db.due_reviews(uid=u), "total": db.due_review_count(uid=u)}
+
+
+REVIEW_CUR_MAX_ITEMS = 80
+REVIEW_CUR_TTL_S = 2 * 3600
+
+
+def _valid_review_snap(snap, uid: str) -> bool:
+    if not isinstance(snap, dict) or snap.get("v") != 1 or snap.get("uid") != uid:
+        return False
+    ts = snap.get("ts")
+    if isinstance(ts, bool) or not isinstance(ts, int) or ts <= 0:
+        return False
+    items = snap.get("items")
+    if not isinstance(items, list) or not 0 < len(items) <= REVIEW_CUR_MAX_ITEMS:
+        return False
+    for x in items:
+        if not isinstance(x, dict) or not isinstance(x.get("question_text"), str) or not x["question_text"]:
+            return False
+    r = snap.get("rIdx")
+    return not isinstance(r, bool) and isinstance(r, int) and 0 <= r < len(items)
+
+
+# 注意：必须注册在 /api/review/{mid} 之前，否则 "cur" 会被 int 路径参数吞掉。
+@router.post("/api/review/cur")
+def api_review_cur_save(body: dict, request: Request):
+    uid = str(body.get("uid") or "").strip()[:64]
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    rl(request, "rcur", 120, 3600, uid)
+    snap = body.get("snap")
+    if snap is None:
+        db.clear_review_cur(uid)
+        return {"ok": True}
+    if not _valid_review_snap(snap, uid):
+        raise HTTPException(400, "无效的复习快照")
+    snap_json = json.dumps(snap, ensure_ascii=False)
+    if len(snap_json) > 200_000:
+        raise HTTPException(400, "复习快照过大")
+    db.save_review_cur(uid, snap_json)
+    return {"ok": True}
+
+
+@router.get("/api/review/cur")
+def api_review_cur_get(uid: str = ""):
+    uid = uid.strip()[:64]
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    d = db.get_review_cur(uid)
+    if not d or time.time() - d["updated_at"] > REVIEW_CUR_TTL_S or not d["snap"]:
+        return {}
+    return {"snap": d["snap"]}
 
 
 @router.post("/api/review/{mid}")
