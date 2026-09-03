@@ -1255,3 +1255,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：ruff/pytest 204/pyright 0/lint/vitest 413/build 全绿；生产 rev b65ac08 testing agent 双视口实测（uid test-r333-search）：1440 关键词入口 + 375 code_hit（纯数字 id 命中）详情均出 AI 按钮；点击预填题干+选项单份不重复；预置 redoAnswer=B 后走搜索入口 ask 页无 B chip、storage 已清；复制链接/详情收起展开回归；全程 0 次 /api/explain、console 0 error（除埋点 400，修复后消除）、双视口溢出 0；Lighthouse 全过（/ 0.98/LCP 804、/tiku/ 1.00）。
 - 边界（如实）：语义码形式 code（如 YY-LJTK-2017-1274831）不命中 code_hit 走全文搜索（既有 parse 逻辑，非本轮改动）；真实触屏未实测；埋点白名单修复后的 200 回归待下次部署复验。
 - 详见 docs/iter/round-3/design-r333-search-ask-entry.md。
+
+### R334 收藏题目详情补「AI 详解本题」入口（2026-08-29，PR #531，分支 devin/1788415680-r334-fav-ask-entry）
+- 取证：收藏与笔记页收藏题目卡展开态已有题干/选项/答案/解析与 移动到…/讨论区/取消收藏 操作，但零 AI 出口——是最后一个有完整题面却无 AI 出口的复盘场景（刷题/错题本/报告浮层 R326、搜索 R333 均已就位）。
+- 收口（复用协议，零新 endpoint/表/URL 契约）：ops 行行首「AI 详解本题」；askFromFav(it)=askPrefill(it.question, it.options) 预填（空 no-op）→ trackEvent('fav_ask_click', module) → setStorageSync redoQuestion + removeStorageSync redoAnswer（收藏无本次作答语义，防串用旧作答）→ switchTab /pages/ask/ask；@click.stop 防收起卡片；本地收藏 _local 同 schema 直接可用；team.py /api/track 白名单同步补 fav_ask_click（吸取 R333 教训，避免静默 400 丢埋点）。
+- 验证：ruff/pytest 204/pyright 0/lint/vitest 413/build 全绿；生产 rev 2bb985c testing agent 双视口实测（uid test-r334-fav）：1440/375 入口出现、点击不收起直接跳 ask 页、预填单份、预置 redoAnswer=B 被清（无 chip、storage null）、fav_ask_click 200×2、三个既有操作回归、0 次 /api/explain、console 0 error、双视口溢出 0；Lighthouse / 独立复跑×2 a11y 1.00、LCP 1811/1924ms（部署首跑 0.94/2643ms 为单样本波动）。
+- 边界（如实）：真实触屏未实测；「移动到…」仅验弹层未执行实际移动；375 下三个回归操作未单测（1440 已验）；测试 uid 全库清理 DELETED 4 / LEFTOVER 0、保护 uid 快照一致。
+- 详见 docs/iter/round-3/design-r334-fav-ask-entry.md。

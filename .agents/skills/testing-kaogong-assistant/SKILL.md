@@ -677,3 +677,8 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 进行中态最省构造法：API 造数一条 ask_sessions 历史会话（POST /api/ask/sessions），真实 UI loadSession 恢复即产生进行中态并触发去抖回传，无需触发 /api/explain。
 - cur 同步断言四件套：A 去抖 POST /api/ask/cur body 含 sid+非空 items；B（无本机快照隔离 context 同 uid）打开 ask 页自动 GET 并无点击回填；A 硬刷本机优先 0 次 GET；「新对话」POST items:[] 后对端硬刷空态。
 - askCurSid 恢复断言用 CDP 读 storage：`uni` storage 实际落 localStorage，键 `askCurSid`。
+
+## R334 收藏页 AI 入口走查新经验
+- 收藏造数最省路径：`POST /api/favs {uid, question_id}`（题 id 可用 1274831），收藏页即显「默认收藏夹 1 题」，无需真实 UI 刷题收藏。
+- Lighthouse 需用 `npx --no-install lighthouse`（PATH 无全局 bin），headless flags `--headless=new --no-sandbox`。
+- 375 视口 holder 结束后 `Emulation.clearDeviceMetricsOverride` 需再 `Page.reload` 一次才真正恢复桌面宽度（首次 clear 后 innerWidth 仍 375）。
