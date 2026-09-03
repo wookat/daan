@@ -762,9 +762,9 @@ export default {
   watch: {
     tab() { this.pageN = 20; this.batchMode = false; this.selIds = {}; this.kbId = null; this.syncBookUrl(); },
     filterMod() { this.pageN = 20; this.syncBookUrl(); },
+    kpFilter() { this.pageN = 20; this.syncBookUrl(); },
     kw() { this.pageN = 20; },
-    kpFilter() { this.pageN = 20; },
-    kp3Filter() { this.pageN = 20; },
+    kp3Filter() { this.pageN = 20; this.syncBookUrl(); },
     sortBy() { this.pageN = 20; this.syncBookUrl(); },
     srcFilter() { this.syncBookUrl(); },
     rzFilter() { this.pageN = 20; this.syncBookUrl(); },
@@ -773,6 +773,8 @@ export default {
     const p = parseBookOpts(opts);
     if (p.tab) this.tab = p.tab;
     if (p.mod) this.filterMod = p.mod;
+    if (p.kp) this._pendingKp = p.kp;
+    if (p.kp3) this._pendingKp3 = p.kp3;
     if (p.src) this.srcFilter = p.src;
     if (p.rz) this.rzFilter = p.rz;
     if (p.sort) this.sortBy = p.sort;
@@ -836,7 +838,7 @@ export default {
     syncBookUrl() {
       // #ifdef H5
       if (typeof window !== 'undefined' && window.history) {
-        window.history.replaceState(null, '', buildBookUrl({ tab: this.tab, mod: this.filterMod, src: this.srcFilter, rz: this.rzFilter, sort: this.sortBy }));
+        window.history.replaceState(null, '', buildBookUrl({ tab: this.tab, mod: this.filterMod, kp: this.kpFilter, kp3: this.kp3Filter, src: this.srcFilter, rz: this.rzFilter, sort: this.sortBy }));
       }
       // #endif
     },
@@ -1087,6 +1089,7 @@ export default {
           if (this.due.length && !this.reviewing) this.startReview();
         }
         this.offlineView = false;
+        this.applyPendingKp();
         cacheMistakes(d.items, anonUid());
         this.loadMastery();
         try {
@@ -1106,6 +1109,29 @@ export default {
         }
       }
       this.loading = false;
+    },
+    // 入向 ?kp=/?kp3= 深链：列表到达后校验命中才生效（fail-closed：无命中丢弃并纠正 URL）
+    applyPendingKp() {
+      const kp = this._pendingKp;
+      const kp3 = this._pendingKp3;
+      if (!kp && !kp3) return;
+      this._pendingKp = '';
+      this._pendingKp3 = '';
+      if (kp3) {
+        const hit = this.items.find((m) => m.tag3_name === kp3);
+        if (hit) {
+          this.filterMod = hit.module || this.filterMod;
+          this.kpFilter = kp && this.items.some((m) => this.groupKey(m) === kp) ? kp : '';
+          this.kp3Filter = kp3;
+          return;
+        }
+      }
+      if (kp && this.items.some((m) => this.groupKey(m) === kp)) {
+        this.kpFilter = kp;
+        this.kp3Filter = '';
+        return;
+      }
+      this.syncBookUrl();
     },
     async loadMastery() {
       try {
