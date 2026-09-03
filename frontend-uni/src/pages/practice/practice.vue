@@ -164,7 +164,7 @@
               </template>
             </view>
           </view>
-          <view v-if="cur.explanation" class="exp-row col">
+          <view v-if="cur.explanation && !isExplanationCovered(cur.hs_explanation, cur.explanation)" class="exp-row col">
             <text class="exp-k">解析</text>
             <view class="exp">{{ cur.explanation }}</view>
           </view>
@@ -365,6 +365,8 @@ import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 import { qStatLine } from '../../q-stat.js';
 import { toggleExcl, pickWithExcl, exclVisible } from '../../exam-excl.js';
 import { collectPracticeProgress, adoptPracticeResume } from '../../practice-progress.js';
+import { weakSpots as buildWeakSpots } from '../../weak-spots.js';
+import { isExplanationCovered } from '../../exp-dup.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -568,20 +570,9 @@ export default {
       for (const s of Object.values(this.pstats.byModule || {})) n += s.done || 0;
       return n >= 30 ? n : 0;
     },
-    // 完成页薄弱考点：本组错题按考点聚合，错题数倒序取前 3
+    // 完成页薄弱考点：本组错题按考点聚合、同名合并，错题数倒序取前 3
     weakSpots() {
-      const map = {};
-      for (const q of this.items) {
-        if (!q._picked || q._picked === q.answer) continue;
-        const key = q.tag3 || q.question_type || q.module || 'other';
-        if (!map[key]) {
-          const qt = q.question_type || '';
-          const sub = qt.includes('-') ? qt.split('-').slice(1).join('-') : qt || null;
-          map[key] = { key, name: sub || this.modName(q.module), module: q.module, submodule: sub, tag3: q.tag3 || null, n: 0 };
-        }
-        map[key].n++;
-      }
-      return Object.values(map).sort((a, b) => b.n - a.n).slice(0, 3);
+      return buildWeakSpots(this.items, (m) => this.modName(m));
     },
     weakModule() {
       let worst = null;
@@ -813,6 +804,7 @@ export default {
   },
   methods: {
     exclVisible,
+    isExplanationCovered,
     toggleMat() {
       this.matOpen = { ...this.matOpen, [this.idx]: !this.matOpen[this.idx] };
     },

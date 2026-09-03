@@ -15,7 +15,7 @@
         <text class="hero-paper">{{ event.paper_title }} · {{ event.n_questions }} 题 · {{ event.duration_min }} 分钟</text>
         <view class="hero-meta">
           <text class="hm">{{ fmtWindow }}</text>
-          <text class="hm">{{ event.registered }} 人报名 · {{ event.submitted }} 人交卷</text>
+          <text class="hm">{{ event.registered || event.submitted ? event.registered + ' 人报名 · ' + event.submitted + ' 人交卷' : '本场首批报名开放中 · 全站同卷' }}</text>
         </view>
 
         <!-- 未开始：倒计时 + 报名 -->
