@@ -242,6 +242,7 @@ import { md } from '../../md.js';
 import { request, uploadExplain, streamExplain, anonUid, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api.js';
 import { isNativeApp, pickImageNative } from '../../native.js';
 import { mergeAskSessions, upsertLocalSession, addTombstone, removeTombstone, pruneTombstones, filterTombstoned, sanitizeCurItems, parseRemoteCur } from '../../ask-sessions.js';
+import { askQid } from '../../ask-link.js';
 
 export default {
   data() {
@@ -262,6 +263,7 @@ export default {
       sessions: uni.getStorageSync('askSessions') || [],
       curSid: Number(uni.getStorageSync('askCurSid')) || 0,
       timer: null,
+      pendingQid: 0,
       recent: uni.getStorageSync('recentExplains') || [],
     };
   },
@@ -294,12 +296,15 @@ export default {
     this.loadDue();
     this.restoreCurSession();
     this.syncSessions();
+    this.openLinkedSession();
     const redo = uni.getStorageSync('redoQuestion');
     if (redo) {
       this.qtext = redo;
       const ra = uni.getStorageSync('redoAnswer');
       this.uanswer = /^[A-D]$/.test(ra) ? ra : '';
       uni.removeStorageSync('redoAnswer');
+      this.pendingQid = askQid(uni.getStorageSync('redoQid'));
+      uni.removeStorageSync('redoQid');
       this.imagePath = '';
       this.imageFile = null;
       this.textOpen = true;
@@ -551,11 +556,14 @@ export default {
       this.stagedImage = img || '';
       this.stagedText = txt || '';
       const uans = this.uanswer.trim();
+      const qid = txt ? this.pendingQid || 0 : 0;
+      this.pendingQid = 0;
       this.startTimer();
       try {
         let d;
         const rec = {
           ts: Date.now(),
+          qid,
           module_name: '',
           question_type: '',
           html: '',
@@ -744,6 +752,7 @@ export default {
     persistSession() {
       const items = this.results.map((r) => ({
         ts: r.ts,
+        qid: askQid(r.qid),
         module: r.module || '',
         module_name: r.module_name || '',
         question_type: r.question_type || '',
@@ -818,6 +827,13 @@ export default {
     },
     openHistory() {
       this.historyOpen = true;
+    },
+    openLinkedSession() {
+      const sid = askQid(uni.getStorageSync('askOpenSid'));
+      uni.removeStorageSync('askOpenSid');
+      if (!sid) return;
+      const i = this.sessions.findIndex((s) => s && s.id === sid);
+      if (i >= 0) this.loadSession(i);
     },
     restoreCurSession() {
       if (this.results.length) return;

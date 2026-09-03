@@ -130,6 +130,7 @@
 import { request, trackEvent } from '../../api.js';
 import { buildSearchUrl, buildTikuQPath } from '../../search-url.js';
 import { askPrefill } from '../../ask-prefill.js';
+import { askQid } from '../../ask-link.js';
 
 const MODS = { ziliao: '资料', shuliang: '数量', yanyu: '言语', panduan: '判断', changshi: '常识', shenlun: '申论' };
 
@@ -185,6 +186,9 @@ export default {
       if (!text) return;
       trackEvent('search_ask_click', d.module || '');
       uni.setStorageSync('redoQuestion', text);
+      const qid = askQid(d && d.id);
+      if (qid) uni.setStorageSync('redoQid', qid);
+      else uni.removeStorageSync('redoQid');
       uni.removeStorageSync('redoAnswer');
       uni.switchTab({ url: '/pages/ask/ask' });
     },

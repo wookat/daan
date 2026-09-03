@@ -281,6 +281,7 @@ import { isFaved, toggleFav } from '../../exam-fav.js';
 import { qStatLine } from '../../q-stat.js';
 import { qTimeLine, paperAvgSecs } from '../../exam-time.js';
 import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
+import { askQid } from '../../ask-link.js';
 import { goalGap, prevScoreDelta } from '../../exam-goal.js';
 import { modAvgPct } from '../../exam-mod-avg.js';
 import { weakModule } from '../../exam-weak.js';
@@ -441,6 +442,9 @@ export default {
       if (!text) return;
       trackEvent('report_ask_click', String(d.question_id || ''));
       uni.setStorageSync('redoQuestion', text);
+      const qid = askQid(d.question_id);
+      if (qid) uni.setStorageSync('redoQid', qid);
+      else uni.removeStorageSync('redoQid');
       const ans = askAnswerLetter(d.picked);
       if (ans) uni.setStorageSync('redoAnswer', ans);
       else uni.removeStorageSync('redoAnswer');

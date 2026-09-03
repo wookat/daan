@@ -114,6 +114,7 @@
 <script>
 import { createFavFolder, deleteFavFolder, fetchFavFolders, fetchFavs, fetchNotes, removeFav, renameFavFolder, setFav, trackEvent } from '../../api.js';
 import { askPrefill } from '../../ask-prefill.js';
+import { askQid } from '../../ask-link.js';
 import { buildFavoritesUrl, parseFavoritesOpts } from '../../favorites-url.js';
 
 const MODS = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', 时政: '时政' };
@@ -293,6 +294,9 @@ export default {
       if (!text) return;
       trackEvent('fav_ask_click', (it && it.module) || '');
       uni.setStorageSync('redoQuestion', text);
+      const qid = askQid(it && it.id);
+      if (qid) uni.setStorageSync('redoQid', qid);
+      else uni.removeStorageSync('redoQid');
       uni.removeStorageSync('redoAnswer');
       uni.switchTab({ url: '/pages/ask/ask' });
     },

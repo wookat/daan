@@ -40,6 +40,9 @@
         <view v-if="askableReview" class="sim-row" role="button" aria-label="看不懂？AI 详解本题" @click="askFromReview">
           <text class="sim-t">看不懂？AI 详解本题 ›</text>
         </view>
+        <view v-if="reviewAskSeen" class="sim-row" role="button" aria-label="回看 AI 详解" @click="openSeenAsk">
+          <text class="sim-t">回看 AI 详解 ›</text>
+        </view>
         <wd-button type="primary" block custom-class="next-btn" @click="nextReview">{{ rIdx + 1 < rItems.length ? '下一题' : '完成复习' }}</wd-button>
       </view>
       <view v-else-if="curMulti" class="selfjudge">
@@ -493,6 +496,7 @@ import { cacheMistakes, getCachedMistakes } from '../../offline.js';
 import { qStatLine } from '../../q-stat.js';
 import { fontSizes, normFontLv } from '../../font-size.js';
 import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
+import { askQid, findAskSid } from '../../ask-link.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 
@@ -505,6 +509,7 @@ export default {
   data() {
     return {
       items: [],
+      askSeenTick: 0,
       loading: true,
       loadErr: '',
       offlineView: false,
@@ -580,6 +585,10 @@ export default {
     qStyle() { return { fontSize: fontSizes(this.fontLv).q }; },
     askableReview() {
       return !!askPrefill(this.cur && this.cur.question_text, null);
+    },
+    reviewAskSeen() {
+      void this.askSeenTick;
+      return findAskSid(uni.getStorageSync('askSessions'), uni.getStorageSync('askCurSession'), this.cur && this.cur.question_id);
     },
     optStyle() { return { fontSize: fontSizes(this.fontLv).opt }; },
     manualPickedCount() {
@@ -757,6 +766,7 @@ export default {
     if (this.tab !== 'fav' && this.pageN < this.shownItems.length) this.pageN += 20;
   },
   onShow() {
+    this.askSeenTick++;
     this.fontLv = normFontLv(uni.getStorageSync('fontLv'));
     this.favs = (uni.getStorageSync('favQuestions') || []).map((f) => ({ ...f, _open: false }));
     if (uni.getStorageSync('bookShowFavs')) {
@@ -1176,11 +1186,19 @@ export default {
       trackEvent('review_similar_click', this.cur.module || '');
       this.practiceSimilar(this.cur);
     },
+    openSeenAsk() {
+      if (!this.reviewAskSeen) return;
+      if (this.reviewAskSeen.sid > 0) uni.setStorageSync('askOpenSid', this.reviewAskSeen.sid);
+      uni.switchTab({ url: '/pages/ask/ask' });
+    },
     askFromReview() {
       const text = askPrefill(this.cur.question_text, null);
       if (!text) return;
       trackEvent('review_ask_click', this.cur.module || '');
       uni.setStorageSync('redoQuestion', text);
+      const qid = askQid(this.cur.question_id);
+      if (qid) uni.setStorageSync('redoQid', qid);
+      else uni.removeStorageSync('redoQid');
       const ans = askAnswerLetter(this.cur.user_answer);
       if (ans) uni.setStorageSync('redoAnswer', ans);
       else uni.removeStorageSync('redoAnswer');
@@ -1278,6 +1296,9 @@ export default {
       const text = askPrefill(m.question_text, null);
       if (!text) return;
       uni.setStorageSync('redoQuestion', text);
+      const qid = askQid(m.question_id);
+      if (qid) uni.setStorageSync('redoQid', qid);
+      else uni.removeStorageSync('redoQid');
       const ans = askAnswerLetter(m.user_answer);
       if (ans) uni.setStorageSync('redoAnswer', ans);
       else uni.removeStorageSync('redoAnswer');

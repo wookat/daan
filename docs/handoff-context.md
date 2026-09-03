@@ -1269,3 +1269,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：ruff/pytest 204/pyright 0/lint/vitest 413/build 全绿；生产 rev c7a6dd9 testing agent 双视口实测（uid test-r335-history，API 造数 1错+1对+1未答）：逐题展开呈现/单开互斥/再点收起、错题进 ask chip=B 错选、对题 chip=A 不串题、未答（预置 redoAnswer=D）无 chip 且 storage 被清、history_ask_click 200×4、重练/会话折叠/快照即显回归、0 次 /api/explain、双视口溢出 0、console 0 error。
 - 边界（如实）：真实触屏未实测；下架题（question=null）行分支无法安全构造未生产实测（代码 fail-closed）；Lighthouse 本轮跳过（分包 hash 路由无独立文档，R334 刚复跑首页基线）；测试期间宿主一度整体不可达 4–5 分钟（共享宿主负载，自行恢复，未归因本应用）；测试数据全库清理 DELETED 10 / LEFTOVER 0、保护 uid 快照一致。
 - 详见 docs/iter/round-3/design-r335-history-detail-expand.md。
+
+### R336 AI 问答会话与题目关联：item 级 qid + 「回看 AI 详解」（2026-08-29，分支 devin/1788420168-r336-ask-qid-link）
+- 取证（SOP-10 审计窗口，四维复查后选定功能深度缺口）：R326–R335 六个复盘场景 AI 入口只写 redoQuestion 文本，题目 id 在跳转时丢弃；ask 会话 item（本机/ask_sessions/ask_cur）无任何题目关联字段——用户回到同一题无法知道已问过 AI，只能翻历史列表或再触发一次 LLM 讲解（重复成本）。后端 /api/ask/sessions 与 /api/ask/cur 的 items 是不透明 dict 列表，天然可带新字段，零后端改动。
+- 收口（纯前端，零新 endpoint/表/URL 契约，不改 /api/explain）：新纯函数 ask-link.js——askQid(v) 仅接受正整数（number 或纯数字字符串）否则 0；findAskSid(sessions, curItems, qid) 先扫进行中 items（命中 {sid:0}）再按列表序扫归档 sessions（命中 {sid:s.id}），非法输入/无命中 null，全部 fail-closed。六入口（practice/book 复习+列表/report/search/favorites/practice-history）写 redoQuestion 同时有效写 redoQid、无效显式 remove；ask 页消费 redoQid→pendingQid，doExplain 仅文本讲解首条消费（qid 挂 rec 后即清零，图片讲解恒 0），persistSession 序列化补 qid: askQid(r.qid)，adoptItems 展开透传；askOpenSid 导航协议：回看入口写目标 sid（sid=0 进行中会话不写，直接切 tab 即见）→ ask onShow openLinkedSession() 消费并 loadSession 定位，非法/缺失静默。首批外显两处「回看 AI 详解」：练习历史展开态（toggleDetail 时算 seenAsk）+ 错题本复习流（reviewAskSeen computed + onShow tick 重算），仅命中才显示，点开零 LLM 请求。存量无 qid 会话不误命中、行为不变。
+- 验证：ruff/pytest 204/pyright 0/lint/vitest 424(+11)/build 全绿。生产验证与测试数据清理见 PR 评论。
+- 边界（如实）：关联以「预填后首次文本讲解」为锚，用户清空重写题目再讲解仍会挂原 qid（提示性关联，非强一致）；跨设备新会话首扫依赖 syncSessions 异步完成后再进入页面才可见（fail-closed 不误报）；回看入口首批只铺练习历史+错题本复习流，其余场景待后续轮次。
+- 详见 docs/iter/round-3/design-r336-ask-qid-link.md。

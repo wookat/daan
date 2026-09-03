@@ -32,6 +32,7 @@
                 <view v-if="d.question.hs_explanation || d.question.explanation" class="d-expl">{{ d.question.hs_explanation || d.question.explanation }}</view>
                 <view class="d-ops">
                   <text class="d-op" role="button" aria-label="AI 详解本题" @click.stop="askFromHistory(d)">AI 详解本题</text>
+                  <text v-if="seenAsk" class="d-op seen" role="button" aria-label="回看 AI 详解" @click.stop="openSeenAsk">回看 AI 详解</text>
                 </view>
               </view>
             </view>
@@ -55,12 +56,13 @@
 <script>
 import { request, snapPeek, anonUid, trackEvent } from '../../api.js';
 import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
+import { askQid, findAskSid } from '../../ask-link.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论', shizheng: '时事政治' };
 
 export default {
   data() {
-    return { items: [], loaded: false, loadErr: '', openIdx: -1, detail: [], detailLoading: false, openDetailIdx: -1 };
+    return { items: [], loaded: false, loadErr: '', openIdx: -1, detail: [], detailLoading: false, openDetailIdx: -1, seenAsk: null };
   },
   computed: {
     wrongQs() {
@@ -107,6 +109,7 @@ export default {
       }
       this.openIdx = i;
       this.openDetailIdx = -1;
+      this.seenAsk = null;
       this.detail = [];
       this.detailLoading = true;
       const s = this.items[i];
@@ -124,6 +127,14 @@ export default {
       const d = this.detail[j];
       if (!d || !d.question) return;
       this.openDetailIdx = this.openDetailIdx === j ? -1 : j;
+      this.seenAsk = this.openDetailIdx === j
+        ? findAskSid(uni.getStorageSync('askSessions'), uni.getStorageSync('askCurSession'), d.question_id)
+        : null;
+    },
+    openSeenAsk() {
+      if (!this.seenAsk) return;
+      if (this.seenAsk.sid > 0) uni.setStorageSync('askOpenSid', this.seenAsk.sid);
+      uni.switchTab({ url: '/pages/ask/ask' });
     },
     askFromHistory(d) {
       const q = d && d.question;
@@ -131,6 +142,9 @@ export default {
       if (!text) return;
       trackEvent('history_ask_click', d.module || '');
       uni.setStorageSync('redoQuestion', text);
+      const qid = askQid(d.question_id);
+      if (qid) uni.setStorageSync('redoQid', qid);
+      else uni.removeStorageSync('redoQid');
       const ans = askAnswerLetter(d.picked);
       if (ans) uni.setStorageSync('redoAnswer', ans);
       else uni.removeStorageSync('redoAnswer');
@@ -195,6 +209,7 @@ export default {
 .d-expl { font-size: 23rpx; color: var(--ink-2); line-height: 1.7; background: var(--bg-2, #f6f7fa); border-radius: 12rpx; padding: 14rpx 18rpx; }
 .d-ops { display: flex; gap: 28rpx; }
 .d-op { font-size: 24rpx; color: var(--brand-text, #2e5bff); font-weight: 600; }
+.d-op.seen { color: var(--ink-3, #6b7280); }
 .d-mark { font-size: 26rpx; font-weight: 800; width: 34rpx; text-align: center; flex-shrink: 0; }
 .d-mark.ok { color: var(--ok-strong, #15803d); }
 .d-mark.bad { color: var(--bad-strong, #b91c1c); }
