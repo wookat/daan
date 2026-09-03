@@ -1,6 +1,32 @@
 // R360：按卷练习「只练剩余」——paperContinuePlan fail-closed 纯函数
 import { describe, it, expect } from 'vitest';
-import { paperContinuePlan, paperPracticedState } from '../src/paper-continue.js';
+import { paperContinuePlan, paperPracticedState, paperQuery } from '../src/paper-continue.js';
+
+describe('paperQuery', () => {
+  it('基础：src 必带且编码', () => {
+    expect(paperQuery({ source: '2015新疆卷' }, false, 'u1')).toBe('src=' + encodeURIComponent('2015新疆卷'));
+  });
+
+  it('pid 仅正整数才带（fail-closed）', () => {
+    expect(paperQuery({ source: 's', pid: 38 }, false, '')).toBe('src=s&pid=38');
+    expect(paperQuery({ source: 's', pid: 0 }, false, '')).toBe('src=s');
+    expect(paperQuery({ source: 's', pid: -3 }, false, '')).toBe('src=s');
+    expect(paperQuery({ source: 's', pid: 1.5 }, false, '')).toBe('src=s');
+    expect(paperQuery({ source: 's', pid: '38' }, false, '')).toBe('src=s');
+    expect(paperQuery({ source: 's' }, false, '')).toBe('src=s');
+  });
+
+  it('uid 仅不计时且非空才带', () => {
+    expect(paperQuery({ source: 's', pid: 7 }, true, 'u-1')).toBe('src=s&pid=7&uid=u-1');
+    expect(paperQuery({ source: 's', pid: 7 }, false, 'u-1')).toBe('src=s&pid=7');
+    expect(paperQuery({ source: 's' }, true, '')).toBe('src=s');
+  });
+
+  it('非法入参 fail-closed', () => {
+    expect(paperQuery(null, true, 'u')).toBe('src=&uid=u');
+    expect(paperQuery({}, false, '')).toBe('src=');
+  });
+});
 
 describe('paperContinuePlan', () => {
   it('非数组 fail-closed 空计划', () => {

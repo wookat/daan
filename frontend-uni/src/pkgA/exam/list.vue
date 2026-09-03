@@ -270,7 +270,7 @@ export default {
     },
     practicePaper(p) {
       // 不计时逐题练习，复用刷题页既有按卷练习协议
-      uni.setStorageSync('practiceLaunch', { kind: 'paper', source: p.psource, title: p.title, untimed: true });
+      uni.setStorageSync('practiceLaunch', { kind: 'paper', source: p.psource, pid: p.id, title: p.title, untimed: true });
       uni.navigateTo({ url: '/pages/practice/practice' });
     },
     openBestReport(p) {
