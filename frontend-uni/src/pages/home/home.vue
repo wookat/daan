@@ -329,10 +329,10 @@
         <text class="more-t">迷你模考</text>
         <text class="more-s">30 题 · 30 分钟</text>
       </view>
-      <view class="card more-c" @click="openPapers">
+      <view class="card more-c" @click="goExamList">
         <view class="more-ico"><l-icon name="files" :size="20" color="#0d9488" /></view>
         <text class="more-t">真题卷练习</text>
-        <text class="more-s">按卷连做 · 统一判分</text>
+        <text class="more-s">卷库选卷 · 不计时逐题练</text>
       </view>
       <view class="card more-c" @click="goPlaza">
         <view class="more-ico"><l-icon name="message-circle" :size="20" color="#7c3aed" /></view>
@@ -459,26 +459,6 @@
       </view>
     </view>
 
-    <!-- 真题卷库 sheet -->
-    <view v-if="paperSheet" class="mask" @click="paperSheet = false">
-      <view class="sheet" @click.stop>
-        <view class="grab" />
-        <view class="sheet-h">
-          <text class="sheet-t">真题卷库 · 选择试卷</text>
-          <view class="sheet-x" role="button" aria-label="关闭" @click="paperSheet = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
-        </view>
-        <view v-if="!papers.length" class="spin">试卷加载中…</view>
-        <scroll-view v-if="paperRegions.length > 1" scroll-x class="pr-scroll">
-          <text class="set-chip" :class="{ on: !paperRegion }" @click="paperRegion = null">全部</text>
-          <text v-for="rg in paperRegions" :key="rg" class="set-chip" :class="{ on: paperRegion === rg }" @click="paperRegion = rg">{{ rg }}</text>
-        </scroll-view>
-        <view v-for="p in shownPapers" :key="p.source" class="sub-chip" @click="startPaper(p)">
-          <text class="sub-name">{{ p.title }}</text>
-          <text class="sub-n">{{ p.n }} 题</text>
-        </view>
-      </view>
-    </view>
-
     <!-- 选二级题型 sheet -->
     <view v-if="subSelect" class="mask" @click="subSelect = null">
       <view class="sheet" @click.stop>
@@ -528,7 +508,6 @@ export default {
     return {
       counts: [],
       subSelect: null,
-      paperSheet: false,
       customOpen: false,
       exporting: false,
       exportConfirm: false,
@@ -545,8 +524,6 @@ export default {
       setupBusy: false,
       pf: { exam_type: '国考', target_region: '', exam_date: '', target_score: 70, daily_minutes: 60, base_level: '零基础' },
       FOCUS_MODS: { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断' },
-      papers: [],
-      paperRegion: null,
       subProg: {},
       submodules: [],
       pstats: { byModule: {}, days: {} },
@@ -590,16 +567,6 @@ export default {
     },
     dueReview() {
       return (this.plan && this.plan.due_mistakes) || 0;
-    },
-    paperRegions() {
-      const seen = [];
-      for (const p of this.papers) {
-        if (p.region && !seen.includes(p.region)) seen.push(p.region);
-      }
-      return seen.sort((a, b) => a.localeCompare(b, 'zh'));
-    },
-    shownPapers() {
-      return this.paperRegion ? this.papers.filter((p) => p.region === this.paperRegion) : this.papers;
     },
     todayCount() {
       // 服务端 answer_log（Asia/Shanghai 日界，按当前 uid）为准；
@@ -832,10 +799,6 @@ export default {
         itemList: days.map((d, i) => d + (i === 0 ? '（昨天）' : i === 1 ? '（前天）' : '')),
         success: (res) => cb(days[res.tapIndex]),
       });
-    },
-    startPaper(p) {
-      this.paperSheet = false;
-      this.launch({ kind: 'paper', source: p.source, title: p.title });
     },
     goMini() {
       uni.navigateTo({ url: '/pkgA/exam/exam?mini=1' });
@@ -1168,17 +1131,6 @@ export default {
         uni.setStorageSync('groupSize', p.groupSize);
       }
     },
-    async openPapers() {
-      this.paperSheet = true;
-      if (this.papers.length) return;
-      try {
-        const d = await request('/api/papers');
-        this.papers = d.items || [];
-      } catch (e) {
-        uni.showToast({ title: '试卷加载失败：' + e.message, icon: 'none' });
-        this.paperSheet = false;
-      }
-    },
     async loadPlan() {
       const uid = uni.getStorageSync('anonUid');
       if (!uid) return;
@@ -1506,8 +1458,6 @@ export default {
 :deep(.sheet-cta) { margin-top: 24rpx; width: 100%; border-radius: 20rpx !important; background: linear-gradient(135deg, #5b8af8, var(--brand)) !important; box-shadow: 0 8rpx 24rpx rgba(46, 91, 255, 0.28); font-weight: 600; }
 :deep(.sheet-cta2) { margin-top: 16rpx; width: 100%; border-radius: 20rpx !important; }
 .custom-note { margin-top: 14rpx; text-align: center; font-size: 21rpx; color: var(--ink-3); }
-.pr-scroll { white-space: nowrap; margin-bottom: 12rpx; }
-.pr-scroll .set-chip { margin-right: 12rpx; }
 .sub-chip { display: flex; justify-content: space-between; align-items: center; gap: 16rpx; padding: 22rpx 8rpx; min-height: 44px; border-top: 1rpx solid var(--line); box-sizing: border-box; }
 .sub-chip:first-of-type { border-top: none; }
 .sub-chip.all-chip .sub-name { color: var(--brand-text); font-weight: 600; }

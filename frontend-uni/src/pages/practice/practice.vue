@@ -731,7 +731,7 @@ export default {
         return;
       }
       if (launch.kind === 'paper') {
-        this.startPaper({ source: launch.source, title: launch.title || '真题卷' });
+        this.startPaper({ source: launch.source, title: launch.title || '真题卷' }, !!launch.untimed);
         return;
       }
       if (launch.kind === 'reinforce') {
@@ -963,7 +963,7 @@ export default {
         this.paperSheet = false;
       }
     },
-    async startPaper(p) {
+    async startPaper(p, untimed = false) {
       if (this._starting) return;
       this._starting = true;
       if (this.beiMode) {
@@ -991,18 +991,25 @@ export default {
         this.lastModule = null;
         this.lastSubmodule = null;
         this.session = true;
-        this.examMode = true;
-        this.examLeft = 120 * 60;
-        this.startQTimer();
-        if (this.examTimer) clearInterval(this.examTimer);
-        this.examTimer = setInterval(() => {
-          this.examLeft--;
-          if (this.examLeft <= 0) {
-            uni.showToast({ title: '时间到，自动交卷', icon: 'none' });
-            this.finishExam();
-          }
-        }, 1000);
-        uni.showToast({ title: p.title + ' 开始：交卷后统一判分', icon: 'none', duration: 1800 });
+        if (untimed) {
+          this.examMode = false;
+          if (this.examTimer) clearInterval(this.examTimer);
+          this.startQTimer();
+          uni.showToast({ title: p.title + ' 开始：不计时逐题练', icon: 'none', duration: 1800 });
+        } else {
+          this.examMode = true;
+          this.examLeft = 120 * 60;
+          this.startQTimer();
+          if (this.examTimer) clearInterval(this.examTimer);
+          this.examTimer = setInterval(() => {
+            this.examLeft--;
+            if (this.examLeft <= 0) {
+              uni.showToast({ title: '时间到，自动交卷', icon: 'none' });
+              this.finishExam();
+            }
+          }, 1000);
+          uni.showToast({ title: p.title + ' 开始：交卷后统一判分', icon: 'none', duration: 1800 });
+        }
       } catch (e) {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       } finally {

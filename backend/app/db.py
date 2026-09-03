@@ -3265,6 +3265,22 @@ def _refresh_papers_cache(key: tuple) -> None:
             _papers_refreshing.discard(key)
 
 
+_PSOURCE_MIN_N = 20  # 对齐练习流按卷启动的最少题数守卫
+
+
+def _dominant_paper_source(qids: list[int], src_by_qid: dict[int, str]) -> str | None:
+    """卷内活跃真题占多数的 source；不足 _PSOURCE_MIN_N 题回 None（fail-closed）。"""
+    counts: dict[str, int] = {}
+    for i in qids:
+        s = src_by_qid.get(i)
+        if s:
+            counts[s] = counts.get(s, 0) + 1
+    if not counts:
+        return None
+    src, n = max(counts.items(), key=lambda kv: kv[1])
+    return src if n >= _PSOURCE_MIN_N else None
+
+
 def _list_exam_papers_base(conn, kind: str | None, year: int | None,
                            region: str | None, force: bool = False) -> list[dict]:
     """uid 无关的卷列表（含活跃题数 n / takers），按筛选键 TTL 缓存；
@@ -3307,17 +3323,22 @@ def _list_exam_papers_base(conn, kind: str | None, year: int | None,
     qids_by_paper = {r["id"]: json.loads(r["question_ids"] or "[]") for r in rows}
     all_ids = list({i for ids in qids_by_paper.values() for i in ids})
     active: set[int] = set()
+    src_by_qid: dict[int, str] = {}
     for chunk_start in range(0, len(all_ids), 900):
         chunk = all_ids[chunk_start:chunk_start + 900]
-        active.update(r["id"] for r in conn.execute(
-            f"SELECT id FROM questions WHERE disabled=0 AND id IN ({','.join('?' * len(chunk))})",
+        for q in conn.execute(
+            f"SELECT id, source, is_real FROM questions WHERE disabled=0 AND id IN ({','.join('?' * len(chunk))})",
             chunk,
-        ))
+        ):
+            active.add(q["id"])
+            if q["is_real"] and q["source"]:
+                src_by_qid[q["id"]] = q["source"]
     base = []
     for r in rows:
         d = dict(r)
         d.pop("question_ids")
         d["n"] = sum(1 for i in qids_by_paper[d["id"]] if i in active)
+        d["psource"] = _dominant_paper_source(qids_by_paper[d["id"]], src_by_qid)
         soc = takers.get(d["id"])
         d["takers"] = soc["n"] if soc else 0
         d["avg_score"] = soc["avg"] if soc else None

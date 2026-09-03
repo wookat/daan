@@ -1444,3 +1444,12 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 测试数据清理：test-r356-ui 全库 DELETED {answer_log 1/growth_events 3}，LEFTOVER {}，review_cur 0 行；保护 uid DB diff 逐表一致 + localStorage EXACT MATCH n=28。
 - 经验：uni.getStorageSync 注入必须用 `{"type":...,"data":...}` 包装格式（裸 JSON 静默读不出）；UTC→本地日键类修复需 CDP 时区覆写制造跨日差做鉴别试验（override 随 socket 关闭即丢，需常驻 holder）。
 - 详见 docs/iter/round-3/r356-w1-h5-followups.md。
+
+### R357 真题卷入口合并到卷库操作台 + R357b 不计时修复（2026-08-29，PR #562，分支 devin/1788462075-r357-paper-console-merge）
+- 取证：首页有两个纸卷入口——结构化卷库（190 卷、模考/报告/社会证明/进度/PDF/续考）与旧版 source 派生卷 sheet（141 卷、仅标题+题数+不计时练），用户视角重复且旧 sheet 明显弱。
+- 收口：a) 后端 /api/exam/papers 每卷新增可选 psource——从卷内活跃（disabled=0）真实（is_real 且有 source）题目推导主 source，主来源 <20 题 fail-closed 返回 null（_dominant_paper_source 纯函数 + 4 个契约测试）；b) 卷库卷卡命中 psource 显示「按卷练习」，写 practiceLaunch {kind:'paper', source, title, untimed:true}；c) 首页「真题卷练习」卡改跳 /pkgA/exam/list，旧卷 sheet 及全部孤儿代码下线；d) /api/papers、/api/paper_questions 保留（practice 页仍消费）。
+- R357b：首版 startPaper() 无条件 examMode=true+120min 倒计时，「按卷练习」实际进模考态（testing agent 生产实测抓到）——补 untimed 参数分支：untimed 时 examMode=false、无倒计时、逐题即时判分，toast「不计时逐题练」；旧 sheet 路径行为不变。
+- 验证：ruff/pytest 255(+4)/pyright 0/lint/vitest 460/build 全绿；生产 rev ee8834a、bundle index-Dc-_YXhO.js、Lighthouse 全过；生产 /api/exam/papers zhenti 120 卷中 117 有 psource、id 40（48 活跃题但无主 source）等 fail-closed 为 null。testing agent 两轮实测：首页跳转/psource 入口显隐/按卷练习不计时即时判分/开始模考回归/375+1440/console 0 error/0 次 /api/explain。
+- 测试数据清理：test-r357-ui 两轮 DELETED {mistakes 1/answer_log 3/exam_attempts 3/growth_events 1/exam_progress 2}，LEFTOVER {}，review_cur 0 行；保护 uid DB 34 表+localStorage EXACT MATCH n=28。
+- 遗留观察（候选下轮）：卷库「未交卷」条「放弃」只清本地，服务端 exam_progress 行不删，刷新/跨设备会回填复活（本轮实测 attempt 217 再现）。
+- 详见 docs/iter/round-3/r357-paper-console-merge.md。

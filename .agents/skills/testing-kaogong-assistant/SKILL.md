@@ -5,6 +5,12 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R357 卷库/按卷练习走查新经验
+- 生产 SQLite 是 `/data/data.db`（容器 env `DB_PATH=/data/data.db`）；`/data/kaogong.db`、`/data/app.db` 是 0 字节空壳，连上查表会得 `TABLES: []`——查数前先 `printenv DB_PATH` 确认。
+- practice.vue 的 `startPaper()`（practiceLaunch kind:'paper' 协议）R357 首版**无条件进模考态**（`examMode=true` + 120min 倒计时），卷名只以 toast 1.8s 一闪；任何声称「不计时逐题练」的按卷入口都要实际点进去核对计时 chip。R357b 后 `startPaper(p, untimed)` 有 untimed 分支——untimed 按卷练习断言点是 toast「不计时逐题练」+ 正计时 0:00 起 + 答错即时判分。
+- 卷卡四按钮态（开始模考/按卷练习/看报告/导出 PDF）可快速构造：对有 psource 的卷开始模考→0 答直接交卷（生成 attempt + best_attempt_id）。
+- 卷库「未交卷」条的「放弃」确认弹窗：连续快速点击（确认后立即点其它按钮）可能不生效，需等 1s 截图确认条已消失；且放弃后服务端 `exam_progress` 行可能仍残留（本地隐藏），清数据时要单独查。
+
 ## R356 本地日键/uni-storage 注入走查新经验
 - **注入 localStorage 供 uni.getStorageSync 读取必须用包装格式** `{"type":"object","data":{...}}`（数字用 `{"type":"number","data":20}`）——裸 JSON 字符串（如直接 `{"days":{...}}`）getStorageSync 读不出、页面（统计 7 日趋势等）会静默不渲染，容易误判为 bug。
 - **验证「UTC→本地 dayKey」类修复要制造时区差**：盒子是 UTC，本地键==UTC 键时新旧代码不可区分。CDP `Emulation.setTimezoneOverride {timezoneId:"Asia/Shanghai"}` 后（UTC 晚间时段上海已是次日），用上海日期做 pstats.days 键——修复代码命中显示计数，旧 UTC 代码查昨日键显示 0，天然鉴别。tz override 与 metrics override 一样**随 socket 关闭即丢**，需常驻 holder（/tmp/cdp174/holdtz.py）。
