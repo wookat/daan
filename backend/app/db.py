@@ -2546,7 +2546,7 @@ def list_papers() -> list[dict]:
     return papers[:120]
 
 
-def paper_questions(source: str, limit: int = 140) -> list[dict]:
+def paper_questions(source: str, limit: int = 140, uid: str | None = None) -> list[dict]:
     conn = get_conn()
     rows = conn.execute(
         """SELECT * FROM questions
@@ -2554,11 +2554,23 @@ def paper_questions(source: str, limit: int = 140) -> list[dict]:
            ORDER BY id LIMIT ?""",
         (source, limit),
     ).fetchall()
+    done_qids: set[int] = set()
+    if uid and rows:
+        _ensure_answer_log(conn)
+        done_qids = {
+            r["question_id"] for r in conn.execute(
+                "SELECT DISTINCT question_id FROM answer_log"
+                " WHERE uid=? AND question_id IS NOT NULL",
+                (uid,),
+            )
+        }
     conn.close()
     out = []
     for r in rows:
         d = dict(r)
         d["options"] = json.loads(d.get("options") or "{}")
+        if uid:
+            d["done"] = d["id"] in done_qids
         out.append(d)
     return out
 
