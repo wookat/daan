@@ -1484,3 +1484,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 观察项（既有非本轮）：部分卷卡 n（question_ids∩活跃题，如 2015 新疆卷 38）≠ paper_questions?src= 会话题数（同 source 120 题）——完成态分母与全练完弹窗 N 可能对不上，候选后续轮对齐。
 - 测试数据清理：test-r361-ui DELETED {mistakes:2, answer_log:76(含72构造行), exam_attempts:1, reinforce_log:1, growth_events:1}，LEFTOVER 空，review_cur 0 行；保护 uid DB 37 表+localStorage EXACT n=30。
 - 详见 docs/iter/round-3/r361-paper-complete-state.md。
+
+### R362 按卷练习会话题集对齐卷面（2026-08-29，PR #568，分支 devin/1788474838-r362-paper-align）
+- 取证：R361 观察项实证为结构性口径分裂——卷卡 n/practiced（R359）= exam_papers.question_ids∩活跃题（2015 新疆卷 38），而按卷练习会话 = paper_questions(source) 同 source 全集（LIMIT 140，实测 120）；进度分母、R360 续练弹窗、R361 全练完弹窗三方对不上。
+- 收口：a) db.paper_questions 补可选 pid——命中有效卷且 question_ids 非空时题集 = question_ids∩disabled=0，保持卷面顺序（IN 分块 900，与模考同口径，不加 is_real 过滤）；未命中/非法回落原 source 路径 fail-open；uid done 语义不变；b) /api/paper_questions 契约补可选 pid（仅正整数透传）；c) 前端 paper-continue.js 补 paperQuery(p, untimed, uid) fail-closed 纯函数（pid 仅正整数带、uid 仅 untimed 带），list.vue practiceLaunch 补 pid: p.id，practice.vue 透传消费；R360/R361 弹窗逻辑零改动，分母对齐后语义自动一致。
+- 验证：ruff/pytest 269(+5)/pyright 0（by_id/rows 需显式 sqlite3.Row 注解否则 7 errors）/lint/vitest 474(+4)/build 全绿；祖先链核对通过；生产 rev 644d31b、bundle index-BBfYVVxQ.js、Lighthouse 全过（/ perf 0.98、/tiku/ 1.00）。curl 实证：pid=133→38 题、无/0/非法 pid→120 题回落。testing agent 实测（uid test-r362-ui）：抓包带 pid=133→会话 1/38 答题卡 38 格（旧 1/120）；答 2 题→卷卡 2/38、R360 弹窗「只练剩下的 36 题」→1/36 从原第 3 题；DB 构造全练完（必须用 pid 响应 38 qids 非 src 全集）→卡 38✓=弹窗 38=重练 1/38 三方一致；2025 四川 75/75 回归、模考 exam/start 零 paper_questions 请求；console 0 error、0 次 /api/explain、375/1440 无溢出。
+- 测试数据清理：test-r362-ui DELETED {mistakes:1, answer_log:38, exam_attempts:1, growth_events:1}，LEFTOVER 空，review_cur 0 行；保护 uid DB+localStorage EXACT n=30。
+- 详见 docs/iter/round-3/r362-paper-session-alignment.md。
