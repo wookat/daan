@@ -5,6 +5,11 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R330 删除墓碑/网络失败模拟走查新经验
+- 模拟某类请求失败（弱网）：对目标 tab 的 CDP 连接 `Fetch.enable{patterns:[{urlPattern:'*api/ask/sessions*',requestStage:'Request'}]}`，对 method=DELETE `Fetch.failRequest(ConnectionFailed)`、其余 `continueRequest`；拦截随该 ws 连接存活，需常驻进程（硬刷不掉）。杀进程后拦截自动解除。注意 `pgrep -f 脚本名` 会匹配到自身 bash -c 命令行，判存活要用完整命令串或先 pgrep -a 核对。
+- 墓碑断言口径：删除后读 localStorage `askDelTombs`（uni storage 包一层 `{"type":"object","data":{...}}`）；「不复活」的强证据 = 服务端 GET 仍返回该 sid + 硬刷后 UI 列表无该条（证明是 filterTombstoned 而非远端已删）。
+- 多窗口切换前台不可靠时用 browser WS `Target.activateTarget{targetId}` 精确置前，再截图取证。
+
 ## R328 ask 历史会话跨设备同步走查新经验
 - 多设备模拟：browser WS `Target.createBrowserContext`+`Target.createTarget{browserContextId}` 造隔离"设备"，各自注入同 anonUid（纯字符串）。注意 `Emulation.setDeviceMetricsOverride` 随 CDP 连接断开而失效——需常驻 holder 进程保持 ws 连接（见 /tmp/r328_holdB.py 模式）。
 - 造数不触 LLM：注入本地 askSessions 一条造数会话 → UI 历史点开恢复（loadSession 会移除该条并 DELETE 远端）→ 点「新对话」走真实 archiveCurrent → POST /api/ask/sessions。全程 0 次 /api/explain 可用网络抓包 grep 断言。

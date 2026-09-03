@@ -1227,3 +1227,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 未生产实测：cap20 截断分支（vitest 覆盖）；真实触屏。
 - 环境观察项（本阶段第 4 次）：测试期间生产两次因同机 recruit 负载（postgres 长查询+长跑 pip install，load ~17）503/超时，watchdog 自愈重启 kaogong 容器；未动任何服务；持续建议独立主机。
 - 详见 docs/iter/round-3/design-r329-ask-session-view-keep.md。
+### R330 AI 问答历史删除墓碑 + 失败重试——收口 DELETE 失败后会话「复活」（2026-08-29，PR #527，基于 #526 分支 devin/1788408896-r330-ask-del-tombstone）
+- 取证：R329 生产实景发现 delSession 的 dropRemoteSession 失败静默（.catch(()=>{})），503 窗口本机已移除但服务端残留，下次 syncSessions union merge 把已删会话并回本机——「删除复活」；本阶段同机负载 503 已 4 次实景出现，缺陷真实可感知。粉笔/夸克删除历史即终态。
+- 收口（纯前端零后端/零契约）：ask-sessions.js 新增墓碑纯函数 addTombstone/removeTombstone/pruneTombstones/filterTombstoned（storage 键 askDelTombs={sid:deletedAtMs}，TTL 7 天、cap 40 剔最旧、fail-closed、输入不可变）；ask.vue delSession 先记墓碑再 DELETE，成功才消墓碑；syncSessions 先 prune、远端 items 经 filterTombstoned 再 merge、对每个墓碑 sid 补发 DELETE 重试；archiveCurrent 同 sid 再归档消墓碑（撤销删除）。
+- 验证：lint/vitest 408(+4)/build 全绿（纯前端，后端门禁沿用 R328 基线）；生产 rev e5c4ae3、bundle index-B0kkHHfg.js；testing agent 实测（uid test-r330-tomb，CDP Fetch.failRequest 定向拦截 DELETE 模拟弱网）：拦截下删除→墓碑落 storage→硬刷后服务端仍返回该 sid（curl 实证残留）但列表不复活（核心断言，改动前必复活）；恢复网络 onShow 自动补发 DELETE 200、墓碑清空、服务端回读已删；正常删除墓碑即时消除；R329 查看不销毁/R328 跨设备回归；双视口溢出 0、console 0 error、零 /api/explain；Lighthouse 全过（/ 0.98、/tiku/ 1.00）。清理 DELETED 3 / LEFTOVER 0 / PROTECTED_MATCH True（32 表）。
+- 边界（如实）：墓碑仅本机——B 删、A 弱网窗口时 A 无墓碑仍可能短暂看到远端残留（无服务端墓碑的固有限制，本轮不改契约）；未生产实测：TTL 7 天/cap 40 分支（vitest 覆盖）、archiveCurrent 撤销分支（生产 UI 不可达）。
+- 详见 docs/iter/round-3/design-r330-ask-session-del-tombstone.md。
+
