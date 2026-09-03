@@ -1262,3 +1262,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：ruff/pytest 204/pyright 0/lint/vitest 413/build 全绿；生产 rev 2bb985c testing agent 双视口实测（uid test-r334-fav）：1440/375 入口出现、点击不收起直接跳 ask 页、预填单份、预置 redoAnswer=B 被清（无 chip、storage null）、fav_ask_click 200×2、三个既有操作回归、0 次 /api/explain、console 0 error、双视口溢出 0；Lighthouse / 独立复跑×2 a11y 1.00、LCP 1811/1924ms（部署首跑 0.94/2643ms 为单样本波动）。
 - 边界（如实）：真实触屏未实测；「移动到…」仅验弹层未执行实际移动；375 下三个回归操作未单测（1440 已验）；测试 uid 全库清理 DELETED 4 / LEFTOVER 0、保护 uid 快照一致。
 - 详见 docs/iter/round-3/design-r334-fav-ask-entry.md。
+
+### R335 练习历史逐题回看展开态 + 「AI 详解本题」入口（2026-08-29，PR #532，分支 devin/1788416965-r335-history-detail-expand）
+- 取证：练习历史会话详情逐题行只有 ✓/✗ + 两行截断题干 + 错题「我的答案 X · 正解 Y」+ 用时，不可点开；后端 practice_history_detail 每行早已附完整题库原题（options/answer/explanation/hs_explanation），数据就位纯呈现缺口；用户想弄懂错题只能「重练」重做。粉笔练习历史支持逐题点开看解析。
+- 收口（纯前端 + 埋点白名单，零新 endpoint/表/URL 契约）：有 d.question 的逐题行可点展开（openDetailIdx 单开互斥，切会话重置）：题干去截断 + 选项（正解绿 ans/我的错选红 bad）+ 正确答案/我的答案行 + 解析；question=null（下架题）行不可展开无箭头；展开态「AI 详解本题」= askPrefill 预填（空 no-op）→ trackEvent('history_ask_click', module) → 写 redoQuestion；picked 经 askAnswerLetter 有效写 redoAnswer（本场景有真实作答语义，区别 R333 搜索/R334 收藏）、无效显式 remove → switchTab ask 页；@click.stop 防冒泡；team.py 白名单补 history_ask_click。
+- 验证：ruff/pytest 204/pyright 0/lint/vitest 413/build 全绿；生产 rev c7a6dd9 testing agent 双视口实测（uid test-r335-history，API 造数 1错+1对+1未答）：逐题展开呈现/单开互斥/再点收起、错题进 ask chip=B 错选、对题 chip=A 不串题、未答（预置 redoAnswer=D）无 chip 且 storage 被清、history_ask_click 200×4、重练/会话折叠/快照即显回归、0 次 /api/explain、双视口溢出 0、console 0 error。
+- 边界（如实）：真实触屏未实测；下架题（question=null）行分支无法安全构造未生产实测（代码 fail-closed）；Lighthouse 本轮跳过（分包 hash 路由无独立文档，R334 刚复跑首页基线）；测试期间宿主一度整体不可达 4–5 分钟（共享宿主负载，自行恢复，未归因本应用）；测试数据全库清理 DELETED 10 / LEFTOVER 0、保护 uid 快照一致。
+- 详见 docs/iter/round-3/design-r335-history-detail-expand.md。

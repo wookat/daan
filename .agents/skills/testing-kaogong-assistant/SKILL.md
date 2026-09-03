@@ -5,6 +5,11 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R335 练习历史走查新经验
+- 练习历史造数最省路径：`POST /api/answer_log {uid,items:[{qid,correct,picked,secs}]}`（study_api.py:138）；同批写入同一时间戳即成一个会话（分组间隔 1800s，db.py `_HISTORY_SESSION_GAP`）。picked 省略即「未答」分支（askAnswerLetter 无效 → 删 redoAnswer 无 chip）。取有效题 id/正解用 `GET /api/questions?module=yanyu&limit=5`（/api/search/question/{id} 对不存在 id 可能长挂/非 JSON）。
+- localStorage 恢复大备份（28+ keys）不要经 CLI 参数传 oneshot.py（Argument list too long），要在 python 内直连 ws 发 Runtime.evaluate。备份文件若是双重 JSON 编码字符串需 json.loads 两次。
+- 生产共享宿主偶发不可达（HTTP 000/503 数分钟）：等待重试即可恢复，勿归因应用。
+
 ## R333 搜索页走查新经验
 - 搜索框输入中文 CJK 用 computer type 会失败（xdotool 打不出汉字）：先 UI 点击聚焦输入框，再 CDP `Input.insertText` 注入文本（等价真实 input 事件，会触发 uni 的 v-model 与去抖搜索）。ASCII/数字可直接 type。
 - code_hit 直达可用**纯数字题目 id**（如 `1274831`），带字母的语义码需匹配后端 `_QCODE_RE`（insights.py）且 parse 成功才命中。
