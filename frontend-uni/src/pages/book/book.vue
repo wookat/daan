@@ -65,7 +65,12 @@
       <view class="cb-card" @click.stop>
         <view class="cb-emoji">🎉</view>
         <view class="cb-t">今日复习已清零！</view>
-        <view class="cb-s">{{ celebrateN }} 道到期错题全部复习完成，遗忘曲线稳住了</view>
+        <template v-if="rSummary">
+          <view class="cb-s">到期 {{ celebrateN }} 道全部复习完成<template v-if="rSummary.pct !== null"> · 首答对 {{ rSummary.dueRight }} 道（{{ rSummary.pct }}%）</template></view>
+          <view v-if="rSummary.dueWrong" class="cb-s">答错 {{ rSummary.dueWrong }} 道已重出巩固<template v-if="rSummary.corrected"> · 纠正 {{ rSummary.corrected }} 道</template></view>
+          <view v-if="rSummary.extra" class="cb-s">加练同类题 {{ rSummary.extra }} 道 · 答对 {{ rSummary.extraRight }} 道</view>
+        </template>
+        <view v-else class="cb-s">{{ celebrateN }} 道到期错题全部复习完成，遗忘曲线稳住了</view>
         <button class="cb-btn" @click="closeCelebrate">太棒了，继续 ›</button>
       </view>
     </view>
@@ -522,6 +527,7 @@ import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
 import { askQid, findAskSid } from '../../ask-link.js';
 import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid, reviewAskAnswer } from '../../review-similar.js';
 import { buildReviewSnap, parseReviewSnap } from '../../review-snap.js';
+import { reviewSummary } from '../../review-summary.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 
@@ -545,6 +551,7 @@ export default {
       fontLv: normFontLv(uni.getStorageSync('fontLv')),
       celebrate: false,
       celebrateN: 0,
+      rSummary: null,
       reinforce: null,
       reinforceItems: [],
       rItems: [],
@@ -1277,12 +1284,15 @@ export default {
     async record(correct) {
       this.wasCorrect = correct;
       this.answered = true;
+      this.cur._res = correct;
       if (this.cur._extra) {
         if (!correct) this.saveExtraWrong(this.cur);
         return;
       }
       if (!correct && !this.cur._requeued) {
-        this.rItems.push({ ...this.cur, _requeued: true });
+        const { _res, ...rest } = this.cur;
+        void _res;
+        this.rItems.push({ ...rest, _requeued: true });
       }
       if (!correct) this.appendSimilar(this.cur);
       try {
@@ -1373,6 +1383,7 @@ export default {
         this.saveReviewSnap();
       } else {
         this.celebrateN = this.rItems.filter((q) => !q._extra && !q._requeued).length;
+        this.rSummary = reviewSummary(this.rItems);
         this.exitReview();
         this.celebrate = true;
         trackEvent('review_done_celebrate', 'book');
