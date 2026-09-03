@@ -5,6 +5,12 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R356 本地日键/uni-storage 注入走查新经验
+- **注入 localStorage 供 uni.getStorageSync 读取必须用包装格式** `{"type":"object","data":{...}}`（数字用 `{"type":"number","data":20}`）——裸 JSON 字符串（如直接 `{"days":{...}}`）getStorageSync 读不出、页面（统计 7 日趋势等）会静默不渲染，容易误判为 bug。
+- **验证「UTC→本地 dayKey」类修复要制造时区差**：盒子是 UTC，本地键==UTC 键时新旧代码不可区分。CDP `Emulation.setTimezoneOverride {timezoneId:"Asia/Shanghai"}` 后（UTC 晚间时段上海已是次日），用上海日期做 pstats.days 键——修复代码命中显示计数，旧 UTC 代码查昨日键显示 0，天然鉴别。tz override 与 metrics override 一样**随 socket 关闭即丢**，需常驻 holder（/tmp/cdp174/holdtz.py）。
+- practice 页「练习工具」面板行数随状态变化（背题开启后隐藏限时训练行），连续点击前每次都要重新截图定位，否则会误点 字号大小（点击循环 小/标准/大，多点两次可复位）。
+- 背题模式断言点：开启后不作答即出「背题模式 · 答案 X」固定横幅，`document.querySelector('.wrap').className` 应含 has-banner（375 下 padding-bottom 200px），用解析末元素 bottom < banner top 断言不遮挡。
+
 ## R336 ask-link 走查新经验
 - **分包 chunk 陈旧缓存坑**：主 bundle（index-*.js）核对为新版 ≠ 分包 chunk 也是新版。pkgA 异步 chunk（如 pkgA-stats-practice-history.*.js）可能命中浏览器/预取缓存跑旧代码，表现为"新功能不出现"。判别法：`performance.getEntriesByType("resource")` 看实际加载的 chunk 文件名，与 `fetch('/assets/index-*.js')` 里引用的 chunk 名比对；不一致就 CDP `Network.clearBrowserCache` + `Page.reload {ignoreCache:true}` 再测，避免把缓存误报为 bug。
 - 断言 storage 驱动的 UI 入口时，可用 `el.__vueParentComponent`（沿 .parent 上溯）直读页面组件 data（如 seenAsk/pendingQid/detail 行字段），能精确定位是"数据没到"还是"渲染没做"。
