@@ -1193,3 +1193,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：lint/vitest 389(+4)/build 全绿（修复后复跑）；生产 rev e10c472→a3b2800、bundle index-BwG3QXxG.js；testing agent 两轮实测：三档 computed px 逐档精确（13/12.5、15/14.5、17/16.5）、切档返回即时生效、材料折叠题干、复习流题干+解析、列表态不变、非法值('abc'/5)回落、1440/375 溢出 0/console 0 error；Lighthouse 全过（/ 0.98、/tiku/ 1.00）。清理 test-r325-font DELETED 19 / LEFTOVER 0，保护 uid 31 表快照一致。
 - 未生产实测：375 视口小档专项（375 已覆盖标准/大与溢出）；真实触屏。
 - 详见 docs/iter/round-3/design-r325-fontlv-global.md。
+
+### R326 复盘场景补「AI 详解本题」入口——报告解析浮层 + 错题本复习流 + 共享 askPrefill（2026-08-29，PR #523，分支 devin/1788394706-r326-ask-from-review）
+- SOP-10 四维复审后取证：普通刷题页已有 AI 深度讲解出口（redoQuestion → /pages/ask/ask），但成绩报告解析浮层（已是复盘工作台）与错题本复习流「看完解析仍不懂」的高价值时刻零 AI 出口（粉笔逐题 AI 讲题、夸克 AI 讲解+追问）。
+- 收口（纯前端零后端/零契约/零 URL 状态）：新增 src/ask-prefill.js 纯函数 askPrefill(stem, options)（题干非字符串/空白返回 ''、options 非法容错、空串不跳转 fail-closed）；practice.vue deepExplain 改共用口径；book.vue 列表卡「AI 详解」与复习流判分后新增「看不懂？AI 详解本题」；report.vue 浮层解析后、纠错前新增同名入口（材料题取 detailMat.stem 小题干，连看随题切换）。
+- 走查发现并修复（commit 674b272）：错题本侧预填选项重复两遍——mistakes.question_text 写入口径本就是题干+选项（practice.vue 与 exam_api._mistake_text 同构），初版再传 m.options 二次拼接；修正为 askPrefill(question_text, null)。
+- 验证：lint/vitest 394(+5)/build 全绿；生产 rev 80dce10→674b272、bundle index-CkDDJQ_o.js；testing agent 两轮双视口实测：三入口预填单份选项（textarea A. 计数=1）、报告连看切题不串题、资料分析只填小题干、既有练同类/纠错/收藏/social bar 回归、1440/375 溢出 0、console 0 error、Lighthouse 全过；未点「讲解」零 LLM 请求。清理 test-r326-ask 两轮累计 DELETED 14 / LEFTOVER 0，保护 uid 快照一致。
+- 未生产实测：真实触屏；askPrefill 空 stem fail-closed 生产分支（vitest 覆盖）；真实 LLM 讲解请求（刻意不触发）。
+- 详见 docs/iter/round-3/design-r326-ask-from-review.md。
