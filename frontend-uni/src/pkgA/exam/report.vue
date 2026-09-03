@@ -144,6 +144,23 @@
         </view>
       </view>
 
+      <view v-if="reasonRecap" class="card">
+        <view class="h">本卷错因画像</view>
+        <view
+          v-for="g in reasonRecap.rows"
+          :key="g.name"
+          class="rz-row"
+          role="button"
+          :aria-label="'去错题本复习错因：' + g.name"
+          @click="goBookReason(g.name)"
+        >
+          <text class="rz-name">{{ g.name }} ›</text>
+          <view class="rz-bar"><view class="rz-fill" :style="{ width: Math.round((g.n / reasonRecap.total) * 100) + '%' }" /></view>
+          <text class="rz-n">{{ g.n }}</text>
+        </view>
+        <text class="rz-tip">点击错因直达错题本对应待掌握错题（不限本卷）；解析浮层里可逐题标注错因</text>
+      </view>
+
       <view
         v-if="nextReco"
         class="next-cta"
@@ -383,6 +400,21 @@ export default {
       const r = this.report;
       return r ? r.items.filter((it) => it.picked && !it.correct).length : 0;
     },
+    reasonRecap() {
+      const r = this.report;
+      if (!r) return null;
+      const wrong = r.items.filter((it) => it.picked && !it.correct);
+      if (!wrong.length) return null;
+      const cnt = {};
+      for (const it of wrong) {
+        const k = this.reasonOpts.includes(it.error_reason) ? it.error_reason : '未标注';
+        cnt[k] = (cnt[k] || 0) + 1;
+      }
+      const rows = Object.keys(cnt)
+        .map((name) => ({ name, n: cnt[name] }))
+        .sort((a, b) => b.n - a.n);
+      return { rows, total: wrong.length };
+    },
     redoCount() {
       const r = this.report;
       return r ? buildExamRedoSet(r.items).length : 0;
@@ -597,6 +629,11 @@ export default {
       uni.setStorageSync('redoSet', set);
       uni.navigateTo({ url: '/pages/practice/practice' });
     },
+    goBookReason(name) {
+      if (!this.reasonOpts.includes(name) && name !== '未标注') return;
+      uni.setStorageSync('bookRzIntent', name);
+      uni.switchTab({ url: '/pages/book/book' });
+    },
     async setDetailReason(rz) {
       const d = this.detail;
       if (!d || !d.mistake_id) return;
@@ -689,6 +726,12 @@ export default {
 .legend { display: flex; gap: 24rpx; }
 .lg { display: inline-flex; align-items: center; gap: 8rpx; font-size: 22rpx; color: var(--ink-2); }
 .dot { width: 20rpx; height: 20rpx; border-radius: 50%; background: var(--soft-bg); border: 2rpx solid var(--line); display: inline-block; }
+.rz-row { display: flex; align-items: center; gap: 12rpx; margin-top: 10rpx; cursor: pointer; }
+.rz-name { width: 150rpx; font-size: 24rpx; color: var(--brand-text, #2e5bff); flex: none; }
+.rz-bar { flex: 1; height: 14rpx; border-radius: 7rpx; background: var(--line-soft, #eef0f4); overflow: hidden; }
+.rz-fill { height: 100%; border-radius: 7rpx; background: var(--warn, #f59e0b); }
+.rz-n { width: 56rpx; text-align: right; font-size: 24rpx; color: var(--ink-2); flex: none; }
+.rz-tip { display: block; margin-top: 14rpx; font-size: 22rpx; color: var(--ink-3); }
 .redo-cta { margin-top: 20rpx; border: 2rpx solid var(--brand); border-radius: 16rpx; padding: 18rpx 22rpx; background: var(--brand-soft); cursor: pointer; }
 .redo-cta-t { display: block; font-size: 26rpx; font-weight: 600; color: var(--brand); }
 .redo-cta-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }

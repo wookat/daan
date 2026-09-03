@@ -794,6 +794,14 @@ export default {
       uni.removeStorageSync('autoStartReview');
       this.autoReview = true;
     }
+    const rzIntent = uni.getStorageSync('bookRzIntent');
+    if (rzIntent) {
+      uni.removeStorageSync('bookRzIntent');
+      if (this.REASONS.includes(rzIntent) || rzIntent === '未标注') {
+        this.tab = 'todo';
+        this.rzFilter = rzIntent;
+      }
+    }
     this.load();
     // #ifdef H5
     if (!this._kbHandler && typeof window !== 'undefined') {
