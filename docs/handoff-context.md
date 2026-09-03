@@ -1234,3 +1234,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 边界（如实）：墓碑仅本机——B 删、A 弱网窗口时 A 无墓碑仍可能短暂看到远端残留（无服务端墓碑的固有限制，本轮不改契约）；未生产实测：TTL 7 天/cap 40 分支（vitest 覆盖）、archiveCurrent 撤销分支（生产 UI 不可达）。
 - 详见 docs/iter/round-3/design-r330-ask-session-del-tombstone.md。
 
+### R331 AI 问答进行中会话刷新恢复——askCurSession 快照回填（2026-08-29，PR #528，基于 #527 分支 devin/1788410294-r331-ask-cur-restore）
+- 取证：persistSession() 每次讲解/追问后写本机 askCurSession，但全页无回填路径——刷新后 results=[]，进行中会话 UI 消失；且 archiveCurrent 首行短路使快照进不了历史，「新对话」还会物理删除快照，已消耗真实 LLM 成本的问答永久丢失。粉笔/夸克刷新后会话上下文保留。
+- 收口（纯前端零后端/零契约）：ask-sessions.js 新增纯函数 sanitizeCurItems（非数组 fail-closed []，仅保留 explanation 非空 string 的 object 条目，输入不可变）；ask.vue loadSession 映射抽出 adoptItems 复用；新增 restoreCurSession()（onShow 中 syncSessions 前调用，results 为空守卫防重复回填）；curSid 由 data() 读 askCurSid 恢复，R329 同 sid 再归档自然衔接。
+- 验证：lint/vitest 410(+2)/build 全绿（纯前端，后端基线沿用 R330）；生产 rev 076df65、bundle index-CyabKi9q.js；testing agent 实测（uid test-r331-restore）：loadSession 产生进行中态→硬刷后讲解+追问自动回填（改动前必空态）、askCurSid 保留、「新对话」POST 复用原 sid 服务端不产生重复；无快照/字符串快照/混合非法快照 fail-closed；R328/R329/R330 回归；1440/375 溢出 0、console 0 error、零 /api/explain；Lighthouse 全过（/ 0.98、/tiku/ 1.00）。清理 DELETED 1 / LEFTOVER 0 / PROTECTED_MATCH True（32 表）。
+- 边界（如实）：进行中会话仍仅本机（R328 只服务端化已归档会话）；恢复后 ansCard/sim 等瞬态不还原（与 loadSession 同口径）；字符串非法快照被忽略但不主动清 storage（无害，候选顺手清理）；真实触屏未实测。
+- 详见 docs/iter/round-3/design-r331-ask-cur-session-restore.md。
