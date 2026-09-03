@@ -1218,3 +1218,12 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 环境观察项（本轮第 3 次）：测试期间生产因同机 recruit/softcopyright 负载（load ~20）503 约 15 分钟，watchdog 自愈；未动任何服务；同机资源争抢持续需老板关注。
 - 语义注意：loadSession（恢复历史）本地既有行为就是把该条移出历史，现同步删服务端对应条；远端删除不强制删本机副本（fail-open，本机优先）。
 - 详见 docs/iter/round-3/design-r328-ask-sessions-sync.md。
+
+### R329 AI 问答历史会话「查看不销毁」+ 再归档回写同一会话（2026-08-29，PR #526，基于 #525 分支 devin/1788405768-r329-ask-session-view-keep）
+- 取证：loadSession(i) 旧语义为「取出销毁」——点开历史即 splice 出本机列表 + dropRemoteSession 删服务端；回看一条讲解若不重新归档就永久丢失，重新归档又生成新 Date.now() sid 造成重复条目+ts 重置。粉笔/夸克历史会话均为「点开查看、列表保留、显式删除」。R328 服务端 POST 已按 (uid,sid) upsert，纯前端收口。
+- 收口（零后端/零契约）：ask-sessions.js 新增纯函数 upsertLocalSession(sessions,sess)（同 id 去重置顶、cap20、非法 fail-closed、输入不可变）；ask.vue data 补 curSid（初始化读 askCurSid storage 防刷新丢 sid）；loadSession 不再 splice/DELETE，记录 curSid=s.id 并写 askCurSid；archiveCurrent sid = curSid || storage(askCurSid) || Date.now()，本机改 upsertLocalSession，POST 同 sid upsert，归档后清 curSid/askCurSid；newSession 同步清；delSession 显式删除语义不变。
+- 验证：lint/vitest 404(+3)/build 全绿（纯前端未动后端，后端门禁沿用 R328 全绿基线）；生产 rev 3551a28、bundle index-D9AjcS4H.js；testing agent 实测（uid test-r329-keep）：A(1440) 恢复后历史仍保留、0 DELETE；「新对话」再归档 POST sid=原 sid、本机不重复、服务端同 sid ts 更新；B(375 隔离 context) 同步、恢复保留；B 显式删除→DELETE 200→C 全新 context 空态；双视口溢出 0、console 0 error、零 /api/explain；Lighthouse 全过（/ 1.00、/tiku/ 1.00）。清理 DELETED 2 / LEFTOVER 0 / PROTECTED_MATCH True（32 表）。
+- 实景发现（fail-open 边界，挂观察项）：弱网下显式删除首次 DELETE 503 时本机已移除但服务端残留，刷新后会话从远端「复活」，重删成功——符合失败静默设计但用户可感知，后续可考虑删除失败重试/墓碑。
+- 未生产实测：cap20 截断分支（vitest 覆盖）；真实触屏。
+- 环境观察项（本阶段第 4 次）：测试期间生产两次因同机 recruit 负载（postgres 长查询+长跑 pip install，load ~17）503/超时，watchdog 自愈重启 kaogong 容器；未动任何服务；持续建议独立主机。
+- 详见 docs/iter/round-3/design-r329-ask-session-view-keep.md。
