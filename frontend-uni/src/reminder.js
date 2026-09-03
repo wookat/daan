@@ -1,6 +1,8 @@
 // 学习提醒：H5 用 Notification API 本地定时提示今日目标进度；
 // 小程序端为订阅消息占位（无正式模板 ID 时降级隐藏订阅入口）。
 
+import { dayKey } from './checkin.js';
+
 // 微信订阅消息模板 ID（申请通过后填入即可启用订阅入口）
 export const MP_SUBSCRIBE_TEMPLATE_ID = '';
 
@@ -38,7 +40,7 @@ export async function requestNotificationPermission() {
 function todayProgress() {
   const pstats = uni.getStorageSync('pstats') || { days: {} };
   const goal = uni.getStorageSync('dailyGoal') || 20;
-  const done = (pstats.days || {})[new Date().toISOString().slice(0, 10)] || 0;
+  const done = (pstats.days || {})[dayKey()] || 0;
   return { done, goal };
 }
 
@@ -71,7 +73,7 @@ export function initReminderLoop() {
     const now = new Date();
     const cur = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     if (cur < time) return;
-    const today = now.toISOString().slice(0, 10);
+    const today = dayKey(now);
     if (uni.getStorageSync('remindFired') === today) return;
     uni.setStorageSync('remindFired', today);
     fireReminder();

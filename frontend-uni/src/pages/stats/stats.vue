@@ -357,7 +357,7 @@
 <script>
 import { request, snapPeek, anonUid, getAuthUser, authLogout, clearAuth, fetchCheckinSummary, trackEvent } from '../../api.js';
 import { md } from '../../md.js';
-import { checkinStreak } from '../../checkin.js';
+import { checkinStreak, dayKey } from '../../checkin.js';
 import { examTrend } from '../../exam-trend.js';
 
 // 旧版缓存的 AI 建议内联了旧紫色，读取时映射到品牌色
@@ -540,7 +540,7 @@ export default {
       for (let i = 6; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
-        const key = d.toISOString().slice(0, 10);
+        const key = dayKey(d);
         const done = days[key] || 0;
         out.push({
           key,

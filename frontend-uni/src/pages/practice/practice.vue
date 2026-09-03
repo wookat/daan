@@ -1,5 +1,5 @@
 <template>
-  <view class="wrap" :class="{ 'has-banner': picked, pdesk: session && cur }">
+  <view class="wrap" :class="{ 'has-banner': picked || beiMode, pdesk: session && cur }">
     <!-- 加载/空态（本页仅承载答题会话，选题在首页） -->
     <view v-if="!session && loadState === 'fail'" class="card loadfail">
       <text class="lf-t">题目加载失败</text>
