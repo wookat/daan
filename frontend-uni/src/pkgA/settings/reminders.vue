@@ -74,6 +74,7 @@
 
 <script>
 import { getReminderSettings, setReminderSettings } from '../../reminder.js';
+import { dayKey } from '../../checkin.js';
 // #ifdef H5
 import { request, anonUid } from '../../api.js';
 // #endif
@@ -116,7 +117,7 @@ export default {
     this.time = s.time;
     this.goal = uni.getStorageSync('dailyGoal') || 20;
     const pstats = uni.getStorageSync('pstats') || { days: {} };
-    this.done = (pstats.days || {})[new Date().toISOString().slice(0, 10)] || 0;
+    this.done = (pstats.days || {})[dayKey()] || 0;
     // #ifdef H5
     this.perm = notificationPermission();
     this.initPush();

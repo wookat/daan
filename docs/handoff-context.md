@@ -1437,3 +1437,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 修复：从 02a0adb（#557 合并点）重新 merge W1 头 85ae35a——自动合并干净，唯一冲突 handoff 手工保留双方；W1 的 B1/C1/M1 改动全部保留。diff vs a4fa410 +2001/-38 恢复 41 文件。本地 pytest 251/vitest 457 双方测试并存全绿。部署 rev 4bf10bb 后生产逐项复验 + T3/T4 补测通过。
 - 教训（第二次同类事故，R348 是分支级、本次是 merge-to-main 级）：任何集成分支合并部署前必须 `git merge-base --is-ancestor <近期各轮 merge 点> <待部署 rev>` 逐项核对；长流程生产测试遇成批 4xx 先复查 /api/health rev 与实载 bundle（可能被并发部署覆盖）。
 
+### R356 W1 遗留 H5 三处收口：日键口径统一/背题模式留白/首页文案口径（2026-08-29，PR #561，分支 devin/1788459968-r356-w1-h5-followups）
+- 取证：W1 backlog 挂账三处一行级缺陷，本轮逐项重新取证——a) pstats.days 写用 checkin.js dayKey()（本地日）、三处读用 toISOString().slice(0,10)（UTC 日），UTC+8 00:00–08:00 统计「今天」恒 0、提醒进度错位一天；b) practice.vue 横幅 v-if 含 beiMode 但 has-banner 留白只看 picked，背题模式底部被固定条遮挡；c) 首页「11万+ 行测真题/真题题库」不实——生产实测在线 109371 题、is_real=1 仅 15864。
+- 收口：stats.vue/reminder.js/reminders.vue 统一 import dayKey（新增 tests/day-key.test.js 锁定本地日语义）；practice.vue `'has-banner': picked || beiMode`；home.vue 改「免费刷 10万+ 行测题」「10万+ 行测题库」「1.5万+ 历年真题 · 三级考点分类」。
+- 验证：lint/vitest 460(+3)/build 全绿（后端零改动）；部署前 merge-base --is-ancestor 4bf10bb 核对通过；生产 rev 7a9bb2f、bundle index-Bm2wz5mH.js（浏览器实载核对）、Lighthouse 全过。testing agent 实测（uid test-r356-ui）：A 用 CDP setTimezoneOverride Asia/Shanghai 制造本地 9/4 / UTC 9/3 跨日差，注入 pstats.days[本地键]=7 → 统计页「今天」列 71%(5/7)、提醒页 7/20 均命中本地键；B 375 背题不作答 has-banner padding-bottom 200px、解析底部不遮挡（末元素 bottom 440 < 横幅 top 544），picked 态回归；C 双视口文案逐字精确无溢出；0 次 /api/explain、67 条全 200、console 0 error。
+- 测试数据清理：test-r356-ui 全库 DELETED {answer_log 1/growth_events 3}，LEFTOVER {}，review_cur 0 行；保护 uid DB diff 逐表一致 + localStorage EXACT MATCH n=28。
+- 经验：uni.getStorageSync 注入必须用 `{"type":...,"data":...}` 包装格式（裸 JSON 静默读不出）；UTC→本地日键类修复需 CDP 时区覆写制造跨日差做鉴别试验（override 随 socket 关闭即丢，需常驻 holder）。
+- 详见 docs/iter/round-3/r356-w1-h5-followups.md。

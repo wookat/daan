@@ -15,10 +15,10 @@
     <!-- 新访客价值主张首屏（无练习历史时展示，可关闭） -->
     <view v-if="showLanding" class="card landing">
       <text class="ld-x" @click="closeLanding">✕</text>
-      <text class="ld-t">免费刷 11万+ 行测真题</text>
+      <text class="ld-t">免费刷 10万+ 行测题</text>
       <text class="ld-s">拍题 AI 讲解 · 错题本按遗忘曲线复习 · 迷你模考 —— 免注册，打开即练</text>
       <view class="ld-grid">
-        <view class="ld-item"><text class="ld-in">11万+ 真题题库</text><text class="ld-id">五大模块 · 三级考点分类</text></view>
+        <view class="ld-item"><text class="ld-in">10万+ 行测题库</text><text class="ld-id">1.5万+ 历年真题 · 三级考点分类</text></view>
         <view class="ld-item"><text class="ld-in">AI 拍题讲解</text><text class="ld-id">花生十三方法体系解析</text></view>
         <view class="ld-item"><text class="ld-in">智能错题本</text><text class="ld-id">遗忘曲线复习 + 掌握度</text></view>
         <view class="ld-item"><text class="ld-in">迷你模考</text><text class="ld-id">判分报告 · 错题自动入本</text></view>
