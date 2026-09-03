@@ -1370,3 +1370,12 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：ruff 0/pytest 218(+2)/pyright 0/lint/vitest 430/build 全绿；生产 rev 997e61b 复验：4 事件 curl 200、bogus 400；真实 UI（uid test-r347-ui，375px）复习流加练触发 review_similar_auto 200、错因打标 review_reason_tag 200，全程 0 非 200、0 console error、0 次 /api/explain。share_poster/review_similar_click 未 UI 实测（curl 已验）。
 - 测试数据清理：test-r347 前缀全库 DELETED {mistakes 1/answer_log 1/review_log 1/growth_events 8/practice_progress 1}，LEFTOVER {}；保护 uid umteojq4sltdhorhm DB+localStorage 前后一致。
 - 详见 docs/iter/round-3/r347-track-whitelist-gap.md。
+
+### R348 加练同类题答错入错题本：_extra 条目保留 qid/题型 + 复用 /api/mistakes 收录（2026-08-29，PR #548，分支 devin/1788445318-r348-similar-extra-mistake）
+- 取证：复习流答错自动加练的 `_extra` 条目丢弃 `x.id`/`x.question_type`，且 record() 首行 `if (this.cur._extra) return;`——加练题答错后完全丢弃，不入错题本、不进错因统计/重练/AI 关联（用户已暴露的新薄弱点练了白练；粉笔加练答错会沉淀）。
+- 收口（纯前端零后端/零契约/零新埋点）：新增 review-similar.js fail-closed 纯函数——similarItemFromQuestion（/api/questions item → _extra 条目，保留 question_id/question_type，非正整数 id 归 null，无题干返回 null）+ mistakeRecFromExtra（仅 _extra===true 且有题干+正解才产出 /api/mistakes body）；book.vue appendSimilar 改用纯函数构造、record() _extra 答错时 saveExtraWrong（_saved 防重复、失败静默非关键路径）、答对不写；入库成功提示「已加入错题本，之后会安排复习」；_extra 保留 qid 后 askFromReview 自动获得 redoQid（AI 详解关联）。加练题仍不写 SRS、不 requeue（语义不变）。
+- 部署基线事故（本轮重要教训）：首版部署 rev f33c79f 从旧基线（#537 链）切出，缺 R346/R346b/R347——生产 q-social-bar 静默消失、review_similar_auto/review_reason_tag 回退 400，仅靠 UI 回归测试发现。已 rebase 到 devin/1788444032-r347-track-whitelist 重新部署 rev 618b100，`git merge-base --is-ancestor` 逐项验证 426a7c7/d9b6b9b/997e61b 均为祖先后复验恢复。**每轮部署前必须核对部署 rev 祖先链包含近期已验修复。**
+- 验证：lint/vitest 438(+8)/build 全绿（rebase 后 ruff/pytest 218/顺跑）；生产 rev 618b100、bundle index-CY7iKnTF.js，部署脚本回归+Lighthouse 全过。testing agent 两轮实测（uid test-r348-ui / test-r348c-ui，375px）：加练题答错 POST /api/mistakes 200（body 含 question_id/question_type/user_answer）+ 提示出现、答对反例 0 次 POST、完成复习后加练题出现在错题列表可展开、原题 review 200 requeue 不变；基线修复后 q-social-bar 恢复渲染、review_similar_auto/review_reason_tag 200；console 0 error、0 次 /api/explain。
+- 测试数据清理：两轮合计 DELETED {mistakes 3/answer_log 2/review_log 3/growth_events 7/practice_progress 2}，LEFTOVER {}；保护 uid umteojq4sltdhorhm DB+localStorage 前后一致。
+- 边界（如实）：真实触屏未测（CDP 模拟）；SW 缓存使老客户端需一次刷新周期才拿到新 bundle（旧 bundle 期间断言会误判回退，经验已入测试 SKILL）。
+- 详见 docs/iter/round-3/r348-similar-extra-mistake-capture.md。

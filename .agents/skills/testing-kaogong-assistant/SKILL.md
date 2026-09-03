@@ -724,3 +724,7 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - `redoSet` 被 practice 页消费即删：重练集合断言不要读 storage，改核对抓包里 `/api/mistakes/redo` 响应 items（或 apiSnap 缓存）与练习页题数。
 
 - 内嵌交互组件（如 q-social-bar）挂进带整卡 click toggle 的容器（如错题本列表卡）时，必测「内部链接点击是否被冒泡吞掉」（R346 实景抓到写笔记被 toggleCard 收起）；笔记类文本断言用 ASCII 内容（xdotool type 中文丢字）。
+
+## R348 部署基线与 SW 缓存走查新经验
+- 每轮生产验证前先核对部署基线：`git merge-base --is-ancestor <前几轮修复 commit> <本轮部署 rev>`——R348 首版 f33c79f 从旧基线切出，R346/R347 已上线功能生产静默回退（q-social-bar 消失、track 事件 400），仅靠 UI 回归测试才发现。
+- 每轮部署验证前必须核对页面真实运行的 bundle：`performance.getEntriesByType('resource')` 看实际加载的 `index-*.js`，而非只 curl 首页 HTML；PWA service worker 会继续服务旧 bundle，需 Ctrl+Shift+R 硬刷后再开始断言，否则会把缓存旧版误判为功能回退。
