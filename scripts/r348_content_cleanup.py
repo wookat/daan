@@ -2,7 +2,7 @@
 """r348 内容治理：下线 hs 自检失败题 / 伪中文 yanyu AI 批次题，剥离 hs 管线括注。
 
 规则（口径与 backend/app/quality.py 共用同一常量/正则）：
-  a. 在线题 hs_explanation 含自检失败词（SKIP:/数据矛盾/官方解析有误/无法用给定）
+  a. 在线题 hs_explanation 含自检失败词（SKIP:/官方解析有误/无法用给定/无法可靠得到 等，见 quality.HS_SELFCHECK_WORDS）
      → disabled=1，note 追加 r348:hs-selfcheck
   b. 在线题 hs_explanation 含「（通用解法，…不在库中）」括注 → 整体删除、空白归一、rescore_question
   c. module='yanyu' AND import_batch LIKE 'b2026%' 在线题，题干+选项伪中文命中 ≥3
