@@ -5,6 +5,12 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R359 卷卡「已练 X/N 题」走查新经验
+- `GET /api/exam/papers?uid=` 每卷恒含 `practiced`（DISTINCT answer_log.question_id ∩ 卷内活跃题）；UI 行 `.ppracticed`（绿 rgb(21,128,61)）仅 `psource && practiced>0` 渲染。断言三角：UI 显示值 == 响应 practiced == DB `count(distinct question_id)` 交集（重复作答行不重复计，重答同题前先记 qid）。
+- 构造「无 psource 卷 practiced>0」的合法 UI 路径：对该卷**交模考卷**（开始模考→答 1 题→立即交卷确认）——模考交卷会写 answer_log，从而 practiced>0 但卡上无已练行（fail-closed 强证），同时顺带构造 best_score/看报告 四按钮态。
+- 按卷练习重进从第 1 题重新出题（不续上次进度），重答同 qid 是最省事的去重验证路径。
+- 生产边缘对无浏览器 UA 的直连 API 请求可能 403——用已加载页面内 fetch 取响应即可，勿误判为应用故障。
+
 ## R358 放弃未交卷（drop:true）走查新经验
 - R358 起「放弃未交卷」是服务端真删：卷库 dropResume()/首页 erDrop() 确认后 POST `/api/exam/progress` body `{uid, attempt_id, drop:true}` → 200 `{ok:true}`，后端 clear_exam_progress；断言点=抓包 drop 请求 + DB `exam_progress` 行删除 + **等 35s 越过 erClearedAt 30s 本地守卫后再硬刷**（30s 内不回填只证明本地守卫，30s 后不回填才证明服务端删除）。
 - 全新 browser context 验证不回填：`Target.createBrowserContext`+`Target.createTarget` 会开**新窗口**（taskbar 出现第二个 Chrome 图标），且 CDP helper（oneshot/holdvw）按 `/json` 列表第一个 zalize tab 匹配，可能误连新 context 的 tab——用完立即 `Target.disposeBrowserContext`，或按 targetId 精确连。
