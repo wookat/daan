@@ -1296,3 +1296,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 测试数据清理：两轮 uid 全库合并清理 DELETED 15 / LEFTOVER 0；保护 uid umteojq4sltdhorhm 37 项快照验前验后逐项一致（PROTECTED_MATCH True）。
 - 边界（如实）：真实触屏未测（CDP 模拟）；真实 LLM 刻意未触发（CDP 注入已有讲解模拟）；askSeenTick 独立隔离路径经换题/重进会话等价覆盖；ask onShow 会回写覆盖注入的 askSessions（测试注入需整页硬刷，已入测试 SKILL）。
 - 详见 docs/iter/round-3/design-r338-ask-seen-final.md。
+
+### R339 AI 问答会话「查看原题」反向闭环 + 历史空态文案修正（2026-08-29，PR #538，分支 devin/1788428478-r339-ask-view-question）
+- 取证：R336–R338 打通「题 → AI」（六场景入口 + 回看命中态），反向为零——AI 讲解 bubble chips 仅「再讲细一点/出同款题/存错题本」，item 级 qid 已就位但用户无法从讲解回到原题继续收藏/纠错/看讨论/复制链接；历史会话空态仍宣称「仅保存在本机」，与 R328 起服务端跨设备同步事实不符（错误承诺）。
+- 收口（纯前端 + 埋点白名单一行，零新 endpoint/表/URL 契约，不改 /api/explain）：ask-link.js 新增 fail-closed 纯函数 askViewUrl(qid)——askQid>0 返回 `/pkgA/search/search?q=<qid>&qid=<qid>` 否则 null，复用 /api/search 纯数字 code_hit 直达 + 搜索页 ?qid 自动 toggleDetail（R270）；ask.vue chips 行尾 v-if="viewUrl(r)" 追加「查看原题」，点击 trackEvent('ask_view_question') → uni.navigateTo；空态文案改「同一账号换设备也能看」；team.py 白名单补 ask_view_question（防 R333 式静默 400）。不改 findAskSid/askOpenSid/redoQuestion/redoAnswer/redoQid 协议。
+- 验证：ruff 0/pytest 205(+1)/pyright 0/lint/vitest 426(+2)/build 全绿；生产 rev 0323231、bundle index-COlLAc83.js，部署脚本 API 回归+Lighthouse 预算全过（/ 0.99/LCP 810ms、/tiku/ 1.00）；curl 实测 ask_view_question 200/bogus 400。testing agent 双视口实测（uid test-r339-view，注入合法 qid/legacy 无 qid/qid=0 三类 item）：合法 qid 出第 4 chip、深链 ?q=333140&qid=333140 code_hit 直达详情自动展开（题目编码与 qid 对应）、埋点 200；legacy/qid=0 fail-closed 无 chip；空态新文案、全页无旧文案；既有 chips 回归（存错题本 /api/mistakes 200）；375/1440 溢出 0、console 0 error、全程 0 次 /api/explain。
+- 测试数据清理：test-r339-view + test-r339-api 全库 DELETED 5（mistakes 1 + growth_events 4）/ LEFTOVER 0 / 保护 uid 快照一致（PROTECTED_MATCH True）。
+- 边界（如实）：真实触屏未测（CDP 模拟）；真实 LLM 刻意未触发（注入快照构造讲解）；「再讲细一点/出同款题」真实点击未测（会触发 LLM，仅验证存在）；题目下架时深链降级为搜索空结果（code_hit 缺失自然降级，未生产构造）。
+- 详见 docs/iter/round-3/r339-ask-view-question.md。

@@ -705,3 +705,6 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 展开卡内小按钮（.op）点击易差几像素命中卡片本体导致收起：先 CDP 读 `getBoundingClientRect()` 换算工具坐标再点（1600 实宽→1024 工具坐标 ×0.64，浏览器 chrome 顶部偏移约 157 实 px）。
 - 验证 `@click.stop` 不收起卡片的客观方法：CDP 给 `.mcard` 挂 bubble 阶段计数 listener，UI 点击子按钮后读计数=0 即证明冒泡被阻断（book onShow 会 reload 列表重置 open 态，返回后卡片收起不能作为反证）。
 - 造「无命中」错题反例最省路径：CDP 只读 `cur.answer` 后 UI 故意点错选项，错题自动入本（无需 API 造数）。
+
+## R339 查看原题反向深链走查新经验
+- 清空服务端 ask_cur 的可靠路径是走 UI「新对话 → 删除新归档会话」：直接删本机 askCurSession 后 reload 会被 `GET /api/ask/cur` 从服务端拉回，越清越回。
