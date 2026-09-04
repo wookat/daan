@@ -1,6 +1,7 @@
 """错题本存储（SQLite）。"""
 import hashlib
 import json
+import math
 import os
 import random
 import re
@@ -2414,9 +2415,26 @@ def _find_open_mistake(conn, uid: str, mid, qid) -> int | None:
     return None
 
 
+CLIENT_TS_PAST_S = 30 * 86400
+CLIENT_TS_FUTURE_S = 300
+
+
+def _client_ts(raw, now: float) -> float:
+    """客户端自报作答时刻（秒或毫秒）；仅接受 [now-30d, now+5min] 内的数值，否则回退 now。"""
+    if isinstance(raw, bool) or not isinstance(raw, (int, float)) or not math.isfinite(raw):
+        return now
+    ts = float(raw)
+    if ts > 1e11:
+        ts /= 1000
+    if now - CLIENT_TS_PAST_S <= ts <= now + CLIENT_TS_FUTURE_S:
+        return ts
+    return now
+
+
 def save_answer_log_detail(uid: str, items: list[dict], probe: bool = False) -> dict:
     """落 answer_log；答对且命中本 uid 未掌握错题的条目同步推进该错题复习计划（与 /api/review 同一套 SRS）。
-    probe=True 标记为探针流量（运营看板剔除，用户自身的统计/复习不受影响）。"""
+    probe=True 标记为探针流量（运营看板剔除，用户自身的统计/复习不受影响）。
+    条目 t（离线补传时的客户端作答时刻）在合理窗口内时作为 created_at。"""
     conn = get_conn()
     _ensure_answer_log(conn)
     _ensure_mistake_uid(conn)
@@ -2442,7 +2460,7 @@ def save_answer_log_detail(uid: str, items: list[dict], probe: bool = False) -> 
             "INSERT INTO answer_log (uid, created_at, question_id, module, submodule, correct, secs, picked, source, probe) VALUES (?,?,?,?,?,?,?,?,?,?)",
             (
                 uid,
-                now,
+                _client_ts(it.get("t"), now),
                 qid,
                 module,
                 sub,
@@ -2707,7 +2725,7 @@ def growth_stats(uid: str) -> dict:
     _ensure_answer_log(conn)
     since = time.time() - 8 * 7 * 86400
     rows = conn.execute(
-        """SELECT strftime('%Y-%W', created_at, 'unixepoch') wk, module,
+        """SELECT strftime('%Y-%W', created_at, 'unixepoch', '+8 hours') wk, module,
                   COUNT(*) n, SUM(correct) c
            FROM answer_log WHERE uid=? AND created_at>?
            GROUP BY wk, module ORDER BY wk""",

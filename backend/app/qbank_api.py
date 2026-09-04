@@ -76,7 +76,14 @@ def api_daily_set_submit(body: dict):
 
 
 @router.get("/api/questions/export")
-def api_questions_export(offset: int = 0, limit: int = 200, module: str | None = None, all: int = 0):
+def api_questions_export(
+    offset: int = 0,
+    limit: int = 200,
+    module: str | None = None,
+    all: int = 0,
+    x_import_token: str | None = Header(None),
+):
+    check_import_token(x_import_token)
     return {"items": db.export_questions(offset, min(limit, 500), module, missing_only=not all)}
 
 
