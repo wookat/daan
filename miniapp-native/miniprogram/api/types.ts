@@ -18,6 +18,7 @@ export interface Question {
   correct_ratio?: number | null;
   most_wrong?: string | null;
   image?: string | null;
+  image_credit?: string | null;
 }
 
 export interface QuestionsResp {
@@ -32,6 +33,7 @@ export interface AnswerLogItem {
   secs: number;
   picked: string;
   source: string | null;
+  t?: number;
 }
 
 export interface Mistake {
@@ -222,6 +224,22 @@ export interface CheckinSummaryResp {
   days?: Record<string, { n: number; correct: number | null }>;
   exam_type?: string | null;
   days_to_exam?: number | null;
+}
+
+export interface GrowthStat {
+  n: number;
+  c: number;
+}
+
+export interface GrowthWeek extends GrowthStat {
+  week: string;
+  modules: Record<string, GrowthStat>;
+}
+
+export interface GrowthResp {
+  total: GrowthStat;
+  modules: Record<string, GrowthStat>;
+  weeks: GrowthWeek[];
 }
 
 export interface CheckinBadge {

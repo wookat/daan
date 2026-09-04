@@ -3,7 +3,8 @@
 维度：题干/选项/解析完整性、解析长度与结构、来源可信度、用户反馈信号、
 内容自证缺陷（hs 自检失败词 / 管线括注 / yanyu 伪中文机器句）。
 
-另含内容清洗规则（题干汉字间空格、hs 管线元句），供清洗脚本与 sanitize_hs 共用。
+另含内容清洗规则（题干汉字间空格、hs 管线元句、explanation 抓取源统计前缀/广告句），
+供清洗脚本与 sanitize_hs / sanitize_explanation 共用。
 """
 import json
 import re
@@ -31,6 +32,21 @@ _CJK_CLASS = (
 )
 CJK_SPACE_RE = re.compile(f"(?<=[{_CJK_CLASS}])[ \u3000]+(?=[{_CJK_CLASS}])")
 _CJK_BLANK_PAIRS = {"（）", "【】", "〔〕", "「」", "『』"}
+# explanation 抓取源残留：站点统计前缀「正确答案：B，全站正确率：24%，易错项：C。 解析 」
+# （含「正确答案是 C 统计 全站数据: … / 解析 」旧格式与前缀后偶发的孤立选项字母），
+# 以及不带统计只剩「解析 」「解析：」标签的开头；正文以「第一步/解法」起头时标签可无分隔。
+_EXP_STATS = (
+    r"正确答案：[A-D]，全站正确率：\d+%，易错项：[A-D]。"
+    r"|正确答案是 [A-D] 统计 全站数据:[^/\n]{0,80}/"
+)
+_EXP_LABEL = r"解析(?:[ \t\u3000]+|[：:][ \t\u3000]*|(?=第一步|解法))"
+EXP_SRC_PREFIX_RE = re.compile(rf"^(?:(?:{_EXP_STATS})\s*(?:(?:[A-D]\s+)?{_EXP_LABEL})?|{_EXP_LABEL})")
+# 抓取源广告句「,一个上岸考生分享经验和答疑的平台。」，多插在句间而非句尾
+EXP_AD_TAIL_RE = re.compile(r"[,，]?一个上岸考生分享经验和答疑的平台。?")
+# 空格是语义的词表：≥3 个 1–4 字词以单个空格相连（「郭斌 且 吴芳」「石油 汽油 煤油 柴油」
+# 「考点 判断推理 定义判断」，以及公式缺失留下的「厘米 的圆柱体 平方厘米」）。命中则整条不做汉字间去空格，
+# 交人工处理；PDF 逐字断开（「中 央 和 国 家」）全是单字，不算词表，照常归一。
+_CJK_WORD_RUN_RE = re.compile(r"(?<![\u4e00-\u9fff])[\u4e00-\u9fff]{1,4}(?: [\u4e00-\u9fff]{1,4}){2,}(?![\u4e00-\u9fff])")
 
 PENALTY_HS_SELFCHECK = 40
 PENALTY_HS_PIPELINE_NOTE = 15
@@ -83,10 +99,33 @@ def sanitize_hs(text: str | None) -> str | None:
         return None
     hs = HS_PIPELINE_NOTE_RE.sub("", hs)
     hs = HS_META_RE.sub("", hs)
-    hs = re.sub(r"[ \t\u3000]+\n", "\n", hs)
-    hs = re.sub(r"[ \t\u3000]{2,}", " ", hs)
-    hs = re.sub(r"\n{3,}", "\n\n", hs)
-    return hs.strip()
+    return _collapse_blank(hs)
+
+
+def has_cjk_word_list(text: str) -> bool:
+    """是否含以空格分隔的汉字词表（至少两个词 ≥2 字），此类空格是语义不可去。"""
+    return any(sum(len(t) >= 2 for t in m.group().split(" ")) >= 2 for m in _CJK_WORD_RUN_RE.finditer(text))
+
+
+def sanitize_explanation(text: str | None) -> str:
+    """剥离抓取源统计前缀/「解析」标签与广告句，汉字间空格归一（数字、字母两侧空格保留；
+    含空格分隔词表的整条不去空格），空白归一。"""
+    e = (text or "").strip()
+    if not e:
+        return ""
+    e = EXP_AD_TAIL_RE.sub("", e).lstrip()  # 广告句可在开头（其后才是「解析 」标签）
+    while m := EXP_SRC_PREFIX_RE.match(e):  # 「解析 解析第一步…」双标签
+        e = e[m.end():].lstrip()
+    if not has_cjk_word_list(e):
+        e = normalize_cjk_spaces(e)
+    return _collapse_blank(e)
+
+
+def _collapse_blank(text: str) -> str:
+    text = re.sub(r"[ \t\u3000]+\n", "\n", text)
+    text = re.sub(r"[ \t\u3000]{2,}", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
 
 
 def _parse_options(options) -> dict:

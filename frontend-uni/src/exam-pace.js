@@ -7,12 +7,18 @@ export function buildPaceRows(perModule, durationMin, total) {
   const sum = keys.reduce((a, k) => a + (Number(pm[k].secs) || 0), 0);
   if (sum <= 0) return [];
   return keys.map((k) => {
+    const n = Number(pm[k].n);
     const secs = Math.max(0, Number(pm[k].secs) || 0);
-    const refSecs = Math.round((dm * 60 * Number(pm[k].n)) / tt);
+    // answered 缺失（旧 attempt）视为全部作答；整模块未作答不参与快慢判定
+    const answered = pm[k].answered == null ? n : Math.min(n, Math.max(0, Number(pm[k].answered) || 0));
+    const perQ = (dm * 60) / tt;
+    const refSecs = Math.round(perQ * n);
+    if (answered === 0) return { key: k, secs, refSecs, answered, n, status: 'skip' };
+    const judgeRef = Math.round(perQ * answered);
     let status = 'ok';
-    if (secs > refSecs * 1.2) status = 'over';
-    else if (secs < refSecs * 0.6) status = 'fast';
-    return { key: k, secs, refSecs, status };
+    if (secs > judgeRef * 1.2) status = 'over';
+    else if (secs < judgeRef * 0.6) status = 'fast';
+    return { key: k, secs, refSecs: judgeRef, answered, n, status };
   });
 }
 

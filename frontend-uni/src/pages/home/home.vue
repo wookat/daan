@@ -1220,7 +1220,9 @@ export default {
     goTask(t) {
       if (t.done) return;
       if (t.type === 'mock') {
-        this.goMini();
+        // 真题/冲刺阶段（plan real_mode）计划文案为「整卷全真模考」→ 卷库；其余阶段迷你模考
+        if (t.real || (this.planToday && this.planToday.real_mode)) this.goExamList();
+        else this.goMini();
         return;
       }
       if (t.type === 'review') {
