@@ -5,6 +5,16 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R368 错题本归卷（卷源徽标 / 按卷筛选 / 练本卷）走查新经验
+- 归卷类功能要同时验 **API 形状** 与 **UI 分组**：`/api/mistakes?uid=` 每条 `paper` 为 `{pid,title,psource}` 或 `null`，用 `Object.keys(item)` 断言不泄露内部字段（如 `q_source/q_is_real`）；对照组用普通刷题答错一题（非该卷真题），它必须 `paper:null` 且卡片无 `.pbadge`。按卷不计时练习产出的 `mistakes.source` 为 NULL（saveWrong 不传 source），这正是归卷靶场景，可在清理前用 `select source,count(*) from mistakes where uid=? group by source` 佐证。
+- 错题本 URL 同步在 hash query 里（`#/pages/book/book?pid=133&mod=…&sort=…`），非法值（`pid=0`/负/非数字）应 fail-closed 不筛选且 console 无 error；**桌面与 375 移动仿真都要在整页刷新后**各验一遍，因为 onLoad 解析与 syncUrl 是两条路径。
+- 375 下长卷源文本的 ellipsis 用计算样式（`overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:40vw`）+ 临时把 `.pbadge` 的 innerText 换成 40+ 字长串量 `getBoundingClientRect().right<=375` 与 `documentElement.scrollWidth===375` 验证；生产真题 psource 通常不够长，别只靠肉眼。
+- 「练本卷 ›」→ `/pkgA/exam/list?pid=` 的 R365 深链在实现上是 **高亮 + `scrollIntoView({block:'center'})`**（`.paper.pinned` + `.pin-badge`「邀你挑战的卷」），卡片仍在原始位置（本轮 index 101/120），不是真正移到列表顶部；不要按「置顶」字面去断言 first child。
+- `/api/track` 事件（如 `book_go_paper`）用页内 `fetch` 钩子在点击前装上（`window.__trk=[]; const of=fetch; fetch=(u,o)=>{if(String(u).includes('/api/track'))__trk.push(o&&o.body);return of(u,o)}`），跨页 navigateTo 前读取，避免整页刷新丢钩子。
+- 清理表本轮命中 mistakes/answer_log/exam_attempts/growth_events/**exam_progress**（开始模考后退出会留 `exam_progress` 1 行）；用 `pragma table_info` 扫全表 uid/user_id 列删除即可，删前记 `answer_log` 总数（总数差应恰等于测试 uid 行数）。
+- `pgrep -f "holdvw.py 1440" | xargs kill` 与 `pkill -f` 一样会匹配到自己所在 bash 命令行并把 exec 会话杀掉（exit -1）；改成 `pgrep -f "[h]oldvw.py"` 或在单独 exec 里只跑 kill，别把后续命令串在同一行。
+- CDP 助手 `C.call(method, **params)` 用关键字参数，`Emulation.clearDeviceMetricsOverride` 直接 `c.call('Emulation.clearDeviceMetricsOverride')`。
+
 ## R367 卷卡错题数 + 已练完卷「只练错题」action sheet 走查新经验
 - 「最近一次作答」口径的 wrong 计数要用 **同一 uid 两轮作答** 验证：整卷答错 K 题 → 卷卡 `已练完全部 N 题 ✓ · 错 K 题`、`/api/exam/papers?uid=` 该卷 `wrong===K`、`/api/paper_questions?src&pid&uid=` 中 `wrong===true` 的 id 顺序应等于卷面顺序（不是答题顺序）；再把这 K 题全答对后 `wrong` 必须回 0 且卷卡去掉「· 错」后缀。答错 id 序列在 UI 上不可见，靠 CDP 读组件 `items[i].answer` 与 `_picked` 记录。
 - uni `showActionSheet` 在 H5 渲染为 `<uni-actionsheet>`，页内判断是否弹出用 `firstElementChild` 的 `display!=='none'`（元素常驻 DOM，不能只看存在性）；取消项文字「取消」，点击后断言组件 `session===false` 且 `items.length===0`。
