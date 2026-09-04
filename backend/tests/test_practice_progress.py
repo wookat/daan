@@ -96,6 +96,39 @@ def test_bounds_fail_closed(client):
     _cleanup()
 
 
+def test_r363_source_ptitle_roundtrip(client):
+    qids = seed_questions()[:3]
+    uid = "test-pprog-u7"
+    client.post("/api/practice/progress", json={
+        "uid": uid, "qids": qids, "source": "zhenti", "ptitle": "2015 新疆卷",
+    })
+    d = client.get(f"/api/practice/resume?uid={uid}").json()
+    assert d["source"] == "zhenti" and d["ptitle"] == "2015 新疆卷"
+    # 不带 source/ptitle 覆盖后应清空（旧客户端零残留）
+    client.post("/api/practice/progress", json={"uid": uid, "qids": qids})
+    d2 = client.get(f"/api/practice/resume?uid={uid}").json()
+    assert d2["source"] is None and d2["ptitle"] is None
+    _cleanup()
+
+
+def test_r363_source_ptitle_fail_closed(client):
+    qids = seed_questions()[:3]
+    uid = "test-pprog-u8"
+    r = client.post("/api/practice/progress", json={
+        "uid": uid, "qids": qids, "source": 7, "ptitle": ["x"],
+    })
+    assert r.status_code == 200
+    d = client.get(f"/api/practice/resume?uid={uid}").json()
+    assert d["source"] is None and d["ptitle"] is None
+    # 超长截断
+    client.post("/api/practice/progress", json={
+        "uid": uid, "qids": qids, "source": "s" * 100, "ptitle": "t" * 100,
+    })
+    d2 = client.get(f"/api/practice/resume?uid={uid}").json()
+    assert d2["source"] == "s" * 64 and d2["ptitle"] == "t" * 80
+    _cleanup()
+
+
 def test_resume_skips_removed_questions(client):
     qids = seed_questions()[:3]
     uid = "test-pprog-u6"
