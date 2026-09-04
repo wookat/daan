@@ -26,3 +26,11 @@ export function paperPracticedState(practiced, n) {
   if (p >= total) return { show: true, done: true, text: `已练完全部 ${total} 题 ✓` };
   return { show: true, done: false, text: `已练 ${p}/${total} 题` };
 }
+
+// 按卷练习完成页归卷：有卷名走本卷完成态，fail-closed（非字符串/空串走通用完成态）
+export function paperFinishState(ptitle) {
+  if (typeof ptitle === 'string' && ptitle.trim()) {
+    return { isPaper: true, big: '本卷练完', title: ptitle.trim() };
+  }
+  return { isPaper: false, big: '本组完成', title: '' };
+}

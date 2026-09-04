@@ -802,3 +802,10 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 跨设备弹窗用 `Target.createBrowserContext` 新 context 注同 uid 进 /pages/practice/practice 即触发（同 R352 模式）；answer_log 表 uid 列名是 `uid` 非 `user_id`。
 - 首页续练卡与普通练习入口：module 为空时副标题回落「上次练习」，属正常而非缺陷。
 - holdvw.py 用 `(setsid nohup … &)` 起，普通 nohup 后台在同 shell 里可能随命令退出被回收导致 override 立即丢失（表现：打印 held 但 iw 不变/进程消失）。
+
+## R364 按卷完成页归卷态走查新经验
+- 完成页归卷断言：`.big` 文案「本卷练完」、`.sub.ptl` 卷名品牌色 rgb(46,91,255)/fw600、主按钮「回卷库」→ /pkgA/exam/list、整页 innerText 不含「再来一组」；普通练习完成页反例保持「本组完成/再来一组」。
+- **375 视口下练习页键盘快捷键（A-D/Enter）不生效**（桌面宽度才启用），移动视口批量答题只能点选。选项 y 坐标随题干长度浮动：可在同一题上连点 3-4 个候选 y（已答后再点选项无副作用），再点固定底部「下一题」，每 4-5 题截图校验进度。
+- 保护 uid 正确拼写是 `umteojq4sltdhorhm`（umte-**ojq**）；上游消息里可能误写成 umtejoq…。做保护 DB 前后对比前先 `select distinct uid … like 'umte%'` 校验，否则 after 快照全 0 造成假警报。
+- 生产站桌面 Chrome 下可能出现少量 `Uncaught (in promise) Object`（无 description）的 EXC——弹窗取消/答错均复现不出、无 UI 影响，属未归因背景噪音；断言口径建议区分 console.error（应为 0）与该类 promise 噪音（单独列报）。
+- 经 ssh+docker exec 跑多行清理脚本时，内嵌 heredoc 可能静默产出空输出；改用 base64 编码脚本 → 远端解码 → `docker cp` 进容器再执行，输出稳定。

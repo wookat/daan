@@ -1498,3 +1498,12 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 验证：ruff/pytest 271(+2)/pyright 0/lint/vitest 478(+4)/build 全绿；祖先链核对（3dc7b38/0f4bfc5/5f41fc2/1550a65/644d31b）通过；生产 rev 67a227a、bundle index-CYBWn0zz.js、Lighthouse 全过；curl 实证生产 source/ptitle 往返/非法忽略/清空。testing agent 实测（uid test-r363-ui）：中断→首页卡显卷名「2015年0711新疆公务员考试《行测》真题 · 已做 2/38 题」→恢复续答 DB source='2015年新疆省考行测真题'（旧版 NULL）；跨设备弹窗带卷名前缀且续答归卷；普通练习无卷名残留（source:""→DB NULL）；计时模考/R358 drop/R360 弹窗/R359 卷卡回归；94 条全 200、console 0 error、0 次 /api/explain、375/1440 无溢出。
 - 测试数据清理：test-r363-ui DELETED {mistakes:2, answer_log:7, user_state:1, exam_attempts:1, growth_events:4, practice_progress:1}，LEFTOVER 空，review_cur 0 行；保护 uid DB 37 表+localStorage EXACT n=30。
 - 详见 docs/iter/round-3/r363-paper-resume-source.md。
+
+### R364 按卷练习完成页归卷收口（2026-08-29，PR #571，分支 devin/1788478793-r364-paper-finish）
+- 取证（SOP-10 窗口内）：按卷不计时练习答完进通用完成页——标题恒「本组完成」不显卷名；「再来一组」在按卷会话（lastModule=null 且无 _redoItems）走 start(null) 抽全模块随机组，打断归卷闭环且覆盖 _source/_ptitle；无回卷库出路。计时模考走成绩报告不受影响。
+- 收口（纯前端零契约）：paper-continue.js 补 paperFinishState(ptitle) fail-closed 纯函数（非空字符串→{isPaper,big:'本卷练完',title:trim}，否则通用态）；practice.vue 完成卡按 paperFinish()（模板方法调用规避非响应式 _ptitle）显「本卷练完」+ 卷名副行（.sub.ptl 品牌色）+ 主按钮「回卷库」（goExamList）；非按卷/背题/错题重练/模考零变化。
+- 验证：lint/vitest 480(+2)/build:h5 全绿；祖先链核对（3dc7b38/0f4bfc5/5f41fc2/1550a65/67a227a）通过；生产 rev e727840、bundle index-DZ-HSBC6.js、Lighthouse 全过。testing agent 实测（uid test-r364-ui）：新疆卷 38 题答完归卷完成页三要素齐、回卷库落卷卡「已练完全部 38 题 ✓」、R363 恢复路径 _ptitle 生效、普通练习反例零变化、375 全程无溢出、500 条全 200、0 次 /api/explain。
+- 测试数据清理：test-r364-ui DELETED {mistakes:38, answer_log:87, growth_events:4}，LEFTOVER 空，review_cur 0 行；保护 uid DB 37 表+localStorage EXACT n=30。
+- ⚠️ 重要更正：保护 uid 正确拼写为 umteojq4sltdhorhm（umte-ojq，非 umtejoq），历史文档个别处拼写有误；对比前用 like 'umte%' 预校验。
+- 观察项：生产 console 累计 5 条未归因 Uncaught (in promise) Object（无 UI 影响、复现不出），候选后续带 source map 归因。
+- 详见 docs/iter/round-3/r364-paper-finish-loop.md。

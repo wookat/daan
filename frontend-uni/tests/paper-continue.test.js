@@ -1,6 +1,6 @@
 // R360：按卷练习「只练剩余」——paperContinuePlan fail-closed 纯函数
 import { describe, it, expect } from 'vitest';
-import { paperContinuePlan, paperPracticedState, paperQuery } from '../src/paper-continue.js';
+import { paperContinuePlan, paperPracticedState, paperQuery, paperFinishState } from '../src/paper-continue.js';
 
 describe('paperQuery', () => {
   it('基础：src 必带且编码', () => {
@@ -87,5 +87,18 @@ describe('paperPracticedState', () => {
   it('全练完（含超出）显示完成态', () => {
     expect(paperPracticedState(75, 75)).toEqual({ show: true, done: true, text: '已练完全部 75 题 ✓' });
     expect(paperPracticedState(80, 75).done).toBe(true);
+  });
+});
+
+describe('R364 paperFinishState 完成页归卷', () => {
+  it('非空卷名走本卷完成态（trim）', () => {
+    expect(paperFinishState('2015年新疆卷')).toEqual({ isPaper: true, big: '本卷练完', title: '2015年新疆卷' });
+    expect(paperFinishState('  卷名  ').title).toBe('卷名');
+  });
+
+  it('空串/空白/非字符串 fail-closed 走通用完成态', () => {
+    for (const v of ['', '   ', null, undefined, 7, {}, []]) {
+      expect(paperFinishState(v)).toEqual({ isPaper: false, big: '本组完成', title: '' });
+    }
   });
 });
