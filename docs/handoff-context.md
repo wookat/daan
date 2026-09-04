@@ -1546,3 +1546,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 测试数据清理：test-r368-k4p7 DELETED 48（mistakes 4/answer_log 39/exam_attempts 1/growth_events 3/exam_progress 1），LEFTOVER 0；容器 StartedAt 03:10:25Z 未变，作答 39=39。清理表新增 exam_progress。
 - 分支：从 R367 mainline 分支切出、PR base=main（含 #576 未合入的 R366/R367 提交，#576 合并后本 PR 自动收敛为仅 R368）。#576 仍待老板合并；main 当前落后生产三轮，合并前勿从 main 部署。
 - 详见 docs/iter/round-3/r368-book-paper-source.md。
+
+### R369 错题本按卷筛选态「重练本卷错题」直达（2026-09，分支 devin/1788493372-r369-book-paper-redo，base=main）
+- 取证：近 14 天 answer_log 243/34 uid、mistakes +129/37 uid，但 review_log 仅 24/3 uid；全量 mistakes 222 条 review_count=0 占 202、mastered 0——错题产出远大于复练。R368 的 pidFilter 只改列表，页顶「错题重练」卡 redoAll() 仍拼 /api/mistakes/redo?module/qtype/rz/src/t3，用户筛到一张卷点「开始」拿到的是全局 10 道待掌握错题，与筛选态语义冲突。
+- 方案（零新表/端点）：book.vue pidFilter 态下卡标题「重练本卷错题 · 卷名」、副文案「按卷面顺序只练本卷上次答错的题（答对过即不再算错）」，redoAll 前置 `if (pidFilter) return redoPaper()`；redoPaper 用 paperGroups(items, Infinity) 取当前卷 {psource,pid,title}，写 practiceLaunch {kind:'paper',untimed:true,wrong:true} → practice。practice.vue startPaper(p, untimed, wantWrong) 拉同一 /api/paper_questions 后 `paperWrongLaunch(items, wantWrong)`（paper-continue.js 新增：wantWrong===true 且有 wrong===true 项才返回 paperWrongPlan 结果，否则 null）→ 直达 wrongOnly（复用 R367 toast「只练本卷上次答错的题」、_source/_ptitle 归卷完成页）；无错题回落既有续练/重练 action sheet。team.py 白名单 +book_redo_paper。`.redo-l` 加 flex:1/min-width:0 防长卷名挤压「开始」。
+- 验证：eslint/vitest 505（+4 paperWrongLaunch）/build:h5、ruff/pytest 279 全绿；pyright 4 错为基线（exam_api.py:572、mock_event.py:502 str-int 运算，stash 前后一致，与本轮无关）。本机 pip 环境重置过，需 `pip install` Dockerfile.runtime 同款依赖才能跑 pytest。
+- 详见 docs/iter/round-3/r369-book-paper-redo.md。

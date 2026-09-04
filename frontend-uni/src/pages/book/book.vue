@@ -284,8 +284,8 @@
         <view class="redo-l">
           <view class="redo-ico"><l-icon name="rotate-ccw" :size="16" color="#2e5bff" /></view>
           <view>
-            <text class="redo-t">错题重练{{ kp3Filter ? ' · ' + kp3Filter : kpFilter ? ' · ' + kpFilter : rzFilter ? ' · ' + rzFilter : srcFilter ? ' · ' + (srcFilter === 'exam' ? '模考错题' : '练习错题') : '' }}</text>
-            <text class="redo-s">{{ kp3Filter ? '只重练当前筛选考点的待掌握错题（最多 10 题）' : kpFilter ? '只重练当前筛选题型的待掌握错题（最多 10 题）' : rzFilter ? '只重练当前筛选错因的待掌握错题（最多 10 题）' : srcFilter ? '只重练当前筛选来源的待掌握错题（最多 10 题）' : '把待掌握错题按刷题模式重做一遍（最多 10 题）' }}</text>
+            <text class="redo-t">{{ pidFilter ? '重练本卷错题 · ' + pidLabel : '错题重练' + (kp3Filter ? ' · ' + kp3Filter : kpFilter ? ' · ' + kpFilter : rzFilter ? ' · ' + rzFilter : srcFilter ? ' · ' + (srcFilter === 'exam' ? '模考错题' : '练习错题') : '') }}</text>
+            <text class="redo-s">{{ pidFilter ? '按卷面顺序只练本卷上次答错的题（答对过即不再算错）' : kp3Filter ? '只重练当前筛选考点的待掌握错题（最多 10 题）' : kpFilter ? '只重练当前筛选题型的待掌握错题（最多 10 题）' : rzFilter ? '只重练当前筛选错因的待掌握错题（最多 10 题）' : srcFilter ? '只重练当前筛选来源的待掌握错题（最多 10 题）' : '把待掌握错题按刷题模式重做一遍（最多 10 题）' }}</text>
           </view>
         </view>
         <text class="redo-go">开始</text>
@@ -1468,7 +1468,16 @@ export default {
       if (sameDay(d, yest)) return '昨天 ' + hm;
       return `${d.getMonth() + 1}月${d.getDate()}日`;
     },
+    // 按卷筛选态：复用按卷「只练错题」协议直达，保留卷面顺序与归卷完成页
+    redoPaper() {
+      const g = paperGroups(this.items, Infinity).find((x) => x.pid === this.pidFilter);
+      if (!g) return;
+      trackEvent('book_redo_paper', 'book', String(g.pid));
+      uni.setStorageSync('practiceLaunch', { kind: 'paper', source: g.psource, pid: g.pid, title: g.title || g.psource, untimed: true, wrong: true });
+      uni.navigateTo({ url: '/pages/practice/practice' });
+    },
     async redoAll() {
+      if (this.pidFilter) return this.redoPaper();
       try {
         let q = '/api/mistakes/redo?limit=10&uid=' + encodeURIComponent(anonUid());
         if (this.kpFilter) {
@@ -1819,7 +1828,7 @@ export default {
 .resumecard .duego { color: #b45309; }
 .resume-drop { font-size: 22rpx; color: rgba(255, 255, 255, 0.85); text-decoration: underline; padding: 4rpx 12rpx; }
 .redoentry { display: flex; justify-content: space-between; align-items: center; }
-.redo-l { display: flex; align-items: center; gap: 16rpx; }
+.redo-l { display: flex; align-items: center; gap: 16rpx; flex: 1; min-width: 0; margin-right: 16rpx; }
 .redo-ico { width: 64rpx; height: 64rpx; border-radius: 50%; background: var(--brand-soft); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .redo-t { display: block; font-size: 27rpx; font-weight: 600; color: var(--ink); }
 .redo-s { display: block; font-size: 21rpx; color: var(--ink-2); margin-top: 4rpx; }

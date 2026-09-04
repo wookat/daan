@@ -42,6 +42,13 @@ export function paperWrongPlan(items) {
   return out;
 }
 
+// 错题本「重练本卷错题」直达：有上次答错题则只练错题；无则回落常规按卷流程（续练/重练弹窗）
+export function paperWrongLaunch(items, wantWrong) {
+  if (wantWrong !== true) return null;
+  const wrong = paperWrongPlan(items);
+  return wrong.length ? wrong : null;
+}
+
 // 按卷练习完成页错题重练：取本会话答错题并清除会话态（含 _logged，否则重练作答不落 answer_log），保持卷面顺序，fail-closed（非数组→空）
 export function paperWrongItems(items) {
   if (!Array.isArray(items)) return [];
