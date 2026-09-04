@@ -5,6 +5,13 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R377 管理台「搜索引擎抓取」面板 + 迷你模考进入/退出 生产复验 走查新经验
+- 面板选择器：`#dash-ops` 内标题文本「搜索引擎抓取（源站日志，近 7 天）」之后的 `.hbar` 行，每行 `.lb`（引擎名 + `.sub` 「最近 …/从未」）与 `span.tag.tag-bad|tag-warn|tag-ok|tag-gray`；底部 `统计生成于 <ISO>`，颜色对照 `getComputedStyle(document.documentElement).getPropertyValue('--t4'|'--error')`（生产 `#6E7280` / `#B91C1C`）。与接口对账用页面自身的 `/api/admin/ops_status` fetch hook（`/tmp/cdp174/r377.py`），不要另开 curl —— crawler cron 每小时 :23 刷新，任务描述里的参考值很可能已过期（本轮 Google 由「从未」变为有抓取），报告要按截获的 JSON 写，并把未触发的分支（`从未`/stale/null）列为未验证。
+- 迷你模考只读进入/退出：首页「更多练习 → 迷你模考」卡 → `POST /api/exam/start {uid,mini:true}` + `POST /api/exam/progress`，会在 `exam_attempts`（`submitted_at=NULL`）与 `exam_progress` 各落 1 行；页头返回箭头（`uni-page-head` 左侧 svg）退出不交卷，回首页出现「有一场未交卷的模考」横幅。清理按 `uid like 'test-…%'` 删这两表即可（`exam_progress` 列：attempt_id, uid, picks, idx, updated_at, marks, secs, excl）。
+- 生产容器 DB 只读/清理脚本：本机写 py → `cat | ssh 'cat > /tmp/x.py && docker cp /tmp/x.py deploy-kaogong-1:/tmp/ && docker exec deploy-kaogong-1 python3 /tmp/x.py'`，先 `ro` 再 `clean`，遍历所有含 uid/from_uid 列的表统计 LEFTOVER。
+- SSH 变量 `TICKETS_VPS_SSH_HOST/USER/CREDENTIAL` 已在 shell 环境里，直接 `sshpass -p $TICKETS_VPS_SSH_CREDENTIAL ssh …`；不要用 exec 的 `env: secret:org:…` 绑定（该引用不存在会被拒绝）。
+- `Emulation.clearDeviceMetricsOverride` 后 innerWidth 可能仍是 375 直到原生导航；若导航后仍窄，再 `setDeviceMetricsOverride(width=0,height=0,deviceScaleFactor=0,mobile=False)` + clear 一次即恢复 1600。
+
 ## W3 集成本地验收（uvicorn + build 产物同源）走查新经验
 - 本地后端 `DB_PATH=<tmp>/app.db IMPORT_TOKEN=xxx KG_BOOT_QUIET_S=0 uvicorn app.main:app --port 8765`（在 backend/ 下）会自动挂载 `../frontend-uni/dist/build/h5`，刚 `npm run build:h5` 的产物直接从 `http://127.0.0.1:8765/#/...` 打开，同源无需另起 vite preview 也无 CORS；Playwright over CDP（`chromium.connectOverCDP('http://localhost:29229')`）先 `localStorage.setItem('anonUid', 'test-w3-…')` 再 goto 报告页即可读到造数。
 - 模考造数：`POST /api/exam/start {uid, mini:true}`（不是 `mode:'mini'`）→ `POST /api/exam/submit {uid, attempt_id, picks, secs}`，`picks`/`secs` 以 **1-based 题号字符串**为 key（不是 question_id），否则全部判未作答；报告 `GET /api/exam/report/{attempt_id}?uid=` 的 `attempt.per_module[mod]={n,answered,correct,secs}`。

@@ -1640,8 +1640,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 ### R377 搜索分发接入：Google Search Console 建资源 + 管理台「搜索引擎抓取」面板（2026-09-04，分支 devin/*-r377-crawler-visibility，base=main）
 - 取证：Search Console 新建 `sc-domain:kaogong.zalize.com`（DNS 提供商自动验证）后「网址检查」`/` 与 `/tiku/` 均「Google 无法识别此网址」、站点地图「未检测到」——**Google 上线以来从未发现本站**（robots 里声明的 sitemap 从未被读取）；「测试实际网址」`/` 可编入索引（SEO 层本身没问题）。源站日志剔除探针后 Googlebot 仅 3 次（全部在 12:24Z 提交 sitemap 之后），Baiduspider 0；Bing/Yandex 靠 R89 IndexNow 在爬。**修正 R90 记录**：当时的「Googlebot 1 条」实为探针网段 140.232.64.5 伪装 Googlebot UA 的 SSR 自测（08-31 08:23Z），不是真 Google。
 - 爬虫 5xx 归因：9-02～9-04 06:05Z 的爬虫 503（25s）全部落在 R372 前的 unhealthy→137 重启窗口（container-events.log）；R372（06:53Z）之后爬虫 0 个 5xx，R376 部署后 restarts 0——运行时不需要改动。
-- 运维动作（已执行，不入代码）：GSC 提交 `https://kaogong.zalize.com/sitemap.xml`（状态「成功」、站点地图索引、子图待处理）；对 `/`、`/tiku/` 各「请求编入索引」一次。GSC 资源挂在测试 Google 账号下——**资源申请：老板 Google 账号邮箱以加为所有者；百度站长平台账号+主动推送 token**（到位前不写推送桩）。
+- 运维动作（已执行，不入代码）：GSC 提交 `https://kaogong.zalize.com/sitemap.xml`（状态「成功」、站点地图索引、子图待处理）；对 `/tiku/` 「请求编入索引」一次（有回执）；`/` 仅「测试实际网址」通过，索引请求是否提交未知。GSC 资源挂在测试 Google 账号下——**资源申请：老板 Google 账号邮箱以加为所有者；百度站长平台账号+主动推送 token**（到位前不写推送桩）。
 - 代码（操作台×分发）：`scripts/crawler_stats.py`（VPS cron `23 * * * *`，读小时级归档 → `kaogong-reports/crawler-stats.json`，探针网段剔除，`probe-ips.txt` 已补 `140.232.64.0/24`）；`ops_status.parse_crawler_stats` → `/api/admin/ops_status.crawlers`（近 7 天 hits/5xx/题库页/sitemap/最近抓取，Google/Baidu/Bing 置顶，>3h 未更新标 stale）；`dashboard.js` 运维状态卡下「搜索引擎抓取」面板（从未来过标红）。零新表/端点。
 - 验证：pytest 327（+7 test_crawler_stats.py）/ ruff / pyright 0；VPS 实跑脚本 5s（历史归档 25 万行），首份 JSON：Yandex 1136 / Bing 89 / Apple 3 / probe_excluded 1（即那条伪装 Googlebot）。
+- 上线复验（rev 62e8c18，同批带上 main 合入的 W3 #590，全量 build）：testing agent 1440/375 全过；cron 13:23Z 刷新后面板 **Google 16 次全部为 sitemap 抓取（12:41Z，提交 sitemap 后 17 分钟）**——GSC 提交实证生效，Google 已开始读 sitemap 但尚未抓 `/tiku/` 任何页；Baidu 仍「从未」红标。stale / crawlers=null / Google「从未」分支只在单测覆盖，生产不可造。
 - 次日复核（R378 取证起点）：源站日志 Googlebot 是否抓 `sitemap-*.xml` 与 `/tiku/` 页；GSC「站点地图」已发现网页数、`/tiku/` 收录状态。不得把「提交成功」当「已收录」。
 - 详见 docs/iter/round-3/r377-search-distribution.md。
