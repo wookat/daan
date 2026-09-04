@@ -146,10 +146,22 @@ def init_db():
         "CREATE INDEX IF NOT EXISTS idx_q_tag3_pick ON questions(tag3, disabled, is_real, has_hs, id)"
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_quality ON questions(quality_score)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_q_disabled_id ON questions(disabled, id)")
+    # (disabled, id) 是 idx_q_sitemap 的前缀，由 idx_q_active_src 接管「disabled=0 AND id IN (...)」
+    conn.execute("DROP INDEX IF EXISTS idx_q_disabled_id")
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_q_sitemap ON questions(disabled, id, updated_at)"
     )
+    # 卷库 /api/exam/papers 按卷内 qid 批量取活跃题的 source/is_real：覆盖索引免回表
+    # （按主键逐题回表要翻 ~64 MB 冷页，覆盖索引 ~3 MB）
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_q_active_src ON questions(disabled, id, is_real, source)"
+    )
+    # 管理台 stats 两个 COUNT 原本各全表扫 ~264 MB（hs_explanation 宽行），部分索引只存命中行 id
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_q_hs_done ON questions(id) "
+        "WHERE hs_explanation IS NOT NULL AND hs_explanation!=''"
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_q_hs_down ON questions(id) WHERE hs_down>0")
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_q_disabled_module ON questions(disabled, module)"
     )

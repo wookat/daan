@@ -26,7 +26,7 @@
       const last = never ? '从未' : esc(e.last_seen.slice(5, 16).replace('T', ' ')) + 'Z';
       const cls = never ? 'tag-bad' : e.err5xx_7d ? 'tag-warn' : e.hits_7d ? 'tag-ok' : 'tag-gray';
       const detail = never ? '0 次' : `${e.hits_7d.toLocaleString()} 次（今日 ${e.hits_today}）· 题库页 ${e.tiku_7d}${e.sitemap_7d ? ` · sitemap ${e.sitemap_7d}` : ''}${e.err5xx_7d ? ` · 5xx ${e.err5xx_7d}` : ''}`;
-      return `<div class="hbar"><span class="lb" style="width:auto;flex:1">${esc(e.name)}<span class="sub" style="margin-left:6px;font-size:11px;color:var(--t4)">最近 ${last}</span></span>
+      return `<div class="hbar hbar-wrap"><span class="lb">${esc(e.name)}<span class="sub">最近 ${last}</span></span>
         <span class="tag ${cls}">${detail}</span></div>`;
     }).join('');
     const foot = `<div style="margin-top:6px;font-size:11px;color:${c.stale ? 'var(--error)' : 'var(--t4)'}">统计生成于 ${esc(c.generated_at || '未知')}${c.stale ? '（超过 3h 未更新，检查 crawler_stats cron）' : ''}</div>`;
@@ -39,7 +39,7 @@
     const detail = hm.api_7d
       ? `API ${hm.api_7d.toLocaleString()} 次（今日 ${hm.api_today}）· 页面 ${hm.page_7d} · IP 日去重 ${hm.ips_7d}（今日 ${hm.ips_today}）· 5xx ${hm.api5xx_7d}`
       : '0 次（近 7 天无真人 API 请求）';
-    return `<div class="hbar" style="margin-bottom:4px"><span class="lb" style="width:auto;flex:1">真人<span class="sub" style="margin-left:6px;font-size:11px;color:var(--t4)">剔除探针网段 / 引擎与通用 bot UA / test- uid</span></span>
+    return `<div class="hbar hbar-wrap" style="margin-bottom:4px"><span class="lb">真人<span class="sub">剔除探针网段 / 引擎与通用 bot UA / test- uid</span></span>
       <span class="tag ${cls}">${detail}</span></div>`;
   }
 

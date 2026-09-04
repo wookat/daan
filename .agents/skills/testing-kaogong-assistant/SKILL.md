@@ -5,6 +5,16 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R382 卷库覆盖索引 + 管理台「搜索引擎抓取」真人行 生产复验 走查新经验
+- **「卷库」UI 用的是 `/api/exam/papers?kind=zhenti&uid=`（exam_papers 表，~120 卷），不是 `/api/papers`（questions 表 src/paper 聚合，~26 条）**。`/api/papers` 只被 `practice.vue openPapers()` 调用且模板里没有调用者，UI 无触发路径；验证「/api/papers 相关索引」时：① 容器内 `EXPLAIN QUERY PLAN` 断言 `USING COVERING INDEX idx_q_paper_src`，② 从页面上下文 `fetch('/api/papers')` 单独计时，③ UI 卷数应与 `/api/exam/papers` items 数比对。别把「UI 卷数 == /api/papers 条数」当断言。
+- 按卷练习入口：首页「更多练习 → 真题卷练习」→ `#/pkgA/exam/list` → 卡片「按卷练习」→ `GET /api/paper_questions?src=&pid=&uid=`；答 N 题后「退出 → 保留进度」是 navigateBack 回卷库列表（卡片立刻显示「已练 N/M 题 · 错 W 题」），需再点左上返回/首页 tab 才看到续练卡；`practice_progress.idx` 是当前题下标（停在第 2 题未点下一题时 idx=1），续练卡「已做 N/M」按 picks 数算。
+- 换 uid 后首页「专项练习」各模块的已练数/正确率仍显示上一个 uid 的值（`loadPStats` 走 localStorage、非 uid 维度），不是 bug，别误报。
+- 管理台「真人」行断言：hook 页面自身 `/api/admin/ops_status`（或用 `localStorage.admToken` 作 `X-Admin-Token` 再 fetch 一次），`h=crawlers.humans`，期望字串 `` `API ${h.api_7d.toLocaleString()} 次（今日 ${h.api_today}）· 页面 ${h.page_7d} · IP 日去重 ${h.ips_7d}（今日 ${h.ips_today}）· 5xx ${h.api5xx_7d}` `` 与 `#dash-ops .hbar` 中 `.lb` 以「真人」开头那行的 `.tag.innerText` 逐字比对；`tag-ok` 当 `api5xx_7d==0 && api_7d>0`。`crawlers` 的键是 `generated_at/stale/window_days/engines[]/humans`，`engines[]` 字段 `name/hits_7d/hits_today/err5xx_7d/tiku_7d/sitemap_7d/last_seen`。crawler-stats.json 会在部署后重新生成，用户口头给的数值可能过期，以页面自身接口为准并注明 `generated_at`。
+- 375 管理台溢出检查：`documentElement.scrollWidth/clientWidth/body.scrollWidth` 三者 ==375 + `#dash-ops` 内 `getBoundingClientRect().right>375` 的节点数 ==0。注意「无横向溢出」不等于排版正常：`.hbar .lb` 标签列在 375 下很窄，长副标题会逐字竖排（真人行 316px 高），要截图报观察项。
+- 管理台登录点「登录」后按钮会停在「验证中…」直到 `/api/admin/stats` 返回，该接口生产可到 10–15 s（`[slow-req]` 日志）；等待时用 `performance.getEntriesByType('resource')` 看 `/api/admin/*` 的 duration/responseStatus，别误判登录失败重复点击。
+- `Page.captureScreenshot` 直接用 `C` 类时结果在 `r['result']['data']`（不是 `r['data']`）；`Sess.shot()` 已封装。`pgrep -f "holdvw.py 375 812"` 会同时匹配到启动它的 `bash -c` 包裹进程，杀 holder 前用 `ps -o pid,cmd -p` 过滤出 python 那个 PID。
+- 客户端 `/api/questions?module=yanyu` 有时 4–5 s（同时段 home_bundle 2.9 s、exam/resume 2.7 s），服务端未必记 slow-req；报告里区分「客户端计时」与「容器日志 slow-req」。
+
 ## R381 index.html 隐藏 SEO 导航（`#kg-seo-nav`）+ 资料分析 grouped 拉题 + 同材料题组 SSR 生产复验 走查新经验
 - 「挂载前 splash 盖住 / 挂载后 CSS 隐藏」这类断言，生产正常加载太快看不到 splash；用 CDP `Fetch.enable(patterns=[{urlPattern:'*index-*.js*'}])` 暂停 bundle 请求（`/tmp/cdp174/r381_cold.py`），在暂停期读 `#app.matches(':empty')`、`getComputedStyle(nav).display`（此时应是 `block`）、splash `position:fixed` rect 覆盖视口、`elementFromPoint(nav中心)` 落在 `#kg-splash` 内；`Fetch.continueRequest` 后再断言 `display==='none'`、`nav.getClientRects().length===0`、`document.body.innerText.includes('行测题库')===false`（innerText 排除 display:none，`textContent` 不排除，别混用）。判 `#app` 空用 `matches(':empty')`/`childElementCount`，`innerHTML===''` 会被注释干扰。
 - 挂载前导航在正常流里有高度（1440≈57px、375≈82px），文档可滚动这一点 splash 遮不住 —— splash 是 fixed 所以仍盖住，但「任何滚动位置都看不见」不能做成绝对断言，报告里要写成已观察/未穷举。
