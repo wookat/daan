@@ -52,6 +52,10 @@ export function fetchQuestions(p: DrawParams): Promise<QuestionsResp> {
   return request<QuestionsResp>(q);
 }
 
+export function fetchQuestionCounts(): Promise<{ counts: { module: string; n: number }[] }> {
+  return request<{ counts: { module: string; n: number }[] }>('/api/question_counts');
+}
+
 export function redoMistakes(limit = 10): Promise<QuestionsResp> {
   return request<QuestionsResp>(
     '/api/mistakes/redo?limit=' + limit + '&uid=' + encodeURIComponent(anonUid())

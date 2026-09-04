@@ -1454,6 +1454,14 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 遗留观察（候选下轮）：卷库「未交卷」条「放弃」只清本地，服务端 exam_progress 行不删，刷新/跨设备会回填复活（本轮实测 attempt 217 再现）。
 - 详见 docs/iter/round-3/r357-paper-console-merge.md。
 
+### W2（可信度收口集成轮，分支 devin/wf-w2-integration，未建 PR/未部署）
+- 集成：origin/main 0c71fdd（含 R356 8cf2628）切 `devin/wf-w2-integration`，依次 merge W2-A（3d36bcb）/ W2-B（d3ebaf0）/ W2-C（e3e871f），三次无冲突；dropped 无；HEAD 上 merge-base --is-ancestor 8cf2628 / 7a9bb2f / 4bf10bb / 02a0adb 均为真（R355 教训）。全量本地验证：backend ruff / pytest 266 passed / pyright 0；frontend-uni lint / vitest 469 / build:h5（bundle index-tRw-HLw2.js）；miniapp typecheck 0 / lint（`ESLINT_USE_FLAT_CONFIG=false`）0 / offline 单测 7。
+- W2-A（backend）：main.py ValueError/TypeError → `/api/*` 统一 400「参数格式错误」；api_save_mistake question_id as_int；`idx_mist_uid(uid, created_at)`；SEO 页脚「10万+ 行测题 · 1.5万+ 历年真题」；quality.normalize_cjk_spaces / HS_META_RE + scripts/w2_content_cleanup.py（dry-run 默认、--apply 备份 .bak-w2、rescore、不下线不改 explanation 不触发 LLM）。本地 uvicorn 实测 export/pdf ['abc'] 400、mistakes 'abc' 400 / '7149' 落 INTEGER / '' 落 NULL、EXPLAIN 命中 idx_mist_uid、/tiku/ 新页脚；临时库 dry-run 1836 → apply → 复扫 0，构造题元句剥离 / SKIP 跳过。生产广场 3 条测试评论已由 W2-A 实施方管理端软删（/api/comments/plaza items:[]）。**生产 export/pdf 仍 500、/tiku/ 仍 13万+、清洗脚本生产 dry-run/apply 未做——待部署。**
+- W2-B（H5）：index.html×4 / manifest / og-card / share-q / pk-result 口径清零；weak-spots.js 薄弱考点按 tag3 聚合后同名合并；exp-dup.js 隐藏被 hs 全文包含的 explanation；contest 零人数「本场首批报名开放中 · 全站同卷」。本地 build 产物 Chrome 375 走查：share-q 不存在 id 新文案、contest 零人数/报名后 1 人两分支、practice 20 题解析显隐与预期一致、完成页薄弱考点无重名。生产 view-source/SW 待部署核对。
+- W2-C（小程序）：hero/stats 连签服务端优先；utils/offline.ts answer_log/mistakes 离线队列（去重/持久化/单飞/联网触发）；exam 错误态+重试；app.wxss page 高度约束；首页题数 /api/question_counts 动态化（静态回退改当前口径）；README Skyline→webview。**微信开发者工具走查未做**（断网→恢复落库、连签一致、14 页滚到底 + login、page 高度对 navbar/底栏影响）。
+- 数据纪律：全部在本机临时库完成，未触碰生产库/配置、未触发 LLM、生产未新增 test-w2-* 数据。
+- 遗留台账：docs/iter/workflow/backlog.md（W2 追加：SMS 凭证资源缺口、original 题 hs 人审、题干模板家族去重设计、mock_event 唯一约束、mock 冗余卷计数、db.py 按域拆分、tag3_name 后端统一、小程序统一「数据非最新」提示、contest 历史累计人数、部署后回归清单）；详证 docs/iter/workflow/w2.md。
+
 ### R358 模考「放弃未交卷」同步删除服务端进度（2026-08-29，PR #563，分支 devin/1788465149-r358-exam-drop-server-clear）
 - 取证：R357 遗留观察实证——放弃只删本地 examProgress，服务端 exam_progress 仅在交卷时 clear_exam_progress()，放弃后刷新/跨设备 /api/exam/resume 回填复活；练习（R323）/复习（R353）均已有服务端清除语义，模考是唯一缺口。
 - 收口（零新 endpoint/表/协议）：a) POST /api/exam/progress body drop:true 时，在 uid/attempt 归属校验后、已交卷/超时校验前直接 clear_exam_progress 返回 {ok:true}——已交卷 drop 幂等 200、已超时进度也能放弃；b) parseExamProgress 补 attemptId（非法回落 0，drop 时 fail-closed 不发请求）；c) 卷库 dropResume/首页 erDrop 确认后写 erClearedAt + POST drop（失败静默本地照删，最终一致性同练习/复习）+ 删本地快照；d) syncResume/syncExamResume 远端回填前 erClearedAt 30s 守卫。

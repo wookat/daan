@@ -2,6 +2,8 @@
 
 维度：题干/选项/解析完整性、解析长度与结构、来源可信度、用户反馈信号、
 内容自证缺陷（hs 自检失败词 / 管线括注 / yanyu 伪中文机器句）。
+
+另含内容清洗规则（题干汉字间空格、hs 管线元句），供清洗脚本与 sanitize_hs 共用。
 """
 import json
 import re
@@ -13,9 +15,22 @@ _STRUCT_HINTS = ("因此", "所以", "故选", "故答案", "综上", "第一步
 HS_SELFCHECK_WORDS = ("SKIP:", "官方解析有误", "官方解析误", "无法用给定", "无法可靠得到", "题干数据或选项有误")
 # 管线括注「（通用解法，该题型花生方法不在库中）」及其变体
 HS_PIPELINE_NOTE_RE = re.compile(r"（通用解法，[^）]*不在库中）")
+# 管线元句「该解法是花生十三体系中此类题型的标准套路，考场可直接套用。」及同义变体：
+# 该/本/此 + 解法/方法/思路 + 是/为 + 花生十三…套路/套用…，到句号为止（含前后空白）
+HS_META_RE = re.compile(
+    r"[ \t\u3000]*(?:该|本|此)(?:解法|方法|思路|做法)(?:是|为|属于|即)花生十三"
+    r"[^。！\n]{0,40}(?:套路|套用|通法)[^。！\n]*[。！]?[ \t\u3000]*"
+)
 # AI 批次 yanyu 伪中文机器句特征「X着Y的Z」；命中 ≥ PSEUDO_ZH_MIN_HITS 判定为机器句
 PSEUDO_ZH_RE = re.compile(r"[一-龥]{1,3}着[一-龥]{1,5}的[一-龥]{1,4}")
 PSEUDO_ZH_MIN_HITS = 3
+# 汉字 / 中文标点（不含全角数字字母），用于「汉字之间夹空格」判定
+_CJK_CLASS = (
+    "\u4e00-\u9fff\u3001-\u303f\u2014\u2026\u2018\u2019\u201c\u201d"
+    "\uff01-\uff0f\uff1a-\uff20\uff3b-\uff40\uff5b-\uff5e"
+)
+CJK_SPACE_RE = re.compile(f"(?<=[{_CJK_CLASS}])[ \u3000]+(?=[{_CJK_CLASS}])")
+_CJK_BLANK_PAIRS = {"（）", "【】", "〔〕", "「」", "『』"}
 
 PENALTY_HS_SELFCHECK = 40
 PENALTY_HS_PIPELINE_NOTE = 15
@@ -28,6 +43,29 @@ def hs_selfcheck_failed(hs: str) -> bool:
 
 def pseudo_zh_hits(text: str) -> int:
     return len(PSEUDO_ZH_RE.findall(text or ""))
+
+
+def _cjk_space_sub(m: re.Match) -> str:
+    s = m.string
+    if s[m.start() - 1] + s[m.end()] in _CJK_BLANK_PAIRS:  # 「（ ）」填空占位保留
+        return m.group(0)
+    return ""
+
+
+def normalize_cjk_spaces(text: str | None) -> str:
+    """仅剥离汉字/中文标点之间的半角/全角空格；数字、字母两侧空格保留（「1 天有 86400 秒」不变）。"""
+    return CJK_SPACE_RE.sub(_cjk_space_sub, text or "")
+
+
+def normalize_options(options) -> str | None:
+    """对选项 JSON 各值做 normalize_cjk_spaces；无变化返回 None（调用方据此判断是否写库）。"""
+    opts = _parse_options(options)
+    if not opts:
+        return None
+    fixed = {k: normalize_cjk_spaces(v) if isinstance(v, str) else v for k, v in opts.items()}
+    if fixed == opts:
+        return None
+    return json.dumps(fixed, ensure_ascii=False)
 
 
 def question_text(row: dict) -> str:
@@ -44,6 +82,7 @@ def sanitize_hs(text: str | None) -> str | None:
     if hs_selfcheck_failed(hs):
         return None
     hs = HS_PIPELINE_NOTE_RE.sub("", hs)
+    hs = HS_META_RE.sub("", hs)
     hs = re.sub(r"[ \t\u3000]+\n", "\n", hs)
     hs = re.sub(r"[ \t\u3000]{2,}", " ", hs)
     hs = re.sub(r"\n{3,}", "\n\n", hs)

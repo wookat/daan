@@ -365,6 +365,7 @@ def api_practice_resume(uid: str):
 @router.post("/api/mistakes")
 def api_save_mistake(rec: dict, request: Request):
     rl(request, "mistake", 240, 3600, str(rec.get("uid") or "").strip() or None)
+    rec["question_id"] = as_int(rec.get("question_id"), 0) or None
     mid = db.save_mistake(rec)
     return {"id": mid}
 

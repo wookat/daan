@@ -3,7 +3,7 @@
     <view v-if="loading" class="card empty">加载中…</view>
     <view v-else-if="errMsg" class="card empty err">
       <text class="err-t">{{ errMsg }}</text>
-      <text class="err-s">题目可能已被删除或链接不完整，13 万题库仍可免费刷</text>
+      <text class="err-s">题目可能已被删除或链接不完整，10万+ 题库仍可免费刷</text>
       <view class="act-btn main" @click="goHome">去刷题</view>
     </view>
 
@@ -78,7 +78,7 @@
       </template>
 
       <view class="reg-tip" @click="goLogin">
-        <text class="reg-t">登录 / 注册错题邦，13 万题库免费刷 ›</text>
+        <text class="reg-t">登录 / 注册错题邦，10万+ 题库免费刷 ›</text>
       </view>
     </template>
   </view>

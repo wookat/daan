@@ -41,7 +41,7 @@
       </view>
 
       <view class="reg-tip" @click="goLogin">
-        <text class="reg-t">登录 / 注册错题邦，13 万题库免费刷 ›</text>
+        <text class="reg-t">登录 / 注册错题邦，10万+ 题库免费刷 ›</text>
       </view>
     </template>
   </view>

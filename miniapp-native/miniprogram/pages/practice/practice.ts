@@ -10,6 +10,8 @@ import {
   trackEvent,
 } from '../../api/index';
 import type { AnswerLogItem, Question } from '../../api/types';
+import { anonUid } from '../../utils/auth';
+import { enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../utils/offline';
 import { BASE_URL } from '../../utils/request';
 import { modName, recordStat, streakDays } from '../../utils/stats';
 
@@ -96,6 +98,7 @@ Page({
     this._tag3 = query.tag3 ? decodeURIComponent(query.tag3) : null;
     const count = Number(query.count) || 10;
     this._mode = query.mode || '';
+    flushOfflineQueue();
     this.start(this._mode, count);
   },
   onUnload() {
@@ -194,9 +197,10 @@ Page({
     }
   },
 
-  // answer_log 上报：先标记 _logged 再发请求，避免在途并发重复落库（对齐 practice.vue）
+  // answer_log 上报：先标记 _logged 再发请求，避免在途并发重复落库；失败入离线队列（对齐 practice.vue）
   async logAttempts(qs: PQuestion[]) {
     try {
+      const uid = anonUid();
       const pending = qs.filter((q) => q._picked && !q._logged);
       const items: AnswerLogItem[] = pending.map((q) => ({
         qid: q.id || null,
@@ -211,7 +215,11 @@ Page({
         pending.forEach((q) => {
           q._logged = true;
         });
-        await postAnswerLog(items).catch(() => undefined);
+        try {
+          await postAnswerLog(items);
+        } catch (err) {
+          enqueueAnswers(uid, items);
+        }
       }
     } catch (e) {
       /* 非关键路径 */
@@ -222,18 +230,19 @@ Page({
     if (q._saved) return;
     q._saved = true;
     const optText = q.optList.map((o) => `${o.k}.${o.v}`).join(' ');
+    const m = {
+      question_id: q.id || null,
+      module: q.module,
+      question_type: q.question_type || q.submodule,
+      question_text: q.question + '\n' + optText,
+      user_answer: picked,
+      correct_answer: q.answer,
+      explanation: q.explanation || '',
+    };
     try {
-      await postMistake({
-        question_id: q.id || null,
-        module: q.module,
-        question_type: q.question_type || q.submodule,
-        question_text: q.question + '\n' + optText,
-        user_answer: picked,
-        correct_answer: q.answer,
-        explanation: q.explanation || '',
-      });
+      await postMistake(m);
     } catch (e) {
-      q._saved = false;
+      enqueueMistake({ uid: anonUid(), ...m });
     }
   },
 

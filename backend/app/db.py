@@ -87,6 +87,8 @@ def init_db():
     ]:
         if col not in cols:
             conn.execute(ddl)
+    _ensure_mistake_uid(conn)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_mist_uid ON mistakes(uid, created_at)")
     # 历史 question_type 混存「模块名-细分」与「细分」两种格式，统一回填为细分题型名（幂等）
     conn.execute(
         "UPDATE mistakes SET question_type = trim(substr(question_type, instr(question_type,'-')+1)) "
