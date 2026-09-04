@@ -221,6 +221,10 @@
         <text class="rr-tip">答对的已推进复习计划<template v-if="redoReport.still">；仍错的已重置复习，明天优先再练</template></text>
         <view class="rr-go" @click="goReview">回错题本查看 ›</view>
       </view>
+      <view v-else-if="!beiMode && fixReport" class="fixreport" @click="goReview">
+        <text class="fr-t">{{ fixReportText(fixReport) }}</text>
+        <text class="fr-go">回错题本 ›</text>
+      </view>
       <view v-if="!beiMode && !examMode && weakSpots.length" class="weakrf">
         <view class="rr-t">薄弱考点 · 趁热打铁</view>
         <view v-for="w in weakSpots" :key="w.key" class="wr-row">
@@ -369,6 +373,7 @@ import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 import { qStatLine } from '../../q-stat.js';
 import { toggleExcl, pickWithExcl, exclVisible } from '../../exam-excl.js';
 import { collectPracticeProgress, adoptPracticeResume } from '../../practice-progress.js';
+import { reviewedMasteredCount, fixReportText } from '../../review-advance.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -427,6 +432,7 @@ export default {
       dailyStats: null,
       dailyBoard: [],
       redoReport: null,
+      fixReport: null,
       examMode: false,
       examLeft: 0,
       examTimer: null,
@@ -2318,29 +2324,23 @@ export default {
       if (this.items.length >= 5) this.initPushNudge();
       // #endif
     },
-    // 错题重练场次：答对的题推进 SRS 复习计划（答错走既有自动存错题路径重置复习），并汇总效果报告
+    // 复习推进由 /api/answer_log 服务端统一完成（任何场次答对曾错题都算）；这里只等在途落库请求回来，汇总效果报告
     async syncRedoReviews() {
       this.redoReport = null;
+      this.fixReport = null;
+      try { await Promise.all((this._logPending || []).map((p) => p.catch(() => null))); } catch (e) { /* 非关键路径 */ }
+      this._logPending = [];
+      const reviewed = this._reviewed || [];
+      this._reviewed = [];
       const isRedo = this._redoItems && this._redoItems.length && !this.lastModule;
-      if (!isRedo) return;
-      const answered = this.items.filter((q) => q._picked && q.mistake_id);
-      if (!answered.length) return;
-      const uid = anonUid();
-      let fixed = 0;
-      let still = 0;
-      let mastered = 0;
-      for (const q of answered) {
-        if (q._picked !== q.answer) {
-          still++;
-          continue;
-        }
-        fixed++;
-        try {
-          const r = await request('/api/review/' + q.mistake_id, { method: 'POST', data: { correct: true, uid } });
-          if (r && r.mastered) mastered++;
-        } catch (e) { /* 非关键路径 */ }
+      if (isRedo) {
+        const answered = this.items.filter((q) => q._picked && q.mistake_id);
+        if (!answered.length) return;
+        const fixed = answered.filter((q) => q._picked === q.answer).length;
+        this.redoReport = { fixed, still: answered.length - fixed, mastered: reviewedMasteredCount(reviewed) };
+        return;
       }
-      this.redoReport = { fixed, still, mastered };
+      if (reviewed.length) this.fixReport = { n: reviewed.length, mastered: reviewedMasteredCount(reviewed) };
     },
     async loadDueReview() {
       try {
@@ -2348,6 +2348,7 @@ export default {
         this.dueReview = r.total || (r.items || []).length;
       } catch (e) { /* 非关键路径 */ }
     },
+    fixReportText,
     goReview() {
       trackEvent('review_entry_click', 'practice_done');
       uni.setStorageSync('autoStartReview', 1);
@@ -2363,6 +2364,7 @@ export default {
         const pending = qs.filter((q) => q._picked && !q._logged);
         const items = pending.map((q) => ({
           qid: q.id || null,
+          mid: q.mistake_id || undefined,
           module: q.module || this.lastModule || null,
           submodule: q.submodule || null,
           correct: q._picked === q.answer,
@@ -2373,8 +2375,13 @@ export default {
         if (items.length) {
           // 先标记再发请求，避免请求在途期间并发调用重复落库
           pending.forEach((q) => { q._logged = true; });
+          const p = request('/api/answer_log', { method: 'POST', data: { uid, items } });
+          (this._logPending = this._logPending || []).push(p);
           try {
-            await request('/api/answer_log', { method: 'POST', data: { uid, items } });
+            const r = await p;
+            if (r && Array.isArray(r.reviewed) && r.reviewed.length) {
+              this._reviewed = (this._reviewed || []).concat(r.reviewed);
+            }
           } catch (err) {
             // 断网：进本地队列，恢复网络后自动同步（按 key 去重）
             enqueueAnswers(uid, items.map((it, i) => ({ ...it, t: Date.now() + i })));
@@ -2384,6 +2391,8 @@ export default {
     },
     quit() {
       if (!this.beiMode && this.items.length) this.logAttempts(this.items);
+      this._reviewed = [];
+      this._logPending = [];
       uni.removeStorageSync('pendingSession');
       if (!this.beiMode && !this.examMode && !this._shizheng) this.clearServerProgress();
       this.examMode = false;
@@ -2652,6 +2661,9 @@ export default {
 .rr-l { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
 .rr-tip { display: block; font-size: 22rpx; color: var(--ink-2); line-height: 1.6; }
 .rr-go { margin-top: 10rpx; font-size: 24rpx; font-weight: 600; color: var(--brand-text); }
+.fixreport { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 16rpx; margin-top: 24rpx; background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 18rpx; padding: 20rpx 28rpx; box-sizing: border-box; text-align: left; }
+.fr-t { flex: 1; min-width: 0; font-size: 24rpx; color: var(--ink-2); line-height: 1.6; }
+.fr-go { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: var(--brand-text); }
 .report { width: 100%; margin: 20rpx 0 28rpx; }
 .report-row { display: flex; gap: 16rpx; margin-bottom: 24rpx; }
 .report-cell { flex: 1; background: var(--soft-bg); border-radius: 16rpx; padding: 20rpx 0; display: flex; flex-direction: column; align-items: center; gap: 6rpx; }

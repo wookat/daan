@@ -2361,11 +2361,45 @@ def _ensure_answer_log(conn):
     conn.execute("CREATE INDEX IF NOT EXISTS idx_al_qid ON answer_log(question_id)")
 
 
-def save_answer_log(uid: str, items: list[dict]) -> int:
+def _pos_int(v) -> int | None:
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, int):
+        return v if v > 0 else None
+    if isinstance(v, str) and v.isdigit():
+        return int(v) or None
+    return None
+
+
+def _find_open_mistake(conn, uid: str, mid, qid) -> int | None:
+    """定位本 uid 尚未掌握的错题：优先条目自带 mistake_id（兼容 question_id 为空的文本匹配错题），否则按题号。"""
+    mid, qid = _pos_int(mid), _pos_int(qid)
+    if mid:
+        row = conn.execute(
+            "SELECT id FROM mistakes WHERE id=? AND uid=? AND (mastered IS NULL OR mastered=0)", (mid, uid)
+        ).fetchone()
+        if row:
+            return row["id"]
+    if qid:
+        row = conn.execute(
+            "SELECT id FROM mistakes WHERE question_id=? AND uid=? AND (mastered IS NULL OR mastered=0) "
+            "ORDER BY id LIMIT 1",
+            (qid, uid),
+        ).fetchone()
+        if row:
+            return row["id"]
+    return None
+
+
+def save_answer_log_detail(uid: str, items: list[dict]) -> dict:
+    """落 answer_log；答对且命中本 uid 未掌握错题的条目同步推进该错题复习计划（与 /api/review 同一套 SRS）。"""
     conn = get_conn()
     _ensure_answer_log(conn)
+    _ensure_mistake_uid(conn)
     now = time.time()
     n = 0
+    reviewed: list[dict] = []
+    advanced: set[int] = set()
     for it in items:
         if not isinstance(it, dict):
             continue
@@ -2395,9 +2429,22 @@ def save_answer_log(uid: str, items: list[dict]) -> int:
             ),
         )
         n += 1
+        if not it.get("correct"):
+            continue
+        mid = _find_open_mistake(conn, uid, it.get("mid"), qid)
+        if mid is None or mid in advanced:
+            continue
+        advanced.add(mid)
+        res = _advance_review(conn, mid, True, uid)
+        if res:
+            reviewed.append({"mistake_id": mid, "streak": res["streak"], "mastered": res["mastered"]})
     conn.commit()
     conn.close()
-    return n
+    return {"saved": n, "reviewed": reviewed}
+
+
+def save_answer_log(uid: str, items: list[dict]) -> int:
+    return save_answer_log_detail(uid, items)["saved"]
 
 
 _HISTORY_SESSION_GAP = 1800  # 相邻作答间隔超过该秒数即切分为新一次练习
@@ -3162,25 +3209,20 @@ def _ensure_review_log(conn):
     conn.execute("CREATE INDEX IF NOT EXISTS idx_rl_uid ON review_log(uid, created_at)")
 
 
-def record_review(mid: int, correct: bool, uid: str | None = None) -> dict:
-    conn = get_conn()
-    _ensure_mistake_uid(conn)
+def _advance_review(conn, mid: int, correct: bool, uid: str | None) -> dict | None:
+    """一次复习结果推进 SRS：写 review_log（有 uid 时）、更新 streak/next_review/mastered。错题不存在返回 None。"""
     cl, args = _uid_clause(uid)
-    if not conn.execute(f"SELECT 1 FROM mistakes WHERE id=?{cl}", (mid, *args)).fetchone():
-        conn.close()
-        raise KeyError(mid)
+    row = conn.execute(
+        f"SELECT review_streak FROM mistakes WHERE id=?{cl}", (mid, *args)
+    ).fetchone()
+    if not row:
+        return None
     if uid:
         _ensure_review_log(conn)
         conn.execute(
             "INSERT INTO review_log (uid, mistake_id, correct, created_at) VALUES (?,?,?,?)",
             (uid, mid, 1 if correct else 0, time.time()),
         )
-    row = conn.execute(
-        f"SELECT review_streak FROM mistakes WHERE id=?{cl}", (mid, *args)
-    ).fetchone()
-    if not row:
-        conn.close()
-        raise KeyError(mid)
     streak = (row["review_streak"] or 0) + 1 if correct else 0
     days = REVIEW_INTERVALS_DAYS[min(streak - 1, len(REVIEW_INTERVALS_DAYS) - 1)] if correct else 1
     nxt = time.time() + days * 86400
@@ -3191,9 +3233,19 @@ def record_review(mid: int, correct: bool, uid: str | None = None) -> dict:
         f"WHERE id=?{cl}",
         (streak, nxt, mastered, mastered, time.time(), mid, *args),
     )
+    return {"streak": streak, "next_review_days": days, "mastered": bool(mastered)}
+
+
+def record_review(mid: int, correct: bool, uid: str | None = None) -> dict:
+    conn = get_conn()
+    _ensure_mistake_uid(conn)
+    res = _advance_review(conn, mid, correct, uid)
+    if res is None:
+        conn.close()
+        raise KeyError(mid)
     conn.commit()
     conn.close()
-    return {"streak": streak, "next_review_days": days, "mastered": bool(mastered)}
+    return res
 
 
 def stats(uid: str | None = None) -> dict:

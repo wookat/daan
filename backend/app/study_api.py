@@ -143,8 +143,7 @@ def api_answer_log(body: dict, request: Request):
     items = body.get("items")
     if not uid or not isinstance(items, list) or not items:
         raise HTTPException(400, "缺少 uid 或答题记录")
-    n = db.save_answer_log(uid[:64], items[:200])
-    return {"saved": n}
+    return db.save_answer_log_detail(uid[:64], items[:200])
 
 @router.get("/api/practice/history")
 def api_practice_history(uid: str):
