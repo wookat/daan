@@ -778,10 +778,10 @@ def _render_question(qid: int) -> str:
         + '<details open class="ans"><summary>答案与解析</summary>'
         + f'<p><b>正确答案：{_e(r["answer"] or "见解析")}</b></p>{exp_html}</details>'
         + (
-            f'<a class="cta" href="{_e(SITE_BASE)}/#/pages/practice/practice?tag3={quote(r["tag3"])}'
-            f'{"&module=" + quote(r["module"]) if r["module"] else ""}&source=seo">在线练习此考点（免费）→</a>'
-            if r["tag3"]
-            else f'<a class="cta" href="{_e(SITE_BASE)}/">继续刷题（免费题库+AI 讲解）→</a>'
+            f'<a class="cta" href="{_e(SITE_BASE)}/#/pages/practice/practice?qid={qid}'
+            f'{"&tag3=" + quote(r["tag3"]) if r["tag3"] else ""}'
+            f'{"&module=" + quote(r["module"]) if r["module"] else ""}&source=seo_q">'
+            f'{"在线做这道题 + 同考点练习（免费）→" if r["tag3"] else "在线做这道题（免费）→"}</a>'
         )
         + (
             f'<p><a href="{_e(_topic_path(r["tag3"]))}">← 返回「{_e(topic["name"])}」考点题目列表</a></p>'

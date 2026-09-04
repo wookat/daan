@@ -46,6 +46,23 @@ git -C "$REPO_DIR" diff --quiet HEAD -- backend || BUILD_REV="$BUILD_REV-dirty"
 echo "$BUILD_REV" > "$REPO_DIR/backend/BUILD_REV"
 echo "本机后端 rev: $BUILD_REV"
 
+step "2b 线上 rev 谱系闸（并行会话互相覆盖回退防护；DEPLOY_FORCE=1 跳过）"
+LIVE_REV=$(curl -s --max-time 15 "$SITE/api/health" | grep -o '"rev":"[^"]*"' | cut -d'"' -f4 || true)
+LIVE_REV="${LIVE_REV%-dirty}"
+if [[ "${DEPLOY_FORCE:-}" == "1" ]]; then
+  echo "跳过（DEPLOY_FORCE=1），线上 rev: ${LIVE_REV:-?}"
+elif [[ -z "$LIVE_REV" ]]; then
+  echo "WARN: 取不到线上 rev（/api/health 不可达），不阻塞"
+elif ! git -C "$REPO_DIR" cat-file -e "$LIVE_REV^{commit}" 2>/dev/null; then
+  echo "FAIL: 线上 rev $LIVE_REV 不在本机仓库（其他会话部署了未推送的提交）。先 git fetch / 与对方对齐，确认要覆盖再 DEPLOY_FORCE=1。"
+  exit 1
+elif ! git -C "$REPO_DIR" merge-base --is-ancestor "$LIVE_REV" HEAD; then
+  echo "FAIL: 本机 HEAD 不包含线上 rev $LIVE_REV（会把别人的上线回退掉）。先 merge origin/main 或对方分支，确认要回滚再 DEPLOY_FORCE=1。"
+  exit 1
+else
+  echo "OK: 线上 rev $LIVE_REV 是本机 HEAD 的祖先"
+fi
+
 step "3/6 rsync backend/deploy/dist 到生产"
 (cd "$REPO_DIR" && sshpass -e rsync -azR --delete -e "ssh ${SSH_OPTS[*]}" \
   backend deploy frontend knowledge frontend-uni/dist "$REMOTE:$REMOTE_DIR/" \

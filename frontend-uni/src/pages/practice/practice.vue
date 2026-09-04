@@ -376,6 +376,7 @@ import { collectPracticeProgress, adoptPracticeResume } from '../../practice-pro
 import { weakSpots as buildWeakSpots } from '../../weak-spots.js';
 import { isExplanationCovered } from '../../exp-dup.js';
 import { reviewedMasteredCount, fixReportText } from '../../review-advance.js';
+import { leadQidOf, mergeLead } from '../../leadq.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -655,8 +656,20 @@ export default {
     },
   },
   onLoad(query) {
-    // SEO 详情页「在线练习此考点」直链：/practice?tag3=xx&module=xx 自动开练
-    if (query && query.tag3) {
+    // SEO 题目页「做这道题」直链：/practice?qid=N[&tag3=xx][&module=xx]，该题领跑其后接同考点/模块题包
+    const leadQid = leadQidOf(query);
+    if (leadQid) {
+      let tag3 = query.tag3 || null;
+      let module = query.module || null;
+      try {
+        if (tag3) tag3 = decodeURIComponent(tag3);
+        if (module) module = decodeURIComponent(module);
+      } catch (e) {
+        /* 保留原值 */
+      }
+      this._urlLaunch = { tag3, module, qid: leadQid, source: query.source || 'seo_q' };
+    } else if (query && query.tag3) {
+      // SEO 详情页「在线练习此考点」直链：/practice?tag3=xx&module=xx 自动开练
       let tag3 = query.tag3;
       let module = query.module || null;
       try {
@@ -713,6 +726,7 @@ export default {
         this.startDaily(q.date, q.src);
         return;
       }
+      this._leadQid = q.qid || null;
       this.start(q.module, null, null, false, q.year ? true : undefined, q.tag3, q.source, q.year);
       return;
     }
@@ -1602,7 +1616,13 @@ export default {
       const adQ = adaptive && uid ? '&adaptive=1' : '';
       const grpQ = module === 'ziliao' && !submodule && !tag3 && !this.realMode ? '&grouped=1' : '';
       const tagQ = tag3 ? '&tag3=' + encodeURIComponent(tag3) : '';
+      const leadQid = this._leadQid || null;
+      this._leadQid = null;
       try {
+        // 领跑题（SEO 题目页深链）与题包并行取；取不到（下线/404/超时）静默按原题包开练
+        const leadP = leadQid
+          ? request('/api/question/' + leadQid, { timeout: 8000 }).then((r) => (r && r.item) || null).catch(() => null)
+          : Promise.resolve(null);
         // 首页预取题包命中时零等待开练
         const pre = this.takePrefetch(module, limit, uid, submodule, adaptive, forceReal, tag3);
         let d = pre
@@ -1632,12 +1652,13 @@ export default {
           uni.showToast({ title: '真题还在搜集中，已切回题库模式', icon: 'none' });
           d = await request('/api/questions?limit=' + limit + uidQ + (module ? '&module=' + module : ''));
         }
-        if (!d.items.length) {
+        const items = mergeLead(await leadP, d.items);
+        if (!items.length) {
           this._starting = false;
           this.endLoadState('该模块暂无题目，换个模块试试');
           return;
         }
-        this.items = d.items.map((q) => ({ ...q, _saved: false }));
+        this.items = items.map((q) => ({ ...q, _saved: false }));
         this._plainStart =
           !(submodule || adaptive || forceReal || tag3 || this.realMode) && module !== 'ziliao';
         this._prefetched = false;

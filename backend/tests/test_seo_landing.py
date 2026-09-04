@@ -20,6 +20,34 @@ def test_question_page_jsonld_qapage_and_breadcrumb(client):
     assert "item" not in items[-1]  # 末项（当前页）无链接
 
 
+def test_question_page_cta_deeplinks_same_question(client):
+    """搜索访客的意图是「这道题」：CTA 必须带 qid 且来源 seo_q，有无考点标签两支都不回首页。"""
+    from app import db
+    from app.seo import pages
+
+    qids = seed_questions()
+    conn = db.get_conn()
+    conn.execute("UPDATE questions SET tag3='ZL-PJ-04' WHERE id=?", (qids[0],))
+    conn.execute("UPDATE questions SET tag3=NULL WHERE id=?", (qids[1],))
+    conn.commit()
+    conn.close()
+    pages._render_question.cache_clear()
+
+    html = client.get(f"/tiku/q/{qids[0]}").text
+    m = re.search(r'class="cta" href="([^"]+)">([^<]+)</a>', html)
+    assert m
+    href, label = m.group(1), m.group(2)
+    assert f"/#/pages/practice/practice?qid={qids[0]}&tag3=ZL-PJ-04&module=ziliao&source=seo_q" in href
+    assert label == "在线做这道题 + 同考点练习（免费）→"
+
+    html = client.get(f"/tiku/q/{qids[1]}").text
+    m = re.search(r'class="cta" href="([^"]+)">([^<]+)</a>', html)
+    assert m
+    assert f"/#/pages/practice/practice?qid={qids[1]}&module=ziliao&source=seo_q" in m.group(1)
+    assert m.group(2) == "在线做这道题（免费）→"
+    assert "继续刷题" not in html
+
+
 def test_share_landing_valid(client):
     qids = seed_questions()
     seed_share("tstsid01", qids[0], from_name="测试考友")

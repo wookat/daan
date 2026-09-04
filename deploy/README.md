@@ -15,6 +15,11 @@
 - 部署：`deploy/deploy_h5.sh` 新增 4c 步（需 `CLOUDFLARE_API_TOKEN`），
   服务器 rsync + 容器重建照旧（origin 仍需完整 dist 供 SSR/兜底）。
 - **回滚**：把 `kaogong.zalize.com` DNS 改回 `A 150.109.230.174 dns-only` 即恢复纯服务器架构。
+- **并行会话部署闸**（R378，2b 步）：部署前读 `/api/health` 的线上 rev，要求它是本机 HEAD 的祖先；
+  线上 rev 不在本机仓库（对方部署了未推送提交）或不是祖先（会把别人的上线回退）都直接 FAIL。
+  解决办法是 `git fetch` 后 merge origin/main 或对方分支再部署；确认要回滚时才 `DEPLOY_FORCE=1`。
+  起因：2026-09-04 13:51Z R378 上线 5 分钟后被另一会话不含 R378 的树覆盖（`deploy-history.log`
+  `rev=fef41da`），复验时才发现。
 - **origin 访问日志**（R85）：全量真实流量经 `kaogong-origin.zalize.com` 回源，该
   Caddy 站点块须配置 access log（JSON、roll_size 50MiB、roll_keep 14、336h），
   输出 `/var/log/caddy/kaogong-origin.zalize.com-access.log`；functions 代理层会
