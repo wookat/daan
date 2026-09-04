@@ -2348,6 +2348,10 @@ def import_hs_explanations(items: list[dict]) -> int:
     return n
 
 
+# 跨用户聚合（运营看板/全站题目统计/击败百分比）的真人口径：剔除探针（probe=1）；旧行 NULL 视为真人（无法回填，如实保留）
+REAL_TRAFFIC = "COALESCE(probe,0)=0"
+
+
 def add_column_if_missing(conn, table: str, column: str, ddl_type: str) -> bool:
     """幂等加列：并发首请求同时迁移时后到者会碰 duplicate column，视为已存在而非错误。"""
     cols = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
@@ -2560,20 +2564,20 @@ def refresh_question_stats() -> int:
     _ensure_answer_log(conn)
     _ensure_question_stat_cols(conn)
     rows = conn.execute(
-        """SELECT question_id qid, COUNT(*) n, SUM(correct) c
-           FROM answer_log WHERE question_id IS NOT NULL GROUP BY question_id"""
+        f"""SELECT question_id qid, COUNT(*) n, SUM(correct) c
+           FROM answer_log WHERE question_id IS NOT NULL AND {REAL_TRAFFIC} GROUP BY question_id"""
     ).fetchall()
     wrong = {
         r["qid"]: r["p"]
         for r in conn.execute(
-            """SELECT qid, p FROM (
+            f"""SELECT qid, p FROM (
                  SELECT question_id qid, picked p,
                         ROW_NUMBER() OVER (
                           PARTITION BY question_id
                           ORDER BY COUNT(*) DESC, picked ASC
                         ) rk
                  FROM answer_log
-                 WHERE question_id IS NOT NULL AND correct=0 AND picked IS NOT NULL
+                 WHERE question_id IS NOT NULL AND correct=0 AND picked IS NOT NULL AND {REAL_TRAFFIC}
                  GROUP BY question_id, picked
                ) WHERE rk=1"""
         )
@@ -2594,6 +2598,12 @@ def refresh_question_stats() -> int:
         ):
             current[r["id"]] = (r["attempt_count"], r["correct_ratio"], r["most_wrong"])
     changed = [(v[0], v[1], v[2], qid) for qid, v in target.items() if qid in current and current[qid] != v]
+    # 已无真人作答行（仅剩探针行/行被清理）但仍挂着旧统计的题目一并清空，否则外显的「全站正确率」是陈旧聚合
+    stale = [
+        r["id"] for r in conn.execute("SELECT id FROM questions WHERE attempt_count IS NOT NULL")
+        if r["id"] not in target
+    ]
+    changed += [(None, None, None, qid) for qid in stale]
     for i in range(0, len(changed), QUESTION_STATS_BATCH):
         conn.executemany(
             "UPDATE questions SET attempt_count=?, correct_ratio=?, most_wrong=? WHERE id=?",
@@ -4190,10 +4200,6 @@ def admin_dashboard() -> dict:
 
 def admin_dashboard_state() -> tuple[dict, str]:
     return _cached_state("dashboard", 300, _admin_dashboard_uncached)
-
-
-# 运营口径：剔除探针流量（probe=1）；旧行 NULL 视为真人（无法回填，如实保留）
-REAL_TRAFFIC = "COALESCE(probe,0)=0"
 
 
 def _admin_dashboard_uncached() -> dict:

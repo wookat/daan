@@ -367,9 +367,9 @@ def _sharer_invite(conn, s) -> dict | None:
 
 
 def _question_stats(conn, question_id: int) -> dict:
-    """该题在 answer_log 中的全量作答统计（用于「你击败了 X%」）。"""
+    """该题在 answer_log 中的全站真人作答统计（用于「你击败了 X%」，探针行不计）。"""
     row = conn.execute(
-        "SELECT COUNT(*) AS n, COALESCE(SUM(correct),0) AS c FROM answer_log WHERE question_id=?",
+        f"SELECT COUNT(*) AS n, COALESCE(SUM(correct),0) AS c FROM answer_log WHERE question_id=? AND {db.REAL_TRAFFIC}",
         (question_id,),
     ).fetchone()
     n, c = row["n"], row["c"]
