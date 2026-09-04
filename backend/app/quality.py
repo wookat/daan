@@ -43,6 +43,10 @@ _EXP_LABEL = r"解析(?:[ \t\u3000]+|[：:][ \t\u3000]*|(?=第一步|解法))"
 EXP_SRC_PREFIX_RE = re.compile(rf"^(?:(?:{_EXP_STATS})\s*(?:(?:[A-D]\s+)?{_EXP_LABEL})?|{_EXP_LABEL})")
 # 抓取源广告句「,一个上岸考生分享经验和答疑的平台。」，多插在句间而非句尾
 EXP_AD_TAIL_RE = re.compile(r"[,，]?一个上岸考生分享经验和答疑的平台。?")
+# 空格是语义的词表：≥3 个 1–4 字词以单个空格相连（「郭斌 且 吴芳」「石油 汽油 煤油 柴油」
+# 「考点 判断推理 定义判断」，以及公式缺失留下的「厘米 的圆柱体 平方厘米」）。命中则整条不做汉字间去空格，
+# 交人工处理；PDF 逐字断开（「中 央 和 国 家」）全是单字，不算词表，照常归一。
+_CJK_WORD_RUN_RE = re.compile(r"(?<![\u4e00-\u9fff])[\u4e00-\u9fff]{1,4}(?: [\u4e00-\u9fff]{1,4}){2,}(?![\u4e00-\u9fff])")
 
 PENALTY_HS_SELFCHECK = 40
 PENALTY_HS_PIPELINE_NOTE = 15
@@ -98,15 +102,23 @@ def sanitize_hs(text: str | None) -> str | None:
     return _collapse_blank(hs)
 
 
+def has_cjk_word_list(text: str) -> bool:
+    """是否含以空格分隔的汉字词表（至少两个词 ≥2 字），此类空格是语义不可去。"""
+    return any(sum(len(t) >= 2 for t in m.group().split(" ")) >= 2 for m in _CJK_WORD_RUN_RE.finditer(text))
+
+
 def sanitize_explanation(text: str | None) -> str:
-    """剥离抓取源统计前缀/「解析」标签与广告句，汉字间空格归一（数字、字母两侧空格保留），空白归一。"""
+    """剥离抓取源统计前缀/「解析」标签与广告句，汉字间空格归一（数字、字母两侧空格保留；
+    含空格分隔词表的整条不去空格），空白归一。"""
     e = (text or "").strip()
     if not e:
         return ""
     e = EXP_AD_TAIL_RE.sub("", e).lstrip()  # 广告句可在开头（其后才是「解析 」标签）
     while m := EXP_SRC_PREFIX_RE.match(e):  # 「解析 解析第一步…」双标签
         e = e[m.end():].lstrip()
-    return _collapse_blank(normalize_cjk_spaces(e))
+    if not has_cjk_word_list(e):
+        e = normalize_cjk_spaces(e)
+    return _collapse_blank(e)
 
 
 def _collapse_blank(text: str) -> str:

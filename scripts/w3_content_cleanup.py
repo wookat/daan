@@ -5,7 +5,9 @@
   a. 开头「正确答案：B，全站正确率：24%，易错项：C。 解析 」统计前缀及只剩「解析 」标签的开头
      （quality.EXP_SRC_PREFIX_RE）→ 删除
   b. 句间广告「,一个上岸考生分享经验和答疑的平台。」（quality.EXP_AD_TAIL_RE）→ 删除
-  c. 「汉字/中文标点 之间」的半角/全角空格（quality.normalize_cjk_spaces：数字、字母两侧空格保留）→ 删除
+  c. 「汉字/中文标点 之间」的半角/全角空格（quality.normalize_cjk_spaces：数字、字母两侧空格保留）→ 删除；
+     含空格分隔词表（quality.has_cjk_word_list：「郭斌 且 吴芳」「石油 汽油 煤油」公式缺失等）的整条不去空格，
+     台账记 space_kept 交人工（W2 选项分词空格被误删事故后的 fail-closed 闸）
   d. 空白归一（行尾空格、连续空格、3+ 空行）；改动题 db.rescore_question
 
 不下线任何题、不改 question/options/hs_explanation、不触发 LLM。
@@ -32,6 +34,7 @@ from app import db, quality
 ONLINE = "(disabled IS NULL OR disabled=0)"
 SAMPLE_N = 10
 RULES = ("prefix", "ad", "space", "blank")
+KEPT = "space_kept"  # 命中词表闸而保留汉字间空格的题（仍可因 prefix/ad/blank 被改写）
 
 
 def classify(e: str) -> list[str]:
@@ -41,24 +44,27 @@ def classify(e: str) -> list[str]:
     if quality.EXP_AD_TAIL_RE.search(e):
         rules.append("ad")
     if quality.normalize_cjk_spaces(e) != e:
-        rules.append("space")
+        rules.append(KEPT if quality.has_cjk_word_list(e) else "space")
     if not rules:
         rules.append("blank")  # 仅空白归一（行尾空格 / 连续空格 / 首尾空白）
     return rules
 
 
-def scan(conn) -> list[dict]:
+def scan(conn) -> tuple[list[dict], list[int]]:
     rows = conn.execute(
         f"SELECT id, module, source, explanation FROM questions WHERE {ONLINE} AND explanation IS NOT NULL AND explanation<>''"
     )
-    hits = []
+    hits, kept = [], []
     for r in rows:
         e = r["explanation"]
         new = quality.sanitize_explanation(e)
+        rules = classify(e)
+        if KEPT in rules:
+            kept.append(r["id"])
         if new == e:
             continue
-        hits.append({"id": r["id"], "module": r["module"], "source": r["source"], "old": e, "new": new, "rules": classify(e)})
-    return hits
+        hits.append({"id": r["id"], "module": r["module"], "source": r["source"], "old": e, "new": new, "rules": rules})
+    return hits, kept
 
 
 def _diff_snippet(old: str, new: str, width: int = 24) -> tuple[str, str]:
@@ -66,9 +72,10 @@ def _diff_snippet(old: str, new: str, width: int = 24) -> tuple[str, str]:
     return old[max(0, i - width):i + width], new[max(0, i - width):i + width]
 
 
-def report(hits: list[dict]):
+def report(hits: list[dict], kept: list[int]):
     by_rule = Counter(rule for h in hits for rule in h["rules"])
     print(f"explanation to rewrite: {len(hits)}  by module: {dict(Counter(h['module'] for h in hits))}")
+    print(f"[{KEPT}] cjk spaces kept (word-list guard, manual review): {len(kept)}  ids: {kept[:SAMPLE_N]}")
     for rule in RULES:
         sub = [h for h in hits if rule in h["rules"]]
         print(f"[{rule}] hits: {by_rule[rule]}  by module: {dict(Counter(h['module'] for h in sub))}")
@@ -121,13 +128,13 @@ def main():
     else:
         conn = sqlite3.connect(f"file:{args.db}?mode=ro", uri=True, timeout=30)
     conn.row_factory = sqlite3.Row
-    hits = scan(conn)
-    report(hits)
+    hits, kept = scan(conn)
+    report(hits, kept)
     if args.show:
         show(hits, [int(x) for x in args.show.split(",") if x.strip()])
     if args.dump:
         with open(args.dump, "w", encoding="utf-8") as f:
-            json.dump({rule: [h["id"] for h in hits if rule in h["rules"]] for rule in RULES}, f, ensure_ascii=False)
+            json.dump({**{rule: [h["id"] for h in hits if rule in h["rules"]] for rule in RULES}, KEPT: kept}, f, ensure_ascii=False)
         print("dumped ids ->", args.dump)
     if not args.apply:
         print("dry-run only; pass --apply to write")
@@ -142,7 +149,7 @@ def main():
         print("backup ->", bak)
     n = apply(conn, hits)
     print("rewritten + rescored questions:", n)
-    print("re-scan after apply:", len(scan(conn)))
+    print("re-scan after apply:", len(scan(conn)[0]))
     conn.close()
 
 

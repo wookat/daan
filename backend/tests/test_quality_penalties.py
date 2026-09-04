@@ -159,7 +159,7 @@ def test_sanitize_explanation_strips_ad_sentence():
 
 def test_sanitize_explanation_cjk_spaces_keep_digits_and_blank():
     f = quality.sanitize_explanation
-    assert f("二次逐差后为 -2，与已知 应根据 前后同级　成立") == "二次逐差后为 -2，与已知应根据前后同级成立"
+    assert f("二次逐差后为 -2，与已知 应根据前后同级　成立") == "二次逐差后为 -2，与已知应根据前后同级成立"
     keep = "1 天有 86400 秒，公元前 2000 年，选 A 项，x 与 y 成正比；填入（ ）处"
     assert f(keep) == keep
     assert f("  第一步，分析。  \n\n\n\n第二步，代入。 ") == "第一步，分析。\n\n第二步，代入。"
@@ -167,3 +167,16 @@ def test_sanitize_explanation_cjk_spaces_keep_digits_and_blank():
     assert f("   ") == ""
     combo = "正确答案：A，全站正确率：70%，易错项：B。 解析 第一步 审题。" + _AD + " 故 1 天有 86400 秒，选 A。"
     assert f(combo) == "第一步审题。故 1 天有 86400 秒，选 A。"
+
+
+def test_sanitize_explanation_keeps_word_list_spaces():
+    f = quality.sanitize_explanation
+    # 空格是语义：逻辑式 / 并列词表 / 考点面包屑 → 整条不去汉字间空格（前缀、广告句仍剥）
+    for s in ("由①②得：郭斌 且 吴芳，再由③排除 D。", "四者依次为 石油 汽油 煤油 柴油。", "考点 判断推理 定义判断 单定义"):
+        assert quality.has_cjk_word_list(s)
+        assert f(s) == s
+    assert f("解析 " + "由①②得：郭斌 且 吴芳。" + _AD) == "由①②得：郭斌 且 吴芳。"
+    # PDF 逐字断开全是单字，不算词表，照常归一；普通换行残留空格也归一
+    for s, want in (("中 央 和 国 家 机 关", "中央和国家机关"), ("符合文 意，保留", "符合文意，保留")):
+        assert not quality.has_cjk_word_list(s)
+        assert f(s) == want
