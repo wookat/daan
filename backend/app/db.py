@@ -170,6 +170,10 @@ def init_db():
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_q_reinforce ON questions(tag3, disabled, correct_ratio, id)"
         )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_q_material ON questions(material_hash, disabled, module) "
+        "WHERE material_hash IS NOT NULL"
+    )
     similarity.ensure_tables(conn)
     conn.execute(
         """CREATE TABLE IF NOT EXISTS tag3_review (
@@ -711,6 +715,24 @@ def refresh_material_hash(batch: int = 20000) -> int:
     return n
 
 
+_ZILIAO_HASHES_SQL = (
+    "SELECT material_hash FROM questions{indexed} "
+    "WHERE module='ziliao' AND material_hash IS NOT NULL AND material_hash!='-' AND disabled=0 "
+    "GROUP BY material_hash HAVING COUNT(*)>=2 ORDER BY RANDOM() LIMIT ?"
+)
+
+
+def _ziliao_material_hashes(conn, n: int) -> list:
+    """无 sqlite_stat1 时规划器对 GROUP BY material_hash 偏向 (disabled,module) 索引回表 4.7k 行，
+    显式走部分覆盖索引；索引缺失（极旧库）回退普通计划。"""
+    try:
+        return conn.execute(
+            _ZILIAO_HASHES_SQL.format(indexed=" INDEXED BY idx_q_material"), (n,)
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return conn.execute(_ZILIAO_HASHES_SQL.format(indexed=""), (n,)).fetchall()
+
+
 def grouped_ziliao_questions(limit: int = 10, uid: str | None = None) -> list[dict]:
     """资料分析材料题组：选若干材料，同材料题连续出，标注 组内序号/组题数。"""
     conn = get_conn()
@@ -728,16 +750,7 @@ def grouped_ziliao_questions(limit: int = 10, uid: str | None = None) -> list[di
                 (uid,),
             )
         }
-    hashes = [
-        r["material_hash"]
-        for r in conn.execute(
-            """SELECT material_hash FROM questions
-               WHERE module='ziliao' AND material_hash IS NOT NULL AND material_hash!='-'
-                 AND disabled=0
-               GROUP BY material_hash HAVING COUNT(*)>=2
-               ORDER BY RANDOM() LIMIT 24"""
-        )
-    ]
+    hashes = [r["material_hash"] for r in _ziliao_material_hashes(conn, 24)]
     for h in hashes:
         if len(out) >= limit:
             break

@@ -60,3 +60,63 @@ def test_no_group_section_without_material_hash(client):
     r = client.get(f"/tiku/q/{qid}")
     assert r.status_code == 200
     assert "同材料题组" not in r.text
+
+
+def _plan(conn, sql, args=()):
+    return " | ".join(r[3] for r in conn.execute("EXPLAIN QUERY PLAN " + sql, args))
+
+
+def test_material_hash_partial_index_exists_and_used(client):
+    """R381：material_hash 无索引时同材料题组/资料分析拉题按 disabled 扫全表（生产 15.6 万行 2–3 s）。"""
+    conn = db.get_conn()
+    row = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type='index' AND name='idx_q_material'"
+    ).fetchone()
+    assert row and "WHERE material_hash IS NOT NULL" in row["sql"]
+
+    seo = _plan(
+        conn,
+        "SELECT id, question FROM questions WHERE material_hash=? AND disabled=0",
+        ("h",),
+    )
+    assert "idx_q_material (material_hash=? AND disabled=?)" in seo
+
+    pick = _plan(conn, db._ZILIAO_HASHES_SQL.format(indexed=" INDEXED BY idx_q_material"), (24,))
+    assert "COVERING INDEX idx_q_material" in pick
+    # 索引名写错/缺失 → OperationalError → 回退普通计划，不抛给调用方
+    assert db._ziliao_material_hashes(conn, 3) is not None
+
+    siblings = _plan(
+        conn,
+        "SELECT * FROM questions WHERE module='ziliao' AND material_hash=? AND disabled=0 ORDER BY id LIMIT 5",
+        ("h",),
+    )
+    assert "idx_q_material (material_hash=? AND disabled=? AND module=?)" in siblings
+    conn.close()
+
+
+def test_grouped_ziliao_unchanged_with_index(client):
+    """同材料题连续出、组内序号 i/n；索引只改执行计划不改结果形态。"""
+    _seed_group(3, h="mh-test-index-group")
+    items = db.grouped_ziliao_questions(3)
+    assert len(items) >= 3
+    grouped = [it for it in items if it.get("group_seq")]
+    assert grouped, "至少一组材料题被选中"
+    seqs = [it["group_seq"] for it in grouped[:3]]
+    assert seqs[0].startswith("1/")
+    ids = [it["id"] for it in grouped[:3]]
+    assert ids == sorted(ids)
+
+
+def test_ziliao_hashes_fallback_without_index():
+    import sqlite3
+
+    c = sqlite3.connect(":memory:")
+    c.row_factory = sqlite3.Row
+    c.execute("CREATE TABLE questions (id INTEGER PRIMARY KEY, module TEXT, material_hash TEXT, disabled INTEGER)")
+    c.executemany(
+        "INSERT INTO questions (module, material_hash, disabled) VALUES ('ziliao', ?, 0)",
+        [("h1",), ("h1",), ("h2",)],
+    )
+    rows = db._ziliao_material_hashes(c, 5)
+    assert [r["material_hash"] for r in rows] == ["h1"]

@@ -695,11 +695,14 @@ def _render_question(qid: int) -> str:
         raise HTTPException(404, "题目不存在")
     group = []
     if r["module"] == "ziliao" and r["material_hash"] and r["material_hash"] != "-":
-        group = conn.execute(
-            "SELECT id, question FROM questions WHERE material_hash=? AND disabled=0 "
-            "ORDER BY id LIMIT 8",
-            (r["material_hash"],),
-        ).fetchall()
+        # 不带 ORDER BY id：无统计信息时规划器会为免排序选 (disabled,id) 索引扫全表；一组 ≤ 几题，Python 排
+        group = sorted(
+            conn.execute(
+                "SELECT id, question FROM questions WHERE material_hash=? AND disabled=0",
+                (r["material_hash"],),
+            ).fetchall(),
+            key=lambda g: g["id"],
+        )[:8]
         if len(group) < 2:
             group = []
     similar = []
