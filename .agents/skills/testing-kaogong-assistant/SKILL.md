@@ -5,6 +5,21 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R385 SEO 深链 → tag3+module 抽题（`idx_q_tag3_pick` 覆盖索引）生产复验 走查新经验
+
+- **SEO 深链契约**（`backend/app/seo/pages.py`）：`/tiku/q/<id>` 页面 CTA `.cta.cta-w` 的 href 形如 `https://<base>/#/pages/practice/practice?qid=<id>&tag3=<tag3>&module=<module>&source=seo_q`；选项 `.opt` 会再加 `&pick=X`。复验必须**原生点击渲染出来的 CTA**（375 下常在首屏外，先原生滚动），不要自己拼 practice URL。
+- **领跑题断言**：`frontend-uni/src/leadq.js` 的 `mergeLead` 把 `qid` 对应题插到池首，`practice.vue` 并行发 `/api/question/<qid>` 与 `/api/questions?limit=10&uid=…&tag3=…&module=…`。预期：头部 `1/11`（10 题池 + 领跑题）、提示语「刚才那题在这里作答，之后 10 题同考点练习」、`items[0].id === qid`。页面自身的 `window.__pc` 有时在导航瞬间为 undefined（`Cannot read properties of undefined`），此时退回 DOM/截图断言即可。
+- **抽题池 TTL**：`_PICK_TTL = 600` s。同一 `(tag3, module)` 在 600 s 内的第二次请求是**缓存命中**，不能当冷 miss 证据。要拿冷 miss：换一个从容器启动起从未被请求过的 `(tag3, module)`，或等部署预热那条请求超过 600 s 再点。用 `docker logs -t deploy-kaogong-1 --since <StartedAt> | grep "tag3="` 列出所有 tag3 请求的服务端时间戳，判断每条到底冷还是热。
+- **取样 id 不要走公网 API**：用容器内 SQL 选 `tag3/module` 样本题 id（走 `/api/questions` 会把池预热掉，冷 miss 就没了）。
+- **生产库路径是 `/data/data.db`**（不是 `/data/kaogong.db`，后者没有 `questions` 表，会报 `no such table: questions`）。只读打开用 `sqlite3.connect("file:/data/data.db?mode=ro", uri=True)`。
+- **索引断言**：`select sql from sqlite_master where name='idx_q_tag3_pick'` + `EXPLAIN QUERY PLAN` 应出现 `SEARCH questions USING COVERING INDEX idx_q_tag3_pick`。注意旧索引在启动迁移时已被 DROP，**同条件 old/new A/B 在生产不可得**，只能与历史报告里的 slow-req 数值做参照，报告里必须说明。
+- **客户端耗时 ≫ 服务端耗时的判读**：`[slow-req]` 阈值是 3.0 s（`backend/app/main.py:214`）。若客户端计时 5 s 但日志无 slow-req，说明瓶颈在服务端之外——用 `top`/`vmstat`/`docker stats` 取宿主证据（本轮 I/O wait 81–88%、swap 活跃时同一 URL 客户端 5069 ms，而容器内同条件 SQL 仅 0.079 s）。这种样本要如实记为计时失败并给出成因证据，不能因为 EXPLAIN 正确就判通过。
+- **`source=seo_q` 的落库证据**：`answer_log.source='seo_q'`、`growth_events.source='seo_q'`；测试机出口网段会被标 `probe=1`（不计入用户指标）。清理脚本按 `uid like 'test-r385-%'` 删，读回时顺带核 `seo_q rows left 0`。
+- **杀 holder 的自杀陷阱（再次踩到）**：`pgrep -af holdvw | grep python | xargs kill` 会匹配到调用它的 `bash -c` 自身而杀掉当前 shell（exit −1）。用 `ps -eo pid,args | grep "[h]oldvw" | grep -v "bash -c"` 拿 PID 再显式 kill。
+- **管理台登录**：`cdp.pick()` 会排除 `/admin` 标签，用 `r374.pick_admin()`；令牌用 native setter 写 `#login-token`（`i.value=…` + `dispatchEvent(new Event('input',{bubbles:true}))`，绝不打印），再原生点「登录」。判断已登录看 `#dash-ops .hbar-wrap` 是否存在。`r383.install(s)` 需要带 `.c` 的 `S()` 会话对象；直接用 `C` 时手动 `call('Page.addScriptToEvaluateOnNewDocument', source=HDR)` + `eval(HDR)`。
+- `cdp.C.eval(js)` 不支持 `await_promise`，异步取数要写成 `window.__x=null; fetch(...).then(...)` 再 sleep 后读 `window.__x`。管理台自查 dashboard 数值：`fetch('/api/admin/dashboard',{headers:{'X-Admin-Token':localStorage.admToken}})`，与 UI「在库/差评/待纠错/待审/下架存量」逐项比。
+- 容器重启一段时间后管理台缓存头可能是 `X-Kg-Cache: stale` 而非 `cold`/`hit`（本轮 stats 690 ms stale、dashboard 221 ms stale），照实记录即可。
+
 ## R384 管理台 dashboard flagged COUNT 改写 + 「运维状态」/「LLM 通道」`.hbar-wrap` 生产复验 走查新经验
 - **冷缓存窗口取证顺序**：容器重启后先 `docker logs deploy-kaogong-1 --since <StartedAt> | grep -c /api/admin/` 确认为 0，再登录管理台；登录后用 `docker logs -t | grep -E "/api/admin/(stats|dashboard|ops_status|llm_health)"` 拿服务端时间戳，与页面钩子的 `X-Kg-Cache: cold` + ms 互证（本轮 stats→dashboard 服务端间隔 0.3 s）。若头为 `hit`，用同一条 grep 找出是谁先访问（预热/其他人）。
 - 修复后的 dashboard 冷访问已 ~0.3 s，登录页「验证中…」几乎不可见；但 `/api/admin/ops_status`、`/api/admin/llm_health` 仍没有 `X-Kg-Cache` 头，只记 ms。
