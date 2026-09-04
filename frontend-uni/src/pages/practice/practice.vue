@@ -363,7 +363,7 @@ import { requestNotificationPermission } from '../../reminder.js';
 import { announce } from '../../a11y-live.js';
 import { pickAnnounceText } from '../../live-policy.js';
 // #endif
-import { paperContinuePlan, paperQuery, paperFinishState, paperShareText, paperWrongItems } from '../../paper-continue.js';
+import { paperContinuePlan, paperQuery, paperFinishState, paperShareText, paperWrongItems, paperWrongPlan } from '../../paper-continue.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 import { qStatLine } from '../../q-stat.js';
@@ -978,6 +978,7 @@ export default {
       try {
         const d = await request('/api/paper_questions?' + paperQuery(p, untimed, anonUid()));
         let items = d.items || [];
+        let wrongOnly = false;
         if (items.length < 20) {
           uni.showToast({ title: '试卷题目不足，换一张试试', icon: 'none' });
           return;
@@ -985,14 +986,29 @@ export default {
         if (untimed) {
           const plan = paperContinuePlan(items);
           if (plan.doneN > 0 && plan.remaining.length === 0) {
-            const again = await new Promise((resolve) => uni.showModal({
-              title: '本卷已练完',
-              content: `本卷 ${items.length} 题已全部练过，重新练一遍？`,
-              confirmText: '重新练', cancelText: '不用了',
-              success: (r) => resolve(!!r.confirm),
-              fail: () => resolve(false),
-            }));
-            if (!again) return;
+            const wrong = paperWrongPlan(items);
+            if (wrong.length) {
+              const pick = await new Promise((resolve) => uni.showActionSheet({
+                title: `本卷 ${items.length} 题已全部练过，上次答错 ${wrong.length} 题`,
+                itemList: [`只练错题（${wrong.length} 题）`, '重新练一遍'],
+                success: (r) => resolve(r.tapIndex),
+                fail: () => resolve(-1),
+              }));
+              if (pick !== 0 && pick !== 1) return;
+              if (pick === 0) {
+                items = wrong;
+                wrongOnly = true;
+              }
+            } else {
+              const again = await new Promise((resolve) => uni.showModal({
+                title: '本卷已练完',
+                content: `本卷 ${items.length} 题已全部练过，重新练一遍？`,
+                confirmText: '重新练', cancelText: '不用了',
+                success: (r) => resolve(!!r.confirm),
+                fail: () => resolve(false),
+              }));
+              if (!again) return;
+            }
           }
           if (plan.doneN > 0 && plan.remaining.length > 0) {
             const cont = await new Promise((resolve) => uni.showModal({
@@ -1024,7 +1040,7 @@ export default {
           this.examMode = false;
           if (this.examTimer) clearInterval(this.examTimer);
           this.startQTimer();
-          uni.showToast({ title: p.title + ' 开始：不计时逐题练', icon: 'none', duration: 1800 });
+          uni.showToast({ title: wrongOnly ? '只练本卷上次答错的题' : p.title + ' 开始：不计时逐题练', icon: 'none', duration: 1800 });
         } else {
           this.examMode = true;
           this.examLeft = 120 * 60;
