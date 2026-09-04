@@ -10,7 +10,10 @@
 输出 JSON：
     {"generated_at": <epoch>, "days": ["2026-09-03", ...],
      "engines": {"Google": {"hits": {"2026-09-03": 3}, "err5xx": {...}, "tiku": {...},
-                            "sitemap": {...}, "last_seen": <epoch|null>}, ...}}
+                            "sitemap": {...}, "last_seen": <epoch|null>}, ...},
+     "humans": {"api": {"2026-09-03": 17}, "api5xx": {...}, "page": {...}, "ips": {...}}}
+humans = 剔除探针网段、搜索引擎与通用 bot UA、test-/probe- 测试 uid 后的余量（R382：
+此前只有爬虫可见，「真人到底有没有来、来了有没有撞 5xx」全靠临时脚本翻日志）。
 只含聚合计数，不含 IP/UA 原文；UA 优先取 Worker 透传的 X-Kg-Ua（源站 User-Agent 可能是回源层的）。
 """
 import argparse
@@ -22,9 +25,30 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from access_log_report import BOT_ENGINES
+from access_log_report import BOT_ENGINES, BOT_GENERIC
 
 SITEMAP_PREFIXES = ("/sitemap", "/robots.txt")
+# 探针/冒烟会话的 uid 前缀（R374 只按网段打标，跨网段跑的测试会话靠 uid 兜底）
+TEST_UID_MARKERS = ("uid=test-", "uid=probe")
+# 真人口径不计的内部/心跳路径
+HUMAN_SKIP_PREFIXES = ("/api/health", "/api/admin", "/admin")
+
+
+def is_generic_bot(ua: str) -> bool:
+    low = (ua or "").lower()
+    return not low or any(k in low for k in BOT_GENERIC)
+
+
+def human_kind(uri: str) -> str | None:
+    """真人请求归类：api / page（HTML 落地页与首页）；内部路径与静态资源返回 None。"""
+    path = uri.split("?", 1)[0]
+    if path.startswith(HUMAN_SKIP_PREFIXES):
+        return None
+    if path.startswith("/api/"):
+        return "api"
+    if path == "/" or path.startswith(("/tiku", "/s/", "/p/")):
+        return "page"
+    return None
 
 
 def engine_of(ua: str) -> str | None:
@@ -91,6 +115,8 @@ def aggregate(lines, days: int, now: float | None = None, exclude_nets: list | N
     day_list = [(today - datetime.timedelta(days=i)).isoformat() for i in range(days - 1, -1, -1)]
     day_set = set(day_list)
     engines: dict[str, dict] = {}
+    humans: dict[str, dict] = {"api": {}, "api5xx": {}, "page": {}}
+    human_ips: dict[str, set] = {}
     for line in lines:
         line = line.strip()
         if not line:
@@ -103,13 +129,28 @@ def aggregate(lines, days: int, now: float | None = None, exclude_nets: list | N
         if not isinstance(ts, (int, float)):
             continue
         req = rec.get("request") or {}
-        name = engine_of(_ua(req))
+        ua = _ua(req)
+        name = engine_of(ua)
+        day = datetime.datetime.fromtimestamp(ts, datetime.UTC).date().isoformat()
         if not name:
+            if day not in day_set or is_generic_bot(ua):
+                continue
+            uri = req.get("uri") or ""
+            kind = human_kind(uri)
+            if not kind or any(m in uri for m in TEST_UID_MARKERS):
+                continue
+            ip = _client_ip(req)
+            if _excluded(ip, exclude_nets):
+                continue
+            humans[kind][day] = humans[kind].get(day, 0) + 1
+            if kind == "api" and int(rec.get("status") or 0) >= 500:
+                humans["api5xx"][day] = humans["api5xx"].get(day, 0) + 1
+            if ip:
+                human_ips.setdefault(day, set()).add(ip)
             continue
         if _excluded(_client_ip(req), exclude_nets):
             probe_excluded += 1
             continue
-        day = datetime.datetime.fromtimestamp(ts, datetime.UTC).date().isoformat()
         e = engines.setdefault(
             name, {"hits": {}, "err5xx": {}, "tiku": {}, "sitemap": {}, "last_seen": None},
         )
@@ -125,10 +166,12 @@ def aggregate(lines, days: int, now: float | None = None, exclude_nets: list | N
             e["tiku"][day] = e["tiku"].get(day, 0) + 1
         if uri.startswith(SITEMAP_PREFIXES):
             e["sitemap"][day] = e["sitemap"].get(day, 0) + 1
+    humans["ips"] = {d: len(s) for d, s in human_ips.items()}
     return {
         "generated_at": now,
         "days": day_list,
         "engines": engines,
+        "humans": humans,
         "probe_excluded": probe_excluded,
     }
 

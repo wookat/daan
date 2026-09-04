@@ -1679,3 +1679,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 未在生产验证：`INDEXED BY` 索引缺失回退分支（生产索引存在）、grouped 空组分支；「导航任何滚动位置绝对不可见」只做了观察 + 加固，非穷举证明。
 - 搜索分发口径不变：Google 仍只抓 sitemap（题目页 0）、Bing 7 / Yandex 87 次题目页抓取（09-02–09-04），真人 `seo_q` 0；入链是给引擎一条可爬路径，**不等于**收录/排名。
 - R382 候选：① 宿主 IO 饱和是 crawler 长尾 503 的根因，应用侧能做的下一档是把 `/tiku/*` SSR 层挪到边缘（预渲染到 R2/KV，Worker 直出、源站只做回源兜底），彻底摆脱共宿 IO；② 继续核对 Googlebot 是否进入 `/tiku/q/*`（首页入链后 3–7 天再看）；③ 真人资料分析拉题耗时（`slow-req` 里 `/api/exam/papers` 10.5 s、`tag3=CS-LS-01` 4.0 s 值得下一轮取证）。
+
+### R382 `/api/papers` 覆盖索引 + 日报真人口径（2026-09-04，分支 devin/*-r382-paper-index-human-traffic，base=main）
+- 取证：R381 候选①「SSR 挪边缘」不做——近 3 天 5xx 1,707 条中 1,599 条来自探针网段 `140.232.64.4/.5`，其余为 GPTBot/ClaudeBot/扫描器；**剔探针 + 通用 bot UA 后候选真人 `/api/` 52 条、5xx 0**；CF Pages Functions 已有 60 s API TTL + SWR/SIE + 重试，不重复建缓存。候选② Googlebot 仍只抓 sitemap（`/tiku/q/*` 0），`/tiku/q/*` 流量主体是 GPTBot 11.3 万 / Yandex 2,028，不能计入搜索分发。候选③ 真命中：`/api/papers`（公开 allowlist、卷库首屏必打）走 `idx_q_real_year` 回表 24,558 行，生产库副本冷读 **78.6 MB**，共宿 iowait 44–76% 下即长尾。Cloudflare 三枚 token 均缺 `zone.analytics.read`，边缘 HIT/MISS 未取得（`X-Kg-Fetch` 只证明回源模式）。
+- 方案：部分覆盖索引 `idx_q_paper_src(is_real, disabled, source, exam_year, exam_region) WHERE is_real=1`（COVERING，副本实测 78.6 MB → 0 MB、结果集一致）；`crawler_stats.py` 增 `humans{api,api5xx,page,ips}` 段（探针网段 → 引擎 UA → `BOT_GENERIC`/空 UA → `uid=test-|probe` 逐层剔除，IP 只出日去重数量）→ `ops_status.crawlers.humans` → 看板「搜索引擎抓取」面板顶部「真人」行（标注剔除口径；旧 JSON 无该段时提示等 cron）。详见 docs/iter/round-3/r382-paper-index-human-traffic.md。
+- 本地：pytest 363 / ruff / pyright 0；前端零改动复用 R381 bundle。生产归档试跑（`/tmp`，不覆盖 cron 产物）：候选真人 API 09-01 5 / 09-02 48 / 09-03 2 / 09-04 1，5xx 0，日去重 IP 2–5。
+- 未做/留档：`/api/exam/papers` 10.5 s 的 `list_exam_papers()+exam_paper_filters()` 组合与 `tag3=CS-LS-01` 4.0 s 留 R383 取证；`/api/comments/count`、`/api/notes` 表结构未核；宿主 IO 争用第 6 次上报。

@@ -143,3 +143,53 @@ def test_ops_status_carries_crawlers(tmp_path):
     }))
     c = parse_ops_status(str(tmp_path))["crawlers"]
     assert c and c["engines"][0]["name"] == "Google" and c["engines"][0]["hits_7d"] == 1
+
+
+MINIAPP = "Mozilla/5.0 (Linux; Android 13; MI 12) AppleWebKit/537.36 Chrome/116 Mobile Safari/537.36 MiniProgramEnv/android"
+
+
+def test_humans_exclude_probe_bots_and_test_uid(tmp_path):
+    """R382：真人口径 = 非探针网段 + 非引擎/通用 bot UA + 非 test-/probe uid；只计 /api 与 HTML 页族。"""
+    ex = tmp_path / "probe.txt"
+    ex.write_text("140.232.64.0/24\n")
+    nets = cs.load_exclude_networks(str(ex))
+    lines = [
+        _line(NOW - 10, HUMAN, "/api/questions?module=yanyu&uid=u1", ip="39.158.40.85"),
+        _line(NOW - 9, MINIAPP, "/api/papers", 503, ip="39.158.40.85"),
+        _line(NOW - 8, HUMAN, "/tiku/q/4640", ip="1.2.3.4"),
+        _line(NOW - 7, HUMAN, "/", ip="1.2.3.4"),
+        _line(NOW - 6, HUMAN, "/assets/index-abc.js", ip="1.2.3.4"),  # 静态资源不计
+        _line(NOW - 5, HUMAN, "/api/health", ip="1.2.3.4"),  # 心跳不计
+        _line(NOW - 4, HUMAN, "/api/answer_log?uid=test-w1-mp", ip="1.2.3.4"),  # 测试 uid
+        _line(NOW - 3, HUMAN, "/api/questions", 503, ip="140.232.64.4"),  # 探针网段
+        _line(NOW - 2, CURL, "/api/questions", 503, ip="8.8.8.8"),  # 通用 bot
+        _line(NOW - 1, GOOGLE, "/tiku/q/1", ip="66.249.66.1"),  # 引擎
+        _line(NOW - DAY - 1, HUMAN, "/api/daily_set", ip="5.6.7.8"),
+        _line(NOW - 30 * DAY, HUMAN, "/api/daily_set", ip="5.6.7.8"),  # 窗口外
+    ]
+    r = cs.aggregate(iter(lines), days=7, now=NOW, exclude_nets=nets)
+    h = r["humans"]
+    assert h["api"] == {"2026-09-04": 2, "2026-09-03": 1}
+    assert h["api5xx"] == {"2026-09-04": 1}
+    assert h["page"] == {"2026-09-04": 2}
+    assert h["ips"] == {"2026-09-04": 2, "2026-09-03": 1}
+    assert r["engines"]["Google"]["hits"] == {"2026-09-04": 1}
+    assert r["probe_excluded"] == 0  # 探针只在引擎 UA 分支计数，真人分支静默剔除
+
+
+def test_parse_crawler_stats_humans_summary(tmp_path):
+    p = tmp_path / "crawler-stats.json"
+    now = time.time()
+    days = [f"2026-09-{d:02d}" for d in range(1, 8)]
+    base = {"generated_at": now - 600, "days": days, "engines": {}}
+    p.write_text(json.dumps(base))
+    assert parse_crawler_stats(str(p), now=now)["humans"] is None  # 旧版 JSON 无 humans 段
+    base["humans"] = {
+        "api": {"2026-09-07": 17, "2026-09-06": 30, "2026-08-30": 999},
+        "api5xx": {"2026-09-06": 2},
+        "page": {"2026-09-07": 4},
+        "ips": {"2026-09-07": 3, "2026-09-06": 5},
+    }
+    p.write_text(json.dumps(base))
+    h = parse_crawler_stats(str(p), now=now)["humans"]
+    assert h == {"api_7d": 47, "api_today": 17, "api5xx_7d": 2, "page_7d": 4, "ips_7d": 8, "ips_today": 3}
