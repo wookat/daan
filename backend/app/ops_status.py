@@ -3,6 +3,7 @@
 日志由 deploy/kaogong-ops.sh、deploy_h5.sh、kaogong-lifecycle-watch.sh 落盘到
 /home/ubuntu/kaogong-reports（容器内只读挂载为 /reports），本模块只读解析、缺失容忍。
 """
+import json
 import os
 import re
 import time
@@ -11,6 +12,9 @@ from datetime import datetime, timedelta, timezone
 TAIL_BYTES = 64 * 1024
 ALERT_PAT = re.compile(r"FAILED|DISK HIGH|UNHEALTHY|SIZE MISMATCH")
 CST = timezone(timedelta(hours=8))
+# 看板固定置顶的引擎（无论有没有来过都列出，「从未」才看得见）
+CRAWLER_PINNED = ("Google", "Baidu", "Bing")
+CRAWLER_WINDOW_DAYS = 7
 
 
 def _tail_lines(path: str) -> list[str]:
@@ -51,6 +55,55 @@ def _latest(lines: list[str], marker: str) -> dict | None:
     return None
 
 
+def parse_crawler_stats(path: str, now: float | None = None) -> dict | None:
+    """scripts/crawler_stats.py 落盘的 JSON → 近 7 天各引擎汇总；文件缺失/损坏返回 None。"""
+    now = now or time.time()
+    try:
+        with open(path, encoding="utf-8") as f:
+            raw = json.load(f)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(raw, dict) or not isinstance(raw.get("engines"), dict):
+        return None
+    days = [d for d in raw.get("days") or [] if isinstance(d, str)][-CRAWLER_WINDOW_DAYS:]
+    today = days[-1] if days else None
+    engines = raw["engines"]
+
+    def _sum(e: dict, key: str) -> int:
+        m = e.get(key) or {}
+        return sum(int(m.get(d) or 0) for d in days)
+
+    rows = []
+    for name in list(CRAWLER_PINNED) + sorted(
+        (n for n in engines if n not in CRAWLER_PINNED),
+        key=lambda n: -_sum(engines[n], "hits"),
+    ):
+        e = engines.get(name) or {}
+        last = e.get("last_seen")
+        rows.append({
+            "name": name,
+            "hits_7d": _sum(e, "hits"),
+            "hits_today": int((e.get("hits") or {}).get(today) or 0) if today else 0,
+            "err5xx_7d": _sum(e, "err5xx"),
+            "tiku_7d": _sum(e, "tiku"),
+            "sitemap_7d": _sum(e, "sitemap"),
+            "last_seen": (
+                datetime.fromtimestamp(last, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+                if isinstance(last, (int, float)) else None
+            ),
+        })
+    gen = raw.get("generated_at")
+    return {
+        "generated_at": (
+            datetime.fromtimestamp(gen, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            if isinstance(gen, (int, float)) else None
+        ),
+        "stale": not isinstance(gen, (int, float)) or gen < now - 3 * 3600,
+        "window_days": len(days),
+        "engines": rows,
+    }
+
+
 def parse_ops_status(reports_dir: str, now: float | None = None) -> dict:
     now = now or time.time()
     ops = _tail_lines(os.path.join(reports_dir, "kaogong-ops.log"))
@@ -58,6 +111,7 @@ def parse_ops_status(reports_dir: str, now: float | None = None) -> dict:
     events = _tail_lines(os.path.join(reports_dir, "container-events.log"))
     if not ops and not deploys and not events:
         return {"available": False}
+    crawlers = parse_crawler_stats(os.path.join(reports_dir, "crawler-stats.json"), now)
 
     last_deploy = None
     for line in reversed(deploys):
@@ -95,4 +149,5 @@ def parse_ops_status(reports_dir: str, now: float | None = None) -> dict:
         "container_changes_24h": changes_24h,
         "last_container_change": last_change,
         "alerts": alerts,
+        "crawlers": crawlers,
     }

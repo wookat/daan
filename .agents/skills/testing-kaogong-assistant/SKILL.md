@@ -5,6 +5,13 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R377 管理台「搜索引擎抓取」面板 + 迷你模考进入/退出 生产复验 走查新经验
+- 面板选择器：`#dash-ops` 内标题文本「搜索引擎抓取（源站日志，近 7 天）」之后的 `.hbar` 行，每行 `.lb`（引擎名 + `.sub` 「最近 …/从未」）与 `span.tag.tag-bad|tag-warn|tag-ok|tag-gray`；底部 `统计生成于 <ISO>`，颜色对照 `getComputedStyle(document.documentElement).getPropertyValue('--t4'|'--error')`（生产 `#6E7280` / `#B91C1C`）。与接口对账用页面自身的 `/api/admin/ops_status` fetch hook（`/tmp/cdp174/r377.py`），不要另开 curl —— crawler cron 每小时 :23 刷新，任务描述里的参考值很可能已过期（本轮 Google 由「从未」变为有抓取），报告要按截获的 JSON 写，并把未触发的分支（`从未`/stale/null）列为未验证。
+- 迷你模考只读进入/退出：首页「更多练习 → 迷你模考」卡 → `POST /api/exam/start {uid,mini:true}` + `POST /api/exam/progress`，会在 `exam_attempts`（`submitted_at=NULL`）与 `exam_progress` 各落 1 行；页头返回箭头（`uni-page-head` 左侧 svg）退出不交卷，回首页出现「有一场未交卷的模考」横幅。清理按 `uid like 'test-…%'` 删这两表即可（`exam_progress` 列：attempt_id, uid, picks, idx, updated_at, marks, secs, excl）。
+- 生产容器 DB 只读/清理脚本：本机写 py → `cat | ssh 'cat > /tmp/x.py && docker cp /tmp/x.py deploy-kaogong-1:/tmp/ && docker exec deploy-kaogong-1 python3 /tmp/x.py'`，先 `ro` 再 `clean`，遍历所有含 uid/from_uid 列的表统计 LEFTOVER。
+- SSH 变量 `TICKETS_VPS_SSH_HOST/USER/CREDENTIAL` 已在 shell 环境里，直接 `sshpass -p $TICKETS_VPS_SSH_CREDENTIAL ssh …`；不要用 exec 的 `env: secret:org:…` 绑定（该引用不存在会被拒绝）。
+- `Emulation.clearDeviceMetricsOverride` 后 innerWidth 可能仍是 375 直到原生导航；若导航后仍窄，再 `setDeviceMetricsOverride(width=0,height=0,deviceScaleFactor=0,mobile=False)` + clear 一次即恢复 1600。
+
 ## R376 种子题去重键（seed_index/seed_runs，零前端）生产复验 走查新经验
 - 分享页真实链接是 `https://kaogong.zalize.com/s/<sid>`（服务端 landing → `#/pkgA/share/share-q?sid=<sid>`）。share-q 读的是 `query.sid`，**不是** `id`；用 `share-q?id=…` 会得到「分享链接无效」的空 sid 分支，误判为 bug。「不存在 id 的文案页」用例用 `/s/<不存在的sid>` 才命中 404 分支。
 - sid 取法：解析区原生点击「🔗 分享给队友」→ 在 fetch hook 里截 `POST /api/share/create` 响应（`reqs()`），或事后只读查 `shared_questions WHERE from_uid LIKE 'test-…%'`。清理时 `shared_answers` 的外键列叫 `share_id`（不是 `sid`）；sqlite 脚本中途抛错则整段未 commit，重跑前先看 BEFORE 计数。

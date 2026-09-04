@@ -18,6 +18,21 @@
     ).join('');
   }
 
+  function crawlerPanel(c) {
+    const head = '<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:12px;font-weight:600">搜索引擎抓取（源站日志，近 7 天）</div>';
+    if (!c) return head + '<div style="font-size:11px;color:var(--t4)">暂无爬虫统计（crawler-stats.json 未生成）</div>';
+    const rows = (c.engines || []).map((e) => {
+      const never = !e.last_seen;
+      const last = never ? '从未' : esc(e.last_seen.slice(5, 16).replace('T', ' ')) + 'Z';
+      const cls = never ? 'tag-bad' : e.err5xx_7d ? 'tag-warn' : e.hits_7d ? 'tag-ok' : 'tag-gray';
+      const detail = never ? '0 次' : `${e.hits_7d.toLocaleString()} 次（今日 ${e.hits_today}）· 题库页 ${e.tiku_7d}${e.sitemap_7d ? ` · sitemap ${e.sitemap_7d}` : ''}${e.err5xx_7d ? ` · 5xx ${e.err5xx_7d}` : ''}`;
+      return `<div class="hbar"><span class="lb" style="width:auto;flex:1">${esc(e.name)}<span class="sub" style="margin-left:6px;font-size:11px;color:var(--t4)">最近 ${last}</span></span>
+        <span class="tag ${cls}">${detail}</span></div>`;
+    }).join('');
+    const foot = `<div style="margin-top:6px;font-size:11px;color:${c.stale ? 'var(--error)' : 'var(--t4)'}">统计生成于 ${esc(c.generated_at || '未知')}${c.stale ? '（超过 3h 未更新，检查 crawler_stats cron）' : ''}</div>`;
+    return head + rows + foot;
+  }
+
   async function render(el) {
     const d = await api('/api/admin/dashboard');
     const t = d.today, y = d.yesterday, h = d.health;
@@ -110,7 +125,8 @@
         + ((o.alerts || []).length
           ? `<div style="margin-top:8px;font-size:11px;color:var(--error)">近 7 天告警：</div>`
             + o.alerts.slice(0, 5).map((a) => `<div style="font-size:11px;color:var(--error);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(a)}">${esc(a)}</div>`).join('')
-          : '<div style="margin-top:8px;font-size:11px;color:var(--t4)">近 7 天无告警</div>');
+          : '<div style="margin-top:8px;font-size:11px;color:var(--t4)">近 7 天无告警</div>')
+        + crawlerPanel(o.crawlers);
     }).catch(() => {
       const box = document.getElementById('dash-ops');
       if (box) box.innerHTML = '<span style="color:var(--error);font-size:12px">加载失败</span>';
