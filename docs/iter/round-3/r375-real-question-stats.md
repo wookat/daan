@@ -40,4 +40,4 @@ uid 维度的查询（本人历史/掌握度/周报/推荐）不受影响——�
 
 - 单测 `test_question_stats_and_beat_pct_exclude_probe_rows`：1 条 legacy NULL（错，选 C）+ 6 条探针（错，选 B）+ 1 条真人（对，选 A）→ `attempt_count=2 / correct_ratio=50 / most_wrong="C"`，`_question_stats={"total":2,"acc":50,"beat_pct":50}`；若探针计入会得 8 / 25 / "B"。
 - 本地：pytest 301 passed / ruff / pyright 0 全绿；前端无改动（bundle 不变）。
-- 生产：部署后触发一次 `POST /api/admin/refresh_qstats`，抽样题目 `attempt_count` 与 `SELECT COUNT(*) ... WHERE probe IS NULL OR probe=0` 对账。
+- 生产：部署后触发一次 `POST /api/admin/refresh_stats`，抽样题目 `attempt_count` 与 `SELECT COUNT(*) ... WHERE probe IS NULL OR probe=0` 对账。
