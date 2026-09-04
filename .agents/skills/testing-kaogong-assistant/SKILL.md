@@ -13,6 +13,8 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 - 资料分析 grouped 请求只在 `module==='ziliao' && !submodule && !tag3 && !realMode` 时加 `&grouped=1`：首页点「资料分析」会先弹题型 sheet，必须选「全部随机」；选具体题型会带 `submodule` 而无 grouped。断言 `__pc.items` 的 `material_hash` 连续成段、`group_seq` 为 `1/K…K/K`，DOM `.grp-tag` 文案 `同材料题组 i/K`。
 - 同材料 SSR 页 `/tiku/q/N?v=<rand>`：`h2` 文本 `同材料题组（共 K 题）`、`li b` 为「本题」、其他 `li a[href^="/tiku/q/"]`；找样例可在容器 DB `select material_hash,count(*) from questions where module='ziliao' and disabled=0 and material_hash is not null group by 1 having count(*)>=2`。
 - `S381.apis()` 返回 `(method,status,ms,url,body)` 五元组，过滤 URL 用 `a[3]`；helper 里 `api` 列表属性与 `api()` 方法同名会报 `'list' object is not callable`。
+- 「导航不可见」别用 `body.innerText.includes('行测题库')`：首页 hero 卡文案含「10万+ 行测题库」会误判；改断言 nav 每个 `a.getClientRects().length===0` + 拼接的 nav 序列「行测题库言语理解判断推理…」不在 innerText 中。收口后（#600）挂载前应满足 `scrollHeight<=innerHeight` 且 `scrollTo(0,99999)` 后 `scrollY===0`。
+- `hold_restart.sh` 的 `pgrep -f "^python3 -u"` 匹配不到 pyenv 全路径进程，不会杀旧 holder 且 pid 文件为空；换 1440↔375 时用 `pgrep -af "[h]oldvw.py"` 取 pid 显式 kill。
 - 本机 `urllib` 直连 `/api/health` 会 403（无 UA 被 WAF 拦），用 `curl -A 'Mozilla/5.0'`。容器日志查 5xx 用 `grep -E '" 5[0-9]{2} '`，裸 ` 5[0-9]{2} ` 会命中 `[indexnow] submitted 533 urls` 之类。
 
 ## R380 练习中途「退出」保留进度弹窗（uni.showModal + practice/progress + /api/track 埋点）生产复验 走查新经验
