@@ -5,6 +5,17 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R387 index.html 路由预加载（`scripts/route-preload.mjs`）生产复验 走查新经验（testing agent）
+
+- **只有 `<script data-kg-route-preload>` 带标记，生成的 `<link>` 没有任何标记**。`document.querySelectorAll('link[data-kg-route-preload]')` 恒为 0，不能用它判断「注入了/没注入」。
+- **stats 等非白名单路由「modulepreload 数为 0」按字面不可观测**：Vite 运行时 `__vitePreload` 会在入口模块执行后自己插 `link[rel=modulepreload]`（stats 最终 DOM 6 条）。正确判据：`Page.addScriptToEvaluateOnNewDocument` 装 `MutationObserver`（`observe(document,{childList:true,subtree:true})`，不要 observe `documentElement`——此时可能还不存在），把「入口 `<script type=module>` 出现前」插入的 link 记为 R387 注入；非白名单路由 pre-entry 应为 0 且 `link[rel=preload][as=style]` 为 0。白名单路由 pre-entry 数 == HTML 里 M 表该路由长度（home 18 / practice 16 / book 19 / team-join 6）。
+- 并行证据看 Network 事件：`pages-home-home.*.js` 的 `requestWillBeSent` 时间 < `index-*.js` 的 `loadingFinished`（home 47 ms < 85 ms）；未注入路由呈串行（stats 分包 97 ms > index 结束 54 ms），可当「坏了」的对照形态。
+- "preloaded but not used within a few seconds" 警告是**延迟**触发的：load 后至少再排 CDP 事件 ≥ 8 s 再读 console，否则漏判。
+- 冷载捕获用 `Network.setCacheDisabled(true)` + 新标签，并在导航前预置 `localStorage.anonUid=test-rNNN-*`；否则第一次冒烟会给受保护 uid 写一条 `growth_events`（本轮 stats 冒烟写了 `heatmap_view probe=1`），只能披露不能删。
+- 卷库真实路由是 `#/pkgA/exam/list`（首页「全真模考」入口），**`#/pages/exam/papers` 不在 pages.json**：文档内改 hash 到未知路由会空白（既有 uni-app 行为），冷加载则回落首页。写计划前先 `grep pages.json` 核对路由。
+- 独立 Lighthouse：`CHROME_PATH=/home/ubuntu/.local/bin/google-chrome npx -y lighthouse@12 <url> --only-categories=performance --form-factor=mobile --chrome-flags="--headless=new --no-sandbox" --extra-headers='{"X-Kg-Probe":"1"}' --output=json`；约 1–2 min。`network-requests` 里 `/` 会出现 2 次（Document + 应用自身 Fetch）、`kaogong.svg` 2 次（Image + Other），属既有行为，去重断言只看 `.js/.css`。得分随宿主时段波动（部署脚本 0.99 vs 复采 0.92）。
+- DevTools 端口是 **29229**（不是 9222），`cdp.C` 的方法是 `call(method, **params)`。
+
 ## R386 探针打标三路（网段 / `X-Kg-Probe: 1` / 自动化 UA）+ 看板口径起点
 
 - **所有对生产 `/api/*` 写入行为数据的脚本请求一律带 `X-Kg-Probe: 1`**（curl `-H 'X-Kg-Probe: 1'`、Playwright `extra_http_headers`、CDP `Network.setExtraHTTPHeaders`），不要只靠出口网段——网段一换（AWS 54.x → 140.232.64.x 已发生过）历史上整月流量就混进「真人」。边缘 `[[path]].js` 原样复制请求头，无需改边缘。
