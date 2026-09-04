@@ -174,6 +174,27 @@ def test_question_stats_and_beat_pct_exclude_probe_rows(client, probe_nets):
     _cleanup()
 
 
+def test_refresh_clears_stale_stats_when_only_probe_rows_remain(client, probe_nets):
+    """R375：题目旧统计挂着、但真人行已清空/只剩探针行 → 刷新后清为 NULL，不外显陈旧「全站正确率」。"""
+    _cleanup()
+    q1 = seed_questions(1, ("ziliao",))[0]
+    conn = db.get_conn()
+    db._ensure_answer_log(conn)
+    db._ensure_question_stat_cols(conn)
+    conn.execute("DELETE FROM answer_log")
+    conn.execute("UPDATE questions SET attempt_count=5, correct_ratio=40, most_wrong='B' WHERE id=?", (q1,))
+    conn.commit()
+    conn.close()
+    client.post("/api/answer_log", json={"uid": PFX + "p", "items": [{"qid": q1, "correct": False, "picked": "B"}]},
+                headers={"X-Kg-Ip": "140.232.64.3"})
+    db.refresh_question_stats()
+    conn = db.get_conn()
+    r = conn.execute("SELECT attempt_count, correct_ratio, most_wrong FROM questions WHERE id=?", (q1,)).fetchone()
+    conn.close()
+    assert tuple(r) == (None, None, None)
+    _cleanup()
+
+
 def test_probe_column_migration_idempotent():
     conn = db.get_conn()
     db._ensure_answer_log(conn)

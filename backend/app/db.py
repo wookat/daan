@@ -2586,6 +2586,12 @@ def refresh_question_stats() -> int:
         ):
             current[r["id"]] = (r["attempt_count"], r["correct_ratio"], r["most_wrong"])
     changed = [(v[0], v[1], v[2], qid) for qid, v in target.items() if qid in current and current[qid] != v]
+    # 已无真人作答行（仅剩探针行/行被清理）但仍挂着旧统计的题目一并清空，否则外显的「全站正确率」是陈旧聚合
+    stale = [
+        r["id"] for r in conn.execute("SELECT id FROM questions WHERE attempt_count IS NOT NULL")
+        if r["id"] not in target
+    ]
+    changed += [(None, None, None, qid) for qid in stale]
     for i in range(0, len(changed), QUESTION_STATS_BATCH):
         conn.executemany(
             "UPDATE questions SET attempt_count=?, correct_ratio=?, most_wrong=? WHERE id=?",
