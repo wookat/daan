@@ -2346,6 +2346,10 @@ def import_hs_explanations(items: list[dict]) -> int:
     return n
 
 
+# 跨用户聚合（运营看板/全站题目统计/击败百分比）的真人口径：剔除探针（probe=1）；旧行 NULL 视为真人（无法回填，如实保留）
+REAL_TRAFFIC = "COALESCE(probe,0)=0"
+
+
 def _ensure_answer_log(conn):
     conn.execute(
         """CREATE TABLE IF NOT EXISTS answer_log (
@@ -2548,20 +2552,20 @@ def refresh_question_stats() -> int:
     _ensure_answer_log(conn)
     _ensure_question_stat_cols(conn)
     rows = conn.execute(
-        """SELECT question_id qid, COUNT(*) n, SUM(correct) c
-           FROM answer_log WHERE question_id IS NOT NULL GROUP BY question_id"""
+        f"""SELECT question_id qid, COUNT(*) n, SUM(correct) c
+           FROM answer_log WHERE question_id IS NOT NULL AND {REAL_TRAFFIC} GROUP BY question_id"""
     ).fetchall()
     wrong = {
         r["qid"]: r["p"]
         for r in conn.execute(
-            """SELECT qid, p FROM (
+            f"""SELECT qid, p FROM (
                  SELECT question_id qid, picked p,
                         ROW_NUMBER() OVER (
                           PARTITION BY question_id
                           ORDER BY COUNT(*) DESC, picked ASC
                         ) rk
                  FROM answer_log
-                 WHERE question_id IS NOT NULL AND correct=0 AND picked IS NOT NULL
+                 WHERE question_id IS NOT NULL AND correct=0 AND picked IS NOT NULL AND {REAL_TRAFFIC}
                  GROUP BY question_id, picked
                ) WHERE rk=1"""
         )
@@ -4178,10 +4182,6 @@ def admin_dashboard() -> dict:
 
 def admin_dashboard_state() -> tuple[dict, str]:
     return _cached_state("dashboard", 300, _admin_dashboard_uncached)
-
-
-# 运营口径：剔除探针流量（probe=1）；旧行 NULL 视为真人（无法回填，如实保留）
-REAL_TRAFFIC = "COALESCE(probe,0)=0"
 
 
 def _admin_dashboard_uncached() -> dict:

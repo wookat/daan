@@ -142,6 +142,38 @@ def test_dashboard_treats_legacy_null_probe_as_real(client):
     _cleanup()
 
 
+def test_question_stats_and_beat_pct_exclude_probe_rows(client, probe_nets):
+    """R375：全站正确率/人次/易错项与分享「击败 X%」只算真人；旧行 NULL 照算。"""
+    from app import team
+
+    _cleanup()
+    q1 = seed_questions(1, ("ziliao",))[0]
+    conn = db.get_conn()
+    db._ensure_answer_log(conn)
+    db._ensure_question_stat_cols(conn)
+    conn.execute("DELETE FROM answer_log")
+    conn.execute("UPDATE questions SET attempt_count=NULL, correct_ratio=NULL, most_wrong=NULL WHERE id=?", (q1,))
+    conn.execute(
+        "INSERT INTO answer_log (uid, created_at, question_id, module, correct, secs, picked, probe) VALUES (?,?,?,?,?,?,?,NULL)",
+        (PFX + "legacy", time.time(), q1, "ziliao", 0, 0, "C"),
+    )
+    conn.commit()
+    conn.close()
+    # 探针 6 次全答 B 且答错：若被计入，易错项会变 B、人次 8、正确率 25%
+    for i in range(6):
+        client.post("/api/answer_log", json={"uid": f"{PFX}p{i}", "items": [{"qid": q1, "correct": False, "picked": "B"}]},
+                    headers={"X-Kg-Ip": "140.232.64.2"})
+    client.post("/api/answer_log", json={"uid": PFX + "real", "items": [{"qid": q1, "correct": True, "picked": "A"}]},
+                headers={"X-Kg-Ip": "39.158.40.85"})
+    db.refresh_question_stats()
+    conn = db.get_conn()
+    r = conn.execute("SELECT attempt_count, correct_ratio, most_wrong FROM questions WHERE id=?", (q1,)).fetchone()
+    assert (r["attempt_count"], r["correct_ratio"], r["most_wrong"]) == (2, 50, "C")
+    assert team._question_stats(conn, q1) == {"total": 2, "acc": 50, "beat_pct": 50}
+    conn.close()
+    _cleanup()
+
+
 def test_probe_column_migration_idempotent():
     conn = db.get_conn()
     db._ensure_answer_log(conn)
