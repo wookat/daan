@@ -91,6 +91,24 @@ def test_normalize_cjk_spaces_strips_between_cjk_only():
     assert f("没有空格的题干。") == "没有空格的题干。"
 
 
+def test_normalize_cjk_spaces_keeps_structural_separators():
+    f = quality.normalize_cjk_spaces
+    # 逻辑式/分句后紧跟步骤标记或角色标签：空格是分隔符，保留（单个）
+    for keep in (
+        "翻译为：善良→美丽 第三步，辨析选项",
+        "③五件以上乙→会员 ④¬乙 第三步，进行推理",
+        "（4）-王→-周 第二步：根据题干",
+        "条件：奥数→围棋 结论：有的喜欢",
+    ):
+        assert f(keep) == keep, keep
+    assert f("找关系。 甲：乙当选 乙：丙当选 丙：-丙当选") == "找关系。甲：乙当选 乙：丙当选 丙：-丙当选"
+    assert f("选错误项　　第二步，东风") == "选错误项 第二步，东风"
+    # 标点后的同类空格、普通换行断词照常去掉
+    assert f("识别题型。 第二步，代入。") == "识别题型。第二步，代入。"
+    assert f("十六周岁的人，犯 故意杀人") == "十六周岁的人，犯故意杀人"
+    assert f("来到美 洲大陆。随后") == "来到美洲大陆。随后"
+
+
 def test_normalize_options_only_when_changed():
     dirty = json.dumps({"A": "蛰伏 客似云来", "B": "隐匿 车水马龙", "C": "选 3 个"}, ensure_ascii=False)
     out = quality.normalize_options(dirty)
@@ -139,6 +157,8 @@ def test_sanitize_explanation_strips_source_prefix():
     assert f("正确答案：B，全站正确率：24%，易错项：C。" + body) == body
     assert f("正确答案：B，全站正确率：24%，易错项：C。 A 解析：" + body) == body  # 孤立选项字母
     assert f("正确答案是 C 统计 全站数据: 正确率 65%，易错项 D / 解析 " + body) == body  # 旧格式
+    assert f("正确答案是 B 解析 " + body) == body  # 不带统计（生产 #288360）
+    assert f("正确答案：C" + body) == body  # 无分隔紧接正文（生产 #1272308）
     assert f("解析 " + body) == body
     assert f("解析" + body) == body  # 无分隔但正文以「第一步」起头
     assert f("解析 解析" + body) == body  # 双标签
