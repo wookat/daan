@@ -1507,3 +1507,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - ⚠️ 重要更正：保护 uid 正确拼写为 umteojq4sltdhorhm（umte-ojq，非 umtejoq），历史文档个别处拼写有误；对比前用 like 'umte%' 预校验。
 - 观察项：生产 console 累计 5 条未归因 Uncaught (in promise) Object（无 UI 影响、复现不出），候选后续带 source map 归因。
 - 详见 docs/iter/round-3/r364-paper-finish-loop.md。
+
+### R365 按卷练习完成页分享文案归卷（2026-08-29，PR #572，分支 devin/1788481071-r365-paper-share）
+- 取证（SOP-10 窗口内）：R364 按卷完成页「分享成绩」仍走通用文案「我在错题邦刷了 N 道行测题…」（lastModule=null 回落「行测」），不带卷名，链接只到站点首页；粉笔按卷分享带卷名。
+- 收口（纯前端零契约零新埋点事件）：paper-continue.js 补 paperShareText(ptitle, n, pct) fail-closed 纯函数（非空卷名 trim + n 正整数 + pct 有限数值→按卷基句，否则 null）；shareResult() 非每日分支 paperBase 优先，命中追加连对/击败后接卷库深链 /#/pkgA/exam/list，未命中完全回落原通用路径；埋点 share_result_copy label paperBase?'paper':模块。每日一练分支零改动；计时模考走 report 分享不经此处。
+- 验证：lint/vitest 483(+3)/build:h5 + ruff/pytest 271/pyright 0 全绿；祖先链核对（e727840 ∈ HEAD）通过；生产 rev f39d1f4、bundle index-GWtmGg-B.js、Lighthouse 全过。testing agent 实测（uid test-r365-ui）：按卷 38 题答完分享剪贴板精确含卷名/38 题/32%/击败34%/卷库深链、track ref=paper 200；普通练习回落 ref=panduan、每日一练 ref=daily 文案均零变化；R364 完成页三要素回归；375/1440 无溢出、0 次 /api/explain。剪贴板经页面内 writeText hook 捕获（readText 授权后仍 NotAllowedError）。
+- 测试数据清理：test-r365-ui DELETED {mistakes:41, answer_log:68, growth_events:12, daily_set_entries:1}，LEFTOVER 空，review_cur 0 行；保护 uid（like 'umte%' 预校验）DB 34 共有表+localStorage EXACT n=30。
+- 环境观察（非本轮引入）：00:35 共宿负载 10 秒 503 抖动 12 条（daily submit 一次 503 重做后 200）；部署换 hash 后旧 chunk 预取 404×30 噪音；promise 噪音 1 条（R364 观察项延续）。
+- 详见 docs/iter/round-3/r365-paper-share-text.md。

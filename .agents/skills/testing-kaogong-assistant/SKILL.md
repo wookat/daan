@@ -809,3 +809,11 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 保护 uid 正确拼写是 `umteojq4sltdhorhm`（umte-**ojq**）；上游消息里可能误写成 umtejoq…。做保护 DB 前后对比前先 `select distinct uid … like 'umte%'` 校验，否则 after 快照全 0 造成假警报。
 - 生产站桌面 Chrome 下可能出现少量 `Uncaught (in promise) Object`（无 description）的 EXC——弹窗取消/答错均复现不出、无 UI 影响，属未归因背景噪音；断言口径建议区分 console.error（应为 0）与该类 promise 噪音（单独列报）。
 - 经 ssh+docker exec 跑多行清理脚本时，内嵌 heredoc 可能静默产出空输出；改用 base64 编码脚本 → 远端解码 → `docker cp` 进容器再执行，输出稳定。
+
+## R365 分享文案归卷走查新经验
+- 读分享剪贴板：`Browser.grantPermissions clipboardReadWrite` 后 `navigator.clipboard.readText()` 仍可能 NotAllowedError（焦点/权限 quirk）。稳定做法：在页面 hook `navigator.clipboard.writeText`（存 `window.__cap` 再透传原实现），点「分享成绩」后读 `window.__cap`。注意 F5/整页 reload 会清掉 hook，需重装。
+- 分享埋点在 net 抓包里查 `POST /api/track`，字段是 `{"event":"share_result_copy","source":"practice","ref":"paper|<module>|daily"}`——label 落在 `ref` 字段。
+- 每日一练重做入口：`/#/pages/practice/practice?daily=1` + F5 整页 reload（SPA 内 hash 跳转不会重挂载会话）。若 `daily_set/submit` 遇 503（共宿负载抖动），服务端未记完成，reload 后可整组重做直至 200；daily 分享分支需要 submit 成功后 dailyStats 到位（完成页出现「今日排行榜」再点分享）。
+- 完成页按钮 y 坐标会因 dailyStats/登录条等动态区块变化，点「分享成绩」前先截图确认，否则可能误点「再来一组」把完成页顶掉。
+- 生产部署后旧 bundle chunk 名会 404（页面预取旧 hash 资源，console 里成串 `assets/*.js 404`）——属部署换 hash 的已知噪音，与 console.error 口径分开列报。
+- 收尾 reload 页面（清 hook）会让 app 以保护 uid 重新拉 `/api/profile` 并新增一个 `apiSnap:*` 缓存键、更新 `apiSnapIndex`——localStorage 相对备份多这两处属 app 正常行为，非污染。

@@ -34,3 +34,10 @@ export function paperFinishState(ptitle) {
   }
   return { isPaper: false, big: '本组完成', title: '' };
 }
+
+// 按卷练习成绩分享基句：带卷名，fail-closed（无卷名/非法数值回落 null 走通用文案）
+export function paperShareText(ptitle, n, pct) {
+  if (!(typeof ptitle === 'string' && ptitle.trim())) return null;
+  if (!Number.isInteger(n) || n <= 0 || !Number.isFinite(pct)) return null;
+  return '我在错题邦练完了「' + ptitle.trim() + '」全卷 ' + n + ' 题，正确率 ' + pct + '%';
+}
