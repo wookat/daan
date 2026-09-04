@@ -1610,6 +1610,25 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 限制：① 打标自 08:41Z 起生效，历史 1040 条 answer_log / 507 条 growth_events 全是 NULL——**R375 起生产取证一律加 `probe` 口径过滤，且至少积累数日干净数据后才能对复习闭环/激活率下结论**；② 副标题「昨日>0」「今日=0」分支未在生产观测；③ growth_events 侧只加了列，除 dashboard 外的漏斗/成长查询（如有）尚未加 probe 过滤。
 - 生产测试数据清理：uid `r374probe-*` 行已删。下次 SOP-10 四维审计 ~R376。
 
+### R375 用户可见的全站聚合接入探针口径（2026-09，分支 devin/1788513418-r375-real-question-stats，PR #587 已合入 main，rev e58779f）
+- 取证：源站访问日志 102,655 条 /api 中 102,541 条来自探针网段，初步可信真人 API 请求 56 条（200×53 / 404×2 / 403×1）、真人 UID 约 3 个（`umst3tuisd7lgzaka` 走通 review→mistakes→check-in→profile→reminders→share）；WordPress/.env/.git 扫描流量不算用户；Cloudflare Analytics token 缺 `zone.analytics.read` 无法查（限制，未补权限）。
+- 方案：`db.REAL_TRAFFIC="COALESCE(probe,0)=0"` 提为共享谓词，`refresh_question_stats()`（题目人次/正确率/`most_wrong`）与 `team._question_stats()`（分享页「击败 X%」）只算真人；历史 NULL 仍计入、不回填；UID 个人历史与 SRS 不变。补丁：**只剩探针行/真人行被清理的题目刷新时把旧聚合清为 NULL**（原实现只更新有真人行的题，陈旧「全站正确率」会一直挂着）。
+- 验证：pytest 318 / ruff / pyright 0；与 main 冲突（R374 `add_column_if_missing` 同文件）已在 `e58779f` 合并解决。生产：q41 只剩 1 条探针行 → (None,None,None)，stale 0 / mismatch 0 / 有统计题 938 / 探针行 80。
+- 部署：rev e58779f，bundle index-EtHOTcLm.js（含 W2 前端），deploy_h5.sh 性能预算全过；W2-A/B 生产回归：`POST /api/export/pdf` 畸形参数 400、`/tiku/` 「10万+ 行测题 · 1.5万+ 历年真题」、`idx_mist_uid` 存在、`/api/mock/events` 正常。
+
+### W2 内容清洗事故与回滚（2026-09-04，生产数据操作，无发版）
+- 事故：`scripts/w2_content_cleanup.py --apply` 在生产改写 7700 题的 question/options（去汉字间空格）+ 2398 题 hs 元句。testing agent 冒烟发现**逻辑填空题被毁**：选项分词空格是语义（「履行 强化 改变」→「履行强化改变」，约 1191 题选项 ≥6 字无分隔），题干中连续空格/`\xa0` 是空位占位（约 92 题空位消失）。第二个连带事故：`db._seed_questions()` 启动时按题干原文 `INSERT OR IGNORE`，题干被改写后容器重启把 **1928 条种子题当新题重插**（10:26:59Z，新 id、无作答引用、tag3_review 166 行）。
+- 回滚（容器内脚本，备份 `/data/data.db.bak-w2`）：先删 1928 条重复行（remap 引用为空，tag3_review 166 行删除），再从备份原样恢复 2000 题（此前两次恢复因 UNIQUE 冲突中断时已恢复其余 5700 题并留下 `question||char(0)||id` 临时后缀），rescore，restart 清 lru_cache。终态核对：questions 156792 = 备份；question/options 与备份差异 0；NUL 占位 0（`id=334117` 备份里本就含 NUL，非本次）；hs 与备份差异恰 2398（预期清洗）；explanation/answer 差异 0；restart 后 seed 未再插入；restarts 0 / healthy。仍含元句的 173 条 hs 全部 disabled=1，本就不在 ONLINE 口径。
+- 处置：脚本撤掉 question/options 改写，只保留 hs 元句剥离（本轮 PR）。**规则：任何对 `questions.question` 的文本改写都会被 `_seed_questions` 视作新题重插，改写前必须先改去重键或同步改 `knowledge/questions_bank.jsonl`；对选项/题干去空格必须先排除填空题型。** 存量 ~7300 题汉字间空格（主要 id≥1046924 AI yanyu 批次）与 76 对「同题异格式」重复归入 backlog（content P2），不再用通用规则一刀切。
+- w2.md §5.0 中「生产 apply 已执行 7700 改写」的记录已被本节覆盖：question/options 部分已回滚，hs 部分保留。
+
+### R376 SOP-10 四维审计 + 种子题库导入去重键换为 seed_index（2026-09-04，分支 devin/1788522083-r376-seed-index，base=main）
+- SOP-10 四维审计（窗口到点）：落地页/首页 UI 与核心功能无新 P0（R375 部署性能预算 `/` 0.97、`/tiku/` 1.00；恢复后库 1440/375 全过）；**命中操作台×架构交叉缺口**——`ADMIN_EDITABLE` 含 `question`、操作台可改题干，而 `_seed_questions()` 每次启动按题干原文 `INSERT OR IGNORE` 9217 行：生产 9217 条种子题干全部在库（572 条 disabled）处于「刚好全命中」的脆弱平衡，任何题干改写/删除都会在下次重启被文件原文复活（同日事故实际重插 1928 条）。
+- 方案（后端零契约零前端）：新表 `seed_index(stem_hash→question_id)` + `seed_runs(path→文件 sha1)`；`_seed_questions(path=None)->int` 文件指纹不变整体跳过，否则按题干 sha1 去重（已导入过的种子题无论改写/下线/删除都不重插），被 IGNORE 的行按原文回查 id 回填映射（升级路径），`submodule` 补齐改按 id。`_seed_shizheng` 只共用 `_seed_bank_path`，语义不变。
+- 验证：pytest 324（+3 test_seed_index.py）/ ruff / pyright 0；前端零改动。生产部署核对：`seed_index` 应为 9217、questions 156792 不变、restart 后不变。
+- 详见 docs/iter/round-3/r376-seed-index-audit.md。下次 SOP-10 四维审计 ~R388。
+
+
 ### W3（体验/口径/内容人味集成轮，分支 devin/wf-w3-integration，未建 PR/未部署）
 - 集成：origin/main 2d50265（含 #587 R375、#588）切 `devin/wf-w3-integration`，依次 merge W3-A（cff7eda）/ W3-B（1ed386a）/ W3-C（8fca744），三次无冲突（A 与 R375 均改 db.py 自动合并）；dropped 无。生产 `/api/health` rev=e58779f 是 HEAD 祖先（无「已上线未合入」漂移）。全量本地验证：backend ruff / pyright 0 / pytest 342（main 基线 318，+24）；frontend-uni（Node 22.23.2）lint / vitest 523 / build:h5（bundle index-TmyrZ0ah.js）；miniapp typecheck 0 / lint 0（脚本已内置 `ESLINT_USE_FLAT_CONFIG=false`）。
 - W3-A（backend）：`/api/questions/export` 复用 import 令牌（`deps.check_import_token`，无头/错令牌/未配置 401）；`growth_stats` 周键 `+8 hours`；`_client_ts(raw, now)` 接受 items[].t（int/float，>1e11 毫秒，[now−30d, now+5min] 外回退 now）落 answer_log.created_at；`/api/rate` `rl(request,'rate',60,600)`。本地 uvicorn 实测：export 无头 401 / 正确令牌 200；t=昨日毫秒 → checkin days 落昨日、t=90 天前回退今日；t=2026-08-31 周一 01:00 CST → `/api/growth` week 2026-35（UTC 键 2026-34 未出现）；`/api/rate` 第 61 次 429；核心接口 200。**生产仍旧代码：export 匿名 200，待部署后回归**。
