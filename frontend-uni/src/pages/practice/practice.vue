@@ -280,7 +280,8 @@
         <text v-if="!pushNudgeDone" class="loginnudge-x" @click="dismissPushNudge">✕</text>
       </view>
       <!-- #endif -->
-      <button v-if="paperFinish().isPaper" class="btn" @click="goExamList">回卷库</button>
+      <button v-if="paperFinish().isPaper && paperWrongN() > 0" class="btn" @click="retryPaperWrong">重练本卷错题（{{ paperWrongN() }} 题）</button>
+      <button v-if="paperFinish().isPaper" :class="paperWrongN() > 0 ? 'btn ghost' : 'btn'" :style="paperWrongN() > 0 ? 'margin-top: 16rpx' : ''" @click="goExamList">回卷库</button>
       <button v-else class="btn" @click="retryGroup">再来一组</button>
       <button v-if="!beiMode" class="btn ghost" style="margin-top: 16rpx" @click="shareResult">分享成绩</button>
       <button class="btn plain" style="margin-top: 8rpx" @click="quit">返回首页</button>
@@ -362,7 +363,7 @@ import { requestNotificationPermission } from '../../reminder.js';
 import { announce } from '../../a11y-live.js';
 import { pickAnnounceText } from '../../live-policy.js';
 // #endif
-import { paperContinuePlan, paperQuery, paperFinishState, paperShareText } from '../../paper-continue.js';
+import { paperContinuePlan, paperQuery, paperFinishState, paperShareText, paperWrongItems, paperWrongPlan } from '../../paper-continue.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 import { qStatLine } from '../../q-stat.js';
@@ -977,6 +978,7 @@ export default {
       try {
         const d = await request('/api/paper_questions?' + paperQuery(p, untimed, anonUid()));
         let items = d.items || [];
+        let wrongOnly = false;
         if (items.length < 20) {
           uni.showToast({ title: '试卷题目不足，换一张试试', icon: 'none' });
           return;
@@ -984,14 +986,29 @@ export default {
         if (untimed) {
           const plan = paperContinuePlan(items);
           if (plan.doneN > 0 && plan.remaining.length === 0) {
-            const again = await new Promise((resolve) => uni.showModal({
-              title: '本卷已练完',
-              content: `本卷 ${items.length} 题已全部练过，重新练一遍？`,
-              confirmText: '重新练', cancelText: '不用了',
-              success: (r) => resolve(!!r.confirm),
-              fail: () => resolve(false),
-            }));
-            if (!again) return;
+            const wrong = paperWrongPlan(items);
+            if (wrong.length) {
+              const pick = await new Promise((resolve) => uni.showActionSheet({
+                title: `本卷 ${items.length} 题已全部练过，上次答错 ${wrong.length} 题`,
+                itemList: [`只练错题（${wrong.length} 题）`, '重新练一遍'],
+                success: (r) => resolve(r.tapIndex),
+                fail: () => resolve(-1),
+              }));
+              if (pick !== 0 && pick !== 1) return;
+              if (pick === 0) {
+                items = wrong;
+                wrongOnly = true;
+              }
+            } else {
+              const again = await new Promise((resolve) => uni.showModal({
+                title: '本卷已练完',
+                content: `本卷 ${items.length} 题已全部练过，重新练一遍？`,
+                confirmText: '重新练', cancelText: '不用了',
+                success: (r) => resolve(!!r.confirm),
+                fail: () => resolve(false),
+              }));
+              if (!again) return;
+            }
           }
           if (plan.doneN > 0 && plan.remaining.length > 0) {
             const cont = await new Promise((resolve) => uni.showModal({
@@ -1023,7 +1040,7 @@ export default {
           this.examMode = false;
           if (this.examTimer) clearInterval(this.examTimer);
           this.startQTimer();
-          uni.showToast({ title: p.title + ' 开始：不计时逐题练', icon: 'none', duration: 1800 });
+          uni.showToast({ title: wrongOnly ? '只练本卷上次答错的题' : p.title + ' 开始：不计时逐题练', icon: 'none', duration: 1800 });
         } else {
           this.examMode = true;
           this.examLeft = 120 * 60;
@@ -1467,6 +1484,27 @@ export default {
     // 完成页归卷态：按卷会话（_ptitle 非空）显卷名与回卷库出路；模板方法调用规避非响应式 _ptitle
     paperFinish() {
       return paperFinishState(this._ptitle);
+    },
+    // 完成页按卷错题数：模板方法调用规避非响应式 _ptitle 影响的缓存
+    paperWrongN() {
+      return paperWrongItems(this.items).length;
+    },
+    // 完成页「重练本卷错题」：就地以本会话答错题重开会话，保留 _source/_ptitle 归卷
+    retryPaperWrong() {
+      const wrong = paperWrongItems(this.items);
+      if (!wrong.length) return;
+      this.items = wrong;
+      this.idx = 0;
+      this.picked = '';
+      this.right = 0;
+      this.streak = 0;
+      this.bestStreak = 0;
+      this.autoSaved = false;
+      this.resultSent = false;
+      this.percentile = null;
+      this.session = true;
+      this.startQTimer();
+      uni.showToast({ title: '只重练本卷错题', icon: 'none' });
     },
     // 完成页「再来一组」：错题重练场次重用同一组错题，其余按原模块重新抽题
     retryGroup() {

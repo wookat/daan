@@ -5,6 +5,22 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R367 卷卡错题数 + 已练完卷「只练错题」action sheet 走查新经验
+- 「最近一次作答」口径的 wrong 计数要用 **同一 uid 两轮作答** 验证：整卷答错 K 题 → 卷卡 `已练完全部 N 题 ✓ · 错 K 题`、`/api/exam/papers?uid=` 该卷 `wrong===K`、`/api/paper_questions?src&pid&uid=` 中 `wrong===true` 的 id 顺序应等于卷面顺序（不是答题顺序）；再把这 K 题全答对后 `wrong` 必须回 0 且卷卡去掉「· 错」后缀。答错 id 序列在 UI 上不可见，靠 CDP 读组件 `items[i].answer` 与 `_picked` 记录。
+- uni `showActionSheet` 在 H5 渲染为 `<uni-actionsheet>`，页内判断是否弹出用 `firstElementChild` 的 `display!=='none'`（元素常驻 DOM，不能只看存在性）；取消项文字「取消」，点击后断言组件 `session===false` 且 `items.length===0`。
+- 「只练错题」入口与 R366 完成页 CTA 的重练 items 断言相同（id 序列/无 `done`/`wrong` 残留/`_ptitle`/`_source`），但 toast 文案不同：R367 是「只练本卷上次答错的题」，R366 是「只重练本卷错题」，别混用。
+- 计时模考回归：「开始模考」直接进 `/pkgA/exam/exam?paper_id=…` 且不弹 sheet；退出未交卷后卷库顶部会留「未交卷」横幅 + `exam_attempts` 1 行，需点「放弃」并把 `exam_attempts` 纳入 uid 清理表（本轮命中 mistakes/answer_log/exam_attempts/growth_events）。
+- 首页真实路由是 `#/`（tabBar），手敲 `#/pages/index/index` 之类未注册 hash 会得到空白页，F5 后才回首页；页内 hash 跳转后 `window.__errs` 之类注入的错误钩子会随整页刷新丢失，改用 browser console 直接看（正常只有 uni `showLoading/hideLoading 必须配对使用` 警告，无 error）。
+- exec 的 `env` 参数不能写 `"$VAR"` 引用已有环境变量（会成字面量，ssh 报 Permission denied）；在命令里写 `SSHPASS="$TICKETS_VPS_SSH_CREDENTIAL" sshpass -e ssh …` 即可。
+- 作答条数对账：首页「今日已练 N 题」应等于 answer_log 该 uid 行数（本轮 84=84）；配合 `docker inspect -f '{{.State.StartedAt}}' deploy-kaogong-1` 无变化即可排除容器重建丢数。
+
+## R366 按卷完成页「重练本卷错题」走查新经验
+- 完成页错题重练 CTA 是纯前端会话态：CDP 拿 practice 组件 proxy（`items/idx/session/_ptitle/_source`）后，断言 `items.map(q=>q.id)` == 本轮 `_picked!==answer` 的 id 序列，且每项无 `_picked/_saved/_mid/_secs/done` 残留；`_ptitle/_source` 不变即 归卷 保留。
+- 375 下键盘快捷键（A–D/Enter）失效（桌面才启用），38 题卷手点太慢：用 CDP `Input.dispatchMouseEvent` 按选项 `getBoundingClientRect` 中心真点（脚本样例 /tmp/cdp174/m375.py：读组件 answer，指定第几题故意答错，答错后自动找「下一题」按钮点掉）。截图坐标≈(css_x*0.64, (css_y+87)*0.64)（1600 宽实屏映射 1024 截图）。
+- 完成页底部横幅（「今日还有 N 题到期待复习」）会晚到几秒并把 CTA 往下推——点 CTA 前重新截图/取 rect，否则点空。
+- 生产 `/api/answer` 失败时前端进 `localStorage.offlineQueue`（`{type,data:{answers:[{key,uid,item:{qid,correct,picked,source,t}}]}}`），下次启动/刷新 toast「离线作答已同步」再落库；DB 断言 answer_log 数量前先刷新一次让队列冲掉，队列里 `item.source` 也可当归卷证据。`deploy_h5.sh` 会顺带重建 `deploy-kaogong-1` 容器（`docker ps` 看 Up 时长），重启窗口内的作答可能既不进队列也不落库（本轮丢 ~8 条）——遇到条数对不上先查容器 StartedAt，别记成功能 bug。
+- 清理：`sqlite_master` 枚举所有含 uid 列的表（本轮命中 mistakes/answer_log/growth_events）按 uid 删并回读 leftover=0；`pkill -f holdvw.py` 会连自己所在 bash 一起杀（模式匹配到命令行），单独一条命令跑或加 `pgrep -f "holdvw.py 375"`。
+
 ## R362 按卷练习 pid 对齐走查新经验
 - pid 对齐最强对抗卷：2015 新疆卷 pid=133（卷卡 n=38，psource「2015年新疆省考行测真题」src 全集 120 题）——请求带 `pid=133` 时会话应 1/38，前端漏带 pid 会退回旧行为 1/120，一眼可辨。
 - 断言四点一线：抓包 `paper_questions?src=…&pid=…&uid=…` → 会话 1/N → 卷卡「已练 X/N」→ R360/R361 弹窗分母同 N（三方分母一致即对齐成功）。

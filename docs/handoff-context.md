@@ -1515,3 +1515,25 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 测试数据清理：test-r365-ui DELETED {mistakes:41, answer_log:68, growth_events:12, daily_set_entries:1}，LEFTOVER 空，review_cur 0 行；保护 uid（like 'umte%' 预校验）DB 34 共有表+localStorage EXACT n=30。
 - 环境观察（非本轮引入）：00:35 共宿负载 10 秒 503 抖动 12 条（daily submit 一次 503 重做后 200）；部署换 hash 后旧 chunk 预取 404×30 噪音；promise 噪音 1 条（R364 观察项延续）。
 - 详见 docs/iter/round-3/r365-paper-share-text.md。
+- ⚠️ 合并链事故（R366 发现并补救）：#572 base 指向 R364 分支 devin/1788478793-r364-paper-finish，在 #571 已入 main 后才 merge，R365 commit f39d1f4 未随入 main（NOT_IN_MAIN）。补救 PR #573（devin/1788483376-r365-mainline，从最新 main merge R365 分支）。教训与 R359 #565 同类：链式 PR 合并顺序错位时改动会落在已合并分支上——合并前必须用权威工具核对 base 与 merge 后 main 祖先链。
+
+### R366 按卷练习完成页「重练本卷错题」（2026-09，分支 devin/1788483435-r366-paper-wrong-retry，基于 #573 链）
+- SOP-10 四维审计（窗口到点）：操作台/落地页/架构无新高优缺口；功能深度选中——按卷练习完成页对本卷错题无就地行动出路（模考报告 R282 有「本卷错题重练」、粉笔完成页有错题重做，按卷练习是自家双路径口径缺口）。
+- 收口（纯前端零契约零新协议零新埋点）：paper-continue.js 补 paperWrongItems(items) fail-closed 纯函数（非数组→[]；取 _picked 非空字符串且 ≠answer 的题，浅拷贝清除 _picked/_saved/_mid/_secs/done，保持卷面顺序）；完成页 isPaper && wrong>0 时主按钮「重练本卷错题（N 题）”（回卷库降为 ghost），retryPaperWrong() 复用 retryGroup 会话重置口径、保留 _source/_ptitle 归卷（answer_log 归本卷、再答错经 saveWrong 入错题本）；全对不显示，普通/每日/背题/模考完成页零变化。
+- 验证：lint/vitest 487(+4)/build:h5 全绿（后端零改动）。生产 rev d1fafc3、bundle index-CKVx9v-X.js、Lighthouse 全过。testing agent 实测（uid test-r366-a7k2）：1440 新疆卷 33/38→CTA「重练本卷错题（5 题）」+ 回卷库 ghost，点击 toast「只重练本卷错题」、items id 序列=5 道错题卷面顺序、无 _picked/_saved/_mid/_secs/done 残留、_ptitle/_source 保留；重练 3/5 后完成页仍归卷且 CTA 变「2 题」；全对 2/2 无 CTA、回卷库主按钮；375 同过（scrollWidth=375，CTA right=349）；普通常识 10 题完成页「本组完成」+「再来一组」零变化；已落库 78 条按卷作答 source 全部归卷；console 0 error。
+- ⚠️ 部署事故（接替会话发现并补救）：上一会话部署 d1fafc3 在 4a2 之前中断——后端容器已换新（/api/health rev=d1fafc3），但 CF Pages 静态层仍为 R365 bundle index-GWtmGg-B.js（deploy-history.log 无 d1fafc3 记录）。教训：`/api/health rev` 只证明后端，静态层必须另查 `curl / | grep index-*.js` 与 chunk 内容；本轮重跑 `deploy_h5.sh --skip-build` 全流程收敛。
+- 环境观察：共宿 recruit celery/postgres 负载尖峰 load 25，边缘 503 约 52s；容器重建窗口内约 8 条作答未落库（其余进 offlineQueue 刷新后同步）。完成页到期复习横幅晚到几秒下推按钮区（既有）。
+- 测试数据清理：test-r366-a7k2 DELETED 108（mistakes 8/answer_log 88/growth_events 12），LEFTOVER 0。
+- 合并状态：平台禁止本会话合并 main（`gh pr merge` 被拒）——#573（R365 补救）与 #574（R366，base=#573 分支）本地全绿+生产复验通过，排队待老板合并；后续轮次分支继续链在 #574 之上。
+- 详见 docs/iter/round-3/r366-paper-wrong-retry.md。
+
+### R367 卷库错题入口：卷卡错题数 + 已练完卷「只练错题」（2026-09，分支 devin/1788488367-r367-paper-wrong-entry，PR #575；补救 mainline 分支 devin/1788490598-r367-mainline）
+- 取证：卷卡 /api/exam/papers 只有 practiced/best_score/attempt_count，/api/paper_questions 只有 done，R366 完成页 CTA 离开即失；已练完卷入口只有「重新练一遍/不用了」。
+- 口径：「错」= 该题本人最近一次 answer_log correct=0（重练答对即不再算错；NULL/非 0 视为非错，fail-closed）。零新表/字段/端点。
+- 后端 db.py：抽 `_answer_state(conn, uid) -> (done_qids, wrong_qids)`（一次 `SELECT question_id, correct … ORDER BY created_at, id` 取最近一次），list_exam_papers 每卷 +`wrong`（无 uid 为 0），paper_questions 每题 +`wrong: bool`（无 uid 不带 done/wrong，契约不变）；禁用题经既有卷题集排除。tests/test_paper_wrong.py 4 例。
+- 前端：paperPracticedState(practiced, n, wrong) 追加 ` · 错 W 题`（仅 0<W≤practiced）；新增 paperWrongPlan(items) fail-closed（wrong===true、保持卷面顺序、清 done/wrong）；practice.vue startPaper 已练完+有错 → showActionSheet「只练错题（W 题）/ 重新练一遍」（取消退出），无错保留原 modal，「只练剩余」与计时模考分支不变；只练错题 toast「只练本卷上次答错的题」。vitest +7。
+- 验证：ruff/pytest 275/pyright（仅基线 pywebpush 缺依赖）/eslint/vitest 494/build 全绿。生产 rev f58236d、bundle index-DpIbxVtu.js、Lighthouse 全过。testing agent（uid test-r367-q9m3）1440：整卷答错 4 → 卷卡「已练完全部 38 题 ✓ · 错 4 题」、API wrong=4 且 wrong===true 的 id 集合与顺序=答错序列；action sheet 二项；只练错题 items 精确等于错题序列、无 done/wrong、_ptitle/_source 保留；全答对后完成页无 R366 CTA、卷卡回无后缀、API wrong=0（最近一次口径）；无错 → 原 modal；取消 → session=false；计时模考/普通专项练习回归零变化。375（错 3 题）同过，scrollWidth=375，console 0 error。容器 StartedAt 未变，作答 84=84 无丢失。
+- 测试数据清理：test-r367-q9m3 DELETED 99（mistakes 8/answer_log 84/exam_attempts 1/growth_events 6），LEFTOVER 0；保护 uid 无变化。
+- ⚠️ 合并链事故再现（第三次，与 R359 #565 / R365 #572 同类）：#573 已入 main 后，#574（base=R365 分支）与 #575（base=R366 分支）被 merge 进各自 base 分支而非 main → `git merge-base --is-ancestor d1fafc3/f58236d origin/main` 均 NOT_IN_MAIN（生产当前运行 f58236d 却不在 main）。补救：从 origin/main 开 devin/1788490598-r367-mainline merge R367 分支（含 R366），开 PR 直接 base=main。**规则升级：后续每轮 PR 一律 base=main，不再链式 base 到未合入分支**；合并后必须用 `git merge-base --is-ancestor <sha> origin/main` 权威核对。
+- 环境观察：退出模考未交卷会留 exam_attempts 行 + 卷库「未交卷」横幅（既有）；uni showLoading/hideLoading 配对 warning（既有）。
+- 详见 docs/iter/round-3/r367-paper-wrong-entry.md。

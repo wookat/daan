@@ -2546,6 +2546,19 @@ def list_papers() -> list[dict]:
     return papers[:120]
 
 
+def _answer_state(conn, uid: str) -> tuple[set[int], set[int]]:
+    """本人作答状态：(已作答题 id 集, 最近一次答错题 id 集)。correct 非 0 视为非错（fail-closed）。"""
+    _ensure_answer_log(conn)
+    latest: dict[int, int | None] = {}
+    for r in conn.execute(
+        "SELECT question_id, correct FROM answer_log"
+        " WHERE uid=? AND question_id IS NOT NULL ORDER BY created_at, id",
+        (uid,),
+    ):
+        latest[r["question_id"]] = r["correct"]
+    return set(latest), {q for q, c in latest.items() if c == 0}
+
+
 def paper_questions(source: str, limit: int = 140, uid: str | None = None,
                     pid: int | None = None) -> list[dict]:
     conn = get_conn()
@@ -2571,15 +2584,9 @@ def paper_questions(source: str, limit: int = 140, uid: str | None = None,
             (source, limit),
         ).fetchall()
     done_qids: set[int] = set()
+    wrong_qids: set[int] = set()
     if uid and rows:
-        _ensure_answer_log(conn)
-        done_qids = {
-            r["question_id"] for r in conn.execute(
-                "SELECT DISTINCT question_id FROM answer_log"
-                " WHERE uid=? AND question_id IS NOT NULL",
-                (uid,),
-            )
-        }
+        done_qids, wrong_qids = _answer_state(conn, uid)
     conn.close()
     out = []
     for r in rows:
@@ -2587,6 +2594,7 @@ def paper_questions(source: str, limit: int = 140, uid: str | None = None,
         d["options"] = json.loads(d.get("options") or "{}")
         if uid:
             d["done"] = d["id"] in done_qids
+            d["wrong"] = d["id"] in wrong_qids
         out.append(d)
     return out
 
@@ -3402,20 +3410,16 @@ def list_exam_papers(kind: str | None = None, year: int | None = None,
                     cur["best_score"] = b["score"]
                     cur["best_attempt_id"] = b["id"]
     done_qids: set[int] = set()
+    wrong_qids: set[int] = set()
     if uid and base:
-        done_qids = {
-            r["question_id"] for r in conn.execute(
-                "SELECT DISTINCT question_id FROM answer_log"
-                " WHERE uid=? AND question_id IS NOT NULL",
-                (uid,),
-            )
-        }
+        done_qids, wrong_qids = _answer_state(conn, uid)
     conn.close()
     out = []
     for d in base:
         d = dict(d)
         qids = d.pop("_qids", [])
         d["practiced"] = sum(1 for i in qids if i in done_qids) if done_qids else 0
+        d["wrong"] = sum(1 for i in qids if i in wrong_qids) if wrong_qids else 0
         d.update(best.get(d["id"], {
             "best_score": None, "attempt_count": 0, "best_attempt_id": None,
         }))
