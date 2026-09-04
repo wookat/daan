@@ -245,15 +245,37 @@ def init_db():
     _seed_shizheng()
 
 
-def _seed_questions():
-    """启动时从 knowledge/questions_bank.jsonl 导入题库（按题干去重）。"""
-    path = os.path.join(os.path.dirname(DB_PATH) if os.path.dirname(DB_PATH) else ".",
-                        "knowledge", "questions_bank.jsonl")
-    alt = os.path.join(os.path.dirname(__file__), "..", "..", "knowledge", "questions_bank.jsonl")
+def _seed_bank_path(name: str) -> str | None:
+    path = os.path.join(os.path.dirname(DB_PATH) if os.path.dirname(DB_PATH) else ".", "knowledge", name)
+    alt = os.path.join(os.path.dirname(__file__), "..", "..", "knowledge", name)
     path = path if os.path.exists(path) else alt
-    if not os.path.exists(path):
-        return
+    return path if os.path.exists(path) else None
+
+
+def _ensure_seed_tables(conn):
+    conn.execute("CREATE TABLE IF NOT EXISTS seed_index (stem_hash TEXT PRIMARY KEY, question_id INTEGER)")
+    conn.execute("CREATE TABLE IF NOT EXISTS seed_runs (path TEXT PRIMARY KEY, fingerprint TEXT, ran_at REAL)")
+
+
+def _seed_questions(path: str | None = None) -> int:
+    """启动时从 knowledge/questions_bank.jsonl 导入题库，返回本次新插入条数。
+
+    去重键是 seed_index（题干原文 sha1 → 首次导入的 id），不是 questions.question 当前值：
+    种子题之后被改写/下线/删除都视为已导入，不再重插；文件内容指纹未变则整体跳过。
+    """
+    path = path or _seed_bank_path("questions_bank.jsonl")
+    if not path:
+        return 0
+    with open(path, "rb") as f:
+        fp = hashlib.sha1(f.read()).hexdigest()
     conn = get_conn()
+    _ensure_seed_tables(conn)
+    prev = conn.execute("SELECT fingerprint FROM seed_runs WHERE path=?", (path,)).fetchone()
+    if prev is not None and prev["fingerprint"] == fp:
+        conn.close()
+        return 0
+    known = {r["stem_hash"] for r in conn.execute("SELECT stem_hash FROM seed_index")}
+    inserted = 0
     with open(path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
@@ -263,12 +285,18 @@ def _seed_questions():
                 q = json.loads(line)
             except json.JSONDecodeError:
                 continue
+            stem = q.get("question")
+            if not stem:
+                continue
+            h = hashlib.sha1(stem.encode("utf-8")).hexdigest()
+            if h in known:
+                continue
             cur = conn.execute(
                 "INSERT OR IGNORE INTO questions (module, question_type, question, options, answer, explanation, source, submodule, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
                 (
                     q.get("module"),
                     q.get("question_type"),
-                    q.get("question"),
+                    stem,
                     json.dumps(q.get("options", {}), ensure_ascii=False),
                     q.get("answer"),
                     q.get("explanation"),
@@ -278,23 +306,33 @@ def _seed_questions():
                 ),
             )
             if cur.rowcount:
-                _enrich_new_question(conn, cur.lastrowid, "seed")
+                qid = cur.lastrowid
+                inserted += 1
+                _enrich_new_question(conn, qid, "seed")
+            else:
+                row = conn.execute("SELECT id FROM questions WHERE question=?", (stem,)).fetchone()
+                qid = row["id"] if row else None
+            if qid is None:
+                continue
             if q.get("submodule"):
                 conn.execute(
-                    "UPDATE questions SET submodule=? WHERE question=? AND (submodule IS NULL OR submodule='')",
-                    (q["submodule"], q.get("question")),
+                    "UPDATE questions SET submodule=? WHERE id=? AND (submodule IS NULL OR submodule='')",
+                    (q["submodule"], qid),
                 )
+            conn.execute("INSERT OR IGNORE INTO seed_index (stem_hash, question_id) VALUES (?,?)", (h, qid))
+            known.add(h)
+    conn.execute(
+        "INSERT OR REPLACE INTO seed_runs (path, fingerprint, ran_at) VALUES (?,?,?)", (path, fp, time.time())
+    )
     conn.commit()
     conn.close()
+    return inserted
 
 
 def _seed_shizheng():
     """启动时从 knowledge/shizheng_bank.jsonl 导入时政题库（按题干去重）。"""
-    path = os.path.join(os.path.dirname(DB_PATH) if os.path.dirname(DB_PATH) else ".",
-                        "knowledge", "shizheng_bank.jsonl")
-    alt = os.path.join(os.path.dirname(__file__), "..", "..", "knowledge", "shizheng_bank.jsonl")
-    path = path if os.path.exists(path) else alt
-    if not os.path.exists(path):
+    path = _seed_bank_path("shizheng_bank.jsonl")
+    if not path:
         return
     conn = get_conn()
     now = time.time()

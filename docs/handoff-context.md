@@ -1621,3 +1621,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 回滚（容器内脚本，备份 `/data/data.db.bak-w2`）：先删 1928 条重复行（remap 引用为空，tag3_review 166 行删除），再从备份原样恢复 2000 题（此前两次恢复因 UNIQUE 冲突中断时已恢复其余 5700 题并留下 `question||char(0)||id` 临时后缀），rescore，restart 清 lru_cache。终态核对：questions 156792 = 备份；question/options 与备份差异 0；NUL 占位 0（`id=334117` 备份里本就含 NUL，非本次）；hs 与备份差异恰 2398（预期清洗）；explanation/answer 差异 0；restart 后 seed 未再插入；restarts 0 / healthy。仍含元句的 173 条 hs 全部 disabled=1，本就不在 ONLINE 口径。
 - 处置：脚本撤掉 question/options 改写，只保留 hs 元句剥离（本轮 PR）。**规则：任何对 `questions.question` 的文本改写都会被 `_seed_questions` 视作新题重插，改写前必须先改去重键或同步改 `knowledge/questions_bank.jsonl`；对选项/题干去空格必须先排除填空题型。** 存量 ~7300 题汉字间空格（主要 id≥1046924 AI yanyu 批次）与 76 对「同题异格式」重复归入 backlog（content P2），不再用通用规则一刀切。
 - w2.md §5.0 中「生产 apply 已执行 7700 改写」的记录已被本节覆盖：question/options 部分已回滚，hs 部分保留。
+
+### R376 SOP-10 四维审计 + 种子题库导入去重键换为 seed_index（2026-09-04，分支 devin/1788522083-r376-seed-index，base=main）
+- SOP-10 四维审计（窗口到点）：落地页/首页 UI 与核心功能无新 P0（R375 部署性能预算 `/` 0.97、`/tiku/` 1.00；恢复后库 1440/375 全过）；**命中操作台×架构交叉缺口**——`ADMIN_EDITABLE` 含 `question`、操作台可改题干，而 `_seed_questions()` 每次启动按题干原文 `INSERT OR IGNORE` 9217 行：生产 9217 条种子题干全部在库（572 条 disabled）处于「刚好全命中」的脆弱平衡，任何题干改写/删除都会在下次重启被文件原文复活（同日事故实际重插 1928 条）。
+- 方案（后端零契约零前端）：新表 `seed_index(stem_hash→question_id)` + `seed_runs(path→文件 sha1)`；`_seed_questions(path=None)->int` 文件指纹不变整体跳过，否则按题干 sha1 去重（已导入过的种子题无论改写/下线/删除都不重插），被 IGNORE 的行按原文回查 id 回填映射（升级路径），`submodule` 补齐改按 id。`_seed_shizheng` 只共用 `_seed_bank_path`，语义不变。
+- 验证：pytest 324（+3 test_seed_index.py）/ ruff / pyright 0；前端零改动。生产部署核对：`seed_index` 应为 9217、questions 156792 不变、restart 后不变。
+- 详见 docs/iter/round-3/r376-seed-index-audit.md。下次 SOP-10 四维审计 ~R388。
