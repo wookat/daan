@@ -5,6 +5,18 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R379 SEO 题目页「选项即作答」+ 练习页 lead 提示条 / pick 自动判分 / 答错滚动 / 深链退出 生产复验 走查新经验
+- SSR 新版式断言（`/tiku/q/N?v=<rand>` 绕边缘缓存）：`a.opt[rel=nofollow]` ×4，href 末尾 `&pick=A..D`；`p.meta` 文案精确比对；`a.cta.cta-w` 必须在 `details.ans` 之前（比 `compareDocumentPosition`），`details.ans.open===false`；**闭合 `<details>` 的 `innerText` 不含隐藏内容**，判「正确答案」在里面要用 `textContent`，判首屏不露答案才用可见文本/截图。无 tag3 的题没有「更多「××」考点题目」链接，属正常分支。
+- 375 首屏深度用 `getBoundingClientRect().top` 记 CTA 位置并与上一轮取证值对比；底边可能略超 812（题干 3 行时 815），报告写清楚而不是判 fail。
+- 练习页 lead 提示条 `.lead-tag` 只在 `idx===0` 渲染；`__pc.leadHint` 字符串在切到第 2 题后仍保留（只是不渲染），断言要看 DOM 而非 vm 字段。N = `items.length-1`，同考点题少时可能是「之后 1 题」。
+- `pick=X` 自动作答：断言 `__pc.picked===X`、`autoTimer===false`、等 ≥4 s `idx` 仍 0；hook 里 `POST /api/answer_log` `items[0].picked/source`，答错还应看到 `POST /api/mistakes`。不带 pick 时 `picked===''`。
+- 答错滚动（`revealAfter`）量化：`.after` rect.top+220 ≤ innerHeight−150（375 时 `.after` top 应 ≈442）、`scrollY>0`，并取「正确答案」`uni-text` top 与底栏（`position:fixed` 且含「正确答案」的 `uni-view`）top 比较；1440 高 900 时不会触发滚动，不要在 1440 断言 scrollY。
+- 深链退出（F11）证明「同 document 无 reload」：点退出前 `window.__mark=Date.now()`，退出后标记仍在 + `performance.getEntriesByType('navigation')[0].type==='navigate'` + `history.length` 变化符合（switchTab 时 +0/+1、navigateBack 时不变）+ 首页「今日已练 N/20」不为 0。浅栈（新标签直开/SSR 点过来）走 `switchTab`，站内进入走 `navigateBack` 且首页滚动位置保留。
+- 新标签直开深链时，CDP 视口 override 不会跟过去（回到窗口原生宽），要对新 tab 单独 `setDeviceMetricsOverride`；`Sess()`/`pick()` 默认选到第一个 zalize tab，多 tab 时用 `tabs()` 按 URL 片段（如 `qid=4641`）挑。做完关掉新 tab 再继续。
+- 杀 holder 别用 `pkill -f holdvw` / `pgrep -f`（会匹配到自己的 bash 并把当前 exec 命令杀掉，exit -1）；用 `pgrep -af holdvw.py | grep -v pgrep` 拿 PID 再 `kill <pid>`，或写成脚本 `/tmp/cdp174/hold_restart.sh W H mobile`。
+- `practice_progress` 没有 `source` 列（source 在 POST 体里但表结构不同），清理脚本别 select 它；本轮退出后该表已无测试 uid 行。`vibrateShort:fail` 是桌面 Chrome 的 uni API 平台 rejection，会进 `unhandledrejection` 列表，报告里单列。
+- 恢复 localStorage 备份：`/tmp/r3xx_ls_backup.json` 是双重编码字串，`d=json.load(f); d=json.loads(d) if isinstance(d,str) else d`，否则会喷 8 万个单字符键并让站点新 mint 一个 uid。
+
 ## R378 SEO 题目页 CTA 直达同题（`?qid=` lead 题）生产复验 走查新经验
 - 部署身份先核再录：并发部署会覆盖生产（本轮 `23cd5c5` 被另一会话的 `fef41da` 覆盖后重部署为 `0b6ef09`）。开录前、换视口前、收尾时各 `curl /api/health` 一次，rev 变了立刻停下问 lead；报告里写实际复验的 rev，不照抄任务描述。
 - Cloudflare 对 `/tiku*` 有 ~300s 边缘缓存：SSR 页 CTA 可能公网还是旧文案而源站（VPS `curl -H 'Host: kaogong.zalize.com' http://127.0.0.1:8300/tiku/q/N`）已是新的。判定用源站 + 等缓存过期后公网复核，不要把旧 CTA 当回归；换题或加 `?v=<rand>` 也可绕过。

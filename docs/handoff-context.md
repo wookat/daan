@@ -1660,4 +1660,5 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 方案（零新表/端点）：`quit()` 页面栈 1 页直接 `switchTab` 首页；题目页选项改 `<a class="opt" href=…&pick=A rel=nofollow>`，CTA（`cta-w` 整行）前移到答案前、答案默认折叠并在折叠区尾再放一次 CTA、选项上方一行价值主张、面包屑去内部 id；练习页领跑题置顶时显示可关闭提示「刚才那题在这里作答，之后 N 题同考点/同模块练习」；`leadPickOf` 只接单个大写字母，领跑就位后走既有 `pick()` 自动判定并取消自动跳题；答错后 `revealAfter()` 把 `.after` 卡顶出判分横幅。
 - 未在生产验证的分支：`pick` 指向不存在选项（本地 `!= null` 守卫）、`getCurrentPages().length>1` 的 navigateBack 支（站内进入练习页再退出，属既有行为）。
 - 留待后续：F18 首页「继续刚才的练习」卡、F10 答对自动跳题默认值、F6 相似题/同考点列表信息密度。
-- 详见 docs/iter/round-3/r379-seo-landing-funnel.md。
+- 验证：pytest 356 / ruff / pyright 0；vitest 532 / eslint / build:h5（bundle index-DKZqTSTu.js）。生产 rev dc88fc1（15:03Z 部署，谱系闸 OK）testing agent 1440/375 全过：答案默认折叠、选项 pick 深链自动判分且不跳题、领跑提示三种文案、375 答错后解析卡顶在横幅之上、深链退出 ×3 均为 navigate（非 reload）回首页且今日计数保留、站内退出仍返回上一页、/api 全 200、容器 0 重启、清理 LEFTOVER 0、questions 156792。观察：375 无 tag3 三行题干时 CTA 底边 815px（超首屏 3px）；桌面 Chrome `vibrateShort:fail` unhandledrejection 为平台噪音（既有）。
+- 详见 docs/iter/round-3/r379-seo-landing-funnel.md；复验评论 PR #596。
