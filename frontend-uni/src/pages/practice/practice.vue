@@ -363,7 +363,7 @@ import { requestNotificationPermission } from '../../reminder.js';
 import { announce } from '../../a11y-live.js';
 import { pickAnnounceText } from '../../live-policy.js';
 // #endif
-import { paperContinuePlan, paperQuery, paperFinishState, paperShareText, paperWrongItems, paperWrongPlan } from '../../paper-continue.js';
+import { paperContinuePlan, paperQuery, paperFinishState, paperShareText, paperWrongItems, paperWrongPlan, paperWrongLaunch } from '../../paper-continue.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 import { qStatLine } from '../../q-stat.js';
@@ -735,7 +735,7 @@ export default {
         return;
       }
       if (launch.kind === 'paper') {
-        this.startPaper({ source: launch.source, pid: launch.pid, title: launch.title || '真题卷' }, !!launch.untimed);
+        this.startPaper({ source: launch.source, pid: launch.pid, title: launch.title || '真题卷' }, !!launch.untimed, launch.wrong === true);
         return;
       }
       if (launch.kind === 'reinforce') {
@@ -967,7 +967,7 @@ export default {
         this.paperSheet = false;
       }
     },
-    async startPaper(p, untimed = false) {
+    async startPaper(p, untimed = false, wantWrong = false) {
       if (this._starting) return;
       this._starting = true;
       if (this.beiMode) {
@@ -983,7 +983,11 @@ export default {
           uni.showToast({ title: '试卷题目不足，换一张试试', icon: 'none' });
           return;
         }
-        if (untimed) {
+        const direct = untimed ? paperWrongLaunch(items, wantWrong) : null;
+        if (direct) {
+          items = direct;
+          wrongOnly = true;
+        } else if (untimed) {
           const plan = paperContinuePlan(items);
           if (plan.doneN > 0 && plan.remaining.length === 0) {
             const wrong = paperWrongPlan(items);

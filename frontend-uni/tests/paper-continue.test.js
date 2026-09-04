@@ -1,6 +1,6 @@
 // R360：按卷练习「只练剩余」——paperContinuePlan fail-closed 纯函数
 import { describe, it, expect } from 'vitest';
-import { paperContinuePlan, paperPracticedState, paperQuery, paperFinishState, paperShareText, paperWrongItems, paperWrongPlan } from '../src/paper-continue.js';
+import { paperContinuePlan, paperPracticedState, paperQuery, paperFinishState, paperShareText, paperWrongItems, paperWrongPlan, paperWrongLaunch } from '../src/paper-continue.js';
 
 describe('paperQuery', () => {
   it('基础：src 必带且编码', () => {
@@ -213,5 +213,38 @@ describe('R367 paperWrongPlan 卷库只练错题题集', () => {
     paperWrongPlan([q]);
     expect(q.done).toBe(true);
     expect(q.wrong).toBe(true);
+  });
+});
+
+describe('R369 paperWrongLaunch 错题本「重练本卷错题」直达', () => {
+  const items = [
+    { id: 1, done: true, wrong: false },
+    { id: 2, done: true, wrong: true },
+    { id: 3, done: true },
+    { id: 4, done: true, wrong: true },
+  ];
+
+  it('wantWrong=true 且有错题：只含错题、保持卷面顺序、去 done/wrong 标记', () => {
+    expect(paperWrongLaunch(items, true)).toEqual([{ id: 2 }, { id: 4 }]);
+  });
+
+  it('wantWrong 非 true（false/undefined/1/"true"）不直达，回落常规流程', () => {
+    for (const v of [false, undefined, null, 1, 'true']) {
+      expect(paperWrongLaunch(items, v)).toBeNull();
+    }
+  });
+
+  it('无错题/空题集/非数组 → null（fail-open 回落续练或重练弹窗）', () => {
+    expect(paperWrongLaunch([{ id: 1, done: true }, { id: 2, done: true, wrong: false }], true)).toBeNull();
+    expect(paperWrongLaunch([], true)).toBeNull();
+    for (const v of [null, undefined, 'x', 7, {}]) {
+      expect(paperWrongLaunch(v, true)).toBeNull();
+    }
+  });
+
+  it('不改动原条目', () => {
+    const q = { id: 9, done: true, wrong: true };
+    paperWrongLaunch([q], true);
+    expect(q).toEqual({ id: 9, done: true, wrong: true });
   });
 });
