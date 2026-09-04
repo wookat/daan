@@ -30,7 +30,17 @@
         <span class="tag ${cls}">${detail}</span></div>`;
     }).join('');
     const foot = `<div style="margin-top:6px;font-size:11px;color:${c.stale ? 'var(--error)' : 'var(--t4)'}">统计生成于 ${esc(c.generated_at || '未知')}${c.stale ? '（超过 3h 未更新，检查 crawler_stats cron）' : ''}</div>`;
-    return head + rows + foot;
+    return head + humanRow(c.humans) + rows + foot;
+  }
+
+  function humanRow(hm) {
+    if (!hm) return '<div style="font-size:11px;color:var(--t4);margin-bottom:4px">真人流量：等待 crawler_stats 下一次生成（旧版 JSON 无 humans 段）</div>';
+    const cls = hm.api5xx_7d ? 'tag-warn' : hm.api_7d ? 'tag-ok' : 'tag-bad';
+    const detail = hm.api_7d
+      ? `API ${hm.api_7d.toLocaleString()} 次（今日 ${hm.api_today}）· 页面 ${hm.page_7d} · IP 日去重 ${hm.ips_7d}（今日 ${hm.ips_today}）· 5xx ${hm.api5xx_7d}`
+      : '0 次（近 7 天无真人 API 请求）';
+    return `<div class="hbar" style="margin-bottom:4px"><span class="lb" style="width:auto;flex:1">真人<span class="sub" style="margin-left:6px;font-size:11px;color:var(--t4)">剔除探针网段 / 引擎与通用 bot UA / test- uid</span></span>
+      <span class="tag ${cls}">${detail}</span></div>`;
   }
 
   async function render(el) {

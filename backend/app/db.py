@@ -174,6 +174,11 @@ def init_db():
         "CREATE INDEX IF NOT EXISTS idx_q_material ON questions(material_hash, disabled, module) "
         "WHERE material_hash IS NOT NULL"
     )
+    # /api/papers 按 source 聚合真题卷：覆盖索引免回表（否则按 idx_q_real_year 回表翻 ~79 MB 冷页）
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_q_paper_src ON questions(is_real, disabled, source, exam_year, exam_region) "
+        "WHERE is_real=1"
+    )
     similarity.ensure_tables(conn)
     conn.execute(
         """CREATE TABLE IF NOT EXISTS tag3_review (

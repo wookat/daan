@@ -92,6 +92,15 @@ def parse_crawler_stats(path: str, now: float | None = None) -> dict | None:
                 if isinstance(last, (int, float)) else None
             ),
         })
+    hum = raw.get("humans") if isinstance(raw.get("humans"), dict) else {}
+    humans = {
+        "api_7d": _sum(hum, "api"),
+        "api_today": int((hum.get("api") or {}).get(today) or 0) if today else 0,
+        "api5xx_7d": _sum(hum, "api5xx"),
+        "page_7d": _sum(hum, "page"),
+        "ips_7d": _sum(hum, "ips"),
+        "ips_today": int((hum.get("ips") or {}).get(today) or 0) if today else 0,
+    } if hum else None
     gen = raw.get("generated_at")
     return {
         "generated_at": (
@@ -101,6 +110,7 @@ def parse_crawler_stats(path: str, now: float | None = None) -> dict | None:
         "stale": not isinstance(gen, (int, float)) or gen < now - 3 * 3600,
         "window_days": len(days),
         "engines": rows,
+        "humans": humans,
     }
 
 

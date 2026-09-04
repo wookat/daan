@@ -120,3 +120,21 @@ def test_ziliao_hashes_fallback_without_index():
     )
     rows = db._ziliao_material_hashes(c, 5)
     assert [r["material_hash"] for r in rows] == ["h1"]
+
+
+def test_paper_source_partial_index_covers_list_papers(client):
+    """R382：/api/papers 按 source 聚合 is_real=1 走 idx_q_real_year 回表翻 ~79 MB 冷页；覆盖索引免回表。"""
+    conn = db.get_conn()
+    row = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type='index' AND name='idx_q_paper_src'"
+    ).fetchone()
+    assert row and "WHERE is_real=1" in row["sql"]
+    plan = _plan(
+        conn,
+        """SELECT source, COUNT(*) n, MAX(exam_year) y, MAX(exam_region) rg FROM questions
+           WHERE is_real=1 AND disabled=0 AND source IS NOT NULL AND source!=''
+           GROUP BY source HAVING n>=40 ORDER BY y DESC, n DESC""",
+    )
+    assert "COVERING INDEX idx_q_paper_src" in plan
+    conn.close()
+    assert isinstance(db.list_papers(), list)
