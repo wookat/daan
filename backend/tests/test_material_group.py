@@ -171,3 +171,22 @@ def test_admin_stats_counts_use_partial_indexes(client):
     conn.close()
     stats = db._admin_stats_uncached()
     assert stats["hs_done"] >= 0 and stats["hs_down_total"] >= 0
+
+
+def test_dashboard_flagged_count_uses_hs_down_partial_index(client):
+    """R384：看板 flagged 原写 `hs_down>0 AND (disabled IS NULL OR disabled=0)`，规划器走 disabled 索引
+    MULTI-INDEX OR 再逐活跃题回宽行看 hs_down（生产副本冷读 237 MB，管理台首访 11 s）；
+    COALESCE 形式才选 idx_q_hs_down 部分索引，且与 OR 形式结果一致。"""
+    conn = db.get_conn()
+    conn.execute("UPDATE questions SET hs_down=2 WHERE id=(SELECT MIN(id) FROM questions)")
+    conn.execute("UPDATE questions SET hs_down=3, disabled=1 WHERE id=(SELECT MAX(id) FROM questions)")
+    conn.commit()
+    sql = "SELECT COUNT(*) FROM questions WHERE hs_down>0 AND COALESCE(disabled,0)=0"
+    plan = _plan(conn, sql)
+    assert "idx_q_hs_down" in plan and "MULTI-INDEX OR" not in plan
+    legacy = conn.execute(
+        "SELECT COUNT(*) FROM questions WHERE hs_down>0 AND (disabled IS NULL OR disabled=0)"
+    ).fetchone()[0]
+    assert conn.execute(sql).fetchone()[0] == legacy == 1
+    conn.close()
+    assert db._admin_dashboard_uncached()["health"]["flagged"] == 1

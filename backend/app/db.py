@@ -4346,7 +4346,9 @@ def _admin_dashboard_uncached() -> dict:
     total = q("SELECT COUNT(*) FROM questions").fetchone()[0]
     disabled = q("SELECT COUNT(*) FROM questions WHERE disabled=1").fetchone()[0]
     pending = q("SELECT COUNT(*) FROM questions WHERE disabled=2").fetchone()[0]
-    flagged = q("SELECT COUNT(*) FROM questions WHERE hs_down>0 AND (disabled IS NULL OR disabled=0)").fetchone()[0]
+    # 写成 COALESCE 而非 (disabled IS NULL OR disabled=0)：OR 形式会让规划器走 disabled 索引的
+    # MULTI-INDEX OR 再逐行回表看 hs_down（全部活跃题宽行），COALESCE 形式才选 idx_q_hs_down 部分索引
+    flagged = q("SELECT COUNT(*) FROM questions WHERE hs_down>0 AND COALESCE(disabled,0)=0").fetchone()[0]
     open_reports = q("SELECT COUNT(*) FROM question_reports WHERE status='open'").fetchone()[0]
     # 健康度口径：基于当前可运营题库（历史下架存量是治理成果，不计入分母惩罚）
     active = max(total - disabled - pending, 0)

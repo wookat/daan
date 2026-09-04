@@ -118,11 +118,11 @@
         return;
       }
       const tag = (it, label) => it
-        ? `<div class="hbar"><span class="lb" style="width:auto;flex:1">${label}<span class="sub" style="margin-left:6px;font-size:11px;color:var(--t4)">${esc(it.ts || '')}</span></span>
+        ? `<div class="hbar hbar-wrap"><span class="lb">${label}<span class="sub">${esc(it.ts || '')}</span></span>
            <span class="tag ${it.ok ? 'tag-ok' : 'tag-bad'}">${it.ok ? '●' : '✕'} ${esc((it.detail || it.rev || '').slice(0, 60))}</span></div>`
-        : `<div class="hbar"><span class="lb" style="width:auto;flex:1">${label}</span><span class="tag tag-gray">无记录</span></div>`;
+        : `<div class="hbar hbar-wrap"><span class="lb">${label}</span><span class="tag tag-gray">无记录</span></div>`;
       const dep = o.last_deploy
-        ? `<div class="hbar"><span class="lb" style="width:auto;flex:1">最近部署<span class="sub" style="margin-left:6px;font-size:11px;color:var(--t4)">${esc(o.last_deploy.ts)}</span></span>
+        ? `<div class="hbar hbar-wrap"><span class="lb">最近部署<span class="sub">${esc(o.last_deploy.ts)}</span></span>
            <span class="tag tag-brand">rev ${esc(o.last_deploy.rev)}</span></div>`
         : '';
       box.innerHTML = dep
@@ -145,7 +145,7 @@
       const box = document.getElementById('dash-llm');
       if (!box) return;
       box.innerHTML = (r.items || []).map((it) =>
-        `<div class="hbar"><span class="lb" style="width:auto;flex:1">${esc(it.name)}<span class="sub" style="margin-left:6px;font-size:11px;color:var(--t4)">${esc(it.host)}</span></span>
+        `<div class="hbar hbar-wrap"><span class="lb">${esc(it.name)}<span class="sub">${esc(it.host)}</span></span>
          <span class="tag ${it.ok ? 'tag-ok' : 'tag-bad'}">${it.ok ? '● 正常' : '✕ 异常'} ${esc(String(it.status))}</span></div>`).join('')
         || '<span style="color:var(--t3);font-size:12px">未配置通道</span>';
     }).catch(() => {
