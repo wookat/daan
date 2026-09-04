@@ -81,10 +81,8 @@ def init_team_db():
         )"""
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ge_event ON growth_events(event, created_at)")
-    ge_cols = {r["name"] for r in conn.execute("PRAGMA table_info(growth_events)")}
-    if "probe" not in ge_cols:
-        # 探针流量标记（1=来自 KG_PROBE_CIDRS 网段）；旧行 NULL=未知
-        conn.execute("ALTER TABLE growth_events ADD COLUMN probe INTEGER")
+    # 探针流量标记（1=来自 KG_PROBE_CIDRS 网段）；旧行 NULL=未知
+    db.add_column_if_missing(conn, "growth_events", "probe", "INTEGER")
     conn.commit()
     conn.close()
 
