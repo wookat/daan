@@ -5,6 +5,13 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R376 种子题去重键（seed_index/seed_runs，零前端）生产复验 走查新经验
+- 分享页真实链接是 `https://kaogong.zalize.com/s/<sid>`（服务端 landing → `#/pkgA/share/share-q?sid=<sid>`）。share-q 读的是 `query.sid`，**不是** `id`；用 `share-q?id=…` 会得到「分享链接无效」的空 sid 分支，误判为 bug。「不存在 id 的文案页」用例用 `/s/<不存在的sid>` 才命中 404 分支。
+- sid 取法：解析区原生点击「🔗 分享给队友」→ 在 fetch hook 里截 `POST /api/share/create` 响应（`reqs()`），或事后只读查 `shared_questions WHERE from_uid LIKE 'test-…%'`。清理时 `shared_answers` 的外键列叫 `share_id`（不是 `sid`）；sqlite 脚本中途抛错则整段未 commit，重跑前先看 BEFORE 计数。
+- 验证「在线种子题一定被出题」：在容器只读 sqlite 里找 `seed_index` 映射且 `disabled=0`、且 `(module,tag3)` 组内在线题数很少（如 2 条）的题，用 `#/pages/practice/practice?tag3=<tag3>&module=<module>` deep link，运行时 `window.__pc.items` ids 必须 ⊇ 这些 id（`/tmp/cdp174/find.js` 找 Vue proxy）。验证「下线种子题不出题」：搜索页 `#/pkgA/search/search` 输入题干片段（CJK 用 CDP `Input.insertText`，xdotool type 中文不进 input）→ `/api/search` 0 结果 + 正向对照另一在线题片段有结果 + DB `disabled=0 AND question LIKE` 计数 0。
+- seed 指纹短路的生产证据：`seed_runs.ran_at` < 容器 `StartedAt` 且重启后不变；`seed_index` 全量 join `questions` 无悬挂；`import_batch='seed'` 字段历史上只有个别行，报告要写成「部署后新增 0」而不是「种子题总数」。
+- 清仿真后 `innerWidth` 若仍是旧 override 宽度（ow 1600 / iw 1440），原生导航一次页面即恢复；再核对 `iw==ow`。
+
 ## R374 管理台看板复验（探针剔除量外显 / 零前端）走查新经验
 - 管理台登录：token 用 `docker exec deploy-kaogong-1 printenv ADMIN_TOKEN`（SSH），在 shell 里只 `echo ${#T}` 长度、通过 `KG_T` 环境变量传给 python，再用 CDP `Runtime.evaluate` 给 `#login-token` 赋 `value` + `dispatchEvent(new Event('input'))`，然后**原生点击**「登录」；token 存 `localStorage.admToken`，结束用 `localStorage.removeItem('admToken')` 退出（不点「退出登录」也可，避免 reload）。
 - `cdp.pick()` 排除 `/admin` 标签页，管理台要用 `/tmp/cdp174/r374.py` 的 `pick_admin()`；375 仿真同理要用 `holdvw_admin.py`（复制 holdvw.py 改 pick）。管理台与用户端各自一个 holder，用各自 pid 文件杀。
