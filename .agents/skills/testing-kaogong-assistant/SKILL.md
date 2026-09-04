@@ -5,6 +5,16 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R381 index.html 隐藏 SEO 导航（`#kg-seo-nav`）+ 资料分析 grouped 拉题 + 同材料题组 SSR 生产复验 走查新经验
+- 「挂载前 splash 盖住 / 挂载后 CSS 隐藏」这类断言，生产正常加载太快看不到 splash；用 CDP `Fetch.enable(patterns=[{urlPattern:'*index-*.js*'}])` 暂停 bundle 请求（`/tmp/cdp174/r381_cold.py`），在暂停期读 `#app.matches(':empty')`、`getComputedStyle(nav).display`（此时应是 `block`）、splash `position:fixed` rect 覆盖视口、`elementFromPoint(nav中心)` 落在 `#kg-splash` 内；`Fetch.continueRequest` 后再断言 `display==='none'`、`nav.getClientRects().length===0`、`document.body.innerText.includes('行测题库')===false`（innerText 排除 display:none，`textContent` 不排除，别混用）。判 `#app` 空用 `matches(':empty')`/`childElementCount`，`innerHTML===''` 会被注释干扰。
+- 挂载前导航在正常流里有高度（1440≈57px、375≈82px），文档可滚动这一点 splash 遮不住 —— splash 是 fixed 所以仍盖住，但「任何滚动位置都看不见」不能做成绝对断言，报告里要写成已观察/未穷举。
+- 布局稳定：`addScriptToEvaluateOnNewDocument` 里放 `PerformanceObserver({type:'layout-shift',buffered:true})` 累计 `value` 并记 `sources` 节点，断言 nav 相关 shift=0；生产首页 CLS 本身约 0.05–0.07（`::after`/`.hero-acts`/`.card`），不是本轮引入。
+- 负对照要留截图：`nav.style.setProperty('display','block','important')` 后 `scrollTo(0,scrollHeight)` 再截图，然后 `removeProperty`；先截图再 revert，否则截出来和正常底部一模一样（本轮第一张负对照图 md5 与正常图相同，作废）。
+- 资料分析 grouped 请求只在 `module==='ziliao' && !submodule && !tag3 && !realMode` 时加 `&grouped=1`：首页点「资料分析」会先弹题型 sheet，必须选「全部随机」；选具体题型会带 `submodule` 而无 grouped。断言 `__pc.items` 的 `material_hash` 连续成段、`group_seq` 为 `1/K…K/K`，DOM `.grp-tag` 文案 `同材料题组 i/K`。
+- 同材料 SSR 页 `/tiku/q/N?v=<rand>`：`h2` 文本 `同材料题组（共 K 题）`、`li b` 为「本题」、其他 `li a[href^="/tiku/q/"]`；找样例可在容器 DB `select material_hash,count(*) from questions where module='ziliao' and disabled=0 and material_hash is not null group by 1 having count(*)>=2`。
+- `S381.apis()` 返回 `(method,status,ms,url,body)` 五元组，过滤 URL 用 `a[3]`；helper 里 `api` 列表属性与 `api()` 方法同名会报 `'list' object is not callable`。
+- 本机 `urllib` 直连 `/api/health` 会 403（无 UA 被 WAF 拦），用 `curl -A 'Mozilla/5.0'`。容器日志查 5xx 用 `grep -E '" 5[0-9]{2} '`，裸 ` 5[0-9]{2} ` 会命中 `[indexnow] submitted 533 urls` 之类。
+
 ## R380 练习中途「退出」保留进度弹窗（uni.showModal + practice/progress + /api/track 埋点）生产复验 走查新经验
 
 - **纯前端 PR 也要核后端白名单**：`trackEvent()` 静默吞错，新事件名（如 `practice_quit_keep/end`）若不在后端 `/api/track` 白名单会 400 而 UI 毫无异常。复验埋点时不能只看 UI，要在页面 hook 里断言 `POST /api/track` 的 status，且到容器里 `select event,count(*) from growth_events where event like 'practice_quit%'` 回读。本轮 d702472 上即因此 400，热修 4584019 后才落库；报告里要区分「热修前 UI 证据」与「热修后埋点证据」。

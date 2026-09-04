@@ -27,8 +27,14 @@ describe('index.html 可爬题库导航', () => {
     for (const h of hrefs) expect(h).toMatch(/^\/tiku(\/[a-z]+)?\/$/);
   });
 
-  it('nav 位于 #app 之后且挂载后由 CSS 隐藏', () => {
-    expect(html.indexOf('<div id="app">')).toBeLessThan(html.indexOf('<nav id="kg-seo-nav"'));
+  it('nav 位于 #app 之后、splash 之前（splash 后绘盖住它），脱离文档流，挂载后由 CSS 隐藏', () => {
+    const iApp = html.indexOf('<div id="app">');
+    const iNav = html.indexOf('<nav id="kg-seo-nav"');
+    const iSplash = html.indexOf('<div id="kg-splash">');
+    expect(iApp).toBeLessThan(iNav);
+    expect(iNav).toBeLessThan(iSplash);
+    // 挂载前不占高度：否则 splash 期间文档可滚动（R381 复验观察 1440≈57px / 375≈82px）
+    expect(html).toMatch(/#kg-seo-nav\{position:absolute;left:0;right:0;top:0;/);
     expect(html).toContain('#app:not(:empty)~#kg-seo-nav{display:none}');
     // 挂载前 #app 内只有注释占位，:empty 才成立
     expect(html).toContain('<div id="app"><!--app-html--></div>');

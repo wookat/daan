@@ -48,3 +48,10 @@
 - 后端 pytest：`init_db` 后 `idx_q_material` 存在且为部分索引；两条真实查询 `EXPLAIN QUERY PLAN` 命中 `idx_q_material`；`grouped_ziliao_questions` 结果不变。
 - 前端 vitest：`index.html` 含 9 条 `/tiku/*` 链接且带隐藏规则。
 - 生产：部署后 `EXPLAIN` 三条查询计划、`/tiku/q/<冷材料题>` TTFB、`/api/questions?module=ziliao&grouped=1` 冷/热耗时；`curl /` 出现 `<a href="/tiku/">`；1440/375 首页/练习/资料分析拉题/SEO 题目页 console 0 error，容器 0 重启。
+
+## 上线与复验结果（2026-09-04）
+
+- PR #599 已合入 main；生产 rev 4d676b0，bundle 不变。
+- 生产 `EXPLAIN`：三条查询全部命中 `idx_q_material`（SEO 同材料 `material_hash=? AND disabled=?`、选材料 `COVERING INDEX`、取同组题三列）；hash 未命中查询 3.4 s → 0.000 s，选材料 2.235 s → 0.053 s，`/tiku/q/297391` 冷 0.030 s，`/api/questions?module=ziliao&grouped=1` 冷 0.517 s → 0.016 s。`curl /` 出现 9 条 `/tiku/*` 入链。
+- testing agent 1440/375 复验全过，详见 https://github.com/wookat/kaogong-assistant/pull/599#issuecomment-5543864082 。观察：挂载前 nav 占高使 splash 期文档可滚动（splash fixed 仍盖住）→ 收口 PR 改 `position:absolute` 并置于 splash 之前。
+- 未验证：`INDEXED BY` 回退分支、grouped 空组分支；入链→Google 抓取题目页尚无数据（需 3–7 天回看）。
