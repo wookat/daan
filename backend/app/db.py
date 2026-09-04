@@ -4384,6 +4384,8 @@ def _admin_dashboard_uncached() -> dict:
             (_day_start(-6),),
         )
     ]
+    # 探针口径生效时刻 = 首条被打标的行；此前行 probe 为 NULL，无法区分、按真人计（看板外显此起点）
+    probe_since = q("SELECT MIN(created_at) t FROM answer_log WHERE probe IS NOT NULL").fetchone()["t"]
     conn.close()
     return {
         "today": {**today, "new_users": new_today, "ai_calls": ai_today},
@@ -4394,6 +4396,7 @@ def _admin_dashboard_uncached() -> dict:
         "todos": todos,
         "by_module": by_module,
         "acc7": acc7,
+        "probe_since": probe_since,
         "generated_at": time.time(),
     }
 

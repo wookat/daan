@@ -50,9 +50,11 @@
       : h.pct >= 85 ? '<span class="tag tag-warn">注意</span>' : '<span class="tag tag-bad">异常</span>';
     const maxMod = Math.max(1, ...d.by_module.map((r) => r.n));
     const probeT = t.probe_excluded || 0, probeY = y.probe_excluded || 0;
-    const probeNote = probeT || probeY
-      ? ` · 已剔除探针作答 今日 ${probeT.toLocaleString()} / 昨日 ${probeY.toLocaleString()} 条（自动化测试出口网段，不计入用户指标）`
-      : '';
+    const probeNote = (probeT || probeY
+      ? ` · 已剔除探针作答 今日 ${probeT.toLocaleString()} / 昨日 ${probeY.toLocaleString()} 条（自动化测试出口网段/显式声明/脚本 UA，不计入用户指标）`
+      : '') + (d.probe_since
+      ? ` · 探针口径自 ${new Date(d.probe_since * 1000).toLocaleDateString('zh-CN')} 起生效，此前行无法区分、按真人计`
+      : '');
     el.innerHTML = `
     <div class="pagehead">
       <div><h1>数据看板</h1><div class="sub">${new Date().toLocaleDateString('zh-CN')} · 统计缓存 5 分钟刷新${probeNote}</div></div>
