@@ -1,4 +1,4 @@
-"""R348 质量打分三类内容自证缺陷扣分 + sanitize_hs 剥离口径；W2 汉字间空格 / hs 元句清洗。"""
+"""R348 质量打分三类内容自证缺陷扣分 + sanitize_hs 剥离口径；W2 汉字间空格 / hs 元句清洗；W3-C explanation 清洗。"""
 import json
 
 from app import quality
@@ -127,3 +127,43 @@ def test_sanitize_hs_strips_meta_keeps_body():
     assert quality.sanitize_hs(_META) == ""
     assert quality.sanitize_hs(_META + "SKIP:数据矛盾") is None  # 自检失败优先
     assert quality.sanitize_hs("用花生十三的十字交叉法：" + _HS) == "用花生十三的十字交叉法：" + _HS
+
+
+_AD = ",一个上岸考生分享经验和答疑的平台。"
+
+
+def test_sanitize_explanation_strips_source_prefix():
+    f = quality.sanitize_explanation
+    body = "第一步，本题考查时政。第二步，排除 A。因此，选择 B 选项。"
+    assert f("正确答案：B，全站正确率：24%，易错项：C。 解析 " + body) == body  # 生产 #235535 形态
+    assert f("正确答案：B，全站正确率：24%，易错项：C。" + body) == body
+    assert f("正确答案：B，全站正确率：24%，易错项：C。 A 解析：" + body) == body  # 孤立选项字母
+    assert f("正确答案是 C 统计 全站数据: 正确率 65%，易错项 D / 解析 " + body) == body  # 旧格式
+    assert f("解析 " + body) == body
+    assert f("解析" + body) == body  # 无分隔但正文以「第一步」起头
+    assert f("解析 解析" + body) == body  # 双标签
+    assert f(_AD + " 解析 " + body) == body  # 广告句居首（生产 #259962）
+    assert f("解析不出来的题要先跳过。") == "解析不出来的题要先跳过。"  # 「解析」作正文词不剥
+    assert f("正确答案为 B。" + body) == "正确答案为 B。" + body  # 非统计前缀不剥
+    assert f("题干提到正确答案：B，全站正确率：24%，易错项：C。") == "题干提到正确答案：B，全站正确率：24%，易错项：C。"  # 仅限开头
+
+
+def test_sanitize_explanation_strips_ad_sentence():
+    f = quality.sanitize_explanation
+    before = "与题干逻辑一致，排除。D 项：“遵守”……符合文意。"
+    assert f(before + _AD + " 因此，选择D选项。") == before + "因此，选择D选项。"  # 生产 #262611 形态
+    assert f(before + "，一个上岸考生分享经验和答疑的平台") == before
+    assert f(before + _AD) == before
+    assert f("该平台为上岸考生提供答疑。") == "该平台为上岸考生提供答疑。"  # 普通「平台」句不剥
+
+
+def test_sanitize_explanation_cjk_spaces_keep_digits_and_blank():
+    f = quality.sanitize_explanation
+    assert f("二次逐差后为 -2，与已知 应根据 前后同级　成立") == "二次逐差后为 -2，与已知应根据前后同级成立"
+    keep = "1 天有 86400 秒，公元前 2000 年，选 A 项，x 与 y 成正比；填入（ ）处"
+    assert f(keep) == keep
+    assert f("  第一步，分析。  \n\n\n\n第二步，代入。 ") == "第一步，分析。\n\n第二步，代入。"
+    assert f(None) == ""
+    assert f("   ") == ""
+    combo = "正确答案：A，全站正确率：70%，易错项：B。 解析 第一步 审题。" + _AD + " 故 1 天有 86400 秒，选 A。"
+    assert f(combo) == "第一步审题。故 1 天有 86400 秒，选 A。"
