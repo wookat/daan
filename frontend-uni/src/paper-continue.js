@@ -49,7 +49,7 @@ export function paperWrongLaunch(items, wantWrong) {
   return wrong.length ? wrong : null;
 }
 
-// 按卷练习完成页错题重练：取本会话答错题并清除会话态，保持卷面顺序，fail-closed（非数组→空）
+// 按卷练习完成页错题重练：取本会话答错题并清除会话态（含 _logged，否则重练作答不落 answer_log），保持卷面顺序，fail-closed（非数组→空）
 export function paperWrongItems(items) {
   if (!Array.isArray(items)) return [];
   const out = [];
@@ -60,6 +60,8 @@ export function paperWrongItems(items) {
     delete c._saved;
     delete c._mid;
     delete c._secs;
+    delete c._logged;
+    delete c._excl;
     delete c.done;
     out.push(c);
   }

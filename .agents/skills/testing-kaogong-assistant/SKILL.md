@@ -5,6 +5,27 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R370 完成页 CTA 重练「落 answer_log」走查新经验
+- 「某轮作答不落库」类修复的核心断言是 **网络层 POST 计数**，不是完成页文案：装 fetch/XHR/sendBeacon 三钩子记录 `/api/answer_log` body（`items[].qid/correct/source`），并把日志同时写进 `sessionStorage`（F5 后内存钩子丢失，但 sessionStorage 还在）；每轮开始前记 mark，轮后断言「新增 POST 数 == 本轮题数」。
+- 重练轮 items 的残留字段要枚举全集：`_picked/_saved/_mid/_secs/_logged/_excl/done`，其中 `_logged:true` 残留会让 `logAttempts` 的 `pending=[]` 静默不发请求——这是 R366 的 bug 根因。
+- 长按排除（`@longpress`）在 H5 只能用 **touch 事件** 触发：CDP `Input.dispatchTouchEvent` type=touchStart（touchPoints=[{x,y}]）→ sleep ≥0.6s → touchCancel；鼠标 mousePressed 按住不触发。排除后 `cur._excl` 为字母数组，题面 `.opt.excl` 仅在选答前可见；重练轮断言 `.opt.excl` 数量 0 + item 无 `_excl`。
+- 生产偶发 503/超时时作答进 `localStorage.offlineQueue`；**统计 DB 行数前先 F5 一次** 让队列 flush（toast「离线作答已同步」），否则 DB 会比 hook POST 数少几条而误判丢答。刷新后钩子要重装，且 `window.__mark` 之类要在重装钩子之后再设（否则 `undefined.length`）。
+- 作答对账公式：uid answer_log 行数 = 各轮题数之和，且等于完成页「已累计刷 N 题」；source 分组（paper psource vs null）可分别核对按卷轮与普通轮。`review_log` 表也带 uid（做错题本重练会写），清理时靠全表 PRAGMA 扫 uid/user_id 列即可覆盖。
+- 保护 uid 快照：测试前记 `max(id)` of growth_events/answer_log/mistakes；恢复 localStorage 后**不要再刷新/导航**（会触发 slow_load/stale_fallback telemetry），最后只用 CDP 校验 `localStorage.anonUid`。
+- 清 375 模拟：holder 进程 kill 后 `Emulation.clearDeviceMetricsOverride` 单独调用可能不生效（innerWidth 仍 375），先 `setDeviceMetricsOverride(width=0,height=0,deviceScaleFactor=0,mobile=false)` 再 clear 即恢复；无需 reload。
+- 不要 `import m375`：脚本在 import 时执行 `main()` 读 argv 会 IndexError，需要复用时把 JS 片段抽出来。
+
+## R369 错题本 pidFilter「重练本卷错题」直达走查新经验
+- 「不再请求 X、改请求 Y」类改动要在点击前装 **fetch+XHR 双钩子**（`window.__log=[]`，记录 url 与 track body）并在 navigateTo 之后（同一 SPA 页面对象仍在）读取；断言 `/api/mistakes/redo` 计数为 0、`/api/paper_questions?src&pid&uid` ≥1、`/api/track` body `event/source/ref`。整页 F5 会丢钩子与 console error 收集器，刷新后要重装，或改用 browser_console 工具读真实控制台。
+- 「latest-answer 仍错」口径验证要刻意造 **先错后对** 的题：整卷答错 K 题 → 走 R367「只练错题」把其中 1 题答对 → 直达会话 `items.map(id)` 必须是 K-1 个且不含那题；错题本仍显示 K 张历史错题卡（mistakes 表不删），两者不一致是设计使然，别误报。
+- 无错题回落是 practice 页 **modal**「本卷已练完 / 重新练一遍？」（uni-modal），而不是 action sheet；DOM 里可能残留上一轮的隐藏 `<uni-actionsheet>`（内部 `.uni-actionsheet` `visibility:hidden` 高度 0），用可见性判断而不是 querySelector 存在性。
+- 从记住上次路由的页面直接改 hash 到 `#/pages/book/book?pid=133` 时，tab 页 onLoad 不一定重跑，组件可能仍是 `pidFilter=0`（标题「错题重练」）；需要用 F5 整页刷新或点徽标进入筛选态再断言。
+- 375 长卷名挤压检查：量 `.redo-go` rect.right ≤ 375、`getComputedStyle(.redo-l).minWidth==='0px'`、`flexShrink==='0'`；再临时把 `.redo-t` textContent 换成 50+ 字长串复测，完毕用保存的原文恢复。
+- 高负载时 `/api/paper_questions` 可能 503 / 50s+，前端 toast「加载试卷…」会一直挂着但自动重试成功后照常弹 modal；等 60–90s 再判断，别把加载中截图当失败。
+- **恢复保护 uid 后不要再多刷生产页**：H5 boot 会以保护 uid 自动上报 `growth_events`（`slow_load`/`stale_fallback`/`boot`），使「前后快照不变」失败。本轮多出 4 行遥测，按 id+时间戳精确删除后快照才一致；最好恢复 localStorage 后直接停止操作，或先在空白页(about:blank)恢复。
+- `pgrep -f "[h]oldvw"` 本身安全，但同一命令行里若再出现字面 `holdvw`（如 `echo "holdvw stopped"`）仍会自杀 exec 会话；kill 命令单独一行且不要在同行写该词。
+- `ssh "docker exec -i A python3 -c …; docker exec -i B python3 -" < script.py`：stdin 会被第一个 `docker exec -i` 吃掉，第二个读到空；需要 stdin 的脚本单独一次 ssh。
+
 ## R368 错题本归卷（卷源徽标 / 按卷筛选 / 练本卷）走查新经验
 - 归卷类功能要同时验 **API 形状** 与 **UI 分组**：`/api/mistakes?uid=` 每条 `paper` 为 `{pid,title,psource}` 或 `null`，用 `Object.keys(item)` 断言不泄露内部字段（如 `q_source/q_is_real`）；对照组用普通刷题答错一题（非该卷真题），它必须 `paper:null` 且卡片无 `.pbadge`。按卷不计时练习产出的 `mistakes.source` 为 NULL（saveWrong 不传 source），这正是归卷靶场景，可在清理前用 `select source,count(*) from mistakes where uid=? group by source` 佐证。
 - 错题本 URL 同步在 hash query 里（`#/pages/book/book?pid=133&mod=…&sort=…`），非法值（`pid=0`/负/非数字）应 fail-closed 不筛选且 console 无 error；**桌面与 375 移动仿真都要在整页刷新后**各验一遍，因为 onLoad 解析与 syncUrl 是两条路径。

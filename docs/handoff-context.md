@@ -1552,3 +1552,14 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 方案（零新表/端点）：book.vue pidFilter 态下卡标题「重练本卷错题 · 卷名」、副文案「按卷面顺序只练本卷上次答错的题（答对过即不再算错）」，redoAll 前置 `if (pidFilter) return redoPaper()`；redoPaper 用 paperGroups(items, Infinity) 取当前卷 {psource,pid,title}，写 practiceLaunch {kind:'paper',untimed:true,wrong:true} → practice。practice.vue startPaper(p, untimed, wantWrong) 拉同一 /api/paper_questions 后 `paperWrongLaunch(items, wantWrong)`（paper-continue.js 新增：wantWrong===true 且有 wrong===true 项才返回 paperWrongPlan 结果，否则 null）→ 直达 wrongOnly（复用 R367 toast「只练本卷上次答错的题」、_source/_ptitle 归卷完成页）；无错题回落既有续练/重练 action sheet。team.py 白名单 +book_redo_paper。`.redo-l` 加 flex:1/min-width:0 防长卷名挤压「开始」。
 - 验证：eslint/vitest 505（+4 paperWrongLaunch）/build:h5、ruff/pytest 279 全绿；pyright 4 错为基线（exam_api.py:572、mock_event.py:502 str-int 运算，stash 前后一致，与本轮无关）。本机 pip 环境重置过，需 `pip install` Dockerfile.runtime 同款依赖才能跑 pytest。
 - 详见 docs/iter/round-3/r369-book-paper-redo.md。
+- 生产复验（PR #578 评论）：rev 05c1f8b / bundle index-CyQMv-31.js，uid test-r369-f7qt 1440/375：pidFilter 卡文案、0× /api/mistakes/redo、/api/paper_questions + track book_redo_paper ref=133、items=[236215,236223,236252]（排除先错后对 236208）、归卷完成页、无错题回落 R367 modal、无 pidFilter/模块筛选回归、375 「开始」不被挤、scrollWidth 375、console 0 error 全过；清理 62 行 LEFTOVER 0，容器 StartedAt 03:55:36Z 未变。#576/#577/#578 已合入 main。
+- 遗留观察（非本轮）：模块筛选态卡标题不带「· 模块名」；从其他路由直接改 hash 到 book?pid= 不一定重跑 tab onLoad（F5/徽标点击可进入）。
+
+### R370 热修：按卷完成页「重练本卷错题」作答不落 answer_log（2026-09，分支 devin/1788496145-r370-paper-retry-log，PR #579，base=main）
+- 取证（R369 复验中发现）：uid test-r369-f7qt 按卷练完 38 → answer_log 38；R366 CTA 重练 4 题后仍 38（容器未重启、offlineQueue=0）；/api/exam/papers wrong 不减、/api/paper_questions 刚答对题仍 wrong:true。R366 复验记的「容器重建窗口丢 ~8 条」根因即此。
+- 根因：practice.vue logAttempts 以 `!q._logged` 过滤；paper-continue.js paperWrongItems 就地复用 items 未删 `_logged` → 重练轮全部被跳过。其他复用点（redoSet/_redoItems 原始拷贝、R367/R369 新拉 items）不受影响。
+- 修复：paperWrongItems 追加 `delete c._logged; delete c._excl;`（排除标记也不带入重练）。零后端改动。vitest +1（502→506 含 R369）。
+- 部署：release/r369-r370 分支（R369 05c1f8b + R370 合并，rev f4af7c1，bundle index-ONbThL14.js）——两 PR 独立 base=main，生产需同时含两者故临时 release 分支合并部署；#578 合入后 #579 与 main 的相邻注释冲突已解决（c9a4f6f，源文件与 release 分支字节一致）。
+- 生产复验（PR #579 评论）：uid test-r370-c5ae，1440 首轮 38 答 5 错（2 题长按排除）→ CTA 重练 5 题 → 5 条 POST /api/answer_log（修复前 0）、DB 38+5=43、/api/exam/papers wrong 5→2、答对题 wrong:false；重练 items 无 _logged/_excl/_picked 残留、.opt.excl=0；联动 R367 卷卡「错 2 题」/action sheet、R369 直达 items=[236215,236243]；回归错题重练「再来一组」/普通刷题落库正常；375 CTA 全流程 2 条 POST、scrollWidth 375；console 0 error。清理 109 行（新增 review_log 表）LEFTOVER 0，保护 uid 快照一致，容器 StartedAt 04:39:49Z 未变。
+- 需注意：复验中 7 条作答一度进 offlineQueue（生产 503/超时），刷新后「离线作答已同步」收敛——DB 对账前先刷新冲队列。
+- 详见 docs/iter/round-3/r370-paper-retry-log.md。
