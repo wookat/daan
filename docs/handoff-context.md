@@ -1646,3 +1646,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 上线复验（rev 62e8c18，同批带上 main 合入的 W3 #590，全量 build）：testing agent 1440/375 全过；cron 13:23Z 刷新后面板 **Google 16 次全部为 sitemap 抓取（12:41Z，提交 sitemap 后 17 分钟）**——GSC 提交实证生效，Google 已开始读 sitemap 但尚未抓 `/tiku/` 任何页；Baidu 仍「从未」红标。stale / crawlers=null / Google「从未」分支只在单测覆盖，生产不可造。
 - 次日复核（R378 取证起点）：源站日志 Googlebot 是否抓 `sitemap-*.xml` 与 `/tiku/` 页；GSC「站点地图」已发现网页数、`/tiku/` 收录状态。不得把「提交成功」当「已收录」。
 - 详见 docs/iter/round-3/r377-search-distribution.md。
+
+### R378 搜索落地页「做这道题」深链：SEO 题目页 CTA 带 qid，练习页领跑 + 同考点续题（2026-09-04，分支 devin/*-r378-seo-lead-question，base=main）
+- 取证：GSC 站点地图 13:40Z 已「成功 · 已发现网页 109,903」（R377 提交时 0）；源站 Googlebot（66.249.73.x）12:24–12:41Z 32 次全为 sitemap 子图，`/tiku/q/*` 0 次——「已发现」≠「已收录」≠「有流量」。生产 `answer_log` 按 source：`seo` 仅 2 行且 probe=1，**SEO 页从未带来一次真人作答**（此前 Google 未发现本站，是没流量不是转化差）。现状 `/tiku/q/N` 唯一 CTA「在线练习此考点」按 tag3 随机取 10 题，访客刚读的那道题不保证在其中；无 tag3 的题 CTA 退化为「继续刷题」回首页丢题。粉笔题目落地页打开的是同一道题。R372 后爬虫 SSR 题目页 p50 10ms / p95 50ms / 0 5xx，抓取承载无需改动。
+- 方案（零新表/端点）：`seo/pages.py` 题目页 CTA → `practice?qid=N[&tag3][&module]&source=seo_q`（有 tag3「在线做这道题 + 同考点练习（免费）→」/ 无 tag3「在线做这道题（免费）→」）；`practice.vue` `onLoad` 解析 qid → `_leadQid`，`start()` 与题包并行取 `/api/question/{qid}`（社区路由既有单题端点），`leadq.mergeLead` 置顶去重，取不到/下线静默按原题包开练；`source=seo_q` 随 `_source` 落 `answer_log.source`。
+- 度量：`answer_log WHERE source='seo_q' AND probe IS NOT 1` 行数/uid 数 = 搜索落地转化；首行 question_id == 落地 qid 比例 = 领跑生效率。Google 尚未抓题目页，短期 0 为正常。
+- 验证：pytest 354（+1 CTA 两支）/ ruff / pyright 0；vitest 528（+6 leadq）/ eslint / build:h5（bundle index-BHP3w8L6.js）。
+- 详见 docs/iter/round-3/r378-seo-lead-question.md。
