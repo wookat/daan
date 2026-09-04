@@ -5,6 +5,16 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R384 管理台 dashboard flagged COUNT 改写 + 「运维状态」/「LLM 通道」`.hbar-wrap` 生产复验 走查新经验
+- **冷缓存窗口取证顺序**：容器重启后先 `docker logs deploy-kaogong-1 --since <StartedAt> | grep -c /api/admin/` 确认为 0，再登录管理台；登录后用 `docker logs -t | grep -E "/api/admin/(stats|dashboard|ops_status|llm_health)"` 拿服务端时间戳，与页面钩子的 `X-Kg-Cache: cold` + ms 互证（本轮 stats→dashboard 服务端间隔 0.3 s）。若头为 `hit`，用同一条 grep 找出是谁先访问（预热/其他人）。
+- 修复后的 dashboard 冷访问已 ~0.3 s，登录页「验证中…」几乎不可见；但 `/api/admin/ops_status`、`/api/admin/llm_health` 仍没有 `X-Kg-Cache` 头，只记 ms。
+- 看板 health 卡片 `差评 N` 对应 `dashboard.health.flagged`；生产当前 flagged=0，`COALESCE(disabled,0)=0` 与旧 `OR` 谓词数值上无法区分，报告里只主张「UI==API」+ 性能差，不要声称验证了谓词等价。
+- 「运维状态」`tag(it,label)` 的「无记录」分支（`tag-gray`）在生产里通常不出现（每行都有记录），只能代码层面确认 `hbar-wrap`，报告归「未测」。
+- 375 `.hbar-wrap` 量测复用 R383 方法；长 tag 换行后的行高 43（单行 tag）/60（双行 tag）属正常，与「逐字竖排」（`.lb` 高 90+、`.sub` 多个窄 rect）区分。
+- **`kill $(pgrep -f "holdvw.py 375")` 会把当前 bash -c 自己也匹配上并 kill（exec 返回 -1）**：先 `pgrep -af holdvw | grep python` 看 PID，再 `kill <pid>`；同理 `pgrep -af x | grep -c python` 会把 bash -c 自己算进去，用 `ps -eo pid,args | grep "[h]oldvw"` 验证。
+- admin 与用户标签页同源共享 localStorage：`admToken` 可能在用户侧 `localStorage.clear()`/恢复备份时被一并清掉，收尾时 `!!localStorage.admToken` 为 false 不代表异常，仍要恢复备份并核 `anonUid`。
+- 用户侧「首页 → 言语理解 → 全部随机 → 3 题 → 退出 → 保留进度」最短回归：375 下专项练习列表在 scroll 10 格左右，「言语理解」卡 y≈215；题型弹层第一项「全部随机」；答对自动跳下一题，答错需点右下「下一题」；退出按钮在题头右上 `退出`；弹窗文案 `已做 N 题 · 答对 R · W 道进错题本`。预期 DB 行：answer_log 3、mistakes=错题数、growth_events 2（boot + practice_quit_keep）、practice_progress 1（idx=3）。
+
 ## R383 questions 索引 + 管理台 `.hbar-wrap` 行折行修复 生产复验 走查新经验
 - **`X-Kg-Cache` 头（cold/hit/stale）只在 `/api/admin/stats|dashboard|governance` 设置**（admin_api.py `response.headers["X-Kg-Cache"]=state`）；`/api/exam/papers`、`/api/questions` 等用户端接口没有这个头，只有 Cloudflare 的 `cf-cache-status: DYNAMIC`。被要求「记录 X-Kg-Cache」时先 grep 代码确认接口是否设头，没有就如实报「无此头」，别当缺陷。
 - 页面自有 fetch/XHR hook 记响应头：在 `fetch` 包装里 `r.headers.get('x-kg-cache')`/`cf-cache-status` 即可（服务端未加 `Access-Control-Expose-Headers` 也能读，因为同源）；XHR 用 `getResponseHeader`。`/tmp/cdp174/r383.py install(tab)` 已实现，记录 `[url,status,ms,xkg,cf]`。
