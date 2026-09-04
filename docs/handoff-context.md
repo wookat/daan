@@ -1652,4 +1652,5 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 方案（零新表/端点）：`seo/pages.py` 题目页 CTA → `practice?qid=N[&tag3][&module]&source=seo_q`（有 tag3「在线做这道题 + 同考点练习（免费）→」/ 无 tag3「在线做这道题（免费）→」）；`practice.vue` `onLoad` 解析 qid → `_leadQid`，`start()` 与题包并行取 `/api/question/{qid}`（社区路由既有单题端点），`leadq.mergeLead` 置顶去重，取不到/下线静默按原题包开练；`source=seo_q` 随 `_source` 落 `answer_log.source`。
 - 度量：`answer_log WHERE source='seo_q' AND probe IS NOT 1` 行数/uid 数 = 搜索落地转化；首行 question_id == 落地 qid 比例 = 领跑生效率。Google 尚未抓题目页，短期 0 为正常。
 - 验证：pytest 354（+1 CTA 两支）/ ruff / pyright 0；vitest 528（+6 leadq）/ eslint / build:h5（bundle index-BHP3w8L6.js）。
+- **并行部署覆盖事故**：13:51Z 上线 rev 23cd5c5 后 5 分钟（13:56Z）被另一会话部署的 `rev=fef41da`（不在任何远端分支；树含 R377 + W3-C #594，不含 R378）覆盖，题目页回到旧 CTA，testing agent 复验开始前发现。处置：R378 分支合入 origin/main（#592/#594）得 0b6ef09 重新部署（14:00Z，bundle 不变）。防复发：`deploy_h5.sh` 新增 2b「线上 rev 谱系闸」——线上 rev 不在本机仓库或不是 HEAD 祖先即 FAIL，`DEPLOY_FORCE=1` 才放行（deploy/README 有说明）。其他并行会话须 `git pull` 才能拿到该闸。
 - 详见 docs/iter/round-3/r378-seo-lead-question.md。
