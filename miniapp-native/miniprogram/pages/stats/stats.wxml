@@ -40,7 +40,7 @@
 
     <text class="hm-note">热力图为云端口径（练习/模考作答，多端同步）</text>
 
-    <view class="sec-h"><text class="sec-t">分模块正确率</text><text class="sec-more">本机口径</text></view>
+    <view class="sec-h"><text class="sec-t">分模块正确率</text><text class="sec-more">{{modSrc}}</text></view>
     <view wx:if="{{!rows.length}}" class="empty">
       <view class="eico">📊</view>
       <text>刷过题后这里会展示分模块正确率</text>

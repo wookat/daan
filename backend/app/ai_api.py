@@ -246,7 +246,8 @@ async def api_similar(body: dict, request: Request, x_access_code: str | None = 
 
 
 @router.post("/api/rate")
-def api_rate(body: dict):
+def api_rate(body: dict, request: Request):
+    rl(request, "rate", 60, 600)
     up = bool(body.get("up"))
     if body.get("key"):
         db.rate_explain(str(body["key"]), up)

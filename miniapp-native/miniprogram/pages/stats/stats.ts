@@ -1,4 +1,4 @@
-import { fetchCheckinSummary, trackEvent } from '../../api/index';
+import { fetchCheckinSummary, fetchGrowth, trackEvent } from '../../api/index';
 import { loadPStats, modName, streakDays, todayCount } from '../../utils/stats';
 import { syncTabBar } from '../../utils/tabbar';
 
@@ -32,6 +32,35 @@ function dateKey(d: Date): string {
   return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
+// 各模块正确率行 + 弱项判定（≥5 题的模块中低于均值 10 个点）
+function buildRows(byModule: Record<string, { done: number; correct: number }>): ModRow[] {
+  const rows: ModRow[] = Object.keys(byModule).map((k) => {
+    const m = byModule[k];
+    return {
+      key: k,
+      name: modName(k),
+      done: m.done,
+      correct: m.correct,
+      pct: m.done ? Math.round((m.correct / m.done) * 100) : 0,
+      color: MOD_COLORS[k] || '#2e5bff',
+      weak: false,
+      gap: 0,
+    };
+  });
+  rows.sort((a, b) => b.done - a.done);
+  const scored = rows.filter((r) => r.done >= 5);
+  if (scored.length >= 2) {
+    const avg = Math.round(scored.reduce((n, r) => n + r.pct, 0) / scored.length);
+    for (const r of scored) {
+      if (avg - r.pct >= 10) {
+        r.weak = true;
+        r.gap = avg - r.pct;
+      }
+    }
+  }
+  return rows;
+}
+
 function buildHeatmap(days: Record<string, number>): { cols: HmCell[][]; total: number } {
   const today = new Date();
   const dow = (today.getDay() + 6) % 7; // 周一=0
@@ -63,6 +92,7 @@ Page({
     total: 0,
     streak: 0,
     rows: [] as ModRow[],
+    modSrc: '本机口径',
     hmCols: [] as HmCell[][],
     hmTotal: 0,
     hmYLabels: ['一', '', '三', '', '五', '', '日'],
@@ -70,38 +100,33 @@ Page({
   _hmTracked: false,
   onShow() {
     syncTabBar(this, 3);
-    const s = loadPStats();
-    const rows: ModRow[] = Object.keys(s.byModule).map((k) => {
-      const m = s.byModule[k];
-      return {
-        key: k,
-        name: modName(k),
-        done: m.done,
-        correct: m.correct,
-        pct: m.done ? Math.round((m.correct / m.done) * 100) : 0,
-        color: MOD_COLORS[k] || '#2e5bff',
-        weak: false,
-        gap: 0,
-      };
-    });
-    rows.sort((a, b) => b.done - a.done);
-    const scored = rows.filter((r) => r.done >= 5);
-    if (scored.length >= 2) {
-      const avg = Math.round(scored.reduce((n, r) => n + r.pct, 0) / scored.length);
-      for (const r of scored) {
-        if (avg - r.pct >= 10) {
-          r.weak = true;
-          r.gap = avg - r.pct;
-        }
-      }
-    }
+    const rows = buildRows(loadPStats().byModule);
     this.setData({
       today: todayCount(),
       total: rows.reduce((n, r) => n + r.done, 0),
       streak: streakDays(),
       rows,
     });
+    this.loadGrowth();
     this.loadHeatmap();
+  },
+  // 模块正确率/累计题数：服务端 answer_log（按 uid，与 H5 统计页同源）为准，失败保留本机 pstats
+  async loadGrowth() {
+    try {
+      const g = await fetchGrowth();
+      const byModule: Record<string, { done: number; correct: number }> = {};
+      for (const k of Object.keys(g.modules || {})) {
+        byModule[k] = { done: g.modules[k].n || 0, correct: g.modules[k].c || 0 };
+      }
+      const rows = buildRows(byModule);
+      this.setData({
+        rows,
+        total: g.total ? g.total.n || 0 : rows.reduce((n, r) => n + r.done, 0),
+        modSrc: '云端口径',
+      });
+    } catch (e) {
+      /* 离线：沿用 onShow 已渲染的本机 pstats */
+    }
   },
   onWeakGo(e: WechatMiniprogram.TouchEvent) {
     const mod = String(e.currentTarget.dataset.mod || '');
@@ -116,6 +141,7 @@ Page({
         days[k] = (d.days as Record<string, { n: number }>)[k].n || 0;
       }
       if (d.streak != null) this.setData({ streak: d.streak });
+      if (d.today_n != null) this.setData({ today: d.today_n });
       if (!this._hmTracked) {
         this._hmTracked = true;
         trackEvent('heatmap_view', 'stats');
