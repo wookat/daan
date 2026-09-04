@@ -381,6 +381,7 @@ import { weakSpots as buildWeakSpots } from '../../weak-spots.js';
 import { isExplanationCovered } from '../../exp-dup.js';
 import { reviewedMasteredCount, fixReportText } from '../../review-advance.js';
 import { leadQidOf, leadPickOf, mergeLead, leadHintText } from '../../leadq.js';
+import { quitSummary } from '../../quit-summary.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -2445,11 +2446,33 @@ export default {
       } catch (e) { /* 非关键路径 */ }
     },
     quit() {
+      const sum = quitSummary(this.items, this.session && !this.examMode && !this.beiMode && !this._shizheng);
+      if (!sum) {
+        this.leave(false);
+        return;
+      }
+      uni.showModal({
+        title: sum.title,
+        content: '保留后可从首页「有一组未做完的练习」继续',
+        confirmText: '保留进度',
+        cancelText: '结束本组',
+        success: (r) => {
+          trackEvent(r.confirm ? 'practice_quit_keep' : 'practice_quit_end', this._source || 'practice');
+          this.leave(!!r.confirm);
+        },
+      });
+    },
+    leave(keep) {
       if (!this.beiMode && this.items.length) this.logAttempts(this.items);
       this._reviewed = [];
       this._logPending = [];
-      uni.removeStorageSync('pendingSession');
-      if (!this.beiMode && !this.examMode && !this._shizheng) this.clearServerProgress();
+      if (keep) {
+        clearTimeout(this._ppTimer);
+        this.pushPracticeProgress();
+      } else {
+        uni.removeStorageSync('pendingSession');
+        if (!this.beiMode && !this.examMode && !this._shizheng) this.clearServerProgress();
+      }
       this.examMode = false;
       if (this.examTimer) {
         clearInterval(this.examTimer);
