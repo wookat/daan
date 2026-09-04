@@ -5,6 +5,20 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R380 练习中途「退出」保留进度弹窗（uni.showModal + practice/progress + /api/track 埋点）生产复验 走查新经验
+
+- **纯前端 PR 也要核后端白名单**：`trackEvent()` 静默吞错，新事件名（如 `practice_quit_keep/end`）若不在后端 `/api/track` 白名单会 400 而 UI 毫无异常。复验埋点时不能只看 UI，要在页面 hook 里断言 `POST /api/track` 的 status，且到容器里 `select event,count(*) from growth_events where event like 'practice_quit%'` 回读。本轮 d702472 上即因此 400，热修 4584019 后才落库；报告里要区分「热修前 UI 证据」与「热修后埋点证据」。
+- **弹窗断言**：`uni-modal` 标题在 `.uni-modal__hd`、正文 `.uni-modal__bd`、按钮 `.uni-modal__btn`（左 cancel=`结束本组`，右 confirm=`保留进度`）；`getComputedStyle(m).display!=='none'` 判可见。375 下弹窗 rect 37.5–337.5、标题两行换行属正常不是截断。全对分支标题精确 `已做 1 题 · 答对 1`（无尾句）。
+- **凑「≥1 错」**：SSR 页 `details.ans` 的 textContent 含正确答案，点一个不同的 `a.opt` 即 `pick=错项`；第二题答对会 ~2 s 自动跳下一题，正好到 idx 2 未答态再点退出。
+- **保留 vs 结束 的请求特征**：保留 → 同一批（<100 ms）出现 `POST /api/practice/progress`（含 qids/picks/idx/right/streak）+ `POST /api/track practice_quit_keep`；结束 → `progress {uid,qids:[]}` + `practice_quit_end`。两者都 `source` 随 `_source`（seo_q）。首页续练卡文案 `有一组未做完的练习 | {模块} · 已做 N/M 题 | 去继续 › | ✕`，用 `className.includes('ercard') && innerText.includes('未做完的练习')` 定位。
+- **续练断言**：`__pc.idx===2`、`items[i]._picked` 保留、`right` 不清零、`picked===''`；URL 变成不带 query 的 `#/pages/practice/practice`。结束后 `ppClearedAt` 会让首页 30 s 内跳过 GET resume，卡消失靠本地状态。
+- **同 document 证据**：进练习页后 `window.__mark380=Date.now()`，退出到首页后 mark 仍在 + `performance.getEntriesByType('navigation')[0].type==='navigate'` = 未 reload；`history.length` 只在 SEO 深链退出时 +1（switchTab），站内 navigateBack 不变。
+- **模考回归**：迷你模考是 `/pkgA/exam/exam?mini=1` 独立页，不经 practice.vue `quit()`；抽查用页头返回即可，会留下 `exam_attempts/exam_progress` 各 1 行（首页出现「有一场未交卷的模考」卡），清理脚本要覆盖这两张表。
+- **清理**：`growth_events` 列是 `created_at`（无 `ts`）；lead 烟测用的 uid（如 `utest_r380_wl`）也要加进 pats。本轮 17 行：answer_log 7 / growth_events 6 / mistakes 2 / exam_attempts 1 / exam_progress 1。
+- **热修重部署后容器 StartedAt 会变**（15:31→15:41）但 RestartCount 仍 0，对照 `kaogong-reports/deploy-history.log` 与 `container-events.log` 判断是部署替换而非崩溃。
+- **切换 1440↔375**：先 `kill <holder pid>`（`pgrep -af "[h]oldvw.py"` 取 pid，kill 单独一条 exec），再启另一个 holder；375 下屏幕坐标 ≈ (vx×0.64, 60+vy×0.64)。清仿真要先 `setDeviceMetricsOverride(1600×900, mobile=false)` 再 `clear` 才能回 innerWidth 1600。
+- **共享 worktree 禁止 `git checkout origin/<branch>`**（会 detached HEAD），lead 的本地分支即最新代码。
+
 ## R379 SEO 题目页「选项即作答」+ 练习页 lead 提示条 / pick 自动判分 / 答错滚动 / 深链退出 生产复验 走查新经验
 - SSR 新版式断言（`/tiku/q/N?v=<rand>` 绕边缘缓存）：`a.opt[rel=nofollow]` ×4，href 末尾 `&pick=A..D`；`p.meta` 文案精确比对；`a.cta.cta-w` 必须在 `details.ans` 之前（比 `compareDocumentPosition`），`details.ans.open===false`；**闭合 `<details>` 的 `innerText` 不含隐藏内容**，判「正确答案」在里面要用 `textContent`，判首屏不露答案才用可见文本/截图。无 tag3 的题没有「更多「××」考点题目」链接，属正常分支。
 - 375 首屏深度用 `getBoundingClientRect().top` 记 CTA 位置并与上一轮取证值对比；底边可能略超 812（题干 3 行时 815），报告写清楚而不是判 fail。

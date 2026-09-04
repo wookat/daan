@@ -1667,3 +1667,6 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：R379 F18「退出后首页无继续上下文」实查根因是 `quit()` 无条件清 `pendingSession` + 服务端进度，首页早有的「有一组未做完的练习」卡只覆盖关页/杀进程路径。搜索分发：Googlebot 仍只抓 sitemap/robots，`/tiku/q/*` 0；**Bingbot 7 次、Yandex 45 次已进入 `/tiku/q/*`**；真人 `seo_q` 仍 0。
 - 方案：`quit-summary.js quitSummary(items, eligible)`（已答≥1 且有未答才返回摘要）→ `quit()` 弹「已做 N 题 · 答对 R · W 道进错题本」保留进度/结束本组 → `leave(keep)`（keep 立即 flush 服务端进度、不清本地）；模考/背题/时政不弹；埋点 `practice_quit_keep/end`。
 - 详见 docs/iter/round-3/r380-quit-keep-progress.md。
+- R380 验证结果（#597 已合入 main）：本地 eslint / vitest 538 / build:h5、pytest 357 / ruff / pyright 0 全绿；生产 rev 4584019（bundle index-Bctw4Xpu.js）。testing agent 1440/375 全过：弹窗标题精确「已做 2 题 · 答对 1 · 1 道进错题本」/全对无尾句、保留进度 → 立即 POST progress 200 → 首页「有一组未做完的练习 · 已做 2/11 题」→ 去继续回到第 3 题计数保留；结束本组 → 无卡、progress 行删；一题未答直接退无弹窗；站内退出仍 navigateBack、迷你模考不受影响；console 0 error、容器 0 重启、清理 LEFTOVER 0、questions 156792。
+- **复验中发现并热修**：首版 d702472 只改前端，`/api/track` 白名单缺 `practice_quit_keep/end` → 400 静默丢埋点；`test_track_whitelist_sync` 的正则只认 `trackEvent('literal'`，三元写法漏扫。热修 4584019：白名单补齐 + 扫描改为抓第一实参内所有字面量（新增用例断言能扫到这两个事件）。教训：纯前端埋点 PR 也必须实测 `/api/track` 状态码 + `growth_events` 回读。
+- 未在生产验证：背题/时政不弹窗分支、全部答完退出、服务端快照续练（换设备）、首页卡 ✕ 放弃。
