@@ -73,6 +73,18 @@ SQLite 存于 docker volume `kaogong-data`（/data/data.db）。备份：`docker
   （`/api/questions?limit=1` 非 200 时 `docker compose up -d` 自愈）。
 - R2 凭证：VPS `/home/ubuntu/.env`（`R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_ENDPOINT`，不入库）。
 
+## 搜索引擎抓取日报（scripts/crawler_stats.py，R377）
+- VPS cron `23 * * * *`：`python3 /home/ubuntu/kaogong-assistant/scripts/crawler_stats.py
+  /home/ubuntu/kaogong-reports/access-archive /home/ubuntu/kaogong-reports/crawler-stats.json
+  --exclude-ip-file /home/ubuntu/kaogong-reports/probe-ips.txt`（读小时级归档，探针网段剔除，
+  含 `140.232.64.0/24`——开发会话伪装 Googlebot UA 的 SSR 自测不能算引擎来过）。
+- 产物 `crawler-stats.json` 经 `/reports` 只读挂载由 `ops_status.parse_crawler_stats` 解析，
+  管理台数据看板「搜索引擎抓取」面板外显（Google/Baidu/Bing 固定置顶，从未来过标红）。
+- `scripts/` 不在 `deploy_h5.sh` rsync 范围内，改动该脚本需手工 `scp scripts/crawler_stats.py
+  scripts/access_log_report.py` 到 VPS 同路径。
+- 搜索引擎侧入口：Google Search Console 资源 `sc-domain:kaogong.zalize.com`（DNS 自动验证，
+  2026-09-04 建立并提交 sitemap.xml）；Bing/Yandex 走 IndexNow（R89）；百度站长平台待账号。
+
 ## API 文档开关
 生产默认关闭公网 API 文档：compose 注入 `DISABLE_API_DOCS=1`（`/docs`、`/redoc`、
 `/openapi.json` 返回 404）。本地开发（uvicorn 直跑，不设该变量）不受影响。
