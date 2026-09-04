@@ -5,6 +5,15 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R371 answer_log 服务端推进错题 SRS（reviewed[] / 不双计 / .fixreport）走查新经验
+- 核心断言是 **网络 + DB 双对账**：页内 fetch/XHR 钩子（样例 /tmp/r371_hook.js，日志存 `sessionStorage.__r371log` 以跨 navigateTo 保留）记录 `POST /api/answer_log` 的 body（是否带 `mid`）与响应 `reviewed[]`，并统计 `/api/review/` 的 **POST** 数必须为 0——`GET /api/review/cur` 是既有轮询，别误判为双计。DB 端每个被纠正的 mistake `review_log` 行数应恰等于答对次数（1 次答对 → 1 行；重练后再对 → 2 行），`next_review-now` 约等于 `REVIEW_INTERVALS_DAYS[streak-1]` 天（1d、3d…）。
+- 三种场次要分开造：①错题本「错题重练」（`/api/mistakes/redo`，items 带 `mistake_id`，body 带 `mid`，完成页 `.redoreport` 已纠正/仍错/达成掌握）；②卷库「只练错题」或按卷练习（卷 kind 会话，items 无 `mistake_id`，body 无 `mid`，服务端按 `question_id+uid` 回退命中，完成页 `.fixreport`「本组答对 N 道曾错题，复习计划已推进（M 道达成掌握）· 回错题本 ›」，mastered=0 时无括号段）；③随机模块刷题很难命中曾错题，用②覆盖「非重练场次」即可。redo 场次的 `.redoreport` 数字用组件 `items` 的 `_picked===answer` 自算对照。
+- 错题本状态判据：`next_review<=now` 显示「今日待复习」+ 顶部「今日待复习 N 道」banner，否则按天数显示「明天复习」；纠正 1 题后 banner 计数应 -1，全纠正后 banner 消失。
+- 375 CDP 移动仿真在桌面 Chrome 仍带 15px 纵向滚动条：`innerWidth=375` 但 `documentElement.clientWidth===scrollWidth===body.scrollWidth===360`，用「clientWidth===scrollWidth」判无横向溢出而不是硬等 375；全 DOM 扫 `getBoundingClientRect().right` 会命中 4 个 `visibility:hidden` 宽 400 的 uni 内部测量 div，忽略。
+- 造数据阶段生产 503/524 时容器可能被重启（StartedAt 变化），作答走 offlineQueue 刷新后补齐；若发生，报告里要明确「StartedAt 全程不变」不成立、并说明功能证据采自重启后的稳定窗口。
+- `/tmp/cdp174/restore_ls.py` 把备份路径写死为 r366，恢复 localStorage 时要自己 `json.load` 本轮备份再 `localStorage.clear()+setItem` 并核对键数（正常 18 键）；恢复后绝不再 reload/navigate。
+- 本轮 uid 命中的清理表：mistakes / answer_log / review_log / growth_events；仍用 `PRAGMA table_info` 扫全部 uid/user_id 列删 `test-rXXX-%`。
+
 ## R370 完成页 CTA 重练「落 answer_log」走查新经验
 - 「某轮作答不落库」类修复的核心断言是 **网络层 POST 计数**，不是完成页文案：装 fetch/XHR/sendBeacon 三钩子记录 `/api/answer_log` body（`items[].qid/correct/source`），并把日志同时写进 `sessionStorage`（F5 后内存钩子丢失，但 sessionStorage 还在）；每轮开始前记 mark，轮后断言「新增 POST 数 == 本轮题数」。
 - 重练轮 items 的残留字段要枚举全集：`_picked/_saved/_mid/_secs/_logged/_excl/done`，其中 `_logged:true` 残留会让 `logAttempts` 的 `pending=[]` 静默不发请求——这是 R366 的 bug 根因。
