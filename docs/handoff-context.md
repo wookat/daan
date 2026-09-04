@@ -1592,3 +1592,12 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 未验证/限制：① 探针窗口宿主 IO pressure avg300 仅 19–26%、load ≤3.6（事故时 full≈65%、load 19–24），「高争用下也 0 阻塞」未在生产复现，机制消除由单测 + 冷页 IO 实测背书；② 375 阶段捕到 1 条 `unhandledrejection: [object Object]`（钩子只存了 String，无法归因，重跑未复现；前端零改动）；③ 管理台未测。
 - 需注意：预热后 VmRSS/HWM ≈650 MB 主要是 mmap 文件页（可回收），不是 anon 增长；若 `_warmup` 5 分钟轮询下预热最迟在空闲后 ≤300s 才发生，属预期。
 - 详见 docs/iter/round-3/r373-idle-gated-refresh.md。下次 SOP-10 四维审计 ~R376。
+
+### R374 探针流量入库侧打标（KG_PROBE_CIDRS）：运营看板只算真人，历史行不造假（2026-09，分支 devin/1788510680-r374-probe-tagging，PR #585 已合入 main，rev a0448a8）
+- 取证（推翻 R373 候选方向）：源站 3 天访问日志 41,202 条 /api 请求中 41,107 条来自 `140.232.64.2–.5`（Devin 会话共享 NAT），非探针仅 95 条（`39.158.40.85` Android WebView 43、`150.109.230.174` admin/curl 38、其余 ≤2）；810 条 `/api/track` 有 807 条是探针；`/api/exam/*` 8,590 次 404 + 183 次 502 全部来自 `.5`。库内 answer_log/growth_events 无法区分探针行与真人行——「197 条未掌握错题 next_review 为空 / review_done 14 天 1 次」这类结论目前是我们自己的测试流量在说话，不能当产品结论。既有 `/home/ubuntu/kaogong-reports/probe-ips.txt` 只有 `.5` 精确 IP（另一行还带了行内注释），漏 `.2/.3/.4`。
+- 方案（零用户功能）：`auth.parse_cidrs/ip_in_nets/probe_ip`，`PROBE_NETS` 由 env `KG_PROBE_CIDRS` 启动时解析（空=不打标，非法项跳过）；`answer_log`/`growth_events` 幂等加 `probe INTEGER`，新行写 0/1，**旧行保持 NULL=未知，不回填**；写入路径全带标：/api/track、/api/answer_log、/api/paper_answers、/api/exam/submit、分享作答；管理台 `_admin_dashboard_uncached` 全部 answer_log 口径加 `REAL_TRAFFIC="COALESCE(probe,0)=0"` 并返回 `today/yesterday.probe_excluded`，看板副标题外显「已剔除探针作答 今日 N / 昨日 M 条」+「真人」tag；`scripts/access_log_report.py --exclude-ip-file` 支持 CIDR；compose 透传 `KG_PROBE_CIDRS`。探针行**保留**（生产冒烟仍可对账/清理），只是不进运营口径；用户自身统计/SRS 推进不受 probe 影响。
+- 验证：pytest 297（+9 test_probe_tagging.py）/ruff/pyright 0；vitest 511/eslint/build 全绿（bundle 不变 index-C7wGv3is.js）。
+- 部署：生产 `deploy/.env` 追加 `KG_PROBE_CIDRS=140.232.64.0/24`（**换探针网段只改 .env 重启，不用发版**）；rev a0448a8，StartedAt 08:41:47Z，restarts 0，OOM false，VmSwap 0。
+- 生产复验：本机出口实为 `140.232.64.4`（旧清单漏掉的 IP），发 1 条 track + 1 条 answer_log 均落 `probe=1`；`/api/admin/dashboard` today.active 5 / answered 41 / probe_excluded 1（探针行未计入）；testing agent 1440/375 管理台看板副标题/真人 tag/KPI 与页面自身接口响应一致、375 cw==sw、console 0 error，用户端首页双视口 0 error（录屏 PR #585 评论）。
+- 限制：① 打标自 08:41Z 起生效，历史 1040 条 answer_log / 507 条 growth_events 全是 NULL——**R375 起生产取证一律加 `probe` 口径过滤，且至少积累数日干净数据后才能对复习闭环/激活率下结论**；② 副标题「昨日>0」「今日=0」分支未在生产观测；③ growth_events 侧只加了列，除 dashboard 外的漏斗/成长查询（如有）尚未加 probe 过滤。
+- 生产测试数据清理：uid `r374probe-*` 行已删。下次 SOP-10 四维审计 ~R376。

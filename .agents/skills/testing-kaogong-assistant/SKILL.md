@@ -5,6 +5,14 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R374 管理台看板复验（探针剔除量外显 / 零前端）走查新经验
+- 管理台登录：token 用 `docker exec deploy-kaogong-1 printenv ADMIN_TOKEN`（SSH），在 shell 里只 `echo ${#T}` 长度、通过 `KG_T` 环境变量传给 python，再用 CDP `Runtime.evaluate` 给 `#login-token` 赋 `value` + `dispatchEvent(new Event('input'))`，然后**原生点击**「登录」；token 存 `localStorage.admToken`，结束用 `localStorage.removeItem('admToken')` 退出（不点「退出登录」也可，避免 reload）。
+- `cdp.pick()` 排除 `/admin` 标签页，管理台要用 `/tmp/cdp174/r374.py` 的 `pick_admin()`；375 仿真同理要用 `holdvw_admin.py`（复制 holdvw.py 改 pick）。管理台与用户端各自一个 holder，用各自 pid 文件杀。
+- 「console 0 error」要**从 reload 开始**采集：hook 只能抓注入之后的错误。用 `/tmp/cdp174/r374_console.py admin|user N` —— 开 `Runtime/Log/Network` 域后 `Page.reload`，收 `consoleAPICalled(type=error)`/`exceptionThrown`/`Log.entryAdded(level=error)` 及 `/api/` 响应状态 N 秒。管理台与用户端首页在 1440/375 载入均 0 error 0 warning 可作为基线。
+- KPI 与接口对账：接口有 5 分钟缓存，不要另开 curl 比对，直接在页面 fetch hook 里 `res.clone().json()` 截获页面**自己**那次 `/api/admin/dashboard` 响应（`window.__r374.dash`），与 `.kpi .v` 文本比。dashboard 的 DOM 选择器：`.pagehead .sub`（副标题）、`.kpi .lb`/`.kpi .v`、`.kpi .lb .tag-gray`（真人 tag，title=已剔除探针流量）。
+- 375 溢出判读除 `clientWidth===scrollWidth` 外，再扫 `body *` 中 `getBoundingClientRect().right > clientWidth` 且可见的元素列表（应为空），并记录 `.pagehead .sub` 高度/行高 ≈ 行数证明换行。管理台 ≤767px 时 `.pagehead{flex-wrap:wrap}`、`.kpis minmax(140px)`，375 下 KPI 卡为单列（left 76 / right 363）。
+- 本轮不造作答/不清数据时，仍要记录 StartedAt/restarts/VmSwap/slow-req 前后值作为运行时证据，并在报告里把入库侧打标（`answer_log.probe` 列、CIDR 匹配）列为「未验证」。
+
 ## R373 精简回归冒烟（纯后端调度改动、零前端）走查新经验
 - `unhandledrejection` 钩子必须保存 reason 的 **JSON 序列化 + stack + Object.keys**，而不是 `reason.message||String(reason)`——uni promisified API 的拒绝是 `{errMsg:'xxx:fail …'}` 这类无 `.message` 的对象，只存 `String()` 会得到无法定位的 `rej: [object Object]`（R373 375 阶段捕到 1 条，事后无法复现也无法归因）。可直接沿用 `window.__r373rej` 的写法：`JSON.stringify(r)` 失败时回落 `String(r)`。
 - 「答 N 题并提交」在本 app 意味着组内自动进下一题，没有独立「提交」按钮；N 题时用「已答 N/10 · 正确 X」+ hook 中 N× `POST /api/answer_log 200` 作为中间态证据，随后需答完 10 题才有完成页。375 上退出会话用页头「退出」，回到首页后「今日已练」应 +N。
