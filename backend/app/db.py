@@ -2366,6 +2366,9 @@ def _ensure_answer_log(conn):
     if "source" not in cols:
         # 推荐埋点：进入练习的入口（reco/weak/reinforce），旧数据默认 NULL
         conn.execute("ALTER TABLE answer_log ADD COLUMN source TEXT")
+    if "probe" not in cols:
+        # 探针流量标记（1=来自 KG_PROBE_CIDRS 网段，运营看板剔除）；旧行 NULL=未知
+        conn.execute("ALTER TABLE answer_log ADD COLUMN probe INTEGER")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_al_qid ON answer_log(question_id)")
 
 
@@ -2399,8 +2402,9 @@ def _find_open_mistake(conn, uid: str, mid, qid) -> int | None:
     return None
 
 
-def save_answer_log_detail(uid: str, items: list[dict]) -> dict:
-    """落 answer_log；答对且命中本 uid 未掌握错题的条目同步推进该错题复习计划（与 /api/review 同一套 SRS）。"""
+def save_answer_log_detail(uid: str, items: list[dict], probe: bool = False) -> dict:
+    """落 answer_log；答对且命中本 uid 未掌握错题的条目同步推进该错题复习计划（与 /api/review 同一套 SRS）。
+    probe=True 标记为探针流量（运营看板剔除，用户自身的统计/复习不受影响）。"""
     conn = get_conn()
     _ensure_answer_log(conn)
     _ensure_mistake_uid(conn)
@@ -2423,7 +2427,7 @@ def save_answer_log_detail(uid: str, items: list[dict]) -> dict:
                 sub = qrow["submodule"] or sub
         sub = merge_submodule(module, sub)
         conn.execute(
-            "INSERT INTO answer_log (uid, created_at, question_id, module, submodule, correct, secs, picked, source) VALUES (?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO answer_log (uid, created_at, question_id, module, submodule, correct, secs, picked, source, probe) VALUES (?,?,?,?,?,?,?,?,?,?)",
             (
                 uid,
                 now,
@@ -2434,6 +2438,7 @@ def save_answer_log_detail(uid: str, items: list[dict]) -> dict:
                 int(it.get("secs") or 0),
                 str(it.get("picked") or "")[:2] or None,
                 (str(it.get("source") or "")[:32] or None),
+                1 if probe else 0,
             ),
         )
         n += 1
@@ -2451,8 +2456,8 @@ def save_answer_log_detail(uid: str, items: list[dict]) -> dict:
     return {"saved": n, "reviewed": reviewed}
 
 
-def save_answer_log(uid: str, items: list[dict]) -> int:
-    return save_answer_log_detail(uid, items)["saved"]
+def save_answer_log(uid: str, items: list[dict], probe: bool = False) -> int:
+    return save_answer_log_detail(uid, items, probe=probe)["saved"]
 
 
 _HISTORY_SESSION_GAP = 1800  # 相邻作答间隔超过该秒数即切分为新一次练习
@@ -4175,6 +4180,10 @@ def admin_dashboard_state() -> tuple[dict, str]:
     return _cached_state("dashboard", 300, _admin_dashboard_uncached)
 
 
+# 运营口径：剔除探针流量（probe=1）；旧行 NULL 视为真人（无法回填，如实保留）
+REAL_TRAFFIC = "COALESCE(probe,0)=0"
+
+
 def _admin_dashboard_uncached() -> dict:
     conn = get_conn()
     _ensure_answer_log(conn)
@@ -4188,15 +4197,19 @@ def _admin_dashboard_uncached() -> dict:
         cond = "created_at>=?" + (" AND created_at<?" if end else "")
         args = (start, end) if end else (start,)
         row = q(
-            f"SELECT COUNT(DISTINCT uid) au, COUNT(*) n, COALESCE(SUM(correct),0) c FROM answer_log WHERE {cond}",
+            f"SELECT COUNT(DISTINCT uid) au, COUNT(*) n, COALESCE(SUM(correct),0) c "
+            f"FROM answer_log WHERE {cond} AND {REAL_TRAFFIC}",
             args,
         ).fetchone()
-        return {"active": row["au"], "answered": row["n"], "correct": row["c"]}
+        probe = q(
+            f"SELECT COUNT(*) n FROM answer_log WHERE {cond} AND probe=1", args
+        ).fetchone()["n"]
+        return {"active": row["au"], "answered": row["n"], "correct": row["c"], "probe_excluded": probe}
 
     today = day_kpis(day0, None)
     yesterday = day_kpis(day_1, day0)
     firsts = q(
-        "SELECT MIN(created_at) t FROM answer_log GROUP BY uid HAVING t>=?", (day_1,)
+        f"SELECT MIN(created_at) t FROM answer_log WHERE {REAL_TRAFFIC} GROUP BY uid HAVING t>=?", (day_1,)
     ).fetchall()
     new_today = sum(1 for r in firsts if r["t"] >= day0)
     new_yesterday = len(firsts) - new_today
@@ -4204,10 +4217,10 @@ def _admin_dashboard_uncached() -> dict:
     trend = [
         dict(r)
         for r in q(
-            """SELECT date(created_at, 'unixepoch', '+8 hours') d,
+            f"""SELECT date(created_at, 'unixepoch', '+8 hours') d,
                       COUNT(*) answered, COUNT(DISTINCT uid) active,
                       ROUND(COALESCE(SUM(correct),0)*100.0/COUNT(*), 1) acc
-               FROM answer_log WHERE created_at>=? GROUP BY d ORDER BY d""",
+               FROM answer_log WHERE created_at>=? AND {REAL_TRAFFIC} GROUP BY d ORDER BY d""",
             (day_14,),
         )
     ]
@@ -4252,8 +4265,8 @@ def _admin_dashboard_uncached() -> dict:
     acc7 = [
         dict(r)
         for r in q(
-            """SELECT module, COUNT(*) n, ROUND(COALESCE(SUM(correct),0)*100.0/COUNT(*),1) acc
-               FROM answer_log WHERE created_at>=? AND module IS NOT NULL
+            f"""SELECT module, COUNT(*) n, ROUND(COALESCE(SUM(correct),0)*100.0/COUNT(*),1) acc
+               FROM answer_log WHERE created_at>=? AND module IS NOT NULL AND {REAL_TRAFFIC}
                GROUP BY module ORDER BY n DESC""",
             (_day_start(-6),),
         )

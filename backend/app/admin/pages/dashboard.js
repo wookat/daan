@@ -24,12 +24,16 @@
     const healthTag = h.pct >= 95 ? '<span class="tag tag-ok">良好</span>'
       : h.pct >= 85 ? '<span class="tag tag-warn">注意</span>' : '<span class="tag tag-bad">异常</span>';
     const maxMod = Math.max(1, ...d.by_module.map((r) => r.n));
+    const probeT = t.probe_excluded || 0, probeY = y.probe_excluded || 0;
+    const probeNote = probeT || probeY
+      ? ` · 已剔除探针作答 今日 ${probeT.toLocaleString()} / 昨日 ${probeY.toLocaleString()} 条（自动化测试出口网段，不计入用户指标）`
+      : '';
     el.innerHTML = `
     <div class="pagehead">
-      <div><h1>数据看板</h1><div class="sub">${new Date().toLocaleDateString('zh-CN')} · 统计缓存 5 分钟刷新</div></div>
+      <div><h1>数据看板</h1><div class="sub">${new Date().toLocaleDateString('zh-CN')} · 统计缓存 5 分钟刷新${probeNote}</div></div>
     </div>
     <div class="kpis">
-      <div class="kpi"><div class="lb">今日活跃用户</div><div class="v">${t.active.toLocaleString()}</div>${delta(t.active, y.active)}</div>
+      <div class="kpi"><div class="lb">今日活跃用户${probeT ? ' <span class="tag tag-gray" title="已剔除探针流量">真人</span>' : ''}</div><div class="v">${t.active.toLocaleString()}</div>${delta(t.active, y.active)}</div>
       <div class="kpi"><div class="lb">今日作答量</div><div class="v">${t.answered.toLocaleString()}</div>${delta(t.answered, y.answered)}</div>
       <div class="kpi"><div class="lb">新增用户</div><div class="v">${t.new_users.toLocaleString()}</div>${delta(t.new_users, y.new_users)}</div>
       <div class="kpi"><div class="lb">题库健康度 ${healthTag}</div><div class="v">${h.pct}%</div>

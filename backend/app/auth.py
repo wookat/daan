@@ -4,6 +4,8 @@
 """
 import hashlib
 import hmac
+import ipaddress
+import os
 import re
 import secrets
 import time
@@ -60,6 +62,40 @@ def verify_password(password: str, stored: str) -> bool:
 def client_ip(request: Request) -> str:
     """真实客户端 IP：边缘代理透传的 X-Kg-Ip 优先（origin 域拒绝直连，头可信），回退 socket 对端。"""
     return request.headers.get("x-kg-ip") or (request.client.host if request.client else "anon")
+
+
+def parse_cidrs(raw: str) -> list[ipaddress.IPv4Network | ipaddress.IPv6Network]:
+    """逗号分隔的 CIDR/IP 清单 → 网段列表；非法项跳过（配置错误不拖垮服务）。"""
+    nets: list[ipaddress.IPv4Network | ipaddress.IPv6Network] = []
+    for part in raw.split(","):
+        s = part.strip()
+        if not s:
+            continue
+        try:
+            nets.append(ipaddress.ip_network(s, strict=False))
+        except ValueError:
+            continue
+    return nets
+
+
+# 探针出口网段（Devin 会话共享 NAT 等自动化流量）：命中的行为数据入库打 probe=1，运营看板剔除。
+# 默认空=不打标；生产由 KG_PROBE_CIDRS 配置，换网段改 .env 重启即可。
+PROBE_NETS = parse_cidrs(os.environ.get("KG_PROBE_CIDRS", ""))
+
+
+def ip_in_nets(ip: str, nets: list[ipaddress.IPv4Network | ipaddress.IPv6Network]) -> bool:
+    if not nets:
+        return False
+    try:
+        addr = ipaddress.ip_address(ip.strip())
+    except ValueError:
+        return False
+    return any(addr in n for n in nets)
+
+
+def probe_ip(request: Request) -> bool:
+    """请求是否来自探针出口网段（PROBE_NETS）。"""
+    return ip_in_nets(client_ip(request), PROBE_NETS)
 
 
 _RATE: dict[str, list[float]] = {}

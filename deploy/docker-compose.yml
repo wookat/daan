@@ -35,6 +35,8 @@ services:
       - KG_VAPID_PRIVATE=${KG_VAPID_PRIVATE:-}
       - KG_VAPID_PUBLIC=${KG_VAPID_PUBLIC:-}
       - KG_VAPID_SUB=${KG_VAPID_SUB:-mailto:support@zalize.com}
+      # 探针出口网段（逗号分隔 CIDR）：命中的作答/埋点入库打 probe=1，运营看板剔除；空=不打标
+      - KG_PROBE_CIDRS=${KG_PROBE_CIDRS:-}
     volumes:
       - kaogong-data:/data
       # 运维审计日志目录（部署/生命周期/备份巡检），只读供 /api/admin/ops_status 外显
