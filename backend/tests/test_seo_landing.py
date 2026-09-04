@@ -34,18 +34,42 @@ def test_question_page_cta_deeplinks_same_question(client):
     pages._render_question.cache_clear()
 
     html = client.get(f"/tiku/q/{qids[0]}").text
-    m = re.search(r'class="cta" href="([^"]+)">([^<]+)</a>', html)
+    m = re.search(r'class="cta cta-w" href="([^"]+)">([^<]+)</a>', html)
     assert m
     href, label = m.group(1), m.group(2)
     assert f"/#/pages/practice/practice?qid={qids[0]}&tag3=ZL-PJ-04&module=ziliao&source=seo_q" in href
     assert label == "在线做这道题 + 同考点练习（免费）→"
 
     html = client.get(f"/tiku/q/{qids[1]}").text
-    m = re.search(r'class="cta" href="([^"]+)">([^<]+)</a>', html)
+    m = re.search(r'class="cta cta-w" href="([^"]+)">([^<]+)</a>', html)
     assert m
     assert f"/#/pages/practice/practice?qid={qids[1]}&module=ziliao&source=seo_q" in m.group(1)
     assert m.group(2) == "在线做这道题（免费）→"
     assert "继续刷题" not in html
+
+
+def test_question_page_first_fold_funnel(client):
+    """首屏就能做题：选项是带 pick 的深链、CTA 在答案之前、答案/解析默认折叠但仍在 DOM（供收录）。"""
+    from app.seo import pages
+
+    qids = seed_questions()
+    pages._render_question.cache_clear()
+    html = client.get(f"/tiku/q/{qids[0]}").text
+
+    opts = re.findall(r'<a class="opt" href="([^"]+)" rel="nofollow"><b>([A-D])\.</b>', html)
+    assert [k for _, k in opts] == ["A", "B", "C", "D"]
+    for href, k in opts:
+        assert f"qid={qids[0]}" in href and "source=seo_q" in href and href.endswith(f"&pick={k}")
+    assert '<div class="opt">' not in html
+
+    assert "<details open" not in html
+    assert '<details class="ans"><summary>先想一想，再看答案与解析' in html
+    assert "正确答案：" in html and "测试解析" in html
+    # 选项→CTA→答案 的页面顺序；价值主张在选项上方
+    assert html.index("点选项直接作答") < html.index('class="opt"') < html.index('class="cta cta-w"') < html.index("<b>正确答案：")
+    assert html.count('class="cta cta-w"') == 2
+    assert "返回「" not in html
+    assert f"题目 #{qids[0]}" not in html
 
 
 def test_share_landing_valid(client):

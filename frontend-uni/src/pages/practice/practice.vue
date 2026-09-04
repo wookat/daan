@@ -94,6 +94,10 @@
       </view>
       <view class="progress"><view class="pfill" :style="{ width: (idx / items.length) * 100 + '%' }" /></view>
       <view v-if="offline" class="offline-tag"><l-icon name="plane" :size="14" color="#b45309" /> 离线题包模式 · 本地判分，作答记录联网后自动同步（AI 讲解等需联网）</view>
+      <view v-if="leadHint && idx === 0" class="lead-tag" role="status">
+        <text class="lead-t">{{ leadHint }}</text>
+        <view class="lead-x" role="button" aria-label="知道了" @click="leadHint = ''"><l-icon name="x" :size="16" color="#0e7490" /></view>
+      </view>
       <view v-if="cur.is_real" class="real-tag">真题{{ cur.exam_year ? ' · ' + cur.exam_year : '' }}{{ cur.exam_region ? ' · ' + cur.exam_region : '' }}</view>
       <view v-if="cur.group_seq" class="grp-tag">同材料题组 {{ cur.group_seq }}</view>
       <view
@@ -376,7 +380,7 @@ import { collectPracticeProgress, adoptPracticeResume } from '../../practice-pro
 import { weakSpots as buildWeakSpots } from '../../weak-spots.js';
 import { isExplanationCovered } from '../../exp-dup.js';
 import { reviewedMasteredCount, fixReportText } from '../../review-advance.js';
-import { leadQidOf, mergeLead } from '../../leadq.js';
+import { leadQidOf, leadPickOf, mergeLead, leadHintText } from '../../leadq.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -404,6 +408,7 @@ export default {
       loadSecs: 0,
       loadFailMsg: '',
       offline: false,
+      leadHint: '',
       items: [],
       idx: 0,
       picked: '',
@@ -667,7 +672,7 @@ export default {
       } catch (e) {
         /* 保留原值 */
       }
-      this._urlLaunch = { tag3, module, qid: leadQid, source: query.source || 'seo_q' };
+      this._urlLaunch = { tag3, module, qid: leadQid, pick: leadPickOf(query), source: query.source || 'seo_q' };
     } else if (query && query.tag3) {
       // SEO 详情页「在线练习此考点」直链：/practice?tag3=xx&module=xx 自动开练
       let tag3 = query.tag3;
@@ -727,6 +732,7 @@ export default {
         return;
       }
       this._leadQid = q.qid || null;
+      this._leadPick = q.pick || null;
       this.start(q.module, null, null, false, q.year ? true : undefined, q.tag3, q.source, q.year);
       return;
     }
@@ -1617,7 +1623,9 @@ export default {
       const grpQ = module === 'ziliao' && !submodule && !tag3 && !this.realMode ? '&grouped=1' : '';
       const tagQ = tag3 ? '&tag3=' + encodeURIComponent(tag3) : '';
       const leadQid = this._leadQid || null;
+      const leadPick = this._leadPick || null;
       this._leadQid = null;
+      this._leadPick = null;
       try {
         // 领跑题（SEO 题目页深链）与题包并行取；取不到（下线/404/超时）静默按原题包开练
         const leadP = leadQid
@@ -1652,7 +1660,9 @@ export default {
           uni.showToast({ title: '真题还在搜集中，已切回题库模式', icon: 'none' });
           d = await request('/api/questions?limit=' + limit + uidQ + (module ? '&module=' + module : ''));
         }
-        const items = mergeLead(await leadP, d.items);
+        const lead = await leadP;
+        const items = mergeLead(lead, d.items);
+        this.leadHint = leadQid && items.length && items[0].id === leadQid ? leadHintText(tag3, items.length) : '';
         if (!items.length) {
           this._starting = false;
           this.endLoadState('该模块暂无题目，换个模块试试');
@@ -1676,6 +1686,17 @@ export default {
         this.offline = false;
         this._autoRetried = false;
         flushOfflineQueue();
+        // 落地页上点的那个选项就是作答：第 1 题直接出判定，不自动跳题，留给用户看解析
+        if (this.leadHint && leadPick && this.cur && this.cur.options && this.cur.options[leadPick] != null) {
+          this.$nextTick(() => {
+            if (this.idx !== 0 || this.picked) return;
+            this.pick(leadPick);
+            if (this.autoTimer) {
+              clearTimeout(this.autoTimer);
+              this.autoTimer = null;
+            }
+          });
+        }
       } catch (e) {
         // 无网络：尝试使用已下载的离线题包（本地判分，作答记录进队列待同步）
         const offItems = module ? drawOffline(module, limit) : null;
@@ -1928,8 +1949,29 @@ export default {
       } else {
         this.streak = 0;
         this.saveWrong();
+        this.$nextTick(() => this.revealAfter());
       }
       this.saveSession();
+    },
+    // 答错时把「正确答案 + 解析」卡开头顶到判分横幅之上，否则在小屏上被横幅盖住看不到
+    revealAfter() {
+      try {
+        const q = uni.createSelectorQuery().in(this);
+        q.select('.after').boundingClientRect();
+        q.selectViewport().scrollOffset();
+        q.exec((res) => {
+          const rect = res && res[0];
+          if (!rect) return;
+          const winH = uni.getSystemInfoSync().windowHeight || 0;
+          const visibleBottom = winH - 150;
+          const want = rect.top + 220;
+          if (want <= visibleBottom) return;
+          const cur = (res[1] && res[1].scrollTop) || 0;
+          uni.pageScrollTo({ scrollTop: Math.max(0, cur + want - visibleBottom), duration: 200 });
+        });
+      } catch (e) {
+        /* 不支持则不滚 */
+      }
     },
     saveSession() {
       if (this.examMode || this.beiMode || this._shizheng || !this.session || !this.items.length) return;
@@ -2418,9 +2460,12 @@ export default {
       this.idx = 0;
       this.picked = '';
       this.cardOpen = false;
+      this.leadHint = '';
       this.stopQTimer();
       this.pstats = loadPStats();
-      uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/home/home' }) });
+      // H5 的 navigateBack 只是 history.go(-1) 且永不 fail：深链直达（页面栈仅 1 页）时会回到站外/整页重载
+      if (getCurrentPages().length > 1) uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/home/home' }) });
+      else uni.switchTab({ url: '/pages/home/home' });
     },
   },
 };
@@ -2482,6 +2527,9 @@ export default {
 .new-tag { font-size: 19rpx; color: #fff; background: #f43f5e; border-radius: 999rpx; padding: 2rpx 12rpx; margin-left: 10rpx; }
 .real-tag { display: inline-block; font-size: 21rpx; color: #b45309; background: #fef3c7; border-radius: 8rpx; padding: 4rpx 14rpx; margin-bottom: 10rpx; }
 .offline-tag { font-size: 21rpx; color: var(--warn); background: var(--warn-soft); border-radius: 8rpx; padding: 8rpx 14rpx; margin-bottom: 10rpx; line-height: 1.5; }
+.lead-tag { display: flex; align-items: center; gap: 12rpx; font-size: 26rpx; color: #0e7490; background: #cffafe; border-radius: 10rpx; padding: 12rpx 16rpx; margin-bottom: 12rpx; line-height: 1.5; }
+.lead-t { flex: 1; }
+.lead-x { flex: none; width: 56rpx; height: 56rpx; display: flex; align-items: center; justify-content: center; margin: -12rpx -8rpx; }
 .mat-fold { display: flex; justify-content: space-between; align-items: center; background: #f0fdfa; border: 1rpx solid #99f6e4; border-radius: 12rpx; padding: 14rpx 20rpx; margin-bottom: 14rpx; }
 .mat-fold-t { font-size: 24rpx; color: #0f766e; }
 .mat-fold-a { font-size: 24rpx; color: #0d9488; font-weight: 600; flex-shrink: 0; margin-left: 16rpx; }
@@ -2623,7 +2671,7 @@ export default {
 .btitle { display: block; font-size: 30rpx; font-weight: 700; }
 .bok .btitle { color: var(--ok); }
 .bbad .btitle { color: var(--bad); }
-.bsub { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
+.bsub { display: block; font-size: 24rpx; color: var(--ink-1); margin-top: 4rpx; }
 .bnext { flex-shrink: 0; border-radius: 999rpx; font-size: 28rpx; font-weight: 600; color: #fff; padding: 0 44rpx; min-height: 44px; line-height: 44px; margin: 0; }
 .bnext.nok, .bnext.nbad { background: linear-gradient(180deg, #4a7bf7, #3567ec); box-shadow: 0 6rpx 16rpx rgba(46, 91, 255, 0.25); }
 .bnext.bstay { background: transparent; border: 2rpx solid var(--brand); color: var(--brand-text); margin-right: 12rpx; box-shadow: none; }
