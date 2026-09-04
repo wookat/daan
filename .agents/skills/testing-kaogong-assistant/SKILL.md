@@ -5,6 +5,15 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R388 管理台「候选真人」行 + `ops_status.crawlers.humans.direct_7d` 生产复验 走查新经验（testing agent）
+
+- **期望值要按 JSON 自己推，不要抄 PR/用户给的数字**：`parse_crawler_stats` 取 `raw.days[-7:]` 求和（`today = days[-1]`），所以 `humans.direct` 里窗口外的日期（本轮 08-25）不计入；先 `cat /home/ubuntu/kaogong-reports/crawler-stats.json`（VPS，容器内挂 `/reports`）读 `generated_at` + `days`，再和页面自己那次 `/api/admin/ops_status` 响应对账。cron 可能重生成 / UTC 零点会滚窗口，执行时再读一次 `generated_at`，变了就重新推。
+- 候选真人行渲染在 `#dash-ops` 的「搜索引擎抓取（源站日志，近 7 天）」面板，`.hbar.hbar-wrap > .lb`（首文本节点 `候选真人`，`.sub` 含 `未经边缘的源站直连`）+ `.tag`；`direct_7d==0` 时尾缀 `· 源站直连扫描 N（已剔除）` 整段不渲染（生产 52，无法在线观测 0 分支，报告要标 untested）。
+- 375 判「逐字竖排」用 `.lb` 文本 Range `getClientRects().length ≤ 2` 且 `.lb` 高 ≤ ~44px（本轮 37px/1 rect）；坏形态是高 > 80px。卷库页 `right > 375` 元素非 0 是正常的（年份/地区 `uni-scroll-view overflow-x:auto` 横滑筛选条），要看其最近 overflow 祖先再下结论，页面级只看 `cw = sw = bsw = 375`。
+- 容器日志里可能有一条部署侧 `GET /api/admin/ops_status 401`（容器启动后 1–2 min、无 token），不是复验流量；按时间戳与自己的开始时间比对后如实披露即可。
+- 容器内 SQL 建议 `scp` 脚本 → `docker cp` → `docker exec python3`，ssh 单引号内嵌 heredoc + 双引号极易静默输出空；`answer_log` 没有 `qid` 列（读 `uid, probe` 即可）。含 uid 的表用 `pragma table_info` 自动枚举（当前 34 张）。
+- 恢复 localStorage 时按 `t['url'].startswith('https://kaogong.zalize.com')` 过滤标签，不要用 `'zalize.com' in url`——测速站 `tool.chinaz.com/speedtest/kaogong.zalize.com` 这类第三方标签会被误写。
+
 ## R387 index.html 路由预加载（`scripts/route-preload.mjs`）生产复验 走查新经验（testing agent）
 
 - **只有 `<script data-kg-route-preload>` 带标记，生成的 `<link>` 没有任何标记**。`document.querySelectorAll('link[data-kg-route-preload]')` 恒为 0，不能用它判断「注入了/没注入」。
