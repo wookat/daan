@@ -38,6 +38,12 @@ class _ConnProxy:
         return getattr(self._conn, name)
 
 
+# 每连接堆页缓存（KiB，负值）：连接为线程本地，uvicorn 线程池最多 40 条，上限随连接数线性放大；
+# 读路径交给 mmap（file-backed，跨连接共享、可回收、不进 swap），mmap 需覆盖整库才不会回落到堆缓存。
+SQLITE_CACHE_KIB = -8192
+SQLITE_MMAP_BYTES = 1 << 30
+
+
 def get_conn():
     conn = getattr(_local, "conn", None)
     if conn is None:
@@ -45,8 +51,8 @@ def get_conn():
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA busy_timeout=30000")
-        conn.execute("PRAGMA cache_size=-32768")
-        conn.execute("PRAGMA mmap_size=268435456")
+        conn.execute(f"PRAGMA cache_size={SQLITE_CACHE_KIB}")
+        conn.execute(f"PRAGMA mmap_size={SQLITE_MMAP_BYTES}")
         _local.conn = conn
     return _ConnProxy(conn)
 
@@ -4372,12 +4378,11 @@ def _governance_scan_uncached() -> dict:
     conn = get_conn()
     q = conn.execute
     broken: list[dict] = []
-    rows = q(
+    dist_all: dict = {}
+    for r in q(
         "SELECT id, module, question, options, answer FROM questions "
         "WHERE (disabled IS NULL OR disabled!=1) LIMIT 200000"
-    ).fetchall()
-    dist_all: dict = {}
-    for r in rows:
+    ):
         problems = []
         text = (r["question"] or "").strip()
         try:

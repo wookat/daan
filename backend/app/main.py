@@ -300,8 +300,18 @@ _HOT_UID_TABLES = (
 )
 
 
+# 冷启动后的静默期：管理台全表扫描/题目统计刷新等重任务推迟到此之后，避免启动瞬间叠加数百 MB 峰值；
+# 宿主内存紧张引发的重启循环（间隔 < 静默期）内永不触发。
+BOOT_TS = time.time()
+BOOT_QUIET_S = float(os.environ.get("KG_BOOT_QUIET_S", "600") or 0)
+
+
+def boot_quiet_elapsed(now: float | None = None) -> bool:
+    return (time.time() if now is None else now) - BOOT_TS >= BOOT_QUIET_S
+
+
 def _prime_admin_caches():
-    """启动时预热管理台重查询 SWR 缓存，重启后首个管理员请求不承担秒级冷 miss。"""
+    """预热管理台重查询 SWR 缓存，首个管理员请求不承担秒级冷 miss。"""
     for fn in (db.admin_stats, db.admin_dashboard, db.governance_scan):
         try:
             fn()
@@ -311,8 +321,11 @@ def _prime_admin_caches():
 
 def _warmup():
     """周期预热抽题 id 池、热点索引页与 uid 热表（总量 <1MB），消除缓存被换出后的冷启动分钟级长尾。"""
-    _prime_admin_caches()
+    primed = False
     while True:
+        if not primed and boot_quiet_elapsed():
+            _prime_admin_caches()
+            primed = True
         try:
             for m in (None, "yanyu", "changshi", "panduan", "shuliang", "ziliao"):
                 db.random_questions(m, 1)
@@ -338,6 +351,7 @@ threading.Thread(target=_warmup, daemon=True).start()
 
 
 def _stats_refresher():
+    time.sleep(BOOT_QUIET_S)
     while True:
         try:
             db.refresh_question_stats()
