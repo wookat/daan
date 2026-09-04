@@ -5,6 +5,15 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R378 SEO 题目页 CTA 直达同题（`?qid=` lead 题）生产复验 走查新经验
+- 部署身份先核再录：并发部署会覆盖生产（本轮 `23cd5c5` 被另一会话的 `fef41da` 覆盖后重部署为 `0b6ef09`）。开录前、换视口前、收尾时各 `curl /api/health` 一次，rev 变了立刻停下问 lead；报告里写实际复验的 rev，不照抄任务描述。
+- Cloudflare 对 `/tiku*` 有 ~300s 边缘缓存：SSR 页 CTA 可能公网还是旧文案而源站（VPS `curl -H 'Host: kaogong.zalize.com' http://127.0.0.1:8300/tiku/q/N`）已是新的。判定用源站 + 等缓存过期后公网复核，不要把旧 CTA 当回归；换题或加 `?v=<rand>` 也可绕过。
+- 找「无 tag3」在线题：容器内只读 `select id,module from questions where disabled=0 and (tag3 is null or tag3='') and module='yanyu' limit 5`；CTA 断言 `a.href.includes('tag3')===false` + 文案精确 `在线做这道题（免费）→`。
+- lead 题验证三件套：fetch hook 里同时看到 `GET /api/question/{qid}`（200/404）与 `GET /api/questions?…`（是否带 tag3）；`/tmp/cdp174/find.js` 找到 practice 组件 → `__pc.items[0].id===qid`、`ids.length===new Set(ids).size`（去重）、`__pc._source==='seo_q'`；再对照 SSR `<h1>`/正文前 40 字。10 题包 + lead 不重叠时 `n=11`，同考点题少时可能只有 `n=2`。
+- 非法 qid：`qid=abc` 的断言是 **没有** `/api/question/abc` 请求（`leadQidOf` 只接受正整数）；`qid=999999999` 会在浏览器原生 console 留一条 `Failed to load resource … 404`（资源级，非应用抛错），应用级用 `window.onerror/unhandledrejection` 监听器 + `uni-modal/uni-toast` 为空判「无报错」，报告里把这条 404 单列为预期观察项。
+- `POST /api/answer_log` 体为 `{uid, items:[{qid,module,submodule,correct,secs,picked,source}]}`，`source` 在 items 元素内；容器 DB 侧查 `answer_log where source='seo_q'` 对账 uid/question_id/probe=1。清理仍按 `test-r378-%` 遍历 uid 列（本轮命中 answer_log/mistakes/practice_progress）。
+- 375 CTA 断言：`a.scrollIntoView({block:'center'})` 后取 rect，`right<=375 && bottom<=innerHeight`；原生点击时屏幕坐标 = 页面坐标 + 内容区顶部偏移（本机 ≈57px）。错选一题（选非正确项）可避免答对自动跳题，便于截解析区。
+
 ## R377 管理台「搜索引擎抓取」面板 + 迷你模考进入/退出 生产复验 走查新经验
 - 面板选择器：`#dash-ops` 内标题文本「搜索引擎抓取（源站日志，近 7 天）」之后的 `.hbar` 行，每行 `.lb`（引擎名 + `.sub` 「最近 …/从未」）与 `span.tag.tag-bad|tag-warn|tag-ok|tag-gray`；底部 `统计生成于 <ISO>`，颜色对照 `getComputedStyle(document.documentElement).getPropertyValue('--t4'|'--error')`（生产 `#6E7280` / `#B91C1C`）。与接口对账用页面自身的 `/api/admin/ops_status` fetch hook（`/tmp/cdp174/r377.py`），不要另开 curl —— crawler cron 每小时 :23 刷新，任务描述里的参考值很可能已过期（本轮 Google 由「从未」变为有抓取），报告要按截获的 JSON 写，并把未触发的分支（`从未`/stale/null）列为未验证。
 - 迷你模考只读进入/退出：首页「更多练习 → 迷你模考」卡 → `POST /api/exam/start {uid,mini:true}` + `POST /api/exam/progress`，会在 `exam_attempts`（`submitted_at=NULL`）与 `exam_progress` 各落 1 行；页头返回箭头（`uni-page-head` 左侧 svg）退出不交卷，回首页出现「有一场未交卷的模考」横幅。清理按 `uid like 'test-…%'` 删这两表即可（`exam_progress` 列：attempt_id, uid, picks, idx, updated_at, marks, secs, excl）。
