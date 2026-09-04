@@ -76,7 +76,7 @@ def _mistake_text(q: dict) -> str:
     return base + ("\n" + opt_text if opt_text else "")
 
 
-def _judge_paper(uid: str, paper: dict, picks: dict[int, str], secs: dict[int, int] | None = None) -> dict:
+def _judge_paper(uid: str, paper: dict, picks: dict[int, str], secs: dict[int, int] | None = None, probe: bool = False) -> dict:
     """picks: {题号(从1开始): 'A'}；secs: {题号: 用时秒}；与扫描答题卡同一套判分/落库逻辑。"""
     qids = paper["question_ids"]
     questions = {q["id"]: q for q in db.questions_by_ids(qids)}
@@ -129,7 +129,7 @@ def _judge_paper(uid: str, paper: dict, picks: dict[int, str], secs: dict[int, i
                     }
                 )
     if uid and log_items:
-        db.save_answer_log(uid[:64], log_items)
+        db.save_answer_log(uid[:64], log_items, probe=probe)
     answered = [r for r in results if r["status"] == "ok"]
     return {
         "code": paper["code"],
@@ -143,7 +143,7 @@ def _judge_paper(uid: str, paper: dict, picks: dict[int, str], secs: dict[int, i
 
 
 @router.post("/api/paper_answers")
-def api_paper_answers(body: dict):
+def api_paper_answers(body: dict, request: Request):
     code = str(body.get("code") or "").strip().upper()[:16]
     paper = db.get_paper_export(code)
     if not paper:
@@ -157,7 +157,7 @@ def api_paper_answers(body: dict):
             continue
     if not picks:
         raise HTTPException(400, "没有已选择的答案")
-    return _judge_paper(str(body.get("uid") or ""), paper, picks)
+    return _judge_paper(str(body.get("uid") or ""), paper, picks, probe=auth.probe_ip(request))
 
 
 @router.post("/api/scan_sheet")
@@ -228,7 +228,7 @@ async def api_scan_sheet(request: Request, uid: str = Form(""), image: UploadFil
                     }
                 )
     if uid and log_items:
-        db.save_answer_log(uid[:64], log_items)
+        db.save_answer_log(uid[:64], log_items, probe=auth.probe_ip(request))
     answered = [r for r in results if r["status"] == "ok"]
     return {
         "code": rec["code"],
@@ -438,7 +438,7 @@ def api_exam_resume(uid: str):
 
 
 @router.post("/api/exam/submit")
-def api_exam_submit(body: dict):
+def api_exam_submit(body: dict, request: Request):
     uid = (body.get("uid") or "").strip()[:64]
     attempt_id = body.get("attempt_id")
     if not uid or not attempt_id:
@@ -455,7 +455,8 @@ def api_exam_submit(body: dict):
     secs = _clean_int_map(body.get("secs") or {})
     marks = _clean_marks(body.get("marks"), len(db.exam_active_qids(paper["question_ids"])))
     judged = _judge_paper(uid, {"code": None, "title": paper["title"],
-                                "question_ids": db.exam_active_qids(paper["question_ids"])}, picks, secs)
+                                "question_ids": db.exam_active_qids(paper["question_ids"])}, picks, secs,
+                          probe=auth.probe_ip(request))
     per_module: dict = {}
     for r in judged["items"]:
         m = r.get("module") or "other"

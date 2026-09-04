@@ -5,7 +5,7 @@ import time
 
 from fastapi import APIRouter, HTTPException, Request
 
-from . import db, kb, plan, taxonomy
+from . import auth, db, kb, plan, taxonomy
 from .deps import as_int, rl
 from .social import api_checkin_badges, api_checkin_summary
 
@@ -143,7 +143,7 @@ def api_answer_log(body: dict, request: Request):
     items = body.get("items")
     if not uid or not isinstance(items, list) or not items:
         raise HTTPException(400, "缺少 uid 或答题记录")
-    return db.save_answer_log_detail(uid[:64], items[:200])
+    return db.save_answer_log_detail(uid[:64], items[:200], probe=auth.probe_ip(request))
 
 @router.get("/api/practice/history")
 def api_practice_history(uid: str):

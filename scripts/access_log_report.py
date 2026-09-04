@@ -6,13 +6,13 @@
 或从 stdin（远程日志）:
     ssh <host> 'cat /var/log/caddy/kaogong.zalize.com-access.log*' | python3 scripts/access_log_report.py -
 可选参数 --days N 只统计最近 N 天（默认全部）。
-可选参数 --exclude-ip-file PATH：逐行 IP 清单（# 注释），按 X-Kg-Ip（回退
+可选参数 --exclude-ip-file PATH：逐行 IP 或 CIDR 网段清单（# 注释），按 X-Kg-Ip（回退
 remote_ip）剔除探针/自测流量，剔除量单独计数外显，保证统计不混入开发探针。
 
 输出：总请求量、/tiku/ 请求量、UA 分类（搜索引擎爬虫/其他 bot/疑似真人）、
 爬虫明细、/tiku/ Top20 URL、状态码分布、时间范围。
 """
-import sys, json, argparse, datetime
+import sys, json, argparse, datetime, ipaddress
 from collections import Counter
 
 BOT_ENGINES = {
@@ -61,16 +61,27 @@ def main():
     ap.add_argument("--exclude-ip-file", default="", help="探针IP清单文件，逐行IP，#注释")
     args = ap.parse_args()
 
-    exclude_ips = set()
+    exclude_ips = []
     if args.exclude_ip_file:
         try:
             with open(args.exclude_ip_file, errors="ignore") as ef:
                 for raw in ef:
                     ip = raw.split("#")[0].strip()
-                    if ip:
-                        exclude_ips.add(ip)
+                    if not ip:
+                        continue
+                    try:
+                        exclude_ips.append(ipaddress.ip_network(ip, strict=False))
+                    except ValueError:
+                        continue
         except OSError:
             pass
+
+    def excluded(ip: str) -> bool:
+        try:
+            addr = ipaddress.ip_address(ip.strip())
+        except ValueError:
+            return False
+        return any(addr in n for n in exclude_ips)
 
     fh = sys.stdin if args.logfile == "-" else open(args.logfile, errors="ignore")
     cutoff = None
@@ -106,7 +117,7 @@ def main():
         req = rec.get("request", {})
         if exclude_ips:
             ip = (req.get("headers", {}).get("X-Kg-Ip") or [""])[0] or req.get("remote_ip", "")
-            if ip in exclude_ips:
+            if excluded(ip):
                 probe_excluded += 1
                 continue
         uri = req.get("uri", "")
@@ -142,7 +153,7 @@ def main():
     print(f"时间范围: {fmt(ts_min)} ~ {fmt(ts_max)}")
     print(f"总请求: {total}")
     if exclude_ips:
-        print(f"探针流量已剔除: {probe_excluded}（IP 清单 {len(exclude_ips)} 个，不计入以上/以下统计）")
+        print(f"探针流量已剔除: {probe_excluded}（IP/网段清单 {len(exclude_ips)} 个，不计入以上/以下统计）")
     print(f"/tiku/ 请求: {tiku}（其中搜索引擎爬虫 {tiku_engine}）")
     if seg_counter:
         print("/tiku/ 分段命中（总/爬虫）:", {k: f"{v}/{seg_engine.get(k, 0)}" for k, v in seg_counter.most_common()})

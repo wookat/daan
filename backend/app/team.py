@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Request
 
 from . import db
-from .auth import client_ip, rate_limit
+from .auth import client_ip, probe_ip, rate_limit
 from .deps import as_int, rl
 from .social import CN_DAY_SQL, CN_TZ
 
@@ -81,6 +81,10 @@ def init_team_db():
         )"""
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ge_event ON growth_events(event, created_at)")
+    ge_cols = {r["name"] for r in conn.execute("PRAGMA table_info(growth_events)")}
+    if "probe" not in ge_cols:
+        # 探针流量标记（1=来自 KG_PROBE_CIDRS 网段）；旧行 NULL=未知
+        conn.execute("ALTER TABLE growth_events ADD COLUMN probe INTEGER")
     conn.commit()
     conn.close()
 
@@ -514,7 +518,7 @@ def api_share_answer(sid: str, body: dict, request: Request):
         "secs": secs,
         "picked": picked,
         "source": "share",
-    }])
+    }], probe=probe_ip(request))
     conn2 = db.get_conn()
     db._ensure_answer_log(conn2)
     q_stats = _question_stats(conn2, s["question_id"])
@@ -593,9 +597,9 @@ def api_track(body: dict, request: Request):
         ago_ms = 0
     conn = db.get_conn()
     conn.execute(
-        "INSERT INTO growth_events (uid, event, source, ref, created_at) VALUES (?,?,?,?,?)",
+        "INSERT INTO growth_events (uid, event, source, ref, created_at, probe) VALUES (?,?,?,?,?,?)",
         (uid, event, str(body.get("source") or "")[:16] or None,
-         ref or None, time.time() - ago_ms / 1000),
+         ref or None, time.time() - ago_ms / 1000, 1 if probe_ip(request) else 0),
     )
     conn.commit()
     conn.close()
