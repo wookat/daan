@@ -58,6 +58,10 @@
             "sdkConfigs" : {}
         }
     },
+    /* H5：uni 构建会用 h5.title（缺省 name）覆写 index.html 的 <title>，SEO 标题以此为准 */
+    "h5" : {
+        "title" : "错题邦 - 公务员考试行测真题免费在线刷题 · 错题本 · 模考"
+    },
     /* 快应用特有相关 */
     "quickapp" : {},
     /* 小程序特有相关 */
