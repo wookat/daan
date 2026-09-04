@@ -11,9 +11,12 @@
     {"generated_at": <epoch>, "days": ["2026-09-03", ...],
      "engines": {"Google": {"hits": {"2026-09-03": 3}, "err5xx": {...}, "tiku": {...},
                             "sitemap": {...}, "last_seen": <epoch|null>}, ...},
-     "humans": {"api": {"2026-09-03": 17}, "api5xx": {...}, "page": {...}, "ips": {...}}}
-humans = 剔除探针网段、搜索引擎与通用 bot UA、test-/probe- 测试 uid 后的余量（R382：
-此前只有爬虫可见，「真人到底有没有来、来了有没有撞 5xx」全靠临时脚本翻日志）。
+     "humans": {"api": {"2026-09-03": 17}, "api5xx": {...}, "page": {...}, "ips": {...},
+                "direct": {...}}}
+humans = 剔除探针网段、搜索引擎与通用 bot UA、test-/probe- 测试 uid、未经边缘直连源站的请求后的余量
+（R382：此前只有爬虫可见，「真人到底有没有来、来了有没有撞 5xx」全靠临时脚本翻日志）。
+direct = 绕过 Cloudflare 边缘直打源站主机名的请求数（无 X-Kg-Ip/Cf-Connecting-Ip，源站一律 403）：
+用户只能经公网域名进来，直连源站的只有扫描器，不进真人口径但单独计数便于对账。
 只含聚合计数，不含 IP/UA 原文；UA 优先取 Worker 透传的 X-Kg-Ua（源站 User-Agent 可能是回源层的）。
 """
 import argparse
@@ -96,6 +99,12 @@ def _client_ip(req: dict) -> str:
     return req.get("remote_ip") or ""
 
 
+def _via_edge(req: dict) -> bool:
+    """是否经 Cloudflare 边缘进入源站（直连源站主机名的请求没有这两个头，Caddy 一律 403）。"""
+    headers = req.get("headers") or {}
+    return any(headers.get(k) and headers[k][0] for k in ("X-Kg-Ip", "Cf-Connecting-Ip"))
+
+
 def _excluded(ip: str, nets: list) -> bool:
     if not nets:
         return False
@@ -115,7 +124,7 @@ def aggregate(lines, days: int, now: float | None = None, exclude_nets: list | N
     day_list = [(today - datetime.timedelta(days=i)).isoformat() for i in range(days - 1, -1, -1)]
     day_set = set(day_list)
     engines: dict[str, dict] = {}
-    humans: dict[str, dict] = {"api": {}, "api5xx": {}, "page": {}}
+    humans: dict[str, dict] = {"api": {}, "api5xx": {}, "page": {}, "direct": {}}
     human_ips: dict[str, set] = {}
     for line in lines:
         line = line.strip()
@@ -138,6 +147,9 @@ def aggregate(lines, days: int, now: float | None = None, exclude_nets: list | N
             uri = req.get("uri") or ""
             kind = human_kind(uri)
             if not kind or any(m in uri for m in TEST_UID_MARKERS):
+                continue
+            if not _via_edge(req):
+                humans["direct"][day] = humans["direct"].get(day, 0) + 1
                 continue
             ip = _client_ip(req)
             if _excluded(ip, exclude_nets):
