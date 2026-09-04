@@ -42,6 +42,8 @@ class _ConnProxy:
 # 读路径交给 mmap（file-backed，跨连接共享、可回收、不进 swap），mmap 需覆盖整库才不会回落到堆缓存。
 SQLITE_CACHE_KIB = -8192
 SQLITE_MMAP_BYTES = 1 << 30
+# 题目统计刷新每批 UPDATE 行数（每批一次 commit，写锁持有期与批大小成正比）
+QUESTION_STATS_BATCH = 100
 
 
 def get_conn():
@@ -2559,16 +2561,30 @@ def refresh_question_stats() -> int:
                ) WHERE rk=1"""
         )
     }
-    n = 0
-    for r in rows:
-        conn.execute(
+    target = {
+        r["qid"]: (r["n"], round(100 * (r["c"] or 0) / r["n"]), wrong.get(r["qid"]))
+        for r in rows
+    }
+    # 先在读事务里取现值：把要改的页读热且不持写锁（冷页缓存下逐题 UPDATE 会把随机页读全算进写锁持有期），
+    # 仅对变化行分批写，写锁单次持有毫秒级。
+    current = {}
+    ids = list(target)
+    for i in range(0, len(ids), 500):
+        chunk = ids[i:i + 500]
+        for r in conn.execute(
+            f"SELECT id, attempt_count, correct_ratio, most_wrong FROM questions WHERE id IN ({','.join('?' * len(chunk))})",
+            chunk,
+        ):
+            current[r["id"]] = (r["attempt_count"], r["correct_ratio"], r["most_wrong"])
+    changed = [(v[0], v[1], v[2], qid) for qid, v in target.items() if qid in current and current[qid] != v]
+    for i in range(0, len(changed), QUESTION_STATS_BATCH):
+        conn.executemany(
             "UPDATE questions SET attempt_count=?, correct_ratio=?, most_wrong=? WHERE id=?",
-            (r["n"], round(100 * (r["c"] or 0) / r["n"]), wrong.get(r["qid"]), r["qid"]),
+            changed[i:i + QUESTION_STATS_BATCH],
         )
-        n += 1
-    conn.commit()
+        conn.commit()
     conn.close()
-    return n
+    return len(target)
 
 
 _PAPER_TITLE_RE = re.compile(r"(\d{4}年[^（(）).]{2,40}《行测》(?:真题|试卷|试题)?(?:（[^）]{1,8}）)?)")
