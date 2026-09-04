@@ -1537,3 +1537,12 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - ⚠️ 合并链事故再现（第三次，与 R359 #565 / R365 #572 同类）：#573 已入 main 后，#574（base=R365 分支）与 #575（base=R366 分支）被 merge 进各自 base 分支而非 main → `git merge-base --is-ancestor d1fafc3/f58236d origin/main` 均 NOT_IN_MAIN（生产当前运行 f58236d 却不在 main）。补救：从 origin/main 开 devin/1788490598-r367-mainline merge R367 分支（含 R366），开 PR 直接 base=main。**规则升级：后续每轮 PR 一律 base=main，不再链式 base 到未合入分支**；合并后必须用 `git merge-base --is-ancestor <sha> origin/main` 权威核对。
 - 环境观察：退出模考未交卷会留 exam_attempts 行 + 卷库「未交卷」横幅（既有）；uni showLoading/hideLoading 配对 warning（既有）。
 - 详见 docs/iter/round-3/r367-paper-wrong-entry.md。
+
+### R368 错题本归卷：卷源徽标 + 按卷筛选 + 「练本卷」回流（2026-09，分支 devin/1788490910-r368-book-paper，PR #577，base=main）
+- 取证：生产 mistakes 222 条，110 条关联真题（is_real=1 且 source 非空，55 个 source），但 mistakes.source 只有 NULL 203 / 'exam' 19——按卷练习答错入本（saveWrong 不传 source）与普通练习错题不可区分、看不到来自哪张卷；粉笔错题本每题带「来源」并可按来源筛选直达卷。R366/R367 打通「卷→错题」，本轮补反向「错题→卷」。
+- 后端 db.py：`_paper_by_psource(conn)` 复用 `_list_exam_papers_base` 全量 TTL 缓存建 psource→{pid,title,psource}（同 source 多卷取 id 最大）；list_mistakes 多取 q.source/q.is_real，每条 +`paper`（真题且匹配才有，否则 None；q_source/q_is_real 不外泄；结果集无真题时不触发卷缓存）。team.py /api/track 白名单 +book_go_paper（test_track_whitelist_sync 守卫命中）。tests/test_mistakes_paper.py 4 例。零新表/字段/端点。
+- 前端：新增 src/book-paper.js（mistakePaper / paperGroups(max=8) / inPaper，fail-closed）；book.vue 错题卡 `.pbadge` 卷源徽标（青绿，点击→pidFilter）、筛选面板「试卷」分组 ×N、当前筛选条「卷名 ✕」+「练本卷 ›」→ navigateTo /pkgA/exam/list?pid=（R365 深链高亮+scrollIntoView，非重排）；book-url.js buildBookUrl/parseBookOpts +pid（^\d{1,9}$ 或正整数，否则 0；fav 不带）——parseBookOpts 形状多一键，既有 toEqual 断言同步补 pid:0。vitest +1 文件。
+- 验证：ruff/pytest 279/pyright（仅基线 pywebpush）/eslint/vitest 501/build 全绿。生产 rev 1c1e18b、bundle index-Difr5oX0.js、Lighthouse 全过。testing agent（uid test-r368-k4p7）1440/375：按卷练习答错 3 → API paper.pid=133、psource 与卷库一致，普通刷题对照 paper:null，mistakes.source 均 NULL；徽标点击→筛选条二 chip、列表 3 条、URL ?pid=133；面板「试卷」×3、「全部」清除；刷新恢复；pid=0/-5/abc fail-closed；「练本卷 ›」→ 卷卡高亮「· 错 3 题」→ 只练错题 items 精确=错题序列；/api/track book_go_paper ref=133；375 scrollWidth=375、长卷源 ellipsis；回归模块/试卷/排序叠加、✕ 单独清除、已掌握 tab、重练、导出、模考徽标、计时模考不弹 sheet 全过；console 0 error。
+- 测试数据清理：test-r368-k4p7 DELETED 48（mistakes 4/answer_log 39/exam_attempts 1/growth_events 3/exam_progress 1），LEFTOVER 0；容器 StartedAt 03:10:25Z 未变，作答 39=39。清理表新增 exam_progress。
+- 分支：从 R367 mainline 分支切出、PR base=main（含 #576 未合入的 R366/R367 提交，#576 合并后本 PR 自动收敛为仅 R368）。#576 仍待老板合并；main 当前落后生产三轮，合并前勿从 main 部署。
+- 详见 docs/iter/round-3/r368-book-paper-source.md。

@@ -12,6 +12,13 @@ function validKp(v) {
   return typeof v === 'string' && v.length > 0 && v.length <= KP_MAX;
 }
 
+function parsePid(v) {
+  let n = 0;
+  if (typeof v === 'number') n = v;
+  else if (typeof v === 'string' && /^\d{1,9}$/.test(v)) n = parseInt(v, 10);
+  return Number.isInteger(n) && n > 0 ? n : 0;
+}
+
 export function buildBookUrl(f) {
   const o = f || {};
   const parts = [];
@@ -21,6 +28,7 @@ export function buildBookUrl(f) {
     if (validKp(o.kp)) parts.push('kp=' + encodeURIComponent(o.kp));
     if (validKp(o.kp3)) parts.push('kp3=' + encodeURIComponent(o.kp3));
     if (SRCS.includes(o.src)) parts.push('src=' + o.src);
+    if (parsePid(o.pid)) parts.push('pid=' + parsePid(o.pid));
     if (RZS.includes(o.rz)) parts.push('rz=' + encodeURIComponent(o.rz));
     if (SORTS.includes(o.sort)) parts.push('sort=' + o.sort);
   }
@@ -53,6 +61,7 @@ export function parseBookOpts(opts) {
     kp: validKp(kp) ? kp : '',
     kp3: validKp(kp3) ? kp3 : '',
     src: SRCS.includes(o.src) ? o.src : '',
+    pid: parsePid(o.pid),
     rz: RZS.includes(rz) ? rz : '',
     sort: SORTS.includes(o.sort) ? o.sort : '',
     review: o.review === '1',

@@ -33,6 +33,7 @@ describe('parseBookOpts', () => {
       kp: '',
       kp3: '',
       src: 'practice',
+      pid: 0,
       rz: '',
       sort: 'reason',
       review: false,
@@ -43,11 +44,29 @@ describe('parseBookOpts', () => {
       kp: '',
       kp3: '',
       src: '',
+      pid: 0,
       rz: '',
       sort: '',
       review: false,
     });
-    expect(parseBookOpts()).toEqual({ tab: '', mod: '', kp: '', kp3: '', src: '', rz: '', sort: '', review: false });
+    expect(parseBookOpts()).toEqual({ tab: '', mod: '', kp: '', kp3: '', src: '', pid: 0, rz: '', sort: '', review: false });
+  });
+
+  it('pid 归卷筛选：正整数入链，非法 fail-closed（R368）', () => {
+    expect(buildBookUrl({ pid: 42 })).toBe(BOOK_PATH + '?pid=42');
+    expect(buildBookUrl({ pid: '17' })).toBe(BOOK_PATH + '?pid=17');
+    expect(buildBookUrl({ pid: 0 })).toBe(BOOK_PATH);
+    expect(buildBookUrl({ pid: -3 })).toBe(BOOK_PATH);
+    expect(buildBookUrl({ pid: 'abc' })).toBe(BOOK_PATH);
+    expect(buildBookUrl({ pid: '1e3' })).toBe(BOOK_PATH);
+    expect(buildBookUrl({ tab: 'fav', pid: 42 })).toBe(BOOK_PATH + '?tab=fav');
+    expect(parseBookOpts({ pid: '42' }).pid).toBe(42);
+    expect(parseBookOpts({ pid: 42 }).pid).toBe(42);
+    expect(parseBookOpts({ pid: '0' }).pid).toBe(0);
+    expect(parseBookOpts({ pid: '-1' }).pid).toBe(0);
+    expect(parseBookOpts({ pid: '1.5' }).pid).toBe(0);
+    expect(parseBookOpts({ pid: 'x' }).pid).toBe(0);
+    expect(parseBookOpts({ pid: ['1'] }).pid).toBe(0);
   });
 
   it('rz 错因白名单，非法 fail-closed，支持 URL 编码', () => {

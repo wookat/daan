@@ -3035,6 +3035,20 @@ def mistakes_by_qids(uid: str, qids: list[int]) -> dict[int, dict]:
     return {r["question_id"]: {"id": r["id"], "error_reason": r["error_reason"]} for r in rows}
 
 
+def _paper_by_psource(conn) -> dict[str, dict]:
+    """卷 psource → {pid, title, psource}；同 source 多卷取 id 最大（最新）一张。复用卷库 TTL 缓存。"""
+    _ensure_exam_tables(conn)
+    out: dict[str, dict] = {}
+    for p in _list_exam_papers_base(conn, None, None, None):
+        src = p.get("psource")
+        if not src:
+            continue
+        cur = out.get(src)
+        if cur is None or p["id"] > cur["pid"]:
+            out[src] = {"pid": p["id"], "title": p["title"], "psource": src}
+    return out
+
+
 def list_mistakes(limit: int = 500, uid: str | None = None) -> list[dict]:
     conn = get_conn()
     _ensure_mistake_uid(conn)
@@ -3043,17 +3057,22 @@ def list_mistakes(limit: int = 500, uid: str | None = None) -> list[dict]:
     args = (uid,) if uid else ()
     rows = conn.execute(
         f"""SELECT m.*, q.tag3, q.options AS q_options,
-            q.attempt_count, q.correct_ratio, q.most_wrong FROM mistakes m
+            q.attempt_count, q.correct_ratio, q.most_wrong,
+            q.source AS q_source, q.is_real AS q_is_real FROM mistakes m
             LEFT JOIN questions q ON q.id=m.question_id
             WHERE 1=1{cl} ORDER BY m.created_at DESC LIMIT ?""",
         (*args, limit),
     ).fetchall()
+    papers = _paper_by_psource(conn) if any(r["q_is_real"] and r["q_source"] for r in rows) else {}
     conn.close()
     out = []
     for r in rows:
         d = dict(r)
         d["methods"] = json.loads(d.get("methods") or "[]")
         d["options"] = _parse_options(d.pop("q_options", None))
+        src = d.pop("q_source", None)
+        hit = papers.get(src) if d.pop("q_is_real", None) and src else None
+        d["paper"] = dict(hit) if hit else None
         out.append(d)
     return out
 
