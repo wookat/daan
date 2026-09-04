@@ -48,7 +48,7 @@ export function pendingCount(): number {
   return q.answers.length + q.mistakes.length;
 }
 
-// key = uid|qid|时间戳，防重复入队 / 重复上传
+// key = uid|qid|时间戳，防重复入队 / 重复上传；item.t 记作答时刻，补传时服务端按 t 落 created_at
 export function enqueueAnswers(uid: string, items: AnswerLogItem[]): void {
   const q = getQueue();
   const seen = new Set(q.answers.map((a) => a.key));
@@ -57,7 +57,7 @@ export function enqueueAnswers(uid: string, items: AnswerLogItem[]): void {
     const key = uid + '|' + (it.qid || 'x') + '|' + (now + i);
     if (seen.has(key)) return;
     seen.add(key);
-    q.answers.push({ key, uid, item: it });
+    q.answers.push({ key, uid, item: { ...it, t: it.t || now + i } });
   });
   setQueue(q);
 }

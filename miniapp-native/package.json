@@ -5,7 +5,7 @@
   "description": "错题邦（原考公错题助手）微信原生小程序（TypeScript + TDesign）",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "lint": "eslint miniprogram --ext .ts"
+    "lint": "ESLINT_USE_FLAT_CONFIG=false eslint miniprogram --ext .ts"
   },
   "dependencies": {
     "tdesign-miniprogram": "~1.9.7"

@@ -85,12 +85,12 @@
         <view v-for="p in paceRows" :key="p.key" class="prow">
           <view class="prow-top">
             <text class="prow-name">{{ p.name }}</text>
-            <text class="prow-tag" :class="p.status">{{ p.status === 'over' ? '超时' : p.status === 'fast' ? '偏快' : '合理' }}</text>
+            <text class="prow-tag" :class="p.status">{{ p.tag }}</text>
           </view>
           <view class="prow-bar">
             <view class="prow-fill" :class="p.status" :style="{ width: p.pct + '%' }"></view>
           </view>
-          <text class="prow-v">用时 {{ fmtMin(p.secs) }} · 参考 {{ fmtMin(p.refSecs) }}</text>
+          <text class="prow-v">用时 {{ fmtMin(p.secs) }} · 参考 {{ fmtMin(p.refSecs) }}{{ p.refNote }}</text>
         </view>
         <text class="note">参考用时按各模块题量占比折算自本卷限时</text>
       </view>
@@ -306,6 +306,7 @@ import { weakModule } from '../../exam-weak.js';
 import { nextPaper } from '../../exam-next.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
+const PACE_TAG = { over: '超时', fast: '偏快', ok: '合理', skip: '未作答' };
 const MOD_ORDER = ['changshi', 'yanyu', 'shuliang', 'panduan', 'ziliao'];
 
 export default {
@@ -393,7 +394,9 @@ export default {
         .map((p) => ({
           ...p,
           name: MODS[p.key] || p.key,
-          pct: Math.max(4, Math.round((p.secs / Math.max(p.secs, p.refSecs, 1)) * 100)),
+          tag: PACE_TAG[p.status] || PACE_TAG.ok,
+          refNote: p.status !== 'skip' && p.answered < p.n ? '（按已答 ' + p.answered + '/' + p.n + ' 题折算）' : '',
+          pct: p.status === 'skip' ? 0 : Math.max(4, Math.round((p.secs / Math.max(p.secs, p.refSecs, 1)) * 100)),
         }));
     },
     wrongTotal() {
@@ -791,6 +794,7 @@ export default {
 .prow-tag { font-size: 21rpx; font-weight: 600; border-radius: 999rpx; padding: 2rpx 14rpx; background: var(--ok-soft); color: var(--ok-strong, #15803d); }
 .prow-tag.over { background: var(--bad-soft); color: var(--bad-strong, #b91c1c); }
 .prow-tag.fast { background: var(--soft-bg); color: var(--ink-2); }
+.prow-tag.skip { background: var(--soft-bg); color: var(--ink-3); }
 .prow-bar { height: 14rpx; background: var(--brand-soft); border-radius: 999rpx; overflow: hidden; }
 .prow-fill { height: 100%; background: var(--brand); border-radius: 999rpx; transition: width 0.4s ease; }
 .prow-fill.over { background: var(--bad, #dc2626); }

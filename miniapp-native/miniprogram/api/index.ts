@@ -10,6 +10,7 @@ import type {
   ExamSubmitResp,
   FavFolder,
   FavItem,
+  GrowthResp,
   Mistake,
   MistakesResp,
   NoteItem,
@@ -362,6 +363,10 @@ export function fetchCheckinSummary(): Promise<CheckinSummaryResp> {
   return request<CheckinSummaryResp>(
     '/api/checkin/summary?uid=' + encodeURIComponent(anonUid())
   );
+}
+
+export function fetchGrowth(): Promise<GrowthResp> {
+  return request<GrowthResp>('/api/growth?uid=' + encodeURIComponent(anonUid()));
 }
 
 export function fetchCheckinBadges(): Promise<CheckinBadgesResp> {
