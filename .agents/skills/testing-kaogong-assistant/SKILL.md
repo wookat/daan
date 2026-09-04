@@ -5,6 +5,14 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R373 精简回归冒烟（纯后端调度改动、零前端）走查新经验
+- `unhandledrejection` 钩子必须保存 reason 的 **JSON 序列化 + stack + Object.keys**，而不是 `reason.message||String(reason)`——uni promisified API 的拒绝是 `{errMsg:'xxx:fail …'}` 这类无 `.message` 的对象，只存 `String()` 会得到无法定位的 `rej: [object Object]`（R373 375 阶段捕到 1 条，事后无法复现也无法归因）。可直接沿用 `window.__r373rej` 的写法：`JSON.stringify(r)` 失败时回落 `String(r)`。
+- 「答 N 题并提交」在本 app 意味着组内自动进下一题，没有独立「提交」按钮；N 题时用「已答 N/10 · 正确 X」+ hook 中 N× `POST /api/answer_log 200` 作为中间态证据，随后需答完 10 题才有完成页。375 上退出会话用页头「退出」，回到首页后「今日已练」应 +N。
+- 本轮 375 CDP 仿真三页宽度全为 375（无 15px 滚动条差值）；同一台机不同轮可能得到 360，判读仍以 `clientWidth===scrollWidth` 为准。
+- 卷库页头「‹」返回的是上一页栈（如错题本），不是首页；回首页点 tab「刷题」。
+- 结束顺序固定：先 SSH 取容器检查点 + DB 对账/清理（base64 脚本 → `docker cp` → `docker exec python3`），再恢复 localStorage（不刷新），再 `kill $(cat holder.pid)`，最后 `Emulation.setDeviceMetricsOverride(mobile=False)` + `clearDeviceMetricsOverride`（只调 clear 不生效，innerWidth 仍 375）。
+- 后台任务门控（`heavy_task_allowed`/`refresh_question_stats` 只写变化行）UI 不可观测；报告里要把它们归入「未验证」，只主张「用户流程无回归 + `docker logs … | grep -c slow-req` = 0 + StartedAt/VmSwap 不变」。
+
 ## R372 运行时/性能冒烟（零功能变化）走查新经验
 - 「每页主要 API 耗时」用两路取证：`performance.getEntriesByType('resource')` 过滤 `/api/`（`duration` + `responseStatus`，Chrome ≥109）和 fetch/XHR 钩子 `window.__r372`（能拿到 POST 的 status 与耗时）；每次 hard nav 后 `performance.clearResourceTimings()` + 重装钩子，逐页把 JSON 追加到 `/tmp/rXXX_timings.jsonl` 便于最后出表。容器 `docker logs | grep slow-req` 会打印 >5s 的请求，可与前端记录互相印证。
 - 出现 >5s 慢请求时**立刻**在同一分钟抓宿主证据：`uptime`（load）、`free -m`（宿主 swap_used）、`/proc/pressure/{cpu,memory,io}`、`top -bn1 | head`（同机 postgres 等进程）、容器 `/proc/1/status VmSwap/VmRSS/VmHWM`、`memory.events oom_kill`。这样能区分「本进程被换出」（VmSwap>0）和「宿主争用」（VmSwap 0 但 IO/CPU pressure 高）。
