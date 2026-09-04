@@ -362,7 +362,7 @@ import { requestNotificationPermission } from '../../reminder.js';
 import { announce } from '../../a11y-live.js';
 import { pickAnnounceText } from '../../live-policy.js';
 // #endif
-import { paperContinuePlan, paperQuery, paperFinishState } from '../../paper-continue.js';
+import { paperContinuePlan, paperQuery, paperFinishState, paperShareText } from '../../paper-continue.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 import { qStatLine } from '../../q-stat.js';
@@ -2129,12 +2129,14 @@ export default {
         return;
       }
       const pct = Math.round((this.right / this.items.length) * 100);
+      const paperBase = paperShareText(this._ptitle, this.items.length, pct);
       let txt =
+        paperBase ||
         '我在错题邦刷了 ' + this.items.length + ' 道' + (this.lastModule ? this.modName(this.lastModule) : '行测') + '题，正确率 ' + pct + '%';
       if (this.bestStreak >= 3) txt += '，最高连对 ' + this.bestStreak + ' 题';
       if (this.percentile != null) txt += '，击败了 ' + this.percentile + '% 的刷题记录';
-      txt += '！一起来刷：https://kaogong.zalize.com';
-      trackEvent('share_result_copy', 'practice', this.lastModule || null);
+      txt += paperBase ? '！也来练这套卷：https://kaogong.zalize.com/#/pkgA/exam/list' : '！一起来刷：https://kaogong.zalize.com';
+      trackEvent('share_result_copy', 'practice', paperBase ? 'paper' : this.lastModule || null);
       uni.setClipboardData({
         data: txt,
         success: () => uni.showToast({ title: '成绩已复制，去粘贴给研友吧', icon: 'none', duration: 1600 }),
