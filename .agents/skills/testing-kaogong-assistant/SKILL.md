@@ -5,6 +5,15 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R389 `manifest.h5.title` 覆写 index.html `<title>`（SEO 首页标题）生产复验 走查新经验（testing agent）
+
+- **原始 HTML 与挂载后标题是两个不同断言，必须分开取证**：原始 `<title>`/`og:title` 用不执行 JS 的方式读（`curl -s /` 或页面上下文 `fetch('/',{headers:{'X-Kg-Probe':'1'},cache:'no-store'}).text()` 后正则 `<title>([^<]*)</title>`）；挂载后用 `document.title`，uni-app 会在路由渲染时用 `pages.json` 的 `navigationBarTitleText` 覆盖（首页 `刷题`、`pkgA/exam/list` `真题卷库`、`pages/book/book` `错题本`），浏览器标签条上也能看到，截图时让标签文字入镜作为可视证据。坏形态：挂载后 `document.title` 仍等于 SEO 长标题（uni 标题覆盖丢失）或原始 `<title>` 只剩 `错题邦`（构建没吃到 `manifest.h5.title`）。
+- `/tiku/*` 是后端 SSR，不受 uni 构建影响：`/tiku/` 应为 `公务员考试题库_行测真题在线刷题_错题邦`，`/tiku/q/<id>` 为 `<题干截断>_<模块>题库_错题邦`；在同一标签原生输入 URL 打开即可，`document.title` 就是 SSR 标题（无 JS 改写）。`/tiku/q/234080` 是稳定可用的在线 qid。
+- App.vue 无障碍 `h1`（`offscreen` 属性）文本 == 当前路由标题（首页 `刷题`、错题本 `错题本`），练习页也是 `刷题`；用 `document.querySelector('h1').textContent` 读。
+- 卷库对账：钩子只记状态码/耗时时，`items.length` 需在页面上下文再 `fetch` 一次页面自己用过的同一 URL（`/api/exam/papers?kind=zhenti&uid=<uid>`，带 `X-Kg-Probe: 1`），与 `.card.paper` 数比较（本轮两视口 120 == 120）。
+- 每轮流程里同一个 `test-<round>-` 前缀双 uid（1440 `a…` / 375 `b…`）做完 3 题→保留→结束本组 + 错题本，DB 审计固定形态是 12 行：`answer_log 6（probe 全 1）+ mistakes 2 + growth_events 4（practice_quit_keep/practice_quit_end ×2）`，`practice_progress 0`（结束本组会删）。偏离这个数就说明有多余操作，先解释再清理。
+- `cdp.C(tab_dict)` 接收的是 `/json` 里的整条 tab 字典，不是 `webSocketDebuggerUrl` 字符串。
+
 ## R388 管理台「候选真人」行 + `ops_status.crawlers.humans.direct_7d` 生产复验 走查新经验（testing agent）
 
 - **期望值要按 JSON 自己推，不要抄 PR/用户给的数字**：`parse_crawler_stats` 取 `raw.days[-7:]` 求和（`today = days[-1]`），所以 `humans.direct` 里窗口外的日期（本轮 08-25）不计入；先 `cat /home/ubuntu/kaogong-reports/crawler-stats.json`（VPS，容器内挂 `/reports`）读 `generated_at` + `days`，再和页面自己那次 `/api/admin/ops_status` 响应对账。cron 可能重生成 / UTC 零点会滚窗口，执行时再读一次 `generated_at`，变了就重新推。
