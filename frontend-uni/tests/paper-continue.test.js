@@ -1,6 +1,6 @@
 // R360：按卷练习「只练剩余」——paperContinuePlan fail-closed 纯函数
 import { describe, it, expect } from 'vitest';
-import { paperContinuePlan, paperPracticedState, paperQuery, paperFinishState } from '../src/paper-continue.js';
+import { paperContinuePlan, paperPracticedState, paperQuery, paperFinishState, paperShareText } from '../src/paper-continue.js';
 
 describe('paperQuery', () => {
   it('基础：src 必带且编码', () => {
@@ -100,5 +100,28 @@ describe('R364 paperFinishState 完成页归卷', () => {
     for (const v of ['', '   ', null, undefined, 7, {}, []]) {
       expect(paperFinishState(v)).toEqual({ isPaper: false, big: '本组完成', title: '' });
     }
+  });
+});
+
+describe('R365 paperShareText 按卷分享基句', () => {
+  it('合法卷名+n+pct 生成带卷名基句（trim）', () => {
+    expect(paperShareText('2015年新疆卷', 38, 87)).toBe('我在错题邦练完了「2015年新疆卷」全卷 38 题，正确率 87%');
+    expect(paperShareText('  卷名  ', 10, 0)).toBe('我在错题邦练完了「卷名」全卷 10 题，正确率 0%');
+  });
+
+  it('无卷名/空白/非字符串 fail-closed 返回 null', () => {
+    for (const v of ['', '   ', null, undefined, 7, {}, []]) {
+      expect(paperShareText(v, 38, 87)).toBeNull();
+    }
+  });
+
+  it('非法 n/pct fail-closed 返回 null', () => {
+    expect(paperShareText('卷', 0, 87)).toBeNull();
+    expect(paperShareText('卷', -1, 87)).toBeNull();
+    expect(paperShareText('卷', 1.5, 87)).toBeNull();
+    expect(paperShareText('卷', '38', 87)).toBeNull();
+    expect(paperShareText('卷', 38, NaN)).toBeNull();
+    expect(paperShareText('卷', 38, Infinity)).toBeNull();
+    expect(paperShareText('卷', 38, '87')).toBeNull();
   });
 });
