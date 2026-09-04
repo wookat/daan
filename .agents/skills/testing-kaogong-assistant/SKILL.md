@@ -5,6 +5,15 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R372 运行时/性能冒烟（零功能变化）走查新经验
+- 「每页主要 API 耗时」用两路取证：`performance.getEntriesByType('resource')` 过滤 `/api/`（`duration` + `responseStatus`，Chrome ≥109）和 fetch/XHR 钩子 `window.__r372`（能拿到 POST 的 status 与耗时）；每次 hard nav 后 `performance.clearResourceTimings()` + 重装钩子，逐页把 JSON 追加到 `/tmp/rXXX_timings.jsonl` 便于最后出表。容器 `docker logs | grep slow-req` 会打印 >5s 的请求，可与前端记录互相印证。
+- 出现 >5s 慢请求时**立刻**在同一分钟抓宿主证据：`uptime`（load）、`free -m`（宿主 swap_used）、`/proc/pressure/{cpu,memory,io}`、`top -bn1 | head`（同机 postgres 等进程）、容器 `/proc/1/status VmSwap/VmRSS/VmHWM`、`memory.events oom_kill`。这样能区分「本进程被换出」（VmSwap>0）和「宿主争用」（VmSwap 0 但 IO/CPU pressure 高）。
+- `VmHWM` 是进程峰值 RSS，静默期（`KG_BOOT_QUIET_S` 默认 600s）结束后的预热/统计刷新会把它抬高（本轮 555→670 MB，上限 768 MiB），记录前后值并报告余量。
+- 管理台 cold 路径要在 StartedAt+600s **之前**登录才能观测；ADMIN_TOKEN 在容器 env（`docker exec deploy-kaogong-1 printenv ADMIN_TOKEN`），SSH 高负载时 printenv 可能超时导致 `$TOK` 为空、`&&` 短路，建议先落到 `/tmp` 文件再用。`cdp.pick()` 刻意排除 `/admin` 标签，连管理台要自己 `tabs()` 过滤 `'/admin' in url`。
+- 普通刷题到完成页：一组默认 10 题，答 2 题不会到完成页；键盘 `A` 选项 + 答错后 `Enter` 下一题（答对自动跳）最省事，10 题后自动进「本组完成」。
+- localStorage 备份若用 `JSON.stringify(JSON.stringify(localStorage))` 导出会成为**双重编码字符串**，恢复前 `if isinstance(d,str): d=json.loads(d)`，否则会写入 8 万个单字符键；恢复后校验 `Object.keys(localStorage).length==18` 且 `anonUid` 为保护 uid。
+- 375 用 CDP `setDeviceMetricsOverride(mobile=true)` 时 clientWidth/scrollWidth 可能都是 375（本轮）也可能是 360（有滚动条时），以 `clientWidth===scrollWidth` 判无溢出。
+
 ## R371 answer_log 服务端推进错题 SRS（reviewed[] / 不双计 / .fixreport）走查新经验
 - 核心断言是 **网络 + DB 双对账**：页内 fetch/XHR 钩子（样例 /tmp/r371_hook.js，日志存 `sessionStorage.__r371log` 以跨 navigateTo 保留）记录 `POST /api/answer_log` 的 body（是否带 `mid`）与响应 `reviewed[]`，并统计 `/api/review/` 的 **POST** 数必须为 0——`GET /api/review/cur` 是既有轮询，别误判为双计。DB 端每个被纠正的 mistake `review_log` 行数应恰等于答对次数（1 次答对 → 1 行；重练后再对 → 2 行），`next_review-now` 约等于 `REVIEW_INTERVALS_DAYS[streak-1]` 天（1d、3d…）。
 - 三种场次要分开造：①错题本「错题重练」（`/api/mistakes/redo`，items 带 `mistake_id`，body 带 `mid`，完成页 `.redoreport` 已纠正/仍错/达成掌握）；②卷库「只练错题」或按卷练习（卷 kind 会话，items 无 `mistake_id`，body 无 `mid`，服务端按 `question_id+uid` 回退命中，完成页 `.fixreport`「本组答对 N 道曾错题，复习计划已推进（M 道达成掌握）· 回错题本 ›」，mastered=0 时无括号段）；③随机模块刷题很难命中曾错题，用②覆盖「非重练场次」即可。redo 场次的 `.redoreport` 数字用组件 `items` 的 `_picked===answer` 自算对照。
