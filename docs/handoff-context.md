@@ -1609,3 +1609,15 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 生产复验：本机出口实为 `140.232.64.4`（旧清单漏掉的 IP），发 1 条 track + 1 条 answer_log 均落 `probe=1`；`/api/admin/dashboard` today.active 5 / answered 41 / probe_excluded 1（探针行未计入）；testing agent 1440/375 管理台看板副标题/真人 tag/KPI 与页面自身接口响应一致、375 cw==sw、console 0 error，用户端首页双视口 0 error（录屏 PR #585 评论）。
 - 限制：① 打标自 08:41Z 起生效，历史 1040 条 answer_log / 507 条 growth_events 全是 NULL——**R375 起生产取证一律加 `probe` 口径过滤，且至少积累数日干净数据后才能对复习闭环/激活率下结论**；② 副标题「昨日>0」「今日=0」分支未在生产观测；③ growth_events 侧只加了列，除 dashboard 外的漏斗/成长查询（如有）尚未加 probe 过滤。
 - 生产测试数据清理：uid `r374probe-*` 行已删。下次 SOP-10 四维审计 ~R376。
+
+### R375 用户可见的全站聚合接入探针口径（2026-09，分支 devin/1788513418-r375-real-question-stats，PR #587 已合入 main，rev e58779f）
+- 取证：源站访问日志 102,655 条 /api 中 102,541 条来自探针网段，初步可信真人 API 请求 56 条（200×53 / 404×2 / 403×1）、真人 UID 约 3 个（`umst3tuisd7lgzaka` 走通 review→mistakes→check-in→profile→reminders→share）；WordPress/.env/.git 扫描流量不算用户；Cloudflare Analytics token 缺 `zone.analytics.read` 无法查（限制，未补权限）。
+- 方案：`db.REAL_TRAFFIC="COALESCE(probe,0)=0"` 提为共享谓词，`refresh_question_stats()`（题目人次/正确率/`most_wrong`）与 `team._question_stats()`（分享页「击败 X%」）只算真人；历史 NULL 仍计入、不回填；UID 个人历史与 SRS 不变。补丁：**只剩探针行/真人行被清理的题目刷新时把旧聚合清为 NULL**（原实现只更新有真人行的题，陈旧「全站正确率」会一直挂着）。
+- 验证：pytest 318 / ruff / pyright 0；与 main 冲突（R374 `add_column_if_missing` 同文件）已在 `e58779f` 合并解决。生产：q41 只剩 1 条探针行 → (None,None,None)，stale 0 / mismatch 0 / 有统计题 938 / 探针行 80。
+- 部署：rev e58779f，bundle index-EtHOTcLm.js（含 W2 前端），deploy_h5.sh 性能预算全过；W2-A/B 生产回归：`POST /api/export/pdf` 畸形参数 400、`/tiku/` 「10万+ 行测题 · 1.5万+ 历年真题」、`idx_mist_uid` 存在、`/api/mock/events` 正常。
+
+### W2 内容清洗事故与回滚（2026-09-04，生产数据操作，无发版）
+- 事故：`scripts/w2_content_cleanup.py --apply` 在生产改写 7700 题的 question/options（去汉字间空格）+ 2398 题 hs 元句。testing agent 冒烟发现**逻辑填空题被毁**：选项分词空格是语义（「履行 强化 改变」→「履行强化改变」，约 1191 题选项 ≥6 字无分隔），题干中连续空格/`\xa0` 是空位占位（约 92 题空位消失）。第二个连带事故：`db._seed_questions()` 启动时按题干原文 `INSERT OR IGNORE`，题干被改写后容器重启把 **1928 条种子题当新题重插**（10:26:59Z，新 id、无作答引用、tag3_review 166 行）。
+- 回滚（容器内脚本，备份 `/data/data.db.bak-w2`）：先删 1928 条重复行（remap 引用为空，tag3_review 166 行删除），再从备份原样恢复 2000 题（此前两次恢复因 UNIQUE 冲突中断时已恢复其余 5700 题并留下 `question||char(0)||id` 临时后缀），rescore，restart 清 lru_cache。终态核对：questions 156792 = 备份；question/options 与备份差异 0；NUL 占位 0（`id=334117` 备份里本就含 NUL，非本次）；hs 与备份差异恰 2398（预期清洗）；explanation/answer 差异 0；restart 后 seed 未再插入；restarts 0 / healthy。仍含元句的 173 条 hs 全部 disabled=1，本就不在 ONLINE 口径。
+- 处置：脚本撤掉 question/options 改写，只保留 hs 元句剥离（本轮 PR）。**规则：任何对 `questions.question` 的文本改写都会被 `_seed_questions` 视作新题重插，改写前必须先改去重键或同步改 `knowledge/questions_bank.jsonl`；对选项/题干去空格必须先排除填空题型。** 存量 ~7300 题汉字间空格（主要 id≥1046924 AI yanyu 批次）与 76 对「同题异格式」重复归入 backlog（content P2），不再用通用规则一刀切。
+- w2.md §5.0 中「生产 apply 已执行 7700 改写」的记录已被本节覆盖：question/options 部分已回滚，hs 部分保留。
