@@ -1563,3 +1563,12 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 生产复验（PR #579 评论）：uid test-r370-c5ae，1440 首轮 38 答 5 错（2 题长按排除）→ CTA 重练 5 题 → 5 条 POST /api/answer_log（修复前 0）、DB 38+5=43、/api/exam/papers wrong 5→2、答对题 wrong:false；重练 items 无 _logged/_excl/_picked 残留、.opt.excl=0；联动 R367 卷卡「错 2 题」/action sheet、R369 直达 items=[236215,236243]；回归错题重练「再来一组」/普通刷题落库正常；375 CTA 全流程 2 条 POST、scrollWidth 375；console 0 error。清理 109 行（新增 review_log 表）LEFTOVER 0，保护 uid 快照一致，容器 StartedAt 04:39:49Z 未变。
 - 需注意：复验中 7 条作答一度进 offlineQueue（生产 503/超时），刷新后「离线作答已同步」收敛——DB 对账前先刷新冲队列。
 - 详见 docs/iter/round-3/r370-paper-retry-log.md。
+
+### R371 任意场次答对曾错题 → 服务端推进错题复习计划（2026-09，分支 devin/1788498918-r371-answer-advance-review，PR #580 已合入 main，base=main）
+- 取证（/data/data.db 实查）：mistakes 222、mastered 0、review_count=0 占 202；21 条未掌握错题在建立后已有答对 answer_log（9 条 review_count 仍 0、6 条答对 ≥2 次）；review_log 近 30 天仅 30 行/5 uid。根因：答错任何场次都走 save_mistake 重置 SRS，答对只有错题本重练场次由前端逐题 POST /api/review/{mid}；普通刷题/按卷/只练错题/CTA 重练/模考/PK 答对只写 answer_log。
+- 方案（零新表/端点）：db.py 抽 `_advance_review`（record_review 与 answer_log 共用同一 SRS）、`_find_open_mistake`（条目 mid 优先→question_id+uid 回退，仅 mastered=0）、`save_answer_log_detail` 返回 `{saved, reviewed:[{mistake_id,streak,mastered}]}`（同批同错题只推进一次）；`save_answer_log` int 契约不变，exam_api/team 调用方自动获得推进。POST /api/answer_log 新增 reviewed 字段。前端 practice.vue：logAttempts 带 `mid: q.mistake_id`；syncRedoReviews 不再 POST /api/review（防双计），改 await 在途落库请求后用 reviewed 汇总；非重练场次新增 `.fixreport`「本组答对 N 道曾错题，复习计划已推进（M 道达成掌握）· 回错题本 ›」；新 src/review-advance.js。掌握阈值 [1,3,7,15,30] 未动。
+- 验证：pytest 285（+6）/ruff、vitest 510（+5）/eslint/build:h5 全绿；pyright 4 错基线不变。
+- 部署：rev b4f12af，bundle index-CMN418Sg.js，Lighthouse 预算全过。
+- 生产复验（PR #580 评论）：uid test-r371-oayu；1440 按卷 38 答 3 错 → 错题重练 2 对 1 错 → 3 条 POST 带 mid、reviewed 各 1、**0 条 POST /api/review**、DB review_count/streak=1、next_review≈+1d、review_log 每题恰 1 行；错题本 2 题「明天复习」1 题「今日待复习」banner 3→1；卷库「只练错题」（无 mistake_id，qid 回退）答对 → `.fixreport` 出现且点击进错题本，banner 消失；375 重练 3 对 → streak 2、next_review≈+3d、redoReport 3/0/0、无横向溢出（clientWidth==scrollWidth==360，桌面 Chrome 仿真带 15px 滚动条，不能硬等 375）、console 0 error。清理 63 行（mistakes 3/answer_log 45/review_log 6/growth_events 9），保护 uid 快照不变。
+- 需注意：造数据阶段生产 503/524 致容器重启一次（StartedAt 05:43:19Z → 05:57:25Z），作答走 offlineQueue 刷新后补齐无丢失；功能证据全部采自重启后稳定窗口。共宿负载问题持续，仍建议限资源。
+- 详见 docs/iter/round-3/r371-answer-advance-review.md。下次 SOP-10 四维审计 ~R376。
