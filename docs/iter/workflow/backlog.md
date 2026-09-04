@@ -10,6 +10,9 @@
 - [x] W2-A（W2，P1，backend）`/api/*` ValueError/TypeError → 统一 400、`api_save_mistake` question_id 整型化、`idx_mist_uid` 索引、SEO 页脚「10万+ 行测题 · 1.5万+ 历年真题」、`normalize_cjk_spaces`/`HS_META_RE` + `scripts/w2_content_cleanup.py`、生产广场 3 条测试评论已软删 —— 已合入 `devin/wf-w2-integration`，本地 ruff/pytest 266/pyright 全绿 + uvicorn 实测；**已上线（PR #564 → rev b31708d）并生产回归全过；清洗脚本生产 apply 已执行（改写 7700 + hs 2398 / rescored 10088，备份 /data/data.db.bak-w2）**，apply 预演暴露 UNIQUE 碰撞缺陷已修（见 w2.md §5.0）
 - [x] W2-B（W2，P1，frontend-h5）index.html/manifest/og-card/share-q/pk-result 口径残留清零、`weak-spots.js` 薄弱考点同名合并、`exp-dup.js` 解析复读隐藏、contest 零人数文案 —— 已合入；lint/vitest 469/build:h5 全绿，本地 build 产物 Chrome 走查通过；生产 view-source/SW 核对待部署后做
 - [x] W2-C（W2，P1，miniapp）连签 hero/stats 改服务端优先、`utils/offline.ts` answer_log/mistakes 离线队列、exam 错误态+重试、`page` 高度约束、首页题数 `/api/question_counts` 动态化、README Skyline→webview —— 已合入；typecheck/lint/vitest 7 全绿；**微信开发者工具走查未做**（断网→恢复落库、连签三处一致、14 页滚到底 + login 回归、page 高度对 navbar/底栏影响）
+- [x] W3-A（W3，P1，backend）`/api/questions/export` 复用 import 令牌 401、`growth_stats` 周键 `+8 hours`、`_client_ts` 接受 items[].t（秒/毫秒、[now−30d, now+5min] 外回退 now）、`/api/rate` `rl(60/600s)` —— 已合入 `devin/wf-w3-integration`；ruff/pyright 0/pytest 342（+24）全绿，本地 uvicorn 实测 export 401·t 落昨日·CST 周键 2026-35·第 61 次 429；**生产回归待部署**（当前 rev e58779f export 仍 200）
+- [x] W3-B（W3，P1，miniapp+H5）小程序 stats 页 `fetchGrowth` 服务端优先/pstats 降级、离线队列与在线上报 items 带 `t`、types GrowthResp/`AnswerLogItem.t`/`Question.image_credit`、lint 脚本内置 `ESLINT_USE_FLAT_CONFIG=false`；H5 `buildPaceRows` 读 `answered`（整模块未作答→「未作答」、部分作答按已答折算）、`goTask` real_mode 进卷库 —— 已合入；typecheck/lint 0、lint/vitest 523/build:h5 全绿；本地 build 产物报告页 Chrome 实测 skip「未作答」灰标 + 折算注；实施方生产 API 级回归已做并清理（test-w3-b-pace leftover 0）；**小程序未真机、goTask 未端到端点击、H5 报告页生产 UI 待部署**
+- [x] W3-C（W3，P2，content）`quality.sanitize_explanation`（抓取源统计前缀/「解析」标签族 + 广告尾句 + CJK 空格归一，数字/字母空格保留）+ `scripts/w3_content_cleanup.py`（dry-run 默认、`--apply` 备份 `.bak-w3`、rescore、不下线）—— 已合入；test_quality_penalties 11（+3）；本地临时库 dry-run 2500 → apply → 复扫 0，非 explanation 列不变；生产只读快照 dry-run rewrite 10,068（prefix 5383 / ad 192 / space 10045）；**生产 dry-run 复核 + `--apply` 待部署后单独确认**（「解析」标签扩展规则与公式缺图空格需人审）
 
 ## Deferred（W2 上线回归追加）
 
@@ -25,8 +28,8 @@
 - [ ] [新需求·竞品] 两套模考入口合并、原生导航字体统一、错误态文案统一属 P2/P3 体验项，本轮未复核证据，下轮由 UX 走查带截图立项。
 - [ ] [新需求·内容] hs_explanation 中「官方解析误将…」类纠错信息有价值，可在 quality 治理后单独抽出为「题目勘误」提示而非直接下线（需产品决策）。
 - [ ] [新需求·安全巡检] 把 guard_account_uid 三路径回归 curl（application/JSON、无 Content-Type、multipart scan_sheet，uid=u999999 无 token → 403 且不落库）写入 `.agents/skills/testing-kaogong-assistant` 走查清单，每轮上线后跑一次。
-- [ ] [工程·P3] miniapp-native `npm run lint` 被仓库根 `eslint.config.mjs`（R213）误切 flat config 报 `Invalid option '--ext'`；package.json 加 `ESLINT_USE_FLAT_CONFIG=false` 或迁移 flat config。
-- [ ] [工程·P3] miniapp `api/types.ts Question` 补 `image_credit?: string | null` 类型声明（M1 wxml 透传运行时可用但无类型）。
+- [x] [工程·P3] miniapp-native `npm run lint` 被仓库根 `eslint.config.mjs`（R213）误切 flat config 报 `Invalid option '--ext'`；package.json 加 `ESLINT_USE_FLAT_CONFIG=false` 或迁移 flat config。—— **W3-B 已在 package.json lint 脚本内置该环境变量**（flat config 迁移未做）。
+- [x] [工程·P3] miniapp `api/types.ts Question` 补 `image_credit?: string | null` 类型声明（M1 wxml 透传运行时可用但无类型）。—— **W3-B 已补**。
 
 ## Deferred（W2 追加）
 
@@ -40,8 +43,28 @@
 - [ ] [frontend-h5·P2] `/api/questions` 不返回 tag3_name（仅 `/api/mistakes` 补齐）；若后续多个页面需要三级考点名，改为 qbank_api 统一附带 tag3_name（复用 taxonomy.topic_index），并去掉 W2-B `weak-spots.js` 的前端合并逻辑。
 - [ ] [frontend-h5·P2·未验证] 首屏信息密度、深色态对比、真机 iOS/Android 字体与 emoji 渲染缺真机截图证据（Linux Chrome 字体差异不能作缺陷）；真机走查后再立项。
 - [ ] [miniapp·P2] 首页 loadPlan/loadDueReview、stats 热力图降级仍静默（书本页已有 toast）；统一一个轻量「数据可能不是最新」提示条而非逐页 toast。
-- [ ] [miniapp·P3] README/工程说明安装步骤需与 webview 现状同步复核（W2-C 只改渲染层描述与删除「基础库 3.x（Skyline 需要）」）；`npm run lint` 需 `ESLINT_USE_FLAT_CONFIG=false` 工程债见上。
+- [ ] [miniapp·P3] README/工程说明安装步骤需与 webview 现状同步复核（W2-C 只改渲染层描述与删除「基础库 3.x（Skyline 需要）」）；lint 环境变量工程债已由 W3-B 收口。
 - [ ] [miniapp·待走查] W2-C 微信开发者工具验收清单（重开项目确保非旧 .js 产物）：断网完成 3 题→恢复→`/api/answer_log` 落库=3（test-w2-* uid，`/api/checkin/summary` 核对当日 n）；首页 hero/任务卡/统计页连签一致且等于 `/api/checkin/badges.streak`；模考 tab 断网错误态+重试；14 页滚到底、login 页无截断；首页题数与 `/api/question_counts` 一致；结束清理 test-w2-* 数据。
 - [ ] [运营·P2·新需求] 模考大赛冷启动：不做假数据；contest 页展示历史场次真实累计参与人数替代单场零值（W2-B 已先以「本场首批报名开放中 · 全站同卷」文案兜底）。
 - [ ] [监测·P2] 首访「60 秒等待」W2 未复现，继续保留观察项（见 W1 条目），不立项。
 - [ ] [部署后回归·W2] W2-A：`POST /api/export/pdf ['abc']` → 400 JSON、`/tiku/` 页脚 10万+、清洗脚本生产 dry-run（预期 CJK 空格约 12807 / hs 元句约 2398）→ 核对 → `--apply`（备份 `/data/data.db.bak-w2`）→ 抽 20 题含 332719/246674/1274976 → `docker restart` 刷 lru_cache；W2-B：新 bundle ≠ `index-Bm2wz5mH.js` + SW 更新、view-source meta/og/JSON-LD/og-card.png、share-q 不存在 id 文案、test-w2-* 完成页无重名、contest 零人数文案。部署前 `git merge-base --is-ancestor` 逐项核对近期 merge 点（R355 教训）。
+
+## Deferred（W3 追加）
+
+- [ ] [部署后回归·W3] W3-A：`GET /api/questions/export?limit=1` 无头 → 401（当前生产 200，hs 管线若用 export 需配 `X-Import-Token`）、test-w3-* uid `POST /api/answer_log` items 带 `t`=昨日 → `/api/checkin/summary` days 落昨日、`/api/growth` weeks 键与北京时间一致、`/api/rate` 连发 61 次第 61 次 429、核心刷题/错题/模考/统计 200；W3-B：新 bundle ≠ `index-C7wGv3is.js` + SW 更新、某模块全空模考报告页「未作答」灰标；W3-C：容器内 `python3 - < scripts/w3_content_cleanup.py` dry-run（预期 rewrite ≈10,068 / prefix ≈5383 / ad ≈192 / space ≈10045）→ 人审 → `--apply`（备份 `/data/data.db.bak-w3`）→ `/tiku/q/262611`、`/api/question/262611` 无广告句、`/api/question/235535` 无统计前缀 → `docker restart` 刷 lru_cache。结束清理 test-w3-* 数据。部署前 `git merge-base --is-ancestor e58779f <deploy_rev>` 核对。
+- [ ] [backend·P2·一行补] 入库防再污染：`sanitize_explanation` 接到 `db.import_questions` / qbank import 入口（W3-A 已合入，同文件可补）。
+- [ ] [backend·P3·待证据] async def 端点内同步 SQLite/CPU：push_api.py subscribe/unsubscribe、ai_api.py api_explain 的 `db.get_explain_cache`、exam_api.py scan_sheet、main.py guard_account_uid 的 owns_uid 查库、etag_conditional 对 SSR 全文 md5 —— 已核实存在但均毫秒级小查询，未拿到与 R372 内存/长尾的因果证据；改法是非流式端点改回 def（走线程池），待 slow-req 日志佐证再做。
+- [ ] [backend·P3·成本中] `_ensure_*` 运行时懒迁移 22 函数 / 161 处调用（每请求 CREATE TABLE IF NOT EXISTS），R375 已引入 add_column_if_missing，建议统一收敛到 startup 一次性 migrate；收益未量化。
+- [ ] [backend·P3·口径] `/api/questions?limit=0` 返回 1 条（生产实测）—— 疑 `max(1,…)` 兜底，属边界口径而非缺陷，需确认是否有前端依赖。
+- [ ] [backend·P3·待量化] 错题写放大（同一题多次答错重复 upsert）与 `/api/mistakes` 合并口径 —— 本轮未拿到量化证据，需先在 answer_log/mistakes 抽样。
+- [ ] [frontend-h5·P2·产品决策] 首页「每日目标 dailyGoal(20/50/100，本地+profile.daily_goal)」与「学习计划 planToday.tasks 目标」两套目标并存（home.vue:95-120 vs 166-178），需产品定口径后合一。
+- [ ] [frontend-h5·P3·随手] `practice.vue:2228 exportPaper` 无引用死代码；home.vue dayKey 已复用 checkin.js。
+- [ ] [frontend-h5·未验证] 收藏双数据源、main.js 动态 import 拆包、book.vue fabmenu 遮挡等 W3 前端发现本轮未逐条复核；`home.vue goTask` real_mode → 卷库跳转未端到端点击验证（本地临时库无 real_mode 阶段计划）。
+- [ ] [miniapp·未验证] 真机渲染/键盘/安全区、stats 页服务端优先/pstats 降级、断网补传后 `t` 落作答当日（依赖 W3-A 部署）—— Linux 无开发者工具，需 macOS/Windows 会话补一次真机走查（W2-C 清单一并）。
+- [ ] [content·P3·先统计] hs 讲解模板化句式（「确认答案为X」「用关键词定位法」高频重复）—— 人味问题但改法涉及 LLM 重写，受「不反复触发 AI」约束，先统计句式频次再决定。
+- [ ] [content·P2·需人审] 「微信/关注」等词在常识题解析中出现（q320965/185847/239781/260004）需人工判断是题目正文还是广告残留，不能规则一刀切。
+- [ ] [content·P2·apply 前人审] W3-C 已知边缘：抓取时丢失公式图片留下的「容量为 毫升」类空格会被并成「容量为毫升」（与 W2 题干规则同口径，ziliao 41 条/部分 shuliang 可能含）；「解析 」标签扩展规则超出工作项原文两条常量。
+- [ ] [新需求提案·增长/留存·待下轮按数据排期] 5 题微组（碎片时间刷题）；邀请落地页预览（复用 team._sharer_invite）；Web Share API 替代复制链接；周报实时化；分享者与被分享者作答对比；学习地图游戏化；AI 先提示后解析模式；5 分钟微模考。
+- [ ] [运维·外部卡点] 生产性能长尾根因归因（R372/R373 已缓解未归因）、竞赛/PK/组队活跃态在生产的真实数据观察（R374 起需 probe 口径过滤积累数日）、AI 实时回复体验。
+- [ ] [流程] 每轮先核对 `/api/health` rev 与 main 的祖先关系，避免把「已上线未合入」或「已合入未上线」当缺陷（W3 集成时 e58779f 已是 HEAD 祖先，无漂移）。
+- [ ] [环境·P3] main 在最新 fastapi 0.141 / starlette 1.6 下有 8 例既有测试 `database is locked`（test_int_params_400 / test_llms_txt / test_material_group×2 / test_mistakes_paper×4，均 conftest.seed_questions；W3-A 实施方两套 venv 对照确认为基线问题）；Dockerfile `pip install fastapi` 未钉版本，重建镜像时关注。fastapi 0.115.12 / starlette 0.46.2 下 342 全绿。
