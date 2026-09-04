@@ -7,7 +7,7 @@
       <view class="hero-deco" />
       <view class="hero-top">
         <text class="hero-label">今日已练</text>
-        <text class="hero-streak" wx:if="{{streak > 0}}">🔥 连续刷题 {{streak}} 天</text>
+        <text class="hero-streak" wx:if="{{badgeStreak || streak}}">🔥 连续刷题 {{badgeStreak || streak}} 天</text>
       </view>
       <view class="hero-num-row">
         <text class="hero-n">{{today}}</text>

@@ -118,6 +118,16 @@ def test_tiku_copy_claims_xingce_only(client):
     assert "行测/申论题目" not in r2.text
 
 
+def test_tiku_footer_count_claim_matches_home(client):
+    """W2：/tiku 页族页脚题量口径与 H5 首页一致，不再出现过时的「13万+」。"""
+    qids = seed_questions()
+    for path in ("/tiku/", "/tiku/yanyu/", f"/tiku/q/{qids[0]}", "/tiku/discuss/"):
+        r = client.get(path)
+        assert r.status_code == 200, path
+        assert "10万+ 行测题 · 1.5万+ 历年真题" in r.text, path
+        assert "13万+" not in r.text, path
+
+
 def test_indexnow_page_urls_cover_sitemap_families(client):
     # R255：IndexNow 页族提交集合 = 首页 + 三个非题目 sitemap 的全部 URL
     from app import seo

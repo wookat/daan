@@ -1,5 +1,6 @@
 """R374：探针出口网段（KG_PROBE_CIDRS）流量入库侧打标，运营看板只算真人。"""
 import ipaddress
+import sqlite3
 import time
 
 import pytest
@@ -193,6 +194,27 @@ def test_refresh_clears_stale_stats_when_only_probe_rows_remain(client, probe_ne
     conn.close()
     assert tuple(r) == (None, None, None)
     _cleanup()
+
+
+def test_add_column_tolerates_concurrent_duplicate():
+    """两个连接各自看到列缺失后同时 ALTER：后到者的 duplicate column 不得抛 500。"""
+    a = sqlite3.connect(":memory:")
+    a.row_factory = sqlite3.Row
+    a.execute("CREATE TABLE t (id INTEGER)")
+    assert db.add_column_if_missing(a, "t", "probe", "INTEGER") is True
+    assert db.add_column_if_missing(a, "t", "probe", "INTEGER") is False
+
+    class _Racy:
+        """PRAGMA 返回旧快照（无 probe 列），ALTER 走真实连接 → 必碰 duplicate column。"""
+
+        def execute(self, sql, *args):
+            if sql.startswith("PRAGMA"):
+                return [{"name": "id"}]
+            return a.execute(sql, *args)
+
+    assert db.add_column_if_missing(_Racy(), "t", "probe", "INTEGER") is False
+    with pytest.raises(sqlite3.OperationalError):
+        db.add_column_if_missing(_Racy(), "nope", "probe", "INTEGER")
 
 
 def test_probe_column_migration_idempotent():

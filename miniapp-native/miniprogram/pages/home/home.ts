@@ -2,6 +2,7 @@ import {
   fetchCheckinBadges,
   fetchPlanToday,
   fetchProfile,
+  fetchQuestionCounts,
   fetchReviewDue,
   saveProfile,
   trackEvent,
@@ -18,14 +19,35 @@ interface ModCard {
   count: string;
 }
 
+// count 为静态回退（口径同生产 2026-08 /api/question_counts），接口成功后由 fmtCount 实时覆盖
 const MODS: ModCard[] = [
   { key: 'ziliao', name: '资料分析', color: '#14B8A6', bg: '#E6F9F6', count: '4,600+ 题' },
-  { key: 'shuliang', name: '数量关系', color: '#2e5bff', bg: '#eef3ff', count: '3.2 万题' },
-  { key: 'yanyu', name: '言语理解', color: '#F43F5E', bg: '#FEF0F2', count: '2.2 万题' },
-  { key: 'panduan', name: '判断推理', color: '#8B5CF6', bg: '#F3EFFE', count: '2.2 万题' },
-  { key: 'changshi', name: '常识判断', color: '#F59E0B', bg: '#FEF7E6', count: '3 万题' },
-  { key: '', name: '全模块混练', color: '#2e5bff', bg: '#dbe6ff', count: '11 万+ 题' },
+  { key: 'shuliang', name: '数量关系', color: '#2e5bff', bg: '#eef3ff', count: '3.3 万题' },
+  { key: 'yanyu', name: '言语理解', color: '#F43F5E', bg: '#FEF0F2', count: '1.8 万题' },
+  { key: 'panduan', name: '判断推理', color: '#8B5CF6', bg: '#F3EFFE', count: '2.3 万题' },
+  { key: 'changshi', name: '常识判断', color: '#F59E0B', bg: '#FEF7E6', count: '3.1 万题' },
+  { key: '', name: '全模块混练', color: '#2e5bff', bg: '#dbe6ff', count: '10 万+ 题' },
 ];
+
+function fmtCount(n: number, total = false): string {
+  if (total) return Math.floor(n / 10000) + ' 万+ 题';
+  if (n >= 10000) return (n / 10000).toFixed(1).replace(/\.0$/, '') + ' 万题';
+  const k = Math.floor(n / 100) * 100;
+  return k.toLocaleString('en-US') + '+ 题';
+}
+
+function applyCounts(mods: ModCard[], counts: { module: string; n: number }[]): ModCard[] {
+  const byMod: Record<string, number> = {};
+  let total = 0;
+  for (const c of counts) {
+    byMod[c.module] = c.n;
+    total += c.n;
+  }
+  return mods.map((m) => {
+    if (!m.key) return total ? { ...m, count: fmtCount(total, true) } : m;
+    return byMod[m.key] ? { ...m, count: fmtCount(byMod[m.key]) } : m;
+  });
+}
 
 Page({
   data: {
@@ -77,6 +99,16 @@ Page({
       dateStart: fmt(d),
       dateEnd: fmt(new Date(d.getFullYear() + 2, d.getMonth(), d.getDate())),
     });
+    this.loadCounts();
+  },
+  // 题数与 H5 首页同源 /api/question_counts，失败保持静态回退
+  async loadCounts() {
+    try {
+      const d = await fetchQuestionCounts();
+      if (d.counts && d.counts.length) this.setData({ mods: applyCounts(MODS, d.counts) });
+    } catch (e) {
+      /* 非关键路径 */
+    }
   },
   onShow() {
     syncTabBar(this, 0);
@@ -126,11 +158,11 @@ Page({
       /* 非关键路径 */
     }
   },
-  // 连签口径以服务端 /api/checkin/badges 为准，失败降级本机 streak
+  // 连签口径以服务端 /api/checkin/badges 为准（hero / 任务卡同源），失败降级本机 streak
   async loadBadges() {
     try {
       const b: CheckinBadgesResp = await fetchCheckinBadges();
-      this.setData({ badgeStreak: b.streak });
+      this.setData({ badgeStreak: b.streak, streak: b.streak });
       this.updateMilestone(
         b.streak,
         (b.badges || []).map((x) => x.days)

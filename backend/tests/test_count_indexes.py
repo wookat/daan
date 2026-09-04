@@ -1,4 +1,4 @@
-"""题库聚合统计查询计划回归（R149）：三条 GROUP BY 聚合必须走覆盖索引，不回表。"""
+"""题库聚合统计查询计划回归（R149）：三条 GROUP BY 聚合必须走覆盖索引，不回表；W2 mistakes(uid, created_at)。"""
 from app import db
 
 
@@ -69,3 +69,18 @@ def test_batch_answer_dist_uses_covering_index():
         "WHERE import_batch='b1' GROUP BY a"
     )
     assert "COVERING INDEX idx_q_batch" in plan
+
+
+def test_list_mistakes_uses_uid_index_no_sort():
+    """list_mistakes: WHERE m.uid=? ORDER BY m.created_at DESC → idx_mist_uid 同时承担过滤与排序。"""
+    plan = _plan(
+        "SELECT m.*, q.tag3 FROM mistakes m LEFT JOIN questions q ON q.id=m.question_id "
+        "WHERE 1=1 AND m.uid='u' ORDER BY m.created_at DESC LIMIT 500"
+    )
+    assert "USING INDEX idx_mist_uid (uid=?)" in plan
+    assert "TEMP B-TREE" not in plan
+
+
+def test_mistake_count_by_uid_uses_index():
+    plan = _plan("SELECT COUNT(*) FROM mistakes WHERE uid='u'")
+    assert "COVERING INDEX idx_mist_uid" in plan
