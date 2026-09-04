@@ -12,6 +12,16 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 - 反例断言（证明真人不被误标）：非探针 IP + 小程序 UA `... wv) ... MiniProgramEnv/android` 或 iPhone Safari UA、不带头 → `probe=0`。
 - 看板副标题 `.pagehead .sub` 新增「探针口径自 YYYY/M/D 起生效，此前行无法区分、按真人计」，日期来自 `dashboard.probe_since`（`MIN(created_at) WHERE probe IS NOT NULL`，生产预期 2026-09-04）；与 API 对账时注意 `toLocaleDateString('zh-CN')` 输出 `2026/9/4` 格式。
 
+### R386 生产复验 走查新经验（testing agent）
+- **显式头会话要独立 CDP 进程保活**：`Network.setExtraHTTPHeaders` 是 per-session，ws 一关头就没了。用 `/tmp/cdp174/holdhdr.py` 之类的 holder（`setsid nohup … &`，记 PID）持有；结束按 **PID** kill，不要 `pkill -f`（会误杀自身 shell）。
+- **证明头真的发出去了**：不要只靠 SQL probe=1（本机出口在 `KG_PROBE_CIDRS` 内，网段路径同样会打 1）。另开一个 CDP 会话 `Network.enable` 后监听 `Network.requestWillBeSentExtraInfo`，读 `headers['X-Kg-Probe']`；注意用 raw 非 await 的 `Runtime.evaluate` 触发请求，否则 `C.eval` 会把事件消息吞掉。报告里「仅显式头」路径要如实标 untested，除非能从网段外出口发请求。
+- **对账用页面自己那次 dashboard 响应**：`r374.HOOK` 把响应存在 `window.S.dash`，在页内算 `new Date(S.dash.probe_since*1000).toLocaleDateString('zh-CN')` 与 `.pagehead .sub` 正则 `探针口径自 (\d{4}/\d{1,2}/\d{1,2}) 起生效` 抓到的日期比对；不要另发 fetch（缓存 5 分钟，可能拿到不同快照）。
+- **375 `.sub` 折 4 行（h ≈ 80 px）是正常整句折行**，判「逐字竖排」看 `.kpi .lb` 文本 Range 的 `getClientRects()` 是否 1 个矩形（题库健康度带徽章为 3 个矩形也是紧凑单行），而非看总高度。
+- 用户侧 hook 导航后可能丢失（`hdr:false`），进入练习页后重新 eval `r383.HDR` 并用 `JSON.stringify(window.__hdr||[])` 校验；hook IIFE 无返回值，eval 返回 `None` 属正常。
+- 期望落库口径：每个 uid 3 题 → `answer_log` 3 行 probe=1；保留进度 → `growth_events practice_quit_keep probe=1` + `practice_progress idx=3`；结束本组 → `practice_quit_end probe=1` 且 `practice_progress` 行被删。growth 事件在会话结束前查不到，先原生退出再读 SQL。
+- 收尾 `Emulation.clearDeviceMetricsOverride` 单独调用有时不生效（innerWidth 仍 375）：先 `setDeviceMetricsOverride(width=0,height=0,deviceScaleFactor=0,mobile=False)` 再 clear，等 1 s 复查。
+- 看板 `today.probe_excluded` 当天可能为 0（复验作答都是当天 probe=1 但缓存 5 分钟），`yesterday` 会显示前一轮复验条数；文案条件是「今日或昨日 > 0」即显示。
+
 ## R385 SEO 深链 → tag3+module 抽题（`idx_q_tag3_pick` 覆盖索引）生产复验 走查新经验
 
 - **SEO 深链契约**（`backend/app/seo/pages.py`）：`/tiku/q/<id>` 页面 CTA `.cta.cta-w` 的 href 形如 `https://<base>/#/pages/practice/practice?qid=<id>&tag3=<tag3>&module=<module>&source=seo_q`；选项 `.opt` 会再加 `&pick=X`。复验必须**原生点击渲染出来的 CTA**（375 下常在首屏外，先原生滚动），不要自己拼 practice URL。
