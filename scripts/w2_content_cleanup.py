@@ -38,7 +38,7 @@ def scan(conn):
         f"SELECT id, module, question, options FROM questions WHERE {ONLINE} AND ("
         "question LIKE '% %' OR question LIKE '%　%' OR options LIKE '% %' OR options LIKE '%　%')"
     ).fetchall()
-    spaces = []
+    spaces, collisions, seen_new_q = [], [], {}
     for r in rows:
         q = r["question"] or ""
         new_q = quality.normalize_cjk_spaces(q)
@@ -48,6 +48,20 @@ def scan(conn):
         d = dict(r)
         d["new_question"] = new_q if new_q != q else None
         d["new_options"] = new_opts
+        if d["new_question"] is not None:
+            # questions.question UNIQUE：去空格后若与另一题同文，说明是同题异格式的重复，
+            # 题干不改写（留给重复簇治理决定去留），选项仍可清洗
+            twin = conn.execute(
+                "SELECT id, disabled FROM questions WHERE question=? AND id<>?", (new_q, r["id"])
+            ).fetchone()
+            twin = (twin["id"], int(twin["disabled"] or 0)) if twin is not None else seen_new_q.get(new_q)
+            if twin is not None:
+                collisions.append({"id": r["id"], "module": r["module"], "twin": twin[0], "twin_disabled": twin[1]})
+                d["new_question"] = None
+                if new_opts is None:
+                    continue
+            else:
+                seen_new_q[new_q] = (r["id"], 0)
         spaces.append(d)
 
     # b. hs 管线元句
@@ -62,7 +76,7 @@ def scan(conn):
         d = dict(r)
         d["new_hs"] = quality.sanitize_hs(hs)
         meta.append(d)
-    return {"spaces": spaces, "meta": meta}
+    return {"spaces": spaces, "meta": meta, "collisions": collisions}
 
 
 def report(res: dict):
@@ -89,6 +103,10 @@ def report(res: dict):
         m = quality.HS_META_RE.search(hs)
         print(f"    #{r['id']} before: {hs[max(0, m.start() - 30):m.end() + 30]!r}")
         print(f"    #{r['id']} after : {(r['new_hs'] or '')[max(0, m.start() - 30):m.start() + 30]!r}")
+    col = res["collisions"]
+    online_twin = [c for c in col if not c["twin_disabled"]]
+    print(f"[c] cjk-space collisions (skip question rewrite): {len(col)}  twin online {len(online_twin)} / twin disabled {len(col) - len(online_twin)}")
+    print("    online-twin pairs sample:", [(c["id"], c["twin"]) for c in online_twin[:SAMPLE_N]])
     print(f"to rewrite: question/options {len(sp)}, hs {len(mt)}, distinct questions {len({r['id'] for r in sp + mt})}")
 
 
@@ -135,7 +153,10 @@ def main():
     report(res)
     if args.dump:
         with open(args.dump, "w", encoding="utf-8") as f:
-            json.dump({k: [r["id"] for r in res[k]] for k in ("spaces", "meta")}, f, ensure_ascii=False)
+            json.dump(
+                {"spaces": [r["id"] for r in res["spaces"]], "meta": [r["id"] for r in res["meta"]], "collisions": res["collisions"]},
+                f, ensure_ascii=False,
+            )
         print("dumped ids ->", args.dump)
     if not args.apply:
         print("dry-run only; pass --apply to write")
@@ -151,7 +172,7 @@ def main():
     n = apply(conn, res)
     print("rewritten + rescored questions:", n)
     remain = scan(conn)
-    print("re-scan after apply:", {k: len(remain[k]) for k in ("spaces", "meta")})
+    print("re-scan after apply:", {k: len(remain[k]) for k in ("spaces", "meta", "collisions")})
     conn.close()
 
 

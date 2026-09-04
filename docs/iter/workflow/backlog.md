@@ -7,9 +7,13 @@
 - [x] R348-B1（W1，P0，backend）账号 uid 归属守卫补洞（Content-Type 大小写 + multipart scan_sheet）、写接口畸形数字 400、连签口径统一 —— 已合入 `devin/wf-w1-integration`，本地全绿 + uvicorn 实测；生产回归待部署后做（见 w1.md §5）
 - [x] R348-C1（W1，P0，content）下线 SKIP/数据矛盾题与伪中文 yanyu AI 批次、剥离 hs 管线括注，规则入 quality.py 与 hs 导入口 —— 代码与脚本已合入；临时库 dry-run/apply/复扫一致；生产 `--apply` 已按 C1b 收窄词表执行（下线 3736 / 剥括注 2438，备份 `/data/data.db.bak-r348`，复扫全 0，详见 w1.md §5）
 - [x] R348-M1（W1，P1，miniapp）海报操作区 `.bar`→`.actions`、账号 uid 403 清登录态回退匿名、刷题页渲染题图可预览、分享页模块名中文 —— 已合入；typecheck + lint（`ESLINT_USE_FLAT_CONFIG=false`）全绿；真机/开发者工具走查未做（无 Linux 版）
-- [x] W2-A（W2，P1，backend）`/api/*` ValueError/TypeError → 统一 400、`api_save_mistake` question_id 整型化、`idx_mist_uid` 索引、SEO 页脚「10万+ 行测题 · 1.5万+ 历年真题」、`normalize_cjk_spaces`/`HS_META_RE` + `scripts/w2_content_cleanup.py`、生产广场 3 条测试评论已软删 —— 已合入 `devin/wf-w2-integration`，本地 ruff/pytest 266/pyright 全绿 + uvicorn 实测；**生产回归与清洗脚本生产 dry-run/apply 待部署后做**（见 w2.md §5）
+- [x] W2-A（W2，P1，backend）`/api/*` ValueError/TypeError → 统一 400、`api_save_mistake` question_id 整型化、`idx_mist_uid` 索引、SEO 页脚「10万+ 行测题 · 1.5万+ 历年真题」、`normalize_cjk_spaces`/`HS_META_RE` + `scripts/w2_content_cleanup.py`、生产广场 3 条测试评论已软删 —— 已合入 `devin/wf-w2-integration`，本地 ruff/pytest 266/pyright 全绿 + uvicorn 实测；**已上线（PR #564 → rev b31708d）并生产回归全过；清洗脚本生产 apply 已执行（改写 7700 + hs 2398 / rescored 10088，备份 /data/data.db.bak-w2）**，apply 预演暴露 UNIQUE 碰撞缺陷已修（见 w2.md §5.0）
 - [x] W2-B（W2，P1，frontend-h5）index.html/manifest/og-card/share-q/pk-result 口径残留清零、`weak-spots.js` 薄弱考点同名合并、`exp-dup.js` 解析复读隐藏、contest 零人数文案 —— 已合入；lint/vitest 469/build:h5 全绿，本地 build 产物 Chrome 走查通过；生产 view-source/SW 核对待部署后做
 - [x] W2-C（W2，P1，miniapp）连签 hero/stats 改服务端优先、`utils/offline.ts` answer_log/mistakes 离线队列、exam 错误态+重试、`page` 高度约束、首页题数 `/api/question_counts` 动态化、README Skyline→webview —— 已合入；typecheck/lint/vitest 7 全绿；**微信开发者工具走查未做**（断网→恢复落库、连签三处一致、14 页滚到底 + login 回归、page 高度对 navbar/底栏影响）
+
+## Deferred（W2 上线回归追加）
+
+- [ ] [content P2] 76 对「同题异格式」在线重复（去汉字间空格后题干同文，台账 `/data/w2_cleanup_ids.json` 的 `collisions`，如 1046534/241427、298750/320495）：42 对答案+选项一致可直接按重复簇规则下架晚入库者，20 对选项格式不同需人审，其余题干同文选项/答案需核；决定去留后对幸存题再跑一次清洗脚本。458 题的 twin 已下架，题干暂保留空格，本轮不动。
 
 ## Deferred（W1 追加）
 
