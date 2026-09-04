@@ -5,6 +5,18 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R383 questions 索引 + 管理台 `.hbar-wrap` 行折行修复 生产复验 走查新经验
+- **`X-Kg-Cache` 头（cold/hit/stale）只在 `/api/admin/stats|dashboard|governance` 设置**（admin_api.py `response.headers["X-Kg-Cache"]=state`）；`/api/exam/papers`、`/api/questions` 等用户端接口没有这个头，只有 Cloudflare 的 `cf-cache-status: DYNAMIC`。被要求「记录 X-Kg-Cache」时先 grep 代码确认接口是否设头，没有就如实报「无此头」，别当缺陷。
+- 页面自有 fetch/XHR hook 记响应头：在 `fetch` 包装里 `r.headers.get('x-kg-cache')`/`cf-cache-status` 即可（服务端未加 `Access-Control-Expose-Headers` 也能读，因为同源）；XHR 用 `getResponseHeader`。`/tmp/cdp174/r383.py install(tab)` 已实现，记录 `[url,status,ms,xkg,cf]`。
+- **管理台冷访问很慢**：首次登录 `/api/admin/stats` ~1.4 s cold、`/api/admin/dashboard` ~11.5 s cold（容器日志 `[slow-req] 11.3s`），期间登录页停在「验证中…」——等 15 s 以上再断言 dashboard DOM；二次 `dashboard` ~3 s `hit`。
+- **判断「逐字竖排」修复的量测法**（对 `#dash-ops .hbar` 行）：`row.classList.contains('hbar-wrap')` + `getComputedStyle(row).flexWrap==='wrap'`；`.lb` 宽 ≥150 且高 ≈19（一行）；`.sub` 文本用 `Range.getClientRects()` 数行数、取最窄 rect 宽（修复前 minW≈12 即单字/行，修复后 ≥90）；tag 是否换行看 `tag.top >= lb.bottom-2`（短 tag 如 Baidu「0 次」允许同行）；再加 `documentElement.scrollWidth<=375` 与 `#dash-ops` 后代 `right>375` 计数 0。1440 无劣化：行高 ≈21、`|lb.top-tag.top|≤4`、`tag.right==panel.right`。
+- 「运维状态」面板里其他行（每日备份上传 R2 / R2 副本周验证 / 宿主内存水位）**没有** `.hbar-wrap`，375 下 `.lb` 仍只有 43–49 px 宽、日期折 3 行——属既有现象，报告为观察而非本 PR 回归。
+- 切换管理台 tab 视口：先 `pgrep -f "holdvw_admin.py 375"` 按 PID kill，再起 `holdvw_admin.py 1440 900`，`Page.reload` 后 `#login-token` 元素仍在 DOM（隐藏），要用 `#dash-ops .hbar-wrap` 是否存在判断已登录。
+- 用户 tab 用 `r374_console.py user` 会 reload 页面 → 页面自有 hook 记录清零；先 `S.apis()` 汇总再跑 console 捕获。
+- localStorage 备份 `/tmp/r383_ls_backup.json` 可能是被 JSON.stringify 两次的字符串：`bk=json.load(f); if isinstance(bk,str): bk=json.loads(bk)`，否则 `.items()` 报错且此时 `localStorage.clear()` 已执行——务必先解析再 clear。
+- 1440 「去继续」断言：练习页表头 `常识判断 · 3/N`、`已答 2/N · 正确 R`，`__pc` 状态 `idx=2, picks=[..两项..], picked=''`；结束用「退出 → 结束本组」发 `progress {qids:[]}` + `track practice_quit_end`。
+- 清理脚本 `/tmp/r383_clean.py` 由 `r382_clean.py` sed 改前缀得到，`docker cp` 进容器后 `ro` 审计 → `clean` → 回读 `LEFTOVER 0`，并 `rm` 容器内与宿主机 `/tmp` 副本。
+
 ## R382 卷库覆盖索引 + 管理台「搜索引擎抓取」真人行 生产复验 走查新经验
 - **「卷库」UI 用的是 `/api/exam/papers?kind=zhenti&uid=`（exam_papers 表，~120 卷），不是 `/api/papers`（questions 表 src/paper 聚合，~26 条）**。`/api/papers` 只被 `practice.vue openPapers()` 调用且模板里没有调用者，UI 无触发路径；验证「/api/papers 相关索引」时：① 容器内 `EXPLAIN QUERY PLAN` 断言 `USING COVERING INDEX idx_q_paper_src`，② 从页面上下文 `fetch('/api/papers')` 单独计时，③ UI 卷数应与 `/api/exam/papers` items 数比对。别把「UI 卷数 == /api/papers 条数」当断言。
 - 按卷练习入口：首页「更多练习 → 真题卷练习」→ `#/pkgA/exam/list` → 卡片「按卷练习」→ `GET /api/paper_questions?src=&pid=&uid=`；答 N 题后「退出 → 保留进度」是 navigateBack 回卷库列表（卡片立刻显示「已练 N/M 题 · 错 W 题」），需再点左上返回/首页 tab 才看到续练卡；`practice_progress.idx` 是当前题下标（停在第 2 题未点下一题时 idx=1），续练卡「已做 N/M」按 picks 数算。
