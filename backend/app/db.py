@@ -2348,6 +2348,20 @@ def import_hs_explanations(items: list[dict]) -> int:
     return n
 
 
+def add_column_if_missing(conn, table: str, column: str, ddl_type: str) -> bool:
+    """幂等加列：并发首请求同时迁移时后到者会碰 duplicate column，视为已存在而非错误。"""
+    cols = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+    if column in cols:
+        return False
+    try:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl_type}")
+    except sqlite3.OperationalError as e:
+        if "duplicate column" not in str(e).lower():
+            raise
+        return False
+    return True
+
+
 def _ensure_answer_log(conn):
     conn.execute(
         """CREATE TABLE IF NOT EXISTS answer_log (
@@ -2362,15 +2376,11 @@ def _ensure_answer_log(conn):
         )"""
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_al_uid ON answer_log(uid, created_at)")
-    cols = {r["name"] for r in conn.execute("PRAGMA table_info(answer_log)")}
-    if "picked" not in cols:
-        conn.execute("ALTER TABLE answer_log ADD COLUMN picked TEXT")
-    if "source" not in cols:
-        # 推荐埋点：进入练习的入口（reco/weak/reinforce），旧数据默认 NULL
-        conn.execute("ALTER TABLE answer_log ADD COLUMN source TEXT")
-    if "probe" not in cols:
-        # 探针流量标记（1=来自 KG_PROBE_CIDRS 网段，运营看板剔除）；旧行 NULL=未知
-        conn.execute("ALTER TABLE answer_log ADD COLUMN probe INTEGER")
+    add_column_if_missing(conn, "answer_log", "picked", "TEXT")
+    # 推荐埋点：进入练习的入口（reco/weak/reinforce），旧数据默认 NULL
+    add_column_if_missing(conn, "answer_log", "source", "TEXT")
+    # 探针流量标记（1=来自 KG_PROBE_CIDRS 网段，运营看板剔除）；旧行 NULL=未知
+    add_column_if_missing(conn, "answer_log", "probe", "INTEGER")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_al_qid ON answer_log(question_id)")
 
 
