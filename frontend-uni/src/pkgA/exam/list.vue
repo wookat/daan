@@ -266,7 +266,7 @@ export default {
       uni.navigateTo({ url: '/pkgA/exam/exam?paper_id=' + p.id });
     },
     practicedState(p) {
-      return paperPracticedState(p.practiced, p.n);
+      return paperPracticedState(p.practiced, p.n, p.wrong);
     },
     practicePaper(p) {
       // 不计时逐题练习，复用刷题页既有按卷练习协议

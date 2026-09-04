@@ -5,6 +5,13 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R366 按卷完成页「重练本卷错题」走查新经验
+- 完成页错题重练 CTA 是纯前端会话态：CDP 拿 practice 组件 proxy（`items/idx/session/_ptitle/_source`）后，断言 `items.map(q=>q.id)` == 本轮 `_picked!==answer` 的 id 序列，且每项无 `_picked/_saved/_mid/_secs/done` 残留；`_ptitle/_source` 不变即 归卷 保留。
+- 375 下键盘快捷键（A–D/Enter）失效（桌面才启用），38 题卷手点太慢：用 CDP `Input.dispatchMouseEvent` 按选项 `getBoundingClientRect` 中心真点（脚本样例 /tmp/cdp174/m375.py：读组件 answer，指定第几题故意答错，答错后自动找「下一题」按钮点掉）。截图坐标≈(css_x*0.64, (css_y+87)*0.64)（1600 宽实屏映射 1024 截图）。
+- 完成页底部横幅（「今日还有 N 题到期待复习」）会晚到几秒并把 CTA 往下推——点 CTA 前重新截图/取 rect，否则点空。
+- 生产 `/api/answer` 失败时前端进 `localStorage.offlineQueue`（`{type,data:{answers:[{key,uid,item:{qid,correct,picked,source,t}}]}}`），下次启动/刷新 toast「离线作答已同步」再落库；DB 断言 answer_log 数量前先刷新一次让队列冲掉，队列里 `item.source` 也可当归卷证据。`deploy_h5.sh` 会顺带重建 `deploy-kaogong-1` 容器（`docker ps` 看 Up 时长），重启窗口内的作答可能既不进队列也不落库（本轮丢 ~8 条）——遇到条数对不上先查容器 StartedAt，别记成功能 bug。
+- 清理：`sqlite_master` 枚举所有含 uid 列的表（本轮命中 mistakes/answer_log/growth_events）按 uid 删并回读 leftover=0；`pkill -f holdvw.py` 会连自己所在 bash 一起杀（模式匹配到命令行），单独一条命令跑或加 `pgrep -f "holdvw.py 375"`。
+
 ## R362 按卷练习 pid 对齐走查新经验
 - pid 对齐最强对抗卷：2015 新疆卷 pid=133（卷卡 n=38，psource「2015年新疆省考行测真题」src 全集 120 题）——请求带 `pid=133` 时会话应 1/38，前端漏带 pid 会退回旧行为 1/120，一眼可辨。
 - 断言四点一线：抓包 `paper_questions?src=…&pid=…&uid=…` → 会话 1/N → 卷卡「已练 X/N」→ R360/R361 弹窗分母同 N（三方分母一致即对齐成功）。

@@ -18,13 +18,45 @@ export function paperQuery(p, untimed, uid) {
   return q;
 }
 
-// 卷卡按卷练习进度外显：全练完给完成态，fail-closed（非法输入不显示）
-export function paperPracticedState(practiced, n) {
+// 卷卡按卷练习进度外显：全练完给完成态，fail-closed（非法输入不显示）；wrong 为正整数且不超过已练数时追加错题数
+export function paperPracticedState(practiced, n, wrong) {
   const p = Number.isInteger(practiced) ? practiced : 0;
   const total = Number.isInteger(n) ? n : 0;
   if (total <= 0 || p <= 0) return { show: false, done: false, text: '' };
-  if (p >= total) return { show: true, done: true, text: `已练完全部 ${total} 题 ✓` };
-  return { show: true, done: false, text: `已练 ${p}/${total} 题` };
+  const w = Number.isInteger(wrong) && wrong > 0 && wrong <= p ? ` · 错 ${wrong} 题` : '';
+  if (p >= total) return { show: true, done: true, text: `已练完全部 ${total} 题 ✓${w}` };
+  return { show: true, done: false, text: `已练 ${p}/${total} 题${w}` };
+}
+
+// 按卷练习「只练错题」题集：取服务端标记 wrong===true 的题并清除标记，保持卷面顺序，fail-closed（非数组→空）
+export function paperWrongPlan(items) {
+  if (!Array.isArray(items)) return [];
+  const out = [];
+  for (const q of items) {
+    if (!q || q.wrong !== true) continue;
+    const c = { ...q };
+    delete c.done;
+    delete c.wrong;
+    out.push(c);
+  }
+  return out;
+}
+
+// 按卷练习完成页错题重练：取本会话答错题并清除会话态，保持卷面顺序，fail-closed（非数组→空）
+export function paperWrongItems(items) {
+  if (!Array.isArray(items)) return [];
+  const out = [];
+  for (const q of items) {
+    if (!q || typeof q._picked !== 'string' || !q._picked || q._picked === q.answer) continue;
+    const c = { ...q };
+    delete c._picked;
+    delete c._saved;
+    delete c._mid;
+    delete c._secs;
+    delete c.done;
+    out.push(c);
+  }
+  return out;
 }
 
 // 按卷练习完成页归卷：有卷名走本卷完成态，fail-closed（非字符串/空串走通用完成态）
