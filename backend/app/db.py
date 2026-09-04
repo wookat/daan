@@ -142,8 +142,15 @@ def init_db():
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_real ON questions(is_real)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_tag3 ON questions(tag3)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_tag3_disabled ON questions(tag3, disabled)")
+    # 抽题池 _pick_scan 带 tag3 时前端总是同时带 module：索引不含 module 就要按 tag3 逐行回宽行表
+    # 校验 module（CS-LS-01 9k 行冷读 147 MB）；含 module 的覆盖索引免回表。旧定义存在则重建。
+    old = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type='index' AND name='idx_q_tag3_pick'"
+    ).fetchone()
+    if old and "module" not in (old[0] or ""):
+        conn.execute("DROP INDEX idx_q_tag3_pick")
     conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_q_tag3_pick ON questions(tag3, disabled, is_real, has_hs, id)"
+        "CREATE INDEX IF NOT EXISTS idx_q_tag3_pick ON questions(tag3, disabled, module, is_real, has_hs, id)"
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_quality ON questions(quality_score)")
     # (disabled, id) 是 idx_q_sitemap 的前缀，由 idx_q_active_src 接管「disabled=0 AND id IN (...)」
