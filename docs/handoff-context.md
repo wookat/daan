@@ -1461,3 +1461,142 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - W2-C（小程序）：hero/stats 连签服务端优先；utils/offline.ts answer_log/mistakes 离线队列（去重/持久化/单飞/联网触发）；exam 错误态+重试；app.wxss page 高度约束；首页题数 /api/question_counts 动态化（静态回退改当前口径）；README Skyline→webview。**微信开发者工具走查未做**（断网→恢复落库、连签一致、14 页滚到底 + login、page 高度对 navbar/底栏影响）。
 - 数据纪律：全部在本机临时库完成，未触碰生产库/配置、未触发 LLM、生产未新增 test-w2-* 数据。
 - 遗留台账：docs/iter/workflow/backlog.md（W2 追加：SMS 凭证资源缺口、original 题 hs 人审、题干模板家族去重设计、mock_event 唯一约束、mock 冗余卷计数、db.py 按域拆分、tag3_name 后端统一、小程序统一「数据非最新」提示、contest 历史累计人数、部署后回归清单）；详证 docs/iter/workflow/w2.md。
+
+### R358 模考「放弃未交卷」同步删除服务端进度（2026-08-29，PR #563，分支 devin/1788465149-r358-exam-drop-server-clear）
+- 取证：R357 遗留观察实证——放弃只删本地 examProgress，服务端 exam_progress 仅在交卷时 clear_exam_progress()，放弃后刷新/跨设备 /api/exam/resume 回填复活；练习（R323）/复习（R353）均已有服务端清除语义，模考是唯一缺口。
+- 收口（零新 endpoint/表/协议）：a) POST /api/exam/progress body drop:true 时，在 uid/attempt 归属校验后、已交卷/超时校验前直接 clear_exam_progress 返回 {ok:true}——已交卷 drop 幂等 200、已超时进度也能放弃；b) parseExamProgress 补 attemptId（非法回落 0，drop 时 fail-closed 不发请求）；c) 卷库 dropResume/首页 erDrop 确认后写 erClearedAt + POST drop（失败静默本地照删，最终一致性同练习/复习）+ 删本地快照；d) syncResume/syncExamResume 远端回填前 erClearedAt 30s 守卫。
+- 验证：ruff/pytest 256(+1)/pyright 0/lint/vitest 461(+1)/build 全绿；部署前 merge-base --is-ancestor ee8834a 核对通过；生产 rev 0c1d732、bundle index-bQpred1S.js、Lighthouse 全过。testing agent 实测（uid test-r358-ui）：放弃→抓包 drop:true 200→生产 DB exam_progress 行真删；不回填强证据（立即硬刷 + 35s 越过 30s 守卫再硬刷 + 全新 context 同 uid 均无）；继续模考原位恢复回归（picks/idx/倒计时接续）；首页 erDrop 同过；45 条全 200、console 0 error、0 次 /api/explain、375/1440 无溢出。
+- 测试数据清理：test-r358-ui DELETED {exam_attempts 2/growth_events 1}，LEFTOVER {}，review_cur 0 行；保护 uid DB 34 表+localStorage EXACT MATCH n=28。
+- 详见 docs/iter/round-3/r358-exam-drop-server-clear.md。
+
+### R359 卷库卷卡外显按卷练习进度（2026-08-29，PR #565，分支 devin/1788467179-r359-paper-practiced）
+- 取证：R357「按卷练习」上线后练习维度零外显——卷卡只有模考态（best_score/attempt_count/已刷 X/N 卷），按卷练习做到一半回卷库无任何痕迹；数据已就位（answer_log 逐题落库、_list_exam_papers_base 已逐卷算活跃题集）。
+- 收口（零新 endpoint/表）：a) base 缓存每卷保留 _qids（活跃题 id，现有循环算出零新增查询）；b) list_exam_papers(uid) 一次 SELECT DISTINCT question_id FROM answer_log WHERE uid=? 后逐卷交集得 practiced，输出剥 _qids；无 uid practiced=0 fail-closed；c) 卷卡 v-if="p.psource && p.practiced" 绿色（--ok-strong）「已练 X/N 题」。口径如实：answer_log 覆盖所有练习场景，不限按卷练习入口。
+- 验证：ruff/pytest 260(+4)/pyright 0/lint/vitest 461/build 全绿；生产 rev 18c4f02、bundle index-Deng7wBk.js、Lighthouse 全过。testing agent 实测（uid test-r359-ui）：零态 120 卷全含 practiced=0 无行；答 3 题→「已练 3/75 题」精确且全页唯一；重答同 qid 去重不变（DB DISTINCT=3）；无 psource 卷经模考构造 practiced=1 仍不显示（fail-closed 强证）；模考/看报告/R358 放弃回归；84 条全 200、console 0 error、0 次 /api/explain、375/1440 无溢出。
+- 测试数据清理：test-r359-ui DELETED 10（mistakes 3/answer_log 5/exam_attempts 2），LEFTOVER 0，review_cur 0 行；保护 uid DB 34 表+localStorage EXACT MATCH n=28。
+- 详见 docs/iter/round-3/r359-paper-practice-progress.md。
+
+### R360 按卷练习「只练剩余」续练（2026-08-29，PR #566，分支 devin/1788468871-r360-paper-continue）
+- 取证：R359 卷卡外显「已练 X/N 题」后进度不可行动——startPaper() 无条件 idx=0 全量从头，请求不带 uid；竞品（粉笔）「已做 X/N」点击默认续做未做题。
+- 收口（零新 endpoint/表）：a) db.paper_questions(source, limit, uid=None)：uid 命中时 SELECT DISTINCT question_id FROM answer_log 得已练集，逐题补 done:bool；无 uid 契约零变化（无 done 字段）；b) /api/paper_questions 补可选 uid（strip+截断 64）；c) 前端仅 untimed 分支带 &uid=，paperContinuePlan 纯函数（done===true 才计已练，fail-closed，顺序保持），0<doneN<N 时 showModal「只练剩余/从头练」，零练过或全练完不弹窗全量；模考 timed 路径零变化。边缘缓存安全：端点不在 allowlist 且带 uid bypass。
+- 基线注意：R359（#565）合并落在已合并的 R358 分支上、未随入 main——R360 分支基于该链 merge main，PR 一并带入 R359。
+- 验证：ruff/pytest 264(+4)/pyright 0/lint/vitest 466(+5)/build 全绿；生产 rev 3dc7b38、bundle index-Dwa_7_qs.js、Lighthouse 全过。testing agent 实测（uid test-r360-ui）：零态无弹窗全 done:false；答 3 题→弹窗文案精确「已练过 3 题，只练剩下的 72 题？」；只练剩余 1/72 从原第 4 题起（done 集合==已答集）；从头练回 1/75 原第 1 题；模考走 /api/exam/start 零 paper_questions 请求、R358 drop 回归；console 0 error、0 次 /api/explain、375/1440 无溢出。
+- 环境观察：测试期间共宿 recruit postgres 负载尖峰（load 15-21）致 8 条瞬时 503 + 20s 超时，answer_log 靠前端重试队列自愈；建议对共宿应用 cgroup 限资源。
+- 测试数据清理：test-r360-ui DELETED 8（answer_log 3/mistakes 2/exam_attempts 1/growth_events 2），LEFTOVER 0，PROTECTED_MATCH True，review_cur 0 行；保护 uid DB 37 表行数一致+localStorage EXACT n=30。
+- 详见 docs/iter/round-3/r360-paper-practice-continue.md。
+
+### R361 按卷练习「已练完」完成态闭环（2026-08-29，PR #567，分支 devin/1788472379-r361）
+- 取证（SOP-10 四维窗口）：R359/R360 后仍有三缺口——卷卡全练完仍显普通「已练 X/N 题」无完成态；全练完再点按卷练习无确认直接从头；startPaper() 不设 _source，按卷练习 answer_log.source 继承上一会话残值（如 reinforce）。
+- 收口（纯前端零契约）：a) paper-continue.js 补 paperPracticedState(practiced, n) fail-closed 纯函数（非整数/≤0 不显示；p>=n → done 完成态「已练完全部 N 题 ✓」）；b) list.vue 卷卡消费该函数 + .ppracticed.done 品牌色加粗；c) practice.vue startPaper() untimed 全练完时弹「重新练一遍？」，取消不进会话；部分/零完成与 timed 路径零变化；d) this._source = untimed ? p.source : null——按卷练习落库归卷、timed 清残值。
+- 验证：ruff/pytest 264/pyright 0/lint/vitest 470(+4)/build 全绿；祖先链核对（3dc7b38/1550a65/5f41fc2）通过；生产 rev 0f4bfc5、bundle index-BHaFSRfo.js、Lighthouse 全过。testing agent 实测（uid test-r361-ui）：零态无进度行无弹窗；部分完成绿色非加粗+R360 弹窗回归；DB 构造全练完→完成态样式（品牌色 fw600）+重练弹窗（取消停留不进会话/确认 1/75 从头）；source 归因序列 卷source→reinforce→卷source 无泄漏；模考无弹窗倒计时正常+R358 drop 回归；97 条全 200、console 0 error、0 次 /api/explain、375/1440 无溢出。
+- 观察项（既有非本轮）：部分卷卡 n（question_ids∩活跃题，如 2015 新疆卷 38）≠ paper_questions?src= 会话题数（同 source 120 题）——完成态分母与全练完弹窗 N 可能对不上，候选后续轮对齐。
+- 测试数据清理：test-r361-ui DELETED {mistakes:2, answer_log:76(含72构造行), exam_attempts:1, reinforce_log:1, growth_events:1}，LEFTOVER 空，review_cur 0 行；保护 uid DB 37 表+localStorage EXACT n=30。
+- 详见 docs/iter/round-3/r361-paper-complete-state.md。
+
+### R362 按卷练习会话题集对齐卷面（2026-08-29，PR #568，分支 devin/1788474838-r362-paper-align）
+- 取证：R361 观察项实证为结构性口径分裂——卷卡 n/practiced（R359）= exam_papers.question_ids∩活跃题（2015 新疆卷 38），而按卷练习会话 = paper_questions(source) 同 source 全集（LIMIT 140，实测 120）；进度分母、R360 续练弹窗、R361 全练完弹窗三方对不上。
+- 收口：a) db.paper_questions 补可选 pid——命中有效卷且 question_ids 非空时题集 = question_ids∩disabled=0，保持卷面顺序（IN 分块 900，与模考同口径，不加 is_real 过滤）；未命中/非法回落原 source 路径 fail-open；uid done 语义不变；b) /api/paper_questions 契约补可选 pid（仅正整数透传）；c) 前端 paper-continue.js 补 paperQuery(p, untimed, uid) fail-closed 纯函数（pid 仅正整数带、uid 仅 untimed 带），list.vue practiceLaunch 补 pid: p.id，practice.vue 透传消费；R360/R361 弹窗逻辑零改动，分母对齐后语义自动一致。
+- 验证：ruff/pytest 269(+5)/pyright 0（by_id/rows 需显式 sqlite3.Row 注解否则 7 errors）/lint/vitest 474(+4)/build 全绿；祖先链核对通过；生产 rev 644d31b、bundle index-BBfYVVxQ.js、Lighthouse 全过（/ perf 0.98、/tiku/ 1.00）。curl 实证：pid=133→38 题、无/0/非法 pid→120 题回落。testing agent 实测（uid test-r362-ui）：抓包带 pid=133→会话 1/38 答题卡 38 格（旧 1/120）；答 2 题→卷卡 2/38、R360 弹窗「只练剩下的 36 题」→1/36 从原第 3 题；DB 构造全练完（必须用 pid 响应 38 qids 非 src 全集）→卡 38✓=弹窗 38=重练 1/38 三方一致；2025 四川 75/75 回归、模考 exam/start 零 paper_questions 请求；console 0 error、0 次 /api/explain、375/1440 无溢出。
+- 测试数据清理：test-r362-ui DELETED {mistakes:1, answer_log:38, exam_attempts:1, growth_events:1}，LEFTOVER 空，review_cur 0 行；保护 uid DB+localStorage EXACT n=30。
+- 详见 docs/iter/round-3/r362-paper-session-alignment.md。
+
+### R363 按卷练习中断续练保留归卷 source 与卷名（2026-08-29，PR #570，分支 devin/1788476955-r363-paper-resume-source）
+- 取证（SOP-10 窗口内）：R361 startPaper() 设 _source 后，中断续练两条恢复路径均不还原——本机 pendingSession 与服务端 practice_progress 都不含 source/卷名，adoptLocalPending/adoptRemoteSnap 恢复后 _source undefined，续答 answer_log.source 变 NULL（卷卡进度断档）；首页续练卡/「继续上次练习？」弹窗只能显示通用文案。
+- 收口：a) practice_progress PRAGMA 守卫式补列 psource/ptitle（存量库无损）；POST /api/practice/progress 可选 source(≤64)/ptitle(≤80) 非字符串按 NULL fail-closed，GET resume 透出；b) saveSession/pushPracticeProgress 带 source/ptitle，adoptLocalPending/adoptRemoteSnap 还原 _source/_ptitle，start()/startReinforce() 清 _ptitle 防非卷会话残留；c) 首页续练卡副标题 ptitle||prModName(module)、两处续练弹窗前缀「卷名」。旧客户端/普通练习/计时模考零变化。
+- 验证：ruff/pytest 271(+2)/pyright 0/lint/vitest 478(+4)/build 全绿；祖先链核对（3dc7b38/0f4bfc5/5f41fc2/1550a65/644d31b）通过；生产 rev 67a227a、bundle index-CYBWn0zz.js、Lighthouse 全过；curl 实证生产 source/ptitle 往返/非法忽略/清空。testing agent 实测（uid test-r363-ui）：中断→首页卡显卷名「2015年0711新疆公务员考试《行测》真题 · 已做 2/38 题」→恢复续答 DB source='2015年新疆省考行测真题'（旧版 NULL）；跨设备弹窗带卷名前缀且续答归卷；普通练习无卷名残留（source:""→DB NULL）；计时模考/R358 drop/R360 弹窗/R359 卷卡回归；94 条全 200、console 0 error、0 次 /api/explain、375/1440 无溢出。
+- 测试数据清理：test-r363-ui DELETED {mistakes:2, answer_log:7, user_state:1, exam_attempts:1, growth_events:4, practice_progress:1}，LEFTOVER 空，review_cur 0 行；保护 uid DB 37 表+localStorage EXACT n=30。
+- 详见 docs/iter/round-3/r363-paper-resume-source.md。
+
+### R364 按卷练习完成页归卷收口（2026-08-29，PR #571，分支 devin/1788478793-r364-paper-finish）
+- 取证（SOP-10 窗口内）：按卷不计时练习答完进通用完成页——标题恒「本组完成」不显卷名；「再来一组」在按卷会话（lastModule=null 且无 _redoItems）走 start(null) 抽全模块随机组，打断归卷闭环且覆盖 _source/_ptitle；无回卷库出路。计时模考走成绩报告不受影响。
+- 收口（纯前端零契约）：paper-continue.js 补 paperFinishState(ptitle) fail-closed 纯函数（非空字符串→{isPaper,big:'本卷练完',title:trim}，否则通用态）；practice.vue 完成卡按 paperFinish()（模板方法调用规避非响应式 _ptitle）显「本卷练完」+ 卷名副行（.sub.ptl 品牌色）+ 主按钮「回卷库」（goExamList）；非按卷/背题/错题重练/模考零变化。
+- 验证：lint/vitest 480(+2)/build:h5 全绿；祖先链核对（3dc7b38/0f4bfc5/5f41fc2/1550a65/67a227a）通过；生产 rev e727840、bundle index-DZ-HSBC6.js、Lighthouse 全过。testing agent 实测（uid test-r364-ui）：新疆卷 38 题答完归卷完成页三要素齐、回卷库落卷卡「已练完全部 38 题 ✓」、R363 恢复路径 _ptitle 生效、普通练习反例零变化、375 全程无溢出、500 条全 200、0 次 /api/explain。
+- 测试数据清理：test-r364-ui DELETED {mistakes:38, answer_log:87, growth_events:4}，LEFTOVER 空，review_cur 0 行；保护 uid DB 37 表+localStorage EXACT n=30。
+- ⚠️ 重要更正：保护 uid 正确拼写为 umteojq4sltdhorhm（umte-ojq，非 umtejoq），历史文档个别处拼写有误；对比前用 like 'umte%' 预校验。
+- 观察项：生产 console 累计 5 条未归因 Uncaught (in promise) Object（无 UI 影响、复现不出），候选后续带 source map 归因。
+- 详见 docs/iter/round-3/r364-paper-finish-loop.md。
+
+### R365 按卷练习完成页分享文案归卷（2026-08-29，PR #572，分支 devin/1788481071-r365-paper-share）
+- 取证（SOP-10 窗口内）：R364 按卷完成页「分享成绩」仍走通用文案「我在错题邦刷了 N 道行测题…」（lastModule=null 回落「行测」），不带卷名，链接只到站点首页；粉笔按卷分享带卷名。
+- 收口（纯前端零契约零新埋点事件）：paper-continue.js 补 paperShareText(ptitle, n, pct) fail-closed 纯函数（非空卷名 trim + n 正整数 + pct 有限数值→按卷基句，否则 null）；shareResult() 非每日分支 paperBase 优先，命中追加连对/击败后接卷库深链 /#/pkgA/exam/list，未命中完全回落原通用路径；埋点 share_result_copy label paperBase?'paper':模块。每日一练分支零改动；计时模考走 report 分享不经此处。
+- 验证：lint/vitest 483(+3)/build:h5 + ruff/pytest 271/pyright 0 全绿；祖先链核对（e727840 ∈ HEAD）通过；生产 rev f39d1f4、bundle index-GWtmGg-B.js、Lighthouse 全过。testing agent 实测（uid test-r365-ui）：按卷 38 题答完分享剪贴板精确含卷名/38 题/32%/击败34%/卷库深链、track ref=paper 200；普通练习回落 ref=panduan、每日一练 ref=daily 文案均零变化；R364 完成页三要素回归；375/1440 无溢出、0 次 /api/explain。剪贴板经页面内 writeText hook 捕获（readText 授权后仍 NotAllowedError）。
+- 测试数据清理：test-r365-ui DELETED {mistakes:41, answer_log:68, growth_events:12, daily_set_entries:1}，LEFTOVER 空，review_cur 0 行；保护 uid（like 'umte%' 预校验）DB 34 共有表+localStorage EXACT n=30。
+- 环境观察（非本轮引入）：00:35 共宿负载 10 秒 503 抖动 12 条（daily submit 一次 503 重做后 200）；部署换 hash 后旧 chunk 预取 404×30 噪音；promise 噪音 1 条（R364 观察项延续）。
+- 详见 docs/iter/round-3/r365-paper-share-text.md。
+- ⚠️ 合并链事故（R366 发现并补救）：#572 base 指向 R364 分支 devin/1788478793-r364-paper-finish，在 #571 已入 main 后才 merge，R365 commit f39d1f4 未随入 main（NOT_IN_MAIN）。补救 PR #573（devin/1788483376-r365-mainline，从最新 main merge R365 分支）。教训与 R359 #565 同类：链式 PR 合并顺序错位时改动会落在已合并分支上——合并前必须用权威工具核对 base 与 merge 后 main 祖先链。
+
+### R366 按卷练习完成页「重练本卷错题」（2026-09，分支 devin/1788483435-r366-paper-wrong-retry，基于 #573 链）
+- SOP-10 四维审计（窗口到点）：操作台/落地页/架构无新高优缺口；功能深度选中——按卷练习完成页对本卷错题无就地行动出路（模考报告 R282 有「本卷错题重练」、粉笔完成页有错题重做，按卷练习是自家双路径口径缺口）。
+- 收口（纯前端零契约零新协议零新埋点）：paper-continue.js 补 paperWrongItems(items) fail-closed 纯函数（非数组→[]；取 _picked 非空字符串且 ≠answer 的题，浅拷贝清除 _picked/_saved/_mid/_secs/done，保持卷面顺序）；完成页 isPaper && wrong>0 时主按钮「重练本卷错题（N 题）”（回卷库降为 ghost），retryPaperWrong() 复用 retryGroup 会话重置口径、保留 _source/_ptitle 归卷（answer_log 归本卷、再答错经 saveWrong 入错题本）；全对不显示，普通/每日/背题/模考完成页零变化。
+- 验证：lint/vitest 487(+4)/build:h5 全绿（后端零改动）。生产 rev d1fafc3、bundle index-CKVx9v-X.js、Lighthouse 全过。testing agent 实测（uid test-r366-a7k2）：1440 新疆卷 33/38→CTA「重练本卷错题（5 题）」+ 回卷库 ghost，点击 toast「只重练本卷错题」、items id 序列=5 道错题卷面顺序、无 _picked/_saved/_mid/_secs/done 残留、_ptitle/_source 保留；重练 3/5 后完成页仍归卷且 CTA 变「2 题」；全对 2/2 无 CTA、回卷库主按钮；375 同过（scrollWidth=375，CTA right=349）；普通常识 10 题完成页「本组完成」+「再来一组」零变化；已落库 78 条按卷作答 source 全部归卷；console 0 error。
+- ⚠️ 部署事故（接替会话发现并补救）：上一会话部署 d1fafc3 在 4a2 之前中断——后端容器已换新（/api/health rev=d1fafc3），但 CF Pages 静态层仍为 R365 bundle index-GWtmGg-B.js（deploy-history.log 无 d1fafc3 记录）。教训：`/api/health rev` 只证明后端，静态层必须另查 `curl / | grep index-*.js` 与 chunk 内容；本轮重跑 `deploy_h5.sh --skip-build` 全流程收敛。
+- 环境观察：共宿 recruit celery/postgres 负载尖峰 load 25，边缘 503 约 52s；容器重建窗口内约 8 条作答未落库（其余进 offlineQueue 刷新后同步）。完成页到期复习横幅晚到几秒下推按钮区（既有）。
+- 测试数据清理：test-r366-a7k2 DELETED 108（mistakes 8/answer_log 88/growth_events 12），LEFTOVER 0。
+- 合并状态：平台禁止本会话合并 main（`gh pr merge` 被拒）——#573（R365 补救）与 #574（R366，base=#573 分支）本地全绿+生产复验通过，排队待老板合并；后续轮次分支继续链在 #574 之上。
+- 详见 docs/iter/round-3/r366-paper-wrong-retry.md。
+
+### R367 卷库错题入口：卷卡错题数 + 已练完卷「只练错题」（2026-09，分支 devin/1788488367-r367-paper-wrong-entry，PR #575；补救 mainline 分支 devin/1788490598-r367-mainline）
+- 取证：卷卡 /api/exam/papers 只有 practiced/best_score/attempt_count，/api/paper_questions 只有 done，R366 完成页 CTA 离开即失；已练完卷入口只有「重新练一遍/不用了」。
+- 口径：「错」= 该题本人最近一次 answer_log correct=0（重练答对即不再算错；NULL/非 0 视为非错，fail-closed）。零新表/字段/端点。
+- 后端 db.py：抽 `_answer_state(conn, uid) -> (done_qids, wrong_qids)`（一次 `SELECT question_id, correct … ORDER BY created_at, id` 取最近一次），list_exam_papers 每卷 +`wrong`（无 uid 为 0），paper_questions 每题 +`wrong: bool`（无 uid 不带 done/wrong，契约不变）；禁用题经既有卷题集排除。tests/test_paper_wrong.py 4 例。
+- 前端：paperPracticedState(practiced, n, wrong) 追加 ` · 错 W 题`（仅 0<W≤practiced）；新增 paperWrongPlan(items) fail-closed（wrong===true、保持卷面顺序、清 done/wrong）；practice.vue startPaper 已练完+有错 → showActionSheet「只练错题（W 题）/ 重新练一遍」（取消退出），无错保留原 modal，「只练剩余」与计时模考分支不变；只练错题 toast「只练本卷上次答错的题」。vitest +7。
+- 验证：ruff/pytest 275/pyright（仅基线 pywebpush 缺依赖）/eslint/vitest 494/build 全绿。生产 rev f58236d、bundle index-DpIbxVtu.js、Lighthouse 全过。testing agent（uid test-r367-q9m3）1440：整卷答错 4 → 卷卡「已练完全部 38 题 ✓ · 错 4 题」、API wrong=4 且 wrong===true 的 id 集合与顺序=答错序列；action sheet 二项；只练错题 items 精确等于错题序列、无 done/wrong、_ptitle/_source 保留；全答对后完成页无 R366 CTA、卷卡回无后缀、API wrong=0（最近一次口径）；无错 → 原 modal；取消 → session=false；计时模考/普通专项练习回归零变化。375（错 3 题）同过，scrollWidth=375，console 0 error。容器 StartedAt 未变，作答 84=84 无丢失。
+- 测试数据清理：test-r367-q9m3 DELETED 99（mistakes 8/answer_log 84/exam_attempts 1/growth_events 6），LEFTOVER 0；保护 uid 无变化。
+- ⚠️ 合并链事故再现（第三次，与 R359 #565 / R365 #572 同类）：#573 已入 main 后，#574（base=R365 分支）与 #575（base=R366 分支）被 merge 进各自 base 分支而非 main → `git merge-base --is-ancestor d1fafc3/f58236d origin/main` 均 NOT_IN_MAIN（生产当前运行 f58236d 却不在 main）。补救：从 origin/main 开 devin/1788490598-r367-mainline merge R367 分支（含 R366），开 PR 直接 base=main。**规则升级：后续每轮 PR 一律 base=main，不再链式 base 到未合入分支**；合并后必须用 `git merge-base --is-ancestor <sha> origin/main` 权威核对。
+- 环境观察：退出模考未交卷会留 exam_attempts 行 + 卷库「未交卷」横幅（既有）；uni showLoading/hideLoading 配对 warning（既有）。
+- 详见 docs/iter/round-3/r367-paper-wrong-entry.md。
+
+### R368 错题本归卷：卷源徽标 + 按卷筛选 + 「练本卷」回流（2026-09，分支 devin/1788490910-r368-book-paper，PR #577，base=main）
+- 取证：生产 mistakes 222 条，110 条关联真题（is_real=1 且 source 非空，55 个 source），但 mistakes.source 只有 NULL 203 / 'exam' 19——按卷练习答错入本（saveWrong 不传 source）与普通练习错题不可区分、看不到来自哪张卷；粉笔错题本每题带「来源」并可按来源筛选直达卷。R366/R367 打通「卷→错题」，本轮补反向「错题→卷」。
+- 后端 db.py：`_paper_by_psource(conn)` 复用 `_list_exam_papers_base` 全量 TTL 缓存建 psource→{pid,title,psource}（同 source 多卷取 id 最大）；list_mistakes 多取 q.source/q.is_real，每条 +`paper`（真题且匹配才有，否则 None；q_source/q_is_real 不外泄；结果集无真题时不触发卷缓存）。team.py /api/track 白名单 +book_go_paper（test_track_whitelist_sync 守卫命中）。tests/test_mistakes_paper.py 4 例。零新表/字段/端点。
+- 前端：新增 src/book-paper.js（mistakePaper / paperGroups(max=8) / inPaper，fail-closed）；book.vue 错题卡 `.pbadge` 卷源徽标（青绿，点击→pidFilter）、筛选面板「试卷」分组 ×N、当前筛选条「卷名 ✕」+「练本卷 ›」→ navigateTo /pkgA/exam/list?pid=（R365 深链高亮+scrollIntoView，非重排）；book-url.js buildBookUrl/parseBookOpts +pid（^\d{1,9}$ 或正整数，否则 0；fav 不带）——parseBookOpts 形状多一键，既有 toEqual 断言同步补 pid:0。vitest +1 文件。
+- 验证：ruff/pytest 279/pyright（仅基线 pywebpush）/eslint/vitest 501/build 全绿。生产 rev 1c1e18b、bundle index-Difr5oX0.js、Lighthouse 全过。testing agent（uid test-r368-k4p7）1440/375：按卷练习答错 3 → API paper.pid=133、psource 与卷库一致，普通刷题对照 paper:null，mistakes.source 均 NULL；徽标点击→筛选条二 chip、列表 3 条、URL ?pid=133；面板「试卷」×3、「全部」清除；刷新恢复；pid=0/-5/abc fail-closed；「练本卷 ›」→ 卷卡高亮「· 错 3 题」→ 只练错题 items 精确=错题序列；/api/track book_go_paper ref=133；375 scrollWidth=375、长卷源 ellipsis；回归模块/试卷/排序叠加、✕ 单独清除、已掌握 tab、重练、导出、模考徽标、计时模考不弹 sheet 全过；console 0 error。
+- 测试数据清理：test-r368-k4p7 DELETED 48（mistakes 4/answer_log 39/exam_attempts 1/growth_events 3/exam_progress 1），LEFTOVER 0；容器 StartedAt 03:10:25Z 未变，作答 39=39。清理表新增 exam_progress。
+- 分支：从 R367 mainline 分支切出、PR base=main（含 #576 未合入的 R366/R367 提交，#576 合并后本 PR 自动收敛为仅 R368）。#576 仍待老板合并；main 当前落后生产三轮，合并前勿从 main 部署。
+- 详见 docs/iter/round-3/r368-book-paper-source.md。
+
+### R369 错题本按卷筛选态「重练本卷错题」直达（2026-09，分支 devin/1788493372-r369-book-paper-redo，base=main）
+- 取证：近 14 天 answer_log 243/34 uid、mistakes +129/37 uid，但 review_log 仅 24/3 uid；全量 mistakes 222 条 review_count=0 占 202、mastered 0——错题产出远大于复练。R368 的 pidFilter 只改列表，页顶「错题重练」卡 redoAll() 仍拼 /api/mistakes/redo?module/qtype/rz/src/t3，用户筛到一张卷点「开始」拿到的是全局 10 道待掌握错题，与筛选态语义冲突。
+- 方案（零新表/端点）：book.vue pidFilter 态下卡标题「重练本卷错题 · 卷名」、副文案「按卷面顺序只练本卷上次答错的题（答对过即不再算错）」，redoAll 前置 `if (pidFilter) return redoPaper()`；redoPaper 用 paperGroups(items, Infinity) 取当前卷 {psource,pid,title}，写 practiceLaunch {kind:'paper',untimed:true,wrong:true} → practice。practice.vue startPaper(p, untimed, wantWrong) 拉同一 /api/paper_questions 后 `paperWrongLaunch(items, wantWrong)`（paper-continue.js 新增：wantWrong===true 且有 wrong===true 项才返回 paperWrongPlan 结果，否则 null）→ 直达 wrongOnly（复用 R367 toast「只练本卷上次答错的题」、_source/_ptitle 归卷完成页）；无错题回落既有续练/重练 action sheet。team.py 白名单 +book_redo_paper。`.redo-l` 加 flex:1/min-width:0 防长卷名挤压「开始」。
+- 验证：eslint/vitest 505（+4 paperWrongLaunch）/build:h5、ruff/pytest 279 全绿；pyright 4 错为基线（exam_api.py:572、mock_event.py:502 str-int 运算，stash 前后一致，与本轮无关）。本机 pip 环境重置过，需 `pip install` Dockerfile.runtime 同款依赖才能跑 pytest。
+- 详见 docs/iter/round-3/r369-book-paper-redo.md。
+- 生产复验（PR #578 评论）：rev 05c1f8b / bundle index-CyQMv-31.js，uid test-r369-f7qt 1440/375：pidFilter 卡文案、0× /api/mistakes/redo、/api/paper_questions + track book_redo_paper ref=133、items=[236215,236223,236252]（排除先错后对 236208）、归卷完成页、无错题回落 R367 modal、无 pidFilter/模块筛选回归、375 「开始」不被挤、scrollWidth 375、console 0 error 全过；清理 62 行 LEFTOVER 0，容器 StartedAt 03:55:36Z 未变。#576/#577/#578 已合入 main。
+- 遗留观察（非本轮）：模块筛选态卡标题不带「· 模块名」；从其他路由直接改 hash 到 book?pid= 不一定重跑 tab onLoad（F5/徽标点击可进入）。
+
+### R370 热修：按卷完成页「重练本卷错题」作答不落 answer_log（2026-09，分支 devin/1788496145-r370-paper-retry-log，PR #579，base=main）
+- 取证（R369 复验中发现）：uid test-r369-f7qt 按卷练完 38 → answer_log 38；R366 CTA 重练 4 题后仍 38（容器未重启、offlineQueue=0）；/api/exam/papers wrong 不减、/api/paper_questions 刚答对题仍 wrong:true。R366 复验记的「容器重建窗口丢 ~8 条」根因即此。
+- 根因：practice.vue logAttempts 以 `!q._logged` 过滤；paper-continue.js paperWrongItems 就地复用 items 未删 `_logged` → 重练轮全部被跳过。其他复用点（redoSet/_redoItems 原始拷贝、R367/R369 新拉 items）不受影响。
+- 修复：paperWrongItems 追加 `delete c._logged; delete c._excl;`（排除标记也不带入重练）。零后端改动。vitest +1（502→506 含 R369）。
+- 部署：release/r369-r370 分支（R369 05c1f8b + R370 合并，rev f4af7c1，bundle index-ONbThL14.js）——两 PR 独立 base=main，生产需同时含两者故临时 release 分支合并部署；#578 合入后 #579 与 main 的相邻注释冲突已解决（c9a4f6f，源文件与 release 分支字节一致）。
+- 生产复验（PR #579 评论）：uid test-r370-c5ae，1440 首轮 38 答 5 错（2 题长按排除）→ CTA 重练 5 题 → 5 条 POST /api/answer_log（修复前 0）、DB 38+5=43、/api/exam/papers wrong 5→2、答对题 wrong:false；重练 items 无 _logged/_excl/_picked 残留、.opt.excl=0；联动 R367 卷卡「错 2 题」/action sheet、R369 直达 items=[236215,236243]；回归错题重练「再来一组」/普通刷题落库正常；375 CTA 全流程 2 条 POST、scrollWidth 375；console 0 error。清理 109 行（新增 review_log 表）LEFTOVER 0，保护 uid 快照一致，容器 StartedAt 04:39:49Z 未变。
+- 需注意：复验中 7 条作答一度进 offlineQueue（生产 503/超时），刷新后「离线作答已同步」收敛——DB 对账前先刷新冲队列。
+- 详见 docs/iter/round-3/r370-paper-retry-log.md。
+
+### R371 任意场次答对曾错题 → 服务端推进错题复习计划（2026-09，分支 devin/1788498918-r371-answer-advance-review，PR #580 已合入 main，base=main）
+- 取证（/data/data.db 实查）：mistakes 222、mastered 0、review_count=0 占 202；21 条未掌握错题在建立后已有答对 answer_log（9 条 review_count 仍 0、6 条答对 ≥2 次）；review_log 近 30 天仅 30 行/5 uid。根因：答错任何场次都走 save_mistake 重置 SRS，答对只有错题本重练场次由前端逐题 POST /api/review/{mid}；普通刷题/按卷/只练错题/CTA 重练/模考/PK 答对只写 answer_log。
+- 方案（零新表/端点）：db.py 抽 `_advance_review`（record_review 与 answer_log 共用同一 SRS）、`_find_open_mistake`（条目 mid 优先→question_id+uid 回退，仅 mastered=0）、`save_answer_log_detail` 返回 `{saved, reviewed:[{mistake_id,streak,mastered}]}`（同批同错题只推进一次）；`save_answer_log` int 契约不变，exam_api/team 调用方自动获得推进。POST /api/answer_log 新增 reviewed 字段。前端 practice.vue：logAttempts 带 `mid: q.mistake_id`；syncRedoReviews 不再 POST /api/review（防双计），改 await 在途落库请求后用 reviewed 汇总；非重练场次新增 `.fixreport`「本组答对 N 道曾错题，复习计划已推进（M 道达成掌握）· 回错题本 ›」；新 src/review-advance.js。掌握阈值 [1,3,7,15,30] 未动。
+- 验证：pytest 285（+6）/ruff、vitest 510（+5）/eslint/build:h5 全绿；pyright 4 错基线不变。
+- 部署：rev b4f12af，bundle index-CMN418Sg.js，Lighthouse 预算全过。
+- 生产复验（PR #580 评论）：uid test-r371-oayu；1440 按卷 38 答 3 错 → 错题重练 2 对 1 错 → 3 条 POST 带 mid、reviewed 各 1、**0 条 POST /api/review**、DB review_count/streak=1、next_review≈+1d、review_log 每题恰 1 行；错题本 2 题「明天复习」1 题「今日待复习」banner 3→1；卷库「只练错题」（无 mistake_id，qid 回退）答对 → `.fixreport` 出现且点击进错题本，banner 消失；375 重练 3 对 → streak 2、next_review≈+3d、redoReport 3/0/0、无横向溢出（clientWidth==scrollWidth==360，桌面 Chrome 仿真带 15px 滚动条，不能硬等 375）、console 0 error。清理 63 行（mistakes 3/answer_log 45/review_log 6/growth_events 9），保护 uid 快照不变。
+- 需注意：造数据阶段生产 503/524 致容器重启一次（StartedAt 05:43:19Z → 05:57:25Z），作答走 offlineQueue 刷新后补齐无丢失；功能证据全部采自重启后稳定窗口。共宿负载问题持续，仍建议限资源。
+- 详见 docs/iter/round-3/r371-answer-advance-review.md。下次 SOP-10 四维审计 ~R376。
+
+### R372 生产进程被整体换出 → 请求 25s 超时/假死重启循环：内存驻留加固（2026-09，分支 devin/1788504128-r372-runtime-memory，PR #582 已合入 main，base=main）
+- 取证（VPS /proc、cgroup v2、Caddy 源站日志、生命周期日志）：真实用户 /api 5xx 9-03 10%、9-04 早间 24%，形态为 Caddy `lb_try_duration 25s` 耗尽 503，绝大多数不在重启窗口；容器内 `/proc/1/status` VmRSS 16 MB / VmSwap 238 MB、cgroup `memory.swap.max=max`——进程被整体换出，每请求从 swap 回页数十秒；健康探针同样 >25s → autoheal SIGKILL（137，OOMKilled=false）→ 冷启动再拉回全部页 → 循环（`removing unhealthy` 4/4/6/8 次/天）。宿主 1.9 GiB RAM 被共宿 recruit-postgres（file 271 MB）+ 10 个 postgres 后端 + dockerd 213 MB 占满，全部业务容器都在 swap。kaogong 自身放大项（本地用生产库副本 smaps 实测）：启动瞬间并发 governance_scan 全表 fetchall（+100 MB 峰值）等三个后台任务 RSS 239→642 MB；每线程本地连接 32 MB 堆页缓存 × 最多 40 线程池连接，mmap 256 MB < 库 419 MB。
+- 方案（零功能变化/零新表端点）：compose `mem_limit: 768m` + `memswap_limit: 768m`（→ `memory.swap.max=0`，进程页固定 RAM）+ `mem_reservation: 384m`（→ `memory.low`）；`db.get_conn` `SQLITE_CACHE_KIB=-8192`、`SQLITE_MMAP_BYTES=1<<30`；main.py `BOOT_QUIET_S`（`KG_BOOT_QUIET_S` 默认 600s）后才跑 `_prime_admin_caches` 与 `refresh_question_stats/refresh_material_hash`；`_governance_scan_uncached` 游标迭代不 fetchall。**代价：宿主压力转移到其余容器**；匿名内存真超 768 MB 走 OOM kill + restart 秒级拉起（lifecycle 日志会显示 oom=true）。
+- 验证：pytest 288（+3 test_runtime_memory.py）/ruff/pyright 0；vitest 511/eslint/build:h5 全绿（前端零改动）。
+- 部署：rev 9a2c8cd，bundle index-C7wGv3is.js，StartedAt 06:53:13Z；docker inspect Memory=MemorySwap=805306368、Reservation 402653184；cgroup swap.max=0、swap.current=0；VmSwap 0、anon 74 MB。
+- 生产复验（PR #582 评论）：1440/375 首页/错题本/卷库/SEO/普通刷题完成页/管理台全部 200、0 console error、375 clientWidth==scrollWidth；部署后 25 min 源站 /api 136 请求 **0 5xx**（部署前当日 12362 请求 5xx 10.7%）、>5s 3.7%（前 12.2%）、平均 0.64s（前 3.74s）；容器 StartedAt 4 个检查点不变、oom_kill 0、VmSwap 全程 0。**未达项**：宿主 load 24 尖峰期普通刷题 5 个写请求 7–15.8s（全 200，进程 VmSwap 0，为宿主 CPU/IO 争抢非换出）；VmHWM 静默期结束后 555→670 MB（上限 768 MB 余量约 100 MB，需观察 lifecycle 日志 oom 字段）。清理 test-r372-xknj 16 行 LEFTOVER 0。
+- 需注意：① 若 lifecycle 日志出现 oom=true，先看 `KG_BOOT_QUIET_S`/预热任务与 `_HOT_UID_TABLES` 全表 fetchall 增长，再考虑上调 mem_limit；② 共宿 recruit/postgres 限资源建议已第四次提出，仍是宿主级根因；③ 本地取证脚本 /home/ubuntu/r372_memprofile*.py 与生产库副本 /home/ubuntu/proddb 不入库。
+- 详见 docs/iter/round-3/r372-runtime-memory-pin.md。
+
+### R373 静默期结束瞬间用户写请求集体阻塞 15s：后台重任务空闲门控 + 题目统计刷新不持写锁翻冷页（2026-09，分支 devin/1788507404-r373-idle-gated-refresh，PR #584，base=main）
+- 取证：R372 上线后源站 0 个 5xx，但 5 条 7–15.6s 的 POST（practice/progress ×3、answer_log ×2）全部在 07:03:34 同一秒放行；StartedAt 06:53:13 + 600s 静默期 = 07:03:13。同一秒集体放行 = 排队等同一把锁。静默期结束同时启动 `_prime_admin_caches`（admin_stats 冷页读 252 MB 全表扫描）与 `refresh_question_stats`（一个隐式写事务内逐题 UPDATE 943 行；生产库副本 `posix_fadvise DONTNEED` 冷页实测读 99 MB＝943 次随机页错误×mmap readahead，热页 0 MB）。宿主 IO pressure full≈65% + 刚起 10 min 页缓存只有 ~135 MB → 随机读全部落盘并算进写锁持有期，POST 在 busy_timeout 上排队到 commit 一刻集体放行。反证：页缓存热时（IO pressure 99%）用探针（/tmp/r373_probe.py，每 0.5s 一读一写 + 触发三缓存 stale 刷新）写 max 1.1s 不阻塞。
+- 另取证（未用作本轮方向，留档）：mistakes 221/59 uid、mastered 0、times=1 占 214、197 条未掌握 next_review IS NULL（R371 前历史数据未进 SRS）、error_reason 仅 6 条非空、source NULL 202/exam 19；近 14 天 growth_events boot 231/229 uid、heatmap_view 59/38、slow_load 54/22（TTFB 中位 69ms 但 p90 25.9s 两极分化）、review_entry_click 5/4、review_done_celebrate 1/1——错题本复习完成率极低，是下一轮候选方向。
+- 方案（零功能、零新表/端点）：① `db.refresh_question_stats` 先在读事务里 `SELECT id, attempt_count, correct_ratio, most_wrong ... WHERE id IN (...)`（读热页、不持写锁），只对变化行 `executemany` UPDATE，每 `QUESTION_STATS_BATCH=100` 行 commit；返回值仍为有作答题数。② main.py `note_request()`（slow-req 中间件记录最近用户请求时间，`/api/health` 探针不计）+ `heavy_task_allowed()` = 静默期已过 且（最近 `KG_IDLE_GATE_S=60`s 无请求 或 已推迟满 `KG_IDLE_MAX_DEFER_S=2h`）；`_warmup` 预热与 `_stats_refresher` 每轮刷新都过此门（`_wait_heavy_task_slot` 15s 轮询）。
+- 验证：pytest 291（+3 test_idle_gated_refresh.py：只写变化行/分批 commit/无变化零写、门控四态+最大推迟、health 不计活跃）/ruff/pyright 0；vitest 511/eslint/build:h5（前端零改动）。测试坑：共享测试库主线程连接若留有 `fetchone()` 未走完的活动读语句，另一线程写后本线程再写会立刻 `database is locked`（BUSY_SNAPSHOT），用 `fetchall()` 让语句复位。
+- 部署：rev c76247a，bundle 不变 index-C7wGv3is.js，StartedAt 07:48:38Z，Lighthouse 预算全过。
+- 生产复验（PR #584 评论）：作者探针 StartedAt+540s→+730s 跨静默期结束点，写 184 次 max 25ms、读 185 次 max 76ms，slow-req 0（R372 同窗口 5 条）；探针刚停 `/api/admin/dashboard` X-Kg-Cache=cold（预热被推迟），空闲 ≥60s 后 `_warmup` 下一轮执行预热 VmRSS 426→647 MB、随后 hit；部署起 1666 条 /api 0 个 5xx、RestartCount 0、VmSwap 0、memory.events oom 0。testing agent（uid test-r373-avxx）1440/375 精简冒烟：首页/刷题 10 题完成页/错题本/卷库 130 个 /api 全 200 max 534ms、console error 0、375 三页 clientWidth==scrollWidth==375、答 1 题落库；清理 22 行 LEFTOVER 0，StartedAt 未变。
+- 未验证/限制：① 探针窗口宿主 IO pressure avg300 仅 19–26%、load ≤3.6（事故时 full≈65%、load 19–24），「高争用下也 0 阻塞」未在生产复现，机制消除由单测 + 冷页 IO 实测背书；② 375 阶段捕到 1 条 `unhandledrejection: [object Object]`（钩子只存了 String，无法归因，重跑未复现；前端零改动）；③ 管理台未测。
+- 需注意：预热后 VmRSS/HWM ≈650 MB 主要是 mmap 文件页（可回收），不是 anon 增长；若 `_warmup` 5 分钟轮询下预热最迟在空闲后 ≤300s 才发生，属预期。
+- 详见 docs/iter/round-3/r373-idle-gated-refresh.md。下次 SOP-10 四维审计 ~R376。

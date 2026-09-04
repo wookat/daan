@@ -62,6 +62,7 @@
         </view>
         <text v-if="p.best_score != null" class="pbest">我的最好成绩 {{ p.best_score }} 分 · 已考 {{ p.attempt_count }} 次</text>
         <text v-else class="pbest none">还没考过，来挑战一下</text>
+        <text v-if="p.psource && practicedState(p).show" class="ppracticed" :class="{ done: practicedState(p).done }">{{ practicedState(p).text }}</text>
       </view>
       <view class="paper-btns">
         <view class="pbtn main" @click="startPaper(p)">开始模考</view>
@@ -101,6 +102,7 @@ import { parseExamProgress, fmtLeftSecs } from '../../exam-resume.js';
 import { filterPapersByStatus } from '../../exam-list-status.js';
 import { paperProgress } from '../../exam-list-progress.js';
 import { adoptServerExamProgress } from '../../exam-progress-sync.js';
+import { paperPracticedState } from '../../paper-continue.js';
 
 export default {
   data() {
@@ -216,6 +218,8 @@ export default {
       if (!this.resume) this.syncResume();
     },
     async syncResume() {
+      const clearedAt = uni.getStorageSync('erClearedAt');
+      if (clearedAt && Date.now() - clearedAt < 30 * 1000) return;
       try {
         const d = await request('/api/exam/resume?uid=' + encodeURIComponent(anonUid()));
         const now = Date.now();
@@ -237,6 +241,10 @@ export default {
         confirmText: '放弃', cancelText: '再想想',
         success: (res) => {
           if (!res.confirm) return;
+          uni.setStorageSync('erClearedAt', Date.now());
+          if (this.resume && this.resume.attemptId) {
+            request('/api/exam/progress', { method: 'POST', data: { uid: anonUid(), attempt_id: this.resume.attemptId, drop: true } }).catch(() => {});
+          }
           uni.removeStorageSync('examProgress');
           this.resume = null;
         },
@@ -257,9 +265,12 @@ export default {
       if (this._starting) return;
       uni.navigateTo({ url: '/pkgA/exam/exam?paper_id=' + p.id });
     },
+    practicedState(p) {
+      return paperPracticedState(p.practiced, p.n, p.wrong);
+    },
     practicePaper(p) {
       // 不计时逐题练习，复用刷题页既有按卷练习协议
-      uni.setStorageSync('practiceLaunch', { kind: 'paper', source: p.psource, title: p.title, untimed: true });
+      uni.setStorageSync('practiceLaunch', { kind: 'paper', source: p.psource, pid: p.id, title: p.title, untimed: true });
       uni.navigateTo({ url: '/pages/practice/practice' });
     },
     openBestReport(p) {
@@ -332,6 +343,8 @@ export default {
 .pmeta { font-size: 23rpx; color: var(--ink-2); }
 .pbest { display: block; font-size: 22rpx; color: var(--warn); margin-top: 10rpx; }
 .pbest.none { color: var(--ink-2); }
+.ppracticed { display: block; font-size: 22rpx; color: var(--ok-strong); margin-top: 6rpx; }
+.ppracticed.done { color: var(--brand-text); font-weight: 600; }
 .paper-btns { display: flex; gap: 16rpx; margin-top: 20rpx; }
 .pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 25rpx; font-weight: 500; }
 .pbtn.main { background: var(--brand); color: #fff; border-color: var(--brand-text); }

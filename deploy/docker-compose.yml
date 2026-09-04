@@ -6,6 +6,12 @@ services:
     restart: unless-stopped
     # 共享宿主 CPU 争抢时的相对调度权重（默认 1024），空闲时无影响
     cpu_shares: 4096
+    # memswap_limit == mem_limit → cgroup memory.swap.max=0：进程页固定在 RAM，不再被整体换出
+    # 后每个请求回页 25s+；mem_reservation → memory.low，宿主回收时优先保住工作集。
+    # 匿名内存真超上限时 OOM kill（OOMKilled=true）并由 restart 秒级拉起，替代 5 分钟假死判定。
+    mem_limit: 768m
+    memswap_limit: 768m
+    mem_reservation: 384m
     ports:
       - "127.0.0.1:8300:8000"
     environment:
@@ -29,6 +35,8 @@ services:
       - KG_VAPID_PRIVATE=${KG_VAPID_PRIVATE:-}
       - KG_VAPID_PUBLIC=${KG_VAPID_PUBLIC:-}
       - KG_VAPID_SUB=${KG_VAPID_SUB:-mailto:support@zalize.com}
+      # 探针出口网段（逗号分隔 CIDR）：命中的作答/埋点入库打 probe=1，运营看板剔除；空=不打标
+      - KG_PROBE_CIDRS=${KG_PROBE_CIDRS:-}
     volumes:
       - kaogong-data:/data
       # 运维审计日志目录（部署/生命周期/备份巡检），只读供 /api/admin/ops_status 外显

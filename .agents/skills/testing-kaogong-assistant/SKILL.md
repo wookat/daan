@@ -5,6 +5,111 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R373 精简回归冒烟（纯后端调度改动、零前端）走查新经验
+- `unhandledrejection` 钩子必须保存 reason 的 **JSON 序列化 + stack + Object.keys**，而不是 `reason.message||String(reason)`——uni promisified API 的拒绝是 `{errMsg:'xxx:fail …'}` 这类无 `.message` 的对象，只存 `String()` 会得到无法定位的 `rej: [object Object]`（R373 375 阶段捕到 1 条，事后无法复现也无法归因）。可直接沿用 `window.__r373rej` 的写法：`JSON.stringify(r)` 失败时回落 `String(r)`。
+- 「答 N 题并提交」在本 app 意味着组内自动进下一题，没有独立「提交」按钮；N 题时用「已答 N/10 · 正确 X」+ hook 中 N× `POST /api/answer_log 200` 作为中间态证据，随后需答完 10 题才有完成页。375 上退出会话用页头「退出」，回到首页后「今日已练」应 +N。
+- 本轮 375 CDP 仿真三页宽度全为 375（无 15px 滚动条差值）；同一台机不同轮可能得到 360，判读仍以 `clientWidth===scrollWidth` 为准。
+- 卷库页头「‹」返回的是上一页栈（如错题本），不是首页；回首页点 tab「刷题」。
+- 结束顺序固定：先 SSH 取容器检查点 + DB 对账/清理（base64 脚本 → `docker cp` → `docker exec python3`），再恢复 localStorage（不刷新），再 `kill $(cat holder.pid)`，最后 `Emulation.setDeviceMetricsOverride(mobile=False)` + `clearDeviceMetricsOverride`（只调 clear 不生效，innerWidth 仍 375）。
+- 后台任务门控（`heavy_task_allowed`/`refresh_question_stats` 只写变化行）UI 不可观测；报告里要把它们归入「未验证」，只主张「用户流程无回归 + `docker logs … | grep -c slow-req` = 0 + StartedAt/VmSwap 不变」。
+
+## R372 运行时/性能冒烟（零功能变化）走查新经验
+- 「每页主要 API 耗时」用两路取证：`performance.getEntriesByType('resource')` 过滤 `/api/`（`duration` + `responseStatus`，Chrome ≥109）和 fetch/XHR 钩子 `window.__r372`（能拿到 POST 的 status 与耗时）；每次 hard nav 后 `performance.clearResourceTimings()` + 重装钩子，逐页把 JSON 追加到 `/tmp/rXXX_timings.jsonl` 便于最后出表。容器 `docker logs | grep slow-req` 会打印 >5s 的请求，可与前端记录互相印证。
+- 出现 >5s 慢请求时**立刻**在同一分钟抓宿主证据：`uptime`（load）、`free -m`（宿主 swap_used）、`/proc/pressure/{cpu,memory,io}`、`top -bn1 | head`（同机 postgres 等进程）、容器 `/proc/1/status VmSwap/VmRSS/VmHWM`、`memory.events oom_kill`。这样能区分「本进程被换出」（VmSwap>0）和「宿主争用」（VmSwap 0 但 IO/CPU pressure 高）。
+- `VmHWM` 是进程峰值 RSS，静默期（`KG_BOOT_QUIET_S` 默认 600s）结束后的预热/统计刷新会把它抬高（本轮 555→670 MB，上限 768 MiB），记录前后值并报告余量。
+- 管理台 cold 路径要在 StartedAt+600s **之前**登录才能观测；ADMIN_TOKEN 在容器 env（`docker exec deploy-kaogong-1 printenv ADMIN_TOKEN`），SSH 高负载时 printenv 可能超时导致 `$TOK` 为空、`&&` 短路，建议先落到 `/tmp` 文件再用。`cdp.pick()` 刻意排除 `/admin` 标签，连管理台要自己 `tabs()` 过滤 `'/admin' in url`。
+- 普通刷题到完成页：一组默认 10 题，答 2 题不会到完成页；键盘 `A` 选项 + 答错后 `Enter` 下一题（答对自动跳）最省事，10 题后自动进「本组完成」。
+- localStorage 备份若用 `JSON.stringify(JSON.stringify(localStorage))` 导出会成为**双重编码字符串**，恢复前 `if isinstance(d,str): d=json.loads(d)`，否则会写入 8 万个单字符键；恢复后校验 `Object.keys(localStorage).length==18` 且 `anonUid` 为保护 uid。
+- 375 用 CDP `setDeviceMetricsOverride(mobile=true)` 时 clientWidth/scrollWidth 可能都是 375（本轮）也可能是 360（有滚动条时），以 `clientWidth===scrollWidth` 判无溢出。
+
+## R371 answer_log 服务端推进错题 SRS（reviewed[] / 不双计 / .fixreport）走查新经验
+- 核心断言是 **网络 + DB 双对账**：页内 fetch/XHR 钩子（样例 /tmp/r371_hook.js，日志存 `sessionStorage.__r371log` 以跨 navigateTo 保留）记录 `POST /api/answer_log` 的 body（是否带 `mid`）与响应 `reviewed[]`，并统计 `/api/review/` 的 **POST** 数必须为 0——`GET /api/review/cur` 是既有轮询，别误判为双计。DB 端每个被纠正的 mistake `review_log` 行数应恰等于答对次数（1 次答对 → 1 行；重练后再对 → 2 行），`next_review-now` 约等于 `REVIEW_INTERVALS_DAYS[streak-1]` 天（1d、3d…）。
+- 三种场次要分开造：①错题本「错题重练」（`/api/mistakes/redo`，items 带 `mistake_id`，body 带 `mid`，完成页 `.redoreport` 已纠正/仍错/达成掌握）；②卷库「只练错题」或按卷练习（卷 kind 会话，items 无 `mistake_id`，body 无 `mid`，服务端按 `question_id+uid` 回退命中，完成页 `.fixreport`「本组答对 N 道曾错题，复习计划已推进（M 道达成掌握）· 回错题本 ›」，mastered=0 时无括号段）；③随机模块刷题很难命中曾错题，用②覆盖「非重练场次」即可。redo 场次的 `.redoreport` 数字用组件 `items` 的 `_picked===answer` 自算对照。
+- 错题本状态判据：`next_review<=now` 显示「今日待复习」+ 顶部「今日待复习 N 道」banner，否则按天数显示「明天复习」；纠正 1 题后 banner 计数应 -1，全纠正后 banner 消失。
+- 375 CDP 移动仿真在桌面 Chrome 仍带 15px 纵向滚动条：`innerWidth=375` 但 `documentElement.clientWidth===scrollWidth===body.scrollWidth===360`，用「clientWidth===scrollWidth」判无横向溢出而不是硬等 375；全 DOM 扫 `getBoundingClientRect().right` 会命中 4 个 `visibility:hidden` 宽 400 的 uni 内部测量 div，忽略。
+- 造数据阶段生产 503/524 时容器可能被重启（StartedAt 变化），作答走 offlineQueue 刷新后补齐；若发生，报告里要明确「StartedAt 全程不变」不成立、并说明功能证据采自重启后的稳定窗口。
+- `/tmp/cdp174/restore_ls.py` 把备份路径写死为 r366，恢复 localStorage 时要自己 `json.load` 本轮备份再 `localStorage.clear()+setItem` 并核对键数（正常 18 键）；恢复后绝不再 reload/navigate。
+- 本轮 uid 命中的清理表：mistakes / answer_log / review_log / growth_events；仍用 `PRAGMA table_info` 扫全部 uid/user_id 列删 `test-rXXX-%`。
+
+## R370 完成页 CTA 重练「落 answer_log」走查新经验
+- 「某轮作答不落库」类修复的核心断言是 **网络层 POST 计数**，不是完成页文案：装 fetch/XHR/sendBeacon 三钩子记录 `/api/answer_log` body（`items[].qid/correct/source`），并把日志同时写进 `sessionStorage`（F5 后内存钩子丢失，但 sessionStorage 还在）；每轮开始前记 mark，轮后断言「新增 POST 数 == 本轮题数」。
+- 重练轮 items 的残留字段要枚举全集：`_picked/_saved/_mid/_secs/_logged/_excl/done`，其中 `_logged:true` 残留会让 `logAttempts` 的 `pending=[]` 静默不发请求——这是 R366 的 bug 根因。
+- 长按排除（`@longpress`）在 H5 只能用 **touch 事件** 触发：CDP `Input.dispatchTouchEvent` type=touchStart（touchPoints=[{x,y}]）→ sleep ≥0.6s → touchCancel；鼠标 mousePressed 按住不触发。排除后 `cur._excl` 为字母数组，题面 `.opt.excl` 仅在选答前可见；重练轮断言 `.opt.excl` 数量 0 + item 无 `_excl`。
+- 生产偶发 503/超时时作答进 `localStorage.offlineQueue`；**统计 DB 行数前先 F5 一次** 让队列 flush（toast「离线作答已同步」），否则 DB 会比 hook POST 数少几条而误判丢答。刷新后钩子要重装，且 `window.__mark` 之类要在重装钩子之后再设（否则 `undefined.length`）。
+- 作答对账公式：uid answer_log 行数 = 各轮题数之和，且等于完成页「已累计刷 N 题」；source 分组（paper psource vs null）可分别核对按卷轮与普通轮。`review_log` 表也带 uid（做错题本重练会写），清理时靠全表 PRAGMA 扫 uid/user_id 列即可覆盖。
+- 保护 uid 快照：测试前记 `max(id)` of growth_events/answer_log/mistakes；恢复 localStorage 后**不要再刷新/导航**（会触发 slow_load/stale_fallback telemetry），最后只用 CDP 校验 `localStorage.anonUid`。
+- 清 375 模拟：holder 进程 kill 后 `Emulation.clearDeviceMetricsOverride` 单独调用可能不生效（innerWidth 仍 375），先 `setDeviceMetricsOverride(width=0,height=0,deviceScaleFactor=0,mobile=false)` 再 clear 即恢复；无需 reload。
+- 不要 `import m375`：脚本在 import 时执行 `main()` 读 argv 会 IndexError，需要复用时把 JS 片段抽出来。
+
+## R369 错题本 pidFilter「重练本卷错题」直达走查新经验
+- 「不再请求 X、改请求 Y」类改动要在点击前装 **fetch+XHR 双钩子**（`window.__log=[]`，记录 url 与 track body）并在 navigateTo 之后（同一 SPA 页面对象仍在）读取；断言 `/api/mistakes/redo` 计数为 0、`/api/paper_questions?src&pid&uid` ≥1、`/api/track` body `event/source/ref`。整页 F5 会丢钩子与 console error 收集器，刷新后要重装，或改用 browser_console 工具读真实控制台。
+- 「latest-answer 仍错」口径验证要刻意造 **先错后对** 的题：整卷答错 K 题 → 走 R367「只练错题」把其中 1 题答对 → 直达会话 `items.map(id)` 必须是 K-1 个且不含那题；错题本仍显示 K 张历史错题卡（mistakes 表不删），两者不一致是设计使然，别误报。
+- 无错题回落是 practice 页 **modal**「本卷已练完 / 重新练一遍？」（uni-modal），而不是 action sheet；DOM 里可能残留上一轮的隐藏 `<uni-actionsheet>`（内部 `.uni-actionsheet` `visibility:hidden` 高度 0），用可见性判断而不是 querySelector 存在性。
+- 从记住上次路由的页面直接改 hash 到 `#/pages/book/book?pid=133` 时，tab 页 onLoad 不一定重跑，组件可能仍是 `pidFilter=0`（标题「错题重练」）；需要用 F5 整页刷新或点徽标进入筛选态再断言。
+- 375 长卷名挤压检查：量 `.redo-go` rect.right ≤ 375、`getComputedStyle(.redo-l).minWidth==='0px'`、`flexShrink==='0'`；再临时把 `.redo-t` textContent 换成 50+ 字长串复测，完毕用保存的原文恢复。
+- 高负载时 `/api/paper_questions` 可能 503 / 50s+，前端 toast「加载试卷…」会一直挂着但自动重试成功后照常弹 modal；等 60–90s 再判断，别把加载中截图当失败。
+- **恢复保护 uid 后不要再多刷生产页**：H5 boot 会以保护 uid 自动上报 `growth_events`（`slow_load`/`stale_fallback`/`boot`），使「前后快照不变」失败。本轮多出 4 行遥测，按 id+时间戳精确删除后快照才一致；最好恢复 localStorage 后直接停止操作，或先在空白页(about:blank)恢复。
+- `pgrep -f "[h]oldvw"` 本身安全，但同一命令行里若再出现字面 `holdvw`（如 `echo "holdvw stopped"`）仍会自杀 exec 会话；kill 命令单独一行且不要在同行写该词。
+- `ssh "docker exec -i A python3 -c …; docker exec -i B python3 -" < script.py`：stdin 会被第一个 `docker exec -i` 吃掉，第二个读到空；需要 stdin 的脚本单独一次 ssh。
+
+## R368 错题本归卷（卷源徽标 / 按卷筛选 / 练本卷）走查新经验
+- 归卷类功能要同时验 **API 形状** 与 **UI 分组**：`/api/mistakes?uid=` 每条 `paper` 为 `{pid,title,psource}` 或 `null`，用 `Object.keys(item)` 断言不泄露内部字段（如 `q_source/q_is_real`）；对照组用普通刷题答错一题（非该卷真题），它必须 `paper:null` 且卡片无 `.pbadge`。按卷不计时练习产出的 `mistakes.source` 为 NULL（saveWrong 不传 source），这正是归卷靶场景，可在清理前用 `select source,count(*) from mistakes where uid=? group by source` 佐证。
+- 错题本 URL 同步在 hash query 里（`#/pages/book/book?pid=133&mod=…&sort=…`），非法值（`pid=0`/负/非数字）应 fail-closed 不筛选且 console 无 error；**桌面与 375 移动仿真都要在整页刷新后**各验一遍，因为 onLoad 解析与 syncUrl 是两条路径。
+- 375 下长卷源文本的 ellipsis 用计算样式（`overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:40vw`）+ 临时把 `.pbadge` 的 innerText 换成 40+ 字长串量 `getBoundingClientRect().right<=375` 与 `documentElement.scrollWidth===375` 验证；生产真题 psource 通常不够长，别只靠肉眼。
+- 「练本卷 ›」→ `/pkgA/exam/list?pid=` 的 R365 深链在实现上是 **高亮 + `scrollIntoView({block:'center'})`**（`.paper.pinned` + `.pin-badge`「邀你挑战的卷」），卡片仍在原始位置（本轮 index 101/120），不是真正移到列表顶部；不要按「置顶」字面去断言 first child。
+- `/api/track` 事件（如 `book_go_paper`）用页内 `fetch` 钩子在点击前装上（`window.__trk=[]; const of=fetch; fetch=(u,o)=>{if(String(u).includes('/api/track'))__trk.push(o&&o.body);return of(u,o)}`），跨页 navigateTo 前读取，避免整页刷新丢钩子。
+- 清理表本轮命中 mistakes/answer_log/exam_attempts/growth_events/**exam_progress**（开始模考后退出会留 `exam_progress` 1 行）；用 `pragma table_info` 扫全表 uid/user_id 列删除即可，删前记 `answer_log` 总数（总数差应恰等于测试 uid 行数）。
+- `pgrep -f "holdvw.py 1440" | xargs kill` 与 `pkill -f` 一样会匹配到自己所在 bash 命令行并把 exec 会话杀掉（exit -1）；改成 `pgrep -f "[h]oldvw.py"` 或在单独 exec 里只跑 kill，别把后续命令串在同一行。
+- CDP 助手 `C.call(method, **params)` 用关键字参数，`Emulation.clearDeviceMetricsOverride` 直接 `c.call('Emulation.clearDeviceMetricsOverride')`。
+
+## R367 卷卡错题数 + 已练完卷「只练错题」action sheet 走查新经验
+- 「最近一次作答」口径的 wrong 计数要用 **同一 uid 两轮作答** 验证：整卷答错 K 题 → 卷卡 `已练完全部 N 题 ✓ · 错 K 题`、`/api/exam/papers?uid=` 该卷 `wrong===K`、`/api/paper_questions?src&pid&uid=` 中 `wrong===true` 的 id 顺序应等于卷面顺序（不是答题顺序）；再把这 K 题全答对后 `wrong` 必须回 0 且卷卡去掉「· 错」后缀。答错 id 序列在 UI 上不可见，靠 CDP 读组件 `items[i].answer` 与 `_picked` 记录。
+- uni `showActionSheet` 在 H5 渲染为 `<uni-actionsheet>`，页内判断是否弹出用 `firstElementChild` 的 `display!=='none'`（元素常驻 DOM，不能只看存在性）；取消项文字「取消」，点击后断言组件 `session===false` 且 `items.length===0`。
+- 「只练错题」入口与 R366 完成页 CTA 的重练 items 断言相同（id 序列/无 `done`/`wrong` 残留/`_ptitle`/`_source`），但 toast 文案不同：R367 是「只练本卷上次答错的题」，R366 是「只重练本卷错题」，别混用。
+- 计时模考回归：「开始模考」直接进 `/pkgA/exam/exam?paper_id=…` 且不弹 sheet；退出未交卷后卷库顶部会留「未交卷」横幅 + `exam_attempts` 1 行，需点「放弃」并把 `exam_attempts` 纳入 uid 清理表（本轮命中 mistakes/answer_log/exam_attempts/growth_events）。
+- 首页真实路由是 `#/`（tabBar），手敲 `#/pages/index/index` 之类未注册 hash 会得到空白页，F5 后才回首页；页内 hash 跳转后 `window.__errs` 之类注入的错误钩子会随整页刷新丢失，改用 browser console 直接看（正常只有 uni `showLoading/hideLoading 必须配对使用` 警告，无 error）。
+- exec 的 `env` 参数不能写 `"$VAR"` 引用已有环境变量（会成字面量，ssh 报 Permission denied）；在命令里写 `SSHPASS="$TICKETS_VPS_SSH_CREDENTIAL" sshpass -e ssh …` 即可。
+- 作答条数对账：首页「今日已练 N 题」应等于 answer_log 该 uid 行数（本轮 84=84）；配合 `docker inspect -f '{{.State.StartedAt}}' deploy-kaogong-1` 无变化即可排除容器重建丢数。
+
+## R366 按卷完成页「重练本卷错题」走查新经验
+- 完成页错题重练 CTA 是纯前端会话态：CDP 拿 practice 组件 proxy（`items/idx/session/_ptitle/_source`）后，断言 `items.map(q=>q.id)` == 本轮 `_picked!==answer` 的 id 序列，且每项无 `_picked/_saved/_mid/_secs/done` 残留；`_ptitle/_source` 不变即 归卷 保留。
+- 375 下键盘快捷键（A–D/Enter）失效（桌面才启用），38 题卷手点太慢：用 CDP `Input.dispatchMouseEvent` 按选项 `getBoundingClientRect` 中心真点（脚本样例 /tmp/cdp174/m375.py：读组件 answer，指定第几题故意答错，答错后自动找「下一题」按钮点掉）。截图坐标≈(css_x*0.64, (css_y+87)*0.64)（1600 宽实屏映射 1024 截图）。
+- 完成页底部横幅（「今日还有 N 题到期待复习」）会晚到几秒并把 CTA 往下推——点 CTA 前重新截图/取 rect，否则点空。
+- 生产 `/api/answer` 失败时前端进 `localStorage.offlineQueue`（`{type,data:{answers:[{key,uid,item:{qid,correct,picked,source,t}}]}}`），下次启动/刷新 toast「离线作答已同步」再落库；DB 断言 answer_log 数量前先刷新一次让队列冲掉，队列里 `item.source` 也可当归卷证据。`deploy_h5.sh` 会顺带重建 `deploy-kaogong-1` 容器（`docker ps` 看 Up 时长），重启窗口内的作答可能既不进队列也不落库（本轮丢 ~8 条）——遇到条数对不上先查容器 StartedAt，别记成功能 bug。
+- 清理：`sqlite_master` 枚举所有含 uid 列的表（本轮命中 mistakes/answer_log/growth_events）按 uid 删并回读 leftover=0；`pkill -f holdvw.py` 会连自己所在 bash 一起杀（模式匹配到命令行），单独一条命令跑或加 `pgrep -f "holdvw.py 375"`。
+
+## R362 按卷练习 pid 对齐走查新经验
+- pid 对齐最强对抗卷：2015 新疆卷 pid=133（卷卡 n=38，psource「2015年新疆省考行测真题」src 全集 120 题）——请求带 `pid=133` 时会话应 1/38，前端漏带 pid 会退回旧行为 1/120，一眼可辨。
+- 断言四点一线：抓包 `paper_questions?src=…&pid=…&uid=…` → 会话 1/N → 卷卡「已练 X/N」→ R360/R361 弹窗分母同 N（三方分母一致即对齐成功）。
+- DB 构造全练完必须用 **pid 响应的 qid 集**（页面内 fetch 带 pid 存 window 变量），不能用 src 全集 120 qids，否则分母被污染。
+- 计时模考路径断言：`POST /api/exam/start {paper_id}`，该导航不发任何 paper_questions 请求（无 pid/uid 均正常）。
+- Emulation.setDeviceMetricsOverride 在设它的 ws session 断开后可能残留 375：另开 session clearDeviceMetricsOverride 可能无效，重启 holdvw holder（重新 hold 1440）才恢复。
+
+## R361 卷卡完成态/重练弹窗/source 归因走查新经验
+- 完成态断言点：`.ppracticed.done` 文案精确「已练完全部 N 题 ✓」、computed color rgb(46,91,255)（--brand-text 在 :root 上 getPropertyValue 可能取空，直接比 computed color）+ font-weight 600；部分完成为绿 rgb(21,128,61) fw400 无 done class。
+- 全练完弹窗：title「本卷已练完」content「本卷 N 题已全部练过，重新练一遍？」按钮 不用了/重新练；「不用了」停留在练习页准备骨架（无 1/N 会话计数即为未进会话）；timed 模考不弹（走 exam 页）。
+- source 归因验证路径：错题卡「…」菜单→「同考点强化 5 道新题」（reinforceFromMistake → _source='reinforce'）答 1 题，再进按卷练习答 1 题，DB `answer_log.source` 应=卷 psource、无 'reinforce' 残值。
+- **卷卡 n 与按卷练习会话题数可能不一致**：卡 n=卷 question_ids ∩ 活跃题（如 2015 新疆卷 n=38），但 paper_questions?src= 按 source 查询可返回更多题（同 source 120 题）——完成态构造/全练完弹窗以 **src 响应题数** 为准，选卷前先核对两者一致（2025 四川卷 75/75 一致，最稳）。
+- DB 构造全练完：向 answer_log 插 `(uid,created_at,question_id,module,submodule,correct,secs,picked,source)`，qid 集取页面内 paper_questions 响应的 id；用独特 source 标记（如 r361-construct）便于追溯，清理按 uid 删即可。
+
+## R360 按卷练习「只练剩余」走查新经验
+- `GET /api/paper_questions?src=…&uid=` 带 uid 时每题含 `done:bool`（该 uid answer_log DISTINCT 命中）；只有 practice.vue untimed 分支拼 uid，模考走 `/api/exam/start`（paper_id），**根本不请求 paper_questions**——timed 回归断言应写成「无带 uid 的 paper_questions 新请求」而非「paper_questions 无 uid」。
+- 续练弹窗断言：标题「继续上次进度？」内容「本卷已练过 X 题，只练剩下的 N-X 题？」确认=只练剩余/取消=从头练；只练剩余后核对三点：进度总数=N-X、当前题 qid==响应里首个 done!=true 的题（顺序保持=原第 X+1 题）、done:true 集合==抓包已答 qids。
+- **同 VPS 共宿 recruit(postgres) 应用会周期性把 load 打到 15-21**，kaogong /api 会 12-20s 超时（前端 20s abort 后页面停在「正在准备练习…」）；answer_log 会 503 但**前端有本地重试队列**，等 load 回落（`uptime` 核对 `ps aux --sort=-%cpu` 看是否 recruit postgres）后重试队列会补写成功——practiced 计数暂时偏低不是产品 bug，先查 load 再判定。
+- 本 app 的 `anonUid` 在 localStorage 里是**裸字符串**（非 uni 包装 JSON）——对它 JSON.parse 会抛异常导致 CDP eval 返回 null；直接 getItem 比较。
+- 恢复保护 uid localStorage 后页面 reload 会刷新 `apiSnap:*` 缓存键值（apiSnapIndex + 各 apiSnap:URL）——想要 EXACT MATCH 需在恢复后把这几个键从备份再覆写一遍（属应用自身缓存，非用户数据漂移）。
+
+## R359 卷卡「已练 X/N 题」走查新经验
+- `GET /api/exam/papers?uid=` 每卷恒含 `practiced`（DISTINCT answer_log.question_id ∩ 卷内活跃题）；UI 行 `.ppracticed`（绿 rgb(21,128,61)）仅 `psource && practiced>0` 渲染。断言三角：UI 显示值 == 响应 practiced == DB `count(distinct question_id)` 交集（重复作答行不重复计，重答同题前先记 qid）。
+- 构造「无 psource 卷 practiced>0」的合法 UI 路径：对该卷**交模考卷**（开始模考→答 1 题→立即交卷确认）——模考交卷会写 answer_log，从而 practiced>0 但卡上无已练行（fail-closed 强证），同时顺带构造 best_score/看报告 四按钮态。
+- 按卷练习重进从第 1 题重新出题（不续上次进度），重答同 qid 是最省事的去重验证路径。
+- 生产边缘对无浏览器 UA 的直连 API 请求可能 403——用已加载页面内 fetch 取响应即可，勿误判为应用故障。
+
+## R358 放弃未交卷（drop:true）走查新经验
+- R358 起「放弃未交卷」是服务端真删：卷库 dropResume()/首页 erDrop() 确认后 POST `/api/exam/progress` body `{uid, attempt_id, drop:true}` → 200 `{ok:true}`，后端 clear_exam_progress；断言点=抓包 drop 请求 + DB `exam_progress` 行删除 + **等 35s 越过 erClearedAt 30s 本地守卫后再硬刷**（30s 内不回填只证明本地守卫，30s 后不回填才证明服务端删除）。
+- 全新 browser context 验证不回填：`Target.createBrowserContext`+`Target.createTarget` 会开**新窗口**（taskbar 出现第二个 Chrome 图标），且 CDP helper（oneshot/holdvw）按 `/json` 列表第一个 zalize tab 匹配，可能误连新 context 的 tab——用完立即 `Target.disposeBrowserContext`，或按 targetId 精确连。
+- 模考未交卷阶段答案只存 `exam_progress`（drop 后连 answer_log 都没有）；留存数据主要是 `exam_attempts`（submitted_at NULL）+ growth_events boot。
+
 ## R357 卷库/按卷练习走查新经验
 - 生产 SQLite 是 `/data/data.db`（容器 env `DB_PATH=/data/data.db`）；`/data/kaogong.db`、`/data/app.db` 是 0 字节空壳，连上查表会得 `TABLES: []`——查数前先 `printenv DB_PATH` 确认。
 - practice.vue 的 `startPaper()`（practiceLaunch kind:'paper' 协议）R357 首版**无条件进模考态**（`examMode=true` + 120min 倒计时），卷名只以 toast 1.8s 一闪；任何声称「不计时逐题练」的按卷入口都要实际点进去核对计时 chip。R357b 后 `startPaper(p, untimed)` 有 untimed 分支——untimed 按卷练习断言点是 toast「不计时逐题练」+ 正计时 0:00 起 + 答错即时判分。
@@ -763,3 +868,25 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 长流程生产测试中若突然出现成批 4xx 或接口行为突变，先复查 `/api/health` 的 rev 与浏览器实载 bundle——生产可能被其他会话并发重新部署（本例 b26cc70 中途被 PR #558 旧基线 merge 覆盖为 a4fa410，R339–R354 全被回退）。发现后立即 message_parent 上报并中断本轮录制，不要把两种 rev 的证据混在一起。
 - `/api/review/cur` 对 FastAPI 路由注册顺序敏感：必须先于 `/api/review/{mid}` 注册。回归指纹：`POST /api/review/cur → 422 {"type":"int_parsing","loc":["path","mid"],"input":"cur"}`、`GET /api/review/cur → 404`。
 - R354 庆祝卡小结断言点：混合轮（首答对 X（P%）/答错 Y·纠正 Z/加练 M·答对 K）三行逐字核对；全对轮仅第 1 行 100%；`_res` 会随 reviewSnap 持久化并出现在 POST /api/review/cur 的 items 里（抓包可直接验证 `"_res":true`）。
+
+## R363 按卷练习续练归卷 source/卷名走查新经验
+- 归卷断言四点一线：POST `/api/practice/progress` body 含 `source`/`ptitle` → 首页续练卡副标题=卷名（ptitle || prModName）→「继续上次练习？」弹窗 content 前缀「卷名」→ 恢复后新答行 `answer_log.source == psource`。旧版 broken 指纹：卡显通用模块文案 + 恢复后 source=NULL。
+- 反向残留断言：从首页「去刷题」起普通练习后，progress body 应为 `"source":"","ptitle":""`，新答行 source=NULL（≠psource）；首页卡无卷名残留。注意服务端 practice_progress 只有一个槽位——起普通练习会覆盖卷练进度，需先测完卷路径再测普通路径（或重造）。
+- 跨设备弹窗用 `Target.createBrowserContext` 新 context 注同 uid 进 /pages/practice/practice 即触发（同 R352 模式）；answer_log 表 uid 列名是 `uid` 非 `user_id`。
+- 首页续练卡与普通练习入口：module 为空时副标题回落「上次练习」，属正常而非缺陷。
+- holdvw.py 用 `(setsid nohup … &)` 起，普通 nohup 后台在同 shell 里可能随命令退出被回收导致 override 立即丢失（表现：打印 held 但 iw 不变/进程消失）。
+
+## R364 按卷完成页归卷态走查新经验
+- 完成页归卷断言：`.big` 文案「本卷练完」、`.sub.ptl` 卷名品牌色 rgb(46,91,255)/fw600、主按钮「回卷库」→ /pkgA/exam/list、整页 innerText 不含「再来一组」；普通练习完成页反例保持「本组完成/再来一组」。
+- **375 视口下练习页键盘快捷键（A-D/Enter）不生效**（桌面宽度才启用），移动视口批量答题只能点选。选项 y 坐标随题干长度浮动：可在同一题上连点 3-4 个候选 y（已答后再点选项无副作用），再点固定底部「下一题」，每 4-5 题截图校验进度。
+- 保护 uid 正确拼写是 `umteojq4sltdhorhm`（umte-**ojq**）；上游消息里可能误写成 umtejoq…。做保护 DB 前后对比前先 `select distinct uid … like 'umte%'` 校验，否则 after 快照全 0 造成假警报。
+- 生产站桌面 Chrome 下可能出现少量 `Uncaught (in promise) Object`（无 description）的 EXC——弹窗取消/答错均复现不出、无 UI 影响，属未归因背景噪音；断言口径建议区分 console.error（应为 0）与该类 promise 噪音（单独列报）。
+- 经 ssh+docker exec 跑多行清理脚本时，内嵌 heredoc 可能静默产出空输出；改用 base64 编码脚本 → 远端解码 → `docker cp` 进容器再执行，输出稳定。
+
+## R365 分享文案归卷走查新经验
+- 读分享剪贴板：`Browser.grantPermissions clipboardReadWrite` 后 `navigator.clipboard.readText()` 仍可能 NotAllowedError（焦点/权限 quirk）。稳定做法：在页面 hook `navigator.clipboard.writeText`（存 `window.__cap` 再透传原实现），点「分享成绩」后读 `window.__cap`。注意 F5/整页 reload 会清掉 hook，需重装。
+- 分享埋点在 net 抓包里查 `POST /api/track`，字段是 `{"event":"share_result_copy","source":"practice","ref":"paper|<module>|daily"}`——label 落在 `ref` 字段。
+- 每日一练重做入口：`/#/pages/practice/practice?daily=1` + F5 整页 reload（SPA 内 hash 跳转不会重挂载会话）。若 `daily_set/submit` 遇 503（共宿负载抖动），服务端未记完成，reload 后可整组重做直至 200；daily 分享分支需要 submit 成功后 dailyStats 到位（完成页出现「今日排行榜」再点分享）。
+- 完成页按钮 y 坐标会因 dailyStats/登录条等动态区块变化，点「分享成绩」前先截图确认，否则可能误点「再来一组」把完成页顶掉。
+- 生产部署后旧 bundle chunk 名会 404（页面预取旧 hash 资源，console 里成串 `assets/*.js 404`）——属部署换 hash 的已知噪音，与 console.error 口径分开列报。
+- 收尾 reload 页面（清 hook）会让 app 以保护 uid 重新拉 `/api/profile` 并新增一个 `apiSnap:*` 缓存键、更新 `apiSnapIndex`——localStorage 相对备份多这两处属 app 正常行为，非污染。

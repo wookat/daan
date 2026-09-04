@@ -206,6 +206,8 @@ async def monitor_report(request: Request):
 @app.middleware("http")
 async def log_slow_requests(request, call_next):
     """慢请求留痕：>3s 打点路径与耗时，用于定位生产间歇性长尾。"""
+    if request.url.path != "/api/health":
+        note_request()
     t0 = time.monotonic()
     response = await call_next(request)
     dt = time.monotonic() - t0
@@ -310,8 +312,45 @@ _HOT_UID_TABLES = (
 )
 
 
+# 冷启动后的静默期：管理台全表扫描/题目统计刷新等重任务推迟到此之后，避免启动瞬间叠加数百 MB 峰值；
+# 宿主内存紧张引发的重启循环（间隔 < 静默期）内永不触发。
+BOOT_TS = time.time()
+BOOT_QUIET_S = float(os.environ.get("KG_BOOT_QUIET_S", "600") or 0)
+
+
+def boot_quiet_elapsed(now: float | None = None) -> bool:
+    return (time.time() if now is None else now) - BOOT_TS >= BOOT_QUIET_S
+
+
+# 空闲门控：全表扫描/统计刷新在冷页缓存上是数百 MB 磁盘读（题目统计刷新还持写锁），与在线用户的
+# 写请求抢同一块盘会让 POST 集体排队；只在最近 IDLE_GATE_S 内无用户请求时执行，最多推迟 IDLE_MAX_DEFER_S。
+IDLE_GATE_S = float(os.environ.get("KG_IDLE_GATE_S", "60") or 0)
+IDLE_MAX_DEFER_S = float(os.environ.get("KG_IDLE_MAX_DEFER_S", str(2 * 3600)) or 0)
+_last_request_ts = 0.0
+
+
+def note_request(now: float | None = None) -> None:
+    global _last_request_ts
+    _last_request_ts = time.time() if now is None else now
+
+
+def heavy_task_allowed(now: float | None = None) -> bool:
+    """静默期已过，且（最近 IDLE_GATE_S 无请求 或 已推迟满 IDLE_MAX_DEFER_S）。"""
+    t = time.time() if now is None else now
+    if not boot_quiet_elapsed(t):
+        return False
+    if t - _last_request_ts >= IDLE_GATE_S:
+        return True
+    return t - BOOT_TS >= BOOT_QUIET_S + IDLE_MAX_DEFER_S
+
+
+def _wait_heavy_task_slot(poll_s: float = 15.0) -> None:
+    while not heavy_task_allowed():
+        time.sleep(poll_s)
+
+
 def _prime_admin_caches():
-    """启动时预热管理台重查询 SWR 缓存，重启后首个管理员请求不承担秒级冷 miss。"""
+    """预热管理台重查询 SWR 缓存，首个管理员请求不承担秒级冷 miss。"""
     for fn in (db.admin_stats, db.admin_dashboard, db.governance_scan):
         try:
             fn()
@@ -321,8 +360,11 @@ def _prime_admin_caches():
 
 def _warmup():
     """周期预热抽题 id 池、热点索引页与 uid 热表（总量 <1MB），消除缓存被换出后的冷启动分钟级长尾。"""
-    _prime_admin_caches()
+    primed = False
     while True:
+        if not primed and heavy_task_allowed():
+            _prime_admin_caches()
+            primed = True
         try:
             for m in (None, "yanyu", "changshi", "panduan", "shuliang", "ziliao"):
                 db.random_questions(m, 1)
@@ -348,7 +390,9 @@ threading.Thread(target=_warmup, daemon=True).start()
 
 
 def _stats_refresher():
+    time.sleep(BOOT_QUIET_S)
     while True:
+        _wait_heavy_task_slot()
         try:
             db.refresh_question_stats()
             db.refresh_material_hash()

@@ -192,7 +192,8 @@
           <text class="ring-t">正确率</text>
         </view>
       </view>
-      <view class="big">{{ beiMode ? '本组背完' : '本组完成' }}</view>
+      <view class="big">{{ beiMode ? '本组背完' : paperFinish().big }}</view>
+      <view v-if="!beiMode && paperFinish().isPaper" class="sub ptl">「{{ paperFinish().title }}」</view>
       <view v-if="!beiMode" class="sub">答对 {{ right }}/{{ items.length }} · 最高连对 {{ bestStreak }} 题<template v-if="autoSaved">，错题已自动加入错题本</template></view>
       <view v-else class="sub">已浏览 {{ items.length }} 道题的答案与解析</view>
       <view v-if="!beiMode && percentile != null" class="beat">本组正确率击败了 {{ percentile }}% 的刷题记录</view>
@@ -219,6 +220,10 @@
         </view>
         <text class="rr-tip">答对的已推进复习计划<template v-if="redoReport.still">；仍错的已重置复习，明天优先再练</template></text>
         <view class="rr-go" @click="goReview">回错题本查看 ›</view>
+      </view>
+      <view v-else-if="!beiMode && fixReport" class="fixreport" @click="goReview">
+        <text class="fr-t">{{ fixReportText(fixReport) }}</text>
+        <text class="fr-go">回错题本 ›</text>
       </view>
       <view v-if="!beiMode && !examMode && weakSpots.length" class="weakrf">
         <view class="rr-t">薄弱考点 · 趁热打铁</view>
@@ -279,7 +284,9 @@
         <text v-if="!pushNudgeDone" class="loginnudge-x" @click="dismissPushNudge">✕</text>
       </view>
       <!-- #endif -->
-      <button class="btn" @click="retryGroup">再来一组</button>
+      <button v-if="paperFinish().isPaper && paperWrongN() > 0" class="btn" @click="retryPaperWrong">重练本卷错题（{{ paperWrongN() }} 题）</button>
+      <button v-if="paperFinish().isPaper" :class="paperWrongN() > 0 ? 'btn ghost' : 'btn'" :style="paperWrongN() > 0 ? 'margin-top: 16rpx' : ''" @click="goExamList">回卷库</button>
+      <button v-else class="btn" @click="retryGroup">再来一组</button>
       <button v-if="!beiMode" class="btn ghost" style="margin-top: 16rpx" @click="shareResult">分享成绩</button>
       <button class="btn plain" style="margin-top: 8rpx" @click="quit">返回首页</button>
     </view>
@@ -360,6 +367,7 @@ import { requestNotificationPermission } from '../../reminder.js';
 import { announce } from '../../a11y-live.js';
 import { pickAnnounceText } from '../../live-policy.js';
 // #endif
+import { paperContinuePlan, paperQuery, paperFinishState, paperShareText, paperWrongItems, paperWrongPlan, paperWrongLaunch } from '../../paper-continue.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 import { qStatLine } from '../../q-stat.js';
@@ -367,6 +375,7 @@ import { toggleExcl, pickWithExcl, exclVisible } from '../../exam-excl.js';
 import { collectPracticeProgress, adoptPracticeResume } from '../../practice-progress.js';
 import { weakSpots as buildWeakSpots } from '../../weak-spots.js';
 import { isExplanationCovered } from '../../exp-dup.js';
+import { reviewedMasteredCount, fixReportText } from '../../review-advance.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -425,6 +434,7 @@ export default {
       dailyStats: null,
       dailyBoard: [],
       redoReport: null,
+      fixReport: null,
       examMode: false,
       examLeft: 0,
       examTimer: null,
@@ -722,7 +732,7 @@ export default {
         return;
       }
       if (launch.kind === 'paper') {
-        this.startPaper({ source: launch.source, title: launch.title || '真题卷' }, !!launch.untimed);
+        this.startPaper({ source: launch.source, pid: launch.pid, title: launch.title || '真题卷' }, !!launch.untimed, launch.wrong === true);
         return;
       }
       if (launch.kind === 'reinforce') {
@@ -955,7 +965,7 @@ export default {
         this.paperSheet = false;
       }
     },
-    async startPaper(p, untimed = false) {
+    async startPaper(p, untimed = false, wantWrong = false) {
       if (this._starting) return;
       this._starting = true;
       if (this.beiMode) {
@@ -964,13 +974,58 @@ export default {
       }
       uni.showLoading({ title: '加载试卷…', mask: true });
       try {
-        const d = await request('/api/paper_questions?src=' + encodeURIComponent(p.source));
-        const items = d.items || [];
+        const d = await request('/api/paper_questions?' + paperQuery(p, untimed, anonUid()));
+        let items = d.items || [];
+        let wrongOnly = false;
         if (items.length < 20) {
           uni.showToast({ title: '试卷题目不足，换一张试试', icon: 'none' });
           return;
         }
+        const direct = untimed ? paperWrongLaunch(items, wantWrong) : null;
+        if (direct) {
+          items = direct;
+          wrongOnly = true;
+        } else if (untimed) {
+          const plan = paperContinuePlan(items);
+          if (plan.doneN > 0 && plan.remaining.length === 0) {
+            const wrong = paperWrongPlan(items);
+            if (wrong.length) {
+              const pick = await new Promise((resolve) => uni.showActionSheet({
+                title: `本卷 ${items.length} 题已全部练过，上次答错 ${wrong.length} 题`,
+                itemList: [`只练错题（${wrong.length} 题）`, '重新练一遍'],
+                success: (r) => resolve(r.tapIndex),
+                fail: () => resolve(-1),
+              }));
+              if (pick !== 0 && pick !== 1) return;
+              if (pick === 0) {
+                items = wrong;
+                wrongOnly = true;
+              }
+            } else {
+              const again = await new Promise((resolve) => uni.showModal({
+                title: '本卷已练完',
+                content: `本卷 ${items.length} 题已全部练过，重新练一遍？`,
+                confirmText: '重新练', cancelText: '不用了',
+                success: (r) => resolve(!!r.confirm),
+                fail: () => resolve(false),
+              }));
+              if (!again) return;
+            }
+          }
+          if (plan.doneN > 0 && plan.remaining.length > 0) {
+            const cont = await new Promise((resolve) => uni.showModal({
+              title: '继续上次进度？',
+              content: `本卷已练过 ${plan.doneN} 题，只练剩下的 ${plan.remaining.length} 题？`,
+              confirmText: '只练剩余', cancelText: '从头练',
+              success: (r) => resolve(!!r.confirm),
+              fail: () => resolve(false),
+            }));
+            if (cont) items = plan.remaining;
+          }
+        }
         this.paperSheet = false;
+        this._source = untimed ? (p.source || null) : null;
+        this._ptitle = untimed ? (p.title || null) : null;
         this.items = items;
         this.idx = 0;
         this.picked = '';
@@ -987,7 +1042,7 @@ export default {
           this.examMode = false;
           if (this.examTimer) clearInterval(this.examTimer);
           this.startQTimer();
-          uni.showToast({ title: p.title + ' 开始：不计时逐题练', icon: 'none', duration: 1800 });
+          uni.showToast({ title: wrongOnly ? '只练本卷上次答错的题' : p.title + ' 开始：不计时逐题练', icon: 'none', duration: 1800 });
         } else {
           this.examMode = true;
           this.examLeft = 120 * 60;
@@ -1335,6 +1390,7 @@ export default {
       if (this._starting) return;
       this._starting = true;
       this._source = launch.source || 'reinforce';
+      this._ptitle = null;
       uni.showLoading({ title: '组题中…', mask: true });
       if (this.beiMode) {
         this.beiMode = false;
@@ -1427,6 +1483,31 @@ export default {
     reinforceWeak(w) {
       this.startReinforce({ module: w.module, submodule: w.submodule, tag3: w.tag3, count: 5, source: 'session-report' });
     },
+    // 完成页归卷态：按卷会话（_ptitle 非空）显卷名与回卷库出路；模板方法调用规避非响应式 _ptitle
+    paperFinish() {
+      return paperFinishState(this._ptitle);
+    },
+    // 完成页按卷错题数：模板方法调用规避非响应式 _ptitle 影响的缓存
+    paperWrongN() {
+      return paperWrongItems(this.items).length;
+    },
+    // 完成页「重练本卷错题」：就地以本会话答错题重开会话，保留 _source/_ptitle 归卷
+    retryPaperWrong() {
+      const wrong = paperWrongItems(this.items);
+      if (!wrong.length) return;
+      this.items = wrong;
+      this.idx = 0;
+      this.picked = '';
+      this.right = 0;
+      this.streak = 0;
+      this.bestStreak = 0;
+      this.autoSaved = false;
+      this.resultSent = false;
+      this.percentile = null;
+      this.session = true;
+      this.startQTimer();
+      uni.showToast({ title: '只重练本卷错题', icon: 'none' });
+    },
     // 完成页「再来一组」：错题重练场次重用同一组错题，其余按原模块重新抽题
     retryGroup() {
       if (this._redoItems && this._redoItems.length && !this.lastModule) {
@@ -1502,6 +1583,7 @@ export default {
       this._lastStartArgs = [module, submodule, count, adaptive, forceReal, tag3, source, year];
       // 推荐埋点：记录本次练习的入口来源（reco/weak 等），随 answer_log 落库
       this._source = source || null;
+      this._ptitle = null;
       this.session = false;
       this.beginLoadState();
       this.lastModule = module;
@@ -1844,6 +1926,8 @@ export default {
         bestStreak: this.bestStreak,
         lastModule: this.lastModule,
         lastSubmodule: this.lastSubmodule,
+        source: this._source || '',
+        ptitle: this._ptitle || '',
       });
       clearTimeout(this._ppTimer);
       this._ppTimer = setTimeout(() => this.pushPracticeProgress(), 1500);
@@ -1851,7 +1935,8 @@ export default {
     pushPracticeProgress() {
       const payload = collectPracticeProgress(
         this.items, this.idx, this.right, this.streak, this.bestStreak,
-        this.lastModule || '', this.lastSubmodule || ''
+        this.lastModule || '', this.lastSubmodule || '',
+        this._source || '', this._ptitle || ''
       );
       if (!payload) return;
       request('/api/practice/progress', { method: 'POST', data: { uid: anonUid(), ...payload } }).catch(() => {});
@@ -1875,6 +1960,8 @@ export default {
       this.bestStreak = s.bestStreak;
       this.lastModule = s.lastModule;
       this.lastSubmodule = s.lastSubmodule;
+      this._source = (typeof s.source === 'string' && s.source) || null;
+      this._ptitle = (typeof s.ptitle === 'string' && s.ptitle) || null;
       this.autoSaved = false;
       this.resultSent = false;
       this.percentile = null;
@@ -1890,6 +1977,8 @@ export default {
       this.bestStreak = snap.bestStreak;
       this.lastModule = snap.module || null;
       this.lastSubmodule = snap.submodule || null;
+      this._source = snap.source || null;
+      this._ptitle = snap.ptitle || null;
       this.autoSaved = false;
       this.resultSent = false;
       this.percentile = null;
@@ -1941,7 +2030,7 @@ export default {
           const done = snap.items.filter((q) => q._picked).length;
           uni.showModal({
             title: '继续上次练习？',
-            content: '在其他设备还有一组未做完（' + done + '/' + snap.items.length + ' 题），是否继续？',
+            content: (snap.ptitle ? '「' + snap.ptitle + '」' : '') + '在其他设备还有一组未做完（' + done + '/' + snap.items.length + ' 题），是否继续？',
             confirmText: '继续',
             cancelText: '不用了',
             success: (res) => {
@@ -1973,7 +2062,7 @@ export default {
       const done = s.items.filter((q) => q._picked).length;
       uni.showModal({
         title: '继续上次练习？',
-        content: '上次还有一组未做完（' + done + '/' + s.items.length + ' 题），是否继续？',
+        content: (s.ptitle ? '「' + s.ptitle + '」' : '') + '上次还有一组未做完（' + done + '/' + s.items.length + ' 题），是否继续？',
         confirmText: '继续',
         cancelText: '不用了',
         success: (res) => {
@@ -2080,12 +2169,14 @@ export default {
         return;
       }
       const pct = Math.round((this.right / this.items.length) * 100);
+      const paperBase = paperShareText(this._ptitle, this.items.length, pct);
       let txt =
+        paperBase ||
         '我在错题邦刷了 ' + this.items.length + ' 道' + (this.lastModule ? this.modName(this.lastModule) : '行测') + '题，正确率 ' + pct + '%';
       if (this.bestStreak >= 3) txt += '，最高连对 ' + this.bestStreak + ' 题';
       if (this.percentile != null) txt += '，击败了 ' + this.percentile + '% 的刷题记录';
-      txt += '！一起来刷：https://kaogong.zalize.com';
-      trackEvent('share_result_copy', 'practice', this.lastModule || null);
+      txt += paperBase ? '！也来练这套卷：https://kaogong.zalize.com/#/pkgA/exam/list' : '！一起来刷：https://kaogong.zalize.com';
+      trackEvent('share_result_copy', 'practice', paperBase ? 'paper' : this.lastModule || null);
       uni.setClipboardData({
         data: txt,
         success: () => uni.showToast({ title: '成绩已复制，去粘贴给研友吧', icon: 'none', duration: 1600 }),
@@ -2225,29 +2316,23 @@ export default {
       if (this.items.length >= 5) this.initPushNudge();
       // #endif
     },
-    // 错题重练场次：答对的题推进 SRS 复习计划（答错走既有自动存错题路径重置复习），并汇总效果报告
+    // 复习推进由 /api/answer_log 服务端统一完成（任何场次答对曾错题都算）；这里只等在途落库请求回来，汇总效果报告
     async syncRedoReviews() {
       this.redoReport = null;
+      this.fixReport = null;
+      try { await Promise.all((this._logPending || []).map((p) => p.catch(() => null))); } catch (e) { /* 非关键路径 */ }
+      this._logPending = [];
+      const reviewed = this._reviewed || [];
+      this._reviewed = [];
       const isRedo = this._redoItems && this._redoItems.length && !this.lastModule;
-      if (!isRedo) return;
-      const answered = this.items.filter((q) => q._picked && q.mistake_id);
-      if (!answered.length) return;
-      const uid = anonUid();
-      let fixed = 0;
-      let still = 0;
-      let mastered = 0;
-      for (const q of answered) {
-        if (q._picked !== q.answer) {
-          still++;
-          continue;
-        }
-        fixed++;
-        try {
-          const r = await request('/api/review/' + q.mistake_id, { method: 'POST', data: { correct: true, uid } });
-          if (r && r.mastered) mastered++;
-        } catch (e) { /* 非关键路径 */ }
+      if (isRedo) {
+        const answered = this.items.filter((q) => q._picked && q.mistake_id);
+        if (!answered.length) return;
+        const fixed = answered.filter((q) => q._picked === q.answer).length;
+        this.redoReport = { fixed, still: answered.length - fixed, mastered: reviewedMasteredCount(reviewed) };
+        return;
       }
-      this.redoReport = { fixed, still, mastered };
+      if (reviewed.length) this.fixReport = { n: reviewed.length, mastered: reviewedMasteredCount(reviewed) };
     },
     async loadDueReview() {
       try {
@@ -2255,6 +2340,7 @@ export default {
         this.dueReview = r.total || (r.items || []).length;
       } catch (e) { /* 非关键路径 */ }
     },
+    fixReportText,
     goReview() {
       trackEvent('review_entry_click', 'practice_done');
       uni.setStorageSync('autoStartReview', 1);
@@ -2270,6 +2356,7 @@ export default {
         const pending = qs.filter((q) => q._picked && !q._logged);
         const items = pending.map((q) => ({
           qid: q.id || null,
+          mid: q.mistake_id || undefined,
           module: q.module || this.lastModule || null,
           submodule: q.submodule || null,
           correct: q._picked === q.answer,
@@ -2280,8 +2367,13 @@ export default {
         if (items.length) {
           // 先标记再发请求，避免请求在途期间并发调用重复落库
           pending.forEach((q) => { q._logged = true; });
+          const p = request('/api/answer_log', { method: 'POST', data: { uid, items } });
+          (this._logPending = this._logPending || []).push(p);
           try {
-            await request('/api/answer_log', { method: 'POST', data: { uid, items } });
+            const r = await p;
+            if (r && Array.isArray(r.reviewed) && r.reviewed.length) {
+              this._reviewed = (this._reviewed || []).concat(r.reviewed);
+            }
           } catch (err) {
             // 断网：进本地队列，恢复网络后自动同步（按 key 去重）
             enqueueAnswers(uid, items.map((it, i) => ({ ...it, t: Date.now() + i })));
@@ -2291,6 +2383,8 @@ export default {
     },
     quit() {
       if (!this.beiMode && this.items.length) this.logAttempts(this.items);
+      this._reviewed = [];
+      this._logPending = [];
       uni.removeStorageSync('pendingSession');
       if (!this.beiMode && !this.examMode && !this._shizheng) this.clearServerProgress();
       this.examMode = false;
@@ -2559,6 +2653,9 @@ export default {
 .rr-l { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
 .rr-tip { display: block; font-size: 22rpx; color: var(--ink-2); line-height: 1.6; }
 .rr-go { margin-top: 10rpx; font-size: 24rpx; font-weight: 600; color: var(--brand-text); }
+.fixreport { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 16rpx; margin-top: 24rpx; background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 18rpx; padding: 20rpx 28rpx; box-sizing: border-box; text-align: left; }
+.fr-t { flex: 1; min-width: 0; font-size: 24rpx; color: var(--ink-2); line-height: 1.6; }
+.fr-go { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: var(--brand-text); }
 .report { width: 100%; margin: 20rpx 0 28rpx; }
 .report-row { display: flex; gap: 16rpx; margin-bottom: 24rpx; }
 .report-cell { flex: 1; background: var(--soft-bg); border-radius: 16rpx; padding: 20rpx 0; display: flex; flex-direction: column; align-items: center; gap: 6rpx; }
@@ -2594,6 +2691,7 @@ export default {
 .ring-t { font-size: 20rpx; color: var(--ink-2); }
 .big { font-size: 40rpx; font-weight: 700; margin-bottom: 12rpx; }
 .sub { font-size: 26rpx; color: var(--ink-2); margin-bottom: 28rpx; }
+.sub.ptl { margin-bottom: 8rpx; color: var(--brand-text); font-weight: 600; word-break: break-all; }
 .mask { position: fixed; inset: 0; background: rgba(15, 18, 30, 0.5); z-index: 90; display: flex; align-items: flex-end; }
 .sheet { width: 100%; box-sizing: border-box; background: var(--card); border-radius: 32rpx 32rpx 0 0; padding: 32rpx 28rpx calc(130rpx + env(safe-area-inset-bottom)); max-height: 70vh; overflow-y: auto; animation: slideup 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20rpx; }

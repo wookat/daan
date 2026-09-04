@@ -38,6 +38,14 @@ class _ConnProxy:
         return getattr(self._conn, name)
 
 
+# 每连接堆页缓存（KiB，负值）：连接为线程本地，uvicorn 线程池最多 40 条，上限随连接数线性放大；
+# 读路径交给 mmap（file-backed，跨连接共享、可回收、不进 swap），mmap 需覆盖整库才不会回落到堆缓存。
+SQLITE_CACHE_KIB = -8192
+SQLITE_MMAP_BYTES = 1 << 30
+# 题目统计刷新每批 UPDATE 行数（每批一次 commit，写锁持有期与批大小成正比）
+QUESTION_STATS_BATCH = 100
+
+
 def get_conn():
     conn = getattr(_local, "conn", None)
     if conn is None:
@@ -45,8 +53,8 @@ def get_conn():
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA busy_timeout=30000")
-        conn.execute("PRAGMA cache_size=-32768")
-        conn.execute("PRAGMA mmap_size=268435456")
+        conn.execute(f"PRAGMA cache_size={SQLITE_CACHE_KIB}")
+        conn.execute(f"PRAGMA mmap_size={SQLITE_MMAP_BYTES}")
         _local.conn = conn
     return _ConnProxy(conn)
 
@@ -2360,14 +2368,52 @@ def _ensure_answer_log(conn):
     if "source" not in cols:
         # 推荐埋点：进入练习的入口（reco/weak/reinforce），旧数据默认 NULL
         conn.execute("ALTER TABLE answer_log ADD COLUMN source TEXT")
+    if "probe" not in cols:
+        # 探针流量标记（1=来自 KG_PROBE_CIDRS 网段，运营看板剔除）；旧行 NULL=未知
+        conn.execute("ALTER TABLE answer_log ADD COLUMN probe INTEGER")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_al_qid ON answer_log(question_id)")
 
 
-def save_answer_log(uid: str, items: list[dict]) -> int:
+def _pos_int(v) -> int | None:
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, int):
+        return v if v > 0 else None
+    if isinstance(v, str) and v.isdigit():
+        return int(v) or None
+    return None
+
+
+def _find_open_mistake(conn, uid: str, mid, qid) -> int | None:
+    """定位本 uid 尚未掌握的错题：优先条目自带 mistake_id（兼容 question_id 为空的文本匹配错题），否则按题号。"""
+    mid, qid = _pos_int(mid), _pos_int(qid)
+    if mid:
+        row = conn.execute(
+            "SELECT id FROM mistakes WHERE id=? AND uid=? AND (mastered IS NULL OR mastered=0)", (mid, uid)
+        ).fetchone()
+        if row:
+            return row["id"]
+    if qid:
+        row = conn.execute(
+            "SELECT id FROM mistakes WHERE question_id=? AND uid=? AND (mastered IS NULL OR mastered=0) "
+            "ORDER BY id LIMIT 1",
+            (qid, uid),
+        ).fetchone()
+        if row:
+            return row["id"]
+    return None
+
+
+def save_answer_log_detail(uid: str, items: list[dict], probe: bool = False) -> dict:
+    """落 answer_log；答对且命中本 uid 未掌握错题的条目同步推进该错题复习计划（与 /api/review 同一套 SRS）。
+    probe=True 标记为探针流量（运营看板剔除，用户自身的统计/复习不受影响）。"""
     conn = get_conn()
     _ensure_answer_log(conn)
+    _ensure_mistake_uid(conn)
     now = time.time()
     n = 0
+    reviewed: list[dict] = []
+    advanced: set[int] = set()
     for it in items:
         if not isinstance(it, dict):
             continue
@@ -2383,7 +2429,7 @@ def save_answer_log(uid: str, items: list[dict]) -> int:
                 sub = qrow["submodule"] or sub
         sub = merge_submodule(module, sub)
         conn.execute(
-            "INSERT INTO answer_log (uid, created_at, question_id, module, submodule, correct, secs, picked, source) VALUES (?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO answer_log (uid, created_at, question_id, module, submodule, correct, secs, picked, source, probe) VALUES (?,?,?,?,?,?,?,?,?,?)",
             (
                 uid,
                 now,
@@ -2394,12 +2440,26 @@ def save_answer_log(uid: str, items: list[dict]) -> int:
                 int(it.get("secs") or 0),
                 str(it.get("picked") or "")[:2] or None,
                 (str(it.get("source") or "")[:32] or None),
+                1 if probe else 0,
             ),
         )
         n += 1
+        if not it.get("correct"):
+            continue
+        mid = _find_open_mistake(conn, uid, it.get("mid"), qid)
+        if mid is None or mid in advanced:
+            continue
+        advanced.add(mid)
+        res = _advance_review(conn, mid, True, uid)
+        if res:
+            reviewed.append({"mistake_id": mid, "streak": res["streak"], "mastered": res["mastered"]})
     conn.commit()
     conn.close()
-    return n
+    return {"saved": n, "reviewed": reviewed}
+
+
+def save_answer_log(uid: str, items: list[dict], probe: bool = False) -> int:
+    return save_answer_log_detail(uid, items, probe=probe)["saved"]
 
 
 _HISTORY_SESSION_GAP = 1800  # 相邻作答间隔超过该秒数即切分为新一次练习
@@ -2508,16 +2568,30 @@ def refresh_question_stats() -> int:
                ) WHERE rk=1"""
         )
     }
-    n = 0
-    for r in rows:
-        conn.execute(
+    target = {
+        r["qid"]: (r["n"], round(100 * (r["c"] or 0) / r["n"]), wrong.get(r["qid"]))
+        for r in rows
+    }
+    # 先在读事务里取现值：把要改的页读热且不持写锁（冷页缓存下逐题 UPDATE 会把随机页读全算进写锁持有期），
+    # 仅对变化行分批写，写锁单次持有毫秒级。
+    current = {}
+    ids = list(target)
+    for i in range(0, len(ids), 500):
+        chunk = ids[i:i + 500]
+        for r in conn.execute(
+            f"SELECT id, attempt_count, correct_ratio, most_wrong FROM questions WHERE id IN ({','.join('?' * len(chunk))})",
+            chunk,
+        ):
+            current[r["id"]] = (r["attempt_count"], r["correct_ratio"], r["most_wrong"])
+    changed = [(v[0], v[1], v[2], qid) for qid, v in target.items() if qid in current and current[qid] != v]
+    for i in range(0, len(changed), QUESTION_STATS_BATCH):
+        conn.executemany(
             "UPDATE questions SET attempt_count=?, correct_ratio=?, most_wrong=? WHERE id=?",
-            (r["n"], round(100 * (r["c"] or 0) / r["n"]), wrong.get(r["qid"]), r["qid"]),
+            changed[i:i + QUESTION_STATS_BATCH],
         )
-        n += 1
-    conn.commit()
+        conn.commit()
     conn.close()
-    return n
+    return len(target)
 
 
 _PAPER_TITLE_RE = re.compile(r"(\d{4}年[^（(）).]{2,40}《行测》(?:真题|试卷|试题)?(?:（[^）]{1,8}）)?)")
@@ -2548,19 +2622,55 @@ def list_papers() -> list[dict]:
     return papers[:120]
 
 
-def paper_questions(source: str, limit: int = 140) -> list[dict]:
+def _answer_state(conn, uid: str) -> tuple[set[int], set[int]]:
+    """本人作答状态：(已作答题 id 集, 最近一次答错题 id 集)。correct 非 0 视为非错（fail-closed）。"""
+    _ensure_answer_log(conn)
+    latest: dict[int, int | None] = {}
+    for r in conn.execute(
+        "SELECT question_id, correct FROM answer_log"
+        " WHERE uid=? AND question_id IS NOT NULL ORDER BY created_at, id",
+        (uid,),
+    ):
+        latest[r["question_id"]] = r["correct"]
+    return set(latest), {q for q, c in latest.items() if c == 0}
+
+
+def paper_questions(source: str, limit: int = 140, uid: str | None = None,
+                    pid: int | None = None) -> list[dict]:
     conn = get_conn()
-    rows = conn.execute(
-        """SELECT * FROM questions
-           WHERE source=? AND is_real=1 AND disabled=0
-           ORDER BY id LIMIT ?""",
-        (source, limit),
-    ).fetchall()
+    rows: list[sqlite3.Row] = []
+    if pid:
+        paper = get_exam_paper(pid)
+        qids: list[int] = (paper or {}).get("question_ids") or []
+        if qids:
+            by_id: dict[int, sqlite3.Row] = {}
+            for chunk_start in range(0, len(qids), 900):
+                chunk = qids[chunk_start:chunk_start + 900]
+                for r in conn.execute(
+                    f"SELECT * FROM questions WHERE disabled=0 AND id IN ({','.join('?' * len(chunk))})",
+                    chunk,
+                ):
+                    by_id[r["id"]] = r
+            rows = [by_id[i] for i in qids if i in by_id]
+    if not rows:
+        rows = conn.execute(
+            """SELECT * FROM questions
+               WHERE source=? AND is_real=1 AND disabled=0
+               ORDER BY id LIMIT ?""",
+            (source, limit),
+        ).fetchall()
+    done_qids: set[int] = set()
+    wrong_qids: set[int] = set()
+    if uid and rows:
+        done_qids, wrong_qids = _answer_state(conn, uid)
     conn.close()
     out = []
     for r in rows:
         d = dict(r)
         d["options"] = json.loads(d.get("options") or "{}")
+        if uid:
+            d["done"] = d["id"] in done_qids
+            d["wrong"] = d["id"] in wrong_qids
         out.append(d)
     return out
 
@@ -3001,6 +3111,20 @@ def mistakes_by_qids(uid: str, qids: list[int]) -> dict[int, dict]:
     return {r["question_id"]: {"id": r["id"], "error_reason": r["error_reason"]} for r in rows}
 
 
+def _paper_by_psource(conn) -> dict[str, dict]:
+    """卷 psource → {pid, title, psource}；同 source 多卷取 id 最大（最新）一张。复用卷库 TTL 缓存。"""
+    _ensure_exam_tables(conn)
+    out: dict[str, dict] = {}
+    for p in _list_exam_papers_base(conn, None, None, None):
+        src = p.get("psource")
+        if not src:
+            continue
+        cur = out.get(src)
+        if cur is None or p["id"] > cur["pid"]:
+            out[src] = {"pid": p["id"], "title": p["title"], "psource": src}
+    return out
+
+
 def list_mistakes(limit: int = 500, uid: str | None = None) -> list[dict]:
     conn = get_conn()
     _ensure_mistake_uid(conn)
@@ -3009,17 +3133,22 @@ def list_mistakes(limit: int = 500, uid: str | None = None) -> list[dict]:
     args = (uid,) if uid else ()
     rows = conn.execute(
         f"""SELECT m.*, q.tag3, q.options AS q_options,
-            q.attempt_count, q.correct_ratio, q.most_wrong FROM mistakes m
+            q.attempt_count, q.correct_ratio, q.most_wrong,
+            q.source AS q_source, q.is_real AS q_is_real FROM mistakes m
             LEFT JOIN questions q ON q.id=m.question_id
             WHERE 1=1{cl} ORDER BY m.created_at DESC LIMIT ?""",
         (*args, limit),
     ).fetchall()
+    papers = _paper_by_psource(conn) if any(r["q_is_real"] and r["q_source"] for r in rows) else {}
     conn.close()
     out = []
     for r in rows:
         d = dict(r)
         d["methods"] = json.loads(d.get("methods") or "[]")
         d["options"] = _parse_options(d.pop("q_options", None))
+        src = d.pop("q_source", None)
+        hit = papers.get(src) if d.pop("q_is_real", None) and src else None
+        d["paper"] = dict(hit) if hit else None
         out.append(d)
     return out
 
@@ -3109,25 +3238,20 @@ def _ensure_review_log(conn):
     conn.execute("CREATE INDEX IF NOT EXISTS idx_rl_uid ON review_log(uid, created_at)")
 
 
-def record_review(mid: int, correct: bool, uid: str | None = None) -> dict:
-    conn = get_conn()
-    _ensure_mistake_uid(conn)
+def _advance_review(conn, mid: int, correct: bool, uid: str | None) -> dict | None:
+    """一次复习结果推进 SRS：写 review_log（有 uid 时）、更新 streak/next_review/mastered。错题不存在返回 None。"""
     cl, args = _uid_clause(uid)
-    if not conn.execute(f"SELECT 1 FROM mistakes WHERE id=?{cl}", (mid, *args)).fetchone():
-        conn.close()
-        raise KeyError(mid)
+    row = conn.execute(
+        f"SELECT review_streak FROM mistakes WHERE id=?{cl}", (mid, *args)
+    ).fetchone()
+    if not row:
+        return None
     if uid:
         _ensure_review_log(conn)
         conn.execute(
             "INSERT INTO review_log (uid, mistake_id, correct, created_at) VALUES (?,?,?,?)",
             (uid, mid, 1 if correct else 0, time.time()),
         )
-    row = conn.execute(
-        f"SELECT review_streak FROM mistakes WHERE id=?{cl}", (mid, *args)
-    ).fetchone()
-    if not row:
-        conn.close()
-        raise KeyError(mid)
     streak = (row["review_streak"] or 0) + 1 if correct else 0
     days = REVIEW_INTERVALS_DAYS[min(streak - 1, len(REVIEW_INTERVALS_DAYS) - 1)] if correct else 1
     nxt = time.time() + days * 86400
@@ -3138,9 +3262,19 @@ def record_review(mid: int, correct: bool, uid: str | None = None) -> dict:
         f"WHERE id=?{cl}",
         (streak, nxt, mastered, mastered, time.time(), mid, *args),
     )
+    return {"streak": streak, "next_review_days": days, "mastered": bool(mastered)}
+
+
+def record_review(mid: int, correct: bool, uid: str | None = None) -> dict:
+    conn = get_conn()
+    _ensure_mistake_uid(conn)
+    res = _advance_review(conn, mid, correct, uid)
+    if res is None:
+        conn.close()
+        raise KeyError(mid)
     conn.commit()
     conn.close()
-    return {"streak": streak, "next_review_days": days, "mastered": bool(mastered)}
+    return res
 
 
 def stats(uid: str | None = None) -> dict:
@@ -3339,7 +3473,8 @@ def _list_exam_papers_base(conn, kind: str | None, year: int | None,
     for r in rows:
         d = dict(r)
         d.pop("question_ids")
-        d["n"] = sum(1 for i in qids_by_paper[d["id"]] if i in active)
+        d["_qids"] = [i for i in qids_by_paper[d["id"]] if i in active]
+        d["n"] = len(d["_qids"])
         d["psource"] = _dominant_paper_source(qids_by_paper[d["id"]], src_by_qid)
         soc = takers.get(d["id"])
         d["takers"] = soc["n"] if soc else 0
@@ -3374,10 +3509,17 @@ def list_exam_papers(kind: str | None = None, year: int | None = None,
                 if s > bs or (s == bs and b["id"] > cur["best_attempt_id"]):
                     cur["best_score"] = b["score"]
                     cur["best_attempt_id"] = b["id"]
+    done_qids: set[int] = set()
+    wrong_qids: set[int] = set()
+    if uid and base:
+        done_qids, wrong_qids = _answer_state(conn, uid)
     conn.close()
     out = []
     for d in base:
         d = dict(d)
+        qids = d.pop("_qids", [])
+        d["practiced"] = sum(1 for i in qids if i in done_qids) if done_qids else 0
+        d["wrong"] = sum(1 for i in qids if i in wrong_qids) if wrong_qids else 0
         d.update(best.get(d["id"], {
             "best_score": None, "attempt_count": 0, "best_attempt_id": None,
         }))
@@ -3599,23 +3741,30 @@ def _ensure_practice_progress(conn):
             updated_at REAL NOT NULL
         )"""
     )
+    pcols = {r["name"] for r in conn.execute("PRAGMA table_info(practice_progress)")}
+    if "psource" not in pcols:
+        conn.execute("ALTER TABLE practice_progress ADD COLUMN psource TEXT")
+    if "ptitle" not in pcols:
+        conn.execute("ALTER TABLE practice_progress ADD COLUMN ptitle TEXT")
 
 
 def save_practice_progress(uid: str, qids: list[int], picks: dict, excl: dict, idx: int,
                            right: int, streak: int, best_streak: int,
-                           module: str | None, submodule: str | None) -> None:
+                           module: str | None, submodule: str | None,
+                           psource: str | None = None, ptitle: str | None = None) -> None:
     conn = get_conn()
     _ensure_practice_progress(conn)
     conn.execute(
         """INSERT INTO practice_progress (uid, qids, picks, excl, idx, right_n, streak, best_streak,
-                                          module, submodule, updated_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                                          module, submodule, psource, ptitle, updated_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
            ON CONFLICT(uid) DO UPDATE SET
              qids=excluded.qids, picks=excluded.picks, excl=excluded.excl, idx=excluded.idx,
              right_n=excluded.right_n, streak=excluded.streak, best_streak=excluded.best_streak,
-             module=excluded.module, submodule=excluded.submodule, updated_at=excluded.updated_at""",
+             module=excluded.module, submodule=excluded.submodule,
+             psource=excluded.psource, ptitle=excluded.ptitle, updated_at=excluded.updated_at""",
         (uid, json.dumps(qids), json.dumps(picks), json.dumps(excl) if excl else None,
-         idx, right, streak, best_streak, module, submodule, time.time()),
+         idx, right, streak, best_streak, module, submodule, psource, ptitle, time.time()),
     )
     conn.commit()
     conn.close()
@@ -4033,6 +4182,10 @@ def admin_dashboard_state() -> tuple[dict, str]:
     return _cached_state("dashboard", 300, _admin_dashboard_uncached)
 
 
+# 运营口径：剔除探针流量（probe=1）；旧行 NULL 视为真人（无法回填，如实保留）
+REAL_TRAFFIC = "COALESCE(probe,0)=0"
+
+
 def _admin_dashboard_uncached() -> dict:
     conn = get_conn()
     _ensure_answer_log(conn)
@@ -4046,15 +4199,19 @@ def _admin_dashboard_uncached() -> dict:
         cond = "created_at>=?" + (" AND created_at<?" if end else "")
         args = (start, end) if end else (start,)
         row = q(
-            f"SELECT COUNT(DISTINCT uid) au, COUNT(*) n, COALESCE(SUM(correct),0) c FROM answer_log WHERE {cond}",
+            f"SELECT COUNT(DISTINCT uid) au, COUNT(*) n, COALESCE(SUM(correct),0) c "
+            f"FROM answer_log WHERE {cond} AND {REAL_TRAFFIC}",
             args,
         ).fetchone()
-        return {"active": row["au"], "answered": row["n"], "correct": row["c"]}
+        probe = q(
+            f"SELECT COUNT(*) n FROM answer_log WHERE {cond} AND probe=1", args
+        ).fetchone()["n"]
+        return {"active": row["au"], "answered": row["n"], "correct": row["c"], "probe_excluded": probe}
 
     today = day_kpis(day0, None)
     yesterday = day_kpis(day_1, day0)
     firsts = q(
-        "SELECT MIN(created_at) t FROM answer_log GROUP BY uid HAVING t>=?", (day_1,)
+        f"SELECT MIN(created_at) t FROM answer_log WHERE {REAL_TRAFFIC} GROUP BY uid HAVING t>=?", (day_1,)
     ).fetchall()
     new_today = sum(1 for r in firsts if r["t"] >= day0)
     new_yesterday = len(firsts) - new_today
@@ -4062,10 +4219,10 @@ def _admin_dashboard_uncached() -> dict:
     trend = [
         dict(r)
         for r in q(
-            """SELECT date(created_at, 'unixepoch', '+8 hours') d,
+            f"""SELECT date(created_at, 'unixepoch', '+8 hours') d,
                       COUNT(*) answered, COUNT(DISTINCT uid) active,
                       ROUND(COALESCE(SUM(correct),0)*100.0/COUNT(*), 1) acc
-               FROM answer_log WHERE created_at>=? GROUP BY d ORDER BY d""",
+               FROM answer_log WHERE created_at>=? AND {REAL_TRAFFIC} GROUP BY d ORDER BY d""",
             (day_14,),
         )
     ]
@@ -4110,8 +4267,8 @@ def _admin_dashboard_uncached() -> dict:
     acc7 = [
         dict(r)
         for r in q(
-            """SELECT module, COUNT(*) n, ROUND(COALESCE(SUM(correct),0)*100.0/COUNT(*),1) acc
-               FROM answer_log WHERE created_at>=? AND module IS NOT NULL
+            f"""SELECT module, COUNT(*) n, ROUND(COALESCE(SUM(correct),0)*100.0/COUNT(*),1) acc
+               FROM answer_log WHERE created_at>=? AND module IS NOT NULL AND {REAL_TRAFFIC}
                GROUP BY module ORDER BY n DESC""",
             (_day_start(-6),),
         )
@@ -4252,12 +4409,11 @@ def _governance_scan_uncached() -> dict:
     conn = get_conn()
     q = conn.execute
     broken: list[dict] = []
-    rows = q(
+    dist_all: dict = {}
+    for r in q(
         "SELECT id, module, question, options, answer FROM questions "
         "WHERE (disabled IS NULL OR disabled!=1) LIMIT 200000"
-    ).fetchall()
-    dist_all: dict = {}
-    for r in rows:
+    ):
         problems = []
         text = (r["question"] or "").strip()
         try:

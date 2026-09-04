@@ -119,6 +119,47 @@ def test_progress_param_validation(client):
     _cleanup()
 
 
+def test_progress_drop(client):
+    """R358：drop:true 主动放弃删除服务端进度（不受超时限制、幂等、归属校验）。"""
+    qids = seed_questions()[:5]
+    pid = _seed_paper("进度放弃删除测试卷", qids)
+    uid = "test-eprog-u8"
+    aid = _start(client, uid, pid)
+    client.post("/api/exam/progress", json={"uid": uid, "attempt_id": aid, "picks": {str(qids[0]): "A"}})
+    assert client.get(f"/api/exam/resume?uid={uid}").json()["attempt_id"] == aid
+    # 他人 attempt 拒绝 drop
+    assert client.post(
+        "/api/exam/progress", json={"uid": "test-eprog-other", "attempt_id": aid, "drop": True}).status_code == 404
+    # drop 成功后 resume 空、行删除
+    r = client.post("/api/exam/progress", json={"uid": uid, "attempt_id": aid, "drop": True})
+    assert r.status_code == 200 and r.json()["ok"] is True
+    assert client.get(f"/api/exam/resume?uid={uid}").json() == {}
+    conn = db.get_conn()
+    n = conn.execute("SELECT COUNT(*) FROM exam_progress WHERE attempt_id=?", (aid,)).fetchone()[0]
+    conn.close()
+    assert n == 0
+    # 幂等
+    assert client.post(
+        "/api/exam/progress", json={"uid": uid, "attempt_id": aid, "drop": True}).status_code == 200
+    # 超时 attempt 仍可 drop（超时快照正是最常见放弃对象）
+    aid2 = _start(client, uid, pid)
+    client.post("/api/exam/progress", json={"uid": uid, "attempt_id": aid2, "picks": {}})
+    conn = db.get_conn()
+    conn.execute("UPDATE exam_attempts SET started_at=? WHERE id=?", (time.time() - 999999, aid2))
+    conn.commit()
+    conn.close()
+    assert client.post(
+        "/api/exam/progress", json={"uid": uid, "attempt_id": aid2, "drop": True}).status_code == 200
+    conn = db.get_conn()
+    n2 = conn.execute("SELECT COUNT(*) FROM exam_progress WHERE attempt_id=?", (aid2,)).fetchone()[0]
+    conn.close()
+    assert n2 == 0
+    # drop 非 True 不触发删除分支（走正常校验）
+    aid3 = _start(client, uid, pid)
+    client.post("/api/exam/progress", json={"uid": uid, "attempt_id": aid3, "picks": {}, "drop": 1})
+    _cleanup()
+
+
 def test_progress_marks_roundtrip_and_validation(client):
     """R317：未交卷进度 marks（question_id 数组）同步与校验。"""
     qids = seed_questions()[:5]

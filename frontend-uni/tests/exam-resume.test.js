@@ -19,6 +19,7 @@ function saved(over = {}) {
 describe('parseExamProgress', () => {
   it('有效进度产出续考数据', () => {
     expect(parseExamProgress(saved(), NOW)).toEqual({
+      attemptId: 9,
       paperId: 5,
       mini: false,
       title: '2025年四川真题卷',
@@ -33,6 +34,11 @@ describe('parseExamProgress', () => {
     expect(r.mini).toBe(true);
     expect(r.paperId).toBe(0);
     expect(r.title).toBe('迷你模考');
+  });
+
+  it('attemptId 非数字回落 0（drop 时 fail-closed 不发服务端删除）', () => {
+    expect(parseExamProgress(saved({ attemptId: 'x9' }), NOW).attemptId).toBe(0);
+    expect(parseExamProgress(saved({ attemptId: {} }), NOW).attemptId).toBe(0);
   });
 
   it('无效/过期返回 null', () => {

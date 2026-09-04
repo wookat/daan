@@ -45,7 +45,7 @@
     <view v-if="practiceResume" class="card ercard">
       <view class="cb-l">
         <text class="cb-t">有一组未做完的练习</text>
-        <text class="cb-s">{{ prModName(practiceResume.module) }} · 已做 {{ practiceResume.done }}/{{ practiceResume.total }} 题</text>
+        <text class="cb-s">{{ practiceResume.ptitle || prModName(practiceResume.module) }} · 已做 {{ practiceResume.done }}/{{ practiceResume.total }} 题</text>
       </view>
       <view class="cb-r">
         <text class="cb-go" role="button" aria-label="继续未做完的练习" @click="prContinue">去继续 ›</text>
@@ -892,6 +892,8 @@ export default {
       if (!this.examResume) this.syncExamResume();
     },
     async syncExamResume() {
+      const clearedAt = uni.getStorageSync('erClearedAt');
+      if (clearedAt && Date.now() - clearedAt < 30 * 1000) return;
       try {
         const d = await request('/api/exam/resume?uid=' + encodeURIComponent(anonUid()));
         const now = Date.now();
@@ -914,6 +916,10 @@ export default {
         cancelText: '再想想',
         success: (res) => {
           if (!res.confirm) return;
+          uni.setStorageSync('erClearedAt', Date.now());
+          if (this.examResume && this.examResume.attemptId) {
+            request('/api/exam/progress', { method: 'POST', data: { uid: anonUid(), attempt_id: this.examResume.attemptId, drop: true } }).catch(() => {});
+          }
           uni.removeStorageSync('examProgress');
           this.examResume = null;
         },

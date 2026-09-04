@@ -1,7 +1,7 @@
 // R322：普通刷题「未完成练习」跨设备同步——上送收集与恢复归一纯函数。
 // 语义：非法输入一律 fail-closed（收集返回 null 不上送、恢复返回 null 不采纳）。
 
-export function collectPracticeProgress(items, idx, right, streak, bestStreak, module, submodule) {
+export function collectPracticeProgress(items, idx, right, streak, bestStreak, module, submodule, source, ptitle) {
   if (!Array.isArray(items) || !items.length || items.length > 100) return null;
   const qids = [];
   const picks = {};
@@ -27,6 +27,8 @@ export function collectPracticeProgress(items, idx, right, streak, bestStreak, m
     best_streak: clamp(bestStreak, 10000),
     module: typeof module === 'string' ? module.slice(0, 64) : '',
     submodule: typeof submodule === 'string' ? submodule.slice(0, 64) : '',
+    source: typeof source === 'string' ? source.slice(0, 64) : '',
+    ptitle: typeof ptitle === 'string' ? ptitle.slice(0, 80) : '',
   };
 }
 
@@ -41,6 +43,7 @@ export function parsePendingPractice(saved, now) {
     done,
     total: saved.items.length,
     module: typeof saved.lastModule === 'string' ? saved.lastModule : '',
+    ptitle: typeof saved.ptitle === 'string' ? saved.ptitle : '',
   };
 }
 
@@ -56,6 +59,7 @@ export function parseRemotePractice(d) {
     done,
     total: d.items.length,
     module: typeof d.module === 'string' ? d.module : '',
+    ptitle: typeof d.ptitle === 'string' ? d.ptitle : '',
   };
 }
 
@@ -82,5 +86,7 @@ export function adoptPracticeResume(d) {
     bestStreak: clamp(d.best_streak, 10000),
     module: typeof d.module === 'string' ? d.module : '',
     submodule: typeof d.submodule === 'string' ? d.submodule : '',
+    source: typeof d.source === 'string' ? d.source : '',
+    ptitle: typeof d.ptitle === 'string' ? d.ptitle : '',
   };
 }

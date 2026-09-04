@@ -284,8 +284,8 @@
         <view class="redo-l">
           <view class="redo-ico"><l-icon name="rotate-ccw" :size="16" color="#2e5bff" /></view>
           <view>
-            <text class="redo-t">错题重练{{ kp3Filter ? ' · ' + kp3Filter : kpFilter ? ' · ' + kpFilter : rzFilter ? ' · ' + rzFilter : srcFilter ? ' · ' + (srcFilter === 'exam' ? '模考错题' : '练习错题') : '' }}</text>
-            <text class="redo-s">{{ kp3Filter ? '只重练当前筛选考点的待掌握错题（最多 10 题）' : kpFilter ? '只重练当前筛选题型的待掌握错题（最多 10 题）' : rzFilter ? '只重练当前筛选错因的待掌握错题（最多 10 题）' : srcFilter ? '只重练当前筛选来源的待掌握错题（最多 10 题）' : '把待掌握错题按刷题模式重做一遍（最多 10 题）' }}</text>
+            <text class="redo-t">{{ pidFilter ? '重练本卷错题 · ' + pidLabel : '错题重练' + (kp3Filter ? ' · ' + kp3Filter : kpFilter ? ' · ' + kpFilter : rzFilter ? ' · ' + rzFilter : srcFilter ? ' · ' + (srcFilter === 'exam' ? '模考错题' : '练习错题') : '') }}</text>
+            <text class="redo-s">{{ pidFilter ? '按卷面顺序只练本卷上次答错的题（答对过即不再算错）' : kp3Filter ? '只重练当前筛选考点的待掌握错题（最多 10 题）' : kpFilter ? '只重练当前筛选题型的待掌握错题（最多 10 题）' : rzFilter ? '只重练当前筛选错因的待掌握错题（最多 10 题）' : srcFilter ? '只重练当前筛选来源的待掌握错题（最多 10 题）' : '把待掌握错题按刷题模式重做一遍（最多 10 题）' }}</text>
           </view>
         </view>
         <text class="redo-go">开始</text>
@@ -352,9 +352,11 @@
         </view>
       </view>
       <!-- #endif -->
-      <view v-if="tab !== 'fav' && (filterMod || kpFilter || kp3Filter || srcFilter || rzFilter)" class="curfilter bk-main">
+      <view v-if="tab !== 'fav' && (filterMod || kpFilter || kp3Filter || srcFilter || rzFilter || pidFilter)" class="curfilter bk-main">
         <text v-if="filterMod || kpFilter || kp3Filter" class="kpchip on" @click="filterMod = ''; kpFilter = ''; kp3Filter = ''">{{ kp3Filter || kpFilter || modName(filterMod) }} ✕</text>
         <text v-if="srcFilter" class="kpchip on" @click="srcFilter = ''">{{ srcFilter === 'exam' ? '模考错题' : '练习错题' }} ✕</text>
+        <text v-if="pidFilter" class="kpchip on" @click="pidFilter = 0">{{ pidLabel }} ✕</text>
+        <text v-if="pidFilter" class="kpchip gopaper" @click="goPaper(pidFilter)">练本卷 ›</text>
         <text v-if="rzFilter" class="kpchip on" @click="rzFilter = ''">错因：{{ rzFilter }} ✕</text>
         <text v-if="sortBy !== 'time'" class="kpchip" @click="filterOpen = true">{{ (SORTS.find(s => s.k === sortBy) || {}).name }}</text>
       </view>
@@ -384,6 +386,11 @@
             <text class="kpchip" :class="{ on: srcFilter === '' }" @click="srcFilter = ''">全部</text>
             <text class="kpchip" :class="{ on: srcFilter === 'exam' }" @click="srcFilter = 'exam'">模考</text>
             <text class="kpchip" :class="{ on: srcFilter === 'practice' }" @click="srcFilter = 'practice'">练习</text>
+          </view>
+          <view v-if="paperGroups.length" class="sheet-k">试卷</view>
+          <view v-if="paperGroups.length" class="kpchips">
+            <text class="kpchip" :class="{ on: pidFilter === 0 }" @click="pidFilter = 0">全部</text>
+            <text v-for="g in paperGroups" :key="g.pid" class="kpchip" :class="{ on: pidFilter === g.pid }" @click="pidFilter = pidFilter === g.pid ? 0 : g.pid">{{ g.psource }} ×{{ g.n }}</text>
           </view>
           <view v-if="hasReasonTagged" class="sheet-k">错因</view>
           <view v-if="hasReasonTagged" class="kpchips">
@@ -426,6 +433,7 @@
           <view v-if="batchMode" class="bchk" :class="{ on: selIds[m.id] }">{{ selIds[m.id] ? '✓' : '' }}</view>
           <text class="tag">{{ tagName(m) }}</text>
           <text v-if="m.source === 'exam'" class="srcbadge">模考</text>
+          <text v-if="mistakePaper(m)" class="pbadge" @click.stop="pidFilter = mistakePaper(m).pid">{{ mistakePaper(m).psource }}</text>
           <text v-if="m.times >= 2" class="timesbadge">错 {{ m.times }} 次</text>
           <text v-if="m.mastered" class="zhan">已掌握</text>
           <view v-else-if="nextReviewText(m)" class="duehint" :class="{ due: isDue(m) }">
@@ -520,6 +528,7 @@
 import { md } from '../../md.js';
 import { request, anonUid, exportPdf, scanSheet, shareCreate, trackEvent, qShareText, shareVariant } from '../../api.js';
 import { buildBookUrl, parseBookOpts } from '../../book-url.js';
+import { mistakePaper, paperGroups, inPaper } from '../../book-paper.js';
 import { cacheMistakes, getCachedMistakes } from '../../offline.js';
 import { qStatLine } from '../../q-stat.js';
 import { fontSizes, normFontLv } from '../../font-size.js';
@@ -571,6 +580,7 @@ export default {
       filterMod: '',
       srcFilter: '',
       rzFilter: '',
+      pidFilter: 0,
       masteryMods: {},
       masteryT3: {},
       kw: '',
@@ -662,6 +672,13 @@ export default {
     hasReasonTagged() {
       return this.items.some((m) => m.error_reason);
     },
+    paperGroups() {
+      return paperGroups(this.items);
+    },
+    pidLabel() {
+      const g = paperGroups(this.items, Infinity).find((x) => x.pid === this.pidFilter);
+      return g ? g.psource : '本卷错题';
+    },
     doneItems() {
       return this.items.filter((m) => m.mastered);
     },
@@ -673,6 +690,7 @@ export default {
       if (this.kp3Filter) base = base.filter((m) => m.tag3_name === this.kp3Filter);
       if (this.srcFilter === 'exam') base = base.filter((m) => m.source === 'exam');
       else if (this.srcFilter === 'practice') base = base.filter((m) => m.source !== 'exam');
+      if (this.pidFilter) base = base.filter((m) => inPaper(m, this.pidFilter));
       if (this.rzFilter === '未标注') base = base.filter((m) => !m.error_reason);
       else if (this.rzFilter) base = base.filter((m) => m.error_reason === this.rzFilter);
       base = [...base];
@@ -792,6 +810,7 @@ export default {
     kp3Filter() { this.pageN = 20; this.syncBookUrl(); },
     sortBy() { this.pageN = 20; this.syncBookUrl(); },
     srcFilter() { this.syncBookUrl(); },
+    pidFilter() { this.pageN = 20; this.syncBookUrl(); },
     rzFilter() { this.pageN = 20; this.syncBookUrl(); },
   },
   onLoad(opts) {
@@ -802,6 +821,7 @@ export default {
     if (p.kp3) this._pendingKp3 = p.kp3;
     this._pendingKpFix = !!(opts && (opts.kp || opts.kp3)) && !p.kp && !p.kp3;
     if (p.src) this.srcFilter = p.src;
+    if (p.pid) this.pidFilter = p.pid;
     if (p.rz) this.rzFilter = p.rz;
     if (p.sort) this.sortBy = p.sort;
     if (p.review) uni.setStorageSync('autoStartReview', 1);
@@ -875,9 +895,15 @@ export default {
     syncBookUrl() {
       // #ifdef H5
       if (typeof window !== 'undefined' && window.history) {
-        window.history.replaceState(null, '', buildBookUrl({ tab: this.tab, mod: this.filterMod, kp: this.kpFilter, kp3: this.kp3Filter, src: this.srcFilter, rz: this.rzFilter, sort: this.sortBy }));
+        window.history.replaceState(null, '', buildBookUrl({ tab: this.tab, mod: this.filterMod, kp: this.kpFilter, kp3: this.kp3Filter, src: this.srcFilter, pid: this.pidFilter, rz: this.rzFilter, sort: this.sortBy }));
       }
       // #endif
+    },
+    mistakePaper,
+    goPaper(pid) {
+      if (!Number.isInteger(pid) || pid <= 0) return;
+      trackEvent('book_go_paper', 'book', String(pid));
+      uni.navigateTo({ url: '/pkgA/exam/list?pid=' + pid });
     },
     // #ifdef H5
     onKeydown(e) {
@@ -1442,7 +1468,16 @@ export default {
       if (sameDay(d, yest)) return '昨天 ' + hm;
       return `${d.getMonth() + 1}月${d.getDate()}日`;
     },
+    // 按卷筛选态：复用按卷「只练错题」协议直达，保留卷面顺序与归卷完成页
+    redoPaper() {
+      const g = paperGroups(this.items, Infinity).find((x) => x.pid === this.pidFilter);
+      if (!g) return;
+      trackEvent('book_redo_paper', 'book', String(g.pid));
+      uni.setStorageSync('practiceLaunch', { kind: 'paper', source: g.psource, pid: g.pid, title: g.title || g.psource, untimed: true, wrong: true });
+      uni.navigateTo({ url: '/pages/practice/practice' });
+    },
     async redoAll() {
+      if (this.pidFilter) return this.redoPaper();
       try {
         let q = '/api/mistakes/redo?limit=10&uid=' + encodeURIComponent(anonUid());
         if (this.kpFilter) {
@@ -1672,6 +1707,8 @@ export default {
 .rvbadge { font-size: 20rpx; color: var(--ink-2); background: var(--soft-bg); border-radius: 999rpx; padding: 4rpx 14rpx; }
 .rzbadge { font-size: 20rpx; color: #b45309; background: #fef3c7; border-radius: 999rpx; padding: 4rpx 14rpx; }
 .srcbadge { font-size: 20rpx; color: #6d28d9; background: #ede9fe; border-radius: 999rpx; padding: 4rpx 14rpx; }
+.pbadge { font-size: 20rpx; color: #0f766e; background: #ccfbf1; border-radius: 999rpx; padding: 4rpx 14rpx; max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kpchip.gopaper { color: var(--brand-text); border-color: var(--brand); font-weight: 600; }
 .zhan { margin-left: auto; font-size: 22rpx; font-weight: 700; color: var(--ok); border: 3rpx solid var(--ok); border-radius: 8rpx; padding: 2rpx 12rpx; transform: rotate(-8deg); }
 .anscmp { margin-top: 12rpx; font-size: 23rpx; display: flex; gap: 12rpx; align-items: center; flex-wrap: wrap; }
 .mstat { margin-top: 10rpx; font-size: 22rpx; color: var(--ink-2); }
@@ -1791,7 +1828,7 @@ export default {
 .resumecard .duego { color: #b45309; }
 .resume-drop { font-size: 22rpx; color: rgba(255, 255, 255, 0.85); text-decoration: underline; padding: 4rpx 12rpx; }
 .redoentry { display: flex; justify-content: space-between; align-items: center; }
-.redo-l { display: flex; align-items: center; gap: 16rpx; }
+.redo-l { display: flex; align-items: center; gap: 16rpx; flex: 1; min-width: 0; margin-right: 16rpx; }
 .redo-ico { width: 64rpx; height: 64rpx; border-radius: 50%; background: var(--brand-soft); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .redo-t { display: block; font-size: 27rpx; font-weight: 600; color: var(--ink); }
 .redo-s { display: block; font-size: 21rpx; color: var(--ink-2); margin-top: 4rpx; }
