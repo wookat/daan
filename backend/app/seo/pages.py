@@ -734,9 +734,19 @@ def _render_question(qid: int) -> str:
         if r["image_credit"]:
             credit = _e(r["image_credit"])
             img_html += f'<p class="meta">图源：{credit}</p>'
-    opts_html = "".join(
-        f'<div class="opt"><b>{_e(k)}.</b> {_e(v)}</div>' for k, v in sorted(options.items())
+    # 搜索访客的意图是「这道题」：选项本身可点（点即带着选择进练习页作答），答案不在首屏摊开
+    practice_href = (
+        f'{_e(SITE_BASE)}/#/pages/practice/practice?qid={qid}'
+        f'{"&tag3=" + quote(r["tag3"]) if r["tag3"] else ""}'
+        f'{"&module=" + quote(r["module"]) if r["module"] else ""}&source=seo_q'
     )
+    opts_html = "".join(
+        f'<a class="opt" href="{practice_href}&pick={_e(k)}" rel="nofollow">'
+        f'<b>{_e(k)}.</b> {_e(v)}</a>'
+        for k, v in sorted(options.items())
+    )
+    cta_label = "在线做这道题 + 同考点练习（免费）→" if r["tag3"] else "在线做这道题（免费）→"
+    cta_html = f'<a class="cta cta-w" href="{practice_href}">{cta_label}</a>'
     hs = (r["hs_explanation"] or "").strip()
     raw_exp = (r["explanation"] or "").strip()
     explanation = hs or raw_exp
@@ -765,7 +775,7 @@ def _render_question(qid: int) -> str:
     )
     if r["submodule"]:
         crumbs.append((r["submodule"], _sub_path(r["module"], r["submodule"])))
-    crumbs.append((f"题目 #{qid}", None))
+    crumbs.append(("题目", None))
     body = (
         _crumb(crumbs)
         + f'<article class="card"><h1>{_e(qtext[:40])}{"…" if len(qtext) > 40 else ""}</h1>'
@@ -774,17 +784,15 @@ def _render_question(qid: int) -> str:
         + f" · {_e(src)}</p>"
         + f"<p>{_e(qtext)}</p>"
         + img_html
+        + '<p class="meta">点选项直接作答 · 免费无需注册 · 做错自动进错题本</p>'
         + opts_html
-        + '<details open class="ans"><summary>答案与解析</summary>'
-        + f'<p><b>正确答案：{_e(r["answer"] or "见解析")}</b></p>{exp_html}</details>'
+        + cta_html
+        + '<details class="ans"><summary>先想一想，再看答案与解析 ▸</summary>'
+        + f'<p><b>正确答案：{_e(r["answer"] or "见解析")}</b></p>{exp_html}'
+        + cta_html
+        + "</details>"
         + (
-            f'<a class="cta" href="{_e(SITE_BASE)}/#/pages/practice/practice?qid={qid}'
-            f'{"&tag3=" + quote(r["tag3"]) if r["tag3"] else ""}'
-            f'{"&module=" + quote(r["module"]) if r["module"] else ""}&source=seo_q">'
-            f'{"在线做这道题 + 同考点练习（免费）→" if r["tag3"] else "在线做这道题（免费）→"}</a>'
-        )
-        + (
-            f'<p><a href="{_e(_topic_path(r["tag3"]))}">← 返回「{_e(topic["name"])}」考点题目列表</a></p>'
+            f'<p><a href="{_e(_topic_path(r["tag3"]))}">更多「{_e(topic["name"])}」考点题目 ›</a></p>'
             if topic
             else ""
         )
