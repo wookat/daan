@@ -13,8 +13,37 @@ describe('buildPaceRows', () => {
     const zl = rows.find((r) => r.key === 'ziliao');
     expect(cs.refSecs).toBe(600);
     expect(cs.status).toBe('fast');
-    expect(zl.refSecs).toBe(600);
+    // 部分作答：参考用时按已答 8/10 折算
+    expect(zl.refSecs).toBe(480);
+    expect(zl.answered).toBe(8);
     expect(zl.status).toBe('over');
+  });
+
+  it('整模块未作答标 skip，不判偏快', () => {
+    const rows = buildPaceRows(
+      { changshi: { n: 10, answered: 10, correct: 7, secs: 600 }, shuliang: { n: 10, answered: 0, correct: 0, secs: 0 } },
+      20,
+      20
+    );
+    const sl = rows.find((r) => r.key === 'shuliang');
+    expect(sl.status).toBe('skip');
+    expect(sl.answered).toBe(0);
+    expect(sl.refSecs).toBe(600);
+    expect(rows.find((r) => r.key === 'changshi').status).toBe('ok');
+  });
+
+  it('部分作答按已答题数折算后判定（答 5/10 用 300s 为合理而非偏快）', () => {
+    const rows = buildPaceRows({ yanyu: { n: 10, answered: 5, correct: 3, secs: 300 } }, 10, 10);
+    expect(rows[0].refSecs).toBe(300);
+    expect(rows[0].status).toBe('ok');
+    expect(rows[0].n).toBe(10);
+  });
+
+  it('answered 缺失（旧 attempt）视为全部作答', () => {
+    const rows = buildPaceRows({ yanyu: { n: 10, correct: 6, secs: 200 } }, 10, 10);
+    expect(rows[0].answered).toBe(10);
+    expect(rows[0].refSecs).toBe(600);
+    expect(rows[0].status).toBe('fast');
   });
 
   it('用时落在 0.6–1.2 倍参考区间判定合理', () => {

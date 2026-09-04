@@ -12,6 +12,13 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 - seed 指纹短路的生产证据：`seed_runs.ran_at` < 容器 `StartedAt` 且重启后不变；`seed_index` 全量 join `questions` 无悬挂；`import_batch='seed'` 字段历史上只有个别行，报告要写成「部署后新增 0」而不是「种子题总数」。
 - 清仿真后 `innerWidth` 若仍是旧 override 宽度（ow 1600 / iw 1440），原生导航一次页面即恢复；再核对 `iw==ow`。
 
+## W3 集成本地验收（uvicorn + build 产物同源）走查新经验
+- 本地后端 `DB_PATH=<tmp>/app.db IMPORT_TOKEN=xxx KG_BOOT_QUIET_S=0 uvicorn app.main:app --port 8765`（在 backend/ 下）会自动挂载 `../frontend-uni/dist/build/h5`，刚 `npm run build:h5` 的产物直接从 `http://127.0.0.1:8765/#/...` 打开，同源无需另起 vite preview 也无 CORS；Playwright over CDP（`chromium.connectOverCDP('http://localhost:29229')`）先 `localStorage.setItem('anonUid', 'test-w3-…')` 再 goto 报告页即可读到造数。
+- 模考造数：`POST /api/exam/start {uid, mini:true}`（不是 `mode:'mini'`）→ `POST /api/exam/submit {uid, attempt_id, picks, secs}`，`picks`/`secs` 以 **1-based 题号字符串**为 key（不是 question_id），否则全部判未作答；报告 `GET /api/exam/report/{attempt_id}?uid=` 的 `attempt.per_module[mod]={n,answered,correct,secs}`。
+- 周界/时间戳类断言：`t` 用毫秒且落在 30 天窗口内（`_client_ts` 超窗回退 now，构造过久的日期会「看似无效」）；周键对照用 `datetime.fromtimestamp(t, CST).strftime('%Y-%W')` 与 UTC 版比较，两者不同才是有效样本（周一 00:00–08:00 CST）。
+- 内容清洗脚本预演：复制 WAL 模式库不要 `cp app.db`（会丢未 checkpoint 写入，出现「dry-run 有命中、apply 副本 0 命中」假象），用 `sqlite3.connect(src).backup(dst)`。
+- 配速新旧对照：把 `src/exam-pace.js` 与 `git show origin/main:frontend-uni/src/exam-pace.js` 各存一份 `.mjs`，喂同一份 per_module JSON 跑 node，即可无 UI 复现「整模块未作答标偏快」。
+
 ## R374 管理台看板复验（探针剔除量外显 / 零前端）走查新经验
 - 管理台登录：token 用 `docker exec deploy-kaogong-1 printenv ADMIN_TOKEN`（SSH），在 shell 里只 `echo ${#T}` 长度、通过 `KG_T` 环境变量传给 python，再用 CDP `Runtime.evaluate` 给 `#login-token` 赋 `value` + `dispatchEvent(new Event('input'))`，然后**原生点击**「登录」；token 存 `localStorage.admToken`，结束用 `localStorage.removeItem('admToken')` 退出（不点「退出登录」也可，避免 reload）。
 - `cdp.pick()` 排除 `/admin` 标签页，管理台要用 `/tmp/cdp174/r374.py` 的 `pick_admin()`；375 仿真同理要用 `holdvw_admin.py`（复制 holdvw.py 改 pick）。管理台与用户端各自一个 holder，用各自 pid 文件杀。

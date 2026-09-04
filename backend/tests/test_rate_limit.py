@@ -106,6 +106,33 @@ def test_answer_log_uid_rotation_capped_by_ip_bucket():
     assert ei.value.status_code == 429
 
 
+def test_rate_endpoint_per_ip_60_per_600s():
+    """W3-A：/api/rate 匿名 IP 桶 60/600s，第 61 次 429；另一 IP 不受影响。"""
+    from app.ai_api import api_rate
+
+    a = _req({"X-Kg-Ip": "12.12.12.12"})
+    for _ in range(60):
+        with pytest.raises(HTTPException) as ei:
+            api_rate({}, a)
+        assert ei.value.status_code == 400  # 通过限速，止步缺 key/question_id 校验
+    with pytest.raises(HTTPException) as ei:
+        api_rate({}, a)
+    assert ei.value.status_code == 429
+    with pytest.raises(HTTPException) as ei:
+        api_rate({}, _req({"X-Kg-Ip": "13.13.13.13"}))
+    assert ei.value.status_code == 400
+
+
+def test_rate_endpoint_http_429(client):
+    """经 HTTP 栈：同 IP 连发 61 次，第 61 次 429（前 60 次业务 200）。"""
+    hdr = {"X-Kg-Ip": "14.14.14.14"}
+    for _ in range(60):
+        r = client.post("/api/rate", json={"key": "w3-rate-key", "up": True}, headers=hdr)
+        assert r.status_code == 200
+    r = client.post("/api/rate", json={"key": "w3-rate-key", "up": True}, headers=hdr)
+    assert r.status_code == 429
+
+
 def test_report_anonymous_per_ip():
     """R189：/api/report 匿名按真实 IP 20/3600，另一 IP 不受影响。"""
     from app.study_api import api_report
