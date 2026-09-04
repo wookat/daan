@@ -140,6 +140,15 @@ describe('R366 paperWrongItems 完成页错题重练题集', () => {
     expect(out[1]).toEqual({ id: 4, answer: 'A' });
   });
 
+  it('R370 清除 _logged/_excl：重练作答能被 logAttempts 重新落库，排除标记不残留', () => {
+    const out = paperWrongItems([
+      { id: 2, answer: 'B', _picked: 'C', _logged: true, _excl: ['A'], _saved: true, _secs: 3 },
+    ]);
+    expect(out).toEqual([{ id: 2, answer: 'B' }]);
+    expect('_logged' in out[0]).toBe(false);
+    expect('_excl' in out[0]).toBe(false);
+  });
+
   it('全对/未作答/空数组返回空', () => {
     expect(paperWrongItems([{ id: 1, answer: 'A', _picked: 'A' }])).toEqual([]);
     expect(paperWrongItems([{ id: 1, answer: 'A' }])).toEqual([]);
