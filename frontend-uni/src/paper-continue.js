@@ -27,6 +27,23 @@ export function paperPracticedState(practiced, n) {
   return { show: true, done: false, text: `已练 ${p}/${total} 题` };
 }
 
+// 按卷练习完成页错题重练：取本会话答错题并清除会话态，保持卷面顺序，fail-closed（非数组→空）
+export function paperWrongItems(items) {
+  if (!Array.isArray(items)) return [];
+  const out = [];
+  for (const q of items) {
+    if (!q || typeof q._picked !== 'string' || !q._picked || q._picked === q.answer) continue;
+    const c = { ...q };
+    delete c._picked;
+    delete c._saved;
+    delete c._mid;
+    delete c._secs;
+    delete c.done;
+    out.push(c);
+  }
+  return out;
+}
+
 // 按卷练习完成页归卷：有卷名走本卷完成态，fail-closed（非字符串/空串走通用完成态）
 export function paperFinishState(ptitle) {
   if (typeof ptitle === 'string' && ptitle.trim()) {

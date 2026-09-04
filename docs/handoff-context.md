@@ -1515,3 +1515,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 测试数据清理：test-r365-ui DELETED {mistakes:41, answer_log:68, growth_events:12, daily_set_entries:1}，LEFTOVER 空，review_cur 0 行；保护 uid（like 'umte%' 预校验）DB 34 共有表+localStorage EXACT n=30。
 - 环境观察（非本轮引入）：00:35 共宿负载 10 秒 503 抖动 12 条（daily submit 一次 503 重做后 200）；部署换 hash 后旧 chunk 预取 404×30 噪音；promise 噪音 1 条（R364 观察项延续）。
 - 详见 docs/iter/round-3/r365-paper-share-text.md。
+- ⚠️ 合并链事故（R366 发现并补救）：#572 base 指向 R364 分支 devin/1788478793-r364-paper-finish，在 #571 已入 main 后才 merge，R365 commit f39d1f4 未随入 main（NOT_IN_MAIN）。补救 PR #573（devin/1788483376-r365-mainline，从最新 main merge R365 分支）。教训与 R359 #565 同类：链式 PR 合并顺序错位时改动会落在已合并分支上——合并前必须用权威工具核对 base 与 merge 后 main 祖先链。
+
+### R366 按卷练习完成页「重练本卷错题」（2026-09，分支 devin/1788483435-r366-paper-wrong-retry，基于 #573 链）
+- SOP-10 四维审计（窗口到点）：操作台/落地页/架构无新高优缺口；功能深度选中——按卷练习完成页对本卷错题无就地行动出路（模考报告 R282 有「本卷错题重练」、粉笔完成页有错题重做，按卷练习是自家双路径口径缺口）。
+- 收口（纯前端零契约零新协议零新埋点）：paper-continue.js 补 paperWrongItems(items) fail-closed 纯函数（非数组→[]；取 _picked 非空字符串且 ≠answer 的题，浅拷贝清除 _picked/_saved/_mid/_secs/done，保持卷面顺序）；完成页 isPaper && wrong>0 时主按钮「重练本卷错题（N 题）”（回卷库降为 ghost），retryPaperWrong() 复用 retryGroup 会话重置口径、保留 _source/_ptitle 归卷（answer_log 归本卷、再答错经 saveWrong 入错题本）；全对不显示，普通/每日/背题/模考完成页零变化。
+- 详见 docs/iter/round-3/r366-paper-wrong-retry.md。

@@ -1,6 +1,6 @@
 // R360：按卷练习「只练剩余」——paperContinuePlan fail-closed 纯函数
 import { describe, it, expect } from 'vitest';
-import { paperContinuePlan, paperPracticedState, paperQuery, paperFinishState, paperShareText } from '../src/paper-continue.js';
+import { paperContinuePlan, paperPracticedState, paperQuery, paperFinishState, paperShareText, paperWrongItems } from '../src/paper-continue.js';
 
 describe('paperQuery', () => {
   it('基础：src 必带且编码', () => {
@@ -123,5 +123,40 @@ describe('R365 paperShareText 按卷分享基句', () => {
     expect(paperShareText('卷', 38, NaN)).toBeNull();
     expect(paperShareText('卷', 38, Infinity)).toBeNull();
     expect(paperShareText('卷', 38, '87')).toBeNull();
+  });
+});
+
+describe('R366 paperWrongItems 完成页错题重练题集', () => {
+  it('只取答错题、保持卷面顺序、清除会话态', () => {
+    const items = [
+      { id: 1, answer: 'A', _picked: 'A', _saved: false },
+      { id: 2, answer: 'B', _picked: 'C', _saved: true, _mid: 9, _secs: 12, done: true },
+      { id: 3, answer: 'D', _picked: '', _saved: false },
+      { id: 4, answer: 'A', _picked: 'D' },
+    ];
+    const out = paperWrongItems(items);
+    expect(out.map((q) => q.id)).toEqual([2, 4]);
+    expect(out[0]).toEqual({ id: 2, answer: 'B' });
+    expect(out[1]).toEqual({ id: 4, answer: 'A' });
+  });
+
+  it('全对/未作答/空数组返回空', () => {
+    expect(paperWrongItems([{ id: 1, answer: 'A', _picked: 'A' }])).toEqual([]);
+    expect(paperWrongItems([{ id: 1, answer: 'A' }])).toEqual([]);
+    expect(paperWrongItems([])).toEqual([]);
+  });
+
+  it('非数组/非法条目 fail-closed', () => {
+    for (const v of [null, undefined, 'x', 7, {}]) {
+      expect(paperWrongItems(v)).toEqual([]);
+    }
+    expect(paperWrongItems([null, undefined, { answer: 'A', _picked: 3 }])).toEqual([]);
+  });
+
+  it('不改动原条目（浅拷贝）', () => {
+    const q = { id: 2, answer: 'B', _picked: 'C', _saved: true };
+    paperWrongItems([q]);
+    expect(q._picked).toBe('C');
+    expect(q._saved).toBe(true);
   });
 });

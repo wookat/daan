@@ -280,7 +280,8 @@
         <text v-if="!pushNudgeDone" class="loginnudge-x" @click="dismissPushNudge">✕</text>
       </view>
       <!-- #endif -->
-      <button v-if="paperFinish().isPaper" class="btn" @click="goExamList">回卷库</button>
+      <button v-if="paperFinish().isPaper && paperWrongN() > 0" class="btn" @click="retryPaperWrong">重练本卷错题（{{ paperWrongN() }} 题）</button>
+      <button v-if="paperFinish().isPaper" :class="paperWrongN() > 0 ? 'btn ghost' : 'btn'" :style="paperWrongN() > 0 ? 'margin-top: 16rpx' : ''" @click="goExamList">回卷库</button>
       <button v-else class="btn" @click="retryGroup">再来一组</button>
       <button v-if="!beiMode" class="btn ghost" style="margin-top: 16rpx" @click="shareResult">分享成绩</button>
       <button class="btn plain" style="margin-top: 8rpx" @click="quit">返回首页</button>
@@ -362,7 +363,7 @@ import { requestNotificationPermission } from '../../reminder.js';
 import { announce } from '../../a11y-live.js';
 import { pickAnnounceText } from '../../live-policy.js';
 // #endif
-import { paperContinuePlan, paperQuery, paperFinishState, paperShareText } from '../../paper-continue.js';
+import { paperContinuePlan, paperQuery, paperFinishState, paperShareText, paperWrongItems } from '../../paper-continue.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 import { qStatLine } from '../../q-stat.js';
@@ -1467,6 +1468,27 @@ export default {
     // 完成页归卷态：按卷会话（_ptitle 非空）显卷名与回卷库出路；模板方法调用规避非响应式 _ptitle
     paperFinish() {
       return paperFinishState(this._ptitle);
+    },
+    // 完成页按卷错题数：模板方法调用规避非响应式 _ptitle 影响的缓存
+    paperWrongN() {
+      return paperWrongItems(this.items).length;
+    },
+    // 完成页「重练本卷错题」：就地以本会话答错题重开会话，保留 _source/_ptitle 归卷
+    retryPaperWrong() {
+      const wrong = paperWrongItems(this.items);
+      if (!wrong.length) return;
+      this.items = wrong;
+      this.idx = 0;
+      this.picked = '';
+      this.right = 0;
+      this.streak = 0;
+      this.bestStreak = 0;
+      this.autoSaved = false;
+      this.resultSent = false;
+      this.percentile = null;
+      this.session = true;
+      this.startQTimer();
+      uni.showToast({ title: '只重练本卷错题', icon: 'none' });
     },
     // 完成页「再来一组」：错题重练场次重用同一组错题，其余按原模块重新抽题
     retryGroup() {
