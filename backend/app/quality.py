@@ -32,12 +32,17 @@ _CJK_CLASS = (
 )
 CJK_SPACE_RE = re.compile(f"(?<=[{_CJK_CLASS}])[ \u3000]+(?=[{_CJK_CLASS}])")
 _CJK_BLANK_PAIRS = {"（）", "【】", "〔〕", "「」", "『』"}
+# 汉字紧接的空格若充当结构分隔（「善良→美丽 第三步」「甲：乙当选 乙：丙当选」「④¬乙 第三步」），去掉会把
+# 逻辑式/分句粘连；标点后的同类空格（「。 第二步」）仍可去。宁多留不误并（fail-closed）。
+_STRUCT_AFTER_RE = re.compile(r"第[一二三四五六七八九十\d]+步|解法[一二三四\d]|拓展|综上|[甲乙丙丁戊己庚辛壬癸][：:]")
+_LOGIC_BEFORE_RE = re.compile(r"[→←¬∧∨]-?[\u4e00-\u9fff]{1,4}$")
 # explanation 抓取源残留：站点统计前缀「正确答案：B，全站正确率：24%，易错项：C。 解析 」
-# （含「正确答案是 C 统计 全站数据: … / 解析 」旧格式与前缀后偶发的孤立选项字母），
-# 以及不带统计只剩「解析 」「解析：」标签的开头；正文以「第一步/解法」起头时标签可无分隔。
+# （含「正确答案是 C 统计 全站数据: … / 解析 」旧格式、不带统计的「正确答案是 B 解析 」「正确答案：C第一步」，
+# 与前缀后偶发的孤立选项字母），以及只剩「解析 」「解析：」标签的开头；正文以「第一步/解法」起头时标签可无分隔。
 _EXP_STATS = (
     r"正确答案：[A-D]，全站正确率：\d+%，易错项：[A-D]。"
     r"|正确答案是 [A-D] 统计 全站数据:[^/\n]{0,80}/"
+    r"|正确答案(?:是 |：)[A-D](?=\s|解析|第一步|解法)"
 )
 _EXP_LABEL = r"解析(?:[ \t\u3000]+|[：:][ \t\u3000]*|(?=第一步|解法))"
 EXP_SRC_PREFIX_RE = re.compile(rf"^(?:(?:{_EXP_STATS})\s*(?:(?:[A-D]\s+)?{_EXP_LABEL})?|{_EXP_LABEL})")
@@ -65,6 +70,10 @@ def _cjk_space_sub(m: re.Match) -> str:
     s = m.string
     if s[m.start() - 1] + s[m.end()] in _CJK_BLANK_PAIRS:  # 「（ ）」填空占位保留
         return m.group(0)
+    if "\u4e00" <= s[m.start() - 1] <= "\u9fff" and (
+        _STRUCT_AFTER_RE.match(s, m.end()) or _LOGIC_BEFORE_RE.search(s, max(0, m.start() - 6), m.start())
+    ):
+        return " "
     return ""
 
 

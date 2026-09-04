@@ -12,6 +12,13 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 - SSH 变量 `TICKETS_VPS_SSH_HOST/USER/CREDENTIAL` 已在 shell 环境里，直接 `sshpass -p $TICKETS_VPS_SSH_CREDENTIAL ssh …`；不要用 exec 的 `env: secret:org:…` 绑定（该引用不存在会被拒绝）。
 - `Emulation.clearDeviceMetricsOverride` 后 innerWidth 可能仍是 375 直到原生导航；若导航后仍窄，再 `setDeviceMetricsOverride(width=0,height=0,deviceScaleFactor=0,mobile=False)` + clear 一次即恢复 1600。
 
+## R376 种子题去重键（seed_index/seed_runs，零前端）生产复验 走查新经验
+- 分享页真实链接是 `https://kaogong.zalize.com/s/<sid>`（服务端 landing → `#/pkgA/share/share-q?sid=<sid>`）。share-q 读的是 `query.sid`，**不是** `id`；用 `share-q?id=…` 会得到「分享链接无效」的空 sid 分支，误判为 bug。「不存在 id 的文案页」用例用 `/s/<不存在的sid>` 才命中 404 分支。
+- sid 取法：解析区原生点击「🔗 分享给队友」→ 在 fetch hook 里截 `POST /api/share/create` 响应（`reqs()`），或事后只读查 `shared_questions WHERE from_uid LIKE 'test-…%'`。清理时 `shared_answers` 的外键列叫 `share_id`（不是 `sid`）；sqlite 脚本中途抛错则整段未 commit，重跑前先看 BEFORE 计数。
+- 验证「在线种子题一定被出题」：在容器只读 sqlite 里找 `seed_index` 映射且 `disabled=0`、且 `(module,tag3)` 组内在线题数很少（如 2 条）的题，用 `#/pages/practice/practice?tag3=<tag3>&module=<module>` deep link，运行时 `window.__pc.items` ids 必须 ⊇ 这些 id（`/tmp/cdp174/find.js` 找 Vue proxy）。验证「下线种子题不出题」：搜索页 `#/pkgA/search/search` 输入题干片段（CJK 用 CDP `Input.insertText`，xdotool type 中文不进 input）→ `/api/search` 0 结果 + 正向对照另一在线题片段有结果 + DB `disabled=0 AND question LIKE` 计数 0。
+- seed 指纹短路的生产证据：`seed_runs.ran_at` < 容器 `StartedAt` 且重启后不变；`seed_index` 全量 join `questions` 无悬挂；`import_batch='seed'` 字段历史上只有个别行，报告要写成「部署后新增 0」而不是「种子题总数」。
+- 清仿真后 `innerWidth` 若仍是旧 override 宽度（ow 1600 / iw 1440），原生导航一次页面即恢复；再核对 `iw==ow`。
+
 ## W3 集成本地验收（uvicorn + build 产物同源）走查新经验
 - 本地后端 `DB_PATH=<tmp>/app.db IMPORT_TOKEN=xxx KG_BOOT_QUIET_S=0 uvicorn app.main:app --port 8765`（在 backend/ 下）会自动挂载 `../frontend-uni/dist/build/h5`，刚 `npm run build:h5` 的产物直接从 `http://127.0.0.1:8765/#/...` 打开，同源无需另起 vite preview 也无 CORS；Playwright over CDP（`chromium.connectOverCDP('http://localhost:29229')`）先 `localStorage.setItem('anonUid', 'test-w3-…')` 再 goto 报告页即可读到造数。
 - 模考造数：`POST /api/exam/start {uid, mini:true}`（不是 `mode:'mini'`）→ `POST /api/exam/submit {uid, attempt_id, picks, secs}`，`picks`/`secs` 以 **1-based 题号字符串**为 key（不是 question_id），否则全部判未作答；报告 `GET /api/exam/report/{attempt_id}?uid=` 的 `attempt.per_module[mod]={n,answered,correct,secs}`。
