@@ -210,6 +210,7 @@ Page({
         secs: q._secs || 0,
         picked: q._picked,
         source: this._source || null,
+        t: Date.now(),
       }));
       if (items.length) {
         pending.forEach((q) => {
