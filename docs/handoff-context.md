@@ -1662,3 +1662,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 留待后续：F18 首页「继续刚才的练习」卡、F10 答对自动跳题默认值、F6 相似题/同考点列表信息密度。
 - 验证：pytest 356 / ruff / pyright 0；vitest 532 / eslint / build:h5（bundle index-DKZqTSTu.js）。生产 rev dc88fc1（15:03Z 部署，谱系闸 OK）testing agent 1440/375 全过：答案默认折叠、选项 pick 深链自动判分且不跳题、领跑提示三种文案、375 答错后解析卡顶在横幅之上、深链退出 ×3 均为 navigate（非 reload）回首页且今日计数保留、站内退出仍返回上一页、/api 全 200、容器 0 重启、清理 LEFTOVER 0、questions 156792。观察：375 无 tag3 三行题干时 CTA 底边 815px（超首屏 3px）；桌面 Chrome `vibrateShort:fail` unhandledrejection 为平台噪音（既有）。
 - 详见 docs/iter/round-3/r379-seo-landing-funnel.md；复验评论 PR #596。
+
+### R380 练习中途「退出」可保留进度——首页续练卡真正接上（2026-09-04，分支 devin/*-r380-quit-keep-progress，base=main）
+- 取证：R379 F18「退出后首页无继续上下文」实查根因是 `quit()` 无条件清 `pendingSession` + 服务端进度，首页早有的「有一组未做完的练习」卡只覆盖关页/杀进程路径。搜索分发：Googlebot 仍只抓 sitemap/robots，`/tiku/q/*` 0；**Bingbot 7 次、Yandex 45 次已进入 `/tiku/q/*`**；真人 `seo_q` 仍 0。
+- 方案：`quit-summary.js quitSummary(items, eligible)`（已答≥1 且有未答才返回摘要）→ `quit()` 弹「已做 N 题 · 答对 R · W 道进错题本」保留进度/结束本组 → `leave(keep)`（keep 立即 flush 服务端进度、不清本地）；模考/背题/时政不弹；埋点 `practice_quit_keep/end`。
+- 详见 docs/iter/round-3/r380-quit-keep-progress.md。
