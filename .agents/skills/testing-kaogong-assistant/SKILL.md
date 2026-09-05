@@ -5,6 +5,15 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R413 补充（testing agent）— 多选题 / 复习吸底 / 收藏标绿
+- 练习页默认「自动下一题」开启（LS `autoNextOff` 未设）：多选题点「确认答案」判分后会立刻切到下一题，看不到 ✓/✗ 标记。测标记前先经顶栏 ··· 菜单原生关掉「自动下一题」（写 `autoNextOff=1`），再深链重进。
+- 深链 `#/pages/practice/practice?qid=N&module=changshi` 只在 `onLoad` 读 query，同页改 hash 不重进，需 `location.href=…; location.reload()`。每次 reload 清页内 HDR 钩子，换题前先 dump。
+- 活跃多选 qid（answer 多字母）：264342 ABC（题干带「(多选题)」）、273027 ABCD、273028 ACD、273030 BCD、273031 ACD、273032 BCD、273036 BD、275876 ACD。多选 UI 选择器：`.multi-bar/.multi-hint/.multi-ok(.dis)`；选项态 `.opt.sel|right|wrong|dim`，标记 `.omark.good/.badm`；DB `mistakes.user_answer` 存拼接字母（如 `AC`），`answer_log.picked` 同。
+- 考试/模考含多选卷：`/api/exam/papers` 里没有「2015 北京市考行测真题」卷（北京卷只有 2018–2023，且不含上述多选 qid），exam 模式多选目前只能标未测。
+- 复习页 `.next-btn`（wd-button custom-class）：375 下 `position:sticky; bottom:58px`，长讲解时 scrollY 0 rect bottom 应 754（TabBar top 762）；讲解短时自然位就在视口内 sticky 不介入，要挑 docH>812 的题（243872 讲解长 docH≈1157；273028 ≈849；264342 ≈829）。1440 桌面无底 TabBar，按钮自然位即可。
+- 收藏三处标绿选择器：错题本收藏 tab 展开 `.anscmp .ca`；收藏页 `.qitem` → `.opt.ans`；搜索 `?q=关键词` 自动搜 → 点卡 → `.q-opt.ans`。搜索页 `?q=` 同样只在 onLoad 生效，换词用搜索框原生输入。收藏 = 练习页顶栏 ⭐ → `POST /api/favs` + LS `favQuestions`，清理表含 `question_favs.uid`、`user_profile.uid`。
+- 预存 P2（非 R413）：错题本收藏卡 `.anscmp` 23rpx=11.5px、卡内 tag 10–11px；收藏页 tag 10px。收藏/搜索页 innerText 里的「回答错误，正确答案 X」是 body 下 1×1 离屏 aria-live 播报 div，不是可见 UI。
+
 ## R412b 补充（testing agent）
 - uni-app `<text>` 渲染为 `<uni-text class="x"><span>…</span></uni-text>`：对 `.edit`/`.nop`/`.qsb-link` 做中心 `elementFromPoint` 时命中的通常是内层 `span`（className 为空），判命中要用 `el.contains(hit)` 或 `hit.closest('.x')`，不要直接比 className。
 - `.edit` 用 `min-height:40px + margin:-10px 0` 后 rect 会外溢 `.mynote` 上下各 ~3px，与相邻元素判相交要拿 `.edit` 自身 rect 比 `.report-link` bottom / `.qsb-row` top，而非只比 `.mynote`。

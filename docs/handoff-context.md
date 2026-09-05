@@ -1890,3 +1890,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 社交栏 `q-social-bar`：三链/笔记操作 `.qsb-link`/`.nop` min-height 40px；R412 复验「改」`.edit` 35.2px FAIL → R412b `min-height:40px inline-flex` 实测 40.0；组件内字号全 24rpx。「🔥 热评」条运行时未量（生产 17 条评论全 deleted）。
 - 生产复验清理 9+3 行 → LEFTOVER 0；questions 156792/109371、quarantine 874、paper_exports 38。
 - PR #619 评论：https://github.com/wookat/kaogong-assistant/pull/619#issuecomment-5555205747
+
+### R413（rev `7bb9fb4`，bundle 变）
+- 「answer 多字母」全库 13 行全真题（活跃 8 / disabled 5），逐行读全为北京市考合法多选题，**不成批**；真问题是练习页单选实现——8 题此前永远答不对且无选项 ✓。practice.vue 加 `isMulti`/`multiSel`/`confirmMulti`/`commitPick`，选项标记按字母包含 `hasKey`；收藏卡/收藏页/搜索详情正确项按 `indexOf(k)` 标绿。复习模式 book.vue 早有 `curMulti` 流程，未改。
+- 复习页作答后 `.next-btn`（下一题/确认答案）`position: sticky; bottom: calc(50px + safe-area + 16rpx)`：375 长讲解 bottom 774（视口外）→ 754，短讲解不变。
+- 校源队列资源缺口合并登记（6 行 hs 冲突 + 13 行选项串入分节标题，全 disabled，需原卷 PDF）；`error_reason` 7 天观察点 ≥ 09-11。详见 docs/iter/round-3/r413-multi-answer-practice-review-sticky-next.md。
+- 生产复验（testing agent）：375/1440 PASS；未测考试/模考态多选（卷库无 2015 北京卷）；预存 P2：收藏卡 `.anscmp` 23rpx=11.5px、卡内/收藏页 tag 10–11px。清理 22 行 → LEFTOVER 0；questions 156792/109371、quarantine 874、paper_exports 38。vitest 573 / eslint / build:h5 绿。
+- PR #619 评论：https://github.com/wookat/kaogong-assistant/pull/619#issuecomment-5555363108
