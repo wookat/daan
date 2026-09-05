@@ -36,6 +36,24 @@ def test_formula_dropped_by_module():
     assert quality.formula_dropped({"module": "shuliang", "explanation": None}) is None
 
 
+def test_formula_dropped_value_slot_quant_only():
+    fd = quality.formula_dropped
+    # 生产 288140/288139：句中数值位被抠空——「…为，」「解得。」「则有，」「联立，」
+    assert fd({"module": "shuliang", "explanation": "则订阅报纸的家庭为，因此只订阅日报的家庭为报的比例最多为，当这"}) == "value"
+    assert fd({"module": "shuliang", "explanation": "设抽取总人数为 x，则有，解得 x＝15。"}) == "value"
+    assert fd({"module": "shuliang", "explanation": "共花费 16560 元，则，解得。则总旧窗户数"}) == "value"
+    assert fd({"module": "ziliao", "explanation": "可知已跑的路程为，联立，解得 7x＝30。"}) == "value"
+    assert fd({"module": "ziliao", "explanation": "2019年经济活力为＜2018年为；"}) == "value"
+    # 词尾「为」与正常承接不算：因为/认为/作为/成为/行为、「可得，」「解得 x＝15」
+    assert fd({"module": "shuliang", "explanation": "由题意可得，甲队单独完成需 40 天，因为，所以。"}) is None
+    assert fd({"module": "shuliang", "explanation": "设总人数为 x，则有 x＋4y＝3x＋y，解得 x＝15。"}) is None
+    assert fd({"module": "shuliang", "explanation": "单方面运用权力所作的行为，不符合定义。"}) is None
+    assert fd({"module": "ziliao", "explanation": "定位文字材料第四段可得，2023年一季度增长 5%，代入数据可得，直除首位商 9。"}) is None
+    # 非数量/资料模块不认该信号（文字题的「为，」多为表述习惯）
+    assert fd({"module": "changshi", "explanation": "其主要成分为，二氧化硅。"}) is None
+    assert fd({"module": "yanyu", "explanation": "解得，文段主旨为，强调创新。"}) is None
+
+
 def test_strip_page_footers_only_removes_footer_fragments():
     assert quality.strip_page_footers("如下图：第47页共64页第二步，分析。") == "如下图：第二步，分析。"
     assert quality.strip_page_footers("如图所示第 22 页共 36 页42 人参加") == "如图所示42 人参加"
@@ -136,3 +154,39 @@ def test_cli_garbled_and_footers_dry_run_write_nothing(tmp_path, capsys):
     c = sqlite3.connect(path)
     assert c.execute("SELECT COUNT(*) FROM questions WHERE explanation IS NULL").fetchone()[0] == 1  # 只有原来的 9
     assert c.execute("SELECT name FROM sqlite_master WHERE name='text_footer_fix'").fetchone() is None
+    c.close()
+
+
+def test_cli_garbled_apply_with_custom_reason_is_independently_restorable(tmp_path, capsys):
+    import sys
+    conn, path = _db(tmp_path)
+    conn.close()
+    argv = sys.argv
+    try:
+        sys.argv = ["x", "--db", path, "--garbled", "--apply", "--reason", "r401:formula-dropped-value"]
+        rq.main()
+        sys.argv = ["x", "--db", path, "--restore", "--reason", "r401:formula-dropped-value"]
+        rq.main()
+    finally:
+        sys.argv = argv
+    out = capsys.readouterr().out
+    assert "restored 1/1 (reason=r401:formula-dropped-value)" in out
+    c = sqlite3.connect(path)
+    assert [r[0] for r in c.execute("SELECT question_id FROM explanation_quarantine")] == [9]  # r396 行不动
+    assert c.execute("SELECT explanation FROM questions WHERE id=1").fetchone()[0] == _E_SKELETON
+    c.close()
+
+
+def test_apply_skips_rows_rewritten_by_concurrent_writer(tmp_path, capsys):
+    """扫描到 apply 之间（生产同期有 w3c 清洗脚本在写 explanation）base 被改过的行不隔离、不留过期快照。"""
+    conn, _ = _db(tmp_path)
+    targets = rq.select_garbled(conn, set(), {5})
+    assert [x["id"] for x in targets] == [1, 5]
+    conn.execute("UPDATE questions SET explanation='并发写入者改过的正文' WHERE id=5")
+    conn.commit()
+    rq.apply(conn, targets, rq.REASON_GARBLED)
+    out = capsys.readouterr().out
+    assert "applied: quarantined 1," in out and "skipped (explanation changed concurrently since scan): [5]" in out
+    q = {r["id"]: r["explanation"] for r in conn.execute("SELECT id, explanation FROM questions")}
+    assert q[1] is None and q[5] == "并发写入者改过的正文"
+    assert [r[0] for r in conn.execute("SELECT question_id FROM explanation_quarantine ORDER BY 1")] == [1, 9]

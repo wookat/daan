@@ -222,6 +222,8 @@ QUANT_MODULES = ("shuliang", "ziliao")
 _FD_COLON_RE = re.compile(r"：[。，、；]")
 _FD_ENUM_RE = re.compile(r"、、|、，|，、|、。")
 _FD_QUANT_RE = re.compile(r"，，|：。|：，|；。|(所求项|所求|括号内|未知项|下一项)(应)?(为|是)[。，；]")
+# 「…为，」「解得。」「则有，」：数值/表达式位被抠空。排除 因为/认为/作为/成为… 等词尾的「为」，「可得，」是正常承接不算。
+_FD_VALUE_RE = re.compile(r"(?<![因认以作称视成分改定选记行较更尤甚人])为[，。；]|(解得|则有|列式得|列式为|化简得|化简为|整理得|联立)[，。；]")
 FOOTER_PAGE_RE = re.compile(r"\s*第\s*\d{1,3}\s*页\s*共\s*\d{1,3}\s*页\s*")
 FOOTER_SRC_RE = re.compile(r"\s*-\s*\d{1,3}\s*-\s*\d{4}\s*年[^，。；：、《》]{0,14}(?:《[^》]{1,12}》)?真题(?:卷)?(?:（[^）]{0,20}）)?\s*")
 
@@ -235,8 +237,11 @@ def formula_dropped(row: dict) -> str | None:
         return "colon"
     if _FD_ENUM_RE.search(e) and (row.get("module") or "") != "yanyu":
         return "enum"
-    if (row.get("module") or "") in QUANT_MODULES and _FD_QUANT_RE.search(e):
-        return "quant"
+    if (row.get("module") or "") in QUANT_MODULES:
+        if _FD_QUANT_RE.search(e):
+            return "quant"
+        if _FD_VALUE_RE.search(e):
+            return "value"
     return None
 
 

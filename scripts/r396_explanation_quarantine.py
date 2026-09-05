@@ -208,23 +208,34 @@ def report(targets: list[dict]) -> None:
 def apply(conn, targets: list[dict], reason: str = REASON) -> None:
     now = time.time()
     conn.execute(DDL)
-    n_mist = 0
+    n_mist = n_q = 0
+    changed: list[int] = []
     for t in targets:
         if t["skip"]:
             continue
+        # 只在 base 仍等于扫描时的文本才隔离；被并发写入者改过的行跳过并报出，避免快照过期
+        cur = conn.execute(
+            "UPDATE questions SET explanation=NULL, updated_at=? WHERE id=? AND explanation=?",
+            (now, t["id"], t["explanation"]),
+        )
+        if cur.rowcount != 1:
+            changed.append(t["id"])
+            continue
+        n_q += 1
         conn.execute(
             "INSERT OR IGNORE INTO explanation_quarantine (question_id, explanation, fit, block, reason, created_at) "
             "VALUES (?,?,?,?,?,?)",
             (t["id"], t["explanation"], t["fit"], t["block"], reason, now),
         )
-        conn.execute("UPDATE questions SET explanation=NULL, updated_at=? WHERE id=?", (now, t["id"]))
         cur = conn.execute(
             "UPDATE mistakes SET explanation=? WHERE question_id=? AND explanation=?",
             (t["hs_explanation"] or "", t["id"], t["explanation"]),
         )
         n_mist += cur.rowcount
     conn.commit()
-    print(f"applied: quarantined {sum(1 for t in targets if not t['skip'])}, mistakes snapshots rewritten {n_mist}")
+    print(f"applied: quarantined {n_q}, mistakes snapshots rewritten {n_mist}")
+    if changed:
+        print(f"skipped (explanation changed concurrently since scan): {changed}")
 
 
 def restore(conn, reason: str | None = None) -> None:
@@ -270,7 +281,7 @@ def main():
         targets = select_garbled(conn, parse_ids(args.keep), parse_ids(args.extra))
         report(targets)
         if args.apply:
-            apply(conn, targets, REASON_GARBLED)
+            apply(conn, targets, args.reason or REASON_GARBLED)
         else:
             print("dry-run only; pass --apply to write")
     elif args.strip_footers:

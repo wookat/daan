@@ -5,6 +5,15 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R400 错题快照写入侧回落 hs + 公式丢失解析隔离 生产复验 走查新经验（testing agent）
+
+- **「写入侧」与「读取侧」证据要分开**：R396b 起 `/api/mistakes`、`due_reviews` 读取侧已把空快照回落 hs，所以 API/错题卡显示 hs **不能**证明写入侧改动。写入侧证据链 = ① 页面上下文 XHR 钩子 `/tmp/cdp174/mhook.js` 记录真实 UI 触发的 `POST /api/mistakes` 请求体 `explanation` 长度/前 40 字（`window.__mist`）② 容器 DB raw：审计脚本 `ro` 模式打印 `select id,uid,question_id,length(explanation),substr(explanation,1,40) from mistakes where uid like 'test-rNNN-%'`，**必须在 clean 之前跑并落盘**（clean 后行消失）。对照题（有官方 base 的）同时答错一道，确认 raw 前缀是 base 而非 hs。
+- **隔离题深链**：`/#/pages/practice/practice?qid=<id>&module=shuliang` 领跑该题，练习包后续题目来自同模块/考点，可能混入**未被隔离的骨架乱文题**（如 288140「…订阅报纸的家庭为，因此…」句首残缺、公式位空、不在 `explanation_quarantine`）——审计 ro 输出里逐条看 `substr(explanation,1,40)`，乱文样本要单列为观察并到 `/tiku/q/<id>` 截「原解析」作证；同时用 `select * from explanation_quarantine where question_id=?` 证明未隔离。
+- **页脚剥离样本多为 `disabled=1`**（`/tiku/q/` 404，不可见页面），只能记 `/api/question/{id}` 层观察；找活跃替代样本时 `docker exec … sqlite3` 在 `questions` 里按 `options like '%《行测》真题%'` 的历史值反查（本轮 332501 `D: 6`），报告明确「UI 用替代样本」。
+- 换 uid 复用同一浏览器时，首页模块进度卡（「言语理解 N/18294 · 正确率」）会沿用上一 uid 的 localStorage 缓存数值，服务端 `home_bundle.summary.today_n` 才是该 uid 真值；别把它记成后端 bug，也别用它做作答条数对账。
+- 同一 `#/pages/practice/practice?qid=` 深链二次进入可能保留上一题包状态，需带一个变化的 query（`&v=2`）强制整页重载再答题。
+- 请求数与点击对账口径：`__mist.length == 答错次数`；容器 `grep -c "POST /api/mistakes "`（尾随空格，排除 `/mistakes/analysis`）== 两 uid 答错总数；`mistakes/analysis` 行数 == 点「生成」次数。
+
 ## R399 AI 生成类接口主通道优先 生产复验 走查新经验（testing agent）
 
 - **R399 后 `mistakes/analysis`/`ai/coach` 走 `llm.chat()`，成功路径零日志**：容器日志只剩 `[slow-req] Ns POST /api/mistakes/analysis` + access 200 行；`[llm] rescue … failed … fallback` 只会由 `chat_fast()` 调用方（题目抽取/申论）产生，对错题分析 grep 到 0 行是预期。`chat()` 主通道 5xx/额度码回落 rescue **也无日志**，所以「耗时偏长（如 53 s）是主通道慢还是静默回落」无法用日志区分，报告里要标成推断；建议下轮在 `chat()` 回落处加 warning 再复验。
