@@ -28,6 +28,12 @@
 - 不把单次停滞归因到服务端/边缘：源站 0 记录、边缘无 analytics 权限，只能说明「不在源站」。
 
 ## 验证
-- 本地：vitest 553 / eslint / build:h5 全绿；产物 `index-*.js` 含 `timeout:2e4`、`errorHandler`。
-- 生产（testing agent，1440/375）：CDP 拦截一个页面分包延迟 >20 s → 20 s 出「连接服务器超时，点击屏幕重试」+ `/api/monitor/report` 收到 `vue:chunk-timeout…`（探针头）；放行后页面照常渲染；正常路径 console 0 error、`/api/monitor/report` 0 次误报；SEO CTA → 练习 → 保留 → 续练回归。
-- 未验证：真实用户是否再出现 chunk 挂起（本轮只让它从此可见）；20 s 阈值是否需随真人 RUM 再调。
+- 本地：vitest 555 / eslint / build:h5 全绿；产物 `index-*.js` 含 `timeout:2e4`、`errorHandler`，无 `timeout:6e4`。
+- 生产第一版（rev f414804，bundle index-BzIny8xO.js；testing agent 1440/375）：
+  - CDP `Fetch` 拦截 `pkgA-exam-list` 分包 hold 25 s：两视口均在 20000–20003 ms 出「连接服务器超时，点击屏幕重试」，`/api/monitor/report` 收到 `vue:chunk-timeout:https://vuejs.org/error-reference/#runtime-13: Async component timed out after 20000ms.`（message 真实、stack 非空）；放行后**不点重试**卷库 120 卷照常渲染；同文档第二次超时被去重不重复上报。`fail404` / `abort` 两路 → `vue:chunk-load: Failed to fetch dynamically imported module …`。
+  - 375 正常路径：/api 全 2xx、console 0、page error 0、监控上报 0。
+  - **1440 正常路径严格口径 FAIL、业务 PASS**：未拦截的情况下本机 Chrome ↔ Cloudflare h3 连接真实出现两次停滞——卷库分包 `performance` duration ≈60 s 后 200（产品按设计 20 s 出超时 UI + 1 条 `vue:chunk-timeout`，随后自行渲染 120 卷）；错题本分包 ≈121 s 后失败（`vue:chunk-load: Unable to preload CSS for /assets/book-*.css`，重载后恢复）。这正是本轮要让其可见的事件，不是测试假象；源站日志同期 5xx / slow-req / traceback 0，仍不能归因服务端。
+  - 附带发现：同期 1 条 `unhandledrejection: [object Object]`，真实 reason 为 `{"errMsg":"setTabBarBadge:fail not TabBar page"}`——错题本分包超时后页面停在 AsyncError 态（非 tabBar 页），`uni.setTabBarBadge` 不传回调时返回 Promise，同步 `try/catch` 接不住。
+  - 服务侧：`/api/health` rev f414804、容器 healthy / 0 重启 / OOMKilled=false、部署后 5xx 0 / slow-req 0；清理 LEFTOVER 0、questions 156792。
+- 第二次提交（同 PR）：`describeRejection` 把对象 reason 取 `errMsg`/`message`/`JSON.stringify`；三处 tabBar 角标改走 `tabbar-badge.js::setBookBadge`（显式 `fail` 回调，uni 不再返回 Promise）。
+- 未验证：真实用户是否再出现 chunk 挂起（本轮只让它从此可见）；20 s 阈值是否需随真人 RUM 再调；h3 停滞是否本机/Devin 出口特有（`--disable-quic` 对照未做）。

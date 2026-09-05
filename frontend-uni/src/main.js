@@ -9,7 +9,7 @@ import { normalizeDailyDeepLink } from "./deeplink.js";
 import { initKeyboardFocus } from "./a11y-focus.js";
 import { initA11yLive } from "./a11y-live.js";
 import { initRoutePrecache } from "./precache.js";
-import { createErrorReporter, installVueErrorHandler } from "./monitor-client.js";
+import { createErrorReporter, describeRejection, installVueErrorHandler } from "./monitor-client.js";
 initKeyboardFocus(); // 必须先于 app 挂载：拦截 Vue runtime 的 click addEventListener
 initA11yLive();
 initRoutePrecache();
@@ -30,8 +30,7 @@ if (typeof window !== 'undefined') {
 	});
 	window.addEventListener('unhandledrejection', (e) => {
 		const r = e.reason;
-		if (r && r.stack) mReport(`unhandledrejection: ${r.message || r}`, r.stack);
-		else mReport(`unhandledrejection: ${String(r).slice(0, 500)}`);
+		mReport(`unhandledrejection: ${describeRejection(r).slice(0, 500)}`, r && r.stack);
 	});
 }
 

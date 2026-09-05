@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { classifyVueError, createErrorReporter, installVueErrorHandler } from '../src/monitor-client.js';
+import { classifyVueError, createErrorReporter, describeRejection, installVueErrorHandler } from '../src/monitor-client.js';
+import { badgeText, setBookBadge } from '../src/tabbar-badge.js';
 
 describe('createErrorReporter', () => {
   it('同 message 只上报一次，单页最多 10 条', () => {
@@ -20,6 +21,37 @@ describe('createErrorReporter', () => {
       throw new Error('boom');
     });
     expect(() => report('x')).not.toThrow();
+  });
+});
+
+describe('describeRejection', () => {
+  it('uni API 拒绝对象取 errMsg，不再是 [object Object]', () => {
+    expect(describeRejection({ errMsg: 'setTabBarBadge:fail not TabBar page' })).toBe('setTabBarBadge:fail not TabBar page');
+    expect(describeRejection(new Error('boom'))).toBe('boom');
+    expect(describeRejection({ code: 7 })).toBe('{"code":7}');
+    expect(describeRejection('str')).toBe('str');
+    expect(describeRejection(undefined)).toBe('undefined');
+    const cyc = {};
+    cyc.self = cyc;
+    expect(describeRejection(cyc)).toBe('[object Object]');
+  });
+});
+
+describe('setBookBadge', () => {
+  it('显式传 fail 回调（uni 不再返回会 unhandledrejection 的 Promise），>99 显示 99+，0 移除', () => {
+    const set = vi.fn();
+    const remove = vi.fn();
+    globalThis.uni = { setTabBarBadge: set, removeTabBarBadge: remove };
+    setBookBadge(120);
+    expect(set).toHaveBeenCalledTimes(1);
+    expect(set.mock.calls[0][0]).toMatchObject({ index: 1, text: '99+' });
+    expect(typeof set.mock.calls[0][0].fail).toBe('function');
+    setBookBadge(0);
+    expect(remove.mock.calls[0][0]).toMatchObject({ index: 1 });
+    expect(typeof remove.mock.calls[0][0].fail).toBe('function');
+    expect(badgeText(5)).toBe('5');
+    expect(badgeText('x')).toBe('');
+    delete globalThis.uni;
   });
 });
 

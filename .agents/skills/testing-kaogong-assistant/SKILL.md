@@ -5,6 +5,17 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R391 页面分包超时（`h5.async.timeout`）+ `app.config.errorHandler` → `/api/monitor/report` 生产复验 走查新经验（testing agent）
+
+- **分包挂起/失败要用 CDP `Fetch.enable` 拦 `*pkgA-exam-list*.js` / `*pages-book-book*.js`，并且必须先 `Network.enable` + `Network.setCacheDisabled(true)`**：immutable 分包命中浏览器缓存就不会经过 Fetch 阶段，拦截器看起来"没生效"。每个拦截器进程只跑 1 个实例（多实例互相抢 `Fetch.requestPaused`）。`hold N` = 暂停 N s 后 `continueRequest`；`fail404` = `fulfillRequest 404`；`abort` = `failRequest`；"点击重载后恢复"若拦截器已 detach 会导致重载后再次卡住——恢复阶段改用 `Network.setBlockedURLs`（可随时解除）更稳。
+- **监控 POST 的 body 只能靠 Fetch 拦 `*/api/monitor/report` 在 request 阶段读 `postData`**（sendBeacon 在 Network 事件里看不到 body）。页面侧再包一层 `navigator.sendBeacon`/`fetch` 记 `__mon`（body、via、`performance.now()`）作双证。终端 tail 的 JSON 会被截断，取原文要读 `.log` 文件或 `__mon`。
+- 计时：hook 是原生导航后装的，`hashchange` 记不到 `navT0`（=0）；用 `performance.getEntriesByType('resource')` 里该分包的 `startTime` 作起点，MutationObserver 记 `.uni-async-error` 出现时刻，生产两视口均为 20000–20003 ms。uni AsyncError 文案 `连接服务器超时，点击屏幕重试`（点击 = `location.reload`）；chunk 迟到仍会正常渲染（不需点击），"放行后不点重试自行渲染"是核心断言。
+- 去重口径 = message 前 200 字符：同文档第二个页面超时（错题本分包）不会再上报 `vue:chunk-timeout`（`<info>` 都是 `https://vuejs.org/error-reference/#runtime-13`），但 console.error 仍每次 2 条（产品保留 console.error + 钩子重复观测）——不要把 console 计数当上报计数。
+- **本机 Chrome → Cloudflare 的 h3 连接会真实出现 60–120 s 停滞**（R390 一次、R391 四次：`performance` entry `fetchStart` 比 `startTime` 晚 ~60 s，或 `duration≈121 s` 后失败 `nextHopProtocol` 为空；这些请求根本没到 Fetch 拦截阶段，`curl` 同资源 <100 ms）。它会让"正常路径 0 上报"回归在卷库/错题本步骤失真：产品会按设计出 20 s 超时 UI 并上报 1 条 chunk-timeout；chunk 失败还会追加 `vue:chunk-load: Unable to preload CSS for /assets/book-*.css` 与 `unhandledrejection: [object Object]`（真实 reason `{"errMsg":"setTabBarBadge:fail not TabBar page"}`，钩子要对 unhandledrejection 的对象 reason 做 `JSON.stringify` 才能事后定位）。如实按"严格口径 FAIL + 业务流程 PASS"报告，并在源站日志里以本机出口 IP（`curl ifconfig.me`）对账每条上报——**sendBeacon 上报不带 `X-Kg-Probe`**，只能靠 IP/时段区分。若要可比的零误报数据，可在录屏前对同一分包 `curl` 预热或改用 `--disable-quic` 启动 Chrome（未验证）。
+- 上报后端反查：容器日志只有 `POST /api/monitor/report 200` access line（内容转发到 zalize-monitor，中心侧无权限 = untested）；Caddy 源站 JSON 日志 `/var/log/caddy/kaogong-origin.zalize.com-access.log` 有 `Cf-Connecting-Ip`/UA/`X-Kg-Probe`，用它数"今日命中数"并逐条对拦截器 `.log` 的 `wall` 时间戳。拦截器输出文件名别复用（同名覆盖会丢早期尝试，本轮 1 条只能靠 IP 归属）。
+- DB 审计：每次分包挂起/停滞都会让该 uid 多 1 条 `growth_events slow_load(probe=1)`，本轮 20 行 = 6 answer_log + 2 mistakes + 12 growth_events（8 slow_load + keep/end×2）。
+- 收尾坑：`restore_ls.py` 原来硬编码 r366 备份路径（已改为 `argv[1]`），恢复后一定 `localStorage.length` 与备份键数对照（30）；`Emulation.clearDeviceMetricsOverride` 在别的 session 设过 override 时可能不生效（innerWidth 仍 1440），先 `setDeviceMetricsOverride(width=0,height=0,deviceScaleFactor=0)` 再 clear 即回 1600。截图工具坐标 = 屏幕 1024×768 坐标系（不要按 0.5 缩放图再 ×2）。
+
 ## R390 `/tiku/q/<id>` JSON-LD（LearningResource⊃Question）生产复验 走查新经验（testing agent）
 
 - **`_page(..., [jsonld, breadcrumb])` 输出的是「一个」`<script type="application/ld+json">`，内容是 JSON 数组**（`[LearningResource, BreadcrumbList]`），不是两段脚本。解析时先 `json.loads` 再 `list` 展平 / 对象包成 list，否则 `.get()` 会在 list 上炸。类型集合断言用「恰好 {LearningResource, BreadcrumbList}」，另外 grep 全文 `QAPage`/`answerCount`/`mainEntity` 作旧版指纹（4403c9c 及之前）。

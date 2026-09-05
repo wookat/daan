@@ -19,6 +19,21 @@ export function createErrorReporter(send) {
   };
 }
 
+// unhandledrejection 的 reason 常是 uni API 的 {errMsg} 普通对象，String() 只会得到 [object Object]
+export function describeRejection(r) {
+  if (r instanceof Error) return r.message || String(r);
+  if (r && typeof r === 'object') {
+    if (typeof r.errMsg === 'string') return r.errMsg;
+    if (typeof r.message === 'string') return r.message;
+    try {
+      return JSON.stringify(r);
+    } catch (e) {
+      return Object.prototype.toString.call(r);
+    }
+  }
+  return String(r);
+}
+
 export function classifyVueError(message) {
   if (/Async component timed out/.test(message)) return 'chunk-timeout';
   if (/Failed to fetch dynamically imported module|Unable to preload|Importing a module script failed|Loading chunk/.test(message)) return 'chunk-load';
