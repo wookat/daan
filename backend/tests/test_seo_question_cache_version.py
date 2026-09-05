@@ -45,6 +45,8 @@ def test_question_page_rerenders_after_quarantine_bumps_updated_at(client):
     assert r2.status_code == 200
     assert "解得 x=。" not in r2.text and "原解析" not in r2.text
     assert _HS in r2.text
+    # 隔离后只剩 hs：仍标注来源，不当作官方解析静默展示
+    assert "<b>花生十三讲解</b>" in r2.text
     ld = []
     for s in r2.text.split('<script type="application/ld+json">')[1:]:
         d = json.loads(s.split("</script>")[0])
@@ -52,6 +54,16 @@ def test_question_page_rerenders_after_quarantine_bumps_updated_at(client):
     lr = next(x for x in ld if x.get("@type") == "LearningResource")
     text = json.dumps(lr, ensure_ascii=False)
     assert "解得 x=。" not in text and _HS[:12] in text
+
+
+def test_question_page_raw_only_has_no_hs_label(client):
+    conn = db.get_conn()
+    qid = _seed(conn, "正常解析：选 C。", "", tag="（仅 base）")
+    conn.close()
+    r = client.get(f"/tiku/q/{qid}")
+    assert r.status_code == 200
+    assert "正常解析：选 C。" in r.text
+    assert "花生十三讲解" not in r.text and "原解析" not in r.text and "暂无解析" not in r.text
 
 
 def test_question_page_still_cached_when_row_unchanged(client):
