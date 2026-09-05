@@ -231,6 +231,12 @@ _FD_OP_RE = re.compile(
 )
 FOOTER_PAGE_RE = re.compile(r"\s*第\s*\d{1,3}\s*页\s*共\s*\d{1,3}\s*页\s*")
 FOOTER_SRC_RE = re.compile(r"\s*-\s*\d{1,3}\s*-\s*\d{4}\s*年[^，。；：、《》]{0,14}(?:《[^》]{1,12}》)?真题(?:卷)?(?:（[^）]{0,20}）)?\s*")
+# 试卷分节标题「二. 数量关系：在这部分试题中…」「第二部分言语理解与表达（共 40 题…）请开始答题：」串到上一题的
+# 末选项/解析尾部（PDF 切题时把下一节标题并进了前一题），从标题起裁到字段/JSON 值末尾；可带 `~ 12 ~` 页码前缀。
+FOOTER_SECTION_RE = re.compile(
+    r"\s*(?:~\s*\d{1,3}\s*~\s*)?(?:第\s*[一二三四五六七八九十]\s*部分|[一二三四五六七八九十]\s*[.、．])\s*"
+    r"(?:数量关系|言语理解与表达|言语理解|判断推理|资料分析|常识判断)[^\"]*(?=$|\")"
+)
 
 
 def formula_dropped(row: dict) -> str | None:
@@ -253,11 +259,12 @@ def formula_dropped(row: dict) -> str | None:
 
 
 def strip_page_footers(text: str | None) -> str:
-    """去掉 PDF 页脚「第 N 页共 M 页」/「-N- 20XX年…真题」串进正文的片段；无命中原样返回。"""
+    """去掉 PDF 页脚「第 N 页共 M 页」/「-N- 20XX年…真题」及串到字段尾部的下一节标题「二. 数量关系：…」；无命中原样返回。"""
     if not text:
         return text or ""
     out = FOOTER_PAGE_RE.sub("", text)
     out = FOOTER_SRC_RE.sub("", out)
+    out = FOOTER_SECTION_RE.sub("", out)
     return out.strip() if out != text else text
 
 

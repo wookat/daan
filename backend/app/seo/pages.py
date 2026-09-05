@@ -775,9 +775,9 @@ def _render_question(qid: int, version: float | None = None) -> str:
     hs_html = _e(hs).replace("\n", "<br>")
     raw_html = _e(raw_exp).replace("\n", "<br>")
     if hs and raw_exp:
-        exp_html = f"<p><b>花生十三讲解</b></p><p>{hs_html}</p><p><b>原解析</b></p><p>{raw_html}</p>"
+        exp_html = f"<p><b>花生十三方法解析</b></p><p>{hs_html}</p><p><b>原解析</b></p><p>{raw_html}</p>"
     elif hs:
-        exp_html = f"<p><b>花生十三讲解</b></p><p>{hs_html}</p>"
+        exp_html = f"<p><b>花生十三方法解析</b></p><p>{hs_html}</p>"
     else:
         exp_html = f"<p>{raw_html or '暂无解析'}</p>"
     src = " ".join(filter(None, [f'{r["exam_year"]}年' if r["exam_year"] else "", r["exam_region"] or "", "真题" if r["is_real"] else "练习题"]))

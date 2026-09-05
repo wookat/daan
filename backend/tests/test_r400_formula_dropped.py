@@ -89,6 +89,25 @@ def test_strip_page_footers_only_removes_footer_fragments():
     assert quality.strip_page_footers(None) == ""
 
 
+def test_strip_section_header_tail_only():
+    sp = quality.strip_page_footers
+    # 生产 1046534/896328/1046578/246097：末选项尾部串进下一节标题
+    opts = json.dumps(
+        {"A": "狭管效应", "B": "温室效应", "C": "阳伞效应", "D": "焚风效应 二. 数量关系：在这部分试题中，每道题呈现一段表述数字关系的文字，要求你迅速，准确的计算出答案。"},
+        ensure_ascii=False,
+    )
+    assert json.loads(sp(opts)) == {"A": "狭管效应", "B": "温室效应", "C": "阳伞效应", "D": "焚风效应"}
+    opts = json.dumps({"A": "③—②—④—①", "D": "①—④—②—③ 二. 言语理解与表达：本部分包含片段阅读、文章阅读、选词填空三个部分。", "C": "①—④—③—②"}, ensure_ascii=False)
+    assert json.loads(sp(opts)) == {"A": "③—②—④—①", "D": "①—④—②—③", "C": "①—④—③—②"}  # 非末键也裁到值尾
+    # 生产 235971/236036/1272497：解析结尾串进「第 N 部分 …请开始答题：」，可带 ~页码~ 前缀
+    assert sp("故正确答案为 A。 ~ 12 ~ 第二部分言语理解与表达（共 40 题，参考时限 40 分钟）本部分包括表达与理解两方面的内容。请开始答题：") == "故正确答案为 A。"
+    assert sp("排除。故正确答案为 A。第五部分资料分析（共 20 题，参考时限 20 分钟）所给出的图、表、文字…请开始答题：一、") == "排除。故正确答案为 A。"
+    assert sp("所以选择B选项 第五部分资料分析 7") == "所以选择B选项"
+    # 正文里提到模块名/序号不受影响
+    for keep in ("本题考查数量关系中的行程问题。", "资料分析第二部分表格显示", "一、二、三项均正确", "第二部分言语", "共 40 题，参考时限 40 分钟"):
+        assert sp(keep) == keep
+
+
 def _db(tmp_path):
     p = tmp_path / "q.db"
     conn = sqlite3.connect(p)
@@ -101,6 +120,8 @@ def _db(tmp_path):
     )
     opts = json.dumps({"A": "1", "B": "2", "C": "3", "D": "4"}, ensure_ascii=False)
     opts_foot = json.dumps({"A": "628", "B": "961", "C": "986", "D": "1014 - 8 - 2020年新疆公务员考试《行测》真题"}, ensure_ascii=False)
+    # 生产 246002 形态：选项已错位，D 整段就是下一节标题 → 裁掉即空，不自动改
+    opts_shift = json.dumps({"A": "电路的干路上", "B": "四个选项中选出一个最恰当的答案。", "D": "二. 言语理解与表达：本部分包括表达与理解两方面的内容。", "C": "并联"}, ensure_ascii=False)
     conn.executemany(
         "INSERT INTO questions VALUES (?,?,?,?,?,?,?,?,?)",
         [
@@ -110,6 +131,7 @@ def _db(tmp_path):
             (4, "panduan", "图推题", opts_foot, "如下图：第47页共64页第二步，分析。", "hs 图推", 0, 1, 1.0),
             (5, "yanyu", "言语题", opts, "文段开篇……对应B 项。 故正确答案为B。文段开篇提出问题……故正确答案为C。", "hs 言语", 0, 1, 1.0),
             (6, "shuliang", "非真题", opts, _E_SKELETON, None, 0, 0, 1.0),
+            (7, "changshi", "选项错位题", opts_shift, "解析。第 7 页 共 36 页拓展。", "hs 常识", 1, 1, 1.0),
         ],
     )
     conn.execute("INSERT INTO explanation_quarantine VALUES (9, '串题解析', 0.01, '9-9', ?, 1.0)", (rq.REASON,))
@@ -150,13 +172,16 @@ def test_garbled_select_apply_and_reason_scoped_restore(tmp_path):
     assert [r[0] for r in conn.execute("SELECT question_id FROM explanation_quarantine")] == [9]
 
 
-def test_strip_footers_apply_and_restore(tmp_path):
+def test_strip_footers_apply_and_restore(tmp_path, capsys):
     conn, _ = _db(tmp_path)
     rows = rq.select_footers(conn)
-    assert [(x["id"], x["field"]) for x in rows] == [(4, "explanation"), (4, "options")]
+    assert [(x["id"], x["field"]) for x in rows] == [(4, "explanation"), (4, "options"), (7, "explanation")]
+    assert "7 options SKIP" in capsys.readouterr().out  # 选项裁掉即空 → 不进改写清单
     rq.apply_footers(conn, rows)
     r = conn.execute("SELECT explanation, options FROM questions WHERE id=4").fetchone()
     assert r["explanation"] == "如下图：第二步，分析。" and json.loads(r["options"])["D"] == "1014"
+    r7 = conn.execute("SELECT explanation, options FROM questions WHERE id=7").fetchone()
+    assert r7["explanation"] == "解析。拓展。" and json.loads(r7["options"])["D"].startswith("二. 言语")
     assert rq.select_footers(conn) == []  # 幂等
     conn.execute("UPDATE questions SET explanation='人工重写' WHERE id=4")
     conn.commit()
@@ -180,7 +205,7 @@ def test_cli_garbled_and_footers_dry_run_write_nothing(tmp_path, capsys):
     finally:
         sys.argv = argv
     out = capsys.readouterr().out
-    assert "targets: 2" in out and "footer fixes: 2 (1 options)" in out and out.count("dry-run only") == 2
+    assert "targets: 2" in out and "footer fixes: 3 (1 options)" in out and out.count("dry-run only") == 2
     c = sqlite3.connect(path)
     assert c.execute("SELECT COUNT(*) FROM questions WHERE explanation IS NULL").fetchone()[0] == 1  # 只有原来的 9
     assert c.execute("SELECT name FROM sqlite_master WHERE name='text_footer_fix'").fetchone() is None

@@ -19,6 +19,7 @@ questions.explanation 置空（前端/SEO/错题快照自动回落到 hs_explana
 生产：sudo docker exec -i deploy-kaogong-1 python3 - --blocks 264413-264477 --keep 264413,264420 [--apply] < scripts/r396_explanation_quarantine.py
 """
 import argparse
+import json
 import os
 import sqlite3
 import sys
@@ -137,23 +138,39 @@ def select_garbled(conn, keep: set[int], extra: set[int]) -> list[dict]:
 
 
 def select_footers(conn) -> list[dict]:
-    """explanation/options 里串进 PDF 页脚的行，返回 [{id, field, before, after}]。"""
+    """explanation/options 里串进 PDF 页脚/下一节标题的行，返回 [{id, field, before, after}]。"""
     out: list[dict] = []
-    for r in conn.execute(
-        "SELECT id, explanation, options FROM questions WHERE is_real=1 "
-        "AND (explanation LIKE '%页共%页%' OR explanation LIKE '%真题%' OR options LIKE '%真题%' OR options LIKE '%页共%页%') ORDER BY id"
-    ):
+    for r in conn.execute("SELECT id, explanation, options FROM questions WHERE is_real=1 ORDER BY id"):
         for field in ("explanation", "options"):
             before = r[field] or ""
             after = quality.strip_page_footers(before)
-            if after != before:
-                out.append({"id": r["id"], "field": field, "before": before, "after": after})
+            if after == before:
+                continue
+            if field == "options" and _blanks_option(before, after):
+                print(f"  {r['id']} options SKIP: 某选项整段就是串入文本，裁掉即为空，需校源后人工处理")
+                continue
+            out.append({"id": r["id"], "field": field, "before": before, "after": after})
     return out
+
+
+def _blanks_option(before: str, after: str) -> bool:
+    """裁剪后有原本非空的选项变空（该选项本身就是串入的分节标题，题目选项已错位）→ 不自动改。"""
+    try:
+        b, a = json.loads(before), json.loads(after)
+    except (ValueError, TypeError):
+        return True
+    if not isinstance(b, dict) or not isinstance(a, dict):
+        return True
+    return any(str(b.get(k) or "").strip() and not str(a.get(k) or "").strip() for k in b)
 
 
 def report_footers(rows: list[dict]) -> None:
     for x in rows:
-        m = quality.FOOTER_PAGE_RE.search(x["before"]) or quality.FOOTER_SRC_RE.search(x["before"])
+        m = (
+            quality.FOOTER_PAGE_RE.search(x["before"])
+            or quality.FOOTER_SRC_RE.search(x["before"])
+            or quality.FOOTER_SECTION_RE.search(x["before"])
+        )
         print(f"  {x['id']} {x['field']} cut={m.group(0).strip() if m else '?'!r} -{len(x['before']) - len(x['after'])} chars")
     print(f"footer fixes: {len(rows)} ({sum(1 for x in rows if x['field'] == 'options')} options)")
 
