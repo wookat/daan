@@ -170,17 +170,19 @@ async def error_storm_middleware(request, call_next):
 
 @app.middleware("http")
 async def report_5xx(request, call_next):
-    """集中式错误监控（审计 P1-7）：后端 5xx 与未捕获异常转发中心收集器。"""
+    """集中式错误监控（审计 P1-7）：后端 5xx 与未捕获异常转发中心收集器；探针触发的标 internal 不计入告警。"""
     try:
         response = await call_next(request)
     except Exception as exc:
         monitor.report("5xx", f"{type(exc).__name__}: {exc}",
-                       url=str(request.url), status=500)
+                       url=str(request.url), status=500,
+                       internal=auth.probe_request(request))
         raise
     if response.status_code >= 500:
         monitor.report("5xx",
                        f"HTTP {response.status_code} {request.method} {request.url.path}",
-                       url=str(request.url), status=response.status_code)
+                       url=str(request.url), status=response.status_code,
+                       internal=auth.probe_request(request))
     return response
 
 
@@ -198,7 +200,8 @@ async def monitor_report(request: Request):
         str(body.get("message") or "(no message)"),
         stack=str(body.get("stack")) if body.get("stack") else None,
         url=str(body.get("url")) if body.get("url") else None,
-        ua=request.headers.get("User-Agent"),
+        ua=auth.client_ua(request),
+        internal=auth.probe_request(request),
     )
     return {"ok": True}
 
