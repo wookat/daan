@@ -169,4 +169,121 @@
   font-size: 22rpx;
   color: var(--t3);
   margin-top: 4rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.p-go {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: var(--brand-500);
+  flex-shrink: 0;
+}
+
+.resume {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  border-left: 8rpx solid var(--warning);
+}
+
+.rs-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin-right: 16rpx;
+}
+
+.rs-t {
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.rs-s {
+  font-size: 22rpx;
+  color: var(--t3);
+  margin-top: 4rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rs-go {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: var(--warning);
+  flex-shrink: 0;
+}
+
+.att-scroll {
+  white-space: nowrap;
+  margin-bottom: 24rpx;
+}
+
+.att {
+  display: inline-flex;
+  flex-direction: column;
+  vertical-align: top;
+  width: 300rpx;
+  background: var(--surface);
+  border-radius: var(--r-l);
+  box-shadow: var(--sh-1);
+  padding: 24rpx;
+  margin-right: 16rpx;
+  box-sizing: border-box;
+}
+
+.att-score {
+  font-size: 44rpx;
+  font-weight: 800;
+  color: var(--brand-500);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.att-u {
+  font-size: 22rpx;
+  font-weight: 600;
+  margin-left: 4rpx;
+}
+
+.att-t {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--t1);
+  margin-top: 12rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.att-d {
+  font-size: 20rpx;
+  color: var(--t3);
+  margin-top: 4rpx;
+}
+
+.chips {
+  white-space: nowrap;
+  margin-bottom: 16rpx;
+}
+
+.chip {
+  display: inline-block;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--t2);
+  background: var(--surface);
+  box-shadow: var(--sh-1);
+  border-radius: var(--r-full);
+  padding: 12rpx 26rpx;
+  margin-right: 12rpx;
+}
+
+.chip.on {
+  background: var(--brand-500);
+  color: #fff;
+  box-shadow: var(--sh-brand);
 }
