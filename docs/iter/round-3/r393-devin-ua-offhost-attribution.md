@@ -36,4 +36,9 @@
 
 ## 3. 验证
 - 本地：`pytest`、`ruff check app tests`、`npx pyright app` 全绿（数字见 PR）；`ruff check scripts/access_log_report.py scripts/crawler_stats.py` 0。
-- 生产（部署后补记）：后端 rev 上线后，VPS 网段外 `curl` 带 `Devin/1.0` UA 打 `/api/track` → `growth_events.probe=1`；`scp` 两脚本 + 手跑 cron 命令 → `crawler-stats.json.humans.offhost` 出现、14 天候选真人 61 → 46 以内；管理台 1440/375 复验。
+- 本地实跑：pytest 380（+2）/ ruff 0 / pyright 0。
+- 生产（rev `ed98be5`，2026-09-05 03:45Z，PR #612 评论有全量）：
+  - VPS 出口（网段外）经边缘 `POST /api/track`：`; Devin/1.0; +devin.ai` UA → `growth_events.probe=1`；普通 Linux Chrome / iPhone Safari UA → 0；样本已清理。
+  - 两脚本 scp + `probe-ips.txt` 追加 `150.109.230.174` + 手跑 cron 命令：`humans.offhost = {09-01: 5, 09-02: 5, 09-04: 2}`（与 1.3 表的 12 条逐日一致）；候选真人 61 → **44**（api 43+1，page 0，ips 2），43 条仍是那台 vivo 小程序设备。
+  - `ops_status.crawlers.humans = {api_7d:44, api_today:0, api5xx_7d:0, page_7d:0, ips_7d:2, ips_today:0, direct_7d:52, offhost_7d:12}`；testing agent 1440/375 看板行与该响应 7 项逐字一致，375 不竖排；业务回归两视口 PASS，`/api` 68+62 全 200，容器 0 重启、5xx/slow-req 0，LEFTOVER 0。
+  - 未验证：`offhost_7d==0` 尾缀隐藏分支（仅单测）；crawler 显式头/预览域名剔除逻辑本体由单测 + 产物数字与取证一致背书；中心监控本轮无新行。

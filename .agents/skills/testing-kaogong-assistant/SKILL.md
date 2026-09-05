@@ -5,6 +5,16 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R393 `PROBE_UA_MARKERS`+`devin/` / `humans.offhost_7d` / 看板「预览域名」尾缀 生产复验 走查新经验（testing agent）
+
+- **看板候选真人行对账用页面自己那次 `/api/admin/ops_status`**（`r377.py HOOK` 存 `__r377.ops`），并记 `generated_at`；crawler cron 每小时 ~:23 刷新，用户口头给的数字可能过期。期望字串按 `dashboard.js humanRow` 拼：`detail + direct + offhost`，注意 `源站直连扫描 N（已剔除） · 预览域名 N（已剔除）`（`（已剔除）` 后有一个空格再 `·`），逐字比对时别手写漏空格。
+- 尾缀 `direct`/`offhost` **仅非零显示**：生产两者非零时 `=0` 分支只能声明 untested，不要去改生产 JSON 造 0。
+- `PROBE_UA_MARKERS` 含 `devin/` 后：本机受管 Chrome UA 若**不含** `Devin/1.0`，GUI 请求仍只走网段路打 probe=1；不要伪造 Devin UA 打生产制造数据，UA 路交给用户 VPS 侧隔离样本，报告标 untested。
+- 管理台 375：`Page.addScriptToEvaluateOnNewDocument` 钩子在 `holdvw_admin.py` 触发的 reload 后不延续，reload 后要重装钩子再取 ops 响应；`.lb` 不逐字竖排的量化口径：标题文本 Range `getClientRects().length==1`、`.lb` 高 ≤60px、`.sub` 正常折 2–3 行（`subMinW` 最后一行可很窄，不是坏形态）、`documentElement.scrollWidth==375`、行 `flex-wrap:wrap` 使 `.tag` 掉到下一行属正常。
+- 部署后容器日志若见 `GET /api/admin/ops_status 401` ×N，先到 Caddy 源站日志对 IP/UA：来自 `150.109.230.174 curl/8.5.0` 且随后 200 的是部署方自己 VPS 核数（无 token/错 token 试探），不是本轮 GUI；按时间戳单列。
+- 短版审计行数参考：两 uid 各 3 题全错/部分错 → `mistakes` = 错题数、`answer_log` 6（probe=1）、`growth_events` 4–6；`answer_log` 清理后回 1090。
+- `cdp.C.call(m, **p)` 只接关键字参数（`c.call('Emulation.clearDeviceMetricsOverride')`），传 dict 位置参数会报 `takes 2 positional arguments`。清 override 后要导航一次（不是 reload）才能看到 `innerWidth` 回 1600。
+
 ## R392 后端 monitor `internal` 标记 短版生产回归 走查新经验（testing agent）
 
 - **后端 `probe_request` 三路判定**（`backend/app/auth.py`）：`X-Kg-Probe: 1` 头 / 出口 IP 命中 `KG_PROBE_CIDRS`（容器 env，`docker exec … printenv KG_PROBE_CIDRS`）/ UA 含 `python-requests|curl/|headlesschrome|playwright…`。GUI 浏览器发的请求（真人 Chrome UA、无探针头）**只走网段路**，验证前先确认本机出口 `curl ifconfig.me` 在 CIDR 内；报告里明确"本侧只能证 200 + 源站 IP/UA/无探针头，中心侧 `internal` 值由用户核对"。
