@@ -465,10 +465,20 @@ def tiku_question_slash(qid: int):
 @router.get("/q/{qid}", response_class=HTMLResponse, include_in_schema=False)
 def tiku_question(qid: int):
     try:
-        html = _render_question(qid)
+        html = _render_question(qid, _question_version(qid))
     except HTTPException:
         return _not_found("题目不存在")
     return HTMLResponse(html.replace("<!--QCOMMENTS-->", _render_q_comments(qid)))
+
+
+def _question_version(qid: int) -> float | None:
+    """渲染缓存键的一部分：题目行 updated_at 变了（隔离/还原/清洗脚本写库）就重新渲染，不必重启进程。"""
+    conn = db.get_conn()
+    try:
+        r = conn.execute("SELECT updated_at FROM questions WHERE id=?", (qid,)).fetchone()
+    finally:
+        conn.close()
+    return r["updated_at"] if r else None
 
 
 def _render_q_comments(qid: int) -> str:
@@ -682,7 +692,7 @@ def _render_topic(code: str, page: int) -> str:
 
 
 @lru_cache(maxsize=4096)
-def _render_question(qid: int) -> str:
+def _render_question(qid: int, version: float | None = None) -> str:
     conn = db.get_conn()
     r = conn.execute(
         "SELECT id, module, submodule, tag3, question, options, answer, explanation, hs_explanation, "
