@@ -1685,3 +1685,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 方案：部分覆盖索引 `idx_q_paper_src(is_real, disabled, source, exam_year, exam_region) WHERE is_real=1`（COVERING，副本实测 78.6 MB → 0 MB、结果集一致）；`crawler_stats.py` 增 `humans{api,api5xx,page,ips}` 段（探针网段 → 引擎 UA → `BOT_GENERIC`/空 UA → `uid=test-|probe` 逐层剔除，IP 只出日去重数量）→ `ops_status.crawlers.humans` → 看板「搜索引擎抓取」面板顶部「真人」行（标注剔除口径；旧 JSON 无该段时提示等 cron）。详见 docs/iter/round-3/r382-paper-index-human-traffic.md。
 - 本地：pytest 363 / ruff / pyright 0；前端零改动复用 R381 bundle。生产归档试跑（`/tmp`，不覆盖 cron 产物）：候选真人 API 09-01 5 / 09-02 48 / 09-03 2 / 09-04 1，5xx 0，日去重 IP 2–5。
 - 未做/留档：`/api/exam/papers` 10.5 s 的 `list_exam_papers()+exam_paper_filters()` 组合与 `tag3=CS-LS-01` 4.0 s 留 R383 取证；`/api/comments/count`、`/api/notes` 表结构未核；宿主 IO 争用第 6 次上报。
+
+### R403 生产盘清理（2026-09-05 纯 ops，老板指令「清理旧备份腾空间」）
+- 现状：VM-0-8-ubuntu 50G 根盘 43G/97%→清理后 42G/88%（余 5.9G）。大头不是备份：containerd 9.3G、docker 卷 13.4G（recruit_app_pgdata 8.6G、kaogong-data 2.0G、softcopyright 2.0G）、镜像 7.2G（nyc-ticket-odds-web 3.57G）。
+- 删除（均有更新副本覆盖，先核对 R2 `zalize-backups/kaogong-sqlite` 08-27～09-05 十份字节数与本地一致后才删）：本地日备 data-2026-08-30/31、09-01/02（≈580M）；一次性旧快照 /home/ubuntu/snap_r42.db（08-10）+ snap.db.gz（08-05）≈442M；容器 /data 内 bak-r348.gz / bak-w2.gz / r396-before.gz（≈515M，各步 ids 台账在仓库）；docker build cache 676M。保留：bak-w3.gz（PR #620 审计依据）、r400/r401-before.gz、r402-before（并行会话进行中）。
+- 长效：deploy/kaogong-ops.sh 本地日备保留 7→3 份（30 天历史在 R2，每周日 R2-VERIFY 独立校验），宿主 /home/ubuntu/kaogong-ops.sh 已同步（md5 一致）。
+- 未做：recruit pgdata 8.6G / nyc 镜像 3.57G 属其他产品不动；主机 2G 内存 + iowait 80% 的结构性瓶颈仍建议扩容或分机。
