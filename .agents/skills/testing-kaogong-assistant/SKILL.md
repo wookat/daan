@@ -5,6 +5,17 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R410b 修复复量轮（同一审计口径复跑）新经验（testing agent）
+
+- **bundle 变更后必须真实 F5**：只做 hash 导航（`location.href='#/pages/...'`）会沿用内存里的旧 chunk/CSS（本轮空态按钮先读到旧 36px，F5 后才是新 44px）。复量前用 `performance.getEntriesByType('resource')` 核实际加载的 `pages-book-book.*.js` / `book-*.css` 文件名与用户给的一致，再量几何。
+- **页内 sheet 取代 uni.showActionSheet 后的量法**：`.mask > .sheet.more-sheet`，行 `.more-act`（`.danger` 删除 / `.cancel` 取消），`.mask.bottom` 375=762、1440=900；`.uni-actionsheet` 计数应为 0。桌面 Esc 关闭要用真实 `xdotool key Escape`，再查 `.more-sheet` 数量。1440 下 modal 关闭后 `.uni-modal` 元素仍在 DOM（父级 `display:none`），判关闭要看父级 display 而不是元素存在。
+- **错因自评持久化证明**：sheet 内 `.more-reasons .rz` 点选 → HDR 钩子只记 `url/status`（`method` 可能为空），用 `/mistakes\/\d+/` 匹配 PATCH；持久化用 F5 后页面自身 GET 或 `curl -H 'X-Kg-Probe: 1' /api/mistakes?uid=`，再点同 chip 期望 `error_reason` 变 `''`（DB 里是空串不是 NULL）。
+- **`rvstate.js` 的 `tgt` 是正确答案**（用于自动推进答对），要「答错」需自己取 `.opt` 中 `innerText != ans` 的元素点。复习循环脚本用 Vue 状态 + 实时 rect，不用固定坐标。
+- **1440 视口在 1024 宽屏幕上的真实点击**：页面坐标 → 屏幕坐标约 `x*0.711`，`y*0.711+88`；只对大按钮用 GUI 点击，小控件用 CDP `Input.dispatchMouseEvent` 页面坐标。
+- **SEO 缓存头**：`curl -I`（HEAD）拿不到 `x-edge-cache`/`age`，要 `curl -s -o /dev/null -D - <url>` GET。
+- **localStorage 备份陷阱**：`cdp.eval('JSON.stringify(localStorage)')` 落盘的文件是**双重 JSON 编码**（`json.load` 得到 str），恢复前 `if isinstance(d,str): d=json.loads(d)`，否则会按字符写入十万个键；恢复用逐键 `setItem`（大对象内嵌到 eval 表达式易静默失败），最后核 `localStorage.length==30` 与 `anonUid`。
+- 批量清空「待掌握」后的空态仍是通用「没有匹配的错题」（本轮只改了已掌握 tab 文案），复量时勿误判为回归。
+
 ## R410 错题本次级屏 375/1440 可用性审计（只审不改）新经验（testing agent）
 
 - **审计轮只量不改**：缺陷理由一律用页面数据（`getBoundingClientRect` + `elementFromPoint` + `scrollWidth` + `getComputedStyle().fontSize`），不要用「竞品有 X」。阈值口径：375 热区 <40px 记 P2、<32px 记 P1、字号 <12px 记 P2；每条缺陷附 rect 数字 + 复现步骤。
