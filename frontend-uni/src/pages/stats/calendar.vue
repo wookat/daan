@@ -152,8 +152,8 @@ export default {
 .wrap { padding: 24rpx; }
 .ms { margin-top: 24rpx; }
 .ms-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
-.ms-best { font-size: 21rpx; color: var(--ink-2); }
-.ms-cur { font-size: 25rpx; color: var(--ink-1, #1f2430); }
+.ms-best { font-size: 22rpx; color: var(--ink-2); }
+.ms-cur { font-size: 26rpx; color: var(--ink-1, #1f2430); }
 .ms-n { font-size: 34rpx; font-weight: 800; color: #d97706; }
 .ms-bar { height: 14rpx; background: var(--line); border-radius: 999rpx; margin-top: 14rpx; overflow: hidden; }
 .ms-fill { height: 100%; background: linear-gradient(90deg, #f59e0b, #d97706); border-radius: 999rpx; }
@@ -169,10 +169,10 @@ export default {
 .h { font-size: 30rpx; font-weight: 700; }
 .cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10rpx; }
 .cal-title { display: flex; align-items: center; gap: 16rpx; }
-.cal-badge { font-size: 21rpx; color: #166534; background: var(--ok-soft, #dcfce7); border-radius: 8rpx; padding: 4rpx 14rpx; }
+.cal-badge { font-size: 22rpx; color: #166534; background: var(--ok-soft, #dcfce7); border-radius: 8rpx; padding: 4rpx 14rpx; }
 .cal-btn { font-size: 30rpx; color: var(--brand-text); font-weight: 600; padding: 8rpx 16rpx; }
 .cal-btn.dis { color: var(--ink-3); }
-.cal-sub { font-size: 23rpx; color: var(--ink-2); margin-bottom: 18rpx; }
+.cal-sub { font-size: 24rpx; color: var(--ink-2); margin-bottom: 18rpx; }
 .cal-week { display: flex; margin-bottom: 8rpx; }
 .cal-w { flex: 1; text-align: center; font-size: 20rpx; color: var(--ink-2); }
 .cal-grid { display: flex; flex-wrap: wrap; }
@@ -181,7 +181,7 @@ export default {
 .cal-c.full { background: var(--brand); color: #fff; font-weight: 700; }
 .cal-c.today { border: 2rpx solid var(--brand); }
 .cal-legend { display: flex; gap: 26rpx; margin-top: 18rpx; }
-.lg { font-size: 21rpx; color: var(--ink-2); display: flex; align-items: center; gap: 8rpx; }
+.lg { font-size: 22rpx; color: var(--ink-2); display: flex; align-items: center; gap: 8rpx; }
 .dot { width: 20rpx; height: 20rpx; border-radius: 50%; display: inline-block; }
 .dot.part { background: var(--brand-soft); border: 1rpx solid var(--brand); }
 .dot.full { background: var(--brand); }

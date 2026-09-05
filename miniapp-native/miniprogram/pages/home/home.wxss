@@ -453,7 +453,7 @@
 }
 
 .tk-name {
-  font-size: 27rpx;
+  font-size: 28rpx;
   font-weight: 600;
   color: var(--t1);
 }
@@ -638,7 +638,7 @@
 .pf-summary {
   margin-top: 26rpx;
   padding: 16rpx 20rpx;
-  font-size: 23rpx;
+  font-size: 24rpx;
   color: var(--t2);
   background: var(--fill);
   border-radius: var(--r-s);
@@ -664,7 +664,7 @@
 .pf-back {
   margin-top: 18rpx;
   text-align: center;
-  font-size: 25rpx;
+  font-size: 26rpx;
   color: var(--t3);
   padding: 8rpx 0;
 }

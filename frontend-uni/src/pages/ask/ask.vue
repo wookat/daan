@@ -925,17 +925,17 @@ export default {
 
 .camscreen { background: linear-gradient(180deg, #171c2b, #1f2740); border-radius: 24rpx; padding: 24rpx 24rpx 32rpx; margin-bottom: 24rpx; }
 .cam-top { display: flex; justify-content: flex-end; gap: 14rpx; margin-bottom: 18rpx; }
-.cam-quick { display: inline-flex; align-items: center; gap: 6rpx; min-height: 44px; box-sizing: border-box; padding: 0 22rpx; border-radius: 999rpx; background: rgba(255, 255, 255, 0.1); color: #e5e9f5; font-size: 23rpx; }
+.cam-quick { display: inline-flex; align-items: center; gap: 6rpx; min-height: 44px; box-sizing: border-box; padding: 0 22rpx; border-radius: 999rpx; background: rgba(255, 255, 255, 0.1); color: #e5e9f5; font-size: 24rpx; }
 .cam-frame { position: relative; min-height: 380rpx; border-radius: 20rpx; background: rgba(255, 255, 255, 0.04); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14rpx; padding: 30rpx; }
 .cam-corner { position: absolute; width: 40rpx; height: 40rpx; border: 4rpx solid #5b8af8; }
 .cam-corner.tl { top: 18rpx; left: 18rpx; border-right: none; border-bottom: none; border-radius: 8rpx 0 0 0; }
 .cam-corner.tr { top: 18rpx; right: 18rpx; border-left: none; border-bottom: none; border-radius: 0 8rpx 0 0; }
 .cam-corner.bl { bottom: 18rpx; left: 18rpx; border-right: none; border-top: none; border-radius: 0 0 0 8rpx; }
 .cam-corner.br { bottom: 18rpx; right: 18rpx; border-left: none; border-top: none; border-radius: 0 0 8rpx 0; }
-.cam-tip { font-size: 27rpx; font-weight: 600; color: #e5e9f5; }
+.cam-tip { font-size: 28rpx; font-weight: 600; color: #e5e9f5; }
 .cam-tip2 { font-size: 22rpx; color: #8fa3d9; }
 .cam-modes { display: flex; justify-content: center; gap: 14rpx; margin: 24rpx 0 10rpx; }
-.cam-mode { font-size: 23rpx; color: #b9c4e2; min-height: 44px; display: inline-flex; align-items: center; padding: 0 20rpx; border-radius: 999rpx; }
+.cam-mode { font-size: 24rpx; color: #b9c4e2; min-height: 44px; display: inline-flex; align-items: center; padding: 0 20rpx; border-radius: 999rpx; }
 .cam-mode.on { color: #fff; font-weight: 700; background: rgba(91, 138, 248, 0.35); }
 .cam-mode.dim { opacity: 0.45; }
 .cam-acts { display: flex; align-items: center; justify-content: space-around; margin-top: 6rpx; }
@@ -948,7 +948,7 @@ export default {
 .msg { display: flex; margin-bottom: 20rpx; }
 .msg.user { justify-content: flex-end; }
 .msg.ai { justify-content: flex-start; }
-.bubble { max-width: 86%; border-radius: 28rpx; padding: 20rpx 26rpx; font-size: 27rpx; line-height: 1.7; box-sizing: border-box; }
+.bubble { max-width: 86%; border-radius: 28rpx; padding: 20rpx 26rpx; font-size: 28rpx; line-height: 1.7; box-sizing: border-box; }
 .ub { background: var(--brand); color: #fff; border-bottom-right-radius: 8rpx; }
 .ub-t { white-space: pre-wrap; word-break: break-all; }
 .ub-img { width: 320rpx; border-radius: 14rpx; display: block; }
@@ -996,7 +996,7 @@ export default {
 .ans-chip { flex: 1; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; font-size: 28rpx; font-weight: 600; color: var(--ink-2); background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 16rpx; }
 .ans-chip.on { color: var(--brand-text); background: var(--brand-soft); border-color: var(--brand-text); }
 .preview { width: 100%; border-radius: 18rpx; margin-top: 8rpx; }
-.spin { color: var(--ink-2); font-size: 25rpx; }
+.spin { color: var(--ink-2); font-size: 26rpx; }
 .raterow { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; background: var(--soft-bg); border-radius: 14rpx; padding: 16rpx 22rpx; margin-top: 16rpx; flex-wrap: wrap; }
 .rate-q { font-size: 24rpx; color: var(--ink-2); }
 .rate-btns { display: flex; gap: 14rpx; }
@@ -1005,8 +1005,8 @@ export default {
 .anscard { display: flex; align-items: center; gap: 22rpx; background: var(--brand-soft); border: 1rpx solid var(--brand-soft-2); border-radius: 20rpx; padding: 22rpx 26rpx; margin: 6rpx 0 16rpx; }
 .ans-big { flex-shrink: 0; min-width: 88rpx; height: 88rpx; padding: 0 14rpx; border-radius: 20rpx; background: var(--brand); color: #fff; font-size: 44rpx; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 6rpx 14rpx rgba(46, 91, 255, 0.3); }
 .ans-r { flex: 1; min-width: 0; }
-.ans-method { display: inline-block; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 21rpx; font-weight: 600; padding: 4rpx 18rpx; margin-bottom: 8rpx; }
-.ans-brief { display: block; font-size: 25rpx; color: var(--ink); line-height: 1.5; }
+.ans-method { display: inline-block; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 22rpx; font-weight: 600; padding: 4rpx 18rpx; margin-bottom: 8rpx; }
+.ans-brief { display: block; font-size: 26rpx; color: var(--ink); line-height: 1.5; }
 .err { color: var(--bad); background: var(--bad-soft); font-size: 26rpx; }
 .tags { margin-bottom: 10rpx; }
 .tag { display: inline-block; background: var(--brand-soft); color: var(--brand-text); border-radius: 999rpx; padding: 6rpx 20rpx; font-size: 22rpx; margin-right: 10rpx; }
@@ -1016,12 +1016,12 @@ export default {
 .rec-row:last-of-type { border-bottom: none; }
 .rec-ans { width: 72rpx; height: 72rpx; border-radius: 16rpx; background: var(--brand-soft); color: var(--brand-text); font-size: 32rpx; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .rec-main { flex: 1; min-width: 0; }
-.rec-brief { display: block; font-size: 25rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rec-meta { display: block; font-size: 21rpx; color: var(--ink-2); margin-top: 4rpx; }
-.rec-del { flex-shrink: 0; font-size: 23rpx; color: var(--bad); min-height: 44px; display: inline-flex; align-items: center; padding: 0 8rpx; }
+.rec-brief { display: block; font-size: 26rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rec-meta { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
+.rec-del { flex-shrink: 0; font-size: 24rpx; color: var(--bad); min-height: 44px; display: inline-flex; align-items: center; padding: 0 8rpx; }
 .rec-empty { padding: 10rpx 0 6rpx; }
 .rec-e1 { display: block; font-size: 26rpx; font-weight: 600; color: var(--ink-2); }
-.rec-e2 { display: block; font-size: 23rpx; color: var(--ink-3); line-height: 1.7; margin-top: 8rpx; }
+.rec-e2 { display: block; font-size: 24rpx; color: var(--ink-3); line-height: 1.7; margin-top: 8rpx; }
 
 /* #ifdef H5 */
 .deskstart { display: none; }
@@ -1044,7 +1044,7 @@ export default {
   .ds-drop { flex: 1; min-height: 300rpx; border: 2rpx dashed var(--brand-soft-2); border-radius: 20rpx; background: var(--brand-soft); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12rpx; cursor: pointer; }
   .ds-drop:hover { border-color: var(--brand-text); }
   .ds-d1 { font-size: 26rpx; font-weight: 600; color: var(--ink); }
-  .ds-d2 { font-size: 23rpx; color: var(--ink-2); }
+  .ds-d2 { font-size: 24rpx; color: var(--ink-2); }
 }
 /* #endif */
 </style>

@@ -446,8 +446,8 @@ export default {
 .avatar { width: 96rpx; height: 96rpx; border-radius: 50%; background: linear-gradient(135deg, #5b8af8, var(--brand)); color: #fff; font-size: 40rpx; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .grow { flex: 1; min-width: 0; }
 .acct-name { display: block; font-size: 32rpx; font-weight: 700; color: var(--ink); }
-.acct-sub { display: block; font-size: 23rpx; color: var(--ink-2); margin-top: 6rpx; }
-.acct-btn { flex-shrink: 0; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 28rpx; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 25rpx; font-weight: 600; }
+.acct-sub { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 6rpx; }
+.acct-btn { flex-shrink: 0; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 28rpx; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 26rpx; font-weight: 600; }
 
 .stats-row { display: flex; gap: 20rpx; margin-bottom: 8rpx; }
 .stat-c { flex: 1; background: var(--card); border-radius: 24rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 26rpx 0; display: flex; flex-direction: column; align-items: center; gap: 6rpx; }
@@ -465,6 +465,10 @@ export default {
 .badge-ico { font-size: 40rpx; }
 .badge-d { font-size: 22rpx; font-weight: 600; color: var(--ink); }
 :deep(.cellcard) { display: block; border-radius: 28rpx; overflow: hidden; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); margin-bottom: 20rpx; }
+/* 标题不换行、右侧值单行省略：wot 默认左右各 flex:1，长标题会被挤成两行 */
+:deep(.cellcard .wd-cell__left) { flex: 0 0 auto; max-width: 62%; }
+:deep(.cellcard .wd-cell__title) { white-space: nowrap; }
+:deep(.cellcard .wd-cell__value) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cell-ico { width: 56rpx; height: 56rpx; border-radius: 14rpx; background: var(--fill); display: flex; align-items: center; justify-content: center; margin-right: 20rpx; }
 
 .logout { margin-top: 40rpx; background: var(--card); border-radius: 24rpx; text-align: center; min-height: 44px; display: flex; align-items: center; justify-content: center; font-size: 28rpx; color: #dc2626; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); }

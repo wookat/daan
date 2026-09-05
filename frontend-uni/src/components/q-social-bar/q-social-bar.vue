@@ -132,7 +132,7 @@ export default {
 .nb { color: #b45309; font-weight: 600; }
 .edit { color: var(--brand-text); margin-left: 12rpx; font-size: 22rpx; }
 .note-edit { background: var(--warn-soft); border-radius: 14rpx; padding: 16rpx 18rpx; }
-.note-ta { width: 100%; min-height: 100rpx; font-size: 25rpx; line-height: 1.6; box-sizing: border-box; }
+.note-ta { width: 100%; min-height: 100rpx; font-size: 26rpx; line-height: 1.6; box-sizing: border-box; }
 .note-ops { display: flex; justify-content: flex-end; gap: 34rpx; margin-top: 10rpx; }
 .nop { font-size: 24rpx; color: var(--ink-3); }
 .nop.save { color: var(--brand-text); font-weight: 600; }
@@ -141,13 +141,13 @@ export default {
 .qsb-link { font-size: 24rpx; color: var(--brand-text); }
 .hotc { background: var(--fill); border-radius: 14rpx; padding: 14rpx 18rpx; margin-top: 14rpx; }
 .hotc-top { display: flex; align-items: center; gap: 12rpx; }
-.hotc-tag { font-size: 21rpx; color: #ea580c; background: #ffedd5; border-radius: 999rpx; padding: 2rpx 12rpx; font-weight: 600; }
+.hotc-tag { font-size: 22rpx; color: #ea580c; background: #ffedd5; border-radius: 999rpx; padding: 2rpx 12rpx; font-weight: 600; }
 .hotc-nick { font-size: 22rpx; color: var(--ink-2); font-weight: 600; }
-.hotc-likes { font-size: 21rpx; color: var(--ink-3); margin-left: auto; }
+.hotc-likes { font-size: 22rpx; color: var(--ink-3); margin-left: auto; }
 .hotc-body { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; margin-top: 8rpx; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .firstc { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; background: var(--fill); border: 1rpx dashed var(--line); border-radius: 999rpx; padding: 12rpx 24rpx; margin-top: 14rpx; }
-.firstc-ph { font-size: 23rpx; color: var(--ink-3); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.firstc-cta { font-size: 23rpx; color: var(--brand-text); font-weight: 600; flex-shrink: 0; }
+.firstc-ph { font-size: 24rpx; color: var(--ink-3); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.firstc-cta { font-size: 24rpx; color: var(--brand-text); font-weight: 600; flex-shrink: 0; }
 /* #ifdef H5 */
 .hotc, .firstc { cursor: pointer; }
 /* #endif */

@@ -13,7 +13,7 @@
 .loading {
   text-align: center;
   color: var(--t3);
-  font-size: 25rpx;
+  font-size: 26rpx;
   padding: 60rpx 0;
 }
 
@@ -37,7 +37,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 999rpx;
-  font-size: 29rpx;
+  font-size: 30rpx;
   font-weight: 600;
   background: var(--brand-500);
   color: #fff;

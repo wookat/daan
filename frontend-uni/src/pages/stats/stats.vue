@@ -890,7 +890,7 @@ export default {
 
 <style scoped>
 .hm-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
-.hm-total { font-size: 21rpx; color: var(--ink-2); }
+.hm-total { font-size: 22rpx; color: var(--ink-2); }
 .hm-body { display: flex; gap: 10rpx; }
 .hm-ylab { display: flex; flex-direction: column; justify-content: space-between; padding: 2rpx 0; }
 .hm-yl { font-size: 18rpx; color: var(--ink-3); height: 26rpx; line-height: 26rpx; }
@@ -904,8 +904,8 @@ export default {
 .hm-c.fut { opacity: 0; }
 .hm-legend { display: flex; align-items: center; gap: 8rpx; justify-content: flex-end; margin-top: 14rpx; }
 .hm-legend .hm-c { width: 26rpx; flex: none; }
-.hm-lt { font-size: 19rpx; color: var(--ink-3); }
-.hm-note { font-size: 19rpx; color: var(--ink-2); margin-right: auto; }
+.hm-lt { font-size: 20rpx; color: var(--ink-3); }
+.hm-note { font-size: 20rpx; color: var(--ink-2); margin-right: auto; }
 .wrap { padding: 24rpx; }
 .card { background: var(--card); border-radius: var(--radius); padding: 24rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .hero { background: var(--card); border: 1rpx solid var(--line); border-radius: var(--radius); padding: 30rpx 28rpx; margin-bottom: 24rpx; box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
@@ -927,9 +927,9 @@ export default {
 .todo-ico { width: 88rpx; height: 88rpx; border-radius: 20rpx; background: var(--brand-soft); display: flex; align-items: center; justify-content: center; font-size: 40rpx; flex-shrink: 0; }
 .todo-ico.warn { background: var(--bad-soft); }
 .todo-main { flex: 1; min-width: 0; }
-.todo-name { display: block; font-size: 27rpx; font-weight: 600; }
+.todo-name { display: block; font-size: 28rpx; font-weight: 600; }
 .todo-meta { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
-.todo-btn { height: 72rpx; line-height: 72rpx; padding: 0 30rpx; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 25rpx; font-weight: 600; flex-shrink: 0; }
+.todo-btn { height: 72rpx; line-height: 72rpx; padding: 0 30rpx; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 26rpx; font-weight: 600; flex-shrink: 0; }
 .radar-flex { display: flex; align-items: center; gap: 12rpx; padding: 30rpx 0 20rpx; }
 .radar-box { flex: 1; display: flex; justify-content: center; }
 .radar { position: relative; width: 320rpx; height: 320rpx; }
@@ -945,13 +945,13 @@ export default {
 .theme-dark .poly { background: rgba(96, 141, 255, 0.45); }
 .rs-t { font-size: 22rpx; color: var(--ink-2); margin-bottom: 10rpx; }
 .rs-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8rpx; }
-.rs-name { font-size: 25rpx; font-weight: 600; }
+.rs-name { font-size: 26rpx; font-weight: 600; }
 .rs-pct { font-size: 24rpx; color: var(--danger, #f04438); font-weight: 600; }
-.ghost-btn { margin-top: 16rpx; height: 72rpx; line-height: 68rpx; text-align: center; border: 2rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 25rpx; font-weight: 600; }
+.ghost-btn { margin-top: 16rpx; height: 72rpx; line-height: 68rpx; text-align: center; border: 2rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 26rpx; font-weight: 600; }
 .ring { position: absolute; border: 1rpx solid var(--line); border-radius: 50%; box-sizing: border-box; }
 .poly { position: absolute; inset: 0; background: rgba(46, 91, 255, 0.35); border-radius: 2rpx; }
 .axis-label { position: absolute; transform: translate(-50%, -50%); text-align: center; white-space: nowrap; }
-.al-name { display: block; font-size: 23rpx; color: var(--ink); font-weight: 600; }
+.al-name { display: block; font-size: 24rpx; color: var(--ink); font-weight: 600; }
 .al-val { display: block; font-size: 20rpx; color: var(--brand-text); }
 .mrow { display: flex; align-items: center; gap: 16rpx; min-height: 112rpx; border-bottom: 1rpx solid var(--line); }
 .mrow:last-of-type { border-bottom: none; }
@@ -959,13 +959,13 @@ export default {
 .mrow-arrow { font-size: 34rpx; color: var(--ink-3); flex-shrink: 0; padding: 0 6rpx; }
 .brow { margin: 14rpx 0; }
 .blabel { display: flex; justify-content: space-between; align-items: center; font-size: 26rpx; color: var(--ink); margin-bottom: 6rpx; }
-.bn { font-size: 23rpx; color: var(--ink-2); }
+.bn { font-size: 24rpx; color: var(--ink-2); }
 .bar { background: var(--brand-soft); border-radius: 999rpx; height: 20rpx; position: relative; overflow: hidden; }
 .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--brand); border-radius: 999rpx; transition: width 0.6s ease; }
 .top-chips { display: flex; flex-wrap: wrap; gap: 14rpx; }
 .top-chip { display: flex; align-items: center; gap: 8rpx; background: var(--brand-soft); border-radius: 999rpx; padding: 14rpx 24rpx; min-height: 44rpx; }
 .tc-name { font-size: 24rpx; color: var(--brand-text); font-weight: 600; }
-.tc-n { font-size: 21rpx; color: var(--ink-2); }
+.tc-n { font-size: 22rpx; color: var(--ink-2); }
 .top-chip.more { background: var(--soft-bg); color: var(--ink-2); font-size: 24rpx; font-weight: 600; }
 .fill.rz { background: #f59e0b; }
 .trend { display: flex; align-items: flex-end; gap: 12rpx; height: 220rpx; padding-top: 8rpx; }
@@ -974,10 +974,10 @@ export default {
 .tbar { flex: 1; width: 36rpx; background: var(--soft-bg); border-radius: 999rpx; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
 .tfill { width: 100%; background: var(--brand); border-radius: 999rpx; }
 .tfill.lo { background: #f59e0b; }
-.tday { font-size: 19rpx; color: var(--ink-2); margin-top: 8rpx; }
+.tday { font-size: 20rpx; color: var(--ink-2); margin-top: 8rpx; }
 .radar-empty { text-align: center; padding: 30rpx 0 20rpx; }
 .re-t { font-size: 28rpx; font-weight: 600; }
-.re-s { font-size: 23rpx; color: var(--ink-2); margin: 8rpx 0 20rpx; }
+.re-s { font-size: 24rpx; color: var(--ink-2); margin: 8rpx 0 20rpx; }
 .re-btn { background: var(--brand); color: #fff; border-radius: 18rpx; font-size: 26rpx; font-weight: 600; width: 50%; }
 .medals { display: flex; flex-wrap: wrap; }
 .medal { width: 25%; box-sizing: border-box; text-align: center; padding: 14rpx 6rpx; }
@@ -1009,13 +1009,13 @@ export default {
 .km-chip.hi { background: #d1fae5; }
 .km-chip.hi .km-name, .km-chip.hi .km-pct { color: #047857; }
 .km-name { display: block; font-size: 24rpx; font-weight: 600; }
-.km-pct { display: block; font-size: 19rpx; margin-top: 2rpx; }
+.km-pct { display: block; font-size: 20rpx; margin-top: 2rpx; }
 .km-legend { display: flex; gap: 18rpx; flex-wrap: wrap; margin-top: 8rpx; }
 .list-card { padding: 0 24rpx; }
 .lrow { display: flex; align-items: center; gap: 18rpx; min-height: 112rpx; border-bottom: 1rpx solid var(--line); }
 .lrow:last-of-type { border-bottom: none; }
 .lrow-ico { width: 64rpx; height: 64rpx; border-radius: 16rpx; background: var(--brand-soft); display: flex; align-items: center; justify-content: center; font-size: 32rpx; flex-shrink: 0; }
-.lrow-name { flex: 1; font-size: 27rpx; font-weight: 600; }
+.lrow-name { flex: 1; font-size: 28rpx; font-weight: 600; }
 .lrow-sub { font-size: 22rpx; color: var(--ink-2); font-weight: 400; margin-left: 14rpx; }
 .lrow-arrow { font-size: 30rpx; color: var(--ink-3); padding: 0 6rpx; }
 .lrow-body { padding: 6rpx 0 24rpx; border-bottom: 1rpx solid var(--line); }
@@ -1033,7 +1033,7 @@ export default {
 }
 .coach-body {
   display: block;
-  font-size: 25rpx;
+  font-size: 26rpx;
   line-height: 1.7;
   padding-top: 8rpx;
 }
@@ -1052,18 +1052,18 @@ export default {
 .gw-tabs { display: flex; gap: 10rpx; margin-bottom: 14rpx; flex-wrap: wrap; }
 .gw-tab { font-size: 22rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 4rpx 18rpx; background: var(--card); }
 .gw-tab.on { color: #fff; background: var(--brand); border-color: var(--brand-text); }
-.gw-delta { font-size: 23rpx; color: #dc2626; margin-top: 6rpx; }
+.gw-delta { font-size: 24rpx; color: #dc2626; margin-top: 6rpx; }
 .gw-delta.up { color: #16a34a; }
 .rc-note { font-size: 20rpx; color: var(--ink-2); margin-top: 10rpx; }
 .sl-row { display: flex; align-items: baseline; gap: 10rpx; margin: 16rpx 0 12rpx; }
 .sl-num { font-size: 44rpx; font-weight: 700; color: var(--brand-text); }
-.sl-lab { font-size: 23rpx; color: var(--ink-2); }
-.sl-last { font-size: 21rpx; color: var(--ink-3); margin-left: auto; }
+.sl-lab { font-size: 24rpx; color: var(--ink-2); }
+.sl-last { font-size: 22rpx; color: var(--ink-3); margin-left: auto; }
 .sl-types { display: flex; flex-wrap: wrap; gap: 10rpx; }
-.sl-chip { font-size: 21rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 999rpx; padding: 8rpx 18rpx; }
-.sl-ih { font-size: 23rpx; color: var(--ink-2); margin-top: 16rpx; padding: 10rpx 0; }
+.sl-chip { font-size: 22rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 999rpx; padding: 8rpx 18rpx; }
+.sl-ih { font-size: 24rpx; color: var(--ink-2); margin-top: 16rpx; padding: 10rpx 0; }
 .sl-issue { display: flex; align-items: flex-start; gap: 10rpx; margin-bottom: 10rpx; }
-.sl-ik { font-size: 19rpx; color: var(--bad-strong); background: var(--bad-soft); border-radius: 6rpx; padding: 2rpx 10rpx; flex-shrink: 0; margin-top: 2rpx; }
+.sl-ik { font-size: 20rpx; color: var(--bad-strong); background: var(--bad-soft); border-radius: 6rpx; padding: 2rpx 10rpx; flex-shrink: 0; margin-top: 2rpx; }
 .sl-ik.adv { color: #b45309; background: var(--warn-soft); }
 .sl-it { font-size: 22rpx; color: var(--ink-1); line-height: 1.6; }
 .trend { display: flex; align-items: flex-end; gap: 8rpx; height: 160rpx; padding-top: 12rpx; }
@@ -1086,10 +1086,10 @@ export default {
 .km-lg.r { color: #ef4444; }
 .km-lg.y { color: #f59e0b; }
 .km-lg.g { color: #10b981; }
-.bk-tip { font-size: 23rpx; color: var(--ink-2); line-height: 1.6; margin-bottom: 14rpx; }
+.bk-tip { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; margin-bottom: 14rpx; }
 .bk-code { font-size: 26rpx; font-weight: 700; color: var(--brand-text); background: var(--brand-soft); border-radius: 14rpx; padding: 14rpx 22rpx; margin-bottom: 14rpx; }
 .row2 { display: flex; gap: 16rpx; }
-.bk-btn { flex: 1; background: var(--brand-soft); color: var(--brand-text); border-radius: 16rpx; font-size: 25rpx; font-weight: 600; }
+.bk-btn { flex: 1; background: var(--brand-soft); color: var(--brand-text); border-radius: 16rpx; font-size: 26rpx; font-weight: 600; }
 .bk-btn.ghost { background: var(--brand-soft); color: var(--brand-text); }
 .loginstrip { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; min-height: 44px; box-sizing: border-box; background: var(--brand-soft); border-radius: 16rpx; padding: 8rpx 26rpx; margin-bottom: 20rpx; }
 .ls-t { font-size: 24rpx; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
