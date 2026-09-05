@@ -5,6 +5,15 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R390 `/tiku/q/<id>` JSON-LD（LearningResource⊃Question）生产复验 走查新经验（testing agent）
+
+- **`_page(..., [jsonld, breadcrumb])` 输出的是「一个」`<script type="application/ld+json">`，内容是 JSON 数组**（`[LearningResource, BreadcrumbList]`），不是两段脚本。解析时先 `json.loads` 再 `list` 展平 / 对象包成 list，否则 `.get()` 会在 list 上炸。类型集合断言用「恰好 {LearningResource, BreadcrumbList}」，另外 grep 全文 `QAPage`/`answerCount`/`mainEntity` 作旧版指纹（4403c9c 及之前）。
+- 页面上下文 `fetch(url,{headers:{'X-Kg-Probe':'1'},cache:'no-store'})` 一律带随机 `?v=`（CF 对 `/tiku*` ~300s 边缘缓存），并核对响应头 `x-edge-cache`/`cf-cache-status` 为 MISS/DYNAMIC；但 JSON-LD 里 `LearningResource.url` 必须**不含** `?v=`（服务端用 `_url(f"/tiku/q/{qid}")` 生成，与请求 URL 无关）——这是一条独立断言，别只看后缀。
+- 选项对照：页面 `a.opt b` 文本是 `K.`，JSON-LD `suggestedAnswer[].text` 是 `K. 选项文本`，比 `text[0]` 与 `b.textContent[0]` 的序列即可；`acceptedAnswer.text` 以 `正确答案：X。` 开头后接解析截断 500 字。无 tag3 的题（如 qid 1046924）`about.name` 回落为模块名（`言语理解`），CTA 也无 `tag3=` 参数——可作 fallback 分支的在线样本。
+- 外部校验：validator.schema.org 按 URL 校验无需登录，结果页顶部显示 `N ERRORS / N WARNINGS / N ITEMS`，右侧可展开类型树；Google Rich Results Test（浏览器已登录 Google）对该页会报「检测到 1 项有效内容 — 路径（Breadcrumbs）」而**不是**「未检测到项目」，因为 BreadcrumbList 本身就是富结果类型；LearningResource 不是 Google 富结果类型所以不出现，也不算无效。截图只截结果区避开右上账号。
+- 375 卷库分包 `pkgA-exam-list.*.js` 可能出现 60 s 的 h3/QUIC 拉取停滞（`performance` resource entry `duration≈60014`, `transferSize 0`, 之后正常渲染 120 卷），期间页面只有 spinner、`/api/exam/papers` 尚未发出；此时 `curl` 同资源只需 ~70 ms。属客户端/网络瞬态，不是后端问题，但会伴随 1 条 `console.error(ErrorObject)`——钩子用 `JSON.stringify` 记参数时 Error 对象会变成 `"{}"`，钩子应改成 `a instanceof Error ? a.message+'\n'+a.stack : JSON.stringify(a)` 才能事后定位。
+- 前端 `slow_load` 埋点：如果 prep/hook 过程中标签操作超时（首页加载被 CDP 阻塞），该 uid 会在 `growth_events` 多出一条 `slow_load(probe=1)`，DB 审计会从固定 12 行变 13 行；对照 `growth rows` 输出解释后正常清理即可。
+
 ## R389 `manifest.h5.title` 覆写 index.html `<title>`（SEO 首页标题）生产复验 走查新经验（testing agent）
 
 - **原始 HTML 与挂载后标题是两个不同断言，必须分开取证**：原始 `<title>`/`og:title` 用不执行 JS 的方式读（`curl -s /` 或页面上下文 `fetch('/',{headers:{'X-Kg-Probe':'1'},cache:'no-store'}).text()` 后正则 `<title>([^<]*)</title>`）；挂载后用 `document.title`，uni-app 会在路由渲染时用 `pages.json` 的 `navigationBarTitleText` 覆盖（首页 `刷题`、`pkgA/exam/list` `真题卷库`、`pages/book/book` `错题本`），浏览器标签条上也能看到，截图时让标签文字入镜作为可视证据。坏形态：挂载后 `document.title` 仍等于 SEO 长标题（uni 标题覆盖丢失）或原始 `<title>` 只剩 `错题邦`（构建没吃到 `manifest.h5.title`）。
