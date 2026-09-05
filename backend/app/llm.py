@@ -106,6 +106,7 @@ async def chat(messages: list, temperature: float = 0.2, max_tokens: int = 4000)
                     },
                 )
             if (resp.status_code in _QUOTA_CODES or resp.status_code >= 500) and _rescue_ok(messages):
+                log.warning("[llm] main %s status=%s, fallback to rescue %s", model, resp.status_code, RESCUE_MODEL)
                 resp = await client.post(
                     f"{RESCUE_BASE_URL}/v1/chat/completions",
                     headers={"Authorization": f"Bearer {RESCUE_API_KEY}"},

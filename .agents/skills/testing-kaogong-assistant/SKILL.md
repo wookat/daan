@@ -5,6 +5,16 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R399 AI 生成类接口主通道优先 生产复验 走查新经验（testing agent）
+
+- **R399 后 `mistakes/analysis`/`ai/coach` 走 `llm.chat()`，成功路径零日志**：容器日志只剩 `[slow-req] Ns POST /api/mistakes/analysis` + access 200 行；`[llm] rescue … failed … fallback` 只会由 `chat_fast()` 调用方（题目抽取/申论）产生，对错题分析 grep 到 0 行是预期。`chat()` 主通道 5xx/额度码回落 rescue **也无日志**，所以「耗时偏长（如 53 s）是主通道慢还是静默回落」无法用日志区分，报告里要标成推断；建议下轮在 `chat()` 回落处加 warning 再复验。
+- **结尾完整性口径**：`JSON.parse(__ai[n].resp).analysis` 末 40 字以 `。！？` 结束、不停在列表序号（R398 126 字止于「1」即截断形态）；同时比对 `uni-rich-text.innerText.trim().slice(-30)`。主通道 `finish_reason=length` 时日志会有 `[llm] finish_reason=length, content N chars returned as-is`，出现要原文记录。
+- **耗时分布**：R399 三次真实请求 14.7 / 34.6 / 53.2 s，方差大，不要把单次超出「18–35 s」判 FAIL，记录事实并与 slow-req 秒数对应即可。
+- `/api/ai/coach` 前端**没有入口**（`frontend-uni/src` grep `ai/coach` 0 命中），只能记「未触达」；不要用 curl 冒充 UI。
+- 宿主 `/tmp` 可能有 lead 的同轮取证脚本（`r399_probe.py`/`r399_rescue_probe.py`/`r399_srs3.py`），收尾只删自己命名带 `_ta` 的副本（如 `r399_audit_ta.py`），先 `ls -la` 甄别。
+- `r398_killvw.py` 会连带结束调用它的 shell 链（后续 `&&` 命令不执行），要单独一条命令跑，再另起命令启新 holder。
+- 浏览器截图坐标空间就是 1024×768 的截图坐标（不用 ×2），超出范围的点击会被静默丢弃——点「生成」前后用 `__ai.length` 核对是否真发出请求。
+
 ## R398 错题本弹层让出 TabBar + AI 失败态可重试 生产复验 走查新经验（testing agent）
 
 - **375 弹层几何口径**：H5 `.uni-tabbar` fixed top=762（812−50）、z 998；`.mask` z 99。断言 `document.querySelector('.mask').getBoundingClientRect().bottom===762`（未修前 812），底部按钮 `rect.bottom<=762` 且 `document.elementFromPoint(cx,cy).closest('.sheet-done'|'.sheet-export'|'.rf-alt')` 非空（未修前返回 tabbar 的 IMG）。1440 `.mask` 是 `[288,0,1345,900]`、computed `bottom:0px`——左 288 是桌面侧栏布局（既有），别当劣化。

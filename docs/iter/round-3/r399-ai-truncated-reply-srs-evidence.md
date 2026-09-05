@@ -71,4 +71,9 @@ rescue = kimi-k3（推理模型，`reasoning_tokens` 计入 `max_tokens`）：
 - 若日后要让「掌握」更早可见，候选是**降低阶梯层数或加中间态展示**（如 streak ≥3「已巩固」标签），需要真人复习行为数据（当前 59 uid 中只有 5 个进过复习）——本轮不动。
 
 ## 4. 本地门禁
-pytest 406（+3）/ ruff / pyright 0。
+pytest 406（+3）/ ruff / pyright 0。R399b（回落 warning）后 pytest 407。
+
+## 5. 生产复验（rev 79ccbc8，2026-09-05 11:28Z 部署，PR #618 评论）
+- 观察事实：1440/375 三次真实 `POST /api/mistakes/analysis` 均 200，正文 327 / 334 / 367 字，末句以「。」收尾（无半截、无空 200）；`docker logs --since 11:28:40Z` 中 `[llm]` 0 行——`rescue … fallback` 0、`finish_reason=length` 0；`ai/coach` 0 行（前端无入口）。耗时 53.2 / 34.6 / 14.7 s（容器 slow-req 53.0 / 34.4 / 14.2 s）。
+- 推断：53 s 那次无法从日志区分「主通道自身慢」与「主通道 5xx→rescue 静默回落」——R399 时 `chat()` 两条路径都无日志。倾向前者（rescue 900 token 直出 327 字完整文的概率按第 1 节样本很低），但不作为事实。R399b 补 `[llm] main <model> status=<code>, fallback to rescue <model>` warning，下轮可据此归因。
+- 未触达：rescue `TruncatedReply` 回落（需主通道故障，生产不可人为制造）；主通道 `finish_reason=length` warning 无首个样本；`/api/ai/coach` 无前端入口。

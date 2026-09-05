@@ -101,6 +101,27 @@ def test_truncated_reply_is_empty_reply_subclass():
     assert issubclass(llm.TruncatedReply, llm.EmptyReply)
 
 
+def test_chat_main_5xx_fallback_to_rescue_logs_warning(monkeypatch, _endpoints, caplog):
+    """主通道 5xx→rescue 回落此前零日志，生产 53 s 慢请求无法归因（R399 复验）。"""
+    calls: list[str] = []
+    bad = _Resp("")
+    bad.status_code = 503
+    monkeypatch.setattr(
+        llm.httpx,
+        "AsyncClient",
+        _client({"http://main.test": bad, "http://rescue.test": "rescue 正文"}, calls),
+    )
+    monkeypatch.setattr(llm.asyncio, "sleep", _nosleep)
+    with caplog.at_level("WARNING", logger=llm.log.name):
+        assert asyncio.run(llm.chat([{"role": "user", "content": "hi"}])) == "rescue 正文"
+    assert [u.split("/v1")[0] for u in calls][-1] == "http://rescue.test"
+    assert any("[llm] main" in r.message and "status=503" in r.message and "fallback to rescue" in r.message for r in caplog.records)
+
+
+async def _nosleep(*a, **k):
+    return None
+
+
 def test_chat_empty_content_raises(monkeypatch, _endpoints):
     calls: list[str] = []
     monkeypatch.setattr(llm.httpx, "AsyncClient", _client({"http://main.test": "   \n"}, calls))
