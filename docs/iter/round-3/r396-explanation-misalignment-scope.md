@@ -44,6 +44,12 @@ testing agent 按卷 24「2022 年安徽省公务员录用考试《行测》」�
 3. **工具入仓**：`quality.explanation_fit / misaligned_blocks` + `scripts/r396_explanation_quarantine.py`（`--scan` 只读全库聚块 / `--blocks --keep --extra` dry-run / `--apply` / `--restore`），单测 10 例（贴合度高低、套话、连续块容错、脚本 dry-run 零写入、apply/restore 往返、不覆盖人工重写）。
 4. 生产执行：dry-run 目标 **304 行（活跃 55，全部有 hs）**，跳过 14 行；`--apply` 后以卷 24 API + 1440/375 错题闭环复验。
 
+## 3b. 生产执行实录（09-05 07:20Z，`~/r396_vps14.sh`）
+
+- 先 `sqlite3 .backup` → `/data/data.db.r396-before`（449,310,720 B），再 `--apply`：**目标 307 行（活跃 55，活跃无 hs 0）、跳过 14**（比 dry-run 多 3 行是 `--extra 264820` 所在块补入），`mistakes` 快照改写 0 行；apply 后 `quarantined but explanation still set 0`、`mistakes referencing quarantined ids 0`、`questions 156792 / active 109371` 不变。卷 24：13 条 base 清空、`264413/264420/264422` 保留。
+- 复验（testing agent，1440/375）：`/api/question/{id}`、交卷报告、错题卡、复习详解、练习页均不再出现串题短语；保留行两行解析都在。
+- **复验新发现 P1（本 PR 第二个提交修）**：练习路径 `practice.vue saveExamWrong` 快照写 `q.explanation||''`，隔离题（如 `264672`）经练习页答错进错题本后 `mistakes.explanation=""`，错题卡「参考解析」与复习详解为空——第 2 条「按既有 `explanation or hs_explanation` 回落」只对交卷路径（`exam_api.py`）成立，`db.list_mistakes / due_reviews` 从不 JOIN hs。修法在读取层：两函数 `LEFT JOIN questions` 多取 `hs_explanation`，快照 `explanation` 为空时回落为 hs（快照非空一律以快照为准，不覆盖），覆盖练习/离线队列/加练三条写入路径与既有空快照，bundle 不变；单测 `test_mistake_explanation_fallback.py`（空快照→hs、非空快照不被 hs 覆盖、无 hs→空串、`q_hs` 不外泄、`due_reviews` 同口径）。
+
 ## 4. 未验证 / 边界
 - 29 个小块未逐条人工核对，可能仍有零星串题活跃行（上界 <150 行）；下一轮按模块抽样，图形/数字推理块视为误报口径。
 - 被隔离的 249 条下线行若日后重上架，`explanation` 为空、hs 可能缺失（`259971/259974/259976` 等 hs=n）——重上架前须补解析。

@@ -5,6 +5,16 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R396b 「解析串题」可逆隔离（`explanation_quarantine`）生产复验 走查新经验（testing agent）
+
+- **解析来源要按路径分别验证**：交卷路径快照（`exam_api.py` `explanation or hs_explanation`）与试卷报告 / 练习页（读 `hs_explanation`）在隔离后都能显示 hs；但**练习路径**写入 `mistakes.explanation` 用的是 `q.explanation||''`，且 `db.list_mistakes` 不 JOIN `questions.hs_explanation` → 隔离题经练习页答错进错题本后，卡片「参考解析」与复习详解为空（R396b 复现 264672，`/api/mistakes` `explanation:""`）。验证隔离类改动时务必走一次「练习页答错隔离题 → 错题卡展开 → 复习详解」的对抗路径，别只走交卷路径。
+- **练习页解析行口径**：「花生十三方法解析」行 = `cur.hs_explanation`，「解析」行 = `cur.explanation`（未被 hs 包含时才显示）。隔离题应只剩前者；保留 base 的题（如 264413）两行都在。检查 DOM 用 `[...document.querySelectorAll('uni-text,uni-view')].map(e=>e.innerText.trim())` 过滤 `==='解析'||==='花生十三方法解析'`，正则写在 `.js` 文件里用 `c.eval(open(f).read())`，避免 shell 转义把 `/…/` 弄坏（`Invalid regular expression: missing /`）。
+- **375 模考页选项点击会自动跳下一题**：`r396exam.py` 那种「点选项 + 点下一题」在 375 会双步跳题（偶数位置全漏答）；用 `/tmp/cdp174/r396b_fill375.py 'pos:L,…'`：先用「上一题/下一题」原生按钮把 `__ex.idx` 导航到目标位置再点一次选项。
+- **375 复习流不要用坐标脚本盲点**：`r396b_review375.py` 一旦选项识别失败会点到 tabbar（`AI问答` 在 x≈120,y≈590）把页面切走，复习会话虽保留（再进错题本从 `复习 7/10` 续），但录屏里很混乱。375 复习卡 A/B/C/D 按钮在 y≈300–400、`下一题` 在 y≈541（滚到底后），用 computer 工具逐题点更稳；复习会在答错题后追加 2 道「加练同类」（`x/10` → `x/13`）。
+- **DB 审计口径加 `length(explanation)`**：`r396b_audit.py ro` 对每条 mistakes 打印 `source,length(explanation),substr(explanation,1,40)`，可直接佐证交卷路径快照 = hs（79–181 字）而练习路径隔离题 = 0；同时打印 `explanation_quarantine` 行数与卷 24 `expl_null/hs_nonempty/quarantined` 确认清理没动隔离表。
+- **API 绕缓存**：`/api/question/{id}?v=rand` + `X-Kg-Probe:1` 均回 `cf-cache-status: DYNAMIC` 无 `age`，响应体在 `item` 下，题干字段是 `question`（不是 `stem`）。
+- 已知 R396 P1 在 6b0cedf 仍在（不影响本轮结论）：375 强化卡「下次再说」rect 767–792 在 tabbar 762–812 下；`/api/mistakes` `source:'exam'` 项 `paper:null`；AI 分析 30 s 后 200 空体 → 「分析失败」被 tabbar 盖住。复习快照复活 375 未复现（`/api/review/cur` 返回 `{}`）。
+
 ## R396 错题本次级屏 UX 走查（生产、无新代码）新经验（testing agent）
 
 - **375 下 tabbar 会盖住所有底部 sheet**：uni tabbar `position:fixed; z-index:998`，页面内 `.mask` z-index 100，任何 bottom sheet 的最后 50 px（762–812）都在 tabbar 下面。量化口径：目标控件 `getBoundingClientRect()` + `document.elementFromPoint(cx,cy)`，返回 tabbar 的 `IMG/.uni-tabbar__bd` 即"不可点"。可滚动 sheet（如筛选 sheet `overflow:auto`）滚到底能点到；不可滚动 sheet（复习完成强化卡的「下次再说」、AI 分析失败文案）会被完全遮住——这是 UX 缺陷不是测试问题，报告时标视口。

@@ -3245,7 +3245,7 @@ def list_mistakes(limit: int = 500, uid: str | None = None) -> list[dict]:
     cl = " AND m.uid=?" if uid else " AND m.uid IS NULL"
     args = (uid,) if uid else ()
     rows = conn.execute(
-        f"""SELECT m.*, q.tag3, q.options AS q_options,
+        f"""SELECT m.*, q.tag3, q.options AS q_options, q.hs_explanation AS q_hs,
             q.attempt_count, q.correct_ratio, q.most_wrong,
             q.source AS q_source, q.is_real AS q_is_real FROM mistakes m
             LEFT JOIN questions q ON q.id=m.question_id
@@ -3259,6 +3259,8 @@ def list_mistakes(limit: int = 500, uid: str | None = None) -> list[dict]:
         d = dict(r)
         d["methods"] = json.loads(d.get("methods") or "[]")
         d["options"] = _parse_options(d.pop("q_options", None))
+        hs = d.pop("q_hs", None)
+        d["explanation"] = d.get("explanation") or hs or ""
         src = d.pop("q_source", None)
         hit = papers.get(src) if d.pop("q_is_real", None) and src else None
         d["paper"] = dict(hit) if hit else None
@@ -3325,7 +3327,7 @@ def due_reviews(limit: int = 20, uid: str | None = None) -> list[dict]:
     _ensure_mistake_uid(conn)
     cl, args = _uid_clause(uid)
     rows = conn.execute(
-        "SELECT m.*, q.options AS q_options FROM mistakes m "
+        "SELECT m.*, q.options AS q_options, q.hs_explanation AS q_hs FROM mistakes m "
         "LEFT JOIN questions q ON q.id=m.question_id "
         "WHERE (m.mastered IS NULL OR m.mastered=0) "
         f"AND (m.next_review IS NULL OR m.next_review <= ?){cl} "
@@ -3338,6 +3340,8 @@ def due_reviews(limit: int = 20, uid: str | None = None) -> list[dict]:
         d = dict(r)
         d["methods"] = json.loads(d.get("methods") or "[]")
         d["options"] = _parse_options(d.pop("q_options", None))
+        hs = d.pop("q_hs", None)
+        d["explanation"] = d.get("explanation") or hs or ""
         out.append(d)
     return out
 
