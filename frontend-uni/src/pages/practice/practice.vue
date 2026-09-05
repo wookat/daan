@@ -2606,8 +2606,8 @@ export default {
 .fontbtn::after { content: ''; position: absolute; inset: -16rpx; }
 .fontbtn.beion { background: var(--brand); border-color: var(--brand-text); color: #fff; }
 .reasons { display: flex; flex-wrap: wrap; align-items: center; gap: 12rpx; margin-bottom: 16rpx; }
-.rz-t { font-size: 23rpx; color: var(--ink-2); }
-.rz { font-size: 23rpx; color: var(--ink-2); border: 1rpx solid var(--line); background: var(--soft-bg); border-radius: 999rpx; padding: 8rpx 22rpx; }
+.rz-t { font-size: 25rpx; color: var(--ink-2); }
+.rz { font-size: 26rpx; color: var(--ink-2); border: 1rpx solid var(--line); background: var(--soft-bg); border-radius: 999rpx; padding: 0 24rpx; min-height: 40px; box-sizing: border-box; display: inline-flex; align-items: center; }
 .rz.on { background: var(--brand); border-color: var(--brand-text); color: #fff; font-weight: 600; }
 .acard-grid { display: flex; flex-wrap: wrap; gap: 20rpx; padding: 8rpx 0 20rpx; }
 .acard-n { width: 80rpx; height: 80rpx; line-height: 80rpx; text-align: center; border-radius: 50%; background: var(--soft-bg); border: 2rpx solid var(--line); font-size: 27rpx; font-weight: 600; color: var(--ink-2); box-sizing: border-box; }

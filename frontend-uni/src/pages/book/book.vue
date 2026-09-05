@@ -429,8 +429,14 @@
         <wd-button type="primary" custom-class="e-btn2" @click="goPractice">去刷题</wd-button>
       </view>
       <view v-if="tab !== 'fav' && items.length && !shownItems.length && !loading" class="card empty bk-main">
-        <view class="e-t">没有匹配的错题</view>
-        <view class="e-s">换个关键词或清除筛选试试</view>
+        <template v-if="tab === 'done' && !kw && !hasFilter">
+          <view class="e-t">还没有已掌握的错题</view>
+          <view class="e-s">在待掌握错题的「···」里标为已掌握，或复习连对后自动进入这里</view>
+        </template>
+        <template v-else>
+          <view class="e-t">没有匹配的错题</view>
+          <view class="e-s">换个关键词或清除筛选试试</view>
+        </template>
       </view>
       <view v-for="m in shownPage" :key="m.id" :id="'mc-' + m.id" class="card mcard bk-main" :class="[masteryClass(m), { bsel: batchMode && selIds[m.id], kbf: kbId === m.id }]" @click="batchMode ? toggleSel(m) : toggleCard(m)">
         <view class="mhead">
@@ -479,10 +485,26 @@
         </view>
       </view>
       <view v-if="tab !== 'fav' && pageN < shownItems.length" class="loadmore bk-main" @click="pageN += 20">上滑或点击加载更多（{{ shownPage.length }}/{{ shownItems.length }}）</view>
+      <view v-else-if="tab !== 'fav' && !batchMode && shownPage.length" class="fabspace bk-main" />
+      <view v-if="moreSheet" class="mask" @click="moreSheet = null">
+        <view class="sheet more-sheet" @click.stop>
+          <view class="sheet-h">
+            <text class="sheet-t">{{ tagName(moreSheet.m) }} · 更多操作</text>
+            <view class="sheet-x" role="button" aria-label="关闭" @click="moreSheet = null"><l-icon name="x" :size="20" color="#6b7280" /></view>
+          </view>
+          <view v-if="!moreSheet.m.mastered" class="reasons more-reasons">
+            <text class="rz-t">错因自评：</text>
+            <text v-for="rz in REASONS" :key="rz" class="rz" :class="{ on: moreSheet.m.error_reason === rz }" role="button" @click="setItemReason(moreSheet.m, rz)">{{ rz }}</text>
+          </view>
+          <view v-for="a in moreSheet.acts" :key="a.t" class="more-act" :class="{ danger: a.danger }" role="button" @click="moreSheet = null; a.f()">{{ a.t }}</view>
+          <view class="more-act cancel" role="button" @click="moreSheet = null">取消</view>
+        </view>
+      </view>
       <!-- 批量操作条 -->
       <view v-if="batchMode && tab !== 'fav'" class="batchbar">
-        <text class="bb-sel" @click="selAll">{{ selCount === shownPage.length ? '取消全选' : '全选本页' }}</text>
+        <text v-if="shownPage.length" class="bb-sel" @click="selAll">{{ selCount === shownPage.length ? '取消全选' : '全选本页' }}</text>
         <text class="bb-n">已选 {{ selCount }}</text>
+        <text class="bb-sel" role="button" aria-label="退出批量" @click="toggleBatch">退出</text>
         <view class="bb-acts">
           <text v-if="tab === 'todo'" class="bb-btn ok" :class="{ dis: !selCount || batchBusy }" @click="batchMaster(true)">标已掌握</text>
           <text v-else class="bb-btn ok" :class="{ dis: !selCount || batchBusy }" @click="batchMaster(false)">恢复复习</text>
@@ -618,6 +640,7 @@ export default {
       batchMode: false,
       kbId: null,
       kbdHelp: false,
+      moreSheet: null,
       selIds: {},
       batchBusy: false,
       recapOpen: typeof window !== 'undefined' && window.innerWidth >= 1024,
@@ -633,6 +656,9 @@ export default {
   },
   computed: {
     qStyle() { return { fontSize: fontSizes(this.fontLv).q }; },
+    hasFilter() {
+      return !!(this.filterMod || this.kpFilter || this.kp3Filter || this.srcFilter || this.rzFilter || this.pidFilter);
+    },
     askableReview() {
       return !!askPrefill(this.cur && this.cur.question_text, null);
     },
@@ -918,6 +944,10 @@ export default {
       const tag = (e.target && e.target.tagName) || '';
       if (/INPUT|TEXTAREA|SELECT/.test(tag) || (e.target && e.target.isContentEditable)) return;
       const k = e.key;
+      if (this.moreSheet) {
+        if (k === 'Escape') { e.preventDefault(); this.moreSheet = null; }
+        return;
+      }
       if (this.kbdHelp) {
         if (k === 'Escape' || k === '?') { e.preventDefault(); this.kbdHelp = false; }
         return;
@@ -1579,11 +1609,18 @@ export default {
       if (m.question_id) acts.push({ t: '分享给队友', f: () => this.shareToMates(m) });
       if (!m.mastered) acts.push({ t: '标为已掌握', f: () => this.master(m) });
       else acts.push({ t: '恢复复习', f: () => this.master(m, false) });
-      acts.push({ t: '删除', f: () => this.del(m) });
-      uni.showActionSheet({
-        itemList: acts.map((a) => a.t),
-        success: (r) => acts[r.tapIndex].f(),
-      });
+      acts.push({ t: '删除', danger: true, f: () => this.del(m) });
+      this.moreSheet = { m, acts };
+    },
+    async setItemReason(m, rz) {
+      const next = m.error_reason === rz ? '' : rz;
+      m.error_reason = next;
+      this.$forceUpdate();
+      try {
+        await request('/api/mistakes/' + m.id, { method: 'PATCH', data: { uid: anonUid(), error_reason: next } });
+      } catch (e) {
+        uni.showToast({ title: e.message || '保存失败', icon: 'none' });
+      }
     },
     async shareToMates(m) {
       try {
@@ -1687,19 +1724,19 @@ export default {
 .e-ico { font-size: 72rpx; margin-bottom: 16rpx; }
 .e-t { font-size: 32rpx; font-weight: 600; margin-bottom: 10rpx; }
 .e-s { font-size: 24rpx; color: var(--ink-2); line-height: 1.7; margin-bottom: 28rpx; }
-:deep(.e-btn2) { margin-top: 8rpx; min-width: 60%; border-radius: 18rpx !important; background: linear-gradient(135deg, #5c82ff, var(--brand)) !important; font-weight: 600; }
+:deep(.e-btn2) { margin-top: 8rpx; min-width: 60%; min-height: 44px; border-radius: 18rpx !important; background: linear-gradient(135deg, #5c82ff, var(--brand)) !important; font-weight: 600; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; border-left: none; }
 .retry { margin-top: 12rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 .searchbar { display: flex; align-items: center; gap: 12rpx; background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 14rpx 26rpx; margin-bottom: 20rpx; }
 .searchinput { flex: 1; font-size: 26rpx; color: var(--ink); height: 40rpx; line-height: 40rpx; }
-.searchclear { display: flex; align-items: center; padding: 0 8rpx; }
+.searchclear { display: flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; margin: -10px -12rpx -10px 0; }
 .sortrow { display: flex; align-items: center; gap: 10rpx; margin-bottom: 16rpx; flex-wrap: wrap; }
 .sort-k { font-size: 22rpx; color: var(--ink-2); }
 .sort-chip { font-size: 22rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 4rpx 18rpx; background: var(--card); }
 .sort-chip.on { color: #fff; background: var(--brand); border-color: var(--brand-text); }
 .kpwrap { margin-bottom: 16rpx; }
 .kpchips { display: flex; flex-wrap: wrap; gap: 10rpx; margin-top: 8rpx; }
-.kpchip { font-size: 22rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 6rpx 18rpx; background: var(--card); }
+.kpchip { font-size: 26rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 22rpx; min-height: 40px; box-sizing: border-box; display: inline-flex; align-items: center; background: var(--card); }
 .kpchip.on { color: #fff; background: var(--brand); border-color: var(--brand-text); }
 .chips { white-space: nowrap; margin-bottom: 24rpx; }
 .chip { display: inline-block; padding: 10rpx 30rpx; margin-right: 16rpx; border-radius: 999rpx; background: var(--card); border: 1rpx solid var(--line); font-size: 25rpx; color: var(--ink-2); }
@@ -1819,13 +1856,20 @@ export default {
 .op.more { color: var(--ink-2); font-weight: 700; padding: 18rpx 30rpx; margin-left: 0; }
 .op.hint { color: var(--ink-3); margin-left: 0; padding-left: 0; }
 .loadmore { text-align: center; font-size: 24rpx; color: var(--ink-2); padding: 24rpx 0 140rpx; }
+/* 列表见底时给悬浮「＋」（104rpx + 32rpx 底距）让位，末卡「···」不被盖 */
+.fabspace { height: calc(104rpx + 64rpx); }
+.more-sheet { padding-bottom: calc(24rpx + env(safe-area-inset-bottom)); }
+.more-reasons { margin: 8rpx 0 20rpx; }
+.more-act { min-height: 48px; display: flex; align-items: center; justify-content: center; font-size: 29rpx; color: var(--ink); border-top: 1rpx solid var(--line); }
+.more-act.danger { color: #c33; }
+.more-act.cancel { color: var(--ink-2); margin-top: 12rpx; border-top: none; background: var(--soft-bg); border-radius: 999rpx; }
 .acts { display: flex; gap: 8rpx; }
 .op { font-size: 24rpx; margin-left: 16rpx; padding: 18rpx 24rpx; border-radius: 999rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
 .op.sim { background: var(--brand-soft); color: var(--brand-text); }
 .op.seen { color: var(--ok-strong); }
 .op.reportop { color: var(--ink-3); text-decoration: underline; }
 .rp-types { display: flex; flex-wrap: wrap; gap: 16rpx; margin-bottom: 20rpx; }
-.rp-chip { padding: 18rpx 26rpx; border-radius: 999rpx; background: var(--soft-bg); font-size: 26rpx; color: var(--ink-2); }
+.rp-chip { padding: 0 26rpx; min-height: 40px; box-sizing: border-box; display: inline-flex; align-items: center; border-radius: 999rpx; background: var(--soft-bg); font-size: 26rpx; color: var(--ink-2); }
 .rp-chip.on { background: rgba(46, 91, 255, 0.12); color: var(--brand-text); font-weight: 600; }
 .rp-detail { width: 100%; box-sizing: border-box; min-height: 140rpx; background: var(--soft-bg); border-radius: 16rpx; padding: 20rpx; font-size: 26rpx; }
 .rp-submit { margin-bottom: 110rpx; }
@@ -1892,8 +1936,8 @@ export default {
 .verdict.badv { color: #b03030; }
 :deep(.next-btn) { margin-top: 20rpx; width: 100%; border-radius: 12rpx !important; }
 .reasons { display: flex; flex-wrap: wrap; align-items: center; gap: 12rpx; margin: 8rpx 0 16rpx; }
-.rz-t { font-size: 23rpx; color: var(--ink-2); }
-.rz { font-size: 23rpx; color: var(--ink-2); border: 1rpx solid var(--line); background: var(--soft-bg); border-radius: 999rpx; padding: 8rpx 22rpx; }
+.rz-t { font-size: 25rpx; color: var(--ink-2); }
+.rz { font-size: 26rpx; color: var(--ink-2); border: 1rpx solid var(--line); background: var(--soft-bg); border-radius: 999rpx; padding: 0 24rpx; min-height: 40px; box-sizing: border-box; display: inline-flex; align-items: center; }
 .rz.on { background: var(--brand); border-color: var(--brand-text); color: #fff; font-weight: 600; }
 .appended-tip { font-size: 23rpx; color: var(--brand, #2e5bff); background: var(--brand-soft, #eef3ff); border-radius: 10rpx; padding: 10rpx 16rpx; margin-bottom: 12rpx; }
 .sim-row { margin-top: 16rpx; text-align: center; }

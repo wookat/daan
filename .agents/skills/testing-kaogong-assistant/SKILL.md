@@ -5,6 +5,17 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R410 错题本次级屏 375/1440 可用性审计（只审不改）新经验（testing agent）
+
+- **审计轮只量不改**：缺陷理由一律用页面数据（`getBoundingClientRect` + `elementFromPoint` + `scrollWidth` + `getComputedStyle().fontSize`），不要用「竞品有 X」。阈值口径：375 热区 <40px 记 P2、<32px 记 P1、字号 <12px 记 P2；每条缺陷附 rect 数字 + 复现步骤。
+- **FAB 与列表末卡**：375 下滚到底时 `.fab-main`（≈307–359 / 694–746）会盖住末卡 `.op.more`「···」（≈306–350 / 681–725），`elementFromPoint` 命中 `fab-main`；「已掌握」tab 只有 1 卡时同样复现。批量模式下 FAB 不渲染但 `.batchbar` 会盖 footer——两种都要量并分开记。
+- **uni `showActionSheet` 几何**：外层元素高 0，量 `.uni-actionsheet__menu` 与各 `.uni-actionsheet__cell`；375 下 6 项菜单末行「删除」/「取消」会越过 tabbar 762；1440 居中弹层容器会裁切末行（看放大截图）。
+- **复习「错因自评」只在复习答错后出现**（展开态卡片没有）；新错题 `next_review NULL` 即到期，`GET /api/review?uid=` 直接可用，不必改库。复习组件状态用含 `退出复习|复习 \d` 文案的元素回溯 `__vue__`/parent 取 `rItems/rIdx/cur`。答错一题会追加 2 道同类（`rItems` +2），完成层统计文案包含「加练同类题 N 道」。
+- **只到确认层的破坏操作**（导出 PDF、批量删除、纠错提交）：截图后点取消，用 `paper_exports`/`question_reports`/`mistakes` 行数前后一致证明未写库。
+- **AI 失败态回归可用浏览器内 CDP Fetch 拦截**（`/tmp/cdp174/r398_intercept.py` 对 `*mistakes/analysis*` 回 502），请求不到达生产；用完按 PID kill，并把该 502 从 non-2xx 统计里剔除。
+- **页面内 HDR 钩子跨文档导航（stats/SEO 页）会重置**：每段结束先 `JSON.stringify(window.__hdr)` 落盘再跳页；漏了就用容器 `docker logs --since` 按 uid grep 状态码直方图补证据。
+- 审计脚本自动枚举 uid 列时用 `c in ('uid','from_uid','user_id','owner_uid','to_uid') or c.endswith('_uid')`（当前 40 张表，含 `review_cur.uid`、`pk_matches.creator_uid/opponent_uid`、`teams.creator_uid`）。
+
 ## R402 只改生产数据的轮次：SSR 进程内缓存陈旧的判法（testing agent）
 
 - **「只改了 DB 数据、rev/bundle 不变」的轮次先查 SSR 缓存**：`/tiku/q/<id>` 由 `backend/app/seo/pages.py _render_question` 渲染并 `@lru_cache(maxsize=4096)`。R402b（`dd13df6`）前缓存键只有 qid，隔离脚本改库后**不重启进程**页面仍是旧 HTML（237345 API 已 `explanation null` 但 SSR 仍两段含「解得 x=。」）。区分边缘缓存与进程缓存：加随机 query（`?x=随机`）拿 `x-edge-cache: MISS`，MISS 仍旧 → 进程内缓存，用 `message_parent` 上报根因并把 SSR 项按现状记 FAIL，等重启/修复后再复验并如实更新。R402b 之后缓存键含 `questions.updated_at`，理论上写库即刷新，但仍要看 `docker inspect StartedAt` 判断是否重启并复核一次。
