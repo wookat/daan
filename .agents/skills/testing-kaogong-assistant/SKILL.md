@@ -5,6 +5,19 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R396 错题本次级屏 UX 走查（生产、无新代码）新经验（testing agent）
+
+- **375 下 tabbar 会盖住所有底部 sheet**：uni tabbar `position:fixed; z-index:998`，页面内 `.mask` z-index 100，任何 bottom sheet 的最后 50 px（762–812）都在 tabbar 下面。量化口径：目标控件 `getBoundingClientRect()` + `document.elementFromPoint(cx,cy)`，返回 tabbar 的 `IMG/.uni-tabbar__bd` 即"不可点"。可滚动 sheet（如筛选 sheet `overflow:auto`）滚到底能点到；不可滚动 sheet（复习完成强化卡的「下次再说」、AI 分析失败文案）会被完全遮住——这是 UX 缺陷不是测试问题，报告时标视口。
+- **题库解析错位是可能的 P0**：错题卡展开/复习详解看到解析与题干不搭时，别当 UI 问题，取 `/api/exam/papers/{pid}` 的 `question_ids`，逐题 `GET /api/question/{id}` 对比 `question_type`/题干 与 `explanation` 首句题型关键词（图形/六面体/定义/类比/削弱），一卷 17 题一次脚本即可定位（R396 卷 24 `2022 安徽` 13/17 错位）。
+- **复习快照"复活"是时序相关**：`exitReview → clearReviewSnap` 会清 timer，但庆祝弹层期间仍可能再 `saveReviewSnap`（1.5 s 延迟 POST `/api/review/cur`），完成后后退再进错题本会自动进入 `复习 2/2`。取证用组件 `reviewing/rIdx/rItems.length` + `GET /api/review/cur?uid=` 的 `snap.rIdx/ts`；同一步骤 375 可能不复现，报告写"非必现 + 触发序列"。
+- **模考错题无 `paper` 字段**：`/api/mistakes` 中 `source:'exam'` 的项 `paper:null`，只有练习里做到的真题才有 `paper:{pid…}`；筛选 sheet「试卷」/卷源徽标/「练本卷」对交卷路径不成立，验证按卷功能要用练习路径造数据，否则会误判为"筛选坏了"。
+- **AI 错题分析可能 200 空体**：`POST /api/mistakes/analysis` 25–30 s 后 200 但 `analysis` 空，前端渲染「分析失败，请稍后重试」且无重试；容器日志只有 `[slow-req]` 无 Traceback。在 `__hdr` 钩子里按 url 过滤等待，`timeout 420 s` 不要用固定 sleep。
+- **375 uni-input 用 xdotool 打中文不生效**：`type` 动作 Chinese 文本对 `.searchinput input` 无效且 `activeElement` 仍是 BODY；用 CDP `Input.insertText` 前先 `input.focus()`（`Runtime.evaluate`），再原生截图看结果。搜索结果在首屏之下需滚动才能看到。
+- **F5 会清空页面钩子数组**：`window.__hdr/__cerr` 随刷新丢失（holdhook 会重装钩子但数组从零开始），做「刷新后筛选保留」断言前先把当前段导出到 `/tmp/*_segmentN.json`，报告按段汇报。
+- **批量模式空列表陷阱**：批量操作把当前 tab/筛选列表清空后，seg 行的「完成/批量」按钮消失，批量条仍在，DOM 里没有退出控件；测试时靠清筛选 chip 或切 tab 恢复，报告记 P2。
+- **审计脚本要包含 `review_cur.uid`**：`pragma table_info` 枚举 39 列会自动带上 `review_cur/ask_cur/practice_progress/exam_progress`，清理后服务端复习快照一并清掉；R396 一轮双 uid 产生 175 行（mistakes 33 / answer_log 64 / exam_attempts 2 / review_log 47 / growth_events 29）。
+- 复位顺序不变：LS 恢复 → kill holdhook/holdvw → `setDeviceMetricsOverride(mobile=False)` + `clearDeviceMetricsOverride`（`innerWidth` 回 1600）；PDF 下载会留在 `~/Downloads`（`错题重练卷 <日期>.pdf`），如需可删。
+
 ## R394 百度自适应标注（SSR/H5 壳 `applicable-device` meta + sitemap `mobile:mobile`）生产复验 走查新经验（testing agent）
 
 - **`/tiku*` 部署后原生导航首访可能拿到部署前旧 head**：CF Pages functions `caches.default` 是 SWR 语义（`cf-cache-status: DYNAMIC` 但带 `age` 秒数 + `cache-control: public, max-age=300`），TTL 过期后首个请求仍回旧副本并后台回源，`age` 可达数小时（R394 见 `age: 16203`）。断言 DOM 前先用 CDP `Network.enable` 捕 `responseReceived(type=Document)` 记 `age/cf-cache-status/fromDiskCache/fromServiceWorker`，DOM 为旧就重试一次原生导航，两次都如实写进报告；`?v=rand`+`X-Kg-Probe`+`no-store` 的页面上下文 fetch 永远是新副本，不能替代 DOM 断言。`/` 壳由 SW 提供（`fromServiceWorker=true`），`age` 为 null。 注意 `caches.default` 按机房独立：Devin 走查恒落 PDX，看到的旧副本是自己（或同机房他人）上次访问留下的，与部署脚本 3b 预热（只刷 VPS 所在 ICN）无关，不能据此推断引擎/真人也会看到旧 head（R395 取证：14 天真人页面命中 swr 旧副本 0 次）。
