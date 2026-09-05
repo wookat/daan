@@ -1884,3 +1884,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - stats.vue 样式 37 处 18–23rpx → 24rpx（12px 下限）；待掌握 tab 全部掌握后专属空态「待掌握已清零」+ 去刷题。源文件锁 tests/stats-r411-fontfloor.test.js。vitest 566 / eslint / build:h5 绿。
 - R411b：复验发现 predict-card（≥30 题作答后渲染）11 处 20–22rpx 仍 <12px，同法抬 24rpx；教训：字号类断言要先造够数据让条件渲染卡片出现。
 - R411/R411b 生产复验（testing agent，rev ec0ab08 → d3fd10f）：stats 全页 <12px 只剩 uni tabbar 标签（框架默认）、溢出 0、热力图对齐；待掌握清零空态 375/1440 PASS；回归 PASS；清理 65+54 行 LEFTOVER 0；评论 https://github.com/wookat/kaogong-assistant/pull/619#issuecomment-5555047980 。未测 `.p-col-v/.p-col-l`（需跨日 history）。
+
+### R412 / R412b（rev `45522cc` → `a121b5f`）
+- hs 显式答案标记 vs `answer` 按 R411 新口径全量重跑（1,576 行会落到 hs 的真题）：强标记 1,376 / 一致 1,370 / **不一致 6 全 disabled**（R402 3 条维持：264787/264790/265118；新登记 297984、376412、298014（answer `AC` vs hs 单选 C））。不改库，上架前须原卷校源。200 行无标记未读。
+- 社交栏 `q-social-bar`：三链/笔记操作 `.qsb-link`/`.nop` min-height 40px；R412 复验「改」`.edit` 35.2px FAIL → R412b `min-height:40px inline-flex` 实测 40.0；组件内字号全 24rpx。「🔥 热评」条运行时未量（生产 17 条评论全 deleted）。
+- 生产复验清理 9+3 行 → LEFTOVER 0；questions 156792/109371、quarantine 874、paper_exports 38。
+- PR #619 评论：https://github.com/wookat/kaogong-assistant/pull/619#issuecomment-5555205747

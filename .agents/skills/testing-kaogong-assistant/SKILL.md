@@ -5,6 +5,11 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R412b 补充（testing agent）
+- uni-app `<text>` 渲染为 `<uni-text class="x"><span>…</span></uni-text>`：对 `.edit`/`.nop`/`.qsb-link` 做中心 `elementFromPoint` 时命中的通常是内层 `span`（className 为空），判命中要用 `el.contains(hit)` 或 `hit.closest('.x')`，不要直接比 className。
+- `.edit` 用 `min-height:40px + margin:-10px 0` 后 rect 会外溢 `.mynote` 上下各 ~3px，与相邻元素判相交要拿 `.edit` 自身 rect 比 `.report-link` bottom / `.qsb-row` top，而非只比 `.mynote`。
+- teardown 清 375 仿真：holder 进程杀掉后新 CDP 会话直接 `Emulation.clearDeviceMetricsOverride` 可能不生效（innerWidth 仍 375），需在同一会话先 `setDeviceMetricsOverride(1600×1017, mobile=false)` 再 `clear` 再 `Page.navigate`（见 `/tmp/cdp174/r410_teardown.py`）。LS 恢复脚本 `/tmp/r4xx_ls_restore.js` 可能被清，最稳从最近的 `/tmp/r4xx_ls_backup.json`（可能双重 JSON 编码）重新生成。
+
 ## R412 社交栏（q-social-bar）热区/字号复验新经验（testing agent）
 - 组件挂载点：practice.vue 答题后解析区（`.qsb` 前一兄弟是 `.report-link` 纠错，「下一题」在 fixed `.banner > .bnext`）、book.vue 错题卡「点开看答案与详解」展开处、复习卡。几何用 `getBoundingClientRect` 量 `.qsb-link/.nop/.edit`，注意 `.edit`「改」是 inline-block + padding 8px，实测高 = 8+line-height(19.2)+8 ≈ 35px，不到 40；整个 `.mynote` 块也绑定 `startEdit`。
 - 「分享给队友」不是弹层：`POST /api/share/create` + 剪贴板 + toast「分享链接已复制，发给队友吧」约 2s 自动消失；会写 `shared_questions.from_uid` 一行，清理要包含该表（审计脚本的 uid 列枚举已覆盖）。「讨论」是 `navigateTo /pkgA/social/discuss?qid=`，页内 ‹ 返回练习页状态保留。
