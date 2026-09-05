@@ -50,7 +50,10 @@ QUESTION_STATS_BATCH = 100
 def get_conn():
     conn = getattr(_local, "conn", None)
     if conn is None:
-        conn = sqlite3.connect(DB_PATH, timeout=30)
+        # 写事务以 BEGIN IMMEDIATE 起头：先拿写锁再执行语句。DEFERRED 下语句内部的先读
+        # （FTS5 触发器重载 config 等）会先开只读快照，随后升级写锁若遇他线程提交则
+        # 立刻 SQLITE_BUSY_SNAPSHOT，busy_timeout 不生效。
+        conn = sqlite3.connect(DB_PATH, timeout=30, isolation_level="IMMEDIATE")
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA busy_timeout=30000")
