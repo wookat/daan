@@ -5,6 +5,15 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R391b `describeRejection` + `tabbar-badge.js fail:noop` 短版生产复验 走查新经验（testing agent）
+
+- **角标/小工具模块可能被 Vite 拆成独立共享 chunk**（如 `/assets/tabbar-badge.<hash>.js`，home/book/ask 各 import 一次），主 bundle 里 grep `setTabBarBadge({…fail` 找不到调用点不等于没上线：先在主 bundle / 页面 chunk 里找 `import("./tabbar-badge.` 取哈希再拉该 chunk 断言 `fail:` 次数。主 bundle 里的 `setTabBarBadge` 字串是 uni 内部 API 名。
+- 验证"fail 回调吞掉 rejection"的最小可信路径：分包 `fail404` 进错题本出 AsyncError 后**停留 ≥30 s**（上轮 `[object Object]` 出现在错误 UI 后 ~7.5 s），页面侧 `__pexc`（unhandledrejection 原始 reason，`JSON.stringify`）必须为空；再在 AsyncError 态下 `import('/assets/tabbar-badge.<hash>.js').then(m=>m.setBookBadge(1))`（导出名在 chunk 里核对）应无 rejection。想同时证明 describeRejection 可读，可从主 bundle 导出里取 uni 底层 `setTabBarBadge` **不带 fail** 调一次，上报应是 `unhandledrejection: setTabBarBadge:fail not TabBar page`——这是人为对照实验，报告里必须与产品路径分开写。
+- **sendBeacon 走 CDP `Fetch` 拦截不稳定**（同一轮 1440 拦到、375 没拦到）：monitor POST 的证据用三方对账——页面 `navigator.sendBeacon` 包装 `__mon`（body 原文）+ `performance.getEntriesByType('resource')` 里 `initiatorType==='beacon'` 的 `responseStatus` + 容器/Caddy 源站 access log 时间戳；不要只靠拦截器 `monitor:[]` 判"0 上报"（正常路径要配合 `__mon` 0 + 源站该时段无该 IP 的 POST）。
+- `r391usr.py` 钩子（`Page.addScriptToEvaluateOnNewDocument`）在 CDP session 断开后**不会**跟到下一个新文档：SEO 页 → CTA 进练习页是新文档，必须在练习页再跑一次 `hook`，否则 `__hdr/__pexc` 为 undefined；前几条 `/api` 只能靠 `performance` + 源站日志补。钩子里 `MutationObserver.observe(document.documentElement)` 在文档极早期可能为 null 抛错并中断后续 hook 安装——包 try/catch 或延后到 `readystatechange`。
+- 受管 Chrome（`chrome-linux64/chrome --remote-debugging-port=29229`）在 AsyncError 点击 reload + 长时间 h3 停滞期间崩过一次：重启命令 `DISPLAY=:0 setsid nohup /opt/.devin/chrome/chrome/linux-*/chrome-linux64/chrome --remote-debugging-port=29229 --no-first-run --user-data-dir=/home/ubuntu/.browser_data_dir <url> &`（profile 是 `~/.browser_data_dir`，不是 `~/.config/devin-chrome`）；重启后的 Chrome 有 15 px 非 overlay 滚动条，375 视口下 `clientWidth=360`，属浏览器差异不是布局回归，报告时说明。崩溃会打断拦截器/holder，全部 PID 要重新 `ps -eo pid,args | grep` 精确 kill——**不要在同一条 bash 里 `pgrep -f` 再 kill**，会匹配到 bash 自身把命令杀掉（exit -1）。
+- 短版 DB 审计行数：两 uid 各 3 answer_log + 1 mistakes + 3 growth_events（prep 期 1 条 `slow_load` + quit_keep + quit_end）= 14 行；`cdp.C` 只有 `call(m, **p)` / `eval(js)`，没有 `send`。
+
 ## R391 页面分包超时（`h5.async.timeout`）+ `app.config.errorHandler` → `/api/monitor/report` 生产复验 走查新经验（testing agent）
 
 - **分包挂起/失败要用 CDP `Fetch.enable` 拦 `*pkgA-exam-list*.js` / `*pages-book-book*.js`，并且必须先 `Network.enable` + `Network.setCacheDisabled(true)`**：immutable 分包命中浏览器缓存就不会经过 Fetch 阶段，拦截器看起来"没生效"。每个拦截器进程只跑 1 个实例（多实例互相抢 `Fetch.requestPaused`）。`hold N` = 暂停 N s 后 `continueRequest`；`fail404` = `fulfillRequest 404`；`abort` = `failRequest`；"点击重载后恢复"若拦截器已 detach 会导致重载后再次卡住——恢复阶段改用 `Network.setBlockedURLs`（可随时解除）更稳。
