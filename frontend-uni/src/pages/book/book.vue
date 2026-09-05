@@ -211,7 +211,7 @@
           </view>
         </view>
       </template>
-      <view v-if="tab !== 'fav' && todoItems.length >= 3" class="card redoentry bk-side" @click="aiAnalysis">
+      <view v-if="tab !== 'fav' && todoItems.length >= 3" class="card redoentry bk-side" @click="aiAnalysis(false)">
         <view class="redo-l">
           <view class="redo-ico"><l-icon name="bot-message-square" :size="16" color="#2e5bff" /></view>
           <view>
@@ -228,6 +228,10 @@
             <view class="sheet-x" role="button" aria-label="关闭" @click="aiOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
           </view>
           <view v-if="aiLoading" class="ai-loading">正在分析你的错题与作答数据，约需 30-60 秒…</view>
+          <view v-else-if="aiErr" class="ai-err">
+            <text class="ai-err-t">分析失败：{{ aiErr }}</text>
+            <view class="sheet-done" role="button" @click="aiAnalysis(true)">重试</view>
+          </view>
           <rich-text v-else :nodes="aiHtml" />
         </view>
       </view>
@@ -608,6 +612,7 @@ export default {
       aiOpen: false,
       aiLoading: false,
       aiHtml: '',
+      aiErr: '',
       sortBy: 'time',
       pageN: 20,
       batchMode: false,
@@ -1050,15 +1055,18 @@ export default {
           .catch(() => {});
       }
     },
-    async aiAnalysis() {
+    async aiAnalysis(retry) {
       this.aiOpen = true;
-      if (this.aiHtml) return;
+      if (this.aiLoading || (this.aiHtml && retry !== true)) return;
+      this.aiErr = '';
       this.aiLoading = true;
       try {
         const d = await request('/api/mistakes/analysis', { method: 'POST', data: { uid: anonUid() }, timeout: 420000 });
-        this.aiHtml = md(d.analysis || '分析失败，请稍后重试');
+        const text = typeof d.analysis === 'string' ? d.analysis.trim() : '';
+        if (!text) throw new Error('AI 未返回内容，请稍后再试');
+        this.aiHtml = md(text);
       } catch (e) {
-        this.aiHtml = md('分析失败：' + e.message);
+        this.aiErr = e.message || '请稍后重试';
       }
       this.aiLoading = false;
     },
@@ -1765,7 +1773,15 @@ export default {
 .att-secs { color: var(--ink-2); }
 .att-time { margin-left: auto; color: var(--ink-3); font-size: 21rpx; }
 .ai-loading { text-align: center; color: var(--ink-2); font-size: 25rpx; padding: 60rpx 0; }
+.ai-err { padding: 40rpx 0 8rpx; text-align: center; }
+.ai-err-t { display: block; color: var(--ink-2); font-size: 25rpx; }
 .mask { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 99; display: flex; align-items: flex-end; }
+/* #ifdef H5 */
+/* 错题本是 tab 页：H5 底部 TabBar（50px，z-index 998）常驻且高于 .mask，整个弹层收在 TabBar 上方（同 export-confirm.above-tabbar） */
+@media (max-width: 767px) {
+  .mask { bottom: calc(50px + env(safe-area-inset-bottom)); }
+}
+/* #endif */
 .rf-card { width: 100%; background: var(--card, #fff); border-radius: 28rpx 28rpx 0 0; padding: 40rpx 32rpx calc(40rpx + env(safe-area-inset-bottom)); }
 .rf-t { font-size: 26rpx; color: var(--ink-2, #646a73); }
 .rf-name { font-size: 34rpx; font-weight: 700; margin-top: 10rpx; }

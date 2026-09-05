@@ -1792,3 +1792,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证与方案见 docs/iter/round-3/r397-ai-empty-reply-paper-null.md。AI：容器内同 prompt 直打 rescue（kimi-k3）200/57 s/`finish_reason=length`/content 0/reasoning 1,381，主通道 200/33 s/content 351；`chat_fast` 把空串当成功。改 `llm._content()` 空正文抛 `EmptyReply`，rescue 空→回落主通道→仍空→端点 502 友好文案；不重试、不改 max_tokens、不造内容。
 - paper:null：映射 90 条；活跃错题 243 = has_paper 75 / not_real 121（契约 null）/ source 无卷 37 / no_qid 10；全库真题 source 376 个仅 90 成卷、未成卷 286（活跃 5,508 题）——不是 17 题安徽卷个案，`_PSOURCE_MIN_N` 不动。旧归卷脚本直接重跑不安全：标题正则把 2025/2024/2023 国考多卷合成同名 + `upsert_exam_paper` 按 title 冲突覆盖 question_ids；`2015年吉林` 233 题 / `历年行测真题` 1,544 题是多卷混装。脚本改为标题=source 原文、已成卷/超量(>140)/撞名跳过并打印原因、`collect()` 返回 `(papers, skipped)`；`_paper_by_psource` 只看 zhenti。副本干跑：跳过 76+2、待建 19 套（61–96 题、资料分析几乎为 0）。**本轮不在生产写卷**，先摆出「补卷即不完整卷」的事实再定。
 - 本地 pytest 403 / ruff / pyright 0。取证脚本 `~/r397_llm_probe.py`（key 不打印）、`~/r397_paper_null.sh`、`~/r397_src_gap.sh`、`~/r397_paper_dry_local.py`。
+
+### R398 SOP-10 四维审计（对标粉笔错题本）+ 错题本 375 弹层让出 TabBar + AI 分析失败态可重试（2026-09-06，分支 devin/*-r398-book-sheets-above-tabbar，base=main）
+- 审计与证据见 docs/iter/round-3/r398-sop10-audit-book-sheets.md。粉笔侧**无一手证据**（需账号），公开帖只作二手，不据此加功能。生产真人：`mistakes` 221/59 uid、`mastered` 0、`error_reason` 6、复习过的 uid 5/59、21 道未掌握错题事后已答对（6 道 ≥2 次）、`review_entry_click` 60 天 10 次。
+- 命中：`book.vue` 9 个 `.mask` 弹层（强化卡/庆祝/AI/手动录入/扫描/键盘帮助/筛选/报告）在 375 全在 tabbar（50px, z 998）之下——R396 走查实录「下次再说」不可点、AI 失败文案被盖、筛选底行被截；`aiAnalysis()` 失败写进 `aiHtml` 后入口 `if (aiHtml) return`，失败一次本页永不重试。
+- 改动：H5 `@media (max-width:767px) .mask{bottom:calc(50px+safe-area)}`（同 `export-confirm.above-tabbar`）；`aiErr` 独立 + 「重试」，空正文按失败；入口显式 `aiAnalysis(false)`。源文件锁 `tests/book-sheet-tabbar.test.js`。
+- 不做：改 SRS 掌握阈值/答对即移出（需设计论证，R399+ 候选）、错因聚合（6/221）、19 套候选卷。
+- 本地 vitest 559 / eslint / build:h5 全绿。取证脚本 `~/r398_probe.py`、`~/r398_probe2.py`（只读）。
