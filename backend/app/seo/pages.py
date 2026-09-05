@@ -529,13 +529,18 @@ def tiku_year(year: int, module: str, page: int = 1):
     try:
         if module == "shenlun":
             return HTMLResponse(_render_shenlun_year(year, max(1, page)))
-        return HTMLResponse(_render_year(year, module, max(1, page)))
+        return HTMLResponse(_render_year(year, module, max(1, page), _year_version(year, module)))
     except HTTPException as e:
         return _not_found(e.detail)
 
 
+def _year_version(year: int, module: str) -> tuple:
+    """列表页缓存版本键：（在架数, 最新 updated_at）取自 5 分钟 TTL 缓存——下架/隔离/还原后最迟 5 分钟重渲染，与 sitemap lastmod 同源。"""
+    return db.year_module_counts().get((year, module), (0, None))
+
+
 @lru_cache(maxsize=512)
-def _render_year(year: int, module: str, page: int) -> str:
+def _render_year(year: int, module: str, page: int, version: tuple = (0, None)) -> str:
     mod_name = _module_name(module)
     total = db.year_module_counts().get((year, module), (0, None))[0]
     if not mod_name or not total:
@@ -606,9 +611,13 @@ def tiku_topic_noslash(code: str):
 @router.get("/t/{code}/", response_class=HTMLResponse, include_in_schema=False)
 def tiku_topic(code: str, page: int = 1):
     try:
-        return HTMLResponse(_render_topic(code, max(1, page)))
+        return HTMLResponse(_render_topic(code, max(1, page), _topic_version(code)))
     except HTTPException as e:
         return _not_found(e.detail)
+
+
+def _topic_version(code: str) -> tuple:
+    return (db.tag3_counts().get(code, 0), db.tag3_lastmod().get(code))
 
 
 def _sibling_topics(code: str, topic: dict) -> str:
@@ -624,7 +633,7 @@ def _sibling_topics(code: str, topic: dict) -> str:
 
 
 @lru_cache(maxsize=1024)
-def _render_topic(code: str, page: int) -> str:
+def _render_topic(code: str, page: int, version: tuple = (0, None)) -> str:
     topic = taxonomy.topic_index().get(code)
     total = db.tag3_counts().get(code, 0)
     if not topic or not total:

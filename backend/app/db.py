@@ -1429,6 +1429,12 @@ def tag3_counts() -> dict:
 
 _YEAR_MODULE_CACHE: list = [0.0, None]
 
+# 早期导入的 updated_at 是 ISO8601 文本，SQLite 里 TEXT 恒大于 REAL，直接 MAX 会让文本值永远盖住之后的数值写入
+_UPDATED_AT_EPOCH = (
+    "CASE WHEN typeof(updated_at)='text' THEN CAST(strftime('%s', updated_at) AS REAL) "
+    "ELSE updated_at END"
+)
+
 
 def year_module_counts() -> dict:
     """各（年份, 模块）的在架真题数与最新 updated_at，进程内 5 分钟缓存。"""
@@ -1437,7 +1443,7 @@ def year_module_counts() -> dict:
         return _YEAR_MODULE_CACHE[1]
     conn = get_conn()
     rows = conn.execute(
-        "SELECT exam_year y, module m, COUNT(*) n, MAX(updated_at) mu FROM questions "
+        f"SELECT exam_year y, module m, COUNT(*) n, MAX({_UPDATED_AT_EPOCH}) mu FROM questions "
         "WHERE is_real=1 AND disabled=0 AND exam_year IS NOT NULL GROUP BY exam_year, module"
     ).fetchall()
     conn.close()
@@ -1457,7 +1463,7 @@ def tag3_lastmod() -> dict:
         return _TAG3_LASTMOD_CACHE[1]
     conn = get_conn()
     rows = conn.execute(
-        "SELECT tag3, MAX(updated_at) mu FROM questions WHERE tag3 IS NOT NULL AND tag3!='' "
+        f"SELECT tag3, MAX({_UPDATED_AT_EPOCH}) mu FROM questions WHERE tag3 IS NOT NULL AND tag3!='' "
         "AND disabled=0 GROUP BY tag3"
     ).fetchall()
     conn.close()
