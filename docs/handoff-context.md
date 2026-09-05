@@ -1800,3 +1800,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 不做：改 SRS 掌握阈值/答对即移出（需设计论证，R399+ 候选）、错因聚合（6/221）、19 套候选卷。
 - 本地 vitest 559 / eslint / build:h5 全绿。取证脚本 `~/r398_probe.py`、`~/r398_probe2.py`（只读）。
 - 上线与复验（PR #617，rev 9ee182e，bundle index-B0wIib1U.js）：375 五个触达弹层 `.mask` bottom 全部 762（tabbar 上方），强化卡「下次再说」717–742 可点（R396 时 767–792 被盖）；AI 真实成功 200/44.8 s 后本机 Fetch 拦截 502 → 失败态 + 重试重发 POST → 放行 200 渲染；1440 mask 仍 bottom 900；回归 PASS；容器 5xx 0 / slow-req 4（=4 次真实 AI）/ 0 重启；LEFTOVER 0。**首次在生产日志抓到 R397c 的 `[llm] rescue kimi-k3 failed (EmptyReply…) fallback to deepseek` ×2**（≈45 s 请求）——rescue→主通道回落已由生产事实证实。观察：一次回落后正文仅 126 字（首次 309）疑似偏短，待看主通道 max_tokens。未验证：扫描结果/报告 sheet、真实 502 分支。
+
+### R399 AI 生成类接口正文截断取证 → 主通道优先 + rescue 截断回落；「事后答对仍待掌握」21 条归因，SRS 不改（2026-09-06，分支 devin/*-r399-ai-truncated-main-first，base=main）
+- 取证与论证见 docs/iter/round-3/r399-ai-truncated-reply-srs-evidence.md。**修正 R398 表述**：126 字那次（34.0 s）不是回落后的主通道正文——回落两次都 ≈45 s 且日志恰 2 条 warning，34 s 只能是 rescue（kimi-k3）直接返回的截断正文（止于「## 薄弱点诊断\n1」，`finish_reason=length` 形态，推断）。容器内复采：rescue 900 ×3 全空（reasoning 897 token 吃满）、1200 ×2 全空、1600 与 2400 各 1 成功 1 空——reasoning 长度不可控，**调 max_tokens 无效**；主通道 deepseek 4/4 `finish=stop` 336–354 字 18–33 s、`completion_tokens` 1,092–1,976 >900（网关不以 max_tokens 约束其 reasoning）。
+- 改动：`llm.TruncatedReply(EmptyReply)`，`_content(reject_truncated=)` 在 `finish_reason=length` 且正文非空时 rescue 侧抛出回落主通道、主通道侧只 warning 原样返回；`/api/mistakes/analysis`、`/api/ai/coach` 由 `chat_fast`（rescue 优先）改 `chat`（主通道优先，5xx/额度码仍回落 rescue）。coach 未单独采样、按同机制推断一并调整。max_tokens 不动。`tests/test_llm_empty_reply.py` +3 用例。
+- SRS：21 条「事后答对仍待掌握」全在 R371（#580 合入 09-04 05:51Z）之前：u26 12 条走显式复习已推进（rc/streak 1–2，两次复习间隔几分钟）、u27 1 条 + umtg6to4yv 8 条（同一练习 3 分钟后重做）是 R371 前普通作答历史行；R371 后真人答对命中未掌握错题 0 行（契约未被违反、也无正向真人样本）。0 已掌握 = 阶梯最短 56 天 vs 站龄 34.9 天。**「答对即掌握」不采纳、不回填**；若要更早可见掌握感，候选是中间态标签（streak≥3「已巩固」），等真人复习数据。
+- 本地 pytest 406 / ruff / pyright 0。脚本 `~/r399_rescue_probe.py`（key 不打印）、`~/r399_srs_probe*.py`（只读）。

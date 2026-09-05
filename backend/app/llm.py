@@ -46,10 +46,19 @@ class EmptyReply(RuntimeError):
     """HTTP 200 但 content 为空（如推理模型把 max_tokens 全耗在 reasoning 上、finish_reason=length）。"""
 
 
-def _content(data: dict) -> str:
-    text = data["choices"][0]["message"].get("content") or ""
+class TruncatedReply(EmptyReply):
+    """HTTP 200、content 非空但 finish_reason=length：推理模型 reasoning 吃掉大半预算后正文被截断。"""
+
+
+def _content(data: dict, reject_truncated: bool = False) -> str:
+    choice = data["choices"][0]
+    text = choice["message"].get("content") or ""
     if not text.strip():
         raise EmptyReply("AI 未返回内容，请稍后再试")
+    if choice.get("finish_reason") == "length":
+        if reject_truncated:
+            raise TruncatedReply(f"AI 回复被截断（{len(text)} 字）")
+        log.warning("[llm] finish_reason=length, content %d chars returned as-is", len(text))
     return text
 
 
@@ -172,7 +181,7 @@ async def chat_fast(messages: list, temperature: float = 0.2, max_tokens: int = 
                     },
                 )
                 resp.raise_for_status()
-                return _content(resp.json())
+                return _content(resp.json(), reject_truncated=True)
         except (httpx.HTTPError, KeyError, IndexError, ValueError, EmptyReply) as e:
             log.warning("[llm] rescue %s failed (%s: %s), fallback to %s", RESCUE_MODEL, type(e).__name__, e, TEXT_MODEL)
     return await chat(messages, temperature=temperature, max_tokens=max_tokens)
