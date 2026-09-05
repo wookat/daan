@@ -9,6 +9,7 @@ questions.explanation 置空（前端/SEO/错题快照自动回落到 hs_explana
       --extra id[,id]          块外/贴合度偏高但人工核对为串题的题，一并隔离
       --fit-max F              块内只隔离贴合度 < F 的行（默认 0.08；无贴合度值的行照常隔离）
   --restore [--reason R]       把 explanation_quarantine 里的解析写回 questions.explanation（仅当前值仍为空）；--reason 只还原该原因的行
+  --extra id[,id] --reason R   不带 --blocks 时只隔离人工核定的散行（如 r405 OCR 整段乱码），reason 默认 r396
   --garbled                    r400 公式丢失骨架解析（quality.formula_dropped；--keep/--extra/--apply 同上，reason=r400）
   --strip-footers              r400 PDF 页脚串进 explanation/options（quality.strip_page_footers），原文存 text_footer_fix 表；--apply 才写
   --restore-footers            把 text_footer_fix 里的原文写回（仅当前值仍等于修后值）
@@ -300,7 +301,7 @@ def main():
         targets = select_targets(conn, parse_blocks(args.blocks), parse_ids(args.keep), parse_ids(args.extra), args.fit_max)
         report(targets)
         if args.apply:
-            apply(conn, targets)
+            apply(conn, targets, args.reason or REASON)
         else:
             print("dry-run only; pass --apply to write")
     else:

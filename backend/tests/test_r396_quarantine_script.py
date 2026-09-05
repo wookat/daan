@@ -91,6 +91,29 @@ def test_restore_does_not_overwrite_manually_rewritten_explanation(tmp_path):
     assert conn.execute("SELECT explanation FROM questions WHERE id=103").fetchone()[0] == _E_OTHER
 
 
+def test_cli_extra_only_apply_uses_custom_reason(tmp_path, capsys):
+    conn, path = _db(tmp_path)
+    conn.close()
+    import sys
+    argv = sys.argv
+    sys.argv = ["x", "--db", path, "--extra", "200,103", "--reason", "r405:ocr-garbled-explanation", "--apply"]
+    try:
+        rq.main()
+    finally:
+        sys.argv = argv
+    out = capsys.readouterr().out
+    assert "targets: 2" in out and "quarantined 2" in out
+    c = sqlite3.connect(path)
+    c.row_factory = sqlite3.Row
+    qr = {r["question_id"]: r for r in c.execute("SELECT * FROM explanation_quarantine")}
+    assert set(qr) == {103, 200}
+    assert {r["reason"] for r in qr.values()} == {"r405:ocr-garbled-explanation"}
+    assert all(r["block"] == "extra" for r in qr.values())
+    q = {r["id"]: r["explanation"] for r in c.execute("SELECT id, explanation FROM questions")}
+    assert q[103] is None and q[200] is None
+    assert q[100] == _E_OTHER and q[102] == _E_OWN  # 未点名的块内行一律不动
+
+
 def test_cli_dry_run_writes_nothing(tmp_path, capsys):
     conn, path = _db(tmp_path)
     conn.close()
