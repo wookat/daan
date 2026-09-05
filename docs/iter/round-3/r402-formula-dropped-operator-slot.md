@@ -90,3 +90,12 @@ pytest 417（+1）/ ruff / pyright 0；前端无改动。全量跑时 `test_answ
 - hs 一致性只核了「有显式答案标记」的 339 行；153 行无标记未逐行读。hs 仍是兜底/证据，不是官方解析替代品。
 - 334667（OCR 乱码 + 双解析）留档未处理；同类（OCR 整段乱码）没有做全库范围扫描。
 - SEO 口径实测只抽 4 页（隔离/keep/双段/候选各 1），同一函数产出，未逐页核。
+
+## 9. R402b：隔离后 SSR 题目页仍出旧「原解析」——进程内渲染缓存（复验发现，已上线）
+- 现象（testing agent 录屏前发现）：`/api/question/237345` 已 `explanation:null`/hs 168，但 `/tiku/q/237345?r402=随机` 边缘 MISS 仍返回两段「花生十三讲解」+「原解析：…解得 x=。」。
+- 根因：`seo/pages.py` `_render_question(qid)` 是 `@lru_cache(maxsize=4096)`，**进程内缓存**，容器未重启（StartedAt 14:57:07Z、Restart 0），R402 只写库不重启 → 隔离前访问过的题目页永远出旧 HTML；未访问过的 265471 直接渲染就是单段 hs。不是 Cloudflare 边缘缓存。
+- 修法（commit dd13df6）：`_render_question(qid, version)` 以 `questions.updated_at` 为版本键，路由先 `_question_version(qid)` 查一次 `updated_at`；隔离脚本 apply/restore/footer fix 都会刷 `updated_at`，写库即失效，不必重启。行未变仍命中缓存。单测 `tests/test_seo_question_cache_version.py` 2 条（隔离后重渲染正文+acceptedAnswer 不含骨架；行不变仍 hit）。
+- 部署 `deploy_h5.sh --skip-build`：线上 rev `dd13df6`（bundle 不变），容器 StartedAt 16:28:01Z、Restart 0、healthy，启动后 5xx/Traceback/slow-req 0；DB quick_check ok、quarantine 307/210/126/83、questions 156792/109371 不变；mistakes 2041 快照 140。
+- 生产复核（带 X-Kg-Probe + 随机 query）：237345/265471/288140 单段 hs、无「原解析」无骨架；265250/264413 仍 hs+原解析双段；JSON-LD {LearningResource, BreadcrumbList}，acceptedAnswer「正确答案：C。/B。」接 hs。
+- 未验证：版本键在**不重启**的活进程里让旧缓存失效——生产是靠这次重建容器清掉的，进程内失效路径只有单测（生产不能为验证再写库）。下次隔离/还原写库后可直接用「访问过→写库→再访问」实证。
+- 本地：pytest 419（+2）/ ruff / pyright 0；全量跑曾出现一次 5 例 `database is locked` 与时区用例同批失败，重跑 418 通过 + 仅时区用例，锁属本机 IO 抖动。
