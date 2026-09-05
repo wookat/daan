@@ -37,10 +37,11 @@
     if (!hm) return '<div style="font-size:11px;color:var(--t4);margin-bottom:4px">真人流量：等待 crawler_stats 下一次生成（旧版 JSON 无 humans 段）</div>';
     const cls = hm.api5xx_7d ? 'tag-warn' : hm.api_7d ? 'tag-ok' : 'tag-bad';
     const direct = hm.direct_7d ? ` · 源站直连扫描 ${hm.direct_7d.toLocaleString()}（已剔除）` : '';
+    const offhost = hm.offhost_7d ? ` · 预览域名 ${hm.offhost_7d.toLocaleString()}（已剔除）` : '';
     const detail = (hm.api_7d
       ? `API ${hm.api_7d.toLocaleString()} 次（今日 ${hm.api_today}）· 页面 ${hm.page_7d} · IP 日去重 ${hm.ips_7d}（今日 ${hm.ips_today}）· 5xx ${hm.api5xx_7d}`
-      : '0 次（近 7 天无真人 API 请求）') + direct;
-    return `<div class="hbar hbar-wrap" style="margin-bottom:4px"><span class="lb">候选真人<span class="sub">剔除探针网段 / 引擎与通用 bot UA / test- uid / 未经边缘的源站直连</span></span>
+      : '0 次（近 7 天无真人 API 请求）') + direct + offhost;
+    return `<div class="hbar hbar-wrap" style="margin-bottom:4px"><span class="lb">候选真人<span class="sub">剔除探针网段与显式探针头 / 引擎、通用 bot 与 Devin 自动化 UA / test- uid / 源站直连 / 预览域名</span></span>
       <span class="tag ${cls}">${detail}</span></div>`;
   }
 
