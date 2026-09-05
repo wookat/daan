@@ -129,8 +129,12 @@
       >
         <text class="okey">{{ k }}</text>
         <text class="otext">{{ v }}</text>
-        <text v-if="!examMode && (picked || beiMode) && k === cur.answer" class="omark good">✓</text>
-        <text v-else-if="!examMode && picked && k === picked" class="omark badm">✗</text>
+        <text v-if="!examMode && (picked || beiMode) && hasKey(cur.answer, k)" class="omark good">✓</text>
+        <text v-else-if="!examMode && picked && hasKey(picked, k)" class="omark badm">✗</text>
+      </view>
+      <view v-if="isMulti && !picked && !beiMode" class="multi-bar">
+        <text class="multi-hint">多选题：选完所有正确项后确认</text>
+        <view class="multi-ok" :class="{ dis: !multiSel.length }" role="button" @click="confirmMulti">确认答案{{ multiSel.length ? '（' + multiSel.length + '）' : '' }}</view>
       </view>
       <view v-if="(picked || beiMode) && !examMode" class="after">
         <view v-if="picked && picked !== cur.answer" class="reasons">
@@ -413,6 +417,7 @@ export default {
       items: [],
       idx: 0,
       picked: '',
+      multiSel: [],
       right: 0,
       lastModule: null,
       lastSubmodule: null,
@@ -476,6 +481,9 @@ export default {
     };
   },
   computed: {
+    isMulti() {
+      return !!(this.cur && typeof this.cur.answer === 'string' && this.cur.answer.trim().length > 1);
+    },
     curAskSeen() {
       void this.askSeenTick;
       return findAskSid(uni.getStorageSync('askSessions'), uni.getStorageSync('askCurSession'), this.cur && this.cur.id);
@@ -831,6 +839,9 @@ export default {
   watch: {
     items() {
       this.matOpen = {};
+    },
+    idx() {
+      this.multiSel = [];
     },
   },
   methods: {
@@ -1904,6 +1915,14 @@ export default {
     },
     pick(k) {
       if (this.picked) return;
+      if (this.isMulti) {
+        this.multiSel = this.multiSel.includes(k) ? this.multiSel.filter((x) => x !== k) : [...this.multiSel, k];
+        return;
+      }
+      this.commitPick(k);
+    },
+    commitPick(k) {
+      if (this.picked) return;
       this.cur._excl = pickWithExcl(this.cur._excl, k);
       this.picked = k;
       this.cur._picked = k;
@@ -1924,7 +1943,7 @@ export default {
         }, 200);
         return;
       }
-      const correct = k === this.cur.answer;
+      const correct = k === this.cur.answer.trim();
       // #ifdef H5
       announce(pickAnnounceText(correct, this.cur.answer, this.streak + (correct ? 1 : 0)));
       // #endif
@@ -2171,13 +2190,22 @@ export default {
       uni.setStorageSync('beiMode', this.beiMode ? '1' : '');
       uni.showToast({ title: this.beiMode ? '背题模式：直接看答案解析，不计入正确率' : '已切回做题模式', icon: 'none', duration: 1500 });
     },
+    hasKey(ans, k) {
+      return typeof ans === 'string' && ans.indexOf(k) !== -1;
+    },
     optClass(k) {
-      if (this.examMode) return k === this.picked ? 'sel' : '';
-      if (this.beiMode) return k === this.cur.answer ? 'right' : '';
-      if (!this.picked) return '';
-      if (k === this.cur.answer) return 'right';
-      if (k === this.picked) return 'wrong';
+      if (this.examMode) return this.hasKey(this.picked, k) || this.multiSel.includes(k) ? 'sel' : '';
+      if (this.beiMode) return this.hasKey(this.cur.answer, k) ? 'right' : '';
+      if (!this.picked) return this.multiSel.includes(k) ? 'sel' : '';
+      if (this.hasKey(this.cur.answer, k)) return 'right';
+      if (this.hasKey(this.picked, k)) return 'wrong';
       return 'dim';
+    },
+    confirmMulti() {
+      if (this.picked || !this.multiSel.length) return;
+      const k = Object.keys(this.cur.options || {}).filter((x) => this.multiSel.includes(x)).join('');
+      this.multiSel = [];
+      this.commitPick(k);
     },
     async saveWrong() {
       const q = this.cur;
@@ -2718,6 +2746,10 @@ export default {
 .qhl { background: var(--hl-bg, #fef08a); color: var(--hl-ink, inherit); border-radius: 4rpx; padding: 0 2rpx; font-weight: 600; }
 .qhl-tip { margin-top: 8rpx; font-size: 21rpx; color: var(--warn); }
 .opt.sel { border-color: var(--brand-text); background: var(--soft-bg); }
+.multi-bar { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; margin: 4rpx 0 20rpx; }
+.multi-hint { font-size: 24rpx; color: var(--ink-3); }
+.multi-ok { min-height: 44px; padding: 0 32rpx; display: inline-flex; align-items: center; border-radius: 999rpx; background: var(--brand); color: #fff; font-size: 28rpx; font-weight: 600; flex-shrink: 0; }
+.multi-ok.dis { opacity: 0.45; }
 .acard-n.skip { background: var(--line); color: var(--ink-2); }
 .beat { margin-top: 10rpx; font-size: 25rpx; color: var(--brand-text); background: var(--soft-bg); border-radius: 999rpx; padding: 10rpx 26rpx; }
 .redoreport { width: 100%; margin-top: 24rpx; background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 18rpx; padding: 24rpx 28rpx; box-sizing: border-box; text-align: left; }

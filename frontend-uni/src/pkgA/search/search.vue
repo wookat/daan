@@ -24,7 +24,7 @@
         <rich-text class="q-text" :nodes="hl(result.code_hit.question)" />
         <view v-if="detailWant === result.code_hit.id && !(detail && detail.id === result.code_hit.id)" class="q-loading">解析加载中…</view>
         <view v-if="detail && detail.id === result.code_hit.id" class="q-detail">
-          <text v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: k === detail.answer }">{{ k }}. {{ v }}</text>
+          <text v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: (detail.answer || '').indexOf(k) !== -1 }">{{ k }}. {{ v }}</text>
           <text class="q-ans">答案：{{ detail.answer }}</text>
           <text v-if="detail.explanation" class="q-exp">{{ detail.explanation }}</text>
           <view class="d-acts">
@@ -94,7 +94,7 @@
           <rich-text class="q-text" :nodes="hl(it.question)" />
           <view v-if="detailWant === it.id && !(detail && detail.id === it.id)" class="q-loading">解析加载中…</view>
           <view v-if="detail && detail.id === it.id" class="q-detail">
-            <text v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: k === detail.answer }">{{ k }}. {{ v }}</text>
+            <text v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: (detail.answer || '').indexOf(k) !== -1 }">{{ k }}. {{ v }}</text>
             <text class="q-ans">答案：{{ detail.answer }}</text>
             <text v-if="detail.explanation" class="q-exp">{{ detail.explanation }}</text>
             <view class="d-acts">

@@ -196,7 +196,7 @@
           </view>
           <view class="q" :class="{ clamp: !f._open }">{{ (f.question || '').slice(0, 200) }}</view>
           <template v-if="f._open">
-            <view v-for="(v, k) in f.options" :key="k" class="anscmp"><text :class="k === f.answer ? 'ca' : ''">{{ k }}. {{ v }}</text></view>
+            <view v-for="(v, k) in f.options" :key="k" class="anscmp"><text :class="(f.answer || '').indexOf(k) !== -1 ? 'ca' : ''">{{ k }}. {{ v }}</text></view>
             <rich-text :nodes="md(f.hs_explanation || f.explanation || '暂无解析')" />
             <template v-if="f.xp_explanation">
               <view class="xp-k">{{ f.xp_school || '第二名师视角' }}</view>
@@ -1939,7 +1939,11 @@ export default {
 .verdict { font-size: 26rpx; font-weight: 600; margin: 12rpx 0; }
 .verdict.good { color: #2a7a2a; }
 .verdict.badv { color: #b03030; }
-:deep(.next-btn) { margin-top: 20rpx; width: 100%; border-radius: 12rpx !important; }
+/* 作答后「下一题/确认答案」吸底：讲解长时不必滚到底才能继续；到自然位置后随内容停住。tab 页需让出 H5 TabBar（50px） */
+:deep(.next-btn) { margin-top: 20rpx; width: 100%; border-radius: 12rpx !important; position: sticky; bottom: calc(50px + env(safe-area-inset-bottom) + 16rpx); z-index: 5; box-shadow: 0 6rpx 20rpx rgba(31, 36, 48, 0.18); }
+/* #ifndef H5 */
+:deep(.next-btn) { bottom: calc(env(safe-area-inset-bottom) + 16rpx); }
+/* #endif */
 .reasons { display: flex; flex-wrap: wrap; align-items: center; gap: 12rpx; margin: 8rpx 0 16rpx; }
 .rz-t { font-size: 25rpx; color: var(--ink-2); }
 .rz { font-size: 26rpx; color: var(--ink-2); border: 1rpx solid var(--line); background: var(--soft-bg); border-radius: 999rpx; padding: 0 24rpx; min-height: 40px; box-sizing: border-box; display: inline-flex; align-items: center; }

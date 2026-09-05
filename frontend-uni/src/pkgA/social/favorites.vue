@@ -69,7 +69,7 @@
           </view>
           <view v-if="it.note" class="mynote"><text class="nb"><l-icon name="pencil-line" :size="13" color="#b45309" /> 我的笔记：</text>{{ it.note }}</view>
           <view v-if="it._open" class="detail">
-            <view v-for="(v, k) in it.options" :key="k" class="opt" :class="{ ans: k === it.answer }">{{ k }}. {{ v }}</view>
+            <view v-for="(v, k) in it.options" :key="k" class="opt" :class="{ ans: (it.answer || '').indexOf(k) !== -1 }">{{ k }}. {{ v }}</view>
             <view class="ansline">正确答案 {{ it.answer }}</view>
             <view v-if="it.hs_explanation || it.explanation" class="exp">{{ it.hs_explanation || it.explanation }}</view>
             <view class="ops">
