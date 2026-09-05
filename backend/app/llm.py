@@ -1,9 +1,12 @@
 """LLM 客户端：OpenAI 兼容中转，支持图片（base64）与文本。"""
 import asyncio
 import json
+import logging
 import os
 
 import httpx
+
+log = logging.getLogger("kg.llm")
 
 BASE_URL = os.environ.get("LLM_BASE_URL", "").rstrip("/")
 API_KEY = os.environ.get("LLM_API_KEY", "")
@@ -170,8 +173,8 @@ async def chat_fast(messages: list, temperature: float = 0.2, max_tokens: int = 
                 )
                 resp.raise_for_status()
                 return _content(resp.json())
-        except (httpx.HTTPError, KeyError, IndexError, ValueError, EmptyReply):
-            pass
+        except (httpx.HTTPError, KeyError, IndexError, ValueError, EmptyReply) as e:
+            log.warning("[llm] rescue %s failed (%s: %s), fallback to %s", RESCUE_MODEL, type(e).__name__, e, TEXT_MODEL)
     return await chat(messages, temperature=temperature, max_tokens=max_tokens)
 
 

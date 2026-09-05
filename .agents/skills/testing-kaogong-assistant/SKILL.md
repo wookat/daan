@@ -5,6 +5,16 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R397 AI 错题分析（`POST /api/mistakes/analysis`）空 200 修复 生产复验 走查新经验（testing agent）
+
+- **AI 入口卡有门槛**：`book.vue` `v-if="tab!=='fav' && todoItems.length>=3"`，每个测试 uid 至少要造 **3 条待掌握错题**才会出现「AI 错题分析 · 生成」卡；最快是深链 `#/pages/practice/practice?qid=264672` 后用 `r396prac.py 1,2,3 3` 连错 3 题（同时顺带覆盖 R396 隔离题回落 hs 路径）。
+- **抓 AI 响应用 XHR 钩子而不是 `__hdr`**：`/tmp/cdp174/aihook.js` 在页面上下文 monkeypatch `XMLHttpRequest.open/send`，对 `/mistakes/analysis` 记 `iso0/iso1/ms/status/responseText` 到 `window.__ai`；同文档内 tab 切换（hash 路由）钩子仍在，但跨文档导航（改地址栏/F5）会丢，要在进入错题本页前、同一文档里装。判定：`JSON.parse(resp).analysis.trim().length>0`；旧空 200 会让前端显示「分析失败，请稍后重试」（无冒号），新 502 路径显示「分析失败：<detail>」（有冒号）——凭冒号区分空 200 与 502。
+- **服务端只有 access 行 + `[slow-req]`**：`llm.py` 的 `EmptyReply`/回落无日志，`grep EmptyReply` 必为 0；是否回落主通道只能由耗时推断（R397 实测 rescue 直出 ≈30 s，疑似回落 ≈52 s；R396 空 200 时 25–31 s）。`grep 502` 会命中 `/api/health` 行里的端口/时间片段，要看状态列而不是行数。
+- **限流 10 次/300 s/uid**：每 uid 只触发 1 次即可；两视口用两个 uid。前端 `timeout: 420000`，30–60 s 不会超时；加载文案「约需 30-60 秒」。
+- **收尾别用 `pkill -f holdvw.py` / `pgrep -af holdvw` 直接在 bash -c 里跑**：模式会匹配到当前 bash 自身把 shell 杀掉（exec 返回 -1）。用 `/tmp/cdp174/r397_teardown.py`（按 PID kill python holder、恢复 LS、`clearDeviceMetricsOverride`、导航回首页）。
+- `hold_restart.sh W H 1` 的第三个参数要写 `true` 才是 mobile（脚本判 `== 'true'`），`1` 会得到 `mobile=False`。
+- 审计脚本按轮次复制：`sed "s/test-r396c-%/test-r397-%/" /tmp/r396c_audit.py > /tmp/r397_audit.py`，末尾追加 `questions active (disabled=0)` 计数（预期 109371 / 总 156792）。
+
 ## R396c 读取层回落 hs（`db.list_mistakes` / `db.due_reviews`）生产复验 走查新经验（testing agent）
 
 - **读取层修复要用「DB raw vs API」对照证明**：前端快照仍写 `q.explanation||''` 时，`mistakes.explanation` raw `length` 应仍为 0，而 `/api/mistakes` / `/api/review` 返回 hs（264672 → 121 字）。审计脚本 ro 模式打印 `length(explanation),substr(explanation,1,40)`，两者不一致才说明修复真的在读取层；同时对照一条 base 非空的快照（264413 79 字「从9个分项中选6项…」）确认 `eq_base:true eq_hs:false` 不被覆盖；断言响应文本 `/q_hs/.test(txt)===false`。
