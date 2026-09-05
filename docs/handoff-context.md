@@ -1799,3 +1799,4 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 改动：H5 `@media (max-width:767px) .mask{bottom:calc(50px+safe-area)}`（同 `export-confirm.above-tabbar`）；`aiErr` 独立 + 「重试」，空正文按失败；入口显式 `aiAnalysis(false)`。源文件锁 `tests/book-sheet-tabbar.test.js`。
 - 不做：改 SRS 掌握阈值/答对即移出（需设计论证，R399+ 候选）、错因聚合（6/221）、19 套候选卷。
 - 本地 vitest 559 / eslint / build:h5 全绿。取证脚本 `~/r398_probe.py`、`~/r398_probe2.py`（只读）。
+- 上线与复验（PR #617，rev 9ee182e，bundle index-B0wIib1U.js）：375 五个触达弹层 `.mask` bottom 全部 762（tabbar 上方），强化卡「下次再说」717–742 可点（R396 时 767–792 被盖）；AI 真实成功 200/44.8 s 后本机 Fetch 拦截 502 → 失败态 + 重试重发 POST → 放行 200 渲染；1440 mask 仍 bottom 900；回归 PASS；容器 5xx 0 / slow-req 4（=4 次真实 AI）/ 0 重启；LEFTOVER 0。**首次在生产日志抓到 R397c 的 `[llm] rescue kimi-k3 failed (EmptyReply…) fallback to deepseek` ×2**（≈45 s 请求）——rescue→主通道回落已由生产事实证实。观察：一次回落后正文仅 126 字（首次 309）疑似偏短，待看主通道 max_tokens。未验证：扫描结果/报告 sheet、真实 502 分支。

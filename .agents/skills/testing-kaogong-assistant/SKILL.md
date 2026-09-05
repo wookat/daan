@@ -5,6 +5,16 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R398 错题本弹层让出 TabBar + AI 失败态可重试 生产复验 走查新经验（testing agent）
+
+- **375 弹层几何口径**：H5 `.uni-tabbar` fixed top=762（812−50）、z 998；`.mask` z 99。断言 `document.querySelector('.mask').getBoundingClientRect().bottom===762`（未修前 812），底部按钮 `rect.bottom<=762` 且 `document.elementFromPoint(cx,cy).closest('.sheet-done'|'.sheet-export'|'.rf-alt')` 非空（未修前返回 tabbar 的 IMG）。1440 `.mask` 是 `[288,0,1345,900]`、computed `bottom:0px`——左 288 是桌面侧栏布局（既有），别当劣化。
+- **强化卡只在 `/api/reinforce/suggest` 返回 `picked` 时出现**（需今日错题）；复习流可能比造出的错题多（到期/加练/重排），用 `/tmp/cdp174/r398_review.py`（按 `rItems/rIdx/reviewing` 找 Vue 组件后 CDP 点选项）做完到庆祝 sheet；别用坐标脚本盲点。
+- **本机拦截制造 AI 502**：`/tmp/cdp174/r398_intercept.py`（`Fetch.enable` 匹配 `*mistakes/analysis*` → `Fetch.fulfillRequest` 502 `{"detail":"AI 未返回内容，请稍后再试"}`，头 `X-Kg-Intercepted`），请求**不到达生产**；先做真实成功→F5（清 `aiHtml` 短路）→装 `aihook.js`→启拦截→点生成→点重试（`__ai.length` +1）→按 PID kill 拦截器→再点重试等真实 200。dry-run 用 `/api/r398probe`（拦截时 502，放行后真实 404，会在容器日志留 404 行，报告里注明）。`window.__bk`（Vue 组件引用）F5 后失效要重找。
+- **`__hdr`/`__cerr` 是每文档钩子**：地址栏深链、F5 都会清零，导出 `/api` 状态要在每次跨文档导航前 `cdp.py eval` 存文件；服务端 5xx 以容器日志直方图 `grep -oE '" [0-9]{3} ' | sort | uniq -c` 兜底。
+- **R397 之后 `llm.py` 回落有日志了**：`[llm] rescue kimi-k3 failed (EmptyReply: …), fallback to deepseek-…`，可与 `[slow-req] 44s POST /api/mistakes/analysis` 行按时间对应，证明回落发生（回落次 ≈45 s，直出 ≈23–34 s）。
+- 卷库路由是 `#/pages/exam/list`（不是 `exam/papers`）；地址栏带 `?r398=uid` 只是给 `r391usr.py prep` 用的标记，不会切 uid。
+- 收尾杀 holder：`r398_killvw.py`（ps 按 `holdvw.py|r398_intercept.py` 匹配 + 排除自身 PID），`kill $(ps … | awk)` 循环里 `ps -eo pid,args | grep -c` 会把 grep 自己算进去，用 `grep "[r]398_intercept"` 写法。
+
 ## R397 AI 错题分析（`POST /api/mistakes/analysis`）空 200 修复 生产复验 走查新经验（testing agent）
 
 - **AI 入口卡有门槛**：`book.vue` `v-if="tab!=='fav' && todoItems.length>=3"`，每个测试 uid 至少要造 **3 条待掌握错题**才会出现「AI 错题分析 · 生成」卡；最快是深链 `#/pages/practice/practice?qid=264672` 后用 `r396prac.py 1,2,3 3` 连错 3 题（同时顺带覆盖 R396 隔离题回落 hs 路径）。
