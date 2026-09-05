@@ -5,6 +5,17 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R414 补充（testing agent）— 模考多选 / book·favorites 24rpx
+- 模考含多选卷现已存在：paper **116**「2015年北京公务员考试《行测》」69 题，多选在 slot 19–24（273027 ABCD / 273028 ACD / 273030 BCD / 273031 ACD / 273032 BCD / 273036 BD）；paper 29 含 264342（ABC）、paper 31 含 275876（ACD）。进入 `#/pkgA/exam/exam?paper_id=116` 后必须 reload 才走 onLoad。
+- **先进 exam 页再 F5 会弹「继续上次模考？（已答 0/62 题）」**：首次进页已 `exam/start` 并写 LS `examProgress`，F5 后按 0 进度也提示恢复（会多留一条空 `exam_attempts` + `exam_progress` 行，清理时计入）。想干净测 resume 就先答题再 F5；测「重新开始」时留意这条空 attempt。
+- 模考多选选择器：题干下 `.multi-tip`（12px，文案「多选题：可选多项，已选 X，选完点「下一题」」）、选项 `.opt.sel`（多字母包含）、长按排除 `.opt.excl`（opacity .45）。单选点选后 ≈180ms `next()`，量「不跳题」要等 ≥500ms 再看 `n/62`。答题卡侧栏（1440 常显）/ 弹层（375）底部「已答 n/62」= `items.filter(q=>q._picked).length`，多选算 1。
+- 进度对账最稳的是页内 body 钩子：`POST /api/exam/progress` 的 `picks` 是 `{qid: 'BD'}`（按 qid），`submit` 的 `answers` 是 `{slot: 'BD'}`（按 1 起 slot）；容器 `exam_progress.picks`/`exam_attempts.answers` 同样两套键。键盘 A–D 只在 `innerWidth>=1024 && !cardOpen` 生效，按同一字母第二次只去掉该字母（B→D→B 得 D）。
+- 长按排除（`@longpress`）用 CDP `Input.dispatchTouchEvent` touchStart 后 sleep ≥600ms 再 touchEnd；只发 touchEnd 或短按不会触发。在按住期间读 `_excl/_picked` 最可靠。
+- 报告页详情 `.dopt.right`=正确项、`.dopt.wrong`=错选项，`.dans`「正确答案 X，你选了 Y」；多选漏选时正确项全部 right、无 wrong；DB `mistakes (user_answer,correct_answer)` 存多字母如 `('AC','ACD')`，`answer_log.picked` 同。
+- 找 Vue 实例：`el.__vueParentComponent` 沿 `parent` 找到含 `items`+`pick` 的 ctx；reload 后 `window.__exvm` 句柄失效要重找。钩子截断 response body 6000 字符，长 `exam/start` 响应别直接 `JSON.parse`。
+- book 页 375 `.trendcard/.trend-*/.kbd` 是 `display:none`（桌面媒体查询才显示），量它们必须 1440；`.trend-kn` 只在 4 周内有 `mastered_at` 时渲染；`.sort-chip` 仅 CSS 定义、模板未使用（量不到属正常）。`.recap-name` 80px nowrap ellipsis、`.recap-n` 20px 用 `scrollWidth<=clientWidth` 判无溢出。
+- 1440 下 book 想有数据可直接把 LS `anonUid` 切回 375 测试 uid（同前缀），不必再造数；`test-r414-%` 清理表：answer_log/exam_attempts/exam_progress/growth_events/mistakes/practice_progress/question_favs/review_log/user_profile（40 张含 uid 表自动枚举）。
+
 ## R413 补充（testing agent）— 多选题 / 复习吸底 / 收藏标绿
 - 练习页默认「自动下一题」开启（LS `autoNextOff` 未设）：多选题点「确认答案」判分后会立刻切到下一题，看不到 ✓/✗ 标记。测标记前先经顶栏 ··· 菜单原生关掉「自动下一题」（写 `autoNextOff=1`），再深链重进。
 - 深链 `#/pages/practice/practice?qid=N&module=changshi` 只在 `onLoad` 读 query，同页改 hash 不重进，需 `location.href=…; location.reload()`。每次 reload 清页内 HDR 钩子，换题前先 dump。

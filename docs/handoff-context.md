@@ -1897,3 +1897,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 校源队列资源缺口合并登记（6 行 hs 冲突 + 13 行选项串入分节标题，全 disabled，需原卷 PDF）；`error_reason` 7 天观察点 ≥ 09-11。详见 docs/iter/round-3/r413-multi-answer-practice-review-sticky-next.md。
 - 生产复验（testing agent）：375/1440 PASS；未测考试/模考态多选（卷库无 2015 北京卷）；预存 P2：收藏卡 `.anscmp` 23rpx=11.5px、卡内/收藏页 tag 10–11px。清理 22 行 → LEFTOVER 0；questions 156792/109371、quarantine 874、paper_exports 38。vitest 573 / eslint / build:h5 绿。
 - PR #619 评论：https://github.com/wookat/kaogong-assistant/pull/619#issuecomment-5555363108
+
+### R414（rev `e203afa`，bundle 变）
+- 生产只读：全库 156,792 行 answer 空/空白/小写/未升序或重复/越界全 0 → **现有数据已规范，不迁移**；导入 `import_questions`/管理端 PATCH/治理扫描接 `db.normalize_answer()`（去空白、大写、去重、升序、按 options 键校验，非法拒绝）。
+- R413 「卷库无可测多选卷」被修正：`exam_papers` 29（264342）/31（275876）/116（273027/273028/273030/273031/273032/273036）含活跃多选题且 `/api/exam/papers` 可见。模考链路此前全是单选假设（`answer[:1]`、`[:1]` 截断、点选即跳题、报告 `k === answer`）→ `exam_api._grade()` 统一三条判分（字母集完全一致才对；单选多涂仍 `status=multi` 不记分）、`answered` 口径改 `status=='ok'`、进度接受 1–4 个 A–D 归一存储、题面下发 `multi` 不带 answer；前端 `togglePickLetter` 点选切换不跳题 + `.multi-tip`，报告按包含标记。PK 本就排除多选未动。
+- book.vue 42 处 / favorites.vue 4 处 18–23rpx → 24rpx（R413 预存 P2）。详见 docs/iter/round-3/r414-exam-multi-answer-normalize-fontfloor.md。
+- 本地 pytest 434（+5）/ ruff / pyright 0；vitest 578（+5）/ eslint / build:h5 绿。生产复验（testing agent，375/1440，paper 116 原生作答→F5 恢复→交卷→报告→DB 对账）全 PASS；清理 25 行 → LEFTOVER 0；questions 156792/109371、quarantine 874、paper_exports 38。
+- 未测/遗留：OMR 答题卡多选（生产 38 张卷无多选样本）；`.trend-kn`（需 4 周内已掌握）；`.sort-chip` 仅 CSS 无模板；单选多涂 status=multi UI 无法产生。复验顺带暴露 P2：进 exam 页不作答直接 F5 会弹「继续上次模考？（已答 0/N 题）」并留空 `exam_attempts`+`exam_progress`（既有行为，R415 候选）。
