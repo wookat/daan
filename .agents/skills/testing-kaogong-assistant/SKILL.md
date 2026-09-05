@@ -5,6 +5,17 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R394 百度自适应标注（SSR/H5 壳 `applicable-device` meta + sitemap `mobile:mobile`）生产复验 走查新经验（testing agent）
+
+- **`/tiku*` 部署后原生导航首访可能拿到部署前旧 head**：CF Pages functions `caches.default` 是 SWR 语义（`cf-cache-status: DYNAMIC` 但带 `age` 秒数 + `cache-control: public, max-age=300`），TTL 过期后首个请求仍回旧副本并后台回源，`age` 可达数小时（R394 见 `age: 16203`）。断言 DOM 前先用 CDP `Network.enable` 捕 `responseReceived(type=Document)` 记 `age/cf-cache-status/fromDiskCache/fromServiceWorker`，DOM 为旧就重试一次原生导航，两次都如实写进报告；`?v=rand`+`X-Kg-Probe`+`no-store` 的页面上下文 fetch 永远是新副本，不能替代 DOM 断言。`/` 壳由 SW 提供（`fromServiceWorker=true`），`age` 为 null。
+- **原始 HTML 断言口径**：`/tiku/*` 用 `html.slice(vpEnd, adStart)===''` 证"紧随 viewport"；`/` 的 viewport 是 `document.write` 脚本产生的，只能证 `</script>` 与 ad meta 之间仅空白、ad 在 `<title` 之前；404 页要同时核 canonical 0、`og:url` 0、`robots noindex` 1（`_page(noindex=True)`）。
+- **sitemap 断言要命名空间感知**：`DOMParser('application/xml')` 后用 `getElementsByTagNameNS('http://www.baidu.com/schemas/sitemap-mobile/1/','mobile')`，`querySelectorAll('mobile\\:mobile')` 在 XML 文档里不可靠；同时核 `parsererror` 0、每条 `url` 首子 `loc`/末子 `mobile:mobile`、`sitemap.xml` 根 `sitemapindex` 且文本不含 `sitemap-mobile`。`/sitemap-questions-1.xml` ~950 KB，`Runtime.evaluate` 要 `awaitPromise` 并把超时放到 ≥60 s。
+- **跨文档导航（SEO 页 → 原生点 CTA → H5）会丢一次性钩子**：`Page.addScriptToEvaluateOnNewDocument` 的注册随 CDP 会话断开而失效，一次性脚本 `prep` 后跳到 SSR 页再回 H5，落地文档里 `__hdr/__conHook2` 为 undefined，落地前 3 条 `/api`（profile / question/:id / questions?limit=10&tag3=…）漏记。改用常驻进程 `/tmp/cdp174/holdhook.py`（保持会话并注册 HDR+CON2）再做 CTA 流程；漏记的用 `docker logs` 按 uid 补证状态码并在报告里标注。
+- **地址栏输入会被 omnibox 内联补全**（输 `…/tiku/` 回车变成历史里的 `…/tiku/q/234080`）：`type` 后先按 `Delete` 再 `Return`。
+- SEO 题目页 CTA 落地 `#/pages/practice/practice?qid=<id>&tag3=…&module=…&source=seo_q`，计数 `1/11`（所读题 + 10 题同考点），375 顶部有「刚才那题在这里作答，之后 10 题同考点练习」提示条；续练卡文案 `常识判断 · 已做 3/11 题`。
+- 容器 `/tmp` 里可能有部署方自己的临时脚本（R394 见 `r394_origin.py`，容器时间 +8h），`rm -rf /tmp/*r394*` 会连带删掉，清理前先 `ls -la` 甄别并在报告里说明。
+- 部署后日志里 `/tiku/q/999999999 404` 是预期 404 页（部署验证 + 本轮），`/sw.js 304` 是 SW 校验，都不算异常。
+
 ## R393 `PROBE_UA_MARKERS`+`devin/` / `humans.offhost_7d` / 看板「预览域名」尾缀 生产复验 走查新经验（testing agent）
 
 - **看板候选真人行对账用页面自己那次 `/api/admin/ops_status`**（`r377.py HOOK` 存 `__r377.ops`），并记 `generated_at`；crawler cron 每小时 ~:23 刷新，用户口头给的数字可能过期。期望字串按 `dashboard.js humanRow` 拼：`detail + direct + offhost`，注意 `源站直连扫描 N（已剔除） · 预览域名 N（已剔除）`（`（已剔除）` 后有一个空格再 `·`），逐字比对时别手写漏空格。
