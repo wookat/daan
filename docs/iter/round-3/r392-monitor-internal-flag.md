@@ -49,7 +49,26 @@ R391 留下的未验证项「zalize-monitor 中心侧是否入库」——本轮
 - `pytest` 378（+4）/ `ruff` 0 / `npx pyright app` 0 errors。
 - 观察到 1 次 `-x` 全量首跑 `test_int_params_400.py::test_save_mistake_question_id_normalized_to_integer` 失败，单跑 ×2 与全量 ×2 均通过，与本轮改动无交集（本轮不触 `mistakes`），记为 flake 观察。
 
-## 4. 生产验证（见 PR 评论）
+## 4. 生产验证（rev b514dcd，容器 StartedAt 2026-09-05T03:00:27Z）
 
-- 部署后从 Devin 出口（网段内）与 VPS（网段外 + `X-Kg-Probe: 1` / `python-requests` UA）各发一条带 `r392` 标记的 `/api/monitor/report`，中心 `/api/errors` 应见 `internal=1`；
-- `internal=0` 路径仅由单测背书（不向生产制造真实告警行）。
+中心 `/api/errors?site=kaogong&limit=200`（VPS 上读 `.env` 调用，key 不落盘）以容器启动时刻切分：
+
+| 切片 | 行数 | internal=0 | internal=1 |
+|---|---|---|---|
+| 部署前（历史） | 118 | 118 | 0 |
+| 部署后 | 6 | 0 | 6 |
+
+部署后 6 行逐条（全部 `internal=1`）：
+
+| 路径 | 触发方式 | 中心行 |
+|---|---|---|
+| A 网段主路 · js | Devin 出口 `140.232.64.4` + Mac Chrome 真人 UA `POST /api/monitor/report` | `js` `r392v-… A devin-net real-ua` |
+| B 网段主路 · 5xx `status>=500` | 同出口 `POST /api/auth/wxlogin` → 503（`WX_MINIAPP_SECRET` 未配）×2（真人 UA / `curl` UA） | `5xx 503 HTTP 503 POST /api/auth/wxlogin` ×2 |
+| D 显式头 | VPS 出口 `150.109.230.174`（网段外）+ iPhone 真人 UA + `X-Kg-Probe: 1` | `js` `r392vps-… D vps explicit-header` |
+| E UA 签名 | VPS 出口（网段外）+ `python-requests/2.32` 无显式头 | `js` `r392vps-… E vps automation-ua` |
+| GUI 走查 | testing agent 生产 Chrome 页面 console `fetch('/api/monitor/report')`（无探针头、Linux Chrome UA、出口在网段内） | `js` `r392-gui-check 1788577909405` |
+
+- `/api/summary?since_hours=168`：`kaogong/js count 98, internal 4`（此前 `internal 0`）——内部走查从此不进 `checkAndAlert` 的 `internal=0` 口径。
+- 未验证：`internal=0`（真人）路径仅由单测背书——不向生产制造真实告警行；未捕获异常 → 500 的 5xx 分支（R348-B1 后畸形参数已统一 400，线上无可安全触发的 500）仅单测覆盖；中心告警邮件是否真的不再发（`checkAndAlert` 每 15 min 只扫最近 15 min 的 `internal=0` 行，历史 118 行已滚出窗口；本轮未等下个 cron 观察）。
+- 业务回归（testing agent 1440/375，bundle 不变）：首页/言语 3 题→保留→续练 4/10/卷库 120==`/api/exam/papers?kind=zhenti`/错题本 全 PASS，`/api` 61+58 条全 200、console 0、容器 0 重启、LEFTOVER 0、questions 156792。
+- 附带观察：部署脚本 Lighthouse `/` LCP 2749 ms 违例，与 R388/R389 同形态（bundle/HTML 不变）判本机噪音。

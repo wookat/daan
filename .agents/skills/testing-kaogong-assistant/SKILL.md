@@ -5,6 +5,15 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R392 后端 monitor `internal` 标记 短版生产回归 走查新经验（testing agent）
+
+- **后端 `probe_request` 三路判定**（`backend/app/auth.py`）：`X-Kg-Probe: 1` 头 / 出口 IP 命中 `KG_PROBE_CIDRS`（容器 env，`docker exec … printenv KG_PROBE_CIDRS`）/ UA 含 `python-requests|curl/|headlesschrome|playwright…`。GUI 浏览器发的请求（真人 Chrome UA、无探针头）**只走网段路**，验证前先确认本机出口 `curl ifconfig.me` 在 CIDR 内；报告里明确"本侧只能证 200 + 源站 IP/UA/无探针头，中心侧 `internal` 值由用户核对"。
+- **要在页面 console 执行用户给定语句时**：DevTools Console 对 `type` 长语句会自动补全括号导致 SyntaxError（请求根本没发出）；改 `xclip -selection clipboard` 写入后 `ctrl+v` 粘贴。要记录 `Date.now()` 生成的 message 原文，在语句前加 `window.__r392msg='…'+Date.now()` 再引用它，body 语义不变；同时开着 `r391b_int.py watch` 拦截器可拿到 postData 原文与 response 200（同一 POST 记 request+response 两条，别算成 2 次上报）。
+- **卷库卷数对账要用页面实际请求**：`pkgA/exam/list.vue` 请求的是 `/api/exam/papers?kind=zhenti&uid=…`（120），无参 `/api/exam/papers` 会多出 mock/retired（200 条）——直接比无参接口会误判不一致。卡片数可用叶子节点 text `开始模考` 计数 + `已刷 0/N 卷` 文案双核。
+- 首页「专项练习」模块行的 `已做 N / 正确率` 是浏览器 localStorage 侧统计，同 profile 换 test uid 后仍显示上个 uid 的数字，不是后端串数据。
+- 部署后 docker 日志若见 `POST /api/auth/wxlogin 503` 且源站 IP 在探针网段（curl/浏览器 UA），多为部署方自己的 5xx 转发验证，按时间戳与本轮 GUI 起止对照后单列，不要直接记为业务 5xx。
+- `r391usr.py read` 需要第 2 个参数（输出 json 路径），`/api` 列表在 `hdr` 键；`restore_ls.py` 期望备份是 JSON **字串**（双重编码），若备份存的是原生对象需改用 CDP 直接 `localStorage.setItem` 写回。
+
 ## R391b `describeRejection` + `tabbar-badge.js fail:noop` 短版生产复验 走查新经验（testing agent）
 
 - **角标/小工具模块可能被 Vite 拆成独立共享 chunk**（如 `/assets/tabbar-badge.<hash>.js`，home/book/ask 各 import 一次），主 bundle 里 grep `setTabBarBadge({…fail` 找不到调用点不等于没上线：先在主 bundle / 页面 chunk 里找 `import("./tabbar-badge.` 取哈希再拉该 chunk 断言 `fail:` 次数。主 bundle 里的 `setTabBarBadge` 字串是 uni 内部 API 名。
