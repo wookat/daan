@@ -5,6 +5,13 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R412 社交栏（q-social-bar）热区/字号复验新经验（testing agent）
+- 组件挂载点：practice.vue 答题后解析区（`.qsb` 前一兄弟是 `.report-link` 纠错，「下一题」在 fixed `.banner > .bnext`）、book.vue 错题卡「点开看答案与详解」展开处、复习卡。几何用 `getBoundingClientRect` 量 `.qsb-link/.nop/.edit`，注意 `.edit`「改」是 inline-block + padding 8px，实测高 = 8+line-height(19.2)+8 ≈ 35px，不到 40；整个 `.mynote` 块也绑定 `startEdit`。
+- 「分享给队友」不是弹层：`POST /api/share/create` + 剪贴板 + toast「分享链接已复制，发给队友吧」约 2s 自动消失；会写 `shared_questions.from_uid` 一行，清理要包含该表（审计脚本的 uid 列枚举已覆盖）。「讨论」是 `navigateTo /pkgA/social/discuss?qid=`，页内 ‹ 返回练习页状态保留。
+- 「🔥 热评」条需 `question_comments.status='ok'` 的题；生产目前全部 deleted（`/api/comments/count` 均 0），且规则不允许写讨论 → 只能标未测。`.firstc`「抢首评」在 `count===0` 时必现，可作字号抽查。
+- xdotool `type` 会丢中文：textarea 需要中文时先原生输入 ASCII 部分，再用 CDP `setRangeText + dispatchEvent('input')` 补中文，保存仍走原生点击。
+- 深链换 uid 时 `localStorage.setItem + location.href + reload` 会重置页面 HDR 钩子，每段先 dump；大 localStorage 恢复要用 `cdp.py evalfile <js>`（命令行参数会 Argument list too long）。
+
 ## R411 字号/空态 CSS 轮新经验（testing agent）
 
 - **「全页 <12px 0 处」断言要分两层报**：先按改动 diff 里的选择器逐个量（`.hm-yl/.hm-note/.hm-lt/.tpct/.km-cov-in/.km-lg`…），再做 TreeWalker 全页叶子文本扫。stats 页有些卡片只在数据够多时才渲染（`predict-card` 需 ≥30 题作答、`.km-cov-in` 冷启动是 `--`），初始少量数据扫出 0 处不代表全页达标——先造够作答（同 uid 深链多练几轮）再扫一次。范围外组件（`components/predict-card`、uni tabbar 标签 10px）单列，不混进「本轮改动」判定。

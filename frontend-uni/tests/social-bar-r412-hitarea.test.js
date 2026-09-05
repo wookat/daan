@@ -11,7 +11,8 @@ describe('R412 社交栏文字链热区（源文件锁）', () => {
       expect(rule(n)).toMatch(/min-height:\s*40px/);
       expect(rule(n)).toMatch(/display:\s*inline-flex/);
     }
-    expect(rule('edit')).toMatch(/padding:\s*8px/);
+    expect(rule('edit')).toMatch(/min-height:\s*40px/);
+    expect(rule('edit')).toMatch(/display:\s*inline-flex/);
     expect(src.slice(src.indexOf('<style'))).not.toMatch(/font-size:\s*(?:1\d|2[0-3])rpx/);
   });
 });

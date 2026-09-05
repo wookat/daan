@@ -130,7 +130,7 @@ export default {
 .qsb { margin-top: 16rpx; }
 .mynote { background: var(--warn-soft); border-left: 6rpx solid #f59e0b; border-radius: 0 12rpx 12rpx 0; padding: 14rpx 18rpx; font-size: 24rpx; color: var(--ink-2); line-height: 1.6; }
 .nb { color: #b45309; font-weight: 600; }
-.edit { color: var(--brand-text); margin-left: 4rpx; font-size: 24rpx; display: inline-block; padding: 8px 8rpx; margin-top: -8px; margin-bottom: -8px; }
+.edit { color: var(--brand-text); margin-left: 4rpx; font-size: 24rpx; display: inline-flex; align-items: center; min-height: 40px; padding: 0 8rpx; margin-top: -10px; margin-bottom: -10px; vertical-align: middle; }
 .note-edit { background: var(--warn-soft); border-radius: 14rpx; padding: 16rpx 18rpx; }
 .note-ta { width: 100%; min-height: 100rpx; font-size: 25rpx; line-height: 1.6; box-sizing: border-box; }
 .note-ops { display: flex; justify-content: flex-end; gap: 34rpx; margin-top: 10rpx; }
