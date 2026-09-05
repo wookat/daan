@@ -433,6 +433,11 @@
           <view class="e-t">还没有已掌握的错题</view>
           <view class="e-s">在待掌握错题的「···」里标为已掌握，或复习连对后自动进入这里</view>
         </template>
+        <template v-else-if="tab === 'todo' && !kw && !hasFilter">
+          <view class="e-t">待掌握已清零</view>
+          <view class="e-s">{{ doneItems.length }} 道错题已全部掌握；再错的题会回到这里，也可去「已掌握」里恢复复习</view>
+          <wd-button type="primary" custom-class="e-btn2" @click="goPractice">去刷题</wd-button>
+        </template>
         <template v-else>
           <view class="e-t">没有匹配的错题</view>
           <view class="e-s">换个关键词或清除筛选试试</view>

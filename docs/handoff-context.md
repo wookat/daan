@@ -1877,3 +1877,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 8 项次级屏全部功能可达，无 P0；P1×6：375 末卡「···」被 FAB 盖（`elementFromPoint`→`fab-main`）、`uni.showActionSheet` 375 末行越过 tabbar 762 / 1440 裁切、复习错因 chip 26px、筛选 chip 24px、搜索 ✕ 24×16。修法（仅 book.vue + practice.vue 样式）：`.fabspace` 占位；「···」改页内 `.mask` sheet（R398 让位规则、48px 行、Esc 关）并放入错因自评四选一（PATCH error_reason，可取消）；`.rz/.kpchip/.rp-chip` 40px + 26rpx、`.searchclear` 40×40、`.e-btn2` 44px；已掌握 tab 专属空态；batchbar 常驻「退出」。源文件锁 tests/book-r410-audit.test.js。vitest 564 / eslint / build:h5 绿。
 - 部署 rev `2541413`（build 后宿主 92%→复验后 91%/4.6 G）；testing agent R410b 复验（uid test-r410b-*，375/1440，46 行清理→LEFTOVER 0）：6 项 P1 全部复量 PASS、1440 复习全流程补做 PASS、R398 回归 PASS；容器 healthy 0 重启、5xx/Traceback/locked/slow-req 0。报告 `~/r410_regress_report.md`、录屏 `~/screencasts/r410b-regress/r410b-regress-edited.mp4`。
 - 未做/遗留：粉笔一手截图仍缺；待掌握 tab 批量清空后空态仍是通用文案（P2）；stats 9–11.5px 字号、社交栏 17px 文字链、复习「下一题」初始 y774 未改；错因入口是否被真人使用待后续数据。
+
+### R411 R410 遗留 P2 收口 + R409「3 行 hs 答案冲突」复核为解析器误报（2026-09-06，同分支 PR #619，bundle 变）
+- 详见 docs/iter/round-3/r411-stats-font-floor-todo-empty-hs-conflict-recheck.md。1046855/1046866/1046874 hs 结尾均为「确认答案为 D/A/C」与 answer 一致，R409 抓的「选X的…是错拿…」是干扰项解释 → **从校源队列移除、不改库**；三题独立复算 1000/80/79 与 DB 一致。后续 hs 标记比对优先「确认答案为/正确答案为/故选」，句末「选X」仅兜底且排除「选X的…」形态。
+- 13 行选项串入分节标题仍全 disabled；容器/宿主无原卷文件（只有 db 与备份）→ 校源队列标「资源缺口：需原始真题 PDF」。
+- stats.vue 样式 37 处 18–23rpx → 24rpx（12px 下限）；待掌握 tab 全部掌握后专属空态「待掌握已清零」+ 去刷题。源文件锁 tests/stats-r411-fontfloor.test.js。vitest 566 / eslint / build:h5 绿。
