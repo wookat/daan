@@ -5,6 +5,14 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R396c 读取层回落 hs（`db.list_mistakes` / `db.due_reviews`）生产复验 走查新经验（testing agent）
+
+- **读取层修复要用「DB raw vs API」对照证明**：前端快照仍写 `q.explanation||''` 时，`mistakes.explanation` raw `length` 应仍为 0，而 `/api/mistakes` / `/api/review` 返回 hs（264672 → 121 字）。审计脚本 ro 模式打印 `length(explanation),substr(explanation,1,40)`，两者不一致才说明修复真的在读取层；同时对照一条 base 非空的快照（264413 79 字「从9个分项中选6项…」）确认 `eq_base:true eq_hs:false` 不被覆盖；断言响应文本 `/q_hs/.test(txt)===false`。
+- **到期复习接口是 `GET /api/review?uid=`**（`study_api.py` `api_review_due`），不是 `/api/review/due`（404，会污染容器日志 404 直方图——报告里要注明是探针）。要在进入复习、答题之前取样，答完后该题 `next_review` 后移，due 列表会变空。
+- **深链 `#/pages/practice/practice?qid=N` 对 `disabled=1` 的题会静默跳过**、落到默认模块包（例：236202「花生壳：核桃仁」为 disabled）。构造"无 base 无 hs"边界前先查 `/api/question/{id}` 的 `disabled`；生产 `disabled=0` 且两解析均空的题目数为 0，该边界在生产无法经 UI 构造。
+- 375 卡片越界判定：`right>375` 的节点若全部是 `visibility:hidden`、`top≈-511` 的 400 px 测量 div（uni rich-text/textarea 影子节点），不算溢出；以 `documentElement.scrollWidth==375` + 卡片 `.card` right ≤ 375 为准。
+- `hold_restart.sh` 的 `pgrep -f "^python3 -u …holdvw.py"` 在 pyenv 下匹配不到（cmdline 是完整路径），会残留多个 holder；收尾用 `pgrep -af holdvw.py` 按 PID kill 再 `clearDeviceMetricsOverride`。
+
 ## R396b 「解析串题」可逆隔离（`explanation_quarantine`）生产复验 走查新经验（testing agent）
 
 - **解析来源要按路径分别验证**：交卷路径快照（`exam_api.py` `explanation or hs_explanation`）与试卷报告 / 练习页（读 `hs_explanation`）在隔离后都能显示 hs；但**练习路径**写入 `mistakes.explanation` 用的是 `q.explanation||''`，且 `db.list_mistakes` 不 JOIN `questions.hs_explanation` → 隔离题经练习页答错进错题本后，卡片「参考解析」与复习详解为空（R396b 复现 264672，`/api/mistakes` `explanation:""`）。验证隔离类改动时务必走一次「练习页答错隔离题 → 错题卡展开 → 复习详解」的对抗路径，别只走交卷路径。
