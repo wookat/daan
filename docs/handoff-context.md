@@ -1765,3 +1765,13 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 未验证：真人 `internal=0` 路径仅单测（不向生产制造告警行）；未捕获异常→500 分支仅单测（R348-B1 后线上无可安全触发的 500）；中心告警邮件是否停发（`checkAndAlert` 只扫最近 15 min 窗口 `internal=0` 行，历史 118 行已滚出窗口，本轮未等下个 cron 观察）。
 - 取证工具：`~/r392_vps{,2,3}.sh`（VPS 上读 .env 调中心，key 不打印，不落 handoff）；生产安全 5xx 触发器 = `POST /api/auth/wxlogin {"code":"x"}` → 503（`WX_MINIAPP_SECRET` 未配时恒定）。
 - R393 候选：① 中心 `/api/summary` 下个 cron 后核 kaogong `internal=0` 增量是否为 0（真人零错误 vs 探针全标）；② 09-06 后回看 GSC 页面索引 / Bing sitemap+IndexNow；③ `vue:chunk-*` 是否出现 `internal=0`（真人 chunk 挂起首批可见数据）；④ 仍无可确认外部真人；⑤ 宿主 IO 争用第 13 次（本次部署 Docker 重建约 8 min）；⑥ 下次 SOP-10 审计 ~R398。
+
+### R393 候选真人口径剔除 Devin 自动化 UA / 显式 X-Kg-Probe 头 / 预览域名 offhost 单列（2026-09-05，分支 devin/*-r393-devin-ua-offhost，base=main，PR #612）
+- 取证与方案见 docs/iter/round-3/r393-devin-ua-offhost-attribution.md：三日归档 `Devin/1.0` UA 7,806 行，1 行经 Google 预取代理 IPv6 转发漏判网段；候选真人 61 条逐条归因（Devin UA 1 / 显式头 2 / `kaogong-h5.pages.dev` 12 / validator 1 / VPS 自身出口 1 / vivo 单设备 43）。
+- 改动：`PROBE_UA_MARKERS` + `devin/`；日报 `BOT_GENERIC` 对齐并单测锁两份清单；crawler 真人分支剔除显式头 + `humans.offhost`（`--site-host`）；看板尾缀「预览域名 N（已剔除）」；VPS 自身 IP 入 `probe-ips.txt`（不进 `KG_PROBE_CIDRS`）。
+- 验证结果（rev ed98be5）：网段外 Devin UA `probe=1` / 普通 UA 0；`offhost` 12 与取证逐日一致；候选真人 61→44；看板 7 项==ops_status；1440/375 业务回归 PASS；本地 pytest 380 / ruff / pyright 0。
+
+### R394 搜索引擎 14 天抓取/5xx 归因 + 百度自适应标注（2026-09-05，分支 devin/1788582081-r394-baidu-adapt-markup，base=main）
+- 取证：14 天引擎抓取 Yandex 1,282 / Bing 126 / Google 26 / **Baiduspider 经边缘真实抓取仅 1 条**（09-04 那条 `/tiku/q/297391` 是探针网段自测）；引擎 5xx 39 条中 29 条集中在 08-31 10:23–10:24Z（R372 前重启窗口），其余零散在部署窗口，不做零停机改造。官方文献：自适应站不用移动适配工具；head 紧随 viewport 加 `applicable-device=pc,mobile`；移动 sitemap `<mobile:mobile type="pc,mobile"/>`（wiki/544；百度公开 XSD 枚举过时不含该值，以公告为准）。详见 docs/iter/round-3/r394-baidu-adapt-markup.md。
+- 改动（零业务）：SSR `_page()` head、H5 `index.html` 各加 1 条 meta；`_urlset()` 加 `xmlns:mobile` + 每条 URL 尾部扩展元素；新增 `tests/test_seo_baidu_adapt.py` + `seo-title.test.js` 用例。本地 pytest 383 / ruff / pyright 0 / vitest 556 / eslint / build:h5 全绿。
+- 验收边界：其他引擎对扩展命名空间的容忍以部署后 sitemap 抓取仍 200 + GSC/Bing 站点地图状态无报错为准；百度是否因此识别为自适应/收录无法从我方日志验证（无站长账号）。

@@ -27,3 +27,14 @@ describe('首页 <title> 的真实来源是 manifest.h5.title', () => {
     expect(ogTitle).toBe(h5Title);
   });
 });
+
+// R394：百度自适应标注（搜索学堂《自适应对百度友好关键》）——首页壳与 /tiku/* SSR 页同步声明 pc,mobile。
+describe('首页壳百度自适应标注', () => {
+  it('head 内恰有一条 applicable-device=pc,mobile，且在 <title> 之前', () => {
+    const head = html.split('</head>')[0];
+    const tags = head.match(/<meta name="applicable-device"[^>]*>/g) || [];
+    expect(tags).toHaveLength(1);
+    expect(tags[0]).toContain('content="pc,mobile"');
+    expect(head.indexOf(tags[0])).toBeLessThan(head.indexOf('<title>'));
+  });
+});
