@@ -1,5 +1,5 @@
 <view class="navbar {{brand ? 'navbar-brand' : ''}}" style="padding-top: {{statusBarHeight}}px">
-  <view class="nav-row">
+  <view class="nav-row" style="padding-right: {{capsuleW}}px">
     <view wx:if="{{back}}" class="nav-back" bind:tap="onBack">‹</view>
     <text class="nav-title">{{title}}</text>
   </view>

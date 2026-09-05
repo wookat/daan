@@ -280,7 +280,7 @@ export function fetchPaperQuestions(source: string): Promise<QuestionsResp> {
 }
 
 export function fetchExamPapers(p: { year?: number | null; region?: string | null } = {}): Promise<ExamPapersResp> {
-  let q = '/api/exam/papers?uid=' + encodeURIComponent(anonUid());
+  let q = '/api/exam/papers?kind=zhenti&uid=' + encodeURIComponent(anonUid());
   if (p.year) q += '&year=' + p.year;
   if (p.region) q += '&region=' + encodeURIComponent(p.region);
   return request<ExamPapersResp>(q);
