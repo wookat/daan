@@ -29,11 +29,12 @@
         </view>
         <text class="q" :style="qStyle">{{ matInfo && !matOpen[idx] ? matInfo.stem : cur.question }}</text>
         <image v-if="cur.image" :src="cur.image" class="qimg" mode="widthFix" />
+        <view v-if="cur.multi" class="multi-tip">多选题：可选多项{{ cur._picked ? '，已选 ' + cur._picked : '' }}，选完点「下一题」</view>
         <view
           v-for="(v, k) in cur.options"
           :key="k"
           class="opt"
-          :class="{ sel: cur._picked === k, excl: (cur._excl || []).includes(k) }"
+          :class="{ sel: (cur._picked || '').indexOf(k) !== -1, excl: (cur._excl || []).includes(k) }"
           @click="pick(k)"
           @longpress="toggleExcl(k)"
         >
@@ -116,7 +117,7 @@ import { submitFailPlan } from '../../exam-policy.js';
 import { dayKey } from '../../checkin.js';
 import { splitMaterial, sameMaterial } from '../../material.js';
 import { crossedTimeAlert } from '../../exam-alert.js';
-import { toggleExcl, pickWithExcl } from '../../exam-excl.js';
+import { toggleExcl, pickWithExcl, togglePickLetter } from '../../exam-excl.js';
 import { fontSizes, normFontLv } from '../../font-size.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
@@ -290,6 +291,11 @@ export default {
     },
     pick(k) {
       this.cur._excl = pickWithExcl(this.cur._excl, k);
+      if (this.cur.multi) {
+        this.cur._picked = togglePickLetter(this.cur._picked, k);
+        this.saveProgress();
+        return;
+      }
       this.cur._picked = this.cur._picked === k ? '' : k;
       this.saveProgress();
       if (this.cur._picked && this.idx + 1 < this.items.length) {
@@ -555,6 +561,7 @@ export default {
 .qimg { width: 100%; border-radius: 12rpx; margin-bottom: 16rpx; background: var(--fill); }
 .opt { display: flex; align-items: center; border: 2rpx solid var(--line); border-radius: 20rpx; padding: 22rpx 24rpx; margin-bottom: 20rpx; font-size: 29rpx; line-height: 1.6; min-height: 44px; box-sizing: border-box; }
 .opt.sel { border-color: var(--brand-text); background: var(--brand-soft); }
+.multi-tip { font-size: 24rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 10rpx; padding: 10rpx 16rpx; margin-bottom: 16rpx; }
 .okey { flex-shrink: 0; width: 52rpx; height: 52rpx; line-height: 52rpx; text-align: center; border-radius: 50%; background: var(--soft-bg); color: var(--ink-2); font-weight: 600; font-size: 26rpx; margin-right: 20rpx; border: 1rpx solid var(--line); }
 .opt.sel .okey { background: var(--brand); color: #fff; border-color: var(--brand-text); }
 .opt.excl { opacity: 0.45; }

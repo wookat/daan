@@ -6,7 +6,15 @@ export function toggleExcl(excl, k, picked) {
   const cur = typeof picked === 'string' ? picked : '';
   if (typeof k !== 'string' || !k) return { excl: list, picked: cur };
   if (list.includes(k)) return { excl: list.filter((x) => x !== k), picked: cur };
-  return { excl: list.concat(k), picked: cur === k ? '' : cur };
+  return { excl: list.concat(k), picked: cur.split('').filter((x) => x !== k).join('') };
+}
+
+// 多选题点选（R414）：在已选字母串中切换 k，结果按字母升序，与服务端 normalize_answer 同序。
+export function togglePickLetter(picked, k) {
+  const cur = typeof picked === 'string' ? picked.split('') : [];
+  if (typeof k !== 'string' || !k) return cur.join('');
+  const set = cur.includes(k) ? cur.filter((x) => x !== k) : cur.concat(k);
+  return [...new Set(set)].sort().join('');
 }
 
 export function pickWithExcl(excl, k) {

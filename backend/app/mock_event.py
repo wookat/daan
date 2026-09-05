@@ -479,8 +479,8 @@ def api_event_report(event_id: int, uid: str = ""):
             q = qmap.get(qid)
             if not q:
                 continue
-            picked = (picks.get(i + 1) or "").strip().upper()
-            correct = picked == (q.get("answer") or "").strip().upper()[:1]
+            picked = db.normalize_answer(picks.get(i + 1))
+            correct = bool(picked) and picked == db.normalize_answer(q.get("answer"))
             tag = q.get("tag3")
             if tag and tag != "UNKNOWN":
                 tag_wrong.setdefault(tag, [0, 0])

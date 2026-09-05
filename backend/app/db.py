@@ -2173,6 +2173,18 @@ def normalize_submodule(sub: str | None) -> str | None:
 _RESIDUE_RE = re.compile(r"[一二三四五六七八九十]、|第[一二三四五]部分|共\d+题")
 
 
+def normalize_answer(raw, opts: dict | None = None) -> str:
+    """答案字母归一：去空白、大写、去重、按字母升序（多选题 'DB' -> 'BD'）。
+
+    传 opts 时任一字母不在选项键内返回 ''（调用方按无效处理）。"""
+    letters = sorted({ch for ch in str(raw or "").strip().upper() if "A" <= ch <= "Z"})
+    if opts is not None:
+        keys = {str(k).strip().upper() for k in opts}
+        if not letters or any(ch not in keys for ch in letters):
+            return ""
+    return "".join(letters)
+
+
 def _bad_options(opts: dict) -> bool:
     vals = [str(v).strip() for v in opts.values()]
     if len(vals) < 2 or any(not v for v in vals) or len(set(vals)) < len(vals):
@@ -2222,12 +2234,12 @@ def import_questions(items: list[dict], batch: str | None = None) -> dict:
         opts = q.get("options") or {}
         if q.get("is_real") and (not q.get("source") or q.get("source") == "original"):
             q["is_real"] = False
+        answer = normalize_answer(q.get("answer"), opts) if isinstance(opts, dict) else ""
         if (
             q.get("module") not in VALID_MODULES
             or not q.get("question")
-            or not q.get("answer")
+            or not answer
             or not isinstance(opts, dict)
-            or q.get("answer") not in opts
             or _bad_options(opts)
         ):
             skipped += 1
@@ -2239,7 +2251,7 @@ def import_questions(items: list[dict], batch: str | None = None) -> dict:
                 q.get("question_type"),
                 q.get("question"),
                 json.dumps(opts, ensure_ascii=False),
-                q.get("answer"),
+                answer,
                 q.get("explanation"),
                 q.get("source"),
                 normalize_submodule(q.get("submodule")),
@@ -4553,7 +4565,7 @@ def _governance_scan_uncached() -> dict:
             opts = json.loads(r["options"] or "{}")
         except ValueError:
             opts = None
-        ans = (r["answer"] or "").strip().upper()[:1]
+        ans = normalize_answer(r["answer"])
         if not text:
             problems.append("空题干")
         if opts is None:
@@ -4564,7 +4576,7 @@ def _governance_scan_uncached() -> dict:
             vals = [str(v).strip() for v in opts.values()]
             if len(set(vals)) < len(vals):
                 problems.append("选项内容重复")
-            if ans and ans not in {str(k).strip().upper() for k in opts}:
+            if ans and ans != normalize_answer(ans, opts):
                 problems.append(f"答案 {ans} 越界")
         if not ans:
             problems.append("缺答案")

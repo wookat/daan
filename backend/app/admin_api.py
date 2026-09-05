@@ -76,6 +76,16 @@ def api_admin_update_question(qid: int, body: dict, x_admin_token: str | None = 
     if "options" in body:
         if not isinstance(body["options"], dict):
             raise HTTPException(400, "options 需为对象")
+    if "answer" in body:
+        opts = body["options"] if isinstance(body.get("options"), dict) else None
+        if opts is None:
+            rows = db.questions_by_ids([qid])
+            opts = rows[0].get("options") if rows and isinstance(rows[0].get("options"), dict) else None
+        ans = db.normalize_answer(body["answer"], opts)
+        if not ans:
+            raise HTTPException(400, "answer 需为选项键内的字母（多选按字母升序拼接）")
+        body["answer"] = ans
+    if "options" in body:
         body["options"] = json.dumps(body["options"], ensure_ascii=False)
     if not db.admin_update_question(qid, body):
         raise HTTPException(400, "无可更新字段或题目不存在")

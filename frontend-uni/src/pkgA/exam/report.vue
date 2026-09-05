@@ -243,7 +243,7 @@
           <text v-else class="dq">{{ detail.question }}</text>
           <image v-if="detail.image" class="dimg" :src="imgUrl(detail.image)" mode="widthFix" @click="previewImg(detail.image)" />
           <view v-if="detail.image && detail.image_credit" class="dimg-credit">图源：{{ detail.image_credit }}</view>
-          <view v-for="(v, k) in detail.options" :key="k" class="dopt" :class="{ right: k === detail.answer, wrong: k === detail.picked && k !== detail.answer }">
+          <view v-for="(v, k) in detail.options" :key="k" class="dopt" :class="{ right: (detail.answer || '').indexOf(k) !== -1, wrong: (detail.picked || '').indexOf(k) !== -1 && (detail.answer || '').indexOf(k) === -1 }">
             <text>{{ k }}. {{ v }}</text>
           </view>
           <view class="dans">
