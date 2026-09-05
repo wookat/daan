@@ -91,7 +91,7 @@ export default {
 .pcard { background: var(--card); border-radius: 16rpx; padding: 28rpx; margin-bottom: 20rpx; box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04); }
 .p-head { display: flex; justify-content: space-between; align-items: center; }
 .p-title { font-size: 30rpx; font-weight: 600; color: var(--ink); }
-.p-conf { font-size: 22rpx; color: var(--ink-2); background: var(--fill); border-radius: 999rpx; padding: 4rpx 16rpx; }
+.p-conf { font-size: 24rpx; color: var(--ink-2); background: var(--fill); border-radius: 999rpx; padding: 4rpx 16rpx; }
 .p-hero { display: flex; align-items: flex-end; gap: 24rpx; margin: 20rpx 0 8rpx; }
 .p-score-w { display: flex; align-items: baseline; }
 .p-score { font-size: 76rpx; font-weight: 700; color: var(--brand-text); line-height: 1; }
@@ -99,23 +99,23 @@ export default {
 .p-meta { display: flex; flex-direction: column; gap: 6rpx; padding-bottom: 6rpx; }
 .p-delta { font-size: 24rpx; color: #12b76a; font-weight: 600; }
 .p-delta.down { color: #ef4444; }
-.p-n { font-size: 22rpx; color: var(--ink-3); }
+.p-n { font-size: 24rpx; color: var(--ink-3); }
 .p-chart { display: flex; align-items: flex-end; gap: 8rpx; height: 200rpx; margin: 20rpx 0 8rpx; }
 .p-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
-.p-col-v { font-size: 20rpx; color: var(--ink-3); }
+.p-col-v { font-size: 24rpx; color: var(--ink-3); }
 .p-col-v.hot { color: var(--brand-text); font-weight: 600; }
 .p-bar-w { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
 .p-bar { width: 40%; max-width: 24rpx; min-height: 8rpx; background: var(--brand-soft-2); border-radius: 6rpx 6rpx 0 0; }
 .p-bar.hot { background: var(--brand); }
-.p-col-l { font-size: 20rpx; color: var(--ink-3); margin-top: 6rpx; }
+.p-col-l { font-size: 24rpx; color: var(--ink-3); margin-top: 6rpx; }
 .p-mods { margin-top: 16rpx; display: flex; flex-direction: column; gap: 14rpx; }
 .p-mod { display: flex; align-items: center; gap: 14rpx; }
 .p-mod-n { width: 120rpx; font-size: 24rpx; color: var(--ink-2); }
 .p-mod-bar { flex: 1; height: 14rpx; background: var(--fill); border-radius: 999rpx; overflow: hidden; }
 .p-mod-fill { height: 100%; background: linear-gradient(90deg, #7ea3f8, var(--brand)); border-radius: 999rpx; }
 .p-mod-s { width: 100rpx; text-align: right; font-size: 24rpx; color: var(--ink); font-weight: 600; }
-.p-mod-mx { font-size: 20rpx; color: var(--ink-3); font-weight: 400; }
-.p-mod-t { width: 30rpx; text-align: center; font-size: 22rpx; color: var(--ink-3); }
+.p-mod-mx { font-size: 24rpx; color: var(--ink-3); font-weight: 400; }
+.p-mod-t { width: 30rpx; text-align: center; font-size: 24rpx; color: var(--ink-3); }
 .p-mod-t.up { color: #12b76a; }
 .p-mod-t.down { color: #ef4444; }
 .p-skel { display: flex; flex-direction: column; gap: 14rpx; margin-top: 20rpx; }

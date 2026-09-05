@@ -1882,3 +1882,4 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 详见 docs/iter/round-3/r411-stats-font-floor-todo-empty-hs-conflict-recheck.md。1046855/1046866/1046874 hs 结尾均为「确认答案为 D/A/C」与 answer 一致，R409 抓的「选X的…是错拿…」是干扰项解释 → **从校源队列移除、不改库**；三题独立复算 1000/80/79 与 DB 一致。后续 hs 标记比对优先「确认答案为/正确答案为/故选」，句末「选X」仅兜底且排除「选X的…」形态。
 - 13 行选项串入分节标题仍全 disabled；容器/宿主无原卷文件（只有 db 与备份）→ 校源队列标「资源缺口：需原始真题 PDF」。
 - stats.vue 样式 37 处 18–23rpx → 24rpx（12px 下限）；待掌握 tab 全部掌握后专属空态「待掌握已清零」+ 去刷题。源文件锁 tests/stats-r411-fontfloor.test.js。vitest 566 / eslint / build:h5 绿。
+- R411b：复验发现 predict-card（≥30 题作答后渲染）11 处 20–22rpx 仍 <12px，同法抬 24rpx；教训：字号类断言要先造够数据让条件渲染卡片出现。

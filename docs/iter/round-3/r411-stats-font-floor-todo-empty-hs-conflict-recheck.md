@@ -28,3 +28,7 @@ R409 用「hs 尾部 `选X`」作为 hs 结论标记，得到 1046855 / 1046866 
 
 - 社交栏 17px 文字链（`q-social-bar` 组件跨页复用，单独评估）；复习「下一题」初始 y774（内容长度所致）。
 - 错因入口真人使用（R410 上线后观察 `error_reason` 变化，只看 `probe=0` 行）。
+
+## 5. R411b — 复验命中范围外组件（predict-card）
+
+R411 复验（rev `ec0ab08`）：stats.vue 改动 37 处全部 12px、溢出 0、热力图对齐 |Δ|≤1px、待掌握清零空态 375/1440 PASS；但作答 ≥30 题后 `components/predict-card` 渲染，全页 <12px 仍 12 处（`.p-conf` 11px、`.p-n` 11px、`.p-mod-mx` 10px×5、`.p-mod-t` 11px×5），初始少量数据时该卡不渲染所以 R410/R411 首扫都没抓到。R411b 同法抬 predict-card 样式 11 处 20–22rpx → 24rpx（`.p-mod-t` 宽 30rpx 只装单字 ↑/↓/—），锁进同一测试文件。uni tabbar 标签 10px 为框架默认，不动。

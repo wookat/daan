@@ -5,6 +5,16 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R411 字号/空态 CSS 轮新经验（testing agent）
+
+- **「全页 <12px 0 处」断言要分两层报**：先按改动 diff 里的选择器逐个量（`.hm-yl/.hm-note/.hm-lt/.tpct/.km-cov-in/.km-lg`…），再做 TreeWalker 全页叶子文本扫。stats 页有些卡片只在数据够多时才渲染（`predict-card` 需 ≥30 题作答、`.km-cov-in` 冷启动是 `--`），初始少量数据扫出 0 处不代表全页达标——先造够作答（同 uid 深链多练几轮）再扫一次。范围外组件（`components/predict-card`、uni tabbar 标签 10px）单列，不混进「本轮改动」判定。
+- **热力图对齐口径**：`.hm-yl` 7 个标签 top 与首列 `.hm-col > .hm-c` 7 个 top 逐行比 |Δ|；`.km-cov-in` 用 `Range.selectNodeContents` 取文本 rect，与圆 rect 比包含。
+- **1440 `scrollWidth != innerWidth` 不一定是横溢**：非 mobile 仿真有 15px 纵向滚动条，`documentElement.clientWidth` 也是 1425；判横溢用 `scrollWidth > clientWidth`。
+- **待掌握清零专属空态**（`tab==='todo' && !kw && !hasFilter && items.length>0`）：批量标掌握后即使还在批量态也已显示；验通用文案回退 375 可用筛选 chip（不用打字），1440 用 CDP `Input.insertText` 搜索。恢复 1 条后「今日待复习」横幅会重新出现把 tab 行下推，再点 tab 前重新截图定位，否则会误触横幅进入复习模式（用「退出复习」退出即可，不写库）。
+- **SEO 页展开解析**：`<summary>` 「先想一想，再看答案与解析」的 DOM rect 与屏幕坐标在 375 仿真下不一一对应，按截图里的实际位置点；误点到「同考点相似题」链接会跳到别的题，用 `alt+Left` 返回重做。
+- **pkill 陷阱**：`pkill -f holdhook.py` 会匹配到当前正在执行该命令的 bash 自身（命令行含该字串）导致 exec 提前退出（exit -1），改用 PID 文件 `kill $(cat *.pid)`。
+- 测试 uid 有 40 张含 uid 列的表（含 `review_cur.uid`）；本轮 3 错题 + 复习 + 续练 + 1440 6 错题共产 65 行，全部由 `test-r411-%` 模式覆盖。
+
 ## R410b 修复复量轮（同一审计口径复跑）新经验（testing agent）
 
 - **bundle 变更后必须真实 F5**：只做 hash 导航（`location.href='#/pages/...'`）会沿用内存里的旧 chunk/CSS（本轮空态按钮先读到旧 36px，F5 后才是新 44px）。复量前用 `performance.getEntriesByType('resource')` 核实际加载的 `pages-book-book.*.js` / `book-*.css` 文件名与用户给的一致，再量几何。
