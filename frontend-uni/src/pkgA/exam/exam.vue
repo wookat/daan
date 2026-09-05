@@ -118,6 +118,7 @@ import { dayKey } from '../../checkin.js';
 import { splitMaterial, sameMaterial } from '../../material.js';
 import { crossedTimeAlert } from '../../exam-alert.js';
 import { toggleExcl, pickWithExcl, togglePickLetter } from '../../exam-excl.js';
+import { countAnswered, shouldPushProgress } from '../../exam-resume.js';
 import { fontSizes, normFontLv } from '../../font-size.js';
 
 const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
@@ -170,17 +171,19 @@ export default {
     const saved = uni.getStorageSync(PROG_KEY);
     if (
       saved && saved.attemptId && saved.endAt > Date.now() &&
-      ((opt.paper_id && String(saved.paperId) === String(opt.paper_id)) || (opt.mini && saved.mini))
+      ((opt.paper_id && String(saved.paperId) === String(opt.paper_id)) || (opt.mini && saved.mini)) &&
+      countAnswered(saved.items) > 0
     ) {
       const resume = await new Promise((resolve) => {
         uni.showModal({
           title: '继续上次模考？',
-          content: '检测到未交卷的进度（已答 ' + saved.items.filter((q) => q._picked).length + '/' + saved.items.length + ' 题）',
+          content: '检测到未交卷的进度（已答 ' + countAnswered(saved.items) + '/' + saved.items.length + ' 题）',
           confirmText: '继续', cancelText: '重新开始',
           success: (r) => resolve(r.confirm), fail: () => resolve(false),
         });
       });
       if (resume) {
+        this._progPushed = true;
         this.attemptId = saved.attemptId;
         this._mini = !!saved.mini;
         this.paper = saved.paper;
@@ -364,6 +367,8 @@ export default {
         if (q && Number.isInteger(q._secs) && q._secs > 0) secs[q.id] = q._secs;
         if (q && Array.isArray(q._excl) && q._excl.length) excl[q.id] = q._excl;
       });
+      if (!shouldPushProgress(picks, marks, this._progPushed)) return;
+      this._progPushed = true;
       request('/api/exam/progress', {
         method: 'POST',
         data: { uid: anonUid(), attempt_id: this.attemptId, picks, idx: this.idx, marks, secs, excl },

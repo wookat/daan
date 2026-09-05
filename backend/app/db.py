@@ -3747,12 +3747,22 @@ def create_mock_paper(n: int = 30, duration_min: int = 30) -> int:
 
 
 def start_exam_attempt(uid: str, paper_id: int) -> int:
+    """开考建 attempt；顺带清掉本人过期未交卷的，以及同卷「进过页面但一题未答」的空场次（连同进度行）。"""
     conn = get_conn()
     _ensure_exam_tables(conn)
-    conn.execute(
-        "DELETE FROM exam_attempts WHERE uid=? AND submitted_at IS NULL AND started_at<?",
-        (uid, time.time() - 86400),
-    )
+    _ensure_exam_progress(conn)
+    stale = [r[0] for r in conn.execute(
+        """SELECT a.id FROM exam_attempts a
+           WHERE a.uid=? AND a.submitted_at IS NULL
+             AND (a.started_at<? OR (a.paper_id=? AND NOT EXISTS (
+                   SELECT 1 FROM exam_progress g
+                   WHERE g.attempt_id=a.id AND g.picks IS NOT NULL AND g.picks NOT IN ('', '{}'))))""",
+        (uid, time.time() - 86400, paper_id),
+    ).fetchall()]
+    if stale:
+        marks = ",".join("?" * len(stale))
+        conn.execute(f"DELETE FROM exam_progress WHERE attempt_id IN ({marks})", stale)
+        conn.execute(f"DELETE FROM exam_attempts WHERE id IN ({marks})", stale)
     cur = conn.execute(
         "INSERT INTO exam_attempts (uid, paper_id, started_at) VALUES (?,?,?)",
         (uid, paper_id, time.time()),
