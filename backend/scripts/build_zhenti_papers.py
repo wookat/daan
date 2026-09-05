@@ -49,6 +49,27 @@ def duration_for(n: int) -> int:
     return max(30, min(120, mins))
 
 
+def _source_ids(conn, source: str) -> tuple[list[int], dict[str, int]]:
+    """该 source 活跃真题 id 按标准模块顺序排列 + 各模块题数。
+    `disabled IS NULL` / `disabled=0` 分两段并显式走 idx_q_paper_src(is_real,disabled,source,…)
+    （init_db 建）；OR 写法或无统计信息时规划器只按 is_real 走索引再逐行回宽行表。"""
+    rows = conn.execute(
+        """SELECT id, module FROM questions INDEXED BY idx_q_paper_src
+           WHERE is_real=1 AND disabled IS NULL AND source=?
+           UNION ALL
+           SELECT id, module FROM questions INDEXED BY idx_q_paper_src
+           WHERE is_real=1 AND disabled=0 AND source=?
+           ORDER BY id""",
+        (source, source),
+    ).fetchall()
+    by_mod: dict[str, list[int]] = {m: [] for m in MODULE_ORDER}
+    by_mod["other"] = []
+    for r in rows:
+        by_mod.get(r["module"], by_mod["other"]).append(r["id"])
+    ids = [i for m in [*MODULE_ORDER, "other"] for i in by_mod[m]]
+    return ids, {m: len(v) for m, v in by_mod.items()}
+
+
 def collect(conn, min_questions: int, max_questions: int = MAX_QUESTIONS):
     """返回 (待建卷, 跳过原因列表)。跳过：已成卷 / 标题被别卷占用 / 题量超上限。"""
     mapped = db._paper_by_psource(conn)
@@ -67,30 +88,11 @@ def collect(conn, min_questions: int, max_questions: int = MAX_QUESTIONS):
         if g["source"] in mapped:
             skipped.append((g["source"], f"已成卷 id={mapped[g['source']]['pid']}"))
             continue
-        ids = []
-        per_mod = {}
-        for mod in MODULE_ORDER:
-            rows = conn.execute(
-                """SELECT id FROM questions
-                   WHERE source=? AND is_real=1 AND (disabled IS NULL OR disabled=0) AND module=?
-                   ORDER BY id""",
-                (g["source"], mod),
-            ).fetchall()
-            per_mod[mod] = len(rows)
-            ids += [r["id"] for r in rows]
-        rest = conn.execute(
-            """SELECT id FROM questions
-               WHERE source=? AND is_real=1 AND (disabled IS NULL OR disabled=0)
-                 AND (module IS NULL OR module NOT IN (?,?,?,?,?))
-               ORDER BY id""",
-            (g["source"], *MODULE_ORDER),
-        ).fetchall()
-        per_mod["other"] = len(rest)
-        ids += [r["id"] for r in rest]
-        if len(ids) < min_questions:
+        if g["n"] > max_questions:
+            skipped.append((g["source"], f"{g['n']} 题 > {max_questions}，疑似多卷混装，需人工拆卷"))
             continue
-        if len(ids) > max_questions:
-            skipped.append((g["source"], f"{len(ids)} 题 > {max_questions}，疑似多卷混装，需人工拆卷"))
+        ids, per_mod = _source_ids(conn, g["source"])
+        if len(ids) < min_questions:
             continue
         title = paper_title(g["source"], g["y"], g["rg"])
         if title in titles:
