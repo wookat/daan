@@ -54,6 +54,27 @@ def test_formula_dropped_value_slot_quant_only():
     assert fd({"module": "yanyu", "explanation": "解得，文段主旨为，强调创新。"}) is None
 
 
+def test_formula_dropped_operator_slot_quant_only():
+    fd = quality.formula_dropped
+    # 生产 237345/286141/273081/272649/265311/236874：等号两侧/括号内表达式被抠空、公式位只剩相撞句读
+    assert fd({"module": "shuliang", "explanation": "x+（2x-2）=500，解得 x=。第三步，求 x 的最小值"}) == "op"
+    assert fd({"module": "shuliang", "explanation": "则列式应为：＝21，解得 n＝7。故正确答案为 C。"}) == "op"
+    assert fd({"module": "shuliang", "explanation": "无要求的 4 人全排列，有种方式。××＝576（种）方式。"}) == "op"
+    assert fd({"module": "shuliang", "explanation": "则浓度变为原来浓度的（1－）。反复三次操作"}) == "op"
+    assert fd({"module": "ziliao", "explanation": "去甲厂实习的人数占（，去乙厂实习的人数占）。，因此去丙厂"}) == "op"
+    assert fd({"module": "shuliang", "explanation": "AB＝50×因此，选择 H 选项。＝25（米），所以 AC＝2AB"}) == "op"
+    assert fd({"module": "ziliao", "explanation": "0.4375A=0.625B，=1.428。则 10 件 A 最多可以买 14 件 B。"}) == "op"
+    # 生产 275923/246915/159864/240320：余数记法「11＋，」、值在括号外「=）107.52」、「，×5」「（×3+1）」是正常表达
+    assert fd({"module": "shuliang", "explanation": "需要 177÷（4＋5＋7）＝11＋，介于 10—12 小时之间。"}) is None
+    assert fd({"module": "ziliao", "explanation": "（16人*5600元/月*12月=）107.52万元，燃料房租"}) is None
+    assert fd({"module": "shuliang", "explanation": "计算1.2²=1.44，再×1.2得1.728，×5=8.64万元，因此A项正确。"}) is None
+    assert fd({"module": "shuliang", "explanation": "若误看为倍数关系（×3+1）则前项×3+1依次为"}) is None
+    assert fd({"module": "shuliang", "explanation": "设速度为 v，则 2v＋3＝15，解得 v＝6（km/h）。"}) is None
+    assert fd({"module": "shuliang", "explanation": _E_TYPO_QUANT}) is None
+    # 非数量/资料模块不认
+    assert fd({"module": "changshi", "explanation": "该说法正确。，故排除 A 项。"}) is None
+
+
 def test_strip_page_footers_only_removes_footer_fragments():
     assert quality.strip_page_footers("如下图：第47页共64页第二步，分析。") == "如下图：第二步，分析。"
     assert quality.strip_page_footers("如图所示第 22 页共 36 页42 人参加") == "如图所示42 人参加"
@@ -93,7 +114,15 @@ def _db(tmp_path):
     )
     conn.execute("INSERT INTO explanation_quarantine VALUES (9, '串题解析', 0.01, '9-9', ?, 1.0)", (rq.REASON,))
     conn.execute("INSERT INTO questions VALUES (9, 'shuliang', 'r396 题', ?, NULL, 'hs9', 0, 1, 1.0)", (opts,))
-    conn.executemany("INSERT INTO mistakes (question_id, explanation, uid) VALUES (?,?,?)", [(1, _E_SKELETON, "u1"), (2, _E_TYPO_QUANT, "u1")])
+    conn.executemany(
+        "INSERT INTO mistakes (question_id, explanation, uid) VALUES (?,?,?)",
+        [
+            (1, _E_SKELETON, "u1"),
+            (2, _E_TYPO_QUANT, "u1"),
+            (1, _E_SKELETON.replace("。", "。 ", 2) + "\n", "u2"),  # 清洗归一空白前写的快照
+            (1, "自己写的笔记", "u3"),
+        ],
+    )
     conn.commit()
     conn.row_factory = sqlite3.Row
     return conn, str(p)
@@ -111,8 +140,9 @@ def test_garbled_select_apply_and_reason_scoped_restore(tmp_path):
     assert q[1] is None and q[5] is None and q[2] == _E_TYPO_QUANT and q[3] == _E_TYPO_TEXT and q[6] == _E_SKELETON
     qr = {r["question_id"]: r["reason"] for r in conn.execute("SELECT question_id, reason FROM explanation_quarantine")}
     assert qr == {1: rq.REASON_GARBLED, 5: rq.REASON_GARBLED, 9: rq.REASON}
-    m = {r["question_id"]: r["explanation"] for r in conn.execute("SELECT question_id, explanation FROM mistakes")}
-    assert m[1] == "hs 几何" and m[2] == _E_TYPO_QUANT
+    m = {r["uid"]: r["explanation"] for r in conn.execute("SELECT uid, explanation FROM mistakes WHERE question_id=1")}
+    assert m == {"u1": "hs 几何", "u2": "hs 几何", "u3": "自己写的笔记"}
+    assert conn.execute("SELECT explanation FROM mistakes WHERE question_id=2").fetchone()[0] == _E_TYPO_QUANT
 
     rq.restore(conn, rq.REASON_GARBLED)  # 只还原 r400，r396 隔离行不动
     q = {r["id"]: r["explanation"] for r in conn.execute("SELECT id, explanation FROM questions")}

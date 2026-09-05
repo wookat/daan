@@ -205,6 +205,10 @@ def report(targets: list[dict]) -> None:
           f"skipped: {len(targets) - len(go)}")
 
 
+def _no_ws(expr: str) -> str:
+    return f"replace(replace(replace({expr},' ',''),'　',''),char(10),'')"
+
+
 def apply(conn, targets: list[dict], reason: str = REASON) -> None:
     now = time.time()
     conn.execute(DDL)
@@ -227,8 +231,9 @@ def apply(conn, targets: list[dict], reason: str = REASON) -> None:
             "VALUES (?,?,?,?,?,?)",
             (t["id"], t["explanation"], t["fit"], t["block"], reason, now),
         )
+        # 快照与被隔离解析只差空白（清洗脚本归一空白前写入）也算同一文本
         cur = conn.execute(
-            "UPDATE mistakes SET explanation=? WHERE question_id=? AND explanation=?",
+            "UPDATE mistakes SET explanation=? WHERE question_id=? AND " + _no_ws("explanation") + "=" + _no_ws("?"),
             (t["hs_explanation"] or "", t["id"], t["explanation"]),
         )
         n_mist += cur.rowcount
