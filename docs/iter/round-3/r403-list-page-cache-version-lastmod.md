@@ -41,5 +41,13 @@ R402b 只修了 `/tiku/q/{id}`。R402 汇报「下一步」第一条：其他带
 
 ## 6. 验证
 
-- 本地：pytest 424（+5，`test_answer_log_uses_client_ts_and_falls_back` 既有时区边界失败与本轮无关）/ ruff / pyright 0。
+- 本地 pytest：R403 新增 5 条 5/5 过；全量 424 条最好一次 423 过 + 时区用例 1 失败，但多数次数出现 5 例 `database is locked`（test_int_params_400 / test_llm_empty_reply / test_llms_txt / test_material_group×2 / test_shenlun_hub，均排在本文件之前）——**去掉本文件后 3/3 同样复现、`dd13df6`（R403 前）2 次中 1 次复现、`origin/main` 363 条 2/2 干净**，即 R396–R402 分支上既有的测试夹具竞态，非 R403 引入；线索：R372 `_ConnProxy` 线程本地连接常驻 + 未耗尽游标持读快照 → 他线程提交后本连接写入即 `SQLITE_BUSY_SNAPSHOT`（busy_timeout 不等待），生产同机制是否会出「database is locked」列 R404 起点。ruff / pyright 0。
 - 生产：见 handoff R403 段与 PR #619 评论。
+
+## 部署与生产复核（rev `412deb6`，2026-09-05 17:01Z 容器重建）
+
+- 容器 healthy / Restart 0 / 启动后 5xx·Traceback·slow-req 0；`quick_check ok`；questions 156792/109371、quarantine 307/210/126/83 不变。
+- 部署前正式域名 `sitemap-topics.xml`：156 条中 `<lastmod>2026-08-09` **50 条**（`~/r403_sitemap_before.xml`）；部署后源站：156 条中 0 条，分布 09-05 ×80 / 09-04 ×66 / 08-10 ×1；SL-GC-01、SL-JH-01 → 09-05，CS-DL-02、SL-GC-04 → 09-04。`sitemap-years.xml` 114 条：09-04 ×56 / 09-05 ×39 / 08-10 ×1。正式域名两 URL `cf-cache-status: DYNAMIC`，已是新值。
+- 容器内归一化聚合实测：tag3 157 组 0.023 s、year×module 102 组 0.003 s。
+- 专题页 `/tiku/t/SL-GC-01/` 首渲染 35 ms、二次 4 ms 且字节相同（命中）；年份页 `/tiku/y/2026/changshi/` 首渲染 1.47 s（冷）、二次 4 ms 命中；3 道已下架隔离题 264747(SL-GC-02)/274185(SL-JH-01)/237348(SL-JJ-01) 在各自考点页 not-listed。
+- 未实证：活进程内「写库 → TTL 到期 → 列表页重渲染」（本轮不为验证写生产库；容器重建已清缓存）。脚本 `~/r403_verify.sh`（只读）。
