@@ -5,6 +5,16 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R402 只改生产数据的轮次：SSR 进程内缓存陈旧的判法（testing agent）
+
+- **「只改了 DB 数据、rev/bundle 不变」的轮次先查 SSR 缓存**：`/tiku/q/<id>` 由 `backend/app/seo/pages.py _render_question` 渲染并 `@lru_cache(maxsize=4096)`。R402b（`dd13df6`）前缓存键只有 qid，隔离脚本改库后**不重启进程**页面仍是旧 HTML（237345 API 已 `explanation null` 但 SSR 仍两段含「解得 x=。」）。区分边缘缓存与进程缓存：加随机 query（`?x=随机`）拿 `x-edge-cache: MISS`，MISS 仍旧 → 进程内缓存，用 `message_parent` 上报根因并把 SSR 项按现状记 FAIL，等重启/修复后再复验并如实更新。R402b 之后缓存键含 `questions.updated_at`，理论上写库即刷新，但仍要看 `docker inspect StartedAt` 判断是否重启并复核一次。
+- **边缘缓存窗口**：`cache-control: public, max-age=300`；部署后 ~15 分钟内无 query 的正式 URL 可能 `x-edge-cache: REVALIDATE age>300` 仍返回旧 HTML，之后才刷新。复验时既要测带随机 query（源站真值）也要测正式 URL（真人视角），报告里分开写。
+- **JSON-LD 断言脚本**：页面 `script[type="application/ld+json"]` 可能是顶层数组，需 flatten 后取 `@type` 集合，`acceptedAnswer` 递归查找（`/tmp/cdp174/ssrcheck.js` 一次返回 skeleton/原解析/花生十三讲解/暂无解析 计数 + 正确答案 + types + accHead）。期望恰为 `{LearningResource, BreadcrumbList}` 两块，acceptedAnswer 以「正确答案：X。」+ hs 开头。
+- **`/api/question/<id>` 返回包在 `item` 下**（`json['item'].explanation`），不是顶层字段。
+- **中途换 rev 的处理**：练习/错题本/回归证据若在重启前采集且变更只涉及 SSR 文件、bundle 不变，证据仍有效；但在新 rev 上至少把核心链（CTA → 答错 → POST expLen → 错题卡）复跑一遍并标「post-fix」，报告写清哪些断言在哪个 rev 上取证（`__mist[].t0` 换算 UTC 与 StartedAt 对比）。
+- 审计脚本列名先核：`mistakes` 无 `wrong_count` 列；脚本报错会让 `&&` 链短路导致 clean 未执行，看到 `LEFTOVER` 不为 0 前先看是否根本没跑到 clean。teardown 用显式 `pgrep -f 'python3 -u /tmp/cdp174/holdX.py'` + 排除自身 PID，避免 R401 的自杀问题。
+- 容器日志数 5xx 用 `grep -E ' 5[0-9][0-9] '` 会误命中 `[indexnow] submitted 533 urls -> 200`，改用 `grep -oE '" [0-9]{3} ' | sort | uniq -c` 看状态码直方图。
+
 ## R401 数值位抠空解析隔离（base 置 NULL）生产复验 走查新经验（testing agent）
 
 - **SSR 题目页解析默认折叠**：`/tiku/q/<id>` 的答案与解析在 `<details>`「先想一想，再看答案与解析」里，`innerText` 里直接数「本题用两集合容斥」会得 0；先原生点开 summary（或断言 `document.querySelector('details').open`）再数骨架/hs/「原解析」出现次数。`backend/app/seo/pages.py` 只在 hs 与 raw **都非空**时才渲染「花生十三讲解 / 原解析」两段，base 置 NULL 后页面只剩单段 hs、「原解析」计数应为 0（这是隔离成功的页面级信号）。
