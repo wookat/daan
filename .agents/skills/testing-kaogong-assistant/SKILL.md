@@ -5,6 +5,15 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R401 数值位抠空解析隔离（base 置 NULL）生产复验 走查新经验（testing agent）
+
+- **SSR 题目页解析默认折叠**：`/tiku/q/<id>` 的答案与解析在 `<details>`「先想一想，再看答案与解析」里，`innerText` 里直接数「本题用两集合容斥」会得 0；先原生点开 summary（或断言 `document.querySelector('details').open`）再数骨架/hs/「原解析」出现次数。`backend/app/seo/pages.py` 只在 hs 与 raw **都非空**时才渲染「花生十三讲解 / 原解析」两段，base 置 NULL 后页面只剩单段 hs、「原解析」计数应为 0（这是隔离成功的页面级信号）。
+- **隔离前后判定口径**：`/api/question/<id>` `explanation === null`（不是空串）+ `hs_explanation` 非空；`mhook` `expLen == hs 长度`（288140 → 104）；clean 前 raw `mistakes.explanation` 同长度同前缀。R400 时同题 raw 是 167 字骨架乱文，R401 后应为 104 字 hs——报告里把这两个数字并列写。
+- **用户给的「保留题/对照题」先查 `disabled`**：334672 在生产是 `disabled=1`（panduan），深链会被过滤、UI 不可用；正常对照仍用 264413（active，base 79 字）。答对照题时先看 `answer`（264413 答案 A），答对会自动跳下一题且不产生 mistake 行——答错才有快照，需带 `&v=N` 重进再答错；多出的一条 answer_log 在对账里要解释（本轮 answer_log 11 = 4+1(答对)+3+3）。
+- 容器日志 404 若出现 `GET /api/questions/<id>`（复数），不是前端/自己的 `/api/question/<id>`（单数）探针，多为 lead 侧脚本；只在报告注明来源不明，不要归给应用。
+- 宿主磁盘/负载要在**测试首尾各记一次**（`uptime` + `df -h /`）：本轮 20 分钟内从 96%/2.0 GB/load 1.5 变到 98%/1.5 GB/load 8，发现时用 `message_parent` 即时上报，不要等最终报告。
+- `r400_teardown.py` 之类用 `pgrep -af holdvw.py` 杀 holder 时会连带命中包含该字符串的 `bash -c` 包装进程（自己的命令被 kill，exit -1）——把 teardown 脚本单独一条命令跑，或 pgrep 后过滤 `python`。
+
 ## R400 错题快照写入侧回落 hs + 公式丢失解析隔离 生产复验 走查新经验（testing agent）
 
 - **「写入侧」与「读取侧」证据要分开**：R396b 起 `/api/mistakes`、`due_reviews` 读取侧已把空快照回落 hs，所以 API/错题卡显示 hs **不能**证明写入侧改动。写入侧证据链 = ① 页面上下文 XHR 钩子 `/tmp/cdp174/mhook.js` 记录真实 UI 触发的 `POST /api/mistakes` 请求体 `explanation` 长度/前 40 字（`window.__mist`）② 容器 DB raw：审计脚本 `ro` 模式打印 `select id,uid,question_id,length(explanation),substr(explanation,1,40) from mistakes where uid like 'test-rNNN-%'`，**必须在 clean 之前跑并落盘**（clean 后行消失）。对照题（有官方 base 的）同时答错一道，确认 raw 前缀是 base 而非 hs。
