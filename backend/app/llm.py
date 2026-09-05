@@ -39,6 +39,17 @@ def _has_image(messages: list) -> bool:
     return False
 
 
+class EmptyReply(RuntimeError):
+    """HTTP 200 但 content 为空（如推理模型把 max_tokens 全耗在 reasoning 上、finish_reason=length）。"""
+
+
+def _content(data: dict) -> str:
+    text = data["choices"][0]["message"].get("content") or ""
+    if not text.strip():
+        raise EmptyReply("AI 未返回内容，请稍后再试")
+    return text
+
+
 def _require_configured(base: str, key: str) -> None:
     """未配置 LLM 时立即失败，让调用方友好降级，而不是等待连接超时拖长响应。"""
     if not base or not key:
@@ -94,8 +105,7 @@ async def chat(messages: list, temperature: float = 0.2, max_tokens: int = 4000)
                     },
                 )
             resp.raise_for_status()
-            data = resp.json()
-            return data["choices"][0]["message"]["content"]
+            return _content(resp.json())
     raise RuntimeError("LLM 请求重试耗尽")
 
 
@@ -159,8 +169,8 @@ async def chat_fast(messages: list, temperature: float = 0.2, max_tokens: int = 
                     },
                 )
                 resp.raise_for_status()
-                return resp.json()["choices"][0]["message"]["content"]
-        except (httpx.HTTPError, KeyError, IndexError, ValueError):
+                return _content(resp.json())
+        except (httpx.HTTPError, KeyError, IndexError, ValueError, EmptyReply):
             pass
     return await chat(messages, temperature=temperature, max_tokens=max_tokens)
 

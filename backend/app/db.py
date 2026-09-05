@@ -3225,10 +3225,11 @@ def mistakes_by_qids(uid: str, qids: list[int]) -> dict[int, dict]:
 
 
 def _paper_by_psource(conn) -> dict[str, dict]:
-    """卷 psource → {pid, title, psource}；同 source 多卷取 id 最大（最新）一张。复用卷库 TTL 缓存。"""
+    """真题卷 psource → {pid, title, psource}；同 source 多卷取 id 最大（最新）一张。
+    只看 kind=zhenti（mock 卷随机组题无主 source），与 H5 卷库 `kind=zhenti` 共用同一缓存键。"""
     _ensure_exam_tables(conn)
     out: dict[str, dict] = {}
-    for p in _list_exam_papers_base(conn, None, None, None):
+    for p in _list_exam_papers_base(conn, "zhenti", None, None):
         src = p.get("psource")
         if not src:
             continue

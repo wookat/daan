@@ -1784,3 +1784,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 顺带：sitemap 源站 MISS p90 7.5 s / p99 24.4 s 不是 SQL——容器内分片查询走 `COVERING INDEX idx_q_sitemap` 0.03–0.04 s / ≤1 MB，慢样本与部署窗口和宿主资源（MemAvailable 214–268 MiB、load 5、同宿主新增 recruit-*/softcopyright-* 8 容器）相关，宿主争用第 14 次上报，不做应用侧改动。
 - 改动（零运行时行为）：`deploy_h5.sh` 3b 注释与 step 文案改为「仅本机所在机房」；`[[path]].js` 顶部注释补「副本按机房独立」；本文件 R394 段落「3b 刷入旧版本副本→每 URL 首访必见旧 head」的因果以本段为准。3b 保留（保护 VPS 本机 cron 请求）。
 - 未验证：zone purge 与 Cache API 的关系；跨部署 swr 样本未逐条比对 body；Google/Bing 对 R394 sitemap 扩展的接受仍待 09-06 后面板。
+
+### R396 真题「解析串题」全库取证 + 可逆隔离 307 行 + 读取层空快照回落 hs（2026-09-05，PR #615，rev b58aafb）
+- 详见 docs/iter/round-3/r396-explanation-misalignment-scope.md：14 块 336 行为导入批次级解析数组错位（活跃 59、全部有 hs），`sqlite3 .backup` 后 `--apply` 隔离 307 行（`explanation_quarantine` 可 `--restore`），不猜映射、不用 hs 批量改写 base；`list_mistakes/due_reviews` 快照空回落 `hs_explanation`、快照非空以快照为准、不暴露 `q_hs`。
+
+### R397 AI 分析空 200 根因（rescue 推理模型 finish=length content 空）+ 错题 paper:null 范围取证 + 归卷脚本只补缺（2026-09-05，分支 devin/*-r397-ai-empty-paper-null，base=main）
+- 取证与方案见 docs/iter/round-3/r397-ai-empty-reply-paper-null.md。AI：容器内同 prompt 直打 rescue（kimi-k3）200/57 s/`finish_reason=length`/content 0/reasoning 1,381，主通道 200/33 s/content 351；`chat_fast` 把空串当成功。改 `llm._content()` 空正文抛 `EmptyReply`，rescue 空→回落主通道→仍空→端点 502 友好文案；不重试、不改 max_tokens、不造内容。
+- paper:null：映射 90 条；活跃错题 243 = has_paper 75 / not_real 121（契约 null）/ source 无卷 37 / no_qid 10；全库真题 source 376 个仅 90 成卷、未成卷 286（活跃 5,508 题）——不是 17 题安徽卷个案，`_PSOURCE_MIN_N` 不动。旧归卷脚本直接重跑不安全：标题正则把 2025/2024/2023 国考多卷合成同名 + `upsert_exam_paper` 按 title 冲突覆盖 question_ids；`2015年吉林` 233 题 / `历年行测真题` 1,544 题是多卷混装。脚本改为标题=source 原文、已成卷/超量(>140)/撞名跳过并打印原因、`collect()` 返回 `(papers, skipped)`；`_paper_by_psource` 只看 zhenti。副本干跑：跳过 76+2、待建 19 套（61–96 题、资料分析几乎为 0）。**本轮不在生产写卷**，先摆出「补卷即不完整卷」的事实再定。
+- 本地 pytest 403 / ruff / pyright 0。取证脚本 `~/r397_llm_probe.py`（key 不打印）、`~/r397_paper_null.sh`、`~/r397_src_gap.sh`、`~/r397_paper_dry_local.py`。
