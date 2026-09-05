@@ -3183,6 +3183,11 @@ def save_mistake(rec: dict) -> int:
         conn.commit()
         conn.close()
         return dup["id"]
+    explanation = rec.get("explanation")
+    if qid and not (explanation or "").strip():
+        # 快照写入侧回落：隔离/无官方解析的题，客户端传空时用 hs 兜底，与 list_mistakes/due_reviews 读取侧口径一致
+        hs_row = conn.execute("SELECT hs_explanation FROM questions WHERE id=?", (qid,)).fetchone()
+        explanation = (hs_row["hs_explanation"] if hs_row else None) or explanation
     cur = conn.execute(
         """INSERT INTO mistakes
            (created_at, module, question_type, question_text, user_answer,
@@ -3197,7 +3202,7 @@ def save_mistake(rec: dict) -> int:
             rec.get("correct_answer"),
             json.dumps(rec.get("methods", []), ensure_ascii=False),
             rec.get("error_reason"),
-            rec.get("explanation"),
+            explanation,
             (rec.get("uid") or None),
             rec.get("question_id"),
             rec.get("source"),

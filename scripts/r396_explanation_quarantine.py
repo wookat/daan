@@ -8,7 +8,10 @@ questions.explanation 置空（前端/SEO/错题快照自动回落到 hs_explana
       --keep id[,id]           块内人工核对为正确的题，跳过
       --extra id[,id]          块外/贴合度偏高但人工核对为串题的题，一并隔离
       --fit-max F              块内只隔离贴合度 < F 的行（默认 0.08；无贴合度值的行照常隔离）
-  --restore                    把 explanation_quarantine 里的解析写回 questions.explanation（仅当前值仍为空）
+  --restore [--reason R]       把 explanation_quarantine 里的解析写回 questions.explanation（仅当前值仍为空）；--reason 只还原该原因的行
+  --garbled                    r400 公式丢失骨架解析（quality.formula_dropped；--keep/--extra/--apply 同上，reason=r400）
+  --strip-footers              r400 PDF 页脚串进 explanation/options（quality.strip_page_footers），原文存 text_footer_fix 表；--apply 才写
+  --restore-footers            把 text_footer_fix 里的原文写回（仅当前值仍等于修后值）
 
 写库时同步：mistakes.explanation 快照若与被隔离解析相同，改为该题 hs_explanation（错题本展开卡直读快照）。
 本地：DB_PATH=/path/data.db python3 scripts/r396_explanation_quarantine.py --scan
@@ -29,6 +32,7 @@ from app import quality
 
 DEFAULT_FIT_MAX = 0.08
 REASON = "r396:cross-question-explanation"
+REASON_GARBLED = "r400:formula-dropped-explanation"
 
 DDL = """CREATE TABLE IF NOT EXISTS explanation_quarantine (
     question_id INTEGER PRIMARY KEY,
@@ -37,6 +41,15 @@ DDL = """CREATE TABLE IF NOT EXISTS explanation_quarantine (
     block TEXT,
     reason TEXT,
     created_at REAL
+)"""
+
+DDL_FOOTER = """CREATE TABLE IF NOT EXISTS text_footer_fix (
+    question_id INTEGER NOT NULL,
+    field TEXT NOT NULL,
+    before TEXT NOT NULL,
+    after TEXT NOT NULL,
+    created_at REAL,
+    PRIMARY KEY (question_id, field)
 )"""
 
 
@@ -104,11 +117,85 @@ def select_targets(conn, blocks, keep: set[int], extra: set[int], fit_max: float
     return targets
 
 
+def select_garbled(conn, keep: set[int], extra: set[int]) -> list[dict]:
+    """公式丢失骨架解析：全库 is_real 逐行过 quality.formula_dropped；extra 为人工核定的块外行。"""
+    targets: list[dict] = []
+    for r in conn.execute(
+        "SELECT id, disabled, module, question, options, explanation, hs_explanation FROM questions "
+        "WHERE is_real=1 AND explanation IS NOT NULL AND explanation!='' ORDER BY id"
+    ):
+        d = dict(r)
+        sig = quality.formula_dropped(d)
+        if sig is None and d["id"] not in extra:
+            continue
+        d["fit"] = quality.explanation_fit(d)
+        d["block"] = f"garbled:{sig or 'extra'}"
+        d["skip"] = "keep" if d["id"] in keep else None
+        targets.append(d)
+    return targets
+
+
+def select_footers(conn) -> list[dict]:
+    """explanation/options 里串进 PDF 页脚的行，返回 [{id, field, before, after}]。"""
+    out: list[dict] = []
+    for r in conn.execute(
+        "SELECT id, explanation, options FROM questions WHERE is_real=1 "
+        "AND (explanation LIKE '%页共%页%' OR explanation LIKE '%真题%' OR options LIKE '%真题%' OR options LIKE '%页共%页%') ORDER BY id"
+    ):
+        for field in ("explanation", "options"):
+            before = r[field] or ""
+            after = quality.strip_page_footers(before)
+            if after != before:
+                out.append({"id": r["id"], "field": field, "before": before, "after": after})
+    return out
+
+
+def report_footers(rows: list[dict]) -> None:
+    for x in rows:
+        m = quality.FOOTER_PAGE_RE.search(x["before"]) or quality.FOOTER_SRC_RE.search(x["before"])
+        print(f"  {x['id']} {x['field']} cut={m.group(0).strip() if m else '?'!r} -{len(x['before']) - len(x['after'])} chars")
+    print(f"footer fixes: {len(rows)} ({sum(1 for x in rows if x['field'] == 'options')} options)")
+
+
+def apply_footers(conn, rows: list[dict]) -> None:
+    now = time.time()
+    conn.execute(DDL_FOOTER)
+    n = 0
+    for x in rows:
+        conn.execute(
+            "INSERT OR IGNORE INTO text_footer_fix (question_id, field, before, after, created_at) VALUES (?,?,?,?,?)",
+            (x["id"], x["field"], x["before"], x["after"], now),
+        )
+        cur = conn.execute(
+            f"UPDATE questions SET {x['field']}=?, updated_at=? WHERE id=? AND {x['field']}=?",
+            (x["after"], now, x["id"], x["before"]),
+        )
+        n += cur.rowcount
+    conn.commit()
+    print(f"applied: footer fixes {n}/{len(rows)}")
+
+
+def restore_footers(conn) -> None:
+    rows = conn.execute("SELECT question_id, field, before, after FROM text_footer_fix").fetchall()
+    n = 0
+    for r in rows:
+        if r["field"] not in ("explanation", "options"):
+            continue
+        cur = conn.execute(
+            f"UPDATE questions SET {r['field']}=?, updated_at=? WHERE id=? AND {r['field']}=?",
+            (r["before"], time.time(), r["question_id"], r["after"]),
+        )
+        n += cur.rowcount
+    conn.execute("DELETE FROM text_footer_fix")
+    conn.commit()
+    print(f"restored footers {n}/{len(rows)}")
+
+
 def report(targets: list[dict]) -> None:
     for t in targets:
         f = "  --" if t["fit"] is None else f"{t['fit']:.2f}"
         flag = f"skip({t['skip']})" if t["skip"] else ("QUARANTINE" + ("" if t["disabled"] == 0 else " (disabled)"))
-        print(f"  {t['id']} fit={f} hs={'y' if t['hs_explanation'] else 'n'} {flag}")
+        print(f"  {t['id']} fit={f} hs={'y' if t['hs_explanation'] else 'n'} {t['block']} {flag}")
         if not t["skip"] or t["disabled"] == 0:
             print(f"      Q: {(t['question'] or '')[:60]!r}")
             print(f"      E: {(t['explanation'] or '')[:70]!r}")
@@ -118,7 +205,7 @@ def report(targets: list[dict]) -> None:
           f"skipped: {len(targets) - len(go)}")
 
 
-def apply(conn, targets: list[dict]) -> None:
+def apply(conn, targets: list[dict], reason: str = REASON) -> None:
     now = time.time()
     conn.execute(DDL)
     n_mist = 0
@@ -128,7 +215,7 @@ def apply(conn, targets: list[dict]) -> None:
         conn.execute(
             "INSERT OR IGNORE INTO explanation_quarantine (question_id, explanation, fit, block, reason, created_at) "
             "VALUES (?,?,?,?,?,?)",
-            (t["id"], t["explanation"], t["fit"], t["block"], REASON, now),
+            (t["id"], t["explanation"], t["fit"], t["block"], reason, now),
         )
         conn.execute("UPDATE questions SET explanation=NULL, updated_at=? WHERE id=?", (now, t["id"]))
         cur = conn.execute(
@@ -140,8 +227,9 @@ def apply(conn, targets: list[dict]) -> None:
     print(f"applied: quarantined {sum(1 for t in targets if not t['skip'])}, mistakes snapshots rewritten {n_mist}")
 
 
-def restore(conn) -> None:
-    rows = conn.execute("SELECT question_id, explanation FROM explanation_quarantine").fetchall()
+def restore(conn, reason: str | None = None) -> None:
+    where, args = (" WHERE reason=?", (reason,)) if reason else ("", ())
+    rows = conn.execute(f"SELECT question_id, explanation FROM explanation_quarantine{where}", args).fetchall()
     n = 0
     for r in rows:
         cur = conn.execute(
@@ -149,9 +237,9 @@ def restore(conn) -> None:
             (r["explanation"], time.time(), r["question_id"]),
         )
         n += cur.rowcount
-    conn.execute("DELETE FROM explanation_quarantine")
+    conn.execute(f"DELETE FROM explanation_quarantine{where}", args)
     conn.commit()
-    print(f"restored {n}/{len(rows)}")
+    print(f"restored {n}/{len(rows)}" + (f" (reason={reason})" if reason else ""))
 
 
 def main():
@@ -164,14 +252,34 @@ def main():
     ap.add_argument("--fit-max", type=float, default=DEFAULT_FIT_MAX)
     ap.add_argument("--apply", action="store_true")
     ap.add_argument("--restore", action="store_true")
+    ap.add_argument("--reason")
+    ap.add_argument("--garbled", action="store_true")
+    ap.add_argument("--strip-footers", action="store_true")
+    ap.add_argument("--restore-footers", action="store_true")
     args = ap.parse_args()
-    write = args.apply or args.restore
+    write = args.apply or args.restore or args.restore_footers
     conn = sqlite3.connect(args.db if write else f"file:{args.db}?mode=ro", uri=not write, timeout=30)
     conn.row_factory = sqlite3.Row
     if args.restore:
-        restore(conn)
+        restore(conn, args.reason)
+    elif args.restore_footers:
+        restore_footers(conn)
     elif args.scan:
         scan(conn)
+    elif args.garbled:
+        targets = select_garbled(conn, parse_ids(args.keep), parse_ids(args.extra))
+        report(targets)
+        if args.apply:
+            apply(conn, targets, REASON_GARBLED)
+        else:
+            print("dry-run only; pass --apply to write")
+    elif args.strip_footers:
+        rows = select_footers(conn)
+        report_footers(rows)
+        if args.apply:
+            apply_footers(conn, rows)
+        else:
+            print("dry-run only; pass --apply to write")
     elif args.blocks or args.extra:
         targets = select_targets(conn, parse_blocks(args.blocks), parse_ids(args.keep), parse_ids(args.extra), args.fit_max)
         report(targets)
@@ -180,7 +288,7 @@ def main():
         else:
             print("dry-run only; pass --apply to write")
     else:
-        ap.error("need one of --scan / --blocks / --extra / --restore")
+        ap.error("need one of --scan / --blocks / --extra / --garbled / --strip-footers / --restore / --restore-footers")
     conn.close()
 
 

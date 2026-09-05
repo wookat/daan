@@ -215,6 +215,40 @@ def misaligned_blocks(
     return blocks
 
 
+# ---- 公式丢失解析（PDF 导入时公式/图片被整段抠掉，只剩「可得：，解得。」骨架）----
+# 数量/资料模块：任一标点相撞信号即判定（生产 246 条命中逐条人工核过，仅 `。。` 单独出现是笔误）；
+# 其他模块只认全角冒号后紧跟标点 / 连续顿号（`，，`/`。。` 在文字题里是笔误不是丢公式）。言语的「、、」是填空占位，不算。
+QUANT_MODULES = ("shuliang", "ziliao")
+_FD_COLON_RE = re.compile(r"：[。，、；]")
+_FD_ENUM_RE = re.compile(r"、、|、，|，、|、。")
+_FD_QUANT_RE = re.compile(r"，，|：。|：，|；。|(所求项|所求|括号内|未知项|下一项)(应)?(为|是)[。，；]")
+FOOTER_PAGE_RE = re.compile(r"\s*第\s*\d{1,3}\s*页\s*共\s*\d{1,3}\s*页\s*")
+FOOTER_SRC_RE = re.compile(r"\s*-\s*\d{1,3}\s*-\s*\d{4}\s*年[^，。；：、《》]{0,14}(?:《[^》]{1,12}》)?真题(?:卷)?(?:（[^）]{0,20}）)?\s*")
+
+
+def formula_dropped(row: dict) -> str | None:
+    """解析是否为「公式丢失」骨架；命中返回信号名，否则 None。row 需含 module/explanation。"""
+    e = row.get("explanation") or ""
+    if not e:
+        return None
+    if _FD_COLON_RE.search(e):
+        return "colon"
+    if _FD_ENUM_RE.search(e) and (row.get("module") or "") != "yanyu":
+        return "enum"
+    if (row.get("module") or "") in QUANT_MODULES and _FD_QUANT_RE.search(e):
+        return "quant"
+    return None
+
+
+def strip_page_footers(text: str | None) -> str:
+    """去掉 PDF 页脚「第 N 页共 M 页」/「-N- 20XX年…真题」串进正文的片段；无命中原样返回。"""
+    if not text:
+        return text or ""
+    out = FOOTER_PAGE_RE.sub("", text)
+    out = FOOTER_SRC_RE.sub("", out)
+    return out.strip() if out != text else text
+
+
 def score_question(row: dict) -> int:
     """row 需含 module/question/options/answer/explanation/hs_explanation/source/is_real/exam_year/exam_region/hs_down/hs_up。"""
     score = 0
