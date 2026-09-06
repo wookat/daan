@@ -1435,3 +1435,11 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - **同一 document 内 chunk 只会失败一次**：模块 URL 拉取失败后 Chrome 模块表记为失败，再进该路由**不发网络请求**直接 reject（第二条 chunk-load 但无 404 记录）；fail-closed 后想再验该路由必须整页 reload。uni 原生「连接服务器超时，点击屏幕重试」点击 = 整页 reload（`navt=reload`），用户可自救。
 - **取证口径**：404 → `GET /`（Fetch/XHR，no-store）间隔 8–21 ms；heal 时 `GET /` 后约 60–110 ms 出现 Document `GET /`（`fromSW`）+ 新 `index-*.js`；`performance.timeOrigin` 变化 = 真 reload；`sendBeacon` 的 `POST /api/monitor/report` 在 reload 瞬间 CDP 记 `FAIL net::ERR_ABORTED`，但 `docker logs -t` 可见服务端 200 已收（用 `-t` 取时间戳对齐），不能把它计入 `/api` 非 2xx。
 - **数据**：只看成长页/日历/周报不做题时，本轮 uid 只写 `growth_events(heatmap_view, probe=1)`，每次进 stats 一行；`daily_set_entries` 不受影响。
+
+## R431 部署第 4 步（compose 重建）失败归因 / 宿主取证经验
+- 归因先看三样：`/tmp/kg-compose.log`（软链→当次 `/tmp/kg-compose-<rev>-<utc>.log`）末行有无 `KG_COMPOSE_EXIT rc=N`；`sudo -n journalctl -u docker --since ...`（`Control/Solve ... context canceled` = client 侧取消，不是 buildkit 错）；`sudo -n journalctl -k`/`dmesg` 找 `Out of memory|oom-kill|Killed process`——**free 很低 ≠ OOM，无内核记录就不能写 OOM**。
+- `session healthcheck failed fatally ... only one connection allowed` 每次 build 收尾都会打，成功也打，不是原因。
+- 本地部署日志里 `compose-started` 之后若无 `Timeout, server not responding`/`closed by remote host`，则 ssh 没掉线；旧写法下 launcher ssh 返回时刻 ≈ compose 进程消失时刻，可用来对齐 dockerd 日志时间。
+- bash 陷阱：`ssh R "cd X && nohup cmd > log 2>&1 & echo ok"` 的 `&` 作用于整个 `cd && nohup` 列表，子 shell 会持有 ssh 管道等 cmd 结束；要立即返回用 `setsid -f nohup cmd > log 2>&1 < /dev/null && echo ok`。远端验证法：`ps -o pid,ppid,sid,pgid,cmd` + `ls -l /proc/<pid>/fd` 看 fd1/2 是 pipe 还是日志文件。
+- `deploy/host_probe.sh` 可单独跑：`ssh R bash -s < deploy/host_probe.sh` → `mem_avail=… disk_avail=… load=… other_builds=N`；`other_builds` 用 `[d]ocker` 写法防 pgrep 匹到自身，验证时远端 `bash -c 'exec -a "docker compose up -d --build" sleep 30' &` 造一个假进程看计数。
+- 部署脚本改动的验证 = 真跑一次 `--skip-build` 部署看 `host:`/`compose-started`/`poll:`/`KG_COMPOSE_EXIT` 四行 + `/api/health` rev + 容器 healthy/RestartCount + 容器日志 5xx/Traceback/locked，无 DB 写入无需清理、无 UI 无需 testing agent。
