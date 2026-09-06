@@ -1386,3 +1386,15 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 管理台没有渲染 `/api/admin/stats` 的 `daily_usage`（`core.js` 只在登录校验调用它）；概览页「近 14 天作答量趋势」来自 `/api/admin/dashboard.trend`（answer_log）。验 `daily_usage` 要在 admin 页用带 `X-Admin-Token: localStorage.admToken` 的 fetch 直接读 JSON，再和 DB 按 `date(created_at,'unixepoch')` 分 probe 分组对账。
 - 清理：`practice_results` 现在可按 uid 删；`growth_events` 会因完成页 nudge 留 `push_nudge_show/login_nudge_show` 行，与 `answer_log/mistakes` 一并按 uid 删；全库扫描 `pragma table_info` 含 `uid` 的表以确认 LEFTOVER 0。
 - 管理台退出登录后 Chrome 会弹「Save password?」，点 Never，避免 token 存入密码管理器；本机拉的 token 临时文件用完即删。
+
+## R427 答题 PK（pk_matches.probe）走查经验
+- 入口：「我的」页 `wd-cell` 「答题 PK」→ `/pkgA/pk/pk`；分享链接直接打开 `https://kaogong.zalize.com/#/pkgA/pk/pk?code=XXXX` 会在 onLoad 自动 join。
+- 所有 pk 接口都是 XHR 且带 `uid: anonUid()`（含 `GET /api/pk/leaderboard?uid=`），网络钩子 PAT 用 `['/api/pk/']` 即可（`/tmp/cdp174/holdnet427.py`）。切身份只需 CDP 写 `localStorage.anonUid` 后 F5。
+- 答题页：点选项 350 ms 后自动锁定并下一题，每题 30 s 超时自动空答；第 10 题后自动 `POST /api/pk/submit` 进结果页。别在答题中途跑长 shell 查询，会有题目超时（如实记录即可）。
+- 随机匹配隔离断言要选**只有真人（probe NULL/0）等待局**的模块（当时 shuliang 只有 `ZBFS14`）；「混合」池里可能有 `creator_score=0` 的探针等待局（非 NULL 也算）会 matched:true 并改写他人行。先用 DB 列出 `status='waiting' AND opponent_uid IS NULL` 的 code/module/probe/creator_score 再决定。
+- toast 「暂无对手，已为你开局等待匹配」只显示约 1.5 s，截图常错过；可即刻查 `document.querySelectorAll('uni-toast')` 的 innerText 兜底取证。
+- 榜隐私口径：匿名/第三方 uid → `items:[]`；参与者 uid → items 含 `r427-u***` 且胜者有 `my_rank`。curl 无 uid 与 UI 有 uid 两条都要对照。
+- 紧接 chip 点击后立刻点「发起好友挑战」曾出现一次 XHR status 0（未到服务端），等 1–2 s 再点即可；如再现请上报。
+- 1440 模拟视口大于物理屏时，computer 截图会裁切；用 CDP `Page.captureScreenshot` 取全视口证据（`r['result']['data']`）。holdvw 杀掉后 override 可能残留，需 `setDeviceMetricsOverride(width=0,height=0,deviceScaleFactor=0)` + `clearDeviceMetricsOverride` + reload 才回 1600×1017。
+- 排查时切勿用 curl 直打 create/join 等写接口——会在生产留行（本轮 `r427-ui-probe-curl` 需额外清理）。
+- 清理：pk 行按 `creator_uid/opponent_uid LIKE 'r427-%'` 删；本轮 `growth_events` 等表无命中（PK 页不产生 nudge 行）。
