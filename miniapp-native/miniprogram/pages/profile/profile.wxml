@@ -59,6 +59,12 @@
       <t-cell title="练习历史" description="逐题回看 · 错题重练" arrow hover bind:click="onPracticeHistory">
         <view slot="left-icon" class="row-ico bg-brand"><l-icon name="clock" size="20" tone="brand" /></view>
       </t-cell>
+      <t-cell title="学习日历" description="每日活跃 · 连续打卡 · 徽章" arrow hover bind:click="onCalendar">
+        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="calendar" size="20" tone="brand" /></view>
+      </t-cell>
+      <t-cell title="周学习报告" description="本周 vs 上周 · 掌握度变化" arrow hover bind:click="onWeekly">
+        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="calendar-check" size="20" tone="brand" /></view>
+      </t-cell>
       <t-cell title="收藏与笔记" description="收藏夹 · 我的笔记" arrow hover bind:click="onFavorites">
         <view slot="left-icon" class="row-ico bg-brand"><l-icon name="star" size="20" tone="brand" /></view>
       </t-cell>

@@ -22,8 +22,12 @@
         <text class="hero-goal">/ {{goal}} 题</text>
       </view>
       <view class="hero-prog"><kg-progress value="{{today}}" max="{{goal}}" thickness="{{4}}" inverse aria-label="今日目标进度" /></view>
+      <view wx:if="{{dsMeta}}" class="hero-links">
+        <text class="hero-ds" bind:tap="onDailySet">{{dsDoneText}}</text>
+        <text class="hero-lnk" bind:tap="onDailyArchive">补练往期 ›</text>
+      </view>
       <view class="hero-btns">
-        <kg-button variant="primary" tone="inverse" size="md" icon="chevron-right" bind:click="onContinueGoal">继续目标</kg-button>
+        <kg-button variant="primary" tone="inverse" size="md" icon="chevron-right" bind:click="onContinueGoal">{{today >= goal ? '再练一组' : '继续目标'}}</kg-button>
         <view class="hero-chips">
           <view
             wx:for="{{goalChips}}"
@@ -71,6 +75,11 @@
       </kg-card>
     </view>
 
+    <!-- 公告横幅 -->
+    <view wx:if="{{announce}}" class="strip">
+      <kg-banner tone="info" icon="megaphone" text="{{announce.title}}{{announce.body ? '：' + announce.body : ''}}" bind:close="onDismissAnn" />
+    </view>
+
     <!-- 今日任务三件套 -->
     <kg-card variant="raised" class="taskcard">
       <view class="tk-h">
@@ -109,7 +118,7 @@
           </block>
           <text wx:else class="tk-sub">已解锁全部打卡徽章，太强了！</text>
         </view>
-        <text class="tk-go">徽章</text>
+        <text class="tk-go">日历</text>
       </view>
     </kg-card>
 
@@ -140,27 +149,57 @@
       <view class="guide-x" catch:tap="onSkipGuide">跳过</view>
     </view>
 
-    <!-- 学习计划卡 -->
-    <kg-card variant="raised" class="plancard" wx:if="{{hasProfile && planTasks.length}}">
+    <!-- 学习计划卡（/api/plan/today：阶段分化 + 任务卡 + 今日主攻） -->
+    <kg-card variant="raised" class="plancard" wx:if="{{hasProfile}}">
       <view class="plan-h">
-        <text class="plan-t">今日学习计划</text>
-        <kg-tag wx:if="{{daysLeft !== null}}" tone="bad">距考试 {{daysLeft}} 天</kg-tag>
+        <text class="plan-t">学习计划</text>
+        <kg-button variant="text" size="sm" bind:click="onOpenSetup">编辑</kg-button>
       </view>
+      <text wx:if="{{daysLeft !== null}}" class="plan-s">距考试 <text class="num">{{daysLeft}}</text> 天 · {{phaseName}}</text>
       <view class="plan-prog">
-        <view class="plan-bar"><kg-progress value="{{planPct}}" max="{{100}}" thickness="{{4}}" aria-label="今日计划完成度" /></view>
-        <text class="plan-pct num">{{planPct}}%</text>
+        <view class="plan-bar"><kg-progress value="{{planDone}}" max="{{planTotal || 1}}" thickness="{{4}}" aria-label="今日计划进度" /></view>
+        <text class="plan-pct num">{{planDone}}/{{planTotal}}</text>
       </view>
       <view
         wx:for="{{planTasks}}"
-        wx:key="index"
-        class="plan-row"
+        wx:key="key"
+        class="task {{item.done ? 'is-done' : ''}}"
         data-index="{{index}}"
         hover-class="tk-row--hover"
         bind:tap="onPlanTask"
       >
-        <view class="tk-ck {{item.done ? 'on' : ''}}"><l-icon wx:if="{{item.done}}" name="check" size="16" tone="on-brand" /></view>
-        <text class="plan-txt {{item.done ? 'tdone' : ''}}">{{item.title || '练习任务'}}</text>
-        <text class="plan-go" wx:if="{{!item.done}}">去完成</text>
+        <l-icon name="{{item.icon}}" size="20" tone="{{item.iconTone}}" />
+        <view class="task-main">
+          <text class="task-t">{{item.title}}</text>
+          <text wx:if="{{item.subText}}" class="task-s">{{item.subText}}</text>
+        </view>
+        <text class="task-go">{{item.goText}}</text>
+      </view>
+      <view class="focus">
+        <text class="focus-k">今天主攻</text>
+        <view class="focus-row"><kg-chip-row size="sm" options="{{focusOpts}}" value="{{focus}}" scroll-to-selected="{{false}}" bind:change="onFocus" /></view>
+      </view>
+    </kg-card>
+
+    <!-- 无画像：今日建议（/api/daily_plan：到期错题 + 薄弱项推荐 source=reco） -->
+    <kg-card variant="raised" class="plancard" wx:elif="{{planLoaded && showSuggest}}">
+      <view class="plan-h">
+        <text class="plan-t">学习计划 · 今日建议</text>
+        <text class="plan-y">{{yesterdayText}}</text>
+      </view>
+      <view wx:if="{{dueReview}}" class="task" hover-class="tk-row--hover" bind:tap="onGoBook">
+        <l-icon name="rotate-ccw" size="20" tone="warn" />
+        <text class="task-t task-main">先复习到期错题 {{dueReview}} 道</text>
+        <text class="task-go">去复习 ›</text>
+      </view>
+      <view wx:for="{{weakList}}" wx:key="key" class="task" data-index="{{index}}" hover-class="tk-row--hover" bind:tap="onWeak">
+        <l-icon name="target" size="20" tone="brand" />
+        <text class="task-t task-main">{{item.text}}</text>
+        <text class="task-go">练 10 题 ›</text>
+      </view>
+      <view class="focus">
+        <text class="focus-k">今天主攻</text>
+        <view class="focus-row"><kg-chip-row size="sm" options="{{focusOpts}}" value="{{focus}}" scroll-to-selected="{{false}}" bind:change="onFocus" /></view>
       </view>
     </kg-card>
 
@@ -183,6 +222,14 @@
         <l-icon class="m-arrow" name="chevron-right" size="20" tone="faint" />
       </view>
     </view>
+    <view class="entries">
+      <kg-entry-row icon="newspaper" tone="warn" title="时政每日一练" desc="每日 10 题 · 全站同题" bind:click="onShizheng">
+        <kg-tag wx:if="{{!szTodayDone}}" tone="warn">今日更新</kg-tag>
+        <kg-tag wx:else tone="ok">已完成</kg-tag>
+      </kg-entry-row>
+      <kg-entry-row icon="file-text" tone="brand" title="真题模式刷题" desc="只练历年真题 · 每组 10 题" bind:click="onRealPractice" />
+    </view>
+
     <!-- 更多练习（对齐 H5 首页 more-grid：模考 / 申论 / 错题重练 / 拍题讲解） -->
     <kg-section-header title="更多练习" />
     <view class="more-grid">
@@ -206,6 +253,14 @@
         <text class="more-t">拍题讲解</text>
         <text class="more-s">花生十三方法体系</text>
       </kg-card>
+    </view>
+
+    <!-- 周报 / 连签日历 -->
+    <view class="entries">
+      <kg-entry-row icon="calendar-check" tone="brand" title="周学习报告" desc="每周一生成 · 回顾上周 · 规划下周" bind:click="onWeeklyReport">
+        <view wx:if="{{weeklyDot}}" class="dot" />
+      </kg-entry-row>
+      <kg-entry-row icon="flame" tone="streak" title="连续打卡 {{badgeStreak || streak}} 天" desc="{{nextMilestone ? '再打卡 ' + nextMilestone.left + ' 天解锁「' + nextMilestone.days + ' 天」徽章' : '已解锁全部打卡徽章，太强了！'}}" bind:click="onCalendar" />
     </view>
   </view>
 </scroll-view>

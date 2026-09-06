@@ -166,6 +166,12 @@ Page({
   onShenlun() {
     wx.navigateTo({ url: '/pkgExam/shenlun/shenlun' });
   },
+  onCalendar() {
+    wx.navigateTo({ url: '/pkgGrow/calendar/calendar' });
+  },
+  onWeekly() {
+    wx.navigateTo({ url: '/pkgGrow/weekly-report/weekly-report' });
+  },
   onLogin() {
     wx.navigateTo({ url: '/pages/login/login' });
   },

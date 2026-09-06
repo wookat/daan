@@ -1,0 +1,110 @@
+<navbar title="周学习报告" back />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <view wx:if="{{loading}}" class="skel" aria-busy="true">
+      <kg-card variant="raised" class="sec"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
+      <kg-card variant="raised" class="sec"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
+    </view>
+
+    <kg-empty wx:elif="{{empty}}" icon="calendar" title="上周没有学习记录" desc="{{stateDesc}}" cta-text="去刷题" bind:cta="onGoPractice" />
+
+    <kg-empty wx:elif="{{pending}}" icon="clock" title="该周尚未结束" desc="{{stateDesc}}" cta-text="查看上一周周报" bind:cta="onPrevWeek" />
+
+    <kg-empty wx:elif="{{error}}" icon="wifi-off" title="加载失败" desc="{{error}}" cta-text="重试" bind:cta="onReload" />
+
+    <block wx:elif="{{r}}">
+      <!-- 1. 头部概览 -->
+      <kg-card variant="raised" class="sec">
+        <text class="hero-lab">{{r.range}}</text>
+        <view class="hero-val"><text class="num">{{r.summary.n}}</text><text class="hero-unit">题</text></view>
+        <view class="stat-row">
+          <view wx:for="{{heroStats}}" wx:key="label" class="stat">
+            <text class="stat-n num {{item.tone ? 'is-' + item.tone : ''}}">{{item.value}}</text>
+            <text class="stat-k">{{item.label}}</text>
+          </view>
+        </view>
+      </kg-card>
+
+      <!-- 2. 徽章 -->
+      <view wx:if="{{r.badges.length}}" class="badges">
+        <view wx:for="{{r.badges}}" wx:key="key" class="badge">
+          <l-icon name="medal" size="20" tone="warn" />
+          <view class="badge-main">
+            <text class="badge-t">{{item.title}}</text>
+            <text class="badge-s">{{item.desc}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 3. 本周 vs 上周 -->
+      <kg-card variant="raised" class="sec">
+        <text class="h">本周 vs 上周</text>
+        <view wx:for="{{cmp}}" wx:key="k" class="cmp-row">
+          <text class="cmp-k">{{item.k}}</text>
+          <text class="cmp-v num">{{item.v}}</text>
+          <text class="cmp-p num">{{item.p}}</text>
+        </view>
+      </kg-card>
+
+      <!-- 4. 掌握度变化 -->
+      <kg-card wx:if="{{mastery.length}}" variant="raised" class="sec">
+        <text class="h">考点掌握变化</text>
+        <view wx:for="{{mastery}}" wx:key="key" class="ms-row">
+          <view class="ms-tag {{item.dir}}"><text class="ms-tag-t">{{item.dir === 'up' ? '↑' : '↓'}}</text></view>
+          <text class="ms-t">{{item.submodule}}</text>
+          <text class="ms-v num">{{item.text}}</text>
+        </view>
+      </kg-card>
+
+      <!-- 5. 错因分布 -->
+      <kg-card wx:if="{{reasons.length}}" variant="raised" class="sec">
+        <text class="h">本周错因分布</text>
+        <view wx:for="{{reasons}}" wx:key="reason" class="rs-row">
+          <text class="rs-k">{{item.reason}}</text>
+          <view class="rs-bar"><view class="rs-fill" style="width:{{item.pct}}%" /></view>
+          <text class="rs-v num">{{item.n}}<text class="rs-p">（上周 {{item.prev_n}}）</text></text>
+        </view>
+      </kg-card>
+
+      <!-- 6. 模考回顾 -->
+      <kg-card variant="raised" class="sec">
+        <text class="h">模考回顾</text>
+        <block wx:if="{{r.mock}}">
+          <text class="mk-line">本周模考最高 <text class="mk-n num">{{r.mock.score}}</text> 分（共 {{r.mock.n_exams}} 次）</text>
+          <text wx:if="{{mockSub}}" class="mk-line sub">{{mockSub}}</text>
+          <kg-button variant="text" size="md" icon="chevron-right" bind:click="onOpenAttempt">查看成绩报告</kg-button>
+        </block>
+        <block wx:else>
+          <text class="mk-none">本周未模考</text>
+          <kg-button wx:if="{{nextEvent}}" variant="text" size="md" icon="chevron-right" bind:click="onGoContest">{{nextEventText}}</kg-button>
+        </block>
+      </kg-card>
+
+      <!-- 7. 下周行动 -->
+      <kg-card wx:if="{{r.actions.length}}" variant="raised" class="sec">
+        <text class="h">下周行动</text>
+        <view wx:for="{{r.actions}}" wx:key="index" class="act-row" aria-role="button" hover-class="row--hover" data-i="{{index}}" bind:tap="onAction">
+          <text class="act-t">{{item.title}}</text>
+          <text class="act-go">去完成</text>
+          <l-icon name="chevron-right" size="16" tone="brand-text" />
+        </view>
+      </kg-card>
+
+      <!-- 8. 分享 -->
+      <kg-card wx:if="{{sharing}}" variant="raised" class="sec">
+        <text class="h">分享周报</text>
+        <image wx:if="{{shareImg}}" src="{{shareImg}}" class="share-img" mode="widthFix" bind:longpress="onSaveShare" />
+        <view wx:else class="share-wait">
+          <t-skeleton wx:if="{{!shareErr}}" theme="image" animation="gradient" />
+          <text class="share-wait-t">{{shareErr || '生成中…'}}</text>
+        </view>
+        <kg-button wx:if="{{shareImg}}" variant="primary" size="lg" block icon="save" bind:click="onSaveShare">保存图片</kg-button>
+      </kg-card>
+      <view class="share-btns">
+        <kg-button wx:if="{{!sharing}}" variant="primary" size="lg" block icon="share-2" bind:click="onBuildShare">生成分享图</kg-button>
+        <kg-button variant="secondary" size="lg" block icon="share-2" openType="share">分享给好友</kg-button>
+      </view>
+      <canvas id="weeklyCanvas" type="2d" class="hidden-canvas" />
+    </block>
+  </view>
+</scroll-view>

@@ -633,6 +633,118 @@
   border-radius: var(--r-full);
 }
 
+/* hero 每日一练入口 */
+.hero-links {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8);
+  margin: var(--sp-8) 0 var(--sp-4);
+}
+
+.hero-ds {
+  font-size: var(--fs-caption);
+  color: var(--on-brand-2);
+  flex: 1;
+  min-width: 0;
+}
+
+.hero-lnk {
+  font-size: var(--fs-caption);
+  color: var(--on-brand);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.strip {
+  margin-bottom: var(--card-gap);
+}
+
+/* 学习计划任务卡 */
+.plan-s {
+  display: block;
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+  margin: -4px 0 var(--sp-8);
+}
+
+.plan-y {
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+.task {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-12);
+  min-height: var(--hit-min);
+  padding: var(--sp-8) 0;
+  border-top: 1px solid var(--line);
+}
+
+.task.is-done {
+  opacity: 0.55;
+}
+
+.task-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-t {
+  display: block;
+  font-size: var(--fs-body);
+  color: var(--ink);
+}
+
+.task-s {
+  display: block;
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+  margin-top: 2px;
+}
+
+.task-go {
+  font-size: var(--fs-caption);
+  color: var(--brand-text);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.focus {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  padding-top: var(--sp-8);
+  border-top: 1px solid var(--line);
+}
+
+.focus-k {
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+  flex-shrink: 0;
+}
+
+.focus-row {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 入口行 */
+.entries {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  margin: var(--sp-8) 0 var(--card-gap);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-full);
+  background: var(--bad);
+}
+
 .rs-x--hover {
   background: var(--fill);
 }

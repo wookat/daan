@@ -1,0 +1,270 @@
+.wrap {
+  padding: var(--sp-16) var(--page-x) var(--sp-40);
+}
+
+.sec {
+  display: block;
+  margin-bottom: var(--card-gap);
+}
+
+/* 月历 */
+.cal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-8);
+  margin-bottom: var(--sp-4);
+}
+
+.cal-title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
+
+.cal-ym {
+  font-size: var(--fs-h3);
+  font-weight: 600;
+  color: var(--ink);
+  line-height: var(--lh-h3);
+}
+
+.cal-btn {
+  width: var(--hit-min);
+  height: var(--hit-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-full);
+}
+
+.cal-btn--hover {
+  background: var(--fill);
+}
+
+.cal-btn.dis {
+  pointer-events: none;
+}
+
+.cal-sub {
+  display: block;
+  font-size: var(--fs-sub);
+  color: var(--ink-3);
+  margin-bottom: var(--sp-16);
+}
+
+.cal-week {
+  display: flex;
+  margin-bottom: var(--sp-8);
+}
+
+.cal-w {
+  flex: 1;
+  text-align: center;
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+.cal-grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.cal-cell {
+  width: 14.28%;
+  height: var(--hit-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cal-c {
+  width: 36px;
+  height: 36px;
+  line-height: 36px;
+  text-align: center;
+  font-size: var(--fs-sub);
+  color: var(--ink-2);
+  box-sizing: border-box;
+  border-radius: var(--r-full);
+}
+
+.cal-c.part {
+  background: var(--brand-soft-2);
+  color: var(--brand-text);
+  font-weight: 600;
+}
+
+.cal-c.full {
+  background: var(--brand);
+  color: var(--on-brand);
+  font-weight: 600;
+}
+
+.cal-c.today {
+  border: 2px solid var(--brand);
+}
+
+.cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8) var(--sp-16);
+  margin-top: var(--sp-16);
+}
+
+.lg {
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--r-full);
+  display: inline-block;
+}
+
+.dot.part {
+  background: var(--brand-soft-2);
+}
+
+.dot.full {
+  background: var(--brand);
+}
+
+.dot.today {
+  border: 2px solid var(--brand);
+  background: var(--card);
+  box-sizing: border-box;
+}
+
+.cal-err {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  min-height: var(--hit-min);
+  margin-top: var(--sp-8);
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+/* 连签里程碑 */
+.ms-h {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--sp-12);
+}
+
+.ms-t {
+  font-size: var(--fs-h3);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ms-best {
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+.ms-cur {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+}
+
+.streak {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-4);
+  height: 24px;
+  padding: 0 var(--sp-8);
+  border-radius: var(--r-full);
+  background: var(--streak-soft);
+  color: var(--streak);
+  font-size: var(--fs-sub);
+  font-weight: 600;
+}
+
+.streak.is-zero {
+  opacity: 0.6;
+}
+
+.streak-u {
+  font-weight: 400;
+  font-size: var(--fs-caption);
+}
+
+.ms-cur-t {
+  font-size: var(--fs-sub);
+  color: var(--ink-2);
+}
+
+.ms-bar {
+  margin-top: var(--sp-12);
+}
+
+.ms-sub {
+  display: block;
+  font-size: var(--fs-sub);
+  color: var(--ink-3);
+  margin-top: var(--sp-8);
+  line-height: var(--lh-sub);
+}
+
+.ms-left {
+  color: var(--streak);
+  font-weight: 600;
+}
+
+.ms-dots {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--sp-16);
+}
+
+.ms-dot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-4);
+}
+
+.ms-dot-i {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-full);
+  background: var(--fill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ms-dot.on .ms-dot-i {
+  background: var(--streak-soft);
+}
+
+.ms-dot-d {
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+.ms-dot.on .ms-dot-d {
+  color: var(--ink);
+}
+
+.poster {
+  margin-top: var(--sp-16);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+}
+
+.poster-tip {
+  text-align: center;
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
