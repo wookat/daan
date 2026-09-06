@@ -1398,3 +1398,12 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 1440 模拟视口大于物理屏时，computer 截图会裁切；用 CDP `Page.captureScreenshot` 取全视口证据（`r['result']['data']`）。holdvw 杀掉后 override 可能残留，需 `setDeviceMetricsOverride(width=0,height=0,deviceScaleFactor=0)` + `clearDeviceMetricsOverride` + reload 才回 1600×1017。
 - 排查时切勿用 curl 直打 create/join 等写接口——会在生产留行（本轮 `r427-ui-probe-curl` 需额外清理）。
 - 清理：pk 行按 `creator_uid/opponent_uid LIKE 'r427-%'` 删；本轮 `growth_events` 等表无命中（PK 页不产生 nudge 行）。
+
+## R428 分享作答多选题（share-q 勾选后确认 / 后端 normalize_answer 判分）走查经验（testing agent）
+- 分享页 `/s/<sid>` 的 `/api/share/*` 请求走 uni.request(XHR)+fetch 混用且 F5 / 落地页跳 hash 是新 document，页面级 `window.__net` 钩子记录会丢；改用 CDP `Network` 域长连接（`/tmp/cdp174/holdnetcdp428.py <out.jsonl>`：`Network.enable` 后收 `requestWillBeSent`/`responseReceived`/`loadingFinished`，`getResponseBody` 期间收到的其他事件要排队处理），把 `/api/` 的 method/URL/postData/status/响应体追加成 JSONL，跨导航可靠。
+- 多选断言口径：`GET /api/share/<sid>?uid=` 的 `question` 键恰为 `[id,image,module,multi,options,question,submodule]`；未揭晓 `.multi-bar` 存在、`.multi-ok` 文案「确认答案（N）」、空选时带 `.dis`；勾选期间 `/answer` POST 必须为 0；确认后 body `picked` 已是升序去重（`ADC` 点法也发 `ACD`）；揭晓后 `.opt.right` 按字母包含、`.opt.wrong` = 选中且不在答案里；同 sid 换 uid 前用 CDP 写 `localStorage.anonUid` 再 F5。单选题 `multi:false`、无 `.multi-bar`、点选即 POST。
+- `POST /api/share/create` 同人同题**幂等复用 sid**（`team.py` 查 `question_id+from_uid+team_id` 直接回旧 sid），日志里 create 200 次数可多于 `shared_questions` 新增行数，不是漏写。
+- `holdvw.py`/holder 的 pid 文件若写 `$!`（`bash -c … &` 包装）记到的是 wrapper pid，`kill $(cat pid)` 杀不掉 python 子进程；新旧 holder 同时存活会导致 1440 override 与 375 互相覆盖（表现：页面渐白/空白、CDP 截图仍 375×812）。切分辨率前先 `ps aux | grep holdvw` 按真实 pid 清干净，再启新 holder。
+- 1440 仿真下 `Page.captureScreenshot` 返回结构是 `{'id','result':{'data'}}`（`cdp.py call` 不解包），取 `['result']['data']`。
+- `/tmp/r428_ls_orig.json` 这类 LS 备份是双重 JSON 字符串，恢复用 `json.loads(json.load(f))`（见 `/tmp/cdp174/r428_restore_ls.py`）。
+- 清理台账：分享流程会在 `growth_events` 留 `share_open`/`share_answer` 行（本轮 14 行），按 uid 一并删；`answer_log` 基线若与清理后不符，先查窗口内其他 probe uid（如并发的 `um…` 探针）再下结论。
