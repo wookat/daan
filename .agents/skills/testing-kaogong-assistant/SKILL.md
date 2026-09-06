@@ -1465,3 +1465,8 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 备份 vs 活跃库对账：宿主 `gunzip -c ~/kaogong-backups/data-<date>.db.gz > /tmp/x.db` 后 python `sqlite3.connect('file:/tmp/x.db?mode=ro', uri=True)`；活跃库同样 `mode=ro` 只读。逐表比 `count(*)` + `max(rowid)`；本库**没有** `favorites`/`reminders` 表（收藏是 `question_favs`/`fav_folders`/`shenlun_qfavs`/`shenlun_mat_favs`，提醒是 `reminder_prefs`；先查 `sqlite_master` 再对账），`no such table` 不是 0 行别写成「一致」。当日 `data-<date>.db.gz` 会被手工整跑 ops 脚本覆盖，对账前先看它的 mtime。
 - `-wal` 文件大小 ≠ 活跃数据：读 `-shm` 前 136 字节，`mxFrame`（偏移 16）× 4096 才是活帧；`nBackfill`（偏移 96）= 已回填帧数。想立刻收回历史峰值只能 `PRAGMA wal_checkpoint(TRUNCATE)`（返回 `(0,0,0)` = 无 busy、全部回填、已截）；有读事务在跑时会返回 busy=1 不是错误，稍后重试。R435 起连接带 `journal_size_limit=64 MiB`，之后 WAL 重置会自动截回，不必再手工。
 - 镜像依赖：`docker exec deploy-kaogong-1 pip freeze | sort | diff - <(grep -v '^#' backend/requirements.txt | grep . | sort)` 必须为空；不为空 = 有人绕过 requirements.txt 或本地漏推。本地 venv 版本与清单不一致时先 `pip install -r backend/requirements.txt` 再跑 pytest，别拿本机旧版当生产结论。buildkit 日志 `/tmp/kg-compose-<rev>-*.log` 里 `RUN pip install` 下一行是 `CACHED` 还是 `Collecting` 能看出这次部署有没有重装依赖。
+
+## R436 前端构建可复现性核查
+- 判「本地 bundle = 线上 bundle」不要只看文件名 hash：`find dist/build/h5 -type f -exec md5sum {} + | sort` 构建前后各存一份 `diff`，0 行才算字节级可复现（R436：119 文件全同）。锁与安装树用 `node_modules/.package-lock.json` 与 `package-lock.json` 逐包比 `version`，`npm install --dry-run` 的「added N」含 optional 平台包、不能当缺包证据。
+- `error_reason` 列在 `mistakes` 表；对 `answer_log` 查会 `no such column`。关联 probe=0 时用 `exists(select 1 from answer_log a where a.uid=m.uid and a.probe=0)`。
+- 本机系统 SQLite 3.37.2 比生产（python:3.12-slim，3.46.1）老；新语法（`->>`/RETURNING/STRICT/unixepoch）本地会先报错，别把本地失败误判成生产问题。
