@@ -1475,3 +1475,8 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - `docker logs deploy-kaogong-1 --since 24h` 的实际覆盖 = 当前容器 `StartedAt` 至今（部署日常常只有几十分钟），先 `docker inspect --format '{{.State.StartedAt}}'` 再下「N 小时无异常」结论。更早的应用日志看 `/home/ubuntu/kaogong-reports/app-log/kaogong-app-<rev>-<startedAt>-to-<now>.log.gz`（R437 起每次重建前归档，保留 14 天，行首 UTC 时间戳）：`zcat … | grep -E 'Traceback|" 5[0-9]{2} '`。
 - caddy 24 h 非 2xx 归因先按 `Cf-Connecting-Ip` 分三桶：探针网段（140.232.64.x）= 历轮走查负向用例；为空 = 直连源站扫描（403 正确）；其余再看 UA/路径。`sitemap-questions-<n>` 越界 404 是分片按 OFFSET 切的设计内行为，引擎请求旧分片号不算问题。
 - 部署机没有 `brotli`，1b 的 WARN 是常态（R367 起）；线上 br 变体由边缘压出，5b 通过即可，别把该 WARN 记成本轮回归。
+
+## R438 SRS 到期点口径
+- R438 起 `mistakes.next_review` 一律落在中国日历日 00:00（`cn_day_start()+N×86400`）；断言写 `nr % 86400 == 16*3600` 且 `now < nr <= now+86400`（1 天档），不要再写 `nr > now + 0.5 天` 之类的滚动口径。错题**重新写入**仍是 `next_review=time.time()`（立刻到期），二者不要混。
+- 生产走查复习后要看「明天复习」标签：改后无论几点复习，次日 00:00 前都应是「明天复习」、00:00 起「今日到期」；如看到当天下午才变到期，先查 `next_review` 是否 % 86400 != 57600（说明是 R438 前的旧行或有新写入路径绕过了 `_advance_review`）。
+- 现存行对齐记录在 `/data/r438-next-review-realign.json`（29 行 old/new），回滚：把 `r438_verify.py` 的 `restore` 分支灌进容器 `python3 -`。
