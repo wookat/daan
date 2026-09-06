@@ -1369,3 +1369,11 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 空正文指纹（R423b 已修）：thinking 数十个后直接 done、正文 0 字、DB review 空；容器日志 `[llm] stream <model> finish=length content=0 …` 告警——出现即预算不足，不是网络问题。
 - 含图 `/api/explain/stream` 只收一个 `image` 字段，重复字段只取最后一张；低清 360px JPEG q35 仍可识题命中缓存键。取材料题样本用 `/api/questions?module=ziliao&grouped=1&limit=5`，**不要在高负载时段对生产库跑无索引全表 LIKE**（一次 >10 min 未返回）。
 - 清理：`interview_sessions` 按 uid 删；探针含图讲解会新增 explain_cache 行（无 uid），按 `question_text like` 定位删回基线。
+
+## R424 面试点评关推理 / 讲解存疑兜底 走查经验
+- 点评口径更新：`/api/interview/answer/stream` 与 regen 流 `event: thinking` 应为 **0**、正文首字距 meta ≤10 s（实测 1.3–1.6 s）；占位只会出现「考官正在撰写点评…」约 1.5 s 一闪，「考官正在思考…（已 N 秒）」不再出现。若 thinking >0 说明上游忽略了 `thinking.disabled`，如实记录个数不算 FAIL。
+- 存疑判定口径：兜底拦截 = `tMeta == tFirstDelta == tDone` 单事件秒回 + `module/question_type` 均 null + 正文首行「【答案】题目存疑」+ **不写 explain_cache**（`select count(*) from explain_cache where question_text like '<题干前缀>%'` 为 0）；模型自判存疑有 module、正文说明缺什么，且会写缓存。合法短题干样本：`3, 6, 12, 24, ( )？ A.36 B.48 C.42 D.30`（B）、`儿童：女童：未成年 A.… D.…`（D）应走模型讲解。
+- `explain_cache` 正文列是 `explanation`（无 `content` 列）、`created_at` 为 epoch REAL；`interview_sessions` 无 `probe` 列；容器内无 `sqlite3` CLI，转储用 python `sqlite3.Connection.backup`。
+- 清理 `test-*` uid 时 `ask_cur`（当前 ask 会话指针）会留 1 行，需一并删；`ins_ta.py` 在 375 弹层可能误报 textarea 长度 0（双 textarea 镜像延迟），以 `querySelectorAll("textarea")` 复核。
+- `pkill -f <pattern>` 不要与同一命令行里含该模式的字符串串联（会杀掉自身 shell）。
+- 复验窗口看到的 `POST /api/auth/wxlogin 503` 若不是你触发，用 caddy 日志按 IP/UA 归因（本轮为 vivo V2405A 真实设备、`WX_MINIAPP_SECRET` 未配的设计返回），不要算进本轮 5xx。
