@@ -22,8 +22,9 @@ describe('R440 首页 / 提醒设置字号下限与热区（源文件锁）', ()
     for (const sel of ['.hero-ds-arc', '.sz-arc']) {
       const m = css.match(new RegExp(`\\${sel}\\s*\\{([^}]*)\\}`));
       expect(m, sel).toBeTruthy();
-      expect(m[1]).toMatch(/display:\s*inline-block/);
-      expect(m[1]).toMatch(/margin:\s*-12px 0 -12px/);
+      // 纵向 padding 要生效须为块级盒：inline-block 或 float（R447 .hero-ds-arc 右浮动）
+      expect(m[1]).toMatch(/display:\s*inline-block|float:\s*right/);
+      expect(m[1]).toMatch(/margin:\s*-12px (?:0|-8rpx) -12px/);
       expect(m[1]).toMatch(/padding:\s*12px/);
     }
   });
