@@ -2074,3 +2074,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 修：`nxt = cn_day_start() + days*86400`（到期 = 中国日历日 00:00，1 天档=明天 0 点）；`due_*` 谓词、前端 `isDue`/`Math.ceil` 标签、错题重写 `next_review=time.time()` 都不改。生产实跑：23:45 CST 答对 → `next_review 09-07 00:00:00`、probe=1、清理 LEFTOVER 0；现存 29 行 floor 到所在日 00:00（dry 29 → dump `/data/r438-next-review-realign.json` → apply 29 → re-dry 0；只提前不推后；`python3 - restore` 可回）。healthy 0 重启、5xx/Traceback/locked 0。本地 pytest 497（+3）/ ruff 0 / pyright 0。
 - 顺带：R437 归档 app-log 3 份 3168 行 Traceback/5xx/locked/warn 0（窗口仅 31 min，跨部署完整样本要明天起）。
 - 登记：日界抖动无生产样本、修的是语义缺陷；小程序 `miniapp-native` 标签代码未单独核；`error_reason` ≥09-11 看 probe=0；`.sheet-x`/自然旧壳 404 (c) 待下次前端发版；`.trend-kn` 需 4 周样本；WAL 截断继续观测。下次 SOP-10 审计 ~R440。
+
+### R439（`backend/app/db.py` `_day_start` 委托 `cn_day_start` + `plan.py` 内联日界公式去重 + 单测 2；部署 `7282ff1`，bundle 不变、无 DB 写入）— 小程序错题本到期口径核（服务端驱动、不改）+「今天 00:00」三处同公式合一
+- 取证 docs/iter/round-3/r439-miniapp-due-label-day-start-single-source.md。`miniapp-native` 全目录无客户端到期判断/「明天复习」标签：首页「今日到期 N 题」、练习页「今日还有 N 题到期」的 N 全来自 `GET /api/review` 的 `total`（`due_review_count`），复习 toast「N 天后」来自 `POST /api/review/{mid}` 的 `next_review_days` → R438 落 00:00 后小程序自然同口径，**无需发版**。生产 29/29 `next_review` 在 CST 00:00、vivo `1952` → 09-07 00:00。
+- 顺带：同一「中国日历日 0 点」公式在 `db.cn_day_start` / `db._day_start`（8 处调用）/ `plan.today_plan` 内联局部变量（且与新函数同名）各写一份 → 合一（数值同、无行为变化，单测锁 `_day_start()==cn_day_start()`）。三处历来都是日历日口径，佐证 R438 方向与既有意图一致。
+- R438 对 08:00 推送「你有 N 道错题今日到期」与今日计划的效果：昨日任意时刻复习过的题今早都算到期（改前昨晚复习的要到今晚同钟点）；单测 `test_plan_counts_last_night_review_as_due_at_push_hour`；历史推送数字不落库不可回溯、`push_subs` 真人订阅数未查。
+- 跨部署 app-log：`83c7522` 680 行 / `fbcda82` 675 行 Traceback/5xx/locked/非 access WARN 全 0；仍是部署间隔片段，完整 24 h 样本需无部署日。`probe=0` 仍 22 行无新增；`error_reason`×probe=0 关联 0。
+- 复验：rc=0、health rev 对、healthy 0 重启、6b 全过（`/` LCP 1820）、WAL 160 KB。本地 pytest 499（+2）/ ruff 0 / pyright 0。
+- 登记：`.sheet-x`/自然旧壳 404 (c) 待下次前端发版；`.trend-kn` 需 4 周样本；WAL 截断继续观测；`error_reason` ≥09-11。R440 做 SOP-10 四维审计。

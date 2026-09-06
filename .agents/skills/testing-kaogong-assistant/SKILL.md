@@ -1480,3 +1480,4 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - R438 起 `mistakes.next_review` 一律落在中国日历日 00:00（`cn_day_start()+N×86400`）；断言写 `nr % 86400 == 16*3600` 且 `now < nr <= now+86400`（1 天档），不要再写 `nr > now + 0.5 天` 之类的滚动口径。错题**重新写入**仍是 `next_review=time.time()`（立刻到期），二者不要混。
 - 生产走查复习后要看「明天复习」标签：改后无论几点复习，次日 00:00 前都应是「明天复习」、00:00 起「今日到期」；如看到当天下午才变到期，先查 `next_review` 是否 % 86400 != 57600（说明是 R438 前的旧行或有新写入路径绕过了 `_advance_review`）。
 - 现存行对齐记录在 `/data/r438-next-review-realign.json`（29 行 old/new），回滚：把 `r438_verify.py` 的 `restore` 分支灌进容器 `python3 -`。
+- 小程序 `miniapp-native` 没有客户端到期判断/「明天复习」标签，首页/练习页「今日到期 N 题」全取 `GET /api/review` 的 `total`；核到期口径只需看服务端，不要去小程序找标签代码（R439）。「今天 0 点」只用 `db.cn_day_start(ts)`（`_day_start(offset)` 是它的偏移封装），不要再内联 `int(t+8*3600)//86400*86400-8*3600`。
