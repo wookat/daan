@@ -6,13 +6,13 @@ import time
 from fastapi import APIRouter, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 
-from . import db, engine, kb, llm
+from . import db, engine, kb, llm, sse
 from .deps import cache_key, check_access, friendly_ai_err, rl
 
 router = APIRouter()
 
 # 推理模型 reasoning 阶段向客户端发进度心跳的最小间隔（秒）
-THINKING_TICK_SEC = 1.0
+THINKING_TICK_SEC = sse.THINKING_TICK_SEC
 
 
 @router.post("/api/explain")
@@ -145,18 +145,12 @@ async def api_explain_stream(
             if cached:
                 yield "data: " + json.dumps({"d": cached["explanation"]}, ensure_ascii=False) + "\n\n"
             else:
-                full = ""
-                t0 = time.monotonic()
-                last_tick = t0
-                async for delta in engine.explain_stream(extracted, user_answer, with_thinking=True):
-                    if isinstance(delta, llm.Thinking):
-                        now = time.monotonic()
-                        if now - last_tick >= THINKING_TICK_SEC:
-                            last_tick = now
-                            yield "event: thinking\ndata: " + json.dumps({"secs": round(now - t0), "chars": delta.chars}) + "\n\n"
-                        continue
-                    full += delta
-                    yield "data: " + json.dumps({"d": delta}, ensure_ascii=False) + "\n\n"
+                parts: list[str] = []
+                async for line in sse.relay(
+                    engine.explain_stream(extracted, user_answer, with_thinking=True), parts, THINKING_TICK_SEC
+                ):
+                    yield line
+                full = "".join(parts)
                 if full.strip():
                     db.save_explain_cache(key, meta, full)
                     if raw_key and raw_key != key:

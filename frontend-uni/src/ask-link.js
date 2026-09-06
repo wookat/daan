@@ -43,3 +43,10 @@ export function thinkingLabel(secs) {
   if (!s) return '生成中…';
   return s < 30 ? `AI 正在推理…（已 ${s} 秒）` : `AI 推理接近完成，讲解正文马上出现…（已 ${s} 秒）`;
 }
+
+// 面试点评流同款占位（点评正文平均在推理 25 s 后才出现）
+export function reviewThinkingLabel(secs) {
+  const s = thinkingSecs({ secs });
+  if (!s) return '考官正在撰写点评…';
+  return s < 20 ? `考官正在思考…（已 ${s} 秒）` : `考官思考接近完成，点评正文马上出现…（已 ${s} 秒）`;
+}

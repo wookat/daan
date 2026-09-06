@@ -724,8 +724,8 @@ export function interviewSession(id) {
 }
 
 // #ifdef H5
-// H5 流式点评：onMeta({scores,total,summary}) 一次，onDelta(fullText) 增量，onDone({session_id})。
-export async function streamInterview({ questionId, answer, durationSec, onMeta, onDelta }) {
+// H5 流式点评：onMeta({scores,total,summary}) 一次，onThinking({secs,chars}) 推理中逐秒，onDelta(fullText) 增量，onDone({session_id})。
+export async function streamInterview({ questionId, answer, durationSec, onMeta, onDelta, onThinking }) {
   const resp = await fetch(BASE_URL + '/api/interview/answer/stream', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Access-Code': getCode(), ...authHeader() },
@@ -742,14 +742,14 @@ export async function streamInterview({ questionId, answer, durationSec, onMeta,
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
-    feedSse(dec.decode(value, { stream: true }), state, onMeta, onDelta);
+    feedSse(dec.decode(value, { stream: true }), state, onMeta, onDelta, onThinking);
   }
   if (!state.meta) throw new Error('点评失败：无响应');
   return { ...state.meta, review: state.full, session_id: state.done && state.done.session_id };
 }
 
-// H5 中断 session 重新生成点评：onDelta(fullText) 增量，完成返回 { review }。
-export async function streamInterviewReviewRegen({ sessionId, onDelta }) {
+// H5 中断 session 重新生成点评：onThinking({secs,chars}) 推理中，onDelta(fullText) 增量，完成返回 { review }。
+export async function streamInterviewReviewRegen({ sessionId, onDelta, onThinking }) {
   const resp = await fetch(BASE_URL + '/api/interview/sessions/' + sessionId + '/review/stream', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Access-Code': getCode(), ...authHeader() },
@@ -766,7 +766,7 @@ export async function streamInterviewReviewRegen({ sessionId, onDelta }) {
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
-    feedSse(dec.decode(value, { stream: true }), state, null, onDelta);
+    feedSse(dec.decode(value, { stream: true }), state, null, onDelta, onThinking);
   }
   if (!state.full) throw new Error('点评失败：无响应');
   return { review: state.full };

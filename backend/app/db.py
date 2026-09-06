@@ -233,6 +233,8 @@ def init_db():
             down INTEGER DEFAULT 0
         )"""
     )
+    # 题库直通（question_id 命中）时记下 qid，讲解首行答案可与题库 answer 直接对账；识题路径/旧行 NULL
+    add_column_if_missing(conn, "explain_cache", "qid", "INTEGER")
     conn.execute(
         """CREATE TABLE IF NOT EXISTS shenlun_questions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2002,8 +2004,8 @@ def get_explain_cache(key: str) -> dict | None:
 def save_explain_cache(key: str, meta: dict, explanation: str):
     conn = get_conn()
     conn.execute(
-        "INSERT OR REPLACE INTO explain_cache (key, created_at, module, question_type, question_text, user_answer, explanation, hits, up, down) "
-        "VALUES (?,?,?,?,?,?,?, COALESCE((SELECT hits FROM explain_cache WHERE key=?),0), "
+        "INSERT OR REPLACE INTO explain_cache (key, created_at, module, question_type, question_text, user_answer, explanation, qid, hits, up, down) "
+        "VALUES (?,?,?,?,?,?,?,?, COALESCE((SELECT hits FROM explain_cache WHERE key=?),0), "
         "COALESCE((SELECT up FROM explain_cache WHERE key=?),0), COALESCE((SELECT down FROM explain_cache WHERE key=?),0))",
         (
             key,
@@ -2013,6 +2015,7 @@ def save_explain_cache(key: str, meta: dict, explanation: str):
             meta.get("question_text"),
             meta.get("user_answer"),
             explanation,
+            meta.get("qid") if isinstance(meta.get("qid"), int) else None,
             key,
             key,
             key,

@@ -96,7 +96,7 @@
               <button class="btn-primary regen-btn" @click="regenReview">重新生成点评</button>
               <!-- #endif -->
             </view>
-            <view v-if="!reviewHtml && (!reviewMissing || streaming)" class="loading">考官正在撰写点评…</view>
+            <view v-if="!reviewHtml && (!reviewMissing || streaming)" class="loading">{{ loadingLabel }}</view>
           </view>
         </view>
       </view>
@@ -116,6 +116,7 @@ import { interviewCategories, interviewDraw, interviewSession, streamInterview }
 import { streamInterviewReviewRegen } from '../../api.js';
 // #endif
 import { md } from '../../md.js';
+import { reviewThinkingLabel, thinkingSecs } from '../../ask-link.js';
 
 export default {
   data() {
@@ -132,6 +133,7 @@ export default {
       report: { scores: {}, total: 0, summary: '', duration: 0, answerLen: 0, category: '' },
       review: '',
       reviewMissing: false,
+      thinkSecs: 0,
       points: [],
     };
   },
@@ -141,6 +143,9 @@ export default {
   computed: {
     reviewHtml() {
       return this.review ? md(this.review) : '';
+    },
+    loadingLabel() {
+      return reviewThinkingLabel(this.thinkSecs);
     },
   },
   onLoad(opts) {
@@ -215,6 +220,7 @@ export default {
       try {
         this.report = { scores: {}, total: 0, summary: '', duration, answerLen: ans.length, category: this.question.category };
         this.review = '';
+        this.thinkSecs = 0;
         this.streaming = true;
         const res = await streamInterview({
           questionId: this.question.id,
@@ -225,6 +231,7 @@ export default {
             this.step = 'report';
           },
           onDelta: (full) => { this.review = full; },
+          onThinking: (t) => { this.thinkSecs = thinkingSecs(t); },
         });
         this.review = res.review || this.review;
         uni.removeStorageSync('ivDraft');
@@ -271,11 +278,13 @@ export default {
     async regenReview() {
       if (this.streaming) return;
       this.streaming = true;
+      this.thinkSecs = 0;
       try {
         const sid = this._sid;
         await streamInterviewReviewRegen({
           sessionId: sid,
           onDelta: (full) => { this.review = full; },
+          onThinking: (t) => { this.thinkSecs = thinkingSecs(t); },
         });
         this.reviewMissing = this.review.trim().length < 300;
       } catch (e) {

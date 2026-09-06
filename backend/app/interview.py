@@ -11,7 +11,7 @@ import time
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
-from . import db, llm
+from . import db, llm, sse
 from .deps import as_int, rl
 
 router = APIRouter(prefix="/api/interview")
@@ -163,7 +163,7 @@ def _clip_score(v) -> int:
 
 
 async def _grade(q: dict, answer: str) -> tuple[dict, int, str]:
-    data = await llm.chat_json(_score_prompt(q, answer), fast=True, temperature=0.1)
+    data = await llm.chat_json(_score_prompt(q, answer), fast=True, temperature=0.1, think=False)
     raw = data.get("scores") or {}
     scores = {d: _clip_score(raw.get(d)) for d in DIMENSIONS}
     total = sum(scores.values()) * 2
@@ -238,11 +238,12 @@ async def api_answer_stream(body: dict, request: Request):
             sid = _save_session(uid, q, answer, duration, scores, total, "")
             meta["session_id"] = sid
             yield "event: meta\ndata: " + json.dumps(meta, ensure_ascii=False) + "\n\n"
-            full = ""
-            async for delta in llm.chat_stream(_review_prompt(q, answer, scores, summary)):
-                full += delta
-                yield "data: " + json.dumps({"d": delta}, ensure_ascii=False) + "\n\n"
-            _update_review(sid, full)
+            parts: list[str] = []
+            async for line in sse.relay(
+                llm.chat_stream(_review_prompt(q, answer, scores, summary), with_thinking=True), parts
+            ):
+                yield line
+            _update_review(sid, "".join(parts))
             yield "event: done\ndata: " + json.dumps({"session_id": sid, "summary": summary}) + "\n\n"
         except Exception as e:
             yield "event: error\ndata: " + json.dumps({"message": _friendly_ai_err(e)}, ensure_ascii=False) + "\n\n"
@@ -273,10 +274,12 @@ async def api_review_regen_stream(sid: int, body: dict, request: Request):
 
     async def gen():
         try:
-            full = ""
-            async for delta in llm.chat_stream(_review_prompt(q, answer, scores, "")):
-                full += delta
-                yield "data: " + json.dumps({"d": delta}, ensure_ascii=False) + "\n\n"
+            parts: list[str] = []
+            async for line in sse.relay(
+                llm.chat_stream(_review_prompt(q, answer, scores, ""), with_thinking=True), parts
+            ):
+                yield line
+            full = "".join(parts)
             if full.strip():
                 _update_review(sid, full)
             yield "event: done\ndata: " + json.dumps({"session_id": sid}) + "\n\n"

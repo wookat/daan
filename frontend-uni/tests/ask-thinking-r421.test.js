@@ -47,7 +47,9 @@ describe('ask.vue / api.js 接线（源锁）', () => {
     expect(API).toMatch(/if \(questionId > 0\) fd\.append\('question_id', String\(questionId\)\)/);
     expect(API).toMatch(/\.\.\.\(questionId > 0 \? \{ question_id: questionId \} : \{\}\)/);
     expect(API).toMatch(/type === 'thinking'\) \{ onThinking && onThinking\(data\); \}/);
-    expect((API.match(/, onMeta, onDelta, onThinking\);/g) || []).length).toBe(3);
+    // 只数 streamExplain 三端（面试流 R423 起也转发 onThinking，不在此锁内）
+    const explain = API.slice(API.indexOf('export async function streamExplain('), API.indexOf('interviewCategories'));
+    expect((explain.match(/, onMeta, onDelta, onThinking\);/g) || []).length).toBe(3);
   });
   it('ask 页传 questionId、按心跳更新 thinkSecs、流式卡占位用 thinkingText', () => {
     expect(ASK).toMatch(/questionId: qid,/);
