@@ -2250,3 +2250,13 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 到期项 22:44Z 无增量：probe=0 33/1（末条 09-06 21:39:44Z = R461 vivo）、growth 20/4、error_reason 7（≥09-11 **0**）、push_subs 0、weekly 2、`quick_check ok`、WAL 4,124,152 B 同字节、healthy 0 重启；(c) 22:30Z 后 81 请求 404/monitor 0、非 2xx 仅本轮脚本直打 origin 的 1 条 403 自归因；宿主盘 **93% / 3.4 G**（续降）。
 - 如实：32/4 是源锁正则计数（W5 换写法会误报，但 6 个功能符号 W5 侧 0 命中为真缺失）；W5 未 rebase 按 merge-base 判定；W5 子 PR #625–#629 内部关系未展开；本轮未执行任何合并。方法：git 2.34 无 `merge-tree --write-tree`，用 detached worktree `merge --no-commit` 取 `--diff-filter=U`，结束 `worktree remove`。
 - 取证：`docs/iter/round-3/r462-w5-w6-w7-vs-pr619-merge-conflict-preview.md`。PR #619 仍 open（R400–R462 同分支）。
+
+## R463（W5 `--hit-min` 44 与 #619 40px 口径对照 + 申论页 `pkgA/shenlun` 从未过 R410+ 字号/热区审计；只取证不改码不部署，生产仍 `fe57df3`）
+- **两层规则并存不冲突**：W5 44 是设计系统组件层（KgButton sm/md `::after`、KgChipRow padding+`::after`、KgSheet ✕ 44×44，视觉 20/28/32/36 不变），#619 40 是页面层（每个可点元素 `min-height: 40px` + 源锁）。凡 W5 真撑到 44 处取 W5 写法不算回退，只需源锁正则接受 `var(--hit-min)`/`::after`。
+- **W5 侧 5 处既不到 44 也不到 40**（合并时按 #619 保留或换 `kg-button size="sm" variant="text"`；已评论 #630）：`book.vue` `.kpchip` 32（#619 40）、`book.vue` `.cf`×6/`.pbadge` = `kg-tag` 20px 当按钮、`q-social-bar.vue` `.qsb-link`/`.nop` 去掉了 R412 40px、`home.vue` `.hero-lnk` ≈ 34、`shenlun.vue` `.paper-tag`/`.tappable` = `kg-tag` 20px。`KgTag` 组件本体无撑高逻辑。
+- **我方命中（R464 立项）**：`pkgA/shenlun/shenlun.vue` 从未过 R410+ 审计——源码 15 处 `20–23rpx`（375 下 10–11.5px）、可点 `.seg-i/.chip/.chip.sm/.q-paper.tappable/.q-go/.sheet-x(本页自写筛选 ✕)/.d-copy/.back/.d-h.toggle` 无 min-height；生产 375 实测（360 仿真 ×1.042）seg-i 30.7 / chip 30.7 / q-paper 19.6 / q-go 28.6 / sheet-x 30.8 / chip.sm 27.7，字号 chip 11.5 / q-paper·q-type·q-meta 11.0（×60 节点）。R430/R440/R450/R460 四次选簇都没含申论。达标的：`.more` 45.8、`.m-star` 42.2、`.sf-btn` 42.2。
+- R462 `-X ours` 32 失败按口径拆三类：功能缺失 7 文件（必取 #619）/ 布局 3 文件（人工）/ 字号热区 6 文件（达标改锁、上面 5 处取 #619）。W5 `--fs-caption: 12px` 写 px 与 #619 12px 下限一致。
+- 到期项 22:58Z 无增量：probe=0 33/1、growth 20/4、error_reason 7（≥09-11 0）、push_subs 0、weekly 2、`quick_check ok`、WAL 4,124,152 B 同字节、healthy 0 重启；(c) 22:40–22:58Z 99 请求 404/monitor 0；宿主 93% / 3.5 G。
+- 如实：W5 页面无渲染量测（分支未构建），`::after` 44 在 uni H5 下是否被父级 `overflow: hidden` 裁掉未验（kg-chip-row 未写 `overflow: visible`）；1440 量测因 Playwright↔Chrome service_worker target 断言崩掉未取；申论素材 tab/详情页只按源码判。
+- 合并：R462「先合 #619」一轮无异议 → 按 CHARTER 第 7 条，R464 起点由项目负责人合并 #619 → main（本地门 vitest/eslint/build + pytest/ruff/pyright），再在新 main 上做 R464 申论修复。
+- 取证：`docs/iter/round-3/r463-w5-hit-min-44-vs-pr619-40px-shenlun-unaudited.md`。PR #619 仍 open（R400–R463 同分支）。

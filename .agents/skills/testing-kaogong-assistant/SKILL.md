@@ -1634,3 +1634,9 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 「能不能机械解」用**对方分支的 vitest 源锁**当尺：`-X ours` / `-X theirs` 各合一次、把对方 `frontend-uni/tests/*.test.js` 拷到 `tests/` 根目录（不能放子目录，源锁用相对路径）跑 `npx vitest run`（本仓库没有 `--reporter=basic`），失败数 = 该方向的回退条数；再 `git grep -c <功能符号> <分支> -- src/pages src/pkgA` 区分「换写法误报」与「功能不存在」。
 - `-X theirs` 仍失败的条目 = 非冲突 hunk 带回的回退，最容易在人工解冲突时漏掉，单独列。
 - 合并顺序论证要先核 `origin/main` 是否落后于生产 rev（`git merge-base --is-ancestor`）：main 落后时「先合谁」不是对称问题。
+
+## R463 经验：两条分支各有「热区下限」时，先分层再比数字
+- 先问规则落在哪一层：组件层（设计系统 token + `::after`/padding 撑高，视觉高度不变）还是页面层（每个可点元素直接 `min-height`）。两层可并存；合并验收只看「每个可点元素实际命中高 ≥ 页面层下限」，源锁正则要同时接受 `min-height: 40px` 与 `var(--hit-min)`/`::after` 形态。
+- 组件层规则最常见的漏洞是「把信息标签组件（KgTag 20px）当按钮用」和「裸 `<text>` 链接」：`git grep -n '<kg-tag' | grep '@click'` + `git grep -n 'class=\"[a-z-]*\" .*@click' -- '*.vue' | grep '<text'` 两条就能列全。
+- 审计簇选择要覆盖 `pkgA` 分包页：R430–R460 五次都没选到 `shenlun.vue`，它从 R242 建页起字号/热区没动过。快速排查：`grep -n -E 'font-size: (1[0-9]|2[0-3])rpx' <page>.vue`（375 下 <12px）+ 量测脚本 `/home/ubuntu/r463_shenlun.py`（CDP 375，`X-Kg-Probe: 1`，只 GET）。
+- 本机 Playwright ↔ 已运行 Chrome 的 `connect_over_cdp` 第二次连接可能被 `service_worker` target 断言打崩（`targetInfo type service_worker`）：一进程只连一次、多视口在同一连接里开多个 context，或先在页面里 `navigator.serviceWorker.getRegistrations()` 后注销再连。
