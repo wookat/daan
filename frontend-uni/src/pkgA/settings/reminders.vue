@@ -219,6 +219,8 @@ export default {
 .time-v { font-size: var(--fs-body); color: var(--brand-text); font-weight: 600; }
 .reminders :deep(.is-dim) { opacity: 0.5; }
 .reminders :deep(.cellcard) { margin-bottom: var(--card-gap); }
+.reminders :deep(.wd-cell__left) { flex: 1 1 auto; min-width: 0; }
+.reminders :deep(.wd-cell__right) { flex: 0 0 auto; }
 
 .warn-card { background: var(--warn-soft); margin-bottom: var(--card-gap); }
 .warn-t { display: flex; align-items: center; gap: var(--sp-4); font-size: var(--fs-body); font-weight: 600; color: var(--warn-strong); }
