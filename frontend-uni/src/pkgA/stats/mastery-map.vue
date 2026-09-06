@@ -17,7 +17,7 @@
         <template #aside>
           <!-- 覆盖度总览 -->
           <kg-card class="head">
-            <kg-progress shape="ring" :value="map.coverage.pct" :size="64" aria-label="考点覆盖度" />
+            <kg-progress shape="ring" :value="map.coverage.pct" :size="72" aria-label="考点覆盖度" />
             <view class="head-r">
               <text class="head-t">考点掌握度地图</text>
               <text class="head-s">已练 <text class="num">{{ map.coverage.practiced }}/{{ map.coverage.total }}</text> 个考点 · 累计 <text class="num">{{ map.n_total }}</text> 题</text>
