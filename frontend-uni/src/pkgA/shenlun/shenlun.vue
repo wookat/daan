@@ -780,7 +780,7 @@ export default {
 .sheet-body { padding-bottom: var(--sp-8); }
 .sheet-k { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin: var(--sp-12) 0 var(--sp-8); }
 .sheet-foot { display: flex; gap: var(--sp-12); }
-.sheet-body :deep(.wd-radio-group) { display: flex; flex-wrap: wrap; gap: var(--sp-8); }
+.sheet-body :deep(.wd-radio-group) { display: flex; flex-wrap: wrap; gap: var(--sp-8); --wot-radio-label-color: var(--ink); --wot-radio-button-bg: var(--fill); --wot-radio-button-border: var(--line); }
 
 .qgrid, .mgrid, .rgrid { display: flex; flex-direction: column; gap: var(--card-gap); }
 .q-top { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); }

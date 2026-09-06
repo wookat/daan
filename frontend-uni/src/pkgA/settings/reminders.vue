@@ -221,6 +221,20 @@ export default {
 .reminders :deep(.cellcard) { margin-bottom: var(--card-gap); }
 .reminders :deep(.wd-cell__left) { flex: 1 1 auto; min-width: 0; }
 .reminders :deep(.wd-cell__right) { flex: 0 0 auto; }
+.reminders :deep(.wd-datetime-picker) {
+  --wot-picker-bg: var(--card);
+  --wot-picker-toolbar-title-color: var(--ink);
+  --wot-picker-toolbar-cancel-color: var(--ink-2);
+  --wot-picker-toolbar-finish-color: var(--brand-text);
+  --wot-picker-column-color: var(--ink);
+  --wot-picker-column-select-bg: var(--fill);
+  --wot-picker-mask: linear-gradient(180deg, var(--picker-mask-a), var(--picker-mask-b));
+  --picker-mask-a: rgba(255, 255, 255, 0.9);
+  --picker-mask-b: rgba(255, 255, 255, 0.25);
+}
+.reminders :deep(.wd-datetime-picker .wd-popup-wrapper .wd-popup) { background: var(--card); }
+.reminders :deep(.wd-datetime-picker .wd-picker-view__roller) { background: var(--fill); }
+.theme-dark .reminders :deep(.wd-datetime-picker) { --picker-mask-a: rgba(29, 31, 40, 0.9); --picker-mask-b: rgba(29, 31, 40, 0.25); }
 
 .warn-card { background: var(--warn-soft); margin-bottom: var(--card-gap); }
 .warn-t { display: flex; align-items: center; gap: var(--sp-4); font-size: var(--fs-body); font-weight: 600; color: var(--warn-strong); }

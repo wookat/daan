@@ -156,8 +156,9 @@ export default {
 .pkg { display: flex; align-items: center; gap: var(--sp-12); margin-bottom: var(--sp-8); }
 .ico { width: 44px; height: 44px; border-radius: var(--r-sm); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .grow { flex: 1; min-width: 0; }
-.nm-row { display: flex; align-items: center; gap: var(--sp-8); }
-.nm { font-size: var(--fs-body); font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nm-row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-4) var(--sp-8); }
+.nm-row :deep(.kg-tag) { flex-shrink: 0; }
+.nm { font-size: var(--fs-body); font-weight: 600; color: var(--ink); line-height: var(--lh-sub); overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .sub2 { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: 2px; }
 .acts { display: flex; align-items: center; gap: var(--sp-4); flex-shrink: 0; }
 .hint2 { display: block; font-size: var(--fs-caption); color: var(--ink-3); line-height: var(--lh-caption); margin: var(--sp-8) var(--sp-4); }

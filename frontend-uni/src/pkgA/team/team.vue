@@ -15,7 +15,7 @@
         </kg-hero-card>
         <kg-card class="join" :padding="12">
           <text class="join-t">有邀请码？直接加入</text>
-          <kg-invite-input v-model="joinCode" placeholder="输入 6 位邀请码" :maxlength="8" :minlength="4" :error="joinErr" :loading="joining" @submit="joinByCode" />
+          <kg-invite-input v-model="joinCode" placeholder="输入 6 位邀请码" :maxlength="8" :minlength="6" :error="joinErr" :loading="joining" @submit="joinByCode" />
         </kg-card>
       </template>
       <template #main>
