@@ -5,6 +5,13 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R416 补充（testing agent）— 只标记（旗标）不上送进度
+- R416 起 `shouldPushProgress(picks, pushedBefore)` 不看 marks：进 exam 页只点「标记」（`.tbtn`→「已标记」）不答 → `POST /api/exam/progress` **0 条**、`exam_progress` 0 行；F5 不弹续考、直接新 attempt 并回收旧空场次（与 R415 不答一样）。一旦本场有过 POST（有作答），此后标记/取消都随 payload `marks:[qid,…]` 同步，清空作答后也会同步 `picks {}`。验证顺序建议：只标记 → 等 ≥5s 看 `__exb` → DB → F5；再 答 BD → 标另一题 → F5「已答 1/62」→ 继续 → 上一题看 `.opt.sel` + `.tbtn.on`。
+- 「只标记就刷新 → 标记丢」在 R416 下依旧（本就不落库），是既定口径，不算 FAIL。
+- 卷库 list 页 reload 会触发 `/api/exam/start`？不会，但 attempt 号可能跳号（本轮 288→290）——都是被回收的空场次，判「只剩 1 条」看 DB 不看编号连续。
+- 诊断钩子：`holdhook.py` 常驻时每个新 document 自动重装 `__exb/__hdr/__cerr/__pexc`，仍需 **每段 reload 前** `r391usr.py read <file>` dump 一次才保留该段。
+- 切视口时不要 `pkill -f "holdvw.py 375 812"`——会匹配到自己所在的 bash 命令行把整条命令杀掉；按 PID 文件 kill 或分两条命令跑。恢复 LS 大对象用 `cdp.C(pick()).eval(js)` 直接走 websocket，`python3 cdp.py eval "<50KB js>"` 会 `Argument list too long`。
+
 ## R415 补充（testing agent）— 模考「空场次」语义
 - R415 起：进 `exam?paper_id=N` 不作答/不标记 → **不会** `POST /api/exam/progress`（首次防抖与 onHide/onUnload flush 都被 `shouldPushProgress` 拦），F5 也不弹「继续上次模考？」而是直接新 attempt；下一次 `/api/exam/start` 会删本人同卷「无 progress 行 / picks '' 或 '{}'」的旧 attempt（连 progress 行）以及 >24h 未交卷的。验证套路：LS `examProgress.data.attemptId` 前后对比 + 容器 DB `exam_attempts/exam_progress where uid=?`。
 - 一旦本场推送过（或从快照恢复），之后清空作答也会同步 `picks {}`；再 F5 → 0 已答不弹 → 新场回收旧 `{}` 行。只标记不答会落 `{picks:{},marks:[...]}`，但 F5 后同样按空场次回收 → **标记丢失**（设计如此，记录即可）。
