@@ -543,6 +543,8 @@ export default {
 .acard-foot { display: block; text-align: center; font-size: var(--fs-sub); color: var(--ink-3); padding: var(--sp-4) 0 var(--sp-12); }
 
 /* #ifdef H5 */
+/* 全卷 100+ 题号超过 70vh 时由答题卡 body 自身滚动，「交卷」固定在面板底部 */
+.page :deep(.kg-sheet__body) { overflow-y: auto; }
 .page :deep(.kg-two__aside) { display: none; }
 .side-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-12); }
 .side-t { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); }
