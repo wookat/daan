@@ -1481,3 +1481,12 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 生产走查复习后要看「明天复习」标签：改后无论几点复习，次日 00:00 前都应是「明天复习」、00:00 起「今日到期」；如看到当天下午才变到期，先查 `next_review` 是否 % 86400 != 57600（说明是 R438 前的旧行或有新写入路径绕过了 `_advance_review`）。
 - 现存行对齐记录在 `/data/r438-next-review-realign.json`（29 行 old/new），回滚：把 `r438_verify.py` 的 `restore` 分支灌进容器 `python3 -`。
 - 小程序 `miniapp-native` 没有客户端到期判断/「明天复习」标签，首页/练习页「今日到期 N 题」全取 `GET /api/review` 的 `total`；核到期口径只需看服务端，不要去小程序找标签代码（R439）。「今天 0 点」只用 `db.cn_day_start(ts)`（`_day_start(offset)` 是它的偏移封装），不要再内联 `int(t+8*3600)//86400*86400-8*3600`。
+
+## R440 首页今日计划复习副标 / 首页 24rpx 字号 / 「往期 ›」热区走查经验
+- 首页两套「到期」口径：任务卡 `.tk-sub`「今日到期 N 题」与到期卡 `.duebar` 取 `GET /api/daily_plan?uid=`（注意不是 `/api/plan`，那是 404）的 `due_mistakes`，**含今日新错**；今日计划卡取 `GET /api/plan/today?uid=` 的 `tasks[key=review]`（`due` 用 `created_before=cn_day_start()` 排除今日新错，`new_today` 只进副标）。`review_target=min(m_review, reviewed+due)`，为 0 时 tasks 里**没有** review 项——只有今日新错的新 uid 计划卡不出现复习行是预期。
+- 造「到期已清 + 今日新错」现场最省事：`POST /api/mistakes {uid,module,question_text,correct_answer,user_answer}` 得 mid → `POST /api/review/{mid} {uid,correct:true}`（review_log +1，next_review 推到明天 00:00）→ 再原生在练习页答错 1 题。练习页题目对同 uid/同会话稳定（本轮两 uid 都拿到 qid 286402，正确 C），先选 A 基本能判错。
+- 今日计划卡需 `user_profile` 才出现：首页「制定我的学习计划 → 去制定 ›」3 步 sheet（考试日期 picker 滚月/日列 → 完成 → 下一步 ×2 → 生成我的学习计划）写 `POST /api/profile`；清理表清单在 R430 基础上加 `user_profile`、`review_log`、`practice_progress`（每个 uid 一行）。
+- `.hero-ds-arc`「补练往期 ›」只在 `dsMeta` 存在时渲染（每日一练有数据即有）；`.sz-arc`「往期 ›」在时政卡内。负外边距热区断言：arc rect.height 41，父行 `.hero-ds` 17；`.sz-s` 375 下本身折 2 行（h 34）不是被撑大，对比 1440 下 h 17 即可分辨。
+- R440 新副标 375 下会折成 2 行（`.task-sub` 247px 宽放不下 30 个字），属正常换行不是溢出；扫 `scrollWidth>clientWidth` 仍应为 `[]`。
+- 提醒设置页路径：「我的」→ 偏好设置「学习提醒」→ `#/pkgA/settings/reminders`。`.warn-s` 只在「每日刷题提醒」开启且 `Notification.permission!=='granted'` 时渲染：原生点开关（只写 LS `reminder` 设置）即出现，Chrome 弹权限框用右上 ✕ 关（perm 保持 default，不改站点设置），量完再点关回。`.push .hd/.appico` 在「提醒样式预览」卡内始终渲染。
+- holder 要带探针头：`holdtab440.py` = `holdtab.py` + `Network.setExtraHTTPHeaders({"X-Kg-Probe":"1"})`；切视口时 kill 旧 holder 再起新参数，reload 后 `innerWidth` 确认。
