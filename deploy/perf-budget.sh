@@ -9,11 +9,14 @@ SITE="${SITE:-https://kaogong.zalize.com}"
 CHROME="${CHROME_PATH:-$(command -v google-chrome || command -v chromium-browser || echo /home/ubuntu/.local/bin/google-chrome)}"
 
 # 预算（依据 docs/iter/round-3/r196-perf-budget.md 的近期稳定水位）
+# LCP 线 3000：Lighthouse 默认 simulate 口径下 `/` 的 LCP 是 Lantern 按「观测 FCP 前收完的
+# High 优先级模块分包」当阻塞资源折算的 ~2.73 s 稳定值（真节流实测 0.7 s），
+# 见 docs/iter/round-3/r443-lcp-budget-lantern-calibration.md。
 MIN_PERF="${MIN_PERF:-0.90}"
 MIN_A11Y="${MIN_A11Y:-1.00}"
 MIN_BP="${MIN_BP:-0.90}"
 MIN_SEO="${MIN_SEO:-0.95}"
-MAX_LCP_MS="${MAX_LCP_MS:-2500}"
+MAX_LCP_MS="${MAX_LCP_MS:-3000}"
 MAX_CLS="${MAX_CLS:-0.10}"
 MAX_BUNDLE_GZ_KB="${MAX_BUNDLE_GZ_KB:-160}"
 

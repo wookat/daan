@@ -1502,3 +1502,9 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 疑似「主包变慢」先做同机交替 A/B 再归因：`git worktree add <旧 commit>` + 复用 `node_modules` 软链（锁未变时）→ `npm run build:h5`；两版各起 `python3 /home/ubuntu/r442/proxy.py <dist> <port>`（静态 + `/api/*` 代理生产并加 `X-Kg-Probe: 1`），`ab.sh` A1 B1 A2 B2… 交替 ≥5 轮只比 `bootup-time` 主包 scripting / TBT / long-tasks；本地静态不压缩，FCP/LCP 绝对值不能和生产比。
 - Lighthouse 单机数值必须同看 `environment.benchmarkIndex`（devin-box 正常 3550–3730）；bench <2500 或本机同刻在跑 pytest/部署/其他 lighthouse 时的 scripting/TBT 高值先当噪音、隔离后复测，不直接登记为回归。
 - 用完 `git worktree remove --force` + `prune`；node_modules 软链先 `rm` 再 remove。
+
+## R443 Lighthouse simulate vs 真节流 / LCP 双峰归因走查经验
+- **LH 默认 simulate 的 FCP/LCP 不是观测值**：先看 `audits.metrics.details.items[0].observedFirstContentfulPaint`（`/` 在 devin-box 只有 110–180 ms）；模拟值由 Lantern 按「观测 FCP 前收完的 High/VeryHigh 请求」折算。判定某次 LCP 落在哪个峰：数 `network-requests` 里 `priority ∈ {VeryHigh,High}` 且 `networkEndTime <= observedFCP` 的条数/字节——23 个 216 KB → 2.73 s；主包 `index-*.js` 晚于观测 FCP 几 ms 被排除 → 22 个 87 KB → 2.0 s。这是量测机竞态，**不登记为回归**。
+- 要看真实弱网首绘用 `--throttling-method=devtools`（`/` FCP=LCP≈0.7 s），会带 runWarning「loaded too slowly」且 TBT 与 simulate 不同口径、跑 60–90 s；只做旁证，预算脚本历史水位全是 simulate，不换口径。
+- 老 LHR 没有 `largest-contentful-paint-element` 时用 `audits['lcp-breakdown-insight']` 拿 LCP selector / TTFB / render delay。
+- `perf-budget.sh` `/` LCP 线现为 3000（R443 校准）；若某天 27xx 之外再出 >3000，先按上面数进图请求数与字节、再看 `benchmarkIndex`，字节涨了才是真信号（主包/预加载分包变大）。

@@ -2102,3 +2102,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证 docs/iter/round-3/r442-main-bundle-bootup-ab-no-regression-lcp-baseline.md。R441-D 关闭：同机交替 5×5，A=R429 `f71db28` 重建 dist 主包 scripting 433–524（均 472）vs B=HEAD dist 426–480（均 457），TBT 93 vs 78，两版主包只差 81 B；生产复测两次 scripting 443/458、perf 0.92–0.93、LCP 2734/2745。R441 记的 744–1373 是量测机噪音。
 - `/` LCP 基线累计 11 次里 10 次 2732–2793（2500 预算恒 WARN、无信息量）→ 决策项交老板：(a) `perf-budget.sh` LCP 线校准到 3000 并注明依据 / (b) 立项主包瘦身（先取证 374 KB 构成）/ (c) 不动；无异议下轮按 (a)。
 - 方法资产：`/home/ubuntu/r442/proxy.py`（本地 dist + `/api` 代理生产加 `X-Kg-Probe: 1`）+ `ab.sh`（交替 Lighthouse 抽指标），可复用于任何前端版本对照；A 版 worktree 已删。
+
+### R443（`perf-budget.sh` `/` LCP 线 2500→3000；只改阈值 + 注释，不改产品代码不部署，生产仍 `b265cdc`）
+- 取证 docs/iter/round-3/r443-lcp-budget-lantern-calibration.md。R442 决策项 (a) 落地，并把「2.73 s 是什么」一手证死：LH 默认 simulate 口径下 `/` 的**观测** FCP/LCP 只有 110–178 ms，Lantern（`FirstContentfulPaint.ts`，LH 13.4.1 源码）把观测 FCP 前收完的 High/VeryHigh 请求（主包 129 KB + R387 预加载 21 个分包/CSS ≈ 23 个 216 KB）全按 150 ms RTT / 1.6 Mbps 折算 → 模拟 LCP 2723–2750；改 `--throttling-method=devtools` 真节流两次 **FCP=LCP=712/722 ms**（LCP 元素同 `#kg-splash > div.s`）。
+- 双峰成因一手：同轮 6 次 simulate 5 次 2723–2750（23 请求进图）、1 次 **2018**（主包 150 ms 收完晚于观测 FCP 141 ms 9 ms → 被排除 → 22 请求 86.7 KB）→ 历轮 0.8/1.2–2.0/2.7 是量测机上 ~10 ms 竞态的落点，不是页面性能信号；R193–R386 复跑 0.8 为主 / 首跑 26xx、R387 后 2.73 成主峰与机理吻合（历史归因为推断）。
+- 3000 线：仍把「首绘前 High 优先级字节」留在护栏内（现值 2723–2793，余量 ~250 ms），不再每次部署误报；perf ≥0.90 不动。`bash -n` 过；生产实跑 `perf-budget.sh` 12 项全 OK（`/` perf 0.97 / LCP 2020；`/tiku/` 1.00 / 957；bundle gzip 125 KB）。
+- 否决 (b) 主包瘦身（真节流首屏 0.7 s、主包在 160 KB 预算内、R442 无回归）与换 devtools 口径（历史水位全是 simulate、跑一次 60–90 s 且带 incomplete warning）。
+- 留存 `/home/ubuntu/r443/lhr_sim_{1..4}.json`、`lhr_devtools_{1,2}.json`。到期项未动：`.sheet-x`/(c) 无样本、`error_reason` ≥09-11、`.trend-kn` 4 周、WAL 截断、无可确认外部真人、`WX_MINIAPP_SECRET`、R385 第二冷样本；下次 SOP-10 ~R450。
