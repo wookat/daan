@@ -1323,7 +1323,7 @@ export default {
           // #ifdef H5
           this.initPushNudge();
           // #endif
-          return request('/api/daily_set/board').then((b) => { this.dailyBoard = (b && b.items) || []; });
+          return request('/api/daily_set/board?uid=' + encodeURIComponent(anonUid())).then((b) => { this.dailyBoard = (b && b.items) || []; });
         })
         .catch(() => {});
     },

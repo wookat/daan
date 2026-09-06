@@ -1243,9 +1243,15 @@ def _ensure_daily_set(conn):
             PRIMARY KEY (day, uid)
         )"""
     )
-    cols = {r["name"] for r in conn.execute("PRAGMA table_info(daily_set_entries)").fetchall()}
-    if "nickname" not in cols:
-        conn.execute("ALTER TABLE daily_set_entries ADD COLUMN nickname TEXT")
+    add_column_if_missing(conn, "daily_set_entries", "nickname", "TEXT")
+    # 探针成绩（服务端三路判定）不进「N 人完成 / 排行榜 / 击败 X%」全站池；本人成绩对本人始终可见
+    add_column_if_missing(conn, "daily_set_entries", "probe", "INTEGER")
+
+
+def _daily_pool(uid: str | None) -> tuple[str, list]:
+    if uid:
+        return f"({REAL_TRAFFIC} OR uid=?)", [uid]
+    return REAL_TRAFFIC, []
 
 
 def cn_day() -> str:
@@ -1326,21 +1332,27 @@ def daily_set_stats(day: str) -> dict:
     conn = get_conn()
     _ensure_daily_set(conn)
     row = conn.execute(
-        "SELECT COUNT(*) n, AVG(right) a FROM daily_set_entries WHERE day=?", (day,)
+        f"SELECT COUNT(*) n, AVG(right) a FROM daily_set_entries WHERE day=? AND {REAL_TRAFFIC}", (day,)
     ).fetchone()
     conn.close()
     return {"participants": row["n"] or 0, "avg_right": round(row["a"], 1) if row["a"] is not None else None}
 
 
 def daily_set_submit(
-    day: str, uid: str, right: int, total: int, secs: float | None, nickname: str | None = None
+    day: str,
+    uid: str,
+    right: int,
+    total: int,
+    secs: float | None,
+    nickname: str | None = None,
+    probe: int = 0,
 ) -> dict:
     conn = get_conn()
     _ensure_daily_set(conn)
     cur = conn.execute(
-        "INSERT OR IGNORE INTO daily_set_entries(day, uid, right, total, secs, nickname, created_at)"
-        " VALUES(?,?,?,?,?,?,?)",
-        (day, uid, right, total, secs, nickname, time.time()),
+        "INSERT OR IGNORE INTO daily_set_entries(day, uid, right, total, secs, nickname, created_at, probe)"
+        " VALUES(?,?,?,?,?,?,?,?)",
+        (day, uid, right, total, secs, nickname, time.time(), 1 if probe else 0),
     )
     already = cur.rowcount == 0
     conn.commit()
@@ -1348,10 +1360,11 @@ def daily_set_submit(
         "SELECT right FROM daily_set_entries WHERE day=? AND uid=?", (day, uid)
     ).fetchone()
     my_right = mine["right"] if mine else right
+    pool, pool_args = _daily_pool(uid)
     row = conn.execute(
         "SELECT COUNT(*) n, SUM(CASE WHEN right < ? THEN 1 ELSE 0 END) b, "
-        "SUM(CASE WHEN right > ? THEN 1 ELSE 0 END) a FROM daily_set_entries WHERE day=?",
-        (my_right, my_right, day),
+        f"SUM(CASE WHEN right > ? THEN 1 ELSE 0 END) a FROM daily_set_entries WHERE day=? AND {pool}",
+        (my_right, my_right, day, *pool_args),
     ).fetchone()
     days = {
         r["day"]
@@ -1379,13 +1392,14 @@ def daily_set_submit(
     }
 
 
-def daily_set_board(day: str, limit: int = 20) -> list[dict]:
+def daily_set_board(day: str, limit: int = 20, uid: str | None = None) -> list[dict]:
     conn = get_conn()
     _ensure_daily_set(conn)
+    pool, pool_args = _daily_pool(uid)
     rows = conn.execute(
-        "SELECT uid, nickname, right, total, secs FROM daily_set_entries WHERE day=? "
+        f"SELECT uid, nickname, right, total, secs FROM daily_set_entries WHERE day=? AND {pool} "
         "ORDER BY right DESC, COALESCE(secs, 9e9) ASC, created_at ASC LIMIT ?",
-        (day, limit),
+        (day, *pool_args, limit),
     ).fetchall()
     conn.close()
     return [

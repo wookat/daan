@@ -5,9 +5,10 @@ import os
 import re
 import time
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Request
 
 from . import db, taxonomy
+from .auth import probe_request
 from .deps import check_import_token
 
 router = APIRouter()
@@ -49,14 +50,16 @@ def api_daily_set(date: str | None = None):
 
 
 @router.get("/api/daily_set/board")
-def api_daily_set_board():
-    """今日排行榜：uid 无关（昵称/脱敏名），公开只读；不入边缘缓存，保证提交后即含本人。"""
+def api_daily_set_board(uid: str | None = None):
+    """今日排行榜（昵称/脱敏名），公开只读；不入边缘缓存，保证提交后即含本人。
+
+    榜只算真人成绩；带 uid 时本人成绩并入（探针会话看得到自己）。"""
     day = db.cn_day()
-    return {"date": day, "items": db.daily_set_board(day)}
+    return {"date": day, "items": db.daily_set_board(day, uid=(uid or "").strip()[:64] or None)}
 
 
 @router.post("/api/daily_set/submit")
-def api_daily_set_submit(body: dict):
+def api_daily_set_submit(body: dict, request: Request):
     uid = str(body.get("uid") or "").strip()[:64]
     if not uid:
         raise HTTPException(400, "缺少 uid")
@@ -72,7 +75,9 @@ def api_daily_set_submit(body: dict):
     nickname = str(body.get("nickname") or "").strip()[:20]
     if nickname.lower() in ("null", "undefined"):
         nickname = ""
-    return db.daily_set_submit(day, uid, min(right, total), total, secs, nickname or None)
+    return db.daily_set_submit(
+        day, uid, min(right, total), total, secs, nickname or None, probe=1 if probe_request(request) else 0
+    )
 
 
 @router.get("/api/questions/export")
