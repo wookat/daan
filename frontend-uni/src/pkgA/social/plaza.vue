@@ -1,37 +1,61 @@
 <template>
   <view class="wrap">
-    <view v-if="items.length" class="list">
-      <view v-for="it in items" :key="it.question_id" class="item" @click="openDiscuss(it)">
-        <view class="item-top">
-          <text class="mod">{{ modName(it.module) }}</text>
-          <text class="cnt"><l-icon name="message-circle" :size="13" color="#8a90a2" /> {{ it.cnt }} 条讨论</text>
+    <kg-two-col>
+      <template #main>
+        <view v-if="items.length" class="list">
+          <kg-card v-for="it in items" :key="it.question_id" clickable class="item" @click="openDiscuss(it)">
+            <view class="item-top">
+              <kg-tag tone="module" :module="it.module">{{ modName(it.module) }}</kg-tag>
+              <view class="cnt">
+                <l-icon name="message-circle" :size="16" tone="muted" />
+                <text class="cnt-t num">{{ it.cnt }}</text>
+                <text class="cnt-u">条讨论</text>
+              </view>
+            </view>
+            <text class="stem q-text ellip2">{{ it.stem }}</text>
+            <view class="latest ellip2"><text class="nick">{{ it.latest.nickname }}：</text>{{ it.latest.content }}</view>
+            <text class="time">{{ fmtTime(it.last_at) }} 活跃</text>
+          </kg-card>
         </view>
-        <view class="stem ellip2">{{ it.stem }}</view>
-        <view class="latest ellip2"><text class="nick">{{ it.latest.nickname }}：</text>{{ it.latest.content }}</view>
-        <view class="time">{{ fmtTime(it.last_at) }} 活跃</view>
-      </view>
-    </view>
-    <view v-else-if="loadErr" class="empty">
-      <text class="empty-t">加载失败</text>
-      <text class="empty-d">{{ loadErr }}</text>
-      <view class="retry" @click="load">重试 ›</view>
-    </view>
-    <view v-else-if="loaded" class="empty">
-      <view class="empty-ico">💬</view>
-      <text class="empty-t">还没有讨论</text>
-      <text class="empty-d">去刷题时对题目发表评论，这里会聚合全站热议</text>
-    </view>
+        <kg-empty-state
+          v-else-if="loadErr"
+          icon="wifi-off"
+          title="加载失败"
+          :desc="loadErr"
+          cta-text="重试"
+          @cta="load"
+        />
+        <kg-empty-state
+          v-else-if="loaded"
+          icon="message-circle"
+          title="还没有讨论"
+          desc="去刷题时对题目发表评论，这里会聚合全站热议"
+          cta-text="去刷题"
+          @cta="goPractice"
+        />
+        <kg-skeleton v-else preset="cards" />
+      </template>
+      <template #aside>
+        <kg-card v-if="items.length" variant="soft">
+          <kg-stat-row :items="[{ label: '热议题目', value: items.length }, { label: '讨论总数', value: totalCnt }]" />
+        </kg-card>
+      </template>
+    </kg-two-col>
   </view>
 </template>
 
 <script>
 import { fetchCommentsPlaza } from '../../api.js';
-
-const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
+import { MODULES, moduleLabel } from '../../module-meta.js';
 
 export default {
   data() {
     return { items: [], loaded: false, loadErr: '' };
+  },
+  computed: {
+    totalCnt() {
+      return this.items.reduce((s, x) => s + (Number(x.cnt) || 0), 0);
+    },
   },
   onShow() {
     this.load();
@@ -49,7 +73,7 @@ export default {
       this.loaded = true;
     },
     modName(m) {
-      return NAMES[m] || '综合';
+      return MODULES[m] ? moduleLabel(m) : '综合';
     },
     fmtTime(ts) {
       const d = new Date(ts * 1000);
@@ -59,35 +83,29 @@ export default {
     openDiscuss(it) {
       uni.navigateTo({ url: '/pkgA/social/discuss?qid=' + it.question_id });
     },
+    goPractice() {
+      uni.switchTab({ url: '/pages/home/home' });
+    },
   },
 };
 </script>
 
 <style scoped>
-.wrap { padding: 24rpx 32rpx 60rpx; }
-.list { display: flex; flex-direction: column; gap: 18rpx; }
-.item { background: var(--card); border-radius: 24rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 24rpx 28rpx; }
-.item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
-.mod { font-size: 22rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 999rpx; padding: 4rpx 18rpx; font-weight: 600; }
-.cnt { font-size: 22rpx; color: var(--ink-2); display: inline-flex; align-items: center; gap: 6rpx; }
-.stem { font-size: 27rpx; color: var(--ink); line-height: 1.6; font-weight: 600; }
-.latest { font-size: 24rpx; color: var(--ink-2); background: var(--bg); border-radius: 12rpx; padding: 12rpx 18rpx; margin-top: 14rpx; line-height: 1.6; }
-.nick { color: var(--ink); font-weight: 600; }
-.time { font-size: 22rpx; color: var(--ink-3); margin-top: 12rpx; }
+.wrap { padding: var(--sp-16) var(--page-x) var(--sp-48); }
+.list { display: flex; flex-direction: column; gap: var(--card-gap); }
+.item-top { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-8); }
+.cnt { display: flex; align-items: center; gap: var(--sp-4); color: var(--ink-3); flex-shrink: 0; }
+.cnt-t { font-size: var(--fs-sub); color: var(--ink-2); }
+.cnt-u { font-size: var(--fs-caption); color: var(--ink-3); }
+.stem { font-size: var(--fs-body); color: var(--ink); }
+.latest { margin-top: var(--sp-8); font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--ink-2); background: var(--fill); border-radius: var(--r-xs); padding: var(--sp-8) var(--sp-12); overflow-wrap: anywhere; }
+.nick { font-weight: 600; color: var(--ink); }
+.time { display: block; margin-top: var(--sp-8); font-size: var(--fs-caption); color: var(--ink-3); }
 .ellip2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
-.empty { display: flex; flex-direction: column; align-items: center; gap: 12rpx; padding: 120rpx 0; }
-.empty-ico { font-size: 72rpx; }
-.empty-t { font-size: 28rpx; font-weight: 600; color: var(--ink); }
-.empty-d { font-size: 24rpx; color: var(--ink-2); }
-.retry { margin-top: 8rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 
 /* #ifdef H5 */
-@media (min-width: 768px) {
-  .wrap { max-width: 1044px; margin: 0 auto; }
-  .item:hover { cursor: pointer; box-shadow: 0 6rpx 20rpx rgba(23, 24, 28, 0.1); }
-}
 @media (min-width: 1024px) {
-  .list { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+  .wrap { max-width: 1044px !important; }
 }
 /* #endif */
 </style>

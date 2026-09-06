@@ -1,137 +1,153 @@
 <template>
   <view class="wrap">
     <!-- 顶部分段 -->
-    <view class="seg">
-      <text class="seg-i" :class="{ on: tab === 'fav' }" @click="tab = 'fav'">收藏题目</text>
-      <text class="seg-i" :class="{ on: tab === 'note' }" @click="switchNote">我的笔记</text>
-    </view>
+    <wd-segmented :value="tabLabel" :options="tabOpts" class="seg" @change="onTabChange" />
 
     <template v-if="tab === 'fav'">
-      <view class="fav-cols">
-      <view class="fav-left">
-      <!-- 收藏夹列表 -->
-      <view class="card folders">
-        <view
-          v-for="f in folders"
-          :key="f.id"
-          class="folder"
-          :class="{ on: folderId === f.id }"
-          @click="pickFolder(f)"
-          @longpress="folderOps(f)"
-        >
-          <text class="fico">{{ f.icon }}</text>
-          <view class="fmain">
-            <text class="fname">{{ f.name }}</text>
-            <text class="fsub">{{ f.n }} 题</text>
-          </view>
-          <!-- #ifdef H5 -->
-          <text v-if="f.id" class="fops" @click.stop="folderOps(f)">···</text>
-          <!-- #endif -->
-          <text class="chev">{{ folderId === f.id ? '✓' : '›' }}</text>
-        </view>
-        <view class="folder add" @click="newFolder">
-          <view class="fico"><l-icon name="folder-plus" :size="18" color="#2e5bff" /></view>
-          <view class="fmain"><text class="fname add-t">新建收藏夹</text></view>
-        </view>
-      </view>
-      </view>
-
-      <view class="fav-right">
-      <!-- 模块筛选 -->
-      <view class="chips">
-        <text class="chip" :class="{ on: !modFilter }" @click="modFilter = ''">全部模块</text>
-        <text
-          v-for="(nm, m) in MODS"
-          :key="m"
-          class="chip"
-          :class="{ on: modFilter === m }"
-          @click="modFilter = modFilter === m ? '' : m"
-        >{{ nm }}</text>
-      </view>
-
-      <view v-if="loading" class="card empty">加载中…</view>
-      <view v-else-if="favErr" class="card empty">
-        <view class="empty-t">加载失败：{{ favErr }}</view>
-        <view class="retry" @click="load">重试 ›</view>
-      </view>
-      <view v-else-if="!shownItems.length" class="card empty">
-        <view class="empty-t">这里还没有收藏</view>
-        <view class="empty-s">刷题时点右上角收藏星标收藏好题，收藏后可在这里「移动到…」选收藏夹</view>
-      </view>
-      <template v-else>
-        <button class="btn" @click="redoFolder">重练{{ curFolderName }}（{{ shownItems.length }} 题 · 乱序）</button>
-        <view v-for="it in shownItems" :key="it.id || it._lkey" class="card qitem" @click="it._open = !it._open">
-          <view class="qtx" :class="{ full: it._open }">{{ it.question }}</view>
-          <view class="meta">
-            <text class="tag" :style="{ background: modColor(it.module).bg, color: modColor(it.module).fg }">{{ modName(it.module) }}</text>
-            <text v-if="it.submodule" class="tag gray">{{ it.submodule }}</text>
-            <text class="mtime">收藏于 {{ fmtDate(it.faved_at) }}</text>
-          </view>
-          <view v-if="it.note" class="mynote"><text class="nb"><l-icon name="pencil-line" :size="13" color="#b45309" /> 我的笔记：</text>{{ it.note }}</view>
-          <view v-if="it._open" class="detail">
-            <view v-for="(v, k) in it.options" :key="k" class="opt" :class="{ ans: k === it.answer }">{{ k }}. {{ v }}</view>
-            <view class="ansline">正确答案 {{ it.answer }}</view>
-            <view v-if="it.hs_explanation || it.explanation" class="exp">{{ it.hs_explanation || it.explanation }}</view>
-            <view class="ops">
-              <text v-if="askSeenTick >= 0 && favAskSeen(it)" class="op seen" role="button" aria-label="回看 AI 详解" @click.stop="openSeenAskFav(it)">回看 AI 详解</text>
-              <text class="op" role="button" aria-label="AI 详解本题" @click.stop="askFromFav(it)">AI 详解本题</text>
-              <text v-if="!it._local" class="op" @click.stop="moveItem(it)">移动到…</text>
-              <text v-if="!it._local" class="op" @click.stop="openDiscuss(it)">讨论区</text>
-              <text class="op del" @click.stop="unfav(it)">取消收藏</text>
+      <kg-skeleton v-if="loading" preset="cards" />
+      <kg-empty-state
+        v-else-if="favErr"
+        icon="wifi-off"
+        :title="'加载失败：' + favErr"
+        cta-text="重试"
+        @cta="load"
+      />
+      <!-- 一条收藏都没有：不展示假可用的收藏夹/筛选，直接空态 -->
+      <kg-empty-state
+        v-else-if="!items.length"
+        icon="star"
+        title="这里还没有收藏"
+        desc="刷题时点右上角收藏星标收藏好题，收藏后可在这里「移动到…」选收藏夹"
+        cta-text="去刷题"
+        :secondary-text="logged ? '' : '登录同步收藏'"
+        @cta="goPractice"
+        @secondary="goLogin"
+      />
+      <kg-two-col v-else aside-first>
+        <template #aside>
+          <!-- 收藏夹列表 -->
+          <kg-card class="folders" :padding="12">
+            <view
+              v-for="f in folders"
+              :key="f.id"
+              class="folder"
+              :class="{ on: folderId === f.id }"
+              role="button"
+              @click="pickFolder(f)"
+              @longpress="folderOps(f)"
+            >
+              <view class="fico"><text class="fico-t">{{ f.icon }}</text></view>
+              <view class="fmain">
+                <text class="fname">{{ f.name }}</text>
+                <text class="fsub"><text class="num">{{ f.n }}</text> 题</text>
+              </view>
+              <!-- #ifdef H5 -->
+              <view v-if="f.id" class="fops" role="button" aria-label="收藏夹操作" @click.stop="folderOps(f)"><l-icon name="ellipsis" :size="20" tone="faint" /></view>
+              <!-- #endif -->
+              <l-icon :name="folderId === f.id ? 'check' : 'chevron-right'" :size="20" :tone="folderId === f.id ? 'brand-text' : 'faint'" />
             </view>
-          </view>
-        </view>
-      </template>
-      </view>
-      </view>
+            <view class="folder add" role="button" @click="newFolder">
+              <view class="fico"><l-icon name="folder-plus" :size="20" tone="brand-text" /></view>
+              <view class="fmain"><text class="fname add-t">新建收藏夹</text></view>
+            </view>
+          </kg-card>
+        </template>
+        <template #main>
+          <!-- 模块筛选 -->
+          <kg-chip-row v-model="modFilter" :options="modOpts" class="chips" />
+
+          <kg-empty-state
+            v-if="!shownItems.length"
+            compact
+            icon="star"
+            title="这个筛选下还没有收藏"
+            desc="换个收藏夹或模块看看"
+          />
+          <template v-else>
+            <kg-button variant="primary" size="lg" block icon="shuffle" class="redo" @click="redoFolder">重练{{ curFolderName }}（{{ shownItems.length }} 题 · 乱序）</kg-button>
+            <kg-card v-for="it in shownItems" :key="it.id || it._lkey" clickable class="qitem" @click="it._open = !it._open">
+              <text class="qtx q-text" :class="{ full: it._open }">{{ it.question }}</text>
+              <view class="meta">
+                <kg-tag tone="module" :module="it.module">{{ modName(it.module) }}</kg-tag>
+                <kg-tag v-if="it.submodule" tone="neutral">{{ it.submodule }}</kg-tag>
+                <text class="mtime">收藏于 {{ fmtDate(it.faved_at) }}</text>
+              </view>
+              <view v-if="it.note" class="mynote">
+                <view class="nb"><l-icon name="pencil-line" :size="16" tone="warn" /><text class="nb-t">我的笔记</text></view>
+                <text class="mynote-t q-text">{{ it.note }}</text>
+              </view>
+              <view v-if="it._open" class="detail">
+                <text v-for="(v, k) in it.options" :key="k" class="opt q-text" :class="{ ans: k === it.answer }">{{ k }}. {{ v }}</text>
+                <text class="ansline">正确答案 {{ it.answer }}</text>
+                <text v-if="it.hs_explanation || it.explanation" class="exp q-text">{{ it.hs_explanation || it.explanation }}</text>
+                <view class="ops" @click.stop>
+                  <kg-button v-if="askSeenTick >= 0 && favAskSeen(it)" variant="text" size="sm" aria-label="回看 AI 详解" @click.stop="openSeenAskFav(it)">回看 AI 详解</kg-button>
+                  <kg-button variant="text" size="sm" aria-label="AI 详解本题" @click.stop="askFromFav(it)">AI 详解本题</kg-button>
+                  <kg-button v-if="!it._local" variant="text" size="sm" @click.stop="moveItem(it)">移动到…</kg-button>
+                  <kg-button v-if="!it._local" variant="text" size="sm" @click.stop="openDiscuss(it)">讨论区</kg-button>
+                  <kg-button variant="text" size="sm" tone="bad" @click.stop="unfav(it)">取消收藏</kg-button>
+                </view>
+              </view>
+            </kg-card>
+          </template>
+        </template>
+      </kg-two-col>
     </template>
 
     <template v-else>
-      <view v-if="loading" class="card empty">加载中…</view>
-      <view v-else-if="noteErr" class="card empty">
-        <view class="empty-t">加载失败：{{ noteErr }}</view>
-        <view class="retry" @click="switchNote">重试 ›</view>
-      </view>
-      <view v-else-if="!notes.length" class="card empty">
-        <view class="empty-t">还没有笔记</view>
-        <view class="empty-s">答题后在解析下方「写笔记」，方法心得随题沉淀</view>
-      </view>
-      <view class="ngrid">
-      <view v-for="n in notes" :key="n.question_id" class="card qitem">
-        <view class="qtx">{{ n.question }}</view>
-        <view class="meta">
-          <text class="tag" :style="{ background: modColor(n.module).bg, color: modColor(n.module).fg }">{{ modName(n.module) }}</text>
-          <text v-if="n.submodule" class="tag gray">{{ n.submodule }}</text>
-          <text class="mtime">{{ fmtDate(n.updated_at) }}</text>
-        </view>
-        <view class="mynote"><text class="nb"><l-icon name="pencil-line" :size="13" color="#b45309" /> </text>{{ n.content }}</view>
-      </view>
+      <kg-skeleton v-if="loading" preset="cards" />
+      <kg-empty-state
+        v-else-if="noteErr"
+        icon="wifi-off"
+        :title="'加载失败：' + noteErr"
+        cta-text="重试"
+        @cta="switchNote"
+      />
+      <kg-empty-state
+        v-else-if="!notes.length"
+        icon="pencil-line"
+        title="还没有笔记"
+        desc="答题后在解析下方「写笔记」，方法心得随题沉淀"
+        cta-text="去刷题"
+        @cta="goPractice"
+      />
+      <view v-else class="ngrid">
+        <kg-card v-for="n in notes" :key="n.question_id" class="qitem">
+          <text class="qtx q-text">{{ n.question }}</text>
+          <view class="meta">
+            <kg-tag tone="module" :module="n.module">{{ modName(n.module) }}</kg-tag>
+            <kg-tag v-if="n.submodule" tone="neutral">{{ n.submodule }}</kg-tag>
+            <text class="mtime">{{ fmtDate(n.updated_at) }}</text>
+          </view>
+          <view class="mynote">
+            <view class="nb"><l-icon name="pencil-line" :size="16" tone="warn" /><text class="nb-t">我的笔记</text></view>
+            <text class="mynote-t q-text">{{ n.content }}</text>
+          </view>
+        </kg-card>
       </view>
     </template>
-    <view style="height: 40rpx" />
   </view>
 </template>
 
 <script>
-import { createFavFolder, deleteFavFolder, fetchFavFolders, fetchFavs, fetchNotes, removeFav, renameFavFolder, setFav, trackEvent } from '../../api.js';
+import { createFavFolder, deleteFavFolder, fetchFavFolders, fetchFavs, fetchNotes, getToken, removeFav, renameFavFolder, setFav, trackEvent } from '../../api.js';
 import { askPrefill } from '../../ask-prefill.js';
 import { askQid, findAskSid } from '../../ask-link.js';
 import { buildFavoritesUrl, parseFavoritesOpts } from '../../favorites-url.js';
+import { MODULES, MODULE_KEYS, moduleLabel } from '../../module-meta.js';
 
-const MODS = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', 时政: '时政' };
-const COLORS = {
-  changshi: { bg: '#FEF3C7', fg: '#B45309' },
-  shuliang: { bg: '#DBEAFE', fg: '#1D4ED8' },
-  panduan: { bg: '#EDE9FE', fg: '#6D28D9' },
-  ziliao: { bg: '#D1FAE5', fg: '#047857' },
-  yanyu: { bg: '#FEE2E2', fg: '#B91C1C' },
-};
+// 收藏页模块筛选项：题库 5 模块（module-meta 单一来源）+ 本地时政收藏
+const MOD_KEYS = [...MODULE_KEYS, '时政'];
+const TAB_OPTS = [
+  { label: '收藏题目', value: 'fav' },
+  { label: '我的笔记', value: 'note' },
+];
 
 export default {
   data() {
     return {
-      MODS,
       tab: 'fav',
+      logged: false,
       favErr: '',
       noteErr: '',
       folders: [],
@@ -144,6 +160,15 @@ export default {
     };
   },
   computed: {
+    tabOpts() {
+      return TAB_OPTS.map((o) => o.label);
+    },
+    tabLabel() {
+      return (TAB_OPTS.find((o) => o.value === this.tab) || TAB_OPTS[0]).label;
+    },
+    modOpts() {
+      return [{ label: '全部模块', value: '' }, ...MOD_KEYS.map((m) => ({ label: this.modName(m), value: m }))];
+    },
     shownItems() {
       let list = this.items;
       if (this.folderId != null) list = list.filter((it) => it.folder_id === this.folderId);
@@ -164,6 +189,7 @@ export default {
   },
   onShow() {
     this.askSeenTick++;
+    this.logged = !!getToken();
     this.load();
   },
   watch: {
@@ -186,10 +212,19 @@ export default {
       // #endif
     },
     modName(m) {
-      return MODS[m] || m || '';
+      return MODULES[m] ? moduleLabel(m) : m || '';
     },
-    modColor(m) {
-      return COLORS[m] || { bg: '#EEF3FF', fg: '#2E5BFF' };
+    onTabChange(opt) {
+      const o = TAB_OPTS.find((x) => x.label === (opt && opt.value));
+      if (!o || o.value === this.tab) return;
+      if (o.value === 'note') this.switchNote();
+      else this.tab = 'fav';
+    },
+    goPractice() {
+      uni.switchTab({ url: '/pages/home/home' });
+    },
+    goLogin() {
+      uni.navigateTo({ url: '/pkgA/user/login' });
     },
     fmtDate(ts) {
       const d = new Date(ts * 1000);
@@ -365,61 +400,45 @@ export default {
 </script>
 
 <style scoped>
-.wrap { padding: 24rpx; }
-.card { background: var(--card, #fff); border-radius: var(--radius, 24rpx); padding: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); margin-bottom: 20rpx; }
-.seg { display: flex; background: var(--line); border-radius: 18rpx; padding: 6rpx; margin-bottom: 20rpx; }
-.seg-i { flex: 1; text-align: center; padding: 14rpx 0; border-radius: 14rpx; font-size: 26rpx; color: var(--ink-2); }
-.seg-i.on { background: var(--card); color: var(--ink); font-weight: 700; box-shadow: 0 2rpx 8rpx rgba(31, 36, 48, 0.08); }
-.folders { padding: 8rpx 24rpx; }
-.folder { display: flex; align-items: center; gap: 18rpx; padding: 22rpx 0; border-bottom: 1rpx solid var(--fill); }
+.wrap { padding: var(--sp-16) var(--page-x) var(--sp-48); }
+.seg { margin-bottom: var(--sp-16); }
+.folder { display: flex; align-items: center; gap: var(--sp-12); min-height: var(--cell-h); padding: var(--sp-8) 0; border-bottom: 1px solid var(--line); }
 .folder:last-child { border-bottom: none; }
-.fico { width: 68rpx; height: 68rpx; border-radius: 16rpx; background: var(--brand-soft); display: flex; align-items: center; justify-content: center; font-size: 32rpx; }
-.fmain { flex: 1; display: flex; flex-direction: column; }
-.fname { font-size: 27rpx; font-weight: 600; }
+.fico { width: 32px; height: 32px; border-radius: var(--r-sm); background: var(--brand-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.fico-t { font-size: var(--fs-body); line-height: 1; }
+.fmain { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.fname { font-size: var(--fs-body); font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .folder.on .fname { color: var(--brand-text); }
-.fsub { font-size: 21rpx; color: var(--ink-3); margin-top: 2rpx; }
-.chev { color: var(--ink-4); font-size: 26rpx; }
-.folder.on .chev { color: var(--brand-text); font-weight: 700; }
+.fsub { font-size: var(--fs-caption); color: var(--ink-3); margin-top: 2px; }
 .add-t { color: var(--brand-text); }
-.chips { display: flex; gap: 12rpx; flex-wrap: wrap; margin: 4rpx 4rpx 18rpx; }
-.chip { font-size: 23rpx; color: var(--ink-2); background: var(--fill); padding: 8rpx 22rpx; border-radius: 999rpx; }
-.chip.on { background: var(--brand-soft); color: var(--brand-text); font-weight: 700; }
-.empty { text-align: center; color: var(--ink-3); font-size: 25rpx; padding: 60rpx 24rpx; }
-.retry { margin-top: 12rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
-.empty-t { font-size: 28rpx; font-weight: 600; color: var(--ink-2); margin-bottom: 8rpx; }
-.btn { background: var(--brand); color: #fff; font-size: 28rpx; border-radius: 18rpx; margin-bottom: 20rpx; }
-.qtx { font-size: 27rpx; line-height: 1.65; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.fops { width: var(--hit-min); height: var(--hit-min); display: flex; align-items: center; justify-content: center; border-radius: var(--r-full); }
+.chips { margin-bottom: var(--sp-12); }
+.redo { margin-bottom: var(--sp-12); }
+.qitem { margin-bottom: var(--card-gap); }
+.qtx { display: -webkit-box; font-size: var(--fs-body); color: var(--ink); -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .qtx.full { -webkit-line-clamp: unset; display: block; }
-.meta { display: flex; gap: 10rpx; align-items: center; margin-top: 12rpx; flex-wrap: wrap; }
-.tag { font-size: 20rpx; padding: 4rpx 14rpx; border-radius: 8rpx; }
-.tag.gray { background: var(--fill); color: var(--ink-3); }
-.mtime { font-size: 21rpx; color: var(--ink-3); }
-.mynote { background: var(--warn-soft); border-left: 6rpx solid #f59e0b; border-radius: 0 12rpx 12rpx 0; padding: 14rpx 18rpx; font-size: 24rpx; color: var(--ink-2); margin-top: 14rpx; line-height: 1.6; }
-.nb { color: #b45309; font-weight: 600; }
-.detail { margin-top: 16rpx; border-top: 1rpx solid var(--fill); padding-top: 16rpx; }
-.opt { font-size: 25rpx; color: var(--ink-2); line-height: 1.7; }
-.opt.ans { color: #16a34a; font-weight: 600; }
-.ansline { font-size: 24rpx; color: var(--ink-3); margin: 10rpx 0; }
-.exp { font-size: 24rpx; color: var(--ink-2); line-height: 1.7; background: var(--fill); border-radius: 14rpx; padding: 16rpx 20rpx; }
-.ops { display: flex; gap: 34rpx; margin-top: 16rpx; }
-.op { font-size: 24rpx; color: var(--brand-text); }
-.op.seen { color: var(--ok-strong); }
-.op.del { color: #ef4444; }
-.fops { color: var(--ink-4); font-size: 26rpx; padding: 0 10rpx; }
+.meta { display: flex; gap: var(--sp-8); align-items: center; margin-top: var(--sp-8); flex-wrap: wrap; }
+.mtime { font-size: var(--fs-caption); color: var(--ink-3); }
+.mynote { background: var(--warn-soft); border-left: 3px solid var(--warn); border-radius: 0 var(--r-sm) var(--r-sm) 0; padding: var(--sp-8) var(--sp-12); margin-top: var(--sp-12); }
+.nb { display: flex; align-items: center; gap: var(--sp-4); margin-bottom: var(--sp-4); }
+.nb-t { font-size: var(--fs-caption); color: var(--warn-strong); font-weight: 600; }
+.mynote-t { display: block; font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--ink-2); }
+.detail { margin-top: var(--sp-12); border-top: 1px solid var(--line); padding-top: var(--sp-12); }
+.opt { display: block; font-size: var(--fs-sub); color: var(--ink-2); }
+.opt.ans { color: var(--ok); font-weight: 600; }
+.ansline { display: block; font-size: var(--fs-sub); color: var(--ink-3); margin: var(--sp-8) 0; }
+.exp { display: block; font-size: var(--fs-sub); color: var(--ink-2); background: var(--fill); border-radius: var(--r-sm); padding: var(--sp-12); }
+.ops { display: flex; gap: var(--sp-4); margin-top: var(--sp-8); flex-wrap: wrap; }
+.ngrid { display: flex; flex-direction: column; }
 
-/* 桌面（H5）：≥768 页宽收敛；≥1024 左收藏夹侧栏+右列表双栏，笔记两列 */
+/* 桌面（H5）：≥1024 KgTwoCol 双栏（收藏夹辅栏 + 列表主列），笔记两列 */
 /* #ifdef H5 */
 @media (min-width: 768px) {
-  .wrap { max-width: 1044px; margin: 0 auto; }
-  .folder:hover, .chip:hover, .qitem:hover, .seg-i:hover, .fops:hover { cursor: pointer; }
-  .qitem:hover { box-shadow: 0 8rpx 24rpx rgba(31, 36, 48, 0.08); }
-  .fops:hover { color: var(--brand-text); }
+  .folder:hover, .qitem:hover, .fops:hover { cursor: pointer; }
 }
 @media (min-width: 1024px) {
-  .fav-cols { display: flex; gap: 32rpx; align-items: flex-start; }
-  .fav-left { width: 300px; flex: none; position: sticky; top: 24rpx; }
-  .fav-right { flex: 1; min-width: 0; }
-  .ngrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; align-items: start; }
+  .wrap { max-width: 1044px !important; }
+  .ngrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 var(--sp-24); align-items: start; }
 }
 /* #endif */
 </style>
