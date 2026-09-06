@@ -2397,7 +2397,7 @@ export default {
       try {
         const d = await request('/api/practice_result', {
           method: 'POST',
-          data: { module: this.lastModule || '', n: this.items.length, correct: this.right, secs: this.totalSecs }
+          data: { uid: anonUid(), module: this.lastModule || '', n: this.items.length, correct: this.right, secs: this.totalSecs }
         });
         if (d.percentile != null) this.percentile = d.percentile;
       } catch (e) { /* 非关键路径 */ }

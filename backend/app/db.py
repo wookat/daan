@@ -1557,9 +1557,11 @@ def real_filters() -> dict:
     return {"years": years, "regions": regions}
 
 
-def save_practice_result(module: str | None, n: int, correct: int, secs: int) -> dict:
-    """保存一次刷题结果并返回正确率百分位（击败了多少历史记录）。"""
-    conn = get_conn()
+# 「击败 X% 的刷题记录」池只算 probe=0：该表无 uid 从未随测试账号清理，历史 NULL 行不能视为真人（与 REAL_TRAFFIC 兼容口径不同）
+PRACTICE_POOL = "n>0 AND probe=0"
+
+
+def _ensure_practice_results(conn) -> None:
     conn.execute(
         """CREATE TABLE IF NOT EXISTS practice_results (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1570,15 +1572,25 @@ def save_practice_result(module: str | None, n: int, correct: int, secs: int) ->
             secs INTEGER
         )"""
     )
+    add_column_if_missing(conn, "practice_results", "uid", "TEXT")
+    add_column_if_missing(conn, "practice_results", "probe", "INTEGER")
+
+
+def save_practice_result(
+    module: str | None, n: int, correct: int, secs: int, uid: str | None = None, probe: bool = False
+) -> dict:
+    """保存一次刷题结果并返回正确率百分位（击败了多少真人记录）。"""
+    conn = get_conn()
+    _ensure_practice_results(conn)
     acc = correct / n if n else 0
     conn.execute(
-        "INSERT INTO practice_results (created_at, module, n, correct, secs) VALUES (?,?,?,?,?)",
-        (time.time(), module, n, correct, secs),
+        "INSERT INTO practice_results (created_at, module, n, correct, secs, uid, probe) VALUES (?,?,?,?,?,?,?)",
+        (time.time(), module, n, correct, secs, uid or None, 1 if probe else 0),
     )
     conn.commit()
-    total = conn.execute("SELECT COUNT(*) FROM practice_results WHERE n>0").fetchone()[0]
+    total = conn.execute(f"SELECT COUNT(*) FROM practice_results WHERE {PRACTICE_POOL}").fetchone()[0]
     beaten = conn.execute(
-        "SELECT COUNT(*) FROM practice_results WHERE n>0 AND CAST(correct AS REAL)/n < ?", (acc,)
+        f"SELECT COUNT(*) FROM practice_results WHERE {PRACTICE_POOL} AND CAST(correct AS REAL)/n < ?", (acc,)
     ).fetchone()[0]
     conn.close()
     percentile = round(beaten / total * 100) if total >= 10 else None
@@ -1774,6 +1786,7 @@ def admin_stats_state() -> tuple[dict, str]:
 
 def _admin_stats_uncached() -> dict:
     conn = get_conn()
+    _ensure_practice_results(conn)
     q = conn.execute
     stats = {
         "total": q("SELECT COUNT(*) FROM questions").fetchone()[0],
@@ -1791,10 +1804,10 @@ def _admin_stats_uncached() -> dict:
         stats["daily_usage"] = [
             dict(r)
             for r in q(
-                """SELECT date(created_at, 'unixepoch') d,
+                f"""SELECT date(created_at, 'unixepoch') d,
                           COUNT(*) sessions, SUM(n) answered,
                           ROUND(SUM(correct)*100.0/SUM(n), 1) acc
-                   FROM practice_results WHERE n>0
+                   FROM practice_results WHERE n>0 AND {REAL_TRAFFIC}
                      AND created_at > strftime('%s','now') - 14*86400
                    GROUP BY d ORDER BY d"""
             )
