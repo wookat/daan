@@ -3502,11 +3502,8 @@ def _ensure_exam_tables(conn):
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ep_kind ON exam_papers(kind, year, region)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ea_uid ON exam_attempts(uid, paper_id, id)")
-    acols = {r["name"] for r in conn.execute("PRAGMA table_info(exam_attempts)")}
-    if "secs" not in acols:
-        conn.execute("ALTER TABLE exam_attempts ADD COLUMN secs TEXT")
-    if "marks" not in acols:
-        conn.execute("ALTER TABLE exam_attempts ADD COLUMN marks TEXT")
+    add_column_if_missing(conn, "exam_attempts", "secs", "TEXT")
+    add_column_if_missing(conn, "exam_attempts", "marks", "TEXT")
     add_column_if_missing(conn, "exam_attempts", "probe", "INTEGER")
 
 
