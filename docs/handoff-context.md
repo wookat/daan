@@ -2188,3 +2188,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - **pages.dev 预览域名扫描器活体**：20:41:46Z `34.44.11.77` 同秒 9 GET（UA `SonyEricssonW810i` 功能机描述符、`/sw.js` 暴露 `HeadlessChrome/143`、referer/`X-Forwarded-Host` 全 `kaogong-h5.pages.dev`），0 POST、库内 0 行；7 天经 pages.dev 共 37 请求 / 13 IP / 0 POST / 0 引擎 UA，全一次性访客。日报按 offhost 单列不进 `humans.ips`。**登记 P3 不动手**：`_routes.json` 把 `/`、`/static/*` 排除在函数外，函数内按 hostname 301 覆盖不到首页壳，要么收回 `/`（改 Pages 迁移 `3d28c33` 静态层设计，非 R271）要么 CF 账户级 Bulk Redirects；触发条件见 SKILL R454。
 - 到期项全不变：probe=0 22/1、error_reason 6（3 uid 全 NULL 历史）、push_subs 0、weekly_reports 1、growth probe=0 18/4、29/29 CST 00:00、WAL 3,164,192 B（与 R453 同字节）、healthy 0 重启。
 - 宿主盘 92% / 3.9 G（R452 91% / 4.5 G）：`/var/lib/docker` 12 G，24 h 新增大文件为其它产品的 containerd 层（python3.12 + cv2）与 softcopyright/recruit 备份；`kaogong-backups` 480 M（+12 M）。扩盘/迁出仍待老板定。
+
+## R455（WAL 机理闭合 + `_routes.json` 出处勘误；只取证不改码不部署，生产仍 `460120f`）
+- 「WAL 截断观测」**闭合**：直接解 `-wal` 头/帧——3,164,192 B = 768 帧 × (4096+24) + 32，当前 salt 有效帧 768/768、最后 commit 帧 768、`ckpt_seq 0`；`wal_autocheckpoint` 未设即默认 1000 帧 → **尚未到自动 checkpoint 阈值，文件只增是预期**；到 1000 帧（≈4 MB）写连接 PASSIVE checkpoint 后从帧 0 复用、大小停在高水位，只有 > `journal_size_limit` 64 MiB 才截断。历轮 431 KB→3.16 MB = 帧 105→768 累积，非泄漏。到期项口径改为：仅 `-wal` > 64 MiB 且持续 > 1 天才立项（长读事务阻塞复用），不再逐轮记字节。
+- 推断（未查前一容器退出信号）：主库 mtime 15:05Z 早于容器 19:41Z 启动 + `ckpt_seq 0` → 进程停止未走连接关闭路径，WAL 跨重启被新进程接续（SQLite 正常恢复路径，无损）。
+- **勘误**：R454 把 `_routes.json` 排除 `/`、`/index.html`、`/static/*` 写成「R271 设计」错误——`git log -S` 一手：Pages 迁移 `3d28c33` 首次创建（README「静态层由 Pages CDN 直出」），`eef6113`（#163）把 `/assets/*` 收回函数；R271 只是 `/api/search` 边缘缓存。R454 文档/handoff 已改（`24cd26b`）；pages.dev 301 方案取舍不变（优先 CF Bulk Redirects）。
+- 到期项不变：probe=0 22/1、error_reason 6、push_subs 0、weekly_reports 1、growth probe=0 18/4、healthy 0 重启、`KG_PROBE_CIDRS` 在配、VPS 出口 `150.109.230.174` 未变；无前端发版 (c) 无新窗口。
+- 取证：`docs/iter/round-3/r455-wal-frames-autocheckpoint-routes-origin-erratum.md`。

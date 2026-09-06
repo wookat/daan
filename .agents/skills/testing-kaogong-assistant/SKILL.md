@@ -1581,3 +1581,8 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 删了未知 SNI 的站点块后，Caddy 默认日志**不记录**握手失败（直打只得 TLS alert、journal 0 条），别把「journal 没噪音」当「没人直打」；要计数只能 `ss -tn state established '( sport = :443 )'`/tcpdump 抓 SNI。
 - 复查 journal error 时先按 `logger`+`msg` 计数，再用同秒窗口逐个对 `/var/log/caddy/*access.log` 判归属（`http2: stream closed` 一类 reverse_proxy 错误不带 host 字段）；宿主上 api-video / jobs / kaogong 三块共用一个 caddy journal。
 - `growth_events` 列为 `id,uid,event,source,ref,created_at,probe`（`ref` 形如 `v:<bundle>;sw:0|1`）；`error_reason` 在 `mistakes` 表；生成查询脚本时别在 Python 双引号字串里嵌 SQL 双引号（R454 第一版两次语法错）。
+
+## R455 经验：判断 WAL 是否「该 checkpoint 了」直接数帧
+- `-wal` 大小换算帧数：`(size-32)/(page_size+24)`；再逐帧读 24 B 帧头（`>6I`：pgno, commit_dbsize, salt1, salt2, ck1, ck2）对 32 B 文件头的 salt，salt 一致即当前有效帧。有效帧 < 1000（`wal_autocheckpoint` 默认）时文件只增是预期，不是泄漏；≥1000 后由写连接 PASSIVE checkpoint 复用、大小停在高水位；仅 > `journal_size_limit`（应用连接 64 MiB）才截。到期项只在 `-wal` > 64 MiB 且持续 > 1 天时立项。
+- `ckpt_seq 0` + 主库 mtime 早于容器启动 = WAL 跨重启被接续（进程未 close 连接），属正常恢复路径。
+- 历史归因写「Rxxx 设计」前先 `git log -S'<字面>' -- <文件>` 找首次引入提交（R454 把 `_routes.json` 排除 `/` 误记 R271，实为 Pages 迁移 `3d28c33`）。
