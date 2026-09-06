@@ -1470,3 +1470,8 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 判「本地 bundle = 线上 bundle」不要只看文件名 hash：`find dist/build/h5 -type f -exec md5sum {} + | sort` 构建前后各存一份 `diff`，0 行才算字节级可复现（R436：119 文件全同）。锁与安装树用 `node_modules/.package-lock.json` 与 `package-lock.json` 逐包比 `version`，`npm install --dry-run` 的「added N」含 optional 平台包、不能当缺包证据。
 - `error_reason` 列在 `mistakes` 表；对 `answer_log` 查会 `no such column`。关联 probe=0 时用 `exists(select 1 from answer_log a where a.uid=m.uid and a.probe=0)`。
 - 本机系统 SQLite 3.37.2 比生产（python:3.12-slim，3.46.1）老；新语法（`->>`/RETURNING/STRICT/unixepoch）本地会先报错，别把本地失败误判成生产问题。
+
+## R437 应用日志取证边界
+- `docker logs deploy-kaogong-1 --since 24h` 的实际覆盖 = 当前容器 `StartedAt` 至今（部署日常常只有几十分钟），先 `docker inspect --format '{{.State.StartedAt}}'` 再下「N 小时无异常」结论。更早的应用日志看 `/home/ubuntu/kaogong-reports/app-log/kaogong-app-<rev>-<startedAt>-to-<now>.log.gz`（R437 起每次重建前归档，保留 14 天，行首 UTC 时间戳）：`zcat … | grep -E 'Traceback|" 5[0-9]{2} '`。
+- caddy 24 h 非 2xx 归因先按 `Cf-Connecting-Ip` 分三桶：探针网段（140.232.64.x）= 历轮走查负向用例；为空 = 直连源站扫描（403 正确）；其余再看 UA/路径。`sitemap-questions-<n>` 越界 404 是分片按 OFFSET 切的设计内行为，引擎请求旧分片号不算问题。
+- 部署机没有 `brotli`，1b 的 WARN 是常态（R367 起）；线上 br 变体由边缘压出，5b 通过即可，别把该 WARN 记成本轮回归。
