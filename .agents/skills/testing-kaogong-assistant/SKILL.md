@@ -1627,3 +1627,10 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - Caddy access log 的 `ts` 是**响应完成时刻**，慢请求起点 = ts − duration；多条同接口「完成时刻相近、时长各异」先反推起点再判是否并发。几个 20–40 s 的 `POST /api/mistakes/analysis` 起点间隔 ~10 s 从一台设备来，优先查客户端 in-flight 守卫（H5 `book.vue::aiAnalysis` 判 `aiLoading`；小程序 `book.ts::onAiAnalysis` 要同判 `aiLoading`）。
 - 空态只能按响应字节推断（`/api/predict` 34 B = `{"status":"cold",…}` 设计冷态、`/api/shenlun/stats` 51 B 无记录），写「字节推断」不写「空态」；小程序真机渲染无服务端证据。
 - 发现的缺陷在**他人活跃分支**（未合 main）时不改他人分支：取证文档登记 + 在该 PR 评论给一行修法与证据链接；`git merge-base --is-ancestor A B` 先确认哪条分支包含另一条，评论挂在包含者上。
+
+## R462 经验：预判两条长分支的合并冲突，用「模拟合并 + 对方源锁」量化，不用肉眼看 diff
+- 宿主 git 2.34 没有 `git merge-tree --write-tree`；等价只读做法：`git worktree add --detach /tmp/wt origin/main` → `git merge --no-ff -m t <分支A>` → `git merge --no-commit <分支B>` → `git diff --name-only --diff-filter=U` 拿冲突集合 → `git merge --abort`，全程不碰主工作区，最后 `git worktree remove --force`。
+- 多条派生分支（W6/W7 都从 W5 分出）冲突集合相同时，先 `git merge-base A B C` 找共同祖先，再对祖先跑一次：冲突根在祖先就不要逐条给下游 PR 评论。
+- 「能不能机械解」用**对方分支的 vitest 源锁**当尺：`-X ours` / `-X theirs` 各合一次、把对方 `frontend-uni/tests/*.test.js` 拷到 `tests/` 根目录（不能放子目录，源锁用相对路径）跑 `npx vitest run`（本仓库没有 `--reporter=basic`），失败数 = 该方向的回退条数；再 `git grep -c <功能符号> <分支> -- src/pages src/pkgA` 区分「换写法误报」与「功能不存在」。
+- `-X theirs` 仍失败的条目 = 非冲突 hunk 带回的回退，最容易在人工解冲突时漏掉，单独列。
+- 合并顺序论证要先核 `origin/main` 是否落后于生产 rev（`git merge-base --is-ancestor`）：main 落后时「先合谁」不是对称问题。
