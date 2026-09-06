@@ -2195,3 +2195,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - **勘误**：R454 把 `_routes.json` 排除 `/`、`/index.html`、`/static/*` 写成「R271 设计」错误——`git log -S` 一手：Pages 迁移 `3d28c33` 首次创建（README「静态层由 Pages CDN 直出」），`eef6113`（#163）把 `/assets/*` 收回函数；R271 只是 `/api/search` 边缘缓存。R454 文档/handoff 已改（`24cd26b`）；pages.dev 301 方案取舍不变（优先 CF Bulk Redirects）。
 - 到期项不变：probe=0 22/1、error_reason 6、push_subs 0、weekly_reports 1、growth probe=0 18/4、healthy 0 重启、`KG_PROBE_CIDRS` 在配、VPS 出口 `150.109.230.174` 未变；无前端发版 (c) 无新窗口。
 - 取证：`docs/iter/round-3/r455-wal-frames-autocheckpoint-routes-origin-erratum.md`。
+
+## R456（停机不 checkpoint 的机理坐实 + 探针出口 /24 复核；只取证不改码不部署，生产仍 `460120f`）
+- R455 推断**成立**：本地同源码 `python3 -m uvicorn` 起服 → 写入 → `kill -TERM`，uvicorn 日志 `Shutting down … Finished server process`（优雅关闭），但主库 mtime 不变、`-wal`（4003 帧）/`-shm` 原样保留——`get_conn()` 线程本地连接从不 `close()`、无 lifespan/atexit 钩子，解释器退出不析构其它线程 TLS 里的连接 → 无 checkpoint-on-close。生产旁证：容器 19:41:40Z 由 R450 `compose up` 重建、PID 1 是 exec 形式 uvicorn、主库 mtime 15:05Z 早于启动、`ckpt_seq 0`。SQLite 正常恢复路径、`synchronous` 默认 FULL，**无数据风险**；**登记 P4 不动手**（加 shutdown 钩子 TRUNCATE checkpoint 收益只是重启后 WAL 归零，多一条停机故障点）。
+- `app_log_snapshot.sh` 在停容器前归档 → 归档永远没有 `Shutting down` 行；`docker events --since 36h` 对该容器为空。要看生产停机形态需在 deploy 脚本停容器后再 `docker logs --tail` 一次（未加，无需求）。
+- R452 复核（origin 24 h）：Devin 出口全在 `140.232.64.0/24`（`.2/.3/.4/.5`，`.5` 新增仍在段内）；网段外 Headless 且无探针头仅微软/Bing 网段 3 条 + R454 pages.dev 扫描器 1 条 → 无 probe=0 污染风险变化。
+- 到期项沿用 R455 快照无变化。取证：`docs/iter/round-3/r456-shutdown-wal-not-checkpointed-probe-cidr-recheck.md`。

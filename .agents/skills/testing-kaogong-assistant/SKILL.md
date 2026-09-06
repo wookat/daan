@@ -1586,3 +1586,9 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - `-wal` 大小换算帧数：`(size-32)/(page_size+24)`；再逐帧读 24 B 帧头（`>6I`：pgno, commit_dbsize, salt1, salt2, ck1, ck2）对 32 B 文件头的 salt，salt 一致即当前有效帧。有效帧 < 1000（`wal_autocheckpoint` 默认）时文件只增是预期，不是泄漏；≥1000 后由写连接 PASSIVE checkpoint 复用、大小停在高水位；仅 > `journal_size_limit`（应用连接 64 MiB）才截。到期项只在 `-wal` > 64 MiB 且持续 > 1 天时立项。
 - `ckpt_seq 0` + 主库 mtime 早于容器启动 = WAL 跨重启被接续（进程未 close 连接），属正常恢复路径。
 - 历史归因写「Rxxx 设计」前先 `git log -S'<字面>' -- <文件>` 找首次引入提交（R454 把 `_routes.json` 排除 `/` 误记 R271，实为 Pages 迁移 `3d28c33`）。
+
+## R456 经验：WAL 跨重启保留是既定形态
+- 应用停机（SIGTERM 优雅关闭）不会 checkpoint：线程本地 SQLite 连接不 close。重启后 `-wal`/`-shm` 仍在、`ckpt_seq` 不变、主库 mtime 早于容器启动都是**正常**，不要当异常登记。本地复现法：`DB_PATH=/tmp/x/t.db KG_BOOT_QUIET_S=0 python3 -m uvicorn app.main:app --port 8456 &` → POST 几条 `/api/track` → `kill -TERM` → 比对 `ls -l --time-style=+%T t.db*`。
+- 本机 `~/.local/bin/uvicorn` 绑的 Python 没有 fastapi，跑后端要用 `python3 -m uvicorn`（pyenv shim）。
+- 生产前一容器的停机日志拿不到：`app_log_snapshot.sh` 在停容器前归档，`docker events` 缓冲对该容器为空。
+- 探针出口复核一行：origin 24 h 按 `X-Kg-Ip` 分「`140.232.64.0/24` 内」与「段外 + UA 含 HeadlessChrome/Playwright/Devin + 无 `X-Kg-Probe`」两桶；段外常见是 `40.77.*`/`199.30.*`（微软/Bing 渲染抓取，引擎口径已覆盖），不是 Devin 出口漂移。
