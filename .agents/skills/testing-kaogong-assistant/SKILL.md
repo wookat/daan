@@ -5,6 +5,17 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R420 补充（testing agent）— 时区仿真 / contest 字号·热区 / contest-report 空态
+- 时区仿真用 CDP `Emulation.setTimezoneOverride`，但它是**按 CDP session** 的：一次性 `cdp.C(...).call(...)` 在 socket 关闭后立刻回落到系统 TZ（本机 UTC）。要像 `holdvw.py` 一样长连接持有：`/tmp/cdp174/holdtz.py <TZ>`（`setsid nohup … &`，记 PID）。切 TZ 后必须 F5，并用 `Intl.DateTimeFormat().resolvedOptions().timeZone` + `new Date(1789174800000).getHours()`（Asia/Shanghai 9 / UTC 1 / America/Los_Angeles 18）证明设备时区真变了，再量 UI 文本。恢复：kill holder 再 `setTimezoneOverride timezoneId=''`。
+- R420 起 `contest-time.js`（`cstParts/fmtWindow/fmtDay/fmtDayHour`）固定东八区：contest `.hero-meta .hm[0]`「9月12日 09:00 - 24:00」、往期 `.prow-s` 用 `fmtDay(close_at-1)`（2026-09-05/08-15/08-08），三种 TZ 下必须完全一致。周报「下一场」`.link` 只在 report 非 empty/pending 态渲染（`/api/report/weekly?uid=` 对测试 uid 是 `status: empty` → 该链接测不到，只能标 untested）；可用页内 `import('/assets/contest-time.<hash>.js')` 直接调 helper 取证（minified 导出名 a/b/f，按参数个数判断）。
+- 新 chunk 取证：F5 后 `performance.getEntriesByType('resource')` 里应有 `index-<hash>.js` + `pkgA-exam-contest.<hash>.js` + `contest-time.<hash>.js` + `contest-<hash>.css`。
+- 字号扫描：遍历有文本子节点且 rect 非 0 的元素，`parseFloat(getComputedStyle(e).fontSize)<12` 列表应为空（375 下 24rpx=12px，1440 下 uni 把 rpx 按 375 基准上限也是 12px）。抽样 `.hero-series/.hero-phase/.hm/.prow-s/.prow-none/.rules-arrow` 12px，`.prow-t` 13px，`.sheet-x` 15px。
+- 榜单弹层：原生点往期行「未参加 · 看榜单 ›」→ `.mask .sheet`，`.sheet-t`「… · 榜单」；`.sheet-x` rect 40×40、`elementFromPoint(cx,cy)` 命中自身。375 `.sheet.bottom === innerHeight`（贴底）。**1440 的 `.mask` 不是全视口**：App.vue `@media (min-width:1366px)` 把 `uni-page-body .mask` 设为 `left: calc((100vw-1280px)/2+208px)`/`right: calc((100vw-1280px)/2)`（跟随壳体+左侧 208px 导航），1440 下 mask 为 288..1345，「居中」要以 mask 中心（816.5）而不是视口中心（712.5）判定，这是既定设计不是 bug。
+- contest-report：`#/pkgA/exam/contest-report?event_id=6` 非参赛者 → `GET /api/mock/events/6/report?uid=` **404**（预期 non-2xx，勿计为回归）→ `.card.empty .empty-t`「暂无大赛报告」`.empty-s`「尚无比赛成绩」`.pbtn.main`「去模考大赛」→ 回 contest；不带 event_id → 0 次 API、`.empty-s`「链接缺少赛事参数，请从模考大赛页进入」。报告正文需真实交卷，upcoming 场次进不去，不要造数据。
+- Chrome omnibox 会把 `…/contest-report` 内联补全成上次访问的 `…?event_id=6`：输入后先按 `Delete` 再 `Return`。
+- 清理边界同 R419：只 `DELETE FROM mock_event_entries WHERE uid LIKE 'test-r420-%'`，其他表 `test-r420-%` 应为 0 行；`SELECT COUNT(*) FROM mock_events` 仍 4。
+- 恢复 LS 后页面一次加载会新增 `apiSnap:/api/mock/events?uid=<anonUid>` 缓存键（30→31），属正常页面缓存，不是泄漏。
+
 ## R419 补充（testing agent）— 模考大赛（contest）页 / mock_events 去重取证
 - 入口：首页「更多练习」`.more-c`「模考大赛」（home.vue L297 `goContest`）→ `#/pkgA/exam/contest`；卷库 list 页无入口，周报页也有入口。
 - 选择器：hero `.card.hero` → `.hero-title`（场次标题）/`.hero-phase`（未开始/进行中）/`.hero-paper`（卷名·题数·分钟）/`.hero-meta .hm`（窗口、「N 人报名 · M 人交卷」或「本场首批报名开放中」）；upcoming 时 `.cta`「预约报名」→ 点后 `.cta.done`「已报名，开赛后可进入」+ toast「报名成功，周六见！」；往期 `.prow-t`/`.prow-s`（非参赛显示「未参加 · 看榜单 ›」）。1440 为双栏 `.ct-cols`。
