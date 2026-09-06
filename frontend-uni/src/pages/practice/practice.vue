@@ -1950,7 +1950,7 @@ export default {
       if (!this.beiMode) this.logAttempts([this.cur]);
       this.recordStat(this.cur.module, correct, this.cur.submodule);
       this.playSfx(correct);
-      try { uni.vibrateShort({ type: correct ? 'light' : 'medium' }); } catch (e) { /* 不支持则忽略 */ }
+      try { uni.vibrateShort({ type: correct ? 'light' : 'medium', fail: () => {} }); } catch (e) { /* 不支持则忽略 */ }
       if (correct) {
         this.right++;
         this.streak++;

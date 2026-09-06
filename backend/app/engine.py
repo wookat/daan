@@ -48,7 +48,7 @@ async def extract_question(image_b64: str | None, mime: str | None, text: str | 
     else:
         content = EXTRACT_PROMPT + "\n\n题目内容：\n" + (text or "")
     try:
-        data = await llm.chat_json([{"role": "user", "content": content}], fast=not image_b64, max_tokens=2000)
+        data = await llm.chat_json([{"role": "user", "content": content}], fast=not image_b64, max_tokens=2000, think=bool(image_b64))
     except (ValueError, KeyError, TypeError):
         data = {}
     if not isinstance(data, dict):
