@@ -1982,3 +1982,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 复验（testing agent，`test-r424-ui-1/2`，375/1440）(a)–(f) 全 PASS：面试 3 流 thinking 0、正文首字距 meta 1.3–1.6 s、2386/2641/2998 字无泄漏、正文中 F5 → regen 1.5 s 落库；ask 数列/类比走模型、乱码秒回存疑 `7f3q9z%` 0 行；`/api` non-2xx 仅预期 404、console 0、healthy 0 重启、Traceback/locked/finish=length 0；清理 LEFTOVER 0、explain_cache 回 76。本地 pytest 475（+7）/ ruff / pyright 0。
 - 观察：首个有量的 `probe=0` uid `umst3tuisd7lgzaka`（vivo V2405A WebView、中国移动 IP，09-06 两次到访 241 API、22 作答/16 错题、3 次 `wxlogin` 503）——R386 已登记同机为 MiniProgramEnv 走查设备、行为与内部验收一致，**按候选真人登记不归因外部真人**；`error_reason` 该 uid 0 行、全局 probe=0 仍 0 行，观察点 ≥09-11。
 - 遗留：极短算式仍拦；flash 替代 pro 样本不足不下结论；点评总时长 30–38 s 由 2.7–3k 字正文决定；宿主 load 10–11、free ~76 MB、磁盘 94%/2.9 G；Lighthouse LCP 2737 一次超预算（bundle 未变、宿主负载）。
+
+### R425（2026-09-06）首个 probe=0 设备逐页复盘 / 小程序 wxlogin 503 反馈 / 点评字数——只取证登记、不改码不部署
+- 取证 docs/iter/round-3/r425-probe0-device-path-wxlogin-503-review-length.md。`umst3tuisd7lgzaka` 是**已发布微信小程序**（Referer servicewechat.com/wx01f2f29cfe51baba）在 vivo V2405A 上的访问：caddy 9 个文件全量 327 行、6 次到访；09-06 08:55–08:58 主链路 = wxlogin 503 ×2（2 s 内）→ 资料 10 题（11 s 内 1 题/s）→ 综合 10 题 → review/1952 → PATCH mistakes 2815/2819 标掌握 → growth ×7；DB `answer_log` 20 行 / `mistakes` 14 新建 + 1952 review_count 0→1 逐条对应，API 全 200 ≤0.66 s。行为是「点过去」+ R386 已登记同机走查 → 仍按候选真人/内部走查登记，不改 probe。
+- wxlogin 503：小程序 `utils/request.ts` 透传 `detail`，登录页 `l-err` 直显「微信登录暂未开通（服务端未配置小程序密钥）」（源码推断未真机截图）；根因是 `WX_MINIAPP_SECRET` 资源缺口，小程序端改动需微信开发者工具发布不在 H5 管线内 → 不改，P3：密钥到位后真机复验登录成功（`users` 出 `wx:` 行）。
+- 点评总时长：上游关推理吐字 57–59 tok/s ≈ 95 汉字/s，总时长 = 首字前 1.3–4 s + 正文长度/速率，纯线性无隐藏等待；流式 95 字/s 远快于阅读速度，不构成可感知等待；`_review_prompt` 无字数约束，生产无真实用户读点评的行为数据 → **不收字数**，P3 待 probe=0 面试会话后看停留/滚动再定。
+- `error_reason` ≥09-11 再看（probe=0 仍 0 行）。宿主状态未变（未部署）。
