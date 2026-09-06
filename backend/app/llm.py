@@ -130,14 +130,15 @@ class Thinking:
 
 
 @overload
-def chat_stream(messages: list, temperature: float = ..., max_tokens: int = ..., with_thinking: Literal[False] = ...) -> AsyncIterator[str]: ...
+def chat_stream(messages: list, temperature: float = ..., max_tokens: int = ..., with_thinking: Literal[False] = ..., think: bool = ...) -> AsyncIterator[str]: ...
 @overload
-def chat_stream(messages: list, temperature: float = ..., max_tokens: int = ..., *, with_thinking: bool) -> AsyncIterator["str | Thinking"]: ...
+def chat_stream(messages: list, temperature: float = ..., max_tokens: int = ..., *, with_thinking: bool, think: bool = ...) -> AsyncIterator["str | Thinking"]: ...
 
 
-async def chat_stream(messages: list, temperature: float = 0.2, max_tokens: int = 4000, with_thinking: bool = False):  # type: ignore[misc]
+async def chat_stream(messages: list, temperature: float = 0.2, max_tokens: int = 4000, with_thinking: bool = False, think: bool = True):  # type: ignore[misc]
     """逐段产出模型输出文本。with_thinking=True 时在正文之前额外产出 Thinking 进度（推理模型 reasoning_content 不落正文，
-    默认被丢弃，正文首字前调用方拿不到任何信号）。"""
+    默认被丢弃，正文首字前调用方拿不到任何信号）。think=False 关闭推理阶段（网关不识别该字段时无副作用，
+    此时 with_thinking=True 仍能把实际发生的 reasoning 透出为进度）。"""
     base, key, model = _endpoint(messages)
     tries = []
     if base and key:
@@ -154,13 +155,7 @@ async def chat_stream(messages: list, temperature: float = 0.2, max_tokens: int 
                 "POST",
                 f"{b}/v1/chat/completions",
                 headers={"Authorization": f"Bearer {k}"},
-                json={
-                    "model": m,
-                    "messages": messages,
-                    "temperature": temperature,
-                    "max_tokens": max_tokens,
-                    "stream": True,
-                },
+                json={**_body(m, messages, temperature, max_tokens, think), "stream": True},
             ) as resp:
                 if (resp.status_code >= 500 or resp.status_code in _QUOTA_CODES) and i < len(tries) - 1:
                     continue

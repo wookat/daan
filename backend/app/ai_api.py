@@ -71,7 +71,7 @@ async def api_explain(
         "explain_key": key,
         "cached": bool(cached),
     }
-    if not cached:
+    if not cached and not suspect:
         db.save_explain_cache(key, meta, explanation)
         if raw_key and raw_key != key:
             db.save_explain_cache(raw_key, meta, explanation)
@@ -151,7 +151,7 @@ async def api_explain_stream(
                 ):
                     yield line
                 full = "".join(parts)
-                if full.strip():
+                if full.strip() and not suspect:
                     db.save_explain_cache(key, meta, full)
                     if raw_key and raw_key != key:
                         db.save_explain_cache(raw_key, meta, full)

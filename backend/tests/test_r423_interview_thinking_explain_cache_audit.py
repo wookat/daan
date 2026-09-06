@@ -33,7 +33,7 @@ def _sse(body: str):
 
 
 def _fake_stream(items):
-    def _stream(messages, temperature=0.2, max_tokens=4000, with_thinking=False):
+    def _stream(messages, temperature=0.2, max_tokens=4000, with_thinking=False, **kw):
         async def gen():
             for it in items:
                 if isinstance(it, llm.Thinking) and not with_thinking:
@@ -103,7 +103,7 @@ def test_review_regen_stream_emits_thinking(client, monkeypatch):
 def test_review_streams_use_enlarged_token_budget(client, monkeypatch):
     seen: list[int] = []
 
-    def _stream(messages, temperature=0.2, max_tokens=4000, with_thinking=False):
+    def _stream(messages, temperature=0.2, max_tokens=4000, with_thinking=False, **kw):
         seen.append(max_tokens)
 
         async def gen():

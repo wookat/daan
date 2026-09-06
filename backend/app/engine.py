@@ -158,14 +158,24 @@ _SUSPECT_TEXT = (
 )
 
 
+_OPTION_MARK = re.compile(r"(?<![A-Za-z])([A-D])[\.．、:：]")
+
+
 def is_suspect(question_text: str) -> bool:
     return _suspect_reason(question_text)
 
 
 def _suspect_reason(question_text: str) -> bool:
-    stem = re.split(r"\bA[\.．、:：]", question_text or "", maxsplit=1)[0]
+    """fail-closed 兜底（主判在 EXPLAIN_SYSTEM 红线 5 由模型完成）：只拦「题干既无可读中文、又无数据、也无成套选项」的输入。
+    数列（3, 6, 12, 24, ( )）、类比（儿童：女童：未成年）等公考题干本身就短于 8 个汉字，带 ≥3 个选项时放行交模型判断。"""
+    text = question_text or ""
+    stem = re.split(r"\bA[\.．、:：]", text, maxsplit=1)[0]
     hanzi = len(re.findall(r"[\u4e00-\u9fff]", stem))
-    return hanzi < 8
+    if hanzi >= 8:
+        return False
+    digits = len(re.findall(r"\d", stem))
+    options = len(set(_OPTION_MARK.findall(text)))
+    return not (options >= 3 and (hanzi >= 4 or digits >= 4))
 
 
 async def explain(extracted: dict, user_answer: str | None = None) -> str:
