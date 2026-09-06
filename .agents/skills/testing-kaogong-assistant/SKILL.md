@@ -1620,3 +1620,10 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 该簇涉及页：`stats.vue`（成长/热力图）、`calendar.vue`（今天标记用设备本地日期，R438 口径）、`weekly-report.vue`（loading/旧快照/empty/pending/error）、`mastery-map.vue`（375 `.tabs` 横滑行 vs 1440 `.side-nav`，条件渲染，量哪个看视口）。
 - 到期项 `weekly_reports` / `mistakes` 无 `probe` 列：关联用 `EXISTS(SELECT 1 FROM answer_log a WHERE a.uid=x.uid AND a.probe=0)`；`weekly_reports` 列是 `week_start/payload/created_at/read_at`（无 `week`）。首开周报即惰性生成一行（`read_at==created_at` 说明是页面自己 GET+`/read`），量测某 uid 的周报页也会写这张表——先看 origin 日志里该行 `created_at` 秒的 `Cf-Connecting-Ip`/UA/`X-Kg-Probe` 再归因。
 - probe=0 增量归因套路：`answer_log WHERE probe=0 GROUP BY uid` 拿 `MAX(created_at)` → origin 日志同分钟 `POST /api/answer_log` 的 `Cf-Connecting-Ip` + UA + 有无 `X-Kg-Probe`；vivo `V2405A` UA + 移动网段 = R425/R446 已知内部验收设备，不是外部真人。
+
+## R461 经验：一段 probe=0 会话先认客户端，再谈「看到了哪版 UI」
+- 归因 probe=0 会话**先看 UA/Referer 定客户端**再下结论：`MicroMessenger … MiniProgramEnv/android|ios` + Referer `https://servicewechat.com/<appid>/<ver>/page-frame.html` = 微信原生小程序（appid 对 `miniapp-native/project.config.json`），**不是 H5**；H5（含微信内置浏览器打开的 H5）Referer 是 `kaogong.zalize.com`。前端发版后的复验样本若是小程序会话，H5 改动它一条也看不到，(c) 旧壳 404 口径也与它无交集。
+- 会话打的接口集合可以反推**它跑的是哪条分支的构建**：把日志里的 `/api/...` 路径逐条 `git grep -l <path> <ref> -- miniapp-native`，对 main 与各活跃 `origin/devin/*` 分支比命中数；main 0/10、某分支 10/10 即为该分支构建（commit / 体验版·开发版不可知，如实写）。
+- Caddy access log 的 `ts` 是**响应完成时刻**，慢请求起点 = ts − duration；多条同接口「完成时刻相近、时长各异」先反推起点再判是否并发。几个 20–40 s 的 `POST /api/mistakes/analysis` 起点间隔 ~10 s 从一台设备来，优先查客户端 in-flight 守卫（H5 `book.vue::aiAnalysis` 判 `aiLoading`；小程序 `book.ts::onAiAnalysis` 要同判 `aiLoading`）。
+- 空态只能按响应字节推断（`/api/predict` 34 B = `{"status":"cold",…}` 设计冷态、`/api/shenlun/stats` 51 B 无记录），写「字节推断」不写「空态」；小程序真机渲染无服务端证据。
+- 发现的缺陷在**他人活跃分支**（未合 main）时不改他人分支：取证文档登记 + 在该 PR 评论给一行修法与证据链接；`git merge-base --is-ancestor A B` 先确认哪条分支包含另一条，评论挂在包含者上。
