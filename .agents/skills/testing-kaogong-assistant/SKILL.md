@@ -1361,3 +1361,11 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 完成页按钮 y 坐标会因 dailyStats/登录条等动态区块变化，点「分享成绩」前先截图确认，否则可能误点「再来一组」把完成页顶掉。
 - 生产部署后旧 bundle chunk 名会 404（页面预取旧 hash 资源，console 里成串 `assets/*.js 404`）——属部署换 hash 的已知噪音，与 console.error 口径分开列报。
 - 收尾 reload 页面（清 hook）会让 app 以保护 uid 重新拉 `/api/profile` 并新增一个 `apiSnap:*` 缓存键、更新 `apiSnapIndex`——localStorage 相对备份多这两处属 app 正常行为，非污染。
+
+## R423 面试模块 SSE 走查经验
+- 入口：ask 页「面试」/ 我的页「AI 面试陪练」→ `/pkgA/interview/interview`；提交 body 是 JSON `{uid,question_id,answer,duration_sec}`（非 FormData）。流：`POST /api/interview/answer/stream`（meta=分数 → thinking 逐秒 → 正文 delta → done{session_id}）与 `POST /api/interview/sessions/{sid}/review/stream`（regen，仅点评 <300 字时允许，否则 400「点评已存在」属设计）。
+- 判定口径：meta ≤6 s（打分已关推理）；`event: thinking` 键恰 `{secs,chars}`、间隔 ~1 s、done 前 5 s 内 0 个；正文首字 30–50 s 是上游推理行为不算缺陷；正文 ≥300 字且不含 `<think`/「思考过程」等推理泄漏；响应头 `text/event-stream` 且无 `content-encoding`，`encodedBodySize==decodedBodySize`。
+- **触发「重新生成点评」的可靠方法**：提交后在 thinking 阶段 F5 中断（评分已落库、点评空）→ 经「练习记录」重进该 session → 出现「上次点评生成被中断，评分已保留」+ 按钮。旧 <300 字 session 通常属他人 uid，跨 uid 访问 `session_id` 会有预期 404。
+- 空正文指纹（R423b 已修）：thinking 数十个后直接 done、正文 0 字、DB review 空；容器日志 `[llm] stream <model> finish=length content=0 …` 告警——出现即预算不足，不是网络问题。
+- 含图 `/api/explain/stream` 只收一个 `image` 字段，重复字段只取最后一张；低清 360px JPEG q35 仍可识题命中缓存键。取材料题样本用 `/api/questions?module=ziliao&grouped=1&limit=5`，**不要在高负载时段对生产库跑无索引全表 LIKE**（一次 >10 min 未返回）。
+- 清理：`interview_sessions` 按 uid 删；探针含图讲解会新增 explain_cache 行（无 uid），按 `question_text like` 定位删回基线。
