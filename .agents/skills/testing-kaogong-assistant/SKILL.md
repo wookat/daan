@@ -1654,3 +1654,11 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 字号 22→24rpx 会让 nowrap+ellipsis 的标签在 375 多出省略号：复验读 `el.scrollWidth > el.clientWidth`，超出时先收同行 `gap`/水平 padding，不缩字号。
 - `min-height: 44rpx` 这类「看起来有热区」的 rpx 值（=22px）是无效值，源锁正则只认 `min-height:\s*40px`。
 - 死规则（模板已不引用的选择器）一并抬字号让「样式块内无 <24rpx」一条正则可锁，文档里列清哪些是死规则，不在审计轮删。
+
+## R466 经验：「读数小」先核外层再定改不改 + 到期项脚本两个坑
+- 只读读数小于 40 的元素先判三件事：模板是否直接挂 `@click`（`grep -n '@click' | grep class`）、所在行高是否就等于自身高（`getBoundingClientRect` 父级）、抬高会不会抬整行。三者都「是」才修；抬整行会破坏布局的（输入框行 `.sbar`、评论底行 `.ft`、页脚两行文字链）用 `min-height:40px + margin:-Npx 0`，独立行（页签行 `.tabs`、排序 chip 行 `.chips`）直接撑到 40 不算回退。
+- 页名 ≠ 源码路径：`search`/`discuss` 在 `pkgA/search/`、`pkgA/social/`，先 `find src -name '*.vue' | grep -i <关键词>` 再写路径，不按页名猜。
+- uni H5 同页只改 hash query（`#/pkgA/search/search?q=…`）**不触发 `onLoad`**，要验带参初始态需 `ctx.new_page()` 重新打开；搜索历史 storage key 是 `kgSearchHist`（`uni.getStorageSync`），只在 kw 为空时渲染。
+- 到期项脚本判「某表 X 时刻后有写入」必须先 `PRAGMA table_info` 看 `created_at` 类型：TEXT 型（`question_text_backup` 的 `'2026-08-02 …'`）与 `strftime('%s',…)` 比较是字串比较、恒真误报；只对 INTEGER 型列做 epoch 比较。
+- WAL「是否复用」不能只看字节：读 32 B 头 `ckpt_seq` + 逐帧 salt 是否与头一致（`struct.unpack('>IIIIII')`），有效帧数 < 帧槽数即已 checkpoint 复用；主库 mtime = 最近一次 checkpoint 写回时刻。
+

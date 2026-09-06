@@ -2280,3 +2280,14 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 如实：375 为 360 仿真；完成页/领跑提示/材料折叠/纠错 chip 未在生产真实走到，按源码 + 本地 dist 推断 + 源锁；无 testing agent 录屏。宿主盘 **94% / 3.1 G**（再降）。
 - 留 R466：搜索页 `.tab` 25.7 / `.scancel` 20、讨论页 `.msg` 15、个人页 `.zl-link` 16、面试页 `.hist-link` 18 只读读数待语义确认（是否有外层撑高）。
 - 取证：`docs/iter/round-3/r465-practice-font-floor-hit-area.md`；源锁 `frontend-uni/tests/practice-r465-audit.test.js`。
+
+## R466（搜索 / 讨论 / 个人 / 面试四页字号/热区修复 + WAL 高水位复用坐实；前端 4 文件样式 + 源锁，生产 `c3326e4` → `7e2e2b3`）
+- R465 留的 5 处读数先核语义：搜索 `.tab`（`<text @click>`，行高=自身 25.7）/ `.scancel`（`.sbar` 32.3 内 20）/ 讨论 `.msg`（`<view @click>` 15，`.chips` 行 24）/ 个人 `.zl-link`（`<text @click>` 17，flex-wrap 行=自身）/ 面试 `.hist-link`（block 19）——**全部真可点、外层无撑高**，不是内层读数小。源码路径勘误：实为 `pkgA/search/search.vue`、`pkgA/social/discuss.vue`（R465 按页名猜的路径不存在）。
+- 改动：4 页样式块 27 处 `20–23rpx` → `24rpx`；模板逐个 `grep @click` 后只对可点元素补 `min-height:40px`：搜索 `.tab .scancel(-4px) .sclear(-12px) .hist-clear .hist-chip(line-height 40) .d-copy .retry`、讨论 `.chip .msg .up(-12px) .op(-12px) .rx 40×40 .send .plaza-btn .retry`（去掉 `.up.sm,.op.sm` 20rpx 覆盖）、个人 `.zl-link(-4px)`+`.zl-links gap 8→16rpx`、面试 `.hist-link .swap(-10px)`；纯信息标签只改字号。0 行模板、0 后端。
+- 生产复验 375/1440：5 处 + 顺带元素全部 40 / `elementFromPoint` 命中带 40；`.sbar` 32.3 不变；四页 `<24rpx` 叶节点 0（剩 24rpx 仿真 11.52px + uni TabBar label）。本地 dist 预检与生产逐项一致。
+- 本地门 vitest 650/650（+8 `tests/secondary-r466-audit.test.js`）/ eslint / build 绿；部署 rc=0、rev 一致、7/7 回归 200、perf 一次全 OK（0.96 / LCP 2302；`/tiku/` 1.00）。
+- **WAL：4,124,152 B 同字节，但 `ckpt_seq 0→1`、有效帧 55/1001 槽（新 salt）** → 1000 帧 autocheckpoint 已发生、从头复用、停在高水位，R455 预测/R465 挂起项闭合；主库 mtime 22:09:44Z 说明 R465 读到的已是 checkpoint 后的高水位。到期项口径仍 R455（>64 MiB 且持续 >1 天才立项）。
+- 到期项无增量（probe=0 33/1、growth 20/4、error_reason 7 / ≥09-11 0、push_subs 0、weekly 2、quick_check ok、healthy 0 重启）；(c) R465 后 305 请求 404/monitor 0。宿主盘 93% / 3.7 G。
+- 如实：375 为 360 仿真；搜索历史区 / 详情 `.d-copy` / 讨论有评论态 `.up .op .rx` / 面试 `.swap` 未在生产真实走到（源码 + dist + 源锁推断）；`.zl-link` 两行命中带 375 重叠 1.3px 登记不改；到期项脚本一次把 TEXT `created_at` 表误报为新写入已纠正（见取证 §5）。
+- 取证：`docs/iter/round-3/r466-secondary-pages-font-floor-hit-area-wal-reuse.md`；源锁 `frontend-uni/tests/secondary-r466-audit.test.js`。
+
