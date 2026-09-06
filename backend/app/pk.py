@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Request
 
 from . import db
+from .auth import probe_request
 from .deps import rl
 from .social import CN_TZ
 
@@ -57,6 +58,8 @@ def init_pk_db():
     conn.execute("CREATE INDEX IF NOT EXISTS idx_pk_opponent ON pk_matches(opponent_uid, created_at)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_pk_open ON pk_matches(status, module, created_at)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_pk_finished ON pk_matches(status, finished_at)")
+    # 对局任一方为探针即 probe=1：随机匹配池按同类配对、周榜只算真人（本人对局始终可见）
+    db.add_column_if_missing(conn, "pk_matches", "probe", "INTEGER")
     conn.commit()
     conn.close()
 
@@ -183,9 +186,12 @@ def api_pk_create(body: dict, request: Request):
     conn = db.get_conn()
     code = _gen_code(conn)
     conn.execute(
-        """INSERT INTO pk_matches (code, module, question_ids, creator_uid, creator_name, created_at)
-           VALUES (?,?,?,?,?,?)""",
-        (code, module, json.dumps(qids), uid, _clean_name(body.get("nickname")), time.time()),
+        """INSERT INTO pk_matches (code, module, question_ids, creator_uid, creator_name, created_at, probe)
+           VALUES (?,?,?,?,?,?,?)""",
+        (
+            code, module, json.dumps(qids), uid, _clean_name(body.get("nickname")), time.time(),
+            1 if probe_request(request) else 0,
+        ),
     )
     conn.commit()
     conn.close()
@@ -193,7 +199,7 @@ def api_pk_create(body: dict, request: Request):
 
 
 @router.post("/join")
-def api_pk_join(body: dict):
+def api_pk_join(body: dict, request: Request):
     uid = _clean_uid(body.get("uid"))
     code = str(body.get("code") or "").strip().upper()[:12]
     if not code:
@@ -216,8 +222,9 @@ def api_pk_join(body: dict):
         raise HTTPException(409, "该挑战已被其他考友接受")
     if not m["opponent_uid"]:
         conn.execute(
-            "UPDATE pk_matches SET opponent_uid=?, opponent_name=? WHERE id=? AND opponent_uid IS NULL",
-            (uid, _clean_name(body.get("nickname")), m["id"]),
+            "UPDATE pk_matches SET opponent_uid=?, opponent_name=?, probe=MAX(COALESCE(probe,0),?)"
+            " WHERE id=? AND opponent_uid IS NULL",
+            (uid, _clean_name(body.get("nickname")), 1 if probe_request(request) else 0, m["id"]),
         )
         conn.commit()
     conn.close()
@@ -233,8 +240,11 @@ def api_pk_random(body: dict, request: Request):
     if module and module not in PK_MODULES:
         raise HTTPException(400, "模块无效")
     conn = db.get_conn()
-    where = "status='waiting' AND opponent_uid IS NULL AND creator_uid!=? AND creator_score IS NOT NULL"
-    args: list = [uid]
+    where = (
+        "status='waiting' AND opponent_uid IS NULL AND creator_uid!=? AND creator_score IS NOT NULL"
+        " AND COALESCE(probe,0)=?"
+    )
+    args: list = [uid, 1 if probe_request(request) else 0]
     if module:
         where += " AND module=?"
         args.append(module)
@@ -245,7 +255,10 @@ def api_pk_random(body: dict, request: Request):
     ).fetchone()
     conn.close()
     if m:
-        return {"matched": True, **api_pk_join({"uid": uid, "code": m["code"], "nickname": body.get("nickname")})}
+        return {
+            "matched": True,
+            **api_pk_join({"uid": uid, "code": m["code"], "nickname": body.get("nickname")}, request),
+        }
     return {"matched": False, **api_pk_create(body, request)}
 
 
@@ -359,11 +372,13 @@ def api_pk_leaderboard(uid: str = ""):
     now = datetime.now(CN_TZ)
     monday = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
     week_start = monday.timestamp()
+    u = (uid or "").strip()[:64]
     conn = db.get_conn()
     rows = conn.execute(
-        """SELECT winner, creator_uid, creator_name, opponent_uid, opponent_name
-           FROM pk_matches WHERE status='finished' AND finished_at>=? AND winner IN ('creator','opponent')""",
-        (week_start,),
+        f"""SELECT winner, creator_uid, creator_name, opponent_uid, opponent_name
+           FROM pk_matches WHERE status='finished' AND finished_at>=? AND winner IN ('creator','opponent')
+           AND ({db.REAL_TRAFFIC} OR creator_uid=? OR opponent_uid=?)""",
+        (week_start, u, u),
     ).fetchall()
     conn.close()
     wins: dict[str, dict] = {}
@@ -373,7 +388,6 @@ def api_pk_leaderboard(uid: str = ""):
         e = wins.setdefault(w_uid, {"uid": w_uid, "name": w_name or "匿名考友", "wins": 0})
         e["wins"] += 1
     ranked = sorted(wins.values(), key=lambda x: -x["wins"])[:20]
-    u = (uid or "").strip()[:64]
     my_rank = None
     my_wins = 0
     if u:
