@@ -1,4 +1,4 @@
-<navbar title="真题卷库" back="{{true}}" />
+<navbar title="{{histView ? '模考记录' : '真题卷库'}}" back="{{true}}" />
 <scroll-view class="page-scroll" scroll-y type="list" scroll-into-view="{{scrollTo}}" scroll-with-animation>
   <view class="wrap">
     <kg-card wx:if="{{resume}}" variant="flat" selected class="resume">

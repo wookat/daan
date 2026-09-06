@@ -3,6 +3,11 @@
   padding: var(--sp-8) var(--page-x) calc(var(--tab-h) + var(--sp-24) + env(safe-area-inset-bottom));
 }
 
+/* 批量态：再为 tabbar 上方的 fixed 批量条让位 */
+.wrap.is-batch {
+  padding-bottom: calc(var(--tab-h) + var(--bar-h) + var(--sp-24) + env(safe-area-inset-bottom));
+}
+
 /* 复习态：白底组，无阴影 */
 .review {
   display: block;

@@ -987,3 +987,10 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 完成页按钮 y 坐标会因 dailyStats/登录条等动态区块变化，点「分享成绩」前先截图确认，否则可能误点「再来一组」把完成页顶掉。
 - 生产部署后旧 bundle chunk 名会 404（页面预取旧 hash 资源，console 里成串 `assets/*.js 404`）——属部署换 hash 的已知噪音，与 console.error 口径分开列报。
 - 收尾 reload 页面（清 hook）会让 app 以保护 uid 重新拉 `/api/profile` 并新增一个 `apiSnap:*` 缓存键、更新 `apiSnapIndex`——localStorage 相对备份多这两处属 app 正常行为，非污染。
+
+## 小程序（原生）v3 底部/导航栏走查新经验
+- 自定义 tabbar 是 fixed 覆盖层（模拟器 `windowHeight === screenHeight`），每个 tab 页都要滚到最底看最后一行是否被遮；页面底部应统一用 `calc(var(--tab-h) + var(--sp-24) + env(safe-area-inset-bottom))`。若页内还有第二个 fixed 底栏（如错题本批量态 `.batchbar`），页面在该态下需额外加底栏高度的 padding，否则内容不足一屏时最后一行永久被底栏遮住且无法滚出。
+- `app.json` 为 `navigationStyle: custom`，各页标题来自 `<navbar title="…">` 组件的静态属性——`wx.setNavigationBarTitle` 对它**无效**。验证"页面标题随参数变化"时必须看模拟器实际标题，不能只看 ts 里的 setNavigationBarTitle 调用；修法应把 title 绑定到 data（如 `title="{{histView ? '模考记录' : '真题卷库'}}"`）。
+- 取证页面路由/参数/状态可在 Console 输入 `var _p=getCurrentPages().slice(-1)[0]; JSON.stringify([_p.route,_p.options,_p.data.xxx])`（用 var 前缀而非直接长表达式，社区版 Console 长表达式偶发吃字导致 SyntaxError，属自伤红错，报告里要单独说明）。
+- 判断"纯色 vs 渐变"可用 PIL 对 `python3 /tmp/mpshot.py` 截图（1600×1122）按 1024×768 坐标缩放采样多个角/边像素，全部同值（品牌色 rgb(46,91,255)）即纯色。
+- Console 过滤框输入文本后 "N hidden" 计数不变时说明过滤未生效；消息量少时改为 Default levels 从顶到底逐屏 zoom 阅读。

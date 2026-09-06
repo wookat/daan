@@ -1,6 +1,6 @@
 <navbar title="错题本" large />
 <scroll-view class="page-scroll" scroll-y type="list">
-  <view class="wrap">
+  <view class="wrap {{batchMode ? 'is-batch' : ''}}">
     <!-- 复习模式（kg-question-card / kg-option-group 小程序版未落地，页内按 T3 结构实现） -->
     <block wx:if="{{reviewing && rCur}}">
       <view class="review">

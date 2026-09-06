@@ -129,10 +129,7 @@ Page({
     this._pending = p;
     this._pendingPid = p.pid;
     if (p.st) this.setData({ st: p.st, hasFilter: true });
-    if (p.view === 'history') {
-      this.setData({ histView: true });
-      wx.setNavigationBarTitle({ title: '模考记录' });
-    }
+    if (p.view === 'history') this.setData({ histView: true });
   },
   onShow() {
     this.load();
