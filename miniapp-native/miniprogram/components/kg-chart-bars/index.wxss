@@ -4,6 +4,7 @@
 .kg-bars__track { flex: 1; width: 100%; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
 .kg-bars__track.is-track { width: 18px; background: var(--prog-track); border-radius: var(--r-full); }
 .kg-bars__bar { width: 100%; border-radius: 3px 3px 0 0; background: var(--brand); min-height: 3px; }
+.kg-bars__bar.is-soft { background: var(--brand-soft-2); }
 .kg-bars__track.is-track .kg-bars__bar { border-radius: var(--r-full); }
 .kg-bars__bar.is-ok { background: var(--ok); }
 .kg-bars__bar.is-warn { background: var(--warn); }
