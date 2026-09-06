@@ -1,0 +1,91 @@
+<navbar title="{{title}}" back="{{true}}" />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <block wx:if="{{loading}}">
+      <view class="topbar"><t-skeleton theme="text" animation="gradient" /></view>
+      <kg-card variant="raised"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
+    </block>
+
+    <kg-empty
+      wx:if="{{!loading && loadErr}}"
+      icon="wifi-off"
+      title="{{loadErr}}"
+      desc="请检查网络后重试"
+      ctaText="重试"
+      secondaryText="返回"
+      bind:cta="onRetry"
+      bind:secondary="onBack"
+    />
+
+    <block wx:if="{{!loading && !loadErr && cur}}">
+      <view class="topbar">
+        <kg-tag tone="module" module="{{cur.module}}">{{cur.submodule || ''}}</kg-tag>
+        <text class="pos num">{{idx + 1}}/{{items.length}}</text>
+        <view class="clock {{lowTime ? 'low' : ''}}" role="timer" aria-label="剩余时间">
+          <l-icon name="timer" size="16" tone="{{lowTime ? 'bad' : 'muted'}}" />
+          <text class="clock-t num">{{fmtLeft}}</text>
+        </view>
+      </view>
+      <view class="prog"><kg-progress value="{{idx + 1}}" max="{{items.length}}" thickness="{{4}}" ariaLabel="作答进度" /></view>
+
+      <view bind:touchstart="onTouchStart" bind:touchend="onTouchEnd">
+        <kg-question-card
+          index="{{idx + 1}}"
+          total="{{items.length}}"
+          module="{{cur.module}}"
+          submodule="{{cur.submodule || ''}}"
+          question="{{cur.question}}"
+          image="{{cur.image || ''}}"
+          imageCredit="{{cur.image_credit || ''}}"
+          markable="{{!practice}}"
+          marked="{{cur._marked}}"
+          fontSize="{{fontPx}}"
+          bind:mark="onMark"
+        >
+          <kg-option-group
+            options="{{opts}}"
+            picked="{{cur._picked}}"
+            answer="{{cur.answer}}"
+            revealed="{{practice && revealed}}"
+            exclusive="{{!practice}}"
+            excl="{{cur._excl}}"
+            fontSize="{{fontPx}}"
+            bind:pick="onPick"
+            bind:excl="onExcl"
+          />
+          <view wx:if="{{!practice}}" slot="footer" class="hint">长按选项可排除干扰项</view>
+          <view wx:if="{{practice && revealed}}" slot="footer" class="expl">
+            <view class="expl-h">
+              <kg-tag tone="{{cur._picked === cur.answer ? 'ok' : 'bad'}}">{{cur._picked === cur.answer ? '回答正确' : '回答错误'}}</kg-tag>
+              <text class="expl-ans">正确答案 <text class="num">{{cur.answer}}</text></text>
+            </view>
+            <text wx:if="{{cur.explanation}}" class="expl-t q-text" user-select>{{cur.explanation}}</text>
+            <text wx:else class="expl-t expl-none">本题暂无解析</text>
+          </view>
+        </kg-question-card>
+      </view>
+    </block>
+  </view>
+</scroll-view>
+
+<kg-action-bar wx:if="{{!loading && !loadErr && cur}}" layout="answer" index="{{idx}}" total="{{items.length}}">
+  <kg-button class="abar-btn" variant="ghost" size="lg" disabled="{{idx === 0}}" icon="chevron-left" bind:click="onPrev">上一题</kg-button>
+  <kg-button class="abar-btn" variant="ghost" size="lg" icon="clipboard-list" bind:click="onOpenCard">答题卡</kg-button>
+  <kg-button wx:if="{{idx + 1 < items.length}}" class="abar-btn abar-main" variant="primary" size="lg" bind:click="onNext">下一题</kg-button>
+  <kg-button wx:elif="{{practice}}" class="abar-btn abar-main" variant="primary" size="lg" bind:click="onFinishPractice">完成</kg-button>
+  <kg-button wx:else class="abar-btn abar-main" variant="primary" size="lg" loading="{{submitting}}" bind:click="onConfirmSubmit">交卷</kg-button>
+</kg-action-bar>
+
+<kg-answer-card
+  visible="{{cardOpen}}"
+  cells="{{cells}}"
+  current="{{idx}}"
+  graded="{{practice}}"
+  grouped="{{!mini}}"
+  footText="{{practice ? '已练 ' + answered + '/' + items.length + ' · 答对 ' + correctN : '已答 ' + answered + '/' + items.length + ' · 剩余 ' + fmtLeft}}"
+  primaryText="{{practice ? '' : '交卷'}}"
+  loading="{{submitting}}"
+  bind:jump="onJump"
+  bind:close="onCloseCard"
+  bind:primary="onConfirmSubmit"
+/>

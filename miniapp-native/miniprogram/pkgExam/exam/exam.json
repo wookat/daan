@@ -1,0 +1,16 @@
+{
+  "usingComponents": {
+    "navbar": "/components/navbar/index",
+    "l-icon": "/components/l-icon/index",
+    "kg-button": "/components/kg-button/index",
+    "kg-card": "/components/kg-card/index",
+    "kg-tag": "/components/kg-tag/index",
+    "kg-progress": "/components/kg-progress/index",
+    "kg-action-bar": "/components/kg-action-bar/index",
+    "kg-empty": "/components/kg-empty/index",
+    "kg-question-card": "/components/kg-question-card/index",
+    "kg-option-group": "/components/kg-option-group/index",
+    "kg-answer-card": "/components/kg-answer-card/index",
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
+  }
+}

@@ -15,6 +15,19 @@
     "pages/share/pk-result",
     "pages/social/poster"
   ],
+  "subPackages": [
+    {
+      "root": "pkgExam",
+      "pages": [
+        "list/list",
+        "exam/exam",
+        "report/report",
+        "contest/contest",
+        "contest-report/contest-report",
+        "shenlun/shenlun"
+      ]
+    }
+  ],
   "renderer": "webview",
   "componentFramework": "glass-easel",
   "lazyCodeLoading": "requiredComponents",

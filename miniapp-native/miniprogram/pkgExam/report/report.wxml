@@ -1,0 +1,261 @@
+<navbar title="成绩报告" back="{{true}}" />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <block wx:if="{{loading}}">
+      <view class="hero hero-skel"><t-skeleton theme="paragraph" animation="gradient" /></view>
+      <kg-card variant="flat" class="sec"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
+      <kg-card variant="flat" class="sec"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
+    </block>
+
+    <kg-empty
+      wx:if="{{!loading && !report && loadErr}}"
+      icon="wifi-off"
+      title="报告加载失败"
+      desc="{{loadErr}}"
+      ctaText="重试"
+      bind:cta="onReload"
+    />
+    <kg-empty
+      wx:elif="{{!loading && !report}}"
+      icon="chart-column"
+      title="暂无成绩报告"
+      desc="从卷库开始一场模考，交卷后这里会生成成绩报告"
+      ctaText="去卷库"
+      bind:cta="goList"
+    />
+
+    <block wx:if="{{!loading && report}}">
+      <view class="hero">
+        <view class="hero-deco" />
+        <text class="hero-s">{{report.paper.title}}</text>
+        <view class="score-row">
+          <text class="score num">{{report.attempt.score}}</text>
+          <text class="score-u">分</text>
+        </view>
+        <view class="hero-sub">
+          <text class="hero-line">答对 {{report.correct}}/{{report.total}}（已答 {{report.answered}}）· 用时 {{usedTime}}</text>
+          <text wx:if="{{prevDeltaText}}" class="hero-line">较上次同卷 {{prevDeltaText}}</text>
+          <text wx:if="{{beatText}}" class="hero-beat num">{{beatText}}</text>
+        </view>
+      </view>
+
+      <kg-card variant="flat" class="sec">
+        <view class="stats">
+          <view wx:for="{{statItems}}" wx:key="label" class="stat">
+            <text class="stat-v num {{item.tone === 'brand' ? 'brand' : ''}}">{{item.value}}</text>
+            <text class="stat-k">{{item.label}}</text>
+          </view>
+        </view>
+      </kg-card>
+
+      <!-- 全卷排名（/api/exam/rank，与 H5 rank-card 同源） -->
+      <kg-card wx:if="{{rank}}" variant="flat" class="sec">
+        <view class="h-row">
+          <text class="h">全卷排名</text>
+          <kg-tag wx:if="{{rank.small_sample}}" tone="neutral">样本 {{rank.total}} 人</kg-tag>
+        </view>
+        <view class="r-main">
+          <view wx:if="{{!rankTiny}}" class="r-beat">
+            <text class="r-beat-n num">{{rank.beaten_pct}}%</text>
+            <text class="r-beat-l">已击败{{rank.small_sample ? '（样本 ' + rank.total + ' 人）' : '考生'}}</text>
+          </view>
+          <text wx:else class="r-beat-tiny">参与人数仍较少（{{rank.total}} 人），暂不计算击败比例</text>
+          <view class="r-kv">
+            <view class="r-kv-i"><text class="r-k">排名</text><text class="r-v num">{{rank.rank}}<text class="r-v-s">/{{rank.total}}</text></text></view>
+            <view class="r-kv-i"><text class="r-k">平均分</text><text class="r-v num">{{rank.avg}}</text></view>
+          </view>
+        </view>
+        <view wx:if="{{dist.length}}" class="r-dist">
+          <view wx:for="{{dist}}" wx:key="label" class="r-col">
+            <view class="r-bar-w"><view class="r-bar {{item.me ? 'me' : ''}}" style="height: {{item.h}}%" /></view>
+            <text class="r-col-l num">{{item.label}}</text>
+          </view>
+        </view>
+        <text wx:if="{{bucketText}}" class="note">{{bucketText}}</text>
+        <view wx:if="{{board}}" class="r-board">
+          <text class="r-board-t">同卷排行榜</text>
+          <view wx:for="{{board}}" wx:key="rank" class="r-brow {{item.me ? 'me' : ''}}">
+            <text class="r-brank num">{{item.rank}}</text>
+            <text class="r-bname">{{item.name}}<text wx:if="{{item.me && item.name !== '我'}}" class="r-bme">（我）</text></text>
+            <text class="r-bscore num">{{item.score}} 分</text>
+          </view>
+        </view>
+      </kg-card>
+
+      <kg-card wx:if="{{goal}}" variant="flat" class="sec">
+        <view class="gap-row">
+          <text class="gap-k">目标分 <text class="num">{{goal.target}}</text></text>
+          <text class="gap-v {{goal.ok ? 'ok' : ''}}">{{goal.text}}</text>
+        </view>
+      </kg-card>
+
+      <kg-card wx:if="{{modules.length}}" variant="flat" class="sec">
+        <text class="h">模块得分</text>
+        <view wx:for="{{modules}}" wx:key="key" class="mrow">
+          <text class="mrow-name">{{item.name}}</text>
+          <view class="mrow-bar"><kg-progress value="{{item.pct}}" module="{{item.key}}" ariaLabel="{{item.name}}正确率" /></view>
+          <view class="mrow-r">
+            <text class="mrow-v num">{{item.correct}}/{{item.n}}</text>
+            <text wx:if="{{item.avgPct != null}}" class="mrow-avg num">全站 {{item.avgPct}}%</text>
+          </view>
+        </view>
+        <view wx:if="{{weakMod}}" class="cta" hover-class="cta--hover" bind:tap="goWeak">
+          <view class="cta-l">
+            <text class="cta-t">薄弱模块：{{weakMod.name}}</text>
+            <text class="cta-d">{{weakMod.reason}}</text>
+          </view>
+          <text class="cta-go">去专项强化</text>
+        </view>
+      </kg-card>
+
+      <kg-card wx:if="{{paceRows.length}}" variant="flat" class="sec">
+        <text class="h">模块用时 · 配速</text>
+        <view wx:for="{{paceRows}}" wx:key="key" class="prow">
+          <view class="prow-top">
+            <text class="prow-name">{{item.name}}</text>
+            <kg-tag tone="{{item.tone}}">{{item.tag}}</kg-tag>
+          </view>
+          <view class="prow-bar"><view class="prow-fill {{item.status}}" style="width: {{item.pct}}%" /></view>
+          <text class="prow-v num">用时 {{item.secsText}} · 参考 {{item.refText}}{{item.refNote}}</text>
+        </view>
+        <text class="note">参考用时按各模块题量占比折算自本卷限时</text>
+      </kg-card>
+
+      <kg-card wx:if="{{history.length > 1}}" variant="flat" class="sec">
+        <text class="h">历次成绩</text>
+        <view class="curve">
+          <view wx:for="{{history}}" wx:key="id" class="curve-col" hover-class="curve-col--hover" data-id="{{item.id}}" bind:tap="onHistory">
+            <text class="curve-v num">{{item.score}}</text>
+            <view class="curve-bar {{item.cur ? 'cur' : ''}}" style="height: {{item.h}}%" />
+            <text class="curve-x num">{{index + 1}}</text>
+          </view>
+        </view>
+        <text class="note">同类试卷最近 {{history.length}} 次成绩（分）</text>
+      </kg-card>
+
+      <kg-card variant="flat" class="sec">
+        <text class="h">本卷薄弱考点</text>
+        <text wx:if="{{!report.weak_tags || !report.weak_tags.length}}" class="note">本卷错题较少，暂未形成薄弱考点结论，继续保持！</text>
+        <view wx:for="{{report.weak_tags}}" wx:key="tag3" class="wrow" hover-class="row--hover" data-tag3="{{item.tag3}}" bind:tap="onWeakTag">
+          <view class="wrow-l">
+            <text class="wrow-t">{{item.name || item.tag3}}</text>
+            <text class="wrow-s">错 {{item.wrong}}/{{item.n}} 题</text>
+          </view>
+          <text class="wrow-go">去练</text>
+          <l-icon name="chevron-right" size="16" tone="brand" />
+        </view>
+      </kg-card>
+
+      <kg-card variant="flat" class="sec">
+        <text class="h">逐题对错（点击看解析）</text>
+        <view class="qgrid">
+          <view wx:for="{{cells}}" wx:key="no" class="qn num {{item.cls}}" hover-class="qn--hover" data-no="{{item.no}}" bind:tap="onCell">{{item.no}}</view>
+        </view>
+        <view class="legend">
+          <view class="lg"><view class="dot ok" /><text>答对</text></view>
+          <view class="lg"><view class="dot bad" /><text>答错</text></view>
+          <view class="lg"><view class="dot" /><text>未答</text></view>
+          <view wx:if="{{markCount}}" class="lg"><view class="dot mk" /><text>考中标记</text></view>
+        </view>
+      </kg-card>
+
+      <view wx:if="{{redoCount}}" class="cta cta-card" hover-class="cta--hover" bind:tap="redoWrong">
+        <view class="cta-l">
+          <text class="cta-t">本卷错题重练（{{redoCount}} 题）</text>
+          <text class="cta-d">按刷题模式把本卷答错的题重做一遍{{wrongTotal > redoCount ? '（本轮先练前 ' + redoCount + ' 题）' : ''}}</text>
+        </view>
+        <l-icon name="chevron-right" size="20" tone="brand" />
+      </view>
+
+      <kg-card wx:if="{{reasonRows.length}}" variant="flat" class="sec">
+        <text class="h">本卷错因画像</text>
+        <view wx:for="{{reasonRows}}" wx:key="name" class="rz-row" hover-class="row--hover" bind:tap="goBook">
+          <text class="rz-name">{{item.name}} ›</text>
+          <view class="rz-bar"><view class="rz-fill" style="width: {{item.pct}}%" /></view>
+          <text class="rz-n num">{{item.n}}</text>
+        </view>
+        <text class="note">点击错因直达错题本复习待掌握错题（不限本卷）；解析浮层里可逐题标注错因</text>
+      </kg-card>
+
+      <view wx:if="{{nextReco}}" class="cta cta-card next" hover-class="cta--hover" bind:tap="goNext">
+        <view class="cta-l">
+          <text class="cta-t">继续模考：{{nextReco.title}}</text>
+          <text class="cta-d">{{nextDesc}}</text>
+        </view>
+        <text class="cta-go">去看这卷</text>
+      </view>
+
+      <view class="share-row">
+        <kg-button wx:if="{{report.paper.kind === 'zhenti'}}" variant="ghost" size="md" icon="share-2" openType="share">邀考友挑战本卷</kg-button>
+      </view>
+    </block>
+  </view>
+</scroll-view>
+
+<kg-action-bar wx:if="{{!loading && report}}" layout="actions" primaryText="再考一次" secondaryText="返回卷库" bind:primary="retake" bind:secondary="goList" />
+
+<!-- 解析浮层 -->
+<kg-sheet visible="{{!!detail}}" title="{{detailTitle}}" bind:close="onDetailClose">
+  <block wx:if="{{detail}}">
+    <view class="d-tools">
+      <kg-tag wx:if="{{detail.marked}}" tone="warn">考试时标记过本题</kg-tag>
+      <view class="d-fav" hover-class="d-fav--hover" bind:tap="toggleDetailFav">
+        <l-icon name="star" size="24" tone="{{detail.faved ? 'warn' : 'ink-2'}}" filled="{{detail.faved}}" />
+      </view>
+    </view>
+    <kg-question-card
+      index="{{detail.no}}"
+      total="{{cells.length}}"
+      module="{{detail.module || ''}}"
+      submodule="{{detail.submodule || ''}}"
+      question="{{detail.question}}"
+      image="{{detail.image || ''}}"
+      imageCredit="{{detail.image_credit || ''}}"
+      markable="{{false}}"
+    >
+      <kg-option-group options="{{detail.optList}}" picked="{{detail.picked || ''}}" answer="{{detail.answer}}" revealed="{{true}}" disabled="{{true}}" />
+    </kg-question-card>
+    <view class="exp-row">
+      <text class="exp-k">正确答案</text>
+      <text class="exp-ans num {{detail.correct ? 'okc' : 'badc'}}">{{detail.answer}}</text>
+      <text wx:if="{{detail.picked && !detail.correct}}" class="exp-picked">你的选择 <text class="num">{{detail.picked}}</text></text>
+    </view>
+    <text wx:if="{{detail.statLine}}" class="dstat">{{detail.statLine}}</text>
+    <view wx:if="{{detail.hs_explanation}}" class="exp-col">
+      <kg-tag tone="brand" icon="lightbulb">花生十三方法解析</kg-tag>
+      <text class="exp" user-select>{{detail.hs_explanation}}</text>
+    </view>
+    <view wx:elif="{{detail.explanation}}" class="exp-col">
+      <kg-tag tone="neutral">解析</kg-tag>
+      <text class="exp" user-select>{{detail.explanation}}</text>
+    </view>
+    <text wx:if="{{detail.timeLine}}" class="dstat">{{detail.timeLine}}</text>
+    <view wx:if="{{detail.mistake_id}}" class="dreasons">
+      <text class="drz-t">错因自评：</text>
+      <text wx:for="{{reasonOpts}}" wx:key="*this" class="chip {{detail.error_reason === item ? 'on' : ''}}" data-rz="{{item}}" bind:tap="onReason">{{item}}</text>
+    </view>
+    <view wx:if="{{detail.tag3}}" class="cta" hover-class="cta--hover" bind:tap="reinforceDetail">
+      <view class="cta-l"><text class="cta-t">练同类题：{{detail.tag3}}</text></view>
+      <text class="cta-go">强化 5 道新题</text>
+    </view>
+    <view wx:if="{{detail.question_id}}" class="d-links">
+      <kg-button variant="text" size="md" tone="neutral" disabled="{{detail.reported}}" bind:click="openQc">{{detail.reported ? '已提交纠错，感谢反馈' : '题目有问题？纠错'}}</kg-button>
+    </view>
+  </block>
+  <view slot="footer" class="dnav">
+    <kg-button variant="ghost" size="md" disabled="{{!hasPrev}}" bind:click="onPrevQ">上一题</kg-button>
+    <kg-button variant="text" size="md" bind:click="cycleNavMode">{{navLabel}}</kg-button>
+    <kg-button variant="ghost" size="md" disabled="{{!hasNext}}" bind:click="onNextQ">下一题</kg-button>
+  </view>
+</kg-sheet>
+
+<!-- 题目纠错 -->
+<kg-sheet visible="{{qcOpen}}" title="题目纠错" bind:close="onQcClose">
+  <view class="rp-types">
+    <text wx:for="{{qcTypes}}" wx:key="*this" class="chip {{qcType === item ? 'on' : ''}}" data-t="{{item}}" bind:tap="onQcType">{{item}}</text>
+  </view>
+  <textarea class="rp-detail" value="{{qcDetail}}" placeholder="补充说明（选填，500 字以内）" maxlength="{{500}}" bindinput="onQcInput" />
+  <view slot="footer">
+    <kg-button block size="lg" disabled="{{!qcType}}" loading="{{qcBusy}}" bind:click="submitQc">提交纠错</kg-button>
+  </view>
+</kg-sheet>

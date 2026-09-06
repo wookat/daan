@@ -1,0 +1,11 @@
+<t-popup visible="{{visible}}" placement="bottom" bind:visible-change="onVisible">
+  <view class="kg-sheet" style="max-height:{{maxHeight}}" role="dialog" aria-modal="true" aria-label="{{title}}">
+    <view class="kg-sheet__handle" />
+    <view class="kg-sheet__hd">
+      <text class="kg-sheet__t">{{title}}</text>
+      <view class="kg-sheet__x" hover-class="kg-sheet__x--hover" role="button" aria-label="关闭" bind:tap="onClose"><l-icon name="x" size="24" tone="muted" /></view>
+    </view>
+    <scroll-view scroll-y class="kg-sheet__body" type="list"><slot /></scroll-view>
+    <view class="kg-sheet__ft"><slot name="footer" /></view>
+  </view>
+</t-popup>

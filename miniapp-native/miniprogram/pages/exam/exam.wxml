@@ -17,7 +17,21 @@
       <kg-button variant="primary" tone="inverse" size="lg" block icon="chevron-right" bind:click="onMini">开始迷你模考</kg-button>
     </view>
 
-    <kg-section-header title="真题卷库" />
+    <!-- 模考大赛 / 申论专区 入口 -->
+    <view class="entry-grid">
+      <kg-card variant="raised" clickable class="entry-c" bind:click="onContest">
+        <view class="entry-ico"><l-icon name="trophy" size="24" tone="brand" /></view>
+        <text class="entry-t">模考大赛</text>
+        <text class="entry-s">同卷同时 · 实时排名</text>
+      </kg-card>
+      <kg-card variant="raised" clickable class="entry-c" bind:click="onShenlun">
+        <view class="entry-ico"><l-icon name="pen-line" size="24" tone="brand" /></view>
+        <text class="entry-t">申论专区</text>
+        <text class="entry-s">真题 + AI 采分点批改</text>
+      </kg-card>
+    </view>
+
+    <kg-section-header title="真题卷库" more="全部卷库" bind:more="onAllPapers" />
 
     <block wx:if="{{loading}}">
       <kg-card wx:for="{{[1, 2, 3]}}" wx:key="*this" variant="raised" class="prow">
@@ -36,19 +50,19 @@
       wx:elif="{{!loading && !papers.length}}"
       icon="files"
       title="真题卷搜集中"
-      desc="全真模考将在二期上线，先用迷你模考体验完整报告"
+      desc="真题卷上线后可整卷计时作答，先用迷你模考体验完整报告"
       ctaText="去迷你模考"
       bind:cta="onMini"
     />
     <block wx:if="{{!loading && papers.length}}">
       <kg-card
-        wx:for="{{pagedPapers}}"
-        wx:key="source"
+        wx:for="{{papers}}"
+        wx:key="id"
         variant="raised"
         clickable
         chevron
         class="prow"
-        data-title="{{item.title || item.source}}"
+        data-id="{{item.id}}"
         bind:click="onPaperTap"
       >
         <view class="p-row">
@@ -57,16 +71,16 @@
             <text class="pb-k">{{item.regionShort}}</text>
           </view>
           <view class="p-main">
-            <text class="p-t">{{item.title || item.source}}</text>
-            <text class="p-s">{{item.region ? item.region + ' · ' : ''}}{{item.n ? item.n + ' 题' : ''}}</text>
+            <text class="p-t">{{item.title}}</text>
+            <text class="p-s">{{item.subText}}</text>
           </view>
-          <kg-tag tone="neutral">二期开放</kg-tag>
+          <kg-tag wx:if="{{item.best_score !== null && item.best_score !== undefined}}" tone="ok">最好 {{item.best_score}} 分</kg-tag>
         </view>
       </kg-card>
-      <view wx:if="{{pagedPapers.length < papers.length}}" class="more">
-        <kg-button variant="ghost" size="md" block bind:click="onMorePapers">加载更多（{{pagedPapers.length}}/{{papers.length}}）</kg-button>
+      <view wx:if="{{total > papers.length}}" class="more">
+        <kg-button variant="ghost" size="md" block bind:click="onAllPapers">查看全部 {{total}} 套 · 按年份/地区筛选</kg-button>
       </view>
-      <text wx:else class="list-end">共 {{papers.length}} 套 · 已全部展示</text>
+      <text wx:else class="list-end">共 {{total}} 套 · 已全部展示</text>
     </block>
   </view>
 </scroll-view>

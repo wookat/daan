@@ -32,6 +32,18 @@
       </view>
     </view>
 
+    <!-- 未交卷模考续考卡（对齐 H5 首页 examResume） -->
+    <kg-card wx:if="{{examResume}}" variant="flat" selected class="ercard" padding="{{12}}">
+      <view class="er-row">
+        <view class="er-main">
+          <text class="er-t">有一场未交卷的模考</text>
+          <text class="er-s">{{examResume.title}} · 已答 {{examResume.answered}}/{{examResume.total}} 题 · 剩余 <text class="num">{{examResume.leftText}}</text></text>
+        </view>
+        <kg-button variant="text" size="sm" aria-label="继续未交卷的模考" bind:click="onErContinue">去继续 ›</kg-button>
+        <view class="er-x" aria-role="button" aria-label="放弃未交卷进度" hover-class="er-x--hover" bind:tap="onErDrop"><l-icon name="x" size="16" tone="muted" /></view>
+      </view>
+    </kg-card>
+
     <!-- 今日任务三件套 -->
     <kg-card variant="raised" class="taskcard">
       <view class="tk-h">
@@ -143,6 +155,21 @@
         </view>
         <l-icon class="m-arrow" name="chevron-right" size="20" tone="faint" />
       </view>
+    </view>
+
+    <!-- 更多练习（对齐 H5 首页 more-grid：模考 / 申论；错题重练与拍题讲解为底栏 tab） -->
+    <kg-section-header title="更多练习" />
+    <view class="more-grid">
+      <kg-card variant="raised" clickable class="more-c" bind:click="onGoExamList">
+        <view class="more-ico"><l-icon name="timer" size="24" tone="brand" /></view>
+        <text class="more-t">模考</text>
+        <text class="more-s">迷你 / 全真 · 成绩报告</text>
+      </kg-card>
+      <kg-card variant="raised" clickable class="more-c" bind:click="onGoShenlun">
+        <view class="more-ico"><l-icon name="pen-line" size="24" tone="brand" /></view>
+        <text class="more-t">申论</text>
+        <text class="more-s">真题 + AI 采分点批改</text>
+      </kg-card>
     </view>
   </view>
 </scroll-view>

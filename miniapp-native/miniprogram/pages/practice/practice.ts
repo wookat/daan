@@ -15,6 +15,7 @@ import { enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../utils/o
 import { BASE_URL } from '../../utils/request';
 import { kpChain, qStatLine, sourceLabel } from '../../utils/q-stat';
 import { modName, recordStat, streakDays } from '../../utils/stats';
+import { takeRedoSet } from '../../utils/kg-exam-progress';
 
 const BADGE_MILESTONES = [3, 7, 14, 30, 60, 100];
 
@@ -117,7 +118,9 @@ Page({
     this.setData({ loading: true, moduleName: modName(this._module || '') });
     try {
       const d =
-        mode === 'redo'
+        mode === 'redoset'
+          ? takeRedoSet()
+          : mode === 'redo'
           ? await redoMistakes(count)
           : await fetchQuestions({
               limit: count,

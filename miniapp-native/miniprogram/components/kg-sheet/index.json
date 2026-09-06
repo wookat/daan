@@ -1,0 +1,7 @@
+{
+  "component": true,
+  "usingComponents": {
+    "l-icon": "/components/l-icon/index",
+    "t-popup": "tdesign-miniprogram/popup/popup"
+  }
+}

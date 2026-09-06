@@ -563,3 +563,87 @@
   gap: var(--sp-8);
   margin-top: var(--sp-16);
 }
+
+/* 未交卷模考续考卡（对齐 H5 .rs） */
+.ercard {
+  display: block;
+  margin-bottom: var(--card-gap);
+}
+
+.er-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+}
+
+.er-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.er-t {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.er-s {
+  font-size: var(--fs-sub);
+  line-height: var(--lh-sub);
+  color: var(--ink-3);
+}
+
+.er-x {
+  width: var(--hit-min);
+  height: var(--hit-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: calc(var(--sp-12) * -1);
+  flex-shrink: 0;
+}
+
+.er-x--hover {
+  opacity: 0.6;
+}
+
+/* 更多练习（对齐 H5 .more-grid） */
+.more-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--card-gap);
+  margin-top: var(--sp-12);
+}
+
+.more-c {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  min-height: 96px;
+}
+
+.more-ico {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--sp-4);
+  border-radius: var(--r-sm);
+  background: var(--brand-soft);
+}
+
+.more-t {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.more-s {
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  color: var(--ink-3);
+}

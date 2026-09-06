@@ -1,0 +1,99 @@
+<navbar title="模考大赛" back="{{true}}" />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <block wx:if="{{loading}}">
+      <kg-card variant="raised" class="sec"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
+      <kg-card variant="flat" class="sec"><t-skeleton theme="text" animation="gradient" /></kg-card>
+    </block>
+
+    <block wx:else>
+      <!-- 当前/下一场比赛 -->
+      <kg-card wx:if="{{event}}" variant="raised" class="hero">
+        <view class="hero-top">
+          <kg-tag tone="brand">{{seriesText}}</kg-tag>
+          <kg-tag tone="{{phaseTone}}">{{phaseText}}</kg-tag>
+        </view>
+        <text class="hero-title">{{event.title}}</text>
+        <text class="hero-paper">{{event.paper_title}} · {{event.n_questions}} 题 · {{event.duration_min}} 分钟</text>
+        <view class="hero-meta">
+          <text class="hm num">{{windowText}}</text>
+          <text class="hm">{{peopleText}}</text>
+        </view>
+
+        <block wx:if="{{event.phase === 'upcoming'}}">
+          <view class="count"><l-icon name="timer" size="16" tone="warn" /><text>距开赛 </text><text class="count-n num">{{countdown}}</text></view>
+          <kg-button wx:if="{{event.my_state === '未报名'}}" block size="lg" bind:click="register">预约报名</kg-button>
+          <view wx:else class="done-line"><l-icon name="circle-check" size="20" tone="ok" /><text>已报名，开赛后可进入</text></view>
+        </block>
+
+        <block wx:elif="{{event.phase === 'running'}}">
+          <view class="count"><l-icon name="timer" size="16" tone="warn" /><text>距截止 </text><text class="count-n num">{{countdown}}</text></view>
+          <block wx:if="{{event.my_state === '已交卷'}}">
+            <text class="score-line">本场成绩 <text class="score-n num">{{event.my_score}}</text> 分</text>
+            <kg-button block size="lg" variant="ghost" bind:click="openReport">查看实时排名与报告</kg-button>
+          </block>
+          <kg-button wx:else block size="lg" bind:click="enter">{{event.my_state === '已报名' ? '进入考试' : '立即参赛'}}</kg-button>
+        </block>
+
+        <block wx:else>
+          <block wx:if="{{event.my_score != null}}">
+            <text class="score-line">本场成绩 <text class="score-n num">{{event.my_score}}</text> 分{{event.my_rank ? ' · 第 ' + event.my_rank + ' 名' : ''}}</text>
+            <kg-button block size="lg" bind:click="openReport">查看赛后报告</kg-button>
+          </block>
+          <block wx:else>
+            <kg-button block size="lg" variant="ghost" bind:click="practice">比赛已结束 · 作为普通试卷练习</kg-button>
+            <kg-button wx:if="{{event.submitted}}" block size="md" variant="text" bind:click="onBoardCurrent">围观本场榜单</kg-button>
+          </block>
+        </block>
+      </kg-card>
+      <kg-empty wx:elif="{{loadErr}}" icon="wifi-off" title="比赛信息加载失败" desc="{{loadErr}}" ctaText="重试" bind:cta="load" />
+      <kg-empty wx:else icon="trophy" title="暂无比赛场次" desc="每周六 09:00 全站同卷模考大赛，先去卷库练一卷热热身" ctaText="去卷库" bind:cta="goList" />
+
+      <!-- 往期成绩：折叠成一行 -->
+      <kg-card wx:if="{{past.length}}" variant="flat" class="sec">
+        <view class="fold-h" hover-class="row--hover" bind:tap="togglePast">
+          <text class="h">往期比赛 · {{past.length}} 场</text>
+          <view class="fold-ico {{pastOpen ? 'flip' : ''}}"><l-icon name="chevron-down" size="20" tone="ink-2" /></view>
+        </view>
+        <block wx:if="{{pastOpen}}">
+          <view wx:for="{{past}}" wx:key="id" class="prow" hover-class="row--hover" data-id="{{item.id}}" bind:tap="onPastTap">
+            <view class="prow-l">
+              <text class="prow-t">{{item.title}}</text>
+              <text class="prow-s num">{{item.dayText}}</text>
+            </view>
+            <text wx:if="{{item.joined}}" class="prow-score num">{{item.scoreText}}</text>
+            <text wx:else class="prow-none">未参加 · 看榜单</text>
+            <l-icon name="chevron-right" size="16" tone="faint" />
+          </view>
+        </block>
+      </kg-card>
+
+      <kg-card variant="flat" class="sec">
+        <view class="fold-h" hover-class="row--hover" bind:tap="toggleRules">
+          <text class="h">赛制说明</text>
+          <view class="fold-ico {{rulesOpen ? 'flip' : ''}}"><l-icon name="chevron-down" size="20" tone="ink-2" /></view>
+        </view>
+        <view wx:if="{{rulesOpen}}" class="rules">
+          <text wx:for="{{rules}}" wx:key="*this" class="rule">{{item}}</text>
+        </view>
+      </kg-card>
+    </block>
+  </view>
+</scroll-view>
+
+<!-- 公共榜单（非参赛者也可围观） -->
+<kg-sheet visible="{{boardOpen}}" title="{{boardTitle}} · 榜单" bind:close="closeBoard">
+  <t-skeleton wx:if="{{boardLoading}}" theme="paragraph" animation="gradient" />
+  <block wx:elif="{{board}}">
+    <view class="board-meta">
+      <text class="hm">{{board.total}} 人交卷 · 平均 {{board.avg}} 分</text>
+      <text wx:if="{{!board.frozen}}" class="hm">排名实时变化中</text>
+    </view>
+    <kg-empty wx:if="{{!board.top || !board.top.length}}" compact icon="inbox" title="本场暂无交卷成绩" />
+    <view wx:for="{{board.top}}" wx:key="rank" class="brow {{item.me ? 'me' : ''}}">
+      <kg-tag tone="{{item.rank === 1 ? 'warn' : item.rank <= 3 ? 'brand' : 'neutral'}}">{{item.rank}}</kg-tag>
+      <text class="brow-n">{{item.nickname}}<text wx:if="{{item.me}}" class="brow-me">（我）</text></text>
+      <text class="brow-s num">{{item.score}} 分</text>
+    </view>
+  </block>
+</kg-sheet>

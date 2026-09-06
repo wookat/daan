@@ -148,6 +148,12 @@ Page({
   onTeam() {
     wx.navigateTo({ url: '/pages/team/team' });
   },
+  onExamList() {
+    wx.navigateTo({ url: '/pkgExam/list/list' });
+  },
+  onShenlun() {
+    wx.navigateTo({ url: '/pkgExam/shenlun/shenlun' });
+  },
   onLogin() {
     wx.navigateTo({ url: '/pages/login/login' });
   },

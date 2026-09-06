@@ -311,3 +311,121 @@
   font-weight: 600;
   flex-shrink: 0;
 }
+
+/* 申论学习 / 模考成绩趋势（对齐 H5 stats.vue） */
+.sl-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-4);
+  margin: var(--sp-8) 0;
+}
+
+.sl-num {
+  font-size: var(--fs-h1);
+  font-weight: 600;
+  color: var(--brand-text);
+}
+
+.sl-lab {
+  font-size: var(--fs-sub);
+  color: var(--ink-3);
+}
+
+.sl-last {
+  margin-left: auto;
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+.sl-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+}
+
+.sl-ih {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--hit-min);
+  margin-top: var(--sp-8);
+  font-size: var(--fs-sub);
+  color: var(--ink-2);
+}
+
+.sl-ih--hover {
+  opacity: 0.7;
+}
+
+.sl-issue {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-8);
+  margin-bottom: var(--sp-8);
+}
+
+.sl-it {
+  flex: 1;
+  font-size: var(--fs-sub);
+  line-height: var(--lh-sub);
+  color: var(--ink);
+}
+
+.trend {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--sp-4);
+  height: 80px;
+  padding-top: var(--sp-8);
+}
+
+.et-wrap {
+  position: relative;
+}
+
+.trend-col {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.trend-bar {
+  width: 100%;
+  min-height: 3px;
+  border-radius: var(--r-xs) var(--r-xs) 0 0;
+  background: var(--ok);
+}
+
+.trend-bar.is-warn {
+  background: var(--warn);
+}
+
+.trend-bar.is-bad {
+  background: var(--bad);
+}
+
+.trend-x {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--sp-4);
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+.et-target {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  border-top: 1px dashed var(--warn-strong);
+  pointer-events: none;
+}
+
+.et-target-t {
+  position: absolute;
+  right: 0;
+  top: -16px;
+  font-size: var(--fs-caption);
+  color: var(--warn-strong);
+}
