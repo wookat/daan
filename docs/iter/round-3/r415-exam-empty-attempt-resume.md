@@ -55,3 +55,10 @@ vitest 582（+4 `exam-r415-empty-attempt.test.js`）/ eslint / build:h5 绿。
 ## 部署与复验
 
 见 handoff 与 PR #619 评论。
+
+## R416 口径对齐（复验 F 项）
+
+复验记录：只打旗标不作答 → 前端落 `{picks:{},marks:[qid]}`，但 F5 按空场次新开并回收旧 attempt → 标记丢。
+前后端「空」口径不一致。对齐为**只看 picks**：`shouldPushProgress(picks, pushedBefore)` 不再把 marks 视为内容，
+只标记不作答的场次服务端零痕迹，与 `start_exam_attempt` 的回收条件、`parseExamProgress` 的 0 已答过滤三处一致。
+不选「有 marks 视为非空」：旗标没有作答就没有可续的东西，为它保留一场未交卷模考反而制造 0/N 卡。

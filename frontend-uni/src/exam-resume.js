@@ -2,13 +2,11 @@ export function countAnswered(items) {
   return (Array.isArray(items) ? items : []).filter((q) => q && q._picked).length;
 }
 
-// 一题未答、也没标记时不往服务端写进度（进过页面就走不算一场模考）；写过一次后就一直同步，
-// 这样「全部取消作答」也会覆盖掉服务端旧进度。
-export function shouldPushProgress(picks, marks, pushedBefore) {
+// 一题未答时不往服务端写进度（进过页面就走不算一场模考；只打旗标不算作答，与服务端回收空场次的
+// picks 口径一致）；写过一次后就一直同步，这样「全部取消作答」也会覆盖掉服务端旧进度。
+export function shouldPushProgress(picks, pushedBefore) {
   if (pushedBefore) return true;
-  const hasPick = !!picks && Object.keys(picks).length > 0;
-  const hasMark = Array.isArray(marks) && marks.length > 0;
-  return hasPick || hasMark;
+  return !!picks && Object.keys(picks).length > 0;
 }
 
 // 未交卷模考进度解析：exam.vue examProgress 快照 -> 卷库续考横幅数据（无效/过期/一题未答返回 null）

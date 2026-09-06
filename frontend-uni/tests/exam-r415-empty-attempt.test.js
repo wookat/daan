@@ -18,18 +18,17 @@ describe('R415 一题未答的模考不算未交卷进度', () => {
     expect(parseExamProgress({ ...base, items: [{ _picked: '' }, { _picked: 'C' }] }, NOW).answered).toBe(1);
   });
 
-  it('shouldPushProgress：无作答无标记且从未推送过 → 不写服务端；推送过后一律同步', () => {
-    expect(shouldPushProgress({}, [], false)).toBe(false);
-    expect(shouldPushProgress({}, undefined, undefined)).toBe(false);
-    expect(shouldPushProgress({ 1: 'A' }, [], false)).toBe(true);
-    expect(shouldPushProgress({}, [7], false)).toBe(true);
-    expect(shouldPushProgress({}, [], true)).toBe(true);
+  it('shouldPushProgress：无作答且从未推送过 → 不写服务端（只打旗标同样不写，与服务端回收口径一致）；推送过后一律同步', () => {
+    expect(shouldPushProgress({}, false)).toBe(false);
+    expect(shouldPushProgress(undefined, undefined)).toBe(false);
+    expect(shouldPushProgress({ 1: 'A' }, false)).toBe(true);
+    expect(shouldPushProgress({}, true)).toBe(true);
   });
 
   it('exam.vue：续考弹窗要求 countAnswered>0；pushProgress 接 shouldPushProgress 并记 _progPushed', () => {
     const src = read('../src/pkgA/exam/exam.vue');
     expect(src).toMatch(/countAnswered\(saved\.items\) > 0\n\s*\) \{/);
-    expect(src).toContain("if (!shouldPushProgress(picks, marks, this._progPushed)) return;");
+    expect(src).toContain("if (!shouldPushProgress(picks, this._progPushed)) return;");
     expect(src).toContain('this._progPushed = true;\n      request(\'/api/exam/progress\'');
     // 恢复快照时视为已推送过，之后清空作答也会同步
     expect(src).toMatch(/if \(resume\) \{\n\s*this\._progPushed = true;/);

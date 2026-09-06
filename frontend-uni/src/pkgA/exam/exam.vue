@@ -367,7 +367,7 @@ export default {
         if (q && Number.isInteger(q._secs) && q._secs > 0) secs[q.id] = q._secs;
         if (q && Array.isArray(q._excl) && q._excl.length) excl[q.id] = q._excl;
       });
-      if (!shouldPushProgress(picks, marks, this._progPushed)) return;
+      if (!shouldPushProgress(picks, this._progPushed)) return;
       this._progPushed = true;
       request('/api/exam/progress', {
         method: 'POST',
