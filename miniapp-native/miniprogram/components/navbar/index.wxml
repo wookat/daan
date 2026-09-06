@@ -1,8 +1,9 @@
-<view class="navbar {{brand ? 'navbar-brand' : ''}}" style="padding-top: {{statusBarHeight}}px">
+<view class="navbar {{brand ? 'navbar-brand' : ''}} {{large ? 'navbar-large' : ''}}" style="padding-top: {{statusBarHeight}}px">
   <view class="nav-row">
     <view wx:if="{{back}}" class="nav-back" hover-class="nav-back--hover" role="button" aria-label="返回" bind:tap="onBack">
       <l-icon name="chevron-left" size="24" tone="{{brand ? 'on-brand' : 'ink'}}" />
     </view>
     <text class="nav-title">{{title}}</text>
+    <view class="nav-right"><slot /></view>
   </view>
 </view>

@@ -1,0 +1,9 @@
+<view class="kg-grid4">
+  <view wx:for="{{items}}" wx:key="key" class="kg-grid4__it" data-key="{{item.key}}" hover-class="kg-grid4__it--hover" hover-stay-time="60" role="button" aria-label="{{item.label}}" bind:tap="onTap">
+    <view class="kg-grid4__ico">
+      <l-icon name="{{item.icon}}" size="24" tone="ink" stroke-width="{{1.75}}" />
+      <view wx:if="{{item.badge}}" class="kg-grid4__badge">{{item.badge}}</view>
+    </view>
+    <text class="kg-grid4__l">{{item.label}}</text>
+  </view>
+</view>

@@ -3,7 +3,6 @@
     "navbar": "/components/navbar/index",
     "l-icon": "/components/l-icon/index",
     "kg-button": "/components/kg-button/index",
-    "kg-card": "/components/kg-card/index",
     "kg-tag": "/components/kg-tag/index",
     "kg-chip-row": "/components/kg-chip-row/index",
     "kg-segmented": "/components/kg-segmented/index",
@@ -14,6 +13,8 @@
     "t-cell-group": "tdesign-miniprogram/cell-group/cell-group",
     "t-textarea": "tdesign-miniprogram/textarea/textarea",
     "kg-sheet": "/components/kg-sheet/index",
-    "t-input": "tdesign-miniprogram/input/input"
+    "t-input": "tdesign-miniprogram/input/input",
+    "kg-group": "/components/kg-group/index",
+    "kg-grid4": "/components/kg-grid4/index"
   }
 }

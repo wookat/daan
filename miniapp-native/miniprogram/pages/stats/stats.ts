@@ -1,9 +1,9 @@
 // 学习统计：对齐 H5 pages/stats/stats.vue 全部区块（服务端 answer_log 口径优先，离线降级本机 pstats）
-import { fetchCheckinSummary, fetchGrowth, fetchMistakes, fetchProfile, fetchReviewDue, trackEvent } from '../../api/index';
+import { fetchCheckinSummary, fetchGrowth, fetchProfile, trackEvent } from '../../api/index';
 import type { GrowthResp } from '../../api/types';
 import { fetchExamAttempts, fetchShenlunStats } from '../../api/exam';
 import type { ShenlunStats } from '../../api/exam-types';
-import { fetchMasteryMap, fetchRecommend, fetchStats, type StatsResp, type WeakTopic } from '../../api/grow';
+import { fetchMasteryMap, fetchStats, type StatsResp } from '../../api/grow';
 import { examTrend, type ExamTrend } from '../../utils/kg-exam-report';
 import type { BarItem } from '../../components/kg-chart-bars/index';
 import type { RadarAxis } from '../../components/kg-chart-radar/index';
@@ -46,13 +46,6 @@ interface GrowthRow {
   pct: number;
   tone: string;
 }
-interface Medal {
-  icon: string;
-  name: string;
-  got: boolean;
-  progress: string;
-  ringStyle: string;
-}
 interface SubChip {
   sub: string;
   done: number;
@@ -64,11 +57,6 @@ interface SubGroup {
   name: string;
   subs: SubChip[];
 }
-interface RecoView extends WeakTopic {
-  name: string;
-  meta: string;
-}
-
 function pctTone(pct: number): string {
   return pct < 60 ? 'bad' : pct < 80 ? 'warn' : 'ok';
 }
@@ -94,9 +82,6 @@ Page({
     streak: 0,
     hmTotal: 0,
     hmCols: [] as HeatCell[][],
-    // 今日待办
-    dueN: 0,
-    reco: [] as RecoView[],
     // 雷达
     axes: [] as RadarAxis[],
     hasRadar: false,
@@ -131,20 +116,14 @@ Page({
     examMid: '',
     // 掌握度地图
     kmCov: null as number | null,
-    kmCovText: '--',
-    kmCovStyle: '',
-    kmDesc: '三级考点五档色阶，看清每个考点的掌握度',
+    kmCovText: '',
     // 考点地图（本机 bySub）
     subMap: [] as SubGroup[],
-    // 勋章
-    medals: [] as Medal[],
-    medalsGot: 0,
   },
   _pstats: { byModule: {}, days: {} } as PStats,
   _growth: null as GrowthResp | null,
   _hmDays: null as Record<string, number> | null,
   _svStreak: null as number | null,
-  _masteredCount: 0,
   _hmTracked: false,
 
   onShow() {
@@ -156,7 +135,6 @@ Page({
     const pc = this.selectComponent('#predict') as (WechatMiniprogram.Component.TrivialInstance & { load?: () => void }) | null;
     if (pc && typeof pc.load === 'function') pc.load();
     this.loadGrowth();
-    this.loadReco();
     this.loadSlStats();
     this.loadMastery();
     this.loadExamTrend();
@@ -205,32 +183,6 @@ Page({
       });
     }
 
-    // 勋章
-    const best = ps.bestStreak || 0;
-    const zhan = this._masteredCount;
-    const m = (icon: string, name: string, cur: number, target: number, unit: string): Medal => {
-      const got = cur >= target;
-      const pct = got ? 100 : Math.min(100, Math.round((cur / target) * 100));
-      const color = got ? 'var(--warn)' : 'var(--ink-4)';
-      return {
-        icon,
-        name,
-        got,
-        progress: got ? '已达成' : cur + '/' + target + ' ' + unit,
-        ringStyle: `background:conic-gradient(${color} 0% ${pct}%, var(--fill) ${pct}% 100%)`,
-      };
-    };
-    const medals = [
-      m('sprout', '初战告捷', totalDone, 10, '题'),
-      m('dumbbell', '小有所成', totalDone, 100, '题'),
-      m('trophy', '刷题大师', totalDone, 500, '题'),
-      m('flame', '三日不辍', streak, 3, '天'),
-      m('zap', '七日连环', streak, 7, '天'),
-      m('target', '十连对', best, 10, '连对'),
-      m('swords', '斩题十道', zhan, 10, '道'),
-      m('crown', '百题斩', zhan, 100, '道'),
-    ];
-
     // 考点地图（本机 bySub，≥3 题）
     const groups: Record<string, SubChip[]> = {};
     for (const [key, s] of Object.entries(ps.bySub || {})) {
@@ -257,8 +209,6 @@ Page({
       weakAxes,
       trendBars,
       trendHas,
-      medals,
-      medalsGot: medals.filter((x) => x.got).length,
       subMap,
       hasData,
       unlockLeft: Math.max(UNLOCK_N - totalDone, 1),
@@ -322,26 +272,6 @@ Page({
       /* 非关键路径 */
     }
   },
-  async loadReco() {
-    try {
-      const r = await fetchRecommend();
-      this.setData({
-        reco: (r.items || []).map((it) => ({
-          ...it,
-          name: it.label || it.submodule || '',
-          meta: (it.reason || '') + ' · 正确率 ' + Math.round((it.acc || 0) * 100) + '%（' + (it.n || 0) + '题）',
-        })),
-      });
-    } catch (e) {
-      /* 非关键路径 */
-    }
-    try {
-      const d = await fetchReviewDue();
-      this.setData({ dueN: d.total || 0 });
-    } catch (e) {
-      /* 非关键路径 */
-    }
-  },
   async loadSlStats() {
     try {
       const sl = await fetchShenlunStats();
@@ -354,12 +284,9 @@ Page({
     try {
       const d = await fetchMasteryMap();
       const cov = d.cold ? null : d.coverage.pct;
-      const pct = cov || 0;
       this.setData({
         kmCov: cov,
-        kmCovText: cov != null ? cov + '%' : '--',
-        kmCovStyle: `background:conic-gradient(var(--brand) 0% ${pct}%, var(--brand-soft) ${pct}% 100%)`,
-        kmDesc: '三级考点五档色阶，看清每个考点的掌握度' + (cov != null ? '，已覆盖 ' + cov + '% 考点' : ''),
+        kmCovText: cov != null ? '已覆盖 ' + cov + '%' : '',
       });
     } catch (e) {
       /* 非关键路径 */
@@ -408,9 +335,6 @@ Page({
     this.setData({ loadErr: '' });
     try {
       this.applyStats(await fetchStats());
-      const mk = await fetchMistakes();
-      this._masteredCount = (mk.items || []).filter((m) => m.mastered).length;
-      this.recompute();
     } catch (e) {
       const msg = (e as Error).message || '网络异常';
       this.setData({ loadErr: msg });
@@ -458,17 +382,6 @@ Page({
     if (ds.tag3) url += '&tag3=' + encodeURIComponent(String(ds.tag3));
     if (ds.source) url += '&source=' + String(ds.source);
     wx.navigateTo({ url });
-  },
-  onGoReco(e: WechatMiniprogram.TouchEvent) {
-    const r = this.data.reco[Number(e.currentTarget.dataset.i)];
-    if (!r) return;
-    let url = '/pages/practice/practice?count=10&source=reco&module=' + (r.module || '');
-    if (r.submodule) url += '&submodule=' + encodeURIComponent(r.submodule);
-    if (r.tag3) url += '&tag3=' + encodeURIComponent(r.tag3);
-    wx.navigateTo({ url });
-  },
-  onGoBook() {
-    wx.switchTab({ url: '/pages/book/book' });
   },
   onExamBar(e: WechatMiniprogram.CustomEvent<{ index: number }>) {
     const t = this.data.exam;

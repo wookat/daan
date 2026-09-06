@@ -1,109 +1,70 @@
-<view class="hero-bleed"><view class="bleed-c1" /><view class="bleed-c2" /></view>
-<navbar title="我的" brand />
+<navbar title="我的" large>
+  <view class="nav-icon-btn" hover-class="nav-icon-btn--hover" aria-role="button" aria-label="消息" bind:tap="onInbox">
+    <l-icon name="bell" size="22" tone="ink" />
+    <view wx:if="{{inboxUnread}}" class="nav-dot" />
+  </view>
+</navbar>
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
-    <!-- 用户信息（沉浸头部上，无卡片） -->
-    <view class="u-card">
+    <view class="user">
       <view class="avatar">{{avatarChar}}</view>
       <view class="u-main">
         <text class="u-name">{{user ? (user.nickname || user.phone) : '游客模式'}}</text>
         <text class="u-sub">{{user ? '已登录 · 多端同步中' : '登录后错题与进度多端同步'}}</text>
       </view>
-      <kg-button wx:if="{{!user}}" variant="primary" tone="inverse" size="sm" bind:click="onLogin">登录 / 注册</kg-button>
-      <kg-button wx:else variant="secondary" tone="inverse" size="sm" bind:click="onLogout">退出</kg-button>
+      <kg-button wx:if="{{!user}}" variant="primary" size="sm" bind:click="onLogin">登录</kg-button>
     </view>
 
-    <!-- 数据概览 -->
-    <kg-card variant="raised" class="u-stats" padding="{{0}}" body-class="u-stats-body">
-      <view class="us-cell"><text class="us-n num c-brand">{{totalDone}}</text><text class="us-t">累计刷题</text></view>
-      <view class="us-cell"><text class="us-n num c-streak">{{streakN}}</text><text class="us-t">连续天数</text></view>
-      <view class="us-cell"><text class="us-n num c-ok">{{mistakeN}}</text><text class="us-t">错题收录</text></view>
-      <view class="us-cell"><text class="us-n num c-info">{{badgeN}}</text><text class="us-t">徽章</text></view>
-    </kg-card>
+    <view class="nums">
+      <view class="nums-it"><text class="nums-n num">{{totalDone}}</text><text class="nums-k">累计题数</text></view>
+      <view class="nums-it"><text class="nums-n num">{{streakN}}</text><text class="nums-k">连续天数</text></view>
+      <view class="nums-it"><text class="nums-n num">{{mistakeN}}</text><text class="nums-k">错题</text></view>
+      <view class="nums-it"><text class="nums-n num">{{badgeN}}</text><text class="nums-k">打卡徽章</text></view>
+    </view>
 
-    <kg-card wx:if="{{badgeInfo}}" variant="raised" class="badges">
-      <view class="badge-head">
-        <text class="badge-cur">当前连续 <text class="badge-b num">{{badgeInfo.streak}}</text> 天</text>
-        <text class="badge-best">历史最长 <text class="num">{{badgeInfo.best_streak}}</text> 天</text>
+    <kg-group title="记录">
+      <kg-row icon="clock" title="练习历史" bind:click="onPracticeHistory" />
+      <kg-row icon="clipboard-list" title="模考记录" bind:click="onExamList" />
+      <kg-row icon="pen-line" title="申论作答" bind:click="onShenlun" />
+      <kg-row icon="mic" title="面试陪练记录" bind:click="onInterviewHistory" />
+      <kg-row icon="swords" title="PK 战绩" value="{{pkN ? pkN + ' 局' : ''}}" bind:click="onPk" />
+      <kg-row icon="bookmark" title="收藏与笔记" last bind:click="onFavorites" />
+    </kg-group>
+
+    <kg-group title="成长">
+      <view class="badges-hd">
+        <text class="badges-t">成就勋章</text>
+        <text class="badges-s">已获 {{medalsGot}}/{{medals.length}}</text>
       </view>
-      <block wx:if="{{nextMilestone}}">
-        <kg-progress value="{{nextMilestone.pct}}" thickness="{{6}}" aria-label="下一徽章进度" />
-        <text class="ms-sub">再打卡 <text class="num">{{nextMilestone.left}}</text> 天解锁「{{nextMilestone.days}} 天」徽章</text>
-      </block>
-      <text wx:elif="{{badgeInfo.badges.length}}" class="ms-sub">已解锁全部打卡徽章，太强了！</text>
-      <view class="badge-grid">
-        <view
-          wx:for="{{badgeInfo.badges}}"
-          wx:key="days"
-          class="badge {{item.unlocked ? '' : 'off'}}"
-          hover-class="badge--hover"
-          data-days="{{item.days}}"
-          data-unlocked="{{item.unlocked}}"
-          bind:tap="onTapBadge"
-        >
-          <view class="badge-ico">
-            <l-icon name="{{item.unlocked ? 'medal' : 'eye-off'}}" size="24" tone="{{item.unlocked ? 'streak' : 'faint'}}" />
-          </view>
-          <text class="badge-d"><text class="num">{{item.days}}</text> 天</text>
+      <view class="medals">
+        <view wx:for="{{medals}}" wx:key="name" class="medal {{item.got ? 'is-got' : ''}}">
+          <l-icon name="{{item.icon}}" size="24" tone="{{item.got ? 'warn' : 'faint'}}" />
+          <text class="m-name">{{item.name}}</text>
+          <text class="m-sub">{{item.progress}}</text>
         </view>
       </view>
-    </kg-card>
+      <view wx:if="{{badgeInfo && badgeInfo.badges.length}}" class="badges">
+        <view class="badges-hd">
+          <text class="badges-t">打卡徽章</text>
+          <text wx:if="{{nextMilestone}}" class="badges-s">再坚持 {{nextMilestone.left}} 天解锁 {{nextMilestone.days}} 天</text>
+          <text wx:else class="badges-s">全部解锁</text>
+        </view>
+        <view class="badges-row">
+          <view wx:for="{{badgeInfo.badges}}" wx:key="days" class="badge {{item.unlocked ? 'is-on' : ''}}" aria-role="button" hover-class="row--hover" data-days="{{item.days}}" data-unlocked="{{item.unlocked}}" bind:tap="onTapBadge">
+            <text class="badge-n num">{{item.days}}</text>
+            <text class="badge-k">天</text>
+          </view>
+        </view>
+      </view>
+      <kg-row icon="users" title="刷题小队" last bind:click="onTeam" />
+    </kg-group>
 
-    <t-cell-group class="cells" t-class="cells-body" title="学习">
-      <t-cell title="真题卷库" description="历年真题 · 模考记录" arrow hover bind:click="onExamList">
-        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="file-text" size="20" tone="brand" /></view>
-      </t-cell>
-      <t-cell title="申论专区" description="真题 + AI 采分点批改 · 素材范文" arrow hover bind:click="onShenlun">
-        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="pen-line" size="20" tone="brand" /></view>
-      </t-cell>
-      <t-cell title="练习历史" description="逐题回看 · 错题重练" arrow hover bind:click="onPracticeHistory">
-        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="clock" size="20" tone="brand" /></view>
-      </t-cell>
-      <t-cell title="学习日历" description="每日活跃 · 连续打卡 · 徽章" arrow hover bind:click="onCalendar">
-        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="calendar" size="20" tone="brand" /></view>
-      </t-cell>
-      <t-cell title="周学习报告" description="本周 vs 上周 · 掌握度变化" arrow hover bind:click="onWeekly">
-        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="calendar-check" size="20" tone="brand" /></view>
-      </t-cell>
-      <t-cell title="收藏与笔记" description="收藏夹 · 我的笔记" arrow hover bind:click="onFavorites">
-        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="star" size="20" tone="brand" /></view>
-      </t-cell>
-      <t-cell title="离线题包" description="{{offlineN ? offlineN + ' 个题包' : '未下载'}}" arrow hover bind:click="onOffline">
-        <view slot="left-icon" class="row-ico bg-info"><l-icon name="package" size="20" tone="info" /></view>
-      </t-cell>
-    </t-cell-group>
-
-    <t-cell-group class="cells" t-class="cells-body" title="AI 与社区">
-      <t-cell title="AI 问答" description="拍题 / 输题，AI 逐步讲解" arrow hover bind:click="onAsk">
-        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="sparkles" size="20" tone="brand" /></view>
-      </t-cell>
-      <t-cell title="面试记录" description="AI 面试陪练 · 作答与得分" arrow hover bind:click="onInterviewHistory">
-        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="mic" size="20" tone="brand" /></view>
-      </t-cell>
-      <t-cell title="PK 战绩" note="{{pkN ? pkN + ' 局' : ''}}" arrow hover bind:click="onPk">
-        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="swords" size="20" tone="brand" /></view>
-      </t-cell>
-      <t-cell title="讨论消息" note="{{inboxUnread ? inboxUnread + ' 条未读' : ''}}" arrow hover bind:click="onInbox">
-        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="message-circle" size="20" tone="brand" /></view>
-      </t-cell>
-      <t-cell title="刷题小队" description="组队打卡 · 互相催学" arrow hover bind:click="onTeam">
-        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="users" size="20" tone="brand" /></view>
-      </t-cell>
-      <t-cell wx:if="{{remindAvail}}" title="学习提醒" description="{{reminderOn ? '已开启微信订阅提醒' : '每天提醒我打卡刷题'}}" arrow hover bind:click="onReminder">
-        <view slot="left-icon" class="row-ico bg-streak"><l-icon name="alarm-clock" size="20" tone="streak" /></view>
-      </t-cell>
-    </t-cell-group>
-
-    <t-cell-group class="cells" t-class="cells-body">
-      <t-cell title="数据同步" note="{{user ? '账号云端同步' : '匿名（登录后自动合并）'}}">
-        <view slot="left-icon" class="row-ico bg-info"><l-icon name="refresh-cw" size="20" tone="info" /></view>
-      </t-cell>
-      <t-cell title="本机标识" note="{{uid}}">
-        <view slot="left-icon" class="row-ico bg-fill"><l-icon name="user-round" size="20" tone="muted" /></view>
-      </t-cell>
-      <t-cell title="版本" note="v0.2">
-        <view slot="left-icon" class="row-ico bg-fill"><l-icon name="info" size="20" tone="muted" /></view>
-      </t-cell>
-    </t-cell-group>
+    <kg-group title="设置">
+      <kg-row icon="package" title="离线题包" value="{{offlineN ? offlineN + ' 个' : ''}}" bind:click="onOffline" />
+      <kg-row wx:if="{{remindAvail}}" icon="alarm-clock" title="学习提醒" value="{{reminderOn ? '已开启' : '未开启'}}" bind:click="onReminder" />
+      <kg-row icon="refresh-cw" title="数据同步" desc="本机标识 {{uid}}" value="{{user ? '云端' : '仅本机'}}" chevron="{{false}}" bind:click="onCopyUid" />
+      <kg-row wx:if="{{user}}" icon="log-out" title="退出登录" chevron="{{false}}" bind:click="onLogout" />
+      <kg-row icon="info" title="版本" value="{{version}}" chevron="{{false}}" last />
+    </kg-group>
   </view>
 </scroll-view>

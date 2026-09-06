@@ -10,7 +10,7 @@
 
     <block wx:if="{{loading}}">
       <view class="p-head"><t-skeleton theme="text" animation="gradient" /></view>
-      <kg-card variant="raised" class="qcard"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
+      <kg-card variant="flat" class="qcard"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
       <text class="pskel-hint" role="status">{{loadHint}}</text>
     </block>
 
@@ -46,7 +46,7 @@
       <view class="progress"><kg-progress value="{{idx}}" max="{{items.length}}" thickness="{{4}}" aria-label="本组进度" /></view>
 
       <!-- kg-question-card / kg-option-group 小程序版未落地：页内按 T3 结构实现 -->
-      <kg-card variant="raised" class="qcard">
+      <kg-card variant="flat" class="qcard">
         <view class="tagrow">
           <kg-tag wx:if="{{cur.is_real}}" tone="warn" icon="flag">真题{{cur.exam_year ? ' · ' + cur.exam_year : ''}}{{cur.exam_region ? ' · ' + cur.exam_region : ''}}</kg-tag>
           <kg-tag wx:if="{{cur.submodule}}" tone="module" module="{{cur.module}}">{{cur.submodule}}</kg-tag>
@@ -94,16 +94,10 @@
       </view>
 
       <!-- 解析卡（kg-analysis-card 小程序版未落地，页内实现） -->
-      <kg-card wx:if="{{picked || beiMode}}" variant="raised" class="exp-card">
-        <view class="exp-row">
-          <text class="exp-k">正确答案</text>
-          <text class="exp-ans num {{beiMode || picked === cur.answer ? 'okc' : 'badc'}}">{{cur.answer}}</text>
-          <text wx:if="{{picked && picked !== cur.answer}}" class="exp-mine">我的答案 <text class="num">{{picked}}</text></text>
-          <text wx:if="{{timedMode && !beiMode && picked}}" class="exp-mine {{cur._secs > targetSecs ? 'badc' : ''}}">用时 {{cur._secs}}s / 目标 {{targetSecs}}s</text>
-        </view>
-        <view wx:if="{{curStat}}" class="exp-row">
-          <text class="exp-k">全站数据</text>
-          <text class="exp-v">{{curStat}}</text>
+      <kg-card wx:if="{{picked || beiMode}}" variant="flat" class="exp-card">
+        <view wx:if="{{timedMode && !beiMode && picked}}" class="exp-row">
+          <text class="exp-k">用时</text>
+          <text class="exp-v num {{cur._secs > targetSecs ? 'badc' : ''}}">{{cur._secs}}s / 目标 {{targetSecs}}s</text>
         </view>
         <view wx:if="{{curKp}}" class="exp-row">
           <text class="exp-k">考点</text>
@@ -114,7 +108,7 @@
           <text class="exp-v">{{curSource}}</text>
         </view>
         <view wx:if="{{cur.hs_explanation}}" class="exp-block">
-          <kg-tag tone="brand" icon="lightbulb">花生十三方法解析</kg-tag>
+          <text class="exp-lab is-brand">花生十三方法解析</text>
           <text class="exp-text q-text" style="font-size: {{expFs}}px" user-select>{{cur.hs_explanation}}</text>
           <view class="hs-rate">
             <text wx:if="{{hsRated}}" class="hs-rate-done">{{hsRated === 'up' ? '已反馈：有用' : '已反馈：有误'}}</text>
@@ -126,15 +120,15 @@
           </view>
         </view>
         <view wx:if="{{cur.xp_explanation}}" class="exp-block">
-          <kg-tag tone="info" icon="sparkles">{{cur.xp_school || '第二名师视角'}}</kg-tag>
+          <text class="exp-lab">{{cur.xp_school || '第二名师视角'}}</text>
           <text class="exp-text q-text" style="font-size: {{expFs}}px" user-select>{{cur.xp_explanation}}</text>
         </view>
         <view wx:if="{{cur.explanation}}" class="exp-block">
-          <kg-tag tone="neutral">解析</kg-tag>
+          <text class="exp-lab">解析</text>
           <text class="exp-text q-text" style="font-size: {{expFs}}px" user-select>{{cur.explanation}}</text>
         </view>
         <view wx:if="{{favNote}}" class="exp-block">
-          <kg-tag tone="warn" icon="pen-line">我的笔记</kg-tag>
+          <text class="exp-lab">我的笔记</text>
           <text class="exp-text q-text" style="font-size: {{expFs}}px" user-select>{{favNote}}</text>
         </view>
 
@@ -151,7 +145,7 @@
     </block>
 
     <!-- 结算 -->
-    <kg-card wx:if="{{finished}}" variant="raised" class="done" body-class="done-body">
+    <kg-card wx:if="{{finished}}" variant="flat" class="done" body-class="done-body">
       <kg-progress shape="ring" size="{{96}}" value="{{pct}}" label="{{pct + '%'}}" aria-label="本组正确率" />
       <text class="done-t">{{beiMode ? '本组背完' : '本组完成'}}</text>
       <text class="done-sub">答对 <text class="num">{{right}}/{{items.length}}</text> · 错题 <text class="num">{{wrongCount}}</text> · 用时 <text class="num">{{totalSecs}}</text>s</text>

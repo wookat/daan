@@ -1,4 +1,4 @@
-<kg-card wx:if="{{loading}}" variant="raised" class="kg-pc">
+<kg-card wx:if="{{loading}}" variant="flat" class="kg-pc">
   <view class="kg-pc__head"><text class="kg-pc__title">能力预测分</text></view>
   <view class="kg-pc__skel">
     <view class="kg-pc__skel-b kg-pc__skel-b--lg" />
@@ -6,7 +6,7 @@
     <view class="kg-pc__skel-b kg-pc__skel-b--sm" />
   </view>
 </kg-card>
-<kg-card wx:elif="{{vm}}" variant="raised" class="kg-pc">
+<kg-card wx:elif="{{vm}}" variant="flat" class="kg-pc">
   <view wx:if="{{vm.cold}}" class="kg-pc__cold">
     <text class="kg-pc__title">能力预测分</text>
     <text class="kg-pc__cold-t">数据积累中</text>

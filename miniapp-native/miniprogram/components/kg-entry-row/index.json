@@ -1,4 +1,4 @@
 {
   "component": true,
-  "usingComponents": { "l-icon": "/components/l-icon/index", "kg-card": "/components/kg-card/index" }
+  "usingComponents": { "l-icon": "/components/l-icon/index" }
 }

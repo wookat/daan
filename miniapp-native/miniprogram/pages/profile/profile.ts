@@ -3,6 +3,7 @@ import { fetchCommentInbox, pkMine } from '../../api/social';
 import type { CheckinBadgesResp } from '../../api/types';
 import { anonUid, clearAuth, getAuthUser, getToken } from '../../utils/auth';
 import { subscribeAvailable } from '../../utils/config';
+import { buildMedals, type Medal } from '../../utils/kg-medals';
 import { listPacks } from '../../utils/offline-pack';
 import { loadPStats, streakDays } from '../../utils/stats';
 import { syncTabBar } from '../../utils/tabbar';
@@ -14,15 +15,20 @@ Page({
     uid: '',
     badgeInfo: null as CheckinBadgesResp | null,
     nextMilestone: null as { days: number; left: number; pct: number } | null,
+    medals: [] as Medal[],
+    medalsGot: 0,
     reminderOn: false,
     remindAvail: false,
     inboxUnread: 0,
     pkN: 0,
     totalDone: 0,
     streakN: 0,
+    bestStreak: 0,
+    mastered: 0,
     mistakeN: 0,
     badgeN: 0,
     offlineN: 0,
+    version: '',
   },
   onShow() {
     syncTabBar(this, 4);
@@ -31,20 +37,35 @@ Page({
     const s = loadPStats();
     let totalDone = 0;
     for (const k of Object.keys(s.byModule)) totalDone += s.byModule[k].done;
+    const acc = wx.getAccountInfoSync();
     this.setData({
       user,
       avatarChar,
       uid: anonUid(),
       totalDone,
       streakN: streakDays(),
+      bestStreak: s.bestStreak || 0,
       offlineN: listPacks().length,
       remindAvail: subscribeAvailable(),
+      version: acc.miniProgram.version || '开发版',
     });
+    this.recomputeMedals();
     this.loadBadges();
     this.loadGrowth();
     this.loadReminder();
     this.loadMistakes();
     this.loadSocial();
+  },
+  // 成就勋章：本机 bestStreak + 服务端累计/连签/已斩错题，任一数据回来即重算
+  recomputeMedals() {
+    const d = this.data;
+    const medals = buildMedals({
+      totalDone: d.totalDone,
+      streak: d.streakN,
+      bestStreak: d.bestStreak,
+      mastered: d.mastered,
+    });
+    this.setData({ medals, medalsGot: medals.filter((m) => m.got).length });
   },
   // 我的页 Social 角标：讨论未读数（需登录）/ PK 战绩数（对齐 H5 profile 入口）
   async loadSocial() {
@@ -64,9 +85,6 @@ Page({
     } catch (e) {
       /* 非关键路径 */
     }
-  },
-  onAsk() {
-    wx.navigateTo({ url: '/pkgSocial/ask/ask' });
   },
   onInbox() {
     if (!getToken()) {
@@ -88,7 +106,10 @@ Page({
   async loadGrowth() {
     try {
       const g = await fetchGrowth();
-      if (g.total && g.total.n != null) this.setData({ totalDone: g.total.n });
+      if (g.total && g.total.n != null) {
+        this.setData({ totalDone: g.total.n });
+        this.recomputeMedals();
+      }
     } catch (e) {
       /* 离线：沿用本机 pstats */
     }
@@ -96,7 +117,9 @@ Page({
   async loadMistakes() {
     try {
       const d = await fetchMistakes();
-      this.setData({ mistakeN: (d.items || []).length });
+      const items = d.items || [];
+      this.setData({ mistakeN: items.length, mastered: items.filter((m) => m.mastered).length });
+      this.recomputeMedals();
     } catch (e) {
       /* 非关键路径 */
     }
@@ -113,7 +136,7 @@ Page({
   onReminder() {
     wx.navigateTo({ url: '/pkgSocial/reminders/reminders' });
   },
-  // 徽章墙：连击口径以服务端 /api/checkin/badges 为准
+  // 打卡徽章：连击口径以服务端 /api/checkin/badges 为准
   async loadBadges() {
     try {
       const badgeInfo = await fetchCheckinBadges();
@@ -138,6 +161,7 @@ Page({
         badgeN: (badgeInfo.badges || []).filter((b) => b.unlocked).length,
         streakN: s || this.data.streakN,
       });
+      this.recomputeMedals();
     } catch (e) {
       /* 非关键路径 */
     }
@@ -169,8 +193,11 @@ Page({
   onCalendar() {
     wx.navigateTo({ url: '/pkgGrow/calendar/calendar' });
   },
-  onWeekly() {
-    wx.navigateTo({ url: '/pkgGrow/weekly-report/weekly-report' });
+  onMistakes() {
+    wx.switchTab({ url: '/pages/mistakes/mistakes' });
+  },
+  onCopyUid() {
+    wx.setClipboardData({ data: this.data.uid });
   },
   onLogin() {
     wx.navigateTo({ url: '/pages/login/login' });

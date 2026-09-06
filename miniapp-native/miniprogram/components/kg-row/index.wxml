@@ -1,0 +1,14 @@
+<view class="kg-row {{last ? 'is-last' : ''}} {{disabled ? 'is-disabled' : ''}}" hover-class="{{disabled ? 'none' : 'kg-row--hover'}}" hover-stay-time="60" bind:tap="onTap">
+  <l-icon wx:if="{{icon}}" class="kg-row__ico" name="{{icon}}" size="20" tone="{{tone}}" />
+  <view class="kg-row__main">
+    <view class="kg-row__line">
+      <text class="kg-row__t">{{title}}</text>
+      <slot name="title-after" />
+    </view>
+    <text wx:if="{{desc}}" class="kg-row__s">{{desc}}</text>
+    <slot name="body" />
+  </view>
+  <text wx:if="{{value}}" class="kg-row__v is-{{valueTone}}">{{value}}</text>
+  <slot />
+  <l-icon wx:if="{{chevron}}" class="kg-row__chev" name="chevron-right" size="16" tone="faint" />
+</view>

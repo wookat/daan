@@ -1,0 +1,7 @@
+<view class="kg-group">
+  <view wx:if="{{title || more}}" class="kg-group__hd">
+    <text class="kg-group__t">{{title}}</text>
+    <view wx:if="{{more}}" class="kg-group__more" hover-class="kg-group__more--hover" role="button" bind:tap="onMore">{{more}}</view>
+  </view>
+  <view class="kg-group__box {{padded ? 'is-padded' : ''}}"><slot /></view>
+</view>

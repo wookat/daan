@@ -1,13 +1,108 @@
 @import '../../styles/md.wxss';
 .wrap {
-  padding: var(--sp-12) var(--page-x) calc(80px + env(safe-area-inset-bottom));
+  padding: var(--sp-8) var(--page-x) calc(80px + env(safe-area-inset-bottom));
 }
 
-.review,
-.recap,
-.mrow {
+/* 复习态：白底组，无阴影 */
+.review {
   display: block;
-  margin-bottom: var(--card-gap);
+  background: var(--card);
+  border-radius: var(--r-sm);
+  padding: var(--sp-16);
+}
+
+/* 焦点：一句话 + 副文 + 唯一主按钮 */
+.focus {
+  padding: var(--sp-8) var(--sp-4) var(--sp-4);
+}
+
+.focus-t {
+  display: block;
+  font-size: var(--fs-h2);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+.focus-s {
+  display: block;
+  margin-top: var(--sp-4);
+  font-size: var(--fs-sub);
+  color: var(--ink-3);
+}
+
+.focus-acts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  margin-top: var(--sp-16);
+}
+
+/* 列表：白底组，一题一行 */
+.mlist {
+  background: var(--card);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+
+.mrow {
+  position: relative;
+  padding: var(--sp-12) var(--sp-16);
+}
+
+.mrow::after {
+  content: '';
+  position: absolute;
+  left: var(--sp-16);
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--line);
+}
+
+.mrow:last-child::after {
+  display: none;
+}
+
+.mrow--hover {
+  background: var(--fill);
+}
+
+.mrow.is-sel {
+  background: var(--brand-soft);
+}
+
+.m-line {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-12);
+}
+
+.m-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.m-chev {
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.m-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-12);
+  margin-top: var(--sp-4);
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+.m-meta-warn {
+  color: var(--warn);
+}
+
+.m-meta-bad {
+  color: var(--bad);
 }
 
 /* 复习清零庆祝态（t-popup center） */
@@ -62,12 +157,12 @@
   }
 }
 
-/* 三态切换 + 筛选 */
+/* 三态切换 + 筛选 + 批量 */
 .tabs {
   display: flex;
   align-items: center;
   gap: var(--sp-8);
-  margin-bottom: var(--sp-12);
+  margin: var(--sp-20) 0 var(--sp-8);
 }
 
 .tabs-seg {
@@ -79,36 +174,33 @@
   width: 36px;
   height: 36px;
   border-radius: var(--r-sm);
-  background: var(--fill);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 
-.filterbtn.fon {
-  background: var(--brand-soft);
+.textbtn {
+  height: 36px;
+  padding: 0 var(--sp-8);
+  display: flex;
+  align-items: center;
+  font-size: var(--fs-sub);
+  color: var(--ink-2);
+  flex-shrink: 0;
+}
+
+.textbtn.on {
+  color: var(--brand-text);
 }
 
 .filterbtn--hover,
 .fold-chip--hover,
-.r-exit--hover,
-.duecard--hover {
-  opacity: 0.75;
+.r-exit--hover {
+  opacity: 0.6;
 }
 
-.redo {
-  margin-bottom: var(--card-gap);
-}
-
-/* 错题卡 */
-.m-h {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-8);
-  margin-bottom: var(--sp-8);
-}
-
+/* 错题行 */
 .m-q {
   display: block;
   font-size: var(--fs-body);
@@ -119,14 +211,14 @@
 .m-q-clamp {
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   overflow: hidden;
 }
 
 .m-detail {
   margin-top: var(--sp-12);
-  border-top: 1px solid var(--line);
-  padding-top: var(--sp-12);
+  padding-left: var(--sp-16);
+  border-left: 2px solid var(--line);
 }
 
 .m-opts {
@@ -183,53 +275,6 @@
   display: flex;
   gap: var(--sp-8);
   margin-top: var(--sp-12);
-}
-
-/* 今日待复习 hero 条 */
-.duecard {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-12);
-  background: var(--brand-grad);
-  border-radius: var(--r-lg);
-  padding: var(--card-pad);
-  margin-bottom: var(--card-gap);
-  box-shadow: var(--sh-2);
-  position: relative;
-  overflow: hidden;
-}
-
-.duecard-deco {
-  position: absolute;
-  right: -26px;
-  top: -40px;
-  width: 130px;
-  height: 130px;
-  border-radius: var(--r-full);
-  background: var(--on-brand);
-  opacity: 0.1;
-}
-
-.duecard-l {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  z-index: 1;
-}
-
-.duecard-t {
-  font-size: var(--fs-h2);
-  font-weight: 600;
-  color: var(--on-brand);
-}
-
-.duecard-s {
-  font-size: var(--fs-caption);
-  color: var(--on-brand-2);
-  margin-top: 2px;
 }
 
 /* 复习模式 */
@@ -418,27 +463,6 @@
 }
 
 /* 本月复盘 */
-.recap-h {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  min-height: 28px;
-}
-
-.recap-t {
-  font-size: var(--fs-body);
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.recap-x {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  font-size: var(--fs-caption);
-  color: var(--brand-text);
-}
-
 .recap-sec {
   margin-top: var(--sp-12);
 }
@@ -498,6 +522,7 @@
 
 /* 收藏夹 */
 .folders-row {
+  margin-top: var(--sp-8);
   display: flex;
   flex-wrap: wrap;
   gap: var(--sp-8);
@@ -539,7 +564,7 @@
 
 .fold-tip {
   display: block;
-  margin: var(--sp-8) 0 var(--sp-12);
+  margin: var(--sp-8) var(--sp-4) var(--sp-12);
   font-size: var(--fs-caption);
   color: var(--ink-3);
 }
@@ -640,50 +665,7 @@
   margin-top: var(--sp-16);
 }
 
-/* ---- 复习断点续做 ---- */
-.resumecard {
-  display: block;
-  margin-bottom: var(--card-gap);
-}
-
-.rs-row {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-8);
-}
-
-.rs-grow {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-4);
-}
-
-.rs-tr {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-4);
-}
-
-.rs-t {
-  font-size: var(--fs-body);
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.rs-s {
-  font-size: var(--fs-sub);
-  color: var(--ink-3);
-}
-
 /* ---- 工具行 / 批量 ---- */
-.tools {
-  display: flex;
-  gap: var(--sp-8);
-  margin-bottom: var(--sp-12);
-}
-
 .bchk {
   width: 24px;
   height: 24px;
@@ -708,9 +690,8 @@
   bottom: calc(50px + var(--sp-12) + env(safe-area-inset-bottom));
   z-index: var(--z-bar);
   background: var(--card);
-  border: 1px solid var(--line);
   border-radius: var(--r-md);
-  box-shadow: var(--sh-2);
+  box-shadow: var(--sh-2); /* kg-allow: 固定底部批量操作条 */
   padding: var(--sp-8) var(--sp-12);
   display: flex;
   align-items: center;

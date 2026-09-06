@@ -3,14 +3,12 @@
     "navbar": "/components/navbar/index",
     "l-icon": "/components/l-icon/index",
     "kg-button": "/components/kg-button/index",
-    "kg-card": "/components/kg-card/index",
-    "kg-progress": "/components/kg-progress/index",
-    "kg-tag": "/components/kg-tag/index",
     "kg-chip-row": "/components/kg-chip-row/index",
-    "kg-section-header": "/components/kg-section-header/index",
-    "kg-banner": "/components/kg-banner/index",
-    "kg-entry-row": "/components/kg-entry-row/index",
     "t-popup": "tdesign-miniprogram/popup/popup",
-    "t-input": "tdesign-miniprogram/input/input"
+    "t-input": "tdesign-miniprogram/input/input",
+    "kg-group": "/components/kg-group/index",
+    "kg-row": "/components/kg-row/index",
+    "kg-dots": "/components/kg-dots/index",
+    "kg-grid4": "/components/kg-grid4/index"
   }
 }

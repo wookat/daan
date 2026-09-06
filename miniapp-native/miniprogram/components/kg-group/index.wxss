@@ -1,0 +1,22 @@
+:host { display: block; }
+.kg-group { margin-top: var(--sp-20); }
+.kg-group__hd {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 var(--sp-4) var(--sp-8);
+}
+.kg-group__t { font-size: var(--fs-sub); color: var(--ink-3); }
+.kg-group__more {
+  font-size: var(--fs-sub);
+  color: var(--brand-text);
+  padding: var(--sp-8) 0 var(--sp-8) var(--sp-12);
+  margin: calc(-1 * var(--sp-8)) 0;
+}
+.kg-group__more--hover { opacity: 0.6; }
+.kg-group__box {
+  background: var(--card);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+.kg-group__box.is-padded { padding: var(--sp-16); }

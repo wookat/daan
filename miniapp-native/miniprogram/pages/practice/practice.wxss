@@ -263,21 +263,8 @@
   color: var(--ink-2);
 }
 
-.exp-ans {
-  font-size: var(--fs-h2);
-  font-weight: 600;
-}
-
-.exp-ans.okc {
-  color: var(--ok-strong);
-}
-
-.exp-ans.badc {
+.exp-v.badc {
   color: var(--bad-strong);
-}
-
-.exp-mine {
-  color: var(--ink-3);
 }
 
 .exp-block {
@@ -288,6 +275,22 @@
   margin-top: var(--sp-16);
   padding-top: var(--sp-12);
   border-top: 1px solid var(--line);
+}
+
+.exp-block:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.exp-lab {
+  font-size: var(--fs-sub);
+  font-weight: 500;
+  color: var(--ink-3);
+}
+
+.exp-lab.is-brand {
+  color: var(--brand-text);
 }
 
 .exp-text {

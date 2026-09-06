@@ -1,6 +1,6 @@
 .kg-pc {
   display: block;
-  margin-bottom: var(--card-gap);
+  border-radius: var(--r-sm);
 }
 
 .kg-pc__head {

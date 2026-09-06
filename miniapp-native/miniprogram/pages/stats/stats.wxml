@@ -1,225 +1,162 @@
-<navbar title="统计" />
+<navbar title="统计" large />
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
-    <!-- 0 数据：整页折叠为 1 张解锁卡（H5 kg-hero-card plain） -->
     <block wx:if="{{!hasData}}">
-      <kg-card variant="raised" class="sec" padding="{{0}}" body-class="unlock-body">
-        <text class="unlock-lab">再答 {{unlockLeft}} 题解锁学习统计</text>
-        <view class="unlock-val"><text class="num">{{totalDone}}</text><text class="unlock-unit">/ {{unlockN}} 题</text></view>
-        <kg-progress value="{{unlockPct}}" thickness="{{6}}" aria-label="解锁进度" />
-        <text class="unlock-s">答满 {{unlockN}} 题后，这里会出现学习热力图、五模块能力雷达、错题分布与考点掌握度地图</text>
-        <view class="unlock-btns">
-          <kg-button variant="primary" size="lg" block icon="dumbbell" bind:click="onGoPractice">去刷 10 题</kg-button>
-          <kg-button variant="secondary" size="lg" block icon="calendar-check" bind:click="onGoCalendar">学习日历</kg-button>
+      <view class="focus">
+        <text class="focus-t">再答 {{unlockLeft}} 题解锁学习统计</text>
+        <view class="focus-dots"><kg-dots value="{{totalDone}}" max="{{unlockN}}" aria-label="解锁进度" /></view>
+        <text class="focus-s">答满 {{unlockN}} 题后，这里会出现能力雷达、错题分布、学习热力图与考点掌握度</text>
+        <view class="focus-acts">
+          <kg-button variant="primary" size="lg" block bind:click="onGoPractice">去刷 {{unlockLeft}} 题</kg-button>
         </view>
-      </kg-card>
+      </view>
       <kg-empty wx:if="{{loadErr}}" compact icon="wifi-off" title="统计加载失败" desc="{{loadErr}}" cta-text="重试" bind:cta="onRetry" />
     </block>
 
     <block wx:else>
-      <!-- 英雄区 -->
-      <kg-card variant="raised" class="sec hero">
-        <view class="hero-h">
-          <view class="hero-main">
-            <text class="hero-lab">累计刷题（含模考）</text>
-            <view class="hero-val"><text class="num">{{totalDone}}</text><text class="hero-unit">题</text></view>
+      <view class="focus">
+        <view class="nums">
+          <view class="nums-it">
+            <text class="nums-n num">{{totalDone}}</text>
+            <text class="nums-k">累计题数</text>
           </view>
-          <view wx:if="{{streak}}" class="hero-streak"><l-icon name="flame" size="20" tone="streak" filled /><text class="num">{{streak}}</text><text class="hero-streak-u">天</text></view>
-        </view>
-        <view class="stat-row">
-          <view class="stat"><text class="stat-n num okc">{{accPct}}%</text><text class="stat-k">总正确率</text></view>
-          <view class="stat"><text class="stat-n num brandc">{{streak}}<text class="stat-u">天</text></text><text class="stat-k">连续打卡</text></view>
-          <view class="stat"><text class="stat-n num">{{hmTotal}}<text class="stat-u">次</text></text><text class="stat-k">近 12 周学习</text></view>
-        </view>
-        <kg-button variant="secondary" size="md" block icon="calendar-check" bind:click="onGoCalendar">学习日历</kg-button>
-      </kg-card>
-
-      <kg-predict-card id="predict" />
-
-      <!-- 今日待办 -->
-      <kg-card wx:if="{{reco.length || dueN}}" variant="raised" class="sec">
-        <kg-section-header title="今日待办" />
-        <view wx:if="{{dueN}}" class="todo-row">
-          <view class="todo-ico is-warn"><l-icon name="book-open" size="20" tone="warn" /></view>
-          <view class="todo-main">
-            <text class="todo-name">错题到期复习</text>
-            <text class="todo-meta">{{dueN}} 题今日待复习</text>
+          <view class="nums-it">
+            <text class="nums-n num">{{accPct}}%</text>
+            <text class="nums-k">正确率</text>
           </view>
-          <kg-button variant="primary" size="sm" bind:click="onGoBook">去复习</kg-button>
-        </view>
-        <view wx:for="{{reco}}" wx:key="index" class="todo-row">
-          <view class="todo-ico"><l-icon name="target" size="20" tone="brand" /></view>
-          <view class="todo-main">
-            <text class="todo-name">{{item.name}}</text>
-            <text class="todo-meta">{{item.meta}}</text>
+          <view class="nums-it">
+            <text class="nums-n num">{{streak}}</text>
+            <text class="nums-k">连续天数</text>
           </view>
-          <kg-button variant="primary" size="sm" data-i="{{index}}" bind:click="onGoReco">练10题</kg-button>
         </view>
-        <text class="note">基于你的做题历史（正确率/近期趋势/遗忘曲线/考频）自动推荐</text>
-      </kg-card>
+      </view>
 
-      <!-- 热力图 -->
-      <kg-card variant="raised" class="sec">
-        <kg-section-header title="学习热力图 · 近 12 周" />
-        <kg-chart-heatmap cols="{{hmCols}}" total="{{hmTotal}}" />
-      </kg-card>
+      <kg-group title="预测">
+        <kg-predict-card id="predict" />
+      </kg-group>
 
-      <!-- 雷达 -->
-      <kg-card variant="raised" class="sec">
-        <kg-section-header title="五模块能力雷达" />
+      <kg-group title="能力">
         <kg-empty wx:if="{{!hasRadar}}" compact icon="chart-column" title="还没有能力数据" desc="刷几题就能生成你的五模块能力画像" cta-text="去刷题" bind:cta="onGoPractice" />
-        <view wx:else class="radar-flex">
-          <kg-chart-radar axes="{{axes}}" size="{{160}}" />
+        <view wx:else class="blk radar-flex">
+          <kg-chart-radar axes="{{axes}}" size="{{148}}" />
           <view class="radar-side">
             <text wx:if="{{weakAxes.length}}" class="rs-t">最薄弱</text>
             <view wx:for="{{weakAxes}}" wx:key="key" class="rs-row">
               <text class="rs-name">{{item.name}}</text>
               <text class="rs-pct num">{{item.pct}}%</text>
             </view>
-            <kg-button wx:if="{{weakAxes.length}}" variant="secondary" size="md" block bind:click="onGoWeak">去补弱</kg-button>
+            <text wx:if="{{weakAxes.length}}" class="rs-link" bind:tap="onGoWeak">去补弱 ›</text>
           </view>
         </view>
-      </kg-card>
+        <view wx:if="{{trendHas}}" class="blk">
+          <text class="blk-t">近 7 日正确率</text>
+          <kg-chart-bars bars="{{trendBars}}" height="{{96}}" labels left-text="" right-text="" />
+        </view>
+        <view wx:if="{{showGrowth}}" class="blk">
+          <view class="blk-hd">
+            <text class="blk-t">周正确率</text>
+            <kg-chip-row options="{{gwOptions}}" value="{{gwMod}}" size="sm" bind:change="onGwMod" />
+          </view>
+          <view wx:for="{{growthRows}}" wx:key="week" class="gw-row">
+            <text class="gw-wk">{{item.label}}</text>
+            <view class="bar thin"><view class="fill is-{{item.tone}}" style="width:{{item.pct}}%" /></view>
+            <text class="gw-pct num">{{item.pct}}%<text class="gw-n">（{{item.n}}题）</text></text>
+          </view>
+          <text wx:if="{{growthDeltaText}}" class="gw-delta {{growthUp ? 'is-up' : ''}}">{{growthDeltaText}}</text>
+        </view>
+      </kg-group>
 
-      <!-- 错题模块分布 -->
-      <kg-card variant="raised" class="sec">
-        <kg-section-header title="错题模块分布" />
+      <kg-group title="错题" more="{{byModule.length ? '错题本' : ''}}" bind:more="onGoBook">
         <kg-empty wx:if="{{loadErr && !byModule.length}}" compact icon="wifi-off" title="加载失败" desc="{{loadErr}}" cta-text="重试" bind:cta="onRetry" />
-        <kg-empty wx:elif="{{!byModule.length}}" compact icon="inbox" title="暂无错题" desc="答错的题会汇集到这里，按模块统计" />
-        <view wx:for="{{shownModules}}" wx:key="module" class="mrow" hover-class="row--hover" aria-role="button" data-mod="{{item.key}}" bind:tap="onGoPractice">
-          <view class="mrow-main">
-            <view class="blabel"><text>{{item.name}}</text><text class="bn num">×{{item.n}}</text></view>
-            <kg-progress value="{{item.n}}" max="{{modTotal}}" module="{{item.key}}" aria-label="{{item.name}}错题占比" />
-          </view>
-          <l-icon name="chevron-right" size="20" tone="faint" />
-        </view>
-        <view wx:if="{{byModule.length > 3}}" class="more" aria-role="button" bind:tap="onToggleMod">{{modOpen ? '收起' : '展开全部 ' + byModule.length + ' 个模块'}}</view>
-      </kg-card>
-
-      <!-- 高频错题型 -->
-      <kg-card variant="raised" class="sec">
-        <kg-section-header title="高频错题型 TOP10" />
-        <kg-empty wx:if="{{loadErr && !byType.length}}" compact icon="wifi-off" title="加载失败" desc="{{loadErr}}" cta-text="重试" bind:cta="onRetry" />
-        <kg-empty wx:elif="{{!byType.length}}" compact icon="inbox" title="暂无数据" desc="错题积累后会按题型聚合" />
-        <view wx:else class="top-chips">
-          <view wx:for="{{shownTypes}}" wx:key="index" class="top-chip" hover-class="row--hover" aria-role="button" bind:tap="onGoPractice">
-            <text class="tc-name">{{item.name}}</text>
-            <text class="tc-n num">×{{item.n}}</text>
-          </view>
-          <view wx:if="{{byType.length > 5}}" class="top-chip is-more" aria-role="button" bind:tap="onToggleTop">{{topOpen ? '收起' : '+' + (byType.length - 5)}}</view>
-        </view>
-      </kg-card>
-
-      <!-- 错因分布 -->
-      <kg-card wx:if="{{byReason.length}}" variant="raised" class="sec">
-        <kg-section-header title="错因分布" />
-        <view wx:for="{{byReason}}" wx:key="error_reason" class="brow">
-          <view class="blabel"><text>{{item.error_reason}}</text><text class="bn num">×{{item.n}}</text></view>
-          <view class="bar"><view class="fill is-warn" style="width:{{item.pct}}%" /></view>
-        </view>
-      </kg-card>
-
-      <!-- 近 7 日 -->
-      <kg-card wx:if="{{trendHas}}" variant="raised" class="sec">
-        <kg-section-header title="近 7 日正确率" />
-        <kg-chart-bars bars="{{trendBars}}" height="{{120}}" labels left-text="" right-text="" />
-      </kg-card>
-
-      <!-- 成长轨迹 -->
-      <kg-card wx:if="{{showGrowth}}" variant="raised" class="sec">
-        <kg-section-header title="成长轨迹（周正确率）" />
-        <kg-chip-row options="{{gwOptions}}" value="{{gwMod}}" size="sm" bind:change="onGwMod" />
-        <view wx:for="{{growthRows}}" wx:key="week" class="gw-row">
-          <text class="gw-wk">{{item.label}}</text>
-          <view class="bar thin"><view class="fill is-{{item.tone}}" style="width:{{item.pct}}%" /></view>
-          <text class="gw-pct num">{{item.pct}}%<text class="gw-n">（{{item.n}}题）</text></text>
-        </view>
-        <text wx:if="{{growthDeltaText}}" class="gw-delta {{growthUp ? 'is-up' : ''}}">{{growthDeltaText}}</text>
-      </kg-card>
-
-      <!-- 申论 -->
-      <kg-card wx:if="{{sl && sl.total}}" variant="raised" class="sec">
-        <kg-section-header title="申论学习" more="作答记录" bind:more="goShenlun" />
-        <view class="sl-row">
-          <text class="sl-num num">{{sl.total}}</text>
-          <text class="sl-lab">次 AI 批改</text>
-          <text wx:if="{{slLast}}" class="sl-last">最近 {{slLast}}</text>
-        </view>
-        <view class="sl-types">
-          <kg-tag wx:for="{{sl.by_type}}" wx:key="qtype" tone="brand">{{item.qtype}} ×{{item.n}}</kg-tag>
-        </view>
-        <block wx:if="{{sl.issues && sl.issues.length}}">
-          <view class="sl-ih" aria-role="button" bind:tap="onToggleSlIssues">
-            <text>近期问题点（{{sl.issues.length}}）</text>
-            <view class="chev {{slIssuesOpen ? 'is-open' : ''}}"><l-icon name="chevron-down" size="16" tone="muted" /></view>
-          </view>
-          <view wx:if="{{slIssuesOpen}}">
-            <view wx:for="{{sl.issues}}" wx:key="index" class="sl-issue">
-              <kg-tag tone="{{item.kind === '提升建议' ? 'warn' : 'bad'}}">{{item.kind === '提升建议' ? '建议' : '遗漏'}}</kg-tag>
-              <text class="sl-it">{{item.text}}</text>
+        <kg-empty wx:elif="{{!byModule.length}}" compact icon="inbox" title="暂无错题" desc="答错的题会汇集到这里，按模块与题型统计" />
+        <block wx:else>
+          <view class="blk">
+            <view wx:for="{{shownModules}}" wx:key="module" class="mrow" hover-class="row--hover" aria-role="button" data-mod="{{item.key}}" bind:tap="onGoPractice">
+              <text class="mrow-name">{{item.name}}</text>
+              <view class="mrow-bar"><kg-progress value="{{item.n}}" max="{{modTotal}}" module="{{item.key}}" thickness="{{6}}" aria-label="{{item.name}}错题占比" /></view>
+              <text class="mrow-n num">{{item.n}}</text>
             </view>
-            <text class="note">来自你最近的 AI 批改结果，供针对性强化</text>
+            <text wx:if="{{byModule.length > 3}}" class="more" aria-role="button" bind:tap="onToggleMod">{{modOpen ? '收起' : '全部 ' + byModule.length + ' 个模块'}}</text>
+          </view>
+          <view wx:if="{{byType.length}}" class="blk">
+            <text class="blk-t">高频题型</text>
+            <view class="top-chips">
+              <view wx:for="{{shownTypes}}" wx:key="index" class="top-chip" hover-class="row--hover" aria-role="button" bind:tap="onGoPractice">
+                <text class="tc-name">{{item.name}}</text>
+                <text class="tc-n num">{{item.n}}</text>
+              </view>
+              <view wx:if="{{byType.length > 5}}" class="top-chip is-more" aria-role="button" bind:tap="onToggleTop">{{topOpen ? '收起' : '+' + (byType.length - 5)}}</view>
+            </view>
+          </view>
+          <view wx:if="{{byReason.length}}" class="blk">
+            <text class="blk-t">错因</text>
+            <view wx:for="{{byReason}}" wx:key="error_reason" class="mrow">
+              <text class="mrow-name">{{item.error_reason}}</text>
+              <view class="mrow-bar bar thin"><view class="fill is-warn" style="width:{{item.pct}}%" /></view>
+              <text class="mrow-n num">{{item.n}}</text>
+            </view>
           </view>
         </block>
-      </kg-card>
+      </kg-group>
 
-      <!-- 模考趋势 -->
-      <kg-card wx:if="{{exam}}" variant="raised" class="sec">
-        <kg-section-header title="{{examTitle}}" />
-        <kg-chart-bars bars="{{examBars}}" height="{{100}}" target-pct="{{exam.targetPct}}" target-text="{{exam.target ? '目标 ' + exam.target + ' 分' : ''}}" mid-text="{{examMid}}" bind:bar="onExamBar" />
-        <text class="note">点柱查看单次报告 · 不同卷难度不同，仅供参考</text>
-      </kg-card>
-
-      <!-- 掌握度地图入口 -->
-      <kg-card variant="raised" class="sec" clickable chevron bind:click="onGoMasteryMap">
-        <view class="km-entry">
-          <view class="km-cov" style="{{kmCovStyle}}"><view class="km-cov-in num">{{kmCovText}}</view></view>
-          <view class="grow">
-            <text class="km-entry-t">考点掌握度地图</text>
-            <text class="km-entry-s">{{kmDesc}}</text>
-          </view>
+      <kg-group wx:if="{{exam}}" title="模考">
+        <view class="blk">
+          <text class="blk-t">{{examTitle}}</text>
+          <kg-chart-bars bars="{{examBars}}" height="{{96}}" target-pct="{{exam.targetPct}}" target-text="{{exam.target ? '目标 ' + exam.target + ' 分' : ''}}" mid-text="{{examMid}}" bind:bar="onExamBar" />
+          <text class="note">点柱查看单次报告 · 不同卷难度不同，仅供参考</text>
         </view>
-      </kg-card>
+      </kg-group>
 
-      <!-- 考点地图（本机 ≥3 题子模块） -->
-      <kg-card wx:if="{{subMap.length}}" variant="raised" class="sec">
-        <kg-section-header title="考点地图" />
-        <view wx:for="{{subMap}}" wx:key="module" wx:for-item="g" class="km-group">
-          <text class="km-mod">{{g.name}}</text>
-          <view class="km-items">
-            <view wx:for="{{g.subs}}" wx:key="sub" wx:for-item="s" class="km-chip is-{{s.lv}}" aria-role="button" hover-class="row--hover" data-mod="{{g.module}}" data-sub="{{s.sub}}" bind:tap="onGoSub">
-              <text class="km-name">{{s.sub}}</text>
-              <text class="km-pct num">{{s.pct}}% · {{s.done}}题</text>
+      <kg-group wx:if="{{sl && sl.total}}" title="申论" more="作答记录" bind:more="goShenlun">
+        <view class="blk">
+          <view class="sl-row">
+            <text class="sl-num num">{{sl.total}}</text>
+            <text class="sl-lab">次 AI 批改</text>
+            <text wx:if="{{slLast}}" class="sl-last">最近 {{slLast}}</text>
+          </view>
+          <view class="sl-types">
+            <kg-tag wx:for="{{sl.by_type}}" wx:key="qtype" tone="neutral">{{item.qtype}} ×{{item.n}}</kg-tag>
+          </view>
+          <block wx:if="{{sl.issues && sl.issues.length}}">
+            <view class="sl-ih" aria-role="button" bind:tap="onToggleSlIssues">
+              <text>近期问题点（{{sl.issues.length}}）</text>
+              <view class="chev {{slIssuesOpen ? 'is-open' : ''}}"><l-icon name="chevron-down" size="16" tone="muted" /></view>
+            </view>
+            <view wx:if="{{slIssuesOpen}}">
+              <view wx:for="{{sl.issues}}" wx:key="index" class="sl-issue">
+                <kg-tag tone="{{item.kind === '提升建议' ? 'warn' : 'bad'}}">{{item.kind === '提升建议' ? '建议' : '遗漏'}}</kg-tag>
+                <text class="sl-it">{{item.text}}</text>
+              </view>
+            </view>
+          </block>
+        </view>
+      </kg-group>
+
+      <kg-group title="学习热力图" more="{{hmTotal ? '近 12 周 ' + hmTotal + ' 次' : ''}}" padded>
+        <kg-chart-heatmap cols="{{hmCols}}" total="{{hmTotal}}" />
+      </kg-group>
+
+      <kg-group wx:if="{{subMap.length}}" title="考点地图">
+        <view class="blk">
+          <view wx:for="{{subMap}}" wx:key="module" wx:for-item="g" class="km-group">
+            <text class="km-mod">{{g.name}}</text>
+            <view class="km-items">
+              <view wx:for="{{g.subs}}" wx:key="sub" wx:for-item="s" class="km-chip is-{{s.lv}}" aria-role="button" hover-class="row--hover" data-mod="{{g.module}}" data-sub="{{s.sub}}" bind:tap="onGoSub">
+                <text class="km-name">{{s.sub}}</text>
+                <text class="km-pct num">{{s.pct}}% · {{s.done}}题</text>
+              </view>
             </view>
           </view>
+          <text class="note">红 {{kmLegendLow}} · 黄 60–80% · 绿 {{kmLegendHigh}}，点考点直达专项练习</text>
         </view>
-        <view class="km-legend">
-          <kg-tag tone="bad">{{kmLegendLow}}</kg-tag>
-          <kg-tag tone="warn">60–80%</kg-tag>
-          <kg-tag tone="ok">{{kmLegendHigh}}</kg-tag>
-          <text class="note km-note">点考点直达专项练习</text>
-        </view>
-      </kg-card>
+      </kg-group>
 
-      <kg-entry-row class="sec" icon="calendar" tone="brand" title="学习计划" desc="报考画像与每日任务，可随时重新制定" bind:click="onGoPlanSetup" />
-
-      <!-- 成就勋章 -->
-      <kg-card variant="raised" class="sec">
-        <view class="sec-h">
-          <text class="sec-t">成就勋章</text>
-          <text class="h-sub num">已获 {{medalsGot}}/{{medals.length}}</text>
-        </view>
-        <view class="medals">
-          <view wx:for="{{medals}}" wx:key="name" class="medal {{item.got ? 'is-got' : ''}}">
-            <view class="m-ring" style="{{item.ringStyle}}"><view class="m-ring-in"><l-icon name="{{item.icon}}" size="24" tone="{{item.got ? 'warn' : 'faint'}}" /></view></view>
-            <text class="m-name">{{item.name}}</text>
-            <text class="m-sub">{{item.progress}}</text>
-          </view>
-        </view>
-      </kg-card>
-
-      <kg-entry-row class="sec" icon="file-text" tone="brand" title="周学习报告" desc="每周日结算：本周 vs 上周、掌握度变化、下周建议" bind:click="onGoWeekly" />
-      <kg-entry-row class="sec" icon="calendar-check" tone="brand" title="学习日历" desc="连续打卡 {{streak}} 天 · 里程碑与打卡海报" bind:click="onGoCalendar" />
+      <kg-group title="更多">
+        <kg-row icon="target" title="掌握度地图" value="{{kmCovText}}" bind:click="onGoMasteryMap" />
+        <kg-row icon="calendar" title="学习计划" bind:click="onGoPlanSetup" />
+        <kg-row icon="file-text" title="周学习报告" bind:click="onGoWeekly" />
+        <kg-row icon="calendar-check" title="学习日历" value="{{streak ? '连续 ' + streak + ' 天' : ''}}" last bind:click="onGoCalendar" />
+      </kg-group>
     </block>
   </view>
 </scroll-view>
