@@ -343,10 +343,10 @@ export default {
 .sbar { display: flex; align-items: center; gap: 20rpx; }
 .sbox { flex: 1; display: flex; align-items: center; gap: 12rpx; background: var(--card); border-radius: 999rpx; padding: 14rpx 24rpx; }
 .sinput { flex: 1; font-size: 28rpx; }
-.sclear { color: var(--ink-3); font-size: 26rpx; padding: 0 8rpx; }
-.scancel { font-size: 28rpx; color: var(--ink-2); }
+.sclear { display: inline-flex; align-items: center; min-height: 40px; margin: -12px 0; color: var(--ink-3); font-size: 26rpx; padding: 0 8rpx; }
+.scancel { display: inline-flex; align-items: center; min-height: 40px; margin: -4px 0; font-size: 28rpx; color: var(--ink-2); }
 .tabs { display: flex; gap: 12rpx; margin: 20rpx 0; }
-.tab { font-size: 26rpx; color: var(--ink-2); background: var(--card); border-radius: 999rpx; padding: 8rpx 28rpx; }
+.tab { display: inline-flex; align-items: center; min-height: 40px; box-sizing: border-box; font-size: 26rpx; color: var(--ink-2); background: var(--card); border-radius: 999rpx; padding: 0 28rpx; }
 .tab.on { color: #fff; background: var(--brand); font-weight: 600; }
 .card { background: var(--card); border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx; }
 .sec { margin-bottom: 12rpx; }
@@ -354,14 +354,14 @@ export default {
 .titem { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }
 .t-l { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6rpx; }
 .t-name { font-size: 28rpx; color: var(--ink); font-weight: 600; }
-.t-sub { font-size: 22rpx; color: var(--ink-3); }
+.t-sub { font-size: 24rpx; color: var(--ink-3); }
 .mt-content { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .t-go { font-size: 24rpx; color: var(--brand-text); flex-shrink: 0; }
 .qitem { display: flex; flex-direction: column; gap: 10rpx; }
 .q-top { display: flex; align-items: center; gap: 12rpx; flex-wrap: wrap; }
-.q-code { font-size: 20rpx; color: var(--ink-2); background: var(--fill); border-radius: 6rpx; padding: 2rpx 10rpx; font-family: monospace; }
-.q-real { font-size: 20rpx; color: var(--warn-strong); background: var(--warn-soft); border-radius: 6rpx; padding: 2rpx 10rpx; }
-.q-mod { font-size: 20rpx; color: var(--ink-3); }
+.q-code { font-size: 24rpx; color: var(--ink-2); background: var(--fill); border-radius: 6rpx; padding: 2rpx 10rpx; font-family: monospace; }
+.q-real { font-size: 24rpx; color: var(--warn-strong); background: var(--warn-soft); border-radius: 6rpx; padding: 2rpx 10rpx; }
+.q-mod { font-size: 24rpx; color: var(--ink-3); }
 .q-text { font-size: 26rpx; color: var(--ink-2); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .q-loading { font-size: 24rpx; color: var(--ink-3); padding-top: 10rpx; }
 .q-detail { border-top: 1rpx solid var(--fill); padding-top: 14rpx; display: flex; flex-direction: column; gap: 8rpx; }
@@ -370,18 +370,18 @@ export default {
 .q-ans { font-size: 24rpx; color: var(--ok-strong); font-weight: 600; margin-top: 4rpx; }
 .q-exp { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; }
 .d-acts { display: flex; gap: 20rpx; }
-.d-copy { font-size: 22rpx; color: var(--brand-text); text-decoration: underline; cursor: pointer; padding: 4rpx 6rpx; align-self: flex-start; }
+.d-copy { display: inline-flex; align-items: center; min-height: 40px; margin: -6px 0; font-size: 24rpx; color: var(--brand-text); text-decoration: underline; cursor: pointer; padding: 0 6rpx; align-self: flex-start; }
 .d-copy.seen { color: var(--ok-strong); }
 .more { text-align: center; font-size: 26rpx; color: var(--brand-text); padding: 16rpx; }
 .empty { display: flex; flex-direction: column; gap: 8rpx; text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 100rpx 40rpx; }
 .empty-t { font-size: 26rpx; color: var(--ink-2); }
-.retry { margin-top: 8rpx; font-size: 26rpx; color: var(--brand-text); font-weight: 600; }
+.retry { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; margin-top: 8rpx; font-size: 26rpx; color: var(--brand-text); font-weight: 600; }
 .hist { margin-top: 28rpx; }
 .hist-top { display: flex; align-items: center; justify-content: space-between; }
 .hist-t { font-size: 26rpx; font-weight: 600; color: var(--ink-2); }
-.hist-clear { font-size: 24rpx; color: var(--ink-3, #8a90a0); padding: 8rpx; }
+.hist-clear { display: inline-flex; align-items: center; min-height: 40px; margin: -8px 0; font-size: 24rpx; color: var(--ink-3, #8a90a0); padding: 0 8rpx; }
 .hist-chips { display: flex; flex-wrap: wrap; gap: 16rpx; margin-top: 16rpx; }
-.hist-chip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 26rpx; color: var(--ink-1, #1f2430); background: var(--card, #fff); border: 1px solid var(--line, #e5e7eb); border-radius: 999rpx; padding: 10rpx 24rpx; }
+.hist-chip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 26rpx; color: var(--ink-1, #1f2430); background: var(--card, #fff); border: 1px solid var(--line, #e5e7eb); border-radius: 999rpx; padding: 0 24rpx; display: inline-block; line-height: 40px; min-height: 40px; box-sizing: border-box; }
 
 /* 桌面（H5）：≥1024 左考点/试卷侧栏 + 右题目列表（仅「全部」tab） */
 /* #ifdef H5 */

@@ -446,33 +446,33 @@ export default {
 .avatar { width: 96rpx; height: 96rpx; border-radius: 50%; background: linear-gradient(135deg, #5b8af8, var(--brand)); color: #fff; font-size: 40rpx; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .grow { flex: 1; min-width: 0; }
 .acct-name { display: block; font-size: 32rpx; font-weight: 700; color: var(--ink); }
-.acct-sub { display: block; font-size: 23rpx; color: var(--ink-2); margin-top: 6rpx; }
+.acct-sub { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 6rpx; }
 .acct-btn { flex-shrink: 0; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 28rpx; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 25rpx; font-weight: 600; }
 
 .stats-row { display: flex; gap: 20rpx; margin-bottom: 8rpx; }
 .stat-c { flex: 1; background: var(--card); border-radius: 24rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 26rpx 0; display: flex; flex-direction: column; align-items: center; gap: 6rpx; }
 .stat-n { font-size: 36rpx; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
-.stat-t { font-size: 22rpx; color: var(--ink-2); }
+.stat-t { font-size: 24rpx; color: var(--ink-2); }
 
 .sec-t { font-size: 24rpx; color: var(--ink-2); margin: 28rpx 8rpx 14rpx; }
 .badges { padding: 26rpx 28rpx; }
 .badge-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20rpx; }
 .badge-cur { font-size: 26rpx; font-weight: 700; color: var(--ink); }
-.badge-best { font-size: 22rpx; color: var(--ink-2); }
+.badge-best { font-size: 24rpx; color: var(--ink-2); }
 .badge-grid { display: flex; flex-wrap: wrap; gap: 16rpx; }
 .badge { width: calc((100% - 32rpx) / 3); box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 6rpx; background: var(--brand-soft); border-radius: 18rpx; padding: 18rpx 0; }
 .badge.off { background: var(--fill); opacity: 0.65; }
 .badge-ico { font-size: 40rpx; }
-.badge-d { font-size: 22rpx; font-weight: 600; color: var(--ink); }
+.badge-d { font-size: 24rpx; font-weight: 600; color: var(--ink); }
 :deep(.cellcard) { display: block; border-radius: 28rpx; overflow: hidden; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); margin-bottom: 20rpx; }
 .cell-ico { width: 56rpx; height: 56rpx; border-radius: 14rpx; background: var(--fill); display: flex; align-items: center; justify-content: center; margin-right: 20rpx; }
 
 .logout { margin-top: 40rpx; background: var(--card); border-radius: 24rpx; text-align: center; min-height: 44px; display: flex; align-items: center; justify-content: center; font-size: 28rpx; color: #dc2626; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); }
 
 .zl-footer { margin: 48rpx 0 16rpx; text-align: center; }
-.zl-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8rpx 28rpx; margin-bottom: 14rpx; }
-.zl-link { font-size: 24rpx; color: var(--brand-text); }
-.zl-copy { font-size: 22rpx; color: var(--ink-3); }
+.zl-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 16rpx 28rpx; margin-bottom: 14rpx; }
+.zl-link { display: inline-flex; align-items: center; min-height: 40px; margin: -4px 0; font-size: 24rpx; color: var(--brand-text); }
+.zl-copy { font-size: 24rpx; color: var(--ink-3); }
 
 /* #ifdef H5 */
 @media (min-width: 768px) {

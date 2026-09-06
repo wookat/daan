@@ -334,24 +334,24 @@ export default {
 .wrap { padding: 24rpx; }
 .card { background: var(--card, #fff); border-radius: var(--radius, 24rpx); padding: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); margin-bottom: 20rpx; }
 .qtags { display: flex; gap: 10rpx; margin-bottom: 12rpx; flex-wrap: wrap; }
-.tag { font-size: 20rpx; padding: 4rpx 14rpx; border-radius: 8rpx; background: var(--brand-soft); color: var(--brand-text); }
+.tag { font-size: 24rpx; padding: 4rpx 14rpx; border-radius: 8rpx; background: var(--brand-soft); color: var(--brand-text); }
 .tag.gray { background: var(--fill); color: var(--ink-3); }
 .tag.warn { background: #fef3c7; color: #b45309; }
 .qtx { font-size: 26rpx; color: var(--ink-2); line-height: 1.7; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
-.qans { font-size: 23rpx; color: var(--ink-3); margin-top: 10rpx; }
+.qans { font-size: 24rpx; color: var(--ink-3); margin-top: 10rpx; }
 .chips { display: flex; align-items: center; gap: 14rpx; margin: 4rpx 4rpx 18rpx; }
-.chip { font-size: 24rpx; color: var(--ink-2); background: var(--fill); padding: 8rpx 26rpx; border-radius: 999rpx; }
+.chip { display: inline-flex; align-items: center; min-height: 40px; box-sizing: border-box; font-size: 24rpx; color: var(--ink-2); background: var(--fill); padding: 0 26rpx; border-radius: 999rpx; }
 .chip.on { background: var(--brand-soft); color: var(--brand-text); font-weight: 700; }
-.cnt { font-size: 22rpx; color: var(--ink-3); margin-left: auto; }
-.msg { display: inline-flex; align-items: center; gap: 6rpx; font-size: 22rpx; color: var(--ink-2); margin-left: 20rpx; }
-.msg-badge { min-width: 30rpx; height: 30rpx; line-height: 30rpx; text-align: center; border-radius: 999rpx; background: #e5484d; color: #fff; font-size: 19rpx; padding: 0 8rpx; box-sizing: border-box; }
+.cnt { font-size: 24rpx; color: var(--ink-3); margin-left: auto; }
+.msg { display: inline-flex; align-items: center; min-height: 40px; gap: 6rpx; font-size: 24rpx; color: var(--ink-2); margin-left: 20rpx; }
+.msg-badge { min-width: 34rpx; height: 34rpx; line-height: 34rpx; text-align: center; border-radius: 999rpx; background: #e5484d; color: #fff; font-size: 24rpx; padding: 0 8rpx; box-sizing: border-box; }
 /* #ifdef H5 */
 .msg { cursor: pointer; }
 /* #endif */
 .empty { text-align: center; color: var(--ink-3); font-size: 25rpx; padding: 60rpx 24rpx; }
 .empty-t { font-size: 28rpx; font-weight: 600; color: var(--ink-2); margin-bottom: 8rpx; }
-.retry { margin-top: 8rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
-.plaza-btn { display: inline-block; margin-top: 24rpx; background: var(--brand); color: #fff; font-size: 26rpx; border-radius: 999rpx; padding: 14rpx 56rpx; }
+.retry { display: inline-flex; align-items: center; min-height: 40px; margin-top: 8rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
+.plaza-btn { display: inline-flex; align-items: center; min-height: 40px; box-sizing: border-box; margin-top: 24rpx; background: var(--brand); color: #fff; font-size: 26rpx; border-radius: 999rpx; padding: 0 56rpx; }
 .cmlist { padding: 6rpx 24rpx; }
 .cm { display: flex; gap: 18rpx; padding: 24rpx 0; border-bottom: 1rpx solid var(--fill); }
 .cm:last-child { border-bottom: none; }
@@ -359,24 +359,23 @@ export default {
 .cm-body { flex: 1; min-width: 0; }
 .cm-hd { display: flex; align-items: center; gap: 10rpx; }
 .nm { font-size: 25rpx; font-weight: 600; color: var(--ink); }
-.tm { font-size: 21rpx; color: var(--ink-3); }
+.tm { font-size: 24rpx; color: var(--ink-3); }
 .tx { font-size: 27rpx; color: var(--ink-2); line-height: 1.65; margin-top: 6rpx; word-break: break-all; white-space: pre-wrap; }
 .ft { display: flex; gap: 30rpx; margin-top: 12rpx; align-items: center; }
-.up { display: inline-flex; align-items: center; gap: 6rpx; font-size: 23rpx; color: var(--ink-3); }
+.up { display: inline-flex; align-items: center; min-height: 40px; margin: -12px 0; gap: 6rpx; font-size: 24rpx; color: var(--ink-3); }
 .up.on { color: var(--brand-text); font-weight: 700; }
-.up.sm, .op.sm { font-size: 21rpx; }
-.op { font-size: 23rpx; color: var(--ink-3); }
+.op { display: inline-flex; align-items: center; min-height: 40px; margin: -12px 0; font-size: 24rpx; color: var(--ink-3); }
 .op.del { color: #ef4444; }
 .reply { background: var(--fill); border-radius: 14rpx; padding: 14rpx 18rpx; font-size: 24rpx; color: var(--ink-2); margin-top: 12rpx; line-height: 1.6; word-break: break-all; white-space: pre-wrap; }
 .rnm { font-weight: 600; color: var(--ink); }
 .rft { display: flex; gap: 24rpx; margin-top: 6rpx; }
-.pin { border: 1rpx solid var(--brand-soft-2); background: var(--brand-soft); border-radius: 16rpx; padding: 18rpx 22rpx; font-size: 23rpx; color: var(--brand-text); line-height: 1.6; }
+.pin { border: 1rpx solid var(--brand-soft-2); background: var(--brand-soft); border-radius: 16rpx; padding: 18rpx 22rpx; font-size: 24rpx; color: var(--brand-text); line-height: 1.6; }
 .inputbar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 1rpx solid var(--line); padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom)); z-index: 20; }
-.replying { font-size: 22rpx; color: var(--ink-3); margin-bottom: 8rpx; display: flex; align-items: center; gap: 12rpx; }
-.rx { padding: 4rpx 12rpx; }
+.replying { font-size: 24rpx; color: var(--ink-3); margin-bottom: 8rpx; display: flex; align-items: center; gap: 12rpx; }
+.rx { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; margin: -10px 0; padding: 0; }
 .inputrow { display: flex; gap: 16rpx; align-items: flex-end; }
 .ipt { flex: 1; min-height: 72rpx; max-height: 240rpx; overflow-y: auto; border-radius: 24rpx; background: var(--fill); font-size: 26rpx; line-height: 40rpx; padding: 16rpx 28rpx; box-sizing: border-box; }
-.send { margin: 0; height: 72rpx; line-height: 72rpx; padding: 0 34rpx; border-radius: 999rpx; background: var(--brand); color: #fff; font-size: 26rpx; }
+.send { margin: 0; height: 40px; line-height: 40px; padding: 0 34rpx; border-radius: 999rpx; background: var(--brand); color: #fff; font-size: 26rpx; }
 .send[disabled] { background: var(--brand-soft-2); color: var(--brand-strong); }
 
 /* #ifdef H5 */
