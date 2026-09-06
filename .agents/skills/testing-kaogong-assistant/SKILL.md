@@ -1541,3 +1541,11 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 按钮顶部热区截胡：arc 41px 热区（padding 12px 上下）在短文案下与 hero 按钮 top 有 **2px 重叠**（375 y 516.4–518.4、x 280.4–345，仅覆盖「今日计划」；「继续目标 ›」x 34–243 不受影响），R440 起既有。用 `document.elementFromPoint` 逐 px 判归属，再用 `/tmp/cdp174/r448_click.py X Y`（`Input.dispatchMouseEvent` 可信输入 + 捕获阶段 click 监听记录 `clientX/Y/target`）在 CSS 精确坐标点击验证。computer-use 截图坐标→CSS 有 ±1.5px 误差（1600×1200 显示、截图 1024×768、页面顶栏约 88 截图 px），点「顶部 4px」前先在无害位置点一下读 `__lc` 校准。
 - 原生做完 10 题的可复用脚本 `/tmp/cdp174/r448_answer.py [optIdx]`：选项 `.opt` 中心 + 底部「下一题/完成」按钮（叶子文本节点 rect 可能为 0，向上找 h≥20 的父级）；**答对会自动跳下一题**（无「下一题」按钮），脚本按 q 序号推进即可。做完后首页 onboarding「免费刷 10万+」卡消失，hero 整体上移（arc y 477.4→156），比较 y 用相对量。
 - 远端诊断别用 `eval "$R" '…$(…)…'` 拼 ssh 命令（`$(...)`/`\"` 会在本机先展开，出现「docker ps accepts no arguments / no such object」），改成本机写 `/tmp/r4xx_diag_remote.sh` 后 `sshpass -e ssh … 'bash -s' < 脚本`。
+
+## R449 经验：验证「热区边界 == 按钮 top」这类 1–2px CSS 改动
+- 用 `elementFromPoint(cx, y)` 以 1px 步长扫 `arc.bottom−3 … +3`，并同时记录 `arc.bottom`/`.hero-acts.top`/`.hero-btn.sub.top` 三个值；判据是「边界 y 起归按钮，边界前归链接，无 y 同时归两者」。桌面视口（1440）hero 按钮左对齐，与右侧链接 x 不相交，链接下方是 `.hero-acts` 空白，扫描要分别在链接中心 x 和按钮中心 x 做。
+- 可信点击前必须过环境守卫：`{innerWidth, clientWidth, .hero-ds width, arc.bottom, acts.top}`；原生点击/导航后再 reload，holder 可能 5s 后才重申 `Emulation.setDeviceMetricsOverride`，期间 cw 变 360（经典滚动条）、rpx 按 360 算、hero 下移 17px，此时得到的点击结果全部作废。做法：reload 前先重启 holder，等 3s 再量。
+- 可信点击证据用 capture 阶段监听 `document.addEventListener('click', e=>window.__t=[x,y,target], {capture:true})` 记录真实 target，再配合 `.mask .sheet` 标题文本判断是「往期」还是「制定学习计划」sheet（`.uni-actionsheet__cell` 判往期）。
+- 1440 下用 (100,100) 点遮罩关 uni 计划 sheet 会连带触发桌面左侧导航（落到错题本/提醒页），回首页用 `location.hash='#/'`，不要 `history.back()`。
+- 长文案注入（`r448_inject.js`）预期值：375 onboarding 卡在时 arc.bottom 526.9 / acts 535.4（短文案 518.4 + 17），间隙 8.5；用相对量判断。
+- 网络 jsonl 字段是 `u`/`st`，拦截失败的 `st` 为字符串 `"FAIL net::ERR_FAILED"`，统计非 2xx 前先按类型分流。

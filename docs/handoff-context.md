@@ -2144,3 +2144,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 登记（既有非本轮）：短文案下 arc 热区与「今日计划」按钮 top 重叠 2 px（R440 起，`elementFromPoint(300,517/518)`=arc），可把 padding 12→10 消除，需权衡 R440 ≥40 px 热区契约。
 - 坑：量测机无 emoji 字体（🔥 → □），注入长文案的折行点与真机可能差几 px；uni `<text>` 嵌套编成 span，注入文本节点要沿 `contains(arc)` 链下钻到 arc 的父 span 再 `insertBefore`。
 - (c) R447 发版后 24 min 246 请求 `/assets/*` 404 0 / monitor 0 → 继续挂，R448 发版后待下轮补量。到期项（18:53Z）无新样本：probe=0 22 行/1 uid、error_reason 6/0、push_subs 0、weekly_reports 0、growth_events probe=0 18/4、29/29 CST 00:00、WAL 1.6 MB；`.trend-kn` 4 周、无可确认外部真人、`WX_MINIAPP_SECRET`、R385 第二冷样本继续挂；下次 SOP-10 ~R450。
+
+### R449（首页 `.hero-ds` 下外边距 20→24rpx，「补练往期 ›」41 px 热区底缘与 hero 按钮 top 重叠 2 px 消除；1 处 CSS + vitest +1；部署 `27e8729`，bundle 变、后端不动、无 DB 写入；testing agent 375/1440 全 PASS）
+- 取证 docs/iter/round-3/r449-hero-ds-arc-hitbox-button-gap.md。一手：375 arc 热区 477.4–518.4 vs `.hero-acts` top 516.4 → 2 px 落在「今日计划」x 280–341（1440 按钮左对齐、arc 下方是空白无功能冲突）；几何来源 = 热区下伸 12 px（padding）> margin-bottom 10 px。谱系：R440 负外边距版纵向 rect 相同、当时压的是「继续目标 ›」→ **R440 起既有，非 R447/R448 回归**。
+- 方案 A（采纳）margin-bottom 24rpx：热区底 == acts top，arc/按钮尺寸都不变，hero +2 px（静态、非 CLS）；否决 B `.hero-acts{position:relative}`（靠绘制顺序赢命中、意图不可见、链接在按钮 x 段缩 39 px）、C arc padding 12→10（37 px 破 R440 ≥40 契约）。新源锁：`.hero-ds` margin-bottom(rpx)/2 ≥ arc padding(px)。
+- 复验：6b 12 项全 OK（`/` perf 0.98 / LCP 1403）；testing agent `elementFromPoint` 1 px 步长 ≤517.4 链接 / 518.4 起按钮，可信点击 (300,517) 往期 sheet、(300,519)/(300,520) 计划 sheet；拦/正常 rAF Δ0；三按钮 top+1 正确；长文案两行 arc 底 526.9 < acts 535.4；`<12px []`、console 0、非 2xx 0、LEFTOVER 0。
+- 坑：CDP 仿真 reload 后可能未重申（cw 360、hero 下移 17）→ 1–2 px 边界测试前守卫 `clientWidth==375 && .hero-ds.width==307`；1440 点遮罩关 sheet 会连带触发左侧导航，用 `location.hash='#/'` 回首页。
+- (c) R448 发版后 27 min 228 请求 `/assets/*` 404 0 / monitor 0 → 继续挂，R449 发版后待下轮补量。到期项沿用 R448 18:53Z（无新样本）。下一轮 **R450 = SOP-10 四维审计**。
