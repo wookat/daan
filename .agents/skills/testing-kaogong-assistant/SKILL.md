@@ -1534,3 +1534,10 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 已完成分支（`dsMeta && dsDone`）只能靠原生做完当天 10 题触发（hero「继续目标 ›」→ 每日一练 → 最后一题点「完成」→ `POST /api/daily_set/submit` 写 LS `dailyDone:<uid>`）；练习页选项 `.opt`、底部「下一题/完成」按钮位置固定，`/tmp/cdp174/r447_opt.py` 可打印选项中心坐标。做完会写 5 张表（mistakes=答错数、answer_log=10、practice_results 1、daily_set_entries 1、growth_events ~3，probe=1），清理用 `/tmp/r447_db.py` 前缀版。
 - 长文案边界（rank+streak）真实数据难造，可在 `.hero-ds` 内临时挂隐藏 span 用同 font 量文本宽度推算，报告时明确标「推算」。
 - `/tmp/r4xx_ls_orig.json` 的 LS 备份可能是二次 JSON 编码的字符串，恢复前 `if isinstance(orig,str): orig=json.loads(orig)`。
+
+## R448 经验：验证绝对定位文字链 + 注入长文案 + 按钮顶部热区
+- `.hero-ds-arc` 改 `position:absolute; right:-8rpx; top:50%; translateY(-50%)` 后，短文案几何与 R447 float 版像素一致（375 arc (280.4,477.4,64.6,41)；1440 含滚动条 `clientWidth=1425` 时 x=1217.9，无滚动条 1440 时 1225.4），仍用不变量 `arc.right-4 == .hero-bar.right` 判右对齐；`.hero-ds` `padding-right` 计算值 62px（124rpx）保证文字不钻到链接下面。
+- 长文案（`· 🔥 连 N 天`，streak≥2）无真实数据时按用户授权只做 DOM 注入：`/tmp/cdp174/r448_inject.js` 用 TreeWalker 找 `.hero-ds` 下非 arc 文本节点、替换第一个并清空其余，`void offsetHeight` 后量 `Range.getClientRects()` 行数、arc 中心 vs `.hero-ds` 中心、`arc.bottom` vs `.hero-acts.top`、`.hero-acts.top` 相对短文案 +17。量完 `location.reload()` 恢复真实 DOM。本机无 emoji 字体（`fc-list | grep -i emoji` 为 0），🔥 渲染成豆腐块，宽度与真机可能略差，报告要写明。
+- 按钮顶部热区截胡：arc 41px 热区（padding 12px 上下）在短文案下与 hero 按钮 top 有 **2px 重叠**（375 y 516.4–518.4、x 280.4–345，仅覆盖「今日计划」；「继续目标 ›」x 34–243 不受影响），R440 起既有。用 `document.elementFromPoint` 逐 px 判归属，再用 `/tmp/cdp174/r448_click.py X Y`（`Input.dispatchMouseEvent` 可信输入 + 捕获阶段 click 监听记录 `clientX/Y/target`）在 CSS 精确坐标点击验证。computer-use 截图坐标→CSS 有 ±1.5px 误差（1600×1200 显示、截图 1024×768、页面顶栏约 88 截图 px），点「顶部 4px」前先在无害位置点一下读 `__lc` 校准。
+- 原生做完 10 题的可复用脚本 `/tmp/cdp174/r448_answer.py [optIdx]`：选项 `.opt` 中心 + 底部「下一题/完成」按钮（叶子文本节点 rect 可能为 0，向上找 h≥20 的父级）；**答对会自动跳下一题**（无「下一题」按钮），脚本按 q 序号推进即可。做完后首页 onboarding「免费刷 10万+」卡消失，hero 整体上移（arc y 477.4→156），比较 y 用相对量。
+- 远端诊断别用 `eval "$R" '…$(…)…'` 拼 ssh 命令（`$(...)`/`\"` 会在本机先展开，出现「docker ps accepts no arguments / no such object」），改成本机写 `/tmp/r4xx_diag_remote.sh` 后 `sshpass -e ssh … 'bash -s' < 脚本`。

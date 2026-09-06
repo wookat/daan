@@ -2135,3 +2135,12 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 坑：右对齐比对用不变量 `arc.right-4 == .hero-bar.right`，绝对 x 随「有无占位滚动条」漂 7.5 px（clientWidth 1425 vs 1440）；`.hero-ds` scrollWidth +4 / innerText 多一个 `\n` 是浮动副作用不是溢出。
 - **待老板定**：375 已完成态若同时带 `· 🔥 连 N 天`（推算 +57.9 px，总宽 ≈305.7 > 可用 246.4）会绕浮动折到第二行（不重叠、行高变、且发生在回包后）——streak≥2 无真实数据未实测；不接受则下轮缩文案（如去「·」或「连 N 天」缩成「🔥N」）。
 - 到期项（09-06 18:01Z）无新样本：probe=0 22 行/1 uid、error_reason 6/0、push_subs 0、weekly_reports 0、growth_events probe=0 18 行/4 uid 同 R446、WAL 564 KB。(c) 本次发版后待下轮补量；`.trend-kn` 4 周、无可确认外部真人、`WX_MINIAPP_SECRET`、R385 第二冷样本继续挂；下次 SOP-10 ~R450。
+
+### R448（首页「补练往期 ›」`.hero-ds-arc` `float:right` → `position:absolute` 贴右 + `.hero-ds padding-right:124rpx` 留位；2 行 CSS + vitest 1 改（+1 用例）/ R440 锁再放宽；部署 `98dffdf`，bundle 变、后端不动、无 DB 写入；testing agent 375/1440 全 PASS）
+- 取证 docs/iter/round-3/r448-hero-ds-arc-absolute-long-text-fix.md。R447 「待老板定」的推算被一手推翻：Playwright 在线上 DOM 注入「已完成 答对 1/10 · 第 1 名 · 🔥 连 2 天」，375 下**文字放得下（290.5/307）但浮动放不下（剩 16.5 px）→ 浮动被挤到下一行、`.hero-ds` 非 BFC 高仍 17 → 链接文字压在「继续目标」按钮上沿、41 px 热区盖住按钮顶部 19 px**。名次恒有（`my_rank` = 高分人数+1），streak≥2 = 连做两天 → 任何真人连做两天即命中，属 R447 引入的 P2 布局缺陷（生产 `daily_set_entries` probe=0 0 行，尚无受害）。
+- 修 D：链接绝对定位贴右（`right:-8rpx; top:50%; translateY(-50%)`，短文案 rect 与 R447 像素一致）、父行 `padding-right:124rpx`（链接文字 56.6 px + 间距）让长文案在链接左侧折行、行高增长把 `.hero-acts` 推下（+17）；否决回退 inline-block（漂移回来）、flow-root（负外边距盒不含 padding 仍压）、父级 flex（要改模板、CJK min-content 先压文字）、缩文案（最长形态仍超 246 px）。
+- 首页其它「回包后追加文案 + 文字链」行：只有 `.sz-arc`，前文静态 → 无同类漂移。
+- 复验：本地 dist 代理与生产同脚本逐项一致；6b 首跑 `/` perf 0.88 一次 WARN → 单独重跑 12 项全 OK（perf 0.93 / LCP 2772 / CLS 0.06）；testing agent 拦/正常逐帧 Δ0、原生做完 10 题已完成态单行右对齐、注入长文案 375 两行居中 acts +17 无重叠、按钮顶部点击正常、`<12px []`、console 0、非 2xx 0、LEFTOVER 0。
+- 登记（既有非本轮）：短文案下 arc 热区与「今日计划」按钮 top 重叠 2 px（R440 起，`elementFromPoint(300,517/518)`=arc），可把 padding 12→10 消除，需权衡 R440 ≥40 px 热区契约。
+- 坑：量测机无 emoji 字体（🔥 → □），注入长文案的折行点与真机可能差几 px；uni `<text>` 嵌套编成 span，注入文本节点要沿 `contains(arc)` 链下钻到 arc 的父 span 再 `insertBefore`。
+- (c) R447 发版后 24 min 246 请求 `/assets/*` 404 0 / monitor 0 → 继续挂，R448 发版后待下轮补量。到期项（18:53Z）无新样本：probe=0 22 行/1 uid、error_reason 6/0、push_subs 0、weekly_reports 0、growth_events probe=0 18/4、29/29 CST 00:00、WAL 1.6 MB；`.trend-kn` 4 周、无可确认外部真人、`WX_MINIAPP_SECRET`、R385 第二冷样本继续挂；下次 SOP-10 ~R450。
