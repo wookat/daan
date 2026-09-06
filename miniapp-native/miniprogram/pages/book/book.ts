@@ -498,7 +498,7 @@ Page({
   // ---------- AI 错题分析 ----------
   async onAiAnalysis() {
     this.setData({ aiOpen: true });
-    if (this.data.aiHtml) return;
+    if (this.data.aiHtml || this.data.aiLoading) return;
     this.setData({ aiLoading: true });
     try {
       const d = await mistakeAnalysis();

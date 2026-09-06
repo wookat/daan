@@ -58,11 +58,10 @@ export function buildHeatmap(days: Record<string, number>): { cols: HeatCell[][]
     }
     cols.push(col);
   }
-  const from = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 83);
   let total = 0;
   for (const k of Object.keys(days)) {
     const d = new Date(k + 'T00:00:00');
-    if (d >= from && d <= today) total += days[k];
+    if (d >= start && d <= today) total += days[k];
   }
   return { cols, total };
 }
