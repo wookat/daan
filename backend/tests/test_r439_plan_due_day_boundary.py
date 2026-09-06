@@ -43,6 +43,20 @@ def test_day_start_offsets_share_cn_day_start(monkeypatch):
     assert db._day_start(-6) == s - 6 * 86400 and db._day_start(1) == s + 86400
 
 
+def test_week_and_saturday_windows_anchor_on_cn_day_start():
+    from app import insights, mock_event
+
+    for ts in (LATE_YESTERDAY, LATE_YESTERDAY + 3 * 3600, LATE_YESTERDAY + 5 * 86400):
+        day0 = db.cn_day_start(ts)
+        assert time.strftime("%H:%M:%S", time.gmtime(day0 + CN)) == "00:00:00"
+        ws = insights._week_start(ts)
+        assert (ws - day0) % 86400 == 0 and 0 <= day0 - ws < 7 * 86400
+        assert time.strftime("%w", time.gmtime(ws + CN)) == "1"
+        o, c = mock_event._saturday_window(ts)
+        assert time.strftime("%w", time.gmtime(o + CN)) == "6" and c > ts
+        assert (o - day0) % 3600 == 0
+
+
 def test_plan_counts_last_night_review_as_due_at_push_hour(client, monkeypatch):
     _cleanup()
     q_old, q_new = seed_questions(2, ("ziliao",))[:2]

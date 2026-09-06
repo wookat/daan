@@ -99,7 +99,7 @@ def _alias(uid: str, nickname: str | None) -> str:
 
 def _saturday_window(now: float) -> tuple[float, float]:
     """本周六（若已结束则下周六）的比赛窗口 [open, close)。"""
-    day0 = ((now + TZ) // 86400) * 86400 - TZ           # 东八区今天 0 点
+    day0 = db.cn_day_start(now)
     weekday = int(((now + TZ) // 86400 + 4) % 7)        # 周一=1 … 周六=6, 周日=0
     sat0 = day0 + ((6 - weekday) % 7) * 86400
     close = sat0 + CLOSE_HOUR * 3600

@@ -169,7 +169,7 @@ def api_predict(uid: str):
 def _week_start(ts: float) -> float:
     """东八区本周一 0 点。"""
     tz = 8 * 3600
-    day0 = ((ts + tz) // 86400) * 86400 - tz
+    day0 = db.cn_day_start(ts)
     weekday = int(((ts + tz) // 86400 + 4) % 7)  # 1970-01-01 是周四
     return day0 - ((weekday - 1) % 7) * 86400
 

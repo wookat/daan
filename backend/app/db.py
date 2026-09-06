@@ -2941,8 +2941,7 @@ def daily_plan(uid: str) -> dict:
     _ensure_answer_log(conn)
     _ensure_mistake_uid(conn)
     now = time.time()
-    tz = 8 * 3600
-    day0 = ((now + tz) // 86400) * 86400 - tz  # 今日 0 点（东八区）
+    day0 = cn_day_start(now)
     yest = conn.execute(
         """SELECT COUNT(*) n, COALESCE(SUM(correct),0) c, COALESCE(SUM(secs),0) s
            FROM answer_log WHERE uid=? AND created_at>=? AND created_at<?""",
