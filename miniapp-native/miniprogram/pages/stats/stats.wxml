@@ -228,9 +228,9 @@
           </view>
         </view>
         <view class="km-legend">
-          <kg-tag tone="bad">&lt;60% 薄弱</kg-tag>
+          <kg-tag tone="bad">{{kmLegendLow}}</kg-tag>
           <kg-tag tone="warn">60–80%</kg-tag>
-          <kg-tag tone="ok">&gt;80% 掌握</kg-tag>
+          <kg-tag tone="ok">{{kmLegendHigh}}</kg-tag>
           <text class="note km-note">点考点直达专项练习</text>
         </view>
       </kg-card>

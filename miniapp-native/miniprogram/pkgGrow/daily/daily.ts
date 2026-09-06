@@ -1,5 +1,5 @@
 // 每日一练（全站同题）/ 时政每日一练：对齐 H5 practice.vue 的 startDaily/markDailyDone/startShizheng/reviewShizheng/markShizhengDone。
-// kind=set|shizheng；archive=1 时先弹近 7 天日期选择（H5 pickArchiveDay）；往期补练不提交榜单、不打卡、不写完成态。
+// kind=set|daily|shizheng|szreview（daily 同 set；szreview 同 shizheng，今日已完成时直接进回顾态）；archive=1 时先弹近 7 天日期选择（H5 pickArchiveDay）；往期补练不提交榜单、不打卡、不写完成态。
 import { postAnswerLog, postMistake } from '../../api/index';
 import type { AnswerLogItem, Question } from '../../api/types';
 import {
@@ -106,7 +106,7 @@ Page({
   _reviewMode: false,
 
   onLoad(query: Record<string, string>) {
-    const kind: Kind = query.kind === 'shizheng' ? 'shizheng' : 'set';
+    const kind: Kind = query.kind === 'shizheng' || query.kind === 'szreview' ? 'shizheng' : 'set';
     this.setData({ kind, title: kind === 'shizheng' ? '时政每日一练' : '每日一练' });
     if (query.date) {
       this._archiveDate = query.date;

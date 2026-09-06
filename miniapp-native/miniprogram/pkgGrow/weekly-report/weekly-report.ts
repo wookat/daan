@@ -117,6 +117,7 @@ Page({
     pending: false,
     error: '',
     range: '',
+    stateDesc: '',
     r: null as WeeklyReportResp | null,
     heroStats: [] as HeroStat[],
     cmp: [] as CmpRow[],
@@ -151,12 +152,24 @@ Page({
 
   apply(d: WeeklyReportResp) {
     if (d.status === 'empty') {
-      this.setData({ empty: true, pending: false, range: d.range || '' });
+      const range = d.range || '';
+      this.setData({
+        empty: true,
+        pending: false,
+        range,
+        stateDesc: range + '\n本周刷起来，下周一就能看到你的专属周报',
+      });
       return;
     }
     if (d.status === 'pending') {
       this._prevWeek = d.prev_week || '';
-      this.setData({ pending: true, empty: false, range: d.range || '' });
+      const range = d.range || '';
+      this.setData({
+        pending: true,
+        empty: false,
+        range,
+        stateDesc: range + '\n周报会在下周一自动生成，先看看上一周的吧',
+      });
       return;
     }
     const t = trendOf(d);

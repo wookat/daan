@@ -124,6 +124,8 @@ function examTrend(items: ExamAttempt[], target: number | null) {
 
 Page({
   data: {
+    kmLegendLow: '<60% 薄弱',
+    kmLegendHigh: '>80% 掌握',
     unlockN: UNLOCK_N,
     hasData: false,
     unlockLeft: UNLOCK_N,
