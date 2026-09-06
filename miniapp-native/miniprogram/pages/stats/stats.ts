@@ -1,4 +1,7 @@
-import { fetchCheckinSummary, fetchGrowth, trackEvent } from '../../api/index';
+import { fetchCheckinSummary, fetchGrowth, fetchProfile, trackEvent } from '../../api/index';
+import { fetchExamAttempts, fetchShenlunStats } from '../../api/exam';
+import type { ShenlunStats } from '../../api/exam-types';
+import { examTrend, type ExamTrend } from '../../utils/kg-exam-report';
 import { loadPStats, modName, streakDays, todayCount } from '../../utils/stats';
 import { syncTabBar } from '../../utils/tabbar';
 import { moduleMeta } from '../../utils/module-meta';
@@ -95,6 +98,12 @@ Page({
     hmTotal: 0,
     hmYLabels: ['一', '', '三', '', '五', '', '日'],
     zero: false,
+    examTrend: null as ExamTrend | null,
+    slStats: null as ShenlunStats | null,
+    slLast: '',
+    slTypes: [] as string[],
+    slIssues: [] as Array<{ tag: string; tone: string; text: string }>,
+    slIssuesOpen: false,
   },
   _hmTracked: false,
   onShow() {
@@ -109,6 +118,50 @@ Page({
     this.syncZero();
     this.loadGrowth();
     this.loadHeatmap();
+    this.loadExamTrend();
+    this.loadSlStats();
+    // 预测分卡首次 attached 自载；再次进页静默刷新（与 H5 onShow → $refs.predict.load() 一致）
+    const pc = this.selectComponent('#predict') as (WechatMiniprogram.Component.TrivialInstance & { load?: () => void }) | null;
+    if (pc && typeof pc.load === 'function') pc.load();
+  },
+  // 模考成绩趋势（近 10 次，与 H5 stats.vue examTrendD 同源：/api/exam/attempts + profile.target_score）
+  async loadExamTrend() {
+    try {
+      const [att, prof] = await Promise.all([fetchExamAttempts(null, 20), fetchProfile()]);
+      const target = prof.profile && prof.profile.target_score != null ? prof.profile.target_score : null;
+      this.setData({ examTrend: examTrend(att.items || [], target) });
+    } catch (e) {
+      /* 非关键路径：失败不渲染 */
+    }
+  },
+  onExamReport(e: WechatMiniprogram.TouchEvent) {
+    const id = Number(e.currentTarget.dataset.id);
+    if (id) wx.navigateTo({ url: '/pkgExam/report/report?attempt_id=' + id });
+  },
+  async loadSlStats() {
+    try {
+      const s = await fetchShenlunStats();
+      const d = s.last_at ? new Date(s.last_at * 1000) : null;
+      const p = (n: number) => (n < 10 ? '0' + n : String(n));
+      this.setData({
+        slStats: s,
+        slLast: d ? p(d.getMonth() + 1) + '-' + p(d.getDate()) : '',
+        slTypes: (s.by_type || []).map((t) => t.qtype + ' ×' + t.n),
+        slIssues: (s.issues || []).map((it) => ({
+          tag: it.kind === '提升建议' ? '建议' : '遗漏',
+          tone: it.kind === '提升建议' ? 'warn' : 'bad',
+          text: it.text,
+        })),
+      });
+    } catch (e) {
+      /* 非关键路径 */
+    }
+  },
+  onSlIssues() {
+    this.setData({ slIssuesOpen: !this.data.slIssuesOpen });
+  },
+  goShenlun() {
+    wx.navigateTo({ url: '/pkgExam/shenlun/shenlun?tab=r' });
   },
   // 0 数据折叠为解锁卡：累计/今日/连签/热力图全为 0 才折叠
   syncZero() {

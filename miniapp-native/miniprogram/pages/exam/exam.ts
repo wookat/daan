@@ -1,45 +1,51 @@
-import { fetchPapers } from '../../api/index';
-import type { Paper } from '../../api/types';
+// 模考 tab：迷你模考入口 + 模考大赛/申论专区入口 + 真题卷库预览（前 20 卷，完整卷库与筛选在 pkgExam/list）
+import { fetchExamPapers } from '../../api/exam';
+import type { ExamPaper } from '../../api/exam-types';
 import { syncTabBar } from '../../utils/tabbar';
 
-type PaperVM = Paper & { yearShort: string; regionShort: string };
+type PaperVM = ExamPaper & { yearShort: string; regionShort: string; subText: string };
 
-const PAGE_SIZE = 20;
+const PREVIEW_N = 20;
+
+function toVM(p: ExamPaper): PaperVM {
+  const y = String(p.year || '');
+  const region = String(p.region || '');
+  let regionShort = '真题';
+  if (region.indexOf('国考') > -1 || region.indexOf('国家') > -1) regionShort = '国考';
+  else if (region.indexOf('联考') > -1) regionShort = '联考';
+  else if (region) regionShort = region.slice(0, 2);
+  const parts: string[] = [];
+  if (region) parts.push(region);
+  if (p.n) parts.push(p.n + ' 题');
+  if (p.duration_min) parts.push(p.duration_min + ' 分钟');
+  return { ...p, yearShort: y.length === 4 ? y.slice(2) : y, regionShort, subText: parts.join(' · ') };
+}
 
 Page({
   data: {
     loading: true,
     loadErr: '',
     papers: [] as PaperVM[],
-    pagedPapers: [] as PaperVM[],
+    total: 0,
   },
   onShow() {
     syncTabBar(this, 2);
     this.load();
   },
+  onShareAppMessage() {
+    return { title: '考公行测真题卷库 · 整卷全真模考', path: '/pages/exam/exam' };
+  },
   async load() {
     this.setData({ loadErr: '' });
     try {
-      const d = await fetchPapers();
-      const papers: PaperVM[] = (d.items || []).map((p) => {
-        const y = String(p.year || '');
-        const region = String(p.region || '');
-        let regionShort = '真题';
-        if (region.indexOf('国考') > -1 || region.indexOf('国家') > -1) regionShort = '国考';
-        else if (region.indexOf('联考') > -1) regionShort = '联考';
-        else if (region) regionShort = region.slice(0, 2);
-        return { ...p, yearShort: y.length === 4 ? y.slice(2) : y, regionShort };
-      });
-      this.setData({ papers, pagedPapers: papers.slice(0, PAGE_SIZE) });
+      const d = await fetchExamPapers();
+      const items = d.items || [];
+      this.setData({ papers: items.slice(0, PREVIEW_N).map(toVM), total: items.length });
     } catch (e) {
       this.setData({ loadErr: (e as Error).message || '网络错误' });
     } finally {
       this.setData({ loading: false });
     }
-  },
-  onMorePapers() {
-    const n = this.data.pagedPapers.length + PAGE_SIZE;
-    this.setData({ pagedPapers: this.data.papers.slice(0, n) });
   },
   onRetry() {
     if (this.data.loading) return;
@@ -47,19 +53,20 @@ Page({
     this.load();
   },
   onPaperTap(e: WechatMiniprogram.TouchEvent) {
-    const title = String(e.currentTarget.dataset.title || '该卷');
-    wx.showModal({
-      title: '全真模考 · 二期上线预告',
-      content: `「${title}」等整卷全真模考正在准备中，上线后可整卷计时作答。现在可以先用迷你模考（30 题混合模块）体验完整的交卷报告和薄弱考点分析。`,
-      confirmText: '去迷你模考',
-      cancelText: '知道了',
-      success: (r) => {
-        if (r.confirm) this.onMini();
-      },
-    });
+    const id = Number(e.currentTarget.dataset.id);
+    if (!id) return;
+    wx.navigateTo({ url: '/pkgExam/list/list?pid=' + id });
+  },
+  onAllPapers() {
+    wx.navigateTo({ url: '/pkgExam/list/list' });
   },
   onMini() {
-    // 迷你模考：真实模考流程（attempt + 成绩报告 + 薄弱考点）
-    wx.navigateTo({ url: '/pages/exam/mini' });
+    wx.navigateTo({ url: '/pkgExam/exam/exam?mini=1' });
+  },
+  onContest() {
+    wx.navigateTo({ url: '/pkgExam/contest/contest' });
+  },
+  onShenlun() {
+    wx.navigateTo({ url: '/pkgExam/shenlun/shenlun' });
   },
 });

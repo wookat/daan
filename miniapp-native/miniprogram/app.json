@@ -26,6 +26,18 @@
         "offline/offline",
         "explain/explain"
       ]
+    },
+    {
+      "root": "pkgExam",
+      "name": "exam",
+      "pages": [
+        "list/list",
+        "exam/exam",
+        "report/report",
+        "contest/contest",
+        "contest-report/contest-report",
+        "shenlun/shenlun"
+      ]
     }
   ],
   "renderer": "webview",

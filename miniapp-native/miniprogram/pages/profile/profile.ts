@@ -156,6 +156,12 @@ Page({
   onOffline() {
     wx.navigateTo({ url: '/pkgLearn/offline/offline' });
   },
+  onExamList() {
+    wx.navigateTo({ url: '/pkgExam/list/list' });
+  },
+  onShenlun() {
+    wx.navigateTo({ url: '/pkgExam/shenlun/shenlun' });
+  },
   onLogin() {
     wx.navigateTo({ url: '/pages/login/login' });
   },

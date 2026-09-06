@@ -50,6 +50,12 @@
     </kg-card>
 
     <t-cell-group class="cells">
+      <t-cell title="真题卷库" description="历年真题 · 模考记录" arrow hover bind:click="onExamList">
+        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="file-text" size="20" tone="brand" /></view>
+      </t-cell>
+      <t-cell title="申论专区" description="真题 + AI 采分点批改 · 素材范文" arrow hover bind:click="onShenlun">
+        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="pen-line" size="20" tone="brand" /></view>
+      </t-cell>
       <t-cell title="刷题小队" description="组队打卡 · 互相催学" arrow hover bind:click="onTeam">
         <view slot="left-icon" class="row-ico bg-brand"><l-icon name="users" size="20" tone="brand" /></view>
       </t-cell>

@@ -30,6 +30,8 @@
         </view>
       </kg-card>
 
+      <kg-predict-card id="predict" />
+
       <kg-card variant="raised" class="sec">
         <view class="h">
           <l-icon name="calendar" size="20" tone="brand" />
@@ -61,6 +63,59 @@
           <text class="hm-lt">多</text>
         </view>
         <text class="hm-note">热力图为云端口径（练习/模考作答，多端同步）</text>
+      </kg-card>
+
+      <!-- 申论学习（与 H5 stats.vue 同源：/api/shenlun/stats） -->
+      <kg-card wx:if="{{slStats && slStats.total}}" variant="raised" class="sec">
+        <kg-section-header title="申论学习" more="作答记录" bind:more="goShenlun" />
+        <view class="sl-row">
+          <text class="sl-num num">{{slStats.total}}</text>
+          <text class="sl-lab">次 AI 批改</text>
+          <text wx:if="{{slLast}}" class="sl-last">最近 {{slLast}}</text>
+        </view>
+        <view class="sl-types">
+          <kg-tag wx:for="{{slTypes}}" wx:key="*this" tone="brand">{{item}}</kg-tag>
+        </view>
+        <block wx:if="{{slIssues.length}}">
+          <view class="sl-ih" hover-class="sl-ih--hover" bind:tap="onSlIssues">
+            <text>近期问题点（{{slIssues.length}}）</text>
+            <l-icon name="{{slIssuesOpen ? 'chevron-up' : 'chevron-down'}}" size="16" tone="muted" />
+          </view>
+          <view wx:if="{{slIssuesOpen}}">
+            <view wx:for="{{slIssues}}" wx:key="index" class="sl-issue">
+              <kg-tag tone="{{item.tone}}">{{item.tag}}</kg-tag>
+              <text class="sl-it">{{item.text}}</text>
+            </view>
+            <text class="hm-note">来自你最近的 AI 批改结果，供针对性强化</text>
+          </view>
+        </block>
+      </kg-card>
+
+      <!-- 模考成绩趋势（与 H5 stats.vue examTrendD 同源） -->
+      <kg-card wx:if="{{examTrend}}" variant="raised" class="sec">
+        <kg-section-header title="{{'模考成绩趋势（近 ' + examTrend.points.length + ' 次）'}}" />
+        <view class="trend et-wrap">
+          <view wx:if="{{examTrend.targetPct !== null}}" class="et-target" style="bottom: {{examTrend.targetPct}}%">
+            <text class="et-target-t">目标 {{examTrend.target}} 分</text>
+          </view>
+          <view
+            wx:for="{{examTrend.points}}"
+            wx:key="id"
+            class="trend-col"
+            data-id="{{item.id}}"
+            aria-role="button"
+            aria-label="{{'查看这次模考报告，得分 ' + item.score + ' 分'}}"
+            bind:tap="onExamReport"
+          >
+            <view class="trend-bar is-{{item.level}}" style="height: {{item.heightPct}}%" />
+          </view>
+        </view>
+        <view class="trend-x">
+          <text>旧</text>
+          <text>最好 {{examTrend.best}} 分 · 最近 {{examTrend.latest}} 分</text>
+          <text>新</text>
+        </view>
+        <text class="hm-note">点柱查看单次报告 · 不同卷难度不同，仅供参考</text>
       </kg-card>
 
       <view class="sec-h">

@@ -11,6 +11,9 @@ import {
 import { fetchPracticeResume, fetchReviewCur, postPracticeProgress, saveReviewCur } from '../../api/learn';
 import type { CheckinBadgesResp, PlanTask, Profile } from '../../api/types';
 import { anonUid } from '../../utils/auth';
+import { examResume, examProgressDrop } from '../../api/exam';
+import { type ResumeInfo, resolveResume, dropResume, resumeUrl } from '../../utils/kg-exam-progress';
+import { fmtClock } from '../../utils/kg-exam-timer';
 import { moduleMeta } from '../../utils/module-meta';
 import {
   PENDING_KEY,
@@ -111,6 +114,7 @@ Page({
     // H5 resumes：未做完的练习 / 未完成的错题复习
     practiceResume: null as (ResumeBrief & { name: string }) | null,
     reviewResume: null as ReviewResume | null,
+    examResume: null as (ResumeInfo & { leftText: string }) | null,
   },
   onLoad() {
     const d = new Date();
@@ -215,6 +219,35 @@ Page({
         this.setData({ reviewResume: null });
       },
     });
+    this.loadExamResume();
+  },
+  // 未交卷模考续考卡（与 H5 首页 examResume 同源：本机 examProgress 优先，否则 /api/exam/resume）
+  async loadExamResume() {
+    const r = await resolveResume(examResume);
+    this.setData({ examResume: r ? { ...r, leftText: fmtClock(r.leftSecs) } : null });
+  },
+  onErContinue() {
+    const r = this.data.examResume;
+    if (r) wx.navigateTo({ url: resumeUrl(r) });
+  },
+  onErDrop() {
+    wx.showModal({
+      title: '放弃未交卷进度？',
+      content: '放弃后本次作答记录不再保留',
+      confirmText: '放弃',
+      cancelText: '再想想',
+      success: (res) => {
+        if (!res.confirm) return;
+        dropResume(this.data.examResume, examProgressDrop);
+        this.setData({ examResume: null });
+      },
+    });
+  },
+  onGoExamList() {
+    wx.navigateTo({ url: '/pkgExam/list/list' });
+  },
+  onGoShenlun() {
+    wx.navigateTo({ url: '/pkgExam/shenlun/shenlun' });
   },
   // 今日已练以服务端为准（answer_log+review_log，与统计页同源），本机 pstats 只做首屏占位与离线降级
   async loadTodayServer() {
@@ -409,7 +442,9 @@ Page({
       return;
     }
     if (t.type === 'mock') {
-      wx.switchTab({ url: '/pages/exam/exam' });
+      // 真题/冲刺阶段（plan real）计划文案为「整卷全真模考」→ 卷库；其余阶段进模考 tab
+      if (t.real) this.onGoExamList();
+      else wx.switchTab({ url: '/pages/exam/exam' });
       return;
     }
     const remain = Math.max(t.target - (t.done_n || 0), 5);

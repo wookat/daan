@@ -1,0 +1,11 @@
+<kg-sheet visible="{{visible}}" title="导出 PDF" bind:close="onClose">
+  <view class="kg-es__row"><text class="kg-es__k">导出范围</text><text class="kg-es__v">{{scope}}</text></view>
+  <view class="kg-es__row"><text class="kg-es__k">题数</text><text class="kg-es__v num">{{countText}}</text></view>
+  <view class="kg-es__opts" role="group" aria-label="导出选项">
+    <view class="kg-es__chip {{withAns && !only ? 'is-on' : ''}}" role="checkbox" aria-checked="{{withAns && !only ? 'true' : 'false'}}" hover-class="kg-es__chip--hover" bind:tap="onAns">含解析</view>
+    <view class="kg-es__chip {{only ? 'is-on' : ''}}" role="checkbox" aria-checked="{{only ? 'true' : 'false'}}" hover-class="kg-es__chip--hover" bind:tap="onOnly">仅答案</view>
+    <view class="kg-es__chip {{withSheet && !only ? 'is-on' : ''}}" role="checkbox" aria-checked="{{withSheet && !only ? 'true' : 'false'}}" hover-class="kg-es__chip--hover" bind:tap="onSheet">含答题卡</view>
+  </view>
+  <text class="kg-es__note">{{note}}</text>
+  <kg-button variant="primary" size="lg" block loading="{{busy}}" bind:click="onConfirm">{{busy ? '正在生成 PDF…' : '确认导出'}}</kg-button>
+</kg-sheet>

@@ -38,7 +38,17 @@
     </view>
 
     <!-- 续做卡（H5 resumes） -->
-    <view wx:if="{{practiceResume || reviewResume}}" class="resumes">
+    <view wx:if="{{examResume || practiceResume || reviewResume}}" class="resumes">
+      <kg-card wx:if="{{examResume}}" variant="raised" padding="{{12}}">
+        <view class="rs-row">
+          <view class="rs-main">
+            <text class="rs-t">有一场未交卷的模考</text>
+            <text class="rs-s">{{examResume.title}} · 已答 {{examResume.answered}}/{{examResume.total}} 题 · 剩余 <text class="num">{{examResume.leftText}}</text></text>
+          </view>
+          <kg-button variant="text" size="sm" aria-label="继续未交卷的模考" bind:click="onErContinue">去继续 ›</kg-button>
+          <view class="rs-x" aria-role="button" aria-label="放弃未交卷进度" hover-class="rs-x--hover" bind:tap="onErDrop"><l-icon name="x" size="16" tone="muted" /></view>
+        </view>
+      </kg-card>
       <kg-card wx:if="{{practiceResume}}" variant="raised" padding="{{12}}">
         <view class="rs-row">
           <view class="rs-main">
@@ -46,7 +56,7 @@
             <text class="rs-s">{{practiceResume.name}} · 已做 {{practiceResume.done}}/{{practiceResume.total}} 题</text>
           </view>
           <kg-button variant="text" size="sm" bind:click="onPrContinue">去继续 ›</kg-button>
-          <view class="rs-x" aria-role="button" aria-label="放弃未完成练习" bind:tap="onPrDrop"><l-icon name="x" size="16" tone="muted" /></view>
+          <view class="rs-x" aria-role="button" aria-label="放弃未完成练习" hover-class="rs-x--hover" bind:tap="onPrDrop"><l-icon name="x" size="16" tone="muted" /></view>
         </view>
       </kg-card>
       <kg-card wx:if="{{reviewResume}}" variant="raised" padding="{{12}}">
@@ -56,7 +66,7 @@
             <text class="rs-s">中断在第 {{reviewResume.rIdx + 1}}/{{reviewResume.items.length}} 题</text>
           </view>
           <kg-button variant="text" size="sm" bind:click="onRvContinue">去继续 ›</kg-button>
-          <view class="rs-x" aria-role="button" aria-label="放弃未完成复习" bind:tap="onRvDrop"><l-icon name="x" size="16" tone="muted" /></view>
+          <view class="rs-x" aria-role="button" aria-label="放弃未完成复习" hover-class="rs-x--hover" bind:tap="onRvDrop"><l-icon name="x" size="16" tone="muted" /></view>
         </view>
       </kg-card>
     </view>
@@ -172,6 +182,21 @@
         </view>
         <l-icon class="m-arrow" name="chevron-right" size="20" tone="faint" />
       </view>
+    </view>
+
+    <!-- 更多练习（对齐 H5 首页 more-grid：模考 / 申论；错题重练与拍题讲解为底栏 tab） -->
+    <kg-section-header title="更多练习" />
+    <view class="more-grid">
+      <kg-card variant="raised" clickable class="more-c" bind:click="onGoExamList">
+        <view class="more-ico"><l-icon name="timer" size="24" tone="brand" /></view>
+        <text class="more-t">模考</text>
+        <text class="more-s">迷你 / 全真 · 成绩报告</text>
+      </kg-card>
+      <kg-card variant="raised" clickable class="more-c" bind:click="onGoShenlun">
+        <view class="more-ico"><l-icon name="pen-line" size="24" tone="brand" /></view>
+        <text class="more-t">申论</text>
+        <text class="more-s">真题 + AI 采分点批改</text>
+      </kg-card>
     </view>
   </view>
 </scroll-view>

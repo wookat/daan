@@ -1,33 +1,5 @@
-import { fetchExamReport, fetchExamRank } from '../../api/index';
-import type { ExamReportItem, ExamReportResp } from '../../api/types';
-import { modName } from '../../utils/stats';
-
-interface ModRow {
-  module: string;
-  name: string;
-  n: number;
-  correct: number;
-  pct: number;
-}
-
-interface RQuestion extends ExamReportItem {
-  optList: Array<{ k: string; v: string }>;
-}
-
+// 旧路径兼容：成绩报告已迁至 pkgExam/report（含排名/配速/历次/错因/解析浮层），此处仅转发 attempt_id
 Page({
-  data: {
-    loading: true,
-    report: null as ExamReportResp | null,
-    accuracy: 0,
-    usedMin: 0,
-    modRows: [] as ModRow[],
-    detail: null as RQuestion | null,
-    loadErr: '',
-    // 同卷击败比例（/api/exam/rank，与 H5 同源）：样本 <10 不展示（迷你模考每次随机组卷，同卷只有本人）
-    rankText: '',
-  },
-  _aid: 0,
-
   onLoad(query: Record<string, string | undefined>) {
     const aid = Number(query.attempt_id || 0);
     if (!aid) {
@@ -35,81 +7,6 @@ Page({
       setTimeout(() => wx.navigateBack(), 1200);
       return;
     }
-    this._aid = aid;
-    this.load(aid);
-  },
-  onReload() {
-    if (!this._aid) return;
-    this.setData({ loading: true, loadErr: '' });
-    this.load(this._aid);
-  },
-
-  async load(aid: number) {
-    fetchExamRank(aid)
-      .then((r) => {
-        const rankText = r.total >= 10 ? `超过 ${r.beaten_pct}% 考生 · 同卷第 ${r.rank}/${r.total}` : '';
-        this.setData({ rankText });
-      })
-      .catch(() => this.setData({ rankText: '' }));
-    try {
-      const d = await fetchExamReport(aid);
-      const modRows: ModRow[] = Object.keys(d.attempt.per_module || {}).map((m) => {
-        const v = d.attempt.per_module[m];
-        return {
-          module: m,
-          name: modName(m),
-          n: v.n,
-          correct: v.correct,
-          pct: v.n ? Math.round((v.correct / v.n) * 100) : 0,
-        };
-      });
-      const used = d.attempt.submitted_at && d.attempt.started_at
-        ? Math.max(0, Math.round((d.attempt.submitted_at - d.attempt.started_at) / 60))
-        : 0;
-      this.setData({
-        loading: false,
-        report: d,
-        accuracy: d.answered ? Math.round((d.correct / d.answered) * 100) : 0,
-        usedMin: used,
-        modRows,
-      });
-    } catch (e) {
-      wx.showToast({ title: '加载失败：' + (e as Error).message, icon: 'none' });
-      this.setData({ loading: false, loadErr: (e as Error).message || '网络错误' });
-    }
-  },
-
-  onWeakPractice(e: WechatMiniprogram.TouchEvent) {
-    const tag3 = String(e.currentTarget.dataset.tag3 || '');
-    if (!tag3) return;
-    wx.navigateTo({
-      url: '/pages/practice/practice?tag3=' + encodeURIComponent(tag3) + '&count=10&source=exam_weak',
-    });
-  },
-  onOpenDetail(e: WechatMiniprogram.TouchEvent) {
-    const i = Number(e.currentTarget.dataset.i);
-    const it = this.data.report && this.data.report.items[i];
-    if (!it) return;
-    const detail: RQuestion = {
-      ...it,
-      optList: Object.keys(it.options || {})
-        .sort()
-        .map((k) => ({ k, v: (it.options || {})[k] })),
-    };
-    this.setData({ detail });
-  },
-  onCloseDetail() {
-    this.setData({ detail: null });
-  },
-  onDetailVisible(e: WechatMiniprogram.CustomEvent<{ visible: boolean }>) {
-    if (!e.detail.visible) this.onCloseDetail();
-  },
-  onRetry() {
-    wx.redirectTo({ url: '/pages/exam/mini' });
-  },
-  onBackExam() {
-    wx.navigateBack({
-      fail: () => wx.switchTab({ url: '/pages/exam/exam' }),
-    });
+    wx.redirectTo({ url: '/pkgExam/report/report?attempt_id=' + aid });
   },
 });

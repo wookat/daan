@@ -6,6 +6,8 @@
     "kg-card": "/components/kg-card/index",
     "kg-tag": "/components/kg-tag/index",
     "kg-empty": "/components/kg-empty/index",
-    "kg-progress": "/components/kg-progress/index"
+    "kg-progress": "/components/kg-progress/index",
+    "kg-section-header": "/components/kg-section-header/index",
+    "kg-predict-card": "/components/kg-predict-card/index"
   }
 }
