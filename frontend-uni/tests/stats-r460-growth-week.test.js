@@ -6,6 +6,8 @@ import { cnWeekKey } from '../src/checkin.js';
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
 const stats = read('../src/pages/stats/stats.vue');
 const style = stats.slice(stats.indexOf('<style'));
+const mm = read('../src/pkgA/stats/mastery-map.vue');
+const mmStyle = mm.slice(mm.indexOf('<style'));
 
 describe('R460 成长轨迹周口径 / 热力图合计窗口 / 周 tab 热区', () => {
   it('cnWeekKey 与 SQLite/Python strftime(%Y-%W) 同口径（周一起算，首周一前为第 00 周）', () => {
@@ -46,6 +48,13 @@ describe('R460 成长轨迹周口径 / 热力图合计窗口 / 周 tab 热区', 
     expect(style).toMatch(/\.gw-wk\s*\{[^}]*width:\s*150rpx;[^}]*white-space:\s*nowrap;/);
     expect(style).toMatch(/\.gw-pct\s*\{[^}]*width:\s*180rpx;[^}]*white-space:\s*nowrap;/);
     const tab = style.match(/\.gw-tab\s*\{([^}]*)\}/);
+    expect(tab).toBeTruthy();
+    expect(tab[1]).toMatch(/min-height:\s*40px;/);
+    expect(tab[1]).toMatch(/box-sizing:\s*border-box;/);
+    expect(tab[1]).toMatch(/display:\s*inline-flex;[^}]*align-items:\s*center;/);
+  });
+  it('知识点地图模块 tab（375 手机态横滑行）纵向热区 ≥40px', () => {
+    const tab = mmStyle.match(/\n\.tab\s*\{([^}]*)\}/);
     expect(tab).toBeTruthy();
     expect(tab[1]).toMatch(/min-height:\s*40px;/);
     expect(tab[1]).toMatch(/box-sizing:\s*border-box;/);

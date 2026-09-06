@@ -300,7 +300,9 @@ export default {
   display: inline-flex;
   align-items: center;
   gap: 8rpx;
-  padding: 14rpx 26rpx;
+  padding: 0 26rpx;
+  min-height: 40px;
+  box-sizing: border-box;
   background: var(--card, #fff);
   border-radius: 999rpx;
   margin-right: 14rpx;
