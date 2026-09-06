@@ -32,6 +32,12 @@
           <text class="k">{{ k }}</text>
           <text class="t">{{ t }}</text>
         </view>
+        <view v-if="isMulti && !revealed" class="multi-bar">
+          <text class="multi-hint">多选题：选完所有正确项后确认</text>
+          <view class="multi-ok" :class="{ dis: !multiSel.length || submitting }" role="button" @click="confirmMulti">
+            确认答案{{ multiSel.length ? '（' + multiSel.length + '）' : '' }}
+          </view>
+        </view>
       </view>
 
       <!-- 作答后 / 分享者：答案与解析 -->
@@ -86,6 +92,7 @@
 
 <script>
 import { shareDetail, shareAnswer, trackEvent, teamJoin, qShareText, canonicalizeSharePath } from '../../api.js';
+import { togglePickLetter } from '../../exam-excl.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const modName = (m) => NAMES[m] || m || '行测';
@@ -98,6 +105,7 @@ export default {
       loading: true,
       errMsg: '',
       picked: '',
+      multiSel: '',
       myResult: null,
       answers: [],
       startTs: 0,
@@ -113,6 +121,9 @@ export default {
   computed: {
     revealed() {
       return !!(this.d && (this.d.is_sharer || this.d.answered || this.myResult));
+    },
+    isMulti() {
+      return !!(this.d && this.d.question && this.d.question.multi);
     },
     modLabel() {
       return modName(this.d && this.d.question.module);
@@ -160,13 +171,24 @@ export default {
       this.loading = false;
     },
     optCls(k) {
-      if (!this.revealed) return { pick: this.picked === k };
-      const right = this.d.question.answer;
-      const myPick = this.myResult ? this.myResult.picked : null;
-      return { right: k === right, wrong: myPick && k === myPick && k !== right };
+      if (!this.revealed) return { pick: this.picked === k || this.multiSel.indexOf(k) !== -1 };
+      const right = String(this.d.question.answer || '');
+      const myPick = String((this.myResult && this.myResult.picked) || '');
+      return { right: right.includes(k), wrong: myPick.includes(k) && !right.includes(k) };
     },
-    async pick(k) {
+    pick(k) {
       if (this.revealed || this.submitting) return;
+      if (this.isMulti) {
+        this.multiSel = togglePickLetter(this.multiSel, k);
+        return;
+      }
+      this.submit(k);
+    },
+    confirmMulti() {
+      if (this.revealed || this.submitting || !this.multiSel) return;
+      this.submit(this.multiSel);
+    },
+    async submit(k) {
       this.picked = k;
       this.submitting = true;
       try {
@@ -257,6 +279,10 @@ export default {
 .opt.pick { border-color: var(--brand-text); background: var(--brand-soft); }
 .opt.right { border-color: var(--ok); background: var(--ok-soft); }
 .opt.wrong { border-color: var(--bad); background: var(--bad-soft); }
+.multi-bar { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; margin: 4rpx 0 6rpx; }
+.multi-hint { font-size: 24rpx; color: var(--ink-2); }
+.multi-ok { min-height: 44px; padding: 0 32rpx; display: inline-flex; align-items: center; border-radius: 999rpx; background: var(--brand); color: #fff; font-size: 28rpx; font-weight: 600; flex-shrink: 0; }
+.multi-ok.dis { opacity: 0.45; }
 
 .res-bar { border-radius: 18rpx; padding: 20rpx 26rpx; font-size: 27rpx; font-weight: 600; margin-bottom: 20rpx; }
 .res-bar.ok { background: var(--ok-soft); color: var(--ok); }

@@ -338,6 +338,8 @@ def _sanitized_question(qid: int) -> dict | None:
         "question": q.get("question"),
         "options": q.get("options") or {},
         "image": q.get("image"),
+        # 多选题（答案多字母）：作答页先勾选再确认，不暴露答案本身
+        "multi": len(db.normalize_answer(q.get("answer"))) > 1,
     }
 
 
@@ -479,7 +481,7 @@ def api_share_detail(sid: str, uid: str = ""):
 def api_share_answer(sid: str, body: dict, request: Request):
     uid = _clean_uid(body.get("uid"))
     rl(request, "share_answer", 60, 3600, uid)
-    picked = str(body.get("picked") or "").strip().upper()[:2]
+    picked = db.normalize_answer(body.get("picked"))[:8]
     if not picked:
         raise HTTPException(400, "缺少作答选项")
     secs = as_int(body.get("secs"))
@@ -500,7 +502,7 @@ def api_share_answer(sid: str, body: dict, request: Request):
     if not full:
         conn.close()
         raise HTTPException(404, "题目不存在")
-    correct = picked == (full.get("answer") or "").strip().upper()
+    correct = picked == db.normalize_answer(full.get("answer"))
     conn.execute(
         "INSERT INTO shared_answers (share_id, uid, nickname, picked, correct, created_at) VALUES (?,?,?,?,?,?)",
         (s["id"], uid, _clean_name(body.get("nickname")), picked, 1 if correct else 0, time.time()),
