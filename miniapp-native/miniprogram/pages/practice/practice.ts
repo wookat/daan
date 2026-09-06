@@ -375,6 +375,10 @@ Page({
         return;
       }
       const done = local.items.filter((q) => q._picked).length;
+      if (done === 0) {
+        this.adoptPending(local);
+        return;
+      }
       wx.showModal({
         title: '继续上次练习？',
         content:
@@ -566,6 +570,11 @@ Page({
     } catch (e) {
       /* 非关键路径 */
     }
+  },
+  onAnnDetail() {
+    const a = this.data.announce;
+    if (!a || !a.body) return;
+    wx.showModal({ title: a.title, content: a.body, showCancel: false, confirmText: '知道了' });
   },
   onDismissAnn() {
     const a = this.data.announce;

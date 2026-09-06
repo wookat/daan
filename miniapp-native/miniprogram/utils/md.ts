@@ -96,6 +96,12 @@ export function md(src: string | null | undefined): string {
     } else if (/^#\s/.test(l)) {
       close();
       out += '<h2 style="font-size:16px;margin:14px 0 6px;color:var(--brand-text)">' + inline(l.slice(2)) + '</h2>';
+    } else if (/^\s*>\s?/.test(l)) {
+      close();
+      out +=
+        '<div style="border-left:3px solid var(--line);padding:2px 12px;margin:6px 0;color:var(--ink-2);font-size:15px;line-height:1.65">' +
+        inline(l.replace(/^\s*>\s?/, '')) +
+        '</div>';
     } else if (/^\s*[-*]\s/.test(l)) {
       if (!inUl) {
         close();
