@@ -1558,3 +1558,9 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - `.remind-btn` 只在对方 `today_n==0` 时渲染：先量 `.remind-btn`，再让对方作答；切 1440 时若双方当天都有作答则量不到，需在流程顺序上前置。
 - 清理：`shared_answers.share_id` 是 `shared_questions.id`（整数），不是 sid；按 sid 删需 `share_id in (select id from shared_questions where sid in (...))`；pk_matches 无子表（participants 内嵌列），teams→team_members 用 team_id；uid 列枚举 `uid | *_uid | user_id` 共 41 张表（`/tmp/r450_db2.py`）。
 - holder 重启后 reload 若出现 cw 360 / DPR1（目标类读 11.52px）是仿真掉了，不是回归；重启 holder 让其周期重申 `Emulation.setDeviceMetricsOverride` 后重量。
+
+## R451 经验：无 `probe` 列的表不能单看计数；同网段兄弟自动化不带头
+- `weekly_reports`/`push_subs`/`mistakes`/`review_log` 等 30 张带 uid 但**无 `probe` 列**的表（枚举：`pragma table_info` 里有 uid 无 probe），到期项复查时「计数 0→N」不能直接当真人旁证，必须 `join answer_log on uid` 看该 uid 的 probe 分布：`select probe,count(*) from answer_log where uid=? group by probe`。R451 首例 `weekly_reports` 1 行 = 全 probe=1 uid。
+- 同 /24（`140.232.64.0/24`，`KG_PROBE_CIDRS` 已覆盖）的其它 Devin 会话 Playwright 不带 `X-Kg-Probe` 头、UA 为设备描述符原文（`iPhone OS 15_0`），只靠网段一路打标；caddy 归因用 `Cf-Connecting-Ip` 对 `KG_PROBE_CIDRS`，别按「无头」就判真人。
+- 1440 下条件渲染元素（`v-if="!m.today_n"` 的 `.remind-btn`）量不到时，可在 `uni-page-body` 下追加带页面 `data-v-xxxx` 属性的 `uni-view.<class>` 合成元素量真实 scoped CSS（脚本 `/home/ubuntu/r451/remind_1440.py`），报告里注明「合成元素、非条件渲染」。
+- 新装的 Playwright python 找不到 headless shell 时用 `p.chromium.launch(executable_path="/home/ubuntu/.local/bin/google-chrome", args=["--no-sandbox"])`，不要 `playwright install`。

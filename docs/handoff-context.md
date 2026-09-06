@@ -2159,3 +2159,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - ④ 命中：`pk.vue` 9 / `team.vue` 11 / `share-q.vue` 5 / `pk-result.vue` 3 = 28 处 <24rpx（生产 `/s/` `/p/` 实测 10.5–11.5px）；`.rank-copy` 32 / `.remind-btn` 36 / `.chip` 33px 热区 <40 → 全抬到下限并源锁（`tests/social-r450-fontfloor.test.js`）。`.timer-t` 最长文案 12px 宽 282 < 311 仍单行（measureText + 生产实测 h17）。
 - 复验：6b 12 项全 OK（`/` perf 0.96 / LCP 2287 / CLS 0.06）；testing agent 两探针 uid 走完 PK 双人对局 `HQQVXK`、小队 `r450tm`、单选/多选分享作答，13 页 `<12px []`、非 2xx 0、清理 LEFTOVER 0。1440 `.remind-btn` 未量到（对方当天已作答不渲染；CSS 与视口无关）。
 - 到期项无新样本（probe=0 22 行/1 uid、error_reason 6/0、push_subs 0、weekly_reports 0、29/29 CST 00:00、WAL 1.79 MB）。(c) R449/R450 发版后待下轮补量。下次 SOP-10 审计 ~R460。
+
+### R451（只取证登记，不改码不部署；生产仍 `460120f`）
+- 取证 docs/iter/round-3/r451-postrelease-404-due-items-weekly-reports-probe-blindspot.md。
+- (c) R449/R450 发版后 54 min 642 请求：`/assets/*` 404 0、monitor 0 → 继续挂。
+- 到期项：probe=0 22/1、error_reason 6/0、push_subs 0、growth_events probe=0 18/4 不变；**`weekly_reports` 0→1**：uid `umtppgte7u8emh2vs` 20:14:52Z 首开周报，来自 `140.232.64.3`（Devin /24、无 `X-Kg-Probe` 头、Playwright iPhone UA），该 uid 26 answer_log/8 growth_events/6 exam_attempts **全 probe=1（仅网段一路命中）** → 推断同网段兄弟 Devin 会话巡览，非真人。登记：30 张带 uid 无 probe 列的表（含 weekly_reports/push_subs）到期项要 join answer_log 看 probe，不补列（产品读路径不跨用户聚合这些表）。
+- R450 遗留 1440 `.remind-btn`：合成元素 + 真实 `data-v-806c425f` scoped CSS 量得 1440/375 均 h40、fs12、min-height 40px → 闭合。
+- WAL 3.05 MB、healthy 0 重启、当前容器日志 0 异常、宿主 91%/4.5 G。
