@@ -1526,3 +1526,11 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - `growth_events`（`/api/track` 落库）没有任何看板读它，只能容器内只读查：`SELECT uid, event, COUNT(*) FROM growth_events WHERE probe=0 AND created_at>=? GROUP BY 1,2`；再用 caddy 按 `?uid=` 归因 IP/UA（`Cf-Ipcountry` 源站收不到，geo 要另查）。它能看到「来了没做题」的访客，`answer_log` 看不到。
 - 老 uid 回访的 `answer_log` 行 probe=NULL 是 R374（09-04 06:53Z）前历史，别误判为写侧漏标；先查 `probe IS NULL AND created_at>=1788504780` 应为 0。
 - `stale_fallback` 同秒成批（7/13 行）= 断网/拦截走查形态，真人极少同时全部接口失败。
+
+## R447 经验：验证首页浮动文字链（`.hero-ds-arc float:right`）与首帧 x 漂移
+- 右对齐不变量用 `arc.right - 4 == .hero-bar.right`（`margin-right:-8rpx` = -4px 故意外扩热区）而不是绝对 x；桌面视口绝对 x 会随「是否有占位滚动条」漂 7.5px（docSw 1425 vs 1440），先打印 `documentElement.clientWidth` 再和预期比。
+- `.hero-ds` `scrollWidth` 比 `clientWidth` 大 4px、`innerText` 里文字与链接之间出现 `\n`，都是浮动元素副作用，不是折行/溢出；判单行看 `.hero-ds` rect h≈17 + 用 TreeWalker 收集非 arc 文本节点的 Range `getClientRects()` top 是否相同（uni `<text>` 会把文字包在 span 里，直接 `childNodes` 拿不到文本节点）。
+- 首帧 x 漂移用 `/tmp/cdp174/r447_frames.py <tabPrefix> <out.json>`：`Page.addScriptToEvaluateOnNewDocument` 注入 rAF 采样 7 s（文案 / arc rect / `.hero-acts.top` / 今日任务卡 top / daily_set responseEnd），reload 后打印「变化帧」与 distinct rect 集合；正常加载能直接看到回包前后那一帧 arc x 是否跳。拦截态照 R445：先清 `apiSnap:/api/daily_set` + `dailySet` 再起 `r445_abort.py`。
+- 已完成分支（`dsMeta && dsDone`）只能靠原生做完当天 10 题触发（hero「继续目标 ›」→ 每日一练 → 最后一题点「完成」→ `POST /api/daily_set/submit` 写 LS `dailyDone:<uid>`）；练习页选项 `.opt`、底部「下一题/完成」按钮位置固定，`/tmp/cdp174/r447_opt.py` 可打印选项中心坐标。做完会写 5 张表（mistakes=答错数、answer_log=10、practice_results 1、daily_set_entries 1、growth_events ~3，probe=1），清理用 `/tmp/r447_db.py` 前缀版。
+- 长文案边界（rank+streak）真实数据难造，可在 `.hero-ds` 内临时挂隐藏 span 用同 font 量文本宽度推算，报告时明确标「推算」。
+- `/tmp/r4xx_ls_orig.json` 的 LS 备份可能是二次 JSON 编码的字符串，恢复前 `if isinstance(orig,str): orig=json.loads(orig)`。

@@ -2127,3 +2127,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证 docs/iter/round-3/r446-growth-events-probe0-readonly-stale-fallback-postrelease.md。`growth_events` 全仓库**无产品/管理台读路径**（看板 KPI 只读 `answer_log`），唯一读者 `scripts/health_scan.py` → `stale_fallback` 不计入任何看板；生产 20 行全 probe=1（两次 testing agent 断网走查同秒 7/13 行）。
 - probe=0 访客级信号：`growth_events` 近 7 天 probe=0 4 个 uid——vivo 小程序 uid、同型号 V2405A Chrome 打开该 vivo 分享码（推断同一持有者）、Windows 老 uid 经双出口 IP 回访（身份不可考）、iPhone 单页跳出 1 次（唯一像外部真人）。`answer_log` R374 后 probe=NULL 新增 0 行。不加看板字段（caddy 日报 `humans.ips` 已覆盖、样本 1），以后到期项复查固定加 `growth_events probe=0 by uid`。
 - (c)：R445 发版后 40 min 148 请求 `/assets/*` 404 0、monitor 0，继续挂。到期项无新样本（probe=0 22 行、error_reason 6/0、push_subs 0、weekly_reports 0、29/29 CST 00:00、WAL 560 KB）。
+
+### R447（首页「补练往期 ›」`.hero-ds-arc` `inline-block` → `float:right`，R445 剩余 CLS 尾项 0.0024 归零；1 行 CSS + vitest 1 新/1 改；部署 `c7347a1`，bundle 变、后端不动、无 DB 写入；testing agent 375/1440 全 PASS）
+- 取证 docs/iter/round-3/r447-hero-ds-arc-float-right-cls-tail.md。改前一手：375 拦/正常 arc x 144.9→243.6、1440 465.4→564.1（漂 98.7 px），纵向几何不变；1440 下链接落在 924 px 行左 1/4 后面大段空白 → 右对齐更合布局。取 B 方案只改一条规则：`float:right; margin:-12px -8rpx -12px 8rpx; padding:12px 8rpx`（热区 41 px 不变，`margin-right:-8rpx` 让文字右缘与 hero 内容右缘对齐、热区外扩 4 px）；否决父级 flex（uni `<text>` 嵌套编译成 span，匿名 flex item 换行要重验）。
+- R440 源锁 `home-r440-fontfloor.test.js`「热区须 inline-block」有意放宽为「inline-block 或 float:right」（都是块级盒、纵向 padding 生效）。
+- 复验：6b `/` CLS 0.06、LCP 931、perf 0.99；Playwright sources ×9 只剩 #1 0.0608（uni TabBar 占位）；375/1440 拦/正常 arc rect 恒定、`.hero-acts`/taskcard Δ0；testing agent 逐帧 t=165 占位 → t=191 回包 arc x 不动；**已完成分支实测**「已完成 答对 1/10 · 第 1 名 补练往期 ›」375 单行余量 21.6 px；`<12px []`、console 0、`/api` 非 2xx 0、healthy 0 重启、LEFTOVER 0。
+- 坑：右对齐比对用不变量 `arc.right-4 == .hero-bar.right`，绝对 x 随「有无占位滚动条」漂 7.5 px（clientWidth 1425 vs 1440）；`.hero-ds` scrollWidth +4 / innerText 多一个 `\n` 是浮动副作用不是溢出。
+- **待老板定**：375 已完成态若同时带 `· 🔥 连 N 天`（推算 +57.9 px，总宽 ≈305.7 > 可用 246.4）会绕浮动折到第二行（不重叠、行高变、且发生在回包后）——streak≥2 无真实数据未实测；不接受则下轮缩文案（如去「·」或「连 N 天」缩成「🔥N」）。
+- 到期项（09-06 18:01Z）无新样本：probe=0 22 行/1 uid、error_reason 6/0、push_subs 0、weekly_reports 0、growth_events probe=0 18 行/4 uid 同 R446、WAL 564 KB。(c) 本次发版后待下轮补量；`.trend-kn` 4 周、无可确认外部真人、`WX_MINIAPP_SECRET`、R385 第二冷样本继续挂；下次 SOP-10 ~R450。
