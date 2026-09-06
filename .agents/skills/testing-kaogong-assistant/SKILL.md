@@ -1407,3 +1407,12 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 1440 仿真下 `Page.captureScreenshot` 返回结构是 `{'id','result':{'data'}}`（`cdp.py call` 不解包），取 `['result']['data']`。
 - `/tmp/r428_ls_orig.json` 这类 LS 备份是双重 JSON 字符串，恢复用 `json.loads(json.load(f))`（见 `/tmp/cdp174/r428_restore_ls.py`）。
 - 清理台账：分享流程会在 `growth_events` 留 `share_open`/`share_answer` 行（本轮 14 行），按 uid 一并删；`answer_log` 基线若与清理后不符，先查窗口内其他 probe uid（如并发的 `um…` 探针）再下结论。
+
+## R429 每日一练（daily_set_entries.probe）走查经验
+- 入口深链 `/#/pages/practice/practice?daily=1`（首页「继续目标/免注册立即开练」= `launch({kind:'daily'})` 同链路）。切 uid 后除 `anonUid` 外还要删 `dailyPlan` / `dailySet` / `dailyDone:<uid>` 缓存再 F5，否则可能复用旧题组或已完成态。
+- 全站同题 10 题按日固定（`/api/daily_set` 边缘缓存 60s），同一天两 uid 拿到同一组题，可提前记答案让第二组少走「下一题」。答对会 350ms 自动跳下一题，答错需点「下一题」（375 底部固定条 ≈ 屏幕 (202,553)，1440 ≈ (822,641)）；最后一题按钮变「完成」，点后 `next()` → `markDailyDone()` 才发 `POST /api/daily_set/submit`，随后 `GET /api/daily_set/board?uid=<anonUid>`。1440 双栏有键盘快捷键 A–D 选项 / Enter 下一题，可快速做题。
+- 完成页断言选择器：`.dsbeat`（「你是今天第 1 位完成者」/「成绩已记录（首次 N 对） · P 人完成」/「击败 X%」）、`.dsboard`（含 `.rr-t` 今日排行榜 + `.dsb-mine` 我的名次 + `.dsb-row`）。
+- 幂等验证：完成页 F5 只会从第 1 题重开、不会自动重发 submit；要触发 `already:true` 需再做一组（会多写 10 行 answer_log + 1 行 practice_results，清理时一并删），或按用户许可在页面上下文 fetch 重放同 body。
+- 每日一练还会写 `review_log`（uid 列）与 `growth_events`（daily_open / push_nudge_show / login_nudge_show / slow_load），清理请全库扫 uid 列而不只按用户列出的表。
+- 匿名口径核 `GET /api/daily_set` `stats.participants` 与 `GET /api/daily_set/board`（无 uid）；SEO `/tiku/daily/` 用 `?x=<随机>` 绕边缘缓存并看 `cf-cache-status`。
+- `cdp.py` 的 `C.call(method, **params)` 用关键字参数（`c.call('Page.captureScreenshot', format='png')['result']['data']`）；清 viewport 需 `setDeviceMetricsOverride(0,0)` + `clearDeviceMetricsOverride` + reload，然后新建连接读 `innerWidth`。
