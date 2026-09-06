@@ -1,106 +1,136 @@
 <navbar title="成绩报告" back="{{true}}" />
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
-    <view wx:if="{{loading}}" class="card spin">报告生成中…</view>
+    <block wx:if="{{loading}}">
+      <view class="hero hero-skel"><t-skeleton theme="paragraph" animation="gradient" /></view>
+      <kg-card variant="raised" class="sec"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
+    </block>
+
+    <kg-empty
+      wx:if="{{!loading && !report}}"
+      icon="wifi-off"
+      title="报告加载失败"
+      desc="{{loadErr || '请检查网络后重试'}}"
+      ctaText="重试"
+      secondaryText="返回模考"
+      bind:cta="onReload"
+      bind:secondary="onBackExam"
+    />
 
     <block wx:if="{{!loading && report}}">
-      <!-- 分数 -->
-      <view class="card hero">
-        <text class="score">{{report.attempt.score}}</text>
-        <text class="score-u">分</text>
+      <!-- 分数 hero（kg-hero-card brand 小程序版未落地，页内实现） -->
+      <view class="hero">
+        <view class="hero-deco" />
         <text class="hero-s">{{report.paper.title}}</text>
+        <view class="score-row">
+          <text class="score num">{{report.attempt.score}}</text>
+          <text class="score-u">分</text>
+        </view>
+        <view class="pct-pill">
+          <l-icon name="trophy" size="16" tone="on-brand" />
+          <text>超过 <text class="num">--</text>% 考生 · 排名数据待接入</text>
+        </view>
         <view class="hero-row">
-          <view class="hstat"><text class="hv">{{report.correct}}/{{report.total}}</text><text class="hk">答对</text></view>
-          <view class="hstat"><text class="hv">{{accuracy}}%</text><text class="hk">正确率</text></view>
-          <view class="hstat"><text class="hv">{{report.answered}}</text><text class="hk">已作答</text></view>
-          <view class="hstat"><text class="hv">{{usedMin}} 分</text><text class="hk">用时</text></view>
+          <view class="hstat"><text class="hv num">{{report.correct}}/{{report.total}}</text><text class="hk">答对</text></view>
+          <view class="hstat"><text class="hv num">{{accuracy}}%</text><text class="hk">正确率</text></view>
+          <view class="hstat"><text class="hv num">{{report.answered}}</text><text class="hk">已作答</text></view>
+          <view class="hstat"><text class="hv num">{{usedMin}}<text class="hu">分</text></text><text class="hk">用时</text></view>
         </view>
       </view>
 
       <!-- 薄弱考点 -->
-      <view class="card">
-        <view class="h">本卷薄弱考点</view>
-        <text wx:if="{{!report.weak_tags.length}}" class="note">本卷错题较少，暂未形成薄弱考点结论，继续保持！</text>
+      <kg-card variant="raised" class="sec">
+        <view class="h"><l-icon name="target" size="20" tone="bad" /><text>本卷薄弱考点</text></view>
+        <kg-empty wx:if="{{!report.weak_tags.length}}" compact icon="sparkles" title="本卷错题较少" desc="暂未形成薄弱考点结论，继续保持" />
         <view
           wx:for="{{report.weak_tags}}"
           wx:key="tag3"
           class="wrow"
+          hover-class="wrow--hover"
           data-tag3="{{item.tag3}}"
           bind:tap="onWeakPractice"
         >
           <view class="wrow-l">
             <text class="wrow-t">{{item.name || item.tag3}}</text>
-            <text class="wrow-s">错 {{item.wrong}}/{{item.n}} 题</text>
+            <text class="wrow-s">错 <text class="num">{{item.wrong}}/{{item.n}}</text> 题</text>
           </view>
-          <text class="wrow-go">去练 ›</text>
+          <view class="wrow-go"><text>去练</text><l-icon name="chevron-right" size="16" tone="brand-text" /></view>
         </view>
-      </view>
+      </kg-card>
 
       <!-- 模块得分 -->
-      <view wx:if="{{modRows.length}}" class="card">
-        <view class="h">模块得分</view>
+      <kg-card wx:if="{{modRows.length}}" variant="raised" class="sec">
+        <view class="h"><l-icon name="chart-column" size="20" tone="brand" /><text>模块得分</text></view>
         <view wx:for="{{modRows}}" wx:key="module" class="mrow">
           <text class="mname">{{item.name}}</text>
-          <view class="mbar"><view class="mfill" style="width: {{item.pct}}%" /></view>
-          <text class="mval">{{item.correct}}/{{item.n}}</text>
+          <view class="mbar"><kg-progress value="{{item.correct}}" max="{{item.n}}" thickness="{{4}}" module="{{item.module}}" aria-label="{{item.name}}得分率" /></view>
+          <text class="mval num">{{item.correct}}/{{item.n}}</text>
         </view>
-      </view>
+      </kg-card>
 
       <!-- 逐题回顾 -->
-      <view class="card">
-        <view class="h">逐题回顾（点击查看解析）</view>
+      <kg-card variant="raised" class="sec">
+        <view class="h"><l-icon name="clipboard-list" size="20" tone="brand" /><text>逐题回顾</text><text class="h-sub">点击查看解析</text></view>
         <view class="qgrid">
           <view
             wx:for="{{report.items}}"
             wx:key="no"
-            class="qn {{item.correct ? 'ok' : item.picked ? 'bad' : 'blank'}}"
+            class="qn num {{item.correct ? 'ok' : item.picked ? 'bad' : 'blank'}}"
+            hover-class="qn--hover"
             data-i="{{index}}"
             bind:tap="onOpenDetail"
           >{{item.no}}</view>
         </view>
         <view class="legend">
-          <text class="lg ok">■ 答对</text>
-          <text class="lg bad">■ 答错</text>
-          <text class="lg blank">■ 未答</text>
+          <view class="lg"><view class="lg-dot ok" /><text>答对</text></view>
+          <view class="lg"><view class="lg-dot bad" /><text>答错</text></view>
+          <view class="lg"><view class="lg-dot blank" /><text>未答</text></view>
         </view>
-      </view>
-
-      <view class="btn-primary" bind:tap="onRetry">再考一次</view>
-      <view class="btn-ghost back-btn" bind:tap="onBackExam">返回模考</view>
+      </kg-card>
     </block>
-
-    <!-- 题目详情浮层 -->
-    <view wx:if="{{detail}}" class="mask" bind:tap="onCloseDetail">
-      <view class="sheet" catch:tap="noop">
-        <view class="sheet-h">
-          <text class="sheet-t">第 {{detail.no}} 题 · {{detail.correct ? '答对' : detail.picked ? '答错' : '未答'}}</text>
-          <text class="sheet-x" bind:tap="onCloseDetail">✕</text>
-        </view>
-        <scroll-view scroll-y class="detail-scroll" type="list">
-          <text class="q" user-select>{{detail.question}}</text>
-          <view
-            wx:for="{{detail.optList}}"
-            wx:key="k"
-            class="opt {{item.k === detail.answer ? 'right' : item.k === detail.picked ? 'wrong' : ''}}"
-          >
-            <text class="okey">{{item.k}}</text>
-            <text class="otext">{{item.v}}</text>
-          </view>
-          <view class="exp-row">
-            <text class="exp-k">正确答案</text>
-            <text class="exp-ans {{detail.correct ? 'okc' : 'badc'}}">{{detail.answer}}</text>
-            <text wx:if="{{detail.picked && !detail.correct}}" class="exp-picked">你的选择 {{detail.picked}}</text>
-          </view>
-          <view wx:if="{{detail.hs_explanation}}" class="exp-col">
-            <text class="exp-k hs">花生十三方法解析</text>
-            <text class="exp" user-select>{{detail.hs_explanation}}</text>
-          </view>
-          <view wx:elif="{{detail.explanation}}" class="exp-col">
-            <text class="exp-k">解析</text>
-            <text class="exp" user-select>{{detail.explanation}}</text>
-          </view>
-        </scroll-view>
-      </view>
-    </view>
   </view>
 </scroll-view>
+
+<kg-action-bar wx:if="{{!loading && report}}" layout="actions" primaryText="再考一次" secondaryText="返回模考" bind:primary="onRetry" bind:secondary="onBackExam" />
+
+<!-- 题目详情 -->
+<t-popup visible="{{!!detail}}" placement="bottom" bind:visible-change="onDetailVisible">
+  <view class="sheet" wx:if="{{detail}}">
+    <view class="sheet-handle" />
+    <view class="sheet-h">
+      <view class="sheet-t-row">
+        <text class="sheet-t">第 {{detail.no}} 题</text>
+        <kg-tag tone="{{detail.correct ? 'ok' : detail.picked ? 'bad' : 'neutral'}}">{{detail.correct ? '答对' : detail.picked ? '答错' : '未答'}}</kg-tag>
+      </view>
+      <view class="sheet-x" hover-class="sheet-x--hover" bind:tap="onCloseDetail"><l-icon name="x" size="24" tone="muted" /></view>
+    </view>
+    <scroll-view scroll-y class="detail-scroll" type="list">
+      <text class="q q-text" user-select>{{detail.question}}</text>
+      <view class="opts">
+        <view
+          wx:for="{{detail.optList}}"
+          wx:key="k"
+          class="opt {{item.k === detail.answer ? 'right' : item.k === detail.picked ? 'wrong' : ''}}"
+        >
+          <text class="okey">{{item.k}}</text>
+          <text class="otext q-text">{{item.v}}</text>
+          <l-icon wx:if="{{item.k === detail.answer}}" name="circle-check" size="20" tone="ok" />
+          <l-icon wx:elif="{{item.k === detail.picked}}" name="circle-x" size="20" tone="bad" />
+        </view>
+      </view>
+      <view class="exp-row">
+        <text class="exp-k">正确答案</text>
+        <text class="exp-ans num {{detail.correct ? 'okc' : 'badc'}}">{{detail.answer}}</text>
+        <text wx:if="{{detail.picked && !detail.correct}}" class="exp-picked">你的选择 <text class="num">{{detail.picked}}</text></text>
+      </view>
+      <view wx:if="{{detail.hs_explanation}}" class="exp-col">
+        <kg-tag tone="brand" icon="lightbulb">花生十三方法解析</kg-tag>
+        <text class="exp q-text" user-select>{{detail.hs_explanation}}</text>
+      </view>
+      <view wx:elif="{{detail.explanation}}" class="exp-col">
+        <kg-tag tone="neutral">解析</kg-tag>
+        <text class="exp q-text" user-select>{{detail.explanation}}</text>
+      </view>
+    </scroll-view>
+  </view>
+</t-popup>

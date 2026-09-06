@@ -22,7 +22,9 @@ Page({
     usedMin: 0,
     modRows: [] as ModRow[],
     detail: null as RQuestion | null,
+    loadErr: '',
   },
+  _aid: 0,
 
   onLoad(query: Record<string, string | undefined>) {
     const aid = Number(query.attempt_id || 0);
@@ -31,7 +33,13 @@ Page({
       setTimeout(() => wx.navigateBack(), 1200);
       return;
     }
+    this._aid = aid;
     this.load(aid);
+  },
+  onReload() {
+    if (!this._aid) return;
+    this.setData({ loading: true, loadErr: '' });
+    this.load(this._aid);
   },
 
   async load(aid: number) {
@@ -59,7 +67,7 @@ Page({
       });
     } catch (e) {
       wx.showToast({ title: '加载失败：' + (e as Error).message, icon: 'none' });
-      this.setData({ loading: false });
+      this.setData({ loading: false, loadErr: (e as Error).message || '网络错误' });
     }
   },
 
@@ -82,11 +90,11 @@ Page({
     };
     this.setData({ detail });
   },
-  noop() {
-    /* 阻断浮层冒泡 */
-  },
   onCloseDetail() {
     this.setData({ detail: null });
+  },
+  onDetailVisible(e: WechatMiniprogram.CustomEvent<{ visible: boolean }>) {
+    if (!e.detail.visible) this.onCloseDetail();
   },
   onRetry() {
     wx.redirectTo({ url: '/pages/exam/mini' });

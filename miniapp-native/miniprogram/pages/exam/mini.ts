@@ -119,14 +119,14 @@ Page({
   onCloseCard() {
     this.setData({ cardOpen: false });
   },
+  onCardVisible(e: WechatMiniprogram.CustomEvent<{ visible: boolean }>) {
+    if (!e.detail.visible) this.onCloseCard();
+  },
   onJump(e: WechatMiniprogram.TouchEvent) {
     this.setData({ cardOpen: false });
     this.goto(Number(e.currentTarget.dataset.i));
   },
 
-  noop() {
-    /* 阻断浮层冒泡 */
-  },
   onConfirmSubmit() {
     const blank = this.data.items.length - this.data.answered;
     wx.showModal({

@@ -1,5 +1,14 @@
 {
   "usingComponents": {
-    "navbar": "/components/navbar/index"
+    "navbar": "/components/navbar/index",
+    "l-icon": "/components/l-icon/index",
+    "kg-button": "/components/kg-button/index",
+    "kg-card": "/components/kg-card/index",
+    "kg-progress": "/components/kg-progress/index",
+    "kg-tag": "/components/kg-tag/index",
+    "kg-chip-row": "/components/kg-chip-row/index",
+    "kg-section-header": "/components/kg-section-header/index",
+    "t-popup": "tdesign-miniprogram/popup/popup",
+    "t-input": "tdesign-miniprogram/input/input"
   }
 }

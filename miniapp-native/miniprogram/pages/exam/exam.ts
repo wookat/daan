@@ -4,11 +4,14 @@ import { syncTabBar } from '../../utils/tabbar';
 
 type PaperVM = Paper & { yearShort: string; regionShort: string };
 
+const PAGE_SIZE = 20;
+
 Page({
   data: {
     loading: true,
     loadErr: '',
     papers: [] as PaperVM[],
+    pagedPapers: [] as PaperVM[],
   },
   onShow() {
     syncTabBar(this, 2);
@@ -27,12 +30,16 @@ Page({
         else if (region) regionShort = region.slice(0, 2);
         return { ...p, yearShort: y.length === 4 ? y.slice(2) : y, regionShort };
       });
-      this.setData({ papers });
+      this.setData({ papers, pagedPapers: papers.slice(0, PAGE_SIZE) });
     } catch (e) {
       this.setData({ loadErr: (e as Error).message || '网络错误' });
     } finally {
       this.setData({ loading: false });
     }
+  },
+  onMorePapers() {
+    const n = this.data.pagedPapers.length + PAGE_SIZE;
+    this.setData({ pagedPapers: this.data.papers.slice(0, n) });
   },
   onRetry() {
     if (this.data.loading) return;

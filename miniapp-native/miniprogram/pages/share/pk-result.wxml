@@ -1,42 +1,57 @@
 <navbar title="PK 战绩" back="{{true}}" />
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
-    <view wx:if="{{loading}}" class="card empty">加载中…</view>
-    <view wx:elif="{{errMsg}}" class="card empty">{{errMsg}}</view>
+    <block wx:if="{{loading}}">
+      <view class="hero"><t-skeleton theme="text" animation="gradient" /></view>
+      <kg-card variant="raised" class="vs"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
+    </block>
+
+    <!-- 无效 / 未结束对局 -->
+    <kg-empty
+      wx:elif="{{errMsg}}"
+      icon="swords"
+      title="看不到这场战绩"
+      desc="{{errMsg}}"
+      ctaText="去刷题练手"
+      bind:cta="onChallenge"
+    />
 
     <block wx:elif="{{d}}">
       <view class="hero">
-        <text class="hero-t">⚔️ 答题 PK 战绩</text>
-        <text class="hero-s">{{modLabel}} · 同组 {{d.n_questions}} 题 · 挑战码 {{d.code}}</text>
+        <view class="hero-ico"><l-icon name="swords" size="28" tone="on-brand" /></view>
+        <view class="hero-txt">
+          <text class="hero-t">答题 PK 战绩</text>
+          <text class="hero-s">{{modLabel}} · 同组 <text class="num">{{d.n_questions}}</text> 题 · 挑战码 <text class="num">{{d.code}}</text></text>
+        </view>
       </view>
 
-      <view class="card vs">
+      <kg-card variant="raised" class="vs">
         <view class="p {{d.winner === 'creator' ? 'win' : ''}}">
-          <text wx:if="{{d.winner === 'creator'}}" class="crown">👑</text>
+          <view class="crown"><l-icon wx:if="{{d.winner === 'creator'}}" name="crown" size="20" tone="streak" /></view>
           <view class="av">{{creatorAv}}</view>
           <text class="nm">{{creatorName}}</text>
-          <text class="sc">{{d.creator.score}}</text>
+          <text class="sc num">{{d.creator.score}}</text>
           <text class="meta">{{creatorMeta}}</text>
         </view>
         <view class="mid">
           <text class="mid-vs">VS</text>
-          <text class="mid-res">{{resultText}}</text>
+          <kg-tag tone="{{d.winner === 'draw' ? 'neutral' : 'warn'}}">{{resultText}}</kg-tag>
         </view>
         <view class="p {{d.winner === 'opponent' ? 'win' : ''}}">
-          <text wx:if="{{d.winner === 'opponent'}}" class="crown">👑</text>
+          <view class="crown"><l-icon wx:if="{{d.winner === 'opponent'}}" name="crown" size="20" tone="streak" /></view>
           <view class="av rival">{{opponentAv}}</view>
           <text class="nm">{{opponentName}}</text>
-          <text class="sc">{{d.opponent.score}}</text>
+          <text class="sc num">{{d.opponent.score}}</text>
           <text class="meta">{{opponentMeta}}</text>
         </view>
-      </view>
+      </kg-card>
 
-      <view class="card cta">
+      <kg-card variant="raised" class="cta">
         <text class="cta-t">不服来战？</text>
         <text class="cta-s">同组 10 题拼手速，答对 +80 分，越快加成越高</text>
-        <view class="act-btn main" bind:tap="onChallenge">去刷题练手</view>
-        <view class="act-btn sub" bind:tap="onCopyLink">复制战绩链接</view>
-      </view>
+        <kg-button variant="primary" size="lg" block icon="zap" bind:click="onChallenge">去刷题练手</kg-button>
+        <kg-button variant="text" size="md" block icon="copy" bind:click="onCopyLink">复制战绩链接</kg-button>
+      </kg-card>
     </block>
   </view>
 </scroll-view>

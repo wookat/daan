@@ -1,93 +1,136 @@
 <navbar title="{{moduleName}} · 专项练习" back="{{true}}" />
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
-    <view wx:if="{{loading}}" class="card spin">出题中…</view>
+    <block wx:if="{{loading}}">
+      <view class="p-head"><t-skeleton theme="text" animation="gradient" /></view>
+      <kg-card variant="raised" class="qcard"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
+    </block>
+
+    <kg-empty
+      wx:if="{{!loading && !cur && !finished}}"
+      icon="wifi-off"
+      title="题目加载失败"
+      desc="{{loadErr || '请检查网络后重试'}}"
+      ctaText="重试"
+      secondaryText="返回"
+      bind:cta="onRetry"
+      bind:secondary="onQuit"
+    />
 
     <!-- 答题 -->
     <block wx:if="{{!loading && cur}}">
       <view class="p-head">
-        <text class="p-idx"><text class="p-idx-b">{{idx + 1}}</text>/{{items.length}}</text>
+        <text class="p-idx num"><text class="p-idx-b">{{idx + 1}}</text>/{{items.length}}</text>
         <view class="p-cnt">
-          <text class="p-timer">{{timerText}}</text>
-          <text class="cnt-ok">✓ {{right}}</text>
-          <text class="cnt-bad">✗ {{wrongCount}}</text>
-          <view class="font-btn" bind:tap="onCycleFont">A<text class="font-btn-lv">{{fontLabel}}</text></view>
+          <view class="p-timer"><l-icon name="timer" size="16" tone="muted" /><text class="num">{{timerText}}</text></view>
+          <view class="cnt cnt-ok"><l-icon name="check" size="16" tone="ok" /><text class="num">{{right}}</text></view>
+          <view class="cnt cnt-bad"><l-icon name="x" size="16" tone="bad" /><text class="num">{{wrongCount}}</text></view>
+          <view class="font-btn" hover-class="font-btn--hover" role="button" aria-label="切换字号" bind:tap="onCycleFont">
+            <l-icon name="a-large-small" size="20" tone="ink-2" /><text class="font-btn-lv">{{fontLabel}}</text>
+          </view>
         </view>
       </view>
-      <view class="progress"><view class="pfill" style="width: {{(idx / items.length) * 100}}%" /></view>
+      <view class="progress"><kg-progress value="{{idx}}" max="{{items.length}}" thickness="{{4}}" aria-label="本组进度" /></view>
 
-      <view class="card">
+      <!-- kg-question-card / kg-option-group 小程序版未落地：页内按 T3 结构实现 -->
+      <kg-card variant="raised" class="qcard">
         <view class="tagrow">
-          <view wx:if="{{cur.is_real}}" class="tag tag-warn">真题{{cur.exam_year ? ' · ' + cur.exam_year : ''}}{{cur.exam_region ? ' · ' + cur.exam_region : ''}}</view>
-          <view wx:if="{{cur.submodule}}" class="tag tag-brand">{{cur.submodule}}</view>
+          <kg-tag wx:if="{{cur.is_real}}" tone="warn" icon="flag">真题{{cur.exam_year ? ' · ' + cur.exam_year : ''}}{{cur.exam_region ? ' · ' + cur.exam_region : ''}}</kg-tag>
+          <kg-tag wx:if="{{cur.submodule}}" tone="module" module="{{cur.module}}">{{cur.submodule}}</kg-tag>
         </view>
-        <text class="q" style="font-size: {{qFs}}rpx" user-select>{{cur.question}}</text>
+        <text class="q q-text" style="font-size: {{qFs}}px" user-select>{{cur.question}}</text>
+        <text wx:if="{{curStat}}" class="q-meta">{{curStat}}</text>
         <image wx:if="{{curImg}}" class="qimg" src="{{curImg}}" mode="widthFix" bind:tap="onPreviewImg" />
         <text wx:if="{{curImg && cur.image_credit}}" class="qimg-credit">图源：{{cur.image_credit}}</text>
-        <view
-          wx:for="{{cur.optList}}"
-          wx:key="k"
-          class="opt {{!picked ? '' : item.k === cur.answer ? 'right' : item.k === picked ? 'wrong' : 'dim'}}"
-          data-key="{{item.k}}"
-          bind:tap="onPick"
-        >
-          <text class="okey">{{item.k}}</text>
-          <text class="otext" style="font-size: {{optFs}}rpx">{{item.v}}</text>
-          <text wx:if="{{picked && item.k === cur.answer}}" class="omark good">✓</text>
-          <text wx:elif="{{picked && item.k === picked}}" class="omark badm">✗</text>
+        <view class="opts">
+          <view
+            wx:for="{{cur.optList}}"
+            wx:key="k"
+            class="opt {{!picked ? '' : item.k === cur.answer ? 'right' : item.k === picked ? 'wrong' : 'dim'}}"
+            hover-class="{{picked ? '' : 'opt--hover'}}"
+            hover-stay-time="60"
+            role="radio"
+            aria-checked="{{picked === item.k ? 'true' : 'false'}}"
+            data-key="{{item.k}}"
+            bind:tap="onPick"
+          >
+            <text class="okey">{{item.k}}</text>
+            <text class="otext q-text" style="font-size: {{optFs}}px">{{item.v}}</text>
+            <l-icon wx:if="{{picked && item.k === cur.answer}}" name="circle-check" size="20" tone="ok" />
+            <l-icon wx:elif="{{picked && item.k === picked}}" name="circle-x" size="20" tone="bad" />
+          </view>
         </view>
-      </view>
-
-      <!-- 解析卡 -->
-      <view wx:if="{{picked}}" class="card exp-card">
-        <view class="exp-ans-row">
-          <text class="exp-ans-k">正确答案</text>
-          <text class="exp-ans">{{cur.answer}}</text>
-          <text wx:if="{{picked !== cur.answer}}" class="exp-mine">我的答案 {{picked}}</text>
-        </view>
-        <view wx:if="{{cur.hs_explanation}}" class="exp-block">
-          <text class="exp-title hs">🥜 花生十三方法解析</text>
-          <text class="exp-text" style="font-size: {{expFs}}rpx" user-select>{{cur.hs_explanation}}</text>
-        </view>
-        <view wx:if="{{cur.xp_explanation}}" class="exp-block">
-          <text class="exp-title xp">👓 {{cur.xp_school || '第二名师视角'}}</text>
-          <text class="exp-text" style="font-size: {{expFs}}rpx" user-select>{{cur.xp_explanation}}</text>
-        </view>
-        <view wx:if="{{cur.explanation}}" class="exp-block">
-          <text class="exp-title pl">解析</text>
-          <text class="exp-text" style="font-size: {{expFs}}rpx" user-select>{{cur.explanation}}</text>
-        </view>
-        <text wx:if="{{cur.source}}" class="exp-src">来源：{{cur.source}}</text>
-        <view wx:if="{{cur.id}}" class="share-op" bind:tap="onShareQ">分享给队友，看 TA 能不能做对 ›</view>
-      </view>
+      </kg-card>
 
       <!-- 判分横幅 -->
       <view wx:if="{{picked}}" class="banner {{picked === cur.answer ? 'bok' : 'bbad'}}">
+        <l-icon name="{{picked === cur.answer ? 'circle-check' : 'circle-x'}}" size="24" tone="{{picked === cur.answer ? 'ok' : 'bad'}}" />
         <view class="b-l">
-          <text class="btitle">{{picked === cur.answer ? '✓ 回答正确' : '✗ 回答错误'}}</text>
+          <text class="btitle">{{picked === cur.answer ? '回答正确' : '回答错误'}}</text>
           <text class="bsub">{{picked === cur.answer ? '再接再厉，保持节奏' : '已自动加入错题本'}}</text>
         </view>
-        <view class="bnext {{picked === cur.answer ? 'nok' : 'nbad'}}" bind:tap="onNext">
-          {{idx + 1 < items.length ? '下一题' : '完成'}}
-        </view>
       </view>
+
+      <!-- 解析卡（kg-analysis-card 小程序版未落地，页内实现） -->
+      <kg-card wx:if="{{picked}}" variant="raised" class="exp-card">
+        <view class="exp-row">
+          <text class="exp-k">正确答案</text>
+          <text class="exp-ans num {{picked === cur.answer ? 'okc' : 'badc'}}">{{cur.answer}}</text>
+          <text wx:if="{{picked !== cur.answer}}" class="exp-mine">我的答案 <text class="num">{{picked}}</text></text>
+        </view>
+        <view wx:if="{{curStat}}" class="exp-row">
+          <text class="exp-k">全站数据</text>
+          <text class="exp-v">{{curStat}}</text>
+        </view>
+        <view wx:if="{{curKp}}" class="exp-row">
+          <text class="exp-k">考点</text>
+          <text class="exp-v">{{curKp}}</text>
+        </view>
+        <view wx:if="{{cur.source}}" class="exp-row">
+          <text class="exp-k">来源</text>
+          <text class="exp-v">{{cur.source}}</text>
+        </view>
+        <view wx:if="{{cur.hs_explanation}}" class="exp-block">
+          <kg-tag tone="brand" icon="lightbulb">花生十三方法解析</kg-tag>
+          <text class="exp-text q-text" style="font-size: {{expFs}}px" user-select>{{cur.hs_explanation}}</text>
+        </view>
+        <view wx:if="{{cur.xp_explanation}}" class="exp-block">
+          <kg-tag tone="info" icon="sparkles">{{cur.xp_school || '第二名师视角'}}</kg-tag>
+          <text class="exp-text q-text" style="font-size: {{expFs}}px" user-select>{{cur.xp_explanation}}</text>
+        </view>
+        <view wx:if="{{cur.explanation}}" class="exp-block">
+          <kg-tag tone="neutral">解析</kg-tag>
+          <text class="exp-text q-text" style="font-size: {{expFs}}px" user-select>{{cur.explanation}}</text>
+        </view>
+      </kg-card>
     </block>
 
     <!-- 结算 -->
-    <view wx:if="{{finished}}" class="card done">
-      <text class="done-pct">{{pct}}%</text>
+    <kg-card wx:if="{{finished}}" variant="raised" class="done">
+      <kg-progress shape="ring" size="{{96}}" value="{{pct}}" label="{{pct + '%'}}" aria-label="本组正确率" />
       <text class="done-t">本组完成</text>
-      <text class="done-sub">答对 {{right}}/{{items.length}} · 错题 {{wrongCount}} · 用时 {{totalSecs}}s</text>
-      <text wx:if="{{percentile !== null}}" class="done-beat">本组正确率击败了 {{percentile}}% 的刷题记录</text>
-      <view wx:if="{{dueReview > 0}}" class="duenudge" bind:tap="onGoReview">
+      <text class="done-sub">答对 <text class="num">{{right}}/{{items.length}}</text> · 错题 <text class="num">{{wrongCount}}</text> · 用时 <text class="num">{{totalSecs}}</text>s</text>
+      <view wx:if="{{percentile !== null}}" class="done-beat">
+        <l-icon name="trophy" size="16" tone="brand-text" />
+        <text>本组正确率击败了 <text class="num">{{percentile}}</text>% 的刷题记录</text>
+      </view>
+      <view wx:if="{{dueReview > 0}}" class="duenudge" hover-class="duenudge--hover" bind:tap="onGoReview">
+        <l-icon name="alarm-clock" size="20" tone="streak" />
         <view class="duenudge-l">
-          <text class="duenudge-t">今日还有 {{dueReview}} 题到期待复习</text>
+          <text class="duenudge-t">今日还有 <text class="num">{{dueReview}}</text> 题到期待复习</text>
           <text class="duenudge-s">趁热打铁，按遗忘曲线巩固一遍</text>
         </view>
-        <text class="duenudge-go">去复习 ›</text>
+        <view class="duenudge-go"><text>去复习</text><l-icon name="chevron-right" size="16" tone="brand-text" /></view>
       </view>
-      <view class="btn-primary" bind:tap="onRetry">再来一组</view>
-      <view class="btn-ghost done-quit" bind:tap="onQuit">返回首页</view>
-    </view>
+    </kg-card>
   </view>
 </scroll-view>
+
+<kg-action-bar wx:if="{{!loading && cur}}" layout="answer" index="{{idx}}" total="{{items.length}}">
+  <kg-button wx:if="{{cur.id}}" class="abar-btn" variant="ghost" size="lg" icon="share-2" bind:click="onShareQ">考队友</kg-button>
+  <kg-button class="abar-btn abar-main" variant="primary" size="lg" disabled="{{!picked}}" icon="{{idx + 1 < items.length ? 'chevron-right' : 'check'}}" bind:click="onNext">
+    {{idx + 1 < items.length ? '下一题' : '完成'}}
+  </kg-button>
+</kg-action-bar>
+
+<kg-action-bar wx:if="{{finished}}" layout="actions" primaryText="再来一组" secondaryText="返回首页" bind:primary="onRetry" bind:secondary="onQuit" />

@@ -6,38 +6,39 @@
   z-index: 1000;
   display: flex;
   flex-direction: row;
-  background: var(--surface, #ffffff);
-  border-top: 1rpx solid var(--border, #eceef4);
-  padding: 6rpx 16rpx 0;
+  background: var(--card);
+  border-top: 1px solid var(--line);
+  padding: var(--sp-4) var(--sp-8) 0;
   padding-bottom: env(safe-area-inset-bottom);
 }
 
 .tab {
   flex: 1;
+  min-height: var(--hit-min);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 12rpx 0 10rpx;
+  padding: var(--sp-4) 0;
 }
 
 .tab-ic {
-  width: 44rpx;
-  height: 44rpx;
+  width: 22px;
+  height: 22px;
 }
 
 .tab-t {
-  margin-top: 4rpx;
-  font-size: 20rpx;
+  margin-top: 2px;
+  font-size: var(--fs-caption);
   font-weight: 500;
-  color: var(--t3, #858ba3);
+  color: var(--ink-3);
 }
 
 .tab.on .tab-t {
-  color: var(--brand-500, #2e5bff);
+  color: var(--brand-text);
   font-weight: 600;
 }
 
 .tab.on .tab-ic {
-  transform: translateY(-2rpx);
+  transform: translateY(-1px);
 }

@@ -2,210 +2,190 @@
 <navbar title="刷题" brand />
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
-    <!-- 今日目标 hero -->
+    <!-- 今日目标 hero（kg-hero-card 小程序版未落地，页内按 COMPONENTS §2.5 结构实现） -->
     <view class="hero">
       <view class="hero-deco" />
       <view class="hero-top">
         <text class="hero-label">今日已练</text>
-        <text class="hero-streak" wx:if="{{badgeStreak || streak}}">🔥 连续刷题 {{badgeStreak || streak}} 天</text>
+        <view class="hero-streak" wx:if="{{badgeStreak || streak}}">
+          <l-icon name="flame" size="16" tone="on-brand" />
+          <text>连续刷题 {{badgeStreak || streak}} 天</text>
+        </view>
       </view>
       <view class="hero-num-row">
-        <text class="hero-n">{{today}}</text>
+        <text class="hero-n num">{{today}}</text>
         <text class="hero-goal">/ {{goal}} 题</text>
       </view>
-      <view class="hero-bar"><view class="hero-fill" style="width: {{goalPct}}%" /></view>
+      <view class="hero-prog"><kg-progress value="{{today}}" max="{{goal}}" thickness="{{4}}" inverse aria-label="今日目标进度" /></view>
       <view class="hero-btns">
-        <view class="hero-go" bind:tap="onContinueGoal">继续目标 ›</view>
+        <kg-button variant="primary" tone="inverse" size="md" icon="chevron-right" bind:click="onContinueGoal">继续目标</kg-button>
         <view class="hero-chips">
-          <text
+          <view
             wx:for="{{goalChips}}"
             wx:key="*this"
             class="hero-chip {{goal === item ? 'on' : ''}}"
             data-goal="{{item}}"
+            hover-class="hero-chip--hover"
             bind:tap="onSetGoal"
-          >{{item}}题</text>
+          >{{item}}题</view>
         </view>
       </view>
     </view>
 
     <!-- 今日任务三件套 -->
-    <view class="card taskcard">
+    <kg-card variant="raised" class="taskcard">
       <view class="tk-h">
         <text class="tk-t">今日任务</text>
-        <view class="tk-ring" style="background: conic-gradient(#2e5bff 0deg {{taskDoneN * 120}}deg, #f1f3f8 {{taskDoneN * 120}}deg 360deg)">
-          <view class="tk-ring-i">{{taskDoneN}}/3</view>
-        </view>
+        <kg-progress shape="ring" size="{{48}}" value="{{taskDoneN}}" max="{{3}}" label="{{taskDoneN}}/3" aria-label="今日任务完成数" />
       </view>
-      <view class="tk-row" data-kind="practice" bind:tap="onTaskGo">
-        <view class="tk-ck {{today >= goal ? 'on' : ''}}">{{today >= goal ? '✓' : ''}}</view>
+      <view class="tk-row" data-kind="practice" hover-class="tk-row--hover" bind:tap="onTaskGo">
+        <view class="tk-ck {{today >= goal ? 'on' : ''}}"><l-icon wx:if="{{today >= goal}}" name="check" size="16" tone="on-brand" /></view>
         <view class="tk-main">
           <text class="tk-name {{today >= goal ? 'tdone' : ''}}">刷题目标</text>
           <text class="tk-sub">已练 {{today}}/{{goal}} 题</text>
         </view>
-        <text class="tk-go">{{today >= goal ? '再练一组 ›' : '去刷题 ›'}}</text>
+        <text class="tk-go">{{today >= goal ? '再练一组' : '去刷题'}}</text>
       </view>
-      <view class="tk-row" data-kind="review" bind:tap="onTaskGo">
-        <view class="tk-ck {{dueLoaded && !dueReview ? 'on' : ''}}">{{dueLoaded && !dueReview ? '✓' : ''}}</view>
+      <view class="tk-row" data-kind="review" hover-class="tk-row--hover" bind:tap="onTaskGo">
+        <view class="tk-ck {{dueLoaded && !dueReview ? 'on' : ''}}"><l-icon wx:if="{{dueLoaded && !dueReview}}" name="check" size="16" tone="on-brand" /></view>
         <view class="tk-main">
           <text class="tk-name {{dueLoaded && !dueReview ? 'tdone' : ''}}">错题复习</text>
           <text class="tk-sub">{{dueReview ? '今日到期 ' + dueReview + ' 题' : dueLoaded ? '今日已清零' : '按遗忘曲线安排'}}</text>
         </view>
-        <text class="tk-go">{{dueReview ? '去复习 ›' : '错题本 ›'}}</text>
+        <text class="tk-go">{{dueReview ? '去复习' : '错题本'}}</text>
       </view>
-      <view class="tk-row" data-kind="checkin" bind:tap="onTaskGo">
-        <view class="tk-ck {{today > 0 ? 'on' : ''}}">{{today > 0 ? '✓' : ''}}</view>
+      <view class="tk-row" data-kind="checkin" hover-class="tk-row--hover" bind:tap="onTaskGo">
+        <view class="tk-ck {{today > 0 ? 'on' : ''}}"><l-icon wx:if="{{today > 0}}" name="check" size="16" tone="on-brand" /></view>
         <view class="tk-main">
-          <text class="tk-name {{today > 0 ? 'tdone' : ''}}">每日打卡 <text wx:if="{{badgeStreak || streak}}" class="tk-streak">🔥 连续 {{badgeStreak || streak}} 天</text></text>
+          <view class="tk-name-row">
+            <text class="tk-name {{today > 0 ? 'tdone' : ''}}">每日打卡</text>
+            <view wx:if="{{badgeStreak || streak}}" class="tk-streak">
+              <l-icon name="flame" size="16" tone="streak" />
+              <text>连续 {{badgeStreak || streak}} 天</text>
+            </view>
+          </view>
           <block wx:if="{{nextMilestone}}">
-            <view class="tk-bar"><view class="tk-fill" style="width: {{nextMilestone.pct}}%" /></view>
+            <view class="tk-bar"><kg-progress value="{{nextMilestone.pct}}" max="{{100}}" thickness="{{4}}" aria-label="下一徽章进度" /></view>
             <text class="tk-sub">再打卡 {{nextMilestone.left}} 天解锁「{{nextMilestone.days}} 天」徽章</text>
           </block>
           <text wx:else class="tk-sub">已解锁全部打卡徽章，太强了！</text>
         </view>
-        <text class="tk-go">徽章 ›</text>
+        <text class="tk-go">徽章</text>
       </view>
-    </view>
+    </kg-card>
 
     <!-- 今日到期复习卡 -->
-    <view wx:if="{{dueReview > 0}}" class="duebar" bind:tap="onReviewEntry">
+    <view wx:if="{{dueReview > 0}}" class="duebar" hover-class="duebar--hover" bind:tap="onReviewEntry">
+      <view class="duebar-ico"><l-icon name="alarm-clock" size="20" tone="streak" /></view>
       <view class="duebar-l">
         <text class="duebar-t">今日到期复习 {{dueReview}} 题</text>
-        <text class="duebar-s">按遗忘曲线安排 · 越拖越容易忘</text>
+        <text class="duebar-s">按遗忘曲线安排 · 越拖越忘</text>
       </view>
-      <text class="duebar-go">去复习 ›</text>
+      <kg-button variant="primary" size="sm">去复习</kg-button>
     </view>
     <view wx:elif="{{dueLoaded}}" class="duebar donebar">
+      <view class="duebar-ico ok"><l-icon name="circle-check" size="20" tone="ok" /></view>
       <view class="duebar-l">
-        <text class="duebar-t">今日复习已清零 ✓</text>
+        <text class="duebar-t">今日复习已清零</text>
         <text class="duebar-s">到期错题已全部复习完，继续刷新题吧</text>
       </view>
     </view>
 
     <!-- 制定学习计划引导卡 -->
-    <view wx:if="{{planLoaded && !hasProfile && !guideHide}}" class="card guide" bind:tap="onOpenSetup">
+    <view wx:if="{{planLoaded && !hasProfile && !guideHide}}" class="guide" hover-class="guide--hover" bind:tap="onOpenSetup">
       <view class="guide-l">
         <text class="guide-t">制定我的学习计划</text>
         <text class="guide-s">按考试日期倒排每日任务：专项练习 + 错题复习 + 每周模考</text>
       </view>
-      <text class="guide-btn">去制定 ›</text>
-      <text class="guide-x" catch:tap="onSkipGuide">跳过</text>
+      <kg-button variant="primary" size="sm">去制定</kg-button>
+      <view class="guide-x" catch:tap="onSkipGuide">跳过</view>
     </view>
 
     <!-- 学习计划卡 -->
-    <view class="card" wx:if="{{hasProfile && planTasks.length}}">
+    <kg-card variant="raised" class="plancard" wx:if="{{hasProfile && planTasks.length}}">
       <view class="plan-h">
         <text class="plan-t">今日学习计划</text>
-        <text class="plan-days" wx:if="{{daysLeft !== null}}">距考试 {{daysLeft}} 天</text>
+        <kg-tag wx:if="{{daysLeft !== null}}" tone="bad">距考试 {{daysLeft}} 天</kg-tag>
       </view>
       <view class="plan-prog">
-        <view class="plan-bar"><view class="plan-fill" style="width: {{planPct}}%" /></view>
-        <text class="plan-pct">{{planPct}}%</text>
+        <view class="plan-bar"><kg-progress value="{{planPct}}" max="{{100}}" thickness="{{4}}" aria-label="今日计划完成度" /></view>
+        <text class="plan-pct num">{{planPct}}%</text>
       </view>
       <view
         wx:for="{{planTasks}}"
         wx:key="index"
         class="plan-row"
         data-index="{{index}}"
+        hover-class="tk-row--hover"
         bind:tap="onPlanTask"
       >
-        <view class="task-ck {{item.done ? 'on' : ''}}">{{item.done ? '✓' : ''}}</view>
+        <view class="tk-ck {{item.done ? 'on' : ''}}"><l-icon wx:if="{{item.done}}" name="check" size="16" tone="on-brand" /></view>
         <text class="plan-txt {{item.done ? 'tdone' : ''}}">{{item.title || '练习任务'}}</text>
-        <text class="plan-go" wx:if="{{!item.done}}">去完成 ›</text>
+        <text class="plan-go" wx:if="{{!item.done}}">去完成</text>
       </view>
-    </view>
+    </kg-card>
 
-    <!-- 专项练习入口 -->
-    <view class="sec-h"><text class="sec-t">专项练习</text></view>
+    <!-- 专项练习入口（kg-module-card 小程序版未落地，页内按 §2.2 一行式实现） -->
+    <kg-section-header title="专项练习" />
     <view class="grid">
       <view
         wx:for="{{mods}}"
         wx:key="key"
         class="mcard"
         data-mod="{{item.key}}"
+        hover-class="mcard--hover"
         bind:tap="onStartModule"
       >
-        <view class="mico" style="background: {{item.bg}}; color: {{item.color}}">{{item.name[0]}}</view>
+        <view class="mico" style="background: {{item.soft}}; color: {{item.color}}"><l-icon name="{{item.icon}}" size="24" tone="inherit" /></view>
         <view class="m-main">
           <text class="mname">{{item.name}}</text>
           <text class="mcount">{{item.count}}</text>
         </view>
-        <text class="m-arrow">›</text>
+        <l-icon class="m-arrow" name="chevron-right" size="20" tone="faint" />
       </view>
     </view>
   </view>
 </scroll-view>
 
 <!-- 制定学习计划 sheet -->
-<view wx:if="{{setupOpen}}" class="sheet-mask" bind:tap="onCloseSetup">
-  <view class="sheet" catch:tap="onSheetNoop">
+<t-popup visible="{{setupOpen}}" placement="bottom" bind:visible-change="onSetupVisible">
+  <view class="sheet">
+    <view class="sheet-handle" />
     <view class="sheet-h">
       <text class="sheet-t">制定学习计划 · {{setupStep === 1 ? '考试信息' : setupStep === 2 ? '目标' : '每日时长'}}（{{setupStep}}/3）</text>
-      <text class="sheet-x" bind:tap="onCloseSetup">✕</text>
+      <view class="sheet-x" hover-class="sheet-x--hover" bind:tap="onCloseSetup"><l-icon name="x" size="24" tone="muted" /></view>
     </view>
-    <block wx:if="{{setupStep === 1}}">
-      <text class="sheet-st">考试类型</text>
-      <view class="chips">
-        <text
-          wx:for="{{examTypes}}"
-          wx:key="*this"
-          class="chip {{pf.exam_type === item ? 'on' : ''}}"
-          data-key="exam_type"
-          data-val="{{item}}"
-          bind:tap="onPfChip"
-        >{{item}}</text>
-      </view>
-      <text class="sheet-st">目标地区</text>
-      <input
-        class="pf-input"
-        value="{{pf.target_region}}"
-        placeholder="如 广东 / 全国（选填）"
-        maxlength="20"
-        bind:input="onPfRegion"
-      />
-      <text class="sheet-st">考试日期</text>
-      <picker mode="date" value="{{pf.exam_date}}" start="{{dateStart}}" end="{{dateEnd}}" bind:change="onPfDate">
-        <view class="pf-date {{pf.exam_date ? '' : 'empty'}}">{{pf.exam_date || '选择日期 ›'}}</view>
-      </picker>
-    </block>
-    <block wx:elif="{{setupStep === 2}}">
-      <text class="sheet-st">目标分</text>
-      <view class="chips">
-        <text
-          wx:for="{{scoreChips}}"
-          wx:key="*this"
-          class="chip {{pf.target_score === item ? 'on' : ''}}"
-          data-key="target_score"
-          data-val="{{item}}"
-          bind:tap="onPfChip"
-        >{{item}}+</text>
-      </view>
-      <text class="sheet-st">基础自评</text>
-      <view class="chips">
-        <text
-          wx:for="{{baseLevels}}"
-          wx:key="*this"
-          class="chip {{pf.base_level === item ? 'on' : ''}}"
-          data-key="base_level"
-          data-val="{{item}}"
-          bind:tap="onPfChip"
-        >{{item}}</text>
-      </view>
-    </block>
-    <block wx:else>
-      <text class="sheet-st">每日可用时长（决定每日任务量）</text>
-      <view class="chips">
-        <text
-          wx:for="{{minuteChips}}"
-          wx:key="*this"
-          class="chip {{pf.daily_minutes === item ? 'on' : ''}}"
-          data-key="daily_minutes"
-          data-val="{{item}}"
-          bind:tap="onPfChip"
-        >{{item}} 分钟</text>
-      </view>
-      <view class="pf-summary">{{pf.exam_type}}{{pf.target_region ? ' · ' + pf.target_region : ''}} · {{pf.exam_date}} · 目标 {{pf.target_score}}+ · {{pf.base_level}} · 每天 {{pf.daily_minutes}} 分钟</view>
-    </block>
-    <view class="sheet-btn {{setupBusy ? 'dis' : ''}}" bind:tap="onSetupNext">{{setupStep < 3 ? '下一步' : setupBusy ? '生成中…' : '生成我的学习计划'}}</view>
-    <view wx:if="{{setupStep > 1}}" class="pf-back" bind:tap="onSetupBack">上一步</view>
+    <scroll-view class="sheet-body" scroll-y>
+      <block wx:if="{{setupStep === 1}}">
+        <text class="sheet-st">考试类型</text>
+        <view class="sheet-chips"><kg-chip-row options="{{examTypeOpts}}" value="{{pf.exam_type}}" data-key="exam_type" bind:change="onPfChip" /></view>
+        <text class="sheet-st">目标地区</text>
+        <view class="pf-field">
+          <t-input borderless value="{{pf.target_region}}" placeholder="如 广东 / 全国（选填）" maxlength="{{20}}" bind:change="onPfRegion" />
+        </view>
+        <text class="sheet-st">考试日期</text>
+        <picker mode="date" value="{{pf.exam_date}}" start="{{dateStart}}" end="{{dateEnd}}" bind:change="onPfDate">
+          <view class="pf-date {{pf.exam_date ? '' : 'empty'}}">
+            <text>{{pf.exam_date || '选择日期'}}</text>
+            <l-icon name="chevron-right" size="20" tone="faint" />
+          </view>
+        </picker>
+      </block>
+      <block wx:elif="{{setupStep === 2}}">
+        <text class="sheet-st">目标分</text>
+        <view class="sheet-chips"><kg-chip-row options="{{scoreOpts}}" value="{{pf.target_score}}" data-key="target_score" bind:change="onPfChip" /></view>
+        <text class="sheet-st">基础自评</text>
+        <view class="sheet-chips"><kg-chip-row options="{{baseLevelOpts}}" value="{{pf.base_level}}" data-key="base_level" bind:change="onPfChip" /></view>
+      </block>
+      <block wx:else>
+        <text class="sheet-st">每日可用时长（决定每日任务量）</text>
+        <view class="sheet-chips"><kg-chip-row options="{{minuteOpts}}" value="{{pf.daily_minutes}}" data-key="daily_minutes" bind:change="onPfChip" /></view>
+        <view class="pf-summary">{{pf.exam_type}}{{pf.target_region ? ' · ' + pf.target_region : ''}} · {{pf.exam_date}} · 目标 {{pf.target_score}}+ · {{pf.base_level}} · 每天 {{pf.daily_minutes}} 分钟</view>
+      </block>
+    </scroll-view>
+    <view class="sheet-acts">
+      <kg-button variant="primary" size="lg" block loading="{{setupBusy}}" bind:click="onSetupNext">{{setupStep < 3 ? '下一步' : '生成我的学习计划'}}</kg-button>
+      <kg-button wx:if="{{setupStep > 1}}" variant="text" size="md" block bind:click="onSetupBack">上一步</kg-button>
+    </view>
   </view>
-</view>
+</t-popup>

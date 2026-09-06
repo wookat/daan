@@ -1,59 +1,71 @@
 <navbar title="迷你模考" back="{{true}}" />
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
-    <view wx:if="{{loading}}" class="card spin">试卷加载中…</view>
+    <block wx:if="{{loading}}">
+      <view class="topbar"><t-skeleton theme="text" animation="gradient" /></view>
+      <kg-card variant="raised" class="qcard"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
+    </block>
 
     <block wx:if="{{!loading && cur}}">
       <view class="topbar">
-        <text class="tag tag-brand">{{idx + 1}}/{{items.length}}</text>
-        <text class="clock">⏱ {{fmtLeft}}</text>
-        <text class="topinfo">已答 {{answered}}</text>
+        <kg-tag tone="brand">{{idx + 1}}/{{items.length}}</kg-tag>
+        <view class="clock"><l-icon name="timer" size="16" tone="brand-text" /><text class="num">{{fmtLeft}}</text></view>
+        <text class="topinfo">已答 <text class="num">{{answered}}</text></text>
       </view>
-      <view class="progress"><view class="pfill" style="width: {{((idx + 1) / items.length) * 100}}%" /></view>
+      <view class="progress"><kg-progress value="{{idx + 1}}" max="{{items.length}}" thickness="{{4}}" aria-label="作答进度" /></view>
 
-      <view class="card">
-        <text class="q" user-select>{{cur.question}}</text>
-        <view
-          wx:for="{{cur.optList}}"
-          wx:key="k"
-          class="opt {{cur._picked === item.k ? 'sel' : ''}}"
-          data-key="{{item.k}}"
-          bind:tap="onPick"
-        >
-          <text class="okey">{{item.k}}</text>
-          <text class="otext">{{item.v}}</text>
-        </view>
-      </view>
-
-      <view class="navrow">
-        <view class="nbtn {{idx === 0 ? 'dis' : ''}}" bind:tap="onPrev">上一题</view>
-        <view class="nbtn acard" bind:tap="onOpenCard">答题卡</view>
-        <view wx:if="{{idx + 1 < items.length}}" class="nbtn main" bind:tap="onNext">下一题</view>
-        <view wx:else class="nbtn main" bind:tap="onConfirmSubmit">交卷</view>
-      </view>
-    </block>
-
-    <!-- 答题卡浮层 -->
-    <view wx:if="{{cardOpen}}" class="mask" bind:tap="onCloseCard">
-      <view class="sheet" catch:tap="noop">
-        <view class="sheet-h">
-          <text class="sheet-t">答题卡</text>
-          <text class="sheet-x" bind:tap="onCloseCard">✕</text>
-        </view>
-        <scroll-view scroll-y class="acard-scroll" type="list">
-          <view class="acard-grid">
-            <view
-              wx:for="{{items}}"
-              wx:key="index"
-              class="acard-n {{item._picked ? 'done' : ''}} {{index === idx ? 'cur' : ''}}"
-              data-i="{{index}}"
-              bind:tap="onJump"
-            >{{index + 1}}</view>
+      <!-- kg-question-card / kg-option-group 小程序版未落地：页内按 T3 结构实现 -->
+      <kg-card variant="raised" class="qcard">
+        <text class="q q-text" user-select>{{cur.question}}</text>
+        <view class="opts">
+          <view
+            wx:for="{{cur.optList}}"
+            wx:key="k"
+            class="opt {{cur._picked === item.k ? 'sel' : ''}}"
+            hover-class="opt--hover"
+            hover-stay-time="60"
+            role="radio"
+            aria-checked="{{cur._picked === item.k ? 'true' : 'false'}}"
+            data-key="{{item.k}}"
+            bind:tap="onPick"
+          >
+            <text class="okey">{{item.k}}</text>
+            <text class="otext q-text">{{item.v}}</text>
           </view>
-        </scroll-view>
-        <view class="acard-foot">已答 {{answered}}/{{items.length}} · 剩余 {{fmtLeft}}</view>
-        <view class="btn-primary" bind:tap="onConfirmSubmit">交卷</view>
-      </view>
-    </view>
+        </view>
+      </kg-card>
+    </block>
   </view>
 </scroll-view>
+
+<kg-action-bar wx:if="{{!loading && cur}}" layout="answer" index="{{idx}}" total="{{items.length}}">
+  <kg-button class="abar-btn" variant="ghost" size="lg" disabled="{{idx === 0}}" icon="chevron-left" bind:click="onPrev">上一题</kg-button>
+  <kg-button class="abar-btn" variant="ghost" size="lg" icon="clipboard-list" bind:click="onOpenCard">答题卡</kg-button>
+  <kg-button wx:if="{{idx + 1 < items.length}}" class="abar-btn abar-main" variant="primary" size="lg" bind:click="onNext">下一题</kg-button>
+  <kg-button wx:else class="abar-btn abar-main" variant="primary" size="lg" loading="{{submitting}}" bind:click="onConfirmSubmit">交卷</kg-button>
+</kg-action-bar>
+
+<!-- 答题卡 -->
+<t-popup visible="{{cardOpen}}" placement="bottom" bind:visible-change="onCardVisible">
+  <view class="sheet">
+    <view class="sheet-handle" />
+    <view class="sheet-h">
+      <text class="sheet-t">答题卡</text>
+      <view class="sheet-x" hover-class="sheet-x--hover" bind:tap="onCloseCard"><l-icon name="x" size="24" tone="muted" /></view>
+    </view>
+    <scroll-view scroll-y class="acard-scroll" type="list">
+      <view class="acard-grid">
+        <view
+          wx:for="{{items}}"
+          wx:key="index"
+          class="acard-n num {{item._picked ? 'done' : ''}} {{index === idx ? 'cur' : ''}}"
+          hover-class="opt--hover"
+          data-i="{{index}}"
+          bind:tap="onJump"
+        >{{index + 1}}</view>
+      </view>
+    </scroll-view>
+    <view class="acard-foot">已答 <text class="num">{{answered}}/{{items.length}}</text> · 剩余 <text class="num">{{fmtLeft}}</text></view>
+    <kg-button variant="primary" size="lg" block loading="{{submitting}}" bind:click="onConfirmSubmit">交卷</kg-button>
+  </view>
+</t-popup>

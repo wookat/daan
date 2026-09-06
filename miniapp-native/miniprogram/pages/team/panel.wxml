@@ -1,60 +1,90 @@
 <navbar title="小队面板" back="{{true}}" />
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
-    <view wx:if="{{loading}}" class="card spin">加载中…</view>
+    <block wx:if="{{loading}}">
+      <view class="hero"><t-skeleton theme="text" animation="gradient" /></view>
+      <kg-card variant="raised" class="mem"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
+    </block>
+
+    <kg-empty
+      wx:if="{{!loading && !panel}}"
+      icon="wifi-off"
+      title="小队信息加载失败"
+      desc="{{loadErr || '请检查网络后重试'}}"
+      ctaText="重试"
+      bind:cta="onReload"
+    />
 
     <block wx:if="{{!loading && panel}}">
       <view class="hero">
         <text class="hero-t">{{panel.team.name}}</text>
-        <text class="hero-s">{{members.length}} 名队友 · 邀请码 {{panel.team.invite_code}}</text>
+        <text class="hero-s"><text class="num">{{members.length}}</text> 名队友 · 邀请码 <text class="num">{{panel.team.invite_code}}</text></text>
         <view class="hero-btns">
-          <view class="hero-btn" bind:tap="onCopyInvite">复制邀请链接</view>
-          <button class="hero-btn share-btn" open-type="share">微信邀请</button>
-          <view class="hero-btn ghost" bind:tap="onLeave">退出小队</view>
+          <kg-button variant="primary" tone="inverse" size="sm" icon="copy" bind:click="onCopyInvite">复制邀请链接</kg-button>
+          <t-button class="share-btn" theme="primary" size="small" shape="round" open-type="share">
+            <l-icon name="share-2" size="16" tone="on-brand" />微信邀请
+          </t-button>
+          <kg-button variant="ghost" tone="inverse" size="sm" bind:click="onLeave">退出小队</kg-button>
         </view>
       </view>
 
-      <view wx:if="{{weekRank.length}}" class="card rank-card">
-        <view class="rank-head">
-          <text class="rank-t">🏆 本周队内排行</text>
-          <view class="rank-copy" bind:tap="onCopyWeekReport">复制周战报</view>
-        </view>
-        <view wx:for="{{weekRank}}" wx:key="index" class="rank-row">
-          <text class="rank-no no{{index + 1}}">{{index + 1}}</text>
-          <text class="rank-name">{{item.nickname}}</text>
-          <text wx:if="{{index === 0 && item.week_n > 0}}" class="rank-king">卷王</text>
-          <text wx:if="{{item.is_me}}" class="rank-me">我</text>
-          <text class="rank-n">本周 {{item.week_n}} 题</text>
-        </view>
-      </view>
+      <!-- 队内无人 -->
+      <kg-empty
+        wx:if="{{members.length <= 1}}"
+        icon="users"
+        title="队里还只有你一个人"
+        desc="把邀请码发给考友，一起打卡刷题、互相催学"
+        ctaText="复制邀请链接"
+        bind:cta="onCopyInvite"
+      />
 
-      <view class="week-head">
-        <text class="wh-name">队友</text>
-        <view class="wh-days">
-          <text wx:for="{{weekLabels}}" wx:key="*this" class="wh-d {{index === todayIdx ? 'today' : ''}}">{{item}}</text>
-        </view>
-      </view>
-
-      <view wx:for="{{members}}" wx:key="index" class="card mem">
-        <view class="mem-top">
-          <view class="mem-av {{item.is_me ? 'me' : ''}}">{{item.av}}</view>
-          <view class="mem-l">
-            <view class="mem-name-row">
-              <text class="mem-name">{{item.nickname}}</text>
-              <text wx:if="{{item.is_me}}" class="mem-tag me">我</text>
-              <text wx:elif="{{item.is_creator}}" class="mem-tag">队长</text>
+      <block wx:else>
+        <kg-card variant="raised" class="rank-card">
+          <view class="rank-head">
+            <view class="rank-t"><l-icon name="trophy" size="18" tone="streak" /><text>本周队内排行</text></view>
+            <kg-button wx:if="{{!weekEmpty}}" variant="text" size="sm" icon="copy" bind:click="onCopyWeekReport">复制周战报</kg-button>
+          </view>
+          <!-- 本周无打卡 -->
+          <kg-empty wx:if="{{weekEmpty}}" compact icon="calendar" title="本周还没人打卡" desc="做完今天第一组题，你就是本周卷王" />
+          <block wx:else>
+            <view wx:for="{{weekRank}}" wx:key="index" class="rank-row">
+              <text class="rank-no num no{{index + 1}}">{{index + 1}}</text>
+              <text class="rank-name">{{item.nickname}}</text>
+              <kg-tag wx:if="{{index === 0 && item.week_n > 0}}" tone="warn" icon="crown">卷王</kg-tag>
+              <kg-tag wx:if="{{item.is_me}}" tone="brand">我</kg-tag>
+              <text class="rank-n">本周 <text class="num">{{item.week_n}}</text> 题</text>
             </view>
-            <text class="mem-sub">{{item.desc}}</text>
+          </block>
+        </kg-card>
+
+        <view class="week-head">
+          <text class="wh-name">队友</text>
+          <view class="wh-days">
+            <text wx:for="{{weekLabels}}" wx:key="*this" class="wh-d {{index === todayIdx ? 'today' : ''}}">{{item}}</text>
           </view>
-          <view wx:if="{{!item.is_me && !item.today_n}}" class="remind-btn" data-index="{{index}}" catch:tap="onRemind">提醒 TA</view>
-          <text wx:elif="{{item.today_n}}" class="mem-done">今日 {{item.today_n}} 题</text>
         </view>
-        <view class="mem-week">
-          <view wx:for="{{item.cells}}" wx:for-item="c" wx:key="index" class="wk-cell {{c.cls}}">
-            <text wx:if="{{c.label}}" class="wk-n {{c.cls}}">{{c.label}}</text>
+
+        <kg-card wx:for="{{members}}" wx:key="index" variant="raised" class="mem">
+          <view class="mem-top">
+            <view class="mem-av {{item.is_me ? 'me' : ''}}">{{item.av}}</view>
+            <view class="mem-l">
+              <view class="mem-name-row">
+                <text class="mem-name">{{item.nickname}}</text>
+                <kg-tag wx:if="{{item.is_me}}" tone="brand">我</kg-tag>
+                <kg-tag wx:elif="{{item.is_creator}}" tone="neutral">队长</kg-tag>
+              </view>
+              <text class="mem-sub">{{item.desc}}</text>
+            </view>
+            <kg-button wx:if="{{!item.is_me && !item.today_n}}" variant="secondary" size="sm" icon="bell" data-index="{{index}}" bind:click="onRemind">提醒 TA</kg-button>
+            <kg-tag wx:elif="{{item.today_n}}" tone="ok" icon="check">今日 {{item.today_n}} 题</kg-tag>
           </view>
-        </view>
-      </view>
+          <view class="mem-week">
+            <view wx:for="{{item.cells}}" wx:for-item="c" wx:key="index" class="wk-cell {{c.cls}}">
+              <text wx:if="{{c.label}}" class="wk-n num">{{c.label}}</text>
+            </view>
+          </view>
+        </kg-card>
+      </block>
     </block>
   </view>
 </scroll-view>

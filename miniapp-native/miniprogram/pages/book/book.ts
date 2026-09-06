@@ -49,6 +49,14 @@ const SORTS = [
   { k: 'reason', t: '按错因' },
 ];
 
+type Opt = { value: string; label: string };
+const toOpts = (xs: string[]): Opt[] => xs.map((x) => ({ value: x, label: x }));
+// 筛选 chip 行首项「全部」= ''（原点选已选中取消的语义由它承接）
+const withAll = (xs: string[]): Opt[] => [{ value: '', label: '全部' }].concat(toOpts(xs));
+
+type ChipChange = WechatMiniprogram.CustomEvent<{ value: string }>;
+type VisibleChange = WechatMiniprogram.CustomEvent<{ visible: boolean }>;
+
 function monthRecap(all: Mistake[]): { total: number; byModule: RecapRow[]; byReason: RecapRow[] } {
   const now = new Date();
   const m0 = new Date(now.getFullYear(), now.getMonth(), 1).getTime() / 1000;
@@ -101,18 +109,31 @@ Page({
     rStreak: 0,
     celebrate: false,
     celebrateN: 0,
-    REASONS,
+    reasonOpts: toOpts(REASONS),
+    tabOpts: [
+      { value: 'todo', label: '待掌握 0' },
+      { value: 'done', label: '已掌握 0' },
+      { value: 'fav', label: '收藏 0' },
+    ],
+    // 错题卡「更多」分组菜单
+    opsOpen: false,
+    opsKind: 'mistake' as 'mistake' | 'fav',
+    opsIdx: -1,
+    opsQid: 0,
+    opsHasNote: false,
+    taSize: { minHeight: 72 },
+    noteTaSize: { minHeight: 112 },
     // 筛选/排序
     filterOpen: false,
-    SORTS,
+    sortOpts: SORTS.map((s) => ({ value: s.k, label: s.t })),
     sortBy: 'time',
     filterMod: '',
-    modOptions: [] as string[],
+    modOpts: withAll([]),
     filterType: '',
-    typeOptions: [] as string[],
+    typeOpts: withAll([]),
     // 纠错
     reportOpen: false,
-    REPORT_TYPES,
+    reportTypeOpts: toOpts(REPORT_TYPES),
     reportType: '',
     reportDetail: '',
     reportBusy: false,
@@ -148,15 +169,23 @@ Page({
       const typeOptions = Array.from(
         new Set(all.map((x) => x.question_type || '').filter(Boolean))
       );
+      const todoCount = all.filter((x) => !x.mastered).length;
+      const doneCount = all.filter((x) => !!x.mastered).length;
+      const favs = f.items || [];
       this.setData({
         all,
-        modOptions,
-        typeOptions,
+        modOpts: withAll(modOptions),
+        typeOpts: withAll(typeOptions),
         recap: monthRecap(all),
-        favs: f.items || [],
+        favs,
         folders: fd.items || [],
-        todoCount: all.filter((x) => !x.mastered).length,
-        doneCount: all.filter((x) => !!x.mastered).length,
+        todoCount,
+        doneCount,
+        tabOpts: [
+          { value: 'todo', label: `待掌握 ${todoCount}` },
+          { value: 'done', label: `已掌握 ${doneCount}` },
+          { value: 'fav', label: `收藏 ${favs.length}` },
+        ],
         due: r.items || [],
         dueTotal: r.total || (r.items || []).length,
       });
@@ -194,17 +223,20 @@ Page({
   onFilterClose() {
     this.setData({ filterOpen: false });
   },
-  onPickSort(e: WechatMiniprogram.TouchEvent) {
-    this.setData({ sortBy: String(e.currentTarget.dataset.k) });
+  onFilterVisible(e: VisibleChange) {
+    if (!e.detail.visible) this.onFilterClose();
+  },
+  onPickSort(e: ChipChange) {
+    this.setData({ sortBy: String(e.detail.value) });
     this.applyTab();
   },
-  onPickMod(e: WechatMiniprogram.TouchEvent) {
-    const v = String(e.currentTarget.dataset.v || '');
+  onPickMod(e: ChipChange) {
+    const v = String(e.detail.value || '');
     this.setData({ filterMod: this.data.filterMod === v ? '' : v });
     this.applyTab();
   },
-  onPickType(e: WechatMiniprogram.TouchEvent) {
-    const v = String(e.currentTarget.dataset.v || '');
+  onPickType(e: ChipChange) {
+    const v = String(e.detail.value || '');
     this.setData({ filterType: this.data.filterType === v ? '' : v });
     this.applyTab();
   },
@@ -212,9 +244,34 @@ Page({
     this.setData({ sortBy: 'time', filterMod: '', filterType: '' });
     this.applyTab();
   },
-  onTab(e: WechatMiniprogram.TouchEvent) {
-    this.setData({ tab: e.currentTarget.dataset.tab as 'todo' | 'done' | 'fav' });
+  onTab(e: ChipChange) {
+    this.setData({ tab: e.detail.value as 'todo' | 'done' | 'fav' });
     this.applyTab();
+  },
+  // 「更多」分组菜单：只做弹层开关 + 把选中项转发给原有处理函数（dataset 原样传递）
+  onOpsOpen(e: WechatMiniprogram.TouchEvent) {
+    const d = e.currentTarget.dataset;
+    this.setData({
+      opsOpen: true,
+      opsKind: d.kind === 'fav' ? 'fav' : 'mistake',
+      opsIdx: Number(d.index),
+      opsQid: Number(d.qid || 0),
+      opsHasNote: d.note === 1 || d.note === '1',
+    });
+  },
+  onOpsClose() {
+    this.setData({ opsOpen: false });
+  },
+  onOpsVisible(e: VisibleChange) {
+    if (!e.detail.visible) this.onOpsClose();
+  },
+  onOpsPick(e: WechatMiniprogram.TouchEvent) {
+    this.onOpsClose();
+    const act = String(e.currentTarget.dataset.act || '');
+    if (act === 'note') this.onNoteOpen(e);
+    else if (act === 'share') this.onShareQ(e);
+    else if (act === 'report') this.onReportOpen(e);
+    else if (act === 'unfav') this.onUnfav(e);
   },
   onToggle(e: WechatMiniprogram.TouchEvent) {
     const idx = Number(e.currentTarget.dataset.index);
@@ -279,10 +336,13 @@ Page({
   onReportClose() {
     this.setData({ reportOpen: false });
   },
-  onPickReportType(e: WechatMiniprogram.TouchEvent) {
-    this.setData({ reportType: String(e.currentTarget.dataset.t) });
+  onReportVisible(e: VisibleChange) {
+    if (!e.detail.visible) this.onReportClose();
   },
-  onReportDetail(e: WechatMiniprogram.Input) {
+  onPickReportType(e: ChipChange) {
+    this.setData({ reportType: String(e.detail.value) });
+  },
+  onReportDetail(e: ChipChange) {
     this.setData({ reportDetail: e.detail.value });
   },
   async onReportSubmit() {
@@ -317,7 +377,10 @@ Page({
   onNoteClose() {
     this.setData({ noteOpen: false });
   },
-  onNoteInput(e: WechatMiniprogram.Input) {
+  onNoteVisible(e: VisibleChange) {
+    if (!e.detail.visible) this.onNoteClose();
+  },
+  onNoteInput(e: ChipChange) {
     this.setData({ noteDraft: e.detail.value });
   },
   async onNoteSave(e: WechatMiniprogram.TouchEvent) {
@@ -525,8 +588,8 @@ Page({
       /* 非关键路径 */
     }
   },
-  async onReviewReason(e: WechatMiniprogram.TouchEvent) {
-    const rz = String(e.currentTarget.dataset.rz || '');
+  async onReviewReason(e: ChipChange) {
+    const rz = String(e.detail.value || '');
     const cur = this.data.rCur;
     if (!rz || !cur || cur.extra) return;
     const i = this.data.rIdx;
@@ -554,6 +617,9 @@ Page({
   },
   onCloseCelebrate() {
     this.setData({ celebrate: false });
+  },
+  onCelebrateVisible(e: VisibleChange) {
+    if (!e.detail.visible) this.onCloseCelebrate();
   },
   noop() {
     /* 阻断冒泡 */

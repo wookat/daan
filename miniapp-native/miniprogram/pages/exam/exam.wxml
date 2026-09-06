@@ -1,40 +1,72 @@
 <navbar title="模考" />
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
-    <view class="hero-mini">
-      <text class="hm-deco">📝</text>
-      <text class="hm-t">迷你模考</text>
-      <text class="hm-s">30 题混合模块 · 交卷即出成绩报告与薄弱考点</text>
-      <view class="mh-stats">
-        <view class="mh-stat"><text class="mh-n">30</text><text class="mh-k">题量</text></view>
-        <view class="mh-stat"><text class="mh-n">25<text class="mh-u">min</text></text><text class="mh-k">建议用时</text></view>
-        <view class="mh-stat"><text class="mh-n">5</text><text class="mh-k">覆盖模块</text></view>
+    <!-- 迷你模考（kg-hero-card 小程序版未落地，页内按 raised 卡 + 1 按钮实现） -->
+    <view class="hero">
+      <view class="hero-deco"><l-icon name="file-text" size="32" tone="on-brand" /></view>
+      <view class="hero-top">
+        <kg-tag tone="brand" icon="timer">限时 25 分钟</kg-tag>
       </view>
-      <view class="hm-btn" bind:tap="onMini">开始迷你模考 ›</view>
+      <text class="hero-t">迷你模考</text>
+      <text class="hero-s">30 题混合模块 · 交卷即出成绩报告与薄弱考点</text>
+      <view class="stat-row">
+        <view class="stat"><text class="stat-n num">30</text><text class="stat-k">题量</text></view>
+        <view class="stat"><text class="stat-n num">25<text class="stat-u">min</text></text><text class="stat-k">建议用时</text></view>
+        <view class="stat"><text class="stat-n num">5</text><text class="stat-k">覆盖模块</text></view>
+      </view>
+      <kg-button variant="primary" tone="inverse" size="lg" block icon="chevron-right" bind:click="onMini">开始迷你模考</kg-button>
     </view>
 
-    <view class="sec-h"><text class="sec-t"><view class="sec-bar" />真题卷库</text></view>
-    <view wx:if="{{loading}}" class="card spin">加载中…</view>
-    <view wx:if="{{!loading && loadErr && !papers.length}}" class="empty">
-      <view class="eico">📶</view>
-      <text>真题卷库加载失败，请检查网络</text>
-      <text class="tag tag-gray" style="margin-top: 12rpx">{{loadErr}}</text>
-      <view class="btn-ghost" style="margin-top: 32rpx; padding: 18rpx 64rpx" bind:tap="onRetry">重试</view>
-    </view>
-    <view wx:elif="{{!loading && !papers.length}}" class="empty">
-      <view class="eico">📄</view>
-      <text>真题卷搜集中，全真模考将在二期上线</text>
-    </view>
-    <view wx:for="{{papers}}" wx:key="source" class="card prow" data-title="{{item.title || item.source}}" bind:tap="onPaperTap">
-      <view class="p-badge">
-        <text class="pb-y">{{item.yearShort}}</text>
-        <text class="pb-k">{{item.regionShort}}</text>
+    <kg-section-header title="真题卷库" />
+
+    <block wx:if="{{loading}}">
+      <kg-card wx:for="{{[1, 2, 3]}}" wx:key="*this" variant="raised" class="prow">
+        <t-skeleton theme="text" animation="gradient" />
+      </kg-card>
+    </block>
+    <kg-empty
+      wx:if="{{!loading && loadErr && !papers.length}}"
+      icon="wifi-off"
+      title="真题卷库加载失败"
+      desc="{{'请检查网络后重试 · ' + loadErr}}"
+      ctaText="重试"
+      bind:cta="onRetry"
+    />
+    <kg-empty
+      wx:elif="{{!loading && !papers.length}}"
+      icon="files"
+      title="真题卷搜集中"
+      desc="全真模考将在二期上线，先用迷你模考体验完整报告"
+      ctaText="去迷你模考"
+      bind:cta="onMini"
+    />
+    <block wx:if="{{!loading && papers.length}}">
+      <kg-card
+        wx:for="{{pagedPapers}}"
+        wx:key="source"
+        variant="raised"
+        clickable
+        chevron
+        class="prow"
+        data-title="{{item.title || item.source}}"
+        bind:click="onPaperTap"
+      >
+        <view class="p-row">
+          <view class="p-badge">
+            <text class="pb-y num">{{item.yearShort}}</text>
+            <text class="pb-k">{{item.regionShort}}</text>
+          </view>
+          <view class="p-main">
+            <text class="p-t">{{item.title || item.source}}</text>
+            <text class="p-s">{{item.region ? item.region + ' · ' : ''}}{{item.n ? item.n + ' 题' : ''}}</text>
+          </view>
+          <kg-tag tone="neutral">二期开放</kg-tag>
+        </view>
+      </kg-card>
+      <view wx:if="{{pagedPapers.length < papers.length}}" class="more">
+        <kg-button variant="ghost" size="md" block bind:click="onMorePapers">加载更多（{{pagedPapers.length}}/{{papers.length}}）</kg-button>
       </view>
-      <view class="p-main">
-        <text class="p-t">{{item.title || item.source}}</text>
-        <text class="p-s">{{item.region ? item.region + ' · ' : ''}}{{item.n ? item.n + ' 题' : ''}}</text>
-      </view>
-      <text class="tag tag-gray">二期开放</text>
-    </view>
+      <text wx:else class="list-end">共 {{papers.length}} 套 · 已全部展示</text>
+    </block>
   </view>
 </scroll-view>

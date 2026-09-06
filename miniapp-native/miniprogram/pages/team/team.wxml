@@ -2,36 +2,78 @@
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
     <view class="hero">
-      <text class="hero-t">刷题小队</text>
-      <text class="hero-s">和队友一起打卡 · 看谁今天没刷题 · 互相催学</text>
-    </view>
-
-    <view wx:if="{{loading}}" class="card spin">加载中…</view>
-
-    <view wx:if="{{!loading && !teams.length}}" class="card">
-      <view class="empty">还没有小队。创建一个小队，把邀请码发给考友，一起打卡刷题！</view>
-    </view>
-    <view wx:for="{{teams}}" wx:key="id" class="card t-row" data-id="{{item.id}}" bind:tap="onOpenPanel">
-      <view class="t-l">
-        <text class="t-name">{{item.name}}</text>
-        <text class="t-sub">{{item.n_members}} 名队友 · 邀请码 {{item.invite_code}}</text>
+      <view class="hero-ico"><l-icon name="users" size="28" tone="on-brand" /></view>
+      <view class="hero-txt">
+        <text class="hero-t">刷题小队</text>
+        <text class="hero-s">和队友一起打卡 · 看谁今天没刷题 · 互相催学</text>
       </view>
-      <text class="t-go">看队友 ›</text>
     </view>
 
-    <view class="btn-primary" bind:tap="onShowCreate">创建小队</view>
-    <view class="join-row">
-      <input class="join-input" value="{{joinCode}}" placeholder="输入 6 位邀请码" maxlength="8" bind:input="onCodeInput" />
-      <view class="join-btn" bind:tap="onJoin">加入</view>
-    </view>
+    <block wx:if="{{loading}}">
+      <kg-card variant="raised" class="t-row"><t-skeleton theme="text" animation="gradient" /></kg-card>
+      <kg-card variant="raised" class="t-row"><t-skeleton theme="text" animation="gradient" /></kg-card>
+    </block>
+
+    <kg-empty
+      wx:if="{{!loading && !teams.length}}"
+      icon="users"
+      title="还没有小队"
+      desc="创建一个小队，把邀请码发给考友，一起打卡刷题"
+      ctaText="创建小队"
+      bind:cta="onShowCreate"
+    />
+
+    <block wx:if="{{!loading}}">
+      <kg-card
+        wx:for="{{teams}}"
+        wx:key="id"
+        variant="raised"
+        clickable
+        chevron
+        class="t-row"
+        data-id="{{item.id}}"
+        bind:click="onOpenPanel"
+      >
+        <view class="t-l">
+          <text class="t-name">{{item.name}}</text>
+          <text class="t-sub"><text class="num">{{item.n_members}}</text> 名队友 · 邀请码 <text class="num">{{item.invite_code}}</text></text>
+        </view>
+      </kg-card>
+    </block>
+
+    <kg-button wx:if="{{!loading && teams.length}}" variant="primary" size="lg" block icon="plus" bind:click="onShowCreate">创建小队</kg-button>
+
+    <kg-card variant="raised" class="join">
+      <text class="join-t">有邀请码？直接加入</text>
+      <view class="join-row">
+        <t-input
+          class="join-input"
+          borderless
+          value="{{joinCode}}"
+          placeholder="输入 6 位邀请码"
+          maxlength="{{8}}"
+          bind:change="onCodeInput"
+        />
+        <kg-button variant="secondary" size="md" bind:click="onJoin">加入</kg-button>
+      </view>
+    </kg-card>
   </view>
 </scroll-view>
 
 <!-- 创建小队弹层 -->
-<view wx:if="{{showCreate}}" class="mask" bind:tap="onHideCreate">
-  <view class="sheet" catch:tap="onNoop">
+<t-popup visible="{{showCreate}}" placement="bottom" bind:visible-change="onCreateVisible">
+  <view class="sheet">
+    <view class="sheet-handle" />
     <text class="sheet-t">创建刷题小队</text>
-    <input class="sheet-input" value="{{newName}}" placeholder="小队名，如：上岸冲刺队" maxlength="20" bind:input="onNameInput" />
-    <view class="sheet-btn {{creating ? 'off' : ''}}" bind:tap="onCreate">{{creating ? '创建中…' : '创建并生成邀请码'}}</view>
+    <t-input
+      class="sheet-input"
+      value="{{newName}}"
+      placeholder="小队名，如：上岸冲刺队"
+      maxlength="{{20}}"
+      bind:change="onNameInput"
+    />
+    <kg-button variant="primary" size="lg" block loading="{{creating}}" bind:click="onCreate">
+      {{creating ? '创建中…' : '创建并生成邀请码'}}
+    </kg-button>
   </view>
-</view>
+</t-popup>

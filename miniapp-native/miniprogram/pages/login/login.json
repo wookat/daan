@@ -2,6 +2,8 @@
   "renderer": "webview",
   "usingComponents": {
     "navbar": "/components/navbar/index",
+    "l-icon": "/components/l-icon/index",
+    "kg-card": "/components/kg-card/index",
     "t-input": "tdesign-miniprogram/input/input",
     "t-button": "tdesign-miniprogram/button/button"
   }

@@ -11,37 +11,42 @@
 
 .nav-row {
   position: relative;
-  height: 88rpx;
+  height: var(--hit-min);
   display: flex;
   flex-direction: row;
   align-items: center;
-  padding: 0 32rpx;
+  padding: 0 var(--page-x);
 }
 
 .nav-back {
-  width: 64rpx;
-  height: 64rpx;
-  margin-left: -16rpx;
-  margin-right: 8rpx;
+  width: var(--hit-min);
+  height: var(--hit-min);
+  margin-left: calc(-1 * var(--sp-12));
+  margin-right: var(--sp-4);
+  border-radius: var(--r-full);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--fs-h2);
-  font-weight: 400;
-  color: var(--ink);
   flex-shrink: 0;
+}
+
+.nav-back--hover {
+  background: var(--fill);
+}
+
+.navbar-brand .nav-back--hover {
+  background: var(--brand-press);
 }
 
 .nav-title {
   font-size: var(--fs-h3);
   font-weight: 600;
   color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .navbar-brand .nav-title {
-  color: var(--on-brand);
-}
-
-.navbar-brand .nav-back {
   color: var(--on-brand);
 }
