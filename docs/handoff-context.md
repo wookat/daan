@@ -2037,3 +2037,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 本地：pytest 490（+1）/ ruff 0 / pyright 仅原有 `access_log_report` 导入解析 1 error（stash 对照同）/ `bash -n` 过。
 - 生产：scp 两文件（md5 核对）、手工跑与脚本逐字相同的压缩循环：415 MB → **86 MB**（15 个 .gz ≈360→14.4 MB ≈25:1 + 5 个 ≤3 天明文 75 MB），`df /` 5.5 → 5.9 G（88%），3.3 s；`gzip -t` 15/15；新脚本重算 `crawler-stats.json` 与 14:03 cron 产物除 `generated_at` 外**逐键相等**（Yandex 1184 / Bing 119 / Google 47 / Apple 3）；周报 `zcat -f` 输出与改前 `cat` 输出 `diff` 空。
 - 登记：这不是宿主问题的解（别家 25 G+ 未动），扩盘/迁出 recruit·softcopyright 仍待老板；`-mtime +3` 依据是归档写入形态、未长期观测；`.sheet-x`/自然旧壳 404 (c) 待下次发版；`error_reason` ≥09-11 看 probe=0；`.trend-kn` 需 4 周样本。下次 SOP-10 审计 ~R440。
+
+### R433（`deploy/kaogong-ops.sh` + `backend/app/ops_status.py` 1 行正则 + 单测 + README；bundle 不变、容器不重建、脚本 scp md5 核对）— 卷内手工全库快照离站归档 + `VOLUME-SNAPSHOT` 巡检
+- 取证 docs/iter/round-3/r433-volume-snapshot-offload-ops-audit.md。只读盘点：`~/kaogong-backups` 468 MB = 3 份每日 gzip（策略保留、R2 都有、非浪费）；`deploy_kaogong-data` 卷 922 MB 里 `data.db` 429 + wal 109 之外，**`data.db.bak-w3.gz` 178 MB + `r418-before.db.gz` 179 MB 两份手工全库快照**（R191 就写过「勿在 /data 堆放」，之后又堆进去无人巡检）= kaogong 名下第二可动项。共享宿主（recruit pgdata 9 G / containerd 9.5 G / SoftCopyright 6 G / build cache 2.75 G）只记录不动。
+- 处置（同 R191，可逆）：容器内 `gzip -t` → `docker exec cat | rclone rcat --size` 到 `r2:zalize-backups/kaogong-sqlite/archive/` → 远端字节数 + `rclone cat | md5sum` 真回读与本地一致（`9cebb800…`/`010485278…`）→ 才删本地。卷 922 → **581 MB**，healthy 0 重启。两份现只在 R2 archive（单副本），需要时 `rclone copy` 回。
+- 巡检：`kaogong-ops.sh` 每日 `find /data -maxdepth 1 \( *.db* -o *.gz \) ! data.db* -size +1M` → 有则写 `VOLUME-SNAPSHOT N file(s) M MB: <paths> (move to r2:…/archive/)`（只报不删）；`ops_status.ALERT_PAT` 加该词管理台标红（随下次容器重建生效）。同步前 `diff` 生产副本发现**未入库改动**（本地保留 7→3 份）已回收进仓库再 scp（md5 `863db0bd…`）。生产整脚本实跑 rc=0 157 s：backup/R2/RESTORE-VERIFY/R2-VERIFY 全 ok、无 VOLUME-SNAPSHOT 行（卷已干净）、`/api/health` 200；改前 2 MiB 假快照演练能报、删后为空。
+- 本地：`bash -n` 过；pytest ops_status 4 passed；ruff 0；pyright 0。
+- 登记：宿主仍 91%/4.6 G——kaogong 可动项已动完（R432 −330 MB + R433 −340 MB），扩盘/迁出 recruit·softcopyright 仍待老板；`.sheet-x`/自然旧壳 404 (c) 待下次发版；`error_reason` ≥09-11 看 probe=0；`.trend-kn` 需 4 周样本。下次 SOP-10 审计 ~R440。

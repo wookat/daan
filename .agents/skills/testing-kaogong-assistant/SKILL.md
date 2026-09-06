@@ -1449,3 +1449,9 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - `answer_log.created_at` / `mistakes.created_at` 是 Unix 秒 real，按日分桶用 `date(created_at,'unixepoch')`，别 `substr(created_at,1,10)`。`mistakes/review_log/interview_sessions/shared_answers/users` 没有 `probe` 列，判断某行是否真人只能经 uid 关联 `answer_log.probe`（三路计数 p0/p1/NULL 都要看，混合 uid 不能整体归真人）。
 - `scripts/` 与 `deploy/cron_access_report.sh` 不走 `deploy_h5.sh` rsync：改完 scp 到 `/home/ubuntu/kaogong-assistant/` 同路径并两端 md5 核对。
 - 归档改读侧/压缩的验证 = 改前先留基线（`cp crawler-stats.json /tmp/before.json`；`cat *.jsonl | access_log_report.py - --days 7 > /tmp/before.txt`），改后用新脚本对同目录重算，`json` 除 `generated_at` 外逐键比、周报 `diff` 要为空；`gzip -t` 每个 .gz；再看下一次 :17 归档 / :23 日报 cron 自然跑完 `generated_at` 更新、`.state` 正常。压缩用 `nice`，全部 415 MB 只要 3 s，不会挤宿主。
+
+## R433 卷内快照归档 / 运维脚本同步经验
+- `deploy/kaogong-ops.sh` 部署在 VPS `/home/ubuntu/kaogong-ops.sh`（cron 40 3 CST），不走 `deploy_h5.sh` rsync。scp 覆盖前**先 `diff` 生产副本**——R433 发现生产有未入库改动（本地备份保留 7→3 份），直接覆盖会把它回退；回收进仓库再 scp、两端 md5 核对，并 `cp -p x x.bak-rNNN` 留旧版。
+- `/data` 卷顶层只该有 `data.db`(+wal/shm)、`qimg/`、`iter-r3b/` 与各轮 `r*-*.json` 处置记录；`app.db`/`kaogong.db` 是 0 字节空壳。手工全库快照（`*.db.gz`/`*.bak*`）不能长期留在卷内：容器内 `gzip -t` → `docker exec C cat f | rclone rcat --size N r2:zalize-backups/kaogong-sqlite/archive/f` → `rclone size --json` 字节数 + `rclone cat | md5sum` 真回读一致 → 才 `rm`；178 MB 一份上传+回读约 70 s，别在半途 kill。`rclone lsl` 对空前缀返回 rc=1 不是失败。
+- 每日 ops 日志会写 `VOLUME-SNAPSHOT N file(s) M MB: …`（只报不删）；看到就按上面口径归档。演练用 `head -c 2097152 /dev/zero > /data/r-selftest.db.gz` 触发、看完删掉。整脚本手工实跑一次 ≈150 s（含 167 MB R2 上传 + 回读校验），会覆盖当天 `data-<date>.db.gz`（同名重传，无副作用）；容器无 `sqlite3` CLI，`.backup` 走 python 回落是既有行为不是报错。
+- 宿主磁盘问题别再往 kaogong 名下找：R432/R433 后 kaogong 自有可动项已清空，剩余是 recruit pgdata / containerd / SoftCopyright / build cache（别家，不动、不 prune）。

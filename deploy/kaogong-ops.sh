@@ -7,7 +7,7 @@ set -u
 LOG=/home/ubuntu/kaogong-reports/kaogong-ops.log
 mkdir -p "$(dirname "$LOG")"
 TS=$(date '+%F %T')
-# 1. 每日 DB 备份（本地保留 7 份）
+# 1. 每日 DB 备份（本地保留 3 份，30 天历史在 R2；主机 50G 盘紧张）
 BK=/home/ubuntu/kaogong-backups
 mkdir -p "$BK"
 docker exec deploy-kaogong-1 sqlite3 /data/data.db ".backup /data/daily.db" 2>/dev/null \
@@ -16,7 +16,7 @@ docker cp deploy-kaogong-1:/data/daily.db "$BK/data-$(date +%F).db" && docker ex
 gzip -f "$BK/data-$(date +%F).db"
 # 文件名为 data-YYYY-MM-DD.db.gz，按名排序即按日期排序
 # shellcheck disable=SC2012
-ls -t "$BK"/data-*.db.gz 2>/dev/null | tail -n +8 | xargs -r rm -f
+ls -t "$BK"/data-*.db.gz 2>/dev/null | tail -n +4 | xargs -r rm -f
 find "$BK" -name "pre-*.db.gz" -mtime +3 -delete 2>/dev/null
 # 1b. R2 离站上传（zalize-backups/kaogong-sqlite，保留 30 天）
 ENV_FILE=/home/ubuntu/.env
@@ -86,6 +86,12 @@ fi
 PCT=$(df --output=pcent / | tail -1 | tr -dc '0-9')
 if [ "${PCT:-0}" -ge 90 ]; then
   echo "$TS DISK HIGH ${PCT}% used on /" >> "$LOG"
+fi
+# 1c''. 卷内手工快照巡检：/data 只该有 data.db(+wal/shm)；手工全库快照须放 R2 archive/ 或宿主 pre-*.db.gz（3 天清理）
+SNAP=$(docker exec deploy-kaogong-1 sh -c "find /data -maxdepth 1 -type f \( -name '*.db*' -o -name '*.gz' \) ! -name 'data.db*' -size +1M -exec ls -l {} + 2>/dev/null" \
+  | awk '{s+=$5; n++; f=f" "$NF} END{if(n) printf "%d file(s) %d MB:%s", n, s/1048576, f}')
+if [ -n "$SNAP" ]; then
+  echo "$TS VOLUME-SNAPSHOT $SNAP (move to r2:$BUCKET_PREFIX/archive/)" >> "$LOG"
 fi
 # 1d. 宿主内存压力巡检：可用内存/交换占用/后端 RSS 每日一行（共享宿主 earlyoom 误杀早发现）
 MEMLINE=$(free -m | awk '/^Mem:/{printf "mem_avail=%sMiB", $7} /^Swap:/{printf " swap_used=%sMiB", $3}')

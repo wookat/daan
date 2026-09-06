@@ -57,14 +57,16 @@ def test_failed_lines_marked_and_alerted(tmp_path):
         f"{_now_cst(2)} RESTORE-VERIFY FAILED verify-script-failed: boom",
         f"{_now_cst(1)} DISK HIGH 93% used on /",
         f"{_now_cst(1)} UNHEALTHY api=000, restarting",
+        f"{_now_cst(1)} VOLUME-SNAPSHOT 2 file(s) 340 MB: /data/a.db.gz /data/b.db.gz (move to r2:x/archive/)",
     ])
     out = parse_ops_status(str(tmp_path))
     assert out["available"] is True
     assert out["backup"]["ok"] is False
     assert out["restore_verify"]["ok"] is False
     assert out["r2_verify"] is None
-    assert len(out["alerts"]) == 4  # 7 天窗口内的 4 条告警
+    assert len(out["alerts"]) == 5  # 7 天窗口内的 5 条告警
     assert any("DISK HIGH" in a for a in out["alerts"])
+    assert any("VOLUME-SNAPSHOT" in a for a in out["alerts"])
 
 
 def test_garbage_lines_tolerated(tmp_path):

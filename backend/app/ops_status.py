@@ -10,7 +10,7 @@ import time
 from datetime import datetime, timedelta, timezone
 
 TAIL_BYTES = 64 * 1024
-ALERT_PAT = re.compile(r"FAILED|DISK HIGH|UNHEALTHY|SIZE MISMATCH")
+ALERT_PAT = re.compile(r"FAILED|DISK HIGH|UNHEALTHY|SIZE MISMATCH|VOLUME-SNAPSHOT")
 CST = timezone(timedelta(hours=8))
 # 看板固定置顶的引擎（无论有没有来过都列出，「从未」才看得见）
 CRAWLER_PINNED = ("Google", "Baidu", "Bing")

@@ -110,10 +110,19 @@ SQLite 存于 docker volume `kaogong-data`（/data/data.db）。备份：`docker
 
 ## 生产运营脚本（deploy/kaogong-ops.sh）
 - 部署位置：VPS `/home/ubuntu/kaogong-ops.sh`，cron `40 3 * * *`。
-- 每日 SQLite `.backup` → 本地 `~/kaogong-backups`（gz，保留 7 份）→ rclone 上传
+- 每日 SQLite `.backup` → 本地 `~/kaogong-backups`（gz，保留 3 份；宿主 50G 盘紧张，30 天历史看 R2）→ rclone 上传
   `r2:zalize-backups/kaogong-sqlite/`（保留 30 天，远端字节数校验）→ 健康巡检
   （`/api/questions?limit=1` 非 200 时 `docker compose up -d` 自愈）。
 - R2 凭证：VPS `/home/ubuntu/.env`（`R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_ENDPOINT`，不入库）。
+- 该脚本也不走 `deploy_h5.sh` rsync：改完 `scp deploy/kaogong-ops.sh` 到 `/home/ubuntu/kaogong-ops.sh`、两端 md5 核对
+  （R433 同步前发现生产副本有一处未入库改动——保留份数 7→3——已回收进仓库；改前先 `diff` 生产副本）。
+- 卷内手工快照巡检（R433，`VOLUME-SNAPSHOT`）：`/data` 顶层只该有 `data.db`(+wal/shm)。脚本每日 `find` 出
+  `*.db*`/`*.gz` 且非 `data.db*`、>1 MB 的文件，写一行 `VOLUME-SNAPSHOT N file(s) M MB: <paths>` 到 ops 日志
+  （只报不删），管理台 ops_status 按告警外显。起因：`data.db.bak-w3.gz`（178 MB）+ `r418-before.db.gz`（179 MB）
+  两份手工全库快照在卷里躺了数轮无人发现，卷 922 MB → 归档后 581 MB。处置口径：容器内 `gzip -t` →
+  `docker exec cat | rclone rcat --size` 到 `r2:zalize-backups/kaogong-sqlite/archive/<name>` → 远端 `rclone size`
+  字节数 + `rclone cat | md5sum` 真回读与本地一致 → 才 `rm` 本地副本；活跃 `data.db`/WAL/SHM/每日备份一律不动。
+  以后手工快照直接落 R2 `archive/` 或宿主 `~/kaogong-backups/pre-*.db.gz`（3 天自动清理），勿留在卷内。
 
 ## 搜索引擎抓取日报（scripts/crawler_stats.py，R377）
 - VPS cron `23 * * * *`：`python3 /home/ubuntu/kaogong-assistant/scripts/crawler_stats.py
