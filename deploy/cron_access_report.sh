@@ -31,10 +31,10 @@ python3 "$ARCHIVER" "$LOG_GLOB" "$ARCHIVE_DIR" >/dev/null 2>&1 || true
   fi
 } > "$OUT" 2>&1
 
-# 归档：3 天前的按日文件 gzip（jsonl 约 10:1；crawler_stats.py 与上面的 zcat -f 都能读 .gz，zcat 可复算），保留 90 天。
+# 归档：3 天前的按日文件 gzip（R432 实测 360→14 MB；crawler_stats.py 与上面的 zcat -f 都能读 .gz），保留 90 天。
 # 用 gzip -c >> 追加成多成员 gz 而不是 gzip -f：同一天若事后又归档出新 .jsonl（如 .state 丢失重灌），不覆盖已有 .gz
 while IFS= read -r f; do
-  [ -n "$f" ] && gzip -c "$f" >> "$f.gz" && rm -f "$f"
+  [ -n "$f" ] && gzip -c "$f" >> "$f.gz" && touch -r "$f" "$f.gz" && rm -f "$f"
 done < <(find "$ARCHIVE_DIR" -name 'access-*.jsonl' -mtime +3 2>/dev/null)
 find "$ARCHIVE_DIR" -name 'access-*.jsonl*' -mtime +90 -delete 2>/dev/null || true
 

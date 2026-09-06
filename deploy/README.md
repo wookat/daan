@@ -123,7 +123,11 @@ SQLite 存于 docker volume `kaogong-data`（/data/data.db）。备份：`docker
 - 产物 `crawler-stats.json` 经 `/reports` 只读挂载由 `ops_status.parse_crawler_stats` 解析，
   管理台数据看板「搜索引擎抓取」面板外显（Google/Baidu/Bing 固定置顶，从未来过标红）。
 - `scripts/` 不在 `deploy_h5.sh` rsync 范围内，改动该脚本需手工 `scp scripts/crawler_stats.py
-  scripts/access_log_report.py` 到 VPS 同路径。
+  scripts/access_log_report.py` 到 VPS 同路径；`deploy/cron_access_report.sh` 同理（不重建容器时也要 scp，md5 核对）。
+- 归档目录 `/home/ubuntu/kaogong-reports/access-archive/`：小时级 `archive_access_log.py` 写明文 `access-YYYYMMDD.jsonl`，
+  周报 cron（周一 08:00）把 3 天前的文件 `gzip -c >>` 成 `.jsonl.gz`（多成员追加不覆盖）、保留 90 天（R432；
+  之前全明文 415 MB → 86 MB）。`crawler_stats.py::iter_archive` 与周报的 `zcat -f` 都同时读 `.jsonl` 和 `.jsonl.gz`，
+  改读侧时两种都要覆盖（否则 .gz 会被静默跳过、日报少算）。
 - 候选真人口径（R382/R388/R393）：逐层剔除探针网段（`probe-ips.txt`，含 VPS 自身出口）、引擎与通用
   bot UA（`BOT_GENERIC` 含 `devin/`，与后端 `PROBE_UA_MARKERS` 单测锁同步）、test- uid、源站直连（无边缘头，
   单列 `humans.direct`）、显式 `X-Kg-Probe: 1`、非正式域名 `X-Forwarded-Host`（Pages 预览域名，单列

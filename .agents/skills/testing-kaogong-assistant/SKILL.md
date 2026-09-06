@@ -1443,3 +1443,9 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - bash 陷阱：`ssh R "cd X && nohup cmd > log 2>&1 & echo ok"` 的 `&` 作用于整个 `cd && nohup` 列表，子 shell 会持有 ssh 管道等 cmd 结束；要立即返回用 `setsid -f nohup cmd > log 2>&1 < /dev/null && echo ok`。远端验证法：`ps -o pid,ppid,sid,pgid,cmd` + `ls -l /proc/<pid>/fd` 看 fd1/2 是 pipe 还是日志文件。
 - `deploy/host_probe.sh` 可单独跑：`ssh R bash -s < deploy/host_probe.sh` → `mem_avail=… disk_avail=… load=… other_builds=N`；`other_builds` 用 `[d]ocker` 写法防 pgrep 匹到自身，验证时远端 `bash -c 'exec -a "docker compose up -d --build" sleep 30' &` 造一个假进程看计数。
 - 部署脚本改动的验证 = 真跑一次 `--skip-build` 部署看 `host:`/`compose-started`/`poll:`/`KG_COMPOSE_EXIT` 四行 + `/api/health` rev + 容器 healthy/RestartCount + 容器日志 5xx/Traceback/locked，无 DB 写入无需清理、无 UI 无需 testing agent。
+
+## R432 访问归档 gzip / 只读查库口径经验
+- 容器内数据库是 `DB_PATH=/data/data.db`（`/data/kaogong.db`、`/data/app.db` 是 0 字节空壳，连上去 `no such table`）；只读用 `sqlite3.connect("file:/data/data.db?mode=ro", uri=True)`，脚本经 `cat x.py | ssh R 'docker exec -i deploy-kaogong-1 python3 -'` 送入（inline heredoc 套 docker exec 会空输出）。
+- `answer_log.created_at` / `mistakes.created_at` 是 Unix 秒 real，按日分桶用 `date(created_at,'unixepoch')`，别 `substr(created_at,1,10)`。`mistakes/review_log/interview_sessions/shared_answers/users` 没有 `probe` 列，判断某行是否真人只能经 uid 关联 `answer_log.probe`（三路计数 p0/p1/NULL 都要看，混合 uid 不能整体归真人）。
+- `scripts/` 与 `deploy/cron_access_report.sh` 不走 `deploy_h5.sh` rsync：改完 scp 到 `/home/ubuntu/kaogong-assistant/` 同路径并两端 md5 核对。
+- 归档改读侧/压缩的验证 = 改前先留基线（`cp crawler-stats.json /tmp/before.json`；`cat *.jsonl | access_log_report.py - --days 7 > /tmp/before.txt`），改后用新脚本对同目录重算，`json` 除 `generated_at` 外逐键比、周报 `diff` 要为空；`gzip -t` 每个 .gz；再看下一次 :17 归档 / :23 日报 cron 自然跑完 `generated_at` 更新、`.state` 正常。压缩用 `nice`，全部 415 MB 只要 3 s，不会挤宿主。
