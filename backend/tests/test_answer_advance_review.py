@@ -49,7 +49,9 @@ def test_correct_answer_advances_open_mistake(client):
     assert d["reviewed"] == [{"mistake_id": mid, "streak": 1, "mastered": False}]
     row = _row(mid)
     assert row["review_count"] == 1 and row["review_streak"] == 1 and row["mastered"] == 0 and row["logs"] == 1
-    assert row["next_review"] > db.time.time() + 0.5 * 86400   # 下次复习 1 天后
+    # 下次复习 = 明天（中国日历日 00:00，R438 起不再按复习时刻滚动 24 h）
+    assert db.time.time() < row["next_review"] <= db.time.time() + 86400
+    assert row["next_review"] % 86400 == 16 * 3600
     _cleanup()
 
 

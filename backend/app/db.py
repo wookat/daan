@@ -1262,6 +1262,12 @@ def cn_day() -> str:
     return time.strftime("%Y-%m-%d", time.gmtime(time.time() + 8 * 3600))
 
 
+def cn_day_start(ts: float | None = None) -> float:
+    """中国时区（UTC+8）ts 所在日 00:00 的 Unix 秒。"""
+    t = time.time() if ts is None else ts
+    return float(int(t + 8 * 3600) // 86400 * 86400 - 8 * 3600)
+
+
 def daily_archive_day(date: str | None) -> str | None:
     """校验往期每日一练日期：仅接受今天之前 7 天内的 ISO 日期，否则 None。"""
     if not date:
@@ -3431,7 +3437,8 @@ def _advance_review(conn, mid: int, correct: bool, uid: str | None) -> dict | No
         )
     streak = (row["review_streak"] or 0) + 1 if correct else 0
     days = REVIEW_INTERVALS_DAYS[min(streak - 1, len(REVIEW_INTERVALS_DAYS) - 1)] if correct else 1
-    nxt = time.time() + days * 86400
+    # 到期点落在中国日历日 00:00，与 UI「今日到期 / 明天复习」及 cn_day 的「今天」同口径
+    nxt = cn_day_start() + days * 86400
     mastered = 1 if streak > len(REVIEW_INTERVALS_DAYS) else 0
     conn.execute(
         "UPDATE mistakes SET review_count=review_count+1, review_streak=?, next_review=?, "
