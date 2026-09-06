@@ -1,5 +1,5 @@
 <template>
-  <view class="wrap chatwrap">
+  <view class="wrap ask">
     <!-- 顶部工具行 -->
     <view class="topbar">
       <view class="top-l">
@@ -7,170 +7,180 @@
         <text class="top-s">花生十三方法体系 · 拍题 / 文字皆可</text>
       </view>
       <view class="top-acts">
-        <text class="top-btn" @click="openHistory">历史</text>
-        <text v-if="results.length" class="top-btn" @click="newSession">新对话</text>
+        <kg-button variant="secondary" size="lg" icon="rotate-ccw" aria-label="历史会话" @click="openHistory">历史{{ sessions.length ? ' ' + sessions.length : '' }}</kg-button>
+        <kg-button v-if="results.length" variant="secondary" size="lg" icon="plus" @click="newSession">新对话</kg-button>
       </view>
     </view>
 
-    <!-- 空态：相机优先取景屏 -->
-    <view v-if="!results.length && !loading" class="camscreen">
-      <view class="cam-top">
-        <view class="cam-quick" @click="openHistory"><l-icon name="rotate-ccw" :size="14" color="#e5e9f5" /><text>历史</text></view>
-        <view class="cam-quick" @click="goBook"><l-icon name="book-open" :size="14" color="#e5e9f5" /><text>错题</text></view>
-      </view>
-      <view class="cam-frame" @click="openCamera">
-        <view class="cam-corner tl" /><view class="cam-corner tr" /><view class="cam-corner bl" /><view class="cam-corner br" />
-        <l-icon name="camera" :size="34" color="#8fa3d9" />
-        <text class="cam-tip">将题目放入框内拍下，AI 讲给你听</text>
-        <text class="cam-tip2">答案 + 花生十三速解方法 + 可迁移技巧</text>
-      </view>
-      <view class="cam-modes">
-        <text class="cam-mode on">拍单题</text>
-        <text class="cam-mode dim" aria-disabled="true">整页批改 · 即将上线</text>
-        <text class="cam-mode" @click="textOpen = true">文字输入</text>
-      </view>
-      <view class="cam-acts">
-        <view class="cam-side" @click="openAlbum"><l-icon name="files" :size="22" color="#e5e9f5" /><text>相册</text></view>
-        <view class="cam-shutter" @click="openCamera"><view class="cam-shutter-in" /></view>
-        <view class="cam-side" @click="goInterview"><l-icon name="mic" :size="22" color="#e5e9f5" /><text>面试</text></view>
-      </view>
-    </view>
+    <kg-two-col>
+      <template #main>
+        <!-- 空态引导：拍题 / 粘贴题目两个动作（移动端） -->
+        <template v-if="!results.length && !loading">
+          <kg-card class="mob-empty">
+            <kg-empty-state icon="camera" title="拍一道题，AI 讲给你听" desc="答案 + 花生十三速解方法 + 可迁移技巧；也可粘贴题目文字或从相册选图" cta-text="拍题讲解" secondary-text="粘贴题目文字" @cta="openCamera" @secondary="textOpen = true" />
+            <view class="mob-acts">
+              <kg-button variant="text" size="lg" icon="files" @click="openAlbum">从相册选图</kg-button>
+              <kg-button variant="text" size="lg" icon="book-open" @click="goBook">看错题本</kg-button>
+            </view>
+          </kg-card>
 
-    <!-- 桌面空态操作台：粘贴/上传优先（仅 H5 ≥1024px） -->
-    <!-- #ifdef H5 -->
-    <view v-if="!results.length && !loading" class="deskstart card">
-      <view class="ds-col">
-        <view class="ds-h"><l-icon name="clipboard-list" :size="18" color="#2e5bff" /><text class="ds-t">粘贴题目文字</text></view>
-        <textarea v-model="qtext" class="ta ds-ta" placeholder="粘贴题干和选项…" :maxlength="-1" />
-        <text class="label">你选的答案（可选，填了会帮你分析错因）</text>
-        <view class="ans-chips">
-          <text v-for="o in ['A', 'B', 'C', 'D']" :key="o" class="ans-chip" :class="{ on: uanswer === o }" @click="uanswer = uanswer === o ? '' : o">{{ o }}</text>
-        </view>
-        <button class="btn sheetbtn" :disabled="loading" @click="submitText">用花生十三方法讲解</button>
-      </view>
-      <view class="ds-col">
-        <view class="ds-h"><l-icon name="camera" :size="18" color="#2e5bff" /><text class="ds-t">上传题目截图</text></view>
-        <view class="ds-drop" @click="openAlbum">
-          <l-icon name="files" :size="30" color="#8fa3d9" />
-          <text class="ds-d1">点击选择图片，或拖拽到这里</text>
-          <text class="ds-d2">也可直接 Ctrl+V 粘贴截图</text>
-        </view>
-      </view>
-    </view>
-    <!-- #endif -->
-
-    <view v-if="!results.length && !loading && recent.length" class="card reccard">
-      <view class="rec-h">最近讲解</view>
-      <view v-for="r in recent" :key="r.ts" class="rec-row">
-        <view class="rec-ans">{{ r.ans || '？' }}</view>
-        <view class="rec-main">
-          <text class="rec-brief">{{ r.brief || '已讲解' }}</text>
-          <text class="rec-meta">{{ [r.module_name, r.question_type].filter(Boolean).join(' · ') || '拍题讲解' }} · {{ fmtRec(r.ts) }}</text>
-        </view>
-      </view>
-    </view>
-
-    <!-- 消息流 -->
-    <view v-for="r in convo" :key="r.ts" class="msgs">
-      <!-- 用户消息 -->
-      <view class="msg user">
-        <view class="bubble ub">
-          <image v-if="r.userImage" :src="r.userImage" mode="widthFix" class="ub-img" />
-          <text v-if="r.userText" class="ub-t">{{ r.userText }}</text>
-          <text v-if="r.user_answer" class="ub-ans">我选：{{ r.user_answer }}</text>
-        </view>
-      </view>
-      <!-- AI 消息 -->
-      <view class="msg ai">
-        <view class="bubble ab">
-          <view v-if="r.module_name || r.question_type" class="tags">
-            <text v-if="r.module_name" class="tag">{{ r.module_name }}</text>
-            <text v-if="r.question_type" class="tag">{{ r.question_type }}</text>
+          <!-- 桌面（无摄像头）首屏：粘贴题目 / 上传图片（仅 H5 ≥1024px） -->
+          <!-- #ifdef H5 -->
+          <view class="deskstart">
+            <kg-card class="ds-col">
+              <view class="ds-h"><l-icon name="clipboard-list" :size="18" tone="brand" /><text class="ds-t">粘贴题目文字</text></view>
+              <textarea v-model="qtext" class="ta ds-ta" placeholder="粘贴题干和选项…" :maxlength="-1" />
+              <text class="label">你选的答案（可选，填了会帮你分析错因）</text>
+              <view class="ans-chips">
+                <view v-for="o in ['A', 'B', 'C', 'D']" :key="o" class="ans-chip" :class="{ on: uanswer === o }" role="button" @click="uanswer = uanswer === o ? '' : o">{{ o }}</view>
+              </view>
+              <view class="ds-act">
+                <kg-button variant="primary" size="lg" block :disabled="loading || !qtext.trim()" @click="submitText">用花生十三方法讲解</kg-button>
+              </view>
+            </kg-card>
+            <kg-card class="ds-col">
+              <view class="ds-h"><l-icon name="camera" :size="18" tone="brand" /><text class="ds-t">上传题目截图</text></view>
+              <view class="ds-drop" role="button" @click="openAlbum">
+                <l-icon name="files" :size="30" tone="brand" />
+                <text class="ds-d1">点击选择图片，或拖拽到这里</text>
+                <text class="ds-d2">也可直接 Ctrl+V 粘贴截图</text>
+              </view>
+            </kg-card>
           </view>
-          <view v-if="r.ansCard" class="anscard">
-            <view class="ans-big">{{ r.ansCard.ans }}</view>
-            <view class="ans-r">
-              <view v-if="r.ansCard.method" class="ans-method">{{ r.ansCard.method }}</view>
-              <text class="ans-brief">{{ r.ansCard.brief }}</text>
+          <!-- #endif -->
+
+          <kg-card v-if="recent.length" class="reccard">
+            <kg-section-header title="最近讲解" />
+            <view v-for="r in recent" :key="r.ts" class="rec-row">
+              <view class="rec-ans num">{{ r.ans || '？' }}</view>
+              <view class="rec-main">
+                <text class="rec-brief">{{ r.brief || '已讲解' }}</text>
+                <text class="rec-meta">{{ [r.module_name, r.question_type].filter(Boolean).join(' · ') || '拍题讲解' }} · {{ fmtRec(r.ts) }}</text>
+              </view>
+            </view>
+          </kg-card>
+        </template>
+
+        <!-- 消息流 -->
+        <view v-for="r in convo" :key="r.ts" class="msgs">
+          <!-- 用户消息 -->
+          <view class="msg user">
+            <view class="bubble ub">
+              <image v-if="r.userImage" :src="r.userImage" mode="widthFix" class="ub-img" />
+              <text v-if="r.userText" class="ub-t">{{ r.userText }}</text>
+              <text v-if="r.user_answer" class="ub-ans">我选：{{ r.user_answer }}</text>
             </view>
           </view>
-          <rich-text v-if="r.html" :nodes="r.html" />
-          <view v-else-if="r.streaming" class="spin">生成中…</view>
-          <view v-if="r.explain_key && !r.streaming" class="raterow">
-            <text class="rate-q">{{ r.rated ? (r.rated === 'up' ? '已反馈：有用' : '已反馈：有误，我们会核查') : '这条解析有帮助吗？' }}</text>
-            <view v-if="!r.rated" class="rate-btns">
-              <view class="rate-btn" @click="rate(r, true)"><l-icon name="thumbs-up" :size="13" color="#2e5bff" /><text>有用</text></view>
-              <view class="rate-btn bad" @click="rate(r, false)"><l-icon name="thumbs-down" :size="13" color="#b91c1c" /><text>有误</text></view>
+          <!-- AI 消息 -->
+          <view class="msg ai">
+            <kg-card variant="soft" class="bubble ab">
+              <view v-if="r.module_name || r.question_type" class="tags">
+                <kg-tag v-if="r.module_name" tone="brand">{{ r.module_name }}</kg-tag>
+                <kg-tag v-if="r.question_type" tone="neutral">{{ r.question_type }}</kg-tag>
+              </view>
+              <view v-if="r.ansCard" class="anscard">
+                <view class="ans-big num">{{ r.ansCard.ans }}</view>
+                <view class="ans-r">
+                  <kg-tag v-if="r.ansCard.method" tone="brand">{{ r.ansCard.method }}</kg-tag>
+                  <text class="ans-brief">{{ r.ansCard.brief }}</text>
+                </view>
+              </view>
+              <rich-text v-if="r.html" :nodes="r.html" />
+              <kg-skeleton v-else-if="r.streaming" preset="lines" />
+              <view v-if="r.explain_key && !r.streaming" class="raterow">
+                <text class="rate-q">{{ r.rated ? (r.rated === 'up' ? '已反馈：有用' : '已反馈：有误，我们会核查') : '这条解析有帮助吗？' }}</text>
+                <view v-if="!r.rated" class="rate-btns">
+                  <kg-button variant="ghost" size="sm" icon="thumbs-up" @click="rate(r, true)">有用</kg-button>
+                  <kg-button variant="ghost" size="sm" tone="bad" icon="thumbs-down" @click="rate(r, false)">有误</kg-button>
+                </view>
+              </view>
+              <!-- 追问建议 + 操作 chips -->
+              <view v-if="!r.streaming" class="chips">
+                <kg-button variant="secondary" size="sm" @click="quickFollowup(r, '请再讲得更细一点，逐步推导每一步')">再讲细一点</kg-button>
+                <kg-button variant="secondary" size="sm" :loading="!!r.simLoading" :aria-disabled="String(!!r.simLoading)" @click="genSimilar(r)">{{ r.simLoading ? '出题中…' + r.simSecs + 's' : '出一道同款题' }}</kg-button>
+                <kg-button :variant="r.saved ? 'ghost' : 'secondary'" size="sm" :icon="r.saved ? 'check' : ''" @click="save(r)">{{ r.saved ? '已存错题本' : '存入错题本' }}</kg-button>
+                <kg-button v-if="viewUrl(r)" variant="text" size="sm" @click="viewQuestion(r)">查看原题</kg-button>
+              </view>
+            </kg-card>
+          </view>
+          <!-- 举一反三 -->
+          <view v-if="r.sim" class="msg ai">
+            <kg-card variant="soft" class="bubble ab">
+              <view class="tags"><kg-tag tone="brand">举一反三</kg-tag></view>
+              <rich-text :nodes="r.sim.qHtml" />
+              <text class="label">先选你的答案再看解析：</text>
+              <view class="ans-chips">
+                <view
+                  v-for="o in ['A', 'B', 'C', 'D']"
+                  :key="o"
+                  class="ans-chip"
+                  :class="[optClass(r, o), { locked: !!r.sim.picked }]"
+                  role="button"
+                  :aria-disabled="String(!!r.sim.picked)"
+                  @click="!r.sim.picked && pick(r, o)"
+                >{{ o }}</view>
+              </view>
+              <view v-if="r.sim.picked && r.sim.ansHtml">
+                <rich-text :nodes="r.sim.ansHtml" />
+                <view class="chips">
+                  <kg-button variant="secondary" size="sm" @click="explainSim(r)">详解这道题</kg-button>
+                  <kg-button
+                    v-if="r.sim.correct && r.sim.picked !== r.sim.correct"
+                    :variant="r.sim.saved ? 'ghost' : 'secondary'"
+                    size="sm"
+                    :icon="r.sim.saved ? 'check' : ''"
+                    @click="saveSim(r)"
+                  >{{ r.sim.saved ? '已存错题本' : '存入错题本' }}</kg-button>
+                </view>
+              </view>
+            </kg-card>
+          </view>
+          <!-- 追问消息 -->
+          <template v-for="(m, mi) in r.fu || []" :key="r.ts + '-fu-' + mi">
+            <view class="msg" :class="m.role === 'ai' ? 'ai' : 'user'">
+              <kg-card v-if="m.role === 'ai'" variant="soft" class="bubble ab"><rich-text :nodes="m.html" /></kg-card>
+              <view v-else class="bubble ub"><text class="ub-t">{{ m.content }}</text></view>
+            </view>
+          </template>
+          <view v-if="r.fuLoading" class="msg ai"><kg-card variant="soft" class="bubble ab"><text class="spin">思考中…</text></kg-card></view>
+        </view>
+
+        <view v-if="loading" class="msgs">
+          <view class="msg user">
+            <view class="bubble ub">
+              <image v-if="stagedImage" :src="stagedImage" mode="widthFix" class="ub-img" />
+              <text v-if="stagedText" class="ub-t">{{ stagedText }}</text>
             </view>
           </view>
-          <!-- 追问建议 + 操作 chips -->
-          <view v-if="!r.streaming" class="chips">
-            <text class="chip" @click="quickFollowup(r, '请再讲得更细一点，逐步推导每一步')">再讲细一点</text>
-            <text class="chip" :class="{ dim: r.simLoading }" :aria-disabled="String(!!r.simLoading)" @click="genSimilar(r)">{{ r.simLoading ? '出题中…' + r.simSecs + 's' : '出一道同款题' }}</text>
-            <text class="chip" :class="{ ok: r.saved }" @click="save(r)">{{ r.saved ? '✓ 已存错题本' : '存入错题本' }}</text>
-            <text v-if="viewUrl(r)" class="chip" @click="viewQuestion(r)">查看原题</text>
-          </view>
+          <view class="msg ai"><kg-card variant="soft" class="bubble ab"><text class="spin">{{ loadingText }}</text><kg-skeleton preset="lines" /></kg-card></view>
         </view>
-      </view>
-      <!-- 举一反三 -->
-      <view v-if="r.sim" class="msg ai">
-        <view class="bubble ab">
-          <view class="tags"><text class="tag">举一反三</text></view>
-          <rich-text :nodes="r.sim.qHtml" />
-          <text class="label">先选你的答案再看解析：</text>
-          <view class="row">
-            <button
-              v-for="o in ['A', 'B', 'C', 'D']"
-              :key="o"
-              class="btn ghost sm"
-              :class="optClass(r, o)"
-              :disabled="!!r.sim.picked"
-              @click="pick(r, o)"
-            >{{ o }}</button>
-          </view>
-          <view v-if="r.sim.picked && r.sim.ansHtml">
-            <rich-text :nodes="r.sim.ansHtml" />
-            <view class="chips">
-              <text class="chip" @click="explainSim(r)">详解这道题</text>
-              <text
-                v-if="r.sim.correct && r.sim.picked !== r.sim.correct"
-                class="chip"
-                :class="{ ok: r.sim.saved }"
-                @click="saveSim(r)"
-              >{{ r.sim.saved ? '✓ 已存错题本' : '存入错题本' }}</text>
-            </view>
-          </view>
-        </view>
-      </view>
-      <!-- 追问消息 -->
-      <template v-for="(m, mi) in r.fu || []" :key="r.ts + '-fu-' + mi">
-        <view class="msg" :class="m.role === 'ai' ? 'ai' : 'user'">
-          <view class="bubble" :class="m.role === 'ai' ? 'ab' : 'ub'">
-            <rich-text v-if="m.role === 'ai'" :nodes="m.html" />
-            <text v-else class="ub-t">{{ m.content }}</text>
-          </view>
-        </view>
+        <kg-banner v-if="error" tone="bad" icon="triangle-alert" :text="'失败：' + error + (error.includes('再试') ? '' : '，请重试')" :closable="false" />
       </template>
-      <view v-if="r.fuLoading" class="msg ai"><view class="bubble ab"><view class="spin">思考中…</view></view></view>
-    </view>
 
-    <view v-if="loading" class="msgs">
-      <view class="msg user">
-        <view class="bubble ub">
-          <image v-if="stagedImage" :src="stagedImage" mode="widthFix" class="ub-img" />
-          <text v-if="stagedText" class="ub-t">{{ stagedText }}</text>
-        </view>
-      </view>
-      <view class="msg ai"><view class="bubble ab"><view class="spin">{{ loadingText }}</view></view></view>
-    </view>
-    <view v-if="error" class="card err">失败：{{ error }}{{ error.includes('再试') ? '' : '，请重试' }}</view>
+      <!-- 会话列表：桌面辅栏 / 移动端跟随主列 -->
+      <template #aside>
+        <kg-card class="sesscard">
+          <kg-section-header title="历史会话" :more="sessions.length ? '管理' : ''" @more="openHistory" />
+          <kg-empty-state v-if="!sessions.length" compact icon="rotate-ccw" title="还没有历史会话" desc="每次「新对话」后，之前的问答会自动存到这里（同一账号换设备也能看）" />
+          <view v-for="(s, si) in sessions.slice(0, 5)" :key="s.id" class="rec-row" role="button" :class="{ on: s.id === curSid }" @click="loadSession(si)">
+            <view class="rec-ans num">{{ s.n }}</view>
+            <view class="rec-main">
+              <text class="rec-brief">{{ s.title }}</text>
+              <text class="rec-meta">{{ s.n }} 次问答 · {{ fmtRec(s.ts) }}</text>
+            </view>
+            <l-icon name="chevron-right" :size="16" tone="faint" />
+          </view>
+          <kg-button v-if="sessions.length > 5" variant="text" size="md" block @click="openHistory">查看全部 {{ sessions.length }} 个会话 ›</kg-button>
+        </kg-card>
+      </template>
+    </kg-two-col>
 
     <view class="bottompad" />
 
     <!-- 底部输入栏（结果页持续行动栏：相机=再拍一题 / 文字 / 追问） -->
-    <view class="inputbar">
-      <view class="ib-cam" @click="openCamera"><l-icon name="camera" :size="20" color="#40434e" /></view>
-      <view class="ib-txt" @click="textOpen = true"><l-icon name="clipboard-list" :size="20" color="#40434e" /></view>
+    <kg-action-bar layout="input" class="askbar">
+      <view class="kg-tool ib-tool" role="button" aria-label="拍题" @click="openCamera"><l-icon name="camera" :size="20" tone="ink-2" /></view>
+      <view class="kg-tool ib-tool" role="button" aria-label="粘贴题目文字" @click="textOpen = true"><l-icon name="clipboard-list" :size="20" tone="ink-2" /></view>
       <input
         v-model="fuText"
         class="ib-inp"
@@ -179,62 +189,42 @@
         :disabled="!results.length"
         @confirm="sendFollowup"
       />
-      <view class="ib-send" :class="{ dim: !results.length || !fuText.trim() }" :aria-disabled="String(!results.length || !fuText.trim())" @click="sendFollowup">发送</view>
-    </view>
+      <kg-button variant="primary" size="lg" icon="send" aria-label="发送" :disabled="!results.length || !fuText.trim()" @click="sendFollowup" />
+    </kg-action-bar>
 
     <!-- 新题文字输入 sheet -->
-    <view v-if="textOpen" class="mask" @click="textOpen = false">
-      <view class="sheet" @click.stop>
-        <view class="sheet-h">
-          <text class="sheet-t">粘贴题目文字</text>
-          <view class="sheet-x" role="button" aria-label="关闭" @click="textOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
-        </view>
-        <textarea v-model="qtext" class="ta" placeholder="粘贴题干和选项…" :maxlength="-1" auto-height />
-        <text class="label">你选的答案（可选，填了会帮你分析错因）</text>
-        <view class="ans-chips">
-          <text v-for="o in ['A', 'B', 'C', 'D']" :key="o" class="ans-chip" :class="{ on: uanswer === o }" @click="uanswer = uanswer === o ? '' : o">{{ o }}</text>
-        </view>
-        <button class="btn sheetbtn" :disabled="loading" @click="submitText">用花生十三方法讲解</button>
+    <kg-sheet v-model="textOpen" title="粘贴题目文字">
+      <kg-banner v-if="error" tone="bad" icon="triangle-alert" :text="'失败：' + error + (error.includes('再试') ? '' : '，请重试')" :closable="false" class="sheet-err" />
+      <textarea v-model="qtext" class="ta" placeholder="粘贴题干和选项…" :maxlength="-1" auto-height />
+      <text class="label">你选的答案（可选，填了会帮你分析错因）</text>
+      <view class="ans-chips">
+        <view v-for="o in ['A', 'B', 'C', 'D']" :key="o" class="ans-chip" :class="{ on: uanswer === o }" role="button" @click="uanswer = uanswer === o ? '' : o">{{ o }}</view>
       </view>
-    </view>
+      <template #footer><kg-button variant="primary" size="lg" block :disabled="loading" @click="submitText">用花生十三方法讲解</kg-button></template>
+    </kg-sheet>
 
     <!-- 图片确认 sheet -->
-    <view v-if="imagePath" class="mask" @click="clearImage">
-      <view class="sheet" @click.stop>
-        <view class="sheet-h">
-          <text class="sheet-t">确认题目图片</text>
-          <view class="sheet-x" role="button" aria-label="移除图片" @click="clearImage"><l-icon name="x" :size="20" color="#6b7280" /></view>
-        </view>
-        <image :src="imagePath" mode="widthFix" class="preview" />
-        <text class="label">你选的答案（可选，填了会帮你分析错因）</text>
-        <view class="ans-chips">
-          <text v-for="o in ['A', 'B', 'C', 'D']" :key="o" class="ans-chip" :class="{ on: uanswer === o }" @click="uanswer = uanswer === o ? '' : o">{{ o }}</text>
-        </view>
-        <button class="btn sheetbtn" :disabled="loading" @click="submitImage">用花生十三方法讲解</button>
+    <kg-sheet :model-value="!!imagePath" title="确认题目图片" @update:model-value="(v) => { if (!v) clearImage(); }">
+      <image :src="imagePath" mode="widthFix" class="preview" />
+      <text class="label">你选的答案（可选，填了会帮你分析错因）</text>
+      <view class="ans-chips">
+        <view v-for="o in ['A', 'B', 'C', 'D']" :key="o" class="ans-chip" :class="{ on: uanswer === o }" role="button" @click="uanswer = uanswer === o ? '' : o">{{ o }}</view>
       </view>
-    </view>
+      <template #footer><kg-button variant="primary" size="lg" block :disabled="loading" @click="submitImage">用花生十三方法讲解</kg-button></template>
+    </kg-sheet>
 
     <!-- 历史会话 sheet -->
-    <view v-if="historyOpen" class="mask" @click="historyOpen = false">
-      <view class="sheet" @click.stop>
-        <view class="sheet-h">
-          <text class="sheet-t">历史会话</text>
-          <view class="sheet-x" role="button" aria-label="关闭" @click="historyOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+    <kg-sheet v-model="historyOpen" title="历史会话">
+      <kg-empty-state v-if="!sessions.length" compact icon="rotate-ccw" title="还没有历史会话" desc="每次「新对话」后，之前的问答会自动存到这里（同一账号换设备也能看）" />
+      <view v-for="(s, si) in sessions" :key="s.id" class="rec-row" role="button" :class="{ on: s.id === curSid }" @click="loadSession(si)">
+        <view class="rec-ans num">{{ s.n }}</view>
+        <view class="rec-main">
+          <text class="rec-brief">{{ s.title }}</text>
+          <text class="rec-meta">{{ s.n }} 次问答 · {{ fmtRec(s.ts) }}</text>
         </view>
-        <view v-if="!sessions.length" class="rec-empty">
-          <text class="rec-e1">还没有历史会话</text>
-          <text class="rec-e2">每次「新对话」后，之前的问答会自动存到这里（同一账号换设备也能看）</text>
-        </view>
-        <view v-for="(s, si) in sessions" :key="s.id" class="rec-row" @click="loadSession(si)">
-          <view class="rec-ans">{{ s.n }}</view>
-          <view class="rec-main">
-            <text class="rec-brief">{{ s.title }}</text>
-            <text class="rec-meta">{{ s.n }} 次问答 · {{ fmtRec(s.ts) }}</text>
-          </view>
-          <text class="rec-del" @click.stop="delSession(si)">删除</text>
-        </view>
+        <kg-button variant="text" size="sm" tone="bad" @click.stop="delSession(si)">删除</kg-button>
       </view>
-    </view>
+    </kg-sheet>
   </view>
 </template>
 
@@ -367,9 +357,6 @@ export default {
       }
     },
     // #endif
-    goInterview() {
-      uni.navigateTo({ url: '/pkgA/interview/interview' });
-    },
     stripStop(s) {
       return (s || '').replace(/<\|[a-z_]+\|>/gi, '').trimEnd();
     },
@@ -913,138 +900,92 @@ export default {
 </script>
 
 <style scoped>
-.wrap { padding: 24rpx; padding-bottom: 40rpx; }
-.chatwrap { min-height: calc(100vh - 120px); }
-.bottompad { height: 140rpx; }
+.wrap { padding: var(--sp-12) var(--page-x) var(--sp-24); min-height: calc(100vh - 120px); box-sizing: border-box; }
+.bottompad { height: calc(72px + env(safe-area-inset-bottom)); }
 
-.topbar { display: flex; justify-content: space-between; align-items: center; padding: 16rpx 8rpx 20rpx; }
-.top-t { display: block; font-size: 34rpx; font-weight: 700; color: var(--ink); }
-.top-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
-.top-acts { display: flex; gap: 12rpx; }
-.top-btn { font-size: 24rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 999rpx; padding: 0 24rpx; min-height: 44px; display: inline-flex; align-items: center; }
+.topbar { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-8); padding: var(--sp-8) 0 var(--sp-12); }
+.top-t { display: block; font-size: var(--fs-h2); font-weight: 600; color: var(--ink); }
+.top-s { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-4); }
+.top-acts { display: flex; gap: var(--sp-8); flex-shrink: 0; }
 
-.camscreen { background: linear-gradient(180deg, #171c2b, #1f2740); border-radius: 24rpx; padding: 24rpx 24rpx 32rpx; margin-bottom: 24rpx; }
-.cam-top { display: flex; justify-content: flex-end; gap: 14rpx; margin-bottom: 18rpx; }
-.cam-quick { display: inline-flex; align-items: center; gap: 6rpx; min-height: 44px; box-sizing: border-box; padding: 0 22rpx; border-radius: 999rpx; background: rgba(255, 255, 255, 0.1); color: #e5e9f5; font-size: 23rpx; }
-.cam-frame { position: relative; min-height: 380rpx; border-radius: 20rpx; background: rgba(255, 255, 255, 0.04); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14rpx; padding: 30rpx; }
-.cam-corner { position: absolute; width: 40rpx; height: 40rpx; border: 4rpx solid #5b8af8; }
-.cam-corner.tl { top: 18rpx; left: 18rpx; border-right: none; border-bottom: none; border-radius: 8rpx 0 0 0; }
-.cam-corner.tr { top: 18rpx; right: 18rpx; border-left: none; border-bottom: none; border-radius: 0 8rpx 0 0; }
-.cam-corner.bl { bottom: 18rpx; left: 18rpx; border-right: none; border-top: none; border-radius: 0 0 0 8rpx; }
-.cam-corner.br { bottom: 18rpx; right: 18rpx; border-left: none; border-top: none; border-radius: 0 0 8rpx 0; }
-.cam-tip { font-size: 27rpx; font-weight: 600; color: #e5e9f5; }
-.cam-tip2 { font-size: 22rpx; color: #8fa3d9; }
-.cam-modes { display: flex; justify-content: center; gap: 14rpx; margin: 24rpx 0 10rpx; }
-.cam-mode { font-size: 23rpx; color: #b9c4e2; min-height: 44px; display: inline-flex; align-items: center; padding: 0 20rpx; border-radius: 999rpx; }
-.cam-mode.on { color: #fff; font-weight: 700; background: rgba(91, 138, 248, 0.35); }
-.cam-mode.dim { opacity: 0.45; }
-.cam-acts { display: flex; align-items: center; justify-content: space-around; margin-top: 6rpx; }
-.cam-side { display: flex; flex-direction: column; align-items: center; gap: 6rpx; color: #e5e9f5; font-size: 22rpx; min-width: 44px; min-height: 44px; justify-content: center; }
-.cam-shutter { width: 128rpx; height: 128rpx; border-radius: 50%; border: 6rpx solid rgba(255, 255, 255, 0.85); display: flex; align-items: center; justify-content: center; }
-.cam-shutter-in { width: 96rpx; height: 96rpx; border-radius: 50%; background: linear-gradient(135deg, #5b8af8, var(--brand)); box-shadow: 0 8rpx 24rpx rgba(46, 91, 255, 0.45); }
-.reccard { text-align: left; }
+/* 空态引导 */
+.mob-empty { margin-bottom: var(--card-gap); }
+.mob-acts { display: flex; justify-content: center; gap: var(--sp-8); }
+.deskstart { display: none; }
+.reccard { margin-bottom: var(--card-gap); }
+.rec-row { display: flex; align-items: center; gap: var(--sp-12); min-height: 56px; border-bottom: 1px solid var(--line); }
+.rec-row:last-of-type { border-bottom: none; }
+.rec-row.on .rec-brief { color: var(--brand-text); font-weight: 600; }
+.rec-ans { width: 36px; height: 36px; border-radius: var(--r-sm); background: var(--brand-soft); color: var(--brand-text); font-size: var(--fs-h3); font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.rec-main { flex: 1; min-width: 0; }
+.rec-brief { display: block; font-size: var(--fs-sub); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rec-meta { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-4); }
+.sesscard { margin-bottom: var(--card-gap); }
 
+/* 消息流 */
 .msgs { display: flex; flex-direction: column; }
-.msg { display: flex; margin-bottom: 20rpx; }
+.msg { display: flex; margin-bottom: var(--sp-12); }
 .msg.user { justify-content: flex-end; }
 .msg.ai { justify-content: flex-start; }
-.bubble { max-width: 86%; border-radius: 28rpx; padding: 20rpx 26rpx; font-size: 27rpx; line-height: 1.7; box-sizing: border-box; }
-.ub { background: var(--brand); color: #fff; border-bottom-right-radius: 8rpx; }
-.ub-t { white-space: pre-wrap; word-break: break-all; }
-.ub-img { width: 320rpx; border-radius: 14rpx; display: block; }
-.ub-ans { display: block; margin-top: 8rpx; font-size: 22rpx; color: rgba(255, 255, 255, 0.85); }
-.ab { background: var(--card); color: var(--ink); border: 1rpx solid var(--line); border-bottom-left-radius: 8rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); max-width: 94%; }
+.bubble { max-width: 86%; border-radius: var(--r-lg); padding: var(--sp-12) var(--sp-16); font-size: var(--fs-body); line-height: var(--lh-body); box-sizing: border-box; }
+.ub { background: var(--brand); color: var(--on-brand); border-bottom-right-radius: var(--r-xs); }
+.ub-t { white-space: pre-wrap; overflow-wrap: anywhere; }
+.ub-img { width: 160px; max-width: 100%; border-radius: var(--r-sm); display: block; }
+.ub-ans { display: block; margin-top: var(--sp-4); font-size: var(--fs-caption); color: var(--on-brand-2); }
+.ab { max-width: 94%; border-bottom-left-radius: var(--r-xs); }
+.spin { display: block; color: var(--ink-3); font-size: var(--fs-sub); margin-bottom: var(--sp-8); }
+.tags { display: flex; gap: var(--sp-8); flex-wrap: wrap; margin-bottom: var(--sp-8); }
+.anscard { display: flex; align-items: center; gap: var(--sp-12); background: var(--card); border: 1px solid var(--brand-soft-2); border-radius: var(--r-md); padding: var(--sp-12) var(--sp-16); margin: var(--sp-4) 0 var(--sp-12); }
+.ans-big { flex-shrink: 0; min-width: 44px; height: 44px; padding: 0 var(--sp-8); border-radius: var(--r-sm); background: var(--brand); color: var(--on-brand); font-size: var(--fs-h1); font-weight: 600; display: flex; align-items: center; justify-content: center; }
+.ans-r { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-4); }
+.ans-brief { display: block; font-size: var(--fs-sub); color: var(--ink); line-height: var(--lh-sub); }
+.raterow { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); background: var(--fill); border-radius: var(--r-sm); padding: var(--sp-8) var(--sp-12); margin-top: var(--sp-12); flex-wrap: wrap; }
+.rate-q { font-size: var(--fs-caption); color: var(--ink-3); }
+.rate-btns { display: flex; gap: var(--sp-8); }
+.chips { display: flex; gap: var(--sp-8); flex-wrap: wrap; margin-top: var(--sp-12); }
+.label { font-size: var(--fs-caption); color: var(--ink-3); display: block; margin: var(--sp-12) 0 var(--sp-8); }
+.sheet-err { margin-bottom: var(--sp-12); }
+.ans-chips { display: flex; gap: var(--sp-8); }
+.ans-chip { flex: 1; min-height: var(--hit-min); display: inline-flex; align-items: center; justify-content: center; font-size: var(--fs-body); font-weight: 600; color: var(--ink-2); background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--r-sm); }
+.ans-chip.on { color: var(--brand-text); background: var(--brand-soft); border-color: var(--brand); }
+.ans-chip.ok { color: var(--ok-strong); background: var(--ok-soft); border-color: var(--ok); }
+.ans-chip.bad { color: var(--bad); background: var(--bad-soft); border-color: var(--bad); }
+.ans-chip.dim { opacity: 0.4; }
+.ans-chip.locked { cursor: default; }
+.ta { width: 100%; min-height: 96px; border: 1px solid var(--line); border-radius: var(--r-sm); padding: var(--sp-12); font-size: var(--fs-body); box-sizing: border-box; background: var(--fill); color: var(--ink); }
+.preview { width: 100%; border-radius: var(--r-sm); margin-top: var(--sp-4); }
 
-.chips { display: flex; gap: 12rpx; flex-wrap: wrap; margin-top: 16rpx; }
-.chip { font-size: 24rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 999rpx; padding: 0 24rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
-.chip.ok { color: var(--ok); background: var(--ok-soft); }
-.chip.dim { opacity: 0.5; }
-
-.inputbar { position: fixed; left: 0; right: 0; bottom: calc(50px + env(safe-area-inset-bottom)); z-index: 40; display: flex; align-items: center; gap: 14rpx; background: var(--card); border-top: 1rpx solid var(--line); padding: 16rpx 24rpx; box-sizing: border-box; }
-/* #ifndef H5 */
-.inputbar { bottom: 0; padding-bottom: calc(16rpx + env(safe-area-inset-bottom)); }
-/* #endif */
-.ib-cam, .ib-txt { flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%; background: var(--soft-bg); display: flex; align-items: center; justify-content: center; font-size: 34rpx; }
-.ib-inp { flex: 1; height: 44px; border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 26rpx; font-size: 26rpx; background: var(--soft-bg); box-sizing: border-box; }
-.ib-send { flex-shrink: 0; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 30rpx; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 26rpx; font-weight: 600; }
-.ib-send.dim { opacity: 0.4; }
-
-.mask { position: fixed; inset: 0; background: rgba(15, 18, 30, 0.5); z-index: 90; display: flex; align-items: flex-end; }
-.sheet { width: 100%; box-sizing: border-box; background: var(--card); border-radius: 32rpx 32rpx 0 0; padding: 32rpx 28rpx calc(36rpx + env(safe-area-inset-bottom)); max-height: 76vh; overflow-y: auto; }
+/* 底部固定输入条（H5 Tab 页需抬到 TabBar 之上） */
+.askbar { gap: var(--sp-8); }
 /* #ifdef H5 */
-/* H5 底部 TabBar 常驻：整个弹层收在 TabBar 上方，内容再高也不会被遮挡 */
+.askbar { bottom: calc(50px + env(safe-area-inset-bottom)); padding-bottom: var(--sp-12); }
+/* #endif */
+.ib-tool { flex-shrink: 0; width: var(--hit-min); height: var(--hit-min); border-radius: var(--r-full); background: var(--fill); display: flex; align-items: center; justify-content: center; }
+.ib-inp { flex: 1; min-width: 0; height: var(--input-h); border: 1px solid var(--line); border-radius: var(--r-full); padding: 0 var(--sp-16); font-size: var(--fs-sub); color: var(--ink); background: var(--fill); box-sizing: border-box; }
+
+/* #ifdef H5 */
 @media (max-width: 767px) {
-  .mask { bottom: calc(50px + env(safe-area-inset-bottom)); }
+  :deep(.kg-sheet.wd-popup--bottom) { bottom: calc(50px + env(safe-area-inset-bottom)); }
 }
-/* #endif */
-.sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20rpx; }
-.sheet-t { font-size: 30rpx; font-weight: 700; }
-.sheet-x { font-size: 28rpx; color: var(--ink-2); padding: 8rpx 16rpx; }
-.sheetbtn { margin-top: 28rpx; width: 100%; }
-
-.card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
-.label { font-size: 24rpx; color: var(--ink-2); display: block; margin: 20rpx 0 10rpx; }
-.btn { background: var(--brand); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(46, 91, 255, 0.25); min-height: 44px; line-height: 44px; }
-.btn[disabled] { opacity: 0.6; }
-.btn.ghost { background: var(--brand-soft); color: var(--brand-text); box-shadow: none; }
-.btn.sm { font-size: 26rpx; flex: 1; }
-.btn.ok { background: var(--ok); color: #fff; opacity: 1 !important; box-shadow: none; }
-.btn.bad { background: var(--bad); color: #fff; box-shadow: none; }
-.btn.dim { opacity: 0.35; }
-.ta { width: 100%; min-height: 160rpx; border: 1rpx solid var(--line); border-radius: 18rpx; padding: 18rpx; font-size: 28rpx; box-sizing: border-box; background: var(--soft-bg); }
-.ans-chips { display: flex; gap: 16rpx; }
-.ans-chip { flex: 1; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; font-size: 28rpx; font-weight: 600; color: var(--ink-2); background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 16rpx; }
-.ans-chip.on { color: var(--brand-text); background: var(--brand-soft); border-color: var(--brand-text); }
-.preview { width: 100%; border-radius: 18rpx; margin-top: 8rpx; }
-.spin { color: var(--ink-2); font-size: 25rpx; }
-.raterow { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; background: var(--soft-bg); border-radius: 14rpx; padding: 16rpx 22rpx; margin-top: 16rpx; flex-wrap: wrap; }
-.rate-q { font-size: 24rpx; color: var(--ink-2); }
-.rate-btns { display: flex; gap: 14rpx; }
-.rate-btn { display: inline-flex; align-items: center; gap: 6rpx; font-size: 24rpx; color: var(--brand-text); border: 1rpx solid var(--brand); border-radius: 999rpx; padding: 8rpx 24rpx; }
-.rate-btn.bad { color: var(--bad); border-color: var(--bad); }
-.anscard { display: flex; align-items: center; gap: 22rpx; background: var(--brand-soft); border: 1rpx solid var(--brand-soft-2); border-radius: 20rpx; padding: 22rpx 26rpx; margin: 6rpx 0 16rpx; }
-.ans-big { flex-shrink: 0; min-width: 88rpx; height: 88rpx; padding: 0 14rpx; border-radius: 20rpx; background: var(--brand); color: #fff; font-size: 44rpx; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 6rpx 14rpx rgba(46, 91, 255, 0.3); }
-.ans-r { flex: 1; min-width: 0; }
-.ans-method { display: inline-block; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 21rpx; font-weight: 600; padding: 4rpx 18rpx; margin-bottom: 8rpx; }
-.ans-brief { display: block; font-size: 25rpx; color: var(--ink); line-height: 1.5; }
-.err { color: var(--bad); background: var(--bad-soft); font-size: 26rpx; }
-.tags { margin-bottom: 10rpx; }
-.tag { display: inline-block; background: var(--brand-soft); color: var(--brand-text); border-radius: 999rpx; padding: 6rpx 20rpx; font-size: 22rpx; margin-right: 10rpx; }
-.row { display: flex; gap: 14rpx; margin: 10rpx 0; }
-.rec-h { font-size: 28rpx; font-weight: 600; margin-bottom: 14rpx; }
-.rec-row { display: flex; align-items: center; gap: 18rpx; min-height: 112rpx; border-bottom: 1rpx solid var(--line); }
-.rec-row:last-of-type { border-bottom: none; }
-.rec-ans { width: 72rpx; height: 72rpx; border-radius: 16rpx; background: var(--brand-soft); color: var(--brand-text); font-size: 32rpx; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.rec-main { flex: 1; min-width: 0; }
-.rec-brief { display: block; font-size: 25rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rec-meta { display: block; font-size: 21rpx; color: var(--ink-2); margin-top: 4rpx; }
-.rec-del { flex-shrink: 0; font-size: 23rpx; color: var(--bad); min-height: 44px; display: inline-flex; align-items: center; padding: 0 8rpx; }
-.rec-empty { padding: 10rpx 0 6rpx; }
-.rec-e1 { display: block; font-size: 26rpx; font-weight: 600; color: var(--ink-2); }
-.rec-e2 { display: block; font-size: 23rpx; color: var(--ink-3); line-height: 1.7; margin-top: 8rpx; }
-
-/* #ifdef H5 */
-.deskstart { display: none; }
-
 @media (min-width: 768px) {
-  .wrap.chatwrap { max-width: 760px; }
-  .inputbar { left: 208px; bottom: 0; padding: 16rpx 15%; }
+  .askbar { left: 208px; bottom: 0; }
   .bubble { max-width: 72%; }
-  .chip:hover, .top-btn:hover, .eg-btn:hover { cursor: pointer; filter: brightness(0.97); }
 }
-
-/* 桌面空态操作台：粘贴/上传优先，取景屏仅留移动端 */
+/* 桌面（无摄像头）：取景/拍题引导隐藏，改粘贴/上传；输入条随主列 sticky */
 @media (min-width: 1024px) {
-  .camscreen { display: none; }
-  .deskstart { display: flex; gap: 32rpx; align-items: stretch; }
+  .wrap.ask { max-width: 1064px; padding-top: var(--sp-24); }
+  .mob-empty { display: none; }
+  .deskstart { display: flex; gap: var(--sp-16); align-items: stretch; margin-bottom: var(--card-gap); }
   .ds-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-  .ds-h { display: flex; align-items: center; gap: 10rpx; margin-bottom: 16rpx; }
-  .ds-t { font-size: 28rpx; font-weight: 700; color: var(--ink); }
-  .ds-ta { flex: 1; min-height: 220rpx; }
-  .ds-drop { flex: 1; min-height: 300rpx; border: 2rpx dashed var(--brand-soft-2); border-radius: 20rpx; background: var(--brand-soft); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12rpx; cursor: pointer; }
-  .ds-drop:hover { border-color: var(--brand-text); }
-  .ds-d1 { font-size: 26rpx; font-weight: 600; color: var(--ink); }
-  .ds-d2 { font-size: 23rpx; color: var(--ink-2); }
+  .ds-h { display: flex; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-12); }
+  .ds-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+  .ds-ta { flex: 1; min-height: 120px; }
+  .ds-act { margin-top: var(--sp-16); }
+  .ds-drop { flex: 1; min-height: 180px; border: 2px dashed var(--brand-soft-2); border-radius: var(--r-md); background: var(--brand-soft); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-8); cursor: pointer; }
+  .ds-drop:hover { border-color: var(--brand); }
+  .ds-d1 { font-size: var(--fs-sub); font-weight: 600; color: var(--ink); }
+  .ds-d2 { font-size: var(--fs-caption); color: var(--ink-3); }
+  .bottompad { height: 0; }
 }
 /* #endif */
 </style>
