@@ -5,8 +5,9 @@
   display: flex;
   align-items: center;
   gap: var(--sp-12);
-  min-height: 52px;
-  padding: var(--sp-12) var(--sp-16);
+  box-sizing: border-box;
+  min-height: var(--cell-h);
+  padding: var(--sp-8) var(--sp-16);
   background: var(--card);
 }
 .kg-entry--hover { background: var(--fill); }

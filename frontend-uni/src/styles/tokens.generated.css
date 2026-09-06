@@ -51,11 +51,11 @@ page {
   --lh-caption: 1.4;
   --lh-question: 1.7;
   /* scale */
-  --fs-display: 32px;
-  --fs-h1: 24px;
-  --fs-h2: 20px;
-  --fs-h3: 17px;
-  --fs-body: 15px;
+  --fs-display: 28px;
+  --fs-h1: 22px;
+  --fs-h2: 18px;
+  --fs-h3: 16px;
+  --fs-body: 14px;
   --fs-sub: 13px;
   --fs-caption: 12px;
   --sp-4: 4px;
@@ -97,13 +97,13 @@ page {
   --input-h: 44px;
   --chip-h: 32px;
   --tag-h: 20px;
-  --cell-h: 52px;
+  --cell-h: 48px;
   --bar-h: 64px;
   --tab-h: 56px;
   --card-pad: 16px;
   --card-gap: 12px;
   --page-x: 16px;
-  --opt-letter: 26px;
+  --opt-letter: 24px;
   --acard-cell: 40px;
   --hit-min: 44px;
   --prog-track: #dbe6ff;
@@ -175,11 +175,11 @@ page {
   --lh-caption: 1.4;
   --lh-question: 1.7;
   /* scale */
-  --fs-display: 32px;
-  --fs-h1: 24px;
-  --fs-h2: 20px;
-  --fs-h3: 17px;
-  --fs-body: 15px;
+  --fs-display: 28px;
+  --fs-h1: 22px;
+  --fs-h2: 18px;
+  --fs-h3: 16px;
+  --fs-body: 14px;
   --fs-sub: 13px;
   --fs-caption: 12px;
   --sp-4: 4px;
@@ -221,13 +221,13 @@ page {
   --input-h: 44px;
   --chip-h: 32px;
   --tag-h: 20px;
-  --cell-h: 52px;
+  --cell-h: 48px;
   --bar-h: 64px;
   --tab-h: 56px;
   --card-pad: 16px;
   --card-gap: 12px;
   --page-x: 16px;
-  --opt-letter: 26px;
+  --opt-letter: 24px;
   --acard-cell: 40px;
   --hit-min: 44px;
   --prog-track: #dbe6ff;

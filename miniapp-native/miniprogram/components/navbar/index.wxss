@@ -55,8 +55,8 @@
   color: var(--on-brand);
 }
 
-/* v3 大标题页头（五 tab 用）：24/600 左对齐，右侧最多一个图标按钮 */
-.navbar-large .nav-row { height: 52px; }
+/* v3 大标题页头（五 tab 用）：h1/600 左对齐，右侧最多一个图标按钮 */
+.navbar-large .nav-row { height: var(--cell-h); }
 .navbar-large .nav-title { font-size: var(--fs-h1); font-weight: 600; letter-spacing: 0; }
 .nav-right { margin-left: auto; display: flex; align-items: center; gap: var(--sp-4); }
 .nav-icon-btn {

@@ -2,7 +2,7 @@
 .kg-dots { display: flex; gap: 4px; }
 .kg-dots__c {
   flex: 1;
-  height: 8px;
+  height: 6px;
   border-radius: 2px;
   background: var(--line);
   transition: background-color var(--dur-fast) var(--ease-standard);

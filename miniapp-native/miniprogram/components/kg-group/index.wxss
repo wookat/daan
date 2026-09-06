@@ -1,5 +1,5 @@
 :host { display: block; }
-.kg-group { margin-top: var(--sp-20); }
+.kg-group { margin-top: var(--sp-16); }
 .kg-group__hd {
   display: flex;
   align-items: baseline;

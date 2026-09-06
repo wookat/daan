@@ -5,8 +5,8 @@
   align-items: center;
   gap: var(--sp-12);
   box-sizing: border-box;
-  min-height: 52px;
-  padding: 10px var(--sp-16);
+  min-height: var(--cell-h);
+  padding: var(--sp-8) var(--sp-16);
   background: var(--card);
 }
 .kg-row--hover { background: var(--fill); }

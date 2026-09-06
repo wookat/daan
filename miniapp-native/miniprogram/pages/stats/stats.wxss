@@ -28,7 +28,7 @@
 }
 
 .focus-acts {
-  margin-top: var(--sp-16);
+  margin-top: var(--sp-12);
 }
 
 /* 一行三数 */
