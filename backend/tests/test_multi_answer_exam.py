@@ -116,6 +116,45 @@ def test_exam_multi_flow(client):
     db._papers_cache.clear()
 
 
+def test_answer_log_keeps_multi_letter_picked(client):
+    """R417：answer_log.picked 不再截成 2 个字母——多选错选 ABD 原样落库，易错项聚合/错题卡「历次作答」按完整字母集。"""
+    qids = seed_questions()[:4]
+    mq = _seed_multi_question("BD")
+    pid = _seed_paper("R417 多选 picked 卷", qids + [mq])
+    uid = "test-r417-picked"
+    conn = db.get_conn()
+    db._ensure_question_stat_cols(conn)
+    conn.execute("DELETE FROM answer_log WHERE question_id=?", (mq,))
+    conn.commit()
+    conn.close()
+    aid = client.post("/api/exam/start", json={"uid": uid, "paper_id": pid}).json()["attempt_id"]
+    sub = client.post("/api/exam/submit", json={"uid": uid, "attempt_id": aid, "picks": {"5": "DBA"}}).json()
+    assert sub["items"][4]["picked"] == "ABD" and sub["items"][4]["correct"] is False
+    # 练习页多选确认后同一接口上报（小写/乱序也归一）
+    r = client.post("/api/answer_log", json={"uid": uid, "items": [{"qid": mq, "correct": False, "picked": "dca"}]})
+    assert r.status_code == 200
+    conn = db.get_conn()
+    rows = conn.execute("SELECT picked FROM answer_log WHERE uid=? AND question_id=? ORDER BY id", (uid, mq)).fetchall()
+    assert [r["picked"] for r in rows] == ["ABD", "ACD"]
+    conn.execute("UPDATE answer_log SET probe=0 WHERE uid=?", (uid,))
+    conn.commit()
+    conn.close()
+    db.refresh_question_stats()
+    conn = db.get_conn()
+    row = conn.execute("SELECT attempt_count, most_wrong FROM questions WHERE id=?", (mq,)).fetchone()
+    assert (row["attempt_count"], row["most_wrong"]) == (2, "ABD")
+    att = db.question_attempts(uid, mq)
+    assert sorted(a["picked"] for a in att) == ["ABD", "ACD"]
+    conn.execute("DELETE FROM mistakes WHERE uid=?", (uid,))
+    conn.execute("DELETE FROM answer_log WHERE uid=?", (uid,))
+    conn.execute("DELETE FROM exam_attempts WHERE uid=?", (uid,))
+    conn.execute("DELETE FROM exam_papers WHERE id=?", (pid,))
+    conn.execute("DELETE FROM questions WHERE id=?", (mq,))
+    conn.commit()
+    conn.close()
+    db._papers_cache.clear()
+
+
 def test_admin_patch_answer_normalized(client, monkeypatch):
     monkeypatch.setattr(deps, "ADMIN_TOKEN", "t0ken")
     h = {"X-Admin-Token": "t0ken"}

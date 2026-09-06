@@ -2566,7 +2566,7 @@ def save_answer_log_detail(uid: str, items: list[dict], probe: bool = False) -> 
                 sub,
                 1 if it.get("correct") else 0,
                 int(it.get("secs") or 0),
-                str(it.get("picked") or "")[:2] or None,
+                normalize_answer(it.get("picked"))[:8] or None,
                 (str(it.get("source") or "")[:32] or None),
                 1 if probe else 0,
             ),

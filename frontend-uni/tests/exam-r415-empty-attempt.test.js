@@ -33,4 +33,16 @@ describe('R415 一题未答的模考不算未交卷进度', () => {
     // 恢复快照时视为已推送过，之后清空作答也会同步
     expect(src).toMatch(/if \(resume\) \{\n\s*this\._progPushed = true;/);
   });
+
+  it('exam.vue：离页 flush（onUnload/onHide）与打旗标（toggleMark）都只经 pushProgress 一处闸门，不存在绕过 shouldPushProgress 的直发', () => {
+    const src = read('../src/pkgA/exam/exam.vue');
+    expect(src.match(/request\('\/api\/exam\/progress'/g)).toHaveLength(1);
+    expect(src).toMatch(/onUnload\(\) \{[\s\S]*?this\.saveProgress\(\);\n\s*this\.flushProgress\(\);/);
+    expect(src).toMatch(/onHide\(\) \{\n\s*this\.saveProgress\(\);\n\s*this\.flushProgress\(\);/);
+    expect(src).toMatch(/flushProgress\(\) \{\n\s*clearTimeout\(this\._progTimer\);\n\s*this\.pushProgress\(\);/);
+    expect(src).toMatch(/toggleMark\(\) \{\n\s*this\.cur\._marked = !this\.cur\._marked;\n\s*this\.saveProgress\(\);/);
+    // 只标记未作答离页：picks 为空且从未推送 → 0 请求；恢复后仅加标记：已视为推送过 → marks 随同一 payload 同步
+    expect(shouldPushProgress({}, false)).toBe(false);
+    expect(shouldPushProgress({ 273036: 'BD' }, true)).toBe(true);
+  });
 });
