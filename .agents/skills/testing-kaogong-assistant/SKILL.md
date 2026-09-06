@@ -1592,3 +1592,9 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 本机 `~/.local/bin/uvicorn` 绑的 Python 没有 fastapi，跑后端要用 `python3 -m uvicorn`（pyenv shim）。
 - 生产前一容器的停机日志拿不到：`app_log_snapshot.sh` 在停容器前归档，`docker events` 缓冲对该容器为空。
 - 探针出口复核一行：origin 24 h 按 `X-Kg-Ip` 分「`140.232.64.0/24` 内」与「段外 + UA 含 HeadlessChrome/Playwright/Devin + 无 `X-Kg-Probe`」两桶；段外常见是 `40.77.*`/`199.30.*`（微软/Bing 渲染抓取，引擎口径已覆盖），不是 Devin 出口漂移。
+
+## R457 经验：部署窗口时序怎么拉
+- 停机耗时看 dockerd journal：`journalctl -u docker.service --since '<本地时间>'`（宿主是 **+08:00**，UTC 时刻要 +8 再传给 journalctl）两行 `stopping restart-manager` → `received task-delete event` 之差即 SIGTERM→退出。
+- 新进程 listening 时刻用 `docker logs --timestamps deploy-kaogong-1 | head`（`Application startup complete`）；容器 `StartedAt` 只是 runc 起进程，Python 到 listening 还要 ~2 s。
+- 窗口是否有流量：origin access log 按 ts 列窄窗（±90 s）逐行看，`/api/health` curl/7.81.0 来自部署轮询、每 ~13 s 一条；「窗口内 0 请求」≠「无停机」。
+- 7 天 5xx 反查先排 `wxlogin` 503（`WX_MINIAPP_SECRET` 未配）与 handoff 已登记的 00:35 共宿抖动，再对 `/tmp/kg-compose-*.log` 文件名时间戳看是否落在部署段。

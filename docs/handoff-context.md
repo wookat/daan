@@ -2201,3 +2201,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - `app_log_snapshot.sh` 在停容器前归档 → 归档永远没有 `Shutting down` 行；`docker events --since 36h` 对该容器为空。要看生产停机形态需在 deploy 脚本停容器后再 `docker logs --tail` 一次（未加，无需求）。
 - R452 复核（origin 24 h）：Devin 出口全在 `140.232.64.0/24`（`.2/.3/.4/.5`，`.5` 新增仍在段内）；网段外 Headless 且无探针头仅微软/Bing 网段 3 条 + R454 pages.dev 扫描器 1 条 → 无 probe=0 污染风险变化。
 - 到期项沿用 R455 快照无变化。取证：`docs/iter/round-3/r456-shutdown-wal-not-checkpointed-probe-cidr-recheck.md`。
+
+## R457（部署重建窗口一手时序；只取证不改码不部署，生产仍 `460120f`）
+- R450 部署（`compose up -d --build` Recreate）逐秒：dockerd 19:41:40.13Z 发停止 → 19:41:40.72Z 旧进程退出（**SIGTERM 0.58 s**，远小于默认 10 s stop timeout，`stop_grace_period` 未配无需配）→ 新容器 19:41:43.77Z 起 → 19:41:45.65Z uvicorn listening（startup 同毫秒完成，无 lifespan 阻塞）→ 源站不可达窗口 **≈5.5 s**。origin 窗口内 **0 请求**（两侧最近 19:41:34.6 / 19:41:47.7 均部署轮询）→ 本次 0 个 5xx 是流量没打进窗口，不是窗口为零。
+- 7 天 origin ≥500 仅 4 条：3 条 `wxlogin` 503（`WX_MINIAPP_SECRET` 未配已知）+ 1 条 09-06 00:35 `/api/health` 503 25.9 s（已登记的共宿负载抖动，非部署窗口）→ 12 次部署全部无 5xx 落窗。
+- `--timeout-keep-alive 130` 是空闲保活，与停机等待无关；边界登记：停机瞬间在飞长 SSE 会等到 10 s 被 SIGKILL 流中断，7 天无样本、部署都在探针窗口 → 不加 `stop_grace_period`。压窄 5.5 s 需双容器/Caddy 重试（宿主拓扑改动）→ **P4 登记**。
+- 同秒 dockerd `healthcheck failed … only one connection allowed` 是 dockerd↔containerd gRPC 告警（推断），非应用 healthcheck，容器全程 healthy。
+- 到期项 21:26Z 实查无变化（probe=0 22/1、error_reason 6、push_subs 0、weekly_reports 1、growth 18/4、WAL 3,164,192 B、healthy rc=0）。取证：`docs/iter/round-3/r457-deploy-window-timeline-stop-timeout.md`。
