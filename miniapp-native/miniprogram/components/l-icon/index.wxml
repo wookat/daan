@@ -1,0 +1,1 @@
+<view class="l-icon" aria-hidden="true" style="width:{{px}};height:{{px}};background-color:{{fill}};-webkit-mask:{{mask}};mask:{{mask}}" />

@@ -103,6 +103,7 @@ page {
   --opt-letter: 26px;
   --acard-cell: 40px;
   --hit-min: 44px;
+  --prog-track: #dbe6ff;
   --streak: #ff8a3d;
   --streak-soft: #fff1e8;
   /* module */
@@ -145,6 +146,7 @@ page {
     --sh-1: none;
     --sh-2: none;
     --sh-3: none;
+    --prog-track: #2b2e3a;
     --streak-soft: #3a2418;
     --mod-ziliao-soft: #0e332f;
     --mod-shuliang-soft: #1c2742;

@@ -89,19 +89,19 @@ html {
   scrollbar-gutter: stable;
 }
 body {
-  background: #f6f7fb;
+  background: var(--bg);
 }
 body::after {
   /* 禁用 uni-h5 的 shadow-preload：本产品不用 page-head shadow，避免向 dcloud CDN 发第三方请求 */
   animation: none !important;
 }
 html.theme-dark body {
-  background: #15161c;
+  background: var(--bg);
 }
 /* #endif */
 
 /* 深色模式（三档设置见 theme.js；.theme-dark 挂在 html 上，H5/App 生效）
-   深色 token 值在 tokens.generated.css；下面只剩 uni 运行时壳（tabbar/page-head）——它们在 uni-page-body 之外读不到变量，只能写死 */
+   深色 token 值在 tokens.generated.css（page + :root 镜像），uni 运行时壳（tabbar/page-head）在 uni-page-body 之外，靠 :root 镜像读 token */
 /* #ifdef H5 */
 .theme-dark uni-page-body {
   background: var(--bg);
@@ -111,15 +111,15 @@ html.theme-dark body {
 }
 .theme-dark uni-tabbar .uni-tabbar,
 .theme-dark uni-tabbar .uni-tabbar__border {
-  background: #1d1f28 !important;
-  border-color: #2b2e3a;
+  background: var(--card) !important;
+  border-color: var(--line);
 }
 /* tabbar 文字色为 pages.json 静态配置的内联样式（uni-h5 无 setTabBarStyle），按配置色值定向覆盖 */
 .theme-dark uni-tabbar .uni-tabbar__label {
-  color: #9ba0b0 !important;
+  color: var(--ink-3) !important;
 }
 .theme-dark uni-tabbar .uni-tabbar__label[style*='rgb(46, 91, 255)'] {
-  color: #8fa8ff !important;
+  color: var(--brand-text) !important;
 }
 /* tabbar 图标为浅色主题静态 PNG（选中蓝 #3060f0 深底偏沉、未选灰偏暗），深色下滤镜提亮对齐 --brand-text/--ink-2 色感 */
 .theme-dark uni-tabbar .uni-tabbar__icon img {
@@ -129,14 +129,14 @@ html.theme-dark body {
   filter: saturate(0.6) brightness(1.45);
 }
 .theme-dark uni-page-head .uni-page-head {
-  background: #15161c !important;
-  color: #f2f3f7;
+  background: var(--bg) !important;
+  color: var(--ink);
 }
 .theme-dark uni-page-head .uni-page-head__title {
-  color: #f2f3f7 !important;
+  color: var(--ink) !important;
 }
 .theme-dark uni-page-head .uni-page-head-btn path {
-  fill: #f2f3f7;
+  fill: var(--ink);
 }
 .theme-dark input,
 .theme-dark textarea {
@@ -167,12 +167,12 @@ html.theme-dark body {
   uni-page-body .stat-c,
   uni-page-body .cellcard {
     border: 1px solid var(--line);
-    box-shadow: 0 1px 2px rgba(23, 24, 28, 0.05);
-    transition: box-shadow 0.15s ease, transform 0.15s ease;
+    box-shadow: var(--sh-1);
+    transition: box-shadow var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard);
   }
   uni-page-body .card:hover,
   uni-page-body .stat-c:hover {
-    box-shadow: 0 4px 12px rgba(23, 24, 28, 0.1);
+    box-shadow: var(--sh-2);
     cursor: pointer;
   }
   uni-page-body .searchbar {

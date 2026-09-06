@@ -1,0 +1,8 @@
+<view wx:if="{{shape === 'bar'}}" class="kg-prog kg-prog--{{thickness}} {{inverse ? 'is-inverse' : ''}}" role="progressbar" aria-valuenow="{{pct}}" aria-valuemin="0" aria-valuemax="100" aria-label="{{ariaLabel}}">
+  <view class="kg-prog__fill" style="width:{{pct}}%;{{fillStyle}}" />
+</view>
+<view wx:else class="kg-ring {{inverse ? 'is-inverse' : ''}}" style="width:{{size}}px;height:{{size}}px;background:conic-gradient({{ringColor}} {{pct}}%, var(--prog-track) 0)" role="progressbar" aria-valuenow="{{pct}}" aria-valuemin="0" aria-valuemax="100" aria-label="{{ariaLabel}}">
+  <view class="kg-ring__in" style="inset:{{size >= 96 ? 8 : size >= 72 ? 6 : 4}}px">
+    <text class="kg-ring__v num" style="font-size:{{size >= 96 ? 'var(--fs-h1)' : size >= 72 ? 'var(--fs-h3)' : 'var(--fs-caption)'}}">{{label || pct + '%'}}</text>
+  </view>
+</view>

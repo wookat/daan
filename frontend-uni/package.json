@@ -36,7 +36,9 @@
     "build:quickapp-webview-huawei": "uni build -p quickapp-webview-huawei",
     "build:quickapp-webview-union": "uni build -p quickapp-webview-union",
     "sync-brand": "node scripts/sync-brand-tokens.mjs",
-    "lint": "eslint src tests && npm run lint:edge",
+    "lint": "npm run lint:tokens && eslint src tests && npm run lint:edge",
+    "lint:tokens": "node ../tools/design-tokens/build.mjs --check && node ../tools/design-tokens/lint-pages.mjs --quiet",
+    "tokens": "node ../tools/design-tokens/build.mjs",
     "lint:edge": "cd .. && eslint deploy/cf-pages/functions",
     "test": "vitest run"
   },

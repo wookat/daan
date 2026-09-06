@@ -1,0 +1,14 @@
+<t-button
+  class="kg-btn kg-btn--{{variant}} kg-btn--{{size}} kg-btn--tone-{{tone}}"
+  theme="{{theme}}"
+  variant="{{tVariant}}"
+  size="{{tSize}}"
+  block="{{block}}"
+  disabled="{{disabled}}"
+  loading="{{loading}}"
+  shape="round"
+  bind:tap="onTap"
+>
+  <l-icon wx:if="{{icon}}" name="{{icon}}" size="{{size === 'sm' ? 16 : 20}}" tone="{{iconTone}}" />
+  <slot />
+</t-button>

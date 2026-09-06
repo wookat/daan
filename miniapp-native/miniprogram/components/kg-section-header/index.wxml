@@ -1,0 +1,7 @@
+<view class="kg-sh">
+  <text class="kg-sh__t">{{title}}</text>
+  <view wx:if="{{more}}" class="kg-sh__more" role="button" hover-class="kg-sh__more--hover" bind:tap="onMore">
+    <text>{{more}}</text>
+    <l-icon name="chevron-right" size="16" tone="muted" />
+  </view>
+</view>

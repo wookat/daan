@@ -1,0 +1,11 @@
+.kg-tag {
+  display: inline-flex; align-items: center; gap: var(--sp-4);
+  height: var(--tag-h); padding: 0 var(--sp-8); border-radius: var(--r-xs);
+  font-size: var(--fs-caption); font-weight: 500; line-height: 1; white-space: nowrap;
+  background: var(--fill); color: var(--ink-2);
+}
+.kg-tag--brand { background: var(--brand-soft); color: var(--brand-text); }
+.kg-tag--ok { background: var(--ok-soft); color: var(--ok-strong); }
+.kg-tag--bad { background: var(--bad-soft); color: var(--bad-strong); }
+.kg-tag--warn { background: var(--warn-soft); color: var(--warn-strong); }
+.kg-tag--info { background: var(--info-soft); color: var(--info-strong); }

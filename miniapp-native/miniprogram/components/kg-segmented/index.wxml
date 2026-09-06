@@ -1,0 +1,12 @@
+<view class="kg-seg kg-seg--{{size}}" role="tablist">
+  <view class="kg-seg__thumb" style="width:{{100 / options.length}}%;transform:translateX({{activeIndex * 100}}%)" aria-hidden="true" />
+  <view
+    wx:for="{{options}}"
+    wx:key="value"
+    class="kg-seg__item {{index === activeIndex ? 'is-on' : ''}}"
+    role="tab"
+    aria-selected="{{index === activeIndex ? 'true' : 'false'}}"
+    data-value="{{item.value}}"
+    bind:tap="onTap"
+  >{{item.label}}</view>
+</view>

@@ -45,6 +45,10 @@
       "root": "pkgA",
       "pages": [
         {
+          "path": "dev/design",
+          "style": { "navigationBarTitleText": "设计系统总览（dev）" }
+        },
+        {
           "path": "shenlun/shenlun",
           "style": { "navigationBarTitleText": "申论专区" }
         },

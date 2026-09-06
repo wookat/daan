@@ -1,0 +1,4 @@
+<view class="kg-tag kg-tag--{{tone}}" style="{{style}}">
+  <l-icon wx:if="{{icon}}" name="{{icon}}" size="16" tone="{{iconTone}}" />
+  <slot />
+</view>

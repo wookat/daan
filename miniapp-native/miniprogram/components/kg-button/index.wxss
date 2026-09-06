@@ -1,0 +1,41 @@
+/* KgButton 小程序版：薄封装 t-button，高度/圆角/字号走 --btn-* / --r-* token，与 H5 kg-button 同一口径 */
+.kg-btn {
+  --td-button-border-radius: var(--r-sm);
+  --td-button-font-weight: 600;
+  --td-button-large-height: var(--btn-h-lg);
+  --td-button-medium-height: var(--btn-h-md);
+  --td-button-small-height: var(--btn-h-sm);
+  --td-button-large-font-size: var(--fs-body);
+  --td-button-medium-font-size: var(--fs-body);
+  --td-button-small-font-size: var(--fs-sub);
+  --td-button-primary-bg-color: var(--brand);
+  --td-button-primary-active-bg-color: var(--brand-press);
+  --td-button-primary-border-color: var(--brand);
+  --td-button-primary-active-border-color: var(--brand-press);
+  --td-button-primary-color: var(--on-brand);
+  --td-button-light-bg-color: var(--brand-soft);
+  --td-button-light-active-bg-color: var(--brand-soft-2);
+  --td-button-light-color: var(--brand-text);
+  --td-button-light-border-color: var(--brand-soft);
+  --td-button-light-active-border-color: var(--brand-soft-2);
+  --td-button-default-bg-color: var(--card);
+  --td-button-default-active-bg-color: var(--fill);
+  --td-button-default-border-color: var(--line);
+  --td-button-default-active-border-color: var(--line);
+  --td-button-default-color: var(--ink);
+  --td-button-text-color: var(--brand-text);
+  --td-button-danger-bg-color: var(--bad);
+  --td-button-danger-active-bg-color: var(--bad-strong);
+  --td-button-danger-border-color: var(--bad);
+  --td-button-danger-color: var(--on-brand);
+}
+.kg-btn--tone-inverse {
+  --td-button-primary-bg-color: var(--on-brand);
+  --td-button-primary-active-bg-color: var(--on-brand-2);
+  --td-button-primary-border-color: var(--on-brand);
+  --td-button-primary-color: var(--brand);
+  --td-button-default-bg-color: transparent;
+  --td-button-default-active-bg-color: rgba(255, 255, 255, 0.14);
+  --td-button-default-border-color: rgba(255, 255, 255, 0.5);
+  --td-button-default-color: var(--on-brand);
+}

@@ -1,35 +1,35 @@
 <template>
-  <image class="l-icon" aria-hidden="true" :src="src" :style="{ width: px, height: px }" mode="aspectFit" />
+  <image v-if="legacy" class="l-icon" aria-hidden="true" :src="legacySrc" :style="{ width: px, height: px }" mode="aspectFit" />
+  <view v-else class="l-icon" aria-hidden="true" :style="style" />
 </template>
 
 <script>
 import PATHS from './paths.js';
-
-const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-function b64encode(str) {
-  let out = '';
-  for (let i = 0; i < str.length; i += 3) {
-    const c1 = str.charCodeAt(i);
-    const c2 = str.charCodeAt(i + 1);
-    const c3 = str.charCodeAt(i + 2);
-    out += B64[c1 >> 2] + B64[((c1 & 3) << 4) | (isNaN(c2) ? 0 : c2 >> 4)];
-    out += isNaN(c2) ? '=' : B64[((c2 & 15) << 2) | (isNaN(c3) ? 0 : c3 >> 6)];
-    out += isNaN(c3) ? '=' : B64[c3 & 63];
-  }
-  return out;
-}
+import { ICON_SIZES, isIconTone, resolveIconColor, iconMaskUri, iconSvgUri } from '../../icon-tone.js';
 
 /**
- * Lucide 图标组件（三端可用：H5 / mp-weixin / App）。
- * SVG 以 base64 data URI 渲染进 <image>，小程序端同样支持。
- * 用法：<l-icon name="flame" :size="20" color="#d97706" />
+ * Lucide 图标组件（H5 / mp-weixin / App）。
+ * 新用法：<l-icon name="flame" tone="warn" :size="20" /> —— SVG 作 CSS mask，颜色由 tone 语义变量决定，随深色模式切换。
+ * 尺寸只用 16/20/24/32（SPEC §2.9）。
+ * color 为 deprecated 裸值通道：传了就走旧的 <image src=data-uri> 渲染（保留 stroke/fill 双色），页面迁到 tone 后连同这条路径一起删。
  */
 export default {
   name: 'LIcon',
   props: {
     name: { type: String, required: true },
-    size: { type: [Number, String], default: 20 },
-    color: { type: String, default: '#40434e' },
+    /** 16 / 20 / 24 / 32；其他值仅 dev 下 warn，不阻断旧页面 */
+    size: {
+      type: [Number, String],
+      default: 20,
+      validator: (v) => ICON_SIZES.includes(Number(v)),
+    },
+    tone: {
+      type: String,
+      default: '',
+      validator: (v) => v === '' || isIconTone(v),
+    },
+    /** @deprecated 用 tone */
+    color: { type: String, default: '' },
     strokeWidth: { type: [Number, String], default: 2 },
     fill: { type: String, default: 'none' },
   },
@@ -37,12 +37,24 @@ export default {
     px() {
       return typeof this.size === 'number' ? this.size + 'px' : this.size;
     },
-    src() {
-      const body = PATHS[this.name] || '';
-      const svg =
-        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${this.fill}" stroke="${this.color}"` +
-        ` stroke-width="${this.strokeWidth}" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
-      return 'data:image/svg+xml;base64,' + b64encode(svg);
+    body() {
+      return PATHS[this.name] || '';
+    },
+    legacy() {
+      return !this.tone && !!this.color;
+    },
+    legacySrc() {
+      return iconSvgUri(this.body, { stroke: this.color, fill: this.fill, strokeWidth: this.strokeWidth });
+    },
+    style() {
+      const mask = `url("${iconMaskUri(this.body, { strokeWidth: this.strokeWidth, fill: this.fill })}") center / contain no-repeat`;
+      return {
+        width: this.px,
+        height: this.px,
+        backgroundColor: resolveIconColor(this.tone, ''),
+        '-webkit-mask': mask,
+        mask,
+      };
     },
   },
 };
