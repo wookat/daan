@@ -356,7 +356,7 @@ export default {
 .qtx { display: -webkit-box; font-size: var(--fs-sub); color: var(--ink-2); -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
 .qans { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-8); }
 .toolbar { display: flex; align-items: center; gap: var(--sp-12); margin-bottom: var(--sp-12); min-width: 0; }
-.toolbar :deep(.wd-segmented) { flex-shrink: 0; }
+.toolbar :deep(.wd-segmented) { flex: 1 1 0; min-width: 0; width: auto; }
 .cnt { font-size: var(--fs-caption); color: var(--ink-3); margin-left: auto; white-space: nowrap; }
 .msg { display: inline-flex; align-items: center; gap: var(--sp-4); min-height: var(--hit-min); padding: 0 var(--sp-8); border-radius: var(--r-sm); color: var(--ink-2); flex-shrink: 0; }
 .msg-t { font-size: var(--fs-sub); }

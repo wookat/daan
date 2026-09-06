@@ -388,6 +388,7 @@ export default {
 <style scoped>
 .page { padding: 0 var(--page-x) var(--sp-48); }
 .sticky { position: sticky; top: 0; z-index: var(--z-sticky); background: var(--bg); margin: 0 calc(-1 * var(--page-x)); padding: var(--sp-8) var(--page-x) var(--sp-8); }
+.sticky :deep(.wd-search) { background: var(--bg); }
 .tabs { margin-top: var(--sp-4); }
 .skel { display: flex; flex-direction: column; gap: var(--sp-12); }
 .sec { margin-bottom: var(--sp-16); }
