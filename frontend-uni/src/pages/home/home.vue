@@ -1288,8 +1288,8 @@ export default {
 .hero-n { font-size: 36rpx; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
 .hero-streak { display: inline-flex; align-items: center; gap: 8rpx; font-size: 24rpx; color: #fff; background: rgba(255, 255, 255, 0.18); border-radius: 8rpx; padding: 4rpx 16rpx; }
 .hero-bar { height: 12rpx; background: rgba(255, 255, 255, 0.25); border-radius: 999rpx; margin: 16rpx 0 24rpx; overflow: hidden; }
-.hero-ds { display: block; font-size: 24rpx; color: rgba(255, 255, 255, 0.85); margin: -8rpx 0 20rpx; }
-.hero-ds-arc { float: right; margin: -12px -8rpx -12px 8rpx; padding: 12px 8rpx; text-decoration: underline; color: rgba(255, 255, 255, 0.75); }
+.hero-ds { position: relative; display: block; padding-right: 124rpx; font-size: 24rpx; color: rgba(255, 255, 255, 0.85); margin: -8rpx 0 20rpx; }
+.hero-ds-arc { position: absolute; right: -8rpx; top: 50%; transform: translateY(-50%); padding: 12px 8rpx; text-decoration: underline; color: rgba(255, 255, 255, 0.75); }
 .sz-arc { display: inline-block; margin: -12px 0 -12px 4rpx; padding: 12px 8rpx; text-decoration: underline; color: var(--ink-2); }
 .hero-fill { height: 100%; background: var(--card); border-radius: 999rpx; transition: width 0.3s; }
 .hero-acts { display: flex; gap: 20rpx; }
