@@ -45,7 +45,7 @@
           <kg-option-group
             options="{{opts}}"
             picked="{{cur._picked}}"
-            answer="{{cur.answer}}"
+            answer="{{cur.answer || ''}}"
             revealed="{{practice && revealed}}"
             exclusive="{{!practice}}"
             excl="{{cur._excl}}"
@@ -69,8 +69,8 @@
 </scroll-view>
 
 <kg-action-bar wx:if="{{!loading && !loadErr && cur}}" layout="answer" index="{{idx}}" total="{{items.length}}">
-  <kg-button class="abar-btn" variant="ghost" size="lg" disabled="{{idx === 0}}" icon="chevron-left" bind:click="onPrev">上一题</kg-button>
-  <kg-button class="abar-btn" variant="ghost" size="lg" icon="clipboard-list" bind:click="onOpenCard">答题卡</kg-button>
+  <kg-button class="abar-btn" variant="ghost" size="lg" disabled="{{idx === 0}}" bind:click="onPrev">上一题</kg-button>
+  <kg-button class="abar-btn" variant="ghost" size="lg" bind:click="onOpenCard">答题卡</kg-button>
   <kg-button wx:if="{{idx + 1 < items.length}}" class="abar-btn abar-main" variant="primary" size="lg" bind:click="onNext">下一题</kg-button>
   <kg-button wx:elif="{{practice}}" class="abar-btn abar-main" variant="primary" size="lg" bind:click="onFinishPractice">完成</kg-button>
   <kg-button wx:else class="abar-btn abar-main" variant="primary" size="lg" loading="{{submitting}}" bind:click="onConfirmSubmit">交卷</kg-button>

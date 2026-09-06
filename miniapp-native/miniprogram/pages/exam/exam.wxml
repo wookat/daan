@@ -19,15 +19,19 @@
 
     <!-- 模考大赛 / 申论专区 入口 -->
     <view class="entry-grid">
-      <kg-card variant="raised" clickable class="entry-c" bind:click="onContest">
-        <view class="entry-ico"><l-icon name="trophy" size="24" tone="brand" /></view>
-        <text class="entry-t">模考大赛</text>
-        <text class="entry-s">同卷同时 · 实时排名</text>
+      <kg-card variant="raised" clickable bind:click="onContest">
+        <view class="entry-c">
+          <view class="entry-ico"><l-icon name="trophy" size="24" tone="brand" /></view>
+          <text class="entry-t">模考大赛</text>
+          <text class="entry-s">同卷同时 · 实时排名</text>
+        </view>
       </kg-card>
-      <kg-card variant="raised" clickable class="entry-c" bind:click="onShenlun">
-        <view class="entry-ico"><l-icon name="pen-line" size="24" tone="brand" /></view>
-        <text class="entry-t">申论专区</text>
-        <text class="entry-s">真题 + AI 采分点批改</text>
+      <kg-card variant="raised" clickable bind:click="onShenlun">
+        <view class="entry-c">
+          <view class="entry-ico"><l-icon name="pen-line" size="24" tone="brand" /></view>
+          <text class="entry-t">申论专区</text>
+          <text class="entry-s">真题 + AI 采分点批改</text>
+        </view>
       </kg-card>
     </view>
 

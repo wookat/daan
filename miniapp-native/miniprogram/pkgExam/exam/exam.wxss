@@ -13,5 +13,5 @@
 .expl-ans { font-size: var(--fs-sub); color: var(--ink-2); }
 .expl-t { display: block; font-size: var(--fs-sub); line-height: 1.7; color: var(--ink-2); white-space: pre-wrap; }
 .expl-none { color: var(--ink-4); }
-.abar-btn { display: block; flex: 1; min-width: 0; }
+.abar-btn { display: block; flex: 1; min-width: 0; --td-button-large-padding-horizontal: var(--sp-12); }
 .abar-main { flex: 1.4; }

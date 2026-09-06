@@ -5,6 +5,8 @@ Component({
     visible: { type: Boolean, value: false },
     title: { type: String, value: '' },
     maxHeight: { type: String, value: '76vh' },
+    // 内容区可滚动高度（webview 下 scroll-view 需显式高度才能滚动；留出把手/标题/footer 空间）
+    bodyMaxHeight: { type: String, value: '56vh' },
   },
   methods: {
     onVisible(e: WechatMiniprogram.CustomEvent<{ visible: boolean }>) {

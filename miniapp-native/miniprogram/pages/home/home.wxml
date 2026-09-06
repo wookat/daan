@@ -160,15 +160,19 @@
     <!-- 更多练习（对齐 H5 首页 more-grid：模考 / 申论；错题重练与拍题讲解为底栏 tab） -->
     <kg-section-header title="更多练习" />
     <view class="more-grid">
-      <kg-card variant="raised" clickable class="more-c" bind:click="onGoExamList">
-        <view class="more-ico"><l-icon name="timer" size="24" tone="brand" /></view>
-        <text class="more-t">模考</text>
-        <text class="more-s">迷你 / 全真 · 成绩报告</text>
+      <kg-card variant="raised" clickable bind:click="onGoExamList">
+        <view class="more-c">
+          <view class="more-ico"><l-icon name="timer" size="24" tone="brand" /></view>
+          <text class="more-t">模考</text>
+          <text class="more-s">迷你 / 全真 · 成绩报告</text>
+        </view>
       </kg-card>
-      <kg-card variant="raised" clickable class="more-c" bind:click="onGoShenlun">
-        <view class="more-ico"><l-icon name="pen-line" size="24" tone="brand" /></view>
-        <text class="more-t">申论</text>
-        <text class="more-s">真题 + AI 采分点批改</text>
+      <kg-card variant="raised" clickable bind:click="onGoShenlun">
+        <view class="more-c">
+          <view class="more-ico"><l-icon name="pen-line" size="24" tone="brand" /></view>
+          <text class="more-t">申论</text>
+          <text class="more-s">真题 + AI 采分点批改</text>
+        </view>
       </kg-card>
     </view>
   </view>

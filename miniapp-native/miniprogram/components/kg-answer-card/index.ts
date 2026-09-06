@@ -9,6 +9,7 @@ export interface AnswerCell {
 }
 
 interface CellGroup {
+  key: string;
   module: string;
   cells: Array<AnswerCell & { i: number }>;
 }
@@ -19,7 +20,7 @@ function groupCells(cells: AnswerCell[]): CellGroup[] {
     const m = c.module || '';
     const last = groups[groups.length - 1];
     if (last && last.module === m) last.cells.push({ ...c, i });
-    else groups.push({ module: m, cells: [{ ...c, i }] });
+    else groups.push({ key: m + '#' + i, module: m, cells: [{ ...c, i }] });
   });
   return groups;
 }

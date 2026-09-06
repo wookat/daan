@@ -132,9 +132,11 @@ Page({
   },
   _aid: 0,
   _hist: [] as ExamAttempt[],
-  _reported: {} as Record<number, true>,
+  _reported: null as unknown as Record<number, true>,
 
   onLoad(q: Record<string, string>) {
+    this._hist = [];
+    this._reported = {};
     const aid = Number(q.attempt_id || 0);
     if (!aid) {
       this.setData({ loading: false });
@@ -369,7 +371,7 @@ Page({
       statLine: qStatLine(it),
       timeLine: qTimeLine(it.secs, paperAvgSecs(r.items)),
       faved,
-      reported: !!(it.question_id && this._reported[it.question_id]),
+      reported: !!(it.question_id && this._reported && this._reported[it.question_id]),
     };
     this.setData({
       detail,
@@ -496,7 +498,7 @@ Page({
     this.setData({ qcBusy: true });
     try {
       await postQuestionReport(qid, this.data.qcType, this.data.qcDetail.slice(0, 500));
-      this._reported[qid] = true;
+      this._reported = { ...(this._reported || {}), [qid]: true };
       this.setData({ qcOpen: false, 'detail.reported': true });
       wx.showToast({ title: '感谢反馈，我们会尽快核查', icon: 'none' });
     } catch (e) {

@@ -11,7 +11,7 @@
       <view class="kg-ac__lg"><view class="kg-ac__dot" /><text>未答</text></view>
     </block>
   </view>
-  <view wx:for="{{groups}}" wx:key="module" wx:for-item="g" class="kg-ac__grp">
+  <view wx:for="{{groups}}" wx:key="key" wx:for-item="g" class="kg-ac__grp">
     <text wx:if="{{grouped && g.module}}" class="kg-ac__grp-t">{{g.module}}</text>
     <view class="kg-ac__grid">
       <view
@@ -47,7 +47,7 @@
     <text wx:if="{{footText}}" class="kg-ac__foot">{{footText}}</text>
     <view wx:if="{{primaryText || secondaryText}}" class="kg-ac__acts">
       <kg-button wx:if="{{secondaryText}}" class="kg-ac__btn" variant="ghost" size="lg" bind:click="onSecondary">{{secondaryText}}</kg-button>
-      <kg-button wx:if="{{primaryText}}" class="kg-ac__btn" variant="primary" size="lg" loading="{{loading}}" bind:click="onPrimary">{{primaryText}}</kg-button>
+      <kg-button wx:if="{{primaryText}}" class="kg-ac__btn" variant="primary" size="lg" block="{{!secondaryText}}" loading="{{loading}}" bind:click="onPrimary">{{primaryText}}</kg-button>
     </view>
   </view>
 </t-popup>

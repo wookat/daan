@@ -4,5 +4,5 @@
 .kg-sheet__t { flex: 1; min-width: 0; font-size: var(--fs-h3); font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kg-sheet__x { flex-shrink: 0; width: var(--hit-min); height: var(--hit-min); margin-right: calc(-1 * var(--sp-8)); display: flex; align-items: center; justify-content: center; border-radius: var(--r-full); }
 .kg-sheet__x--hover { background: var(--fill); }
-.kg-sheet__body { flex: 1; min-height: 0; }
+.kg-sheet__body { flex: 0 1 auto; min-height: 0; }
 .kg-sheet__ft:empty { display: none; }
