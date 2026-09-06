@@ -108,6 +108,18 @@ SQLite 存于 docker volume `kaogong-data`（/data/data.db）。备份：`docker
   ssh，不是 ssh 掉线牵连；谁发的信号无 auditd 不可考（同机另一产品的 build 2 min 后同样 client 侧
   cancel）。
 
+## 旧容器应用日志归档（deploy/app_log_snapshot.sh，R437）
+容器日志驱动是 json-file（宿主 daemon.json `max-size 20m × 3`），日志文件随容器一起删除：
+`compose up --build` 每换一次容器 ID，上一个容器的 uvicorn stdout/stderr（启动、Traceback、access
+行）就没了。生命周期审计 09-01 起 251 个容器 ID、09-06 单日 22 次重建 → `docker logs --since 24h`
+实际只覆盖当前容器存活的几十分钟，「过去 24 h 应用层有没有异常」这个问题结构上答不了。
+- 第 4 步 compose 起之前，`app_log_snapshot.sh <live_rev>` 在远端把旧容器 `docker logs --timestamps`
+  gzip 到 `/home/ubuntu/kaogong-reports/app-log/kaogong-app-<rev>-<startedAt>-to-<now>.log.gz`
+  （≈9 B/行，1205 行 → 11 KB），保留 14 天，`find -mtime +14 -delete`；无容器/失败只 WARN 不阻塞。
+- autoheal `docker restart` 与 restart 策略拉起不换容器 ID，日志本来就在，不归档。
+- 事后查：`zcat kaogong-reports/app-log/*.gz | grep -E 'Traceback|" 5[0-9]{2} '`；行首是 UTC，
+  与 caddy access（RFC3339）/ ops 日志（UTC）可直接对时。
+
 ## 生产运营脚本（deploy/kaogong-ops.sh）
 - 部署位置：VPS `/home/ubuntu/kaogong-ops.sh`，cron `40 3 * * *`。
 - 每日 SQLite `.backup` → 本地 `~/kaogong-backups`（gz，保留 3 份；宿主 50G 盘紧张，30 天历史看 R2）→ rclone 上传

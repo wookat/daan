@@ -102,6 +102,9 @@ done
 
 PREV_STARTED=$(sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" \
   "docker inspect deploy-kaogong-1 --format '{{.State.StartedAt}}' 2>/dev/null" || true)
+# 4-pre2 旧容器应用日志归档：json-file 日志随容器销毁，重建即丢（见 deploy/app_log_snapshot.sh 头注）
+SNAP=$(sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" bash -s "${LIVE_REV:-unknown}" < "$REPO_DIR/deploy/app_log_snapshot.sh" 2>/dev/null || echo "snapshot=skipped reason=ssh-failed")
+echo "  old-container-log: $SNAP"
 # 每次重建独立日志（不再互相覆盖）+ 末行写 compose 退出码/时刻，进程被打断时事后可辨「退出」与「仍在跑」；
 # setsid -f 让 compose 自成会话并立刻返回：旧写法 `cd && nohup ... &` 把整个 && 列表放进后台子 shell，
 # 该子 shell 持有 ssh 的管道直到 compose 结束（本地 ssh 被拖住整个 build，ssh 掉线即 SIGHUP 波及）。
