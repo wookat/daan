@@ -266,10 +266,10 @@ export default {
 .from-av { width: 72rpx; height: 72rpx; border-radius: 50%; background: #fff; color: var(--brand-text); font-size: 30rpx; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .from-l { flex: 1; min-width: 0; }
 .from-t { display: block; color: #fff; font-size: 30rpx; font-weight: 700; }
-.from-s { display: block; color: rgba(255, 255, 255, 0.85); font-size: 22rpx; margin-top: 4rpx; }
+.from-s { display: block; color: rgba(255, 255, 255, 0.85); font-size: 24rpx; margin-top: 4rpx; }
 
 .q-tags { display: flex; gap: 12rpx; margin-bottom: 16rpx; }
-.tag { font-size: 21rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
+.tag { font-size: 24rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
 .tag.gray { color: var(--ink-2); background: var(--fill); }
 .stem { display: block; font-size: 29rpx; color: var(--ink); line-height: 1.7; margin-bottom: 22rpx; white-space: pre-wrap; }
 
@@ -294,19 +294,19 @@ export default {
 .team-cta.joined { background: var(--ok-soft); }
 .tc-l { flex: 1; min-width: 0; }
 .tc-t { display: block; font-size: 28rpx; font-weight: 700; color: var(--ink); }
-.tc-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; }
+.tc-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 6rpx; }
 .tc-btn { flex-shrink: 0; min-height: 40px; display: flex; align-items: center; padding: 0 30rpx; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 25rpx; font-weight: 600; }
 .tc-btn.off { opacity: 0.6; }
 .tc-btn.ghost { background: var(--brand-soft); color: var(--brand-text); }
 
-.exp-k { display: block; font-size: 23rpx; color: var(--ink-2); font-weight: 600; margin-bottom: 10rpx; }
+.exp-k { display: block; font-size: 24rpx; color: var(--ink-2); font-weight: 600; margin-bottom: 10rpx; }
 .exp { font-size: 26rpx; color: var(--ink); line-height: 1.7; white-space: pre-wrap; }
 
 .ans-row { display: flex; align-items: center; gap: 16rpx; padding: 14rpx 0; border-bottom: 1rpx solid var(--fill); }
 .ans-row:last-child { border-bottom: none; }
 .ans-name { flex: 1; font-size: 26rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ans-pick { font-size: 24rpx; color: var(--ink-2); }
-.ans-res { font-size: 22rpx; font-weight: 700; padding: 4rpx 16rpx; border-radius: 999rpx; }
+.ans-res { font-size: 24rpx; font-weight: 700; padding: 4rpx 16rpx; border-radius: 999rpx; }
 .ans-res.ok { background: var(--ok-soft); color: var(--ok); }
 .ans-res.bad { background: var(--bad-soft); color: var(--bad); }
 

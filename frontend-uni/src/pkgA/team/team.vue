@@ -304,7 +304,7 @@ export default {
 .t-row { display: flex; align-items: center; gap: 16rpx; }
 .t-l { flex: 1; min-width: 0; }
 .t-name { display: block; font-size: 30rpx; font-weight: 700; color: var(--ink); }
-.t-sub { display: block; font-size: 23rpx; color: var(--ink-2); margin-top: 6rpx; }
+.t-sub { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 6rpx; }
 .t-go { flex-shrink: 0; font-size: 25rpx; color: var(--brand-text); font-weight: 600; }
 
 .act-btn { min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; font-size: 29rpx; font-weight: 600; margin-bottom: 18rpx; }
@@ -318,7 +318,7 @@ export default {
 .rank-card { padding: 24rpx 28rpx; }
 .rank-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8rpx; }
 .rank-t { font-size: 27rpx; font-weight: 700; color: var(--ink); }
-.rank-copy { min-height: 32px; display: flex; align-items: center; padding: 0 22rpx; background: var(--brand-soft); color: var(--brand-text); border-radius: 999rpx; font-size: 22rpx; font-weight: 600; }
+.rank-copy { min-height: 40px; display: flex; align-items: center; padding: 0 22rpx; background: var(--brand-soft); color: var(--brand-text); border-radius: 999rpx; font-size: 24rpx; font-weight: 600; }
 .rank-row { display: flex; align-items: center; gap: 14rpx; padding: 14rpx 0; border-bottom: 1rpx solid var(--fill); }
 .rank-row:last-child { border-bottom: none; }
 .rank-no { width: 40rpx; text-align: center; font-size: 24rpx; font-weight: 800; color: var(--ink-3); }
@@ -326,15 +326,15 @@ export default {
 .rank-no.no2 { color: #6b7280; }
 .rank-no.no3 { color: #b45309; }
 .rank-name { flex: 1; min-width: 0; font-size: 26rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rank-king { font-size: 20rpx; color: #d97706; background: #fef3c7; border-radius: 8rpx; padding: 2rpx 12rpx; font-weight: 700; }
-.rank-me { font-size: 20rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 2rpx 10rpx; }
+.rank-king { font-size: 24rpx; color: #d97706; background: #fef3c7; border-radius: 8rpx; padding: 2rpx 12rpx; font-weight: 700; }
+.rank-me { font-size: 24rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 2rpx 10rpx; }
 .rank-n { font-size: 24rpx; color: var(--ink-2); font-weight: 600; }
 
 /* 打卡矩阵 */
 .week-head { display: flex; align-items: center; padding: 0 28rpx; margin-bottom: 12rpx; }
-.wh-name { width: 96rpx; font-size: 22rpx; color: var(--ink-3); }
+.wh-name { width: 96rpx; font-size: 24rpx; color: var(--ink-3); }
 .wh-days { flex: 1; display: flex; gap: 10rpx; margin-left: 20rpx; }
-.wh-d { flex: 1; text-align: center; font-size: 22rpx; color: var(--ink-3); }
+.wh-d { flex: 1; text-align: center; font-size: 24rpx; color: var(--ink-3); }
 .wh-d.today { color: var(--brand-text); font-weight: 700; }
 
 .mem { padding: 22rpx 28rpx; }
@@ -344,11 +344,11 @@ export default {
 .mem-l { flex: 1; min-width: 0; }
 .mem-name-row { display: flex; align-items: center; gap: 10rpx; }
 .mem-name { font-size: 28rpx; font-weight: 700; color: var(--ink); max-width: 260rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mem-tag { font-size: 20rpx; color: #d97706; background: #fef3c7; border-radius: 8rpx; padding: 2rpx 10rpx; }
+.mem-tag { font-size: 24rpx; color: #d97706; background: #fef3c7; border-radius: 8rpx; padding: 2rpx 10rpx; }
 .mem-tag.me { color: var(--brand-text); background: var(--brand-soft); }
-.mem-sub { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; }
-.remind-btn { flex-shrink: 0; min-height: 36px; display: flex; align-items: center; padding: 0 24rpx; background: #fef3c7; color: #b45309; border-radius: 999rpx; font-size: 23rpx; font-weight: 600; }
-.mem-done { flex-shrink: 0; font-size: 23rpx; color: var(--ok); font-weight: 700; }
+.mem-sub { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 6rpx; }
+.remind-btn { flex-shrink: 0; min-height: 40px; display: flex; align-items: center; padding: 0 24rpx; background: #fef3c7; color: #b45309; border-radius: 999rpx; font-size: 24rpx; font-weight: 600; }
+.mem-done { flex-shrink: 0; font-size: 24rpx; color: var(--ok); font-weight: 700; }
 
 .mem-week { display: flex; gap: 10rpx; margin-top: 18rpx; margin-left: 90rpx; }
 .wk-cell { flex: 1; height: 52rpx; border-radius: 10rpx; background: var(--fill); display: flex; align-items: center; justify-content: center; }
@@ -358,7 +358,7 @@ export default {
 .wk-cell.miss { background: var(--fill); }
 .wk-cell.today-empty { background: var(--fill); border: 1rpx dashed var(--brand); box-sizing: border-box; }
 .wk-cell.future { background: transparent; border: 1rpx dashed var(--line); box-sizing: border-box; }
-.wk-n { font-size: 20rpx; color: var(--brand-text); font-weight: 700; }
+.wk-n { font-size: 24rpx; color: var(--brand-text); font-weight: 700; }
 
 /* 弹层 */
 .mask { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 99; display: flex; align-items: flex-end; }

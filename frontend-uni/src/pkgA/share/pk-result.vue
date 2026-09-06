@@ -140,14 +140,14 @@ export default {
 .nm { font-size: 24rpx; color: var(--ink); max-width: 220rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sc { font-size: 52rpx; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
 .p.win .sc { color: var(--brand-text); }
-.meta { font-size: 21rpx; color: var(--ink-2); }
+.meta { font-size: 24rpx; color: var(--ink-2); }
 .mid { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10rpx; padding: 0 12rpx; }
 .mid-vs { font-size: 36rpx; font-weight: 800; color: var(--ink-3); }
-.mid-res { font-size: 21rpx; color: var(--ink-2); text-align: center; max-width: 140rpx; }
+.mid-res { font-size: 24rpx; color: var(--ink-2); text-align: center; max-width: 140rpx; }
 
 .cta { text-align: center; padding: 32rpx 28rpx; }
 .cta-t { display: block; font-size: 32rpx; font-weight: 800; color: var(--ink); }
-.cta-s { display: block; font-size: 23rpx; color: var(--ink-2); margin: 10rpx 0 24rpx; }
+.cta-s { display: block; font-size: 24rpx; color: var(--ink-2); margin: 10rpx 0 24rpx; }
 .act-btn { min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; font-size: 29rpx; font-weight: 600; }
 .act-btn.main { background: var(--brand); color: #fff; }
 
