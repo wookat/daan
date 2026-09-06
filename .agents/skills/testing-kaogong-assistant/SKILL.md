@@ -5,6 +5,18 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## 本地 H5 设计系统与主题回归
+
+- H5 `api.js` 默认 `BASE_URL=''`，静态 `http.server` 只能验证无数据组件；业务回归需同源 `/api/*` 反代到获准使用的后端，或构建时显式配置 API。不要把静态服务 `/api` 404 当成页面回归。
+- 反代保留浏览器 User-Agent，勿转发本地 Host/Origin；本地静态 bundle 与远端 `/tiku/` SSR 是不同被测对象，后者不能证明分支 H5 样式正确。
+- `#/pkgA/dev/design` 是组件总览；宽度 430 与 1280 可覆盖移动 sheet/桌面 dialog、单栏/双栏与三种底栏。浅/深切换后再次打开弹层，核对实际 computed background 与 `--card`，不能仅检查变量值。
+- 个人页「外观模式」是点击循环（跟随系统→浅色→深色），不是弹出选择器；主题保存在当前 origin，换本地端口需重设。
+- 区分源码修复与静态 bundle：复验前硬刷并确认加载的新 chunk；旧 bundle 截图只能作为修复前证据。
+
+### Devin Secrets Needed
+
+- 匿名组件/视觉回归无需 secret；使用生产 API 前仍需任务授权，避免提交答案或修改业务数据。
+
 ## R381 index.html 隐藏 SEO 导航（`#kg-seo-nav`）+ 资料分析 grouped 拉题 + 同材料题组 SSR 生产复验 走查新经验
 - 「挂载前 splash 盖住 / 挂载后 CSS 隐藏」这类断言，生产正常加载太快看不到 splash；用 CDP `Fetch.enable(patterns=[{urlPattern:'*index-*.js*'}])` 暂停 bundle 请求（`/tmp/cdp174/r381_cold.py`），在暂停期读 `#app.matches(':empty')`、`getComputedStyle(nav).display`（此时应是 `block`）、splash `position:fixed` rect 覆盖视口、`elementFromPoint(nav中心)` 落在 `#kg-splash` 内；`Fetch.continueRequest` 后再断言 `display==='none'`、`nav.getClientRects().length===0`、`document.body.innerText.includes('行测题库')===false`（innerText 排除 display:none，`textContent` 不排除，别混用）。判 `#app` 空用 `matches(':empty')`/`childElementCount`，`innerHTML===''` 会被注释干扰。
 - 挂载前导航在正常流里有高度（1440≈57px、375≈82px），文档可滚动这一点 splash 遮不住 —— splash 是 fixed 所以仍盖住，但「任何滚动位置都看不见」不能做成绝对断言，报告里要写成已观察/未穷举。
