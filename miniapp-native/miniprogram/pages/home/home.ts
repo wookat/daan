@@ -2,27 +2,34 @@ import { fetchCheckinBadges, fetchCheckinSummary, fetchProfile, fetchQuestionCou
 import type { CheckinBadgesResp, CheckinSummaryResp, Profile } from '../../api/types';
 import {
   adoptServerDailyGoal,
-  clearReviewCur,
   dropExamProgress,
-  dropPracticeProgress,
   fetchAnnouncement,
   fetchDailyPlan,
   fetchDailySet,
   fetchExamResume,
   fetchHomeBundle,
   fetchPlanTodayFull,
-  fetchPracticeResume,
-  fetchReviewCur,
   flushDailySubmit,
   loadDailyDone,
   loadSzDaily,
   saveServerDailyGoal,
   setUserFocus,
 } from '../../api/grow';
-import type { Announcement, DailyDoneRec, DailyPlanResp, HomeBundleResp, HomeProfile, PlanTodayResp, PlanTodayTask, ReviewSnap } from '../../api/grow';
+import type { Announcement, DailyDoneRec, DailyPlanResp, HomeBundleResp, HomeProfile, PlanTodayResp, PlanTodayTask } from '../../api/grow';
+import { fetchPracticeResume, fetchReviewCur, postPracticeProgress, saveReviewCur } from '../../api/learn';
+import { anonUid } from '../../utils/auth';
 import { MODULE_KEYS, moduleMeta } from '../../utils/module-meta';
 import { cnDayKey } from '../../utils/cn-date';
-import { getDailyGoal, setDailyGoal, streakDays, todayCount } from '../../utils/stats';
+import {
+  PENDING_KEY,
+  PP_CLEARED_KEY,
+  parsePendingPractice,
+  parseRemotePractice,
+  readPendingSession,
+  type ResumeBrief,
+} from '../../utils/practice-progress';
+import { parseReviewSnap, REVIEW_SNAP_KEY, type ReviewResume } from '../../utils/review-snap';
+import { getDailyGoal, modName, setDailyGoal, streakDays, todayCount } from '../../utils/stats';
 import { syncTabBar } from '../../utils/tabbar';
 
 interface ModCard {
@@ -74,7 +81,6 @@ function applyCounts(mods: ModCard[], counts: { module: string; n: number }[]): 
 
 const BUNDLE_SNAP_KEY = 'homeBundleSnap';
 const RESUME_CLEAR_TTL = 30 * 1000;
-const REVIEW_SNAP_TTL_S = 2 * 3600;
 
 interface PlanTaskView extends PlanTodayTask {
   goText: string;
@@ -101,17 +107,6 @@ interface ExamResumeView {
   leftText: string;
 }
 
-interface PracticeResumeView {
-  title: string;
-  done: number;
-  total: number;
-}
-
-interface ReviewResumeView {
-  rIdx: number;
-  total: number;
-}
-
 function planTaskView(t: PlanTodayTask): PlanTaskView {
   const goText = t.done
     ? '已完成'
@@ -129,26 +124,6 @@ function planTaskView(t: PlanTodayTask): PlanTaskView {
 function fmtLeftSecs(s: number): string {
   const v = Math.max(0, Math.floor(s) || 0);
   return Math.floor(v / 60) + ':' + String(v % 60).padStart(2, '0');
-}
-
-// 照搬 H5 review-snap.js parseReviewSnap：v===1、uid 一致、2h TTL、rIdx 合法
-function parseReviewSnap(raw: ReviewSnap | string | null | undefined, uid: string, nowS: number): ReviewResumeView | null {
-  let s: ReviewSnap | null = null;
-  if (typeof raw === 'string') {
-    try {
-      s = JSON.parse(raw) as ReviewSnap;
-    } catch (e) {
-      return null;
-    }
-  } else s = raw || null;
-  if (!s || s.v !== 1 || !uid || s.uid !== uid) return null;
-  const ts = Number(s.ts);
-  const t = Math.floor(nowS);
-  if (!Number.isInteger(ts) || ts <= 0 || t - ts > REVIEW_SNAP_TTL_S || ts > t + 60) return null;
-  if (!Array.isArray(s.items) || !s.items.length) return null;
-  const rIdx = Number(s.rIdx);
-  if (!Number.isInteger(rIdx) || rIdx < 0 || rIdx >= s.items.length) return null;
-  return { rIdx, total: s.items.length };
 }
 
 Page({
@@ -198,11 +173,11 @@ Page({
     badgeStreak: 0,
     nextMilestone: null as { days: number; left: number; pct: number } | null,
     taskDoneN: 0,
-    // 公告 / 续练续考 / 全站同题 / 时政 / 周报
+    // 公告 / 续练续考（H5 resumes：本地 pendingSession/reviewSnap 优先，其次服务端） / 全站同题 / 时政 / 周报
     announce: null as Announcement | null,
     examResume: null as ExamResumeView | null,
-    practiceResume: null as PracticeResumeView | null,
-    reviewResume: null as ReviewResumeView | null,
+    practiceResume: null as (ResumeBrief & { name: string }) | null,
+    reviewResume: null as ReviewResume | null,
     dsMeta: null as { date: string; participants: number } | null,
     dsDone: null as DailyDoneRec | null,
     dsDoneText: '',
@@ -247,6 +222,76 @@ Page({
     this.loadDailySet();
     this.setData({ szTodayDone: !!loadSzDaily().days[cnDayKey()] });
     flushDailySubmit(cnDayKey());
+  },
+  onSearch() {
+    wx.navigateTo({ url: '/pkgLearn/search/search' });
+  },
+  // ---------- 续做卡（H5 loadPracticeResume/prContinue/prDrop） ----------
+  loadPracticeResume() {
+    const brief = (b: ResumeBrief | null) => (b ? { ...b, name: b.ptitle || modName(b.module) || '上次练习' } : null);
+    const local = parsePendingPractice(readPendingSession(), Date.now());
+    if (local) {
+      this.setData({ practiceResume: brief(local) });
+      return;
+    }
+    this.setData({ practiceResume: null });
+    const clearedAt = Number(wx.getStorageSync(PP_CLEARED_KEY)) || 0;
+    if (clearedAt && Date.now() - clearedAt < 30 * 1000) return;
+    fetchPracticeResume()
+      .then((d) => this.setData({ practiceResume: brief(parseRemotePractice(d)) }))
+      .catch(() => {});
+  },
+  onPrContinue() {
+    wx.navigateTo({ url: '/pages/practice/practice?resume=1' });
+  },
+  onPrDrop() {
+    wx.showModal({
+      title: '放弃未完成练习？',
+      content: '放弃后这组题的作答进度不再保留',
+      confirmText: '放弃',
+      cancelText: '再想想',
+      success: (res) => {
+        if (!res.confirm) return;
+        wx.removeStorageSync(PENDING_KEY);
+        wx.setStorageSync(PP_CLEARED_KEY, Date.now());
+        postPracticeProgress({ qids: [] }).catch(() => {});
+        this.setData({ practiceResume: null });
+      },
+    });
+  },
+  loadReviewResume() {
+    const uid = anonUid();
+    const local = parseReviewSnap(wx.getStorageSync(REVIEW_SNAP_KEY), uid, Date.now() / 1000);
+    if (local) {
+      this.setData({ reviewResume: local });
+      return;
+    }
+    this.setData({ reviewResume: null });
+    const clearedAt = Number(wx.getStorageSync('rvClearedAt')) || 0;
+    if (clearedAt && Date.now() - clearedAt < 30 * 1000) return;
+    fetchReviewCur()
+      .then((r) => this.setData({ reviewResume: parseReviewSnap(r && r.snap, uid, Date.now() / 1000) }))
+      .catch(() => {});
+  },
+  onRvContinue() {
+    trackEvent('home_review_resume_click', 'home');
+    wx.setStorageSync('bookReviewIntent', 1);
+    wx.switchTab({ url: '/pages/book/book' });
+  },
+  onRvDrop() {
+    wx.showModal({
+      title: '放弃未完成复习？',
+      content: '放弃后这轮复习的进度不再保留',
+      confirmText: '放弃',
+      cancelText: '再想想',
+      success: (res) => {
+        if (!res.confirm) return;
+        wx.removeStorageSync(REVIEW_SNAP_KEY);
+        wx.setStorageSync('rvClearedAt', Date.now());
+        saveReviewCur(null).catch(() => {});
+        this.setData({ reviewResume: null });
+      },
+    });
   },
   // 首屏 uid 专属数据聚合拉取：bundle 一次取齐 plan/profile/plan_today/badges/summary（同 H5 loadHome），
   // 失败时回退逐个端点；本地快照先渲染但不套用 summary（避免今日已练回退旧值）
@@ -422,44 +467,7 @@ Page({
     if (this.data.announce) wx.setStorageSync('annDismissed', String(this.data.announce.id));
     this.setData({ announce: null });
   },
-  // ---- 续练 / 续考 / 续复习（小程序端无本地进度快照，直接取服务端；放弃后 30s 内不回读）----
-  loadPracticeResume() {
-    const clearedAt = Number(wx.getStorageSync('ppClearedAt')) || 0;
-    if (clearedAt && Date.now() - clearedAt < RESUME_CLEAR_TTL) return;
-    fetchPracticeResume()
-      .then((d) => {
-        if (!d || !Array.isArray(d.items) || !d.items.length) {
-          this.setData({ practiceResume: null });
-          return;
-        }
-        const picks = d.picks || {};
-        const done = d.items.filter((q) => picks[String(q.id)] != null).length;
-        if (done >= d.items.length) {
-          this.setData({ practiceResume: null });
-          return;
-        }
-        const mod = d.module ? moduleMeta(d.module).label : '';
-        this.setData({ practiceResume: { title: d.ptitle || mod || '上次练习', done, total: d.items.length } });
-      })
-      .catch(() => undefined);
-  },
-  onPrContinue() {
-    wx.navigateTo({ url: '/pages/practice/practice?mode=resume' });
-  },
-  onPrDrop() {
-    wx.showModal({
-      title: '放弃未完成练习？',
-      content: '放弃后这组题的作答进度不再保留',
-      confirmText: '放弃',
-      cancelText: '再想想',
-      success: (res) => {
-        if (!res.confirm) return;
-        wx.setStorageSync('ppClearedAt', Date.now());
-        dropPracticeProgress().catch(() => undefined);
-        this.setData({ practiceResume: null });
-      },
-    });
-  },
+  // ---- 续考（小程序端无本地模考快照，直接取服务端 /api/exam/resume；放弃后 30s 内不回读）----
   async loadExamResume() {
     const clearedAt = Number(wx.getStorageSync('erClearedAt')) || 0;
     if (clearedAt && Date.now() - clearedAt < RESUME_CLEAR_TTL) return;
@@ -511,35 +519,6 @@ Page({
         const r = this.data.examResume;
         if (r && r.attemptId) dropExamProgress(r.attemptId).catch(() => undefined);
         this.setData({ examResume: null });
-      },
-    });
-  },
-  loadReviewResume() {
-    const clearedAt = Number(wx.getStorageSync('rvClearedAt')) || 0;
-    if (clearedAt && Date.now() - clearedAt < RESUME_CLEAR_TTL) return;
-    const uid = wx.getStorageSync<string>('anonUid') || '';
-    fetchReviewCur()
-      .then((r) => {
-        this.setData({ reviewResume: parseReviewSnap(r && r.snap, uid, Date.now() / 1000) });
-      })
-      .catch(() => undefined);
-  },
-  onRvContinue() {
-    trackEvent('home_review_resume_click', 'home');
-    wx.setStorageSync('autoStartReview', 1);
-    wx.switchTab({ url: '/pages/book/book' });
-  },
-  onRvDrop() {
-    wx.showModal({
-      title: '放弃未完成复习？',
-      content: '放弃后这轮复习的进度不再保留',
-      confirmText: '放弃',
-      cancelText: '再想想',
-      success: (res) => {
-        if (!res.confirm) return;
-        wx.setStorageSync('rvClearedAt', Date.now());
-        clearReviewCur().catch(() => undefined);
-        this.setData({ reviewResume: null });
       },
     });
   },

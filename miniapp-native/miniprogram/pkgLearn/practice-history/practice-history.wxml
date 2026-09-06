@@ -1,0 +1,60 @@
+<navbar title="练习历史" back="{{true}}" />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <block wx:if="{{total}}">
+      <view wx:for="{{groups}}" wx:key="day" wx:for-item="g" class="group">
+        <kg-section-header title="{{g.day}} · {{g.list.length}} 组" />
+        <kg-card wx:for="{{g.list}}" wx:key="start" wx:for-item="s" padding="{{12}}" class="item">
+          <view class="row" role="button" aria-expanded="{{openIdx === s.i ? 'true' : 'false'}}" data-i="{{s.i}}" bind:tap="onToggle">
+            <view class="row-main">
+              <view class="row-top">
+                <text class="time num">{{s.time}}</text>
+                <kg-tag wx:for="{{s.modules}}" wx:key="m" wx:for-item="m" tone="module" module="{{m.m}}">{{m.name}}</kg-tag>
+              </view>
+              <text class="meta"><text class="num">{{s.n}}</text> 题 · 用时 <text class="num">{{s.dur}}</text></text>
+            </view>
+            <text class="pct num {{s.pctCls}}">{{s.pct}}%</text>
+            <view class="arrow {{openIdx === s.i ? 'open' : ''}}"><l-icon name="chevron-right" size="20" tone="faint" /></view>
+          </view>
+
+          <view wx:if="{{openIdx === s.i}}" class="detail">
+            <t-skeleton wx:if="{{detailLoading}}" theme="paragraph" animation="gradient" />
+            <block wx:else>
+              <view wx:for="{{detail}}" wx:key="index" wx:for-item="d" wx:for-index="j" class="d-item">
+                <view class="d-row {{d.correct ? '' : 'wrong'}}" data-j="{{j}}" bind:tap="onToggleDetail">
+                  <view class="d-mark"><l-icon name="{{d.correct ? 'check' : 'x'}}" size="16" tone="{{d.correct ? 'ok' : 'bad'}}" /></view>
+                  <view class="d-main">
+                    <text class="d-q q-text {{openDetailIdx === j ? '' : 'ellip2'}}">{{d.title}}</text>
+                    <text wx:if="{{d.ans}}" class="d-ans">{{d.ans}}</text>
+                  </view>
+                  <text class="d-secs num">{{d.secs}}s</text>
+                  <view wx:if="{{d.hasQ}}" class="arrow {{openDetailIdx === j ? 'open' : ''}}"><l-icon name="chevron-right" size="16" tone="faint" /></view>
+                </view>
+                <view wx:if="{{openDetailIdx === j && d.hasQ}}" class="d-exp">
+                  <text wx:for="{{d.optList}}" wx:key="k" wx:for-item="o" class="d-opt q-text {{o.k === d.answer ? 'ans' : ''}} {{!d.correct && o.k === d.picked ? 'bad' : ''}}">{{o.k}}. {{o.v}}</text>
+                  <text class="d-ansline">{{d.ansLine}}</text>
+                  <text wx:if="{{d.expl}}" class="d-expl q-text">{{d.expl}}</text>
+                  <view class="d-ops">
+                    <kg-button variant="text" size="sm" icon="sparkles" data-j="{{j}}" bind:click="onAsk">AI 详解本题</kg-button>
+                  </view>
+                </view>
+              </view>
+              <kg-empty wx:if="{{!detail.length}}" compact icon="inbox" title="本组没有逐题记录" />
+              <kg-button wx:if="{{wrongN}}" variant="primary" size="md" block icon="rotate-ccw" class="btn-redo" bind:click="onRedoWrong">重练本次错题（{{wrongN}} 题）</kg-button>
+            </block>
+          </view>
+        </kg-card>
+      </view>
+    </block>
+    <kg-empty wx:elif="{{loadErr}}" icon="wifi-off" title="加载失败：{{loadErr}}" ctaText="重试" bind:cta="onRetry" />
+    <kg-empty
+      wx:elif="{{loaded}}"
+      icon="pencil-line"
+      title="还没有练习记录"
+      desc="每次刷题都会按日期记在这里，可回看每道题的作答与解析"
+      ctaText="去刷一组题"
+      bind:cta="onGoPractice"
+    />
+    <view wx:else class="skel"><t-skeleton theme="paragraph" animation="gradient" /><t-skeleton theme="paragraph" animation="gradient" /></view>
+  </view>
+</scroll-view>

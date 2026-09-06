@@ -17,6 +17,17 @@
   ],
   "subPackages": [
     {
+      "root": "pkgLearn",
+      "name": "learn",
+      "pages": [
+        "setup/setup",
+        "search/search",
+        "practice-history/practice-history",
+        "offline/offline",
+        "explain/explain"
+      ]
+    },
+    {
       "root": "pkgGrow",
       "pages": ["daily/daily", "calendar/calendar", "weekly-report/weekly-report", "mastery-map/mastery-map"]
     }

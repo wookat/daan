@@ -1,0 +1,252 @@
+.wrap {
+  padding: var(--sp-16) var(--page-x) 0;
+}
+
+.card {
+  display: block;
+  margin-bottom: var(--card-gap);
+}
+
+.h {
+  display: block;
+  font-size: var(--fs-h3);
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: var(--sp-12);
+}
+
+.ta {
+  display: block;
+  margin-bottom: var(--sp-12);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--fill);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-12);
+  margin-bottom: var(--sp-12);
+}
+
+.lb {
+  font-size: var(--fs-sub);
+  color: var(--ink-2);
+}
+
+.ua {
+  flex: 1;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+}
+
+.gen {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  margin-bottom: var(--sp-12);
+}
+
+.gen-t {
+  font-size: var(--fs-sub);
+  color: var(--brand-text);
+}
+
+.msg {
+  display: flex;
+  margin-bottom: var(--sp-12);
+}
+
+.msg.user {
+  justify-content: flex-end;
+}
+
+.msg.ai {
+  justify-content: flex-start;
+}
+
+.bubble {
+  max-width: 86%;
+  border-radius: var(--r-lg);
+  padding: var(--sp-12) var(--sp-16);
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  box-sizing: border-box;
+}
+
+.ub {
+  background: var(--brand);
+  color: var(--on-brand);
+  border-bottom-right-radius: var(--r-xs);
+}
+
+.ub-t {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ub-ans {
+  display: block;
+  margin-top: var(--sp-4);
+  font-size: var(--fs-caption);
+  color: var(--on-brand-2);
+}
+
+.ab {
+  max-width: 94%;
+  border-bottom-left-radius: var(--r-xs);
+  padding: 0;
+}
+
+.tags {
+  display: flex;
+  gap: var(--sp-8);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-8);
+}
+
+.anscard {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-12);
+  background: var(--card);
+  border: 1px solid var(--brand-soft-2);
+  border-radius: var(--r-md);
+  padding: var(--sp-12) var(--sp-16);
+  margin: var(--sp-4) 0 var(--sp-12);
+}
+
+.ans-big {
+  flex-shrink: 0;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 var(--sp-8);
+  border-radius: var(--r-sm);
+  background: var(--brand);
+  color: var(--on-brand);
+  font-size: var(--fs-h1);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ans-r {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-4);
+}
+
+.ans-brief {
+  display: block;
+  font-size: var(--fs-sub);
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+.md {
+  display: block;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.raterow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8);
+  background: var(--fill);
+  border-radius: var(--r-sm);
+  padding: var(--sp-8) var(--sp-12);
+  margin-top: var(--sp-12);
+  flex-wrap: wrap;
+}
+
+.rate-q {
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+.rate-btns {
+  display: flex;
+  gap: var(--sp-8);
+}
+
+.chips {
+  display: flex;
+  gap: var(--sp-8);
+  flex-wrap: wrap;
+  margin-top: var(--sp-12);
+}
+
+.label {
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+  display: block;
+  margin: var(--sp-12) 0 var(--sp-8);
+}
+
+.ans-chips {
+  display: flex;
+  gap: var(--sp-8);
+}
+
+.ans-chip {
+  flex: 1;
+  min-height: var(--hit-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--ink-2);
+  background: var(--card);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+}
+
+.ans-chip.ok {
+  color: var(--ok-strong);
+  background: var(--ok-soft);
+  border-color: var(--ok);
+}
+
+.ans-chip.bad {
+  color: var(--bad);
+  background: var(--bad-soft);
+  border-color: var(--bad);
+}
+
+.ans-chip.dim {
+  opacity: 0.4;
+}
+
+.bottom-pad {
+  height: calc(var(--sp-48) + var(--sp-24) + env(safe-area-inset-bottom));
+}
+
+.fubar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  padding: var(--sp-8) var(--page-x) calc(var(--sp-8) + env(safe-area-inset-bottom));
+  background: var(--card);
+  border-top: 1px solid var(--line);
+  z-index: 10;
+}
+
+.fu-in {
+  flex: 1;
+  min-width: 0;
+  background: var(--fill);
+  border-radius: var(--r-full);
+  padding: 0 var(--sp-12);
+}

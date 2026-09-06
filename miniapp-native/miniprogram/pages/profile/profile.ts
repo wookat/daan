@@ -9,6 +9,7 @@ import {
 } from '../../api/index';
 import type { CheckinBadgesResp } from '../../api/types';
 import { anonUid, clearAuth, getAuthUser } from '../../utils/auth';
+import { listPacks } from '../../utils/offline-pack';
 import { loadPStats, streakDays } from '../../utils/stats';
 import { syncTabBar } from '../../utils/tabbar';
 
@@ -27,6 +28,7 @@ Page({
     streakN: 0,
     mistakeN: 0,
     badgeN: 0,
+    offlineN: 0,
   },
   onShow() {
     syncTabBar(this, 4);
@@ -35,7 +37,7 @@ Page({
     const s = loadPStats();
     let totalDone = 0;
     for (const k of Object.keys(s.byModule)) totalDone += s.byModule[k].done;
-    this.setData({ user, avatarChar, uid: anonUid(), totalDone, streakN: streakDays() });
+    this.setData({ user, avatarChar, uid: anonUid(), totalDone, streakN: streakDays(), offlineN: listPacks().length });
     this.loadBadges();
     this.loadGrowth();
     this.loadReminder();
@@ -147,6 +149,12 @@ Page({
   },
   onTeam() {
     wx.navigateTo({ url: '/pages/team/team' });
+  },
+  onPracticeHistory() {
+    wx.navigateTo({ url: '/pkgLearn/practice-history/practice-history' });
+  },
+  onOffline() {
+    wx.navigateTo({ url: '/pkgLearn/offline/offline' });
   },
   onCalendar() {
     wx.navigateTo({ url: '/pkgGrow/calendar/calendar' });

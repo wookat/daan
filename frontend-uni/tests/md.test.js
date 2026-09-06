@@ -25,6 +25,13 @@ describe('md（AI 答案渲染，v-html 唯一入口）', () => {
     expect(md('#### 四级')).toContain('<h4 ');
   });
 
+  it('引用块：> 前缀渲染为左边线引用，不裸露 > 字符', () => {
+    const out = md('> 当然可以');
+    expect(out).toContain('border-left:3px solid');
+    expect(out).toContain('>当然可以</div>');
+    expect(out).not.toMatch(/>\s*>\s*当然/);
+  });
+
   it('「第N步」标题渲染徽标', () => {
     const out = md('### 第一步：审题');
     expect(out).toContain('第一步</span>');

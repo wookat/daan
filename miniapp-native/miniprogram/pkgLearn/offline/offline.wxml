@@ -1,0 +1,49 @@
+<navbar title="离线题包" back="{{true}}" />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <view wx:if="{{!online}}" class="offbar" role="status">
+      <l-icon name="plane" size="16" tone="warn" />
+      <text class="offbar-t">当前离线 · 可继续刷已下载题包，作答将在联网后自动同步</text>
+    </view>
+
+    <kg-card class="card">
+      <view class="row-sb">
+        <text class="h">存储占用</text>
+        <text class="sub">题包已用 <text class="num">{{usageText}}</text></text>
+      </view>
+      <view class="bar"><kg-progress value="{{usagePct}}" thickness="{{8}}" aria-label="存储占用" /></view>
+      <text class="hint">题包含题干/选项/解析文本，AI 讲解与讨论区需联网。小程序存储上限 10MB，题包为精简小包。</text>
+      <text wx:if="{{storageText}}" class="hint">{{storageText}}</text>
+    </kg-card>
+
+    <kg-card wx:if="{{pending}}" class="card" padding="{{12}}" body-class="sync">
+      <l-icon name="refresh-cw" size="20" tone="brand-text" />
+      <text class="sync-t">待同步：离线作答 <text class="num">{{pending}}</text> 条 · 联网后自动上传并更新统计</text>
+      <kg-button variant="primary" size="sm" loading="{{syncing}}" disabled="{{syncing}}" bind:click="onSyncNow">立即同步</kg-button>
+    </kg-card>
+
+    <kg-section-header title="题包（每包 {{packSize}} 题，可随时更新）" />
+    <kg-card wx:for="{{packs}}" wx:key="module" class="pkg" padding="{{12}}" body-class="pkg-body">
+      <view class="ico" style="background: {{item.soft}}; color: {{item.color}}">
+        <l-icon name="{{item.icon}}" size="24" tone="inherit" />
+      </view>
+      <view class="grow">
+        <view class="nm-row">
+          <text class="nm">{{item.name}} · 高频题包</text>
+          <kg-tag wx:if="{{item.has}}" tone="ok">已下载</kg-tag>
+        </view>
+        <text class="sub2">{{item.sub}}</text>
+      </view>
+      <view class="acts">
+        <kg-button wx:if="{{busy === item.module}}" variant="secondary" size="sm" loading disabled>下载中</kg-button>
+        <block wx:elif="{{item.has}}">
+          <kg-button variant="secondary" size="sm" icon="rotate-ccw" data-m="{{item.module}}" bind:click="onDownload">更新</kg-button>
+          <kg-button variant="text" size="sm" tone="bad" data-m="{{item.module}}" bind:click="onRemove">删除</kg-button>
+        </block>
+        <kg-button wx:else variant="primary" size="sm" icon="monitor-down" data-m="{{item.module}}" bind:click="onDownload">下载</kg-button>
+      </view>
+    </kg-card>
+
+    <text class="hint2">离线时进入「刷题 → 专项练习」会自动使用已下载题包出题，本地判分；错题与作答记录联网后自动同步（去重）。错题本离线可查看最近缓存内容。</text>
+  </view>
+</scroll-view>

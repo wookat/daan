@@ -1,11 +1,11 @@
-.kg-card { position: relative; background: var(--card); border-radius: var(--r-md); color: var(--ink); transition: background-color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard); }
+.kg-card { position: relative; --kg-surface: var(--card); background: var(--kg-surface); border-radius: var(--r-md); color: var(--ink); transition: background-color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard); }
 .kg-card--p16 { padding: var(--card-pad); }
 .kg-card--p12 { padding: var(--sp-12); }
 .kg-card--flat { border: 1px solid var(--line); }
 .kg-card--raised { box-shadow: var(--sh-1); }
-.kg-card--soft { background: var(--fill); }
-.kg-card--hover { background: var(--fill); }
-.kg-card.is-selected { border: 1px solid var(--brand); background: var(--brand-soft); box-shadow: none; }
+.kg-card--soft { --kg-surface: var(--fill); }
+.kg-card--hover { --kg-surface: var(--fill); }
+.kg-card.is-selected { border: 1px solid var(--brand); --kg-surface: var(--brand-soft); box-shadow: none; }
 .kg-card__hd { margin-bottom: var(--sp-12); }
 .kg-card__ft { margin-top: var(--sp-12); padding-top: var(--sp-12); border-top: 1px solid var(--line); }
 .kg-card__chev { position: absolute; right: var(--sp-12); top: 50%; transform: translateY(-50%); }
