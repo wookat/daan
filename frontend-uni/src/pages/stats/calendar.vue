@@ -1,53 +1,60 @@
 <template>
-  <view class="wrap">
-    <view class="cd-cols">
-    <view class="cd-main">
-    <view class="card">
-      <view class="cal-head">
-        <view class="cal-title">
-          <text class="cal-btn" @click="shiftMonth(-1)">‹</text>
-          <view class="h" style="margin-bottom: 0">{{ ym.y }} 年 {{ ym.m + 1 }} 月</view>
-          <text class="cal-btn" :class="{ dis: isCurMonth }" @click="shiftMonth(1)">›</text>
-        </view>
-        <text class="cal-badge">本月打卡 {{ monthDays }} 天</text>
-      </view>
-      <view class="cal-sub">本月共练 {{ monthCount }} 题</view>
-      <view class="cal-week">
-        <text v-for="w in ['一', '二', '三', '四', '五', '六', '日']" :key="w" class="cal-w">{{ w }}</text>
-      </view>
-      <view class="cal-grid">
-        <view v-for="(c, i) in calCells" :key="i" class="cal-c" :class="c.cls">{{ c.d || '' }}</view>
-      </view>
-      <view class="cal-legend">
-        <text class="lg"><text class="dot part" /> 1-9 题</text>
-        <text class="lg"><text class="dot full" /> ≥10 题</text>
-        <text class="lg"><text class="dot today" /> 今天</text>
-      </view>
-    </view>
-    </view>
-
-    <view class="cd-side">
-    <view v-if="badgeInfo" class="card ms">
-      <view class="ms-h">
-        <view class="h" style="margin-bottom: 0">连签里程碑</view>
-        <text class="ms-best">历史最长 {{ badgeInfo.best_streak }} 天</text>
-      </view>
-      <view class="ms-cur">🔥 当前连续打卡 <text class="ms-n">{{ badgeInfo.streak }}</text> 天</view>
-      <template v-if="nextMilestone">
-        <view class="ms-bar"><view class="ms-fill" :style="{ width: nextMilestone.pct + '%' }" /></view>
-        <view class="ms-sub">再打卡 <text class="ms-left">{{ nextMilestone.left }}</text> 天解锁「{{ nextMilestone.days }} 天」徽章</view>
+  <view class="wrap cal-page">
+    <kg-two-col>
+      <template #main>
+        <kg-card class="calcard">
+          <view class="cal-head">
+            <view class="cal-title">
+              <view class="cal-btn" role="button" aria-label="上个月" hover-class="cal-btn--hover" @click="shiftMonth(-1)"><l-icon name="chevron-left" :size="20" tone="brand-text" /></view>
+              <text class="cal-ym num">{{ ym.y }} 年 {{ ym.m + 1 }} 月</text>
+              <view class="cal-btn" :class="{ dis: isCurMonth }" role="button" aria-label="下个月" :aria-disabled="String(isCurMonth)" hover-class="cal-btn--hover" @click="shiftMonth(1)"><l-icon name="chevron-right" :size="20" :tone="isCurMonth ? 'faint' : 'brand-text'" /></view>
+            </view>
+            <kg-tag tone="ok">本月打卡 {{ monthDays }} 天</kg-tag>
+          </view>
+          <text class="cal-sub">本月共练 {{ monthCount }} 题</text>
+          <view class="cal-week">
+            <text v-for="w in ['一', '二', '三', '四', '五', '六', '日']" :key="w" class="cal-w">{{ w }}</text>
+          </view>
+          <view class="cal-grid">
+            <view v-for="(c, i) in calCells" :key="i" class="cal-cell"><view class="cal-c num" :class="c.cls">{{ c.d || '' }}</view></view>
+          </view>
+          <view class="cal-legend">
+            <text class="lg"><text class="dot part" /> 1-9 题</text>
+            <text class="lg"><text class="dot full" /> ≥10 题</text>
+            <text class="lg"><text class="dot today" /> 今天</text>
+          </view>
+        </kg-card>
       </template>
-      <view v-else class="ms-sub">已解锁全部打卡徽章，太强了！</view>
-      <view class="ms-dots">
-        <view v-for="b in badgeInfo.badges" :key="b.days" class="ms-dot" :class="{ on: b.unlocked }">
-          <text class="ms-dot-i">{{ b.unlocked ? '🏅' : '🔒' }}</text>
-          <text class="ms-dot-d">{{ b.days }}天</text>
+
+      <template #aside>
+        <kg-skeleton v-if="badgeInfo === null" preset="lines" />
+        <kg-card v-else class="ms">
+          <view class="ms-h">
+            <text class="ms-t">连签里程碑</text>
+            <text class="ms-best">历史最长 <text class="num">{{ badgeInfo.best_streak }}</text> 天</text>
+          </view>
+          <view class="ms-cur">
+            <kg-streak-badges :days="badgeInfo.streak || 0" />
+            <text class="ms-cur-t">当前连续打卡</text>
+          </view>
+          <template v-if="nextMilestone">
+            <kg-progress :value="nextMilestone.pct" :thickness="8" class="ms-bar" :aria-label="`距下一个徽章 ${nextMilestone.pct}%`" />
+            <text class="ms-sub">再打卡 <text class="ms-left num">{{ nextMilestone.left }}</text> 天解锁「{{ nextMilestone.days }} 天」徽章</text>
+          </template>
+          <text v-else class="ms-sub">已解锁全部打卡徽章，太强了！</text>
+          <view class="ms-dots">
+            <view v-for="b in badgeInfo.badges" :key="b.days" class="ms-dot" :class="{ on: b.unlocked }">
+              <view class="ms-dot-i"><l-icon name="medal" :size="20" :tone="b.unlocked ? 'streak' : 'faint'" /></view>
+              <text class="ms-dot-d num">{{ b.days }}天</text>
+            </view>
+          </view>
+        </kg-card>
+        <view class="poster">
+          <kg-button variant="primary" size="lg" block icon="share-2" :disabled="!canPoster" @click="openPoster">生成打卡海报</kg-button>
+          <text v-if="!canPoster" class="poster-tip">今天先练 1 题打上卡，再来生成海报</text>
         </view>
-      </view>
-    </view>
-    <button class="poster-btn" @click="openPoster">生成打卡海报</button>
-    </view>
-    </view>
+      </template>
+    </kg-two-col>
   </view>
 </template>
 
@@ -85,6 +92,12 @@ export default {
       return Object.keys(days)
         .filter((k) => k.startsWith(this.monthPrefix))
         .reduce((s, k) => s + (days[k] || 0), 0);
+    },
+    /** 0 天（从未打卡）时海报无内容可生成：按钮 disabled + 说明 */
+    canPoster() {
+      const days = this.dayMap;
+      if (Object.keys(days).some((k) => days[k] > 0)) return true;
+      return !!(this.badgeInfo && (this.badgeInfo.streak || this.badgeInfo.best_streak));
     },
     nextMilestone() {
       if (!this.badgeInfo) return null;
@@ -125,7 +138,10 @@ export default {
     async loadBadges() {
       try {
         this.badgeInfo = await fetchCheckinBadges();
-      } catch (e) { /* 非关键路径 */ }
+      } catch (e) {
+        // 非关键路径：请求失败时用空徽章数据渲染，避免辅栏一直骨架
+        if (this.badgeInfo === null) this.badgeInfo = { streak: 0, best_streak: 0, badges: [] };
+      }
     },
     async loadDays() {
       try {
@@ -134,6 +150,7 @@ export default {
       } catch (e) { /* 非关键路径，降级本地 pstats */ }
     },
     openPoster() {
+      if (!this.canPoster) return;
       uni.navigateTo({ url: '/pkgA/social/poster' });
     },
     shiftMonth(dir) {
@@ -149,55 +166,54 @@ export default {
 </script>
 
 <style scoped>
-.wrap { padding: 24rpx; }
-.ms { margin-top: 24rpx; }
-.ms-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
-.ms-best { font-size: 21rpx; color: var(--ink-2); }
-.ms-cur { font-size: 25rpx; color: var(--ink-1, #1f2430); }
-.ms-n { font-size: 34rpx; font-weight: 800; color: #d97706; }
-.ms-bar { height: 14rpx; background: var(--line); border-radius: 999rpx; margin-top: 14rpx; overflow: hidden; }
-.ms-fill { height: 100%; background: linear-gradient(90deg, #f59e0b, #d97706); border-radius: 999rpx; }
-.ms-sub { font-size: 22rpx; color: var(--ink-2); margin-top: 10rpx; }
-.ms-left { color: #d97706; font-weight: 700; }
-.ms-dots { display: flex; justify-content: space-between; margin-top: 20rpx; }
-.ms-dot { display: flex; flex-direction: column; align-items: center; gap: 4rpx; }
-.ms-dot-i { font-size: 30rpx; opacity: 0.45; }
-.ms-dot.on .ms-dot-i { opacity: 1; }
-.ms-dot-d { font-size: 20rpx; color: var(--ink-2); }
-.poster-btn { margin-top: 24rpx; background: var(--brand); color: #fff; font-size: 28rpx; border-radius: 18rpx; }
-.card { background: var(--card); border-radius: var(--radius); padding: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
-.h { font-size: 30rpx; font-weight: 700; }
-.cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10rpx; }
-.cal-title { display: flex; align-items: center; gap: 16rpx; }
-.cal-badge { font-size: 21rpx; color: #166534; background: var(--ok-soft, #dcfce7); border-radius: 8rpx; padding: 4rpx 14rpx; }
-.cal-btn { font-size: 30rpx; color: var(--brand-text); font-weight: 600; padding: 8rpx 16rpx; }
-.cal-btn.dis { color: var(--ink-3); }
-.cal-sub { font-size: 23rpx; color: var(--ink-2); margin-bottom: 18rpx; }
-.cal-week { display: flex; margin-bottom: 8rpx; }
-.cal-w { flex: 1; text-align: center; font-size: 20rpx; color: var(--ink-2); }
+.wrap { padding: var(--sp-16) var(--page-x) var(--sp-40); }
+
+/* 月历 */
+.cal-head { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-4); }
+.cal-title { display: flex; align-items: center; gap: var(--sp-4); }
+.cal-ym { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); line-height: var(--lh-h3); }
+.cal-btn { width: var(--hit-min); height: var(--hit-min); display: flex; align-items: center; justify-content: center; border-radius: var(--r-full); }
+.cal-btn--hover { background: var(--fill); }
+.cal-btn.dis { pointer-events: none; }
+.cal-sub { display: block; font-size: var(--fs-sub); color: var(--ink-3); margin-bottom: var(--sp-16); }
+.cal-week { display: flex; margin-bottom: var(--sp-8); }
+.cal-w { flex: 1; text-align: center; font-size: var(--fs-caption); color: var(--ink-3); }
 .cal-grid { display: flex; flex-wrap: wrap; }
-.cal-c { width: 14.28%; height: 80rpx; line-height: 80rpx; text-align: center; font-size: 24rpx; color: var(--ink-2); box-sizing: border-box; border-radius: 50%; }
-.cal-c.part { background: var(--brand-soft); color: var(--brand-text); font-weight: 600; }
-.cal-c.full { background: var(--brand); color: #fff; font-weight: 700; }
-.cal-c.today { border: 2rpx solid var(--brand); }
-.cal-legend { display: flex; gap: 26rpx; margin-top: 18rpx; }
-.lg { font-size: 21rpx; color: var(--ink-2); display: flex; align-items: center; gap: 8rpx; }
-.dot { width: 20rpx; height: 20rpx; border-radius: 50%; display: inline-block; }
-.dot.part { background: var(--brand-soft); border: 1rpx solid var(--brand); }
+.cal-cell { width: 14.28%; height: var(--hit-min); display: flex; align-items: center; justify-content: center; }
+.cal-c { width: 36px; height: 36px; line-height: 36px; text-align: center; font-size: var(--fs-sub); color: var(--ink-2); box-sizing: border-box; border-radius: var(--r-full); }
+.cal-c.part { background: var(--brand-soft-2); color: var(--brand-text); font-weight: 600; }
+.cal-c.full { background: var(--brand); color: var(--on-brand); font-weight: 600; }
+.cal-c.today { border: 2px solid var(--brand); }
+.cal-legend { display: flex; flex-wrap: wrap; gap: var(--sp-8) var(--sp-16); margin-top: var(--sp-16); }
+.lg { font-size: var(--fs-caption); color: var(--ink-3); display: inline-flex; align-items: center; gap: var(--sp-4); }
+.dot { width: 10px; height: 10px; border-radius: var(--r-full); display: inline-block; }
+.dot.part { background: var(--brand-soft-2); }
 .dot.full { background: var(--brand); }
-.dot.today { border: 2rpx solid var(--brand); background: var(--card); }
+.dot.today { border: 2px solid var(--brand); background: var(--card); box-sizing: border-box; }
+
+/* 连签里程碑 */
+.ms-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-12); }
+.ms-t { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); }
+.ms-best { font-size: var(--fs-caption); color: var(--ink-3); }
+.ms-cur { display: flex; align-items: center; gap: var(--sp-8); }
+.ms-cur-t { font-size: var(--fs-sub); color: var(--ink-2); }
+.ms-bar { margin-top: var(--sp-12); }
+.ms-sub { display: block; font-size: var(--fs-sub); color: var(--ink-3); margin-top: var(--sp-8); line-height: var(--lh-sub); }
+.ms-left { color: var(--streak); font-weight: 600; }
+.ms-dots { display: flex; justify-content: space-between; margin-top: var(--sp-16); }
+.ms-dot { display: flex; flex-direction: column; align-items: center; gap: var(--sp-4); }
+.ms-dot-i { width: 32px; height: 32px; border-radius: var(--r-full); background: var(--fill); display: flex; align-items: center; justify-content: center; }
+.ms-dot.on .ms-dot-i { background: var(--streak-soft); }
+.ms-dot-d { font-size: var(--fs-caption); color: var(--ink-3); }
+.ms-dot.on .ms-dot-d { color: var(--ink); }
+
+.poster { margin-top: var(--sp-16); display: grid; gap: var(--sp-8); }
+.poster-tip { text-align: center; font-size: var(--fs-caption); color: var(--ink-3); }
 
 /* #ifdef H5 */
-@media (min-width: 768px) {
-  .wrap { max-width: 1044px; margin: 0 auto; }
-  .cal-btn:hover, .poster-btn:hover, .cal-btn.dis:hover { cursor: pointer; }
-}
-
 @media (min-width: 1024px) {
-  .cd-cols { display: flex; gap: 32rpx; align-items: flex-start; }
-  .cd-main { flex: 1; min-width: 0; }
-  .cd-side { width: 420px; flex: none; position: sticky; top: 24rpx; }
-  .cd-side .ms { margin-top: 0; }
+  .wrap.cal-page { max-width: 1064px; }
+  .ms { margin-top: 0; }
 }
 /* #endif */
 </style>

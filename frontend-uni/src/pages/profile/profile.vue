@@ -1,154 +1,165 @@
 <template>
   <view class="wrap profile">
-    <!-- 账号卡 -->
-    <view class="card acct" @click="user ? null : goLogin()">
-      <view class="avatar">
-        <text v-if="user">{{ (user.nickname || user.phone || 'U').slice(0, 1) }}</text>
-        <l-icon v-else name="user-round" :size="26" color="#ffffff" />
-      </view>
-      <view class="grow">
-        <text class="acct-name">{{ user ? user.nickname || maskPhone(user.phone) : '未登录' }}</text>
-        <text class="acct-sub">{{ user ? maskPhone(user.phone) + ' · 记录多端同步中' : '登录后错题、做题记录多端同步' }}</text>
-      </view>
-      <view v-if="!user" class="acct-btn" @click.stop="goLogin">登录 / 注册</view>
-    </view>
+    <kg-two-col>
+      <template #main>
+        <!-- 账号卡 -->
+        <kg-card class="acct" :clickable="!user" @click="goLogin">
+          <view class="acct-row">
+            <view class="avatar">
+              <text v-if="user" class="avatar-t">{{ (user.nickname || user.phone || 'U').slice(0, 1) }}</text>
+              <l-icon v-else name="user-round" :size="24" tone="on-brand" />
+            </view>
+            <view class="grow">
+              <text class="acct-name">{{ user ? user.nickname || maskPhone(user.phone) : '未登录' }}</text>
+              <text class="acct-sub">{{ user ? maskPhone(user.phone) + ' · 记录多端同步中' : '登录后错题、做题记录多端同步' }}</text>
+            </view>
+            <kg-button v-if="!user" variant="primary" size="lg" @click.stop="goLogin">登录 / 注册</kg-button>
+          </view>
+          <view class="acct-stats">
+            <kg-stat-row :items="statItems" />
+          </view>
+        </kg-card>
 
-    <!-- 学习资产 -->
-    <view class="stats-row">
-      <view class="stat-c" @click="goStats">
-        <text class="stat-n">{{ totalDone }}</text>
-        <text class="stat-t">累计做题</text>
-      </view>
-      <view class="stat-c" @click="goBook">
-        <text class="stat-n">{{ mistakeN == null ? '—' : mistakeN }}</text>
-        <text class="stat-t">错题本</text>
-      </view>
-      <view class="stat-c" @click="goStats">
-        <text class="stat-n">{{ streak }}</text>
-        <text class="stat-t">连续打卡</text>
-      </view>
-    </view>
+        <!-- 打卡徽章：一行，点击进日历 -->
+        <kg-card class="streak" clickable chevron @click="goCalendar">
+          <view class="streak-row">
+            <kg-streak-badges :days="streak" />
+            <text class="streak-t">连续打卡</text>
+            <text v-if="badgeInfo" class="streak-best">历史最长 <text class="num">{{ badgeInfo.best_streak }}</text> 天 · 已解锁 {{ unlockedN }}/{{ badgeList.length }} 徽章</text>
+            <text v-else class="streak-best">学习日历与打卡徽章</text>
+          </view>
+        </kg-card>
 
-    <view class="pgrid">
-    <view class="psec">
-    <!-- 打卡徽章墙 -->
-    <view class="sec-t">打卡徽章</view>
-    <view class="card badges">
-      <view v-if="badgeInfo" class="badge-head">
-        <text class="badge-cur">当前连续 {{ badgeInfo.streak }} 天</text>
-        <text class="badge-best">历史最长 {{ badgeInfo.best_streak }} 天</text>
+        <!-- 学习 -->
+        <kg-section-header title="学习" />
+        <wd-cell-group custom-class="cellcard" border>
+          <wd-cell title="学习计划与报考画像" :value="profileSummary" is-link clickable @click="goPlan">
+            <template #icon><view class="cell-ico"><l-icon name="target" :size="20" tone="brand" /></view></template>
+          </wd-cell>
+          <wd-cell title="学习日历" is-link clickable @click="goCalendar">
+            <template #icon><view class="cell-ico"><l-icon name="calendar" :size="20" tone="brand" /></view></template>
+          </wd-cell>
+          <wd-cell title="我的收藏" :value="favN + ' 题'" is-link clickable @click="goFavs">
+            <template #icon><view class="cell-ico"><l-icon name="star" :size="20" tone="brand" /></view></template>
+          </wd-cell>
+          <wd-cell title="讨论消息" :value="inboxUnread ? inboxUnread + ' 条未读' : ''" is-link clickable @click="goInbox">
+            <template #icon><view class="cell-ico"><l-icon name="message-circle" :size="20" tone="brand" /></view></template>
+          </wd-cell>
+          <wd-cell title="练习历史" value="逐题回看 · 错题重练" is-link clickable @click="goPracticeHistory">
+            <template #icon><view class="cell-ico"><l-icon name="clock" :size="20" tone="brand" /></view></template>
+          </wd-cell>
+          <wd-cell title="真题卷库" value="历年真题 · 模考记录" is-link clickable @click="goExamList">
+            <template #icon><view class="cell-ico"><l-icon name="file-text" :size="20" tone="brand" /></view></template>
+          </wd-cell>
+          <wd-cell title="AI 学习教练" :value="coachHtml ? '已生成建议' : '个性化备考建议'" is-link clickable @click="coachOpen = true">
+            <template #icon><view class="cell-ico"><l-icon name="bot-message-square" :size="20" tone="brand" /></view></template>
+          </wd-cell>
+          <wd-cell title="数据备份与迁移" :value="backupCode ? '恢复码 ' + backupCode : '免注册换机'" is-link clickable @click="bkOpen = true">
+            <template #icon><view class="cell-ico"><l-icon name="save" :size="20" tone="brand" /></view></template>
+          </wd-cell>
+        </wd-cell-group>
+
+        <!-- 偏好设置 -->
+        <kg-section-header title="偏好设置" />
+        <wd-cell-group custom-class="cellcard" border>
+          <wd-cell title="每日目标" :value="dailyGoal + ' 题/天'" is-link clickable @click="cycleGoal">
+            <template #icon><view class="cell-ico"><l-icon name="flag" :size="20" tone="info" /></view></template>
+          </wd-cell>
+          <wd-cell title="字号与显示" :value="['小', '标准', '大'][fontLv]" is-link clickable @click="cycleFont">
+            <template #icon><view class="cell-ico"><l-icon name="a-large-small" :size="20" tone="info" /></view></template>
+          </wd-cell>
+          <wd-cell title="学习提醒" :value="remindOn ? '每天 ' + remindTime : '未开启'" is-link clickable @click="goReminders">
+            <template #icon><view class="cell-ico"><l-icon name="alarm-clock" :size="20" tone="info" /></view></template>
+          </wd-cell>
+          <!-- #ifdef H5 -->
+          <wd-cell title="外观模式" :value="themeLabel" is-link clickable @click="cycleTheme">
+            <template #icon><view class="cell-ico"><l-icon name="moon" :size="20" tone="info" /></view></template>
+          </wd-cell>
+          <wd-cell v-if="pwaInstallable" title="安装到桌面" value="像 App 一样从主屏打开" is-link clickable @click="installPwa">
+            <template #icon><view class="cell-ico"><l-icon name="monitor-down" :size="20" tone="info" /></view></template>
+          </wd-cell>
+          <wd-cell v-else-if="iosInstallable" title="安装到主屏幕" value="像 App 一样从主屏打开" is-link clickable @click="showIosGuide">
+            <template #icon><view class="cell-ico"><l-icon name="monitor-down" :size="20" tone="info" /></view></template>
+          </wd-cell>
+          <!-- #endif -->
+          <wd-cell title="离线题包" :value="offlineN ? offlineN + ' 个题包' : '未下载'" is-link clickable @click="goOffline">
+            <template #icon><view class="cell-ico"><l-icon name="package" :size="20" tone="info" /></view></template>
+          </wd-cell>
+          <wd-cell title="答题音效" :value="sfxOn ? '已开启' : '已关闭'" is-link clickable @click="toggleSfx">
+            <template #icon><view class="cell-ico"><l-icon name="bell" :size="20" tone="info" /></view></template>
+          </wd-cell>
+        </wd-cell-group>
+      </template>
+
+      <template #aside>
+        <!-- 其他 -->
+        <kg-section-header title="其他" />
+        <wd-cell-group custom-class="cellcard" border>
+          <wd-cell v-if="announce" title="公告" :value="announce.title" is-link clickable @click="showAnnounce">
+            <template #icon><view class="cell-ico"><l-icon name="megaphone" :size="20" tone="warn" /></view></template>
+          </wd-cell>
+          <wd-cell title="反馈与纠错" is-link clickable @click="feedback">
+            <template #icon><view class="cell-ico"><l-icon name="message-circle" :size="20" tone="warn" /></view></template>
+          </wd-cell>
+          <wd-cell title="关于" value="错题邦" is-link clickable @click="about">
+            <template #icon><view class="cell-ico"><l-icon name="info" :size="20" tone="warn" /></view></template>
+          </wd-cell>
+        </wd-cell-group>
+
+        <view v-if="user" class="logout">
+          <kg-button variant="secondary" tone="bad" size="lg" block @click="doLogout">退出登录</kg-button>
+        </view>
+
+        <view class="zl-footer">
+          <view class="zl-links">
+            <text class="zl-link" v-for="p in zlProducts" :key="p.url" @click="zlOpen(p.url)">{{ p.name }}</text>
+          </view>
+          <view class="zl-links">
+            <text class="zl-link" @click="zlOpen('https://career.zalize.com/privacy/')">隐私政策</text>
+            <text class="zl-link" @click="zlOpen('https://career.zalize.com/terms/')">服务条款</text>
+            <text class="zl-link" @click="zlOpen('mailto:support@zalize.com')">联系我们</text>
+          </view>
+          <text class="zl-copy">© 2026 Zalize 上岸 · 错题邦</text>
+        </view>
+      </template>
+    </kg-two-col>
+
+    <!-- AI 学习教练（自 stats 迁入） -->
+    <kg-sheet v-model="coachOpen" title="AI 学习教练">
+      <view class="sheet-body">
+        <text class="sheet-tip">基于你的正确率、错因分布和打卡情况，生成个性化备考建议</text>
+        <kg-skeleton v-if="coachLoading" preset="lines" />
+        <rich-text v-else-if="coachHtml" class="coach-body" :nodes="coachHtml" />
+        <kg-empty-state v-else compact icon="bot-message-square" title="还没有生成过建议" desc="教练会读取你的做题数据，约需 10 秒" />
       </view>
-      <view class="badge-grid">
-        <view v-for="b in badgeList" :key="b.days" class="badge" :class="{ off: !b.unlocked }" @click="tapBadge(b)">
-          <text class="badge-ico">{{ b.unlocked ? '🏅' : '🔒' }}</text>
-          <text class="badge-d">{{ b.days }} 天</text>
+      <template #footer>
+        <kg-button variant="primary" size="lg" block :loading="coachLoading" @click="getCoach">{{ coachHtml ? '重新诊断' : '生成建议' }}</kg-button>
+      </template>
+    </kg-sheet>
+
+    <!-- 数据备份与迁移（自 stats 迁入） -->
+    <kg-sheet v-model="bkOpen" title="数据备份与迁移">
+      <view class="sheet-body">
+        <text class="sheet-tip">免注册也能换机：生成恢复码备份学习数据，在新设备输入恢复码即可找回。</text>
+        <view v-if="backupCode" class="bk-code" role="button" aria-label="复制恢复码" @click="copyCode">
+          <text class="bk-code-l">恢复码</text>
+          <text class="bk-code-v num">{{ backupCode }}</text>
+          <l-icon name="copy" :size="16" tone="brand-text" />
         </view>
       </view>
-    </view>
-    </view>
-
-    <view class="psec">
-    <!-- 学习 -->
-    <view class="sec-t">学习</view>
-    <wd-cell-group custom-class="cellcard" border>
-      <wd-cell title="学习计划与报考画像" :value="profileSummary" is-link clickable @click="goPlan">
-        <template #icon><view class="cell-ico"><l-icon name="target" :size="18" color="#2e5bff" /></view></template>
-      </wd-cell>
-      <wd-cell title="学习日历" is-link clickable @click="goCalendar">
-        <template #icon><view class="cell-ico"><l-icon name="calendar" :size="18" color="#2e5bff" /></view></template>
-      </wd-cell>
-      <wd-cell title="我的收藏" :value="favN + ' 题'" is-link clickable @click="goFavs">
-        <template #icon><view class="cell-ico"><l-icon name="star" :size="18" color="#2e5bff" /></view></template>
-      </wd-cell>
-      <wd-cell title="讨论消息" :value="inboxUnread ? inboxUnread + ' 条未读' : ''" is-link clickable @click="goInbox">
-        <template #icon><view class="cell-ico"><l-icon name="message-circle" :size="18" color="#2e5bff" /></view></template>
-      </wd-cell>
-      <wd-cell title="练习历史" value="逐题回看 · 错题重练" is-link clickable @click="goPracticeHistory">
-        <template #icon><view class="cell-ico"><l-icon name="clock" :size="18" color="#2e5bff" /></view></template>
-      </wd-cell>
-      <wd-cell title="模考记录" is-link clickable @click="goExamList">
-        <template #icon><view class="cell-ico"><l-icon name="file-text" :size="18" color="#2e5bff" /></view></template>
-      </wd-cell>
-      <wd-cell title="AI 面试陪练" value="抽题 · 打分 · 点评" is-link clickable @click="goInterview">
-        <template #icon><view class="cell-ico"><l-icon name="mic" :size="18" color="#2e5bff" /></view></template>
-      </wd-cell>
-      <wd-cell title="答题 PK" is-link clickable @click="goPk">
-        <template #icon><view class="cell-ico"><l-icon name="swords" :size="18" color="#2e5bff" /></view></template>
-      </wd-cell>
-      <wd-cell title="刷题小队" value="组队打卡 · 互相催学" is-link clickable @click="goTeam">
-        <template #icon><view class="cell-ico"><l-icon name="users" :size="18" color="#2e5bff" /></view></template>
-      </wd-cell>
-    </wd-cell-group>
-    </view>
-
-    <view class="psec">
-    <!-- 偏好设置 -->
-    <view class="sec-t">偏好设置</view>
-    <wd-cell-group custom-class="cellcard" border>
-      <wd-cell title="每日目标" :value="dailyGoal + ' 题/天'" is-link clickable @click="cycleGoal">
-        <template #icon><view class="cell-ico"><l-icon name="flag" :size="18" color="#0d9488" /></view></template>
-      </wd-cell>
-      <wd-cell title="字号与显示" :value="['小', '标准', '大'][fontLv]" is-link clickable @click="cycleFont">
-        <template #icon><view class="cell-ico"><l-icon name="a-large-small" :size="18" color="#0d9488" /></view></template>
-      </wd-cell>
-      <wd-cell title="学习提醒" :value="remindOn ? '每天 ' + remindTime : '未开启'" is-link clickable @click="goReminders">
-        <template #icon><view class="cell-ico"><l-icon name="alarm-clock" :size="18" color="#0d9488" /></view></template>
-      </wd-cell>
-      <!-- #ifdef H5 -->
-      <wd-cell title="外观模式" :value="themeLabel" is-link clickable @click="cycleTheme">
-        <template #icon><view class="cell-ico"><l-icon name="moon" :size="18" color="#0d9488" /></view></template>
-      </wd-cell>
-      <wd-cell v-if="pwaInstallable" title="安装到桌面" value="像 App 一样从主屏打开" is-link clickable @click="installPwa">
-        <template #icon><view class="cell-ico"><l-icon name="monitor-down" :size="18" color="#0d9488" /></view></template>
-      </wd-cell>
-      <wd-cell v-else-if="iosInstallable" title="安装到主屏幕" value="像 App 一样从主屏打开" is-link clickable @click="showIosGuide">
-        <template #icon><view class="cell-ico"><l-icon name="monitor-down" :size="18" color="#0d9488" /></view></template>
-      </wd-cell>
-      <!-- #endif -->
-      <wd-cell title="离线题包" :value="offlineN ? offlineN + ' 个题包' : '未下载'" is-link clickable @click="goOffline">
-        <template #icon><view class="cell-ico"><l-icon name="package" :size="18" color="#0d9488" /></view></template>
-      </wd-cell>
-      <wd-cell title="答题音效" :value="sfxOn ? '已开启' : '已关闭'" is-link clickable @click="toggleSfx">
-        <template #icon><view class="cell-ico"><l-icon name="bell" :size="18" color="#0d9488" /></view></template>
-      </wd-cell>
-    </wd-cell-group>
-    </view>
-
-    <view class="psec">
-    <!-- 其他 -->
-    <view class="sec-t">其他</view>
-    <wd-cell-group custom-class="cellcard" border>
-      <wd-cell v-if="announce" title="公告" :value="announce.title" is-link clickable @click="showAnnounce">
-        <template #icon><view class="cell-ico"><l-icon name="megaphone" :size="18" color="#d97706" /></view></template>
-      </wd-cell>
-      <wd-cell title="反馈与纠错" is-link clickable @click="feedback">
-        <template #icon><view class="cell-ico"><l-icon name="message-circle" :size="18" color="#d97706" /></view></template>
-      </wd-cell>
-      <wd-cell title="关于" value="错题邦" is-link clickable @click="about">
-        <template #icon><view class="cell-ico"><l-icon name="info" :size="18" color="#d97706" /></view></template>
-      </wd-cell>
-    </wd-cell-group>
-    </view>
-    </view>
-
-    <view v-if="user" class="logout" @click="doLogout">退出登录</view>
-
-    <view class="zl-footer">
-      <view class="zl-links">
-        <text class="zl-link" v-for="p in zlProducts" :key="p.url" @click="zlOpen(p.url)">{{ p.name }}</text>
-      </view>
-      <view class="zl-links">
-        <text class="zl-link" @click="zlOpen('https://career.zalize.com/privacy/')">隐私政策</text>
-        <text class="zl-link" @click="zlOpen('https://career.zalize.com/terms/')">服务条款</text>
-        <text class="zl-link" @click="zlOpen('mailto:support@zalize.com')">联系我们</text>
-      </view>
-      <text class="zl-copy">© 2026 Zalize 上岸 · 错题邦</text>
-    </view>
+      <template #footer>
+        <view class="row2">
+          <kg-button variant="primary" size="lg" block :loading="bkLoading" @click="doBackup">{{ backupCode ? '更新备份' : '生成恢复码' }}</kg-button>
+          <kg-button variant="secondary" size="lg" block :disabled="bkLoading" @click="doRestore">输入恢复码恢复</kg-button>
+        </view>
+      </template>
+    </kg-sheet>
   </view>
 </template>
 
 <script>
 import { request, snapPeek, getAuthUser, authLogout, clearAuth, anonUid, fetchCheckinBadges, fetchCommentInbox } from '../../api.js';
+import { md } from '../../md.js';
 import { getReminderSettings } from '../../reminder.js';
 import { cycleThemeMode, getThemeMode, THEME_LABELS } from '../../theme.js';
 import { normFontLv } from '../../font-size.js';
@@ -158,6 +169,17 @@ import { canInstall, promptInstall, onInstallable, isIosSafariInstallable } from
 import { listPacks } from '../../offline.js';
 import { checkinStreak } from '../../checkin.js';
 import { DAILY_GOALS, adoptServerDailyGoal } from '../../daily-goal.js';
+import { moduleLabel } from '../../module-meta.js';
+
+// 旧版缓存的 AI 建议 HTML 内联了旧紫色，读取时映射到品牌色
+function cleanCoach(s) {
+  return s.replace(/#4f46e5/g, '#2e5bff').replace(/#6366f1/g, '#5c82ff').replace(/#3730a3/g, '#2f5cd8').replace(/#f4f5ff/g, '#eef3ff');
+}
+
+function typeName(t) {
+  if (!t) return '未分类';
+  return String(t).replace(/^(数量关系|数学运算|资料分析|言语理解(与表达)?|判断推理|逻辑判断|常识判断|常识)[-－·：:]/, '');
+}
 
 export default {
   data() {
@@ -181,6 +203,12 @@ export default {
       offlineN: 0,
       badgeInfo: null,
       growth: null,
+      coachOpen: false,
+      coachHtml: cleanCoach(uni.getStorageSync('coachAdvice') || ''),
+      coachLoading: false,
+      bkOpen: false,
+      backupCode: uni.getStorageSync('backupCode') || '',
+      bkLoading: false,
       zlProducts: [
         { name: 'Zalize 门户', url: 'https://career.zalize.com' },
         { name: '刷题营', url: 'https://tiku.zalize.com' },
@@ -195,6 +223,16 @@ export default {
       if (this.badgeInfo) return this.badgeInfo.badges || [];
       return [3, 7, 14, 30, 60, 100].map((d) => ({ days: d, unlocked: false }));
     },
+    unlockedN() {
+      return this.badgeList.filter((b) => b.unlocked).length;
+    },
+    statItems() {
+      return [
+        { label: '累计做题', value: this.totalDone },
+        { label: '错题本', value: this.mistakeN == null ? '—' : this.mistakeN },
+        { label: '连续打卡', value: this.streak, unit: '天', tone: 'brand' },
+      ];
+    },
     themeLabel() {
       return THEME_LABELS[this.themeMode] || '跟随系统';
     },
@@ -205,6 +243,13 @@ export default {
       let n = 0;
       for (const s of Object.values(this.pstats.byModule || {})) n += s.done || 0;
       return n;
+    },
+    accPct() {
+      const done = this.totalDone;
+      if (!done) return 0;
+      const sv = this.growth && this.growth.total;
+      const c = sv ? sv.c || 0 : Object.values(this.pstats.byModule || {}).reduce((s, m) => s + (m.correct || 0), 0);
+      return Math.round((c / done) * 100);
     },
     streak() {
       if (this.badgeInfo && this.badgeInfo.streak != null) return this.badgeInfo.streak;
@@ -266,7 +311,7 @@ export default {
     showIosGuide() {
       uni.showModal({
         title: '安装到主屏幕',
-        content: '1. 点浏览器底部的「分享」按钮（向上箭头）\n2. 在菜单中选择「添加到主屏幕」\n完成后可像 App 一样从主屏直接打开', 
+        content: '1. 点浏览器底部的「分享」按钮（向上箭头）\n2. 在菜单中选择「添加到主屏幕」\n完成后可像 App 一样从主屏直接打开',
         showCancel: false,
         confirmText: '知道了',
       });
@@ -286,13 +331,6 @@ export default {
       try {
         this.badgeInfo = await fetchCheckinBadges();
       } catch (e) { /* 非关键路径 */ }
-    },
-    tapBadge(b) {
-      if (b.unlocked) {
-        uni.navigateTo({ url: '/pkgA/social/poster?badge=' + b.days });
-      } else {
-        uni.showToast({ title: `连续打卡 ${b.days} 天即可解锁`, icon: 'none' });
-      }
     },
     async loadRemote() {
       const uid = anonUid();
@@ -327,14 +365,96 @@ export default {
         this.announce = d.item || null;
       } catch (e) { /* 非关键路径 */ }
     },
+    /** 本地练习记录按当前身份隔离（与 stats.vue 同口径） */
+    localHist() {
+      try {
+        const uid = anonUid();
+        return (uni.getStorageSync('practiceHistory') || []).filter((h) => !h.uid || h.uid === uid);
+      } catch (e) {
+        return [];
+      }
+    },
+    /** 自 stats.vue 迁入：payload 字段与原实现一致，错题分布按需拉一次 /api/stats */
+    async getCoach() {
+      this.coachLoading = true;
+      try {
+        let st = { by_module: [], by_type: [], by_reason: [] };
+        try {
+          st = await request('/api/stats?uid=' + encodeURIComponent(anonUid()));
+        } catch (e) { /* 无错题分布时仍可生成 */ }
+        const byMod = {};
+        for (const [k, v] of Object.entries(this.pstats.byModule || {})) {
+          byMod[k] = { 已做: v.done, 正确率: v.done ? Math.round((v.correct / v.done) * 100) + '%' : '无' };
+        }
+        const hist = this.localHist();
+        const stats = {
+          累计刷题: this.totalDone,
+          总正确率: this.accPct + '%',
+          连续打卡天数: this.streak,
+          各模块: byMod,
+          错题模块分布: (st.by_module || []).map((m) => moduleLabel(m.module) + '×' + m.n).join('、'),
+          错因分布: (st.by_reason || []).map((r) => r.error_reason + '×' + r.n).join('、'),
+          高频错题型TOP5: (st.by_type || []).slice(0, 5).map((t) => typeName(t.question_type) + '×' + t.n).join('、'),
+          近10次练习: hist.slice(0, 10).map((h) => (moduleLabel(h.module) || '未分类') + ' ' + h.correct + '/' + h.n),
+        };
+        const d = await request('/api/coach', { method: 'POST', data: { stats } });
+        this.coachHtml = md(d.advice || '');
+        uni.setStorageSync('coachAdvice', this.coachHtml);
+      } catch (e) {
+        uni.showToast({ title: '生成失败：' + e.message, icon: 'none' });
+      }
+      this.coachLoading = false;
+    },
+    copyCode() {
+      uni.setClipboardData({ data: this.backupCode });
+    },
+    localData() {
+      const keys = ['pstats', 'dailyPlan', 'dailyGoal', 'groupSize', 'realMode', 'fontLv', 'beiMode', 'favQuestions', 'practiceHistory', 'coachAdvice', 'backupCode'];
+      const out = {};
+      keys.forEach((k) => {
+        const v = uni.getStorageSync(k);
+        if (v !== '' && v !== null && v !== undefined) out[k] = v;
+      });
+      return out;
+    },
+    async doBackup() {
+      this.bkLoading = true;
+      try {
+        const d = await request('/api/backup', { method: 'POST', data: { code: this.backupCode || null, data: this.localData() } });
+        this.backupCode = d.code;
+        uni.setStorageSync('backupCode', d.code);
+        uni.showModal({ title: '备份成功', content: '恢复码：' + d.code + '\n请记下或截图保存，在新设备输入即可恢复数据。', showCancel: false });
+      } catch (e) {
+        uni.showToast({ title: '备份失败：' + e.message, icon: 'none' });
+      }
+      this.bkLoading = false;
+    },
+    doRestore() {
+      uni.showModal({
+        title: '输入恢复码',
+        editable: true,
+        placeholderText: '如：AB3D5F7H',
+        success: async (res) => {
+          if (!res.confirm || !res.content) return;
+          try {
+            const d = await request('/api/backup?code=' + encodeURIComponent(res.content.trim()));
+            Object.entries(d.data || {}).forEach(([k, v]) => uni.setStorageSync(k, v));
+            uni.setStorageSync('backupCode', res.content.trim().toUpperCase());
+            this.backupCode = res.content.trim().toUpperCase();
+            this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
+            this.favN = (uni.getStorageSync('favQuestions') || []).length;
+            this.dailyGoal = uni.getStorageSync('dailyGoal') || 20;
+            this.fontLv = normFontLv(uni.getStorageSync('fontLv'));
+            this.coachHtml = cleanCoach(uni.getStorageSync('coachAdvice') || '');
+            uni.showToast({ title: '恢复成功！', icon: 'success' });
+          } catch (e) {
+            uni.showToast({ title: '恢复失败：' + e.message, icon: 'none' });
+          }
+        },
+      });
+    },
     goLogin() {
       uni.navigateTo({ url: '/pkgA/user/login' });
-    },
-    goStats() {
-      uni.switchTab({ url: '/pages/stats/stats' });
-    },
-    goBook() {
-      uni.switchTab({ url: '/pages/book/book' });
     },
     goPlan() {
       uni.setStorageSync('openPlanSetup', '1');
@@ -359,15 +479,6 @@ export default {
     },
     goExamList() {
       uni.navigateTo({ url: '/pkgA/exam/list' });
-    },
-    goInterview() {
-      uni.navigateTo({ url: '/pkgA/interview/interview' });
-    },
-    goPk() {
-      uni.navigateTo({ url: '/pkgA/pk/pk' });
-    },
-    goTeam() {
-      uni.navigateTo({ url: '/pkgA/team/team' });
     },
     goReminders() {
       uni.navigateTo({ url: '/pkgA/settings/reminders' });
@@ -439,52 +550,48 @@ export default {
 </script>
 
 <style scoped>
-.wrap { padding: 24rpx 32rpx calc(60rpx + 50px + env(safe-area-inset-bottom)); }
-.card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); margin-bottom: 20rpx; }
+.wrap { padding: var(--sp-16) var(--page-x) calc(var(--sp-40) + 50px + env(safe-area-inset-bottom)); }
 
-.acct { display: flex; align-items: center; gap: 24rpx; padding: 32rpx; }
-.avatar { width: 96rpx; height: 96rpx; border-radius: 50%; background: linear-gradient(135deg, #5b8af8, var(--brand)); color: #fff; font-size: 40rpx; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+/* 账号卡 */
+.acct { margin-bottom: var(--card-gap); }
+.acct-row { display: flex; align-items: center; gap: var(--sp-12); }
+.avatar { width: 48px; height: 48px; border-radius: var(--r-full); background: var(--brand-grad); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.avatar-t { color: var(--on-brand); font-size: var(--fs-h2); font-weight: 600; }
 .grow { flex: 1; min-width: 0; }
-.acct-name { display: block; font-size: 32rpx; font-weight: 700; color: var(--ink); }
-.acct-sub { display: block; font-size: 23rpx; color: var(--ink-2); margin-top: 6rpx; }
-.acct-btn { flex-shrink: 0; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 28rpx; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 25rpx; font-weight: 600; }
+.acct-name { display: block; font-size: var(--fs-h3); font-weight: 600; color: var(--ink); line-height: var(--lh-h3); }
+.acct-sub { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: 2px; }
+.acct-stats { margin-top: var(--sp-16); padding-top: var(--sp-16); border-top: 1px solid var(--line); }
 
-.stats-row { display: flex; gap: 20rpx; margin-bottom: 8rpx; }
-.stat-c { flex: 1; background: var(--card); border-radius: 24rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 26rpx 0; display: flex; flex-direction: column; align-items: center; gap: 6rpx; }
-.stat-n { font-size: 36rpx; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
-.stat-t { font-size: 22rpx; color: var(--ink-2); }
+/* 连签一行 */
+.streak { margin-bottom: var(--sp-4); }
+.streak-row { display: flex; align-items: center; gap: var(--sp-8); min-height: 24px; padding-right: var(--sp-24); }
+.streak-t { font-size: var(--fs-body); font-weight: 500; color: var(--ink); }
+.streak-best { flex: 1; min-width: 0; font-size: var(--fs-caption); color: var(--ink-3); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.sec-t { font-size: 24rpx; color: var(--ink-2); margin: 28rpx 8rpx 14rpx; }
-.badges { padding: 26rpx 28rpx; }
-.badge-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20rpx; }
-.badge-cur { font-size: 26rpx; font-weight: 700; color: var(--ink); }
-.badge-best { font-size: 22rpx; color: var(--ink-2); }
-.badge-grid { display: flex; flex-wrap: wrap; gap: 16rpx; }
-.badge { width: calc((100% - 32rpx) / 3); box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 6rpx; background: var(--brand-soft); border-radius: 18rpx; padding: 18rpx 0; }
-.badge.off { background: var(--fill); opacity: 0.65; }
-.badge-ico { font-size: 40rpx; }
-.badge-d { font-size: 22rpx; font-weight: 600; color: var(--ink); }
-:deep(.cellcard) { display: block; border-radius: 28rpx; overflow: hidden; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); margin-bottom: 20rpx; }
-.cell-ico { width: 56rpx; height: 56rpx; border-radius: 14rpx; background: var(--fill); display: flex; align-items: center; justify-content: center; margin-right: 20rpx; }
+/* cell 组：作为 cell 规范样板 */
+:deep(.cellcard) { display: block; border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--line); margin-bottom: var(--sp-4); }
+.cell-ico { width: 32px; height: 32px; border-radius: var(--r-xs); background: var(--fill); display: flex; align-items: center; justify-content: center; margin-right: var(--sp-12); }
 
-.logout { margin-top: 40rpx; background: var(--card); border-radius: 24rpx; text-align: center; min-height: 44px; display: flex; align-items: center; justify-content: center; font-size: 28rpx; color: #dc2626; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); }
+.logout { margin-top: var(--sp-24); }
 
-.zl-footer { margin: 48rpx 0 16rpx; text-align: center; }
-.zl-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8rpx 28rpx; margin-bottom: 14rpx; }
-.zl-link { font-size: 24rpx; color: var(--brand-text); }
-.zl-copy { font-size: 22rpx; color: var(--ink-3); }
+/* 迁入的两个 sheet */
+.sheet-body { padding: var(--sp-4) var(--sp-16) var(--sp-16); }
+.sheet-tip { display: block; font-size: var(--fs-sub); color: var(--ink-3); line-height: var(--lh-sub); margin-bottom: var(--sp-12); }
+.coach-body { display: block; font-size: var(--fs-body); line-height: var(--lh-body); color: var(--ink); }
+.bk-code { display: flex; align-items: center; gap: var(--sp-8); min-height: var(--hit-min); padding: 0 var(--sp-12); background: var(--brand-soft); border-radius: var(--r-sm); }
+.bk-code-l { font-size: var(--fs-sub); color: var(--ink-3); }
+.bk-code-v { flex: 1; font-size: var(--fs-h3); font-weight: 600; color: var(--brand-text); letter-spacing: 2px; }
+.row2 { display: flex; gap: var(--sp-12); }
+.row2 :deep(.kg-btn) { flex: 1; }
+
+.zl-footer { margin: var(--sp-32) 0 var(--sp-8); text-align: center; }
+.zl-links { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-4) var(--sp-16); margin-bottom: var(--sp-8); }
+.zl-link { font-size: var(--fs-caption); color: var(--brand-text); line-height: 28px; }
+.zl-copy { font-size: var(--fs-caption); color: var(--ink-3); }
 
 /* #ifdef H5 */
-@media (min-width: 768px) {
-  .wrap.profile { max-width: 680px; }
-  .row:hover { cursor: pointer; }
-}
-
-/* 桌面双栏（仅 H5 ≥1024px）：四分组 masonry，账号卡/资产行/页脚保持整宽 */
 @media (min-width: 1024px) {
-  .wrap.profile { max-width: 1044px !important; margin: 0 auto; }
-  .pgrid { column-count: 2; column-gap: 24rpx; }
-  .pgrid > .psec { break-inside: avoid; }
+  .wrap.profile { max-width: 1064px; }
 }
 /* #endif */
 </style>
