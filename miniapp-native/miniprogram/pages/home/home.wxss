@@ -1,6 +1,6 @@
 /* 首页 v3 贴皮：白头大标题 + 焦点句 + 三组。页面级不写阴影/渐变，分区靠留白与灰字标题。 */
 .wrap {
-  padding: var(--sp-8) var(--page-x) calc(80px + env(safe-area-inset-bottom));
+  padding: var(--sp-8) var(--page-x) calc(var(--tab-h) + var(--sp-24) + env(safe-area-inset-bottom));
 }
 
 /* 焦点：一句话 + 格点进度 + 唯一主按钮 */

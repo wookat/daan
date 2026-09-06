@@ -122,7 +122,7 @@ Page({
     if (id) wx.navigateTo({ url: '/pkgExam/report/report?attempt_id=' + id });
   },
   onAllAttempts() {
-    wx.navigateTo({ url: '/pkgExam/list/list' });
+    wx.navigateTo({ url: '/pkgExam/list/list?view=history' });
   },
   onPaperTap(e: WechatMiniprogram.TouchEvent) {
     const id = Number(e.currentTarget.dataset.id);

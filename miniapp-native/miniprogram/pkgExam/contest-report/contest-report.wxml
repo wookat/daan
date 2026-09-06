@@ -10,7 +10,6 @@
 
     <block wx:elif="{{r}}">
       <view class="hero">
-        <view class="hero-deco" />
         <text class="hero-s">{{heroLabel}}</text>
         <view class="score-row"><text class="score num">{{r.score}}</text><text class="score-u">分</text></view>
         <view class="hero-sub">

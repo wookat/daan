@@ -185,7 +185,7 @@ Page({
     wx.navigateTo({ url: '/pkgLearn/offline/offline' });
   },
   onExamList() {
-    wx.navigateTo({ url: '/pkgExam/list/list' });
+    wx.navigateTo({ url: '/pkgExam/list/list?view=history' });
   },
   onShenlun() {
     wx.navigateTo({ url: '/pkgExam/shenlun/shenlun' });
