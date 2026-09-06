@@ -1640,3 +1640,9 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 组件层规则最常见的漏洞是「把信息标签组件（KgTag 20px）当按钮用」和「裸 `<text>` 链接」：`git grep -n '<kg-tag' | grep '@click'` + `git grep -n 'class=\"[a-z-]*\" .*@click' -- '*.vue' | grep '<text'` 两条就能列全。
 - 审计簇选择要覆盖 `pkgA` 分包页：R430–R460 五次都没选到 `shenlun.vue`，它从 R242 建页起字号/热区没动过。快速排查：`grep -n -E 'font-size: (1[0-9]|2[0-3])rpx' <page>.vue`（375 下 <12px）+ 量测脚本 `/home/ubuntu/r463_shenlun.py`（CDP 375，`X-Kg-Probe: 1`，只 GET）。
 - 本机 Playwright ↔ 已运行 Chrome 的 `connect_over_cdp` 第二次连接可能被 `service_worker` target 断言打崩（`targetInfo type service_worker`）：一进程只连一次、多视口在同一连接里开多个 context，或先在页面里 `navigator.serviceWorker.getRegistrations()` 后注销再连。
+
+## R464 经验：带底色小标签当按钮时用 `::after` 撑命中区 + 本地 dist 预检
+- 「带底色/描边的 20px 小标签」（如 `.q-paper.tappable`）如果直接 `min-height: 40px` 会变成大药丸、与并排信息标签不一致；改 `position: relative` + `::after { content:''; position:absolute; left:0; right:0; top:50%; height:40px; transform:translateY(-50%) }`，视觉不变。uni H5 `<text>`→`uni-text` inline 元素上此写法可用（Chrome 已验），父级不能 `overflow: hidden`。
+- 验证命中带别只看 `getComputedStyle(el,'::after').height`，要 `document.elementFromPoint(cx, cy±19)` 命中 / `±21` 不命中，两边都测才算 40px；源锁正则同时锁 `top: 50%`/`translateY(-50%)`/`height: 40px`。
+- 部署前可用本地 dist 做一次同脚本预检：`python3 -m http.server 8765` 起 `dist/build/h5`，Playwright `ctx.route('<base>/api/**')` 把 GET 转发到生产（带 `X-Kg-Probe: 1`、非 GET abort），与部署后生产数值逐项比对一致才算「本地=线上」。多视口在**同一个** `connect_over_cdp` 连接里开多个 context（R463 二连崩掉的规避法）。
+- `.chip.sm` 之类子变体去掉自己的 `font-size`/`padding` 竖向值，让高度/字号继承父规则，源锁里反向锁「子变体不含 min-height/font-size」防以后又各写一套。

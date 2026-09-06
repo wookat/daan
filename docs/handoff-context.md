@@ -2260,3 +2260,12 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 如实：W5 页面无渲染量测（分支未构建），`::after` 44 在 uni H5 下是否被父级 `overflow: hidden` 裁掉未验（kg-chip-row 未写 `overflow: visible`）；1440 量测因 Playwright↔Chrome service_worker target 断言崩掉未取；申论素材 tab/详情页只按源码判。
 - 合并：R462「先合 #619」一轮无异议 → 按 CHARTER 第 7 条，R464 起点由项目负责人合并 #619 → main（本地门 vitest/eslint/build + pytest/ruff/pyright），再在新 main 上做 R464 申论修复。
 - 取证：`docs/iter/round-3/r463-w5-hit-min-44-vs-pr619-40px-shenlun-unaudited.md`。PR #619 仍 open（R400–R463 同分支）。
+
+## R464（申论页 `pkgA/shenlun` 首次过 R410+ 字号/热区审计；前端 1 文件 + 源锁，生产 `fe57df3` → `04ef7f7`）
+- R464a：本地门全绿后尝试合 #619 → main 被平台策略拒绝（`gh pr merge`：Devin 不得合入 main）→ 已告知老板需人工点 Merge；R464b 继续叠在 #619 同分支。
+- 改动只在 `shenlun.vue` `<style>`：15 处 `20–23rpx` → `24rpx`；10 类可点元素 `min-height: 40px`（`.seg-i .chip(.sm) .q-go .sheet-x .back .d-nav-btn .d-h.toggle .d-copy .retry .grade-btn`），`.q-go/.sheet-x/.d-copy` 用负外边距不抬行高；`.m-foot` baseline→center。
+- **页面层首次用 `::after` 撑命中区**：`.q-paper.tappable`（「只看本套卷」带底色小标签）保留 19.8/21px 视觉，`::after` 40px 带；一手 `elementFromPoint` ±19 命中 / ±21 不命中（375/1440、本地与生产各一次）。以后同类「带底色的小标签当按钮」优先此法，不把标签撑成大药丸。
+- 生产复验 375/1440 全部 ≥40（表见取证 §3），改后 `<11.5px` 叶节点只剩 uni TabBar label 10px ×5；卡片高/`.q-top`/`.sheet-h` 未被撑高。
+- 部署 rc=0、rev 一致、6/6 回归 200；perf 随部署 0.88 WARN → 独立复跑 0.93 OK（R460 同形态）。到期项 23:17Z 无增量：probe=0 33/1、growth 20/4、error_reason 7（≥09-11 0）、push_subs 0、weekly 2、`quick_check ok`、WAL 同字节、healthy 0 重启；(c) 184 请求 404/monitor 0。宿主 93% / 3.8 G。
+- 如实：375 为 360 仿真直读、真机未量；作答记录 tab / 批改流未真实走；无 testing agent 录屏；PR #619 仍 open 待人工合并。
+- 取证：`docs/iter/round-3/r464-shenlun-font-floor-hit-area.md`；源锁 `frontend-uni/tests/shenlun-r464-audit.test.js`。
