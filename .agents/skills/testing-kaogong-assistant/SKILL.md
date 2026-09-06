@@ -5,6 +5,15 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R417 补充（testing agent）— 多选 picked 落库 / 历次作答 / 换 uid 的 LS 陷阱
+- R417 起 `save_answer_log_detail` 用 `normalize_answer(picked)[:8]`（旧 `str(picked)[:2]`：多选 ABD 会落 AB）。核对口径：`SELECT question_id,picked,correct FROM answer_log WHERE uid=?` + `mistakes.user_answer` + 报告页「你选了 ABD」+ 错题本卡片展开后 `.attempts .att-pick`「选 ABD」（`toggleCard` 打开时才 GET `/api/attempts?uid&question_id`）。**不要伪造 probe=0** 去刷 most_wrong/易错项：测试 uid 的 answer_log 全为 probe=1，后台聚合不会计入，只核行与 UI。
+- 练习页多选：`.multi-bar .multi-ok`「确认答案（n）」→ `POST /api/answer_log {uid,items:[{qid,correct,picked}]}`，source 取深链 `source=seo_q`。SEO `/tiku/q/<id>` 的 CTA「在线做这道题 + 同考点练习（免费）→」是普通 `<a href="…#/pages/practice/practice?qid=…&source=seo_q">`，原生点即落 practice、该题领跑。
+- 请求体抓取：`holdbody414.py` 的 `window.__exb` 条目字段是 `{u, req, st, res}`（不是 url/body），`__hdr` 只有 `{url,status,ms}` 无 body。过滤要用 `x.u`。
+- exam 页顶部「<」是 uni H5 navbar back：从卷库 list 原生点「开始模考」进入才有历史栈，点「<」回卷库会触发 `onUnload` flush 且**不重建 document**（`__hdr/__exb` 保留，可直接读 POST 数）；深链直达时无栈会走 `navigateBack fail → reLaunch list` 兜底。容器日志里 progress 请求 uid 在 body 不在 URL，只能按时间窗 `docker logs --since <ISO>` grep `exam/progress` 计数。
+- 换 uid 陷阱：LS `examProgress`（模考快照）与 `pendingSession`（练习续做卡 `.ercard`「有一组未做完的练习」）都**不是 uid 作用域**。① 在 exam 页上换 uid 后再导航，`onUnload` 会把旧场快照写回 LS，导致新 uid 首次进 116 误弹「继续上次模考？」——先离开 exam 页（去首页/卷库）再 `removeItem('examProgress')` 再进；② 首页 `.ercard` 计数 1 可能是练习卡而非模考卡，要看 innerText 是否含「未交卷/模考」。
+- 「恢复后仅新增标记」：答题卡跳题（idx 变）本身就会推一条 progress（marks []），标记后再推一条；判「标记触发同步」看最后一条 payload `marks:[qid]` 且 picks 不变。
+- 清理时 `practice_progress` 也有 uid 行（练习页产生），审计脚本要包含。
+
 ## R416 补充（testing agent）— 只标记（旗标）不上送进度
 - R416 起 `shouldPushProgress(picks, pushedBefore)` 不看 marks：进 exam 页只点「标记」（`.tbtn`→「已标记」）不答 → `POST /api/exam/progress` **0 条**、`exam_progress` 0 行；F5 不弹续考、直接新 attempt 并回收旧空场次（与 R415 不答一样）。一旦本场有过 POST（有作答），此后标记/取消都随 payload `marks:[qid,…]` 同步，清空作答后也会同步 `picks {}`。验证顺序建议：只标记 → 等 ≥5s 看 `__exb` → DB → F5；再 答 BD → 标另一题 → F5「已答 1/62」→ 继续 → 上一题看 `.opt.sel` + `.tbtn.on`。
 - 「只标记就刷新 → 标记丢」在 R416 下依旧（本就不落库），是既定口径，不算 FAIL。
