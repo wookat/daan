@@ -1,0 +1,38 @@
+<kg-card variant="raised">
+  <view wx:if="{{tag}}" class="kg-qc__tags">
+    <kg-tag tone="{{tagTone}}" module="{{module}}">{{tag}}</kg-tag>
+  </view>
+  <text class="kg-qc__q q-text" style="font-size: {{fontSize}}px" user-select>{{question}}</text>
+  <image wx:if="{{image}}" class="kg-qc__img" src="{{image}}" mode="widthFix" bind:tap="onPreview" />
+  <view class="kg-qc__opts">
+    <view
+      wx:for="{{options}}"
+      wx:key="k"
+      class="kg-qc__opt {{!picked ? '' : item.k === answer ? 'is-right' : item.k === picked ? 'is-wrong' : 'is-dim'}}"
+      hover-class="{{picked ? '' : 'kg-qc__opt--hover'}}"
+      hover-stay-time="60"
+      role="radio"
+      aria-checked="{{picked === item.k ? 'true' : 'false'}}"
+      data-key="{{item.k}}"
+      bind:tap="onPick"
+    >
+      <text class="kg-qc__key">{{item.k}}</text>
+      <text class="kg-qc__otext q-text" style="font-size: {{fontSize - 1}}px">{{item.v}}</text>
+      <l-icon wx:if="{{picked && item.k === answer}}" name="circle-check" size="20" tone="ok" />
+      <l-icon wx:elif="{{picked && item.k === picked}}" name="circle-x" size="20" tone="bad" />
+    </view>
+  </view>
+</kg-card>
+
+<view wx:if="{{picked}}" class="kg-qc__banner {{picked === answer ? 'is-ok' : 'is-bad'}}">
+  <l-icon name="{{picked === answer ? 'circle-check' : 'circle-x'}}" size="24" tone="{{picked === answer ? 'ok' : 'bad'}}" />
+  <view class="kg-qc__bl">
+    <text class="kg-qc__bt">{{picked === answer ? '回答正确' : '回答错误'}}</text>
+    <text class="kg-qc__bs">正确答案 <text class="num">{{answer}}</text><block wx:if="{{picked !== answer}}"> · 我的答案 <text class="num">{{picked}}</text></block></text>
+  </view>
+</view>
+
+<kg-card wx:if="{{picked && explanation}}" variant="raised" class="kg-qc__exp">
+  <kg-tag tone="neutral">解析</kg-tag>
+  <text class="kg-qc__etext q-text" style="font-size: {{fontSize - 2}}px" user-select>{{explanation}}</text>
+</kg-card>

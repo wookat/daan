@@ -1,0 +1,14 @@
+.kg-bars { position: relative; display: flex; align-items: flex-end; gap: var(--sp-4); padding-top: var(--sp-8); }
+.kg-bars__col { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+.kg-bars__pct { font-size: var(--fs-caption); color: var(--brand-text); height: 14px; line-height: 14px; }
+.kg-bars__track { flex: 1; width: 100%; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
+.kg-bars__track.is-track { width: 18px; background: var(--prog-track); border-radius: var(--r-full); }
+.kg-bars__bar { width: 100%; border-radius: 3px 3px 0 0; background: var(--brand); min-height: 3px; }
+.kg-bars__track.is-track .kg-bars__bar { border-radius: var(--r-full); }
+.kg-bars__bar.is-ok { background: var(--ok); }
+.kg-bars__bar.is-warn { background: var(--warn); }
+.kg-bars__bar.is-bad { background: var(--bad); }
+.kg-bars__day { font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-4); }
+.kg-bars__target { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--warn-strong); z-index: 1; pointer-events: none; }
+.kg-bars__target-t { position: absolute; right: 0; top: -16px; font-size: var(--fs-caption); color: var(--warn-strong); }
+.kg-bars__x { display: flex; justify-content: space-between; font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-4); }

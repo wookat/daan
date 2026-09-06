@@ -14,6 +14,8 @@ import { anonUid } from '../../utils/auth';
 import { enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../utils/offline';
 import { BASE_URL } from '../../utils/request';
 import { kpChain, qStatLine, sourceLabel } from '../../utils/q-stat';
+import { fetchPracticeResume } from '../../api/grow';
+import type { PracticeResumeResp } from '../../api/grow';
 import { modName, recordStat, streakDays } from '../../utils/stats';
 
 const BADGE_MILESTONES = [3, 7, 14, 30, 60, 100];
@@ -84,6 +86,7 @@ Page({
     expFs: EXP_FS[1],
   },
   _source: null as string | null,
+  _real: false,
   _mode: '',
   _module: null as string | null,
   _submodule: null as string | null,
@@ -102,6 +105,7 @@ Page({
     this._module = query.module || null;
     this._submodule = query.submodule ? decodeURIComponent(query.submodule) : null;
     this._tag3 = query.tag3 ? decodeURIComponent(query.tag3) : null;
+    this._real = query.real === '1';
     const count = Number(query.count) || 10;
     this._mode = query.mode || '';
     flushOfflineQueue();
@@ -119,31 +123,55 @@ Page({
       const d =
         mode === 'redo'
           ? await redoMistakes(count)
-          : await fetchQuestions({
-              limit: count,
-              module: this._module,
-              submodule: this._submodule,
-              tag3: this._tag3,
-              adaptive: this._tag3 ? true : undefined,
-            });
+          : mode === 'resume'
+            ? await fetchPracticeResume()
+            : await fetchQuestions({
+                limit: count,
+                module: this._module,
+                submodule: this._submodule,
+                tag3: this._tag3,
+                adaptive: this._tag3 ? true : undefined,
+                real: this._real || undefined,
+              });
       if (!d.items || !d.items.length) {
-        wx.showToast({ title: '该模块暂无题目', icon: 'none' });
+        wx.showToast({ title: mode === 'resume' ? '没有可继续的练习' : '该模块暂无题目', icon: 'none' });
         setTimeout(() => wx.navigateBack(), 1200);
         return;
       }
       const items = d.items.map(toPQ);
+      // 续练：服务端 picks 回填已答题（已上报，不重复计分/记错），定位到中断题（对齐 H5 adoptPracticeResume）
+      let idx = 0;
+      let right = 0;
+      if (mode === 'resume') {
+        const rs = d as PracticeResumeResp;
+        const picks = rs.picks || {};
+        for (const q of items) {
+          const p = picks[String(q.id)];
+          if (p === 'A' || p === 'B' || p === 'C' || p === 'D') {
+            q._picked = p;
+            q._logged = true;
+            q._saved = true;
+            if (p === q.answer) right++;
+          }
+        }
+        idx = Math.min(Math.max(rs.idx || 0, 0), items.length - 1);
+        this._module = rs.module || this._module;
+        this._submodule = rs.submodule || this._submodule;
+        this._source = rs.source || this._source;
+        this.setData({ moduleName: modName(this._module || '') });
+      }
       this.setData({
         loading: false,
         loadErr: '',
         items,
-        idx: 0,
-        cur: items[0],
-        curImg: imgUrl(items[0].image),
-        curStat: qStatLine(items[0]),
-        curKp: kpChain(items[0], modName(items[0].module)),
-        curSource: sourceLabel(items[0]),
-        picked: '',
-        right: 0,
+        idx,
+        cur: items[idx],
+        curImg: imgUrl(items[idx].image),
+        curStat: qStatLine(items[idx]),
+        curKp: kpChain(items[idx], modName(items[idx].module)),
+        curSource: sourceLabel(items[idx]),
+        picked: items[idx]._picked,
+        right,
       });
       this.startTimer();
     } catch (e) {

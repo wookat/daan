@@ -1,0 +1,21 @@
+.kg-qc__tags { display: flex; flex-wrap: wrap; gap: var(--sp-8); margin-bottom: var(--sp-8); }
+.kg-qc__q { display: block; line-height: var(--lh-question); color: var(--ink); }
+.kg-qc__img { display: block; width: 100%; margin-top: var(--sp-12); border-radius: var(--r-sm); background: var(--fill); }
+.kg-qc__opts { display: flex; flex-direction: column; gap: var(--sp-8); margin-top: var(--sp-16); }
+.kg-qc__opt { display: flex; align-items: center; gap: var(--sp-12); min-height: var(--hit-min); border: 1px solid var(--line); border-radius: var(--r-sm); padding: var(--sp-8) var(--sp-12); background: var(--card); box-sizing: border-box; }
+.kg-qc__opt--hover { background: var(--fill); }
+.kg-qc__opt.is-right { border-color: var(--ok); background: var(--ok-soft); }
+.kg-qc__opt.is-wrong { border-color: var(--bad); background: var(--bad-soft); }
+.kg-qc__opt.is-dim { opacity: 0.55; }
+.kg-qc__key { width: 24px; height: 24px; flex-shrink: 0; border-radius: var(--r-full); background: var(--fill); display: inline-flex; align-items: center; justify-content: center; font-size: var(--fs-sub); font-weight: 600; color: var(--ink-2); }
+.kg-qc__opt.is-right .kg-qc__key { background: var(--ok); color: var(--on-brand); }
+.kg-qc__opt.is-wrong .kg-qc__key { background: var(--bad); color: var(--on-brand); }
+.kg-qc__otext { flex: 1; min-width: 0; color: var(--ink); line-height: var(--lh-body); }
+.kg-qc__banner { display: flex; align-items: center; gap: var(--sp-12); padding: var(--sp-12) var(--card-pad); border-radius: var(--r-md); margin-top: var(--card-gap); }
+.kg-qc__banner.is-ok { background: var(--ok-soft); }
+.kg-qc__banner.is-bad { background: var(--bad-soft); }
+.kg-qc__bl { display: flex; flex-direction: column; min-width: 0; }
+.kg-qc__bt { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+.kg-qc__bs { font-size: var(--fs-sub); color: var(--ink-2); margin-top: 2px; }
+.kg-qc__exp { display: block; margin-top: var(--card-gap); }
+.kg-qc__etext { display: block; margin-top: var(--sp-8); color: var(--ink-2); line-height: var(--lh-body); white-space: pre-wrap; }

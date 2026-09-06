@@ -1,15 +1,27 @@
+import { fetchCheckinBadges, fetchCheckinSummary, fetchProfile, fetchQuestionCounts, saveProfile, trackEvent } from '../../api/index';
+import type { CheckinBadgesResp, CheckinSummaryResp, Profile } from '../../api/types';
 import {
-  fetchCheckinBadges,
-  fetchCheckinSummary,
-  fetchPlanToday,
-  fetchProfile,
-  fetchQuestionCounts,
-  fetchReviewDue,
-  saveProfile,
-  trackEvent,
-} from '../../api/index';
-import type { CheckinBadgesResp, PlanTask, Profile } from '../../api/types';
-import { moduleMeta } from '../../utils/module-meta';
+  adoptServerDailyGoal,
+  clearReviewCur,
+  dropExamProgress,
+  dropPracticeProgress,
+  fetchAnnouncement,
+  fetchDailyPlan,
+  fetchDailySet,
+  fetchExamResume,
+  fetchHomeBundle,
+  fetchPlanTodayFull,
+  fetchPracticeResume,
+  fetchReviewCur,
+  flushDailySubmit,
+  loadDailyDone,
+  loadSzDaily,
+  saveServerDailyGoal,
+  setUserFocus,
+} from '../../api/grow';
+import type { Announcement, DailyDoneRec, DailyPlanResp, HomeBundleResp, HomeProfile, PlanTodayResp, PlanTodayTask, ReviewSnap } from '../../api/grow';
+import { MODULE_KEYS, moduleMeta } from '../../utils/module-meta';
+import { cnDayKey } from '../../utils/cn-date';
 import { getDailyGoal, setDailyGoal, streakDays, todayCount } from '../../utils/stats';
 import { syncTabBar } from '../../utils/tabbar';
 
@@ -60,6 +72,85 @@ function applyCounts(mods: ModCard[], counts: { module: string; n: number }[]): 
   });
 }
 
+const BUNDLE_SNAP_KEY = 'homeBundleSnap';
+const RESUME_CLEAR_TTL = 30 * 1000;
+const REVIEW_SNAP_TTL_S = 2 * 3600;
+
+interface PlanTaskView extends PlanTodayTask {
+  goText: string;
+  subText: string;
+  icon: string;
+  iconTone: string;
+}
+
+interface WeakView {
+  key: string;
+  module: string;
+  submodule: string;
+  tag3: string | null;
+  text: string;
+}
+
+interface ExamResumeView {
+  attemptId: number;
+  paperId: number;
+  mini: boolean;
+  title: string;
+  answered: number;
+  total: number;
+  leftText: string;
+}
+
+interface PracticeResumeView {
+  title: string;
+  done: number;
+  total: number;
+}
+
+interface ReviewResumeView {
+  rIdx: number;
+  total: number;
+}
+
+function planTaskView(t: PlanTodayTask): PlanTaskView {
+  const goText = t.done
+    ? '已完成'
+    : t.type === 'mock'
+      ? '去模考 ›'
+      : t.type === 'review'
+        ? '去复习 ›'
+        : t.type === 'reinforce'
+          ? '去强化 ›'
+          : '去练 ›';
+  const subText = (t.sub || '') + (t.type !== 'mock' && t.done_n ? ' · 已完成 ' + t.done_n + '/' + t.target : '');
+  return { ...t, goText, subText, icon: t.done ? 'circle-check' : 'target', iconTone: t.done ? 'ok' : 'brand' };
+}
+
+function fmtLeftSecs(s: number): string {
+  const v = Math.max(0, Math.floor(s) || 0);
+  return Math.floor(v / 60) + ':' + String(v % 60).padStart(2, '0');
+}
+
+// 照搬 H5 review-snap.js parseReviewSnap：v===1、uid 一致、2h TTL、rIdx 合法
+function parseReviewSnap(raw: ReviewSnap | string | null | undefined, uid: string, nowS: number): ReviewResumeView | null {
+  let s: ReviewSnap | null = null;
+  if (typeof raw === 'string') {
+    try {
+      s = JSON.parse(raw) as ReviewSnap;
+    } catch (e) {
+      return null;
+    }
+  } else s = raw || null;
+  if (!s || s.v !== 1 || !uid || s.uid !== uid) return null;
+  const ts = Number(s.ts);
+  const t = Math.floor(nowS);
+  if (!Number.isInteger(ts) || ts <= 0 || t - ts > REVIEW_SNAP_TTL_S || ts > t + 60) return null;
+  if (!Array.isArray(s.items) || !s.items.length) return null;
+  const rIdx = Number(s.rIdx);
+  if (!Number.isInteger(rIdx) || rIdx < 0 || rIdx >= s.items.length) return null;
+  return { rIdx, total: s.items.length };
+}
+
 Page({
   data: {
     today: 0,
@@ -88,16 +179,38 @@ Page({
     minuteOpts: toOpts([30, 60, 90, 120], ' 分钟'),
     dateStart: '',
     dateEnd: '',
-    planTasks: [] as PlanTask[],
-    planPct: 0,
+    // 学习计划（/api/plan/today，有画像时）
+    planTasks: [] as PlanTaskView[],
+    planDone: 0,
+    planTotal: 0,
     daysLeft: null as number | null,
+    phaseName: '',
+    realMode: false,
+    // 今日建议（/api/daily_plan，无画像时）
+    weakList: [] as WeakView[],
+    yesterdayText: '',
+    showSuggest: false,
+    focus: '',
+    focusOpts: MODULE_KEYS.map((k) => ({ value: k, label: moduleMeta(k).label })),
     dueReview: 0,
     dueLoaded: false,
     clearedToday: 0,
     badgeStreak: 0,
     nextMilestone: null as { days: number; left: number; pct: number } | null,
     taskDoneN: 0,
+    // 公告 / 续练续考 / 全站同题 / 时政 / 周报
+    announce: null as Announcement | null,
+    examResume: null as ExamResumeView | null,
+    practiceResume: null as PracticeResumeView | null,
+    reviewResume: null as ReviewResumeView | null,
+    dsMeta: null as { date: string; participants: number } | null,
+    dsDone: null as DailyDoneRec | null,
+    dsDoneText: '',
+    szTodayDone: false,
+    weeklyDot: false,
   },
+  _serverToday: null as number | null,
+  _profile: null as HomeProfile | null,
   onLoad() {
     const d = new Date();
     const fmt = (x: Date) =>
@@ -125,66 +238,128 @@ Page({
   onShow() {
     syncTabBar(this, 0);
     this.refreshGoal();
-    this.loadPlan();
-    this.loadDueReview();
-    this.loadBadges();
-    this.loadTodayServer();
+    this.loadHome();
+    this.loadAnnounce();
+    this.calcWeeklyDot();
+    this.loadExamResume();
+    this.loadPracticeResume();
+    this.loadReviewResume();
+    this.loadDailySet();
+    this.setData({ szTodayDone: !!loadSzDaily().days[cnDayKey()] });
+    flushDailySubmit(cnDayKey());
   },
-  // 今日已练以服务端为准（answer_log+review_log，与统计页同源），本机 pstats 只做首屏占位与离线降级
-  async loadTodayServer() {
+  // 首屏 uid 专属数据聚合拉取：bundle 一次取齐 plan/profile/plan_today/badges/summary（同 H5 loadHome），
+  // 失败时回退逐个端点；本地快照先渲染但不套用 summary（避免今日已练回退旧值）
+  async loadHome() {
+    const snap = wx.getStorageSync<HomeBundleResp | ''>(BUNDLE_SNAP_KEY);
+    if (snap) this.applyBundle(snap, true);
     try {
-      const d = await fetchCheckinSummary();
-      if (d.today_n == null) return;
-      const today = d.today_n;
-      this._serverToday = today;
-      this.setData({
-        today,
-        clearedToday: d.cleared_today || 0,
-        goalPct: Math.min(100, Math.round((today / this.data.goal) * 100)),
-      });
-      this.updateTaskCard();
+      const d = await fetchHomeBundle();
+      wx.setStorageSync(BUNDLE_SNAP_KEY, d);
+      this.applyBundle(d, false);
     } catch (e) {
-      /* 非关键路径 */
+      this.loadPlanFallback();
+      this.loadBadges();
+      this.loadTodayServer();
+      this.loadProfileFallback();
     }
   },
-  _serverToday: null as number | null,
-  refreshGoal() {
-    const today = this._serverToday ?? todayCount();
-    const goal = getDailyGoal();
+  applyBundle(d: HomeBundleResp, stale: boolean) {
+    this.applyPlan(d.plan);
+    if (d.badges) this.applyBadges(d.badges);
+    if (!stale && d.summary) this.applySummary(d.summary);
+    this.applyProfile(d.profile || null, d.profile ? d.plan_today : null);
+  },
+  applyPlan(plan: DailyPlanResp | null) {
+    if (!plan) return;
+    const weakList: WeakView[] = (plan.weak || []).map((w) => ({
+      key: w.module + '|' + w.submodule + '|' + (w.tag3 || ''),
+      module: w.module || '',
+      submodule: w.submodule,
+      tag3: w.tag3 || null,
+      text: (w.label || w.submodule) + '（' + w.reason + ' · 正确率 ' + Math.round(w.acc * 100) + '%）',
+    }));
+    const y = plan.yesterday;
+    const yesterdayText = y && y.n ? '昨日练 ' + y.n + ' 题 · 正确率 ' + Math.round((y.correct / y.n) * 100) + '%' : '昨日未练习';
+    const due = plan.due_mistakes || 0;
     this.setData({
-      today,
-      goal,
-      goalPct: Math.min(100, Math.round((today / goal) * 100)),
-      streak: streakDays(),
+      dueReview: due,
+      dueLoaded: true,
+      weakList,
+      yesterdayText,
+      focus: plan.focus || '',
+      showSuggest: !!(due || weakList.length || (y && y.n)),
     });
     this.updateTaskCard();
   },
-  async loadPlan() {
+  applyBadges(b: CheckinBadgesResp) {
+    this.setData({ badgeStreak: b.streak, streak: b.streak });
+    this.updateMilestone(
+      b.streak,
+      (b.badges || []).map((x) => x.days)
+    );
+  },
+  applySummary(d: CheckinSummaryResp) {
+    if (d.today_n == null) return;
+    const today = d.today_n;
+    this._serverToday = today;
+    this.setData({
+      today,
+      clearedToday: d.cleared_today || 0,
+      goalPct: Math.min(100, Math.round((today / this.data.goal) * 100)),
+    });
+    this.updateTaskCard();
+  },
+  applyProfile(profile: HomeProfile | null, planToday: PlanTodayResp | null) {
+    this._profile = profile;
+    const g = adoptServerDailyGoal(this.data.goal, profile);
+    if (g != null) {
+      setDailyGoal(g);
+      this.refreshGoal();
+    }
+    if (profile) this.setData({ pf: { ...this.data.pf, ...profile } });
+    this.applyPlanToday(profile ? planToday : null);
+  },
+  applyPlanToday(plan: PlanTodayResp | null) {
+    if (!plan || !plan.profile) {
+      this.setData({ hasProfile: false, planLoaded: true, planTasks: [] });
+      return;
+    }
+    const tasks = (plan.tasks || []).map(planTaskView);
+    const prog = plan.progress || { done: tasks.filter((t) => t.done).length, total: tasks.length };
+    this.setData({
+      hasProfile: true,
+      planLoaded: true,
+      planTasks: tasks,
+      planDone: prog.done,
+      planTotal: prog.total,
+      daysLeft: plan.days_left ?? null,
+      phaseName: plan.phase_name || '',
+      realMode: !!plan.real_mode,
+    });
+  },
+  // ---- bundle 失败时的逐端点回退（旧后端/部署窗口兼容）----
+  async loadPlanFallback() {
     try {
-      const d = await fetchProfile();
-      if (!d.profile) {
-        this.setData({ hasProfile: false, planTasks: [], planLoaded: true });
-        return;
-      }
-      const plan = await fetchPlanToday();
-      const tasks = plan.tasks || [];
-      const done = tasks.filter((t) => t.done).length;
-      this.setData({
-        hasProfile: true,
-        planLoaded: true,
-        planTasks: tasks,
-        daysLeft: plan.days_left ?? null,
-        planPct: tasks.length ? Math.round((done / tasks.length) * 100) : 0,
-      });
+      this.applyPlan(await fetchDailyPlan());
     } catch (e) {
       /* 非关键路径 */
     }
   },
-  async loadDueReview() {
+  async loadProfileFallback() {
     try {
-      const r = await fetchReviewDue();
-      this.setData({ dueReview: r.total || (r.items || []).length, dueLoaded: true });
-      this.updateTaskCard();
+      const d = await fetchProfile();
+      const profile = (d.profile || null) as HomeProfile | null;
+      let planToday: PlanTodayResp | null = null;
+      if (profile) planToday = await fetchPlanTodayFull();
+      this.applyProfile(profile, planToday);
+    } catch (e) {
+      this.setData({ planLoaded: true });
+    }
+  },
+  async loadTodayServer() {
+    try {
+      this.applySummary(await fetchCheckinSummary());
     } catch (e) {
       /* 非关键路径 */
     }
@@ -192,15 +367,21 @@ Page({
   // 连签口径以服务端 /api/checkin/badges 为准（hero / 任务卡同源），失败降级本机 streak
   async loadBadges() {
     try {
-      const b: CheckinBadgesResp = await fetchCheckinBadges();
-      this.setData({ badgeStreak: b.streak, streak: b.streak });
-      this.updateMilestone(
-        b.streak,
-        (b.badges || []).map((x) => x.days)
-      );
+      this.applyBadges(await fetchCheckinBadges());
     } catch (e) {
       this.updateMilestone(this.data.streak, [3, 7, 14, 30, 60, 100]);
     }
+  },
+  refreshGoal() {
+    const today = this._serverToday ?? todayCount();
+    const goal = getDailyGoal();
+    this.setData({
+      today,
+      goal,
+      goalPct: Math.min(100, Math.round((today / goal) * 100)),
+      streak: this.data.badgeStreak || streakDays(),
+    });
+    this.updateTaskCard();
   },
   updateMilestone(streak: number, ms: number[]) {
     const next = ms.find((m) => m > streak);
@@ -227,6 +408,209 @@ Page({
     if (this.data.today > 0) n++;
     this.setData({ taskDoneN: n });
   },
+  // ---- 公告 ----
+  async loadAnnounce() {
+    try {
+      const d = await fetchAnnouncement();
+      const item = d.item;
+      this.setData({ announce: item && wx.getStorageSync('annDismissed') !== String(item.id) ? item : null });
+    } catch (e) {
+      this.setData({ announce: null });
+    }
+  },
+  onDismissAnn() {
+    if (this.data.announce) wx.setStorageSync('annDismissed', String(this.data.announce.id));
+    this.setData({ announce: null });
+  },
+  // ---- 续练 / 续考 / 续复习（小程序端无本地进度快照，直接取服务端；放弃后 30s 内不回读）----
+  loadPracticeResume() {
+    const clearedAt = Number(wx.getStorageSync('ppClearedAt')) || 0;
+    if (clearedAt && Date.now() - clearedAt < RESUME_CLEAR_TTL) return;
+    fetchPracticeResume()
+      .then((d) => {
+        if (!d || !Array.isArray(d.items) || !d.items.length) {
+          this.setData({ practiceResume: null });
+          return;
+        }
+        const picks = d.picks || {};
+        const done = d.items.filter((q) => picks[String(q.id)] != null).length;
+        if (done >= d.items.length) {
+          this.setData({ practiceResume: null });
+          return;
+        }
+        const mod = d.module ? moduleMeta(d.module).label : '';
+        this.setData({ practiceResume: { title: d.ptitle || mod || '上次练习', done, total: d.items.length } });
+      })
+      .catch(() => undefined);
+  },
+  onPrContinue() {
+    wx.navigateTo({ url: '/pages/practice/practice?mode=resume' });
+  },
+  onPrDrop() {
+    wx.showModal({
+      title: '放弃未完成练习？',
+      content: '放弃后这组题的作答进度不再保留',
+      confirmText: '放弃',
+      cancelText: '再想想',
+      success: (res) => {
+        if (!res.confirm) return;
+        wx.setStorageSync('ppClearedAt', Date.now());
+        dropPracticeProgress().catch(() => undefined);
+        this.setData({ practiceResume: null });
+      },
+    });
+  },
+  async loadExamResume() {
+    const clearedAt = Number(wx.getStorageSync('erClearedAt')) || 0;
+    if (clearedAt && Date.now() - clearedAt < RESUME_CLEAR_TTL) return;
+    try {
+      const d = await fetchExamResume();
+      const now = Date.now();
+      if (!d || !d.attempt_id || !d.paper || !d.paper.id || !Array.isArray(d.items) || !d.items.length) {
+        this.setData({ examResume: null });
+        return;
+      }
+      const endAt = Number(d.end_at_ms);
+      if (!Number.isFinite(endAt) || endAt <= now) {
+        this.setData({ examResume: null });
+        return;
+      }
+      const picks = d.picks || {};
+      const mini = d.paper.kind === 'mini';
+      this.setData({
+        examResume: {
+          attemptId: d.attempt_id,
+          paperId: d.paper.id,
+          mini,
+          title: d.paper.title || (mini ? '迷你模考' : '真题模考'),
+          answered: d.items.filter((q) => picks[String(q.id)] != null).length,
+          total: d.items.length,
+          leftText: fmtLeftSecs((endAt - now) / 1000),
+        },
+      });
+    } catch (e) {
+      /* 非关键路径 */
+    }
+  },
+  // 小程序模考页暂无按 attempt 恢复能力（Exam 组范围），此处进入模考页由用户重新开始/查看
+  onErContinue() {
+    const r = this.data.examResume;
+    if (!r) return;
+    if (r.mini) wx.navigateTo({ url: '/pages/exam/mini' });
+    else wx.switchTab({ url: '/pages/exam/exam' });
+  },
+  onErDrop() {
+    wx.showModal({
+      title: '放弃未交卷进度？',
+      content: '放弃后本次作答记录不再保留',
+      confirmText: '放弃',
+      cancelText: '再想想',
+      success: (res) => {
+        if (!res.confirm) return;
+        wx.setStorageSync('erClearedAt', Date.now());
+        const r = this.data.examResume;
+        if (r && r.attemptId) dropExamProgress(r.attemptId).catch(() => undefined);
+        this.setData({ examResume: null });
+      },
+    });
+  },
+  loadReviewResume() {
+    const clearedAt = Number(wx.getStorageSync('rvClearedAt')) || 0;
+    if (clearedAt && Date.now() - clearedAt < RESUME_CLEAR_TTL) return;
+    const uid = wx.getStorageSync<string>('anonUid') || '';
+    fetchReviewCur()
+      .then((r) => {
+        this.setData({ reviewResume: parseReviewSnap(r && r.snap, uid, Date.now() / 1000) });
+      })
+      .catch(() => undefined);
+  },
+  onRvContinue() {
+    trackEvent('home_review_resume_click', 'home');
+    wx.setStorageSync('autoStartReview', 1);
+    wx.switchTab({ url: '/pages/book/book' });
+  },
+  onRvDrop() {
+    wx.showModal({
+      title: '放弃未完成复习？',
+      content: '放弃后这轮复习的进度不再保留',
+      confirmText: '放弃',
+      cancelText: '再想想',
+      success: (res) => {
+        if (!res.confirm) return;
+        wx.setStorageSync('rvClearedAt', Date.now());
+        clearReviewCur().catch(() => undefined);
+        this.setData({ reviewResume: null });
+      },
+    });
+  },
+  // ---- 全站同题（每日一练）外显 ----
+  loadDailySet() {
+    fetchDailySet()
+      .then((d) => {
+        if (!d || !d.date || !(d.items || []).length) return;
+        const done = loadDailyDone();
+        const dsDone = done && done.date === d.date ? done : null;
+        let dsDoneText = '';
+        if (dsDone) {
+          dsDoneText = '今日全站同题 · 答对 ' + dsDone.right + '/' + dsDone.total;
+          if (dsDone.rank) dsDoneText += ' · 第 ' + dsDone.rank + ' 名';
+          if (dsDone.streak >= 2) dsDoneText += ' · 连 ' + dsDone.streak + ' 天';
+        } else {
+          const n = (d.stats && d.stats.participants) || 0;
+          dsDoneText = '今日全站同题 10 题 · ' + (n ? '已有 ' + n + ' 人完成' : '来做今天第 1 人');
+        }
+        this.setData({ dsMeta: { date: d.date, participants: (d.stats && d.stats.participants) || 0 }, dsDone, dsDoneText });
+      })
+      .catch(() => undefined);
+  },
+  onDailySet() {
+    wx.navigateTo({ url: '/pkgGrow/daily/daily?kind=set' });
+  },
+  onDailyArchive() {
+    wx.navigateTo({ url: '/pkgGrow/daily/daily?kind=set&archive=1' });
+  },
+  onShizheng() {
+    wx.navigateTo({ url: '/pkgGrow/daily/daily?kind=shizheng' });
+  },
+  onSzArchive() {
+    wx.navigateTo({ url: '/pkgGrow/daily/daily?kind=shizheng&archive=1' });
+  },
+  // 周一至周三未读上周周报时显示红点（同 H5 calcWeeklyDot）
+  calcWeeklyDot() {
+    const now = new Date();
+    const dow = now.getDay();
+    if (dow < 1 || dow > 3) {
+      this.setData({ weeklyDot: false });
+      return;
+    }
+    const day0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const lastWs = Math.floor(day0.getTime() / 1000) - ((dow + 6) % 7) * 86400 - 7 * 86400;
+    this.setData({ weeklyDot: wx.getStorageSync('weeklyReadWs') !== lastWs });
+  },
+  onWeeklyReport() {
+    wx.navigateTo({ url: '/pkgGrow/weekly-report/weekly-report' });
+  },
+  onCalendar() {
+    wx.navigateTo({ url: '/pkgGrow/calendar/calendar' });
+  },
+  onAsk() {
+    // AI 拍题讲解页由 Learn 组分包提供；未落地时提示
+    wx.navigateTo({
+      url: '/pkgLearn/ask/ask',
+      fail: () => wx.showToast({ title: 'AI 拍题讲解即将上线', icon: 'none' }),
+    });
+  },
+  onMore(e: WechatMiniprogram.TouchEvent) {
+    const kind = String(e.currentTarget.dataset.kind || '');
+    if (kind === 'exam') wx.switchTab({ url: '/pages/exam/exam' });
+    else if (kind === 'book') wx.switchTab({ url: '/pages/book/book' });
+    else if (kind === 'ask') this.onAsk();
+    else wx.switchTab({ url: '/pages/stats/stats' });
+  },
+  onRealPractice() {
+    wx.navigateTo({ url: '/pages/practice/practice?real=1&count=10' });
+  },
+  // ---- 任务卡 / 复习 / 目标 ----
   onTaskGo(e: WechatMiniprogram.TouchEvent) {
     const kind = String(e.currentTarget.dataset.kind || '');
     trackEvent('task_card_click', kind);
@@ -239,7 +623,7 @@ Page({
       }
       wx.switchTab({ url: '/pages/book/book' });
     } else {
-      wx.switchTab({ url: '/pages/profile/profile' });
+      this.onCalendar();
     }
   },
   onReviewEntry() {
@@ -248,16 +632,42 @@ Page({
     wx.setStorageSync('autoStartReview', 1);
     wx.switchTab({ url: '/pages/book/book' });
   },
+  onGoBook() {
+    wx.switchTab({ url: '/pages/book/book' });
+  },
   onSetGoal(e: WechatMiniprogram.TouchEvent) {
     const g = Number(e.currentTarget.dataset.goal);
     setDailyGoal(g);
     this.refreshGoal();
+    saveServerDailyGoal(g).catch(() => undefined);
   },
   onStartModule(e: WechatMiniprogram.TouchEvent) {
     const mod = String(e.currentTarget.dataset.mod || '');
     wx.navigateTo({
       url: '/pages/practice/practice' + (mod ? '?module=' + mod : ''),
     });
+  },
+  // 今日主攻：POST /api/user_state 后服务端刷新推荐，重新拉 daily_plan（+ plan/today）
+  async onFocus(e: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const mod = String(e.detail.value || '');
+    const next = this.data.focus === mod ? '' : mod;
+    try {
+      await setUserFocus(next);
+      this.applyPlan(await fetchDailyPlan());
+      if (this._profile) this.applyPlanToday(await fetchPlanTodayFull());
+      if (next) wx.showToast({ title: '今日主攻已设为' + moduleMeta(next).label + '，推荐已更新', icon: 'none' });
+    } catch (err) {
+      /* 非关键路径 */
+    }
+  },
+  // 薄弱项推荐 → 练 10 题（source=reco 埋点，同 H5 startPreset(..., 'reco')）
+  onWeak(e: WechatMiniprogram.TouchEvent) {
+    const w = this.data.weakList[Number(e.currentTarget.dataset.index)];
+    if (!w) return;
+    let url = '/pages/practice/practice?count=10&source=reco&module=' + w.module;
+    if (w.submodule) url += '&submodule=' + encodeURIComponent(w.submodule);
+    if (w.tag3) url += '&tag3=' + encodeURIComponent(w.tag3);
+    wx.navigateTo({ url });
   },
   onOpenSetup() {
     this.setData({ setupOpen: true, setupStep: 1 });
@@ -304,7 +714,7 @@ Page({
       await saveProfile(pf);
       this.setData({ setupOpen: false });
       wx.showToast({ title: '学习计划已生成', icon: 'none' });
-      this.loadPlan();
+      this.loadHome();
     } catch (e) {
       wx.showToast({ title: '保存失败，请稍后再试', icon: 'none' });
     } finally {
@@ -314,22 +724,33 @@ Page({
   onContinueGoal() {
     wx.navigateTo({ url: '/pages/practice/practice' });
   },
+  // 计划任务路由（同 H5 goTask）：mock→真题卷/迷你模考；review→错题本；reinforce→强化 5 题；其余→练剩余量
   onPlanTask(e: WechatMiniprogram.TouchEvent) {
     const idx = Number(e.currentTarget.dataset.index);
     const t = this.data.planTasks[idx];
     if (!t || t.done) return;
+    if (t.type === 'mock') {
+      if (t.real || this.data.realMode) wx.switchTab({ url: '/pages/exam/exam' });
+      else wx.navigateTo({ url: '/pages/exam/mini' });
+      return;
+    }
     if (t.type === 'review') {
       wx.switchTab({ url: '/pages/book/book' });
       return;
     }
-    if (t.type === 'mock') {
-      wx.switchTab({ url: '/pages/exam/exam' });
+    if (t.type === 'reinforce') {
+      let url = '/pages/practice/practice?count=5';
+      if (t.module) url += '&module=' + t.module;
+      if (t.submodule) url += '&submodule=' + encodeURIComponent(t.submodule);
+      if (t.tag3) url += '&tag3=' + encodeURIComponent(t.tag3);
+      wx.navigateTo({ url });
       return;
     }
     const remain = Math.max(t.target - (t.done_n || 0), 5);
     let url = '/pages/practice/practice?count=' + remain;
     if (t.module) url += '&module=' + t.module;
     if (t.submodule) url += '&submodule=' + encodeURIComponent(t.submodule);
+    if (t.real) url += '&real=1';
     wx.navigateTo({ url });
   },
 });
