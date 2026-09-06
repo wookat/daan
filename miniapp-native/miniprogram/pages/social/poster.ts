@@ -197,7 +197,7 @@ Page({
               : reject(new Error('canvas 不可用'))
           );
       });
-      const dpr = wx.getSystemInfoSync().pixelRatio || 2;
+      const dpr = wx.getWindowInfo().pixelRatio || 2;
       node.width = W * dpr;
       node.height = H * dpr;
       const ctx = node.getContext('2d') as unknown as Ctx2D;

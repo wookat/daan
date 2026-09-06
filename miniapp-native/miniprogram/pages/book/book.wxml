@@ -13,7 +13,7 @@
           <view
             wx:for="{{rOpts}}"
             wx:key="k"
-            class="r-opt {{rOpts[0].text ? 'r-opt-full' : ''}} {{!answered ? (rMulti && picked.indexOf(item.k) > -1 ? 'rsel' : '') : rLetter.indexOf(item.k) > -1 ? 'rok' : picked.indexOf(item.k) > -1 ? 'rbad' : 'rdim'}}"
+            class="r-opt {{rOpts[0].text ? 'r-opt-full' : ''}} {{item.state ? 'r' + item.state : ''}}"
             hover-class="{{answered ? 'none' : 'r-opt--hover'}}"
             data-opt="{{item.k}}"
             bind:tap="onReviewPick"
@@ -58,7 +58,7 @@
         <text class="duecard-t">今日待复习 {{dueTotal}} 道</text>
         <text class="duecard-s">按遗忘曲线安排 · 趁热打铁巩固一遍</text>
       </view>
-      <kg-button variant="primary" tone="inverse" size="md">开始复习</kg-button>
+      <kg-button variant="primary" tone="inverse" size="md" bind:click="onReviewFromCard">开始复习</kg-button>
     </view>
 
     <!-- 本月复盘 -->
@@ -96,7 +96,7 @@
       </view>
     </view>
 
-    <view wx:if="{{tab !== 'fav'}}" class="redo"><kg-button variant="primary" size="lg" block icon="shuffle" bind:click="onRedo">错题重练（抽 10 题）</kg-button></view>
+    <view wx:if="{{tab !== 'fav' && todoCount}}" class="redo"><kg-button variant="primary" size="lg" block icon="shuffle" bind:click="onRedo">错题重练（抽 10 题）</kg-button></view>
 
     <!-- 加载态 -->
     <block wx:if="{{loading}}">
@@ -124,6 +124,14 @@
         </view>
         <text class="m-q q-text {{item.open ? '' : 'm-q-clamp'}}">{{item.question_text}}</text>
         <view wx:if="{{item.open}}" class="m-detail">
+          <view wx:if="{{item.optList.length}}" class="m-opts">
+            <text
+              wx:for="{{item.optList}}"
+              wx:for-item="o"
+              wx:key="k"
+              class="m-opt q-text {{o.ok ? 'm-opt--ok' : ''}} {{o.bad ? 'm-opt--bad' : ''}}"
+            >{{o.k}}. {{o.v}}</text>
+          </view>
           <view class="m-ans">
             <text class="m-k">我的答案 <text class="badc">{{item.user_answer}}</text></text>
             <text class="m-k">正确答案 <text class="okc">{{item.correct_answer}}</text></text>

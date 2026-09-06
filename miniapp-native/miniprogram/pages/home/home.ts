@@ -1,5 +1,6 @@
 import {
   fetchCheckinBadges,
+  fetchCheckinSummary,
   fetchPlanToday,
   fetchProfile,
   fetchQuestionCounts,
@@ -92,6 +93,7 @@ Page({
     daysLeft: null as number | null,
     dueReview: 0,
     dueLoaded: false,
+    clearedToday: 0,
     badgeStreak: 0,
     nextMilestone: null as { days: number; left: number; pct: number } | null,
     taskDoneN: 0,
@@ -126,9 +128,28 @@ Page({
     this.loadPlan();
     this.loadDueReview();
     this.loadBadges();
+    this.loadTodayServer();
   },
+  // 今日已练以服务端为准（answer_log+review_log，与统计页同源），本机 pstats 只做首屏占位与离线降级
+  async loadTodayServer() {
+    try {
+      const d = await fetchCheckinSummary();
+      if (d.today_n == null) return;
+      const today = d.today_n;
+      this._serverToday = today;
+      this.setData({
+        today,
+        clearedToday: d.cleared_today || 0,
+        goalPct: Math.min(100, Math.round((today / this.data.goal) * 100)),
+      });
+      this.updateTaskCard();
+    } catch (e) {
+      /* 非关键路径 */
+    }
+  },
+  _serverToday: null as number | null,
   refreshGoal() {
-    const today = todayCount();
+    const today = this._serverToday ?? todayCount();
     const goal = getDailyGoal();
     this.setData({
       today,

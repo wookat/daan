@@ -1,8 +1,3 @@
-.page-scroll {
-  flex: 1;
-  height: 100%;
-}
-
 .wrap {
   padding: var(--sp-12) var(--page-x) calc(var(--bar-h) + var(--sp-24) + env(safe-area-inset-bottom));
 }
@@ -304,12 +299,15 @@
 
 /* 结算 */
 .done {
+  display: block;
+}
+
+.done-body {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding-top: var(--sp-24);
-  padding-bottom: var(--sp-24);
+  padding: var(--sp-8) 0;
 }
 
 .done-t {

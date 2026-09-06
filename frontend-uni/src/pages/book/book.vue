@@ -217,6 +217,14 @@
               <text class="meta mtime">{{ fmt(m.created_at) }}</text>
             </view>
             <view class="q" :class="{ clamp: !m.open }">{{ (m.question_text || '').slice(0, 200) }}</view>
+            <view v-if="m.open && m.options" class="mopts">
+              <text
+                v-for="(v, k) in m.options"
+                :key="k"
+                class="mopt"
+                :class="{ 'mopt--ok': ansLetter(m.correct_answer).includes(k), 'mopt--bad': ansLetter(m.user_answer).includes(k) && !ansLetter(m.correct_answer).includes(k) }"
+              >{{ k }}. {{ v }}</text>
+            </view>
             <view v-if="m.open && ansLetter(m.user_answer)" class="anscmp">
               <kg-tag tone="bad">我选 {{ ansLetter(m.user_answer) }}</kg-tag>
               <kg-tag v-if="ansLetter(m.correct_answer)" tone="ok">答案 {{ ansLetter(m.correct_answer) }}</kg-tag>
@@ -1696,6 +1704,10 @@ export default {
 .q { font-size: var(--fs-body); line-height: var(--lh-body); color: var(--ink); margin-top: var(--sp-8); }
 .q.clamp { max-height: calc(var(--fs-body) * var(--lh-body) * 3); overflow: hidden; }
 .meta { font-size: var(--fs-caption); color: var(--ink-3); }
+.mopts { margin-top: var(--sp-8); display: flex; flex-direction: column; gap: var(--sp-4); }
+.mopt { font-size: var(--fs-sub); line-height: var(--lh-body); color: var(--ink-2); }
+.mopt--ok { color: var(--ok-strong); }
+.mopt--bad { color: var(--bad-strong); }
 .anscmp { margin-top: var(--sp-8); font-size: var(--fs-sub); display: flex; gap: var(--sp-8); align-items: center; flex-wrap: wrap; }
 .anscmp .ca { color: var(--ok); font-weight: 600; }
 .mstat { margin-top: var(--sp-8); font-size: var(--fs-caption); color: var(--ink-3); }

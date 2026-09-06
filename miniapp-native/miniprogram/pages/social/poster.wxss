@@ -1,8 +1,3 @@
-.page-scroll {
-  flex: 1;
-  height: 100%;
-}
-
 .wrap {
   max-width: 480px;
   margin: 0 auto;
@@ -31,17 +26,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-8);
-}
-
-.share-btn {
-  --td-button-border-radius: var(--r-full);
-  --td-button-large-height: var(--btn-h-lg);
-  --td-button-large-font-size: var(--fs-body);
-  --td-button-light-color: var(--brand-text);
-  --td-button-light-bg-color: var(--brand-soft);
-  --td-button-light-border-color: var(--brand-soft);
-  --td-button-light-active-bg-color: var(--brand-soft-2);
-  --td-button-light-active-border-color: var(--brand-soft-2);
 }
 
 .tip {

@@ -6,6 +6,7 @@ import type {
   CheckinBadgesResp,
   CheckinSummaryResp,
   ExamReportResp,
+  ExamRankResp,
   ExamStartResp,
   ExamSubmitResp,
   FavFolder,
@@ -298,6 +299,12 @@ export function examSubmit(
 export function fetchExamReport(attemptId: number): Promise<ExamReportResp> {
   return request<ExamReportResp>(
     '/api/exam/report/' + attemptId + '?uid=' + encodeURIComponent(anonUid())
+  );
+}
+
+export function fetchExamRank(attemptId: number): Promise<ExamRankResp> {
+  return request<ExamRankResp>(
+    '/api/exam/rank/' + attemptId + '?uid=' + encodeURIComponent(anonUid())
   );
 }
 

@@ -1,8 +1,3 @@
-.page-scroll {
-  flex: 1;
-  height: 100%;
-}
-
 .wrap {
   padding: var(--sp-12) var(--page-x) calc(80px + env(safe-area-inset-bottom));
 }
@@ -131,6 +126,27 @@
   margin-top: var(--sp-12);
   border-top: 1px solid var(--line);
   padding-top: var(--sp-12);
+}
+
+.m-opts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-12);
+}
+
+.m-opt {
+  font-size: var(--fs-sub);
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.m-opt--ok {
+  color: var(--ok-strong);
+}
+
+.m-opt--bad {
+  color: var(--bad-strong);
 }
 
 .m-ans {

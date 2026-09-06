@@ -26,9 +26,9 @@
           <text class="score num">{{report.attempt.score}}</text>
           <text class="score-u">分</text>
         </view>
-        <view class="pct-pill">
+        <view wx:if="{{rankText}}" class="pct-pill">
           <l-icon name="trophy" size="16" tone="on-brand" />
-          <text>超过 <text class="num">--</text>% 考生 · 排名数据待接入</text>
+          <text>{{rankText}}</text>
         </view>
         <view class="hero-row">
           <view class="hstat"><text class="hv num">{{report.correct}}/{{report.total}}</text><text class="hk">答对</text></view>

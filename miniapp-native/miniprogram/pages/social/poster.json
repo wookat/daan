@@ -4,7 +4,6 @@
     "l-icon": "/components/l-icon/index",
     "kg-button": "/components/kg-button/index",
     "kg-empty": "/components/kg-empty/index",
-    "t-button": "tdesign-miniprogram/button/button",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
   }
 }

@@ -7,8 +7,9 @@
   disabled="{{disabled}}"
   loading="{{loading}}"
   shape="round"
+  open-type="{{openType}}"
   bind:tap="onTap"
 >
-  <l-icon wx:if="{{icon}}" name="{{icon}}" size="{{size === 'sm' ? 16 : 20}}" tone="{{iconTone}}" />
+  <l-icon wx:if="{{icon}}" class="kg-btn__icon" name="{{icon}}" size="{{size === 'sm' ? 16 : 20}}" tone="inherit" />
   <slot />
 </t-button>

@@ -23,6 +23,18 @@ import { syncTabBar } from '../../utils/tabbar';
 interface MRow extends Mistake {
   modName: string;
   open: boolean;
+  optList: { k: string; v: string; ok: boolean; bad: boolean }[];
+}
+
+function optList(m: Mistake): MRow['optList'] {
+  const o = m.options;
+  if (!o) return [];
+  const ok = extractLetter(m.correct_answer);
+  const bad = extractLetter(m.user_answer);
+  return Object.keys(o)
+    .sort()
+    .filter((k) => (o[k] || '').trim())
+    .map((k) => ({ k, v: o[k], ok: ok.includes(k), bad: bad.includes(k) && !ok.includes(k) }));
 }
 
 interface RItem extends Mistake {
@@ -101,7 +113,7 @@ Page({
     rCur: null as RItem | null,
     rLetter: '',
     rMulti: false,
-    rOpts: [] as { k: string; text: string }[],
+    rOpts: [] as { k: string; text: string; state: string }[],
     picked: '',
     answered: false,
     wasCorrect: false,
@@ -164,7 +176,12 @@ Page({
         fetchFavs(this.data.folderId).catch(() => ({ items: [] as FavItem[] })),
         fetchFavFolders().catch(() => ({ items: [] as FavFolder[] })),
       ]);
-      const all = (m.items || []).map((x) => ({ ...x, modName: modName(x.module), open: false }));
+      const all = (m.items || []).map((x) => ({
+        ...x,
+        modName: modName(x.module),
+        open: false,
+        optList: optList(x),
+      }));
       const modOptions = Array.from(new Set(all.map((x) => x.modName).filter(Boolean)));
       const typeOptions = Array.from(
         new Set(all.map((x) => x.question_type || '').filter(Boolean))
@@ -496,7 +513,7 @@ Page({
   resetQ() {
     const cur = this.data.rItems[this.data.rIdx] || null;
     const opts = cur && cur.options ? cur.options : null;
-    const rOpts = ['A', 'B', 'C', 'D'].map((k) => ({ k, text: (opts && opts[k]) || '' }));
+    const rOpts = ['A', 'B', 'C', 'D'].map((k) => ({ k, text: (opts && opts[k]) || '', state: '' }));
     const rLetter = extractLetter(cur ? cur.correct_answer : '');
     this.setData({
       rCur: cur,
@@ -509,6 +526,19 @@ Page({
       nextDays: 0,
     });
   },
+  // WXML 表达式不支持方法调用（indexOf 等），选项的选中/对错态在这里算好再下发
+  paintOpts(picked: string, answered: boolean) {
+    const { rLetter, rOpts } = this.data;
+    const next = rOpts.map((o) => {
+      let state = '';
+      if (!answered) state = picked.includes(o.k) ? 'sel' : '';
+      else if (rLetter.includes(o.k)) state = 'ok';
+      else if (picked.includes(o.k)) state = 'bad';
+      else state = 'dim';
+      return { ...o, state };
+    });
+    this.setData({ picked, rOpts: next });
+  },
   onReviewPick(e: WechatMiniprogram.TouchEvent) {
     if (this.data.answered) return;
     const o = String(e.currentTarget.dataset.opt);
@@ -516,14 +546,15 @@ Page({
       const set = new Set(this.data.picked.split('').filter(Boolean));
       if (set.has(o)) set.delete(o);
       else set.add(o);
-      this.setData({ picked: Array.from(set).sort().join('') });
+      this.paintOpts(Array.from(set).sort().join(''), false);
       return;
     }
-    this.setData({ picked: o });
+    this.paintOpts(o, true);
     this.recordReview(o === this.data.rLetter);
   },
   onConfirmMulti() {
     if (this.data.answered || !this.data.picked) return;
+    this.paintOpts(this.data.picked, true);
     this.recordReview(this.data.picked === this.data.rLetter);
   },
   onSelfJudge(e: WechatMiniprogram.TouchEvent) {

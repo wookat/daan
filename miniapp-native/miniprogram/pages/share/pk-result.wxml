@@ -25,7 +25,7 @@
         </view>
       </view>
 
-      <kg-card variant="raised" class="vs">
+      <kg-card variant="raised" class="vs" body-class="vs-body">
         <view class="p {{d.winner === 'creator' ? 'win' : ''}}">
           <view class="crown"><l-icon wx:if="{{d.winner === 'creator'}}" name="crown" size="20" tone="streak" /></view>
           <view class="av">{{creatorAv}}</view>
@@ -46,7 +46,7 @@
         </view>
       </kg-card>
 
-      <kg-card variant="raised" class="cta">
+      <kg-card variant="raised" class="cta" body-class="cta-body">
         <text class="cta-t">不服来战？</text>
         <text class="cta-s">同组 10 题拼手速，答对 +80 分，越快加成越高</text>
         <kg-button variant="primary" size="lg" block icon="zap" bind:click="onChallenge">去刷题练手</kg-button>

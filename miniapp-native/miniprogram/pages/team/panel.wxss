@@ -1,8 +1,3 @@
-.page-scroll {
-  flex: 1;
-  height: 100%;
-}
-
 .wrap {
   padding: var(--sp-12) var(--page-x) calc(var(--sp-40) + env(safe-area-inset-bottom));
 }
@@ -36,15 +31,6 @@
   margin-top: var(--sp-12);
 }
 
-.share-btn {
-  --td-button-primary-bg-color: var(--brand-press);
-  --td-button-primary-border-color: var(--on-brand-2);
-  --td-button-primary-active-bg-color: var(--brand-press);
-  --td-button-primary-active-border-color: var(--on-brand-2);
-  --td-button-primary-color: var(--on-brand);
-  --td-button-small-height: var(--btn-h-sm);
-  --td-button-small-font-size: var(--fs-sub);
-}
 
 /* 排行 */
 .rank-card {

@@ -15,6 +15,14 @@ Component({
       this.setData({ statusBarHeight: info.statusBarHeight || 20 });
     },
   },
+  pageLifetimes: {
+    // 状态栏前景色由 window.navigationBarTextStyle(@navTxtStyle 随主题)决定；品牌渐变头页面不论主题都要白字
+    show() {
+      if (this.properties.brand) {
+        wx.setNavigationBarColor({ frontColor: '#ffffff', backgroundColor: '#2e5bff' });
+      }
+    },
+  },
   methods: {
     onBack() {
       wx.navigateBack({

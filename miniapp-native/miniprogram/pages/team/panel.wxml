@@ -20,10 +20,8 @@
         <text class="hero-t">{{panel.team.name}}</text>
         <text class="hero-s"><text class="num">{{members.length}}</text> 名队友 · 邀请码 <text class="num">{{panel.team.invite_code}}</text></text>
         <view class="hero-btns">
-          <kg-button variant="primary" tone="inverse" size="sm" icon="copy" bind:click="onCopyInvite">复制邀请链接</kg-button>
-          <t-button class="share-btn" theme="primary" size="small" shape="round" open-type="share">
-            <l-icon name="share-2" size="16" tone="on-brand" />微信邀请
-          </t-button>
+          <kg-button variant="primary" tone="inverse" size="sm" icon="share-2" openType="share">微信邀请</kg-button>
+          <kg-button variant="ghost" tone="inverse" size="sm" icon="copy" bind:click="onCopyInvite">复制邀请链接</kg-button>
           <kg-button variant="ghost" tone="inverse" size="sm" bind:click="onLeave">退出小队</kg-button>
         </view>
       </view>
@@ -33,9 +31,7 @@
         wx:if="{{members.length <= 1}}"
         icon="users"
         title="队里还只有你一个人"
-        desc="把邀请码发给考友，一起打卡刷题、互相催学"
-        ctaText="复制邀请链接"
-        bind:cta="onCopyInvite"
+        desc="点上方「微信邀请」发给考友，一起打卡刷题、互相催学"
       />
 
       <block wx:else>

@@ -2,7 +2,7 @@
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
     <!-- 0 数据：折叠为一张解锁卡 -->
-    <kg-card wx:if="{{zero}}" variant="raised" class="unlock">
+    <kg-card wx:if="{{zero}}" variant="raised" class="unlock" padding="{{0}}" body-class="unlock-body">
       <view class="unlock-ico"><l-icon name="chart-column" size="32" tone="brand" /></view>
       <text class="unlock-t">刷 10 题解锁统计</text>
       <text class="unlock-s">今日题数、连续天数、12 周热力图与分模块正确率，都会在你开始刷题后点亮</text>
@@ -15,7 +15,7 @@
     </kg-card>
 
     <block wx:else>
-      <kg-card variant="raised" class="nums">
+      <kg-card variant="raised" class="nums" padding="{{0}}" body-class="nums-body">
         <view class="numcell">
           <text class="num-n num c1">{{today}}</text>
           <text class="num-t">今日题数</text>

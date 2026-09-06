@@ -106,7 +106,7 @@
     </block>
 
     <!-- 结算 -->
-    <kg-card wx:if="{{finished}}" variant="raised" class="done">
+    <kg-card wx:if="{{finished}}" variant="raised" class="done" body-class="done-body">
       <kg-progress shape="ring" size="{{96}}" value="{{pct}}" label="{{pct + '%'}}" aria-label="本组正确率" />
       <text class="done-t">本组完成</text>
       <text class="done-sub">答对 <text class="num">{{right}}/{{items.length}}</text> · 错题 <text class="num">{{wrongCount}}</text> · 用时 <text class="num">{{totalSecs}}</text>s</text>

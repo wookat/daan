@@ -14,7 +14,7 @@
     </view>
 
     <!-- 数据概览 -->
-    <kg-card variant="raised" class="u-stats">
+    <kg-card variant="raised" class="u-stats" padding="{{0}}" body-class="u-stats-body">
       <view class="us-cell"><text class="us-n num c-brand">{{totalDone}}</text><text class="us-t">累计刷题</text></view>
       <view class="us-cell"><text class="us-n num c-streak">{{streakN}}</text><text class="us-t">连续天数</text></view>
       <view class="us-cell"><text class="us-n num c-ok">{{mistakeN}}</text><text class="us-t">错题收录</text></view>
@@ -49,7 +49,7 @@
       </view>
     </kg-card>
 
-    <t-cell-group theme="card" class="cells">
+    <t-cell-group class="cells">
       <t-cell title="刷题小队" description="组队打卡 · 互相催学" arrow hover bind:click="onTeam">
         <view slot="left-icon" class="row-ico bg-brand"><l-icon name="users" size="20" tone="brand" /></view>
       </t-cell>
@@ -58,7 +58,7 @@
       </t-cell>
     </t-cell-group>
 
-    <t-cell-group theme="card" class="cells">
+    <t-cell-group class="cells">
       <t-cell title="数据同步" note="{{user ? '账号云端同步' : '匿名（登录后自动合并）'}}">
         <view slot="left-icon" class="row-ico bg-info"><l-icon name="refresh-cw" size="20" tone="info" /></view>
       </t-cell>

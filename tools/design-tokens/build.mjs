@@ -377,14 +377,15 @@ const UTIL_CSS = `/* utilities */
 }
 .safe-b {
   padding-bottom: env(safe-area-inset-bottom);
-}
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
 }`;
+
+const REDUCED_MOTION_DECLS = `    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;`;
+
+function reducedMotion(selectors) {
+  return `@media (prefers-reduced-motion: reduce) {\n  ${selectors} {\n${REDUCED_MOTION_DECLS}\n  }\n}`;
+}
 
 export function emitCss(flat) {
   const compat = H5_COMPAT.map(([k, v]) => `  ${k}: ${v}; /* deprecated */`);
@@ -401,20 +402,25 @@ export function emitCss(flat) {
     '/* compat：过渡期别名，页面组接入后删除（foundation-2） */',
     cssBlock('page', compat),
     UTIL_CSS,
+    reducedMotion('*, *::before, *::after'),
     '',
   ].join('\n');
 }
+
+/* custom-tab-bar 渲染在 page 节点之外，读不到 page 上的变量：其根节点加 .kg-theme-root 并以 styleIsolation:apply-shared 吃到 app.wxss 里的这条规则。
+   WXSS 不支持 `*` 选择器（整文件编译失败→模拟器白屏），prefers-reduced-motion 的标签枚举块在 app.wxss 手写 */
+const WXSS_ROOT = 'page, .kg-theme-root';
 
 export function emitWxss(flat) {
   const compat = MP_COMPAT.map(([k, v]) => `  ${k}: ${v}; /* deprecated */`);
   return [
     HEADER,
-    cssBlock('page', lightDecls(flat)),
-    `@media (prefers-color-scheme: dark) {\n${cssBlock('  page', darkDecls(flat).map((l) => '  ' + l)).replace(/\n}$/, '\n  }')}\n}`,
+    cssBlock(WXSS_ROOT, lightDecls(flat)),
+    `@media (prefers-color-scheme: dark) {\n${cssBlock(`  ${WXSS_ROOT}`, darkDecls(flat).map((l) => '  ' + l)).replace(/\n}$/, '\n  }')}\n}`,
     '/* component: tdesign-miniprogram（变量名以 tdesign-miniprogram@1.9.x common/style/theme/_light.wxss 为准） */',
-    cssBlock('page', TD_MAP.map(([k, v]) => decl('  ', k, v))),
+    cssBlock(WXSS_ROOT, TD_MAP.map(([k, v]) => decl('  ', k, v))),
     '/* compat：过渡期别名，页面组接入后删除（foundation-2） */',
-    cssBlock('page', compat),
+    cssBlock(WXSS_ROOT, compat),
     UTIL_CSS,
     '',
   ].join('\n');

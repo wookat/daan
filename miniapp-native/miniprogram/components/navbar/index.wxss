@@ -1,3 +1,7 @@
+:host {
+  flex-shrink: 0;
+}
+
 .navbar {
   position: relative;
   z-index: 100;

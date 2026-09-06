@@ -1,4 +1,4 @@
-import { fetchExamReport } from '../../api/index';
+import { fetchExamReport, fetchExamRank } from '../../api/index';
 import type { ExamReportItem, ExamReportResp } from '../../api/types';
 import { modName } from '../../utils/stats';
 
@@ -23,6 +23,8 @@ Page({
     modRows: [] as ModRow[],
     detail: null as RQuestion | null,
     loadErr: '',
+    // 同卷击败比例（/api/exam/rank，与 H5 同源）：样本 <10 不展示（迷你模考每次随机组卷，同卷只有本人）
+    rankText: '',
   },
   _aid: 0,
 
@@ -43,6 +45,12 @@ Page({
   },
 
   async load(aid: number) {
+    fetchExamRank(aid)
+      .then((r) => {
+        const rankText = r.total >= 10 ? `超过 ${r.beaten_pct}% 考生 · 同卷第 ${r.rank}/${r.total}` : '';
+        this.setData({ rankText });
+      })
+      .catch(() => this.setData({ rankText: '' }));
     try {
       const d = await fetchExamReport(aid);
       const modRows: ModRow[] = Object.keys(d.attempt.per_module || {}).map((m) => {

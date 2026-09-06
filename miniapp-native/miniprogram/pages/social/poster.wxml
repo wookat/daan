@@ -17,9 +17,7 @@
       />
       <view class="actions">
         <kg-button variant="primary" size="lg" block icon="save" disabled="{{!imgSrc || streak0}}" bind:click="onSave">保存图片</kg-button>
-        <t-button class="share-btn" theme="light" size="large" shape="round" block open-type="share">
-          <l-icon name="share-2" size="20" tone="brand-text" />分享给好友
-        </t-button>
+        <kg-button variant="secondary" size="lg" block icon="share-2" openType="share">分享给好友</kg-button>
         <text wx:if="{{streak0}}" class="tip tip-warn">打卡 1 天后可生成海报，先去做一组题吧</text>
         <text wx:else class="tip">保存后可分享到朋友圈 / 小红书，和考友一起上岸</text>
       </view>
