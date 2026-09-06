@@ -98,6 +98,24 @@ def test_iter_archive_reads_only_window_files(tmp_path):
     assert set(r["engines"]) == {"Google", "Bing"}
 
 
+def test_iter_archive_reads_gzipped_and_multi_member_files(tmp_path):
+    import gzip
+
+    (tmp_path / "access-20260904.jsonl").write_text(_line(NOW - 1, GOOGLE) + "\n")
+    with gzip.open(tmp_path / "access-20260902.jsonl.gz", "wt") as f:
+        f.write(_line(NOW - 2 * DAY, BING) + "\n")
+    # cron 用 gzip -c >> 追加成多成员 gz：两段都要读到
+    p = tmp_path / "access-20260901.jsonl.gz"
+    p.write_bytes(gzip.compress((_line(NOW - 3 * DAY, YANDEX) + "\n").encode())
+                  + gzip.compress((_line(NOW - 3 * DAY + 60, YANDEX) + "\n").encode()))
+    with gzip.open(tmp_path / "access-20260801.jsonl.gz", "wt") as f:
+        f.write(_line(NOW - 34 * DAY, GOOGLE) + "\n")
+    r = cs.aggregate(cs.iter_archive(str(tmp_path), days=7, now=NOW), days=7, now=NOW)
+    assert set(r["engines"]) == {"Google", "Bing", "Yandex"}
+    assert sum(r["engines"]["Yandex"]["hits"].values()) == 2
+    assert sum(r["engines"]["Google"]["hits"].values()) == 1
+
+
 def test_parse_crawler_stats_pins_google_baidu_bing(tmp_path):
     p = tmp_path / "crawler-stats.json"
     now = time.time()
