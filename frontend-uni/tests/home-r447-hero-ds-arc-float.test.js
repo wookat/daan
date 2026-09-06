@@ -27,4 +27,13 @@ describe('R447/R448 「补练往期 ›」右对齐（源文件锁）', () => {
     expect(Number(m[1])).toBeGreaterThanOrEqual(122);
     expect(Number(m[1])).toBeLessThanOrEqual(140);
   });
+  it('.hero-ds 下外边距 ≥ 链接热区下伸量：热区（12px 内边距、对行居中）底缘不进入下方 .hero-acts 按钮（R449）', () => {
+    const ds = style.split('\n').find((l) => l.startsWith('.hero-ds '));
+    const arc = style.split('\n').find((l) => l.startsWith('.hero-ds-arc '));
+    const pad = Number(arc.match(/padding:\s*(\d+)px/)[1]);
+    // 热区底 = 行底 + (热区高 − 行高)/2 = 行底 + 上下 padding 之一 → 外边距须 ≥ padding（1rpx = 0.5px）
+    const m = ds.match(/margin:\s*-?\d+rpx 0 (\d+)rpx/);
+    expect(m).toBeTruthy();
+    expect(Number(m[1]) / 2).toBeGreaterThanOrEqual(pad);
+  });
 });
