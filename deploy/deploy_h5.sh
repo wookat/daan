@@ -86,25 +86,62 @@ for u in "/tiku/" "/tiku/daily/" "/tiku/discuss/" "/robots.txt" "/sitemap.xml" "
 done
 
 step "4/6 重建容器（远端后台执行 + rev/StartedAt 轮询收敛，防高负载宿主 ssh 通道挂起）"
+# 4-pre 宿主快照 + 同机其它 compose build 让行：同一宿主多产品共用 dockerd/buildkit，别家 build 收尾
+# 会拖慢本家、且别家清理动作可能连带打断本家 build（R430b 首次重建在 exporting layers 被 client 侧 cancel）。
+host_probe() { sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" bash -s < "$REPO_DIR/deploy/host_probe.sh" 2>/dev/null || echo "probe-failed"; }
+WAIT_DEADLINE=$((SECONDS + 300))
+while :; do
+  HOST_SNAP=$(host_probe)
+  echo "  host: $HOST_SNAP"
+  OTHER=$(sed -n 's/.*other_builds=\([0-9]*\).*/\1/p' <<<"$HOST_SNAP")
+  [[ -z "$OTHER" || "$OTHER" == "0" || $SECONDS -ge $WAIT_DEADLINE ]] && break
+  echo "  WAIT: 宿主上有 $OTHER 个 docker compose build/up 相关进程在跑，15s 后再看（最多等 300s，超时不阻塞）"
+  sleep 15
+done
+[[ -n "$OTHER" && "$OTHER" != "0" ]] && echo "  WARN: 300s 后仍有其它 build 在跑，继续重建（并发 build 互相挤，收敛可能变慢）"
+
 PREV_STARTED=$(sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" \
   "docker inspect deploy-kaogong-1 --format '{{.State.StartedAt}}' 2>/dev/null" || true)
+# 每次重建独立日志（不再互相覆盖）+ 末行写 compose 退出码/时刻，进程被打断时事后可辨「退出」与「仍在跑」；
+# setsid 让 compose 脱离 ssh 会话进程组（不吃 sshd 会话收尾 / 别人按组 kill 的连带）
+COMPOSE_LOG="/tmp/kg-compose-${BUILD_REV}-$(date -u +%Y%m%dT%H%M%SZ).log"
 sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" \
-  "cd $REMOTE_DIR/deploy && nohup docker compose up -d --build > /tmp/kg-compose.log 2>&1 < /dev/null & echo compose-started"
+  "cd $REMOTE_DIR/deploy && setsid nohup bash -c 'docker compose up -d --build; echo \"KG_COMPOSE_EXIT rc=\$? at \$(date -u +%Y-%m-%dT%H:%M:%SZ)\"' > $COMPOSE_LOG 2>&1 < /dev/null & ln -sfn $COMPOSE_LOG /tmp/kg-compose.log; echo compose-started log=$COMPOSE_LOG"
 DEADLINE=$((SECONDS + 600))
 REBUILT=0
+COMPOSE_RC=""
+GRACE=0
 while (( SECONDS < DEADLINE )); do
   sleep 10
-  CUR_STARTED=$(sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" \
-    "docker inspect deploy-kaogong-1 --format '{{.State.StartedAt}}' 2>/dev/null" || true)
+  POLL=$(sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" \
+    "docker inspect deploy-kaogong-1 --format '{{.State.StartedAt}}' 2>/dev/null; echo; tail -1 $COMPOSE_LOG 2>/dev/null" || true)
+  CUR_STARTED=$(sed -n 1p <<<"$POLL")
+  LAST_LINE=$(tail -1 <<<"$POLL")
+  [[ "$LAST_LINE" =~ KG_COMPOSE_EXIT\ rc=([0-9]+) ]] && COMPOSE_RC="${BASH_REMATCH[1]}"
   CUR_REV=$(curl -s --max-time 15 "$SITE/api/health" | grep -o '"rev":"[^"]*"' | cut -d'"' -f4 || true)
-  echo "  poll: started=${CUR_STARTED:-?} rev=${CUR_REV:-?}"
+  echo "  poll: started=${CUR_STARTED:-?} rev=${CUR_REV:-?}${COMPOSE_RC:+ compose_rc=$COMPOSE_RC}"
   if [[ -n "$CUR_STARTED" && "$CUR_STARTED" != "$PREV_STARTED" && "$CUR_REV" == "$BUILD_REV" ]]; then
     REBUILT=1; break
   fi
+  if [[ -n "$COMPOSE_RC" && "$COMPOSE_RC" != "0" ]]; then
+    echo "  compose 已退出 rc=$COMPOSE_RC，不再等待"; break
+  fi
+  # compose 正常退出但容器/rev 还没收敛：再给 3 轮（health 经边缘可能慢半拍），仍不收敛按失败
+  if [[ "$COMPOSE_RC" == "0" ]] && (( ++GRACE >= 3 )); then break; fi
 done
-sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" "tail -3 /tmp/kg-compose.log" || true
+sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" "tail -3 $COMPOSE_LOG" || true
 if [[ "$REBUILT" != "1" ]]; then
-  echo "FAIL: 600s 内容器未完成重建或线上 rev 未收敛到 $BUILD_REV！"; exit 1
+  if [[ -z "$COMPOSE_RC" ]]; then
+    echo "FAIL: 600s 内 compose 未退出、容器未完成重建（线上仍 ${CUR_REV:-?}，目标 $BUILD_REV）"
+  else
+    echo "FAIL: compose 退出 rc=$COMPOSE_RC 但线上 rev 未收敛到 $BUILD_REV（线上 ${CUR_REV:-?}）"
+  fi
+  echo "--- 宿主现场（事后归因用；OOM 看内核日志而非猜）---"
+  host_probe
+  sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" \
+    "pgrep -af '[d]ocker compose' || echo 'no compose proc'; tail -40 $COMPOSE_LOG; \
+     journalctl -k --since '-20 min' --no-pager 2>/dev/null | grep -i -E 'out of memory|oom-kill|killed process' || echo 'kernel: no OOM in last 20 min'" || true
+  exit 1
 fi
 sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" \
   "docker inspect deploy-kaogong-1 --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -q '^ADMIN_TOKEN=..'" \

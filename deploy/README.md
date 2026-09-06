@@ -84,6 +84,22 @@ encode @nosse gzip
 ## 数据
 SQLite 存于 docker volume `kaogong-data`（/data/data.db）。备份：`docker compose cp kaogong:/data/data.db ./backup.db`
 
+## 重建容器失败时怎么归因（deploy_h5.sh 第 4 步，R431）
+宿主是 2 vCPU / 1.9 GiB、多产品共用一个 dockerd/buildkit（recruit / softcopyright / kaogong 同机
+各自 `docker compose up -d --build`），部署互相挤是常态。第 4 步现在：
+- 4-pre 打宿主快照（`deploy/host_probe.sh`：`mem_avail / disk_avail / load / other_builds`），
+  别家 build/up 进程在跑就等（15 s 一看，最多 300 s，超时只 WARN 不阻塞）。
+- compose 用 `setsid nohup bash -c 'docker compose up -d --build; echo KG_COMPOSE_EXIT rc=$?'`
+  起，日志 `/tmp/kg-compose-<rev>-<utc>.log`（`/tmp/kg-compose.log` 为最新的软链），末行有退出码即
+  「进程已退出」、没有即「仍在跑/被打断」；轮询读到 rc≠0 立即 FAIL，不再空等到 600 s。
+- FAIL 时自动打印宿主快照、残留 compose 进程、日志尾 40 行、内核日志近 20 min 的 OOM 关键词。
+- 归因口径：**OOM 只认 `journalctl -k`/`dmesg` 里的 `Out of memory`/`oom-kill`**（VPS 上 `sudo -n` 可用），
+  free 很低 ≠ OOM；`dockerd` 日志 `Control/Solve ... context canceled` + `failed to send write:
+  context canceled` = build 被 client 侧（compose 进程）取消/消失，不是 buildkit 自己失败；
+  `session healthcheck failed fatally: only one connection allowed` 是每次 build 会话收尾的常见噪音，
+  成功的 build 也会打，不能当失败原因。R430b 首次重建（09-06 21:00 CST）就是「exporting layers
+  阶段 client 侧 cancel、整个 boot 周期 0 次内核 OOM」，谁发的信号无 auditd 不可考。
+
 ## 生产运营脚本（deploy/kaogong-ops.sh）
 - 部署位置：VPS `/home/ubuntu/kaogong-ops.sh`，cron `40 3 * * *`。
 - 每日 SQLite `.backup` → 本地 `~/kaogong-backups`（gz，保留 7 份）→ rclone 上传
