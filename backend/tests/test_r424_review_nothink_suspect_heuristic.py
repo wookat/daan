@@ -15,7 +15,9 @@ SUSPECT_INPUTS = [
     "1+1等于几",
     "j#@!kf 8s^&df ---===]][[ qqq zzz 000",
     "7f3q9z A. 1 B. 2 C. 3 D. 4",
+    "7f3q9z k2m A. 1 B. 2 C. 3 D. 4",  # 生产实测：首版按「数字字符 ≥4」放行后模型硬编出「【答案】B 图形推理」
     "q2w8ez7 A.1 B.2 C.3 D.4",
+    "x1 y2 z3 A.1 B.2 C.3 D.4",
     "1+1等于几？A.1 B.2 C.3 D.4",
 ]
 VALID_SHORT_INPUTS = [

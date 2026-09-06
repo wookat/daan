@@ -159,6 +159,7 @@ _SUSPECT_TEXT = (
 
 
 _OPTION_MARK = re.compile(r"(?<![A-Za-z])([A-D])[\.．、:：]")
+_NUMBER = re.compile(r"(?<![A-Za-z0-9])\d+(?:\.\d+)?(?![A-Za-z0-9])")  # 独立数字项，7f3q9z 这类字母夹数字不算
 
 
 def is_suspect(question_text: str) -> bool:
@@ -166,16 +167,17 @@ def is_suspect(question_text: str) -> bool:
 
 
 def _suspect_reason(question_text: str) -> bool:
-    """fail-closed 兜底（主判在 EXPLAIN_SYSTEM 红线 5 由模型完成）：只拦「题干既无可读中文、又无数据、也无成套选项」的输入。
+    """fail-closed 兜底（主判在 EXPLAIN_SYSTEM 红线 5 由模型完成，但对字母数字噪声模型会硬编答案）：
+    只拦「题干既无可读中文、又无独立数字项、也无成套选项」的输入。
     数列（3, 6, 12, 24, ( )）、类比（儿童：女童：未成年）等公考题干本身就短于 8 个汉字，带 ≥3 个选项时放行交模型判断。"""
     text = question_text or ""
     stem = re.split(r"\bA[\.．、:：]", text, maxsplit=1)[0]
     hanzi = len(re.findall(r"[\u4e00-\u9fff]", stem))
     if hanzi >= 8:
         return False
-    digits = len(re.findall(r"\d", stem))
+    numbers = len(_NUMBER.findall(stem))
     options = len(set(_OPTION_MARK.findall(text)))
-    return not (options >= 3 and (hanzi >= 4 or digits >= 4))
+    return not (options >= 3 and (hanzi >= 4 or numbers >= 3))
 
 
 async def explain(extracted: dict, user_answer: str | None = None) -> str:
