@@ -298,7 +298,7 @@ Page({
     const text = askPrefill(d.question, d.options);
     if (!text) return;
     trackEvent('search_ask_click', d.module || '');
-    openExplain({ text, qid: d.id, answer: '', qtype: d.submodule || null });
+    openExplain({ text, qid: d.id, answer: '' });
   },
   onCopyLink() {
     const d = this.data.detail;

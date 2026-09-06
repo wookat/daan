@@ -372,6 +372,12 @@ Page({
     setDailyGoal(g);
     this.refreshGoal();
   },
+  onAsk() {
+    wx.navigateTo({ url: '/pkgSocial/ask/ask' });
+  },
+  onGoBook() {
+    wx.switchTab({ url: '/pages/book/book' });
+  },
   onStartModule(e: WechatMiniprogram.TouchEvent) {
     const mod = String(e.currentTarget.dataset.mod || '');
     wx.navigateTo({

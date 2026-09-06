@@ -1,0 +1,24 @@
+@import '../../styles/pkg-social.wxss';
+@import '../../styles/comments.wxss';
+
+.qtx { display: -webkit-box; font-size: var(--fs-sub); color: var(--ink-2); -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.qans { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-8); }
+
+.toolbar { display: flex; align-items: center; gap: var(--sp-12); margin-bottom: var(--sp-12); min-width: 0; }
+.toolbar-seg { flex: 1 1 0; min-width: 0; }
+.cnt { font-size: var(--fs-caption); color: var(--ink-3); margin-left: auto; white-space: nowrap; }
+.msg { display: inline-flex; align-items: center; gap: var(--sp-4); min-height: var(--hit-min); padding: 0 var(--sp-8); border-radius: var(--r-sm); color: var(--ink-2); flex-shrink: 0; }
+.msg-t { font-size: var(--fs-sub); }
+.msg-badge { min-width: 18px; height: 18px; line-height: 18px; text-align: center; border-radius: var(--r-full); background: var(--bad); color: var(--on-brand); font-size: var(--fs-caption); padding: 0 var(--sp-4); box-sizing: border-box; }
+
+.pin { display: flex; align-items: center; gap: var(--sp-8); padding: var(--sp-8) var(--sp-12); border-radius: var(--r-sm); background: var(--brand-soft); margin-top: var(--sp-12); }
+.pin-t { flex: 1; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--brand-text); }
+
+/* 输入栏 */
+.ibar-in { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-8); }
+.replying { display: flex; align-items: center; justify-content: space-between; padding: var(--sp-4) var(--sp-8); border-radius: var(--r-xs); background: var(--fill); }
+.replying-t { font-size: var(--fs-caption); color: var(--ink-3); }
+.rx { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: var(--r-full); }
+.inputrow { display: flex; align-items: flex-end; gap: var(--sp-8); }
+.ipt { flex: 1; min-width: 0; min-height: var(--btn-h-lg); max-height: 120px; padding: var(--sp-8) var(--sp-12); box-sizing: border-box; border-radius: var(--r-sm); background: var(--fill); font-size: var(--fs-body); line-height: var(--lh-body); color: var(--ink); }
+.ipt-ph { color: var(--ink-4); }

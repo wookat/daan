@@ -198,7 +198,7 @@ Page({
     const text = askPrefill(q.question, q.options);
     if (!text) return;
     trackEvent('history_ask_click', d.module || '');
-    openExplain({ text, qid: q.id, answer: d.picked || '', qtype: q.submodule || null });
+    openExplain({ text, qid: q.id, answer: d.picked || '' });
   },
 
   onRedoWrong() {

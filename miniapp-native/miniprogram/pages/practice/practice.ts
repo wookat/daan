@@ -894,7 +894,6 @@ Page({
       text: askPrefill(q.question, q.options),
       qid: q.id || null,
       answer: this.data.picked || '',
-      qtype: q.question_type || q.submodule || null,
     });
   },
 

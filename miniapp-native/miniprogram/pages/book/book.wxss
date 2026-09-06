@@ -1,3 +1,4 @@
+@import '../../styles/md.wxss';
 .wrap {
   padding: var(--sp-12) var(--page-x) calc(80px + env(safe-area-inset-bottom));
 }

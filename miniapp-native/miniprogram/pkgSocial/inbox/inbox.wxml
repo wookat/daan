@@ -1,0 +1,42 @@
+<navbar title="讨论消息" back="{{true}}" />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <block wx:if="{{items.length}}">
+      <kg-card variant="soft" class="sec">
+        <view class="stats">
+          <view class="stat"><text class="stat-n num">{{items.length}}</text><text class="stat-l">消息</text></view>
+          <view class="stat"><text class="stat-n num">{{unreadCount}}</text><text class="stat-l">未读</text></view>
+        </view>
+      </kg-card>
+      <view class="list">
+        <kg-card wx:for="{{items}}" wx:key="key" wx:for-item="it" variant="raised" clickable data-qid="{{it.question_id}}" bind:click="openDiscuss">
+          <view class="item">
+            <view class="avatar">
+              <l-icon wx:if="{{it.type === 'like'}}" name="thumbs-up" size="20" tone="brand-text" />
+              <text wx:else class="avatar-t">{{it.av}}</text>
+            </view>
+            <view class="body">
+              <view class="hd">
+                <view class="who">
+                  <view wx:if="{{it.unread}}" class="dot" />
+                  <text wx:if="{{it.type === 'like'}}" class="act">有人赞了我的评论</text>
+                  <block wx:else>
+                    <text class="nick">{{it.nickname}}</text>
+                    <text class="act">回复了我</text>
+                  </block>
+                </view>
+                <text class="time num">{{it.time}}</text>
+              </view>
+              <text wx:if="{{it.type !== 'like'}}" class="content q-text ellip1">{{it.content}}</text>
+              <text class="quote ellip1">我的评论：{{it.parent_content}}</text>
+            </view>
+          </view>
+        </kg-card>
+      </view>
+    </block>
+    <kg-empty wx:elif="{{loaded && !logged}}" icon="user-round" title="登录后查看消息" desc="登录账号后，评论收到的回复和点赞会在这里提醒你" ctaText="去登录" bind:cta="goLogin" />
+    <kg-empty wx:elif="{{loadErr}}" icon="wifi-off" title="加载失败：{{loadErr}}" ctaText="重试" bind:cta="load" />
+    <kg-empty wx:elif="{{loaded}}" icon="message-circle" title="暂无消息" desc="去讨论区发表评论，收到回复或点赞会在这里提醒你" />
+    <kg-card wx:else variant="raised"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
+  </view>
+</scroll-view>

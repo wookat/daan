@@ -1,0 +1,106 @@
+<navbar title="AI 面试陪练" back="{{true}}" />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <!-- 第一步：选分类 -->
+    <block wx:if="{{step === 'pick'}}">
+      <view class="ivhero">
+        <text class="ivhero-l">AI 结构化面试陪练 · 已练</text>
+        <view class="ivhero-v"><text class="num ivhero-n">{{doneTotal}}</text><text class="ivhero-u">题</text></view>
+        <text class="ivhero-s">抽题作答 · 考官级五维打分 · 逐段点评 · <text class="num">{{bankTotal}}</text> 道真题/经典题（来源公开资料）</text>
+        <kg-button variant="secondary" size="md" tone="inverse" icon="shuffle" bind:click="onDrawRandom">随机抽一题</kg-button>
+      </view>
+      <kg-section-header title="选择题型分类" more="练习记录" bind:more="goHistory" />
+      <kg-card wx:if="{{!categories.length && catLoading}}" variant="raised"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
+      <kg-card wx:elif="{{categories.length}}" variant="raised" padding="12">
+        <view wx:for="{{categories}}" wx:key="name" wx:for-item="c" class="row" hover-class="row--hover" data-name="{{c.name}}" bind:tap="onPickCat">
+          <view class="row-main">
+            <text class="row-t">{{c.name}}</text>
+            <text class="row-s">{{c.sub}}</text>
+          </view>
+          <l-icon name="chevron-right" size="20" tone="faint" />
+        </view>
+      </kg-card>
+      <kg-empty
+        wx:elif="{{!catLoading}}"
+        compact
+        icon="{{catErr ? 'wifi-off' : 'mic'}}"
+        title="{{catErr ? '加载失败：' + catErr : '题库暂时没有加载出来'}}"
+        desc="检查网络后重试，或直接随机抽一题"
+        ctaText="重试"
+        bind:cta="loadCategories"
+      />
+    </block>
+
+    <!-- 第二步：作答 -->
+    <block wx:elif="{{step === 'answer'}}">
+      <kg-card variant="raised" class="qcard">
+        <view class="qmeta">
+          <kg-tag tone="brand">{{qCategory}}</kg-tag>
+          <text class="qsrc">{{qSource}}</text>
+        </view>
+        <text class="q-text stem" user-select>{{qText}}</text>
+      </kg-card>
+      <view class="timer-row">
+        <view class="timer"><l-icon name="timer" size="16" tone="ink-2" /><text class="num">{{elapsedTxt}}</text></view>
+        <kg-button variant="text" size="sm" icon="shuffle" bind:click="onRedraw">换一题</kg-button>
+      </view>
+      <kg-card variant="raised" padding="12" class="anscard">
+        <textarea
+          class="ansbox"
+          value="{{answer}}"
+          maxlength="{{5000}}"
+          placeholder="像面试现场一样组织语言作答（建议 200 字以上）…草稿自动保存在本机"
+          placeholder-class="ipt-ph"
+          adjust-position
+          cursor-spacing="8"
+          bindinput="onInput"
+        />
+      </kg-card>
+      <text class="cnt"><text wx:if="{{answer}}" class="cnt-save">已自动保存 · </text><text class="num">{{ansLen}}</text> / 5000</text>
+      <view class="btn-row">
+        <kg-button variant="ghost" size="lg" icon="mic" bind:click="onVoice">语音（即将上线）</kg-button>
+        <kg-button variant="primary" size="lg" class="grow" disabled="{{!canSubmit || submitting}}" loading="{{submitting}}" bind:click="onSubmit">{{submitting ? '考官点评中…' : '提交作答'}}</kg-button>
+      </view>
+    </block>
+
+    <!-- 第三步：点评报告 -->
+    <block wx:else>
+      <view class="ivhero">
+        <text class="ivhero-l">结构化面试 · {{reportCategory}} · 得分</text>
+        <view class="ivhero-v"><text class="num ivhero-n">{{reportTotal}}</text><text class="ivhero-u">/ 100</text></view>
+        <text class="ivhero-s">作答 <text class="num">{{reportDur}}</text> · <text class="num">{{reportLen}}</text> 字</text>
+        <text wx:if="{{reportSummary}}" class="ivhero-sum">{{reportSummary}}</text>
+      </view>
+      <kg-card variant="raised" class="card">
+        <text class="card-t">五维评分</text>
+        <view wx:for="{{dims}}" wx:key="k" wx:for-item="d" class="dim-row">
+          <text class="dim-l">{{d.k}}</text>
+          <kg-progress value="{{d.pct}}" thickness="{{8}}" ariaLabel="{{d.k}} 评分" class="dim-bar" />
+          <text class="dim-v num">{{d.v}}</text>
+        </view>
+      </kg-card>
+      <kg-section-header title="题目" />
+      <kg-card variant="raised" class="qcard"><text class="q-text stem" user-select>{{qText}}</text></kg-card>
+      <kg-card wx:if="{{points.length}}" variant="raised" class="card">
+        <text class="card-t">参考思路要点</text>
+        <text wx:for="{{points}}" wx:key="n" wx:for-item="p" class="pt">{{p.n}}. {{p.t}}</text>
+      </kg-card>
+      <kg-section-header title="{{streaming ? '考官点评（生成中…）' : '考官点评'}}" />
+      <kg-card variant="raised" class="card review">
+        <rich-text wx:if="{{hasReview}}" class="md" nodes="{{reviewHtml}}" user-select />
+        <view wx:if="{{reviewMissing && !streaming}}" class="regen">
+          <text class="regen-tip">{{hasReview ? '点评可能不完整（生成被中断）' : '上次点评生成被中断，评分已保留'}}</text>
+        </view>
+        <view wx:if="{{!hasReview && (!reviewMissing || streaming)}}" class="loading">
+          <t-skeleton theme="paragraph" animation="gradient" />
+          <text class="loading-t">考官正在撰写点评…</text>
+        </view>
+      </kg-card>
+      <view class="btn-row">
+        <kg-button variant="ghost" size="lg" disabled="{{streaming}}" bind:click="onRetry">重答本题</kg-button>
+        <kg-button variant="primary" size="lg" class="grow" disabled="{{streaming}}" bind:click="onRedraw">再练一题</kg-button>
+      </view>
+      <kg-button variant="text" size="md" block icon="chevron-right" bind:click="goHistory">练习记录</kg-button>
+    </block>
+  </view>
+</scroll-view>

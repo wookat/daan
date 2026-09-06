@@ -18,13 +18,16 @@ export interface ExplainHandoff {
   qid: number | null;
   /** 用户作答字母（/api/explain user_answer），未作答传 '' */
   answer: string;
-  qtype: string | null;
 }
-export const EXPLAIN_HANDOFF_KEY = 'explainPrefill';
 
-// 刷题页 / 错题本 / 历史 → pkgLearn/explain：先落 storage 再跳转（题干可能超过 URL 长度）
+// 刷题页 / 搜索 / 历史 → pkgSocial/ask：与 H5 practice.deepExplain 同存储契约（redoQuestion/redoQid/redoAnswer），
+// ask 页 onShow 读取后自动填入。题干先落 storage 再跳转（可能超过 URL 长度）。
 export function openExplain(h: ExplainHandoff): void {
   if (!h.text) return;
-  wx.setStorageSync(EXPLAIN_HANDOFF_KEY, h);
-  wx.navigateTo({ url: '/pkgLearn/explain/explain' + (h.qid ? '?qid=' + h.qid : '') });
+  wx.setStorageSync('redoQuestion', h.text);
+  if (h.qid) wx.setStorageSync('redoQid', h.qid);
+  else wx.removeStorageSync('redoQid');
+  if (/^[A-D]$/.test(h.answer)) wx.setStorageSync('redoAnswer', h.answer);
+  else wx.removeStorageSync('redoAnswer');
+  wx.navigateTo({ url: '/pkgSocial/ask/ask' });
 }

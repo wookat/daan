@@ -23,8 +23,7 @@
         "setup/setup",
         "search/search",
         "practice-history/practice-history",
-        "offline/offline",
-        "explain/explain"
+        "offline/offline"
       ]
     },
     {
@@ -37,6 +36,22 @@
         "contest/contest",
         "contest-report/contest-report",
         "shenlun/shenlun"
+      ]
+    },
+    {
+      "root": "pkgSocial",
+      "name": "social",
+      "pages": [
+        "ask/ask",
+        "pk/pk",
+        "pk-result/pk-result",
+        "discuss/discuss",
+        "plaza/plaza",
+        "inbox/inbox",
+        "favorites/favorites",
+        "interview/interview",
+        "history/history",
+        "reminders/reminders"
       ]
     }
   ],

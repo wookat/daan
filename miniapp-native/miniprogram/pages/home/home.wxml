@@ -183,8 +183,7 @@
         <l-icon class="m-arrow" name="chevron-right" size="20" tone="faint" />
       </view>
     </view>
-
-    <!-- 更多练习（对齐 H5 首页 more-grid：模考 / 申论；错题重练与拍题讲解为底栏 tab） -->
+    <!-- 更多练习（对齐 H5 首页 more-grid：模考 / 申论 / 错题重练 / 拍题讲解） -->
     <kg-section-header title="更多练习" />
     <view class="more-grid">
       <kg-card variant="raised" clickable class="more-c" bind:click="onGoExamList">
@@ -196,6 +195,16 @@
         <view class="more-ico"><l-icon name="pen-line" size="24" tone="brand" /></view>
         <text class="more-t">申论</text>
         <text class="more-s">真题 + AI 采分点批改</text>
+      </kg-card>
+      <kg-card variant="raised" clickable class="more-c" bind:click="onGoBook">
+        <view class="more-ico"><l-icon name="rotate-ccw" size="24" tone="brand" /></view>
+        <text class="more-t">错题重练</text>
+        <text class="more-s">遗忘曲线 · 今日复习</text>
+      </kg-card>
+      <kg-card variant="raised" clickable class="more-c" bind:click="onAsk">
+        <view class="more-ico"><l-icon name="camera" size="24" tone="brand" /></view>
+        <text class="more-t">拍题讲解</text>
+        <text class="more-s">花生十三方法体系</text>
       </kg-card>
     </view>
   </view>
