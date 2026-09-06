@@ -86,9 +86,9 @@
           <text class="exp-k">考点</text>
           <text class="exp-v">{{curKp}}</text>
         </view>
-        <view wx:if="{{cur.source}}" class="exp-row">
+        <view wx:if="{{curSource}}" class="exp-row">
           <text class="exp-k">来源</text>
-          <text class="exp-v">{{cur.source}}</text>
+          <text class="exp-v">{{curSource}}</text>
         </view>
         <view wx:if="{{cur.hs_explanation}}" class="exp-block">
           <kg-tag tone="brand" icon="lightbulb">花生十三方法解析</kg-tag>

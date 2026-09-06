@@ -13,7 +13,7 @@ import type { AnswerLogItem, Question } from '../../api/types';
 import { anonUid } from '../../utils/auth';
 import { enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../utils/offline';
 import { BASE_URL } from '../../utils/request';
-import { kpChain, qStatLine } from '../../utils/q-stat';
+import { kpChain, qStatLine, sourceLabel } from '../../utils/q-stat';
 import { modName, recordStat, streakDays } from '../../utils/stats';
 
 const BADGE_MILESTONES = [3, 7, 14, 30, 60, 100];
@@ -65,6 +65,7 @@ Page({
     curImg: '',
     curStat: '',
     curKp: '',
+    curSource: '',
     loadErr: '',
     picked: '',
     right: 0,
@@ -140,6 +141,7 @@ Page({
         curImg: imgUrl(items[0].image),
         curStat: qStatLine(items[0]),
         curKp: kpChain(items[0], modName(items[0].module)),
+        curSource: sourceLabel(items[0]),
         picked: '',
         right: 0,
       });
@@ -273,6 +275,7 @@ Page({
         curImg: imgUrl(items[next].image),
         curStat: qStatLine(items[next]),
         curKp: kpChain(items[next], modName(items[next].module)),
+        curSource: sourceLabel(items[next]),
         picked: items[next]._picked || '',
       });
       if (!items[next]._picked) this.startTimer();
@@ -291,6 +294,7 @@ Page({
       curImg: '',
       curStat: '',
       curKp: '',
+      curSource: '',
       pct: Math.round((right / items.length) * 100),
       totalSecs,
       wrongCount: items.filter((q) => q._picked && q._picked !== q.answer).length,

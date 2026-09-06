@@ -21,3 +21,10 @@ export function kpChain(q: Question | null | undefined, modLabel: string): strin
   }
   return parts.filter(Boolean).join(' › ');
 }
+
+// 来源行：original/unknown/ai 是库内占位值（同 backend quality.py），不是可展示的出处
+const SOURCE_PLACEHOLDER = /^(original|unknown|ai)$/i;
+export function sourceLabel(q: Question | null | undefined): string {
+  const s = (q && q.source ? String(q.source) : '').trim();
+  return SOURCE_PLACEHOLDER.test(s) ? '' : s;
+}
