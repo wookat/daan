@@ -5,6 +5,15 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R419 补充（testing agent）— 模考大赛（contest）页 / mock_events 去重取证
+- 入口：首页「更多练习」`.more-c`「模考大赛」（home.vue L297 `goContest`）→ `#/pkgA/exam/contest`；卷库 list 页无入口，周报页也有入口。
+- 选择器：hero `.card.hero` → `.hero-title`（场次标题）/`.hero-phase`（未开始/进行中）/`.hero-paper`（卷名·题数·分钟）/`.hero-meta .hm`（窗口、「N 人报名 · M 人交卷」或「本场首批报名开放中」）；upcoming 时 `.cta`「预约报名」→ 点后 `.cta.done`「已报名，开赛后可进入」+ toast「报名成功，周六见！」；往期 `.prow-t`/`.prow-s`（非参赛显示「未参加 · 看榜单 ›」）。1440 为双栏 `.ct-cols`。
+- 每次 `GET /api/mock/events` 都会跑 `ensure_weekly_event()`（mock_event.py），去重回归口径：多次打开/F5 后容器 DB `SELECT id,title FROM mock_events ORDER BY open_at` 行数不变，且 `title LIKE '%第N+1期%'` 为 0；唯一索引 `idx_mock_events_window(series,open_at,close_at)` 可用 `sqlite_master` 核。
+- 报名只写 `mock_event_entries(event_id,uid,registered_at,attempt_id,score,rank,nickname)`；清理 `DELETE FROM mock_event_entries WHERE uid LIKE 'test-r419-%'`，勿动 `u15` 行。upcoming 场次没有「进入考试」按钮，不会产生 exam_attempts。
+- contest 页请求走 uni.request（XHR），`__exb`（fetch 钩子）抓不到，用 `__hdr`（响应钩子）核状态码，用页内 `fetch('/api/mock/events?uid=…')` 核 `next.my_state`。
+- 陷阱：`fmtWindow` 按浏览器本地时区格式化，测试浏览器 TZ=UTC 会显示「9月12日 01:00 - 16:00」（真实东八区 09:00–24:00），不是数据错误；核开赛日期用 DB `open_at` 换算。
+- 停 holder 时勿 `pkill -f "holdvw.py …"`（会连当前 shell 一起杀，exit -1）；用记录的 PID `kill`。
+
 ## R418 补充（testing agent）— 探针场次打标 / 真人聚合 / 排行榜取证
 - `exam_attempts.probe` 在 `POST /api/exam/start` 由 `auth.probe_request` 写入（X-Kg-Probe:1 / `KG_PROBE_CIDRS` 网段 / UA 标记三路任一）。生产容器 `docker exec deploy-kaogong-1 printenv KG_PROBE_CIDRS` 可查网段；本机出口 `curl api.ipify.org` 命中网段则 GUI 会话天然 probe=1，**不要**用别的手段伪造 probe=0。跨用户聚合（`/api/exam/papers` takers/avg、SEO「已有 N 人模考」、`/api/exam/rank`、比赛分数池）用 `db.REAL_TRAFFIC = COALESCE(probe,0)=0`；排行榜 pool 是 `REAL_TRAFFIC OR uid=本人`，探针看自己报告 total≥1、board 有 me:true。
 - 取证选卷：挑一张真人 takers=0 的卷（DB `SELECT COUNT(*),SUM(probe=1) FROM exam_attempts WHERE paper_id=? AND submitted_at IS NOT NULL`）——卷卡 `.pmeta` 在 takers 为 0 时不渲染「人考过」，SEO 页也无「人模考」，探针交卷后若变「1 人考过」立刻可见。卷库卡上「我的最好成绩 X 分 · 已考 N 次」「已练 n/62 题」是本人视角，不是聚合，勿混淆。
