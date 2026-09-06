@@ -1,0 +1,124 @@
+<navbar title="{{title}}" back />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <!-- 加载态 -->
+    <view wx:if="{{state === 'loading'}}" class="sec">
+      <t-skeleton theme="paragraph" animation="gradient" />
+      <t-skeleton theme="paragraph" animation="gradient" />
+    </view>
+
+    <!-- 错误态（可重试） -->
+    <kg-empty
+      wx:elif="{{state === 'error'}}"
+      icon="wifi-off"
+      title="连接失败"
+      desc="{{errMsg}}"
+      cta-text="重试"
+      secondary-text="随机练 10 题"
+      bind:cta="onRetry"
+      bind:secondary="onAgain"
+    />
+
+    <!-- 空态 -->
+    <kg-empty
+      wx:elif="{{state === 'empty'}}"
+      icon="newspaper"
+      title="{{kind === 'shizheng' ? '时政题库准备中' : '今日题组未就绪'}}"
+      desc="{{errMsg}}"
+      cta-text="看看往期"
+      secondary-text="回到首页"
+      bind:cta="onPickArchive"
+      bind:secondary="onHome"
+    />
+
+    <!-- 作答态 -->
+    <block wx:elif="{{state === 'play' && cur}}">
+      <view class="top">
+        <view class="top-l">
+          <kg-tag tone="{{kind === 'shizheng' ? 'warn' : 'brand'}}">{{kind === 'shizheng' ? '时政' : '全站同题'}}</kg-tag>
+          <kg-tag wx:if="{{past}}" tone="neutral">往期 · 不计榜单</kg-tag>
+          <text class="top-s">{{subTitle}}</text>
+        </view>
+        <view class="top-r">
+          <text class="timer num">{{qsecsText}}</text>
+          <text class="cnt okc num">✓{{right}}</text>
+          <text class="cnt badc num">✗{{wrong}}</text>
+          <view wx:if="{{streak >= 3}}" class="cnt fire"><l-icon name="flame" size="16" tone="streak" filled /><text class="num">{{streak}}</text></view>
+          <view class="icon-btn" hover-class="icon-btn--hover" aria-role="button" aria-label="退出练习" bind:tap="onQuit"><l-icon name="log-out" size="20" tone="ink-2" /></view>
+        </view>
+      </view>
+      <kg-question-card
+        question="{{cur.question}}"
+        options="{{cur.optList}}"
+        answer="{{cur.answer}}"
+        picked="{{cur._picked}}"
+        explanation="{{cur.expText}}"
+        tag="{{cur.module}}"
+        tag-tone="{{kind === 'shizheng' ? 'warn' : 'neutral'}}"
+        image="{{cur.image || ''}}"
+        bind:pick="onPick"
+      />
+    </block>
+
+    <!-- 完成态 -->
+    <block wx:elif="{{state === 'done'}}">
+      <kg-card variant="raised" class="sec">
+        <view class="done-h">
+          <l-icon name="{{past ? 'circle-check' : 'party-popper'}}" size="32" tone="{{past ? 'ok' : 'brand'}}" />
+          <text class="done-t">{{doneTitle}}</text>
+          <text class="done-s">{{subTitle}}</text>
+        </view>
+        <view class="stat-row">
+          <view class="stat"><text class="stat-n num">{{right}}/{{items.length}}</text><text class="stat-k">答对</text></view>
+          <view class="stat"><text class="stat-n num">{{totalSecsText}}</text><text class="stat-k">用时</text></view>
+          <view class="stat"><text class="stat-n num">{{bestStreak}}</text><text class="stat-k">最长连对</text></view>
+        </view>
+      </kg-card>
+
+      <view wx:if="{{dailyStats}}" class="sec">
+        <kg-banner tone="info" icon="users" closable="{{false}}" text="{{dailyStatsText}}" />
+      </view>
+
+      <kg-card wx:if="{{dailyStats && board.length}}" class="sec">
+        <view class="sec-h">
+          <text class="sec-t">今日排行榜</text>
+          <text wx:if="{{myRank}}" class="sec-r num">我的名次：第 {{myRank}} 名</text>
+        </view>
+        <view wx:for="{{board}}" wx:key="rank" class="dsb-row">
+          <kg-tag tone="{{item.tone}}">{{item.rank}}</kg-tag>
+          <text class="dsb-name">{{item.name}}</text>
+          <text class="dsb-score num">答对 {{item.right}}/{{item.total}}{{item.secsText}}</text>
+        </view>
+      </kg-card>
+
+      <kg-card class="sec">
+        <view class="sec-h" hover-class="row--hover" bind:tap="onToggleReview">
+          <text class="sec-t">逐题回顾</text>
+          <l-icon name="{{showReview ? 'chevron-down' : 'chevron-right'}}" size="20" tone="muted" />
+        </view>
+        <block wx:if="{{showReview}}">
+          <view wx:for="{{review}}" wx:key="n" class="rv-row">
+            <l-icon name="{{item.ok ? 'circle-check' : 'circle-x'}}" size="16" tone="{{item.ok ? 'ok' : 'bad'}}" />
+            <text class="rv-q">{{item.n}}. {{item.question}}</text>
+            <text class="rv-a num">{{item.ok ? item.answer : item.picked + '→' + item.answer}}</text>
+          </view>
+        </block>
+      </kg-card>
+
+      <view class="btns">
+        <kg-button variant="primary" size="lg" block open-type="share" icon="share-2">分享成绩</kg-button>
+        <kg-button variant="ghost" size="lg" block bind:click="onPickArchive">补练往期</kg-button>
+        <kg-button variant="text" size="md" block bind:click="onHome">回到首页</kg-button>
+      </view>
+    </block>
+  </view>
+</scroll-view>
+
+<kg-action-bar
+  wx:if="{{state === 'play' && cur && cur._picked}}"
+  layout="answer"
+  index="{{idx}}"
+  total="{{items.length}}"
+  primary-text="{{idx + 1 < items.length ? '下一题' : '完成'}}"
+  bind:primary="onNext"
+/>

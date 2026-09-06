@@ -15,6 +15,12 @@
     "pages/share/pk-result",
     "pages/social/poster"
   ],
+  "subPackages": [
+    {
+      "root": "pkgGrow",
+      "pages": ["daily/daily", "calendar/calendar", "weekly-report/weekly-report", "mastery-map/mastery-map"]
+    }
+  ],
   "renderer": "webview",
   "componentFramework": "glass-easel",
   "lazyCodeLoading": "requiredComponents",
