@@ -1605,3 +1605,9 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - origin access log 出现「空窗」先排盘满：`journalctl --since … | grep -ci "no space left"`；caddy 自己会在 journal 打 `write error: write /var/log/caddy/kaogong-origin.zalize.com-access.log: no space left on device`，此时空窗是盲区不是无流量。kaogong 该窗口有无写入用容器内 `mode=ro` 查 `answer_log`/`growth_events` `created_at`（**epoch 浮点**，不要用字符串日期比较）+ `pragma quick_check`。
 - 到期项 probe=0 计数一律 `WHERE probe=0`（严格）：`COALESCE(probe,0)=0` 是产品聚合口径，会把 R374 前 NULL 历史行算进去（answer_log 1001 行 / growth 480 行），不是到期项口径。
 
+
+## R459 经验：宿主历史日志 / autoheal 签名 / dockerd↔containerd 迟滞怎么查
+- 宿主 journal 自 09-05 14:43Z 盘满后**只剩那一秒起的档**（`journalctl --list-boots` 首条 = 盘满首秒），查 09-05 前的 dockerd/earlyoom/kernel 一律用 rsyslog：`grep -h <pat> /var/log/syslog /var/log/syslog.1`（08-30 起明文）、`zgrep -h <pat> /var/log/syslog.*.gz`（到 08-09）；`journalctl -u earlyoom` 为空 ≠ earlyoom 没动。
+- dockerd 行读法（`sed -E 's/^(.{19}).*msg="([^"]{0,70}).*container=([0-9a-f]{12}).*/\1 \2 \3/'` 压成一行）：`failed to exit within **30s** of signal 15` = autoheal（宿主只有它用 30 s，14 天 21/21 全 kaogong），可直接当 autoheal 动手计数并与 `docker logs deploy-autoheal-1` 逐 ID 对多重集；`within 10s of signal 15` = compose Recreate / 手工 `docker restart`（ID 不变 = restart，ID 变 = Recreate）；`within 10s of kill - trying direct SIGKILL`、`failed to delete container from containerd`、`healthcheck failed fatally … only one connection allowed` 都是 dockerd↔containerd 迟滞/会话断连，**不是应用问题**，只把停机窗口拉长。
+- kaogong 容器 ID 归属：`connecting to shim <id>` 后 ≤3 s 内 `sbJoin … ep=deploy-kaogong-1`（启发式，兄弟容器同秒起会误归；精确归属优先 autoheal 日志 / `container-events.log` 里的 ID）。
+- earlyoom 形态：`sending SIGTERM to process <pid> … "uvicorn": badness N, VmRSS M MiB` → 10 s 后 `kill failed: Timer expired`（被无视）→ 只有 `escalating to SIGKILL after 1.5 seconds` + `process exited` 才是真杀，随后 containerd `shim disconnected` + dockerd `restarting container`（restart policy，会加 RestartCount）。

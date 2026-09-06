@@ -21,7 +21,7 @@
 
 ## 2. compose 路径也有 10 s 强杀：09-06 两次部署（一手，R457 未见）
 
-journal `Container failed to exit within 10s of signal 15 - using the force` 14 天共 12 条，逐 ID 对 `container-events.log`：**2 条是 kaogong**（其余 10 条 0 命中，属兄弟产品），都发生在部署 Recreate：
+journal `Container failed to exit within 10s of signal 15 - using the force` ~~14 天~~共 12 条（**R459 勘误**：journal 只从 09-05 14:43:34Z 盘满那一秒起有档，实为 **1.6 天**；14 天完整历史在 rsyslog `/var/log/syslog*`，kaogong 10 s 强杀 08-30–09-07 CST 逐日 45/63/57/8/10/11/1/2/0，见 r459 文档 §4），逐 ID 对 `container-events.log`：**2 条是 kaogong**（其余 10 条 0 命中，属兄弟产品），都发生在部署 Recreate：
 
 | 部署 | dockerd 停止请求 | task-delete | 强杀日志 | 新容器 StartedAt | 不可达窗口 | 宿主 |
 |---|---|---|---|---|---|---|
@@ -52,8 +52,8 @@ probe=0 22/1（`WHERE probe=0` 严格口径；`COALESCE(probe,0)=0` 会把 R374 
 
 ## 6. 如实说明
 
-- 22 次里只有 2 次一手看到 exit 137，其余 20 次退出码没抓到（60 s 轮询），「都被 SIGKILL」是按 40–88 s 间隔的推断。
-- 137 也可能来自 earlyoom（同样 SIGKILL）：两次 137 前 1–2 min 都有 autoheal 发出记录、`oom=false`，归 autoheal 是时序推断，未核 earlyoom 日志。
-- 「task-delete 已到仍等满 10 s」机理未解、未翻 dockerd 源码。
+- ~~22 次里只有 2 次一手看到 exit 137，其余 20 次退出码没抓到（60 s 轮询），「都被 SIGKILL」是按 40–88 s 间隔的推断。~~ **R459 已坐实**：syslog 里 dockerd `failed to exit within 30s of signal 15 - using the force` 21 条逐 ID 对上 22 次里的 21 次（第 22 次 09-04 01:37:00Z 落在上一次重启未完成的 90 s 内、无独立停止）。
+- ~~137 也可能来自 earlyoom（同样 SIGKILL）：两次 137 前 1–2 min 都有 autoheal 发出记录、`oom=false`，归 autoheal 是时序推断，未核 earlyoom 日志。~~ **R459 已排除**：earlyoom 08-30 起全部动作只在 08-31 05:07–06:27Z（其中 06:27:06Z SIGKILL 击杀过一次 kaogong），09-01 起 0 行；两次 137 同秒 dockerd 30 s 强杀行直接对上 autoheal 发出时刻。
+- 「task-delete 已到仍等满 10 s」~~机理未解~~ **R459**：与 dockerd↔containerd 会话 `healthcheck failed fatally` 强相关（09-06/07 10/19 前 12 s 内有 fatal，基率 ≈1%），30 s 路径上同款且再多一次 `within 10s of kill - trying direct SIGKILL`；08:53Z 一例无 fatal 行，未完全解释，dockerd 源码未翻。
 - 盘满肇因归 recruit-app/兄弟会话是同秒 journal 的推断，未查那 53 s 内具体哪个文件在增长（当时没有 `du` 采样）。
 - 09-04 后 autoheal 清零归 R372/R373 是时间相关，不是受控对照。
