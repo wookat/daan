@@ -2180,3 +2180,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - `.trend-kn` **闭合**：自然 4 周已掌握样本仍只有 vivo 小程序 uid 2 条（小程序不渲染 H5 趋势卡）；合成元素量真实 `data-v-bcbaf750`：375/1440 `.trend-kn`/`.trend-n` 均 fs 12 / h 14 / 600 → 已在 12px 下限。登记改为「有真人 k>0 样本时看 4 列排版」。
 - 到期项：probe=0 22/1、error_reason 6、push_subs 0、weekly_reports 1、growth probe=0 18/4 不变；WAL 3.16 MB；healthy 0 重启。
 - **跨产品登记（非本轮引入）**：`www.zalize.com` LE 续签自 09-05 起持续失败（tls-alpn-01 打到 CF 边缘 `Cannot negotiate ALPN acme-tls/1`；ZeroSSL 回退 `caddy_legacy_user_removed`），证书 **10-04 到期**，不修会在 CF Full(strict) 下断站。修法（CF Origin CA / DNS-01 / dns-only）属 zalize.com 运维，待老板定；本仓库不动。
+
+### R454（只取证登记，不改码不部署；生产仍 `460120f`，宿主为 R453 删块后状态）
+- 取证 docs/iter/round-3/r454-post-legacy-block-removal-readonly-pagesdev-scanner.md。
+- 删块复验：直打 SNI 仍 TLS alert（rc 35）；旧块日志 mtime 停在 09-06 06:07Z、删块后 0 新行；caddy journal **0 条** TLS 握手噪音（Caddy 默认级别不记未知 SNI 握手失败，直打量不可由 journal 观测）；reload 后 journal 唯一 error `http2: stream closed` ×48 按同秒 access log 归属 `api-video.zalize.com`（今日 1454 条、04:10/04:25/04:40 CST 成簇，早于 reload），与 kaogong 无关。
+- 库内：近 24 h `growth_events event='boot'` 33 行 = 32 probe=1 + 1 probe=0（R446 vivo 持有者 Chrome 入口 uid），NULL 0 → 无新绕边缘写入；3 扫描器 uid 库内只有 ShapBot `slow_load` NULL 1 行 + PA/iPhone `boot` NULL 1 行（Firefox Ice 0 行），保留不改。`growth_events` 列是 `id,uid,event,source,ref,created_at,probe`；`error_reason` 在 `mistakes` 表。
+- **pages.dev 预览域名扫描器活体**：20:41:46Z `34.44.11.77` 同秒 9 GET（UA `SonyEricssonW810i` 功能机描述符、`/sw.js` 暴露 `HeadlessChrome/143`、referer/`X-Forwarded-Host` 全 `kaogong-h5.pages.dev`），0 POST、库内 0 行；7 天经 pages.dev 共 37 请求 / 13 IP / 0 POST / 0 引擎 UA，全一次性访客。日报按 offhost 单列不进 `humans.ips`。**登记 P3 不动手**：`_routes.json` 把 `/`、`/static/*` 排除在函数外，函数内按 hostname 301 覆盖不到首页壳，要么收回 `/`（改 R271 设计）要么 CF 账户级 Bulk Redirects；触发条件见 SKILL R454。
+- 到期项全不变：probe=0 22/1、error_reason 6（3 uid 全 NULL 历史）、push_subs 0、weekly_reports 1、growth probe=0 18/4、29/29 CST 00:00、WAL 3,164,192 B（与 R453 同字节）、healthy 0 重启。
+- 宿主盘 92% / 3.9 G（R452 91% / 4.5 G）：`/var/lib/docker` 12 G，24 h 新增大文件为其它产品的 containerd 层（python3.12 + cv2）与 softcopyright/recruit 备份；`kaogong-backups` 480 M（+12 M）。扩盘/迁出仍待老板定。

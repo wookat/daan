@@ -1575,3 +1575,9 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 对账日报 `humans.ips` 时看 `X-Kg-Ua` 全文（不要截 60 字：`ShapBot/0.1.0` 截成 `ShapBo` 会误判没进 BOT_GENERIC），并用 `crawler_stats.py <archive> /tmp/x.json --exclude-ip-file probe-ips.txt` 本地同参数重算对生产 json。
 - `.trend-kn` 合成量测脚本 `/home/ubuntu/r453/trend_kn.py`（book 页 `data-v-bcbaf750`，探针头只读）。
 - 改宿主 Caddyfile 前看 `journalctl -u caddy --since "10 min ago" | grep tls.renew`：reload 会 `context canceled` 正在进行的续签（自动重试，但要复查）。
+
+## R454 经验：pages.dev 预览域名是扫描器第二入口；journal 看不到直打握手
+- 「像真人的 UA」第二判据：同秒 `/sw.js` 的 UA（R453）；R454 又抓到功能机描述符 `SonyEricssonW810i` + `HeadlessChrome/143` sw.js 的组合。这类经 `kaogong-h5.pages.dev` 的流量在 origin 日志里 `X-Forwarded-Host`≠正式域名、referer 为 pages.dev，日报已按 offhost 单列。到期项复查加一条：`(zcat -f archive/*.jsonl*; cat live.log) | 过滤 X-Forwarded-Host 含 pages.dev`，看 **POST 数 / 引擎 UA 数 / 日均**；出现 POST `/api/track`·作答、引擎 UA 抓 pages.dev、或日均 > 50 再立项 301（优先 CF Bulk Redirects，别为此改 `_routes.json` 把 `/` 收回函数）。
+- 删了未知 SNI 的站点块后，Caddy 默认日志**不记录**握手失败（直打只得 TLS alert、journal 0 条），别把「journal 没噪音」当「没人直打」；要计数只能 `ss -tn state established '( sport = :443 )'`/tcpdump 抓 SNI。
+- 复查 journal error 时先按 `logger`+`msg` 计数，再用同秒窗口逐个对 `/var/log/caddy/*access.log` 判归属（`http2: stream closed` 一类 reverse_proxy 错误不带 host 字段）；宿主上 api-video / jobs / kaogong 三块共用一个 caddy journal。
+- `growth_events` 列为 `id,uid,event,source,ref,created_at,probe`（`ref` 形如 `v:<bundle>;sw:0|1`）；`error_reason` 在 `mistakes` 表；生成查询脚本时别在 Python 双引号字串里嵌 SQL 双引号（R454 第一版两次语法错）。
