@@ -33,7 +33,7 @@
         <view v-if="filters.years.length || filters.regions.length" class="filters">
           <wd-segmented :value="stLabel" :options="ST_LABELS" size="small" @change="onSt" />
           <kg-chip-row v-if="filters.years.length" :options="yearOpts" :model-value="year == null ? '' : year" @update:model-value="setYear($event === '' ? null : $event)" />
-          <kg-chip-row v-if="filters.regions.length" class="region-row" :options="regionOpts" :model-value="region || ''" @update:model-value="setRegion($event || null)" />
+          <kg-chip-row v-if="filters.regions.length" class="region-row" :options="regionOpts" :model-value="region || ''" :scroll-to-selected="false" @update:model-value="setRegion($event || null)" />
         </view>
 
         <kg-skeleton v-if="loading" preset="cards" />
