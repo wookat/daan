@@ -1,0 +1,16 @@
+@import '../../styles/pkg-social.wxss';
+
+.list { display: flex; flex-direction: column; gap: var(--card-gap); }
+.item { display: flex; gap: var(--sp-12); align-items: flex-start; }
+.avatar { flex-shrink: 0; width: 40px; height: 40px; border-radius: var(--r-full); background: var(--brand-soft); display: flex; align-items: center; justify-content: center; }
+.avatar-t { font-size: var(--fs-body); font-weight: var(--fw-semibold); color: var(--brand-text); }
+.body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-4); }
+.hd { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-8); }
+.who { display: flex; align-items: center; gap: var(--sp-8); min-width: 0; }
+.dot { flex-shrink: 0; width: 8px; height: 8px; border-radius: var(--r-full); background: var(--brand); }
+.nick { font-size: var(--fs-body); font-weight: var(--fw-semibold); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.act { font-size: var(--fs-sub); color: var(--ink-2); white-space: nowrap; }
+.time { flex-shrink: 0; font-size: var(--fs-caption); color: var(--ink-3); font-weight: var(--fw-regular); }
+.content { font-size: var(--fs-body); color: var(--ink); }
+.quote { font-size: var(--fs-sub); color: var(--ink-3); background: var(--fill); border-radius: var(--r-xs); padding: var(--sp-4) var(--sp-8); }
+.ellip1 { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

@@ -1,0 +1,106 @@
+<navbar title="题目讨论" back="{{true}}" />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap {{noQid ? '' : 'wrap-bar'}}">
+    <kg-empty
+      wx:if="{{noQid}}"
+      icon="message-circle"
+      title="链接缺少题目参数"
+      desc="请从题目解析页进入讨论，或去讨论广场看看大家在聊什么"
+      ctaText="去讨论广场"
+      bind:cta="goPlaza"
+    />
+    <block wx:else>
+      <!-- 题目摘要卡 -->
+      <kg-card wx:if="{{q}}" variant="raised" class="sec">
+        <view class="tags">
+          <kg-tag tone="module" module="{{q.module || ''}}">{{qMod}}</kg-tag>
+          <kg-tag wx:if="{{qReal}}" tone="neutral">{{qReal}}</kg-tag>
+          <kg-tag wx:if="{{qRatio}}" tone="neutral">{{qRatio}}</kg-tag>
+        </view>
+        <text class="qtx q-text">{{q.question}}</text>
+        <text class="qans">正确答案 {{q.answer}}</text>
+      </kg-card>
+
+      <!-- 排序 / 消息 -->
+      <view class="toolbar">
+        <view class="toolbar-seg"><kg-segmented options="{{sortOpts}}" value="{{sort}}" size="sm" bind:change="onSort" /></view>
+        <text class="cnt">共 <text class="num">{{total}}</text> 条</text>
+        <view class="msg" hover-class="row--hover" bind:tap="goInbox">
+          <l-icon name="bell" size="20" tone="ink-2" />
+          <text class="msg-t">消息</text>
+          <text wx:if="{{inboxUnread}}" class="msg-badge num">{{inboxUnread}}</text>
+        </view>
+      </view>
+
+      <!-- 评论列表 -->
+      <kg-card wx:if="{{loading}}" variant="raised"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
+      <kg-empty wx:elif="{{loadErr}}" compact icon="wifi-off" title="加载失败：{{loadErr}}" ctaText="重试" bind:cta="load" />
+      <kg-empty wx:elif="{{!items.length}}" compact icon="message-square" title="还没有讨论" desc="说说你的解法、避坑经验，帮到下一位考友" />
+      <kg-card wx:else variant="raised" padding="12">
+        <view wx:for="{{items}}" wx:key="id" wx:for-item="c" class="cm">
+          <view class="avatar av-{{c.avTone}}">{{c.av}}</view>
+          <view class="cm-body">
+            <view class="cm-hd">
+              <text class="nm">{{c.nickname}}</text>
+              <kg-tag wx:if="{{c.likes >= 10}}" tone="warn">高赞</kg-tag>
+              <text class="tm">{{c.tm}}</text>
+            </view>
+            <text class="tx q-text" user-select>{{c.content}}</text>
+            <view class="ft">
+              <view class="op {{c.liked ? 'on' : ''}}" hover-class="op--hover" data-top="{{c.id}}" bind:tap="onLike">
+                <l-icon name="thumbs-up" size="16" tone="{{c.liked ? 'brand-text' : 'muted'}}" />
+                <text class="num">{{c.likes || '赞'}}</text>
+              </view>
+              <text class="op" hover-class="op--hover" data-top="{{c.id}}" bind:tap="onReply">回复{{c.replies.length ? ' ' + c.replies.length : ''}}</text>
+              <text wx:if="{{c.mine}}" class="op del" hover-class="op--hover" data-top="{{c.id}}" bind:tap="onRemove">删除</text>
+              <text wx:else class="op" hover-class="op--hover" data-top="{{c.id}}" bind:tap="onReport">举报</text>
+            </view>
+            <view wx:for="{{c.replies}}" wx:key="id" wx:for-item="r" class="reply">
+              <text class="rtx q-text" user-select><text class="rnm">{{r.nickname}}：</text>{{r.content}}</text>
+              <view class="rft">
+                <view class="op sm {{r.liked ? 'on' : ''}}" hover-class="op--hover" data-top="{{c.id}}" data-id="{{r.id}}" bind:tap="onLike">
+                  <l-icon name="thumbs-up" size="16" tone="{{r.liked ? 'brand-text' : 'muted'}}" />
+                  <text class="num">{{r.likes || '赞'}}</text>
+                </view>
+                <text class="op sm" hover-class="op--hover" data-top="{{c.id}}" data-id="{{r.id}}" bind:tap="onReply">回复</text>
+                <text wx:if="{{r.mine}}" class="op sm del" hover-class="op--hover" data-top="{{c.id}}" data-id="{{r.id}}" bind:tap="onRemove">删除</text>
+                <text wx:else class="op sm" hover-class="op--hover" data-top="{{c.id}}" data-id="{{r.id}}" bind:tap="onReport">举报</text>
+              </view>
+            </view>
+          </view>
+        </view>
+      </kg-card>
+
+      <view class="pin">
+        <l-icon name="info" size="16" tone="brand-text" />
+        <text class="pin-t">社区公约：讨论解题思路，不传播付费课程内容；违规内容将被删除。</text>
+      </view>
+    </block>
+  </view>
+</scroll-view>
+
+<!-- 输入栏 -->
+<kg-action-bar wx:if="{{!noQid}}" layout="input">
+  <view class="ibar-in">
+    <view wx:if="{{replyTo}}" class="replying">
+      <text class="replying-t">回复 {{replyTo.nickname}}</text>
+      <view class="rx" hover-class="op--hover" bind:tap="cancelReply"><l-icon name="x" size="16" tone="muted" /></view>
+    </view>
+    <view class="inputrow">
+      <textarea
+        class="ipt"
+        value="{{draft}}"
+        placeholder="{{logged ? '说说你的解法 / 吐槽这道题…' : '登录后参与讨论'}}"
+        placeholder-class="ipt-ph"
+        maxlength="{{500}}"
+        focus="{{autoFocus}}"
+        auto-height
+        adjust-position
+        cursor-spacing="8"
+        bindinput="onDraft"
+        bindfocus="onFocus"
+      />
+      <kg-button variant="primary" size="lg" icon="send" disabled="{{busy || !draft}}" loading="{{busy}}" bind:click="submit">发布</kg-button>
+    </view>
+  </view>
+</kg-action-bar>

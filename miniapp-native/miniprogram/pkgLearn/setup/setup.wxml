@@ -1,0 +1,105 @@
+<navbar title="选题 · 练习设置" back="{{true}}" />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <!-- 练习设置（H5 home.vue「练习设置」sheet 同项同序） -->
+    <kg-card class="set">
+      <view class="setrow">
+        <view class="set-kwrap"><text class="set-k">每日目标</text><text class="set-sub">今天合计要练的题数</text></view>
+        <kg-chip-row size="sm" options="{{goalOpts}}" value="{{dailyGoal}}" scrollToSelected="{{false}}" bind:change="onGoal" />
+      </view>
+      <view class="setrow">
+        <text class="set-k">选题来源</text>
+        <kg-chip-row size="sm" options="{{srcOpts}}" value="{{realMode}}" scrollToSelected="{{false}}" bind:change="onSrc" />
+      </view>
+      <view wx:if="{{realMode && yearOpts.length}}" class="setrow">
+        <text class="set-k">真题年份</text>
+        <kg-chip-row size="sm" options="{{yearOpts}}" value="{{realYear}}" bind:change="onYear" />
+      </view>
+      <view wx:if="{{realMode && regionOpts.length}}" class="setrow">
+        <text class="set-k">真题地区</text>
+        <kg-chip-row size="sm" options="{{regionOpts}}" value="{{realRegion}}" bind:change="onRegion" />
+      </view>
+      <view class="setrow">
+        <view class="set-kwrap"><text class="set-k">每组题量</text><text class="set-sub">单次练习连做几道</text></view>
+        <kg-chip-row size="sm" options="{{groupOpts}}" value="{{groupSize}}" scrollToSelected="{{false}}" bind:change="onGroup" />
+      </view>
+      <text class="custom-note">以上设置同样作用于模块列表；模考与真题卷不受影响</text>
+      <kg-button variant="primary" size="lg" block icon="shuffle" bind:click="onStartMixed">按以上设置开始练习（混合模块）</kg-button>
+    </kg-card>
+
+    <!-- 专项练习：五模块 + 时政 + 随机 -->
+    <kg-section-header title="专项练习" />
+    <view wx:if="{{!countsLoaded}}" class="skel">
+      <t-skeleton theme="paragraph" animation="gradient" />
+    </view>
+    <block wx:else>
+      <kg-empty wx:if="{{countsErr}}" compact icon="wifi-off" title="题库加载失败" desc="模块题数暂不可用，仍可直接开练" ctaText="重试" bind:cta="onRetryCounts" />
+      <view class="modlist">
+        <kg-card wx:for="{{mods}}" wx:key="key" clickable chevron class="modrow" padding="{{12}}" data-m="{{item.key}}" bind:click="onModTap">
+          <view class="modrow-in">
+            <view class="modrow-ico" style="background: {{item.soft}}; color: {{item.color}}"><l-icon name="{{item.icon}}" size="24" tone="inherit" /></view>
+            <view class="grow">
+              <text class="modrow-t">{{item.name}}</text>
+              <text class="modrow-s">{{item.sub}}</text>
+              <view wx:if="{{item.hasProg}}" class="modrow-bar"><kg-progress value="{{item.pct}}" max="{{100}}" thickness="{{4}}" module="{{item.key}}" aria-label="{{item.name}}进度" /></view>
+            </view>
+          </view>
+        </kg-card>
+        <kg-card clickable chevron class="modrow" padding="{{12}}" bind:click="onShizheng">
+          <view class="modrow-in">
+            <view class="modrow-ico is-warn"><l-icon name="newspaper" size="24" tone="warn" /></view>
+            <view class="grow">
+              <view class="modrow-tr">
+                <text class="modrow-t">时政每日一练</text>
+                <kg-tag wx:if="{{!szTodayDone}}" tone="warn">今日更新</kg-tag>
+                <kg-tag wx:else tone="ok">已完成</kg-tag>
+              </view>
+              <text class="modrow-s">每日 10 题 · 全站同题</text>
+            </view>
+          </view>
+        </kg-card>
+        <kg-card clickable chevron class="modrow" padding="{{12}}" bind:click="onDaily">
+          <view class="modrow-in">
+            <view class="modrow-ico"><l-icon name="calendar-check" size="24" tone="brand" /></view>
+            <view class="grow">
+              <text class="modrow-t">每日一练</text>
+              <text class="modrow-s">每天一组精选题 · 打卡计连签</text>
+            </view>
+          </view>
+        </kg-card>
+        <kg-card clickable chevron class="modrow" padding="{{12}}" bind:click="onStartMixed">
+          <view class="modrow-in">
+            <view class="modrow-ico"><l-icon name="shuffle" size="24" tone="brand" /></view>
+            <view class="grow">
+              <text class="modrow-t">随机混合刷题</text>
+              <text class="modrow-s">全部模块随机 · 每组 {{groupSize}} 题</text>
+            </view>
+          </view>
+        </kg-card>
+      </view>
+    </block>
+  </view>
+</scroll-view>
+
+<!-- 选二级题型 sheet（H5 home.vue「选择题型」） -->
+<kg-sheet visible="{{subOpen}}" title="{{subModuleName}} · 选择题型" bind:close="onSubClose">
+  <view class="sub-list">
+    <kg-card clickable chevron class="sub-chip is-all" padding="{{12}}" bind:click="onSubAll">
+      <view class="sub-row">
+        <text class="sub-name">全部随机</text>
+        <text class="sub-n num">{{subAllN}} 题</text>
+      </view>
+    </kg-card>
+    <view wx:if="{{subLoading}}" class="skel"><t-skeleton theme="paragraph" animation="gradient" /></view>
+    <kg-empty wx:elif="{{subErr}}" compact icon="wifi-off" title="题型加载失败：{{subErr}}" ctaText="重试" bind:cta="onSubRetry" />
+    <kg-card wx:for="{{subs}}" wx:key="submodule" clickable chevron class="sub-chip" padding="{{12}}" data-s="{{item.submodule}}" bind:click="onSubPick">
+      <view class="sub-row">
+        <view class="grow">
+          <text class="sub-name">{{item.submodule}}</text>
+          <text wx:if="{{item.prog}}" class="sub-prog">{{item.prog}}</text>
+        </view>
+        <text class="sub-n num">{{item.n}} 题</text>
+      </view>
+    </kg-card>
+  </view>
+</kg-sheet>

@@ -1,0 +1,25 @@
+<view class="qv {{dense ? 'qv-dense' : ''}}">
+  <text class="qv-stem q-text" user-select>{{question}}</text>
+  <view class="qv-opts">
+    <view
+      wx:for="{{optList}}"
+      wx:key="k"
+      class="qv-opt {{item.k === answer ? 'right' : item.k === picked ? 'wrong' : ''}}"
+    >
+      <text class="qv-key">{{item.k}}</text>
+      <text class="qv-txt q-text">{{item.v}}</text>
+      <l-icon wx:if="{{item.k === answer}}" name="circle-check" size="16" tone="ok" />
+      <l-icon wx:elif="{{picked && item.k === picked}}" name="circle-x" size="16" tone="bad" />
+    </view>
+  </view>
+  <view wx:if="{{showExplanation && (hsExplanation || explanation)}}" class="qv-exp">
+    <view wx:if="{{hsExplanation}}" class="qv-exp-blk">
+      <kg-tag tone="brand" icon="lightbulb">花生十三方法解析</kg-tag>
+      <text class="qv-exp-t q-text" user-select>{{hsExplanation}}</text>
+    </view>
+    <view wx:if="{{explanation}}" class="qv-exp-blk">
+      <kg-tag tone="neutral">解析</kg-tag>
+      <text class="qv-exp-t q-text" user-select>{{explanation}}</text>
+    </view>
+  </view>
+</view>

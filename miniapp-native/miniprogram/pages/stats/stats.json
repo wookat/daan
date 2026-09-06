@@ -7,7 +7,12 @@
     "kg-tag": "/components/kg-tag/index",
     "kg-empty": "/components/kg-empty/index",
     "kg-progress": "/components/kg-progress/index",
+    "kg-chip-row": "/components/kg-chip-row/index",
     "kg-section-header": "/components/kg-section-header/index",
+    "kg-entry-row": "/components/kg-entry-row/index",
+    "kg-chart-radar": "/components/kg-chart-radar/index",
+    "kg-chart-bars": "/components/kg-chart-bars/index",
+    "kg-chart-heatmap": "/components/kg-chart-heatmap/index",
     "kg-predict-card": "/components/kg-predict-card/index"
   }
 }

@@ -12,6 +12,8 @@
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
     "t-cell": "tdesign-miniprogram/cell/cell",
     "t-cell-group": "tdesign-miniprogram/cell-group/cell-group",
-    "t-textarea": "tdesign-miniprogram/textarea/textarea"
+    "t-textarea": "tdesign-miniprogram/textarea/textarea",
+    "kg-sheet": "/components/kg-sheet/index",
+    "t-input": "tdesign-miniprogram/input/input"
   }
 }

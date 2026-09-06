@@ -1,0 +1,11 @@
+{
+  "renderer": "webview",
+  "usingComponents": {
+    "navbar": "/components/navbar/index",
+    "l-icon": "/components/l-icon/index",
+    "kg-card": "/components/kg-card/index",
+    "kg-tag": "/components/kg-tag/index",
+    "kg-empty": "/components/kg-empty/index",
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
+  }
+}

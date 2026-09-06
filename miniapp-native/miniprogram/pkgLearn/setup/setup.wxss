@@ -1,0 +1,148 @@
+.wrap {
+  padding: var(--sp-16) var(--page-x) var(--sp-48);
+}
+
+.set {
+  display: block;
+  margin-bottom: var(--sp-16);
+}
+
+.setrow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  padding: var(--sp-12) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.setrow:first-child {
+  padding-top: 0;
+}
+
+.set-kwrap {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-8);
+}
+
+.set-k {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.set-sub {
+  font-size: var(--fs-caption);
+  color: var(--ink-4);
+}
+
+.custom-note {
+  display: block;
+  font-size: var(--fs-caption);
+  color: var(--ink-4);
+  padding: var(--sp-12) 0 var(--sp-16);
+  line-height: 1.5;
+}
+
+.skel {
+  padding: var(--sp-12) 0;
+}
+
+.modlist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--card-gap);
+  margin-top: var(--sp-12);
+}
+
+.modrow {
+  display: block;
+}
+
+.modrow-in {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-12);
+  padding-right: var(--sp-24);
+}
+
+.modrow-ico {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-sm);
+  background: var(--brand-soft);
+  color: var(--brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.modrow-ico.is-warn {
+  background: var(--warn-soft);
+}
+
+.grow {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.modrow-tr {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+}
+
+.modrow-t {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.modrow-s {
+  font-size: var(--fs-sub);
+  color: var(--ink-3);
+  line-height: 1.5;
+}
+
+.modrow-bar {
+  margin-top: var(--sp-4);
+}
+
+.sub-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  padding-bottom: var(--sp-16);
+}
+
+.sub-chip {
+  display: block;
+}
+
+.sub-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-12);
+  padding-right: var(--sp-24);
+}
+
+.sub-name {
+  font-size: var(--fs-body);
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.sub-prog {
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+.sub-n {
+  font-size: var(--fs-sub);
+  color: var(--ink-3);
+  flex-shrink: 0;
+}

@@ -1,0 +1,12 @@
+@import '../../styles/pkg-social.wxss';
+
+.list { display: flex; flex-direction: column; gap: var(--card-gap); }
+.item-top { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-8); }
+.cnt { display: flex; align-items: center; gap: var(--sp-4); color: var(--ink-3); flex-shrink: 0; }
+.cnt-t { font-size: var(--fs-sub); color: var(--ink-2); }
+.cnt-u { font-size: var(--fs-caption); color: var(--ink-3); }
+.stem { font-size: var(--fs-body); color: var(--ink); }
+.latest { margin-top: var(--sp-8); font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--ink-2); background: var(--fill); border-radius: var(--r-xs); padding: var(--sp-8) var(--sp-12); overflow-wrap: anywhere; }
+.nick { font-weight: var(--fw-semibold); color: var(--ink); }
+.time { display: block; margin-top: var(--sp-8); font-size: var(--fs-caption); color: var(--ink-3); }
+.ellip2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }

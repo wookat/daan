@@ -1,0 +1,8 @@
+<view class="kg-banner kg-banner--{{tone}}">
+  <l-icon name="{{iconName}}" size="20" tone="{{tone}}" />
+  <text class="kg-banner__t">{{text}}</text>
+  <kg-button wx:if="{{actionText}}" variant="text" size="sm" bind:click="onAction">{{actionText}}</kg-button>
+  <view wx:if="{{closable}}" class="kg-banner__x" hover-class="kg-banner__x--hover" aria-role="button" aria-label="关闭" bind:tap="onClose">
+    <l-icon name="x" size="16" tone="muted" />
+  </view>
+</view>

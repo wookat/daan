@@ -1,0 +1,15 @@
+{
+  "usingComponents": {
+    "navbar": "/components/navbar/index",
+    "l-icon": "/components/l-icon/index",
+    "kg-button": "/components/kg-button/index",
+    "kg-card": "/components/kg-card/index",
+    "kg-tag": "/components/kg-tag/index",
+    "kg-progress": "/components/kg-progress/index",
+    "kg-chip-row": "/components/kg-chip-row/index",
+    "kg-section-header": "/components/kg-section-header/index",
+    "kg-empty": "/components/kg-empty/index",
+    "kg-sheet": "/components/kg-sheet/index",
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
+  }
+}

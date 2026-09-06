@@ -1,0 +1,10 @@
+<kg-card clickable chevron="{{chevron}}" bind:click="onTap">
+  <view class="kg-entry">
+    <view class="kg-entry__ico is-{{tone}}"><l-icon name="{{icon}}" size="20" tone="{{tone}}" /></view>
+    <view class="kg-entry__main">
+      <text class="kg-entry__t">{{title}}</text>
+      <text wx:if="{{desc}}" class="kg-entry__s">{{desc}}</text>
+    </view>
+    <slot />
+  </view>
+</kg-card>
