@@ -1,154 +1,214 @@
 <template>
   <view class="page">
-    <view class="seg">
-      <text class="seg-i" :class="{ on: tab === 'q' }" @click="tapQ">真题题库</text>
-      <text class="seg-i" :class="{ on: tab === 'm' }" @click="tapMat">素材/范文</text>
-      <text class="seg-i" :class="{ on: tab === 'r' }" @click="tapRec">作答记录</text>
-    </view>
+    <wd-segmented :value="tabLabel" :options="tabOpts" class="seg" @change="onTabChange" />
 
+    <!-- 真题列表 -->
     <template v-if="tab === 'q' && !detail">
+      <kg-chip-row :model-value="qFavOnly ? '' : qtype" :options="qtypeChips" class="chips" @update:model-value="setQtype" />
       <view class="fltbar">
-        <text v-if="paper" class="chip on" role="button" :aria-label="'清除套卷筛选：' + paper" @click="clearPaper">{{ paper }} ✕</text>
-        <text class="chip" :class="{ on: !!region }" @click="fltOpen = true">{{ region || '地区' }} ▾</text>
-        <text class="chip" :class="{ on: !!year }" @click="fltOpen = true">{{ year || '年份' }} ▾</text>
-        <text class="chip" :class="{ on: qtype !== '全部' }" @click="fltOpen = true">{{ qtype === '全部' ? '题型' : qtype }} ▾</text>
-        <view class="chip fav" :class="{ on: qFavOnly }" @click="toggleQFavOnly"><l-icon name="star" :size="13" :color="qFavOnly ? '#b45309' : '#8a90a0'" :fill="qFavOnly ? '#f59e0b' : 'none'" /><text>收藏{{ qFavIds.length ? ' ' + qFavIds.length : '' }}</text></view>
+        <kg-tag v-if="paper" tone="brand" class="paper-tag" role="button" :aria-label="'清除套卷筛选：' + paper" @click="clearPaper">{{ paper }} ✕</kg-tag>
+        <kg-button variant="secondary" size="sm" icon="chevron-down" :tone="region ? 'brand' : undefined" @click="fltOpen = true">{{ region || '地区' }}</kg-button>
+        <kg-button variant="secondary" size="sm" icon="chevron-down" :tone="year ? 'brand' : undefined" @click="fltOpen = true">{{ year || '年份' }}</kg-button>
+        <kg-button variant="secondary" size="sm" icon="star" :tone="qFavOnly ? 'brand' : undefined" :aria-pressed="qFavOnly ? 'true' : 'false'" @click="toggleQFavOnly">收藏{{ qFavIds.length ? ' ' + qFavIds.length : '' }}</kg-button>
         <view class="grow"></view>
-        <text class="chip clr" @click="clearFlt">重置</text>
+        <kg-button v-if="fltCount || paper || qtype !== '全部' || qFavOnly" variant="text" size="sm" @click="clearFlt">重置</kg-button>
       </view>
-      <view v-if="fltOpen" class="mask" @click="fltOpen = false">
-        <view class="sheet" @click.stop>
-          <view class="sheet-h"><text class="sheet-t">筛选</text><view class="sheet-x" role="button" aria-label="关闭" @click="fltOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view></view>
-          <view class="sheet-k">题型</view>
-          <view class="chips">
-            <text v-for="t in QTYPES" :key="t" class="chip sm" :class="{ on: qtype === t }" @click="setQtype(t)">{{ t }}</text>
-          </view>
-          <view v-if="years.length" class="sheet-k">年份</view>
-          <view v-if="years.length" class="chips">
-            <text class="chip sm" :class="{ on: !year }" @click="setYear(0)">全部</text>
-            <text v-for="y in years" :key="y" class="chip sm" :class="{ on: year === y }" @click="setYear(y)">{{ y }}</text>
-          </view>
-          <view v-if="regions.length" class="sheet-k">地区</view>
-          <view v-if="regions.length" class="chips">
-            <text class="chip sm" :class="{ on: !region }" @click="setRegion('')">全部</text>
-            <text v-for="r in regions" :key="r" class="chip sm" :class="{ on: region === r }" @click="setRegion(r)">{{ r }}</text>
-          </view>
+
+      <kg-sheet v-model="fltOpen" title="筛选">
+        <view class="sheet-body">
+          <text v-if="years.length" class="sheet-k">年份</text>
+          <kg-chip-row v-if="years.length" :model-value="year" :options="yearChips" size="sm" @update:model-value="setYear" />
+          <text v-if="regions.length" class="sheet-k">地区</text>
+          <wd-radio-group v-if="regions.length" :model-value="region" shape="button" @change="onRegionChange">
+            <wd-radio value="">全部</wd-radio>
+            <wd-radio v-for="r in regions" :key="r" :value="r">{{ r }}</wd-radio>
+          </wd-radio-group>
+        </view>
+        <template #footer>
           <view class="sheet-foot">
-            <view class="sf-btn ghost" @click="clearFlt">重置</view>
-            <view class="sf-btn" @click="fltOpen = false">查看 {{ qTotal }} 道题</view>
+            <kg-button variant="ghost" size="lg" @click="clearFlt">重置</kg-button>
+            <kg-button variant="primary" size="lg" class="grow" @click="fltOpen = false">查看 {{ qTotal }} 道题</kg-button>
           </view>
-        </view>
-      </view>
-      <view v-if="loading" class="spin">加载中…</view>
-      <view v-else-if="qErr" class="spin">加载失败：{{ qErr }}<view class="retry" @click="loadQs()">重试 ›</view></view>
-      <view v-else-if="!shownQs.length" class="spin">{{ qFavOnly ? '还没有收藏真题，点题目右上星标收藏' : '暂无题目，敬请期待' }}</view>
-      <view class="qgrid">
-      <view v-for="q in shownQs" :key="q.id" class="card q-item" @click="openQ(q.id)">
-        <view class="q-top">
-          <view class="q-tags">
-            <text class="q-type">{{ q.qtype }}</text>
-            <text v-if="q.paper" class="q-paper tappable" role="button" :aria-label="'只看本套卷：' + q.paper" @click.stop="applyPaper(q.paper)">{{ q.paper }}</text>
-            <text v-else class="q-paper">{{ q.exam_year + ' · ' + (q.exam_region || '') }}</text>
+        </template>
+      </kg-sheet>
+
+      <kg-skeleton v-if="loading" preset="cards" />
+      <kg-empty-state
+        v-else-if="qErr"
+        icon="wifi-off"
+        :title="'加载失败：' + qErr"
+        cta-text="重试"
+        @cta="loadQs()"
+      />
+      <kg-empty-state
+        v-else-if="!shownQs.length"
+        icon="pen-line"
+        :title="qFavOnly ? '还没有收藏真题' : '暂无题目'"
+        :desc="qFavOnly ? '点题目右上角星标收藏，收藏的题会汇总在这里' : '换个题型或年份试试，更多真题陆续上线'"
+        :cta-text="qFavOnly || fltCount || qtype !== '全部' ? '查看全部真题' : ''"
+        @cta="clearFlt"
+      />
+      <view v-else class="qgrid">
+        <kg-card v-for="q in shownQs" :key="q.id" clickable class="q-item" @click="openQ(q.id)">
+          <view class="q-top">
+            <view class="q-tags">
+              <kg-tag tone="brand">{{ q.qtype }}</kg-tag>
+              <kg-tag v-if="q.paper" tone="neutral" class="tappable" role="button" :aria-label="'只看本套卷：' + q.paper" @click.stop="applyPaper(q.paper)">{{ q.paper }}</kg-tag>
+              <text v-else class="q-paper">{{ q.exam_year + ' · ' + (q.exam_region || '') }}</text>
+            </view>
+            <view class="star-btn" role="button" :aria-label="qFavIds.includes(q.id) ? '取消收藏本题' : '收藏本题'" @click.stop="toggleQFav(q)">
+              <l-icon name="star" :size="20" :tone="qFavIds.includes(q.id) ? 'warn' : 'faint'" :fill="qFavIds.includes(q.id) ? 'currentColor' : 'none'" />
+            </view>
           </view>
-          <view class="m-star" :class="{ on: qFavIds.includes(q.id) }" @click.stop="toggleQFav(q)"><l-icon name="star" :size="17" :color="qFavIds.includes(q.id) ? '#f59e0b' : '#8a90a0'" :fill="qFavIds.includes(q.id) ? '#f59e0b' : 'none'" /></view>
-        </view>
-        <text class="q-text">{{ q.question }}</text>
-        <view class="q-foot">
-          <text class="q-meta">{{ qMeta(q.question) }}</text>
-          <text class="q-go" @click.stop="openQ(q.id)">去作答 ›</text>
-        </view>
+          <text class="q-text ellip3">{{ q.question }}</text>
+          <view class="q-foot">
+            <text class="q-meta">{{ qMeta(q.question) }}</text>
+            <kg-button variant="secondary" size="sm" icon="chevron-right" @click.stop="openQ(q.id)">作答</kg-button>
+          </view>
+        </kg-card>
       </view>
-      </view>
-      <view v-if="!qFavOnly && !qEnd && qs.length >= 20" class="more" @click="loadMore">加载更多</view>
+      <kg-button v-if="!loading && !qErr && !qFavOnly && !qEnd && qs.length >= 20" variant="secondary" size="md" block class="more" @click="loadMore">加载更多</kg-button>
     </template>
 
+    <!-- 真题详情 / 作答 -->
     <template v-if="tab === 'q' && detail">
-      <view class="back" @click="detail = null">‹ 返回列表</view>
-      <view class="card">
-        <view class="d-cols">
-        <view class="d-left">
-        <view class="q-top">
-          <text class="q-paper">{{ detail.paper || (detail.exam_year + ' · ' + (detail.exam_region || '')) }}</text>
-          <view class="q-top-r">
-            <text class="q-type">{{ detail.qtype }}</text>
-            <view class="m-star" :class="{ on: qFavIds.includes(detail.id) }" role="button" :aria-label="qFavIds.includes(detail.id) ? '取消收藏本题' : '收藏本题'" @click="toggleQFav(detail)"><l-icon name="star" :size="17" :color="qFavIds.includes(detail.id) ? '#f59e0b' : '#8a90a0'" :fill="qFavIds.includes(detail.id) ? '#f59e0b' : 'none'" /></view>
-            <text class="d-copy" role="button" aria-label="复制本题链接" @click="copyQLink">复制本题链接</text>
+      <kg-button variant="text" size="sm" icon="chevron-left" class="back" @click="detail = null">返回列表</kg-button>
+      <kg-two-col>
+        <template #main>
+          <kg-card class="d-card">
+            <view class="q-top">
+              <text class="q-paper">{{ detail.paper || (detail.exam_year + ' · ' + (detail.exam_region || '')) }}</text>
+              <view class="q-top-r">
+                <kg-tag tone="brand">{{ detail.qtype }}</kg-tag>
+                <view class="star-btn" role="button" :aria-label="qFavIds.includes(detail.id) ? '取消收藏本题' : '收藏本题'" @click="toggleQFav(detail)">
+                  <l-icon name="star" :size="20" :tone="qFavIds.includes(detail.id) ? 'warn' : 'faint'" :fill="qFavIds.includes(detail.id) ? 'currentColor' : 'none'" />
+                </view>
+                <kg-button variant="text" size="sm" icon="copy" aria-label="复制本题链接" @click="copyQLink">复制链接</kg-button>
+              </view>
+            </view>
+            <text class="d-h">作答要求</text>
+            <text class="d-q">{{ detail.question }}</text>
+            <view class="d-toggle" role="button" :aria-expanded="showMat ? 'true' : 'false'" @click="showMat = !showMat">
+              <text class="d-h">给定资料</text>
+              <l-icon name="chevron-down" :size="20" tone="muted" :class="{ flip: showMat }" />
+            </view>
+            <text v-if="showMat" class="d-mat">{{ detail.material }}</text>
+          </kg-card>
+          <view v-if="qNav.idx >= 0 && qNav.total > 1" class="d-nav">
+            <kg-button variant="ghost" size="md" icon="chevron-left" :disabled="!qNav.prevId" aria-label="上一题" @click="qNav.prevId && openQ(qNav.prevId)">上一题</kg-button>
+            <text class="d-nav-pos num">{{ qNav.idx + 1 }} / {{ qNav.total }}</text>
+            <kg-button variant="ghost" size="md" :disabled="!qNav.nextId" aria-label="下一题" @click="qNav.nextId && openQ(qNav.nextId)">下一题</kg-button>
           </view>
-        </view>
-        <view class="d-h">作答要求</view>
-        <text class="d-q">{{ detail.question }}</text>
-        <view class="d-h toggle" @click="showMat = !showMat">给定资料 {{ showMat ? '▲' : '▼' }}</view>
-        <text v-if="showMat" class="d-mat">{{ detail.material }}</text>
-        </view>
-        <view class="d-right">
-        <view class="d-ans-h"><view class="d-h" style="margin: 0">我的作答</view><text v-if="qWordLim" class="d-save d-wc" :class="qWordSt">{{ myAnswer ? (myAnswer.length + ' / 限' + qWordLim.label + (qWordSt === 'over' ? '，已超 ' + (myAnswer.length - qWordLim.max) + ' 字' : '')) : '限' + qWordLim.label }}</text><text v-else-if="myAnswer" class="d-save">已自动保存 · {{ myAnswer.length }} 字</text></view>
-        <textarea v-model="myAnswer" class="d-ta" :maxlength="3000" placeholder="在此作答后点击下方按钮，AI 按采分点批改（大作文为结构点评+参考档位）。草稿自动保存，换设备可续写" auto-height @input="saveDraft" />
-        <view class="grade-btn" :class="{ dis: grading || !myAnswer.trim() }" @click="grade">{{ grading ? 'AI 批改中…' : '提交 AI 批改' }}</view>
-        <view v-if="gradeResult" class="d-grade">
-          <view class="d-h">批改结果<text class="g-note">（AI 参考，非官方评分）</text></view>
-          <text class="g-body">{{ gradeResult }}</text>
-        </view>
-        <view v-if="history.length" class="d-h toggle" @click="showHist = !showHist">历史作答（{{ history.length }}） {{ showHist ? '▲' : '▼' }}</view>
-        <view v-if="showHist">
-          <view v-for="h in history" :key="h.id" class="hist-item">
-            <text class="hist-time">{{ fmtTime(h.created_at) }}</text>
-            <text class="hist-ans">{{ h.answer }}</text>
-            <text v-if="h.result" class="hist-res">{{ h.result }}</text>
-          </view>
-        </view>
-        <view class="d-h toggle ref" @click="showRef = !showRef">{{ showRef ? '收起参考要点 ▲' : '写完再看 · 参考要点 ▼' }}</view>
-        <text v-if="showRef" class="d-ref">{{ detail.reference }}</text>
-        <text v-if="showRef && detail.notes" class="d-notes">{{ detail.notes }}</text>
-        </view>
-        </view>
-        <view v-if="qNav.idx >= 0 && qNav.total > 1" class="d-nav">
-          <text class="d-nav-btn" :class="{ dis: !qNav.prevId }" role="button" aria-label="上一题" :aria-disabled="!qNav.prevId" @click="qNav.prevId && openQ(qNav.prevId)">‹ 上一题</text>
-          <text class="d-nav-pos">{{ qNav.idx + 1 }} / {{ qNav.total }}</text>
-          <text class="d-nav-btn" :class="{ dis: !qNav.nextId }" role="button" aria-label="下一题" :aria-disabled="!qNav.nextId" @click="qNav.nextId && openQ(qNav.nextId)">下一题 ›</text>
-        </view>
-      </view>
+        </template>
+        <template #aside>
+          <kg-card class="d-card">
+            <view class="d-ans-h">
+              <text class="d-h">我的作答</text>
+              <text v-if="qWordLim" class="d-save num" :class="qWordSt">{{ myAnswer ? (myAnswer.length + ' / 限' + qWordLim.label + (qWordSt === 'over' ? '，已超 ' + (myAnswer.length - qWordLim.max) + ' 字' : '')) : '限' + qWordLim.label }}</text>
+              <text v-else-if="myAnswer" class="d-save">已自动保存 · <text class="num">{{ myAnswer.length }}</text> 字</text>
+            </view>
+            <textarea v-model="myAnswer" class="d-ta" :maxlength="3000" placeholder="在此作答后点击下方按钮，AI 按采分点批改（大作文为结构点评+参考档位）。草稿自动保存，换设备可续写" placeholder-style="color: var(--ink-4)" auto-height @input="saveDraft" />
+            <kg-button variant="primary" size="lg" block :disabled="grading || !myAnswer.trim()" :loading="grading" class="grade-btn" @click="grade">{{ grading ? 'AI 批改中…' : '提交 AI 批改' }}</kg-button>
+            <view v-if="gradeResult" class="d-grade">
+              <text class="d-h">批改结果<text class="g-note">（AI 参考，非官方评分）</text></text>
+              <text class="g-body">{{ gradeResult }}</text>
+            </view>
+            <view v-if="history.length" class="d-toggle" role="button" :aria-expanded="showHist ? 'true' : 'false'" @click="showHist = !showHist">
+              <text class="d-h">历史作答（{{ history.length }}）</text>
+              <l-icon name="chevron-down" :size="20" tone="muted" :class="{ flip: showHist }" />
+            </view>
+            <view v-if="showHist">
+              <view v-for="h in history" :key="h.id" class="hist-item">
+                <text class="hist-time num">{{ fmtTime(h.created_at) }}</text>
+                <text class="hist-ans">{{ h.answer }}</text>
+                <text v-if="h.result" class="hist-res">{{ h.result }}</text>
+              </view>
+            </view>
+            <view class="d-toggle ref" role="button" :aria-expanded="showRef ? 'true' : 'false'" @click="showRef = !showRef">
+              <text class="d-h ref-t">{{ showRef ? '收起参考要点' : '写完再看 · 参考要点' }}</text>
+              <l-icon name="chevron-down" :size="20" tone="brand-text" :class="{ flip: showRef }" />
+            </view>
+            <text v-if="showRef" class="d-ref">{{ detail.reference }}</text>
+            <text v-if="showRef && detail.notes" class="d-notes">{{ detail.notes }}</text>
+          </kg-card>
+        </template>
+      </kg-two-col>
     </template>
 
+    <!-- 素材/范文 -->
     <template v-if="tab === 'm'">
-      <view class="chips">
-        <text v-for="t in MTYPES" :key="t" class="chip" :class="{ on: mtype === t && !favOnly }" @click="setMtype(t)">{{ t }}</text>
-        <view class="chip fav" :class="{ on: favOnly }" @click="toggleFavOnly"><l-icon name="star" :size="13" :color="favOnly ? '#b45309' : '#8a90a0'" :fill="favOnly ? '#f59e0b' : 'none'" /><text>收藏{{ favIds.length ? ' ' + favIds.length : '' }}</text></view>
+      <view class="fltbar">
+        <kg-chip-row :model-value="favOnly ? '' : mtype" :options="mtypeChips" class="chips grow" @update:model-value="setMtype" />
+        <kg-button variant="secondary" size="sm" icon="star" :tone="favOnly ? 'brand' : undefined" :aria-pressed="favOnly ? 'true' : 'false'" @click="toggleFavOnly">收藏{{ favIds.length ? ' ' + favIds.length : '' }}</kg-button>
       </view>
-      <view v-if="loading" class="spin">加载中…</view>
-      <view v-else-if="mErr" class="spin">加载失败：{{ mErr }}<view class="retry" @click="loadMats()">重试 ›</view></view>
-      <view v-else-if="!shownMats.length" class="spin">{{ favOnly ? '还没有收藏素材，点素材右上星标收藏' : '暂无素材，敬请期待' }}</view>
-      <view class="mgrid">
-      <view v-for="m in shownMats" :key="m.id" class="card m-item">
-        <view class="q-top">
-          <text class="m-topic">{{ m.topic }}<text v-if="m.id === hitMid" class="m-hit">搜索命中</text></text>
-          <view class="q-top-r">
-            <text class="q-type">{{ m.type }}</text>
-            <view class="m-star" :class="{ on: favIds.includes(m.id) }" @click="toggleFav(m)"><l-icon name="star" :size="17" :color="favIds.includes(m.id) ? '#f59e0b' : '#8a90a0'" :fill="favIds.includes(m.id) ? '#f59e0b' : 'none'" /></view>
+      <kg-skeleton v-if="loading" preset="cards" />
+      <kg-empty-state
+        v-else-if="mErr"
+        icon="wifi-off"
+        :title="'加载失败：' + mErr"
+        cta-text="重试"
+        @cta="loadMats()"
+      />
+      <kg-empty-state
+        v-else-if="!shownMats.length"
+        icon="book-open"
+        :title="favOnly ? '还没有收藏素材' : '暂无素材'"
+        :desc="favOnly ? '点素材右上角星标收藏，方便写作时随手翻' : '换个类型看看，金句/案例/范文陆续补充'"
+        :cta-text="favOnly || mtype !== '全部' ? '查看全部素材' : ''"
+        @cta="setMtype('全部')"
+      />
+      <view v-else class="mgrid">
+        <kg-card v-for="m in shownMats" :key="m.id" class="m-item">
+          <view class="q-top">
+            <view class="q-tags">
+              <text class="m-topic">{{ m.topic }}</text>
+              <kg-tag v-if="m.id === hitMid" tone="warn">搜索命中</kg-tag>
+            </view>
+            <view class="q-top-r">
+              <kg-tag tone="neutral">{{ m.type }}</kg-tag>
+              <view class="star-btn" role="button" :aria-label="favIds.includes(m.id) ? '取消收藏' : '收藏素材'" @click="toggleFav(m)">
+                <l-icon name="star" :size="20" :tone="favIds.includes(m.id) ? 'warn' : 'faint'" :fill="favIds.includes(m.id) ? 'currentColor' : 'none'" />
+              </view>
+            </view>
           </view>
-        </view>
-        <text class="m-content" :class="{ clamp: expanded !== m.id }" @click="expanded = expanded === m.id ? 0 : m.id">{{ m.content }}</text>
-        <view class="m-foot">
-          <text v-if="m.source" class="m-src">出处：{{ m.source }}</text>
-          <text class="d-copy" role="button" :aria-label="'复制素材链接：' + m.topic" @click="copyMatLink(m)">复制链接</text>
-        </view>
+          <text class="m-content" :class="{ ellip3: expanded !== m.id }" @click="expanded = expanded === m.id ? 0 : m.id">{{ m.content }}</text>
+          <view class="m-foot">
+            <text v-if="m.source" class="m-src ellip">出处：{{ m.source }}</text>
+            <view class="grow"></view>
+            <kg-button variant="text" size="sm" icon="copy" :aria-label="'复制素材链接：' + m.topic" @click="copyMatLink(m)">复制链接</kg-button>
+          </view>
+        </kg-card>
       </view>
-      </view>
-      <view v-if="!favOnly && !mEnd && mats.length >= 20" class="more" @click="loadMoreMat">加载更多</view>
+      <kg-button v-if="!loading && !mErr && !favOnly && !mEnd && mats.length >= 20" variant="secondary" size="md" block class="more" @click="loadMoreMat">加载更多</kg-button>
     </template>
 
+    <!-- 作答记录 -->
     <template v-if="tab === 'r'">
-      <view v-if="recLoading" class="spin">加载中…</view>
-      <view v-else-if="rErr" class="spin">加载失败：{{ rErr }}<view class="retry" @click="loadRecs()">重试 ›</view></view>
-      <view v-else-if="!recs.length" class="spin">还没有作答记录，去题库作答并 AI 批改后会自动保存</view>
-      <view class="rgrid">
-      <view v-for="r in recs" :key="r.id" class="card">
-        <view class="q-top">
-          <text class="hist-time">{{ fmtTime(r.created_at) }}</text>
-          <text class="q-type">{{ r.qtype || '申论' }}</text>
-        </view>
-        <text class="q-text" @click="openQ(r.qid); tab = 'q'">{{ r.question || '（题目已下线）' }}</text>
-        <text class="m-content" :class="{ clamp: expanded !== 'r' + r.id }" @click="expanded = expanded === 'r' + r.id ? 0 : 'r' + r.id">{{ '【我的作答】\n' + r.answer + (r.result ? '\n\n【批改结果】\n' + r.result : '') }}</text>
-      </view>
+      <kg-skeleton v-if="recLoading" preset="cards" />
+      <kg-empty-state
+        v-else-if="rErr"
+        icon="wifi-off"
+        :title="'加载失败：' + rErr"
+        cta-text="重试"
+        @cta="loadRecs()"
+      />
+      <kg-empty-state
+        v-else-if="!recs.length"
+        icon="square-pen"
+        title="还没有作答记录"
+        desc="去题库作答并提交 AI 批改后，作答与批改结果会自动保存在这里"
+        cta-text="去题库作答"
+        @cta="tapQ"
+      />
+      <view v-else class="rgrid">
+        <kg-card v-for="r in recs" :key="r.id" class="r-item">
+          <view class="q-top">
+            <text class="hist-time num">{{ fmtTime(r.created_at) }}</text>
+            <kg-tag tone="brand">{{ r.qtype || '申论' }}</kg-tag>
+          </view>
+          <text class="q-text link" role="link" @click="openQ(r.qid); tab = 'q'">{{ r.question || '（题目已下线）' }}</text>
+          <text class="m-content" :class="{ ellip3: expanded !== 'r' + r.id }" @click="expanded = expanded === 'r' + r.id ? 0 : 'r' + r.id">{{ '【我的作答】\n' + r.answer + (r.result ? '\n\n【批改结果】\n' + r.result : '') }}</text>
+        </kg-card>
       </view>
     </template>
   </view>
@@ -164,6 +224,11 @@ import { adoptServerDraft } from '../../shenlun-draft.js';
 
 const QTYPES = ['全部', '归纳概括', '综合分析', '提出对策', '贯彻执行', '大作文'];
 const MTYPES = ['全部', '金句', '案例', '政策理论', '范文'];
+const TABS = [
+  { label: '真题题库', value: 'q' },
+  { label: '素材/范文', value: 'm' },
+  { label: '作答记录', value: 'r' },
+];
 
 export default {
   data() {
@@ -222,6 +287,21 @@ export default {
     },
   },
   computed: {
+    tabOpts() {
+      return TABS.map((t) => t.label);
+    },
+    tabLabel() {
+      return (TABS.find((t) => t.value === this.tab) || TABS[0]).label;
+    },
+    qtypeChips() {
+      return QTYPES.map((t) => ({ label: t === '全部' ? '全部题型' : t, value: t }));
+    },
+    mtypeChips() {
+      return MTYPES.map((t) => ({ label: t, value: t }));
+    },
+    yearChips() {
+      return [{ label: '全部', value: 0 }].concat(this.years.map((y) => ({ label: String(y), value: y })));
+    },
     shownMats() {
       return this.favOnly ? this.favMats : this.mats;
     },
@@ -380,6 +460,17 @@ export default {
         window.history.replaceState(null, '', this.filterUrl());
       }
       // #endif
+    },
+    onTabChange(opt) {
+      const label = opt && typeof opt === 'object' ? opt.value : opt;
+      const t = TABS.find((x) => x.label === label);
+      if (!t || t.value === this.tab) return;
+      if (t.value === 'q') this.tapQ();
+      else if (t.value === 'm') this.tapMat();
+      else this.tapRec();
+    },
+    onRegionChange({ value }) {
+      this.setRegion(value || '');
     },
     tapQ() {
       this.tab = 'q';
@@ -672,101 +763,72 @@ export default {
 };
 </script>
 
-<style>
-page { background: var(--fill); }
-.page { padding: 20rpx 24rpx 40rpx; background: var(--fill); min-height: 100vh; box-sizing: border-box; }
-.seg { display: flex; gap: 12rpx; margin-bottom: 20rpx; }
-.seg-i { display: inline-flex; align-items: center; justify-content: center; font-size: 24rpx; color: var(--ink-2); background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 12rpx 28rpx; }
-.seg-i.on { background: var(--brand-soft); color: var(--brand-text); border-color: transparent; font-weight: 600; }
-.chips { display: flex; gap: 12rpx; flex-wrap: wrap; margin-bottom: 20rpx; }
-.fltbar { display: flex; align-items: center; gap: 12rpx; margin-bottom: 20rpx; }
-.grow { flex: 1; }
-.sheet-foot { display: flex; gap: 18rpx; margin-top: 28rpx; }
-.sf-btn { flex: 1; text-align: center; background: var(--brand); color: #fff; font-size: 27rpx; font-weight: 600; border-radius: 999rpx; height: 88rpx; line-height: 88rpx; }
-.sf-btn.ghost { flex: 0 0 30%; background: var(--card); color: var(--ink-2); border: 1rpx solid var(--line); box-sizing: border-box; }
-.q-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 14rpx; }
-.q-meta { font-size: 22rpx; color: var(--ink-3); }
-.q-go { color: var(--brand-text); font-size: 24rpx; font-weight: 500; padding: 12rpx 0 12rpx 24rpx; }
-.chip { display: inline-flex; align-items: center; gap: 6rpx; font-size: 23rpx; color: var(--ink-2); background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 12rpx 24rpx; }
-.chip.on { color: #fff; background: var(--brand); border-color: var(--brand-text); }
-.card { background: var(--card); border-radius: 20rpx; padding: 26rpx 28rpx; margin-bottom: 18rpx; }
-.hist-item { background: var(--fill); border-radius: 12rpx; padding: 16rpx 18rpx; margin-bottom: 12rpx; }
-.hist-time { font-size: 21rpx; color: var(--ink-3); display: block; margin-bottom: 6rpx; }
-.hist-ans { font-size: 24rpx; color: var(--ink-1); line-height: 1.7; white-space: pre-wrap; display: block; max-height: 240rpx; overflow: hidden; }
-.hist-res { font-size: 23rpx; color: var(--ink-2); background: var(--warn-soft); border-radius: 8rpx; padding: 12rpx 14rpx; margin-top: 10rpx; line-height: 1.7; white-space: pre-wrap; display: block; }
-.spin { text-align: center; color: var(--ink-3); font-size: 25rpx; padding: 60rpx 0; }
-.retry { margin-top: 12rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
-.q-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
-.q-tags { display: flex; align-items: center; gap: 12rpx; flex-wrap: wrap; }
-.q-paper { font-size: 22rpx; color: var(--ink-2); background: var(--fill); border-radius: 8rpx; padding: 4rpx 14rpx; }
-.q-paper.tappable { cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
-.q-type { font-size: 22rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
-.q-item .q-text { font-size: 26rpx; color: var(--ink-1); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.q-text { font-size: 26rpx; color: var(--ink-1); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.more { text-align: center; color: var(--brand-text); font-size: 25rpx; padding: 20rpx 0 40rpx; }
-.back { color: var(--brand-text); font-size: 26rpx; padding: 6rpx 0 18rpx; }
-.d-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 24rpx; padding-top: 20rpx; border-top: 1rpx solid var(--line); }
-.d-nav-btn { font-size: 25rpx; color: var(--brand-text); padding: 10rpx 18rpx; cursor: pointer; }
-.d-nav-btn.dis { color: var(--ink-3); cursor: default; }
-.d-nav-pos { font-size: 23rpx; color: var(--ink-2); }
-.d-wc.near { color: var(--warn-strong); }
-.d-wc.over { color: var(--bad-strong); }
-.d-h { font-size: 25rpx; font-weight: 700; color: var(--ink-1); margin: 22rpx 0 10rpx; }
-.d-h.toggle { color: var(--brand-text); }
-.d-h.ref { color: #b45309; }
-.d-q { font-size: 26rpx; color: var(--ink-1); line-height: 1.7; white-space: pre-wrap; }
-.d-mat { font-size: 25rpx; color: var(--ink-2); line-height: 1.8; white-space: pre-wrap; }
-.d-ref { font-size: 25rpx; color: #166534; background: var(--ok-soft); border-radius: 12rpx; padding: 18rpx; line-height: 1.8; white-space: pre-wrap; display: block; }
-.d-notes { font-size: 23rpx; color: var(--ink-2); margin-top: 12rpx; line-height: 1.7; white-space: pre-wrap; display: block; }
-.m-topic { font-size: 24rpx; font-weight: 600; color: var(--ink-1); }
-.q-top-r { display: flex; align-items: center; gap: 12rpx; }
-.d-copy { font-size: 22rpx; color: var(--brand-text); text-decoration: underline; cursor: pointer; padding: 4rpx 6rpx; }
-.m-star { font-size: 34rpx; color: var(--ink-3); display: inline-flex; align-items: center; justify-content: center; min-width: 88rpx; min-height: 88rpx; margin: -24rpx -20rpx -24rpx -8rpx; }
-.m-star.on { color: #f59e0b; }
-.chip.fav.on { background: var(--warn-soft); color: #b45309; border-color: #fcd34d; }
-.m-content { font-size: 25rpx; color: var(--ink-2); line-height: 1.8; white-space: pre-wrap; display: block; margin: 8rpx 0; word-break: break-all; overflow-wrap: anywhere; }
-.m-content.clamp { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
-.chip.sm { font-size: 22rpx; padding: 10rpx 20rpx; }
-.chip.flt { border-style: dashed; }
-.chip.clr { color: var(--ink-3); }
-.mask { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 90; display: flex; align-items: flex-end; }
-.sheet { width: 100%; background: var(--card); border-radius: 24rpx 24rpx 0 0; padding: 26rpx 28rpx 50rpx; box-sizing: border-box; max-height: 70vh; overflow-y: auto; }
-.sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18rpx; }
-.sheet-t { font-size: 30rpx; font-weight: 700; }
-.sheet-x { font-size: 26rpx; color: var(--brand-text); font-weight: 600; padding: 10rpx 0 10rpx 24rpx; }
-.sheet-k { font-size: 23rpx; color: var(--ink-3); margin: 14rpx 0 10rpx; }
-.m-src { font-size: 22rpx; color: var(--ink-3); word-break: break-all; overflow-wrap: anywhere; display: block; }
-.m-foot { display: flex; align-items: baseline; justify-content: space-between; gap: 12rpx; margin-top: 4rpx; }
-.m-foot .m-src { flex: 1; }
-.m-foot .d-copy { flex-shrink: 0; margin-left: auto; }
-.m-hit { margin-left: 8rpx; padding: 2rpx 10rpx; font-size: 20rpx; color: var(--brand-text); background: var(--fill); border-radius: 8rpx; font-weight: 400; }
-.d-ans-h { display: flex; justify-content: space-between; align-items: baseline; margin: 22rpx 0 10rpx; }
-.d-save { font-size: 21rpx; color: var(--ink-3); }
-.d-ta { width: 100%; box-sizing: border-box; min-height: 220rpx; background: var(--fill); border: 1rpx solid var(--line); border-radius: 12rpx; padding: 18rpx; font-size: 25rpx; line-height: 1.7; }
-.grade-btn { margin-top: 16rpx; text-align: center; background: var(--brand); color: #fff; font-size: 27rpx; font-weight: 600; border-radius: 999rpx; padding: 20rpx 0; }
-.grade-btn.dis { opacity: 0.5; }
-.d-grade { margin-top: 8rpx; }
-.g-note { font-size: 21rpx; color: var(--ink-3); font-weight: 400; }
-.g-body { font-size: 25rpx; color: var(--ink-1); background: var(--warn-soft); border-radius: 12rpx; padding: 18rpx; line-height: 1.8; white-space: pre-wrap; display: block; }
-.d-cols { display: flex; flex-direction: column; }
+<style scoped>
+.page { padding: var(--sp-16) var(--page-x) var(--sp-48); }
+.seg { margin-bottom: var(--sp-12); }
+.chips { margin-bottom: var(--sp-12); }
+.grow { flex: 1; min-width: 0; }
+.fltbar { display: flex; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-12); flex-wrap: wrap; }
+.fltbar .chips { margin-bottom: 0; }
+.paper-tag { max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tappable { cursor: pointer; }
+.more { margin-top: var(--sp-8); }
+.back { margin-bottom: var(--sp-8); align-self: flex-start; }
+.ellip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ellip3 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 
-/* 桌面（H5）：≥768 页宽收敛+居中弹窗；≥1024 列表两列+详情双栏工作台 */
+.sheet-body { padding-bottom: var(--sp-8); }
+.sheet-k { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin: var(--sp-12) 0 var(--sp-8); }
+.sheet-foot { display: flex; gap: var(--sp-12); }
+.sheet-body :deep(.wd-radio-group) { display: flex; flex-wrap: wrap; gap: var(--sp-8); }
+
+.qgrid, .mgrid, .rgrid { display: flex; flex-direction: column; gap: var(--card-gap); }
+.q-top { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); }
+.q-tags { display: flex; align-items: center; gap: var(--sp-8); flex: 1; min-width: 0; flex-wrap: wrap; }
+.q-top-r { display: flex; align-items: center; gap: var(--sp-4); flex-shrink: 0; }
+.q-paper { font-size: var(--fs-caption); color: var(--ink-2); }
+.star-btn { width: var(--hit-min); height: var(--hit-min); margin: calc((var(--hit-min) - 20px) / -2) 0; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: var(--r-full); }
+.q-text { display: block; margin-top: var(--sp-8); font-size: var(--fs-body); line-height: var(--lh-question); color: var(--ink); }
+.q-text.link { color: var(--brand-text); }
+.q-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); margin-top: var(--sp-8); }
+.q-meta { font-size: var(--fs-caption); color: var(--ink-3); flex: 1; min-width: 0; }
+
+.d-card { margin-bottom: var(--card-gap); }
+.d-h { display: block; font-size: var(--fs-h3); font-weight: 600; color: var(--ink); margin-top: var(--sp-12); }
+.d-q { display: block; margin-top: var(--sp-8); font-size: var(--fs-body); line-height: var(--lh-question); color: var(--ink); white-space: pre-wrap; }
+.d-toggle { display: flex; align-items: center; justify-content: space-between; min-height: var(--hit-min); cursor: pointer; }
+.d-toggle .d-h { margin-top: 0; }
+.d-toggle.ref .ref-t { color: var(--brand-text); }
+.flip { transform: rotate(180deg); }
+.d-mat { display: block; font-size: var(--fs-sub); line-height: var(--lh-body); color: var(--ink-2); white-space: pre-wrap; }
+.d-ans-h { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); }
+.d-ans-h .d-h { margin-top: 0; }
+.d-save { font-size: var(--fs-caption); color: var(--ink-3); }
+.d-save.near { color: var(--warn-strong); }
+.d-save.over { color: var(--bad); font-weight: 600; }
+.d-ta { width: 100%; box-sizing: border-box; min-height: 160px; margin-top: var(--sp-8); padding: var(--sp-12); background: var(--fill); border-radius: var(--r-sm); color: var(--ink); font-size: var(--fs-body); line-height: var(--lh-body); }
+.grade-btn { margin-top: var(--sp-12); }
+.d-grade { margin-top: var(--sp-4); }
+.g-note { font-size: var(--fs-caption); font-weight: 400; color: var(--ink-3); }
+.g-body { display: block; margin-top: var(--sp-8); font-size: var(--fs-sub); line-height: var(--lh-body); color: var(--ink); white-space: pre-wrap; }
+.hist-item { padding: var(--sp-8) 0; border-top: 1px solid var(--line); }
+.hist-time { display: block; font-size: var(--fs-caption); color: var(--ink-3); }
+.hist-ans { display: block; margin-top: var(--sp-4); font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--ink); white-space: pre-wrap; }
+.hist-res { display: block; margin-top: var(--sp-4); font-size: var(--fs-caption); line-height: var(--lh-sub); color: var(--ink-2); white-space: pre-wrap; }
+.d-ref, .d-notes { display: block; margin-top: var(--sp-8); font-size: var(--fs-sub); line-height: var(--lh-body); color: var(--ink); white-space: pre-wrap; }
+.d-notes { color: var(--ink-2); }
+.d-nav { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); }
+.d-nav-pos { font-size: var(--fs-sub); color: var(--ink-2); }
+
+.m-topic { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+.m-content { display: block; margin-top: var(--sp-8); font-size: var(--fs-sub); line-height: var(--lh-body); color: var(--ink); white-space: pre-wrap; }
+.m-foot { display: flex; align-items: center; gap: var(--sp-8); margin-top: var(--sp-4); }
+.m-src { font-size: var(--fs-caption); color: var(--ink-3); max-width: 60%; }
+
 /* #ifdef H5 */
-@media (min-width: 768px) {
-  .page { max-width: 1044px; margin: 0 auto; }
-  .mask { align-items: center; justify-content: center; }
-  .sheet { max-width: 520px; border-radius: 28rpx; }
-  .q-item:hover, .m-item:hover, .chip:hover, .seg-i:hover { cursor: pointer; }
-  .q-item:hover { box-shadow: 0 8rpx 24rpx rgba(23, 24, 28, 0.08); }
-}
 @media (min-width: 1024px) {
-  .qgrid, .mgrid, .rgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; align-items: start; }
-  .q-item { display: flex; flex-direction: column; }
-  .q-item .q-text { flex: 1; }
-  .d-cols { flex-direction: row; gap: 40rpx; align-items: flex-start; }
-  .d-left { flex: 1; min-width: 0; }
-  .d-right { flex: 1; min-width: 0; position: sticky; top: 24rpx; }
-  .d-right .d-ans-h { margin-top: 0; }
+  .qgrid, .mgrid, .rgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .d-ta { min-height: 320px; }
 }
 /* #endif */
 </style>
