@@ -5,6 +5,24 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R421b 补充（testing agent）— ask 页「存入错题本」带 question_id 的复验口径
+- 自 rev adfdc17 起 `ask.vue save(r)` POST `/api/mistakes` 带 `question_id: askQid(r.qid)||null`；后端 `db.save_mistake`（db.py ~L3189）先按 `(question_id, uid)` 再按 `(question_text, uid)` **去重合并**（`times+1`、`next_review` 更新、`question_id=COALESCE`）。因此「练习答错自动存 → ask 再存同题」只会得到 **1 行**（`times 2`），不再是 R421 的两张卡；核 ask 存入是否带 qid 时要看 `times`/`next_review` 变化，而不是找第二行。练习行 `question_text` 无 `\r`、ask 行文本是 meta 的 `\r\n` 版，文本去重不会命中，所以合并本身就证明 ask POST 带了 qid。
+- 想要**纯 ask 存入的独立行**（无练习行可合并）：搜索页 `#/pkgA/search/search?q=<qid>` 点结果卡展开 → 「AI 详解本题」（`search.vue askFromSearch` 写 redoQuestion/redoQid、清 redoAnswer）→ ask 页选一个 R421 已缓存的答案（如 709452+B）秒回 → 「存入错题本」→ DB 新行 `question_id` 应等于 qid、`explanation` 以「【答案】」开头（AI 来源）。
+- 抓 `/api/mistakes` 请求体：uni.request 走 XHR，可在页内一次性包 `XMLHttpRequest.prototype.open/send` 把 `/api/mistakes` POST 的 body `JSON.parse` 进 `window.__mb`（页级钩子，SEO 全页跳转会丢，需在同一 document 内完成 ask→存入）。
+- 错题卡再问入口是展开卡片后的「AI 详解」（`book.vue redo(m)`，`m.question_id` 非空才写 redoQid）；再问成功口径：`__sse` 最新记录 `fd.question_id` = qid、`meta.cached true`、thinking 0、最后 4 个 `.chip` 含「查看原题」→ 点后 `#/pkgA/search/search?q=<qid>&qid=<qid>`。
+- SSH 变量在 shell 环境里（`TICKETS_VPS_SSH_*`），不要用 exec `env: secret:org:…`（该引用不存在会被拒）；`cat <<EOF` heredoc 与被拒的同一条命令会一起作废，脚本用 write 工具落盘后 scp。恢复 LS 时不要在 `cdp.py eval` 里内联 `$(python3 …)`（引号嵌套会让 JSON.parse 失败并已清空 LS），改用 `r421b_restore_ls.py` 这类读文件的 CDP 脚本。
+
+## R421 补充（testing agent）— ask 页 AI 讲解 SSE（question_id 直通 / thinking 心跳 / 缓存）取证
+- `/api/explain/stream` 是 fetch + FormData（`api.js streamExplain`），uni.request 钩子抓不到；用 `/tmp/cdp174/holdsse421.py`（长连接，`Page.addScriptToEvaluateOnNewDocument` 包 `window.fetch`，**克隆** response 流读 SSE，不替换应用消费的原流）在 `window.__sse[]` 记 `fd`（FormData 字段）、`st`、`tMeta`/`thinking[{t,d}]`/`tFirstDelta`/`tDone`（相对 fetch 发出的 ms）、`full`。注意 SPA 内 hash 路由不重置 `__sse`，但从 SEO 页（`/tiku/q/<id>` 服务端页）点选项进 `/#/pages/practice` 是新 document → `__sse` 重新从 index 0 开始，轮询前先 `window.__sse.length` 确认下标。
+- 深链入口（凡 `setStorageSync('redoQid')` 再 switchTab ask）：SEO `/tiku/q/<id>` 原生点选项 → practice `?qid=…&pick=X` 判题 → 「用花生十三方法详解这道题 ›」（可 `scrollIntoView` 后原生点）→ ask 页 toast「题目已填入…」+ textarea 预填 + 答案预选。ask `onShow` 会立刻消费并删掉 `redoQuestion/redoQid/redoAnswer`，事后 LS 里查不到是正常的，以 FormData `question_id` 为准。
+- 通过口径：linked 题 `tMeta` ≈150–200 ms、`meta.qid`=题 id、`module/question_type` 与 `questions` 表一致、`cached:false`；无 qid 手输题 `tMeta` ≈8–15 s（识题 LLM，前 meta 占位是「AI 识题中…（N秒）」）、`meta.qid null`。thinking 事件 data 键**恰为** `{secs,chars}`，服务端 ≥1 s 节流（客户端到达间隔有抖动，见过 722 ms，不算失败）；`.spin` 文案「生成中…」→「AI 正在推理…（已 N 秒）」→ N≥30「AI 推理接近完成，讲解正文马上出现…（已 N 秒）」，用 `r421poll.py <out> <idx> <maxs>` 每 1.2 s 采样取证（正文常 30–80 s 才到）。正文检查不含「思考过程/推理过程/<think/reasoning」。
+- 缓存键 `deps.cache_key(text.strip()+"\n||\n"+ua)` 是**逐字**的：后端把 meta.question_text 归一成 `\r\n` 版并同时存 `key`（归一文本）与 `raw_key`（原 FormData 文本）两个键；textarea 会把 `\r\n` 转成 `\n`，所以从错题本再问通常命中 raw_key。选未缓存题先在容器 DB 用 prefill 文本（`askPrefill(stem, options)` = 题干+`\n`+`A.x B.y …`）+ ua∈{'',A,B,C,D} 算 sha256 查 `explain_cache`。缓存命中：`meta.cached:true`、meta 无 qid、`thinking.length 0`、`tFirstDelta==tDone≈tMeta`。
+- **已知缺陷（R421 时）**：ask `save(r)` POST `/api/mistakes` 不带 `question_id` → 该错题行 `question_id NULL` → 错题本「AI 详解」(`book.vue redo(m)`) 不写 redoQid → 再问时 FormData 无 question_id、卡片无「查看原题」。练习页答错自动存入的行带 question_id，走它才能验「缓存命中 + 查看原题回填」。错题本卡片的再问按钮文案是「AI 详解」（`.op.redo`），不是「再问 AI」；「更多操作」sheet 里没有它。
+- 回归耗时：`/api/followup` ≈35 s、`/api/similar` ≈55 s（推理模型），等待要给足；「历史」sheet 在当前会话未归档时是空态，先点「新对话」再开「历史」才列出会话。
+- xdotool `type` 无法输入 CJK（只剩数字/字母）：先点聚焦 textarea，再 `cdp.C(pick()).call('Input.insertText', text=…)`（等价 IME/粘贴输入，会触发 input 事件）。
+- 桌面 H5 practice 页答题会抛 `unhandledrejection {"errMsg":"vibrateShort:fail"}`（`practice.vue` `uni.vibrateShort` 无 fail 回调），每答一题一次，属既有噪音，报告里单列勿混入 R4xx 回归。
+- 清理：`test-r421-%` 会落在 mistakes（练习自动存 + ask 存入）、answer_log、ask_sessions、ask_cur、growth_events、practice_progress，按「所有含 uid 列的表」循环 DELETE 再 LEFTOVER；`explain_cache` 是全局资源不按 uid 删，只记录新增键。
+
 ## R420 补充（testing agent）— 时区仿真 / contest 字号·热区 / contest-report 空态
 - 时区仿真用 CDP `Emulation.setTimezoneOverride`，但它是**按 CDP session** 的：一次性 `cdp.C(...).call(...)` 在 socket 关闭后立刻回落到系统 TZ（本机 UTC）。要像 `holdvw.py` 一样长连接持有：`/tmp/cdp174/holdtz.py <TZ>`（`setsid nohup … &`，记 PID）。切 TZ 后必须 F5，并用 `Intl.DateTimeFormat().resolvedOptions().timeZone` + `new Date(1789174800000).getHours()`（Asia/Shanghai 9 / UTC 1 / America/Los_Angeles 18）证明设备时区真变了，再量 UI 文本。恢复：kill holder 再 `setTimezoneOverride timezoneId=''`。
 - R420 起 `contest-time.js`（`cstParts/fmtWindow/fmtDay/fmtDayHour`）固定东八区：contest `.hero-meta .hm[0]`「9月12日 09:00 - 24:00」、往期 `.prow-s` 用 `fmtDay(close_at-1)`（2026-09-05/08-15/08-08），三种 TZ 下必须完全一致。周报「下一场」`.link` 只在 report 非 empty/pending 态渲染（`/api/report/weekly?uid=` 对测试 uid 是 `status: empty` → 该链接测不到，只能标 untested）；可用页内 `import('/assets/contest-time.<hash>.js')` 直接调 helper 取证（minified 导出名 a/b/f，按参数个数判断）。
