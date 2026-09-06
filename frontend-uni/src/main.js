@@ -75,6 +75,7 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && location
 }
 
 // 可观测性与陈旧壳自愈：不依赖 SW，覆盖国内 App 内置 webview 等无 SW 环境
+let healOnChunkLoadError = () => {};
 if (typeof window !== 'undefined') {
 	window.addEventListener('load', () => {
 		// 当前运行 bundle 的 hash 段（主 chunk 文件名），用于 RUM 版本戳与陈旧壳自愈比对
@@ -157,6 +158,8 @@ if (typeof window !== 'undefined') {
 			} catch (e) { /* 自愈失败保持原状 */ }
 		};
 		setTimeout(staleShellHeal, 15000);
+		// 旧壳动态 import 已下线的 chunk（发版后旧 hash 404）→ 立即校验，比 15s 定时先到；hash 一致（真网络故障）不动
+		healOnChunkLoadError = staleShellHeal;
 		// SW 升级即校验：新 SW activate 后 postMessage，穿透缓存壳触达存量客户端
 		try {
 			if (navigator.serviceWorker) {
@@ -187,7 +190,7 @@ function dismissSplash() {
 export function createApp() {
 	const app = createSSRApp(App);
 	// #ifdef H5
-	installVueErrorHandler(app, mReport, (e) => console.error(e));
+	installVueErrorHandler(app, mReport, (e) => console.error(e), () => healOnChunkLoadError());
 	app.mixin({
 		mounted() {
 			dismissSplash();

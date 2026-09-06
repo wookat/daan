@@ -43,12 +43,14 @@ export function classifyVueError(message) {
 // uni h5 每个页面都是 defineAsyncComponent（timeout 由 manifest.h5.async.timeout 决定）：
 // 分包 chunk 拉取挂起超时 / 拉取失败（发版后旧 hash 404 等）都只走 Vue handleError → console.error，
 // window.onerror / unhandledrejection 均不触发，线上无痕。errorHandler 接管后同时上报并保留控制台输出。
-export function installVueErrorHandler(app, report, consoleError) {
+export function installVueErrorHandler(app, report, consoleError, onChunkLoadError) {
   const prev = app.config.errorHandler;
   app.config.errorHandler = (err, instance, info) => {
     const e = err instanceof Error ? err : new Error(String(err));
-    report(`vue:${classifyVueError(e.message)}${info ? `:${info}` : ''}: ${e.message}`, e.stack);
+    const kind = classifyVueError(e.message);
+    report(`vue:${kind}${info ? `:${info}` : ''}: ${e.message}`, e.stack);
     if (typeof consoleError === 'function') consoleError(e);
+    if (kind === 'chunk-load' && typeof onChunkLoadError === 'function') onChunkLoadError(e);
     if (typeof prev === 'function') prev(err, instance, info);
   };
 }
