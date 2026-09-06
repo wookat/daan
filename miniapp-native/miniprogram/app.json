@@ -15,6 +15,19 @@
     "pages/share/pk-result",
     "pages/social/poster"
   ],
+  "subPackages": [
+    {
+      "root": "pkgLearn",
+      "name": "learn",
+      "pages": [
+        "setup/setup",
+        "search/search",
+        "practice-history/practice-history",
+        "offline/offline",
+        "explain/explain"
+      ]
+    }
+  ],
   "renderer": "webview",
   "componentFramework": "glass-easel",
   "lazyCodeLoading": "requiredComponents",

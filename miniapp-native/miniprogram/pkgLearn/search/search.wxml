@@ -1,0 +1,141 @@
+<navbar title="搜索" back="{{true}}" />
+<view class="sticky">
+  <t-search
+    value="{{kw}}"
+    placeholder="题号 / 题干关键词 / 考点 / 申论"
+    focus="{{true}}"
+    maxlength="{{64}}"
+    shape="round"
+    action="取消"
+    bind:change="onInput"
+    bind:submit="onSubmit"
+    bind:clear="onClear"
+    bind:action-click="onCancel"
+  />
+  <kg-chip-row options="{{tabs}}" value="{{tab}}" size="sm" bind:change="onTab" />
+</view>
+
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <block wx:if="{{loading || loadErr || hasResult}}">
+      <view wx:if="{{loading}}" class="skel" aria-busy="true">
+        <t-skeleton theme="text" animation="gradient" />
+        <t-skeleton theme="paragraph" animation="gradient" />
+      </view>
+      <kg-empty wx:elif="{{loadErr}}" icon="wifi-off" title="搜索失败：{{loadErr}}" ctaText="重试" bind:cta="onSubmit" />
+      <block wx:else>
+        <!-- 题号直达 -->
+        <kg-card wx:if="{{codeHit}}" clickable class="qitem hit" data-id="{{codeHit.id}}" bind:click="onToggle">
+          <view class="q-top">
+            <kg-tag tone="brand">题号直达</kg-tag>
+            <text class="q-code num">{{codeHit.code}}</text>
+            <kg-tag tone="module" module="{{codeHit.module}}">{{codeHit.modLabel}}</kg-tag>
+          </view>
+          <view class="stem q-text"><text wx:for="{{codeHit.segs}}" wx:key="index" class="{{item.hi ? 'hi' : ''}}">{{item.t}}</text></view>
+          <view wx:if="{{detailWant === codeHit.id && detailId !== codeHit.id}}" class="q-loading"><t-skeleton theme="text" animation="gradient" /></view>
+          <view wx:if="{{detail && detailId === codeHit.id}}" class="q-detail">
+            <kg-question-view options="{{detail.options}}" answer="{{detail.answer}}" explanation="{{detail.explanation}}" dense />
+            <view class="d-acts">
+              <kg-button variant="secondary" size="sm" icon="sparkles" bind:click="onAsk">AI 详解本题</kg-button>
+              <kg-button variant="text" size="sm" icon="copy" bind:click="onCopyLink">复制题号</kg-button>
+            </view>
+          </view>
+        </kg-card>
+
+        <!-- 题目 -->
+        <view wx:if="{{qItems.length}}" class="sec">
+          <kg-section-header title="题目 · {{qTotal}}" />
+          <kg-card wx:for="{{qItems}}" wx:key="id" clickable class="qitem" data-id="{{item.id}}" bind:click="onToggle">
+            <view class="q-top">
+              <text class="q-code num">{{item.code}}</text>
+              <kg-tag wx:if="{{item.realLabel}}" tone="warn">{{item.realLabel}}</kg-tag>
+              <kg-tag tone="module" module="{{item.module}}">{{item.modLabel}}</kg-tag>
+            </view>
+            <view class="stem q-text"><text wx:for="{{item.segs}}" wx:for-item="s" wx:key="index" class="{{s.hi ? 'hi' : ''}}">{{s.t}}</text></view>
+            <view wx:if="{{detailWant === item.id && detailId !== item.id}}" class="q-loading"><t-skeleton theme="text" animation="gradient" /></view>
+            <view wx:if="{{detail && detailId === item.id}}" class="q-detail">
+              <kg-question-view options="{{detail.options}}" answer="{{detail.answer}}" explanation="{{detail.explanation}}" dense />
+              <view class="d-acts">
+                <kg-button variant="secondary" size="sm" icon="sparkles" bind:click="onAsk">AI 详解本题</kg-button>
+                <kg-button variant="text" size="sm" icon="copy" bind:click="onCopyLink">复制题号</kg-button>
+              </view>
+            </view>
+          </kg-card>
+          <kg-button wx:if="{{hasMore}}" variant="ghost" size="md" block loading="{{moreLoading}}" disabled="{{moreLoading}}" class="more" bind:click="onLoadMore">加载更多</kg-button>
+        </view>
+
+        <!-- 考点 -->
+        <view wx:if="{{topics.length}}" class="sec">
+          <kg-section-header title="考点" />
+          <kg-card wx:for="{{topics}}" wx:key="code" clickable chevron padding="{{12}}" class="titem" data-code="{{item.code}}" data-module="{{item.module}}" bind:click="onTopic">
+            <view class="t-l">
+              <view class="t-name"><text wx:for="{{item.segs}}" wx:for-item="s" wx:key="index" class="{{s.hi ? 'hi' : ''}}">{{s.t}}</text></view>
+              <text class="t-sub">{{item.sub}}</text>
+            </view>
+          </kg-card>
+        </view>
+
+        <!-- 试卷 -->
+        <view wx:if="{{papers.length}}" class="sec">
+          <kg-section-header title="试卷" />
+          <kg-card wx:for="{{papers}}" wx:key="id" clickable chevron padding="{{12}}" class="titem" data-id="{{item.id}}" bind:click="onPaper">
+            <view class="t-l">
+              <view class="t-name"><text wx:for="{{item.segs}}" wx:for-item="s" wx:key="index" class="{{s.hi ? 'hi' : ''}}">{{s.t}}</text></view>
+              <text class="t-sub">{{item.sub}}</text>
+            </view>
+          </kg-card>
+        </view>
+
+        <!-- 申论真题 -->
+        <view wx:if="{{shenlun.length}}" class="sec">
+          <kg-section-header title="申论真题" />
+          <kg-card wx:for="{{shenlun}}" wx:key="id" clickable chevron padding="{{12}}" class="titem" bind:click="onShenlun">
+            <view class="t-l">
+              <view class="t-name"><text wx:for="{{item.segs}}" wx:for-item="s" wx:key="index" class="{{s.hi ? 'hi' : ''}}">{{s.t}}</text></view>
+              <text class="t-sub">{{item.sub}}</text>
+            </view>
+          </kg-card>
+        </view>
+
+        <!-- 申论素材 -->
+        <view wx:if="{{mats.length}}" class="sec">
+          <kg-section-header title="申论素材" />
+          <kg-card wx:for="{{mats}}" wx:key="id" clickable chevron padding="{{12}}" class="titem" bind:click="onShenlun">
+            <view class="t-l">
+              <text class="t-sub">{{item.head}}</text>
+              <view class="mt-content"><text wx:for="{{item.segs}}" wx:for-item="s" wx:key="index" class="{{s.hi ? 'hi' : ''}}">{{s.t}}</text></view>
+            </view>
+          </kg-card>
+        </view>
+
+        <kg-empty
+          wx:if="{{isEmpty}}"
+          icon="search"
+          title="没有找到「{{q}}」相关内容"
+          desc="可尝试题号（如 ZL-JQ-2024-000914）、题干关键词或考点名"
+        />
+      </block>
+    </block>
+
+    <!-- 输入态：最近搜索 -->
+    <view wx:else class="idle">
+      <block wx:if="{{hist.length}}">
+        <kg-section-header title="最近搜索" />
+        <view class="hist-chips">
+          <view wx:for="{{hist}}" wx:key="*this" class="hist-chip" hover-class="hist-chip--hover" role="button" aria-label="搜索 {{item}}" data-h="{{item}}" bind:tap="onHist">
+            <l-icon name="clock" size="16" tone="muted" />
+            <text class="hist-chip-t">{{item}}</text>
+          </view>
+        </view>
+        <kg-button variant="text" size="sm" icon="trash-2" bind:click="onClearHist">清空历史</kg-button>
+      </block>
+      <kg-empty
+        wx:else
+        compact
+        icon="search"
+        title="搜题、考点、试卷、申论"
+        desc="支持题号语义码（如 ZL-JQ-2024-000914）、题干关键词、考点名、试卷名、申论真题/素材"
+      />
+    </view>
+  </view>
+</scroll-view>

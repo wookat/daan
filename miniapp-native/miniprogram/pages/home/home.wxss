@@ -563,3 +563,69 @@
   gap: var(--sp-8);
   margin-top: var(--sp-16);
 }
+
+/* 全局搜索入口（品牌渐变头上，白字） */
+.searchbar {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  height: 36px;
+  padding: 0 var(--sp-12);
+  margin-bottom: var(--sp-12);
+  border-radius: var(--r-full);
+  background: var(--brand-press);
+  color: var(--on-brand);
+}
+
+.searchbar--hover {
+  opacity: 0.85;
+}
+
+.searchbar-t {
+  font-size: var(--fs-sub);
+  color: var(--on-brand-2);
+}
+
+/* 续做卡 */
+.resumes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  margin-bottom: var(--card-gap);
+}
+
+.rs-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+}
+
+.rs-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.rs-t {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.rs-s {
+  font-size: var(--fs-sub);
+  color: var(--ink-3);
+}
+
+.rs-x {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-full);
+}

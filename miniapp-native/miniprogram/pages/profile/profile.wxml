@@ -56,6 +56,12 @@
       <t-cell title="学习提醒" description="{{reminderOn ? '已开启 · 点击关闭' : '每天提醒我打卡刷题'}}" arrow hover bind:click="onReminder">
         <view slot="left-icon" class="row-ico bg-streak"><l-icon name="alarm-clock" size="20" tone="streak" /></view>
       </t-cell>
+      <t-cell title="练习历史" description="逐题回看 · 错题重练" arrow hover bind:click="onPracticeHistory">
+        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="clock" size="20" tone="brand" /></view>
+      </t-cell>
+      <t-cell title="离线题包" description="{{offlineN ? offlineN + ' 个题包' : '未下载'}}" arrow hover bind:click="onOffline">
+        <view slot="left-icon" class="row-ico bg-info"><l-icon name="package" size="20" tone="info" /></view>
+      </t-cell>
     </t-cell-group>
 
     <t-cell-group class="cells">

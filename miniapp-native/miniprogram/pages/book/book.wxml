@@ -61,6 +61,18 @@
       <kg-button variant="primary" tone="inverse" size="md" bind:click="onReviewFromCard">开始复习</kg-button>
     </view>
 
+    <!-- 复习断点续做（H5 resumecard） -->
+    <kg-card wx:if="{{resumeInfo}}" variant="soft" class="resumecard">
+      <view class="rs-row">
+        <view class="rs-grow">
+          <view class="rs-tr"><l-icon name="clock" size="16" tone="warn" /><text class="rs-t">上次复习中断在第 {{resumeInfo.rIdx + 1}}/{{resumeInfo.items.length}} 题</text></view>
+          <text class="rs-s">进度已保留，可原位继续</text>
+        </view>
+        <kg-button variant="text" size="md" bind:click="onDiscardResume">放弃</kg-button>
+        <kg-button variant="secondary" size="lg" bind:click="onResumeReview">继续复习</kg-button>
+      </view>
+    </kg-card>
+
     <!-- 本月复盘 -->
     <kg-card wx:if="{{recap.total}}" variant="raised" class="recap">
       <view class="recap-h" hover-class="r-exit--hover" bind:tap="onToggleRecap">
@@ -94,9 +106,14 @@
       <view wx:if="{{tab !== 'fav'}}" class="filterbtn {{sortBy !== 'time' || filterMod || filterType ? 'fon' : ''}}" hover-class="filterbtn--hover" bind:tap="onFilterOpen">
         <l-icon name="sliders-horizontal" size="20" tone="{{sortBy !== 'time' || filterMod || filterType ? 'brand-text' : 'ink-2'}}" />
       </view>
+      <kg-button wx:if="{{tab !== 'fav' && shown.length}}" variant="{{batchMode ? 'primary' : 'secondary'}}" size="md" bind:click="onToggleBatch">{{batchMode ? '完成' : '批量'}}</kg-button>
     </view>
 
-    <view wx:if="{{tab !== 'fav' && todoCount}}" class="redo"><kg-button variant="primary" size="lg" block icon="shuffle" bind:click="onRedo">错题重练（抽 10 题）</kg-button></view>
+    <view wx:if="{{tab !== 'fav' && todoCount && !batchMode}}" class="redo"><kg-button variant="primary" size="lg" block icon="shuffle" bind:click="onRedo">{{filterMod || filterType ? '重练筛选错题（抽 10 题）' : '错题重练（抽 10 题）'}}</kg-button></view>
+    <view wx:if="{{tab !== 'fav' && !batchMode && (todoCount || doneCount)}}" class="tools">
+      <kg-button variant="secondary" size="md" icon="sparkles" bind:click="onAiAnalysis">AI 错题分析</kg-button>
+      <kg-button variant="secondary" size="md" icon="pencil-line" bind:click="onManualOpen">手动录入答案</kg-button>
+    </view>
 
     <!-- 加载态 -->
     <block wx:if="{{loading}}">
@@ -115,9 +132,11 @@
         ctaText="{{tab === 'todo' && !filterMod && !filterType ? '去刷题' : ''}}"
         ctaTo="/pages/practice/practice"
       />
-      <kg-card wx:for="{{shown}}" wx:key="id" variant="raised" clickable class="mrow" data-index="{{index}}" bind:click="onToggle">
+      <kg-card wx:for="{{shown}}" wx:key="id" variant="raised" clickable selected="{{batchMode && selIds[item.id]}}" class="mrow" data-index="{{index}}" bind:click="onToggle">
         <view class="m-h">
+          <view wx:if="{{batchMode}}" class="bchk {{selIds[item.id] ? 'on' : ''}}"><l-icon wx:if="{{selIds[item.id]}}" name="check" size="16" tone="on-brand" /></view>
           <kg-tag tone="module" module="{{item.module}}">{{item.modName}}</kg-tag>
+          <kg-tag wx:if="{{item.typeName && item.typeName !== item.modName}}" tone="neutral">{{item.typeName}}</kg-tag>
           <kg-tag wx:if="{{item.tag3_name}}" tone="neutral">{{item.tag3_name}}</kg-tag>
           <kg-tag wx:if="{{item.error_reason}}" tone="warn">{{item.error_reason}}</kg-tag>
           <kg-tag wx:if="{{item.times > 1}}" tone="bad">错 {{item.times}} 次</kg-tag>
@@ -137,6 +156,10 @@
             <text class="m-k">正确答案 <text class="okc">{{item.correct_answer}}</text></text>
           </view>
           <text wx:if="{{item.explanation}}" class="m-exp q-text" user-select>{{item.explanation}}</text>
+          <view wx:if="{{item.attempts && item.attempts.length}}" class="m-att">
+            <text class="m-att-t">作答记录</text>
+            <text wx:for="{{item.attempts}}" wx:for-item="a" wx:key="*this" class="m-att-row">{{a}}</text>
+          </view>
           <view class="m-ops" catch:tap="noop">
             <kg-button variant="secondary" size="sm" icon="{{item.mastered ? 'rotate-ccw' : 'check'}}" data-index="{{index}}" bind:click="onMaster">{{item.mastered ? '移回待掌握' : '标记已掌握'}}</kg-button>
             <kg-button wx:if="{{item.question_id}}" variant="ghost" size="sm" icon="ellipsis" data-kind="mistake" data-index="{{index}}" data-qid="{{item.question_id}}" bind:click="onOpsOpen">更多</kg-button>
@@ -175,6 +198,83 @@
     </block>
   </view>
 </scroll-view>
+
+<!-- 批量操作条（H5 batchbar） -->
+<view wx:if="{{batchMode && tab !== 'fav' && !reviewing}}" class="batchbar">
+  <kg-button variant="text" size="md" bind:click="onSelAll">{{selCount === shown.length ? '取消全选' : '全选'}}</kg-button>
+  <text class="batch-n">已选 {{selCount}}</text>
+  <view class="batch-grow" />
+  <kg-button wx:if="{{tab === 'todo'}}" variant="secondary" size="lg" disabled="{{!selCount || batchBusy}}" data-on="1" bind:click="onBatchMaster">标已掌握</kg-button>
+  <kg-button wx:else variant="secondary" size="lg" disabled="{{!selCount || batchBusy}}" data-on="0" bind:click="onBatchMaster">恢复复习</kg-button>
+  <kg-button variant="secondary" size="lg" tone="bad" disabled="{{!selCount || batchBusy}}" bind:click="onBatchDel">删除</kg-button>
+</view>
+
+<!-- AI 错题分析 -->
+<kg-sheet visible="{{aiOpen}}" title="AI 错题分析" bind:close="onAiClose">
+  <view wx:if="{{aiLoading}}" class="ai-loading">
+    <t-skeleton theme="paragraph" animation="gradient" />
+    <text class="side-s">正在分析你的错题与作答数据，约需 30-60 秒…</text>
+  </view>
+  <rich-text wx:else nodes="{{aiHtml}}" class="md" />
+  <view slot="footer" class="sheet-acts"><kg-button wx:if="{{!aiLoading}}" variant="ghost" size="md" block icon="rotate-ccw" bind:click="onAiRetry">重新分析</kg-button></view>
+</kg-sheet>
+
+<!-- 手动录入答案（按卷） -->
+<kg-sheet visible="{{manualOpen}}" title="手动录入答案" bind:close="onManualClose">
+  <block wx:if="{{!manualPaper}}">
+    <text class="sheet-k">输入卷面上的卷码</text>
+    <view class="codebar">
+      <t-input value="{{manualCode}}" placeholder="如 A1B2C3D4（封面/答题卡顶部）" borderless confirm-type="done" bind:change="onManualCode" bind:enter="onManualLookup" />
+    </view>
+  </block>
+  <block wx:else>
+    <text class="scan-sum">{{manualPaper.title || '试卷'}} · 卷码 {{manualPaper.code}} · 共 {{manualPaper.n}} 题 · 已选 {{manualPickedCount}}</text>
+    <view class="scan-list">
+      <view wx:for="{{manualRows}}" wx:key="no" class="manual-row">
+        <text class="scan-no num">{{item.no}}</text>
+        <text wx:for="{{item.opts}}" wx:for-item="o" wx:key="L" class="manual-opt num {{o.on ? 'on' : ''}}" data-no="{{item.no}}" data-l="{{o.L}}" bind:tap="onManualPick">{{o.L}}</text>
+      </view>
+    </view>
+  </block>
+  <view slot="footer" class="sheet-acts">
+    <kg-button wx:if="{{!manualPaper}}" variant="primary" size="lg" block loading="{{manualLoading}}" bind:click="onManualLookup">{{manualLoading ? '查找中…' : '查找试卷'}}</kg-button>
+    <block wx:else>
+      <kg-button variant="primary" size="lg" block disabled="{{!manualPickedCount}}" loading="{{manualSubmitting}}" bind:click="onManualSubmit">{{manualSubmitting ? '判分中…' : '交卷判分（' + manualPickedCount + ' 题）'}}</kg-button>
+      <kg-button variant="text" size="md" block bind:click="onManualBack">‹ 换一份试卷</kg-button>
+    </block>
+  </view>
+</kg-sheet>
+
+<!-- 对答案结果 -->
+<kg-sheet visible="{{scanOpen && scanResult !== null}}" title="对答案结果 · {{scanResult.title || '试卷'}}" bind:close="onScanClose">
+  <block wx:if="{{scanResult}}">
+    <text class="scan-sum">卷码 {{scanResult.code}} · 已作答 {{scanResult.answered}}/{{scanResult.total}} · 答对 <text class="scan-good num">{{scanResult.correct}}</text> 题{{scanResult.saved ? ' · 已记入做题记录' : ''}}</text>
+    <view class="scan-list">
+      <view wx:for="{{scanRows}}" wx:key="no" class="scan-row">
+        <text class="scan-no num">{{item.no}}</text>
+        <text class="scan-pick {{item.cls}}">{{item.pickText}}</text>
+        <text class="scan-ans">答案 {{item.answer}}</text>
+        <text class="scan-mark">{{item.mark}}</text>
+      </view>
+    </view>
+  </block>
+  <view slot="footer" class="sheet-acts"><kg-button variant="primary" size="lg" block bind:click="onScanDone">完成</kg-button></view>
+</kg-sheet>
+
+<!-- 强化建议（复习清零后） -->
+<kg-sheet visible="{{!reviewing && reinforce !== null}}" title="本轮复习完成！趁热打铁强化一下？" bind:close="onReinforceClose">
+  <view wx:if="{{reinforce}}" class="rf">
+    <text class="rf-name">{{reinforce.tag3_name || reinforce.submodule}}</text>
+    <text class="rf-meta">{{reinforceMeta}}</text>
+  </view>
+  <view slot="footer" class="sheet-acts">
+    <kg-button variant="primary" size="lg" block bind:click="onStartReinforce">强化 5 道新题（未做过）</kg-button>
+    <view class="rf-row2">
+      <kg-button wx:if="{{reinforceItems.length > 1}}" variant="text" size="md" bind:click="onSwapReinforce">换个考点</kg-button>
+      <kg-button variant="text" size="md" bind:click="onReinforceClose">下次再说</kg-button>
+    </view>
+  </view>
+</kg-sheet>
 
 <!-- 复习清零庆祝态 -->
 <t-popup visible="{{celebrate}}" placement="center" bind:visible-change="onCelebrateVisible">

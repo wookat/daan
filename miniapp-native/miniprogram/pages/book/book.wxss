@@ -638,3 +638,246 @@
 .sheet-acts {
   margin-top: var(--sp-16);
 }
+
+/* ---- 复习断点续做 ---- */
+.resumecard {
+  display: block;
+  margin-bottom: var(--card-gap);
+}
+
+.rs-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+}
+
+.rs-grow {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.rs-tr {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
+
+.rs-t {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.rs-s {
+  font-size: var(--fs-sub);
+  color: var(--ink-3);
+}
+
+/* ---- 工具行 / 批量 ---- */
+.tools {
+  display: flex;
+  gap: var(--sp-8);
+  margin-bottom: var(--sp-12);
+}
+
+.bchk {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--r-full);
+  border: 2px solid var(--line-strong);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.bchk.on {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+.batchbar {
+  position: fixed;
+  left: var(--page-x);
+  right: var(--page-x);
+  bottom: calc(50px + var(--sp-12) + env(safe-area-inset-bottom));
+  z-index: var(--z-bar);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--sh-2);
+  padding: var(--sp-8) var(--sp-12);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+}
+
+.batch-n {
+  font-size: var(--fs-sub);
+  color: var(--ink-3);
+}
+
+.batch-grow {
+  flex: 1;
+}
+
+/* ---- 作答记录 ---- */
+.m-att {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  margin-top: var(--sp-8);
+  padding-top: var(--sp-8);
+  border-top: 1px solid var(--line);
+}
+
+.m-att-t {
+  font-size: var(--fs-caption);
+  color: var(--ink-4);
+}
+
+.m-att-row {
+  font-size: var(--fs-sub);
+  color: var(--ink-3);
+}
+
+/* ---- AI 分析 / 按卷录入 / 对答案 ---- */
+.ai-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-12);
+  padding: var(--sp-12) 0;
+}
+
+.side-s {
+  font-size: var(--fs-sub);
+  color: var(--ink-3);
+}
+
+.md {
+  display: block;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.sheet-k {
+  display: block;
+  font-size: var(--fs-caption);
+  color: var(--ink-4);
+  margin: var(--sp-8) 0;
+}
+
+.codebar {
+  background: var(--fill);
+  border-radius: var(--r-sm);
+  padding: 0 var(--sp-8);
+}
+
+.scan-sum {
+  display: block;
+  font-size: var(--fs-sub);
+  color: var(--ink-3);
+  margin: var(--sp-4) 0 var(--sp-8);
+}
+
+.scan-good {
+  color: var(--ok);
+}
+
+.scan-list {
+  padding-bottom: var(--sp-8);
+}
+
+.scan-row {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--fs-sub);
+}
+
+.scan-no {
+  width: 36px;
+  color: var(--ink-4);
+}
+
+.scan-pick {
+  flex: 1;
+  color: var(--ink);
+}
+
+.scan-pick.good {
+  color: var(--ok);
+}
+
+.scan-pick.bad {
+  color: var(--bad);
+}
+
+.scan-ans {
+  width: 72px;
+  color: var(--ink-3);
+}
+
+.scan-mark {
+  width: 24px;
+  text-align: right;
+  color: var(--ink-4);
+}
+
+.manual-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  min-height: var(--hit-min);
+  padding: var(--sp-4) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.manual-opt {
+  flex: 1;
+  text-align: center;
+  min-height: 36px;
+  line-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-xs);
+  font-size: var(--fs-body);
+  color: var(--ink-2);
+}
+
+.manual-opt.on {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--on-brand);
+}
+
+/* ---- 强化建议 ---- */
+.rf {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: var(--sp-8) 0;
+}
+
+.rf-name {
+  font-size: var(--fs-h3);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.rf-meta {
+  font-size: var(--fs-sub);
+  color: var(--ink-3);
+  line-height: 1.5;
+}
+
+.rf-row2 {
+  display: flex;
+  justify-content: center;
+  gap: var(--sp-16);
+  margin-top: var(--sp-8);
+}

@@ -2,6 +2,11 @@
 <navbar title="刷题" brand />
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
+    <!-- 全局搜索入口（H5 toprow） -->
+    <view class="searchbar" hover-class="searchbar--hover" aria-role="button" bind:tap="onSearch">
+      <l-icon name="search" size="16" tone="on-brand" />
+      <text class="searchbar-t">搜题目 / 考点 / 试卷</text>
+    </view>
     <!-- 今日目标 hero（kg-hero-card 小程序版未落地，页内按 COMPONENTS §2.5 结构实现） -->
     <view class="hero">
       <view class="hero-deco" />
@@ -30,6 +35,30 @@
           >{{item}}题</view>
         </view>
       </view>
+    </view>
+
+    <!-- 续做卡（H5 resumes） -->
+    <view wx:if="{{practiceResume || reviewResume}}" class="resumes">
+      <kg-card wx:if="{{practiceResume}}" variant="raised" padding="{{12}}">
+        <view class="rs-row">
+          <view class="rs-main">
+            <text class="rs-t">有一组未做完的练习</text>
+            <text class="rs-s">{{practiceResume.name}} · 已做 {{practiceResume.done}}/{{practiceResume.total}} 题</text>
+          </view>
+          <kg-button variant="text" size="sm" bind:click="onPrContinue">去继续 ›</kg-button>
+          <view class="rs-x" aria-role="button" aria-label="放弃未完成练习" bind:tap="onPrDrop"><l-icon name="x" size="16" tone="muted" /></view>
+        </view>
+      </kg-card>
+      <kg-card wx:if="{{reviewResume}}" variant="raised" padding="{{12}}">
+        <view class="rs-row">
+          <view class="rs-main">
+            <text class="rs-t">有一次未完成的错题复习</text>
+            <text class="rs-s">中断在第 {{reviewResume.rIdx + 1}}/{{reviewResume.items.length}} 题</text>
+          </view>
+          <kg-button variant="text" size="sm" bind:click="onRvContinue">去继续 ›</kg-button>
+          <view class="rs-x" aria-role="button" aria-label="放弃未完成复习" bind:tap="onRvDrop"><l-icon name="x" size="16" tone="muted" /></view>
+        </view>
+      </kg-card>
     </view>
 
     <!-- 今日任务三件套 -->
@@ -126,7 +155,7 @@
     </kg-card>
 
     <!-- 专项练习入口（kg-module-card 小程序版未落地，页内按 §2.2 一行式实现） -->
-    <kg-section-header title="专项练习" />
+    <kg-section-header title="专项练习" more="题型/真题筛选" to="/pkgLearn/setup/setup" />
     <view class="grid">
       <view
         wx:for="{{mods}}"
