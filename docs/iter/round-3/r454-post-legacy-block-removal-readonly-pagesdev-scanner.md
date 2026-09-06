@@ -63,7 +63,7 @@
 ### 处置论证：pages.dev 要不要 301 到正式域名
 
 - 收益：切断扫描器拿「完整壳 + 实时 API」的第二入口（第一入口旧块 R453 已删）；防未来重复收录。
-- 成本/约束：`deploy/cf-pages/_routes.json` 把 `/`、`/index.html`、`/static/*` **排除在函数之外**（R271 后静态层直出，保首屏与函数配额），函数里按 `url.hostname` 跳转覆盖不到首页壳；要么把 `/` 收回函数（改动 R271 设计，需重测首屏/缓存），要么用 CF 账户级 Bulk Redirects（本仓库不可见的宿主配置）。
+- 成本/约束：`deploy/cf-pages/_routes.json` 把 `/`、`/index.html`、`/static/*` **排除在函数之外**（Pages 迁移原始设计 `3d28c33`：README「静态层由 Pages CDN 直出」；`/assets/*` 后来在 #163 收回函数），函数里按 `url.hostname` 跳转覆盖不到首页壳；要么把 `/` 收回函数（改动 `3d28c33` 静态层设计，需重测首屏/缓存），要么用 CF 账户级 Bulk Redirects（本仓库不可见的宿主配置）。
 - 现状危害：7 天 0 POST、0 库内写入、0 引擎抓取、日报已单列 → **无实际损失**。
 - 决定：**登记 P3 不动手**；触发条件写进 SKILL：pages.dev 出现 POST `/api/track`/作答、或引擎 UA 抓 pages.dev、或 offhost 日均 > 50，再立项（方案优先 Bulk Redirects，避免改 `_routes.json`）。
 
