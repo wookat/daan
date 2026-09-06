@@ -60,9 +60,34 @@ def test_plan_counts_last_night_review_as_due_at_push_hour(client, monkeypatch):
     task = _review_task(uid)
     assert task and task["sub"] == "还有 1 道到期" and task["done"] is False
 
-    # 今日新记的错题立即到期（next_review=now）但不入今日计划的 due，避免复习任务被新错题变回未完成
+    # 今日新记的错题立即到期（next_review=now）但不入今日计划的 due，避免复习任务被新错题变回未完成；
+    # R440：副标把这 1 道点出来，与首页「今日到期 2 题」对得上
     _mistake(client, uid, q_new)
     assert db.due_review_count(uid) == 2
     task = _review_task(uid)
-    assert task and task["sub"] == "还有 1 道到期"
+    assert task and task["sub"] == "还有 1 道到期 · 另 1 道今日新错可随时巩固" and task["target"] == 1
+    _cleanup()
+
+
+def test_r440_review_sub_reconciles_home_due_count(client, monkeypatch):
+    """昨晚到期题今早复习完 + 今日又新错 1 道：首页任务卡「今日到期 1 题」，计划副标不能只说「已清」。"""
+    _cleanup()
+    q_old, q_new = seed_questions(2, ("ziliao",))[:2]
+    uid = PFX + "sub"
+    db.save_user_profile(uid, {"exam_date": "2026-12-01", "daily_minutes": 60, "base_level": "mid"})
+    monkeypatch.setattr(db.time, "time", lambda: LATE_YESTERDAY)
+    m_old = _mistake(client, uid, q_old)
+    db.record_review(m_old, True, uid)
+
+    monkeypatch.setattr(db.time, "time", lambda: PUSH_HOUR_TODAY)
+    db.record_review(m_old, True, uid)  # 今早复习掉 → due=0, reviewed=1
+    task = _review_task(uid)
+    assert task and task["done"] is True and task["sub"] == "今日到期错题已清"
+
+    _mistake(client, uid, q_new)  # 今日新错：首页 due_mistakes=1，计划任务不回退
+    assert db.daily_plan(uid)["due_mistakes"] == 1
+    task = _review_task(uid)
+    assert task and task["done"] is True and task["target"] == 1
+    assert task["sub"] == "今日到期错题已清 · 另 1 道今日新错可随时巩固"
+    assert plan._review_sub(0, 0) == "今日到期错题已清"
     _cleanup()

@@ -51,13 +51,15 @@ def test_answer_log_uses_client_ts_and_falls_back(client):
     try:
         now = time.time()
         yday_ms = int((now - 86400) * 1000)
+        # 「2 h 前」但不跌出中国日历日，否则 CST 00:00–02:00 跑测试会把它算进昨天的 checkin 桶
+        t2 = max(now - 7200, db.cn_day_start(now) + 1)
         r = client.post(
             "/api/answer_log",
             json={
                 "uid": UID,
                 "items": [
                     {"qid": 1, "module": "yanyu", "correct": 1, "t": yday_ms},
-                    {"qid": 1, "module": "yanyu", "correct": 0, "t": now - 7200},
+                    {"qid": 1, "module": "yanyu", "correct": 0, "t": t2},
                     {"qid": 1, "module": "yanyu", "correct": 0, "t": now - 40 * 86400},
                     {"qid": 1, "module": "yanyu", "correct": 0},
                 ],
@@ -66,7 +68,7 @@ def test_answer_log_uses_client_ts_and_falls_back(client):
         assert r.status_code == 200 and r.json()["saved"] == 4
         rows = _rows()
         assert rows[0] == pytest.approx(yday_ms / 1000, abs=1e-3)
-        assert rows[1] == pytest.approx(now - 7200, abs=1e-3)
+        assert rows[1] == pytest.approx(t2, abs=1e-3)
         assert rows[2] >= now and rows[3] >= now
         assert rows[2] == rows[3]
 

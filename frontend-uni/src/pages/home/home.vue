@@ -1286,11 +1286,11 @@ export default {
 .hero-top { display: flex; justify-content: space-between; align-items: center; }
 .hero-goal { font-size: 26rpx; color: rgba(255, 255, 255, 0.85); }
 .hero-n { font-size: 36rpx; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
-.hero-streak { display: inline-flex; align-items: center; gap: 8rpx; font-size: 22rpx; color: #fff; background: rgba(255, 255, 255, 0.18); border-radius: 8rpx; padding: 4rpx 16rpx; }
+.hero-streak { display: inline-flex; align-items: center; gap: 8rpx; font-size: 24rpx; color: #fff; background: rgba(255, 255, 255, 0.18); border-radius: 8rpx; padding: 4rpx 16rpx; }
 .hero-bar { height: 12rpx; background: rgba(255, 255, 255, 0.25); border-radius: 999rpx; margin: 16rpx 0 24rpx; overflow: hidden; }
-.hero-ds { display: block; font-size: 22rpx; color: rgba(255, 255, 255, 0.85); margin: -8rpx 0 20rpx; }
-.hero-ds-arc { margin-left: 16rpx; text-decoration: underline; color: rgba(255, 255, 255, 0.75); }
-.sz-arc { margin-left: 12rpx; text-decoration: underline; color: var(--ink-2); }
+.hero-ds { display: block; font-size: 24rpx; color: rgba(255, 255, 255, 0.85); margin: -8rpx 0 20rpx; }
+.hero-ds-arc { display: inline-block; margin: -12px 0 -12px 8rpx; padding: 12px 8rpx; text-decoration: underline; color: rgba(255, 255, 255, 0.75); }
+.sz-arc { display: inline-block; margin: -12px 0 -12px 4rpx; padding: 12px 8rpx; text-decoration: underline; color: var(--ink-2); }
 .hero-fill { height: 100%; background: var(--card); border-radius: 999rpx; transition: width 0.3s; }
 .hero-acts { display: flex; gap: 20rpx; }
 .hero-btn { min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 20rpx; font-size: 28rpx; font-weight: 600; }
@@ -1305,15 +1305,15 @@ export default {
 /* 周报卡 */
 .weekly-c { display: flex; align-items: center; gap: 24rpx; padding: 26rpx 32rpx; }
 .weekly-t { font-size: 29rpx; font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 10rpx; }
-.weekly-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
+.weekly-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 4rpx; }
 .dot { width: 16rpx; height: 16rpx; border-radius: 50%; background: #ef4444; }
 
 /* 时政卡 */
 .szcard { display: flex; align-items: center; gap: 24rpx; padding: 26rpx 32rpx; }
 .sz-ico { width: 80rpx; height: 80rpx; border-radius: 20rpx; background: var(--warn-soft); display: flex; align-items: center; justify-content: center; font-size: 38rpx; flex-shrink: 0; }
 .sz-t { font-size: 29rpx; font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 8rpx; }
-.sz-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
-.tag { display: inline-flex; align-items: center; height: 40rpx; padding: 0 16rpx; border-radius: 12rpx; font-size: 21rpx; font-weight: 500; }
+.sz-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 4rpx; }
+.tag { display: inline-flex; align-items: center; height: 40rpx; padding: 0 16rpx; border-radius: 12rpx; font-size: 24rpx; font-weight: 500; }
 .tag.warn { background: var(--warn-soft); color: var(--warn-strong); }
 .tag.ok { background: var(--ok-soft); color: var(--ok-strong); }
 .mini-btn { flex-shrink: 0; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 28rpx; background: var(--brand-soft); color: var(--brand-text); border-radius: 20rpx; font-size: 25rpx; font-weight: 600; }
@@ -1324,14 +1324,14 @@ export default {
 .modrow { display: flex; align-items: center; gap: 24rpx; padding: 28rpx 32rpx; margin-bottom: 20rpx; }
 .mod-ico { width: 88rpx; height: 88rpx; border-radius: 20rpx; display: flex; align-items: center; justify-content: center; font-size: 40rpx; flex-shrink: 0; }
 .mod-name { display: block; font-size: 30rpx; font-weight: 600; color: var(--ink); }
-.mod-sub { display: block; font-size: 23rpx; color: var(--ink-2); margin-top: 4rpx; }
+.mod-sub { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 4rpx; }
 .mod-bar { width: 120rpx; height: 10rpx; background: var(--soft-bg); border-radius: 999rpx; overflow: hidden; flex-shrink: 0; }
 .mod-fill { height: 100%; border-radius: 999rpx; }
 .mod-arrow { color: var(--ink-4); font-size: 30rpx; flex-shrink: 0; }
 
 .smart { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(120deg, var(--brand-soft), var(--brand-soft)); border: 1rpx solid var(--brand-soft-2); padding: 26rpx 32rpx; margin-bottom: 20rpx; }
 .smart-t { display: block; font-size: 28rpx; font-weight: 600; color: var(--brand-text); }
-.smart-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; }
+.smart-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 6rpx; }
 .smart-go { flex-shrink: 0; font-size: 26rpx; font-weight: 600; color: var(--brand-text); min-height: 44px; display: inline-flex; align-items: center; }
 
 /* 更多练习 */
@@ -1339,7 +1339,7 @@ export default {
 .more-c { margin: 0; padding: 28rpx 30rpx; display: flex; flex-direction: column; }
 .more-ico { width: 72rpx; height: 72rpx; border-radius: 18rpx; background: var(--fill); display: flex; align-items: center; justify-content: center; }
 .more-t { font-size: 29rpx; font-weight: 600; color: var(--ink); margin-top: 10rpx; }
-.more-s { font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
+.more-s { font-size: 24rpx; color: var(--ink-2); margin-top: 4rpx; }
 
 /* 通用卡片 */
 .card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); margin-bottom: 20rpx; padding: 28rpx 32rpx; }
@@ -1361,39 +1361,39 @@ export default {
 .guide { display: flex; align-items: center; gap: 16rpx; background: linear-gradient(120deg, var(--brand-soft), var(--brand-soft)); border: 1rpx solid var(--brand-soft-2); padding: 24rpx 26rpx; }
 .guide-l { flex: 1; min-height: 44px; display: flex; flex-direction: column; justify-content: center; }
 .guide-t { font-size: 28rpx; font-weight: 600; color: var(--brand-text); }
-.guide-s { font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; }
+.guide-s { font-size: 24rpx; color: var(--ink-2); margin-top: 6rpx; }
 .guide-btn { flex-shrink: 0; background: var(--brand); color: #fff; border-radius: 999rpx; padding: 0 26rpx; font-size: 24rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
-.guide-x { flex-shrink: 0; font-size: 22rpx; color: var(--ink-3); min-height: 44px; display: inline-flex; align-items: center; padding: 0 8rpx; }
+.guide-x { flex-shrink: 0; font-size: 24rpx; color: var(--ink-3); min-height: 44px; display: inline-flex; align-items: center; padding: 0 8rpx; }
 .plan-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6rpx; }
 .plan-t { font-size: 27rpx; font-weight: 600; color: var(--ink); }
-.plan-y { font-size: 21rpx; color: var(--ink-3); }
+.plan-y { font-size: 24rpx; color: var(--ink-3); }
 .plan-hr { display: flex; align-items: center; gap: 14rpx; }
-.plan-days { font-size: 21rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 999rpx; padding: 4rpx 14rpx; }
-.plan-edit { font-size: 22rpx; color: var(--ink-3); min-height: 44px; display: inline-flex; align-items: center; }
+.plan-days { font-size: 24rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 999rpx; padding: 4rpx 14rpx; }
+.plan-edit { font-size: 24rpx; color: var(--ink-3); min-height: 44px; display: inline-flex; align-items: center; }
 .plan-prog { display: flex; align-items: center; gap: 14rpx; margin: 8rpx 0 6rpx; }
 .plan-prog-bar { flex: 1; height: 10rpx; background: var(--brand-soft); border-radius: 999rpx; overflow: hidden; }
 .plan-prog-fill { height: 100%; background: var(--brand); border-radius: 999rpx; transition: width 0.3s; }
-.plan-prog-t { font-size: 21rpx; color: var(--ink-3); flex-shrink: 0; }
+.plan-prog-t { font-size: 24rpx; color: var(--ink-3); flex-shrink: 0; }
 .plan-row { display: flex; align-items: center; gap: 14rpx; min-height: 44px; border-top: 1rpx solid var(--line); }
 .plan-row:first-of-type { border-top: none; }
 .plan-row.task { gap: 16rpx; }
-.task-ck { width: 36rpx; height: 36rpx; border-radius: 50%; border: 2rpx solid var(--ink-4); flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 22rpx; color: #fff; box-sizing: border-box; }
+.task-ck { width: 36rpx; height: 36rpx; border-radius: 50%; border: 2rpx solid var(--ink-4); flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 24rpx; color: #fff; box-sizing: border-box; }
 .task-ck.on { background: #16a34a; border-color: #16a34a; }
 .task-main { flex: 1; display: flex; flex-direction: column; padding: 10rpx 0; }
 .plan-txt { flex: 1; font-size: 25rpx; color: var(--ink); }
 .plan-txt.tdone { color: var(--ink-3); text-decoration: line-through; }
-.task-sub { font-size: 21rpx; color: var(--ink-3); margin-top: 4rpx; }
+.task-sub { font-size: 24rpx; color: var(--ink-3); margin-top: 4rpx; }
 .plan-dot { width: 12rpx; height: 12rpx; border-radius: 50%; background: var(--brand); flex-shrink: 0; }
 .plan-dot.due { background: #f59e0b; }
 .plan-go { font-size: 24rpx; color: var(--brand-text); flex-shrink: 0; }
 .plan-focus { display: flex; align-items: center; gap: 10rpx; flex-wrap: wrap; border-top: 1rpx solid var(--line); padding-top: 14rpx; margin-top: 6rpx; }
-.plan-focus-k { font-size: 22rpx; color: var(--ink-3); margin-right: 4rpx; }
-.plan-fchip { font-size: 22rpx; color: var(--ink-2); background: var(--fill); border-radius: 999rpx; padding: 0 20rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
+.plan-focus-k { font-size: 24rpx; color: var(--ink-3); margin-right: 4rpx; }
+.plan-fchip { font-size: 24rpx; color: var(--ink-2); background: var(--fill); border-radius: 999rpx; padding: 0 20rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
 .plan-fchip.on { background: var(--brand-soft); color: var(--brand-text); font-weight: 600; }
 .pf-input { flex: 1; min-height: 44px; border: 1rpx solid var(--line); border-radius: 12rpx; padding: 0 20rpx; font-size: 26rpx; background: var(--fill); box-sizing: border-box; }
 .pf-date { min-height: 44px; display: inline-flex; align-items: center; border: 1rpx solid var(--line); border-radius: 12rpx; padding: 0 24rpx; font-size: 26rpx; color: var(--ink); background: var(--fill); box-sizing: border-box; }
 .pf-date.empty { color: var(--ink-3); }
-.pf-summary { margin-top: 8rpx; font-size: 23rpx; color: var(--ink-2); background: var(--brand-soft); border-radius: 12rpx; padding: 18rpx 22rpx; }
+.pf-summary { margin-top: 8rpx; font-size: 24rpx; color: var(--ink-2); background: var(--brand-soft); border-radius: 12rpx; padding: 18rpx 22rpx; }
 .pf-back { margin-top: 16rpx; text-align: center; font-size: 24rpx; color: var(--ink-3); min-height: 44px; display: flex; align-items: center; justify-content: center; }
 
 /* 回访召回卡 */
@@ -1401,7 +1401,7 @@ export default {
 .cbcard { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #f59e0b, #f97316); border: none; box-shadow: 0 6rpx 16rpx rgba(249, 115, 22, 0.25); padding: 24rpx 28rpx; }
 .cb-l { min-width: 0; }
 .cb-t { display: block; font-size: 28rpx; font-weight: 700; color: #ffffff; }
-.cb-s { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.85); margin-top: 4rpx; }
+.cb-s { display: block; font-size: 24rpx; color: rgba(255, 255, 255, 0.85); margin-top: 4rpx; }
 .cb-r { flex-shrink: 0; display: flex; align-items: center; gap: 16rpx; }
 .cb-go { background: rgba(255, 255, 255, 0.2); color: #ffffff; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 12rpx 26rpx; }
 .cb-x { color: rgba(255, 255, 255, 0.75); font-size: 26rpx; padding: 8rpx; }
@@ -1414,37 +1414,37 @@ export default {
 .duebar-l { display: flex; align-items: center; gap: 18rpx; min-width: 0; }
 .duebar-txts { min-width: 0; }
 .duebar-t { display: block; font-size: 28rpx; font-weight: 700; color: #ffffff; }
-.duebar-s { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.75); margin-top: 4rpx; }
+.duebar-s { display: block; font-size: 24rpx; color: rgba(255, 255, 255, 0.75); margin-top: 4rpx; }
 .duebar-go { flex-shrink: 0; background: rgba(255, 255, 255, 0.18); color: #ffffff; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 12rpx 30rpx; }
 .taskcard { padding: 24rpx 28rpx; }
 .tk-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8rpx; }
 .tk-t { font-size: 28rpx; font-weight: 700; }
-.tk-n { font-size: 22rpx; color: var(--brand-text); font-weight: 700; background: var(--brand-soft); border-radius: 8rpx; padding: 2rpx 14rpx; }
+.tk-n { font-size: 24rpx; color: var(--brand-text); font-weight: 700; background: var(--brand-soft); border-radius: 8rpx; padding: 2rpx 14rpx; }
 .tk-row { display: flex; align-items: center; gap: 18rpx; padding: 16rpx 0; border-top: 1rpx solid var(--line); }
 .tk-row:first-of-type { border-top: none; }
-.tk-ck { flex-shrink: 0; width: 34rpx; height: 34rpx; line-height: 34rpx; text-align: center; border-radius: 50%; border: 2rpx solid var(--line); font-size: 22rpx; color: #fff; }
+.tk-ck { flex-shrink: 0; width: 34rpx; height: 34rpx; line-height: 34rpx; text-align: center; border-radius: 50%; border: 2rpx solid var(--line); font-size: 24rpx; color: #fff; }
 .tk-ck.on { background: #16a34a; border-color: #16a34a; }
 .tk-main { flex: 1; min-width: 0; }
 .tk-name { display: block; font-size: 26rpx; font-weight: 600; }
 .tk-name.done { color: var(--ink-3); }
-.tk-streak { font-size: 21rpx; color: #d97706; font-weight: 600; margin-left: 12rpx; }
-.tk-sub { display: block; font-size: 21rpx; color: var(--ink-2); margin-top: 4rpx; }
+.tk-streak { font-size: 24rpx; color: #d97706; font-weight: 600; margin-left: 12rpx; }
+.tk-sub { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 4rpx; }
 .tk-bar { height: 10rpx; background: var(--line); border-radius: 999rpx; margin-top: 10rpx; overflow: hidden; }
 .tk-fill { height: 100%; background: linear-gradient(90deg, #f59e0b, #d97706); border-radius: 999rpx; }
-.tk-go { flex-shrink: 0; font-size: 23rpx; color: var(--brand-text); font-weight: 600; }
+.tk-go { flex-shrink: 0; font-size: 24rpx; color: var(--brand-text); font-weight: 600; }
 
 /* 断卡风险提示 */
 .riskbar { display: flex; align-items: center; gap: 20rpx; background: var(--warn-soft); border: 1rpx solid #fde68a; padding: 22rpx 26rpx; }
 .risk-ico { flex-shrink: 0; display: flex; align-items: center; }
 .risk-t { display: block; font-size: 26rpx; font-weight: 600; color: var(--warn); }
-.risk-s { display: block; font-size: 22rpx; color: #b45309; margin-top: 4rpx; }
+.risk-s { display: block; font-size: 24rpx; color: #b45309; margin-top: 4rpx; }
 .risk-go { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: var(--warn); }
 
 /* 公告 */
 .ann { display: flex; align-items: flex-start; gap: 14rpx; background: var(--info-soft); border: 1rpx solid #bae6fd; padding: 22rpx 26rpx; }
 .ann-c { flex: 1; }
 .ann-t { display: block; font-size: 25rpx; font-weight: 600; color: var(--info-strong); }
-.ann-b { display: block; font-size: 22rpx; color: var(--info-strong); margin-top: 4rpx; white-space: pre-wrap; }
+.ann-b { display: block; font-size: 24rpx; color: var(--info-strong); margin-top: 4rpx; white-space: pre-wrap; }
 .ann-x { flex-shrink: 0; display: flex; align-items: center; padding: 4rpx 8rpx; }
 
 /* Sheet */
@@ -1457,21 +1457,21 @@ export default {
 .setrow { display: flex; justify-content: space-between; align-items: center; gap: 20rpx; padding: 18rpx 0; }
 .set-kwrap { display: flex; flex-direction: column; }
 .set-k { font-size: 27rpx; color: var(--ink); font-weight: 500; }
-.set-sub { font-size: 21rpx; color: var(--ink-2); margin-top: 2rpx; }
+.set-sub { font-size: 24rpx; color: var(--ink-2); margin-top: 2rpx; }
 .set-chips { display: flex; gap: 12rpx; flex-wrap: wrap; justify-content: flex-end; }
 .set-chips.scrollx { flex-wrap: nowrap; overflow-x: auto; max-width: 65%; }
 .set-chip { font-size: 24rpx; color: var(--ink-2); background: var(--soft-bg); border-radius: 999rpx; padding: 0 22rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; white-space: nowrap; }
 .set-chip.on { background: var(--brand-soft); color: var(--brand-text); font-weight: 600; }
 :deep(.sheet-cta) { margin-top: 24rpx; width: 100%; border-radius: 20rpx !important; background: linear-gradient(135deg, #5b8af8, var(--brand)) !important; box-shadow: 0 8rpx 24rpx rgba(46, 91, 255, 0.28); font-weight: 600; }
 :deep(.sheet-cta2) { margin-top: 16rpx; width: 100%; border-radius: 20rpx !important; }
-.custom-note { margin-top: 14rpx; text-align: center; font-size: 21rpx; color: var(--ink-3); }
+.custom-note { margin-top: 14rpx; text-align: center; font-size: 24rpx; color: var(--ink-3); }
 .sub-chip { display: flex; justify-content: space-between; align-items: center; gap: 16rpx; padding: 22rpx 8rpx; min-height: 44px; border-top: 1rpx solid var(--line); box-sizing: border-box; }
 .sub-chip:first-of-type { border-top: none; }
 .sub-chip.all-chip .sub-name { color: var(--brand-text); font-weight: 600; }
 .sub-l { flex: 1; display: flex; flex-direction: column; }
 .sub-name { font-size: 27rpx; color: var(--ink); }
-.sub-prog { font-size: 21rpx; color: var(--ink-3); margin-top: 4rpx; }
-.sub-n { font-size: 23rpx; color: var(--ink-3); flex-shrink: 0; }
+.sub-prog { font-size: 24rpx; color: var(--ink-3); margin-top: 4rpx; }
+.sub-n { font-size: 24rpx; color: var(--ink-3); flex-shrink: 0; }
 
 /* 宽屏交互（≥768px）；双栏留到 ≥1024px——768 时内容区仅 560px（侧栏占 208px），双栏放不下卡内固定宽元素 */
 /* #ifdef H5 */
@@ -1497,9 +1497,9 @@ export default {
 .toprow { display: flex; align-items: center; gap: 16rpx; margin-bottom: 20rpx; }
 .examsw { flex-shrink: 0; display: flex; align-items: center; gap: 6rpx; min-height: 44px; box-sizing: border-box; padding: 0 22rpx; background: var(--card); border-radius: 999rpx; box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04); }
 .examsw-t { font-size: 26rpx; font-weight: 600; color: var(--ink); max-width: 220rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.examsw-a { font-size: 20rpx; color: var(--ink-3); }
+.examsw-a { font-size: 24rpx; color: var(--ink-3); }
 .mod-r { display: flex; flex-direction: column; align-items: flex-end; gap: 8rpx; flex-shrink: 0; }
-.mod-prog { font-size: 22rpx; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.mod-prog { font-size: 24rpx; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .mod-prog-n { font-size: 26rpx; font-weight: 700; color: var(--ink); }
 .searchbar { flex: 1; display: flex; align-items: center; gap: 12rpx; background: var(--card); border-radius: 999rpx; padding: 16rpx 26rpx; box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04); }
 .searchbar-t { font-size: 26rpx; color: var(--ink-3); }
@@ -1512,7 +1512,7 @@ export default {
 .ld-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14rpx; margin-top: 24rpx; }
 .ld-item { background: rgba(255, 255, 255, 0.14); border-radius: 16rpx; padding: 18rpx 20rpx; display: flex; flex-direction: column; gap: 4rpx; }
 .ld-in { font-size: 26rpx; font-weight: 600; }
-.ld-id { font-size: 21rpx; color: rgba(255, 255, 255, 0.82); }
+.ld-id { font-size: 24rpx; color: rgba(255, 255, 255, 0.82); }
 .ld-acts { display: flex; gap: 16rpx; margin-top: 26rpx; }
 .ld-btn { min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; border-radius: 999rpx; padding: 0 34rpx; font-size: 27rpx; font-weight: 600; }
 .ld-btn.main { background: #fff; color: var(--brand); flex: 1; }
