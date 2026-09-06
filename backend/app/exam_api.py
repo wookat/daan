@@ -312,7 +312,7 @@ def api_exam_paper_detail(pid: int):
 
 
 @router.post("/api/exam/start")
-def api_exam_start(body: dict):
+def api_exam_start(body: dict, request: Request):
     uid = (body.get("uid") or "").strip()[:64]
     if not uid:
         raise HTTPException(400, "缺少 uid")
@@ -329,7 +329,7 @@ def api_exam_start(body: dict):
     pinfo, ordered = _exam_paper_payload(paper)
     if len(ordered) < 5:
         raise HTTPException(400, "试卷题目不足")
-    attempt_id = db.start_exam_attempt(uid, pid)
+    attempt_id = db.start_exam_attempt(uid, pid, probe=auth.probe_request(request))
     return {"attempt_id": attempt_id, "paper": pinfo, "items": ordered}
 
 

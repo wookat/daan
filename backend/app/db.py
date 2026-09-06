@@ -3507,6 +3507,7 @@ def _ensure_exam_tables(conn):
         conn.execute("ALTER TABLE exam_attempts ADD COLUMN secs TEXT")
     if "marks" not in acols:
         conn.execute("ALTER TABLE exam_attempts ADD COLUMN marks TEXT")
+    add_column_if_missing(conn, "exam_attempts", "probe", "INTEGER")
 
 
 def upsert_exam_paper(title: str, kind: str, year: int | None, region: str | None,
@@ -3594,9 +3595,9 @@ def _list_exam_papers_base(conn, kind: str | None, year: int | None,
     takers: dict[int, dict] = {}
     if rows:
         for t in conn.execute(
-            """SELECT paper_id, COUNT(*) n, ROUND(AVG(s), 1) avg FROM (
+            f"""SELECT paper_id, COUNT(*) n, ROUND(AVG(s), 1) avg FROM (
                  SELECT paper_id, uid, MAX(score) s FROM exam_attempts
-                 WHERE submitted_at IS NOT NULL GROUP BY paper_id, uid
+                 WHERE submitted_at IS NOT NULL AND {REAL_TRAFFIC} GROUP BY paper_id, uid
                ) GROUP BY paper_id"""
         ):
             takers[t["paper_id"]] = {"n": t["n"], "avg": t["avg"]}
@@ -3690,12 +3691,12 @@ def exam_paper_filters() -> dict:
 
 
 def exam_paper_social(pid: int) -> dict:
-    """同卷全体用户社会证明：每人取最高分（与模考排名口径一致）。"""
+    """同卷全体用户社会证明：每人取最高分（与模考排名口径一致，只算真人）。"""
     conn = get_conn()
     _ensure_exam_tables(conn)
     rows = conn.execute(
-        """SELECT uid, MAX(score) s FROM exam_attempts
-           WHERE paper_id=? AND submitted_at IS NOT NULL GROUP BY uid""",
+        f"""SELECT uid, MAX(score) s FROM exam_attempts
+           WHERE paper_id=? AND submitted_at IS NOT NULL AND {REAL_TRAFFIC} GROUP BY uid""",
         (pid,),
     ).fetchall()
     conn.close()
@@ -3746,8 +3747,9 @@ def create_mock_paper(n: int = 30, duration_min: int = 30) -> int:
     return pid
 
 
-def start_exam_attempt(uid: str, paper_id: int) -> int:
-    """开考建 attempt；顺带清掉本人过期未交卷的，以及同卷「进过页面但一题未答」的空场次（连同进度行）。"""
+def start_exam_attempt(uid: str, paper_id: int, probe: bool = False) -> int:
+    """开考建 attempt；顺带清掉本人过期未交卷的，以及同卷「进过页面但一题未答」的空场次（连同进度行）。
+    probe=True 标记探针场次：同卷人数/均分/排行榜/分数池等跨用户聚合剔除，本人报告不受影响。"""
     conn = get_conn()
     _ensure_exam_tables(conn)
     _ensure_exam_progress(conn)
@@ -3764,8 +3766,8 @@ def start_exam_attempt(uid: str, paper_id: int) -> int:
         conn.execute(f"DELETE FROM exam_progress WHERE attempt_id IN ({marks})", stale)
         conn.execute(f"DELETE FROM exam_attempts WHERE id IN ({marks})", stale)
     cur = conn.execute(
-        "INSERT INTO exam_attempts (uid, paper_id, started_at) VALUES (?,?,?)",
-        (uid, paper_id, time.time()),
+        "INSERT INTO exam_attempts (uid, paper_id, started_at, probe) VALUES (?,?,?,?)",
+        (uid, paper_id, time.time(), 1 if probe else 0),
     )
     conn.commit()
     aid = cur.lastrowid

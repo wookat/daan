@@ -349,8 +349,8 @@ def _freeze_ranks(conn, event_id: int):
 def _score_pool(conn, ev: dict) -> dict:
     """历史同卷分数池（含比赛窗口外作答），小样本时作参照。"""
     rows = conn.execute(
-        """SELECT uid, MAX(score) s FROM exam_attempts
-           WHERE paper_id=? AND submitted_at IS NOT NULL GROUP BY uid""",
+        f"""SELECT uid, MAX(score) s FROM exam_attempts
+           WHERE paper_id=? AND submitted_at IS NOT NULL AND {db.REAL_TRAFFIC} GROUP BY uid""",
         (ev["paper_id"],),
     ).fetchall()
     scores = [r["s"] for r in rows]
