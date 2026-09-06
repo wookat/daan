@@ -41,7 +41,7 @@
             <view class="kg-tool" :class="{ on: cur._marked }" role="button" :aria-label="cur._marked ? '取消标记' : '标记本题'" :aria-pressed="cur._marked ? 'true' : 'false'" hover-class="tool-hover" @click="toggleMark">
               <l-icon name="bookmark" :size="24" :tone="cur._marked ? 'warn' : 'ink-2'" :fill="cur._marked ? 'currentColor' : 'none'" />
             </view>
-            <view class="kg-tool tool-acard" role="button" aria-label="答题卡" hover-class="tool-hover" @click="cardOpen = true">
+            <view class="kg-tool kg-tool--m" role="button" aria-label="答题卡" hover-class="tool-hover" @click="cardOpen = true">
               <l-icon name="clipboard-list" :size="24" tone="ink-2" />
             </view>
           </template>
@@ -551,7 +551,6 @@ export default {
 @media (min-width: 1024px) {
   .page { max-width: 1064px; margin: 0 auto; padding-bottom: var(--sp-24); }
   .page :deep(.kg-two__aside) { display: block; }
-  .tool-acard { display: none; }
   .kg-tool, .acard-n { cursor: pointer; }
 }
 /* #endif */

@@ -40,15 +40,20 @@ export default {
 </script>
 
 <style scoped>
-.kg-chips { width: 100%; white-space: nowrap; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent); }
-.kg-chips__row { display: inline-flex; gap: var(--sp-8); padding-right: var(--sp-24); }
+/* scroll-view 横向滚动必然裁掉纵向溢出：行内上下补到 --hit-min，再用负 margin 把布局占位还原为 chip 视觉高，
+   chip 的 ::after 命中区就落在这层 padding 里而不被裁 */
+.kg-chips { --kg-chips-pad: calc((var(--hit-min) - var(--chip-h)) / 2); width: 100%; white-space: nowrap; margin: calc(-1 * var(--kg-chips-pad)) 0; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent); }
+.kg-chips--sm { --kg-chips-pad: calc((var(--hit-min) - 28px) / 2); }
+.kg-chips__row { display: inline-flex; gap: var(--sp-8); padding: var(--kg-chips-pad) var(--sp-24) var(--kg-chips-pad) 0; }
 .kg-chip {
   display: inline-flex; align-items: center; gap: var(--sp-4); flex-shrink: 0; white-space: nowrap;
   height: var(--chip-h); padding: 0 14px; border-radius: var(--r-full);
   background: var(--card); border: 1px solid var(--line); color: var(--ink-2);
   font-size: var(--fs-sub); font-weight: 500; line-height: 1;
   transition: background-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
+  position: relative;
 }
+.kg-chip::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: var(--hit-min); transform: translateY(-50%); }
 .kg-chips--sm .kg-chip { height: 28px; padding: 0 var(--sp-12); }
 .kg-chip--hover { background: var(--fill); }
 .kg-chip.is-on { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }

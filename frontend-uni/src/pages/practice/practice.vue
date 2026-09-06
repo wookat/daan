@@ -131,9 +131,9 @@
               <l-icon name="star" :size="24" :tone="isFav ? 'warn' : 'ink-2'" :fill="isFav ? 'currentColor' : 'none'" />
             </view>
             <view class="kg-tool" role="button" aria-label="练习工具" hover-class="tool-hover" @click="toolsOpen = true">
-              <l-icon name="settings-2" :size="24" tone="ink-2" />
+              <l-icon name="sliders-horizontal" :size="24" tone="ink-2" />
             </view>
-            <view class="kg-tool tool-acard" role="button" aria-label="答题卡" hover-class="tool-hover" @click="cardOpen = true">
+            <view class="kg-tool kg-tool--m" role="button" aria-label="答题卡" hover-class="tool-hover" @click="cardOpen = true">
               <l-icon name="clipboard-list" :size="24" tone="ink-2" />
             </view>
           </template>
@@ -2643,7 +2643,6 @@ export default {
   .page { max-width: 1064px; margin: 0 auto; }
   .page.has-bar { padding-bottom: var(--sp-24); }
   .page :deep(.kg-two__aside) { display: block; }
-  .tool-acard { display: none; }
   .kg-tool, .acard-n, .rz, .tool-row, .icon-btn, .top-mod { cursor: pointer; }
 }
 /* #endif */

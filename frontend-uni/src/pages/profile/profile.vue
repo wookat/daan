@@ -588,7 +588,7 @@ export default {
 
 .zl-footer { margin: var(--sp-32) 0 var(--sp-8); text-align: center; }
 .zl-links { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-4) var(--sp-16); margin-bottom: var(--sp-8); }
-.zl-link { font-size: var(--fs-caption); color: var(--brand-text); line-height: 28px; }
+.zl-link { display: inline-block; font-size: var(--fs-caption); color: var(--brand-text); line-height: 28px; padding: var(--sp-8) 0; }
 .zl-copy { font-size: var(--fs-caption); color: var(--ink-3); }
 
 /* #ifdef H5 */

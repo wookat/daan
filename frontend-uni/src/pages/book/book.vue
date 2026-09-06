@@ -114,8 +114,8 @@
               <view class="seg-i" :class="{ on: tab === 'done' }" role="tab" @click="tab = 'done'">已掌握 {{ doneItems.length }}</view>
               <view class="seg-i" :class="{ on: tab === 'fav' }" role="tab" @click="tab = 'fav'">收藏{{ favs.length ? ' ' + favs.length : '' }}</view>
             </view>
-            <kg-button v-if="tab !== 'fav'" variant="secondary" size="lg" icon="sliders-horizontal" aria-label="筛选与排序" @click="filterOpen = true">筛选</kg-button>
-            <kg-button v-if="tab !== 'fav' && shownItems.length" :variant="batchMode ? 'primary' : 'secondary'" size="lg" @click="toggleBatch">{{ batchMode ? '完成' : '批量' }}</kg-button>
+            <kg-button v-if="tab !== 'fav'" variant="secondary" size="md" icon="sliders-horizontal" aria-label="筛选与排序" @click="filterOpen = true" />
+            <kg-button v-if="tab !== 'fav' && shownItems.length" :variant="batchMode ? 'primary' : 'secondary'" size="md" @click="toggleBatch">{{ batchMode ? '完成' : '批量' }}</kg-button>
           </view>
           <kg-chip-row v-if="tab !== 'fav' && chipList.length > 2" class="modchips" :options="chipList.map((c) => ({ label: c.name, value: c.key }))" :model-value="filterMod" @update:model-value="(v) => { filterMod = v; kpFilter = ''; kp3Filter = ''; }" />
 
@@ -1662,7 +1662,7 @@ export default {
 /* 分段 + 筛选/批量 */
 .segrow { display: flex; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-12); }
 .seg { flex: 1; min-width: 0; display: flex; background: var(--fill); border-radius: var(--r-sm); padding: var(--sp-4); }
-.seg-i { flex: 1; text-align: center; min-height: 36px; display: flex; align-items: center; justify-content: center; border-radius: var(--r-xs); font-size: var(--fs-sub); color: var(--ink-2); white-space: nowrap; }
+.seg-i { flex: 1; min-width: 0; text-align: center; min-height: 36px; display: flex; align-items: center; justify-content: center; border-radius: var(--r-xs); font-size: var(--fs-sub); color: var(--ink-2); white-space: nowrap; padding: 0 var(--sp-4); }
 .seg-i.on { background: var(--card); color: var(--ink); font-weight: 600; box-shadow: var(--sh-1); }
 .modchips { margin-bottom: var(--sp-12); }
 
