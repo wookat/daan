@@ -1460,3 +1460,8 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - `rclone delete` **默认递归**：对 `r2:zalize-backups/kaogong-sqlite/` 加 `--min-age 30d` 会连 `archive/` 一起清。现行写法 `--max-depth 1 --include "data-*.db.gz"`；任何改动清理命令前先 `--dry-run --min-age 1s` 把作用域列全再看 `--min-age 30d`。R2 对象 mtime 取上传时刻（`rclone rcat` 不带 `--metadata` 时），归档「年龄」= 归档日不是快照日。
 - archive/ 对象一律 gzip；大对象整理走流式 `rclone cat x | gzip | rclone rcat x.gz` + `rclone cat x.gz | gunzip | md5sum` 对照 `rclone cat x | md5sum`，370 MB 一份 ≈100 s，宿主不落盘；用 `setsid -f nohup … > log` 跑，别在 ssh 前台等。
 - bucket `zalize-backups` 是多产品共用（`d1/ honestcv-kv/ probe/ recruit-pg/`），只动 `kaogong-sqlite/`。
+
+## R435 备份对账 / WAL / 依赖钉版经验
+- 备份 vs 活跃库对账：宿主 `gunzip -c ~/kaogong-backups/data-<date>.db.gz > /tmp/x.db` 后 python `sqlite3.connect('file:/tmp/x.db?mode=ro', uri=True)`；活跃库同样 `mode=ro` 只读。逐表比 `count(*)` + `max(rowid)`；本库**没有** `favorites`/`reminders` 表（收藏是 `question_favs`/`fav_folders`/`shenlun_qfavs`/`shenlun_mat_favs`，提醒是 `reminder_prefs`；先查 `sqlite_master` 再对账），`no such table` 不是 0 行别写成「一致」。当日 `data-<date>.db.gz` 会被手工整跑 ops 脚本覆盖，对账前先看它的 mtime。
+- `-wal` 文件大小 ≠ 活跃数据：读 `-shm` 前 136 字节，`mxFrame`（偏移 16）× 4096 才是活帧；`nBackfill`（偏移 96）= 已回填帧数。想立刻收回历史峰值只能 `PRAGMA wal_checkpoint(TRUNCATE)`（返回 `(0,0,0)` = 无 busy、全部回填、已截）；有读事务在跑时会返回 busy=1 不是错误，稍后重试。R435 起连接带 `journal_size_limit=64 MiB`，之后 WAL 重置会自动截回，不必再手工。
+- 镜像依赖：`docker exec deploy-kaogong-1 pip freeze | sort | diff - <(grep -v '^#' backend/requirements.txt | grep . | sort)` 必须为空；不为空 = 有人绕过 requirements.txt 或本地漏推。本地 venv 版本与清单不一致时先 `pip install -r backend/requirements.txt` 再跑 pytest，别拿本机旧版当生产结论。buildkit 日志 `/tmp/kg-compose-<rev>-*.log` 里 `RUN pip install` 下一行是 `CACHED` 还是 `Collecting` 能看出这次部署有没有重装依赖。

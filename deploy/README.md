@@ -133,6 +133,18 @@ SQLite 存于 docker volume `kaogong-data`（/data/data.db）。备份：`docker
   `rclone deletefile` 原件）；bucket `zalize-backups` 由多产品共用（`d1/ honestcv-kv/ probe/ recruit-pg/`），只动
   `kaogong-sqlite/` 前缀。
 
+## 镜像 Python 依赖钉版（backend/requirements.txt，R435）
+- 两份 Dockerfile（根 `Dockerfile` 与 `deploy/Dockerfile.runtime`）只 `pip install --no-cache-dir -r backend/requirements.txt`，
+  清单是生产容器 `pip freeze` 的全量 `==` 钉版（含传递依赖），单测 `tests/test_requirements_pinned.py` 锁格式与装法。
+- 起因：原写法 `pip install fastapi uvicorn httpx … pypdf …` 无版本；同机多产品共用 buildkit 缓存，kaogong 的 pip 层
+  每隔一两次部署就被挤出（R431 `ed9e69e`、R435 `190cf70` 两次缓存 miss 重装，`Downloading pypdf-6.17.0`——发布才 2 天），
+  生产依赖版本由「别家什么时候 build」决定，与本地跑测试的那套包可能不同（本轮本机 6.16.2 vs 线上 6.17.0）。
+- 升级：改 `requirements.txt` → 本地 `pip install -r` + pytest 全绿 → 部署；部署后
+  `docker exec deploy-kaogong-1 pip freeze | sort | diff - <(grep -v '^#' backend/requirements.txt | grep . | sort)` 应为空。
+- SQLite 连接同轮加 `PRAGMA journal_size_limit=64MiB`：`-wal` 文件在 checkpoint 后不截断，此前 114 MB 里只有 3.6 MB 活帧
+  （历史一次性大写入的峰值永不回收）；限额只在 WAL 重置时截文件，热路径无影响。已有的大 WAL 要手工一次
+  `PRAGMA wal_checkpoint(TRUNCATE)` 才会收回。
+
 ## 搜索引擎抓取日报（scripts/crawler_stats.py，R377）
 - VPS cron `23 * * * *`：`python3 /home/ubuntu/kaogong-assistant/scripts/crawler_stats.py
   /home/ubuntu/kaogong-reports/access-archive /home/ubuntu/kaogong-reports/crawler-stats.json
