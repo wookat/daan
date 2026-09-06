@@ -6,6 +6,16 @@ export function dayKey(d = new Date()) {
   return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
 }
 
+// 与服务端 growth_stats 的 strftime('%Y-%W') 同口径：周一为一周首日，年内首个周一之前的日子计为第 00 周
+// 传入的 d 应已是东八区日期（如 stats 页 cnToday）
+export function cnWeekKey(d) {
+  const jan1 = new Date(d.getFullYear(), 0, 1);
+  const yday = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - jan1) / 86400000);
+  const wdayMon = (d.getDay() + 6) % 7;
+  const w = Math.floor((yday + 7 - wdayMon) / 7);
+  return d.getFullYear() + '-' + (w < 10 ? '0' + w : '' + w);
+}
+
 // 时政每日一练完成态按 uid 隔离，避免同设备切换身份后互相污染；旧全局键迁移一次
 export function loadSzDaily(uid) {
   const key = 'szDaily:' + uid;

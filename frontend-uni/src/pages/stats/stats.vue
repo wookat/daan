@@ -184,7 +184,7 @@
         <text class="gw-pct">{{ w.pct }}%<text class="gw-n">（{{ w.n }}题）</text></text>
       </view>
       <view v-if="growthDelta !== null" class="gw-delta" :class="{ up: growthDelta >= 0 }">
-        本周比上周{{ growthDelta >= 0 ? '提升' : '下降' }} {{ Math.abs(growthDelta) }} 个百分点
+        {{ growthDeltaLabel }}{{ growthDelta >= 0 ? '提升' : '下降' }} {{ Math.abs(growthDelta) }} 个百分点
       </view>
     </view>
 
@@ -357,7 +357,7 @@
 <script>
 import { request, snapPeek, anonUid, getAuthUser, authLogout, clearAuth, fetchCheckinSummary, trackEvent } from '../../api.js';
 import { md } from '../../md.js';
-import { checkinStreak, dayKey } from '../../checkin.js';
+import { checkinStreak, dayKey, cnWeekKey } from '../../checkin.js';
 import { examTrend } from '../../exam-trend.js';
 
 // 旧版缓存的 AI 建议内联了旧紫色，读取时映射到品牌色
@@ -434,6 +434,16 @@ export default {
       if (r.length < 2) return null;
       return r[r.length - 1].pct - r[r.length - 2].pct;
     },
+    growthDeltaLabel() {
+      // 服务端 weeks 只含有作答的周：末两行是「本周 / 上周」才这么叫，否则点名两周
+      const r = this.growthRows;
+      const last = r[r.length - 1];
+      const prev = r[r.length - 2];
+      const today = this.cnToday;
+      const lastWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7);
+      if (last.week === cnWeekKey(today) && prev.week === cnWeekKey(lastWeek)) return '本周比上周';
+      return last.label + '比' + prev.label;
+    },
     trendData() {
       return this.history
         .slice(0, 14)
@@ -504,7 +514,8 @@ export default {
     hmTotal() {
       const days = this.hmDayMap;
       const today = this.cnToday;
-      const from = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 83);
+      const dow = (today.getDay() + 6) % 7;
+      const from = new Date(today.getFullYear(), today.getMonth(), today.getDate() - dow - 77);
       let s = 0;
       for (const [k, n] of Object.entries(days)) {
         const d = new Date(k + 'T00:00:00');
@@ -1042,15 +1053,15 @@ export default {
 .hist-row { display: flex; align-items: center; gap: 16rpx; padding: 14rpx 0; border-bottom: 1rpx solid var(--fill); }
 .hist-time { font-size: 24rpx; color: var(--ink-2); width: 170rpx; }
 .gw-row { display: flex; align-items: center; gap: 14rpx; margin-bottom: 12rpx; }
-.gw-wk { font-size: 24rpx; color: var(--ink-2); width: 130rpx; flex-shrink: 0; }
+.gw-wk { font-size: 24rpx; color: var(--ink-2); width: 150rpx; flex-shrink: 0; white-space: nowrap; }
 .gw-bar { flex: 1; height: 16rpx; background: var(--brand-soft); border-radius: 999rpx; overflow: hidden; }
 .gw-fill { height: 100%; background: #16a34a; border-radius: 999rpx; }
 .gw-fill.mid { background: #f59e0b; }
 .gw-fill.lo { background: #dc2626; }
-.gw-pct { font-size: 24rpx; width: 150rpx; text-align: right; flex-shrink: 0; }
+.gw-pct { font-size: 24rpx; width: 180rpx; text-align: right; flex-shrink: 0; white-space: nowrap; }
 .gw-n { color: var(--ink-2); }
 .gw-tabs { display: flex; gap: 10rpx; margin-bottom: 14rpx; flex-wrap: wrap; }
-.gw-tab { font-size: 24rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 4rpx 18rpx; background: var(--card); }
+.gw-tab { font-size: 24rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 18rpx; min-height: 40px; box-sizing: border-box; display: inline-flex; align-items: center; background: var(--card); }
 .gw-tab.on { color: #fff; background: var(--brand); border-color: var(--brand-text); }
 .gw-delta { font-size: 24rpx; color: #dc2626; margin-top: 6rpx; }
 .gw-delta.up { color: #16a34a; }
