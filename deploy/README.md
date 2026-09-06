@@ -14,7 +14,11 @@
   与原 Caddyfile 口径一致；`/tiku/*` 保持可收录，`/api/*`、`/admin` noindex。
 - 部署：`deploy/deploy_h5.sh` 新增 4c 步（需 `CLOUDFLARE_API_TOKEN`），
   服务器 rsync + 容器重建照旧（origin 仍需完整 dist 供 SSR/兜底）。
-- **回滚**：把 `kaogong.zalize.com` DNS 改回 `A 150.109.230.174 dns-only` 即恢复纯服务器架构。
+- **回滚**：把 `kaogong.zalize.com` DNS 改回 `A 150.109.230.174 dns-only`，并把宿主 Caddyfile 的
+  `kaogong.zalize.com` 站点块恢复（`/etc/caddy/Caddyfile.bak-r453` 里有原块；或按下面「旧方案」
+  示例 + CSP/SSE 两节重写）后 reload。该块已于 R453 删除：迁移后 19 天 33,292 行日志边缘头 0 行，
+  只剩直打 VPS IP 的扫描器（Palo Alto 配对无头浏览器等）经它拿到完整壳 + 实时 API 并写入 probe=0，
+  而日报只读 origin 日志看不见；留块还会让 Caddy 为该域续签 LE 失败刷 journal。现在直打该 SNI 收到 TLS alert。
 - **并行会话部署闸**（R378，2b 步）：部署前读 `/api/health` 的线上 rev，要求它是本机 HEAD 的祖先；
   线上 rev 不在本机仓库（对方部署了未推送提交）或不是祖先（会把别人的上线回退）都直接 FAIL。
   解决办法是 `git fetch` 后 merge origin/main 或对方分支再部署；确认要回滚时才 `DEPLOY_FORCE=1`。
@@ -68,7 +72,7 @@ script-src 'self' 'unsafe-inline' https://career.zalize.com
 Caddy `encode gzip` 默认对 `text/*` 生效且只在首个 flush ≥512 B 时才决定压缩，一旦压缩
 就把整条 `text/event-stream` 攒到结束才落地：`/api/explain/stream` 的 meta 事件含题干，
 题干 ≥ ~110 字（活跃题 23.8%，言语 78%、资料 96%）即触发，用户首字前 60–110 s 零信号、
-`thinking` 心跳全部失效。`kaogong.zalize.com` 与 `kaogong-origin.zalize.com` 两个 site 块须写成：
+`thinking` 心跳全部失效。`kaogong-origin.zalize.com` site 块（以及回滚时重建的 `kaogong.zalize.com` 块）须写成：
 ```
 @nosse not path */stream
 encode @nosse gzip

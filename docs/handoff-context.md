@@ -2171,3 +2171,12 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证 docs/iter/round-3/r452-probe-route-dependence-7d-caddy-readonly.md。7 天 caddy 按 `auth.probe_request` 三路复算：1233 uid，**~864（70%）只靠网段一路**命中（GUI 走查 UA 与真人无异）；网段外无签名自动化 **0 uid**；非探针 uid 10 个全部归因（5 已知设备 + 3 扫描器 + 2 单页访客），与库内 probe=0（answer_log 22/1、growth 18/4）一一对应、无未归因行 → 当下无污染。风险形态 = Devin 出口 /24 变更当天 GUI 走查整批 probe=0，现有日报 `humans.ips` 会立刻放大 → 不加码，SKILL 到期项加「突增先核 CIDR」。
 - 兄弟自动化 uid 首见 09-06 11:05:29Z 首页冷启动四连，全程 `140.232.64.3`。
 - 到期项不变；候选真人 +1（Windows 171.114.10.99 只读首页 0 作答）；WAL 3.15 MB。
+
+### R453（宿主 Caddyfile 删旧 `kaogong.zalize.com` 站点块；应用不改、生产仍 `460120f`）
+- 取证 docs/iter/round-3/r453-legacy-caddy-block-bypass-scanner-pair-trend-kn.md。
+- **归因纠正**：R446「唯一像外部真人」的 iPhone iOS 18.3 访客（`59.83.208.103` 09-03/09-04）= Palo Alto Networks 扫描器配对的 Linux 无头 Chrome 移动仿真：页面 UA iPhone、同会话 `/sw.js` UA `X11; Linux x86_64`；与 `Hello from Palo Alto Networks` UA 同秒相邻 IP 成对 4 次（08-20/08-25/09-03/09-04）；全部**直打 VPS IP、SNI `kaogong.zalize.com`、无任何 CF 头**，走的是迁移后已死的旧 Caddy 块（08-19 起 33,292 行边缘头 0）。候选真人 −1。
+- 缺陷修（P2）：旧块仍全路径 `reverse_proxy 127.0.0.1:8300`，扫描器拿到完整壳 + 实时 API、后端只见直连 IP → `growth_events` 写 probe=0 1 行 / NULL 2 行（保留不改），日报 `crawler_stats` 只读 origin 日志看不见这条通道。删块（不是加 403：留块 Caddy 09-28 起为该域续签 LE 必失败刷 journal 至 10-28 过期）。备份 `Caddyfile.bak-r453`，validate → reload；直打 SNI → TLS alert；公网 `/`、`/tiku/`、`/api/*` 200 rev 对；origin 直连 403；兄弟站 200。`deploy/README.md` 回滚步骤改为 DNS + 恢复块。
+- 日报 `humans.ips` **未**把 3 扫描器算候选真人：ShapBot（R452 截成 `ShapBo`）X-Kg-Ua 含 `bot` → BOT_GENERIC；Firefox Ice / Mac 访客 referer pages.dev → offhost；PA/iPhone 不在 origin 日志。本地同参数重算 = 生产 json。
+- `.trend-kn` **闭合**：自然 4 周已掌握样本仍只有 vivo 小程序 uid 2 条（小程序不渲染 H5 趋势卡）；合成元素量真实 `data-v-bcbaf750`：375/1440 `.trend-kn`/`.trend-n` 均 fs 12 / h 14 / 600 → 已在 12px 下限。登记改为「有真人 k>0 样本时看 4 列排版」。
+- 到期项：probe=0 22/1、error_reason 6、push_subs 0、weekly_reports 1、growth probe=0 18/4 不变；WAL 3.16 MB；healthy 0 重启。
+- 需注意：reload 打断了 Caddy 正在跑的 `www.zalize.com` 续签（10-04 到期，维护循环自动重试）——下一轮复查 journal 是否 `certificate renewed`。

@@ -1568,3 +1568,10 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 ## R452 经验：探针识别 ~70% uid 只靠网段一路
 - 7 天 caddy 复算：1233 个带 `uid=` 的 uid 里 ~864 个只靠 `Cf-Connecting-Ip ∈ KG_PROBE_CIDRS` 打标（GUI 走查 UA 与真人无异、多数会话不带 `X-Kg-Probe`）。到期项复查时若日报 `humans.ips` 或 `answer_log probe=0` 新 uid 突增，**先核 `KG_PROBE_CIDRS` 是否落后于当前出口**（`curl -s ifconfig.me` 对比 `docker exec deploy-kaogong-1 env | grep KG_PROBE`），再谈真人。
 - 复算脚本 `/home/ubuntu/r452_caddy.py`（scp 到 VPS `/tmp` 跑；按 `auth.probe_request` 三路同口径），输出「非探针 uid 逐个 IP/UA」「网段单路 uid」「网段外自动化签名」三段。VPS 自身出口 `150.109.230.174` 的 curl/python-requests 走 UA 一路，正常。
+
+## R453 经验：「像真人的移动 UA」先看 sw.js 的 UA；直打 VPS 的流量别只查 origin 日志
+- 归因 iPhone/Android 描述符访客时，同会话 `/sw.js` 请求的 UA 若是 `X11; Linux x86_64`，就是无头 Chrome 移动仿真（SW 注册请求不吃页面级 UA 覆写），不是真机；再看是否与 `Hello from Palo Alto Networks` 这类扫描器 UA 同秒/相邻 IP 成对。
+- 宿主 Caddy 现在只有 `kaogong-origin.zalize.com` 块（R453 删了旧 `kaogong.zalize.com` 块）；直打 `--resolve kaogong.zalize.com:443:150.109.230.174` 应得 TLS alert（curl rc 35）。若又出现「无 CF 头却 200」的日志，先核 Caddyfile 是否被回滚/重写。R422 那种 SSE 直连复现改走 `kaogong-origin` 块 + `X-Kg-Edge` 头，或容器 `127.0.0.1:8300`。
+- 对账日报 `humans.ips` 时看 `X-Kg-Ua` 全文（不要截 60 字：`ShapBot/0.1.0` 截成 `ShapBo` 会误判没进 BOT_GENERIC），并用 `crawler_stats.py <archive> /tmp/x.json --exclude-ip-file probe-ips.txt` 本地同参数重算对生产 json。
+- `.trend-kn` 合成量测脚本 `/home/ubuntu/r453/trend_kn.py`（book 页 `data-v-bcbaf750`，探针头只读）。
+- 改宿主 Caddyfile 前看 `journalctl -u caddy --since "10 min ago" | grep tls.renew`：reload 会 `context canceled` 正在进行的续签（自动重试，但要复查）。
