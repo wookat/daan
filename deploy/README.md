@@ -64,6 +64,19 @@
 script-src 'self' 'unsafe-inline' https://career.zalize.com
 ```
 
+### SSE 讲解流不能过 gzip（服务器 Caddyfile，R422 一手复现）
+Caddy `encode gzip` 默认对 `text/*` 生效且只在首个 flush ≥512 B 时才决定压缩，一旦压缩
+就把整条 `text/event-stream` 攒到结束才落地：`/api/explain/stream` 的 meta 事件含题干，
+题干 ≥ ~110 字（活跃题 23.8%，言语 78%、资料 96%）即触发，用户首字前 60–110 s 零信号、
+`thinking` 心跳全部失效。`kaogong.zalize.com` 与 `kaogong-origin.zalize.com` 两个 site 块须写成：
+```
+@nosse not path */stream
+encode @nosse gzip
+```
+复验：`curl -N --compressed` 发一道长题干题，`event: thinking` 应逐秒到达且响应头无
+`vary: Accept-Encoding`。SSE 端点：`/api/explain/stream`、`/api/interview/answer/stream`、
+`/api/interview/sessions/{sid}/review/stream`。
+
 ## 微信小程序上线额外要求
 - 小程序 request/uploadFile 合法域名需在微信后台配置为 `https://kaogong.zalize.com`
 - 构建时设置 `VITE_API_BASE=https://kaogong.zalize.com` 后 `npm run build:mp-weixin`

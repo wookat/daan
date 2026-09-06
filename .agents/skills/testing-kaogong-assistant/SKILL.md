@@ -5,6 +5,24 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R422b 补充（testing agent）— 长题干 SSE 免 gzip / 含图路径已可用 / explain_cache 时间窗清理
+- **长题干 SSE 缓冲陷阱**：meta 事件 ≥512 B（题干 ≥~110 字，言语/资料题居多）时若边缘（Caddy `encode gzip`）对 `text/event-stream` 压缩，浏览器会在首字前 60–110 s 零信号、thinking 全部挤到末尾。生产 Caddyfile 已用 `@nosse not path */stream` + `encode @nosse gzip` 排除；复验口径：用 `/tmp/cdp174/holdsse422.py`（= holdsse421 + `rec.hdrs{ce,ct,cl,te}` 取 `Response.headers`）核 `hdrs.ce === null`（不是 `gzip`），再用 `performance.getEntriesByType('resource')` 里 `/api/explain/stream` 的 `encodedBodySize == decodedBodySize` 双证；thinking 判「逐秒」看 `thinking[0].t`（应 ≈ tMeta+2 s）、间隔 min/max、以及 `done 前 5 s 内 thinking 数 == 0`；`tFirstDelta` 应早于 `tDone` ≥ 数秒。之前只测短题干数量题会漏掉此类问题，回归至少各测一道 ≥150 字言语题（无 qid + 深链）。
+- 取长题干样本：`/tiku/q/235804`（2022 国考副省级 多空综合，题干 180 字，选项 预测渗透/主导贯穿/判断投射/反映覆盖，答案 A）。避免缓存只需改一个无关字（如「战争目的」→「目标」、「基础」→「基石」），识题不受影响（module yanyu / 逻辑填空）。
+- 含图路径自 2026-09-06 05:45 起生产已配 `LLM_BASE_URL/LLM_API_KEY`（复用文本网关）+ `LLM_MODEL=qwen3-vl-plus`：`r422_drop.py` 在 375 也能用（`.ds-drop` 在 375 DOM 里 0×0 但 `onDrop` 无宽度守卫；`handlePaste` 有 `innerWidth<1024` 守卫，375 下 paste 不行）。一手时延 `tMeta ≈3.2 s`（含图 think=True 也很快），meta 带识别出的 `question_text`。同图+同 `user_answer` 会命中 explain_cache，换答案即可。
+- 375 ask 页手输入口：「文字输入」按钮 → 弹层 textarea；页面有 2 个 textarea，`Input.insertText` 前必须**原生点一次弹层 textarea** 取焦点（脚本里 `.focus()` 对 uni 组件无效，值会是 0）。
+- explain_cache 清理口径：开测前记 `SELECT COUNT(*),MAX(created_at)`，测后列 `created_at > T0` 的行（key/question_text 前 30 字/user_answer），逐行确认全是本轮造的再按 key 删（每道手输题 `\r\n`/`\n` 两键、深链题一键，题干以「（2022国考·副省级）（单选题）」开头的是深链版，`startswith` 过滤要包含它）。总数应回到基线。
+- `__hdr` 记录字段是 `{url,status,ms,xkg,cf}`（不是 `u/st`）。
+
+## R422 补充（testing agent）— 无 qid 识题时延 / 含图路径 / practice rejection 口径
+- 无 qid 文字识题（`engine.extract_question` 无图 `think=False`，rev 9e657da 起）的 UI 一手时延口径：`__sse[i].tMeta` 生产实测 **2.6–3.3 s**（旧路径 8–15 s）；判定用 `tMeta ≤ 6000` 而不是看占位文案切换的肉眼感受。占位仍先「AI 识题中…（N秒）」再「AI 正在推理…（已 N 秒）」；thinking 心跳与正文行为与 R421 相同（键恰 `{secs,chars}`，客户端间隔可低至 ~990 ms）。
+- 造「未缓存新题」时改数字要保证题目仍有一致解（如盈亏问题 `(盈+亏)/差` 需整除），否则 AI 正文会正确判「题目存疑、选项无此项」——这不是缺陷，但会让「正文正常」断言变得难解释。工程问题 `a/b/c` 天改成互为倍数的数（229/458/458）最省事。
+- 含图（拍照/上传）路径的环境前提：`llm._endpoint()` 对含图消息走视觉通道（`LLM_BASE_URL/LLM_API_KEY/LLM_MODEL`），未配则 `_require_configured` 抛「AI 服务未配置」→ `/api/explain/stream` HTTP 200 但 ~180 ms 即 `event: error {"message":"AI 服务未配置"}`，UI 红条「失败：AI 服务未配置，请重试」（R422 首轮复验即此形态；同日已在生产 `.env` 补齐，见上 R422b 节）。测含图前先 `docker exec deploy-kaogong-1 env | grep -c ^LLM_MODEL=` 核视觉通道是否配置，否则记环境 FAIL 而不是代码缺陷。
+- 含图路径的 UI 触发：`uni.chooseImage` 动态创建 `<input type=file>`，CDP `Page.setInterceptFileChooserDialog` + 合成点击 `.ds-drop` **拦不到**（无 `fileChooserOpened`）。可行方案是 `/tmp/cdp174/r422_drop.py <png>`：页内用 base64 构造 `File` → `DataTransfer` → 在 `.ds-drop` 派发 `DragEvent("drop")`（ask.vue H5 分支原生监听 `document drop`），会弹「确认题目图片」预览层，之后原生点答案 + 「用花生十三方法讲解」即可；`__sse` 记录的 `fd` 键为 `image,user_answer`。
+- practice 页 `unhandledrejection` 口径：rev 9e657da 起 `uni.vibrateShort({..., fail(){}})`，桌面 Chrome 答对/答错后 `__pexc` 应恒为 `[]`（R421/R421b 每次判题 +1 条 `vibrateShort:fail`）。判题即时核：每次点选项后立刻 `eval window.__pexc`，正确答案会**自动切下一题**（无「下一题」停留帧），截图要在点选前后各一张。多选题（如常识 273031）从 SEO `/tiku/q/<id>` 点任一选项进 practice 后带 `pick=X` 预选一项，页面出现 `.multi-bar`「多选题：选完所有正确项后确认」+「确认答案（n）」，再点其他选项累加后点「确认答案」→ `answer_log.user_answer` 为拼接串（如 `ACD`）。
+- 1440 下 ask 页有「新对话」按钮（页面滚动后需先滚回顶部再点），`window.__sse` 在 SPA 内不重置、进 SEO 页（新 document）才重置——按段落记录时先记下 `__sse.length`。
+- teardown：`Emulation.clearDeviceMetricsOverride` 由另一条 CDP 连接调用时页面 `innerWidth` 可能不立刻变化，需 `Page.reload` 一次再核 1600×1017。杀 holder 只用 PID 文件；`for p in $(pgrep -f "holdvw")` 会连当前 shell 一起杀（exit -1）。
+- 清理脚本模板 `/tmp/r422_db2.py`（按 `PRAGMA table_info` 找全部含 `uid` 列的 34 张表，count/delete 两模式，参数化 LIKE）；`answer_log` 无 `is_correct` 列，直接 `SELECT *`（第 7 列为对错、末列 probe）。
+
 ## R421b 补充（testing agent）— ask 页「存入错题本」带 question_id 的复验口径
 - 自 rev adfdc17 起 `ask.vue save(r)` POST `/api/mistakes` 带 `question_id: askQid(r.qid)||null`；后端 `db.save_mistake`（db.py ~L3189）先按 `(question_id, uid)` 再按 `(question_text, uid)` **去重合并**（`times+1`、`next_review` 更新、`question_id=COALESCE`）。因此「练习答错自动存 → ask 再存同题」只会得到 **1 行**（`times 2`），不再是 R421 的两张卡；核 ask 存入是否带 qid 时要看 `times`/`next_review` 变化，而不是找第二行。练习行 `question_text` 无 `\r`、ask 行文本是 meta 的 `\r\n` 版，文本去重不会命中，所以合并本身就证明 ask POST 带了 qid。
 - 想要**纯 ask 存入的独立行**（无练习行可合并）：搜索页 `#/pkgA/search/search?q=<qid>` 点结果卡展开 → 「AI 详解本题」（`search.vue askFromSearch` 写 redoQuestion/redoQid、清 redoAnswer）→ ask 页选一个 R421 已缓存的答案（如 709452+B）秒回 → 「存入错题本」→ DB 新行 `question_id` 应等于 qid、`explanation` 以「【答案】」开头（AI 来源）。
