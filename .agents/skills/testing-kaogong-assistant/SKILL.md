@@ -1549,3 +1549,12 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 1440 下用 (100,100) 点遮罩关 uni 计划 sheet 会连带触发桌面左侧导航（落到错题本/提醒页），回首页用 `location.hash='#/'`，不要 `history.back()`。
 - 长文案注入（`r448_inject.js`）预期值：375 onboarding 卡在时 arc.bottom 526.9 / acts 535.4（短文案 518.4 + 17），间隙 8.5；用相对量判断。
 - 网络 jsonl 字段是 `u`/`st`，拦截失败的 `st` 为字符串 `"FAIL net::ERR_FAILED"`，统计非 2xx 前先按类型分流。
+
+## R450 经验：验证 PK / 小队 / 分享 多页字号下限与热区高度（写入型两 uid 流程）
+- 两 uid 同 tab 切换：`localStorage.setItem('anonUid','<uid>')` 后 `Page.navigate`（不要只 reload hash 路由），B 侧 PK 应战 / 小队加入 / `/s/<sid>` 作答均可在同一 tab 完成；PK 结果双方 finished 需 A 侧再进 PK 首页点 `.m-row` 查看。
+- PK 答题助手要先 `scrollIntoView({block:'center'})` 再算选项坐标，否则第 4 题起选项在视口外会停住让计时器跑完；一局 10 题 30s/题，卡住可直接等超时进入结果页。
+- toast 文案查 `uni-toast` 元素 innerText（`.uni-toast__content` 类选择器为 null）。PK/小队 join 输入框统一是 `input.join-input`。
+- 分享 sid 只能从 holder 抓 `POST /api/share/create` 响应拿（页面只复制到剪贴板）；多选题分享用 deep link `#/pages/practice/practice?qid=273031&module=changshi` 让 A 选多项 → `.multi-ok` 确认后再点「🔗 分享给队友」；B 在 `/s/<sid>` 也走 `.opt` 多选 + `.multi-ok`。
+- `.remind-btn` 只在对方 `today_n==0` 时渲染：先量 `.remind-btn`，再让对方作答；切 1440 时若双方当天都有作答则量不到，需在流程顺序上前置。
+- 清理：`shared_answers.share_id` 是 `shared_questions.id`（整数），不是 sid；按 sid 删需 `share_id in (select id from shared_questions where sid in (...))`；pk_matches 无子表（participants 内嵌列），teams→team_members 用 team_id；uid 列枚举 `uid | *_uid | user_id` 共 41 张表（`/tmp/r450_db2.py`）。
+- holder 重启后 reload 若出现 cw 360 / DPR1（目标类读 11.52px）是仿真掉了，不是回归；重启 holder 让其周期重申 `Emulation.setDeviceMetricsOverride` 后重量。

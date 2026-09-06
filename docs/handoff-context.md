@@ -2151,3 +2151,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 复验：6b 12 项全 OK（`/` perf 0.98 / LCP 1403）；testing agent `elementFromPoint` 1 px 步长 ≤517.4 链接 / 518.4 起按钮，可信点击 (300,517) 往期 sheet、(300,519)/(300,520) 计划 sheet；拦/正常 rAF Δ0；三按钮 top+1 正确；长文案两行 arc 底 526.9 < acts 535.4；`<12px []`、console 0、非 2xx 0、LEFTOVER 0。
 - 坑：CDP 仿真 reload 后可能未重申（cw 360、hero 下移 17）→ 1–2 px 边界测试前守卫 `clientWidth==375 && .hero-ds.width==307`；1440 点遮罩关 sheet 会连带触发左侧导航，用 `location.hash='#/'` 回首页。
 - (c) R448 发版后 27 min 228 请求 `/assets/*` 404 0 / monitor 0 → 继续挂，R449 发版后待下轮补量。到期项沿用 R448 18:53Z（无新样本）。下一轮 **R450 = SOP-10 四维审计**。
+
+### R450（SOP-10 四维审计「分享 / PK / 小队排行」簇：4 页 28 处 <24rpx 字号抬到 24rpx + `.rank-copy`/`.remind-btn`/`.chip` ≥40px；CSS + vitest +5；部署 `460120f`，bundle 变、后端不动、无 DB 写入；testing agent 375/1440 全 PASS）
+- 取证 docs/iter/round-3/r450-sop10-audit-share-pk-team-cluster.md。竞品维度仍无一手（粉笔次级屏需账号）→ 零竞品陈述、不加功能。
+- ① 生产只读：`pk_matches` 无显式 probe=0 对局（NULL 1/4、probe=1 9/13）；`shared_questions`/`shared_answers`/`teams`/`team_members` 均无 `probe` 列（探针归因只能经 `growth_events`/镜像 `answer_log`）；该簇 growth_events probe=0 仅 3 行且与 R446 vivo 持有者同源 → **无外部真人样本**。
+- ② 源码走查 share/pk/team 后端与 4 页前端：幂等/揭晓/多选/probe 隔离/周榜谓词/提交失败重试/等待轮询/空错态均在位，无缺陷命中，后端不改。
+- ④ 命中：`pk.vue` 9 / `team.vue` 11 / `share-q.vue` 5 / `pk-result.vue` 3 = 28 处 <24rpx（生产 `/s/` `/p/` 实测 10.5–11.5px）；`.rank-copy` 32 / `.remind-btn` 36 / `.chip` 33px 热区 <40 → 全抬到下限并源锁（`tests/social-r450-fontfloor.test.js`）。`.timer-t` 最长文案 12px 宽 282 < 311 仍单行（measureText + 生产实测 h17）。
+- 复验：6b 12 项全 OK（`/` perf 0.96 / LCP 2287 / CLS 0.06）；testing agent 两探针 uid 走完 PK 双人对局 `HQQVXK`、小队 `r450tm`、单选/多选分享作答，13 页 `<12px []`、非 2xx 0、清理 LEFTOVER 0。1440 `.remind-btn` 未量到（对方当天已作答不渲染；CSS 与视口无关）。
+- 到期项无新样本（probe=0 22 行/1 uid、error_reason 6/0、push_subs 0、weekly_reports 0、29/29 CST 00:00、WAL 1.79 MB）。(c) R449/R450 发版后待下轮补量。下次 SOP-10 审计 ~R460。
