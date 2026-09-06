@@ -56,7 +56,8 @@ export default {
 </script>
 
 <style>
-.kg-sheet.wd-popup { background: var(--card); border-radius: var(--r-lg) var(--r-lg) 0 0; }
+/* wd-popup 写死 .wd-popup-wrapper[scoped] .wd-popup{background:#fff}（(0,3,0)），且深色只认 .wot-theme-dark；这里用 !important 让面板跟 --card 走 */
+.wd-popup-wrapper .wd-popup.kg-sheet, .kg-sheet.wd-popup { background: var(--card) !important; border-radius: var(--r-lg) var(--r-lg) 0 0; }
 .kg-sheet__in { display: flex; flex-direction: column; max-height: 70vh; padding: 0 var(--sp-16) var(--sp-16); }
 .kg-sheet__grab { width: 36px; height: 4px; border-radius: var(--r-full); background: var(--line); margin: var(--sp-8) auto var(--sp-4); }
 .kg-sheet__hd { display: flex; align-items: center; justify-content: space-between; padding: var(--sp-12) 0; }
