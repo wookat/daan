@@ -98,7 +98,7 @@
       </view>
       <view class="hero-bar"><view class="hero-fill" :style="{ width: Math.min((todayCount / dailyGoal) * 100, 100) + '%' }" /></view>
       <text v-if="dsMeta && dsDone" class="hero-ds">今日全站同题 · 已完成 答对 {{ dsDone.right }}/{{ dsDone.total }}<template v-if="dsDone.rank"> · 第 {{ dsDone.rank }} 名</template><template v-if="dsDone.streak >= 2"> · 🔥 连 {{ dsDone.streak }} 天</template><text class="hero-ds-arc" @click.stop="openDailyArchive">补练往期 ›</text></text>
-      <text v-else-if="dsMeta" class="hero-ds">今日全站同题 10 题 · {{ dsMeta.participants ? '已有 ' + dsMeta.participants + ' 人完成' : '来做今天第 1 人' }}<text class="hero-ds-arc" @click.stop="openDailyArchive">补练往期 ›</text></text>
+      <text v-else class="hero-ds">今日全站同题 10 题{{ dsMeta ? ' · ' + (dsMeta.participants ? '已有 ' + dsMeta.participants + ' 人完成' : '来做今天第 1 人') : '' }}<text class="hero-ds-arc" @click.stop="openDailyArchive">补练往期 ›</text></text>
       <view class="hero-acts">
         <view class="hero-btn main" @click="startDaily">{{ todayDone ? '再练一组 ›' : '继续目标 ›' }}</view>
         <view class="hero-btn sub" @click="openSetup">今日计划</view>
