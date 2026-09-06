@@ -43,6 +43,8 @@ class _ConnProxy:
 # 读路径交给 mmap（file-backed，跨连接共享、可回收、不进 swap），mmap 需覆盖整库才不会回落到堆缓存。
 SQLITE_CACHE_KIB = -8192
 SQLITE_MMAP_BYTES = 1 << 30
+# WAL 重置时把 -wal 文件截回的长度上限；不设则文件长度永久停在历史最大一次两次 checkpoint 之间的写入量。
+SQLITE_WAL_LIMIT_BYTES = 64 << 20
 # 题目统计刷新每批 UPDATE 行数（每批一次 commit，写锁持有期与批大小成正比）
 QUESTION_STATS_BATCH = 100
 
@@ -59,6 +61,7 @@ def get_conn():
         conn.execute("PRAGMA busy_timeout=30000")
         conn.execute(f"PRAGMA cache_size={SQLITE_CACHE_KIB}")
         conn.execute(f"PRAGMA mmap_size={SQLITE_MMAP_BYTES}")
+        conn.execute(f"PRAGMA journal_size_limit={SQLITE_WAL_LIMIT_BYTES}")
         _local.conn = conn
     return _ConnProxy(conn)
 
