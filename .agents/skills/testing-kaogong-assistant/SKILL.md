@@ -1508,3 +1508,9 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 要看真实弱网首绘用 `--throttling-method=devtools`（`/` FCP=LCP≈0.7 s），会带 runWarning「loaded too slowly」且 TBT 与 simulate 不同口径、跑 60–90 s；只做旁证，预算脚本历史水位全是 simulate，不换口径。
 - 老 LHR 没有 `largest-contentful-paint-element` 时用 `audits['lcp-breakdown-insight']` 拿 LCP selector / TTFB / render delay。
 - `perf-budget.sh` `/` LCP 线现为 3000（R443 校准）；若某天 27xx 之外再出 >3000，先按上面数进图请求数与字节、再看 `benchmarkIndex`，字节涨了才是真信号（主包/预加载分包变大）。
+
+## R444 CLS 元素级归因走查经验
+- LH `audits['layout-shifts'].details.items` 只给每次位移的「首个节点 + 分值」，`boundingRect` 是末态 DOM 快照（可能已在视口外），要看谁被推了多少：`lighthouse … --save-assets` 后读 `*-0.trace.json` 的 `LayoutShift` 事件 `args.data.impacted_nodes[].old_rect/new_rect`（node_id 是后端节点号，需再映射）。
+- 更直接的是 Playwright 对生产 `add_init_script` 注一个 `PerformanceObserver({type:'layout-shift',buffered:true})` 读 `entries[].sources[].node/previousRect/currentRect`，同时采 `#kg-splash` 的 `classList`/`opacity` 判断位移是否在启动屏遮盖下（脚本样例 `/home/ubuntu/r444/cls_sources.py`；Chrome 用 `/home/ubuntu/.local/bin/google-chrome`，pip 的 playwright 没装浏览器）。请求头带 `X-Kg-Probe: 1`。
+- `had_recent_input=true` 在 LH/Playwright 仿真视口下是常态（视口事件算「输入」），LH 对视口事件后 500 ms 内的位移无条件计入，不要据此把位移当「用户触发」排除。
+- `PRAGMA journal_size_limit` 是连接级：只读探针连接读到 -1 不代表应用连接没设（R435 在应用连接设 64 MiB、R436 已读回），核对要在应用进程内或看 WAL 是否在 checkpoint 后被截到限值以下。

@@ -101,6 +101,7 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - CSP 由后端下发，新增外部资源（如 nav.js）需同步白名单（PR #154 曾修）
 - LLM 缺配置立即失败/友好降级（friendly_ai_err），不得伪造 AI 输出；讲解严格引用方法库，不编造「花生十三方法」
 - SEO 页 /tiku/ 与 wookat/tiku 仓是两回事（本仓是后端 SSR 落地页集群）
+- 勘误（R441/R443）：本文 R128–R437 各节把 Lighthouse `/` LCP 26xx–27xx 记为「宿主方差 / 单样本波动 / 本机噪音 / 宿主负载」均为**误归因**——那是 LH simulate 口径下 Lantern 按首绘前收完的 High 优先级请求折算的稳定值（真节流 0.7 s），低值 0.8/1.2–2.0 才是主包与首绘竞态的落点；历史行按当时原文保留不改，机理见 docs/iter/round-3/r443-lcp-budget-lantern-calibration.md。
 
 ## 资源与凭证索引
 - 环境变量：LLM_BASE_URL / LLM_API_KEY / LLM_MODEL（需图片输入）、SITE_BASE_URL、管理令牌/导入令牌（名称见 deps.py）
@@ -2109,3 +2110,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 3000 线：仍把「首绘前 High 优先级字节」留在护栏内（现值 2723–2793，余量 ~250 ms），不再每次部署误报；perf ≥0.90 不动。`bash -n` 过；生产实跑 `perf-budget.sh` 12 项全 OK（`/` perf 0.97 / LCP 2020；`/tiku/` 1.00 / 957；bundle gzip 125 KB）。
 - 否决 (b) 主包瘦身（真节流首屏 0.7 s、主包在 160 KB 预算内、R442 无回归）与换 devtools 口径（历史水位全是 simulate、跑一次 60–90 s 且带 incomplete warning）。
 - 留存 `/home/ubuntu/r443/lhr_sim_{1..4}.json`、`lhr_devtools_{1,2}.json`。到期项未动：`.sheet-x`/(c) 无样本、`error_reason` ≥09-11、`.trend-kn` 4 周、WAL 截断、无可确认外部真人、`WX_MINIAPP_SECRET`、R385 第二冷样本；下次 SOP-10 ~R450。
+
+### R444（到期项只读复查 + 27xx 误归因勘误指针 + 首页 CLS 0.071 元素级归因；只登记，不改产品代码不部署，生产仍 `b265cdc`）
+- 取证 docs/iter/round-3/r444-due-items-readonly-cls-attribution-erratum.md。到期项全无新样本：`probe=0` 仍 22 行/1 uid（09-06 vivo 小程序，之后 0 新行）、`error_reason` 6 行与 probe=0 关联 0、`push_subs`/`weekly_reports` 0/0、29/29 `next_review` 在 CST 00:00、WAL 519 KB（64 MiB 截断阈值未触发；只读探针连接读 `journal_size_limit=-1` 属连接级 pragma 预期，应用连接 R436 已读回 64 MiB）；caddy 6 h 2404 请求 `/assets/*` 404 = 0、monitor 上报 12 条全 testing agent、非探针非 2xx 全可归因（bingbot 历史分片 12 / 直连 403 / `.env`·security.txt 扫描）、0 候选真人。
+- 勘误：把 26xx–27xx LCP 记为「宿主方差/单样本波动/本机噪音/宿主负载」的历史行（R128/R315/R324/R334/R343/R388/R389/R424/R427/R431/R435/R437 节 + r424/r435 取证各 1 处）**不改原文**，在本文「已知坑与注意事项」加一条勘误指针 → R443 机理文档。
+- CLS 0.071（R196 起每次 6b 恒定、从未归因）一手拆解：8 份 lhr + `--save-assets` trace + Playwright `layout-shift` sources 4 次 = **12 次全同**两次位移：#1 0.0608 `uni-page-wrapper::after`（uni-app TabBar 50 px 占位，空页时在 44 px 导航下、内容进入后被推到 2680 px 页尾）≈ 全在启动屏遮盖下；#2 0.0102 `home_bundle` 回包 `dsMeta` 有值 → `<text v-if="dsMeta" class="hero-ds">` 插入 26 px 把 `.hero-acts` 与 taskcard 下顶 26 px（taskcard 同帧另收 −26 px，哪一行未核），落在 splash 0.15 s 淡出窗口内。判 P3 登记：0.071 在「良好」区间且预算 0.10 有余量；候选修法 = `dsMeta` 未返回前给 `.hero-ds` 预留一行（需先核 `dsMeta` 是否每日必有），无真人样本不动手。
+- 留存（devin-box）：`/home/ubuntu/r444/lhr_cls_1.json`、`lhr_cls_1-0.trace.json`、`cls_sources.py`。到期项继续挂：`.sheet-x`/(c)、`error_reason` ≥09-11、`.trend-kn` 4 周、WAL 截断、无可确认外部真人、`WX_MINIAPP_SECRET`、R385 第二冷样本；下次 SOP-10 ~R450。
