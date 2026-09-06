@@ -5,6 +5,15 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R418 补充（testing agent）— 探针场次打标 / 真人聚合 / 排行榜取证
+- `exam_attempts.probe` 在 `POST /api/exam/start` 由 `auth.probe_request` 写入（X-Kg-Probe:1 / `KG_PROBE_CIDRS` 网段 / UA 标记三路任一）。生产容器 `docker exec deploy-kaogong-1 printenv KG_PROBE_CIDRS` 可查网段；本机出口 `curl api.ipify.org` 命中网段则 GUI 会话天然 probe=1，**不要**用别的手段伪造 probe=0。跨用户聚合（`/api/exam/papers` takers/avg、SEO「已有 N 人模考」、`/api/exam/rank`、比赛分数池）用 `db.REAL_TRAFFIC = COALESCE(probe,0)=0`；排行榜 pool 是 `REAL_TRAFFIC OR uid=本人`，探针看自己报告 total≥1、board 有 me:true。
+- 取证选卷：挑一张真人 takers=0 的卷（DB `SELECT COUNT(*),SUM(probe=1) FROM exam_attempts WHERE paper_id=? AND submitted_at IS NOT NULL`）——卷卡 `.pmeta` 在 takers 为 0 时不渲染「人考过」，SEO 页也无「人模考」，探针交卷后若变「1 人考过」立刻可见。卷库卡上「我的最好成绩 X 分 · 已考 N 次」「已练 n/62 题」是本人视角，不是聚合，勿混淆。
+- `/api/exam/papers` takers 有 300 s SWR 内存缓存：交卷后等 ≥305 s 再连续 curl 两次，以第二次为准；用 `-H "X-Kg-Probe: 1"` 的 curl 只读不落库。
+- 报告页排行榜卡选择器：`.r-title`「全卷排名」、`.r-tag`「样本 N 人」、`.r-beat-tiny`（total<10 时代替击败比例）、`.r-kv-i`「排名 r/total」「平均分」；「同卷排行榜」列表 `.r-brow` 在 `exam-board.js` `rows.length<2` 时整块不渲染（total=1 不显示是既定逻辑，不是 bug）。GET 响应体 `__exb.res` 为 undefined，取 JSON 用页内 `fetch('/api/exam/rank/<id>?uid=…')`。
+- 容器内直接 `docker exec deploy-kaogong-1 python3 -c "from app import insights; insights.api_exam_rank(<attempt_id>, uid='<uid>')"`（工作目录已是 `/app/backend`，勿加 `-w /app`）。
+- `cdp.C` 需要 target：`cdp.C(cdp.pick())`；大 LS 恢复走它的 `.eval` 避免 `Argument list too long`。`r391usr.py read <out.json>` 必须带输出路径。
+- 基线漂移排查：`SELECT * FROM growth_events ORDER BY rowid DESC LIMIT 3` 看最新行的 uid/probe/created_at，能区分「本轮前其他探针会话产生」与「本轮泄漏」。
+
 ## R417 补充（testing agent）— 多选 picked 落库 / 历次作答 / 换 uid 的 LS 陷阱
 - R417 起 `save_answer_log_detail` 用 `normalize_answer(picked)[:8]`（旧 `str(picked)[:2]`：多选 ABD 会落 AB）。核对口径：`SELECT question_id,picked,correct FROM answer_log WHERE uid=?` + `mistakes.user_answer` + 报告页「你选了 ABD」+ 错题本卡片展开后 `.attempts .att-pick`「选 ABD」（`toggleCard` 打开时才 GET `/api/attempts?uid&question_id`）。**不要伪造 probe=0** 去刷 most_wrong/易错项：测试 uid 的 answer_log 全为 probe=1，后台聚合不会计入，只核行与 UI。
 - 练习页多选：`.multi-bar .multi-ok`「确认答案（n）」→ `POST /api/answer_log {uid,items:[{qid,correct,picked}]}`，source 取深链 `source=seo_q`。SEO `/tiku/q/<id>` 的 CTA「在线做这道题 + 同考点练习（免费）→」是普通 `<a href="…#/pages/practice/practice?qid=…&source=seo_q">`，原生点即落 practice、该题领跑。
