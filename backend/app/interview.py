@@ -23,6 +23,7 @@ DIMENSIONS = ["内容针对性", "逻辑条理", "内容深度", "语言表达",
 ANSWER_MAX_LEN = 5000
 ANSWER_MIN_LEN = 20
 REVIEW_MIN_LEN = 300  # 短于此视为流截断/异常产出，保留重新生成入口
+REVIEW_MAX_TOKENS = 8000  # 推理模型 reasoning 可占 2.5k+ token，正文 ~1.3k；预算不足时正文为空
 
 _bank: dict | None = None
 
@@ -240,7 +241,8 @@ async def api_answer_stream(body: dict, request: Request):
             yield "event: meta\ndata: " + json.dumps(meta, ensure_ascii=False) + "\n\n"
             parts: list[str] = []
             async for line in sse.relay(
-                llm.chat_stream(_review_prompt(q, answer, scores, summary), with_thinking=True), parts
+                llm.chat_stream(_review_prompt(q, answer, scores, summary), max_tokens=REVIEW_MAX_TOKENS, with_thinking=True),
+                parts,
             ):
                 yield line
             _update_review(sid, "".join(parts))
@@ -276,7 +278,8 @@ async def api_review_regen_stream(sid: int, body: dict, request: Request):
         try:
             parts: list[str] = []
             async for line in sse.relay(
-                llm.chat_stream(_review_prompt(q, answer, scores, ""), with_thinking=True), parts
+                llm.chat_stream(_review_prompt(q, answer, scores, ""), max_tokens=REVIEW_MAX_TOKENS, with_thinking=True),
+                parts,
             ):
                 yield line
             full = "".join(parts)

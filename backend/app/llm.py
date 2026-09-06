@@ -165,7 +165,8 @@ async def chat_stream(messages: list, temperature: float = 0.2, max_tokens: int 
                 if (resp.status_code >= 500 or resp.status_code in _QUOTA_CODES) and i < len(tries) - 1:
                     continue
                 resp.raise_for_status()
-                thinking_chars = 0
+                thinking_chars = content_chars = 0
+                finish = None
                 async for line in resp.aiter_lines():
                     if not line.startswith("data:"):
                         continue
@@ -173,19 +174,27 @@ async def chat_stream(messages: list, temperature: float = 0.2, max_tokens: int 
                     if payload == "[DONE]":
                         break
                     try:
-                        d = json.loads(payload)["choices"][0]["delta"]
+                        choice = json.loads(payload)["choices"][0]
+                        d = choice["delta"]
                     except (json.JSONDecodeError, KeyError, IndexError, TypeError):
                         continue
                     if not isinstance(d, dict):
                         continue
+                    finish = choice.get("finish_reason") or finish
                     delta = d.get("content")
                     if delta:
+                        content_chars += len(delta)
                         yield delta
                     elif with_thinking:
                         reasoning = d.get("reasoning_content") or d.get("reasoning")
                         if reasoning:
                             thinking_chars += len(reasoning)
                             yield Thinking(thinking_chars)
+                if finish == "length" or not content_chars:
+                    log.warning(
+                        "[llm] stream %s finish=%s content=%d reasoning_chars=%d max_tokens=%d",
+                        m, finish, content_chars, thinking_chars, max_tokens,
+                    )
             return
 
 

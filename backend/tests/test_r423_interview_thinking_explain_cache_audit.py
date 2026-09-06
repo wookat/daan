@@ -100,6 +100,93 @@ def test_review_regen_stream_emits_thinking(client, monkeypatch):
     conn.close()
 
 
+def test_review_streams_use_enlarged_token_budget(client, monkeypatch):
+    seen: list[int] = []
+
+    def _stream(messages, temperature=0.2, max_tokens=4000, with_thinking=False):
+        seen.append(max_tokens)
+
+        async def gen():
+            yield REVIEW
+        return gen()
+
+    async def fake_chat_json(messages, fast=False, **kw):
+        return {"scores": {d: 6 for d in interview.DIMENSIONS}, "summary": "s"}
+
+    monkeypatch.setattr(llm, "chat_json", fake_chat_json)
+    monkeypatch.setattr(llm, "chat_stream", _stream)
+    q = interview.bank()["questions"][0]
+    r = client.post("/api/interview/answer/stream", json={"uid": "test-r423-tok", "question_id": q["id"], "answer": "x" * 40})
+    assert r.status_code == 200
+    sid = interview._save_session("test-r423-tok", q, "x" * 40, 30, {d: 5 for d in interview.DIMENSIONS}, 50, "")
+    assert client.post(f"/api/interview/sessions/{sid}/review/stream", json={"uid": "test-r423-tok"}).status_code == 200
+    assert seen == [interview.REVIEW_MAX_TOKENS] * 2 and interview.REVIEW_MAX_TOKENS >= 8000
+
+
+class _FakeStreamResp:
+    status_code = 200
+
+    def __init__(self, lines):
+        self._lines = lines
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *a):
+        return False
+
+    def raise_for_status(self):
+        pass
+
+    async def aiter_lines(self):
+        for ln in self._lines:
+            yield ln
+
+
+def _chunk(delta, finish=None):
+    return "data: " + json.dumps({"choices": [{"delta": delta, "finish_reason": finish}]})
+
+
+def _run_stream(monkeypatch, lines):
+    class _Client:
+        def __init__(self, *a, **k):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return False
+
+        def stream(self, *a, **k):
+            return _FakeStreamResp(lines)
+
+    monkeypatch.setattr(llm.httpx, "AsyncClient", _Client)
+    monkeypatch.setattr(llm, "_endpoint", lambda m: ("http://x", "k", "m1"))
+    monkeypatch.setattr(llm, "FALLBACK_MODEL", "")
+    monkeypatch.setattr(llm, "_rescue_ok", lambda m: False)
+
+    async def collect():
+        return [x async for x in llm.chat_stream([{"role": "user", "content": "q"}], with_thinking=True)]
+    return [x.chars if isinstance(x, llm.Thinking) else x for x in asyncio.run(collect())]
+
+
+def test_chat_stream_logs_when_reasoning_exhausts_budget(monkeypatch, caplog):
+    lines = [_chunk({"reasoning_content": "想" * 30}), _chunk({"reasoning_content": "想" * 20}, "length"), "data: [DONE]"]
+    with caplog.at_level("WARNING", logger="kg.llm"):
+        out = _run_stream(monkeypatch, lines)
+    assert out == [30, 50]
+    assert any("finish=length content=0 reasoning_chars=50" in r.message for r in caplog.records)
+
+
+def test_chat_stream_quiet_on_normal_completion(monkeypatch, caplog):
+    lines = [_chunk({"reasoning_content": "想想"}), _chunk({"content": "正文"}), _chunk({}, "stop"), "data: [DONE]"]
+    with caplog.at_level("WARNING", logger="kg.llm"):
+        out = _run_stream(monkeypatch, lines)
+    assert out == [2, "正文"]
+    assert not [r for r in caplog.records if "[llm] stream" in r.message]
+
+
 def test_thinking_tick_throttled(client, monkeypatch):
     async def fake_chat_json(messages, fast=False, **kw):
         return {"scores": {d: 6 for d in interview.DIMENSIONS}, "summary": "s"}
