@@ -1,112 +1,131 @@
 <template>
-  <view class="wrap">
+  <view class="page">
     <!-- 第一步：选分类 -->
-    <view v-if="step === 'pick'">
-      <view class="hero">
-        <view class="hero-t">AI 结构化面试陪练</view>
-        <view class="hero-s">抽题作答 · 考官级五维打分 · 逐段点评</view>
-        <view class="hero-n">{{ bankTotal }} 道真题/经典题 · 来源公开资料</view>
-      </view>
-      <view class="sec-t">选择题型分类</view>
-      <view class="cat-list">
-        <view v-for="c in categories" :key="c.name" class="cat" @click="draw(c.name)">
-          <view class="cat-l">
-            <text class="cat-name">{{ c.name }}</text>
-            <text class="cat-sub">共 {{ c.total }} 题 · 已练 {{ c.done }}</text>
-          </view>
-          <text class="cat-arrow">›</text>
-        </view>
-      </view>
-      <button class="btn-primary" @click="draw('')"><l-icon name="shuffle" :size="16" color="#ffffff" /> 随机抽一题</button>
-      <view class="hist-link" @click="goHistory">练习记录 ›</view>
-    </view>
+    <kg-two-col v-if="step === 'pick'" aside-first>
+      <template #aside>
+        <kg-hero-card
+          label="AI 结构化面试陪练 · 已练"
+          :value="doneTotal"
+          unit="题"
+          :primary="{ text: '随机抽一题' }"
+          class="hero"
+          @primary="draw('')"
+        >
+          <text class="hero-s">抽题作答 · 考官级五维打分 · 逐段点评 · <text class="num">{{ bankTotal }}</text> 道真题/经典题（来源公开资料）</text>
+        </kg-hero-card>
+      </template>
+      <template #main>
+        <kg-section-header title="选择题型分类" more="练习记录" to="/pkgA/interview/history" />
+        <kg-skeleton v-if="!categories.length && catLoading" preset="lines" />
+        <wd-cell-group v-else custom-class="cellcard" border>
+          <wd-cell
+            v-for="c in categories"
+            :key="c.name"
+            :title="c.name"
+            :label="'共 ' + c.total + ' 题 · 已练 ' + c.done"
+            is-link
+            clickable
+            @click="draw(c.name)"
+          />
+        </wd-cell-group>
+        <kg-empty-state
+          v-if="!categories.length && !catLoading"
+          compact
+          icon="mic"
+          title="题库暂时没有加载出来"
+          desc="检查网络后重试，或直接随机抽一题"
+          cta-text="重试"
+          @cta="loadCategories"
+        />
+      </template>
+    </kg-two-col>
 
     <!-- 第二步：作答 -->
-    <view v-else-if="step === 'answer'" class="iv-cols">
-      <view class="iv-left">
-        <view class="q-card">
+    <kg-two-col v-else-if="step === 'answer'" aside-first>
+      <template #aside>
+        <kg-card class="q-card">
           <view class="q-meta">
-            <text class="q-tag">{{ question.category }}</text>
+            <kg-tag tone="brand">{{ question.category }}</kg-tag>
             <text class="q-src">{{ question.source }}</text>
           </view>
-          <view class="q-text">{{ question.question }}</view>
-        </view>
+          <text class="q-text stem">{{ question.question }}</text>
+        </kg-card>
         <view class="timer-row">
-          <view class="timer"><l-icon name="timer" :size="15" color="#40434e" /><text>{{ fmtDur(elapsed) }}</text></view>
-          <text class="swap" @click="draw(pickedCategory, question.id)">换一题</text>
+          <view class="timer"><l-icon name="timer" :size="16" tone="ink-2" /><text class="num">{{ fmtDur(elapsed) }}</text></view>
+          <kg-button variant="text" size="sm" icon="shuffle" @click="draw(pickedCategory, question.id)">换一题</kg-button>
         </view>
-      </view>
-      <view class="iv-right">
-        <textarea
-          v-model="answer"
-          class="ans-box"
-          :maxlength="5000"
-          placeholder="像面试现场一样组织语言作答（建议 200 字以上）…草稿自动保存在本机"
-          @input="saveDraft"
-        />
-        <view class="cnt"><text v-if="answer" class="cnt-save">已自动保存 · </text>{{ answer.length }} / 5000</view>
+      </template>
+      <template #main>
+        <kg-card :padding="12" class="ans-card">
+          <textarea
+            v-model="answer"
+            class="ans-box"
+            :maxlength="5000"
+            placeholder="像面试现场一样组织语言作答（建议 200 字以上）…草稿自动保存在本机"
+            placeholder-style="color: var(--ink-4)"
+            @input="saveDraft"
+          />
+        </kg-card>
+        <text class="cnt"><text v-if="answer" class="cnt-save">已自动保存 · </text><text class="num">{{ answer.length }}</text> / 5000</text>
         <view class="btn-row">
-          <button class="btn-ghost" @click="voiceStub"><l-icon name="mic" :size="15" color="#2e5bff" /> 语音作答（即将上线）</button>
-          <button class="btn-primary grow" :disabled="answer.trim().length < 20 || submitting" @click="submit">
+          <kg-button variant="ghost" size="lg" icon="mic" @click="voiceStub">语音（即将上线）</kg-button>
+          <kg-button variant="primary" size="lg" class="grow" :disabled="answer.trim().length < 20 || submitting" :loading="submitting" @click="submit">
             {{ submitting ? '考官点评中…' : '提交作答' }}
-          </button>
+          </kg-button>
         </view>
-      </view>
-    </view>
+      </template>
+    </kg-two-col>
 
     <!-- 第三步：点评报告 -->
-    <view v-else>
-      <view class="hero report">
-        <view class="row-between">
-          <view>
-            <view class="hero-s">结构化面试 · {{ report.category }}</view>
-            <view class="score-big">{{ report.total }} <text class="score-sub">/ 100</text></view>
-          </view>
-          <view class="hero-meta">作答 {{ fmtDur(report.duration) }} · {{ report.answerLen }} 字</view>
-        </view>
-        <view v-if="report.summary" class="hero-sum">{{ report.summary }}</view>
-      </view>
+    <template v-else>
+      <kg-hero-card :label="'结构化面试 · ' + report.category + ' · 得分'" :value="report.total" :total="100" class="hero">
+        <text class="hero-s">作答 <text class="num">{{ fmtDur(report.duration) }}</text> · <text class="num">{{ report.answerLen }}</text> 字</text>
+        <text v-if="report.summary" class="hero-sum">{{ report.summary }}</text>
+      </kg-hero-card>
 
-      <view class="rp-cols">
-        <view class="rp-left">
-          <view class="card">
-            <view class="card-t">五维评分</view>
+      <kg-two-col aside-first>
+        <template #aside>
+          <kg-card class="card">
+            <text class="card-t">五维评分</text>
             <view v-for="(v, k) in report.scores" :key="k" class="dim-row">
               <text class="dim-l">{{ k }}</text>
-              <view class="bar"><view class="bar-i" :style="{ width: v * 10 + '%' }" /></view>
-              <text class="dim-v">{{ v }}</text>
+              <kg-progress :value="v * 10" :thickness="8" :aria-label="k + ' 评分'" class="dim-bar" />
+              <text class="dim-v num">{{ v }}</text>
             </view>
-          </view>
+          </kg-card>
 
-          <view class="sec-t">题目</view>
-          <view class="q-card"><view class="q-text">{{ question.question }}</view></view>
+          <kg-section-header title="题目" />
+          <kg-card class="q-card"><text class="q-text stem">{{ question.question }}</text></kg-card>
 
-          <view v-if="points.length" class="card">
-            <view class="card-t">参考思路要点</view>
-            <view v-for="(p, i) in points" :key="i" class="pt">{{ i + 1 }}. {{ p }}</view>
-          </view>
-        </view>
-        <view class="rp-right">
-          <view class="sec-t">考官点评{{ streaming ? '（生成中…）' : '' }}</view>
-          <view class="card review">
+          <kg-card v-if="points.length" class="card">
+            <text class="card-t">参考思路要点</text>
+            <text v-for="(p, i) in points" :key="i" class="pt">{{ i + 1 }}. {{ p }}</text>
+          </kg-card>
+        </template>
+        <template #main>
+          <kg-section-header :title="'考官点评' + (streaming ? '（生成中…）' : '')" />
+          <kg-card class="review">
             <rich-text v-if="reviewHtml" :nodes="reviewHtml" />
             <view v-if="reviewMissing && !streaming" class="regen">
-              <view class="regen-tip">{{ review ? '点评可能不完整（生成被中断）' : '上次点评生成被中断，评分已保留' }}</view>
+              <text class="regen-tip">{{ review ? '点评可能不完整（生成被中断）' : '上次点评生成被中断，评分已保留' }}</text>
               <!-- #ifdef H5 -->
-              <button class="btn-primary regen-btn" @click="regenReview">重新生成点评</button>
+              <kg-button variant="secondary" size="md" icon="rotate-ccw" @click="regenReview">重新生成点评</kg-button>
               <!-- #endif -->
             </view>
-            <view v-if="!reviewHtml && (!reviewMissing || streaming)" class="loading">考官正在撰写点评…</view>
-          </view>
-        </view>
-      </view>
+            <view v-if="!reviewHtml && (!reviewMissing || streaming)" class="loading" aria-busy="true">
+              <kg-skeleton preset="lines" />
+              <text class="loading-t">考官正在撰写点评…</text>
+            </view>
+          </kg-card>
 
-      <view class="btn-row">
-        <button class="btn-ghost" :disabled="streaming" @click="retry">重答本题</button>
-        <button class="btn-primary grow" :disabled="streaming" @click="draw(pickedCategory, question.id)">再练一题</button>
-      </view>
-      <view class="hist-link" @click="goHistory">练习记录 ›</view>
-    </view>
+          <view class="btn-row">
+            <kg-button variant="ghost" size="lg" :disabled="streaming" @click="retry">重答本题</kg-button>
+            <kg-button variant="primary" size="lg" class="grow" :disabled="streaming" @click="draw(pickedCategory, question.id)">再练一题</kg-button>
+          </view>
+          <kg-button variant="text" size="md" block icon="chevron-right" class="hist-link" @click="goHistory">练习记录</kg-button>
+        </template>
+      </kg-two-col>
+    </template>
   </view>
 </template>
 
@@ -122,6 +141,7 @@ export default {
     return {
       step: 'pick',
       categories: [],
+      catLoading: false,
       bankTotal: 0,
       pickedCategory: '',
       question: {},
@@ -139,6 +159,9 @@ export default {
     this._timer = null;
   },
   computed: {
+    doneTotal() {
+      return this.categories.reduce((n, c) => n + (Number(c.done) || 0), 0);
+    },
     reviewHtml() {
       return this.review ? md(this.review) : '';
     },
@@ -156,6 +179,7 @@ export default {
       return m + "'" + String(s % 60).padStart(2, '0') + '"';
     },
     async loadCategories() {
+      this.catLoading = true;
       try {
         const d = await interviewCategories();
         this.categories = d.categories || [];
@@ -163,6 +187,7 @@ export default {
       } catch (e) {
         uni.showToast({ title: e.message || '加载失败', icon: 'none' });
       }
+      this.catLoading = false;
     },
     async draw(category, excludeId) {
       this.pickedCategory = category || '';
@@ -300,80 +325,43 @@ export default {
 </script>
 
 <style scoped>
-.wrap { padding: 24rpx 32rpx 60rpx; }
+.page { padding: var(--sp-16) var(--page-x) var(--sp-48); }
+.hero { margin-bottom: var(--card-gap); }
+.hero-s { display: block; font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--on-brand-2); margin-bottom: var(--sp-8); }
+.hero-sum { display: block; font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--on-brand); border-top: 1px solid var(--on-brand-2); padding-top: var(--sp-8); margin-bottom: var(--sp-4); opacity: 0.92; }
 
-.hero { background: linear-gradient(135deg, #5b8af8, #2e5bff); border-radius: 28rpx; padding: 36rpx 32rpx; color: #fff; margin-bottom: 24rpx; box-shadow: 0 6rpx 18rpx rgba(46, 91, 255, 0.3); }
-.hero-t { font-size: 38rpx; font-weight: 800; }
-.hero-s { font-size: 25rpx; color: rgba(255, 255, 255, 0.85); margin-top: 8rpx; }
-.hero-n { font-size: 22rpx; color: rgba(255, 255, 255, 0.7); margin-top: 14rpx; }
-.hero.report { margin-bottom: 20rpx; }
-.row-between { display: flex; justify-content: space-between; align-items: flex-start; }
-.score-big { font-size: 68rpx; font-weight: 800; line-height: 1.2; }
-.score-sub { font-size: 26rpx; font-weight: 500; color: rgba(255, 255, 255, 0.8); }
-.hero-meta { font-size: 23rpx; color: rgba(255, 255, 255, 0.85); text-align: right; line-height: 1.8; }
-.hero-sum { font-size: 25rpx; color: rgba(255, 255, 255, 0.92); margin-top: 14rpx; border-top: 1rpx solid rgba(255, 255, 255, 0.25); padding-top: 14rpx; }
+.q-card { margin-bottom: var(--sp-12); }
+.q-meta { display: flex; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-8); }
+.q-src { font-size: var(--fs-caption); color: var(--ink-2); }
+.stem { display: block; font-size: var(--fs-body); line-height: var(--lh-question); color: var(--ink); }
 
-.sec-t { font-size: 24rpx; color: var(--ink-2); margin: 28rpx 8rpx 14rpx; }
-.cat-list { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 4rpx 32rpx; margin-bottom: 24rpx; }
-.cat { display: flex; align-items: center; min-height: 52px; border-top: 1rpx solid var(--line); }
-.cat:first-child { border-top: none; }
-.cat-l { flex: 1; }
-.cat-name { display: block; font-size: 29rpx; font-weight: 600; color: var(--ink); }
-.cat-sub { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
-.cat-arrow { color: #b0b4c0; font-size: 30rpx; }
-
-.q-card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 28rpx 32rpx; margin-bottom: 20rpx; }
-.q-meta { display: flex; align-items: center; gap: 16rpx; margin-bottom: 14rpx; }
-.q-tag { background: #e8effe; color: var(--brand-text); font-size: 22rpx; font-weight: 600; border-radius: 8rpx; padding: 4rpx 14rpx; }
-.q-src { font-size: 22rpx; color: var(--ink-2); }
-.q-text { font-size: 29rpx; line-height: 1.7; color: var(--ink); }
-
-.timer-row { display: flex; justify-content: space-between; align-items: center; margin: 0 8rpx 14rpx; }
-.timer { display: flex; align-items: center; gap: 8rpx; font-size: 26rpx; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-.swap { font-size: 25rpx; color: var(--brand-text); }
-.ans-box { width: 100%; box-sizing: border-box; min-height: 320rpx; background: var(--card); border-radius: 24rpx; padding: 24rpx 28rpx; font-size: 28rpx; line-height: 1.7; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); }
-.cnt { text-align: right; font-size: 22rpx; color: var(--ink-2); margin: 10rpx 8rpx 24rpx; }
+.timer-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-12); }
+.timer { display: flex; align-items: center; gap: var(--sp-4); font-size: var(--fs-sub); color: var(--ink-2); }
+.ans-card { margin-bottom: var(--sp-4); }
+.ans-box { width: 100%; box-sizing: border-box; min-height: 160px; background: transparent; color: var(--ink); font-size: var(--fs-body); line-height: var(--lh-body); }
+.cnt { display: block; text-align: right; font-size: var(--fs-caption); color: var(--ink-2); margin: 0 var(--sp-4) var(--sp-12); }
 .cnt-save { color: var(--ink-3); }
 
-.btn-row { display: flex; gap: 20rpx; margin-top: 10rpx; }
+.btn-row { display: flex; gap: var(--sp-12); margin-top: var(--sp-4); }
 .grow { flex: 1; }
-.btn-primary { background: #2e5bff; color: #fff; border-radius: 999rpx; font-size: 29rpx; font-weight: 600; min-height: 44px; display: flex; align-items: center; justify-content: center; width: 100%; }
-.btn-primary[disabled] { opacity: 0.5; }
-.btn-ghost { background: var(--card); color: var(--ink); border-radius: 999rpx; font-size: 26rpx; min-height: 44px; display: flex; align-items: center; justify-content: center; padding: 0 24rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); }
-.btn-ghost[disabled] { opacity: 0.5; }
-.hist-link { text-align: center; font-size: 26rpx; color: var(--brand-text); margin-top: 28rpx; }
+.hist-link { margin-top: var(--sp-12); }
 
-.card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 28rpx 32rpx; margin-bottom: 20rpx; }
-.card-t { font-size: 29rpx; font-weight: 700; color: var(--ink); margin-bottom: 12rpx; }
-.dim-row { display: flex; align-items: center; gap: 18rpx; padding: 12rpx 0; }
-.dim-l { width: 130rpx; font-size: 24rpx; color: var(--ink-2); flex-shrink: 0; }
-.bar { flex: 1; height: 14rpx; background: #eef1f7; border-radius: 999rpx; overflow: hidden; }
-.bar-i { height: 100%; background: linear-gradient(90deg, #5b8af8, #2e5bff); border-radius: 999rpx; }
-.dim-v { width: 44rpx; text-align: right; font-size: 26rpx; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
-.pt { font-size: 26rpx; color: var(--ink); line-height: 1.7; margin: 8rpx 0; }
-.review { font-size: 27rpx; line-height: 1.8; }
-.loading { font-size: 26rpx; color: var(--ink-2); padding: 20rpx 0; }
-.regen { padding: 16rpx 0; }
-.regen-tip { font-size: 26rpx; color: var(--ink-2); margin-bottom: 20rpx; }
-.regen-btn { max-width: 360rpx; }
+.card { margin-bottom: var(--card-gap); }
+.card-t { display: block; font-size: var(--fs-h3); font-weight: 600; color: var(--ink); margin-bottom: var(--sp-8); }
+.dim-row { display: flex; align-items: center; gap: var(--sp-12); padding: var(--sp-4) 0; }
+.dim-l { width: 64px; font-size: var(--fs-caption); color: var(--ink-2); flex-shrink: 0; }
+.dim-bar { flex: 1; }
+.dim-v { width: 24px; text-align: right; font-size: var(--fs-sub); font-weight: 600; color: var(--ink); flex-shrink: 0; }
+.pt { display: block; font-size: var(--fs-sub); color: var(--ink); line-height: var(--lh-sub); margin: var(--sp-4) 0; }
+.review { font-size: var(--fs-body); line-height: var(--lh-body); color: var(--ink); margin-bottom: var(--card-gap); }
+.loading { padding: var(--sp-8) 0; }
+.loading-t { display: block; margin-top: var(--sp-8); font-size: var(--fs-sub); color: var(--ink-2); }
+.regen { padding: var(--sp-8) 0; display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-12); }
+.regen-tip { font-size: var(--fs-sub); color: var(--ink-2); }
 
 /* #ifdef H5 */
-@media (min-width: 768px) {
-  .wrap { max-width: 1044px; margin: 0 auto; }
-  .cat:hover, .hist-link:hover, .swap:hover { cursor: pointer; }
-  .cat:hover { background: var(--soft-bg, #f5f6fa); border-radius: 16rpx; }
-}
 @media (min-width: 1024px) {
-  .cat-list { display: grid; grid-template-columns: 1fr 1fr; column-gap: 32rpx; padding: 12rpx 32rpx; }
-  .cat:nth-child(2) { border-top: none; }
-  .iv-cols { display: flex; gap: 32rpx; align-items: flex-start; }
-  .iv-left { width: 420px; flex: none; position: sticky; top: 24rpx; }
-  .iv-right { flex: 1; min-width: 0; }
-  .iv-right .ans-box { min-height: 480rpx; }
-  .rp-cols { display: flex; gap: 32rpx; align-items: flex-start; }
-  .rp-left { width: 420px; flex: none; }
-  .rp-right { flex: 1; min-width: 0; }
-  .rp-right .sec-t { margin-top: 0; }
+  .ans-box { min-height: 320px; }
 }
 /* #endif */
 </style>

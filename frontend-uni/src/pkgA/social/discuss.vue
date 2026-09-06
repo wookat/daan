@@ -1,122 +1,133 @@
 <template>
-  <view class="wrap">
-    <view class="dc-cols">
-    <view class="dc-side">
-    <!-- 题目摘要卡 -->
-    <view v-if="q" class="card qcard">
-      <view class="qtags">
-        <text class="tag" :style="{ background: modColor(q.module).bg, color: modColor(q.module).fg }">{{ modName(q.module) }}</text>
-        <text v-if="q.is_real" class="tag gray">{{ [q.exam_year, q.exam_region, '真题'].filter(Boolean).join(' ') }}</text>
-        <text v-if="q.attempt_count >= 5 && q.correct_ratio != null" class="tag gray">正确率 {{ q.correct_ratio }}%</text>
-      </view>
-      <view class="qtx">{{ q.question }}</view>
-      <view class="qans">正确答案 {{ q.answer }}</view>
-    </view>
-    </view>
-
-    <view class="dc-main">
-    <!-- 排序 -->
-    <view class="chips">
-      <text class="chip" :class="{ on: sort === 'hot' }" @click="switchSort('hot')">最热</text>
-      <text class="chip" :class="{ on: sort === 'new' }" @click="switchSort('new')">最新</text>
-      <text class="cnt">共 {{ total }} 条讨论</text>
-      <view class="msg" @click="goInbox">
-        <l-icon name="bell" :size="15" color="#5a6072" />
-        <text>消息</text>
-        <text v-if="inboxUnread" class="msg-badge">{{ inboxUnread }}</text>
-      </view>
-    </view>
-
-    <!-- 评论列表 -->
-    <view v-if="noQid" class="card empty">
-      <view class="empty-t">链接缺少题目参数</view>
-      <view class="empty-s">请从题目解析页进入讨论，或去讨论广场看看大家在聊什么</view>
-      <view class="plaza-btn" @click="goPlaza">去讨论广场</view>
-    </view>
-    <view v-else-if="loading" class="card empty">加载中…</view>
-    <view v-else-if="loadErr" class="card empty">
-      <view class="empty-t">加载失败：{{ loadErr }}</view>
-      <view class="retry" @click="load">重试 ›</view>
-    </view>
-    <view v-else-if="!items.length" class="card empty">
-      <view class="empty-t">还没有讨论</view>
-      <view class="empty-s">说说你的解法、避坑经验，帮到下一位考友</view>
-    </view>
-    <view v-else class="card cmlist">
-      <view v-for="c in items" :key="c.id" class="cm">
-        <view class="avatar" :style="avatarStyle(c.nickname)">{{ c.nickname.slice(0, 1) }}</view>
-        <view class="cm-body">
-          <view class="cm-hd">
-            <text class="nm">{{ c.nickname }}</text>
-            <text v-if="c.likes >= 10" class="tag warn">高赞</text>
-            <text class="tm">{{ fmtTime(c.created_at) }}</text>
+  <view class="wrap" :class="{ 'has-bar': !noQid }">
+    <kg-empty-state
+      v-if="noQid"
+      icon="message-circle"
+      title="链接缺少题目参数"
+      desc="请从题目解析页进入讨论，或去讨论广场看看大家在聊什么"
+      cta-text="去讨论广场"
+      @cta="goPlaza"
+    />
+    <kg-two-col v-else aside-first>
+      <template #aside>
+        <!-- 题目摘要卡 -->
+        <kg-card v-if="q" class="qcard">
+          <view class="qtags">
+            <kg-tag tone="module" :module="q.module">{{ modName(q.module) }}</kg-tag>
+            <kg-tag v-if="q.is_real" tone="neutral">{{ [q.exam_year, q.exam_region, '真题'].filter(Boolean).join(' ') }}</kg-tag>
+            <kg-tag v-if="q.attempt_count >= 5 && q.correct_ratio != null" tone="neutral">正确率 {{ q.correct_ratio }}%</kg-tag>
           </view>
-          <view class="tx">{{ c.content }}</view>
-          <view class="ft">
-            <view class="up" :class="{ on: c.liked }" @click="like(c)"><l-icon name="thumbs-up" :size="13" :color="c.liked ? '#2e5bff' : '#8a90a0'" /><text>{{ c.likes || '赞' }}</text></view>
-            <text class="op" @click="startReply(c)">回复{{ c.replies.length ? ' ' + c.replies.length : '' }}</text>
-            <text v-if="c.mine" class="op del" @click="removeOwn(c)">删除</text>
-            <text v-else class="op" @click="report(c)">举报</text>
-          </view>
-          <view v-for="r in c.replies" :key="r.id" class="reply">
-            <text class="rnm">{{ r.nickname }}：</text>{{ r.content }}
-            <view class="rft">
-              <view class="up sm" :class="{ on: r.liked }" @click="like(r)"><l-icon name="thumbs-up" :size="12" :color="r.liked ? '#2e5bff' : '#8a90a0'" /><text>{{ r.likes || '赞' }}</text></view>
-              <text class="op sm" @click="startReply(c, r)">回复</text>
-              <text v-if="r.mine" class="op sm del" @click="removeOwn(r, c)">删除</text>
-              <text v-else class="op sm" @click="report(r, c)">举报</text>
-            </view>
+          <text class="qtx q-text">{{ q.question }}</text>
+          <text class="qans">正确答案 {{ q.answer }}</text>
+        </kg-card>
+      </template>
+      <template #main>
+        <!-- 排序 -->
+        <view class="toolbar">
+          <wd-segmented :value="sortLabel" :options="sortOpts" size="small" @change="onSortChange" />
+          <text class="cnt">共 <text class="num">{{ total }}</text> 条</text>
+          <view class="msg" role="button" aria-label="消息" @click="goInbox">
+            <l-icon name="bell" :size="20" tone="ink-2" />
+            <text class="msg-t">消息</text>
+            <text v-if="inboxUnread" class="msg-badge num">{{ inboxUnread }}</text>
           </view>
         </view>
-      </view>
-    </view>
 
-    <view class="pin"><l-icon name="info" :size="14" color="#2c5ad6" /> 社区公约：讨论解题思路，不传播付费课程内容；违规内容将被删除。</view>
-    </view>
-    </view>
-    <view style="height: 140rpx" />
-
-    <!-- 输入栏 -->
-    <view v-if="!noQid" class="inputbar">
-      <view v-if="replyTo" class="replying">
-        回复 {{ replyTo.nickname }}
-        <view class="rx" role="button" aria-label="取消回复" @click="replyTo = null"><l-icon name="x" :size="14" color="#8a90a0" /></view>
-      </view>
-      <view class="inputrow">
-        <textarea
-          v-model="draft"
-          class="ipt"
-          :placeholder="logged ? '说说你的解法 / 吐槽这道题…' : '登录后参与讨论'"
-          :maxlength="500"
-          :focus="autoFocus"
-          :auto-height="true"
-          @focus="ensureLogin"
+        <!-- 评论列表 -->
+        <kg-skeleton v-if="loading" preset="lines" />
+        <kg-empty-state
+          v-else-if="loadErr"
+          compact
+          icon="wifi-off"
+          :title="'加载失败：' + loadErr"
+          cta-text="重试"
+          @cta="load"
         />
-        <button class="send" :disabled="busy || !draft.trim()" @click="submit">发布</button>
-      </view>
-    </view>
+        <kg-empty-state
+          v-else-if="!items.length"
+          compact
+          icon="message-square"
+          title="还没有讨论"
+          desc="说说你的解法、避坑经验，帮到下一位考友"
+        />
+        <kg-card v-else class="cmlist" :padding="12">
+          <view v-for="c in items" :key="c.id" class="cm">
+            <view class="avatar" :class="'av-' + avatarTone(c.nickname)" aria-hidden="true">{{ c.nickname.slice(0, 1) }}</view>
+            <view class="cm-body">
+              <view class="cm-hd">
+                <text class="nm">{{ c.nickname }}</text>
+                <kg-tag v-if="c.likes >= 10" tone="warn">高赞</kg-tag>
+                <text class="tm">{{ fmtTime(c.created_at) }}</text>
+              </view>
+              <text class="tx q-text">{{ c.content }}</text>
+              <view class="ft">
+                <view class="op up" :class="{ on: c.liked }" role="button" aria-label="点赞" @click="like(c)">
+                  <l-icon name="thumbs-up" :size="16" :tone="c.liked ? 'brand-text' : 'muted'" />
+                  <text class="num">{{ c.likes || '赞' }}</text>
+                </view>
+                <text class="op" role="button" @click="startReply(c)">回复{{ c.replies.length ? ' ' + c.replies.length : '' }}</text>
+                <text v-if="c.mine" class="op del" role="button" @click="removeOwn(c)">删除</text>
+                <text v-else class="op" role="button" @click="report(c)">举报</text>
+              </view>
+              <view v-for="r in c.replies" :key="r.id" class="reply">
+                <text class="rtx q-text"><text class="rnm">{{ r.nickname }}：</text>{{ r.content }}</text>
+                <view class="rft">
+                  <view class="op sm up" :class="{ on: r.liked }" role="button" aria-label="点赞" @click="like(r)">
+                    <l-icon name="thumbs-up" :size="16" :tone="r.liked ? 'brand-text' : 'muted'" />
+                    <text class="num">{{ r.likes || '赞' }}</text>
+                  </view>
+                  <text class="op sm" role="button" @click="startReply(c, r)">回复</text>
+                  <text v-if="r.mine" class="op sm del" role="button" @click="removeOwn(r, c)">删除</text>
+                  <text v-else class="op sm" role="button" @click="report(r, c)">举报</text>
+                </view>
+              </view>
+            </view>
+          </view>
+        </kg-card>
+
+        <view class="pin">
+          <l-icon name="info" :size="16" tone="brand-text" />
+          <text class="pin-t">社区公约：讨论解题思路，不传播付费课程内容；违规内容将被删除。</text>
+        </view>
+
+        <!-- 输入栏 -->
+        <kg-action-bar layout="input" class="ibar">
+          <view class="ibar-in">
+            <view v-if="replyTo" class="replying">
+              <text class="replying-t">回复 {{ replyTo.nickname }}</text>
+              <view class="rx" role="button" aria-label="取消回复" @click="replyTo = null"><l-icon name="x" :size="16" tone="muted" /></view>
+            </view>
+            <view class="inputrow">
+              <textarea
+                v-model="draft"
+                class="ipt"
+                :placeholder="logged ? '说说你的解法 / 吐槽这道题…' : '登录后参与讨论'"
+                placeholder-style="color: var(--ink-4)"
+                :maxlength="500"
+                :focus="autoFocus"
+                :auto-height="true"
+                @focus="ensureLogin"
+              />
+              <kg-button variant="primary" size="lg" icon="send" :disabled="busy || !draft.trim()" :loading="busy" @click="submit">发布</kg-button>
+            </view>
+          </view>
+        </kg-action-bar>
+      </template>
+    </kg-two-col>
   </view>
 </template>
 
 <script>
 import { deleteOwnComment, fetchCommentInbox, fetchComments, getToken, likeComment, postComment, reportComment, request } from '../../api.js';
+import { MODULES, moduleLabel } from '../../module-meta.js';
 
-const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
-const COLORS = {
-  changshi: { bg: '#FEF3C7', fg: '#B45309' },
-  shuliang: { bg: '#DBEAFE', fg: '#1D4ED8' },
-  panduan: { bg: '#EDE9FE', fg: '#6D28D9' },
-  ziliao: { bg: '#D1FAE5', fg: '#047857' },
-  yanyu: { bg: '#FEE2E2', fg: '#B91C1C' },
-};
-const REPORT_REASONS = ['广告导流', '人身攻击', '违法违规', '色情低俗', '其他'];
-const AV_COLORS = [
-  { bg: '#FFF7E6', fg: '#D97706' },
-  { bg: '#ECFDF5', fg: '#16A34A' },
-  { bg: '#EFF6FF', fg: '#2563EB' },
-  { bg: '#FEF2F2', fg: '#DC2626' },
-  { bg: '#F5F3FF', fg: '#7C3AED' },
+const SORT_OPTS = [
+  { label: '最热', value: 'hot' },
+  { label: '最新', value: 'new' },
 ];
+
+const REPORT_REASONS = ['广告导流', '人身攻击', '违法违规', '色情低俗', '其他'];
+const AV_TONES = ['warn', 'ok', 'brand', 'bad', 'info'];
 
 export default {
   data() {
@@ -136,6 +147,14 @@ export default {
       autoFocus: false,
       inboxUnread: 0,
     };
+  },
+  computed: {
+    sortOpts() {
+      return SORT_OPTS.map((o) => o.label);
+    },
+    sortLabel() {
+      return (SORT_OPTS.find((o) => o.value === this.sort) || SORT_OPTS[0]).label;
+    },
   },
   watch: {
     draft(v) {
@@ -182,16 +201,16 @@ export default {
   },
   methods: {
     modName(m) {
-      return NAMES[m] || m || '';
+      return MODULES[m] ? moduleLabel(m) : m || '';
     },
-    modColor(m) {
-      return COLORS[m] || { bg: '#EEF3FF', fg: '#2E5BFF' };
-    },
-    avatarStyle(nm) {
+    avatarTone(nm) {
       let h = 0;
       for (let i = 0; i < nm.length; i++) h = (h * 31 + nm.charCodeAt(i)) >>> 0;
-      const c = AV_COLORS[h % AV_COLORS.length];
-      return { background: c.bg, color: c.fg };
+      return AV_TONES[h % AV_TONES.length];
+    },
+    onSortChange(opt) {
+      const o = SORT_OPTS.find((x) => x.label === (opt && opt.value));
+      if (o) this.switchSort(o.value);
     },
     fmtTime(ts) {
       const diff = Date.now() / 1000 - ts;
@@ -331,65 +350,56 @@ export default {
 </script>
 
 <style scoped>
-.wrap { padding: 24rpx; }
-.card { background: var(--card, #fff); border-radius: var(--radius, 24rpx); padding: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); margin-bottom: 20rpx; }
-.qtags { display: flex; gap: 10rpx; margin-bottom: 12rpx; flex-wrap: wrap; }
-.tag { font-size: 20rpx; padding: 4rpx 14rpx; border-radius: 8rpx; background: var(--brand-soft); color: var(--brand-text); }
-.tag.gray { background: var(--fill); color: var(--ink-3); }
-.tag.warn { background: #fef3c7; color: #b45309; }
-.qtx { font-size: 26rpx; color: var(--ink-2); line-height: 1.7; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
-.qans { font-size: 23rpx; color: var(--ink-3); margin-top: 10rpx; }
-.chips { display: flex; align-items: center; gap: 14rpx; margin: 4rpx 4rpx 18rpx; }
-.chip { font-size: 24rpx; color: var(--ink-2); background: var(--fill); padding: 8rpx 26rpx; border-radius: 999rpx; }
-.chip.on { background: var(--brand-soft); color: var(--brand-text); font-weight: 700; }
-.cnt { font-size: 22rpx; color: var(--ink-3); margin-left: auto; }
-.msg { display: inline-flex; align-items: center; gap: 6rpx; font-size: 22rpx; color: var(--ink-2); margin-left: 20rpx; }
-.msg-badge { min-width: 30rpx; height: 30rpx; line-height: 30rpx; text-align: center; border-radius: 999rpx; background: #e5484d; color: #fff; font-size: 19rpx; padding: 0 8rpx; box-sizing: border-box; }
-/* #ifdef H5 */
-.msg { cursor: pointer; }
-/* #endif */
-.empty { text-align: center; color: var(--ink-3); font-size: 25rpx; padding: 60rpx 24rpx; }
-.empty-t { font-size: 28rpx; font-weight: 600; color: var(--ink-2); margin-bottom: 8rpx; }
-.retry { margin-top: 8rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
-.plaza-btn { display: inline-block; margin-top: 24rpx; background: var(--brand); color: #fff; font-size: 26rpx; border-radius: 999rpx; padding: 14rpx 56rpx; }
-.cmlist { padding: 6rpx 24rpx; }
-.cm { display: flex; gap: 18rpx; padding: 24rpx 0; border-bottom: 1rpx solid var(--fill); }
+.wrap { padding: var(--sp-16) var(--page-x) var(--sp-48); }
+.wrap.has-bar { padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
+.qtags { display: flex; gap: var(--sp-8); margin-bottom: var(--sp-12); flex-wrap: wrap; }
+.qtx { display: -webkit-box; font-size: var(--fs-sub); color: var(--ink-2); -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.qans { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-8); }
+.toolbar { display: flex; align-items: center; gap: var(--sp-12); margin-bottom: var(--sp-12); min-width: 0; }
+.toolbar :deep(.wd-segmented) { flex: 1 1 0; min-width: 0; width: auto; }
+.cnt { font-size: var(--fs-caption); color: var(--ink-3); margin-left: auto; white-space: nowrap; }
+.msg { display: inline-flex; align-items: center; gap: var(--sp-4); min-height: var(--hit-min); padding: 0 var(--sp-8); border-radius: var(--r-sm); color: var(--ink-2); flex-shrink: 0; }
+.msg-t { font-size: var(--fs-sub); }
+.msg-badge { min-width: 18px; height: 18px; line-height: 18px; text-align: center; border-radius: var(--r-full); background: var(--bad); color: var(--on-brand); font-size: var(--fs-caption); padding: 0 var(--sp-4); box-sizing: border-box; }
+.cm { display: flex; gap: var(--sp-12); padding: var(--sp-12) 0; border-bottom: 1px solid var(--line); }
 .cm:last-child { border-bottom: none; }
-.avatar { width: 64rpx; height: 64rpx; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26rpx; font-weight: 700; flex-shrink: 0; }
+.avatar { width: 32px; height: 32px; border-radius: var(--r-full); display: flex; align-items: center; justify-content: center; font-size: var(--fs-sub); font-weight: 600; flex-shrink: 0; }
+.av-warn { background: var(--warn-soft); color: var(--warn); }
+.av-ok { background: var(--ok-soft); color: var(--ok); }
+.av-brand { background: var(--brand-soft); color: var(--brand-text); }
+.av-bad { background: var(--bad-soft); color: var(--bad); }
+.av-info { background: var(--info-soft); color: var(--info); }
 .cm-body { flex: 1; min-width: 0; }
-.cm-hd { display: flex; align-items: center; gap: 10rpx; }
-.nm { font-size: 25rpx; font-weight: 600; color: var(--ink); }
-.tm { font-size: 21rpx; color: var(--ink-3); }
-.tx { font-size: 27rpx; color: var(--ink-2); line-height: 1.65; margin-top: 6rpx; word-break: break-all; white-space: pre-wrap; }
-.ft { display: flex; gap: 30rpx; margin-top: 12rpx; align-items: center; }
-.up { display: inline-flex; align-items: center; gap: 6rpx; font-size: 23rpx; color: var(--ink-3); }
-.up.on { color: var(--brand-text); font-weight: 700; }
-.up.sm, .op.sm { font-size: 21rpx; }
-.op { font-size: 23rpx; color: var(--ink-3); }
-.op.del { color: #ef4444; }
-.reply { background: var(--fill); border-radius: 14rpx; padding: 14rpx 18rpx; font-size: 24rpx; color: var(--ink-2); margin-top: 12rpx; line-height: 1.6; word-break: break-all; white-space: pre-wrap; }
+.cm-hd { display: flex; align-items: center; gap: var(--sp-8); flex-wrap: wrap; }
+.nm { font-size: var(--fs-sub); font-weight: 600; color: var(--ink); }
+.tm { font-size: var(--fs-caption); color: var(--ink-3); }
+.tx { display: block; font-size: var(--fs-body); line-height: var(--lh-body); color: var(--ink); margin-top: var(--sp-4); white-space: pre-wrap; }
+.ft { display: flex; gap: var(--sp-8); margin-top: var(--sp-4); align-items: center; flex-wrap: wrap; }
+.op { display: inline-flex; align-items: center; gap: var(--sp-4); min-height: var(--hit-min); padding: 0 var(--sp-8); margin-left: calc(-1 * var(--sp-8)); border-radius: var(--r-sm); font-size: var(--fs-sub); color: var(--ink-3); }
+.op + .op { margin-left: 0; }
+.up.on { color: var(--brand-text); font-weight: 600; }
+.op.sm { font-size: var(--fs-caption); }
+.op.del { color: var(--bad); }
+.reply { background: var(--fill); border-radius: var(--r-sm); padding: var(--sp-8) var(--sp-12); margin-top: var(--sp-8); }
+.rtx { display: block; font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--ink-2); white-space: pre-wrap; }
 .rnm { font-weight: 600; color: var(--ink); }
-.rft { display: flex; gap: 24rpx; margin-top: 6rpx; }
-.pin { border: 1rpx solid var(--brand-soft-2); background: var(--brand-soft); border-radius: 16rpx; padding: 18rpx 22rpx; font-size: 23rpx; color: var(--brand-text); line-height: 1.6; }
-.inputbar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 1rpx solid var(--line); padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom)); z-index: 20; }
-.replying { font-size: 22rpx; color: var(--ink-3); margin-bottom: 8rpx; display: flex; align-items: center; gap: 12rpx; }
-.rx { padding: 4rpx 12rpx; }
-.inputrow { display: flex; gap: 16rpx; align-items: flex-end; }
-.ipt { flex: 1; min-height: 72rpx; max-height: 240rpx; overflow-y: auto; border-radius: 24rpx; background: var(--fill); font-size: 26rpx; line-height: 40rpx; padding: 16rpx 28rpx; box-sizing: border-box; }
-.send { margin: 0; height: 72rpx; line-height: 72rpx; padding: 0 34rpx; border-radius: 999rpx; background: var(--brand); color: #fff; font-size: 26rpx; }
-.send[disabled] { background: var(--brand-soft-2); color: var(--brand-strong); }
+.rft { display: flex; gap: var(--sp-8); align-items: center; flex-wrap: wrap; }
+.pin { display: flex; align-items: flex-start; gap: var(--sp-8); margin-top: var(--sp-16); border: 1px solid var(--brand-soft-2); background: var(--brand-soft); border-radius: var(--r-md); padding: var(--sp-12); }
+.pin-t { font-size: var(--fs-caption); color: var(--brand-text); line-height: var(--lh-caption); }
+.ibar-in { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-8); }
+.replying { display: flex; align-items: center; gap: var(--sp-8); }
+.replying-t { font-size: var(--fs-caption); color: var(--ink-3); }
+.rx { width: var(--hit-min); height: 28px; display: flex; align-items: center; justify-content: center; border-radius: var(--r-sm); }
+.inputrow { display: flex; gap: var(--sp-12); align-items: flex-end; }
+.ipt { flex: 1; min-width: 0; min-height: var(--input-h); max-height: 120px; overflow-y: auto; border-radius: var(--r-lg); background: var(--fill); color: var(--ink); font-size: var(--fs-sub); line-height: 20px; padding: var(--sp-12) var(--sp-16); box-sizing: border-box; }
 
 /* #ifdef H5 */
 @media (min-width: 768px) {
-  .wrap { max-width: 1044px; margin: 0 auto; }
-  .replying, .inputrow { max-width: 1044px; margin-left: auto; margin-right: auto; }
-  .chip:hover, .up:hover, .op:hover, .send:hover, .rx:hover { cursor: pointer; }
+  .msg:hover, .op:hover, .rx:hover { cursor: pointer; }
 }
-
 @media (min-width: 1024px) {
-  .dc-cols { display: flex; gap: 32rpx; align-items: flex-start; }
-  .dc-side { width: 380px; flex: none; position: sticky; top: 24rpx; }
-  .dc-main { flex: 1; min-width: 0; }
+  .wrap { max-width: 1044px !important; }
+  .ibar { margin-top: var(--sp-16); border: 1px solid var(--line); border-radius: var(--r-md); }
 }
 /* #endif */
 </style>
