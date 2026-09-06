@@ -1,360 +1,366 @@
 <template>
-  <view class="wrap" :class="{ 'has-banner': picked || beiMode, pdesk: session && cur }">
-    <!-- 加载/空态（本页仅承载答题会话，选题在首页） -->
-    <view v-if="!session && loadState === 'fail'" class="card loadfail">
-      <text class="lf-t">题目加载失败</text>
-      <text class="lf-s">{{ loadFailMsg || '网络不稳定或服务暂时无响应' }}</text>
-      <view class="lf-acts">
-        <view class="lf-btn main" @click="retryStart">重试</view>
-        <view class="lf-btn" @click="quit">返回首页</view>
-      </view>
-    </view>
+  <view class="page" :class="{ 'has-bar': session && cur }">
+    <!-- 加载失败 / 骨架（本页仅承载答题会话，选题在首页） -->
+    <kg-empty-state
+      v-if="!session && loadState === 'fail'"
+      icon="wifi-off"
+      title="题目加载失败"
+      :desc="loadFailMsg || '网络不稳定或服务暂时无响应'"
+      cta-text="重试"
+      secondary-text="返回首页"
+      @cta="retryStart"
+      @secondary="quit"
+    />
     <view v-else-if="!session" class="pskel">
-      <view class="card">
-        <view class="sk-row"><view class="sk-line sk-w30" /><view class="sk-line sk-w15" /></view>
-        <view class="sk-line sk-w90" />
-        <view class="sk-line sk-w80" />
-        <view class="sk-line sk-w60" />
-        <view v-for="i in 4" :key="i" class="sk-opt" />
-      </view>
-      <view class="pskel-hint">{{ loadHint }}</view>
-      <view class="pskel-quit" @click="quit">返回首页</view>
-    </view>
-    <!-- 桌面常驻侧栏：答题卡 + 快捷键（仅 H5 ≥1024px 显示） -->
-    <!-- #ifdef H5 -->
-    <view v-if="session && cur" class="pside">
-      <view class="card pside-card">
-        <view class="ps-h">答题卡</view>
-        <view class="acard-grid">
-          <view
-            v-for="(q, i) in items"
-            :key="i"
-            class="acard-n"
-            :class="acardClass(q, i)"
-            @click="jumpTo(i)"
-          >{{ i + 1 }}</view>
-        </view>
-        <view class="acard-foot">已答 {{ answeredCount }}/{{ items.length }}<template v-if="!examMode"> · 正确 {{ right }}</template></view>
-        <button v-if="examMode" class="btn" style="margin-top: 16rpx" @click="confirmFinishExam">交卷</button>
-      </view>
-      <view class="card pside-card">
-        <view class="ps-h">键盘快捷键</view>
-        <view class="kbd-row"><text class="kbd">A</text><text class="kbd">–</text><text class="kbd">D</text><text class="kbd-d">选择答案</text></view>
-        <view class="kbd-row"><text class="kbd">Enter</text><text class="kbd-d">下一题</text></view>
-        <view class="kbd-row"><text class="kbd">←</text><text class="kbd">→</text><text class="kbd-d">上一题 / 下一题</text></view>
-      </view>
-    </view>
-    <!-- #endif -->
-    <!-- 答题 -->
-    <view v-if="session && cur" class="card pmain">
-      <view v-if="beiMode || timedMode || cur.is_real" class="modechips">
-        <text v-if="beiMode" class="mchip brand">背题模式</text>
-        <text v-if="timedMode && !beiMode && !examMode" class="mchip info">限时训练</text>
-        <text v-if="examMode" class="mchip bad">模考态 · 交卷统一判分</text>
-      </view>
-      <view class="rhead">
-        <text class="tag" @click="cardOpen = true">{{ modName(cur.module) }}{{ lastSubmodule ? ' · ' + lastSubmodule : '' }} · {{ idx + 1 }}/{{ items.length }} ▾</text>
-        <view class="hstats">
-          <text class="timer" :class="{ examleft: examMode, overtime: timedMode && !examMode && qsecs > targetSecs }">{{ examMode ? fmtSecs(examLeft) : timedMode ? (qsecs > targetSecs ? '超时+' + fmtSecs(qsecs - targetSecs) : fmtSecs(targetSecs - qsecs)) : fmtSecs(qsecs) }}</text>
-          <text v-if="!examMode" class="cnt okc">✓{{ right }}</text>
-          <text v-if="!examMode" class="cnt badc">✗{{ wrongCount }}</text>
-          <view v-if="streak >= 3" class="cnt fire"><l-icon name="flame" :size="13" color="#f97316" fill="#fdba74" /><text class="fire-n">{{ streak }}</text></view>
-          <view class="fontbtn iconbtn" @click="toggleFav"><l-icon name="star" :size="16" :color="isFav ? '#f59e0b' : '#8a90a0'" :fill="isFav ? '#f59e0b' : 'none'" /></view>
-          <text class="fontbtn" @click="toolsOpen = true">···</text>
-          <text class="op" @click="quit">退出</text>
-        </view>
-      </view>
-      <view v-if="toolsOpen" class="mask" @click="toolsOpen = false">
-        <view class="sheet" @click.stop>
-          <view class="sheet-h">
-            <text class="sheet-t">练习工具</text>
-            <view class="sheet-x" role="button" aria-label="关闭" @click="toolsOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
-          </view>
-          <view class="tool-row" @click="cycleFont">
-            <text class="tool-name">字号大小</text>
-            <text class="tool-val">{{ ['小', '标准', '大'][fontLv] || '标准' }} · 点击切换</text>
-          </view>
-          <view v-if="!examMode" class="tool-row" @click="toggleBei">
-            <text class="tool-name">背题模式</text>
-            <text class="tool-val" :class="{ on: beiMode }">{{ beiMode ? '已开启' : '已关闭' }}</text>
-          </view>
-          <view v-if="!examMode" class="tool-row" @click="toggleAutoNext">
-            <text class="tool-name">答对自动跳下一题</text>
-            <text class="tool-val" :class="{ on: autoNext }">{{ autoNext ? '已开启' : '已关闭' }}</text>
-          </view>
-          <view v-if="!examMode && !beiMode" class="tool-row" @click="toggleTimed">
-            <text class="tool-name">限时训练（按模块建议用时倒计时）</text>
-            <text class="tool-val" :class="{ on: timedMode }">{{ timedMode ? '已开启' : '已关闭' }}</text>
-          </view>
-          <view class="tool-row" @click="toggleSfx">
-            <text class="tool-name">答题音效</text>
-            <text class="tool-val" :class="{ on: sfxOn }">{{ sfxOn ? '已开启' : '已关闭' }}</text>
-          </view>
-        </view>
-      </view>
-      <view class="progress"><view class="pfill" :style="{ width: (idx / items.length) * 100 + '%' }" /></view>
-      <view v-if="offline" class="offline-tag"><l-icon name="plane" :size="14" color="#b45309" /> 离线题包模式 · 本地判分，作答记录联网后自动同步（AI 讲解等需联网）</view>
-      <view v-if="leadHint && idx === 0" class="lead-tag" role="status">
-        <text class="lead-t">{{ leadHint }}</text>
-        <view class="lead-x" role="button" aria-label="知道了" @click="leadHint = ''"><l-icon name="x" :size="16" color="#0e7490" /></view>
-      </view>
-      <view v-if="cur.is_real" class="real-tag">真题{{ cur.exam_year ? ' · ' + cur.exam_year : '' }}{{ cur.exam_region ? ' · ' + cur.exam_region : '' }}</view>
-      <view v-if="cur.group_seq" class="grp-tag">同材料题组 {{ cur.group_seq }}</view>
-      <view
-        v-if="matInfo"
-        class="mat-fold"
-        role="button"
-        :aria-label="matOpen[idx] ? '收起材料' : '展开材料'"
-        @click="toggleMat"
-      >
-        <text class="mat-fold-t">📄 同上材料（与上一题相同）</text>
-        <text class="mat-fold-a">{{ matOpen[idx] ? '收起 ‹' : '展开 ›' }}</text>
-      </view>
-      <view class="q" :style="qStyle">
-        <template v-if="matInfo && !matOpen[idx]">{{ matInfo.stem }}</template>
-        <template v-else-if="qSegs"><text v-for="(s, si) in qSegs" :key="si" :class="{ qhl: s.hl }">{{ s.t }}</text></template>
-        <template v-else>{{ cur.question }}</template>
-      </view>
-      <view v-if="qSegs && qSegs.some(s => s.hl)" class="qhl-tip">已标注题干重点（解析涉及的关键数字/关键词），对照检查是否找对了信息</view>
-      <image v-if="cur.image" class="qimg" :src="imgUrl(cur.image)" mode="widthFix" @click="previewImg(cur.image)" />
-      <view v-if="cur.image && cur.image_credit" class="qimg-credit">图源：{{ cur.image_credit }}</view>
-      <view
-        v-for="(v, k) in cur.options"
-        :key="k"
-        class="opt"
-        :class="[optClass(k), exclVisible(cur._excl, k, picked, beiMode) ? 'excl' : '']"
-        :style="optStyle"
-        @click="beiMode ? null : pick(k)"
-        @longpress="toggleExclOpt(k)"
-      >
-        <text class="okey">{{ k }}</text>
-        <text class="otext">{{ v }}</text>
-        <text v-if="!examMode && (picked || beiMode) && k === cur.answer" class="omark good">✓</text>
-        <text v-else-if="!examMode && picked && k === picked" class="omark badm">✗</text>
-      </view>
-      <view v-if="(picked || beiMode) && !examMode" class="after">
-        <view v-if="picked && picked !== cur.answer" class="reasons">
-          <text class="rz-t">错因自评：</text>
-          <text
-            v-for="rz in REASONS"
-            :key="rz"
-            class="rz"
-            :class="{ on: cur._reason === rz }"
-            @click="setReason(rz)"
-          >{{ rz }}</text>
-        </view>
-        <view class="exp-sec">
-          <view class="exp-row">
-            <text class="exp-k">正确答案</text>
-            <text class="exp-ans" :class="beiMode || picked === cur.answer ? 'okc2' : 'badc2'">{{ cur.answer }}</text>
-            <text v-if="timedMode && !beiMode && cur._secs != null" class="tm-cmp" :class="{ over: cur._secs > targetSecs }">用时 {{ cur._secs }}s / 目标 {{ targetSecs }}s</text>
-          </view>
-          <view v-if="qStatLine" class="exp-row">
-            <text class="exp-k">全站数据</text>
-            <text class="exp-v">{{ qStatLine }}</text>
-          </view>
-          <view v-if="cur.hs_explanation" class="exp-row col">
-            <text class="exp-k hs">花生十三方法解析</text>
-            <view class="exp hsx">{{ cur.hs_explanation }}</view>
-            <template v-if="cur.xp_explanation">
-              <text class="exp-k xp">{{ cur.xp_school || '第二名师视角' }}</text>
-              <view class="exp xpx">{{ cur.xp_explanation }}</view>
-            </template>
-            <view class="hs-rate">
-              <text v-if="hsRated[cur.id]" class="hs-rate-done">{{ hsRated[cur.id] === 'up' ? '已反馈：有用' : '已反馈：有误' }}</text>
-              <template v-else>
-                <view class="hs-rate-btn" @click="rateHs(cur, true)"><l-icon name="thumbs-up" :size="13" color="#2e5bff" /><text>有用</text></view>
-                <view class="hs-rate-btn bad" @click="rateHs(cur, false)"><l-icon name="thumbs-down" :size="13" color="#b91c1c" /><text>有误</text></view>
-              </template>
-            </view>
-          </view>
-          <view v-if="cur.explanation && !isExplanationCovered(cur.hs_explanation, cur.explanation)" class="exp-row col">
-            <text class="exp-k">解析</text>
-            <view class="exp">{{ cur.explanation }}</view>
-          </view>
-          <view v-if="kpChain" class="exp-row">
-            <text class="exp-k">考点</text>
-            <text class="exp-v">{{ kpChain }}</text>
-          </view>
-          <view v-if="cur.source" class="exp-row">
-            <text class="exp-k">来源</text>
-            <text class="exp-v">{{ cur.source }}</text>
-          </view>
-        </view>
-        <view v-if="curAskSeen" class="deep seen" role="button" aria-label="回看 AI 详解" @click="openSeenAsk">回看 AI 详解 ›</view>
-        <view class="deep" @click="deepExplain">用花生十三方法详解这道题 ›</view>
-        <view v-if="!cur._sz" class="report-link" @click="reportQuestion">{{ cur._reported ? '已提交纠错，感谢反馈' : '题目有问题？纠错' }}</view>
-        <q-social-bar v-if="cur.id && !cur._sz" :question-id="cur.id" />
-      </view>
+      <kg-skeleton preset="lines" />
+      <text class="pskel-hint" role="status">{{ loadHint }}</text>
+      <kg-button variant="text" size="md" @click="quit">返回首页</kg-button>
     </view>
 
-    <!-- 完成/结算 -->
-    <view v-if="session && !cur" class="card done">
-      <view v-if="!beiMode" class="ring" :style="ringStyle">
-        <view class="ring-in">
-          <text class="ring-n">{{ Math.round((right / items.length) * 100) }}%</text>
-          <text class="ring-t">正确率</text>
+    <!-- 作答（T3） -->
+    <kg-two-col v-if="session && cur">
+      <template #main>
+        <view v-if="beiMode || timedMode || examMode" class="modechips">
+          <kg-tag v-if="beiMode" tone="brand">背题模式</kg-tag>
+          <kg-tag v-if="timedMode && !beiMode && !examMode" tone="info">限时训练</kg-tag>
+          <kg-tag v-if="examMode" tone="bad">模考态 · 交卷统一判分</kg-tag>
         </view>
-      </view>
-      <view class="big">{{ beiMode ? '本组背完' : paperFinish().big }}</view>
-      <view v-if="!beiMode && paperFinish().isPaper" class="sub ptl">「{{ paperFinish().title }}」</view>
-      <view v-if="!beiMode" class="sub">答对 {{ right }}/{{ items.length }} · 最高连对 {{ bestStreak }} 题<template v-if="autoSaved">，错题已自动加入错题本</template></view>
-      <view v-else class="sub">已浏览 {{ items.length }} 道题的答案与解析</view>
-      <view v-if="!beiMode && percentile != null" class="beat">本组正确率击败了 {{ percentile }}% 的刷题记录</view>
-      <view v-if="!beiMode && dailyStats" class="beat dsbeat">
-        <template v-if="dailyStats.already">今日全站同题成绩已记录（首次 {{ dailyStats.my_right }} 对） · {{ dailyStats.participants }} 人完成</template>
-        <template v-else-if="dailyStats.beat_pct == null">今日全站同题 · 你是今天第 1 位完成者</template>
-        <template v-else>今日全站同题 · {{ dailyStats.participants }} 人完成 · 击败 {{ dailyStats.beat_pct }}%</template>
-        <template v-if="dailyStats.streak >= 2"> · 🔥 已连续参与 {{ dailyStats.streak }} 天</template>
-      </view>
-      <view v-if="!beiMode && dailyStats && dailyBoard.length" class="dsboard">
-        <view class="rr-t">今日排行榜<text v-if="dailyStats.my_rank" class="dsb-mine">我的名次：第 {{ dailyStats.my_rank }} 名</text></view>
-        <view v-for="r in dailyBoard.slice(0, 10)" :key="r.rank" class="dsb-row">
-          <text class="dsb-rank" :class="{ top: r.rank <= 3 }">{{ r.rank }}</text>
-          <text class="dsb-name">{{ r.name }}</text>
-          <text class="dsb-score">答对 {{ r.right }}/{{ r.total }}<template v-if="r.secs"> · {{ fmtSecs(r.secs) }}</template></text>
-        </view>
-      </view>
-      <view v-if="!beiMode && redoReport" class="redoreport">
-        <view class="rr-t">错题重练效果</view>
-        <view class="rr-row">
-          <view class="rr-cell"><text class="rr-n rr-ok">{{ redoReport.fixed }}</text><text class="rr-l">已纠正</text></view>
-          <view class="rr-cell"><text class="rr-n rr-bad">{{ redoReport.still }}</text><text class="rr-l">仍错</text></view>
-          <view class="rr-cell"><text class="rr-n rr-master">{{ redoReport.mastered }}</text><text class="rr-l">达成掌握</text></view>
-        </view>
-        <text class="rr-tip">答对的已推进复习计划<template v-if="redoReport.still">；仍错的已重置复习，明天优先再练</template></text>
-        <view class="rr-go" @click="goReview">回错题本查看 ›</view>
-      </view>
-      <view v-else-if="!beiMode && fixReport" class="fixreport" @click="goReview">
-        <text class="fr-t">{{ fixReportText(fixReport) }}</text>
-        <text class="fr-go">回错题本 ›</text>
-      </view>
-      <view v-if="!beiMode && !examMode && weakSpots.length" class="weakrf">
-        <view class="rr-t">薄弱考点 · 趁热打铁</view>
-        <view v-for="w in weakSpots" :key="w.key" class="wr-row">
-          <view class="wr-l">
-            <text class="wr-name">{{ w.name }}</text>
-            <text class="wr-meta">本组错 {{ w.n }} 题</text>
+        <view class="topbar">
+          <view class="top-mod" role="button" aria-label="打开答题卡" @click="cardOpen = true">
+            <kg-tag tone="module" :module="cur.module">{{ modName(cur.module) }}</kg-tag>
+            <text class="pos num">{{ idx + 1 }}/{{ items.length }}</text>
+            <l-icon name="chevron-down" :size="16" tone="muted" />
           </view>
-          <view class="wr-btn" @click="reinforceWeak(w)">强化 5 道新题</view>
+          <view class="hstats">
+            <text class="timer num" :class="{ examleft: examMode, overtime: timedMode && !examMode && qsecs > targetSecs }">{{ examMode ? fmtSecs(examLeft) : timedMode ? (qsecs > targetSecs ? '超时+' + fmtSecs(qsecs - targetSecs) : fmtSecs(targetSecs - qsecs)) : fmtSecs(qsecs) }}</text>
+            <text v-if="!examMode" class="cnt okc num">✓{{ right }}</text>
+            <text v-if="!examMode" class="cnt badc num">✗{{ wrongCount }}</text>
+            <view v-if="streak >= 3" class="cnt fire"><l-icon name="flame" :size="16" tone="streak" fill="currentColor" /><text class="num">{{ streak }}</text></view>
+            <view class="icon-btn" role="button" aria-label="退出练习" hover-class="tool-hover" @click="quit"><l-icon name="log-out" :size="20" tone="ink-2" /></view>
+          </view>
         </view>
-      </view>
-      <view v-if="!beiMode" class="report">
-        <view class="report-row">
-          <view class="report-cell"><text class="report-n">{{ fmtSecs(totalSecs) }}</text><text class="report-t">总用时</text></view>
-          <view class="report-cell"><text class="report-n">{{ avgSecs }}s</text><text class="report-t">平均每题</text></view>
-          <view class="report-cell"><text class="report-n badc2">{{ wrongCount }}</text><text class="report-t">错题</text></view>
+
+        <kg-banner v-if="offline" tone="warn" icon="plane" text="离线题包模式 · 本地判分，作答记录联网后自动同步（AI 讲解等需联网）" :closable="false" />
+        <kg-banner v-if="leadHint && idx === 0" class="lead-tag" tone="info" :text="leadHint" @close="leadHint = ''" />
+
+        <kg-question-card :q="qCard" :index="idx" :total="items.length" :font-level="fontLv">
+          <template v-if="qSegs && !matInfo" #stem>
+            <text v-for="(s, si) in qSegs" :key="si" :class="{ qhl: s.hl }">{{ s.t }}</text>
+          </template>
+          <text v-if="qSegs && qSegs.some(s => s.hl)" class="qhl-tip">已标注题干重点（解析涉及的关键数字/关键词），对照检查是否找对了信息</text>
+          <text v-if="cur.image && cur.image_credit" class="img-credit">图源：{{ cur.image_credit }}</text>
+          <kg-option-group
+            :options="optList"
+            :model-value="picked"
+            :answer="cur.answer"
+            :revealed="(!!picked || beiMode) && !examMode"
+            :excluded="cur._excl || []"
+            :readonly="beiMode"
+            :font-level="fontLv"
+            @select="pick"
+            @exclude="toggleExclOpt"
+          />
+        </kg-question-card>
+
+        <view v-if="(picked || beiMode) && !examMode" class="after">
+          <kg-banner
+            :tone="beiMode || picked === cur.answer ? 'ok' : 'bad'"
+            :text="beiMode ? '背题模式 · 答案 ' + cur.answer : picked === cur.answer ? '回答正确' + (streak >= 3 ? ' · 连对 ' + streak + ' 题！' : '') : '正确答案 ' + cur.answer + (cur._saved ? ' · 已自动存入错题本' : '')"
+            :action-text="!beiMode && picked === cur.answer && autoTimer ? '看解析' : ''"
+            :closable="false"
+            @action="stayHere"
+          />
+          <view v-if="picked && picked !== cur.answer" class="reasons" role="group" aria-label="错因自评">
+            <text class="rz-t">错因自评</text>
+            <view
+              v-for="rz in REASONS"
+              :key="rz"
+              class="rz"
+              :class="{ on: cur._reason === rz }"
+              role="button"
+              :aria-pressed="cur._reason === rz ? 'true' : 'false'"
+              @click="setReason(rz)"
+            >{{ rz }}</view>
+          </view>
+          <kg-analysis-card
+            :answer="cur.answer"
+            :picked="beiMode ? '' : picked"
+            :analysis="mainExplanation"
+            :stats="anaStats"
+            :source="cur.source || ''"
+            :tags="kpTags"
+          >
+            <template #social>
+              <text v-if="timedMode && !beiMode && cur._secs != null" class="tm-cmp num" :class="{ over: cur._secs > targetSecs }">用时 {{ cur._secs }}s / 目标 {{ targetSecs }}s</text>
+              <view v-if="cur.hs_explanation" class="hs-rate">
+                <text v-if="hsRated[cur.id]" class="hs-rate-done">{{ hsRated[cur.id] === 'up' ? '已反馈：有用' : '已反馈：有误' }}</text>
+                <template v-else>
+                  <text class="hs-rate-t">花生十三方法解析</text>
+                  <kg-button variant="ghost" size="sm" icon="thumbs-up" @click="rateHs(cur, true)">有用</kg-button>
+                  <kg-button variant="ghost" size="sm" tone="bad" icon="thumbs-down" @click="rateHs(cur, false)">有误</kg-button>
+                </template>
+              </view>
+              <q-social-bar v-if="cur.id && !cur._sz" :question-id="cur.id" />
+            </template>
+          </kg-analysis-card>
+          <kg-card v-if="cur.xp_explanation" variant="soft" class="xp-card">
+            <text class="xp-k">{{ cur.xp_school || '第二名师视角' }}</text>
+            <text class="xp-b q-text">{{ cur.xp_explanation }}</text>
+          </kg-card>
+          <kg-card v-if="cur.hs_explanation && cur.explanation && !isExplanationCovered(cur.hs_explanation, cur.explanation)" variant="soft" class="xp-card">
+            <text class="xp-k">解析</text>
+            <text class="xp-b q-text">{{ cur.explanation }}</text>
+          </kg-card>
+          <view class="deep-acts">
+            <kg-button v-if="curAskSeen" variant="ghost" size="md" block @click="openSeenAsk">回看 AI 详解</kg-button>
+            <kg-button variant="secondary" size="md" block icon="sparkles" @click="deepExplain">用花生十三方法详解这道题</kg-button>
+            <kg-button v-if="!cur._sz" variant="text" size="sm" @click="reportQuestion">{{ cur._reported ? '已提交纠错，感谢反馈' : '题目有问题？纠错' }}</kg-button>
+          </view>
         </view>
-        <view v-if="moduleBreakdown.length >= 2" class="mb-list">
+
+        <kg-action-bar
+          layout="answer"
+          :index="idx"
+          :total="items.length"
+          :primary-text="barPrimary.text"
+          :disabled="barPrimary.disabled"
+          @primary="barPrimary.go()"
+        >
+          <template #tools>
+            <view class="kg-tool" :class="{ on: isFav }" role="button" :aria-label="isFav ? '取消收藏' : '收藏本题'" :aria-pressed="isFav ? 'true' : 'false'" hover-class="tool-hover" @click="toggleFav">
+              <l-icon name="star" :size="24" :tone="isFav ? 'warn' : 'ink-2'" :fill="isFav ? 'currentColor' : 'none'" />
+            </view>
+            <view class="kg-tool" role="button" aria-label="练习工具" hover-class="tool-hover" @click="toolsOpen = true">
+              <l-icon name="settings-2" :size="24" tone="ink-2" />
+            </view>
+            <view class="kg-tool tool-acard" role="button" aria-label="答题卡" hover-class="tool-hover" @click="cardOpen = true">
+              <l-icon name="clipboard-list" :size="24" tone="ink-2" />
+            </view>
+          </template>
+        </kg-action-bar>
+      </template>
+
+      <!-- #ifdef H5 -->
+      <template #aside>
+        <kg-card class="side-card">
+          <view class="side-h">
+            <text class="side-t">答题卡</text>
+            <text class="acard-foot">已答 {{ answeredCount }}/{{ items.length }}<template v-if="!examMode"> · 正确 {{ right }}</template></text>
+          </view>
+          <view class="acard-grid side-grid">
+            <view
+              v-for="(q, i) in items"
+              :key="i"
+              class="acard-n num"
+              :class="acardClass(q, i)"
+              role="button"
+              :aria-label="'第 ' + (i + 1) + ' 题'"
+              @click="jumpTo(i)"
+            >{{ i + 1 }}</view>
+          </view>
+          <kg-button v-if="examMode" size="md" block @click="confirmFinishExam">交卷</kg-button>
+        </kg-card>
+        <kg-card class="side-card">
+          <text class="side-t">键盘快捷键</text>
+          <view class="kbd-row"><text class="kbd">A</text><text class="kbd">–</text><text class="kbd">D</text><text class="kbd-d">选择答案</text></view>
+          <view class="kbd-row"><text class="kbd">Enter</text><text class="kbd-d">下一题</text></view>
+          <view class="kbd-row"><text class="kbd">←</text><text class="kbd">→</text><text class="kbd-d">上一题 / 下一题</text></view>
+        </kg-card>
+      </template>
+      <!-- #endif -->
+    </kg-two-col>
+
+    <!-- 结算段（T4） -->
+    <kg-two-col v-if="session && !cur">
+      <template #main>
+        <kg-hero-card
+          v-if="!beiMode"
+          :label="paperFinish().isPaper ? paperFinish().big + ' · ' + paperFinish().title : paperFinish().big"
+          :value="Math.round((right / (items.length || 1)) * 100)"
+          unit="%"
+          :progress="Math.round((right / (items.length || 1)) * 100)"
+        >
+          <text class="hero-s">答对 {{ right }}/{{ items.length }} · 最高连对 {{ bestStreak }} 题<template v-if="autoSaved">，错题已自动加入错题本</template></text>
+          <text v-if="percentile != null" class="hero-s">本组正确率击败了 {{ percentile }}% 的刷题记录</text>
+        </kg-hero-card>
+        <kg-hero-card v-else label="本组背完" :value="items.length" unit="题">
+          <text class="hero-s">已浏览 {{ items.length }} 道题的答案与解析</text>
+        </kg-hero-card>
+
+        <kg-stat-row v-if="!beiMode" class="sec" :items="doneStats" />
+
+        <kg-banner
+          v-if="!beiMode && dailyStats"
+          class="sec"
+          tone="info"
+          icon="users"
+          :closable="false"
+          :text="dailyStatsText"
+        />
+        <kg-card v-if="!beiMode && dailyStats && dailyBoard.length" class="sec">
+          <view class="sec-h">
+            <text class="sec-t">今日排行榜</text>
+            <text v-if="dailyStats.my_rank" class="sec-r num">我的名次：第 {{ dailyStats.my_rank }} 名</text>
+          </view>
+          <view v-for="r in dailyBoard.slice(0, 10)" :key="r.rank" class="dsb-row">
+            <kg-tag :tone="r.rank <= 3 ? 'warn' : 'neutral'">{{ r.rank }}</kg-tag>
+            <text class="dsb-name">{{ r.name }}</text>
+            <text class="dsb-score num">答对 {{ r.right }}/{{ r.total }}<template v-if="r.secs"> · {{ fmtSecs(r.secs) }}</template></text>
+          </view>
+        </kg-card>
+
+        <kg-card v-if="!beiMode && redoReport" class="sec">
+          <text class="sec-t">错题重练效果</text>
+          <kg-stat-row
+            :items="[
+              { label: '已纠正', value: redoReport.fixed, tone: 'ok' },
+              { label: '仍错', value: redoReport.still, tone: 'bad' },
+              { label: '达成掌握', value: redoReport.mastered, tone: 'brand' },
+            ]"
+          />
+          <text class="sec-tip">答对的已推进复习计划<template v-if="redoReport.still">；仍错的已重置复习，明天优先再练</template></text>
+          <kg-button variant="text" size="sm" @click="goReview">回错题本查看</kg-button>
+        </kg-card>
+        <kg-card v-else-if="!beiMode && fixReport" class="sec" clickable chevron @click="goReview">
+          <text class="fr-t">{{ fixReportText(fixReport) }}</text>
+        </kg-card>
+
+        <kg-card v-if="!beiMode && !examMode && weakSpots.length" class="sec">
+          <text class="sec-t">薄弱考点 · 趁热打铁</text>
+          <view v-for="w in weakSpots" :key="w.key" class="wr-row">
+            <view class="wr-l">
+              <text class="wr-name">{{ w.name }}</text>
+              <text class="wr-meta">本组错 {{ w.n }} 题</text>
+            </view>
+            <kg-button variant="ghost" size="sm" @click="reinforceWeak(w)">强化 5 道新题</kg-button>
+          </view>
+        </kg-card>
+
+        <kg-card v-if="!beiMode && moduleBreakdown.length >= 2" class="sec">
+          <text class="sec-t">分模块正确率</text>
           <view v-for="b in moduleBreakdown" :key="b.mod" class="mb-row">
             <text class="mb-name">{{ modName(b.mod) }}</text>
-            <view class="mb-bar"><view class="mb-fill" :class="{ lo: b.pct < 60, mid: b.pct >= 60 && b.pct < 80 }" :style="{ width: b.pct + '%' }" /></view>
-            <text class="mb-pct">{{ b.right }}/{{ b.n }} · {{ b.pct }}%</text>
+            <kg-progress :value="b.pct" :module="b.mod" class="mb-bar" :aria-label="modName(b.mod) + '正确率'" />
+            <text class="mb-pct num">{{ b.right }}/{{ b.n }} · {{ b.pct }}%</text>
           </view>
+        </kg-card>
+
+        <kg-card v-if="!beiMode" class="sec answers-card">
+          <text class="sec-t">逐题回顾</text>
+          <view class="acard-grid">
+            <view
+              v-for="(q, i) in items"
+              :key="i"
+              class="acard-n num"
+              :class="!q._picked ? 'skip' : q._picked === q.answer ? 'ok' : 'bad'"
+              role="button"
+              :aria-label="'第 ' + (i + 1) + ' 题'"
+              @click="jumpTo(i)"
+            >{{ i + 1 }}</view>
+          </view>
+          <text class="sec-tip">点题号可回看题目与解析<template v-if="items.some(q => !q._picked)">（灰色为未作答）</template></text>
+        </kg-card>
+
+        <kg-card v-if="!beiMode && dueReview" class="sec" clickable chevron @click="goReview">
+          <text class="nudge-t">今日还有 {{ dueReview }} 题到期待复习</text>
+          <text class="nudge-s">趁热打铁，按遗忘曲线巩固一遍</text>
+        </kg-card>
+        <kg-banner
+          v-if="!beiMode && loginNudgeN"
+          class="sec"
+          tone="info"
+          icon="cloud"
+          :text="'已累计刷 ' + loginNudgeN + ' 题 · 登录保进度：错题本、做题记录云同步，换设备/清缓存不丢'"
+          action-text="去登录"
+          @action="loginNudgeGo"
+          @close="dismissLoginNudge"
+        />
+        <!-- #ifdef H5 -->
+        <kg-banner
+          v-if="!beiMode && pushNudge"
+          class="sec"
+          tone="info"
+          icon="bell"
+          :text="pushNudgeDone ? '已开启每日一练提醒 · 明早 8 点推送今日全站同题' : (dailyStats && dailyStats.streak >= 2 ? '别断了连续 ' + dailyStats.streak + ' 天 · ' : '') + '开启每日一练提醒：明早 8 点推送全站同题 10 题，关闭页面也能收到'"
+          :action-text="pushNudgeDone ? '' : '开启'"
+          :closable="!pushNudgeDone"
+          @action="pushNudgeGo"
+          @close="dismissPushNudge"
+        />
+        <!-- #endif -->
+
+        <view class="done-acts">
+          <kg-button v-if="paperFinish().isPaper && paperWrongN() > 0" size="lg" block @click="retryPaperWrong">重练本卷错题（{{ paperWrongN() }} 题）</kg-button>
+          <kg-button v-if="paperFinish().isPaper" :variant="paperWrongN() > 0 ? 'ghost' : 'primary'" size="lg" block @click="goExamList">回卷库</kg-button>
+          <kg-button v-else size="lg" block @click="retryGroup">再来一组</kg-button>
+          <kg-button v-if="!beiMode" variant="ghost" size="lg" block icon="share-2" @click="shareResult">分享成绩</kg-button>
+          <kg-button variant="text" size="md" block @click="quit">返回首页</kg-button>
         </view>
-        <view class="report-grid">
-          <view
-            v-for="(q, i) in items"
-            :key="i"
-            class="acard-n"
-            :class="!q._picked ? 'skip' : q._picked === q.answer ? 'ok' : 'bad'"
-            @click="jumpTo(i)"
-          >{{ i + 1 }}</view>
-        </view>
-        <view class="report-tip">点题号可回看题目与解析<template v-if="items.some(q => !q._picked)">（灰色为未作答）</template></view>
-      </view>
-      <view v-if="!beiMode && dueReview" class="duenudge" @click="goReview">
-        <view class="duenudge-l">
-          <text class="duenudge-t">今日还有 {{ dueReview }} 题到期待复习</text>
-          <text class="duenudge-s">趁热打铁，按遗忘曲线巩固一遍</text>
-        </view>
-        <text class="duenudge-go">去复习 ›</text>
-      </view>
-      <view v-if="!beiMode && loginNudgeN" class="loginnudge">
-        <view class="duenudge-l">
-          <text class="duenudge-t">已累计刷 {{ loginNudgeN }} 题 · 登录保进度</text>
-          <text class="duenudge-s">错题本、做题记录云同步，换设备/清缓存不丢</text>
-        </view>
-        <text class="duenudge-go" @click="loginNudgeGo">去登录 ›</text>
-        <text class="loginnudge-x" @click="dismissLoginNudge">✕</text>
-      </view>
-      <!-- #ifdef H5 -->
-      <view v-if="!beiMode && pushNudge" class="loginnudge">
-        <view class="duenudge-l">
-          <text class="duenudge-t">{{ pushNudgeDone ? '已开启每日一练提醒 ✓' : dailyStats && dailyStats.streak >= 2 ? '别断了连续 ' + dailyStats.streak + ' 天' : '开启每日一练提醒' }}</text>
-          <text class="duenudge-s">{{ pushNudgeDone ? '明早 8 点推送今日全站同题' : '明早 8 点推送全站同题 10 题，关闭页面也能收到' }}</text>
-        </view>
-        <text v-if="!pushNudgeDone" class="duenudge-go" @click="pushNudgeGo">开启 ›</text>
-        <text v-if="!pushNudgeDone" class="loginnudge-x" @click="dismissPushNudge">✕</text>
-      </view>
-      <!-- #endif -->
-      <button v-if="paperFinish().isPaper && paperWrongN() > 0" class="btn" @click="retryPaperWrong">重练本卷错题（{{ paperWrongN() }} 题）</button>
-      <button v-if="paperFinish().isPaper" :class="paperWrongN() > 0 ? 'btn ghost' : 'btn'" :style="paperWrongN() > 0 ? 'margin-top: 16rpx' : ''" @click="goExamList">回卷库</button>
-      <button v-else class="btn" @click="retryGroup">再来一组</button>
-      <button v-if="!beiMode" class="btn ghost" style="margin-top: 16rpx" @click="shareResult">分享成绩</button>
-      <button class="btn plain" style="margin-top: 8rpx" @click="quit">返回首页</button>
-    </view>
+      </template>
+    </kg-two-col>
 
     <!-- 答题卡 -->
-    <view v-if="cardOpen && session" class="mask" @click="cardOpen = false">
-      <view class="sheet" @click.stop>
-        <view class="sheet-h">
-          <text class="sheet-t">答题卡</text>
-          <view class="sheet-x" role="button" aria-label="关闭" @click="cardOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
-        </view>
-        <view class="acard-grid">
-          <view
-            v-for="(q, i) in items"
-            :key="i"
-            class="acard-n"
-            :class="acardClass(q, i)"
-            @click="jumpTo(i)"
-          >{{ i + 1 }}</view>
-        </view>
-        <view class="acard-foot">已答 {{ answeredCount }}/{{ items.length }}<template v-if="!examMode"> · 正确 {{ right }}</template></view>
-        <button v-if="examMode" class="btn" style="margin-top: 16rpx" @click="confirmFinishExam">交卷</button>
+    <kg-sheet v-model="cardOpen" title="答题卡">
+      <view class="acard-grid">
+        <view
+          v-for="(q, i) in items"
+          :key="i"
+          class="acard-n num"
+          :class="acardClass(q, i)"
+          role="button"
+          :aria-label="'第 ' + (i + 1) + ' 题'"
+          @click="jumpTo(i)"
+        >{{ i + 1 }}</view>
       </view>
-    </view>
+      <text class="acard-foot">已答 {{ answeredCount }}/{{ items.length }}<template v-if="!examMode"> · 正确 {{ right }}</template></text>
+      <kg-button v-if="examMode" size="lg" block @click="confirmFinishExam">交卷</kg-button>
+    </kg-sheet>
 
-    <!-- 题目纠错弹层 -->
-    <view v-if="reportOpen" class="mask" @click="reportOpen = false">
-      <view class="sheet" @click.stop>
-        <view class="sheet-h">
-          <text class="sheet-t">题目纠错</text>
-          <view class="sheet-x" role="button" aria-label="关闭" @click="reportOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
-        </view>
-        <view class="rp-types">
-          <text
-            v-for="t in reportTypes"
-            :key="t"
-            class="rp-chip"
-            :class="{ on: reportType === t }"
-            @click="reportType = t"
-          >{{ t }}</text>
-        </view>
-        <textarea
-          v-model="reportDetail"
-          class="rp-detail"
-          placeholder="补充说明（选填，500 字以内）"
-          :maxlength="500"
-        />
-        <button class="btn rp-submit" :disabled="!reportType || reportBusy" @click="submitReport">
-          {{ reportBusy ? '提交中…' : '提交纠错' }}
-        </button>
+    <!-- 练习工具 -->
+    <kg-sheet v-model="toolsOpen" title="练习工具">
+      <view class="tool-row" role="button" @click="cycleFont">
+        <text class="tool-name">字号大小</text>
+        <text class="tool-val">{{ ['小', '标准', '大'][fontLv] || '标准' }} · 点击切换</text>
       </view>
-    </view>
+      <view v-if="!examMode" class="tool-row" role="switch" :aria-checked="beiMode ? 'true' : 'false'" @click="toggleBei">
+        <text class="tool-name">背题模式</text>
+        <text class="tool-val" :class="{ on: beiMode }">{{ beiMode ? '已开启' : '已关闭' }}</text>
+      </view>
+      <view v-if="!examMode" class="tool-row" role="switch" :aria-checked="autoNext ? 'true' : 'false'" @click="toggleAutoNext">
+        <text class="tool-name">答对自动跳下一题</text>
+        <text class="tool-val" :class="{ on: autoNext }">{{ autoNext ? '已开启' : '已关闭' }}</text>
+      </view>
+      <view v-if="!examMode && !beiMode" class="tool-row" role="switch" :aria-checked="timedMode ? 'true' : 'false'" @click="toggleTimed">
+        <text class="tool-name">限时训练（按模块建议用时倒计时）</text>
+        <text class="tool-val" :class="{ on: timedMode }">{{ timedMode ? '已开启' : '已关闭' }}</text>
+      </view>
+      <view class="tool-row" role="switch" :aria-checked="sfxOn ? 'true' : 'false'" @click="toggleSfx">
+        <text class="tool-name">答题音效</text>
+        <text class="tool-val" :class="{ on: sfxOn }">{{ sfxOn ? '已开启' : '已关闭' }}</text>
+      </view>
+    </kg-sheet>
 
-    <!-- 判分横幅 -->
-    <view v-if="cur && !examMode && (picked || beiMode)" class="banner" :class="beiMode || picked === cur.answer ? 'bok' : 'bbad'">
-      <view class="binfo">
-        <text class="btitle">{{ beiMode ? '背题模式 · 答案 ' + cur.answer : picked === cur.answer ? '✓ 回答正确' + (streak >= 3 ? ' · 连对 ' + streak + ' 题！' : '') : '✗ 正确答案 ' + cur.answer }}</text>
-        <text v-if="!beiMode && picked !== cur.answer" class="bsub">{{ cur._saved ? '已自动存入错题本' : '' }}</text>
+    <!-- 题目纠错 -->
+    <kg-sheet v-model="reportOpen" title="题目纠错">
+      <view class="rp-types" role="group" aria-label="问题类型">
+        <view
+          v-for="t in reportTypes"
+          :key="t"
+          class="rz"
+          :class="{ on: reportType === t }"
+          role="button"
+          :aria-pressed="reportType === t ? 'true' : 'false'"
+          @click="reportType = t"
+        >{{ t }}</view>
       </view>
-      <button v-if="!beiMode && picked === cur.answer && autoTimer" class="bnext bstay" @click="stayHere">看解析</button>
-      <button class="bnext" :class="beiMode || picked === cur.answer ? 'nok' : 'nbad'" @click="next">
-        {{ idx + 1 < items.length ? '下一题' : '完成' }}
-      </button>
-    </view>
+      <textarea
+        v-model="reportDetail"
+        class="rp-detail"
+        placeholder="补充说明（选填，500 字以内）"
+        :maxlength="500"
+      />
+      <kg-button size="lg" block :disabled="!reportType || reportBusy" :loading="reportBusy" @click="submitReport">提交纠错</kg-button>
+    </kg-sheet>
   </view>
 </template>
 
@@ -363,7 +369,8 @@ import { request, BASE_URL, anonUid, pkNickname, exportPdf, removeFav, setFav, f
 import { drawOffline, enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../offline.js';
 import { dayKey, loadSzDaily, saveSzDaily } from '../../checkin.js';
 import { splitMaterial, sameMaterial } from '../../material.js';
-import { fontSizes, normFontLv } from '../../font-size.js';
+import { normFontLv } from '../../font-size.js';
+import { MODULES, moduleLabel } from '../../module-meta.js';
 import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
 import { askQid, findAskSid } from '../../ask-link.js';
 // #ifdef H5
@@ -374,7 +381,7 @@ import { pickAnnounceText } from '../../live-policy.js';
 import { paperContinuePlan, paperQuery, paperFinishState, paperShareText, paperWrongItems, paperWrongPlan, paperWrongLaunch } from '../../paper-continue.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
-import { qStatLine } from '../../q-stat.js';
+import { qStatLine, qDifficulty } from '../../q-stat.js';
 import { toggleExcl, pickWithExcl, exclVisible } from '../../exam-excl.js';
 import { collectPracticeProgress, adoptPracticeResume } from '../../practice-progress.js';
 import { weakSpots as buildWeakSpots } from '../../weak-spots.js';
@@ -383,14 +390,6 @@ import { reviewedMasteredCount, fixReportText } from '../../review-advance.js';
 import { leadQidOf, leadPickOf, mergeLead, leadHintText } from '../../leadq.js';
 import { quitSummary } from '../../quit-summary.js';
 
-const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
-const COLORS = {
-  changshi: { bg: '#FEF3C7', fg: '#B45309' },
-  shuliang: { bg: '#DBEAFE', fg: '#1D4ED8' },
-  panduan: { bg: '#EDE9FE', fg: '#6D28D9' },
-  ziliao: { bg: '#D1FAE5', fg: '#047857' },
-  yanyu: { bg: '#FEE2E2', fg: '#B91C1C' },
-};
 
 function loadPStats() {
   return uni.getStorageSync('pstats') || { byModule: {}, days: {} };
@@ -637,22 +636,66 @@ export default {
     answeredCount() {
       return this.items.filter((q) => q._picked).length;
     },
-    qStyle() {
-      return { fontSize: fontSizes(this.fontLv).q };
+    qCard() {
+      const q = this.cur;
+      const m = this.matInfo;
+      return {
+        id: q.id,
+        module: q.module,
+        tag3: q.submodule || this.lastSubmodule || '',
+        stem: m ? m.stem : String(q.question || ''),
+        material: m ? m.material : '',
+        images: q.image ? [this.imgUrl(q.image)] : [],
+        difficulty: qDifficulty(q),
+        accuracy: q.correct_ratio,
+        attemptCount: q.attempt_count,
+        isReal: !!q.is_real,
+        groupSeq: q.group_seq || 0,
+      };
     },
-    optStyle() {
-      return { fontSize: fontSizes(this.fontLv).opt };
+    optList() {
+      const o = (this.cur && this.cur.options) || {};
+      return Object.keys(o).map((k) => ({ key: k, text: String(o[k] == null ? '' : o[k]) }));
+    },
+    mainExplanation() {
+      const q = this.cur;
+      return String(q.hs_explanation || q.explanation || '');
+    },
+    anaStats() {
+      const q = this.cur;
+      return { attemptCount: q.attempt_count, accuracy: q.correct_ratio, mostWrong: q.most_wrong, avgSecs: q.avg_secs };
+    },
+    kpTags() {
+      return this.kpChain ? this.kpChain.split(' › ') : [];
+    },
+    barPrimary() {
+      const last = this.idx + 1 >= this.items.length;
+      if (this.examMode) return { text: '交卷', disabled: false, go: () => this.confirmFinishExam() };
+      if (!this.picked && !this.beiMode) return { text: '请选择答案', disabled: true, go: () => {} };
+      return { text: last ? '完成' : '下一题', disabled: false, go: () => this.next() };
+    },
+    doneStats() {
+      return [
+        { label: '总用时', value: this.fmtSecs(this.totalSecs) },
+        { label: '平均每题', value: this.avgSecs, unit: 's' },
+        { label: '错题', value: this.wrongCount, tone: 'bad' },
+      ];
+    },
+    dailyStatsText() {
+      const d = this.dailyStats;
+      if (!d) return '';
+      let s;
+      if (d.already) s = `今日全站同题成绩已记录（首次 ${d.my_right} 对） · ${d.participants} 人完成`;
+      else if (d.beat_pct == null) s = '今日全站同题 · 你是今天第 1 位完成者';
+      else s = `今日全站同题 · ${d.participants} 人完成 · 击败 ${d.beat_pct}%`;
+      if (d.streak >= 2) s += ` · 已连续参与 ${d.streak} 天`;
+      return s;
     },
     totalSecs() {
       return this.items.reduce((a, q) => a + (q._secs || 0), 0);
     },
     avgSecs() {
       return this.items.length ? Math.round(this.totalSecs / this.items.length) : 0;
-    },
-    ringStyle() {
-      const pct = Math.round((this.right / (this.items.length || 1)) * 100);
-      const color = pct >= 80 ? '#22c55e' : pct >= 60 ? '#f59e0b' : '#ef4444';
-      return { background: `conic-gradient(${color} 0% ${pct}%, var(--brand-soft) ${pct}% 100%)` };
     },
     loadHint() {
       if (this.loadState !== 'loading') return '正在准备练习…';
@@ -840,16 +883,13 @@ export default {
       this.matOpen = { ...this.matOpen, [this.idx]: !this.matOpen[this.idx] };
     },
     modName(m) {
-      return NAMES[m] || m || '未知';
+      return MODULES[m] ? moduleLabel(m) : m === 'shenlun' ? '申论' : m || '未知';
     },
     imgUrl(p) {
       return /^https?:/.test(p) ? p : (BASE_URL || '') + p;
     },
     previewImg(p) {
       uni.previewImage({ urls: [this.imgUrl(p)] });
-    },
-    modColor(m) {
-      return COLORS[m] || { bg: 'var(--brand-soft)', fg: 'var(--brand)' };
     },
     modStat(m) {
       return this.pstats.byModule[m] || { done: 0, correct: 0 };
@@ -2495,325 +2535,116 @@ export default {
 </script>
 
 <style scoped>
-.wrap { padding: 24rpx; padding-bottom: 40rpx; }
-.grid4 { display: flex; padding: 20rpx 8rpx; }
-.g4 { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 10rpx 0; }
-.g4-ic { width: 88rpx; height: 88rpx; border-radius: 24rpx; display: flex; align-items: center; justify-content: center; margin-bottom: 10rpx; }
-.g4-t { font-size: 24rpx; color: var(--ink-2); }
-.custom-row { display: flex; justify-content: space-between; align-items: center; padding: 24rpx 28rpx; }
-.custom-start { margin-top: 24rpx; background: var(--brand); color: #fff; text-align: center; border-radius: 999rpx; padding: 22rpx 0; font-size: 28rpx; font-weight: 500; }
-.exp-opts { display: flex; gap: 12rpx; margin-top: 20rpx; }
-.expchip { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--line); border-radius: 12rpx; font-size: 24rpx; color: var(--ink-2); background: var(--fill); }
-.expchip.on { border-color: var(--brand-text); color: var(--brand-text); background: var(--brand-soft); font-weight: 600; }
-.custom-export { margin-top: 16rpx; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; text-align: center; border: 1rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; padding: 20rpx 0; font-size: 27rpx; font-weight: 500; }
-.custom-note { margin-top: 14rpx; text-align: center; font-size: 21rpx; color: var(--ink-3); }
-.wrap.has-banner { padding-bottom: calc(280rpx + env(safe-area-inset-bottom)); }
-.card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
-.h { font-size: 30rpx; font-weight: 600; margin-bottom: 20rpx; }
-.spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 24rpx; }
-.pskel { padding-top: 8rpx; }
-.sk-row { display: flex; justify-content: space-between; gap: 16rpx; }
-.sk-line { height: 28rpx; border-radius: 8rpx; background: var(--fill, #eceef3); margin-bottom: 20rpx; animation: sk-pulse 1.2s ease-in-out infinite; }
-.sk-w15 { width: 15%; }
-.sk-w30 { width: 30%; }
-.sk-w60 { width: 60%; }
-.sk-w80 { width: 80%; }
-.sk-w90 { width: 90%; }
-.sk-opt { height: 80rpx; border-radius: 12rpx; background: var(--fill, #eceef3); margin-top: 20rpx; animation: sk-pulse 1.2s ease-in-out infinite; }
-@keyframes sk-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
-.pskel-hint { text-align: center; color: var(--ink-2); font-size: 26rpx; margin-top: 24rpx; }
-.pskel-quit { text-align: center; color: var(--brand-text); font-size: 26rpx; margin-top: 20rpx; min-height: 44px; display: flex; align-items: center; justify-content: center; }
-.loadfail { text-align: center; padding: 56rpx 32rpx; }
-.lf-t { display: block; font-size: 32rpx; font-weight: 700; color: var(--ink); }
-.lf-s { display: block; font-size: 25rpx; color: var(--ink-2); margin-top: 12rpx; line-height: 1.6; }
-.lf-acts { display: flex; gap: 20rpx; margin-top: 36rpx; }
-.lf-btn { flex: 1; min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 16rpx; font-size: 28rpx; font-weight: 600; background: var(--fill, #eceef3); color: var(--ink-2); }
-.lf-btn.main { background: var(--brand); color: #fff; }
-.goal { margin-bottom: 22rpx; }
-.goal-top { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; margin-bottom: 10rpx; flex-wrap: wrap; }
-.goal-t { font-size: 24rpx; color: var(--ink-2); }
-.goal-set { display: flex; gap: 8rpx; }
-.goal-chip { font-size: 22rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 8rpx 20rpx; }
-.goal-chip.on { color: #fff; background: var(--brand); border-color: var(--brand-text); }
-.goal-bar { height: 12rpx; background: var(--brand-soft); border-radius: 999rpx; overflow: hidden; }
-.goal-fill { height: 100%; background: var(--brand); border-radius: 999rpx; transition: width 0.3s; }
-.goal-fill.done { background: #16a34a; }
-.setrow { display: flex; align-items: center; gap: 18rpx; margin-bottom: 16rpx; flex-wrap: wrap; }
-.set-k { font-size: 24rpx; color: var(--ink-2); }
-.set-kwrap { display: flex; flex-direction: column; min-width: 150rpx; }
-.set-sub { font-size: 19rpx; color: var(--ink-3); margin-top: 2rpx; }
-.set-chips { display: flex; gap: 12rpx; flex-wrap: wrap; }
-.set-chips.scrollx { flex-wrap: nowrap; overflow-x: auto; max-width: 70%; padding-bottom: 4rpx; }
-.set-chips.scrollx .set-chip { flex-shrink: 0; }
-.set-chip { font-size: 23rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 12rpx 24rpx; }
-.set-chip.on { color: #fff; background: var(--brand); border-color: var(--brand-text); }
-.new-tag { font-size: 19rpx; color: #fff; background: #f43f5e; border-radius: 999rpx; padding: 2rpx 12rpx; margin-left: 10rpx; }
-.real-tag { display: inline-block; font-size: 21rpx; color: #b45309; background: #fef3c7; border-radius: 8rpx; padding: 4rpx 14rpx; margin-bottom: 10rpx; }
-.offline-tag { font-size: 21rpx; color: var(--warn); background: var(--warn-soft); border-radius: 8rpx; padding: 8rpx 14rpx; margin-bottom: 10rpx; line-height: 1.5; }
-.lead-tag { display: flex; align-items: center; gap: 12rpx; font-size: 26rpx; color: #0e7490; background: #cffafe; border-radius: 10rpx; padding: 12rpx 16rpx; margin-bottom: 12rpx; line-height: 1.5; }
-.lead-t { flex: 1; }
-.lead-x { flex: none; width: 56rpx; height: 56rpx; display: flex; align-items: center; justify-content: center; margin: -12rpx -8rpx; }
-.mat-fold { display: flex; justify-content: space-between; align-items: center; background: #f0fdfa; border: 1rpx solid #99f6e4; border-radius: 12rpx; padding: 14rpx 20rpx; margin-bottom: 14rpx; }
-.mat-fold-t { font-size: 24rpx; color: #0f766e; }
-.mat-fold-a { font-size: 24rpx; color: #0d9488; font-weight: 600; flex-shrink: 0; margin-left: 16rpx; }
-.grp-tag { display: inline-block; font-size: 21rpx; color: #0e7490; background: #cffafe; border-radius: 8rpx; padding: 4rpx 14rpx; margin-bottom: 10rpx; margin-left: 10rpx; }
-.daily { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(120deg, var(--brand), #5c82ff); border-radius: 20rpx; padding: 24rpx 28rpx; margin-bottom: 20rpx; }
-.daily.done { background: linear-gradient(135deg, #10b981, #059669); }
-.daily.sz { background: linear-gradient(120deg, #d9480f, #f59e0b); }
-.daily.sz.done { background: linear-gradient(135deg, #10b981, #059669); }
-.daily.sz .daily-go { color: #d9480f; }
-.daily.sz.done .daily-go { color: #059669; }
-.daily-t { display: flex; align-items: center; gap: 8rpx; }
-.daily-t-t { font-size: 27rpx; font-weight: 700; color: #fff; }
-.daily-s { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.85); margin-top: 4rpx; }
-.daily-go { background: var(--card); color: var(--brand-text); font-size: 24rpx; font-weight: 600; border-radius: 999rpx; padding: 10rpx 26rpx; flex-shrink: 0; }
-.smart { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #f97316, #f43f5e); border-radius: 20rpx; padding: 24rpx 28rpx; margin-bottom: 20rpx; }
-.smart-t { display: flex; align-items: center; gap: 8rpx; font-size: 27rpx; font-weight: 700; color: #fff; }
-.smart-t-t { font-size: 27rpx; font-weight: 700; color: #fff; }
-.smart-s { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.8); margin-top: 4rpx; }
-.smart-go { background: var(--card); color: #f43f5e; font-size: 24rpx; font-weight: 600; border-radius: 999rpx; padding: 10rpx 26rpx; flex-shrink: 0; }
-.grid { display: flex; flex-wrap: wrap; gap: 20rpx; }
-.mcard { width: calc(50% - 10rpx); box-sizing: border-box; background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 20rpx; padding: 24rpx; }
-.mcard.all { background: linear-gradient(135deg, #5c82ff, var(--brand)); border: none; }
-.mcard.all .mname, .mcard.all .mn { color: #fff; }
-.mtop { display: flex; align-items: center; gap: 12rpx; margin-bottom: 8rpx; }
-.mico { width: 48rpx; height: 48rpx; line-height: 48rpx; text-align: center; border-radius: 12rpx; font-size: 24rpx; font-weight: 600; }
-.mname { font-size: 29rpx; font-weight: 600; color: var(--ink); }
-.mn { display: block; font-size: 21rpx; color: var(--ink-2); margin: 4rpx 0 10rpx; }
-.mbar { height: 8rpx; background: var(--line); border-radius: 999rpx; overflow: hidden; }
-.mfill { height: 100%; background: var(--brand); border-radius: 999rpx; transition: width 0.4s ease; }
-.modechips { display: flex; gap: 12rpx; margin-bottom: 14rpx; flex-wrap: wrap; }
-.mchip { font-size: 21rpx; border-radius: 12rpx; padding: 4rpx 16rpx; font-weight: 500; }
-.mchip.brand { background: var(--brand-soft); color: var(--brand-text); }
-.mchip.info { background: #cffafe; color: #0e7490; }
-.mchip.bad { background: var(--bad-soft); color: var(--bad-strong); }
-.rhead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14rpx; }
-.tag { display: inline-block; background: var(--brand-soft); color: var(--brand-text); border-radius: 12rpx; padding: 6rpx 20rpx; font-size: 22rpx; min-width: 0; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hstats { display: flex; align-items: center; gap: 12rpx; flex-shrink: 0; }
-.tool-row { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 8rpx 4rpx; border-bottom: 1rpx solid var(--line); }
-.tool-row:last-child { border-bottom: none; }
-.tool-name { font-size: 27rpx; color: var(--ink); }
-.tool-val { font-size: 24rpx; color: var(--ink-2); }
+.page { padding: var(--sp-16) var(--page-x) var(--sp-24); }
+.page.has-bar { padding-bottom: calc(var(--bar-h) + var(--sp-24) + env(safe-area-inset-bottom, 0px)); }
+.pskel { display: flex; flex-direction: column; align-items: center; gap: var(--sp-12); }
+.pskel :deep(.kg-skel) { width: 100%; }
+.pskel-hint { font-size: var(--fs-sub); color: var(--ink-2); }
+
+/* 顶栏 */
+.modechips { display: flex; flex-wrap: wrap; gap: var(--sp-8); margin-bottom: var(--sp-8); }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-12); min-height: var(--hit-min); margin-bottom: var(--sp-12); }
+.top-mod { display: inline-flex; align-items: center; gap: var(--sp-8); min-height: var(--hit-min); min-width: 0; }
+.pos { font-size: var(--fs-sub); color: var(--ink-2); }
+.hstats { display: flex; align-items: center; gap: var(--sp-8); flex-shrink: 0; }
+.timer { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); }
+.timer.examleft, .timer.overtime { color: var(--bad-strong); }
+.cnt { font-size: var(--fs-sub); font-weight: 500; }
+.cnt.okc { color: var(--ok-strong); }
+.cnt.badc { color: var(--bad-strong); }
+.cnt.fire { display: inline-flex; align-items: center; gap: var(--sp-4); color: var(--streak); }
+.icon-btn { width: var(--hit-min); height: var(--hit-min); display: flex; align-items: center; justify-content: center; border-radius: var(--r-full); margin-right: calc(-1 * var(--sp-8)); }
+.tool-hover { background: var(--fill); }
+.kg-tool.on { background: var(--warn-soft); }
+
+/* 题面 */
+.qhl { background: var(--warn-soft); color: var(--warn-strong); border-radius: var(--r-xs); padding: 0 2px; font-weight: 600; }
+.qhl-tip { display: block; margin: var(--sp-8) 0 var(--sp-12); font-size: var(--fs-caption); color: var(--warn-strong); }
+.img-credit { display: block; margin-bottom: var(--sp-12); font-size: var(--fs-caption); color: var(--ink-3); }
+
+/* 作答后 */
+.after { display: flex; flex-direction: column; gap: var(--sp-12); margin-top: var(--sp-12); }
+.reasons { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-8); }
+.rz-t { font-size: var(--fs-sub); color: var(--ink-2); margin-right: var(--sp-4); }
+.rz {
+  display: inline-flex; align-items: center; min-height: 36px; padding: 0 var(--sp-16); border-radius: var(--r-full);
+  border: 1px solid var(--line); background: var(--card); font-size: var(--fs-sub); color: var(--ink-2);
+}
+.rz.on { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-text); font-weight: 600; }
+.tm-cmp { display: block; margin-bottom: var(--sp-8); font-size: var(--fs-sub); color: var(--ok-strong); }
+.tm-cmp.over { color: var(--bad-strong); }
+.hs-rate { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-8); }
+.hs-rate-t, .hs-rate-done { font-size: var(--fs-sub); color: var(--ink-2); margin-right: var(--sp-4); }
+.xp-k { display: block; font-size: var(--fs-sub); font-weight: 600; color: var(--warn-strong); margin-bottom: var(--sp-4); }
+.xp-b { display: block; font-size: var(--fs-body); color: var(--ink-2); line-height: var(--lh-question); white-space: pre-wrap; }
+.deep-acts { display: flex; flex-direction: column; align-items: center; gap: var(--sp-8); }
+.deep-acts :deep(.kg-btn--block) { width: 100%; }
+
+/* 答题卡 */
+.acard-grid { display: flex; flex-wrap: wrap; gap: var(--sp-8); padding: var(--sp-4) 0 var(--sp-12); }
+.acard-n {
+  width: var(--acard-cell); height: var(--acard-cell); line-height: var(--acard-cell); text-align: center; border-radius: var(--r-full);
+  background: var(--fill); border: 1px solid var(--line); font-size: var(--fs-sub); color: var(--ink-2); box-sizing: border-box;
+}
+.acard-n.ok { background: var(--ok-soft); border-color: var(--ok); color: var(--ok-strong); }
+.acard-n.bad { background: var(--bad-soft); border-color: var(--bad); color: var(--bad-strong); }
+.acard-n.skip { background: var(--fill); color: var(--ink-3); }
+.acard-n.cur { box-shadow: 0 0 0 2px var(--brand-soft-2); border-color: var(--brand); color: var(--brand-text); }
+.acard-foot { display: block; font-size: var(--fs-sub); color: var(--ink-3); padding: var(--sp-4) 0 var(--sp-12); }
+
+/* 工具 / 纠错 sheet */
+.tool-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-12); min-height: var(--cell-h); border-bottom: 1px solid var(--line); }
+.tool-row:last-child { border-bottom: 0; }
+.tool-name { font-size: var(--fs-body); color: var(--ink); }
+.tool-val { font-size: var(--fs-sub); color: var(--ink-3); flex-shrink: 0; }
 .tool-val.on { color: var(--brand-text); font-weight: 600; }
-.cnt { font-size: 22rpx; border-radius: 999rpx; padding: 2rpx 14rpx; font-weight: 600; }
-.okc { background: var(--ok-soft); color: var(--ok-strong); }
-.badc { background: var(--bad-soft); color: var(--bad-strong); }
-.fire { background: var(--warn-soft); color: #ea580c; display: inline-flex; align-items: center; gap: 2rpx; }
-.fire-n { font-size: 22rpx; color: #ea580c; font-weight: 700; }
-.iconbtn { display: inline-flex; align-items: center; }
-.timer { font-size: 22rpx; color: var(--ink-2); }
-.fontbtn { font-size: 24rpx; font-weight: 700; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 10rpx; padding: 2rpx 12rpx; position: relative; }
-.fontbtn::after { content: ''; position: absolute; inset: -16rpx; }
-.fontbtn.beion { background: var(--brand); border-color: var(--brand-text); color: #fff; }
-.reasons { display: flex; flex-wrap: wrap; align-items: center; gap: 12rpx; margin-bottom: 16rpx; }
-.rz-t { font-size: 23rpx; color: var(--ink-2); }
-.rz { font-size: 23rpx; color: var(--ink-2); border: 1rpx solid var(--line); background: var(--soft-bg); border-radius: 999rpx; padding: 8rpx 22rpx; }
-.rz.on { background: var(--brand); border-color: var(--brand-text); color: #fff; font-weight: 600; }
-.acard-grid { display: flex; flex-wrap: wrap; gap: 20rpx; padding: 8rpx 0 20rpx; }
-.acard-n { width: 80rpx; height: 80rpx; line-height: 80rpx; text-align: center; border-radius: 50%; background: var(--soft-bg); border: 2rpx solid var(--line); font-size: 27rpx; font-weight: 600; color: var(--ink-2); box-sizing: border-box; }
-.acard-n.ok { background: var(--ok-soft); border-color: #86efac; color: #15803d; }
-.acard-n.bad { background: #fee2e2; border-color: #fca5a5; color: #b91c1c; }
-.acard-n.cur { border-color: var(--brand-text); color: var(--brand-text); background: var(--brand-soft); }
-.acard-foot { text-align: center; font-size: 23rpx; color: var(--ink-2); padding-bottom: 8rpx; }
-.op { font-size: 24rpx; color: var(--ink-2); margin-left: 6rpx; }
-.progress { height: 6rpx; background: var(--fill); border-radius: 999rpx; overflow: hidden; margin-bottom: 22rpx; }
-.pfill { height: 100%; background: linear-gradient(90deg, #5c82ff, var(--brand)); border-radius: 999rpx; transition: width 0.3s ease; }
-.q { font-size: 30rpx; line-height: 1.7; margin-bottom: 22rpx; white-space: pre-wrap; word-break: break-all; }
-.qimg { width: 100%; border-radius: 12rpx; margin-bottom: 8rpx; background: var(--fill); }
-.qimg-credit { font-size: 20rpx; color: var(--ink-2); margin-bottom: 16rpx; }
-.opt { display: flex; align-items: center; border: 2rpx solid var(--line); border-radius: 20rpx; padding: 22rpx 24rpx; margin-bottom: 20rpx; font-size: 29rpx; line-height: 1.6; transition: border-color 0.15s, background 0.15s; }
-.okey { flex-shrink: 0; width: 52rpx; height: 52rpx; line-height: 52rpx; text-align: center; border-radius: 50%; background: var(--soft-bg); color: var(--ink-2); font-weight: 600; font-size: 26rpx; margin-right: 20rpx; border: 1rpx solid var(--line); }
-.otext { flex: 1; word-break: break-all; }
-.omark { flex-shrink: 0; font-size: 30rpx; font-weight: 700; margin-left: 12rpx; }
-.omark.good { color: var(--ok); }
-.omark.badm { color: var(--bad); }
-.opt.right { background: var(--ok-soft); border-color: var(--ok); animation: pop 0.35s cubic-bezier(0.2, 0.8, 0.2, 1.4); }
-@keyframes pop {
-  0% { transform: scale(1); }
-  40% { transform: scale(1.03); }
-  100% { transform: scale(1); }
+.rp-types { display: flex; flex-wrap: wrap; gap: var(--sp-8); margin-bottom: var(--sp-16); }
+.rp-detail {
+  width: 100%; box-sizing: border-box; min-height: 96px; background: var(--fill); border-radius: var(--r-sm);
+  padding: var(--sp-12); font-size: var(--fs-body); color: var(--ink); margin-bottom: var(--sp-16);
 }
-.opt.right .okey { background: var(--ok); color: #fff; border-color: var(--ok); }
-.opt.wrong { background: var(--bad-soft); border-color: var(--bad); animation: shake 0.3s; }
-.opt.wrong .okey { background: var(--bad); color: #fff; border-color: var(--bad); }
-.opt.dim { opacity: 0.5; }
-.opt.excl { opacity: 0.45; }
-.opt.excl .otext { text-decoration: line-through; }
-@keyframes shake {
-  25% { transform: translateX(-8rpx); }
-  75% { transform: translateX(8rpx); }
-}
-.after { margin-top: 8rpx; }
-.exp-k.hs { color: var(--brand-text); }
-.exp.hsx { border-left: 5rpx solid var(--brand); background: var(--brand-soft); }
-.exp-k.xp { color: #b45309; margin-top: 12rpx; }
-.exp.xpx { border-left: 5rpx solid #f59e0b; background: var(--warn-soft); }
-.hs-rate { display: flex; gap: 14rpx; margin-top: 10rpx; align-items: center; }
-.hs-rate-btn { display: inline-flex; align-items: center; gap: 6rpx; font-size: 23rpx; color: var(--brand-text); border: 1rpx solid var(--brand); border-radius: 999rpx; padding: 6rpx 22rpx; }
-.hs-rate-btn.bad { color: var(--bad); border-color: var(--bad); }
-.hs-rate-done { font-size: 23rpx; color: var(--ink-2); }
-.exp { background: var(--soft-bg); border-radius: 14rpx; padding: 20rpx; font-size: 25rpx; line-height: 1.7; color: var(--ink); white-space: pre-wrap; word-break: break-all; margin-top: 8rpx; }
-.exp-sec { background: linear-gradient(180deg, var(--brand-soft), var(--card) 40%); border: 1rpx solid var(--brand-soft-2); border-radius: 20rpx; padding: 20rpx; margin-bottom: 16rpx; }
-.exp-row { display: flex; align-items: baseline; gap: 16rpx; margin-bottom: 12rpx; }
-.exp-row:last-child { margin-bottom: 0; }
-.exp-row.col { display: block; }
-.exp-k { flex-shrink: 0; font-size: 22rpx; color: var(--ink-2); font-weight: 600; }
-.exp-v { font-size: 24rpx; color: var(--ink); }
-.exp-ans { font-size: 32rpx; font-weight: 800; }
-.exp-ans.okc2 { color: var(--ok); }
-.exp-ans.badc2 { color: var(--bad); }
-.rp-types { display: flex; flex-wrap: wrap; gap: 16rpx; margin-bottom: 20rpx; }
-.rp-chip { padding: 18rpx 26rpx; min-height: 44rpx; border-radius: 999rpx; background: var(--soft-bg); font-size: 26rpx; color: var(--ink-2); }
-.rp-chip.on { background: rgba(46, 91, 255, 0.12); color: var(--brand-text); font-weight: 600; }
-.rp-detail { width: 100%; box-sizing: border-box; min-height: 140rpx; background: var(--soft-bg); border-radius: 16rpx; padding: 20rpx; font-size: 26rpx; margin-bottom: 24rpx; }
-.rp-submit { width: 100%; }
-.rp-submit[disabled] { opacity: 0.5; }
-.report-link {
-  text-align: center;
-  font-size: 22rpx;
-  color: var(--ink-2);
-  padding-top: 14rpx;
-  text-decoration: underline;
-}
-.deep { margin-top: 6rpx; text-align: center; font-size: 25rpx; color: var(--brand-text); border: 1rpx solid var(--brand); border-radius: 999rpx; padding: 14rpx 0; }
-.deep.seen { color: var(--ok-strong); border-color: var(--ok-strong); }
-.banner { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between; gap: 20rpx; padding: 28rpx 32rpx calc(28rpx + env(safe-area-inset-bottom)); animation: slideup 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
-/* #ifdef H5 */
-@media (max-width: 767px) {
-  .banner { bottom: calc(50px + env(safe-area-inset-bottom)); padding-bottom: 28rpx; }
-  .wrap.has-banner { padding-bottom: calc(300rpx + 50px + env(safe-area-inset-bottom)); }
-}
-/* #endif */
-@keyframes slideup {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
-.banner { background: rgba(255, 255, 255, 0.97); border-top: 1rpx solid var(--line); box-shadow: 0 -8rpx 24rpx rgba(23, 24, 28, 0.08); }
-.theme-dark .banner { background: rgba(29, 31, 40, 0.97); }
-.binfo { flex: 1; min-width: 0; }
-.btitle { display: block; font-size: 30rpx; font-weight: 700; }
-.bok .btitle { color: var(--ok); }
-.bbad .btitle { color: var(--bad); }
-.bsub { display: block; font-size: 24rpx; color: var(--ink-1); margin-top: 4rpx; }
-.bnext { flex-shrink: 0; border-radius: 999rpx; font-size: 28rpx; font-weight: 600; color: #fff; padding: 0 44rpx; min-height: 44px; line-height: 44px; margin: 0; }
-.bnext.nok, .bnext.nbad { background: linear-gradient(180deg, #4a7bf7, #3567ec); box-shadow: 0 6rpx 16rpx rgba(46, 91, 255, 0.25); }
-.bnext.bstay { background: transparent; border: 2rpx solid var(--brand); color: var(--brand-text); margin-right: 12rpx; box-shadow: none; }
-.ann { display: flex; align-items: flex-start; gap: 12rpx; background: var(--info-soft); border: 1rpx solid #bae6fd; border-radius: 16rpx; padding: 18rpx 22rpx; margin-bottom: 20rpx; }
-.ann-c { flex: 1; }
-.ann-t { display: block; font-size: 26rpx; font-weight: 600; color: #0369a1; }
-.ann-b { display: block; font-size: 23rpx; color: #0284c7; margin-top: 4rpx; }
-.ann-x { color: #0369a1; font-size: 26rpx; padding: 8rpx 16rpx; }
-.daily.exam { background: var(--card); border: 1rpx solid var(--line); box-shadow: 0 2rpx 8rpx rgba(23,24,28,.04); }
-.exam-ico { width: 56rpx; height: 56rpx; border-radius: 16rpx; display: inline-flex; align-items: center; justify-content: center; }
-.exam-ico.warn { background: var(--warn-soft); }
-.exam-ico.err { background: var(--bad-soft); }
-.daily-t-t.dark { color: var(--ink); }
-.daily-s.dark { color: var(--ink-2); }
-.daily.exam .daily-go { background: var(--brand-soft); color: var(--brand-text); }
 
-.timer.examleft { color: #ef4444; font-weight: 700; }
-.timer.overtime { color: #ef4444; font-weight: 700; }
-.tm-cmp { margin-left: auto; font-size: 22rpx; color: #16a34a; }
-.tm-cmp.over { color: #ef4444; }
-.qhl { background: var(--hl-bg, #fef08a); color: var(--hl-ink, inherit); border-radius: 4rpx; padding: 0 2rpx; font-weight: 600; }
-.qhl-tip { margin-top: 8rpx; font-size: 21rpx; color: var(--warn); }
-.opt.sel { border-color: var(--brand-text); background: var(--soft-bg); }
-.acard-n.skip { background: var(--line); color: var(--ink-2); }
-.beat { margin-top: 10rpx; font-size: 25rpx; color: var(--brand-text); background: var(--soft-bg); border-radius: 999rpx; padding: 10rpx 26rpx; }
-.redoreport { width: 100%; margin-top: 24rpx; background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 18rpx; padding: 24rpx 28rpx; box-sizing: border-box; text-align: left; }
-.dsboard { width: 100%; margin-top: 24rpx; background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 18rpx; padding: 24rpx 28rpx; box-sizing: border-box; text-align: left; }
-.dsb-mine { float: right; font-size: 23rpx; font-weight: 600; color: var(--brand-text); }
-.dsb-row { display: flex; align-items: center; gap: 16rpx; margin-top: 14rpx; }
-.dsb-rank { flex-shrink: 0; width: 40rpx; text-align: center; font-size: 24rpx; font-weight: 700; color: var(--ink-2); }
-.dsb-rank.top { color: var(--brand-text); }
-.dsb-name { flex: 1; min-width: 0; font-size: 25rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dsb-score { flex-shrink: 0; font-size: 23rpx; color: var(--ink-2); }
-.weakrf { width: 100%; margin-top: 24rpx; background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 18rpx; padding: 24rpx 28rpx; box-sizing: border-box; text-align: left; }
-.wr-row { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; margin-top: 18rpx; }
-.wr-l { display: flex; flex-direction: column; gap: 4rpx; min-width: 0; }
-.wr-name { font-size: 26rpx; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.wr-meta { font-size: 22rpx; color: var(--bad-strong); }
-.wr-btn { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: var(--brand-text); border: 1rpx solid var(--brand); border-radius: 999rpx; padding: 8rpx 22rpx; }
-@media (min-width: 768px) { .wr-btn { cursor: pointer; } .wr-btn:hover { background: var(--brand); color: #fff; } }
-.rr-t { font-size: 27rpx; font-weight: 700; color: var(--ink); }
-.rr-row { display: flex; gap: 16rpx; margin: 18rpx 0 12rpx; }
-.rr-cell { flex: 1; text-align: center; background: var(--card-bg, #fff); border-radius: 14rpx; padding: 16rpx 0; }
-.rr-n { display: block; font-size: 40rpx; font-weight: 800; color: var(--ink); }
-.rr-n.rr-ok { color: #16a34a; }
-.rr-n.rr-bad { color: #dc2626; }
-.rr-n.rr-master { color: var(--brand-text); }
-.rr-l { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
-.rr-tip { display: block; font-size: 22rpx; color: var(--ink-2); line-height: 1.6; }
-.rr-go { margin-top: 10rpx; font-size: 24rpx; font-weight: 600; color: var(--brand-text); }
-.fixreport { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 16rpx; margin-top: 24rpx; background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 18rpx; padding: 20rpx 28rpx; box-sizing: border-box; text-align: left; }
-.fr-t { flex: 1; min-width: 0; font-size: 24rpx; color: var(--ink-2); line-height: 1.6; }
-.fr-go { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: var(--brand-text); }
-.report { width: 100%; margin: 20rpx 0 28rpx; }
-.report-row { display: flex; gap: 16rpx; margin-bottom: 24rpx; }
-.report-cell { flex: 1; background: var(--soft-bg); border-radius: 16rpx; padding: 20rpx 0; display: flex; flex-direction: column; align-items: center; gap: 6rpx; }
-.report-n { font-size: 34rpx; font-weight: 700; color: var(--ink); }
-.report-n.badc2 { color: var(--bad); }
-.report-t { font-size: 22rpx; color: var(--ink-2); }
-.mb-list { margin-bottom: 24rpx; }
-.mb-row { display: flex; align-items: center; gap: 16rpx; margin-bottom: 12rpx; }
-.mb-name { font-size: 23rpx; color: var(--ink); width: 130rpx; text-align: left; flex-shrink: 0; }
-.mb-bar { flex: 1; height: 14rpx; background: var(--line); border-radius: 999rpx; overflow: hidden; }
-.mb-fill { height: 100%; border-radius: 999rpx; background: #22c55e; }
-.mb-fill.mid { background: #f59e0b; }
-.mb-fill.lo { background: #ef4444; }
-.mb-pct { font-size: 22rpx; color: var(--ink-2); width: 150rpx; text-align: right; flex-shrink: 0; }
-.report-grid { display: flex; flex-wrap: wrap; gap: 16rpx; justify-content: center; }
-.report-tip { text-align: center; font-size: 22rpx; color: var(--ink-2); margin-top: 14rpx; }
-.btn { background: linear-gradient(135deg, #5c82ff, var(--brand)); color: #fff; border-radius: 18rpx; font-size: 30rpx; font-weight: 600; box-shadow: 0 6rpx 16rpx rgba(46, 91, 255, 0.25); min-height: 44px; line-height: 44px; }
-.btn.ghost { background: var(--brand-soft); color: var(--brand-text); box-shadow: none; }
-.btn.plain { background: none; color: var(--ink-2); box-shadow: none; }
-.done { text-align: center; padding: 48rpx 28rpx; }
-.duenudge { display: flex; justify-content: space-between; align-items: center; text-align: left; background: linear-gradient(180deg, #4a7bf7, #3567ec); border-radius: 18rpx; box-shadow: 0 6rpx 16rpx rgba(46, 91, 255, 0.25); padding: 24rpx 28rpx; margin: 24rpx 0; }
-.duenudge-t { display: block; font-size: 27rpx; font-weight: 700; color: #ffffff; }
-.duenudge-s { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.75); margin-top: 4rpx; }
-.duenudge-go { flex-shrink: 0; background: rgba(255, 255, 255, 0.18); color: #ffffff; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 12rpx 30rpx; }
-.loginnudge { display: flex; justify-content: space-between; align-items: center; gap: 16rpx; text-align: left; background: var(--card); border: 1rpx solid var(--line); border-radius: 18rpx; padding: 24rpx 28rpx; margin: 24rpx 0; }
-.loginnudge .duenudge-t { color: var(--ink); }
-.loginnudge .duenudge-s { color: var(--ink-2); }
-.loginnudge .duenudge-go { background: var(--brand-soft); color: var(--brand-text); }
-.loginnudge-x { flex-shrink: 0; color: var(--ink-3); font-size: 26rpx; padding: 8rpx; }
-.ring { width: 200rpx; height: 200rpx; border-radius: 50%; margin: 0 auto 24rpx; display: flex; align-items: center; justify-content: center; }
-.ring-in { width: 156rpx; height: 156rpx; border-radius: 50%; background: var(--card); display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.ring-n { font-size: 40rpx; font-weight: 700; color: var(--ink); }
-.ring-t { font-size: 20rpx; color: var(--ink-2); }
-.big { font-size: 40rpx; font-weight: 700; margin-bottom: 12rpx; }
-.sub { font-size: 26rpx; color: var(--ink-2); margin-bottom: 28rpx; }
-.sub.ptl { margin-bottom: 8rpx; color: var(--brand-text); font-weight: 600; word-break: break-all; }
-.mask { position: fixed; inset: 0; background: rgba(15, 18, 30, 0.5); z-index: 90; display: flex; align-items: flex-end; }
-.sheet { width: 100%; box-sizing: border-box; background: var(--card); border-radius: 32rpx 32rpx 0 0; padding: 32rpx 28rpx calc(130rpx + env(safe-area-inset-bottom)); max-height: 70vh; overflow-y: auto; animation: slideup 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
-.sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20rpx; }
-.sheet-t { font-size: 30rpx; font-weight: 700; }
-.sheet-x { font-size: 28rpx; color: var(--ink-2); padding: 8rpx 16rpx; }
-.sub-chip { display: flex; justify-content: space-between; align-items: center; border: 1rpx solid var(--line); background: var(--soft-bg); border-radius: 18rpx; padding: 24rpx 28rpx; margin-bottom: 16rpx; }
-.sub-l { display: flex; flex-direction: column; gap: 4rpx; min-width: 0; }
-.pr-scroll { white-space: nowrap; margin-bottom: 20rpx; }
-.pr-scroll .set-chip { display: inline-block; margin-right: 12rpx; }
-.sub-prog { font-size: 22rpx; color: var(--muted); }
-.sub-chip.all-chip { background: linear-gradient(135deg, #5c82ff, var(--brand)); border: none; }
-.sub-chip.all-chip .sub-name, .sub-chip.all-chip .sub-n { color: #fff; }
-.sub-name { font-size: 28rpx; font-weight: 600; color: var(--ink); }
-.sub-n { font-size: 22rpx; color: var(--ink-2); }
-.searchbar { display: flex; align-items: center; gap: 12rpx; background: var(--card); border-radius: 999rpx; padding: 16rpx 26rpx; margin-bottom: 20rpx; box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04); }
-.searchbar-t { font-size: 26rpx; color: var(--ink-3); }
+/* 结算段 */
+.sec { margin-top: var(--card-gap); }
+.hero-s { display: block; margin-top: var(--sp-8); font-size: var(--fs-sub); color: var(--on-brand); opacity: 0.85; }
+.sec-h { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); }
+.sec-t { display: block; font-size: var(--fs-h3); font-weight: 600; color: var(--ink); margin-bottom: var(--sp-8); }
+.sec-r { font-size: var(--fs-sub); font-weight: 600; color: var(--brand-text); }
+.sec-tip { display: block; margin-top: var(--sp-8); font-size: var(--fs-caption); color: var(--ink-3); line-height: 1.6; }
+.dsb-row { display: flex; align-items: center; gap: var(--sp-12); min-height: 40px; }
+.dsb-name { flex: 1; min-width: 0; font-size: var(--fs-body); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dsb-score { flex-shrink: 0; font-size: var(--fs-sub); color: var(--ink-2); }
+.fr-t { font-size: var(--fs-sub); color: var(--ink-2); line-height: 1.6; }
+.wr-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-12); min-height: var(--hit-min); }
+.wr-l { display: flex; flex-direction: column; gap: var(--sp-4); min-width: 0; }
+.wr-name { font-size: var(--fs-body); font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wr-meta { font-size: var(--fs-caption); color: var(--bad-strong); }
+.mb-row { display: flex; align-items: center; gap: var(--sp-12); min-height: 32px; }
+.mb-name { width: 64px; flex-shrink: 0; font-size: var(--fs-sub); color: var(--ink); }
+.mb-bar { flex: 1; }
+.mb-pct { width: 96px; flex-shrink: 0; text-align: right; font-size: var(--fs-caption); color: var(--ink-2); }
+.nudge-t { display: block; font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+.nudge-s { display: block; margin-top: var(--sp-4); font-size: var(--fs-caption); color: var(--ink-2); }
+.done-acts { display: flex; flex-direction: column; gap: var(--sp-12); margin-top: var(--sp-24); }
 
-/* 桌面常驻侧栏（答题卡 + 快捷键）——仅 H5 ≥1024px */
-.pside { display: none; }
-.ps-h { font-size: 26rpx; font-weight: 600; color: var(--ink); margin-bottom: 8rpx; }
-.kbd-row { display: flex; align-items: center; gap: 8rpx; margin-top: 14rpx; }
-.kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 40rpx; height: 40rpx; padding: 0 10rpx; box-sizing: border-box; background: var(--card); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 8rpx; font-size: 21rpx; font-weight: 600; color: var(--ink-2); }
-.kbd-d { font-size: 22rpx; color: var(--ink-2); margin-left: 8rpx; }
 /* #ifdef H5 */
+.page :deep(.kg-two__aside) { display: none; }
+.side-card { margin-bottom: var(--card-gap); }
+.side-h { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-8); }
+.side-t { display: block; font-size: var(--fs-h3); font-weight: 600; color: var(--ink); }
+.side-grid { max-height: 46vh; overflow-y: auto; }
+.kbd-row { display: flex; align-items: center; gap: var(--sp-4); margin-top: var(--sp-8); }
+.kbd {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; padding: 0 var(--sp-4); box-sizing: border-box;
+  background: var(--fill); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: var(--r-xs); font-size: var(--fs-caption); font-weight: 600; color: var(--ink-2);
+}
+.kbd-d { font-size: var(--fs-caption); color: var(--ink-2); margin-left: var(--sp-4); }
 @media (min-width: 1024px) {
-  .wrap.pdesk { max-width: 1044px !important; margin: 0 auto; box-sizing: border-box; }
-  .wrap.pdesk::after { content: ''; display: block; clear: both; }
-  .pside { display: block; float: right; width: 320px; }
-  .pside-card { margin-bottom: 20rpx; }
-  .card.pmain { margin-right: 344px; }
+  .page { max-width: 1064px; margin: 0 auto; }
+  .page.has-bar { padding-bottom: var(--sp-24); }
+  .page :deep(.kg-two__aside) { display: block; }
+  .tool-acard { display: none; }
+  .kg-tool, .acard-n, .rz, .tool-row, .icon-btn, .top-mod { cursor: pointer; }
 }
 /* #endif */
 </style>

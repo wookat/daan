@@ -1,84 +1,76 @@
 <template>
-  <view class="wrap shareq">
-    <view v-if="loading" class="card empty">加载中…</view>
-    <view v-else-if="errMsg" class="card empty err">
-      <text class="err-t">{{ errMsg }}</text>
-      <text class="err-s">题目可能已被删除或链接不完整，10万+ 题库仍可免费刷</text>
-      <view class="act-btn main" @click="goHome">去刷题</view>
-    </view>
+  <view class="page">
+    <kg-skeleton v-if="loading" preset="lines" />
+    <kg-empty-state
+      v-else-if="errMsg"
+      icon="triangle-alert"
+      :title="errMsg"
+      desc="题目可能已被删除或链接不完整，10万+ 题库仍可免费刷"
+      cta-text="去刷题"
+      @cta="goHome"
+    />
 
     <template v-else-if="d">
-      <view class="from-bar">
-        <view class="from-av">{{ (d.from_name || '?').slice(0, 1) }}</view>
-        <view class="from-l">
-          <text class="from-t">{{ d.from_name }} 分享了一道题</text>
-          <text class="from-s">{{ d.answered || d.is_sharer ? nAnsweredText : '先作答，再看答案和大家的选择' }}</text>
-        </view>
-      </view>
+      <kg-hero-card :label="d.from_name + ' 分享了一道题'" :value="d.answered || d.is_sharer ? (answers.length || d.n_answered) : '?'" :unit="d.answered || d.is_sharer ? ' 人已作答' : ''">
+        <text class="hero-s">{{ d.answered || d.is_sharer ? '看看大家都选了什么' : '先作答，再看答案和大家的选择' }}</text>
+      </kg-hero-card>
 
-      <view class="card q">
-        <view class="q-tags">
-          <text class="tag">{{ modLabel }}</text>
-          <text v-if="d.question.submodule" class="tag gray">{{ d.question.submodule }}</text>
-        </view>
-        <text class="stem">{{ d.question.question }}</text>
-        <view
-          v-for="(t, k) in d.question.options"
-          :key="k"
-          class="opt"
-          :class="optCls(k)"
-          @click="pick(k)"
-        >
-          <text class="k">{{ k }}</text>
-          <text class="t">{{ t }}</text>
-        </view>
-      </view>
+      <kg-question-card :q="qCard" class="sec">
+        <kg-option-group
+          :options="optList"
+          :model-value="revealed && myResult ? myResult.picked : picked"
+          :answer="revealed ? d.question.answer : ''"
+          :revealed="revealed"
+          :readonly="revealed || submitting"
+          @select="pick"
+        />
+      </kg-question-card>
 
       <!-- 作答后 / 分享者：答案与解析 -->
       <template v-if="revealed">
-        <view v-if="myResult" class="res-bar" :class="myResult.correct ? 'ok' : 'bad'">
-          {{ myResult.correct ? '✅ 答对了！正确答案 ' + d.question.answer : '❌ 答错了，正确答案是 ' + d.question.answer + '，你选了 ' + myResult.picked }}
-        </view>
-        <view v-else class="res-bar ok">正确答案：{{ d.question.answer }}</view>
+        <kg-banner v-if="myResult" :tone="myResult.correct ? 'ok' : 'bad'" :closable="false" class="sec"
+          :text="myResult.correct ? '答对了！正确答案 ' + d.question.answer : '答错了，正确答案是 ' + d.question.answer + '，你选了 ' + myResult.picked" />
+        <kg-banner v-if="beatText" tone="warn" icon="trophy" :closable="false" class="sec" :text="beatText" />
 
-        <view v-if="beatText" class="beat-bar">{{ beatText }}</view>
+        <kg-analysis-card
+          v-if="d.question.explanation"
+          class="sec"
+          :answer="d.question.answer"
+          :picked="myResult ? myResult.picked : ''"
+          :analysis="d.question.explanation"
+          :tags="d.question.submodule ? [d.question.submodule] : []"
+        />
 
-        <view v-if="d.question.explanation" class="card">
-          <text class="exp-k">解析</text>
-          <view class="exp">{{ d.question.explanation }}</view>
-        </view>
-
-        <view class="card">
-          <text class="exp-k">大家的作答（{{ answers.length }} 人）</text>
-          <view v-if="!answers.length" class="empty small">还没有人作答，把链接再发给几个考友吧</view>
+        <kg-card variant="flat" class="sec">
+          <text class="h">大家的作答（{{ answers.length }} 人）</text>
+          <kg-empty-state v-if="!answers.length" compact icon="users" title="还没有人作答" desc="把链接再发给几个考友吧" />
           <view v-for="(a, i) in answers" :key="i" class="ans-row">
             <text class="ans-name">{{ a.nickname }}</text>
             <text class="ans-pick">选 {{ a.picked }}</text>
-            <text class="ans-res" :class="a.correct ? 'ok' : 'bad'">{{ a.correct ? '对' : '错' }}</text>
+            <kg-tag :tone="a.correct ? 'ok' : 'bad'">{{ a.correct ? '对' : '错' }}</kg-tag>
           </view>
-        </view>
+        </kg-card>
 
-        <view v-if="teamInvite && !teamJoined" class="card team-cta">
+        <kg-card v-if="teamInvite && !teamJoined" variant="flat" class="sec team-cta">
           <view class="tc-l">
             <text class="tc-t">和 {{ d.from_name }} 组队刷题</text>
             <text class="tc-s">加入小队「{{ teamInvite.name }}」，每天互相监督打卡</text>
           </view>
-          <view class="tc-btn" :class="{ off: joining }" @click="joinTeam">{{ joining ? '加入中…' : '一键加入' }}</view>
-        </view>
-        <view v-else-if="teamJoined" class="card team-cta joined">
+          <kg-button size="md" :loading="joining" @click="joinTeam">一键加入</kg-button>
+        </kg-card>
+        <kg-card v-else-if="teamJoined" variant="flat" class="sec team-cta joined">
           <view class="tc-l">
             <text class="tc-t">🎉 已加入「{{ teamInvite.name }}」</text>
             <text class="tc-s">每天刷题就是打卡，队友都能看到你的进度</text>
           </view>
-          <view class="tc-btn ghost" @click="goTeamPage">看队友 ›</view>
-        </view>
+          <kg-button size="md" variant="ghost" @click="goTeamPage">看队友</kg-button>
+        </kg-card>
 
-        <view class="act-btn main" @click="goSimilar">去刷同类题</view>
-        <view v-if="d.is_sharer" class="act-btn sub" @click="copyLink">复制分享链接，喊更多人来答</view>
+        <kg-action-bar layout="actions" primary-text="去刷同类题" :secondary-text="d.is_sharer ? '复制分享链接' : ''" @primary="goSimilar" @secondary="copyLink" />
       </template>
 
-      <view class="reg-tip" @click="goLogin">
-        <text class="reg-t">登录 / 注册错题邦，10万+ 题库免费刷 ›</text>
+      <view class="reg-tip">
+        <kg-button variant="text" size="md" @click="goLogin">登录 / 注册错题邦，10万+ 题库免费刷</kg-button>
       </view>
     </template>
   </view>
@@ -86,9 +78,9 @@
 
 <script>
 import { shareDetail, shareAnswer, trackEvent, teamJoin, qShareText, canonicalizeSharePath } from '../../api.js';
+import { MODULES, moduleLabel } from '../../module-meta.js';
 
-const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
-const modName = (m) => NAMES[m] || m || '行测';
+const modName = (m) => (MODULES[m] ? moduleLabel(m) : m === 'shenlun' ? '申论' : m || '行测');
 
 export default {
   data() {
@@ -116,6 +108,14 @@ export default {
     },
     modLabel() {
       return modName(this.d && this.d.question.module);
+    },
+    qCard() {
+      const q = this.d.question;
+      return { id: q.id, module: q.module, tag3: q.submodule || '', stem: String(q.question || '') };
+    },
+    optList() {
+      const o = (this.d && this.d.question.options) || {};
+      return Object.keys(o).map((k) => ({ key: k, text: String(o[k] == null ? '' : o[k]) }));
     },
     nAnsweredText() {
       return `${this.answers.length || this.d.n_answered} 人已作答`;
@@ -158,12 +158,6 @@ export default {
         this.errMsg = e.message || '分享不存在或已过期';
       }
       this.loading = false;
-    },
-    optCls(k) {
-      if (!this.revealed) return { pick: this.picked === k };
-      const right = this.d.question.answer;
-      const myPick = this.myResult ? this.myResult.picked : null;
-      return { right: k === right, wrong: myPick && k === myPick && k !== right };
     },
     async pick(k) {
       if (this.revealed || this.submitting) return;
@@ -231,69 +225,24 @@ export default {
 </script>
 
 <style scoped>
-.wrap { padding: 24rpx 32rpx 60rpx; }
-.card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 24rpx 28rpx; margin-bottom: 20rpx; }
-.empty { text-align: center; color: var(--ink-2); font-size: 25rpx; padding: 30rpx 0; }
-.empty.small { padding: 16rpx 0; }
-.empty.err { padding: 70rpx 28rpx; }
-.err-t { display: block; font-size: 30rpx; font-weight: 600; color: var(--ink); }
-.err-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 12rpx; margin-bottom: 32rpx; }
-.empty.err .act-btn { max-width: 320rpx; margin: 0 auto; }
-
-.from-bar { display: flex; align-items: center; gap: 18rpx; background: linear-gradient(135deg, #5b8af8, #2e5bff); border-radius: 28rpx; padding: 26rpx 28rpx; margin-bottom: 20rpx; box-shadow: 0 12rpx 36rpx rgba(46, 91, 255, 0.3); }
-.from-av { width: 72rpx; height: 72rpx; border-radius: 50%; background: #fff; color: var(--brand-text); font-size: 30rpx; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.from-l { flex: 1; min-width: 0; }
-.from-t { display: block; color: #fff; font-size: 30rpx; font-weight: 700; }
-.from-s { display: block; color: rgba(255, 255, 255, 0.85); font-size: 22rpx; margin-top: 4rpx; }
-
-.q-tags { display: flex; gap: 12rpx; margin-bottom: 16rpx; }
-.tag { font-size: 21rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
-.tag.gray { color: var(--ink-2); background: var(--fill); }
-.stem { display: block; font-size: 29rpx; color: var(--ink); line-height: 1.7; margin-bottom: 22rpx; white-space: pre-wrap; }
-
-.opt { display: flex; gap: 16rpx; align-items: flex-start; border: 1rpx solid var(--line); border-radius: 18rpx; padding: 20rpx 22rpx; margin-bottom: 14rpx; }
-.opt .k { font-weight: 700; color: var(--ink-2); }
-.opt .t { flex: 1; font-size: 27rpx; color: var(--ink); line-height: 1.6; }
-.opt.pick { border-color: var(--brand-text); background: var(--brand-soft); }
-.opt.right { border-color: var(--ok); background: var(--ok-soft); }
-.opt.wrong { border-color: var(--bad); background: var(--bad-soft); }
-
-.res-bar { border-radius: 18rpx; padding: 20rpx 26rpx; font-size: 27rpx; font-weight: 600; margin-bottom: 20rpx; }
-.res-bar.ok { background: var(--ok-soft); color: var(--ok); }
-.res-bar.bad { background: var(--bad-soft); color: var(--bad); }
-
-.beat-bar { border-radius: 18rpx; padding: 18rpx 26rpx; font-size: 25rpx; font-weight: 600; margin-bottom: 20rpx; background: #fef3c7; color: #b45309; }
-
-.team-cta { display: flex; align-items: center; gap: 18rpx; }
+.page { padding: var(--sp-16) var(--page-x) calc(var(--bar-h) + var(--sp-24) + env(safe-area-inset-bottom, 0px)); }
+.sec { margin-top: var(--card-gap); }
+.h { display: block; font-size: var(--fs-h3); font-weight: 600; color: var(--ink); margin-bottom: var(--sp-12); }
+.hero-s { display: block; font-size: var(--fs-sub); color: var(--on-brand); opacity: 0.85; margin-top: var(--sp-8); }
+.ans-row { display: flex; align-items: center; gap: var(--sp-12); min-height: var(--hit-min); padding: var(--sp-4) 0; border-bottom: 1px solid var(--line); }
+.ans-row:last-child { border-bottom: none; }
+.ans-name { flex: 1; font-size: var(--fs-body); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ans-pick { font-size: var(--fs-sub); color: var(--ink-2); }
+.team-cta { display: flex; align-items: center; gap: var(--sp-12); }
 .team-cta.joined { background: var(--ok-soft); }
 .tc-l { flex: 1; min-width: 0; }
-.tc-t { display: block; font-size: 28rpx; font-weight: 700; color: var(--ink); }
-.tc-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; }
-.tc-btn { flex-shrink: 0; min-height: 40px; display: flex; align-items: center; padding: 0 30rpx; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 25rpx; font-weight: 600; }
-.tc-btn.off { opacity: 0.6; }
-.tc-btn.ghost { background: var(--brand-soft); color: var(--brand-text); }
-
-.exp-k { display: block; font-size: 23rpx; color: var(--ink-2); font-weight: 600; margin-bottom: 10rpx; }
-.exp { font-size: 26rpx; color: var(--ink); line-height: 1.7; white-space: pre-wrap; }
-
-.ans-row { display: flex; align-items: center; gap: 16rpx; padding: 14rpx 0; border-bottom: 1rpx solid var(--fill); }
-.ans-row:last-child { border-bottom: none; }
-.ans-name { flex: 1; font-size: 26rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ans-pick { font-size: 24rpx; color: var(--ink-2); }
-.ans-res { font-size: 22rpx; font-weight: 700; padding: 4rpx 16rpx; border-radius: 999rpx; }
-.ans-res.ok { background: var(--ok-soft); color: var(--ok); }
-.ans-res.bad { background: var(--bad-soft); color: var(--bad); }
-
-.act-btn { min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; font-size: 29rpx; font-weight: 600; margin-bottom: 18rpx; }
-.act-btn.main { background: var(--brand); color: #fff; }
-.act-btn.sub { background: var(--brand-soft); color: var(--brand-text); }
-
-.reg-tip { text-align: center; padding: 20rpx 0; }
-.reg-t { font-size: 24rpx; color: var(--brand-text); }
+.tc-t { display: block; font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+.tc-s { display: block; font-size: var(--fs-caption); color: var(--ink-2); margin-top: var(--sp-4); }
+.reg-tip { display: flex; justify-content: center; padding: var(--sp-12) 0; }
 
 /* #ifdef H5 */
-@media (min-width: 768px) {
-  .wrap.shareq { max-width: 640px; }
+@media (min-width: 1024px) {
+  .page { max-width: 760px; margin: 0 auto; padding-bottom: var(--sp-24); }
 }
 /* #endif */
 </style>

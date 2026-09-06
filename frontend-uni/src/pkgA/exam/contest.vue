@@ -1,110 +1,104 @@
 <template>
-  <view class="wrap">
-    <view v-if="loading" class="spin">比赛信息加载中…</view>
+  <view class="page">
+    <kg-skeleton v-if="loading" preset="cards" />
 
-    <template v-else>
-      <view class="ct-cols">
-      <view class="ct-main">
-      <!-- 当前/下一场比赛卡 -->
-      <view v-if="event" class="card hero">
-        <view class="hero-top">
-          <text class="hero-series">{{ event.series === 'weekly' ? '每周六 · 全站同卷' : '专场比赛' }}</text>
-          <text class="hero-phase" :class="event.phase">{{ phaseText }}</text>
-        </view>
-        <text class="hero-title">{{ event.title }}</text>
-        <text class="hero-paper">{{ event.paper_title }} · {{ event.n_questions }} 题 · {{ event.duration_min }} 分钟</text>
-        <view class="hero-meta">
-          <text class="hm">{{ fmtWindow }}</text>
-          <text class="hm">{{ event.registered || event.submitted ? event.registered + ' 人报名 · ' + event.submitted + ' 人交卷' : '本场首批报名开放中 · 全站同卷' }}</text>
-        </view>
-
-        <!-- 未开始：倒计时 + 报名 -->
-        <template v-if="event.phase === 'upcoming'">
-          <view class="count">距开赛 <text class="count-n">{{ countdown }}</text></view>
-          <view v-if="event.my_state === '未报名'" class="cta" @click="register">预约报名</view>
-          <view v-else class="cta done">已报名，开赛后可进入</view>
-        </template>
-
-        <!-- 进行中：剩余时间 + 进入考试 -->
-        <template v-else-if="event.phase === 'running'">
-          <view class="count">距截止 <text class="count-n">{{ countdown }}</text></view>
-          <view v-if="event.my_state === '已交卷'" class="score-line">
-            <text>本场成绩 <text class="score-n">{{ event.my_score }}</text> 分</text>
-            <view class="cta sub" @click="openReport(event.id)">查看实时排名与报告 ›</view>
+    <kg-two-col v-else>
+      <template #main>
+        <!-- 当前/下一场比赛 -->
+        <kg-card v-if="event" variant="raised" class="hero">
+          <view class="hero-top">
+            <kg-tag tone="brand">{{ event.series === 'weekly' ? '每周六 · 全站同卷' : '专场比赛' }}</kg-tag>
+            <kg-tag :tone="event.phase === 'running' ? 'ok' : event.phase === 'upcoming' ? 'warn' : 'neutral'">{{ phaseText }}</kg-tag>
           </view>
-          <view v-else class="cta" @click="enter">{{ event.my_state === '已报名' ? '进入考试' : '立即参赛' }}</view>
-        </template>
-
-        <!-- 已结束：冻结排名 -->
-        <template v-else>
-          <view v-if="event.my_score != null" class="score-line">
-            <text>本场成绩 <text class="score-n">{{ event.my_score }}</text> 分<template v-if="event.my_rank"> · 第 {{ event.my_rank }} 名</template></text>
-            <view class="cta sub" @click="openReport(event.id)">查看赛后报告 ›</view>
+          <text class="hero-title">{{ event.title }}</text>
+          <text class="hero-paper">{{ event.paper_title }} · {{ event.n_questions }} 题 · {{ event.duration_min }} 分钟</text>
+          <view class="hero-meta">
+            <text class="hm num">{{ fmtWindow }}</text>
+            <text class="hm">{{ event.registered || event.submitted ? event.registered + ' 人报名 · ' + event.submitted + ' 人交卷' : '本场首批报名开放中 · 全站同卷' }}</text>
           </view>
+
+          <template v-if="event.phase === 'upcoming'">
+            <view class="count"><l-icon name="timer" :size="16" tone="warn" /><text>距开赛 </text><text class="count-n num">{{ countdown }}</text></view>
+            <kg-button v-if="event.my_state === '未报名'" block size="lg" @click="register">预约报名</kg-button>
+            <view v-else class="done-line"><l-icon name="circle-check" :size="20" tone="ok" /><text>已报名，开赛后可进入</text></view>
+          </template>
+
+          <template v-else-if="event.phase === 'running'">
+            <view class="count"><l-icon name="timer" :size="16" tone="warn" /><text>距截止 </text><text class="count-n num">{{ countdown }}</text></view>
+            <template v-if="event.my_state === '已交卷'">
+              <text class="score-line">本场成绩 <text class="score-n num">{{ event.my_score }}</text> 分</text>
+              <kg-button block size="lg" variant="ghost" @click="openReport(event.id)">查看实时排名与报告</kg-button>
+            </template>
+            <kg-button v-else block size="lg" @click="enter">{{ event.my_state === '已报名' ? '进入考试' : '立即参赛' }}</kg-button>
+          </template>
+
           <template v-else>
-            <view class="cta ghost" @click="practice">比赛已结束 · 作为普通试卷练习</view>
-            <view v-if="event.submitted" class="cta sub" @click="openBoard(event)">围观本场榜单 ›</view>
+            <template v-if="event.my_score != null">
+              <text class="score-line">本场成绩 <text class="score-n num">{{ event.my_score }}</text> 分<template v-if="event.my_rank"> · 第 {{ event.my_rank }} 名</template></text>
+              <kg-button block size="lg" @click="openReport(event.id)">查看赛后报告</kg-button>
+            </template>
+            <template v-else>
+              <kg-button block size="lg" variant="ghost" @click="practice">比赛已结束 · 作为普通试卷练习</kg-button>
+              <kg-button v-if="event.submitted" block size="md" variant="text" @click="openBoard(event)">围观本场榜单</kg-button>
+            </template>
           </template>
-        </template>
-      </view>
-      <view v-else-if="loadErr" class="card spin">加载失败：{{ loadErr }}<view class="retry" @click="load">重试 ›</view></view>
-      <view v-else class="card spin">暂无比赛场次</view>
-      </view>
+        </kg-card>
+        <kg-empty-state v-else-if="loadErr" icon="wifi-off" title="比赛信息加载失败" :desc="loadErr" cta-text="重试" @cta="load" />
+        <kg-empty-state v-else icon="trophy" title="暂无比赛场次" desc="每周六 09:00 全站同卷模考大赛，先去卷库练一卷热热身" cta-text="去卷库" cta-to="/pkgA/exam/list" />
 
-      <view class="ct-side">
-      <!-- 往期成绩 -->
-      <view v-if="past.length" class="card">
-        <view class="h">往期比赛</view>
-        <view v-for="p in past" :key="p.id" class="prow" @click="p.joined ? openReport(p.id) : openBoard(p)">
-          <view class="prow-l">
-            <text class="prow-t">{{ p.title }}</text>
-            <text class="prow-s">{{ fmtDay(p.close_at) }}</text>
+        <!-- 往期成绩：折叠成一行，点开展开 -->
+        <kg-card v-if="past.length" variant="flat" class="sec">
+          <view class="fold-h" role="button" :aria-expanded="pastOpen ? 'true' : 'false'" @click="pastOpen = !pastOpen">
+            <text class="h">往期比赛 · {{ past.length }} 场</text>
+            <l-icon name="chevron-down" :size="20" tone="ink-2" :class="{ flip: pastOpen }" class="fold-ico" />
           </view>
-          <text v-if="p.joined" class="prow-score">{{ p.score }} 分<template v-if="p.rank"> · 第 {{ p.rank }} 名</template></text>
-          <text v-else class="prow-none">未参加 · 看榜单 ›</text>
-        </view>
-      </view>
-
-      <!-- 公共榜单弹层（非参赛者也可围观） -->
-      <view v-if="board || boardLoading" class="mask" @click="closeBoard">
-        <view class="sheet" @click.stop>
-          <view class="sheet-h">
-            <text class="sheet-t">{{ boardTitle }} · 榜单</text>
-            <text class="sheet-x" @click="closeBoard">✕</text>
-          </view>
-          <view v-if="boardLoading" class="spin">榜单加载中…</view>
-          <template v-else-if="board">
-            <view class="board-meta">
-              <text class="hm">{{ board.total }} 人交卷 · 平均 {{ board.avg }} 分</text>
-              <text v-if="!board.frozen" class="hm">排名实时变化中</text>
-            </view>
-            <view v-if="!board.top || !board.top.length" class="spin">本场暂无交卷成绩</view>
-            <view v-for="(t, i) in board.top" :key="i" class="brow" :class="{ me: t.me }">
-              <text class="brow-r" :class="'r' + t.rank">{{ t.rank }}</text>
-              <text class="brow-n">{{ t.nickname }}<text v-if="t.me" class="brow-me">（我）</text></text>
-              <text class="brow-s">{{ t.score }} 分</text>
+          <template v-if="pastOpen">
+            <view v-for="p in past" :key="p.id" class="prow" role="button" hover-class="row--hover" @click="p.joined ? openReport(p.id) : openBoard(p)">
+              <view class="prow-l">
+                <text class="prow-t">{{ p.title }}</text>
+                <text class="prow-s num">{{ fmtDay(p.close_at) }}</text>
+              </view>
+              <text v-if="p.joined" class="prow-score num">{{ p.score }} 分<template v-if="p.rank"> · 第 {{ p.rank }} 名</template></text>
+              <text v-else class="prow-none">未参加 · 看榜单</text>
+              <l-icon name="chevron-right" :size="16" tone="faint" />
             </view>
           </template>
-        </view>
-      </view>
+        </kg-card>
+      </template>
 
-      <!-- 赛制说明（可折叠） -->
-      <view class="card">
-        <view class="h rules-h" @click="rulesOpen = !rulesOpen">
-          <text>赛制说明</text>
-          <text class="rules-arrow">{{ rulesOpen ? '收起 ▲' : '展开 ▼' }}</text>
+      <template #aside>
+        <kg-card variant="flat" class="sec rules-card">
+          <view class="fold-h" role="button" :aria-expanded="rulesOpen ? 'true' : 'false'" @click="rulesOpen = !rulesOpen">
+            <text class="h">赛制说明</text>
+            <l-icon name="chevron-down" :size="20" tone="ink-2" :class="{ flip: rulesOpen }" class="fold-ico" />
+          </view>
+          <view v-if="rulesOpen" class="rules">
+            <text class="rule">1. 每周六 09:00-24:00（东八区）全站同卷比赛，报名可选，开赛后随时进入。</text>
+            <text class="rule">2. 只有比赛窗口内交卷的成绩计入排名，且以首次交卷为准。</text>
+            <text class="rule">3. 交卷后即可看到成绩与实时排名，比赛结束后排名冻结并生成赛后报告。</text>
+            <text class="rule">4. 比赛结束后试卷转为普通试卷，可自由练习，不影响比赛榜单。</text>
+            <text class="rule">5. 参赛人数较少时，报告会同时展示历史同卷分数池作为参照。</text>
+          </view>
+        </kg-card>
+      </template>
+    </kg-two-col>
+
+    <!-- 公共榜单（非参赛者也可围观） -->
+    <kg-sheet :model-value="!!(board || boardLoading)" :title="boardTitle + ' · 榜单'" @update:model-value="!$event && closeBoard()">
+      <kg-skeleton v-if="boardLoading" preset="lines" />
+      <template v-else-if="board">
+        <view class="board-meta">
+          <text class="hm">{{ board.total }} 人交卷 · 平均 {{ board.avg }} 分</text>
+          <text v-if="!board.frozen" class="hm">排名实时变化中</text>
         </view>
-        <view v-if="rulesOpen" class="rules">
-          <text class="rule">1. 每周六 09:00-24:00（东八区）全站同卷比赛，报名可选，开赛后随时进入。</text>
-          <text class="rule">2. 只有比赛窗口内交卷的成绩计入排名，且以首次交卷为准。</text>
-          <text class="rule">3. 交卷后即可看到成绩与实时排名，比赛结束后排名冻结并生成赛后报告。</text>
-          <text class="rule">4. 比赛结束后试卷转为普通试卷，可自由练习，不影响比赛榜单。</text>
-          <text class="rule">5. 参赛人数较少时，报告会同时展示历史同卷分数池作为参照。</text>
+        <kg-empty-state v-if="!board.top || !board.top.length" compact icon="inbox" title="本场暂无交卷成绩" />
+        <view v-for="(t, i) in board.top" :key="i" class="brow" :class="{ me: t.me }">
+          <kg-tag :tone="t.rank === 1 ? 'warn' : t.rank <= 3 ? 'brand' : 'neutral'" class="brow-r">{{ t.rank }}</kg-tag>
+          <text class="brow-n">{{ t.nickname }}<text v-if="t.me" class="brow-me">（我）</text></text>
+          <text class="brow-s num">{{ t.score }} 分</text>
         </view>
-      </view>
-      </view>
-      </view>
-    </template>
+      </template>
+    </kg-sheet>
   </view>
 </template>
 
@@ -119,6 +113,7 @@ export default {
       event: null,
       past: [],
       rulesOpen: false,
+      pastOpen: false,
       nowSec: Math.floor(Date.now() / 1000),
       timer: null,
       board: null,
@@ -220,71 +215,46 @@ export default {
 </script>
 
 <style scoped>
-.wrap { padding: 24rpx; padding-bottom: 40rpx; }
-.spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 60rpx 24rpx; }
-.retry { margin-top: 12rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
-.card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
-.h { font-size: 30rpx; font-weight: 600; margin-bottom: 20rpx; }
-.hero { background: linear-gradient(135deg, #eef3ff, #fdfbf3); }
-.theme-dark .hero { background: linear-gradient(135deg, #232a3d, #262330); }
-.hero-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
-.hero-series { font-size: 21rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
-.hero-phase { font-size: 22rpx; font-weight: 600; border-radius: 999rpx; padding: 4rpx 18rpx; }
-.hero-phase.upcoming { color: var(--warn-strong); background: var(--warn-soft); }
-.hero-phase.running { color: #15803d; background: var(--ok-soft); }
-.hero-phase.ended { color: var(--ink-2); background: var(--soft-bg); }
-.hero-title { display: block; font-size: 34rpx; font-weight: 800; color: var(--ink); }
-.hero-paper { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 8rpx; }
-.hero-meta { display: flex; gap: 24rpx; flex-wrap: wrap; margin-top: 12rpx; }
-.hm { font-size: 23rpx; color: var(--ink-2); }
-.count { font-size: 26rpx; color: var(--ink-2); margin-top: 20rpx; }
-.count-n { font-size: 30rpx; font-weight: 700; color: #d97706; }
-.cta { margin-top: 20rpx; min-height: 44px; display: flex; align-items: center; justify-content: center; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 28rpx; font-weight: 600; }
-.cta.done { background: var(--ok-soft); color: #15803d; }
-.cta.ghost { background: var(--card); color: var(--brand-text); border: 1rpx solid var(--brand); }
-.cta.sub { margin-top: 12rpx; background: var(--card); color: var(--brand-text); border: 1rpx solid var(--brand); }
-.score-line { margin-top: 20rpx; font-size: 26rpx; color: var(--ink); }
-.score-n { font-size: 40rpx; font-weight: 800; color: var(--brand-text); }
-.prow { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 12rpx 0; border-bottom: 1rpx solid var(--line); }
-.prow:last-child { border-bottom: none; }
-.prow-l { flex: 1; min-width: 0; margin-right: 16rpx; }
-.prow-t { display: block; font-size: 25rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.prow-s { display: block; font-size: 21rpx; color: var(--ink-2); margin-top: 4rpx; }
-.prow-score { flex-shrink: 0; font-size: 26rpx; font-weight: 700; color: var(--brand-text); }
-.prow-none { flex-shrink: 0; font-size: 23rpx; color: var(--ink-3); }
-.rules-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0; }
-.rules-arrow { font-size: 22rpx; color: var(--ink-2); font-weight: 400; }
-.rules { margin-top: 16rpx; }
-.rule { display: block; font-size: 24rpx; color: var(--ink-2); line-height: 1.8; margin-bottom: 8rpx; }
-.mask { position: fixed; inset: 0; background: rgba(15, 18, 26, 0.5); z-index: 60; display: flex; align-items: flex-end; }
-.sheet { width: 100%; max-height: 70vh; overflow-y: auto; background: var(--card); border-radius: 32rpx 32rpx 0 0; padding: 28rpx 28rpx calc(28rpx + env(safe-area-inset-bottom)); }
-.sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
-.sheet-t { font-size: 30rpx; font-weight: 700; color: var(--ink); }
-.sheet-x { font-size: 30rpx; color: var(--ink-2); padding: 8rpx 16rpx; }
-.board-meta { display: flex; justify-content: space-between; margin-bottom: 16rpx; }
-.brow { display: flex; align-items: center; min-height: 44px; padding: 10rpx 0; border-bottom: 1rpx solid var(--line); }
+.page { padding: var(--sp-16) var(--page-x) var(--sp-40); }
+.h { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); }
+.sec { margin-top: var(--card-gap); }
+.hero-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-12); }
+.hero-title { display: block; font-size: var(--fs-h2); font-weight: 600; color: var(--ink); line-height: var(--lh-h2); }
+.hero-paper { display: block; font-size: var(--fs-sub); color: var(--ink-2); margin-top: var(--sp-4); }
+.hero-meta { display: flex; gap: var(--sp-16); flex-wrap: wrap; margin-top: var(--sp-8); }
+.hm { font-size: var(--fs-caption); color: var(--ink-3); }
+.count { display: flex; align-items: center; gap: var(--sp-4); font-size: var(--fs-sub); color: var(--ink-2); margin: var(--sp-16) 0 var(--sp-12); }
+.count-n { font-size: var(--fs-h3); font-weight: 600; color: var(--warn-strong); }
+.done-line { display: flex; align-items: center; justify-content: center; gap: var(--sp-8); min-height: var(--hit-min); border-radius: var(--r-full); background: var(--ok-soft); color: var(--ok-strong); font-size: var(--fs-body); font-weight: 500; }
+.score-line { display: block; font-size: var(--fs-body); color: var(--ink); margin: var(--sp-16) 0 var(--sp-12); }
+.score-n { font-size: var(--fs-h1); font-weight: 600; color: var(--brand-text); }
+.fold-h { display: flex; justify-content: space-between; align-items: center; min-height: var(--hit-min); }
+.fold-ico { transition: transform 0.2s ease; }
+.fold-ico.flip { transform: rotate(180deg); }
+.prow { display: flex; align-items: center; gap: var(--sp-8); min-height: var(--cell-h); padding: var(--sp-8) 0; border-bottom: 1px solid var(--line); }
+.prow:last-child { border-bottom: none; padding-bottom: 0; }
+.row--hover { background: var(--fill); }
+.prow-l { flex: 1; min-width: 0; }
+.prow-t { display: block; font-size: var(--fs-body); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prow-s { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-4); }
+.prow-score { flex-shrink: 0; font-size: var(--fs-body); font-weight: 600; color: var(--brand-text); }
+.prow-none { flex-shrink: 0; font-size: var(--fs-caption); color: var(--ink-3); }
+.rules { margin-top: var(--sp-8); }
+.rule { display: block; font-size: var(--fs-sub); color: var(--ink-2); line-height: var(--lh-body); margin-bottom: var(--sp-8); }
+.board-meta { display: flex; justify-content: space-between; gap: var(--sp-8); margin-bottom: var(--sp-12); }
+.brow { display: flex; align-items: center; gap: var(--sp-8); min-height: var(--hit-min); padding: var(--sp-4) var(--sp-8); border-bottom: 1px solid var(--line); }
 .brow:last-child { border-bottom: none; }
-.brow.me { background: var(--brand-soft); border-radius: 12rpx; padding-left: 8rpx; padding-right: 8rpx; }
-.brow-r { width: 64rpx; font-size: 28rpx; font-weight: 800; color: var(--ink-2); }
-.brow-r.r1 { color: #d97706; }
-.brow-r.r2 { color: #6b7280; }
-.brow-r.r3 { color: #b45309; }
-.brow-n { flex: 1; min-width: 0; font-size: 26rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.brow-me { color: var(--brand-text); font-size: 22rpx; }
-.brow-s { flex-shrink: 0; font-size: 26rpx; font-weight: 700; color: var(--brand-text); }
+.brow.me { background: var(--brand-soft); border-radius: var(--r-sm); }
+.brow-r { flex-shrink: 0; min-width: 28px; justify-content: center; }
+.brow-n { flex: 1; min-width: 0; font-size: var(--fs-body); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brow-me { color: var(--brand-text); font-size: var(--fs-caption); }
+.brow-s { flex-shrink: 0; font-size: var(--fs-body); font-weight: 600; color: var(--brand-text); }
 
 /* #ifdef H5 */
-@media (min-width: 768px) {
-  .wrap { max-width: 1044px; margin: 0 auto; }
-  .prow:hover, .cta:hover, .rules-h:hover, .brow:hover, .sheet-x:hover { cursor: pointer; }
-  .prow:hover { background: var(--soft-bg, #f5f6fa); border-radius: 12rpx; }
-  .mask { align-items: center; justify-content: center; }
-  .sheet { max-width: 560px; border-radius: 32rpx; padding-bottom: 28rpx; }
-}
 @media (min-width: 1024px) {
-  .ct-cols { display: flex; gap: 32rpx; align-items: flex-start; }
-  .ct-main { flex: 1; min-width: 0; }
-  .ct-side { width: 360px; flex: none; position: sticky; top: 24rpx; }
+  .page { max-width: 1064px; margin: 0 auto; }
+  .rules-card { margin-top: 0; }
+  .fold-h, .prow, .brow { cursor: pointer; }
 }
 /* #endif */
 </style>
