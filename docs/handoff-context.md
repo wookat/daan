@@ -1988,3 +1988,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - wxlogin 503：小程序 `utils/request.ts` 透传 `detail`，登录页 `l-err` 直显「微信登录暂未开通（服务端未配置小程序密钥）」（源码推断未真机截图）；根因是 `WX_MINIAPP_SECRET` 资源缺口，小程序端改动需微信开发者工具发布不在 H5 管线内 → 不改，P3：密钥到位后真机复验登录成功（`users` 出 `wx:` 行）。
 - 点评总时长：上游关推理吐字 57–59 tok/s ≈ 95 汉字/s，总时长 = 首字前 1.3–4 s + 正文长度/速率，纯线性无隐藏等待；流式 95 字/s 远快于阅读速度，不构成可感知等待；`_review_prompt` 无字数约束，生产无真实用户读点评的行为数据 → **不收字数**，P3 待 probe=0 面试会话后看停留/滚动再定。
 - `error_reason` ≥09-11 再看（probe=0 仍 0 行）。宿主状态未变（未部署）。
+
+### R426（rev `dc69266`，bundle 变；后端 `db.py`/`study_api.py` + 前端 `practice.vue` + 单测）— 小程序 API 契约核对 / `practice_results` 探针口径
+- 取证 docs/iter/round-3/r426-miniapp-api-contract-practice-result-probe.md。以 R425 小程序真机调用集合 + `miniapp-native/api/index.ts` 44 个函数逐条核后端/H5：uid 作用域、错误透传、probe 判定全在服务端，均一致；**唯一命中 `POST /api/practice_result`**——表无 uid/probe，「本组正确率击败了 X% 的刷题记录」（H5 与小程序同文案）池 = 全表，R375 接探针口径时漏掉，SKILL 早已登记「测试行无法归属、不清理」。
+- 生产只读：286 行、按日 08-14 18 / 08-31 31 / 09-04 35（走查日）、正确率 p25 已 100%、p10 只 10%；时间关联 answer_log 仅 85 行可匹配（test uid 的 answer_log 早被清理），probe=0 只有 R425 那台 vivo 的 2 行——**这张表的 NULL 不能套 `REAL_TRAFFIC` 兼容口径**。
+- 修：幂等加列 `uid`/`probe`；`PRACTICE_POOL = "n>0 AND probe=0"`（严格，与 `REAL_TRAFFIC` 并列注明）；端点读可选 `uid` + `probe_request`；H5 payload 加 uid；管理台 `daily_usage` 接 `REAL_TRAFFIC` 并先 ensure 列。历史 286 行不删不回填（无 uid 不可归因）；回滚 = 谓词改回。**上线后「击败 X%」不显示，直到累计 10 次 probe=0 完成**（如实而非回归）。
+- 复验 PASS（375 ×2 + 1440 ×1，XHR body/DB/日志/清理 LEFTOVER 0）；附带发现 `daily_usage` 无任何管理台页面渲染（P3）。P3：小程序 `postPracticeResult` 下次发布补 uid。宿主部署前 load 1.5、磁盘 91%/4.7 G → 4.4 G。

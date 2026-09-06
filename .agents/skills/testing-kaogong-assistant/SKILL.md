@@ -795,7 +795,7 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 - 学习计划阶段验证：改画像考试日期即可切换 专项期(>30天)/真题期(>14)/冲刺期(≤14)；冲刺期 60min → 13专项+8真题=21 题；复习配额受「今日之前到期数」约束，UI 显示 min 值属正常。
 - OMR 闭环可全真测：导出含答题卡 PDF → pymupdf 渲染 → 按 backend/app/omr.py 几何（bubble_rect）PIL 涂黑 → UI「扫描答题卡→拍照」走系统文件选择器选图 → 识别卷码/精确判分/自动记入。生产表是 `paper_exports`（无 `papers` 表），correct 答案查 `questions` 表。
 - 组队打卡：pkgA/team/team 创建得 6 位邀请码，第二 uid 输码加入即 2 名队友；做题后队页「今日 N 题」实时联动。**队长昵称可能显示 null**（创建时无 pkNickname），周战报剪贴板可用 `navigator.clipboard.readText()` 读（先在页面点 Allow 授权弹窗）。
-- `practice_results` 表无 uid 列（全局聚合），测试产生的行无法归属、不清理。清理团队要删 `teams` + `team_members` 两表。
+- `practice_results` 自 R426（rev `dc69266`）起有 `uid`/`probe` 列：清理时**按 uid 一并删**；R426 前的 286 行历史无 uid（全 NULL）不可归属、不删。清理团队要删 `teams` + `team_members` 两表。
 
 ## R26r 生产回归新经验（growth.total 口径 / 注册迁移 / 收藏页入口）
 - R26 起时政完成态按 uid 隔离存 `szDaily:<uid>`（不再是裸 `szDaily`）；注册合并会把 `szDaily:<旧匿名uid>` 复制到 `szDaily:<账号uid>`。验证迁移要注册后 F5 再看首页时政卡。
@@ -1377,3 +1377,12 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 清理 `test-*` uid 时 `ask_cur`（当前 ask 会话指针）会留 1 行，需一并删；`ins_ta.py` 在 375 弹层可能误报 textarea 长度 0（双 textarea 镜像延迟），以 `querySelectorAll("textarea")` 复核。
 - `pkill -f <pattern>` 不要与同一命令行里含该模式的字符串串联（会杀掉自身 shell）。
 - 复验窗口看到的 `POST /api/auth/wxlogin 503` 若不是你触发，用 caddy 日志按 IP/UA 归因（本轮为 vivo V2405A 真实设备、`WX_MINIAPP_SECRET` 未配的设计返回），不要算进本轮 5xx。
+
+## R426 练习完成页 practice_result uid/probe 走查经验
+- H5 的 `/api/practice_result`、`/api/mistakes`、`/api/answer_log` 走 **XMLHttpRequest**（uni `request`），只克隆 `window.fetch` 的钩子抓不到——网络钩子要同时包 `XMLHttpRequest.prototype.open/send` 并在 `loadend` 读 `responseText`（参考 `/tmp/cdp174/holdnet426.py`）。第一组做完前先用一次已知请求验证钩子确实有记录。
+- 完成时 body 为 `{uid: anonUid(), module, n: items.length, correct, secs}`；服务端按三路（`X-Kg-Probe: 1` / 出口网段 / UA 签名）写 `practice_results.probe`。GUI 会话 UA 与真人无异且不带头 → 依赖网段命中；若 DB 写成 probe=0 说明网段未命中，会污染「击败 X%」池（`n>0 AND probe=0`，≥10 样本才显示），**必须立刻按 uid 删**。
+- 「击败 X%」断言用 `document.querySelectorAll('.beat').length===0` + `body.innerText` 不含「击败」；注意 `.beat.dsbeat` 是每日同题另一元素，普通模块练习不出现。响应在 probe=0 池为空时恒为 `{"percentile":null,"samples":0}`，属预期不算回归。
+- 常识判断组内可能出现多选题（需点多个选项再点「确认答案」），故意答错时选全选即可；完成页「答对 X/10」与 body `correct` 必须一致，逐题记录对错以便对账。
+- 管理台没有渲染 `/api/admin/stats` 的 `daily_usage`（`core.js` 只在登录校验调用它）；概览页「近 14 天作答量趋势」来自 `/api/admin/dashboard.trend`（answer_log）。验 `daily_usage` 要在 admin 页用带 `X-Admin-Token: localStorage.admToken` 的 fetch 直接读 JSON，再和 DB 按 `date(created_at,'unixepoch')` 分 probe 分组对账。
+- 清理：`practice_results` 现在可按 uid 删；`growth_events` 会因完成页 nudge 留 `push_nudge_show/login_nudge_show` 行，与 `answer_log/mistakes` 一并按 uid 删；全库扫描 `pragma table_info` 含 `uid` 的表以确认 LEFTOVER 0。
+- 管理台退出登录后 Chrome 会弹「Save password?」，点 Never，避免 token 存入密码管理器；本机拉的 token 临时文件用完即删。
