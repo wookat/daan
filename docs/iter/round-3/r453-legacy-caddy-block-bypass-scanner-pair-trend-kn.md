@@ -99,4 +99,4 @@ humans: api {09-02:43, 09-03:1, 09-05:83, 09-06:337}  ips {09-02:1, 09-03:1, 09-
 - 「Palo Alto 配对无头浏览器」是按 UA 不一致 + 同秒相邻 IP 推断，未查 ASN/归属；4 组配对全一致但样本就 4 组。
 - `humans.ips` 剔除口径只对账了这 3 个扫描器 + 1 个 Windows 访客，未全量重新归因 8 个 09-06 ips。
 - `.trend-kn` 是合成元素（页面无自然数据），真机字体度量未验。
-- `www.zalize.com` 续签是否在下一轮维护循环成功，本轮末复查一次；未成功则属既有续签链路问题另开取证。
+- **跨产品既有问题（非本轮引入，本轮只登记）**：`www.zalize.com` 的 LE 续签自 09-05 22:48 起持续失败（journal 176 次 queuing、`tls.renew` attempt 11 每 3 h 重试）：LE 侧 tls-alpn-01 `Cannot negotiate ALPN protocol "acme-tls/1"`（该域走 Cloudflare 代理，挑战打到 CF 边缘）、ZeroSSL 回退 `caddy_legacy_user_removed (422)`；证书 **10-04 16:38Z 到期**。我的 reload 只是把正在等待的 attempt 11 `context canceled`，Caddy 已重新排队。修法（CF Origin CA 证书 / Caddy DNS-01 用 CF token / 该域改 dns-only）属 zalize.com 站点运维，需老板定，本仓库不动。

@@ -2179,4 +2179,4 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 日报 `humans.ips` **未**把 3 扫描器算候选真人：ShapBot（R452 截成 `ShapBo`）X-Kg-Ua 含 `bot` → BOT_GENERIC；Firefox Ice / Mac 访客 referer pages.dev → offhost；PA/iPhone 不在 origin 日志。本地同参数重算 = 生产 json。
 - `.trend-kn` **闭合**：自然 4 周已掌握样本仍只有 vivo 小程序 uid 2 条（小程序不渲染 H5 趋势卡）；合成元素量真实 `data-v-bcbaf750`：375/1440 `.trend-kn`/`.trend-n` 均 fs 12 / h 14 / 600 → 已在 12px 下限。登记改为「有真人 k>0 样本时看 4 列排版」。
 - 到期项：probe=0 22/1、error_reason 6、push_subs 0、weekly_reports 1、growth probe=0 18/4 不变；WAL 3.16 MB；healthy 0 重启。
-- 需注意：reload 打断了 Caddy 正在跑的 `www.zalize.com` 续签（10-04 到期，维护循环自动重试）——下一轮复查 journal 是否 `certificate renewed`。
+- **跨产品登记（非本轮引入）**：`www.zalize.com` LE 续签自 09-05 起持续失败（tls-alpn-01 打到 CF 边缘 `Cannot negotiate ALPN acme-tls/1`；ZeroSSL 回退 `caddy_legacy_user_removed`），证书 **10-04 到期**，不修会在 CF Full(strict) 下断站。修法（CF Origin CA / DNS-01 / dns-only）属 zalize.com 运维，待老板定；本仓库不动。
