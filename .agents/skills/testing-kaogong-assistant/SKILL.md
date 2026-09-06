@@ -1598,3 +1598,10 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 新进程 listening 时刻用 `docker logs --timestamps deploy-kaogong-1 | head`（`Application startup complete`）；容器 `StartedAt` 只是 runc 起进程，Python 到 listening 还要 ~2 s。
 - 窗口是否有流量：origin access log 按 ts 列窄窗（±90 s）逐行看，`/api/health` curl/7.81.0 来自部署轮询、每 ~13 s 一条；「窗口内 0 请求」≠「无停机」。
 - 7 天 5xx 反查先排 `wxlogin` 503（`WX_MINIAPP_SECRET` 未配）与 handoff 已登记的 00:35 共宿抖动，再对 `/tmp/kg-compose-*.log` 文件名时间戳看是否落在部署段。
+
+## R458 经验：autoheal / 强杀 / 盘满 怎么查
+- `docker inspect --format {{.RestartCount}}` 为 0 **不等于**没被 autoheal 重启：autoheal 走 `docker restart t=30`（原地重启、ID 不变、只有 `StartedAt` 变、RestartCount 不加）。要看 `docker logs deploy-autoheal-1 --since <ISO> | grep kaogong`（形态 `found to be unhealthy - Restarting container now with 30s timeout`）和 `/home/ubuntu/kaogong-reports/container-events.log`（60 s 轮询，`prev=[id StartedAt state health rc oom] cur=[…]`，能抓到 `exited unhealthy 137` 即 SIGKILL）。
+- 部署窗口归因不能只靠 `/tmp/kg-compose-*.log`（09-06 13:47Z 起才有）：用 `deploy-history.log`（每次部署完成时刻 + rev）+ `container-events.log`（新旧容器 ID/StartedAt）+ `journalctl -u docker.service | grep -E "stopping restart-manager|task-delete|failed to exit within"`（宿主 +08:00）。`Container failed to exit within 10s of signal 15 - using the force` 含 64 位容器 ID，前 8 位 grep `container-events.log` 判是否 kaogong；宿主 swap 高压时 Recreate 窗口可达 30+ s（正常 5.5 s）。
+- origin access log 出现「空窗」先排盘满：`journalctl --since … | grep -ci "no space left"`；caddy 自己会在 journal 打 `write error: write /var/log/caddy/kaogong-origin.zalize.com-access.log: no space left on device`，此时空窗是盲区不是无流量。kaogong 该窗口有无写入用容器内 `mode=ro` 查 `answer_log`/`growth_events` `created_at`（**epoch 浮点**，不要用字符串日期比较）+ `pragma quick_check`。
+- 到期项 probe=0 计数一律 `WHERE probe=0`（严格）：`COALESCE(probe,0)=0` 是产品聚合口径，会把 R374 前 NULL 历史行算进去（answer_log 1001 行 / growth 480 行），不是到期项口径。
+
