@@ -1,0 +1,180 @@
+<navbar title="AI 问答" back="{{true}}" />
+<scroll-view class="page-scroll" scroll-y type="list" scroll-into-view="{{scrollInto}}" scroll-with-animation>
+  <view class="wrap wrap-bar">
+    <view class="top">
+      <view class="hero hero-ask">
+        <view class="hero-ico"><l-icon name="bot-message-square" size="28" tone="on-brand" /></view>
+        <view class="hero-txt">
+          <text class="hero-t">拍题讲解 · 花生十三方法</text>
+          <text class="hero-s">拍照或粘贴题目，AI 用花生十三的思路分步讲解，可追问、出同款题、存错题本</text>
+        </view>
+      </view>
+      <view class="acts top-acts">
+        <view class="acts-grow"><kg-button variant="secondary" size="md" block icon="camera" bind:click="openCamera">拍照</kg-button></view>
+        <view class="acts-grow"><kg-button variant="secondary" size="md" block icon="files" bind:click="openAlbum">相册</kg-button></view>
+        <view class="acts-grow"><kg-button variant="primary" size="md" block icon="pencil-line" bind:click="openText">粘贴题目</kg-button></view>
+      </view>
+      <view class="top-row">
+        <kg-button variant="text" size="sm" icon="clock" bind:click="openHistory">历史会话 ({{sessionRows.length}})</kg-button>
+        <kg-button wx:if="{{hasResults}}" variant="text" size="sm" icon="plus" bind:click="newSession">新会话</kg-button>
+      </view>
+    </view>
+
+    <view wx:if="{{errorText}}" class="err">{{errorText}}</view>
+
+    <!-- 空态：最近讲解 / 引导 -->
+    <block wx:if="{{!hasResults && !loading}}">
+      <kg-empty
+        icon="sparkles"
+        title="还没有问答记录"
+        desc="拍一张题目照片，或粘贴题目文字，AI 会先识题再分步讲解"
+        ctaText="粘贴题目开始"
+        bind:cta="openText"
+      />
+      <block wx:if="{{recent.length}}">
+        <kg-section-header title="最近讲解" />
+        <kg-card variant="raised">
+          <view wx:for="{{recent}}" wx:key="ts" class="row">
+            <view class="row-badge">{{item.ans || '—'}}</view>
+            <view class="row-main">
+              <text class="row-t">{{item.brief || '拍题讲解'}}</text>
+              <text class="row-s">{{item.meta}}</text>
+            </view>
+          </view>
+        </kg-card>
+      </block>
+    </block>
+
+    <!-- 对话流：按时间正序 -->
+    <block wx:for="{{convo}}" wx:key="ts" wx:for-item="r">
+      <view class="msg msg-me" id="msg-{{r.ts}}">
+        <view class="bubble bubble-me">
+          <image wx:if="{{r.userImage}}" class="bubble-img" src="{{r.userImage}}" mode="widthFix" />
+          <text wx:elif="{{r.userText}}" class="bubble-txt">{{r.userText}}</text>
+          <text wx:else class="bubble-txt">{{r.question_text || '拍题讲解'}}</text>
+          <text wx:if="{{r.user_answer}}" class="bubble-sub">我的答案：{{r.user_answer}}</text>
+        </view>
+      </view>
+      <view class="msg msg-ai">
+        <kg-card variant="raised" class="ai-card">
+          <view class="tags" wx:if="{{r.module_name || r.question_type}}">
+            <kg-tag wx:if="{{r.module_name}}" tone="module" module="{{r.module}}">{{r.module_name}}</kg-tag>
+            <kg-tag wx:if="{{r.question_type}}" tone="neutral">{{r.question_type}}</kg-tag>
+          </view>
+          <view wx:if="{{r.ansCard}}" class="ans-card">
+            <view class="ans-row"><text class="ans-k">答案</text><text class="ans-v ans-big">{{r.ansCard.ans}}</text></view>
+            <view class="ans-row"><text class="ans-k">方法</text><text class="ans-v">{{r.ansCard.method}}</text></view>
+            <view class="ans-row" wx:if="{{r.ansCard.brief}}"><text class="ans-k">一句话</text><text class="ans-v">{{r.ansCard.brief}}</text></view>
+          </view>
+          <rich-text wx:if="{{r.html}}" class="md" nodes="{{r.html}}" user-select />
+          <text wx:if="{{r.streaming && !r.html}}" class="hint">正在生成讲解…</text>
+
+          <view wx:if="{{!r.streaming}}" class="chips">
+            <kg-button variant="{{r.rated === 'up' ? 'secondary' : 'ghost'}}" size="sm" icon="thumbs-up" disabled="{{!!r.rated}}" data-ts="{{r.ts}}" data-up="1" bind:click="onRate">{{r.rated === 'up' ? '已反馈' : '有用'}}</kg-button>
+            <kg-button variant="{{r.rated === 'down' ? 'secondary' : 'ghost'}}" size="sm" icon="thumbs-down" tone="bad" disabled="{{!!r.rated}}" data-ts="{{r.ts}}" data-up="0" bind:click="onRate">{{r.rated === 'down' ? '已反馈' : '有误'}}</kg-button>
+            <kg-button variant="ghost" size="sm" icon="save" disabled="{{r.saved}}" data-ts="{{r.ts}}" bind:click="onSave">{{r.saved ? '已存错题本' : '存错题本'}}</kg-button>
+            <kg-button variant="ghost" size="sm" icon="lightbulb" data-ts="{{r.ts}}" bind:click="onDetail">再细讲</kg-button>
+            <kg-button variant="ghost" size="sm" icon="shuffle" loading="{{r.simLoading}}" data-ts="{{r.ts}}" bind:click="onSimilar">{{r.simLoading ? '出题中 ' + r.simSecs + 's' : '出同款题'}}</kg-button>
+          </view>
+
+          <!-- 追问 -->
+          <view wx:for="{{r.fu}}" wx:key="index" wx:for-item="m" class="fu {{m.role === 'user' ? 'fu-me' : 'fu-ai'}}">
+            <text wx:if="{{m.role === 'user'}}" class="fu-txt">{{m.content}}</text>
+            <rich-text wx:else class="md" nodes="{{m.html}}" user-select />
+          </view>
+          <text wx:if="{{r.fuLoading}}" class="hint fu-loading">AI 思考中…</text>
+
+          <!-- 同款题 -->
+          <view wx:if="{{r.sim}}" class="sim">
+            <kg-section-header title="同款练习题" />
+            <rich-text class="md" nodes="{{r.sim.qHtml}}" user-select />
+            <view class="ans-chips">
+              <view
+                wx:for="{{opts}}"
+                wx:key="*this"
+                class="ans-chip {{r.sim.optCls[item]}} {{r.sim.picked === item ? 'on' : ''}}"
+                data-ts="{{r.ts}}"
+                data-o="{{item}}"
+                bind:tap="onPickSim"
+              >{{item}}</view>
+            </view>
+            <block wx:if="{{r.sim.picked}}">
+              <text class="hint sim-res">{{r.sim.correct ? (r.sim.picked === r.sim.correct ? '✅ 答对了' : '❌ 答错了，正确答案 ' + r.sim.correct) : '已选 ' + r.sim.picked}}</text>
+              <rich-text wx:if="{{r.sim.ansHtml}}" class="md" nodes="{{r.sim.ansHtml}}" user-select />
+              <view class="acts">
+                <view class="acts-grow"><kg-button variant="secondary" size="sm" block data-ts="{{r.ts}}" bind:click="onExplainSim">AI 讲这道</kg-button></view>
+                <view class="acts-grow"><kg-button variant="ghost" size="sm" block disabled="{{r.sim.saved}}" data-ts="{{r.ts}}" bind:click="onSaveSim">{{r.sim.saved ? '已存' : '存错题本'}}</kg-button></view>
+              </view>
+            </block>
+          </view>
+        </kg-card>
+      </view>
+    </block>
+
+    <!-- 生成中 -->
+    <block wx:if="{{loading}}">
+      <view class="msg msg-me" id="msg-loading">
+        <view class="bubble bubble-me">
+          <image wx:if="{{stagedImage}}" class="bubble-img" src="{{stagedImage}}" mode="widthFix" />
+          <text wx:else class="bubble-txt">{{stagedText}}</text>
+        </view>
+      </view>
+      <view class="msg msg-ai"><kg-card variant="raised" class="ai-card"><text class="hint">{{loadingText}}</text></kg-card></view>
+    </block>
+  </view>
+</scroll-view>
+
+<!-- 追问输入条 -->
+<kg-action-bar wx:if="{{hasResults}}" layout="input">
+  <input class="fu-input" value="{{fuText}}" placeholder="继续追问，如：第二步为什么这样算" confirm-type="send" bindinput="onFuText" bindconfirm="sendFollowup" />
+  <kg-button variant="primary" size="md" icon="send" disabled="{{!fuText}}" bind:click="sendFollowup">发送</kg-button>
+</kg-action-bar>
+
+<!-- 文字题面板 -->
+<t-popup visible="{{textOpen}}" placement="bottom" bind:visible-change="onTextVisible">
+  <view class="sheet">
+    <view class="sheet-handle" />
+    <text class="sheet-t">粘贴题目文字</text>
+    <view class="sheet-ta">
+      <t-textarea value="{{qtext}}" placeholder="把题目原文（含选项）粘贴到这里" maxlength="{{3000}}" indicator autosize="{{taSize}}" bordered="{{false}}" bind:change="onQtext" />
+    </view>
+    <text class="label">我的答案（选填，AI 会针对你的错因讲）</text>
+    <view class="ans-chips">
+      <view wx:for="{{opts}}" wx:key="*this" class="ans-chip {{uanswer === item ? 'on' : ''}}" data-o="{{item}}" bind:tap="onPickAns">{{item}}</view>
+    </view>
+    <kg-button variant="primary" size="lg" block loading="{{loading}}" disabled="{{!qtext}}" bind:click="submitText">开始讲解</kg-button>
+  </view>
+</t-popup>
+
+<!-- 图片确认面板 -->
+<t-popup visible="{{!!imagePath}}" placement="bottom" bind:visible-change="onImageVisible">
+  <view class="sheet">
+    <view class="sheet-handle" />
+    <text class="sheet-t">确认题目照片</text>
+    <image class="preview" src="{{imagePath}}" mode="widthFix" />
+    <text class="label">我的答案（选填）</text>
+    <view class="ans-chips">
+      <view wx:for="{{opts}}" wx:key="*this" class="ans-chip {{uanswer === item ? 'on' : ''}}" data-o="{{item}}" bind:tap="onPickAns">{{item}}</view>
+    </view>
+    <kg-button variant="primary" size="lg" block loading="{{loading}}" bind:click="submitImage">开始讲解</kg-button>
+  </view>
+</t-popup>
+
+<!-- 历史会话 -->
+<t-popup visible="{{historyOpen}}" placement="bottom" bind:visible-change="onHistoryVisible">
+  <view class="sheet">
+    <view class="sheet-handle" />
+    <text class="sheet-t">历史会话</text>
+    <kg-empty wx:if="{{!sessionRows.length}}" compact icon="clock" title="还没有归档会话" desc="点「新会话」会把当前对话归档到这里，换设备也能同步" />
+    <scroll-view wx:else scroll-y class="sheet-body">
+      <view wx:for="{{sessionRows}}" wx:key="id" class="row {{item.on ? 'is-on' : ''}}">
+        <view class="row-badge">{{item.n}}</view>
+        <view class="row-main" data-id="{{item.id}}" bind:tap="onLoadSession">
+          <text class="row-t">{{item.title}}</text>
+          <text class="row-s">{{item.meta}}{{item.on ? ' · 当前' : ''}}</text>
+        </view>
+        <kg-button variant="ghost" size="sm" tone="bad" icon="trash-2" data-id="{{item.id}}" bind:click="onDelSession" />
+      </view>
+    </scroll-view>
+  </view>
+</t-popup>

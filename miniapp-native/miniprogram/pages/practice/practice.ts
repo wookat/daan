@@ -15,6 +15,7 @@ import { enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../utils/o
 import { BASE_URL } from '../../utils/request';
 import { kpChain, qStatLine, sourceLabel } from '../../utils/q-stat';
 import { modName, recordStat, streakDays } from '../../utils/stats';
+import { askPrefill, askQid } from '../../utils/ask-sessions';
 
 const BADGE_MILESTONES = [3, 7, 14, 30, 60, 100];
 
@@ -117,7 +118,9 @@ Page({
     this.setData({ loading: true, moduleName: modName(this._module || '') });
     try {
       const d =
-        mode === 'redo'
+        mode === 'redoSet'
+          ? { items: (wx.getStorageSync('redoSet') as Question[]) || [] }
+          : mode === 'redo'
           ? await redoMistakes(count)
           : await fetchQuestions({
               limit: count,
@@ -126,6 +129,7 @@ Page({
               tag3: this._tag3,
               adaptive: this._tag3 ? true : undefined,
             });
+      if (mode === 'redoSet') wx.removeStorageSync('redoSet');
       if (!d.items || !d.items.length) {
         wx.showToast({ title: '该模块暂无题目', icon: 'none' });
         setTimeout(() => wx.navigateBack(), 1200);
@@ -346,6 +350,24 @@ Page({
     this._badgeChecking = false;
   },
 
+  onDiscuss() {
+    const cur = this.data.cur;
+    if (!cur || !cur.id) return;
+    wx.navigateTo({ url: '/pkgSocial/discuss/discuss?qid=' + cur.id });
+  },
+  onAskAI() {
+    const cur = this.data.cur;
+    if (!cur) return;
+    const text = askPrefill(cur.question, cur.options);
+    if (!text) return;
+    wx.setStorageSync('redoQuestion', text);
+    const qid = askQid(cur.id);
+    if (qid) wx.setStorageSync('redoQid', qid);
+    else wx.removeStorageSync('redoQid');
+    if (/^[A-D]$/.test(this.data.picked)) wx.setStorageSync('redoAnswer', this.data.picked);
+    else wx.removeStorageSync('redoAnswer');
+    wx.navigateTo({ url: '/pkgSocial/ask/ask' });
+  },
   async onShareQ() {
     const cur = this.data.cur;
     if (!cur || !cur.id) {

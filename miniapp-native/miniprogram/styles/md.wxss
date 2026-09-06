@@ -1,0 +1,16 @@
+/* utils/md.ts 输出的 rich-text 节点样式（对齐 frontend-uni/src/md.js 的内联样式，改为 token） */
+.md-p { font-size: var(--fs-body); line-height: var(--lh-body); margin: var(--sp-4) 0; color: var(--ink); }
+.md-b { color: var(--bad); font-weight: var(--fw-semibold); }
+.md-code { background: var(--fill); border-radius: var(--r-xs); padding: 0 var(--sp-4); }
+.md-pre { font-family: ui-monospace, Menlo, Consolas, monospace; background: var(--brand-soft); border-left: 4px solid var(--brand); border-radius: var(--r-sm); padding: var(--sp-8) var(--sp-12); font-size: var(--fs-sub); line-height: var(--lh-body); margin: var(--sp-8) 0; white-space: pre-wrap; color: var(--brand-text); }
+.md-table { border-collapse: collapse; font-size: var(--fs-caption); margin: var(--sp-8) 0; }
+.md-td { border: 1px solid var(--line); padding: var(--sp-4); }
+.md-hr { border: none; border-top: 1px solid var(--line); margin: var(--sp-12) 0; }
+.md-h2 { font-size: var(--fs-h3); font-weight: var(--fw-semibold); margin: var(--sp-12) 0 var(--sp-4); color: var(--brand-text); }
+.md-h3 { font-size: var(--fs-body); font-weight: var(--fw-semibold); margin: var(--sp-8) 0 var(--sp-4); color: var(--ink); }
+.md-h4 { font-size: var(--fs-sub); font-weight: var(--fw-semibold); margin: var(--sp-8) 0 var(--sp-4); color: var(--ink); }
+.md-step { display: flex; align-items: center; margin: var(--sp-16) 0 var(--sp-4); }
+.md-step-n { background: var(--brand); color: var(--on-brand); border-radius: var(--r-full); font-size: var(--fs-caption); font-weight: var(--fw-semibold); padding: 2px var(--sp-12); margin-right: var(--sp-8); flex-shrink: 0; }
+.md-step-t { font-size: var(--fs-body); font-weight: var(--fw-semibold); color: var(--ink); }
+.md-ul, .md-ol { padding-left: var(--sp-20); margin: var(--sp-4) 0; }
+.md-li { font-size: var(--fs-body); line-height: var(--lh-body); color: var(--ink); }

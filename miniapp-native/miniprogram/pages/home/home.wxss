@@ -419,6 +419,10 @@
   gap: var(--sp-12);
 }
 
+.mico-ask {
+  background: var(--brand-soft);
+}
+
 .mcard--hover {
   opacity: 0.85;
 }

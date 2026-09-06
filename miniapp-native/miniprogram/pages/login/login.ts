@@ -1,4 +1,4 @@
-import { authLogin, authRegister, authWxLogin, mergeAnon } from '../../api/index';
+import { authLogin, authRegister, authWxLogin, mergeAnon, trackEvent } from '../../api/index';
 import { setAuth } from '../../utils/auth';
 
 Page({
@@ -27,8 +27,10 @@ Page({
         } catch (e) {
           /* 合并失败不阻断登录 */
         }
+      } else {
+        wx.showToast({ title: '登录成功', icon: 'success' });
       }
-      wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/profile/profile' }) });
+      setTimeout(() => wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/profile/profile' }) }), 1200);
     } catch (e) {
       this.setData({ err: (e as Error).message });
     } finally {
@@ -66,6 +68,13 @@ Page({
           ? await authLogin(phone, password)
           : await authRegister(phone, password, nickname.trim());
       setAuth(r.token, r.user);
+      if (mode === 'register') {
+        const src = wx.getStorageSync<string>('regSource');
+        if (src) {
+          trackEvent('register', src);
+          wx.removeStorageSync('regSource');
+        }
+      }
       if (anon && anon !== r.user.uid) {
         try {
           await mergeAnon(anon);
@@ -73,8 +82,10 @@ Page({
         } catch (e) {
           /* 合并失败不阻断登录 */
         }
+      } else {
+        wx.showToast({ title: mode === 'login' ? '登录成功' : '注册成功', icon: 'success' });
       }
-      wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/profile/profile' }) });
+      setTimeout(() => wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/profile/profile' }) }), 1200);
     } catch (e) {
       this.setData({ err: (e as Error).message });
     } finally {

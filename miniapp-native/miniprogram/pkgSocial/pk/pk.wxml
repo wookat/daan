@@ -1,0 +1,145 @@
+<navbar title="答题 PK" back="{{true}}" />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap {{view === 'result' ? 'wrap-bar' : ''}}">
+
+    <!-- 大厅 -->
+    <block wx:if="{{view === 'home'}}">
+      <view class="hero">
+        <view class="hero-ico"><l-icon name="swords" size="28" tone="on-brand" /></view>
+        <view class="hero-txt">
+          <text class="hero-t">本周胜场 <text class="num">{{myWins}}</text> 胜</text>
+          <text class="hero-s">{{myRank ? '本周榜 #' + myRank + ' · ' : ''}}同组 10 题拼手速 · 答对 +80，越快加成越高</text>
+        </view>
+      </view>
+
+      <kg-card variant="raised" class="sec">
+        <kg-section-header title="选择模块" />
+        <kg-chip-row options="{{modOpts}}" value="{{module}}" bind:change="onPickModule" />
+        <view class="acts acts-col">
+          <kg-button block size="lg" icon="swords" bind:click="createMatch">发起好友挑战</kg-button>
+          <kg-button block size="lg" variant="ghost" icon="shuffle" bind:click="randomMatch">随机匹配对手</kg-button>
+        </view>
+        <view class="join-row">
+          <t-input class="sheet-input join-input" borderless value="{{joinCode}}" placeholder="输入挑战码，如 A8X2QK" maxlength="{{8}}" bind:change="onCodeInput" />
+          <kg-button variant="secondary" size="md" bind:click="joinByCode">应战</kg-button>
+        </view>
+      </kg-card>
+
+      <kg-card variant="raised" class="sec">
+        <kg-section-header title="我的对局" more="{{mineWins ? '累计 ' + mineWins + ' 胜' : ''}}" />
+        <block wx:if="{{loading}}"><t-skeleton theme="paragraph" animation="gradient" /></block>
+        <kg-empty wx:elif="{{loadErr && !mineRows.length}}" compact icon="wifi-off" title="加载失败" desc="{{loadErr}}" ctaText="重试" bind:cta="loadHome" />
+        <kg-empty wx:elif="{{!mineRows.length}}" compact icon="swords" title="还没有对局记录" desc="发起一局或输入挑战码应战" />
+        <view wx:for="{{mineRows}}" wx:key="code" class="row" hover-class="row--hover" data-code="{{item.code}}" bind:tap="onOpenMatch">
+          <view class="row-main">
+            <text class="row-t">{{item.title}}</text>
+            <text class="row-s">{{item.desc}}</text>
+          </view>
+          <kg-tag tone="{{item.tone}}">{{item.badge}}</kg-tag>
+          <l-icon name="chevron-right" size="16" tone="faint" />
+        </view>
+      </kg-card>
+
+      <kg-card variant="raised" class="sec">
+        <kg-section-header title="本周胜场榜" more="{{myRank ? '我的排名 #' + myRank + ' · ' + myWins + ' 胜' : ''}}" />
+        <block wx:if="{{loading}}"><t-skeleton theme="paragraph" animation="gradient" /></block>
+        <kg-empty wx:elif="{{loadErr && !lbRows.length}}" compact icon="wifi-off" title="加载失败" desc="{{loadErr}}" ctaText="重试" bind:cta="loadHome" />
+        <kg-empty wx:elif="{{!lbRows.length}}" compact icon="trophy" title="本周还没有对局" desc="快来抢占榜首！" />
+        <view wx:for="{{lbRows}}" wx:key="rank" class="row">
+          <kg-tag tone="{{item.tone}}">{{item.rank}}</kg-tag>
+          <view class="row-main"><text class="row-t">{{item.name}}</text></view>
+          <text class="row-s num">{{item.wins}} 胜</text>
+        </view>
+      </kg-card>
+    </block>
+
+    <!-- 答题 -->
+    <block wx:elif="{{view === 'quiz'}}">
+      <kg-card variant="raised" class="sec">
+        <view class="vs">
+          <view class="p">
+            <view class="av">我</view>
+            <text class="nm">{{myName}}</text>
+            <text class="sc num">{{answered}}<text class="sc-sub">/{{total}}</text></text>
+          </view>
+          <text class="mid">VS</text>
+          <view class="p">
+            <view class="av rival">{{rivalAv}}</view>
+            <text class="nm">{{rivalName || '等待对手'}}</text>
+            <text class="sc num">{{rivalDone ? '✓' : '—'}}</text>
+          </view>
+        </view>
+        <kg-progress value="{{timeLeft}}" max="{{30}}" />
+        <text class="timer-t num">本题剩余 {{timeLeft}} 秒 · 答对+80，越快加成越高 · 第 {{qIndex + 1}}/{{total}} 题</text>
+        <view class="streak">
+          <view wx:for="{{streak}}" wx:key="index" class="dot {{item}}" />
+        </view>
+      </kg-card>
+
+      <kg-card wx:if="{{curQ}}" variant="raised" class="sec">
+        <view class="tags"><kg-tag tone="module" module="{{curQ.module || ''}}">{{curTag}}</kg-tag><kg-tag tone="neutral">第 {{qIndex + 1}}/{{total}} 题</kg-tag></view>
+        <text class="q-stem q-text" user-select>{{curQ.question}}</text>
+        <image wx:if="{{curQ.image}}" class="q-img" src="{{curQ.image}}" mode="widthFix" />
+        <view wx:for="{{curOpts}}" wx:key="k" class="opt {{picked === item.k ? 'on' : ''}}" hover-class="{{picked ? '' : 'opt--hover'}}" data-k="{{item.k}}" bind:tap="onPick">
+          <text class="opt-k">{{item.k}}</text>
+          <text class="opt-v">{{item.v}}</text>
+        </view>
+      </kg-card>
+
+      <view wx:if="{{rivalDone}}" class="banner banner-info"><l-icon name="zap" size="16" tone="info" /><text>对手已完成全部作答 —— 锁定你的答案！</text></view>
+      <view wx:if="{{submitFailed}}" class="banner banner-warn">
+        <l-icon name="triangle-alert" size="16" tone="warn" />
+        <text class="banner-txt">提交未成功（作答已保留），网络恢复后可重试</text>
+        <kg-button variant="secondary" size="sm" loading="{{submitting}}" bind:click="finishQuiz">重新提交</kg-button>
+      </view>
+    </block>
+
+    <!-- 结果 / 等待 -->
+    <block wx:elif="{{view === 'result'}}">
+      <view class="hero">
+        <view class="hero-txt">
+          <text class="hero-s">{{resTitle}}</text>
+          <text class="hero-t"><text class="num">{{myScore}}</text> 分</text>
+          <text class="hero-s">{{resModule}} · 挑战码 <text class="num">{{code}}</text></text>
+        </view>
+      </view>
+
+      <kg-card variant="raised" class="sec">
+        <view class="vs res-vs">
+          <view class="p">
+            <text class="nm">{{me.name}}</text>
+            <text class="sc num">{{me.score}}</text>
+            <text class="meta num">{{me.meta}}</text>
+          </view>
+          <text class="mid">VS</text>
+          <view class="p">
+            <text class="nm">{{them.name}}</text>
+            <text class="sc num {{them.done ? '' : 'wait'}}">{{them.score}}</text>
+            <text class="meta num">{{them.meta}}</text>
+          </view>
+        </view>
+      </kg-card>
+
+      <block wx:if="{{!finished}}">
+        <view wx:if="{{noOppHint}}" class="banner banner-warn"><l-icon name="triangle-alert" size="16" tone="warn" /><text class="banner-txt">暂无对手，试试邀请好友——复制下方挑战码或分享链接，叫考友来应战</text></view>
+        <kg-card variant="raised" class="sec">
+          <kg-section-header title="把挑战发给考友，等 TA 应战" />
+          <view class="code-box" hover-class="row--hover" bind:tap="copyCode">
+            <text class="code num">{{code}}</text>
+            <l-icon name="copy" size="20" tone="brand" />
+          </view>
+          <kg-button block size="md" variant="ghost" icon="refresh-cw" bind:click="refreshMatch">刷新对局状态</kg-button>
+        </kg-card>
+      </block>
+      <view wx:else class="sec back-row">
+        <kg-button variant="text" size="md" icon="chevron-left" bind:click="backHome">返回 PK 大厅</kg-button>
+      </view>
+    </block>
+  </view>
+</scroll-view>
+
+<kg-action-bar wx:if="{{view === 'result' && !finished}}" layout="actions">
+  <kg-button class="bar-btn" variant="ghost" size="lg" bind:click="backHome">返回 PK 大厅</kg-button>
+  <kg-button class="bar-btn" variant="primary" size="lg" openType="share" bind:click="shareMatch">转发给好友应战</kg-button>
+</kg-action-bar>
+<kg-action-bar wx:if="{{view === 'result' && finished}}" layout="actions" primaryText="再来一局" secondaryText="晒战绩，喊人来战" bind:primary="rematch" bind:secondary="shareResult" />

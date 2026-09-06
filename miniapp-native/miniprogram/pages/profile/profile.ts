@@ -1,19 +1,10 @@
-import {
-  authLogout,
-  fetchCheckinBadges,
-  fetchGrowth,
-  fetchMistakes,
-  fetchReminders,
-  setReminder,
-  trackEvent,
-} from '../../api/index';
+import { authLogout, fetchCheckinBadges, fetchGrowth, fetchMistakes, fetchReminders } from '../../api/index';
+import { fetchCommentInbox, pkMine } from '../../api/social';
 import type { CheckinBadgesResp } from '../../api/types';
-import { anonUid, clearAuth, getAuthUser } from '../../utils/auth';
+import { anonUid, clearAuth, getAuthUser, getToken } from '../../utils/auth';
+import { subscribeAvailable } from '../../utils/config';
 import { loadPStats, streakDays } from '../../utils/stats';
 import { syncTabBar } from '../../utils/tabbar';
-
-// 订阅消息模板 ID：AppID/模板审核通过后填入即开闸，留空时仅登记提醒意向
-const SUBSCRIBE_TMPL_ID = '';
 
 Page({
   data: {
@@ -23,6 +14,9 @@ Page({
     badgeInfo: null as CheckinBadgesResp | null,
     nextMilestone: null as { days: number; left: number; pct: number } | null,
     reminderOn: false,
+    remindAvail: false,
+    inboxUnread: 0,
+    pkN: 0,
     totalDone: 0,
     streakN: 0,
     mistakeN: 0,
@@ -35,11 +29,50 @@ Page({
     const s = loadPStats();
     let totalDone = 0;
     for (const k of Object.keys(s.byModule)) totalDone += s.byModule[k].done;
-    this.setData({ user, avatarChar, uid: anonUid(), totalDone, streakN: streakDays() });
+    this.setData({ user, avatarChar, uid: anonUid(), totalDone, streakN: streakDays(), remindAvail: subscribeAvailable() });
     this.loadBadges();
     this.loadGrowth();
     this.loadReminder();
     this.loadMistakes();
+    this.loadSocial();
+  },
+  // 我的页 Social 角标：讨论未读数（需登录）/ PK 战绩数（对齐 H5 profile 入口）
+  async loadSocial() {
+    try {
+      const m = await pkMine();
+      this.setData({ pkN: (m.items || []).length });
+    } catch (e) {
+      /* 非关键路径 */
+    }
+    if (!getToken()) {
+      this.setData({ inboxUnread: 0 });
+      return;
+    }
+    try {
+      const d = await fetchCommentInbox();
+      this.setData({ inboxUnread: d.unread || 0 });
+    } catch (e) {
+      /* 非关键路径 */
+    }
+  },
+  onAsk() {
+    wx.navigateTo({ url: '/pkgSocial/ask/ask' });
+  },
+  onInbox() {
+    if (!getToken()) {
+      wx.navigateTo({ url: '/pages/login/login' });
+      return;
+    }
+    wx.navigateTo({ url: '/pkgSocial/inbox/inbox' });
+  },
+  onFavorites() {
+    wx.navigateTo({ url: '/pkgSocial/favorites/favorites' });
+  },
+  onInterviewHistory() {
+    wx.navigateTo({ url: '/pkgSocial/history/history' });
+  },
+  onPk() {
+    wx.navigateTo({ url: '/pkgSocial/pk/pk' });
   },
   // 累计刷题：服务端 answer_log 口径（与统计页/H5 同源），失败保留本机 pstats
   async loadGrowth() {
@@ -67,45 +100,8 @@ Page({
       /* 非关键路径 */
     }
   },
-  async onReminder() {
-    if (this.data.reminderOn) {
-      try {
-        await setReminder('wxsub', false);
-        this.setData({ reminderOn: false });
-        wx.showToast({ title: '已关闭学习提醒', icon: 'none' });
-      } catch (err) {
-        wx.showToast({ title: '操作失败：' + (err as Error).message, icon: 'none' });
-      }
-      return;
-    }
-    // 模板已配置时先请求微信订阅授权；未配置/拒绝时降级为仅登记意向
-    if (SUBSCRIBE_TMPL_ID && wx.requestSubscribeMessage) {
-      try {
-        await new Promise<void>((resolve, reject) => {
-          wx.requestSubscribeMessage({
-            tmplIds: [SUBSCRIBE_TMPL_ID],
-            success: (r) => {
-              if (r[SUBSCRIBE_TMPL_ID] === 'accept') resolve();
-              else reject(new Error('未授权'));
-            },
-            fail: () => reject(new Error('订阅失败')),
-          });
-        });
-      } catch (e) {
-        wx.showToast({ title: '未开启订阅，已为你登记提醒意向', icon: 'none' });
-      }
-    }
-    try {
-      await setReminder('wxsub', true, 20);
-      this.setData({ reminderOn: true });
-      trackEvent('reminder_optin', 'profile');
-      wx.showToast({
-        title: SUBSCRIBE_TMPL_ID ? '已开启每日学习提醒' : '已登记提醒意向，订阅消息上线后自动生效',
-        icon: 'none',
-      });
-    } catch (err) {
-      wx.showToast({ title: '操作失败：' + (err as Error).message, icon: 'none' });
-    }
+  onReminder() {
+    wx.navigateTo({ url: '/pkgSocial/reminders/reminders' });
   },
   // 徽章墙：连击口径以服务端 /api/checkin/badges 为准
   async loadBadges() {

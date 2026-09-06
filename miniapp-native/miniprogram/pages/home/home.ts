@@ -253,6 +253,9 @@ Page({
     setDailyGoal(g);
     this.refreshGoal();
   },
+  onAsk() {
+    wx.navigateTo({ url: '/pkgSocial/ask/ask' });
+  },
   onStartModule(e: WechatMiniprogram.TouchEvent) {
     const mod = String(e.currentTarget.dataset.mod || '');
     wx.navigateTo({

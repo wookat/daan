@@ -15,6 +15,23 @@
     "pages/share/pk-result",
     "pages/social/poster"
   ],
+  "subPackages": [
+    {
+      "root": "pkgSocial",
+      "pages": [
+        "ask/ask",
+        "pk/pk",
+        "pk-result/pk-result",
+        "discuss/discuss",
+        "plaza/plaza",
+        "inbox/inbox",
+        "favorites/favorites",
+        "interview/interview",
+        "history/history",
+        "reminders/reminders"
+      ]
+    }
+  ],
   "renderer": "webview",
   "componentFramework": "glass-easel",
   "lazyCodeLoading": "requiredComponents",

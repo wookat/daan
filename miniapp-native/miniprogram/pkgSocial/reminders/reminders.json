@@ -1,0 +1,12 @@
+{
+  "renderer": "webview",
+  "usingComponents": {
+    "navbar": "/components/navbar/index",
+    "l-icon": "/components/l-icon/index",
+    "kg-card": "/components/kg-card/index",
+    "kg-section-header": "/components/kg-section-header/index",
+    "t-cell": "tdesign-miniprogram/cell/cell",
+    "t-cell-group": "tdesign-miniprogram/cell-group/cell-group",
+    "t-switch": "tdesign-miniprogram/switch/switch"
+  }
+}

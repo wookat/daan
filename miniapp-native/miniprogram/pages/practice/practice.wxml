@@ -102,6 +102,10 @@
           <kg-tag tone="neutral">解析</kg-tag>
           <text class="exp-text q-text" style="font-size: {{expFs}}px" user-select>{{cur.explanation}}</text>
         </view>
+        <view wx:if="{{cur.id}}" class="exp-social">
+          <kg-button variant="text" size="sm" icon="message-circle" bind:click="onDiscuss">讨论</kg-button>
+          <kg-button variant="text" size="sm" icon="sparkles" bind:click="onAskAI">AI 讲解</kg-button>
+        </view>
       </kg-card>
     </block>
 

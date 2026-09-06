@@ -144,6 +144,19 @@
         <l-icon class="m-arrow" name="chevron-right" size="20" tone="faint" />
       </view>
     </view>
+
+    <!-- 更多练习 · AI 问答入口（对齐 H5 home「拍题讲解」卡） -->
+    <kg-section-header title="更多练习" />
+    <view class="grid">
+      <view class="mcard" hover-class="mcard--hover" bind:tap="onAsk">
+        <view class="mico mico-ask"><l-icon name="camera" size="24" tone="brand" /></view>
+        <view class="m-main">
+          <text class="mname">拍题讲解</text>
+          <text class="mcount">花生十三方法体系</text>
+        </view>
+        <l-icon class="m-arrow" name="chevron-right" size="20" tone="faint" />
+      </view>
+    </view>
   </view>
 </scroll-view>
 

@@ -383,6 +383,12 @@
 }
 
 /* 底栏按钮（slot 内容归页面样式） */
+.exp-social {
+  display: flex;
+  gap: var(--sp-8);
+  margin-top: var(--sp-8);
+}
+
 .abar-btn {
   display: block;
   flex: 1;

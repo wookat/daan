@@ -96,6 +96,9 @@
           <kg-button variant="text" size="md" block icon="copy" bind:click="onCopyLink">复制分享链接，喊更多人来答</kg-button>
         </view>
       </block>
+      <view wx:if="{{!logged}}" class="actions">
+        <kg-button variant="text" size="md" block bind:click="onLogin">登录 / 注册错题邦，10万+ 题库免费刷</kg-button>
+      </view>
     </block>
   </view>
 </scroll-view>

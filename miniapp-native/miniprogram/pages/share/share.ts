@@ -1,15 +1,16 @@
 import { shareAnswer, shareDetail, teamJoin, trackEvent } from '../../api/index';
 import type { QStats, ShareAnswerRow, ShareDetailResp, TeamInvite } from '../../api/types';
+import { getToken } from '../../utils/auth';
 import { modName } from '../../utils/stats';
 
 const SITE = 'https://kaogong.zalize.com';
 
 function beatText(s: QStats | null, myResult: { correct: boolean } | null): string {
   if (!s || !s.total || !myResult) return '';
-  if (s.total < 5) return `🎯 你是第 ${s.total} 个作答的人，把题发给更多考友一起比比`;
+  if (s.total < 5) return `🎯 全站第 ${s.total} 个作答本题的人，把题发给更多考友一起比比`;
   if (myResult.correct && s.beat_pct != null)
-    return `🏆 你击败了 ${s.beat_pct}% 的作答者（共 ${s.total} 人做过这题）`;
-  if (s.acc != null) return `共 ${s.total} 人做过这题，正确率 ${s.acc}%，再战同类题赢回来`;
+    return `🏆 你击败了全站 ${s.beat_pct}% 的作答者（共 ${s.total} 人做过这题）`;
+  if (s.acc != null) return `全站共 ${s.total} 人做过这题，正确率 ${s.acc}%，再战同类题赢回来`;
   return '';
 }
 
@@ -31,6 +32,7 @@ Page({
     teamInvite: null as TeamInvite | null,
     teamJoined: false,
     joining: false,
+    logged: false,
   },
   _startTs: 0,
   _qStats: null as QStats | null,
@@ -38,7 +40,7 @@ Page({
 
   onLoad(query: Record<string, string>) {
     const sid = query && query.sid ? String(query.sid) : '';
-    this.setData({ sid });
+    this.setData({ sid, logged: !!getToken() });
     trackEvent('share_open', 'share', sid || null);
     wx.setStorageSync('regSource', 'share');
     this.load();
@@ -131,6 +133,9 @@ Page({
     wx.navigateTo({ url: '/pages/team/panel?id=' + this._joinedTeamId });
   },
 
+  onLogin() {
+    wx.navigateTo({ url: '/pages/login/login' });
+  },
   onCopyLink() {
     const q = this.data.d && this.data.d.question;
     const mod = (q && (q.submodule || modName(q.module || ''))) || '行测';
