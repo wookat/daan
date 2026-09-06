@@ -2044,3 +2044,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 巡检：`kaogong-ops.sh` 每日 `find /data -maxdepth 1 \( *.db* -o *.gz \) ! data.db* -size +1M` → 有则写 `VOLUME-SNAPSHOT N file(s) M MB: <paths> (move to r2:…/archive/)`（只报不删）；`ops_status.ALERT_PAT` 加该词管理台标红（随下次容器重建生效）。同步前 `diff` 生产副本发现**未入库改动**（本地保留 7→3 份）已回收进仓库再 scp（md5 `863db0bd…`）。生产整脚本实跑 rc=0 157 s：backup/R2/RESTORE-VERIFY/R2-VERIFY 全 ok、无 VOLUME-SNAPSHOT 行（卷已干净）、`/api/health` 200；改前 2 MiB 假快照演练能报、删后为空。
 - 本地：`bash -n` 过；pytest ops_status 4 passed；ruff 0；pyright 0。
 - 登记：宿主仍 91%/4.6 G——kaogong 可动项已动完（R432 −330 MB + R433 −340 MB），扩盘/迁出 recruit·softcopyright 仍待老板；`.sheet-x`/自然旧壳 404 (c) 待下次发版；`error_reason` ≥09-11 看 probe=0；`.trend-kn` 需 4 周样本。下次 SOP-10 审计 ~R440。
+
+### R434（`deploy/kaogong-ops.sh` 1 行 + README + 取证；bundle 不变、容器不重建、脚本 scp md5 核对）— R2 `kaogong-sqlite` 前缀盘点：30 天清理递归误伤 `archive/`（差 2.6 天）
+- 取证 docs/iter/round-3/r434-r2-prefix-retention-archive-recursion.md。只读 `rclone lsl`：顶层 11 份每日 `data-08-27…09-06.db.gz`（最早 08-27，未满 30 天 → 30 天清理尚无可观测样本）+ `archive/` 7 个对象（R191 归档的 R33 ×3 / R96 ×2 未压缩 .db 各 370 MB + R433 两份 .gz）= 3.585 GiB；bucket 全部 5.64 GiB（多产品共用，10 GB 免费额度）。
+- **命中**：`rclone delete --min-age 30d "r2:$BUCKET_PREFIX/"` 默认递归，`--dry-run --min-age 1s` 复现作用域含 archive/ 全部 7 个对象；`bak_r96_qa*.db`（08-10）已 27.4 天，**09-10 03:40 的 cron 就会删掉**，随后 r33 三份（09-16）、R433 两份（10-06）——「永久归档」实为 30 天静默消失。修 1 行：`--max-depth 1 --include "data-*.db.gz"`；dry-run 新作用域只有 11 份每日；scp md5 `362cba73…` 一致，新命令生产实跑 rc=0（今天无到期对象）。
+- archive/ 5 份未压缩 .db 流式 gzip（`rclone cat | gzip | rclone rcat`，不落宿主盘；`gunzip | md5sum` 与原对象一致才 `deletefile`）：5/5 一致，archive 1.86 GB → 987 MiB、前缀 3.585 → 2.484 GiB、bucket 5.64 → 4.54 GiB；全程 healthy、health 200。
+- 卷内 `iter-r3b/` 24 MB 是 R3b 清洗账本（ledger/fixes.sql）、`r4xx-*.json` 是处置记录 → 保留。
+- 登记：30 天清理真执行要 09-26 后看；R2 用量稳态 ≈5 GB+archive、超 10 GB 是计费不是失败；archive 单副本；`.sheet-x`/自然旧壳 404 (c) 待下次发版；`error_reason` ≥09-11 看 probe=0；`.trend-kn` 需 4 周样本。下次 SOP-10 审计 ~R440。

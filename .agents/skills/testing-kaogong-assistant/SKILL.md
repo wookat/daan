@@ -1455,3 +1455,8 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - `/data` 卷顶层只该有 `data.db`(+wal/shm)、`qimg/`、`iter-r3b/` 与各轮 `r*-*.json` 处置记录；`app.db`/`kaogong.db` 是 0 字节空壳。手工全库快照（`*.db.gz`/`*.bak*`）不能长期留在卷内：容器内 `gzip -t` → `docker exec C cat f | rclone rcat --size N r2:zalize-backups/kaogong-sqlite/archive/f` → `rclone size --json` 字节数 + `rclone cat | md5sum` 真回读一致 → 才 `rm`；178 MB 一份上传+回读约 70 s，别在半途 kill。`rclone lsl` 对空前缀返回 rc=1 不是失败。
 - 每日 ops 日志会写 `VOLUME-SNAPSHOT N file(s) M MB: …`（只报不删）；看到就按上面口径归档。演练用 `head -c 2097152 /dev/zero > /data/r-selftest.db.gz` 触发、看完删掉。整脚本手工实跑一次 ≈150 s（含 167 MB R2 上传 + 回读校验），会覆盖当天 `data-<date>.db.gz`（同名重传，无副作用）；容器无 `sqlite3` CLI，`.backup` 走 python 回落是既有行为不是报错。
 - 宿主磁盘问题别再往 kaogong 名下找：R432/R433 后 kaogong 自有可动项已清空，剩余是 recruit pgdata / containerd / SoftCopyright / build cache（别家，不动、不 prune）。
+
+## R434 R2 前缀清理作用域经验
+- `rclone delete` **默认递归**：对 `r2:zalize-backups/kaogong-sqlite/` 加 `--min-age 30d` 会连 `archive/` 一起清。现行写法 `--max-depth 1 --include "data-*.db.gz"`；任何改动清理命令前先 `--dry-run --min-age 1s` 把作用域列全再看 `--min-age 30d`。R2 对象 mtime 取上传时刻（`rclone rcat` 不带 `--metadata` 时），归档「年龄」= 归档日不是快照日。
+- archive/ 对象一律 gzip；大对象整理走流式 `rclone cat x | gzip | rclone rcat x.gz` + `rclone cat x.gz | gunzip | md5sum` 对照 `rclone cat x | md5sum`，370 MB 一份 ≈100 s，宿主不落盘；用 `setsid -f nohup … > log` 跑，别在 ssh 前台等。
+- bucket `zalize-backups` 是多产品共用（`d1/ honestcv-kv/ probe/ recruit-pg/`），只动 `kaogong-sqlite/`。

@@ -123,6 +123,15 @@ SQLite 存于 docker volume `kaogong-data`（/data/data.db）。备份：`docker
   `docker exec cat | rclone rcat --size` 到 `r2:zalize-backups/kaogong-sqlite/archive/<name>` → 远端 `rclone size`
   字节数 + `rclone cat | md5sum` 真回读与本地一致 → 才 `rm` 本地副本；活跃 `data.db`/WAL/SHM/每日备份一律不动。
   以后手工快照直接落 R2 `archive/` 或宿主 `~/kaogong-backups/pre-*.db.gz`（3 天自动清理），勿留在卷内。
+- R2 前缀布局与 30 天清理边界（R434）：`kaogong-sqlite/` 顶层 = 每日 `data-YYYY-MM-DD.db.gz`（脚本
+  `rclone delete --min-age 30d --max-depth 1 --include "data-*.db.gz"` 只清这一层）；`kaogong-sqlite/archive/` =
+  永久手工快照（R33/R96/R418/w3），**不受 30 天清理**。R434 前那行是 `rclone delete --min-age 30d "r2:$BUCKET_PREFIX/"`
+  ——rclone delete 默认递归，会把 `archive/` 一并按 30 天删掉（08-10 归档的 `bak_r96_qa*.db` 到 09-09 就满 30 天，
+  差 2.6 天被日常 cron 清掉，R191 归档的 5 份都会陆续消失）；`--dry-run --min-age 1s` 两版对照可复现。
+  改 archive 布局/加新前缀时先 `rclone delete --dry-run --min-age 1s` 看清理范围。archive/ 内对象统一 gzip 存
+  （`rclone cat x.db | gzip | rclone rcat x.db.gz`，`rclone cat x.db.gz | gunzip | md5sum` 与原对象 md5 一致后才
+  `rclone deletefile` 原件）；bucket `zalize-backups` 由多产品共用（`d1/ honestcv-kv/ probe/ recruit-pg/`），只动
+  `kaogong-sqlite/` 前缀。
 
 ## 搜索引擎抓取日报（scripts/crawler_stats.py，R377）
 - VPS cron `23 * * * *`：`python3 /home/ubuntu/kaogong-assistant/scripts/crawler_stats.py

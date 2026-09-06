@@ -37,7 +37,8 @@ if [ -f "$ENV_FILE" ]; then
     remote_size=$(rclone size --json "r2:$BUCKET_PREFIX/$(basename "$F")" | python3 -c 'import json,sys;print(json.load(sys.stdin)["bytes"])')
     if [ "$remote_size" = "$size" ]; then
       echo "$TS r2 upload ok $(basename "$F") ($size bytes)" >> "$LOG"
-      rclone delete --min-age 30d "r2:$BUCKET_PREFIX/" 2>/dev/null
+      # 只清顶层每日备份；archive/ 是永久手工快照，rclone delete 默认递归会把它一并按 30 天清掉
+      rclone delete --min-age 30d --max-depth 1 --include "data-*.db.gz" "r2:$BUCKET_PREFIX/" 2>/dev/null
     else
       echo "$TS r2 upload SIZE MISMATCH $(basename "$F") ($remote_size != $size)" >> "$LOG"
     fi
