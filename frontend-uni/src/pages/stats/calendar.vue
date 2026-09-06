@@ -152,36 +152,36 @@ export default {
 .wrap { padding: 24rpx; }
 .ms { margin-top: 24rpx; }
 .ms-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
-.ms-best { font-size: 21rpx; color: var(--ink-2); }
+.ms-best { font-size: 24rpx; color: var(--ink-2); }
 .ms-cur { font-size: 25rpx; color: var(--ink-1, #1f2430); }
 .ms-n { font-size: 34rpx; font-weight: 800; color: #d97706; }
 .ms-bar { height: 14rpx; background: var(--line); border-radius: 999rpx; margin-top: 14rpx; overflow: hidden; }
 .ms-fill { height: 100%; background: linear-gradient(90deg, #f59e0b, #d97706); border-radius: 999rpx; }
-.ms-sub { font-size: 22rpx; color: var(--ink-2); margin-top: 10rpx; }
+.ms-sub { font-size: 24rpx; color: var(--ink-2); margin-top: 10rpx; }
 .ms-left { color: #d97706; font-weight: 700; }
 .ms-dots { display: flex; justify-content: space-between; margin-top: 20rpx; }
 .ms-dot { display: flex; flex-direction: column; align-items: center; gap: 4rpx; }
 .ms-dot-i { font-size: 30rpx; opacity: 0.45; }
 .ms-dot.on .ms-dot-i { opacity: 1; }
-.ms-dot-d { font-size: 20rpx; color: var(--ink-2); }
+.ms-dot-d { font-size: 24rpx; color: var(--ink-2); }
 .poster-btn { margin-top: 24rpx; background: var(--brand); color: #fff; font-size: 28rpx; border-radius: 18rpx; }
 .card { background: var(--card); border-radius: var(--radius); padding: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 30rpx; font-weight: 700; }
 .cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10rpx; }
 .cal-title { display: flex; align-items: center; gap: 16rpx; }
-.cal-badge { font-size: 21rpx; color: #166534; background: var(--ok-soft, #dcfce7); border-radius: 8rpx; padding: 4rpx 14rpx; }
-.cal-btn { font-size: 30rpx; color: var(--brand-text); font-weight: 600; padding: 8rpx 16rpx; }
+.cal-badge { font-size: 24rpx; color: #166534; background: var(--ok-soft, #dcfce7); border-radius: 8rpx; padding: 4rpx 14rpx; }
+.cal-btn { font-size: 30rpx; color: var(--brand-text); font-weight: 600; min-width: 40px; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; }
 .cal-btn.dis { color: var(--ink-3); }
-.cal-sub { font-size: 23rpx; color: var(--ink-2); margin-bottom: 18rpx; }
+.cal-sub { font-size: 24rpx; color: var(--ink-2); margin-bottom: 18rpx; }
 .cal-week { display: flex; margin-bottom: 8rpx; }
-.cal-w { flex: 1; text-align: center; font-size: 20rpx; color: var(--ink-2); }
+.cal-w { flex: 1; text-align: center; font-size: 24rpx; color: var(--ink-2); }
 .cal-grid { display: flex; flex-wrap: wrap; }
 .cal-c { width: 14.28%; height: 80rpx; line-height: 80rpx; text-align: center; font-size: 24rpx; color: var(--ink-2); box-sizing: border-box; border-radius: 50%; }
 .cal-c.part { background: var(--brand-soft); color: var(--brand-text); font-weight: 600; }
 .cal-c.full { background: var(--brand); color: #fff; font-weight: 700; }
 .cal-c.today { border: 2rpx solid var(--brand); }
 .cal-legend { display: flex; gap: 26rpx; margin-top: 18rpx; }
-.lg { font-size: 21rpx; color: var(--ink-2); display: flex; align-items: center; gap: 8rpx; }
+.lg { font-size: 24rpx; color: var(--ink-2); display: flex; align-items: center; gap: 8rpx; }
 .dot { width: 20rpx; height: 20rpx; border-radius: 50%; display: inline-block; }
 .dot.part { background: var(--brand-soft); border: 1rpx solid var(--brand); }
 .dot.full { background: var(--brand); }

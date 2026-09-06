@@ -252,7 +252,7 @@ export default {
   color: var(--brand-text);
 }
 .cov-t {
-  font-size: 18rpx;
+  font-size: 24rpx;
   color: var(--ink-2, #5f6575);
 }
 .head-t {
@@ -261,7 +261,7 @@ export default {
   color: var(--ink, #17181c);
 }
 .head-s {
-  font-size: 22rpx;
+  font-size: 24rpx;
   color: var(--ink-2, #5f6575);
   margin: 6rpx 0 10rpx;
 }
@@ -271,7 +271,7 @@ export default {
   flex-wrap: wrap;
 }
 .lg {
-  font-size: 18rpx;
+  font-size: 24rpx;
   padding: 2rpx 10rpx;
   border-radius: 6rpx;
   color: #fff;
@@ -312,7 +312,7 @@ export default {
   color: #fff;
 }
 .tab-pct {
-  font-size: 20rpx;
+  font-size: 24rpx;
   opacity: 0.75;
 }
 .grp-h {
@@ -327,7 +327,7 @@ export default {
   color: var(--ink, #17181c);
 }
 .grp-meta {
-  font-size: 22rpx;
+  font-size: 24rpx;
   color: var(--ink-2, #5f6575);
 }
 .tiles {
@@ -367,26 +367,26 @@ export default {
   outline: 4rpx solid #2e5bff;
 }
 .tile-name {
-  font-size: 22rpx;
+  font-size: 24rpx;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .tile-meta {
-  font-size: 18rpx;
+  font-size: 24rpx;
   opacity: 0.85;
 }
 .dot {
   position: absolute;
   top: -8rpx;
   right: -8rpx;
-  min-width: 30rpx;
-  height: 30rpx;
+  min-width: 36rpx;
+  height: 36rpx;
   border-radius: 999rpx;
   background: #ef4444;
   color: #fff;
-  font-size: 18rpx;
+  font-size: 24rpx;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -418,7 +418,7 @@ export default {
   font-weight: 700;
 }
 .sheet-s {
-  font-size: 20rpx;
+  font-size: 24rpx;
   color: var(--ink-2, #5f6575);
   margin-top: 4rpx;
 }

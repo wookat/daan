@@ -186,8 +186,8 @@ export default {
 .row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8rpx; }
 .row-top { display: flex; align-items: center; gap: 10rpx; flex-wrap: wrap; }
 .time { font-size: 26rpx; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
-.chip { background: #e8effe; color: var(--brand-text); font-size: 20rpx; font-weight: 600; border-radius: 8rpx; padding: 2rpx 12rpx; }
-.meta { font-size: 22rpx; color: var(--ink-2); }
+.chip { background: #e8effe; color: var(--brand-text); font-size: 24rpx; font-weight: 600; border-radius: 8rpx; padding: 2rpx 12rpx; }
+.meta { font-size: 24rpx; color: var(--ink-2); }
 .pct { font-size: 32rpx; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
 .pct.hi { color: var(--ok-strong, #15803d); }
 .pct.lo { color: var(--bad-strong, #b91c1c); }
@@ -205,8 +205,8 @@ export default {
 .d-opt { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; }
 .d-opt.ans { color: var(--ok-strong, #15803d); font-weight: 600; }
 .d-opt.bad { color: var(--bad-strong, #b91c1c); }
-.d-ansline { font-size: 23rpx; color: var(--ink); font-weight: 600; }
-.d-expl { font-size: 23rpx; color: var(--ink-2); line-height: 1.7; background: var(--bg-2, #f6f7fa); border-radius: 12rpx; padding: 14rpx 18rpx; }
+.d-ansline { font-size: 24rpx; color: var(--ink); font-weight: 600; }
+.d-expl { font-size: 24rpx; color: var(--ink-2); line-height: 1.7; background: var(--bg-2, #f6f7fa); border-radius: 12rpx; padding: 14rpx 18rpx; }
 .d-ops { display: flex; gap: 28rpx; }
 .d-op { font-size: 24rpx; color: var(--brand-text, #2e5bff); font-weight: 600; }
 .d-op.seen { color: var(--ink-3, #6b7280); }
@@ -216,8 +216,8 @@ export default {
 .d-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6rpx; }
 .d-q { font-size: 25rpx; color: var(--ink); line-height: 1.6; }
 .ellip2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
-.d-ans { font-size: 22rpx; color: var(--bad-strong, #b91c1c); }
-.d-secs { font-size: 22rpx; color: var(--ink-2); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.d-ans { font-size: 24rpx; color: var(--bad-strong, #b91c1c); }
+.d-secs { font-size: 24rpx; color: var(--ink-2); flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .btn-redo { margin-top: 20rpx; background: #2e5bff; color: #fff; border-radius: 999rpx; font-size: 26rpx; font-weight: 600; min-height: 40px; display: flex; align-items: center; justify-content: center; }
 
 .empty { display: flex; flex-direction: column; align-items: center; gap: 16rpx; padding: 120rpx 0; }
