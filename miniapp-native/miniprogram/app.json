@@ -77,7 +77,7 @@
     "selectedColor": "#2e5bff",
     "backgroundColor": "#ffffff",
     "list": [
-      { "pagePath": "pages/home/home", "text": "首页" },
+      { "pagePath": "pages/home/home", "text": "刷题" },
       { "pagePath": "pages/book/book", "text": "错题本" },
       { "pagePath": "pages/exam/exam", "text": "模考" },
       { "pagePath": "pages/stats/stats", "text": "统计" },

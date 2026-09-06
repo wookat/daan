@@ -67,6 +67,34 @@ export function buildHeatmap(days: Record<string, number>): { cols: HeatCell[][]
   return { cols, total };
 }
 
+/** 服务端 growth 的周键：strftime('%Y-%W')（周一起算，1 月 1 日所在的不完整周为 00） */
+export function cnWeekKey(d: Date): string {
+  const fm = firstMonday(d.getFullYear());
+  const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const w = day < fm ? 0 : Math.floor((day.getTime() - fm.getTime()) / 86400000 / 7) + 1;
+  return d.getFullYear() + '-' + pad2(w);
+}
+
+function firstMonday(year: number): Date {
+  const jan1 = new Date(year, 0, 1);
+  return new Date(year, 0, 1 + ((8 - jan1.getDay()) % 7));
+}
+
+/** 周键 → 用户可读标签：本周 / 上周 / 起止日期（8/25–8/31） */
+export function weekLabel(key: string): string {
+  const today = cnToday();
+  if (key === cnWeekKey(today)) return '本周';
+  if (key === cnWeekKey(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7))) return '上周';
+  const [ys, ws] = key.split('-');
+  const y = Number(ys);
+  const w = Number(ws);
+  const fm = firstMonday(y);
+  const start = w === 0 ? new Date(y, 0, 1) : new Date(fm.getFullYear(), fm.getMonth(), fm.getDate() + (w - 1) * 7);
+  const end = w === 0 ? new Date(fm.getFullYear(), fm.getMonth(), fm.getDate() - 1) : new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+  const md = (d: Date) => d.getMonth() + 1 + '/' + d.getDate();
+  return start.getTime() > end.getTime() ? md(start) : md(start) + '–' + md(end);
+}
+
 /** 从 dayMap 倒推连续打卡天数（今天没练则从昨天起算），与 H5 checkinStreak 一致 */
 export function streakFromDays(days: Record<string, number>): number {
   const t = cnToday();

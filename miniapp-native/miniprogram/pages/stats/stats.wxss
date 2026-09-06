@@ -78,18 +78,6 @@
   margin-bottom: var(--sp-12);
 }
 
-.blk-hd {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-8);
-  margin-bottom: var(--sp-12);
-}
-
-.blk-hd .blk-t {
-  margin-bottom: 0;
-}
-
 .note {
   display: block;
   font-size: var(--fs-caption);
@@ -245,6 +233,10 @@
 }
 
 /* 周正确率 */
+.gw-chips {
+  margin: calc(-1 * var(--sp-4)) calc(-1 * var(--sp-16)) var(--sp-12);
+}
+
 .gw-row {
   display: flex;
   align-items: center;
@@ -278,11 +270,15 @@
   display: block;
   margin-top: var(--sp-8);
   font-size: var(--fs-caption);
-  color: var(--bad-strong);
+  color: var(--ink-3);
 }
 
 .gw-delta.is-up {
   color: var(--ok-strong);
+}
+
+.gw-delta.is-down {
+  color: var(--bad-strong);
 }
 
 /* 申论 */

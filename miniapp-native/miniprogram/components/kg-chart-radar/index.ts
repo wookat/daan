@@ -10,6 +10,9 @@ interface LabelPos extends RadarAxis {
   style: string;
 }
 
+const LABEL_PAD = 30;
+const LABEL_GAP = 14;
+
 Component({
   properties: {
     axes: { type: Array, value: [] as RadarAxis[] },
@@ -20,6 +23,7 @@ Component({
     polyStyle: '',
     labels: [] as LabelPos[],
     boxStyle: '',
+    plotStyle: '',
   },
   observers: {
     'axes, size'(axes: RadarAxis[], size: number) {
@@ -33,15 +37,20 @@ Component({
         const s = i * 25;
         return `width:${s}%;height:${s}%;left:${(100 - s) / 2}%;top:${(100 - s) / 2}%`;
       });
+      // 标签留在盒内：绘图区向内缩 LABEL_PAD，标签放在绘图半径外 LABEL_GAP 处（px 定位，不随百分比溢出）
+      const plotR = Math.max(24, size / 2 - LABEL_PAD);
+      const labR = plotR + LABEL_GAP;
+      const c = size / 2;
       const labels = axes.map((a, i) => {
         const ang = (Math.PI * 2 * i) / n - Math.PI / 2;
-        return { ...a, style: `left:${(50 + 58 * Math.cos(ang)).toFixed(2)}%;top:${(50 + 58 * Math.sin(ang)).toFixed(2)}%` };
+        return { ...a, style: `left:${(c + labR * Math.cos(ang)).toFixed(1)}px;top:${(c + labR * Math.sin(ang)).toFixed(1)}px` };
       });
       this.setData({
         rings,
         labels,
         polyStyle: pts.length >= 3 ? `clip-path:polygon(${pts.join(',')})` : 'display:none',
         boxStyle: `width:${size}px;height:${size}px`,
+        plotStyle: `left:${c - plotR}px;top:${c - plotR}px;width:${plotR * 2}px;height:${plotR * 2}px`,
       });
     },
   },

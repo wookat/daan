@@ -13,7 +13,7 @@
     </view>
     <view wx:else class="focus">
       <text class="focus-t">迷你模考</text>
-      <text class="focus-s">30 题混合五大模块，限时 25 分钟，交卷即出成绩报告与薄弱考点</text>
+      <text class="focus-s">30 题混合五大模块，限时 30 分钟，交卷即出成绩报告与薄弱考点</text>
       <view class="focus-acts"><kg-button variant="primary" size="lg" block bind:click="onMini">开始迷你模考</kg-button></view>
     </view>
 

@@ -49,22 +49,20 @@ function modCard(key: string, count: string): ModCard {
   return { key, name: m.label, icon: m.icon, color: m.color, soft: m.soft, count };
 }
 const MODS: ModCard[] = [
-  modCard('ziliao', '4,600+ 题'),
+  modCard('ziliao', '4,600 题'),
   modCard('shuliang', '3.3 万题'),
   modCard('yanyu', '1.8 万题'),
   modCard('panduan', '2.3 万题'),
   modCard('changshi', '3.1 万题'),
-  { key: '', name: '全模块混练', icon: 'shuffle', color: 'var(--brand)', soft: 'var(--brand-soft)', count: '10 万+ 题' },
+  { key: '', name: '全模块混练', icon: 'shuffle', color: 'var(--brand)', soft: 'var(--brand-soft)', count: '10.9 万题' },
 ];
 
 const toOpts = (xs: Array<string | number>, suffix = ''): Array<{ value: string | number; label: string }> =>
   xs.map((x) => ({ value: x, label: String(x) + suffix }));
 
-function fmtCount(n: number, total = false): string {
-  if (total) return Math.floor(n / 10000) + ' 万+ 题';
+function fmtCount(n: number): string {
   if (n >= 10000) return (n / 10000).toFixed(1).replace(/\.0$/, '') + ' 万题';
-  const k = Math.floor(n / 100) * 100;
-  return k.toLocaleString('en-US') + '+ 题';
+  return String(Math.floor(n / 100) * 100).replace(/\B(?=(\d{3})+$)/g, ',') + ' 题';
 }
 
 function applyCounts(mods: ModCard[], counts: { module: string; n: number }[]): ModCard[] {
@@ -75,7 +73,7 @@ function applyCounts(mods: ModCard[], counts: { module: string; n: number }[]): 
     total += c.n;
   }
   return mods.map((m) => {
-    if (!m.key) return total ? { ...m, count: fmtCount(total, true) } : m;
+    if (!m.key) return total ? { ...m, count: fmtCount(total) } : m;
     return byMod[m.key] ? { ...m, count: fmtCount(byMod[m.key]) } : m;
   });
 }

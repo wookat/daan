@@ -23,10 +23,17 @@ function toVM(p: ExamPaper): PaperVM {
 function attemptVM(a: ExamAttempt): AttemptVM {
   const score = a.score;
   const has = score !== null && score !== undefined;
+  let n = 0;
+  let correct = 0;
+  for (const k in a.per_module || {}) {
+    const pm = a.per_module![k];
+    n += pm.n || 0;
+    correct += pm.correct || 0;
+  }
   return {
     id: a.id,
-    title: a.title || (a.mini ? '迷你模考' : '模考'),
-    desc: fmtTs(a.submitted_at || a.started_at, false) + (a.total ? '　' + (a.correct ?? 0) + '/' + a.total + ' 题' : ''),
+    title: a.kind === 'mock' ? '迷你模考' : a.title || '模考',
+    desc: fmtTs(a.submitted_at || a.started_at) + (n ? '　答对 ' + correct + '/' + n : ''),
     scoreText: has ? score + ' 分' : '未交卷',
     scoreTone: has ? (Number(score) >= 60 ? 'ok' : 'warn') : 'muted',
   };

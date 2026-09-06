@@ -38,7 +38,7 @@
       <kg-group title="能力">
         <kg-empty wx:if="{{!hasRadar}}" compact icon="chart-column" title="还没有能力数据" desc="刷几题就能生成你的五模块能力画像" cta-text="去刷题" bind:cta="onGoPractice" />
         <view wx:else class="blk radar-flex">
-          <kg-chart-radar axes="{{axes}}" size="{{148}}" />
+          <kg-chart-radar axes="{{axes}}" size="{{184}}" />
           <view class="radar-side">
             <text wx:if="{{weakAxes.length}}" class="rs-t">最薄弱</text>
             <view wx:for="{{weakAxes}}" wx:key="key" class="rs-row">
@@ -53,8 +53,8 @@
           <kg-chart-bars bars="{{trendBars}}" height="{{96}}" labels left-text="" right-text="" />
         </view>
         <view wx:if="{{showGrowth}}" class="blk">
-          <view class="blk-hd">
-            <text class="blk-t">周正确率</text>
+          <text class="blk-t">周正确率</text>
+          <view class="gw-chips">
             <kg-chip-row options="{{gwOptions}}" value="{{gwMod}}" size="sm" bind:change="onGwMod" />
           </view>
           <view wx:for="{{growthRows}}" wx:key="week" class="gw-row">
@@ -62,7 +62,7 @@
             <view class="bar thin"><view class="fill is-{{item.tone}}" style="width:{{item.pct}}%" /></view>
             <text class="gw-pct num">{{item.pct}}%<text class="gw-n">（{{item.n}}题）</text></text>
           </view>
-          <text wx:if="{{growthDeltaText}}" class="gw-delta {{growthUp ? 'is-up' : ''}}">{{growthDeltaText}}</text>
+          <text wx:if="{{growthDeltaText}}" class="gw-delta is-{{growthDeltaTone}}">{{growthDeltaText}}</text>
         </view>
       </kg-group>
 

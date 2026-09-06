@@ -7,7 +7,7 @@ import { fetchMasteryMap, fetchStats, type StatsResp } from '../../api/grow';
 import { examTrend, type ExamTrend } from '../../utils/kg-exam-report';
 import type { BarItem } from '../../components/kg-chart-bars/index';
 import type { RadarAxis } from '../../components/kg-chart-radar/index';
-import { buildHeatmap, dayCountMap, fmtTs, streakFromDays, type HeatCell } from '../../utils/cn-date';
+import { buildHeatmap, dayCountMap, fmtTs, streakFromDays, weekLabel, type HeatCell } from '../../utils/cn-date';
 import { dayKey, loadPStats, modName, type PStats } from '../../utils/stats';
 import { syncTabBar } from '../../utils/tabbar';
 
@@ -22,6 +22,8 @@ const MOD_KEY: Record<string, string> = { 资料分析: 'ziliao', 数量关系: 
 
 /** 0 数据折叠阈值：答满该题数前整页只显示解锁卡 */
 const UNLOCK_N = 10;
+/** 周环比最小样本：任一周低于此题数不给涨跌结论 */
+const GROWTH_MIN_N = 5;
 
 interface ModRow {
   module: string;
@@ -103,7 +105,7 @@ Page({
     gwOptions: [] as { label: string; value: string }[],
     growthRows: [] as GrowthRow[],
     growthDeltaText: '',
-    growthUp: true,
+    growthDeltaTone: 'muted' as 'up' | 'down' | 'muted',
     showGrowth: false,
     // 申论
     sl: null as ShenlunStats | null,
@@ -230,19 +232,24 @@ Page({
     );
     const gwMod = this.data.gwMod;
     const rows: GrowthRow[] = g.weeks.slice(-8).map((w) => {
-      const [y, wk] = w.week.split('-');
       const src = gwMod ? (w.modules || {})[gwMod] || { n: 0, c: 0 } : w;
       const pct = src.n ? Math.round((src.c / src.n) * 100) : 0;
-      return { week: w.week, label: y.slice(2) + '年第' + Number(wk) + '周', n: src.n, pct, tone: pctTone(pct) };
+      return { week: w.week, label: weekLabel(w.week), n: src.n, pct, tone: pctTone(pct) };
     });
     let growthDeltaText = '';
-    let growthUp = true;
+    let growthDeltaTone: 'up' | 'down' | 'muted' = 'muted';
     if (rows.length >= 2) {
-      const d = rows[rows.length - 1].pct - rows[rows.length - 2].pct;
-      growthUp = d >= 0;
-      growthDeltaText = '本周比上周' + (d >= 0 ? '提升' : '下降') + ' ' + Math.abs(d) + ' 个百分点';
+      const cur = rows[rows.length - 1];
+      const prev = rows[rows.length - 2];
+      if (cur.n < GROWTH_MIN_N || prev.n < GROWTH_MIN_N) {
+        growthDeltaText = '两周中有一周不足 ' + GROWTH_MIN_N + ' 题，暂不比较';
+      } else {
+        const d = cur.pct - prev.pct;
+        growthDeltaTone = d >= 0 ? 'up' : 'down';
+        growthDeltaText = cur.label + '比' + prev.label + (d >= 0 ? '提升' : '下降') + ' ' + Math.abs(d) + ' 个百分点';
+      }
     }
-    this.setData({ showGrowth: true, gwOptions, growthRows: rows, growthDeltaText, growthUp });
+    this.setData({ showGrowth: true, gwOptions, growthRows: rows, growthDeltaText, growthDeltaTone });
   },
   onGwMod(e: WechatMiniprogram.CustomEvent<{ value: string }>) {
     this.setData({ gwMod: e.detail.value });
