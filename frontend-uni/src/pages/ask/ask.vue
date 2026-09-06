@@ -660,6 +660,7 @@ export default {
         method: 'POST',
         data: {
           uid: anonUid(),
+          question_id: askQid(r.qid) || null,
           module: r.module,
           question_type: r.question_type,
           question_text: r.question_text,

@@ -55,4 +55,8 @@ describe('ask.vue / api.js 接线（源锁）', () => {
     expect(ASK).toMatch(/v-else-if="r\.streaming" class="spin">\{\{ thinkingText\(r\) \}\}/);
     expect(ASK).not.toMatch(/class="spin">生成中…<\/view>/);
   });
+  it('R421b：「存入错题本」带 question_id（题库题深链 → 错题卡「AI 详解」再问才有 redoQid/「查看原题」）', () => {
+    const save = ASK.slice(ASK.indexOf('async save(r)'), ASK.indexOf('async genSimilar('));
+    expect(save).toMatch(/question_id: askQid\(r\.qid\) \|\| null,/);
+  });
 });
