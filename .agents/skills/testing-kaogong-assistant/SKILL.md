@@ -1497,3 +1497,8 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 「中国日历日 0 点秒」只允许 `db.cn_day_start(ts)`；查克隆用 `grep -nE "8 \* 3600|28800" backend/app`，`strftime(gmtime(t+8h))` 日期字串与 `weekday` 计算不是同一语义、不算克隆。
 - R437 归档 app-log 用 `grep -cE " 5[0-9]{2} "` 会误匹配 `[indexnow] submitted 533 urls -> 200`，计数 >0 先看原文。
 - caddy 源站按 `ts` 数「发版后」窗口时，探针网段 `140.232.64.x` 的 `curl/7.81.0` 4xx 是 testing agent 探路径（R440 为 `GET /api/plan`，正确是 `/api/plan/today`），不算产品非 2xx。
+
+## R442 前端两版 dist 同机 A/B 走查经验
+- 疑似「主包变慢」先做同机交替 A/B 再归因：`git worktree add <旧 commit>` + 复用 `node_modules` 软链（锁未变时）→ `npm run build:h5`；两版各起 `python3 /home/ubuntu/r442/proxy.py <dist> <port>`（静态 + `/api/*` 代理生产并加 `X-Kg-Probe: 1`），`ab.sh` A1 B1 A2 B2… 交替 ≥5 轮只比 `bootup-time` 主包 scripting / TBT / long-tasks；本地静态不压缩，FCP/LCP 绝对值不能和生产比。
+- Lighthouse 单机数值必须同看 `environment.benchmarkIndex`（devin-box 正常 3550–3730）；bench <2500 或本机同刻在跑 pytest/部署/其他 lighthouse 时的 scripting/TBT 高值先当噪音、隔离后复测，不直接登记为回归。
+- 用完 `git worktree remove --force` + `prune`；node_modules 软链先 `rm` 再 remove。

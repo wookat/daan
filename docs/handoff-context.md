@@ -2097,3 +2097,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - **D（未定论、R442 起点）**：同机同 bench 下主包 `bootup scripting` R429 `Ct1Bg37q` 402–450 ms（5 次）→ 本轮 `DaOBPuSg` 744/757/1373 ms（3 次），TBT 54–94 → 321–658；样本少、LH 单机噪音大 → R442 本地起两版 dist（R429 commit vs HEAD）交替各跑 ≥5 次 A/B 再归因（候选：R430b `main.js`/`monitor-client.js`、R440 `home.vue`）。
 - E/F：`probe=0` 仍 22 行、`error_reason` 6 行不变、`push_subs` 0、`weekly_reports` 0、WAL 431 KB；`d30a9b0` 归档 app-log 1959 行 0 异常（grep 5xx 会误匹配 `[indexnow] submitted 533 urls`，看上下文）。
 - lhr 留存：`/home/ubuntu/r441_lhr*.json`、`/home/ubuntu/r429_lh/`（devin-box，非仓库）。下次 SOP-10 审计 ~R450。
+
+### R442（只取证不改码不部署：主包脚本成本 A/B 无回归 + `/` LCP 基线决策项）
+- 取证 docs/iter/round-3/r442-main-bundle-bootup-ab-no-regression-lcp-baseline.md。R441-D 关闭：同机交替 5×5，A=R429 `f71db28` 重建 dist 主包 scripting 433–524（均 472）vs B=HEAD dist 426–480（均 457），TBT 93 vs 78，两版主包只差 81 B；生产复测两次 scripting 443/458、perf 0.92–0.93、LCP 2734/2745。R441 记的 744–1373 是量测机噪音。
+- `/` LCP 基线累计 11 次里 10 次 2732–2793（2500 预算恒 WARN、无信息量）→ 决策项交老板：(a) `perf-budget.sh` LCP 线校准到 3000 并注明依据 / (b) 立项主包瘦身（先取证 374 KB 构成）/ (c) 不动；无异议下轮按 (a)。
+- 方法资产：`/home/ubuntu/r442/proxy.py`（本地 dist + `/api` 代理生产加 `X-Kg-Probe: 1`）+ `ab.sh`（交替 Lighthouse 抽指标），可复用于任何前端版本对照；A 版 worktree 已删。
