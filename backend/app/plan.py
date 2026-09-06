@@ -75,8 +75,7 @@ def today_plan(uid: str) -> dict:
     today = db.today_answer_counts(uid)
     reviewed = db.reviews_today(uid)
     # 今日新错题不计入今日计划，否则按计划练习产生的新错题会把刚完成的复习任务变回未完成
-    cn_day_start = (int(time.time() + 8 * 3600) // 86400) * 86400 - 8 * 3600
-    due = db.due_review_count(uid, created_before=cn_day_start)
+    due = db.due_review_count(uid, created_before=db.cn_day_start())
 
     tasks: list[dict] = []
 

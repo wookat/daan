@@ -4255,10 +4255,8 @@ def save_user_profile(uid: str, fields: dict) -> dict:
 
 
 def _day_start(offset_days: int = 0) -> float:
-    """东八区当日 0 点时间戳。"""
-    tz = 8 * 3600
-    now = time.time()
-    return ((now + tz) // 86400 + offset_days) * 86400 - tz
+    """东八区当日 0 点时间戳（offset_days 偏移若干天）。"""
+    return cn_day_start() + offset_days * 86400
 
 
 def today_answer_counts(uid: str) -> dict:
