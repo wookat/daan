@@ -1514,3 +1514,10 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 更直接的是 Playwright 对生产 `add_init_script` 注一个 `PerformanceObserver({type:'layout-shift',buffered:true})` 读 `entries[].sources[].node/previousRect/currentRect`，同时采 `#kg-splash` 的 `classList`/`opacity` 判断位移是否在启动屏遮盖下（脚本样例 `/home/ubuntu/r444/cls_sources.py`；Chrome 用 `/home/ubuntu/.local/bin/google-chrome`，pip 的 playwright 没装浏览器）。请求头带 `X-Kg-Probe: 1`。
 - `had_recent_input=true` 在 LH/Playwright 仿真视口下是常态（视口事件算「输入」），LH 对视口事件后 500 ms 内的位移无条件计入，不要据此把位移当「用户触发」排除。
 - `PRAGMA journal_size_limit` 是连接级：只读探针连接读到 -1 不代表应用连接没设（R435 在应用连接设 64 MiB、R436 已读回），核对要在应用进程内或看 WAL 是否在 checkpoint 后被截到限值以下。
+
+## R445 经验：拦截 `/api/*` 验证「首帧占位 / CLS」时的坑
+- 只 abort 某个 GET 接口（CDP `Fetch.failRequest` / Playwright route.abort）**不等于**前端拿到错误态：`frontend-uni/src/api.js` 的「GET 最近成功快照兜底」会在超时/网络错误时用 localStorage `apiSnap:<path>` 回填并上报 `track stale_fallback`。要复现「数据从未到达」（首访/无缓存）路径，拦截前先 `localStorage.removeItem('apiSnap:/api/xxx')`（首页每日一练还需删 `dailySet`），结束后正常加载会自然重建，无需手工恢复。
+- 对比拦截 / 不拦截的 `getBoundingClientRect().y` 时要在**同一视口同一 holder**下量；更有力的证据是 `Page.addScriptToEvaluateOnNewDocument` 注入 rAF 逐帧采样（记录目标元素文案 + `.top` + `performance.getEntriesByType('resource')` 里该接口的 `responseEnd`），可直接看出回包前后元素 y 是否变化。
+- 桌面宽视口（≥1024）下 uni H5 `showActionSheet` 是居中 popover，`.uni-actionsheet__action`（取消）`display:none`，只能点遮罩关闭；判断"已关闭"用 `getComputedStyle(.uni-actionsheet).visibility=='hidden'`，元素本身不会移除。
+- 用 `nohup python3 xxx.py &` + `$!` 记 pid 后再 `kill`，有时进程仍存活（本轮 holder/abort 各一次）——收尾务必 `pgrep -af holdtab|r445_abort` 按真实 pid `kill -9`，否则视口/Fetch 拦截会一直残留导致后续 reload 仍被拦。
+- 只读走查也会写 `growth_events`（`boot` / `stale_fallback`，`probe=1`），收尾按 `uid + created_at>=开始时间 + probe=1` 删即可。
