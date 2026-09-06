@@ -4,7 +4,7 @@
 
     <!-- 真题列表 -->
     <template v-if="tab === 'q' && !detail">
-      <kg-chip-row :model-value="qFavOnly ? '' : qtype" :options="qtypeChips" class="chips" @update:model-value="setQtype" />
+      <kg-chip-row :model-value="qFavOnly ? -1 : QTYPES.indexOf(qtype)" :options="qtypeChips" class="chips" @update:model-value="setQtype(QTYPES[$event])" />
       <view class="fltbar">
         <kg-tag v-if="paper" tone="brand" class="paper-tag" role="button" :aria-label="'清除套卷筛选：' + paper" @click="clearPaper">{{ paper }} ✕</kg-tag>
         <kg-button variant="secondary" size="sm" icon="chevron-down" :tone="region ? 'brand' : undefined" @click="fltOpen = true">{{ region || '地区' }}</kg-button>
@@ -138,7 +138,7 @@
     <!-- 素材/范文 -->
     <template v-if="tab === 'm'">
       <view class="fltbar">
-        <kg-chip-row :model-value="favOnly ? '' : mtype" :options="mtypeChips" class="chips grow" @update:model-value="setMtype" />
+        <kg-chip-row :model-value="favOnly ? -1 : MTYPES.indexOf(mtype)" :options="mtypeChips" class="chips grow" @update:model-value="setMtype(MTYPES[$event])" />
         <kg-button variant="secondary" size="sm" icon="star" :tone="favOnly ? 'brand' : undefined" :aria-pressed="favOnly ? 'true' : 'false'" @click="toggleFavOnly">收藏{{ favIds.length ? ' ' + favIds.length : '' }}</kg-button>
       </view>
       <kg-skeleton v-if="loading" preset="cards" />
@@ -294,10 +294,10 @@ export default {
       return (TABS.find((t) => t.value === this.tab) || TABS[0]).label;
     },
     qtypeChips() {
-      return QTYPES.map((t) => ({ label: t === '全部' ? '全部题型' : t, value: t }));
+      return QTYPES.map((t, i) => ({ label: t === '全部' ? '全部题型' : t, value: i }));
     },
     mtypeChips() {
-      return MTYPES.map((t) => ({ label: t, value: t }));
+      return MTYPES.map((t, i) => ({ label: t, value: i }));
     },
     yearChips() {
       return [{ label: '全部', value: 0 }].concat(this.years.map((y) => ({ label: String(y), value: y })));
