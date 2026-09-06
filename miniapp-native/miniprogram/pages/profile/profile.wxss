@@ -147,36 +147,77 @@
 }
 
 .badges-row {
+  position: relative;
   display: flex;
-  gap: var(--sp-8);
-  padding: var(--sp-12) var(--sp-16) var(--sp-16);
+  padding: var(--sp-12) var(--sp-16) var(--sp-12);
+}
+
+.badge::before,
+.badge::after {
+  content: '';
+  position: absolute;
+  top: calc(var(--sp-8) + 4px);
+  height: 2px;
+  background: var(--line);
+}
+
+.badge::before {
+  left: 0;
+  right: 50%;
+}
+
+.badge::after {
+  left: 50%;
+  right: 0;
+}
+
+.badge:first-child::before,
+.badge:last-child::after {
+  display: none;
 }
 
 .badge {
+  position: relative;
   flex: 1;
   display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 2px;
-  height: 36px;
-  border-radius: var(--r-sm);
-  background: var(--fill);
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-8);
+  min-height: var(--hit-min);
+  padding-top: var(--sp-8);
   color: var(--ink-4);
 }
 
+.badge-dot {
+  position: relative;
+  z-index: 1;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--card);
+  border: 2px solid var(--line);
+  box-sizing: border-box;
+}
+
 .badge.is-on {
-  background: var(--warn-soft);
-  color: var(--warn);
+  color: var(--ink);
+}
+
+.badge.is-on .badge-dot {
+  background: var(--warn);
+  border-color: var(--warn);
 }
 
 .badge-n {
-  font-size: var(--fs-body);
+  font-size: var(--fs-sub);
   font-weight: 600;
-  line-height: 36px;
+  line-height: 1;
 }
 
 .badge-k {
   font-size: var(--fs-caption);
+  font-weight: 400;
+  margin-left: 1px;
 }
 
 .row--hover {

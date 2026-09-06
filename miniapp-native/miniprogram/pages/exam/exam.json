@@ -6,7 +6,6 @@
     "kg-empty": "/components/kg-empty/index",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
     "kg-group": "/components/kg-group/index",
-    "kg-row": "/components/kg-row/index",
-    "kg-grid4": "/components/kg-grid4/index"
+    "kg-row": "/components/kg-row/index"
   }
 }

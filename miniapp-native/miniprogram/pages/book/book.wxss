@@ -166,23 +166,13 @@
 .tabs {
   display: flex;
   align-items: center;
-  gap: var(--sp-8);
+  gap: var(--sp-4);
   margin: var(--sp-20) 0 var(--sp-8);
 }
 
 .tabs-seg {
   flex: 1;
   min-width: 0;
-}
-
-.filterbtn {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--r-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
 }
 
 .textbtn {

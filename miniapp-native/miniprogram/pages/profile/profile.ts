@@ -26,7 +26,6 @@ Page({
     bestStreak: 0,
     mastered: 0,
     mistakeN: 0,
-    badgeN: 0,
     offlineN: 0,
     version: '',
   },
@@ -158,7 +157,6 @@ Page({
       this.setData({
         badgeInfo,
         nextMilestone,
-        badgeN: (badgeInfo.badges || []).filter((b) => b.unlocked).length,
         streakN: s || this.data.streakN,
       });
       this.recomputeMedals();

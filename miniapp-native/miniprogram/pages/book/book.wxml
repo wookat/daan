@@ -95,9 +95,7 @@
     <!-- 三态切换 + 筛选 + 批量 -->
     <view class="tabs">
       <view class="tabs-seg"><kg-segmented options="{{tabOpts}}" value="{{tab}}" bind:change="onTab" /></view>
-      <view wx:if="{{tab !== 'fav'}}" class="filterbtn" hover-class="filterbtn--hover" role="button" aria-label="筛选与排序" bind:tap="onFilterOpen">
-        <l-icon name="sliders-horizontal" size="20" tone="{{sortBy !== 'time' || filterMod || filterType ? 'brand-text' : 'ink-2'}}" />
-      </view>
+      <view wx:if="{{tab !== 'fav'}}" class="textbtn {{sortBy !== 'time' || filterMod || filterType ? 'on' : ''}}" hover-class="filterbtn--hover" role="button" aria-label="筛选与排序" bind:tap="onFilterOpen">筛选</view>
       <view wx:if="{{tab !== 'fav' && shown.length}}" class="textbtn {{batchMode ? 'on' : ''}}" hover-class="filterbtn--hover" role="button" bind:tap="onToggleBatch">{{batchMode ? '完成' : '批量'}}</view>
     </view>
 

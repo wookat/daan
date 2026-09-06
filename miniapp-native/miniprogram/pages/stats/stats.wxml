@@ -136,12 +136,13 @@
         <kg-chart-heatmap cols="{{hmCols}}" total="{{hmTotal}}" />
       </kg-group>
 
-      <kg-group wx:if="{{subMap.length}}" title="考点地图">
+      <kg-group wx:if="{{subMap.length}}" title="考点地图" more="{{kmCovText ? kmCovText + '　全部' : '全部'}}" bind:more="onGoMasteryMap">
         <view class="blk">
           <view wx:for="{{subMap}}" wx:key="module" wx:for-item="g" class="km-group">
             <text class="km-mod">{{g.name}}</text>
             <view class="km-items">
               <view wx:for="{{g.subs}}" wx:key="sub" wx:for-item="s" class="km-chip is-{{s.lv}}" aria-role="button" hover-class="row--hover" data-mod="{{g.module}}" data-sub="{{s.sub}}" bind:tap="onGoSub">
+                <view class="km-dot" />
                 <text class="km-name">{{s.sub}}</text>
                 <text class="km-pct num">{{s.pct}}% · {{s.done}}题</text>
               </view>
@@ -152,7 +153,6 @@
       </kg-group>
 
       <kg-group title="更多">
-        <kg-row icon="target" title="掌握度地图" value="{{kmCovText}}" bind:click="onGoMasteryMap" />
         <kg-row icon="calendar" title="学习计划" bind:click="onGoPlanSetup" />
         <kg-row icon="file-text" title="周学习报告" bind:click="onGoWeekly" />
         <kg-row icon="calendar-check" title="学习日历" value="{{streak ? '连续 ' + streak + ' 天' : ''}}" last bind:click="onGoCalendar" />

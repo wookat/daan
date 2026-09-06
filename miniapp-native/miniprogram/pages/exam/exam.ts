@@ -9,7 +9,7 @@ import { syncTabBar } from '../../utils/tabbar';
 type PaperVM = ExamPaper & { subText: string };
 type AttemptVM = { id: number; title: string; desc: string; scoreText: string; scoreTone: string };
 
-const PREVIEW_N = 20;
+const PREVIEW_N = 8;
 const RECENT_N = 3;
 
 function toVM(p: ExamPaper): PaperVM {
@@ -47,12 +47,6 @@ Page({
     total: 0,
     recent: [] as AttemptVM[],
     examResume: null as (ResumeInfo & { leftText: string }) | null,
-    entries: [
-      { key: 'papers', icon: 'files', label: '真题卷库' },
-      { key: 'contest', icon: 'trophy', label: '模考大赛' },
-      { key: 'shenlun', icon: 'pen-line', label: '申论' },
-      { key: 'history', icon: 'clipboard-list', label: '模考记录' },
-    ],
   },
   onShow() {
     syncTabBar(this, 2);
@@ -109,13 +103,6 @@ Page({
         this.setData({ examResume: null });
       },
     });
-  },
-  onEntry(e: WechatMiniprogram.CustomEvent<{ key: string }>) {
-    const k = e.detail.key;
-    if (k === 'papers') this.onAllPapers();
-    else if (k === 'contest') this.onContest();
-    else if (k === 'shenlun') this.onShenlun();
-    else if (k === 'history') this.onAllAttempts();
   },
   onAttemptTap(e: WechatMiniprogram.TouchEvent) {
     const id = Number(e.currentTarget.dataset.id);

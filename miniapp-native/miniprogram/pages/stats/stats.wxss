@@ -365,24 +365,34 @@
 }
 
 .km-chip {
+  position: relative;
   display: inline-flex;
   flex-direction: column;
-  padding: var(--sp-4) var(--sp-12);
+  padding: var(--sp-4) var(--sp-12) var(--sp-4) var(--sp-24);
   border-radius: var(--r-sm);
   background: var(--fill);
-  border-left: 3px solid var(--ink-4);
 }
 
-.km-chip.is-lo {
-  border-left-color: var(--bad);
+.km-dot {
+  position: absolute;
+  left: var(--sp-12);
+  top: 11px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-4);
 }
 
-.km-chip.is-mid {
-  border-left-color: var(--warn);
+.km-chip.is-lo .km-dot {
+  background: var(--bad);
 }
 
-.km-chip.is-hi {
-  border-left-color: var(--ok);
+.km-chip.is-mid .km-dot {
+  background: var(--warn);
+}
+
+.km-chip.is-hi .km-dot {
+  background: var(--ok);
 }
 
 .km-name {

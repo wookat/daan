@@ -19,7 +19,7 @@
       <view class="nums-it"><text class="nums-n num">{{totalDone}}</text><text class="nums-k">累计题数</text></view>
       <view class="nums-it"><text class="nums-n num">{{streakN}}</text><text class="nums-k">连续天数</text></view>
       <view class="nums-it"><text class="nums-n num">{{mistakeN}}</text><text class="nums-k">错题</text></view>
-      <view class="nums-it"><text class="nums-n num">{{badgeN}}</text><text class="nums-k">打卡徽章</text></view>
+      <view class="nums-it"><text class="nums-n num">{{medalsGot}}</text><text class="nums-k">成就</text></view>
     </view>
 
     <kg-group title="记录">
@@ -50,9 +50,9 @@
           <text wx:else class="badges-s">全部解锁</text>
         </view>
         <view class="badges-row">
-          <view wx:for="{{badgeInfo.badges}}" wx:key="days" class="badge {{item.unlocked ? 'is-on' : ''}}" aria-role="button" hover-class="row--hover" data-days="{{item.days}}" data-unlocked="{{item.unlocked}}" bind:tap="onTapBadge">
-            <text class="badge-n num">{{item.days}}</text>
-            <text class="badge-k">天</text>
+          <view wx:for="{{badgeInfo.badges}}" wx:key="days" class="badge {{item.unlocked ? 'is-on' : ''}}" aria-role="button" aria-label="{{item.days + ' 天打卡徽章' + (item.unlocked ? '，已解锁' : '，未解锁')}}" hover-class="row--hover" data-days="{{item.days}}" data-unlocked="{{item.unlocked}}" bind:tap="onTapBadge">
+            <view class="badge-dot" />
+            <text class="badge-n num">{{item.days}}<text class="badge-k">天</text></text>
           </view>
         </view>
       </view>
@@ -62,7 +62,7 @@
     <kg-group title="设置">
       <kg-row icon="package" title="离线题包" value="{{offlineN ? offlineN + ' 个' : ''}}" bind:click="onOffline" />
       <kg-row wx:if="{{remindAvail}}" icon="alarm-clock" title="学习提醒" value="{{reminderOn ? '已开启' : '未开启'}}" bind:click="onReminder" />
-      <kg-row icon="refresh-cw" title="数据同步" desc="本机标识 {{uid}}" value="{{user ? '云端' : '仅本机'}}" chevron="{{false}}" bind:click="onCopyUid" />
+      <kg-row icon="refresh-cw" title="数据同步" desc="{{user ? '' : '登录后错题与进度跨设备同步'}}" value="{{user ? '云端' : '仅本机'}}" chevron="{{false}}" bind:click="onCopyUid" />
       <kg-row wx:if="{{user}}" icon="log-out" title="退出登录" chevron="{{false}}" bind:click="onLogout" />
       <kg-row icon="info" title="版本" value="{{version}}" chevron="{{false}}" last />
     </kg-group>

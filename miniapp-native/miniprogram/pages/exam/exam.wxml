@@ -17,10 +17,6 @@
       <view class="focus-acts"><kg-button variant="primary" size="lg" block bind:click="onMini">开始迷你模考</kg-button></view>
     </view>
 
-    <kg-group title="更多模考">
-      <kg-grid4 items="{{entries}}" bind:click="onEntry" />
-    </kg-group>
-
     <kg-group wx:if="{{recent.length}}" title="最近成绩" more="全部" bind:more="onAllAttempts">
       <kg-row
         wx:for="{{recent}}"
@@ -68,5 +64,10 @@
       </block>
     </kg-group>
     <text wx:if="{{!loading && papers.length && total <= papers.length}}" class="list-end">共 {{total}} 套，已全部展示</text>
+
+    <kg-group title="更多">
+      <kg-row icon="trophy" title="模考大赛" desc="全站同卷同时开考，交卷即出排名" bind:click="onContest" />
+      <kg-row icon="pen-line" title="申论专区" desc="真题作答与 AI 批改" last bind:click="onShenlun" />
+    </kg-group>
   </view>
 </scroll-view>
