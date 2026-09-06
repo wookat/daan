@@ -1646,3 +1646,11 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 验证命中带别只看 `getComputedStyle(el,'::after').height`，要 `document.elementFromPoint(cx, cy±19)` 命中 / `±21` 不命中，两边都测才算 40px；源锁正则同时锁 `top: 50%`/`translateY(-50%)`/`height: 40px`。
 - 部署前可用本地 dist 做一次同脚本预检：`python3 -m http.server 8765` 起 `dist/build/h5`，Playwright `ctx.route('<base>/api/**')` 把 GET 转发到生产（带 `X-Kg-Probe: 1`、非 GET abort），与部署后生产数值逐项比对一致才算「本地=线上」。多视口在**同一个** `connect_over_cdp` 连接里开多个 context（R463 二连崩掉的规避法）。
 - `.chip.sm` 之类子变体去掉自己的 `font-size`/`padding` 竖向值，让高度/字号继承父规则，源锁里反向锁「子变体不含 min-height/font-size」防以后又各写一套。
+
+## R465 经验：审计选簇别绕过主循环页 + header 内可点文字的 40px 法
+- 历轮按「簇」选审计对象（每日一练/复习流/分享/成长/申论）会系统性绕过「每题必经」的作答页本体；每 10 轮 SOP-10 至少把 `pages/practice` `pages/book` `pages/index` 三个主循环页跑一遍 `r465_scan.py` 式只读读数（`getBoundingClientRect` + `fontSize`，`.tag .sheet-x .op .fontbtn` 等）。
+- 判「谁该撑高」先 `grep -o 'class="[^"]*"'` 出所有挂 `@click` 的元素再核外层容器，纯信息标签（`.real-tag .cnt .mchip .exp-k`）只改字号；模板里 `<text @click>` 的文字链要撑 40px 得改成 `<view class="x"><text class="x-t">`（外层 flex 40px + 负外边距，视觉/省略号搬到内层），`<text>` 上直接 `min-height` 在 uni H5 是 inline 不生效。
+- header 单行里的可点文字（`.tag .op`）用 `min-height:40px; margin:-10px 0`，复验必须同时读 `.rhead` 行高（改前后都 20px）与 `elementFromPoint` 命中带，两者缺一即算回退。
+- 字号 22→24rpx 会让 nowrap+ellipsis 的标签在 375 多出省略号：复验读 `el.scrollWidth > el.clientWidth`，超出时先收同行 `gap`/水平 padding，不缩字号。
+- `min-height: 44rpx` 这类「看起来有热区」的 rpx 值（=22px）是无效值，源锁正则只认 `min-height:\s*40px`。
+- 死规则（模板已不引用的选择器）一并抬字号让「样式块内无 <24rpx」一条正则可锁，文档里列清哪些是死规则，不在审计轮删。

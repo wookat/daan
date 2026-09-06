@@ -2269,3 +2269,14 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 部署 rc=0、rev 一致、6/6 回归 200；perf 随部署 0.88 WARN → 独立复跑 0.93 OK（R460 同形态）。到期项 23:17Z 无增量：probe=0 33/1、growth 20/4、error_reason 7（≥09-11 0）、push_subs 0、weekly 2、`quick_check ok`、WAL 同字节、healthy 0 重启；(c) 184 请求 404/monitor 0。宿主 93% / 3.8 G。
 - 如实：375 为 360 仿真直读、真机未量；作答记录 tab / 批改流未真实走；无 testing agent 录屏；PR #619 仍 open 待人工合并。
 - 取证：`docs/iter/round-3/r464-shenlun-font-floor-hit-area.md`；源锁 `frontend-uni/tests/shenlun-r464-audit.test.js`。
+
+## R465（核心作答页 `pages/practice/practice.vue` 首次过 R410+ 字号/热区审计；前端 1 文件 + 源锁，生产 `04ef7f7` → `c3326e4`）
+- 只读盘点先命中：作答页本体（主循环每题必经）从未过审计——样式块 40 处 `19–23rpx`、答题卡入口 `.tag` 生产 20.8px 直接可点、抽屉 ✕ `.sheet-x` 27.7×35.3。R430–R464 历轮选簇全绕过了它。
+- 改动：40 处 → `24rpx`（含 11 处模板已不引用的死规则，一并抬只为一条源锁正则可锁；不删）；按模板逐个核 `@click` 后只对可点元素补 40px：`.tag`（模板 1 行改 `<view class="tag"><text class="tag-t">`，外层 40px + `margin:-10px 0`）、`.op`、`.fontbtn::after inset -12px`、`.sheet-x`×3、`.lead-x`、`.mat-fold`、`.hs-rate-btn`、`.report-link`、`.deep`、`.rp-chip`（原 `min-height:44rpx`=22px 无效值）、`.wr-btn`、`.rr-go`、`.duenudge-go`、`.loginnudge-x`、`.fixreport`；纯信息标签只改字号不撑高。
+- 硬约束达成：`.rhead` header 行高 20px 不变（375/1440 生产一手）；`.tag` 22→24rpx 变宽在 375 出省略号 → `.hstats gap 12→8rpx` + `.op` 不加水平 padding 补回，复验无省略号。
+- 生产复验 375/1440：`.tag/.op/.sheet-x` 命中带 40（`elementFromPoint` ±20/−19）、`.fontbtn` 42、解析区 `.hs-rate-btn/.report-link/.deep` 40；`<11.9px` 叶节点全部 = 24rpx 仿真 11.52px，0 个 <24rpx。
+- 本地门 vitest 642/642（+4 `tests/practice-r465-audit.test.js`）/ eslint / build 绿；部署 rc=0、rev 一致、7/7 回归 200、perf 一次全 OK（0.94 / LCP 2354）。
+- 到期项无增量（probe=0 33/1、growth 20/4、error_reason 7 / ≥09-11 0、push_subs 0、weekly 2、quick_check ok、healthy 0 重启）；(c) 200 请求 404/monitor 0。**WAL 3,164,192 → 4,124,152 B = 1001 帧**，首次到 R455 预测的 1000 帧 autocheckpoint 阈值，下一轮看是否停在高水位同字节。
+- 如实：375 为 360 仿真；完成页/领跑提示/材料折叠/纠错 chip 未在生产真实走到，按源码 + 本地 dist 推断 + 源锁；无 testing agent 录屏。宿主盘 **94% / 3.1 G**（再降）。
+- 留 R466：搜索页 `.tab` 25.7 / `.scancel` 20、讨论页 `.msg` 15、个人页 `.zl-link` 16、面试页 `.hist-link` 18 只读读数待语义确认（是否有外层撑高）。
+- 取证：`docs/iter/round-3/r465-practice-font-floor-hit-area.md`；源锁 `frontend-uni/tests/practice-r465-audit.test.js`。
