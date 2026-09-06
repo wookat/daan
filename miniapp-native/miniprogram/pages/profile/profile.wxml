@@ -50,6 +50,12 @@
     </kg-card>
 
     <t-cell-group class="cells">
+      <t-cell title="学习日历" description="每日活跃 · 连续打卡 · 徽章" arrow hover bind:click="onCalendar">
+        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="calendar" size="20" tone="brand" /></view>
+      </t-cell>
+      <t-cell title="周学习报告" description="本周 vs 上周 · 掌握度变化" arrow hover bind:click="onWeekly">
+        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="file-text" size="20" tone="brand" /></view>
+      </t-cell>
       <t-cell title="刷题小队" description="组队打卡 · 互相催学" arrow hover bind:click="onTeam">
         <view slot="left-icon" class="row-ico bg-brand"><l-icon name="users" size="20" tone="brand" /></view>
       </t-cell>

@@ -148,6 +148,12 @@ Page({
   onTeam() {
     wx.navigateTo({ url: '/pages/team/team' });
   },
+  onCalendar() {
+    wx.navigateTo({ url: '/pkgGrow/calendar/calendar' });
+  },
+  onWeekly() {
+    wx.navigateTo({ url: '/pkgGrow/weekly-report/weekly-report' });
+  },
   onLogin() {
     wx.navigateTo({ url: '/pages/login/login' });
   },
