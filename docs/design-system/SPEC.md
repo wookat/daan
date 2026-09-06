@@ -142,7 +142,7 @@
 - 引用原始阶（`--brand-500`、`$kg-primary-600`）—— 过渡期别名存在，但新代码不许写。
 
 ### 2.5 z-index（新增，四档）
-`--z-sticky 10`（吸顶筛选行）/ `--z-bar 50`（固定底部操作条，`exam.vue:563 .navrow` 现值）/ `--z-overlay 100`（遮罩+sheet）/ `--z-toast 200`。wot `wd-popup`/`wd-toast` 的默认层级 `[待核]`（本机未装 node_modules），foundation 用 `--wot-*` 变量对齐到这四档。参照 Brilliant 十档（`research/01` 借鉴 #7），我们四档够用。
+`--z-sticky 10`（吸顶筛选行）/ `--z-bar 50`（固定底部操作条，`exam.vue:563 .navrow` 现值）/ `--z-overlay 1000`（遮罩+sheet）/ `--z-toast 1100`。已核：wot `wd-popup` 默认 100、只认内联 `z-index` prop；uni-h5 壳 `page-head`/`tabbar` 998、原生 `toast`/`modal`/`actionsheet` 999（`@dcloudio/uni-h5/style`）。因此 overlay 必须 >998 才能盖住 TabBar（否则 sheet 底部按钮被壳压住不可点），原生反馈层再抬到 `--z-toast`（`App.vue` H5 段）。`KgSheet` 运行时读 `--z-overlay` 传给 `wd-popup`。参照 Brilliant 十档（`research/01` 借鉴 #7），我们四档够用。
 
 ### 2.6 对比度验收表（生成脚本内置断言）
 `build.mjs --check` 跑以下断言，任一不达标则失败：正文对 `--card`/`--bg` ≥4.5（`--ink/--ink-2/--ink-3/--brand-text/--*-strong`，浅+深）；`--on-brand` 对 `--brand`、`--*-strong` ≥4.5；图标/边框 `--brand/--ok/--bad/--line-strong` 对 `--card` ≥3。当前值全部通过（本轮实算：`--ink-2` 9.86、`--brand-text` 浅 6.55（对 soft）/ 深 7.20、`--ok-strong` 对 `--ok-soft` 4.76、`--bad-strong` 对 `--bad-soft` 5.91、`--warn-strong` 对 `--warn-soft` 4.84、`--info-strong` 对 `--info-soft` 7.09）。`--ok-strong` 对 `--ok-soft` 4.76 贴线，不要再调浅。

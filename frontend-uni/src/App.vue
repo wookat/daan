@@ -83,7 +83,28 @@ page {
   font-family: var(--font-sans);
 }
 
+/* wot 未开放变量的硬编码底色（wd-popup #fff / picker roller rgba(245,245,245)）：写在 scoped 选择器上，只能提权覆盖到语义 token */
+.wd-popup-wrapper .wd-popup {
+  background: var(--card) !important;
+}
+.wd-picker-view .wd-picker-view__roller {
+  background: var(--fill) !important;
+}
+/* wot 1.14 的 $-picker-mask 是空格分隔的双 gradient（缺逗号），整条 background 无效，滚轮上下渐隐一直没渲染；这里按上/下半区各铺一层 */
+.wd-picker-view .wd-picker-view__mask {
+  background:
+    linear-gradient(180deg, var(--card-fade), var(--card-fade-2)) top / 100% 50% no-repeat,
+    linear-gradient(0deg, var(--card-fade), var(--card-fade-2)) bottom / 100% 50% no-repeat !important;
+}
+
 /* #ifdef H5 */
+/* uni-h5 壳：page-head/tabbar 998、原生 toast/modal 999；遮罩+sheet 走 --z-overlay 压过壳，原生反馈层再抬到 --z-toast */
+uni-toast,
+uni-modal,
+uni-actionsheet .uni-mask,
+uni-actionsheet .uni-actionsheet {
+  z-index: var(--z-toast) !important;
+}
 html {
   /* 恒预留滚动条槽位：内容变长出现滚动条时居中壳不再横移（CLS） */
   scrollbar-gutter: stable;

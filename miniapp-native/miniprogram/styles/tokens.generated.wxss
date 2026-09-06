@@ -31,6 +31,8 @@ page {
   --card: #ffffff;
   --bg: #f6f7fb;
   --mask: rgba(23,24,28,.45);
+  --card-fade: rgba(255,255,255,.9);
+  --card-fade-2: rgba(255,255,255,.25);
   --hl-bg: #fef08a;
   --hl-ink: inherit;
   --sh-1: 0 2px 8px rgba(23,24,28,.06);
@@ -83,8 +85,8 @@ page {
   --icon-xl: 32px;
   --z-sticky: 10;
   --z-bar: 50;
-  --z-overlay: 100;
-  --z-toast: 200;
+  --z-overlay: 1000;
+  --z-toast: 1100;
   --bp-md: 768px;
   --bp-lg: 1024px;
   --bp-xl: 1366px;
@@ -141,6 +143,8 @@ page {
     --card: #1d1f28;
     --bg: #15161c;
     --mask: rgba(0,0,0,.6);
+    --card-fade: rgba(29,31,40,.9);
+    --card-fade-2: rgba(29,31,40,.25);
     --hl-bg: rgba(250,204,21,.22);
     --hl-ink: #fde047;
     --sh-1: none;

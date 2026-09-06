@@ -1246,10 +1246,6 @@ export default {
 .sub-n { font-size: var(--fs-sub); color: var(--ink-3); flex-shrink: 0; }
 
 /* #ifdef H5 */
-/* Tab 页底部 TabBar（z 998）压在 KgSheet（--z-overlay 100）之上：窄屏把弹层收到 TabBar 上方 */
-@media (max-width: 767px) {
-  :deep(.kg-sheet.wd-popup--bottom) { bottom: calc(50px + env(safe-area-inset-bottom)); }
-}
 @media (min-width: 1024px) {
   .wrap.home { max-width: 1064px; padding-top: var(--sp-24); }
   .toprow { max-width: 640px; }

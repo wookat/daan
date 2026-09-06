@@ -592,9 +592,6 @@ export default {
 .zl-copy { font-size: var(--fs-caption); color: var(--ink-3); }
 
 /* #ifdef H5 */
-@media (max-width: 767px) {
-  :deep(.kg-sheet.wd-popup--bottom) { bottom: calc(50px + env(safe-area-inset-bottom)); }
-}
 @media (min-width: 1024px) {
   .wrap.profile { max-width: 1064px; }
 }

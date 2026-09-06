@@ -809,8 +809,6 @@ export default {
 .kbd-note { display: block; text-align: center; font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-12); }
 
 /* #ifdef H5 */
-/* 解析浮层内容超过 70vh 时由 body 自身滚动，footer 固定在面板底部 */
-.page :deep(.kg-sheet__body) { overflow-y: auto; }
 .page :deep(.kg-two__aside) { display: none; }
 @media (min-width: 1024px) {
   .page { max-width: 1064px; margin: 0 auto; padding-bottom: var(--sp-24); }
