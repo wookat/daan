@@ -5,7 +5,7 @@
     :safe-area-inset-bottom="position === 'bottom'"
     :z-index="100"
     custom-class="kg-sheet"
-    :custom-style="position === 'center' ? 'width:480px;border-radius:var(--r-lg)' : ''"
+    :custom-style="sheetStyle"
     @update:model-value="$emit('update:modelValue', $event)"
     @close="$emit('close')"
   >
@@ -35,6 +35,11 @@ export default {
   data() { return { wide: false }; },
   computed: {
     position() { return this.wide ? 'center' : 'bottom'; },
+    /** wd-popup 把 #fff 写死在 .wd-popup-wrapper[scoped] .wd-popup 上、深色只认 .wot-theme-dark，且 custom-class 挂在非根节点拿不到本组件 scope 属性；用内联 custom-style 让面板底色跟 --card */
+    sheetStyle() {
+      const base = 'background:var(--card);';
+      return this.position === 'center' ? base + 'width:480px;border-radius:var(--r-lg)' : base + 'border-radius:var(--r-lg) var(--r-lg) 0 0';
+    },
   },
   mounted() {
     // #ifdef H5
@@ -56,8 +61,6 @@ export default {
 </script>
 
 <style>
-/* wd-popup 写死 .wd-popup-wrapper[scoped] .wd-popup{background:#fff}（(0,3,0)），且深色只认 .wot-theme-dark；这里用 !important 让面板跟 --card 走 */
-.wd-popup-wrapper .wd-popup.kg-sheet, .kg-sheet.wd-popup { background: var(--card) !important; border-radius: var(--r-lg) var(--r-lg) 0 0; }
 .kg-sheet__in { display: flex; flex-direction: column; max-height: 70vh; padding: 0 var(--sp-16) var(--sp-16); }
 .kg-sheet__grab { width: 36px; height: 4px; border-radius: var(--r-full); background: var(--line); margin: var(--sp-8) auto var(--sp-4); }
 .kg-sheet__hd { display: flex; align-items: center; justify-content: space-between; padding: var(--sp-12) 0; }
