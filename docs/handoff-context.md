@@ -1904,3 +1904,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - book.vue 42 处 / favorites.vue 4 处 18–23rpx → 24rpx（R413 预存 P2）。详见 docs/iter/round-3/r414-exam-multi-answer-normalize-fontfloor.md。
 - 本地 pytest 434（+5）/ ruff / pyright 0；vitest 578（+5）/ eslint / build:h5 绿。生产复验（testing agent，375/1440，paper 116 原生作答→F5 恢复→交卷→报告→DB 对账）全 PASS；清理 25 行 → LEFTOVER 0；questions 156792/109371、quarantine 874、paper_exports 38。
 - 未测/遗留：OMR 答题卡多选（生产 38 张卷无多选样本）；`.trend-kn`（需 4 周内已掌握）；`.sort-chip` 仅 CSS 无模板；单选多涂 status=multi UI 无法产生。复验顺带暴露 P2：进 exam 页不作答直接 F5 会弹「继续上次模考？（已答 0/N 题）」并留空 `exam_attempts`+`exam_progress`（既有行为，R415 候选）。
+
+### R415（rev `50f6f26`，bundle 变）
+- 生产只读取证（e203afa 容器）：`exam_attempts` 42 / 已交卷 17 / 未交卷 25（<1d 3、<7d 13、≥7d 9，17 uid）；`exam_progress` 7 行里 **6 行 picks=`{}`**——「进过页面就走」形态；原 `start_exam_attempt` 只清 >24h 且不删进度行。
+- 修：`exam-resume.js` 新增 `countAnswered`/`shouldPushProgress`，`parseExamProgress` 已答 0 → null（首页/卷库不出 0/N 卡）；`exam.vue` 续考弹窗要求已答 >0，`pushProgress` 无作答无标记且从未推送过不写服务端、推送过后一律同步（清空作答也覆盖）；`db.start_exam_attempt` 清本人 >24h 未交卷 **或** 同卷且进度空/无进度行的 attempt 连同 `exam_progress` 行。`/api/exam/resume` 契约未改（历史空行由前端过滤）。详见 docs/iter/round-3/r415-exam-empty-attempt-resume.md。
+- 本地 pytest 435（+1）/ ruff / pyright 0；vitest 582（+4）/ eslint / build:h5 绿。生产复验（testing agent，375/1440，paper 116）：不答 F5 不弹且旧空场次+`{}` 行回收、首页/卷库无卡、答 BD 后 F5 弹 1/62 恢复、取消后 DB `{}` 再 F5 不弹并回收、交卷报告/mistakes 一致，全 PASS；清理 9 行 → LEFTOVER 0；questions 156792/109371、quarantine 874、paper_exports 38。
+- 已知取舍：**只标记不作答**时服务端会落 `{picks:{},marks:[…]}`，但 F5 按空场次新开并回收 → 标记丢失（前后端「空」口径不一致，P3，候选修法：`shouldPushProgress` 不把 marks 视为内容，或 reap SQL 把有 marks 视为非空）。不做历史 25 条空 attempt 一次性清理（各 uid 下次开考自清、用户不可见）。375 A/C/D/E 段 console 全量 dump 缺失（仅 `/api/exam/*` 全 200；1440 全段与 375 list 段全量 0）。

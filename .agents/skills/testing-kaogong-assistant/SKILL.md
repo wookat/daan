@@ -5,6 +5,15 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R415 补充（testing agent）— 模考「空场次」语义
+- R415 起：进 `exam?paper_id=N` 不作答/不标记 → **不会** `POST /api/exam/progress`（首次防抖与 onHide/onUnload flush 都被 `shouldPushProgress` 拦），F5 也不弹「继续上次模考？」而是直接新 attempt；下一次 `/api/exam/start` 会删本人同卷「无 progress 行 / picks '' 或 '{}'」的旧 attempt（连 progress 行）以及 >24h 未交卷的。验证套路：LS `examProgress.data.attemptId` 前后对比 + 容器 DB `exam_attempts/exam_progress where uid=?`。
+- 一旦本场推送过（或从快照恢复），之后清空作答也会同步 `picks {}`；再 F5 → 0 已答不弹 → 新场回收旧 `{}` 行。只标记不答会落 `{picks:{},marks:[...]}`，但 F5 后同样按空场次回收 → **标记丢失**（设计如此，记录即可）。
+- 首页 `.ercard` / 卷库 `.card.resume` 由 `parseExamProgress` 过滤 answered 0；`/api/exam/resume` 仍会回 picks `{}` 的历史快照，不要以接口有返回判「有卡」。
+- paper 116 运行时可能只有 62 题、273036 在 slot 23（不是 R414 记的 24）——每次以 LS `examProgress.data.items.findIndex(q=>q.id===273036)` 现场取 slot。
+- `window.__hdr/__cerr/__pexc` 随 document 重建，**每次 F5/location.href 前先 `r391usr.py read <file>` dump**，否则该段诊断丢失（R415 375 前几段就漏了，只剩 `__exb`）。
+- 用 `hold_restart.sh`/holdvw 切过 1440 后，`Emulation.clearDeviceMetricsOverride` 单独调用可能不生效（innerWidth 仍 1440）；先 `setDeviceMetricsOverride 1600x1017 mobile=false` 再 clear 再 `Page.navigate`（见 `/tmp/cdp174/r410_teardown.py`）。
+- 容器日志 `POST /api/auth/wxlogin 503` 是 `auth.py` 未配 `WX_MINIAPP_SECRET` 的设计返回，外部小程序客户端会触发，不算本轮 5xx 回归。并发子会话（`test-w*-` uid）会让 growth_events 等基线漂移，只清自己前缀。
+
 ## R414 补充（testing agent）— 模考多选 / book·favorites 24rpx
 - 模考含多选卷现已存在：paper **116**「2015年北京公务员考试《行测》」69 题，多选在 slot 19–24（273027 ABCD / 273028 ACD / 273030 BCD / 273031 ACD / 273032 BCD / 273036 BD）；paper 29 含 264342（ABC）、paper 31 含 275876（ACD）。进入 `#/pkgA/exam/exam?paper_id=116` 后必须 reload 才走 onLoad。
 - **先进 exam 页再 F5 会弹「继续上次模考？（已答 0/62 题）」**：首次进页已 `exam/start` 并写 LS `examProgress`，F5 后按 0 进度也提示恢复（会多留一条空 `exam_attempts` + `exam_progress` 行，清理时计入）。想干净测 resume 就先答题再 F5；测「重新开始」时留意这条空 attempt。
