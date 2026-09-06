@@ -1814,6 +1814,9 @@ export default {
 .sj-row > * { flex: 1; }
 
 /* #ifdef H5 */
+@media (max-width: 767px) {
+  :deep(.kg-sheet.wd-popup--bottom) { bottom: calc(50px + env(safe-area-inset-bottom)); }
+}
 @media (min-width: 1024px) {
   .wrap.book { max-width: 1064px; padding-top: var(--sp-24); }
   .trendcard, .kbdcard { display: block; }

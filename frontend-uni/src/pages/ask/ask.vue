@@ -964,6 +964,9 @@ export default {
 .ib-inp { flex: 1; min-width: 0; height: var(--input-h); border: 1px solid var(--line); border-radius: var(--r-full); padding: 0 var(--sp-16); font-size: var(--fs-sub); color: var(--ink); background: var(--fill); box-sizing: border-box; }
 
 /* #ifdef H5 */
+@media (max-width: 767px) {
+  :deep(.kg-sheet.wd-popup--bottom) { bottom: calc(50px + env(safe-area-inset-bottom)); }
+}
 @media (min-width: 768px) {
   .askbar { left: 208px; bottom: 0; }
   .bubble { max-width: 72%; }

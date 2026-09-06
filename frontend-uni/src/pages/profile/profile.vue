@@ -570,6 +570,8 @@ export default {
 
 /* cell 组：作为 cell 规范样板 */
 :deep(.cellcard) { display: block; border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--line); margin-bottom: var(--sp-4); }
+:deep(.cellcard .wd-cell__left) { flex: 0 1 auto; max-width: 60%; }
+:deep(.cellcard .wd-cell__value) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cell-ico { width: 32px; height: 32px; border-radius: var(--r-xs); background: var(--fill); display: flex; align-items: center; justify-content: center; margin-right: var(--sp-12); }
 
 .logout { margin-top: var(--sp-24); }
@@ -590,6 +592,9 @@ export default {
 .zl-copy { font-size: var(--fs-caption); color: var(--ink-3); }
 
 /* #ifdef H5 */
+@media (max-width: 767px) {
+  :deep(.kg-sheet.wd-popup--bottom) { bottom: calc(50px + env(safe-area-inset-bottom)); }
+}
 @media (min-width: 1024px) {
   .wrap.profile { max-width: 1064px; }
 }

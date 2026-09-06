@@ -19,7 +19,7 @@
           <kg-hero-card
             label="拍题 AI 讲解 · 错题按遗忘曲线复习 · 迷你模考"
             value="10万+"
-            unit="行测题免费刷，免注册打开即练"
+            unit="行测题免费刷，免注册即练"
             :primary="{ text: '免注册立即开练' }"
             @primary="startDaily"
           />
@@ -1158,6 +1158,8 @@ export default {
 
 /* Hero */
 .hero-wrap { position: relative; }
+.hero-wrap :deep(.kg-hero__num) { white-space: nowrap; flex-shrink: 0; }
+.hero-wrap :deep(.kg-hero__total) { min-width: 0; line-height: var(--lh-body); }
 .hero-x { position: absolute; top: var(--sp-8); right: var(--sp-8); width: var(--hit-min); height: var(--hit-min); display: flex; align-items: center; justify-content: center; border-radius: var(--r-full); }
 .hero-links { display: flex; flex-direction: column; gap: var(--sp-4); }
 .hero-ds { font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--on-brand-2); }
@@ -1244,6 +1246,10 @@ export default {
 .sub-n { font-size: var(--fs-sub); color: var(--ink-3); flex-shrink: 0; }
 
 /* #ifdef H5 */
+/* Tab 页底部 TabBar（z 998）压在 KgSheet（--z-overlay 100）之上：窄屏把弹层收到 TabBar 上方 */
+@media (max-width: 767px) {
+  :deep(.kg-sheet.wd-popup--bottom) { bottom: calc(50px + env(safe-area-inset-bottom)); }
+}
 @media (min-width: 1024px) {
   .wrap.home { max-width: 1064px; padding-top: var(--sp-24); }
   .toprow { max-width: 640px; }
