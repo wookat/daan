@@ -103,10 +103,11 @@ done
 PREV_STARTED=$(sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" \
   "docker inspect deploy-kaogong-1 --format '{{.State.StartedAt}}' 2>/dev/null" || true)
 # 每次重建独立日志（不再互相覆盖）+ 末行写 compose 退出码/时刻，进程被打断时事后可辨「退出」与「仍在跑」；
-# setsid 让 compose 脱离 ssh 会话进程组（不吃 sshd 会话收尾 / 别人按组 kill 的连带）
+# setsid -f 让 compose 自成会话并立刻返回：旧写法 `cd && nohup ... &` 把整个 && 列表放进后台子 shell，
+# 该子 shell 持有 ssh 的管道直到 compose 结束（本地 ssh 被拖住整个 build，ssh 掉线即 SIGHUP 波及）。
 COMPOSE_LOG="/tmp/kg-compose-${BUILD_REV}-$(date -u +%Y%m%dT%H%M%SZ).log"
 sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" \
-  "cd $REMOTE_DIR/deploy && setsid nohup bash -c 'docker compose up -d --build; echo \"KG_COMPOSE_EXIT rc=\$? at \$(date -u +%Y-%m-%dT%H:%M:%SZ)\"' > $COMPOSE_LOG 2>&1 < /dev/null & ln -sfn $COMPOSE_LOG /tmp/kg-compose.log; echo compose-started log=$COMPOSE_LOG"
+  "cd $REMOTE_DIR/deploy && setsid -f nohup bash -c 'docker compose up -d --build; echo \"KG_COMPOSE_EXIT rc=\$? at \$(date -u +%Y-%m-%dT%H:%M:%SZ)\"' > $COMPOSE_LOG 2>&1 < /dev/null && ln -sfn $COMPOSE_LOG /tmp/kg-compose.log && echo compose-started log=$COMPOSE_LOG"
 DEADLINE=$((SECONDS + 600))
 REBUILT=0
 COMPOSE_RC=""
