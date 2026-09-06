@@ -477,11 +477,12 @@ export async function exportPdf(body) {
 // #endif
 
 // SSE 文本 → 事件回调；解析见 api-policy.parseSseEvents。
-function feedSse(chunkText, state, onMeta, onDelta) {
+function feedSse(chunkText, state, onMeta, onDelta, onThinking) {
   const { rest, events } = parseSseEvents(state.buf + chunkText);
   state.buf = rest;
   for (const { type, data } of events) {
     if (type === 'meta') { state.meta = data; onMeta && onMeta(data); }
+    else if (type === 'thinking') { onThinking && onThinking(data); }
     else if (type === 'done') { state.done = data; }
     else if (type === 'error') throw new Error(data.message || state.errMsg || '生成失败');
     else if (type === 'message') { state.full += data.d; onDelta && onDelta(state.full); }
@@ -490,12 +491,13 @@ function feedSse(chunkText, state, onMeta, onDelta) {
 
 // #ifdef H5
 // H5 流式讲解：onMeta(meta) 一次，onDelta(fullText) 增量；返回完整讲解文本。
-export async function streamExplain({ file, text, userAnswer, onMeta, onDelta }) {
+export async function streamExplain({ file, text, userAnswer, questionId, onMeta, onDelta, onThinking }) {
   const doIt = async () => {
     const fd = new FormData();
     if (file) fd.append('image', file);
     if (text) fd.append('text', text);
     if (userAnswer) fd.append('user_answer', userAnswer);
+    if (questionId > 0) fd.append('question_id', String(questionId));
     const resp = await fetch(BASE_URL + '/api/explain/stream', {
       method: 'POST',
       headers: { 'X-Access-Code': getCode(), ...authHeader() },
@@ -512,7 +514,7 @@ export async function streamExplain({ file, text, userAnswer, onMeta, onDelta })
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
-      feedSse(dec.decode(value, { stream: true }), state, onMeta, onDelta);
+      feedSse(dec.decode(value, { stream: true }), state, onMeta, onDelta, onThinking);
     }
     if (!state.meta) throw new Error('生成失败：无响应');
     return { ...state.meta, explanation: state.full };
@@ -524,7 +526,7 @@ export async function streamExplain({ file, text, userAnswer, onMeta, onDelta })
 // #ifndef H5
 // 小程序/App 无 fetch 流。文字题走分块流式（微信 enableChunked / App XHR 进度），
 // 图片题无法分块上传 → 降级为一次性 /api/explain（uploadExplain）。
-export function streamExplain({ filePath, text, userAnswer, onMeta, onDelta }) {
+export function streamExplain({ filePath, text, userAnswer, questionId, onMeta, onDelta, onThinking }) {
   if (filePath || !text) {
     return uploadExplain({ filePath: filePath || null, text: text || null, userAnswer }).then((d) => {
       onMeta && onMeta(d);
@@ -532,7 +534,7 @@ export function streamExplain({ filePath, text, userAnswer, onMeta, onDelta }) {
       return d;
     });
   }
-  const formBody = { text, ...(userAnswer ? { user_answer: userAnswer } : {}) };
+  const formBody = { text, ...(userAnswer ? { user_answer: userAnswer } : {}), ...(questionId > 0 ? { question_id: questionId } : {}) };
   const header = {
     'Content-Type': 'application/x-www-form-urlencoded',
     'X-Access-Code': getCode(),
@@ -563,7 +565,7 @@ export function streamExplain({ filePath, text, userAnswer, onMeta, onDelta }) {
       if (task && task.onChunkReceived) {
         task.onChunkReceived((r) => {
           try {
-            feedSse(decode(r.data), state, onMeta, onDelta);
+            feedSse(decode(r.data), state, onMeta, onDelta, onThinking);
           } catch (e) {
             reject(e);
           }
@@ -582,7 +584,7 @@ export function streamExplain({ filePath, text, userAnswer, onMeta, onDelta }) {
           const txt = xhr.responseText || '';
           if (txt.length > seen) {
             try {
-              feedSse(txt.slice(seen), state, onMeta, onDelta);
+              feedSse(txt.slice(seen), state, onMeta, onDelta, onThinking);
             } catch (e) {
               reject(e);
               return;

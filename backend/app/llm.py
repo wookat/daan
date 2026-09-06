@@ -3,6 +3,8 @@ import asyncio
 import json
 import logging
 import os
+from collections.abc import AsyncIterator
+from typing import Literal, overload
 
 import httpx
 
@@ -122,8 +124,24 @@ async def chat(messages: list, temperature: float = 0.2, max_tokens: int = 4000)
     raise RuntimeError("LLM 请求重试耗尽")
 
 
-async def chat_stream(messages: list, temperature: float = 0.2, max_tokens: int = 4000):
-    """逐段产出模型输出文本。"""
+class Thinking:
+    """推理模型 reasoning 阶段的进度标记（chat_stream(with_thinking=True) 时产出）：chars 为累计推理字数。"""
+
+    __slots__ = ("chars",)
+
+    def __init__(self, chars: int):
+        self.chars = chars
+
+
+@overload
+def chat_stream(messages: list, temperature: float = ..., max_tokens: int = ..., with_thinking: Literal[False] = ...) -> AsyncIterator[str]: ...
+@overload
+def chat_stream(messages: list, temperature: float = ..., max_tokens: int = ..., *, with_thinking: bool) -> AsyncIterator["str | Thinking"]: ...
+
+
+async def chat_stream(messages: list, temperature: float = 0.2, max_tokens: int = 4000, with_thinking: bool = False):  # type: ignore[misc]
+    """逐段产出模型输出文本。with_thinking=True 时在正文之前额外产出 Thinking 进度（推理模型 reasoning_content 不落正文，
+    默认被丢弃，正文首字前调用方拿不到任何信号）。"""
     base, key, model = _endpoint(messages)
     tries = []
     if base and key:
@@ -151,6 +169,7 @@ async def chat_stream(messages: list, temperature: float = 0.2, max_tokens: int 
                 if (resp.status_code >= 500 or resp.status_code in _QUOTA_CODES) and i < len(tries) - 1:
                     continue
                 resp.raise_for_status()
+                thinking_chars = 0
                 async for line in resp.aiter_lines():
                     if not line.startswith("data:"):
                         continue
@@ -158,11 +177,19 @@ async def chat_stream(messages: list, temperature: float = 0.2, max_tokens: int 
                     if payload == "[DONE]":
                         break
                     try:
-                        delta = json.loads(payload)["choices"][0]["delta"].get("content")
-                    except (json.JSONDecodeError, KeyError, IndexError):
+                        d = json.loads(payload)["choices"][0]["delta"]
+                    except (json.JSONDecodeError, KeyError, IndexError, TypeError):
                         continue
+                    if not isinstance(d, dict):
+                        continue
+                    delta = d.get("content")
                     if delta:
                         yield delta
+                    elif with_thinking:
+                        reasoning = d.get("reasoning_content") or d.get("reasoning")
+                        if reasoning:
+                            thinking_chars += len(reasoning)
+                            yield Thinking(thinking_chars)
             return
 
 

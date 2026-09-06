@@ -60,6 +60,36 @@ async def extract_question(image_b64: str | None, mime: str | None, text: str | 
     return data
 
 
+def _squash(s: str) -> str:
+    return re.sub(r"\s+", "", s or "")
+
+
+def extract_from_qbank(q: dict | None, text: str | None) -> dict | None:
+    """题库题直通：用户提交的文字确为该题（题干前段逐字命中）时，直接用题库的模块/题型/答案构造 extracted，
+    跳过识题 LLM；对不上（qid 传错、题面被改）返回 None 走原有识别路径（fail-closed）。"""
+    if not q or not text:
+        return None
+    stem = _squash(str(q.get("question") or ""))
+    if len(stem) < 8:
+        return None
+    head = stem[: min(len(stem), 40)]
+    if head not in _squash(text):
+        return None
+    module = q.get("module") if q.get("module") in kb.MODULES else None
+    if not module:
+        return None
+    answer = "" if q.get("disabled") else str(q.get("answer") or "").strip().upper()
+    return {
+        "question_text": text.strip(),
+        "module": module,
+        "question_type": q.get("question_type") or (f"{kb.MODULES[module]['name']}-{q['submodule']}" if q.get("submodule") else None),
+        "user_answer": None,
+        "marked_correct_answer": None,
+        "known_answer": answer if re.fullmatch(r"[A-H]{1,4}", answer) else None,
+        "qid": q.get("id"),
+    }
+
+
 SIMILAR_SYSTEM = """你是公考出题老师。根据用户给出的原题，出一道考察同一方法/技巧的新题（自编数据，不照搬真题原文），难度相当。
 输出 Markdown：
 ## 练习题
@@ -110,6 +140,8 @@ def _explain_messages(extracted: dict, user_answer: str | None = None) -> list:
         user_msg += f"\n\n我选了：{ua}（请判断对错并分析错因）"
     if extracted.get("marked_correct_answer"):
         user_msg += f"\n（图中标注正确答案：{extracted['marked_correct_answer']}）"
+    if extracted.get("known_answer"):
+        user_msg += f"\n（题库标准答案：{extracted['known_answer']}，讲解须以此为准；若你推导结果不同，请按标准答案重新核对推导，并在易错点中说明分歧）"
     user_msg += "\n\n（提醒：输出第一行必须严格是 “【答案】X｜【方法】方法名｜【一句话】核心思路”，之后按规定的 Markdown 结构讲解）"
     return [
         {"role": "system", "content": EXPLAIN_SYSTEM.format(methods=methods)},
@@ -142,9 +174,9 @@ async def explain(extracted: dict, user_answer: str | None = None) -> str:
     return await llm.chat(_explain_messages(extracted, user_answer), max_tokens=6000)
 
 
-def explain_stream(extracted: dict, user_answer: str | None = None):
+def explain_stream(extracted: dict, user_answer: str | None = None, with_thinking: bool = False):
     if _suspect_reason(extracted.get("question_text", "")):
         async def _fixed():
             yield _SUSPECT_TEXT
         return _fixed()
-    return llm.chat_stream(_explain_messages(extracted, user_answer), max_tokens=6000)
+    return llm.chat_stream(_explain_messages(extracted, user_answer), max_tokens=6000, with_thinking=with_thinking)

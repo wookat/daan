@@ -11,6 +11,9 @@ from .deps import cache_key, check_access, friendly_ai_err, rl
 
 router = APIRouter()
 
+# 推理模型 reasoning 阶段向客户端发进度心跳的最小间隔（秒）
+THINKING_TICK_SEC = 1.0
+
 
 @router.post("/api/explain")
 async def api_explain(
@@ -81,6 +84,7 @@ async def api_explain_stream(
     image: UploadFile | None = File(None),
     text: str | None = Form(None),
     user_answer: str | None = Form(None),
+    question_id: int | None = Form(None),
     x_access_code: str | None = Header(None),
 ):
     check_access(x_access_code)
@@ -95,6 +99,12 @@ async def api_explain_stream(
             raise HTTPException(400, "图片过大（限 8MB）")
         image_b64 = base64.b64encode(raw).decode()
         mime = image.content_type or "image/jpeg"
+
+    def _linked() -> dict | None:
+        if image or not text or not question_id or question_id <= 0:
+            return None
+        rows = db.questions_by_ids([question_id])
+        return engine.extract_from_qbank(rows[0] if rows else None, text)
 
     async def gen():
         try:
@@ -115,7 +125,7 @@ async def api_explain_stream(
                     yield "data: " + json.dumps({"d": hit["explanation"]}, ensure_ascii=False) + "\n\n"
                     yield "event: done\ndata: {}\n\n"
                     return
-            extracted = await engine.extract_question(image_b64, mime, text)
+            extracted = _linked() or await engine.extract_question(image_b64, mime, text)
             ua = user_answer or extracted.get("user_answer")
             key = cache_key(extracted.get("question_text"), ua)
             raw_key = cache_key(text, ua) if text else None
@@ -129,13 +139,22 @@ async def api_explain_stream(
                 "user_answer": ua,
                 "explain_key": key,
                 "cached": bool(cached),
+                "qid": extracted.get("qid"),
             }
             yield "event: meta\ndata: " + json.dumps(meta, ensure_ascii=False) + "\n\n"
             if cached:
                 yield "data: " + json.dumps({"d": cached["explanation"]}, ensure_ascii=False) + "\n\n"
             else:
                 full = ""
-                async for delta in engine.explain_stream(extracted, user_answer):
+                t0 = time.monotonic()
+                last_tick = t0
+                async for delta in engine.explain_stream(extracted, user_answer, with_thinking=True):
+                    if isinstance(delta, llm.Thinking):
+                        now = time.monotonic()
+                        if now - last_tick >= THINKING_TICK_SEC:
+                            last_tick = now
+                            yield "event: thinking\ndata: " + json.dumps({"secs": round(now - t0), "chars": delta.chars}) + "\n\n"
+                        continue
                     full += delta
                     yield "data: " + json.dumps({"d": delta}, ensure_ascii=False) + "\n\n"
                 if full.strip():
