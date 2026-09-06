@@ -2089,3 +2089,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 顺带：`test_answer_log_client_ts` 在 CST 00:00–02:00 跑必假失败（`now-7200` 跌进昨天 checkin 桶；stash 对照同样失败、非本轮引入）→ `t2 = max(now-7200, cn_day_start(now)+1)`。登记 `db.daily_plan` 仍内联 `((now+tz)//86400)*86400-tz`（R439 漏一处，数值同、不动）。
 - 复验（testing agent，`r440-ui-a/b`，375/1440）：造「到期已清 + 今日新错 1」现场 → 任务卡「今日到期 1 题」+ 到期卡，计划复习行仍 ✓ 副标「今日到期错题已清 · 另 1 道今日新错可随时巩固 · 已完成 1/1」，`/api/plan/today` 逐字一致；对照 uid 只有今日新错 → 计划无 review 任务（reviewed+due=0 → target 0，预期）；首页/提醒页全页 `<12px []`、无溢出；arc 41px 高、父行 17px 未撑大；`/api` 非 2xx 0、console/pageerror/rejection 0、healthy 0 重启、5xx/Traceback/locked 0；清理 6 表 15 行 LEFTOVER 0。6b 全过（`/` LCP 1245 / perf 0.99）。本地 pytest 500（+1）/ ruff / pyright 0；vitest 619（+3）/ eslint / build:h5 绿。
 - 登记：375 下新副标 + 「· 已完成 1/1」在 247px 内折 2 行（无溢出、1440 单行）——是否接受双行待产品定；`.sheet-x`/自然旧壳 404 (c) 本次发版后可补量；`.trend-kn` 需 4 周样本；WAL 165 KB 截断继续观测；`error_reason` ≥09-11；宿主 91%/4.7 G。下次 SOP-10 审计 ~R450。
+
+### R441（日界公式收口 3 处 `db.daily_plan` / `insights._week_start` / `mock_event._saturday_window` → `db.cn_day_start` + 单测 1；部署 `b265cdc`，bundle 不变、无 DB 写入、不派 testing agent）
+- 取证 docs/iter/round-3/r441-day-start-single-source-lcp-baseline-postrelease-404.md。A：R439 合一漏的不止 `daily_plan` 一处，grep `8 \* 3600` 全量核出 3 处「日 0 点秒」克隆，全部改用 `db.cn_day_start(ts)`（纯等价，`weekday` 局部计算保留）；pytest 501 / ruff / pyright 0。
+- B：R440 前端发版后 70 min caddy 源站 160 请求、`/assets/*` 404 0、monitor POST 0 → 自然旧壳 404 (c) 仍无样本（非 2xx 仅 testing agent `GET /api/plan` ×2）。
+- **C（口径纠正）**：`/` Lighthouse LCP ≈ 2.73 s 是稳定基线（R429 留存 lhr 4/5 + 本轮 4/4 都 2732–2793），历轮记「一次 WARN、宿主负载」是错误归因——LCP 元素是壳内联 splash、observed TTFB 57–102 ms、render-blocking 0、assets 全 <200 ms 收完，成本在 4× CPU 模拟下的主线程（主包 bootup 1.4–2.0 s）。R439 1820 / R440 1245 才是离群低值。不改预算不改码（无设计论证）。
+- **D（未定论、R442 起点）**：同机同 bench 下主包 `bootup scripting` R429 `Ct1Bg37q` 402–450 ms（5 次）→ 本轮 `DaOBPuSg` 744/757/1373 ms（3 次），TBT 54–94 → 321–658；样本少、LH 单机噪音大 → R442 本地起两版 dist（R429 commit vs HEAD）交替各跑 ≥5 次 A/B 再归因（候选：R430b `main.js`/`monitor-client.js`、R440 `home.vue`）。
+- E/F：`probe=0` 仍 22 行、`error_reason` 6 行不变、`push_subs` 0、`weekly_reports` 0、WAL 431 KB；`d30a9b0` 归档 app-log 1959 行 0 异常（grep 5xx 会误匹配 `[indexnow] submitted 533 urls`，看上下文）。
+- lhr 留存：`/home/ubuntu/r441_lhr*.json`、`/home/ubuntu/r429_lh/`（devin-box，非仓库）。下次 SOP-10 审计 ~R450。

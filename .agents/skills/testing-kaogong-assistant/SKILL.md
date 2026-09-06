@@ -1490,3 +1490,10 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - R440 新副标 375 下会折成 2 行（`.task-sub` 247px 宽放不下 30 个字），属正常换行不是溢出；扫 `scrollWidth>clientWidth` 仍应为 `[]`。
 - 提醒设置页路径：「我的」→ 偏好设置「学习提醒」→ `#/pkgA/settings/reminders`。`.warn-s` 只在「每日刷题提醒」开启且 `Notification.permission!=='granted'` 时渲染：原生点开关（只写 LS `reminder` 设置）即出现，Chrome 弹权限框用右上 ✕ 关（perm 保持 default，不改站点设置），量完再点关回。`.push .hd/.appico` 在「提醒样式预览」卡内始终渲染。
 - holder 要带探针头：`holdtab440.py` = `holdtab.py` + `Network.setExtraHTTPHeaders({"X-Kg-Probe":"1"})`；切视口时 kill 旧 holder 再起新参数，reload 后 `innerWidth` 确认。
+
+## R441 Lighthouse 预算 / 日界公式 / 归档日志走查经验
+- **`/` 的 LH 移动模拟 LCP 基线 ≈ 2.73 s（预算 2500）**：不是偶发、不是宿主负载——LCP 元素是壳内联 `#kg-splash > div.s`，observed TTFB ~60–100 ms、render-blocking 0；看到 6b `/` LCP 27xx WARN 先对 `lcp-breakdown-insight`（TTFB/render delay）与 `network-requests` 首屏资产收完时间，只有 TTFB 或资产时间异常才归服务端/宿主。LH 13 的 lhr 里 `largest-contentful-paint-element`/`render-blocking-resources`/`third-party-summary` 已改名为 `*-insight`，按 key 模糊匹配取。
+- `perf-budget.sh` 的 lhr 随 `$TMP` 删除；要留证据直接 `npx lighthouse <url> --output=json --output-path=/home/ubuntu/rNNN_lhr.json --chrome-flags="--headless=new --no-sandbox"`，横向比较必须同看 `environment.benchmarkIndex`（devin-box 2 vCPU 在 1800–3700 波动），主包成本看 `bootup-time.details.items[url~index-]` 的 `scripting` 与 `long-tasks`。
+- 「中国日历日 0 点秒」只允许 `db.cn_day_start(ts)`；查克隆用 `grep -nE "8 \* 3600|28800" backend/app`，`strftime(gmtime(t+8h))` 日期字串与 `weekday` 计算不是同一语义、不算克隆。
+- R437 归档 app-log 用 `grep -cE " 5[0-9]{2} "` 会误匹配 `[indexnow] submitted 533 urls -> 200`，计数 >0 先看原文。
+- caddy 源站按 `ts` 数「发版后」窗口时，探针网段 `140.232.64.x` 的 `curl/7.81.0` 4xx 是 testing agent 探路径（R440 为 `GET /api/plan`，正确是 `/api/plan/today`），不算产品非 2xx。
