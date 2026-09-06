@@ -1521,3 +1521,8 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 桌面宽视口（≥1024）下 uni H5 `showActionSheet` 是居中 popover，`.uni-actionsheet__action`（取消）`display:none`，只能点遮罩关闭；判断"已关闭"用 `getComputedStyle(.uni-actionsheet).visibility=='hidden'`，元素本身不会移除。
 - 用 `nohup python3 xxx.py &` + `$!` 记 pid 后再 `kill`，有时进程仍存活（本轮 holder/abort 各一次）——收尾务必 `pgrep -af holdtab|r445_abort` 按真实 pid `kill -9`，否则视口/Fetch 拦截会一直残留导致后续 reload 仍被拦。
 - 只读走查也会写 `growth_events`（`boot` / `stale_fallback`，`probe=1`），收尾按 `uid + created_at>=开始时间 + probe=1` 删即可。
+
+## R446 经验：到期项复查加 `growth_events` probe=0 逐 uid
+- `growth_events`（`/api/track` 落库）没有任何看板读它，只能容器内只读查：`SELECT uid, event, COUNT(*) FROM growth_events WHERE probe=0 AND created_at>=? GROUP BY 1,2`；再用 caddy 按 `?uid=` 归因 IP/UA（`Cf-Ipcountry` 源站收不到，geo 要另查）。它能看到「来了没做题」的访客，`answer_log` 看不到。
+- 老 uid 回访的 `answer_log` 行 probe=NULL 是 R374（09-04 06:53Z）前历史，别误判为写侧漏标；先查 `probe IS NULL AND created_at>=1788504780` 应为 0。
+- `stale_fallback` 同秒成批（7/13 行）= 断网/拦截走查形态，真人极少同时全部接口失败。

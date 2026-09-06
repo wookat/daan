@@ -2122,3 +2122,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 修：该行常驻，未回包只显示「今日全站同题 10 题 + 补练往期 ›」，回包后同一行追加「· 已有 N 人完成 / 来做今天第 1 人」，最终态像素不变。6b `/` CLS 0.07 → **0.06**；Playwright sources ×3：#1 0.0608 不变、#2 0.0102 → 0.0024（只剩链接随文字变长水平右移 108 px，P4 登记：改右对齐需 UI 判断）。
 - 复验：375/1440 正常态单行无溢出；CDP 拦 `/api/daily_set` + 清 `apiSnap` 快照后 hero 按钮/今日任务卡 y 与正常态 Δ 0.0；rAF 逐帧首帧即占位、回包后 `.hero-acts.top` 不变；`<12px` `[]`、console 0、`/api` 非 2xx 0、healthy 0 重启、LEFTOVER 0。走查坑：`api.js` `apiSnap:` 快照兜底让单 abort 接口不等于错误态（要先清键）；1440 下 uni actionSheet 是 popover、无「取消」键点遮罩关。
 - 到期项继续挂：`.sheet-x`/自然旧壳 404 (c)（本次前端发版后可补量）、`error_reason` ≥09-11、`.trend-kn` 4 周、WAL 截断、无可确认外部真人、`WX_MINIAPP_SECRET`、R385 第二冷样本；下次 SOP-10 ~R450。
+
+### R446（只取证登记：`growth_events` probe=0 首次逐 uid 归因 + `stale_fallback` 口径 + R445 发版后 (c) 补量；不改码不部署，生产 `3dc59fa`）
+- 取证 docs/iter/round-3/r446-growth-events-probe0-readonly-stale-fallback-postrelease.md。`growth_events` 全仓库**无产品/管理台读路径**（看板 KPI 只读 `answer_log`），唯一读者 `scripts/health_scan.py` → `stale_fallback` 不计入任何看板；生产 20 行全 probe=1（两次 testing agent 断网走查同秒 7/13 行）。
+- probe=0 访客级信号：`growth_events` 近 7 天 probe=0 4 个 uid——vivo 小程序 uid、同型号 V2405A Chrome 打开该 vivo 分享码（推断同一持有者）、Windows 老 uid 经双出口 IP 回访（身份不可考）、iPhone 单页跳出 1 次（唯一像外部真人）。`answer_log` R374 后 probe=NULL 新增 0 行。不加看板字段（caddy 日报 `humans.ips` 已覆盖、样本 1），以后到期项复查固定加 `growth_events probe=0 by uid`。
+- (c)：R445 发版后 40 min 148 请求 `/assets/*` 404 0、monitor 0，继续挂。到期项无新样本（probe=0 22 行、error_reason 6/0、push_subs 0、weekly_reports 0、29/29 CST 00:00、WAL 560 KB）。
