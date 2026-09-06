@@ -1564,3 +1564,7 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 同 /24（`140.232.64.0/24`，`KG_PROBE_CIDRS` 已覆盖）的其它 Devin 会话 Playwright 不带 `X-Kg-Probe` 头、UA 为设备描述符原文（`iPhone OS 15_0`），只靠网段一路打标；caddy 归因用 `Cf-Connecting-Ip` 对 `KG_PROBE_CIDRS`，别按「无头」就判真人。
 - 1440 下条件渲染元素（`v-if="!m.today_n"` 的 `.remind-btn`）量不到时，可在 `uni-page-body` 下追加带页面 `data-v-xxxx` 属性的 `uni-view.<class>` 合成元素量真实 scoped CSS（脚本 `/home/ubuntu/r451/remind_1440.py`），报告里注明「合成元素、非条件渲染」。
 - 新装的 Playwright python 找不到 headless shell 时用 `p.chromium.launch(executable_path="/home/ubuntu/.local/bin/google-chrome", args=["--no-sandbox"])`，不要 `playwright install`。
+
+## R452 经验：探针识别 ~70% uid 只靠网段一路
+- 7 天 caddy 复算：1233 个带 `uid=` 的 uid 里 ~864 个只靠 `Cf-Connecting-Ip ∈ KG_PROBE_CIDRS` 打标（GUI 走查 UA 与真人无异、多数会话不带 `X-Kg-Probe`）。到期项复查时若日报 `humans.ips` 或 `answer_log probe=0` 新 uid 突增，**先核 `KG_PROBE_CIDRS` 是否落后于当前出口**（`curl -s ifconfig.me` 对比 `docker exec deploy-kaogong-1 env | grep KG_PROBE`），再谈真人。
+- 复算脚本 `/home/ubuntu/r452_caddy.py`（scp 到 VPS `/tmp` 跑；按 `auth.probe_request` 三路同口径），输出「非探针 uid 逐个 IP/UA」「网段单路 uid」「网段外自动化签名」三段。VPS 自身出口 `150.109.230.174` 的 curl/python-requests 走 UA 一路，正常。

@@ -2166,3 +2166,8 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 到期项：probe=0 22/1、error_reason 6/0、push_subs 0、growth_events probe=0 18/4 不变；**`weekly_reports` 0→1**：uid `umtppgte7u8emh2vs` 20:14:52Z 首开周报，来自 `140.232.64.3`（Devin /24、无 `X-Kg-Probe` 头、Playwright iPhone UA），该 uid 26 answer_log/8 growth_events/6 exam_attempts **全 probe=1（仅网段一路命中）** → 推断同网段兄弟 Devin 会话巡览，非真人。登记：30 张带 uid 无 probe 列的表（含 weekly_reports/push_subs）到期项要 join answer_log 看 probe，不补列（产品读路径不跨用户聚合这些表）。
 - R450 遗留 1440 `.remind-btn`：合成元素 + 真实 `data-v-806c425f` scoped CSS 量得 1440/375 均 h40、fs12、min-height 40px → 闭合。
 - WAL 3.05 MB、healthy 0 重启、当前容器日志 0 异常、宿主 91%/4.5 G。
+
+### R452（只取证登记，不改码不部署；生产仍 `460120f`）
+- 取证 docs/iter/round-3/r452-probe-route-dependence-7d-caddy-readonly.md。7 天 caddy 按 `auth.probe_request` 三路复算：1233 uid，**~864（70%）只靠网段一路**命中（GUI 走查 UA 与真人无异）；网段外无签名自动化 **0 uid**；非探针 uid 10 个全部归因（5 已知设备 + 3 扫描器 + 2 单页访客），与库内 probe=0（answer_log 22/1、growth 18/4）一一对应、无未归因行 → 当下无污染。风险形态 = Devin 出口 /24 变更当天 GUI 走查整批 probe=0，现有日报 `humans.ips` 会立刻放大 → 不加码，SKILL 到期项加「突增先核 CIDR」。
+- 兄弟自动化 uid 首见 09-06 11:05:29Z 首页冷启动四连，全程 `140.232.64.3`。
+- 到期项不变；候选真人 +1（Windows 171.114.10.99 只读首页 0 作答）；WAL 3.15 MB。
