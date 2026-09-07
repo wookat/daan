@@ -12,7 +12,7 @@ import {
 import type { AnswerLogItem, Question } from '../../api/types';
 import { anonUid } from '../../utils/auth';
 import { enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../utils/offline';
-import { BASE_URL } from '../../utils/request';
+import { imgUrl } from '../../utils/request';
 import { kpChain, qStatLine, sourceLabel } from '../../utils/q-stat';
 import { modName, recordStat, streakDays } from '../../utils/stats';
 
@@ -36,11 +36,6 @@ interface PQuestion extends Question {
   _logged: boolean;
   _saved: boolean;
   optList: Array<{ k: string; v: string }>;
-}
-
-function imgUrl(p: string | null | undefined): string {
-  if (!p) return '';
-  return /^https?:/.test(p) ? p : BASE_URL + p;
 }
 
 function toPQ(q: Question): PQuestion {

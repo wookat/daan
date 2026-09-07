@@ -20,6 +20,10 @@
   color: var(--brand-text);
 }
 
+.clock.low {
+  color: var(--error);
+}
+
 .topinfo {
   font-size: var(--fs-sub);
   color: var(--ink-3);
@@ -46,6 +50,13 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-8);
+}
+
+.qimg {
+  width: 100%;
+  border-radius: 12rpx;
+  margin: 0 0 24rpx;
+  background: var(--fill);
 }
 
 .opt {

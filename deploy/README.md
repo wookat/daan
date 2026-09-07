@@ -87,6 +87,10 @@ SQLite 存于 docker volume `kaogong-data`（/data/data.db）。备份：`docker
   管理台数据看板「搜索引擎抓取」面板外显（Google/Baidu/Bing 固定置顶，从未来过标红）。
 - `scripts/` 不在 `deploy_h5.sh` rsync 范围内，改动该脚本需手工 `scp scripts/crawler_stats.py
   scripts/access_log_report.py` 到 VPS 同路径。
+- 候选真人口径（R382/R388/R393）：逐层剔除探针网段（`probe-ips.txt`，含 VPS 自身出口）、引擎与通用
+  bot UA（`BOT_GENERIC` 含 `devin/`，与后端 `PROBE_UA_MARKERS` 单测锁同步）、test- uid、源站直连（无边缘头，
+  单列 `humans.direct`）、显式 `X-Kg-Probe: 1`、非正式域名 `X-Forwarded-Host`（Pages 预览域名，单列
+  `humans.offhost`；`--site-host` 可覆盖默认 `kaogong.zalize.com`）。
 - 搜索引擎侧入口：Google Search Console 资源 `sc-domain:kaogong.zalize.com`（DNS 自动验证，
   2026-09-04 建立并提交 sitemap.xml）；Bing/Yandex 走 IndexNow（R89）；百度站长平台待账号。
 

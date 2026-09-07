@@ -155,3 +155,94 @@
   color: var(--ink-4);
   padding: var(--sp-12) 0;
 }
+
+.p-go {
+  font-size: var(--fs-sub);
+  font-weight: 600;
+  color: var(--brand-text);
+  flex-shrink: 0;
+}
+
+.resume {
+  margin-bottom: var(--sp-12);
+}
+
+.rs-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--sp-8);
+}
+
+.rs-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rs-t {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.rs-s {
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rs-go {
+  font-size: var(--fs-sub);
+  font-weight: 600;
+  color: var(--warn-strong);
+  flex-shrink: 0;
+}
+
+.att-scroll {
+  white-space: nowrap;
+  margin-bottom: var(--sp-12);
+}
+
+.att {
+  display: inline-flex;
+  flex-direction: column;
+  vertical-align: top;
+  width: 150px;
+  margin-right: var(--sp-8);
+  box-sizing: border-box;
+}
+
+.att-score {
+  font-size: var(--fs-h1);
+  font-weight: 700;
+  color: var(--brand-text);
+  line-height: 1.1;
+}
+
+.att-u {
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  margin-left: 2px;
+}
+
+.att-t {
+  display: block;
+  font-size: var(--fs-sub);
+  color: var(--ink);
+  margin-top: var(--sp-8);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.att-d {
+  display: block;
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+  margin-top: 2px;
+}

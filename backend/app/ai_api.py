@@ -290,7 +290,7 @@ async def api_coach(body: dict, request: Request, x_access_code: str | None = He
         + json.dumps(stats, ensure_ascii=False)[:3000]
     )
     try:
-        advice = await llm.chat_fast([{"role": "user", "content": prompt}], temperature=0.4, max_tokens=800)
+        advice = await llm.chat([{"role": "user", "content": prompt}], temperature=0.4, max_tokens=800)
     except Exception as e:
         raise HTTPException(502, friendly_ai_err(e)) from e
     return {"advice": advice}
@@ -313,7 +313,7 @@ async def api_mistake_analysis(body: dict, request: Request, x_access_code: str 
         + json.dumps(stats, ensure_ascii=False)[:3000]
     )
     try:
-        analysis = await llm.chat_fast([{"role": "user", "content": prompt}], temperature=0.4, max_tokens=900)
+        analysis = await llm.chat([{"role": "user", "content": prompt}], temperature=0.4, max_tokens=900)
     except Exception as e:
         raise HTTPException(502, friendly_ai_err(e)) from e
     return {"analysis": analysis, "stats": stats}

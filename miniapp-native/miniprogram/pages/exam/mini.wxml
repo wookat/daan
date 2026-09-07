@@ -1,4 +1,4 @@
-<navbar title="迷你模考" back="{{true}}" />
+<navbar title="{{title}}" back="{{true}}" />
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
     <block wx:if="{{loading}}">
@@ -9,7 +9,7 @@
     <block wx:if="{{!loading && cur}}">
       <view class="topbar">
         <kg-tag tone="brand">{{idx + 1}}/{{items.length}}</kg-tag>
-        <view class="clock"><l-icon name="timer" size="16" tone="brand-text" /><text class="num">{{fmtLeft}}</text></view>
+        <view class="clock {{lowTime ? 'low' : ''}}"><l-icon name="timer" size="16" tone="{{lowTime ? 'bad' : 'brand-text'}}" /><text class="num">{{fmtLeft}}</text></view>
         <text class="topinfo">已答 <text class="num">{{answered}}</text></text>
       </view>
       <view class="progress"><kg-progress value="{{idx + 1}}" max="{{items.length}}" thickness="{{4}}" aria-label="作答进度" /></view>
@@ -17,6 +17,7 @@
       <!-- kg-question-card / kg-option-group 小程序版未落地：页内按 T3 结构实现 -->
       <kg-card variant="raised" class="qcard">
         <text class="q q-text" user-select>{{cur.question}}</text>
+        <image wx:if="{{cur.image}}" class="qimg" src="{{cur.image}}" mode="widthFix" bind:tap="onPreviewImg" />
         <view class="opts">
           <view
             wx:for="{{cur.optList}}"

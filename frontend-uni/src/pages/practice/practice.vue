@@ -1241,7 +1241,7 @@ export default {
             question_text: q.question + '\n' + optText,
             user_answer: q._picked,
             correct_answer: q.answer,
-            explanation: q.explanation || '',
+            explanation: q.explanation || q.hs_explanation || '',
           },
         });
         q._mid = res.id;
@@ -1256,7 +1256,7 @@ export default {
           question_text: q.question + '\n' + optText,
           user_answer: q._picked,
           correct_answer: q.answer,
-          explanation: q.explanation || '',
+          explanation: q.explanation || q.hs_explanation || '',
         });
         q._saved = true;
         this.autoSaved = true;
@@ -2234,7 +2234,7 @@ export default {
             question_text: q.question + '\n' + optText,
             user_answer: this.picked,
             correct_answer: q.answer,
-            explanation: q.explanation || '',
+            explanation: q.explanation || q.hs_explanation || '',
           },
         });
         q._mid = res.id;
@@ -2253,7 +2253,7 @@ export default {
           question_text: q.question + '\n' + optText,
           user_answer: this.picked,
           correct_answer: q.answer,
-          explanation: q.explanation || '',
+          explanation: q.explanation || q.hs_explanation || '',
         });
         q._saved = true;
         this.autoSaved = true;

@@ -35,6 +35,8 @@ SITEMAP_PREFIXES = ("/sitemap", "/robots.txt")
 TEST_UID_MARKERS = ("uid=test-", "uid=probe")
 # 真人口径不计的内部/心跳路径
 HUMAN_SKIP_PREFIXES = ("/api/health", "/api/admin", "/admin")
+# 用户可达的正式域名；边缘回源带 X-Forwarded-Host，其它主机名（Pages 预览域名等）只有内部走查
+SITE_HOSTS = ("kaogong.zalize.com",)
 
 
 def is_generic_bot(ua: str) -> bool:
@@ -105,6 +107,18 @@ def _via_edge(req: dict) -> bool:
     return any(headers.get(k) and headers[k][0] for k in ("X-Kg-Ip", "Cf-Connecting-Ip"))
 
 
+def _explicit_probe(req: dict) -> bool:
+    headers = req.get("headers") or {}
+    vals = headers.get("X-Kg-Probe")
+    return bool(vals) and vals[0] == "1"
+
+
+def _forwarded_host(req: dict) -> str:
+    headers = req.get("headers") or {}
+    vals = headers.get("X-Forwarded-Host")
+    return (vals[0] if vals else "").strip().lower()
+
+
 def _excluded(ip: str, nets: list) -> bool:
     if not nets:
         return False
@@ -115,16 +129,23 @@ def _excluded(ip: str, nets: list) -> bool:
     return any(addr in n for n in nets)
 
 
-def aggregate(lines, days: int, now: float | None = None, exclude_nets: list | None = None) -> dict:
+def aggregate(
+    lines,
+    days: int,
+    now: float | None = None,
+    exclude_nets: list | None = None,
+    site_hosts: tuple[str, ...] | list[str] | None = None,
+) -> dict:
     """把 Caddy JSON 行迭代器聚合成引擎×天计数；窗口为最近 days 个 UTC 自然日（含今天）。"""
     now = now or time.time()
     exclude_nets = exclude_nets or []
+    hosts = {h.strip().lower() for h in (site_hosts or SITE_HOSTS) if h.strip()}
     probe_excluded = 0
     today = datetime.datetime.fromtimestamp(now, datetime.UTC).date()
     day_list = [(today - datetime.timedelta(days=i)).isoformat() for i in range(days - 1, -1, -1)]
     day_set = set(day_list)
     engines: dict[str, dict] = {}
-    humans: dict[str, dict] = {"api": {}, "api5xx": {}, "page": {}, "direct": {}}
+    humans: dict[str, dict] = {"api": {}, "api5xx": {}, "page": {}, "direct": {}, "offhost": {}}
     human_ips: dict[str, set] = {}
     for line in lines:
         line = line.strip()
@@ -150,6 +171,12 @@ def aggregate(lines, days: int, now: float | None = None, exclude_nets: list | N
                 continue
             if not _via_edge(req):
                 humans["direct"][day] = humans["direct"].get(day, 0) + 1
+                continue
+            if _explicit_probe(req):
+                continue
+            fwd_host = _forwarded_host(req)
+            if fwd_host and fwd_host not in hosts:
+                humans["offhost"][day] = humans["offhost"].get(day, 0) + 1
                 continue
             ip = _client_ip(req)
             if _excluded(ip, exclude_nets):
@@ -209,6 +236,8 @@ def main() -> int:
     ap.add_argument("out_json")
     ap.add_argument("--days", type=int, default=14)
     ap.add_argument("--exclude-ip-file", default="", help="探针 IP/CIDR 清单，逐行，# 注释")
+    ap.add_argument("--site-host", action="append", default=[],
+                    help="用户可达的正式域名（可重复；默认 kaogong.zalize.com），其它 X-Forwarded-Host 计 offhost")
     args = ap.parse_args()
     try:
         os.nice(19)
@@ -221,6 +250,7 @@ def main() -> int:
         iter_archive(args.archive_dir, args.days),
         args.days,
         exclude_nets=load_exclude_networks(args.exclude_ip_file),
+        site_hosts=args.site_host or None,
     )
     tmp = args.out_json + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:

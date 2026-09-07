@@ -308,7 +308,7 @@
               <text class="side-s">高频错因是提分洼地：优先复习对应模块的待掌握错题</text>
             </view>
           </kg-card>
-          <kg-card v-if="tab !== 'fav' && todoItems.length >= 3" clickable chevron class="side entry" @click="aiAnalysis">
+          <kg-card v-if="tab !== 'fav' && todoItems.length >= 3" clickable chevron class="side entry" @click="aiAnalysis(false)">
             <view class="entry-in">
               <view class="entry-ico"><l-icon name="bot-message-square" :size="20" tone="brand" /></view>
               <view class="grow">
@@ -363,6 +363,10 @@
       <!-- AI 错题分析 -->
       <kg-sheet v-model="aiOpen" title="AI 错题分析">
         <view v-if="aiLoading" class="ai-loading"><kg-skeleton preset="lines" /><text class="side-s">正在分析你的错题与作答数据，约需 30-60 秒…</text></view>
+        <view v-else-if="aiErr" class="ai-err">
+          <text class="side-s">分析失败：{{ aiErr }}</text>
+          <kg-button variant="secondary" size="md" block @click="aiAnalysis(true)">重试</kg-button>
+        </view>
         <rich-text v-else :nodes="aiHtml" />
       </kg-sheet>
 
@@ -591,6 +595,7 @@ export default {
       aiOpen: false,
       aiLoading: false,
       aiHtml: '',
+      aiErr: '',
       sortBy: 'time',
       pageN: 20,
       batchMode: false,
@@ -1033,15 +1038,18 @@ export default {
           .catch(() => {});
       }
     },
-    async aiAnalysis() {
+    async aiAnalysis(retry) {
       this.aiOpen = true;
-      if (this.aiHtml) return;
+      if (this.aiLoading || (this.aiHtml && retry !== true)) return;
+      this.aiErr = '';
       this.aiLoading = true;
       try {
         const d = await request('/api/mistakes/analysis', { method: 'POST', data: { uid: anonUid() }, timeout: 420000 });
-        this.aiHtml = md(d.analysis || '分析失败，请稍后重试');
+        const text = typeof d.analysis === 'string' ? d.analysis.trim() : '';
+        if (!text) throw new Error('AI 未返回内容，请稍后再试');
+        this.aiHtml = md(text);
       } catch (e) {
-        this.aiHtml = md('分析失败：' + e.message);
+        this.aiErr = e.message || '请稍后重试';
       }
       this.aiLoading = false;
     },
@@ -1769,6 +1777,7 @@ export default {
 .sheet-k { display: block; font-size: var(--fs-sub); color: var(--ink-3); margin: var(--sp-12) 0 var(--sp-8); }
 .sheet-acts { display: grid; gap: var(--sp-8); }
 .ai-loading { display: flex; flex-direction: column; gap: var(--sp-12); padding: var(--sp-12) 0; }
+.ai-err { display: grid; gap: var(--sp-12); padding: var(--sp-12) 0; text-align: center; }
 .scan-sum { display: block; font-size: var(--fs-sub); color: var(--ink-3); margin: var(--sp-4) 0 var(--sp-8); }
 .scan-good { color: var(--ok); }
 .scan-row { display: flex; align-items: center; min-height: 36px; border-bottom: 1px solid var(--line); font-size: var(--fs-sub); }

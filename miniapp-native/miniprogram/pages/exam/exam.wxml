@@ -1,23 +1,47 @@
 <navbar title="模考" />
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
+    <kg-card wx:if="{{resume}}" variant="soft" clickable class="resume" bind:click="onResume">
+      <view class="rs-row">
+        <l-icon name="clock" size="20" tone="warn" />
+        <view class="rs-main">
+          <text class="rs-t">继续上次模考</text>
+          <text class="rs-s">{{resume.title}} · 已答 {{resume.answered}}/{{resume.total}} 题</text>
+        </view>
+        <text class="rs-go">续考 ›</text>
+      </view>
+    </kg-card>
+
     <!-- 迷你模考（kg-hero-card 小程序版未落地，页内按 raised 卡 + 1 按钮实现） -->
     <view class="hero">
       <view class="hero-deco"><l-icon name="file-text" size="32" tone="on-brand" /></view>
       <view class="hero-top">
-        <kg-tag tone="brand" icon="timer">限时 25 分钟</kg-tag>
+        <kg-tag tone="brand" icon="timer">限时 30 分钟</kg-tag>
       </view>
       <text class="hero-t">迷你模考</text>
       <text class="hero-s">30 题混合模块 · 交卷即出成绩报告与薄弱考点</text>
       <view class="stat-row">
         <view class="stat"><text class="stat-n num">30</text><text class="stat-k">题量</text></view>
-        <view class="stat"><text class="stat-n num">25<text class="stat-u">min</text></text><text class="stat-k">建议用时</text></view>
+        <view class="stat"><text class="stat-n num">30<text class="stat-u">min</text></text><text class="stat-k">限时</text></view>
         <view class="stat"><text class="stat-n num">5</text><text class="stat-k">覆盖模块</text></view>
       </view>
       <kg-button variant="primary" tone="inverse" size="lg" block icon="chevron-right" bind:click="onMini">开始迷你模考</kg-button>
     </view>
 
-    <kg-section-header title="真题卷库" />
+    <block wx:if="{{attempts.length}}">
+      <kg-section-header title="最近模考" />
+      <scroll-view scroll-x class="att-scroll">
+        <kg-card wx:for="{{attempts}}" wx:key="id" variant="raised" clickable class="att" data-id="{{item.id}}" bind:click="onReport">
+          <text class="att-score num">{{item.scoreText}}<text class="att-u">分</text></text>
+          <text class="att-t">{{item.title}}</text>
+          <text class="att-d">{{item.dateText}} · 看报告 ›</text>
+        </kg-card>
+      </scroll-view>
+    </block>
+
+    <kg-section-header title="真题全真模考" />
+    <kg-chip-row wx:if="{{years.length > 1}}" size="sm" options="{{years}}" value="{{year}}" bind:change="onYear" />
+    <kg-chip-row wx:if="{{regions.length > 1}}" size="sm" options="{{regions}}" value="{{region}}" bind:change="onRegion" />
 
     <block wx:if="{{loading}}">
       <kg-card wx:for="{{[1, 2, 3]}}" wx:key="*this" variant="raised" class="prow">
@@ -35,20 +59,19 @@
     <kg-empty
       wx:elif="{{!loading && !papers.length}}"
       icon="files"
-      title="真题卷搜集中"
-      desc="全真模考将在二期上线，先用迷你模考体验完整报告"
+      title="{{year || region ? '该筛选下暂无真题卷' : '真题卷库暂无内容'}}"
+      desc="{{year || region ? '换个年份或地区试试' : '先用迷你模考体验完整报告'}}"
       ctaText="去迷你模考"
       bind:cta="onMini"
     />
     <block wx:if="{{!loading && papers.length}}">
       <kg-card
         wx:for="{{pagedPapers}}"
-        wx:key="source"
+        wx:key="id"
         variant="raised"
         clickable
-        chevron
         class="prow"
-        data-title="{{item.title || item.source}}"
+        data-pid="{{item.id}}"
         bind:click="onPaperTap"
       >
         <view class="p-row">
@@ -57,10 +80,12 @@
             <text class="pb-k">{{item.regionShort}}</text>
           </view>
           <view class="p-main">
-            <text class="p-t">{{item.title || item.source}}</text>
-            <text class="p-s">{{item.region ? item.region + ' · ' : ''}}{{item.n ? item.n + ' 题' : ''}}</text>
+            <text class="p-t">{{item.title}}</text>
+            <text class="p-s">{{item.sub}}</text>
           </view>
-          <kg-tag tone="neutral">二期开放</kg-tag>
+          <kg-tag wx:if="{{resume && resume.paperId === item.id}}" tone="warn">续考</kg-tag>
+          <kg-tag wx:elif="{{item.bestText}}" tone="ok">最高 {{item.bestText}}</kg-tag>
+          <text wx:else class="p-go">开考 ›</text>
         </view>
       </kg-card>
       <view wx:if="{{pagedPapers.length < papers.length}}" class="more">
