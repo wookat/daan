@@ -172,6 +172,11 @@ table.tbl{width:100%;border-collapse:collapse}
 .hbar .bar{flex:1;height:8px;border-radius:var(--r-full);background:var(--fill);overflow:hidden}
 .hbar .bar>i{display:block;height:100%;border-radius:var(--r-full);background:var(--grad-brand)}
 .hbar .n{width:56px;text-align:right;color:var(--t3);flex:none;font-variant-numeric:tabular-nums}
+/* 标签+长文本 tag 的行（爬虫面板）：窄屏整体换行到下一行，而不是把 .lb 挤成逐字竖排 */
+.hbar-wrap{flex-wrap:wrap;row-gap:4px}
+.hbar-wrap .lb{width:auto;flex:1 1 150px;min-width:0}
+.hbar-wrap .lb .sub{margin-left:6px;font-size:11px;color:var(--t4)}
+.hbar-wrap .tag{flex:none;height:auto;min-height:20px;padding:2px 8px;line-height:1.5;white-space:normal;max-width:100%}
 
 /* ===== 768px 平板收纳：侧栏折叠为图标栏 ===== */
 @media(max-width:1023px){
