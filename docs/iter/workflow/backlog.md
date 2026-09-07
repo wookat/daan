@@ -13,6 +13,9 @@
 - [x] W3-A（W3，P1，backend）`/api/questions/export` 复用 import 令牌 401、`growth_stats` 周键 `+8 hours`、`_client_ts` 接受 items[].t（秒/毫秒、[now−30d, now+5min] 外回退 now）、`/api/rate` `rl(60/600s)` —— 已合入 `devin/wf-w3-integration`；ruff/pyright 0/pytest 342（+24）全绿，本地 uvicorn 实测 export 401·t 落昨日·CST 周键 2026-35·第 61 次 429；**生产回归待部署**（当前 rev e58779f export 仍 200）
 - [x] W3-B（W3，P1，miniapp+H5）小程序 stats 页 `fetchGrowth` 服务端优先/pstats 降级、离线队列与在线上报 items 带 `t`、types GrowthResp/`AnswerLogItem.t`/`Question.image_credit`、lint 脚本内置 `ESLINT_USE_FLAT_CONFIG=false`；H5 `buildPaceRows` 读 `answered`（整模块未作答→「未作答」、部分作答按已答折算）、`goTask` real_mode 进卷库 —— 已合入；typecheck/lint 0、lint/vitest 523/build:h5 全绿；本地 build 产物报告页 Chrome 实测 skip「未作答」灰标 + 折算注；实施方生产 API 级回归已做并清理（test-w3-b-pace leftover 0）；**小程序未真机、goTask 未端到端点击、H5 报告页生产 UI 待部署**
 - [x] W3-C（W3，P2，content）`quality.sanitize_explanation`（抓取源统计前缀/「解析」标签族 + 广告尾句 + CJK 空格归一，数字/字母空格保留）+ `scripts/w3_content_cleanup.py`（dry-run 默认、`--apply` 备份 `.bak-w3`、rescore、不下线）—— 已合入；test_quality_penalties 11（+3）；本地临时库 dry-run 2500 → apply → 复扫 0，非 explanation 列不变；生产只读快照 dry-run rewrite 10,068（prefix 5383 / ad 192 / space 10045）；生产 `--apply` 已于 2026-09-04 17:11Z 执行（容器内 dry-run 8,282 人审后，含 #594 规则），09-05 复扫 0 / 台账 7,997 题核对一致 / 空 0，记录见 w3.md §4.5
+- [x] W9-A（W9，P1，backend）`/api/push/subscribe|unsubscribe` 改 `def(body: dict)`（非 JSON Content-Type 422）+ subscribe 显式 `owns_uid` 403、`guard_account_uid`/`scan_sheet` 的 owns_uid 与 OpenCV 走 `run_in_threadpool`、`init_db` 建 `idx_q_reinforce` 前补 `_ensure_question_stat_cols`、`quality.answer_letter_conflict` 扣 30（只降分）—— 已合入 `devin/wf-w9-integration`；ruff/pyright 0/pytest 525（+9）全绿，本地新库 uvicorn 实测 form 422 且 0 行 / JSON 无 token 403 / 匿名 200→unsubscribe 200 / scan_sheet 非法图 422 / 新库含 correct_ratio 且 adaptive 200；**生产回归待部署**（见 w9.md §5.1）
+- [x] W9-B（W9，P1，frontend-h5）桌面 208px 让位仅 `uni-page[type="tabBar"]`、tabBar `fontSize 12px`、`exam-weak.js`/`report.vue` 薄弱模块按 `answered`/`ansPct` 判定（answered=0 或 <3 不判、部分作答附「（按已答 a/n 题折算）」）、焦点环 `var(--brand)` —— 已合入；lint/vitest 843/build:h5 全绿；本地 dist CDP 375/1440 实测非 tab 页 paddingLeft 0、tab 页 208、label 12px 单行、整模块未答 attempt 无 CTA、对照组有 CTA（w9.md §4.4）；**生产 UI 待部署**
+- [x] W9-C（W9，P2，miniapp）`kg-exam-report.ts` 薄弱判定与 H5 同口径（集成时兜底文案逐字对齐）、`report.ts` 映射 answered/ansPct、`practice_result` 带 `uid: anonUid()`、`profile.ts` 抽 `refresh()` 退出登录后重拉、删零引用 `utils/exam-progress.ts` —— 已合入；tsc/lint 0、源锁 vitest 9；本地 uvicorn 实测 practice_result 落 uid；**运行时未核**（Linux 无微信开发者工具）
 
 ## Deferred（W2 上线回归追加）
 
@@ -54,7 +57,7 @@
 
 - [ ] [部署后回归·W3] W3-A：`GET /api/questions/export?limit=1` 无头 → 401（当前生产 200，hs 管线若用 export 需配 `X-Import-Token`）、test-w3-* uid `POST /api/answer_log` items 带 `t`=昨日 → `/api/checkin/summary` days 落昨日、`/api/growth` weeks 键与北京时间一致、`/api/rate` 连发 61 次第 61 次 429、核心刷题/错题/模考/统计 200；W3-B：新 bundle ≠ `index-C7wGv3is.js` + SW 更新、某模块全空模考报告页「未作答」灰标；W3-C：已完成（apply 09-04 17:11Z，09-05 复扫 0、262611/235535 外显干净、容器已重建刷缓存，见 w3.md §4.5）。test-w3-mp / test-w3-cmp01 遗留造数已于 09-05 按 uid 精确清除（test-w3-% 余 0）。部署前 `git merge-base --is-ancestor e58779f <deploy_rev>` 核对。
 - [ ] [backend·P2·一行补] 入库防再污染：`sanitize_explanation` 接到 `db.import_questions` / qbank import 入口（W3-A 已合入，同文件可补）。
-- [ ] [backend·P3·待证据] async def 端点内同步 SQLite/CPU：push_api.py subscribe/unsubscribe、ai_api.py api_explain 的 `db.get_explain_cache`、exam_api.py scan_sheet、main.py guard_account_uid 的 owns_uid 查库、etag_conditional 对 SSR 全文 md5 —— 已核实存在但均毫秒级小查询，未拿到与 R372 内存/长尾的因果证据；改法是非流式端点改回 def（走线程池），待 slow-req 日志佐证再做。
+- [ ] [backend·P3·待证据] async def 端点内同步 SQLite/CPU：~~push_api.py subscribe/unsubscribe~~、ai_api.py api_explain 的 `db.get_explain_cache`、~~exam_api.py scan_sheet~~、~~main.py guard_account_uid 的 owns_uid 查库~~、etag_conditional 对 SSR 全文 md5 —— **W9-A 已收口有 5s 上限网络阻塞（owns_uid）与 OpenCV 及 push 两端点**；其余毫秒级小查询未拿到与 R372 长尾的因果证据，待 slow-req 日志佐证再做。
 - [ ] [backend·P3·成本中] `_ensure_*` 运行时懒迁移 22 函数 / 161 处调用（每请求 CREATE TABLE IF NOT EXISTS），R375 已引入 add_column_if_missing，建议统一收敛到 startup 一次性 migrate；收益未量化。
 - [ ] [backend·P3·口径] `/api/questions?limit=0` 返回 1 条（生产实测）—— 疑 `max(1,…)` 兜底，属边界口径而非缺陷，需确认是否有前端依赖。
 - [ ] [backend·P3·待量化] 错题写放大（同一题多次答错重复 upsert）与 `/api/mistakes` 合并口径 —— 本轮未拿到量化证据，需先在 answer_log/mistakes 抽样。
@@ -68,4 +71,25 @@
 - [ ] [新需求提案·增长/留存·待下轮按数据排期] 5 题微组（碎片时间刷题）；邀请落地页预览（复用 team._sharer_invite）；Web Share API 替代复制链接；周报实时化；分享者与被分享者作答对比；学习地图游戏化；AI 先提示后解析模式；5 分钟微模考。
 - [ ] [运维·外部卡点] 生产性能长尾根因归因（R372/R373 已缓解未归因）、竞赛/PK/组队活跃态在生产的真实数据观察（R374 起需 probe 口径过滤积累数日）、AI 实时回复体验。
 - [ ] [流程] 每轮先核对 `/api/health` rev 与 main 的祖先关系，避免把「已上线未合入」或「已合入未上线」当缺陷（W3 集成时 e58779f 已是 HEAD 祖先，无漂移）。
-- [ ] [环境·P3] main 在最新 fastapi 0.141 / starlette 1.6 下有 8 例既有测试 `database is locked`（test_int_params_400 / test_llms_txt / test_material_group×2 / test_mistakes_paper×4，均 conftest.seed_questions；W3-A 实施方两套 venv 对照确认为基线问题）；Dockerfile `pip install fastapi` 未钉版本，重建镜像时关注。fastapi 0.115.12 / starlette 0.46.2 下 342 全绿。
+- [ ] [环境·P3] main 在最新 fastapi 0.141 / starlette 1.6 下有 8 例既有测试 `database is locked`（test_int_params_400 / test_llms_txt / test_material_group×2 / test_mistakes_paper×4，均 conftest.seed_questions；W3-A 实施方两套 venv 对照确认为基线问题）；Dockerfile `pip install fastapi` 未钉版本，重建镜像时关注。fastapi 0.115.12 / starlette 0.46.2 下 342 全绿。**W9 集成（fastapi 0.141.1 / starlette 1.6.0，Python 3.12）pytest 525 全绿未复现 locked**，可能已被后续 conftest 改动消解，保留观察。
+
+## Deferred（W9 追加）
+
+- [ ] [部署后回归·W9] W9-A：form Content-Type 打 `/api/push/subscribe` uid=u999999 → 非 2xx；JSON 匿名 test-w9-* subscribe→200 后立即 unsubscribe 清理；`/api/scan_sheet` 非法图 → 422；`/api/questions?adaptive=1&uid=test-w9-x&module=yanyu` 200；容器内只读抽样核 `answer_letter_conflict` 命中率 ≈1‰（本地无生产库未 dry-run）。W9-B：1440 `#/pkgA/exam/list|report|settings/reminders` `uni-page-wrapper paddingLeft 0`、五 tab 页仍 208、375 tab label 12px 单行、test-w9-* 整模块未答 attempt 报告页无 CTA 后清理、Lighthouse a11y 不低于 R509。W9-C：macOS/Windows 微信开发者工具核 `practice_results` uid 非空 / 退出登录角标即时回匿名 / 报告页整模块未答无 CTA。部署前确认 R510/R511 分支已合 main 且 `git merge-base --is-ancestor 35be115c <deploy_rev>`（`main.py` 两侧改动 merge-tree 预演无冲突）。
+- [ ] [miniapp·P2·API-first 先行] stats 页 onShow 扇出 9 个请求（heatmap/growth/slStats/mastery/examTrend/predict/load…）：先在后端提供聚合 `/api/stats_bundle?uid=`（复用 home_bundle 模式，只做拼装不改各子查询），H5 stats.vue 与小程序 stats.ts 再各自切换；本轮未量化真机耗时，不立项。
+- [ ] [miniapp·P2·设计后做] utils/request.ts 缺 H5 api.js 的超时分级/幂等 GET 重试/apiSnap 快照/stale-uid 丢弃四项韧性；应作为一次请求层对齐（一个文件 + 调用点零改动），需先定小程序侧存储配额与快照键口径，避免与 offline.ts 队列双写。
+- [ ] [miniapp·待真机·P2/P3] 源码级读数、Linux 无开发者工具未核：pkgExam/shenlun/shenlun.wxml 无 page-scroll 结构（其他主页面有）；pkgSocial/pk-result.wxss 中列固定 72px 可能裁切结果标签；kg-chip-row track 自带 page-x 内边距在嵌套容器内双重缩进；app.json 无 preloadRule（分包首开）；首页/统计降级静默（W2 已登记）。合并进 W2-C/W3 的 macOS/Windows 真机走查清单一次处理。
+- [ ] [frontend-h5·P3] predict-card.vue mounted().load() 与 stats.vue onShow → $refs.predict.load() 首次进入重复请求 /api/predict 一次；一行去重（onShow 跳过首帧）但价值低。
+- [ ] [frontend-h5·P3·产品/设计] pkgA/settings/reminders.vue 用 kg-two-col aside-first 把主控件（提醒开关/时间）放 aside：移动端顺序正确，≥1024 主控件落在 320px 右栏、主列只剩说明；是否改为 main 放控件需设计定稿，同类 9 处 aside-first 页面一起看。
+- [ ] [frontend-h5·P3·待截图] favorites.vue `.ngrid`（≥1024 两列、row-gap 0）内 kg-card 依赖 `.kg-card + .kg-card` 兄弟边距排版，第二列首项可能多出 margin-top；生产需有笔记数据才能复现，list.vue 已用 `.plist .paper + .paper{margin-top:0}` 页面级覆盖——若复现，同法一行覆盖，不动 kg-card 组件。
+- [ ] [frontend-h5/miniapp·P3] md.js 行内输出 hex 颜色 vs md.ts 输出 token class：渲染层口径不一致，深色态可能分叉；待深色截图证据后统一为 class。
+- [ ] [frontend-h5·P3·待证据] kg-streak-badges 零状态 opacity/配色、practice 完成页薄弱考点逻辑、mastery-map/exam/list 桌面网格密度等 H5 视觉读数本轮未逐条复核（多为 R479–R495 已修范围），下轮带 375/1440 截图再议。
+- [ ] [frontend-h5·P3·a11y 既有] `#/pkgA/exam/report` Lighthouse a11y 0.95 两项既有失败：配速 kg-tag「偏快」#6b7280/#f2f3f7 对比度 4.35:1；`.cta` aria-label 与可见文案不一致（label-content-name-mismatch）—— W9-B 实施方本地 dist 发现，非本轮引入。
+- [ ] [backend·P3·量化后做] `_ensure_*` 懒迁移 22 函数/161 处调用与 async 端点内其余毫秒级同步 SQLite（ai_api get_explain_cache、etag md5）：W9-A 只收口有 5s 上限的网络阻塞与 OpenCV；其余按 W3 台账等 slow-req 日志佐证。
+- [ ] [backend·P2·契约] `/api/profile` 仍接受已过考试日期（R505/R506 登记）；小程序 picker start 本地日期；`mistakes_total` 三处口径——已在 handoff 登记给 W7 簇，本轮不重复立项。
+- [ ] [content·数据结论] 解析结论字母与 answer 冲突：生产随机 5 模块×150 题、1451 个解析段中命中 1（q283745），≈1‰；W9-A 只加扣分规则，是否批量下线/改答案需 admin 按 quality_score 低分抽审后决定，不做脚本 apply。
+- [ ] [content·P3·维持不立项] hs 模板句式（「确认答案为X」80%）、original 题「同模板换地名」家族、机器味解析——W2/W3 台账已判：去模板化=LLM 重写成本，受「不反复触发 AI」约束；家族标记需先出骨架哈希统计。
+- [ ] [content·P2·需人审·沿用台账] 76 对同题异格式重复、7300 题汉字间空格（禁一刀切）、yanyu b2026* 批次抽审、8 条 ziliao「数据矛盾」复核、「微信/关注」词人审——均在 backlog，不重复。
+- [ ] [数据结论·W9] 生产探针打标自 2026-09-03 起，此前流量不可分类；R505–R509 连续 (c) 核对显示 probe=0 的 answer_log/growth/push_subs/mistakes_total 触达为 0 或个位数，user_profile 9 行全默认——当前没有足够真人样本支撑留存/漏斗结论，任何「用户不用某功能」的判断都不能下；下一步是获客而非再做功能推断。
+- [ ] [新需求提案·沿用 W3 清单] 5 题微组、邀请落地页预览、Web Share API、周报实时化、分享者作答对比、AI 先提示后解析、5 分钟微模考、模考大赛真实累计人数展示、SMS 凭证到位后注册验证码——待有真人流量数据再按转化排期。
+- [ ] [流程] 每轮先核 `/api/health` rev 与 main 祖先关系：W9 集成时生产 `10e2eb82` 在 R510 分支（`origin/devin/1788816465-r510-precache-practice-first`）上，是 main `35be115c` 的后代（+7 提交，含 R511 `0c532532`），生产 = main 超集无漂移；**R510/R511 尚未合 main**，合 main 时与 W9-A 的 `main.py` 改动 merge-tree 预演无冲突。

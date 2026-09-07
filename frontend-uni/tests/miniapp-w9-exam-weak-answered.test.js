@@ -23,11 +23,16 @@ describe('W9-C kg-exam-report.weakModule：按已答判定', () => {
   it('已答正确率高于全卷正确率时不误判：pct 30（未答拖低）但 ansPct 100 → 不薄弱', () => {
     expect(weakModule([row('panduan', 30, 70, { answered: 3, ansPct: 100 })])).toBe(null);
   });
-  it('兜底文案：ansPct 口径写「本卷已答正确率」，无 answered 字段回落 n/pct 写「本卷正确率」', () => {
+  it('兜底文案与 H5 exam-weak.js 逐字一致：部分作答附「（按已答 a/n 题折算）」，全部作答/无 answered 字段不附', () => {
     expect(weakModule([row('yanyu', 40, null, { answered: 5, ansPct: 40 })])).toEqual({
       key: 'yanyu',
       name: 'yanyu名',
-      reason: '本卷已答正确率 40%，全卷最低',
+      reason: '本卷正确率 40%，全卷最低（按已答 5/10 题折算）',
+    });
+    expect(weakModule([row('yanyu', 40, null, { answered: 10, ansPct: 40 })])).toEqual({
+      key: 'yanyu',
+      name: 'yanyu名',
+      reason: '本卷正确率 40%，全卷最低',
     });
     expect(weakModule([row('yanyu', 40, null)])).toEqual({ key: 'yanyu', name: 'yanyu名', reason: '本卷正确率 40%，全卷最低' });
   });

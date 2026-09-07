@@ -157,6 +157,11 @@ function judgePct(m: ModuleRow): number | null {
   return validPct(pct) ? pct : null;
 }
 
+/** 部分作答时兜底文案附折算说明，与 paceRows refNote / H5 exam-weak.js 同写法 */
+function partialNote(m: ModuleRow): string {
+  return m.answered != null && m.answered < m.n ? '（按已答 ' + m.answered + '/' + m.n + ' 题折算）' : '';
+}
+
 /** 薄弱模块：优先「低于全站均值 ≥5 个百分点」最大者，否则全卷最低且 <60%（与 H5 exam-weak.js 同口径） */
 export function weakModule(modules: ModuleRow[]): { key: string; name: string; reason: string } | null {
   const rows: Array<{ m: ModuleRow; pct: number }> = [];
@@ -175,8 +180,7 @@ export function weakModule(modules: ModuleRow[]): { key: string; name: string; r
   if (best) return { key: best.m.key, name: best.m.name || best.m.key, reason: '低于全站均值 ' + Math.round(best.gap) + ' 个百分点' };
   const low = rows.slice().sort((a, b) => a.pct - b.pct)[0];
   if (low && low.pct < LOW_PCT) {
-    const label = low.m.ansPct == null ? '本卷正确率 ' : '本卷已答正确率 ';
-    return { key: low.m.key, name: low.m.name || low.m.key, reason: label + low.pct + '%，全卷最低' };
+    return { key: low.m.key, name: low.m.name || low.m.key, reason: '本卷正确率 ' + low.pct + '%，全卷最低' + partialNote(low.m) };
   }
   return null;
 }
