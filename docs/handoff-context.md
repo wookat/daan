@@ -2493,3 +2493,14 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 顺带核不命中：`redo(m)` `if (!text) return;` 对 `question_text` 空静默——生产 0 行。问答页 sheet / 错题本 AI 分析结果态 / 每日一练完成态本轮**未整页过审**（`ask_sessions` 该 uid 0 行、sheet 非探针 0 次打开），留到有到达证据再审。
 - 如实：`umsacie7` 61 作答全 08-01 probe=NULL、09-05 回访 0 作答、两段出口 IP 不同、身份不确定；入口归属靠「调用点唯一 + 无 track POST」两条推出；埋点真人 0 样本；未提交 `explain/stream`；无 testing agent 录屏（未另行授权）；仍无可确认外部真人完整闭环。
 - 取证：`docs/iter/round-3/r490-sop10-book-list-ask-deeplink-only-natural-qid-entry-untracked.md`；脚本/输出 `~/r490_db3.sh` `~/r490_caddy1.py` `~/r490_post.sh` `~/r490_post2.out` `~/r490_deploy.log`。
+
+### R491（2026-09-07）：问答页会话/历史 sheet 只读整页审（375/1440）——命中「删除正在查看的会话后被新对话/切换会话重新归档复活」→ `clearCurrent()` 最小修上线（生产 `a8ceca8` → `93ac35c`）
+- **(c) / 到期项 0 增量**：R490 容器（10:37:53Z 起）34 请求全本机/探针；非探针 POST / `mistakes/analysis` / `explain/stream` 0；`umst3` 0 回访；`book_ask_click` 真人 0（仅 R490 探针 1 行）、`practice_ask_click` 仍只 R487 探针 2 行 → `growth_events.ref ↔ explain_cache.qid` 对账无真人样本；`explain_cache qid` 0/82；时政 qid 非空 0/0；`error_reason` ≥09-11 0；probe=0 33/1、growth 20/4；WAL 同字节。
+- **历史 sheet 一手（生产 bundle CDP 375/1440，探针头，`/api/**` 全 mock/abort → 0 库写入 0 LLM）**：空态/列表行 54.8 px/`删除` 44×30.7/关闭 40×40/长标题 ellipsis/切换写 `askCurSid`/DELETE 503 墓碑保留 + 刷新过滤 + 重试 全通过（R330 语义成立）。
+- **命中（verified 两视口）**：删**正在查看**的会话 A → 行消失、DELETE 200、墓碑清，但 `results`/`askCurSid` 仍 = A；随后「新对话」或切到 B → `archiveCurrent()` 用同 sid 回写 → 本机列表 A 复活 + `POST /api/ask/sessions sid=A`（服务端复活）、标题被 `userText` 30 字改写。R329「查看不销毁」× R330「删除即终态」交叉路径无人接。
+- **修（`93ac35c`，纯前端）**：`newSession()` 清空段抽成 `clearCurrent()`；`delSession()` 末行 `if (s.id === (this.curSid || Number(uni.getStorageSync('askCurSid')) || 0)) this.clearCurrent();`（刷新后 `curSid` 为 0、sid 只在 storage 的情形一并覆盖）。源锁 `tests/ask-r491-del-current-session.test.js`。门 vitest 728 / eslint / build 绿；pytest 510 / ruff / pyright 0。
+- **发版 + 改后一手**：等兄弟 `pip install` 退出（盘 2.6 G→3.4 G）后 `--skip-build` 一次 rc=0，容器 `StartedAt 11:03:51.871Z` healthy 0 重启，`pages-ask-ask.9GiTFO19.js` 线上=本机 md5；7/7 200；perf `/` 0.97·1.00 / `/tiku/` 1.00·1.00。生产 375/1440 同脚本：删当前会话即清空 + `POST /api/ask/cur []`、切 B 后 0 条 `POST sessions`、`askSessions=[1002]`；失败态/墓碑不变。起后 49 请求全本机、5xx/404/monitor 0。
+- **生产触达**：Caddy 全历史 `/api/ask/sessions|cur` 630 次里非探针 20 次（GET 18 + `POST cur` 2），**`POST/DELETE /api/ask/sessions` 非探针 0 条**、`ask_sessions` 全表 1 行探针 → 命中路径真实流量 0 次发生（可达未触发，R484 同性质）。
+- 登记不改：`删除` 30.7 px 宽 + 无二次确认（错题本有 `showModal`）——无样本；跨设备删后本机仍看着 → 追问回写复活（R330 已登记）。
+- 如实：CDP 仿真非真机；`.rec-row`/`.rec-brief` 结果区同名 class 会混进计数、判定看 `.sheet` 内元素 + `askSessions`；未提交 `explain/stream`；无 testing agent 录屏（未另行授权）。
+- 取证：`docs/iter/round-3/r491-ask-history-sheet-audit-delete-current-session-resurrect.md`；脚本/输出 `~/r491_hist.py`（`R491_BASE` 可指本地 dist）`~/r491_hist_{375,1440}{,_post}.out` `~/r491_hist_375_local.out` `~/r491_caddy2.sh` `~/r491_post.out` `~/r491_deploy.log`。
