@@ -1686,6 +1686,12 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 本地：pytest 363 / ruff / pyright 0；前端零改动复用 R381 bundle。生产归档试跑（`/tmp`，不覆盖 cron 产物）：候选真人 API 09-01 5 / 09-02 48 / 09-03 2 / 09-04 1，5xx 0，日去重 IP 2–5。
 - 未做/留档：`/api/exam/papers` 10.5 s 的 `list_exam_papers()+exam_paper_filters()` 组合与 `tag3=CS-LS-01` 4.0 s 留 R383 取证；`/api/comments/count`、`/api/notes` 表结构未核；宿主 IO 争用第 6 次上报。
 
+### R383 UI/组件/排版专项：字阶偶数化 + 卷库操作区层级/分批挂载 + 我的页 cell 标题不折行（2026-09-05，分支 devin/*-ui-type-scale，base=main）
+- 取证：生产 H5 14 路由 × light/dark 28 张真机口径截图（390×844 @2x）+ 静态扫描：H5 38 个 .vue 有 30 种 `font-size`、36 种圆角、131 种色值；小程序 17 个 wxss 有 24 种字号。奇数 rpx（19/21/23/25/27/29）在 375 宽下落到 .5px 亚像素，同一行文字在不同机型渲染灰度不一，且与 `uni.scss` 字阶 token（22/26/30/34）错位。`pkgA/exam/list` 120 张卷一次性渲染整页 43k px（DOM 480+ 卡片节点），每卷 4 个同权重描边药丸按钮；`pages/profile` wot `wd-cell` 左右各 `flex:1`，9 字标题被挤成两行。
+- 方案（只动样式块，不动业务）：① 脚本把 H5 .vue `<style>` 与小程序 .wxss 中奇数 rpx 字号统一上取偶数（360 处：23→24 94、25→26 91、21→22 74、27→28 65、29→30 28、19→20 8），`font-weight: 800` 85 处**保留**（v2 设计稿 hero 数字有意用 800）；`font-size.js` 选项字号 25/29/33 → 24/28/32（题干 26/30/34 减 2rpx，同一口径），对应 vitest 期望值同步。② 卷库：`paged = shown.slice(0, visibleN)`（PAGE 20），底部「展开更多（还有 N 卷）」+ `onReachBottom` 自动追加；切筛选重置；深链 `pid` 命中第 idx 张时 `visibleN = idx+1` 保证定位可见。操作区一主多次：主按钮 `flex:1.5` 实底，次按钮 `--brand-soft` 浅底无边框。③ 我的页 `:deep(.cellcard .wd-cell__left){flex:0 0 auto;max-width:62%}`，标题 nowrap、值单行省略。
+- 本地：vitest 540 / eslint / build:h5（需 Node 22，lock 里 nanoid 6 只支持 ^22；系统默认 Node 20 会 ERR_REQUIRE_ESM，用 `~/.nvm/versions/node/v22.12.0`）/ 小程序 tsc+eslint 0。本地 dist + 生产 API 代理实跑：10 路由 375/1440 无横向溢出；卷库首屏 43k→7.5k px、展开更多 20→40→滚动到底 60、`?pid=112`（第 120 张）定位成功；我的页 cell 标题单行。
+- 未做/留档：小程序 wxss 改动只做 tsc/eslint，未在开发者工具模拟器回归（登录态需扫码）；131 种色值/36 种圆角收敛到 token 留下一轮（需逐页语义判断，不适合脚本）；深色模式逐页对比度复核未做。
+
 ### R403 生产盘清理（2026-09-05 纯 ops，老板指令「清理旧备份腾空间」）
 - 现状：VM-0-8-ubuntu 50G 根盘 43G/97%→清理后 42G/88%（余 5.9G）。大头不是备份：containerd 9.3G、docker 卷 13.4G（recruit_app_pgdata 8.6G、kaogong-data 2.0G、softcopyright 2.0G）、镜像 7.2G（nyc-ticket-odds-web 3.57G）。
 - 删除（均有更新副本覆盖，先核对 R2 `zalize-backups/kaogong-sqlite` 08-27～09-05 十份字节数与本地一致后才删）：本地日备 data-2026-08-30/31、09-01/02（≈580M）；一次性旧快照 /home/ubuntu/snap_r42.db（08-10）+ snap.db.gz（08-05）≈442M；容器 /data 内 bak-r348.gz / bak-w2.gz / r396-before.gz（≈515M，各步 ids 台账在仓库）；docker build cache 676M。保留：bak-w3.gz（PR #620 审计依据）、r400/r401-before.gz、r402-before（并行会话进行中）。

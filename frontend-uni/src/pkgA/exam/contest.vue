@@ -228,7 +228,7 @@ export default {
 .hero { background: linear-gradient(135deg, #eef3ff, #fdfbf3); }
 .theme-dark .hero { background: linear-gradient(135deg, #232a3d, #262330); }
 .hero-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
-.hero-series { font-size: 21rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
+.hero-series { font-size: 22rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
 .hero-phase { font-size: 22rpx; font-weight: 600; border-radius: 999rpx; padding: 4rpx 18rpx; }
 .hero-phase.upcoming { color: var(--warn-strong); background: var(--warn-soft); }
 .hero-phase.running { color: #15803d; background: var(--ok-soft); }
@@ -236,7 +236,7 @@ export default {
 .hero-title { display: block; font-size: 34rpx; font-weight: 800; color: var(--ink); }
 .hero-paper { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 8rpx; }
 .hero-meta { display: flex; gap: 24rpx; flex-wrap: wrap; margin-top: 12rpx; }
-.hm { font-size: 23rpx; color: var(--ink-2); }
+.hm { font-size: 24rpx; color: var(--ink-2); }
 .count { font-size: 26rpx; color: var(--ink-2); margin-top: 20rpx; }
 .count-n { font-size: 30rpx; font-weight: 700; color: #d97706; }
 .cta { margin-top: 20rpx; min-height: 44px; display: flex; align-items: center; justify-content: center; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 28rpx; font-weight: 600; }
@@ -248,10 +248,10 @@ export default {
 .prow { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 12rpx 0; border-bottom: 1rpx solid var(--line); }
 .prow:last-child { border-bottom: none; }
 .prow-l { flex: 1; min-width: 0; margin-right: 16rpx; }
-.prow-t { display: block; font-size: 25rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.prow-s { display: block; font-size: 21rpx; color: var(--ink-2); margin-top: 4rpx; }
+.prow-t { display: block; font-size: 26rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prow-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
 .prow-score { flex-shrink: 0; font-size: 26rpx; font-weight: 700; color: var(--brand-text); }
-.prow-none { flex-shrink: 0; font-size: 23rpx; color: var(--ink-3); }
+.prow-none { flex-shrink: 0; font-size: 24rpx; color: var(--ink-3); }
 .rules-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0; }
 .rules-arrow { font-size: 22rpx; color: var(--ink-2); font-weight: 400; }
 .rules { margin-top: 16rpx; }

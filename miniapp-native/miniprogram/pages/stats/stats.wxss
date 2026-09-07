@@ -228,7 +228,7 @@
   border-radius: var(--r-m);
   padding: 18rpx 22rpx;
   margin-top: 18rpx;
-  font-size: 23rpx;
+  font-size: 24rpx;
   color: #b45309;
   font-weight: 600;
 }

@@ -411,15 +411,15 @@ export default {
 .empty-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 12rpx; }
 .cta { margin-top: 32rpx; min-height: 44px; display: flex; align-items: center; justify-content: center; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 28rpx; font-weight: 600; }
 .hero { background: linear-gradient(135deg, var(--brand), #5c82ff); border: none; }
-.hero-range { display: block; font-size: 25rpx; color: rgba(255, 255, 255, 0.85); text-align: center; }
+.hero-range { display: block; font-size: 26rpx; color: rgba(255, 255, 255, 0.85); text-align: center; }
 .hero-nums { display: flex; margin-top: 24rpx; }
 .hn { flex: 1; text-align: center; }
 .hn-v { display: block; font-size: 40rpx; font-weight: 800; color: #fff; }
-.hn-k { display: block; font-size: 21rpx; color: rgba(255, 255, 255, 0.8); margin-top: 6rpx; }
+.hn-k { display: block; font-size: 22rpx; color: rgba(255, 255, 255, 0.8); margin-top: 6rpx; }
 .badges { display: flex; gap: 16rpx; margin-bottom: 24rpx; flex-wrap: wrap; }
 .badge { flex: 1; min-width: 200rpx; background: linear-gradient(135deg, #fff7ed, #fffbeb); border: 1rpx solid #fcd34d; border-radius: 16rpx; padding: 20rpx; }
 .badge-t { display: block; font-size: 26rpx; font-weight: 700; color: #92400e; }
-.badge-s { display: block; font-size: 21rpx; color: #b45309; margin-top: 6rpx; }
+.badge-s { display: block; font-size: 22rpx; color: #b45309; margin-top: 6rpx; }
 .cmp-row { display: flex; align-items: center; min-height: 44px; border-bottom: 1rpx solid var(--line); }
 .cmp-row:last-child { border-bottom: none; }
 .cmp-k { flex-shrink: 0; width: 150rpx; font-size: 24rpx; color: var(--ink-2); }
@@ -429,25 +429,25 @@ export default {
 .ms-tag { flex-shrink: 0; width: 40rpx; height: 40rpx; line-height: 40rpx; text-align: center; border-radius: 50%; font-size: 24rpx; font-weight: 800; }
 .ms-tag.up { background: var(--ok-soft); color: #15803d; }
 .ms-tag.down { background: var(--bad-soft); color: #b91c1c; }
-.ms-t { flex: 1; font-size: 25rpx; color: var(--ink); }
-.ms-v { flex-shrink: 0; font-size: 23rpx; color: var(--ink-2); }
+.ms-t { flex: 1; font-size: 26rpx; color: var(--ink); }
+.ms-v { flex-shrink: 0; font-size: 24rpx; color: var(--ink-2); }
 .rs-row { display: flex; align-items: center; gap: 14rpx; min-height: 44px; }
-.rs-k { flex-shrink: 0; width: 140rpx; font-size: 23rpx; color: var(--ink-2); }
+.rs-k { flex-shrink: 0; width: 140rpx; font-size: 24rpx; color: var(--ink-2); }
 .rs-bar { flex: 1; height: 16rpx; background: var(--bad-soft); border-radius: 999rpx; overflow: hidden; }
 .rs-fill { height: 100%; background: #ef4444; border-radius: 999rpx; }
 .rs-v { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: var(--ink); }
 .rs-p { font-size: 20rpx; color: var(--ink-3); font-weight: 400; }
 .mk-line { font-size: 26rpx; color: var(--ink); margin-bottom: 10rpx; }
-.mk-line.sub { font-size: 23rpx; color: var(--ink-2); }
+.mk-line.sub { font-size: 24rpx; color: var(--ink-2); }
 .mk-n { font-size: 34rpx; font-weight: 800; color: var(--brand-text); }
-.mk-none { display: block; font-size: 25rpx; color: var(--ink-2); margin-bottom: 12rpx; }
+.mk-none { display: block; font-size: 26rpx; color: var(--ink-2); margin-bottom: 12rpx; }
 .link { font-size: 24rpx; color: var(--brand-text); font-weight: 600; min-height: 44px; display: flex; align-items: center; }
 .act-row { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 10rpx 0; border-bottom: 1rpx solid var(--line); }
 .act-row:last-child { border-bottom: none; }
-.act-t { font-size: 25rpx; color: var(--ink); }
+.act-t { font-size: 26rpx; color: var(--ink); }
 .act-go { flex-shrink: 0; font-size: 24rpx; color: var(--brand-text); font-weight: 600; }
 .btns { display: flex; }
-.pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 27rpx; font-weight: 500; background: var(--card); }
+.pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 28rpx; font-weight: 500; background: var(--card); }
 .pbtn.main { background: var(--brand); color: #fff; }
 .mask { position: fixed; inset: 0; background: rgba(15, 18, 25, 0.45); z-index: 90; display: flex; align-items: flex-end; }
 .sheet { width: 100%; background: var(--card); border-radius: 28rpx 28rpx 0 0; padding: 28rpx 28rpx calc(28rpx + env(safe-area-inset-bottom)); max-height: 85vh; box-sizing: border-box; overflow-y: auto; }

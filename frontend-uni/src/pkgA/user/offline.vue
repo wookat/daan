@@ -129,14 +129,14 @@ export default {
 
 <style scoped>
 .wrap { padding: 24rpx 32rpx 60rpx; }
-.offbar { background: var(--warn-soft); border-radius: 16rpx; padding: 18rpx 24rpx; font-size: 25rpx; color: var(--warn); margin-bottom: 20rpx; }
+.offbar { background: var(--warn-soft); border-radius: 16rpx; padding: 18rpx 24rpx; font-size: 26rpx; color: var(--warn); margin-bottom: 20rpx; }
 .card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 28rpx; margin-bottom: 20rpx; }
 .row-sb { display: flex; justify-content: space-between; align-items: center; }
 .h { font-size: 30rpx; font-weight: 700; color: var(--ink); }
 .sub { font-size: 24rpx; color: var(--ink-3); }
 .bar { height: 12rpx; background: var(--fill); border-radius: 999rpx; overflow: hidden; margin-top: 16rpx; }
 .fill { height: 100%; background: var(--brand); border-radius: 999rpx; min-width: 6rpx; }
-.hint { font-size: 23rpx; color: var(--ink-3); margin-top: 14rpx; line-height: 1.6; }
+.hint { font-size: 24rpx; color: var(--ink-3); margin-top: 14rpx; line-height: 1.6; }
 .sync { display: flex; align-items: center; gap: 16rpx; background: var(--brand-soft); box-shadow: none; }
 .sync-t { flex: 1; font-size: 24rpx; color: var(--brand-text); line-height: 1.6; }
 .sync-btn { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: #fff; background: var(--brand); border-radius: 999rpx; padding: 10rpx 26rpx; }
@@ -146,10 +146,10 @@ export default {
 .pkg:last-child { border-bottom: none; }
 .ico { width: 68rpx; height: 68rpx; border-radius: 16rpx; color: #fff; font-size: 30rpx; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .grow { flex: 1; min-width: 0; }
-.nm { display: block; font-size: 27rpx; font-weight: 600; color: var(--ink); }
+.nm { display: block; font-size: 28rpx; font-weight: 600; color: var(--ink); }
 .sub2 { display: block; font-size: 22rpx; color: var(--ink-3); margin-top: 4rpx; }
 .act { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: var(--brand-text); padding: 12rpx 16rpx; }
 .act.del { color: var(--bad); }
 .act.dim { color: var(--ink-4); }
-.hint2 { font-size: 23rpx; color: var(--ink-3); line-height: 1.7; margin: 8rpx 10rpx; }
+.hint2 { font-size: 24rpx; color: var(--ink-3); line-height: 1.7; margin: 8rpx 10rpx; }
 </style>

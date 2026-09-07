@@ -73,7 +73,7 @@ export default {
 .exp-opts { display: flex; gap: 12rpx; margin-top: 20rpx; }
 .expchip { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--line); border-radius: 12rpx; font-size: 24rpx; color: var(--ink-2); background: var(--fill); }
 .expchip.on { border-color: var(--brand-text); color: var(--brand-text); background: var(--brand-soft); font-weight: 600; }
-.opt-note { margin-top: 14rpx; font-size: 21rpx; color: var(--ink-3); }
+.opt-note { margin-top: 14rpx; font-size: 22rpx; color: var(--ink-3); }
 .confirm-btn { margin-top: 24rpx; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 28rpx; font-weight: 600; }
 .confirm-btn.dim { opacity: 0.6; }
 </style>

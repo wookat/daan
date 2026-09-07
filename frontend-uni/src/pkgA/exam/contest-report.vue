@@ -179,21 +179,21 @@ export default {
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 30rpx; font-weight: 600; margin-bottom: 20rpx; }
 .hero { background: linear-gradient(135deg, var(--brand), #5c82ff); border: none; text-align: center; }
-.hero-title { display: block; font-size: 25rpx; color: rgba(255, 255, 255, 0.85); }
+.hero-title { display: block; font-size: 26rpx; color: rgba(255, 255, 255, 0.85); }
 .hero-score { margin: 16rpx 0 10rpx; }
 .score-n { font-size: 88rpx; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
 .score-u { font-size: 26rpx; color: rgba(255, 255, 255, 0.85); margin-left: 6rpx; }
 .hero-meta { display: flex; justify-content: center; gap: 28rpx; flex-wrap: wrap; }
-.hm { font-size: 23rpx; color: rgba(255, 255, 255, 0.9); }
+.hm { font-size: 24rpx; color: rgba(255, 255, 255, 0.9); }
 .tip-card { background: var(--warn-soft); border-color: #fcd34d; }
-.tipline { font-size: 23rpx; color: #92400e; line-height: 1.7; }
+.tipline { font-size: 24rpx; color: #92400e; line-height: 1.7; }
 .dist { display: flex; align-items: flex-end; gap: 6rpx; height: 160rpx; }
 .dist-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
 .dist-bar-w { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
 .dist-bar { width: 60%; min-height: 4rpx; background: var(--line); border-radius: 4rpx 4rpx 0 0; }
 .dist-bar.me { background: var(--brand); }
 .dist-l { font-size: 18rpx; color: var(--ink-3); margin-top: 4rpx; }
-.note { display: block; font-size: 21rpx; color: var(--ink-3); margin-top: 10rpx; }
+.note { display: block; font-size: 22rpx; color: var(--ink-3); margin-top: 10rpx; }
 .gap-row { display: flex; justify-content: space-between; align-items: center; min-height: 44px; }
 .gap-k { font-size: 26rpx; color: var(--ink); }
 .gap-v { font-size: 26rpx; font-weight: 700; color: #d97706; }
@@ -204,11 +204,11 @@ export default {
 .mrow-main { flex: 1; min-width: 0; }
 .mrow-bar { height: 14rpx; background: var(--brand-soft); border-radius: 999rpx; overflow: hidden; margin-bottom: 8rpx; }
 .mrow-fill { height: 100%; background: var(--brand); border-radius: 999rpx; }
-.mrow-sub { display: block; font-size: 21rpx; color: var(--ink-2); margin-top: 2rpx; }
+.mrow-sub { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 2rpx; }
 .wrow { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 10rpx 0; border-bottom: 1rpx solid var(--line); }
 .wrow:last-child { border-bottom: none; }
-.wrow-t { display: block; font-size: 25rpx; color: var(--ink); }
-.wrow-s { display: block; font-size: 21rpx; color: #b91c1c; margin-top: 2rpx; }
+.wrow-t { display: block; font-size: 26rpx; color: var(--ink); }
+.wrow-s { display: block; font-size: 22rpx; color: #b91c1c; margin-top: 2rpx; }
 .wrow-go { flex-shrink: 0; font-size: 24rpx; color: var(--brand-text); font-weight: 600; }
 .curve { display: flex; align-items: flex-end; gap: 14rpx; height: 220rpx; padding: 10rpx 0; }
 .curve-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 44rpx; }
@@ -217,7 +217,7 @@ export default {
 .curve-bar.cur { background: var(--brand); }
 .curve-x { font-size: 20rpx; color: var(--ink-2); margin-top: 6rpx; }
 .btns { display: flex; gap: 16rpx; }
-.pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 27rpx; font-weight: 500; background: var(--card); }
+.pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 28rpx; font-weight: 500; background: var(--card); }
 .pbtn.main { background: var(--brand); color: #fff; }
 
 /* #ifdef H5 */
