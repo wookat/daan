@@ -120,10 +120,10 @@
         <text class="tk-go">{{ todayCount >= dailyGoal ? '再练一组 ›' : '去刷题 ›' }}</text>
       </view>
       <view class="tk-row" @click="taskGo('review')">
-        <text class="tk-ck" :class="{ on: planFetched && !dueReview }">{{ planFetched && !dueReview ? '✓' : '' }}</text>
+        <text class="tk-ck" :class="{ on: reviewTaskDone }">{{ reviewTaskDone ? '✓' : '' }}</text>
         <view class="tk-main">
-          <text class="tk-name" :class="{ done: planFetched && !dueReview }">错题复习</text>
-          <text class="tk-sub">{{ dueReview ? '今日到期 ' + dueReview + ' 题' : planFetched ? '今日已清零' : '按遗忘曲线安排' }}</text>
+          <text class="tk-name" :class="{ done: reviewTaskDone }">错题复习</text>
+          <text class="tk-sub">{{ dueReview ? '今日到期 ' + dueReview + ' 题' : reviewTaskDone ? '今日已清零' : planFetched ? '答错的题自动进错题本' : '按遗忘曲线安排' }}</text>
         </view>
         <text class="tk-go">{{ dueReview ? '去复习 ›' : '错题本 ›' }}</text>
       </view>
@@ -569,6 +569,12 @@ export default {
     dueReview() {
       return (this.plan && this.plan.due_mistakes) || 0;
     },
+    reviewTaskDone() {
+      // 从未有过错题的用户没有可清零的复习，不算已完成（老快照无 mistakes_total 时沿用旧口径）
+      if (!this.planFetched || this.dueReview) return false;
+      const t = this.plan && this.plan.mistakes_total;
+      return t == null || t > 0;
+    },
     todayCount() {
       // 服务端 answer_log（Asia/Shanghai 日界，按当前 uid）为准；
       // 本地 pstats 不分身份，仅在服务端未返回（离线）时降级使用
@@ -639,7 +645,7 @@ export default {
     taskDoneN() {
       let n = 0;
       if (this.todayCount >= this.dailyGoal) n++;
-      if (this.planFetched && !this.dueReview) n++;
+      if (this.reviewTaskDone) n++;
       if (this.todayCount > 0) n++;
       return n;
     },

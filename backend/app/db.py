@@ -2967,6 +2967,9 @@ def daily_plan(uid: str) -> dict:
               AND (next_review IS NULL OR next_review<=?){uc}""",
         (now, *ua),
     ).fetchone()
+    mtotal = conn.execute(
+        f"SELECT COUNT(*) n FROM mistakes WHERE 1=1{uc}", ua
+    ).fetchone()
     conn.close()
     state = get_user_state(uid)
     focus = (state or {}).get("focus_module") or ""
@@ -2979,6 +2982,7 @@ def daily_plan(uid: str) -> dict:
             "modules": [{"module": r["module"], "n": r["n"], "c": r["c"]} for r in ymods],
         },
         "due_mistakes": due["n"],
+        "mistakes_total": mtotal["n"],
         "weak": weak[:2],
         "focus": focus,
     }
