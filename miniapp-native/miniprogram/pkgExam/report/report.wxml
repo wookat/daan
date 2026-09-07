@@ -208,7 +208,7 @@
       module="{{detail.module || ''}}"
       submodule="{{detail.submodule || ''}}"
       question="{{detail.question}}"
-      image="{{detail.image || ''}}"
+      image="{{detail.imgUrl}}"
       imageCredit="{{detail.image_credit || ''}}"
       markable="{{false}}"
     >

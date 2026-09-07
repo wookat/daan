@@ -570,9 +570,12 @@ export default {
 
 /* cell 组：作为 cell 规范样板 */
 :deep(.cellcard) { display: block; border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--line); margin-bottom: var(--sp-4); }
-/* 标题不换行、右侧值单行省略：wot 默认左右各 flex:1，长标题会被挤成两行 */
-:deep(.cellcard .wd-cell__left) { flex: 0 0 auto; max-width: 62%; }
-:deep(.cellcard .wd-cell__title) { white-space: nowrap; }
+/* 标题不换行、右侧值单行省略：wot 默认左右各 flex:1，长标题会被挤成两行；
+   title 由 <text> 渲染，uni-h5 基础样式 uni-text{white-space:pre-line} 会盖掉父级 nowrap，需下探到 text 本体 */
+:deep(.cellcard .wd-cell__left) { flex: 0 0 auto; max-width: 62%; min-width: 0; }
+:deep(.cellcard .wd-cell__title),
+:deep(.cellcard .wd-cell__title uni-text),
+:deep(.cellcard .wd-cell__title text) { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 :deep(.cellcard .wd-cell__value) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cell-ico { width: 32px; height: 32px; border-radius: var(--r-xs); background: var(--fill); display: flex; align-items: center; justify-content: center; margin-right: var(--sp-12); }
 

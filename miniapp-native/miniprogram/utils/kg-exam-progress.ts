@@ -2,6 +2,7 @@
 // 对齐 frontend-uni/src/exam-resume.js、exam-progress-sync.js、exam-policy.js
 import type { ExamPaperInfo, Question } from '../api/types';
 import type { ExamResumeResp } from '../api/exam-types';
+import { imgUrl } from './request';
 
 export const PROG_KEY = 'examProgress';
 export const CLEARED_KEY = 'erClearedAt';
@@ -36,7 +37,7 @@ export interface ResumeInfo {
 }
 
 export function toEQ(q: Question): EQuestion {
-  return { ...q, _picked: '', _marked: false, _secs: 0, _excl: [] };
+  return { ...q, image: imgUrl(q.image), _picked: '', _marked: false, _secs: 0, _excl: [] };
 }
 
 export function loadSnap(): ExamProgressSnap | null {
