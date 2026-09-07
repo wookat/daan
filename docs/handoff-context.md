@@ -2661,3 +2661,13 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 门：pytest 516 / ruff / pyright 0；vitest 778 / eslint / build 绿。发版 `--skip-build` rc=0，容器 `16:46:42Z rev=34bd4d1` healthy，7/7 200，perf `/` 0.96 LCP 2290 / `/tiku/` 1.00。
 - 登记：landing 三卖点 375 三行小字（无用户证据不动）；打卡行 1–2 天态未核；老壳/新服务端组合走 `t == null` 旧口径不受影响。
 - 取证：`docs/iter/round-3/r503-home-cold-start-fresh-user-review-task-fenbi-benchmark.md`；`~/r503_post.sh`、`~/r503_claims.sh`→`~/r503_claims.out`、`~/r503_home_cold.py`→`~/r503_home_cold_{,post_}{375,1440}.out`+`.png`、`~/r503_fenbi_home.html`、`~/r503_deploy.log`。
+
+### R504（2026-09-08）：首页「有数据态」hero / 任务卡 / 到期条 / 今日计划 与 DB 一手对账 375/1440 → 数值口径全部一致，命中「考试日期已过仍倒计『距考试 -1 天』」→ 最小修上线（生产 `34bd4d1` → `65580c6`）
+
+- (c)：R503 容器至发版 / 新容器 5xx/404/monitor/非探针 POST/401·403 全 0；WAL 同字节；到期项全部不变（probe=0 `answer_log` 53/2、growth 26/4、`explain_cache qid` 0/82、`error_reason ≥09-11` 0、`push_subs` 0）。`mistakes_total` 非探针首次触达 **0**（非探针 `home_bundle` 35 次全在 R503 发版前）。无新的外部真人证据。
+- 对账（`umst3` 只读 GET，0 写入）：DB 今日 0 题 / 累计 45 / 学习日 09-03·06·07 / mistakes 32·30·30 / profile 国考·2026-09-07 ↔ `home_bundle` `today_n 0 · streak 2 · due 30 · mistakes_total 32 · progress 0/4` ↔ 页面 `今日已练 0/20 · 连续打卡 2 天 · 今日任务 0/3 · 今日到期 30 题 · 再打卡 1 天解锁 3 天 · 0/4 · 国考` 逐值一致；375/1440 无溢出、GET 8/8 200。
+- 命中：`plan_today.days_left = -1`（`exam_date` 已过）被模板原样渲染为「距考试 -1 天 · 冲刺期」，而同屏 `summary.days_to_exam` 对已过日期回 `None` —— 两口径不一致。修：新 `frontend-uni/src/plan-days-label.js` `planDaysLabel()`（>0 距考试 N 天 / 0 今天考试 / <0 「考试日期已过 · 点「编辑」更新」/ 非整数不渲染），`home.vue` 走 computed `planDaysText`；不改后端 `_days_left`/阶段。源锁 vitest 6。
+- 门：vitest 784 / eslint / build 绿；pytest 516 / ruff / pyright 0。发版 `--skip-build` rc=0，容器 `17:02:40Z rev=65580c6` healthy，7/7 200，perf `/` 0.98 LCP 1414 / `/tiku/` 1.00。改后生产 375/1440 计划卡头「考试日期已过 · 点「编辑」更新」，其余读数与几何逐值同改前。
+- 登记：服务端 `phase` 对已过日期仍 `chongci`；小程序端若显示 `days_left` 需同法（W7 合 main 顺带）；跨日界 `today.n` 双路径未造用例。
+- PR #619 与 main 冲突（W5 设计系统 tokens）已合并解决 `b470b50`：4 组件取 token 字阶/语义色、保留本分支热区（`min-height 40px`/`flex-wrap`），SKILL 双方保留；六门全绿（vitest 804 / lint:tokens+eslint / build；pytest 516 / ruff / pyright 0）。
+- 取证：`docs/iter/round-3/r504-home-data-state-hero-taskcard-db-reconcile.md`；`~/r504_post.sh`→`.out`、`~/r504_post2.sh`→`.out`、`~/r504_home_data.py`→`~/r504_home_data_{375,post_375,post_1440}.out`+`.png`、`~/r504_bundle_umst3tuisd7lgzaka.json`、`~/r504_deploy.log`。
