@@ -2447,7 +2447,7 @@ export default {
         }
         const pending = qs.filter((q) => q._picked && !q._logged);
         const items = pending.map((q) => ({
-          qid: q.id || null,
+          qid: q._sz ? null : q.id || null,
           mid: q.mistake_id || undefined,
           module: q.module || this.lastModule || null,
           submodule: q.submodule || null,

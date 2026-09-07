@@ -2524,6 +2524,12 @@ def _ensure_answer_log(conn):
     conn.execute("CREATE INDEX IF NOT EXISTS idx_al_qid ON answer_log(question_id)")
 
 
+def foreign_module_qid(module, qid):
+    """时政等非行测模块的题号属于别的表（shizheng_questions），与 questions.id 只是数字撞号；
+    落 answer_log / mistakes 时置空，否则按题号的统计、去重、复习推进会算到无关的行测题上。"""
+    return bool(qid) and isinstance(module, str) and bool(module) and module not in VALID_MODULES
+
+
 def _pos_int(v) -> int | None:
     if isinstance(v, bool):
         return None
@@ -2586,8 +2592,9 @@ def save_answer_log_detail(uid: str, items: list[dict], probe: bool = False) -> 
             continue
         qid = it.get("qid") or it.get("question_id") or it.get("id")
         module, sub = it.get("module"), it.get("submodule")
-        if qid and (not module or module in VALID_MODULES):
-            # 时政等非行测模块的 qid 指向其它表，不能拿 questions 表覆盖
+        if foreign_module_qid(module, qid):
+            qid = None
+        if qid:
             qrow = conn.execute(
                 "SELECT module, submodule FROM questions WHERE id=?", (qid,)
             ).fetchone()
@@ -3222,6 +3229,8 @@ def save_mistake(rec: dict) -> int:
     _ensure_mistake_uid(conn)
     qtext = rec.get("question_text")
     qid = rec.get("question_id")
+    if foreign_module_qid(rec.get("module"), qid):
+        qid = None
     dup = None
     uc, ua = _uid_clause(rec.get("uid") or None)
     if qid:
@@ -3263,7 +3272,7 @@ def save_mistake(rec: dict) -> int:
             rec.get("error_reason"),
             explanation,
             (rec.get("uid") or None),
-            rec.get("question_id"),
+            qid,
             rec.get("source"),
         ),
     )
