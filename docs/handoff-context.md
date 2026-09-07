@@ -2671,3 +2671,13 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 登记：服务端 `phase` 对已过日期仍 `chongci`；小程序端若显示 `days_left` 需同法（W7 合 main 顺带）；跨日界 `today.n` 双路径未造用例。
 - PR #619 与 main 冲突（W5 设计系统 tokens）已合并解决 `b470b50`：4 组件取 token 字阶/语义色、保留本分支热区（`min-height 40px`/`flex-wrap`），SKILL 双方保留；六门全绿（vitest 804 / lint:tokens+eslint / build；pytest 516 / ruff / pyright 0）。
 - 取证：`docs/iter/round-3/r504-home-data-state-hero-taskcard-db-reconcile.md`；`~/r504_post.sh`→`.out`、`~/r504_post2.sh`→`.out`、`~/r504_home_data.py`→`~/r504_home_data_{375,post_375,post_1440}.out`+`.png`、`~/r504_bundle_umst3tuisd7lgzaka.json`、`~/r504_deploy.log`。
+
+### R505（2026-09-08）：首页「编辑」→ 学习计划设置表单 375/1440 只读整页审 → 命中「计划卡头说『考试日期已过 · 点「编辑」更新』，表单却把已过日期原样放行到生成」→ 最小修两次发版（生产 `65580c6` → `40e5ee0f` → `bf1807a6`）
+
+- (c)：R504 容器 5xx/404/mpUA 0、非探针 POST 只有扫描器 `POST / 403`；817 条「非探针非 bot」全为 `34.186.44.79` 直打源站 `.env`/`.git/config` 扫描（403/404，0 条 <400）；1 条 monitor 是 R505a 发版 6b Lighthouse（探针网段，internal=1）。新容器 56 请求全 0。WAL 同字节；到期项全部不变；`mistakes_total` 非探针触达仍 0。无新的外部真人证据。生产 profile 已过/今天/未来 = 1/0/8（唯一已过 `umst3tui · 2026-09-07`）。
+- 命中（改前生产 375/1440 runtime-confirmed，0 写入）：第 1 步日期框 `2026-09-07` 无提示、picker 初值 2026/09/07、「下一步」放行、第 3 步摘要仍带 `2026-09-07`，CTA 会 `POST /api/profile` 存回已过日期。
+- 修：`plan-days-label.js` 新增 `cnTodayStr()`/`isExamDatePast()`/`examDateFieldText()`；`home.vue` 日期框「YYYY-MM-DD · 已过，请重选」+ `.past` 错误色、`setupNext()` 第 1 步拦截 + toast「考试日期已过，请重新选择」。不改后端/契约/生产库。源锁 vitest 7（+R504 import 正则放宽）。
+- **R505a 未触发教训**：首版用浏览器本地日期 `fmtDateStr(Date.now())` 判今天，改后复验（harness 浏览器 UTC，17:2x Z 仍 09-07）表单照旧放行——与服务端东八区 `days_left` 不同口径。R505b 改 `cnTodayStr()` 后 375/1440：日期框「已过，请重选」红、下一步停 1/3 + toast、`docSW==cw`、errs []、非 GET 仅 `POST track`。
+- 门：vitest 810→811 / lint-pages 0 error / build 绿；pytest 516 / ruff / pyright 0。发版两次 `--skip-build` rc=0（预检 5.1G/0.29、4.6G/0.38，兄弟构建 0）；R505a perf `/` a11y 0.94（R429 已知间歇），R505b `/` 0.98 a11y 1.00 LCP 1562 / `/tiku/` 1.00。
+- 登记：后端 `/api/profile` 仍接受已过日期（小程序/直调可存回）；小程序端计划表单未核；picker `dateStart` 取 UTC 日期与 `cnTodayStr()` 在 16:00–24:00Z 差 1 天（只影响最早可选日）；monitor 中心内容无权限。
+- 取证：`docs/iter/round-3/r505-home-plan-setup-expired-exam-date-form.md`；`~/r505_post.sh`→`.out`/`_post2.out`、`~/r505_scan.sh`→`.out`、`~/r505_setup_sheet.py`→`~/r505_setup_{375,1440}.out`（改前）/`~/r505_setup_post_{375,1440}.out`（R505b）、`~/r505_bad_probe.py`、`~/r505_deploy.log`/`~/r505b_deploy.log`。
