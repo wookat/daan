@@ -796,6 +796,9 @@ export default {
     },
     newSession() {
       this.archiveCurrent();
+      this.clearCurrent();
+    },
+    clearCurrent() {
       this.results = [];
       this.error = '';
       uni.removeStorageSync('askCurSession');
@@ -912,6 +915,7 @@ export default {
       if (s) {
         uni.setStorageSync('askDelTombs', addTombstone(uni.getStorageSync('askDelTombs'), s.id));
         this.dropRemoteSession(s.id);
+        if (s.id === (this.curSid || Number(uni.getStorageSync('askCurSid')) || 0)) this.clearCurrent();
       }
     },
   },
