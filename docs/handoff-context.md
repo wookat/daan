@@ -2611,3 +2611,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 登记不改：国考卷成套（等资料分析题源）；卷库无「国考/省考」分区维度（无一手用户证据）；`mods` 未接小程序端（W7 合 main 时可读）；2015 吉林 233 题需人工拆卷。
 - 如实：CDP 非真机；0 真实模考/作答/账号/LLM；粉笔只核公开面；立项依据是「对外信息 vs 数据实况」而非用户反馈；无 testing agent 录屏（未另行授权）。
 - 取证：`docs/iter/round-3/r500-sop10-audit-paper-module-composition-fenbi-benchmark.md`；脚本/输出 `~/r500_post.sh` → `~/r500_post{,2}.out`、`~/r500_scan.py` → `~/r500_scan_*.out`、`~/r500_fenbi*.py` + `~/r500_fenbi_*.png`、`~/r500_appq.sh`/`~/r500_bench*.sh`/`~/r500_guokao*.sh`/`~/r500_takers.sh` → 同名 `.out`、`~/r500_dryrun.out`、`~/r500_papers_ui.py <375|1440> [BASE]` → `~/r500_prod_papers_*.out` + `~/r500_papers_*.png`、`~/r500_papers_post.json`、`~/r500_deploy.log`。
+
+### R501（2026-09-08）：R500 发版后 (c) 0 增量 + 真人模考漏斗全历史一手（11 → 1 → 0）+ 缺项卷在作答/报告/续考链路口径核 → 只读不改码，登记 3 项
+
+- (c)：新容器 45 请求 5xx/404/monitor/Traceback/非探针 POST 0；WAL 同字节；到期项全部与 R500 同；卷库 `mods` 非探针触达 0。
+- 漏斗（Caddy 全历史非探针）：`exam/papers` 11（全 `umst3`，四段巡览）→ `exam/start` **1**（paper 5 四川省考 70 min，8 s 答 3 题即离开）→ `submit`/`report` **0**；唯一 probe=0 attempt `#315` 超时后 `latest_exam_progress()` 服务端过滤 + 前端 `end_at_ms` 双保险 → 续考卡/成绩列表均干净。
+- 缺项卷口径：`per_module` 服务端只含卷内出现的模块 → 报告页 `modules()`/`weakModule()`/配速/`insights` 全部 fail-closed，缺项不出「0/0」也不会被判薄弱；但报告页无「本卷不含 X」说明（登记）。
+- 登记：报告页缺项说明 / 超时进度静默丢弃 / 模考侧无真人证据不加功能；下一处功能面回真人有量路径（练习→错题→复习）。
+- 取证：`docs/iter/round-3/r501-exam-funnel-real-path-missing-module-report-semantics.md`；`~/r501_post.sh`→`~/r501_post.out`、`~/r501_funnel.sh`→`~/r501_funnel.out`、`~/r501_resume.sh`→`~/r501_resume.out`（VPS 上经 ssh 只读执行）。
