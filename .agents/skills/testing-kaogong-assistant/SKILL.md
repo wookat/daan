@@ -1224,3 +1224,9 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 我的页里程碑轨道（`.badge::before/::after` 连线 + `.badge-dot`）几何用 PIL 量：非白像素行找连线 y、列找圆点上下沿，连线 y 应 == 圆点中心 ±1，连线 x 范围应 == 首点左沿..末点右沿（首尾无外伸）。未解锁点点击是 1.5s 的 toast「连续打卡 N 天即可解锁」，wait ≤0.4s 后立刻 zoom 截图才能抓到；已解锁点会跳 `pages/social/poster?badge=N`。
 - 统计页预测卡/「已覆盖 x%」都依赖 mastery 非冷态（≥30 题作答）：匿名 uid `umtppgte7u8emh2vs` 在 2026-09-06 已由 27→30 题解锁（做题页答对 3 题，无新错题），之后冷态不可再在该 uid 复现；需要冷态请换新匿名 uid。
 - 错题本工具栏「筛选」是 `.textbtn`，有筛选条件时 `.on` → 品牌色；用 PIL 取字形最深像素比较（灰 ≈ (73,75,86)，品牌 ≈ (43,73,221)），并用非白像素行区间证明与「批量」同字号同基线。测完记得在 sheet 里「重置」→「完成」恢复。
+
+## H5 卷库分页 / 我的页 nowrap 走查经验（PR #622 合并复验）
+- 本地 SQLite 造 `exam_papers` 时 `kind` 必须为 `'zhenti'`（H5 卷库请求 `/api/exam/papers?kind=zhenti&uid=…`，不带 `kind` 的请求返回全部，容易误判「API 有数据但页面空」）。`question_ids` 需 ≥5 个有效题 id 才会进列表。插入后要重启 uvicorn（列表结果有进程内缓存）。
+- H5 卷库 `onReachBottom` 自动追加：用 375×812 CDP 模拟 + 鼠标滚轮滚到底即可触发；断言用 CDP 数 `真题卷 TESTnn` 卡片数 + 「加载更多」按钮是否消失，不点按钮。
+- uni-h5 基础样式 `uni-text{white-space:pre-line}` 会覆盖父级 `white-space:nowrap`：给 `.wd-cell__title` 加 nowrap 对 wd-cell 用 `<text>` 渲染的 title prop 无效，长标题仍会折行。验证时用 CDP 注入 ≥20 字标题观察高度（单行 32px，两行 48px），验完记得还原文本。要真正单行需把 nowrap 作用到 `.wd-cell__title uni-text` 或改用 title 插槽加自定义类。
+- `pkill -f "cdp.py hold"` 这类模式会连当前 shell 一起杀掉（命令行含相同字串），清理时改用 `pgrep -af` 找 PID 再 `kill`。
