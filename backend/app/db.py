@@ -43,6 +43,8 @@ class _ConnProxy:
 # 读路径交给 mmap（file-backed，跨连接共享、可回收、不进 swap），mmap 需覆盖整库才不会回落到堆缓存。
 SQLITE_CACHE_KIB = -8192
 SQLITE_MMAP_BYTES = 1 << 30
+# WAL 重置时把 -wal 文件截回的长度上限；不设则文件长度永久停在历史最大一次两次 checkpoint 之间的写入量。
+SQLITE_WAL_LIMIT_BYTES = 64 << 20
 # 题目统计刷新每批 UPDATE 行数（每批一次 commit，写锁持有期与批大小成正比）
 QUESTION_STATS_BATCH = 100
 
@@ -50,12 +52,16 @@ QUESTION_STATS_BATCH = 100
 def get_conn():
     conn = getattr(_local, "conn", None)
     if conn is None:
-        conn = sqlite3.connect(DB_PATH, timeout=30)
+        # 写事务以 BEGIN IMMEDIATE 起头：先拿写锁再执行语句。DEFERRED 下语句内部的先读
+        # （FTS5 触发器重载 config 等）会先开只读快照，随后升级写锁若遇他线程提交则
+        # 立刻 SQLITE_BUSY_SNAPSHOT，busy_timeout 不生效。
+        conn = sqlite3.connect(DB_PATH, timeout=30, isolation_level="IMMEDIATE")
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA busy_timeout=30000")
         conn.execute(f"PRAGMA cache_size={SQLITE_CACHE_KIB}")
         conn.execute(f"PRAGMA mmap_size={SQLITE_MMAP_BYTES}")
+        conn.execute(f"PRAGMA journal_size_limit={SQLITE_WAL_LIMIT_BYTES}")
         _local.conn = conn
     return _ConnProxy(conn)
 
@@ -230,6 +236,8 @@ def init_db():
             down INTEGER DEFAULT 0
         )"""
     )
+    # 题库直通（question_id 命中）时记下 qid，讲解首行答案可与题库 answer 直接对账；识题路径/旧行 NULL
+    add_column_if_missing(conn, "explain_cache", "qid", "INTEGER")
     conn.execute(
         """CREATE TABLE IF NOT EXISTS shenlun_questions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1238,14 +1246,26 @@ def _ensure_daily_set(conn):
             PRIMARY KEY (day, uid)
         )"""
     )
-    cols = {r["name"] for r in conn.execute("PRAGMA table_info(daily_set_entries)").fetchall()}
-    if "nickname" not in cols:
-        conn.execute("ALTER TABLE daily_set_entries ADD COLUMN nickname TEXT")
+    add_column_if_missing(conn, "daily_set_entries", "nickname", "TEXT")
+    # 探针成绩（服务端三路判定）不进「N 人完成 / 排行榜 / 击败 X%」全站池；本人成绩对本人始终可见
+    add_column_if_missing(conn, "daily_set_entries", "probe", "INTEGER")
+
+
+def _daily_pool(uid: str | None) -> tuple[str, list]:
+    if uid:
+        return f"({REAL_TRAFFIC} OR uid=?)", [uid]
+    return REAL_TRAFFIC, []
 
 
 def cn_day() -> str:
     """中国时区（UTC+8）当日日期 YYYY-MM-DD。"""
     return time.strftime("%Y-%m-%d", time.gmtime(time.time() + 8 * 3600))
+
+
+def cn_day_start(ts: float | None = None) -> float:
+    """中国时区（UTC+8）ts 所在日 00:00 的 Unix 秒。"""
+    t = time.time() if ts is None else ts
+    return float(int(t + 8 * 3600) // 86400 * 86400 - 8 * 3600)
 
 
 def daily_archive_day(date: str | None) -> str | None:
@@ -1321,21 +1341,27 @@ def daily_set_stats(day: str) -> dict:
     conn = get_conn()
     _ensure_daily_set(conn)
     row = conn.execute(
-        "SELECT COUNT(*) n, AVG(right) a FROM daily_set_entries WHERE day=?", (day,)
+        f"SELECT COUNT(*) n, AVG(right) a FROM daily_set_entries WHERE day=? AND {REAL_TRAFFIC}", (day,)
     ).fetchone()
     conn.close()
     return {"participants": row["n"] or 0, "avg_right": round(row["a"], 1) if row["a"] is not None else None}
 
 
 def daily_set_submit(
-    day: str, uid: str, right: int, total: int, secs: float | None, nickname: str | None = None
+    day: str,
+    uid: str,
+    right: int,
+    total: int,
+    secs: float | None,
+    nickname: str | None = None,
+    probe: int = 0,
 ) -> dict:
     conn = get_conn()
     _ensure_daily_set(conn)
     cur = conn.execute(
-        "INSERT OR IGNORE INTO daily_set_entries(day, uid, right, total, secs, nickname, created_at)"
-        " VALUES(?,?,?,?,?,?,?)",
-        (day, uid, right, total, secs, nickname, time.time()),
+        "INSERT OR IGNORE INTO daily_set_entries(day, uid, right, total, secs, nickname, created_at, probe)"
+        " VALUES(?,?,?,?,?,?,?,?)",
+        (day, uid, right, total, secs, nickname, time.time(), 1 if probe else 0),
     )
     already = cur.rowcount == 0
     conn.commit()
@@ -1343,10 +1369,11 @@ def daily_set_submit(
         "SELECT right FROM daily_set_entries WHERE day=? AND uid=?", (day, uid)
     ).fetchone()
     my_right = mine["right"] if mine else right
+    pool, pool_args = _daily_pool(uid)
     row = conn.execute(
         "SELECT COUNT(*) n, SUM(CASE WHEN right < ? THEN 1 ELSE 0 END) b, "
-        "SUM(CASE WHEN right > ? THEN 1 ELSE 0 END) a FROM daily_set_entries WHERE day=?",
-        (my_right, my_right, day),
+        f"SUM(CASE WHEN right > ? THEN 1 ELSE 0 END) a FROM daily_set_entries WHERE day=? AND {pool}",
+        (my_right, my_right, day, *pool_args),
     ).fetchone()
     days = {
         r["day"]
@@ -1374,13 +1401,14 @@ def daily_set_submit(
     }
 
 
-def daily_set_board(day: str, limit: int = 20) -> list[dict]:
+def daily_set_board(day: str, limit: int = 20, uid: str | None = None) -> list[dict]:
     conn = get_conn()
     _ensure_daily_set(conn)
+    pool, pool_args = _daily_pool(uid)
     rows = conn.execute(
-        "SELECT uid, nickname, right, total, secs FROM daily_set_entries WHERE day=? "
+        f"SELECT uid, nickname, right, total, secs FROM daily_set_entries WHERE day=? AND {pool} "
         "ORDER BY right DESC, COALESCE(secs, 9e9) ASC, created_at ASC LIMIT ?",
-        (day, limit),
+        (day, *pool_args, limit),
     ).fetchall()
     conn.close()
     return [
@@ -1429,6 +1457,12 @@ def tag3_counts() -> dict:
 
 _YEAR_MODULE_CACHE: list = [0.0, None]
 
+# 早期导入的 updated_at 是 ISO8601 文本，SQLite 里 TEXT 恒大于 REAL，直接 MAX 会让文本值永远盖住之后的数值写入
+_UPDATED_AT_EPOCH = (
+    "CASE WHEN typeof(updated_at)='text' THEN CAST(strftime('%s', updated_at) AS REAL) "
+    "ELSE updated_at END"
+)
+
 
 def year_module_counts() -> dict:
     """各（年份, 模块）的在架真题数与最新 updated_at，进程内 5 分钟缓存。"""
@@ -1437,7 +1471,7 @@ def year_module_counts() -> dict:
         return _YEAR_MODULE_CACHE[1]
     conn = get_conn()
     rows = conn.execute(
-        "SELECT exam_year y, module m, COUNT(*) n, MAX(updated_at) mu FROM questions "
+        f"SELECT exam_year y, module m, COUNT(*) n, MAX({_UPDATED_AT_EPOCH}) mu FROM questions "
         "WHERE is_real=1 AND disabled=0 AND exam_year IS NOT NULL GROUP BY exam_year, module"
     ).fetchall()
     conn.close()
@@ -1457,7 +1491,7 @@ def tag3_lastmod() -> dict:
         return _TAG3_LASTMOD_CACHE[1]
     conn = get_conn()
     rows = conn.execute(
-        "SELECT tag3, MAX(updated_at) mu FROM questions WHERE tag3 IS NOT NULL AND tag3!='' "
+        f"SELECT tag3, MAX({_UPDATED_AT_EPOCH}) mu FROM questions WHERE tag3 IS NOT NULL AND tag3!='' "
         "AND disabled=0 GROUP BY tag3"
     ).fetchall()
     conn.close()
@@ -1546,9 +1580,11 @@ def real_filters() -> dict:
     return {"years": years, "regions": regions}
 
 
-def save_practice_result(module: str | None, n: int, correct: int, secs: int) -> dict:
-    """保存一次刷题结果并返回正确率百分位（击败了多少历史记录）。"""
-    conn = get_conn()
+# 「击败 X% 的刷题记录」池只算 probe=0：该表无 uid 从未随测试账号清理，历史 NULL 行不能视为真人（与 REAL_TRAFFIC 兼容口径不同）
+PRACTICE_POOL = "n>0 AND probe=0"
+
+
+def _ensure_practice_results(conn) -> None:
     conn.execute(
         """CREATE TABLE IF NOT EXISTS practice_results (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1559,15 +1595,25 @@ def save_practice_result(module: str | None, n: int, correct: int, secs: int) ->
             secs INTEGER
         )"""
     )
+    add_column_if_missing(conn, "practice_results", "uid", "TEXT")
+    add_column_if_missing(conn, "practice_results", "probe", "INTEGER")
+
+
+def save_practice_result(
+    module: str | None, n: int, correct: int, secs: int, uid: str | None = None, probe: bool = False
+) -> dict:
+    """保存一次刷题结果并返回正确率百分位（击败了多少真人记录）。"""
+    conn = get_conn()
+    _ensure_practice_results(conn)
     acc = correct / n if n else 0
     conn.execute(
-        "INSERT INTO practice_results (created_at, module, n, correct, secs) VALUES (?,?,?,?,?)",
-        (time.time(), module, n, correct, secs),
+        "INSERT INTO practice_results (created_at, module, n, correct, secs, uid, probe) VALUES (?,?,?,?,?,?,?)",
+        (time.time(), module, n, correct, secs, uid or None, 1 if probe else 0),
     )
     conn.commit()
-    total = conn.execute("SELECT COUNT(*) FROM practice_results WHERE n>0").fetchone()[0]
+    total = conn.execute(f"SELECT COUNT(*) FROM practice_results WHERE {PRACTICE_POOL}").fetchone()[0]
     beaten = conn.execute(
-        "SELECT COUNT(*) FROM practice_results WHERE n>0 AND CAST(correct AS REAL)/n < ?", (acc,)
+        f"SELECT COUNT(*) FROM practice_results WHERE {PRACTICE_POOL} AND CAST(correct AS REAL)/n < ?", (acc,)
     ).fetchone()[0]
     conn.close()
     percentile = round(beaten / total * 100) if total >= 10 else None
@@ -1763,6 +1809,7 @@ def admin_stats_state() -> tuple[dict, str]:
 
 def _admin_stats_uncached() -> dict:
     conn = get_conn()
+    _ensure_practice_results(conn)
     q = conn.execute
     stats = {
         "total": q("SELECT COUNT(*) FROM questions").fetchone()[0],
@@ -1780,10 +1827,10 @@ def _admin_stats_uncached() -> dict:
         stats["daily_usage"] = [
             dict(r)
             for r in q(
-                """SELECT date(created_at, 'unixepoch') d,
+                f"""SELECT date(created_at, 'unixepoch') d,
                           COUNT(*) sessions, SUM(n) answered,
                           ROUND(SUM(correct)*100.0/SUM(n), 1) acc
-                   FROM practice_results WHERE n>0
+                   FROM practice_results WHERE n>0 AND {REAL_TRAFFIC}
                      AND created_at > strftime('%s','now') - 14*86400
                    GROUP BY d ORDER BY d"""
             )
@@ -1993,8 +2040,8 @@ def get_explain_cache(key: str) -> dict | None:
 def save_explain_cache(key: str, meta: dict, explanation: str):
     conn = get_conn()
     conn.execute(
-        "INSERT OR REPLACE INTO explain_cache (key, created_at, module, question_type, question_text, user_answer, explanation, hits, up, down) "
-        "VALUES (?,?,?,?,?,?,?, COALESCE((SELECT hits FROM explain_cache WHERE key=?),0), "
+        "INSERT OR REPLACE INTO explain_cache (key, created_at, module, question_type, question_text, user_answer, explanation, qid, hits, up, down) "
+        "VALUES (?,?,?,?,?,?,?,?, COALESCE((SELECT hits FROM explain_cache WHERE key=?),0), "
         "COALESCE((SELECT up FROM explain_cache WHERE key=?),0), COALESCE((SELECT down FROM explain_cache WHERE key=?),0))",
         (
             key,
@@ -2004,6 +2051,7 @@ def save_explain_cache(key: str, meta: dict, explanation: str):
             meta.get("question_text"),
             meta.get("user_answer"),
             explanation,
+            meta.get("qid") if isinstance(meta.get("qid"), int) else None,
             key,
             key,
             key,
@@ -2164,6 +2212,18 @@ def normalize_submodule(sub: str | None) -> str | None:
 _RESIDUE_RE = re.compile(r"[一二三四五六七八九十]、|第[一二三四五]部分|共\d+题")
 
 
+def normalize_answer(raw, opts: dict | None = None) -> str:
+    """答案字母归一：去空白、大写、去重、按字母升序（多选题 'DB' -> 'BD'）。
+
+    传 opts 时任一字母不在选项键内返回 ''（调用方按无效处理）。"""
+    letters = sorted({ch for ch in str(raw or "").strip().upper() if "A" <= ch <= "Z"})
+    if opts is not None:
+        keys = {str(k).strip().upper() for k in opts}
+        if not letters or any(ch not in keys for ch in letters):
+            return ""
+    return "".join(letters)
+
+
 def _bad_options(opts: dict) -> bool:
     vals = [str(v).strip() for v in opts.values()]
     if len(vals) < 2 or any(not v for v in vals) or len(set(vals)) < len(vals):
@@ -2213,12 +2273,12 @@ def import_questions(items: list[dict], batch: str | None = None) -> dict:
         opts = q.get("options") or {}
         if q.get("is_real") and (not q.get("source") or q.get("source") == "original"):
             q["is_real"] = False
+        answer = normalize_answer(q.get("answer"), opts) if isinstance(opts, dict) else ""
         if (
             q.get("module") not in VALID_MODULES
             or not q.get("question")
-            or not q.get("answer")
+            or not answer
             or not isinstance(opts, dict)
-            or q.get("answer") not in opts
             or _bad_options(opts)
         ):
             skipped += 1
@@ -2230,7 +2290,7 @@ def import_questions(items: list[dict], batch: str | None = None) -> dict:
                 q.get("question_type"),
                 q.get("question"),
                 json.dumps(opts, ensure_ascii=False),
-                q.get("answer"),
+                answer,
                 q.get("explanation"),
                 q.get("source"),
                 normalize_submodule(q.get("submodule")),
@@ -2464,6 +2524,12 @@ def _ensure_answer_log(conn):
     conn.execute("CREATE INDEX IF NOT EXISTS idx_al_qid ON answer_log(question_id)")
 
 
+def foreign_module_qid(module, qid):
+    """时政等非行测模块的题号属于别的表（shizheng_questions），与 questions.id 只是数字撞号；
+    落 answer_log / mistakes 时置空，否则按题号的统计、去重、复习推进会算到无关的行测题上。"""
+    return bool(qid) and isinstance(module, str) and bool(module) and module not in VALID_MODULES
+
+
 def _pos_int(v) -> int | None:
     if isinstance(v, bool):
         return None
@@ -2526,8 +2592,9 @@ def save_answer_log_detail(uid: str, items: list[dict], probe: bool = False) -> 
             continue
         qid = it.get("qid") or it.get("question_id") or it.get("id")
         module, sub = it.get("module"), it.get("submodule")
-        if qid and (not module or module in VALID_MODULES):
-            # 时政等非行测模块的 qid 指向其它表，不能拿 questions 表覆盖
+        if foreign_module_qid(module, qid):
+            qid = None
+        if qid:
             qrow = conn.execute(
                 "SELECT module, submodule FROM questions WHERE id=?", (qid,)
             ).fetchone()
@@ -2545,7 +2612,7 @@ def save_answer_log_detail(uid: str, items: list[dict], probe: bool = False) -> 
                 sub,
                 1 if it.get("correct") else 0,
                 int(it.get("secs") or 0),
-                str(it.get("picked") or "")[:2] or None,
+                normalize_answer(it.get("picked"))[:8] or None,
                 (str(it.get("source") or "")[:32] or None),
                 1 if probe else 0,
             ),
@@ -2881,8 +2948,7 @@ def daily_plan(uid: str) -> dict:
     _ensure_answer_log(conn)
     _ensure_mistake_uid(conn)
     now = time.time()
-    tz = 8 * 3600
-    day0 = ((now + tz) // 86400) * 86400 - tz  # 今日 0 点（东八区）
+    day0 = cn_day_start(now)
     yest = conn.execute(
         """SELECT COUNT(*) n, COALESCE(SUM(correct),0) c, COALESCE(SUM(secs),0) s
            FROM answer_log WHERE uid=? AND created_at>=? AND created_at<?""",
@@ -2901,6 +2967,9 @@ def daily_plan(uid: str) -> dict:
               AND (next_review IS NULL OR next_review<=?){uc}""",
         (now, *ua),
     ).fetchone()
+    mtotal = conn.execute(
+        f"SELECT COUNT(*) n FROM mistakes WHERE 1=1{uc}", ua
+    ).fetchone()
     conn.close()
     state = get_user_state(uid)
     focus = (state or {}).get("focus_module") or ""
@@ -2913,6 +2982,7 @@ def daily_plan(uid: str) -> dict:
             "modules": [{"module": r["module"], "n": r["n"], "c": r["c"]} for r in ymods],
         },
         "due_mistakes": due["n"],
+        "mistakes_total": mtotal["n"],
         "weak": weak[:2],
         "focus": focus,
     }
@@ -3163,6 +3233,8 @@ def save_mistake(rec: dict) -> int:
     _ensure_mistake_uid(conn)
     qtext = rec.get("question_text")
     qid = rec.get("question_id")
+    if foreign_module_qid(rec.get("module"), qid):
+        qid = None
     dup = None
     uc, ua = _uid_clause(rec.get("uid") or None)
     if qid:
@@ -3204,7 +3276,7 @@ def save_mistake(rec: dict) -> int:
             rec.get("error_reason"),
             explanation,
             (rec.get("uid") or None),
-            rec.get("question_id"),
+            qid,
             rec.get("source"),
         ),
     )
@@ -3385,7 +3457,8 @@ def _advance_review(conn, mid: int, correct: bool, uid: str | None) -> dict | No
         )
     streak = (row["review_streak"] or 0) + 1 if correct else 0
     days = REVIEW_INTERVALS_DAYS[min(streak - 1, len(REVIEW_INTERVALS_DAYS) - 1)] if correct else 1
-    nxt = time.time() + days * 86400
+    # 到期点落在中国日历日 00:00，与 UI「今日到期 / 明天复习」及 cn_day 的「今天」同口径
+    nxt = cn_day_start() + days * 86400
     mastered = 1 if streak > len(REVIEW_INTERVALS_DAYS) else 0
     conn.execute(
         "UPDATE mistakes SET review_count=review_count+1, review_streak=?, next_review=?, "
@@ -3489,11 +3562,9 @@ def _ensure_exam_tables(conn):
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ep_kind ON exam_papers(kind, year, region)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ea_uid ON exam_attempts(uid, paper_id, id)")
-    acols = {r["name"] for r in conn.execute("PRAGMA table_info(exam_attempts)")}
-    if "secs" not in acols:
-        conn.execute("ALTER TABLE exam_attempts ADD COLUMN secs TEXT")
-    if "marks" not in acols:
-        conn.execute("ALTER TABLE exam_attempts ADD COLUMN marks TEXT")
+    add_column_if_missing(conn, "exam_attempts", "secs", "TEXT")
+    add_column_if_missing(conn, "exam_attempts", "marks", "TEXT")
+    add_column_if_missing(conn, "exam_attempts", "probe", "INTEGER")
 
 
 def upsert_exam_paper(title: str, kind: str, year: int | None, region: str | None,
@@ -3548,6 +3619,16 @@ def _dominant_paper_source(qids: list[int], src_by_qid: dict[int, str]) -> str |
     return src if n >= _PSOURCE_MIN_N else None
 
 
+def _paper_module_counts(qids: list[int], mod_by_qid: dict[int, str]) -> dict[str, int]:
+    """卷内活跃题按行测五模块计数（只含 >0 的模块，按标准模块顺序）；让卷卡如实外显回忆版卷的构成/缺项。"""
+    counts = {m: 0 for m in MODULE_ORDER}
+    for i in qids:
+        m = mod_by_qid.get(i)
+        if m:
+            counts[m] += 1
+    return {m: n for m, n in counts.items() if n}
+
+
 def _list_exam_papers_base(conn, kind: str | None, year: int | None,
                            region: str | None, force: bool = False) -> list[dict]:
     """uid 无关的卷列表（含活跃题数 n / takers），按筛选键 TTL 缓存；
@@ -3581,9 +3662,9 @@ def _list_exam_papers_base(conn, kind: str | None, year: int | None,
     takers: dict[int, dict] = {}
     if rows:
         for t in conn.execute(
-            """SELECT paper_id, COUNT(*) n, ROUND(AVG(s), 1) avg FROM (
+            f"""SELECT paper_id, COUNT(*) n, ROUND(AVG(s), 1) avg FROM (
                  SELECT paper_id, uid, MAX(score) s FROM exam_attempts
-                 WHERE submitted_at IS NOT NULL GROUP BY paper_id, uid
+                 WHERE submitted_at IS NOT NULL AND {REAL_TRAFFIC} GROUP BY paper_id, uid
                ) GROUP BY paper_id"""
         ):
             takers[t["paper_id"]] = {"n": t["n"], "avg": t["avg"]}
@@ -3591,6 +3672,7 @@ def _list_exam_papers_base(conn, kind: str | None, year: int | None,
     all_ids = list({i for ids in qids_by_paper.values() for i in ids})
     active: set[int] = set()
     src_by_qid: dict[int, str] = {}
+    mod_by_qid: dict[int, str] = {}
     for chunk_start in range(0, len(all_ids), 900):
         chunk = all_ids[chunk_start:chunk_start + 900]
         for q in conn.execute(
@@ -3600,12 +3682,22 @@ def _list_exam_papers_base(conn, kind: str | None, year: int | None,
             active.add(q["id"])
             if q["is_real"] and q["source"]:
                 src_by_qid[q["id"]] = q["source"]
+    # module 单独查走 idx_q_disabled_module 覆盖索引（每次 IN 整段扫，尽量一次带全，不回宽行表）
+    for chunk_start in range(0, len(all_ids), 30000):
+        chunk = all_ids[chunk_start:chunk_start + 30000]
+        for q in conn.execute(
+            f"SELECT id, module FROM questions WHERE disabled=0 AND id IN ({','.join('?' * len(chunk))})",
+            chunk,
+        ):
+            if q["module"] in MODULE_ORDER:
+                mod_by_qid[q["id"]] = q["module"]
     base = []
     for r in rows:
         d = dict(r)
         d.pop("question_ids")
         d["_qids"] = [i for i in qids_by_paper[d["id"]] if i in active]
         d["n"] = len(d["_qids"])
+        d["mods"] = _paper_module_counts(d["_qids"], mod_by_qid)
         d["psource"] = _dominant_paper_source(qids_by_paper[d["id"]], src_by_qid)
         soc = takers.get(d["id"])
         d["takers"] = soc["n"] if soc else 0
@@ -3677,12 +3769,12 @@ def exam_paper_filters() -> dict:
 
 
 def exam_paper_social(pid: int) -> dict:
-    """同卷全体用户社会证明：每人取最高分（与模考排名口径一致）。"""
+    """同卷全体用户社会证明：每人取最高分（与模考排名口径一致，只算真人）。"""
     conn = get_conn()
     _ensure_exam_tables(conn)
     rows = conn.execute(
-        """SELECT uid, MAX(score) s FROM exam_attempts
-           WHERE paper_id=? AND submitted_at IS NOT NULL GROUP BY uid""",
+        f"""SELECT uid, MAX(score) s FROM exam_attempts
+           WHERE paper_id=? AND submitted_at IS NOT NULL AND {REAL_TRAFFIC} GROUP BY uid""",
         (pid,),
     ).fetchall()
     conn.close()
@@ -3733,16 +3825,27 @@ def create_mock_paper(n: int = 30, duration_min: int = 30) -> int:
     return pid
 
 
-def start_exam_attempt(uid: str, paper_id: int) -> int:
+def start_exam_attempt(uid: str, paper_id: int, probe: bool = False) -> int:
+    """开考建 attempt；顺带清掉本人过期未交卷的，以及同卷「进过页面但一题未答」的空场次（连同进度行）。
+    probe=True 标记探针场次：同卷人数/均分/排行榜/分数池等跨用户聚合剔除，本人报告不受影响。"""
     conn = get_conn()
     _ensure_exam_tables(conn)
-    conn.execute(
-        "DELETE FROM exam_attempts WHERE uid=? AND submitted_at IS NULL AND started_at<?",
-        (uid, time.time() - 86400),
-    )
+    _ensure_exam_progress(conn)
+    stale = [r[0] for r in conn.execute(
+        """SELECT a.id FROM exam_attempts a
+           WHERE a.uid=? AND a.submitted_at IS NULL
+             AND (a.started_at<? OR (a.paper_id=? AND NOT EXISTS (
+                   SELECT 1 FROM exam_progress g
+                   WHERE g.attempt_id=a.id AND g.picks IS NOT NULL AND g.picks NOT IN ('', '{}'))))""",
+        (uid, time.time() - 86400, paper_id),
+    ).fetchall()]
+    if stale:
+        marks = ",".join("?" * len(stale))
+        conn.execute(f"DELETE FROM exam_progress WHERE attempt_id IN ({marks})", stale)
+        conn.execute(f"DELETE FROM exam_attempts WHERE id IN ({marks})", stale)
     cur = conn.execute(
-        "INSERT INTO exam_attempts (uid, paper_id, started_at) VALUES (?,?,?)",
-        (uid, paper_id, time.time()),
+        "INSERT INTO exam_attempts (uid, paper_id, started_at, probe) VALUES (?,?,?,?)",
+        (uid, paper_id, time.time(), 1 if probe else 0),
     )
     conn.commit()
     aid = cur.lastrowid
@@ -4193,10 +4296,8 @@ def save_user_profile(uid: str, fields: dict) -> dict:
 
 
 def _day_start(offset_days: int = 0) -> float:
-    """东八区当日 0 点时间戳。"""
-    tz = 8 * 3600
-    now = time.time()
-    return ((now + tz) // 86400 + offset_days) * 86400 - tz
+    """东八区当日 0 点时间戳（offset_days 偏移若干天）。"""
+    return cn_day_start() + offset_days * 86400
 
 
 def today_answer_counts(uid: str) -> dict:
@@ -4552,7 +4653,7 @@ def _governance_scan_uncached() -> dict:
             opts = json.loads(r["options"] or "{}")
         except ValueError:
             opts = None
-        ans = (r["answer"] or "").strip().upper()[:1]
+        ans = normalize_answer(r["answer"])
         if not text:
             problems.append("空题干")
         if opts is None:
@@ -4563,7 +4664,7 @@ def _governance_scan_uncached() -> dict:
             vals = [str(v).strip() for v in opts.values()]
             if len(set(vals)) < len(vals):
                 problems.append("选项内容重复")
-            if ans and ans not in {str(k).strip().upper() for k in opts}:
+            if ans and ans != normalize_answer(ans, opts):
                 problems.append(f"答案 {ans} 越界")
         if not ans:
             problems.append("缺答案")

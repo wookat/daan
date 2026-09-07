@@ -7,6 +7,7 @@
 import hashlib
 import json
 import random
+import sqlite3
 import time
 
 from fastapi import APIRouter, Header, HTTPException
@@ -55,7 +56,24 @@ def init_mock_event_db():
     if "nickname" not in cols:
         conn.execute("ALTER TABLE mock_event_entries ADD COLUMN nickname TEXT")
     conn.commit()
+    ensure_window_index(conn)
     conn.close()
+
+
+WINDOW_INDEX = "idx_mock_events_window"
+
+
+def ensure_window_index(conn) -> bool:
+    """同系列同窗口唯一：库里若已有重复场次则建不起来，返回 False（待 scripts/r419 去重后再建）。"""
+    try:
+        conn.execute(
+            f"CREATE UNIQUE INDEX IF NOT EXISTS {WINDOW_INDEX} ON mock_events(series, open_at, close_at)"
+        )
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        conn.rollback()
+        return False
 
 
 def _clean_uid(uid) -> str:
@@ -81,7 +99,7 @@ def _alias(uid: str, nickname: str | None) -> str:
 
 def _saturday_window(now: float) -> tuple[float, float]:
     """本周六（若已结束则下周六）的比赛窗口 [open, close)。"""
-    day0 = ((now + TZ) // 86400) * 86400 - TZ           # 东八区今天 0 点
+    day0 = db.cn_day_start(now)
     weekday = int(((now + TZ) // 86400 + 4) % 7)        # 周一=1 … 周六=6, 周日=0
     sat0 = day0 + ((6 - weekday) % 7) * 86400
     close = sat0 + CLOSE_HOUR * 3600
@@ -109,21 +127,32 @@ def ensure_weekly_event() -> None:
     conn = db.get_conn()
     try:
         db._ensure_exam_tables(conn)
-        exists = conn.execute(
+        if conn.execute(
             "SELECT 1 FROM mock_events WHERE open_at=? AND close_at=?", (open_at, close_at)
-        ).fetchone()
-        if exists:
+        ).fetchone():
+            return
+        pid = _pick_paper_id(conn)  # 可能新建 mock 卷并 commit，须在写锁事务之外
+        # 存在性检查与 INSERT 必须同在写锁内：连接 isolation_level=IMMEDIATE 只在 DML 前自动开事务，
+        # 纯 SELECT 走无锁快照，并发首请求会全部通过检查后各插一行。
+        if not conn.in_transaction:
+            conn.execute("BEGIN IMMEDIATE")
+        if conn.execute(
+            "SELECT 1 FROM mock_events WHERE open_at=? AND close_at=?", (open_at, close_at)
+        ).fetchone():
+            conn.rollback()
             return
         n = conn.execute(
             "SELECT COUNT(*) n FROM mock_events WHERE series=?", (SERIES_DEFAULT,)
         ).fetchone()["n"]
-        pid = _pick_paper_id(conn)
-        conn.execute(
-            "INSERT INTO mock_events(title, series, paper_id, open_at, close_at, created_at)"
-            " VALUES(?,?,?,?,?,?)",
-            (f"全站模考大赛 第{n + 1}期", SERIES_DEFAULT, pid, open_at, close_at, now),
-        )
-        conn.commit()
+        try:
+            conn.execute(
+                "INSERT INTO mock_events(title, series, paper_id, open_at, close_at, created_at)"
+                " VALUES(?,?,?,?,?,?)",
+                (f"全站模考大赛 第{n + 1}期", SERIES_DEFAULT, pid, open_at, close_at, now),
+            )
+            conn.commit()
+        except sqlite3.IntegrityError:
+            conn.rollback()
     finally:
         conn.close()
 
@@ -349,8 +378,8 @@ def _freeze_ranks(conn, event_id: int):
 def _score_pool(conn, ev: dict) -> dict:
     """历史同卷分数池（含比赛窗口外作答），小样本时作参照。"""
     rows = conn.execute(
-        """SELECT uid, MAX(score) s FROM exam_attempts
-           WHERE paper_id=? AND submitted_at IS NOT NULL GROUP BY uid""",
+        f"""SELECT uid, MAX(score) s FROM exam_attempts
+           WHERE paper_id=? AND submitted_at IS NOT NULL AND {db.REAL_TRAFFIC} GROUP BY uid""",
         (ev["paper_id"],),
     ).fetchall()
     scores = [r["s"] for r in rows]
@@ -479,8 +508,8 @@ def api_event_report(event_id: int, uid: str = ""):
             q = qmap.get(qid)
             if not q:
                 continue
-            picked = (picks.get(i + 1) or "").strip().upper()
-            correct = picked == (q.get("answer") or "").strip().upper()[:1]
+            picked = db.normalize_answer(picks.get(i + 1))
+            correct = bool(picked) and picked == db.normalize_answer(q.get("answer"))
             tag = q.get("tag3")
             if tag and tag != "UNKNOWN":
                 tag_wrong.setdefault(tag, [0, 0])
@@ -553,12 +582,16 @@ def api_admin_create_event(body: dict, x_admin_token: str | None = Header(None))
         raise HTTPException(404, "试卷不存在")
     conn = db.get_conn()
     try:
-        cur = conn.execute(
-            "INSERT INTO mock_events(title, series, paper_id, open_at, close_at, created_at)"
-            " VALUES(?,?,?,?,?,?)",
-            (title[:80], str(body.get("series") or SERIES_DEFAULT)[:40], int(paper_id),
-             float(open_at), float(close_at), time.time()),
-        )
+        try:
+            cur = conn.execute(
+                "INSERT INTO mock_events(title, series, paper_id, open_at, close_at, created_at)"
+                " VALUES(?,?,?,?,?,?)",
+                (title[:80], str(body.get("series") or SERIES_DEFAULT)[:40], int(paper_id),
+                 float(open_at), float(close_at), time.time()),
+            )
+        except sqlite3.IntegrityError:
+            conn.rollback()
+            raise HTTPException(409, "同系列同窗口已有场次")
         conn.commit()
         return {"id": cur.lastrowid}
     finally:

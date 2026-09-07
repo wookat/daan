@@ -59,6 +59,7 @@
             <view class="paper-top" role="button" @click="startPaper(p)">
               <kg-tag v-if="p.id === pinnedId" tone="brand">邀你挑战的卷</kg-tag>
               <text class="paper-t">{{ p.title }}</text>
+              <text v-if="modsText(p)" class="pmods">{{ modsText(p) }}</text>
               <view class="paper-meta">
                 <kg-tag v-if="p.year" tone="neutral">{{ p.year }}年</kg-tag>
                 <kg-tag v-if="p.region" tone="neutral">{{ p.region }}</kg-tag>
@@ -142,6 +143,7 @@ import { filterPapersByStatus } from '../../exam-list-status.js';
 import { paperProgress } from '../../exam-list-progress.js';
 import { adoptServerExamProgress } from '../../exam-progress-sync.js';
 import { paperPracticedState } from '../../paper-continue.js';
+import { paperModsText } from '../../exam-paper-mods.js';
 
 const PAGE = 20;
 const ST_LABELS = ['全部', '没考过', '考过的'];
@@ -349,6 +351,9 @@ export default {
       if (this._starting) return;
       uni.navigateTo({ url: '/pkgA/exam/exam?paper_id=' + p.id });
     },
+    modsText(p) {
+      return paperModsText(p && p.mods);
+    },
     practicedState(p) {
       return paperPracticedState(p.practiced, p.n, p.wrong);
     },
@@ -420,6 +425,7 @@ export default {
 .paper-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); line-height: var(--lh-body); }
 .paper-meta { display: flex; align-items: center; gap: var(--sp-8); flex-wrap: wrap; }
 .pmeta { font-size: var(--fs-sub); color: var(--ink-3); }
+.pmods { display: block; width: 100%; font-size: var(--fs-sub); color: var(--ink-3); }
 .pbest { font-size: var(--fs-sub); color: var(--warn-strong); }
 .pbest.none { color: var(--ink-3); }
 .ppracticed { font-size: var(--fs-sub); color: var(--ok-strong); }

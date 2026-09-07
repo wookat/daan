@@ -40,7 +40,7 @@
     <kg-group title="今日">
       <kg-row icon="rotate-ccw" title="错题复习" desc="{{dueReview ? '今日到期 ' + dueReview + ' 题' : !dueLoaded ? '按遗忘曲线安排' : clearedToday ? '今日已清零' : '暂无到期错题'}}" value="{{dueReview ? '去复习' : ''}}" value-tone="brand" bind:click="onReviewEntry" />
       <kg-row icon="flame" title="每日打卡" desc="{{nextMilestone ? '再打卡 ' + nextMilestone.left + ' 天解锁「' + nextMilestone.days + ' 天」徽章' : '已解锁全部打卡徽章'}}" value="{{today > 0 ? '已打卡' : ''}}" value-tone="ok" bind:click="onCalendar" />
-      <kg-row wx:if="{{hasProfile}}" icon="calendar-check" title="学习计划" desc="{{(daysLeft !== null ? '距考试 ' + daysLeft + ' 天　' + phaseName + '　' : '') + '今日 ' + planDone + '/' + planTotal}}" value="{{planTasks.length && planDone < planTotal ? '去完成' : ''}}" value-tone="brand" bind:click="onGoPlan" />
+      <kg-row wx:if="{{hasProfile}}" icon="calendar-check" title="学习计划" desc="{{(daysText ? daysText + '　' : '') + '今日 ' + planDone + '/' + planTotal}}" value="{{planTasks.length && planDone < planTotal ? '去完成' : ''}}" value-tone="brand" bind:click="onGoPlan" />
       <kg-row wx:elif="{{planLoaded && !guideHide}}" icon="calendar-check" title="学习计划" desc="按考试日期倒排每日任务" value="去制定" value-tone="brand" bind:click="onOpenSetup" />
       <kg-row icon="newspaper" title="时政每日一练" desc="每日 10 题　全站同题" value="{{szTodayDone ? '已完成' : '今日更新'}}" value-tone="{{szTodayDone ? 'ok' : 'warn'}}" last bind:click="onShizheng" />
     </kg-group>
@@ -62,7 +62,7 @@
   <view class="sheet">
     <view class="sheet-handle" />
     <view class="sheet-h">
-      <text class="sheet-t">学习计划{{daysLeft !== null ? '　距考试 ' + daysLeft + ' 天' : ''}}</text>
+      <text class="sheet-t">学习计划{{daysTitle ? '　' + daysTitle : ''}}</text>
       <view class="sheet-x" hover-class="sheet-x--hover" bind:tap="onClosePlan"><l-icon name="x" size="24" tone="muted" /></view>
     </view>
     <scroll-view class="sheet-body" scroll-y>
@@ -97,8 +97,8 @@
         </view>
         <text class="sheet-st">考试日期</text>
         <picker mode="date" value="{{pf.exam_date}}" start="{{dateStart}}" end="{{dateEnd}}" bind:change="onPfDate">
-          <view class="pf-date {{pf.exam_date ? '' : 'empty'}}">
-            <text>{{pf.exam_date || '选择日期'}}</text>
+          <view class="pf-date {{pf.exam_date ? '' : 'empty'}} {{pfDatePast ? 'past' : ''}}">
+            <text>{{pfDateText}}</text>
             <l-icon name="chevron-right" size="20" tone="faint" />
           </view>
         </picker>

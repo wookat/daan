@@ -5,6 +5,188 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R422b 补充（testing agent）— 长题干 SSE 免 gzip / 含图路径已可用 / explain_cache 时间窗清理
+- **长题干 SSE 缓冲陷阱**：meta 事件 ≥512 B（题干 ≥~110 字，言语/资料题居多）时若边缘（Caddy `encode gzip`）对 `text/event-stream` 压缩，浏览器会在首字前 60–110 s 零信号、thinking 全部挤到末尾。生产 Caddyfile 已用 `@nosse not path */stream` + `encode @nosse gzip` 排除；复验口径：用 `/tmp/cdp174/holdsse422.py`（= holdsse421 + `rec.hdrs{ce,ct,cl,te}` 取 `Response.headers`）核 `hdrs.ce === null`（不是 `gzip`），再用 `performance.getEntriesByType('resource')` 里 `/api/explain/stream` 的 `encodedBodySize == decodedBodySize` 双证；thinking 判「逐秒」看 `thinking[0].t`（应 ≈ tMeta+2 s）、间隔 min/max、以及 `done 前 5 s 内 thinking 数 == 0`；`tFirstDelta` 应早于 `tDone` ≥ 数秒。之前只测短题干数量题会漏掉此类问题，回归至少各测一道 ≥150 字言语题（无 qid + 深链）。
+- 取长题干样本：`/tiku/q/235804`（2022 国考副省级 多空综合，题干 180 字，选项 预测渗透/主导贯穿/判断投射/反映覆盖，答案 A）。避免缓存只需改一个无关字（如「战争目的」→「目标」、「基础」→「基石」），识题不受影响（module yanyu / 逻辑填空）。
+- 含图路径自 2026-09-06 05:45 起生产已配 `LLM_BASE_URL/LLM_API_KEY`（复用文本网关）+ `LLM_MODEL=qwen3-vl-plus`：`r422_drop.py` 在 375 也能用（`.ds-drop` 在 375 DOM 里 0×0 但 `onDrop` 无宽度守卫；`handlePaste` 有 `innerWidth<1024` 守卫，375 下 paste 不行）。一手时延 `tMeta ≈3.2 s`（含图 think=True 也很快），meta 带识别出的 `question_text`。同图+同 `user_answer` 会命中 explain_cache，换答案即可。
+- 375 ask 页手输入口：「文字输入」按钮 → 弹层 textarea；页面有 2 个 textarea，`Input.insertText` 前必须**原生点一次弹层 textarea** 取焦点（脚本里 `.focus()` 对 uni 组件无效，值会是 0）。
+- explain_cache 清理口径：开测前记 `SELECT COUNT(*),MAX(created_at)`，测后列 `created_at > T0` 的行（key/question_text 前 30 字/user_answer），逐行确认全是本轮造的再按 key 删（每道手输题 `\r\n`/`\n` 两键、深链题一键，题干以「（2022国考·副省级）（单选题）」开头的是深链版，`startswith` 过滤要包含它）。总数应回到基线。
+- `__hdr` 记录字段是 `{url,status,ms,xkg,cf}`（不是 `u/st`）。
+
+## R422 补充（testing agent）— 无 qid 识题时延 / 含图路径 / practice rejection 口径
+- 无 qid 文字识题（`engine.extract_question` 无图 `think=False`，rev 9e657da 起）的 UI 一手时延口径：`__sse[i].tMeta` 生产实测 **2.6–3.3 s**（旧路径 8–15 s）；判定用 `tMeta ≤ 6000` 而不是看占位文案切换的肉眼感受。占位仍先「AI 识题中…（N秒）」再「AI 正在推理…（已 N 秒）」；thinking 心跳与正文行为与 R421 相同（键恰 `{secs,chars}`，客户端间隔可低至 ~990 ms）。
+- 造「未缓存新题」时改数字要保证题目仍有一致解（如盈亏问题 `(盈+亏)/差` 需整除），否则 AI 正文会正确判「题目存疑、选项无此项」——这不是缺陷，但会让「正文正常」断言变得难解释。工程问题 `a/b/c` 天改成互为倍数的数（229/458/458）最省事。
+- 含图（拍照/上传）路径的环境前提：`llm._endpoint()` 对含图消息走视觉通道（`LLM_BASE_URL/LLM_API_KEY/LLM_MODEL`），未配则 `_require_configured` 抛「AI 服务未配置」→ `/api/explain/stream` HTTP 200 但 ~180 ms 即 `event: error {"message":"AI 服务未配置"}`，UI 红条「失败：AI 服务未配置，请重试」（R422 首轮复验即此形态；同日已在生产 `.env` 补齐，见上 R422b 节）。测含图前先 `docker exec deploy-kaogong-1 env | grep -c ^LLM_MODEL=` 核视觉通道是否配置，否则记环境 FAIL 而不是代码缺陷。
+- 含图路径的 UI 触发：`uni.chooseImage` 动态创建 `<input type=file>`，CDP `Page.setInterceptFileChooserDialog` + 合成点击 `.ds-drop` **拦不到**（无 `fileChooserOpened`）。可行方案是 `/tmp/cdp174/r422_drop.py <png>`：页内用 base64 构造 `File` → `DataTransfer` → 在 `.ds-drop` 派发 `DragEvent("drop")`（ask.vue H5 分支原生监听 `document drop`），会弹「确认题目图片」预览层，之后原生点答案 + 「用花生十三方法讲解」即可；`__sse` 记录的 `fd` 键为 `image,user_answer`。
+- practice 页 `unhandledrejection` 口径：rev 9e657da 起 `uni.vibrateShort({..., fail(){}})`，桌面 Chrome 答对/答错后 `__pexc` 应恒为 `[]`（R421/R421b 每次判题 +1 条 `vibrateShort:fail`）。判题即时核：每次点选项后立刻 `eval window.__pexc`，正确答案会**自动切下一题**（无「下一题」停留帧），截图要在点选前后各一张。多选题（如常识 273031）从 SEO `/tiku/q/<id>` 点任一选项进 practice 后带 `pick=X` 预选一项，页面出现 `.multi-bar`「多选题：选完所有正确项后确认」+「确认答案（n）」，再点其他选项累加后点「确认答案」→ `answer_log.user_answer` 为拼接串（如 `ACD`）。
+- 1440 下 ask 页有「新对话」按钮（页面滚动后需先滚回顶部再点），`window.__sse` 在 SPA 内不重置、进 SEO 页（新 document）才重置——按段落记录时先记下 `__sse.length`。
+- teardown：`Emulation.clearDeviceMetricsOverride` 由另一条 CDP 连接调用时页面 `innerWidth` 可能不立刻变化，需 `Page.reload` 一次再核 1600×1017。杀 holder 只用 PID 文件；`for p in $(pgrep -f "holdvw")` 会连当前 shell 一起杀（exit -1）。
+- 清理脚本模板 `/tmp/r422_db2.py`（按 `PRAGMA table_info` 找全部含 `uid` 列的 34 张表，count/delete 两模式，参数化 LIKE）；`answer_log` 无 `is_correct` 列，直接 `SELECT *`（第 7 列为对错、末列 probe）。
+
+## R421b 补充（testing agent）— ask 页「存入错题本」带 question_id 的复验口径
+- 自 rev adfdc17 起 `ask.vue save(r)` POST `/api/mistakes` 带 `question_id: askQid(r.qid)||null`；后端 `db.save_mistake`（db.py ~L3189）先按 `(question_id, uid)` 再按 `(question_text, uid)` **去重合并**（`times+1`、`next_review` 更新、`question_id=COALESCE`）。因此「练习答错自动存 → ask 再存同题」只会得到 **1 行**（`times 2`），不再是 R421 的两张卡；核 ask 存入是否带 qid 时要看 `times`/`next_review` 变化，而不是找第二行。练习行 `question_text` 无 `\r`、ask 行文本是 meta 的 `\r\n` 版，文本去重不会命中，所以合并本身就证明 ask POST 带了 qid。
+- 想要**纯 ask 存入的独立行**（无练习行可合并）：搜索页 `#/pkgA/search/search?q=<qid>` 点结果卡展开 → 「AI 详解本题」（`search.vue askFromSearch` 写 redoQuestion/redoQid、清 redoAnswer）→ ask 页选一个 R421 已缓存的答案（如 709452+B）秒回 → 「存入错题本」→ DB 新行 `question_id` 应等于 qid、`explanation` 以「【答案】」开头（AI 来源）。
+- 抓 `/api/mistakes` 请求体：uni.request 走 XHR，可在页内一次性包 `XMLHttpRequest.prototype.open/send` 把 `/api/mistakes` POST 的 body `JSON.parse` 进 `window.__mb`（页级钩子，SEO 全页跳转会丢，需在同一 document 内完成 ask→存入）。
+- 错题卡再问入口是展开卡片后的「AI 详解」（`book.vue redo(m)`，`m.question_id` 非空才写 redoQid）；再问成功口径：`__sse` 最新记录 `fd.question_id` = qid、`meta.cached true`、thinking 0、最后 4 个 `.chip` 含「查看原题」→ 点后 `#/pkgA/search/search?q=<qid>&qid=<qid>`。
+- SSH 变量在 shell 环境里（`TICKETS_VPS_SSH_*`），不要用 exec `env: secret:org:…`（该引用不存在会被拒）；`cat <<EOF` heredoc 与被拒的同一条命令会一起作废，脚本用 write 工具落盘后 scp。恢复 LS 时不要在 `cdp.py eval` 里内联 `$(python3 …)`（引号嵌套会让 JSON.parse 失败并已清空 LS），改用 `r421b_restore_ls.py` 这类读文件的 CDP 脚本。
+
+## R421 补充（testing agent）— ask 页 AI 讲解 SSE（question_id 直通 / thinking 心跳 / 缓存）取证
+- `/api/explain/stream` 是 fetch + FormData（`api.js streamExplain`），uni.request 钩子抓不到；用 `/tmp/cdp174/holdsse421.py`（长连接，`Page.addScriptToEvaluateOnNewDocument` 包 `window.fetch`，**克隆** response 流读 SSE，不替换应用消费的原流）在 `window.__sse[]` 记 `fd`（FormData 字段）、`st`、`tMeta`/`thinking[{t,d}]`/`tFirstDelta`/`tDone`（相对 fetch 发出的 ms）、`full`。注意 SPA 内 hash 路由不重置 `__sse`，但从 SEO 页（`/tiku/q/<id>` 服务端页）点选项进 `/#/pages/practice` 是新 document → `__sse` 重新从 index 0 开始，轮询前先 `window.__sse.length` 确认下标。
+- 深链入口（凡 `setStorageSync('redoQid')` 再 switchTab ask）：SEO `/tiku/q/<id>` 原生点选项 → practice `?qid=…&pick=X` 判题 → 「用花生十三方法详解这道题 ›」（可 `scrollIntoView` 后原生点）→ ask 页 toast「题目已填入…」+ textarea 预填 + 答案预选。ask `onShow` 会立刻消费并删掉 `redoQuestion/redoQid/redoAnswer`，事后 LS 里查不到是正常的，以 FormData `question_id` 为准。
+- 通过口径：linked 题 `tMeta` ≈150–200 ms、`meta.qid`=题 id、`module/question_type` 与 `questions` 表一致、`cached:false`；无 qid 手输题 `tMeta` ≈8–15 s（识题 LLM，前 meta 占位是「AI 识题中…（N秒）」）、`meta.qid null`。thinking 事件 data 键**恰为** `{secs,chars}`，服务端 ≥1 s 节流（客户端到达间隔有抖动，见过 722 ms，不算失败）；`.spin` 文案「生成中…」→「AI 正在推理…（已 N 秒）」→ N≥30「AI 推理接近完成，讲解正文马上出现…（已 N 秒）」，用 `r421poll.py <out> <idx> <maxs>` 每 1.2 s 采样取证（正文常 30–80 s 才到）。正文检查不含「思考过程/推理过程/<think/reasoning」。
+- 缓存键 `deps.cache_key(text.strip()+"\n||\n"+ua)` 是**逐字**的：后端把 meta.question_text 归一成 `\r\n` 版并同时存 `key`（归一文本）与 `raw_key`（原 FormData 文本）两个键；textarea 会把 `\r\n` 转成 `\n`，所以从错题本再问通常命中 raw_key。选未缓存题先在容器 DB 用 prefill 文本（`askPrefill(stem, options)` = 题干+`\n`+`A.x B.y …`）+ ua∈{'',A,B,C,D} 算 sha256 查 `explain_cache`。缓存命中：`meta.cached:true`、meta 无 qid、`thinking.length 0`、`tFirstDelta==tDone≈tMeta`。
+- **已知缺陷（R421 时）**：ask `save(r)` POST `/api/mistakes` 不带 `question_id` → 该错题行 `question_id NULL` → 错题本「AI 详解」(`book.vue redo(m)`) 不写 redoQid → 再问时 FormData 无 question_id、卡片无「查看原题」。练习页答错自动存入的行带 question_id，走它才能验「缓存命中 + 查看原题回填」。错题本卡片的再问按钮文案是「AI 详解」（`.op.redo`），不是「再问 AI」；「更多操作」sheet 里没有它。
+- 回归耗时：`/api/followup` ≈35 s、`/api/similar` ≈55 s（推理模型），等待要给足；「历史」sheet 在当前会话未归档时是空态，先点「新对话」再开「历史」才列出会话。
+- xdotool `type` 无法输入 CJK（只剩数字/字母）：先点聚焦 textarea，再 `cdp.C(pick()).call('Input.insertText', text=…)`（等价 IME/粘贴输入，会触发 input 事件）。
+- 桌面 H5 practice 页答题会抛 `unhandledrejection {"errMsg":"vibrateShort:fail"}`（`practice.vue` `uni.vibrateShort` 无 fail 回调），每答一题一次，属既有噪音，报告里单列勿混入 R4xx 回归。
+- 清理：`test-r421-%` 会落在 mistakes（练习自动存 + ask 存入）、answer_log、ask_sessions、ask_cur、growth_events、practice_progress，按「所有含 uid 列的表」循环 DELETE 再 LEFTOVER；`explain_cache` 是全局资源不按 uid 删，只记录新增键。
+
+## R420 补充（testing agent）— 时区仿真 / contest 字号·热区 / contest-report 空态
+- 时区仿真用 CDP `Emulation.setTimezoneOverride`，但它是**按 CDP session** 的：一次性 `cdp.C(...).call(...)` 在 socket 关闭后立刻回落到系统 TZ（本机 UTC）。要像 `holdvw.py` 一样长连接持有：`/tmp/cdp174/holdtz.py <TZ>`（`setsid nohup … &`，记 PID）。切 TZ 后必须 F5，并用 `Intl.DateTimeFormat().resolvedOptions().timeZone` + `new Date(1789174800000).getHours()`（Asia/Shanghai 9 / UTC 1 / America/Los_Angeles 18）证明设备时区真变了，再量 UI 文本。恢复：kill holder 再 `setTimezoneOverride timezoneId=''`。
+- R420 起 `contest-time.js`（`cstParts/fmtWindow/fmtDay/fmtDayHour`）固定东八区：contest `.hero-meta .hm[0]`「9月12日 09:00 - 24:00」、往期 `.prow-s` 用 `fmtDay(close_at-1)`（2026-09-05/08-15/08-08），三种 TZ 下必须完全一致。周报「下一场」`.link` 只在 report 非 empty/pending 态渲染（`/api/report/weekly?uid=` 对测试 uid 是 `status: empty` → 该链接测不到，只能标 untested）；可用页内 `import('/assets/contest-time.<hash>.js')` 直接调 helper 取证（minified 导出名 a/b/f，按参数个数判断）。
+- 新 chunk 取证：F5 后 `performance.getEntriesByType('resource')` 里应有 `index-<hash>.js` + `pkgA-exam-contest.<hash>.js` + `contest-time.<hash>.js` + `contest-<hash>.css`。
+- 字号扫描：遍历有文本子节点且 rect 非 0 的元素，`parseFloat(getComputedStyle(e).fontSize)<12` 列表应为空（375 下 24rpx=12px，1440 下 uni 把 rpx 按 375 基准上限也是 12px）。抽样 `.hero-series/.hero-phase/.hm/.prow-s/.prow-none/.rules-arrow` 12px，`.prow-t` 13px，`.sheet-x` 15px。
+- 榜单弹层：原生点往期行「未参加 · 看榜单 ›」→ `.mask .sheet`，`.sheet-t`「… · 榜单」；`.sheet-x` rect 40×40、`elementFromPoint(cx,cy)` 命中自身。375 `.sheet.bottom === innerHeight`（贴底）。**1440 的 `.mask` 不是全视口**：App.vue `@media (min-width:1366px)` 把 `uni-page-body .mask` 设为 `left: calc((100vw-1280px)/2+208px)`/`right: calc((100vw-1280px)/2)`（跟随壳体+左侧 208px 导航），1440 下 mask 为 288..1345，「居中」要以 mask 中心（816.5）而不是视口中心（712.5）判定，这是既定设计不是 bug。
+- contest-report：`#/pkgA/exam/contest-report?event_id=6` 非参赛者 → `GET /api/mock/events/6/report?uid=` **404**（预期 non-2xx，勿计为回归）→ `.card.empty .empty-t`「暂无大赛报告」`.empty-s`「尚无比赛成绩」`.pbtn.main`「去模考大赛」→ 回 contest；不带 event_id → 0 次 API、`.empty-s`「链接缺少赛事参数，请从模考大赛页进入」。报告正文需真实交卷，upcoming 场次进不去，不要造数据。
+- Chrome omnibox 会把 `…/contest-report` 内联补全成上次访问的 `…?event_id=6`：输入后先按 `Delete` 再 `Return`。
+- 清理边界同 R419：只 `DELETE FROM mock_event_entries WHERE uid LIKE 'test-r420-%'`，其他表 `test-r420-%` 应为 0 行；`SELECT COUNT(*) FROM mock_events` 仍 4。
+- 恢复 LS 后页面一次加载会新增 `apiSnap:/api/mock/events?uid=<anonUid>` 缓存键（30→31），属正常页面缓存，不是泄漏。
+
+## R419 补充（testing agent）— 模考大赛（contest）页 / mock_events 去重取证
+- 入口：首页「更多练习」`.more-c`「模考大赛」（home.vue L297 `goContest`）→ `#/pkgA/exam/contest`；卷库 list 页无入口，周报页也有入口。
+- 选择器：hero `.card.hero` → `.hero-title`（场次标题）/`.hero-phase`（未开始/进行中）/`.hero-paper`（卷名·题数·分钟）/`.hero-meta .hm`（窗口、「N 人报名 · M 人交卷」或「本场首批报名开放中」）；upcoming 时 `.cta`「预约报名」→ 点后 `.cta.done`「已报名，开赛后可进入」+ toast「报名成功，周六见！」；往期 `.prow-t`/`.prow-s`（非参赛显示「未参加 · 看榜单 ›」）。1440 为双栏 `.ct-cols`。
+- 每次 `GET /api/mock/events` 都会跑 `ensure_weekly_event()`（mock_event.py），去重回归口径：多次打开/F5 后容器 DB `SELECT id,title FROM mock_events ORDER BY open_at` 行数不变，且 `title LIKE '%第N+1期%'` 为 0；唯一索引 `idx_mock_events_window(series,open_at,close_at)` 可用 `sqlite_master` 核。
+- 报名只写 `mock_event_entries(event_id,uid,registered_at,attempt_id,score,rank,nickname)`；清理 `DELETE FROM mock_event_entries WHERE uid LIKE 'test-r419-%'`，勿动 `u15` 行。upcoming 场次没有「进入考试」按钮，不会产生 exam_attempts。
+- contest 页请求走 uni.request（XHR），`__exb`（fetch 钩子）抓不到，用 `__hdr`（响应钩子）核状态码，用页内 `fetch('/api/mock/events?uid=…')` 核 `next.my_state`。
+- 陷阱：`fmtWindow` 按浏览器本地时区格式化，测试浏览器 TZ=UTC 会显示「9月12日 01:00 - 16:00」（真实东八区 09:00–24:00），不是数据错误；核开赛日期用 DB `open_at` 换算。
+- 停 holder 时勿 `pkill -f "holdvw.py …"`（会连当前 shell 一起杀，exit -1）；用记录的 PID `kill`。
+
+## R418 补充（testing agent）— 探针场次打标 / 真人聚合 / 排行榜取证
+- `exam_attempts.probe` 在 `POST /api/exam/start` 由 `auth.probe_request` 写入（X-Kg-Probe:1 / `KG_PROBE_CIDRS` 网段 / UA 标记三路任一）。生产容器 `docker exec deploy-kaogong-1 printenv KG_PROBE_CIDRS` 可查网段；本机出口 `curl api.ipify.org` 命中网段则 GUI 会话天然 probe=1，**不要**用别的手段伪造 probe=0。跨用户聚合（`/api/exam/papers` takers/avg、SEO「已有 N 人模考」、`/api/exam/rank`、比赛分数池）用 `db.REAL_TRAFFIC = COALESCE(probe,0)=0`；排行榜 pool 是 `REAL_TRAFFIC OR uid=本人`，探针看自己报告 total≥1、board 有 me:true。
+- 取证选卷：挑一张真人 takers=0 的卷（DB `SELECT COUNT(*),SUM(probe=1) FROM exam_attempts WHERE paper_id=? AND submitted_at IS NOT NULL`）——卷卡 `.pmeta` 在 takers 为 0 时不渲染「人考过」，SEO 页也无「人模考」，探针交卷后若变「1 人考过」立刻可见。卷库卡上「我的最好成绩 X 分 · 已考 N 次」「已练 n/62 题」是本人视角，不是聚合，勿混淆。
+- `/api/exam/papers` takers 有 300 s SWR 内存缓存：交卷后等 ≥305 s 再连续 curl 两次，以第二次为准；用 `-H "X-Kg-Probe: 1"` 的 curl 只读不落库。
+- 报告页排行榜卡选择器：`.r-title`「全卷排名」、`.r-tag`「样本 N 人」、`.r-beat-tiny`（total<10 时代替击败比例）、`.r-kv-i`「排名 r/total」「平均分」；「同卷排行榜」列表 `.r-brow` 在 `exam-board.js` `rows.length<2` 时整块不渲染（total=1 不显示是既定逻辑，不是 bug）。GET 响应体 `__exb.res` 为 undefined，取 JSON 用页内 `fetch('/api/exam/rank/<id>?uid=…')`。
+- 容器内直接 `docker exec deploy-kaogong-1 python3 -c "from app import insights; insights.api_exam_rank(<attempt_id>, uid='<uid>')"`（工作目录已是 `/app/backend`，勿加 `-w /app`）。
+- `cdp.C` 需要 target：`cdp.C(cdp.pick())`；大 LS 恢复走它的 `.eval` 避免 `Argument list too long`。`r391usr.py read <out.json>` 必须带输出路径。
+- 基线漂移排查：`SELECT * FROM growth_events ORDER BY rowid DESC LIMIT 3` 看最新行的 uid/probe/created_at，能区分「本轮前其他探针会话产生」与「本轮泄漏」。
+
+## R417 补充（testing agent）— 多选 picked 落库 / 历次作答 / 换 uid 的 LS 陷阱
+- R417 起 `save_answer_log_detail` 用 `normalize_answer(picked)[:8]`（旧 `str(picked)[:2]`：多选 ABD 会落 AB）。核对口径：`SELECT question_id,picked,correct FROM answer_log WHERE uid=?` + `mistakes.user_answer` + 报告页「你选了 ABD」+ 错题本卡片展开后 `.attempts .att-pick`「选 ABD」（`toggleCard` 打开时才 GET `/api/attempts?uid&question_id`）。**不要伪造 probe=0** 去刷 most_wrong/易错项：测试 uid 的 answer_log 全为 probe=1，后台聚合不会计入，只核行与 UI。
+- 练习页多选：`.multi-bar .multi-ok`「确认答案（n）」→ `POST /api/answer_log {uid,items:[{qid,correct,picked}]}`，source 取深链 `source=seo_q`。SEO `/tiku/q/<id>` 的 CTA「在线做这道题 + 同考点练习（免费）→」是普通 `<a href="…#/pages/practice/practice?qid=…&source=seo_q">`，原生点即落 practice、该题领跑。
+- 请求体抓取：`holdbody414.py` 的 `window.__exb` 条目字段是 `{u, req, st, res}`（不是 url/body），`__hdr` 只有 `{url,status,ms}` 无 body。过滤要用 `x.u`。
+- exam 页顶部「<」是 uni H5 navbar back：从卷库 list 原生点「开始模考」进入才有历史栈，点「<」回卷库会触发 `onUnload` flush 且**不重建 document**（`__hdr/__exb` 保留，可直接读 POST 数）；深链直达时无栈会走 `navigateBack fail → reLaunch list` 兜底。容器日志里 progress 请求 uid 在 body 不在 URL，只能按时间窗 `docker logs --since <ISO>` grep `exam/progress` 计数。
+- 换 uid 陷阱：LS `examProgress`（模考快照）与 `pendingSession`（练习续做卡 `.ercard`「有一组未做完的练习」）都**不是 uid 作用域**。① 在 exam 页上换 uid 后再导航，`onUnload` 会把旧场快照写回 LS，导致新 uid 首次进 116 误弹「继续上次模考？」——先离开 exam 页（去首页/卷库）再 `removeItem('examProgress')` 再进；② 首页 `.ercard` 计数 1 可能是练习卡而非模考卡，要看 innerText 是否含「未交卷/模考」。
+- 「恢复后仅新增标记」：答题卡跳题（idx 变）本身就会推一条 progress（marks []），标记后再推一条；判「标记触发同步」看最后一条 payload `marks:[qid]` 且 picks 不变。
+- 清理时 `practice_progress` 也有 uid 行（练习页产生），审计脚本要包含。
+
+## R416 补充（testing agent）— 只标记（旗标）不上送进度
+- R416 起 `shouldPushProgress(picks, pushedBefore)` 不看 marks：进 exam 页只点「标记」（`.tbtn`→「已标记」）不答 → `POST /api/exam/progress` **0 条**、`exam_progress` 0 行；F5 不弹续考、直接新 attempt 并回收旧空场次（与 R415 不答一样）。一旦本场有过 POST（有作答），此后标记/取消都随 payload `marks:[qid,…]` 同步，清空作答后也会同步 `picks {}`。验证顺序建议：只标记 → 等 ≥5s 看 `__exb` → DB → F5；再 答 BD → 标另一题 → F5「已答 1/62」→ 继续 → 上一题看 `.opt.sel` + `.tbtn.on`。
+- 「只标记就刷新 → 标记丢」在 R416 下依旧（本就不落库），是既定口径，不算 FAIL。
+- 卷库 list 页 reload 会触发 `/api/exam/start`？不会，但 attempt 号可能跳号（本轮 288→290）——都是被回收的空场次，判「只剩 1 条」看 DB 不看编号连续。
+- 诊断钩子：`holdhook.py` 常驻时每个新 document 自动重装 `__exb/__hdr/__cerr/__pexc`，仍需 **每段 reload 前** `r391usr.py read <file>` dump 一次才保留该段。
+- 切视口时不要 `pkill -f "holdvw.py 375 812"`——会匹配到自己所在的 bash 命令行把整条命令杀掉；按 PID 文件 kill 或分两条命令跑。恢复 LS 大对象用 `cdp.C(pick()).eval(js)` 直接走 websocket，`python3 cdp.py eval "<50KB js>"` 会 `Argument list too long`。
+
+## R415 补充（testing agent）— 模考「空场次」语义
+- R415 起：进 `exam?paper_id=N` 不作答/不标记 → **不会** `POST /api/exam/progress`（首次防抖与 onHide/onUnload flush 都被 `shouldPushProgress` 拦），F5 也不弹「继续上次模考？」而是直接新 attempt；下一次 `/api/exam/start` 会删本人同卷「无 progress 行 / picks '' 或 '{}'」的旧 attempt（连 progress 行）以及 >24h 未交卷的。验证套路：LS `examProgress.data.attemptId` 前后对比 + 容器 DB `exam_attempts/exam_progress where uid=?`。
+- 一旦本场推送过（或从快照恢复），之后清空作答也会同步 `picks {}`；再 F5 → 0 已答不弹 → 新场回收旧 `{}` 行。只标记不答会落 `{picks:{},marks:[...]}`，但 F5 后同样按空场次回收 → **标记丢失**（设计如此，记录即可）。
+- 首页 `.ercard` / 卷库 `.card.resume` 由 `parseExamProgress` 过滤 answered 0；`/api/exam/resume` 仍会回 picks `{}` 的历史快照，不要以接口有返回判「有卡」。
+- paper 116 运行时可能只有 62 题、273036 在 slot 23（不是 R414 记的 24）——每次以 LS `examProgress.data.items.findIndex(q=>q.id===273036)` 现场取 slot。
+- `window.__hdr/__cerr/__pexc` 随 document 重建，**每次 F5/location.href 前先 `r391usr.py read <file>` dump**，否则该段诊断丢失（R415 375 前几段就漏了，只剩 `__exb`）。
+- 用 `hold_restart.sh`/holdvw 切过 1440 后，`Emulation.clearDeviceMetricsOverride` 单独调用可能不生效（innerWidth 仍 1440）；先 `setDeviceMetricsOverride 1600x1017 mobile=false` 再 clear 再 `Page.navigate`（见 `/tmp/cdp174/r410_teardown.py`）。
+- 容器日志 `POST /api/auth/wxlogin 503` 是 `auth.py` 未配 `WX_MINIAPP_SECRET` 的设计返回，外部小程序客户端会触发，不算本轮 5xx 回归。并发子会话（`test-w*-` uid）会让 growth_events 等基线漂移，只清自己前缀。
+
+## R414 补充（testing agent）— 模考多选 / book·favorites 24rpx
+- 模考含多选卷现已存在：paper **116**「2015年北京公务员考试《行测》」69 题，多选在 slot 19–24（273027 ABCD / 273028 ACD / 273030 BCD / 273031 ACD / 273032 BCD / 273036 BD）；paper 29 含 264342（ABC）、paper 31 含 275876（ACD）。进入 `#/pkgA/exam/exam?paper_id=116` 后必须 reload 才走 onLoad。
+- **先进 exam 页再 F5 会弹「继续上次模考？（已答 0/62 题）」**：首次进页已 `exam/start` 并写 LS `examProgress`，F5 后按 0 进度也提示恢复（会多留一条空 `exam_attempts` + `exam_progress` 行，清理时计入）。想干净测 resume 就先答题再 F5；测「重新开始」时留意这条空 attempt。
+- 模考多选选择器：题干下 `.multi-tip`（12px，文案「多选题：可选多项，已选 X，选完点「下一题」」）、选项 `.opt.sel`（多字母包含）、长按排除 `.opt.excl`（opacity .45）。单选点选后 ≈180ms `next()`，量「不跳题」要等 ≥500ms 再看 `n/62`。答题卡侧栏（1440 常显）/ 弹层（375）底部「已答 n/62」= `items.filter(q=>q._picked).length`，多选算 1。
+- 进度对账最稳的是页内 body 钩子：`POST /api/exam/progress` 的 `picks` 是 `{qid: 'BD'}`（按 qid），`submit` 的 `answers` 是 `{slot: 'BD'}`（按 1 起 slot）；容器 `exam_progress.picks`/`exam_attempts.answers` 同样两套键。键盘 A–D 只在 `innerWidth>=1024 && !cardOpen` 生效，按同一字母第二次只去掉该字母（B→D→B 得 D）。
+- 长按排除（`@longpress`）用 CDP `Input.dispatchTouchEvent` touchStart 后 sleep ≥600ms 再 touchEnd；只发 touchEnd 或短按不会触发。在按住期间读 `_excl/_picked` 最可靠。
+- 报告页详情 `.dopt.right`=正确项、`.dopt.wrong`=错选项，`.dans`「正确答案 X，你选了 Y」；多选漏选时正确项全部 right、无 wrong；DB `mistakes (user_answer,correct_answer)` 存多字母如 `('AC','ACD')`，`answer_log.picked` 同。
+- 找 Vue 实例：`el.__vueParentComponent` 沿 `parent` 找到含 `items`+`pick` 的 ctx；reload 后 `window.__exvm` 句柄失效要重找。钩子截断 response body 6000 字符，长 `exam/start` 响应别直接 `JSON.parse`。
+- book 页 375 `.trendcard/.trend-*/.kbd` 是 `display:none`（桌面媒体查询才显示），量它们必须 1440；`.trend-kn` 只在 4 周内有 `mastered_at` 时渲染；`.sort-chip` 仅 CSS 定义、模板未使用（量不到属正常）。`.recap-name` 80px nowrap ellipsis、`.recap-n` 20px 用 `scrollWidth<=clientWidth` 判无溢出。
+- 1440 下 book 想有数据可直接把 LS `anonUid` 切回 375 测试 uid（同前缀），不必再造数；`test-r414-%` 清理表：answer_log/exam_attempts/exam_progress/growth_events/mistakes/practice_progress/question_favs/review_log/user_profile（40 张含 uid 表自动枚举）。
+
+## R413 补充（testing agent）— 多选题 / 复习吸底 / 收藏标绿
+- 练习页默认「自动下一题」开启（LS `autoNextOff` 未设）：多选题点「确认答案」判分后会立刻切到下一题，看不到 ✓/✗ 标记。测标记前先经顶栏 ··· 菜单原生关掉「自动下一题」（写 `autoNextOff=1`），再深链重进。
+- 深链 `#/pages/practice/practice?qid=N&module=changshi` 只在 `onLoad` 读 query，同页改 hash 不重进，需 `location.href=…; location.reload()`。每次 reload 清页内 HDR 钩子，换题前先 dump。
+- 活跃多选 qid（answer 多字母）：264342 ABC（题干带「(多选题)」）、273027 ABCD、273028 ACD、273030 BCD、273031 ACD、273032 BCD、273036 BD、275876 ACD。多选 UI 选择器：`.multi-bar/.multi-hint/.multi-ok(.dis)`；选项态 `.opt.sel|right|wrong|dim`，标记 `.omark.good/.badm`；DB `mistakes.user_answer` 存拼接字母（如 `AC`），`answer_log.picked` 同。
+- 考试/模考含多选卷：`/api/exam/papers` 里没有「2015 北京市考行测真题」卷（北京卷只有 2018–2023，且不含上述多选 qid），exam 模式多选目前只能标未测。
+- 复习页 `.next-btn`（wd-button custom-class）：375 下 `position:sticky; bottom:58px`，长讲解时 scrollY 0 rect bottom 应 754（TabBar top 762）；讲解短时自然位就在视口内 sticky 不介入，要挑 docH>812 的题（243872 讲解长 docH≈1157；273028 ≈849；264342 ≈829）。1440 桌面无底 TabBar，按钮自然位即可。
+- 收藏三处标绿选择器：错题本收藏 tab 展开 `.anscmp .ca`；收藏页 `.qitem` → `.opt.ans`；搜索 `?q=关键词` 自动搜 → 点卡 → `.q-opt.ans`。搜索页 `?q=` 同样只在 onLoad 生效，换词用搜索框原生输入。收藏 = 练习页顶栏 ⭐ → `POST /api/favs` + LS `favQuestions`，清理表含 `question_favs.uid`、`user_profile.uid`。
+- 预存 P2（非 R413）：错题本收藏卡 `.anscmp` 23rpx=11.5px、卡内 tag 10–11px；收藏页 tag 10px。收藏/搜索页 innerText 里的「回答错误，正确答案 X」是 body 下 1×1 离屏 aria-live 播报 div，不是可见 UI。
+
+## R412b 补充（testing agent）
+- uni-app `<text>` 渲染为 `<uni-text class="x"><span>…</span></uni-text>`：对 `.edit`/`.nop`/`.qsb-link` 做中心 `elementFromPoint` 时命中的通常是内层 `span`（className 为空），判命中要用 `el.contains(hit)` 或 `hit.closest('.x')`，不要直接比 className。
+- `.edit` 用 `min-height:40px + margin:-10px 0` 后 rect 会外溢 `.mynote` 上下各 ~3px，与相邻元素判相交要拿 `.edit` 自身 rect 比 `.report-link` bottom / `.qsb-row` top，而非只比 `.mynote`。
+- teardown 清 375 仿真：holder 进程杀掉后新 CDP 会话直接 `Emulation.clearDeviceMetricsOverride` 可能不生效（innerWidth 仍 375），需在同一会话先 `setDeviceMetricsOverride(1600×1017, mobile=false)` 再 `clear` 再 `Page.navigate`（见 `/tmp/cdp174/r410_teardown.py`）。LS 恢复脚本 `/tmp/r4xx_ls_restore.js` 可能被清，最稳从最近的 `/tmp/r4xx_ls_backup.json`（可能双重 JSON 编码）重新生成。
+
+## R412 社交栏（q-social-bar）热区/字号复验新经验（testing agent）
+- 组件挂载点：practice.vue 答题后解析区（`.qsb` 前一兄弟是 `.report-link` 纠错，「下一题」在 fixed `.banner > .bnext`）、book.vue 错题卡「点开看答案与详解」展开处、复习卡。几何用 `getBoundingClientRect` 量 `.qsb-link/.nop/.edit`，注意 `.edit`「改」是 inline-block + padding 8px，实测高 = 8+line-height(19.2)+8 ≈ 35px，不到 40；整个 `.mynote` 块也绑定 `startEdit`。
+- 「分享给队友」不是弹层：`POST /api/share/create` + 剪贴板 + toast「分享链接已复制，发给队友吧」约 2s 自动消失；会写 `shared_questions.from_uid` 一行，清理要包含该表（审计脚本的 uid 列枚举已覆盖）。「讨论」是 `navigateTo /pkgA/social/discuss?qid=`，页内 ‹ 返回练习页状态保留。
+- 「🔥 热评」条需 `question_comments.status='ok'` 的题；生产目前全部 deleted（`/api/comments/count` 均 0），且规则不允许写讨论 → 只能标未测。`.firstc`「抢首评」在 `count===0` 时必现，可作字号抽查。
+- xdotool `type` 会丢中文：textarea 需要中文时先原生输入 ASCII 部分，再用 CDP `setRangeText + dispatchEvent('input')` 补中文，保存仍走原生点击。
+- 深链换 uid 时 `localStorage.setItem + location.href + reload` 会重置页面 HDR 钩子，每段先 dump；大 localStorage 恢复要用 `cdp.py evalfile <js>`（命令行参数会 Argument list too long）。
+
+## R411 字号/空态 CSS 轮新经验（testing agent）
+
+- **「全页 <12px 0 处」断言要分两层报**：先按改动 diff 里的选择器逐个量（`.hm-yl/.hm-note/.hm-lt/.tpct/.km-cov-in/.km-lg`…），再做 TreeWalker 全页叶子文本扫。stats 页有些卡片只在数据够多时才渲染（`predict-card` 需 ≥30 题作答、`.km-cov-in` 冷启动是 `--`），初始少量数据扫出 0 处不代表全页达标——先造够作答（同 uid 深链多练几轮）再扫一次。范围外组件（`components/predict-card`、uni tabbar 标签 10px）单列，不混进「本轮改动」判定。
+- **热力图对齐口径**：`.hm-yl` 7 个标签 top 与首列 `.hm-col > .hm-c` 7 个 top 逐行比 |Δ|；`.km-cov-in` 用 `Range.selectNodeContents` 取文本 rect，与圆 rect 比包含。
+- **1440 `scrollWidth != innerWidth` 不一定是横溢**：非 mobile 仿真有 15px 纵向滚动条，`documentElement.clientWidth` 也是 1425；判横溢用 `scrollWidth > clientWidth`。
+- **待掌握清零专属空态**（`tab==='todo' && !kw && !hasFilter && items.length>0`）：批量标掌握后即使还在批量态也已显示；验通用文案回退 375 可用筛选 chip（不用打字），1440 用 CDP `Input.insertText` 搜索。恢复 1 条后「今日待复习」横幅会重新出现把 tab 行下推，再点 tab 前重新截图定位，否则会误触横幅进入复习模式（用「退出复习」退出即可，不写库）。
+- **SEO 页展开解析**：`<summary>` 「先想一想，再看答案与解析」的 DOM rect 与屏幕坐标在 375 仿真下不一一对应，按截图里的实际位置点；误点到「同考点相似题」链接会跳到别的题，用 `alt+Left` 返回重做。
+- **pkill 陷阱**：`pkill -f holdhook.py` 会匹配到当前正在执行该命令的 bash 自身（命令行含该字串）导致 exec 提前退出（exit -1），改用 PID 文件 `kill $(cat *.pid)`。
+- 测试 uid 有 40 张含 uid 列的表（含 `review_cur.uid`）；本轮 3 错题 + 复习 + 续练 + 1440 6 错题共产 65 行，全部由 `test-r411-%` 模式覆盖。
+
+## R410b 修复复量轮（同一审计口径复跑）新经验（testing agent）
+
+- **bundle 变更后必须真实 F5**：只做 hash 导航（`location.href='#/pages/...'`）会沿用内存里的旧 chunk/CSS（本轮空态按钮先读到旧 36px，F5 后才是新 44px）。复量前用 `performance.getEntriesByType('resource')` 核实际加载的 `pages-book-book.*.js` / `book-*.css` 文件名与用户给的一致，再量几何。
+- **页内 sheet 取代 uni.showActionSheet 后的量法**：`.mask > .sheet.more-sheet`，行 `.more-act`（`.danger` 删除 / `.cancel` 取消），`.mask.bottom` 375=762、1440=900；`.uni-actionsheet` 计数应为 0。桌面 Esc 关闭要用真实 `xdotool key Escape`，再查 `.more-sheet` 数量。1440 下 modal 关闭后 `.uni-modal` 元素仍在 DOM（父级 `display:none`），判关闭要看父级 display 而不是元素存在。
+- **错因自评持久化证明**：sheet 内 `.more-reasons .rz` 点选 → HDR 钩子只记 `url/status`（`method` 可能为空），用 `/mistakes\/\d+/` 匹配 PATCH；持久化用 F5 后页面自身 GET 或 `curl -H 'X-Kg-Probe: 1' /api/mistakes?uid=`，再点同 chip 期望 `error_reason` 变 `''`（DB 里是空串不是 NULL）。
+- **`rvstate.js` 的 `tgt` 是正确答案**（用于自动推进答对），要「答错」需自己取 `.opt` 中 `innerText != ans` 的元素点。复习循环脚本用 Vue 状态 + 实时 rect，不用固定坐标。
+- **1440 视口在 1024 宽屏幕上的真实点击**：页面坐标 → 屏幕坐标约 `x*0.711`，`y*0.711+88`；只对大按钮用 GUI 点击，小控件用 CDP `Input.dispatchMouseEvent` 页面坐标。
+- **SEO 缓存头**：`curl -I`（HEAD）拿不到 `x-edge-cache`/`age`，要 `curl -s -o /dev/null -D - <url>` GET。
+- **localStorage 备份陷阱**：`cdp.eval('JSON.stringify(localStorage)')` 落盘的文件是**双重 JSON 编码**（`json.load` 得到 str），恢复前 `if isinstance(d,str): d=json.loads(d)`，否则会按字符写入十万个键；恢复用逐键 `setItem`（大对象内嵌到 eval 表达式易静默失败），最后核 `localStorage.length==30` 与 `anonUid`。
+- 批量清空「待掌握」后的空态仍是通用「没有匹配的错题」（本轮只改了已掌握 tab 文案），复量时勿误判为回归。
+
+## R410 错题本次级屏 375/1440 可用性审计（只审不改）新经验（testing agent）
+
+- **审计轮只量不改**：缺陷理由一律用页面数据（`getBoundingClientRect` + `elementFromPoint` + `scrollWidth` + `getComputedStyle().fontSize`），不要用「竞品有 X」。阈值口径：375 热区 <40px 记 P2、<32px 记 P1、字号 <12px 记 P2；每条缺陷附 rect 数字 + 复现步骤。
+- **FAB 与列表末卡**：375 下滚到底时 `.fab-main`（≈307–359 / 694–746）会盖住末卡 `.op.more`「···」（≈306–350 / 681–725），`elementFromPoint` 命中 `fab-main`；「已掌握」tab 只有 1 卡时同样复现。批量模式下 FAB 不渲染但 `.batchbar` 会盖 footer——两种都要量并分开记。
+- **uni `showActionSheet` 几何**：外层元素高 0，量 `.uni-actionsheet__menu` 与各 `.uni-actionsheet__cell`；375 下 6 项菜单末行「删除」/「取消」会越过 tabbar 762；1440 居中弹层容器会裁切末行（看放大截图）。
+- **复习「错因自评」只在复习答错后出现**（展开态卡片没有）；新错题 `next_review NULL` 即到期，`GET /api/review?uid=` 直接可用，不必改库。复习组件状态用含 `退出复习|复习 \d` 文案的元素回溯 `__vue__`/parent 取 `rItems/rIdx/cur`。答错一题会追加 2 道同类（`rItems` +2），完成层统计文案包含「加练同类题 N 道」。
+- **只到确认层的破坏操作**（导出 PDF、批量删除、纠错提交）：截图后点取消，用 `paper_exports`/`question_reports`/`mistakes` 行数前后一致证明未写库。
+- **AI 失败态回归可用浏览器内 CDP Fetch 拦截**（`/tmp/cdp174/r398_intercept.py` 对 `*mistakes/analysis*` 回 502），请求不到达生产；用完按 PID kill，并把该 502 从 non-2xx 统计里剔除。
+- **页面内 HDR 钩子跨文档导航（stats/SEO 页）会重置**：每段结束先 `JSON.stringify(window.__hdr)` 落盘再跳页；漏了就用容器 `docker logs --since` 按 uid grep 状态码直方图补证据。
+- 审计脚本自动枚举 uid 列时用 `c in ('uid','from_uid','user_id','owner_uid','to_uid') or c.endswith('_uid')`（当前 40 张表，含 `review_cur.uid`、`pk_matches.creator_uid/opponent_uid`、`teams.creator_uid`）。
+
+## R402 只改生产数据的轮次：SSR 进程内缓存陈旧的判法（testing agent）
+
+- **「只改了 DB 数据、rev/bundle 不变」的轮次先查 SSR 缓存**：`/tiku/q/<id>` 由 `backend/app/seo/pages.py _render_question` 渲染并 `@lru_cache(maxsize=4096)`。R402b（`dd13df6`）前缓存键只有 qid，隔离脚本改库后**不重启进程**页面仍是旧 HTML（237345 API 已 `explanation null` 但 SSR 仍两段含「解得 x=。」）。区分边缘缓存与进程缓存：加随机 query（`?x=随机`）拿 `x-edge-cache: MISS`，MISS 仍旧 → 进程内缓存，用 `message_parent` 上报根因并把 SSR 项按现状记 FAIL，等重启/修复后再复验并如实更新。R402b 之后缓存键含 `questions.updated_at`，理论上写库即刷新，但仍要看 `docker inspect StartedAt` 判断是否重启并复核一次。
+- **边缘缓存窗口**：`cache-control: public, max-age=300`；部署后 ~15 分钟内无 query 的正式 URL 可能 `x-edge-cache: REVALIDATE age>300` 仍返回旧 HTML，之后才刷新。复验时既要测带随机 query（源站真值）也要测正式 URL（真人视角），报告里分开写。
+- **JSON-LD 断言脚本**：页面 `script[type="application/ld+json"]` 可能是顶层数组，需 flatten 后取 `@type` 集合，`acceptedAnswer` 递归查找（`/tmp/cdp174/ssrcheck.js` 一次返回 skeleton/原解析/花生十三讲解/暂无解析 计数 + 正确答案 + types + accHead）。期望恰为 `{LearningResource, BreadcrumbList}` 两块，acceptedAnswer 以「正确答案：X。」+ hs 开头。
+- **`/api/question/<id>` 返回包在 `item` 下**（`json['item'].explanation`），不是顶层字段。
+- **中途换 rev 的处理**：练习/错题本/回归证据若在重启前采集且变更只涉及 SSR 文件、bundle 不变，证据仍有效；但在新 rev 上至少把核心链（CTA → 答错 → POST expLen → 错题卡）复跑一遍并标「post-fix」，报告写清哪些断言在哪个 rev 上取证（`__mist[].t0` 换算 UTC 与 StartedAt 对比）。
+- 审计脚本列名先核：`mistakes` 无 `wrong_count` 列；脚本报错会让 `&&` 链短路导致 clean 未执行，看到 `LEFTOVER` 不为 0 前先看是否根本没跑到 clean。teardown 用显式 `pgrep -f 'python3 -u /tmp/cdp174/holdX.py'` + 排除自身 PID，避免 R401 的自杀问题。
+- 容器日志数 5xx 用 `grep -E ' 5[0-9][0-9] '` 会误命中 `[indexnow] submitted 533 urls -> 200`，改用 `grep -oE '" [0-9]{3} ' | sort | uniq -c` 看状态码直方图。
+
+## R401 数值位抠空解析隔离（base 置 NULL）生产复验 走查新经验（testing agent）
+
+- **SSR 题目页解析默认折叠**：`/tiku/q/<id>` 的答案与解析在 `<details>`「先想一想，再看答案与解析」里，`innerText` 里直接数「本题用两集合容斥」会得 0；先原生点开 summary（或断言 `document.querySelector('details').open`）再数骨架/hs/「原解析」出现次数。`backend/app/seo/pages.py` 只在 hs 与 raw **都非空**时才渲染「花生十三讲解 / 原解析」两段，base 置 NULL 后页面只剩单段 hs、「原解析」计数应为 0（这是隔离成功的页面级信号）。
+- **隔离前后判定口径**：`/api/question/<id>` `explanation === null`（不是空串）+ `hs_explanation` 非空；`mhook` `expLen == hs 长度`（288140 → 104）；clean 前 raw `mistakes.explanation` 同长度同前缀。R400 时同题 raw 是 167 字骨架乱文，R401 后应为 104 字 hs——报告里把这两个数字并列写。
+- **用户给的「保留题/对照题」先查 `disabled`**：334672 在生产是 `disabled=1`（panduan），深链会被过滤、UI 不可用；正常对照仍用 264413（active，base 79 字）。答对照题时先看 `answer`（264413 答案 A），答对会自动跳下一题且不产生 mistake 行——答错才有快照，需带 `&v=N` 重进再答错；多出的一条 answer_log 在对账里要解释（本轮 answer_log 11 = 4+1(答对)+3+3）。
+- 容器日志 404 若出现 `GET /api/questions/<id>`（复数），不是前端/自己的 `/api/question/<id>`（单数）探针，多为 lead 侧脚本；只在报告注明来源不明，不要归给应用。
+- 宿主磁盘/负载要在**测试首尾各记一次**（`uptime` + `df -h /`）：本轮 20 分钟内从 96%/2.0 GB/load 1.5 变到 98%/1.5 GB/load 8，发现时用 `message_parent` 即时上报，不要等最终报告。
+- `r400_teardown.py` 之类用 `pgrep -af holdvw.py` 杀 holder 时会连带命中包含该字符串的 `bash -c` 包装进程（自己的命令被 kill，exit -1）——把 teardown 脚本单独一条命令跑，或 pgrep 后过滤 `python`。
+
+## R400 错题快照写入侧回落 hs + 公式丢失解析隔离 生产复验 走查新经验（testing agent）
+
+- **「写入侧」与「读取侧」证据要分开**：R396b 起 `/api/mistakes`、`due_reviews` 读取侧已把空快照回落 hs，所以 API/错题卡显示 hs **不能**证明写入侧改动。写入侧证据链 = ① 页面上下文 XHR 钩子 `/tmp/cdp174/mhook.js` 记录真实 UI 触发的 `POST /api/mistakes` 请求体 `explanation` 长度/前 40 字（`window.__mist`）② 容器 DB raw：审计脚本 `ro` 模式打印 `select id,uid,question_id,length(explanation),substr(explanation,1,40) from mistakes where uid like 'test-rNNN-%'`，**必须在 clean 之前跑并落盘**（clean 后行消失）。对照题（有官方 base 的）同时答错一道，确认 raw 前缀是 base 而非 hs。
+- **隔离题深链**：`/#/pages/practice/practice?qid=<id>&module=shuliang` 领跑该题，练习包后续题目来自同模块/考点，可能混入**未被隔离的骨架乱文题**（如 288140「…订阅报纸的家庭为，因此…」句首残缺、公式位空、不在 `explanation_quarantine`）——审计 ro 输出里逐条看 `substr(explanation,1,40)`，乱文样本要单列为观察并到 `/tiku/q/<id>` 截「原解析」作证；同时用 `select * from explanation_quarantine where question_id=?` 证明未隔离。
+- **页脚剥离样本多为 `disabled=1`**（`/tiku/q/` 404，不可见页面），只能记 `/api/question/{id}` 层观察；找活跃替代样本时 `docker exec … sqlite3` 在 `questions` 里按 `options like '%《行测》真题%'` 的历史值反查（本轮 332501 `D: 6`），报告明确「UI 用替代样本」。
+- 换 uid 复用同一浏览器时，首页模块进度卡（「言语理解 N/18294 · 正确率」）会沿用上一 uid 的 localStorage 缓存数值，服务端 `home_bundle.summary.today_n` 才是该 uid 真值；别把它记成后端 bug，也别用它做作答条数对账。
+- 同一 `#/pages/practice/practice?qid=` 深链二次进入可能保留上一题包状态，需带一个变化的 query（`&v=2`）强制整页重载再答题。
+- 请求数与点击对账口径：`__mist.length == 答错次数`；容器 `grep -c "POST /api/mistakes "`（尾随空格，排除 `/mistakes/analysis`）== 两 uid 答错总数；`mistakes/analysis` 行数 == 点「生成」次数。
+
 ## 本地 H5 设计系统与主题回归
 
 - H5 `api.js` 默认 `BASE_URL=''`，静态 `http.server` 只能验证无数据组件；业务回归需同源 `/api/*` 反代到获准使用的后端，或构建时显式配置 API。不要把静态服务 `/api` 404 当成页面回归。
@@ -634,7 +816,7 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 - 学习计划阶段验证：改画像考试日期即可切换 专项期(>30天)/真题期(>14)/冲刺期(≤14)；冲刺期 60min → 13专项+8真题=21 题；复习配额受「今日之前到期数」约束，UI 显示 min 值属正常。
 - OMR 闭环可全真测：导出含答题卡 PDF → pymupdf 渲染 → 按 backend/app/omr.py 几何（bubble_rect）PIL 涂黑 → UI「扫描答题卡→拍照」走系统文件选择器选图 → 识别卷码/精确判分/自动记入。生产表是 `paper_exports`（无 `papers` 表），correct 答案查 `questions` 表。
 - 组队打卡：pkgA/team/team 创建得 6 位邀请码，第二 uid 输码加入即 2 名队友；做题后队页「今日 N 题」实时联动。**队长昵称可能显示 null**（创建时无 pkNickname），周战报剪贴板可用 `navigator.clipboard.readText()` 读（先在页面点 Allow 授权弹窗）。
-- `practice_results` 表无 uid 列（全局聚合），测试产生的行无法归属、不清理。清理团队要删 `teams` + `team_members` 两表。
+- `practice_results` 自 R426（rev `dc69266`）起有 `uid`/`probe` 列：清理时**按 uid 一并删**；R426 前的 286 行历史无 uid（全 NULL）不可归属、不删。清理团队要删 `teams` + `team_members` 两表。
 
 ## R26r 生产回归新经验（growth.total 口径 / 注册迁移 / 收藏页入口）
 - R26 起时政完成态按 uid 隔离存 `szDaily:<uid>`（不再是裸 `szDaily`）；注册合并会把 `szDaily:<旧匿名uid>` 复制到 `szDaily:<账号uid>`。验证迁移要注册后 F5 再看首页时政卡。
@@ -1203,6 +1385,476 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 完成页按钮 y 坐标会因 dailyStats/登录条等动态区块变化，点「分享成绩」前先截图确认，否则可能误点「再来一组」把完成页顶掉。
 - 生产部署后旧 bundle chunk 名会 404（页面预取旧 hash 资源，console 里成串 `assets/*.js 404`）——属部署换 hash 的已知噪音，与 console.error 口径分开列报。
 - 收尾 reload 页面（清 hook）会让 app 以保护 uid 重新拉 `/api/profile` 并新增一个 `apiSnap:*` 缓存键、更新 `apiSnapIndex`——localStorage 相对备份多这两处属 app 正常行为，非污染。
+
+## R423 面试模块 SSE 走查经验
+- 入口：ask 页「面试」/ 我的页「AI 面试陪练」→ `/pkgA/interview/interview`；提交 body 是 JSON `{uid,question_id,answer,duration_sec}`（非 FormData）。流：`POST /api/interview/answer/stream`（meta=分数 → thinking 逐秒 → 正文 delta → done{session_id}）与 `POST /api/interview/sessions/{sid}/review/stream`（regen，仅点评 <300 字时允许，否则 400「点评已存在」属设计）。
+- 判定口径：meta ≤6 s（打分已关推理）；`event: thinking` 键恰 `{secs,chars}`、间隔 ~1 s、done 前 5 s 内 0 个；正文首字 30–50 s 是上游推理行为不算缺陷；正文 ≥300 字且不含 `<think`/「思考过程」等推理泄漏；响应头 `text/event-stream` 且无 `content-encoding`，`encodedBodySize==decodedBodySize`。
+- **触发「重新生成点评」的可靠方法**：提交后在 thinking 阶段 F5 中断（评分已落库、点评空）→ 经「练习记录」重进该 session → 出现「上次点评生成被中断，评分已保留」+ 按钮。旧 <300 字 session 通常属他人 uid，跨 uid 访问 `session_id` 会有预期 404。
+- 空正文指纹（R423b 已修）：thinking 数十个后直接 done、正文 0 字、DB review 空；容器日志 `[llm] stream <model> finish=length content=0 …` 告警——出现即预算不足，不是网络问题。
+- 含图 `/api/explain/stream` 只收一个 `image` 字段，重复字段只取最后一张；低清 360px JPEG q35 仍可识题命中缓存键。取材料题样本用 `/api/questions?module=ziliao&grouped=1&limit=5`，**不要在高负载时段对生产库跑无索引全表 LIKE**（一次 >10 min 未返回）。
+- 清理：`interview_sessions` 按 uid 删；探针含图讲解会新增 explain_cache 行（无 uid），按 `question_text like` 定位删回基线。
+
+## R424 面试点评关推理 / 讲解存疑兜底 走查经验
+- 点评口径更新：`/api/interview/answer/stream` 与 regen 流 `event: thinking` 应为 **0**、正文首字距 meta ≤10 s（实测 1.3–1.6 s）；占位只会出现「考官正在撰写点评…」约 1.5 s 一闪，「考官正在思考…（已 N 秒）」不再出现。若 thinking >0 说明上游忽略了 `thinking.disabled`，如实记录个数不算 FAIL。
+- 存疑判定口径：兜底拦截 = `tMeta == tFirstDelta == tDone` 单事件秒回 + `module/question_type` 均 null + 正文首行「【答案】题目存疑」+ **不写 explain_cache**（`select count(*) from explain_cache where question_text like '<题干前缀>%'` 为 0）；模型自判存疑有 module、正文说明缺什么，且会写缓存。合法短题干样本：`3, 6, 12, 24, ( )？ A.36 B.48 C.42 D.30`（B）、`儿童：女童：未成年 A.… D.…`（D）应走模型讲解。
+- `explain_cache` 正文列是 `explanation`（无 `content` 列）、`created_at` 为 epoch REAL；`interview_sessions` 无 `probe` 列；容器内无 `sqlite3` CLI，转储用 python `sqlite3.Connection.backup`。
+- 清理 `test-*` uid 时 `ask_cur`（当前 ask 会话指针）会留 1 行，需一并删；`ins_ta.py` 在 375 弹层可能误报 textarea 长度 0（双 textarea 镜像延迟），以 `querySelectorAll("textarea")` 复核。
+- `pkill -f <pattern>` 不要与同一命令行里含该模式的字符串串联（会杀掉自身 shell）。
+- 复验窗口看到的 `POST /api/auth/wxlogin 503` 若不是你触发，用 caddy 日志按 IP/UA 归因（本轮为 vivo V2405A 真实设备、`WX_MINIAPP_SECRET` 未配的设计返回），不要算进本轮 5xx。
+
+## R426 练习完成页 practice_result uid/probe 走查经验
+- H5 的 `/api/practice_result`、`/api/mistakes`、`/api/answer_log` 走 **XMLHttpRequest**（uni `request`），只克隆 `window.fetch` 的钩子抓不到——网络钩子要同时包 `XMLHttpRequest.prototype.open/send` 并在 `loadend` 读 `responseText`（参考 `/tmp/cdp174/holdnet426.py`）。第一组做完前先用一次已知请求验证钩子确实有记录。
+- 完成时 body 为 `{uid: anonUid(), module, n: items.length, correct, secs}`；服务端按三路（`X-Kg-Probe: 1` / 出口网段 / UA 签名）写 `practice_results.probe`。GUI 会话 UA 与真人无异且不带头 → 依赖网段命中；若 DB 写成 probe=0 说明网段未命中，会污染「击败 X%」池（`n>0 AND probe=0`，≥10 样本才显示），**必须立刻按 uid 删**。
+- 「击败 X%」断言用 `document.querySelectorAll('.beat').length===0` + `body.innerText` 不含「击败」；注意 `.beat.dsbeat` 是每日同题另一元素，普通模块练习不出现。响应在 probe=0 池为空时恒为 `{"percentile":null,"samples":0}`，属预期不算回归。
+- 常识判断组内可能出现多选题（需点多个选项再点「确认答案」），故意答错时选全选即可；完成页「答对 X/10」与 body `correct` 必须一致，逐题记录对错以便对账。
+- 管理台没有渲染 `/api/admin/stats` 的 `daily_usage`（`core.js` 只在登录校验调用它）；概览页「近 14 天作答量趋势」来自 `/api/admin/dashboard.trend`（answer_log）。验 `daily_usage` 要在 admin 页用带 `X-Admin-Token: localStorage.admToken` 的 fetch 直接读 JSON，再和 DB 按 `date(created_at,'unixepoch')` 分 probe 分组对账。
+- 清理：`practice_results` 现在可按 uid 删；`growth_events` 会因完成页 nudge 留 `push_nudge_show/login_nudge_show` 行，与 `answer_log/mistakes` 一并按 uid 删；全库扫描 `pragma table_info` 含 `uid` 的表以确认 LEFTOVER 0。
+- 管理台退出登录后 Chrome 会弹「Save password?」，点 Never，避免 token 存入密码管理器；本机拉的 token 临时文件用完即删。
+
+## R427 答题 PK（pk_matches.probe）走查经验
+- 入口：「我的」页 `wd-cell` 「答题 PK」→ `/pkgA/pk/pk`；分享链接直接打开 `https://kaogong.zalize.com/#/pkgA/pk/pk?code=XXXX` 会在 onLoad 自动 join。
+- 所有 pk 接口都是 XHR 且带 `uid: anonUid()`（含 `GET /api/pk/leaderboard?uid=`），网络钩子 PAT 用 `['/api/pk/']` 即可（`/tmp/cdp174/holdnet427.py`）。切身份只需 CDP 写 `localStorage.anonUid` 后 F5。
+- 答题页：点选项 350 ms 后自动锁定并下一题，每题 30 s 超时自动空答；第 10 题后自动 `POST /api/pk/submit` 进结果页。别在答题中途跑长 shell 查询，会有题目超时（如实记录即可）。
+- 随机匹配隔离断言要选**只有真人（probe NULL/0）等待局**的模块（当时 shuliang 只有 `ZBFS14`）；「混合」池里可能有 `creator_score=0` 的探针等待局（非 NULL 也算）会 matched:true 并改写他人行。先用 DB 列出 `status='waiting' AND opponent_uid IS NULL` 的 code/module/probe/creator_score 再决定。
+- toast 「暂无对手，已为你开局等待匹配」只显示约 1.5 s，截图常错过；可即刻查 `document.querySelectorAll('uni-toast')` 的 innerText 兜底取证。
+- 榜隐私口径：匿名/第三方 uid → `items:[]`；参与者 uid → items 含 `r427-u***` 且胜者有 `my_rank`。curl 无 uid 与 UI 有 uid 两条都要对照。
+- 紧接 chip 点击后立刻点「发起好友挑战」曾出现一次 XHR status 0（未到服务端），等 1–2 s 再点即可；如再现请上报。
+- 1440 模拟视口大于物理屏时，computer 截图会裁切；用 CDP `Page.captureScreenshot` 取全视口证据（`r['result']['data']`）。holdvw 杀掉后 override 可能残留，需 `setDeviceMetricsOverride(width=0,height=0,deviceScaleFactor=0)` + `clearDeviceMetricsOverride` + reload 才回 1600×1017。
+- 排查时切勿用 curl 直打 create/join 等写接口——会在生产留行（本轮 `r427-ui-probe-curl` 需额外清理）。
+- 清理：pk 行按 `creator_uid/opponent_uid LIKE 'r427-%'` 删；本轮 `growth_events` 等表无命中（PK 页不产生 nudge 行）。
+
+## R428 分享作答多选题（share-q 勾选后确认 / 后端 normalize_answer 判分）走查经验（testing agent）
+- 分享页 `/s/<sid>` 的 `/api/share/*` 请求走 uni.request(XHR)+fetch 混用且 F5 / 落地页跳 hash 是新 document，页面级 `window.__net` 钩子记录会丢；改用 CDP `Network` 域长连接（`/tmp/cdp174/holdnetcdp428.py <out.jsonl>`：`Network.enable` 后收 `requestWillBeSent`/`responseReceived`/`loadingFinished`，`getResponseBody` 期间收到的其他事件要排队处理），把 `/api/` 的 method/URL/postData/status/响应体追加成 JSONL，跨导航可靠。
+- 多选断言口径：`GET /api/share/<sid>?uid=` 的 `question` 键恰为 `[id,image,module,multi,options,question,submodule]`；未揭晓 `.multi-bar` 存在、`.multi-ok` 文案「确认答案（N）」、空选时带 `.dis`；勾选期间 `/answer` POST 必须为 0；确认后 body `picked` 已是升序去重（`ADC` 点法也发 `ACD`）；揭晓后 `.opt.right` 按字母包含、`.opt.wrong` = 选中且不在答案里；同 sid 换 uid 前用 CDP 写 `localStorage.anonUid` 再 F5。单选题 `multi:false`、无 `.multi-bar`、点选即 POST。
+- `POST /api/share/create` 同人同题**幂等复用 sid**（`team.py` 查 `question_id+from_uid+team_id` 直接回旧 sid），日志里 create 200 次数可多于 `shared_questions` 新增行数，不是漏写。
+- `holdvw.py`/holder 的 pid 文件若写 `$!`（`bash -c … &` 包装）记到的是 wrapper pid，`kill $(cat pid)` 杀不掉 python 子进程；新旧 holder 同时存活会导致 1440 override 与 375 互相覆盖（表现：页面渐白/空白、CDP 截图仍 375×812）。切分辨率前先 `ps aux | grep holdvw` 按真实 pid 清干净，再启新 holder。
+- 1440 仿真下 `Page.captureScreenshot` 返回结构是 `{'id','result':{'data'}}`（`cdp.py call` 不解包），取 `['result']['data']`。
+- `/tmp/r428_ls_orig.json` 这类 LS 备份是双重 JSON 字符串，恢复用 `json.loads(json.load(f))`（见 `/tmp/cdp174/r428_restore_ls.py`）。
+- 清理台账：分享流程会在 `growth_events` 留 `share_open`/`share_answer` 行（本轮 14 行），按 uid 一并删；`answer_log` 基线若与清理后不符，先查窗口内其他 probe uid（如并发的 `um…` 探针）再下结论。
+
+## R429 每日一练（daily_set_entries.probe）走查经验
+- 入口深链 `/#/pages/practice/practice?daily=1`（首页「继续目标/免注册立即开练」= `launch({kind:'daily'})` 同链路）。切 uid 后除 `anonUid` 外还要删 `dailyPlan` / `dailySet` / `dailyDone:<uid>` 缓存再 F5，否则可能复用旧题组或已完成态。
+- 全站同题 10 题按日固定（`/api/daily_set` 边缘缓存 60s），同一天两 uid 拿到同一组题，可提前记答案让第二组少走「下一题」。答对会 350ms 自动跳下一题，答错需点「下一题」（375 底部固定条 ≈ 屏幕 (202,553)，1440 ≈ (822,641)）；最后一题按钮变「完成」，点后 `next()` → `markDailyDone()` 才发 `POST /api/daily_set/submit`，随后 `GET /api/daily_set/board?uid=<anonUid>`。1440 双栏有键盘快捷键 A–D 选项 / Enter 下一题，可快速做题。
+- 完成页断言选择器：`.dsbeat`（「你是今天第 1 位完成者」/「成绩已记录（首次 N 对） · P 人完成」/「击败 X%」）、`.dsboard`（含 `.rr-t` 今日排行榜 + `.dsb-mine` 我的名次 + `.dsb-row`）。
+- 幂等验证：完成页 F5 只会从第 1 题重开、不会自动重发 submit；要触发 `already:true` 需再做一组（会多写 10 行 answer_log + 1 行 practice_results，清理时一并删），或按用户许可在页面上下文 fetch 重放同 body。
+- 每日一练还会写 `review_log`（uid 列）与 `growth_events`（daily_open / push_nudge_show / login_nudge_show / slow_load），清理请全库扫 uid 列而不只按用户列出的表。
+- 匿名口径核 `GET /api/daily_set` `stats.participants` 与 `GET /api/daily_set/board`（无 uid）；SEO `/tiku/daily/` 用 `?x=<随机>` 绕边缘缓存并看 `cf-cache-status`。
+- `cdp.py` 的 `C.call(method, **params)` 用关键字参数（`c.call('Page.captureScreenshot', format='png')['result']['data']`）；清 viewport 需 `setDeviceMetricsOverride(0,0)` + `clearDeviceMetricsOverride` + reload，然后新建连接读 `innerWidth`。
+
+## R430 统计次级屏簇（掌握度地图 / 练习历史 / 打卡日历 / 周报）CSS 字号下限走查经验
+- **入口路径**（成长页 `#/pages/stats/stats`）：hero「学习日历 ›」`.hero-cal` → `#/pages/stats/calendar`；「考点掌握度地图」卡 `.km-entry` → `#/pkgA/stats/mastery-map?mod=<module>`；「练习记录 · 逐题回看 ›」`.hist-link` → `#/pkgA/stats/practice-history`；周报 `#/pkgA/stats/weekly-report` 首页仅在有报告时显示「看周报 ›」，新 uid 直达 URL 即可。
+- **掌握度地图解锁门槛**：`MASTERY_COLD_START_N = 30`（`n_total` = 该 uid `answer_log` 行数），<30 显示「再练 N 题解锁掌握度地图」冷态，无 `.cov-t/.lg/.tab-pct/.tile-meta`。3 组 × 10 题（可含 1 组「每日一练」`?daily=1`，会额外写 `daily_set_entries` 1 行）刚好 30。`.dot` 只在 tile `due_mistakes>0`（mistakes `mastered=0 AND next_review IS NULL OR <=now`）时渲染，答错即到期，所以故意答错就有 `.dot`。
+- **周报状态**：新 uid `GET /api/report/weekly?uid=` → `{"status":"empty","range":"上周一 ~ 上周日"}`，UI `.empty`「上周没有学习记录」；「生成分享图」`.pbtn.main` 与分享面 `.sheet-x` **只在有上周记录的正文里**，新 uid 无法量 `.sheet-x`，如实标 untested。正确接口是 `/api/report/weekly`，不是 `/api/weekly_report`（打错会在容器日志留 404）。
+- **字号扫描口径**：uni H5 375 宽 1rpx=0.5px → 24rpx=12px、36rpx=18px；1440 宽下 rpx 按 750 基准 clamp，同样得 12px（`.side-item` 用 px 14）。扫描：`body *` 中有直接文本子节点且 `getClientRects().length>0` 的元素 `parseFloat(getComputedStyle().fontSize)<12` → 期望 `[]`；`uni-tabbar__label` 10px 是 uni 内置 tabbar，非页面 CSS，在 tab 页（错题本/成长页）扫描结果里剔除说明。`.tab-pct` 在 1440 隐藏（`rect 0×0`，桌面用 `.side-nav`），fs 仍可读。
+- **吸底条量测顺序**：`.sheet-s` 只在点 tile 后存在，量测脚本要在 `pick()` 之后再跑一次，否则 `fs:[]`（R430 漏了这一步，只能视觉取证）。
+- **1440 布局判读**：`uni-app` `max-width:1280; margin:0 auto`（≥1366），`uni-page-wrapper padding-left:208px` 为全局桌面侧栏保留列（App.vue 既有），所以子页 `.page` 左 280.5 / 右 87.5 不对称是设计而非 bug；居中断言看 `uni-app` rect 左右各 72.5。物理屏 1024 宽时 1440 视口在录屏中按 ~0.63 缩放显示，原生点击坐标 ≈ page_x×0.634+8；取证用 `Page.captureScreenshot`。
+- **日历 ‹ ›**：`.cal-btn` 40×40，‹ → 上月（badge「本月打卡 0 天」「本月共练 0 题」），› 回本月后带 `.dis`；`.cal-grid > *` 取 `offsetLeft` 唯一值 7 个、宽高一致即无错位。返回：子页导航栏「<」是 H5 navbar back，栈里有多层时要连点（周报 ← 日历 ← 成长页）。
+- **bundle 变更后首进 stats 的旧 SW 问题**：浏览器若持旧 `index-*.js`（SW 预缓存），点统计 tab 动态 import 旧 chunk `pages-stats-stats.<oldhash>.js` 会 404，前端把它显示成「连接服务器超时，点击屏幕重试」并计 `__cerr` 2 + `__asyncErr` 1；点重试后走新 bundle 恢复。这是可复现的真实体验问题，要单列上报，不能当钩子噪音；如需纯净口径先硬刷（`Page.reload ignoreCache`）再开始。`holdnetcdp429` 只落 `/api` 请求，静态 chunk 404 要靠 `__cerr` 或 Network 域全量抓。
+- 清理：本轮 uid 涉及 `mistakes / practice_results / answer_log / growth_events(daily_open, heatmap_view, login_nudge_show, push_nudge_show) / daily_set_entries`（每日一练组），用 `pragma table_info` 全表扫 uid 列，脚本 `scp → docker cp → docker exec python3 <script> ro|clean`，清后 `rm` 两侧副本。
+
+## R430b 旧壳 chunk-load 自愈（errorHandler → staleShellHeal）走查经验 / 「造旧壳现场」方法
+- **机制**：`monitor-client.js installVueErrorHandler(app, report, consoleError, onChunkLoadError)` 仅 `classifyVueError==='chunk-load'`（`Failed to fetch dynamically imported module` / `Loading chunk`）时回调；`main.js` 回调=既有 `staleShellHeal`：`visibilityState==='visible'` 且无 `sessionStorage.kg_sh_reload` → `fetch('/',{cache:'no-store'})` 比对 `assets/index-<hash>.js` → 不一致才 `kg_sh_reload=1`+`location.reload()`。既有触发只有 load+15 s 定时一次与 SW `kg-sw-updated`；**后台（hidden）tab 收到 SW 消息会被 visibility 守卫跳过，旧壳会一直留到用户切回并再触发**——所以「先开 tab 再切走等发版」能稳定保留旧壳现场。
+- **自然旧壳 404 不一定能复现**：本次发版后上一版分包（`pages-stats-stats.QZ0CcByq.js` 等）仍 200（服务器/边缘保留了上一版 assets），旧壳导航不会 404，R430 那次 404 是因为浏览器持的是再前一版 SW 预缓存壳。先用 `curl -o /dev/null -w %{http_code} -H 'Cache-Control: no-store' https://kaogong.zalize.com/assets/<旧chunk>` 判断，404 才走 (c) 自然路径，否则直接上方案 B。
+- **方案 B（CDP Fetch）脚本 `/tmp/cdp174/r430b_fetch.py <tabIdPrefix> chunk404|fakeroot <chunkName> [maxhits]`**：Request 阶段把 `*/assets/<chunkName>.*.js` 前 maxhits 次 `fulfillRequest 404`；`fakeroot` 再在 Response 阶段把 `/` 的 `assets/index-<hash>.js` 改写成 `index-FAKE0000.js`。三个坑：① `staleShellHeal` 的 `fetch('/')` 在 `Fetch.requestPaused` 里 `resourceType` 是 **`XHR`**（不是 Fetch），只判 Fetch 会漏改写 → 变成第二个 fail-closed 样本；② urlPattern 用 `*mastery-map*` 会同时拦到 `mastery-map-*.css`，而 `cdp.C.call()` 在等回包时会**丢弃**期间到达的事件 → css 请求永远 paused → Vite preload 不结算 → 20 s 后是 `Async component timed out`（classify 非 chunk-load，正确地不自愈），务必 pattern 只匹配 `.js` 且把等待期事件入队；③ urlPattern 里 `?` 是单字符通配，`https://host/?*` 会匹配 `/api/...`、`/precache.json`，改写函数要在 `orig=None` 时原样放行（本次 `/api/practice/history`、`/api/report/weekly` 都经过了改写函数但内容未变）。
+- **同一 document 内 chunk 只会失败一次**：模块 URL 拉取失败后 Chrome 模块表记为失败，再进该路由**不发网络请求**直接 reject（第二条 chunk-load 但无 404 记录）；fail-closed 后想再验该路由必须整页 reload。uni 原生「连接服务器超时，点击屏幕重试」点击 = 整页 reload（`navt=reload`），用户可自救。
+- **取证口径**：404 → `GET /`（Fetch/XHR，no-store）间隔 8–21 ms；heal 时 `GET /` 后约 60–110 ms 出现 Document `GET /`（`fromSW`）+ 新 `index-*.js`；`performance.timeOrigin` 变化 = 真 reload；`sendBeacon` 的 `POST /api/monitor/report` 在 reload 瞬间 CDP 记 `FAIL net::ERR_ABORTED`，但 `docker logs -t` 可见服务端 200 已收（用 `-t` 取时间戳对齐），不能把它计入 `/api` 非 2xx。
+- **数据**：只看成长页/日历/周报不做题时，本轮 uid 只写 `growth_events(heatmap_view, probe=1)`，每次进 stats 一行；`daily_set_entries` 不受影响。
+
+## R431 部署第 4 步（compose 重建）失败归因 / 宿主取证经验
+- 归因先看三样：`/tmp/kg-compose.log`（软链→当次 `/tmp/kg-compose-<rev>-<utc>.log`）末行有无 `KG_COMPOSE_EXIT rc=N`；`sudo -n journalctl -u docker --since ...`（`Control/Solve ... context canceled` = client 侧取消，不是 buildkit 错）；`sudo -n journalctl -k`/`dmesg` 找 `Out of memory|oom-kill|Killed process`——**free 很低 ≠ OOM，无内核记录就不能写 OOM**。
+- `session healthcheck failed fatally ... only one connection allowed` 每次 build 收尾都会打，成功也打，不是原因。
+- 本地部署日志里 `compose-started` 之后若无 `Timeout, server not responding`/`closed by remote host`，则 ssh 没掉线；旧写法下 launcher ssh 返回时刻 ≈ compose 进程消失时刻，可用来对齐 dockerd 日志时间。
+- bash 陷阱：`ssh R "cd X && nohup cmd > log 2>&1 & echo ok"` 的 `&` 作用于整个 `cd && nohup` 列表，子 shell 会持有 ssh 管道等 cmd 结束；要立即返回用 `setsid -f nohup cmd > log 2>&1 < /dev/null && echo ok`。远端验证法：`ps -o pid,ppid,sid,pgid,cmd` + `ls -l /proc/<pid>/fd` 看 fd1/2 是 pipe 还是日志文件。
+- `deploy/host_probe.sh` 可单独跑：`ssh R bash -s < deploy/host_probe.sh` → `mem_avail=… disk_avail=… load=… other_builds=N`；`other_builds` 用 `[d]ocker` 写法防 pgrep 匹到自身，验证时远端 `bash -c 'exec -a "docker compose up -d --build" sleep 30' &` 造一个假进程看计数。
+- 部署脚本改动的验证 = 真跑一次 `--skip-build` 部署看 `host:`/`compose-started`/`poll:`/`KG_COMPOSE_EXIT` 四行 + `/api/health` rev + 容器 healthy/RestartCount + 容器日志 5xx/Traceback/locked，无 DB 写入无需清理、无 UI 无需 testing agent。
+
+## R432 访问归档 gzip / 只读查库口径经验
+- 容器内数据库是 `DB_PATH=/data/data.db`（`/data/kaogong.db`、`/data/app.db` 是 0 字节空壳，连上去 `no such table`）；只读用 `sqlite3.connect("file:/data/data.db?mode=ro", uri=True)`，脚本经 `cat x.py | ssh R 'docker exec -i deploy-kaogong-1 python3 -'` 送入（inline heredoc 套 docker exec 会空输出）。
+- `answer_log.created_at` / `mistakes.created_at` 是 Unix 秒 real，按日分桶用 `date(created_at,'unixepoch')`，别 `substr(created_at,1,10)`。`mistakes/review_log/interview_sessions/shared_answers/users` 没有 `probe` 列，判断某行是否真人只能经 uid 关联 `answer_log.probe`（三路计数 p0/p1/NULL 都要看，混合 uid 不能整体归真人）。
+- `scripts/` 与 `deploy/cron_access_report.sh` 不走 `deploy_h5.sh` rsync：改完 scp 到 `/home/ubuntu/kaogong-assistant/` 同路径并两端 md5 核对。
+- 归档改读侧/压缩的验证 = 改前先留基线（`cp crawler-stats.json /tmp/before.json`；`cat *.jsonl | access_log_report.py - --days 7 > /tmp/before.txt`），改后用新脚本对同目录重算，`json` 除 `generated_at` 外逐键比、周报 `diff` 要为空；`gzip -t` 每个 .gz；再看下一次 :17 归档 / :23 日报 cron 自然跑完 `generated_at` 更新、`.state` 正常。压缩用 `nice`，全部 415 MB 只要 3 s，不会挤宿主。
+
+## R433 卷内快照归档 / 运维脚本同步经验
+- `deploy/kaogong-ops.sh` 部署在 VPS `/home/ubuntu/kaogong-ops.sh`（cron 40 3 CST），不走 `deploy_h5.sh` rsync。scp 覆盖前**先 `diff` 生产副本**——R433 发现生产有未入库改动（本地备份保留 7→3 份），直接覆盖会把它回退；回收进仓库再 scp、两端 md5 核对，并 `cp -p x x.bak-rNNN` 留旧版。
+- `/data` 卷顶层只该有 `data.db`(+wal/shm)、`qimg/`、`iter-r3b/` 与各轮 `r*-*.json` 处置记录；`app.db`/`kaogong.db` 是 0 字节空壳。手工全库快照（`*.db.gz`/`*.bak*`）不能长期留在卷内：容器内 `gzip -t` → `docker exec C cat f | rclone rcat --size N r2:zalize-backups/kaogong-sqlite/archive/f` → `rclone size --json` 字节数 + `rclone cat | md5sum` 真回读一致 → 才 `rm`；178 MB 一份上传+回读约 70 s，别在半途 kill。`rclone lsl` 对空前缀返回 rc=1 不是失败。
+- 每日 ops 日志会写 `VOLUME-SNAPSHOT N file(s) M MB: …`（只报不删）；看到就按上面口径归档。演练用 `head -c 2097152 /dev/zero > /data/r-selftest.db.gz` 触发、看完删掉。整脚本手工实跑一次 ≈150 s（含 167 MB R2 上传 + 回读校验），会覆盖当天 `data-<date>.db.gz`（同名重传，无副作用）；容器无 `sqlite3` CLI，`.backup` 走 python 回落是既有行为不是报错。
+- 宿主磁盘问题别再往 kaogong 名下找：R432/R433 后 kaogong 自有可动项已清空，剩余是 recruit pgdata / containerd / SoftCopyright / build cache（别家，不动、不 prune）。
+
+## R434 R2 前缀清理作用域经验
+- `rclone delete` **默认递归**：对 `r2:zalize-backups/kaogong-sqlite/` 加 `--min-age 30d` 会连 `archive/` 一起清。现行写法 `--max-depth 1 --include "data-*.db.gz"`；任何改动清理命令前先 `--dry-run --min-age 1s` 把作用域列全再看 `--min-age 30d`。R2 对象 mtime 取上传时刻（`rclone rcat` 不带 `--metadata` 时），归档「年龄」= 归档日不是快照日。
+- archive/ 对象一律 gzip；大对象整理走流式 `rclone cat x | gzip | rclone rcat x.gz` + `rclone cat x.gz | gunzip | md5sum` 对照 `rclone cat x | md5sum`，370 MB 一份 ≈100 s，宿主不落盘；用 `setsid -f nohup … > log` 跑，别在 ssh 前台等。
+- bucket `zalize-backups` 是多产品共用（`d1/ honestcv-kv/ probe/ recruit-pg/`），只动 `kaogong-sqlite/`。
+
+## R435 备份对账 / WAL / 依赖钉版经验
+- 备份 vs 活跃库对账：宿主 `gunzip -c ~/kaogong-backups/data-<date>.db.gz > /tmp/x.db` 后 python `sqlite3.connect('file:/tmp/x.db?mode=ro', uri=True)`；活跃库同样 `mode=ro` 只读。逐表比 `count(*)` + `max(rowid)`；本库**没有** `favorites`/`reminders` 表（收藏是 `question_favs`/`fav_folders`/`shenlun_qfavs`/`shenlun_mat_favs`，提醒是 `reminder_prefs`；先查 `sqlite_master` 再对账），`no such table` 不是 0 行别写成「一致」。当日 `data-<date>.db.gz` 会被手工整跑 ops 脚本覆盖，对账前先看它的 mtime。
+- `-wal` 文件大小 ≠ 活跃数据：读 `-shm` 前 136 字节，`mxFrame`（偏移 16）× 4096 才是活帧；`nBackfill`（偏移 96）= 已回填帧数。想立刻收回历史峰值只能 `PRAGMA wal_checkpoint(TRUNCATE)`（返回 `(0,0,0)` = 无 busy、全部回填、已截）；有读事务在跑时会返回 busy=1 不是错误，稍后重试。R435 起连接带 `journal_size_limit=64 MiB`，之后 WAL 重置会自动截回，不必再手工。
+- 镜像依赖：`docker exec deploy-kaogong-1 pip freeze | sort | diff - <(grep -v '^#' backend/requirements.txt | grep . | sort)` 必须为空；不为空 = 有人绕过 requirements.txt 或本地漏推。本地 venv 版本与清单不一致时先 `pip install -r backend/requirements.txt` 再跑 pytest，别拿本机旧版当生产结论。buildkit 日志 `/tmp/kg-compose-<rev>-*.log` 里 `RUN pip install` 下一行是 `CACHED` 还是 `Collecting` 能看出这次部署有没有重装依赖。
+
+## R436 前端构建可复现性核查
+- 判「本地 bundle = 线上 bundle」不要只看文件名 hash：`find dist/build/h5 -type f -exec md5sum {} + | sort` 构建前后各存一份 `diff`，0 行才算字节级可复现（R436：119 文件全同）。锁与安装树用 `node_modules/.package-lock.json` 与 `package-lock.json` 逐包比 `version`，`npm install --dry-run` 的「added N」含 optional 平台包、不能当缺包证据。
+- `error_reason` 列在 `mistakes` 表；对 `answer_log` 查会 `no such column`。关联 probe=0 时用 `exists(select 1 from answer_log a where a.uid=m.uid and a.probe=0)`。
+- 本机系统 SQLite 3.37.2 比生产（python:3.12-slim，3.46.1）老；新语法（`->>`/RETURNING/STRICT/unixepoch）本地会先报错，别把本地失败误判成生产问题。
+
+## R437 应用日志取证边界
+- `docker logs deploy-kaogong-1 --since 24h` 的实际覆盖 = 当前容器 `StartedAt` 至今（部署日常常只有几十分钟），先 `docker inspect --format '{{.State.StartedAt}}'` 再下「N 小时无异常」结论。更早的应用日志看 `/home/ubuntu/kaogong-reports/app-log/kaogong-app-<rev>-<startedAt>-to-<now>.log.gz`（R437 起每次重建前归档，保留 14 天，行首 UTC 时间戳）：`zcat … | grep -E 'Traceback|" 5[0-9]{2} '`。
+- caddy 24 h 非 2xx 归因先按 `Cf-Connecting-Ip` 分三桶：探针网段（140.232.64.x）= 历轮走查负向用例；为空 = 直连源站扫描（403 正确）；其余再看 UA/路径。`sitemap-questions-<n>` 越界 404 是分片按 OFFSET 切的设计内行为，引擎请求旧分片号不算问题。
+- 部署机没有 `brotli`，1b 的 WARN 是常态（R367 起）；线上 br 变体由边缘压出，5b 通过即可，别把该 WARN 记成本轮回归。
+
+## R438 SRS 到期点口径
+- R438 起 `mistakes.next_review` 一律落在中国日历日 00:00（`cn_day_start()+N×86400`）；断言写 `nr % 86400 == 16*3600` 且 `now < nr <= now+86400`（1 天档），不要再写 `nr > now + 0.5 天` 之类的滚动口径。错题**重新写入**仍是 `next_review=time.time()`（立刻到期），二者不要混。
+- 生产走查复习后要看「明天复习」标签：改后无论几点复习，次日 00:00 前都应是「明天复习」、00:00 起「今日到期」；如看到当天下午才变到期，先查 `next_review` 是否 % 86400 != 57600（说明是 R438 前的旧行或有新写入路径绕过了 `_advance_review`）。
+- 现存行对齐记录在 `/data/r438-next-review-realign.json`（29 行 old/new），回滚：把 `r438_verify.py` 的 `restore` 分支灌进容器 `python3 -`。
+- 小程序 `miniapp-native` 没有客户端到期判断/「明天复习」标签，首页/练习页「今日到期 N 题」全取 `GET /api/review` 的 `total`；核到期口径只需看服务端，不要去小程序找标签代码（R439）。「今天 0 点」只用 `db.cn_day_start(ts)`（`_day_start(offset)` 是它的偏移封装），不要再内联 `int(t+8*3600)//86400*86400-8*3600`。
+
+## R440 首页今日计划复习副标 / 首页 24rpx 字号 / 「往期 ›」热区走查经验
+- 首页两套「到期」口径：任务卡 `.tk-sub`「今日到期 N 题」与到期卡 `.duebar` 取 `GET /api/daily_plan?uid=`（注意不是 `/api/plan`，那是 404）的 `due_mistakes`，**含今日新错**；今日计划卡取 `GET /api/plan/today?uid=` 的 `tasks[key=review]`（`due` 用 `created_before=cn_day_start()` 排除今日新错，`new_today` 只进副标）。`review_target=min(m_review, reviewed+due)`，为 0 时 tasks 里**没有** review 项——只有今日新错的新 uid 计划卡不出现复习行是预期。
+- 造「到期已清 + 今日新错」现场最省事：`POST /api/mistakes {uid,module,question_text,correct_answer,user_answer}` 得 mid → `POST /api/review/{mid} {uid,correct:true}`（review_log +1，next_review 推到明天 00:00）→ 再原生在练习页答错 1 题。练习页题目对同 uid/同会话稳定（本轮两 uid 都拿到 qid 286402，正确 C），先选 A 基本能判错。
+- 今日计划卡需 `user_profile` 才出现：首页「制定我的学习计划 → 去制定 ›」3 步 sheet（考试日期 picker 滚月/日列 → 完成 → 下一步 ×2 → 生成我的学习计划）写 `POST /api/profile`；清理表清单在 R430 基础上加 `user_profile`、`review_log`、`practice_progress`（每个 uid 一行）。
+- `.hero-ds-arc`「补练往期 ›」只在 `dsMeta` 存在时渲染（每日一练有数据即有）；`.sz-arc`「往期 ›」在时政卡内。负外边距热区断言：arc rect.height 41，父行 `.hero-ds` 17；`.sz-s` 375 下本身折 2 行（h 34）不是被撑大，对比 1440 下 h 17 即可分辨。
+- R440 新副标 375 下会折成 2 行（`.task-sub` 247px 宽放不下 30 个字），属正常换行不是溢出；扫 `scrollWidth>clientWidth` 仍应为 `[]`。
+- 提醒设置页路径：「我的」→ 偏好设置「学习提醒」→ `#/pkgA/settings/reminders`。`.warn-s` 只在「每日刷题提醒」开启且 `Notification.permission!=='granted'` 时渲染：原生点开关（只写 LS `reminder` 设置）即出现，Chrome 弹权限框用右上 ✕ 关（perm 保持 default，不改站点设置），量完再点关回。`.push .hd/.appico` 在「提醒样式预览」卡内始终渲染。
+- holder 要带探针头：`holdtab440.py` = `holdtab.py` + `Network.setExtraHTTPHeaders({"X-Kg-Probe":"1"})`；切视口时 kill 旧 holder 再起新参数，reload 后 `innerWidth` 确认。
+
+## R441 Lighthouse 预算 / 日界公式 / 归档日志走查经验
+- **`/` 的 LH 移动模拟 LCP 基线 ≈ 2.73 s（预算 2500）**：不是偶发、不是宿主负载——LCP 元素是壳内联 `#kg-splash > div.s`，observed TTFB ~60–100 ms、render-blocking 0；看到 6b `/` LCP 27xx WARN 先对 `lcp-breakdown-insight`（TTFB/render delay）与 `network-requests` 首屏资产收完时间，只有 TTFB 或资产时间异常才归服务端/宿主。LH 13 的 lhr 里 `largest-contentful-paint-element`/`render-blocking-resources`/`third-party-summary` 已改名为 `*-insight`，按 key 模糊匹配取。
+- `perf-budget.sh` 的 lhr 随 `$TMP` 删除；要留证据直接 `npx lighthouse <url> --output=json --output-path=/home/ubuntu/rNNN_lhr.json --chrome-flags="--headless=new --no-sandbox"`，横向比较必须同看 `environment.benchmarkIndex`（devin-box 2 vCPU 在 1800–3700 波动），主包成本看 `bootup-time.details.items[url~index-]` 的 `scripting` 与 `long-tasks`。
+- 「中国日历日 0 点秒」只允许 `db.cn_day_start(ts)`；查克隆用 `grep -nE "8 \* 3600|28800" backend/app`，`strftime(gmtime(t+8h))` 日期字串与 `weekday` 计算不是同一语义、不算克隆。
+- R437 归档 app-log 用 `grep -cE " 5[0-9]{2} "` 会误匹配 `[indexnow] submitted 533 urls -> 200`，计数 >0 先看原文。
+- caddy 源站按 `ts` 数「发版后」窗口时，探针网段 `140.232.64.x` 的 `curl/7.81.0` 4xx 是 testing agent 探路径（R440 为 `GET /api/plan`，正确是 `/api/plan/today`），不算产品非 2xx。
+
+## R442 前端两版 dist 同机 A/B 走查经验
+- 疑似「主包变慢」先做同机交替 A/B 再归因：`git worktree add <旧 commit>` + 复用 `node_modules` 软链（锁未变时）→ `npm run build:h5`；两版各起 `python3 /home/ubuntu/r442/proxy.py <dist> <port>`（静态 + `/api/*` 代理生产并加 `X-Kg-Probe: 1`），`ab.sh` A1 B1 A2 B2… 交替 ≥5 轮只比 `bootup-time` 主包 scripting / TBT / long-tasks；本地静态不压缩，FCP/LCP 绝对值不能和生产比。
+- Lighthouse 单机数值必须同看 `environment.benchmarkIndex`（devin-box 正常 3550–3730）；bench <2500 或本机同刻在跑 pytest/部署/其他 lighthouse 时的 scripting/TBT 高值先当噪音、隔离后复测，不直接登记为回归。
+- 用完 `git worktree remove --force` + `prune`；node_modules 软链先 `rm` 再 remove。
+
+## R443 Lighthouse simulate vs 真节流 / LCP 双峰归因走查经验
+- **LH 默认 simulate 的 FCP/LCP 不是观测值**：先看 `audits.metrics.details.items[0].observedFirstContentfulPaint`（`/` 在 devin-box 只有 110–180 ms）；模拟值由 Lantern 按「观测 FCP 前收完的 High/VeryHigh 请求」折算。判定某次 LCP 落在哪个峰：数 `network-requests` 里 `priority ∈ {VeryHigh,High}` 且 `networkEndTime <= observedFCP` 的条数/字节——23 个 216 KB → 2.73 s；主包 `index-*.js` 晚于观测 FCP 几 ms 被排除 → 22 个 87 KB → 2.0 s。这是量测机竞态，**不登记为回归**。
+- 要看真实弱网首绘用 `--throttling-method=devtools`（`/` FCP=LCP≈0.7 s），会带 runWarning「loaded too slowly」且 TBT 与 simulate 不同口径、跑 60–90 s；只做旁证，预算脚本历史水位全是 simulate，不换口径。
+- 老 LHR 没有 `largest-contentful-paint-element` 时用 `audits['lcp-breakdown-insight']` 拿 LCP selector / TTFB / render delay。
+- `perf-budget.sh` `/` LCP 线现为 3000（R443 校准）；若某天 27xx 之外再出 >3000，先按上面数进图请求数与字节、再看 `benchmarkIndex`，字节涨了才是真信号（主包/预加载分包变大）。
+
+## R444 CLS 元素级归因走查经验
+- LH `audits['layout-shifts'].details.items` 只给每次位移的「首个节点 + 分值」，`boundingRect` 是末态 DOM 快照（可能已在视口外），要看谁被推了多少：`lighthouse … --save-assets` 后读 `*-0.trace.json` 的 `LayoutShift` 事件 `args.data.impacted_nodes[].old_rect/new_rect`（node_id 是后端节点号，需再映射）。
+- 更直接的是 Playwright 对生产 `add_init_script` 注一个 `PerformanceObserver({type:'layout-shift',buffered:true})` 读 `entries[].sources[].node/previousRect/currentRect`，同时采 `#kg-splash` 的 `classList`/`opacity` 判断位移是否在启动屏遮盖下（脚本样例 `/home/ubuntu/r444/cls_sources.py`；Chrome 用 `/home/ubuntu/.local/bin/google-chrome`，pip 的 playwright 没装浏览器）。请求头带 `X-Kg-Probe: 1`。
+- `had_recent_input=true` 在 LH/Playwright 仿真视口下是常态（视口事件算「输入」），LH 对视口事件后 500 ms 内的位移无条件计入，不要据此把位移当「用户触发」排除。
+- `PRAGMA journal_size_limit` 是连接级：只读探针连接读到 -1 不代表应用连接没设（R435 在应用连接设 64 MiB、R436 已读回），核对要在应用进程内或看 WAL 是否在 checkpoint 后被截到限值以下。
+
+## R445 经验：拦截 `/api/*` 验证「首帧占位 / CLS」时的坑
+- 只 abort 某个 GET 接口（CDP `Fetch.failRequest` / Playwright route.abort）**不等于**前端拿到错误态：`frontend-uni/src/api.js` 的「GET 最近成功快照兜底」会在超时/网络错误时用 localStorage `apiSnap:<path>` 回填并上报 `track stale_fallback`。要复现「数据从未到达」（首访/无缓存）路径，拦截前先 `localStorage.removeItem('apiSnap:/api/xxx')`（首页每日一练还需删 `dailySet`），结束后正常加载会自然重建，无需手工恢复。
+- 对比拦截 / 不拦截的 `getBoundingClientRect().y` 时要在**同一视口同一 holder**下量；更有力的证据是 `Page.addScriptToEvaluateOnNewDocument` 注入 rAF 逐帧采样（记录目标元素文案 + `.top` + `performance.getEntriesByType('resource')` 里该接口的 `responseEnd`），可直接看出回包前后元素 y 是否变化。
+- 桌面宽视口（≥1024）下 uni H5 `showActionSheet` 是居中 popover，`.uni-actionsheet__action`（取消）`display:none`，只能点遮罩关闭；判断"已关闭"用 `getComputedStyle(.uni-actionsheet).visibility=='hidden'`，元素本身不会移除。
+- 用 `nohup python3 xxx.py &` + `$!` 记 pid 后再 `kill`，有时进程仍存活（本轮 holder/abort 各一次）——收尾务必 `pgrep -af holdtab|r445_abort` 按真实 pid `kill -9`，否则视口/Fetch 拦截会一直残留导致后续 reload 仍被拦。
+- 只读走查也会写 `growth_events`（`boot` / `stale_fallback`，`probe=1`），收尾按 `uid + created_at>=开始时间 + probe=1` 删即可。
+
+## R446 经验：到期项复查加 `growth_events` probe=0 逐 uid
+- `growth_events`（`/api/track` 落库）没有任何看板读它，只能容器内只读查：`SELECT uid, event, COUNT(*) FROM growth_events WHERE probe=0 AND created_at>=? GROUP BY 1,2`；再用 caddy 按 `?uid=` 归因 IP/UA（`Cf-Ipcountry` 源站收不到，geo 要另查）。它能看到「来了没做题」的访客，`answer_log` 看不到。
+- 老 uid 回访的 `answer_log` 行 probe=NULL 是 R374（09-04 06:53Z）前历史，别误判为写侧漏标；先查 `probe IS NULL AND created_at>=1788504780` 应为 0。
+- `stale_fallback` 同秒成批（7/13 行）= 断网/拦截走查形态，真人极少同时全部接口失败。
+
+## R447 经验：验证首页浮动文字链（`.hero-ds-arc float:right`）与首帧 x 漂移
+- 右对齐不变量用 `arc.right - 4 == .hero-bar.right`（`margin-right:-8rpx` = -4px 故意外扩热区）而不是绝对 x；桌面视口绝对 x 会随「是否有占位滚动条」漂 7.5px（docSw 1425 vs 1440），先打印 `documentElement.clientWidth` 再和预期比。
+- `.hero-ds` `scrollWidth` 比 `clientWidth` 大 4px、`innerText` 里文字与链接之间出现 `\n`，都是浮动元素副作用，不是折行/溢出；判单行看 `.hero-ds` rect h≈17 + 用 TreeWalker 收集非 arc 文本节点的 Range `getClientRects()` top 是否相同（uni `<text>` 会把文字包在 span 里，直接 `childNodes` 拿不到文本节点）。
+- 首帧 x 漂移用 `/tmp/cdp174/r447_frames.py <tabPrefix> <out.json>`：`Page.addScriptToEvaluateOnNewDocument` 注入 rAF 采样 7 s（文案 / arc rect / `.hero-acts.top` / 今日任务卡 top / daily_set responseEnd），reload 后打印「变化帧」与 distinct rect 集合；正常加载能直接看到回包前后那一帧 arc x 是否跳。拦截态照 R445：先清 `apiSnap:/api/daily_set` + `dailySet` 再起 `r445_abort.py`。
+- 已完成分支（`dsMeta && dsDone`）只能靠原生做完当天 10 题触发（hero「继续目标 ›」→ 每日一练 → 最后一题点「完成」→ `POST /api/daily_set/submit` 写 LS `dailyDone:<uid>`）；练习页选项 `.opt`、底部「下一题/完成」按钮位置固定，`/tmp/cdp174/r447_opt.py` 可打印选项中心坐标。做完会写 5 张表（mistakes=答错数、answer_log=10、practice_results 1、daily_set_entries 1、growth_events ~3，probe=1），清理用 `/tmp/r447_db.py` 前缀版。
+- 长文案边界（rank+streak）真实数据难造，可在 `.hero-ds` 内临时挂隐藏 span 用同 font 量文本宽度推算，报告时明确标「推算」。
+- `/tmp/r4xx_ls_orig.json` 的 LS 备份可能是二次 JSON 编码的字符串，恢复前 `if isinstance(orig,str): orig=json.loads(orig)`。
+
+## R448 经验：验证绝对定位文字链 + 注入长文案 + 按钮顶部热区
+- `.hero-ds-arc` 改 `position:absolute; right:-8rpx; top:50%; translateY(-50%)` 后，短文案几何与 R447 float 版像素一致（375 arc (280.4,477.4,64.6,41)；1440 含滚动条 `clientWidth=1425` 时 x=1217.9，无滚动条 1440 时 1225.4），仍用不变量 `arc.right-4 == .hero-bar.right` 判右对齐；`.hero-ds` `padding-right` 计算值 62px（124rpx）保证文字不钻到链接下面。
+- 长文案（`· 🔥 连 N 天`，streak≥2）无真实数据时按用户授权只做 DOM 注入：`/tmp/cdp174/r448_inject.js` 用 TreeWalker 找 `.hero-ds` 下非 arc 文本节点、替换第一个并清空其余，`void offsetHeight` 后量 `Range.getClientRects()` 行数、arc 中心 vs `.hero-ds` 中心、`arc.bottom` vs `.hero-acts.top`、`.hero-acts.top` 相对短文案 +17。量完 `location.reload()` 恢复真实 DOM。本机无 emoji 字体（`fc-list | grep -i emoji` 为 0），🔥 渲染成豆腐块，宽度与真机可能略差，报告要写明。
+- 按钮顶部热区截胡：arc 41px 热区（padding 12px 上下）在短文案下与 hero 按钮 top 有 **2px 重叠**（375 y 516.4–518.4、x 280.4–345，仅覆盖「今日计划」；「继续目标 ›」x 34–243 不受影响），R440 起既有。用 `document.elementFromPoint` 逐 px 判归属，再用 `/tmp/cdp174/r448_click.py X Y`（`Input.dispatchMouseEvent` 可信输入 + 捕获阶段 click 监听记录 `clientX/Y/target`）在 CSS 精确坐标点击验证。computer-use 截图坐标→CSS 有 ±1.5px 误差（1600×1200 显示、截图 1024×768、页面顶栏约 88 截图 px），点「顶部 4px」前先在无害位置点一下读 `__lc` 校准。
+- 原生做完 10 题的可复用脚本 `/tmp/cdp174/r448_answer.py [optIdx]`：选项 `.opt` 中心 + 底部「下一题/完成」按钮（叶子文本节点 rect 可能为 0，向上找 h≥20 的父级）；**答对会自动跳下一题**（无「下一题」按钮），脚本按 q 序号推进即可。做完后首页 onboarding「免费刷 10万+」卡消失，hero 整体上移（arc y 477.4→156），比较 y 用相对量。
+- 远端诊断别用 `eval "$R" '…$(…)…'` 拼 ssh 命令（`$(...)`/`\"` 会在本机先展开，出现「docker ps accepts no arguments / no such object」），改成本机写 `/tmp/r4xx_diag_remote.sh` 后 `sshpass -e ssh … 'bash -s' < 脚本`。
+
+## R449 经验：验证「热区边界 == 按钮 top」这类 1–2px CSS 改动
+- 用 `elementFromPoint(cx, y)` 以 1px 步长扫 `arc.bottom−3 … +3`，并同时记录 `arc.bottom`/`.hero-acts.top`/`.hero-btn.sub.top` 三个值；判据是「边界 y 起归按钮，边界前归链接，无 y 同时归两者」。桌面视口（1440）hero 按钮左对齐，与右侧链接 x 不相交，链接下方是 `.hero-acts` 空白，扫描要分别在链接中心 x 和按钮中心 x 做。
+- 可信点击前必须过环境守卫：`{innerWidth, clientWidth, .hero-ds width, arc.bottom, acts.top}`；原生点击/导航后再 reload，holder 可能 5s 后才重申 `Emulation.setDeviceMetricsOverride`，期间 cw 变 360（经典滚动条）、rpx 按 360 算、hero 下移 17px，此时得到的点击结果全部作废。做法：reload 前先重启 holder，等 3s 再量。
+- 可信点击证据用 capture 阶段监听 `document.addEventListener('click', e=>window.__t=[x,y,target], {capture:true})` 记录真实 target，再配合 `.mask .sheet` 标题文本判断是「往期」还是「制定学习计划」sheet（`.uni-actionsheet__cell` 判往期）。
+- 1440 下用 (100,100) 点遮罩关 uni 计划 sheet 会连带触发桌面左侧导航（落到错题本/提醒页），回首页用 `location.hash='#/'`，不要 `history.back()`。
+- 长文案注入（`r448_inject.js`）预期值：375 onboarding 卡在时 arc.bottom 526.9 / acts 535.4（短文案 518.4 + 17），间隙 8.5；用相对量判断。
+- 网络 jsonl 字段是 `u`/`st`，拦截失败的 `st` 为字符串 `"FAIL net::ERR_FAILED"`，统计非 2xx 前先按类型分流。
+
+## R450 经验：验证 PK / 小队 / 分享 多页字号下限与热区高度（写入型两 uid 流程）
+- 两 uid 同 tab 切换：`localStorage.setItem('anonUid','<uid>')` 后 `Page.navigate`（不要只 reload hash 路由），B 侧 PK 应战 / 小队加入 / `/s/<sid>` 作答均可在同一 tab 完成；PK 结果双方 finished 需 A 侧再进 PK 首页点 `.m-row` 查看。
+- PK 答题助手要先 `scrollIntoView({block:'center'})` 再算选项坐标，否则第 4 题起选项在视口外会停住让计时器跑完；一局 10 题 30s/题，卡住可直接等超时进入结果页。
+- toast 文案查 `uni-toast` 元素 innerText（`.uni-toast__content` 类选择器为 null）。PK/小队 join 输入框统一是 `input.join-input`。
+- 分享 sid 只能从 holder 抓 `POST /api/share/create` 响应拿（页面只复制到剪贴板）；多选题分享用 deep link `#/pages/practice/practice?qid=273031&module=changshi` 让 A 选多项 → `.multi-ok` 确认后再点「🔗 分享给队友」；B 在 `/s/<sid>` 也走 `.opt` 多选 + `.multi-ok`。
+- `.remind-btn` 只在对方 `today_n==0` 时渲染：先量 `.remind-btn`，再让对方作答；切 1440 时若双方当天都有作答则量不到，需在流程顺序上前置。
+- 清理：`shared_answers.share_id` 是 `shared_questions.id`（整数），不是 sid；按 sid 删需 `share_id in (select id from shared_questions where sid in (...))`；pk_matches 无子表（participants 内嵌列），teams→team_members 用 team_id；uid 列枚举 `uid | *_uid | user_id` 共 41 张表（`/tmp/r450_db2.py`）。
+- holder 重启后 reload 若出现 cw 360 / DPR1（目标类读 11.52px）是仿真掉了，不是回归；重启 holder 让其周期重申 `Emulation.setDeviceMetricsOverride` 后重量。
+
+## R451 经验：无 `probe` 列的表不能单看计数；同网段兄弟自动化不带头
+- `weekly_reports`/`push_subs`/`mistakes`/`review_log` 等 30 张带 uid 但**无 `probe` 列**的表（枚举：`pragma table_info` 里有 uid 无 probe），到期项复查时「计数 0→N」不能直接当真人旁证，必须 `join answer_log on uid` 看该 uid 的 probe 分布：`select probe,count(*) from answer_log where uid=? group by probe`。R451 首例 `weekly_reports` 1 行 = 全 probe=1 uid。
+- 同 /24（`140.232.64.0/24`，`KG_PROBE_CIDRS` 已覆盖）的其它 Devin 会话 Playwright 不带 `X-Kg-Probe` 头、UA 为设备描述符原文（`iPhone OS 15_0`），只靠网段一路打标；caddy 归因用 `Cf-Connecting-Ip` 对 `KG_PROBE_CIDRS`，别按「无头」就判真人。
+- 1440 下条件渲染元素（`v-if="!m.today_n"` 的 `.remind-btn`）量不到时，可在 `uni-page-body` 下追加带页面 `data-v-xxxx` 属性的 `uni-view.<class>` 合成元素量真实 scoped CSS（脚本 `/home/ubuntu/r451/remind_1440.py`），报告里注明「合成元素、非条件渲染」。
+- 新装的 Playwright python 找不到 headless shell 时用 `p.chromium.launch(executable_path="/home/ubuntu/.local/bin/google-chrome", args=["--no-sandbox"])`，不要 `playwright install`。
+
+## R452 经验：探针识别 ~70% uid 只靠网段一路
+- 7 天 caddy 复算：1233 个带 `uid=` 的 uid 里 ~864 个只靠 `Cf-Connecting-Ip ∈ KG_PROBE_CIDRS` 打标（GUI 走查 UA 与真人无异、多数会话不带 `X-Kg-Probe`）。到期项复查时若日报 `humans.ips` 或 `answer_log probe=0` 新 uid 突增，**先核 `KG_PROBE_CIDRS` 是否落后于当前出口**（`curl -s ifconfig.me` 对比 `docker exec deploy-kaogong-1 env | grep KG_PROBE`），再谈真人。
+- 复算脚本 `/home/ubuntu/r452_caddy.py`（scp 到 VPS `/tmp` 跑；按 `auth.probe_request` 三路同口径），输出「非探针 uid 逐个 IP/UA」「网段单路 uid」「网段外自动化签名」三段。VPS 自身出口 `150.109.230.174` 的 curl/python-requests 走 UA 一路，正常。
+
+## R453 经验：「像真人的移动 UA」先看 sw.js 的 UA；直打 VPS 的流量别只查 origin 日志
+- 归因 iPhone/Android 描述符访客时，同会话 `/sw.js` 请求的 UA 若是 `X11; Linux x86_64`，就是无头 Chrome 移动仿真（SW 注册请求不吃页面级 UA 覆写），不是真机；再看是否与 `Hello from Palo Alto Networks` 这类扫描器 UA 同秒/相邻 IP 成对。
+- 宿主 Caddy 现在只有 `kaogong-origin.zalize.com` 块（R453 删了旧 `kaogong.zalize.com` 块）；直打 `--resolve kaogong.zalize.com:443:150.109.230.174` 应得 TLS alert（curl rc 35）。若又出现「无 CF 头却 200」的日志，先核 Caddyfile 是否被回滚/重写。R422 那种 SSE 直连复现改走 `kaogong-origin` 块 + `X-Kg-Edge` 头，或容器 `127.0.0.1:8300`。
+- 对账日报 `humans.ips` 时看 `X-Kg-Ua` 全文（不要截 60 字：`ShapBot/0.1.0` 截成 `ShapBo` 会误判没进 BOT_GENERIC），并用 `crawler_stats.py <archive> /tmp/x.json --exclude-ip-file probe-ips.txt` 本地同参数重算对生产 json。
+- `.trend-kn` 合成量测脚本 `/home/ubuntu/r453/trend_kn.py`（book 页 `data-v-bcbaf750`，探针头只读）。
+- 改宿主 Caddyfile 前看 `journalctl -u caddy --since "10 min ago" | grep tls.renew`：reload 会 `context canceled` 正在进行的续签（自动重试，但要复查）。
+
+## R454 经验：pages.dev 预览域名是扫描器第二入口；journal 看不到直打握手
+- 「像真人的 UA」第二判据：同秒 `/sw.js` 的 UA（R453）；R454 又抓到功能机描述符 `SonyEricssonW810i` + `HeadlessChrome/143` sw.js 的组合。这类经 `kaogong-h5.pages.dev` 的流量在 origin 日志里 `X-Forwarded-Host`≠正式域名、referer 为 pages.dev，日报已按 offhost 单列。到期项复查加一条：`(zcat -f archive/*.jsonl*; cat live.log) | 过滤 X-Forwarded-Host 含 pages.dev`，看 **POST 数 / 引擎 UA 数 / 日均**；出现 POST `/api/track`·作答、引擎 UA 抓 pages.dev、或日均 > 50 再立项 301（优先 CF Bulk Redirects，别为此改 `_routes.json` 把 `/` 收回函数）。
+- 删了未知 SNI 的站点块后，Caddy 默认日志**不记录**握手失败（直打只得 TLS alert、journal 0 条），别把「journal 没噪音」当「没人直打」；要计数只能 `ss -tn state established '( sport = :443 )'`/tcpdump 抓 SNI。
+- 复查 journal error 时先按 `logger`+`msg` 计数，再用同秒窗口逐个对 `/var/log/caddy/*access.log` 判归属（`http2: stream closed` 一类 reverse_proxy 错误不带 host 字段）；宿主上 api-video / jobs / kaogong 三块共用一个 caddy journal。
+- `growth_events` 列为 `id,uid,event,source,ref,created_at,probe`（`ref` 形如 `v:<bundle>;sw:0|1`）；`error_reason` 在 `mistakes` 表；生成查询脚本时别在 Python 双引号字串里嵌 SQL 双引号（R454 第一版两次语法错）。
+
+## R455 经验：判断 WAL 是否「该 checkpoint 了」直接数帧
+- `-wal` 大小换算帧数：`(size-32)/(page_size+24)`；再逐帧读 24 B 帧头（`>6I`：pgno, commit_dbsize, salt1, salt2, ck1, ck2）对 32 B 文件头的 salt，salt 一致即当前有效帧。有效帧 < 1000（`wal_autocheckpoint` 默认）时文件只增是预期，不是泄漏；≥1000 后由写连接 PASSIVE checkpoint 复用、大小停在高水位；仅 > `journal_size_limit`（应用连接 64 MiB）才截。到期项只在 `-wal` > 64 MiB 且持续 > 1 天时立项。
+- `ckpt_seq 0` + 主库 mtime 早于容器启动 = WAL 跨重启被接续（进程未 close 连接），属正常恢复路径。
+- 历史归因写「Rxxx 设计」前先 `git log -S'<字面>' -- <文件>` 找首次引入提交（R454 把 `_routes.json` 排除 `/` 误记 R271，实为 Pages 迁移 `3d28c33`）。
+
+## R456 经验：WAL 跨重启保留是既定形态
+- 应用停机（SIGTERM 优雅关闭）不会 checkpoint：线程本地 SQLite 连接不 close。重启后 `-wal`/`-shm` 仍在、`ckpt_seq` 不变、主库 mtime 早于容器启动都是**正常**，不要当异常登记。本地复现法：`DB_PATH=/tmp/x/t.db KG_BOOT_QUIET_S=0 python3 -m uvicorn app.main:app --port 8456 &` → POST 几条 `/api/track` → `kill -TERM` → 比对 `ls -l --time-style=+%T t.db*`。
+- 本机 `~/.local/bin/uvicorn` 绑的 Python 没有 fastapi，跑后端要用 `python3 -m uvicorn`（pyenv shim）。
+- 生产前一容器的停机日志拿不到：`app_log_snapshot.sh` 在停容器前归档，`docker events` 缓冲对该容器为空。
+- 探针出口复核一行：origin 24 h 按 `X-Kg-Ip` 分「`140.232.64.0/24` 内」与「段外 + UA 含 HeadlessChrome/Playwright/Devin + 无 `X-Kg-Probe`」两桶；段外常见是 `40.77.*`/`199.30.*`（微软/Bing 渲染抓取，引擎口径已覆盖），不是 Devin 出口漂移。
+
+## R457 经验：部署窗口时序怎么拉
+- 停机耗时看 dockerd journal：`journalctl -u docker.service --since '<本地时间>'`（宿主是 **+08:00**，UTC 时刻要 +8 再传给 journalctl）两行 `stopping restart-manager` → `received task-delete event` 之差即 SIGTERM→退出。
+- 新进程 listening 时刻用 `docker logs --timestamps deploy-kaogong-1 | head`（`Application startup complete`）；容器 `StartedAt` 只是 runc 起进程，Python 到 listening 还要 ~2 s。
+- 窗口是否有流量：origin access log 按 ts 列窄窗（±90 s）逐行看，`/api/health` curl/7.81.0 来自部署轮询、每 ~13 s 一条；「窗口内 0 请求」≠「无停机」。
+- 7 天 5xx 反查先排 `wxlogin` 503（`WX_MINIAPP_SECRET` 未配）与 handoff 已登记的 00:35 共宿抖动，再对 `/tmp/kg-compose-*.log` 文件名时间戳看是否落在部署段。
+
+## R458 经验：autoheal / 强杀 / 盘满 怎么查
+- `docker inspect --format {{.RestartCount}}` 为 0 **不等于**没被 autoheal 重启：autoheal 走 `docker restart t=30`（原地重启、ID 不变、只有 `StartedAt` 变、RestartCount 不加）。要看 `docker logs deploy-autoheal-1 --since <ISO> | grep kaogong`（形态 `found to be unhealthy - Restarting container now with 30s timeout`）和 `/home/ubuntu/kaogong-reports/container-events.log`（60 s 轮询，`prev=[id StartedAt state health rc oom] cur=[…]`，能抓到 `exited unhealthy 137` 即 SIGKILL）。
+- 部署窗口归因不能只靠 `/tmp/kg-compose-*.log`（09-06 13:47Z 起才有）：用 `deploy-history.log`（每次部署完成时刻 + rev）+ `container-events.log`（新旧容器 ID/StartedAt）+ `journalctl -u docker.service | grep -E "stopping restart-manager|task-delete|failed to exit within"`（宿主 +08:00）。`Container failed to exit within 10s of signal 15 - using the force` 含 64 位容器 ID，前 8 位 grep `container-events.log` 判是否 kaogong；宿主 swap 高压时 Recreate 窗口可达 30+ s（正常 5.5 s）。
+- origin access log 出现「空窗」先排盘满：`journalctl --since … | grep -ci "no space left"`；caddy 自己会在 journal 打 `write error: write /var/log/caddy/kaogong-origin.zalize.com-access.log: no space left on device`，此时空窗是盲区不是无流量。kaogong 该窗口有无写入用容器内 `mode=ro` 查 `answer_log`/`growth_events` `created_at`（**epoch 浮点**，不要用字符串日期比较）+ `pragma quick_check`。
+- 到期项 probe=0 计数一律 `WHERE probe=0`（严格）：`COALESCE(probe,0)=0` 是产品聚合口径，会把 R374 前 NULL 历史行算进去（answer_log 1001 行 / growth 480 行），不是到期项口径。
+
+
+## R459 经验：宿主历史日志 / autoheal 签名 / dockerd↔containerd 迟滞怎么查
+- 宿主 journal 自 09-05 14:43Z 盘满后**只剩那一秒起的档**（`journalctl --list-boots` 首条 = 盘满首秒），查 09-05 前的 dockerd/earlyoom/kernel 一律用 rsyslog：`grep -h <pat> /var/log/syslog /var/log/syslog.1`（08-30 起明文）、`zgrep -h <pat> /var/log/syslog.*.gz`（到 08-09）；`journalctl -u earlyoom` 为空 ≠ earlyoom 没动。
+- dockerd 行读法（`sed -E 's/^(.{19}).*msg="([^"]{0,70}).*container=([0-9a-f]{12}).*/\1 \2 \3/'` 压成一行）：`failed to exit within **30s** of signal 15` = autoheal（宿主只有它用 30 s，14 天 21/21 全 kaogong），可直接当 autoheal 动手计数并与 `docker logs deploy-autoheal-1` 逐 ID 对多重集；`within 10s of signal 15` = compose Recreate / 手工 `docker restart`（ID 不变 = restart，ID 变 = Recreate）；`within 10s of kill - trying direct SIGKILL`、`failed to delete container from containerd`、`healthcheck failed fatally … only one connection allowed` 都是 dockerd↔containerd 迟滞/会话断连，**不是应用问题**，只把停机窗口拉长。
+- kaogong 容器 ID 归属：`connecting to shim <id>` 后 ≤3 s 内 `sbJoin … ep=deploy-kaogong-1`（启发式，兄弟容器同秒起会误归；精确归属优先 autoheal 日志 / `container-events.log` 里的 ID）。
+- earlyoom 形态：`sending SIGTERM to process <pid> … "uvicorn": badness N, VmRSS M MiB` → 10 s 后 `kill failed: Timer expired`（被无视）→ 只有 `escalating to SIGKILL after 1.5 seconds` + `process exited` 才是真杀，随后 containerd `shim disconnected` + dockerd `restarting container`（restart policy，会加 RestartCount）。
+
+## R460 经验：成长页 / 周报 / 知识点趋势簇怎么审
+- `/api/growth` 的 `weeks` **只含有作答的周**（`strftime('%Y-%W', …, '+8 hours')`），前端不能把数组末两项直接叫「本周 / 上周」；判定用 `checkin.js::cnWeekKey(cnToday)` 与服务端同口径（周一起算、首个周一前 = 第 00 周，`2024-53`/`2025-00` 边界已单测）。改周键逻辑先用 Python `date.strftime('%Y-%W')` 逐日对拍再改。
+- 热力图「学习 N 次」合计与 12 列格子必须同起点（本周周一 −77 天）；任何「从 today 往前 N 天」的合计都要和网格起点对一遍。
+- 生产量测成长卡 / 知识点地图：Playwright CDP 只读 + `X-Kg-Probe:1`，先 `goto /` 写 `localStorage.anonUid` 再 `goto /#/pages/stats/stats`（或 `/#/pkgA/stats/mastery-map`），量 `.gw-wk/.gw-pct/.gw-delta/.gw-tab`、`.tab/.tile/.side-item` 的 `getBoundingClientRect` + `fontSize`。375×812 DPR2 仿真 `clientWidth` 常报 **360**（24rpx → 11.52px），要用 1440 对照（12px）+ 源 CSS 判定，不据此改字号（R449 同现象）。
+- 一个 CDP 连接开两个 context 并行量测会撞 `service_worker` target attach 报错并断连 → 按视口串行、每次新连接。
+- 该簇涉及页：`stats.vue`（成长/热力图）、`calendar.vue`（今天标记用设备本地日期，R438 口径）、`weekly-report.vue`（loading/旧快照/empty/pending/error）、`mastery-map.vue`（375 `.tabs` 横滑行 vs 1440 `.side-nav`，条件渲染，量哪个看视口）。
+- 到期项 `weekly_reports` / `mistakes` 无 `probe` 列：关联用 `EXISTS(SELECT 1 FROM answer_log a WHERE a.uid=x.uid AND a.probe=0)`；`weekly_reports` 列是 `week_start/payload/created_at/read_at`（无 `week`）。首开周报即惰性生成一行（`read_at==created_at` 说明是页面自己 GET+`/read`），量测某 uid 的周报页也会写这张表——先看 origin 日志里该行 `created_at` 秒的 `Cf-Connecting-Ip`/UA/`X-Kg-Probe` 再归因。
+- probe=0 增量归因套路：`answer_log WHERE probe=0 GROUP BY uid` 拿 `MAX(created_at)` → origin 日志同分钟 `POST /api/answer_log` 的 `Cf-Connecting-Ip` + UA + 有无 `X-Kg-Probe`；vivo `V2405A` UA + 移动网段 = R425/R446 已知内部验收设备，不是外部真人。
+
+## R461 经验：一段 probe=0 会话先认客户端，再谈「看到了哪版 UI」
+- 归因 probe=0 会话**先看 UA/Referer 定客户端**再下结论：`MicroMessenger … MiniProgramEnv/android|ios` + Referer `https://servicewechat.com/<appid>/<ver>/page-frame.html` = 微信原生小程序（appid 对 `miniapp-native/project.config.json`），**不是 H5**；H5（含微信内置浏览器打开的 H5）Referer 是 `kaogong.zalize.com`。前端发版后的复验样本若是小程序会话，H5 改动它一条也看不到，(c) 旧壳 404 口径也与它无交集。
+- 会话打的接口集合可以反推**它跑的是哪条分支的构建**：把日志里的 `/api/...` 路径逐条 `git grep -l <path> <ref> -- miniapp-native`，对 main 与各活跃 `origin/devin/*` 分支比命中数；main 0/10、某分支 10/10 即为该分支构建（commit / 体验版·开发版不可知，如实写）。
+- Caddy access log 的 `ts` 是**响应完成时刻**，慢请求起点 = ts − duration；多条同接口「完成时刻相近、时长各异」先反推起点再判是否并发。几个 20–40 s 的 `POST /api/mistakes/analysis` 起点间隔 ~10 s 从一台设备来，优先查客户端 in-flight 守卫（H5 `book.vue::aiAnalysis` 判 `aiLoading`；小程序 `book.ts::onAiAnalysis` 要同判 `aiLoading`）。
+- 空态只能按响应字节推断（`/api/predict` 34 B = `{"status":"cold",…}` 设计冷态、`/api/shenlun/stats` 51 B 无记录），写「字节推断」不写「空态」；小程序真机渲染无服务端证据。
+- 发现的缺陷在**他人活跃分支**（未合 main）时不改他人分支：取证文档登记 + 在该 PR 评论给一行修法与证据链接；`git merge-base --is-ancestor A B` 先确认哪条分支包含另一条，评论挂在包含者上。
+
+## R462 经验：预判两条长分支的合并冲突，用「模拟合并 + 对方源锁」量化，不用肉眼看 diff
+- 宿主 git 2.34 没有 `git merge-tree --write-tree`；等价只读做法：`git worktree add --detach /tmp/wt origin/main` → `git merge --no-ff -m t <分支A>` → `git merge --no-commit <分支B>` → `git diff --name-only --diff-filter=U` 拿冲突集合 → `git merge --abort`，全程不碰主工作区，最后 `git worktree remove --force`。
+- 多条派生分支（W6/W7 都从 W5 分出）冲突集合相同时，先 `git merge-base A B C` 找共同祖先，再对祖先跑一次：冲突根在祖先就不要逐条给下游 PR 评论。
+- 「能不能机械解」用**对方分支的 vitest 源锁**当尺：`-X ours` / `-X theirs` 各合一次、把对方 `frontend-uni/tests/*.test.js` 拷到 `tests/` 根目录（不能放子目录，源锁用相对路径）跑 `npx vitest run`（本仓库没有 `--reporter=basic`），失败数 = 该方向的回退条数；再 `git grep -c <功能符号> <分支> -- src/pages src/pkgA` 区分「换写法误报」与「功能不存在」。
+- `-X theirs` 仍失败的条目 = 非冲突 hunk 带回的回退，最容易在人工解冲突时漏掉，单独列。
+- 合并顺序论证要先核 `origin/main` 是否落后于生产 rev（`git merge-base --is-ancestor`）：main 落后时「先合谁」不是对称问题。
+
+## R463 经验：两条分支各有「热区下限」时，先分层再比数字
+- 先问规则落在哪一层：组件层（设计系统 token + `::after`/padding 撑高，视觉高度不变）还是页面层（每个可点元素直接 `min-height`）。两层可并存；合并验收只看「每个可点元素实际命中高 ≥ 页面层下限」，源锁正则要同时接受 `min-height: 40px` 与 `var(--hit-min)`/`::after` 形态。
+- 组件层规则最常见的漏洞是「把信息标签组件（KgTag 20px）当按钮用」和「裸 `<text>` 链接」：`git grep -n '<kg-tag' | grep '@click'` + `git grep -n 'class=\"[a-z-]*\" .*@click' -- '*.vue' | grep '<text'` 两条就能列全。
+- 审计簇选择要覆盖 `pkgA` 分包页：R430–R460 五次都没选到 `shenlun.vue`，它从 R242 建页起字号/热区没动过。快速排查：`grep -n -E 'font-size: (1[0-9]|2[0-3])rpx' <page>.vue`（375 下 <12px）+ 量测脚本 `/home/ubuntu/r463_shenlun.py`（CDP 375，`X-Kg-Probe: 1`，只 GET）。
+- 本机 Playwright ↔ 已运行 Chrome 的 `connect_over_cdp` 第二次连接可能被 `service_worker` target 断言打崩（`targetInfo type service_worker`）：一进程只连一次、多视口在同一连接里开多个 context，或先在页面里 `navigator.serviceWorker.getRegistrations()` 后注销再连。
+
+## R464 经验：带底色小标签当按钮时用 `::after` 撑命中区 + 本地 dist 预检
+- 「带底色/描边的 20px 小标签」（如 `.q-paper.tappable`）如果直接 `min-height: 40px` 会变成大药丸、与并排信息标签不一致；改 `position: relative` + `::after { content:''; position:absolute; left:0; right:0; top:50%; height:40px; transform:translateY(-50%) }`，视觉不变。uni H5 `<text>`→`uni-text` inline 元素上此写法可用（Chrome 已验），父级不能 `overflow: hidden`。
+- 验证命中带别只看 `getComputedStyle(el,'::after').height`，要 `document.elementFromPoint(cx, cy±19)` 命中 / `±21` 不命中，两边都测才算 40px；源锁正则同时锁 `top: 50%`/`translateY(-50%)`/`height: 40px`。
+- 部署前可用本地 dist 做一次同脚本预检：`python3 -m http.server 8765` 起 `dist/build/h5`，Playwright `ctx.route('<base>/api/**')` 把 GET 转发到生产（带 `X-Kg-Probe: 1`、非 GET abort），与部署后生产数值逐项比对一致才算「本地=线上」。多视口在**同一个** `connect_over_cdp` 连接里开多个 context（R463 二连崩掉的规避法）。
+- `.chip.sm` 之类子变体去掉自己的 `font-size`/`padding` 竖向值，让高度/字号继承父规则，源锁里反向锁「子变体不含 min-height/font-size」防以后又各写一套。
+
+## R465 经验：审计选簇别绕过主循环页 + header 内可点文字的 40px 法
+- 历轮按「簇」选审计对象（每日一练/复习流/分享/成长/申论）会系统性绕过「每题必经」的作答页本体；每 10 轮 SOP-10 至少把 `pages/practice` `pages/book` `pages/index` 三个主循环页跑一遍 `r465_scan.py` 式只读读数（`getBoundingClientRect` + `fontSize`，`.tag .sheet-x .op .fontbtn` 等）。
+- 判「谁该撑高」先 `grep -o 'class="[^"]*"'` 出所有挂 `@click` 的元素再核外层容器，纯信息标签（`.real-tag .cnt .mchip .exp-k`）只改字号；模板里 `<text @click>` 的文字链要撑 40px 得改成 `<view class="x"><text class="x-t">`（外层 flex 40px + 负外边距，视觉/省略号搬到内层），`<text>` 上直接 `min-height` 在 uni H5 是 inline 不生效。
+- header 单行里的可点文字（`.tag .op`）用 `min-height:40px; margin:-10px 0`，复验必须同时读 `.rhead` 行高（改前后都 20px）与 `elementFromPoint` 命中带，两者缺一即算回退。
+- 字号 22→24rpx 会让 nowrap+ellipsis 的标签在 375 多出省略号：复验读 `el.scrollWidth > el.clientWidth`，超出时先收同行 `gap`/水平 padding，不缩字号。
+- `min-height: 44rpx` 这类「看起来有热区」的 rpx 值（=22px）是无效值，源锁正则只认 `min-height:\s*40px`。
+- 死规则（模板已不引用的选择器）一并抬字号让「样式块内无 <24rpx」一条正则可锁，文档里列清哪些是死规则，不在审计轮删。
+
+## R466 经验：「读数小」先核外层再定改不改 + 到期项脚本两个坑
+- 只读读数小于 40 的元素先判三件事：模板是否直接挂 `@click`（`grep -n '@click' | grep class`）、所在行高是否就等于自身高（`getBoundingClientRect` 父级）、抬高会不会抬整行。三者都「是」才修；抬整行会破坏布局的（输入框行 `.sbar`、评论底行 `.ft`、页脚两行文字链）用 `min-height:40px + margin:-Npx 0`，独立行（页签行 `.tabs`、排序 chip 行 `.chips`）直接撑到 40 不算回退。
+- 页名 ≠ 源码路径：`search`/`discuss` 在 `pkgA/search/`、`pkgA/social/`，先 `find src -name '*.vue' | grep -i <关键词>` 再写路径，不按页名猜。
+- uni H5 同页只改 hash query（`#/pkgA/search/search?q=…`）**不触发 `onLoad`**，要验带参初始态需 `ctx.new_page()` 重新打开；搜索历史 storage key 是 `kgSearchHist`（`uni.getStorageSync`），只在 kw 为空时渲染。
+- 到期项脚本判「某表 X 时刻后有写入」必须先 `PRAGMA table_info` 看 `created_at` 类型：TEXT 型（`question_text_backup` 的 `'2026-08-02 …'`）与 `strftime('%s',…)` 比较是字串比较、恒真误报；只对 INTEGER 型列做 epoch 比较。
+- WAL「是否复用」不能只看字节：读 32 B 头 `ckpt_seq` + 逐帧 salt 是否与头一致（`struct.unpack('>IIIIII')`），有效帧数 < 帧槽数即已 checkpoint 复用；主库 mtime = 最近一次 checkpoint 写回时刻。
+
+
+## R467 经验：热区量测的三个假阴性来源 + 部署脚本 600 s 中止后的必做动作
+- `elementFromPoint` 命中带测试前必须 `el.scrollIntoView({block:'center'})`：目标在视口外或贴边时中心点 ±19 落到别处，会把已达标元素报成未命中（R467 第一版 `.ann-x .mg-go` 假阴性）。
+- 负外边距撑出的 40px 带会被**下方兄弟元素盖住**（`.pbadge-hit` 1440 +19、`.recap-h` 375 下半段）：这是真不命中，不是量测问题；修法 `position:relative; z-index:1`，源锁一起锁。
+- 「读数小」先看模板有没有 `@click`：`home.vue` `.tk-go` 16px 无 `@click`，外层 `.tk-row` 52 整行可点 → 不改，源锁反向锁「`.tk-go` 不含 min-height 且 `.tk-row` 挂 `@click`」防以后有人把它当漏审再抬。
+- 首页源码是 `src/pages/home/home.vue`，不是 `pages/index`（R465/R466 handoff 写错）。
+- `deploy_h5.sh` 远端 `compose up --build` 轮询上限默认 600 s（R468 核过 19 次常态 build p50 82 / max 149 s，不改默认）；宿主层缓存被清 + load >10 时 build 要 17–28 min，脚本会 FAIL 退出但 compose 仍在后台跑。**R468 起中止后按脚本自己打的四行做**：① `ssh … tail -1 /tmp/kg-compose-<rev>-*.log` 等到 `KG_COMPOSE_EXIT rc=0` 且 `/api/health rev` = 目标；② `DEPLOY_RESUME=1 ./deploy/deploy_h5.sh --skip-build` 续跑 4a–6（不 rsync 不重建；4a rev 闸仍在，容器没换到会被拒）——否则 `/` 静态层仍指旧 bundle 半发版，且 `deploy-history.log` 缺行；③ `KG_COMPOSE_EXIT rc≠0` 才是真失败，预见宿主被挤时可 `DEPLOY_WAIT_SECS=1500` 起新部署（R468 本轮 1500 也超了，1650 s）。别在 compose 没退时第二次全量 `--skip-build` 去追（叠第二个 build）。FAIL 现场 `other_builds=2` 是本次部署自己的 `bash -c` 壳 + `docker compose` CLI，不是别家 build（要看别家用 `ps -eo pid,ppid,etimes,cmd | grep -E '[b]uilder prune|[c]ompose'` 看谱系）。
+- **宿主层缓存被清 / dockerd 卡死的第一嫌疑是同机 recruit_app 的 15 分钟磁盘守护（R469 坐实）**：`/etc/cron.d/recruit-disk-maintenance` 第二行 `*/15` 跑 `/usr/local/bin/recruit-disk-guard.sh`，盘 ≥80% 即 `docker image prune -f` + `docker builder prune -f --keep-storage 1GB`（整机三产品共享 1 GB），高负载下一次 3–16 min。查它：`sudo grep -hE 'recruit-disk: guard' /var/log/syslog | tail`（`high-water tier ran`→`ran` 两行相减 = prune 段耗时，CST 时间戳）、`sudo tail /var/log/recruit-disk-maintenance.log`、`ps -eo pid,ppid,etimes,cmd | grep -E '[p]rune|[d]isk-guard'`。R469 起 `host_probe.sh` 多打 `prunes=N`，4-pre 见 prune 也让行（300 s 上限）。`docker exec/system df/buildx du` 120 s 无响应时先看是不是撞上它，到期项改走宿主直读卷：`sudo sqlite3 "file:/var/lib/docker/volumes/deploy_kaogong-data/_data/data.db?mode=ro" '…'`（`error_reason` 在 `mistakes` 表不在 `answer_log`）。caddy 日志按 `ts` 过滤时 epoch 常量用 `python3 -c 'import datetime;…timestamp()'` 算，别手写（R469 首版写成 2025 年）。别去改 recruit_app 的脚本——宿主级改动是老板/该仓库的权限，本仓库只登记 + 让行。
+- pip 层 `exit code: 4294967295` 且内核无 OOM → 先查同宿主是否有 `docker builder prune`/其它 build 并发（`ps -eo pid,etimes,cmd | grep -E 'buildkit|builder prune|compose'`），不是 requirements 问题。
+
+## R470 经验：模考簇只读量测法 + 「盒小但命中带够」的判读 + 4-pre 让行实况
+- 考试页 `pkgA/exam/exam` 进入即 `POST /api/exam/start` 建 attempt（probe 头也会落 `exam_attempts`）。只读量测答题卡几何时在浏览器侧 `ctx.route('**/api/**')` 拦截该 POST，用 `GET /api/exam/papers/{pid}` + `GET /api/questions?limit=N` 合成 `{attempt_id:0, paper, items}` 回包 `fulfill`，其余非 GET 一律 `abort`；报告页用已提交的 probe attempt（`SELECT id FROM exam_attempts WHERE submitted_at IS NOT NULL ORDER BY id DESC` 宿主直读卷）+ `localStorage.anonUid` 设为该 uid 后打开 `#/pkgA/exam/report?attempt_id=`。
+- 弹层打开后 `querySelector('.sheet-x')` 会先命中背景层隐藏节点：过滤 `getBoundingClientRect().height>0` 取最后一个可见节点再量；报告纠错 chip 用 `[class*=type]` 在 375 抓到的是两行容器（87.7），单个 `.rp-chip` 要 1440 或本地 dist 直读。
+- 「盒 20px 但 hits −21/−19/0/+19 全命中、+21 不命中」= `::after` 撑出的 42px 命中带在生效（practice `.fontbtn`），不是缺陷，别按 `h` 一列就立项；反过来 `h=40` 但 ±19 有 false 才是被邻元素盖住（R467 `z-index`）。
+- `<11.9px` 叶节点计数只在 1440 下当结论用；375 仿真 `clientWidth` 360 把 24rpx 算成 11.52px 会把全页达标节点都数进去（home 56 / book 138 / list 526 全是这个）。
+- 源锁禁 `min-height: Nrpx` 时只锁可点元素的选择器（`.rp-chip`），别全文件 `not.toMatch`——textarea / 卡片的 `min-height: 140rpx` 是合法尺寸规则（R470 首版误伤 `.rp-detail`）。
+- 4-pre 让行实况：别家 `compose up --build` 一跑 45 min+，让行 300 s 到点必然 WARN 继续，之后本家构建大概率再离群（R470 ~1500 s：pip 413 s + exporting layers 344 s）；直接按 R468 路径走：600 s FAIL 文案出来后 `tail -1 /tmp/kg-compose-<rev>-*.log` 轮询到 `KG_COMPOSE_EXIT rc=0` 再 `DEPLOY_RESUME=1 ./deploy/deploy_h5.sh --skip-build`，别重跑第一段。`journalctl -u caddy` 里的 502 是同机别家域名（api-video / mx-ux），kaogong 源站非 2xx 只看 `/var/log/caddy/kaogong-origin.zalize.com-access.log`。
+
+## R471 经验：失败态热区全仓一次扫 + 「改 display 会改布局」+ grep 同名 class 的假命中
+- 「加载失败 → 重试 ›」失败态在生产**可以只读稳定制造**：Playwright `ctx.route('**/api/**', abort)` 全 abort 即可，不需要真故障、无 DB 写入；同一脚本对本地 dist（`npx serve dist/build/h5` 端口）复跑就是预检，改前/改后两份 JSON 都要落盘（R471 改前只在终端回显、只剩范围 18–22px 可登记）。
+- 同一类控件（`.retry`）别按簇修：`grep -rl 'class="retry"' src` 一次列全（17 页），历轮按簇只修了 6 页；源锁用「递归发现 + 阈值 ≥N」防漏扫，阈值是防漏扫下限不是页面总数断言。
+- **补 `min-height` 时改了 `display` 就是改布局**：`<view>` 在 uni H5 默认 `display:block`，`inline-flex` 会让「`加载失败：{{err}}<view class="retry">`」同容器的重试从独占一行变成贴着错误文案同行（R470 list + R471a 5 页，源锁/vitest 拦不住，生产失败态截图才看见）。要独占一行 + 40px 命中带用 `display: flex; align-items: center; justify-content: center`（R464 shenlun 写法）；只有 `.retry` 是独立子节点（父 `.empty` 是 flex 列）时 `inline-flex` 才等价。每次改 `display` 都要截一张失败态图，别只看 `h`/hits。
+- `git grep <组件名>` 命中的文件先看是 `<rank-card>` 标签还是本地同名 class（team.vue 的 `.rank-card` 是 `.card` 的修饰 class），别把同名 class 登成「另一挂载点」。
+- 宿主 TZ=CST：在宿主上用 python 过滤 caddy JSON `ts` 时 `datetime(...).timestamp()` 是本地时区 → 窗口提前 8 h（R471 把 R461 vivo 会话 272 行数进「新容器后」）；一律 `datetime(..., tzinfo=timezone.utc)`，或用 caddy 自带的 `-o cat` + `--since` 在 journalctl 侧过滤后再核 host。
+- `DEPLOY_RESUME=1` 前别先提 docs commit：4a rev 闸比的是本机 HEAD，HEAD 一动就被拒（设计如此）；先 resume 再提文档，或 `git checkout <部署 rev>` 跑完再切回分支。
+- `/api/monitor/report` 上报体只转发中心不落本地；核来源用 caddy 行的 `Cf-Connecting-Ip` + UA（`moto g power (2022)` = Lighthouse 移动仿真、本机出口 IP = 自己的 6b），别把部署 Lighthouse 触发的 1 条当用户侧 JS 错误。
+- 4-pre 让行 WAIT 期间别家 build 退出会提前放行（`other_builds=0`），不一定等满 300 s；但之后本家构建照样冷启（守护 `builder prune` 常驻），600 s FAIL → 等 `KG_COMPOSE_EXIT rc=0` → `DEPLOY_RESUME=1` 路径已是常态，不必每轮再登记为异常。
+
+## R472 经验：回扫「谁改过 display」要整行抽、要看父容器
+- 本仓 `<style>` 大量单行规则 `.x { display: inline-flex; min-height: 40px; ... }`，`grep '^\+\s*display:'` 只命中独占一行的写法（R472 第一版据此得出「R410 起只新增 3 条 display」的假结论，实为 87 条）。回扫用 `git diff <起点>~1 HEAD -- frontend-uni/src | grep -E '^[+-]'` 后按 `display:\s*([a-z-]+)` 在整行抽，再按 (文件, 选择器) 归并 `-`/`+` 集合看净变化。
+- 判「改 display 会不会改行」只看三件事：元素默认（uni H5 `<view>` block / `<text>` inline）、父容器是否 flex/grid（是 → 子项 blockified，inline-* 与 block 等价，不会改行）、同容器有没有行内兄弟（`<text>`/裸文本/inline 规则的元素）。父 block + 有行内兄弟 + 块级↔行内变化 = R471a 形态，必须截失败态图；父 block 无行内兄弟只是宽度从撑满变内容宽（居中靠父 `text-align`）。
+- 制造失败态的页面参数要按 `onLoad` 实际读的 key：exam/report 是 `attempt_id`（传 `aid` 走到无参分支 → 「暂无成绩报告」空态不是失败态）；search 要 `?q=` 或真的输入回车才发请求。
+
+## R473 经验：需要登录态才会发请求的页面，用 `add_init_script` 注假 token 再 abort
+- 登录态判定在 `api.js getToken()` = `uni.getStorageSync('authToken')`，H5 下就是 `localStorage.authToken`。`onShow()` 里先判 token 的页面（如 `pkgA/social/inbox`）无 token 根本不发请求、`route().abort()` 制造不出失败态；`context.add_init_script("localStorage.setItem('authToken','probe-fake')")` 在页面脚本之前写入即可，不用真登录。配合 `**/api/**` 全 abort 无任何写入。
+- SOP-10 §4 硬指标一次性全路由复扫模板：`/home/ubuntu/r473_axe.py`——`add_script_tag(content=axe.min.js)`（本机 `~/.npm/_npx/*/node_modules/axe-core/`）后 `axe.run(document,{runOnly:['color-contrast','link-in-text-block']})`，同页再读 `documentElement.scrollWidth` vs `clientWidth` + 遍历 `body *` 找 `right>cw+1 || left<-1` 的非 fixed 元素。越出命中先看 `visibility` 与祖先 `overflow`：uni resize-sensor 的 `visibility:hidden` 探测 div（宽 100000 / 400 等）和 `uni-scroll-view overflow-x:auto` 里的 chip 都不是缺陷，别当溢出登记。
+
+## R474 经验：「功能触达率」怎么只读盘点 + Caddy 时序/字节的两个口径坑
+- 触达率一律分 6 层写：代码存在 → 接口被请求 → 接口 200 → 数据落表 → 前端渲染 → 真实用户走完整流程；各层证据源不同（源码 / caddy / caddy status / DB / 无一手只能写「未验证」）。模考报告簇的用时·模块统计·历史·目标分·rank·推荐五张卡都以 `submitted_at` 非空为前提，一个 `exam/submit`=0 就是五个 0，别写成五条独立缺口。
+- 非探针口径三件套：排除 `Cf-Connecting-Ip` 在 `140.232.64.0/24`、排除带 `X-Kg-Probe` 头、`exam_attempts.probe` 三分（NULL=加列前历史不可归因 / 0 / 1）分别列。`probe IS NULL` 的 29 条 attempt 不能算真人也不能算探针。
+- Caddy access log `ts` 是**响应写出**时刻，长 LLM 请求的起点要 `ts - duration` 反推；同一秒内多条重叠请求用 `Cf-Ray` 单调性 + 请求 `Content-Length` 判是否同体重复。源站每个 site 块都 `encode gzip`，`size` 是压缩后字节，不能反推正文字数（`mistakes/analysis` 845 B ≠ 正文很短）。
+- 生产 `explain_cache` 可宿主直读核 AI 讲解是否真落正文（`length(explanation)`）；`mistakes/analysis` 无结果表，只能用 status+size 判「服务端成功」，渲染与否无证据。
+- 小程序客户端识别：Referer `https://servicewechat.com/<appid>/<版本号>/page-frame.html`，版本号 `0` 是开发/体验版（推断）；同一用户几秒内出口 IP 切换是移动网络常态，别当两个人。
+- 同 uid 同请求体的 AI 接口在飞行中重复（explain ×2 / analysis ×4）是 R474 登记的 R475 候选：先查客户端为何重发（本机无微信开发者工具复现不了），再论服务端 single-flight；`rl` 只限量不去重，`book.vue aiLoading` 守卫只管同一页面实例。
+
+## R475 经验：AI 接口飞行中重复的归因与服务端 single-flight 生产验证
+- 先认客户端：Referer `servicewechat.com` = 原生小程序 `miniapp-native`，**不要拿 H5 `frontend-uni` 源码去核守卫**（R474 犯过）；再用 `git log --all -S'<函数名>'` / `git show <commit>~1:<path>` 取事发时刻之前的版本，兄弟会话分支（如 `origin/devin/w7-mp-flat-v3`）的提交说明常已写明「生产实测」线索。
+- 重发形态判别：同页面重入 = 起点间隔十几秒、每条 duration 完整、全 200；超时重发 = 间隔 ≈ 客户端 timeout 且前一条 duration 也 ≈ timeout；页面栈多实例 = 起点几乎同刻。`gzip size` 各异 = 各自独立生成（合并后同 size 同刻结束）。
+- 验证 single-flight（探针 `X-Kg-Probe: 1`，写库 0）：同 uid 4 个 `curl` 并发（`&` + `wait`）比 `sha256(analysis)`/长度/结束时刻 → 应同 sha、Caddy 同 size、结束时刻差 ≤ 几十 ms；紧接再发 1 次应 sha 不同且耗时完整 = 成功未缓存、槽已清。脚本样板 `/home/ubuntu/r475_probe.sh`（生产 `ACCESS_CODE` 未配、`check_access` 直接放行，不用带头；uid 必须已有待掌握错题，否则走「错题本还没有待掌握的错题」短路不打 LLM、测不到合并）。
+- 后端单进程（`Dockerfile.runtime` uvicorn 无 `--workers`）→ 进程内字典即全局；改多 worker 前先换共享介质。请求体若加字段，合并键必须并入（当前 `body: dict` 只读 `uid`）。
+- 单测里 mock `llm.chat` 的并发用例要 `await asyncio.sleep(0)` 多轮让任务真正跑到 await（`_spin()`），否则断言早于协程进入合并点。
+- Caddy 按 IP 归因 UA 时用 `Counter` 取全量再下结论：141.11.46.193 是 `VivoBrowser`（系统浏览器）不是微信，R474 凭机型联想会错。
+
+## R476 经验：「要不要做聚合端点」先量墙钟；面试/任意功能漏斗的浏览形态判别；小程序两条官方硬约束
+- 「N 个并发请求要不要合成 1 个」不要凭请求数拍板：Playwright over CDP（`connect_over_cdp('http://localhost:29229')`，`X-Kg-Probe: 1`、探针 uid）+ `Network.emulateNetworkConditions`（4G latency 100 / 3G 300）在生产页面上量 `request→requestfinished` 的合并墙钟，同页同网况再 `fetch` 一个既有单端点作对照（脚本形态见 `/home/ubuntu/r476_fanout.py`，每网况 ≥5 轮、首轮冷启离群单列）。HTTP/2 下 9 并发 ≈ 1 RTT + 80–150 ms，收益 <1 RTT 就不值得把可独立渲染的卡片绑成最慢者决定首绘。R62 `home_bundle` 的前提是当时 origin 45 s 长尾，先核 Caddy 端点 p99/>1 s 条数确认前提还在不在。
+- Caddy 端点时延分布一次取：按 `uri.split('?')[0]` 归端点，`duration` 排序取 p50/p90/p99/max，`>1.0` 单列样本；「onShow 扇出」用同 (ip, uid) 2 s 窗口内 distinct 端点数 ≥5 聚簇即可复现每次切页的请求组。
+- 功能漏斗「有 A 请求没 B 请求」先看停留时长与前后页：同 uid 时间线里 A 后 3–6 s 下一请求已是别的页面、且 4–5 min 内十几个页面每页 2–8 s = 浏览一遍形态，不是「想做没做成」；写结论只能说「日志未观测到 B」，不立项提醒/自动续做。`interview_sessions` 只在回答成功后写入，question 请求 ≠ 面试。
+- 部署后 (c) 补量的时间 filter 用 `docker inspect -f '{{.State.StartedAt}}'` 的秒（本轮与脚本常量同秒），不要用 deploy 日志或估算。
+- 微信官方文档（`developers.weixin.qq.com/miniprogram/dev/framework/ability/network.html`）两条核过的硬约束：`wx.request` 最大并发 **10**（一页 onShow 9 连 + 飞行中 AI 长请求即顶满，多余的排队）；Referer `servicewechat.com/{appid}/{version}/` 的 `{version}=0` = 开发版/体验版/审核版三者、`devtools` = 开发者工具，报告里写「非正式版」不要写死「开发版」；进入后台 5 s 内未结束的请求回调 `fail interrupted`。
+
+
+## R477 经验：「同 uid 重复 AI 请求」判端侧成因的三件一手
+- 看**前置请求**：小程序问答页 `submitText/submitImage → ensureAccess()` 每次手动提交前会发一次 `GET /api/access_info`（无访问码时；全小程序只有 `ask.ts` 调它，`git grep fetchAccessInfo` 核），Caddy 里每条 `explain/stream` 前 1–2 s 有没有它，直接区分「手动重点」vs「代码自动重发」；`streamPost` 失败的降级路径是**非流式** `/api/explain`，看它有没有到源站再判降级是否发生。
+- 看**留存表**：`ask_cur.items[*].ts` 是端侧 `Date.now()`，与 Caddy 起点（`ts − duration`）对齐即可判断哪一次提交留了下来；rec 只在 `onMeta`/成功后 `unshift`，`catch` 不插入 → 「N 次请求只留 1 条 rec」= 只有 1 次端侧成功。`explain_cache` 是 `INSERT OR REPLACE`（同一条流末尾 3 ms 内写 `key` + `raw_key` 两行），分不出前一次有没有落过库，别拿它当次数证据。
+- 看**出口 IP 是否永久切换**：旧 IP 此后 0 新请求 + 新 IP 接管全部后续 = 网络切换；Caddy 对端侧已放弃的流仍记 200 + 完整时长 + 完整字节，源站「跑满」不能反推端侧收到了。
+- 只读查询模板：`ask_cur` / `ask_sessions` 行的 uid 先用 Caddy 三路（140.232.64.x / `X-Kg-Probe` / 自动化 UA）归类再谈「真实留存」；`api_ask_cur_get` 有 7×24 h 口径，过期时间 = `updated_at + 7 d`。
+- `docker logs --since/--until` 取容器日志时若返回极少（本轮 1 行），先确认容器日志是否落在同窗口（部署重建后 `docker logs` 只含新容器），别把「没日志」当「没异常」。
+
+## R478 经验：uid 归类与探针 uid 卫生
+- **探针一律用专用新 uid**（`anonUid()` 形态随机生成即可），不得复用任何在 R446/R452 身份表、`growth_events probe=0`、`ask_cur`/`ask_sessions` 里出现过的老 uid：R475 拿 `umsacie728f4ghcv8`（R446 判「身份不可考」）当探针，把「09-05 非探针会话」与「09-07 探针」混在同一 uid 下，R477 据此把它整条归成探针（R478 勘误）。
+- 给 `ask_cur`/`ask_sessions`/`explain_cache` 等**无 probe 列**的表归类时，不能只看当前 Caddy 文件（文件起点前的会话不可见）：对每个 uid 用 `pragma table_info` 枚举含 `uid`+`probe` 列的表（`answer_log`/`exam_attempts`/`growth_events`）统计 p0/p1/NULL，再与 R446/R452 身份表交叉；p1 行的时间若全在某次探针之后，之前的行不能算探针。
+- `kaogong-reports/app-log/*.log.gz` 的覆盖起点 = 首个归档的 StartedAt（当前 09-06 15:11Z），不是「14 天」（那是保留期）；下「N 天无 `[llm] stream` 告警」结论前先 `ls` 最早文件。uvicorn 访问日志行的时间是**响应开始**（流式请求 = meta 之前），与 Caddy `ts − duration` 反推起点在 ±30 ms 内可互证。
+- `explain/stream` 的 `event: error`（含 `chat_stream` 中途 `httpx` 异常）在服务端**不写日志**、Caddy 仍记 200：B 路径（meta 后失败）只能从端侧 / 用户反馈 / `ask_cur` 空 explanation 侧面看，服务端日志 0 ≠ 未发生。
+
+## R479 经验：问答页 / 面试簇只读量测怎么把结果态与 sheet 渲染出来
+- **uni H5 的 `uni.setStorageSync` 落 localStorage 是包装格式** `{"type":"object","data":<value>}`：要让问答页恢复结果态 / 历史 sheet 有行，必须写 `askCurSession` / `askSessions` 为该格式（裸数组页面读不到，R479 首版量测空态误判）。占位 item 用 `explain_key:'r479-local-only'`、`saved:false`，只在浏览器本地渲染、不落库。
+- 面试记录页 `/api/interview/history` 用 `page.route(...).fulfill()` 浏览器侧占位回包，不在生产制造记录；注意有数据态下空态 `.btn-primary` / 失败态 `.retry` 不渲染，量不到要如实写「源码 + 源锁」。
+- **选簇依据用 `git log <生产 rev> -- <路径>` 查触碰史**：R410 后只有功能改动触碰的页面 = 未过审簇（R465 practice / R470 exam / R479 ask+interview 都是这样找到的），比按文档逐字复核快且不漏。
+- sheet 关闭 ✕ 抬到 40px 用 `min-width/min-height:40px` + 负外边距（`margin:-6px … -6px 0`），改后要读 `.sheet-h` 高度确认头行没被抬（R479 改前/改后都是 28）；命中判定用 `elementFromPoint` 中心 ±19 / ±21（脚本 `/home/ubuntu/r479_hits.py`）。
+- 375 叶节点字号下限：360 仿真下 24rpx = 11.52 px，阈值 11.9 会把 24rpx 自身留在 ≥ 侧、只抓 ≤23rpx；uni tabbar label 10 px 是框架全站样式，历轮都不计入页面命中。
+
+## R481 经验：有登录门槛的分包页怎么在生产只读进入有数据态
+- **`api.js getToken()` 读的是裸 `uni.getStorageSync('authToken')`**（字符串），H5 落 localStorage 时**不是** `{type,data}` 包装（那是对象/数组值才有的格式）：`add_init_script` 写 `localStorage.setItem('authToken','r481-local-fake')` 即可让 inbox 走过 `onShow` 的 `getToken()` 门；写成包装格式页面读不到、仍落登录分支（R481 首版误判）。
+- 有数据态占位回包要按页面的时间契约给值：plaza / inbox `fmtTime(ts)` 是 `new Date(ts*1000)`，占位必须给 **Unix 秒整数**，给毫秒或字符串会渲染 `NaN-NaN NaN:Na`（占位数据错误，不是产品缺陷）。
+- 进有数据态同时要 `route.abort()` 非 GET（inbox 进页会 `readCommentInbox()` 回写已读），保证 0 库写入。
+- 复用 sheet ✕ 负外边距法前先读该组件 `.sheet-h` 改前高度：头行本来 <28（export-confirm 22.7）时 `-6/-6` 会把头行抬到 28，要在文档如实登记而不是只写「不抬」。
+
+## R482 经验：monitor「真人行」口径与 `Script error.` 的判法
+
+- **真人 monitor 行**必须两侧交叉：中心 `GET /api/errors?site=kaogong`（key 从 VPS deploy `.env` 取、只在远端 shell 用、不打印）按 `internal=0` 初筛后，还要剔除出口在 `KG_PROBE_CIDRS`（`140.232.64.0/24`）的行——R392 之前的历史行 `internal` 全为 0，不代表真人；再用 Caddy **全部** `kaogong-origin.zalize.com-access*`（含 `.gz`）的 `POST /api/monitor/report` 按 `Cf-Connecting-Ip` / UA / `X-Kg-Probe` 归类对账，两边条数对得上才算口径闭合（R482：114 条里真人 2 条）。
+- `message="Script error."` + `stack=NULL` 是跨源脚本脱敏（规范 muted errors：`filename=""`、`error=null`），**不是本站代码抛错的证据**：本页脚本全同源（主 bundle `crossorigin`、内联 splash / route-preload），CSP 白名单里的 `career.zalize.com/nav.js` 已下线。判法：`rg "createElement\('script'"` / `rg career.zalize` 前端源码为 0 → 只能是页面外注入脚本。R482 起 `main.js` 已过滤（`isMaskedCrossOriginError`：message 匹配 ∧ 无 `error` ∧ 无 `filename`），生产复验用 `window.dispatchEvent(new ErrorEvent('error',{message:'Script error.'}))` 应 **0** 条 `/api/monitor/report`，而 `new ErrorEvent('error',{message:'Script error.',error:new Error('x')})` 或 `filename` 非空应照常上报。将来若加第三方 SDK，`<script>` 必须带 `crossorigin` 且对方返回 CORS 头，否则其报错也会被浏览器脱敏而被这道闸丢掉。
+- 中心告警阈值是 `internal=0` **≥1 条 / 15 min**（站点 1 h 节流），所以任何一条噪音真人行 = 一封告警；核「有没有发」只能查 D1 `alert_state`（无 HTTP 读接口，需 wrangler 登录态），本机没有时如实写「按代码应触发、送达未核」。
+- **部署前看宿主盘**：`deploy_h5.sh` 4/6 让行只等其它 compose build/prune 最多 300 s、超时不阻塞；若 `df` 非 root 可用已是 0（兄弟项目构建期常见），要手动中止（`kill_shell`），不要让它超时后在 0 B 盘上起重建。此时 1/6–3b 只 rsync + 预热、对运行容器无影响（dist 在镜像内，非 bind 挂载）。盘满时线上写入是否受影响用 `X-Kg-Probe: 1` 的 `POST /api/track {"event":"boot"}` 探（容器 uid 0 可用 ext4 root 保留块 ≈2.1 GB），落库后查 `growth_events` probe=1 行。
+
+## R483 经验：时政题号撞 `questions.id` 与「按题号聚合」类核法
+- `shizheng_questions.id` 与 `questions.id` 是两套自增、必然撞号；任何按 `question_id` 聚合 / JOIN / 去重 / 推进 SRS 的路径（`refresh_question_stats`、`list_mistakes`/`due_reviews` `LEFT JOIN questions`、`_find_open_mistake`、`save_mistake` 去重）都必须先确认行的 `module` 是行测五模块。核法：`SELECT module, question_id IS NOT NULL, COUNT(*) FROM answer_log|mistakes GROUP BY 1,2` —— `('时政', 1, n)` 有行即撞号污染；`questions` 外显统计是否被污染用「该 qid 在 answer_log 里按 REAL_TRAFFIC 口径的**行测**作答行数」对照 `attempt_count`。R483 起服务端 `foreign_module_qid()` 置空，新行不应再出现；再出现先看 module 是否空字符串（空 module 仍信题号）。
+- 历史修复走 `scripts/r483_shizheng_qid_null.py`（`DB_PATH` 指库；默认 dry-run，`--apply --record x.json` 置空并留 `{表:{id:旧 qid}}`，`--restore x.json`）。生产顺序：容器内 `python3 -c "sqlite3.connect('/data/data.db').backup(sqlite3.connect('/data/data.db.rNNN-before'))"` + `quick_check` → `docker cp` 脚本进容器 → dry-run 对表 → apply → re-dry-run 0 → **手动** `POST /api/admin/refresh_stats`（容器内 `python3 urllib` 打 `127.0.0.1:8000`、`X-Admin-Token` 取容器 `$ADMIN_TOKEN`；容器无 curl）让 stale 分支把只剩非行测作答的题统计清 NULL（不手改 `questions`），写前/写后各拉一次这些 qid 的 `attempt_count/correct_ratio/most_wrong` 对照。
+- `refresh_question_stats` 只在 `_stats_refresher` 每 6 h + 启动静默期后跑，且受 `_wait_heavy_task_slot` 门控；改了 answer_log 想立即看外显统计要走 admin 端点，不要等。
+- Caddy 补量脚本若用 `/var/log/caddy/*.log` 必须按 `request.host` 含 `kaogong` 过滤——同宿主还有 `api-video` / `jobs` 站点日志，否则会把别站 UA 当成本站非探针流量。
+
+## R484 经验：时政 `_sz` 源边界要沿「裸 qid 往下传」全路径核，不只看落库
+- R483 修的是 answer_log/mistakes 写入；同页凡读 `this.cur.id` / `q.id` 往别处传的（`redoQid` → ask 页 `pendingQid` → `explain/stream question_id` → 服务端 `questions_by_ids`；`findAskSid` 本地匹配；`askViewUrl` 深链）都要按 `_sz` 守卫核一遍。`askQid()` 只校验正整数，不辨源表，不要指望它拦。服务端 `foreign_module_qid` 只挂在 answer_log/mistakes，`explain/stream` 的 `question_id` 没有 module 上下文可兜底 → 端侧是唯一闸。
+- 盘「按 question_id JOIN/聚合」是否吃别表 id：取 `shizheng_questions` id 集，对每张带 qid 的表做 `qid ∩ 集合` + 文本交叉（撞号≠污染：`mistakes` 有 1 行 `ziliao` qid 41 撞号但文本=行测题）；`interview_sessions.question_id` 属静态 `backend/app/data/interview_questions.json`、`shenlun_answers` 属 `shenlun_questions`，与 `questions` 对不上是正常的，不要当孤儿。`practice_progress` 列是 `psource` 不是 `source`。
+- 生产库 `created_at` 是 epoch **real**，算「某容器起之后」的窗口用 `docker inspect --format '{{.State.StartedAt}}'` 换算，先 `select created_at, typeof(created_at) ... order by id desc limit 1` 核一眼，别手写日期 epoch（本轮首版写成 2025 年把全表算进窗口）。
+- 端侧验「有没有写某个 storage 键」不能事后读：ask 页 onShow 即 `getStorageSync + removeStorageSync` 消费 `redoQid`，点击 1.5 s 后再读必为 null。在点击前 `Storage.prototype.setItem` 包一层记 `window.__setLog`（switchTab 是 SPA 内跳转，window 不换）。uni H5 的 storage 值格式：字符串原样、其它为 `{"type":"number","data":N}`，注入 `practiceLaunch` 也要按此格式写 `{type:'object',data:{...}}`。
+- 时政场次 CDP 入口：先落 `practiceLaunch {kind:'shizheng'}` 再 `goto #/pages/practice/practice`；`.deep`（AI 详解深链）只在选了选项后渲染，选项一点就发 `answer_log`/`mistakes`（记成探针写入，带 `X-Kg-Probe: 1`）。
+- Caddy 统计**只读 `/var/log/caddy/kaogong-origin.zalize.com-access.log`**；同目录还有兄弟站点（storyboard/drama/vidgen/major/job 等）的访问日志，`glob('/var/log/caddy/*.log*')` 会把它们的流量算成 kaogong（R485 首版出现「陌生 IP 1001 请求」假象）。真实出口看 `Cf-Connecting-Ip`，`remote_ip` 是 CF 边缘。
+- 说「服务端会按错 qid 取题喂 LLM」之前先跑 `engine.extract_from_qbank(row, text)`：它按题干前 40 字逐字命中 fail-closed，qid 与题文对不上返回 None（R485 勘误 R484）。`explain/stream` 的缓存命中分支 `meta0` 不回传 `qid`，端侧 `askQid(m.qid) || qid` 的回落是为它保留的，别当 bug 删。
+- 小程序端契约核对：W7 `api/social.ts streamExplain()` 不带 `question_id`、main 小程序无问答页——`explain/stream question_id` 发送方全产品只有 H5 `ask.vue`；`git grep -n <关键词> origin/devin/w7-mp-flat-v3 -- miniapp-native` 只读核即可，不动 W7 文件。
+- 生产库「题文 ∩ 题库」交叉不要写成 SQL `replace(question,...) LIKE ?` 对 `questions`（157k 行）循环——R486 跑 >15 min 不返回；kill 本地 ssh 后宿主上 `sudo python3 -` 子进程仍在跑（`pgrep -af "python3 -"` 查、手动 kill）。正确做法：Python 一次 `select id,question from questions where disabled=0 or disabled is null` 取活跃题干前 12 字建 dict（≈4.5 s），再对目标文本滑窗查 dict；宿主脚本一律 `sudo timeout 200 python3 -`。
+- 判断「R421 qid 直通有没有真跑过」看 `explain_cache.qid`（R423 起才记；缓存命中分支不写）；`ask_cur.items[].qid` 只说明端侧带了 qid，不说明服务端走了直通。
+- H5 页面间跳转全是 `uni.switchTab`/`navigateTo`（SPA 内路由），后续 API 请求的 Caddy `Referer` 永远是**首次进站 URL**（`/`、`/s/<code>`），不能用 referer 证明「从 A 页到 B 页」；只能靠 `growth_events` 埋点。核某入口触达前先 `grep -n "trackEvent('" frontend-uni/src` 确认它有埋点——R487 前 6 个问答入口只有练习页那个没有。给新入口加埋点必须同步 `backend/app/team.py` 白名单（`test_track_whitelist_sync` 会锁），`ref` 里时政题记 `'sz'` 不记数字（撞号）。
+- 小程序流量在 Caddy 里的 Referer 是 `https://servicewechat.com/<appid>/<ver>/page-frame.html`、UA 含 `MiniProgramEnv/android|ios`；appid 与 `miniapp-native/project.config.json` 对得上才归 W7。W7 `explain/stream` 不发 `question_id`，看到 `explain_cache.qid NULL` 先分端再判。
+- `deploy/perf-budget.sh` 出现「Lighthouse 运行失败」时（R488 起）同一行带 `rc=` 与 loadavg、下面跟 lighthouse stderr 末 20 行——先读它分类（interstitial / 超时 / Chrome 起不来 / 协议错误），再决定是否手动复跑 `./deploy/perf-budget.sh /`。R488 前的部署日志（含 R487 那次）stderr 已被 `2>&1 >/dev/null` 吞掉、不可追溯，别回头猜根因。手动复跑必须 `--output-path=/tmp/lh_N.json` 落盘再读 `categories.performance.score` / `audits.*.numericValue` / `environment.benchmarkIndex` / `runWarnings`——R487 口头记的「perf 0.57」没落盘就无法复核。判读以 LCP/CLS 数值 + 83 份部署日志分布（`/` OK 0.90–1.00、FAIL 仅 0.81/0.84/0.86 三次）为准。`CHROME_PATH` 指向不存在文件时 lighthouse 不会失败（chrome-launcher 自行找 Chrome），不能用它构造失败路径；构造失败用 `SITE=https://<不存在域名>`。
+- 生产 Caddy 站点日志轮转文件名是 `kaogong-origin.zalize.com-access-<date>.log.gz`（R489）：全历史扫描 glob 用 `/var/log/caddy/kaogong-origin.zalize.com-access*`，写成 `…-access.log*` 只会匹配当前文件、悄悄漏掉轮转前的全部（09-05 18:44Z 前的 `explain/stream` 就在轮转文件里）；仍然禁止 `/var/log/caddy/*.log*`（兄弟站点污染）。查「某入口有没有人点过」先 `select event,probe,count(*) from growth_events where event like '%<name>%' group by event,probe`（全表、分 probe），再用 `X-Kg-Probe: 1` 拉当前 bundle 各分包 grep 事件名确认埋点确实在线上，两步都 0 才谈「未触达」；`error_reason` 列在 `mistakes` 不在 `answer_log`。
+- 发版前先 `pgrep -af "compose up -d --build"`（含 cwd `ls -l /proc/<pid>/cwd`）——同宿主 `/opt/SoftCopyrightAgent` 等兄弟项目构建期盘可掉 1–5 G（R482 曾到 0 B）；等它退出、`docker ps` 里兄弟容器 Up 后再跑 `deploy_h5.sh`。
+- 数「某功能有几个入口」不要按页面数、要按**调用点**数（R490）：`book.vue` 复习态 `askFromReview()` 与列表展开卡 `redo(m)` 是两个问答入口、埋点各自独立，R487/R489 按页数成「6 入口」漏了后者，排除法结论随之错。可靠做法：`grep -n "uni.switchTab({ url: '/pages/ask/ask' })"`（或目标路由）列全调用点，逐个核方法体有无 `trackEvent`；已加源锁「所有写 `redoQid` 的方法体必有 `*_ask_click`」。给自然用户归属 SPA 内入口时用「同一秒的伴随 API 指纹」：列表展开卡 = `/api/attempts`+`/api/notes?…question_id`+`/api/comments/count` 三请求同秒（`/api/attempts` 全 book.vue 只在 `toggleCard`），复习态无 `/api/attempts`；再看两秒内有无 `POST /api/track`——有埋点的入口必有，没有就是无埋点那个。
+- 审「列表 + 当前态」类功能（问答历史 sheet / 错题本筛选 / 收藏夹）必跑一条**「删的就是正在看的那条 → 再做会触发归档/保存的操作（新对话/切换/退出）」**用例（R491）：只删非当前项看不出 `archiveCurrent()` 类回写复活；判定看本机列表 + 有没有多出 `POST /api/ask/sessions`。历史 sheet 的 `.rec-row`/`.rec-brief` 与结果区「最近讲解」同名，选择器要限定 `.sheet .rec-row`、删除按钮用行内 `.rec-del`（别按 `.nth(k)` 数全页）；修后「新对话」按钮随 `results` 清空而消失，脚本要按是否存在分流。
+- 改前后同一脚本对照：`frontend-uni/dist/build/h5` 直接 `python3 -m http.server <port>` 起来、`ctx.route('**/api/**')` 全 mock/abort 后跑同一 CDP 脚本（`R491_BASE=http://localhost:<port>`），H5 hash 路由不需要后端；发版后再对生产跑一遍即三点对照，0 库写入 0 LLM。
+- 源站 Caddy 日志按探针网段判身份要取 `Cf-Connecting-Ip` 头，`request.remote_ip` 是 Cloudflare 边缘 IP（104.23.* / 172.68.*），按它判网段全部非命中会把探针算成真人（R491 首版）。
+- 审「一次请求 → 结果缓存在页面实例」类 AI 面板（错题本 AI 分析 / 教练建议 / 周报点评）必跑一条**「成功后关闭 → 让输入数据变化（切 tab 回来 `onShow → load()`）→ 重开」**用例（R492）：tab 页 `switchTab` 不销毁实例，`if (this.aiHtml && retry !== true) return` 这类成功缓存会把结果冻结到整页 reload；判定看「重开 0 次新请求」+ 结果态 DOM 里有没有能带 `retry=true` 的按钮。给刷新入口时 catch 要分叉（已有结果 → toast 保留旧结果；无结果 → 失败态），否则 `v-else-if="aiErr"` 会盖住旧结果且重开也回不来。
+- AI 面板 CDP 审计不造 LLM 流量的做法（R492 `~/r492_ai.py`）：`ctx.route('**/api/**')` 里对 `POST /api/mistakes/analysis` 按模式 `fulfill`（`ok` 短 Markdown / `fail` 502 `{detail}` / `empty` `{"analysis":"   "}` / `nopending` 后端确定性文案 / `long` 14 段 / `hang` 不应答），`GET /api/mistakes?` 回本地占位错题（`id 9000xx`、`question_id 0`），其它非 GET abort；所有 analysis 调用连同模式与相对时刻记进 `calls[]`，每段用 `calls[n:]` 切片断言次数。改后 Caddy 窗口 `non-probe non-bot 0` + 探针 POST 仅 track 可证生产后端 0 次 analysis。
+- `mistakes` 表**没有 `probe` 列**（探针归因只在 `answer_log`/`growth_events`/`exam_attempts`），写 `mistakes where probe=0` 直接 `no such column`；按 uid 分探针要 JOIN `answer_log` 或按 uid 前缀（`uprobe*`、`umr4*`、`test-r*`）排除。任何生产 SQL 先 `pragma table_info(<表>)`。
+- `~/r4xx_post.sh` 类补量脚本是**远端 payload**（`ssh … bash -s < 脚本`），直接本机 `bash` 会对本机 docker 报 `no such object: deploy-kaogong-1`、`df` 读到本机盘（R492 误跑一次）——看到 `70G`/`load 0.1x` 这种与生产量级不符的数先怀疑跑错机器。
+- Playwright 点 `.mask` 关闭弹层要指定 `position={x:20,y:120}` 之类在页头以下、sheet 以上的点，默认中心点会落到 `.uni-page-head`/sheet 上被 `intercepts pointer events` 卡 30 s（R492）；先 `elementFromPoint(20,120)` 核该点 className 是 `mask` 再点。
+- 审「作答完成 → 服务端记成绩 → 外显」类页面（每日一练完成态 / PK 结果 / 模考报告）必跑三条**失败路径**用例（R493）：① 提交接口 5xx → 完成页有没有**可见**的失败态与当页重试入口（改前 `v-if="dailyStats"` 让整行消失、toast 在提交前就报「成功」，用户无从知道没上传）；② 提交挂起 → 直接回首页 → 补投成功后首页外显是否**首次 onShow 即刷新**（`loadDailySet()` 与 `flushDailySubmit()` 并发，靠「再切一次页」才对是竞态）；③ 依赖成绩的分享文案在失败态是否回落成别的场次文案。重试实现要重投 storage 里的 pending payload，不要按当前页面状态重新拼装（页面可能已被「再来一组」改写）；榜/附属请求失败不要算成提交失败。
+- 每日一练 CDP 用例（`~/r493_daily.py`）：`ctx.route('**/api/**')` 对 `GET /api/daily_set` 回 10 题假数据（`id 9100xx`、日期 = `new Date(Date.now()+8*3600e3).toISOString().slice(0,10)` 北京日，往期用旧日期验「不提交」），`POST /api/daily_set/submit` 按模式 fulfill（`ok`/`fail` 503/`already`/`first` `beat_pct null`/挂起后放行），`GET /api/daily_set/board` 回 10 行含 20 字长昵称；其它非 GET abort。入口写 `practiceLaunch {type:'object',data:{kind:'daily'}}` 再 `goto #/pages/practice/practice`。uni H5 按钮是 `uni-button` 不是 `button`（`.card.done uni-button`）；剪贴板 hook 必须在首个 page 创建前 `add_init_script`；该 context 下 TabBar 高度量到 0，375 让位只能按「最后按钮 bottom < 视口高」判、真机未核。
+- 非探针 `answer_log` 增量出现时先看**节奏**再说话：按 uid 列 `created_at` 相邻间隔与 `picked`，资料分析 1–2 s/题、同材料 5 题全同选项 = 点过不是做过；再用 Caddy 同分钟另一端（小程序 UA / 不同出口）是否同城同时段判「同一人两端点测」——只能写成推断。probe=0 有写入 ≠ 真人在学；`daily_set_entries`/`shared_answers`/`pk` 等「进阶闭环」表有没有跟着长才是下一层证据。发版重启窗口要核 Caddy 里窗口前后最近请求时刻，证明「无人受影响」。
+- 审「提示条 / nudge / banner」类漏斗（完成页登录 nudge、推送 nudge、到期复习条）先列**四类出口**各有没有埋点（R494）：显示 / 主 CTA 成功 / 主 CTA 失败（权限拒绝、订阅抛错各一路）/ ✕ 关闭；只有 `show` + 成功事件时，生产「show 后 0 行」无法区分「没看见」「关掉了」「点了被拒」「点了失败」，先补埋点再谈产品结论——不要因为 0 行就改阈值/文案。所有 `trackEvent('<x>_nudge_*')` 事件名必须 ⊆ `team.py` `/api/track` 白名单（R380 热修教训），源锁用全文件 regex 收集事件名集合逐个断言。
+- 完成页 nudge CDP 用例（`~/r494_nudge.py <375|1440> <both|login|pushok|pushdeny|pushfail>`，`R494_BASE` 可指本地 dist）：seed uni storage **必须**用 `{type:'object',data:{...}}` 包裹格式，裸 JSON 会让 `loadPStats()` 读 `byModule` 抛 `TypeError`、登录 nudge 不出现（首版只见两卡是脚本缺陷不是产品缺陷）；`pstats.byModule` 合计 ≥30 题才满足 `loginNudgeN`；推送三态用 `add_init_script` stub `Notification.requestPermission` / `PushManager.prototype.subscribe`；mock `GET /api/push/pubkey` 回任意 base64url、`POST /api/push/subscribe` 200，`POST /api/track` 记 `events[]`；学习类非 GET abort。本地 `python3 -m http.server` 起 dist 时 `/sw.js` 404（生产由 `main.py` 路由供 `static/sw.js`）→ `serviceWorker.ready` 永不 resolve、推送 nudge 不出现，`ln -sf static/sw.js dist/build/h5/sw.js` 后正常（dist 不入库）。
+- `pkill -f <脚本名>` 会连带杀掉命令行里含该名字的当前 shell 本身（R494：`pkill -f r494_hostwait.sh; …deploy_h5.sh` 一行，deploy 根本没起来、日志文件不存在）——kill 与后续命令分两次调用，或用 `pgrep -f` 拿 pid 再 `kill`。
+- `deploy_h5.sh` 4-pre 让行只等 300 s 且「超时不阻塞」；宿主 `/` avail 掉到 <500 M（R494 见 41 M）时不要让它超时放行——`compose up --build` 落新镜像层会失败、SQLite WAL 扩页也会失败。此时本机 `pkill -f deploy/deploy_h5.sh`（4-pre 尚在本机轮询、远端未动），另起只读轮询（`~/r494_hostwait2.sh`：无兄弟 `docker (compose )?(build|up)|pnpm install` 且 avail ≥1.5 G 才 READY）再重跑；期间只核 `deploy-kaogong-1` healthy + 探针 `POST /api/track` 200 + WAL 字节不变，不删任何东西。
+- 发版后探针核验 `/api/track` 白名单要打**边缘域** `https://kaogong.zalize.com`；直打 `kaogong-origin.zalize.com` 会因无边缘头被 R388 规则 403（R494 首跑 4 条全 403 误以为回归）。`--skip-build` 的 5/6 bundle 首查看到旧 hash 是 Pages 传播窗口、脚本自带 5 s 重试，不要手动重发。
+- 审「成功后离开当前页」的 H5 页面（登录 / 注册 / 设置类，R495）必跑一条**「刷新或深链直达该页（页面栈仅 1 页）→ 成功」**用例：uni H5 的 `uni.navigateBack()` 只是 `history.go(-1)` 且**永不进 `fail` 回调**，`navigateBack({ fail: () => switchTab(...) })` 在页面栈 1 页时不兜底、页面原地不动；正确写法是 `getCurrentPages().length > 1 ? navigateBack : switchTab`（R379 `practice.vue` 先例）。判定看成功 toast 后 +1.2 s 的 `location.hash` 是否还是本页。注意 Playwright `page.evaluate` 里 `getCurrentPages`/`uni` 都是 `undefined`（只在 bundle 作用域），不能在 evaluate 里调 `uni.navigateTo` 伪造页面栈，用 `goto '#/...'` 直达 vs 从别的页点进去两条路径对照即可。
+- 登录页 CDP 用例（`~/r495_login.py <375|1440> <scen>`，`R495_BASE` 可指本地 dist）：`ctx.route('**/api/**')` 对 `POST /api/auth/login|register|sso` 按场景 fulfill 200 `{token,user:{uid}}` / 401 `{detail}`，`POST /api/auth/merge_anon` 200 或 503，`GET /api/auth/me` 200，其它非 GET abort → 0 生产账号；nudge 路径先 seed `pstats {type:'object',data:{byModule:…≥30}}` 做完 10 题再点「去登录 ›」，`fresh*` 直接 `goto #/pkgA/user/login`。完成页收 nudge 卡**按 `.duenudge-t` 文本判**，推送 nudge 复用 `.loginnudge` class、按 class 数会把它当成登录 nudge 残留（R495 首判误判）。所有「附属操作失败不阻断主流程」的 catch（`mergeAnon`、榜、订阅）都要核**有没有用户可见反馈**，空 catch = 用户以为成了。mock token 跳到真实页后会对生产发只读 GET 得 403（服务端拒非本人 token），是 harness 噪音不是产品错误；核 Caddy `auth POST` 计数发版前后一致证明 0 账号写入。
+- 审「退出登录」类路径（个人页 / 统计页 / 设置页，R496）必跑一条**「登录态有数据 → 退出确认 → 立刻读屏，不切页」**用例：把账号域接口（`profile`/`checkin/badges`/`checkin/summary`/`inbox/unread`/`heatmap`/`stats`）mock 成非 0 假数据，退出后断言打卡天数/徽章/热力图/未读/KPI **立即**归匿名态，再切一次 tab 对照 `after_reshow`；`doLogout()` 里「挑几个 loader 重拉」几乎必漏（R496 两页都漏），修法是把 `onShow` 的账号相关拉取抽成一个 `refreshAccountData()`、退出先清字段再整套调它。顺带把 `calls_after` 与 `onShow` 首次请求集合做差，差集就是漏的 loader。
+- 退出 / 重登 CDP 用例（`~/r496_logout.py <375|1440> <profile|stats|relogin>`，`R496_BASE` 可指本地 dist）：CDP 页面里 `uni.switchTab` **不存在**，切 tab 用 `.uni-tabbar__item` 按文本（`我的`/`统计`/`刷题`）点击；`uni.showModal` 在 H5 是 DOM `.uni-modal`，按钮文本 `确定`；seed `authUser` 用 `{type:'object',data:{…}}` 包裹；stats 页 mock `growth` 必须带 `weeks: []`（模板读 `growth.weeks.length`，缺了整页 `TypeError` 是 mock 噪音不是产品错）。「再合并」断言 = 退出后 `anonUid === deviceAnonUid`，再登录后 `POST /api/auth/merge_anon` body `anon_uid` 等于它。
+- 发版后「非探针非 bot」计数 >0 先按 `Cf-Connecting-Ip` 对本机出口（`curl api.ipify.org`）再说话：部署脚本 6b Lighthouse 移动仿真 UA 是 `Mozilla/5.0 (Linux; Android 11; moto g power (2022)) …`，**不含** `Lighthouse`/`HeadlessChrome` 字样，按 UA 的 bot 规则截不住，会以新鲜 profile 的匿名 uid 打一串 `home_bundle/daily_set/questions` GET（R496 13 条全是它 + CDP `/sw.js`）；时刻与 `deploy.log` 6b 段对齐即可归属。
+- 审「登录态失效」类路径（R497）要分**两条**：显式退出（`doLogout`）和 `api-policy` 自动清态（401 `未登录或登录已过期` / 403 `无权访问该账号数据` → `clearAuth()` → `$emit('authChanged')`）。R496 只修了前者；凡是持有账号派生字段的页面必须监听 `authChanged` 并按 uid 比对 reset。用例构造要点：**清态必须发生在 `onShow` 之外**——「切回页面时 403」会被 `onShow` 顺手刷新掉而看不到命中；要用「页面停留中做页内动作（如个人页点每日目标 `POST /api/profile`）撞 403」或「`onShow` 拉取之后才返回的接口（`comments/inbox` 401）」，然后**不切页**读屏、再 reshow 对照。`/api/auth/*` 的 401 必须单独跑一条确认**不**清态（登录页自己的合并失败 toast）。
+- `authLogout()` 失败路径直接 mock `POST /api/auth/logout` 503：预期本机仍清态 + 「已退出登录」，`calls_after` 按 `deviceAnonUid` 重拉；`errs` 里 mock 401/403/503 的 `Failed to load resource` 是 harness 噪音不是产品错。
+- 设置页 `pkgA/settings/reminders`（`~/r497_settings.py <375|1440> <auth|anon> [grant]`）：`<picker>` 在 H5 的可点区就是其唯一子元素的盒子，量 `.time-v` 的 `getBoundingClientRect` 而不是 `.set-row`；`Notification.permission` 用 `Object.defineProperty(Notification,'permission',{get})` 注入 `default|denied|granted` 三态，`granted` 态还要 stub `navigator.serviceWorker.ready` + `PushManager.subscribe`（synthetic，失败 toast 不算产品缺陷）；该页状态全在本机 storage（`remindOn/remindTime`），登录态/匿名态预期一屏相同。
+- pyright 门必须 `cd backend && npx -y pyright app`；仓库根目录跑会读不到 `backend/pyrightconfig.json` 报 100+ 假错。
+- 「哪些页要监听 `authChanged`」一次全仓盘点法（R498）：`pages.json` 取 tabBar 列表（tab 页不销毁、最易留屏）+ `grep -l "authChanged" src/pages src/pkgA` 求差集，再对差集页 `grep "anonUid()"` 列出账号派生字段与**页内写请求**（`POST/PATCH/DELETE`）——只有「挂载中能撞 401/403 的写请求」才能构造出 `onShow` 之外的清态；`navigateTo` 叶子页进入即按当前 uid 拉取、无写请求的直接登记不修。首页/错题本用例：`~/r498_expire.py <375|1440> inpage_home|inpage_book`——首页点计划 focus chip 撞 `POST user_state` 403，错题本走卡片「更多」sheet 点「标为已掌握」撞 `PATCH mistakes/:id` 403，然后不切页读屏；`expire_home|expire_book`（切回时 403）改前即匿名态、不能暴露命中。
+- 审错题本类写操作要同时看 `calls_after` 里有没有 `POST /api/monitor/report unhandledrejection: …`：`await request()` 无 catch 时 policy 抛出的错会被 R391 全局 handler 打到监控、用户侧只剩 policy toast——这是「失败无反馈 + 监控噪音」双缺陷，修法是 catch → toast 并 return，不要只在 monitor 侧过滤。
+- 错题本 mock 假错题要给 `id`（PATCH/DELETE 路径用）、`module/tag3/created_at/next_review`（卡片头与「明天复习」标签）与 `mastered=0`；`/api/review` 给 `due/total` 才有「今日待复习 N 道」；`ask` 页的会话历史是设备本地 `askSessions` + 远端合并不按 uid 分键，账号失效后仍显示是既有设计，不要登记为留屏缺陷。
+- 审「身份切换」类路径除了 R496/R497 的「立刻读屏」还要跑一条**飞行竞态**用例（R499）：把一个账号 uid 的 GET 用 `asyncio.Future` 在 `ctx.route` 里**挂起**（其它接口正常回），做退出/换号，等清态落地并读屏后再 `set_result` 释放旧回包，**不切页**再读屏 + 读 storage + 看随后有没有 POST。`authChanged → resetAccountState()` 只清已到手字段，挡不住后到的回包；判定看 `after_release` 是否回到账号数值（个人页 `growth.total.n` 会改写 `累计做题`），ask 页看 `askCurSid/askCurSession/askSessions` 是否落盘、`POST /api/ask/cur` 的 `uid` 是否是新身份却携带旧 items。修法放在 `request()` 回包层（`isStaleUidResponse(path, anonUid)`）一处覆盖所有带 uid 的 GET，比逐页加请求代次可靠；守卫要在 `snapSave` 之前且抛错文案不含「网络/超时」字样（否则被 `isNetErr` 当断网走快照回落）。
+- 竞态 harness（`~/r499_race.py <375|1440> <profile_race|ask_race>`，`R499_BASE` 可指本地 dist）：`HOLD = {'/api/growth': Future, ...}` 只对 `uid=账号` 的 GET 挂起、匿名 uid 立即回；ask 场景 `onShow` 会同时发 `ask/cur`+`ask/sessions`，都挂起再切「我的」退出；释放后要等 ≥2 s 再读（`pushCurSession()` 1.5 s debounce）。401/403 自动清态**不要**构造「旧 uid 200 后到」——同一失效 token 的兄弟请求同样被 `guard_account_uid` 403，忠实触发面只有显式退出/换号。
+- 发版后「非探针非 bot」出现 `GET / 403` 且 UA 像安卓 webview（`redroid`、`Build/...; wv`）时先看该行有没有 `Cf-Connecting-Ip`/`Cf-Ray`：都没有就是直打源站被 R388 规则 403 的扫描器，不算真人也不算回归。
+- 给 `/api/exam/papers`（或任何按 qid 回表的聚合）加字段前先在生产库副本 `mode=ro` 跑 `EXPLAIN QUERY PLAN`（R500）：`questions` 宽行表上 `SELECT id, source, is_real … WHERE disabled=0 AND id IN (…)` 走 `COVERING INDEX idx_q_active_src`，多 SELECT 一列（如 `module`）就退化成 `INTEGER PRIMARY KEY (rowid=?)` 回宽行表（R383 冷读 85 MB 回归）；正确做法是按已有覆盖索引**分趟查**（`SELECT id, module` 单独走 `idx_q_disabled_module`），IN 段可放大到 30,000（该索引每段都整段扫）。生产库只读基准脚本模板 `~/r500_appq.sh`（复现聚合形状 + plan + 计时 + 分布）。
+- 卷库卷卡新增文本行的生产读数（`~/r500_papers_ui.py <375|1440> [BASE]`）：读 `.pmods` 的 `text/h/w/fontSize`、与 `.pmeta` 的 `top/bottom` 比对判「独占一行」、`width == .paper-meta` 宽判整行；`over.bad` 里 `.fchip` 是 `<scroll-view scroll-x>` 内筛选 chip，`docSW == cw` 即非溢出，不要登记。改后 API 用 `-w '%{time_total}'` 跑 3 次与改前同量级即可，不必再进容器。
+- 后端 pytest 造题 fixture：`questions.question` 有 UNIQUE 约束，两用例共用一个 seed helper 必须把用例名/tag 拼进题干；「未知模块」不要用 `shenlun`（`test_shenlun_hub` 靠共享测试库里有没有申论题决定渲染分支，会互扰），用 `mianshi` 这类既不在 `MODULE_ORDER` 也无专属路由的值。
+- 「兄弟 docker 构建」预检不要用 `ps aux | grep -c "docker build\|pnpm"` 的计数（`grep` 自身与 `bash -c` 包装会自匹配出 2–3），改成列进程行人工核（`ps -eo pid,etime,cmd | grep -E '[d]ocker (build|compose)|[p]npm'`），0 行才放行。
+- SOP-10 四维审计的「R410 后未整页过审页面」一次算全：`for f in pages/*/*.vue pkgA/*/*.vue`，`git log <R410 sha>..HEAD -- $f | wc -l` × `grep -l "<page path>" docs/iter/round-3/r4*.md | wc -l`，`auditdocs=0` 的再人工核一次（`pkgA/exam/exam` 因文档写「模考页/exam.vue」漏匹配、实为 R414/R415/R470 已审）。对标竞品只能核**未登录公开面**（粉笔点卷即登录墙），报告里必须写明内部作答/错题/复习行为未核。
+- 非探针 `GET / 403` 归属再加一条：看 `request.host`——`kaogong-origin.zalize.com`（源站域）+ 无 `Cf-Ray` = 直连源站的扫描器（R388 规则），真人只会走 `kaogong.zalize.com` 经边缘。
+- 生产只读盘点脚本（Caddy 全历史 + `mode=ro` SQLite）要在 **VPS 上**跑：`SSHPASS="$TICKETS_VPS_SSH_CREDENTIAL" sshpass -e ssh "$TICKETS_VPS_SSH_USER@$TICKETS_VPS_SSH_HOST" bash -s < script.sh`（R501：本机跑会报 `no such object: deploy-kaogong-1` / `unable to open database file`）。Caddy 源站日志只见 API 与 SSR，H5 静态分包在 Pages 边缘，不能从源站日志推「分包加载 0」。
+- 模考漏斗一手口径：`exam_attempts.probe=0` 行 = 真人 start；`exam_progress` 联表 `started_at + duration_min*60 > now` 才是可续考；超时行服务端 `/api/exam/resume` 返回 `{}`（size 2）——按 Caddy `size` 字段区分空/有载荷即可，不用进库。
+- 学习链路（练习→错题→复习→SRS）生产对账口径（R502）：写入侧按「Caddy 非探针 `POST answer_log`/`POST mistakes`/`POST review/{mid}`/`PATCH mistakes/{mid}` 次数 ↔ 对应表行数」1:1 对；SRS 侧 `review_log` 是唯一事件表（两条推进入口都写它，`correct` 列区分），`mistakes.mastered=1 且 review_count=0` = 手动 PATCH 标掌握不是 SRS 产生；答错分支校验 `next_review == cn_day_start(事件时刻)+86400`。`review_log` 里 `uid` 不在 `answer_log` 的行是历史内部账号。
+- 判「probe=0 作答是否学习行为」看节奏：相邻 `answer_log.created_at` 间隔 1–4 s（尤其资料分析材料题）是巡览点击；同 uid 在 `growth_events` 出现 `probe=1` 行、或出口 IP 与已归内部的 /24 同段，都要写成「疑内部设备」而不是真人。
+- 生产 `mistakes` 表无 `submodule`/`paper_id`/`user_answer` 之外的想当然列（有 `user_answer`，无 `note`），`explain_cache` 无 `id`；写盘点 SQL 前先 `pragma table_info(<table>)` 一次，别按本地迁移后的 schema 猜（R502 两次因猜列名重跑）。
+- 时政（`shizheng/daily`）错题 `question_id` 为 NULL 是 R483 设计（`foreign_module_qid()`），盘点「answer_log 答对命中错题」时这类行天然缺席，不算断点。
+- 首页「无数据冷启动」审法（R503，`~/r503_home_cold.py <375|1440>`）：新 CDP context 不带 storage、不注登录态，前端自生匿名 uid 即是「从未有数据」用户；除几何外要把**每个任务/进度行的文案与其数据前提**对起来（`✓ 今日已清零` 必须有 `mistakes_total>0` 支撑），「0 数据却已完成 N/M」是语义命中，几何读数发现不了。
+- 给 `daily_plan`/`home_bundle.plan` 加字段后，前端 computed 要给「老快照无该字段」留旧口径分支（`t == null`）——`snapSave` 会把发版前的回包回放到新 bundle。
+- 首页「有数据态」对账法（R504，`~/r504_home_data.py <375|1440> [uid]`）：用库里已有数据的 probe=0 uid 只发 GET（`anonUid` 注入 storage，非 GET `/api/**` 全 abort），先在 VPS 上 `mode=ro` 取 DB 一手（今日/累计 `answer_log`、学习日、`mistakes` total/open/due、profile），再取 `home_bundle` 回包存 json，最后把 hero/任务卡/到期条/计划卡每行文案与两者三向对账；同一屏两个「距考试」口径（`summary.days_to_exam` 对已过回 `None` vs `plan_today.days_left` 回负数）要一起看，负数/0/null 三态各造一个用例。
+- 合 main 撞 W5 设计系统 token 冲突（`var(--fs-*)`/`--ok-strong` 等）时：`--fs-caption`=12px（=24rpx@375）、`--fs-sub`=13px、`--fs-body`=15px 与本分支 ≥24rpx 下限等价，字号/颜色取 token 侧，热区结构（`min-height: 40px`、`inline-flex`、负 margin、`flex-wrap`）保留本分支；改完跑 `npm run lint`（含 `lint:tokens` 的 `build.mjs --check` + `lint-pages`）再 vitest。
+- 首页计划表单已过日期审法（R505，`~/r505_setup_sheet.py <375|1440> <uid>`）：用 profile `exam_date` 已过的 uid 只发 GET，点 `.plan-edit` 后读第 1 步 `.pf-date` 文案/class/颜色、打开 picker 读初值列后取消、点 `.sheet-cta` 看标题是否仍 `1/3` + `.uni-toast` 文案；不点第 3 步 CTA（非 GET `/api/**` 全 abort）。「首页提示 → 编辑」这类引导要**沿着提示走到落点**再判，卡头有提示不等于表单能引导。
+- 前端「今天」一律用东八区 `cnTodayStr()`（`plan-days-label.js`），别用 `fmtDateStr(Date.now())`/`new Date().toISOString()`：服务端 `days_left`/`cn_day_start` 是东八区，harness 浏览器是 UTC，16:00–24:00Z 窗口两者差一天，改后复验会「未触发」（R505a）。用例要造 15:59Z/16:00Z 两个边界。
+- 计划表单第 2/3 步 + 生成链路审法（R506，`~/r506_setup_form.py <375|1440> <uid> [BASE]`）：uni `picker` 在 CDP 合成拖动下列 UI 会动但**不触发 `change`**（Vue 状态不变），该次读数作废——要过第 1 步用 `vm.pf.exam_date='YYYY-MM-DD'` 浏览器内存注入；「生成」链路只 mock `POST /api/profile`（回 `{ok, profile:body}`），其余 GET 真打生产，读 `getsAfterGenerate` 里 `plan/today` 200 + sheet 关 + toast + 卡片重绘；报告里写明这是受控链路，不是生产生成验证。sheet 关闭判定要沿父链看 `display/visibility/opacity`，600 ms 时可能还在关闭动画中，以 3 s 读数为准。传 `BASE=http://localhost:PORT` 可先审本地 dist（GET 转发生产只读），用于「main 合入后形态是否已变」的对照。
+- W7 小程序端「同形态」核法：H5 每修一处首页/表单口径（R503 `mistakes_total`、R504 `days_left<0`、R505b 已过日期拦截），到 `miniapp-native/miniprogram/pages/home/home.{ts,wxml}` 与 `api/grow.ts` 契约逐项对；「今天」用既有 `utils/cn-date.ts cnDayKey()`；小程序改动本机只能过 `npm run typecheck`/`npm run lint` + vitest 源锁（文案里的全角空格写 `\u3000` 转义，否则 eslint `no-irregular-whitespace`），运行时形态未核要如实写。
+- 溢出扫描 `bad` 里 `left ≈ -99xxx` 的匿名 `DIV` 若父链是 `uni-resize-sensor`（`visibility: hidden`、在收起的 `wd-popup` 内），是 uni picker 内部元素，不算溢出；以 `docSW == cw` 为准。
 
 ## 小程序（原生）v3 底部/导航栏走查新经验
 - 自定义 tabbar 是 fixed 覆盖层（模拟器 `windowHeight === screenHeight`），每个 tab 页都要滚到最底看最后一行是否被遮；页面底部应统一用 `calc(var(--tab-h) + var(--sp-24) + env(safe-area-inset-bottom))`。若页内还有第二个 fixed 底栏（如错题本批量态 `.batchbar`），页面在该态下需额外加底栏高度的 padding，否则内容不足一屏时最后一行永久被底栏遮住且无法滚出。

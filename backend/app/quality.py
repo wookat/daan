@@ -222,8 +222,21 @@ QUANT_MODULES = ("shuliang", "ziliao")
 _FD_COLON_RE = re.compile(r"：[。，、；]")
 _FD_ENUM_RE = re.compile(r"、、|、，|，、|、。")
 _FD_QUANT_RE = re.compile(r"，，|：。|：，|；。|(所求项|所求|括号内|未知项|下一项)(应)?(为|是)[。，；]")
+# 「…为，」「解得。」「则有，」：数值/表达式位被抠空。排除 因为/认为/作为/成为… 等词尾的「为」，「可得，」是正常承接不算。
+_FD_VALUE_RE = re.compile(r"(?<![因认以作称视成分改定选记行较更尤甚人])为[，。；]|(解得|则有|列式得|列式为|化简得|化简为|整理得|联立)[，。；]")
+# 「解得 x＝。」「：＝21」「××＝576」「（1－）」「，。」：等号/运算符两侧或括号内表达式被抠空、公式位只剩相撞的句读。
+# `+，`/`＝）` 不算（「11＋，」是余数记法、「(…=）107 万元」值在括号外），`。。` 单独出现是笔误（261638）不算。
+_FD_OP_RE = re.compile(
+    r"[＝=][，。；]|[，。；：（][＝=]|[×÷＋+－][×÷＝=]|[（(][^）)]{0,3}[×÷＋+－＝=][）)]|[，。；][，；]|[，；]。"
+)
 FOOTER_PAGE_RE = re.compile(r"\s*第\s*\d{1,3}\s*页\s*共\s*\d{1,3}\s*页\s*")
 FOOTER_SRC_RE = re.compile(r"\s*-\s*\d{1,3}\s*-\s*\d{4}\s*年[^，。；：、《》]{0,14}(?:《[^》]{1,12}》)?真题(?:卷)?(?:（[^）]{0,20}）)?\s*")
+# 试卷分节标题「二. 数量关系：在这部分试题中…」「第二部分言语理解与表达（共 40 题…）请开始答题：」串到上一题的
+# 末选项/解析尾部（PDF 切题时把下一节标题并进了前一题），从标题起裁到字段/JSON 值末尾；可带 `~ 12 ~` 页码前缀。
+FOOTER_SECTION_RE = re.compile(
+    r"\s*(?:~\s*\d{1,3}\s*~\s*)?(?:第\s*[一二三四五六七八九十]\s*部分|[一二三四五六七八九十]\s*[.、．])\s*"
+    r"(?:数量关系|言语理解与表达|言语理解|判断推理|资料分析|常识判断)[^\"]*(?=$|\")"
+)
 
 
 def formula_dropped(row: dict) -> str | None:
@@ -235,17 +248,23 @@ def formula_dropped(row: dict) -> str | None:
         return "colon"
     if _FD_ENUM_RE.search(e) and (row.get("module") or "") != "yanyu":
         return "enum"
-    if (row.get("module") or "") in QUANT_MODULES and _FD_QUANT_RE.search(e):
-        return "quant"
+    if (row.get("module") or "") in QUANT_MODULES:
+        if _FD_QUANT_RE.search(e):
+            return "quant"
+        if _FD_VALUE_RE.search(e):
+            return "value"
+        if _FD_OP_RE.search(e):
+            return "op"
     return None
 
 
 def strip_page_footers(text: str | None) -> str:
-    """去掉 PDF 页脚「第 N 页共 M 页」/「-N- 20XX年…真题」串进正文的片段；无命中原样返回。"""
+    """去掉 PDF 页脚「第 N 页共 M 页」/「-N- 20XX年…真题」及串到字段尾部的下一节标题「二. 数量关系：…」；无命中原样返回。"""
     if not text:
         return text or ""
     out = FOOTER_PAGE_RE.sub("", text)
     out = FOOTER_SRC_RE.sub("", out)
+    out = FOOTER_SECTION_RE.sub("", out)
     return out.strip() if out != text else text
 
 

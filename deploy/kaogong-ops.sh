@@ -37,7 +37,8 @@ if [ -f "$ENV_FILE" ]; then
     remote_size=$(rclone size --json "r2:$BUCKET_PREFIX/$(basename "$F")" | python3 -c 'import json,sys;print(json.load(sys.stdin)["bytes"])')
     if [ "$remote_size" = "$size" ]; then
       echo "$TS r2 upload ok $(basename "$F") ($size bytes)" >> "$LOG"
-      rclone delete --min-age 30d "r2:$BUCKET_PREFIX/" 2>/dev/null
+      # 只清顶层每日备份；archive/ 是永久手工快照，rclone delete 默认递归会把它一并按 30 天清掉
+      rclone delete --min-age 30d --max-depth 1 --include "data-*.db.gz" "r2:$BUCKET_PREFIX/" 2>/dev/null
     else
       echo "$TS r2 upload SIZE MISMATCH $(basename "$F") ($remote_size != $size)" >> "$LOG"
     fi
@@ -86,6 +87,12 @@ fi
 PCT=$(df --output=pcent / | tail -1 | tr -dc '0-9')
 if [ "${PCT:-0}" -ge 90 ]; then
   echo "$TS DISK HIGH ${PCT}% used on /" >> "$LOG"
+fi
+# 1c''. 卷内手工快照巡检：/data 只该有 data.db(+wal/shm)；手工全库快照须放 R2 archive/ 或宿主 pre-*.db.gz（3 天清理）
+SNAP=$(docker exec deploy-kaogong-1 sh -c "find /data -maxdepth 1 -type f \( -name '*.db*' -o -name '*.gz' \) ! -name 'data.db*' -size +1M -exec ls -l {} + 2>/dev/null" \
+  | awk '{s+=$5; n++; f=f" "$NF} END{if(n) printf "%d file(s) %d MB:%s", n, s/1048576, f}')
+if [ -n "$SNAP" ]; then
+  echo "$TS VOLUME-SNAPSHOT $SNAP (move to r2:$BUCKET_PREFIX/archive/)" >> "$LOG"
 fi
 # 1d. 宿主内存压力巡检：可用内存/交换占用/后端 RSS 每日一行（共享宿主 earlyoom 误杀早发现）
 MEMLINE=$(free -m | awk '/^Mem:/{printf "mem_avail=%sMiB", $7} /^Swap:/{printf " swap_used=%sMiB", $3}')

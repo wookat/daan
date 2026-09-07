@@ -8,7 +8,8 @@ RUN npm run build:h5
 FROM python:3.12-slim
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends fonts-wqy-zenhei fonts-arphic-uming libglib2.0-0 && rm -rf /var/lib/apt/lists/*
-RUN pip install --no-cache-dir fastapi uvicorn httpx python-multipart reportlab pypdf opencv-python-headless numpy pypinyin "pyjwt[crypto]"
+COPY backend/requirements.txt backend/requirements.txt
+RUN pip install --no-cache-dir -r backend/requirements.txt
 COPY backend backend
 COPY frontend frontend
 COPY knowledge knowledge

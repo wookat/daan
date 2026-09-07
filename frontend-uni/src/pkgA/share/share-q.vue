@@ -18,13 +18,20 @@
       <kg-question-card :q="qCard" class="sec">
         <kg-option-group
           :options="optList"
-          :model-value="revealed && myResult ? myResult.picked : picked"
-          :answer="revealed ? d.question.answer : ''"
+          :model-value="optPicked"
+          :answer="revealed ? String(d.question.answer || '').split('') : []"
           :revealed="revealed"
           :readonly="revealed || submitting"
+          :multiple="isMulti"
           @select="pick"
         />
       </kg-question-card>
+      <view v-if="isMulti && !revealed" class="multi-bar">
+        <text class="multi-hint">多选题：选完所有正确项后确认</text>
+        <kg-button variant="primary" size="lg" :disabled="!multiSel.length || submitting" @click="confirmMulti">
+          确认答案{{ multiSel.length ? '（' + multiSel.length + '）' : '' }}
+        </kg-button>
+      </view>
 
       <!-- 作答后 / 分享者：答案与解析 -->
       <template v-if="revealed">
@@ -79,6 +86,7 @@
 <script>
 import { shareDetail, shareAnswer, trackEvent, teamJoin, qShareText, canonicalizeSharePath } from '../../api.js';
 import { MODULES, moduleLabel } from '../../module-meta.js';
+import { togglePickLetter } from '../../exam-excl.js';
 
 const modName = (m) => (MODULES[m] ? moduleLabel(m) : m === 'shenlun' ? '申论' : m || '行测');
 
@@ -90,6 +98,7 @@ export default {
       loading: true,
       errMsg: '',
       picked: '',
+      multiSel: '',
       myResult: null,
       answers: [],
       startTs: 0,
@@ -106,6 +115,9 @@ export default {
     revealed() {
       return !!(this.d && (this.d.is_sharer || this.d.answered || this.myResult));
     },
+    isMulti() {
+      return !!(this.d && this.d.question && this.d.question.multi);
+    },
     modLabel() {
       return modName(this.d && this.d.question.module);
     },
@@ -116,6 +128,10 @@ export default {
     optList() {
       const o = (this.d && this.d.question.options) || {};
       return Object.keys(o).map((k) => ({ key: k, text: String(o[k] == null ? '' : o[k]) }));
+    },
+    optPicked() {
+      const v = this.revealed && this.myResult ? this.myResult.picked : this.isMulti ? this.multiSel : this.picked;
+      return String(v || '').split('');
     },
     nAnsweredText() {
       return `${this.answers.length || this.d.n_answered} 人已作答`;
@@ -159,8 +175,19 @@ export default {
       }
       this.loading = false;
     },
-    async pick(k) {
+    pick(k) {
       if (this.revealed || this.submitting) return;
+      if (this.isMulti) {
+        this.multiSel = togglePickLetter(this.multiSel, k);
+        return;
+      }
+      this.submit(k);
+    },
+    confirmMulti() {
+      if (this.revealed || this.submitting || !this.multiSel) return;
+      this.submit(this.multiSel);
+    },
+    async submit(k) {
       this.picked = k;
       this.submitting = true;
       try {
@@ -246,3 +273,5 @@ export default {
 }
 /* #endif */
 </style>
+.multi-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-12); margin-top: var(--sp-8); }
+.multi-hint { font-size: var(--fs-caption); color: var(--ink-2); }

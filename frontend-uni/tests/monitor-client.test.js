@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { classifyVueError, createErrorReporter, describeRejection, installVueErrorHandler } from '../src/monitor-client.js';
+import { classifyVueError, createErrorReporter, describeRejection, installVueErrorHandler, isMaskedCrossOriginError } from '../src/monitor-client.js';
 import { badgeText, setBookBadge } from '../src/tabbar-badge.js';
 
 describe('createErrorReporter', () => {
@@ -34,6 +34,24 @@ describe('describeRejection', () => {
     const cyc = {};
     cyc.self = cyc;
     expect(describeRejection(cyc)).toBe('[object Object]');
+  });
+});
+
+describe('isMaskedCrossOriginError', () => {
+  it('跨源脚本脱敏错误（"Script error." + 无 filename / error）不上报；带定位信息或其它 message 照常上报', () => {
+    expect(isMaskedCrossOriginError({ message: 'Script error.', filename: '', lineno: 0, colno: 0, error: null })).toBe(true);
+    expect(isMaskedCrossOriginError({ message: 'Script error', filename: '', error: undefined })).toBe(true);
+    expect(isMaskedCrossOriginError({ message: 'Script error.', filename: 'https://kaogong.zalize.com/assets/index-x.js', error: null })).toBe(false);
+    expect(isMaskedCrossOriginError({ message: 'Script error.', filename: '', error: new Error('Script error.') })).toBe(false);
+    expect(isMaskedCrossOriginError({ message: 'Script error. in module', filename: '', error: null })).toBe(false);
+    expect(isMaskedCrossOriginError({ message: "Cannot read properties of undefined (reading 'x')", filename: '', error: null })).toBe(false);
+    expect(isMaskedCrossOriginError(null)).toBe(false);
+    expect(isMaskedCrossOriginError({})).toBe(false);
+  });
+
+  it('main.js 的 window error 监听先过这道闸再上报（源锁）', () => {
+    const src = readFileSync(fileURLToPath(new URL('../src/main.js', import.meta.url)), 'utf8');
+    expect(src).toMatch(/addEventListener\('error', \(e\) => \{\s*if \(isMaskedCrossOriginError\(e\)\) return;/);
   });
 });
 

@@ -77,7 +77,7 @@
                 <text class="mynote-t q-text">{{ it.note }}</text>
               </view>
               <view v-if="it._open" class="detail">
-                <text v-for="(v, k) in it.options" :key="k" class="opt q-text" :class="{ ans: k === it.answer }">{{ k }}. {{ v }}</text>
+                <text v-for="(v, k) in it.options" :key="k" class="opt q-text" :class="{ ans: (it.answer || '').indexOf(k) !== -1 }">{{ k }}. {{ v }}</text>
                 <text class="ansline">正确答案 {{ it.answer }}</text>
                 <text v-if="it.hs_explanation || it.explanation" class="exp q-text">{{ it.hs_explanation || it.explanation }}</text>
                 <view class="ops" @click.stop>

@@ -66,7 +66,7 @@ export default {
 .sheet { width: 100%; box-sizing: border-box; background: var(--card); border-radius: 32rpx 32rpx 0 0; padding: 32rpx 28rpx calc(36rpx + env(safe-area-inset-bottom)); max-height: 76vh; overflow-y: auto; }
 .sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20rpx; }
 .sheet-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
-.sheet-x { font-size: var(--fs-sub); color: var(--ink-2); padding: 8rpx 16rpx; }
+.sheet-x { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; font-size: var(--fs-sub); color: var(--ink-2); margin: -6px -8rpx -6px 0; }
 .info-row { display: flex; align-items: baseline; gap: 20rpx; margin-bottom: 12rpx; }
 .info-k { flex-shrink: 0; font-size: var(--fs-caption); color: var(--ink-2); }
 .info-v { font-size: var(--fs-sub); color: var(--ink); font-weight: 500; }

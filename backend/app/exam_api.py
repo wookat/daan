@@ -68,6 +68,22 @@ def api_paper_info(code: str):
         "created_at": paper.get("created_at"),
     }
 
+def _grade(picked_raw, answer_raw) -> tuple[str, str, str, bool]:
+    """卷库/答题卡/模考统一判分：返回 (picked, correct_ans, status, is_correct)。
+
+    字母均归一（大写、去重、升序）；多选题（answer 多字母）需字母集完全一致才算对；
+    单选题涂多个泡 status='multi'（不记分不落库，与答题卡多涂同义）。"""
+    picked = db.normalize_answer(picked_raw)
+    correct_ans = db.normalize_answer(answer_raw)
+    if not picked:
+        status = "blank"
+    elif len(picked) > 1 and len(correct_ans) <= 1:
+        status = "multi"
+    else:
+        status = "ok"
+    return picked, correct_ans, status, status == "ok" and picked == correct_ans
+
+
 def _mistake_text(q: dict) -> str:
     """错题文本与刷题端同格式（题干+选项），复习时才看得到选项。"""
     opts = q.get("options") or {}
@@ -86,10 +102,7 @@ def _judge_paper(uid: str, paper: dict, picks: dict[int, str], secs: dict[int, i
         q = questions.get(qid)
         if not q:
             continue
-        picked = (picks.get(i + 1) or "").strip().upper()
-        correct_ans = (q.get("answer") or "").strip().upper()[:1]
-        status = "blank" if not picked else ("multi" if len(picked) > 1 else "ok")
-        is_correct = status == "ok" and picked == correct_ans
+        picked, correct_ans, status, is_correct = _grade(picks.get(i + 1), q.get("answer"))
         results.append(
             {
                 "no": i + 1,
@@ -152,7 +165,7 @@ def api_paper_answers(body: dict, request: Request):
     picks: dict[int, str] = {}
     for k, v in raw_picks.items():
         try:
-            picks[int(k)] = str(v or "")[:1]
+            picks[int(k)] = str(v or "")[:8]
         except (TypeError, ValueError):
             continue
     if not picks:
@@ -187,10 +200,7 @@ async def api_scan_sheet(request: Request, uid: str = Form(""), image: UploadFil
         q = questions.get(qid)
         if not q:
             continue
-        picked = rec["picks"].get(slot, "")
-        correct_ans = (q.get("answer") or "").strip().upper()[:1]
-        status = "blank" if not picked else ("multi" if len(picked) > 1 else "ok")
-        is_correct = status == "ok" and picked == correct_ans
+        picked, correct_ans, status, is_correct = _grade(rec["picks"].get(slot, ""), q.get("answer"))
         results.append(
             {
                 "no": start + slot + 1,
@@ -249,7 +259,7 @@ def _clean_int_map(raw: dict, as_str: bool = False) -> dict:
     out: dict = {}
     for k, v in (raw or {}).items():
         try:
-            out[int(k)] = str(v or "")[:1] if as_str else max(0, min(int(v or 0), 86400))
+            out[int(k)] = str(v or "")[:8] if as_str else max(0, min(int(v or 0), 86400))
         except (TypeError, ValueError):
             continue
     return out
@@ -275,6 +285,13 @@ _EXAM_ITEM_FIELDS = ("id", "question", "options", "module", "submodule", "image"
                      "is_real", "exam_year", "exam_region")
 
 
+def _exam_item(q: dict) -> dict:
+    """下发题面不带答案，但给出是否多选（前端据此切多选交互）。"""
+    d = {k: q.get(k) for k in _EXAM_ITEM_FIELDS}
+    d["multi"] = len(db.normalize_answer(q.get("answer"))) > 1
+    return d
+
+
 @router.get("/api/exam/papers")
 def api_exam_papers(kind: str | None = None, year: int | None = None,
                     region: str | None = None, uid: str | None = None):
@@ -295,7 +312,7 @@ def api_exam_paper_detail(pid: int):
 
 
 @router.post("/api/exam/start")
-def api_exam_start(body: dict):
+def api_exam_start(body: dict, request: Request):
     uid = (body.get("uid") or "").strip()[:64]
     if not uid:
         raise HTTPException(400, "缺少 uid")
@@ -312,14 +329,14 @@ def api_exam_start(body: dict):
     pinfo, ordered = _exam_paper_payload(paper)
     if len(ordered) < 5:
         raise HTTPException(400, "试卷题目不足")
-    attempt_id = db.start_exam_attempt(uid, pid)
+    attempt_id = db.start_exam_attempt(uid, pid, probe=auth.probe_request(request))
     return {"attempt_id": attempt_id, "paper": pinfo, "items": ordered}
 
 
 def _exam_paper_payload(paper: dict) -> tuple[dict, list[dict]]:
     qids = db.exam_active_qids(paper["question_ids"])
     items = {q["id"]: q for q in db.questions_by_ids(qids)}
-    ordered = [{k: items[i].get(k) for k in _EXAM_ITEM_FIELDS} for i in qids if i in items]
+    ordered = [_exam_item(items[i]) for i in qids if i in items]
     pinfo = {
         "id": paper["id"],
         "title": paper["title"],
@@ -358,9 +375,9 @@ def api_exam_progress(body: dict):
             qid = int(k)
         except (TypeError, ValueError):
             raise HTTPException(400, "无效的作答进度") from None
-        if not isinstance(v, str) or v not in ("A", "B", "C", "D"):
+        if not isinstance(v, str) or not v or len(v) > 4 or any(ch not in "ABCD" for ch in v):
             raise HTTPException(400, "无效的作答进度")
-        picks[str(qid)] = v
+        picks[str(qid)] = db.normalize_answer(v)
     idx = body.get("idx")
     idx = idx if isinstance(idx, int) and 0 <= idx < 1000 else 0
     raw_marks = body.get("marks")
@@ -515,8 +532,7 @@ def api_exam_report(attempt_id: int, uid: str = ""):
         q = questions.get(qid)
         if not q:
             continue
-        picked = (picks.get(i + 1) or "").strip().upper()
-        correct_ans = (q.get("answer") or "").strip().upper()[:1]
+        picked, correct_ans, status, is_correct = _grade(picks.get(i + 1), q.get("answer"))
         items.append({
             "no": i + 1,
             "question_id": qid,
@@ -527,11 +543,12 @@ def api_exam_report(attempt_id: int, uid: str = ""):
             "options": q.get("options"),
             "picked": picked,
             "answer": correct_ans,
-            "correct": bool(picked) and len(picked) == 1 and picked == correct_ans,
+            "correct": is_correct,
+            "status": status,
             "secs": smap[i + 1] if isinstance(smap.get(i + 1), int) and smap[i + 1] > 0 else None,
             "marked": (i + 1) in marked,
-            "mistake_id": (mmap.get(qid) or {}).get("id") if picked and picked != correct_ans else None,
-            "error_reason": (mmap.get(qid) or {}).get("error_reason") if picked and picked != correct_ans else None,
+            "mistake_id": (mmap.get(qid) or {}).get("id") if picked and not is_correct else None,
+            "error_reason": (mmap.get(qid) or {}).get("error_reason") if picked and not is_correct else None,
             "explanation": q.get("explanation"),
             "hs_explanation": q.get("hs_explanation"),
             "image": q.get("image"),
@@ -543,7 +560,7 @@ def api_exam_report(attempt_id: int, uid: str = ""):
             "correct_ratio": q.get("correct_ratio"),
             "most_wrong": q.get("most_wrong"),
         })
-    answered = sum(1 for r in items if r["picked"] and len(r["picked"]) == 1)
+    answered = sum(1 for r in items if r["status"] == "ok")
     tag_stats: dict[str, list[int]] = {}
     for i, qid in enumerate(qids):
         q = questions.get(qid)
@@ -552,8 +569,7 @@ def api_exam_report(attempt_id: int, uid: str = ""):
         tag = q.get("tag3")
         if not tag or tag == "UNKNOWN":
             continue
-        picked = (picks.get(i + 1) or "").strip().upper()
-        correct = picked == (q.get("answer") or "").strip().upper()[:1]
+        picked, _ans, _st, correct = _grade(picks.get(i + 1), q.get("answer"))
         tag_stats.setdefault(tag, [0, 0])
         tag_stats[tag][0] += 1
         if picked and not correct:

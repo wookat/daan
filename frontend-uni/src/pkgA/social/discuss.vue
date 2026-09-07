@@ -389,7 +389,7 @@ export default {
 .ibar-in { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-8); }
 .replying { display: flex; align-items: center; gap: var(--sp-8); }
 .replying-t { font-size: var(--fs-caption); color: var(--ink-3); }
-.rx { width: var(--hit-min); height: 28px; display: flex; align-items: center; justify-content: center; border-radius: var(--r-sm); }
+.rx { width: var(--hit-min); height: 40px; margin: -6px 0; display: flex; align-items: center; justify-content: center; border-radius: var(--r-sm); }
 .inputrow { display: flex; gap: var(--sp-12); align-items: flex-end; }
 .ipt { flex: 1; min-width: 0; min-height: var(--input-h); max-height: 120px; overflow-y: auto; border-radius: var(--r-lg); background: var(--fill); color: var(--ink); font-size: var(--fs-sub); line-height: 20px; padding: var(--sp-12) var(--sp-16); box-sizing: border-box; }
 

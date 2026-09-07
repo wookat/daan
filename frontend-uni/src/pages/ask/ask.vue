@@ -86,7 +86,7 @@
                 </view>
               </view>
               <rich-text v-if="r.html" :nodes="r.html" />
-              <kg-skeleton v-else-if="r.streaming" preset="lines" />
+              <view v-else-if="r.streaming"><text class="spin">{{ thinkingText(r) }}</text><kg-skeleton preset="lines" /></view>
               <view v-if="r.explain_key && !r.streaming" class="raterow">
                 <text class="rate-q">{{ r.rated ? (r.rated === 'up' ? '已反馈：有用' : '已反馈：有误，我们会核查') : '这条解析有帮助吗？' }}</text>
                 <view v-if="!r.rated" class="rate-btns">
@@ -234,7 +234,7 @@ import { request, uploadExplain, streamExplain, anonUid, hasAccessCode, fetchAcc
 import { isNativeApp, pickImageNative } from '../../native.js';
 import { setBookBadge } from '../../tabbar-badge.js';
 import { mergeAskSessions, upsertLocalSession, addTombstone, removeTombstone, pruneTombstones, filterTombstoned, sanitizeCurItems, parseRemoteCur } from '../../ask-sessions.js';
-import { askQid, askViewUrl } from '../../ask-link.js';
+import { askQid, askViewUrl, thinkingSecs, thinkingLabel } from '../../ask-link.js';
 
 export default {
   data() {
@@ -508,6 +508,9 @@ export default {
       inp.click();
     },
     // #endif
+    thinkingText(r) {
+      return thinkingLabel(r.thinkSecs);
+    },
     startTimer() {
       let secs = 0;
       this.loadingText = '⏳ AI 识题中…（0秒）';
@@ -573,6 +576,7 @@ export default {
           fu: [],
           fuLoading: false,
           streaming: true,
+          thinkSecs: 0,
         };
         // H5 图片重做回填时无 File 对象，退回非流式
         // #ifdef H5
@@ -601,8 +605,9 @@ export default {
           filePath: img || null,
           text: txt || null,
           userAnswer: uans || null,
+          questionId: qid,
           onMeta: (m) => {
-            Object.assign(rec, m, { ansCard: null, userImage: img || '', userText: txt || '', user_answer: uans });
+            Object.assign(rec, m, { qid: askQid(m.qid) || qid, ansCard: null, userImage: img || '', userText: txt || '', user_answer: uans });
             this.results.unshift(rec);
             live = this.results[0];
             inserted = true;
@@ -610,6 +615,7 @@ export default {
             this.loading = false;
             this.scrollBottom();
           },
+          onThinking: (t) => { live.thinkSecs = thinkingSecs(t); },
           onDelta: (full) => { this.applyExplain(live, full); },
         });
         if (!inserted) {
@@ -641,6 +647,7 @@ export default {
         method: 'POST',
         data: {
           uid: anonUid(),
+          question_id: askQid(r.qid) || null,
           module: r.module,
           question_type: r.question_type,
           question_text: r.question_text,
@@ -776,6 +783,9 @@ export default {
     },
     newSession() {
       this.archiveCurrent();
+      this.clearCurrent();
+    },
+    clearCurrent() {
       this.results = [];
       this.error = '';
       uni.removeStorageSync('askCurSession');
@@ -892,6 +902,7 @@ export default {
       if (s) {
         uni.setStorageSync('askDelTombs', addTombstone(uni.getStorageSync('askDelTombs'), s.id));
         this.dropRemoteSession(s.id);
+        if (s.id === (this.curSid || Number(uni.getStorageSync('askCurSid')) || 0)) this.clearCurrent();
       }
     },
   },

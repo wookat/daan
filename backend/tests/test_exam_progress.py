@@ -249,3 +249,34 @@ def test_progress_excl_roundtrip_and_validation(client):
             json={"uid": uid, "attempt_id": aid, "picks": {}, "excl": bad},
         ).status_code == 400
     _cleanup()
+
+
+def test_start_reaps_empty_same_paper_attempts(client):
+    """R415：重新开考清掉本人同卷「一题未答」的空场次（连同进度行）；有作答的、别卷的空场次保留。"""
+    qids = seed_questions()[:5]
+    pid = _seed_paper("空场次回收测试卷", qids)
+    pid2 = _seed_paper("空场次回收对照卷", qids)
+    uid = "test-eprog-u9"
+    empty_no_prog = _start(client, uid, pid)
+    empty_with_prog = _start(client, uid, pid2)
+    client.post("/api/exam/progress", json={"uid": uid, "attempt_id": empty_with_prog, "picks": {}})
+    other_paper_empty = _start(client, uid, pid2)
+    # pid2 再开一场：empty_with_prog（同卷、picks {}）被清；empty_no_prog 属别卷保留
+    assert other_paper_empty != empty_with_prog
+    assert db.get_exam_attempt(empty_with_prog) is None
+    assert db.get_exam_attempt(empty_no_prog) is not None
+    conn = db.get_conn()
+    assert conn.execute(
+        "SELECT COUNT(*) FROM exam_progress WHERE attempt_id=?", (empty_with_prog,)).fetchone()[0] == 0
+    conn.close()
+    # 有作答的同卷场次不被清
+    answered = _start(client, uid, pid)
+    assert db.get_exam_attempt(empty_no_prog) is None
+    client.post("/api/exam/progress", json={"uid": uid, "attempt_id": answered, "picks": {str(qids[0]): "A"}})
+    again = _start(client, uid, pid)
+    assert again != answered and db.get_exam_attempt(answered) is not None
+    # 别人的空场次不受影响
+    other = _start(client, "test-eprog-u9b", pid)
+    _start(client, uid, pid)
+    assert db.get_exam_attempt(other) is not None
+    _cleanup()

@@ -169,7 +169,7 @@ def api_predict(uid: str):
 def _week_start(ts: float) -> float:
     """东八区本周一 0 点。"""
     tz = 8 * 3600
-    day0 = ((ts + tz) // 86400) * 86400 - tz
+    day0 = db.cn_day_start(ts)
     weekday = int(((ts + tz) // 86400 + 4) % 7)  # 1970-01-01 是周四
     return day0 - ((weekday - 1) % 7) * 86400
 
@@ -190,11 +190,12 @@ def api_exam_rank(attempt_id: int, uid: str = ""):
     conn = db.get_conn()
     db._ensure_exam_tables(conn)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ea_paper ON exam_attempts(paper_id, submitted_at)")
-    # 同卷全体用户：每人取该卷最高分（含历史作答者，冷启动分母）
+    # 同卷全体用户：每人取该卷最高分（含历史作答者，冷启动分母）；探针场次剔除，本人始终在池内
+    pool = f"paper_id=? AND submitted_at IS NOT NULL AND ({db.REAL_TRAFFIC} OR uid=?)"
+    pool_args = (attempt["paper_id"], attempt["uid"])
     rows = conn.execute(
-        """SELECT uid, MAX(score) s, MIN(submitted_at) t FROM exam_attempts
-           WHERE paper_id=? AND submitted_at IS NOT NULL GROUP BY uid""",
-        (attempt["paper_id"],),
+        f"SELECT uid, MAX(score) s, MIN(submitted_at) t FROM exam_attempts WHERE {pool} GROUP BY uid",
+        pool_args,
     ).fetchall()
     top = sorted(rows, key=lambda r: (-r["s"], r["t"]))[:10]
     # 登录用户 uid 形如 u<id>，昵称在 users 表；匿名 uid 回落脱敏
@@ -213,12 +214,12 @@ def api_exam_rank(attempt_id: int, uid: str = ""):
             names = {}
     # 模块级全站均值：per-user-best attempt 的 per_module，按模块聚合各用户正确率均值
     pm_rows = conn.execute(
-        """SELECT a.uid, a.per_module FROM exam_attempts a
+        f"""SELECT a.uid, a.per_module FROM exam_attempts a
            JOIN (SELECT uid u, MAX(score) s FROM exam_attempts
-                 WHERE paper_id=? AND submitted_at IS NOT NULL GROUP BY uid) b
+                 WHERE {pool} GROUP BY uid) b
              ON a.uid=b.u AND a.score=b.s
            WHERE a.paper_id=? AND a.submitted_at IS NOT NULL GROUP BY a.uid""",
-        (attempt["paper_id"], attempt["paper_id"]),
+        (*pool_args, attempt["paper_id"]),
     ).fetchall()
     conn.close()
     mod_ratios: dict[str, list[float]] = {}

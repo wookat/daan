@@ -21,6 +21,7 @@ direct = 绕过 Cloudflare 边缘直打源站主机名的请求数（无 X-Kg-Ip
 """
 import argparse
 import datetime
+import gzip
 import ipaddress
 import json
 import os
@@ -224,9 +225,10 @@ def iter_archive(archive_dir: str, days: int, now: float | None = None):
         for i in range(days + 1)
     }
     for fn in sorted(os.listdir(archive_dir)):
-        if fn not in wanted:
+        if fn.removesuffix(".gz") not in wanted:
             continue
-        with open(os.path.join(archive_dir, fn), errors="ignore") as f:
+        opener = gzip.open if fn.endswith(".gz") else open
+        with opener(os.path.join(archive_dir, fn), "rt", errors="ignore") as f:
             yield from f
 
 

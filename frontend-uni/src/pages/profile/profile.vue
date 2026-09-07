@@ -263,7 +263,9 @@ export default {
   },
   onLoad() {
     this._onAuth = () => {
-      this.user = getAuthUser();
+      const u = getAuthUser();
+      if ((u ? u.uid : null) === (this.user ? this.user.uid : null)) return;
+      this.resetAccountState();
     };
     uni.$on('authChanged', this._onAuth);
     // #ifdef H5
@@ -293,11 +295,23 @@ export default {
     this.remindTime = rs.time;
     this.themeMode = getThemeMode();
     this.offlineN = listPacks().length;
-    this.loadRemote();
-    this.loadBadges();
-    this.loadInbox();
+    this.refreshAccountData();
   },
   methods: {
+    refreshAccountData() {
+      this.user = getAuthUser();
+      this.loadRemote();
+      this.loadBadges();
+      this.loadInbox();
+    },
+    resetAccountState() {
+      this.mistakeN = null;
+      this.profile = null;
+      this.growth = null;
+      this.badgeInfo = null;
+      this.inboxUnread = 0;
+      this.refreshAccountData();
+    },
     maskPhone(p) {
       return p ? p.slice(0, 3) + '****' + p.slice(-4) : '';
     },
@@ -539,8 +553,6 @@ export default {
           if (!r.confirm) return;
           authLogout();
           clearAuth();
-          this.user = null;
-          this.loadRemote();
           uni.showToast({ title: '已退出登录', icon: 'none' });
         },
       });

@@ -175,7 +175,7 @@
             <text class="gw-pct num">{{ w.pct }}%<text class="gw-n">（{{ w.n }}题）</text></text>
           </view>
           <text v-if="growthDelta !== null" class="gw-delta" :class="{ 'is-up': growthDelta >= 0 }">
-            本周比上周{{ growthDelta >= 0 ? '提升' : '下降' }} {{ Math.abs(growthDelta) }} 个百分点
+            {{ growthDeltaLabel }}{{ growthDelta >= 0 ? '提升' : '下降' }} {{ Math.abs(growthDelta) }} 个百分点
           </text>
         </kg-card>
 
@@ -347,8 +347,8 @@
 </template>
 
 <script>
-import { request, snapPeek, anonUid, getAuthUser, fetchCheckinSummary, trackEvent } from '../../api.js';
-import { checkinStreak, dayKey } from '../../checkin.js';
+import { request, snapPeek, anonUid, getAuthUser, fetchCheckinSummary, trackEvent, isStaleUidErr } from '../../api.js';
+import { checkinStreak, dayKey, cnWeekKey } from '../../checkin.js';
 import { examTrend } from '../../exam-trend.js';
 
 const MODS = [
@@ -442,6 +442,16 @@ export default {
       if (r.length < 2) return null;
       return r[r.length - 1].pct - r[r.length - 2].pct;
     },
+    growthDeltaLabel() {
+      // 服务端 weeks 只含有作答的周：末两行是「本周 / 上周」才这么叫，否则点名两周
+      const r = this.growthRows;
+      const last = r[r.length - 1];
+      const prev = r[r.length - 2];
+      const today = this.cnToday;
+      const lastWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7);
+      if (last.week === cnWeekKey(today) && prev.week === cnWeekKey(lastWeek)) return '本周比上周';
+      return last.label + '比' + prev.label;
+    },
     trendData() {
       return this.history
         .slice(0, 14)
@@ -512,7 +522,8 @@ export default {
     hmTotal() {
       const days = this.hmDayMap;
       const today = this.cnToday;
-      const from = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 83);
+      const dow = (today.getDay() + 6) % 7;
+      const from = new Date(today.getFullYear(), today.getMonth(), today.getDate() - dow - 77);
       let s = 0;
       for (const [k, n] of Object.entries(days)) {
         const d = new Date(k + 'T00:00:00');
@@ -612,7 +623,9 @@ export default {
   },
   onLoad() {
     this._onAuth = () => {
-      this.authUser = getAuthUser();
+      const u = getAuthUser();
+      if ((u ? u.uid : null) === (this.authUser ? this.authUser.uid : null)) return;
+      this.resetAccountState();
     };
     uni.$on('authChanged', this._onAuth);
   },
@@ -620,17 +633,7 @@ export default {
     if (this._onAuth) uni.$off('authChanged', this._onAuth);
   },
   onShow() {
-    this.authUser = getAuthUser();
-    this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
-    this.history = this.loadHist();
-    this.loadHeatmap();
-    if (this.$refs.predict) this.$refs.predict.load();
-    this.loadGrowth();
-    this.loadReco();
-    this.loadSlStats();
-    this.loadMastery();
-    this.loadExamTrend();
-    this.load();
+    this.refreshAccountData();
   },
   watch: {
     // 解锁卡 → 完整页切换后 predict-card 才挂载，补一次加载
@@ -639,6 +642,30 @@ export default {
     },
   },
   methods: {
+    refreshAccountData() {
+      this.authUser = getAuthUser();
+      this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
+      this.history = this.loadHist();
+      this.loadHeatmap();
+      if (this.$refs.predict) this.$refs.predict.load();
+      this.loadGrowth();
+      this.loadReco();
+      this.loadSlStats();
+      this.loadMastery();
+      this.loadExamTrend();
+      this.load();
+    },
+    resetAccountState() {
+      this.hmDays = null;
+      this.svStreak = null;
+      this.kmCov = null;
+      this.examAttempts = null;
+      this.examTarget = null;
+      this.growth = null;
+      this.reco = null;
+      this.slStats = null;
+      this.refreshAccountData();
+    },
     loadHist() {
       // 本地练习记录按当前身份隔离；无 uid 的历史记录一次性归属到当前身份（升级前设备默认单身份）
       try {
@@ -806,6 +833,7 @@ export default {
         const mk = await request(mp);
         this.masteredCount = (mk.items || []).filter((m) => m.mastered).length;
       } catch (e) {
+        if (isStaleUidErr(e)) return;
         this.loadErr = e.message || '网络异常';
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
@@ -943,8 +971,8 @@ export default {
 .hist-pct { font-size: var(--fs-sub); font-weight: 600; color: var(--ok-strong); width: 44px; text-align: right; }
 .hist-pct.is-bad { color: var(--bad-strong); }
 .gw-row { display: flex; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-8); }
-.gw-wk { font-size: var(--fs-caption); color: var(--ink-3); width: 66px; flex-shrink: 0; }
-.gw-pct { font-size: var(--fs-caption); color: var(--ink); width: 76px; text-align: right; flex-shrink: 0; }
+.gw-wk { font-size: var(--fs-caption); color: var(--ink-3); width: 75px; flex-shrink: 0; white-space: nowrap; }
+.gw-pct { font-size: var(--fs-caption); color: var(--ink); width: 90px; text-align: right; flex-shrink: 0; white-space: nowrap; }
 .gw-n { color: var(--ink-3); }
 .gw-delta { display: block; font-size: var(--fs-sub); color: var(--bad-strong); margin-top: var(--sp-4); }
 .gw-delta.is-up { color: var(--ok-strong); }

@@ -142,7 +142,7 @@
               </view>
               <view class="q" :class="{ clamp: !f._open }">{{ (f.question || '').slice(0, 200) }}</view>
               <template v-if="f._open">
-                <view v-for="(v, k) in f.options" :key="k" class="anscmp"><text :class="k === f.answer ? 'ca' : ''">{{ k }}. {{ v }}</text></view>
+                <view v-for="(v, k) in f.options" :key="k" class="anscmp"><text :class="(f.answer || '').indexOf(k) !== -1 ? 'ca' : ''">{{ k }}. {{ v }}</text></view>
                 <rich-text :nodes="md(f.hs_explanation || f.explanation || '暂无解析')" />
                 <template v-if="f.xp_explanation">
                   <view class="xp-k">{{ f.xp_school || '第二名师视角' }}</view>
@@ -194,7 +194,11 @@
             @cta="goPractice"
             @secondary="goAskScan"
           />
-          <kg-empty-state v-if="tab !== 'fav' && items.length && !shownItems.length && !loading" compact icon="search" title="没有匹配的错题" desc="换个关键词或清除筛选试试" />
+          <template v-if="tab !== 'fav' && items.length && !shownItems.length && !loading">
+            <kg-empty-state v-if="tab === 'done' && !kw && !hasFilter" compact icon="circle-check" title="还没有已掌握的错题" desc="在待掌握错题的「···」里标为已掌握，或复习连对后自动进入这里" />
+            <kg-empty-state v-else-if="tab === 'todo' && !kw && !hasFilter" compact icon="circle-check" title="待掌握已清零" :desc="doneItems.length + ' 道错题已全部掌握；再错的题会回到这里，也可去「已掌握」里恢复复习'" cta-text="去刷题" @cta="goPractice" />
+            <kg-empty-state v-else compact icon="search" title="没有匹配的错题" desc="换个关键词或清除筛选试试" />
+          </template>
 
           <kg-card
             v-for="m in shownPage"
@@ -210,7 +214,7 @@
               <view v-if="batchMode" class="bchk" :class="{ on: selIds[m.id] }" role="checkbox" :aria-checked="String(!!selIds[m.id])"><l-icon v-if="selIds[m.id]" name="check" :size="14" tone="on-brand" /></view>
               <kg-tag tone="brand">{{ tagName(m) }}</kg-tag>
               <kg-tag v-if="m.source === 'exam'" tone="info">模考</kg-tag>
-              <kg-tag v-if="mistakePaper(m)" tone="neutral" class="pbadge" @click.stop="pidFilter = mistakePaper(m).pid">{{ mistakePaper(m).psource }}</kg-tag>
+              <view v-if="mistakePaper(m)" class="pbadge-hit" role="button" @click.stop="pidFilter = mistakePaper(m).pid"><kg-tag tone="neutral" class="pbadge">{{ mistakePaper(m).psource }}</kg-tag></view>
               <kg-tag v-if="m.times >= 2" tone="bad">错 {{ m.times }} 次</kg-tag>
               <kg-tag v-if="m.mastered" tone="ok" class="mright">已掌握</kg-tag>
               <kg-tag v-else-if="nextReviewText(m)" :tone="isDue(m) ? 'warn' : 'neutral'" class="mright">{{ nextReviewText(m) }}</kg-tag>
@@ -258,6 +262,7 @@
             </view>
           </kg-card>
           <kg-button v-if="tab !== 'fav' && pageN < shownItems.length" variant="text" size="md" block class="loadmore" @click="pageN += 20">上滑或点击加载更多（{{ shownPage.length }}/{{ shownItems.length }}）</kg-button>
+          <view v-else-if="tab !== 'fav' && !batchMode && shownPage.length" class="fabspace" />
         </template>
 
         <template #aside>
@@ -367,7 +372,10 @@
           <text class="side-s">分析失败：{{ aiErr }}</text>
           <kg-button variant="secondary" size="md" block @click="aiAnalysis(true)">重试</kg-button>
         </view>
-        <rich-text v-else :nodes="aiHtml" />
+        <view v-else>
+          <rich-text :nodes="aiHtml" />
+          <kg-button variant="secondary" size="md" block class="ai-regen" @click="aiAnalysis(true)">按当前错题重新生成</kg-button>
+        </view>
       </kg-sheet>
 
       <!-- 手动录入答案（扫描答题卡/手动录入收在右下角「＋」） -->
@@ -477,9 +485,20 @@
       />
 
       <!-- 批量操作条 -->
+      <kg-sheet :model-value="!!moreSheet" :title="moreSheet ? tagName(moreSheet.m) + ' · 更多操作' : ''" @update:model-value="(v) => { if (!v) moreSheet = null; }">
+        <template v-if="moreSheet">
+          <view v-if="!moreSheet.m.mastered" class="reasons more-reasons">
+            <text class="rz-t">错因自评：</text>
+            <kg-chip-row size="sm" :options="REASONS.map((rz) => ({ label: rz, value: rz }))" :model-value="moreSheet.m.error_reason || ''" :scroll-to-selected="false" @update:model-value="(v) => setItemReason(moreSheet.m, v)" />
+          </view>
+          <view v-for="a in moreSheet.acts" :key="a.t" class="more-act" :class="{ danger: a.danger }" role="button" @click="moreSheet = null; a.f()">{{ a.t }}</view>
+          <view class="more-act cancel" role="button" @click="moreSheet = null">取消</view>
+        </template>
+      </kg-sheet>
       <view v-if="batchMode && tab !== 'fav'" class="batchbar">
-        <kg-button variant="text" size="md" @click="selAll">{{ selCount === shownPage.length ? '取消全选' : '全选本页' }}</kg-button>
+        <kg-button v-if="shownPage.length" variant="text" size="md" @click="selAll">{{ selCount === shownPage.length ? '取消全选' : '全选本页' }}</kg-button>
         <text class="bb-n">已选 {{ selCount }}</text>
+        <kg-button variant="text" size="md" aria-label="退出批量" @click="toggleBatch">退出</kg-button>
         <view class="bb-acts">
           <kg-button v-if="tab === 'todo'" variant="secondary" size="lg" :disabled="!selCount || batchBusy" @click="batchMaster(true)">标已掌握</kg-button>
           <kg-button v-else variant="secondary" size="lg" :disabled="!selCount || batchBusy" @click="batchMaster(false)">恢复复习</kg-button>
@@ -513,7 +532,7 @@
 
 <script>
 import { md } from '../../md.js';
-import { request, anonUid, exportPdf, scanSheet, shareCreate, trackEvent, qShareText, shareVariant } from '../../api.js';
+import { request, anonUid, exportPdf, scanSheet, shareCreate, trackEvent, qShareText, shareVariant, isStaleUidErr } from '../../api.js';
 import { buildBookUrl, parseBookOpts } from '../../book-url.js';
 import { setBookBadge } from '../../tabbar-badge.js';
 import { mistakePaper, paperGroups, inPaper } from '../../book-paper.js';
@@ -601,6 +620,7 @@ export default {
       batchMode: false,
       kbId: null,
       kbdHelp: false,
+      moreSheet: null,
       selIds: {},
       batchBusy: false,
       recapOpen: typeof window !== 'undefined' && window.innerWidth >= 1024,
@@ -616,6 +636,9 @@ export default {
   },
   computed: {
     qStyle() { return { fontSize: fontSizes(this.fontLv).q }; },
+    hasFilter() {
+      return !!(this.filterMod || this.kpFilter || this.kp3Filter || this.srcFilter || this.rzFilter || this.pidFilter);
+    },
     askableReview() {
       return !!askPrefill(this.cur && this.cur.question_text, null);
     },
@@ -814,6 +837,11 @@ export default {
     if (p.rz) this.rzFilter = p.rz;
     if (p.sort) this.sortBy = p.sort;
     if (p.review) uni.setStorageSync('autoStartReview', 1);
+    this._onAuth = () => {
+      if (anonUid() === this._acctUid) return;
+      this.resetAccountState();
+    };
+    uni.$on('authChanged', this._onAuth);
   },
   onReachBottom() {
     if (this.tab !== 'fav' && this.pageN < this.shownItems.length) this.pageN += 20;
@@ -833,8 +861,9 @@ export default {
     }
     const rvIntent = uni.getStorageSync('bookReviewIntent');
     if (rvIntent) uni.removeStorageSync('bookReviewIntent');
+    this._acctUid = anonUid();
     if (!this.reviewing) {
-      this.resumeInfo = parseReviewSnap(uni.getStorageSync('reviewSnap'), anonUid(), Date.now() / 1000);
+      this.resumeInfo = parseReviewSnap(uni.getStorageSync('reviewSnap'), this._acctUid, Date.now() / 1000);
       if (this.resumeInfo && rvIntent) {
         this.resumeReview();
       } else if (!this.resumeInfo) {
@@ -867,6 +896,7 @@ export default {
     // #endif
   },
   onUnload() {
+    if (this._onAuth) uni.$off('authChanged', this._onAuth);
     // #ifdef H5
     if (this._kbHandler && typeof window !== 'undefined') {
       window.removeEventListener('keydown', this._kbHandler);
@@ -875,6 +905,33 @@ export default {
     // #endif
   },
   methods: {
+    // 登录态变化（uid 已换）：清掉上一个账号的错题/到期/掌握度/AI 分析，按当前 uid 重拉
+    resetAccountState() {
+      this.items = [];
+      this.due = [];
+      this.dueTotal = 0;
+      this.masteryMods = {};
+      this.masteryT3 = {};
+      this.offlineView = false;
+      this.loadErr = '';
+      this.aiOpen = false;
+      this.aiHtml = '';
+      this.aiErr = '';
+      this.moreSheet = null;
+      this.batchMode = false;
+      this.selIds = {};
+      this.pageN = 20;
+      this.reviewing = false;
+      this.resumeInfo = null;
+      setBookBadge(0);
+      this._acctUid = anonUid();
+      this.resumeInfo = parseReviewSnap(uni.getStorageSync('reviewSnap'), this._acctUid, Date.now() / 1000);
+      if (!this.resumeInfo) {
+        this._reviewIntent = false;
+        this.restoreRemoteSnap();
+      }
+      this.load();
+    },
     filterByReason(name) {
       if (!name) return;
       this.tab = 'todo';
@@ -901,6 +958,10 @@ export default {
       const tag = (e.target && e.target.tagName) || '';
       if (/INPUT|TEXTAREA|SELECT/.test(tag) || (e.target && e.target.isContentEditable)) return;
       const k = e.key;
+      if (this.moreSheet) {
+        if (k === 'Escape') { e.preventDefault(); this.moreSheet = null; }
+        return;
+      }
       if (this.kbdHelp) {
         if (k === 'Escape' || k === '?') { e.preventDefault(); this.kbdHelp = false; }
         return;
@@ -1049,7 +1110,8 @@ export default {
         if (!text) throw new Error('AI 未返回内容，请稍后再试');
         this.aiHtml = md(text);
       } catch (e) {
-        this.aiErr = e.message || '请稍后重试';
+        if (this.aiHtml) uni.showToast({ title: '重新生成失败：' + (e.message || '请稍后重试'), icon: 'none' });
+        else this.aiErr = e.message || '请稍后重试';
       }
       this.aiLoading = false;
     },
@@ -1108,7 +1170,12 @@ export default {
       return m ? [...new Set(m[0])].sort().join('') : '';
     },
     async master(m, on = true) {
-      await request('/api/mistakes/' + m.id, { method: 'PATCH', data: { uid: anonUid(), mastered: on ? 1 : 0 } });
+      try {
+        await request('/api/mistakes/' + m.id, { method: 'PATCH', data: { uid: anonUid(), mastered: on ? 1 : 0 } });
+      } catch (e) {
+        uni.showToast({ title: '操作失败：' + (e.message || '请稍后重试'), icon: 'none' });
+        return;
+      }
       m.mastered = on ? 1 : 0;
       m.mastered_at = on ? (m.mastered_at || Date.now() / 1000) : null;
       uni.showToast({ title: on ? '已掌握！' : '已恢复复习', icon: on ? 'success' : 'none' });
@@ -1153,6 +1220,10 @@ export default {
         setBookBadge(this.dueTotal);
       } catch (e) {
         if (seq !== this._loadSeq) return;
+        if (isStaleUidErr(e)) {
+          this.loading = false;
+          return;
+        }
         const c = getCachedMistakes(anonUid());
         if (c && c.items && c.items.length) {
           this.items = c.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
@@ -1519,6 +1590,7 @@ export default {
       const ans = askAnswerLetter(m.user_answer);
       if (ans) uni.setStorageSync('redoAnswer', ans);
       else uni.removeStorageSync('redoAnswer');
+      trackEvent('book_ask_click', m.module || '', String(qid || ''));
       uni.switchTab({ url: '/pages/ask/ask' });
     },
     reinforceFromMistake(m) {
@@ -1565,11 +1637,18 @@ export default {
       if (m.question_id) acts.push({ t: '分享给队友', f: () => this.shareToMates(m) });
       if (!m.mastered) acts.push({ t: '标为已掌握', f: () => this.master(m) });
       else acts.push({ t: '恢复复习', f: () => this.master(m, false) });
-      acts.push({ t: '删除', f: () => this.del(m) });
-      uni.showActionSheet({
-        itemList: acts.map((a) => a.t),
-        success: (r) => acts[r.tapIndex].f(),
-      });
+      acts.push({ t: '删除', danger: true, f: () => this.del(m) });
+      this.moreSheet = { m, acts };
+    },
+    async setItemReason(m, rz) {
+      const next = m.error_reason === rz ? '' : rz;
+      m.error_reason = next;
+      this.$forceUpdate();
+      try {
+        await request('/api/mistakes/' + m.id, { method: 'PATCH', data: { uid: anonUid(), error_reason: next } });
+      } catch (e) {
+        uni.showToast({ title: e.message || '保存失败', icon: 'none' });
+      }
     },
     async shareToMates(m) {
       try {
@@ -1650,7 +1729,12 @@ export default {
         title: '确定删除这道错题？',
         success: async (res) => {
           if (!res.confirm) return;
-          await request('/api/mistakes/' + m.id + '?uid=' + encodeURIComponent(anonUid()), { method: 'DELETE' });
+          try {
+            await request('/api/mistakes/' + m.id + '?uid=' + encodeURIComponent(anonUid()), { method: 'DELETE' });
+          } catch (e) {
+            uni.showToast({ title: '删除失败：' + (e.message || '请稍后重试'), icon: 'none' });
+            return;
+          }
           this.load();
         },
       });
@@ -1676,7 +1760,7 @@ export default {
 /* 分段 + 筛选/批量 */
 .segrow { display: flex; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-12); }
 .seg { flex: 1; min-width: 0; display: flex; background: var(--fill); border-radius: var(--r-sm); padding: var(--sp-4); }
-.seg-i { flex: 1; min-width: 0; text-align: center; min-height: 36px; display: flex; align-items: center; justify-content: center; border-radius: var(--r-xs); font-size: var(--fs-sub); color: var(--ink-2); white-space: nowrap; padding: 0 var(--sp-4); }
+.seg-i { flex: 1; min-width: 0; text-align: center; min-height: 40px; display: flex; align-items: center; justify-content: center; border-radius: var(--r-xs); font-size: var(--fs-sub); color: var(--ink-2); white-space: nowrap; padding: 0 var(--sp-4); }
 .seg-i.on { background: var(--card); color: var(--ink); font-weight: 600; box-shadow: var(--sh-1); }
 .modchips { margin-bottom: var(--sp-12); }
 
@@ -1693,9 +1777,9 @@ export default {
 .searchinput { flex: 1; min-width: 0; font-size: var(--fs-sub); color: var(--ink); height: var(--input-h); line-height: var(--input-h); }
 .searchclear { display: flex; align-items: center; justify-content: center; width: var(--hit-min); height: var(--hit-min); margin-right: calc(var(--sp-12) * -1); }
 .curfilter { display: flex; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-12); flex-wrap: wrap; }
-.cf { cursor: pointer; }
+.cf { cursor: pointer; min-height: 40px; }
 .kpchips { display: flex; flex-wrap: wrap; gap: var(--sp-8); }
-.kpchip { min-height: var(--chip-h); padding: 0 var(--sp-12); }
+.kpchip { min-height: 40px; padding: 0 var(--sp-12); }
 
 /* 错题卡 */
 .mcard { margin-bottom: var(--card-gap); }
@@ -1704,7 +1788,8 @@ export default {
 .mright { margin-left: auto; }
 .mtime { white-space: nowrap; }
 .mhead .mright + .mtime { margin-left: 0; }
-.pbadge { max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pbadge-hit { position: relative; z-index: 1; display: inline-flex; align-items: center; min-height: 40px; margin: -10px 0; max-width: 40vw; }
+.pbadge { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bchk { width: 24px; height: 24px; border-radius: var(--r-full); border: 2px solid var(--line-strong); flex-shrink: 0; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
 .bchk.on { background: var(--brand); border-color: var(--brand); }
 .q { font-size: var(--fs-body); line-height: var(--lh-body); color: var(--ink); margin-top: var(--sp-8); }
@@ -1753,7 +1838,7 @@ export default {
 .recap-sec { margin-top: var(--sp-8); }
 .recap-st { font-size: var(--fs-caption); color: var(--ink-3); }
 .recap-row { display: flex; align-items: center; gap: var(--sp-8); margin-top: var(--sp-8); min-height: 24px; }
-.recap-link { cursor: pointer; }
+.recap-link { cursor: pointer; min-height: 40px; }
 .recap-name { flex: 0 0 80px; font-size: var(--fs-sub); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .recap-name.is-link { color: var(--brand-text); }
 .recap-n { flex: 0 0 24px; text-align: right; font-size: var(--fs-caption); color: var(--ink-3); }
@@ -1809,6 +1894,13 @@ export default {
 /* #endif */
 .fab-main { width: 52px; height: 52px; border-radius: var(--r-full); background: var(--brand); display: flex; align-items: center; justify-content: center; box-shadow: var(--sh-2); transition: transform var(--dur-base) var(--ease-standard); }
 .fab-main.open { transform: rotate(45deg); }
+/* 列表见底时给悬浮「＋」（52px + 底距）让位，末卡「···」不被盖 */
+.fabspace { height: calc(52px + var(--sp-32)); }
+.more-reasons { margin: var(--sp-4) 0 var(--sp-12); flex-wrap: wrap; }
+.more-act { min-height: 48px; display: flex; align-items: center; justify-content: center; font-size: var(--fs-body); color: var(--ink); border-top: 1px solid var(--line); }
+.more-act.danger { color: var(--bad); }
+.more-act.cancel { color: var(--ink-3); margin-top: var(--sp-12); border-top: none; background: var(--fill); border-radius: var(--r-full); }
+.ai-regen { margin-top: var(--sp-12); }
 
 /* 复习模式 */
 .review { display: flex; flex-direction: column; gap: var(--sp-8); }
@@ -1822,7 +1914,11 @@ export default {
 .verdict { font-size: var(--fs-body); font-weight: 600; margin: var(--sp-8) 0; line-height: var(--lh-body); }
 .verdict.good { color: var(--ok-strong); }
 .verdict.badv { color: var(--bad); }
-.next-btn { margin-top: var(--sp-12); }
+/* 作答后「下一题/确认答案」吸底：讲解长时不必滚到底才能继续；到自然位置后随内容停住。tab 页需让出 H5 TabBar（50px） */
+.next-btn { margin-top: var(--sp-12); position: sticky; bottom: calc(50px + env(safe-area-inset-bottom) + var(--sp-8)); z-index: var(--z-sticky); box-shadow: var(--sh-2); }
+/* #ifndef H5 */
+.next-btn { bottom: calc(env(safe-area-inset-bottom) + var(--sp-8)); }
+/* #endif */
 .reasons { display: flex; align-items: center; gap: var(--sp-8); margin: var(--sp-4) 0 var(--sp-12); }
 .rz-t { font-size: var(--fs-sub); color: var(--ink-3); flex-shrink: 0; }
 .appended-tip { font-size: var(--fs-sub); color: var(--brand-text); background: var(--brand-soft); border-radius: var(--r-xs); padding: var(--sp-8) var(--sp-12); margin-bottom: var(--sp-8); }

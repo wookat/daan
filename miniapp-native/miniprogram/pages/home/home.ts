@@ -21,6 +21,7 @@ import { type ResumeInfo, resolveResume, dropResume, resumeUrl } from '../../uti
 import { fmtClock } from '../../utils/kg-exam-timer';
 import { MODULE_KEYS, moduleMeta } from '../../utils/module-meta';
 import { cnDayKey } from '../../utils/cn-date';
+import { examDateFieldText, isExamDatePast, planDaysLabel } from '../../utils/plan-label';
 import {
   PENDING_KEY,
   PP_CLEARED_KEY,
@@ -139,6 +140,8 @@ Page({
       daily_minutes: 60,
       base_level: '零基础',
     } as Profile,
+    pfDateText: '选择日期',
+    pfDatePast: false,
     examTypeOpts: toOpts(['国考', '省考', '事业单位', '其他']),
     scoreOpts: toOpts([60, 65, 70, 75, 80], '+'),
     baseLevelOpts: toOpts(['零基础', '有基础', '二战']),
@@ -150,6 +153,8 @@ Page({
     planDone: 0,
     planTotal: 0,
     daysLeft: null as number | null,
+    daysText: '',
+    daysTitle: '',
     phaseName: '',
     realMode: false,
     // 今日建议（/api/daily_plan，无画像时）
@@ -381,7 +386,10 @@ Page({
       setDailyGoal(g);
       this.refreshGoal();
     }
-    if (profile) this.setData({ pf: { ...this.data.pf, ...profile } });
+    if (profile) {
+      this.setData({ pf: { ...this.data.pf, ...profile } });
+      this.syncPfDate();
+    }
     this.applyPlanToday(profile ? planToday : null);
   },
   applyPlanToday(plan: PlanTodayResp | null) {
@@ -398,6 +406,8 @@ Page({
       planDone: prog.done,
       planTotal: prog.total,
       daysLeft: plan.days_left ?? null,
+      daysText: planDaysLabel(plan.days_left, plan.phase_name || ''),
+      daysTitle: planDaysLabel(plan.days_left),
       phaseName: plan.phase_name || '',
       realMode: !!plan.real_mode,
     });
@@ -634,6 +644,7 @@ Page({
     wx.navigateTo({ url });
   },
   onOpenSetup() {
+    this.syncPfDate();
     this.setData({ setupOpen: true, setupStep: 1 });
   },
   onCloseSetup() {
@@ -658,6 +669,12 @@ Page({
   },
   onPfDate(e: WechatMiniprogram.PickerChange) {
     this.setData({ 'pf.exam_date': String(e.detail.value) });
+    this.syncPfDate();
+  },
+  syncPfDate() {
+    const today = cnDayKey();
+    const d = this.data.pf.exam_date;
+    this.setData({ pfDateText: examDateFieldText(d, today), pfDatePast: isExamDatePast(d, today) });
   },
   onSetupBack() {
     if (this.data.setupStep > 1) this.setData({ setupStep: this.data.setupStep - 1 });
@@ -666,6 +683,11 @@ Page({
     const { setupStep, pf, setupBusy } = this.data;
     if (setupStep === 1 && !pf.exam_date) {
       wx.showToast({ title: '请先选择考试日期', icon: 'none' });
+      return;
+    }
+    if (setupStep === 1 && isExamDatePast(pf.exam_date, cnDayKey())) {
+      this.syncPfDate();
+      wx.showToast({ title: '考试日期已过，请重新选择', icon: 'none' });
       return;
     }
     if (setupStep < 3) {

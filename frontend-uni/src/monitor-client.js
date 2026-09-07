@@ -34,6 +34,13 @@ export function describeRejection(r) {
   return String(r);
 }
 
+// 跨源脚本抛错被浏览器脱敏为 "Script error."（无 filename / lineno / error 对象）：本页 CSP 只放行同源脚本，
+// 这类事件只能来自浏览器厂商注入脚本等页面外代码，无任何可定位信息，不上报（Sentry 默认同样丢弃）
+export function isMaskedCrossOriginError(e) {
+  if (!e || !/^Script error\.?$/.test(String(e.message || ''))) return false;
+  return !e.error && !e.filename;
+}
+
 export function classifyVueError(message) {
   if (/Async component timed out/.test(message)) return 'chunk-timeout';
   if (/Failed to fetch dynamically imported module|Unable to preload|Importing a module script failed|Loading chunk/.test(message)) return 'chunk-load';
@@ -43,12 +50,14 @@ export function classifyVueError(message) {
 // uni h5 每个页面都是 defineAsyncComponent（timeout 由 manifest.h5.async.timeout 决定）：
 // 分包 chunk 拉取挂起超时 / 拉取失败（发版后旧 hash 404 等）都只走 Vue handleError → console.error，
 // window.onerror / unhandledrejection 均不触发，线上无痕。errorHandler 接管后同时上报并保留控制台输出。
-export function installVueErrorHandler(app, report, consoleError) {
+export function installVueErrorHandler(app, report, consoleError, onChunkLoadError) {
   const prev = app.config.errorHandler;
   app.config.errorHandler = (err, instance, info) => {
     const e = err instanceof Error ? err : new Error(String(err));
-    report(`vue:${classifyVueError(e.message)}${info ? `:${info}` : ''}: ${e.message}`, e.stack);
+    const kind = classifyVueError(e.message);
+    report(`vue:${kind}${info ? `:${info}` : ''}: ${e.message}`, e.stack);
     if (typeof consoleError === 'function') consoleError(e);
+    if (kind === 'chunk-load' && typeof onChunkLoadError === 'function') onChunkLoadError(e);
     if (typeof prev === 'function') prev(err, instance, info);
   };
 }

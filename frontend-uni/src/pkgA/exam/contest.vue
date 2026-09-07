@@ -56,7 +56,7 @@
             <view v-for="p in past" :key="p.id" class="prow" role="button" hover-class="row--hover" @click="p.joined ? openReport(p.id) : openBoard(p)">
               <view class="prow-l">
                 <text class="prow-t">{{ p.title }}</text>
-                <text class="prow-s num">{{ fmtDay(p.close_at) }}</text>
+                <text class="prow-s num">{{ fmtDay(p.close_at - 1) }}</text>
               </view>
               <text v-if="p.joined" class="prow-score num">{{ p.score }} 分<template v-if="p.rank"> · 第 {{ p.rank }} 名</template></text>
               <text v-else class="prow-none">未参加 · 看榜单</text>
@@ -104,6 +104,7 @@
 
 <script>
 import { request, anonUid, pkNickname } from '../../api.js';
+import { fmtWindow as fmtWindowCst, fmtDay as fmtDayCst } from '../../contest-time.js';
 
 export default {
   data() {
@@ -126,10 +127,7 @@ export default {
       return { upcoming: '未开始', running: '进行中', ended: '已结束' }[this.event.phase] || '';
     },
     fmtWindow() {
-      const o = new Date(this.event.open_at * 1000);
-      const c = new Date(this.event.close_at * 1000);
-      const p = (n) => String(n).padStart(2, '0');
-      return `${o.getMonth() + 1}月${o.getDate()}日 ${p(o.getHours())}:${p(o.getMinutes())} - ${c.getHours() === 0 ? '24:00' : p(c.getHours()) + ':' + p(c.getMinutes())}`;
+      return fmtWindowCst(this.event.open_at, this.event.close_at);
     },
     countdown() {
       const target = this.event.phase === 'upcoming' ? this.event.open_at : this.event.close_at;
@@ -207,8 +205,7 @@ export default {
       this.boardLoading = false;
     },
     fmtDay(t) {
-      const d = new Date(t * 1000);
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      return fmtDayCst(t);
     },
   },
 };

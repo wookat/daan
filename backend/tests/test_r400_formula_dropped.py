@@ -36,6 +36,45 @@ def test_formula_dropped_by_module():
     assert quality.formula_dropped({"module": "shuliang", "explanation": None}) is None
 
 
+def test_formula_dropped_value_slot_quant_only():
+    fd = quality.formula_dropped
+    # 生产 288140/288139：句中数值位被抠空——「…为，」「解得。」「则有，」「联立，」
+    assert fd({"module": "shuliang", "explanation": "则订阅报纸的家庭为，因此只订阅日报的家庭为报的比例最多为，当这"}) == "value"
+    assert fd({"module": "shuliang", "explanation": "设抽取总人数为 x，则有，解得 x＝15。"}) == "value"
+    assert fd({"module": "shuliang", "explanation": "共花费 16560 元，则，解得。则总旧窗户数"}) == "value"
+    assert fd({"module": "ziliao", "explanation": "可知已跑的路程为，联立，解得 7x＝30。"}) == "value"
+    assert fd({"module": "ziliao", "explanation": "2019年经济活力为＜2018年为；"}) == "value"
+    # 词尾「为」与正常承接不算：因为/认为/作为/成为/行为、「可得，」「解得 x＝15」
+    assert fd({"module": "shuliang", "explanation": "由题意可得，甲队单独完成需 40 天，因为，所以。"}) is None
+    assert fd({"module": "shuliang", "explanation": "设总人数为 x，则有 x＋4y＝3x＋y，解得 x＝15。"}) is None
+    assert fd({"module": "shuliang", "explanation": "单方面运用权力所作的行为，不符合定义。"}) is None
+    assert fd({"module": "ziliao", "explanation": "定位文字材料第四段可得，2023年一季度增长 5%，代入数据可得，直除首位商 9。"}) is None
+    # 非数量/资料模块不认该信号（文字题的「为，」多为表述习惯）
+    assert fd({"module": "changshi", "explanation": "其主要成分为，二氧化硅。"}) is None
+    assert fd({"module": "yanyu", "explanation": "解得，文段主旨为，强调创新。"}) is None
+
+
+def test_formula_dropped_operator_slot_quant_only():
+    fd = quality.formula_dropped
+    # 生产 237345/286141/273081/272649/265311/236874：等号两侧/括号内表达式被抠空、公式位只剩相撞句读
+    assert fd({"module": "shuliang", "explanation": "x+（2x-2）=500，解得 x=。第三步，求 x 的最小值"}) == "op"
+    assert fd({"module": "shuliang", "explanation": "则列式应为：＝21，解得 n＝7。故正确答案为 C。"}) == "op"
+    assert fd({"module": "shuliang", "explanation": "无要求的 4 人全排列，有种方式。××＝576（种）方式。"}) == "op"
+    assert fd({"module": "shuliang", "explanation": "则浓度变为原来浓度的（1－）。反复三次操作"}) == "op"
+    assert fd({"module": "ziliao", "explanation": "去甲厂实习的人数占（，去乙厂实习的人数占）。，因此去丙厂"}) == "op"
+    assert fd({"module": "shuliang", "explanation": "AB＝50×因此，选择 H 选项。＝25（米），所以 AC＝2AB"}) == "op"
+    assert fd({"module": "ziliao", "explanation": "0.4375A=0.625B，=1.428。则 10 件 A 最多可以买 14 件 B。"}) == "op"
+    # 生产 275923/246915/159864/240320：余数记法「11＋，」、值在括号外「=）107.52」、「，×5」「（×3+1）」是正常表达
+    assert fd({"module": "shuliang", "explanation": "需要 177÷（4＋5＋7）＝11＋，介于 10—12 小时之间。"}) is None
+    assert fd({"module": "ziliao", "explanation": "（16人*5600元/月*12月=）107.52万元，燃料房租"}) is None
+    assert fd({"module": "shuliang", "explanation": "计算1.2²=1.44，再×1.2得1.728，×5=8.64万元，因此A项正确。"}) is None
+    assert fd({"module": "shuliang", "explanation": "若误看为倍数关系（×3+1）则前项×3+1依次为"}) is None
+    assert fd({"module": "shuliang", "explanation": "设速度为 v，则 2v＋3＝15，解得 v＝6（km/h）。"}) is None
+    assert fd({"module": "shuliang", "explanation": _E_TYPO_QUANT}) is None
+    # 非数量/资料模块不认
+    assert fd({"module": "changshi", "explanation": "该说法正确。，故排除 A 项。"}) is None
+
+
 def test_strip_page_footers_only_removes_footer_fragments():
     assert quality.strip_page_footers("如下图：第47页共64页第二步，分析。") == "如下图：第二步，分析。"
     assert quality.strip_page_footers("如图所示第 22 页共 36 页42 人参加") == "如图所示42 人参加"
@@ -50,6 +89,25 @@ def test_strip_page_footers_only_removes_footer_fragments():
     assert quality.strip_page_footers(None) == ""
 
 
+def test_strip_section_header_tail_only():
+    sp = quality.strip_page_footers
+    # 生产 1046534/896328/1046578/246097：末选项尾部串进下一节标题
+    opts = json.dumps(
+        {"A": "狭管效应", "B": "温室效应", "C": "阳伞效应", "D": "焚风效应 二. 数量关系：在这部分试题中，每道题呈现一段表述数字关系的文字，要求你迅速，准确的计算出答案。"},
+        ensure_ascii=False,
+    )
+    assert json.loads(sp(opts)) == {"A": "狭管效应", "B": "温室效应", "C": "阳伞效应", "D": "焚风效应"}
+    opts = json.dumps({"A": "③—②—④—①", "D": "①—④—②—③ 二. 言语理解与表达：本部分包含片段阅读、文章阅读、选词填空三个部分。", "C": "①—④—③—②"}, ensure_ascii=False)
+    assert json.loads(sp(opts)) == {"A": "③—②—④—①", "D": "①—④—②—③", "C": "①—④—③—②"}  # 非末键也裁到值尾
+    # 生产 235971/236036/1272497：解析结尾串进「第 N 部分 …请开始答题：」，可带 ~页码~ 前缀
+    assert sp("故正确答案为 A。 ~ 12 ~ 第二部分言语理解与表达（共 40 题，参考时限 40 分钟）本部分包括表达与理解两方面的内容。请开始答题：") == "故正确答案为 A。"
+    assert sp("排除。故正确答案为 A。第五部分资料分析（共 20 题，参考时限 20 分钟）所给出的图、表、文字…请开始答题：一、") == "排除。故正确答案为 A。"
+    assert sp("所以选择B选项 第五部分资料分析 7") == "所以选择B选项"
+    # 正文里提到模块名/序号不受影响
+    for keep in ("本题考查数量关系中的行程问题。", "资料分析第二部分表格显示", "一、二、三项均正确", "第二部分言语", "共 40 题，参考时限 40 分钟"):
+        assert sp(keep) == keep
+
+
 def _db(tmp_path):
     p = tmp_path / "q.db"
     conn = sqlite3.connect(p)
@@ -62,6 +120,8 @@ def _db(tmp_path):
     )
     opts = json.dumps({"A": "1", "B": "2", "C": "3", "D": "4"}, ensure_ascii=False)
     opts_foot = json.dumps({"A": "628", "B": "961", "C": "986", "D": "1014 - 8 - 2020年新疆公务员考试《行测》真题"}, ensure_ascii=False)
+    # 生产 246002 形态：选项已错位，D 整段就是下一节标题 → 裁掉即空，不自动改
+    opts_shift = json.dumps({"A": "电路的干路上", "B": "四个选项中选出一个最恰当的答案。", "D": "二. 言语理解与表达：本部分包括表达与理解两方面的内容。", "C": "并联"}, ensure_ascii=False)
     conn.executemany(
         "INSERT INTO questions VALUES (?,?,?,?,?,?,?,?,?)",
         [
@@ -71,11 +131,20 @@ def _db(tmp_path):
             (4, "panduan", "图推题", opts_foot, "如下图：第47页共64页第二步，分析。", "hs 图推", 0, 1, 1.0),
             (5, "yanyu", "言语题", opts, "文段开篇……对应B 项。 故正确答案为B。文段开篇提出问题……故正确答案为C。", "hs 言语", 0, 1, 1.0),
             (6, "shuliang", "非真题", opts, _E_SKELETON, None, 0, 0, 1.0),
+            (7, "changshi", "选项错位题", opts_shift, "解析。第 7 页 共 36 页拓展。", "hs 常识", 1, 1, 1.0),
         ],
     )
     conn.execute("INSERT INTO explanation_quarantine VALUES (9, '串题解析', 0.01, '9-9', ?, 1.0)", (rq.REASON,))
     conn.execute("INSERT INTO questions VALUES (9, 'shuliang', 'r396 题', ?, NULL, 'hs9', 0, 1, 1.0)", (opts,))
-    conn.executemany("INSERT INTO mistakes (question_id, explanation, uid) VALUES (?,?,?)", [(1, _E_SKELETON, "u1"), (2, _E_TYPO_QUANT, "u1")])
+    conn.executemany(
+        "INSERT INTO mistakes (question_id, explanation, uid) VALUES (?,?,?)",
+        [
+            (1, _E_SKELETON, "u1"),
+            (2, _E_TYPO_QUANT, "u1"),
+            (1, _E_SKELETON.replace("。", "。 ", 2) + "\n", "u2"),  # 清洗归一空白前写的快照
+            (1, "自己写的笔记", "u3"),
+        ],
+    )
     conn.commit()
     conn.row_factory = sqlite3.Row
     return conn, str(p)
@@ -93,8 +162,9 @@ def test_garbled_select_apply_and_reason_scoped_restore(tmp_path):
     assert q[1] is None and q[5] is None and q[2] == _E_TYPO_QUANT and q[3] == _E_TYPO_TEXT and q[6] == _E_SKELETON
     qr = {r["question_id"]: r["reason"] for r in conn.execute("SELECT question_id, reason FROM explanation_quarantine")}
     assert qr == {1: rq.REASON_GARBLED, 5: rq.REASON_GARBLED, 9: rq.REASON}
-    m = {r["question_id"]: r["explanation"] for r in conn.execute("SELECT question_id, explanation FROM mistakes")}
-    assert m[1] == "hs 几何" and m[2] == _E_TYPO_QUANT
+    m = {r["uid"]: r["explanation"] for r in conn.execute("SELECT uid, explanation FROM mistakes WHERE question_id=1")}
+    assert m == {"u1": "hs 几何", "u2": "hs 几何", "u3": "自己写的笔记"}
+    assert conn.execute("SELECT explanation FROM mistakes WHERE question_id=2").fetchone()[0] == _E_TYPO_QUANT
 
     rq.restore(conn, rq.REASON_GARBLED)  # 只还原 r400，r396 隔离行不动
     q = {r["id"]: r["explanation"] for r in conn.execute("SELECT id, explanation FROM questions")}
@@ -102,13 +172,16 @@ def test_garbled_select_apply_and_reason_scoped_restore(tmp_path):
     assert [r[0] for r in conn.execute("SELECT question_id FROM explanation_quarantine")] == [9]
 
 
-def test_strip_footers_apply_and_restore(tmp_path):
+def test_strip_footers_apply_and_restore(tmp_path, capsys):
     conn, _ = _db(tmp_path)
     rows = rq.select_footers(conn)
-    assert [(x["id"], x["field"]) for x in rows] == [(4, "explanation"), (4, "options")]
+    assert [(x["id"], x["field"]) for x in rows] == [(4, "explanation"), (4, "options"), (7, "explanation")]
+    assert "7 options SKIP" in capsys.readouterr().out  # 选项裁掉即空 → 不进改写清单
     rq.apply_footers(conn, rows)
     r = conn.execute("SELECT explanation, options FROM questions WHERE id=4").fetchone()
     assert r["explanation"] == "如下图：第二步，分析。" and json.loads(r["options"])["D"] == "1014"
+    r7 = conn.execute("SELECT explanation, options FROM questions WHERE id=7").fetchone()
+    assert r7["explanation"] == "解析。拓展。" and json.loads(r7["options"])["D"].startswith("二. 言语")
     assert rq.select_footers(conn) == []  # 幂等
     conn.execute("UPDATE questions SET explanation='人工重写' WHERE id=4")
     conn.commit()
@@ -132,7 +205,43 @@ def test_cli_garbled_and_footers_dry_run_write_nothing(tmp_path, capsys):
     finally:
         sys.argv = argv
     out = capsys.readouterr().out
-    assert "targets: 2" in out and "footer fixes: 2 (1 options)" in out and out.count("dry-run only") == 2
+    assert "targets: 2" in out and "footer fixes: 3 (1 options)" in out and out.count("dry-run only") == 2
     c = sqlite3.connect(path)
     assert c.execute("SELECT COUNT(*) FROM questions WHERE explanation IS NULL").fetchone()[0] == 1  # 只有原来的 9
     assert c.execute("SELECT name FROM sqlite_master WHERE name='text_footer_fix'").fetchone() is None
+    c.close()
+
+
+def test_cli_garbled_apply_with_custom_reason_is_independently_restorable(tmp_path, capsys):
+    import sys
+    conn, path = _db(tmp_path)
+    conn.close()
+    argv = sys.argv
+    try:
+        sys.argv = ["x", "--db", path, "--garbled", "--apply", "--reason", "r401:formula-dropped-value"]
+        rq.main()
+        sys.argv = ["x", "--db", path, "--restore", "--reason", "r401:formula-dropped-value"]
+        rq.main()
+    finally:
+        sys.argv = argv
+    out = capsys.readouterr().out
+    assert "restored 1/1 (reason=r401:formula-dropped-value)" in out
+    c = sqlite3.connect(path)
+    assert [r[0] for r in c.execute("SELECT question_id FROM explanation_quarantine")] == [9]  # r396 行不动
+    assert c.execute("SELECT explanation FROM questions WHERE id=1").fetchone()[0] == _E_SKELETON
+    c.close()
+
+
+def test_apply_skips_rows_rewritten_by_concurrent_writer(tmp_path, capsys):
+    """扫描到 apply 之间（生产同期有 w3c 清洗脚本在写 explanation）base 被改过的行不隔离、不留过期快照。"""
+    conn, _ = _db(tmp_path)
+    targets = rq.select_garbled(conn, set(), {5})
+    assert [x["id"] for x in targets] == [1, 5]
+    conn.execute("UPDATE questions SET explanation='并发写入者改过的正文' WHERE id=5")
+    conn.commit()
+    rq.apply(conn, targets, rq.REASON_GARBLED)
+    out = capsys.readouterr().out
+    assert "applied: quarantined 1," in out and "skipped (explanation changed concurrently since scan): [5]" in out
+    q = {r["id"]: r["explanation"] for r in conn.execute("SELECT id, explanation FROM questions")}
+    assert q[1] is None and q[5] == "并发写入者改过的正文"
+    assert [r[0] for r in conn.execute("SELECT question_id FROM explanation_quarantine ORDER BY 1")] == [1, 9]

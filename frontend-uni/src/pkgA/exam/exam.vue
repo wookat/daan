@@ -16,9 +16,11 @@
 
         <view @touchstart="touchStart" @touchend="touchEnd">
           <kg-question-card :q="qCard" :index="idx" :total="items.length" :font-level="fontLv" :show-meta="false">
+            <view v-if="cur.multi" class="multi-tip">多选题：可选多项{{ cur._picked ? '，已选 ' + cur._picked : '' }}，选完点「下一题」</view>
             <kg-option-group
               :options="optList"
-              :model-value="cur._picked || ''"
+              :model-value="cur.multi ? (cur._picked || '').split('') : (cur._picked || '')"
+              :multiple="!!cur.multi"
               :excluded="cur._excl || []"
               :font-level="fontLv"
               @select="pick"
@@ -111,7 +113,8 @@ import { submitFailPlan } from '../../exam-policy.js';
 import { dayKey } from '../../checkin.js';
 import { splitMaterial, sameMaterial } from '../../material.js';
 import { crossedTimeAlert } from '../../exam-alert.js';
-import { toggleExcl, pickWithExcl } from '../../exam-excl.js';
+import { toggleExcl, pickWithExcl, togglePickLetter } from '../../exam-excl.js';
+import { countAnswered, shouldPushProgress } from '../../exam-resume.js';
 import { normFontLv } from '../../font-size.js';
 import { MODULES, moduleLabel } from '../../module-meta.js';
 
@@ -177,17 +180,19 @@ export default {
     const saved = uni.getStorageSync(PROG_KEY);
     if (
       saved && saved.attemptId && saved.endAt > Date.now() &&
-      ((opt.paper_id && String(saved.paperId) === String(opt.paper_id)) || (opt.mini && saved.mini))
+      ((opt.paper_id && String(saved.paperId) === String(opt.paper_id)) || (opt.mini && saved.mini)) &&
+      countAnswered(saved.items) > 0
     ) {
       const resume = await new Promise((resolve) => {
         uni.showModal({
           title: '继续上次模考？',
-          content: '检测到未交卷的进度（已答 ' + saved.items.filter((q) => q._picked).length + '/' + saved.items.length + ' 题）',
+          content: '检测到未交卷的进度（已答 ' + countAnswered(saved.items) + '/' + saved.items.length + ' 题）',
           confirmText: '继续', cancelText: '重新开始',
           success: (r) => resolve(r.confirm), fail: () => resolve(false),
         });
       });
       if (resume) {
+        this._progPushed = true;
         this.attemptId = saved.attemptId;
         this._mini = !!saved.mini;
         this.paper = saved.paper;
@@ -290,6 +295,11 @@ export default {
     },
     pick(k) {
       this.cur._excl = pickWithExcl(this.cur._excl, k);
+      if (this.cur.multi) {
+        this.cur._picked = togglePickLetter(this.cur._picked, k);
+        this.saveProgress();
+        return;
+      }
       this.cur._picked = this.cur._picked === k ? '' : k;
       this.saveProgress();
       if (this.cur._picked && this.idx + 1 < this.items.length) {
@@ -358,6 +368,8 @@ export default {
         if (q && Number.isInteger(q._secs) && q._secs > 0) secs[q.id] = q._secs;
         if (q && Array.isArray(q._excl) && q._excl.length) excl[q.id] = q._excl;
       });
+      if (!shouldPushProgress(picks, this._progPushed)) return;
+      this._progPushed = true;
       request('/api/exam/progress', {
         method: 'POST',
         data: { uid: anonUid(), attempt_id: this.attemptId, picks, idx: this.idx, marks, secs, excl },
@@ -555,3 +567,4 @@ export default {
 }
 /* #endif */
 </style>
+.multi-tip { font-size: 24rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 10rpx; padding: 10rpx 16rpx; margin-bottom: 16rpx; }

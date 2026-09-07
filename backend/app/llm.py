@@ -3,6 +3,8 @@ import asyncio
 import json
 import logging
 import os
+from collections.abc import AsyncIterator
+from typing import Literal, overload
 
 import httpx
 
@@ -68,13 +70,24 @@ def _require_configured(base: str, key: str) -> None:
         raise RuntimeError("AI 服务未配置")
 
 
+NO_THINK = {"thinking": {"type": "disabled"}}
+
+
+def _body(model: str, messages: list, temperature: float, max_tokens: int, think: bool = True) -> dict:
+    body = {"model": model, "messages": messages, "temperature": temperature, "max_tokens": max_tokens}
+    if not think:
+        body.update(NO_THINK)
+    return body
+
+
 def _endpoint(messages: list) -> tuple[str, str, str]:
     if _has_image(messages):
         return BASE_URL, API_KEY, MODEL
     return TEXT_BASE_URL, TEXT_API_KEY, TEXT_MODEL
 
 
-async def chat(messages: list, temperature: float = 0.2, max_tokens: int = 4000) -> str:
+async def chat(messages: list, temperature: float = 0.2, max_tokens: int = 4000, think: bool = True) -> str:
+    """think=False：抽取/分类类任务关闭推理模型的 thinking 阶段（网关不识别该字段时无副作用）。"""
     base, key, model = _endpoint(messages)
     if (not base or not key) and _rescue_ok(messages):
         base, key, model = RESCUE_BASE_URL, RESCUE_API_KEY, RESCUE_MODEL
@@ -84,12 +97,7 @@ async def chat(messages: list, temperature: float = 0.2, max_tokens: int = 4000)
             resp = await client.post(
                 f"{base}/v1/chat/completions",
                 headers={"Authorization": f"Bearer {key}"},
-                json={
-                    "model": model,
-                    "messages": messages,
-                    "temperature": temperature,
-                    "max_tokens": max_tokens,
-                },
+                json=_body(model, messages, temperature, max_tokens, think),
             )
             if resp.status_code >= 500 and attempt < 2:
                 await asyncio.sleep(2 * (attempt + 1))
@@ -98,32 +106,39 @@ async def chat(messages: list, temperature: float = 0.2, max_tokens: int = 4000)
                 resp = await client.post(
                     f"{base}/v1/chat/completions",
                     headers={"Authorization": f"Bearer {key}"},
-                    json={
-                        "model": FALLBACK_MODEL,
-                        "messages": messages,
-                        "temperature": temperature,
-                        "max_tokens": max_tokens,
-                    },
+                    json=_body(FALLBACK_MODEL, messages, temperature, max_tokens, think),
                 )
             if (resp.status_code in _QUOTA_CODES or resp.status_code >= 500) and _rescue_ok(messages):
                 log.warning("[llm] main %s status=%s, fallback to rescue %s", model, resp.status_code, RESCUE_MODEL)
                 resp = await client.post(
                     f"{RESCUE_BASE_URL}/v1/chat/completions",
                     headers={"Authorization": f"Bearer {RESCUE_API_KEY}"},
-                    json={
-                        "model": RESCUE_MODEL,
-                        "messages": messages,
-                        "temperature": temperature,
-                        "max_tokens": max_tokens,
-                    },
+                    json=_body(RESCUE_MODEL, messages, temperature, max_tokens, think),
                 )
             resp.raise_for_status()
             return _content(resp.json())
     raise RuntimeError("LLM 请求重试耗尽")
 
 
-async def chat_stream(messages: list, temperature: float = 0.2, max_tokens: int = 4000):
-    """逐段产出模型输出文本。"""
+class Thinking:
+    """推理模型 reasoning 阶段的进度标记（chat_stream(with_thinking=True) 时产出）：chars 为累计推理字数。"""
+
+    __slots__ = ("chars",)
+
+    def __init__(self, chars: int):
+        self.chars = chars
+
+
+@overload
+def chat_stream(messages: list, temperature: float = ..., max_tokens: int = ..., with_thinking: Literal[False] = ..., think: bool = ...) -> AsyncIterator[str]: ...
+@overload
+def chat_stream(messages: list, temperature: float = ..., max_tokens: int = ..., *, with_thinking: bool, think: bool = ...) -> AsyncIterator["str | Thinking"]: ...
+
+
+async def chat_stream(messages: list, temperature: float = 0.2, max_tokens: int = 4000, with_thinking: bool = False, think: bool = True):  # type: ignore[misc]
+    """逐段产出模型输出文本。with_thinking=True 时在正文之前额外产出 Thinking 进度（推理模型 reasoning_content 不落正文，
+    默认被丢弃，正文首字前调用方拿不到任何信号）。think=False 关闭推理阶段（网关不识别该字段时无副作用，
+    此时 with_thinking=True 仍能把实际发生的 reasoning 透出为进度）。"""
     base, key, model = _endpoint(messages)
     tries = []
     if base and key:
@@ -140,17 +155,13 @@ async def chat_stream(messages: list, temperature: float = 0.2, max_tokens: int 
                 "POST",
                 f"{b}/v1/chat/completions",
                 headers={"Authorization": f"Bearer {k}"},
-                json={
-                    "model": m,
-                    "messages": messages,
-                    "temperature": temperature,
-                    "max_tokens": max_tokens,
-                    "stream": True,
-                },
+                json={**_body(m, messages, temperature, max_tokens, think), "stream": True},
             ) as resp:
                 if (resp.status_code >= 500 or resp.status_code in _QUOTA_CODES) and i < len(tries) - 1:
                     continue
                 resp.raise_for_status()
+                thinking_chars = content_chars = 0
+                finish = None
                 async for line in resp.aiter_lines():
                     if not line.startswith("data:"):
                         continue
@@ -158,16 +169,36 @@ async def chat_stream(messages: list, temperature: float = 0.2, max_tokens: int 
                     if payload == "[DONE]":
                         break
                     try:
-                        delta = json.loads(payload)["choices"][0]["delta"].get("content")
-                    except (json.JSONDecodeError, KeyError, IndexError):
+                        choice = json.loads(payload)["choices"][0]
+                        d = choice["delta"]
+                    except (json.JSONDecodeError, KeyError, IndexError, TypeError):
                         continue
+                    if not isinstance(d, dict):
+                        continue
+                    finish = choice.get("finish_reason") or finish
+                    delta = d.get("content")
                     if delta:
+                        content_chars += len(delta)
                         yield delta
+                    elif with_thinking:
+                        reasoning = d.get("reasoning_content") or d.get("reasoning")
+                        if reasoning:
+                            thinking_chars += len(reasoning)
+                            yield Thinking(thinking_chars)
+                if finish == "length" or not content_chars:
+                    log.warning(
+                        "[llm] stream %s finish=%s content=%d reasoning_chars=%d max_tokens=%d",
+                        m, finish, content_chars, thinking_chars, max_tokens,
+                    )
             return
 
 
-async def chat_fast(messages: list, temperature: float = 0.2, max_tokens: int = 2000) -> str:
-    """轻量任务（分类/抽取）优先走无排队的备用端点，失败时回退主通道。"""
+async def chat_fast(messages: list, temperature: float = 0.2, max_tokens: int = 2000, think: bool = True) -> str:
+    """轻量任务（分类/抽取）优先走无排队的备用端点，失败时回退主通道。
+    think=False 时反过来：主文本通道关 thinking 优先（备用端点不识别关闭字段、仍会整段推理），
+    主通道 5xx/配额不足仍由 chat() 回落备用端点。"""
+    if not think:
+        return await chat(messages, temperature=temperature, max_tokens=max_tokens, think=False)
     if _rescue_ok(messages):
         try:
             async with httpx.AsyncClient(timeout=TIMEOUT) as client:

@@ -11,7 +11,7 @@ import time
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
-from . import db, llm
+from . import db, llm, sse
 from .deps import as_int, rl
 
 router = APIRouter(prefix="/api/interview")
@@ -23,6 +23,7 @@ DIMENSIONS = ["内容针对性", "逻辑条理", "内容深度", "语言表达",
 ANSWER_MAX_LEN = 5000
 ANSWER_MIN_LEN = 20
 REVIEW_MIN_LEN = 300  # 短于此视为流截断/异常产出，保留重新生成入口
+REVIEW_MAX_TOKENS = 8000  # 点评关推理后正文 ~1.7k token；网关忽略关闭字段时 reasoning 仍可占 4k，预算不足则正文为空
 
 _bank: dict | None = None
 
@@ -163,7 +164,7 @@ def _clip_score(v) -> int:
 
 
 async def _grade(q: dict, answer: str) -> tuple[dict, int, str]:
-    data = await llm.chat_json(_score_prompt(q, answer), fast=True, temperature=0.1)
+    data = await llm.chat_json(_score_prompt(q, answer), fast=True, temperature=0.1, think=False)
     raw = data.get("scores") or {}
     scores = {d: _clip_score(raw.get(d)) for d in DIMENSIONS}
     total = sum(scores.values()) * 2
@@ -238,11 +239,13 @@ async def api_answer_stream(body: dict, request: Request):
             sid = _save_session(uid, q, answer, duration, scores, total, "")
             meta["session_id"] = sid
             yield "event: meta\ndata: " + json.dumps(meta, ensure_ascii=False) + "\n\n"
-            full = ""
-            async for delta in llm.chat_stream(_review_prompt(q, answer, scores, summary)):
-                full += delta
-                yield "data: " + json.dumps({"d": delta}, ensure_ascii=False) + "\n\n"
-            _update_review(sid, full)
+            parts: list[str] = []
+            async for line in sse.relay(
+                llm.chat_stream(_review_prompt(q, answer, scores, summary), max_tokens=REVIEW_MAX_TOKENS, with_thinking=True, think=False),
+                parts,
+            ):
+                yield line
+            _update_review(sid, "".join(parts))
             yield "event: done\ndata: " + json.dumps({"session_id": sid, "summary": summary}) + "\n\n"
         except Exception as e:
             yield "event: error\ndata: " + json.dumps({"message": _friendly_ai_err(e)}, ensure_ascii=False) + "\n\n"
@@ -273,10 +276,13 @@ async def api_review_regen_stream(sid: int, body: dict, request: Request):
 
     async def gen():
         try:
-            full = ""
-            async for delta in llm.chat_stream(_review_prompt(q, answer, scores, "")):
-                full += delta
-                yield "data: " + json.dumps({"d": delta}, ensure_ascii=False) + "\n\n"
+            parts: list[str] = []
+            async for line in sse.relay(
+                llm.chat_stream(_review_prompt(q, answer, scores, ""), max_tokens=REVIEW_MAX_TOKENS, with_thinking=True, think=False),
+                parts,
+            ):
+                yield line
+            full = "".join(parts)
             if full.strip():
                 _update_review(sid, full)
             yield "event: done\ndata: " + json.dumps({"session_id": sid}) + "\n\n"
@@ -293,7 +299,7 @@ async def api_answer(body: dict, request: Request):
     uid, q, answer, duration = _validate(request, body)
     try:
         scores, total, summary = await _grade(q, answer)
-        review = await llm.chat(_review_prompt(q, answer, scores, summary))
+        review = await llm.chat(_review_prompt(q, answer, scores, summary), max_tokens=REVIEW_MAX_TOKENS, think=False)
     except Exception as e:
         raise HTTPException(502, _friendly_ai_err(e)) from e
     sid = _save_session(uid, q, answer, duration, scores, total, review)

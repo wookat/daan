@@ -9,6 +9,7 @@ questions.explanation 置空（前端/SEO/错题快照自动回落到 hs_explana
       --extra id[,id]          块外/贴合度偏高但人工核对为串题的题，一并隔离
       --fit-max F              块内只隔离贴合度 < F 的行（默认 0.08；无贴合度值的行照常隔离）
   --restore [--reason R]       把 explanation_quarantine 里的解析写回 questions.explanation（仅当前值仍为空）；--reason 只还原该原因的行
+  --extra id[,id] --reason R   不带 --blocks 时只隔离人工核定的散行（如 r405 OCR 整段乱码），reason 默认 r396
   --garbled                    r400 公式丢失骨架解析（quality.formula_dropped；--keep/--extra/--apply 同上，reason=r400）
   --strip-footers              r400 PDF 页脚串进 explanation/options（quality.strip_page_footers），原文存 text_footer_fix 表；--apply 才写
   --restore-footers            把 text_footer_fix 里的原文写回（仅当前值仍等于修后值）
@@ -18,6 +19,7 @@ questions.explanation 置空（前端/SEO/错题快照自动回落到 hs_explana
 生产：sudo docker exec -i deploy-kaogong-1 python3 - --blocks 264413-264477 --keep 264413,264420 [--apply] < scripts/r396_explanation_quarantine.py
 """
 import argparse
+import json
 import os
 import sqlite3
 import sys
@@ -136,23 +138,39 @@ def select_garbled(conn, keep: set[int], extra: set[int]) -> list[dict]:
 
 
 def select_footers(conn) -> list[dict]:
-    """explanation/options 里串进 PDF 页脚的行，返回 [{id, field, before, after}]。"""
+    """explanation/options 里串进 PDF 页脚/下一节标题的行，返回 [{id, field, before, after}]。"""
     out: list[dict] = []
-    for r in conn.execute(
-        "SELECT id, explanation, options FROM questions WHERE is_real=1 "
-        "AND (explanation LIKE '%页共%页%' OR explanation LIKE '%真题%' OR options LIKE '%真题%' OR options LIKE '%页共%页%') ORDER BY id"
-    ):
+    for r in conn.execute("SELECT id, explanation, options FROM questions WHERE is_real=1 ORDER BY id"):
         for field in ("explanation", "options"):
             before = r[field] or ""
             after = quality.strip_page_footers(before)
-            if after != before:
-                out.append({"id": r["id"], "field": field, "before": before, "after": after})
+            if after == before:
+                continue
+            if field == "options" and _blanks_option(before, after):
+                print(f"  {r['id']} options SKIP: 某选项整段就是串入文本，裁掉即为空，需校源后人工处理")
+                continue
+            out.append({"id": r["id"], "field": field, "before": before, "after": after})
     return out
+
+
+def _blanks_option(before: str, after: str) -> bool:
+    """裁剪后有原本非空的选项变空（该选项本身就是串入的分节标题，题目选项已错位）→ 不自动改。"""
+    try:
+        b, a = json.loads(before), json.loads(after)
+    except (ValueError, TypeError):
+        return True
+    if not isinstance(b, dict) or not isinstance(a, dict):
+        return True
+    return any(str(b.get(k) or "").strip() and not str(a.get(k) or "").strip() for k in b)
 
 
 def report_footers(rows: list[dict]) -> None:
     for x in rows:
-        m = quality.FOOTER_PAGE_RE.search(x["before"]) or quality.FOOTER_SRC_RE.search(x["before"])
+        m = (
+            quality.FOOTER_PAGE_RE.search(x["before"])
+            or quality.FOOTER_SRC_RE.search(x["before"])
+            or quality.FOOTER_SECTION_RE.search(x["before"])
+        )
         print(f"  {x['id']} {x['field']} cut={m.group(0).strip() if m else '?'!r} -{len(x['before']) - len(x['after'])} chars")
     print(f"footer fixes: {len(rows)} ({sum(1 for x in rows if x['field'] == 'options')} options)")
 
@@ -205,26 +223,42 @@ def report(targets: list[dict]) -> None:
           f"skipped: {len(targets) - len(go)}")
 
 
+def _no_ws(expr: str) -> str:
+    return f"replace(replace(replace({expr},' ',''),'　',''),char(10),'')"
+
+
 def apply(conn, targets: list[dict], reason: str = REASON) -> None:
     now = time.time()
     conn.execute(DDL)
-    n_mist = 0
+    n_mist = n_q = 0
+    changed: list[int] = []
     for t in targets:
         if t["skip"]:
             continue
+        # 只在 base 仍等于扫描时的文本才隔离；被并发写入者改过的行跳过并报出，避免快照过期
+        cur = conn.execute(
+            "UPDATE questions SET explanation=NULL, updated_at=? WHERE id=? AND explanation=?",
+            (now, t["id"], t["explanation"]),
+        )
+        if cur.rowcount != 1:
+            changed.append(t["id"])
+            continue
+        n_q += 1
         conn.execute(
             "INSERT OR IGNORE INTO explanation_quarantine (question_id, explanation, fit, block, reason, created_at) "
             "VALUES (?,?,?,?,?,?)",
             (t["id"], t["explanation"], t["fit"], t["block"], reason, now),
         )
-        conn.execute("UPDATE questions SET explanation=NULL, updated_at=? WHERE id=?", (now, t["id"]))
+        # 快照与被隔离解析只差空白（清洗脚本归一空白前写入）也算同一文本
         cur = conn.execute(
-            "UPDATE mistakes SET explanation=? WHERE question_id=? AND explanation=?",
+            "UPDATE mistakes SET explanation=? WHERE question_id=? AND " + _no_ws("explanation") + "=" + _no_ws("?"),
             (t["hs_explanation"] or "", t["id"], t["explanation"]),
         )
         n_mist += cur.rowcount
     conn.commit()
-    print(f"applied: quarantined {sum(1 for t in targets if not t['skip'])}, mistakes snapshots rewritten {n_mist}")
+    print(f"applied: quarantined {n_q}, mistakes snapshots rewritten {n_mist}")
+    if changed:
+        print(f"skipped (explanation changed concurrently since scan): {changed}")
 
 
 def restore(conn, reason: str | None = None) -> None:
@@ -270,7 +304,7 @@ def main():
         targets = select_garbled(conn, parse_ids(args.keep), parse_ids(args.extra))
         report(targets)
         if args.apply:
-            apply(conn, targets, REASON_GARBLED)
+            apply(conn, targets, args.reason or REASON_GARBLED)
         else:
             print("dry-run only; pass --apply to write")
     elif args.strip_footers:
@@ -284,7 +318,7 @@ def main():
         targets = select_targets(conn, parse_blocks(args.blocks), parse_ids(args.keep), parse_ids(args.extra), args.fit_max)
         report(targets)
         if args.apply:
-            apply(conn, targets)
+            apply(conn, targets, args.reason or REASON)
         else:
             print("dry-run only; pass --apply to write")
     else:

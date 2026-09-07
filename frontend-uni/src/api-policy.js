@@ -37,6 +37,26 @@ export function snapPushIndex(idx, path, max) {
   return { idx: next, evict };
 }
 
+// ---------- 账号切换飞行竞态（R499）----------
+
+export function pathUid(path) {
+  const m = /[?&]uid=([^&#]*)/.exec(String(path));
+  if (!m) return null;
+  try {
+    return decodeURIComponent(m[1]);
+  } catch (e) {
+    return m[1];
+  }
+}
+
+// 带 uid 的 GET 回包到达时本机身份已变（退出/换号/401 清态）→ 回包属旧身份，不得落到页面态与 storage。
+export function isStaleUidResponse(path, curUid) {
+  const sent = pathUid(path);
+  return !!sent && sent !== (curUid || '');
+}
+
+export const isStaleUidErr = (e) => !!(e && e.staleUid);
+
 // ---------- 埋点失败离线队列（R176）----------
 
 // 可重试判定：网络失败/超时/HTTP 5xx（瞬时窗口）/429 限流可重放；其余 4xx 属确定性拒绝不重试。

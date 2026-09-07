@@ -254,7 +254,10 @@ def api_practice_result(body: dict, request: Request):
         raise HTTPException(400, "无效题量")
     correct = max(0, min(as_int(body.get("correct")), n))
     secs = max(0, min(as_int(body.get("secs")), 86400))
-    return db.save_practice_result(body.get("module"), n, correct, secs)
+    uid = str(body.get("uid") or "").strip()[:64] or None
+    return db.save_practice_result(
+        body.get("module"), n, correct, secs, uid=uid, probe=auth.probe_request(request)
+    )
 
 @router.post("/api/practice/progress")
 def api_practice_progress(body: dict, request: Request):

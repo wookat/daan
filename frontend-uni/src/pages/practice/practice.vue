@@ -51,15 +51,20 @@
           <text v-if="cur.image && cur.image_credit" class="img-credit">图源：{{ cur.image_credit }}</text>
           <kg-option-group
             :options="optList"
-            :model-value="picked"
-            :answer="cur.answer"
+            :model-value="picked ? ansKeys(picked) : multiSel"
+            :answer="ansKeys(cur.answer)"
             :revealed="(!!picked || beiMode) && !examMode"
             :excluded="cur._excl || []"
             :readonly="beiMode"
+            :multiple="isMulti"
             :font-level="fontLv"
             @select="pick"
             @exclude="toggleExclOpt"
           />
+          <view v-if="isMulti && !picked && !beiMode" class="multi-bar">
+            <text class="multi-hint">多选题：选完所有正确项后确认</text>
+            <kg-button variant="primary" size="lg" :disabled="!multiSel.length" @click="confirmMulti">确认答案{{ multiSel.length ? '（' + multiSel.length + '）' : '' }}</kg-button>
+          </view>
         </kg-question-card>
 
         <view v-if="(picked || beiMode) && !examMode" class="after">
@@ -208,6 +213,15 @@
             <text class="dsb-score num">答对 {{ r.right }}/{{ r.total }}<template v-if="r.secs"> · {{ fmtSecs(r.secs) }}</template></text>
           </view>
         </kg-card>
+        <kg-banner
+          v-if="!beiMode && dailyErr"
+          class="sec"
+          tone="warn"
+          :closable="false"
+          text="今日全站同题 · 成绩上传失败（回首页也会自动补传）"
+          action-text="重试"
+          @action="retryDailySubmit"
+        />
 
         <kg-card v-if="!beiMode && redoReport" class="sec">
           <text class="sec-t">错题重练效果</text>
@@ -412,6 +426,7 @@ export default {
       items: [],
       idx: 0,
       picked: '',
+      multiSel: [],
       right: 0,
       lastModule: null,
       lastSubmodule: null,
@@ -438,6 +453,7 @@ export default {
       resultSent: false,
       percentile: null,
       dailyStats: null,
+      dailyErr: false,
       dailyBoard: [],
       redoReport: null,
       fixReport: null,
@@ -475,9 +491,12 @@ export default {
     };
   },
   computed: {
+    isMulti() {
+      return !!(this.cur && typeof this.cur.answer === 'string' && this.cur.answer.trim().length > 1);
+    },
     curAskSeen() {
       void this.askSeenTick;
-      return findAskSid(uni.getStorageSync('askSessions'), uni.getStorageSync('askCurSession'), this.cur && this.cur.id);
+      return findAskSid(uni.getStorageSync('askSessions'), uni.getStorageSync('askCurSession'), this.cur && !this.cur._sz && this.cur.id);
     },
     moduleBreakdown() {
       const map = {};
@@ -874,6 +893,9 @@ export default {
   watch: {
     items() {
       this.matOpen = {};
+    },
+    idx() {
+      this.multiSel = [];
     },
   },
   methods: {
@@ -1346,15 +1368,31 @@ export default {
       this._dailyDate = '';
       if (!date) return;
       this._dailyDoneDate = date;
-      submitDailySet({ uid: anonUid(), nickname: pkNickname(), date, right: this.right, total: this.items.length, secs: this.totalSecs })
+      this.sendDailyResult({ uid: anonUid(), nickname: pkNickname(), date, right: this.right, total: this.items.length, secs: this.totalSecs });
+    },
+    // 成绩上报：成功挂全站成绩 + 榜；提交失败置 dailyErr 供完成页重试（payload 已在 dailyPendingSubmit，首页 onShow 也会补传）；榜失败不算失败
+    sendDailyResult(payload) {
+      this.dailyErr = false;
+      return submitDailySet(payload)
         .then((d) => {
           this.dailyStats = d;
           // #ifdef H5
           this.initPushNudge();
           // #endif
-          return request('/api/daily_set/board').then((b) => { this.dailyBoard = (b && b.items) || []; });
+          return request('/api/daily_set/board?uid=' + encodeURIComponent(anonUid())).then((b) => { this.dailyBoard = (b && b.items) || []; });
         })
-        .catch(() => {});
+        .catch(() => {
+          if (!this.dailyStats) this.dailyErr = true;
+        });
+    },
+    retryDailySubmit() {
+      const p = uni.getStorageSync('dailyPendingSubmit');
+      if (!p || !p.date || p.date !== this._dailyDoneDate) {
+        this.dailyErr = false;
+        return;
+      }
+      uni.showToast({ title: '重新上传成绩…', icon: 'none', duration: 1000 });
+      this.sendDailyResult(p);
     },
     _mapShizheng(q) {
       return {
@@ -1499,6 +1537,7 @@ export default {
     dismissLoginNudge() {
       this.loginNudgeOff = true;
       uni.setStorageSync('loginNudgeDismissed', '1');
+      trackEvent('login_nudge_dismiss');
     },
     // #ifdef H5
     async initPushNudge() {
@@ -1521,6 +1560,7 @@ export default {
       try {
         if ((await requestNotificationPermission()) !== 'granted') {
           uni.showToast({ title: '需要通知权限才能推送', icon: 'none' });
+          trackEvent('push_nudge_fail', null, 'denied');
           return;
         }
         const pad = '='.repeat((4 - (this._pushKey.length % 4)) % 4);
@@ -1534,11 +1574,13 @@ export default {
         trackEvent('push_nudge_ok');
       } catch (e) {
         uni.showToast({ title: '开启失败，请稍后再试', icon: 'none' });
+        trackEvent('push_nudge_fail', null, 'error');
       }
     },
     dismissPushNudge() {
       this.pushNudge = false;
       uni.setStorageSync('pushNudgeOff', '1');
+      trackEvent('push_nudge_dismiss');
     },
     // #endif
     reinforceWeak(w) {
@@ -1944,6 +1986,14 @@ export default {
     },
     pick(k) {
       if (this.picked) return;
+      if (this.isMulti) {
+        this.multiSel = this.multiSel.includes(k) ? this.multiSel.filter((x) => x !== k) : [...this.multiSel, k];
+        return;
+      }
+      this.commitPick(k);
+    },
+    commitPick(k) {
+      if (this.picked) return;
       this.cur._excl = pickWithExcl(this.cur._excl, k);
       this.picked = k;
       this.cur._picked = k;
@@ -1964,14 +2014,14 @@ export default {
         }, 200);
         return;
       }
-      const correct = k === this.cur.answer;
+      const correct = k === this.cur.answer.trim();
       // #ifdef H5
       announce(pickAnnounceText(correct, this.cur.answer, this.streak + (correct ? 1 : 0)));
       // #endif
       if (!this.beiMode) this.logAttempts([this.cur]);
       this.recordStat(this.cur.module, correct, this.cur.submodule);
       this.playSfx(correct);
-      try { uni.vibrateShort({ type: correct ? 'light' : 'medium' }); } catch (e) { /* 不支持则忽略 */ }
+      try { uni.vibrateShort({ type: correct ? 'light' : 'medium', fail: () => {} }); } catch (e) { /* 不支持则忽略 */ }
       if (correct) {
         this.right++;
         this.streak++;
@@ -2219,13 +2269,25 @@ export default {
       uni.setStorageSync('beiMode', this.beiMode ? '1' : '');
       uni.showToast({ title: this.beiMode ? '背题模式：直接看答案解析，不计入正确率' : '已切回做题模式', icon: 'none', duration: 1500 });
     },
+    hasKey(ans, k) {
+      return typeof ans === 'string' && ans.indexOf(k) !== -1;
+    },
+    ansKeys(ans) {
+      return typeof ans === 'string' ? ans.trim().split('') : [];
+    },
     optClass(k) {
-      if (this.examMode) return k === this.picked ? 'sel' : '';
-      if (this.beiMode) return k === this.cur.answer ? 'right' : '';
-      if (!this.picked) return '';
-      if (k === this.cur.answer) return 'right';
-      if (k === this.picked) return 'wrong';
+      if (this.examMode) return this.hasKey(this.picked, k) || this.multiSel.includes(k) ? 'sel' : '';
+      if (this.beiMode) return this.hasKey(this.cur.answer, k) ? 'right' : '';
+      if (!this.picked) return this.multiSel.includes(k) ? 'sel' : '';
+      if (this.hasKey(this.cur.answer, k)) return 'right';
+      if (this.hasKey(this.picked, k)) return 'wrong';
       return 'dim';
+    },
+    confirmMulti() {
+      if (this.picked || !this.multiSel.length) return;
+      const k = Object.keys(this.cur.options || {}).filter((x) => this.multiSel.includes(x)).join('');
+      this.multiSel = [];
+      this.commitPick(k);
     },
     async saveWrong() {
       const q = this.cur;
@@ -2268,10 +2330,11 @@ export default {
       }
     },
     shareResult() {
-      if (this.dailyStats && this._dailyDoneDate) {
+      if (this._dailyDoneDate && (this.dailyStats || this.dailyErr)) {
+        const ds = this.dailyStats || {};
         let txt = '我完成了错题邦 ' + this._dailyDoneDate + ' 每日一练（全站同题 ' + this.items.length + ' 题），答对 ' + this.right + ' 题';
-        if (this.dailyStats.beat_pct != null) txt += '，击败全站 ' + this.dailyStats.beat_pct + '%';
-        if (this.dailyStats.streak >= 2) txt += '，已连续参与 ' + this.dailyStats.streak + ' 天';
+        if (ds.beat_pct != null) txt += '，击败全站 ' + ds.beat_pct + '%';
+        if (ds.streak >= 2) txt += '，已连续参与 ' + ds.streak + ' 天';
         txt += '！同题挑战我：https://kaogong.zalize.com/#/pages/practice/practice?daily=1&src=share';
         trackEvent('share_result_copy', 'practice', 'daily');
         uni.setClipboardData({
@@ -2329,12 +2392,13 @@ export default {
       const text = askPrefill(q.question, q.options);
       if (!text) return;
       uni.setStorageSync('redoQuestion', text);
-      const qid = askQid(q.id);
+      const qid = q._sz ? 0 : askQid(q.id);
       if (qid) uni.setStorageSync('redoQid', qid);
       else uni.removeStorageSync('redoQid');
       const ans = askAnswerLetter(this.picked);
       if (ans) uni.setStorageSync('redoAnswer', ans);
       else uni.removeStorageSync('redoAnswer');
+      trackEvent('practice_ask_click', q.module || '', q._sz ? 'sz' : String(qid || ''));
       uni.switchTab({ url: '/pages/ask/ask' });
     },
     async exportPaper() {
@@ -2392,6 +2456,7 @@ export default {
     async submitResult() {
       if (this.beiMode || this.resultSent || !this.items.length) return;
       this.dailyStats = null;
+      this.dailyErr = false;
       this.resultSent = true;
       this.dailyBoard = [];
       this.pushNudge = false;
@@ -2417,7 +2482,7 @@ export default {
       try {
         const d = await request('/api/practice_result', {
           method: 'POST',
-          data: { module: this.lastModule || '', n: this.items.length, correct: this.right, secs: this.totalSecs }
+          data: { uid: anonUid(), module: this.lastModule || '', n: this.items.length, correct: this.right, secs: this.totalSecs }
         });
         if (d.percentile != null) this.percentile = d.percentile;
       } catch (e) { /* 非关键路径 */ }
@@ -2467,7 +2532,7 @@ export default {
         }
         const pending = qs.filter((q) => q._picked && !q._logged);
         const items = pending.map((q) => ({
-          qid: q.id || null,
+          qid: q._sz ? null : q.id || null,
           mid: q.mistake_id || undefined,
           module: q.module || this.lastModule || null,
           submodule: q.submodule || null,
@@ -2575,7 +2640,7 @@ export default {
 .reasons { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-8); }
 .rz-t { font-size: var(--fs-sub); color: var(--ink-2); margin-right: var(--sp-4); }
 .rz {
-  display: inline-flex; align-items: center; min-height: 36px; padding: 0 var(--sp-16); border-radius: var(--r-full);
+  display: inline-flex; align-items: center; min-height: 40px; padding: 0 var(--sp-16); border-radius: var(--r-full);
   border: 1px solid var(--line); background: var(--card); font-size: var(--fs-sub); color: var(--ink-2);
 }
 .rz.on { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-text); font-weight: 600; }
@@ -2585,6 +2650,8 @@ export default {
 .hs-rate-t, .hs-rate-done { font-size: var(--fs-sub); color: var(--ink-2); margin-right: var(--sp-4); }
 .xp-k { display: block; font-size: var(--fs-sub); font-weight: 600; color: var(--warn-strong); margin-bottom: var(--sp-4); }
 .xp-b { display: block; font-size: var(--fs-body); color: var(--ink-2); line-height: var(--lh-question); white-space: pre-wrap; }
+.multi-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); margin: var(--sp-12) 0 var(--sp-4); }
+.multi-hint { font-size: var(--fs-caption); color: var(--ink-3); }
 .deep-acts { display: flex; flex-direction: column; align-items: center; gap: var(--sp-8); }
 .deep-acts :deep(.kg-btn--block) { width: 100%; }
 

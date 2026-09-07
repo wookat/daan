@@ -1,4 +1,5 @@
 """AI 能力面：拍照/文字解析、追问、教练建议、错题分析（LLM 调用统一友好降级）。"""
+import asyncio
 import base64
 import json
 import time
@@ -6,10 +7,25 @@ import time
 from fastapi import APIRouter, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 
-from . import db, engine, kb, llm
+from . import db, engine, kb, llm, sse
 from .deps import cache_key, check_access, friendly_ai_err, rl
 
 router = APIRouter()
+
+# 推理模型 reasoning 阶段向客户端发进度心跳的最小间隔（秒）
+THINKING_TICK_SEC = sse.THINKING_TICK_SEC
+
+# 错题分析同 uid 飞行中合并：同一 uid 并发到达的请求共用一次 LLM 调用，结束即移除（成功/失败都不缓存）
+_ANALYSIS_INFLIGHT: dict[str, asyncio.Future] = {}
+
+
+async def _shared_mistake_analysis(uid: str, prompt: str) -> str:
+    fut = _ANALYSIS_INFLIGHT.get(uid)
+    if fut is None:
+        fut = asyncio.ensure_future(llm.chat([{"role": "user", "content": prompt}], temperature=0.4, max_tokens=900))
+        _ANALYSIS_INFLIGHT[uid] = fut
+        fut.add_done_callback(lambda _f: _ANALYSIS_INFLIGHT.pop(uid, None))
+    return await asyncio.shield(fut)
 
 
 @router.post("/api/explain")
@@ -68,7 +84,7 @@ async def api_explain(
         "explain_key": key,
         "cached": bool(cached),
     }
-    if not cached:
+    if not cached and not suspect:
         db.save_explain_cache(key, meta, explanation)
         if raw_key and raw_key != key:
             db.save_explain_cache(raw_key, meta, explanation)
@@ -81,6 +97,7 @@ async def api_explain_stream(
     image: UploadFile | None = File(None),
     text: str | None = Form(None),
     user_answer: str | None = Form(None),
+    question_id: int | None = Form(None),
     x_access_code: str | None = Header(None),
 ):
     check_access(x_access_code)
@@ -95,6 +112,12 @@ async def api_explain_stream(
             raise HTTPException(400, "图片过大（限 8MB）")
         image_b64 = base64.b64encode(raw).decode()
         mime = image.content_type or "image/jpeg"
+
+    def _linked() -> dict | None:
+        if image or not text or not question_id or question_id <= 0:
+            return None
+        rows = db.questions_by_ids([question_id])
+        return engine.extract_from_qbank(rows[0] if rows else None, text)
 
     async def gen():
         try:
@@ -115,7 +138,7 @@ async def api_explain_stream(
                     yield "data: " + json.dumps({"d": hit["explanation"]}, ensure_ascii=False) + "\n\n"
                     yield "event: done\ndata: {}\n\n"
                     return
-            extracted = await engine.extract_question(image_b64, mime, text)
+            extracted = _linked() or await engine.extract_question(image_b64, mime, text)
             ua = user_answer or extracted.get("user_answer")
             key = cache_key(extracted.get("question_text"), ua)
             raw_key = cache_key(text, ua) if text else None
@@ -129,16 +152,19 @@ async def api_explain_stream(
                 "user_answer": ua,
                 "explain_key": key,
                 "cached": bool(cached),
+                "qid": extracted.get("qid"),
             }
             yield "event: meta\ndata: " + json.dumps(meta, ensure_ascii=False) + "\n\n"
             if cached:
                 yield "data: " + json.dumps({"d": cached["explanation"]}, ensure_ascii=False) + "\n\n"
             else:
-                full = ""
-                async for delta in engine.explain_stream(extracted, user_answer):
-                    full += delta
-                    yield "data: " + json.dumps({"d": delta}, ensure_ascii=False) + "\n\n"
-                if full.strip():
+                parts: list[str] = []
+                async for line in sse.relay(
+                    engine.explain_stream(extracted, user_answer, with_thinking=True), parts, THINKING_TICK_SEC
+                ):
+                    yield line
+                full = "".join(parts)
+                if full.strip() and not suspect:
                     db.save_explain_cache(key, meta, full)
                     if raw_key and raw_key != key:
                         db.save_explain_cache(raw_key, meta, full)
@@ -313,7 +339,7 @@ async def api_mistake_analysis(body: dict, request: Request, x_access_code: str 
         + json.dumps(stats, ensure_ascii=False)[:3000]
     )
     try:
-        analysis = await llm.chat([{"role": "user", "content": prompt}], temperature=0.4, max_tokens=900)
+        analysis = await _shared_mistake_analysis(uid[:64], prompt)
     except Exception as e:
         raise HTTPException(502, friendly_ai_err(e)) from e
     return {"analysis": analysis, "stats": stats}

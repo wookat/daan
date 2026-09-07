@@ -60,6 +60,15 @@ def _phase(days_left: int | None, base_level: str | None) -> str:
     return "chongci"
 
 
+def _review_sub(due: int, new_today: int) -> str:
+    """复习任务副标：今日新错题不计入任务，但首页「今日到期 N 题」/错题本队列包含它们，需在文案里对上口径。"""
+    if due:
+        return f"还有 {due} 道到期" + (f" · 另 {new_today} 道今日新错可随时巩固" if new_today else "")
+    if new_today:
+        return f"今日到期错题已清 · 另 {new_today} 道今日新错可随时巩固"
+    return "今日到期错题已清"
+
+
 def today_plan(uid: str) -> dict:
     profile = db.get_user_profile(uid)
     if not profile:
@@ -75,8 +84,8 @@ def today_plan(uid: str) -> dict:
     today = db.today_answer_counts(uid)
     reviewed = db.reviews_today(uid)
     # 今日新错题不计入今日计划，否则按计划练习产生的新错题会把刚完成的复习任务变回未完成
-    cn_day_start = (int(time.time() + 8 * 3600) // 86400) * 86400 - 8 * 3600
-    due = db.due_review_count(uid, created_before=cn_day_start)
+    due = db.due_review_count(uid, created_before=db.cn_day_start())
+    new_today = max(0, db.due_review_count(uid) - due)
 
     tasks: list[dict] = []
 
@@ -88,7 +97,7 @@ def today_plan(uid: str) -> dict:
             "key": "review",
             "type": "review",
             "title": f"错题复习 {review_target} 道",
-            "sub": f"还有 {due} 道到期" if due else "今日到期错题已清",
+            "sub": _review_sub(due, new_today),
             "target": review_target,
             "done_n": min(reviewed, review_target),
             "done": reviewed >= review_target,

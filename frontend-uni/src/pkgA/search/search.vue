@@ -43,7 +43,7 @@
               <rich-text class="q-text stem" :nodes="hl(it.question)" />
               <view v-if="detailWant === it.id && !(detail && detail.id === it.id)" class="q-loading"><kg-skeleton preset="lines" /></view>
               <view v-if="detail && detail.id === it.id" class="q-detail">
-                <text v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: k === detail.answer }">{{ k }}. {{ v }}</text>
+                <text v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: (detail.answer || '').indexOf(k) !== -1 }">{{ k }}. {{ v }}</text>
                 <text class="q-ans">答案：<text class="num">{{ detail.answer }}</text></text>
                 <text v-if="detail.explanation" class="q-exp">{{ detail.explanation }}</text>
                 <view class="d-acts">
@@ -85,7 +85,7 @@
           <rich-text class="q-text stem" :nodes="hl(result.code_hit.question)" />
           <view v-if="detailWant === result.code_hit.id && !(detail && detail.id === result.code_hit.id)" class="q-loading"><kg-skeleton preset="lines" /></view>
           <view v-if="detail && detail.id === result.code_hit.id" class="q-detail">
-            <text v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: k === detail.answer }">{{ k }}. {{ v }}</text>
+            <text v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: (detail.answer || '').indexOf(k) !== -1 }">{{ k }}. {{ v }}</text>
             <text class="q-ans">答案：<text class="num">{{ detail.answer }}</text></text>
             <text v-if="detail.explanation" class="q-exp">{{ detail.explanation }}</text>
             <view class="d-acts">
@@ -411,7 +411,7 @@ export default {
 .mt-content { font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--ink-2); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 .idle { padding-top: var(--sp-16); }
 .hist-chips { display: flex; flex-wrap: wrap; gap: var(--sp-8); }
-.hist-chip { display: inline-flex; align-items: center; gap: var(--sp-4); height: 32px; padding: 0 var(--sp-12); border-radius: var(--r-full); background: var(--card); border: 1px solid var(--line); max-width: 100%; }
+.hist-chip { display: inline-flex; align-items: center; gap: var(--sp-4); min-height: 40px; padding: 0 var(--sp-12); border-radius: var(--r-full); background: var(--card); border: 1px solid var(--line); max-width: 100%; }
 .hist-chip-t { font-size: var(--fs-sub); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hist-clear { margin-top: var(--sp-8); }
 </style>

@@ -217,7 +217,7 @@
           </view>
         </view>
         <kg-question-card :q="detailQ" :show-meta="false">
-          <kg-option-group :options="detailOpts" :model-value="detail.picked || ''" :answer="detail.answer" revealed readonly />
+          <kg-option-group :options="detailOpts" :model-value="(detail.picked || '').split('')" :answer="(detail.answer || '').split('')" revealed readonly />
         </kg-question-card>
         <kg-analysis-card
           :answer="detail.answer"

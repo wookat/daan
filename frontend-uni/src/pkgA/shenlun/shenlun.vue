@@ -6,7 +6,7 @@
     <template v-if="tab === 'q' && !detail">
       <kg-chip-row :model-value="qFavOnly ? -1 : QTYPES.indexOf(qtype)" :options="qtypeChips" class="chips" @update:model-value="setQtype(QTYPES[$event])" />
       <view class="fltbar">
-        <kg-tag v-if="paper" tone="brand" class="paper-tag" role="button" :aria-label="'清除套卷筛选：' + paper" @click="clearPaper">{{ paper }} ✕</kg-tag>
+        <kg-tag v-if="paper" tone="brand" class="paper-tag tappable" role="button" :aria-label="'清除套卷筛选：' + paper" @click="clearPaper">{{ paper }} ✕</kg-tag>
         <kg-button variant="secondary" size="sm" icon="chevron-down" :tone="region ? 'brand' : undefined" @click="fltOpen = true">{{ region || '地区' }}</kg-button>
         <kg-button variant="secondary" size="sm" icon="chevron-down" :tone="year ? 'brand' : undefined" @click="fltOpen = true">{{ year || '年份' }}</kg-button>
         <kg-button variant="secondary" size="sm" icon="star" :tone="qFavOnly ? 'brand' : undefined" :aria-pressed="qFavOnly ? 'true' : 'false'" @click="toggleQFavOnly">收藏{{ qFavIds.length ? ' ' + qFavIds.length : '' }}</kg-button>
@@ -771,7 +771,8 @@ export default {
 .fltbar { display: flex; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-12); flex-wrap: wrap; }
 .fltbar .chips { margin-bottom: 0; }
 .paper-tag { max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tappable { cursor: pointer; }
+.tappable { cursor: pointer; position: relative; }
+.tappable::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 40px; transform: translateY(-50%); }
 .more { margin-top: var(--sp-8); }
 .back { margin-bottom: var(--sp-8); align-self: flex-start; }
 .ellip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

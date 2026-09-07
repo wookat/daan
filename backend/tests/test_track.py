@@ -34,6 +34,35 @@ def test_track_ask_view_question_whitelisted(client):
     assert _rows("utesttrack_avq") == [{"event": "ask_view_question", "source": "ask", "ref": None}]
 
 
+def test_track_practice_ask_click_whitelisted(client):
+    r = client.post(
+        "/api/track",
+        json={"event": "practice_ask_click", "uid": "utesttrack_pac", "source": "shuliang", "ref": "296322"},
+    )
+    assert r.status_code == 200
+    assert _rows("utesttrack_pac") == [{"event": "practice_ask_click", "source": "shuliang", "ref": "296322"}]
+
+
+def test_track_book_ask_click_whitelisted(client):
+    r = client.post(
+        "/api/track",
+        json={"event": "book_ask_click", "uid": "utesttrack_bac", "source": "yanyu", "ref": "234494"},
+    )
+    assert r.status_code == 200
+    assert _rows("utesttrack_bac") == [{"event": "book_ask_click", "source": "yanyu", "ref": "234494"}]
+
+
+def test_track_nudge_funnel_events_whitelisted(client):
+    for ev, ref in (("login_nudge_dismiss", None), ("push_nudge_dismiss", None), ("push_nudge_fail", "denied")):
+        r = client.post("/api/track", json={"event": ev, "uid": "utesttrack_nudge", "ref": ref})
+        assert r.status_code == 200, ev
+    assert _rows("utesttrack_nudge") == [
+        {"event": "login_nudge_dismiss", "source": None, "ref": None},
+        {"event": "push_nudge_dismiss", "source": None, "ref": None},
+        {"event": "push_nudge_fail", "source": None, "ref": "denied"},
+    ]
+
+
 def test_track_slow_load_server_side_enrichment(client):
     r = client.post(
         "/api/track",

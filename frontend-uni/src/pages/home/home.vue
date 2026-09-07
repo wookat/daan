@@ -38,9 +38,9 @@
         >
           <view class="hero-links">
             <text v-if="dsMeta && dsDone" class="hero-ds">今日全站同题 · 答对 {{ dsDone.right }}/{{ dsDone.total }}<template v-if="dsDone.rank"> · 第 {{ dsDone.rank }} 名</template><template v-if="dsDone.streak >= 2"> · 连 {{ dsDone.streak }} 天</template></text>
-            <text v-else-if="dsMeta" class="hero-ds">今日全站同题 10 题 · {{ dsMeta.participants ? '已有 ' + dsMeta.participants + ' 人完成' : '来做今天第 1 人' }}</text>
+            <text v-else class="hero-ds">今日全站同题 10 题{{ dsMeta ? ' · ' + (dsMeta.participants ? '已有 ' + dsMeta.participants + ' 人完成' : '来做今天第 1 人') : '' }}</text>
             <view class="hero-lnk-row">
-              <text v-if="dsMeta" class="hero-lnk" role="button" @click.stop="openDailyArchive">补练往期 ›</text>
+              <text class="hero-lnk" role="button" @click.stop="openDailyArchive">补练往期 ›</text>
               <text v-if="todayCount >= dailyGoal" class="hero-lnk" role="button" @click.stop="openPoster">生成打卡海报 ›</text>
             </view>
           </view>
@@ -117,7 +117,7 @@
         </kg-card>
         <kg-card v-else-if="planToday && planToday.profile" class="sec plan">
           <kg-section-header title="学习计划" more="编辑" @more="openSetup" />
-          <text v-if="planToday.days_left != null" class="plan-s">距考试 <text class="num">{{ planToday.days_left }}</text> 天 · {{ planToday.phase_name }}</text>
+          <text v-if="planDaysText" class="plan-s">{{ planDaysText }}</text>
           <view class="plan-prog">
             <kg-progress :value="planToday.progress.done" :max="planToday.progress.total || 1" :thickness="4" class="grow" aria-label="今日计划进度" />
             <text class="plan-prog-t num">{{ planToday.progress.done }}/{{ planToday.progress.total }}</text>
@@ -317,7 +317,7 @@
             :before-confirm="beforeExamDate"
             @confirm="onExamDate"
           >
-            <view class="pf-date" :class="{ empty: !pf.exam_date }">{{ pf.exam_date || '选择日期 ›' }}</view>
+            <view class="pf-date" :class="{ empty: !pf.exam_date, past: pfDatePast }">{{ pfDateText }}</view>
           </wd-datetime-picker>
         </view>
       </template>
@@ -370,7 +370,7 @@
 </template>
 
 <script>
-import { request, snapPeek, anonUid, exportPdf, trackEvent, fetchCheckinBadges, fetchCheckinSummary, flushDailySubmit } from '../../api.js';
+import { request, snapPeek, anonUid, exportPdf, trackEvent, fetchCheckinBadges, fetchCheckinSummary, flushDailySubmit, isStaleUidErr } from '../../api.js';
 import { checkinStreak, dayKey, loadSzDaily } from '../../checkin.js';
 import { parseExamProgress, fmtLeftSecs } from '../../exam-resume.js';
 import { setBookBadge } from '../../tabbar-badge.js';
@@ -379,6 +379,7 @@ import { parsePendingPractice, parseRemotePractice } from '../../practice-progre
 import { parseReviewSnap } from '../../review-snap.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
+import { planDaysLabel, isExamDatePast, examDateFieldText, cnTodayStr } from '../../plan-days-label.js';
 import { MODULE_KEYS, moduleLabel } from '../../module-meta.js';
 
 // module-meta.js 只含行测五模块；申论不是练习模块但会出现在续练/薄弱项文案里
@@ -441,6 +442,15 @@ export default {
     },
     focusOptions() {
       return MODULE_KEYS.map((k) => ({ label: moduleLabel(k), value: k }));
+    },
+    planDaysText() {
+      return this.planToday ? planDaysLabel(this.planToday.days_left, this.planToday.phase_name) : '';
+    },
+    pfDatePast() {
+      return isExamDatePast(this.pf.exam_date, cnTodayStr());
+    },
+    pfDateText() {
+      return examDateFieldText(this.pf.exam_date, cnTodayStr());
     },
     goalOptions() {
       return [20, 50, 100].map((g) => ({ label: g + ' 题', value: g }));
@@ -529,10 +539,19 @@ export default {
       return { days: next, left: next - s, pct: Math.round(((s - prev) / (next - prev)) * 100) };
     },
   },
+  onLoad() {
+    this._onAuth = () => {
+      if (anonUid() === this._acctUid) return;
+      this.resetAccountState();
+    };
+    uni.$on('authChanged', this._onAuth);
+  },
+  onUnload() {
+    if (this._onAuth) uni.$off('authChanged', this._onAuth);
+  },
   onShow() {
     this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
     this.daily = uni.getStorageSync('dailyPlan') || { days: {} };
-    this.szDaily = loadSzDaily(anonUid());
     this.groupSize = uni.getStorageSync('groupSize') || 10;
     this.dailyGoal = uni.getStorageSync('dailyGoal') || 20;
     if (!this.counts.length) this.counts = uni.getStorageSync('countsSnap') || [];
@@ -542,23 +561,43 @@ export default {
     this.calcWeeklyDot();
     this.checkComeback();
     this.checkReminder();
-    this.loadExamResume();
-    this.loadPracticeResume();
-    this.loadReviewResume();
     this.loadDailySet();
-    flushDailySubmit();
+    flushDailySubmit().then((ok) => {
+      if (ok) this.syncDsDone();
+    });
     const wantSetup = uni.getStorageSync('openPlanSetup');
     if (wantSetup) {
       uni.removeStorageSync('openPlanSetup');
       // 立即弹出设置，不等 profile 请求返回（返回后表单会回填已有值）
       this.openSetup();
     }
-    this.loadHome().then(() => {
+    this.refreshAccountData().then(() => {
       if (wantSetup && this.setupOpen && this.profile) this.openSetup();
     });
     if (this.realMode) this.loadRealFilters();
   },
   methods: {
+    // 账号（uid）专属数据统一从这里拉：onShow 与登录态变化（authChanged）共用
+    refreshAccountData() {
+      this._acctUid = anonUid();
+      this.szDaily = loadSzDaily(this._acctUid);
+      this.loadExamResume();
+      this.loadPracticeResume();
+      this.loadReviewResume();
+      this.syncDsDone();
+      return this.loadHome();
+    },
+    resetAccountState() {
+      this.plan = null;
+      this.planFetched = false;
+      this.planToday = null;
+      this.profile = undefined;
+      this.profileFetched = false;
+      this.badgeInfo = null;
+      this.svTodayN = null;
+      this.dsDone = null;
+      this.refreshAccountData();
+    },
     closeLanding() {
       this.landingHide = true;
       uni.setStorageSync('landingHide', 1);
@@ -592,11 +631,15 @@ export default {
         .then((d) => {
           if (!d || !d.date || !(d.items || []).length) return;
           this.dsMeta = { date: d.date, participants: (d.stats && d.stats.participants) || 0 };
-          const done = uni.getStorageSync('dailyDone:' + anonUid());
-          this.dsDone = done && done.date === d.date ? done : null;
+          this.syncDsDone();
           uni.setStorageSync('dailySet', d);
         })
         .catch(() => {});
+    },
+    syncDsDone() {
+      if (!this.dsMeta) return;
+      const done = uni.getStorageSync('dailyDone:' + anonUid());
+      this.dsDone = done && done.date === this.dsMeta.date ? done : null;
     },
     goSearch() {
       uni.navigateTo({ url: '/pkgA/search/search' });
@@ -887,6 +930,7 @@ export default {
       try {
         this.applyBundle(await request(p));
       } catch (e) {
+        if (isStaleUidErr(e)) return;
         this.loadPlan();
         this.loadBadges();
         await this.loadProfile();
@@ -1062,6 +1106,10 @@ export default {
         uni.showToast({ title: '请先选择考试日期', icon: 'none' });
         return;
       }
+      if (this.setupStep === 1 && this.pfDatePast) {
+        uni.showToast({ title: '考试日期已过，请重新选择', icon: 'none' });
+        return;
+      }
       if (this.setupStep < 3) {
         this.setupStep++;
         return;
@@ -1163,7 +1211,7 @@ export default {
 .hero-links { display: flex; flex-direction: column; gap: var(--sp-4); }
 .hero-ds { font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--on-brand-2); }
 .hero-lnk-row { display: flex; gap: var(--sp-16); }
-.hero-lnk { font-size: var(--fs-sub); color: var(--on-brand); text-decoration: underline; text-underline-offset: 3px; padding: var(--sp-8) 0; }
+.hero-lnk { display: inline-flex; align-items: center; min-height: 40px; margin: -3px 0; font-size: var(--fs-sub); color: var(--on-brand); text-decoration: underline; text-underline-offset: 3px; }
 
 /* 续练/续考/续复习 */
 .resumes { display: flex; flex-direction: column; gap: var(--sp-8); margin-top: var(--sp-12); }
@@ -1212,7 +1260,7 @@ export default {
 .modrow-tr { display: flex; align-items: center; gap: var(--sp-8); }
 .modrow-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
 .modrow-s { font-size: var(--fs-sub); color: var(--ink-3); line-height: var(--lh-sub); }
-.modrow-lnk { color: var(--brand-text); }
+.modrow-lnk { display: inline-block; padding: 11px 0 11px 4px; margin: -11px 0 -11px -4px; color: var(--brand-text); }
 .dot { width: 8px; height: 8px; border-radius: var(--r-full); background: var(--bad); }
 
 /* 更多练习 4 格 */
@@ -1234,6 +1282,7 @@ export default {
 .pf-input { height: var(--hit-min); padding: 0 var(--sp-12); border-radius: var(--r-sm); background: var(--fill); color: var(--ink); font-size: var(--fs-body); }
 .pf-date { display: flex; align-items: center; height: var(--hit-min); padding: 0 var(--sp-12); border-radius: var(--r-sm); background: var(--fill); color: var(--ink); font-size: var(--fs-body); }
 .pf-date.empty { color: var(--ink-4); }
+.pf-date.past { color: var(--bad-strong); border: 1px solid var(--bad-strong); }
 .pf-summary { display: block; font-size: var(--fs-sub); color: var(--ink-2); line-height: var(--lh-sub); padding: var(--sp-12) 0 0; }
 
 /* 题型 sheet */
