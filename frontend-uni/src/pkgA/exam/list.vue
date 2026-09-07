@@ -317,17 +317,17 @@ export default {
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 30rpx; font-weight: 600; margin-bottom: 20rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 40rpx 24rpx; }
-.retry { margin-top: 12rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
+.retry { display: inline-flex; align-items: center; min-height: 40px; margin-top: 4rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 .mini { display: flex; align-items: center; gap: 20rpx; background: linear-gradient(135deg, var(--warn-soft), var(--card)); border: 1rpx solid var(--line); }
 .mini-ico { flex-shrink: 0; font-size: 48rpx; }
 .mini-l { flex: 1; min-width: 0; }
 .mini-t { display: block; font-size: 30rpx; font-weight: 700; color: var(--ink); }
-.mini-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; }
+.mini-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 6rpx; }
 .mini-go { flex-shrink: 0; background: var(--brand); color: #fff; border-radius: 999rpx; padding: 0 36rpx; min-height: 38px; line-height: 38px; font-size: 26rpx; font-weight: 600; }
 .progcard { padding: 22rpx 28rpx; }
 .prog-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
 .prog-t { font-size: 25rpx; font-weight: 600; color: var(--ink); }
-.prog-p { font-size: 23rpx; font-weight: 600; color: var(--brand-text); }
+.prog-p { font-size: 24rpx; font-weight: 600; color: var(--brand-text); }
 .prog-bar { height: 12rpx; background: var(--brand-soft); border-radius: 999rpx; overflow: hidden; }
 .prog-fill { height: 100%; min-width: 4rpx; background: var(--brand); border-radius: 999rpx; }
 .filters { margin-bottom: 20rpx; }
@@ -336,14 +336,14 @@ export default {
 .fchip.on { color: #fff; background: var(--brand); border-color: var(--brand-text); font-weight: 600; }
 .paper-top { min-height: 44px; }
 .paper.pinned { border-color: var(--brand); box-shadow: 0 4rpx 20rpx rgba(37, 99, 235, 0.18); }
-.pin-badge { display: inline-block; font-size: 21rpx; color: #fff; background: var(--brand); border-radius: 8rpx; padding: 4rpx 14rpx; margin-bottom: 10rpx; }
+.pin-badge { display: inline-block; font-size: 24rpx; color: #fff; background: var(--brand); border-radius: 8rpx; padding: 4rpx 14rpx; margin-bottom: 10rpx; }
 .paper-t { font-size: 29rpx; font-weight: 600; color: var(--ink); line-height: 1.5; }
 .paper-meta { display: flex; align-items: center; gap: 12rpx; margin-top: 10rpx; flex-wrap: wrap; }
-.ptag { font-size: 21rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
-.pmeta { font-size: 23rpx; color: var(--ink-2); }
-.pbest { display: block; font-size: 22rpx; color: var(--warn); margin-top: 10rpx; }
+.ptag { font-size: 24rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
+.pmeta { font-size: 24rpx; color: var(--ink-2); }
+.pbest { display: block; font-size: 24rpx; color: var(--warn); margin-top: 10rpx; }
 .pbest.none { color: var(--ink-2); }
-.ppracticed { display: block; font-size: 22rpx; color: var(--ok-strong); margin-top: 6rpx; }
+.ppracticed { display: block; font-size: 24rpx; color: var(--ok-strong); margin-top: 6rpx; }
 .ppracticed.done { color: var(--brand-text); font-weight: 600; }
 .paper-btns { display: flex; gap: 16rpx; margin-top: 20rpx; }
 .pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 25rpx; font-weight: 500; }
@@ -352,12 +352,12 @@ export default {
 .arow:last-child { border-bottom: none; }
 .arow-l { flex: 1; min-width: 0; margin-right: 16rpx; }
 .arow-t { display: block; font-size: 25rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.arow-s { display: block; font-size: 21rpx; color: var(--ink-2); margin-top: 4rpx; }
+.arow-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 4rpx; }
 .arow-score { flex-shrink: 0; font-size: 28rpx; font-weight: 700; color: var(--brand-text); }
 .resume { display: flex; align-items: center; gap: 20rpx; border-color: var(--brand); }
 .resume-l { flex: 1; min-width: 0; }
 .resume-t { display: block; font-size: 27rpx; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.resume-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; }
+.resume-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 6rpx; }
 .resume-btns { flex-shrink: 0; display: flex; gap: 12rpx; }
 .rbtn { flex: none; padding: 0 26rpx; }
 

@@ -532,7 +532,7 @@ export default {
 .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; gap: 12rpx; }
 .meta-row { display: flex; justify-content: flex-end; margin-bottom: 8rpx; }
 .pos { font-size: 24rpx; font-weight: 600; color: var(--ink-2); }
-.mod { font-size: 21rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 2rpx 12rpx; }
+.mod { font-size: 24rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 2rpx 12rpx; }
 .clock { font-size: 32rpx; font-weight: 700; color: #ef4444; font-variant-numeric: tabular-nums; }
 .clock.low, .side-clock.low { animation: clock-pulse 1s ease-in-out infinite; }
 @keyframes clock-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
@@ -540,7 +540,7 @@ export default {
   .clock.low, .side-clock.low { animation: none; }
 }
 .top-btns { display: flex; gap: 10rpx; }
-.tbtn { min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; font-size: 23rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 22rpx; background: var(--card); }
+.tbtn { min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; font-size: 24rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 22rpx; background: var(--card); }
 .tbtn.on { color: #d97706; border-color: #f59e0b; background: var(--warn-soft); font-weight: 600; }
 .progress { height: 6rpx; background: #dbe6ff; border-radius: 999rpx; overflow: hidden; margin-bottom: 20rpx; }
 .pfill { height: 100%; background: linear-gradient(90deg, #5c82ff, var(--brand)); border-radius: 999rpx; transition: width 0.3s ease; }
@@ -581,19 +581,19 @@ export default {
 .sheet { width: 100%; background: var(--card); border-radius: 28rpx 28rpx 0 0; padding: 28rpx 28rpx calc(28rpx + env(safe-area-inset-bottom)); max-height: 75vh; display: flex; flex-direction: column; box-sizing: border-box; }
 .sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
 .sheet-t { font-size: 30rpx; font-weight: 600; }
-.sheet-x { font-size: 30rpx; color: var(--ink-2); padding: 8rpx 16rpx; }
+.sheet-x { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; font-size: 30rpx; color: var(--ink-2); margin: -6px -10rpx -6px 0; }
 .legend { display: flex; gap: 24rpx; margin-bottom: 16rpx; }
-.lg { display: inline-flex; align-items: center; gap: 8rpx; font-size: 22rpx; color: var(--ink-2); }
+.lg { display: inline-flex; align-items: center; gap: 8rpx; font-size: 24rpx; color: var(--ink-2); }
 .dot { width: 20rpx; height: 20rpx; border-radius: 50%; background: var(--soft-bg); border: 2rpx solid var(--line); display: inline-block; }
 .dot.done { background: var(--brand); border-color: var(--brand-text); }
 .dot.mark { background: var(--warn-soft); border-color: #f59e0b; }
 .acard-scroll { max-height: 40vh; }
 .acard-grid { display: flex; flex-wrap: wrap; gap: 20rpx; padding: 8rpx 0 20rpx; }
-.acard-n { width: 80rpx; height: 80rpx; line-height: 80rpx; text-align: center; border-radius: 50%; background: var(--soft-bg); border: 2rpx solid var(--line); font-size: 27rpx; font-weight: 600; color: var(--ink-2); box-sizing: border-box; }
+.acard-n { width: 80rpx; height: 80rpx; min-width: 40px; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--soft-bg); border: 2rpx solid var(--line); font-size: 27rpx; font-weight: 600; color: var(--ink-2); box-sizing: border-box; }
 .acard-n.done { background: var(--brand); border-color: var(--brand-text); color: #fff; }
 .acard-n.mark { border-color: #f59e0b; }
 .acard-n.cur { box-shadow: 0 0 0 4rpx var(--brand-soft); border-color: var(--brand-text); }
-.acard-foot { text-align: center; font-size: 23rpx; color: var(--ink-2); padding: 8rpx 0 16rpx; }
+.acard-foot { text-align: center; font-size: 24rpx; color: var(--ink-2); padding: 8rpx 0 16rpx; }
 .btn { background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 28rpx; font-weight: 500; min-height: 44px; line-height: 44px; }
 
 /* #ifdef H5 */
@@ -614,7 +614,7 @@ export default {
   .side-t { font-size: 30rpx; font-weight: 600; }
   .side-clock { font-size: 28rpx; font-weight: 700; color: #ef4444; font-variant-numeric: tabular-nums; }
   .side-grid { max-height: 46vh; overflow-y: auto; }
-  .kbd-note { text-align: center; font-size: 21rpx; color: var(--ink-2); margin-top: 16rpx; }
+  .kbd-note { text-align: center; font-size: 24rpx; color: var(--ink-2); margin-top: 16rpx; }
   .navrow { position: static; padding: 0; background: transparent; border-top: none; margin-bottom: 24rpx; }
   .navrow .acard-btn { display: none; }
   .wrap { padding-bottom: 40rpx; }

@@ -79,24 +79,24 @@ export default {
 .rcard { background: var(--card); border-radius: 16rpx; padding: 28rpx; margin-bottom: 20rpx; box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04); }
 .r-head { display: flex; justify-content: space-between; align-items: center; }
 .r-title { font-size: 30rpx; font-weight: 600; color: var(--ink); }
-.r-tag { font-size: 22rpx; color: #b45309; background: var(--warn-soft); border-radius: 999rpx; padding: 4rpx 16rpx; }
+.r-tag { font-size: 24rpx; color: #b45309; background: var(--warn-soft); border-radius: 999rpx; padding: 4rpx 16rpx; }
 .r-main { display: flex; align-items: center; gap: 40rpx; margin: 22rpx 0 10rpx; }
 .r-beat { display: flex; flex-direction: column; }
 .r-beat-n { font-size: 64rpx; font-weight: 700; color: var(--brand-text); line-height: 1.1; }
-.r-beat-l { font-size: 22rpx; color: var(--ink-2); }
+.r-beat-l { font-size: 24rpx; color: var(--ink-2); }
 .r-beat-tiny { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; }
 .r-kv { display: flex; gap: 40rpx; }
 .r-kv-i { display: flex; flex-direction: column; }
-.r-k { font-size: 22rpx; color: var(--ink-3); }
+.r-k { font-size: 24rpx; color: var(--ink-3); }
 .r-v { font-size: 34rpx; font-weight: 600; color: var(--ink); }
-.r-v-s { font-size: 22rpx; color: var(--ink-3); font-weight: 400; }
+.r-v-s { font-size: 24rpx; color: var(--ink-3); font-weight: 400; }
 .r-dist { display: flex; align-items: flex-end; gap: 6rpx; height: 140rpx; margin-top: 14rpx; }
 .r-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
 .r-bar-w { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
 .r-bar { width: 60%; min-height: 4rpx; background: var(--line); border-radius: 4rpx 4rpx 0 0; }
 .r-bar.me { background: var(--brand); }
-.r-col-l { font-size: 18rpx; color: var(--ink-3); margin-top: 4rpx; }
-.r-hint { font-size: 22rpx; color: var(--ink-3); margin-top: 8rpx; }
+.r-col-l { font-size: 24rpx; color: var(--ink-3); margin-top: 4rpx; }
+.r-hint { font-size: 24rpx; color: var(--ink-3); margin-top: 8rpx; }
 .r-board { margin-top: 22rpx; border-top: 1rpx solid var(--line); padding-top: 18rpx; }
 .r-board-t { font-size: 26rpx; font-weight: 600; color: var(--ink); display: block; margin-bottom: 10rpx; }
 .r-brow { display: flex; align-items: center; gap: 16rpx; padding: 10rpx 12rpx; border-radius: 10rpx; }
@@ -104,6 +104,6 @@ export default {
 .r-brank { width: 44rpx; font-size: 26rpx; font-weight: 700; color: var(--ink-3); text-align: center; }
 .r-brow.me .r-brank { color: var(--brand-text); }
 .r-bname { flex: 1; font-size: 26rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.r-bme { font-size: 22rpx; color: var(--brand-text); }
+.r-bme { font-size: 24rpx; color: var(--brand-text); }
 .r-bscore { font-size: 26rpx; font-weight: 600; color: var(--ink); }
 </style>
