@@ -98,6 +98,33 @@ def probe_ip(request: Request) -> bool:
     return ip_in_nets(client_ip(request), PROBE_NETS)
 
 
+def client_ua(request: Request) -> str:
+    """真实客户端 UA：边缘透传的 X-Kg-Ua 优先（Workers 回源会改写 UA），回退 User-Agent。"""
+    return request.headers.get("x-kg-ua") or request.headers.get("user-agent") or ""
+
+
+# 自动化 UA 签名：脚本/无头浏览器不会是 H5/小程序真人。只收真人浏览器绝不会带的标识，
+# 桌面 Linux Chrome、iPhone 模拟 UA 等真人也可能有的不在此列。
+PROBE_UA_MARKERS = (
+    "python-urllib", "python-requests", "curl/", "wget/", "headlesschrome",
+    "playwright", "httpx/", "go-http-client",
+)
+
+
+def probe_request(request: Request) -> bool:
+    """请求是否为探针：显式 X-Kg-Probe: 1 / 出口网段命中 / 自动化 UA 签名，三路任一。
+
+    网段是主路（GUI 测试会话 UA 与真人无异），显式头与 UA 签名不依赖 KG_PROBE_CIDRS 配置，
+    出口网段变更时兜底脚本类流量。
+    """
+    if request.headers.get("x-kg-probe") == "1":
+        return True
+    if probe_ip(request):
+        return True
+    ua = client_ua(request).lower()
+    return any(m in ua for m in PROBE_UA_MARKERS)
+
+
 _RATE: dict[str, list[float]] = {}
 
 
