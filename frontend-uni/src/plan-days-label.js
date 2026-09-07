@@ -26,3 +26,10 @@ export function examDateFieldText(dateStr, todayStr) {
   if (!dateStr) return '选择日期 ›';
   return isExamDatePast(dateStr, todayStr) ? `${dateStr} · 已过，请重选` : dateStr;
 }
+
+// 首页 `homePlanCard` 本地标记：有今日计划卡时存任务行数（下次冷启动骨架按同行数等高占位），否则存 ''（走引导卡/不占位）
+export function planCardMark(planToday) {
+  if (!planToday || !planToday.profile) return '';
+  const n = Array.isArray(planToday.tasks) ? planToday.tasks.length : 0;
+  return String(n || 1);
+}

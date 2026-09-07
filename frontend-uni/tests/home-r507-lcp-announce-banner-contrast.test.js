@@ -31,7 +31,7 @@ describe('首页公告占位（R507 CLS：骨架 116px → 横幅 48px 抬升下
   it('公告未回包时用 banner 预设（单行等高 48px），不用四行 lines 段落骨架', () => {
     expect(home).toMatch(/<view v-if="announce === undefined" class="strip"><kg-skeleton preset="banner" \/><\/view>/);
     const skel = read('../src/components/kg-skeleton/kg-skeleton.vue');
-    expect(skel).toContain("['hero', 'cards', 'lines', 'banner']");
+    expect(skel).toMatch(/export const SKELETON_PRESETS = \[[^\]]*'banner'[^\]]*\];/);
     expect(skel).toMatch(/v-else-if="preset === 'banner'" theme="image" :row-col="\[\{ width: '100%', height: '48px', type: 'rect' \}\]"/);
   });
 });

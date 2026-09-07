@@ -108,7 +108,7 @@
         </kg-card>
 
         <!-- 学习计划（三入口合一：未制定→去制定 / 已制定→今日任务 / 无画像→今日建议） -->
-        <kg-skeleton v-if="!profileFetched && planSkel" preset="cards" class="sec" />
+        <kg-card v-if="!profileFetched && planSkel" class="sec plan"><kg-skeleton preset="plan" :rows="planSkelRows" /></kg-card>
         <kg-card v-else-if="profileFetched && profile === null && !guideHide" class="sec plan">
           <kg-section-header title="学习计划">
             <template #right><kg-button variant="text" size="sm" @click="skipGuide">跳过</kg-button></template>
@@ -380,7 +380,7 @@ import { parsePendingPractice, parseRemotePractice } from '../../practice-progre
 import { parseReviewSnap } from '../../review-snap.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
-import { planDaysLabel, isExamDatePast, examDateFieldText, cnTodayStr } from '../../plan-days-label.js';
+import { planDaysLabel, isExamDatePast, examDateFieldText, cnTodayStr, planCardMark } from '../../plan-days-label.js';
 import { MODULE_KEYS, moduleLabel } from '../../module-meta.js';
 
 // module-meta.js 只含行测五模块；申论不是练习模块但会出现在续练/薄弱项文案里
@@ -400,6 +400,7 @@ export default {
       profile: undefined,
       profileFetched: false,
       planSkel: uni.getStorageSync('homePlanCard') || !uni.getStorageSync('planGuideHide'),
+      planSkelRows: Number(uni.getStorageSync('homePlanCard')) || 0,
       planToday: null,
       guideHide: uni.getStorageSync('planGuideHide') ? true : false,
       landingHide: uni.getStorageSync('landingHide') ? true : false,
@@ -953,7 +954,7 @@ export default {
       this.adoptPrefs(this.profile);
       if (this.profile) {
         this.planToday = d.plan_today || null;
-        uni.setStorageSync('homePlanCard', this.planToday && this.planToday.profile ? '1' : '');
+        uni.setStorageSync('homePlanCard', planCardMark(this.planToday));
       } else this.planToday = null;
     },
     goAsk() {
@@ -1080,7 +1081,7 @@ export default {
     async loadPlanToday() {
       try {
         this.planToday = await request('/api/plan/today?uid=' + encodeURIComponent(anonUid()));
-        uni.setStorageSync('homePlanCard', this.planToday && this.planToday.profile ? '1' : '');
+        uni.setStorageSync('homePlanCard', planCardMark(this.planToday));
       } catch (e) { /* 非关键路径 */ }
     },
     openSetup() {
