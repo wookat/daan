@@ -2319,3 +2319,12 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - **宿主级请老板定（不动别家脚本）**：`--keep-storage 1GB` 抬到 ≥3 GB 或 ≥90% 才 prune builder / 有 compose build 在跑时跳过 / 扩盘（第六次提）。
 - 到期项（宿主直读卷 `mode=ro`，绕 `docker exec`）：`push_subs 0`、`weekly_reports 2`、`quick_check rc=0 201 s`、`mistakes.error_reason` 7 / ≥09-11 **0**（首版误查 `answer_log` 列，已纠）、probe=0 33/1、growth 20/4、WAL 4,124,152 B 同字节。(c) R468 容器起（01:36:26Z）后 47 请求：`/assets/*` 404 0 / monitor 0 / 小程序 UA 0；非 2xx `/api/health` 403 ×2 + `/sw.js` 304（首版 epoch 常量写成 2025 年把 14303 行全算进去，已纠）。
 - 取证：`docs/iter/round-3/r469-buildkit-cache-loss-recruit-disk-guard-prune-cron.md`。
+
+## R470（SOP-10 四维审计：主循环 practice/book/home 强制只读读数 0 命中；选簇模考簇 `pkgA/exam/list|exam|report` + `components/rank-card` 首次过 R410+ 审计 → 42 处 <24rpx 字号 + 12 类可点元素 40px；前端 4 文件 `<style>` + 源锁，0 后端；生产 `aa29e52` → `6047881`；新 4-pre 让行首次实跑）
+- 主循环三页生产 375/1440 一手全达标：home `.ld-x/.ann-x` 40、`.tk-row` 52/55 整行；book 四类 40；practice `.tag/.op` 40、`.fontbtn` 盒 20 但 `::after` 42 命中带 −21…+19 全命中（R465 生效）→ 不是缺陷。1440 `<11.9px` 叶节点三页 0（375 计数全是 24rpx 仿真 11.52px）。
+- 模考簇改前一手（375/1440）：答题卡 ✕ 27.7/28、题号格 38.4/40、报告题号格 36.5/38、详情 ✕ 27.7/28、纠错链接 21.7/23、上下题 37.3/39、全部题目 33.3/35、练同类题 34.3/37、AI 详解 18/19、纠错类型 chip `min-height:44rpx`=22（R465 同类无效值）；1440 `<11.9px` 叶节点 list 490 / report 36 / 详情 36。改后全部 40（±19 命中 ±21 不命中）、1440 叶节点 0。
+- 有意不改：`.dopt` 报告选项无 `@click`；`.mod .lg .acard-foot .dstat .note .wrow-s .prow-*`、rank-card 轴刻度/分段提示等纯信息标签只抬字号；卷库 `.fchip/.pbtn/.paper-top/.arow` 原 44 源锁反向锁住。无一手竞品截图不加功能。
+- 部署一手：4-pre 起点 `other_builds=1 prunes=0`（SoftCopyrightAgent compose build 已跑 45 min）WAIT ×18 → 300 s WARN 继续（设计如此，prune 分支本轮未触发）；构建 ~1500 s 再离群（pip 413 s + export 344 s）→ 600 s FAIL 新文案 → 等 `KG_COMPOSE_EXIT rc=0 03:08:40Z` → `DEPLOY_RESUME=1` rc=0（rev 一致 / bundle `index-D_ZUYBdC.js` / 回归全 200 / perf 0.96·1.00）；重建窗口源站 256 请求 5xx 0。
+- 到期项 03:12Z 无增量：probe=0 33/1、growth 20/4、error_reason 7 / ≥09-11 0、push_subs 0、weekly 2、exam_attempts probe=0 1/64、healthy 0 重启；(c) 3062 请求 `/assets/*` 404 0 / monitor 0，非 2xx 全为已登记项（`/api/health` 403 直连扫描、wxlogin 503、`sitemap-questions-12.xml` 404）。
+- 如实：375 为 360 仿真、真机未量、无 testing agent 录屏；`.drz` 错因 chip / `.retry` 失败态 / 交卷与续考门控未在生产走到（源码 + dist + 源锁）；`.rp-chip` 375 单值按 1440 + 源锁推断；考试页量测用浏览器侧合成的 `/api/exam/start` 回包不建 attempt；构建离群归因为宿主指标相关性。
+- 取证：`docs/iter/round-3/r470-sop10-audit-mainloop-exam-cluster-font-hitarea.md`；源锁 `frontend-uni/tests/exam-r470-audit.test.js`。下次 SOP-10 审计 ~R480。
