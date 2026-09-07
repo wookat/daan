@@ -1689,3 +1689,8 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - `DEPLOY_RESUME=1` 前别先提 docs commit：4a rev 闸比的是本机 HEAD，HEAD 一动就被拒（设计如此）；先 resume 再提文档，或 `git checkout <部署 rev>` 跑完再切回分支。
 - `/api/monitor/report` 上报体只转发中心不落本地；核来源用 caddy 行的 `Cf-Connecting-Ip` + UA（`moto g power (2022)` = Lighthouse 移动仿真、本机出口 IP = 自己的 6b），别把部署 Lighthouse 触发的 1 条当用户侧 JS 错误。
 - 4-pre 让行 WAIT 期间别家 build 退出会提前放行（`other_builds=0`），不一定等满 300 s；但之后本家构建照样冷启（守护 `builder prune` 常驻），600 s FAIL → 等 `KG_COMPOSE_EXIT rc=0` → `DEPLOY_RESUME=1` 路径已是常态，不必每轮再登记为异常。
+
+## R472 经验：回扫「谁改过 display」要整行抽、要看父容器
+- 本仓 `<style>` 大量单行规则 `.x { display: inline-flex; min-height: 40px; ... }`，`grep '^\+\s*display:'` 只命中独占一行的写法（R472 第一版据此得出「R410 起只新增 3 条 display」的假结论，实为 87 条）。回扫用 `git diff <起点>~1 HEAD -- frontend-uni/src | grep -E '^[+-]'` 后按 `display:\s*([a-z-]+)` 在整行抽，再按 (文件, 选择器) 归并 `-`/`+` 集合看净变化。
+- 判「改 display 会不会改行」只看三件事：元素默认（uni H5 `<view>` block / `<text>` inline）、父容器是否 flex/grid（是 → 子项 blockified，inline-* 与 block 等价，不会改行）、同容器有没有行内兄弟（`<text>`/裸文本/inline 规则的元素）。父 block + 有行内兄弟 + 块级↔行内变化 = R471a 形态，必须截失败态图；父 block 无行内兄弟只是宽度从撑满变内容宽（居中靠父 `text-align`）。
+- 制造失败态的页面参数要按 `onLoad` 实际读的 key：exam/report 是 `attempt_id`（传 `aid` 走到无参分支 → 「暂无成绩报告」空态不是失败态）；search 要 `?q=` 或真的输入回车才发请求。

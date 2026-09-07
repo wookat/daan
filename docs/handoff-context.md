@@ -2336,3 +2336,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 到期项 04:07Z 无增量：probe=0 33/1、growth 20/4、error_reason 7 / ≥09-11 0、push_subs 0、weekly 2、exam_attempts probe=0 1/64、healthy 0 重启；(c) R471a 容器起后 32 请求 `/assets/*` 404 0 / monitor 0 / 小程序 UA 0 / kaogong 5xx 0（Caddy 总日志 502 全是别家 host：sco / api-video / api.aicdks / mx-ux）。
 - 如实：375 为 360 仿真、真机未量、无 testing agent 录屏；改前逐页精确值未落盘只登记范围；三页按钮类可点元素只核源码未逐个量测；inbox 失败态未走到；R471a 回归是截图发现、源锁事后补锁只覆盖同容器形态。
 - 取证：`docs/iter/round-3/r471-retry-hitarea-all-pages-rankcard-mount-erratum.md`。下次 SOP-10 审计 ~R480。
+
+## R472（R471 教训全仓回扫：R410 起 `display` 净变化 87 条 / 块级↔行内流变化 33 处 → 0 处「错误文案 + 重试同行」同类回归；R471 未截图的 book/report/discuss/search 4 页 `.retry` 生产失败态补截独占行；0 代码、不发版，生产仍 `6e82179`）
+- 方法：`git diff 2541413~1 HEAD -- frontend-uni/src` 整行抽 `display:\s*([a-z-]+)`（**不能只匹配独占一行的 `display:`，本仓大量单行规则，第一版因此得出「只新增 3 条」的假结论**）→ 按 (文件, 选择器) 归并净变化 → `html.parser` 解析模板取元素标签 / 父容器 display / 兄弟行内性。33 处流变化：26 处父是 flex（子项 blockified，等价）、7 处父 block 但无行内兄弟（独占行、宽变内容宽）、**0 处 R471a 形态**。
+- 生产 `6e82179` 375/1440：book / report(`?attempt_id=`) / discuss / search(需真搜一次) `.retry` h=40、±19 命中 ±21 不命中、top 均在错误文案 bottom 之下，截图独占行居中。17 页 `.retry` 至此 16 页有生产失败态一手，只剩 `inbox`（API 全 abort 先落登录分支）。
+- 到期项 04:52Z 无增量：probe=0 33/1、growth 20/4、error_reason 7 / ≥09-11 0、push_subs 0、weekly 2、exam_attempts probe=0 1/64、healthy 0 重启；(c) R471b 容器起后 54 请求全部本机出口 IP（部署 curl / Lighthouse / 本轮 Playwright），`/assets/*` 404 0、小程序 UA 0、5xx 0，monitor 仍只有 R471 那 1 条。宿主 92% / 4.2 G、load 10、mem_avail 281 MB，守护 prune 04:30/04:45Z 各一次。
+- 如实：「0 同类回归」是静态判定 + 4 页一手，其余 29 处依赖各轮当时量测未重截；inbox 未走到；375 为 360 仿真；无录屏；0 代码故本轮无新门。
+- 取证：`docs/iter/round-3/r472-display-change-layout-regression-sweep.md`。下次 SOP-10 审计 ~R480。
