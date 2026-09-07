@@ -1,0 +1,15 @@
+.kg-chips { position: relative; }
+.kg-chips__sv { width: 100%; white-space: nowrap; }
+.kg-chips__track { display: inline-flex; gap: var(--sp-8); padding: 0 var(--page-x); }
+.kg-chip {
+  display: inline-flex; align-items: center; gap: var(--sp-4); height: var(--chip-h); padding: 0 var(--sp-12);
+  border-radius: var(--r-full); background: var(--fill); color: var(--ink-2); font-size: var(--fs-sub); font-weight: 500;
+  border: 1px solid transparent; transition: background-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+}
+.kg-chips--sm .kg-chip { height: 28px; padding: 0 var(--sp-8); font-size: var(--fs-caption); }
+.kg-chip--hover { background: var(--line); }
+.kg-chip.is-on { background: var(--brand-soft); color: var(--brand-text); border-color: var(--brand-soft-2); font-weight: 600; }
+.kg-chip.is-off { opacity: 0.45; }
+.kg-chip__n { font-size: var(--fs-caption); color: var(--ink-3); }
+.kg-chip.is-on .kg-chip__n { color: var(--brand-text); }
+.kg-chips__fade { position: absolute; right: 0; top: 0; bottom: 0; width: 24px; pointer-events: none; background: linear-gradient(to right, transparent, var(--bg)); }

@@ -12,76 +12,36 @@
  * 如果你的项目同样使用了scss预处理，你也可以直接在你的 scss 代码中使用如下变量，同时无需 import 这个文件
  */
 
-/* ============ KG Design Tokens v1（设计规范 v1） ============ */
-$kg-primary-50:  #eef3ff;
-$kg-primary-100: #dbe6ff;
-$kg-primary-200: #b8ccff;
-$kg-primary-500: #5c82ff;
-$kg-primary-600: #2e5bff;
-$kg-primary-700: #1e44d9;
-$kg-grad-primary: linear-gradient(135deg, #5c82ff, #2e5bff);
-
-$kg-success: #16a34a;  $kg-success-bg: #ecfdf5;  $kg-success-deep: #15803d;
-$kg-error:   #dc2626;  $kg-error-bg:   #fef2f2;  $kg-error-deep:   #b91c1c;
-$kg-warning: #d97706;  $kg-warning-bg: #fffbeb;  $kg-warning-deep: #b45309;
-$kg-info:    #0284c7;  $kg-info-bg:    #f0f9ff;  $kg-info-deep:    #0369a1;
-
-$kg-text-1: #17181c;
-$kg-text-2: #40434e;
-$kg-text-3: #7d818f;
-$kg-text-4: #b0b4c0;
-$kg-border: #e7e9f0;
-$kg-fill:   #f2f3f7;
-$kg-bg:     #f6f7fb;
-$kg-surface:#ffffff;
-
-$kg-mod-shuliang: #2e5bff;  $kg-mod-changshi: #d97706;
-$kg-mod-panduan:  #7c3aed;  $kg-mod-yanyu:    #e11d48;
-$kg-mod-ziliao:   #0d9488;
-
-$kg-font-display: 48rpx;  $kg-font-h1: 40rpx;   $kg-font-h2: 34rpx;
-$kg-font-body: 30rpx;     $kg-font-sub: 26rpx;  $kg-font-caption: 22rpx;
-$kg-font-num: 56rpx;
-
-$kg-space-1: 8rpx;  $kg-space-2: 16rpx; $kg-space-3: 24rpx; $kg-space-4: 32rpx;
-$kg-space-5: 40rpx; $kg-space-6: 48rpx; $kg-space-7: 64rpx; $kg-space-8: 96rpx;
-$kg-page-padding: 32rpx;
-
-$kg-radius-s: 12rpx; $kg-radius-m: 20rpx; $kg-radius-l: 28rpx;
-$kg-radius-xl: 40rpx; $kg-radius-full: 999rpx;
-
-$kg-shadow-1: 0 2rpx 8rpx rgba(23,24,28,.04);
-$kg-shadow-2: 0 8rpx 24rpx rgba(23,24,28,.08);
-$kg-shadow-3: 0 16rpx 48rpx rgba(23,24,28,.16);
-
-$kg-dur-fast: 150ms;
-$kg-dur-base: 250ms;
-$kg-ease: cubic-bezier(.2,.8,.2,1);
-/* ============ /KG Design Tokens ============ */
+/* ============ 设计 token（唯一来源 tools/design-tokens/tokens.json） ============
+ * 不要在这里手写颜色/字号/间距：改 tokens.json 后 `node tools/design-tokens/build.mjs`。
+ * 旧 $kg-* 名在生成文件末尾以 deprecated 别名保留一段时间。运行时主题请用 var(--xxx)。
+ */
+@import '@/styles/tokens.generated.scss';
+/* ============ /设计 token ============ */
 
 /* 颜色变量 */
 
 /* 行为相关颜色 */
-$uni-color-primary: #007aff;
-$uni-color-success: #4cd964;
-$uni-color-warning: #f0ad4e;
-$uni-color-error: #dd524d;
+$uni-color-primary: $brand;
+$uni-color-success: $ok;
+$uni-color-warning: $warn;
+$uni-color-error: $bad;
 
 /* 文字基本颜色 */
-$uni-text-color: #333; // 基本色
-$uni-text-color-inverse: #fff; // 反色
-$uni-text-color-grey: #999; // 辅助灰色，如加载更多的提示信息
-$uni-text-color-placeholder: #808080;
-$uni-text-color-disable: #c0c0c0;
+$uni-text-color: $ink; // 基本色
+$uni-text-color-inverse: $on-brand; // 反色
+$uni-text-color-grey: $ink-3; // 辅助灰色，如加载更多的提示信息
+$uni-text-color-placeholder: $ink-4;
+$uni-text-color-disable: $ink-4;
 
 /* 背景颜色 */
-$uni-bg-color: #fff;
-$uni-bg-color-grey: #f8f8f8;
-$uni-bg-color-hover: #f1f1f1; // 点击状态颜色
-$uni-bg-color-mask: rgba(0, 0, 0, 0.4); // 遮罩颜色
+$uni-bg-color: $card;
+$uni-bg-color-grey: $bg;
+$uni-bg-color-hover: $fill; // 点击状态颜色
+$uni-bg-color-mask: $mask; // 遮罩颜色
 
 /* 边框颜色 */
-$uni-border-color: #c8c7cc;
+$uni-border-color: $line;
 
 /* 尺寸变量 */
 
@@ -115,9 +75,9 @@ $uni-spacing-col-lg: 12px;
 $uni-opacity-disabled: 0.3; // 组件禁用态的透明度
 
 /* 文章场景相关 */
-$uni-color-title: #2c405a; // 文章标题颜色
+$uni-color-title: $ink; // 文章标题颜色
 $uni-font-size-title: 20px;
-$uni-color-subtitle: #555; // 二级标题颜色
+$uni-color-subtitle: $ink-2; // 二级标题颜色
 $uni-font-size-subtitle: 18px;
-$uni-color-paragraph: #3f536e; // 文章段落颜色
+$uni-color-paragraph: $ink-2; // 文章段落颜色
 $uni-font-size-paragraph: 15px;

@@ -5,6 +5,18 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## 本地 H5 设计系统与主题回归
+
+- H5 `api.js` 默认 `BASE_URL=''`，静态 `http.server` 只能验证无数据组件；业务回归需同源 `/api/*` 反代到获准使用的后端，或构建时显式配置 API。不要把静态服务 `/api` 404 当成页面回归。
+- 反代保留浏览器 User-Agent，勿转发本地 Host/Origin；本地静态 bundle 与远端 `/tiku/` SSR 是不同被测对象，后者不能证明分支 H5 样式正确。
+- `#/pkgA/dev/design` 是组件总览；宽度 430 与 1280 可覆盖移动 sheet/桌面 dialog、单栏/双栏与三种底栏。浅/深切换后再次打开弹层，核对实际 computed background 与 `--card`，不能仅检查变量值。
+- 个人页「外观模式」是点击循环（跟随系统→浅色→深色），不是弹出选择器；主题保存在当前 origin，换本地端口需重设。
+- 区分源码修复与静态 bundle：复验前硬刷并确认加载的新 chunk；旧 bundle 截图只能作为修复前证据。
+
+### Devin Secrets Needed
+
+- 匿名组件/视觉回归无需 secret；使用生产 API 前仍需任务授权，避免提交答案或修改业务数据。
+
 ## R399 AI 生成类接口主通道优先 生产复验 走查新经验（testing agent）
 
 - **R399 后 `mistakes/analysis`/`ai/coach` 走 `llm.chat()`，成功路径零日志**：容器日志只剩 `[slow-req] Ns POST /api/mistakes/analysis` + access 200 行；`[llm] rescue … failed … fallback` 只会由 `chat_fast()` 调用方（题目抽取/申论）产生，对错题分析 grep 到 0 行是预期。`chat()` 主通道 5xx/额度码回落 rescue **也无日志**，所以「耗时偏长（如 53 s）是主通道慢还是静默回落」无法用日志区分，报告里要标成推断；建议下轮在 `chat()` 回落处加 warning 再复验。

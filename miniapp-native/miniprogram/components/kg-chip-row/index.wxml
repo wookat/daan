@@ -1,0 +1,24 @@
+<view class="kg-chips kg-chips--{{size}}" role="tablist">
+  <scroll-view class="kg-chips__sv" scroll-x enhanced show-scrollbar="{{false}}" scroll-into-view="{{scrollTo}}" scroll-with-animation>
+    <view class="kg-chips__track">
+      <view
+        wx:for="{{options}}"
+        wx:key="value"
+        id="chip-{{index}}"
+        class="kg-chip {{item.value === value ? 'is-on' : ''}} {{item.disabled ? 'is-off' : ''}}"
+        role="tab"
+        aria-selected="{{item.value === value ? 'true' : 'false'}}"
+        hover-class="kg-chip--hover"
+        hover-stay-time="60"
+        data-value="{{item.value}}"
+        data-disabled="{{item.disabled}}"
+        bind:tap="onTap"
+      >
+        <l-icon wx:if="{{item.icon}}" name="{{item.icon}}" size="16" tone="{{item.value === value ? 'brand-text' : 'ink-2'}}" />
+        <text>{{item.label}}</text>
+        <text wx:if="{{item.count != null}}" class="kg-chip__n num">{{item.count}}</text>
+      </view>
+    </view>
+  </scroll-view>
+  <view class="kg-chips__fade" aria-hidden="true" />
+</view>
