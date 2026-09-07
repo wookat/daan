@@ -91,17 +91,17 @@ export default {
 .stats-row { display: flex; gap: 20rpx; margin-bottom: 24rpx; }
 .stat-c { flex: 1; background: var(--card); border-radius: 24rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 26rpx 0; display: flex; flex-direction: column; align-items: center; gap: 6rpx; }
 .stat-n { font-size: 36rpx; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
-.stat-t { font-size: 22rpx; color: var(--ink-2); }
+.stat-t { font-size: 24rpx; color: var(--ink-2); }
 
 .list { display: flex; flex-direction: column; gap: 18rpx; }
 .item { background: var(--card); border-radius: 24rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 24rpx 28rpx; }
 .item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
-.tag { background: #e8effe; color: var(--brand-text); font-size: 22rpx; font-weight: 600; border-radius: 8rpx; padding: 4rpx 14rpx; }
+.tag { background: #e8effe; color: var(--brand-text); font-size: 24rpx; font-weight: 600; border-radius: 8rpx; padding: 4rpx 14rpx; }
 .score { font-size: 30rpx; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
 .score.good { color: #16a34a; }
 .q { font-size: 27rpx; color: var(--ink); line-height: 1.6; }
 .ellip2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
-.meta { font-size: 22rpx; color: var(--ink-2); margin-top: 12rpx; }
+.meta { font-size: 24rpx; color: var(--ink-2); margin-top: 12rpx; }
 
 .empty { display: flex; flex-direction: column; align-items: center; gap: 16rpx; padding: 120rpx 0; }
 .empty-ico { font-size: 72rpx; }
