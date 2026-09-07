@@ -2448,3 +2448,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - **(c) 补量**：R484 容器起后源站 103 请求 = 本机 101 + ClaudeBot 2；非探针 POST/analysis/explain 0、`umst3` 0、404/5xx/monitor/小程序 UA 0；`时政且 qid 非空` 全表 0 / R484 后 0；到期项无增量（probe=0 33/1、growth 20/4、error_reason 7 / ≥09-11 0、push_subs 0、weekly 2、exam_attempts probe=0 1/64、WAL 同字节）。
 - 取证自纠：Caddy 统计 glob `/var/log/caddy/*.log*` 会把同宿主兄弟站点算进来（出现 1001 请求的假 IP），只能读 `kaogong-origin.zalize.com-access.log`。
 - 取证：`docs/iter/round-3/r485-explain-stream-qid-sender-audit-linked-failclosed-erratum.md`。
+
+### R486（2026-09-07）：时政题文进 AI 讲解 0 例 + R421 qid 直通路径 0 次新生成（0 代码，生产仍 `7acf57b`）
+
+- 时政题文（138 条题干前 30 字）与 `explain_cache` 82 行 / ask rec 6 条 / `mistakes` 全表交叉 **0 命中**；识题 LLM module 必落五模块（`guess_module` → `panduan` 兜底），时政题文进来会被贴行测模块，无样本不动。
+- `explain_cache.qid` **82 行全 NULL**：R423（09-06 07:12Z）起记 qid，之后 0 次带 qid 新生成 = R421 直通路径上线后从未在新生成上执行（缓存命中不写 qid）；唯一带 qid 的非探针请求（234494，09-05 17:06Z）早于 R421。82 行里 50 行题文含活跃题库题干 → 适用面宽但端侧从未带 qid 到达。观察指标：`select count(*) from explain_cache where qid is not null` 首次 >0。
+- 登记合并：`meta0` 回传 `hit.qid` + 命中时补写 qid（待有例）。
+- 取证自纠：别用 `replace() LIKE` 扫 157k 题 × N 行（>15 min 不返回、kill 后宿主残留 `sudo python3 -` 要手动 kill）；Python 一次建活跃题干 12 字字典再滑窗（4.5 s）。
+- 取证：`docs/iter/round-3/r486-shizheng-text-in-explain-zero-r421-qid-path-unexercised.md`。
