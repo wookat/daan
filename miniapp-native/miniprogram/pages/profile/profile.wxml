@@ -49,16 +49,52 @@
       </view>
     </kg-card>
 
-    <t-cell-group class="cells">
+    <t-cell-group class="cells" t-class="cells-body" title="学习">
+      <t-cell title="真题卷库" description="历年真题 · 模考记录" arrow hover bind:click="onExamList">
+        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="file-text" size="20" tone="brand" /></view>
+      </t-cell>
+      <t-cell title="申论专区" description="真题 + AI 采分点批改 · 素材范文" arrow hover bind:click="onShenlun">
+        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="pen-line" size="20" tone="brand" /></view>
+      </t-cell>
+      <t-cell title="练习历史" description="逐题回看 · 错题重练" arrow hover bind:click="onPracticeHistory">
+        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="clock" size="20" tone="brand" /></view>
+      </t-cell>
+      <t-cell title="学习日历" description="每日活跃 · 连续打卡 · 徽章" arrow hover bind:click="onCalendar">
+        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="calendar" size="20" tone="brand" /></view>
+      </t-cell>
+      <t-cell title="周学习报告" description="本周 vs 上周 · 掌握度变化" arrow hover bind:click="onWeekly">
+        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="calendar-check" size="20" tone="brand" /></view>
+      </t-cell>
+      <t-cell title="收藏与笔记" description="收藏夹 · 我的笔记" arrow hover bind:click="onFavorites">
+        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="star" size="20" tone="brand" /></view>
+      </t-cell>
+      <t-cell title="离线题包" description="{{offlineN ? offlineN + ' 个题包' : '未下载'}}" arrow hover bind:click="onOffline">
+        <view slot="left-icon" class="row-ico bg-info"><l-icon name="package" size="20" tone="info" /></view>
+      </t-cell>
+    </t-cell-group>
+
+    <t-cell-group class="cells" t-class="cells-body" title="AI 与社区">
+      <t-cell title="AI 问答" description="拍题 / 输题，AI 逐步讲解" arrow hover bind:click="onAsk">
+        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="sparkles" size="20" tone="brand" /></view>
+      </t-cell>
+      <t-cell title="面试记录" description="AI 面试陪练 · 作答与得分" arrow hover bind:click="onInterviewHistory">
+        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="mic" size="20" tone="brand" /></view>
+      </t-cell>
+      <t-cell title="PK 战绩" note="{{pkN ? pkN + ' 局' : ''}}" arrow hover bind:click="onPk">
+        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="swords" size="20" tone="brand" /></view>
+      </t-cell>
+      <t-cell title="讨论消息" note="{{inboxUnread ? inboxUnread + ' 条未读' : ''}}" arrow hover bind:click="onInbox">
+        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="message-circle" size="20" tone="brand" /></view>
+      </t-cell>
       <t-cell title="刷题小队" description="组队打卡 · 互相催学" arrow hover bind:click="onTeam">
         <view slot="left-icon" class="row-ico bg-brand"><l-icon name="users" size="20" tone="brand" /></view>
       </t-cell>
-      <t-cell title="学习提醒" description="{{reminderOn ? '已开启 · 点击关闭' : '每天提醒我打卡刷题'}}" arrow hover bind:click="onReminder">
+      <t-cell wx:if="{{remindAvail}}" title="学习提醒" description="{{reminderOn ? '已开启微信订阅提醒' : '每天提醒我打卡刷题'}}" arrow hover bind:click="onReminder">
         <view slot="left-icon" class="row-ico bg-streak"><l-icon name="alarm-clock" size="20" tone="streak" /></view>
       </t-cell>
     </t-cell-group>
 
-    <t-cell-group class="cells">
+    <t-cell-group class="cells" t-class="cells-body">
       <t-cell title="数据同步" note="{{user ? '账号云端同步' : '匿名（登录后自动合并）'}}">
         <view slot="left-icon" class="row-ico bg-info"><l-icon name="refresh-cw" size="20" tone="info" /></view>
       </t-cell>

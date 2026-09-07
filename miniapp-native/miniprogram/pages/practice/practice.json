@@ -8,6 +8,8 @@
     "kg-empty": "/components/kg-empty/index",
     "kg-progress": "/components/kg-progress/index",
     "kg-action-bar": "/components/kg-action-bar/index",
-    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
+    "kg-sheet": "/components/kg-sheet/index",
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
+    "t-textarea": "tdesign-miniprogram/textarea/textarea"
   }
 }

@@ -1,0 +1,53 @@
+<template name="kg-ac-grid">
+  <view class="kg-ac__legend">
+    <block wx:if="{{graded}}">
+      <view class="kg-ac__lg"><view class="kg-ac__dot kg-ac__dot--right" /><text>正确</text></view>
+      <view class="kg-ac__lg"><view class="kg-ac__dot kg-ac__dot--wrong" /><text>错误</text></view>
+      <view class="kg-ac__lg"><view class="kg-ac__dot" /><text>未答</text></view>
+    </block>
+    <block wx:else>
+      <view class="kg-ac__lg"><view class="kg-ac__dot kg-ac__dot--done" /><text>已答</text></view>
+      <view class="kg-ac__lg"><view class="kg-ac__dot kg-ac__dot--marked" /><text>标记</text></view>
+      <view class="kg-ac__lg"><view class="kg-ac__dot" /><text>未答</text></view>
+    </block>
+  </view>
+  <view wx:for="{{groups}}" wx:key="key" wx:for-item="g" class="kg-ac__grp">
+    <text wx:if="{{grouped && g.module}}" class="kg-ac__grp-t">{{g.module}}</text>
+    <view class="kg-ac__grid">
+      <view
+        wx:for="{{g.cells}}"
+        wx:key="no"
+        class="kg-ac__n num {{item.state ? 'is-' + item.state : ''}} {{item.i === current ? 'is-cur' : ''}}"
+        hover-class="kg-ac__n--hover"
+        hover-stay-time="60"
+        role="button"
+        aria-label="第 {{item.no}} 题"
+        data-i="{{item.i}}"
+        bind:tap="onJump"
+      >{{item.no}}</view>
+    </view>
+  </view>
+</template>
+
+<block wx:if="{{inline}}">
+  <view class="kg-ac kg-ac--inline">
+    <template is="kg-ac-grid" data="{{groups, current, graded, grouped}}" />
+  </view>
+</block>
+<t-popup wx:else visible="{{visible}}" placement="bottom" bind:visible-change="onVisible">
+  <view class="kg-ac kg-ac--sheet">
+    <view class="kg-ac__handle" />
+    <view class="kg-ac__hd">
+      <text class="kg-ac__title">{{title}}</text>
+      <view class="kg-ac__x" hover-class="kg-ac__x--hover" role="button" aria-label="关闭" bind:tap="onClose"><l-icon name="x" size="24" tone="muted" /></view>
+    </view>
+    <scroll-view scroll-y class="kg-ac__scroll" type="list">
+      <template is="kg-ac-grid" data="{{groups, current, graded, grouped}}" />
+    </scroll-view>
+    <text wx:if="{{footText}}" class="kg-ac__foot">{{footText}}</text>
+    <view wx:if="{{primaryText || secondaryText}}" class="kg-ac__acts">
+      <kg-button wx:if="{{secondaryText}}" class="kg-ac__btn" variant="ghost" size="lg" bind:click="onSecondary">{{secondaryText}}</kg-button>
+      <kg-button wx:if="{{primaryText}}" class="kg-ac__btn" variant="primary" size="lg" block="{{!secondaryText}}" loading="{{loading}}" bind:click="onPrimary">{{primaryText}}</kg-button>
+    </view>
+  </view>
+</t-popup>

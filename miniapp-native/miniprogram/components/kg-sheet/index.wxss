@@ -1,0 +1,59 @@
+.sheet {
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  padding: var(--sp-8) var(--page-x) calc(var(--sp-16) + env(safe-area-inset-bottom));
+  max-height: 80vh;
+  box-sizing: border-box;
+}
+
+.sheet-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: var(--r-full);
+  background: var(--line-strong);
+  margin: 0 auto var(--sp-8);
+}
+
+.sheet-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--hit-min);
+}
+
+.sheet-t {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-h3);
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sheet-x {
+  width: var(--hit-min);
+  height: var(--hit-min);
+  margin-right: calc(-1 * var(--sp-8));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-full);
+}
+
+.sheet-x--hover {
+  background: var(--fill);
+}
+
+.sheet-body {
+  flex: 1;
+  min-height: 0;
+  max-height: 60vh;
+}
+
+.sheet-foot:empty {
+  display: none;
+}

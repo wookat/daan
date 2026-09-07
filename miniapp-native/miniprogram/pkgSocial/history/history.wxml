@@ -1,0 +1,28 @@
+<navbar title="练习记录" back="{{true}}" />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <block wx:if="{{items.length}}">
+      <view class="stats">
+        <view class="stat"><text class="stat-n num">{{total}}</text><text class="stat-l">练习次数</text></view>
+        <view class="stat"><text class="stat-n num ok">{{best}}</text><text class="stat-l">最高得分</text></view>
+        <view class="stat"><text class="stat-n num">{{avg}}</text><text class="stat-l">平均得分</text></view>
+      </view>
+      <kg-card wx:for="{{items}}" wx:key="id" wx:for-item="it" variant="raised" clickable chevron class="item" data-id="{{it.id}}" bind:click="onOpen">
+        <view class="item-top">
+          <kg-tag tone="brand">{{it.category}}</kg-tag>
+          <text class="score num {{it.good ? 'good' : ''}}">{{it.total}} 分</text>
+        </view>
+        <text class="q q-text">{{it.question_text}}</text>
+        <text class="meta">{{it.meta}}</text>
+      </kg-card>
+      <kg-card variant="soft" class="aside">
+        <text class="aside-t">继续练习</text>
+        <text class="aside-d">随机抽一题模拟面试，AI 即时点评</text>
+        <kg-button variant="primary" size="lg" block icon="mic" bind:click="goPractice">去练一题</kg-button>
+      </kg-card>
+    </block>
+    <kg-empty wx:elif="{{loadErr}}" icon="wifi-off" title="加载失败：{{loadErr}}" ctaText="重试" bind:cta="load" />
+    <kg-empty wx:elif="{{loaded}}" icon="mic" title="还没有练习记录" desc="AI 面试陪练会记录每次作答与得分，先去练一题吧" ctaText="去练一题" bind:cta="goPractice" />
+    <kg-card wx:else variant="raised"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
+  </view>
+</scroll-view>

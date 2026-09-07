@@ -1,0 +1,99 @@
+<navbar title="收藏与笔记" back="{{true}}" />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <view class="seg"><kg-segmented options="{{tabOpts}}" value="{{tab}}" bind:change="onTab" /></view>
+
+    <!-- 收藏题目 -->
+    <block wx:if="{{tab === 'fav'}}">
+      <kg-card wx:if="{{loading}}" variant="raised"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
+      <kg-empty wx:elif="{{favErr}}" icon="wifi-off" title="加载失败：{{favErr}}" ctaText="重试" bind:cta="load" />
+      <kg-empty
+        wx:elif="{{!hasItems}}"
+        icon="star"
+        title="这里还没有收藏"
+        desc="刷题时点右上角收藏星标收藏好题，收藏后可在这里「移动到…」选收藏夹"
+        ctaText="去刷题"
+        secondaryText="{{logged ? '' : '登录同步收藏'}}"
+        bind:cta="goPractice"
+        bind:secondary="goLogin"
+      />
+      <block wx:else>
+        <!-- 收藏夹列表 -->
+        <kg-card variant="raised" padding="12" class="sec">
+          <view
+            wx:for="{{folders}}"
+            wx:key="id"
+            wx:for-item="f"
+            class="folder {{folderId === f.id ? 'on' : ''}}"
+            hover-class="row--hover"
+            data-fid="{{f.id}}"
+            bind:tap="onPickFolder"
+            bind:longpress="onFolderOps"
+          >
+            <view class="fico"><text class="fico-t">{{f.icon}}</text></view>
+            <view class="fmain">
+              <text class="fname">{{f.name}}</text>
+              <text class="fsub"><text class="num">{{f.n}}</text> 题</text>
+            </view>
+            <view wx:if="{{f.id}}" class="fops" hover-class="op--hover" data-fid="{{f.id}}" catch:tap="onFolderOps"><l-icon name="ellipsis" size="20" tone="faint" /></view>
+            <l-icon name="{{folderId === f.id ? 'check' : 'chevron-right'}}" size="20" tone="{{folderId === f.id ? 'brand-text' : 'faint'}}" />
+          </view>
+          <view class="folder add" hover-class="row--hover" bind:tap="onNewFolder">
+            <view class="fico"><l-icon name="folder-plus" size="20" tone="brand-text" /></view>
+            <view class="fmain"><text class="fname add-t">新建收藏夹</text></view>
+          </view>
+        </kg-card>
+
+        <!-- 模块筛选 -->
+        <view class="chips"><kg-chip-row options="{{modOpts}}" value="{{modFilter}}" bind:change="onModFilter" /></view>
+        <kg-empty wx:if="{{!rows.length}}" compact icon="star" title="这个筛选下还没有收藏" desc="换个收藏夹或模块看看" />
+        <block wx:else>
+          <view class="redo"><kg-button variant="primary" size="lg" block icon="shuffle" bind:click="onRedo">重练{{curFolderName}}（{{rows.length}} 题 · 乱序）</kg-button></view>
+          <kg-card wx:for="{{rows}}" wx:key="key" wx:for-item="it" variant="raised" clickable class="qitem" data-key="{{it.key}}" bind:click="onToggle">
+            <text class="qtx q-text {{it.open ? 'full' : ''}}" user-select="{{it.open}}">{{it.question}}</text>
+            <view class="meta">
+              <kg-tag tone="module" module="{{it.module}}">{{it.modName}}</kg-tag>
+              <kg-tag wx:if="{{it.submodule}}" tone="neutral">{{it.submodule}}</kg-tag>
+              <text class="mtime">收藏于 {{it.date}}</text>
+            </view>
+            <view wx:if="{{it.note}}" class="mynote">
+              <view class="nb"><l-icon name="pencil-line" size="16" tone="warn" /><text class="nb-t">我的笔记</text></view>
+              <text class="mynote-t q-text">{{it.note}}</text>
+            </view>
+            <view wx:if="{{it.open}}" class="detail">
+              <text wx:for="{{it.opts}}" wx:key="k" wx:for-item="o" class="dopt q-text {{o.ans ? 'ans' : ''}}">{{o.k}}. {{o.v}}</text>
+              <text class="ansline">正确答案 {{it.answer}}</text>
+              <text wx:if="{{it.exp}}" class="exp q-text" user-select>{{it.exp}}</text>
+              <view class="ops" catch:tap="noop">
+                <kg-button wx:if="{{it.seen}}" variant="text" size="sm" data-key="{{it.key}}" bind:click="onSeenAsk">回看 AI 详解</kg-button>
+                <kg-button variant="text" size="sm" data-key="{{it.key}}" bind:click="onAsk">AI 详解本题</kg-button>
+                <kg-button wx:if="{{!it.local}}" variant="text" size="sm" data-key="{{it.key}}" bind:click="onMove">移动到…</kg-button>
+                <kg-button wx:if="{{!it.local}}" variant="text" size="sm" data-key="{{it.key}}" bind:click="onDiscuss">讨论区</kg-button>
+                <kg-button variant="text" size="sm" tone="bad" data-key="{{it.key}}" bind:click="onUnfav">取消收藏</kg-button>
+              </view>
+            </view>
+          </kg-card>
+        </block>
+      </block>
+    </block>
+
+    <!-- 我的笔记 -->
+    <block wx:else>
+      <kg-card wx:if="{{loading}}" variant="raised"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
+      <kg-empty wx:elif="{{noteErr}}" icon="wifi-off" title="加载失败：{{noteErr}}" ctaText="重试" bind:cta="switchNote" />
+      <kg-empty wx:elif="{{!notes.length}}" icon="pencil-line" title="还没有笔记" desc="答题后在解析下方「写笔记」，方法心得随题沉淀" ctaText="去刷题" bind:cta="goPractice" />
+      <kg-card wx:for="{{notes}}" wx:key="question_id" wx:for-item="n" variant="raised" class="qitem">
+        <text class="qtx q-text">{{n.question}}</text>
+        <view class="meta">
+          <kg-tag tone="module" module="{{n.module || ''}}">{{n.modName}}</kg-tag>
+          <kg-tag wx:if="{{n.submodule}}" tone="neutral">{{n.submodule}}</kg-tag>
+          <text class="mtime">{{n.date}}</text>
+        </view>
+        <view class="mynote">
+          <view class="nb"><l-icon name="pencil-line" size="16" tone="warn" /><text class="nb-t">我的笔记</text></view>
+          <text class="mynote-t q-text" user-select>{{n.content}}</text>
+        </view>
+      </kg-card>
+    </block>
+  </view>
+</scroll-view>

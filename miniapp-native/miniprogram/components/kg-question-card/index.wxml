@@ -1,0 +1,28 @@
+<kg-card variant="{{variant}}" class="kg-qc">
+  <view class="kg-qc__hd">
+    <view class="kg-qc__tags">
+      <kg-tag wx:if="{{index}}" tone="brand"><text class="num">{{index}}{{total ? '/' + total : ''}}</text></kg-tag>
+      <kg-tag wx:if="{{module}}" tone="module" module="{{module}}">{{submodule || modName}}</kg-tag>
+      <text wx:if="{{meta}}" class="kg-qc__meta">{{meta}}</text>
+    </view>
+    <view
+      wx:if="{{markable}}"
+      class="kg-qc__mark {{marked ? 'is-on' : ''}}"
+      hover-class="kg-qc__mark--hover"
+      role="button"
+      aria-pressed="{{marked ? 'true' : 'false'}}"
+      aria-label="{{marked ? '取消标记本题' : '标记本题'}}"
+      bind:tap="onMark"
+    >
+      <l-icon name="flag" size="20" tone="{{marked ? 'warn' : 'faint'}}" filled="{{marked}}" />
+      <text class="kg-qc__mark-t">{{marked ? '已标记' : '标记'}}</text>
+    </view>
+  </view>
+  <text class="kg-qc__q q-text" user-select style="{{fontSize ? 'font-size:' + fontSize + 'px' : ''}}">{{question}}</text>
+  <block wx:if="{{image}}">
+    <image class="kg-qc__img" src="{{image}}" mode="widthFix" bind:tap="onPreview" aria-label="题目配图，点击放大" />
+    <text wx:if="{{imageCredit}}" class="kg-qc__credit">{{imageCredit}}</text>
+  </block>
+  <slot />
+  <view class="kg-qc__ft"><slot name="footer" /></view>
+</kg-card>

@@ -1,0 +1,74 @@
+<navbar title="考点掌握度地图" back />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap {{selected ? 'has-bar' : ''}}">
+    <view wx:if="{{loading}}" class="skel" aria-busy="true">
+      <kg-card variant="raised" class="sec"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
+      <kg-card variant="raised" class="sec"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
+    </view>
+
+    <!-- 冷启动：还不到解锁题量 -->
+    <kg-card wx:elif="{{cold}}" variant="raised" class="sec">
+      <kg-empty compact icon="chart-pie" title="{{'再练 ' + needMore + ' 题解锁掌握度地图'}}" desc="{{'累计作答 ' + nTotal + '/' + need + ' 题后，按三级考点展示你的掌握度色阶'}}" />
+      <kg-progress value="{{nTotal}}" max="{{need}}" thickness="{{8}}" aria-label="解锁进度" class="cold-bar" />
+      <kg-button variant="primary" size="lg" block bind:click="onGoPracticeCold">去刷题</kg-button>
+    </kg-card>
+
+    <block wx:elif="{{map}}">
+      <!-- 覆盖度总览 -->
+      <kg-card variant="raised" class="sec head">
+        <kg-progress shape="ring" value="{{map.coverage.pct}}" size="{{72}}" aria-label="考点覆盖度" />
+        <view class="head-r">
+          <text class="head-t">考点掌握度地图</text>
+          <text class="head-s">已练 <text class="num">{{map.coverage.practiced}}/{{map.coverage.total}}</text> 个考点 · 累计 <text class="num">{{map.n_total}}</text> 题</text>
+          <view class="legend">
+            <text wx:for="{{LEVELS}}" wx:key="key" class="lg {{item.key}}">{{item.label}}</text>
+          </view>
+        </view>
+      </kg-card>
+
+      <kg-chip-row class="tabs" options="{{modChips}}" value="{{curMod}}" bind:change="onModChange" />
+      <view class="toolbar">
+        <kg-segmented options="{{viewOpts}}" value="{{view}}" size="sm" bind:change="onViewChange" />
+      </view>
+
+      <!-- 二级题型卡 + 三级考点 -->
+      <kg-card wx:for="{{subs}}" wx:key="code" wx:for-item="g" wx:for-index="gi" variant="raised" class="sec">
+        <view class="grp-h">
+          <text class="grp-name">{{g.submodule}}</text>
+          <text class="grp-meta num">{{g.meta}}</text>
+        </view>
+        <view wx:if="{{view === 'grid'}}" class="tiles">
+          <view wx:for="{{g.tag3s}}" wx:key="code" wx:for-item="t" wx:for-index="ti" class="tile {{t.level}} {{t.sel ? 'sel' : ''}}" aria-role="button" aria-pressed="{{t.sel ? 'true' : 'false'}}" data-g="{{gi}}" data-t="{{ti}}" bind:tap="onPick">
+            <text class="tile-name">{{t.name}}</text>
+            <text class="tile-meta num">{{t.pctText}}</text>
+            <view wx:if="{{t.due_mistakes}}" class="dot num">{{t.dueText}}</view>
+          </view>
+        </view>
+        <view wx:else class="rows">
+          <view wx:for="{{g.tag3s}}" wx:key="code" wx:for-item="t" wx:for-index="ti" class="row {{t.sel ? 'sel' : ''}}" aria-role="button" aria-pressed="{{t.sel ? 'true' : 'false'}}" data-g="{{gi}}" data-t="{{ti}}" bind:tap="onPick">
+            <view class="row-main">
+              <view class="row-top">
+                <text class="row-name">{{t.name}}</text>
+                <kg-tag wx:if="{{t.due_mistakes}}" tone="bad">{{t.due_mistakes}} 道到期</kg-tag>
+              </view>
+              <kg-progress value="{{t.pct}}" thickness="{{8}}" module="{{curMod}}" aria-label="{{t.name + ' 掌握度'}}" />
+            </view>
+            <text class="row-pct num {{t.level}}">{{t.pctText}}</text>
+          </view>
+        </view>
+      </kg-card>
+    </block>
+
+    <kg-empty wx:elif="{{err}}" icon="wifi-off" title="{{err}}" cta-text="重试" bind:cta="onRetry" />
+  </view>
+</scroll-view>
+
+<!-- 选中考点吸底操作条 -->
+<kg-action-bar wx:if="{{selected}}" layout="input">
+  <view class="sheet-l">
+    <text class="sheet-t">{{selected.name}}</text>
+    <text class="sheet-s">{{selDesc}}</text>
+  </view>
+  <kg-button wx:if="{{selected.due_mistakes}}" variant="ghost" size="md" bind:click="onGoReview">去复习</kg-button>
+  <kg-button variant="primary" size="md" bind:click="onGoPractice">练 10 题</kg-button>
+</kg-action-bar>

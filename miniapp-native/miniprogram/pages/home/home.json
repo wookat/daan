@@ -8,6 +8,8 @@
     "kg-tag": "/components/kg-tag/index",
     "kg-chip-row": "/components/kg-chip-row/index",
     "kg-section-header": "/components/kg-section-header/index",
+    "kg-banner": "/components/kg-banner/index",
+    "kg-entry-row": "/components/kg-entry-row/index",
     "t-popup": "tdesign-miniprogram/popup/popup",
     "t-input": "tdesign-miniprogram/input/input"
   }

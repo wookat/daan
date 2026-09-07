@@ -1,0 +1,79 @@
+.qv {
+  display: block;
+}
+
+.qv-stem {
+  display: block;
+  font-size: var(--fs-body);
+  line-height: 1.7;
+  color: var(--ink);
+}
+
+.qv-dense .qv-stem {
+  font-size: var(--fs-sub);
+}
+
+.qv-opts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  margin-top: var(--sp-12);
+}
+
+.qv-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-8);
+  padding: var(--sp-8) var(--sp-12);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: var(--card);
+}
+
+.qv-opt.right {
+  border-color: var(--ok);
+  background: var(--ok-soft);
+}
+
+.qv-opt.wrong {
+  border-color: var(--bad);
+  background: var(--bad-soft);
+}
+
+.qv-key {
+  flex: none;
+  width: 20px;
+  font-size: var(--fs-sub);
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.qv-txt {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-sub);
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.qv-exp {
+  margin-top: var(--sp-12);
+  padding-top: var(--sp-12);
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-12);
+}
+
+.qv-exp-blk {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  align-items: flex-start;
+}
+
+.qv-exp-t {
+  font-size: var(--fs-sub);
+  line-height: 1.7;
+  color: var(--ink-2);
+}

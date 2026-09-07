@@ -227,6 +227,16 @@
   --td-cell-title-font-size: var(--fs-body);
   --td-cell-description-font-size: var(--fs-caption);
   --td-cell-note-font-size: var(--fs-sub);
+  --td-cell-group-title-font-size: var(--fs-caption);
+  --td-cell-group-title-color: var(--ink-3);
+  --td-cell-group-title-bg-color: transparent;
+  --td-cell-group-title-line-height: 32px;
+  --td-cell-group-title-padding-left: var(--sp-4);
+}
+
+.cells-body {
+  border-radius: var(--r-md);
+  overflow: hidden;
 }
 
 .row-ico {

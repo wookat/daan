@@ -1,0 +1,21 @@
+<view class="kg-opts" role="radiogroup">
+  <view
+    wx:for="{{views}}"
+    wx:key="k"
+    class="kg-opt {{item.cls ? 'kg-opt--' + item.cls : ''}} {{disabled ? 'is-disabled' : ''}}"
+    hover-class="{{revealed || disabled ? 'none' : 'kg-opt--hover'}}"
+    hover-stay-time="60"
+    role="radio"
+    aria-checked="{{item.checked ? 'true' : 'false'}}"
+    aria-label="{{item.k}}{{item.isExcl ? '（已排除）' : ''}}"
+    data-key="{{item.k}}"
+    bind:tap="onPick"
+    bind:longpress="onLong"
+  >
+    <text class="kg-opt__key">{{item.k}}</text>
+    <text class="kg-opt__text q-text" style="{{fontSize ? 'font-size:' + fontSize + 'px' : ''}}">{{item.v}}</text>
+    <l-icon wx:if="{{item.isRight}}" name="circle-check" size="20" tone="ok" />
+    <l-icon wx:elif="{{item.isWrong}}" name="circle-x" size="20" tone="bad" />
+    <l-icon wx:elif="{{item.isExcl}}" name="eye-off" size="16" tone="faint" />
+  </view>
+</view>

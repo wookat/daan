@@ -1,0 +1,8 @@
+.kg-es__row { display: flex; align-items: baseline; gap: var(--sp-12); margin-bottom: var(--sp-8); }
+.kg-es__k { flex-shrink: 0; font-size: var(--fs-caption); color: var(--ink-2); }
+.kg-es__v { flex: 1; min-width: 0; font-size: var(--fs-sub); color: var(--ink); font-weight: 500; }
+.kg-es__opts { display: flex; gap: var(--sp-8); margin-top: var(--sp-12); }
+.kg-es__chip { flex: 1; min-height: var(--hit-min); box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: var(--r-sm); font-size: var(--fs-caption); color: var(--ink-2); background: var(--fill); }
+.kg-es__chip--hover { background: var(--line); }
+.kg-es__chip.is-on { border-color: var(--brand-text); color: var(--brand-text); background: var(--brand-soft); font-weight: 600; }
+.kg-es__note { display: block; margin: var(--sp-8) 0 var(--sp-16); font-size: var(--fs-caption); color: var(--ink-3); }

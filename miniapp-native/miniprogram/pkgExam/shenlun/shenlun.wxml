@@ -1,0 +1,208 @@
+<navbar title="申论专区" back="{{true}}" />
+<view class="wrap">
+  <kg-segmented options="{{tabOpts}}" value="{{tab}}" bind:change="onTab" />
+
+  <!-- 真题列表 -->
+  <block wx:if="{{tab === 'q' && !detail}}">
+    <view class="chips">
+      <kg-chip-row options="{{qtypeChips}}" value="{{qFavOnly ? '__fav' : qtype}}" bind:change="onQtype" />
+    </view>
+    <view class="fltbar">
+      <view wx:if="{{paper}}" class="paper-tag" role="button" aria-label="清除套卷筛选：{{paper}}" bind:tap="clearPaper">
+        <kg-tag tone="brand">{{paper}} ✕</kg-tag>
+      </view>
+      <kg-button variant="secondary" size="sm" icon="chevron-down" bind:click="openFlt">{{region || '地区'}}</kg-button>
+      <kg-button variant="secondary" size="sm" icon="chevron-down" bind:click="openFlt">{{year || '年份'}}</kg-button>
+      <kg-button variant="secondary" size="sm" icon="star" bind:click="toggleQFavOnly">收藏{{qFavCount ? ' ' + qFavCount : ''}}</kg-button>
+      <view class="grow" />
+      <kg-button wx:if="{{fltActive}}" variant="text" size="sm" bind:click="clearFlt">重置</kg-button>
+    </view>
+
+    <kg-sheet visible="{{fltOpen}}" title="筛选" bind:close="closeFlt">
+      <view class="sheet-body">
+        <text wx:if="{{years.length}}" class="sheet-k">年份</text>
+        <kg-chip-row wx:if="{{years.length}}" options="{{yearChips}}" value="{{year}}" size="sm" bind:change="onYear" />
+        <text wx:if="{{regions.length}}" class="sheet-k">地区</text>
+        <kg-chip-row wx:if="{{regions.length}}" options="{{regionChips}}" value="{{region}}" size="sm" scrollToSelected="{{false}}" bind:change="onRegion" />
+      </view>
+      <view slot="footer" class="sheet-foot">
+        <kg-button variant="ghost" size="lg" bind:click="clearFlt">重置</kg-button>
+        <view class="grow"><kg-button variant="primary" size="lg" block bind:click="closeFlt">查看 {{qTotal}} 道题</kg-button></view>
+      </view>
+    </kg-sheet>
+
+    <t-skeleton wx:if="{{loading}}" theme="paragraph" animation="gradient" />
+    <kg-empty wx:elif="{{qErr}}" icon="wifi-off" title="加载失败：{{qErr}}" ctaText="重试" bind:cta="loadQs" />
+    <kg-empty
+      wx:elif="{{!qs.length}}"
+      icon="pen-line"
+      title="{{qFavOnly ? '还没有收藏真题' : '暂无题目'}}"
+      desc="{{qFavOnly ? '点题目右上角星标收藏，收藏的题会汇总在这里' : '换个题型或年份试试，更多真题陆续上线'}}"
+      ctaText="{{fltActive ? '查看全部真题' : ''}}"
+      bind:cta="clearFlt"
+    />
+    <view wx:else class="grid">
+      <kg-card wx:for="{{qs}}" wx:key="id" clickable data-id="{{item.id}}" bind:click="onOpenQ">
+        <view class="q-top">
+          <view class="q-tags">
+            <kg-tag tone="brand">{{item.qtype}}</kg-tag>
+            <view wx:if="{{item.paper}}" role="button" aria-label="只看本套卷：{{item.paper}}" data-paper="{{item.paper}}" catch:tap="onPaperTap"><kg-tag tone="neutral">{{item.paper}}</kg-tag></view>
+            <text wx:else class="q-paper">{{item.sub}}</text>
+          </view>
+          <view class="star-btn" role="button" aria-label="{{item.faved ? '取消收藏本题' : '收藏本题'}}" data-id="{{item.id}}" catch:tap="onQFav">
+            <l-icon name="star" size="20" tone="{{item.faved ? 'warn' : 'faint'}}" filled="{{item.faved}}" />
+          </view>
+        </view>
+        <text class="q-text ellip3">{{item.question}}</text>
+        <view class="q-foot">
+          <text class="q-meta">{{item.meta}}</text>
+          <kg-button variant="secondary" size="sm" icon="chevron-right" data-id="{{item.id}}" bind:click="onOpenQ">作答</kg-button>
+        </view>
+      </kg-card>
+    </view>
+    <view wx:if="{{!loading && !qErr && !qFavOnly && !qEnd && qs.length >= 20}}" class="more">
+      <kg-button variant="secondary" size="md" block bind:click="loadMore">加载更多</kg-button>
+    </view>
+  </block>
+
+  <!-- 真题详情 / 作答 -->
+  <block wx:if="{{tab === 'q' && detail}}">
+    <view class="back"><kg-button variant="text" size="sm" icon="chevron-left" bind:click="backToList">返回列表</kg-button></view>
+    <kg-card class="d-card">
+      <view class="q-top">
+        <text class="q-paper">{{detailSub}}</text>
+        <view class="q-top-r">
+          <kg-tag tone="brand">{{detail.qtype}}</kg-tag>
+          <view class="star-btn" role="button" aria-label="{{detailFaved ? '取消收藏本题' : '收藏本题'}}" bind:tap="onDetailFav">
+            <l-icon name="star" size="20" tone="{{detailFaved ? 'warn' : 'faint'}}" filled="{{detailFaved}}" />
+          </view>
+          <kg-button variant="text" size="sm" icon="copy" bind:click="copyQLink">复制链接</kg-button>
+        </view>
+      </view>
+      <text class="d-h">作答要求</text>
+      <text class="d-q">{{detail.question}}</text>
+      <view class="d-toggle" role="button" aria-expanded="{{showMat}}" bind:tap="toggleMat">
+        <text class="d-h">给定资料</text>
+        <view class="fold-ico {{showMat ? 'flip' : ''}}"><l-icon name="chevron-down" size="20" tone="muted" /></view>
+      </view>
+      <text wx:if="{{showMat}}" class="d-mat">{{detail.material}}</text>
+    </kg-card>
+    <view wx:if="{{qNav.idx >= 0 && qNav.total > 1}}" class="d-nav">
+      <kg-button variant="ghost" size="md" icon="chevron-left" disabled="{{!qNav.prevId}}" bind:click="onPrevQ">上一题</kg-button>
+      <text class="d-nav-pos">{{qNav.idx + 1}} / {{qNav.total}}</text>
+      <kg-button variant="ghost" size="md" disabled="{{!qNav.nextId}}" bind:click="onNextQ">下一题</kg-button>
+    </view>
+
+    <kg-card class="d-card">
+      <view class="d-ans-h">
+        <text class="d-h">我的作答</text>
+        <text wx:if="{{wordText}}" class="d-save {{wordSt}}">{{wordText}}</text>
+      </view>
+      <textarea
+        class="d-ta"
+        value="{{myAnswer}}"
+        maxlength="3000"
+        placeholder="在此作答后点击下方按钮，AI 按采分点批改（大作文为结构点评+参考档位）。草稿自动保存，换设备可续写"
+        placeholder-class="d-ta-ph"
+        auto-height
+        show-confirm-bar="{{false}}"
+        bindinput="onAnswerInput"
+      />
+      <view class="grade-btn">
+        <kg-button variant="primary" size="lg" block disabled="{{grading || !myAnswer}}" loading="{{grading}}" bind:click="grade">{{grading ? 'AI 批改中…' : '提交 AI 批改'}}</kg-button>
+      </view>
+      <view wx:if="{{gradeErr}}" class="g-degrade" role="status">
+        <l-icon name="info" size="20" tone="warn" />
+        <text class="g-degrade-t">{{gradeErr}}</text>
+      </view>
+      <view wx:if="{{gradeResult}}" class="d-grade">
+        <text class="d-h">批改结果<text class="g-note">（AI 参考，非官方评分）</text></text>
+        <text class="g-body">{{gradeResult}}</text>
+      </view>
+      <view wx:if="{{history.length}}" class="d-toggle" role="button" aria-expanded="{{showHist}}" bind:tap="toggleHist">
+        <text class="d-h">历史作答（{{history.length}}）</text>
+        <view class="fold-ico {{showHist ? 'flip' : ''}}"><l-icon name="chevron-down" size="20" tone="muted" /></view>
+      </view>
+      <view wx:if="{{showHist}}">
+        <view wx:for="{{history}}" wx:key="id" class="hist-item">
+          <text class="hist-time">{{item.timeText}}</text>
+          <text class="hist-ans">{{item.answer}}</text>
+          <text wx:if="{{item.result}}" class="hist-res">{{item.result}}</text>
+        </view>
+      </view>
+      <view class="d-toggle" role="button" aria-expanded="{{showRef}}" bind:tap="toggleRef">
+        <text class="d-h ref-t">{{showRef ? '收起参考要点' : '写完再看 · 参考要点'}}</text>
+        <view class="fold-ico {{showRef ? 'flip' : ''}}"><l-icon name="chevron-down" size="20" tone="brand-text" /></view>
+      </view>
+      <text wx:if="{{showRef}}" class="d-ref">{{detail.reference}}</text>
+      <text wx:if="{{showRef && detail.notes}}" class="d-notes">{{detail.notes}}</text>
+    </kg-card>
+  </block>
+
+  <!-- 素材/范文 -->
+  <block wx:if="{{tab === 'm'}}">
+    <view class="fltbar">
+      <view class="grow"><kg-chip-row options="{{mtypeChips}}" value="{{favOnly ? '__fav' : mtype}}" bind:change="onMtype" /></view>
+      <kg-button variant="secondary" size="sm" icon="star" bind:click="toggleFavOnly">收藏{{mFavCount ? ' ' + mFavCount : ''}}</kg-button>
+    </view>
+    <t-skeleton wx:if="{{loading}}" theme="paragraph" animation="gradient" />
+    <kg-empty wx:elif="{{mErr}}" icon="wifi-off" title="加载失败：{{mErr}}" ctaText="重试" bind:cta="loadMats" />
+    <kg-empty
+      wx:elif="{{!mats.length}}"
+      icon="book-open"
+      title="{{favOnly ? '还没有收藏素材' : '暂无素材'}}"
+      desc="{{favOnly ? '点素材右上角星标收藏，方便写作时随手翻' : '换个类型看看，金句/案例/范文陆续补充'}}"
+      ctaText="{{favOnly || mtype !== '全部' ? '查看全部素材' : ''}}"
+      bind:cta="resetMtype"
+    />
+    <view wx:else class="grid">
+      <kg-card wx:for="{{mats}}" wx:key="id">
+        <view class="q-top">
+          <view class="q-tags">
+            <text class="m-topic">{{item.topic}}</text>
+            <kg-tag wx:if="{{item.hit}}" tone="warn">搜索命中</kg-tag>
+          </view>
+          <view class="q-top-r">
+            <kg-tag tone="neutral">{{item.type}}</kg-tag>
+            <view class="star-btn" role="button" aria-label="{{item.faved ? '取消收藏' : '收藏素材'}}" data-id="{{item.id}}" bind:tap="onMatFav">
+              <l-icon name="star" size="20" tone="{{item.faved ? 'warn' : 'faint'}}" filled="{{item.faved}}" />
+            </view>
+          </view>
+        </view>
+        <text class="m-content {{item.expanded ? '' : 'ellip3'}}" data-id="{{item.id}}" bind:tap="onMatExpand">{{item.content}}</text>
+        <view class="m-foot">
+          <text wx:if="{{item.source}}" class="m-src ellip">出处：{{item.source}}</text>
+          <view class="grow" />
+          <kg-button variant="text" size="sm" icon="copy" data-id="{{item.id}}" bind:click="copyMatLink">复制链接</kg-button>
+        </view>
+      </kg-card>
+    </view>
+    <view wx:if="{{!loading && !mErr && !favOnly && !mEnd && mats.length >= 20}}" class="more">
+      <kg-button variant="secondary" size="md" block bind:click="loadMoreMat">加载更多</kg-button>
+    </view>
+  </block>
+
+  <!-- 作答记录 -->
+  <block wx:if="{{tab === 'r'}}">
+    <t-skeleton wx:if="{{recLoading}}" theme="paragraph" animation="gradient" />
+    <kg-empty wx:elif="{{rErr}}" icon="wifi-off" title="加载失败：{{rErr}}" ctaText="重试" bind:cta="switchRec" />
+    <kg-empty
+      wx:elif="{{!recs.length}}"
+      icon="square-pen"
+      title="还没有作答记录"
+      desc="去题库作答并提交 AI 批改后，作答与批改结果会自动保存在这里"
+      ctaText="去题库作答"
+      bind:cta="tapQ"
+    />
+    <view wx:else class="grid">
+      <kg-card wx:for="{{recs}}" wx:key="id">
+        <view class="q-top">
+          <text class="hist-time">{{item.timeText}}</text>
+          <kg-tag tone="brand">{{item.qtype || '申论'}}</kg-tag>
+        </view>
+        <text class="q-text link" role="link" data-qid="{{item.qid}}" bind:tap="onRecOpen">{{item.question || '（题目已下线）'}}</text>
+        <text class="m-content {{item.expanded ? '' : 'ellip3'}}" data-id="{{item.id}}" bind:tap="onRecExpand">{{item.body}}</text>
+      </kg-card>
+    </view>
+  </block>
+</view>

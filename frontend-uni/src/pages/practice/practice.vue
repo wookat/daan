@@ -2132,6 +2132,10 @@ export default {
             return;
           }
           const done = snap.items.filter((q) => q._picked).length;
+          if (done === 0) {
+            this.adoptRemoteSnap(snap);
+            return;
+          }
           uni.showModal({
             title: '继续上次练习？',
             content: (snap.ptitle ? '「' + snap.ptitle + '」' : '') + '在其他设备还有一组未做完（' + done + '/' + snap.items.length + ' 题），是否继续？',
@@ -2164,6 +2168,10 @@ export default {
         return true;
       }
       const done = s.items.filter((q) => q._picked).length;
+      if (done === 0) {
+        this.adoptLocalPending(s);
+        return true;
+      }
       uni.showModal({
         title: '继续上次练习？',
         content: (s.ptitle ? '「' + s.ptitle + '」' : '') + '上次还有一组未做完（' + done + '/' + s.items.length + ' 题），是否继续？',

@@ -1,0 +1,12 @@
+@import '../../styles/pkg-social.wxss';
+
+.stat-n.ok { color: var(--ok); }
+.item { display: block; margin-bottom: var(--card-gap); }
+.item-top { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-8); }
+.score { font-size: var(--fs-h3); color: var(--ink); flex-shrink: 0; }
+.score.good { color: var(--ok); }
+.q { display: -webkit-box; font-size: var(--fs-body); color: var(--ink); -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.meta { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-8); }
+.aside { display: block; margin-top: var(--sp-8); }
+.aside-t { display: block; font-size: var(--fs-h3); font-weight: var(--fw-semibold); color: var(--ink); }
+.aside-d { display: block; font-size: var(--fs-sub); color: var(--ink-3); margin: var(--sp-4) 0 var(--sp-12); }

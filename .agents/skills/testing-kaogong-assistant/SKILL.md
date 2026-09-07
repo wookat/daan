@@ -17,6 +17,15 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 - 匿名组件/视觉回归无需 secret；使用生产 API 前仍需任务授权，避免提交答案或修改业务数据。
 
+## W6 原生小程序（miniapp-native）社区版微信开发者工具模拟器走查新经验
+- 启动：`/opt/apps/io.github.msojocs.wechat-devtools-linux/files/bin/bin/wechat-devtools`，文件 → 打开项目选 **目标 worktree** 的 `miniapp-native`（多 worktree 时 DevTools 会记住上次项目，先核对标题栏/`project.config.json` 路径再走查）。若出现登录二维码：不要扫，立刻中断上报。
+- 「构建 npm」会提示 `No miniprogram_npm package was found` —— tdesign 已随仓库放在 `miniprogram/miniprogram_npm/`，编译仍成功，属工具提示非产品缺陷。模拟器机型没有 iPhone 14 Pro，用 iPhone 12/13 (Pro) 390×844 并在报告注明。
+- 深路由（分包页、`?attempt_id=`/`?kind=`）无 UI 入口时在 DevTools Console 输入 `wx.navigateTo({url:'/pkgX/page/page?k=v'})`；控制台会自动补右括号，输入后先 zoom 核对再回车，否则会留下一条 **自己造成的** `Uncaught SyntaxError` 红错（报告里要单列，不算产品错误）。`getCurrentPages().pop().route/.options` 可取当前路由与参数做「契约」截图。
+- 匿名 uid 在 `wx.getStorageSync('anonUid')`；生产接口可用 `curl 'https://kaogong.zalize.com/api/exam/attempts?uid=<uid>&limit=20'` 对账（模考趋势柱需 ≥2 次已提交尝试；迷你模考 30 题提交是唯一可接受的写操作，不要创建小队/PK、不要提交纠错——纠错会进管理员待审队列）。
+- 全真模考答题卡：分组 `wx:key` 重复会在 Console 出 `same key` 警告，用 Console 过滤框输入 `same key` 做负断言；75 题需在答题卡 body 内滚到底核对固定「交卷」按钮。
+- 截图：全屏截图后裁 x 755–1010 / y 55–605 即模拟器区域（`PIL.Image.crop`），统一放 `/home/ubuntu/screenshots/mp-w6/`。
+- H5 侧长按排除（`@longpress`）在桌面 Chrome 的鼠标长按会退化为点击（直接选答）；要造「0 题已答」的 `pendingSession` 只能直接改 localStorage（结构 `{"type":"object","data":{t,items,idx,...}}`，题干字段是 `question` 不是 `question_text`）或 `POST /api/practice/progress {uid,qids,picks:{}}` 造远端快照后删本地键。
+
 ## R399 AI 生成类接口主通道优先 生产复验 走查新经验（testing agent）
 
 - **R399 后 `mistakes/analysis`/`ai/coach` 走 `llm.chat()`，成功路径零日志**：容器日志只剩 `[slow-req] Ns POST /api/mistakes/analysis` + access 200 行；`[llm] rescue … failed … fallback` 只会由 `chat_fast()` 调用方（题目抽取/申论）产生，对错题分析 grep 到 0 行是预期。`chat()` 主通道 5xx/额度码回落 rescue **也无日志**，所以「耗时偏长（如 53 s）是主通道慢还是静默回落」无法用日志区分，报告里要标成推断；建议下轮在 `chat()` 回落处加 warning 再复验。

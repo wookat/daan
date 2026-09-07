@@ -156,93 +156,39 @@
   padding: var(--sp-12) 0;
 }
 
-.p-go {
-  font-size: var(--fs-sub);
-  font-weight: 600;
-  color: var(--brand-text);
-  flex-shrink: 0;
+/* 模考大赛 / 申论专区 入口 */
+.entry-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--card-gap);
+  margin: var(--sp-12) 0 var(--sp-16);
 }
 
-.resume {
-  margin-bottom: var(--sp-12);
-}
-
-.rs-row {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: var(--sp-8);
-}
-
-.rs-main {
-  flex: 1;
+.entry-c {
   display: flex;
   flex-direction: column;
-  min-width: 0;
+  gap: var(--sp-4);
 }
 
-.rs-t {
+.entry-ico {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--sp-4);
+  border-radius: var(--r-sm);
+  background: var(--brand-soft);
+}
+
+.entry-t {
   font-size: var(--fs-body);
   font-weight: 600;
   color: var(--ink);
 }
 
-.rs-s {
+.entry-s {
   font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
   color: var(--ink-3);
-  margin-top: 2px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.rs-go {
-  font-size: var(--fs-sub);
-  font-weight: 600;
-  color: var(--warn-strong);
-  flex-shrink: 0;
-}
-
-.att-scroll {
-  white-space: nowrap;
-  margin-bottom: var(--sp-12);
-}
-
-.att {
-  display: inline-flex;
-  flex-direction: column;
-  vertical-align: top;
-  width: 150px;
-  margin-right: var(--sp-8);
-  box-sizing: border-box;
-}
-
-.att-score {
-  font-size: var(--fs-h1);
-  font-weight: 700;
-  color: var(--brand-text);
-  line-height: 1.1;
-}
-
-.att-u {
-  font-size: var(--fs-caption);
-  font-weight: 600;
-  margin-left: 2px;
-}
-
-.att-t {
-  display: block;
-  font-size: var(--fs-sub);
-  color: var(--ink);
-  margin-top: var(--sp-8);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.att-d {
-  display: block;
-  font-size: var(--fs-caption);
-  color: var(--ink-3);
-  margin-top: 2px;
 }

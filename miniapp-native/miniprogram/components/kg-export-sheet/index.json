@@ -1,0 +1,7 @@
+{
+  "component": true,
+  "usingComponents": {
+    "kg-sheet": "/components/kg-sheet/index",
+    "kg-button": "/components/kg-button/index"
+  }
+}

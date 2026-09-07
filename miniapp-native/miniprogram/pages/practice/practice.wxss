@@ -393,6 +393,247 @@
   flex: 1.6;
 }
 
+/* ---- W6 Learn 对齐：公告条 / 模式 chip / 排除法 / 错因 / 讲解区操作 / 底栏工具 / sheet 内容 ---- */
+.ann {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  padding: var(--sp-8) var(--sp-12);
+  margin-bottom: var(--card-gap);
+  border-radius: var(--r-md);
+  background: var(--info-soft);
+  color: var(--info-strong);
+}
+
+.ann-t {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+}
+
+.ann-x {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: calc(-1 * var(--sp-8));
+}
+
+.pskel-hint {
+  display: block;
+  text-align: center;
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+  margin-top: var(--sp-12);
+}
+
+.modechips {
+  display: flex;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+}
+
+.p-timer.overtime {
+  color: var(--bad-strong);
+}
+
+.opt.excl {
+  opacity: 0.45;
+}
+
+.opt.excl .otext {
+  text-decoration: line-through;
+}
+
+.opt-hint {
+  display: block;
+  margin-top: var(--sp-8);
+  font-size: var(--fs-caption);
+  color: var(--ink-4);
+}
+
+.b-l {
+  flex: 1;
+}
+
+.reasons,
+.rp-types {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8);
+  margin-bottom: var(--card-gap);
+}
+
+.rp-types {
+  margin-top: var(--sp-12);
+}
+
+.rz-t {
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+.rz {
+  min-height: 32px;
+  padding: 0 var(--sp-12);
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--r-full);
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: var(--fs-caption);
+  color: var(--ink-2);
+}
+
+.rz.on {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand-text);
+}
+
+.hs-rate {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  margin-top: var(--sp-8);
+}
+
+.hs-rate-t,
+.hs-rate-done {
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+.exp-acts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  margin-top: var(--sp-12);
+  padding-top: var(--sp-12);
+  border-top: 1px solid var(--line);
+}
+
+/* 讨论/笔记/纠错：等宽三格，375 宽不折行 */
+.exp-acts-row {
+  display: flex;
+  gap: var(--sp-8);
+}
+
+.exp-act {
+  flex: 1;
+  min-width: 0;
+}
+
+.abar-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  flex: none;
+}
+
+.kg-tool {
+  width: var(--hit-min);
+  height: var(--hit-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-full);
+}
+
+.kg-tool--hover {
+  background: var(--fill);
+}
+
+.acard-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--sp-8);
+  padding: var(--sp-12) 0;
+}
+
+.acard-n {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: var(--fs-sub);
+  color: var(--ink-2);
+}
+
+.acard-n.ok {
+  background: var(--ok-soft);
+  border-color: var(--ok);
+  color: var(--ok-strong);
+}
+
+.acard-n.bad {
+  background: var(--bad-soft);
+  border-color: var(--bad);
+  color: var(--bad-strong);
+}
+
+.acard-n.seen {
+  background: var(--fill);
+}
+
+.acard-n.cur {
+  border-color: var(--brand);
+  color: var(--brand-text);
+  font-weight: 600;
+}
+
+.acard-foot {
+  display: block;
+  text-align: center;
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+  padding-bottom: var(--sp-8);
+}
+
+.tool-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-12);
+  min-height: var(--hit-min);
+  padding: var(--sp-8) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.tool-name {
+  font-size: var(--fs-body);
+  color: var(--ink);
+}
+
+.tool-val {
+  flex: none;
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+.tool-val.on {
+  color: var(--brand-text);
+  font-weight: 600;
+}
+
+.rp-field {
+  margin-top: var(--sp-12);
+  background: var(--fill);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+
+.sheet-acts {
+  padding-top: var(--sp-16);
+}
+
 /* 桌面：题目列 ≤760 居中（T3 辅栏答题卡为 H5 专有，小程序桌面端仅收窄） */
 @media (min-width: 1024px) {
   .wrap {

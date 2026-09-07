@@ -1,0 +1,31 @@
+<navbar title="讨论广场" back="{{true}}" />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <block wx:if="{{items.length}}">
+      <kg-card variant="soft" class="sec">
+        <view class="stats">
+          <view class="stat"><text class="stat-n num">{{items.length}}</text><text class="stat-l">热议题目</text></view>
+          <view class="stat"><text class="stat-n num">{{totalCnt}}</text><text class="stat-l">讨论总数</text></view>
+        </view>
+      </kg-card>
+      <view class="list">
+        <kg-card wx:for="{{items}}" wx:key="question_id" wx:for-item="it" variant="raised" clickable data-qid="{{it.question_id}}" bind:click="openDiscuss">
+          <view class="item-top">
+            <kg-tag tone="module" module="{{it.module || ''}}">{{it.modName}}</kg-tag>
+            <view class="cnt">
+              <l-icon name="message-circle" size="16" tone="muted" />
+              <text class="cnt-t num">{{it.cnt}}</text>
+              <text class="cnt-u">条讨论</text>
+            </view>
+          </view>
+          <text class="stem q-text ellip2">{{it.stem}}</text>
+          <view class="latest ellip2"><text class="nick">{{it.latest.nickname}}：</text>{{it.latest.content}}</view>
+          <text class="time">{{it.time}} 活跃</text>
+        </kg-card>
+      </view>
+    </block>
+    <kg-empty wx:elif="{{loadErr}}" icon="wifi-off" title="加载失败" desc="{{loadErr}}" ctaText="重试" bind:cta="load" />
+    <kg-empty wx:elif="{{loaded}}" icon="message-circle" title="还没有讨论" desc="去刷题时对题目发表评论，这里会聚合全站热议" ctaText="去刷题" bind:cta="goPractice" />
+    <kg-card wx:else variant="raised"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
+  </view>
+</scroll-view>
