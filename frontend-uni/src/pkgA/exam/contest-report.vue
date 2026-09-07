@@ -172,7 +172,7 @@ export default {
 .wrap { padding: 24rpx; padding-bottom: 40rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 60rpx 24rpx; }
 .empty { text-align: center; padding: 80rpx 28rpx; }
-.retry { margin-top: 12rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
+.retry { display: inline-flex; align-items: center; min-height: 40px; margin-top: 4rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 .empty-t { display: block; font-size: 30rpx; font-weight: 600; color: var(--ink); }
 .empty-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 12rpx; margin-bottom: 32rpx; }
 .empty .pbtn { margin: 0 auto; max-width: 320rpx; }

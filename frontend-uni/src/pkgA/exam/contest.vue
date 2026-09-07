@@ -219,7 +219,7 @@ export default {
 <style scoped>
 .wrap { padding: 24rpx; padding-bottom: 40rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 60rpx 24rpx; }
-.retry { margin-top: 12rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
+.retry { display: inline-flex; align-items: center; min-height: 40px; margin-top: 4rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 30rpx; font-weight: 600; margin-bottom: 20rpx; }
 .hero { background: linear-gradient(135deg, #eef3ff, #fdfbf3); }

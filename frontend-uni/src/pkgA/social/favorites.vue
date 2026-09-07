@@ -385,7 +385,7 @@ export default {
 .chip { font-size: 24rpx; color: var(--ink-2); background: var(--fill); padding: 8rpx 22rpx; border-radius: 999rpx; }
 .chip.on { background: var(--brand-soft); color: var(--brand-text); font-weight: 700; }
 .empty { text-align: center; color: var(--ink-3); font-size: 25rpx; padding: 60rpx 24rpx; }
-.retry { margin-top: 12rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
+.retry { display: inline-flex; align-items: center; min-height: 40px; margin-top: 4rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 .empty-t { font-size: 28rpx; font-weight: 600; color: var(--ink-2); margin-bottom: 8rpx; }
 .btn { background: var(--brand); color: #fff; font-size: 28rpx; border-radius: 18rpx; margin-bottom: 20rpx; }
 .qtx { font-size: 27rpx; line-height: 1.65; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

@@ -222,7 +222,7 @@ export default {
 
 .empty { display: flex; flex-direction: column; align-items: center; gap: 16rpx; padding: 120rpx 0; }
 .empty-t { font-size: 27rpx; color: var(--ink-2); }
-.retry { margin-top: 8rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
+.retry { display: inline-flex; align-items: center; min-height: 40px; margin-top: 4rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 .btn-primary { background: #2e5bff; color: #fff; border-radius: 999rpx; font-size: 28rpx; font-weight: 600; min-height: 44px; display: flex; align-items: center; justify-content: center; padding: 0 60rpx; margin-top: 12rpx; }
 
 /* #ifdef H5 */

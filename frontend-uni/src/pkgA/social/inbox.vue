@@ -96,7 +96,10 @@ export default {
 .empty-ico { font-size: 72rpx; }
 .empty-t { font-size: 28rpx; font-weight: 600; color: var(--ink); }
 .retry {
-  margin-top: 8rpx;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  margin-top: 4rpx;
   color: var(--brand-text);
   font-size: 26rpx;
   font-weight: 500;
