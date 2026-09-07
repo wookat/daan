@@ -3607,6 +3607,16 @@ def _dominant_paper_source(qids: list[int], src_by_qid: dict[int, str]) -> str |
     return src if n >= _PSOURCE_MIN_N else None
 
 
+def _paper_module_counts(qids: list[int], mod_by_qid: dict[int, str]) -> dict[str, int]:
+    """卷内活跃题按行测五模块计数（只含 >0 的模块，按标准模块顺序）；让卷卡如实外显回忆版卷的构成/缺项。"""
+    counts = {m: 0 for m in MODULE_ORDER}
+    for i in qids:
+        m = mod_by_qid.get(i)
+        if m:
+            counts[m] += 1
+    return {m: n for m, n in counts.items() if n}
+
+
 def _list_exam_papers_base(conn, kind: str | None, year: int | None,
                            region: str | None, force: bool = False) -> list[dict]:
     """uid 无关的卷列表（含活跃题数 n / takers），按筛选键 TTL 缓存；
@@ -3650,6 +3660,7 @@ def _list_exam_papers_base(conn, kind: str | None, year: int | None,
     all_ids = list({i for ids in qids_by_paper.values() for i in ids})
     active: set[int] = set()
     src_by_qid: dict[int, str] = {}
+    mod_by_qid: dict[int, str] = {}
     for chunk_start in range(0, len(all_ids), 900):
         chunk = all_ids[chunk_start:chunk_start + 900]
         for q in conn.execute(
@@ -3659,12 +3670,22 @@ def _list_exam_papers_base(conn, kind: str | None, year: int | None,
             active.add(q["id"])
             if q["is_real"] and q["source"]:
                 src_by_qid[q["id"]] = q["source"]
+    # module 单独查走 idx_q_disabled_module 覆盖索引（每次 IN 整段扫，尽量一次带全，不回宽行表）
+    for chunk_start in range(0, len(all_ids), 30000):
+        chunk = all_ids[chunk_start:chunk_start + 30000]
+        for q in conn.execute(
+            f"SELECT id, module FROM questions WHERE disabled=0 AND id IN ({','.join('?' * len(chunk))})",
+            chunk,
+        ):
+            if q["module"] in MODULE_ORDER:
+                mod_by_qid[q["id"]] = q["module"]
     base = []
     for r in rows:
         d = dict(r)
         d.pop("question_ids")
         d["_qids"] = [i for i in qids_by_paper[d["id"]] if i in active]
         d["n"] = len(d["_qids"])
+        d["mods"] = _paper_module_counts(d["_qids"], mod_by_qid)
         d["psource"] = _dominant_paper_source(qids_by_paper[d["id"]], src_by_qid)
         soc = takers.get(d["id"])
         d["takers"] = soc["n"] if soc else 0

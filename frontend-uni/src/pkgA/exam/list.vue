@@ -59,6 +59,7 @@
           <text v-if="p.year" class="ptag">{{ p.year }}年</text>
           <text v-if="p.region" class="ptag">{{ p.region }}</text>
           <text class="pmeta">{{ p.n }} 题 · {{ p.duration_min }} 分钟{{ p.takers ? ' · ' + p.takers + ' 人考过' + (p.avg_score != null ? ' · 平均 ' + p.avg_score + ' 分' : '') : '' }}</text>
+          <text v-if="modsText(p)" class="pmods">{{ modsText(p) }}</text>
         </view>
         <text v-if="p.best_score != null" class="pbest">我的最好成绩 {{ p.best_score }} 分 · 已考 {{ p.attempt_count }} 次</text>
         <text v-else class="pbest none">还没考过，来挑战一下</text>
@@ -103,6 +104,7 @@ import { filterPapersByStatus } from '../../exam-list-status.js';
 import { paperProgress } from '../../exam-list-progress.js';
 import { adoptServerExamProgress } from '../../exam-progress-sync.js';
 import { paperPracticedState } from '../../paper-continue.js';
+import { paperModsText } from '../../exam-paper-mods.js';
 
 export default {
   data() {
@@ -265,6 +267,9 @@ export default {
       if (this._starting) return;
       uni.navigateTo({ url: '/pkgA/exam/exam?paper_id=' + p.id });
     },
+    modsText(p) {
+      return paperModsText(p && p.mods);
+    },
     practicedState(p) {
       return paperPracticedState(p.practiced, p.n, p.wrong);
     },
@@ -341,6 +346,7 @@ export default {
 .paper-meta { display: flex; align-items: center; gap: 12rpx; margin-top: 10rpx; flex-wrap: wrap; }
 .ptag { font-size: 24rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
 .pmeta { font-size: 24rpx; color: var(--ink-2); }
+.pmods { display: block; width: 100%; font-size: 24rpx; color: var(--ink-3); margin-top: 6rpx; }
 .pbest { display: block; font-size: 24rpx; color: var(--warn); margin-top: 10rpx; }
 .pbest.none { color: var(--ink-2); }
 .ppracticed { display: block; font-size: 24rpx; color: var(--ok-strong); margin-top: 6rpx; }
