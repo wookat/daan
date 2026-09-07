@@ -2640,3 +2640,14 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 断点：到期 31/30，进错题本 68 次只开始过 1 次复习；作答节奏 1–4 s/题（10 题 20 s 的资料分析）= 巡览点击；`umst3` 同 uid 有 `probe=1` 行、`umsacie7` 09-07 出口 `141.11.46.189`（R475 内部 /24）→ 两 uid 疑内部设备，不构成外部真人证据，不据此立功能。
 - 登记：时政错题 `question_id=NULL`（9/32）只能走复习页推进；15 条 R400 前旧快照 `correct_answer` ≠ 现题 `answer`（复习页只用快照，自洽）；答错自动追加同考点题样本 1；「到期 → 开始复习」转化低但无外部真人。
 - 取证：`docs/iter/round-3/r502-real-path-practice-mistake-review-srs-chain-audit.md`；`~/r502_post.sh`→`~/r502_post.out`、`~/r502_srs.sh`→`~/r502_srs.out`、`~/r502_srs2.sh`→`~/r502_srs2.out`/`~/r502_srs3.out`（VPS 上经 ssh 只读执行）。
+
+### R503（2026-09-08）：首页首屏「未登录冷启动、无任何数据」态 375/1440 一手对标粉笔公开面 → 命中「新用户错题复习被标『今日已清零 ✓』计入 1/3」→ 最小修上线（生产 `ccdbf58` → `34bd4d1`）
+
+- (c)：R500 容器至发版 5xx/404/monitor/非探针 POST/401·403 全 0；WAL 同字节；到期项全部与 R502 同（`explain_cache` 真实列以 `key` 开头、无 `id`）。无新的外部真人作答/复习证据。
+- 冷启动几何全过：375 首屏 landing（109–408）+ hero（418–557）+ 完整任务卡（567–780）+ 学习计划卡上沿；1440 到公告/时政卡；`docSW == cw`（360/1425）、`pageerror 0`、核心 GET 全 200；改前改后逐值相同。
+- 命中（语义）：匿名新 uid `due_mistakes=0` 且从未有错题，任务卡渲染「✓ 错题复习 · 今日已清零」并计「今日任务 **1/3**」——模板只看 `planFetched && !dueReview`，服务端没有「是否有过错题」字段。
+- 修：`daily_plan` 新增 `mistakes_total`（`_uid_clause` 隔离、含已掌握）；首页 computed `reviewTaskDone`（有到期 → false；`mistakes_total==0` → false；老快照无字段 → 旧口径），✓/done/`taskDoneN` 三处改走它，新用户副标题「答错的题自动进错题本」。改后生产 375/1440：「今日任务 0/3」，任务卡几何不变；`umst3`（32 错题 / 30 到期）仍走「今日到期 30 题」。
+- 粉笔公开面：门户型（课程/题库/公告/职位表/日历/直播/APP），点题即登录墙；本产品「免注册打开即练」是差异化，不据此加功能。
+- 门：pytest 516 / ruff / pyright 0；vitest 778 / eslint / build 绿。发版 `--skip-build` rc=0，容器 `16:46:42Z rev=34bd4d1` healthy，7/7 200，perf `/` 0.96 LCP 2290 / `/tiku/` 1.00。
+- 登记：landing 三卖点 375 三行小字（无用户证据不动）；打卡行 1–2 天态未核；老壳/新服务端组合走 `t == null` 旧口径不受影响。
+- 取证：`docs/iter/round-3/r503-home-cold-start-fresh-user-review-task-fenbi-benchmark.md`；`~/r503_post.sh`、`~/r503_claims.sh`→`~/r503_claims.out`、`~/r503_home_cold.py`→`~/r503_home_cold_{,post_}{375,1440}.out`+`.png`、`~/r503_fenbi_home.html`、`~/r503_deploy.log`。

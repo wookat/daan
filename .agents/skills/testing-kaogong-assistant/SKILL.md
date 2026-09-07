@@ -1825,3 +1825,5 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 判「probe=0 作答是否学习行为」看节奏：相邻 `answer_log.created_at` 间隔 1–4 s（尤其资料分析材料题）是巡览点击；同 uid 在 `growth_events` 出现 `probe=1` 行、或出口 IP 与已归内部的 /24 同段，都要写成「疑内部设备」而不是真人。
 - 生产 `mistakes` 表无 `submodule`/`paper_id`/`user_answer` 之外的想当然列（有 `user_answer`，无 `note`），`explain_cache` 无 `id`；写盘点 SQL 前先 `pragma table_info(<table>)` 一次，别按本地迁移后的 schema 猜（R502 两次因猜列名重跑）。
 - 时政（`shizheng/daily`）错题 `question_id` 为 NULL 是 R483 设计（`foreign_module_qid()`），盘点「answer_log 答对命中错题」时这类行天然缺席，不算断点。
+- 首页「无数据冷启动」审法（R503，`~/r503_home_cold.py <375|1440>`）：新 CDP context 不带 storage、不注登录态，前端自生匿名 uid 即是「从未有数据」用户；除几何外要把**每个任务/进度行的文案与其数据前提**对起来（`✓ 今日已清零` 必须有 `mistakes_total>0` 支撑），「0 数据却已完成 N/M」是语义命中，几何读数发现不了。
+- 给 `daily_plan`/`home_bundle.plan` 加字段后，前端 computed 要给「老快照无该字段」留旧口径分支（`t == null`）——`snapSave` 会把发版前的回包回放到新 bundle。
