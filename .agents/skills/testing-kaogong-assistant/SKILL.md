@@ -1821,3 +1821,7 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 非探针 `GET / 403` 归属再加一条：看 `request.host`——`kaogong-origin.zalize.com`（源站域）+ 无 `Cf-Ray` = 直连源站的扫描器（R388 规则），真人只会走 `kaogong.zalize.com` 经边缘。
 - 生产只读盘点脚本（Caddy 全历史 + `mode=ro` SQLite）要在 **VPS 上**跑：`SSHPASS="$TICKETS_VPS_SSH_CREDENTIAL" sshpass -e ssh "$TICKETS_VPS_SSH_USER@$TICKETS_VPS_SSH_HOST" bash -s < script.sh`（R501：本机跑会报 `no such object: deploy-kaogong-1` / `unable to open database file`）。Caddy 源站日志只见 API 与 SSR，H5 静态分包在 Pages 边缘，不能从源站日志推「分包加载 0」。
 - 模考漏斗一手口径：`exam_attempts.probe=0` 行 = 真人 start；`exam_progress` 联表 `started_at + duration_min*60 > now` 才是可续考；超时行服务端 `/api/exam/resume` 返回 `{}`（size 2）——按 Caddy `size` 字段区分空/有载荷即可，不用进库。
+- 学习链路（练习→错题→复习→SRS）生产对账口径（R502）：写入侧按「Caddy 非探针 `POST answer_log`/`POST mistakes`/`POST review/{mid}`/`PATCH mistakes/{mid}` 次数 ↔ 对应表行数」1:1 对；SRS 侧 `review_log` 是唯一事件表（两条推进入口都写它，`correct` 列区分），`mistakes.mastered=1 且 review_count=0` = 手动 PATCH 标掌握不是 SRS 产生；答错分支校验 `next_review == cn_day_start(事件时刻)+86400`。`review_log` 里 `uid` 不在 `answer_log` 的行是历史内部账号。
+- 判「probe=0 作答是否学习行为」看节奏：相邻 `answer_log.created_at` 间隔 1–4 s（尤其资料分析材料题）是巡览点击；同 uid 在 `growth_events` 出现 `probe=1` 行、或出口 IP 与已归内部的 /24 同段，都要写成「疑内部设备」而不是真人。
+- 生产 `mistakes` 表无 `submodule`/`paper_id`/`user_answer` 之外的想当然列（有 `user_answer`，无 `note`），`explain_cache` 无 `id`；写盘点 SQL 前先 `pragma table_info(<table>)` 一次，别按本地迁移后的 schema 猜（R502 两次因猜列名重跑）。
+- 时政（`shizheng/daily`）错题 `question_id` 为 NULL 是 R483 设计（`foreign_module_qid()`），盘点「answer_log 答对命中错题」时这类行天然缺席，不算断点。

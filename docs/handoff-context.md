@@ -2631,3 +2631,12 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 缺项卷口径：`per_module` 服务端只含卷内出现的模块 → 报告页 `modules()`/`weakModule()`/配速/`insights` 全部 fail-closed，缺项不出「0/0」也不会被判薄弱；但报告页无「本卷不含 X」说明（登记）。
 - 登记：报告页缺项说明 / 超时进度静默丢弃 / 模考侧无真人证据不加功能；下一处功能面回真人有量路径（练习→错题→复习）。
 - 取证：`docs/iter/round-3/r501-exam-funnel-real-path-missing-module-report-semantics.md`；`~/r501_post.sh`→`~/r501_post.out`、`~/r501_funnel.sh`→`~/r501_funnel.out`、`~/r501_resume.sh`→`~/r501_resume.out`（VPS 上经 ssh 只读执行）。
+
+### R502（2026-09-08）：真人有量路径「练习 → 错题 → 复习 → 再答对推进 SRS」全链路 DB + Caddy 只读对账 → 写入 1:1、SRS 答错分支字段级正确、答对分支生产 0 样本、断点在人不在码 → 不改码，登记 4 项
+
+- (c)：R500 容器 69 请求 5xx/404/monitor/Traceback/非探针 POST/401·403 全 0；WAL 同字节；到期项全部与 R501 同。
+- 写入对账（Caddy 非探针全历史 ↔ DB）：`POST answer_log` 55 ↔ 55 行、`POST mistakes` 36 ↔ 36 行、`POST review/1952` 1 ↔ `review_log #307 correct=0`、`PATCH mistakes` 3 ↔ `mastered=1` ×2 + `error_reason='纯蒙的'` ×1；无丢失无 4xx。
+- SRS：唯一复习事件答错 → `review_count 1 / streak 0 / next_review = cn_day_start()+1d` 与 `_advance_review()` 一致；**答对推进**两条入口（`review/{mid}` 答对、R371 `answer_log` 命中错题）生产 0 样本，只有 `test_answer_advance_review.py` / `test_r438_srs_day_aligned.py` 锁定。
+- 断点：到期 31/30，进错题本 68 次只开始过 1 次复习；作答节奏 1–4 s/题（10 题 20 s 的资料分析）= 巡览点击；`umst3` 同 uid 有 `probe=1` 行、`umsacie7` 09-07 出口 `141.11.46.189`（R475 内部 /24）→ 两 uid 疑内部设备，不构成外部真人证据，不据此立功能。
+- 登记：时政错题 `question_id=NULL`（9/32）只能走复习页推进；15 条 R400 前旧快照 `correct_answer` ≠ 现题 `answer`（复习页只用快照，自洽）；答错自动追加同考点题样本 1；「到期 → 开始复习」转化低但无外部真人。
+- 取证：`docs/iter/round-3/r502-real-path-practice-mistake-review-srs-chain-audit.md`；`~/r502_post.sh`→`~/r502_post.out`、`~/r502_srs.sh`→`~/r502_srs.out`、`~/r502_srs2.sh`→`~/r502_srs2.out`/`~/r502_srs3.out`（VPS 上经 ssh 只读执行）。
