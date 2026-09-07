@@ -9,35 +9,28 @@ import { normalizeDailyDeepLink } from "./deeplink.js";
 import { initKeyboardFocus } from "./a11y-focus.js";
 import { initA11yLive } from "./a11y-live.js";
 import { initRoutePrecache } from "./precache.js";
+import { createErrorReporter, describeRejection, installVueErrorHandler } from "./monitor-client.js";
 initKeyboardFocus(); // 必须先于 app 挂载：拦截 Vue runtime 的 click addEventListener
 initA11yLive();
 initRoutePrecache();
 
 // 集中式错误监控（审计 P1-7）：未捕获 JS 错误同源上报 /api/monitor/report，由后端转发中心收集器
+let mReport = () => false;
 if (typeof window !== 'undefined') {
-	const mSeen = new Set();
-	let mSent = 0;
-	const mReport = (message, stack) => {
-		const key = String(message || '').slice(0, 200);
-		if (mSeen.has(key) || mSent >= 10) return;
-		mSeen.add(key);
-		mSent += 1;
+	mReport = createErrorReporter(({ message, stack }) => {
 		const body = JSON.stringify({ message, stack, url: location.href });
-		try {
-			if (navigator.sendBeacon) {
-				navigator.sendBeacon('/api/monitor/report', new Blob([body], { type: 'application/json' }));
-			} else {
-				fetch('/api/monitor/report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
-			}
-		} catch (e) { /* 监控绝不影响主链路 */ }
-	};
+		if (navigator.sendBeacon) {
+			navigator.sendBeacon('/api/monitor/report', new Blob([body], { type: 'application/json' }));
+		} else {
+			fetch('/api/monitor/report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+		}
+	});
 	window.addEventListener('error', (e) => {
 		mReport(e.message || 'window.onerror', e.error && e.error.stack);
 	});
 	window.addEventListener('unhandledrejection', (e) => {
 		const r = e.reason;
-		if (r && r.stack) mReport(`unhandledrejection: ${r.message || r}`, r.stack);
-		else mReport(`unhandledrejection: ${String(r).slice(0, 500)}`);
+		mReport(`unhandledrejection: ${describeRejection(r).slice(0, 500)}`, r && r.stack);
 	});
 }
 
@@ -194,6 +187,7 @@ function dismissSplash() {
 export function createApp() {
 	const app = createSSRApp(App);
 	// #ifdef H5
+	installVueErrorHandler(app, mReport, (e) => console.error(e));
 	app.mixin({
 		mounted() {
 			dismissSplash();

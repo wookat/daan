@@ -242,6 +242,7 @@
 import { md } from '../../md.js';
 import { request, uploadExplain, streamExplain, anonUid, hasAccessCode, fetchAccessInfo, promptAccessCode, trackEvent } from '../../api.js';
 import { isNativeApp, pickImageNative } from '../../native.js';
+import { setBookBadge } from '../../tabbar-badge.js';
 import { mergeAskSessions, upsertLocalSession, addTombstone, removeTombstone, pruneTombstones, filterTombstoned, sanitizeCurItems, parseRemoteCur } from '../../ask-sessions.js';
 import { askQid, askViewUrl } from '../../ask-link.js';
 
@@ -429,10 +430,8 @@ export default {
     async loadDue() {
       try {
         const r = await request('/api/review?uid=' + encodeURIComponent(anonUid()));
-        const dueCount = r.total || (r.items || []).length;
-        if (dueCount > 0) uni.setTabBarBadge({ index: 1, text: String(dueCount > 99 ? '99+' : dueCount) });
-        else uni.removeTabBarBadge({ index: 1 });
-      } catch (e) { /* tabBar 未就绪时忽略 */ }
+        setBookBadge(r.total || (r.items || []).length);
+      } catch (e) { /* 接口失败时忽略 */ }
     },
     clearImage() {
       this.imagePath = '';

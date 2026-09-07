@@ -171,3 +171,77 @@ def test_admin_stats_counts_use_partial_indexes(client):
     conn.close()
     stats = db._admin_stats_uncached()
     assert stats["hs_done"] >= 0 and stats["hs_down_total"] >= 0
+
+
+def test_dashboard_flagged_count_uses_hs_down_partial_index(client):
+    """R384：看板 flagged 原写 `hs_down>0 AND (disabled IS NULL OR disabled=0)`，规划器走 disabled 索引
+    MULTI-INDEX OR 再逐活跃题回宽行看 hs_down（生产副本冷读 237 MB，管理台首访 11 s）；
+    COALESCE 形式才选 idx_q_hs_down 部分索引，且与 OR 形式结果一致。"""
+    conn = db.get_conn()
+    conn.execute("UPDATE questions SET hs_down=2 WHERE id=(SELECT MIN(id) FROM questions)")
+    conn.execute("UPDATE questions SET hs_down=3, disabled=1 WHERE id=(SELECT MAX(id) FROM questions)")
+    conn.commit()
+    sql = "SELECT COUNT(*) FROM questions WHERE hs_down>0 AND COALESCE(disabled,0)=0"
+    plan = _plan(conn, sql)
+    assert "idx_q_hs_down" in plan and "MULTI-INDEX OR" not in plan
+    legacy = conn.execute(
+        "SELECT COUNT(*) FROM questions WHERE hs_down>0 AND (disabled IS NULL OR disabled=0)"
+    ).fetchone()[0]
+    assert conn.execute(sql).fetchone()[0] == legacy == 1
+    conn.close()
+    assert db._admin_dashboard_uncached()["health"]["flagged"] == 1
+
+
+def test_tag3_pick_index_covers_module_filter(client):
+    """R385：SEO 深链/薄弱考点拉题 `tag3+module` 的抽题池扫描，旧 idx_q_tag3_pick 不含 module，
+    按 tag3 命中的每行都回宽行表校验 module（生产 CS-LS-01 9,038 行冷读 147 MB、预热 3.8–5.6 s）；
+    含 module 的覆盖索引免回表，旧定义在启动时被重建。"""
+    conn = db.get_conn()
+    row = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type='index' AND name='idx_q_tag3_pick'"
+    ).fetchone()
+    assert row and "(tag3, disabled, module, is_real, has_hs, id)" in row["sql"]
+    sql = (
+        "SELECT id, is_real, COALESCE(has_hs,0) hs FROM questions INDEXED BY idx_q_tag3_pick "
+        "WHERE disabled=0 AND module=? AND tag3=?"
+    )
+    assert "COVERING INDEX idx_q_tag3_pick (tag3=? AND disabled=? AND module=?)" in _plan(
+        conn, sql, ("changshi", "CS-LS-01")
+    )
+    # 只带 tag3 仍走同一索引前缀
+    assert "COVERING INDEX idx_q_tag3_pick (tag3=? AND disabled=?)" in _plan(
+        conn, sql.replace("module=? AND ", ""), ("CS-LS-01",)
+    )
+    tag3, module = conn.execute(
+        "SELECT tag3, module FROM questions WHERE tag3 IS NOT NULL AND disabled=0 LIMIT 1"
+    ).fetchone()
+    pools = db._pick_scan(conn, module, None, tag3, None, None)
+    assert sum(len(v) for v in pools.values()) == conn.execute(
+        "SELECT COUNT(*) FROM questions WHERE disabled=0 AND module=? AND tag3=?", (module, tag3)
+    ).fetchone()[0] > 0
+    conn.close()
+
+
+def test_tag3_pick_index_old_definition_rebuilt(tmp_path, monkeypatch):
+    import sqlite3
+    import threading
+
+    def init_in_fresh_thread():
+        # get_conn 按线程缓存连接：新线程才会按 monkeypatch 后的 DB_PATH 建连
+        t = threading.Thread(target=db.init_db)
+        t.start()
+        t.join()
+
+    path = str(tmp_path / "old.db")
+    monkeypatch.setattr(db, "DB_PATH", path)
+    init_in_fresh_thread()
+    c = sqlite3.connect(path)
+    c.execute("DROP INDEX idx_q_tag3_pick")
+    c.execute("CREATE INDEX idx_q_tag3_pick ON questions(tag3, disabled, is_real, has_hs, id)")
+    c.commit()
+    c.close()
+    init_in_fresh_thread()
+    c = sqlite3.connect(path)
+    sql = c.execute("SELECT sql FROM sqlite_master WHERE name='idx_q_tag3_pick'").fetchone()[0]
+    c.close()
+    assert "(tag3, disabled, module, is_real, has_hs, id)" in sql
