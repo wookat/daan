@@ -138,3 +138,36 @@ def test_paper_source_partial_index_covers_list_papers(client):
     assert "COVERING INDEX idx_q_paper_src" in plan
     conn.close()
     assert isinstance(db.list_papers(), list)
+
+
+def test_active_src_index_covers_exam_papers_qid_lookup(client):
+    """R383：卷库按卷内 qid 批量取 source/is_real 原走主键逐题回表（~64 MB 冷页）；
+    (disabled, id, is_real, source) 覆盖索引由规划器自动选中，无需 INDEXED BY。"""
+    conn = db.get_conn()
+    names = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='questions'")}
+    assert "idx_q_active_src" in names
+    assert "idx_q_disabled_id" not in names  # (disabled,id) 是 idx_q_sitemap 前缀，已收编
+    plan = _plan(
+        conn,
+        "SELECT id, source, is_real FROM questions WHERE disabled=0 AND id IN (?,?,?)",
+        (1, 2, 3),
+    )
+    assert "COVERING INDEX idx_q_active_src" in plan
+    # sitemap 的 (disabled, id, updated_at) 扫描不受影响
+    assert "idx_q_sitemap" in _plan(
+        conn, "SELECT id, updated_at FROM questions WHERE disabled=0 AND id>? ORDER BY id LIMIT 10", (0,)
+    )
+    conn.close()
+    assert isinstance(db.list_exam_papers(kind="zhenti"), list)
+
+
+def test_admin_stats_counts_use_partial_indexes(client):
+    """R383：管理台 stats 的 hs_done / hs_down 两个 COUNT 原本各全表扫 ~264 MB 宽行。"""
+    conn = db.get_conn()
+    assert "idx_q_hs_done" in _plan(
+        conn, "SELECT COUNT(*) FROM questions WHERE hs_explanation IS NOT NULL AND hs_explanation!=''"
+    )
+    assert "idx_q_hs_down" in _plan(conn, "SELECT COUNT(*) FROM questions WHERE hs_down>0")
+    conn.close()
+    stats = db._admin_stats_uncached()
+    assert stats["hs_done"] >= 0 and stats["hs_down_total"] >= 0
