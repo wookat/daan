@@ -2,6 +2,8 @@
 
 日期：2026-09-07（UTC 09:30–10:00）。生产 `7acf57b`（R484）→ `896007c`（本轮，见 §4.1）。
 
+> **R490 勘误**：本文「6 个问答入口里 5 个有埋点、只有练习页没有」漏数了 `book.vue` 错题本**列表**展开卡的「AI 详解」（`redo(m)`，与复习模式 `askFromReview()` 是两个入口）：实际是 7 个写 `redoQid` 的入口、**2 个**无埋点（练习页 + 错题本列表）。生产唯一一次非探针带 qid 深链（`umsacie7` 09-05）走的正是后者，R490 已补 `book_ask_click`。见 `r490-sop10-book-list-ask-deeplink-only-natural-qid-entry-untracked.md` §3。
+
 ## 0. 结论
 
 1. **入口可见性（源码）**：`practice.vue` 答题后的解析区里「用花生十三方法详解这道题 ›」**无条件渲染**（不依赖 `cur._sz` / `cur.hs_explanation` / `cur.explanation`，只要解析区出现就有），点击 `deepExplain()` → `setStorageSync('redoQuestion'/'redoQid'/'redoAnswer')` → `uni.switchTab('/pages/ask/ask')`。可见、可达，R484 已给时政加 `_sz` 守卫。

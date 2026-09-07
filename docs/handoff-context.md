@@ -2483,3 +2483,13 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证自纠：Caddy 轮转文件名 `…-access-<date>.log.gz`，glob 必须 `…-access*`（`…-access.log*` 只匹配当前文件，会漏 09-05 前全部）；`error_reason` 在 `mistakes` 不在 `answer_log`；容器起点 epoch 用 `StartedAt` 换算别手算。
 - 如实：排除法推断依赖「5 个埋点 09-05 前已上线且未静默失败」；`umsacie7` 两段不同出口 IP、身份不确定；0 库写入；无 testing agent 录屏（未另行授权）。
 - 取证：`docs/iter/round-3/r489-ask-entry-funnel-five-tracked-entries-zero-natural.md`；脚本/输出 `~/r489_db.sh` `~/r489_db.out` `~/r489_caddy.out` `~/r489_post.out`。
+
+### R490（2026-09-07，SOP-10 四维审计）：生产唯一一次非探针带 qid 问答深链走的是错题本**列表**「AI 详解」`redo(m)`——7 入口里唯一无埋点、R487/R489「6 入口」漏数 → `book_ask_click` 上线（生产 `896007c` → `a8ceca8`）
+- **(c) / 到期项 0 增量**（10:31Z）：R487 容器 108 请求全本机/探针/bot；非探针 POST / analysis / explain 0；`umst3` 0 回访；`practice_ask_click` 仍只探针 2 行；probe=0 33/1、growth 20/4、`explain_cache qid` 0/82、时政 qid 非空 0/0、`error_reason` ≥09-11 0、WAL 同字节。
+- **选簇**：三候选只有「问答页会话/历史 sheet」有非探针**写入**（`umsacie7` 09-05 `explain/stream` + `ask/cur` 落库）；错题本 AI 分析（非探针 `mistakes/analysis` 全历史 0）/ 每日一练完成态（`daily_set_entries` 1 行 probe=1）只读无写 → 先把这唯一一次到达复盘到入口。
+- **命中（verified）**：Caddy 17:05:56Z 同一秒 `GET /api/attempts|notes|comments/count?…question_id=234494`（`/api/attempts` 全 `book.vue` 只在列表 `toggleCard(m)`；复习模式不调）→ 17:05:57Z 问答页 onShow（`ask/cur`+`ask/sessions`），中间 **0 条 `/api/track`**（`askFromReview()` 必打 `review_ask_click`）→ 入口 = 列表展开卡 `redo(m)`，无埋点。R487 §1.1 / R489 §2.1「6 入口」漏了它（book.vue 有复习态 + 列表两个入口）；R489「排除法走练习页」勘误（两份文档已加勘误块）。该次讲解走完：`ask_cur` 一条完整讲解（答案 D + 针对所选 B 的错因分析，`saved:false`），功能通，是可观测性缺口非缺陷。
+- **修（`a8ceca8`）**：`redo(m)` `switchTab` 前 `trackEvent('book_ask_click', m.module || '', String(qid || ''))`；`team.py` 白名单 +1；源锁 `tests/book-r490-ask-click.test.js`（`redo(m)` 必带 + **所有写 `redoQid` 的方法体必有 `*_ask_click`**，改前 2/2 红）；`test_track.py` +1。门：pytest 510 / ruff / pyright 0；vitest 726 / eslint / build 绿。
+- **发版**：4-pre 让行兄弟构建 150 s 后 compose rc=0，容器 10:37:53Z healthy 0 重启；bundle `index-DR7w8z1H.js` + `pages-book-book.QtYBmytf.js` 线上=本机逐字节；7/7 200；perf `/` 0.93 / `/tiku/` 1.00。改后一手：探针 `book_ask_click` → 200 落库 probe=1、非白名单 400（源站直连 403 ×2 为 R388 口径，走公网域名）；起后 34 请求 5xx/404/monitor/mpUA/非探针全 0。
+- 顺带核不命中：`redo(m)` `if (!text) return;` 对 `question_text` 空静默——生产 0 行。问答页 sheet / 错题本 AI 分析结果态 / 每日一练完成态本轮**未整页过审**（`ask_sessions` 该 uid 0 行、sheet 非探针 0 次打开），留到有到达证据再审。
+- 如实：`umsacie7` 61 作答全 08-01 probe=NULL、09-05 回访 0 作答、两段出口 IP 不同、身份不确定；入口归属靠「调用点唯一 + 无 track POST」两条推出；埋点真人 0 样本；未提交 `explain/stream`；无 testing agent 录屏（未另行授权）；仍无可确认外部真人完整闭环。
+- 取证：`docs/iter/round-3/r490-sop10-book-list-ask-deeplink-only-natural-qid-entry-untracked.md`；脚本/输出 `~/r490_db3.sh` `~/r490_caddy1.py` `~/r490_post.sh` `~/r490_post2.out` `~/r490_deploy.log`。

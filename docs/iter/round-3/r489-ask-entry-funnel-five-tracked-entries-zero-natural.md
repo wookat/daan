@@ -2,6 +2,8 @@
 
 日期：2026-09-07（UTC）。生产仍 `896007c`（本轮 0 代码、不发版；只登记）。
 
+> **R490 勘误**：§0.3 / §3「`umsacie7` 09-05 那次带 qid 深链按排除法走的是练习页」**不成立**。Caddy 逐请求：17:05:56Z 同一秒 `GET /api/attempts|notes|comments/count?…question_id=234494`（`/api/attempts` 全 `book.vue` 只在列表 `toggleCard(m)` 调用）→ 17:05:57Z 问答页 onShow，中间 0 条 `/api/track` → 入口是错题本**列表**展开卡「AI 详解」`redo(m)`，它是 R487/R489「6 入口」漏数的第 7 个、也无埋点。排除法的前提「无埋点的入口只有练习页」本身错了。R490 已补 `book_ask_click`；见 `r490-sop10-book-list-ask-deeplink-only-natural-qid-entry-untracked.md` §3。
+
 ## 0. 结论
 
 1. **(c) 补量 / 到期项 0 增量**（§1）：R487 容器（09:51:52Z 起）截至 10:14Z 仍 108 请求（与 R488 同，最后一条 10:04:20Z）、全本机/探针/bot；非探针 POST / `mistakes/analysis` / `explain/stream` 0；`umst3tuisd7lgzaka` 0 回访；`practice_ask_click` 仍只有 R487 探针 2 行；`explain_cache qid` 0/82；时政 qid 非空 0/0；`error_reason` 7 / ≥09-11 0；WAL 同字节；healthy 0 重启。Lighthouse「运行失败」本轮无部署、无新样本。
