@@ -564,7 +564,7 @@ def api_track(body: dict, request: Request):
         "review_entry_click", "task_card_click", "heatmap_view", "review_done_celebrate",
         "comeback_view", "share_result_copy", "reminder_optin", "reminder_banner_click",
         "slow_load", "daily_archive_open", "login_nudge_show", "login_nudge_click",
-        "stale_fallback", "boot", "push_nudge_show", "push_nudge_ok", "daily_open",
+        "stale_fallback", "boot", "push_nudge_show", "push_nudge_ok", "push_nudge_fail", "push_nudge_dismiss", "login_nudge_dismiss", "daily_open",
         "search_ask_click", "review_ask_click", "report_ask_click", "fav_ask_click", "history_ask_click",
         "practice_ask_click", "book_ask_click", "ask_view_question",
         "review_similar_auto", "review_similar_click", "review_reason_tag", "review_resume_click", "home_review_resume_click", "share_poster",

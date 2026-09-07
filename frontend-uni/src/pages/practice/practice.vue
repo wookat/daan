@@ -1488,6 +1488,7 @@ export default {
     dismissLoginNudge() {
       this.loginNudgeOff = true;
       uni.setStorageSync('loginNudgeDismissed', '1');
+      trackEvent('login_nudge_dismiss');
     },
     // #ifdef H5
     async initPushNudge() {
@@ -1510,6 +1511,7 @@ export default {
       try {
         if ((await requestNotificationPermission()) !== 'granted') {
           uni.showToast({ title: '需要通知权限才能推送', icon: 'none' });
+          trackEvent('push_nudge_fail', null, 'denied');
           return;
         }
         const pad = '='.repeat((4 - (this._pushKey.length % 4)) % 4);
@@ -1523,11 +1525,13 @@ export default {
         trackEvent('push_nudge_ok');
       } catch (e) {
         uni.showToast({ title: '开启失败，请稍后再试', icon: 'none' });
+        trackEvent('push_nudge_fail', null, 'error');
       }
     },
     dismissPushNudge() {
       this.pushNudge = false;
       uni.setStorageSync('pushNudgeOff', '1');
+      trackEvent('push_nudge_dismiss');
     },
     // #endif
     reinforceWeak(w) {
