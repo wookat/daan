@@ -560,7 +560,7 @@
 
 <script>
 import { md } from '../../md.js';
-import { request, anonUid, exportPdf, scanSheet, shareCreate, trackEvent, qShareText, shareVariant } from '../../api.js';
+import { request, anonUid, exportPdf, scanSheet, shareCreate, trackEvent, qShareText, shareVariant, isStaleUidErr } from '../../api.js';
 import { buildBookUrl, parseBookOpts } from '../../book-url.js';
 import { setBookBadge } from '../../tabbar-badge.js';
 import { mistakePaper, paperGroups, inPaper } from '../../book-paper.js';
@@ -1245,6 +1245,10 @@ export default {
         setBookBadge(this.dueTotal);
       } catch (e) {
         if (seq !== this._loadSeq) return;
+        if (isStaleUidErr(e)) {
+          this.loading = false;
+          return;
+        }
         const c = getCachedMistakes(anonUid());
         if (c && c.items && c.items.length) {
           this.items = c.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));

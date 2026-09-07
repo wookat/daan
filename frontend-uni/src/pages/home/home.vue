@@ -484,7 +484,7 @@
 </template>
 
 <script>
-import { request, snapPeek, anonUid, exportPdf, trackEvent, fetchCheckinBadges, fetchCheckinSummary, flushDailySubmit } from '../../api.js';
+import { request, snapPeek, anonUid, exportPdf, trackEvent, fetchCheckinBadges, fetchCheckinSummary, flushDailySubmit, isStaleUidErr } from '../../api.js';
 import { checkinStreak, dayKey, loadSzDaily } from '../../checkin.js';
 import { parseExamProgress, fmtLeftSecs } from '../../exam-resume.js';
 import { setBookBadge } from '../../tabbar-badge.js';
@@ -1045,6 +1045,7 @@ export default {
       try {
         this.applyBundle(await request(p));
       } catch (e) {
+        if (isStaleUidErr(e)) return;
         this.loadPlan();
         this.loadBadges();
         await this.loadProfile();

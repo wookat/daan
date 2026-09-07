@@ -1,6 +1,8 @@
 // API 封装：H5 同源相对路径；小程序 / App 必须用绝对域名（可用 VITE_API_BASE 覆盖）
 import { isNativeApp, savePdfNative } from './native';
-import { isTimeoutMsg, isNetMsg, classifyHttpError, snapCacheable, snapFresh, snapPushIndex, parseSseEvents, trackRetryable, trackQueuePush, trackReplayPayload } from './api-policy';
+import { isTimeoutMsg, isNetMsg, classifyHttpError, snapCacheable, snapFresh, snapPushIndex, isStaleUidResponse, isStaleUidErr, parseSseEvents, trackRetryable, trackQueuePush, trackReplayPayload } from './api-policy';
+
+export { isStaleUidErr };
 
 const REMOTE_BASE = 'https://kaogong.zalize.com';
 
@@ -306,9 +308,20 @@ export function snapPeek(path) {
   return snap ? snap.d : null;
 }
 
+// 带 uid 的 GET 回包到达时本机身份已变（退出/换号/401 清态）：回包属旧身份，作废不交给调用方
+function guardStaleUid(path, data) {
+  if (isStaleUidResponse(path, uni.getStorageSync('anonUid'))) {
+    const e = new Error('账号已切换，已忽略旧身份数据');
+    e.staleUid = true;
+    throw e;
+  }
+  return data;
+}
+
 export function request(path, opts = {}) {
   const method = (opts.method || 'GET').toUpperCase();
-  if (method !== 'GET' || opts.timeout != null) return withAuthRetry(() => rawRequest(path, opts));
+  if (method !== 'GET') return withAuthRetry(() => rawRequest(path, opts));
+  if (opts.timeout != null) return withAuthRetry(() => rawRequest(path, opts).then((d) => guardStaleUid(path, d)));
   // GET 默认 12s 超时；超时自动重试一次（幂等安全）——共享 origin 长尾为单请求级，重试大概率命中热路径
   return withAuthRetry(() =>
     rawRequest(path, { ...opts, timeout: 12000 })
@@ -317,6 +330,7 @@ export function request(path, opts = {}) {
         return rawRequest(path, { ...opts, timeout: 20000 });
       })
       .then((data) => {
+        guardStaleUid(path, data);
         if (snapCacheable(path)) snapSave(path, data);
         return data;
       })

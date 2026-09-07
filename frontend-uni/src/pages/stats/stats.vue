@@ -355,7 +355,7 @@
 </template>
 
 <script>
-import { request, snapPeek, anonUid, getAuthUser, authLogout, clearAuth, fetchCheckinSummary, trackEvent } from '../../api.js';
+import { request, snapPeek, anonUid, getAuthUser, authLogout, clearAuth, fetchCheckinSummary, trackEvent, isStaleUidErr } from '../../api.js';
 import { md } from '../../md.js';
 import { checkinStreak, dayKey, cnWeekKey } from '../../checkin.js';
 import { examTrend } from '../../exam-trend.js';
@@ -902,6 +902,7 @@ export default {
         const mk = await request(mp);
         this.masteredCount = (mk.items || []).filter((m) => m.mastered).length;
       } catch (e) {
+        if (isStaleUidErr(e)) return;
         this.loadErr = e.message || '网络异常';
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
