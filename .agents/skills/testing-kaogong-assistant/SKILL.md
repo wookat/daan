@@ -1742,3 +1742,9 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - **选簇依据用 `git log <生产 rev> -- <路径>` 查触碰史**：R410 后只有功能改动触碰的页面 = 未过审簇（R465 practice / R470 exam / R479 ask+interview 都是这样找到的），比按文档逐字复核快且不漏。
 - sheet 关闭 ✕ 抬到 40px 用 `min-width/min-height:40px` + 负外边距（`margin:-6px … -6px 0`），改后要读 `.sheet-h` 高度确认头行没被抬（R479 改前/改后都是 28）；命中判定用 `elementFromPoint` 中心 ±19 / ±21（脚本 `/home/ubuntu/r479_hits.py`）。
 - 375 叶节点字号下限：360 仿真下 24rpx = 11.52 px，阈值 11.9 会把 24rpx 自身留在 ≥ 侧、只抓 ≤23rpx；uni tabbar label 10 px 是框架全站样式，历轮都不计入页面命中。
+
+## R481 经验：有登录门槛的分包页怎么在生产只读进入有数据态
+- **`api.js getToken()` 读的是裸 `uni.getStorageSync('authToken')`**（字符串），H5 落 localStorage 时**不是** `{type,data}` 包装（那是对象/数组值才有的格式）：`add_init_script` 写 `localStorage.setItem('authToken','r481-local-fake')` 即可让 inbox 走过 `onShow` 的 `getToken()` 门；写成包装格式页面读不到、仍落登录分支（R481 首版误判）。
+- 有数据态占位回包要按页面的时间契约给值：plaza / inbox `fmtTime(ts)` 是 `new Date(ts*1000)`，占位必须给 **Unix 秒整数**，给毫秒或字符串会渲染 `NaN-NaN NaN:Na`（占位数据错误，不是产品缺陷）。
+- 进有数据态同时要 `route.abort()` 非 GET（inbox 进页会 `readCommentInbox()` 回写已读），保证 0 库写入。
+- 复用 sheet ✕ 负外边距法前先读该组件 `.sheet-h` 改前高度：头行本来 <28（export-confirm 22.7）时 `-6/-6` 会把头行抬到 28，要在文档如实登记而不是只写「不抬」。
