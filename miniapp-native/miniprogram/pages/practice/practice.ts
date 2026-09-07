@@ -38,7 +38,7 @@ import {
   readPendingSession,
 } from '../../utils/practice-progress';
 import type { PendingSession, ProgressQuestion } from '../../utils/practice-progress';
-import { BASE_URL } from '../../utils/request';
+import { imgUrl } from '../../utils/request';
 import { kpChain, qStatLine, sourceLabel } from '../../utils/q-stat';
 import { modName, recordStat, streakDays } from '../../utils/stats';
 
@@ -78,11 +78,6 @@ function optListOf(options: Record<string, string>, excl: string[]): Array<{ k: 
   return Object.keys(options || {})
     .sort()
     .map((k) => ({ k, v: options[k], x: excl.includes(k) }));
-}
-
-function imgUrl(p: string | null | undefined): string {
-  if (!p) return '';
-  return /^https?:/.test(p) ? p : BASE_URL + p;
 }
 
 function toPQ(q: Question | ProgressQuestion): PQuestion {

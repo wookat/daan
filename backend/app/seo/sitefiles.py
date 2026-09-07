@@ -46,11 +46,18 @@ def _lastmod(ts: float | str | None) -> str:
     return "<lastmod>" + time.strftime("%Y-%m-%d", time.gmtime(ts)) + "</lastmod>"
 
 
+# 百度移动 sitemap 协议：自适应页标 type="pc,mobile"（ziyuan.baidu.com/wiki/544），无标注按 PC 页处理
+BAIDU_MOBILE_NS = 'xmlns:mobile="http://www.baidu.com/schemas/sitemap-mobile/1/"'
+BAIDU_MOBILE_TAG = '<mobile:mobile type="pc,mobile"/>'
+
+
 def _urlset(urls: list[tuple[str, float | None]]) -> Response:
     body = (
         '<?xml version="1.0" encoding="UTF-8"?>'
-        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-        + "".join(f"<url><loc>{_e(u)}</loc>{_lastmod(ts)}</url>" for u, ts in urls)
+        f'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" {BAIDU_MOBILE_NS}>'
+        + "".join(
+            f"<url><loc>{_e(u)}</loc>{_lastmod(ts)}{BAIDU_MOBILE_TAG}</url>" for u, ts in urls
+        )
         + "</urlset>"
     )
     return Response(content=body, media_type="application/xml")

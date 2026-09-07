@@ -107,6 +107,10 @@ _CSS = (
 )
 
 
+# 百度自适应站点标注，紧随 viewport（搜索学堂《自适应对百度友好关键》）
+BAIDU_ADAPT_META = '<meta name="applicable-device" content="pc,mobile">'
+
+
 def _page(
     title: str,
     description: str,
@@ -132,6 +136,7 @@ def _page(
     return (
         '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        f"{BAIDU_ADAPT_META}"
         '<meta name="color-scheme" content="light dark">'
         f"<title>{_e(title)}</title>"
         f'<meta name="description" content="{_e(description)}">'

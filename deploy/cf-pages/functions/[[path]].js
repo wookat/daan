@@ -27,7 +27,9 @@ const SECURITY_HEADERS = {
 };
 
 // 缓存副本在边缘长存 24h：TTL 过期后先回陈旧副本并后台刷新（stale-while-revalidate），
-// 后台刷新失败/5xx 时保留旧副本继续兜底（stale-if-error）
+// 后台刷新失败/5xx 时保留旧副本继续兜底（stale-if-error）。
+// caches.default 按机房独立、不跨机房复制：副本年龄 = 本机房上次回源至今，
+// 部署/预热/purge 只作用于发起请求的那个机房。
 const STALE_KEEP = 86400;
 
 // 副本自身 Cache-Control 为长存值，对外输出时改回逻辑 TTL，避免下游/浏览器长缓存

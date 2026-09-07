@@ -7,6 +7,7 @@
     "kg-tag": "/components/kg-tag/index",
     "kg-empty": "/components/kg-empty/index",
     "kg-section-header": "/components/kg-section-header/index",
-    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
+    "kg-chip-row": "/components/kg-chip-row/index"
   }
 }
