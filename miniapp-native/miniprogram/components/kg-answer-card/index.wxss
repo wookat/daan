@@ -1,0 +1,28 @@
+.kg-ac--sheet { background: var(--card); border-radius: var(--r-lg) var(--r-lg) 0 0; padding: var(--sp-8) var(--page-x) calc(var(--sp-16) + env(safe-area-inset-bottom)); display: flex; flex-direction: column; box-sizing: border-box; }
+.kg-ac__handle { width: 36px; height: 4px; border-radius: var(--r-full); background: var(--line-strong); margin: 0 auto var(--sp-8); }
+.kg-ac__hd { display: flex; align-items: center; justify-content: space-between; min-height: var(--hit-min); margin-bottom: var(--sp-4); }
+.kg-ac__title { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); }
+.kg-ac__x { width: var(--hit-min); height: var(--hit-min); margin-right: calc(-1 * var(--sp-8)); display: flex; align-items: center; justify-content: center; border-radius: var(--r-full); }
+.kg-ac__x--hover { background: var(--fill); }
+.kg-ac__scroll { max-height: 48vh; }
+.kg-ac__legend { display: flex; gap: var(--sp-16); margin-bottom: var(--sp-12); }
+.kg-ac__lg { display: inline-flex; align-items: center; gap: var(--sp-4); font-size: var(--fs-caption); color: var(--ink-3); }
+.kg-ac__dot { width: 12px; height: 12px; border-radius: var(--r-xs); border: 1px solid var(--line); background: var(--card); }
+.kg-ac__dot--done { background: var(--brand-soft); border-color: var(--brand); }
+.kg-ac__dot--marked { background: var(--warn-soft); border-color: var(--warn); }
+.kg-ac__dot--right { background: var(--ok-soft); border-color: var(--ok); }
+.kg-ac__dot--wrong { background: var(--bad-soft); border-color: var(--bad); }
+.kg-ac__grp { margin-bottom: var(--sp-12); }
+.kg-ac__grp-t { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-bottom: var(--sp-8); }
+.kg-ac__grid { display: flex; flex-wrap: wrap; gap: var(--sp-8); }
+.kg-ac__n { width: 44px; height: 44px; border-radius: var(--r-sm); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: var(--fs-sub); color: var(--ink-2); background: var(--card); box-sizing: border-box; }
+.kg-ac__n--hover { background: var(--fill); }
+.kg-ac__n.is-done { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-text); font-weight: 600; }
+.kg-ac__n.is-marked { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); font-weight: 600; }
+.kg-ac__n.is-right { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); font-weight: 600; }
+.kg-ac__n.is-wrong { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); font-weight: 600; }
+.kg-ac__n.is-skip { color: var(--ink-4); border-style: dashed; }
+.kg-ac__n.is-cur { border-width: 2px; border-color: var(--brand); }
+.kg-ac__foot { display: block; font-size: var(--fs-sub); color: var(--ink-3); margin: var(--sp-12) 0; text-align: center; }
+.kg-ac__acts { display: flex; gap: var(--sp-12); }
+.kg-ac__btn { flex: 1; }

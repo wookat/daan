@@ -1,0 +1,127 @@
+<navbar title="{{histView ? '模考记录' : '真题卷库'}}" back="{{true}}" />
+<scroll-view class="page-scroll" scroll-y type="list" scroll-into-view="{{scrollTo}}" scroll-with-animation>
+  <view class="wrap">
+    <kg-card wx:if="{{resume}}" variant="flat" selected class="resume">
+      <view class="resume-row">
+        <view class="resume-l">
+          <text class="resume-t">未交卷：{{resume.title}}</text>
+          <text class="resume-s">已答 {{resume.answered}}/{{resume.total}} 题 · 剩余 <text class="num">{{resume.leftText}}</text></text>
+        </view>
+        <view class="resume-btns">
+          <kg-button size="md" bind:click="onContinue">继续模考</kg-button>
+          <kg-button size="md" variant="text" tone="bad" bind:click="onDropResume">放弃</kg-button>
+        </view>
+      </view>
+    </kg-card>
+
+    <kg-card variant="raised" class="mini">
+      <view class="mini-row">
+        <view class="mini-ico"><l-icon name="zap" size="24" tone="warn" /></view>
+        <view class="mini-l">
+          <text class="mini-t">迷你模考</text>
+          <text class="mini-s">30 题 · 30 分钟 · 随机组卷，即刻开考</text>
+        </view>
+        <kg-button size="md" bind:click="onMini">开始</kg-button>
+      </view>
+    </kg-card>
+
+    <view wx:if="{{prog.total > 0}}" class="progrow">
+      <view class="prog-txt">
+        <text class="prog-t">{{prog.done === prog.total ? '全部刷完 🎉' : '已刷 ' + prog.done + '/' + prog.total + ' 卷'}}</text>
+        <text class="prog-p num">{{prog.pct}}%</text>
+      </view>
+      <kg-progress value="{{prog.done}}" max="{{prog.total}}" ariaLabel="{{'已刷 ' + prog.done + '/' + prog.total + ' 卷'}}" />
+    </view>
+
+    <view wx:if="{{filters.years.length || filters.regions.length}}" class="filters">
+      <kg-segmented options="{{stOpts}}" value="{{st}}" size="sm" bind:change="onSt" />
+      <kg-chip-row wx:if="{{filters.years.length}}" options="{{yearOpts}}" value="{{year}}" bind:change="onYear" />
+      <kg-chip-row wx:if="{{filters.regions.length}}" options="{{regionOpts}}" value="{{region}}" scrollToSelected="{{false}}" bind:change="onRegion" />
+    </view>
+
+    <block wx:if="{{loading}}">
+      <kg-card wx:for="{{[1, 2, 3]}}" wx:key="*this" variant="flat" class="paper"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
+    </block>
+    <kg-empty
+      wx:elif="{{loadErr}}"
+      icon="wifi-off"
+      title="试卷加载失败"
+      desc="{{loadErr}}"
+      ctaText="重试"
+      bind:cta="onRetry"
+    />
+    <kg-empty
+      wx:elif="{{!shown.length}}"
+      icon="inbox"
+      title="暂无成套真题卷"
+      desc="{{hasFilter ? '试试放宽筛选条件' : '真题卷持续录入中，先来一场迷你模考'}}"
+      ctaText="{{hasFilter ? '清除筛选' : '迷你模考'}}"
+      bind:cta="onEmptyCta"
+    />
+
+    <view wx:else class="plist">
+      <view wx:for="{{visible}}" wx:key="id" id="paper-{{item.id}}">
+        <kg-card variant="flat" selected="{{item.id === pinnedId}}" footer class="paper">
+          <view class="paper-top" role="button" hover-class="paper-top--hover" data-id="{{item.id}}" bind:tap="onStart">
+            <kg-tag wx:if="{{item.id === pinnedId}}" tone="brand">邀你挑战的卷</kg-tag>
+            <text class="paper-t">{{item.title}}</text>
+            <view class="paper-meta">
+              <kg-tag wx:if="{{item.year}}" tone="neutral">{{item.year}}年</kg-tag>
+              <kg-tag wx:if="{{item.region}}" tone="neutral">{{item.region}}</kg-tag>
+              <text class="pmeta">{{item.metaText}}</text>
+            </view>
+            <text wx:if="{{item.bestText}}" class="pbest">{{item.bestText}}</text>
+            <text wx:else class="pbest none">还没考过，来挑战一下</text>
+            <text wx:if="{{item.practicedText}}" class="ppracticed {{item.practicedDone ? 'done' : ''}}">{{item.practicedText}}</text>
+          </view>
+          <view slot="footer" class="paper-btns">
+            <kg-button size="md" class="paper-main" data-id="{{item.id}}" bind:click="onStart">开始模考</kg-button>
+            <view class="more" role="button" aria-label="更多操作：{{item.title}}" hover-class="more--hover" data-id="{{item.id}}" bind:tap="onMenu">
+              <l-icon name="ellipsis" size="24" tone="ink-2" />
+            </view>
+          </view>
+        </kg-card>
+      </view>
+    </view>
+
+    <view wx:if="{{!loading && !loadErr && visible.length < shown.length}}" class="more-row">
+      <kg-button variant="ghost" size="lg" block bind:click="onMore">加载更多（还有 {{shown.length - visible.length}} 卷）</kg-button>
+    </view>
+
+    <kg-card wx:if="{{attempts.length || (histView && attemptsLoaded)}}" id="hist" variant="flat" class="hist">
+      <text class="h">历史成绩</text>
+      <text wx:if="{{!attempts.length}}" class="hist-empty">还没有交卷的模考，从上方选一卷开考</text>
+      <view wx:for="{{attempts}}" wx:key="id" class="arow" role="button" hover-class="arow--hover" data-id="{{item.id}}" bind:tap="onAttempt">
+        <view class="arow-l">
+          <text class="arow-t">{{item.title}}</text>
+          <text class="arow-s">{{item.timeText}}</text>
+        </view>
+        <text class="arow-score num">{{item.score}} 分</text>
+        <l-icon name="chevron-right" size="16" tone="faint" />
+      </view>
+    </kg-card>
+  </view>
+</scroll-view>
+
+<kg-sheet visible="{{menuOpen}}" title="{{menuPaper ? menuPaper.title : ''}}" bind:close="onMenuClose">
+  <view wx:if="{{menuPaper}}" class="menu">
+    <view wx:if="{{menuPaper.psource}}" class="menu-it" role="button" hover-class="menu-it--hover" bind:tap="onPractice">
+      <l-icon name="pencil-line" size="20" tone="ink-2" /><text>按卷练习（不计时）</text>
+    </view>
+    <view wx:if="{{menuPaper.best_attempt_id}}" class="menu-it" role="button" hover-class="menu-it--hover" bind:tap="onBestReport">
+      <l-icon name="chart-column" size="20" tone="ink-2" /><text>看最好成绩报告</text>
+    </view>
+    <view class="menu-it" role="button" hover-class="menu-it--hover" bind:tap="onAskExport">
+      <l-icon name="file-text" size="20" tone="ink-2" /><text>{{exporting ? '导出中…' : '导出 PDF'}}</text>
+    </view>
+  </view>
+</kg-sheet>
+
+<kg-export-sheet
+  visible="{{!!exportTarget}}"
+  scope="{{exportTarget ? exportTarget.title : ''}}"
+  count="{{exportTarget ? exportTarget.n : null}}"
+  busy="{{exporting}}"
+  bind:close="onExportClose"
+  bind:confirm="onExport"
+/>

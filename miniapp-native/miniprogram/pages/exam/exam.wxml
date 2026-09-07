@@ -1,97 +1,73 @@
-<navbar title="模考" />
+<navbar title="模考" large />
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
-    <kg-card wx:if="{{resume}}" variant="soft" clickable class="resume" bind:click="onResume">
-      <view class="rs-row">
-        <l-icon name="clock" size="20" tone="warn" />
-        <view class="rs-main">
-          <text class="rs-t">继续上次模考</text>
-          <text class="rs-s">{{resume.title}} · 已答 {{resume.answered}}/{{resume.total}} 题</text>
-        </view>
-        <text class="rs-go">续考 ›</text>
+    <!-- 焦点：未交卷续考优先，否则迷你模考；一屏一个主按钮 -->
+    <view wx:if="{{examResume}}" class="focus">
+      <text class="focus-k">未交卷</text>
+      <text class="focus-t">{{examResume.title}}</text>
+      <text class="focus-s">已答 {{examResume.answered}}/{{examResume.total}} 题，剩余 {{examResume.leftText}}</text>
+      <view class="focus-acts">
+        <kg-button variant="primary" size="lg" block bind:click="onResumeExam">继续作答</kg-button>
+        <kg-button variant="text" size="md" bind:click="onDropResume">放弃本次</kg-button>
       </view>
-    </kg-card>
-
-    <!-- 迷你模考（kg-hero-card 小程序版未落地，页内按 raised 卡 + 1 按钮实现） -->
-    <view class="hero">
-      <view class="hero-deco"><l-icon name="file-text" size="32" tone="on-brand" /></view>
-      <view class="hero-top">
-        <kg-tag tone="brand" icon="timer">限时 30 分钟</kg-tag>
-      </view>
-      <text class="hero-t">迷你模考</text>
-      <text class="hero-s">30 题混合模块 · 交卷即出成绩报告与薄弱考点</text>
-      <view class="stat-row">
-        <view class="stat"><text class="stat-n num">30</text><text class="stat-k">题量</text></view>
-        <view class="stat"><text class="stat-n num">30<text class="stat-u">min</text></text><text class="stat-k">限时</text></view>
-        <view class="stat"><text class="stat-n num">5</text><text class="stat-k">覆盖模块</text></view>
-      </view>
-      <kg-button variant="primary" tone="inverse" size="lg" block icon="chevron-right" bind:click="onMini">开始迷你模考</kg-button>
+    </view>
+    <view wx:else class="focus">
+      <text class="focus-t">迷你模考</text>
+      <text class="focus-s">30 题混合五大模块，限时 30 分钟，交卷即出成绩报告与薄弱考点</text>
+      <view class="focus-acts"><kg-button variant="primary" size="lg" block bind:click="onMini">开始迷你模考</kg-button></view>
     </view>
 
-    <block wx:if="{{attempts.length}}">
-      <kg-section-header title="最近模考" />
-      <scroll-view scroll-x class="att-scroll">
-        <kg-card wx:for="{{attempts}}" wx:key="id" variant="raised" clickable class="att" data-id="{{item.id}}" bind:click="onReport">
-          <text class="att-score num">{{item.scoreText}}<text class="att-u">分</text></text>
-          <text class="att-t">{{item.title}}</text>
-          <text class="att-d">{{item.dateText}} · 看报告 ›</text>
-        </kg-card>
-      </scroll-view>
-    </block>
-
-    <kg-section-header title="真题全真模考" />
-    <kg-chip-row wx:if="{{years.length > 1}}" size="sm" options="{{years}}" value="{{year}}" bind:change="onYear" />
-    <kg-chip-row wx:if="{{regions.length > 1}}" size="sm" options="{{regions}}" value="{{region}}" bind:change="onRegion" />
-
-    <block wx:if="{{loading}}">
-      <kg-card wx:for="{{[1, 2, 3]}}" wx:key="*this" variant="raised" class="prow">
-        <t-skeleton theme="text" animation="gradient" />
-      </kg-card>
-    </block>
-    <kg-empty
-      wx:if="{{!loading && loadErr && !papers.length}}"
-      icon="wifi-off"
-      title="真题卷库加载失败"
-      desc="{{'请检查网络后重试 · ' + loadErr}}"
-      ctaText="重试"
-      bind:cta="onRetry"
-    />
-    <kg-empty
-      wx:elif="{{!loading && !papers.length}}"
-      icon="files"
-      title="{{year || region ? '该筛选下暂无真题卷' : '真题卷库暂无内容'}}"
-      desc="{{year || region ? '换个年份或地区试试' : '先用迷你模考体验完整报告'}}"
-      ctaText="去迷你模考"
-      bind:cta="onMini"
-    />
-    <block wx:if="{{!loading && papers.length}}">
-      <kg-card
-        wx:for="{{pagedPapers}}"
+    <kg-group wx:if="{{recent.length}}" title="最近成绩" more="全部" bind:more="onAllAttempts">
+      <kg-row
+        wx:for="{{recent}}"
         wx:key="id"
-        variant="raised"
-        clickable
-        class="prow"
-        data-pid="{{item.id}}"
-        bind:click="onPaperTap"
-      >
-        <view class="p-row">
-          <view class="p-badge">
-            <text class="pb-y num">{{item.yearShort}}</text>
-            <text class="pb-k">{{item.regionShort}}</text>
-          </view>
-          <view class="p-main">
-            <text class="p-t">{{item.title}}</text>
-            <text class="p-s">{{item.sub}}</text>
-          </view>
-          <kg-tag wx:if="{{resume && resume.paperId === item.id}}" tone="warn">续考</kg-tag>
-          <kg-tag wx:elif="{{item.bestText}}" tone="ok">最高 {{item.bestText}}</kg-tag>
-          <text wx:else class="p-go">开考 ›</text>
-        </view>
-      </kg-card>
-      <view wx:if="{{pagedPapers.length < papers.length}}" class="more">
-        <kg-button variant="ghost" size="md" block bind:click="onMorePapers">加载更多（{{pagedPapers.length}}/{{papers.length}}）</kg-button>
+        title="{{item.title}}"
+        desc="{{item.desc}}"
+        value="{{item.scoreText}}"
+        valueTone="{{item.scoreTone}}"
+        last="{{index === recent.length - 1}}"
+        data-id="{{item.id}}"
+        bind:click="onAttemptTap"
+      />
+    </kg-group>
+
+    <kg-group title="真题卷库" more="{{total > papers.length ? '全部 ' + total + ' 套' : ''}}" bind:more="onAllPapers">
+      <view wx:if="{{loading}}" class="ph">
+        <view wx:for="{{[1, 2, 3]}}" wx:key="*this" class="ph-row"><t-skeleton theme="text" animation="gradient" /></view>
       </view>
-      <text wx:else class="list-end">共 {{papers.length}} 套 · 已全部展示</text>
-    </block>
+      <kg-empty
+        wx:if="{{!loading && loadErr && !papers.length}}"
+        icon="wifi-off"
+        title="真题卷库加载失败"
+        desc="{{'请检查网络后重试 · ' + loadErr}}"
+        ctaText="重试"
+        bind:cta="onRetry"
+      />
+      <kg-empty
+        wx:elif="{{!loading && !papers.length}}"
+        icon="files"
+        title="真题卷搜集中"
+        desc="真题卷上线后可整卷计时作答，先用迷你模考体验完整报告"
+      />
+      <block wx:if="{{!loading && papers.length}}">
+        <kg-row
+          wx:for="{{papers}}"
+          wx:key="id"
+          title="{{item.title}}"
+          desc="{{item.subText}}"
+          value="{{item.best_score !== null && item.best_score !== undefined ? '最好 ' + item.best_score + ' 分' : ''}}"
+          valueTone="ok"
+          last="{{index === papers.length - 1}}"
+          data-id="{{item.id}}"
+          bind:click="onPaperTap"
+        />
+      </block>
+    </kg-group>
+    <text wx:if="{{!loading && papers.length && total <= papers.length}}" class="list-end">共 {{total}} 套，已全部展示</text>
+
+    <kg-group title="更多">
+      <kg-row icon="trophy" title="模考大赛" desc="全站同卷同时开考，交卷即出排名" bind:click="onContest" />
+      <kg-row icon="pen-line" title="申论专区" desc="真题作答与 AI 批改" last bind:click="onShenlun" />
+    </kg-group>
   </view>
 </scroll-view>

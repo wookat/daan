@@ -1,0 +1,7 @@
+{
+  "component": true,
+  "usingComponents": {
+    "kg-card": "/components/kg-card/index",
+    "kg-progress": "/components/kg-progress/index"
+  }
+}

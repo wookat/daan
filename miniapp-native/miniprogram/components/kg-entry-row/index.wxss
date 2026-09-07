@@ -1,0 +1,27 @@
+/* v3 贴皮：入口 = 组内一行（单色线性图标，无彩色底、无阴影），分隔线从文字起点开始 */
+:host { display: block; }
+.kg-entry {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-12);
+  box-sizing: border-box;
+  min-height: var(--cell-h);
+  padding: var(--sp-8) var(--sp-16);
+  background: var(--card);
+}
+.kg-entry--hover { background: var(--fill); }
+.kg-entry::after {
+  content: '';
+  position: absolute;
+  left: var(--sp-16);
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--line);
+}
+:host(:last-child) .kg-entry::after { display: none; }
+.kg-entry__main { flex: 1; min-width: 0; }
+.kg-entry__t { display: block; font-size: var(--fs-body); font-weight: 500; color: var(--ink); line-height: 1.4; }
+.kg-entry__s { display: block; font-size: var(--fs-sub); color: var(--ink-3); margin-top: 2px; line-height: var(--lh-caption); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kg-entry__chev { flex-shrink: 0; margin-right: calc(-1 * var(--sp-4)); }

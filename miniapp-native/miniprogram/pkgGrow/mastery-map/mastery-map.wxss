@@ -1,0 +1,261 @@
+.wrap {
+  padding: var(--sp-16) var(--page-x) var(--sp-48);
+}
+
+.wrap.has-bar {
+  padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+}
+
+.skel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-12);
+}
+
+.sec {
+  display: block;
+  margin-bottom: var(--card-gap);
+}
+
+.cold-bar {
+  display: block;
+  margin: var(--sp-16) 0;
+}
+
+/* 覆盖度总览 */
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-16);
+}
+
+.head-r {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.head-t {
+  font-size: var(--fs-h3);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.head-s {
+  font-size: var(--fs-caption);
+  color: var(--ink-2);
+  margin: var(--sp-4) 0 var(--sp-8);
+}
+
+.legend {
+  display: flex;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+}
+
+.lg {
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  padding: 0 var(--sp-8);
+  border-radius: var(--r-xs);
+}
+
+/* 掌握度 4 级色阶：语义 soft/strong 对；无接触=中性 */
+.untouched {
+  background: var(--fill);
+  color: var(--ink-3);
+}
+
+.rumen {
+  background: var(--bad-soft);
+  color: var(--bad-strong);
+}
+
+.gonggu {
+  background: var(--warn-soft);
+  color: var(--warn-strong);
+}
+
+.shulian {
+  background: var(--ok-soft);
+  color: var(--ok-strong);
+}
+
+.jingtong {
+  background: var(--ok-strong);
+  color: var(--on-brand);
+}
+
+.tabs {
+  display: block;
+  margin-bottom: var(--sp-12);
+}
+
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--sp-12);
+}
+
+/* 二级题型卡 */
+.grp-h {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--sp-8);
+  margin-bottom: var(--sp-12);
+}
+
+.grp-name {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.grp-meta {
+  flex-shrink: 0;
+  font-size: var(--fs-caption);
+  color: var(--ink-2);
+}
+
+/* 网格 */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-8);
+}
+
+.tile {
+  position: relative;
+  min-height: var(--hit-min);
+  border-radius: var(--r-sm);
+  padding: var(--sp-8);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.tile.untouched {
+  border: 1px dashed var(--line-strong);
+}
+
+.tile.sel {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+
+.tile-name {
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tile-meta {
+  font-size: var(--fs-caption);
+  opacity: 0.85;
+}
+
+.dot {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: var(--r-full);
+  background: var(--bad);
+  color: var(--on-brand);
+  font-size: var(--fs-caption);
+  line-height: 16px;
+  text-align: center;
+  padding: 0 var(--sp-4);
+  border: 2px solid var(--card);
+  box-sizing: content-box;
+}
+
+/* 列表 */
+.rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-12);
+  min-height: var(--hit-min);
+  padding: var(--sp-8) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.row.sel .row-name {
+  color: var(--brand-text);
+}
+
+.row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.row-top {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+}
+
+.row-name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-sub);
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-pct {
+  flex-shrink: 0;
+  width: 44px;
+  text-align: right;
+  font-size: var(--fs-sub);
+  font-weight: 600;
+  background: none;
+}
+
+.row-pct.untouched {
+  color: var(--ink-3);
+}
+
+/* 吸底操作条 */
+.sheet-l {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sheet-t {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sheet-s {
+  font-size: var(--fs-caption);
+  color: var(--ink-2);
+  margin-top: 2px;
+}

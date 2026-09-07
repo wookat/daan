@@ -11,7 +11,7 @@
 .poster {
   width: 100%;
   border-radius: var(--r-lg);
-  box-shadow: var(--sh-3);
+  box-shadow: var(--sh-3); /* kg-allow: 分享海报图本身 */
 }
 
 .poster-skel {

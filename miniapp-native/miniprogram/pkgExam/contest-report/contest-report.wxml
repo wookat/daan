@@ -1,0 +1,98 @@
+<navbar title="赛后报告" back="{{true}}" />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <block wx:if="{{loading}}">
+      <view class="hero hero-skel"><t-skeleton theme="paragraph" animation="gradient" /></view>
+      <kg-card variant="flat" class="sec"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
+    </block>
+    <kg-empty wx:elif="{{loadErr}}" icon="wifi-off" title="赛后报告加载失败" desc="{{loadErr}}" ctaText="重试" bind:cta="retry" />
+    <kg-empty wx:elif="{{err}}" icon="trophy" title="暂无大赛报告" desc="{{err}}" ctaText="去模考大赛" bind:cta="goContest" />
+
+    <block wx:elif="{{r}}">
+      <view class="hero">
+        <text class="hero-s">{{heroLabel}}</text>
+        <view class="score-row"><text class="score num">{{r.score}}</text><text class="score-u">分</text></view>
+        <view class="hero-sub">
+          <text class="hero-beat num">击败 {{r.pct}}% 考生</text>
+          <text class="hero-line num">第 {{r.rank}} 名 / {{r.total}} 人 · 全场平均 {{r.avg}} 分</text>
+        </view>
+      </view>
+
+      <view wx:if="{{smallText}}" class="banner">
+        <l-icon name="info" size="16" tone="warn" />
+        <text class="banner-t">{{smallText}}</text>
+      </view>
+
+      <kg-card variant="flat" class="sec">
+        <view class="stats">
+          <view wx:for="{{statItems}}" wx:key="label" class="stat">
+            <text class="stat-v num {{item.tone === 'brand' ? 'brand' : ''}}">{{item.value}}<text wx:if="{{item.unit}}" class="stat-u">{{item.unit}}</text></text>
+            <text class="stat-k">{{item.label}}</text>
+          </view>
+        </view>
+      </kg-card>
+
+      <kg-card wx:if="{{goalText || top25Text}}" variant="flat" class="sec">
+        <text class="h">距离目标</text>
+        <view wx:if="{{goalText}}" class="gap-row">
+          <text class="gap-k">目标分 <text class="num">{{r.target_score}}</text></text>
+          <text class="gap-v {{goalOk ? 'ok' : ''}}">{{goalText}}</text>
+        </view>
+        <view wx:if="{{top25Text}}" class="gap-row">
+          <text class="gap-k">前 25% 分数线 <text class="num">{{r.top25_score}}</text></text>
+          <text class="gap-v {{top25Ok ? 'ok' : ''}}">{{top25Text}}</text>
+        </view>
+      </kg-card>
+
+      <kg-card wx:if="{{modules.length}}" variant="flat" class="sec">
+        <text class="h">模块表现</text>
+        <view wx:for="{{modules}}" wx:key="module" class="mrow">
+          <text class="mrow-name">{{item.name}}</text>
+          <view class="mrow-main">
+            <kg-progress value="{{item.pct}}" module="{{item.module}}" ariaLabel="{{item.name}}正确率" />
+            <text class="mrow-sub num">{{item.line1}}</text>
+            <text class="mrow-sub num">{{item.line2}}</text>
+          </view>
+        </view>
+      </kg-card>
+
+      <kg-card variant="flat" class="sec">
+        <text class="h">本卷薄弱考点</text>
+        <text wx:if="{{!r.weak_tags.length}}" class="note">本卷错题较少，暂未形成薄弱考点结论，继续保持！</text>
+        <view wx:for="{{r.weak_tags}}" wx:key="tag3" class="wrow" hover-class="row--hover" data-tag3="{{item.tag3}}" bind:tap="onWeakTag">
+          <view class="wrow-l">
+            <text class="wrow-t">{{item.name || item.tag3}}</text>
+            <text class="wrow-s">错 {{item.wrong}}/{{item.n}} 题</text>
+          </view>
+          <text class="wrow-go">去练</text>
+          <l-icon name="chevron-right" size="16" tone="brand" />
+        </view>
+      </kg-card>
+
+      <kg-card wx:if="{{history.length > 1}}" variant="flat" class="sec">
+        <text class="h">历届大赛成绩</text>
+        <view class="curve">
+          <view wx:for="{{history}}" wx:key="id" class="curve-col">
+            <text class="curve-v num">{{item.score}}</text>
+            <view class="curve-bar {{item.cur ? 'cur' : ''}}" style="height: {{item.h}}%" />
+            <text class="curve-x num">{{index + 1}}</text>
+          </view>
+        </view>
+        <text class="note">同系列最近 {{history.length}} 场成绩（分）</text>
+      </kg-card>
+
+      <kg-card variant="flat" class="sec">
+        <text class="h">分数分布</text>
+        <view class="dist">
+          <view wx:for="{{dist}}" wx:key="label" class="dist-col">
+            <view class="dist-bar-w"><view class="dist-bar {{item.me ? 'me' : ''}}" style="height: {{item.h}}%" /></view>
+            <text class="dist-l num">{{item.label}}</text>
+          </view>
+        </view>
+        <text class="note">{{bucketText}}</text>
+      </kg-card>
+    </block>
+  </view>
+</scroll-view>
+
+<kg-action-bar wx:if="{{!loading && r}}" layout="actions" primaryText="弱项练 5 题" secondaryText="逐题回顾" bind:primary="goWeakPractice" bind:secondary="openAttempt" />

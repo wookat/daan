@@ -1,0 +1,24 @@
+/* 讨论区/广场/消息共用的评论条目样式（对齐 H5 pkgA/social/*.vue） */
+.cm { display: flex; gap: var(--sp-12); padding: var(--sp-12) 0; border-bottom: 1px solid var(--line); }
+.cm:last-child { border-bottom: none; }
+.cm-body { flex: 1; min-width: 0; }
+.cm-hd { display: flex; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-4); }
+.avatar { width: 32px; height: 32px; border-radius: var(--r-full); display: flex; align-items: center; justify-content: center; font-size: var(--fs-sub); font-weight: var(--fw-semibold); flex-shrink: 0; }
+.av-warn { background: var(--warn-soft); color: var(--warn); }
+.av-ok { background: var(--ok-soft); color: var(--ok); }
+.av-brand { background: var(--brand-soft); color: var(--brand-text); }
+.av-bad { background: var(--bad-soft); color: var(--bad); }
+.av-info { background: var(--info-soft); color: var(--info); }
+.nm { font-size: var(--fs-sub); font-weight: var(--fw-semibold); color: var(--ink); }
+.tm { font-size: var(--fs-caption); color: var(--ink-4); margin-left: auto; }
+.tx { display: block; font-size: var(--fs-body); line-height: var(--lh-body); color: var(--ink); white-space: pre-wrap; word-break: break-word; }
+.ft { display: flex; align-items: center; gap: var(--sp-16); margin-top: var(--sp-8); }
+.op { display: inline-flex; align-items: center; gap: var(--sp-4); font-size: var(--fs-caption); color: var(--ink-3); min-height: var(--hit-min); }
+.op.on { color: var(--brand-text); }
+.op.del { color: var(--bad); }
+.op.sm { min-height: 28px; }
+.op--hover { opacity: 0.7; }
+.reply { margin-top: var(--sp-8); padding: var(--sp-8) var(--sp-12); border-radius: var(--r-xs); background: var(--fill); }
+.rtx { display: block; font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--ink-2); white-space: pre-wrap; word-break: break-word; }
+.rnm { color: var(--ink); font-weight: var(--fw-medium); }
+.rft { display: flex; align-items: center; gap: var(--sp-12); margin-top: var(--sp-4); }

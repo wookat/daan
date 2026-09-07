@@ -1,0 +1,41 @@
+<kg-card wx:if="{{loading}}" variant="flat" class="kg-pc">
+  <view class="kg-pc__skel">
+    <view class="kg-pc__skel-b kg-pc__skel-b--lg" />
+    <view class="kg-pc__skel-b" />
+    <view class="kg-pc__skel-b kg-pc__skel-b--sm" />
+  </view>
+</kg-card>
+<kg-card wx:elif="{{vm}}" variant="flat" class="kg-pc">
+  <view wx:if="{{vm.cold}}" class="kg-pc__cold">
+    <text class="kg-pc__cold-t">数据积累中</text>
+    <text class="kg-pc__cold-s">再作答 {{vm.coldLeft}} 题即可解锁预测分（{{vm.n}}/{{vm.need}}）</text>
+    <kg-progress value="{{vm.n}}" max="{{vm.need}}" thickness="{{4}}" aria-label="预测分解锁进度" />
+  </view>
+  <block wx:else>
+    <view class="kg-pc__hero">
+      <view class="kg-pc__score-w">
+        <text class="kg-pc__score num">{{vm.score}}</text>
+        <text class="kg-pc__unit">分</text>
+      </view>
+      <view class="kg-pc__meta">
+        <text wx:if="{{vm.deltaText}}" class="kg-pc__delta {{vm.deltaDown ? 'kg-pc__delta--down' : ''}}">{{vm.deltaText}}</text>
+        <text class="kg-pc__n">{{vm.nText}}　置信度 {{vm.confidence}}</text>
+      </view>
+    </view>
+    <view wx:if="{{vm.history.length}}" class="kg-pc__chart" aria-label="近 12 周预测分曲线">
+      <view wx:for="{{vm.history}}" wx:key="key" class="kg-pc__col">
+        <text class="kg-pc__col-v num {{item.hot ? 'kg-pc__col-v--hot' : ''}}">{{item.scoreText}}</text>
+        <view class="kg-pc__bar-w"><view class="kg-pc__bar {{item.hot ? 'kg-pc__bar--hot' : ''}}" style="height: {{item.heightPct}}%" /></view>
+        <text class="kg-pc__col-l">{{item.label}}</text>
+      </view>
+    </view>
+    <view class="kg-pc__mods">
+      <view wx:for="{{vm.mods}}" wx:key="module" class="kg-pc__mod">
+        <text class="kg-pc__mod-n">{{item.name}}</text>
+        <view class="kg-pc__mod-bar"><kg-progress value="{{item.score}}" max="{{item.max}}" module="{{item.module}}" thickness="{{4}}" aria-label="{{item.name + ' 预测分'}}" /></view>
+        <text class="kg-pc__mod-s num">{{item.score}}<text class="kg-pc__mod-mx">/{{item.max}}</text></text>
+        <text class="kg-pc__mod-t {{item.trend ? 'kg-pc__mod-t--' + item.trend : ''}}">{{item.trendMark}}</text>
+      </view>
+    </view>
+  </block>
+</kg-card>

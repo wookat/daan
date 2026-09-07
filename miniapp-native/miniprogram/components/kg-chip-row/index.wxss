@@ -12,4 +12,4 @@
 .kg-chip.is-off { opacity: 0.45; }
 .kg-chip__n { font-size: var(--fs-caption); color: var(--ink-3); }
 .kg-chip.is-on .kg-chip__n { color: var(--brand-text); }
-.kg-chips__fade { position: absolute; right: 0; top: 0; bottom: 0; width: 24px; pointer-events: none; background: linear-gradient(to right, transparent, var(--bg)); }
+.kg-chips__fade { position: absolute; right: 0; top: 0; bottom: 0; width: 24px; pointer-events: none; background: linear-gradient(to right, transparent, var(--kg-surface, var(--bg))); }

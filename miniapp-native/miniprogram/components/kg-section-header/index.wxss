@@ -1,4 +1,5 @@
-.kg-sh { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
-.kg-sh__t { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); }
-.kg-sh__more { display: flex; align-items: center; gap: 2px; min-height: var(--hit-min); padding: 0 var(--sp-4); font-size: var(--fs-sub); color: var(--ink-3); }
+/* v3 贴皮：分区标题 = 13px 灰字，不加粗、无竖条；「更多」为品牌色文字 */
+.kg-sh { display: flex; align-items: baseline; justify-content: space-between; padding: var(--sp-16) var(--sp-4) var(--sp-8); }
+.kg-sh__t { font-size: var(--fs-sub); color: var(--ink-3); }
+.kg-sh__more { display: flex; align-items: center; gap: 2px; min-height: var(--hit-min); margin: calc(-1 * var(--sp-12)) 0; padding: 0 var(--sp-4); font-size: var(--fs-sub); color: var(--brand-text); }
 .kg-sh__more--hover { opacity: 0.6; }

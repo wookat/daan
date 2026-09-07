@@ -15,6 +15,50 @@
     "pages/share/pk-result",
     "pages/social/poster"
   ],
+  "subPackages": [
+    {
+      "root": "pkgLearn",
+      "name": "learn",
+      "pages": [
+        "setup/setup",
+        "search/search",
+        "practice-history/practice-history",
+        "offline/offline"
+      ]
+    },
+    {
+      "root": "pkgExam",
+      "name": "exam",
+      "pages": [
+        "list/list",
+        "exam/exam",
+        "report/report",
+        "contest/contest",
+        "contest-report/contest-report",
+        "shenlun/shenlun"
+      ]
+    },
+    {
+      "root": "pkgSocial",
+      "name": "social",
+      "pages": [
+        "ask/ask",
+        "pk/pk",
+        "pk-result/pk-result",
+        "discuss/discuss",
+        "plaza/plaza",
+        "inbox/inbox",
+        "favorites/favorites",
+        "interview/interview",
+        "history/history",
+        "reminders/reminders"
+      ]
+    },
+    {
+      "root": "pkgGrow",
+      "pages": ["daily/daily", "calendar/calendar", "weekly-report/weekly-report", "mastery-map/mastery-map"]
+    }
+  ],
   "renderer": "webview",
   "componentFramework": "glass-easel",
   "lazyCodeLoading": "requiredComponents",
@@ -33,7 +77,7 @@
     "selectedColor": "#2e5bff",
     "backgroundColor": "#ffffff",
     "list": [
-      { "pagePath": "pages/home/home", "text": "首页" },
+      { "pagePath": "pages/home/home", "text": "刷题" },
       { "pagePath": "pages/book/book", "text": "错题本" },
       { "pagePath": "pages/exam/exam", "text": "模考" },
       { "pagePath": "pages/stats/stats", "text": "统计" },

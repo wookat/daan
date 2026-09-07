@@ -1,0 +1,138 @@
+.sticky {
+  flex: none;
+  background: var(--bg);
+  padding: var(--sp-8) var(--page-x) var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+}
+
+.wrap {
+  padding: var(--sp-12) var(--page-x) calc(var(--sp-24) + env(safe-area-inset-bottom));
+}
+
+.skel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-12);
+}
+
+.sec {
+  margin-bottom: var(--sp-16);
+}
+
+.qitem {
+  margin-bottom: var(--card-gap);
+}
+
+.q-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+  margin-bottom: var(--sp-8);
+}
+
+.q-code {
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+.stem {
+  font-size: var(--fs-body);
+  line-height: 1.7;
+  color: var(--ink);
+}
+
+.hi {
+  color: var(--brand-text);
+  font-weight: 600;
+}
+
+.q-loading {
+  margin-top: var(--sp-12);
+}
+
+.q-detail {
+  margin-top: var(--sp-12);
+  padding-top: var(--sp-12);
+  border-top: 1px solid var(--line);
+}
+
+.d-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+  margin-top: var(--sp-12);
+}
+
+.more {
+  margin-top: var(--sp-8);
+}
+
+.titem {
+  margin-bottom: var(--sp-8);
+}
+
+.t-l {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+
+.t-name {
+  font-size: var(--fs-body);
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+.t-sub {
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+.mt-content {
+  font-size: var(--fs-sub);
+  color: var(--ink-2);
+  line-height: 1.6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.idle {
+  padding-top: var(--sp-8);
+}
+
+.hist-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+  margin-bottom: var(--sp-8);
+}
+
+.hist-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-4);
+  min-height: 32px;
+  padding: 0 var(--sp-12);
+  border-radius: var(--r-full);
+  background: var(--fill);
+  color: var(--ink-2);
+  font-size: var(--fs-caption);
+  max-width: 100%;
+}
+
+.hist-chip--hover {
+  background: var(--line);
+}
+
+.hist-chip-t {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

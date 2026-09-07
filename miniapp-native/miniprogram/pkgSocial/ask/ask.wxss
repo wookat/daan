@@ -1,0 +1,36 @@
+@import '../../styles/pkg-social.wxss';
+@import '../../styles/md.wxss';
+
+.top { margin-bottom: var(--card-gap); }
+.hero-ask { margin-bottom: var(--sp-12); }
+.top-acts { margin-top: 0; }
+.top-row { display: flex; justify-content: space-between; align-items: center; margin-top: var(--sp-4); }
+
+.msg { display: flex; margin-bottom: var(--sp-12); }
+.msg-me { justify-content: flex-end; }
+.msg-ai { justify-content: flex-start; }
+.bubble { max-width: 82%; border-radius: var(--r-md); padding: var(--sp-8) var(--sp-12); }
+.bubble-me { background: var(--brand); color: var(--on-brand); border-bottom-right-radius: var(--r-xs); }
+.bubble-txt { font-size: var(--fs-body); line-height: var(--lh-body); white-space: pre-wrap; overflow-wrap: anywhere; }
+.bubble-sub { display: block; margin-top: var(--sp-4); font-size: var(--fs-caption); color: var(--on-brand-2); }
+.bubble-img { width: 200px; border-radius: var(--r-sm); display: block; }
+.ai-card { width: 100%; }
+
+.ans-card { background: var(--brand-soft); border-radius: var(--r-sm); padding: var(--sp-8) var(--sp-12); margin-bottom: var(--sp-8); display: flex; flex-direction: column; gap: var(--sp-4); }
+.ans-row { display: flex; gap: var(--sp-8); align-items: baseline; }
+.ans-k { flex-shrink: 0; font-size: var(--fs-caption); color: var(--brand-text); font-weight: var(--fw-semibold); min-width: 40px; }
+.ans-v { flex: 1; font-size: var(--fs-sub); color: var(--ink); line-height: var(--lh-sub); }
+.ans-big { font-size: var(--fs-h2); font-weight: var(--fw-semibold); color: var(--brand-text); }
+
+.fu { margin-top: var(--sp-8); border-radius: var(--r-sm); padding: var(--sp-8) var(--sp-12); }
+.fu-me { background: var(--fill); }
+.fu-ai { background: var(--brand-soft); }
+.fu-txt { font-size: var(--fs-sub); color: var(--ink-2); line-height: var(--lh-sub); }
+.fu-loading { display: block; margin-top: var(--sp-8); }
+
+.sim { margin-top: var(--sp-12); padding-top: var(--sp-8); border-top: 1px dashed var(--line); }
+.sim .ans-chips { margin-top: var(--sp-8); }
+.sim-res { display: block; margin-top: var(--sp-8); }
+
+.fu-input { flex: 1; min-width: 0; height: var(--btn-h-md); border-radius: var(--r-full); background: var(--fill); padding: 0 var(--sp-16); font-size: var(--fs-body); color: var(--ink); }
+.preview { width: 100%; max-height: 40vh; border-radius: var(--r-sm); }

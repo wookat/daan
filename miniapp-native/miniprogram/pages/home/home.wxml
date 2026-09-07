@@ -1,151 +1,83 @@
-<view class="hero-bleed"><view class="bleed-c1" /><view class="bleed-c2" /></view>
-<navbar title="刷题" brand />
+<navbar title="刷题" large>
+  <view class="nav-icon-btn" hover-class="nav-icon-btn--hover" role="button" aria-label="搜索题目、考点、试卷" bind:tap="onSearch">
+    <l-icon name="search" size="24" tone="ink" />
+  </view>
+</navbar>
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
-    <!-- 今日目标 hero（kg-hero-card 小程序版未落地，页内按 COMPONENTS §2.5 结构实现） -->
-    <view class="hero">
-      <view class="hero-deco" />
-      <view class="hero-top">
-        <text class="hero-label">今日已练</text>
-        <view class="hero-streak" wx:if="{{badgeStreak || streak}}">
-          <l-icon name="flame" size="16" tone="on-brand" />
-          <text>连续刷题 {{badgeStreak || streak}} 天</text>
-        </view>
+    <!-- 焦点：一句话 + 格点进度（每格 1 题）+ 唯一主按钮 -->
+    <view class="focus">
+      <text class="focus-t">{{today >= goal ? '今日目标已完成' : today > 0 ? '还差 ' + (goal - today) + ' 题完成今日目标' : '今天从 ' + goal + ' 题开始'}}</text>
+      <view class="focus-dots"><kg-dots value="{{today}}" max="{{goal}}" aria-label="今日目标进度" /></view>
+      <view class="focus-meta">
+        <text class="num">{{today}}/{{goal}} 题</text>
+        <text wx:if="{{badgeStreak || streak}}" class="focus-sep">连续 {{badgeStreak || streak}} 天</text>
+        <text class="focus-goal" hover-class="focus-goal--hover" role="button" aria-label="修改每日目标" bind:tap="onPickGoal">目标 {{goal}} 题</text>
       </view>
-      <view class="hero-num-row">
-        <text class="hero-n num">{{today}}</text>
-        <text class="hero-goal">/ {{goal}} 题</text>
-      </view>
-      <view class="hero-prog"><kg-progress value="{{today}}" max="{{goal}}" thickness="{{4}}" inverse aria-label="今日目标进度" /></view>
-      <view class="hero-btns">
-        <kg-button variant="primary" tone="inverse" size="md" icon="chevron-right" bind:click="onContinueGoal">继续目标</kg-button>
-        <view class="hero-chips">
-          <view
-            wx:for="{{goalChips}}"
-            wx:key="*this"
-            class="hero-chip {{goal === item ? 'on' : ''}}"
-            data-goal="{{item}}"
-            hover-class="hero-chip--hover"
-            bind:tap="onSetGoal"
-          >{{item}}题</view>
-        </view>
-      </view>
+      <kg-button variant="primary" size="lg" block bind:click="onContinueGoal">{{today >= goal ? '再练一组' : '继续练习'}}</kg-button>
     </view>
 
-    <!-- 今日任务三件套 -->
-    <kg-card variant="raised" class="taskcard">
-      <view class="tk-h">
-        <text class="tk-t">今日任务</text>
-        <kg-progress shape="ring" size="{{48}}" value="{{taskDoneN}}" max="{{3}}" label="{{taskDoneN}}/3" aria-label="今日任务完成数" />
-      </view>
-      <view class="tk-row" data-kind="practice" hover-class="tk-row--hover" bind:tap="onTaskGo">
-        <view class="tk-ck {{today >= goal ? 'on' : ''}}"><l-icon wx:if="{{today >= goal}}" name="check" size="16" tone="on-brand" /></view>
-        <view class="tk-main">
-          <text class="tk-name {{today >= goal ? 'tdone' : ''}}">刷题目标</text>
-          <text class="tk-sub">已练 {{today}}/{{goal}} 题</text>
-        </view>
-        <text class="tk-go">{{today >= goal ? '再练一组' : '去刷题'}}</text>
-      </view>
-      <view class="tk-row" data-kind="review" hover-class="tk-row--hover" bind:tap="onTaskGo">
-        <view class="tk-ck {{dueLoaded && !dueReview ? 'on' : ''}}"><l-icon wx:if="{{dueLoaded && !dueReview}}" name="check" size="16" tone="on-brand" /></view>
-        <view class="tk-main">
-          <text class="tk-name {{dueLoaded && !dueReview ? 'tdone' : ''}}">错题复习</text>
-          <text class="tk-sub">{{dueReview ? '今日到期 ' + dueReview + ' 题' : !dueLoaded ? '按遗忘曲线安排' : clearedToday ? '今日已清零' : '暂无到期错题'}}</text>
-        </view>
-        <text class="tk-go">{{dueReview ? '去复习' : '错题本'}}</text>
-      </view>
-      <view class="tk-row" data-kind="checkin" hover-class="tk-row--hover" bind:tap="onTaskGo">
-        <view class="tk-ck {{today > 0 ? 'on' : ''}}"><l-icon wx:if="{{today > 0}}" name="check" size="16" tone="on-brand" /></view>
-        <view class="tk-main">
-          <view class="tk-name-row">
-            <text class="tk-name {{today > 0 ? 'tdone' : ''}}">每日打卡</text>
-            <view wx:if="{{badgeStreak || streak}}" class="tk-streak">
-              <l-icon name="flame" size="16" tone="streak" />
-              <text>连续 {{badgeStreak || streak}} 天</text>
-            </view>
-          </view>
-          <block wx:if="{{nextMilestone}}">
-            <view class="tk-bar"><kg-progress value="{{nextMilestone.pct}}" max="{{100}}" thickness="{{4}}" aria-label="下一徽章进度" /></view>
-            <text class="tk-sub">再打卡 {{nextMilestone.left}} 天解锁「{{nextMilestone.days}} 天」徽章</text>
-          </block>
-          <text wx:else class="tk-sub">已解锁全部打卡徽章，太强了！</text>
-        </view>
-        <text class="tk-go">徽章</text>
-      </view>
-    </kg-card>
-
-    <!-- 今日到期复习卡 -->
-    <view wx:if="{{dueReview > 0}}" class="duebar" hover-class="duebar--hover" bind:tap="onReviewEntry">
-      <view class="duebar-ico"><l-icon name="alarm-clock" size="20" tone="streak" /></view>
-      <view class="duebar-l">
-        <text class="duebar-t">今日到期复习 {{dueReview}} 题</text>
-        <text class="duebar-s">按遗忘曲线安排 · 越拖越忘</text>
-      </view>
-      <kg-button variant="primary" size="sm" bind:click="onReviewEntry">去复习</kg-button>
-    </view>
-    <view wx:elif="{{dueLoaded && clearedToday}}" class="duebar donebar">
-      <view class="duebar-ico ok"><l-icon name="circle-check" size="20" tone="ok" /></view>
-      <view class="duebar-l">
-        <text class="duebar-t">今日复习已清零</text>
-        <text class="duebar-s">到期错题已全部复习完，继续刷新题吧</text>
-      </view>
+    <!-- 公告：一行灰字，可关 -->
+    <view wx:if="{{announce}}" class="notice">
+      <text class="notice-t">{{announce.title}}{{announce.body ? '：' + announce.body : ''}}</text>
+      <view class="notice-x" role="button" aria-label="关闭公告" hover-class="notice-x--hover" bind:tap="onDismissAnn"><l-icon name="x" size="16" tone="muted" /></view>
     </view>
 
-    <!-- 制定学习计划引导卡 -->
-    <view wx:if="{{planLoaded && !hasProfile && !guideHide}}" class="guide" hover-class="guide--hover" bind:tap="onOpenSetup">
-      <view class="guide-l">
-        <text class="guide-t">制定我的学习计划</text>
-        <text class="guide-s">按考试日期倒排每日任务：专项练习 + 错题复习 + 每周模考</text>
-      </view>
-      <kg-button variant="primary" size="sm" bind:click="onOpenSetup">去制定</kg-button>
-      <view class="guide-x" catch:tap="onSkipGuide">跳过</view>
-    </view>
+    <!-- 未完成：有则显示，作为「今日」组的前置组 -->
+    <kg-group wx:if="{{examResume || practiceResume || reviewResume}}" title="未完成">
+      <kg-row wx:if="{{examResume}}" title="{{examResume.title}}" desc="{{'模考 已答 ' + examResume.answered + '/' + examResume.total + ' 题　剩余 ' + examResume.leftText}}" value="继续" value-tone="brand" chevron="{{false}}" last="{{!practiceResume && !reviewResume}}" bind:click="onErContinue">
+        <view class="rs-x" role="button" aria-label="放弃未交卷进度" hover-class="rs-x--hover" catch:tap="onErDrop"><l-icon name="x" size="16" tone="faint" /></view>
+      </kg-row>
+      <kg-row wx:if="{{practiceResume}}" title="{{practiceResume.name}}" desc="{{'练习 已做 ' + practiceResume.done + '/' + practiceResume.total + ' 题'}}" value="继续" value-tone="brand" chevron="{{false}}" last="{{!reviewResume}}" bind:click="onPrContinue">
+        <view class="rs-x" role="button" aria-label="放弃未完成练习" hover-class="rs-x--hover" catch:tap="onPrDrop"><l-icon name="x" size="16" tone="faint" /></view>
+      </kg-row>
+      <kg-row wx:if="{{reviewResume}}" title="错题复习" desc="{{'中断在第 ' + (reviewResume.rIdx + 1) + '/' + reviewResume.items.length + ' 题'}}" value="继续" value-tone="brand" chevron="{{false}}" last bind:click="onRvContinue">
+        <view class="rs-x" role="button" aria-label="放弃未完成复习" hover-class="rs-x--hover" catch:tap="onRvDrop"><l-icon name="x" size="16" tone="faint" /></view>
+      </kg-row>
+    </kg-group>
 
-    <!-- 学习计划卡 -->
-    <kg-card variant="raised" class="plancard" wx:if="{{hasProfile && planTasks.length}}">
-      <view class="plan-h">
-        <text class="plan-t">今日学习计划</text>
-        <kg-tag wx:if="{{daysLeft !== null}}" tone="bad">距考试 {{daysLeft}} 天</kg-tag>
-      </view>
-      <view class="plan-prog">
-        <view class="plan-bar"><kg-progress value="{{planPct}}" max="{{100}}" thickness="{{4}}" aria-label="今日计划完成度" /></view>
-        <text class="plan-pct num">{{planPct}}%</text>
-      </view>
-      <view
-        wx:for="{{planTasks}}"
-        wx:key="index"
-        class="plan-row"
-        data-index="{{index}}"
-        hover-class="tk-row--hover"
-        bind:tap="onPlanTask"
-      >
-        <view class="tk-ck {{item.done ? 'on' : ''}}"><l-icon wx:if="{{item.done}}" name="check" size="16" tone="on-brand" /></view>
-        <text class="plan-txt {{item.done ? 'tdone' : ''}}">{{item.title || '练习任务'}}</text>
-        <text class="plan-go" wx:if="{{!item.done}}">去完成</text>
-      </view>
-    </kg-card>
+    <!-- 今日：复习 / 打卡 / 计划 / 时政，四行一组 -->
+    <kg-group title="今日">
+      <kg-row icon="rotate-ccw" title="错题复习" desc="{{dueReview ? '今日到期 ' + dueReview + ' 题' : !dueLoaded ? '按遗忘曲线安排' : clearedToday ? '今日已清零' : '暂无到期错题'}}" value="{{dueReview ? '去复习' : ''}}" value-tone="brand" bind:click="onReviewEntry" />
+      <kg-row icon="flame" title="每日打卡" desc="{{nextMilestone ? '再打卡 ' + nextMilestone.left + ' 天解锁「' + nextMilestone.days + ' 天」徽章' : '已解锁全部打卡徽章'}}" value="{{today > 0 ? '已打卡' : ''}}" value-tone="ok" bind:click="onCalendar" />
+      <kg-row wx:if="{{hasProfile}}" icon="calendar-check" title="学习计划" desc="{{(daysLeft !== null ? '距考试 ' + daysLeft + ' 天　' + phaseName + '　' : '') + '今日 ' + planDone + '/' + planTotal}}" value="{{planTasks.length && planDone < planTotal ? '去完成' : ''}}" value-tone="brand" bind:click="onGoPlan" />
+      <kg-row wx:elif="{{planLoaded && !guideHide}}" icon="calendar-check" title="学习计划" desc="按考试日期倒排每日任务" value="去制定" value-tone="brand" bind:click="onOpenSetup" />
+      <kg-row icon="newspaper" title="时政每日一练" desc="每日 10 题　全站同题" value="{{szTodayDone ? '已完成' : '今日更新'}}" value-tone="{{szTodayDone ? 'ok' : 'warn'}}" last bind:click="onShizheng" />
+    </kg-group>
 
-    <!-- 专项练习入口（kg-module-card 小程序版未落地，页内按 §2.2 一行式实现） -->
-    <kg-section-header title="专项练习" />
-    <view class="grid">
-      <view
-        wx:for="{{mods}}"
-        wx:key="key"
-        class="mcard"
-        data-mod="{{item.key}}"
-        hover-class="mcard--hover"
-        bind:tap="onStartModule"
-      >
-        <view class="mico" style="background: {{item.soft}}; color: {{item.color}}"><l-icon name="{{item.icon}}" size="24" tone="inherit" /></view>
-        <view class="m-main">
-          <text class="mname">{{item.name}}</text>
-          <text class="mcount">{{item.count}}</text>
-        </view>
-        <l-icon class="m-arrow" name="chevron-right" size="20" tone="faint" />
-      </view>
-    </view>
+    <!-- 练习方式：4 格入口，只放去处 -->
+    <kg-group title="练习">
+      <kg-grid4 items="{{quick}}" bind:click="onQuick" />
+    </kg-group>
+
+    <!-- 专项：一模块一行 -->
+    <kg-group title="专项练习" more="筛选" to="/pkgLearn/setup/setup">
+      <kg-row wx:for="{{mods}}" wx:key="key" icon="{{item.icon}}" title="{{item.name}}" value="{{item.count}}" last="{{index === mods.length - 1}}" data-mod="{{item.key}}" bind:click="onStartModule" />
+    </kg-group>
   </view>
 </scroll-view>
+
+<!-- 学习计划 sheet：今日任务 + 今日主攻，从首屏收进浮层 -->
+<t-popup visible="{{planOpen}}" placement="bottom" bind:visible-change="onPlanVisible">
+  <view class="sheet">
+    <view class="sheet-handle" />
+    <view class="sheet-h">
+      <text class="sheet-t">学习计划{{daysLeft !== null ? '　距考试 ' + daysLeft + ' 天' : ''}}</text>
+      <view class="sheet-x" hover-class="sheet-x--hover" bind:tap="onClosePlan"><l-icon name="x" size="24" tone="muted" /></view>
+    </view>
+    <scroll-view class="sheet-body" scroll-y>
+      <text class="sheet-st">今日任务　{{planDone}}/{{planTotal}}{{phaseName ? '　' + phaseName : ''}}</text>
+      <view class="plan-list">
+        <kg-row wx:for="{{planTasks}}" wx:key="key" icon="{{item.icon}}" tone="{{item.done ? 'ok' : 'ink-2'}}" title="{{item.title}}" desc="{{item.subText}}" value="{{item.goText}}" value-tone="{{item.done ? 'muted' : 'brand'}}" chevron="{{false}}" last="{{index === planTasks.length - 1}}" data-index="{{index}}" bind:click="onPlanTask" />
+      </view>
+      <text class="sheet-st">今天主攻</text>
+      <view class="sheet-chips"><kg-chip-row size="sm" options="{{focusOpts}}" value="{{focus}}" scroll-to-selected="{{false}}" bind:change="onFocus" /></view>
+    </scroll-view>
+    <view class="sheet-acts">
+      <kg-button variant="text" size="md" block bind:click="onPlanEdit">编辑计划</kg-button>
+    </view>
+  </view>
+</t-popup>
 
 <!-- 制定学习计划 sheet -->
 <t-popup visible="{{setupOpen}}" placement="bottom" bind:visible-change="onSetupVisible">

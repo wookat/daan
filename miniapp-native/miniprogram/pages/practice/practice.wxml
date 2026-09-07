@@ -1,39 +1,52 @@
-<navbar title="{{moduleName}} · 专项练习" back="{{true}}" />
+<navbar title="{{navTitle}}" back="{{true}}" />
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
+    <!-- 公告条（/api/announcement，关闭后按 id 记忆） -->
+    <view wx:if="{{announce}}" class="ann">
+      <l-icon name="megaphone" size="16" tone="info" />
+      <text class="ann-t" bind:tap="onAnnDetail">{{announce.title}}</text>
+      <view class="ann-x" role="button" aria-label="关闭公告" bind:tap="onDismissAnn"><l-icon name="x" size="16" tone="muted" /></view>
+    </view>
+
     <block wx:if="{{loading}}">
       <view class="p-head"><t-skeleton theme="text" animation="gradient" /></view>
-      <kg-card variant="raised" class="qcard"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
+      <kg-card variant="flat" class="qcard"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
+      <text class="pskel-hint" role="status">{{loadHint}}</text>
     </block>
 
     <kg-empty
       wx:if="{{!loading && !cur && !finished}}"
       icon="wifi-off"
       title="题目加载失败"
-      desc="{{loadErr || '请检查网络后重试'}}"
+      desc="{{loadErr || '网络不稳定或服务暂时无响应'}}"
       ctaText="重试"
       secondaryText="返回"
       bind:cta="onRetry"
       bind:secondary="onQuit"
     />
 
-    <!-- 答题 -->
+    <!-- 作答 -->
     <block wx:if="{{!loading && cur}}">
       <view class="p-head">
         <text class="p-idx num"><text class="p-idx-b">{{idx + 1}}</text>/{{items.length}}</text>
+        <view class="modechips" wx:if="{{beiMode || timedMode || offline}}">
+          <kg-tag wx:if="{{beiMode}}" tone="brand">背题模式</kg-tag>
+          <kg-tag wx:if="{{timedMode && !beiMode}}" tone="info">限时训练</kg-tag>
+          <kg-tag wx:if="{{offline}}" tone="warn" icon="wifi-off">离线题包</kg-tag>
+        </view>
         <view class="p-cnt">
-          <view class="p-timer"><l-icon name="timer" size="16" tone="muted" /><text class="num">{{timerText}}</text></view>
-          <view class="cnt cnt-ok"><l-icon name="check" size="16" tone="ok" /><text class="num">{{right}}</text></view>
-          <view class="cnt cnt-bad"><l-icon name="x" size="16" tone="bad" /><text class="num">{{wrongCount}}</text></view>
-          <view class="font-btn" hover-class="font-btn--hover" role="button" aria-label="切换字号" bind:tap="onCycleFont">
-            <l-icon name="a-large-small" size="20" tone="ink-2" /><text class="font-btn-lv">{{fontLabel}}</text>
+          <view class="p-timer {{overtime ? 'overtime' : ''}}"><l-icon name="timer" size="16" tone="{{overtime ? 'bad' : 'muted'}}" /><text class="num">{{timerText}}</text></view>
+          <view wx:if="{{!beiMode}}" class="cnt cnt-ok"><l-icon name="check" size="16" tone="ok" /><text class="num">{{right}}</text></view>
+          <view wx:if="{{!beiMode}}" class="cnt cnt-bad"><l-icon name="x" size="16" tone="bad" /><text class="num">{{wrongCount}}</text></view>
+          <view class="font-btn" hover-class="font-btn--hover" role="button" aria-label="搜索题目" bind:tap="onGoSearch">
+            <l-icon name="search" size="20" tone="ink-2" />
           </view>
         </view>
       </view>
       <view class="progress"><kg-progress value="{{idx}}" max="{{items.length}}" thickness="{{4}}" aria-label="本组进度" /></view>
 
       <!-- kg-question-card / kg-option-group 小程序版未落地：页内按 T3 结构实现 -->
-      <kg-card variant="raised" class="qcard">
+      <kg-card variant="flat" class="qcard">
         <view class="tagrow">
           <kg-tag wx:if="{{cur.is_real}}" tone="warn" icon="flag">真题{{cur.exam_year ? ' · ' + cur.exam_year : ''}}{{cur.exam_region ? ' · ' + cur.exam_region : ''}}</kg-tag>
           <kg-tag wx:if="{{cur.submodule}}" tone="module" module="{{cur.module}}">{{cur.submodule}}</kg-tag>
@@ -46,41 +59,45 @@
           <view
             wx:for="{{cur.optList}}"
             wx:key="k"
-            class="opt {{!picked ? '' : item.k === cur.answer ? 'right' : item.k === picked ? 'wrong' : 'dim'}}"
-            hover-class="{{picked ? '' : 'opt--hover'}}"
+            class="opt {{beiMode ? (item.k === cur.answer ? 'right' : 'dim') : !picked ? (item.x ? 'excl' : '') : item.k === cur.answer ? 'right' : item.k === picked ? 'wrong' : 'dim'}}"
+            hover-class="{{picked || beiMode ? '' : 'opt--hover'}}"
             hover-stay-time="60"
             role="radio"
             aria-checked="{{picked === item.k ? 'true' : 'false'}}"
             data-key="{{item.k}}"
             bind:tap="onPick"
+            bind:longpress="onExclOpt"
           >
             <text class="okey">{{item.k}}</text>
             <text class="otext q-text" style="font-size: {{optFs}}px">{{item.v}}</text>
-            <l-icon wx:if="{{picked && item.k === cur.answer}}" name="circle-check" size="20" tone="ok" />
+            <l-icon wx:if="{{(picked || beiMode) && item.k === cur.answer}}" name="circle-check" size="20" tone="ok" />
             <l-icon wx:elif="{{picked && item.k === picked}}" name="circle-x" size="20" tone="bad" />
           </view>
         </view>
+        <text wx:if="{{!picked && !beiMode}}" class="opt-hint">长按选项可排除</text>
       </kg-card>
 
       <!-- 判分横幅 -->
-      <view wx:if="{{picked}}" class="banner {{picked === cur.answer ? 'bok' : 'bbad'}}">
-        <l-icon name="{{picked === cur.answer ? 'circle-check' : 'circle-x'}}" size="24" tone="{{picked === cur.answer ? 'ok' : 'bad'}}" />
+      <view wx:if="{{picked || beiMode}}" class="banner {{beiMode || picked === cur.answer ? 'bok' : 'bbad'}}">
+        <l-icon name="{{beiMode || picked === cur.answer ? 'circle-check' : 'circle-x'}}" size="24" tone="{{beiMode || picked === cur.answer ? 'ok' : 'bad'}}" />
         <view class="b-l">
-          <text class="btitle">{{picked === cur.answer ? '回答正确' : '回答错误'}}</text>
-          <text class="bsub">{{picked === cur.answer ? '再接再厉，保持节奏' : '已自动加入错题本'}}</text>
+          <text class="btitle">{{beiMode ? '背题模式 · 答案 ' + cur.answer : picked === cur.answer ? '回答正确' + (streak >= 3 ? ' · 连对 ' + streak + ' 题！' : '') : '正确答案 ' + cur.answer}}</text>
+          <text class="bsub">{{beiMode ? '不计分，直接看解析' : picked === cur.answer ? '再接再厉，保持节奏' : offline ? '离线作答，联网后自动存入错题本' : '已自动加入错题本'}}</text>
         </view>
+        <kg-button wx:if="{{!beiMode && picked === cur.answer && autoNext}}" variant="text" size="sm" bind:click="onStayHere">看解析</kg-button>
+      </view>
+
+      <!-- 错因自评 -->
+      <view wx:if="{{picked && picked !== cur.answer}}" class="reasons" role="group" aria-label="错因自评">
+        <text class="rz-t">错因自评</text>
+        <view wx:for="{{reasons}}" wx:key="*this" class="rz {{cur._reason === item ? 'on' : ''}}" role="button" data-rz="{{item}}" bind:tap="onSetReason">{{item}}</view>
       </view>
 
       <!-- 解析卡（kg-analysis-card 小程序版未落地，页内实现） -->
-      <kg-card wx:if="{{picked}}" variant="raised" class="exp-card">
-        <view class="exp-row">
-          <text class="exp-k">正确答案</text>
-          <text class="exp-ans num {{picked === cur.answer ? 'okc' : 'badc'}}">{{cur.answer}}</text>
-          <text wx:if="{{picked !== cur.answer}}" class="exp-mine">我的答案 <text class="num">{{picked}}</text></text>
-        </view>
-        <view wx:if="{{curStat}}" class="exp-row">
-          <text class="exp-k">全站数据</text>
-          <text class="exp-v">{{curStat}}</text>
+      <kg-card wx:if="{{picked || beiMode}}" variant="flat" class="exp-card">
+        <view wx:if="{{timedMode && !beiMode && picked}}" class="exp-row">
+          <text class="exp-k">用时</text>
+          <text class="exp-v num {{cur._secs > targetSecs ? 'badc' : ''}}">{{cur._secs}}s / 目标 {{targetSecs}}s</text>
         </view>
         <view wx:if="{{curKp}}" class="exp-row">
           <text class="exp-k">考点</text>
@@ -91,29 +108,52 @@
           <text class="exp-v">{{curSource}}</text>
         </view>
         <view wx:if="{{cur.hs_explanation}}" class="exp-block">
-          <kg-tag tone="brand" icon="lightbulb">花生十三方法解析</kg-tag>
+          <text class="exp-lab is-brand">花生十三方法解析</text>
           <text class="exp-text q-text" style="font-size: {{expFs}}px" user-select>{{cur.hs_explanation}}</text>
+          <view class="hs-rate">
+            <text wx:if="{{hsRated}}" class="hs-rate-done">{{hsRated === 'up' ? '已反馈：有用' : '已反馈：有误'}}</text>
+            <block wx:else>
+              <text class="hs-rate-t">这条解析</text>
+              <kg-button variant="ghost" size="sm" icon="thumbs-up" data-up="1" bind:click="onRateHs">有用</kg-button>
+              <kg-button variant="ghost" size="sm" tone="bad" icon="thumbs-down" data-up="0" bind:click="onRateHs">有误</kg-button>
+            </block>
+          </view>
         </view>
         <view wx:if="{{cur.xp_explanation}}" class="exp-block">
-          <kg-tag tone="info" icon="sparkles">{{cur.xp_school || '第二名师视角'}}</kg-tag>
+          <text class="exp-lab">{{cur.xp_school || '第二名师视角'}}</text>
           <text class="exp-text q-text" style="font-size: {{expFs}}px" user-select>{{cur.xp_explanation}}</text>
         </view>
         <view wx:if="{{cur.explanation}}" class="exp-block">
-          <kg-tag tone="neutral">解析</kg-tag>
+          <text class="exp-lab">解析</text>
           <text class="exp-text q-text" style="font-size: {{expFs}}px" user-select>{{cur.explanation}}</text>
+        </view>
+        <view wx:if="{{favNote}}" class="exp-block">
+          <text class="exp-lab">我的笔记</text>
+          <text class="exp-text q-text" style="font-size: {{expFs}}px" user-select>{{favNote}}</text>
+        </view>
+
+        <!-- 讲解区操作：AI 详解 / 讨论 / 笔记 / 纠错 -->
+        <view class="exp-acts">
+          <kg-button variant="secondary" size="md" block icon="sparkles" bind:click="onDeepExplain">AI 详解与追问</kg-button>
+          <view wx:if="{{cur.id}}" class="exp-acts-row">
+            <kg-button class="exp-act" variant="ghost" size="sm" block icon="message-circle" bind:click="onOpenDiscuss">讨论{{commentN ? ' ' + commentN : ''}}</kg-button>
+            <kg-button class="exp-act" variant="ghost" size="sm" block icon="pen-line" bind:click="onOpenNote">{{favNote ? '改笔记' : '写笔记'}}</kg-button>
+            <kg-button class="exp-act" variant="ghost" size="sm" block icon="flag" disabled="{{cur._reported}}" bind:click="onOpenReport">{{cur._reported ? '已纠错' : '纠错'}}</kg-button>
+          </view>
         </view>
       </kg-card>
     </block>
 
     <!-- 结算 -->
-    <kg-card wx:if="{{finished}}" variant="raised" class="done" body-class="done-body">
+    <kg-card wx:if="{{finished}}" variant="flat" class="done" body-class="done-body">
       <kg-progress shape="ring" size="{{96}}" value="{{pct}}" label="{{pct + '%'}}" aria-label="本组正确率" />
-      <text class="done-t">本组完成</text>
+      <text class="done-t">{{beiMode ? '本组背完' : '本组完成'}}</text>
       <text class="done-sub">答对 <text class="num">{{right}}/{{items.length}}</text> · 错题 <text class="num">{{wrongCount}}</text> · 用时 <text class="num">{{totalSecs}}</text>s</text>
       <view wx:if="{{percentile !== null}}" class="done-beat">
         <l-icon name="trophy" size="16" tone="brand-text" />
         <text>本组正确率击败了 <text class="num">{{percentile}}</text>% 的刷题记录</text>
       </view>
+      <kg-button wx:if="{{wrongCount > 0}}" variant="secondary" size="md" icon="rotate-ccw" bind:click="onRedoWrong">只重练本组错题（{{wrongCount}}）</kg-button>
       <view wx:if="{{dueReview > 0}}" class="duenudge" hover-class="duenudge--hover" bind:tap="onGoReview">
         <l-icon name="alarm-clock" size="20" tone="streak" />
         <view class="duenudge-l">
@@ -127,10 +167,78 @@
 </scroll-view>
 
 <kg-action-bar wx:if="{{!loading && cur}}" layout="answer" index="{{idx}}" total="{{items.length}}">
-  <kg-button wx:if="{{cur.id}}" class="abar-btn" variant="ghost" size="lg" icon="share-2" bind:click="onShareQ">考队友</kg-button>
-  <kg-button class="abar-btn abar-main" variant="primary" size="lg" disabled="{{!picked}}" icon="{{idx + 1 < items.length ? 'chevron-right' : 'check'}}" bind:click="onNext">
+  <view class="abar-tools">
+    <view wx:if="{{cur.id}}" class="kg-tool {{isFav ? 'on' : ''}}" hover-class="kg-tool--hover" role="button" aria-label="{{isFav ? '取消收藏' : '收藏本题'}}" bind:tap="onToggleFav">
+      <l-icon name="star" size="24" tone="{{isFav ? 'warn' : 'ink-2'}}" />
+    </view>
+    <view class="kg-tool" hover-class="kg-tool--hover" role="button" aria-label="练习工具" bind:tap="onOpenTools">
+      <l-icon name="sliders-horizontal" size="24" tone="ink-2" />
+    </view>
+    <view class="kg-tool" hover-class="kg-tool--hover" role="button" aria-label="答题卡" bind:tap="onOpenCard">
+      <l-icon name="clipboard-list" size="24" tone="ink-2" />
+    </view>
+    <view wx:if="{{cur.id}}" class="kg-tool" hover-class="kg-tool--hover" role="button" aria-label="考队友" bind:tap="onShareQ">
+      <l-icon name="share-2" size="24" tone="ink-2" />
+    </view>
+  </view>
+  <kg-button class="abar-btn abar-main" variant="primary" size="lg" disabled="{{!picked && !beiMode}}" icon="{{idx + 1 < items.length ? 'chevron-right' : 'check'}}" bind:click="onNext">
     {{idx + 1 < items.length ? '下一题' : '完成'}}
   </kg-button>
 </kg-action-bar>
 
-<kg-action-bar wx:if="{{finished}}" layout="actions" primaryText="再来一组" secondaryText="返回首页" bind:primary="onRetry" bind:secondary="onQuit" />
+<kg-action-bar wx:if="{{finished}}" layout="actions" primaryText="再来一组" secondaryText="返回" bind:primary="onRetry" bind:secondary="onQuit" />
+
+<!-- 答题卡 -->
+<kg-sheet visible="{{cardOpen}}" title="答题卡" bind:close="onCloseCard">
+  <view class="acard-grid">
+    <view wx:for="{{cardCells}}" wx:key="i" class="acard-n num {{item.cls}}" role="button" aria-label="第 {{item.i + 1}} 题" data-i="{{item.i}}" bind:tap="onJumpTo">{{item.i + 1}}</view>
+  </view>
+  <text class="acard-foot">已答 {{answeredCount}}/{{items.length}}{{beiMode ? '' : ' · 正确 ' + right}}</text>
+</kg-sheet>
+
+<!-- 练习工具（与 H5 练习工具 sheet 同项） -->
+<kg-sheet visible="{{toolsOpen}}" title="练习工具" bind:close="onCloseTools">
+  <view class="tool-row" role="button" bind:tap="onCycleFont">
+    <text class="tool-name">字号大小</text>
+    <text class="tool-val">{{fontLv === 0 ? '小' : fontLv === 2 ? '大' : '标准'}} · 点击切换</text>
+  </view>
+  <view class="tool-row" role="switch" aria-checked="{{beiMode ? 'true' : 'false'}}" bind:tap="onToggleBei">
+    <text class="tool-name">背题模式</text>
+    <text class="tool-val {{beiMode ? 'on' : ''}}">{{beiMode ? '已开启' : '已关闭'}}</text>
+  </view>
+  <view class="tool-row" role="switch" aria-checked="{{autoNext ? 'true' : 'false'}}" bind:tap="onToggleAutoNext">
+    <text class="tool-name">答对自动跳下一题</text>
+    <text class="tool-val {{autoNext ? 'on' : ''}}">{{autoNext ? '已开启' : '已关闭'}}</text>
+  </view>
+  <view wx:if="{{!beiMode}}" class="tool-row" role="switch" aria-checked="{{timedMode ? 'true' : 'false'}}" bind:tap="onToggleTimed">
+    <text class="tool-name">限时训练（按模块建议用时倒计时）</text>
+    <text class="tool-val {{timedMode ? 'on' : ''}}">{{timedMode ? '已开启' : '已关闭'}}</text>
+  </view>
+  <view class="tool-row" role="switch" aria-checked="{{vibrate ? 'true' : 'false'}}" bind:tap="onToggleVibrate">
+    <text class="tool-name">答题震动反馈</text>
+    <text class="tool-val {{vibrate ? 'on' : ''}}">{{vibrate ? '已开启' : '已关闭'}}</text>
+  </view>
+</kg-sheet>
+
+<!-- 题目纠错 -->
+<kg-sheet visible="{{reportOpen}}" title="题目纠错" bind:close="onCloseReport">
+  <view class="rp-types" role="group" aria-label="问题类型">
+    <view wx:for="{{reportTypes}}" wx:key="*this" class="rz {{reportType === item ? 'on' : ''}}" role="button" data-t="{{item}}" bind:tap="onReportType">{{item}}</view>
+  </view>
+  <view class="rp-field">
+    <t-textarea value="{{reportDetail}}" placeholder="补充说明（选填，500 字内）" maxlength="{{500}}" autosize="{{true}}" bordered="{{false}}" bind:change="onReportDetail" />
+  </view>
+  <view slot="footer" class="sheet-acts">
+    <kg-button variant="primary" size="lg" block disabled="{{!reportType || reportBusy}}" loading="{{reportBusy}}" bind:click="onSubmitReport">提交纠错</kg-button>
+  </view>
+</kg-sheet>
+
+<!-- 笔记 -->
+<kg-sheet visible="{{noteOpen}}" title="我的笔记" bind:close="onCloseNote">
+  <view class="rp-field">
+    <t-textarea value="{{noteDraft}}" placeholder="记下解题思路、易错点…（500 字内）" maxlength="{{500}}" autosize="{{true}}" bordered="{{false}}" bind:change="onNoteInput" />
+  </view>
+  <view slot="footer" class="sheet-acts">
+    <kg-button variant="primary" size="lg" block loading="{{noteBusy}}" bind:click="onSaveNote">保存笔记</kg-button>
+  </view>
+</kg-sheet>

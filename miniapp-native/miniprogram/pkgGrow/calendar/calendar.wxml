@@ -1,0 +1,65 @@
+<navbar title="学习日历" back />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <kg-card variant="raised" class="sec">
+      <view class="cal-head">
+        <view class="cal-title">
+          <view class="cal-btn" aria-role="button" aria-label="上个月" hover-class="cal-btn--hover" bind:tap="onPrev"><l-icon name="chevron-left" size="20" tone="brand-text" /></view>
+          <text class="cal-ym num">{{ymText}}</text>
+          <view class="cal-btn {{isCurMonth ? 'dis' : ''}}" aria-role="button" aria-label="下个月" aria-disabled="{{isCurMonth}}" hover-class="cal-btn--hover" bind:tap="onNext"><l-icon name="chevron-right" size="20" tone="{{isCurMonth ? 'faint' : 'brand-text'}}" /></view>
+        </view>
+        <kg-tag tone="ok">本月打卡 {{monthDays}} 天</kg-tag>
+      </view>
+      <text class="cal-sub">本月共练 {{monthCount}} 题</text>
+      <view class="cal-week">
+        <text wx:for="{{week}}" wx:key="*this" class="cal-w">{{item}}</text>
+      </view>
+      <view class="cal-grid">
+        <view wx:for="{{cells}}" wx:key="index" class="cal-cell"><view class="cal-c num {{item.cls}}">{{item.d || ''}}</view></view>
+      </view>
+      <view class="cal-legend">
+        <text class="lg"><text class="dot part" /> 1-9 题</text>
+        <text class="lg"><text class="dot full" /> ≥10 题</text>
+        <text class="lg"><text class="dot today" /> 今天</text>
+      </view>
+      <view wx:if="{{dayErr}}" class="cal-err" aria-role="button" bind:tap="onRetry">
+        <l-icon name="wifi-off" size="16" tone="muted" />
+        <text>服务端打卡数据加载失败，当前显示本机记录，点此重试</text>
+      </view>
+    </kg-card>
+
+    <kg-card wx:if="{{badgeLoading}}" variant="raised" class="sec">
+      <t-skeleton theme="paragraph" animation="gradient" />
+    </kg-card>
+    <kg-card wx:else variant="raised" class="sec">
+      <view class="ms-h">
+        <text class="ms-t">连签里程碑</text>
+        <text class="ms-best">历史最长 <text class="num">{{bestStreak}}</text> 天</text>
+      </view>
+      <view class="ms-cur">
+        <view class="streak {{streak ? '' : 'is-zero'}}" aria-label="连续打卡 {{streak}} 天">
+          <l-icon name="flame" size="16" tone="streak" />
+          <text class="streak-n num">{{streak}}</text>
+          <text class="streak-u">天</text>
+        </view>
+        <text class="ms-cur-t">当前连续打卡</text>
+      </view>
+      <block wx:if="{{next}}">
+        <view class="ms-bar"><kg-progress value="{{next.pct}}" thickness="{{8}}" aria-label="距下一个徽章 {{next.pct}}%" /></view>
+        <text class="ms-sub">再打卡 <text class="ms-left num">{{next.left}}</text> 天解锁「{{next.days}} 天」徽章</text>
+      </block>
+      <text wx:else class="ms-sub">已解锁全部打卡徽章，太强了！</text>
+      <view class="ms-dots">
+        <view wx:for="{{badges}}" wx:key="days" class="ms-dot {{item.unlocked ? 'on' : ''}}">
+          <view class="ms-dot-i"><l-icon name="medal" size="20" tone="{{item.unlocked ? 'streak' : 'faint'}}" /></view>
+          <text class="ms-dot-d num">{{item.days}}天</text>
+        </view>
+      </view>
+    </kg-card>
+
+    <view class="poster">
+      <kg-button variant="primary" size="lg" block icon="share-2" disabled="{{!canPoster}}" bind:click="onPoster">生成打卡海报</kg-button>
+      <text wx:if="{{!canPoster}}" class="poster-tip">今天先练 1 题打上卡，再来生成海报</text>
+    </view>
+  </view>
+</scroll-view>

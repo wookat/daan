@@ -3,9 +3,16 @@
     "navbar": "/components/navbar/index",
     "l-icon": "/components/l-icon/index",
     "kg-button": "/components/kg-button/index",
-    "kg-card": "/components/kg-card/index",
     "kg-tag": "/components/kg-tag/index",
     "kg-empty": "/components/kg-empty/index",
-    "kg-progress": "/components/kg-progress/index"
+    "kg-progress": "/components/kg-progress/index",
+    "kg-chip-row": "/components/kg-chip-row/index",
+    "kg-chart-radar": "/components/kg-chart-radar/index",
+    "kg-chart-bars": "/components/kg-chart-bars/index",
+    "kg-chart-heatmap": "/components/kg-chart-heatmap/index",
+    "kg-predict-card": "/components/kg-predict-card/index",
+    "kg-group": "/components/kg-group/index",
+    "kg-row": "/components/kg-row/index",
+    "kg-dots": "/components/kg-dots/index"
   }
 }

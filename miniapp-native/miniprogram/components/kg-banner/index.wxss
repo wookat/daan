@@ -1,0 +1,8 @@
+.kg-banner { display: flex; align-items: center; gap: var(--sp-8); padding: var(--sp-8) var(--sp-12); border-radius: var(--r-sm); font-size: var(--fs-sub); line-height: var(--lh-sub); }
+.kg-banner--info { background: var(--info-soft); color: var(--info-strong); }
+.kg-banner--warn { background: var(--warn-soft); color: var(--warn-strong); }
+.kg-banner--ok { background: var(--ok-soft); color: var(--ok-strong); }
+.kg-banner--bad { background: var(--bad-soft); color: var(--bad-strong); }
+.kg-banner__t { flex: 1; min-width: 0; }
+.kg-banner__x { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: var(--r-full); flex-shrink: 0; }
+.kg-banner__x--hover { background: var(--fill); }

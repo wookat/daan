@@ -1,125 +1,85 @@
-import { fetchExamAttempts, fetchExamPapers } from '../../api/index';
-import type { ExamAttemptItem, ExamPaper } from '../../api/types';
+// 模考 tab：焦点（未交卷续考 / 迷你模考）+ 更多模考 4 格 + 最近成绩 + 真题卷库预览（前 20 卷，完整卷库与筛选在 pkgExam/list）
+import { fetchExamPapers, fetchExamAttempts, examResume, examProgressDrop } from '../../api/exam';
+import type { ExamPaper, ExamAttempt } from '../../api/exam-types';
+import { type ResumeInfo, resolveResume, dropResume, resumeUrl } from '../../utils/kg-exam-progress';
+import { fmtClock } from '../../utils/kg-exam-timer';
+import { fmtTs } from '../../utils/cn-date';
 import { syncTabBar } from '../../utils/tabbar';
-import { loadExamProgress } from '../../utils/exam-progress';
 
-type PaperVM = ExamPaper & {
-  yearShort: string;
-  regionShort: string;
-  bestText: string;
-  sub: string;
-};
+type PaperVM = ExamPaper & { subText: string };
+type AttemptVM = { id: number; title: string; desc: string; scoreText: string; scoreTone: string };
 
-type AttemptVM = ExamAttemptItem & { dateText: string; scoreText: string };
-
-interface Chip {
-  value: string;
-  label: string;
-}
-
-function regionShortOf(region: string): string {
-  if (!region) return '真题';
-  if (region.indexOf('国考') > -1 || region.indexOf('国家') > -1) return '国考';
-  if (region.indexOf('联考') > -1) return '联考';
-  return region.slice(0, 2);
-}
-
-function fmtDate(ts: number): string {
-  const d = new Date(ts * 1000);
-  return d.getMonth() + 1 + '月' + d.getDate() + '日';
-}
+const PREVIEW_N = 8;
+const RECENT_N = 3;
 
 function toVM(p: ExamPaper): PaperVM {
-  const y = String(p.year || '');
   const parts: string[] = [];
-  if (p.region) parts.push(p.region);
-  parts.push(p.n + ' 题');
-  if (p.duration_min) parts.push(p.duration_min + ' 分钟');
-  if (p.takers) parts.push(p.takers + ' 人考过');
-  return {
-    ...p,
-    yearShort: y.length === 4 ? y.slice(2) : y || '真题',
-    regionShort: regionShortOf(String(p.region || '')),
-    bestText: p.best_score != null ? p.best_score + ' 分' : '',
-    sub: parts.join(' · '),
-  };
+  if (p.year) parts.push(String(p.year));
+  if (p.region) parts.push(String(p.region));
+  if (p.n) parts.push(p.n + ' 题');
+  return { ...p, subText: parts.join('　') };
 }
 
-const PAGE_SIZE = 20;
+function attemptVM(a: ExamAttempt): AttemptVM {
+  const score = a.score;
+  const has = score !== null && score !== undefined;
+  let n = 0;
+  let correct = 0;
+  for (const k in a.per_module || {}) {
+    const pm = a.per_module![k];
+    n += pm.n || 0;
+    correct += pm.correct || 0;
+  }
+  return {
+    id: a.id,
+    title: a.kind === 'mock' ? '迷你模考' : a.title || '模考',
+    desc: fmtTs(a.submitted_at || a.started_at) + (n ? '　答对 ' + correct + '/' + n : ''),
+    scoreText: has ? score + ' 分' : '未交卷',
+    scoreTone: has ? (Number(score) >= 60 ? 'ok' : 'warn') : 'muted',
+  };
+}
 
 Page({
   data: {
     loading: true,
     loadErr: '',
     papers: [] as PaperVM[],
-    pagedPapers: [] as PaperVM[],
-    years: [] as Chip[],
-    regions: [] as Chip[],
-    year: '',
-    region: '',
-    /** 本地未交卷快照摘要（不把整卷题目投进视图层） */
-    resume: null as { paperId: number | null; title: string; answered: number; total: number } | null,
-    attempts: [] as AttemptVM[],
+    total: 0,
+    recent: [] as AttemptVM[],
+    examResume: null as (ResumeInfo & { leftText: string }) | null,
   },
   onShow() {
     syncTabBar(this, 2);
-    this.syncResume();
     this.load();
-    this.loadAttempts();
+    this.loadResume();
+    this.loadRecent();
   },
-  syncResume() {
-    const snap = loadExamProgress();
-    this.setData({
-      resume: snap
-        ? {
-            paperId: snap.paperId,
-            title: snap.paper.title,
-            answered: snap.items.filter((q) => q._picked).length,
-            total: snap.items.length,
-          }
-        : null,
-    });
+  onShareAppMessage() {
+    return { title: '考公行测真题卷库 · 整卷全真模考', path: '/pages/exam/exam' };
   },
   async load() {
     this.setData({ loadErr: '' });
     try {
-      const d = await fetchExamPapers({
-        year: this.data.year ? Number(this.data.year) : null,
-        region: this.data.region || null,
-      });
-      const papers = (d.items || []).map(toVM);
-      const f = d.filters || { years: [], regions: [] };
-      this.setData({
-        papers,
-        pagedPapers: papers.slice(0, PAGE_SIZE),
-        years: [{ value: '', label: '全部年份' }].concat(
-          (f.years || []).map((y) => ({ value: String(y.y), label: String(y.y) }))
-        ),
-        regions: [{ value: '', label: '全部地区' }].concat(
-          (f.regions || []).map((r) => ({ value: r.r, label: r.r }))
-        ),
-      });
+      const d = await fetchExamPapers();
+      const items = d.items || [];
+      this.setData({ papers: items.slice(0, PREVIEW_N).map(toVM), total: items.length });
     } catch (e) {
       this.setData({ loadErr: (e as Error).message || '网络错误' });
     } finally {
       this.setData({ loading: false });
     }
   },
-  onMorePapers() {
-    const n = this.data.pagedPapers.length + PAGE_SIZE;
-    this.setData({ pagedPapers: this.data.papers.slice(0, n) });
+  // 与首页 examResume 同源：本机 examProgress 优先，否则 /api/exam/resume
+  async loadResume() {
+    const r = await resolveResume(examResume);
+    this.setData({ examResume: r ? { ...r, leftText: fmtClock(r.leftSecs) } : null });
   },
-  async loadAttempts() {
+  async loadRecent() {
     try {
-      const d = await fetchExamAttempts(5);
-      const attempts: AttemptVM[] = (d.items || []).map((a) => ({
-        ...a,
-        dateText: fmtDate(a.submitted_at),
-        scoreText: a.score != null ? String(a.score) : '--',
-      }));
-      this.setData({ attempts });
-    } catch {
-      /* 历次记录是附属信息，失败不打断卷库展示 */
+      const d = await fetchExamAttempts(null, RECENT_N);
+      this.setData({ recent: (d.items || []).filter((a) => a.submitted_at).slice(0, RECENT_N).map(attemptVM) });
+    } catch (e) {
+      /* 非关键路径 */
     }
   },
   onRetry() {
@@ -127,52 +87,45 @@ Page({
     this.setData({ loading: true });
     this.load();
   },
-  onYear(e: WechatMiniprogram.CustomEvent<{ value: string }>) {
-    const k = String(e.detail.value ?? '');
-    if (k === this.data.year) return;
-    this.setData({ year: k, loading: true });
-    this.load();
+  onResumeExam() {
+    const r = this.data.examResume;
+    if (r) wx.navigateTo({ url: resumeUrl(r) });
   },
-  onRegion(e: WechatMiniprogram.CustomEvent<{ value: string }>) {
-    const k = String(e.detail.value ?? '');
-    if (k === this.data.region) return;
-    this.setData({ region: k, loading: true });
-    this.load();
-  },
-  onPaperTap(e: WechatMiniprogram.TouchEvent) {
-    const pid = Number(e.currentTarget.dataset.pid);
-    const p = this.data.papers.find((x) => x.id === pid);
-    if (!p) return;
-    const snap = this.data.resume;
-    if (snap && snap.paperId === pid) {
-      this.onResume();
-      return;
-    }
+  onDropResume() {
     wx.showModal({
-      title: p.title,
-      content:
-        p.n + ' 题 · 限时 ' + p.duration_min + ' 分钟，中途退出可续考。' +
-        (p.best_score != null ? '\n本卷最好成绩 ' + p.best_score + ' 分。' : ''),
-      confirmText: '开始模考',
-      cancelText: '再看看',
-      success: (r) => {
-        if (r.confirm) wx.navigateTo({ url: '/pages/exam/mini?paper_id=' + pid });
+      title: '放弃未交卷进度？',
+      content: '放弃后本次作答记录不再保留',
+      confirmText: '放弃',
+      cancelText: '再想想',
+      success: (res) => {
+        if (!res.confirm) return;
+        dropResume(this.data.examResume, examProgressDrop);
+        this.setData({ examResume: null });
       },
     });
   },
-  onReport(e: WechatMiniprogram.TouchEvent) {
+  onAttemptTap(e: WechatMiniprogram.TouchEvent) {
     const id = Number(e.currentTarget.dataset.id);
-    if (id) wx.navigateTo({ url: '/pages/exam/report?attempt_id=' + id });
+    if (id) wx.navigateTo({ url: '/pkgExam/report/report?attempt_id=' + id });
   },
-  onResume() {
-    const snap = this.data.resume;
-    if (!snap) return;
-    wx.navigateTo({
-      url: snap.paperId ? '/pages/exam/mini?paper_id=' + snap.paperId : '/pages/exam/mini',
-    });
+  onAllAttempts() {
+    wx.navigateTo({ url: '/pkgExam/list/list?view=history' });
+  },
+  onPaperTap(e: WechatMiniprogram.TouchEvent) {
+    const id = Number(e.currentTarget.dataset.id);
+    if (!id) return;
+    wx.navigateTo({ url: '/pkgExam/list/list?pid=' + id });
+  },
+  onAllPapers() {
+    wx.navigateTo({ url: '/pkgExam/list/list' });
   },
   onMini() {
-    // 迷你模考：真实模考流程（attempt + 成绩报告 + 薄弱考点）
-    wx.navigateTo({ url: '/pages/exam/mini' });
+    wx.navigateTo({ url: '/pkgExam/exam/exam?mini=1' });
+  },
+  onContest() {
+    wx.navigateTo({ url: '/pkgExam/contest/contest' });
+  },
+  onShenlun() {
+    wx.navigateTo({ url: '/pkgExam/shenlun/shenlun' });
   },
 });

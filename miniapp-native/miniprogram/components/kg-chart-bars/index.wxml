@@ -1,0 +1,18 @@
+<view class="kg-bars {{labels ? 'has-labels' : ''}}" style="height:{{height}}px">
+  <view wx:if="{{labels}}" class="kg-bars__base" />
+  <view wx:if="{{targetPct !== null}}" class="kg-bars__target" style="bottom:{{targetPct}}%">
+    <text wx:if="{{targetText}}" class="kg-bars__target-t">{{targetText}}</text>
+  </view>
+  <view wx:for="{{bars}}" wx:key="index" class="kg-bars__col" data-i="{{index}}" bind:tap="onTap">
+    <text wx:if="{{labels}}" class="kg-bars__pct num">{{item.text || ''}}</text>
+    <view class="kg-bars__track">
+      <view class="kg-bars__bar {{item.pct ? '' : 'is-empty'}} {{item.tone ? 'is-' + item.tone : ''}}" style="height:{{item.pct}}%" />
+    </view>
+    <text wx:if="{{labels}}" class="kg-bars__day">{{item.label || ''}}</text>
+  </view>
+</view>
+<view wx:if="{{leftText || midText || rightText}}" class="kg-bars__x">
+  <text>{{leftText}}</text>
+  <text>{{midText}}</text>
+  <text>{{rightText}}</text>
+</view>

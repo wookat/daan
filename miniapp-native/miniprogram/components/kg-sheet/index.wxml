@@ -1,0 +1,15 @@
+<t-popup visible="{{visible}}" placement="bottom" bind:visible-change="onVisibleChange">
+  <view class="sheet">
+    <view class="sheet-handle" />
+    <view wx:if="{{title || closable}}" class="sheet-h">
+      <text class="sheet-t">{{title}}</text>
+      <view wx:if="{{closable}}" class="sheet-x" hover-class="sheet-x--hover" role="button" aria-label="关闭" bind:tap="onClose">
+        <l-icon name="x" size="24" tone="muted" />
+      </view>
+    </view>
+    <scroll-view class="sheet-body" scroll-y type="list">
+      <slot />
+    </scroll-view>
+    <view class="sheet-foot"><slot name="footer" /></view>
+  </view>
+</t-popup>
