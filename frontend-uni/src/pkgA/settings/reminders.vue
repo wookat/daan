@@ -225,7 +225,7 @@ export default {
 .grow { flex: 1; min-width: 0; }
 .nm { display: block; font-size: 28rpx; font-weight: 600; color: var(--ink); }
 .sub { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 4rpx; }
-.time-v { font-size: 27rpx; color: var(--brand-text); font-weight: 600; }
+.time-v { font-size: 27rpx; color: var(--brand-text); font-weight: 600; min-height: 40px; display: inline-flex; align-items: center; padding-left: 24rpx; }
 
 .warn-card { padding: 26rpx 30rpx; background: var(--warn-soft); }
 .warn-t { display: flex; align-items: center; gap: 8rpx; font-size: 27rpx; font-weight: 600; color: var(--warn); }
