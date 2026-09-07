@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # 部署脚本：本机构建 H5 → rsync 到生产 → 重建容器 → 线上 bundle hash 校验 → 接口回归
 # 用法: TICKETS_VPS_SSH_USER=.. TICKETS_VPS_SSH_HOST=.. TICKETS_VPS_SSH_CREDENTIAL=.. ./deploy/deploy_h5.sh [--skip-build]
+#   DEPLOY_WAIT_SECS=N   步骤 4 等 compose 重建收敛的上限（默认 600；宿主被同机 build/prune 挤时 build 可到 17 min，见 R468）
+#   DEPLOY_RESUME=1      跳过 2b–4（不 rsync、不重建），只跑 4a–6：用于步骤 4 超时退出后 compose 在后台自行收敛的续跑，
+#                        4a 仍会校线上 rev == 本机 HEAD，容器没换到就拒绝续跑
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -46,6 +49,10 @@ git -C "$REPO_DIR" diff --quiet HEAD -- backend || BUILD_REV="$BUILD_REV-dirty"
 echo "$BUILD_REV" > "$REPO_DIR/backend/BUILD_REV"
 echo "本机后端 rev: $BUILD_REV"
 
+# ---- DEPLOY_RESUME=1 时跳过 2b–4（下方 if/fi 不重新缩进，保持 diff 可审）----
+if [[ "${DEPLOY_RESUME:-}" == "1" ]]; then
+  step "2b–4 跳过（DEPLOY_RESUME=1：不 rsync、不重建，接续跑 4a–6）"
+else
 step "2b 线上 rev 谱系闸（并行会话互相覆盖回退防护；DEPLOY_FORCE=1 跳过）"
 LIVE_REV=$(curl -s --max-time 15 "$SITE/api/health" | grep -o '"rev":"[^"]*"' | cut -d'"' -f4 || true)
 LIVE_REV="${LIVE_REV%-dirty}"
@@ -111,7 +118,8 @@ echo "  old-container-log: $SNAP"
 COMPOSE_LOG="/tmp/kg-compose-${BUILD_REV}-$(date -u +%Y%m%dT%H%M%SZ).log"
 sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" \
   "cd $REMOTE_DIR/deploy && setsid -f nohup bash -c 'docker compose up -d --build; echo \"KG_COMPOSE_EXIT rc=\$? at \$(date -u +%Y-%m-%dT%H:%M:%SZ)\"' > $COMPOSE_LOG 2>&1 < /dev/null && ln -sfn $COMPOSE_LOG /tmp/kg-compose.log && echo compose-started log=$COMPOSE_LOG"
-DEADLINE=$((SECONDS + 600))
+WAIT_SECS="${DEPLOY_WAIT_SECS:-600}"
+DEADLINE=$((SECONDS + WAIT_SECS))
 REBUILT=0
 COMPOSE_RC=""
 GRACE=0
@@ -136,7 +144,11 @@ done
 sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" "tail -3 $COMPOSE_LOG" || true
 if [[ "$REBUILT" != "1" ]]; then
   if [[ -z "$COMPOSE_RC" ]]; then
-    echo "FAIL: 600s 内 compose 未退出、容器未完成重建（线上仍 ${CUR_REV:-?}，目标 $BUILD_REV）"
+    echo "FAIL: ${WAIT_SECS}s 内 compose 未退出、容器未完成重建（线上仍 ${CUR_REV:-?}，目标 $BUILD_REV）"
+    echo "  compose 仍在宿主后台跑（setsid），本脚本退出不会停它；旧容器继续对外服务。接下来不要直接重跑本脚本（会叠第二个 build）："
+    echo "  1) 看它有没有退： ssh $REMOTE tail -1 $COMPOSE_LOG    （出 KG_COMPOSE_EXIT rc=0 且 /api/health rev=$BUILD_REV 才算收敛）"
+    echo "  2) 收敛后续跑 4a–6（Pages 静态层 / bundle 校验 / 回归，否则线上是「后端新、/ 仍旧 bundle」半发版）： DEPLOY_RESUME=1 $0 --skip-build"
+    echo "  3) rc≠0 才是真失败；宿主被同机 build/prune 挤时可 DEPLOY_WAIT_SECS=1500 重跑"
   else
     echo "FAIL: compose 退出 rc=$COMPOSE_RC 但线上 rev 未收敛到 $BUILD_REV（线上 ${CUR_REV:-?}）"
   fi
@@ -150,6 +162,8 @@ fi
 sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" \
   "docker inspect deploy-kaogong-1 --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -q '^ADMIN_TOKEN=..'" \
   || { echo "FAIL: 容器 ADMIN_TOKEN 为空，.env 未正确注入！"; exit 1; }
+fi
+# ---- DEPLOY_RESUME 跳过段结束 ----
 
 step "4a 线上后端 rev 校验"
 ONLINE_REV=$(curl -s "$SITE/api/health" | grep -o '"rev":"[^"]*"' | cut -d'"' -f4)

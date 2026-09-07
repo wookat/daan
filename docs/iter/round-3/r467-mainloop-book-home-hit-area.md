@@ -45,7 +45,7 @@ R465 SKILL 新条要求每 10 轮 SOP-10 至少把 `pages/practice` `pages/book`
 
    `.pbadge-hit` / `.recap-h` 加 `position:relative; z-index:1` 的原因：负外边距撑出的 40px 带在 1440（`.mhead` 21 单行）下半段会被下方题干 `.q` 盖住，本地 dist 预检 `elementFromPoint(+19)` 一次不命中；置顶后 ±19 全命中（§3）。
 4. **生产复验（§3）**：全部改动元素 375/1440 **40 / `elementFromPoint` ±19 命中、±21 不命中**；`.mhead` 1440 21 与改前同值（375 读 41.8 = 时间标签折行，徽标宽 146.4 同改前，见 §5）、`.mg-row` 57、`.sheet-h` 28 不变；`.tk-row` 52.3/55 整行命中 ±21 全 true；两页 `<11.9px` 叶节点仍只剩 TabBar label。本地 dist 预检数值与生产逐项一致。
-5. **部署本身出了一次可复用的坑（§2b）**：`deploy_h5.sh` 远端 `compose up --build` 两次都超 600 s 轮询上限被脚本判 FAIL 退出，但 compose 仍在宿主后台跑；第一次 pip 层 `exit code 4294967295` 失败（同时刻宿主有兄弟会话的 `docker builder prune -f --keep-storage 1GB` 在跑 + `other_builds=2`、load 25、mem_avail 98 MB），第二次 17 分钟后 rc=0 容器 00:48:06Z 起。脚本中止后 **4c CF Pages 部署 / 5 bundle 校验 / 6 回归 没跑**——线上 `/` 仍指旧 bundle `index-CbCTdalC.js` 而后端已是 `a49b52c`，手工补跑 4c（`wrangler pages deploy` → `9c6bdd6c.kaogong-h5.pages.dev`）后 5 s 内 `/` 切到 `index-D6cTFb18.js`，5b 五种 `Accept-Encoding` 全 `application/javascript`，6/6 回归 7/7 200，perf 一次全 OK（`/` 0.93 / LCP 2772 / CLS 0.06；`/tiku/` 1.00 / LCP 961）。
+5. **部署本身出了一次可复用的坑（§2b）**：`deploy_h5.sh` 远端 `compose up --build` 两次都超 600 s 轮询上限被脚本判 FAIL 退出，但 compose 仍在宿主后台跑；第一次 pip 层 `exit code 4294967295` 失败（同时刻宿主有兄弟会话的 `docker builder prune -f --keep-storage 1GB` 在跑、load 25、mem_avail 98 MB；FAIL 现场的 `other_builds=2` **R468 勘误**：那是本次部署自己的 `bash -c 'docker compose up …'` 包装壳 + `docker compose` CLI 两个进程，`host_probe.sh` 的 pgrep 正则不区分本家/别家、也不计 `builder prune`，不是「另有 2 个 build」），第二次 17 分钟后 rc=0 容器 00:48:06Z 起。脚本中止后 **4c CF Pages 部署 / 5 bundle 校验 / 6 回归 没跑**——线上 `/` 仍指旧 bundle `index-CbCTdalC.js` 而后端已是 `a49b52c`，手工补跑 4c（`wrangler pages deploy` → `9c6bdd6c.kaogong-h5.pages.dev`）后 5 s 内 `/` 切到 `index-D6cTFb18.js`，5b 五种 `Accept-Encoding` 全 `application/javascript`，6/6 回归 7/7 200，perf 一次全 OK（`/` 0.93 / LCP 2772 / CLS 0.06；`/tiku/` 1.00 / LCP 961）。
 6. 到期项无增量（§4）；(c) R466 发版后 321 请求 `/assets/*` 404 0 / monitor 0（其中 R467 容器起后 47 请求）。WAL 仍 4,124,152 B、`ckpt_seq 1`（R466 高水位复用结论维持）。
 
 ## 2. 本地门 + 本地 dist 预检
@@ -59,11 +59,11 @@ R465 SKILL 新条要求每 10 轮 SOP-10 至少把 `pages/practice` `pages/book`
 |---|---|
 | 00:10:51 | 第 1 次 `deploy_h5.sh --skip-build`：rsync 完成，远端 `compose up -d --build` 起；宿主 `mem_avail=438MB disk 2.4G(96%) load=4.64 other_builds=0` |
 | ~00:13–00:16 | 镜像层缓存不在（`#8 apt-get` 从头跑 178.5 s、`#5` 113 s）→ 推断是此前/同期兄弟会话 `docker builder prune` 清掉了 kaogong 的层缓存 |
-| 00:20:51 | 脚本 600 s 到 → FAIL 退出（线上仍 `7e2e2b3`，旧容器 healthy 未动）；现场 `mem_avail=293MB load=25.10 other_builds=2` |
+| 00:20:51 | 脚本 600 s 到 → FAIL 退出（线上仍 `7e2e2b3`，旧容器 healthy 未动）；现场 `mem_avail=293MB load=25.10 other_builds=2`（= 本次 compose 自身两进程，见 §1.5 R468 勘误） |
 | 00:22:05 | 手工 ssh：`docker builder prune -f --keep-storage 1GB`（PID 653735，非本仓库任何脚本）与 compose 并存；`free` avail **98 MB**；`docker system df` 挂起 >3 min |
 | 00:27:27 | compose 退出 **rc=1**：`#10 RUN pip install … did not complete successfully: exit code: 4294967295`（=-1，非 pip 自身退出码；内核 20 min 内无 OOM 行）→ 推断为 buildkit 构建被并发 prune / 资源压力打断 |
 | 00:31:10 | 第 2 次 `deploy_h5.sh --skip-build`（盘 4.3G 91%、load 11.5、`other_builds=0`）；期间 ssh 一次 `Connection timed out during banner exchange`；`#10 pip` 313.5 s、`#11 COPY backend` 53 s |
-| 00:41:10 | 脚本 600 s 到 → 再 FAIL 退出（`other_builds=2`，又见 `docker builder prune` PID 678467） |
+| 00:41:10 | 脚本 600 s 到 → 再 FAIL 退出（`other_builds=2` 同为自身；另见 `docker builder prune` PID 678467） |
 | 00:48:07 | compose **rc=0**（`#16` 导出 128.7 s、`#17` 18.9 s）；新容器 `StartedAt 00:48:06.92Z` healthy、`/api/health rev a49b52c` |
 | 00:52 | 发现 `/` 仍 `index-CbCTdalC.js`（Pages 静态层未发）→ 手工跑 4c → `/` 5 s 内切 `index-D6cTFb18.js` → 5b / 6 / perf 全过 |
 
