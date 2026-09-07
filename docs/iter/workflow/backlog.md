@@ -12,7 +12,7 @@
 - [x] W2-C（W2，P1，miniapp）连签 hero/stats 改服务端优先、`utils/offline.ts` answer_log/mistakes 离线队列、exam 错误态+重试、`page` 高度约束、首页题数 `/api/question_counts` 动态化、README Skyline→webview —— 已合入；typecheck/lint/vitest 7 全绿；**微信开发者工具走查未做**（断网→恢复落库、连签三处一致、14 页滚到底 + login 回归、page 高度对 navbar/底栏影响）
 - [x] W3-A（W3，P1，backend）`/api/questions/export` 复用 import 令牌 401、`growth_stats` 周键 `+8 hours`、`_client_ts` 接受 items[].t（秒/毫秒、[now−30d, now+5min] 外回退 now）、`/api/rate` `rl(60/600s)` —— 已合入 `devin/wf-w3-integration`；ruff/pyright 0/pytest 342（+24）全绿，本地 uvicorn 实测 export 401·t 落昨日·CST 周键 2026-35·第 61 次 429；**生产回归待部署**（当前 rev e58779f export 仍 200）
 - [x] W3-B（W3，P1，miniapp+H5）小程序 stats 页 `fetchGrowth` 服务端优先/pstats 降级、离线队列与在线上报 items 带 `t`、types GrowthResp/`AnswerLogItem.t`/`Question.image_credit`、lint 脚本内置 `ESLINT_USE_FLAT_CONFIG=false`；H5 `buildPaceRows` 读 `answered`（整模块未作答→「未作答」、部分作答按已答折算）、`goTask` real_mode 进卷库 —— 已合入；typecheck/lint 0、lint/vitest 523/build:h5 全绿；本地 build 产物报告页 Chrome 实测 skip「未作答」灰标 + 折算注；实施方生产 API 级回归已做并清理（test-w3-b-pace leftover 0）；**小程序未真机、goTask 未端到端点击、H5 报告页生产 UI 待部署**
-- [x] W3-C（W3，P2，content）`quality.sanitize_explanation`（抓取源统计前缀/「解析」标签族 + 广告尾句 + CJK 空格归一，数字/字母空格保留）+ `scripts/w3_content_cleanup.py`（dry-run 默认、`--apply` 备份 `.bak-w3`、rescore、不下线）—— 已合入；test_quality_penalties 11（+3）；本地临时库 dry-run 2500 → apply → 复扫 0，非 explanation 列不变；生产只读快照 dry-run rewrite 10,068（prefix 5383 / ad 192 / space 10045）；**生产 dry-run 复核 + `--apply` 待部署后单独确认**（「解析」标签扩展规则与公式缺图空格需人审）
+- [x] W3-C（W3，P2，content）`quality.sanitize_explanation`（抓取源统计前缀/「解析」标签族 + 广告尾句 + CJK 空格归一，数字/字母空格保留）+ `scripts/w3_content_cleanup.py`（dry-run 默认、`--apply` 备份 `.bak-w3`、rescore、不下线）—— 已合入；test_quality_penalties 11（+3）；本地临时库 dry-run 2500 → apply → 复扫 0，非 explanation 列不变；生产只读快照 dry-run rewrite 10,068（prefix 5383 / ad 192 / space 10045）；生产 `--apply` 已于 2026-09-04 17:11Z 执行（容器内 dry-run 8,282 人审后，含 #594 规则），09-05 复扫 0 / 台账 7,997 题核对一致 / 空 0，记录见 w3.md §4.5
 
 ## Deferred（W2 上线回归追加）
 
@@ -52,7 +52,7 @@
 
 ## Deferred（W3 追加）
 
-- [ ] [部署后回归·W3] W3-A：`GET /api/questions/export?limit=1` 无头 → 401（当前生产 200，hs 管线若用 export 需配 `X-Import-Token`）、test-w3-* uid `POST /api/answer_log` items 带 `t`=昨日 → `/api/checkin/summary` days 落昨日、`/api/growth` weeks 键与北京时间一致、`/api/rate` 连发 61 次第 61 次 429、核心刷题/错题/模考/统计 200；W3-B：新 bundle ≠ `index-C7wGv3is.js` + SW 更新、某模块全空模考报告页「未作答」灰标；W3-C：容器内 `python3 - < scripts/w3_content_cleanup.py` dry-run（预期 rewrite ≈10,068 / prefix ≈5383 / ad ≈192 / space ≈10045）→ 人审 → `--apply`（备份 `/data/data.db.bak-w3`）→ `/tiku/q/262611`、`/api/question/262611` 无广告句、`/api/question/235535` 无统计前缀 → `docker restart` 刷 lru_cache。结束清理 test-w3-* 数据。部署前 `git merge-base --is-ancestor e58779f <deploy_rev>` 核对。
+- [ ] [部署后回归·W3] W3-A：`GET /api/questions/export?limit=1` 无头 → 401（当前生产 200，hs 管线若用 export 需配 `X-Import-Token`）、test-w3-* uid `POST /api/answer_log` items 带 `t`=昨日 → `/api/checkin/summary` days 落昨日、`/api/growth` weeks 键与北京时间一致、`/api/rate` 连发 61 次第 61 次 429、核心刷题/错题/模考/统计 200；W3-B：新 bundle ≠ `index-C7wGv3is.js` + SW 更新、某模块全空模考报告页「未作答」灰标；W3-C：已完成（apply 09-04 17:11Z，09-05 复扫 0、262611/235535 外显干净、容器已重建刷缓存，见 w3.md §4.5）。test-w3-mp / test-w3-cmp01 遗留造数已于 09-05 按 uid 精确清除（test-w3-% 余 0）。部署前 `git merge-base --is-ancestor e58779f <deploy_rev>` 核对。
 - [ ] [backend·P2·一行补] 入库防再污染：`sanitize_explanation` 接到 `db.import_questions` / qbank import 入口（W3-A 已合入，同文件可补）。
 - [ ] [backend·P3·待证据] async def 端点内同步 SQLite/CPU：push_api.py subscribe/unsubscribe、ai_api.py api_explain 的 `db.get_explain_cache`、exam_api.py scan_sheet、main.py guard_account_uid 的 owns_uid 查库、etag_conditional 对 SSR 全文 md5 —— 已核实存在但均毫秒级小查询，未拿到与 R372 内存/长尾的因果证据；改法是非流式端点改回 def（走线程池），待 slow-req 日志佐证再做。
 - [ ] [backend·P3·成本中] `_ensure_*` 运行时懒迁移 22 函数 / 161 处调用（每请求 CREATE TABLE IF NOT EXISTS），R375 已引入 add_column_if_missing，建议统一收敛到 startup 一次性 migrate；收益未量化。
@@ -64,7 +64,7 @@
 - [ ] [miniapp·未验证] 真机渲染/键盘/安全区、stats 页服务端优先/pstats 降级、断网补传后 `t` 落作答当日（依赖 W3-A 部署）—— Linux 无开发者工具，需 macOS/Windows 会话补一次真机走查（W2-C 清单一并）。
 - [ ] [content·P3·先统计] hs 讲解模板化句式（「确认答案为X」「用关键词定位法」高频重复）—— 人味问题但改法涉及 LLM 重写，受「不反复触发 AI」约束，先统计句式频次再决定。
 - [ ] [content·P2·需人审] 「微信/关注」等词在常识题解析中出现（q320965/185847/239781/260004）需人工判断是题目正文还是广告残留，不能规则一刀切。
-- [ ] [content·P2·apply 前人审] W3-C 已知边缘：抓取时丢失公式图片留下的「容量为 毫升」类空格会被并成「容量为毫升」（与 W2 题干规则同口径，ziliao 41 条/部分 shuliang 可能含）；「解析 」标签扩展规则超出工作项原文两条常量。
+- [x] [content·P2·apply 前人审，已完成，公式缺失另走 R400 缺陷线] W3-C 已知边缘：抓取时丢失公式图片留下的「容量为 毫升」类空格会被并成「容量为毫升」（与 W2 题干规则同口径，ziliao 41 条/部分 shuliang 可能含）；「解析 」标签扩展规则超出工作项原文两条常量。
 - [ ] [新需求提案·增长/留存·待下轮按数据排期] 5 题微组（碎片时间刷题）；邀请落地页预览（复用 team._sharer_invite）；Web Share API 替代复制链接；周报实时化；分享者与被分享者作答对比；学习地图游戏化；AI 先提示后解析模式；5 分钟微模考。
 - [ ] [运维·外部卡点] 生产性能长尾根因归因（R372/R373 已缓解未归因）、竞赛/PK/组队活跃态在生产的真实数据观察（R374 起需 probe 口径过滤积累数日）、AI 实时回复体验。
 - [ ] [流程] 每轮先核对 `/api/health` rev 与 main 的祖先关系，避免把「已上线未合入」或「已合入未上线」当缺陷（W3 集成时 e58779f 已是 HEAD 祖先，无漂移）。
