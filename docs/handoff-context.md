@@ -2466,3 +2466,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - (c) / 到期项无增量：probe=0 33/1、growth 20/4、error_reason 7 / ≥09-11 0、push_subs 0、weekly 2、exam_attempts probe=0 1/64、`时政且 qid 非空` 0/0、`explain_cache qid nonnull` 0/82、`umst3` 0 回访。
 - 如实：埋点在真人流量上 0 样本；未提交 `explain/stream`（不造 LLM 流量）；W7 `openExplain` 无 `_sz` 守卫 / 不发 qid 只读源码核未真机；无 testing agent 录屏（未另行授权）。
 - 取证：`docs/iter/round-3/r487-practice-ask-deeplink-reach-unobservable-practice-ask-click.md`；脚本 `~/r487_host.sh` `~/r487_db3.sh` `~/r487_db4.sh` `~/r487_post.sh`。
+
+### R488（2026-09-07）：`perf-budget.sh` Lighthouse「运行失败」不可考 → stderr 留痕（部署侧脚本，生产仍 `896007c` 不发版）
+- **(c) / 到期项 0 增量**：R487 容器（09:51:52Z 起）108 请求全本机/探针/bot，非探针 `mistakes/analysis` / `explain/stream` / POST 0；`umst3tuisd7lgzaka` 0 回访；`practice_ask_click` 仍只有 R487 探针 2 行（probe=1）→ `growth_events.ref ↔ explain_cache.qid` 对账无真人样本、未做。probe=0 33/1、growth 20/4、`explain_cache qid` 0/82、`时政且 qid 非空` 0/0、error_reason ≥09-11 0、WAL 同字节、healthy 0 重启。track 5 条里 2 条 200 是 R487 手动 Lighthouse（`moto g power (2022)` UA、本机网段）触发的页面埋点，归探针。
+- **修（`deploy/perf-budget.sh`，仅在部署机跑）**：lighthouse stderr 落 `$TMP/<url>.err`，失败时打印 `rc` / loadavg / stderr 末 20 行后继续下一个 URL；`rc=$?` 块首先取；成功路径输出不变、`deploy_h5.sh` 6b WARN/strict 语义不动。本地：`bash -n` OK；正常 `/` perf 0.93 / LCP 2783 rc=0；`SITE=https://nonexistent-r488.invalid` 构造失败 → `rc=1, load=…` + `Chrome prevented page load with an interstitial` 打出、脚本 rc=1。
+- **R487 `/` perf 0.57 勘正**：该次手动跑未落盘、不可复核，不再作为数据点；留痕 6 次 perf 0.88–0.93、LCP 2731–2812、`runWarnings` 空、bench 3249–3686；83 份部署日志 `/` perf OK 71 次 0.90–1.00、FAIL 3 次 0.81/0.84/0.86、运行失败 1 次（R487）。「运行失败」根因仍未知，不登记为回归，登记为「已留痕待自然复现」。
+- 顺带一手：`CHROME_PATH` 指向不存在文件时 lighthouse 照常跑通（chrome-launcher 回落自找 Chrome，机制为推断）——R487 那次不是 Chrome 路径问题。
+- 如实：本轮 0 产品代码；构造失败走的是 interstitial 路径、未复现 R487 具体失败类型；无 testing agent 录屏（未另行授权）。
+- 取证：`docs/iter/round-3/r488-perf-budget-lighthouse-stderr-retained.md`；补量脚本复用 `~/r487_post.sh`。

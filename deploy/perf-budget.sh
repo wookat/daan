@@ -44,11 +44,15 @@ trap 'rm -rf "$TMP"' EXIT
 
 for u in "${URLS[@]}"; do
   out="$TMP/$(echo "$u" | tr '/?' '__').json"
+  err="${out%.json}.err"
   echo "==> Lighthouse $SITE$u"
   CHROME_PATH="$CHROME" npx --yes lighthouse "$SITE$u" \
     --quiet --output=json --output-path="$out" \
-    --chrome-flags="--headless=new --no-sandbox" >/dev/null 2>&1 \
-    || { echo "FAIL Lighthouse 运行失败: $u"; FAIL=1; continue; }
+    --chrome-flags="--headless=new --no-sandbox" >/dev/null 2>"$err" \
+    || { rc=$?
+         echo "FAIL Lighthouse 运行失败: $u (rc=$rc, load=$(cut -d' ' -f1-3 /proc/loadavg 2>/dev/null))"
+         echo "---- lighthouse stderr (tail 20) ----"; tail -n 20 "$err"; echo "----"
+         FAIL=1; continue; }
   python3 - "$out" "$u" "$MIN_PERF" "$MIN_A11Y" "$MIN_BP" "$MIN_SEO" "$MAX_LCP_MS" "$MAX_CLS" <<'EOF' || FAIL=1
 import json, sys
 p, u, mperf, ma11y, mbp, mseo, mlcp, mcls = sys.argv[1:9]
