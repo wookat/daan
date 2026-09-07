@@ -9,7 +9,7 @@ import { normalizeDailyDeepLink } from "./deeplink.js";
 import { initKeyboardFocus } from "./a11y-focus.js";
 import { initA11yLive } from "./a11y-live.js";
 import { initRoutePrecache } from "./precache.js";
-import { createErrorReporter, describeRejection, installVueErrorHandler } from "./monitor-client.js";
+import { createErrorReporter, describeRejection, installVueErrorHandler, isMaskedCrossOriginError } from "./monitor-client.js";
 initKeyboardFocus(); // 必须先于 app 挂载：拦截 Vue runtime 的 click addEventListener
 initA11yLive();
 initRoutePrecache();
@@ -26,6 +26,7 @@ if (typeof window !== 'undefined') {
 		}
 	});
 	window.addEventListener('error', (e) => {
+		if (isMaskedCrossOriginError(e)) return;
 		mReport(e.message || 'window.onerror', e.error && e.error.stack);
 	});
 	window.addEventListener('unhandledrejection', (e) => {

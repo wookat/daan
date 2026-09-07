@@ -34,6 +34,13 @@ export function describeRejection(r) {
   return String(r);
 }
 
+// 跨源脚本抛错被浏览器脱敏为 "Script error."（无 filename / lineno / error 对象）：本页 CSP 只放行同源脚本，
+// 这类事件只能来自浏览器厂商注入脚本等页面外代码，无任何可定位信息，不上报（Sentry 默认同样丢弃）
+export function isMaskedCrossOriginError(e) {
+  if (!e || !/^Script error\.?$/.test(String(e.message || ''))) return false;
+  return !e.error && !e.filename;
+}
+
 export function classifyVueError(message) {
   if (/Async component timed out/.test(message)) return 'chunk-timeout';
   if (/Failed to fetch dynamically imported module|Unable to preload|Importing a module script failed|Loading chunk/.test(message)) return 'chunk-load';
