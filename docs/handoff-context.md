@@ -2749,3 +2749,15 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - **如实**：为量答后态 harness 点了一次选项 A 与「下一题」，`POST review/1953`、`review/cur`、`track ×2` 全在网络层 abort；`mistake 1953` `review_count 0 / next_review NULL` 未变、`umst3` 自 22:00Z `answer_log`/`growth_events`/`review_log` 新增 0。不是外部真人复习验证。
 - 登记：多选复习卡无到期样本（只过源锁）；错因自评 chip 行 375 末项被裁（既有）；小程序端复习卡同形态未核（W7）；`/api/profile` 仍收已过日期（R505）；直链 API 预发/真机弱网（R510）；模块标签 4.00:1；6b 中位数策略待定；非 RUM；无录屏。
 - 取证：`docs/iter/round-3/r512-book-review-card-options-text.md`；`~/r512_pre.out`、`~/r512_post.out`、`~/r512_deploy.log`、`~/r512/review_audit.py`、`~/r512/review_{375,1440}.out`（改前）、`~/r512/local_*.out`、`~/r512/post/prod_{375,1440}.out`（改后）+ 截图。
+
+### R513（2026-09-08）：复习多选题作答卡 + 完成态 / 退出恢复态 375/1440 只读整页审——多选状态机（合成样本）与恢复链路（真数据）均正常不改；命中「375 复习卡 988 px 高、作答须下滚 ≥400，完成复习关闭庆祝后 `exitReview()` 不回页顶 → 头卡 top −613、到期状态/CTA 不可见」→ `exitReview()` 末尾 `uni.pageScrollTo(0)`（完成/手动退出同一出口）；生产 `8a4bc53e` → `10e2eb82`（PR #640 追加）
+
+- (c)：R512 容器 5xx/404/monitor/mpUA/非探针 POST/401·403/Traceback 全 0、WAL `4,173,592` 同字节；probe=0 `answer_log` 53/2、growth 26/4、`explain_cache qid` 0/82、`error_reason ≥09-11` 0、`*_ask_click`/nudge 真人 0、`push_subs` 0；公告「详情」/`mistakes_total` 触达无样本；复习真人证据仍只 09-06 1 条。无新的外部真人证据。
+- 多选：生产到期项 `len(correct_answer)>1` **0 道**（题库多选 13/156792）→ `GET /api/review` 在 CDP `Fetch` 层 stub 合成 1 道多选：pick/unpick/确认文案随选变/确认后 `ok|bad|ok|dim` 全对，375/1440 同；**合成非真人证据**。
+- 恢复：`umst3` 真数据答到 Q2 刷新 → 恢复卡「第 2/23 题」→ 继续复习题干一致（True×2）；`reviewSnap` 18 KB。
+- 命中：完成态 375 关闭庆祝后头卡 top −613（1440 视口够高 top 68 正常）。修 `book.vue` `exitReview()` +1 行；源锁 `tests/book-r513-exit-review-scroll-top.test.js` 2 例。改后生产 375 头卡 top **56** / CTA 140、`sheets=[]`、`resume=null`、errs []。
+- 小程序源码核（W7）：`resetQ()` 按 `options[k]` 组 `rOpts[].text` + wxml `wx:if="{{item.text}}"` → **不是裸字母形态**；登记 ① native `exitReview()` 同样不回页顶 ② `celebrateN = rItems.length`（H5 排除 `_extra/_requeued`）。未在微信开发者工具跑。
+- 门：vitest 119/836 / eslint / `lint:tokens` / lint-pages 0 error / build / `diff --check` 绿。发版 `--skip-build` rc=0（mem_avail 425 MB / 5.5 G / load 3.11），**compose 重建 21 min = BuildKit 层缓存再丢（pip 全量）**，R469 同形态；`22:24:01Z rev=10e2eb82` healthy 0 重启；7/7 200；6b `/` 0.93 / a11y 1.00 / LCP 2807 / CLS 0.06。
+- 发版后 (c)：全 0；**非探针非 bot 48 行 = 48 IP × 1 次 `GET /tiku/q/*`**，`Accept-Language en-US` 统一、无 Referer、UA Chrome 107–136 轮换、无后续 assets/API、同 UA 集合全史只三簇（09-02/09-04/09-07 整点）→ 推断住宅代理分布式抓取，`access_log_report` 会计为候选真人（登记不改口径）。
+- 登记：W7 两项；多选无生产样本；复习卡 988 px 长题干未做折叠/粘底（等真人数据）；候选真人启发式待样本；既有项不变。
+- 取证：`docs/iter/round-3/r513-book-review-multi-complete-resume-scroll-top.md`；`~/r513/review_states.py`、`~/r513/{resume,complete,multi}_{375,1440}.out`、`~/r513/post/complete_{375,1440}.out`、`~/r513_pre.out`、`~/r513_post.out`、`~/r513_deploy.log`。
