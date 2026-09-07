@@ -1735,3 +1735,10 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 给 `ask_cur`/`ask_sessions`/`explain_cache` 等**无 probe 列**的表归类时，不能只看当前 Caddy 文件（文件起点前的会话不可见）：对每个 uid 用 `pragma table_info` 枚举含 `uid`+`probe` 列的表（`answer_log`/`exam_attempts`/`growth_events`）统计 p0/p1/NULL，再与 R446/R452 身份表交叉；p1 行的时间若全在某次探针之后，之前的行不能算探针。
 - `kaogong-reports/app-log/*.log.gz` 的覆盖起点 = 首个归档的 StartedAt（当前 09-06 15:11Z），不是「14 天」（那是保留期）；下「N 天无 `[llm] stream` 告警」结论前先 `ls` 最早文件。uvicorn 访问日志行的时间是**响应开始**（流式请求 = meta 之前），与 Caddy `ts − duration` 反推起点在 ±30 ms 内可互证。
 - `explain/stream` 的 `event: error`（含 `chat_stream` 中途 `httpx` 异常）在服务端**不写日志**、Caddy 仍记 200：B 路径（meta 后失败）只能从端侧 / 用户反馈 / `ask_cur` 空 explanation 侧面看，服务端日志 0 ≠ 未发生。
+
+## R479 经验：问答页 / 面试簇只读量测怎么把结果态与 sheet 渲染出来
+- **uni H5 的 `uni.setStorageSync` 落 localStorage 是包装格式** `{"type":"object","data":<value>}`：要让问答页恢复结果态 / 历史 sheet 有行，必须写 `askCurSession` / `askSessions` 为该格式（裸数组页面读不到，R479 首版量测空态误判）。占位 item 用 `explain_key:'r479-local-only'`、`saved:false`，只在浏览器本地渲染、不落库。
+- 面试记录页 `/api/interview/history` 用 `page.route(...).fulfill()` 浏览器侧占位回包，不在生产制造记录；注意有数据态下空态 `.btn-primary` / 失败态 `.retry` 不渲染，量不到要如实写「源码 + 源锁」。
+- **选簇依据用 `git log <生产 rev> -- <路径>` 查触碰史**：R410 后只有功能改动触碰的页面 = 未过审簇（R465 practice / R470 exam / R479 ask+interview 都是这样找到的），比按文档逐字复核快且不漏。
+- sheet 关闭 ✕ 抬到 40px 用 `min-width/min-height:40px` + 负外边距（`margin:-6px … -6px 0`），改后要读 `.sheet-h` 高度确认头行没被抬（R479 改前/改后都是 28）；命中判定用 `elementFromPoint` 中心 ±19 / ±21（脚本 `/home/ubuntu/r479_hits.py`）。
+- 375 叶节点字号下限：360 仿真下 24rpx = 11.52 px，阈值 11.9 会把 24rpx 自身留在 ≥ 侧、只抓 ≤23rpx；uni tabbar label 10 px 是框架全站样式，历轮都不计入页面命中。
