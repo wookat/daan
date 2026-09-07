@@ -90,9 +90,10 @@
         <view v-if="streakRisk" class="strip">
           <kg-banner tone="warn" icon="flame" :text="streakRisk.title + '。' + streakRisk.sub" action-text="去刷题" :closable="false" @action="startDaily" />
         </view>
-        <view v-if="announce === undefined" class="strip"><kg-skeleton preset="lines" /></view>
+        <view v-if="announce === undefined" class="strip"><kg-skeleton preset="banner" /></view>
         <view v-else-if="announce" class="strip">
-          <kg-banner tone="info" icon="megaphone" :text="announce.title + (announce.body ? '：' + announce.body : '')" @close="dismissAnn" />
+          <kg-banner tone="info" icon="megaphone" :text="announce.title" :action-text="announce.body && !annOpen ? '详情' : ''" @action="annOpen = true" @close="dismissAnn" />
+          <text v-if="annOpen && announce.body" class="ann-body">{{ announce.body }}</text>
         </view>
 
         <!-- 今日到期复习 -->
@@ -419,6 +420,7 @@ export default {
       groupSize: uni.getStorageSync('groupSize') || 10,
       dailyGoal: uni.getStorageSync('dailyGoal') || 20,
       announce: undefined,
+      annOpen: false,
       badgeInfo: null,
       svTodayN: null,
       weeklyDot: false,
@@ -1201,7 +1203,7 @@ export default {
 .examsw-t { font-size: var(--fs-sub); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .searchbar { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--sp-8); height: var(--hit-min); padding: 0 var(--sp-16); border-radius: var(--r-full); background: var(--card); border: 1px solid var(--line); }
 .searchbar--hover { background: var(--fill); }
-.searchbar-t { font-size: var(--fs-sub); color: var(--ink-4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.searchbar-t { font-size: var(--fs-sub); color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Hero */
 .hero-wrap { position: relative; }
@@ -1223,6 +1225,7 @@ export default {
 
 /* 横幅 */
 .strip { margin-top: var(--sp-12); }
+.ann-body { display: block; font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--ink-2); padding: var(--sp-8) var(--sp-12) 0; }
 
 /* 到期复习 */
 .due { margin-top: var(--sp-12); }

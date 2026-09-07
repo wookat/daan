@@ -44,7 +44,7 @@ describe('R467 首页 home.vue 可点元素 40px', () => {
     expect(rule(homeCss, '.hero-x')).toMatch(BOX40);
     expect(legacyHit(expect, home, '.ld-x')).toBe('componentized');
     expect(legacyHit(expect, home, '.ann-x')).toBe('componentized');
-    expect(home).toMatch(/<kg-banner tone="info" icon="megaphone" :text="announce\.title[^"]*" @close="dismissAnn" \/>/);
+    expect(home).toMatch(/<kg-banner tone="info" icon="megaphone" :text="announce\.title[^"]*"[^>]*@close="dismissAnn" \/>/);
   });
   it('续练/续考/续复习 「去继续 ›」走 kg-button sm、✕ .rs-x 44×44', () => {
     expect(templateOf(home).match(/<kg-button variant="text" size="sm" aria-label="继续[^"]*" @click="(?:er|pr|rv)Continue">去继续 ›<\/kg-button>/g) || []).toHaveLength(3);

@@ -4,6 +4,7 @@
     <template v-else-if="preset === 'cards'">
       <wd-skeleton v-for="i in 3" :key="i" theme="image" :row-col="[{ width: '100%', height: '88px', type: 'rect' }]" :animation="anim" />
     </template>
+    <wd-skeleton v-else-if="preset === 'banner'" theme="image" :row-col="[{ width: '100%', height: '48px', type: 'rect' }]" :animation="anim" />
     <wd-skeleton v-else theme="paragraph" :row-col="[{ width: '40%', height: '20px' }, 1, 1, { width: '70%' }]" :animation="anim" />
   </view>
   <slot v-else />
@@ -12,8 +13,8 @@
 <script>
 import { prefersReducedMotion } from '../../a11y-motion.js';
 
-/** KgSkeleton（COMPONENTS §1.9）：wd-skeleton 三套预设；reduced-motion 下静止。空态与骨架互斥由页面保证。 */
-export const SKELETON_PRESETS = ['hero', 'cards', 'lines'];
+/** KgSkeleton（COMPONENTS §1.9）：wd-skeleton 四套预设（banner = 单行 KgBanner 等高占位，回包后不抬下方内容）；reduced-motion 下静止。空态与骨架互斥由页面保证。 */
+export const SKELETON_PRESETS = ['hero', 'cards', 'lines', 'banner'];
 
 export default {
   name: 'KgSkeleton',
