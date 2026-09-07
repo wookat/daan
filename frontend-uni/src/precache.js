@@ -1,7 +1,10 @@
 // 路由 chunk 空闲预取：静态资源为 immutable 长缓存且不经 SW 拦截，
 // 一次普通 fetch 即可长期驻留 HTTP 缓存，离线时浏览器直接命中，
-// 从而离线也能直入未访问过的路由。守卫：省流/2g/离线跳过，同版本只跑一轮。
+// 从而离线也能直入未访问过的路由；清单前段是主循环页分包（见 gen-precache-manifest.mjs），
+// 首页停留几秒内点进练习/错题本即命中缓存。守卫：省流/2g/离线跳过，同版本只跑一轮。
 const DONE_KEY = 'kg_precache_done';
+/** load 后延迟：首屏数据与题包预取在慢网下 load 后 ~0.5 s 内完成，3 s 已在其后、又早于用户点进练习的最短间隔（≈8 s）。 */
+export const PRECACHE_DELAY_MS = 3000;
 
 async function run() {
   try {
@@ -30,6 +33,6 @@ export function initRoutePrecache() {
     setTimeout(() => {
       if (window.requestIdleCallback) window.requestIdleCallback(run, { timeout: 10000 });
       else run();
-    }, 8000);
+    }, PRECACHE_DELAY_MS);
   });
 }
