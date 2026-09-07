@@ -2739,3 +2739,13 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 双峰定性（`~/r511/lhr_root_*.json`）：perf 0.99/0.85/0.85、simLCP 1427/3686/3660，而 obsFCP 96/180/140、obsLoad 207–261、请求 83、FCP 前 48 个资源逐条相同、simTTI 同；唯一差异是 `index-*.js` 结束时刻在 obsFCP 之前/之后 → **推断** Lantern 按观测 FCP 裁剪依赖图。6b 单次 FAIL（本轮/R508/R506）不是页面回归；判回归先看 obs*/拓扑/FCP 前资源。是否让 6b 取中位数待定。
 - 登记：`/api/profile` 仍收已过日期（R505）；直链 API 预发/真机弱网/清单尾部（R510）；模块标签 4.00:1；W7 小程序三项；非 RUM；无录屏。
 - 取证：`docs/iter/round-3/r511-sop10-audit-int-overflow-400-lantern-bimodal.md`；`~/r511_pre.out`、`~/r511_post.out`、`~/r511_deploy.log`、`~/r511/lhr_root_{1,2,3}.json`。
+
+### R512（2026-09-08）：错题本复习作答页 375/1440 只读整页审——命中「到期复习 294 题中 266（90%）联查题库，`_hydrate_mistake` 把 `question_text` 换成规范题干、选项进结构化 `options`，而复习卡只画 A–D 裸字母 → 真人到期复习不可据选项作答」→ `review-opts.js` fail-closed 纯函数 + 作答卡竖排铺出选项文本 + AI 详解预填带 options → 生产 `0c532532` → `8a4bc53e`
+
+- (c)：R511 容器 179 请求 + R512 容器 45 请求 5xx/404/monitor/mpUA/非探针非 bot/非探针 POST/401·403/Traceback 全 0、WAL `4,173,592` 同字节；probe=0 `answer_log` 53/2、growth 26/4、`explain_cache qid` 0/82、`error_reason ≥09-11` 0、`*_ask_click`/nudge 真人 0、`push_subs` 0；全史非探针 `POST /api/review/<id>` 仍只 09-06 那 1 条、`review_log` 自 09-07 起 0；公告「详情」/`mistakes_total` 触达无样本；`user_profile` 11→**9** 行（推断 W9 清了自己 2 行探针 profile，未求证）。无新的外部真人证据。
+- 命中（一手，改前生产 `umst3` 30 题到期）：复习卡 Q1（资料分析 641 字）题干**无 A–D 行**、选项 4 个只画字母各 71.3×46 横排；Q2（定义判断 70 字）同；1440 同。`pageerror []`、`docSW==cw`。答后态/判词/下一题/同类题/AI 入口/进度重排（1/20→1/23）均正常。
+- 修（`8a4bc53e`，前端 3 文件）：`src/review-opts.js` `reviewOptions(cur)` 只接受对象 + 单大写字母键 + 非空字符串值 + ≥2 项，否则回退 A–D（手录/时政/加练题不臆造选项）；`book.vue` `v-for="o in curOpts"` `.opt.full`（字母 + 文本、`aria-label` 带文本、仍 `pick(o.k)`，状态机不变）；`askPrefill(question_text, options)` 两处（此前传 `null`）。源锁 +12。门：vitest / eslint / lint:tokens / lint-pages / build:h5 绿；后端未动。
+- 发版：`--skip-build` rc=0（mem_avail 398 MB / 5.9 G / load 0.41，谱系闸 OK）；`22:02:50Z rev=8a4bc53e` healthy 0 重启；7/7 200；6b `/` 0.93 / a11y 1.00 / LCP 2800 / CLS 0.06、`/tiku/` 1.00。改后生产 375：选项各 **309×44**（长选项 61.4 两行）竖排、文本 14px；1440 各 **726×44**；`docSW==cw`、errs []。
+- **如实**：为量答后态 harness 点了一次选项 A 与「下一题」，`POST review/1953`、`review/cur`、`track ×2` 全在网络层 abort；`mistake 1953` `review_count 0 / next_review NULL` 未变、`umst3` 自 22:00Z `answer_log`/`growth_events`/`review_log` 新增 0。不是外部真人复习验证。
+- 登记：多选复习卡无到期样本（只过源锁）；错因自评 chip 行 375 末项被裁（既有）；小程序端复习卡同形态未核（W7）；`/api/profile` 仍收已过日期（R505）；直链 API 预发/真机弱网（R510）；模块标签 4.00:1；6b 中位数策略待定；非 RUM；无录屏。
+- 取证：`docs/iter/round-3/r512-book-review-card-options-text.md`；`~/r512_pre.out`、`~/r512_post.out`、`~/r512_deploy.log`、`~/r512/review_audit.py`、`~/r512/review_{375,1440}.out`（改前）、`~/r512/local_*.out`、`~/r512/post/prod_{375,1440}.out`（改后）+ 截图。
