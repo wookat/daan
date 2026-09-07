@@ -49,7 +49,7 @@
   background: #fff;
   color: var(--brand-500);
   border-radius: var(--r-full);
-  font-size: 25rpx;
+  font-size: 26rpx;
   font-weight: 600;
   margin-right: 16rpx;
 }
@@ -187,13 +187,13 @@
   background: #fef3c7;
   color: #b45309;
   border-radius: var(--r-full);
-  font-size: 23rpx;
+  font-size: 24rpx;
   font-weight: 600;
 }
 
 .mem-done {
   flex-shrink: 0;
-  font-size: 23rpx;
+  font-size: 24rpx;
   color: var(--success);
   font-weight: 700;
 }
@@ -259,7 +259,7 @@
   margin-bottom: 8rpx;
 }
 .rank-t {
-  font-size: 27rpx;
+  font-size: 28rpx;
   font-weight: 700;
   color: var(--t1);
 }

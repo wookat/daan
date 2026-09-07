@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Request
 
 from . import db
-from .auth import client_ip, probe_ip, rate_limit
+from .auth import client_ip, probe_request, rate_limit
 from .deps import as_int, rl
 from .social import CN_DAY_SQL, CN_TZ
 
@@ -516,7 +516,7 @@ def api_share_answer(sid: str, body: dict, request: Request):
         "secs": secs,
         "picked": picked,
         "source": "share",
-    }], probe=probe_ip(request))
+    }], probe=probe_request(request))
     conn2 = db.get_conn()
     db._ensure_answer_log(conn2)
     q_stats = _question_stats(conn2, s["question_id"])
@@ -597,7 +597,7 @@ def api_track(body: dict, request: Request):
     conn.execute(
         "INSERT INTO growth_events (uid, event, source, ref, created_at, probe) VALUES (?,?,?,?,?,?)",
         (uid, event, str(body.get("source") or "")[:16] or None,
-         ref or None, time.time() - ago_ms / 1000, 1 if probe_ip(request) else 0),
+         ref or None, time.time() - ago_ms / 1000, 1 if probe_request(request) else 0),
     )
     conn.commit()
     conn.close()

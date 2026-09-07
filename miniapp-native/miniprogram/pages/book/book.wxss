@@ -51,7 +51,7 @@
   margin-top: 32rpx;
   background: var(--brand-grad);
   color: #fff;
-  font-size: 27rpx;
+  font-size: 28rpx;
   font-weight: 600;
   border-radius: var(--r-full);
   padding: 20rpx 0;
@@ -145,7 +145,7 @@
 }
 
 .m-q {
-  font-size: 27rpx;
+  font-size: 28rpx;
   line-height: 1.6;
   color: var(--t1);
 }
@@ -181,7 +181,7 @@
 .m-exp {
   white-space: pre-wrap;
   word-break: break-all;
-  font-size: 25rpx;
+  font-size: 26rpx;
   color: var(--t2);
   line-height: 1.7;
 }
@@ -332,7 +332,7 @@
 }
 
 .r-verdict {
-  font-size: 25rpx;
+  font-size: 26rpx;
   font-weight: 600;
   border-radius: var(--r-s);
   padding: 14rpx 20rpx;
@@ -355,7 +355,7 @@
 
 .r-sj-t {
   display: block;
-  font-size: 25rpx;
+  font-size: 26rpx;
   color: var(--t3);
   margin: 24rpx 0 16rpx;
 }
@@ -368,7 +368,7 @@
 .r-sj {
   flex: 1;
   text-align: center;
-  font-size: 27rpx;
+  font-size: 28rpx;
   font-weight: 600;
   border-radius: var(--r-full);
   padding: 18rpx 0;
@@ -389,7 +389,7 @@
 }
 
 .appended-tip {
-  font-size: 23rpx;
+  font-size: 24rpx;
   color: var(--brand-500);
   background: var(--brand-50);
   border-radius: 10rpx;
@@ -406,12 +406,12 @@
 }
 
 .rz-t {
-  font-size: 23rpx;
+  font-size: 24rpx;
   color: var(--t2);
 }
 
 .rz {
-  font-size: 23rpx;
+  font-size: 24rpx;
   color: var(--t2);
   background: var(--fill);
   border-radius: var(--r-full);
@@ -436,7 +436,7 @@
 }
 
 .recap-x {
-  font-size: 23rpx;
+  font-size: 24rpx;
   color: var(--brand-500);
 }
 
@@ -458,7 +458,7 @@
 
 .recap-name {
   flex: 0 0 160rpx;
-  font-size: 23rpx;
+  font-size: 24rpx;
   color: var(--t1);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -542,13 +542,13 @@
 .fold-tip {
   display: block;
   margin: 12rpx 0 4rpx;
-  font-size: 21rpx;
+  font-size: 22rpx;
   color: var(--t3);
 }
 
 .fav-note {
   margin-top: 12rpx;
-  font-size: 23rpx;
+  font-size: 24rpx;
   color: var(--t2);
   background: var(--fill);
   border-radius: var(--r-s);
@@ -625,7 +625,7 @@
   min-height: 140rpx;
   margin-top: 20rpx;
   padding: 16rpx 20rpx;
-  font-size: 25rpx;
+  font-size: 26rpx;
   color: var(--t1);
   background: var(--fill);
   border-radius: var(--r-s);
@@ -647,7 +647,7 @@
   text-align: center;
   background: var(--brand-500);
   color: #fff;
-  font-size: 27rpx;
+  font-size: 28rpx;
   font-weight: 600;
   border-radius: var(--r-full);
   padding: 20rpx 0;

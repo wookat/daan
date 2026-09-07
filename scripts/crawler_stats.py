@@ -11,9 +11,12 @@
     {"generated_at": <epoch>, "days": ["2026-09-03", ...],
      "engines": {"Google": {"hits": {"2026-09-03": 3}, "err5xx": {...}, "tiku": {...},
                             "sitemap": {...}, "last_seen": <epoch|null>}, ...},
-     "humans": {"api": {"2026-09-03": 17}, "api5xx": {...}, "page": {...}, "ips": {...}}}
-humans = 剔除探针网段、搜索引擎与通用 bot UA、test-/probe- 测试 uid 后的余量（R382：
-此前只有爬虫可见，「真人到底有没有来、来了有没有撞 5xx」全靠临时脚本翻日志）。
+     "humans": {"api": {"2026-09-03": 17}, "api5xx": {...}, "page": {...}, "ips": {...},
+                "direct": {...}}}
+humans = 剔除探针网段、搜索引擎与通用 bot UA、test-/probe- 测试 uid、未经边缘直连源站的请求后的余量
+（R382：此前只有爬虫可见，「真人到底有没有来、来了有没有撞 5xx」全靠临时脚本翻日志）。
+direct = 绕过 Cloudflare 边缘直打源站主机名的请求数（无 X-Kg-Ip/Cf-Connecting-Ip，源站一律 403）：
+用户只能经公网域名进来，直连源站的只有扫描器，不进真人口径但单独计数便于对账。
 只含聚合计数，不含 IP/UA 原文；UA 优先取 Worker 透传的 X-Kg-Ua（源站 User-Agent 可能是回源层的）。
 """
 import argparse
@@ -32,6 +35,8 @@ SITEMAP_PREFIXES = ("/sitemap", "/robots.txt")
 TEST_UID_MARKERS = ("uid=test-", "uid=probe")
 # 真人口径不计的内部/心跳路径
 HUMAN_SKIP_PREFIXES = ("/api/health", "/api/admin", "/admin")
+# 用户可达的正式域名；边缘回源带 X-Forwarded-Host，其它主机名（Pages 预览域名等）只有内部走查
+SITE_HOSTS = ("kaogong.zalize.com",)
 
 
 def is_generic_bot(ua: str) -> bool:
@@ -96,6 +101,24 @@ def _client_ip(req: dict) -> str:
     return req.get("remote_ip") or ""
 
 
+def _via_edge(req: dict) -> bool:
+    """是否经 Cloudflare 边缘进入源站（直连源站主机名的请求没有这两个头，Caddy 一律 403）。"""
+    headers = req.get("headers") or {}
+    return any(headers.get(k) and headers[k][0] for k in ("X-Kg-Ip", "Cf-Connecting-Ip"))
+
+
+def _explicit_probe(req: dict) -> bool:
+    headers = req.get("headers") or {}
+    vals = headers.get("X-Kg-Probe")
+    return bool(vals) and vals[0] == "1"
+
+
+def _forwarded_host(req: dict) -> str:
+    headers = req.get("headers") or {}
+    vals = headers.get("X-Forwarded-Host")
+    return (vals[0] if vals else "").strip().lower()
+
+
 def _excluded(ip: str, nets: list) -> bool:
     if not nets:
         return False
@@ -106,16 +129,23 @@ def _excluded(ip: str, nets: list) -> bool:
     return any(addr in n for n in nets)
 
 
-def aggregate(lines, days: int, now: float | None = None, exclude_nets: list | None = None) -> dict:
+def aggregate(
+    lines,
+    days: int,
+    now: float | None = None,
+    exclude_nets: list | None = None,
+    site_hosts: tuple[str, ...] | list[str] | None = None,
+) -> dict:
     """把 Caddy JSON 行迭代器聚合成引擎×天计数；窗口为最近 days 个 UTC 自然日（含今天）。"""
     now = now or time.time()
     exclude_nets = exclude_nets or []
+    hosts = {h.strip().lower() for h in (site_hosts or SITE_HOSTS) if h.strip()}
     probe_excluded = 0
     today = datetime.datetime.fromtimestamp(now, datetime.UTC).date()
     day_list = [(today - datetime.timedelta(days=i)).isoformat() for i in range(days - 1, -1, -1)]
     day_set = set(day_list)
     engines: dict[str, dict] = {}
-    humans: dict[str, dict] = {"api": {}, "api5xx": {}, "page": {}}
+    humans: dict[str, dict] = {"api": {}, "api5xx": {}, "page": {}, "direct": {}, "offhost": {}}
     human_ips: dict[str, set] = {}
     for line in lines:
         line = line.strip()
@@ -138,6 +168,15 @@ def aggregate(lines, days: int, now: float | None = None, exclude_nets: list | N
             uri = req.get("uri") or ""
             kind = human_kind(uri)
             if not kind or any(m in uri for m in TEST_UID_MARKERS):
+                continue
+            if not _via_edge(req):
+                humans["direct"][day] = humans["direct"].get(day, 0) + 1
+                continue
+            if _explicit_probe(req):
+                continue
+            fwd_host = _forwarded_host(req)
+            if fwd_host and fwd_host not in hosts:
+                humans["offhost"][day] = humans["offhost"].get(day, 0) + 1
                 continue
             ip = _client_ip(req)
             if _excluded(ip, exclude_nets):
@@ -197,6 +236,8 @@ def main() -> int:
     ap.add_argument("out_json")
     ap.add_argument("--days", type=int, default=14)
     ap.add_argument("--exclude-ip-file", default="", help="探针 IP/CIDR 清单，逐行，# 注释")
+    ap.add_argument("--site-host", action="append", default=[],
+                    help="用户可达的正式域名（可重复；默认 kaogong.zalize.com），其它 X-Forwarded-Host 计 offhost")
     args = ap.parse_args()
     try:
         os.nice(19)
@@ -209,6 +250,7 @@ def main() -> int:
         iter_archive(args.archive_dir, args.days),
         args.days,
         exclude_nets=load_exclude_networks(args.exclude_ip_file),
+        site_hosts=args.site_host or None,
     )
     tmp = args.out_json + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:

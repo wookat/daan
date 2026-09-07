@@ -281,6 +281,35 @@ export interface ExamPaperInfo {
   n?: number;
 }
 
+/** /api/exam/papers 卷库项（含当前 uid 的做题/模考状态） */
+export interface ExamPaper extends ExamPaperInfo {
+  n: number;
+  takers?: number;
+  avg_score?: number | null;
+  practiced?: number;
+  wrong?: number;
+  best_score?: number | null;
+  attempt_count?: number;
+  best_attempt_id?: number | null;
+}
+
+export interface ExamPapersResp {
+  items: ExamPaper[];
+  filters: { years: { y: number; n: number }[]; regions: { r: string; n: number }[] };
+}
+
+export interface ExamAttemptItem {
+  id: number;
+  paper_id: number;
+  started_at: number;
+  submitted_at: number;
+  score: number | null;
+  title: string;
+  year?: number | null;
+  region?: string | null;
+  duration_min: number;
+}
+
 export interface ExamStartResp {
   attempt_id: number;
   paper: ExamPaperInfo;

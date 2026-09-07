@@ -4,15 +4,28 @@ import re
 from .conftest import seed_pk, seed_questions, seed_share
 
 
-def test_question_page_jsonld_qapage_and_breadcrumb(client):
+def test_question_page_jsonld_learning_resource_and_breadcrumb(client):
+    """题目页不是 Q&A 社区页：Google QAPage 准则把「站方单一答案、用户不能补答」列为无效用例，
+    整站 10.9 万页一律不得再输出 QAPage；改为 LearningResource ⊃ Question(选择题)。"""
     qids = seed_questions()
     r = client.get(f"/tiku/q/{qids[0]}")
     assert r.status_code == 200
+    assert "QAPage" not in r.text
     m = re.search(r'<script type="application/ld\+json">(.*?)</script>', r.text, re.DOTALL)
     assert m
     ld = json.loads(m.group(1))
     types = {d["@type"] for d in ld}
-    assert types == {"QAPage", "BreadcrumbList"}
+    assert types == {"LearningResource", "BreadcrumbList"}
+    lr = next(d for d in ld if d["@type"] == "LearningResource")
+    assert lr["url"].endswith(f"/tiku/q/{qids[0]}")
+    assert lr["learningResourceType"] in {"真题", "练习题"}
+    q = lr["hasPart"]
+    assert q["@type"] == "Question" and q["eduQuestionType"] == "Multiple choice"
+    # 选项一一对应 suggestedAnswer（与页面可见内容一致），正确答案在 acceptedAnswer
+    opts_html = re.findall(r'<a class="opt" [^>]*><b>([A-Z])\.</b>', r.text)
+    assert [a["text"][0] for a in q["suggestedAnswer"]] == opts_html
+    assert q["acceptedAnswer"]["text"].startswith("正确答案：")
+    assert "answerCount" not in q and "mainEntity" not in lr
     bc = next(d for d in ld if d["@type"] == "BreadcrumbList")
     items = bc["itemListElement"]
     assert items[0]["name"] == "题库"

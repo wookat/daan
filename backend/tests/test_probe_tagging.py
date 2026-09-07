@@ -92,6 +92,76 @@ def test_paper_answers_tags_probe(client, probe_nets):
     assert _col("answer_log", PFX + "paper") == [1, 1]
 
 
+def test_probe_request_three_paths(client):
+    """R386：显式头 / 自动化 UA 不依赖网段配置；真人 UA + 非探针 IP 不打标。"""
+    from fastapi import Request
+
+    def req(headers: dict) -> Request:
+        raw = [(k.lower().encode(), v.encode()) for k, v in headers.items()]
+        return Request({"type": "http", "headers": raw, "client": ("8.8.8.8", 1)})
+
+    assert auth.PROBE_NETS == []
+    assert auth.probe_request(req({"X-Kg-Probe": "1", "X-Kg-Ip": "39.158.40.85"}))
+    assert not auth.probe_request(req({"X-Kg-Probe": "0", "X-Kg-Ip": "39.158.40.85"}))
+    assert auth.probe_request(req({"X-Kg-Ua": "Python-urllib/3.12", "User-Agent": "Mozilla/5.0"}))
+    assert auth.probe_request(req({"User-Agent": "curl/8.5.0"}))
+    assert auth.probe_request(req({"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) HeadlessChrome/137.0"}))
+    # R393：Devin 自动化驾驭的浏览器上下文 UA 后缀，经 Google 预取代理转发时出口不在网段内
+    devin_ua = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/137.0.0.0 Safari/537.36; Devin/1.0; +devin.ai")
+    assert auth.probe_request(req({"X-Kg-Ua": devin_ua, "X-Kg-Ip": "2001:4860:7:30e::c4"}))
+    real_ua = "Mozilla/5.0 (Linux; Android 16; V2405A Build/BP2A; wv) AppleWebKit/537.36 Chrome/139 MiniProgramEnv/android"
+    assert not auth.probe_request(req({"X-Kg-Ua": real_ua, "X-Kg-Ip": "39.158.40.85"}))
+    assert not auth.probe_request(req({"X-Kg-Ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/137.0.0.0 Safari/537.36"}))
+
+
+def test_track_tags_probe_by_header_and_ua_without_cidr_config(client):
+    _cleanup()
+    assert auth.PROBE_NETS == []
+    r = client.post("/api/track", json={"event": "boot", "uid": PFX + "h1", "source": "h5"},
+                    headers={"X-Kg-Ip": "39.158.40.85", "X-Kg-Probe": "1"})
+    assert r.status_code == 200
+    r = client.post("/api/track", json={"event": "boot", "uid": PFX + "h2", "source": "h5"},
+                    headers={"X-Kg-Ip": "39.158.40.85", "X-Kg-Ua": "python-requests/2.32"})
+    assert r.status_code == 200
+    r = client.post("/api/track", json={"event": "boot", "uid": PFX + "h3", "source": "h5"},
+                    headers={"X-Kg-Ip": "39.158.40.85", "X-Kg-Ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) Safari/604.1"})
+    assert r.status_code == 200
+    assert _col("growth_events", PFX + "h1") == [1]
+    assert _col("growth_events", PFX + "h2") == [1]
+    assert _col("growth_events", PFX + "h3") == [0]
+
+
+def test_answer_log_tags_probe_by_header(client):
+    _cleanup()
+    q1 = seed_questions(1, ("ziliao",))[0]
+    r = client.post("/api/answer_log", json={"uid": PFX + "hdr", "items": [{"qid": q1, "correct": True}]},
+                    headers={"X-Kg-Ip": "39.158.40.85", "X-Kg-Probe": "1"})
+    assert r.status_code == 200 and r.json()["saved"] == 1
+    assert _col("answer_log", PFX + "hdr") == [1]
+
+
+def test_dashboard_reports_probe_since(client, probe_nets):
+    _cleanup()
+    q1 = seed_questions(1, ("ziliao",))[0]
+    conn = db.get_conn()
+    db._ensure_answer_log(conn)
+    conn.execute("DELETE FROM answer_log")
+    conn.execute(
+        "INSERT INTO answer_log (uid, created_at, question_id, module, correct, secs, probe) VALUES (?,?,?,?,?,?,NULL)",
+        (PFX + "legacy", time.time() - 86400 * 20, q1, "ziliao", 1, 0),
+    )
+    conn.commit()
+    conn.close()
+    assert db._admin_dashboard_uncached()["probe_since"] is None
+    t0 = time.time()
+    client.post("/api/answer_log", json={"uid": PFX + "real", "items": [{"qid": q1, "correct": True}]},
+                headers={"X-Kg-Ip": "39.158.40.85"})
+    since = db._admin_dashboard_uncached()["probe_since"]
+    assert since is not None and t0 - 1 <= since <= time.time() + 1
+    _cleanup()
+
+
 def test_answer_log_without_config_writes_zero(client):
     _cleanup()
     q1 = seed_questions(1, ("ziliao",))[0]

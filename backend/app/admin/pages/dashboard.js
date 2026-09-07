@@ -26,7 +26,7 @@
       const last = never ? '从未' : esc(e.last_seen.slice(5, 16).replace('T', ' ')) + 'Z';
       const cls = never ? 'tag-bad' : e.err5xx_7d ? 'tag-warn' : e.hits_7d ? 'tag-ok' : 'tag-gray';
       const detail = never ? '0 次' : `${e.hits_7d.toLocaleString()} 次（今日 ${e.hits_today}）· 题库页 ${e.tiku_7d}${e.sitemap_7d ? ` · sitemap ${e.sitemap_7d}` : ''}${e.err5xx_7d ? ` · 5xx ${e.err5xx_7d}` : ''}`;
-      return `<div class="hbar"><span class="lb" style="width:auto;flex:1">${esc(e.name)}<span class="sub" style="margin-left:6px;font-size:11px;color:var(--t4)">最近 ${last}</span></span>
+      return `<div class="hbar hbar-wrap"><span class="lb">${esc(e.name)}<span class="sub">最近 ${last}</span></span>
         <span class="tag ${cls}">${detail}</span></div>`;
     }).join('');
     const foot = `<div style="margin-top:6px;font-size:11px;color:${c.stale ? 'var(--error)' : 'var(--t4)'}">统计生成于 ${esc(c.generated_at || '未知')}${c.stale ? '（超过 3h 未更新，检查 crawler_stats cron）' : ''}</div>`;
@@ -36,10 +36,12 @@
   function humanRow(hm) {
     if (!hm) return '<div style="font-size:11px;color:var(--t4);margin-bottom:4px">真人流量：等待 crawler_stats 下一次生成（旧版 JSON 无 humans 段）</div>';
     const cls = hm.api5xx_7d ? 'tag-warn' : hm.api_7d ? 'tag-ok' : 'tag-bad';
-    const detail = hm.api_7d
+    const direct = hm.direct_7d ? ` · 源站直连扫描 ${hm.direct_7d.toLocaleString()}（已剔除）` : '';
+    const offhost = hm.offhost_7d ? ` · 预览域名 ${hm.offhost_7d.toLocaleString()}（已剔除）` : '';
+    const detail = (hm.api_7d
       ? `API ${hm.api_7d.toLocaleString()} 次（今日 ${hm.api_today}）· 页面 ${hm.page_7d} · IP 日去重 ${hm.ips_7d}（今日 ${hm.ips_today}）· 5xx ${hm.api5xx_7d}`
-      : '0 次（近 7 天无真人 API 请求）';
-    return `<div class="hbar" style="margin-bottom:4px"><span class="lb" style="width:auto;flex:1">真人<span class="sub" style="margin-left:6px;font-size:11px;color:var(--t4)">剔除探针网段 / 引擎与通用 bot UA / test- uid</span></span>
+      : '0 次（近 7 天无真人 API 请求）') + direct + offhost;
+    return `<div class="hbar hbar-wrap" style="margin-bottom:4px"><span class="lb">候选真人<span class="sub">剔除探针网段与显式探针头 / 引擎、通用 bot 与 Devin 自动化 UA / test- uid / 源站直连 / 预览域名</span></span>
       <span class="tag ${cls}">${detail}</span></div>`;
   }
 
@@ -50,9 +52,11 @@
       : h.pct >= 85 ? '<span class="tag tag-warn">注意</span>' : '<span class="tag tag-bad">异常</span>';
     const maxMod = Math.max(1, ...d.by_module.map((r) => r.n));
     const probeT = t.probe_excluded || 0, probeY = y.probe_excluded || 0;
-    const probeNote = probeT || probeY
-      ? ` · 已剔除探针作答 今日 ${probeT.toLocaleString()} / 昨日 ${probeY.toLocaleString()} 条（自动化测试出口网段，不计入用户指标）`
-      : '';
+    const probeNote = (probeT || probeY
+      ? ` · 已剔除探针作答 今日 ${probeT.toLocaleString()} / 昨日 ${probeY.toLocaleString()} 条（自动化测试出口网段/显式声明/脚本 UA，不计入用户指标）`
+      : '') + (d.probe_since
+      ? ` · 探针口径自 ${new Date(d.probe_since * 1000).toLocaleDateString('zh-CN')} 起生效，此前行无法区分、按真人计`
+      : '');
     el.innerHTML = `
     <div class="pagehead">
       <div><h1>数据看板</h1><div class="sub">${new Date().toLocaleDateString('zh-CN')} · 统计缓存 5 分钟刷新${probeNote}</div></div>
@@ -118,11 +122,11 @@
         return;
       }
       const tag = (it, label) => it
-        ? `<div class="hbar"><span class="lb" style="width:auto;flex:1">${label}<span class="sub" style="margin-left:6px;font-size:11px;color:var(--t4)">${esc(it.ts || '')}</span></span>
+        ? `<div class="hbar hbar-wrap"><span class="lb">${label}<span class="sub">${esc(it.ts || '')}</span></span>
            <span class="tag ${it.ok ? 'tag-ok' : 'tag-bad'}">${it.ok ? '●' : '✕'} ${esc((it.detail || it.rev || '').slice(0, 60))}</span></div>`
-        : `<div class="hbar"><span class="lb" style="width:auto;flex:1">${label}</span><span class="tag tag-gray">无记录</span></div>`;
+        : `<div class="hbar hbar-wrap"><span class="lb">${label}</span><span class="tag tag-gray">无记录</span></div>`;
       const dep = o.last_deploy
-        ? `<div class="hbar"><span class="lb" style="width:auto;flex:1">最近部署<span class="sub" style="margin-left:6px;font-size:11px;color:var(--t4)">${esc(o.last_deploy.ts)}</span></span>
+        ? `<div class="hbar hbar-wrap"><span class="lb">最近部署<span class="sub">${esc(o.last_deploy.ts)}</span></span>
            <span class="tag tag-brand">rev ${esc(o.last_deploy.rev)}</span></div>`
         : '';
       box.innerHTML = dep
@@ -145,7 +149,7 @@
       const box = document.getElementById('dash-llm');
       if (!box) return;
       box.innerHTML = (r.items || []).map((it) =>
-        `<div class="hbar"><span class="lb" style="width:auto;flex:1">${esc(it.name)}<span class="sub" style="margin-left:6px;font-size:11px;color:var(--t4)">${esc(it.host)}</span></span>
+        `<div class="hbar hbar-wrap"><span class="lb">${esc(it.name)}<span class="sub">${esc(it.host)}</span></span>
          <span class="tag ${it.ok ? 'tag-ok' : 'tag-bad'}">${it.ok ? '● 正常' : '✕ 异常'} ${esc(String(it.status))}</span></div>`).join('')
         || '<span style="color:var(--t3);font-size:12px">未配置通道</span>';
     }).catch(() => {

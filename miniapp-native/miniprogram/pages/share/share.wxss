@@ -10,7 +10,7 @@
 .empty {
   text-align: center;
   color: var(--t3);
-  font-size: 25rpx;
+  font-size: 26rpx;
   padding: 30rpx 0;
 }
 
@@ -69,7 +69,7 @@
 }
 
 .tag {
-  font-size: 21rpx;
+  font-size: 22rpx;
   border-radius: 8rpx;
   padding: 4rpx 14rpx;
   margin-right: 12rpx;
@@ -87,7 +87,7 @@
 
 .stem {
   display: block;
-  font-size: 29rpx;
+  font-size: 30rpx;
   color: var(--t1);
   line-height: 1.7;
   margin-bottom: 22rpx;
@@ -111,7 +111,7 @@
 
 .otext {
   flex: 1;
-  font-size: 27rpx;
+  font-size: 28rpx;
   color: var(--t1);
   line-height: 1.6;
 }
@@ -134,7 +134,7 @@
 .res-bar {
   border-radius: 18rpx;
   padding: 20rpx 26rpx;
-  font-size: 27rpx;
+  font-size: 28rpx;
   font-weight: 600;
   margin-bottom: 20rpx;
 }
@@ -151,7 +151,7 @@
 
 .exp-k {
   display: block;
-  font-size: 23rpx;
+  font-size: 24rpx;
   color: var(--t3);
   font-weight: 600;
   margin-bottom: 10rpx;
@@ -215,7 +215,7 @@
   background: var(--brand-500);
   color: #fff;
   border-radius: var(--r-full);
-  font-size: 29rpx;
+  font-size: 30rpx;
   font-weight: 600;
   margin-bottom: 18rpx;
 }
@@ -228,7 +228,7 @@
   background: var(--brand-50);
   color: var(--brand-500);
   border-radius: var(--r-full);
-  font-size: 29rpx;
+  font-size: 30rpx;
   font-weight: 600;
 }
 
@@ -236,7 +236,7 @@
 .beat-bar {
   border-radius: 18rpx;
   padding: 18rpx 26rpx;
-  font-size: 25rpx;
+  font-size: 26rpx;
   font-weight: 600;
   margin-bottom: 20rpx;
   background: var(--warning-bg);
@@ -263,7 +263,7 @@
   background: var(--brand-500);
   color: #fff;
   border-radius: 999rpx;
-  font-size: 25rpx;
+  font-size: 26rpx;
   font-weight: 600;
 }
 .tc-btn.off { opacity: 0.6; }

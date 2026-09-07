@@ -4,7 +4,7 @@
 }
 
 .wrap {
-  padding: 24rpx 32rpx 40rpx;
+  padding: 24rpx 32rpx calc(40rpx + env(safe-area-inset-bottom));
 }
 
 .spin {
@@ -88,7 +88,7 @@
 }
 
 .wrow-t {
-  font-size: 27rpx;
+  font-size: 28rpx;
   font-weight: 600;
 }
 
@@ -238,7 +238,7 @@
 }
 
 .q {
-  font-size: 29rpx;
+  font-size: 30rpx;
   line-height: 1.7;
   color: var(--t1);
   margin-bottom: 20rpx;
@@ -273,7 +273,7 @@
 
 .otext {
   flex: 1;
-  font-size: 27rpx;
+  font-size: 28rpx;
   color: var(--t1);
   line-height: 1.6;
 }
