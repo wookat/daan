@@ -33,7 +33,7 @@
         </view>
         <view :style="optStyle"><rich-text :nodes="curHtml" /></view>
         <view class="sim-rows">
-          <kg-button v-if="!wasCorrect && cur.module && !cur._extra" variant="text" size="md" block @click="similarFromReview">还不稳？练 3 道同类题巩固 ›</kg-button>
+          <kg-button v-if="!wasCorrect && similarableReview && !cur._extra" variant="text" size="md" block @click="similarFromReview">还不稳？练 3 道同类题巩固 ›</kg-button>
           <kg-button v-if="askableReview" variant="text" size="md" block aria-label="看不懂？AI 详解本题" @click="askFromReview">看不懂？AI 详解本题 ›</kg-button>
           <kg-button v-if="reviewAskSeen" variant="text" size="md" block aria-label="回看 AI 详解" @click="openSeenAsk">回看 AI 详解 ›</kg-button>
         </view>
@@ -542,7 +542,7 @@ import { qStatLine } from '../../q-stat.js';
 import { fontSizes, normFontLv } from '../../font-size.js';
 import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
 import { askQid, findAskSid } from '../../ask-link.js';
-import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid, reviewAskAnswer, similarSubmodule } from '../../review-similar.js';
+import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid, reviewAskAnswer, similarSubmodule, hasSimilarPool } from '../../review-similar.js';
 import { buildReviewSnap, parseReviewSnap } from '../../review-snap.js';
 import { reviewSummary } from '../../review-summary.js';
 import { reviewOptions, reviewOptionsFull } from '../../review-opts.js';
@@ -643,6 +643,9 @@ export default {
     },
     askableReview() {
       return !!askPrefill(this.cur && this.cur.question_text, this.cur && this.cur.options);
+    },
+    similarableReview() {
+      return hasSimilarPool(this.cur);
     },
     curOpts() {
       return reviewOptions(this.cur);
@@ -1402,7 +1405,7 @@ export default {
     },
     async appendSimilar(m) {
       // 答错自动加推：本轮末尾追加最多 2 道同类新题（不写 SRS，不影响复习记录）
-      if (m._simFetched || m._requeued || !m.module) return;
+      if (m._simFetched || m._requeued || !hasSimilarPool(m)) return;
       m._simFetched = true;
       const sub = similarSubmodule(m);
       try {
@@ -1638,7 +1641,7 @@ export default {
     itemSheet(m) {
       const acts = [];
       if (m.tag3) acts.push({ t: '同考点强化 5 道新题', f: () => this.reinforceFromMistake(m) });
-      if (m.module) acts.push({ t: '练3道同类', f: () => this.practiceSimilar(m) });
+      if (hasSimilarPool(m)) acts.push({ t: '练3道同类', f: () => this.practiceSimilar(m) });
       if (m.question_id) acts.push({ t: '题目纠错', f: () => this.openReport(m) });
       if (m.question_id) acts.push({ t: '分享给队友', f: () => this.shareToMates(m) });
       if (!m.mastered) acts.push({ t: '标为已掌握', f: () => this.master(m) });

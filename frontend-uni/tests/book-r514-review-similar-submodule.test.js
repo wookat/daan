@@ -52,7 +52,7 @@ describe('similarItemFromQuestion 加练条目 → 作答卡/AI 预填', () => {
 
 describe('book.vue 源锁', () => {
   it('appendSimilar / practiceSimilar 走 similarSubmodule（不再从 question_type split("-") 取 null）；reinforceFromMistake 优先题库 submodule', () => {
-    expect(BOOK).toContain("import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid, reviewAskAnswer, similarSubmodule } from '../../review-similar.js'");
+    expect(BOOK).toMatch(/import \{[^}]*\bsimilarSubmodule\b[^}]*\} from '\.\.\/\.\.\/review-similar\.js'/);
     expect(BOOK).toContain('const sub = similarSubmodule(m);');
     expect(BOOK).toContain("uni.setStorageSync('practicePreset', { module: m.module, submodule: similarSubmodule(m), count: 3 });");
     expect(BOOK).toContain('submodule: similarSubmodule(m) || sub, tag3: m.tag3');

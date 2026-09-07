@@ -2,6 +2,12 @@
 
 import { askAnswerLetter } from './ask-prefill.js';
 import { reviewOptions, reviewOptionsFull } from './review-opts.js';
+import { MODULE_KEYS } from './module-meta.js';
+
+/** 错题/复习条目是否有题库同类题池：只有行测五模块走 /api/questions 抽题；时政（/api/shizheng/daily）、手录等模块无池，同类题入口不应出现。 */
+export function hasSimilarPool(m) {
+  return !!(m && typeof m === 'object' && typeof m.module === 'string' && MODULE_KEYS.includes(m.module));
+}
 
 /** 复习流条目 → AI 详解携带的用户作答：加练条目取本轮作答，普通条目取历史作答。 */
 export function reviewAskAnswer(cur, picked) {
