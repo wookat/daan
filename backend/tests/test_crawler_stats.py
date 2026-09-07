@@ -175,6 +175,51 @@ def test_humans_exclude_probe_bots_and_test_uid(tmp_path):
     assert h["ips"] == {"2026-09-04": 2, "2026-09-03": 1}
     assert r["engines"]["Google"]["hits"] == {"2026-09-04": 1}
     assert r["probe_excluded"] == 0  # 探针只在引擎 UA 分支计数，真人分支静默剔除
+    assert h["direct"] == {}
+
+
+def _direct_line(ts, ua, uri="/", status=403, remote_ip="3.238.133.204"):
+    """绕过 CF 直打源站主机名的请求：只有 User-Agent，无 X-Kg-Ip/Cf-Connecting-Ip，Caddy @noedge 回 403。"""
+    return json.dumps({
+        "ts": ts,
+        "status": status,
+        "request": {"uri": uri, "headers": {"User-Agent": [ua]}, "remote_ip": remote_ip},
+    })
+
+
+def test_humans_exclude_direct_to_origin_scanners():
+    """R388：源站直连（浏览器 UA 但无边缘头）不进候选真人，单独计 direct；旧格式日志（无 headers）仍按空 UA 视为 bot 不计。"""
+    win = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128 Safari/537.36"
+    lines = [
+        _direct_line(NOW - 30, win, "/", 403, "3.238.133.204"),
+        _direct_line(NOW - 29, win, "/", 403, "3.238.133.205"),
+        _direct_line(NOW - 28, HUMAN, "/tiku/", 403, "45.1.2.3"),
+        _direct_line(NOW - 27, HUMAN, "/api/questions", 403, "45.1.2.3"),
+        _direct_line(NOW - 26, CURL, "/", 403, "45.1.2.9"),  # 通用 bot：不计也不进 direct
+        _line(NOW - 20, HUMAN, "/tiku/q/4640", ip="1.2.3.4"),  # 经边缘的真页面
+        json.dumps({"ts": NOW - 10, "status": 200,
+                    "request": {"uri": "/tiku/y/2024/", "remote_ip": "104.23.160.1"}}),  # 旧格式无 headers
+    ]
+    r = cs.aggregate(iter(lines), days=7, now=NOW)
+    h = r["humans"]
+    assert h["page"] == {"2026-09-04": 1}
+    assert h["api"] == {}
+    assert h["ips"] == {"2026-09-04": 1}  # 扫描器 IP 不进去重
+    assert h["direct"] == {"2026-09-04": 4}
+
+
+def test_google_inspection_tool_is_google_not_human():
+    """R388：GSC「网址检查」渲染器 UA（无 Googlebot 字样）归 Google，不进候选真人。"""
+    nexus = ("Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 "
+             "(KHTML, like Gecko) Chrome/152.0.7977.64 Mobile Safari/537.36 (compatible; Google-InspectionTool/1.0)")
+    lines = [
+        _line(NOW - 5, nexus, "/tiku/", ip="66.249.73.237"),
+        _line(NOW - 4, "Mozilla/5.0 (compatible; Google-InspectionTool/1.0)", "/tiku/", ip="66.249.73.237"),
+    ]
+    r = cs.aggregate(iter(lines), days=7, now=NOW)
+    assert r["engines"]["Google"]["hits"] == {"2026-09-04": 2}
+    assert r["engines"]["Google"]["tiku"] == {"2026-09-04": 2}
+    assert r["humans"]["page"] == {}
 
 
 def test_parse_crawler_stats_humans_summary(tmp_path):
@@ -192,4 +237,8 @@ def test_parse_crawler_stats_humans_summary(tmp_path):
     }
     p.write_text(json.dumps(base))
     h = parse_crawler_stats(str(p), now=now)["humans"]
-    assert h == {"api_7d": 47, "api_today": 17, "api5xx_7d": 2, "page_7d": 4, "ips_7d": 8, "ips_today": 3}
+    assert h == {"api_7d": 47, "api_today": 17, "api5xx_7d": 2, "page_7d": 4, "ips_7d": 8, "ips_today": 3,
+                 "direct_7d": 0}  # R388 前的 JSON 无 direct 段→ 0
+    base["humans"]["direct"] = {"2026-09-07": 30, "2026-09-05": 3, "2026-08-30": 999}
+    p.write_text(json.dumps(base))
+    assert parse_crawler_stats(str(p), now=now)["humans"]["direct_7d"] == 33

@@ -157,7 +157,7 @@ def api_paper_answers(body: dict, request: Request):
             continue
     if not picks:
         raise HTTPException(400, "没有已选择的答案")
-    return _judge_paper(str(body.get("uid") or ""), paper, picks, probe=auth.probe_ip(request))
+    return _judge_paper(str(body.get("uid") or ""), paper, picks, probe=auth.probe_request(request))
 
 
 @router.post("/api/scan_sheet")
@@ -228,7 +228,7 @@ async def api_scan_sheet(request: Request, uid: str = Form(""), image: UploadFil
                     }
                 )
     if uid and log_items:
-        db.save_answer_log(uid[:64], log_items, probe=auth.probe_ip(request))
+        db.save_answer_log(uid[:64], log_items, probe=auth.probe_request(request))
     answered = [r for r in results if r["status"] == "ok"]
     return {
         "code": rec["code"],
@@ -456,7 +456,7 @@ def api_exam_submit(body: dict, request: Request):
     marks = _clean_marks(body.get("marks"), len(db.exam_active_qids(paper["question_ids"])))
     judged = _judge_paper(uid, {"code": None, "title": paper["title"],
                                 "question_ids": db.exam_active_qids(paper["question_ids"])}, picks, secs,
-                          probe=auth.probe_ip(request))
+                          probe=auth.probe_request(request))
     per_module: dict = {}
     for r in judged["items"]:
         m = r.get("module") or "other"
