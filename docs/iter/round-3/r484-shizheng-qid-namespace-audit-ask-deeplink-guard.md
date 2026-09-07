@@ -41,7 +41,9 @@ const qid = askQid(q.id);
 if (qid) uni.setStorageSync('redoQid', qid);
 ```
 
-`askQid()`（`ask-link.js`）只校验正整数，不辨源表。下游（`ask.vue`）拿 `redoQid` → `pendingQid` → 提交 `POST /api/explain/stream` 带 `question_id` → 服务端 `_linked()` `db.questions_by_ids([question_id])` 按 **`questions`** 取题给 LLM 做「题库答案入提示」（R421）；rec 落 `qid` → 「查看原题」深链 `/pkgA/search/search?qid=N`、「存入错题本」`question_id: askQid(r.qid)`。时政题 id 118 撞 `questions.118`（`panduan`「某部门要从甲、乙、丙、丁四人中选派两人出差…」）→ 讲解提示被喂另一道题的题干/答案、「查看原题」打开别的题、存错题本落成行测题号。
+`askQid()`（`ask-link.js`）只校验正整数，不辨源表。下游（`ask.vue`）拿 `redoQid` → `pendingQid` → 提交 `POST /api/explain/stream` 带 `question_id`，并把 `pendingQid` 落进 rec（`qid: askQid(m.qid) || qid`）→ 「查看原题」深链 `/pkgA/search/search?qid=N`、「存入错题本」`question_id: askQid(r.qid)`。时政题 id 118 撞 `questions.118`（`panduan`「某部门要从甲、乙、丙、丁四人中选派两人出差…」）→ 「查看原题」打开别的题、存错题本落成行测题号（`save_mistake` 的 `foreign_module_qid` 只在 module 非空且非行测时置空，ask 页 `module` 来自 LLM 识题、时政题多为 None/行测 → 不拦）。
+
+> **R485 勘误**：本节首版写「服务端 `_linked()` 按 `questions` 取题喂 LLM、讲解提示被喂另一道题」——**不成立**。R421 的 `engine.extract_from_qbank(row, text)` 是 fail-closed：要求题库行题干前 40 字逐字出现在提交文本里，时政题文 + 撞号行测 `questions.118` → 返回 `None` → 走原识题路径、meta `qid` 为 None（本地 `python3 -c` 用生产 118 题干实跑：时政文 → `None`，本题文 → `118`）。服务端提示不会被喂错题；受影响的只有端侧 rec 回落 `pendingQid` 后的「查看原题」/「存入错题本」两条。修法与源锁不变。
 
 生产落库为 0（§1 `ask_cur` 仅 1 条非 0 qid 且是行测），原因是时政题「AI 详解」入口至今无人点过——路径可达、结果错误、只是尚未触发；按 R483 同法算「可复现的源边界缺陷」，最小修 2 行。
 
@@ -80,9 +82,9 @@ const qid = q._sz ? 0 : askQid(q.id);         // deepExplain：时政不写 redo
 ## 5. 如实说明
 
 - §1 为「生产库当前行 + 源码路径」盘点，不是穷举所有历史版本的写入口；`review_log` 37 行只核了外键形态未逐行回溯其 mistake 的原 qid（R483 回填前时政 mistakes 3 行若曾被复习会留 review_log，但按 `mistake_id` 关联不受撞号影响）。
-- §2 是「可达 + 结果错误」的源边界缺陷，**生产 0 条时政讲解落库**，修的是未触发路径；不改 `askQid()` 语义（W7 / search 深链共用）。
+- §2 是「可达 + 结果错误」的源边界缺陷，**生产 0 条时政讲解落库**，修的是未触发路径；不改 `askQid()` 语义（W7 / search 深链共用）。首版把「LLM 提示被喂错题」也算进影响，R485 按源码 + 本地实跑勘误（见 §2 引文）。
 - §4.1 为 Chrome CDP 仿真非真机；`setItem` 拦截法只证明写入与否，未在 ask 页实际发 `explain/stream`（避免制造 LLM 流量）；探针写入 answer_log +4 / mistakes +3（probe=1）。
-- W7 小程序端同形态未修（服务端 `foreign_module_qid` 只覆盖 answer_log/mistakes，不覆盖 `explain/stream` 的 `question_id`——小程序若把时政 id 传进去服务端仍按 `questions` 取题；登记给 W7）。
+- W7 小程序端：`daily.ts logAttempts()` answer_log `qid: q.id || null` 同形态未修（R483 登记）；W7 `streamExplain()` 只发 `text`/`user_answer` **不带 `question_id`**、main 小程序无问答页 → 全产品 `explain/stream question_id` 发送方只有 H5 `ask.vue`（R485 只读核）。
 - 仍无可确认外部真人作答者；无 testing agent 录屏（未另行授权）。
 
 脚本：`/home/ubuntu/r484_host1.sh`（补量首版，时间戳错）/ `r484_host2.sh`（修正）/ `r484_probe2.py`（§1 盘点）/ `r484_verify.py`（§4.1）/ `r484_host3.sh`（§4.2）。
