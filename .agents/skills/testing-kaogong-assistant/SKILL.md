@@ -1698,3 +1698,11 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 ## R473 经验：需要登录态才会发请求的页面，用 `add_init_script` 注假 token 再 abort
 - 登录态判定在 `api.js getToken()` = `uni.getStorageSync('authToken')`，H5 下就是 `localStorage.authToken`。`onShow()` 里先判 token 的页面（如 `pkgA/social/inbox`）无 token 根本不发请求、`route().abort()` 制造不出失败态；`context.add_init_script("localStorage.setItem('authToken','probe-fake')")` 在页面脚本之前写入即可，不用真登录。配合 `**/api/**` 全 abort 无任何写入。
 - SOP-10 §4 硬指标一次性全路由复扫模板：`/home/ubuntu/r473_axe.py`——`add_script_tag(content=axe.min.js)`（本机 `~/.npm/_npx/*/node_modules/axe-core/`）后 `axe.run(document,{runOnly:['color-contrast','link-in-text-block']})`，同页再读 `documentElement.scrollWidth` vs `clientWidth` + 遍历 `body *` 找 `right>cw+1 || left<-1` 的非 fixed 元素。越出命中先看 `visibility` 与祖先 `overflow`：uni resize-sensor 的 `visibility:hidden` 探测 div（宽 100000 / 400 等）和 `uni-scroll-view overflow-x:auto` 里的 chip 都不是缺陷，别当溢出登记。
+
+## R474 经验：「功能触达率」怎么只读盘点 + Caddy 时序/字节的两个口径坑
+- 触达率一律分 6 层写：代码存在 → 接口被请求 → 接口 200 → 数据落表 → 前端渲染 → 真实用户走完整流程；各层证据源不同（源码 / caddy / caddy status / DB / 无一手只能写「未验证」）。模考报告簇的用时·模块统计·历史·目标分·rank·推荐五张卡都以 `submitted_at` 非空为前提，一个 `exam/submit`=0 就是五个 0，别写成五条独立缺口。
+- 非探针口径三件套：排除 `Cf-Connecting-Ip` 在 `140.232.64.0/24`、排除带 `X-Kg-Probe` 头、`exam_attempts.probe` 三分（NULL=加列前历史不可归因 / 0 / 1）分别列。`probe IS NULL` 的 29 条 attempt 不能算真人也不能算探针。
+- Caddy access log `ts` 是**响应写出**时刻，长 LLM 请求的起点要 `ts - duration` 反推；同一秒内多条重叠请求用 `Cf-Ray` 单调性 + 请求 `Content-Length` 判是否同体重复。源站每个 site 块都 `encode gzip`，`size` 是压缩后字节，不能反推正文字数（`mistakes/analysis` 845 B ≠ 正文很短）。
+- 生产 `explain_cache` 可宿主直读核 AI 讲解是否真落正文（`length(explanation)`）；`mistakes/analysis` 无结果表，只能用 status+size 判「服务端成功」，渲染与否无证据。
+- 小程序客户端识别：Referer `https://servicewechat.com/<appid>/<版本号>/page-frame.html`，版本号 `0` 是开发/体验版（推断）；同一用户几秒内出口 IP 切换是移动网络常态，别当两个人。
+- 同 uid 同请求体的 AI 接口在飞行中重复（explain ×2 / analysis ×4）是 R474 登记的 R475 候选：先查客户端为何重发（本机无微信开发者工具复现不了），再论服务端 single-flight；`rl` 只限量不去重，`book.vue aiLoading` 守卫只管同一页面实例。
