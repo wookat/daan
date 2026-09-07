@@ -27,6 +27,10 @@
   color: var(--brand-500);
 }
 
+.clock.low {
+  color: var(--error);
+}
+
 .topinfo {
   font-size: 24rpx;
   color: var(--t3);
@@ -51,6 +55,13 @@
   line-height: 1.7;
   color: var(--t1);
   margin-bottom: 24rpx;
+}
+
+.qimg {
+  width: 100%;
+  border-radius: 12rpx;
+  margin: 0 0 24rpx;
+  background: var(--fill);
 }
 
 .opt {

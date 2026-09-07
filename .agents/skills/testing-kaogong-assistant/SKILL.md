@@ -689,6 +689,9 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 - **「开启 Skyline 渲染调试」在 Linux 版会让编译卡死在 theme.json**：详情→本地设置取消勾选，改用 WebView 渲染即可正常编译。
 - **模拟器滚动输入不生效仅限 skyline 渲染期**：PR#129 起 app.json `renderer: webview`，滚轮滚动正常。若仍需整页一屏目视，可在机型下拉选「自定义」添加高分辨率机型（如 375×1400）。
 - 小程序直连生产 API（`miniprogram/utils/request.ts` BASE_URL=https://kaogong.zalize.com），模拟器匿名 uid 会真实写 answer_log/mistakes，测完要列清理清单。
+- **切分支/拉新提交后必须先 `cd miniapp-native && npx tsc` 再点开发者工具「编译」**：`miniprogram/**/*.js` 被 .gitignore 忽略，Linux 版工具的 TS 插件不会重新生成已有的旧 .js，模拟器会静默跑旧代码（表现：Network 面板请求路径/UI 与 .ts 不一致）。校验：`grep -c <新字符串> miniprogram/pages/xx/xx.js` 与 `ls -l --time-style=full-iso` 对比 .ts 时间。
+- 开发者工具 Console 可直接调 `wx.*`：清快照 `wx.removeStorageSync('examProgress')`；改倒计时 `s=wx.getStorageSync('examProgress'); s.endAt=Date.now()+4*60*1000; wx.setStorageSync('examProgress',s)`。xdotool 打字会丢 `?` 与部分大写字母（`fromCharCode`→`fromharCode`），URL 里的 `?` 用 `unescape('%3f')` 拼，长句分段 `type` 后 zoom 核对再回车。
+- 模考数据口径（PR#622 起）：`/api/exam/papers` 不带 `kind=zhenti` 会混入 `kind=mock`（他人迷你卷）与 `retired` 卷；真卷题目均无题图，题图只能在含图形题的 mock 卷验证（DB 扫 `exam_papers.question_ids ∩ questions.image`，用 Console `wx.navigateTo` 直开 `mini?paper_id=N`）。迷你模考每次 start 会新建全局 `exam_papers(kind=mock)` 行，清理时若无他人 attempt 引用可一并删；模考交卷错题会写 `mistakes`、作答写 `answer_log`、start 写 `growth_events`，清理台账要含这四表 + `exam_progress`（主键 attempt_id+uid，无 id 列）。
 - 统计页薄弱提示触发条件：≥2 个模块 done≥5 且某模块正确率低于均值 ≥10 个百分点；混练约 3 组 10 题可构造。
 
 ## R7 审查轮新经验（分享/PK/reinforce）

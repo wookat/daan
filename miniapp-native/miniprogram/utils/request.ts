@@ -7,6 +7,12 @@ import { clearAccessCode, clearAuth, getAccessCode, getToken, setAccessCode } fr
 
 export const BASE_URL = 'https://kaogong.zalize.com';
 
+/** 题图相对路径补全为绝对 URL */
+export function imgUrl(p: string | null | undefined): string {
+  if (!p) return '';
+  return /^https?:/.test(p) ? p : BASE_URL + p;
+}
+
 export interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   data?: WechatMiniprogram.IAnyObject | string;
