@@ -255,7 +255,7 @@ export default {
 <style scoped>
 .wrap { padding: 24rpx 32rpx 60rpx; }
 .card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 24rpx 28rpx; margin-bottom: 20rpx; }
-.empty { text-align: center; color: var(--ink-2); font-size: 25rpx; padding: 30rpx 0; }
+.empty { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 30rpx 0; }
 .empty.small { padding: 16rpx 0; }
 .empty.err { padding: 70rpx 28rpx; }
 .err-t { display: block; font-size: 30rpx; font-weight: 600; color: var(--ink); }
@@ -271,11 +271,11 @@ export default {
 .q-tags { display: flex; gap: 12rpx; margin-bottom: 16rpx; }
 .tag { font-size: 24rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
 .tag.gray { color: var(--ink-2); background: var(--fill); }
-.stem { display: block; font-size: 29rpx; color: var(--ink); line-height: 1.7; margin-bottom: 22rpx; white-space: pre-wrap; }
+.stem { display: block; font-size: 30rpx; color: var(--ink); line-height: 1.7; margin-bottom: 22rpx; white-space: pre-wrap; }
 
 .opt { display: flex; gap: 16rpx; align-items: flex-start; border: 1rpx solid var(--line); border-radius: 18rpx; padding: 20rpx 22rpx; margin-bottom: 14rpx; }
 .opt .k { font-weight: 700; color: var(--ink-2); }
-.opt .t { flex: 1; font-size: 27rpx; color: var(--ink); line-height: 1.6; }
+.opt .t { flex: 1; font-size: 28rpx; color: var(--ink); line-height: 1.6; }
 .opt.pick { border-color: var(--brand-text); background: var(--brand-soft); }
 .opt.right { border-color: var(--ok); background: var(--ok-soft); }
 .opt.wrong { border-color: var(--bad); background: var(--bad-soft); }
@@ -284,18 +284,18 @@ export default {
 .multi-ok { min-height: 44px; padding: 0 32rpx; display: inline-flex; align-items: center; border-radius: 999rpx; background: var(--brand); color: #fff; font-size: 28rpx; font-weight: 600; flex-shrink: 0; }
 .multi-ok.dis { opacity: 0.45; }
 
-.res-bar { border-radius: 18rpx; padding: 20rpx 26rpx; font-size: 27rpx; font-weight: 600; margin-bottom: 20rpx; }
+.res-bar { border-radius: 18rpx; padding: 20rpx 26rpx; font-size: 28rpx; font-weight: 600; margin-bottom: 20rpx; }
 .res-bar.ok { background: var(--ok-soft); color: var(--ok); }
 .res-bar.bad { background: var(--bad-soft); color: var(--bad); }
 
-.beat-bar { border-radius: 18rpx; padding: 18rpx 26rpx; font-size: 25rpx; font-weight: 600; margin-bottom: 20rpx; background: #fef3c7; color: #b45309; }
+.beat-bar { border-radius: 18rpx; padding: 18rpx 26rpx; font-size: 26rpx; font-weight: 600; margin-bottom: 20rpx; background: #fef3c7; color: #b45309; }
 
 .team-cta { display: flex; align-items: center; gap: 18rpx; }
 .team-cta.joined { background: var(--ok-soft); }
 .tc-l { flex: 1; min-width: 0; }
 .tc-t { display: block; font-size: 28rpx; font-weight: 700; color: var(--ink); }
 .tc-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 6rpx; }
-.tc-btn { flex-shrink: 0; min-height: 40px; display: flex; align-items: center; padding: 0 30rpx; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 25rpx; font-weight: 600; }
+.tc-btn { flex-shrink: 0; min-height: 40px; display: flex; align-items: center; padding: 0 30rpx; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 26rpx; font-weight: 600; }
 .tc-btn.off { opacity: 0.6; }
 .tc-btn.ghost { background: var(--brand-soft); color: var(--brand-text); }
 
@@ -310,7 +310,7 @@ export default {
 .ans-res.ok { background: var(--ok-soft); color: var(--ok); }
 .ans-res.bad { background: var(--bad-soft); color: var(--bad); }
 
-.act-btn { min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; font-size: 29rpx; font-weight: 600; margin-bottom: 18rpx; }
+.act-btn { min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; font-size: 30rpx; font-weight: 600; margin-bottom: 18rpx; }
 .act-btn.main { background: var(--brand); color: #fff; }
 .act-btn.sub { background: var(--brand-soft); color: var(--brand-text); }
 

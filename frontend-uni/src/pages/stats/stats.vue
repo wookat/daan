@@ -950,9 +950,9 @@ export default {
 .todo-ico { width: 88rpx; height: 88rpx; border-radius: 20rpx; background: var(--brand-soft); display: flex; align-items: center; justify-content: center; font-size: 40rpx; flex-shrink: 0; }
 .todo-ico.warn { background: var(--bad-soft); }
 .todo-main { flex: 1; min-width: 0; }
-.todo-name { display: block; font-size: 27rpx; font-weight: 600; }
+.todo-name { display: block; font-size: 28rpx; font-weight: 600; }
 .todo-meta { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 4rpx; }
-.todo-btn { height: 72rpx; line-height: 72rpx; padding: 0 30rpx; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 25rpx; font-weight: 600; flex-shrink: 0; }
+.todo-btn { height: 72rpx; line-height: 72rpx; padding: 0 30rpx; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 26rpx; font-weight: 600; flex-shrink: 0; }
 .radar-flex { display: flex; align-items: center; gap: 12rpx; padding: 30rpx 0 20rpx; }
 .radar-box { flex: 1; display: flex; justify-content: center; }
 .radar { position: relative; width: 320rpx; height: 320rpx; }
@@ -968,9 +968,9 @@ export default {
 .theme-dark .poly { background: rgba(96, 141, 255, 0.45); }
 .rs-t { font-size: 24rpx; color: var(--ink-2); margin-bottom: 10rpx; }
 .rs-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8rpx; }
-.rs-name { font-size: 25rpx; font-weight: 600; }
+.rs-name { font-size: 26rpx; font-weight: 600; }
 .rs-pct { font-size: 24rpx; color: var(--danger, #f04438); font-weight: 600; }
-.ghost-btn { margin-top: 16rpx; height: 72rpx; line-height: 68rpx; text-align: center; border: 2rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 25rpx; font-weight: 600; }
+.ghost-btn { margin-top: 16rpx; height: 72rpx; line-height: 68rpx; text-align: center; border: 2rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 26rpx; font-weight: 600; }
 .ring { position: absolute; border: 1rpx solid var(--line); border-radius: 50%; box-sizing: border-box; }
 .poly { position: absolute; inset: 0; background: rgba(46, 91, 255, 0.35); border-radius: 2rpx; }
 .axis-label { position: absolute; transform: translate(-50%, -50%); text-align: center; white-space: nowrap; }
@@ -1038,7 +1038,7 @@ export default {
 .lrow { display: flex; align-items: center; gap: 18rpx; min-height: 112rpx; border-bottom: 1rpx solid var(--line); }
 .lrow:last-of-type { border-bottom: none; }
 .lrow-ico { width: 64rpx; height: 64rpx; border-radius: 16rpx; background: var(--brand-soft); display: flex; align-items: center; justify-content: center; font-size: 32rpx; flex-shrink: 0; }
-.lrow-name { flex: 1; font-size: 27rpx; font-weight: 600; }
+.lrow-name { flex: 1; font-size: 28rpx; font-weight: 600; }
 .lrow-sub { font-size: 24rpx; color: var(--ink-2); font-weight: 400; margin-left: 14rpx; }
 .lrow-arrow { font-size: 30rpx; color: var(--ink-3); padding: 0 6rpx; }
 .lrow-body { padding: 6rpx 0 24rpx; border-bottom: 1rpx solid var(--line); }
@@ -1056,7 +1056,7 @@ export default {
 }
 .coach-body {
   display: block;
-  font-size: 25rpx;
+  font-size: 26rpx;
   line-height: 1.7;
   padding-top: 8rpx;
 }
@@ -1112,7 +1112,7 @@ export default {
 .bk-tip { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; margin-bottom: 14rpx; }
 .bk-code { font-size: 26rpx; font-weight: 700; color: var(--brand-text); background: var(--brand-soft); border-radius: 14rpx; padding: 14rpx 22rpx; margin-bottom: 14rpx; }
 .row2 { display: flex; gap: 16rpx; }
-.bk-btn { flex: 1; background: var(--brand-soft); color: var(--brand-text); border-radius: 16rpx; font-size: 25rpx; font-weight: 600; }
+.bk-btn { flex: 1; background: var(--brand-soft); color: var(--brand-text); border-radius: 16rpx; font-size: 26rpx; font-weight: 600; }
 .bk-btn.ghost { background: var(--brand-soft); color: var(--brand-text); }
 .loginstrip { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; min-height: 44px; box-sizing: border-box; background: var(--brand-soft); border-radius: 16rpx; padding: 8rpx 26rpx; margin-bottom: 20rpx; }
 .ls-t { font-size: 24rpx; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

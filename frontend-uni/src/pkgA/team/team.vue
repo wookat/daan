@@ -291,33 +291,33 @@ export default {
 <style scoped>
 .wrap { padding: 24rpx 32rpx 60rpx; }
 .card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 24rpx 28rpx; margin-bottom: 20rpx; }
-.empty { text-align: center; color: var(--ink-2); font-size: 25rpx; padding: 30rpx 0; line-height: 1.7; }
+.empty { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 30rpx 0; line-height: 1.7; }
 .retry { display: flex; align-items: center; justify-content: center; min-height: 40px; margin-top: 4rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 
 .hero { background: linear-gradient(135deg, #5b8af8, #2e5bff); border-radius: 32rpx; padding: 36rpx 32rpx; margin-bottom: 24rpx; box-shadow: 0 12rpx 36rpx rgba(46, 91, 255, 0.3); }
 .hero-t { display: flex; align-items: center; gap: 12rpx; color: #fff; font-size: 40rpx; font-weight: 800; }
 .hero-s { display: block; color: rgba(255, 255, 255, 0.85); font-size: 24rpx; margin-top: 10rpx; }
 .hero-btns { display: flex; gap: 16rpx; margin-top: 22rpx; }
-.hero-btn { flex: 1; min-height: 40px; display: flex; align-items: center; justify-content: center; background: #fff; color: var(--brand-text); border-radius: 999rpx; font-size: 25rpx; font-weight: 600; }
+.hero-btn { flex: 1; min-height: 40px; display: flex; align-items: center; justify-content: center; background: #fff; color: var(--brand-text); border-radius: 999rpx; font-size: 26rpx; font-weight: 600; }
 .hero-btn.ghost { background: rgba(255, 255, 255, 0.16); color: #fff; }
 
 .t-row { display: flex; align-items: center; gap: 16rpx; }
 .t-l { flex: 1; min-width: 0; }
 .t-name { display: block; font-size: 30rpx; font-weight: 700; color: var(--ink); }
 .t-sub { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 6rpx; }
-.t-go { flex-shrink: 0; font-size: 25rpx; color: var(--brand-text); font-weight: 600; }
+.t-go { flex-shrink: 0; font-size: 26rpx; color: var(--brand-text); font-weight: 600; }
 
-.act-btn { min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; font-size: 29rpx; font-weight: 600; margin-bottom: 18rpx; }
+.act-btn { min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; font-size: 30rpx; font-weight: 600; margin-bottom: 18rpx; }
 .act-btn.main { background: var(--brand); color: #fff; }
 
 .join-row { display: flex; gap: 16rpx; }
-.join-input { flex: 1; background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 30rpx; min-height: 44px; font-size: 27rpx; box-sizing: border-box; }
-.join-btn { min-height: 44px; display: flex; align-items: center; padding: 0 40rpx; background: var(--brand-soft); color: var(--brand-text); border-radius: 999rpx; font-size: 27rpx; font-weight: 600; }
+.join-input { flex: 1; background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 30rpx; min-height: 44px; font-size: 28rpx; box-sizing: border-box; }
+.join-btn { min-height: 44px; display: flex; align-items: center; padding: 0 40rpx; background: var(--brand-soft); color: var(--brand-text); border-radius: 999rpx; font-size: 28rpx; font-weight: 600; }
 
 /* 本周排行榜 */
 .rank-card { padding: 24rpx 28rpx; }
 .rank-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8rpx; }
-.rank-t { font-size: 27rpx; font-weight: 700; color: var(--ink); }
+.rank-t { font-size: 28rpx; font-weight: 700; color: var(--ink); }
 .rank-copy { min-height: 40px; display: flex; align-items: center; padding: 0 22rpx; background: var(--brand-soft); color: var(--brand-text); border-radius: 999rpx; font-size: 24rpx; font-weight: 600; }
 .rank-row { display: flex; align-items: center; gap: 14rpx; padding: 14rpx 0; border-bottom: 1rpx solid var(--fill); }
 .rank-row:last-child { border-bottom: none; }
@@ -365,7 +365,7 @@ export default {
 .sheet { width: 100%; background: var(--card); border-radius: 32rpx 32rpx 0 0; padding: 40rpx 40rpx calc(40rpx + env(safe-area-inset-bottom)); box-sizing: border-box; }
 .sheet-t { display: block; font-size: 32rpx; font-weight: 700; color: var(--ink); margin-bottom: 26rpx; }
 .sheet-input { background: var(--fill); border-radius: 16rpx; padding: 0 26rpx; min-height: 44px; font-size: 28rpx; margin-bottom: 26rpx; box-sizing: border-box; width: 100%; }
-.sheet-btn { min-height: 44px; display: flex; align-items: center; justify-content: center; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 29rpx; font-weight: 600; }
+.sheet-btn { min-height: 44px; display: flex; align-items: center; justify-content: center; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 30rpx; font-weight: 600; }
 .sheet-btn.off { opacity: 0.6; }
 
 /* #ifdef H5 */

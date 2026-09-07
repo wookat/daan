@@ -410,7 +410,7 @@
 }
 
 .duenudge-t {
-  font-size: 27rpx;
+  font-size: 28rpx;
   font-weight: 600;
   color: #fff;
 }
@@ -422,7 +422,7 @@
 }
 
 .duenudge-go {
-  font-size: 25rpx;
+  font-size: 26rpx;
   font-weight: 600;
   color: var(--brand-500);
   background: #fff;

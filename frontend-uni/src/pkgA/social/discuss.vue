@@ -348,7 +348,7 @@ export default {
 /* #ifdef H5 */
 .msg { cursor: pointer; }
 /* #endif */
-.empty { text-align: center; color: var(--ink-3); font-size: 25rpx; padding: 60rpx 24rpx; }
+.empty { text-align: center; color: var(--ink-3); font-size: 26rpx; padding: 60rpx 24rpx; }
 .empty-t { font-size: 28rpx; font-weight: 600; color: var(--ink-2); margin-bottom: 8rpx; }
 .retry { display: inline-flex; align-items: center; min-height: 40px; margin-top: 8rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 .plaza-btn { display: inline-flex; align-items: center; min-height: 40px; box-sizing: border-box; margin-top: 24rpx; background: var(--brand); color: #fff; font-size: 26rpx; border-radius: 999rpx; padding: 0 56rpx; }
@@ -358,9 +358,9 @@ export default {
 .avatar { width: 64rpx; height: 64rpx; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26rpx; font-weight: 700; flex-shrink: 0; }
 .cm-body { flex: 1; min-width: 0; }
 .cm-hd { display: flex; align-items: center; gap: 10rpx; }
-.nm { font-size: 25rpx; font-weight: 600; color: var(--ink); }
+.nm { font-size: 26rpx; font-weight: 600; color: var(--ink); }
 .tm { font-size: 24rpx; color: var(--ink-3); }
-.tx { font-size: 27rpx; color: var(--ink-2); line-height: 1.65; margin-top: 6rpx; word-break: break-all; white-space: pre-wrap; }
+.tx { font-size: 28rpx; color: var(--ink-2); line-height: 1.65; margin-top: 6rpx; word-break: break-all; white-space: pre-wrap; }
 .ft { display: flex; gap: 30rpx; margin-top: 12rpx; align-items: center; }
 .up { display: inline-flex; align-items: center; min-height: 40px; margin: -12px 0; gap: 6rpx; font-size: 24rpx; color: var(--ink-3); }
 .up.on { color: var(--brand-text); font-weight: 700; }

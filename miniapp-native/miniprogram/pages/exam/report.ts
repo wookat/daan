@@ -89,7 +89,10 @@ Page({
     this.setData({ detail: null });
   },
   onRetry() {
-    wx.redirectTo({ url: '/pages/exam/mini' });
+    // kind=mock 是即时生成的迷你卷，重考应重新组卷；真题卷重考同一卷
+    const p = this.data.report && this.data.report.paper;
+    const url = p && p.kind !== 'mock' ? '/pages/exam/mini?paper_id=' + p.id : '/pages/exam/mini';
+    wx.redirectTo({ url });
   },
   onBackExam() {
     wx.navigateBack({

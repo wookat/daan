@@ -129,7 +129,7 @@ export default {
 
 <style scoped>
 .wrap { padding: 24rpx 32rpx 60rpx; }
-.offbar { background: var(--warn-soft); border-radius: 16rpx; padding: 18rpx 24rpx; font-size: 25rpx; color: var(--warn); margin-bottom: 20rpx; }
+.offbar { background: var(--warn-soft); border-radius: 16rpx; padding: 18rpx 24rpx; font-size: 26rpx; color: var(--warn); margin-bottom: 20rpx; }
 .card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 28rpx; margin-bottom: 20rpx; }
 .row-sb { display: flex; justify-content: space-between; align-items: center; }
 .h { font-size: 30rpx; font-weight: 700; color: var(--ink); }
@@ -146,7 +146,7 @@ export default {
 .pkg:last-child { border-bottom: none; }
 .ico { width: 68rpx; height: 68rpx; border-radius: 16rpx; color: #fff; font-size: 30rpx; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .grow { flex: 1; min-width: 0; }
-.nm { display: block; font-size: 27rpx; font-weight: 600; color: var(--ink); }
+.nm { display: block; font-size: 28rpx; font-weight: 600; color: var(--ink); }
 .sub2 { display: block; font-size: 24rpx; color: var(--ink-3); margin-top: 4rpx; }
 .act { flex-shrink: 0; display: inline-flex; align-items: center; min-height: 40px; box-sizing: border-box; font-size: 24rpx; font-weight: 600; color: var(--brand-text); padding: 0 16rpx; }
 .act.del { color: var(--bad); }

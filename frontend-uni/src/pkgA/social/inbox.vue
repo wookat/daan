@@ -89,7 +89,7 @@ export default {
 .like-ico { font-size: 26rpx; }
 .act { font-size: 24rpx; color: var(--ink-2); }
 .time { font-size: 24rpx; color: var(--ink-2); }
-.content { font-size: 27rpx; color: var(--ink); line-height: 1.6; }
+.content { font-size: 28rpx; color: var(--ink); line-height: 1.6; }
 .quote { font-size: 24rpx; color: var(--ink-2); background: var(--bg); border-radius: 12rpx; padding: 12rpx 18rpx; margin-top: 14rpx; }
 .ellip2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .empty { display: flex; flex-direction: column; align-items: center; gap: 12rpx; padding: 120rpx 0; }

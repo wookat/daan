@@ -19,7 +19,7 @@ describe('R497 提醒设置页 picker 触发区热区（源文件锁）', () => 
     expect(r).not.toMatch(/min-height:\s*\d+rpx/);
     expect(r).toMatch(/display:\s*inline-flex/);
     expect(r).toMatch(/align-items:\s*center/);
-    expect(r).toMatch(/font-size:\s*27rpx/);
+    expect(r).toMatch(/font-size:\s*28rpx/);
   });
 
   it('.set-row 行高仍 ≥56px（.time-v 40px 不撑破行）', () => {

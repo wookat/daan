@@ -51,7 +51,7 @@
     <view v-else-if="!shown.length" class="spin">暂无成套真题卷{{ year || region || st ? '，试试放宽筛选' : '' }}</view>
 
     <view class="plist">
-    <view v-for="p in shown" :key="p.id" :id="'paper-' + p.id" class="card paper" :class="{ pinned: p.id === pinnedId }">
+    <view v-for="p in paged" :key="p.id" :id="'paper-' + p.id" class="card paper" :class="{ pinned: p.id === pinnedId }">
       <view class="paper-top" @click="startPaper(p)">
         <text v-if="p.id === pinnedId" class="pin-badge">邀你挑战的卷</text>
         <text class="paper-t">{{ p.title }}</text>
@@ -72,6 +72,7 @@
         <view class="pbtn" @click="askExport(p)">{{ exportingId === p.id ? '导出中…' : '导出 PDF' }}</view>
       </view>
     </view>
+    <view v-if="hiddenN > 0" class="more" @click="showMore">展开更多（还有 {{ hiddenN }} 卷）</view>
     </view>
 
     <export-confirm
@@ -106,6 +107,8 @@ import { adoptServerExamProgress } from '../../exam-progress-sync.js';
 import { paperPracticedState } from '../../paper-continue.js';
 import { paperModsText } from '../../exam-paper-mods.js';
 
+const PAGE = 20;
+
 export default {
   data() {
     return {
@@ -121,7 +124,11 @@ export default {
       exportTarget: null,
       pinnedId: 0,
       resume: null,
+      visibleN: PAGE,
     };
+  },
+  onReachBottom() {
+    this.showMore();
   },
   created() {
     this._starting = false;
@@ -129,6 +136,13 @@ export default {
   computed: {
     shown() {
       return filterPapersByStatus(this.items, this.st);
+    },
+    // 全量卷 100+ 张时一次渲染约 4 万 px 长列表，分批挂载
+    paged() {
+      return this.shown.slice(0, this.visibleN);
+    },
+    hiddenN() {
+      return this.shown.length - this.paged.length;
     },
     prog() {
       return paperProgress(this.items);
@@ -149,6 +163,9 @@ export default {
     this.loadResume();
   },
   methods: {
+    showMore() {
+      if (this.visibleN < this.shown.length) this.visibleN += PAGE;
+    },
     async load() {
       this.loadErr = '';
       const q = ['kind=zhenti', 'uid=' + encodeURIComponent(anonUid())];
@@ -202,8 +219,10 @@ export default {
       const pid = this._pendingPid;
       if (!pid) return;
       this._pendingPid = 0;
-      if (!this.shown.some((p) => p.id === pid)) return;
+      const idx = this.shown.findIndex((p) => p.id === pid);
+      if (idx < 0) return;
       this.pinnedId = pid;
+      if (idx >= this.visibleN) this.visibleN = idx + 1;
       // #ifdef H5
       this.$nextTick(() => {
         if (typeof document !== 'undefined') {
@@ -260,9 +279,9 @@ export default {
       }
       // #endif
     },
-    setYear(y) { this.year = y; this.pinnedId = 0; this.syncUrl(); this.load(); },
-    setRegion(r) { this.region = r; this.pinnedId = 0; this.syncUrl(); this.load(); },
-    setSt(s) { this.st = s; this.pinnedId = 0; this.syncUrl(); },
+    setYear(y) { this.year = y; this.pinnedId = 0; this.visibleN = PAGE; this.syncUrl(); this.load(); },
+    setRegion(r) { this.region = r; this.pinnedId = 0; this.visibleN = PAGE; this.syncUrl(); this.load(); },
+    setSt(s) { this.st = s; this.pinnedId = 0; this.visibleN = PAGE; this.syncUrl(); },
     startPaper(p) {
       if (this._starting) return;
       uni.navigateTo({ url: '/pkgA/exam/exam?paper_id=' + p.id });
@@ -331,7 +350,7 @@ export default {
 .mini-go { flex-shrink: 0; background: var(--brand); color: #fff; border-radius: 999rpx; padding: 0 36rpx; min-height: 38px; line-height: 38px; font-size: 26rpx; font-weight: 600; }
 .progcard { padding: 22rpx 28rpx; }
 .prog-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
-.prog-t { font-size: 25rpx; font-weight: 600; color: var(--ink); }
+.prog-t { font-size: 26rpx; font-weight: 600; color: var(--ink); }
 .prog-p { font-size: 24rpx; font-weight: 600; color: var(--brand-text); }
 .prog-bar { height: 12rpx; background: var(--brand-soft); border-radius: 999rpx; overflow: hidden; }
 .prog-fill { height: 100%; min-width: 4rpx; background: var(--brand); border-radius: 999rpx; }
@@ -342,7 +361,7 @@ export default {
 .paper-top { min-height: 44px; }
 .paper.pinned { border-color: var(--brand); box-shadow: 0 4rpx 20rpx rgba(37, 99, 235, 0.18); }
 .pin-badge { display: inline-block; font-size: 24rpx; color: #fff; background: var(--brand); border-radius: 8rpx; padding: 4rpx 14rpx; margin-bottom: 10rpx; }
-.paper-t { font-size: 29rpx; font-weight: 600; color: var(--ink); line-height: 1.5; }
+.paper-t { font-size: 30rpx; font-weight: 600; color: var(--ink); line-height: 1.5; }
 .paper-meta { display: flex; align-items: center; gap: 12rpx; margin-top: 10rpx; flex-wrap: wrap; }
 .ptag { font-size: 24rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
 .pmeta { font-size: 24rpx; color: var(--ink-2); }
@@ -351,18 +370,20 @@ export default {
 .pbest.none { color: var(--ink-2); }
 .ppracticed { display: block; font-size: 24rpx; color: var(--ok-strong); margin-top: 6rpx; }
 .ppracticed.done { color: var(--brand-text); font-weight: 600; }
-.paper-btns { display: flex; gap: 16rpx; margin-top: 20rpx; }
-.pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 25rpx; font-weight: 500; }
-.pbtn.main { background: var(--brand); color: #fff; border-color: var(--brand-text); }
+.paper-btns { display: flex; gap: 12rpx; margin-top: 20rpx; }
+/* 一主多次：主按钮实底更宽，次按钮浅底无边框，避免一行四个描边药丸互相抢眼 */
+.pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; background: var(--brand-soft); color: var(--brand-text); border-radius: 999rpx; font-size: 24rpx; font-weight: 500; white-space: nowrap; }
+.pbtn.main { flex: 1.5; background: var(--brand); color: #fff; font-weight: 600; font-size: 26rpx; }
+.more { min-height: 44px; display: flex; align-items: center; justify-content: center; font-size: 26rpx; color: var(--brand-text); }
 .arow { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 12rpx 0; border-bottom: 1rpx solid var(--line); }
 .arow:last-child { border-bottom: none; }
 .arow-l { flex: 1; min-width: 0; margin-right: 16rpx; }
-.arow-t { display: block; font-size: 25rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.arow-t { display: block; font-size: 26rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .arow-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 4rpx; }
 .arow-score { flex-shrink: 0; font-size: 28rpx; font-weight: 700; color: var(--brand-text); }
 .resume { display: flex; align-items: center; gap: 20rpx; border-color: var(--brand); }
 .resume-l { flex: 1; min-width: 0; }
-.resume-t { display: block; font-size: 27rpx; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.resume-t { display: block; font-size: 28rpx; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .resume-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 6rpx; }
 .resume-btns { flex-shrink: 0; display: flex; gap: 12rpx; }
 .rbtn { flex: none; padding: 0 26rpx; }

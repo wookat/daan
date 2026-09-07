@@ -1,19 +1,45 @@
 <navbar title="模考" />
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
+    <view wx:if="{{resume}}" class="card resume" bind:tap="onResume">
+      <view class="rs-main">
+        <text class="rs-t">继续上次模考</text>
+        <text class="rs-s">{{resume.title}} · 已答 {{resume.answered}}/{{resume.total}} 题</text>
+      </view>
+      <text class="rs-go">续考 ›</text>
+    </view>
+
     <view class="hero-mini">
       <text class="hm-deco">📝</text>
       <text class="hm-t">迷你模考</text>
       <text class="hm-s">30 题混合模块 · 交卷即出成绩报告与薄弱考点</text>
       <view class="mh-stats">
         <view class="mh-stat"><text class="mh-n">30</text><text class="mh-k">题量</text></view>
-        <view class="mh-stat"><text class="mh-n">25<text class="mh-u">min</text></text><text class="mh-k">建议用时</text></view>
+        <view class="mh-stat"><text class="mh-n">30<text class="mh-u">min</text></text><text class="mh-k">限时</text></view>
         <view class="mh-stat"><text class="mh-n">5</text><text class="mh-k">覆盖模块</text></view>
       </view>
       <view class="hm-btn" bind:tap="onMini">开始迷你模考 ›</view>
     </view>
 
-    <view class="sec-h"><text class="sec-t"><view class="sec-bar" />真题卷库</text></view>
+    <block wx:if="{{attempts.length}}">
+      <view class="sec-h"><text class="sec-t"><view class="sec-bar" />最近模考</text></view>
+      <scroll-view scroll-x class="att-scroll">
+        <view wx:for="{{attempts}}" wx:key="id" class="att" data-id="{{item.id}}" bind:tap="onReport">
+          <text class="att-score">{{item.scoreText}}<text class="att-u">分</text></text>
+          <text class="att-t">{{item.title}}</text>
+          <text class="att-d">{{item.dateText}} · 看报告 ›</text>
+        </view>
+      </scroll-view>
+    </block>
+
+    <view class="sec-h"><text class="sec-t"><view class="sec-bar" />真题全真模考</text></view>
+    <scroll-view wx:if="{{years.length > 1}}" scroll-x class="chips">
+      <view wx:for="{{years}}" wx:key="k" class="chip {{year === item.k ? 'on' : ''}}" data-k="{{item.k}}" bind:tap="onYear">{{item.label}}</view>
+    </scroll-view>
+    <scroll-view wx:if="{{regions.length > 1}}" scroll-x class="chips">
+      <view wx:for="{{regions}}" wx:key="k" class="chip {{region === item.k ? 'on' : ''}}" data-k="{{item.k}}" bind:tap="onRegion">{{item.label}}</view>
+    </scroll-view>
+
     <view wx:if="{{loading}}" class="card spin">加载中…</view>
     <view wx:if="{{!loading && loadErr && !papers.length}}" class="empty">
       <view class="eico">📶</view>
@@ -23,18 +49,20 @@
     </view>
     <view wx:elif="{{!loading && !papers.length}}" class="empty">
       <view class="eico">📄</view>
-      <text>真题卷搜集中，全真模考将在二期上线</text>
+      <text>{{year || region ? '该筛选下暂无真题卷，换个年份或地区试试' : '真题卷库暂无内容'}}</text>
     </view>
-    <view wx:for="{{papers}}" wx:key="source" class="card prow" data-title="{{item.title || item.source}}" bind:tap="onPaperTap">
+    <view wx:for="{{papers}}" wx:key="id" class="card prow" data-pid="{{item.id}}" bind:tap="onPaperTap">
       <view class="p-badge">
         <text class="pb-y">{{item.yearShort}}</text>
         <text class="pb-k">{{item.regionShort}}</text>
       </view>
       <view class="p-main">
-        <text class="p-t">{{item.title || item.source}}</text>
-        <text class="p-s">{{item.region ? item.region + ' · ' : ''}}{{item.n ? item.n + ' 题' : ''}}</text>
+        <text class="p-t">{{item.title}}</text>
+        <text class="p-s">{{item.sub}}</text>
       </view>
-      <text class="tag tag-gray">二期开放</text>
+      <text wx:if="{{resume && resume.paperId === item.id}}" class="tag tag-warn">续考</text>
+      <text wx:elif="{{item.bestText}}" class="tag tag-ok">最高 {{item.bestText}}</text>
+      <text wx:else class="p-go">开考 ›</text>
     </view>
   </view>
 </scroll-view>

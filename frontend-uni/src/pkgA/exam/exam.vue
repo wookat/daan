@@ -564,7 +564,7 @@ export default {
   margin-left: 16rpx;
 }
 .qimg { width: 100%; border-radius: 12rpx; margin-bottom: 16rpx; background: var(--fill); }
-.opt { display: flex; align-items: center; border: 2rpx solid var(--line); border-radius: 20rpx; padding: 22rpx 24rpx; margin-bottom: 20rpx; font-size: 29rpx; line-height: 1.6; min-height: 44px; box-sizing: border-box; }
+.opt { display: flex; align-items: center; border: 2rpx solid var(--line); border-radius: 20rpx; padding: 22rpx 24rpx; margin-bottom: 20rpx; font-size: 30rpx; line-height: 1.6; min-height: 44px; box-sizing: border-box; }
 .opt.sel { border-color: var(--brand-text); background: var(--brand-soft); }
 .multi-tip { font-size: 24rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 10rpx; padding: 10rpx 16rpx; margin-bottom: 16rpx; }
 .okey { flex-shrink: 0; width: 52rpx; height: 52rpx; line-height: 52rpx; text-align: center; border-radius: 50%; background: var(--soft-bg); color: var(--ink-2); font-weight: 600; font-size: 26rpx; margin-right: 20rpx; border: 1rpx solid var(--line); }
@@ -573,7 +573,7 @@ export default {
 .opt.excl .otext { text-decoration: line-through; }
 .otext { flex: 1; }
 .navrow { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: flex; gap: 16rpx; padding: 20rpx 24rpx calc(20rpx + env(safe-area-inset-bottom)); background: var(--card); border-top: 1rpx solid var(--line); }
-.nbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 27rpx; font-weight: 500; background: var(--card); }
+.nbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 28rpx; font-weight: 500; background: var(--card); }
 .nbtn.acard-btn { flex: 0 0 176rpx; border-color: var(--line); color: var(--ink-2); }
 .nbtn.main { background: var(--brand); color: #fff; }
 .nbtn.dis { opacity: 0.4; }
@@ -589,7 +589,7 @@ export default {
 .dot.mark { background: var(--warn-soft); border-color: #f59e0b; }
 .acard-scroll { max-height: 40vh; }
 .acard-grid { display: flex; flex-wrap: wrap; gap: 20rpx; padding: 8rpx 0 20rpx; }
-.acard-n { width: 80rpx; height: 80rpx; min-width: 40px; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--soft-bg); border: 2rpx solid var(--line); font-size: 27rpx; font-weight: 600; color: var(--ink-2); box-sizing: border-box; }
+.acard-n { width: 80rpx; height: 80rpx; min-width: 40px; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--soft-bg); border: 2rpx solid var(--line); font-size: 28rpx; font-weight: 600; color: var(--ink-2); box-sizing: border-box; }
 .acard-n.done { background: var(--brand); border-color: var(--brand-text); color: #fff; }
 .acard-n.mark { border-color: #f59e0b; }
 .acard-n.cur { box-shadow: 0 0 0 4rpx var(--brand-soft); border-color: var(--brand-text); }

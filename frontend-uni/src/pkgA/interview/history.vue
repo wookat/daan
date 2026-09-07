@@ -99,13 +99,13 @@ export default {
 .tag { background: #e8effe; color: var(--brand-text); font-size: 24rpx; font-weight: 600; border-radius: 8rpx; padding: 4rpx 14rpx; }
 .score { font-size: 30rpx; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
 .score.good { color: #16a34a; }
-.q { font-size: 27rpx; color: var(--ink); line-height: 1.6; }
+.q { font-size: 28rpx; color: var(--ink); line-height: 1.6; }
 .ellip2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .meta { font-size: 24rpx; color: var(--ink-2); margin-top: 12rpx; }
 
 .empty { display: flex; flex-direction: column; align-items: center; gap: 16rpx; padding: 120rpx 0; }
 .empty-ico { font-size: 72rpx; }
-.empty-t { font-size: 27rpx; color: var(--ink-2); }
+.empty-t { font-size: 28rpx; color: var(--ink-2); }
 .retry {
   display: flex;
   align-items: center;

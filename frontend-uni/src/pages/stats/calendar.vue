@@ -153,7 +153,7 @@ export default {
 .ms { margin-top: 24rpx; }
 .ms-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
 .ms-best { font-size: 24rpx; color: var(--ink-2); }
-.ms-cur { font-size: 25rpx; color: var(--ink-1, #1f2430); }
+.ms-cur { font-size: 26rpx; color: var(--ink-1, #1f2430); }
 .ms-n { font-size: 34rpx; font-weight: 800; color: #d97706; }
 .ms-bar { height: 14rpx; background: var(--line); border-radius: 999rpx; margin-top: 14rpx; overflow: hidden; }
 .ms-fill { height: 100%; background: linear-gradient(90deg, #f59e0b, #d97706); border-radius: 999rpx; }

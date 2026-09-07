@@ -214,14 +214,14 @@ export default {
 .d-mark.ok { color: var(--ok-strong, #15803d); }
 .d-mark.bad { color: var(--bad-strong, #b91c1c); }
 .d-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6rpx; }
-.d-q { font-size: 25rpx; color: var(--ink); line-height: 1.6; }
+.d-q { font-size: 26rpx; color: var(--ink); line-height: 1.6; }
 .ellip2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .d-ans { font-size: 24rpx; color: var(--bad-strong, #b91c1c); }
 .d-secs { font-size: 24rpx; color: var(--ink-2); flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .btn-redo { margin-top: 20rpx; background: #2e5bff; color: #fff; border-radius: 999rpx; font-size: 26rpx; font-weight: 600; min-height: 40px; display: flex; align-items: center; justify-content: center; }
 
 .empty { display: flex; flex-direction: column; align-items: center; gap: 16rpx; padding: 120rpx 0; }
-.empty-t { font-size: 27rpx; color: var(--ink-2); }
+.empty-t { font-size: 28rpx; color: var(--ink-2); }
 .retry { display: flex; align-items: center; justify-content: center; min-height: 40px; margin-top: 4rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 .btn-primary { background: #2e5bff; color: #fff; border-radius: 999rpx; font-size: 28rpx; font-weight: 600; min-height: 44px; display: flex; align-items: center; justify-content: center; padding: 0 60rpx; margin-top: 12rpx; }
 

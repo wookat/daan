@@ -121,7 +121,7 @@ export default {
 <style scoped>
 .wrap { padding: 24rpx 32rpx 60rpx; }
 .card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 24rpx 28rpx; margin-bottom: 20rpx; }
-.empty { text-align: center; color: var(--ink-2); font-size: 25rpx; padding: 30rpx 0; }
+.empty { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 30rpx 0; }
 .empty.err { padding: 70rpx 28rpx; }
 .err-t { display: block; font-size: 30rpx; font-weight: 600; color: var(--ink); }
 .err-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 12rpx; margin-bottom: 32rpx; }
@@ -148,7 +148,7 @@ export default {
 .cta { text-align: center; padding: 32rpx 28rpx; }
 .cta-t { display: block; font-size: 32rpx; font-weight: 800; color: var(--ink); }
 .cta-s { display: block; font-size: 24rpx; color: var(--ink-2); margin: 10rpx 0 24rpx; }
-.act-btn { min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; font-size: 29rpx; font-weight: 600; }
+.act-btn { min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; font-size: 30rpx; font-weight: 600; }
 .act-btn.main { background: var(--brand); color: #fff; }
 
 .reg-tip { text-align: center; padding: 20rpx 0; }

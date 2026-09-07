@@ -70,7 +70,7 @@ export default {
 .item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
 .mod { font-size: 24rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 999rpx; padding: 4rpx 18rpx; font-weight: 600; }
 .cnt { font-size: 24rpx; color: var(--ink-2); display: inline-flex; align-items: center; gap: 6rpx; }
-.stem { font-size: 27rpx; color: var(--ink); line-height: 1.6; font-weight: 600; }
+.stem { font-size: 28rpx; color: var(--ink); line-height: 1.6; font-weight: 600; }
 .latest { font-size: 24rpx; color: var(--ink-2); background: var(--bg); border-radius: 12rpx; padding: 12rpx 18rpx; margin-top: 14rpx; line-height: 1.6; }
 .nick { color: var(--ink); font-weight: 600; }
 .time { font-size: 24rpx; color: var(--ink-3); margin-top: 12rpx; }

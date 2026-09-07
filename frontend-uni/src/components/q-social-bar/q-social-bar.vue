@@ -132,7 +132,7 @@ export default {
 .nb { color: #b45309; font-weight: 600; }
 .edit { color: var(--brand-text); margin-left: 4rpx; font-size: 24rpx; display: inline-flex; align-items: center; min-height: 40px; padding: 0 8rpx; margin-top: -10px; margin-bottom: -10px; vertical-align: middle; }
 .note-edit { background: var(--warn-soft); border-radius: 14rpx; padding: 16rpx 18rpx; }
-.note-ta { width: 100%; min-height: 100rpx; font-size: 25rpx; line-height: 1.6; box-sizing: border-box; }
+.note-ta { width: 100%; min-height: 100rpx; font-size: 26rpx; line-height: 1.6; box-sizing: border-box; }
 .note-ops { display: flex; justify-content: flex-end; gap: 34rpx; margin-top: 10rpx; }
 .nop { font-size: 24rpx; color: var(--ink-3); min-height: 40px; display: inline-flex; align-items: center; padding: 0 8rpx; margin: -6px -8rpx; }
 .nop.save { color: var(--brand-text); font-weight: 600; }

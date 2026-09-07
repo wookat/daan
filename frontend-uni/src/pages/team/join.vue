@@ -93,9 +93,9 @@ export default {
 .code { font-size: 56rpx; font-weight: 800; color: var(--brand-text); letter-spacing: 8rpx; margin-bottom: 30rpx; }
 .ok-t { font-size: 34rpx; font-weight: 700; color: var(--ink); margin-bottom: 12rpx; }
 .ok-s { font-size: 24rpx; color: var(--ink-2); margin-bottom: 30rpx; }
-.err { font-size: 27rpx; color: #dc2626; margin-bottom: 26rpx; }
+.err { font-size: 28rpx; color: #dc2626; margin-bottom: 26rpx; }
 
-.act-btn { width: 100%; min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; font-size: 29rpx; font-weight: 600; margin-bottom: 18rpx; box-sizing: border-box; }
+.act-btn { width: 100%; min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; font-size: 30rpx; font-weight: 600; margin-bottom: 18rpx; box-sizing: border-box; }
 .act-btn.main { background: var(--brand); color: #fff; }
 .act-btn.sub { background: var(--brand-soft); color: var(--brand-text); }
 

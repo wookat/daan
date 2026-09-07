@@ -942,7 +942,7 @@ export default {
 .cam-corner.tr { top: 18rpx; right: 18rpx; border-left: none; border-bottom: none; border-radius: 0 8rpx 0 0; }
 .cam-corner.bl { bottom: 18rpx; left: 18rpx; border-right: none; border-top: none; border-radius: 0 0 0 8rpx; }
 .cam-corner.br { bottom: 18rpx; right: 18rpx; border-left: none; border-top: none; border-radius: 0 0 8rpx 0; }
-.cam-tip { font-size: 27rpx; font-weight: 600; color: #e5e9f5; }
+.cam-tip { font-size: 28rpx; font-weight: 600; color: #e5e9f5; }
 .cam-tip2 { font-size: 24rpx; color: #8fa3d9; }
 .cam-modes { display: flex; justify-content: center; gap: 14rpx; margin: 24rpx 0 10rpx; }
 .cam-mode { font-size: 24rpx; color: #b9c4e2; min-height: 44px; display: inline-flex; align-items: center; padding: 0 20rpx; border-radius: 999rpx; }
@@ -958,7 +958,7 @@ export default {
 .msg { display: flex; margin-bottom: 20rpx; }
 .msg.user { justify-content: flex-end; }
 .msg.ai { justify-content: flex-start; }
-.bubble { max-width: 86%; border-radius: 28rpx; padding: 20rpx 26rpx; font-size: 27rpx; line-height: 1.7; box-sizing: border-box; }
+.bubble { max-width: 86%; border-radius: 28rpx; padding: 20rpx 26rpx; font-size: 28rpx; line-height: 1.7; box-sizing: border-box; }
 .ub { background: var(--brand); color: #fff; border-bottom-right-radius: 8rpx; }
 .ub-t { white-space: pre-wrap; word-break: break-all; }
 .ub-img { width: 320rpx; border-radius: 14rpx; display: block; }
@@ -1006,7 +1006,7 @@ export default {
 .ans-chip { flex: 1; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; font-size: 28rpx; font-weight: 600; color: var(--ink-2); background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 16rpx; }
 .ans-chip.on { color: var(--brand-text); background: var(--brand-soft); border-color: var(--brand-text); }
 .preview { width: 100%; border-radius: 18rpx; margin-top: 8rpx; }
-.spin { color: var(--ink-2); font-size: 25rpx; }
+.spin { color: var(--ink-2); font-size: 26rpx; }
 .raterow { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; background: var(--soft-bg); border-radius: 14rpx; padding: 16rpx 22rpx; margin-top: 16rpx; flex-wrap: wrap; }
 .rate-q { font-size: 24rpx; color: var(--ink-2); }
 .rate-btns { display: flex; gap: 14rpx; }
@@ -1016,7 +1016,7 @@ export default {
 .ans-big { flex-shrink: 0; min-width: 88rpx; height: 88rpx; padding: 0 14rpx; border-radius: 20rpx; background: var(--brand); color: #fff; font-size: 44rpx; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 6rpx 14rpx rgba(46, 91, 255, 0.3); }
 .ans-r { flex: 1; min-width: 0; }
 .ans-method { display: inline-block; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 24rpx; font-weight: 600; padding: 4rpx 18rpx; margin-bottom: 8rpx; }
-.ans-brief { display: block; font-size: 25rpx; color: var(--ink); line-height: 1.5; }
+.ans-brief { display: block; font-size: 26rpx; color: var(--ink); line-height: 1.5; }
 .err { color: var(--bad); background: var(--bad-soft); font-size: 26rpx; }
 .tags { margin-bottom: 10rpx; }
 .tag { display: inline-block; background: var(--brand-soft); color: var(--brand-text); border-radius: 999rpx; padding: 6rpx 20rpx; font-size: 24rpx; margin-right: 10rpx; }
@@ -1026,7 +1026,7 @@ export default {
 .rec-row:last-of-type { border-bottom: none; }
 .rec-ans { width: 72rpx; height: 72rpx; border-radius: 16rpx; background: var(--brand-soft); color: var(--brand-text); font-size: 32rpx; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .rec-main { flex: 1; min-width: 0; }
-.rec-brief { display: block; font-size: 25rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rec-brief { display: block; font-size: 26rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rec-meta { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 4rpx; }
 .rec-del { flex-shrink: 0; font-size: 24rpx; color: var(--bad); min-height: 44px; display: inline-flex; align-items: center; padding: 0 8rpx; }
 .rec-empty { padding: 10rpx 0 6rpx; }

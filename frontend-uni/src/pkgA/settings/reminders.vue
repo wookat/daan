@@ -225,10 +225,10 @@ export default {
 .grow { flex: 1; min-width: 0; }
 .nm { display: block; font-size: 28rpx; font-weight: 600; color: var(--ink); }
 .sub { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 4rpx; }
-.time-v { font-size: 27rpx; color: var(--brand-text); font-weight: 600; min-height: 40px; display: inline-flex; align-items: center; padding-left: 24rpx; }
+.time-v { font-size: 28rpx; color: var(--brand-text); font-weight: 600; min-height: 40px; display: inline-flex; align-items: center; padding-left: 24rpx; }
 
 .warn-card { padding: 26rpx 30rpx; background: var(--warn-soft); }
-.warn-t { display: flex; align-items: center; gap: 8rpx; font-size: 27rpx; font-weight: 600; color: var(--warn); }
+.warn-t { display: flex; align-items: center; gap: 8rpx; font-size: 28rpx; font-weight: 600; color: var(--warn); }
 .warn-s { display: block; font-size: 24rpx; color: #b45309; margin-top: 8rpx; line-height: 1.6; }
 .warn-btn { margin-top: 18rpx; min-height: 44px; display: flex; align-items: center; justify-content: center; background: var(--warn); color: #fff; border-radius: 999rpx; font-size: 26rpx; font-weight: 600; }
 
@@ -236,7 +236,7 @@ export default {
 .push { background: var(--card); border-radius: 24rpx; box-shadow: 0 6rpx 20rpx rgba(23, 24, 28, 0.08); padding: 24rpx 28rpx; margin-bottom: 20rpx; }
 .push .hd { display: flex; align-items: center; gap: 12rpx; font-size: 24rpx; color: var(--ink-2); margin-bottom: 10rpx; }
 .appico { width: 36rpx; height: 36rpx; border-radius: 10rpx; background: linear-gradient(135deg, #5b8af8, #2e5bff); color: #fff; font-size: 24rpx; font-weight: 800; display: flex; align-items: center; justify-content: center; }
-.tt { display: block; font-size: 27rpx; font-weight: 700; color: var(--ink); }
+.tt { display: block; font-size: 28rpx; font-weight: 700; color: var(--ink); }
 .bd { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 6rpx; line-height: 1.6; }
 
 .tip { background: var(--brand-soft); box-shadow: none; padding: 22rpx 28rpx; }
