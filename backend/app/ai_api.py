@@ -1,4 +1,5 @@
 """AI 能力面：拍照/文字解析、追问、教练建议、错题分析（LLM 调用统一友好降级）。"""
+import asyncio
 import base64
 import json
 import time
@@ -13,6 +14,18 @@ router = APIRouter()
 
 # 推理模型 reasoning 阶段向客户端发进度心跳的最小间隔（秒）
 THINKING_TICK_SEC = sse.THINKING_TICK_SEC
+
+# 错题分析同 uid 飞行中合并：同一 uid 并发到达的请求共用一次 LLM 调用，结束即移除（成功/失败都不缓存）
+_ANALYSIS_INFLIGHT: dict[str, asyncio.Future] = {}
+
+
+async def _shared_mistake_analysis(uid: str, prompt: str) -> str:
+    fut = _ANALYSIS_INFLIGHT.get(uid)
+    if fut is None:
+        fut = asyncio.ensure_future(llm.chat([{"role": "user", "content": prompt}], temperature=0.4, max_tokens=900))
+        _ANALYSIS_INFLIGHT[uid] = fut
+        fut.add_done_callback(lambda _f: _ANALYSIS_INFLIGHT.pop(uid, None))
+    return await asyncio.shield(fut)
 
 
 @router.post("/api/explain")
@@ -326,7 +339,7 @@ async def api_mistake_analysis(body: dict, request: Request, x_access_code: str 
         + json.dumps(stats, ensure_ascii=False)[:3000]
     )
     try:
-        analysis = await llm.chat([{"role": "user", "content": prompt}], temperature=0.4, max_tokens=900)
+        analysis = await _shared_mistake_analysis(uid[:64], prompt)
     except Exception as e:
         raise HTTPException(502, friendly_ai_err(e)) from e
     return {"analysis": analysis, "stats": stats}
