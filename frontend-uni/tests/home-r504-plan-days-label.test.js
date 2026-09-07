@@ -39,7 +39,7 @@ describe('home.vue 今日计划头走 planDaysLabel（源锁）', () => {
   });
 
   it('computed planDaysText 调 planDaysLabel(days_left, phase_name)', () => {
-    expect(src).toMatch(/import \{ planDaysLabel \} from '\.\.\/\.\.\/plan-days-label\.js'/);
+    expect(src).toMatch(/import \{ planDaysLabel[^}]*\} from '\.\.\/\.\.\/plan-days-label\.js'/);
     expect(src).toMatch(/planDaysText\(\) \{\s*return this\.planToday \? planDaysLabel\(this\.planToday\.days_left, this\.planToday\.phase_name\) : '';/);
   });
 });

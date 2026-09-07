@@ -427,7 +427,7 @@
               :before-confirm="beforeExamDate"
               @confirm="onExamDate"
             >
-              <view class="pf-date" :class="{ empty: !pf.exam_date }">{{ pf.exam_date || '选择日期 ›' }}</view>
+              <view class="pf-date" :class="{ empty: !pf.exam_date, past: pfDatePast }">{{ pfDateText }}</view>
             </wd-datetime-picker>
           </view>
         </template>
@@ -493,7 +493,7 @@ import { parsePendingPractice, parseRemotePractice } from '../../practice-progre
 import { parseReviewSnap } from '../../review-snap.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
-import { planDaysLabel } from '../../plan-days-label.js';
+import { planDaysLabel, isExamDatePast, examDateFieldText } from '../../plan-days-label.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -559,6 +559,12 @@ export default {
   computed: {
     planDaysText() {
       return this.planToday ? planDaysLabel(this.planToday.days_left, this.planToday.phase_name) : '';
+    },
+    pfDatePast() {
+      return isExamDatePast(this.pf.exam_date, this.fmtDateStr(Date.now()));
+    },
+    pfDateText() {
+      return examDateFieldText(this.pf.exam_date, this.fmtDateStr(Date.now()));
     },
     showLanding() {
       if (this.landingHide) return false;
@@ -1242,6 +1248,10 @@ export default {
         uni.showToast({ title: '请先选择考试日期', icon: 'none' });
         return;
       }
+      if (this.setupStep === 1 && this.pfDatePast) {
+        uni.showToast({ title: '考试日期已过，请重新选择', icon: 'none' });
+        return;
+      }
       if (this.setupStep < 3) {
         this.setupStep++;
         return;
@@ -1437,6 +1447,7 @@ export default {
 .pf-input { flex: 1; min-height: 44px; border: 1rpx solid var(--line); border-radius: 12rpx; padding: 0 20rpx; font-size: 26rpx; background: var(--fill); box-sizing: border-box; }
 .pf-date { min-height: 44px; display: inline-flex; align-items: center; border: 1rpx solid var(--line); border-radius: 12rpx; padding: 0 24rpx; font-size: 26rpx; color: var(--ink); background: var(--fill); box-sizing: border-box; }
 .pf-date.empty { color: var(--ink-3); }
+.pf-date.past { color: var(--bad-strong); border-color: var(--bad-strong); }
 .pf-summary { margin-top: 8rpx; font-size: 24rpx; color: var(--ink-2); background: var(--brand-soft); border-radius: 12rpx; padding: 18rpx 22rpx; }
 .pf-back { margin-top: 16rpx; text-align: center; font-size: 24rpx; color: var(--ink-3); min-height: 44px; display: flex; align-items: center; justify-content: center; }
 
