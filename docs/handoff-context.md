@@ -2343,3 +2343,10 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 到期项 04:52Z 无增量：probe=0 33/1、growth 20/4、error_reason 7 / ≥09-11 0、push_subs 0、weekly 2、exam_attempts probe=0 1/64、healthy 0 重启；(c) R471b 容器起后 54 请求全部本机出口 IP（部署 curl / Lighthouse / 本轮 Playwright），`/assets/*` 404 0、小程序 UA 0、5xx 0，monitor 仍只有 R471 那 1 条。宿主 92% / 4.2 G、load 10、mem_avail 281 MB，守护 prune 04:30/04:45Z 各一次。
 - 如实：「0 同类回归」是静态判定 + 4 页一手，其余 29 处依赖各轮当时量测未重截；inbox 未走到；375 为 360 仿真；无录屏；0 代码故本轮无新门。
 - 取证：`docs/iter/round-3/r472-display-change-layout-regression-sweep.md`。下次 SOP-10 审计 ~R480。
+
+## R473（`inbox` 失败态换路径补齐 17/17 页 `.retry` 生产一手；SOP-10 §4 硬指标（对比度 / 横向溢出 / pageerror）R165 以来首次全路由复扫 25 路由 × 2 视口 0 命中；0 代码、不发版，生产仍 `6e82179`）
+- inbox 走不到失败态的原因：`onShow()` 先 `getToken()`（`uni.getStorageSync('authToken')` = H5 `localStorage.authToken`），无 token 直接落登录分支不调 `load()`。解法 `context.add_init_script` 写假 `authToken` 再 `route('**/api/**')` 全 abort → `loadErr='request:fail'` → `.retry` 渲染。生产 375/1440：h=40、flex、父 `.empty` flex-column、前一兄弟 `empty-t` bottom < top（独占行）、±19 命中 ±21 不命中；截图 `r473_inbox_375.png`。假 token 不产生写入（全 abort；`readCommentInbox` 只在 `d.unread` 时调）。
+- 硬指标复扫：axe `color-contrast`+`link-in-text-block` 25 路由 × 375/1440 **0 违例**；`documentElement.scrollWidth==clientWidth` 50/50；元素级越出视口 7 组全为非缺陷（exam/list `.fchip` 在 `uni-scroll-view overflow-x:auto` 横滚行；reminders×4 / discuss×2 / ask×1 是 uni resize-sensor `visibility:hidden` 探测 div、父 `overflow:hidden`）；pageerror 0。未扫 exam/exam、contest-report、share/*、poster、offline、team/join。
+- 到期项 04:59Z 无增量：probe=0 33/1、growth 20/4、error_reason 7 / ≥09-11 0、push_subs 0、weekly 2、exam_attempts probe=0 1/64、healthy 0 重启；(c) R471b 容器起后 90 请求（增量全是 R472/R473 本机 Playwright，51 带探针头）、`/assets/*` 404 0、小程序 UA 0、5xx 0、monitor 仍 1 条。宿主 93% / 3.7 G、load 2.85、mem_avail 358 MB，守护 prune 04:30/04:45Z。
+- 如实：375 为 360 仿真；inbox 有消息态 / 已读回写未走到；axe 只跑两规则、只覆盖首屏渲染态（弹层 / 深色未展开）；越出判定按 `visibility:hidden` + 祖先 overflow、未逐个截图；0 代码无新门。
+- 决策：字号 / 热区 / 对比度 / 溢出四条 UI 硬指标线 R464–R473 已扫平，**R474 起转功能深度维度**（先只读盘点模考报告用时 / 统计锚点 / 目标分 / AI 出口在真实用户回包里的触达率）。取证：`docs/iter/round-3/r473-inbox-retry-auth-inject-contrast-overflow-sweep.md`。下次 SOP-10 审计 ~R480。
