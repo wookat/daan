@@ -17,3 +17,14 @@ describe('practice.vue 时政题号不入库', () => {
     expect(SRC).not.toMatch(/qid: q\.id \|\| null/);
   });
 });
+
+// R484：AI 详解深链 / 「回看 AI 详解」按 qid 匹配，时政 id 同样会撞到同号行测题——
+// ask 页会把该 qid 写进 rec.qid → 「查看原题」跳到别的题、「存入错题本」以 LLM 判出的行测模块落库绕过服务端 foreign_module_qid 兜底。
+describe('practice.vue 时政题号不进 AI 详解深链', () => {
+  it('deepExplain 的 redoQid 带 _sz 守卫', () => {
+    expect(SRC).toMatch(/const qid = q\._sz \? 0 : askQid\(q\.id\);/);
+  });
+  it('curAskSeen 对时政题不按 id 匹配历史讲解', () => {
+    expect(SRC).toMatch(/findAskSid\(.*this\.cur && !this\.cur\._sz && this\.cur\.id\);/);
+  });
+});

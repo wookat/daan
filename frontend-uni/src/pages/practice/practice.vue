@@ -486,7 +486,7 @@ export default {
     },
     curAskSeen() {
       void this.askSeenTick;
-      return findAskSid(uni.getStorageSync('askSessions'), uni.getStorageSync('askCurSession'), this.cur && this.cur.id);
+      return findAskSid(uni.getStorageSync('askSessions'), uni.getStorageSync('askCurSession'), this.cur && !this.cur._sz && this.cur.id);
     },
     moduleBreakdown() {
       const map = {};
@@ -2309,7 +2309,7 @@ export default {
       const text = askPrefill(q.question, q.options);
       if (!text) return;
       uni.setStorageSync('redoQuestion', text);
-      const qid = askQid(q.id);
+      const qid = q._sz ? 0 : askQid(q.id);
       if (qid) uni.setStorageSync('redoQid', qid);
       else uni.removeStorageSync('redoQid');
       const ans = askAnswerLetter(this.picked);
