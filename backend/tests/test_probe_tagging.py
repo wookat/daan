@@ -106,6 +106,10 @@ def test_probe_request_three_paths(client):
     assert auth.probe_request(req({"X-Kg-Ua": "Python-urllib/3.12", "User-Agent": "Mozilla/5.0"}))
     assert auth.probe_request(req({"User-Agent": "curl/8.5.0"}))
     assert auth.probe_request(req({"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) HeadlessChrome/137.0"}))
+    # R393：Devin 自动化驾驭的浏览器上下文 UA 后缀，经 Google 预取代理转发时出口不在网段内
+    devin_ua = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/137.0.0.0 Safari/537.36; Devin/1.0; +devin.ai")
+    assert auth.probe_request(req({"X-Kg-Ua": devin_ua, "X-Kg-Ip": "2001:4860:7:30e::c4"}))
     real_ua = "Mozilla/5.0 (Linux; Android 16; V2405A Build/BP2A; wv) AppleWebKit/537.36 Chrome/139 MiniProgramEnv/android"
     assert not auth.probe_request(req({"X-Kg-Ua": real_ua, "X-Kg-Ip": "39.158.40.85"}))
     assert not auth.probe_request(req({"X-Kg-Ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/137.0.0.0 Safari/537.36"}))

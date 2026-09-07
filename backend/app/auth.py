@@ -104,10 +104,11 @@ def client_ua(request: Request) -> str:
 
 
 # 自动化 UA 签名：脚本/无头浏览器不会是 H5/小程序真人。只收真人浏览器绝不会带的标识，
-# 桌面 Linux Chrome、iPhone 模拟 UA 等真人也可能有的不在此列。
+# 桌面 Linux Chrome、iPhone 模拟 UA 等真人也可能有的不在此列。`devin/` 是 Devin 自动化
+# 驾驭的浏览器上下文自带的 UA 后缀（GUI 走查），与 scripts/access_log_report.BOT_GENERIC 同步。
 PROBE_UA_MARKERS = (
     "python-urllib", "python-requests", "curl/", "wget/", "headlesschrome",
-    "playwright", "httpx/", "go-http-client",
+    "playwright", "httpx/", "go-http-client", "devin/",
 )
 
 

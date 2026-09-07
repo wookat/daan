@@ -5,6 +5,88 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R399 AI 生成类接口主通道优先 生产复验 走查新经验（testing agent）
+
+- **R399 后 `mistakes/analysis`/`ai/coach` 走 `llm.chat()`，成功路径零日志**：容器日志只剩 `[slow-req] Ns POST /api/mistakes/analysis` + access 200 行；`[llm] rescue … failed … fallback` 只会由 `chat_fast()` 调用方（题目抽取/申论）产生，对错题分析 grep 到 0 行是预期。`chat()` 主通道 5xx/额度码回落 rescue **也无日志**，所以「耗时偏长（如 53 s）是主通道慢还是静默回落」无法用日志区分，报告里要标成推断；建议下轮在 `chat()` 回落处加 warning 再复验。
+- **结尾完整性口径**：`JSON.parse(__ai[n].resp).analysis` 末 40 字以 `。！？` 结束、不停在列表序号（R398 126 字止于「1」即截断形态）；同时比对 `uni-rich-text.innerText.trim().slice(-30)`。主通道 `finish_reason=length` 时日志会有 `[llm] finish_reason=length, content N chars returned as-is`，出现要原文记录。
+- **耗时分布**：R399 三次真实请求 14.7 / 34.6 / 53.2 s，方差大，不要把单次超出「18–35 s」判 FAIL，记录事实并与 slow-req 秒数对应即可。
+- `/api/ai/coach` 前端**没有入口**（`frontend-uni/src` grep `ai/coach` 0 命中），只能记「未触达」；不要用 curl 冒充 UI。
+- 宿主 `/tmp` 可能有 lead 的同轮取证脚本（`r399_probe.py`/`r399_rescue_probe.py`/`r399_srs3.py`），收尾只删自己命名带 `_ta` 的副本（如 `r399_audit_ta.py`），先 `ls -la` 甄别。
+- `r398_killvw.py` 会连带结束调用它的 shell 链（后续 `&&` 命令不执行），要单独一条命令跑，再另起命令启新 holder。
+- 浏览器截图坐标空间就是 1024×768 的截图坐标（不用 ×2），超出范围的点击会被静默丢弃——点「生成」前后用 `__ai.length` 核对是否真发出请求。
+
+## R398 错题本弹层让出 TabBar + AI 失败态可重试 生产复验 走查新经验（testing agent）
+
+- **375 弹层几何口径**：H5 `.uni-tabbar` fixed top=762（812−50）、z 998；`.mask` z 99。断言 `document.querySelector('.mask').getBoundingClientRect().bottom===762`（未修前 812），底部按钮 `rect.bottom<=762` 且 `document.elementFromPoint(cx,cy).closest('.sheet-done'|'.sheet-export'|'.rf-alt')` 非空（未修前返回 tabbar 的 IMG）。1440 `.mask` 是 `[288,0,1345,900]`、computed `bottom:0px`——左 288 是桌面侧栏布局（既有），别当劣化。
+- **强化卡只在 `/api/reinforce/suggest` 返回 `picked` 时出现**（需今日错题）；复习流可能比造出的错题多（到期/加练/重排），用 `/tmp/cdp174/r398_review.py`（按 `rItems/rIdx/reviewing` 找 Vue 组件后 CDP 点选项）做完到庆祝 sheet；别用坐标脚本盲点。
+- **本机拦截制造 AI 502**：`/tmp/cdp174/r398_intercept.py`（`Fetch.enable` 匹配 `*mistakes/analysis*` → `Fetch.fulfillRequest` 502 `{"detail":"AI 未返回内容，请稍后再试"}`，头 `X-Kg-Intercepted`），请求**不到达生产**；先做真实成功→F5（清 `aiHtml` 短路）→装 `aihook.js`→启拦截→点生成→点重试（`__ai.length` +1）→按 PID kill 拦截器→再点重试等真实 200。dry-run 用 `/api/r398probe`（拦截时 502，放行后真实 404，会在容器日志留 404 行，报告里注明）。`window.__bk`（Vue 组件引用）F5 后失效要重找。
+- **`__hdr`/`__cerr` 是每文档钩子**：地址栏深链、F5 都会清零，导出 `/api` 状态要在每次跨文档导航前 `cdp.py eval` 存文件；服务端 5xx 以容器日志直方图 `grep -oE '" [0-9]{3} ' | sort | uniq -c` 兜底。
+- **R397 之后 `llm.py` 回落有日志了**：`[llm] rescue kimi-k3 failed (EmptyReply: …), fallback to deepseek-…`，可与 `[slow-req] 44s POST /api/mistakes/analysis` 行按时间对应，证明回落发生（回落次 ≈45 s，直出 ≈23–34 s）。
+- 卷库路由是 `#/pages/exam/list`（不是 `exam/papers`）；地址栏带 `?r398=uid` 只是给 `r391usr.py prep` 用的标记，不会切 uid。
+- 收尾杀 holder：`r398_killvw.py`（ps 按 `holdvw.py|r398_intercept.py` 匹配 + 排除自身 PID），`kill $(ps … | awk)` 循环里 `ps -eo pid,args | grep -c` 会把 grep 自己算进去，用 `grep "[r]398_intercept"` 写法。
+
+## R397 AI 错题分析（`POST /api/mistakes/analysis`）空 200 修复 生产复验 走查新经验（testing agent）
+
+- **AI 入口卡有门槛**：`book.vue` `v-if="tab!=='fav' && todoItems.length>=3"`，每个测试 uid 至少要造 **3 条待掌握错题**才会出现「AI 错题分析 · 生成」卡；最快是深链 `#/pages/practice/practice?qid=264672` 后用 `r396prac.py 1,2,3 3` 连错 3 题（同时顺带覆盖 R396 隔离题回落 hs 路径）。
+- **抓 AI 响应用 XHR 钩子而不是 `__hdr`**：`/tmp/cdp174/aihook.js` 在页面上下文 monkeypatch `XMLHttpRequest.open/send`，对 `/mistakes/analysis` 记 `iso0/iso1/ms/status/responseText` 到 `window.__ai`；同文档内 tab 切换（hash 路由）钩子仍在，但跨文档导航（改地址栏/F5）会丢，要在进入错题本页前、同一文档里装。判定：`JSON.parse(resp).analysis.trim().length>0`；旧空 200 会让前端显示「分析失败，请稍后重试」（无冒号），新 502 路径显示「分析失败：<detail>」（有冒号）——凭冒号区分空 200 与 502。
+- **服务端只有 access 行 + `[slow-req]`**：`llm.py` 的 `EmptyReply`/回落无日志，`grep EmptyReply` 必为 0；是否回落主通道只能由耗时推断（R397 实测 rescue 直出 ≈30 s，疑似回落 ≈52 s；R396 空 200 时 25–31 s）。`grep 502` 会命中 `/api/health` 行里的端口/时间片段，要看状态列而不是行数。
+- **限流 10 次/300 s/uid**：每 uid 只触发 1 次即可；两视口用两个 uid。前端 `timeout: 420000`，30–60 s 不会超时；加载文案「约需 30-60 秒」。
+- **收尾别用 `pkill -f holdvw.py` / `pgrep -af holdvw` 直接在 bash -c 里跑**：模式会匹配到当前 bash 自身把 shell 杀掉（exec 返回 -1）。用 `/tmp/cdp174/r397_teardown.py`（按 PID kill python holder、恢复 LS、`clearDeviceMetricsOverride`、导航回首页）。
+- `hold_restart.sh W H 1` 的第三个参数要写 `true` 才是 mobile（脚本判 `== 'true'`），`1` 会得到 `mobile=False`。
+- 审计脚本按轮次复制：`sed "s/test-r396c-%/test-r397-%/" /tmp/r396c_audit.py > /tmp/r397_audit.py`，末尾追加 `questions active (disabled=0)` 计数（预期 109371 / 总 156792）。
+
+## R396c 读取层回落 hs（`db.list_mistakes` / `db.due_reviews`）生产复验 走查新经验（testing agent）
+
+- **读取层修复要用「DB raw vs API」对照证明**：前端快照仍写 `q.explanation||''` 时，`mistakes.explanation` raw `length` 应仍为 0，而 `/api/mistakes` / `/api/review` 返回 hs（264672 → 121 字）。审计脚本 ro 模式打印 `length(explanation),substr(explanation,1,40)`，两者不一致才说明修复真的在读取层；同时对照一条 base 非空的快照（264413 79 字「从9个分项中选6项…」）确认 `eq_base:true eq_hs:false` 不被覆盖；断言响应文本 `/q_hs/.test(txt)===false`。
+- **到期复习接口是 `GET /api/review?uid=`**（`study_api.py` `api_review_due`），不是 `/api/review/due`（404，会污染容器日志 404 直方图——报告里要注明是探针）。要在进入复习、答题之前取样，答完后该题 `next_review` 后移，due 列表会变空。
+- **深链 `#/pages/practice/practice?qid=N` 对 `disabled=1` 的题会静默跳过**、落到默认模块包（例：236202「花生壳：核桃仁」为 disabled）。构造"无 base 无 hs"边界前先查 `/api/question/{id}` 的 `disabled`；生产 `disabled=0` 且两解析均空的题目数为 0，该边界在生产无法经 UI 构造。
+- 375 卡片越界判定：`right>375` 的节点若全部是 `visibility:hidden`、`top≈-511` 的 400 px 测量 div（uni rich-text/textarea 影子节点），不算溢出；以 `documentElement.scrollWidth==375` + 卡片 `.card` right ≤ 375 为准。
+- `hold_restart.sh` 的 `pgrep -f "^python3 -u …holdvw.py"` 在 pyenv 下匹配不到（cmdline 是完整路径），会残留多个 holder；收尾用 `pgrep -af holdvw.py` 按 PID kill 再 `clearDeviceMetricsOverride`。
+
+## R396b 「解析串题」可逆隔离（`explanation_quarantine`）生产复验 走查新经验（testing agent）
+
+- **解析来源要按路径分别验证**：交卷路径快照（`exam_api.py` `explanation or hs_explanation`）与试卷报告 / 练习页（读 `hs_explanation`）在隔离后都能显示 hs；但**练习路径**写入 `mistakes.explanation` 用的是 `q.explanation||''`，且 `db.list_mistakes` 不 JOIN `questions.hs_explanation` → 隔离题经练习页答错进错题本后，卡片「参考解析」与复习详解为空（R396b 复现 264672，`/api/mistakes` `explanation:""`）。验证隔离类改动时务必走一次「练习页答错隔离题 → 错题卡展开 → 复习详解」的对抗路径，别只走交卷路径。
+- **练习页解析行口径**：「花生十三方法解析」行 = `cur.hs_explanation`，「解析」行 = `cur.explanation`（未被 hs 包含时才显示）。隔离题应只剩前者；保留 base 的题（如 264413）两行都在。检查 DOM 用 `[...document.querySelectorAll('uni-text,uni-view')].map(e=>e.innerText.trim())` 过滤 `==='解析'||==='花生十三方法解析'`，正则写在 `.js` 文件里用 `c.eval(open(f).read())`，避免 shell 转义把 `/…/` 弄坏（`Invalid regular expression: missing /`）。
+- **375 模考页选项点击会自动跳下一题**：`r396exam.py` 那种「点选项 + 点下一题」在 375 会双步跳题（偶数位置全漏答）；用 `/tmp/cdp174/r396b_fill375.py 'pos:L,…'`：先用「上一题/下一题」原生按钮把 `__ex.idx` 导航到目标位置再点一次选项。
+- **375 复习流不要用坐标脚本盲点**：`r396b_review375.py` 一旦选项识别失败会点到 tabbar（`AI问答` 在 x≈120,y≈590）把页面切走，复习会话虽保留（再进错题本从 `复习 7/10` 续），但录屏里很混乱。375 复习卡 A/B/C/D 按钮在 y≈300–400、`下一题` 在 y≈541（滚到底后），用 computer 工具逐题点更稳；复习会在答错题后追加 2 道「加练同类」（`x/10` → `x/13`）。
+- **DB 审计口径加 `length(explanation)`**：`r396b_audit.py ro` 对每条 mistakes 打印 `source,length(explanation),substr(explanation,1,40)`，可直接佐证交卷路径快照 = hs（79–181 字）而练习路径隔离题 = 0；同时打印 `explanation_quarantine` 行数与卷 24 `expl_null/hs_nonempty/quarantined` 确认清理没动隔离表。
+- **API 绕缓存**：`/api/question/{id}?v=rand` + `X-Kg-Probe:1` 均回 `cf-cache-status: DYNAMIC` 无 `age`，响应体在 `item` 下，题干字段是 `question`（不是 `stem`）。
+- 已知 R396 P1 在 6b0cedf 仍在（不影响本轮结论）：375 强化卡「下次再说」rect 767–792 在 tabbar 762–812 下；`/api/mistakes` `source:'exam'` 项 `paper:null`；AI 分析 30 s 后 200 空体 → 「分析失败」被 tabbar 盖住。复习快照复活 375 未复现（`/api/review/cur` 返回 `{}`）。
+
+## R396 错题本次级屏 UX 走查（生产、无新代码）新经验（testing agent）
+
+- **375 下 tabbar 会盖住所有底部 sheet**：uni tabbar `position:fixed; z-index:998`，页面内 `.mask` z-index 100，任何 bottom sheet 的最后 50 px（762–812）都在 tabbar 下面。量化口径：目标控件 `getBoundingClientRect()` + `document.elementFromPoint(cx,cy)`，返回 tabbar 的 `IMG/.uni-tabbar__bd` 即"不可点"。可滚动 sheet（如筛选 sheet `overflow:auto`）滚到底能点到；不可滚动 sheet（复习完成强化卡的「下次再说」、AI 分析失败文案）会被完全遮住——这是 UX 缺陷不是测试问题，报告时标视口。
+- **题库解析错位是可能的 P0**：错题卡展开/复习详解看到解析与题干不搭时，别当 UI 问题，取 `/api/exam/papers/{pid}` 的 `question_ids`，逐题 `GET /api/question/{id}` 对比 `question_type`/题干 与 `explanation` 首句题型关键词（图形/六面体/定义/类比/削弱），一卷 17 题一次脚本即可定位（R396 卷 24 `2022 安徽` 13/17 错位）。
+- **复习快照"复活"是时序相关**：`exitReview → clearReviewSnap` 会清 timer，但庆祝弹层期间仍可能再 `saveReviewSnap`（1.5 s 延迟 POST `/api/review/cur`），完成后后退再进错题本会自动进入 `复习 2/2`。取证用组件 `reviewing/rIdx/rItems.length` + `GET /api/review/cur?uid=` 的 `snap.rIdx/ts`；同一步骤 375 可能不复现，报告写"非必现 + 触发序列"。
+- **模考错题无 `paper` 字段**：`/api/mistakes` 中 `source:'exam'` 的项 `paper:null`，只有练习里做到的真题才有 `paper:{pid…}`；筛选 sheet「试卷」/卷源徽标/「练本卷」对交卷路径不成立，验证按卷功能要用练习路径造数据，否则会误判为"筛选坏了"。
+- **AI 错题分析可能 200 空体**：`POST /api/mistakes/analysis` 25–30 s 后 200 但 `analysis` 空，前端渲染「分析失败，请稍后重试」且无重试；容器日志只有 `[slow-req]` 无 Traceback。在 `__hdr` 钩子里按 url 过滤等待，`timeout 420 s` 不要用固定 sleep。
+- **375 uni-input 用 xdotool 打中文不生效**：`type` 动作 Chinese 文本对 `.searchinput input` 无效且 `activeElement` 仍是 BODY；用 CDP `Input.insertText` 前先 `input.focus()`（`Runtime.evaluate`），再原生截图看结果。搜索结果在首屏之下需滚动才能看到。
+- **F5 会清空页面钩子数组**：`window.__hdr/__cerr` 随刷新丢失（holdhook 会重装钩子但数组从零开始），做「刷新后筛选保留」断言前先把当前段导出到 `/tmp/*_segmentN.json`，报告按段汇报。
+- **批量模式空列表陷阱**：批量操作把当前 tab/筛选列表清空后，seg 行的「完成/批量」按钮消失，批量条仍在，DOM 里没有退出控件；测试时靠清筛选 chip 或切 tab 恢复，报告记 P2。
+- **审计脚本要包含 `review_cur.uid`**：`pragma table_info` 枚举 39 列会自动带上 `review_cur/ask_cur/practice_progress/exam_progress`，清理后服务端复习快照一并清掉；R396 一轮双 uid 产生 175 行（mistakes 33 / answer_log 64 / exam_attempts 2 / review_log 47 / growth_events 29）。
+- 复位顺序不变：LS 恢复 → kill holdhook/holdvw → `setDeviceMetricsOverride(mobile=False)` + `clearDeviceMetricsOverride`（`innerWidth` 回 1600）；PDF 下载会留在 `~/Downloads`（`错题重练卷 <日期>.pdf`），如需可删。
+
+## R394 百度自适应标注（SSR/H5 壳 `applicable-device` meta + sitemap `mobile:mobile`）生产复验 走查新经验（testing agent）
+
+- **`/tiku*` 部署后原生导航首访可能拿到部署前旧 head**：CF Pages functions `caches.default` 是 SWR 语义（`cf-cache-status: DYNAMIC` 但带 `age` 秒数 + `cache-control: public, max-age=300`），TTL 过期后首个请求仍回旧副本并后台回源，`age` 可达数小时（R394 见 `age: 16203`）。断言 DOM 前先用 CDP `Network.enable` 捕 `responseReceived(type=Document)` 记 `age/cf-cache-status/fromDiskCache/fromServiceWorker`，DOM 为旧就重试一次原生导航，两次都如实写进报告；`?v=rand`+`X-Kg-Probe`+`no-store` 的页面上下文 fetch 永远是新副本，不能替代 DOM 断言。`/` 壳由 SW 提供（`fromServiceWorker=true`），`age` 为 null。 注意 `caches.default` 按机房独立：Devin 走查恒落 PDX，看到的旧副本是自己（或同机房他人）上次访问留下的，与部署脚本 3b 预热（只刷 VPS 所在 ICN）无关，不能据此推断引擎/真人也会看到旧 head（R395 取证：14 天真人页面命中 swr 旧副本 0 次）。
+- **原始 HTML 断言口径**：`/tiku/*` 用 `html.slice(vpEnd, adStart)===''` 证"紧随 viewport"；`/` 的 viewport 是 `document.write` 脚本产生的，只能证 `</script>` 与 ad meta 之间仅空白、ad 在 `<title` 之前；404 页要同时核 canonical 0、`og:url` 0、`robots noindex` 1（`_page(noindex=True)`）。
+- **sitemap 断言要命名空间感知**：`DOMParser('application/xml')` 后用 `getElementsByTagNameNS('http://www.baidu.com/schemas/sitemap-mobile/1/','mobile')`，`querySelectorAll('mobile\\:mobile')` 在 XML 文档里不可靠；同时核 `parsererror` 0、每条 `url` 首子 `loc`/末子 `mobile:mobile`、`sitemap.xml` 根 `sitemapindex` 且文本不含 `sitemap-mobile`。`/sitemap-questions-1.xml` ~950 KB，`Runtime.evaluate` 要 `awaitPromise` 并把超时放到 ≥60 s。
+- **跨文档导航（SEO 页 → 原生点 CTA → H5）会丢一次性钩子**：`Page.addScriptToEvaluateOnNewDocument` 的注册随 CDP 会话断开而失效，一次性脚本 `prep` 后跳到 SSR 页再回 H5，落地文档里 `__hdr/__conHook2` 为 undefined，落地前 3 条 `/api`（profile / question/:id / questions?limit=10&tag3=…）漏记。改用常驻进程 `/tmp/cdp174/holdhook.py`（保持会话并注册 HDR+CON2）再做 CTA 流程；漏记的用 `docker logs` 按 uid 补证状态码并在报告里标注。
+- **地址栏输入会被 omnibox 内联补全**（输 `…/tiku/` 回车变成历史里的 `…/tiku/q/234080`）：`type` 后先按 `Delete` 再 `Return`。
+- SEO 题目页 CTA 落地 `#/pages/practice/practice?qid=<id>&tag3=…&module=…&source=seo_q`，计数 `1/11`（所读题 + 10 题同考点），375 顶部有「刚才那题在这里作答，之后 10 题同考点练习」提示条；续练卡文案 `常识判断 · 已做 3/11 题`。
+- 容器 `/tmp` 里可能有部署方自己的临时脚本（R394 见 `r394_origin.py`，容器时间 +8h），`rm -rf /tmp/*r394*` 会连带删掉，清理前先 `ls -la` 甄别并在报告里说明。
+- 部署后日志里 `/tiku/q/999999999 404` 是预期 404 页（部署验证 + 本轮），`/sw.js 304` 是 SW 校验，都不算异常。
+
+## R393 `PROBE_UA_MARKERS`+`devin/` / `humans.offhost_7d` / 看板「预览域名」尾缀 生产复验 走查新经验（testing agent）
+
+- **看板候选真人行对账用页面自己那次 `/api/admin/ops_status`**（`r377.py HOOK` 存 `__r377.ops`），并记 `generated_at`；crawler cron 每小时 ~:23 刷新，用户口头给的数字可能过期。期望字串按 `dashboard.js humanRow` 拼：`detail + direct + offhost`，注意 `源站直连扫描 N（已剔除） · 预览域名 N（已剔除）`（`（已剔除）` 后有一个空格再 `·`），逐字比对时别手写漏空格。
+- 尾缀 `direct`/`offhost` **仅非零显示**：生产两者非零时 `=0` 分支只能声明 untested，不要去改生产 JSON 造 0。
+- `PROBE_UA_MARKERS` 含 `devin/` 后：本机受管 Chrome UA 若**不含** `Devin/1.0`，GUI 请求仍只走网段路打 probe=1；不要伪造 Devin UA 打生产制造数据，UA 路交给用户 VPS 侧隔离样本，报告标 untested。
+- 管理台 375：`Page.addScriptToEvaluateOnNewDocument` 钩子在 `holdvw_admin.py` 触发的 reload 后不延续，reload 后要重装钩子再取 ops 响应；`.lb` 不逐字竖排的量化口径：标题文本 Range `getClientRects().length==1`、`.lb` 高 ≤60px、`.sub` 正常折 2–3 行（`subMinW` 最后一行可很窄，不是坏形态）、`documentElement.scrollWidth==375`、行 `flex-wrap:wrap` 使 `.tag` 掉到下一行属正常。
+- 部署后容器日志若见 `GET /api/admin/ops_status 401` ×N，先到 Caddy 源站日志对 IP/UA：来自 `150.109.230.174 curl/8.5.0` 且随后 200 的是部署方自己 VPS 核数（无 token/错 token 试探），不是本轮 GUI；按时间戳单列。
+- 短版审计行数参考：两 uid 各 3 题全错/部分错 → `mistakes` = 错题数、`answer_log` 6（probe=1）、`growth_events` 4–6；`answer_log` 清理后回 1090。
+- `cdp.C.call(m, **p)` 只接关键字参数（`c.call('Emulation.clearDeviceMetricsOverride')`），传 dict 位置参数会报 `takes 2 positional arguments`。清 override 后要导航一次（不是 reload）才能看到 `innerWidth` 回 1600。
+
 ## R392 后端 monitor `internal` 标记 短版生产回归 走查新经验（testing agent）
 
 - **后端 `probe_request` 三路判定**（`backend/app/auth.py`）：`X-Kg-Probe: 1` 头 / 出口 IP 命中 `KG_PROBE_CIDRS`（容器 env，`docker exec … printenv KG_PROBE_CIDRS`）/ UA 含 `python-requests|curl/|headlesschrome|playwright…`。GUI 浏览器发的请求（真人 Chrome UA、无探针头）**只走网段路**，验证前先确认本机出口 `curl ifconfig.me` 在 CIDR 内；报告里明确"本侧只能证 200 + 源站 IP/UA/无探针头，中心侧 `internal` 值由用户核对"。

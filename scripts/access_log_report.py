@@ -12,7 +12,11 @@ remote_ip）剔除探针/自测流量，剔除量单独计数外显，保证统�
 输出：总请求量、/tiku/ 请求量、UA 分类（搜索引擎爬虫/其他 bot/疑似真人）、
 爬虫明细、/tiku/ Top20 URL、状态码分布、时间范围。
 """
-import sys, json, argparse, datetime, ipaddress
+import argparse
+import datetime
+import ipaddress
+import json
+import sys
 from collections import Counter
 
 BOT_ENGINES = {
@@ -22,8 +26,11 @@ BOT_ENGINES = {
     "bytespider": "ByteDance", "duckduckbot": "DuckDuckGo",
     "applebot": "Apple", "petalbot": "Petal(华为)", "yisouspider": "Yisou(神马)",
 }
+# 与 backend/app/auth.PROBE_UA_MARKERS 同步（单测锁：后端每一条自动化签名这里都能认出）。
+# devin/ ：Devin 自动化驾驭的浏览器上下文 UA 后缀；validator：schema.org/W3C 等校验工具。
 BOT_GENERIC = ("bot", "spider", "crawl", "curl", "python", "wget", "httpx",
-               "headless", "phantom", "scrapy", "go-http", "okhttp", "libwww")
+               "headless", "phantom", "scrapy", "go-http", "okhttp", "libwww",
+               "playwright", "devin/", "validator")
 
 # /tiku/ 页族分段（前缀首匹配，长前缀在前）
 SEGMENTS = (
@@ -84,10 +91,10 @@ def main():
             return False
         return any(addr in n for n in exclude_ips)
 
-    fh = sys.stdin if args.logfile == "-" else open(args.logfile, errors="ignore")
+    fh = sys.stdin if args.logfile == "-" else open(args.logfile, errors="ignore")  # noqa: SIM115
     cutoff = None
     if args.days:
-        cutoff = datetime.datetime.now().timestamp() - args.days * 86400
+        cutoff = datetime.datetime.now(datetime.UTC).timestamp() - args.days * 86400
 
     total = tiku = 0
     ts_min = ts_max = None
@@ -149,7 +156,7 @@ def main():
                     seg_engine["其他/导航"] += 1
 
     def fmt(ts):
-        return datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M") if ts else "-"
+        return datetime.datetime.fromtimestamp(ts, datetime.UTC).strftime("%Y-%m-%d %H:%M") if ts else "-"
 
     print(f"时间范围: {fmt(ts_min)} ~ {fmt(ts_max)}")
     print(f"总请求: {total}")
