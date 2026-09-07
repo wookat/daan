@@ -90,7 +90,7 @@ container healthy restarts=0 started=03:08:34Z
 - 考试页量测用浏览器侧合成的 `/api/exam/start` 回包（`multi:false`、无答案），只为渲染答题卡几何；交卷 / 计时到点 / 续考进度门控（R415）未走。
 - 4-pre 的 prune 让行分支本轮没被真实触发（`prunes=0` 全程），只有 build 让行分支走通；prune 分支仍只有 R469 的宿主模拟循环证据。
 - 构建 ~1500 s 归因「别家并发 build + 层缓存」是 `etimes` + 宿主指标相关性，未逐层核 `buildx du`。
-- rank-card 同时被 `pkgA/exam/team.vue`（如有）等复用，字号抬升对其它挂载点未逐页量测；组件无 `@click`，只有字号改动。
+- rank-card 同时被 `pkgA/exam/team.vue`（如有）等复用，字号抬升对其它挂载点未逐页量测；组件无 `@click`，只有字号改动。**R471 勘误**：`git grep rank-card` 命中的 `pkgA/team/team.vue` 是本地 class `.rank-card`（`<view class="card rank-card">` + `padding` 一条规则），不是 `components/rank-card` 组件；组件挂载点全仓只有 `pkgA/exam/report.vue` 一处，本轮已审即全部。另：本轮 `.retry` 的 `inline-flex` 写法在 `list.vue`「加载失败：…重试 ›」同容器模板下会把重试挤到错误文案同行，R471b 已改块级 flex（见 `r471-retry-hitarea-all-pages-rankcard-mount-erratum.md` §1.4）。
 
 ## 4. 处置 / 登记
 

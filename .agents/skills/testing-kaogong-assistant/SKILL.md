@@ -1679,3 +1679,10 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - `<11.9px` 叶节点计数只在 1440 下当结论用；375 仿真 `clientWidth` 360 把 24rpx 算成 11.52px 会把全页达标节点都数进去（home 56 / book 138 / list 526 全是这个）。
 - 源锁禁 `min-height: Nrpx` 时只锁可点元素的选择器（`.rp-chip`），别全文件 `not.toMatch`——textarea / 卡片的 `min-height: 140rpx` 是合法尺寸规则（R470 首版误伤 `.rp-detail`）。
 - 4-pre 让行实况：别家 `compose up --build` 一跑 45 min+，让行 300 s 到点必然 WARN 继续，之后本家构建大概率再离群（R470 ~1500 s：pip 413 s + exporting layers 344 s）；直接按 R468 路径走：600 s FAIL 文案出来后 `tail -1 /tmp/kg-compose-<rev>-*.log` 轮询到 `KG_COMPOSE_EXIT rc=0` 再 `DEPLOY_RESUME=1 ./deploy/deploy_h5.sh --skip-build`，别重跑第一段。`journalctl -u caddy` 里的 502 是同机别家域名（api-video / mx-ux），kaogong 源站非 2xx 只看 `/var/log/caddy/kaogong-origin.zalize.com-access.log`。
+
+## R471 经验：失败态热区全仓一次扫 + 「改 display 会改布局」+ grep 同名 class 的假命中
+- 「加载失败 → 重试 ›」失败态在生产**可以只读稳定制造**：Playwright `ctx.route('**/api/**', abort)` 全 abort 即可，不需要真故障、无 DB 写入；同一脚本对本地 dist（`npx serve dist/build/h5` 端口）复跑就是预检，改前/改后两份 JSON 都要落盘（R471 改前只在终端回显、只剩范围 18–22px 可登记）。
+- 同一类控件（`.retry`）别按簇修：`grep -rl 'class="retry"' src` 一次列全（17 页），历轮按簇只修了 6 页；源锁用「递归发现 + 阈值 ≥N」防漏扫，阈值是防漏扫下限不是页面总数断言。
+- **补 `min-height` 时改了 `display` 就是改布局**：`<view>` 在 uni H5 默认 `display:block`，`inline-flex` 会让「`加载失败：{{err}}<view class="retry">`」同容器的重试从独占一行变成贴着错误文案同行（R470 list + R471a 5 页，源锁/vitest 拦不住，生产失败态截图才看见）。要独占一行 + 40px 命中带用 `display: flex; align-items: center; justify-content: center`（R464 shenlun 写法）；只有 `.retry` 是独立子节点（父 `.empty` 是 flex 列）时 `inline-flex` 才等价。每次改 `display` 都要截一张失败态图，别只看 `h`/hits。
+- `git grep <组件名>` 命中的文件先看是 `<rank-card>` 标签还是本地同名 class（team.vue 的 `.rank-card` 是 `.card` 的修饰 class），别把同名 class 登成「另一挂载点」。
+- 4-pre 让行 WAIT 期间别家 build 退出会提前放行（`other_builds=0`），不一定等满 300 s；但之后本家构建照样冷启（守护 `builder prune` 常驻），600 s FAIL → 等 `KG_COMPOSE_EXIT rc=0` → `DEPLOY_RESUME=1` 路径已是常态，不必每轮再登记为异常。
