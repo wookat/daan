@@ -1,0 +1,11 @@
+<view class="kg-empty {{compact ? 'is-compact' : ''}}" role="status">
+  <view class="kg-empty__ico"><l-icon name="{{icon}}" size="{{compact ? 24 : 32}}" tone="faint" /></view>
+  <view class="kg-empty__txt">
+    <text class="kg-empty__t">{{title}}</text>
+    <text wx:if="{{desc}}" class="kg-empty__d">{{desc}}</text>
+  </view>
+  <view wx:if="{{ctaText || secondaryText}}" class="kg-empty__acts">
+    <kg-button wx:if="{{ctaText}}" variant="primary" size="{{compact ? 'sm' : 'lg'}}" bind:click="onCta">{{ctaText}}</kg-button>
+    <kg-button wx:if="{{secondaryText}}" variant="text" size="{{compact ? 'sm' : 'md'}}" bind:click="onSecondary">{{secondaryText}}</kg-button>
+  </view>
+</view>

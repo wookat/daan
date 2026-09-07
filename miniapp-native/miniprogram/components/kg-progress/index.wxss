@@ -1,0 +1,11 @@
+.kg-prog { width: 100%; border-radius: var(--r-full); background: var(--prog-track); overflow: hidden; }
+.kg-prog--4 { height: 4px; }
+.kg-prog--8 { height: 8px; }
+.kg-prog__fill { height: 100%; border-radius: var(--r-full); background: var(--brand); transition: width var(--dur-base) var(--ease-decel); }
+.kg-prog.is-inverse { background: rgba(255, 255, 255, 0.24); }
+.kg-prog.is-inverse .kg-prog__fill { background: var(--on-brand); }
+.kg-ring { position: relative; border-radius: var(--r-full); flex-shrink: 0; }
+.kg-ring__in { position: absolute; border-radius: var(--r-full); background: var(--card); display: flex; align-items: center; justify-content: center; }
+.kg-ring__v { font-weight: 600; color: var(--ink); }
+.kg-ring.is-inverse .kg-ring__in { background: transparent; }
+.kg-ring.is-inverse .kg-ring__v { color: var(--on-brand); }

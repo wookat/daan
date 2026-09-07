@@ -1,0 +1,6 @@
+.kg-abar { position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-bar); background: var(--card); border-top: 1px solid var(--line); padding: var(--sp-8) var(--page-x) calc(var(--sp-8) + env(safe-area-inset-bottom)); }
+.kg-abar__row { display: flex; align-items: center; gap: var(--sp-12); min-height: var(--bar-h); }
+.kg-abar__row > kg-button { flex: 1; }
+.kg-abar__idx { font-size: var(--fs-sub); color: var(--ink-3); min-width: 48px; }
+.kg-abar__prog { position: absolute; left: 0; right: 0; top: -1px; height: 2px; background: var(--prog-track); }
+.kg-abar__prog-fill { height: 100%; background: var(--brand); transition: width var(--dur-base) var(--ease-decel); }

@@ -1,0 +1,11 @@
+<view
+  class="kg-card kg-card--{{variant}} kg-card--p{{padding}} {{clickable ? 'is-clickable' : ''}} {{selected ? 'is-selected' : ''}}"
+  hover-class="{{clickable ? 'kg-card--hover' : 'none'}}"
+  hover-stay-time="60"
+  bind:tap="onTap"
+>
+  <view wx:if="{{header}}" class="kg-card__hd"><slot name="header" /></view>
+  <view class="kg-card__body"><slot /></view>
+  <l-icon wx:if="{{chevron}}" class="kg-card__chev" name="chevron-right" size="20" tone="faint" />
+  <view wx:if="{{footer}}" class="kg-card__ft"><slot name="footer" /></view>
+</view>

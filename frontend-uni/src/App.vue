@@ -72,51 +72,15 @@ export default {
 </script>
 
 <style>
-/* 全局设计规范 */
+/* 设计 token：唯一来源 tools/design-tokens/tokens.json，改完跑 node tools/design-tokens/build.mjs。
+   生成文件含 semantic/scale/component/module 变量、深色映射（.theme-dark uni-page-body）、
+   wot-design-uni 主题变量、deprecated 别名与 .num/.q-text/.safe-b 工具类。回滚 = 删下面这一行。 */
+@import './styles/tokens.generated.css';
+
 page {
-  /* design-v3 tokens（docs/design-v3/DESIGN.md） */
-  --brand: #2e5bff;
-  --brand-soft: #eef3ff;
-  --brand-soft-2: #dce7fd;
-  --brand-strong: #1d4ed8;
-  --brand-text: #2e5bff;
-  --info-strong: #075985;
-  --ink: #17181c;
-  --ink-2: #5f6575;
-  --ink-3: #6b7280;
-  --ink-4: #b0b4c0;
-  --ok: #16a34a;
-  --ok-soft: #ecfdf5;
-  --ok-strong: #15803d;
-  --warn-strong: #b45309;
-  --bad: #dc2626;
-  --bad-soft: #fef2f2;
-  --bad-strong: #b91c1c;
-  --warn: #d97706;
-  --warn-soft: #fffbeb;
-  --info: #0284c7;
-  --info-soft: #f0f9ff;
-  --line: #e7e9f0;
-  --fill: #f2f3f7;
-  --card: #ffffff;
-  --soft-bg: #f2f3f7;
-  /* 题干关键词高亮 */
-  --hl-bg: #fef08a;
-  --hl-ink: inherit;
-  /* 历史别名（部分页面沿用） */
-  --brand-50: var(--brand-soft);
-  --ink-1: var(--ink);
-  --muted: var(--ink-3);
-  --danger: var(--bad);
-  --radius: 28rpx;
-  /* wot-design-uni 主题对齐品牌蓝 */
-  --wot-color-theme: #2e5bff;
-  --wot-button-primary-bg-color: #2e5bff;
-  --wot-cell-title-fs: 15px;
-  background: #f6f7fb;
+  background: var(--bg);
   color: var(--ink);
-  /* 字体栈对齐 @zalize/brand（Inter + 系统中文字体） */
-  font-family: Inter, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'HarmonyOS Sans', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif;
+  font-family: var(--font-sans);
 }
 
 /* #ifdef H5 */
@@ -125,75 +89,37 @@ html {
   scrollbar-gutter: stable;
 }
 body {
-  background: #f6f7fb;
+  background: var(--bg);
 }
 body::after {
   /* 禁用 uni-h5 的 shadow-preload：本产品不用 page-head shadow，避免向 dcloud CDN 发第三方请求 */
   animation: none !important;
 }
 html.theme-dark body {
-  background: #15161c;
-}
-/* 系统「减弱动态效果」：动画/过渡压至瞬时并只跑单次，保留 keyframes 终态 */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
+  background: var(--bg);
 }
 /* #endif */
 
 /* 深色模式（三档设置见 theme.js；.theme-dark 挂在 html 上，H5/App 生效）
-   深色 token 见 docs/design-v3/features/dark-mode.html：品牌蓝不变，浅底改深底 */
+   深色 token 值在 tokens.generated.css（page + :root 镜像），uni 运行时壳（tabbar/page-head）在 uni-page-body 之外，靠 :root 镜像读 token */
 /* #ifdef H5 */
 .theme-dark uni-page-body {
-  background: #15161c;
-  --brand-soft: #1e2a4a;
-  --brand-soft-2: #24345c;
-  --brand-strong: #b9ccff;
-  --brand-text: #8fa8ff;
-  --info-strong: #7dd3fc;
-  --ink: #f2f3f7;
-  --ink-2: #9ba0b0;
-  --ink-3: #8a8ea0;
-  --ink-4: #5c6070;
-  --ok-soft: #0e2b1e;
-  --ok-strong: #4ade80;
-  --warn-strong: #fbbf24;
-  --bad-soft: #331416;
-  --bad-strong: #f87171;
-  --warn-soft: #33260e;
-  --info-soft: #0e2233;
-  --line: #2b2e3a;
-  --fill: #23252f;
-  --card: #1d1f28;
-  --soft-bg: #23252f;
-  --hl-bg: rgba(250, 204, 21, 0.22);
-  --hl-ink: #fde047;
-  /* wot-design-uni 深色适配 */
-  --wot-color-white: #1d1f28;
-  --wot-cell-title-color: #f2f3f7;
-  --wot-cell-value-color: #9ba0b0;
-  --wot-cell-label-color: #8a8ea0;
+  background: var(--bg);
+  /* wot 深色微调（其余 wot 变量已在生成文件里指向语义 token，自动跟随） */
   --wot-cell-tap-bg: rgba(255, 255, 255, 0.06);
-  --wot-cell-group-title-color: #9ba0b0;
-  --wot-color-border-light: #2b2e3a;
   --wot-button-plain-bg-color: transparent;
 }
 .theme-dark uni-tabbar .uni-tabbar,
 .theme-dark uni-tabbar .uni-tabbar__border {
-  background: #1d1f28 !important;
-  border-color: #2b2e3a;
+  background: var(--card) !important;
+  border-color: var(--line);
 }
 /* tabbar 文字色为 pages.json 静态配置的内联样式（uni-h5 无 setTabBarStyle），按配置色值定向覆盖 */
 .theme-dark uni-tabbar .uni-tabbar__label {
-  color: #9ba0b0 !important;
+  color: var(--ink-3) !important;
 }
 .theme-dark uni-tabbar .uni-tabbar__label[style*='rgb(46, 91, 255)'] {
-  color: #8fa8ff !important;
+  color: var(--brand-text) !important;
 }
 /* tabbar 图标为浅色主题静态 PNG（选中蓝 #3060f0 深底偏沉、未选灰偏暗），深色下滤镜提亮对齐 --brand-text/--ink-2 色感 */
 .theme-dark uni-tabbar .uni-tabbar__icon img {
@@ -203,14 +129,14 @@ html.theme-dark body {
   filter: saturate(0.6) brightness(1.45);
 }
 .theme-dark uni-page-head .uni-page-head {
-  background: #15161c !important;
-  color: #f2f3f7;
+  background: var(--bg) !important;
+  color: var(--ink);
 }
 .theme-dark uni-page-head .uni-page-head__title {
-  color: #f2f3f7 !important;
+  color: var(--ink) !important;
 }
 .theme-dark uni-page-head .uni-page-head-btn path {
-  fill: #f2f3f7;
+  fill: var(--ink);
 }
 .theme-dark input,
 .theme-dark textarea {
@@ -241,12 +167,12 @@ html.theme-dark body {
   uni-page-body .stat-c,
   uni-page-body .cellcard {
     border: 1px solid var(--line);
-    box-shadow: 0 1px 2px rgba(23, 24, 28, 0.05);
-    transition: box-shadow 0.15s ease, transform 0.15s ease;
+    box-shadow: var(--sh-1);
+    transition: box-shadow var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard);
   }
   uni-page-body .card:hover,
   uni-page-body .stat-c:hover {
-    box-shadow: 0 4px 12px rgba(23, 24, 28, 0.1);
+    box-shadow: var(--sh-2);
     cursor: pointer;
   }
   uni-page-body .searchbar {

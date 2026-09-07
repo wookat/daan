@@ -1,111 +1,26 @@
-/* design v2 token · Zalize 岸蓝 #2E5BFF（@zalize/brand 对齐） */
+/* 设计 token：唯一来源 tools/design-tokens/tokens.json，改完跑 node tools/design-tokens/build.mjs。
+   生成文件含 semantic/scale/component/module 变量、深色映射（prefers-color-scheme）、
+   tdesign 主题变量、deprecated 别名（--t1/--surface/--success 等）与 .num/.q-text/.safe-b 工具类。回滚 = 删下面这一行。 */
+@import './styles/tokens.generated.wxss';
+
 page {
-  --brand-50: #eef3ff;
-  --brand-100: #dbe6ff;
-  --brand-200: #b8ccff;
-  --brand-300: #8aa9ff;
-  --brand-400: #5c82ff;
-  --brand-500: #2e5bff;
-  --brand-600: #1e44d9;
-  --brand-700: #1735ab;
-  --brand-grad: linear-gradient(160deg, #5c82ff 0%, #2e5bff 52%, #1e44d9 100%);
-  --brand-grad-btn: linear-gradient(135deg, #5c82ff, #1e44d9);
-
-  --accent-500: #ff8a3d;
-  --accent-600: #f2711c;
-  --accent-bg: #fff3e8;
-  --gold: #f5b83d;
-  --gold-bg: #fdf6e5;
-  --streak-grad: linear-gradient(90deg, #f5b83d, #ff8a3d);
-
-  --t1: #171a23;
-  --t2: #464b5c;
-  --t3: #858ba3;
-  --t4: #b4b9c9;
-  --border: #eceef4;
-  --fill: #f1f3f8;
-  --fill-deep: #e8ebf2;
-  --bg: #f5f7fb;
-  --surface: #ffffff;
-
-  --success: #10b981;
-  --success-deep: #059669;
-  --success-bg: #e8faf3;
-  --error: #f43f5e;
-  --error-deep: #e11d48;
-  --error-bg: #fef0f2;
-  --warning: #f59e0b;
-  --warning-bg: #fef7e6;
-  --info: #0ea5e9;
-  --info-bg: #eaf6fd;
-
-  --mod-ziliao: #14b8a6;
-  --mod-ziliao-bg: #e6f9f6;
-  --mod-shuliang: #2e5bff;
-  --mod-shuliang-bg: #eef3ff;
-  --mod-yanyu: #f43f5e;
-  --mod-yanyu-bg: #fef0f2;
-  --mod-panduan: #8b5cf6;
-  --mod-panduan-bg: #f3effe;
-  --mod-changshi: #f59e0b;
-  --mod-changshi-bg: #fef7e6;
-
-  --r-xs: 12rpx;
-  --r-s: 20rpx;
-  --r-m: 28rpx;
-  --r-l: 36rpx;
-  --r-xl: 48rpx;
-  --r-full: 999rpx;
-
-  --sh-1: 0 2rpx 4rpx rgba(23, 26, 35, 0.03), 0 8rpx 28rpx rgba(23, 26, 35, 0.05);
-  --sh-2: 0 4rpx 12rpx rgba(23, 26, 35, 0.04), 0 20rpx 56rpx rgba(23, 26, 35, 0.08);
-  --sh-brand: 0 12rpx 32rpx rgba(46, 91, 255, 0.32);
-  --sh-accent: 0 12rpx 32rpx rgba(255, 138, 61, 0.32);
-
   background-color: var(--bg);
-  color: var(--t1);
-  font-size: 28rpx;
+  color: var(--ink);
+  font-size: var(--fs-body);
+  font-family: var(--font-sans);
   /* webview 下 page 无默认高度，各页 .page-scroll{flex:1;height:100%} 依赖此约束 */
   height: 100%;
   display: flex;
   flex-direction: column;
 }
 
-@media (prefers-color-scheme: dark) {
-  page {
-    --brand-50: #1c2742;
-    --brand-100: #223260;
-    --accent-bg: #3a2410;
-    --gold-bg: #383012;
-    --t1: #edeff5;
-    --t2: #c3c7d4;
-    --t3: #8a90a2;
-    --t4: #5d6274;
-    --border: #2a2d3a;
-    --fill: #232634;
-    --fill-deep: #2b2f3f;
-    --bg: #141721;
-    --surface: #1d202c;
-    --success-bg: #0e3527;
-    --error-bg: #3b1520;
-    --warning-bg: #3a2b0e;
-    --info-bg: #0e2b3a;
-    --mod-ziliao-bg: #0e332f;
-    --mod-shuliang-bg: #1c2742;
-    --mod-yanyu-bg: #3b1520;
-    --mod-panduan-bg: #291f45;
-    --mod-changshi-bg: #3a2b0e;
-    --sh-1: 0 2rpx 4rpx rgba(0, 0, 0, 0.25), 0 8rpx 28rpx rgba(0, 0, 0, 0.3);
-    --sh-2: 0 4rpx 12rpx rgba(0, 0, 0, 0.3), 0 20rpx 56rpx rgba(0, 0, 0, 0.4);
-  }
-}
-
+/* 下面是页面沿用的全局类，值已换成 token；页面组接入 kg-* 组件后逐步删除 */
 .card {
-  background: var(--surface);
-  border-radius: var(--r-l);
+  background: var(--card);
+  border-radius: var(--r-md);
   box-shadow: var(--sh-1);
-  padding: 32rpx;
-  margin-bottom: 24rpx;
+  padding: var(--card-pad);
+  margin-bottom: var(--card-gap);
 }
 
 .sec-h {
@@ -113,86 +28,81 @@ page {
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  margin: 32rpx 4rpx 24rpx;
+  margin: var(--sp-16) 0 var(--sp-12);
 }
 
 .sec-t {
   display: flex;
   flex-direction: row;
   align-items: center;
-  font-size: 34rpx;
-  font-weight: 800;
-  color: var(--t1);
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-semibold);
+  color: var(--ink);
 }
 
 .sec-bar {
-  width: 8rpx;
-  height: 28rpx;
-  border-radius: 4rpx;
-  background: var(--brand-grad-btn);
-  margin-right: 16rpx;
+  width: 4px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--brand);
+  margin-right: var(--sp-8);
 }
 
 .sec-more {
-  font-size: 24rpx;
-  color: var(--t3);
-  font-weight: 500;
+  font-size: var(--fs-sub);
+  color: var(--ink-3);
+  font-weight: var(--fw-medium);
 }
 
 .btn-primary {
-  background: var(--brand-grad-btn);
-  color: #fff;
+  height: var(--btn-h-lg);
+  line-height: var(--btn-h-lg);
+  background: var(--brand);
+  color: var(--on-brand);
   border-radius: var(--r-full);
   text-align: center;
-  padding: 26rpx 0;
-  font-size: 32rpx;
-  font-weight: 700;
-  box-shadow: var(--sh-brand);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semibold);
 }
 
 .btn-ghost {
-  background: var(--brand-50);
-  color: var(--brand-500);
+  height: var(--btn-h-lg);
+  line-height: var(--btn-h-lg);
+  background: var(--brand-soft);
+  color: var(--brand-text);
   border-radius: var(--r-full);
   text-align: center;
-  padding: 26rpx 0;
-  font-size: 32rpx;
-  font-weight: 600;
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semibold);
 }
 
 .tag {
   display: inline-flex;
   flex-direction: row;
   align-items: center;
-  height: 40rpx;
-  padding: 0 16rpx;
+  height: var(--tag-h);
+  padding: 0 var(--sp-8);
   border-radius: var(--r-xs);
-  font-size: 22rpx;
-  font-weight: 600;
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium);
 }
 
-.tag-brand { background: var(--brand-50); color: var(--brand-500); }
-.tag-ok { background: var(--success-bg); color: var(--success-deep); }
-.tag-bad { background: var(--error-bg); color: var(--error-deep); }
-.tag-warn { background: var(--warning-bg); color: var(--warning); }
-.tag-gray { background: var(--fill); color: var(--t3); }
-.tag-accent { background: var(--accent-bg); color: var(--accent-600); }
-
-.num {
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -1rpx;
-}
+.tag-brand { background: var(--brand-soft); color: var(--brand-text); }
+.tag-ok { background: var(--ok-soft); color: var(--ok-strong); }
+.tag-bad { background: var(--bad-soft); color: var(--bad-strong); }
+.tag-warn { background: var(--warn-soft); color: var(--warn-strong); }
+.tag-gray { background: var(--fill); color: var(--ink-3); }
+.tag-accent { background: var(--streak-soft); color: var(--streak); }
 
 .bar {
-  height: 12rpx;
-  border-radius: 6rpx;
-  background: var(--fill);
+  height: 8px;
+  border-radius: 4px;
+  background: var(--brand-soft-2);
   overflow: hidden;
 }
 
 .bar-fill {
   height: 100%;
-  border-radius: 6rpx;
-  background: var(--brand-grad-btn);
+  border-radius: 4px;
+  background: var(--brand);
 }
