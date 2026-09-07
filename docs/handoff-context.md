@@ -2456,3 +2456,13 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 登记合并：`meta0` 回传 `hit.qid` + 命中时补写 qid（待有例）。
 - 取证自纠：别用 `replace() LIKE` 扫 157k 题 × N 行（>15 min 不返回、kill 后宿主残留 `sudo python3 -` 要手动 kill）；Python 一次建活跃题干 12 字字典再滑窗（4.5 s）。
 - 取证：`docs/iter/round-3/r486-shizheng-text-in-explain-zero-r421-qid-path-unexercised.md`。
+
+### R487（2026-09-07）：非探针「练习页 → 问答页带 qid 深链」为何 0 → 入口可见可达但触达不可观测 → `practice_ask_click` 埋点上线（生产 `7acf57b` → `896007c`）
+
+- **取证**：`practice.vue` 「用花生十三方法详解这道题 ›」无 `v-if`、解析区出现即渲染，`deepExplain()` → storage + `uni.switchTab` → 问答页 API 的 Caddy `Referer` 仍是进站 URL（本轮非探针 ask GET referer 全为 `/s/<code>`/`/`，含 practice 的 0 条）；全产品 6 个问答入口只有练习页无 `*_ask_click` 埋点 → `growth_events` probe=0 20 行 0 条能证明练习深链被点过。结论：`explain_cache.qid` 0/82 **既不能判「没人点」也不能判「点了 qid 丢了」**——可观测性缺口，不是功能缺陷。
+- 本轮唯一非探针 `explain/stream` 一对（`umst3tuisd7lgzaka` 09-06 21:40Z）Referer `servicewechat.com/wx01f2f29cfe51baba/0/page-frame.html` + `MiniProgramEnv/android` = W7 小程序（appid 与 `project.config.json` 一致）；题文=行测 `questions.296322`（shuliang），该 uid 21:39:44Z 刚答错这题（mistakes 2923 `error_reason='纯蒙的'`）；W7 `streamExplain()` 不发 `question_id`（R485）→ 这两行 qid NULL 是协议决定的。小程序侧「练习→深链讲解」链路通，H5 侧 0 证据。
+- **修（`896007c`）**：`deepExplain()` `switchTab` 前 `trackEvent('practice_ask_click', q.module || '', q._sz ? 'sz' : String(qid || ''))`（时政不放数字 qid，记 `'sz'`）；`team.py` `/api/track` 白名单 +1；源锁 `tests/practice-r483-shizheng-qid.test.js` +1、后端 `test_track.py` +1。门 pytest 509 / ruff / pyright 0；vitest 724 / eslint rc=0 / build 绿。下轮起 `growth_events(practice_ask_click).ref` ↔ `explain_cache.qid` 可对账（点了几次 / 带 qid 几次 / 落库带 qid 几次）。
+- **发版**：让行 `/opt/SoftCopyrightAgent` `compose up --build`（09:45–09:50Z，盘 5.4→4.0→4.5 G）后 `--skip-build` 一次 rc=0（rev `896007c`、bundle `index-Dm-hobV2.js`、practice 分包 `Ll3wF6Ra` 线上=本机逐字节、7/7 200）。6b `/` 首跑 Lighthouse「运行失败」（stderr 被脚本吞、原因未留痕），手动复跑 perf 0.57 / 0.88 / 0.93、LCP 2738–2812（预算内）、a11y 1.00，`/tiku/` 1.00·1.00；首页结构未改 → 判量测机噪音（推断）。改后一手：探针 `POST /api/track` `practice_ask_click` ×2（`shuliang/296322`、`时政/sz`）200 落库 probe=1，非白名单事件 400；新容器 healthy 0 重启、63 请求 5xx/404/monitor/mpUA 0；WAL 同字节。
+- (c) / 到期项无增量：probe=0 33/1、growth 20/4、error_reason 7 / ≥09-11 0、push_subs 0、weekly 2、exam_attempts probe=0 1/64、`时政且 qid 非空` 0/0、`explain_cache qid nonnull` 0/82、`umst3` 0 回访。
+- 如实：埋点在真人流量上 0 样本；未提交 `explain/stream`（不造 LLM 流量）；W7 `openExplain` 无 `_sz` 守卫 / 不发 qid 只读源码核未真机；无 testing agent 录屏（未另行授权）。
+- 取证：`docs/iter/round-3/r487-practice-ask-deeplink-reach-unobservable-practice-ask-click.md`；脚本 `~/r487_host.sh` `~/r487_db3.sh` `~/r487_db4.sh` `~/r487_post.sh`。
