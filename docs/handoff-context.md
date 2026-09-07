@@ -2729,3 +2729,13 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 方法教训（入 SKILL）：Playwright `page.route` 会禁用 HTTP 缓存，缓存实验必须改 CDP `Fetch` 域；直链与首页链分开量。
 - 登记：直链 API 挂载前预发待真人直链样本；整数参数越界 500（W9）；3 s 未在真机弱网量；清单尾部 ~70 个资源仍在首页停留后逐个拉（省流/2g 跳过）；非 RUM。
 - 取证：`docs/iter/round-3/r510-practice-deep-link-precache-waterfall.md`；`~/r510/{waterfall.py,serve.py,ab.sh,ab2.out,ab_1440.out,wf_375_direct.out,wf_direct2.out,wf_375_home_delay.out,prod_after_home.out,prod_after_2.out,lh/lh_practice_r510.out}`、`~/r510_pre.sh`/`~/r510_5xx.sh`/`~/r510_prof.sh`/`~/r510_post.sh`→`.out`、`~/r510_deploy.log`。
+
+### R511（2026-09-08）：SOP-10 四维审计——R500–R510 三簇（首页 Lighthouse/CLS、练习页冷启动、计划表单）复盘均收口无新样本；命中 W9 登记的「整数参数越界 500」未被处置 → `OverflowError` 接入 `_bad_param_handler`（/api 400、`/tiku`·`/s/`·`/p/` 品牌 404）→ 生产 `f5223d72` → `0c532532`；首页 Lighthouse perf/LCP 双峰定性为 Lantern 模拟量法（观测值/拓扑不变），不是回归
+
+- (c)：R510 容器 155 请求 5xx/404/monitor/mpUA/非探针非 bot/非探针 POST/401·403/Traceback 全 0、WAL 同字节；probe=0 `answer_log` 53/2、growth 26/4、`explain_cache qid` 0/82、`error_reason ≥09-11` 0、`*_ask_click`/nudge 真人 0、`push_subs` 0、时政 qid 非空 0、harness uid 落库 0；公告「详情」/`mistakes_total` 非探针触达无样本；profile 11 行已过/今天/未来 1/0/10、非探针 `POST /api/profile` 全史 1 条。无新的外部真人证据。
+- 命中（一手）：`origin` 无 W9 分支、main 无 `OverflowError` 处理；本地 `TestClient` 复现 `/api/question|questions?year|exam/papers?year|mock/events` 20 位整数 → 500，**公开页 `/tiku/q/<20 位>/` 也 500**（`/tiku/<20 位>/yanyu/` 已 404）。机制：pydantic `int` 任意精度放行，`sqlite3` 绑参才抛 `OverflowError`（`ArithmeticError` 子类，`ValueError/TypeError` 兜底不覆盖）。
+- 修（`0c532532`，`backend/app/main.py`）：`_bad_param_handler` 加 `@app.exception_handler(OverflowError)`；/api 同 400 文案；`isinstance(exc, OverflowError)` 且 `/tiku`/`/s/`/`/p/` → `seo._not_found`；其余路径仍 `raise`。不逐端点加 `le=`。源锁 `tests/test_int_params_400.py` +6。门：pytest 522 / ruff / pyright 0；前端未动。
+- 发版：`DEPLOY_FORCE=1 --skip-build` rc=0（mem_avail 404 MB / 5.0 G / load 0.57）——线上 `f5223d72` 是 R510 在旧分支的原提交、本分支为 cherry-pick `34f67d3a`（空树差），谱系闸假阳性；`21:42:01Z rev=0c532532` healthy 0 重启、7/7 200、`/tiku/` 1.00。生产复验：4 条 /api → 400 JSON、`/tiku/q/<20 位>/` → 301 → 404 `页面不存在_错题邦`、正常 id 200、Traceback 0。
+- 双峰定性（`~/r511/lhr_root_*.json`）：perf 0.99/0.85/0.85、simLCP 1427/3686/3660，而 obsFCP 96/180/140、obsLoad 207–261、请求 83、FCP 前 48 个资源逐条相同、simTTI 同；唯一差异是 `index-*.js` 结束时刻在 obsFCP 之前/之后 → **推断** Lantern 按观测 FCP 裁剪依赖图。6b 单次 FAIL（本轮/R508/R506）不是页面回归；判回归先看 obs*/拓扑/FCP 前资源。是否让 6b 取中位数待定。
+- 登记：`/api/profile` 仍收已过日期（R505）；直链 API 预发/真机弱网/清单尾部（R510）；模块标签 4.00:1；W7 小程序三项；非 RUM；无录屏。
+- 取证：`docs/iter/round-3/r511-sop10-audit-int-overflow-400-lantern-bimodal.md`；`~/r511_pre.out`、`~/r511_post.out`、`~/r511_deploy.log`、`~/r511/lhr_root_{1,2,3}.json`。
