@@ -16,8 +16,11 @@ const body = (src, name) => {
 
 describe('R493 每日一练完成页：成绩提交失败可见可重试、分享仍带每日文案（源文件锁）', () => {
   it('完成页有 dailyErr 失败行，点击走 retryDailySubmit，热区 ≥40px', () => {
-    expect(practice).toMatch(/v-else-if="!beiMode && dailyErr" class="beat dsbeat dserr"[^>]*@click="retryDailySubmit"/);
-    expect(practice).toMatch(/\.dsbeat\.dserr \{[^}]*min-height: 40px/);
+    // W5 起走 kg-banner（tone=warn，不可关闭），「重试」由组件 action 槽的 kg-button 承担热区
+    expect(practice).toMatch(/<kg-banner\s+v-if="!beiMode && dailyErr"[\s\S]*?tone="warn"[\s\S]*?:closable="false"[\s\S]*?action-text="重试"\s+@action="retryDailySubmit"/);
+    expect(practice).toMatch(/text="今日全站同题 · 成绩上传失败（回首页也会自动补传）"/);
+    const banner = read('../src/components/kg-banner/kg-banner.vue');
+    expect(banner).toMatch(/<kg-button v-if="actionText" variant="text" size="sm" @click="\$emit\('action'\)"/);
   });
   it('markDailyDone 经 sendDailyResult 提交；提交失败且无成绩才置 dailyErr（榜失败不算）', () => {
     expect(body(practice, 'markDailyDone')).toMatch(/this\.sendDailyResult\(\{ uid: anonUid\(\)/);

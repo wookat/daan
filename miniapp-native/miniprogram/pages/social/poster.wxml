@@ -1,14 +1,25 @@
 <navbar title="打卡海报" back="{{true}}" />
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
-    <view wx:if="{{loading}}" class="loading">正在生成海报…</view>
+    <block wx:if="{{loading}}">
+      <view class="poster poster-skel"><t-skeleton theme="image" animation="gradient" /></view>
+      <text class="tip">正在生成海报…</text>
+    </block>
     <block wx:else>
       <image wx:if="{{imgSrc}}" class="poster" src="{{imgSrc}}" mode="widthFix" bind:longpress="onSave" />
-      <view wx:else class="loading">{{err || '生成失败'}}</view>
+      <kg-empty
+        wx:else
+        icon="triangle-alert"
+        title="海报生成失败"
+        desc="{{err || '请稍后重试'}}"
+        ctaText="重新生成"
+        bind:cta="build"
+      />
       <view class="actions">
-        <view class="btn {{imgSrc ? '' : 'off'}}" bind:tap="onSave">保存图片</view>
-        <button class="btn ghost" open-type="share">分享给好友</button>
-        <text class="tip">保存后可分享到朋友圈 / 小红书，和考友一起上岸</text>
+        <kg-button variant="primary" size="lg" block icon="save" disabled="{{!imgSrc || streak0}}" bind:click="onSave">保存图片</kg-button>
+        <kg-button variant="secondary" size="lg" block icon="share-2" openType="share">分享给好友</kg-button>
+        <text wx:if="{{streak0}}" class="tip tip-warn">打卡 1 天后可生成海报，先去做一组题吧</text>
+        <text wx:else class="tip">保存后可分享到朋友圈 / 小红书，和考友一起上岸</text>
       </view>
     </block>
     <canvas id="posterCanvas" type="2d" class="hidden-canvas" />

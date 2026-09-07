@@ -1,64 +1,97 @@
 <navbar title="统计" />
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
-    <view class="card nums">
-      <view class="numcell"><text class="num-n c1">{{today}}</text><text class="num-t">今日题数</text></view>
-      <view class="numcell divl"><text class="num-n c2">{{total}}</text><text class="num-t">累计题数</text></view>
-      <view class="numcell divl"><text class="num-n c3">🔥 {{streak}}</text><text class="num-t">连续天数</text></view>
-    </view>
-
-    <view class="card">
-      <view class="hm-h">
-        <text class="hm-t">学习热力图 · 近 12 周</text>
-        <text class="hm-total">共 {{hmTotal}} 题</text>
+    <!-- 0 数据：折叠为一张解锁卡 -->
+    <kg-card wx:if="{{zero}}" variant="raised" class="unlock" padding="{{0}}" body-class="unlock-body">
+      <view class="unlock-ico"><l-icon name="chart-column" size="32" tone="brand" /></view>
+      <text class="unlock-t">刷 10 题解锁统计</text>
+      <text class="unlock-s">今日题数、连续天数、12 周热力图与分模块正确率，都会在你开始刷题后点亮</text>
+      <view class="unlock-steps">
+        <view class="unlock-step"><l-icon name="flame" size="16" tone="streak" /><text>连续天数</text></view>
+        <view class="unlock-step"><l-icon name="calendar" size="16" tone="brand" /><text>学习热力图</text></view>
+        <view class="unlock-step"><l-icon name="target" size="16" tone="bad" /><text>薄弱模块定向重练</text></view>
       </view>
-      <view class="hm-body">
-        <view class="hm-ylab">
-          <text wx:for="{{hmYLabels}}" wx:key="index" class="hm-yl">{{item}}</text>
+      <kg-button variant="primary" size="lg" block icon="dumbbell" bind:click="onGoPractice">开始刷题</kg-button>
+    </kg-card>
+
+    <block wx:else>
+      <kg-card variant="raised" class="nums" padding="{{0}}" body-class="nums-body">
+        <view class="numcell">
+          <text class="num-n num c1">{{today}}</text>
+          <text class="num-t">今日题数</text>
         </view>
-        <view class="hm-grid">
-          <view wx:for="{{hmCols}}" wx:for-item="col" wx:key="index" class="hm-col">
-            <view
-              wx:for="{{col}}"
-              wx:for-item="c"
-              wx:key="index"
-              class="hm-c lv{{c.lv}} {{c.future ? 'fut' : ''}}"
-            />
+        <view class="numcell divl">
+          <text class="num-n num c2">{{total}}</text>
+          <text class="num-t">累计题数</text>
+        </view>
+        <view class="numcell divl">
+          <view class="num-n num c3"><l-icon name="flame" size="20" tone="streak" /><text>{{streak}}</text></view>
+          <text class="num-t">连续天数</text>
+        </view>
+      </kg-card>
+
+      <kg-card variant="raised" class="sec">
+        <view class="h">
+          <l-icon name="calendar" size="20" tone="brand" />
+          <text>学习热力图</text>
+          <text class="h-sub">近 12 周 · 共 <text class="num">{{hmTotal}}</text> 题</text>
+        </view>
+        <view class="hm-body">
+          <view class="hm-ylab">
+            <text wx:for="{{hmYLabels}}" wx:key="index" class="hm-yl">{{item}}</text>
+          </view>
+          <view class="hm-grid">
+            <view wx:for="{{hmCols}}" wx:for-item="col" wx:key="index" class="hm-col">
+              <view
+                wx:for="{{col}}"
+                wx:for-item="c"
+                wx:key="index"
+                class="hm-c lv{{c.lv}} {{c.future ? 'fut' : ''}}"
+              />
+            </view>
           </view>
         </view>
-      </view>
-      <view class="hm-legend">
-        <text class="hm-lt">少</text>
-        <view class="hm-c lv0" />
-        <view class="hm-c lv1" />
-        <view class="hm-c lv2" />
-        <view class="hm-c lv3" />
-        <view class="hm-c lv4" />
-        <text class="hm-lt">多</text>
-      </view>
-    </view>
-
-    <text class="hm-note">热力图为云端口径（练习/模考作答，多端同步）</text>
-
-    <view class="sec-h"><text class="sec-t">分模块正确率</text><text class="sec-more">{{modSrc}}</text></view>
-    <view wx:if="{{!rows.length}}" class="empty">
-      <view class="eico">📊</view>
-      <text>刷过题后这里会展示分模块正确率</text>
-    </view>
-    <view wx:for="{{rows}}" wx:key="key" class="card mrow">
-      <view class="mr-h">
-        <view class="mr-l">
-          <view class="mr-dot" style="background: {{item.color}}" />
-          <text class="mr-name">{{item.name}}</text>
-          <text class="mr-sub">{{item.done}} 题</text>
+        <view class="hm-legend">
+          <text class="hm-lt">少</text>
+          <view class="hm-c lv0" />
+          <view class="hm-c lv1" />
+          <view class="hm-c lv2" />
+          <view class="hm-c lv3" />
+          <view class="hm-c lv4" />
+          <text class="hm-lt">多</text>
         </view>
-        <text class="mr-pct" style="color: {{item.weak ? '#f59e0b' : item.color}}">{{item.pct}}%</text>
+        <text class="hm-note">热力图为云端口径（练习/模考作答，多端同步）</text>
+      </kg-card>
+
+      <view class="sec-h">
+        <text class="sec-t">分模块正确率</text>
+        <kg-tag tone="neutral">{{modSrc}}</kg-tag>
       </view>
-      <view class="bar"><view class="bar-fill" style="width: {{item.pct}}%; background: {{item.weak ? '#f59e0b' : item.color}}" /></view>
-      <view wx:if="{{item.weak}}" class="weak-tip" data-mod="{{item.key}}" bind:tap="onWeakGo">
-        <text>⚠️ 薄弱模块 · 低于平均 {{item.gap}} 个百分点</text>
-        <text class="weak-go">定向重练 ›</text>
-      </view>
-    </view>
+      <kg-empty
+        wx:if="{{!rows.length}}"
+        compact
+        icon="chart-column"
+        title="还没有模块数据"
+        desc="刷过题后这里会展示分模块正确率"
+      />
+      <kg-card wx:for="{{rows}}" wx:key="key" variant="raised" class="mrow">
+        <view class="mr-h">
+          <view class="mr-l">
+            <view class="mr-ico" style="background: {{item.soft}}; color: {{item.color}}">
+              <l-icon name="{{item.icon}}" size="18" tone="inherit" />
+            </view>
+            <text class="mr-name">{{item.name}}</text>
+            <text class="mr-sub"><text class="num">{{item.done}}</text> 题</text>
+          </view>
+          <text class="mr-pct num {{item.weak ? 'is-weak' : ''}}" style="{{item.weak ? '' : 'color: ' + item.color}}">{{item.pct}}%</text>
+        </view>
+        <kg-progress value="{{item.pct}}" thickness="{{6}}" module="{{item.key}}" aria-label="{{item.name}}正确率" />
+        <view wx:if="{{item.weak}}" class="weak-tip" hover-class="weak-tip--hover" data-mod="{{item.key}}" bind:tap="onWeakGo">
+          <l-icon name="triangle-alert" size="16" tone="warn" />
+          <text class="weak-txt">薄弱模块 · 低于平均 <text class="num">{{item.gap}}</text> 个百分点</text>
+          <view class="weak-go"><text>定向重练</text><l-icon name="chevron-right" size="16" tone="warn" /></view>
+        </view>
+      </kg-card>
+    </block>
   </view>
 </scroll-view>

@@ -39,5 +39,5 @@ export default {
 .kg-banner--ok { background: var(--ok-soft); color: var(--ok-strong); }
 .kg-banner--bad { background: var(--bad-soft); color: var(--bad-strong); }
 .kg-banner__t { flex: 1; min-width: 0; }
-.kg-banner__x { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex-shrink: 0; }
+.kg-banner__x { display: flex; align-items: center; justify-content: center; width: var(--hit-min); height: var(--hit-min); margin: calc(-1 * var(--sp-8)) calc(-1 * var(--sp-8)) calc(-1 * var(--sp-8)) 0; flex-shrink: 0; } /* 命中 44，吃掉 banner 自身 padding，不改外观 */
 </style>

@@ -17,16 +17,21 @@ describe('R440 首页 / 提醒设置字号下限与热区（源文件锁）', ()
       expect(css).not.toMatch(/font-size:\s*(?:[1-9]|1[01])(?:\.\d+)?px/);
     });
   }
-  it('首页「补练往期 ›」「往期 ›」行内文字链纵向热区 ≥40px（负外边距不改布局）', () => {
+  it('首页「补练往期 ›」「往期 ›」文字链纵向热区 ≥40px（负外边距不改布局）', () => {
+    const tpl = pages.home.slice(0, pages.home.indexOf('<script'));
     const css = style(pages.home);
-    for (const sel of ['.hero-ds-arc', '.sz-arc']) {
-      const m = css.match(new RegExp(`\\${sel}\\s*\\{([^}]*)\\}`));
-      expect(m, sel).toBeTruthy();
-      // 纵向 padding 要生效须为块级盒：inline-block / float / absolute（R448 .hero-ds-arc 绝对定位贴右）
-      expect(m[1]).toMatch(/display:\s*inline-block|float:\s*right|position:\s*absolute/);
-      // 行内盒靠负外边距不撑大父行；绝对定位盒脱离文档流本就不占位
-      if (!/position:\s*absolute/.test(m[1])) expect(m[1]).toMatch(/margin:\s*-12px (?:0|-8rpx) -12px/);
-      expect(m[1]).toMatch(/padding:\s*12px/);
-    }
+    // W5 起「补练往期 ›」独占 .hero-lnk-row（flex 子项）；「往期 ›」仍是模块行副标题内的行内链
+    expect(tpl).toMatch(/<text class="hero-lnk" role="button" @click\.stop="openDailyArchive">补练往期 ›<\/text>/);
+    expect(tpl).toMatch(/<text class="modrow-lnk" @click\.stop="openSzArchive"> · 往期 ›<\/text>/);
+    const lnk = css.match(/\.hero-lnk \{([^}]*)\}/);
+    expect(lnk).toBeTruthy();
+    expect(lnk[1]).toMatch(/display:\s*inline-flex/);
+    expect(lnk[1]).toMatch(/min-height:\s*40px/);
+    expect(lnk[1]).toMatch(/margin:\s*-3px 0/);
+    const sz = css.match(/\.modrow-lnk \{([^}]*)\}/);
+    expect(sz).toBeTruthy();
+    expect(sz[1]).toMatch(/display:\s*inline-block/);
+    expect(sz[1]).toMatch(/padding:\s*11px 0 11px 4px/);
+    expect(sz[1]).toMatch(/margin:\s*-11px 0 -11px -4px/);
   });
 });

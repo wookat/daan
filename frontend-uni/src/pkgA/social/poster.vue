@@ -1,18 +1,32 @@
 <template>
   <view class="wrap">
-    <view v-if="loading" class="loading">正在生成海报…</view>
+    <view v-if="loading" class="state" aria-busy="true">
+      <kg-skeleton preset="hero" class="skel" />
+      <text class="state-t">正在生成海报…</text>
+    </view>
     <template v-else>
-      <image v-if="imgSrc" class="poster" :src="imgSrc" mode="widthFix" @longpress="save" />
-      <view v-else class="loading">
-        <text>{{ err || '生成失败' }}</text>
-        <button class="btn retry" @click="retry">重新生成</button>
-      </view>
-      <view class="bar">
-        <button class="btn" :disabled="!imgSrc" @click="save">保存图片</button>
+      <kg-empty-state
+        v-if="zeroDay"
+        icon="flame"
+        title="打卡 1 天后可生成海报"
+        desc="今天先去刷几题，明天就能生成第一张连续打卡海报"
+        cta-text="去刷题"
+        @cta="goPractice"
+      />
+      <image v-else-if="imgSrc" class="poster" :src="imgSrc" mode="widthFix" @longpress="save" />
+      <kg-empty-state
+        v-else
+        icon="wifi-off"
+        :title="err || '生成失败'"
+        cta-text="重新生成"
+        @cta="retry"
+      />
+      <view v-if="!zeroDay" class="bar">
+        <kg-button variant="primary" size="lg" block icon="save" :disabled="!imgSrc" @click="save">保存图片</kg-button>
         <!-- #ifdef MP-WEIXIN -->
-        <button class="btn ghost" open-type="share">分享给好友</button>
+        <kg-button variant="secondary" size="lg" block open-type="share" class="share">分享给好友</kg-button>
         <!-- #endif -->
-        <view class="tip">保存后可分享到朋友圈 / 小红书，和考友一起上岸</view>
+        <text class="tip">保存后可分享到朋友圈 / 小红书，和考友一起上岸</text>
       </view>
     </template>
     <!-- #ifdef MP-WEIXIN -->
@@ -247,7 +261,7 @@ function drawExamPoster(ctx, d) {
 
 export default {
   data() {
-    return { loading: true, imgSrc: '', err: '', tmpPath: '', badge: 0, mode: '', attemptId: 0 };
+    return { loading: true, imgSrc: '', err: '', tmpPath: '', badge: 0, mode: '', attemptId: 0, streak: null };
   },
   onLoad(query) {
     this.badge = Number(query && query.badge) || 0;
@@ -260,6 +274,12 @@ export default {
     return { title: '我在错题邦打卡刷题，一起上岸！', path: '/pages/practice/practice' };
   },
   // #endif
+  computed: {
+    /** 打卡海报：连签 0 天没有可展示的成绩，禁止保存（PAGES §3.3）；模考成绩单不受此限 */
+    zeroDay() {
+      return this.mode !== 'exam' && !this.badge && this.streak != null && Number(this.streak) <= 0;
+    },
+  },
   methods: {
     makeQuote(d) {
       if (d.badge) return `“解锁「连续打卡 ${d.badge} 天」徽章，坚持正在变成实力。”`;
@@ -267,6 +287,9 @@ export default {
       if (d.streak >= 7) return `“连续 ${d.streak} 天没断过，习惯正在变成实力。”`;
       if (d.today_n >= 50) return `“一天 ${d.today_n} 题，量变正在悄悄积累成质变。”`;
       return '“慢一点没关系，别停下来，上岸的人都是这么过来的。”';
+    },
+    goPractice() {
+      uni.switchTab({ url: '/pages/home/home' });
     },
     retry() {
       this.loading = true;
@@ -297,6 +320,7 @@ export default {
           this.loading = false;
           return;
         }
+        this.streak = Number(d.streak) || 0;
         d.badge = this.badge;
         d.quote = this.makeQuote(d);
       }
@@ -344,7 +368,7 @@ export default {
       this.loading = false;
     },
     save() {
-      if (!this.imgSrc) return;
+      if (!this.imgSrc || this.zeroDay) return;
       // #ifdef H5
       const a = document.createElement('a');
       a.href = this.imgSrc;
@@ -375,13 +399,19 @@ export default {
 </script>
 
 <style scoped>
-.wrap { padding: 32rpx; display: flex; flex-direction: column; align-items: center; min-height: 100vh; background: var(--line); box-sizing: border-box; }
-.loading { color: var(--ink-3); font-size: 26rpx; padding: 120rpx 0; display: flex; flex-direction: column; align-items: center; gap: 24rpx; }
-.btn.retry { padding: 0 64rpx; }
-.poster { width: 640rpx; border-radius: 32rpx; box-shadow: 0 16rpx 48rpx rgba(44, 90, 214, 0.35); }
-.bar { width: 100%; margin-top: 32rpx; }
-.btn { background: var(--brand); color: #fff; font-size: 28rpx; line-height: 40px; min-height: 40px; border-radius: 18rpx; }
-.btn.ghost { background: var(--card); color: var(--brand-text); border: 1rpx solid var(--brand); margin-top: 16rpx; }
-.tip { text-align: center; font-size: 24rpx; color: var(--ink-3); margin-top: 18rpx; }
-.hidden-canvas { position: fixed; left: -9999rpx; top: 0; width: 660px; height: 900px; }
+.wrap { padding: var(--sp-16) var(--page-x) var(--sp-48); display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; }
+.state { width: 100%; max-width: 320px; display: flex; flex-direction: column; align-items: center; gap: var(--sp-16); padding: var(--sp-24) 0; }
+.skel { width: 100%; }
+.state-t { color: var(--ink-3); font-size: var(--fs-sub); }
+.poster { width: 100%; max-width: 320px; border-radius: var(--r-lg); box-shadow: var(--sh-2); }
+.bar { width: 100%; max-width: 320px; margin-top: var(--sp-24); display: flex; flex-direction: column; gap: var(--sp-12); }
+.tip { text-align: center; font-size: var(--fs-caption); color: var(--ink-3); line-height: var(--lh-caption); }
+.hidden-canvas { position: fixed; left: -9999px; top: 0; width: 660px; height: 900px; }
+
+/* T5 工具页：任何断点都单列（≤480） */
+/* #ifdef H5 */
+@media (min-width: 700px) {
+  .wrap { max-width: 480px !important; }
+}
+/* #endif */
 </style>

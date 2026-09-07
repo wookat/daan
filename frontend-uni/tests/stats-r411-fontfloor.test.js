@@ -19,6 +19,6 @@ describe('R411 stats 字号下限 / 待掌握清零空态（源文件锁）', ()
     expect(style.match(/font-size:\s*(?:[1-9]|1\d|2[0-3])rpx/g) || []).toEqual([]);
   });
   it('待掌握 tab 全部掌握后（无搜索/筛选）有专属空态与「去刷题」', () => {
-    expect(book).toMatch(/v-else-if="tab === 'todo' && !kw && !hasFilter"[\s\S]*?待掌握已清零[\s\S]*?doneItems\.length[\s\S]*?e-btn2/);
+    expect(book).toMatch(/<kg-empty-state v-else-if="tab === 'todo' && !kw && !hasFilter"[^>]*title="待掌握已清零"[^>]*doneItems\.length[^>]*cta-text="去刷题" @cta="goPractice"/);
   });
 });

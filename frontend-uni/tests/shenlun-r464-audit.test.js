@@ -1,34 +1,49 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { read, styleOf, templateOf, rule, legacyHit, assertHitLayer } from './_w5-hit.js';
 
-const src = readFileSync(fileURLToPath(new URL('../src/pkgA/shenlun/shenlun.vue', import.meta.url)), 'utf8');
-const style = src.slice(src.indexOf('<style'));
-const rule = (sel) => (style.match(new RegExp(`\\n${sel.replace(/[.:]/g, '\\$&')} \\{([^}]*)\\}`)) || [])[1] || '';
+const src = read('pkgA/shenlun/shenlun.vue');
+const style = styleOf(src);
+const tpl = templateOf(src);
 
-describe('R464 申论页字号下限 / 可点元素热区（源文件锁）', () => {
+describe('R464 申论页字号下限 / 可点元素热区（源文件锁，W5 组件化后口径）', () => {
   it('样式块内无 <24rpx 字号（375 下 <12px）', () => {
     expect(style).not.toMatch(/font-size:\s*(?:1\d|2[0-3])rpx/);
   });
 
-  it('页签 / 筛选 chip / 抽屉 chip / 去作答 / 返回 / 上下题 / 折叠标题 / 复制链接 / 重试 命中高 ≥40px', () => {
-    for (const sel of ['.seg-i', '.chip', '.q-go', '.back', '.d-nav-btn', '.d-h.toggle', '.d-copy', '.retry', '.sheet-x', '.grade-btn']) {
-      expect(rule(sel), sel).toMatch(/min-height:\s*40px/);
-    }
-    expect(rule('.chip.sm')).not.toMatch(/min-height|font-size/);
+  it('组件层命中规则在位（kg-button / kg-sheet / kg-chip-row）', () => {
+    assertHitLayer(expect);
   });
 
-  it('套卷标签「只看本套卷」保留 20px 视觉，用 ::after 撑 40px 命中区', () => {
-    expect(rule('.q-paper.tappable')).toMatch(/position:\s*relative/);
-    const after = rule('.q-paper.tappable::after');
+  it('页签 / 筛选 chip / 返回 / 上下题 / 复制链接 / 提交批改 已换成 kg-* 组件；旧页面级选择器不再挂模板', () => {
+    expect(tpl).toMatch(/<kg-chip-row[^>]*:options="qtypeChips"/);
+    expect(tpl).toMatch(/<kg-chip-row[^>]*:options="yearChips"/);
+    expect(tpl).toMatch(/<kg-sheet v-model="fltOpen" title="筛选">/);
+    expect(tpl).toMatch(/<kg-button variant="text" size="sm" icon="chevron-left" class="back" @click="detail = null">返回列表<\/kg-button>/);
+    expect(tpl).toMatch(/<kg-button variant="ghost" size="md" icon="chevron-left"[^>]*aria-label="上一题"/);
+    expect(tpl).toMatch(/<kg-button variant="ghost" size="md"[^>]*aria-label="下一题"/);
+    expect(tpl).toMatch(/<kg-button variant="text" size="sm" icon="copy" aria-label="复制本题链接" @click="copyQLink">复制链接<\/kg-button>/);
+    expect(tpl).toMatch(/<kg-button variant="primary" size="lg" block[^>]*class="grade-btn" @click="grade">/);
+    for (const s of ['.seg-i', '.chip', '.q-go', '.d-nav-btn', '.d-copy', '.retry', '.sheet-x']) {
+      expect(legacyHit(expect, src, s), s).toBe('componentized');
+    }
+    // .back / .grade-btn 只剩外边距，命中由 kg-button 组件层保证
+    expect(rule(style, '.back')).not.toMatch(/min-height|height/);
+    expect(rule(style, '.grade-btn')).not.toMatch(/min-height|height/);
+  });
+
+  it('自绘可点行「参考要点」折叠 min-height 走 --hit-min', () => {
+    expect(tpl).toMatch(/<view class="d-toggle ref" role="button"/);
+    expect(rule(style, '.d-toggle')).toMatch(/min-height:\s*var\(--hit-min\)/);
+  });
+
+  it('kg-tag 20px 视觉的两个可点标签（只看本套卷 / 清除套卷筛选）都挂 .tappable，用 ::after 撑 40px 命中区', () => {
+    expect(tpl).toMatch(/<kg-tag v-if="q\.paper" tone="neutral" class="tappable" role="button"/);
+    expect(tpl).toMatch(/<kg-tag v-if="paper" tone="brand" class="paper-tag tappable" role="button"/);
+    expect(rule(style, '.tappable')).toMatch(/position:\s*relative/);
+    const after = rule(style, '.tappable::after');
     expect(after).toMatch(/position:\s*absolute/);
     expect(after).toMatch(/height:\s*40px/);
     expect(after).toMatch(/top:\s*50%/);
     expect(after).toMatch(/translateY\(-50%\)/);
-  });
-
-  it('筛选 ✕ 是 40×40 且用负外边距不抬高标题行', () => {
-    expect(rule('.sheet-x')).toMatch(/min-width:\s*40px/);
-    expect(rule('.sheet-x')).toMatch(/margin:\s*-6px/);
   });
 });

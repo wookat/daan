@@ -1,6 +1,7 @@
 import { fetchCheckinSummary, fetchGrowth, trackEvent } from '../../api/index';
 import { loadPStats, modName, streakDays, todayCount } from '../../utils/stats';
 import { syncTabBar } from '../../utils/tabbar';
+import { moduleMeta } from '../../utils/module-meta';
 
 interface ModRow {
   key: string;
@@ -9,17 +10,11 @@ interface ModRow {
   correct: number;
   pct: number;
   color: string;
+  soft: string;
+  icon: string;
   weak: boolean;
   gap: number;
 }
-
-const MOD_COLORS: Record<string, string> = {
-  ziliao: '#14b8a6',
-  shuliang: '#2e5bff',
-  yanyu: '#f43f5e',
-  panduan: '#8b5cf6',
-  changshi: '#f59e0b',
-};
 
 interface HmCell {
   lv: number;
@@ -36,13 +31,16 @@ function dateKey(d: Date): string {
 function buildRows(byModule: Record<string, { done: number; correct: number }>): ModRow[] {
   const rows: ModRow[] = Object.keys(byModule).map((k) => {
     const m = byModule[k];
+    const meta = moduleMeta(k);
     return {
       key: k,
       name: modName(k),
       done: m.done,
       correct: m.correct,
       pct: m.done ? Math.round((m.correct / m.done) * 100) : 0,
-      color: MOD_COLORS[k] || '#2e5bff',
+      color: meta.color,
+      soft: meta.soft,
+      icon: meta.icon,
       weak: false,
       gap: 0,
     };
@@ -96,6 +94,7 @@ Page({
     hmCols: [] as HmCell[][],
     hmTotal: 0,
     hmYLabels: ['一', '', '三', '', '五', '', '日'],
+    zero: false,
   },
   _hmTracked: false,
   onShow() {
@@ -107,8 +106,17 @@ Page({
       streak: streakDays(),
       rows,
     });
+    this.syncZero();
     this.loadGrowth();
     this.loadHeatmap();
+  },
+  // 0 数据折叠为解锁卡：累计/今日/连签/热力图全为 0 才折叠
+  syncZero() {
+    const d = this.data;
+    this.setData({ zero: !d.total && !d.today && !d.streak && !d.hmTotal });
+  },
+  onGoPractice() {
+    wx.navigateTo({ url: '/pages/practice/practice' });
   },
   // 模块正确率/累计题数：服务端 answer_log（按 uid，与 H5 统计页同源）为准，失败保留本机 pstats
   async loadGrowth() {
@@ -124,6 +132,7 @@ Page({
         total: g.total ? g.total.n || 0 : rows.reduce((n, r) => n + r.done, 0),
         modSrc: '云端口径',
       });
+      this.syncZero();
     } catch (e) {
       /* 离线：沿用 onShow 已渲染的本机 pstats */
     }
@@ -151,5 +160,6 @@ Page({
     }
     const { cols, total } = buildHeatmap(days);
     this.setData({ hmCols: cols, hmTotal: total });
+    this.syncZero();
   },
 });

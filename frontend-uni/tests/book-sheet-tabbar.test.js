@@ -8,10 +8,12 @@ const src = readFileSync(fileURLToPath(new URL('../src/pages/book/book.vue', imp
 const style = src.slice(src.indexOf('<style'));
 
 describe('book.vue 弹层与 TabBar 关系（源文件锁）', () => {
-  it('H5 窄屏 .mask 底边让出 TabBar 高度（与 export-confirm.above-tabbar 同一约定）', () => {
-    const m = style.match(/@media \(max-width: 767px\) \{[^}]*\.mask \{([^}]*)\}/);
-    expect(m, '缺少 375 .mask 让位规则').toBeTruthy();
-    expect(m[1]).toMatch(/bottom:\s*calc\(50px \+ env\(safe-area-inset-bottom\)\)/);
+  it('底部弹层统一走 KgSheet（层级读 --z-overlay 压过 TabBar 998），页面不再自绘 .mask 让位', () => {
+    expect(src).toMatch(/<kg-sheet v-model="aiOpen"/);
+    expect(src).toMatch(/<kg-sheet v-model="manualOpen"/);
+    expect(style).not.toMatch(/\.mask \{/);
+    const sheet = readFileSync(fileURLToPath(new URL('../src/components/kg-sheet/kg-sheet.vue', import.meta.url)), 'utf8');
+    expect(sheet).toMatch(/--z-overlay/);
   });
   it('PDF 导出弹层显式 above-tabbar（组件级同一约定）', () => {
     expect(src).toMatch(/<export-confirm[\s\S]*?above-tabbar/);

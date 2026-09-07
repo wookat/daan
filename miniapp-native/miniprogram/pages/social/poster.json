@@ -1,5 +1,9 @@
 {
   "usingComponents": {
-    "navbar": "/components/navbar/index"
+    "navbar": "/components/navbar/index",
+    "l-icon": "/components/l-icon/index",
+    "kg-button": "/components/kg-button/index",
+    "kg-empty": "/components/kg-empty/index",
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
   }
 }

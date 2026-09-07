@@ -48,6 +48,10 @@ describe('R420 contest / contest-report 字号下限（375 下 ≥12px）与榜�
     expect(style(report).match(/font-size:\s*(?:[1-9]|1\d|2[0-3])rpx/g) || []).toEqual([]);
   });
   it('榜单弹层 ✕ 热区 ≥40px', () => {
-    expect(style(contest)).toMatch(/\.sheet-x\s*\{[^}]*min-width:\s*40px;[^}]*min-height:\s*40px;/);
+    // W5 起榜单弹层走 kg-sheet，✕ 由组件 .kg-sheet__x 撑 --hit-min（44px）
+    expect(contest).toMatch(/<kg-sheet :model-value="!!\(board \|\| boardLoading\)"/);
+    expect(contest).not.toMatch(/class="sheet-x"/);
+    const sheet = read('../src/components/kg-sheet/kg-sheet.vue');
+    expect(sheet).toMatch(/\.kg-sheet__x \{[^}]*width: var\(--hit-min\); height: var\(--hit-min\)/);
   });
 });

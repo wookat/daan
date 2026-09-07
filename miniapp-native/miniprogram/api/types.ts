@@ -375,3 +375,13 @@ export interface ExamReportResp {
   weak_tags: ExamWeakTag[];
   items: ExamReportItem[];
 }
+
+export interface ExamRankResp {
+  attempt_id: number;
+  score: number;
+  rank: number;
+  total: number;
+  beaten_pct: number;
+  avg: number;
+  small_sample: boolean;
+}

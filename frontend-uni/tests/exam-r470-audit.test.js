@@ -1,54 +1,60 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { read, styleOf, rule, legacyHit, assertHitLayer, countTag } from './_w5-hit.js';
 
-const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
-const style = (src) => src.slice(src.indexOf('<style'));
-const rule = (css, sel) => (css.match(new RegExp(`\\n\\s*${sel.replace(/[.:]/g, '\\$&')} \\{([^}]*)\\}`)) || [])[1] || '';
+// W5/main 起模考簇的失败态「重试」/ 弹层 ✕ / chip / 按钮全部走 kg-empty-state / kg-sheet / kg-chip-row / kg-button，
+// 热区由组件层（--hit-min 44px）统一保证；页面级仍自绘的元素（卷头 / 记录行 / 答题卡题号格）按 token 锁 ≥40px。
 const pages = {
-  list: style(read('../src/pkgA/exam/list.vue')),
-  exam: style(read('../src/pkgA/exam/exam.vue')),
-  report: style(read('../src/pkgA/exam/report.vue')),
-  rankCard: style(read('../src/components/rank-card/rank-card.vue')),
+  list: read('pkgA/exam/list.vue'),
+  exam: read('pkgA/exam/exam.vue'),
+  report: read('pkgA/exam/report.vue'),
+  rankCard: read('components/rank-card/rank-card.vue'),
 };
 
+const CELL40 = /(?:min-)?width:\s*(?:var\(--acard-cell\)|4\dpx)[^}]*(?:min-)?height:\s*(?:var\(--acard-cell\)|4\dpx)/;
+
 describe('R470 模考簇（卷库 / 考试 / 成绩报告 / 报告内排名卡组件）字号下限与可点元素热区（源文件锁）', () => {
-  for (const [name, css] of Object.entries(pages)) {
-    it(`${name} 样式无 <24rpx（375 下 12px）字号`, () => {
+  for (const [name, src] of Object.entries(pages)) {
+    it(`${name} 样式无 <24rpx（375 下 12px）字号，也无 <12px 字面值`, () => {
+      const css = styleOf(src);
       expect(css.match(/font-size:\s*(?:[1-9]|1\d|2[0-3])rpx/g) || []).toEqual([]);
+      expect(css.match(/font-size:\s*(?:[1-9]|1[01])px/g) || []).toEqual([]);
     });
   }
 
-  it('卷库页：加载失败「重试」命中高 ≥40px（chip / 按钮 / 卷头 / 记录行原有 44px 保留）', () => {
-    const css = pages.list;
-    expect(rule(css, '.retry')).toMatch(/min-height:\s*40px/);
-    for (const sel of ['.fchip', '.pbtn', '.paper-top', '.arow']) {
-      expect(rule(css, sel), sel).toMatch(/min-height:\s*44px/);
-    }
+  it('组件层热区契约（tokens / kg-button / kg-sheet / kg-chip-row / kg-section-header / kg-banner）', () => {
+    assertHitLayer(expect);
+    const tokens = read('styles/tokens.generated.css');
+    expect(tokens).toMatch(/--acard-cell:\s*40px;/);
   });
 
-  it('考试页：答题卡 ✕ / 题号格 命中高 ≥40px，✕ 用负外边距不抬 sheet 头行', () => {
-    const css = pages.exam;
-    expect(rule(css, '.sheet-x')).toMatch(/min-height:\s*40px/);
-    expect(rule(css, '.sheet-x')).toMatch(/min-width:\s*40px/);
-    expect(rule(css, '.sheet-x')).toMatch(/margin:\s*-6px/);
-    expect(rule(css, '.acard-n')).toMatch(/min-height:\s*40px/);
-    expect(rule(css, '.acard-n')).toMatch(/min-width:\s*40px/);
-    expect(rule(css, '.acard-n')).not.toMatch(/line-height/);
-    for (const sel of ['.tbtn', '.opt', '.nbtn']) {
-      expect(rule(css, sel), sel).toMatch(/min-height:\s*44px/);
-    }
+  it('卷库页：失败态走 kg-empty-state、筛选走 kg-chip-row、弹层走 kg-sheet；卷头 / 记录行 ≥44px', () => {
+    const src = pages.list;
+    expect(countTag(src, 'kg-empty-state')).toBeGreaterThanOrEqual(1);
+    expect(countTag(src, 'kg-chip-row')).toBeGreaterThanOrEqual(1);
+    expect(countTag(src, 'kg-sheet')).toBeGreaterThanOrEqual(1);
+    for (const sel of ['.retry', '.fchip', '.pbtn']) expect(legacyHit(expect, src, sel)).toBe('componentized');
+    expect(rule(styleOf(src), '.paper-top')).toMatch(/min-height:\s*var\(--hit-min\)/);
+    expect(rule(styleOf(src), '.arow')).toMatch(/min-height:\s*var\(--cell-h\)/);
   });
 
-  it('报告页：题号格 / 弹层 ✕（收藏·关闭）/ 错因 chip / 练同类题 / AI 详解 / 纠错链接 / 上下题 / 导航模式 / 纠错类型 chip / 重试 命中高 ≥40px', () => {
-    const css = pages.report;
-    for (const sel of ['.qn', '.sheet-x', '.drz', '.dreinf', '.dask', '.report-link', '.dnav-btn', '.dnav-mid', '.rp-chip', '.retry']) {
-      expect(rule(css, sel), sel).toMatch(/min-height:\s*40px/);
+  it('考试页：答题卡走 kg-sheet（✕ 由组件撑 44px），题号格 40×40 token；选项走 kg-option-group', () => {
+    const src = pages.exam;
+    expect(countTag(src, 'kg-sheet')).toBeGreaterThanOrEqual(1);
+    expect(countTag(src, 'kg-option-group')).toBe(1);
+    expect(legacyHit(expect, src, '.sheet-x')).toBe('componentized');
+    expect(rule(styleOf(src), '.acard-n')).toMatch(CELL40);
+    for (const sel of ['.tbtn', '.opt', '.nbtn']) legacyHit(expect, src, sel, /min-height:\s*(?:44px|var\(--hit-min\)|var\(--btn-h-lg\))/);
+  });
+
+  it('报告页：题号格 40×40 token；弹层 ✕ / 错因 chip / 练同类题 / AI 详解 / 上下题 / 纠错 chip / 重试 走组件层', () => {
+    const src = pages.report;
+    expect(rule(styleOf(src), '.qn')).toMatch(CELL40);
+    expect(countTag(src, 'kg-sheet')).toBeGreaterThanOrEqual(1);
+    expect(countTag(src, 'kg-button')).toBeGreaterThanOrEqual(3);
+    for (const sel of ['.sheet-x', '.drz', '.dreinf', '.dask', '.report-link', '.dnav-btn', '.dnav-mid', '.rp-chip', '.retry']) {
+      legacyHit(expect, src, sel);
     }
-    expect(rule(css, '.qn')).toMatch(/min-width:\s*40px/);
-    expect(rule(css, '.qn')).not.toMatch(/line-height/);
-    expect(rule(css, '.sheet-x')).toMatch(/margin:\s*-6px/);
     // R465 同类：min-height 用 rpx（44rpx = 22px）不是有效热区值
-    expect(rule(css, '.rp-chip')).not.toMatch(/min-height:\s*\d+rpx/);
+    expect(styleOf(src)).not.toMatch(/min-height:\s*\d+rpx/);
   });
 });

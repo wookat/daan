@@ -1,8 +1,18 @@
 <navbar title="题目分享" back="{{true}}" />
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
-    <view wx:if="{{loading}}" class="card empty">加载中…</view>
-    <view wx:elif="{{errMsg}}" class="card empty">{{errMsg}}</view>
+    <block wx:if="{{loading}}">
+      <kg-card variant="raised" class="qcard"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
+    </block>
+
+    <kg-empty
+      wx:elif="{{errMsg}}"
+      icon="wifi-off"
+      title="分享打不开"
+      desc="{{errMsg}}"
+      ctaText="去刷题"
+      ctaTo="/pages/home/home"
+    />
 
     <block wx:elif="{{d}}">
       <view class="from-bar">
@@ -13,64 +23,78 @@
         </view>
       </view>
 
-      <view class="card">
+      <kg-card variant="raised" class="qcard">
         <view class="q-tags">
-          <text class="tag tag-brand">{{modLabel}}</text>
-          <text wx:if="{{d.question.submodule}}" class="tag tag-gray">{{d.question.submodule}}</text>
+          <kg-tag tone="module" module="{{d.question.module}}">{{modLabel}}</kg-tag>
+          <kg-tag wx:if="{{d.question.submodule}}" tone="neutral">{{d.question.submodule}}</kg-tag>
         </view>
         <text class="stem" user-select>{{d.question.question}}</text>
-        <view
-          wx:for="{{optList}}"
-          wx:key="k"
-          class="opt {{!revealed ? (picked === item.k ? 'pick' : '') : item.k === d.question.answer ? 'right' : (myResult && item.k === myResult.picked ? 'wrong' : '')}}"
-          data-key="{{item.k}}"
-          bind:tap="onPick"
-        >
-          <text class="okey">{{item.k}}</text>
-          <text class="otext">{{item.v}}</text>
+        <view class="opts">
+          <view
+            wx:for="{{optList}}"
+            wx:key="k"
+            class="opt {{!revealed ? (picked === item.k ? 'pick' : '') : item.k === d.question.answer ? 'right' : (myResult && item.k === myResult.picked ? 'wrong' : '')}}"
+            hover-class="{{revealed ? '' : 'opt--hover'}}"
+            role="button"
+            aria-label="选项 {{item.k}}"
+            data-key="{{item.k}}"
+            bind:tap="onPick"
+          >
+            <text class="okey">{{item.k}}</text>
+            <text class="otext">{{item.v}}</text>
+          </view>
         </view>
-      </view>
+      </kg-card>
 
       <block wx:if="{{revealed}}">
-        <view wx:if="{{myResult}}" class="res-bar {{myResult.correct ? 'ok' : 'bad'}}">
-          {{myResult.correct ? '✅ 答对了！正确答案 ' + d.question.answer : '❌ 答错了，正确答案是 ' + d.question.answer + '，你选了 ' + myResult.picked}}
+        <view wx:if="{{myResult}}" class="banner {{myResult.correct ? 'ok' : 'bad'}}">
+          <l-icon name="{{myResult.correct ? 'circle-check' : 'circle-x'}}" size="22" tone="{{myResult.correct ? 'ok' : 'bad'}}" />
+          <text class="banner-t">{{myResult.correct ? '答对了！正确答案 ' + d.question.answer : '答错了，正确答案是 ' + d.question.answer + '，你选了 ' + myResult.picked}}</text>
         </view>
-        <view wx:else class="res-bar ok">正确答案：{{d.question.answer}}</view>
+        <view wx:else class="banner ok">
+          <l-icon name="circle-check" size="22" tone="ok" />
+          <text class="banner-t">正确答案：{{d.question.answer}}</text>
+        </view>
 
-        <view wx:if="{{beatText}}" class="beat-bar">{{beatText}}</view>
+        <view wx:if="{{beatText}}" class="beat-bar">
+          <l-icon name="sparkles" size="16" tone="warn" />
+          <text>{{beatText}}</text>
+        </view>
 
-        <view wx:if="{{d.question.explanation}}" class="card">
-          <text class="exp-k">解析</text>
+        <kg-card wx:if="{{d.question.explanation}}" variant="raised" class="qcard">
+          <view class="exp-h"><l-icon name="lightbulb" size="18" tone="warn" /><text>解析</text></view>
           <text class="exp" user-select>{{d.question.explanation}}</text>
-        </view>
+        </kg-card>
 
-        <view class="card">
-          <text class="exp-k">大家的作答（{{answers.length}} 人）</text>
-          <view wx:if="{{!answers.length}}" class="empty small">还没有人作答，把链接再发给几个考友吧</view>
+        <kg-card variant="raised" class="qcard">
+          <view class="exp-h"><l-icon name="users" size="18" tone="brand" /><text>大家的作答（{{answers.length}} 人）</text></view>
+          <kg-empty wx:if="{{!answers.length}}" compact icon="inbox" title="还没有人作答" desc="把链接再发给几个考友吧" />
           <view wx:for="{{answers}}" wx:key="index" class="ans-row">
             <text class="ans-name">{{item.nickname}}</text>
             <text class="ans-pick">选 {{item.picked}}</text>
-            <text class="ans-res {{item.correct ? 'ok' : 'bad'}}">{{item.correct ? '对' : '错'}}</text>
+            <kg-tag tone="{{item.correct ? 'ok' : 'bad'}}">{{item.correct ? '对' : '错'}}</kg-tag>
           </view>
-        </view>
+        </kg-card>
 
-        <view wx:if="{{teamInvite && !teamJoined}}" class="card team-cta">
+        <view wx:if="{{teamInvite && !teamJoined}}" class="team-cta">
           <view class="tc-l">
             <text class="tc-t">和 {{d.from_name}} 组队刷题</text>
             <text class="tc-s">加入小队「{{teamInvite.name}}」，每天互相监督打卡</text>
           </view>
-          <view class="tc-btn {{joining ? 'off' : ''}}" bind:tap="onJoinTeam">{{joining ? '加入中…' : '一键加入'}}</view>
+          <kg-button variant="primary" tone="inverse" size="sm" loading="{{joining}}" bind:click="onJoinTeam">{{joining ? '加入中…' : '一键加入'}}</kg-button>
         </view>
-        <view wx:elif="{{teamJoined}}" class="card team-cta joined">
+        <view wx:elif="{{teamJoined}}" class="team-cta joined">
           <view class="tc-l">
-            <text class="tc-t">🎉 已加入「{{teamInvite.name}}」</text>
+            <view class="tc-t-row"><l-icon name="party-popper" size="18" tone="ok" /><text class="tc-t">已加入「{{teamInvite.name}}」</text></view>
             <text class="tc-s">每天刷题就是打卡，队友都能看到你的进度</text>
           </view>
-          <view class="tc-btn ghost" bind:tap="onGoTeam">看队友 ›</view>
+          <kg-button variant="secondary" size="sm" icon="chevron-right" bind:click="onGoTeam">看队友</kg-button>
         </view>
 
-        <view class="btn-primary" bind:tap="onSimilar">去刷同类题</view>
-        <view class="btn-sub" bind:tap="onCopyLink">复制分享链接，喊更多人来答</view>
+        <view class="actions">
+          <kg-button variant="primary" size="lg" block icon="zap" bind:click="onSimilar">去刷同类题</kg-button>
+          <kg-button variant="text" size="md" block icon="copy" bind:click="onCopyLink">复制分享链接，喊更多人来答</kg-button>
+        </view>
       </block>
     </block>
   </view>

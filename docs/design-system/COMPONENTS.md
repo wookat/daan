@@ -65,6 +65,8 @@ Props：`variant: 'primary'|'secondary'|'ghost'|'text'`，`size: 'lg'|'md'|'sm'`
 
 现有实现：`wd-button` ×8（profile/reminders/login 等）；自写 `.btn/.hero-btn/.paper-btn/.empty-btn` 等 18 文件（`research/03` §6.1）；小程序 `app.wxss:142 .btn-primary`（渐变、700 字重、26rpx 竖 padding → 全部改）。
 
+命中区：`sm`（32）/`md`（36）视觉高度低于 `--hit-min`（44），`KgButton` 用 `::after` 把可点区上下扩到 44（wot 默认 `overflow:hidden` 与 text 变体 `::after{display:none}` 一并覆写）；`md` 去掉 wot 自带 `min-width:120`，宽度由内容+padding 决定（行内工具位如错题本「筛选/批量」放不下，且会挤压同排分段控件）。
+
 **取舍**：为什么不直接裸用 `wd-button` 而要 `KgButton`：4 级到 wot `type/plain` 的映射不是一一对应（secondary 需要 custom-class），18 个文件各自翻译一遍就是现状；薄封装 30 行。为什么主按钮不用渐变：小程序 v2 与 home hero 用渐变按钮，但渐变没有对应的 press 态（深一档渐变要再造两个 raw 色），Khan/Duolingo/Brilliant 主按钮全是平色（`research/01` §3）。
 
 ### 1.2 输入 / 搜索 ← `wd-input` / `wd-search` / `t-input` / `t-search`

@@ -2,391 +2,289 @@
   <view class="wrap home">
     <!-- 考试切换 + 全局搜索入口 -->
     <view class="toprow">
-      <view class="examsw" @click="openSetup">
+      <view class="examsw" role="button" hover-class="examsw--hover" @click="openSetup">
         <text class="examsw-t">{{ examLabel }}</text>
-        <text class="examsw-a">▾</text>
+        <l-icon name="chevron-down" :size="16" tone="brand-text" />
       </view>
-      <view class="searchbar" @click="goSearch">
-        <l-icon name="search" :size="16" color="#9ca3af" />
+      <view class="searchbar" role="button" hover-class="searchbar--hover" @click="goSearch">
+        <l-icon name="search" :size="16" tone="muted" />
         <text class="searchbar-t">搜题目 / 考点 / 试卷</text>
       </view>
     </view>
 
-    <!-- 新访客价值主张首屏（无练习历史时展示，可关闭） -->
-    <view v-if="showLanding" class="card landing">
-      <text class="ld-x" @click="closeLanding">✕</text>
-      <text class="ld-t">免费刷 10万+ 行测题</text>
-      <text class="ld-s">拍题 AI 讲解 · 错题本按遗忘曲线复习 · 迷你模考 —— 免注册，打开即练</text>
-      <view class="ld-grid">
-        <view class="ld-item"><text class="ld-in">10万+ 行测题库</text><text class="ld-id">1.5万+ 历年真题 · 三级考点分类</text></view>
-        <view class="ld-item"><text class="ld-in">AI 拍题讲解</text><text class="ld-id">花生十三方法体系解析</text></view>
-        <view class="ld-item"><text class="ld-in">智能错题本</text><text class="ld-id">遗忘曲线复习 + 掌握度</text></view>
-        <view class="ld-item"><text class="ld-in">迷你模考</text><text class="ld-id">判分报告 · 错题自动入本</text></view>
-      </view>
-      <view class="ld-acts">
-        <view class="ld-btn main" @click="startDaily">免注册立即开练 ›</view>
-        <view class="ld-btn sub" @click="goTiku">浏览题库</view>
-      </view>
-    </view>
-
-    <!-- 未交卷模考续考卡 -->
-    <view v-if="examResume" class="card ercard">
-      <view class="cb-l">
-        <text class="cb-t">有一场未交卷的模考</text>
-        <text class="cb-s">{{ examResume.title }} · 已答 {{ examResume.answered }}/{{ examResume.total }} 题 · 剩余 {{ fmtErLeft(examResume.leftSecs) }}</text>
-      </view>
-      <view class="cb-r">
-        <text class="cb-go" role="button" aria-label="继续未交卷的模考" @click="erContinue">去继续 ›</text>
-        <text class="cb-x" role="button" aria-label="放弃未交卷进度" @click="erDrop">✕</text>
-      </view>
-    </view>
-
-    <!-- 未完成普通练习续练卡 -->
-    <view v-if="practiceResume" class="card ercard">
-      <view class="cb-l">
-        <text class="cb-t">有一组未做完的练习</text>
-        <text class="cb-s">{{ practiceResume.ptitle || prModName(practiceResume.module) }} · 已做 {{ practiceResume.done }}/{{ practiceResume.total }} 题</text>
-      </view>
-      <view class="cb-r">
-        <text class="cb-go" role="button" aria-label="继续未做完的练习" @click="prContinue">去继续 ›</text>
-        <text class="cb-x" role="button" aria-label="放弃未完成练习" @click="prDrop">✕</text>
-      </view>
-    </view>
-
-    <!-- 未完成错题复习续复习卡 -->
-    <view v-if="reviewResume" class="card ercard">
-      <view class="cb-l">
-        <text class="cb-t">有一次未完成的错题复习</text>
-        <text class="cb-s">中断在第 {{ reviewResume.rIdx + 1 }}/{{ reviewResume.items.length }} 题</text>
-      </view>
-      <view class="cb-r">
-        <text class="cb-go" role="button" aria-label="继续未完成的错题复习" @click="rvContinue">去继续 ›</text>
-        <text class="cb-x" role="button" aria-label="放弃未完成复习" @click="rvDrop">✕</text>
-      </view>
-    </view>
-
-    <!-- 回访召回卡（7天以上未练习的老用户） -->
-    <view v-if="comeback" class="card cbcard">
-      <view class="cb-l">
-        <text class="cb-t">欢迎回来！你已累计练 {{ comeback.total }} 题</text>
-        <text class="cb-s">上次练习是 {{ comeback.gap }} 天前 · 继续保持，看看你的学习周报</text>
-      </view>
-      <view class="cb-r">
-        <text class="cb-go" @click="cbWeekly">看周报 ›</text>
-        <text class="cb-x" @click="comeback = null">✕</text>
-      </view>
-    </view>
-
-    <!-- 每日打卡提醒横幅（傍晚仍未开练时展示，每天一次） -->
-    <view v-if="reminderBanner" class="card rmcard">
-      <view class="cb-l">
-        <text class="cb-t">今天还没打卡</text>
-        <text class="cb-s">练 1 题即可保住连续打卡，别让连击断在今天</text>
-      </view>
-      <view class="cb-r">
-        <text class="cb-go" @click="rmGo">去刷题 ›</text>
-        <text class="cb-x" @click="reminderBanner = false">✕</text>
-      </view>
-    </view>
-
-    <!-- Hero：今日目标 + 行动 -->
-    <view class="hero">
-      <view class="hero-top">
-        <text class="hero-goal">今日已练 <text class="hero-n">{{ todayCount }}</text>/{{ dailyGoal }} 题{{ todayCount >= dailyGoal ? ' · 已达成' : '' }}</text>
-        <view v-if="todayCount >= dailyGoal" class="hero-streak" @click="openPoster"><l-icon name="party-popper" :size="13" color="#ffffff" /><text>生成打卡海报 ›</text></view>
-        <view v-else-if="streakShown" class="hero-streak"><l-icon name="flame" :size="13" color="#ffffff" /><text>连续打卡 {{ streakShown }} 天</text></view>
-      </view>
-      <view class="hero-bar"><view class="hero-fill" :style="{ width: Math.min((todayCount / dailyGoal) * 100, 100) + '%' }" /></view>
-      <text v-if="dsMeta && dsDone" class="hero-ds">今日全站同题 · 已完成 答对 {{ dsDone.right }}/{{ dsDone.total }}<template v-if="dsDone.rank"> · 第 {{ dsDone.rank }} 名</template><template v-if="dsDone.streak >= 2"> · 🔥 连 {{ dsDone.streak }} 天</template><text class="hero-ds-arc" @click.stop="openDailyArchive">补练往期 ›</text></text>
-      <text v-else class="hero-ds">今日全站同题 10 题{{ dsMeta ? ' · ' + (dsMeta.participants ? '已有 ' + dsMeta.participants + ' 人完成' : '来做今天第 1 人') : '' }}<text class="hero-ds-arc" @click.stop="openDailyArchive">补练往期 ›</text></text>
-      <view class="hero-acts">
-        <view class="hero-btn main" @click="startDaily">{{ todayDone ? '再练一组 ›' : '继续目标 ›' }}</view>
-        <view class="hero-btn sub" @click="openSetup">今日计划</view>
-      </view>
-    </view>
-
-    <!-- 今日任务三件套 -->
-    <view class="card taskcard">
-      <view class="tk-h">
-        <text class="tk-t">今日任务</text>
-        <text class="tk-n">{{ taskDoneN }}/3</text>
-      </view>
-      <view class="tk-row" @click="taskGo('practice')">
-        <text class="tk-ck" :class="{ on: todayCount >= dailyGoal }">{{ todayCount >= dailyGoal ? '✓' : '' }}</text>
-        <view class="tk-main">
-          <text class="tk-name" :class="{ done: todayCount >= dailyGoal }">刷题目标</text>
-          <text class="tk-sub">已练 {{ todayCount }}/{{ dailyGoal }} 题</text>
+    <kg-two-col>
+      <template #main>
+        <!-- Hero：零作答 = 一句价值 + 1 CTA（可关闭）；有记录 = 今日已练 N/goal + 1 主按钮 + 连签 -->
+        <view v-if="showLanding" class="hero-wrap">
+          <kg-hero-card
+            label="拍题 AI 讲解 · 错题按遗忘曲线复习 · 迷你模考"
+            value="10万+"
+            unit="行测题免费刷，免注册即练"
+            :primary="{ text: '免注册立即开练' }"
+            @primary="startDaily"
+          />
+          <view class="hero-x" role="button" aria-label="关闭" @click="closeLanding"><l-icon name="x" :size="16" tone="on-brand" /></view>
         </view>
-        <text class="tk-go">{{ todayCount >= dailyGoal ? '再练一组 ›' : '去刷题 ›' }}</text>
-      </view>
-      <view class="tk-row" @click="taskGo('review')">
-        <text class="tk-ck" :class="{ on: reviewTaskDone }">{{ reviewTaskDone ? '✓' : '' }}</text>
-        <view class="tk-main">
-          <text class="tk-name" :class="{ done: reviewTaskDone }">错题复习</text>
-          <text class="tk-sub">{{ dueReview ? '今日到期 ' + dueReview + ' 题' : reviewTaskDone ? '今日已清零' : planFetched ? '答错的题自动进错题本' : '按遗忘曲线安排' }}</text>
-        </view>
-        <text class="tk-go">{{ dueReview ? '去复习 ›' : '错题本 ›' }}</text>
-      </view>
-      <view class="tk-row" @click="taskGo('checkin')">
-        <text class="tk-ck" :class="{ on: todayCount > 0 }">{{ todayCount > 0 ? '✓' : '' }}</text>
-        <view class="tk-main">
-          <text class="tk-name" :class="{ done: todayCount > 0 }">每日打卡<text v-if="streakShown" class="tk-streak">🔥 连续 {{ streakShown }} 天</text></text>
-          <template v-if="nextMilestone">
-            <view class="tk-bar"><view class="tk-fill" :style="{ width: nextMilestone.pct + '%' }" /></view>
-            <text class="tk-sub">再打卡 {{ nextMilestone.left }} 天解锁「{{ nextMilestone.days }} 天」徽章</text>
-          </template>
-          <text v-else class="tk-sub">已解锁全部打卡徽章，太强了！</text>
-        </view>
-        <text class="tk-go">日历 ›</text>
-      </view>
-    </view>
-
-    <!-- 今日到期复习入口 -->
-    <view v-if="dueReview" class="card duebar" @click="goReview('home_card')">
-      <view class="duebar-l">
-        <l-icon name="calendar-check" :size="18" color="#ffffff" />
-        <view class="duebar-txts">
-          <text class="duebar-t">今日到期复习 {{ dueReview }} 题</text>
-          <text class="duebar-s">按遗忘曲线安排 · 越拖越容易忘</text>
-        </view>
-      </view>
-      <text class="duebar-go">去复习 ›</text>
-    </view>
-
-    <!-- 学习计划引导 / 今日计划 -->
-    <view v-if="!profileFetched && planSkel" class="card skel skel-plan" />
-    <view v-if="profileFetched && profile === null && !guideHide" class="card guide" @click="openSetup">
-      <view class="guide-l">
-        <text class="guide-t">制定我的学习计划</text>
-        <text class="guide-s">按考试日期倒排每日任务：专项练习 + 错题复习 + 每周模考</text>
-      </view>
-      <text class="guide-btn">去制定 ›</text>
-      <text class="guide-x" @click.stop="skipGuide">跳过</text>
-    </view>
-    <view v-if="planToday && planToday.profile" class="card plancard">
-      <view class="plan-h">
-        <text class="plan-t">今日计划</text>
-        <view class="plan-hr">
-          <text v-if="planDaysText" class="plan-days">{{ planDaysText }}</text>
-          <text class="plan-edit" @click="openSetup">编辑</text>
-        </view>
-      </view>
-      <view class="plan-prog">
-        <view class="plan-prog-bar"><view class="plan-prog-fill" :style="{ width: (planToday.progress.total ? (planToday.progress.done / planToday.progress.total) * 100 : 0) + '%' }" /></view>
-        <text class="plan-prog-t">{{ planToday.progress.done }}/{{ planToday.progress.total }}</text>
-      </view>
-      <view v-for="t in planToday.tasks" :key="t.key" class="plan-row task" @click="goTask(t)">
-        <text class="task-ck" :class="{ on: t.done }">{{ t.done ? '✓' : '' }}</text>
-        <view class="task-main">
-          <text class="plan-txt" :class="{ tdone: t.done }">{{ t.title }}</text>
-          <text class="task-sub">{{ t.sub }}<template v-if="t.type !== 'mock' && t.done_n"> · 已完成 {{ t.done_n }}/{{ t.target }}</template></text>
-        </view>
-        <text class="plan-go">{{ t.done ? '已完成' : t.type === 'mock' ? '去模考 ›' : t.type === 'review' ? '去复习 ›' : t.type === 'reinforce' ? '去强化 ›' : '去练 ›' }}</text>
-      </view>
-      <view class="plan-focus">
-        <text class="plan-focus-k">今天主攻</text>
-        <text v-for="(fn, fk) in FOCUS_MODS" :key="fk" class="plan-fchip" :class="{ on: plan && plan.focus === fk }" @click="setFocus(fk)">{{ fn }}</text>
-      </view>
-    </view>
-    <view v-else-if="plan && (plan.due_mistakes || (plan.weak || []).length || (plan.yesterday || {}).n)" class="card plancard">
-      <view class="plan-h">
-        <text class="plan-t">今日建议</text>
-        <text v-if="(plan.yesterday || {}).n" class="plan-y">昨日练 {{ plan.yesterday.n }} 题 · 正确率 {{ Math.round((plan.yesterday.correct / plan.yesterday.n) * 100) }}%</text>
-        <text v-else class="plan-y">昨日未练习</text>
-      </view>
-      <view v-if="plan.due_mistakes" class="plan-row" @click="goBook">
-        <text class="plan-dot due" />
-        <text class="plan-txt">先复习到期错题 {{ plan.due_mistakes }} 道</text>
-        <text class="plan-go">去复习 ›</text>
-      </view>
-      <view v-for="w in plan.weak || []" :key="w.module + w.submodule + (w.tag3 || '')" class="plan-row" @click="startPreset(w.module, w.submodule, 10, true, w.tag3 || null, 'reco')">
-        <text class="plan-dot" />
-        <text class="plan-txt">{{ w.label || w.submodule }}（{{ w.reason }} · 正确率 {{ Math.round(w.acc * 100) }}%）</text>
-        <text class="plan-go">练 10 题 ›</text>
-      </view>
-      <view class="plan-focus">
-        <text class="plan-focus-k">今天主攻</text>
-        <text v-for="(fn, fk) in FOCUS_MODS" :key="fk" class="plan-fchip" :class="{ on: plan.focus === fk }" @click="setFocus(fk)">{{ fn }}</text>
-      </view>
-    </view>
-
-    <!-- 断卡风险提示 -->
-    <view v-if="streakRisk" class="card riskbar" @click="startDaily">
-      <view class="risk-ico"><l-icon name="flame" :size="22" color="#d97706" /></view>
-      <view class="grow">
-        <text class="risk-t">{{ streakRisk.title }}</text>
-        <text class="risk-s">{{ streakRisk.sub }}</text>
-      </view>
-      <text class="risk-go">去刷题 ›</text>
-    </view>
-
-    <!-- 公告 -->
-    <view v-if="announce === undefined" class="card skel skel-ann" />
-    <view v-if="announce" class="card ann">
-      <l-icon name="megaphone" :size="16" color="#0369a1" />
-      <view class="ann-c">
-        <text class="ann-t">{{ announce.title }}</text>
-        <text v-if="announce.body" class="ann-b">{{ announce.body }}</text>
-      </view>
-      <view class="ann-x" role="button" aria-label="关闭公告" @click="dismissAnn"><l-icon name="x" :size="16" color="#0369a1" /></view>
-    </view>
-
-    <!-- 时政每日一练 -->
-    <view v-if="!counts.length" class="card skel skel-sz" />
-    <view v-if="counts.length" class="card szcard" @click="szTodayDone ? launch({ kind: 'szreview' }) : launch({ kind: 'shizheng' })">
-      <view class="sz-ico"><l-icon name="newspaper" :size="24" color="#d97706" /></view>
-      <view class="grow">
-        <view class="sz-t">时政每日一练 <text v-if="!szTodayDone" class="tag warn">今日更新</text><text v-else class="tag ok">已完成</text></view>
-        <text class="sz-s">每日 10 题 · 近半年国内时政热点 · 全站同题<text class="sz-arc" @click.stop="openSzArchive">往期 ›</text></text>
-      </view>
-      <view class="mini-btn">{{ szTodayDone ? '回顾' : '去练习' }}</view>
-    </view>
-
-    <!-- 专项练习 -->
-    <view class="sec-h">
-      <text class="sec-t">专项练习</text>
-      <text class="sec-more" @click="customOpen = true">练习设置 ›</text>
-    </view>
-    <view v-if="!counts.length" class="skelwrap" @click="loadCounts">
-      <view v-for="i in 6" :key="i" class="card skel skel-row" />
-      <text class="skel-hint">题库加载中…点此重试</text>
-    </view>
-    <view class="modlist">
-      <view v-for="c in counts" :key="c.module" class="card modrow" @click="openModule(c.module)">
-        <view class="mod-ico" :style="{ background: modColor(c.module).bg }"><l-icon :name="modIcon(c.module)" :size="24" :color="modColor(c.module).fg" /></view>
-        <view class="grow">
-          <text class="mod-name">{{ modName(c.module) }}</text>
-          <text class="mod-sub">{{ progText(c) }}</text>
-        </view>
-        <view v-if="c.n" class="mod-r">
-          <text class="mod-prog"><text class="mod-prog-n">{{ modStat(c.module).done }}</text>/{{ c.n }}</text>
-          <view class="mod-bar"><view class="mod-fill" :style="{ width: progPct(c) + '%', background: modColor(c.module).fg }" /></view>
-        </view>
-        <text class="mod-arrow">›</text>
-      </view>
-      <view v-if="counts.length" class="card modrow" @click="startPreset(null)">
-        <view class="mod-ico" style="background: var(--brand-soft)"><l-icon name="shuffle" :size="24" color="#2e5bff" /></view>
-        <view class="grow">
-          <text class="mod-name">混合刷题</text>
-          <text class="mod-sub">全部模块随机 · 每组 {{ groupSize }} 题</text>
-        </view>
-        <text class="mod-arrow">›</text>
-      </view>
-      <view v-if="weakModule" class="card smart" @click="openModule(weakModule)">
-        <view class="smart-l">
-          <text class="smart-t">智能刷题：攻克薄弱项</text>
-          <text class="smart-s">你的 {{ modName(weakModule) }} 正确率较低，建议专项练习</text>
-        </view>
-        <text class="smart-go">去练 ›</text>
-      </view>
-    </view>
-
-    <!-- 周学习报告 -->
-    <view class="card weekly-c" @click="goWeeklyReport">
-      <view class="more-ico"><l-icon name="calendar-check" :size="22" color="#2e5bff" /></view>
-      <view class="grow">
-        <view class="weekly-t">周学习报告 <view v-if="weeklyDot" class="dot" /></view>
-        <text class="weekly-s">每周一生成 · 回顾上周 · 规划下周</text>
-      </view>
-      <view class="mini-btn">查看</view>
-    </view>
-
-    <!-- 更多练习 -->
-    <view class="sec-h"><text class="sec-t">更多练习</text></view>
-    <view class="more-grid">
-      <view class="card more-c" @click="goContest">
-        <view class="more-ico"><l-icon name="trophy" :size="20" color="#d97706" /></view>
-        <text class="more-t">模考大赛</text>
-        <text class="more-s">每周六 · 全站同卷排名</text>
-      </view>
-      <view class="card more-c" @click="goExamList">
-        <view class="more-ico"><l-icon name="file-text" :size="20" color="#2e5bff" /></view>
-        <text class="more-t">全真模考</text>
-        <text class="more-s">真题卷库 · 成绩报告</text>
-      </view>
-      <view class="card more-c" @click="goShenlun">
-        <view class="more-ico"><l-icon name="pen-line" :size="20" color="#0d9488" /></view>
-        <text class="more-t">申论专区</text>
-        <text class="more-s">真题 + AI 采分点批改</text>
-      </view>
-      <view class="card more-c" @click="goBook">
-        <view class="more-ico"><l-icon name="rotate-ccw" :size="20" color="#e11d48" /></view>
-        <text class="more-t">错题重练</text>
-        <text class="more-s">遗忘曲线 · 今日复习</text>
-      </view>
-      <view class="card more-c" @click="goAsk">
-        <view class="more-ico"><l-icon name="camera" :size="20" color="#7c3aed" /></view>
-        <text class="more-t">拍题讲解</text>
-        <text class="more-s">花生十三方法体系</text>
-      </view>
-      <view class="card more-c" @click="goPk">
-        <view class="more-ico"><l-icon name="swords" :size="20" color="#d97706" /></view>
-        <text class="more-t">答题 PK</text>
-        <text class="more-s">同组 10 题 · 比分拼手速</text>
-      </view>
-      <view class="card more-c" @click="goMini">
-        <view class="more-ico"><l-icon name="zap" :size="20" color="#2e5bff" /></view>
-        <text class="more-t">迷你模考</text>
-        <text class="more-s">30 题 · 30 分钟</text>
-      </view>
-      <view class="card more-c" @click="goExamList">
-        <view class="more-ico"><l-icon name="files" :size="20" color="#0d9488" /></view>
-        <text class="more-t">真题卷练习</text>
-        <text class="more-s">卷库选卷 · 不计时逐题练</text>
-      </view>
-      <view class="card more-c" @click="goPlaza">
-        <view class="more-ico"><l-icon name="message-circle" :size="20" color="#7c3aed" /></view>
-        <text class="more-t">讨论广场</text>
-        <text class="more-s">考友热议 · 每题讨论</text>
-      </view>
-    </view>
-
-    <!-- 自定义练习 sheet -->
-    <view v-if="customOpen" class="mask" @click="customOpen = false">
-      <view class="sheet" @click.stop>
-        <view class="grab" />
-        <view class="sheet-h">
-          <text class="sheet-t">练习设置</text>
-          <view class="sheet-x" role="button" aria-label="关闭" @click="customOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
-        </view>
-        <view class="setrow">
-          <view class="set-kwrap"><text class="set-k">每日目标</text><text class="set-sub">今天合计要练的题数</text></view>
-          <view class="set-chips">
-            <text v-for="g in [20, 50, 100]" :key="g" class="set-chip" :class="{ on: dailyGoal === g }" @click="setGoal(g)">{{ g }} 题</text>
+        <kg-hero-card
+          v-else
+          :label="todayCount >= dailyGoal ? '今日已练 · 已达成' : '今日已练'"
+          :value="todayCount"
+          :total="dailyGoal"
+          unit="题"
+          :progress="Math.min((todayCount / dailyGoal) * 100, 100)"
+          :streak="streakShown"
+          :primary="{ text: todayDone ? '再练一组' : '继续目标' }"
+          @primary="startDaily"
+        >
+          <view class="hero-links">
+            <text v-if="dsMeta && dsDone" class="hero-ds">今日全站同题 · 答对 {{ dsDone.right }}/{{ dsDone.total }}<template v-if="dsDone.rank"> · 第 {{ dsDone.rank }} 名</template><template v-if="dsDone.streak >= 2"> · 连 {{ dsDone.streak }} 天</template></text>
+            <text v-else class="hero-ds">今日全站同题 10 题{{ dsMeta ? ' · ' + (dsMeta.participants ? '已有 ' + dsMeta.participants + ' 人完成' : '来做今天第 1 人') : '' }}</text>
+            <view class="hero-lnk-row">
+              <text class="hero-lnk" role="button" @click.stop="openDailyArchive">补练往期 ›</text>
+              <text v-if="todayCount >= dailyGoal" class="hero-lnk" role="button" @click.stop="openPoster">生成打卡海报 ›</text>
+            </view>
           </view>
+        </kg-hero-card>
+
+        <!-- 续练/续考/续复习（并入 hero 下方一组，保留放弃确认） -->
+        <view v-if="examResume || practiceResume || reviewResume" class="resumes">
+          <kg-card v-if="examResume" class="rs" :padding="12">
+            <view class="rs-row">
+              <view class="rs-main">
+                <text class="rs-t">有一场未交卷的模考</text>
+                <text class="rs-s">{{ examResume.title }} · 已答 {{ examResume.answered }}/{{ examResume.total }} 题 · 剩余 {{ fmtErLeft(examResume.leftSecs) }}</text>
+              </view>
+              <kg-button variant="text" size="sm" aria-label="继续未交卷的模考" @click="erContinue">去继续 ›</kg-button>
+              <view class="rs-x" role="button" aria-label="放弃未交卷进度" @click="erDrop"><l-icon name="x" :size="16" tone="muted" /></view>
+            </view>
+          </kg-card>
+          <kg-card v-if="practiceResume" class="rs" :padding="12">
+            <view class="rs-row">
+              <view class="rs-main">
+                <text class="rs-t">有一组未做完的练习</text>
+                <text class="rs-s">{{ practiceResume.ptitle || prModName(practiceResume.module) }} · 已做 {{ practiceResume.done }}/{{ practiceResume.total }} 题</text>
+              </view>
+              <kg-button variant="text" size="sm" aria-label="继续未做完的练习" @click="prContinue">去继续 ›</kg-button>
+              <view class="rs-x" role="button" aria-label="放弃未完成练习" @click="prDrop"><l-icon name="x" :size="16" tone="muted" /></view>
+            </view>
+          </kg-card>
+          <kg-card v-if="reviewResume" class="rs" :padding="12">
+            <view class="rs-row">
+              <view class="rs-main">
+                <text class="rs-t">有一次未完成的错题复习</text>
+                <text class="rs-s">中断在第 {{ reviewResume.rIdx + 1 }}/{{ reviewResume.items.length }} 题</text>
+              </view>
+              <kg-button variant="text" size="sm" aria-label="继续未完成的错题复习" @click="rvContinue">去继续 ›</kg-button>
+              <view class="rs-x" role="button" aria-label="放弃未完成复习" @click="rvDrop"><l-icon name="x" :size="16" tone="muted" /></view>
+            </view>
+          </kg-card>
         </view>
-        <view class="setrow">
-          <text class="set-k">选题来源</text>
-          <view class="set-chips">
-            <text class="set-chip" :class="{ on: !realMode }" @click="setReal(false)">题库模式</text>
-            <text class="set-chip" :class="{ on: realMode }" @click="setReal(true)">真题模式</text>
+
+        <!-- 回访召回 / 打卡提醒 / 断卡风险 / 公告：统一横幅 -->
+        <view v-if="comeback" class="strip">
+          <kg-banner tone="ok" icon="sprout" :text="'欢迎回来！你已累计练 ' + comeback.total + ' 题，上次练习是 ' + comeback.gap + ' 天前'" action-text="看周报" @action="cbWeekly" @close="comeback = null" />
+        </view>
+        <view v-if="reminderBanner" class="strip">
+          <kg-banner tone="warn" icon="flame" text="今天还没打卡：练 1 题即可保住连续打卡" action-text="去刷题" @action="rmGo" @close="reminderBanner = false" />
+        </view>
+        <view v-if="streakRisk" class="strip">
+          <kg-banner tone="warn" icon="flame" :text="streakRisk.title + '。' + streakRisk.sub" action-text="去刷题" :closable="false" @action="startDaily" />
+        </view>
+        <view v-if="announce === undefined" class="strip"><kg-skeleton preset="lines" /></view>
+        <view v-else-if="announce" class="strip">
+          <kg-banner tone="info" icon="megaphone" :text="announce.title + (announce.body ? '：' + announce.body : '')" @close="dismissAnn" />
+        </view>
+
+        <!-- 今日到期复习 -->
+        <kg-card v-if="dueReview" variant="soft" clickable chevron class="due" @click="goReview('home_card')">
+          <view class="due-row">
+            <view class="due-ico"><l-icon name="calendar-check" :size="20" tone="warn" /></view>
+            <view class="grow">
+              <text class="due-t">今日到期复习 <text class="num">{{ dueReview }}</text> 题</text>
+              <text class="due-s">按遗忘曲线安排 · 越拖越容易忘</text>
+            </view>
           </view>
-        </view>
-        <view v-if="realMode && realYears.length" class="setrow">
-          <text class="set-k">真题年份</text>
-          <view class="set-chips scrollx">
-            <text class="set-chip" :class="{ on: !realYear }" @click="setRealYear(null)">全部</text>
-            <text v-for="y in realYears" :key="y.y" class="set-chip" :class="{ on: realYear === y.y }" @click="setRealYear(y.y)">{{ y.y }}</text>
+        </kg-card>
+
+        <!-- 学习计划（三入口合一：未制定→去制定 / 已制定→今日任务 / 无画像→今日建议） -->
+        <kg-skeleton v-if="!profileFetched && planSkel" preset="cards" class="sec" />
+        <kg-card v-else-if="profileFetched && profile === null && !guideHide" class="sec plan">
+          <kg-section-header title="学习计划">
+            <template #right><kg-button variant="text" size="sm" @click="skipGuide">跳过</kg-button></template>
+          </kg-section-header>
+          <text class="plan-s">按考试日期倒排每日任务：专项练习 + 错题复习 + 每周模考</text>
+          <kg-button variant="primary" size="lg" block @click="openSetup">制定我的学习计划</kg-button>
+        </kg-card>
+        <kg-card v-else-if="planToday && planToday.profile" class="sec plan">
+          <kg-section-header title="学习计划" more="编辑" @more="openSetup" />
+          <text v-if="planDaysText" class="plan-s">{{ planDaysText }}</text>
+          <view class="plan-prog">
+            <kg-progress :value="planToday.progress.done" :max="planToday.progress.total || 1" :thickness="4" class="grow" aria-label="今日计划进度" />
+            <text class="plan-prog-t num">{{ planToday.progress.done }}/{{ planToday.progress.total }}</text>
           </view>
-        </view>
-        <view v-if="realMode && realRegions.length" class="setrow">
-          <text class="set-k">真题地区</text>
-          <view class="set-chips scrollx">
-            <text class="set-chip" :class="{ on: !realRegion }" @click="setRealRegion(null)">全部</text>
-            <text v-for="r in realRegions" :key="r.r" class="set-chip" :class="{ on: realRegion === r.r }" @click="setRealRegion(r.r)">{{ r.r }}</text>
+          <view v-for="t in planToday.tasks" :key="t.key" class="task" :class="{ 'is-done': t.done }" role="button" hover-class="task--hover" @click="goTask(t)">
+            <l-icon :name="t.done ? 'circle-check' : 'target'" :size="20" :tone="t.done ? 'ok' : 'brand'" />
+            <view class="grow task-main">
+              <text class="task-t">{{ t.title }}</text>
+              <text class="task-s">{{ t.sub }}<template v-if="t.type !== 'mock' && t.done_n"> · 已完成 {{ t.done_n }}/{{ t.target }}</template></text>
+            </view>
+            <text class="task-go">{{ t.done ? '已完成' : t.type === 'mock' ? '去模考 ›' : t.type === 'review' ? '去复习 ›' : t.type === 'reinforce' ? '去强化 ›' : '去练 ›' }}</text>
           </view>
-        </view>
-        <view class="setrow">
-          <view class="set-kwrap"><text class="set-k">每组题量</text><text class="set-sub">单次练习连做几道</text></view>
-          <view class="set-chips">
-            <text v-for="n in [10, 20, 30, 50]" :key="n" class="set-chip" :class="{ on: groupSize === n }" @click="setGroup(n)">{{ n }}</text>
+          <view class="focus">
+            <text class="focus-k">今天主攻</text>
+            <kg-chip-row size="sm" :options="focusOptions" :model-value="(plan && plan.focus) || ''" :scroll-to-selected="false" @update:model-value="setFocus" />
           </view>
+        </kg-card>
+        <kg-card v-else-if="plan && (plan.due_mistakes || (plan.weak || []).length || (plan.yesterday || {}).n)" class="sec plan">
+          <kg-section-header title="学习计划 · 今日建议">
+            <template #right>
+              <text v-if="(plan.yesterday || {}).n" class="plan-y">昨日练 {{ plan.yesterday.n }} 题 · 正确率 {{ Math.round((plan.yesterday.correct / plan.yesterday.n) * 100) }}%</text>
+              <text v-else class="plan-y">昨日未练习</text>
+            </template>
+          </kg-section-header>
+          <view v-if="plan.due_mistakes" class="task" role="button" hover-class="task--hover" @click="goBook">
+            <l-icon name="rotate-ccw" :size="20" tone="warn" />
+            <text class="grow task-t">先复习到期错题 {{ plan.due_mistakes }} 道</text>
+            <text class="task-go">去复习 ›</text>
+          </view>
+          <view v-for="w in plan.weak || []" :key="w.module + w.submodule + (w.tag3 || '')" class="task" role="button" hover-class="task--hover" @click="startPreset(w.module, w.submodule, 10, true, w.tag3 || null, 'reco')">
+            <l-icon name="target" :size="20" tone="brand" />
+            <text class="grow task-t">{{ w.label || w.submodule }}（{{ w.reason }} · 正确率 {{ Math.round(w.acc * 100) }}%）</text>
+            <text class="task-go">练 10 题 ›</text>
+          </view>
+          <view class="focus">
+            <text class="focus-k">今天主攻</text>
+            <kg-chip-row size="sm" :options="focusOptions" :model-value="plan.focus || ''" :scroll-to-selected="false" @update:model-value="setFocus" />
+          </view>
+        </kg-card>
+
+        <!-- 专项练习：五模块 + 时政 + 随机 -->
+        <kg-section-header title="专项练习" more="练习设置" class="sec-h" @more="customOpen = true" />
+        <view v-if="!counts.length" class="skelwrap" @click="loadCounts">
+          <kg-skeleton preset="cards" />
+          <text class="skel-hint">题库加载中…点此重试</text>
         </view>
-        <wd-button type="primary" block custom-class="sheet-cta" @click="customOpen = false; startPreset(null)">按以上设置开始练习（混合模块）</wd-button>
-        <wd-button type="primary" plain block custom-class="sheet-cta2" @click="exportConfirm = true">{{ exporting ? '正在生成 PDF…' : '导出为试卷 PDF' }}</wd-button>
-        <view class="custom-note">以上设置同样作用于模块列表；模考与真题卷不受影响</view>
+        <view v-else class="modlist">
+          <kg-module-card v-for="c in modCounts" :key="c.module" :module="c.module" :progress="modProgress(c)" :sub="modSub(c)" @click="openModule(c.module)" />
+          <kg-card clickable chevron class="modrow" @click="szTodayDone ? launch({ kind: 'szreview' }) : launch({ kind: 'shizheng' })">
+            <view class="modrow-in">
+              <view class="modrow-ico is-warn"><l-icon name="newspaper" :size="24" tone="warn" /></view>
+              <view class="grow">
+                <view class="modrow-tr">
+                  <text class="modrow-t">时政每日一练</text>
+                  <kg-tag v-if="!szTodayDone" tone="warn">今日更新</kg-tag>
+                  <kg-tag v-else tone="ok">已完成</kg-tag>
+                </view>
+                <text class="modrow-s">每日 10 题 · 全站同题<text class="modrow-lnk" @click.stop="openSzArchive"> · 往期 ›</text></text>
+              </view>
+            </view>
+          </kg-card>
+          <kg-card clickable chevron class="modrow" @click="startPreset(null)">
+            <view class="modrow-in">
+              <view class="modrow-ico"><l-icon name="shuffle" :size="24" tone="brand" /></view>
+              <view class="grow">
+                <text class="modrow-t">随机混合刷题</text>
+                <text class="modrow-s">全部模块随机 · 每组 {{ groupSize }} 题</text>
+              </view>
+            </view>
+          </kg-card>
+          <kg-card v-if="weakModule" variant="soft" clickable chevron class="modrow" @click="openModule(weakModule)">
+            <view class="modrow-in">
+              <view class="modrow-ico"><l-icon name="zap" :size="24" tone="brand" /></view>
+              <view class="grow">
+                <text class="modrow-t">智能刷题：攻克薄弱项</text>
+                <text class="modrow-s">你的 {{ modName(weakModule) }} 正确率较低，建议专项练习</text>
+              </view>
+            </view>
+          </kg-card>
+        </view>
+      </template>
+
+      <template #aside>
+        <!-- 更多练习：4 格 -->
+        <kg-section-header title="更多练习" class="sec-h" />
+        <view class="more-grid">
+          <kg-card clickable class="more-c" @click="goExamList">
+            <view class="more-ico"><l-icon name="timer" :size="24" tone="brand" /></view>
+            <text class="more-t">模考</text>
+            <text class="more-s">迷你 / 全真 · 成绩报告</text>
+          </kg-card>
+          <kg-card clickable class="more-c" @click="goShenlun">
+            <view class="more-ico"><l-icon name="pen-line" :size="24" tone="brand" /></view>
+            <text class="more-t">申论</text>
+            <text class="more-s">真题 + AI 采分点批改</text>
+          </kg-card>
+          <kg-card clickable class="more-c" @click="goBook">
+            <view class="more-ico"><l-icon name="rotate-ccw" :size="24" tone="brand" /></view>
+            <text class="more-t">错题重练</text>
+            <text class="more-s">遗忘曲线 · 今日复习</text>
+          </kg-card>
+          <kg-card clickable class="more-c" @click="goAsk">
+            <view class="more-ico"><l-icon name="camera" :size="24" tone="brand" /></view>
+            <text class="more-t">拍题讲解</text>
+            <text class="more-s">花生十三方法体系</text>
+          </kg-card>
+        </view>
+
+        <!-- 周学习报告 -->
+        <kg-card clickable chevron class="weekly" @click="goWeeklyReport">
+          <view class="modrow-in">
+            <view class="modrow-ico"><l-icon name="calendar-check" :size="24" tone="brand" /></view>
+            <view class="grow">
+              <view class="modrow-tr">
+                <text class="modrow-t">周学习报告</text>
+                <view v-if="weeklyDot" class="dot" />
+              </view>
+              <text class="modrow-s">每周一生成 · 回顾上周 · 规划下周</text>
+            </view>
+          </view>
+        </kg-card>
+
+        <!-- 连签摘要（≥1024 辅栏，窄屏在流末） -->
+        <kg-card clickable chevron class="streak" @click="goCalendar">
+          <view class="modrow-in">
+            <kg-streak-badges :days="streakShown" />
+            <view class="grow">
+              <text class="modrow-t">连续打卡</text>
+              <text v-if="nextMilestone" class="modrow-s">再打卡 {{ nextMilestone.left }} 天解锁「{{ nextMilestone.days }} 天」徽章</text>
+              <text v-else class="modrow-s">已解锁全部打卡徽章，太强了！</text>
+            </view>
+          </view>
+          <kg-progress v-if="nextMilestone" :value="nextMilestone.pct" :thickness="4" class="streak-bar" aria-label="距下一个徽章" />
+        </kg-card>
+      </template>
+    </kg-two-col>
+
+    <!-- 练习设置 sheet -->
+    <kg-sheet v-model="customOpen" title="练习设置">
+      <view class="setrow">
+        <view class="set-kwrap"><text class="set-k">每日目标</text><text class="set-sub">今天合计要练的题数</text></view>
+        <kg-chip-row size="sm" :options="goalOptions" :model-value="dailyGoal" :scroll-to-selected="false" @update:model-value="setGoal" />
       </view>
-    </view>
+      <view class="setrow">
+        <text class="set-k">选题来源</text>
+        <kg-chip-row size="sm" :options="[{ label: '题库模式', value: 0 }, { label: '真题模式', value: 1 }]" :model-value="realMode ? 1 : 0" :scroll-to-selected="false" @update:model-value="(v) => setReal(!!v)" />
+      </view>
+      <view v-if="realMode && realYears.length" class="setrow">
+        <text class="set-k">真题年份</text>
+        <kg-chip-row size="sm" :options="[{ label: '全部', value: '' }].concat(realYears.map((y) => ({ label: String(y.y), value: y.y })))" :model-value="realYear || ''" @update:model-value="(v) => setRealYear(v || null)" />
+      </view>
+      <view v-if="realMode && realRegions.length" class="setrow">
+        <text class="set-k">真题地区</text>
+        <kg-chip-row size="sm" :options="[{ label: '全部', value: '' }].concat(realRegions.map((r) => ({ label: r.r, value: r.r })))" :model-value="realRegion || ''" @update:model-value="(v) => setRealRegion(v || null)" />
+      </view>
+      <view class="setrow">
+        <view class="set-kwrap"><text class="set-k">每组题量</text><text class="set-sub">单次练习连做几道</text></view>
+        <kg-chip-row size="sm" :options="groupOptions" :model-value="groupSize" :scroll-to-selected="false" @update:model-value="setGroup" />
+      </view>
+      <text class="custom-note">以上设置同样作用于模块列表；模考与真题卷不受影响</text>
+      <template #footer>
+        <view class="sheet-acts">
+          <kg-button variant="primary" size="lg" block @click="customOpen = false; startPreset(null)">按以上设置开始练习（混合模块）</kg-button>
+          <kg-button variant="secondary" size="lg" block :loading="exporting" @click="exportConfirm = true">{{ exporting ? '正在生成 PDF…' : '导出为试卷 PDF' }}</kg-button>
+        </view>
+      </template>
+    </kg-sheet>
 
     <export-confirm
       :visible="exportConfirm"
@@ -399,87 +297,75 @@
     />
 
     <!-- 制定学习计划 sheet -->
-    <view v-if="setupOpen" class="mask" @click="setupOpen = false">
-      <view class="sheet" @click.stop>
-        <view class="grab" />
-        <view class="sheet-h">
-          <text class="sheet-t">制定学习计划 · {{ ['考试信息', '目标', '每日时长'][setupStep - 1] }}（{{ setupStep }}/3）</text>
-          <view class="sheet-x" role="button" aria-label="关闭" @click="setupOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+    <kg-sheet v-model="setupOpen" :title="'制定学习计划 · ' + ['考试信息', '目标', '每日时长'][setupStep - 1] + '（' + setupStep + '/3）'">
+      <template v-if="setupStep === 1">
+        <view class="setrow">
+          <text class="set-k">考试类型</text>
+          <kg-chip-row size="sm" :options="['国考', '省考', '事业单位', '其他'].map((t) => ({ label: t, value: t }))" :model-value="pf.exam_type" :scroll-to-selected="false" @update:model-value="(v) => (pf.exam_type = v)" />
         </view>
-        <template v-if="setupStep === 1">
-          <view class="setrow">
-            <text class="set-k">考试类型</text>
-            <view class="set-chips">
-              <text v-for="t in ['国考', '省考', '事业单位', '其他']" :key="t" class="set-chip" :class="{ on: pf.exam_type === t }" @click="pf.exam_type = t">{{ t }}</text>
-            </view>
-          </view>
-          <view class="setrow">
-            <text class="set-k">目标地区</text>
-            <input v-model="pf.target_region" class="pf-input" placeholder="如 广东 / 全国（选填）" :maxlength="20" />
-          </view>
-          <view class="setrow">
-            <text class="set-k">考试日期</text>
-            <wd-datetime-picker
-              v-model="pfDateTs"
-              type="date"
-              :min-date="dateStartTs"
-              :max-date="dateEndTs"
-              :before-confirm="beforeExamDate"
-              @confirm="onExamDate"
-            >
-              <view class="pf-date" :class="{ empty: !pf.exam_date, past: pfDatePast }">{{ pfDateText }}</view>
-            </wd-datetime-picker>
-          </view>
-        </template>
-        <template v-else-if="setupStep === 2">
-          <view class="setrow">
-            <text class="set-k">目标分</text>
-            <view class="set-chips">
-              <text v-for="s in [60, 65, 70, 75, 80]" :key="s" class="set-chip" :class="{ on: pf.target_score === s }" @click="pf.target_score = s">{{ s }}+</text>
-            </view>
-          </view>
-          <view class="setrow">
-            <text class="set-k">基础自评</text>
-            <view class="set-chips">
-              <text v-for="b in ['零基础', '有基础', '二战']" :key="b" class="set-chip" :class="{ on: pf.base_level === b }" @click="pf.base_level = b">{{ b }}</text>
-            </view>
-          </view>
-        </template>
-        <template v-else>
-          <view class="setrow">
-            <view class="set-kwrap"><text class="set-k">每日可用时长</text><text class="set-sub">决定每日任务量</text></view>
-            <view class="set-chips">
-              <text v-for="m in [30, 60, 90, 120]" :key="m" class="set-chip" :class="{ on: pf.daily_minutes === m }" @click="pf.daily_minutes = m">{{ m }} 分钟</text>
-            </view>
-          </view>
-          <view class="pf-summary">{{ pf.exam_type }}{{ pf.target_region ? ' · ' + pf.target_region : '' }} · {{ pf.exam_date }} · 目标 {{ pf.target_score }}+ · {{ pf.base_level }} · 每天 {{ pf.daily_minutes }} 分钟</view>
-        </template>
-        <wd-button type="primary" block custom-class="sheet-cta" @click="setupNext">{{ setupStep < 3 ? '下一步' : setupBusy ? '生成中…' : '生成我的学习计划' }}</wd-button>
-        <view v-if="setupStep > 1" class="pf-back" @click="setupStep--">上一步</view>
-      </view>
-    </view>
+        <view class="setrow">
+          <text class="set-k">目标地区</text>
+          <input v-model="pf.target_region" class="pf-input" placeholder="如 广东 / 全国（选填）" :maxlength="20" />
+        </view>
+        <view class="setrow">
+          <text class="set-k">考试日期</text>
+          <wd-datetime-picker
+            v-model="pfDateTs"
+            type="date"
+            :min-date="dateStartTs"
+            :max-date="dateEndTs"
+            :before-confirm="beforeExamDate"
+            @confirm="onExamDate"
+          >
+            <view class="pf-date" :class="{ empty: !pf.exam_date, past: pfDatePast }">{{ pfDateText }}</view>
+          </wd-datetime-picker>
+        </view>
+      </template>
+      <template v-else-if="setupStep === 2">
+        <view class="setrow">
+          <text class="set-k">目标分</text>
+          <kg-chip-row size="sm" :options="[60, 65, 70, 75, 80].map((s) => ({ label: s + '+', value: s }))" :model-value="pf.target_score" :scroll-to-selected="false" @update:model-value="(v) => (pf.target_score = v)" />
+        </view>
+        <view class="setrow">
+          <text class="set-k">基础自评</text>
+          <kg-chip-row size="sm" :options="['零基础', '有基础', '二战'].map((b) => ({ label: b, value: b }))" :model-value="pf.base_level" :scroll-to-selected="false" @update:model-value="(v) => (pf.base_level = v)" />
+        </view>
+      </template>
+      <template v-else>
+        <view class="setrow">
+          <view class="set-kwrap"><text class="set-k">每日可用时长</text><text class="set-sub">决定每日任务量</text></view>
+          <kg-chip-row size="sm" :options="[30, 60, 90, 120].map((m) => ({ label: m + ' 分钟', value: m }))" :model-value="pf.daily_minutes" :scroll-to-selected="false" @update:model-value="(v) => (pf.daily_minutes = v)" />
+        </view>
+        <text class="pf-summary">{{ pf.exam_type }}{{ pf.target_region ? ' · ' + pf.target_region : '' }} · {{ pf.exam_date }} · 目标 {{ pf.target_score }}+ · {{ pf.base_level }} · 每天 {{ pf.daily_minutes }} 分钟</text>
+      </template>
+      <template #footer>
+        <view class="sheet-acts">
+          <kg-button variant="primary" size="lg" block :loading="setupBusy" @click="setupNext">{{ setupStep < 3 ? '下一步' : setupBusy ? '生成中…' : '生成我的学习计划' }}</kg-button>
+          <kg-button v-if="setupStep > 1" variant="text" size="md" block @click="setupStep--">上一步</kg-button>
+        </view>
+      </template>
+    </kg-sheet>
 
     <!-- 选二级题型 sheet -->
-    <view v-if="subSelect" class="mask" @click="subSelect = null">
-      <view class="sheet" @click.stop>
-        <view class="grab" />
-        <view class="sheet-h">
-          <text class="sheet-t">{{ modName(subSelect) }} · 选择题型</text>
-          <view class="sheet-x" role="button" aria-label="关闭" @click="subSelect = null"><l-icon name="x" :size="20" color="#6b7280" /></view>
-        </view>
-        <view class="sub-chip all-chip" @click="startPreset(subSelect)">
-          <text class="sub-name">全部随机</text>
-          <text class="sub-n">{{ (counts.find(c => c.module === subSelect) || {}).n || 0 }} 题</text>
-        </view>
-        <view v-for="s in submodules" :key="s.submodule" class="sub-chip" @click="startPreset(subSelect, s.submodule)">
-          <view class="sub-l">
-            <text class="sub-name">{{ s.submodule }}</text>
-            <text v-if="subProg[s.submodule]" class="sub-prog">已做 {{ subProg[s.submodule].n }} 题 · 正确率 {{ Math.round(100 * subProg[s.submodule].c / subProg[s.submodule].n) }}%</text>
+    <kg-sheet :model-value="!!subSelect" :title="modName(subSelect) + ' · 选择题型'" @update:model-value="(v) => { if (!v) subSelect = null; }">
+      <view class="sub-list">
+        <kg-card clickable chevron class="sub-chip is-all" @click="startPreset(subSelect)">
+          <view class="sub-row">
+            <text class="sub-name">全部随机</text>
+            <text class="sub-n num">{{ (counts.find((c) => c.module === subSelect) || {}).n || 0 }} 题</text>
           </view>
-          <text class="sub-n">{{ s.n }} 题</text>
-        </view>
+        </kg-card>
+        <kg-card v-for="s in submodules" :key="s.submodule" clickable chevron class="sub-chip" @click="startPreset(subSelect, s.submodule)">
+          <view class="sub-row">
+            <view class="grow">
+              <text class="sub-name">{{ s.submodule }}</text>
+              <text v-if="subProg[s.submodule]" class="sub-prog">已做 {{ subProg[s.submodule].n }} 题 · 正确率 {{ Math.round((100 * subProg[s.submodule].c) / subProg[s.submodule].n) }}%</text>
+            </view>
+            <text class="sub-n num">{{ s.n }} 题</text>
+          </view>
+        </kg-card>
       </view>
-    </view>
+    </kg-sheet>
   </view>
 </template>
 
@@ -494,16 +380,11 @@ import { parseReviewSnap } from '../../review-snap.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 import { planDaysLabel, isExamDatePast, examDateFieldText, cnTodayStr } from '../../plan-days-label.js';
+import { MODULE_KEYS, moduleLabel } from '../../module-meta.js';
 
-const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
-const COLORS = {
-  ziliao: { bg: '#e6f5f3', fg: '#0d9488' },
-  shuliang: { bg: '#e8effe', fg: '#2e5bff' },
-  yanyu: { bg: '#fce8ec', fg: '#e11d48' },
-  panduan: { bg: '#f1eafd', fg: '#7c3aed' },
-  changshi: { bg: '#fbf1e0', fg: '#d97706' },
-};
-const ICONS = { ziliao: 'chart-pie', shuliang: 'calculator', yanyu: 'message-square', panduan: 'puzzle', changshi: 'lightbulb' };
+// module-meta.js 只含行测五模块；申论不是练习模块但会出现在续练/薄弱项文案里
+const EXTRA_NAMES = { shenlun: '申论' };
+const modLabel = (m) => (MODULE_KEYS.includes(m) ? moduleLabel(m) : EXTRA_NAMES[m] || '');
 
 export default {
   data() {
@@ -525,7 +406,6 @@ export default {
       setupStep: 1,
       setupBusy: false,
       pf: { exam_type: '国考', target_region: '', exam_date: '', target_score: 70, daily_minutes: 60, base_level: '零基础' },
-      FOCUS_MODS: { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断' },
       subProg: {},
       submodules: [],
       pstats: { byModule: {}, days: {} },
@@ -557,6 +437,12 @@ export default {
     };
   },
   computed: {
+    modCounts() {
+      return this.counts.filter((c) => MODULE_KEYS.includes(c.module));
+    },
+    focusOptions() {
+      return MODULE_KEYS.map((k) => ({ label: moduleLabel(k), value: k }));
+    },
     planDaysText() {
       return this.planToday ? planDaysLabel(this.planToday.days_left, this.planToday.phase_name) : '';
     },
@@ -565,6 +451,12 @@ export default {
     },
     pfDateText() {
       return examDateFieldText(this.pf.exam_date, cnTodayStr());
+    },
+    goalOptions() {
+      return [20, 50, 100].map((g) => ({ label: g + ' 题', value: g }));
+    },
+    groupOptions() {
+      return [10, 20, 30, 50].map((n) => ({ label: String(n), value: n }));
     },
     showLanding() {
       if (this.landingHide) return false;
@@ -578,12 +470,6 @@ export default {
     },
     dueReview() {
       return (this.plan && this.plan.due_mistakes) || 0;
-    },
-    reviewTaskDone() {
-      // 从未有过错题的用户没有可清零的复习，不算已完成（老快照无 mistakes_total 时沿用旧口径）
-      if (!this.planFetched || this.dueReview) return false;
-      const t = this.plan && this.plan.mistakes_total;
-      return t == null || t > 0;
     },
     todayCount() {
       // 服务端 answer_log（Asia/Shanghai 日界，按当前 uid）为准；
@@ -651,13 +537,6 @@ export default {
       if (!next) return null;
       const prev = ms.filter((m) => m <= s).pop() || 0;
       return { days: next, left: next - s, pct: Math.round(((s - prev) / (next - prev)) * 100) };
-    },
-    taskDoneN() {
-      let n = 0;
-      if (this.todayCount >= this.dailyGoal) n++;
-      if (this.reviewTaskDone) n++;
-      if (this.todayCount > 0) n++;
-      return n;
     },
   },
   onLoad() {
@@ -768,29 +647,26 @@ export default {
     openPoster() {
       uni.navigateTo({ url: '/pkgA/social/poster' });
     },
-    goPk() {
-      uni.navigateTo({ url: '/pkgA/pk/pk' });
-    },
-    goPlaza() {
-      uni.navigateTo({ url: '/pkgA/social/plaza' });
+    goCalendar() {
+      uni.navigateTo({ url: '/pages/stats/calendar' });
     },
     modName(m) {
-      return NAMES[m] || m || '未知';
-    },
-    modColor(m) {
-      return COLORS[m] || { bg: '#eef3ff', fg: '#2e5bff' };
-    },
-    modIcon(m) {
-      return ICONS[m] || 'book-open';
+      return modLabel(m) || m || '未知';
     },
     modStat(m) {
       return this.pstats.byModule[m] || { done: 0, correct: 0 };
     },
-    progText(c) {
+    /** KgModuleCard progress：{done,total,acc}；未开始/题数未知时返回 null 走 sub 文案 */
+    modProgress(c) {
+      const s = this.modStat(c.module);
+      if (!c.n || !s.done) return null;
+      return { done: s.done, total: c.n, acc: Math.round((s.correct / s.done) * 100) };
+    },
+    modSub(c) {
       const s = this.modStat(c.module);
       if (!c.n && !s.done) return '题库加载中…';
       if (!s.done) return '共 ' + c.n + ' 题 · 未开始';
-      return `正确率 ${Math.round((s.correct / s.done) * 100)}%`;
+      return '';
     },
     prefetchNext() {
       this.prefetchModule(uni.getStorageSync('lastModule') || '');
@@ -811,10 +687,6 @@ export default {
           if (d.items && d.items.length) uni.setStorageSync('prefetchPack', { module, limit, uid, items: d.items, ts: Date.now() });
         })
         .catch(() => {});
-    },
-    progPct(c) {
-      const s = this.modStat(c.module);
-      return Math.min(100, (s.done / (c.n || 1)) * 100);
     },
     launch(payload) {
       uni.setStorageSync('practiceLaunch', payload);
@@ -856,9 +728,6 @@ export default {
     goExamList() {
       uni.navigateTo({ url: '/pkgA/exam/list' });
     },
-    goContest() {
-      uni.navigateTo({ url: '/pkgA/exam/contest' });
-    },
     goWeeklyReport() {
       uni.navigateTo({ url: '/pkgA/stats/weekly-report' });
     },
@@ -878,7 +747,7 @@ export default {
         .catch(() => {});
     },
     prModName(m) {
-      return NAMES[m] || '上次练习';
+      return modLabel(m) || '上次练习';
     },
     prContinue() {
       uni.setStorageSync('practiceLaunch', { kind: 'resume' });
@@ -1085,17 +954,6 @@ export default {
         uni.setStorageSync('homePlanCard', this.planToday && this.planToday.profile ? '1' : '');
       } else this.planToday = null;
     },
-    taskGo(kind) {
-      trackEvent('task_card_click', kind);
-      if (kind === 'practice') this.startDaily();
-      else if (kind === 'review') {
-        if (this.dueReview) {
-          uni.setStorageSync('autoStartReview', 1);
-          trackEvent('review_entry_click', 'task_card');
-        }
-        uni.switchTab({ url: '/pages/book/book' });
-      } else uni.navigateTo({ url: '/pages/stats/calendar' });
-    },
     goAsk() {
       uni.switchTab({ url: '/pages/ask/ask' });
     },
@@ -1129,7 +987,7 @@ export default {
       } catch (e) { /* 走下方快照/静态回退 + 重试 */ }
       if (!this.counts.length) {
         // 接口不可用时入口不阻塞：静态模块列表先渲染，题数后台刷新后原位替换
-        this.counts = Object.keys(NAMES).map((m) => ({ module: m, n: 0 }));
+        this.counts = MODULE_KEYS.map((m) => ({ module: m, n: 0 }));
       }
       this._countsTries = (this._countsTries || 0) + 1;
       if (this._countsTries <= 20) setTimeout(() => this.loadCounts(), 3000);
@@ -1325,7 +1183,7 @@ export default {
         await request('/api/user_state', { method: 'POST', data: { uid, focus: next } });
         this.plan = await request('/api/daily_plan?uid=' + encodeURIComponent(uid));
         if (this.profile) this.loadPlanToday();
-        if (next) uni.showToast({ title: '今日主攻已设为' + (this.FOCUS_MODS[next] || next) + '，推荐已更新', icon: 'none' });
+        if (next) uni.showToast({ title: '今日主攻已设为' + (modLabel(next) || next) + '，推荐已更新', icon: 'none' });
       } catch (e) { /* 非关键路径 */ }
     },
   },
@@ -1333,243 +1191,113 @@ export default {
 </script>
 
 <style scoped>
-.wrap { padding: 24rpx 32rpx 40rpx; }
+.wrap { padding: var(--sp-12) var(--page-x) calc(var(--sp-40) + 50px + env(safe-area-inset-bottom)); }
+.grow { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-4); }
+
+/* 顶部：考试切换 + 搜索 */
+.toprow { display: flex; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-12); }
+.examsw { display: flex; align-items: center; gap: var(--sp-4); height: var(--hit-min); padding: 0 var(--sp-12); border-radius: var(--r-full); background: var(--brand-soft); color: var(--brand-text); flex-shrink: 0; max-width: 45%; }
+.examsw--hover { background: var(--brand-soft-2); }
+.examsw-t { font-size: var(--fs-sub); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.searchbar { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--sp-8); height: var(--hit-min); padding: 0 var(--sp-16); border-radius: var(--r-full); background: var(--card); border: 1px solid var(--line); }
+.searchbar--hover { background: var(--fill); }
+.searchbar-t { font-size: var(--fs-sub); color: var(--ink-4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Hero */
-.hero { background: linear-gradient(135deg, #5b8af8, var(--brand)); border-radius: 28rpx; padding: 30rpx 36rpx 26rpx; margin-bottom: 20rpx; box-shadow: 0 12rpx 36rpx rgba(46, 91, 255, 0.3); }
-.hero-top { display: flex; justify-content: space-between; align-items: center; }
-.hero-goal { font-size: 26rpx; color: rgba(255, 255, 255, 0.85); }
-.hero-n { font-size: 36rpx; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
-.hero-streak { display: inline-flex; align-items: center; gap: 8rpx; font-size: 24rpx; color: #fff; background: rgba(255, 255, 255, 0.18); border-radius: 8rpx; padding: 4rpx 16rpx; }
-.hero-bar { height: 12rpx; background: rgba(255, 255, 255, 0.25); border-radius: 999rpx; margin: 16rpx 0 24rpx; overflow: hidden; }
-.hero-ds { position: relative; display: block; padding-right: 124rpx; font-size: 24rpx; color: rgba(255, 255, 255, 0.85); margin: -8rpx 0 24rpx; }
-.hero-ds-arc { position: absolute; right: -8rpx; top: 50%; transform: translateY(-50%); padding: 12px 8rpx; text-decoration: underline; color: rgba(255, 255, 255, 0.75); }
-.sz-arc { display: inline-block; margin: -12px 0 -12px 4rpx; padding: 12px 8rpx; text-decoration: underline; color: var(--ink-2); }
-.hero-fill { height: 100%; background: var(--card); border-radius: 999rpx; transition: width 0.3s; }
-.hero-acts { display: flex; gap: 20rpx; }
-.hero-btn { min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 20rpx; font-size: 28rpx; font-weight: 600; }
-.hero-btn.main { flex: 1; background: var(--card); color: var(--brand-text); }
-.hero-btn.sub { padding: 0 32rpx; background: rgba(255, 255, 255, 0.16); color: #fff; }
+.hero-wrap { position: relative; }
+.hero-wrap :deep(.kg-hero__num) { white-space: nowrap; flex-shrink: 0; }
+.hero-wrap :deep(.kg-hero__total) { min-width: 0; line-height: var(--lh-body); }
+.hero-x { position: absolute; top: var(--sp-8); right: var(--sp-8); width: var(--hit-min); height: var(--hit-min); display: flex; align-items: center; justify-content: center; border-radius: var(--r-full); }
+.hero-links { display: flex; flex-direction: column; gap: var(--sp-4); }
+.hero-ds { font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--on-brand-2); }
+.hero-lnk-row { display: flex; gap: var(--sp-16); }
+.hero-lnk { display: inline-flex; align-items: center; min-height: 40px; margin: -3px 0; font-size: var(--fs-sub); color: var(--on-brand); text-decoration: underline; text-underline-offset: 3px; }
 
-/* Section header */
-.sec-h { display: flex; justify-content: space-between; align-items: baseline; margin: 36rpx 4rpx 20rpx; }
-.sec-t { font-size: 32rpx; font-weight: 700; color: var(--ink); }
-.sec-more { font-size: 24rpx; color: var(--ink-2); min-height: 44px; display: inline-flex; align-items: center; }
+/* 续练/续考/续复习 */
+.resumes { display: flex; flex-direction: column; gap: var(--sp-8); margin-top: var(--sp-12); }
+.rs-row { display: flex; align-items: center; gap: var(--sp-8); }
+.rs-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-4); }
+.rs-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+.rs-s { font-size: var(--fs-sub); color: var(--ink-3); line-height: var(--lh-sub); }
+.rs-x { width: var(--hit-min); height: var(--hit-min); display: flex; align-items: center; justify-content: center; margin-right: calc(var(--sp-12) * -1); flex-shrink: 0; }
 
-/* 周报卡 */
-.weekly-c { display: flex; align-items: center; gap: 24rpx; padding: 26rpx 32rpx; }
-.weekly-t { font-size: 30rpx; font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 10rpx; }
-.weekly-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 4rpx; }
-.dot { width: 16rpx; height: 16rpx; border-radius: 50%; background: #ef4444; }
+/* 横幅 */
+.strip { margin-top: var(--sp-12); }
 
-/* 时政卡 */
-.szcard { display: flex; align-items: center; gap: 24rpx; padding: 26rpx 32rpx; }
-.sz-ico { width: 80rpx; height: 80rpx; border-radius: 20rpx; background: var(--warn-soft); display: flex; align-items: center; justify-content: center; font-size: 38rpx; flex-shrink: 0; }
-.sz-t { font-size: 30rpx; font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 8rpx; }
-.sz-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 4rpx; }
-.tag { display: inline-flex; align-items: center; height: 40rpx; padding: 0 16rpx; border-radius: 12rpx; font-size: 24rpx; font-weight: 500; }
-.tag.warn { background: var(--warn-soft); color: var(--warn-strong); }
-.tag.ok { background: var(--ok-soft); color: var(--ok-strong); }
-.mini-btn { flex-shrink: 0; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 28rpx; background: var(--brand-soft); color: var(--brand-text); border-radius: 20rpx; font-size: 26rpx; font-weight: 600; }
-.grow { flex: 1; min-width: 0; }
+/* 到期复习 */
+.due { margin-top: var(--sp-12); }
+.due-row { display: flex; align-items: center; gap: var(--sp-12); }
+.due-ico { width: 40px; height: 40px; border-radius: var(--r-sm); background: var(--warn-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.due-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+.due-s { font-size: var(--fs-sub); color: var(--ink-3); }
 
-/* 模块列表 */
-.modlist { display: flex; flex-direction: column; }
-.modrow { display: flex; align-items: center; gap: 24rpx; padding: 28rpx 32rpx; margin-bottom: 20rpx; }
-.mod-ico { width: 88rpx; height: 88rpx; border-radius: 20rpx; display: flex; align-items: center; justify-content: center; font-size: 40rpx; flex-shrink: 0; }
-.mod-name { display: block; font-size: 30rpx; font-weight: 600; color: var(--ink); }
-.mod-sub { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 4rpx; }
-.mod-bar { width: 120rpx; height: 10rpx; background: var(--soft-bg); border-radius: 999rpx; overflow: hidden; flex-shrink: 0; }
-.mod-fill { height: 100%; border-radius: 999rpx; }
-.mod-arrow { color: var(--ink-4); font-size: 30rpx; flex-shrink: 0; }
+/* 学习计划 */
+.sec { margin-top: var(--sp-16); }
+.sec-h { margin-top: var(--sp-16); }
+.plan { display: grid; gap: var(--sp-12); }
+.plan-s { font-size: var(--fs-sub); color: var(--ink-3); line-height: var(--lh-sub); }
+.plan-y { font-size: var(--fs-caption); color: var(--ink-3); }
+.plan-prog { display: flex; align-items: center; gap: var(--sp-12); }
+.plan-prog-t { font-size: var(--fs-sub); color: var(--ink-2); flex-shrink: 0; }
+.task { display: flex; align-items: center; gap: var(--sp-12); min-height: var(--hit-min); padding: var(--sp-8) 0; border-top: 1px solid var(--line); }
+.task--hover { background: var(--fill); }
+.task-main { display: flex; flex-direction: column; gap: var(--sp-4); }
+.task-t { font-size: var(--fs-body); color: var(--ink); line-height: var(--lh-body); }
+.task.is-done .task-t { color: var(--ink-4); text-decoration: line-through; }
+.task-s { font-size: var(--fs-sub); color: var(--ink-3); line-height: var(--lh-sub); }
+.task-go { font-size: var(--fs-sub); color: var(--brand-text); font-weight: 500; flex-shrink: 0; }
+.task.is-done .task-go { color: var(--ink-4); }
+.focus { display: flex; align-items: center; gap: var(--sp-8); }
+.focus-k { font-size: var(--fs-sub); color: var(--ink-3); flex-shrink: 0; }
 
-.smart { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(120deg, var(--brand-soft), var(--brand-soft)); border: 1rpx solid var(--brand-soft-2); padding: 26rpx 32rpx; margin-bottom: 20rpx; }
-.smart-t { display: block; font-size: 28rpx; font-weight: 600; color: var(--brand-text); }
-.smart-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 6rpx; }
-.smart-go { flex-shrink: 0; font-size: 26rpx; font-weight: 600; color: var(--brand-text); min-height: 44px; display: inline-flex; align-items: center; }
+/* 专项练习列表 */
+.skelwrap { display: flex; flex-direction: column; gap: var(--sp-8); margin-top: var(--sp-12); }
+.skel-hint { font-size: var(--fs-caption); color: var(--ink-4); text-align: center; padding: var(--sp-8) 0; }
+.modlist { display: flex; flex-direction: column; gap: var(--card-gap); margin-top: var(--sp-12); }
+.modrow-in { display: flex; align-items: center; gap: var(--sp-12); }
+.modrow-ico { width: 44px; height: 44px; border-radius: var(--r-sm); background: var(--brand-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.modrow-ico.is-warn { background: var(--warn-soft); }
+.modrow-tr { display: flex; align-items: center; gap: var(--sp-8); }
+.modrow-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+.modrow-s { font-size: var(--fs-sub); color: var(--ink-3); line-height: var(--lh-sub); }
+.modrow-lnk { display: inline-block; padding: 11px 0 11px 4px; margin: -11px 0 -11px -4px; color: var(--brand-text); }
+.dot { width: 8px; height: 8px; border-radius: var(--r-full); background: var(--bad); }
 
-/* 更多练习 */
-.more-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20rpx; }
-.more-c { margin: 0; padding: 28rpx 30rpx; display: flex; flex-direction: column; }
-.more-ico { width: 72rpx; height: 72rpx; border-radius: 18rpx; background: var(--fill); display: flex; align-items: center; justify-content: center; }
-.more-t { font-size: 30rpx; font-weight: 600; color: var(--ink); margin-top: 10rpx; }
-.more-s { font-size: 24rpx; color: var(--ink-2); margin-top: 4rpx; }
+/* 更多练习 4 格 */
+.more-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--card-gap); margin-top: var(--sp-12); }
+.more-c { display: flex; flex-direction: column; gap: var(--sp-4); min-height: 96px; }
+.more-ico { width: 40px; height: 40px; border-radius: var(--r-sm); background: var(--brand-soft); display: flex; align-items: center; justify-content: center; margin-bottom: var(--sp-4); }
+.more-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+.more-s { font-size: var(--fs-caption); color: var(--ink-3); line-height: var(--lh-caption); }
+.weekly, .streak { margin-top: var(--card-gap); }
+.streak-bar { margin-top: var(--sp-12); }
 
-/* 通用卡片 */
-.card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); margin-bottom: 20rpx; padding: 28rpx 32rpx; }
-.spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 30rpx 0; }
-.skel { background: var(--fill); box-shadow: none; animation: skel-pulse 1.4s ease-in-out infinite; }
-.skel-plan { height: 162rpx; box-sizing: border-box; }
-.skel-sz { height: 166rpx; box-sizing: border-box; }
-.skel-ann { height: 154rpx; box-sizing: border-box; }
-.skel-row { height: 144rpx; box-sizing: border-box; }
-.skelwrap { position: relative; }
-.skel-hint { position: absolute; top: 56rpx; left: 0; right: 0; text-align: center; color: var(--ink-2); font-size: 26rpx; }
-@keyframes skel-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.55; }
-}
+/* sheet 内表单 */
+.setrow { display: flex; flex-direction: column; gap: var(--sp-8); padding: var(--sp-12) 0; border-bottom: 1px solid var(--line); }
+.set-kwrap { display: flex; align-items: baseline; gap: var(--sp-8); }
+.set-k { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+.set-sub { font-size: var(--fs-caption); color: var(--ink-4); }
+.custom-note { display: block; font-size: var(--fs-caption); color: var(--ink-4); padding: var(--sp-12) 0 0; line-height: var(--lh-caption); }
+.sheet-acts { display: grid; gap: var(--sp-8); }
+.pf-input { height: var(--hit-min); padding: 0 var(--sp-12); border-radius: var(--r-sm); background: var(--fill); color: var(--ink); font-size: var(--fs-body); }
+.pf-date { display: flex; align-items: center; height: var(--hit-min); padding: 0 var(--sp-12); border-radius: var(--r-sm); background: var(--fill); color: var(--ink); font-size: var(--fs-body); }
+.pf-date.empty { color: var(--ink-4); }
+.pf-date.past { color: var(--bad-strong); border: 1px solid var(--bad-strong); }
+.pf-summary { display: block; font-size: var(--fs-sub); color: var(--ink-2); line-height: var(--lh-sub); padding: var(--sp-12) 0 0; }
 
-/* 计划卡（沿用原样式类名） */
-.plancard { padding: 22rpx 26rpx; }
-.guide { display: flex; align-items: center; gap: 16rpx; background: linear-gradient(120deg, var(--brand-soft), var(--brand-soft)); border: 1rpx solid var(--brand-soft-2); padding: 24rpx 26rpx; }
-.guide-l { flex: 1; min-height: 44px; display: flex; flex-direction: column; justify-content: center; }
-.guide-t { font-size: 28rpx; font-weight: 600; color: var(--brand-text); }
-.guide-s { font-size: 24rpx; color: var(--ink-2); margin-top: 6rpx; }
-.guide-btn { flex-shrink: 0; background: var(--brand); color: #fff; border-radius: 999rpx; padding: 0 26rpx; font-size: 24rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
-.guide-x { flex-shrink: 0; font-size: 24rpx; color: var(--ink-3); min-height: 44px; display: inline-flex; align-items: center; padding: 0 8rpx; }
-.plan-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6rpx; }
-.plan-t { font-size: 28rpx; font-weight: 600; color: var(--ink); }
-.plan-y { font-size: 24rpx; color: var(--ink-3); }
-.plan-hr { display: flex; align-items: center; gap: 14rpx; }
-.plan-days { font-size: 24rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 999rpx; padding: 4rpx 14rpx; }
-.plan-edit { font-size: 24rpx; color: var(--ink-3); min-height: 44px; display: inline-flex; align-items: center; }
-.plan-prog { display: flex; align-items: center; gap: 14rpx; margin: 8rpx 0 6rpx; }
-.plan-prog-bar { flex: 1; height: 10rpx; background: var(--brand-soft); border-radius: 999rpx; overflow: hidden; }
-.plan-prog-fill { height: 100%; background: var(--brand); border-radius: 999rpx; transition: width 0.3s; }
-.plan-prog-t { font-size: 24rpx; color: var(--ink-3); flex-shrink: 0; }
-.plan-row { display: flex; align-items: center; gap: 14rpx; min-height: 44px; border-top: 1rpx solid var(--line); }
-.plan-row:first-of-type { border-top: none; }
-.plan-row.task { gap: 16rpx; }
-.task-ck { width: 36rpx; height: 36rpx; border-radius: 50%; border: 2rpx solid var(--ink-4); flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 24rpx; color: #fff; box-sizing: border-box; }
-.task-ck.on { background: #16a34a; border-color: #16a34a; }
-.task-main { flex: 1; display: flex; flex-direction: column; padding: 10rpx 0; }
-.plan-txt { flex: 1; font-size: 26rpx; color: var(--ink); }
-.plan-txt.tdone { color: var(--ink-3); text-decoration: line-through; }
-.task-sub { font-size: 24rpx; color: var(--ink-3); margin-top: 4rpx; }
-.plan-dot { width: 12rpx; height: 12rpx; border-radius: 50%; background: var(--brand); flex-shrink: 0; }
-.plan-dot.due { background: #f59e0b; }
-.plan-go { font-size: 24rpx; color: var(--brand-text); flex-shrink: 0; }
-.plan-focus { display: flex; align-items: center; gap: 10rpx; flex-wrap: wrap; border-top: 1rpx solid var(--line); padding-top: 14rpx; margin-top: 6rpx; }
-.plan-focus-k { font-size: 24rpx; color: var(--ink-3); margin-right: 4rpx; }
-.plan-fchip { font-size: 24rpx; color: var(--ink-2); background: var(--fill); border-radius: 999rpx; padding: 0 20rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
-.plan-fchip.on { background: var(--brand-soft); color: var(--brand-text); font-weight: 600; }
-.pf-input { flex: 1; min-height: 44px; border: 1rpx solid var(--line); border-radius: 12rpx; padding: 0 20rpx; font-size: 26rpx; background: var(--fill); box-sizing: border-box; }
-.pf-date { min-height: 44px; display: inline-flex; align-items: center; border: 1rpx solid var(--line); border-radius: 12rpx; padding: 0 24rpx; font-size: 26rpx; color: var(--ink); background: var(--fill); box-sizing: border-box; }
-.pf-date.empty { color: var(--ink-3); }
-.pf-date.past { color: var(--bad-strong); border-color: var(--bad-strong); }
-.pf-summary { margin-top: 8rpx; font-size: 24rpx; color: var(--ink-2); background: var(--brand-soft); border-radius: 12rpx; padding: 18rpx 22rpx; }
-.pf-back { margin-top: 16rpx; text-align: center; font-size: 24rpx; color: var(--ink-3); min-height: 44px; display: flex; align-items: center; justify-content: center; }
+/* 题型 sheet */
+.sub-list { display: flex; flex-direction: column; gap: var(--sp-8); }
+.sub-row { display: flex; align-items: center; gap: var(--sp-12); }
+.sub-chip.is-all { background: var(--brand-soft); border-color: transparent; }
+.sub-name { font-size: var(--fs-body); font-weight: 500; color: var(--ink); flex: 1; }
+.sub-prog { font-size: var(--fs-caption); color: var(--ink-3); }
+.sub-n { font-size: var(--fs-sub); color: var(--ink-3); flex-shrink: 0; }
 
-/* 回访召回卡 */
-.ercard { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; box-shadow: 0 6rpx 16rpx rgba(37, 99, 235, 0.25); padding: 24rpx 28rpx; }
-.cbcard { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #f59e0b, #f97316); border: none; box-shadow: 0 6rpx 16rpx rgba(249, 115, 22, 0.25); padding: 24rpx 28rpx; }
-.cb-l { min-width: 0; }
-.cb-t { display: block; font-size: 28rpx; font-weight: 700; color: #ffffff; }
-.cb-s { display: block; font-size: 24rpx; color: rgba(255, 255, 255, 0.85); margin-top: 4rpx; }
-.cb-r { flex-shrink: 0; display: flex; align-items: center; gap: 16rpx; }
-.cb-go { display: inline-flex; align-items: center; min-height: 40px; box-sizing: border-box; background: rgba(255, 255, 255, 0.2); color: #ffffff; font-size: 26rpx; font-weight: 600; border-radius: 999rpx; padding: 0 26rpx; }
-.cb-x { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; color: rgba(255, 255, 255, 0.75); font-size: 26rpx; padding: 0; }
-
-/* 每日打卡提醒横幅 */
-.rmcard { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #6366f1, #4f46e5); border: none; box-shadow: 0 6rpx 16rpx rgba(99, 102, 241, 0.25); padding: 24rpx 28rpx; }
-
-/* 今日到期复习入口 */
-.duebar { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(180deg, #4a7bf7, #3567ec); border: none; box-shadow: 0 6rpx 16rpx rgba(46, 91, 255, 0.25); padding: 24rpx 28rpx; }
-.duebar-l { display: flex; align-items: center; gap: 18rpx; min-width: 0; }
-.duebar-txts { min-width: 0; }
-.duebar-t { display: block; font-size: 28rpx; font-weight: 700; color: #ffffff; }
-.duebar-s { display: block; font-size: 24rpx; color: rgba(255, 255, 255, 0.75); margin-top: 4rpx; }
-.duebar-go { flex-shrink: 0; background: rgba(255, 255, 255, 0.18); color: #ffffff; font-size: 26rpx; font-weight: 600; border-radius: 999rpx; padding: 12rpx 30rpx; }
-.taskcard { padding: 24rpx 28rpx; }
-.tk-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8rpx; }
-.tk-t { font-size: 28rpx; font-weight: 700; }
-.tk-n { font-size: 24rpx; color: var(--brand-text); font-weight: 700; background: var(--brand-soft); border-radius: 8rpx; padding: 2rpx 14rpx; }
-.tk-row { display: flex; align-items: center; gap: 18rpx; padding: 16rpx 0; border-top: 1rpx solid var(--line); }
-.tk-row:first-of-type { border-top: none; }
-.tk-ck { flex-shrink: 0; width: 34rpx; height: 34rpx; line-height: 34rpx; text-align: center; border-radius: 50%; border: 2rpx solid var(--line); font-size: 24rpx; color: #fff; }
-.tk-ck.on { background: #16a34a; border-color: #16a34a; }
-.tk-main { flex: 1; min-width: 0; }
-.tk-name { display: block; font-size: 26rpx; font-weight: 600; }
-.tk-name.done { color: var(--ink-3); }
-.tk-streak { font-size: 24rpx; color: #d97706; font-weight: 600; margin-left: 12rpx; }
-.tk-sub { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 4rpx; }
-.tk-bar { height: 10rpx; background: var(--line); border-radius: 999rpx; margin-top: 10rpx; overflow: hidden; }
-.tk-fill { height: 100%; background: linear-gradient(90deg, #f59e0b, #d97706); border-radius: 999rpx; }
-.tk-go { flex-shrink: 0; font-size: 24rpx; color: var(--brand-text); font-weight: 600; }
-
-/* 断卡风险提示 */
-.riskbar { display: flex; align-items: center; gap: 20rpx; background: var(--warn-soft); border: 1rpx solid #fde68a; padding: 22rpx 26rpx; }
-.risk-ico { flex-shrink: 0; display: flex; align-items: center; }
-.risk-t { display: block; font-size: 26rpx; font-weight: 600; color: var(--warn); }
-.risk-s { display: block; font-size: 24rpx; color: #b45309; margin-top: 4rpx; }
-.risk-go { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: var(--warn); }
-
-/* 公告 */
-.ann { display: flex; align-items: flex-start; gap: 14rpx; background: var(--info-soft); border: 1rpx solid #bae6fd; padding: 22rpx 26rpx; }
-.ann-c { flex: 1; }
-.ann-t { display: block; font-size: 26rpx; font-weight: 600; color: var(--info-strong); }
-.ann-b { display: block; font-size: 24rpx; color: var(--info-strong); margin-top: 4rpx; white-space: pre-wrap; }
-.ann-x { flex-shrink: 0; display: flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; margin: -10px -8rpx -10px 0; padding: 0; }
-
-/* Sheet */
-.mask { position: fixed; inset: 0; background: rgba(23, 24, 28, 0.45); z-index: 30; display: flex; align-items: flex-end; }
-.sheet { width: 100%; max-height: 76vh; overflow-y: auto; background: var(--card); border-radius: 40rpx 40rpx 0 0; padding: 12rpx 36rpx calc(146rpx + env(safe-area-inset-bottom)); box-sizing: border-box; box-shadow: 0 -16rpx 48rpx rgba(23, 24, 28, 0.16); }
-.grab { width: 72rpx; height: 8rpx; border-radius: 4rpx; background: var(--line); margin: 8rpx auto 16rpx; }
-.sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
-.sheet-t { font-size: 32rpx; font-weight: 700; color: var(--ink); }
-.sheet-x { min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
-.setrow { display: flex; justify-content: space-between; align-items: center; gap: 20rpx; padding: 18rpx 0; }
-.set-kwrap { display: flex; flex-direction: column; }
-.set-k { font-size: 28rpx; color: var(--ink); font-weight: 500; }
-.set-sub { font-size: 24rpx; color: var(--ink-2); margin-top: 2rpx; }
-.set-chips { display: flex; gap: 12rpx; flex-wrap: wrap; justify-content: flex-end; }
-.set-chips.scrollx { flex-wrap: nowrap; overflow-x: auto; max-width: 65%; }
-.set-chip { font-size: 24rpx; color: var(--ink-2); background: var(--soft-bg); border-radius: 999rpx; padding: 0 22rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; white-space: nowrap; }
-.set-chip.on { background: var(--brand-soft); color: var(--brand-text); font-weight: 600; }
-:deep(.sheet-cta) { margin-top: 24rpx; width: 100%; border-radius: 20rpx !important; background: linear-gradient(135deg, #5b8af8, var(--brand)) !important; box-shadow: 0 8rpx 24rpx rgba(46, 91, 255, 0.28); font-weight: 600; }
-:deep(.sheet-cta2) { margin-top: 16rpx; width: 100%; border-radius: 20rpx !important; }
-.custom-note { margin-top: 14rpx; text-align: center; font-size: 24rpx; color: var(--ink-3); }
-.sub-chip { display: flex; justify-content: space-between; align-items: center; gap: 16rpx; padding: 22rpx 8rpx; min-height: 44px; border-top: 1rpx solid var(--line); box-sizing: border-box; }
-.sub-chip:first-of-type { border-top: none; }
-.sub-chip.all-chip .sub-name { color: var(--brand-text); font-weight: 600; }
-.sub-l { flex: 1; display: flex; flex-direction: column; }
-.sub-name { font-size: 28rpx; color: var(--ink); }
-.sub-prog { font-size: 24rpx; color: var(--ink-3); margin-top: 4rpx; }
-.sub-n { font-size: 24rpx; color: var(--ink-3); flex-shrink: 0; }
-
-/* 宽屏交互（≥768px）；双栏留到 ≥1024px——768 时内容区仅 560px（侧栏占 208px），双栏放不下卡内固定宽元素 */
 /* #ifdef H5 */
-@media (min-width: 768px) {
-  .wrap.home { max-width: 960px !important; }
-  .modrow:hover, .more-c:hover { box-shadow: 0 8rpx 24rpx rgba(23, 24, 28, 0.08); cursor: pointer; }
-  .mask { position: fixed; align-items: center; justify-content: center; }
-  .sheet { max-width: 520px; border-radius: 28rpx; padding-bottom: calc(36rpx + env(safe-area-inset-bottom)); }
-}
 @media (min-width: 1024px) {
-  .wrap.home { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; align-items: start; }
-  .hero, .sec-h, .ann, .riskbar, .duebar, .taskcard { grid-column: 1 / -1; }
-  .modlist { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; align-items: start; }
-  .modlist .card.smart { grid-column: 1 / -1; }
-  .more-grid { grid-column: 1 / -1; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .card.guide, .card.plancard, .card.szcard, .card.weekly-c, .card.spin { grid-column: 1 / -1; }
-  .card.landing { grid-column: 1 / -1; }
-  .hero-btn.main { flex: 0 0 auto; padding: 0 64rpx; }
-  .landing .ld-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .landing .ld-btn.main { flex: 0 0 auto; padding: 0 56rpx; }
+  .wrap.home { max-width: 1064px; padding-top: var(--sp-24); }
+  .toprow { max-width: 640px; }
+  .more-grid { margin-top: var(--sp-8); }
 }
 /* #endif */
-.toprow { display: flex; align-items: center; gap: 16rpx; margin-bottom: 20rpx; }
-.examsw { flex-shrink: 0; display: flex; align-items: center; gap: 6rpx; min-height: 44px; box-sizing: border-box; padding: 0 22rpx; background: var(--card); border-radius: 999rpx; box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04); }
-.examsw-t { font-size: 26rpx; font-weight: 600; color: var(--ink); max-width: 220rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.examsw-a { font-size: 24rpx; color: var(--ink-3); }
-.mod-r { display: flex; flex-direction: column; align-items: flex-end; gap: 8rpx; flex-shrink: 0; }
-.mod-prog { font-size: 24rpx; color: var(--ink-3); font-variant-numeric: tabular-nums; }
-.mod-prog-n { font-size: 26rpx; font-weight: 700; color: var(--ink); }
-.searchbar { flex: 1; display: flex; align-items: center; gap: 12rpx; background: var(--card); border-radius: 999rpx; padding: 16rpx 26rpx; box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04); }
-.searchbar-t { font-size: 26rpx; color: var(--ink-3); }
-
-/* 新访客价值主张首屏 */
-.landing { position: relative; background: linear-gradient(135deg, var(--brand), #4c7dff); color: #fff; padding: 36rpx 32rpx; }
-.ld-x { position: absolute; top: 0; right: 8rpx; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; font-size: 26rpx; color: rgba(255, 255, 255, 0.75); padding: 0; }
-.ld-t { display: block; font-size: 40rpx; font-weight: 700; line-height: 1.35; }
-.ld-s { display: block; font-size: 24rpx; color: rgba(255, 255, 255, 0.88); margin-top: 10rpx; line-height: 1.6; }
-.ld-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14rpx; margin-top: 24rpx; }
-.ld-item { background: rgba(255, 255, 255, 0.14); border-radius: 16rpx; padding: 18rpx 20rpx; display: flex; flex-direction: column; gap: 4rpx; }
-.ld-in { font-size: 26rpx; font-weight: 600; }
-.ld-id { font-size: 24rpx; color: rgba(255, 255, 255, 0.82); }
-.ld-acts { display: flex; gap: 16rpx; margin-top: 26rpx; }
-.ld-btn { min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; border-radius: 999rpx; padding: 0 34rpx; font-size: 28rpx; font-weight: 600; }
-.ld-btn.main { background: #fff; color: var(--brand); flex: 1; }
-.ld-btn.sub { background: rgba(255, 255, 255, 0.16); color: #fff; border: 1rpx solid rgba(255, 255, 255, 0.45); }
 </style>

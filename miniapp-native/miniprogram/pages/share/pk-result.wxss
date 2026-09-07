@@ -1,169 +1,164 @@
-.page-scroll {
-  flex: 1;
-  height: 100%;
-}
-
 .wrap {
-  padding: 24rpx 32rpx 60rpx;
-}
-
-.empty {
-  text-align: center;
-  color: var(--t3);
-  font-size: 26rpx;
-  padding: 30rpx 0;
+  padding: var(--sp-12) var(--page-x) calc(var(--sp-40) + env(safe-area-inset-bottom));
 }
 
 .hero {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-12);
+  padding: var(--card-pad);
+  border-radius: var(--r-lg);
   background: var(--brand-grad);
-  border-radius: 32rpx;
-  padding: 36rpx 32rpx;
-  margin-bottom: 24rpx;
-  box-shadow: var(--sh-brand);
+  color: var(--on-brand);
+  margin-bottom: var(--card-gap);
+}
+
+.hero-ico {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: var(--r-md);
+  background: var(--brand-press);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-txt {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .hero-t {
-  display: block;
-  color: #fff;
-  font-size: 40rpx;
-  font-weight: 800;
+  font-size: var(--fs-h2);
+  font-weight: 600;
 }
 
 .hero-s {
-  display: block;
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 24rpx;
-  margin-top: 10rpx;
+  font-size: var(--fs-caption);
+  color: var(--on-brand-2);
+  margin-top: 2px;
 }
 
+/* 对阵卡 */
 .vs {
+  display: block;
+  margin-bottom: var(--card-gap);
+}
+
+.vs-body {
   display: flex;
-  flex-direction: row;
   align-items: stretch;
-  padding: 32rpx 20rpx;
 }
 
 .p {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8rpx;
-  position: relative;
-  padding-top: 30rpx;
+  text-align: center;
+  padding: var(--sp-8) var(--sp-4);
+  border-radius: var(--r-md);
+}
+
+.p.win {
+  background: var(--warn-soft);
 }
 
 .crown {
-  position: absolute;
-  top: -6rpx;
-  font-size: 34rpx;
+  height: 20px;
 }
 
 .av {
-  width: 96rpx;
-  height: 96rpx;
-  border-radius: 50%;
-  background: var(--brand-50);
-  color: var(--brand-500);
+  width: 48px;
+  height: 48px;
+  border-radius: var(--r-full);
+  background: var(--brand);
+  color: var(--on-brand);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 36rpx;
-  font-weight: 800;
+  font-size: var(--fs-h2);
+  font-weight: 600;
+  margin-top: var(--sp-4);
 }
 
 .av.rival {
-  background: var(--warning-bg);
-  color: var(--warning);
-}
-
-.p.win .av {
-  box-shadow: 0 0 0 6rpx #fbbf24;
+  background: var(--bad);
 }
 
 .nm {
-  font-size: 24rpx;
-  color: var(--t1);
-  max-width: 220rpx;
+  margin-top: var(--sp-8);
+  font-size: var(--fs-sub);
+  font-weight: 600;
+  color: var(--ink);
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .sc {
-  font-size: 52rpx;
-  font-weight: 800;
-  color: var(--t1);
-}
-
-.p.win .sc {
-  color: var(--brand-500);
+  font-size: var(--fs-display);
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.2;
+  margin-top: var(--sp-4);
 }
 
 .meta {
-  font-size: 22rpx;
-  color: var(--t3);
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+  margin-top: 2px;
 }
 
 .mid {
+  width: 72px;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10rpx;
-  padding: 0 12rpx;
+  gap: var(--sp-8);
 }
 
 .mid-vs {
-  font-size: 36rpx;
-  font-weight: 800;
-  color: var(--t4);
+  font-size: var(--fs-h2);
+  font-weight: 600;
+  color: var(--ink-4);
+  font-style: italic;
 }
 
-.mid-res {
-  font-size: 22rpx;
-  color: var(--t3);
-  text-align: center;
-  max-width: 140rpx;
-}
-
+/* CTA */
 .cta {
-  padding: 32rpx 28rpx;
+  display: block;
+}
+
+.cta-body {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
+  gap: var(--sp-8);
+  text-align: center;
 }
 
 .cta-t {
-  font-size: 32rpx;
-  font-weight: 800;
-  color: var(--t1);
+  font-size: var(--fs-h2);
+  font-weight: 600;
+  color: var(--ink);
 }
 
 .cta-s {
-  font-size: 24rpx;
-  color: var(--t3);
-  margin: 10rpx 0 24rpx;
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+  margin-bottom: var(--sp-8);
 }
 
-.act-btn {
-  width: 100%;
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999rpx;
-  font-size: 30rpx;
-  font-weight: 600;
-}
-
-.act-btn.main {
-  background: var(--brand-500);
-  color: #fff;
-}
-
-.act-btn.sub {
-  background: var(--brand-50);
-  color: var(--brand-500);
-  margin-top: 16rpx;
+@media (min-width: 1024px) {
+  .wrap {
+    max-width: 640px;
+    margin: 0 auto;
+  }
 }

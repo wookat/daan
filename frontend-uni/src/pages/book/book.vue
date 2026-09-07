@@ -1,19 +1,21 @@
 <template>
-  <view class="wrap" :class="[reviewing ? 'bookwrap-review' : 'bookwrap', { noside: !items.length }]">
-    <view v-if="offlineView" class="offbar"><l-icon name="plane" :size="15" color="#b45309" /><text>当前离线 · 展示已缓存错题，联网后自动更新</text></view>
+  <view class="wrap book" :class="{ 'is-review': reviewing }">
+    <kg-banner v-if="offlineView" tone="warn" icon="plane" text="当前离线 · 展示已缓存错题，联网后自动更新" :closable="false" class="offbar" />
+
     <!-- 复习模式 -->
-    <view v-if="reviewing" class="card review">
+    <kg-card v-if="reviewing" class="review">
       <view class="rhead">
-        <text class="tag">{{ cur._extra ? '加练同类' : '复习' }} {{ rIdx + 1 }}/{{ rItems.length }}</text>
-        <text class="op" @click="exitReview">退出复习</text>
+        <kg-tag tone="warn">{{ cur._extra ? '加练同类' : '复习' }} {{ rIdx + 1 }}/{{ rItems.length }}</kg-tag>
+        <kg-button variant="text" size="sm" @click="exitReview">退出复习</kg-button>
       </view>
       <view class="q" :style="qStyle">{{ cur.question_text }}</view>
       <view v-if="curLetter" class="opts">
         <view
           v-for="o in ['A', 'B', 'C', 'D']"
           :key="o"
-          class="opt"
+          class="opt num"
           :class="optClass(o)"
+          role="button"
           @click="pick(o)"
         >{{ o }}</view>
       </view>
@@ -26,389 +28,451 @@
         <view v-if="cur._extra && !wasCorrect && cur._saved" class="appended-tip">已加入错题本，之后会安排复习</view>
         <view v-if="!wasCorrect && reviewReasonMid(cur)" class="reasons">
           <text class="rz-t">错因自评：</text>
-          <text
-            v-for="rz in REASONS"
-            :key="rz"
-            class="rz"
-            :class="{ on: cur.error_reason === rz }"
-            @click="setReviewReason(rz)"
-          >{{ rz }}</text>
+          <kg-chip-row size="sm" :options="REASONS.map((rz) => ({ label: rz, value: rz }))" :model-value="cur.error_reason || ''" :scroll-to-selected="false" @update:model-value="setReviewReason" />
         </view>
         <view :style="optStyle"><rich-text :nodes="curHtml" /></view>
-        <view v-if="!wasCorrect && cur.module && !cur._extra" class="sim-row" @click="similarFromReview">
-          <text class="sim-t">还不稳？练 3 道同类题巩固 ›</text>
-        </view>
-        <view v-if="askableReview" class="sim-row" role="button" aria-label="看不懂？AI 详解本题" @click="askFromReview">
-          <text class="sim-t">看不懂？AI 详解本题 ›</text>
-        </view>
-        <view v-if="reviewAskSeen" class="sim-row" role="button" aria-label="回看 AI 详解" @click="openSeenAsk">
-          <text class="sim-t">回看 AI 详解 ›</text>
+        <view class="sim-rows">
+          <kg-button v-if="!wasCorrect && cur.module && !cur._extra" variant="text" size="md" block @click="similarFromReview">还不稳？练 3 道同类题巩固 ›</kg-button>
+          <kg-button v-if="askableReview" variant="text" size="md" block aria-label="看不懂？AI 详解本题" @click="askFromReview">看不懂？AI 详解本题 ›</kg-button>
+          <kg-button v-if="reviewAskSeen" variant="text" size="md" block aria-label="回看 AI 详解" @click="openSeenAsk">回看 AI 详解 ›</kg-button>
         </view>
         <q-social-bar v-if="cur.question_id" :question-id="cur.question_id" />
-        <wd-button type="primary" block custom-class="next-btn" @click="nextReview">{{ rIdx + 1 < rItems.length ? '下一题' : '完成复习' }}</wd-button>
+        <kg-button variant="primary" size="lg" block class="next-btn" @click="nextReview">{{ rIdx + 1 < rItems.length ? '下一题' : '完成复习' }}</kg-button>
       </view>
       <view v-else-if="curMulti" class="selfjudge">
-        <view class="q2">多选题：选完所有选项后确认</view>
-        <wd-button type="primary" block :disabled="!picked" custom-class="next-btn" @click="confirmMulti">确认答案{{ picked ? '（已选 ' + picked + '）' : '' }}</wd-button>
+        <text class="q2">多选题：选完所有选项后确认</text>
+        <kg-button variant="primary" size="lg" block :disabled="!picked" class="next-btn" @click="confirmMulti">确认答案{{ picked ? '（已选 ' + picked + '）' : '' }}</kg-button>
       </view>
       <view v-else-if="!curLetter" class="selfjudge">
-        <view class="q2">先自己做，然后：</view>
+        <text class="q2">先自己做，然后：</text>
         <view class="sj-row">
-          <wd-button type="success" plain custom-class="sj-btn" @click="selfJudge(true)">我做对了</wd-button>
-          <wd-button type="error" plain custom-class="sj-btn" @click="selfJudge(false)">我做错了</wd-button>
+          <kg-button variant="secondary" size="lg" block @click="selfJudge(true)">我做对了</kg-button>
+          <kg-button variant="secondary" size="lg" tone="bad" block @click="selfJudge(false)">我做错了</kg-button>
         </view>
       </view>
-    </view>
+    </kg-card>
 
     <!-- 复习清零庆祝态 -->
-    <view v-if="celebrate" class="mask" @click="closeCelebrate">
-      <view class="cb-card" @click.stop>
-        <view class="cb-emoji">🎉</view>
-        <view class="cb-t">今日复习已清零！</view>
+    <kg-sheet :model-value="celebrate" title="今日复习已清零" @update:model-value="(v) => { if (!v) closeCelebrate(); }">
+      <view class="cb">
+        <l-icon name="party-popper" :size="48" tone="ok" />
         <template v-if="rSummary">
-          <view class="cb-s">到期 {{ celebrateN }} 道全部复习完成<template v-if="rSummary.pct !== null"> · 首答对 {{ rSummary.dueRight }} 道（{{ rSummary.pct }}%）</template></view>
-          <view v-if="rSummary.dueWrong" class="cb-s">答错 {{ rSummary.dueWrong }} 道已重出巩固<template v-if="rSummary.corrected"> · 纠正 {{ rSummary.corrected }} 道</template></view>
-          <view v-if="rSummary.extra" class="cb-s">加练同类题 {{ rSummary.extra }} 道 · 答对 {{ rSummary.extraRight }} 道</view>
+          <text class="cb-s">到期 {{ celebrateN }} 道全部复习完成<template v-if="rSummary.pct !== null"> · 首答对 {{ rSummary.dueRight }} 道（{{ rSummary.pct }}%）</template></text>
+          <text v-if="rSummary.dueWrong" class="cb-s">答错 {{ rSummary.dueWrong }} 道已重出巩固<template v-if="rSummary.corrected"> · 纠正 {{ rSummary.corrected }} 道</template></text>
+          <text v-if="rSummary.extra" class="cb-s">加练同类题 {{ rSummary.extra }} 道 · 答对 {{ rSummary.extraRight }} 道</text>
         </template>
-        <view v-else class="cb-s">{{ celebrateN }} 道到期错题全部复习完成，遗忘曲线稳住了</view>
-        <button class="cb-btn" @click="closeCelebrate">太棒了，继续 ›</button>
+        <text v-else class="cb-s">{{ celebrateN }} 道到期错题全部复习完成，遗忘曲线稳住了</text>
       </view>
-    </view>
+      <template #footer><kg-button variant="primary" size="lg" block @click="closeCelebrate">太棒了，继续 ›</kg-button></template>
+    </kg-sheet>
 
     <!-- 复习完成后：同考点强化卡（spec-03） -->
-    <view v-if="!reviewing && reinforce" class="mask" @click="reinforce = null">
-      <view class="rf-card" @click.stop>
-        <view class="rf-t">本轮复习完成！趁热打铁强化一下？</view>
-        <view class="rf-name">{{ reinforce.tag3_name || reinforce.submodule }}</view>
-        <view class="rf-meta">{{ reinforce.module_name }}<template v-if="reinforce.tag3_name"> · {{ reinforce.submodule }}</template> · 掌握度 {{ Math.round(reinforce.mastery * 100) }}%（{{ reinforce.level_name }}） · 今日错 {{ reinforce.wrong_today }} 道</view>
-        <button class="rf-btn" @click="startReinforce(reinforce)">强化 5 道新题（未做过）</button>
-        <view class="rf-row2">
-          <text v-if="reinforceItems.length > 1" class="rf-alt" @click="swapReinforce">换个考点</text>
-          <text class="rf-alt" @click="reinforce = null">下次再说</text>
-        </view>
+    <kg-sheet :model-value="!reviewing && !!reinforce" title="本轮复习完成！趁热打铁强化一下？" @update:model-value="(v) => { if (!v) reinforce = null; }">
+      <view v-if="reinforce" class="rf">
+        <text class="rf-name">{{ reinforce.tag3_name || reinforce.submodule }}</text>
+        <text class="rf-meta">{{ reinforce.module_name }}<template v-if="reinforce.tag3_name"> · {{ reinforce.submodule }}</template> · 掌握度 {{ Math.round(reinforce.mastery * 100) }}%（{{ reinforce.level_name }}） · 今日错 {{ reinforce.wrong_today }} 道</text>
       </view>
-    </view>
-
-    <!-- 列表模式 -->
-    <template v-if="!reviewing">
-      <view v-if="items.length" class="ovrow bk-side">
-        <view class="ov-c"><text class="ov-n">{{ items.length }}</text><text class="ov-t">全部错题</text></view>
-        <view class="ov-c"><text class="ov-n warn">{{ todoItems.length }}</text><text class="ov-t">待掌握</text></view>
-        <view class="ov-c"><text class="ov-n ok">{{ doneItems.length }}</text><text class="ov-t">已掌握</text></view>
-      </view>
-      <view v-if="resumeInfo" class="card resumecard bk-main" role="button" aria-label="继续刚才的复习" @click="resumeReview">
-        <view>
-          <view class="duetxt"><l-icon name="clock" :size="16" color="#ffffff" /><text class="duetxt-t">上次复习中断在第 {{ resumeInfo.rIdx + 1 }}/{{ resumeInfo.items.length }} 题</text></view>
-          <text class="duesub">进度已保留，可原位继续</text>
-        </view>
-        <view class="resume-ops">
-          <text class="duego">继续复习</text>
-          <text class="resume-drop" role="button" aria-label="放弃本轮复习进度" @click.stop="discardResume">放弃</text>
-        </view>
-      </view>
-      <view v-if="due.length" class="card duecard bk-main" @click="startReviewFromCard">
-        <view>
-          <view class="duetxt"><l-icon name="calendar-check" :size="16" color="#ffffff" /><text class="duetxt-t">今日待复习 {{ dueTotal }} 道</text></view>
-          <text class="duesub">按遗忘曲线安排 · 预计 {{ Math.max(1, Math.ceil(due.length * 0.8)) }} 分钟</text>
-        </view>
-        <text class="duego">开始复习</text>
-      </view>
-      <view v-if="weekTrend" class="card trendcard bk-side">
-        <text class="trend-t">错题趋势（近 4 周）</text>
-        <view class="trend-bars">
-          <view v-for="w in weekTrend.weeks" :key="w.label" class="trend-col">
-            <view class="trend-barwrap">
-              <view class="trend-bar" :style="{ height: w.pct + '%' }" />
-              <view class="trend-bar killed" :style="{ height: w.kpct + '%' }" />
-            </view>
-            <text class="trend-n">{{ w.n }}<text v-if="w.k" class="trend-kn">/{{ w.k }}</text></text>
-            <text class="trend-lb">{{ w.label }}</text>
-          </view>
-        </view>
-        <view class="trend-legend">
-          <view class="trend-lg"><view class="trend-dot" /><text class="trend-lgt">新增</text></view>
-          <view class="trend-lg"><view class="trend-dot killed" /><text class="trend-lgt">消灭（达成掌握）</text></view>
-        </view>
-        <text class="trend-sum">近 7 天新增 {{ weekTrend.last7 }} 道 · 消灭 {{ weekTrend.klast7 }} 道 · 累计已掌握 {{ doneItems.length }} 道</text>
-      </view>
-      <view v-if="monthRecap.total" class="card recap bk-side">
-        <view class="recap-h" @click="recapOpen = !recapOpen">
-          <text class="recap-t">本月错题复盘 · 新增 {{ monthRecap.total }} 道</text>
-          <text class="recap-x">{{ recapOpen ? '收起' : '展开' }}</text>
-        </view>
-        <view v-if="recapOpen">
-          <view class="recap-sec">
-            <text class="recap-st">按模块</text>
-            <view v-for="g in monthRecap.byModule" :key="g.name" class="recap-row">
-              <text class="recap-name">{{ g.name }}</text>
-              <view class="recap-bar"><view class="recap-fill" :style="{ width: Math.round((g.n / monthRecap.total) * 100) + '%' }" /></view>
-              <text class="recap-n">{{ g.n }}</text>
-            </view>
-          </view>
-          <view class="recap-sec">
-            <text class="recap-st">按错因</text>
-            <view v-for="g in monthRecap.byReason" :key="g.name" class="recap-row recap-link" role="button" :aria-label="'筛选错因：' + g.name" @click="filterByReason(g.name)">
-              <text class="recap-name">{{ g.name }} ›</text>
-              <view class="recap-bar"><view class="recap-fill warnfill" :style="{ width: Math.round((g.n / monthRecap.total) * 100) + '%' }" /></view>
-              <text class="recap-n">{{ g.n }}</text>
-            </view>
-          </view>
-          <text class="recap-tip">高频错因是提分洼地：优先复习对应模块的待掌握错题</text>
-        </view>
-      </view>
-      <view v-if="items.length" class="segrow bk-main">
-        <view class="seg">
-          <view class="seg-i" :class="{ on: tab === 'todo' }" @click="tab = 'todo'">待掌握 {{ todoItems.length }}</view>
-          <view class="seg-i" :class="{ on: tab === 'done' }" @click="tab = 'done'">已掌握 {{ doneItems.length }}</view>
-          <view class="seg-i" :class="{ on: tab === 'fav' }" @click="tab = 'fav'">收藏{{ favs.length ? ' ' + favs.length : '' }}</view>
-        </view>
-        <view v-if="tab !== 'fav'" class="filterbtn" @click="filterOpen = true">
-          <l-icon name="sliders-horizontal" :size="16" color="#646a73" /><text class="filterbtn-t">筛选</text>
-        </view>
-        <view v-if="tab !== 'fav' && shownItems.length" class="filterbtn" :class="{ bon: batchMode }" @click="toggleBatch">
-          <text class="filterbtn-t" :class="{ bont: batchMode }">{{ batchMode ? '完成' : '批量' }}</text>
-        </view>
-      </view>
-      <template v-if="tab === 'fav'">
-        <view class="card redoentry bk-main" @click="openFavPage">
-          <view class="redo-l">
-            <view class="redo-ico"><l-icon name="star" :size="16" color="#f59e0b" /></view>
-            <view>
-              <text class="redo-t">收藏夹与笔记</text>
-              <text class="redo-s">多夹分组 · 每题笔记 · 可按夹重练</text>
-            </view>
-          </view>
-          <text class="redo-go">打开</text>
-        </view>
-        <view v-if="!favs.length" class="card empty bk-main">
-          <view class="e-t">还没有本机收藏</view>
-          <view class="e-s">刷题时点顶栏星星即可收藏好题</view>
-        </view>
-        <view v-if="favs.length > 3" class="searchbar bk-main">
-          <l-icon name="search" :size="16" color="#8a90a0" />
-          <input v-model="favKw" class="searchinput" placeholder="搜收藏题干或题型" confirm-type="search" />
-          <view v-if="favKw" class="searchclear" role="button" aria-label="清空搜索" @click="favKw = ''"><l-icon name="x" :size="16" color="#8a90a0" /></view>
-        </view>
-        <view v-for="f in favShown" :key="f.t" class="card mcard bk-main" @click="f._open = !f._open">
-          <view class="mhead">
-            <text class="tag">{{ f.submodule || modName(f.module) }}</text>
-            <text v-if="f.is_real" class="rvbadge">真题{{ f.exam_year ? ' · ' + f.exam_year : '' }}{{ f.exam_region ? ' · ' + f.exam_region : '' }}</text>
-          </view>
-          <view class="q" :class="{ clamp: !f._open }">{{ (f.question || '').slice(0, 200) }}</view>
-          <template v-if="f._open">
-            <view v-for="(v, k) in f.options" :key="k" class="anscmp"><text :class="(f.answer || '').indexOf(k) !== -1 ? 'ca' : ''">{{ k }}. {{ v }}</text></view>
-            <rich-text :nodes="md(f.hs_explanation || f.explanation || '暂无解析')" />
-            <template v-if="f.xp_explanation">
-              <view class="xp-k">{{ f.xp_school || '第二名师视角' }}</view>
-              <view class="xp-body">{{ f.xp_explanation }}</view>
-            </template>
-          </template>
-          <view class="mfoot">
-            <text class="meta">{{ fmt(f.t / 1000) }}</text>
-            <view class="acts">
-              <text class="op del" @click.stop="unfavItem(f)">取消收藏</text>
-            </view>
+      <template #footer>
+        <view class="sheet-acts">
+          <kg-button variant="primary" size="lg" block @click="startReinforce(reinforce)">强化 5 道新题（未做过）</kg-button>
+          <view class="rf-row2">
+            <kg-button v-if="reinforceItems.length > 1" variant="text" size="md" @click="swapReinforce">换个考点</kg-button>
+            <kg-button variant="text" size="md" @click="reinforce = null">下次再说</kg-button>
           </view>
         </view>
       </template>
-      <view v-if="tab !== 'fav' && todoItems.length >= 3" class="card redoentry bk-side" @click="aiAnalysis(false)">
-        <view class="redo-l">
-          <view class="redo-ico"><l-icon name="bot-message-square" :size="16" color="#2e5bff" /></view>
-          <view>
-            <text class="redo-t">AI 错题分析</text>
-            <text class="redo-s">基于你的错题分布与近期作答生成诊断与复习建议</text>
-          </view>
-        </view>
-        <text class="redo-go">生成</text>
-      </view>
-      <view v-if="aiOpen" class="mask" @click="aiOpen = false">
-        <view class="sheet" @click.stop>
-          <view class="sheet-h">
-            <text class="sheet-t">AI 错题分析</text>
-            <view class="sheet-x" role="button" aria-label="关闭" @click="aiOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
-          </view>
-          <view v-if="aiLoading" class="ai-loading">正在分析你的错题与作答数据，约需 30-60 秒…</view>
-          <view v-else-if="aiErr" class="ai-err">
-            <text class="ai-err-t">分析失败：{{ aiErr }}</text>
-            <view class="sheet-done" role="button" @click="aiAnalysis(true)">重试</view>
-          </view>
-          <view v-else>
-            <rich-text :nodes="aiHtml" />
-            <view class="sheet-done ai-regen" role="button" @click="aiAnalysis(true)">按当前错题重新生成</view>
-          </view>
-        </view>
-      </view>
-      <!-- 扫描答题卡/手动录入已收进右下角 + 浮动菜单，错题列表作为页面主体 -->
-      <view v-if="manualOpen" class="mask" @click="manualOpen = false">
-        <view class="sheet" @click.stop>
-          <view class="sheet-h">
-            <text class="sheet-t">手动录入答案</text>
-            <view class="sheet-x" role="button" aria-label="关闭" @click="manualOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
-          </view>
-          <template v-if="!manualPaper">
-            <view v-if="recentPapers.length" class="sheet-k">最近导出的试卷</view>
-            <view v-if="recentPapers.length" class="kpchips">
-              <text v-for="p in recentPapers" :key="p.code" class="kpchip" @click="manualLookup(p.code)">{{ p.title }} · {{ p.code }}</text>
-            </view>
-            <view class="sheet-k">或输入卷面上的卷码</view>
-            <view class="searchbar manual-codebar">
-              <input v-model="manualCode" class="searchinput" placeholder="如 A1B2C3D4（封面/答题卡顶部）" confirm-type="done" @confirm="manualLookup(manualCode)" />
-            </view>
-            <view class="sheet-done" @click="manualLookup(manualCode)">{{ manualLoading ? '查找中…' : '查找试卷' }}</view>
-          </template>
-          <template v-else>
-            <view class="scan-sum">{{ manualPaper.title || '试卷' }} · 卷码 {{ manualPaper.code }} · 共 {{ manualPaper.n }} 题 · 已选 {{ manualPickedCount }}</view>
-            <scroll-view scroll-y class="scan-list manual-list">
-              <view v-for="no in manualPaper.n" :key="no" class="manual-row">
-                <text class="scan-no">{{ no }}</text>
-                <text v-for="L in ['A','B','C','D']" :key="L" class="manual-opt" :class="{ on: manualPicks[no] === L }" @click="manualPick(no, L)">{{ L }}</text>
+    </kg-sheet>
+
+    <!-- 列表模式 -->
+    <template v-if="!reviewing">
+      <kg-two-col>
+        <template #main>
+          <!-- 首屏：今日待复习 N · 预计 M 分钟 · 累计 K + 开始复习 -->
+          <kg-card v-if="!loading || items.length || due.length" class="head">
+            <kg-stat-row :items="[
+              { label: '今日待复习', value: dueTotal, unit: '题', tone: due.length ? 'brand' : undefined },
+              { label: '预计', value: due.length ? Math.max(1, Math.ceil(due.length * 0.8)) : 0, unit: '分钟' },
+              { label: '累计错题', value: items.length, unit: '题' },
+            ]" />
+            <kg-button v-if="due.length" variant="primary" size="lg" block class="head-cta" @click="startReviewFromCard">开始复习</kg-button>
+            <text v-else-if="items.length" class="head-tip">今日没有到期错题 · 待掌握 {{ todoItems.length }} · 已掌握 {{ doneItems.length }}</text>
+          </kg-card>
+          <kg-card v-if="resumeInfo" variant="soft" class="resumecard" role="button" aria-label="继续刚才的复习">
+            <view class="rs-row">
+              <view class="grow">
+                <view class="rs-tr"><l-icon name="clock" :size="16" tone="warn" /><text class="rs-t">上次复习中断在第 {{ resumeInfo.rIdx + 1 }}/{{ resumeInfo.items.length }} 题</text></view>
+                <text class="rs-s">进度已保留，可原位继续</text>
               </view>
-            </scroll-view>
-            <view class="sheet-done" :class="{ dim: !manualPickedCount }" :aria-disabled="String(!manualPickedCount)" @click="manualSubmit">{{ manualSubmitting ? '判分中…' : '交卷判分（' + manualPickedCount + ' 题）' }}</view>
-            <view class="manual-back" @click="manualPaper = null">‹ 换一份试卷</view>
-          </template>
-        </view>
-      </view>
-      <view v-if="scanOpen && scanResult" class="mask" @click="scanOpen = false">
-        <view class="sheet" @click.stop>
-          <view class="sheet-h">
-            <text class="sheet-t">对答案结果 · {{ scanResult.title || '试卷' }}</text>
-            <view class="sheet-x" role="button" aria-label="关闭" @click="scanOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
+              <kg-button variant="text" size="md" role="button" aria-label="放弃本轮复习进度" @click.stop="discardResume">放弃</kg-button>
+              <kg-button variant="secondary" size="lg" @click="resumeReview">继续复习</kg-button>
+            </view>
+          </kg-card>
+
+          <view v-if="items.length || favs.length" class="segrow">
+            <view class="seg" role="tablist">
+              <view class="seg-i" :class="{ on: tab === 'todo' }" role="tab" @click="tab = 'todo'">待掌握 {{ todoItems.length }}</view>
+              <view class="seg-i" :class="{ on: tab === 'done' }" role="tab" @click="tab = 'done'">已掌握 {{ doneItems.length }}</view>
+              <view class="seg-i" :class="{ on: tab === 'fav' }" role="tab" @click="tab = 'fav'">收藏{{ favs.length ? ' ' + favs.length : '' }}</view>
+            </view>
+            <kg-button v-if="tab !== 'fav'" variant="secondary" size="md" icon="sliders-horizontal" aria-label="筛选与排序" @click="filterOpen = true" />
+            <kg-button v-if="tab !== 'fav' && shownItems.length" :variant="batchMode ? 'primary' : 'secondary'" size="md" @click="toggleBatch">{{ batchMode ? '完成' : '批量' }}</kg-button>
           </view>
-          <view class="scan-sum">卷码 {{ scanResult.code }}{{ scanResult.page ? ' · 第 ' + scanResult.page + ' 页' : '' }} · 已作答 {{ scanResult.answered }}/{{ scanResult.total }} · 答对 <text class="scan-good">{{ scanResult.correct }}</text> 题{{ scanResult.saved ? ' · 已记入做题记录' : '' }}</view>
-          <scroll-view scroll-y class="scan-list">
+          <kg-chip-row v-if="tab !== 'fav' && chipList.length > 2" class="modchips" :options="chipList.map((c) => ({ label: c.name, value: c.key }))" :model-value="filterMod" @update:model-value="(v) => { filterMod = v; kpFilter = ''; kp3Filter = ''; }" />
+
+          <template v-if="tab === 'fav'">
+            <kg-card clickable chevron class="entry" @click="openFavPage">
+              <view class="entry-in">
+                <view class="entry-ico is-warn"><l-icon name="star" :size="20" tone="warn" /></view>
+                <view class="grow">
+                  <text class="entry-t">收藏夹与笔记</text>
+                  <text class="entry-s">多夹分组 · 每题笔记 · 可按夹重练</text>
+                </view>
+              </view>
+            </kg-card>
+            <kg-empty-state v-if="!favs.length" compact icon="star" title="还没有本机收藏" desc="刷题时点顶栏星星即可收藏好题" />
+            <view v-if="favs.length > 3" class="searchbar">
+              <l-icon name="search" :size="16" tone="muted" />
+              <input v-model="favKw" class="searchinput" placeholder="搜收藏题干或题型" confirm-type="search" />
+              <view v-if="favKw" class="searchclear" role="button" aria-label="清空搜索" @click="favKw = ''"><l-icon name="x" :size="16" tone="muted" /></view>
+            </view>
+            <kg-card v-for="f in favShown" :key="f.t" clickable class="mcard" @click="f._open = !f._open">
+              <view class="mhead">
+                <kg-tag tone="brand">{{ f.submodule || modName(f.module) }}</kg-tag>
+                <kg-tag v-if="f.is_real" tone="neutral">真题{{ f.exam_year ? ' · ' + f.exam_year : '' }}{{ f.exam_region ? ' · ' + f.exam_region : '' }}</kg-tag>
+              </view>
+              <view class="q" :class="{ clamp: !f._open }">{{ (f.question || '').slice(0, 200) }}</view>
+              <template v-if="f._open">
+                <view v-for="(v, k) in f.options" :key="k" class="anscmp"><text :class="(f.answer || '').indexOf(k) !== -1 ? 'ca' : ''">{{ k }}. {{ v }}</text></view>
+                <rich-text :nodes="md(f.hs_explanation || f.explanation || '暂无解析')" />
+                <template v-if="f.xp_explanation">
+                  <view class="xp-k">{{ f.xp_school || '第二名师视角' }}</view>
+                  <view class="xp-body">{{ f.xp_explanation }}</view>
+                </template>
+              </template>
+              <view class="mfoot">
+                <text class="meta">{{ fmt(f.t / 1000) }}</text>
+                <kg-button variant="text" size="sm" tone="bad" @click.stop="unfavItem(f)">取消收藏</kg-button>
+              </view>
+            </kg-card>
+          </template>
+
+          <kg-card v-if="tab !== 'fav' && todoItems.length" clickable chevron class="entry" @click="redoAll">
+            <view class="entry-in">
+              <view class="entry-ico"><l-icon name="rotate-ccw" :size="20" tone="brand" /></view>
+              <view class="grow">
+                <text class="entry-t">{{ pidFilter ? '重练本卷错题 · ' + pidLabel : '错题重练' + (kp3Filter ? ' · ' + kp3Filter : kpFilter ? ' · ' + kpFilter : rzFilter ? ' · ' + rzFilter : srcFilter ? ' · ' + (srcFilter === 'exam' ? '模考错题' : '练习错题') : '') }}</text>
+                <text class="entry-s">{{ pidFilter ? '按卷面顺序只练本卷上次答错的题（答对过即不再算错）' : kp3Filter ? '只重练当前筛选考点的待掌握错题（最多 10 题）' : kpFilter ? '只重练当前筛选题型的待掌握错题（最多 10 题）' : rzFilter ? '只重练当前筛选错因的待掌握错题（最多 10 题）' : srcFilter ? '只重练当前筛选来源的待掌握错题（最多 10 题）' : '把待掌握错题按刷题模式重做一遍（最多 10 题）' }}</text>
+              </view>
+            </view>
+          </kg-card>
+          <view v-if="tab !== 'fav' && items.length > 5" class="searchbar">
+            <l-icon name="search" :size="16" tone="muted" />
+            <input v-model="kw" class="searchinput" placeholder="搜题干关键词或题型，如：增长率 / 类比推理" confirm-type="search" />
+            <view v-if="kw" class="searchclear" role="button" aria-label="清空搜索" @click="kw = ''"><l-icon name="x" :size="16" tone="muted" /></view>
+          </view>
+          <view v-if="tab !== 'fav' && (filterMod || kpFilter || kp3Filter || srcFilter || rzFilter || pidFilter)" class="curfilter">
+            <kg-tag v-if="filterMod || kpFilter || kp3Filter" tone="brand" icon="x" class="cf" @click="filterMod = ''; kpFilter = ''; kp3Filter = ''">{{ kp3Filter || kpFilter || modName(filterMod) }}</kg-tag>
+            <kg-tag v-if="srcFilter" tone="brand" icon="x" class="cf" @click="srcFilter = ''">{{ srcFilter === 'exam' ? '模考错题' : '练习错题' }}</kg-tag>
+            <kg-tag v-if="pidFilter" tone="brand" icon="x" class="cf" @click="pidFilter = 0">{{ pidLabel }}</kg-tag>
+            <kg-button v-if="pidFilter" variant="text" size="sm" @click="goPaper(pidFilter)">练本卷 ›</kg-button>
+            <kg-tag v-if="rzFilter" tone="brand" icon="x" class="cf" @click="rzFilter = ''">错因：{{ rzFilter }}</kg-tag>
+            <kg-tag v-if="sortBy !== 'time'" tone="neutral" class="cf" @click="filterOpen = true">{{ (SORTS.find(s => s.k === sortBy) || {}).name }}</kg-tag>
+          </view>
+          <view v-else-if="tab !== 'fav' && sortBy !== 'time'" class="curfilter">
+            <kg-tag tone="brand" icon="x" class="cf" @click="sortBy = 'time'">{{ (SORTS.find(s => s.k === sortBy) || {}).name }}</kg-tag>
+          </view>
+
+          <kg-skeleton v-if="tab !== 'fav' && loading" preset="cards" />
+          <kg-empty-state v-else-if="tab !== 'fav' && loadErr && !items.length" icon="wifi-off" title="加载失败" :desc="loadErr" cta-text="重试" @cta="load" />
+          <kg-empty-state
+            v-else-if="tab !== 'fav' && !items.length"
+            icon="folder-plus"
+            title="错题本还是空的"
+            desc="刷题或拍题讲解时答错的题会汇集到这里，之后按遗忘曲线安排复习；右下角「＋」可扫描答题卡或手动录入答案"
+            cta-text="去刷题"
+            secondary-text="拍题录入"
+            @cta="goPractice"
+            @secondary="goAskScan"
+          />
+          <template v-if="tab !== 'fav' && items.length && !shownItems.length && !loading">
+            <kg-empty-state v-if="tab === 'done' && !kw && !hasFilter" compact icon="circle-check" title="还没有已掌握的错题" desc="在待掌握错题的「···」里标为已掌握，或复习连对后自动进入这里" />
+            <kg-empty-state v-else-if="tab === 'todo' && !kw && !hasFilter" compact icon="circle-check" title="待掌握已清零" :desc="doneItems.length + ' 道错题已全部掌握；再错的题会回到这里，也可去「已掌握」里恢复复习'" cta-text="去刷题" @cta="goPractice" />
+            <kg-empty-state v-else compact icon="search" title="没有匹配的错题" desc="换个关键词或清除筛选试试" />
+          </template>
+
+          <kg-card
+            v-for="m in shownPage"
+            :key="m.id"
+            :id="'mc-' + m.id"
+            clickable
+            :selected="batchMode && !!selIds[m.id]"
+            class="mcard"
+            :class="[masteryClass(m), { kbf: kbId === m.id }]"
+            @click="batchMode ? toggleSel(m) : toggleCard(m)"
+          >
+            <view class="mhead">
+              <view v-if="batchMode" class="bchk" :class="{ on: selIds[m.id] }" role="checkbox" :aria-checked="String(!!selIds[m.id])"><l-icon v-if="selIds[m.id]" name="check" :size="14" tone="on-brand" /></view>
+              <kg-tag tone="brand">{{ tagName(m) }}</kg-tag>
+              <kg-tag v-if="m.source === 'exam'" tone="info">模考</kg-tag>
+              <view v-if="mistakePaper(m)" class="pbadge-hit" role="button" @click.stop="pidFilter = mistakePaper(m).pid"><kg-tag tone="neutral" class="pbadge">{{ mistakePaper(m).psource }}</kg-tag></view>
+              <kg-tag v-if="m.times >= 2" tone="bad">错 {{ m.times }} 次</kg-tag>
+              <kg-tag v-if="m.mastered" tone="ok" class="mright">已掌握</kg-tag>
+              <kg-tag v-else-if="nextReviewText(m)" :tone="isDue(m) ? 'warn' : 'neutral'" class="mright">{{ nextReviewText(m) }}</kg-tag>
+              <text class="meta mtime">{{ fmt(m.created_at) }}</text>
+            </view>
+            <view class="q" :class="{ clamp: !m.open }">{{ (m.question_text || '').slice(0, 200) }}</view>
+            <view v-if="m.open && m.options" class="mopts">
+              <text
+                v-for="(v, k) in m.options"
+                :key="k"
+                class="mopt"
+                :class="{ 'mopt--ok': ansLetter(m.correct_answer).includes(k), 'mopt--bad': ansLetter(m.user_answer).includes(k) && !ansLetter(m.correct_answer).includes(k) }"
+              >{{ k }}. {{ v }}</text>
+            </view>
+            <view v-if="m.open && ansLetter(m.user_answer)" class="anscmp">
+              <kg-tag tone="bad">我选 {{ ansLetter(m.user_answer) }}</kg-tag>
+              <kg-tag v-if="ansLetter(m.correct_answer)" tone="ok">答案 {{ ansLetter(m.correct_answer) }}</kg-tag>
+            </view>
+            <view v-if="m.open && mStatLine(m)" class="mstat">{{ mStatLine(m) }}</view>
+            <view v-if="m.open && m.attempts && m.attempts.length" class="attempts">
+              <view class="att-h">历次作答 · {{ m.attempts.length }} 次</view>
+              <view v-for="(a, ai) in m.attempts" :key="ai" class="att-row">
+                <text class="att-mark" :class="a.correct ? 'aok' : 'abad'">{{ a.correct ? '✓ 对' : '✗ 错' }}</text>
+                <text class="att-pick">选 {{ a.picked || '—' }}</text>
+                <text v-if="a.secs" class="att-secs">用时 {{ a.secs }}s</text>
+                <text class="att-time">{{ fmt(a.created_at) }}</text>
+              </view>
+            </view>
+            <view v-if="!m.open" class="mfoot">
+              <text class="hint">点开看答案与详解</text>
+              <kg-button variant="text" size="sm" icon="ellipsis" aria-label="更多操作" @click.stop="itemSheet(m)" />
+            </view>
+            <view v-else class="mfoot">
+              <view class="acts">
+                <kg-button v-if="askSeenTick >= 0 && mAskSeen(m)" variant="text" size="sm" aria-label="回看 AI 详解" @click.stop="openSeenAskM(m)">回看 AI 详解</kg-button>
+                <kg-button v-if="!m.mastered" variant="secondary" size="sm" @click.stop="redo(m)">AI 详解</kg-button>
+                <kg-button v-else variant="secondary" size="sm" @click.stop="master(m, false)">恢复复习</kg-button>
+                <kg-button v-if="m.question_id" variant="text" size="sm" @click.stop="openReport(m)">{{ m._reported ? '已纠错' : '纠错' }}</kg-button>
+              </view>
+              <kg-button variant="text" size="sm" icon="ellipsis" aria-label="更多操作" @click.stop="itemSheet(m)" />
+            </view>
+            <rich-text v-if="m.open" :nodes="m.html" />
+            <view v-if="m.open && m.question_id" @click.stop>
+              <q-social-bar :question-id="m.question_id" />
+            </view>
+          </kg-card>
+          <kg-button v-if="tab !== 'fav' && pageN < shownItems.length" variant="text" size="md" block class="loadmore" @click="pageN += 20">上滑或点击加载更多（{{ shownPage.length }}/{{ shownItems.length }}）</kg-button>
+          <view v-else-if="tab !== 'fav' && !batchMode && shownPage.length" class="fabspace" />
+        </template>
+
+        <template #aside>
+          <kg-card v-if="items.length" class="side">
+            <kg-stat-row :items="[
+              { label: '全部错题', value: items.length },
+              { label: '待掌握', value: todoItems.length, tone: todoItems.length ? 'bad' : undefined },
+              { label: '已掌握', value: doneItems.length, tone: 'ok' },
+            ]" />
+          </kg-card>
+          <kg-card v-if="weekTrend" class="side trendcard">
+            <text class="side-t">错题趋势（近 4 周）</text>
+            <view class="trend-bars">
+              <view v-for="w in weekTrend.weeks" :key="w.label" class="trend-col">
+                <view class="trend-barwrap">
+                  <view class="trend-bar" :style="{ height: w.pct + '%' }" />
+                  <view class="trend-bar killed" :style="{ height: w.kpct + '%' }" />
+                </view>
+                <text class="trend-n num">{{ w.n }}<text v-if="w.k" class="trend-kn">/{{ w.k }}</text></text>
+                <text class="trend-lb">{{ w.label }}</text>
+              </view>
+            </view>
+            <view class="trend-legend">
+              <view class="trend-lg"><view class="trend-dot" /><text class="trend-lgt">新增</text></view>
+              <view class="trend-lg"><view class="trend-dot killed" /><text class="trend-lgt">消灭（达成掌握）</text></view>
+            </view>
+            <text class="side-s">近 7 天新增 {{ weekTrend.last7 }} 道 · 消灭 {{ weekTrend.klast7 }} 道 · 累计已掌握 {{ doneItems.length }} 道</text>
+          </kg-card>
+          <kg-card v-if="monthRecap.total" class="side recap">
+            <kg-section-header :title="'本月错题复盘 · 新增 ' + monthRecap.total + ' 道'" :more="recapOpen ? '收起' : '展开'" @more="recapOpen = !recapOpen" />
+            <view v-if="recapOpen">
+              <view class="recap-sec">
+                <text class="recap-st">按模块</text>
+                <view v-for="g in monthRecap.byModule" :key="g.name" class="recap-row">
+                  <text class="recap-name">{{ g.name }}</text>
+                  <kg-progress :value="g.n" :max="monthRecap.total" class="grow" />
+                  <text class="recap-n num">{{ g.n }}</text>
+                </view>
+              </view>
+              <view class="recap-sec">
+                <text class="recap-st">按错因</text>
+                <view v-for="g in monthRecap.byReason" :key="g.name" class="recap-row recap-link" role="button" :aria-label="'筛选错因：' + g.name" @click="filterByReason(g.name)">
+                  <text class="recap-name is-link">{{ g.name }} ›</text>
+                  <kg-progress :value="g.n" :max="monthRecap.total" class="grow" />
+                  <text class="recap-n num">{{ g.n }}</text>
+                </view>
+              </view>
+              <text class="side-s">高频错因是提分洼地：优先复习对应模块的待掌握错题</text>
+            </view>
+          </kg-card>
+          <kg-card v-if="tab !== 'fav' && todoItems.length >= 3" clickable chevron class="side entry" @click="aiAnalysis(false)">
+            <view class="entry-in">
+              <view class="entry-ico"><l-icon name="bot-message-square" :size="20" tone="brand" /></view>
+              <view class="grow">
+                <text class="entry-t">AI 错题分析</text>
+                <text class="entry-s">基于你的错题分布与近期作答生成诊断与复习建议</text>
+              </view>
+            </view>
+          </kg-card>
+          <kg-card v-if="tab !== 'fav' && modGroups.length" class="side modgroup">
+            <text class="side-t">按模块查看</text>
+            <view v-for="g in modGroups" :key="g.key" class="mg-blk">
+              <view class="mg-row" role="button" @click="toggleGroup(g.key)">
+                <l-icon name="chevron-down" :size="16" tone="muted" class="mg-arrow" :class="{ 'is-open': mgOpen[g.key] }" />
+                <text class="mg-name">{{ g.name }}</text>
+                <text v-if="masteryMods[g.key]" class="mg-mst">掌握 {{ masteryMods[g.key].pct }}% · {{ masteryMods[g.key].level }}</text>
+                <kg-tag tone="neutral">{{ g.n }}</kg-tag>
+                <kg-button variant="text" size="sm" @click.stop="pickGroup(g.key, '')">查看 ›</kg-button>
+              </view>
+              <view v-if="mgOpen[g.key]">
+                <template v-for="s in g.subs" :key="s.name">
+                  <view class="mg-sub" role="button" @click="pickGroup(g.key, s.name)">
+                    <text class="mg-sub-name">{{ s.name }}</text>
+                    <kg-tag tone="neutral">{{ s.n }}</kg-tag>
+                  </view>
+                  <view
+                    v-for="t in s.t3"
+                    :key="s.name + '/' + t.name"
+                    class="mg-sub mg-sub3"
+                    role="button"
+                    @click="pickGroup(g.key, s.name, t.name)"
+                  >
+                    <text class="mg-sub-name">{{ t.name }}</text>
+                    <text v-if="masteryT3[t.name] != null" class="mg-mst">{{ masteryT3[t.name] }}%</text>
+                    <kg-tag tone="neutral">{{ t.n }}</kg-tag>
+                  </view>
+                </template>
+              </view>
+            </view>
+          </kg-card>
+          <!-- #ifdef H5 -->
+          <kg-card class="side kbdcard">
+            <text class="side-t">键盘快捷键</text>
+            <view class="kbd-row"><text class="kbd">J</text><text class="kbd">K</text><text class="kbd-d">上下切题</text></view>
+            <view class="kbd-row"><text class="kbd">Enter</text><text class="kbd-d">展开/收起详解</text></view>
+            <view class="kbd-row"><text class="kbd">A</text><text class="kbd">–</text><text class="kbd">D</text><text class="kbd-d">复习模式作答</text></view>
+            <kg-button variant="text" size="sm" @click="kbdHelp = true">按 ? 查看全部 ›</kg-button>
+          </kg-card>
+          <!-- #endif -->
+        </template>
+      </kg-two-col>
+
+      <!-- AI 错题分析 -->
+      <kg-sheet v-model="aiOpen" title="AI 错题分析">
+        <view v-if="aiLoading" class="ai-loading"><kg-skeleton preset="lines" /><text class="side-s">正在分析你的错题与作答数据，约需 30-60 秒…</text></view>
+        <view v-else-if="aiErr" class="ai-err">
+          <text class="side-s">分析失败：{{ aiErr }}</text>
+          <kg-button variant="secondary" size="md" block @click="aiAnalysis(true)">重试</kg-button>
+        </view>
+        <view v-else>
+          <rich-text :nodes="aiHtml" />
+          <kg-button variant="secondary" size="md" block class="ai-regen" @click="aiAnalysis(true)">按当前错题重新生成</kg-button>
+        </view>
+      </kg-sheet>
+
+      <!-- 手动录入答案（扫描答题卡/手动录入收在右下角「＋」） -->
+      <kg-sheet v-model="manualOpen" title="手动录入答案">
+        <template v-if="!manualPaper">
+          <text v-if="recentPapers.length" class="sheet-k">最近导出的试卷</text>
+          <kg-chip-row v-if="recentPapers.length" size="sm" :options="recentPapers.map((p) => ({ label: p.title + ' · ' + p.code, value: p.code }))" model-value="" :scroll-to-selected="false" @update:model-value="manualLookup" />
+          <text class="sheet-k">或输入卷面上的卷码</text>
+          <view class="searchbar manual-codebar">
+            <input v-model="manualCode" class="searchinput num" placeholder="如 A1B2C3D4（封面/答题卡顶部）" confirm-type="done" @confirm="manualLookup(manualCode)" />
+          </view>
+        </template>
+        <template v-else>
+          <text class="scan-sum">{{ manualPaper.title || '试卷' }} · 卷码 {{ manualPaper.code }} · 共 {{ manualPaper.n }} 题 · 已选 {{ manualPickedCount }}</text>
+          <view class="scan-list">
+            <view v-for="no in manualPaper.n" :key="no" class="manual-row">
+              <text class="scan-no num">{{ no }}</text>
+              <text v-for="L in ['A','B','C','D']" :key="L" class="manual-opt num" :class="{ on: manualPicks[no] === L }" role="button" @click="manualPick(no, L)">{{ L }}</text>
+            </view>
+          </view>
+        </template>
+        <template #footer>
+          <view class="sheet-acts">
+            <kg-button v-if="!manualPaper" variant="primary" size="lg" block :loading="manualLoading" @click="manualLookup(manualCode)">{{ manualLoading ? '查找中…' : '查找试卷' }}</kg-button>
+            <template v-else>
+              <kg-button variant="primary" size="lg" block :disabled="!manualPickedCount" :loading="manualSubmitting" @click="manualSubmit">{{ manualSubmitting ? '判分中…' : '交卷判分（' + manualPickedCount + ' 题）' }}</kg-button>
+              <kg-button variant="text" size="md" block @click="manualPaper = null">‹ 换一份试卷</kg-button>
+            </template>
+          </view>
+        </template>
+      </kg-sheet>
+
+      <!-- 对答案结果 -->
+      <kg-sheet :model-value="scanOpen && !!scanResult" :title="'对答案结果 · ' + ((scanResult && scanResult.title) || '试卷')" @update:model-value="(v) => { if (!v) scanOpen = false; }">
+        <template v-if="scanResult">
+          <text class="scan-sum">卷码 {{ scanResult.code }}{{ scanResult.page ? ' · 第 ' + scanResult.page + ' 页' : '' }} · 已作答 {{ scanResult.answered }}/{{ scanResult.total }} · 答对 <text class="scan-good num">{{ scanResult.correct }}</text> 题{{ scanResult.saved ? ' · 已记入做题记录' : '' }}</text>
+          <view class="scan-list">
             <view v-for="r in scanResult.items" :key="r.no" class="scan-row">
-              <text class="scan-no">{{ r.no }}</text>
+              <text class="scan-no num">{{ r.no }}</text>
               <text class="scan-pick" :class="{ good: r.correct, bad: r.status === 'ok' && !r.correct }">{{ r.status === 'blank' ? '未涂' : r.status === 'multi' ? '多涂 ' + r.picked : r.picked }}</text>
               <text class="scan-ans">答案 {{ r.answer || '—' }}</text>
               <text class="scan-mark">{{ r.correct ? '✓' : r.status === 'ok' ? '✗' : '—' }}</text>
             </view>
-          </scroll-view>
-          <view class="sheet-done" @click="scanOpen = false; load()">完成</view>
-        </view>
-      </view>
-      <view v-if="tab !== 'fav' && todoItems.length" class="card redoentry bk-side" @click="redoAll">
-        <view class="redo-l">
-          <view class="redo-ico"><l-icon name="rotate-ccw" :size="16" color="#2e5bff" /></view>
-          <view>
-            <text class="redo-t">{{ pidFilter ? '重练本卷错题 · ' + pidLabel : '错题重练' + (kp3Filter ? ' · ' + kp3Filter : kpFilter ? ' · ' + kpFilter : rzFilter ? ' · ' + rzFilter : srcFilter ? ' · ' + (srcFilter === 'exam' ? '模考错题' : '练习错题') : '') }}</text>
-            <text class="redo-s">{{ pidFilter ? '按卷面顺序只练本卷上次答错的题（答对过即不再算错）' : kp3Filter ? '只重练当前筛选考点的待掌握错题（最多 10 题）' : kpFilter ? '只重练当前筛选题型的待掌握错题（最多 10 题）' : rzFilter ? '只重练当前筛选错因的待掌握错题（最多 10 题）' : srcFilter ? '只重练当前筛选来源的待掌握错题（最多 10 题）' : '把待掌握错题按刷题模式重做一遍（最多 10 题）' }}</text>
           </view>
-        </view>
-        <text class="redo-go">开始</text>
-      </view>
-      <view v-if="tab !== 'fav' && items.length > 5" class="searchbar bk-main">
-        <l-icon name="search" :size="16" color="#8a90a0" />
-        <input v-model="kw" class="searchinput" placeholder="搜题干关键词或题型，如：增长率 / 类比推理" confirm-type="search" />
-        <view v-if="kw" class="searchclear" role="button" aria-label="清空搜索" @click="kw = ''"><l-icon name="x" :size="16" color="#8a90a0" /></view>
-      </view>
-      <view v-if="tab !== 'fav' && modGroups.length" class="card modgroup bk-side">
-        <view class="mg-h">按模块查看</view>
-        <view v-for="g in modGroups" :key="g.key" class="mg-blk">
-          <view class="mg-row" @click="toggleGroup(g.key)">
-            <text class="mg-arrow">{{ mgOpen[g.key] ? '▾' : '▸' }}</text>
-            <text class="mg-name">{{ g.name }}</text>
-            <text v-if="masteryMods[g.key]" class="mg-mst">掌握 {{ masteryMods[g.key].pct }}% · {{ masteryMods[g.key].level }}</text>
-            <text class="mg-badge">{{ g.n }}</text>
-            <text class="mg-go" @click.stop="pickGroup(g.key, '')">查看 ›</text>
-          </view>
-          <view v-if="mgOpen[g.key]">
-            <template v-for="s in g.subs" :key="s.name">
-              <view class="mg-sub" @click="pickGroup(g.key, s.name)">
-                <text class="mg-sub-name">{{ s.name }}</text>
-                <text class="mg-badge">{{ s.n }}</text>
-              </view>
-              <view
-                v-for="t in s.t3"
-                :key="s.name + '/' + t.name"
-                class="mg-sub mg-sub3"
-                @click="pickGroup(g.key, s.name, t.name)"
-              >
-                <text class="mg-sub-name">{{ t.name }}</text>
-                <text v-if="masteryT3[t.name] != null" class="mg-mst">{{ masteryT3[t.name] }}%</text>
-                <text class="mg-badge">{{ t.n }}</text>
-              </view>
-            </template>
-          </view>
-        </view>
-      </view>
+        </template>
+        <template #footer><kg-button variant="primary" size="lg" block @click="scanOpen = false; load()">完成</kg-button></template>
+      </kg-sheet>
+
       <!-- #ifdef H5 -->
-      <view class="card kbdcard bk-side">
-        <view class="kbd-h">键盘快捷键</view>
-        <view class="kbd-row"><text class="kbd">J</text><text class="kbd">K</text><text class="kbd-d">上下切题</text></view>
-        <view class="kbd-row"><text class="kbd">Enter</text><text class="kbd-d">展开/收起详解</text></view>
-        <view class="kbd-row"><text class="kbd">A</text><text class="kbd">–</text><text class="kbd">D</text><text class="kbd-d">复习模式作答</text></view>
-        <text class="kbd-more" @click="kbdHelp = true">按 ? 查看全部 ›</text>
-      </view>
-      <view v-if="kbdHelp" class="mask" @click="kbdHelp = false">
-        <view class="sheet" @click.stop>
-          <view class="sheet-h">
-            <text class="sheet-t">键盘快捷键</text>
-            <view class="sheet-x" role="button" aria-label="关闭" @click="kbdHelp = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
-          </view>
-          <view class="sheet-k">错题列表</view>
-          <view class="kbd-row"><text class="kbd">J</text><text class="kbd">↓</text><text class="kbd-d">下一张错题</text></view>
-          <view class="kbd-row"><text class="kbd">K</text><text class="kbd">↑</text><text class="kbd-d">上一张错题</text></view>
-          <view class="kbd-row"><text class="kbd">Enter</text><text class="kbd">空格</text><text class="kbd-d">展开/收起当前错题详解</text></view>
-          <view class="sheet-k">复习模式</view>
-          <view class="kbd-row"><text class="kbd">A</text><text class="kbd">B</text><text class="kbd">C</text><text class="kbd">D</text><text class="kbd-d">直接作答（单选）</text></view>
-          <view class="kbd-row"><text class="kbd">Enter</text><text class="kbd-d">多选确认 / 已作答进入下一题</text></view>
-          <view class="sheet-k">通用</view>
-          <view class="kbd-row"><text class="kbd">?</text><text class="kbd-d">打开本面板</text></view>
-          <view class="kbd-row"><text class="kbd">Esc</text><text class="kbd-d">关闭本面板</text></view>
-        </view>
-      </view>
+      <kg-sheet v-model="kbdHelp" title="键盘快捷键">
+        <text class="sheet-k">错题列表</text>
+        <view class="kbd-row"><text class="kbd">J</text><text class="kbd">↓</text><text class="kbd-d">下一张错题</text></view>
+        <view class="kbd-row"><text class="kbd">K</text><text class="kbd">↑</text><text class="kbd-d">上一张错题</text></view>
+        <view class="kbd-row"><text class="kbd">Enter</text><text class="kbd">空格</text><text class="kbd-d">展开/收起当前错题详解</text></view>
+        <text class="sheet-k">复习模式</text>
+        <view class="kbd-row"><text class="kbd">A</text><text class="kbd">B</text><text class="kbd">C</text><text class="kbd">D</text><text class="kbd-d">直接作答（单选）</text></view>
+        <view class="kbd-row"><text class="kbd">Enter</text><text class="kbd-d">多选确认 / 已作答进入下一题</text></view>
+        <text class="sheet-k">通用</text>
+        <view class="kbd-row"><text class="kbd">?</text><text class="kbd-d">打开本面板</text></view>
+        <view class="kbd-row"><text class="kbd">Esc</text><text class="kbd-d">关闭本面板</text></view>
+      </kg-sheet>
       <!-- #endif -->
-      <view v-if="tab !== 'fav' && (filterMod || kpFilter || kp3Filter || srcFilter || rzFilter || pidFilter)" class="curfilter bk-main">
-        <text v-if="filterMod || kpFilter || kp3Filter" class="kpchip on" @click="filterMod = ''; kpFilter = ''; kp3Filter = ''">{{ kp3Filter || kpFilter || modName(filterMod) }} ✕</text>
-        <text v-if="srcFilter" class="kpchip on" @click="srcFilter = ''">{{ srcFilter === 'exam' ? '模考错题' : '练习错题' }} ✕</text>
-        <text v-if="pidFilter" class="kpchip on" @click="pidFilter = 0">{{ pidLabel }} ✕</text>
-        <text v-if="pidFilter" class="kpchip gopaper" @click="goPaper(pidFilter)">练本卷 ›</text>
-        <text v-if="rzFilter" class="kpchip on" @click="rzFilter = ''">错因：{{ rzFilter }} ✕</text>
-        <text v-if="sortBy !== 'time'" class="kpchip" @click="filterOpen = true">{{ (SORTS.find(s => s.k === sortBy) || {}).name }}</text>
-      </view>
-      <view v-else-if="tab !== 'fav' && sortBy !== 'time'" class="curfilter bk-main">
-        <text class="kpchip on" @click="sortBy = 'time'">{{ (SORTS.find(s => s.k === sortBy) || {}).name }} ✕</text>
-      </view>
-      <view v-if="filterOpen" class="mask" @click="filterOpen = false">
-        <view class="sheet" @click.stop>
-          <view class="sheet-h">
-            <text class="sheet-t">筛选与排序</text>
-            <view class="sheet-x" role="button" aria-label="关闭" @click="filterOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
-          </view>
-          <view class="sheet-k">排序</view>
+
+      <!-- 筛选与排序 -->
+      <kg-sheet v-model="filterOpen" title="筛选与排序">
+        <text class="sheet-k">排序</text>
+        <kg-chip-row size="sm" :options="SORTS.map((s) => ({ label: s.name, value: s.k }))" :model-value="sortBy" :scroll-to-selected="false" @update:model-value="(v) => (sortBy = v)" />
+        <text class="sheet-k">模块</text>
+        <kg-chip-row size="sm" :options="chipList.map((c) => ({ label: c.name, value: c.key }))" :model-value="filterMod" :scroll-to-selected="false" @update:model-value="(v) => { filterMod = v; kpFilter = ''; kp3Filter = ''; }" />
+        <template v-if="typeGroups.length > 1">
+          <text class="sheet-k">题型</text>
           <view class="kpchips">
-            <text v-for="s in SORTS" :key="s.k" class="kpchip" :class="{ on: sortBy === s.k }" @click="sortBy = s.k">{{ s.name }}</text>
+            <kg-tag v-for="g in typeGroups" :key="g.name" :tone="kpFilter === g.name ? 'brand' : 'neutral'" class="kpchip" @click="kpFilter = kpFilter === g.name ? '' : g.name; kp3Filter = ''">{{ g.name }} ×{{ g.n }}</kg-tag>
           </view>
-          <view class="sheet-k">模块</view>
+        </template>
+        <template v-if="hasExamMistakes">
+          <text class="sheet-k">来源</text>
+          <kg-chip-row size="sm" :options="[{ label: '全部', value: '' }, { label: '模考', value: 'exam' }, { label: '练习', value: 'practice' }]" :model-value="srcFilter" :scroll-to-selected="false" @update:model-value="(v) => (srcFilter = v)" />
+        </template>
+        <template v-if="paperGroups.length">
+          <text class="sheet-k">试卷</text>
           <view class="kpchips">
-            <text v-for="c in chipList" :key="c.key" class="kpchip" :class="{ on: filterMod === c.key }" @click="filterMod = c.key; kpFilter = ''; kp3Filter = ''">{{ c.name }}</text>
+            <kg-tag :tone="pidFilter === 0 ? 'brand' : 'neutral'" class="kpchip" @click="pidFilter = 0">全部</kg-tag>
+            <kg-tag v-for="g in paperGroups" :key="g.pid" :tone="pidFilter === g.pid ? 'brand' : 'neutral'" class="kpchip" @click="pidFilter = pidFilter === g.pid ? 0 : g.pid">{{ g.psource }} ×{{ g.n }}</kg-tag>
           </view>
-          <view v-if="typeGroups.length > 1" class="sheet-k">题型</view>
-          <view v-if="typeGroups.length > 1" class="kpchips">
-            <text v-for="g in typeGroups" :key="g.name" class="kpchip" :class="{ on: kpFilter === g.name }" @click="kpFilter = kpFilter === g.name ? '' : g.name; kp3Filter = ''">{{ g.name }} ×{{ g.n }}</text>
+        </template>
+        <template v-if="hasReasonTagged">
+          <text class="sheet-k">错因</text>
+          <kg-chip-row size="sm" :options="[{ label: '全部', value: '' }].concat(REASONS.map((rz) => ({ label: rz, value: rz })), [{ label: '未标注', value: '未标注' }])" :model-value="rzFilter" :scroll-to-selected="false" @update:model-value="(v) => (rzFilter = v)" />
+        </template>
+        <template #footer>
+          <view class="sheet-acts">
+            <kg-button variant="primary" size="lg" block @click="filterOpen = false">完成</kg-button>
+            <kg-button variant="secondary" size="lg" block :loading="exporting" @click="exportConfirm = true">{{ exporting ? '正在生成 PDF…' : '导出当前筛选为错题卷 PDF' }}</kg-button>
           </view>
-          <view v-if="hasExamMistakes" class="sheet-k">来源</view>
-          <view v-if="hasExamMistakes" class="kpchips">
-            <text class="kpchip" :class="{ on: srcFilter === '' }" @click="srcFilter = ''">全部</text>
-            <text class="kpchip" :class="{ on: srcFilter === 'exam' }" @click="srcFilter = 'exam'">模考</text>
-            <text class="kpchip" :class="{ on: srcFilter === 'practice' }" @click="srcFilter = 'practice'">练习</text>
-          </view>
-          <view v-if="paperGroups.length" class="sheet-k">试卷</view>
-          <view v-if="paperGroups.length" class="kpchips">
-            <text class="kpchip" :class="{ on: pidFilter === 0 }" @click="pidFilter = 0">全部</text>
-            <text v-for="g in paperGroups" :key="g.pid" class="kpchip" :class="{ on: pidFilter === g.pid }" @click="pidFilter = pidFilter === g.pid ? 0 : g.pid">{{ g.psource }} ×{{ g.n }}</text>
-          </view>
-          <view v-if="hasReasonTagged" class="sheet-k">错因</view>
-          <view v-if="hasReasonTagged" class="kpchips">
-            <text class="kpchip" :class="{ on: rzFilter === '' }" @click="rzFilter = ''">全部</text>
-            <text v-for="rz in REASONS" :key="rz" class="kpchip" :class="{ on: rzFilter === rz }" @click="rzFilter = rzFilter === rz ? '' : rz">{{ rz }}</text>
-            <text class="kpchip" :class="{ on: rzFilter === '未标注' }" @click="rzFilter = rzFilter === '未标注' ? '' : '未标注'">未标注</text>
-          </view>
-          <view class="sheet-done" @click="filterOpen = false">完成</view>
-          <view class="sheet-export" @click="exportConfirm = true">{{ exporting ? '正在生成 PDF…' : '导出当前筛选为错题卷 PDF' }}</view>
-        </view>
-      </view>
+        </template>
+      </kg-sheet>
 
       <export-confirm
         :visible="exportConfirm"
@@ -419,140 +483,48 @@
         @close="exportConfirm = false"
         @confirm="exportMistakes"
       />
-      <view v-if="tab !== 'fav' && loading" class="card spin bk-main">加载中…</view>
-      <view v-else-if="tab !== 'fav' && loadErr && !items.length" class="card empty bk-main">
-        <view class="e-t">加载失败</view>
-        <view class="e-s">{{ loadErr }}</view>
-        <view class="retry" @click="load">重试 ›</view>
-      </view>
-      <view v-else-if="tab !== 'fav' && !items.length" class="card empty bk-main">
-        <view class="e-ico"><l-icon name="folder-plus" :size="52" color="#c7cad4" :stroke-width="1.5" /></view>
-        <view class="e-t">错题本还是空的</view>
-        <view class="e-s">去拍题讲解或刷题，答错的题会汇集到这里，之后按遗忘曲线安排复习</view>
-        <wd-button type="primary" custom-class="e-btn2" @click="goPractice">去刷题</wd-button>
-      </view>
-      <view v-if="tab !== 'fav' && items.length && !shownItems.length && !loading" class="card empty bk-main">
-        <template v-if="tab === 'done' && !kw && !hasFilter">
-          <view class="e-t">还没有已掌握的错题</view>
-          <view class="e-s">在待掌握错题的「···」里标为已掌握，或复习连对后自动进入这里</view>
-        </template>
-        <template v-else-if="tab === 'todo' && !kw && !hasFilter">
-          <view class="e-t">待掌握已清零</view>
-          <view class="e-s">{{ doneItems.length }} 道错题已全部掌握；再错的题会回到这里，也可去「已掌握」里恢复复习</view>
-          <wd-button type="primary" custom-class="e-btn2" @click="goPractice">去刷题</wd-button>
-        </template>
-        <template v-else>
-          <view class="e-t">没有匹配的错题</view>
-          <view class="e-s">换个关键词或清除筛选试试</view>
-        </template>
-      </view>
-      <view v-for="m in shownPage" :key="m.id" :id="'mc-' + m.id" class="card mcard bk-main" :class="[masteryClass(m), { bsel: batchMode && selIds[m.id], kbf: kbId === m.id }]" @click="batchMode ? toggleSel(m) : toggleCard(m)">
-        <view class="mhead">
-          <view v-if="batchMode" class="bchk" :class="{ on: selIds[m.id] }">{{ selIds[m.id] ? '✓' : '' }}</view>
-          <text class="tag">{{ tagName(m) }}</text>
-          <text v-if="m.source === 'exam'" class="srcbadge">模考</text>
-          <view v-if="mistakePaper(m)" class="pbadge-hit" @click.stop="pidFilter = mistakePaper(m).pid"><text class="pbadge">{{ mistakePaper(m).psource }}</text></view>
-          <text v-if="m.times >= 2" class="timesbadge">错 {{ m.times }} 次</text>
-          <text v-if="m.mastered" class="zhan">已掌握</text>
-          <view v-else-if="nextReviewText(m)" class="duehint" :class="{ due: isDue(m) }">
-            <view class="duedot" /><text>{{ nextReviewText(m) }}</text>
-          </view>
-          <text class="meta mtime">{{ fmt(m.created_at) }}</text>
-        </view>
-        <view class="q" :class="{ clamp: !m.open }">{{ (m.question_text || '').slice(0, 200) }}</view>
-        <view v-if="m.open && ansLetter(m.user_answer)" class="anscmp">
-          <text class="rpill wrong">我选 {{ ansLetter(m.user_answer) }}</text>
-          <text v-if="ansLetter(m.correct_answer)" class="rpill right">答案 {{ ansLetter(m.correct_answer) }}</text>
-        </view>
-        <view v-if="m.open && mStatLine(m)" class="mstat">{{ mStatLine(m) }}</view>
-        <view v-if="m.open && m.attempts && m.attempts.length" class="attempts">
-          <view class="att-h">历次作答 · {{ m.attempts.length }} 次</view>
-          <view v-for="(a, ai) in m.attempts" :key="ai" class="att-row">
-            <text class="att-mark" :class="a.correct ? 'aok' : 'abad'">{{ a.correct ? '✓ 对' : '✗ 错' }}</text>
-            <text class="att-pick">选 {{ a.picked || '—' }}</text>
-            <text v-if="a.secs" class="att-secs">用时 {{ a.secs }}s</text>
-            <text class="att-time">{{ fmt(a.created_at) }}</text>
-          </view>
-        </view>
-        <view v-if="!m.open" class="mfoot">
-          <text class="op hint">点开看答案与详解</text>
-          <text class="op more" @click.stop="itemSheet(m)">···</text>
-        </view>
-        <view v-else class="mfoot">
-          <view class="acts">
-            <text v-if="askSeenTick >= 0 && mAskSeen(m)" class="op seen" role="button" aria-label="回看 AI 详解" @click.stop="openSeenAskM(m)">回看 AI 详解</text>
-            <text v-if="!m.mastered" class="op redo" @click.stop="redo(m)">AI 详解</text>
-            <text v-else class="op redo" @click.stop="master(m, false)">恢复复习</text>
-            <text v-if="m.question_id" class="op reportop" @click.stop="openReport(m)">{{ m._reported ? '已纠错' : '纠错' }}</text>
-          </view>
-          <text class="op more" @click.stop="itemSheet(m)">···</text>
-        </view>
-        <rich-text v-if="m.open" :nodes="m.html" />
-        <view v-if="m.open && m.question_id" @click.stop>
-          <q-social-bar :question-id="m.question_id" />
-        </view>
-      </view>
-      <view v-if="tab !== 'fav' && pageN < shownItems.length" class="loadmore bk-main" @click="pageN += 20">上滑或点击加载更多（{{ shownPage.length }}/{{ shownItems.length }}）</view>
-      <view v-else-if="tab !== 'fav' && !batchMode && shownPage.length" class="fabspace bk-main" />
-      <view v-if="moreSheet" class="mask" @click="moreSheet = null">
-        <view class="sheet more-sheet" @click.stop>
-          <view class="sheet-h">
-            <text class="sheet-t">{{ tagName(moreSheet.m) }} · 更多操作</text>
-            <view class="sheet-x" role="button" aria-label="关闭" @click="moreSheet = null"><l-icon name="x" :size="20" color="#6b7280" /></view>
-          </view>
+
+      <!-- 批量操作条 -->
+      <kg-sheet :model-value="!!moreSheet" :title="moreSheet ? tagName(moreSheet.m) + ' · 更多操作' : ''" @update:model-value="(v) => { if (!v) moreSheet = null; }">
+        <template v-if="moreSheet">
           <view v-if="!moreSheet.m.mastered" class="reasons more-reasons">
             <text class="rz-t">错因自评：</text>
-            <text v-for="rz in REASONS" :key="rz" class="rz" :class="{ on: moreSheet.m.error_reason === rz }" role="button" @click="setItemReason(moreSheet.m, rz)">{{ rz }}</text>
+            <kg-chip-row size="sm" :options="REASONS.map((rz) => ({ label: rz, value: rz }))" :model-value="moreSheet.m.error_reason || ''" :scroll-to-selected="false" @update:model-value="(v) => setItemReason(moreSheet.m, v)" />
           </view>
           <view v-for="a in moreSheet.acts" :key="a.t" class="more-act" :class="{ danger: a.danger }" role="button" @click="moreSheet = null; a.f()">{{ a.t }}</view>
           <view class="more-act cancel" role="button" @click="moreSheet = null">取消</view>
-        </view>
-      </view>
-      <!-- 批量操作条 -->
+        </template>
+      </kg-sheet>
       <view v-if="batchMode && tab !== 'fav'" class="batchbar">
-        <text v-if="shownPage.length" class="bb-sel" @click="selAll">{{ selCount === shownPage.length ? '取消全选' : '全选本页' }}</text>
+        <kg-button v-if="shownPage.length" variant="text" size="md" @click="selAll">{{ selCount === shownPage.length ? '取消全选' : '全选本页' }}</kg-button>
         <text class="bb-n">已选 {{ selCount }}</text>
-        <text class="bb-sel" role="button" aria-label="退出批量" @click="toggleBatch">退出</text>
+        <kg-button variant="text" size="md" aria-label="退出批量" @click="toggleBatch">退出</kg-button>
         <view class="bb-acts">
-          <text v-if="tab === 'todo'" class="bb-btn ok" :class="{ dis: !selCount || batchBusy }" @click="batchMaster(true)">标已掌握</text>
-          <text v-else class="bb-btn ok" :class="{ dis: !selCount || batchBusy }" @click="batchMaster(false)">恢复复习</text>
-          <text class="bb-btn danger" :class="{ dis: !selCount || batchBusy }" @click="batchDel">删除</text>
+          <kg-button v-if="tab === 'todo'" variant="secondary" size="lg" :disabled="!selCount || batchBusy" @click="batchMaster(true)">标已掌握</kg-button>
+          <kg-button v-else variant="secondary" size="lg" :disabled="!selCount || batchBusy" @click="batchMaster(false)">恢复复习</kg-button>
+          <kg-button variant="secondary" size="lg" tone="bad" :disabled="!selCount || batchBusy" @click="batchDel">删除</kg-button>
         </view>
       </view>
-      <view v-if="reportOpen" class="mask" @click="reportOpen = false">
-        <view class="sheet" @click.stop>
-          <view class="sheet-h">
-            <text class="sheet-t">题目纠错</text>
-            <view class="sheet-x" role="button" aria-label="关闭" @click="reportOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
-          </view>
-          <view class="rp-types">
-            <text
-              v-for="t in reportTypes"
-              :key="t"
-              class="rp-chip"
-              :class="{ on: reportType === t }"
-              @click="reportType = t"
-            >{{ t }}</text>
-          </view>
-          <textarea
-            v-model="reportDetail"
-            class="rp-detail"
-            placeholder="补充说明（选填，500 字以内）"
-            :maxlength="500"
-          />
-          <view class="sheet-done rp-submit" :class="{ off: !reportType || reportBusy }" @click="submitReport">{{ reportBusy ? '提交中…' : '提交纠错' }}</view>
-        </view>
-      </view>
+
+      <!-- 题目纠错 -->
+      <kg-sheet v-model="reportOpen" title="题目纠错">
+        <kg-chip-row size="sm" :options="reportTypes.map((t) => ({ label: t, value: t }))" :model-value="reportType" :scroll-to-selected="false" @update:model-value="(v) => (reportType = v)" />
+        <textarea
+          v-model="reportDetail"
+          class="rp-detail"
+          placeholder="补充说明（选填，500 字以内）"
+          :maxlength="500"
+        />
+        <template #footer><kg-button variant="primary" size="lg" block :disabled="!reportType || reportBusy" :loading="reportBusy" @click="submitReport">{{ reportBusy ? '提交中…' : '提交纠错' }}</kg-button></template>
+      </kg-sheet>
+
+      <!-- 右下角「＋」：扫描答题卡 / 手动录入 -->
       <view v-if="tab !== 'fav' && !batchMode" class="fabmenu">
         <template v-if="fabOpen">
-          <view class="fab-item" @click="fabOpen = false; scanSheetPick()">
-            <l-icon name="scan-line" :size="16" color="#2e5bff" /><text>{{ scanning ? '识别中…' : '扫描答题卡' }}</text>
-          </view>
-          <view class="fab-item" @click="fabOpen = false; manualOpenSheet()">
-            <l-icon name="pencil-line" :size="16" color="#2e5bff" /><text>手动录入答案</text>
-          </view>
+          <kg-button variant="secondary" size="lg" icon="scan-line" @click="fabOpen = false; scanSheetPick()">{{ scanning ? '识别中…' : '扫描答题卡' }}</kg-button>
+          <kg-button variant="secondary" size="lg" icon="pencil-line" @click="fabOpen = false; manualOpenSheet()">手动录入答案</kg-button>
         </template>
-        <view class="fab-main" :class="{ open: fabOpen }" @click="fabOpen = !fabOpen">＋</view>
+        <view class="fab-main" :class="{ open: fabOpen }" role="button" :aria-label="fabOpen ? '收起' : '录入错题'" @click="fabOpen = !fabOpen"><l-icon name="plus" :size="28" tone="on-brand" /></view>
       </view>
     </template>
   </view>
@@ -1215,6 +1187,9 @@ export default {
     goPractice() {
       uni.switchTab({ url: '/pages/home/home' });
     },
+    goAskScan() {
+      uni.switchTab({ url: '/pages/ask/ask' });
+    },
     async load() {
       const seq = (this._loadSeq = (this._loadSeq || 0) + 1);
       this.loading = true;
@@ -1769,302 +1744,195 @@ export default {
 </script>
 
 <style scoped>
-.wrap { padding: 24rpx; }
-.offbar { background: var(--warn-soft); border-radius: 16rpx; padding: 16rpx 22rpx; font-size: 24rpx; color: var(--warn); margin-bottom: 20rpx; }
-.ovrow { display: flex; gap: 16rpx; margin-bottom: 20rpx; }
-.ov-c { flex: 1; background: var(--card, #fff); border-radius: 20rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 22rpx 0; display: flex; flex-direction: column; align-items: center; gap: 4rpx; }
-.ov-n { font-size: 44rpx; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
-.ov-n.warn { color: #d97706; }
-.ov-n.ok { color: #16a34a; }
-.ov-t { font-size: 24rpx; color: var(--ink-2); }
-.card { background: var(--card); border-radius: var(--radius); padding: 24rpx; margin-bottom: 24rpx; border-left: 6rpx solid var(--brand); border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
-.empty { text-align: center; padding: 56rpx 32rpx; }
-.e-ico { font-size: 72rpx; margin-bottom: 16rpx; }
-.e-t { font-size: 32rpx; font-weight: 600; margin-bottom: 10rpx; }
-.e-s { font-size: 24rpx; color: var(--ink-2); line-height: 1.7; margin-bottom: 28rpx; }
-:deep(.e-btn2) { margin-top: 8rpx; min-width: 60%; min-height: 44px; border-radius: 18rpx !important; background: linear-gradient(135deg, #5c82ff, var(--brand)) !important; font-weight: 600; }
-.spin { text-align: center; color: var(--ink-2); font-size: 26rpx; border-left: none; }
-.retry { display: inline-flex; align-items: center; min-height: 40px; margin-top: 4rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
-.searchbar { display: flex; align-items: center; gap: 12rpx; background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 14rpx 26rpx; margin-bottom: 20rpx; }
-.searchinput { flex: 1; font-size: 26rpx; color: var(--ink); height: 40rpx; line-height: 40rpx; }
-.searchclear { display: flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; margin: -10px -12rpx -10px 0; }
-.sortrow { display: flex; align-items: center; gap: 10rpx; margin-bottom: 16rpx; flex-wrap: wrap; }
-.sort-k { font-size: 24rpx; color: var(--ink-2); }
-.sort-chip { font-size: 24rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 4rpx 18rpx; background: var(--card); }
-.sort-chip.on { color: #fff; background: var(--brand); border-color: var(--brand-text); }
-.kpwrap { margin-bottom: 16rpx; }
-.kpchips { display: flex; flex-wrap: wrap; gap: 10rpx; margin-top: 8rpx; }
-.kpchip { font-size: 26rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 22rpx; min-height: 40px; box-sizing: border-box; display: inline-flex; align-items: center; background: var(--card); }
-.kpchip.on { color: #fff; background: var(--brand); border-color: var(--brand-text); }
-.chips { white-space: nowrap; margin-bottom: 24rpx; }
-.chip { display: inline-block; padding: 10rpx 30rpx; margin-right: 16rpx; border-radius: 999rpx; background: var(--card); border: 1rpx solid var(--line); font-size: 26rpx; color: var(--ink-2); }
-.chip.on { background: var(--brand); border-color: var(--brand-text); color: #fff; font-weight: 600; }
-.mhead { display: flex; align-items: center; gap: 12rpx; flex-wrap: wrap; }
-.mtime { margin-left: auto; white-space: nowrap; }
-.duehint { display: inline-flex; align-items: center; gap: 8rpx; font-size: 24rpx; color: var(--ink-2); }
-.duehint.due { color: #c2410c; }
-.duedot { width: 12rpx; height: 12rpx; border-radius: 50%; background: var(--ink-4); }
-.duehint.due .duedot { background: #f59e0b; }
-.rvbadge { font-size: 24rpx; color: var(--ink-2); background: var(--soft-bg); border-radius: 999rpx; padding: 4rpx 14rpx; }
-.rzbadge { font-size: 24rpx; color: #b45309; background: #fef3c7; border-radius: 999rpx; padding: 4rpx 14rpx; }
-.srcbadge { font-size: 24rpx; color: #6d28d9; background: #ede9fe; border-radius: 999rpx; padding: 4rpx 14rpx; }
+.wrap { padding: var(--sp-12) var(--page-x) calc(var(--sp-40) + 50px + env(safe-area-inset-bottom)); }
+.grow { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-4); }
+.offbar { margin-bottom: var(--sp-12); }
+
+/* 首屏数字行 + 主按钮 */
+.head { display: grid; gap: var(--sp-16); margin-bottom: var(--card-gap); }
+.head-tip { font-size: var(--fs-sub); color: var(--ink-3); text-align: center; }
+.resumecard { margin-bottom: var(--card-gap); }
+.rs-row { display: flex; align-items: center; gap: var(--sp-8); }
+.rs-tr { display: flex; align-items: center; gap: var(--sp-4); }
+.rs-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+.rs-s { font-size: var(--fs-sub); color: var(--ink-3); }
+
+/* 分段 + 筛选/批量 */
+.segrow { display: flex; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-12); }
+.seg { flex: 1; min-width: 0; display: flex; background: var(--fill); border-radius: var(--r-sm); padding: var(--sp-4); }
+.seg-i { flex: 1; min-width: 0; text-align: center; min-height: 40px; display: flex; align-items: center; justify-content: center; border-radius: var(--r-xs); font-size: var(--fs-sub); color: var(--ink-2); white-space: nowrap; padding: 0 var(--sp-4); }
+.seg-i.on { background: var(--card); color: var(--ink); font-weight: 600; box-shadow: var(--sh-1); }
+.modchips { margin-bottom: var(--sp-12); }
+
+/* 入口卡（重练 / 收藏夹 / AI 分析） */
+.entry { margin-bottom: var(--card-gap); }
+.entry-in { display: flex; align-items: center; gap: var(--sp-12); }
+.entry-ico { width: 40px; height: 40px; border-radius: var(--r-sm); background: var(--brand-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.entry-ico.is-warn { background: var(--warn-soft); }
+.entry-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+.entry-s { font-size: var(--fs-sub); color: var(--ink-3); line-height: var(--lh-sub); }
+
+/* 搜索 */
+.searchbar { display: flex; align-items: center; gap: var(--sp-8); background: var(--card); border: 1px solid var(--line); border-radius: var(--r-full); padding: 0 var(--sp-16); min-height: var(--input-h); margin-bottom: var(--sp-12); }
+.searchinput { flex: 1; min-width: 0; font-size: var(--fs-sub); color: var(--ink); height: var(--input-h); line-height: var(--input-h); }
+.searchclear { display: flex; align-items: center; justify-content: center; width: var(--hit-min); height: var(--hit-min); margin-right: calc(var(--sp-12) * -1); }
+.curfilter { display: flex; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-12); flex-wrap: wrap; }
+.cf { cursor: pointer; min-height: 40px; }
+.kpchips { display: flex; flex-wrap: wrap; gap: var(--sp-8); }
+.kpchip { min-height: 40px; padding: 0 var(--sp-12); }
+
+/* 错题卡 */
+.mcard { margin-bottom: var(--card-gap); }
+.mcard.kbf { outline: 2px solid var(--brand); outline-offset: -2px; }
+.mhead { display: flex; align-items: center; gap: var(--sp-8); flex-wrap: wrap; }
+.mright { margin-left: auto; }
+.mtime { white-space: nowrap; }
+.mhead .mright + .mtime { margin-left: 0; }
 .pbadge-hit { position: relative; z-index: 1; display: inline-flex; align-items: center; min-height: 40px; margin: -10px 0; max-width: 40vw; }
-.pbadge { font-size: 24rpx; color: #0f766e; background: #ccfbf1; border-radius: 999rpx; padding: 4rpx 14rpx; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.kpchip.gopaper { color: var(--brand-text); border-color: var(--brand); font-weight: 600; }
-.zhan { margin-left: auto; font-size: 24rpx; font-weight: 700; color: var(--ok); border: 3rpx solid var(--ok); border-radius: 8rpx; padding: 2rpx 12rpx; transform: rotate(-8deg); }
-.anscmp { margin-top: 12rpx; font-size: 24rpx; display: flex; gap: 12rpx; align-items: center; flex-wrap: wrap; }
-.mstat { margin-top: 10rpx; font-size: 24rpx; color: var(--ink-2); }
+.pbadge { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bchk { width: 24px; height: 24px; border-radius: var(--r-full); border: 2px solid var(--line-strong); flex-shrink: 0; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
+.bchk.on { background: var(--brand); border-color: var(--brand); }
+.q { font-size: var(--fs-body); line-height: var(--lh-body); color: var(--ink); margin-top: var(--sp-8); }
+.q.clamp { max-height: calc(var(--fs-body) * var(--lh-body) * 3); overflow: hidden; }
+.meta { font-size: var(--fs-caption); color: var(--ink-3); }
+.mopts { margin-top: var(--sp-8); display: flex; flex-direction: column; gap: var(--sp-4); }
+.mopt { font-size: var(--fs-sub); line-height: var(--lh-body); color: var(--ink-2); }
+.mopt--ok { color: var(--ok-strong); }
+.mopt--bad { color: var(--bad-strong); }
+.anscmp { margin-top: var(--sp-8); font-size: var(--fs-sub); display: flex; gap: var(--sp-8); align-items: center; flex-wrap: wrap; }
 .anscmp .ca { color: var(--ok); font-weight: 600; }
-.rpill { font-size: 24rpx; font-weight: 600; border-radius: 999rpx; padding: 6rpx 20rpx; }
-.rpill.wrong { background: #fee2e2; color: #b91c1c; }
-.rpill.right { background: var(--ok-soft); color: #15803d; }
-.zop { color: var(--ok); border: 1rpx solid var(--ok); }
-.segrow { display: flex; align-items: center; gap: 16rpx; margin-bottom: 20rpx; }
-.seg { flex: 1; display: flex; background: var(--fill); border-radius: 16rpx; padding: 4rpx; }
-.seg-i { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 40px; box-sizing: border-box; padding: 0; border-radius: 12rpx; font-size: 26rpx; color: var(--ink-2); }
-.seg-i.on { background: var(--card); color: var(--ink); font-weight: 600; box-shadow: 0 2rpx 8rpx rgba(31, 35, 41, 0.08); }
-.filterbtn { display: inline-flex; align-items: center; gap: 6rpx; background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 24rpx; min-height: 44px; box-sizing: border-box; flex-shrink: 0; }
-.filterbtn-t { font-size: 24rpx; color: var(--ink-2); }
-.filterbtn.bon { background: var(--brand); border-color: var(--brand-text); }
-.filterbtn-t.bont { color: #fff; font-weight: 600; }
-.bchk { width: 36rpx; height: 36rpx; border-radius: 50%; border: 3rpx solid var(--line); margin-right: 12rpx; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 24rpx; color: #fff; box-sizing: border-box; }
-.bchk.on { background: var(--brand); border-color: var(--brand-text); }
-.mcard.bsel { border-color: var(--brand-text); box-shadow: 0 0 0 2rpx var(--brand-soft); }
-.fabmenu { position: fixed; right: 32rpx; bottom: calc(50px + env(safe-area-inset-bottom) + 32rpx); z-index: 60; display: flex; flex-direction: column; align-items: flex-end; gap: 18rpx; }
-/* #ifndef H5 */
-.fabmenu { bottom: calc(env(safe-area-inset-bottom) + 32rpx); }
-/* #endif */
-.fab-item { display: inline-flex; align-items: center; gap: 10rpx; min-height: 44px; box-sizing: border-box; padding: 0 26rpx; background: var(--card); color: var(--ink); font-size: 26rpx; font-weight: 600; border: 1rpx solid var(--line); border-radius: 999rpx; box-shadow: 0 8rpx 24rpx rgba(31, 36, 48, 0.14); }
-.fab-main { width: 104rpx; height: 104rpx; border-radius: 50%; background: var(--brand); color: #fff; font-size: 52rpx; font-weight: 400; display: flex; align-items: center; justify-content: center; box-shadow: 0 10rpx 28rpx rgba(46, 91, 255, 0.35); transition: transform 0.3s ease; }
-.fab-main.open { transform: rotate(45deg); }
-.batchbar { position: fixed; left: 24rpx; right: 24rpx; bottom: calc(120rpx + env(safe-area-inset-bottom)); z-index: 50; background: var(--card); border: 1rpx solid var(--line); border-radius: 24rpx; box-shadow: 0 8rpx 32rpx rgba(31, 36, 48, 0.16); padding: 16rpx 24rpx; display: flex; align-items: center; gap: 16rpx; }
-.bb-sel { font-size: 24rpx; color: var(--brand-text); min-height: 44px; display: inline-flex; align-items: center; }
-.bb-n { font-size: 24rpx; color: var(--ink-2); flex: 1; }
-.bb-acts { display: flex; gap: 12rpx; }
-.bb-btn { font-size: 24rpx; font-weight: 600; border-radius: 999rpx; padding: 0 24rpx; min-height: 44px; display: inline-flex; align-items: center; }
-.bb-btn.ok { color: #15803d; background: var(--ok-soft); }
-.bb-btn.danger { color: #c33; background: rgba(204, 51, 51, 0.08); }
-.bb-btn.dis { opacity: 0.4; }
-.modgroup { padding: 20rpx 24rpx; }
-.mg-h { font-size: 24rpx; color: var(--ink-2); margin-bottom: 6rpx; }
-.mg-row { display: flex; align-items: center; gap: 12rpx; min-height: 56px; border-bottom: 1rpx solid var(--line); }
-.mg-blk:last-child .mg-row { border-bottom: none; }
-.mg-arrow { font-size: 24rpx; color: var(--ink-3); width: 28rpx; }
-.mg-name { font-size: 30rpx; font-weight: 600; color: var(--ink); flex: 1; }
-.mg-badge { background: var(--fill); color: var(--ink-2); border-radius: 999rpx; font-size: 24rpx; padding: 4rpx 18rpx; }
-.mg-mst { font-size: 24rpx; color: var(--ink-3); white-space: nowrap; }
-.mg-go { display: inline-flex; align-items: center; min-height: 40px; font-size: 24rpx; color: var(--brand-text); padding: 0 0 0 24rpx; }
-.mg-sub { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding-left: 60rpx; border-bottom: 1rpx dashed var(--line); }
-.mg-sub-name { font-size: 26rpx; color: var(--ink); }
-.mg-sub3 { padding-left: 110rpx; min-height: 42px; }
-.mg-sub3 .mg-sub-name { font-size: 24rpx; color: var(--ink-2); }
-.curfilter { display: flex; gap: 12rpx; margin-bottom: 16rpx; flex-wrap: wrap; }
-.attempts { margin-top: 14rpx; background: var(--soft-bg); border-radius: 12rpx; padding: 14rpx 18rpx; }
-.att-h { font-size: 24rpx; color: var(--ink-2); margin-bottom: 6rpx; }
-.att-row { display: flex; align-items: center; gap: 16rpx; font-size: 24rpx; padding: 6rpx 0; }
+.mstat { margin-top: var(--sp-8); font-size: var(--fs-caption); color: var(--ink-3); }
+.attempts { margin-top: var(--sp-8); background: var(--fill); border-radius: var(--r-xs); padding: var(--sp-8) var(--sp-12); }
+.att-h { font-size: var(--fs-caption); color: var(--ink-3); margin-bottom: var(--sp-4); }
+.att-row { display: flex; align-items: center; gap: var(--sp-8); font-size: var(--fs-sub); padding: var(--sp-4) 0; }
 .att-mark { font-weight: 600; }
-.att-mark.aok { color: var(--ok, #12b76a); }
-.att-mark.abad { color: var(--bad, #f04438); }
+.att-mark.aok { color: var(--ok); }
+.att-mark.abad { color: var(--bad); }
 .att-pick { color: var(--ink); }
-.att-secs { color: var(--ink-2); }
-.att-time { margin-left: auto; color: var(--ink-3); font-size: 24rpx; }
-.ai-loading { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 60rpx 0; }
-.ai-err { padding: 40rpx 0 8rpx; text-align: center; }
-.ai-err-t { display: block; color: var(--ink-2); font-size: 26rpx; }
-.ai-regen { background: var(--brand-soft); color: var(--brand-text); }
-.mask { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 99; display: flex; align-items: flex-end; }
-/* #ifdef H5 */
-/* 错题本是 tab 页：H5 底部 TabBar（50px，z-index 998）常驻且高于 .mask，整个弹层收在 TabBar 上方（同 export-confirm.above-tabbar） */
-@media (max-width: 767px) {
-  .mask { bottom: calc(50px + env(safe-area-inset-bottom)); }
-}
-/* #endif */
-.rf-card { width: 100%; background: var(--card, #fff); border-radius: 28rpx 28rpx 0 0; padding: 40rpx 32rpx calc(40rpx + env(safe-area-inset-bottom)); }
-.rf-t { font-size: 26rpx; color: var(--ink-2, #646a73); }
-.rf-name { font-size: 34rpx; font-weight: 700; margin-top: 10rpx; }
-.rf-meta { font-size: 24rpx; color: var(--ink-2, #8a90a0); margin: 8rpx 0 26rpx; }
-.rf-btn { background: var(--brand, #2e5bff); color: #fff; border-radius: 999rpx; font-size: 28rpx; }
-.rf-row2 { display: flex; justify-content: center; gap: 48rpx; margin-top: 22rpx; }
-.rf-alt { display: inline-flex; align-items: center; min-height: 40px; font-size: 24rpx; color: var(--ink-2, #8a90a0); padding: 0 16rpx; }
-.sheet { width: 100%; background: var(--card); border-radius: 24rpx 24rpx 0 0; padding: 28rpx 28rpx 48rpx; max-height: 70vh; overflow-y: auto; box-sizing: border-box; }
-.sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
-.sheet-t { font-size: 30rpx; font-weight: 600; }
-.sheet-x { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; margin: -6px -8rpx -6px 0; font-size: 30rpx; color: var(--ink-2); padding: 0; }
-.sheet-k { font-size: 24rpx; color: var(--ink-2); margin: 20rpx 0 10rpx; }
-.sheet-done { margin-top: 32rpx; background: var(--brand); color: #fff; text-align: center; border-radius: 999rpx; padding: 22rpx 0; font-size: 28rpx; font-weight: 500; }
-.scan-sum { font-size: 26rpx; color: var(--ink-2); margin: 8rpx 0 12rpx; }
-.scan-good { color: #12b76a; font-weight: 600; }
-.scan-list { max-height: 50vh; }
-.scan-row { display: flex; align-items: center; min-height: 60rpx; border-bottom: 1rpx solid var(--fill); font-size: 26rpx; }
-.scan-no { width: 70rpx; color: var(--ink-3); }
+.att-secs { color: var(--ink-3); }
+.att-time { margin-left: auto; color: var(--ink-4); font-size: var(--fs-caption); }
+.mfoot { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-8); margin-top: var(--sp-8); border-top: 1px solid var(--line); padding-top: var(--sp-4); }
+.hint { font-size: var(--fs-caption); color: var(--ink-4); }
+.acts { display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap; }
+.xp-k { margin-top: var(--sp-8); font-size: var(--fs-caption); font-weight: 600; color: var(--warn-strong); border-left: 3px solid var(--warn); padding-left: var(--sp-8); }
+.xp-body { margin-top: var(--sp-4); font-size: var(--fs-sub); color: var(--ink); background: var(--warn-soft); border-radius: var(--r-xs); padding: var(--sp-8); line-height: var(--lh-sub); }
+.loadmore { margin: var(--sp-8) 0 var(--sp-24); }
+
+/* 辅栏 */
+.side { margin-bottom: var(--card-gap); }
+.side-t { display: block; font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+.side-s { display: block; margin-top: var(--sp-8); font-size: var(--fs-caption); color: var(--ink-3); line-height: var(--lh-caption); }
+.trend-bars { display: flex; gap: var(--sp-8); align-items: flex-end; margin-top: var(--sp-12); }
+.trend-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: var(--sp-4); }
+.trend-barwrap { width: 100%; height: 48px; display: flex; align-items: flex-end; justify-content: center; gap: 2px; }
+.trend-bar { width: 12px; background: var(--brand); border-radius: var(--r-xs) var(--r-xs) 0 0; min-height: 0; }
+.trend-bar.killed { background: var(--ok); }
+.trend-n { font-size: var(--fs-caption); color: var(--ink); }
+.trend-kn { font-size: var(--fs-caption); color: var(--ok); }
+.trend-lb { font-size: var(--fs-caption); color: var(--ink-4); }
+.trend-legend { display: flex; gap: var(--sp-12); margin-top: var(--sp-8); }
+.trend-lg { display: flex; align-items: center; gap: var(--sp-4); }
+.trend-dot { width: 8px; height: 8px; border-radius: 2px; background: var(--brand); }
+.trend-dot.killed { background: var(--ok); }
+.trend-lgt { font-size: var(--fs-caption); color: var(--ink-3); }
+.recap-sec { margin-top: var(--sp-8); }
+.recap-st { font-size: var(--fs-caption); color: var(--ink-3); }
+.recap-row { display: flex; align-items: center; gap: var(--sp-8); margin-top: var(--sp-8); min-height: 24px; }
+.recap-link { cursor: pointer; min-height: 40px; }
+.recap-name { flex: 0 0 80px; font-size: var(--fs-sub); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recap-name.is-link { color: var(--brand-text); }
+.recap-n { flex: 0 0 24px; text-align: right; font-size: var(--fs-caption); color: var(--ink-3); }
+.mg-blk { border-top: 1px solid var(--line); }
+.mg-row { display: flex; align-items: center; gap: var(--sp-8); min-height: 52px; }
+.mg-arrow { transition: transform var(--dur-instant) var(--ease-standard); flex-shrink: 0; }
+.mg-arrow.is-open { transform: rotate(180deg); }
+.mg-name { font-size: var(--fs-body); font-weight: 600; color: var(--ink); flex: 1; min-width: 0; }
+.mg-mst { font-size: var(--fs-caption); color: var(--ink-4); white-space: nowrap; }
+.mg-sub { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); min-height: var(--hit-min); padding-left: var(--sp-24); border-top: 1px dashed var(--line); }
+.mg-sub-name { font-size: var(--fs-sub); color: var(--ink); flex: 1; min-width: 0; }
+.mg-sub3 { padding-left: var(--sp-48); }
+.mg-sub3 .mg-sub-name { color: var(--ink-3); }
+.kbd-row { display: flex; align-items: center; gap: var(--sp-4); margin-top: var(--sp-8); }
+.kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 var(--sp-4); box-sizing: border-box; background: var(--card); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: var(--r-xs); font-size: var(--fs-caption); font-weight: 600; color: var(--ink-2); }
+.kbd-d { font-size: var(--fs-caption); color: var(--ink-3); margin-left: var(--sp-4); }
+/* 趋势与快捷键卡只在桌面辅栏展示 */
+.trendcard, .kbdcard { display: none; }
+
+/* sheet 内容 */
+.sheet-k { display: block; font-size: var(--fs-sub); color: var(--ink-3); margin: var(--sp-12) 0 var(--sp-8); }
+.sheet-acts { display: grid; gap: var(--sp-8); }
+.ai-loading { display: flex; flex-direction: column; gap: var(--sp-12); padding: var(--sp-12) 0; }
+.ai-err { display: grid; gap: var(--sp-12); padding: var(--sp-12) 0; text-align: center; }
+.scan-sum { display: block; font-size: var(--fs-sub); color: var(--ink-3); margin: var(--sp-4) 0 var(--sp-8); }
+.scan-good { color: var(--ok); }
+.scan-row { display: flex; align-items: center; min-height: 36px; border-bottom: 1px solid var(--line); font-size: var(--fs-sub); }
+.scan-no { width: 36px; color: var(--ink-4); }
 .scan-pick { flex: 1; color: var(--ink); }
-.scan-pick.good { color: #12b76a; }
-.scan-pick.bad { color: #f04438; }
-.scan-ans { width: 140rpx; color: var(--ink-2); }
-.scan-mark { width: 50rpx; text-align: right; color: var(--ink-3); }
-.manual-list { max-height: 44vh; }
-.manual-row { display: flex; align-items: center; gap: 16rpx; min-height: 88rpx; border-bottom: 1rpx solid var(--fill); }
-.manual-opt { flex: 1; text-align: center; line-height: 68rpx; border: 1rpx solid var(--line); border-radius: 12rpx; font-size: 28rpx; color: var(--ink-2); }
-.manual-opt.on { background: var(--brand); border-color: var(--brand-text); color: #fff; font-weight: 600; }
+.scan-pick.good { color: var(--ok); }
+.scan-pick.bad { color: var(--bad); }
+.scan-ans { width: 72px; color: var(--ink-3); }
+.scan-mark { width: 24px; text-align: right; color: var(--ink-4); }
+.manual-row { display: flex; align-items: center; gap: var(--sp-8); min-height: var(--hit-min); padding: var(--sp-4) 0; border-bottom: 1px solid var(--line); }
+.manual-opt { flex: 1; text-align: center; min-height: 36px; line-height: 36px; border: 1px solid var(--line); border-radius: var(--r-xs); font-size: var(--fs-body); color: var(--ink-2); }
+.manual-opt.on { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
 .manual-codebar { margin: 0; }
-.manual-back { display: flex; align-items: center; justify-content: center; min-height: 40px; color: var(--ink-2); font-size: 26rpx; padding: 8rpx 0 0; }
-.sheet-done.dim { opacity: 0.45; }
-.sheet-export { margin-top: 16rpx; margin-bottom: 110rpx; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand-text); text-align: center; border-radius: 999rpx; padding: 20rpx 0; font-size: 28rpx; font-weight: 500; }
-.xp-k { margin-top: 12rpx; font-size: 24rpx; font-weight: 700; color: #ea580c; border-left: 6rpx solid #ea580c; padding-left: 10rpx; }
-.xp-body { margin-top: 6rpx; font-size: 24rpx; color: var(--ink); background: var(--warn-soft); border-radius: 10rpx; padding: 12rpx; line-height: 1.6; }
-.mfoot { display: flex; justify-content: space-between; align-items: center; margin-top: 12rpx; border-top: 1rpx solid var(--line); padding-top: 8rpx; }
-.op.more { color: var(--ink-2); font-weight: 700; padding: 18rpx 30rpx; margin-left: 0; }
-.op.hint { color: var(--ink-3); margin-left: 0; padding-left: 0; }
-.loadmore { text-align: center; font-size: 24rpx; color: var(--ink-2); padding: 24rpx 0 140rpx; }
-/* 列表见底时给悬浮「＋」（104rpx + 32rpx 底距）让位，末卡「···」不被盖 */
-.fabspace { height: calc(104rpx + 64rpx); }
-.more-sheet { padding-bottom: calc(24rpx + env(safe-area-inset-bottom)); }
-.more-reasons { margin: 8rpx 0 20rpx; }
-.more-act { min-height: 48px; display: flex; align-items: center; justify-content: center; font-size: 29rpx; color: var(--ink); border-top: 1rpx solid var(--line); }
-.more-act.danger { color: #c33; }
-.more-act.cancel { color: var(--ink-2); margin-top: 12rpx; border-top: none; background: var(--soft-bg); border-radius: 999rpx; }
-.acts { display: flex; gap: 8rpx; }
-.op { font-size: 24rpx; margin-left: 16rpx; padding: 18rpx 24rpx; border-radius: 999rpx; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
-.op.sim { background: var(--brand-soft); color: var(--brand-text); }
-.op.seen { color: var(--ok-strong); }
-.op.reportop { color: var(--ink-3); text-decoration: underline; }
-.rp-types { display: flex; flex-wrap: wrap; gap: 16rpx; margin-bottom: 20rpx; }
-.rp-chip { padding: 0 26rpx; min-height: 40px; box-sizing: border-box; display: inline-flex; align-items: center; border-radius: 999rpx; background: var(--soft-bg); font-size: 26rpx; color: var(--ink-2); }
-.rp-chip.on { background: rgba(46, 91, 255, 0.12); color: var(--brand-text); font-weight: 600; }
-.rp-detail { width: 100%; box-sizing: border-box; min-height: 140rpx; background: var(--soft-bg); border-radius: 16rpx; padding: 20rpx; font-size: 26rpx; }
-.rp-submit { margin-bottom: 110rpx; }
-.rp-submit.off { opacity: 0.45; pointer-events: none; }
-.redo { color: var(--brand-text); border: 1rpx solid var(--brand); }
-.del { color: #c33; }
-.tag { display: inline-block; background: var(--brand-soft); color: var(--brand-text); border-radius: 10rpx; padding: 4rpx 14rpx; font-size: 24rpx; }
-.q { font-size: 26rpx; line-height: 1.5; margin-top: 10rpx; }
-.q.clamp { max-height: 120rpx; overflow: hidden; }
-.meta { font-size: 24rpx; color: var(--ink-2); }
-.duecard { background: linear-gradient(180deg, #4a7bf7, #3567ec); border: none; box-shadow: 0 6rpx 16rpx rgba(46, 91, 255, 0.25); display: flex; justify-content: space-between; align-items: center; }
-.resumecard { background: linear-gradient(180deg, #f59e0b, #d97706); border: none; box-shadow: 0 6rpx 16rpx rgba(217, 119, 6, 0.25); display: flex; justify-content: space-between; align-items: center; }
-.resume-ops { display: flex; flex-direction: column; align-items: center; gap: 8rpx; }
-.resumecard .duego { color: #b45309; }
-.resume-drop { display: inline-flex; align-items: center; min-height: 40px; margin: -10px 0; font-size: 24rpx; color: rgba(255, 255, 255, 0.85); text-decoration: underline; padding: 0 12rpx; }
-.redoentry { display: flex; justify-content: space-between; align-items: center; }
-.redo-l { display: flex; align-items: center; gap: 16rpx; flex: 1; min-width: 0; margin-right: 16rpx; }
-.redo-ico { width: 64rpx; height: 64rpx; border-radius: 50%; background: var(--brand-soft); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.redo-t { display: block; font-size: 28rpx; font-weight: 600; color: var(--ink); }
-.redo-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 4rpx; }
-.redo-go { background: var(--brand-soft); color: var(--brand-text); font-size: 26rpx; font-weight: 600; border-radius: 999rpx; padding: 0 34rpx; min-height: 44px; line-height: 44px; flex-shrink: 0; box-sizing: border-box; }
-.nrbadge {
-  display: inline-block;
-  background: var(--brand-soft);
-  color: var(--brand-text);
-  border-radius: 10rpx;
-  padding: 4rpx 14rpx;
-  font-size: 24rpx;
-  margin-left: 8rpx;
-}
-.nrbadge.due {
-  background: var(--warn-soft);
-  color: #c2410c;
-}
-.timesbadge { display: inline-block; background: #fee2e2; color: #b91c1c; border-radius: 10rpx; padding: 4rpx 14rpx; font-size: 24rpx; margin-left: 8rpx; }
-.duetxt { display: flex; align-items: center; gap: 8rpx; font-size: 28rpx; font-weight: 700; color: #fff; }
-.duetxt-t { font-size: 28rpx; font-weight: 700; color: #fff; }
-.duesub { display: block; font-size: 24rpx; color: rgba(255, 255, 255, 0.75); margin-top: 6rpx; }
-.duego { background: var(--card); color: var(--brand-text); font-size: 26rpx; font-weight: 600; border-radius: 999rpx; padding: 0 34rpx; min-height: 44px; line-height: 44px; display: inline-block; box-sizing: border-box; }
-.review { border-left-color: #f5a623; }
-.cb-card { background: var(--card); border-radius: 28rpx; padding: 56rpx 44rpx 40rpx; margin: 0 60rpx calc(env(safe-area-inset-bottom) + 120rpx); text-align: center; max-width: 560rpx; animation: cb-pop 0.35s ease-out; }
-.cb-emoji { font-size: 88rpx; line-height: 1; animation: cb-bounce 0.8s ease-out; }
-.cb-t { font-size: 34rpx; font-weight: 800; color: #16a34a; margin-top: 20rpx; }
-.cb-s { font-size: 24rpx; color: var(--ink-2); margin-top: 12rpx; }
-.cb-btn { margin-top: 32rpx; background: linear-gradient(135deg, #5b8af8, var(--brand)); color: #fff; font-size: 28rpx; font-weight: 600; border-radius: 999rpx; }
-@keyframes cb-pop {
-  0% { transform: scale(0.7); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
-}
-@keyframes cb-bounce {
-  0% { transform: translateY(-30rpx); }
-  50% { transform: translateY(8rpx); }
-  100% { transform: translateY(0); }
-}
-.rhead { display: flex; justify-content: space-between; margin-bottom: 12rpx; }
-.opts { display: flex; gap: 16rpx; margin: 20rpx 0; }
-.opt { flex: 1; text-align: center; padding: 16rpx 0; border: 2rpx solid var(--line); border-radius: 12rpx; font-size: 28rpx; }
-.opt.ok { background: var(--ok-soft); border-color: #3aa53a; color: #2a7a2a; }
+.rp-detail { width: 100%; box-sizing: border-box; min-height: 88px; background: var(--fill); border-radius: var(--r-sm); padding: var(--sp-12); font-size: var(--fs-sub); color: var(--ink); margin-top: var(--sp-12); }
+.cb { display: flex; flex-direction: column; align-items: center; gap: var(--sp-8); padding: var(--sp-16) 0; text-align: center; }
+.cb-s { font-size: var(--fs-sub); color: var(--ink-2); line-height: var(--lh-sub); }
+.rf { display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-8) 0; }
+.rf-name { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); }
+.rf-meta { font-size: var(--fs-sub); color: var(--ink-3); line-height: var(--lh-sub); }
+.rf-row2 { display: flex; justify-content: center; gap: var(--sp-16); }
+
+/* 批量操作条 / 浮钮 */
+.batchbar { position: fixed; left: var(--page-x); right: var(--page-x); bottom: calc(50px + var(--sp-12) + env(safe-area-inset-bottom)); z-index: var(--z-bar); background: var(--card); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--sh-2); padding: var(--sp-8) var(--sp-12); display: flex; align-items: center; gap: var(--sp-8); }
+.bb-n { font-size: var(--fs-sub); color: var(--ink-3); flex: 1; }
+.bb-acts { display: flex; gap: var(--sp-8); }
+.fabmenu { position: fixed; right: var(--sp-16); bottom: calc(50px + env(safe-area-inset-bottom) + var(--sp-16)); z-index: var(--z-bar); display: flex; flex-direction: column; align-items: flex-end; gap: var(--sp-8); }
+/* #ifndef H5 */
+.fabmenu { bottom: calc(env(safe-area-inset-bottom) + var(--sp-16)); }
+/* #endif */
+.fab-main { width: 52px; height: 52px; border-radius: var(--r-full); background: var(--brand); display: flex; align-items: center; justify-content: center; box-shadow: var(--sh-2); transition: transform var(--dur-base) var(--ease-standard); }
+.fab-main.open { transform: rotate(45deg); }
+/* 列表见底时给悬浮「＋」（52px + 底距）让位，末卡「···」不被盖 */
+.fabspace { height: calc(52px + var(--sp-32)); }
+.more-reasons { margin: var(--sp-4) 0 var(--sp-12); flex-wrap: wrap; }
+.more-act { min-height: 48px; display: flex; align-items: center; justify-content: center; font-size: var(--fs-body); color: var(--ink); border-top: 1px solid var(--line); }
+.more-act.danger { color: var(--bad); }
+.more-act.cancel { color: var(--ink-3); margin-top: var(--sp-12); border-top: none; background: var(--fill); border-radius: var(--r-full); }
+.ai-regen { margin-top: var(--sp-12); }
+
+/* 复习模式 */
+.review { display: flex; flex-direction: column; gap: var(--sp-8); }
+.rhead { display: flex; justify-content: space-between; align-items: center; }
+.opts { display: flex; gap: var(--sp-8); margin: var(--sp-12) 0; }
+.opt { flex: 1; text-align: center; min-height: var(--hit-min); display: flex; align-items: center; justify-content: center; border: 1px solid var(--line-strong); border-radius: var(--r-sm); font-size: var(--fs-body); color: var(--ink); background: var(--card); }
+.opt.ok { background: var(--ok-soft); border-color: var(--ok); color: var(--ok-strong); }
 .opt.bad { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); }
 .opt.dim { opacity: 0.4; }
-.opt.sel { background: var(--brand-soft, #eef3ff); border-color: var(--brand, #2e5bff); color: var(--brand, #2e5bff); }
-.verdict { font-size: 26rpx; font-weight: 600; margin: 12rpx 0; }
-.verdict.good { color: #2a7a2a; }
-.verdict.badv { color: #b03030; }
+.opt.sel { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-text); }
+.verdict { font-size: var(--fs-body); font-weight: 600; margin: var(--sp-8) 0; line-height: var(--lh-body); }
+.verdict.good { color: var(--ok-strong); }
+.verdict.badv { color: var(--bad); }
 /* 作答后「下一题/确认答案」吸底：讲解长时不必滚到底才能继续；到自然位置后随内容停住。tab 页需让出 H5 TabBar（50px） */
-:deep(.next-btn) { margin-top: 20rpx; width: 100%; border-radius: 12rpx !important; position: sticky; bottom: calc(50px + env(safe-area-inset-bottom) + 16rpx); z-index: 5; box-shadow: 0 6rpx 20rpx rgba(31, 36, 48, 0.18); }
+.next-btn { margin-top: var(--sp-12); position: sticky; bottom: calc(50px + env(safe-area-inset-bottom) + var(--sp-8)); z-index: var(--z-sticky); box-shadow: var(--sh-2); }
 /* #ifndef H5 */
-:deep(.next-btn) { bottom: calc(env(safe-area-inset-bottom) + 16rpx); }
+.next-btn { bottom: calc(env(safe-area-inset-bottom) + var(--sp-8)); }
 /* #endif */
-.reasons { display: flex; flex-wrap: wrap; align-items: center; gap: 12rpx; margin: 8rpx 0 16rpx; }
-.rz-t { font-size: 26rpx; color: var(--ink-2); }
-.rz { font-size: 26rpx; color: var(--ink-2); border: 1rpx solid var(--line); background: var(--soft-bg); border-radius: 999rpx; padding: 0 24rpx; min-height: 40px; box-sizing: border-box; display: inline-flex; align-items: center; }
-.rz.on { background: var(--brand); border-color: var(--brand-text); color: #fff; font-weight: 600; }
-.appended-tip { font-size: 24rpx; color: var(--brand, #2e5bff); background: var(--brand-soft, #eef3ff); border-radius: 10rpx; padding: 10rpx 16rpx; margin-bottom: 12rpx; }
-.sim-row { display: flex; align-items: center; justify-content: center; min-height: 40px; margin-top: 4rpx; text-align: center; }
-.sim-t { font-size: 26rpx; color: var(--brand, #2e5bff); font-weight: 600; }
-.recap-h { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center; min-height: 40px; margin: -11px 0; }
-.recap-t { font-size: 26rpx; font-weight: 700; color: var(--ink-1, #1f2329); }
-.recap-x { font-size: 24rpx; color: var(--brand, #2e5bff); }
-.recap-sec { margin-top: 16rpx; }
-.recap-st { font-size: 24rpx; color: var(--ink-2); }
-.recap-row { display: flex; align-items: center; gap: 12rpx; margin-top: 10rpx; }
-.recap-link { cursor: pointer; min-height: 40px; margin-top: 0; }
-.recap-link .recap-name { color: var(--brand-text, #2e5bff); }
-.recap-name { flex: 0 0 160rpx; font-size: 24rpx; color: var(--ink-1, #1f2329); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.recap-bar { flex: 1; height: 14rpx; background: var(--soft-bg); border-radius: 999rpx; overflow: hidden; }
-.recap-fill { height: 100%; background: var(--brand, #2e5bff); border-radius: 999rpx; }
-.recap-fill.warnfill { background: #f59e0b; }
-.recap-n { flex: 0 0 40rpx; text-align: right; font-size: 24rpx; color: var(--ink-2); }
-.recap-tip { display: block; margin-top: 14rpx; font-size: 24rpx; color: var(--ink-2); }
-.selfjudge { margin-top: 20rpx; }
-.q2 { font-size: 24rpx; color: var(--ink-2); margin-bottom: 12rpx; }
-.sj-row { display: flex; gap: 20rpx; }
-:deep(.sj-btn) { flex: 1; border-radius: 12rpx !important; }
-
-/* 快捷键提示卡（仅桌面侧栏展示）与速查面板 */
-.kbdcard { display: none; }
-.kbd-h { font-size: 26rpx; font-weight: 600; color: var(--ink); }
-.kbd-row { display: flex; align-items: center; gap: 8rpx; margin-top: 14rpx; }
-.kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 40rpx; height: 40rpx; padding: 0 10rpx; box-sizing: border-box; background: var(--card); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 8rpx; font-size: 24rpx; font-weight: 600; color: var(--ink-2); }
-.kbd-d { font-size: 24rpx; color: var(--ink-2); margin-left: 8rpx; }
-.kbd-more { display: inline-flex; align-items: center; min-height: 40px; margin: -4px 0 -11px; font-size: 24rpx; color: var(--brand-text); cursor: pointer; }
-
-/* 错题趋势卡（仅桌面侧栏展示） */
-.trendcard { display: none; }
-.trend-t { font-size: 26rpx; font-weight: 600; color: var(--ink); }
-.trend-bars { display: flex; gap: 18rpx; align-items: flex-end; margin-top: 18rpx; }
-.trend-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4rpx; }
-.trend-barwrap { width: 100%; height: 96rpx; display: flex; align-items: flex-end; justify-content: center; gap: 4rpx; }
-.trend-bar { width: 22rpx; background: var(--brand, #2e5bff); border-radius: 6rpx 6rpx 0 0; min-height: 0; }
-.trend-bar.killed { background: #22c55e; }
-.trend-n { font-size: 24rpx; font-weight: 600; color: var(--ink); }
-.trend-kn { font-size: 24rpx; font-weight: 600; color: #16a34a; }
-.trend-lb { font-size: 24rpx; color: var(--ink-3); }
-.trend-legend { display: flex; gap: 24rpx; margin-top: 12rpx; }
-.trend-lg { display: flex; align-items: center; gap: 6rpx; }
-.trend-dot { width: 14rpx; height: 14rpx; border-radius: 4rpx; background: var(--brand, #2e5bff); }
-.trend-dot.killed { background: #22c55e; }
-.trend-lgt { font-size: 24rpx; color: var(--ink-2); }
-.trend-sum { display: block; margin-top: 14rpx; font-size: 24rpx; color: var(--ink-2); }
+.reasons { display: flex; align-items: center; gap: var(--sp-8); margin: var(--sp-4) 0 var(--sp-12); }
+.rz-t { font-size: var(--fs-sub); color: var(--ink-3); flex-shrink: 0; }
+.appended-tip { font-size: var(--fs-sub); color: var(--brand-text); background: var(--brand-soft); border-radius: var(--r-xs); padding: var(--sp-8) var(--sp-12); margin-bottom: var(--sp-8); }
+.sim-rows { display: grid; margin-top: var(--sp-8); }
+.selfjudge { margin-top: var(--sp-12); display: grid; gap: var(--sp-8); }
+.q2 { font-size: var(--fs-sub); color: var(--ink-3); }
+.sj-row { display: flex; gap: var(--sp-12); }
+.sj-row > * { flex: 1; }
 
 /* #ifdef H5 */
-/* 桌面操作台（round-3）：≥1024px 双栏工作台，主列=列表工作流，侧栏=统计/复盘/工具 */
 @media (min-width: 1024px) {
-  .bookwrap { max-width: 920px !important; }
-  .mcard.kbf { outline: 2px solid var(--brand); outline-offset: -2px; }
-  .bookwrap::after { content: ''; display: block; clear: both; }
-  /* 主列走常规文档流（仅预留右侧栏宽度），侧栏用右浮动堆叠：
-     避免左列元素受“浮动框顶不得高于文档序更早浮动框顶”的约束被右列高卡推低形成空洞 */
-  .bookwrap .bk-main { margin-right: 344px; box-sizing: border-box; }
-  .bookwrap .bk-side { float: right; clear: right; width: 320px; box-sizing: border-box; }
-  .bookwrap .trendcard { display: block; }
-  .bookwrap .kbdcard { display: block; }
-  .bookwrap.noside .bk-main { margin-right: 0; }
-  .bookwrap-review { max-width: 760px !important; }
+  .wrap.book { max-width: 1064px; padding-top: var(--sp-24); }
+  .trendcard, .kbdcard { display: block; }
+  .wrap.is-review { max-width: 760px; margin: 0 auto; }
 }
 /* #endif */
 </style>

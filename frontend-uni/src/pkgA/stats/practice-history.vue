@@ -1,55 +1,65 @@
 <template>
   <view class="wrap">
     <view v-if="items.length" class="list">
-      <view v-for="(s, i) in items" :key="s.start" class="item">
-        <view class="row" @click="toggle(i)">
-          <view class="row-main">
-            <view class="row-top">
-              <text class="time">{{ fmtTime(s.start) }}</text>
-              <text v-for="m in s.modules" :key="m" class="chip">{{ modName(m) }}</text>
+      <view v-for="g in groups" :key="g.day" class="group">
+        <kg-section-header :title="g.day + ' · ' + g.list.length + ' 组'" />
+        <kg-card v-for="{ s, i } in g.list" :key="s.start" class="item" :padding="12">
+          <view class="row" role="button" @click="toggle(i)">
+            <view class="row-main">
+              <view class="row-top">
+                <text class="time num">{{ fmtTime(s.start) }}</text>
+                <kg-tag v-for="m in s.modules" :key="m" tone="module" :module="m">{{ modName(m) }}</kg-tag>
+              </view>
+              <text class="meta"><text class="num">{{ s.n }}</text> 题 · 用时 <text class="num">{{ fmtDur(s.secs) }}</text></text>
             </view>
-            <text class="meta">{{ s.n }} 题 · 用时 {{ fmtDur(s.secs) }}</text>
+            <text class="pct num" :class="pctCls(s)">{{ pct(s) }}%</text>
+            <l-icon name="chevron-right" :size="20" tone="faint" class="arrow" :class="{ open: openIdx === i }" />
           </view>
-          <text class="pct" :class="pctCls(s)">{{ pct(s) }}%</text>
-          <text class="arrow" :class="{ open: openIdx === i }">›</text>
-        </view>
-        <view v-if="openIdx === i" class="detail">
-          <view v-if="detailLoading" class="d-loading">加载中…</view>
-          <template v-else>
-            <view v-for="(d, j) in detail" :key="j" class="d-item">
-              <view class="d-row" :class="{ wrong: !d.correct, opener: !!d.question }" @click.stop="toggleDetail(j)">
-                <text class="d-mark" :class="d.correct ? 'ok' : 'bad'">{{ d.correct ? '✓' : '✗' }}</text>
-                <view class="d-main">
-                  <text class="d-q" :class="{ ellip2: openDetailIdx !== j }">{{ d.question ? d.question.question : (d.submodule || modName(d.module)) }}</text>
-                  <text v-if="!d.correct && d.picked" class="d-ans">我的答案 {{ d.picked }}<template v-if="d.question && d.question.answer"> · 正解 {{ d.question.answer }}</template></text>
+          <view v-if="openIdx === i" class="detail">
+            <kg-skeleton v-if="detailLoading" preset="lines" />
+            <template v-else>
+              <view v-for="(d, j) in detail" :key="j" class="d-item">
+                <view class="d-row" :class="{ wrong: !d.correct, opener: !!d.question }" @click.stop="toggleDetail(j)">
+                  <l-icon :name="d.correct ? 'check' : 'x'" :size="16" :tone="d.correct ? 'ok' : 'bad'" class="d-mark" />
+                  <view class="d-main">
+                    <text class="d-q q-text" :class="{ ellip2: openDetailIdx !== j }">{{ d.question ? d.question.question : (d.submodule || modName(d.module)) }}</text>
+                    <text v-if="!d.correct && d.picked" class="d-ans">我的答案 {{ d.picked }}<template v-if="d.question && d.question.answer"> · 正解 {{ d.question.answer }}</template></text>
+                  </view>
+                  <text class="d-secs num">{{ d.secs }}s</text>
+                  <l-icon v-if="d.question" name="chevron-right" :size="16" tone="faint" class="arrow" :class="{ open: openDetailIdx === j }" />
                 </view>
-                <text class="d-secs">{{ d.secs }}s</text>
-                <text v-if="d.question" class="d-arrow" :class="{ open: openDetailIdx === j }">›</text>
-              </view>
-              <view v-if="openDetailIdx === j && d.question" class="d-exp">
-                <view v-for="(v, k) in d.question.options" :key="k" class="d-opt" :class="{ ans: k === d.question.answer, bad: !d.correct && k === d.picked }">{{ k }}. {{ v }}</view>
-                <view class="d-ansline">正确答案 {{ d.question.answer }}<template v-if="d.picked"> · 我的答案 {{ d.picked }}</template></view>
-                <view v-if="d.question.hs_explanation || d.question.explanation" class="d-expl">{{ d.question.hs_explanation || d.question.explanation }}</view>
-                <view class="d-ops">
-                  <text class="d-op" role="button" aria-label="AI 详解本题" @click.stop="askFromHistory(d)">AI 详解本题</text>
-                  <text v-if="seenAsk" class="d-op seen" role="button" aria-label="回看 AI 详解" @click.stop="openSeenAsk">回看 AI 详解</text>
+                <view v-if="openDetailIdx === j && d.question" class="d-exp">
+                  <text v-for="(v, k) in d.question.options" :key="k" class="d-opt q-text" :class="{ ans: k === d.question.answer, bad: !d.correct && k === d.picked }">{{ k }}. {{ v }}</text>
+                  <text class="d-ansline">正确答案 {{ d.question.answer }}<template v-if="d.picked"> · 我的答案 {{ d.picked }}</template></text>
+                  <text v-if="d.question.hs_explanation || d.question.explanation" class="d-expl q-text">{{ d.question.hs_explanation || d.question.explanation }}</text>
+                  <view class="d-ops" @click.stop>
+                    <kg-button variant="text" size="sm" aria-label="AI 详解本题" @click.stop="askFromHistory(d)">AI 详解本题</kg-button>
+                    <kg-button v-if="seenAsk" variant="text" size="sm" aria-label="回看 AI 详解" @click.stop="openSeenAsk">回看 AI 详解</kg-button>
+                  </view>
                 </view>
               </view>
-            </view>
-            <button v-if="wrongQs.length" class="btn-redo" @click="redoWrong">重练本次错题（{{ wrongQs.length }} 题）</button>
-          </template>
-        </view>
+              <kg-button v-if="wrongQs.length" variant="primary" size="md" block icon="rotate-ccw" class="btn-redo" @click="redoWrong">重练本次错题（{{ wrongQs.length }} 题）</kg-button>
+            </template>
+          </view>
+        </kg-card>
       </view>
     </view>
-    <view v-else-if="loadErr" class="empty">
-      <text class="empty-t">加载失败：{{ loadErr }}</text>
-      <view class="retry" @click="load">重试 ›</view>
-    </view>
-    <view v-else-if="loaded" class="empty">
-      <view class="empty-ico"><l-icon name="edit-3" :size="30" color="#b0b4c0" /></view>
-      <text class="empty-t">还没有练习记录</text>
-      <button class="btn-primary" @click="goPractice">去刷一组题</button>
-    </view>
+    <kg-empty-state
+      v-else-if="loadErr"
+      icon="wifi-off"
+      :title="'加载失败：' + loadErr"
+      cta-text="重试"
+      @cta="load"
+    />
+    <kg-empty-state
+      v-else-if="loaded"
+      icon="pencil-line"
+      title="还没有练习记录"
+      desc="每次刷题都会按日期记在这里，可回看每道题的作答与解析"
+      cta-text="去刷一组题"
+      @cta="goPractice"
+    />
+    <kg-skeleton v-else preset="cards" />
   </view>
 </template>
 
@@ -57,14 +67,30 @@
 import { request, snapPeek, anonUid, trackEvent } from '../../api.js';
 import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
 import { askQid, findAskSid } from '../../ask-link.js';
+import { MODULES, moduleLabel } from '../../module-meta.js';
 
-const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论', shizheng: '时事政治' };
+// module-meta 只收录题库 5 模块；练习历史里还会出现申论/时政会话
+const EXTRA_NAMES = { shenlun: '申论', shizheng: '时事政治' };
 
 export default {
   data() {
     return { items: [], loaded: false, loadErr: '', openIdx: -1, detail: [], detailLoading: false, openDetailIdx: -1, seenAsk: null };
   },
   computed: {
+    /** 按日期分组（仅展示层）：保留 items 原顺序与原下标，toggle 仍按原下标 */
+    groups() {
+      const out = [];
+      this.items.forEach((s, i) => {
+        const day = this.fmtDay(s.start);
+        let g = out[out.length - 1];
+        if (!g || g.day !== day) {
+          g = { day, list: [] };
+          out.push(g);
+        }
+        g.list.push({ s, i });
+      });
+      return out;
+    },
     wrongQs() {
       const seen = new Set();
       const out = [];
@@ -82,7 +108,18 @@ export default {
   },
   methods: {
     modName(m) {
-      return NAMES[m] || m || '混合';
+      if (MODULES[m]) return moduleLabel(m);
+      return EXTRA_NAMES[m] || m || '混合';
+    },
+    fmtDay(ts) {
+      const d = new Date(ts * 1000);
+      const now = new Date();
+      const same = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+      if (same(d, now)) return '今天';
+      const y = new Date(now);
+      y.setDate(now.getDate() - 1);
+      if (same(d, y)) return '昨天';
+      return `${d.getMonth() + 1} 月 ${d.getDate()} 日`;
     },
     async load() {
       this.loadErr = '';
@@ -179,60 +216,43 @@ export default {
 </script>
 
 <style scoped>
-.wrap { padding: 24rpx 32rpx 60rpx; }
-.list { display: flex; flex-direction: column; gap: 18rpx; }
-.item { background: var(--card); border-radius: 24rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); overflow: hidden; }
-.row { display: flex; align-items: center; gap: 16rpx; padding: 24rpx 28rpx; }
-.row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8rpx; }
-.row-top { display: flex; align-items: center; gap: 10rpx; flex-wrap: wrap; }
-.time { font-size: 26rpx; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
-.chip { background: #e8effe; color: var(--brand-text); font-size: 24rpx; font-weight: 600; border-radius: 8rpx; padding: 2rpx 12rpx; }
-.meta { font-size: 24rpx; color: var(--ink-2); }
-.pct { font-size: 32rpx; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
-.pct.hi { color: var(--ok-strong, #15803d); }
-.pct.lo { color: var(--bad-strong, #b91c1c); }
-.arrow { font-size: 32rpx; color: var(--ink-4); transition: transform 0.15s; }
+.wrap { padding: var(--sp-16) var(--page-x) var(--sp-48); }
+.list { display: flex; flex-direction: column; }
+.group { margin-bottom: var(--sp-8); }
+.item { margin-bottom: var(--card-gap); }
+.row { display: flex; align-items: center; gap: var(--sp-12); min-height: var(--hit-min); }
+.row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-4); }
+.row-top { display: flex; align-items: center; gap: var(--sp-8); flex-wrap: wrap; }
+.time { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+.meta { font-size: var(--fs-caption); color: var(--ink-2); }
+.pct { font-size: var(--fs-h2); font-weight: 600; color: var(--ink); flex-shrink: 0; }
+.pct.hi { color: var(--ok-strong); }
+.pct.lo { color: var(--bad-strong); }
+.arrow { flex-shrink: 0; transition: transform var(--dur-fast); }
 .arrow.open { transform: rotate(90deg); }
 
-.detail { border-top: 1rpx solid var(--line, #eef0f4); padding: 12rpx 28rpx 24rpx; }
-.d-loading { font-size: 24rpx; color: var(--ink-2); padding: 20rpx 0; text-align: center; }
-.d-item { border-bottom: 1rpx solid var(--line, #f2f3f7); }
+.detail { border-top: 1px solid var(--line); margin-top: var(--sp-12); padding-top: var(--sp-8); }
+.d-item { border-bottom: 1px solid var(--line); }
 .d-item:last-of-type { border-bottom: none; }
-.d-row { display: flex; align-items: flex-start; gap: 14rpx; padding: 16rpx 0; }
-.d-arrow { font-size: 28rpx; color: var(--ink-4); flex-shrink: 0; transition: transform 0.15s; }
-.d-arrow.open { transform: rotate(90deg); }
-.d-exp { padding: 0 0 20rpx 48rpx; display: flex; flex-direction: column; gap: 10rpx; }
-.d-opt { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; }
-.d-opt.ans { color: var(--ok-strong, #15803d); font-weight: 600; }
-.d-opt.bad { color: var(--bad-strong, #b91c1c); }
-.d-ansline { font-size: 24rpx; color: var(--ink); font-weight: 600; }
-.d-expl { font-size: 24rpx; color: var(--ink-2); line-height: 1.7; background: var(--bg-2, #f6f7fa); border-radius: 12rpx; padding: 14rpx 18rpx; }
-.d-ops { display: flex; gap: 28rpx; }
-.d-op { font-size: 24rpx; color: var(--brand-text, #2e5bff); font-weight: 600; }
-.d-op.seen { color: var(--ink-3, #6b7280); }
-.d-mark { font-size: 26rpx; font-weight: 800; width: 34rpx; text-align: center; flex-shrink: 0; }
-.d-mark.ok { color: var(--ok-strong, #15803d); }
-.d-mark.bad { color: var(--bad-strong, #b91c1c); }
-.d-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6rpx; }
-.d-q { font-size: 26rpx; color: var(--ink); line-height: 1.6; }
+.d-row { display: flex; align-items: flex-start; gap: var(--sp-8); padding: var(--sp-12) 0; }
+.d-mark { flex-shrink: 0; margin-top: 2px; }
+.d-exp { padding: 0 0 var(--sp-12) var(--sp-24); display: flex; flex-direction: column; gap: var(--sp-8); }
+.d-opt { font-size: var(--fs-sub); color: var(--ink-2); }
+.d-opt.ans { color: var(--ok-strong); font-weight: 600; }
+.d-opt.bad { color: var(--bad-strong); }
+.d-ansline { font-size: var(--fs-sub); color: var(--ink); font-weight: 600; }
+.d-expl { font-size: var(--fs-sub); color: var(--ink-2); background: var(--fill); border-radius: var(--r-sm); padding: var(--sp-8) var(--sp-12); }
+.d-ops { display: flex; gap: var(--sp-4); flex-wrap: wrap; }
+.d-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-4); }
+.d-q { font-size: var(--fs-sub); color: var(--ink); }
 .ellip2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
-.d-ans { font-size: 24rpx; color: var(--bad-strong, #b91c1c); }
-.d-secs { font-size: 24rpx; color: var(--ink-2); flex-shrink: 0; font-variant-numeric: tabular-nums; }
-.btn-redo { margin-top: 20rpx; background: #2e5bff; color: #fff; border-radius: 999rpx; font-size: 26rpx; font-weight: 600; min-height: 40px; display: flex; align-items: center; justify-content: center; }
-
-.empty { display: flex; flex-direction: column; align-items: center; gap: 16rpx; padding: 120rpx 0; }
-.empty-t { font-size: 28rpx; color: var(--ink-2); }
-.retry { display: flex; align-items: center; justify-content: center; min-height: 40px; margin-top: 4rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
-.btn-primary { background: #2e5bff; color: #fff; border-radius: 999rpx; font-size: 28rpx; font-weight: 600; min-height: 44px; display: flex; align-items: center; justify-content: center; padding: 0 60rpx; margin-top: 12rpx; }
+.d-ans { font-size: var(--fs-caption); color: var(--bad-strong); }
+.d-secs { font-size: var(--fs-caption); color: var(--ink-2); flex-shrink: 0; }
+.btn-redo { margin-top: var(--sp-12); }
 
 /* #ifdef H5 */
 @media (min-width: 768px) {
-  .wrap { max-width: 880px; margin: 0 auto; }
-  .row:hover, .btn-redo:hover, .btn-primary:hover, .d-row.opener:hover, .d-op:hover { cursor: pointer; }
-}
-@media (min-width: 1024px) {
-  .item { transition: box-shadow 0.15s; }
-  .item:hover { box-shadow: 0 6rpx 20rpx rgba(23, 24, 28, 0.1); }
+  .row:hover, .d-row.opener:hover { cursor: pointer; }
 }
 /* #endif */
 </style>

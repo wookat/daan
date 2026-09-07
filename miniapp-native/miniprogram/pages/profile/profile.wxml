@@ -9,26 +9,26 @@
         <text class="u-name">{{user ? (user.nickname || user.phone) : '游客模式'}}</text>
         <text class="u-sub">{{user ? '已登录 · 多端同步中' : '登录后错题与进度多端同步'}}</text>
       </view>
-      <view wx:if="{{!user}}" class="u-btn" bind:tap="onLogin">登录 / 注册</view>
-      <view wx:else class="u-btn" bind:tap="onLogout">退出</view>
+      <kg-button wx:if="{{!user}}" variant="primary" tone="inverse" size="sm" bind:click="onLogin">登录 / 注册</kg-button>
+      <kg-button wx:else variant="secondary" tone="inverse" size="sm" bind:click="onLogout">退出</kg-button>
     </view>
 
     <!-- 数据概览 -->
-    <view class="card u-stats">
-      <view class="us-cell"><text class="us-n c-brand">{{totalDone}}</text><text class="us-t">累计刷题</text></view>
-      <view class="us-cell"><text class="us-n c-accent">{{streakN}}</text><text class="us-t">连续天数</text></view>
-      <view class="us-cell"><text class="us-n c-success">{{mistakeN}}</text><text class="us-t">错题收录</text></view>
-      <view class="us-cell"><text class="us-n c-purple">{{badgeN}}</text><text class="us-t">徽章</text></view>
-    </view>
+    <kg-card variant="raised" class="u-stats" padding="{{0}}" body-class="u-stats-body">
+      <view class="us-cell"><text class="us-n num c-brand">{{totalDone}}</text><text class="us-t">累计刷题</text></view>
+      <view class="us-cell"><text class="us-n num c-streak">{{streakN}}</text><text class="us-t">连续天数</text></view>
+      <view class="us-cell"><text class="us-n num c-ok">{{mistakeN}}</text><text class="us-t">错题收录</text></view>
+      <view class="us-cell"><text class="us-n num c-info">{{badgeN}}</text><text class="us-t">徽章</text></view>
+    </kg-card>
 
-    <view wx:if="{{badgeInfo}}" class="card badges">
+    <kg-card wx:if="{{badgeInfo}}" variant="raised" class="badges">
       <view class="badge-head">
-        <text class="badge-cur">当前连续 <text class="badge-b">{{badgeInfo.streak}}</text> 天</text>
-        <text class="badge-best">历史最长 {{badgeInfo.best_streak}} 天</text>
+        <text class="badge-cur">当前连续 <text class="badge-b num">{{badgeInfo.streak}}</text> 天</text>
+        <text class="badge-best">历史最长 <text class="num">{{badgeInfo.best_streak}}</text> 天</text>
       </view>
       <block wx:if="{{nextMilestone}}">
-        <view class="ms-bar"><view class="ms-fill" style="width: {{nextMilestone.pct}}%" /></view>
-        <text class="ms-sub">再打卡 {{nextMilestone.left}} 天解锁「{{nextMilestone.days}} 天」徽章</text>
+        <kg-progress value="{{nextMilestone.pct}}" thickness="{{6}}" aria-label="下一徽章进度" />
+        <text class="ms-sub">再打卡 <text class="num">{{nextMilestone.left}}</text> 天解锁「{{nextMilestone.days}} 天」徽章</text>
       </block>
       <text wx:elif="{{badgeInfo.badges.length}}" class="ms-sub">已解锁全部打卡徽章，太强了！</text>
       <view class="badge-grid">
@@ -36,47 +36,38 @@
           wx:for="{{badgeInfo.badges}}"
           wx:key="days"
           class="badge {{item.unlocked ? '' : 'off'}}"
+          hover-class="badge--hover"
           data-days="{{item.days}}"
           data-unlocked="{{item.unlocked}}"
           bind:tap="onTapBadge"
         >
-          <text class="badge-ico">{{item.unlocked ? '🏅' : '🔒'}}</text>
-          <text class="badge-d">{{item.days}} 天</text>
+          <view class="badge-ico">
+            <l-icon name="{{item.unlocked ? 'medal' : 'eye-off'}}" size="24" tone="{{item.unlocked ? 'streak' : 'faint'}}" />
+          </view>
+          <text class="badge-d"><text class="num">{{item.days}}</text> 天</text>
         </view>
       </view>
-    </view>
+    </kg-card>
 
-    <view class="card listcard">
-      <view class="row-i link" bind:tap="onTeam">
-        <view class="row-ico bg-brand">👥</view>
-        <text class="r-k">刷题小队</text>
-        <text class="r-v">组队打卡 · 互相催学</text>
-        <text class="chev">›</text>
-      </view>
-      <view class="row-i link" bind:tap="onReminder">
-        <view class="row-ico bg-accent">⏰</view>
-        <text class="r-k">学习提醒</text>
-        <text class="r-v">{{reminderOn ? '已开启 · 点击关闭' : '每天提醒我打卡刷题'}}</text>
-        <text class="chev">›</text>
-      </view>
-    </view>
+    <t-cell-group class="cells">
+      <t-cell title="刷题小队" description="组队打卡 · 互相催学" arrow hover bind:click="onTeam">
+        <view slot="left-icon" class="row-ico bg-brand"><l-icon name="users" size="20" tone="brand" /></view>
+      </t-cell>
+      <t-cell title="学习提醒" description="{{reminderOn ? '已开启 · 点击关闭' : '每天提醒我打卡刷题'}}" arrow hover bind:click="onReminder">
+        <view slot="left-icon" class="row-ico bg-streak"><l-icon name="alarm-clock" size="20" tone="streak" /></view>
+      </t-cell>
+    </t-cell-group>
 
-    <view class="card listcard">
-      <view class="row-i">
-        <view class="row-ico bg-info">☁️</view>
-        <text class="r-k">数据同步</text>
-        <text class="r-v">{{user ? '账号云端同步' : '匿名（登录后自动合并）'}}</text>
-      </view>
-      <view class="row-i">
-        <view class="row-ico bg-fill">🪪</view>
-        <text class="r-k">本机标识</text>
-        <text class="r-v">{{uid}}</text>
-      </view>
-      <view class="row-i">
-        <view class="row-ico bg-fill">⚙️</view>
-        <text class="r-k">版本</text>
-        <text class="r-v">v0.2</text>
-      </view>
-    </view>
+    <t-cell-group class="cells">
+      <t-cell title="数据同步" note="{{user ? '账号云端同步' : '匿名（登录后自动合并）'}}">
+        <view slot="left-icon" class="row-ico bg-info"><l-icon name="refresh-cw" size="20" tone="info" /></view>
+      </t-cell>
+      <t-cell title="本机标识" note="{{uid}}">
+        <view slot="left-icon" class="row-ico bg-fill"><l-icon name="user-round" size="20" tone="muted" /></view>
+      </t-cell>
+      <t-cell title="版本" note="v0.2">
+        <view slot="left-icon" class="row-ico bg-fill"><l-icon name="info" size="20" tone="muted" /></view>
+      </t-cell>
+    </t-cell-group>
   </view>
 </scroll-view>

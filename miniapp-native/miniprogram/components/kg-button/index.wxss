@@ -18,24 +18,39 @@
   --td-button-light-color: var(--brand-text);
   --td-button-light-border-color: var(--brand-soft);
   --td-button-light-active-border-color: var(--brand-soft-2);
-  --td-button-default-bg-color: var(--card);
-  --td-button-default-active-bg-color: var(--fill);
-  --td-button-default-border-color: var(--line);
-  --td-button-default-active-border-color: var(--line);
-  --td-button-default-color: var(--ink);
-  --td-button-text-color: var(--brand-text);
+  /* ghost → t-button variant=outline：走 *-outline-* 与 --td-bg-color-container，而非 default-* */
+  --td-bg-color-container: var(--card);
+  --td-button-default-outline-color: var(--ink);
+  --td-button-default-outline-border-color: var(--line);
+  --td-button-default-outline-active-bg-color: var(--fill);
+  --td-button-default-outline-active-border-color: var(--line);
+  --td-button-primary-text-color: var(--brand-text);
+  --td-button-primary-text-active-bg-color: var(--brand-soft);
+  --td-button-danger-text-color: var(--bad);
+  --td-button-danger-text-active-bg-color: var(--bad-soft);
   --td-button-danger-bg-color: var(--bad);
   --td-button-danger-active-bg-color: var(--bad-strong);
   --td-button-danger-border-color: var(--bad);
   --td-button-danger-color: var(--on-brand);
+}
+.kg-btn--ghost.kg-btn--tone-bad {
+  --td-button-default-outline-color: var(--bad);
+  --td-button-default-outline-border-color: var(--bad);
+  --td-button-default-outline-active-bg-color: var(--bad-soft);
+  --td-button-default-outline-active-border-color: var(--bad);
 }
 .kg-btn--tone-inverse {
   --td-button-primary-bg-color: var(--on-brand);
   --td-button-primary-active-bg-color: var(--on-brand-2);
   --td-button-primary-border-color: var(--on-brand);
   --td-button-primary-color: var(--brand);
-  --td-button-default-bg-color: transparent;
-  --td-button-default-active-bg-color: rgba(255, 255, 255, 0.14);
-  --td-button-default-border-color: rgba(255, 255, 255, 0.5);
-  --td-button-default-color: var(--on-brand);
+  --td-bg-color-container: transparent;
+  --td-button-default-outline-color: var(--on-brand);
+  --td-button-default-outline-border-color: rgba(255, 255, 255, 0.5);
+  --td-button-default-outline-active-bg-color: rgba(255, 255, 255, 0.14);
+  --td-button-default-outline-active-border-color: rgba(255, 255, 255, 0.7);
+}
+/* 图标与文字间距与 H5 kg-btn__in gap 同口径 */
+.kg-btn__icon {
+  margin-right: var(--sp-8);
 }

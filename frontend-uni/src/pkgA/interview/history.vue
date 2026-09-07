@@ -1,39 +1,46 @@
 <template>
   <view class="wrap">
-    <view class="stats-row">
-      <view class="stat-c">
-        <text class="stat-n">{{ total }}</text>
-        <text class="stat-t">练习次数</text>
-      </view>
-      <view class="stat-c">
-        <text class="stat-n">{{ best == null ? '—' : best }}</text>
-        <text class="stat-t">最高得分</text>
-      </view>
-      <view class="stat-c">
-        <text class="stat-n">{{ avg == null ? '—' : avg }}</text>
-        <text class="stat-t">平均得分</text>
-      </view>
-    </view>
+    <kg-two-col>
+      <template #main>
+        <kg-card v-if="items.length" class="stats">
+          <kg-stat-row :items="statItems" />
+        </kg-card>
 
-    <view v-if="items.length" class="list">
-      <view v-for="it in items" :key="it.id" class="item" @click="openSession(it.id)">
-        <view class="item-top">
-          <text class="tag">{{ it.category }}</text>
-          <text class="score" :class="{ good: it.total >= 80 }">{{ it.total }} 分</text>
+        <view v-if="items.length" class="list">
+          <kg-card v-for="it in items" :key="it.id" clickable chevron class="item" @click="openSession(it.id)">
+            <view class="item-top">
+              <kg-tag tone="brand">{{ it.category }}</kg-tag>
+              <text class="score num" :class="{ good: it.total >= 80 }">{{ it.total }} 分</text>
+            </view>
+            <text class="q q-text ellip2">{{ it.question_text }}</text>
+            <text class="meta">{{ fmtTime(it.created_at) }} · 作答 {{ fmtDur(it.duration_sec || 0) }}</text>
+          </kg-card>
         </view>
-        <view class="q ellip2">{{ it.question_text }}</view>
-        <view class="meta">{{ fmtTime(it.created_at) }} · 作答 {{ fmtDur(it.duration_sec || 0) }}</view>
-      </view>
-    </view>
-    <view v-else-if="loadErr" class="empty">
-      <text class="empty-t">加载失败：{{ loadErr }}</text>
-      <view class="retry" @click="load">重试 ›</view>
-    </view>
-    <view v-else-if="loaded" class="empty">
-      <view class="empty-ico"><l-icon name="mic" :size="30" color="#b0b4c0" /></view>
-      <text class="empty-t">还没有练习记录</text>
-      <button class="btn-primary" @click="goPractice">去练一题</button>
-    </view>
+        <kg-empty-state
+          v-else-if="loadErr"
+          icon="wifi-off"
+          :title="'加载失败：' + loadErr"
+          cta-text="重试"
+          @cta="load"
+        />
+        <kg-empty-state
+          v-else-if="loaded"
+          icon="mic"
+          title="还没有练习记录"
+          desc="AI 面试陪练会记录每次作答与得分，先去练一题吧"
+          cta-text="去练一题"
+          @cta="goPractice"
+        />
+        <kg-skeleton v-else preset="cards" />
+      </template>
+      <template #aside>
+        <kg-card v-if="items.length" variant="soft" class="aside-card">
+          <text class="aside-t">继续练习</text>
+          <text class="aside-d">随机抽一题模拟面试，AI 即时点评</text>
+          <kg-button variant="primary" size="lg" block icon="mic" @click="goPractice">去练一题</kg-button>
+        </kg-card>
+      </template>
+    </kg-two-col>
   </view>
 </template>
 
@@ -48,6 +55,13 @@ export default {
     avg() {
       if (!this.items.length) return null;
       return Math.round(this.items.reduce((s, i) => s + (i.total || 0), 0) / this.items.length);
+    },
+    statItems() {
+      return [
+        { label: '练习次数', value: this.total },
+        { label: '最高得分', value: this.best == null ? '—' : this.best, tone: 'ok' },
+        { label: '平均得分', value: this.avg == null ? '—' : this.avg, tone: 'brand' },
+      ];
     },
   },
   onShow() {
@@ -87,47 +101,22 @@ export default {
 </script>
 
 <style scoped>
-.wrap { padding: 24rpx 32rpx 60rpx; }
-.stats-row { display: flex; gap: 20rpx; margin-bottom: 24rpx; }
-.stat-c { flex: 1; background: var(--card); border-radius: 24rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 26rpx 0; display: flex; flex-direction: column; align-items: center; gap: 6rpx; }
-.stat-n { font-size: 36rpx; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
-.stat-t { font-size: 24rpx; color: var(--ink-2); }
-
-.list { display: flex; flex-direction: column; gap: 18rpx; }
-.item { background: var(--card); border-radius: 24rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 24rpx 28rpx; }
-.item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
-.tag { background: #e8effe; color: var(--brand-text); font-size: 24rpx; font-weight: 600; border-radius: 8rpx; padding: 4rpx 14rpx; }
-.score { font-size: 30rpx; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
-.score.good { color: #16a34a; }
-.q { font-size: 28rpx; color: var(--ink); line-height: 1.6; }
+.wrap { padding: var(--sp-16) var(--page-x) var(--sp-48); }
+.stats { margin-bottom: var(--sp-16); }
+.list { display: flex; flex-direction: column; gap: var(--card-gap); }
+.item-top { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-8); }
+.score { font-size: var(--fs-h3); color: var(--ink); flex-shrink: 0; }
+.score.good { color: var(--ok); }
+.q { display: block; font-size: var(--fs-body); color: var(--ink); }
 .ellip2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
-.meta { font-size: 24rpx; color: var(--ink-2); margin-top: 12rpx; }
-
-.empty { display: flex; flex-direction: column; align-items: center; gap: 16rpx; padding: 120rpx 0; }
-.empty-ico { font-size: 72rpx; }
-.empty-t { font-size: 28rpx; color: var(--ink-2); }
-.retry {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 40px;
-  margin-top: 4rpx;
-  color: var(--brand-text);
-  font-size: 26rpx;
-  font-weight: 500;
-}
-.btn-primary { background: #2e5bff; color: #fff; border-radius: 999rpx; font-size: 28rpx; font-weight: 600; min-height: 44px; display: flex; align-items: center; justify-content: center; padding: 0 60rpx; margin-top: 12rpx; }
+.meta { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-8); }
+.aside-card { display: flex; flex-direction: column; gap: var(--sp-8); }
+.aside-t { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); }
+.aside-d { font-size: var(--fs-sub); color: var(--ink-3); margin-bottom: var(--sp-8); }
 
 /* #ifdef H5 */
-@media (min-width: 768px) {
-  .wrap { max-width: 1044px; margin: 0 auto; }
-  .item:hover { cursor: pointer; }
-  .btn-primary:hover { cursor: pointer; }
-}
-
 @media (min-width: 1024px) {
-  .list { display: grid; grid-template-columns: 1fr 1fr; gap: 24rpx; align-items: stretch; }
-  .item:hover { box-shadow: 0 6rpx 20rpx rgba(23, 24, 28, 0.1); }
+  .wrap { max-width: 1044px !important; }
 }
 /* #endif */
 </style>

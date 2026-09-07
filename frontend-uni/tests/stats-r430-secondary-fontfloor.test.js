@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { rule, BOX40, legacyHit, assertHitLayer } from './_w5-hit.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
 const style = (src) => src.slice(src.indexOf('<style'));
@@ -19,11 +20,17 @@ describe('R430 统计次级屏字号下限 / 热区（源文件锁）', () => {
       expect(css).not.toMatch(/font-size:\s*(?:[1-9]|1[01])(?:\.\d+)?px/);
     });
   }
-  it('mastery-map 到期错题角标随 24rpx 字号放大到 36rpx', () => {
-    expect(style(pages.masteryMap)).toMatch(/\.dot\s*\{[^}]*min-width:\s*36rpx;[^}]*height:\s*36rpx;/);
+  it('mastery-map 到期错题角标：字号 --fs-caption（12px），内盒 16px + 2px 描边（content-box）容得下「9+」', () => {
+    const dot = rule(style(pages.masteryMap), '.dot');
+    expect(dot).toMatch(/font-size:\s*var\(--fs-caption\)/);
+    expect(dot).toMatch(/min-width:\s*16px;[^}]*height:\s*16px;[^}]*line-height:\s*16px/);
+    expect(dot).toMatch(/border:\s*2px solid var\(--card\);[^}]*box-sizing:\s*content-box/);
   });
-  it('calendar 月份 ‹ › 与 weekly-report 分享面 ✕ 热区 ≥40×40px', () => {
-    expect(style(pages.calendar)).toMatch(/\.cal-btn\s*\{[^}]*min-width:\s*40px;[^}]*min-height:\s*40px;/);
-    expect(style(pages.weeklyReport)).toMatch(/\.sheet-x\s*\{[^}]*min-width:\s*40px;[^}]*min-height:\s*40px;/);
+  it('calendar 月份 ‹ › 自绘 --hit-min 方块；weekly-report 分享面换成 kg-sheet（✕ 由组件层保证）', () => {
+    assertHitLayer(expect);
+    expect(pages.calendar).toMatch(/<view class="cal-btn" role="button" aria-label="上个月"/);
+    expect(rule(style(pages.calendar), '.cal-btn')).toMatch(BOX40);
+    expect(pages.weeklyReport).toMatch(/<kg-sheet v-model="sharing" title="分享周报">/);
+    expect(legacyHit(expect, pages.weeklyReport, '.sheet-x')).toBe('componentized');
   });
 });

@@ -23,6 +23,7 @@
   "window": {
     "navigationStyle": "custom",
     "navigationBarTitleText": "错题邦",
+    "navigationBarTextStyle": "@navTxtStyle",
     "backgroundColor": "@bgColor",
     "backgroundTextStyle": "@bgTxtStyle"
   },

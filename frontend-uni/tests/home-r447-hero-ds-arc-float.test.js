@@ -3,37 +3,29 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const src = readFileSync(fileURLToPath(new URL('../src/pages/home/home.vue', import.meta.url)), 'utf8');
+const tpl = src.slice(0, src.indexOf('<script'));
 const style = src.slice(src.indexOf('<style'));
+const line = (sel) => style.split('\n').find((l) => l.startsWith(`${sel} `));
 
-describe('R447/R448 「补练往期 ›」右对齐（源文件锁）', () => {
-  it('.hero-ds-arc 绝对定位贴右：文案回包变长时不水平漂移，也不会因放不下被挤到下一行压住 hero 按钮（R448）', () => {
-    const rule = style.split('\n').find((l) => l.startsWith('.hero-ds-arc '));
-    expect(rule).toBeTruthy();
-    expect(rule).toMatch(/position:\s*absolute/);
-    expect(rule).toMatch(/right:\s*-8rpx/);
-    expect(rule).toMatch(/top:\s*50%/);
-    expect(rule).toMatch(/translateY\(-50%\)/);
-    expect(rule).not.toMatch(/float:/);
-    expect(rule).not.toMatch(/display:\s*inline-block/);
-    expect(rule).toMatch(/padding:\s*12px 8rpx/);
+// R447–R449 的问题面是「补练往期 ›」与全站同题文案同一行（文案回包变长 → 链接水平漂移 / 折行压住 hero 按钮 / 热区下伸进按钮）。
+// W5 起链接独占一行 .hero-lnk-row，放在 .hero-ds 文案之下、hero 按钮由 kg-hero-card 承载，三种重叠面结构上不再存在。
+describe('R447/R448 「补练往期 ›」不与全站同题文案争一行（源文件锁）', () => {
+  it('「补练往期 ›」在 .hero-ds 文案之外、独占 .hero-lnk-row（flex 行），不再绝对定位贴右', () => {
+    expect(tpl).toMatch(/<text v-if="dsMeta && dsDone" class="hero-ds">[^\n]*<\/text>\s*<text v-else class="hero-ds">[^\n]*<\/text>\s*<view class="hero-lnk-row">\s*<text class="hero-lnk" role="button" @click\.stop="openDailyArchive">补练往期 ›<\/text>/);
+    expect(tpl).not.toMatch(/hero-ds-arc/);
+    expect(line('.hero-lnk-row')).toMatch(/display:\s*flex/);
+    expect(line('.hero-lnk')).not.toMatch(/position:\s*absolute|float:/);
   });
-  it('.hero-ds 为定位父级并用 padding-right 给链接留位：长文案（已完成 + 名次 + 连 N 天）在 375 下在链接左侧折行而不重叠', () => {
-    const rule = style.split('\n').find((l) => l.startsWith('.hero-ds '));
-    expect(rule).toBeTruthy();
-    expect(rule).toMatch(/position:\s*relative/);
-    // 「补练往期 ›」12px 字宽 56.6px + 4px 间距 → 预留 ≥ 61px（1rpx = 0.5px）
-    const m = rule.match(/padding-right:\s*(\d+)rpx/);
-    expect(m).toBeTruthy();
-    expect(Number(m[1])).toBeGreaterThanOrEqual(122);
-    expect(Number(m[1])).toBeLessThanOrEqual(140);
+  it('.hero-ds 文案行自身不再需要定位父级 / 右侧预留', () => {
+    const ds = line('.hero-ds');
+    expect(ds).toBeTruthy();
+    expect(ds).not.toMatch(/position:\s*relative|padding-right/);
   });
-  it('.hero-ds 下外边距 ≥ 链接热区下伸量：热区（12px 内边距、对行居中）底缘不进入下方 .hero-acts 按钮（R449）', () => {
-    const ds = style.split('\n').find((l) => l.startsWith('.hero-ds '));
-    const arc = style.split('\n').find((l) => l.startsWith('.hero-ds-arc '));
-    const pad = Number(arc.match(/padding:\s*(\d+)px/)[1]);
-    // 热区底 = 行底 + (热区高 − 行高)/2 = 行底 + 上下 padding 之一 → 外边距须 ≥ padding（1rpx = 0.5px）
-    const m = ds.match(/margin:\s*-?\d+rpx 0 (\d+)rpx/);
-    expect(m).toBeTruthy();
-    expect(Number(m[1]) / 2).toBeGreaterThanOrEqual(pad);
+  it('链接热区 40px 用负外边距吸收（行高不变），不会下伸进下一行', () => {
+    const lnk = line('.hero-lnk');
+    expect(lnk).toMatch(/min-height:\s*40px/);
+    expect(lnk).toMatch(/margin:\s*-3px 0/);
+    // .hero-links 列向 gap 4px ≥ 负外边距外溢 3px
+    expect(line('.hero-links')).toMatch(/flex-direction:\s*column;\s*gap:\s*var\(--sp-4\)/);
   });
 });

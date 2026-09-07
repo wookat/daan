@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { cnWeekKey } from '../src/checkin.js';
+import { legacyHit, assertHitLayer } from './_w5-hit.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
 const stats = read('../src/pages/stats/stats.vue');
@@ -44,20 +45,16 @@ describe('R460 成长轨迹周口径 / 热力图合计窗口 / 周 tab 热区', 
     expect(fn[1]).toMatch(/today\.getDate\(\) - dow - 77\)/);
     expect(fn[1]).not.toMatch(/- 83\)/);
   });
-  it('周标签 / 百分比列不折行且宽度容得下「26年第52周」「100%（9999题）」；模块 tab 纵向热区 ≥40px', () => {
-    expect(style).toMatch(/\.gw-wk\s*\{[^}]*width:\s*150rpx;[^}]*white-space:\s*nowrap;/);
-    expect(style).toMatch(/\.gw-pct\s*\{[^}]*width:\s*180rpx;[^}]*white-space:\s*nowrap;/);
-    const tab = style.match(/\.gw-tab\s*\{([^}]*)\}/);
-    expect(tab).toBeTruthy();
-    expect(tab[1]).toMatch(/min-height:\s*40px;/);
-    expect(tab[1]).toMatch(/box-sizing:\s*border-box;/);
-    expect(tab[1]).toMatch(/display:\s*inline-flex;[^}]*align-items:\s*center;/);
+  it('周标签 / 百分比列不折行且宽度容得下「26年第52周」「100%（9999题）」（12px 下约 72 / 88 px；W5 换 px 时沿用了 R460 前的 66/76 且丢 nowrap，已恢复）；模块 tab 换成 kg-chip-row', () => {
+    expect(style).toMatch(/\.gw-wk\s*\{[^}]*font-size:\s*var\(--fs-caption\);[^}]*width:\s*75px;[^}]*flex-shrink:\s*0;[^}]*white-space:\s*nowrap;/);
+    expect(style).toMatch(/\.gw-pct\s*\{[^}]*font-size:\s*var\(--fs-caption\);[^}]*width:\s*90px;[^}]*flex-shrink:\s*0;[^}]*white-space:\s*nowrap;/);
+    expect(stats).toMatch(/<kg-chip-row v-model="gwMod" :options="gwOptions" size="sm" \/>/);
+    expect(legacyHit(expect, stats, '.gw-tab')).toBe('componentized');
+    assertHitLayer(expect);
   });
-  it('知识点地图模块 tab（375 手机态横滑行）纵向热区 ≥40px', () => {
-    const tab = mmStyle.match(/\n\.tab\s*\{([^}]*)\}/);
-    expect(tab).toBeTruthy();
-    expect(tab[1]).toMatch(/min-height:\s*40px;/);
-    expect(tab[1]).toMatch(/box-sizing:\s*border-box;/);
-    expect(tab[1]).toMatch(/display:\s*inline-flex;[^}]*align-items:\s*center;/);
+  it('知识点地图模块 tab（375 手机态横滑行）换成 kg-chip-row，纵向热区由组件层 --hit-min 保证', () => {
+    expect(mm).toMatch(/<kg-chip-row v-model="curMod" :options="modChips" class="tabs" \/>/);
+    expect(legacyHit(expect, mm, '.tab')).toBe('componentized');
+    expect(mmStyle).not.toMatch(/\n\.tab\s*\{/);
   });
 });

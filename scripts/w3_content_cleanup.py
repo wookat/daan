@@ -107,12 +107,23 @@ def show(hits: list[dict], ids: list[int]):
 
 
 def apply(conn, hits: list[dict]) -> int:
+    """乐观并发：只改写扫描后未被他人改过的行（explanation 仍等于扫描值），被并发改写的行跳过并打印。"""
     now = time.time()
+    n, skipped = 0, []
     for h in hits:
-        conn.execute("UPDATE questions SET explanation=?, updated_at=? WHERE id=?", (h["new"], now, h["id"]))
+        cur = conn.execute(
+            "UPDATE questions SET explanation=?, updated_at=? WHERE id=? AND explanation=?",
+            (h["new"], now, h["id"], h["old"]),
+        )
+        if cur.rowcount != 1:
+            skipped.append(h["id"])
+            continue
         db.rescore_question(conn, h["id"])
+        n += 1
     conn.commit()
-    return len(hits)
+    if skipped:
+        print(f"skipped (changed concurrently since scan): {len(skipped)} ids: {skipped[:SAMPLE_N]}")
+    return n
 
 
 def main():

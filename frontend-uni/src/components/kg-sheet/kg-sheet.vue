@@ -3,7 +3,7 @@
     :model-value="modelValue"
     :position="position"
     :safe-area-inset-bottom="position === 'bottom'"
-    :z-index="100"
+    :z-index="zIndex"
     custom-class="kg-sheet"
     :custom-style="sheetStyle"
     @update:model-value="$emit('update:modelValue', $event)"
@@ -24,7 +24,17 @@
 </template>
 
 <script>
-/** KgSheet（COMPONENTS §1.11）：wd-popup 封装，≥1024 自动改 dialog 形态。遮罩 --mask、层级 --z-overlay 由 tokens.generated.css 的 --wot-popup-* 决定。 */
+/** KgSheet（COMPONENTS §1.11）：wd-popup 封装，≥1024 自动改 dialog 形态。遮罩色走 --wot-overlay-bg；层级 wd-popup 只认内联 z-index prop，运行时读 --z-overlay（须压过 uni-h5 壳 tabbar/page-head 998）。 */
+const Z_OVERLAY_FALLBACK = 1000;
+
+function readZOverlay() {
+  // #ifdef H5
+  const v = parseInt(window.getComputedStyle(document.documentElement).getPropertyValue('--z-overlay'), 10);
+  if (v > 0) return v;
+  // #endif
+  return Z_OVERLAY_FALLBACK;
+}
+
 export default {
   name: 'KgSheet',
   props: {
@@ -32,7 +42,7 @@ export default {
     title: { type: String, default: '' },
   },
   emits: ['update:modelValue', 'close'],
-  data() { return { wide: false }; },
+  data() { return { wide: false, zIndex: readZOverlay() }; },
   computed: {
     position() { return this.wide ? 'center' : 'bottom'; },
     /** wd-popup 把 #fff 写死在 .wd-popup-wrapper[scoped] .wd-popup 上、深色只认 .wot-theme-dark，且 custom-class 挂在非根节点拿不到本组件 scope 属性；用内联 custom-style 让面板底色跟 --card */
@@ -66,7 +76,8 @@ export default {
 .kg-sheet__hd { display: flex; align-items: center; justify-content: space-between; padding: var(--sp-12) 0; }
 .kg-sheet__t { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); }
 .kg-sheet__x { width: var(--hit-min); height: var(--hit-min); display: flex; align-items: center; justify-content: center; margin-right: calc(-1 * var(--sp-12)); }
-.kg-sheet__body { flex: 1; min-height: 0; }
+/* H5 的 uni-scroll-view 内层 height:100% 在 max-height 弹性容器里解析为 auto，需在外层自己滚，否则长内容顶掉 footer */
+.kg-sheet__body { flex: 1; min-height: 0; overflow-y: auto; }
 .kg-sheet__ft { padding-top: var(--sp-12); }
 .kg-sheet__in.is-dialog { padding-top: var(--sp-8); }
 </style>

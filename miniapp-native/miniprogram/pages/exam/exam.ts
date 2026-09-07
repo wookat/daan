@@ -13,7 +13,7 @@ type PaperVM = ExamPaper & {
 type AttemptVM = ExamAttemptItem & { dateText: string; scoreText: string };
 
 interface Chip {
-  k: string;
+  value: string;
   label: string;
 }
 
@@ -45,11 +45,14 @@ function toVM(p: ExamPaper): PaperVM {
   };
 }
 
+const PAGE_SIZE = 20;
+
 Page({
   data: {
     loading: true,
     loadErr: '',
     papers: [] as PaperVM[],
+    pagedPapers: [] as PaperVM[],
     years: [] as Chip[],
     regions: [] as Chip[],
     year: '',
@@ -88,11 +91,12 @@ Page({
       const f = d.filters || { years: [], regions: [] };
       this.setData({
         papers,
-        years: [{ k: '', label: '全部年份' }].concat(
-          (f.years || []).map((y) => ({ k: String(y.y), label: String(y.y) }))
+        pagedPapers: papers.slice(0, PAGE_SIZE),
+        years: [{ value: '', label: '全部年份' }].concat(
+          (f.years || []).map((y) => ({ value: String(y.y), label: String(y.y) }))
         ),
-        regions: [{ k: '', label: '全部地区' }].concat(
-          (f.regions || []).map((r) => ({ k: r.r, label: r.r }))
+        regions: [{ value: '', label: '全部地区' }].concat(
+          (f.regions || []).map((r) => ({ value: r.r, label: r.r }))
         ),
       });
     } catch (e) {
@@ -100,6 +104,10 @@ Page({
     } finally {
       this.setData({ loading: false });
     }
+  },
+  onMorePapers() {
+    const n = this.data.pagedPapers.length + PAGE_SIZE;
+    this.setData({ pagedPapers: this.data.papers.slice(0, n) });
   },
   async loadAttempts() {
     try {
@@ -119,14 +127,14 @@ Page({
     this.setData({ loading: true });
     this.load();
   },
-  onYear(e: WechatMiniprogram.TouchEvent) {
-    const k = String(e.currentTarget.dataset.k ?? '');
+  onYear(e: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const k = String(e.detail.value ?? '');
     if (k === this.data.year) return;
     this.setData({ year: k, loading: true });
     this.load();
   },
-  onRegion(e: WechatMiniprogram.TouchEvent) {
-    const k = String(e.currentTarget.dataset.k ?? '');
+  onRegion(e: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const k = String(e.detail.value ?? '');
     if (k === this.data.region) return;
     this.setData({ region: k, loading: true });
     this.load();

@@ -54,7 +54,7 @@ describe('ask.vue / api.js 接线（源锁）', () => {
   it('ask 页传 questionId、按心跳更新 thinkSecs、流式卡占位用 thinkingText', () => {
     expect(ASK).toMatch(/questionId: qid,/);
     expect(ASK).toMatch(/onThinking: \(t\) => \{ live\.thinkSecs = thinkingSecs\(t\); \}/);
-    expect(ASK).toMatch(/v-else-if="r\.streaming" class="spin">\{\{ thinkingText\(r\) \}\}/);
+    expect(ASK).toMatch(/v-else-if="r\.streaming"><text class="spin">\{\{ thinkingText\(r\) \}\}<\/text>/);
     expect(ASK).not.toMatch(/class="spin">生成中…<\/view>/);
   });
   it('R421b：「存入错题本」带 question_id（题库题深链 → 错题卡「AI 详解」再问才有 redoQid/「查看原题」）', () => {

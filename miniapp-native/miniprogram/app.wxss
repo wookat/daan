@@ -8,10 +8,26 @@ page {
   color: var(--ink);
   font-size: var(--fs-body);
   font-family: var(--font-sans);
-  /* webview 下 page 无默认高度，各页 .page-scroll{flex:1;height:100%} 依赖此约束 */
+  /* webview 下 page 无默认高度；navbar + .page-scroll 纵向分配，页面本身不滚 */
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+/* 页面主体滚动区：只占 navbar 之外的剩余高度。此前各页 height:100% 会让 page 总高溢出，整页跟着滚、标题顶进状态栏 */
+.page-scroll {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+/* 动效降级：WXSS 无 `*`，且 tokens.generated.wxss 要能被组件 wxss 引入（不能带标签选择器），故标签枚举放这里 */
+@media (prefers-reduced-motion: reduce) {
+  view, text, button, image, navigator, scroll-view, swiper, swiper-item, input, textarea,
+  view::before, view::after, text::before, text::after, button::before, button::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* 下面是页面沿用的全局类，值已换成 token；页面组接入 kg-* 组件后逐步删除 */

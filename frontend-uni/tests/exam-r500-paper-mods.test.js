@@ -42,7 +42,8 @@ describe('卷库页 list.vue 源文件锁', () => {
   it('.pmods 字号 ≥24rpx 且整行独占（R470 字号下限口径）', () => {
     const css = src.slice(src.indexOf('<style'));
     const rule = (css.match(/\n\s*\.pmods \{([^}]*)\}/) || [])[1] || '';
-    expect(rule).toMatch(/font-size:\s*24rpx/);
+    // W5 token：--fs-sub = 13px（> 24rpx@375 = 12px 下限）
+    expect(rule).toMatch(/font-size:\s*(?:24rpx|var\(--fs-sub\)|var\(--fs-caption\))/);
     expect(rule).toMatch(/display:\s*block/);
     expect(rule).toMatch(/width:\s*100%/);
   });

@@ -50,6 +50,8 @@ Page({
     weekRank: [] as RankRow[],
     weekLabels: ['一', '二', '三', '四', '五', '六', '日'],
     todayIdx: 0,
+    weekEmpty: false,
+    loadErr: '',
   },
   _teamId: 0,
 
@@ -83,11 +85,23 @@ Page({
           week_n: (m.week || []).reduce((a, b) => a + b, 0),
         }))
         .sort((a, b) => b.week_n - a.week_n);
-      this.setData({ loading: false, panel: d, members, weekRank, todayIdx });
+      this.setData({
+        loading: false,
+        loadErr: '',
+        panel: d,
+        members,
+        weekRank,
+        todayIdx,
+        weekEmpty: weekRank.every((r) => !r.week_n),
+      });
     } catch (e) {
       wx.showToast({ title: (e as Error).message || '加载失败', icon: 'none' });
-      this.setData({ loading: false });
+      this.setData({ loading: false, loadErr: (e as Error).message || '网络错误' });
     }
+  },
+  onReload() {
+    this.setData({ loading: true, loadErr: '' });
+    this.load();
   },
 
   inviteText(): string {

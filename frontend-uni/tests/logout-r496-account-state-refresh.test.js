@@ -12,12 +12,15 @@ const PAGES = {
     loaders: ['loadRemote', 'loadBadges', 'loadInbox'],
     cleared: ['mistakeN = null', 'profile = null', 'growth = null', 'badgeInfo = null', 'inboxUnread = 0'],
     userField: 'user',
+    hasLogout: true,
   },
   stats: {
     src: readFileSync(new URL('../src/pages/stats/stats.vue', import.meta.url), 'utf8'),
     loaders: ['loadHeatmap', 'loadGrowth', 'loadReco', 'loadSlStats', 'loadMastery', 'loadExamTrend', 'load'],
     cleared: ['hmDays = null', 'svStreak = null', 'kmCov = null', 'examAttempts = null', 'examTarget = null', 'growth = null', 'reco = null', 'slStats = null'],
     userField: 'authUser',
+    // W5 起统计页只保留「登录 / 注册」横幅，退出入口只在个人页
+    hasLogout: false,
   },
 };
 
@@ -47,6 +50,10 @@ for (const [page, cfg] of Object.entries(PAGES)) {
     });
 
     it('doLogout 确认后只 clearAuth()，清态/重拉交给 authChanged 监听（不重复、不漏）', () => {
+      if (!cfg.hasLogout) {
+        expect(cfg.src).not.toMatch(/doLogout|退出登录/);
+        return;
+      }
       const body = block(cfg.src, 'doLogout', 4);
       const confirm = body.slice(body.indexOf('clearAuth();'));
       expect(confirm).toMatch(/clearAuth\(\);/);

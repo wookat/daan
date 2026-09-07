@@ -1,4 +1,12 @@
-import { authLogout, fetchCheckinBadges, fetchMistakes, fetchReminders, setReminder, trackEvent } from '../../api/index';
+import {
+  authLogout,
+  fetchCheckinBadges,
+  fetchGrowth,
+  fetchMistakes,
+  fetchReminders,
+  setReminder,
+  trackEvent,
+} from '../../api/index';
 import type { CheckinBadgesResp } from '../../api/types';
 import { anonUid, clearAuth, getAuthUser } from '../../utils/auth';
 import { loadPStats, streakDays } from '../../utils/stats';
@@ -29,8 +37,18 @@ Page({
     for (const k of Object.keys(s.byModule)) totalDone += s.byModule[k].done;
     this.setData({ user, avatarChar, uid: anonUid(), totalDone, streakN: streakDays() });
     this.loadBadges();
+    this.loadGrowth();
     this.loadReminder();
     this.loadMistakes();
+  },
+  // 累计刷题：服务端 answer_log 口径（与统计页/H5 同源），失败保留本机 pstats
+  async loadGrowth() {
+    try {
+      const g = await fetchGrowth();
+      if (g.total && g.total.n != null) this.setData({ totalDone: g.total.n });
+    } catch (e) {
+      /* 离线：沿用本机 pstats */
+    }
   },
   async loadMistakes() {
     try {

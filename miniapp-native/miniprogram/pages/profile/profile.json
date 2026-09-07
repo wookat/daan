@@ -1,5 +1,11 @@
 {
   "usingComponents": {
-    "navbar": "/components/navbar/index"
+    "navbar": "/components/navbar/index",
+    "l-icon": "/components/l-icon/index",
+    "kg-button": "/components/kg-button/index",
+    "kg-card": "/components/kg-card/index",
+    "kg-progress": "/components/kg-progress/index",
+    "t-cell": "tdesign-miniprogram/cell/cell",
+    "t-cell-group": "tdesign-miniprogram/cell-group/cell-group"
   }
 }

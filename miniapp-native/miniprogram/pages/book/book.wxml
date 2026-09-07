@@ -1,78 +1,71 @@
 <navbar title="错题本" />
-<!-- 复习清零庆祝态 -->
-<view wx:if="{{celebrate}}" class="cb-mask" bind:tap="onCloseCelebrate">
-  <view class="cb-card" catch:tap="noop">
-    <view class="cb-emoji">🎉</view>
-    <view class="cb-t">今日复习已清零！</view>
-    <view class="cb-s">{{celebrateN}} 道到期错题全部复习完成，遗忘曲线稳住了</view>
-    <view class="cb-btn" bind:tap="onCloseCelebrate">太棒了，继续 ›</view>
-  </view>
-</view>
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
-    <!-- 复习模式 -->
+    <!-- 复习模式（kg-question-card / kg-option-group 小程序版未落地，页内按 T3 结构实现） -->
     <block wx:if="{{reviewing && rCur}}">
-      <view class="card review">
+      <kg-card variant="raised" class="review">
         <view class="rhead">
-          <text class="tag tag-brand">{{rCur.extra ? '加练同类' : '复习'}} {{rIdx + 1}}/{{rItems.length}}</text>
-          <text class="r-exit" bind:tap="exitReview">退出复习</text>
+          <kg-tag tone="brand">{{rCur.extra ? '加练同类' : '复习'}} {{rIdx + 1}}/{{rItems.length}}</kg-tag>
+          <view class="r-exit" hover-class="r-exit--hover" bind:tap="exitReview">退出复习</view>
         </view>
-        <text class="m-q" user-select>{{rCur.question_text}}</text>
+        <text class="m-q q-text" user-select>{{rCur.question_text}}</text>
         <view wx:if="{{rLetter}}" class="r-opts {{rOpts[0].text ? 'r-opts-full' : ''}}">
           <view
             wx:for="{{rOpts}}"
             wx:key="k"
-            class="r-opt {{rOpts[0].text ? 'r-opt-full' : ''}} {{!answered ? (rMulti && picked.indexOf(item.k) > -1 ? 'rsel' : '') : rLetter.indexOf(item.k) > -1 ? 'rok' : picked.indexOf(item.k) > -1 ? 'rbad' : 'rdim'}}"
+            class="r-opt {{rOpts[0].text ? 'r-opt-full' : ''}} {{item.state ? 'r' + item.state : ''}}"
+            hover-class="{{answered ? 'none' : 'r-opt--hover'}}"
             data-opt="{{item.k}}"
             bind:tap="onReviewPick"
-          >{{item.k}}{{item.text ? '. ' + item.text : ''}}</view>
+          >
+            <text class="r-opt-k">{{item.k}}</text>
+            <text wx:if="{{item.text}}" class="r-opt-t q-text">{{item.text}}</text>
+          </view>
         </view>
         <block wx:if="{{answered}}">
           <view class="r-verdict {{wasCorrect ? 'vok' : 'vbad'}}">
-            <block wx:if="{{rCur.extra}}">{{wasCorrect ? '答对了，这个考法稳了 ✓' : '还没稳，仔细看解析'}}</block>
-            <block wx:else>{{wasCorrect ? (rCur.requeued ? '这次答对了，本轮已纠正 ✓' : '答对了！连对 ' + rStreak + ' 次') : '又错了，看解析（稍后本轮会再出现）'}}（下次复习：{{nextDays}} 天后）</block>
+            <l-icon name="{{wasCorrect ? 'circle-check' : 'circle-x'}}" size="16" tone="{{wasCorrect ? 'ok' : 'bad'}}" />
+            <text wx:if="{{rCur.extra}}">{{wasCorrect ? '答对了，这个考法稳了' : '还没稳，仔细看解析'}}</text>
+            <text wx:else>{{wasCorrect ? (rCur.requeued ? '这次答对了，本轮已纠正' : '答对了！连对 ' + rStreak + ' 次') : '又错了，看解析（稍后本轮会再出现）'}}（下次复习：{{nextDays}} 天后）</text>
           </view>
           <view wx:if="{{!wasCorrect && rCur.appended}}" class="appended-tip">已为你在本轮末尾加练 {{rCur.appended}} 道同类题</view>
           <view wx:if="{{!wasCorrect && !rCur.extra}}" class="reasons">
-            <text class="rz-t">错因自评：</text>
-            <text
-              wx:for="{{REASONS}}"
-              wx:key="*this"
-              class="rz {{rCur.error_reason === item ? 'rz-on' : ''}}"
-              data-rz="{{item}}"
-              bind:tap="onReviewReason"
-            >{{item}}</text>
+            <text class="rz-t">错因自评</text>
+            <view class="reasons-row"><kg-chip-row size="sm" options="{{reasonOpts}}" value="{{rCur.error_reason || ''}}" bind:change="onReviewReason" /></view>
           </view>
-          <text wx:if="{{rCur.explanation}}" class="m-exp" user-select>{{rCur.explanation}}</text>
-          <view class="btn-primary r-next" bind:tap="onNextReview">{{rIdx + 1 < rItems.length ? '下一题' : '完成复习'}}</view>
+          <text wx:if="{{rCur.explanation}}" class="m-exp q-text" user-select>{{rCur.explanation}}</text>
+          <view class="r-next"><kg-button variant="primary" size="lg" block bind:click="onNextReview">{{rIdx + 1 < rItems.length ? '下一题' : '完成复习'}}</kg-button></view>
         </block>
         <block wx:elif="{{rMulti}}">
           <text class="r-sj-t">多选题：选完所有选项后确认</text>
-          <view class="btn-primary r-next {{picked ? '' : 'r-dis'}}" bind:tap="onConfirmMulti">确认答案{{picked ? '（已选 ' + picked + '）' : ''}}</view>
+          <kg-button variant="primary" size="lg" block disabled="{{!picked}}" bind:click="onConfirmMulti">确认答案{{picked ? '（已选 ' + picked + '）' : ''}}</kg-button>
         </block>
         <block wx:elif="{{!rLetter}}">
           <text class="r-sj-t">先自己做，然后：</text>
           <view class="r-sj-row">
-            <view class="r-sj rsok" data-ok="1" bind:tap="onSelfJudge">我做对了</view>
-            <view class="r-sj rsbad" data-ok="0" bind:tap="onSelfJudge">我做错了</view>
+            <view class="r-sj rsok" hover-class="r-sj--hover" data-ok="1" bind:tap="onSelfJudge"><l-icon name="circle-check" size="20" tone="ok" /><text>我做对了</text></view>
+            <view class="r-sj rsbad" hover-class="r-sj--hover" data-ok="0" bind:tap="onSelfJudge"><l-icon name="circle-x" size="20" tone="bad" /><text>我做错了</text></view>
           </view>
         </block>
-      </view>
+      </kg-card>
     </block>
 
     <block wx:if="{{!reviewing}}">
-    <view wx:if="{{dueTotal > 0}}" class="duecard" bind:tap="onReviewFromCard">
+    <!-- 今日待复习 hero 条 -->
+    <view wx:if="{{dueTotal > 0}}" class="duecard" hover-class="duecard--hover" bind:tap="onReviewFromCard">
       <view class="duecard-deco" />
       <view class="duecard-l">
         <text class="duecard-t">今日待复习 {{dueTotal}} 道</text>
         <text class="duecard-s">按遗忘曲线安排 · 趁热打铁巩固一遍</text>
       </view>
-      <text class="duecard-go">开始复习</text>
+      <kg-button variant="primary" tone="inverse" size="md" bind:click="onReviewFromCard">开始复习</kg-button>
     </view>
-    <view wx:if="{{recap.total}}" class="card recap">
-      <view class="recap-h" bind:tap="onToggleRecap">
+
+    <!-- 本月复盘 -->
+    <kg-card wx:if="{{recap.total}}" variant="raised" class="recap">
+      <view class="recap-h" hover-class="r-exit--hover" bind:tap="onToggleRecap">
         <text class="recap-t">本月错题复盘 · 新增 {{recap.total}} 道</text>
-        <text class="recap-x">{{recapOpen ? '收起' : '展开'}}</text>
+        <view class="recap-x"><text>{{recapOpen ? '收起' : '展开'}}</text><l-icon name="{{recapOpen ? 'chevron-down' : 'chevron-right'}}" size="16" tone="brand-text" /></view>
       </view>
       <block wx:if="{{recapOpen}}">
         <view class="recap-sec">
@@ -80,7 +73,7 @@
           <view wx:for="{{recap.byModule}}" wx:key="name" class="recap-row">
             <text class="recap-name">{{item.name}}</text>
             <view class="recap-bar"><view class="recap-fill" style="width: {{item.pct}}%" /></view>
-            <text class="recap-n">{{item.n}}</text>
+            <text class="recap-n num">{{item.n}}</text>
           </view>
         </view>
         <view class="recap-sec">
@@ -88,177 +81,195 @@
           <view wx:for="{{recap.byReason}}" wx:key="name" class="recap-row">
             <text class="recap-name">{{item.name}}</text>
             <view class="recap-bar"><view class="recap-fill warnfill" style="width: {{item.pct}}%" /></view>
-            <text class="recap-n">{{item.n}}</text>
+            <text class="recap-n num">{{item.n}}</text>
           </view>
         </view>
         <text class="recap-tip">高频错因是提分洼地：优先复习对应模块的待掌握错题</text>
       </block>
-    </view>
+    </kg-card>
+
+    <!-- 三态切换（kg-stat-row 小程序版未落地，用 kg-segmented 承载计数） -->
     <view class="tabs">
-      <text class="tab-chip {{tab === 'todo' ? 'on' : ''}}" data-tab="todo" bind:tap="onTab">待掌握 {{todoCount}}</text>
-      <text class="tab-chip {{tab === 'done' ? 'on' : ''}}" data-tab="done" bind:tap="onTab">已掌握 {{doneCount}}</text>
-      <text class="tab-chip {{tab === 'fav' ? 'on' : ''}}" data-tab="fav" bind:tap="onTab">收藏 {{favs.length}}</text>
-      <text wx:if="{{tab !== 'fav'}}" class="filterbtn {{sortBy !== 'time' || filterMod || filterType ? 'fon' : ''}}" bind:tap="onFilterOpen">筛选</text>
+      <view class="tabs-seg"><kg-segmented options="{{tabOpts}}" value="{{tab}}" bind:change="onTab" /></view>
+      <view wx:if="{{tab !== 'fav'}}" class="filterbtn {{sortBy !== 'time' || filterMod || filterType ? 'fon' : ''}}" hover-class="filterbtn--hover" bind:tap="onFilterOpen">
+        <l-icon name="sliders-horizontal" size="20" tone="{{sortBy !== 'time' || filterMod || filterType ? 'brand-text' : 'ink-2'}}" />
+      </view>
     </view>
 
-    <view wx:if="{{tab !== 'fav'}}" class="btn-primary redo" bind:tap="onRedo">错题重练（抽 10 题）</view>
+    <view wx:if="{{tab !== 'fav' && todoCount}}" class="redo"><kg-button variant="primary" size="lg" block icon="shuffle" bind:click="onRedo">错题重练（抽 10 题）</kg-button></view>
 
-    <view wx:if="{{loading}}" class="card spin">加载中…</view>
+    <!-- 加载态 -->
+    <block wx:if="{{loading}}">
+      <kg-card wx:for="{{[1, 2, 3]}}" wx:key="*this" variant="raised" class="mrow">
+        <t-skeleton theme="paragraph" animation="gradient" />
+      </kg-card>
+    </block>
 
+    <!-- 错题列表 -->
     <block wx:if="{{!loading && tab !== 'fav'}}">
-      <view wx:if="{{!shown.length}}" class="empty">
-        <view class="eico">🎉</view>
-        <text>{{tab === 'todo' ? '暂无待掌握错题，继续刷题吧' : '还没有已掌握的错题'}}</text>
-      </view>
-      <view wx:for="{{shown}}" wx:key="id" class="card mrow" data-index="{{index}}" bind:tap="onToggle">
+      <kg-empty
+        wx:if="{{!shown.length}}"
+        icon="{{tab === 'todo' ? 'party-popper' : 'inbox'}}"
+        title="{{tab === 'todo' ? '暂无待掌握错题' : '还没有已掌握的错题'}}"
+        desc="{{tab === 'todo' ? (filterMod || filterType ? '换个筛选条件试试' : '继续刷题，答错的题会自动进入这里') : '在待掌握列表里点「标记已掌握」即可归档'}}"
+        ctaText="{{tab === 'todo' && !filterMod && !filterType ? '去刷题' : ''}}"
+        ctaTo="/pages/practice/practice"
+      />
+      <kg-card wx:for="{{shown}}" wx:key="id" variant="raised" clickable class="mrow" data-index="{{index}}" bind:click="onToggle">
         <view class="m-h">
-          <text class="tag tag-brand">{{item.modName}}</text>
-          <text wx:if="{{item.tag3_name}}" class="tag tag-gray">{{item.tag3_name}}</text>
-          <text wx:if="{{item.error_reason}}" class="tag tag-warn">{{item.error_reason}}</text>
-          <text wx:if="{{item.times > 1}}" class="tag tag-gray">错 {{item.times}} 次</text>
+          <kg-tag tone="module" module="{{item.module}}">{{item.modName}}</kg-tag>
+          <kg-tag wx:if="{{item.tag3_name}}" tone="neutral">{{item.tag3_name}}</kg-tag>
+          <kg-tag wx:if="{{item.error_reason}}" tone="warn">{{item.error_reason}}</kg-tag>
+          <kg-tag wx:if="{{item.times > 1}}" tone="bad">错 {{item.times}} 次</kg-tag>
         </view>
-        <text class="m-q">{{item.question_text}}</text>
+        <text class="m-q q-text {{item.open ? '' : 'm-q-clamp'}}">{{item.question_text}}</text>
         <view wx:if="{{item.open}}" class="m-detail">
+          <view wx:if="{{item.optList.length}}" class="m-opts">
+            <text
+              wx:for="{{item.optList}}"
+              wx:for-item="o"
+              wx:key="k"
+              class="m-opt q-text {{o.ok ? 'm-opt--ok' : ''}} {{o.bad ? 'm-opt--bad' : ''}}"
+            >{{o.k}}. {{o.v}}</text>
+          </view>
           <view class="m-ans">
             <text class="m-k">我的答案 <text class="badc">{{item.user_answer}}</text></text>
             <text class="m-k">正确答案 <text class="okc">{{item.correct_answer}}</text></text>
           </view>
-          <text wx:if="{{item.explanation}}" class="m-exp" user-select>{{item.explanation}}</text>
-          <view class="m-ops">
-            <view class="m-op" data-index="{{index}}" catch:tap="onMaster">{{item.mastered ? '移回待掌握' : '标记已掌握'}}</view>
-            <view wx:if="{{item.question_id}}" class="m-op" data-qid="{{item.question_id}}" catch:tap="onNoteOpen">笔记</view>
-            <view wx:if="{{item.question_id}}" class="m-op" data-index="{{index}}" catch:tap="onReportOpen">纠错</view>
-            <view wx:if="{{item.question_id}}" class="m-op" data-index="{{index}}" catch:tap="onShareQ">分享给队友</view>
+          <text wx:if="{{item.explanation}}" class="m-exp q-text" user-select>{{item.explanation}}</text>
+          <view class="m-ops" catch:tap="noop">
+            <kg-button variant="secondary" size="sm" icon="{{item.mastered ? 'rotate-ccw' : 'check'}}" data-index="{{index}}" bind:click="onMaster">{{item.mastered ? '移回待掌握' : '标记已掌握'}}</kg-button>
+            <kg-button wx:if="{{item.question_id}}" variant="ghost" size="sm" icon="ellipsis" data-kind="mistake" data-index="{{index}}" data-qid="{{item.question_id}}" bind:click="onOpsOpen">更多</kg-button>
           </view>
         </view>
-      </view>
+      </kg-card>
     </block>
 
+    <!-- 收藏 -->
     <block wx:if="{{!loading && tab === 'fav'}}">
       <view class="folders-row">
-        <text class="fold-chip {{folderId === null ? 'on' : ''}}" data-fid="all" bind:tap="onPickFolder">全部</text>
-        <text
+        <view class="fold-chip {{folderId === null ? 'on' : ''}}" hover-class="fold-chip--hover" data-fid="all" bind:tap="onPickFolder">全部</view>
+        <view
           wx:for="{{folders}}"
           wx:key="id"
           class="fold-chip {{folderId === item.id ? 'on' : ''}}"
+          hover-class="fold-chip--hover"
           data-fid="{{item.id}}"
           data-name="{{item.name}}"
           bind:tap="onPickFolder"
           bind:longpress="onFolderOps"
-        >{{item.icon}} {{item.name}} {{item.n}}</text>
-        <text class="fold-chip fold-new" bind:tap="onNewFolder">＋ 新建收藏夹</text>
+        >{{item.icon}} {{item.name}} <text class="fold-n num">{{item.n}}</text></view>
+        <view class="fold-chip fold-new" hover-class="fold-chip--hover" bind:tap="onNewFolder"><l-icon name="plus" size="16" tone="brand-text" /><text>新建收藏夹</text></view>
       </view>
       <text class="fold-tip">长按自建收藏夹可重命名 / 删除</text>
-      <view wx:if="{{!favs.length}}" class="empty">
-        <view class="eico">⭐</view>
-        <text>暂无收藏题目</text>
-      </view>
-      <view wx:for="{{favs}}" wx:key="id" class="card">
-        <text class="m-q">{{item.question || '题目 #' + item.id}}</text>
-        <view wx:if="{{item.note}}" class="fav-note">📝 {{item.note}}</view>
-        <view class="m-ops">
-          <view class="m-op" data-qid="{{item.id}}" catch:tap="onNoteOpen">{{item.note ? '改笔记' : '写笔记'}}</view>
-          <view class="m-op" data-module="{{item.module}}" catch:tap="onFavPractice">去练同模块</view>
-          <view class="m-op" data-qid="{{item.id}}" catch:tap="onUnfav">取消收藏</view>
+      <kg-empty wx:if="{{!favs.length}}" icon="star" title="暂无收藏题目" desc="刷题时点「收藏」，好题就会收进这里" ctaText="去刷题" ctaTo="/pages/practice/practice" />
+      <kg-card wx:for="{{favs}}" wx:key="id" variant="raised" class="mrow">
+        <text class="m-q q-text">{{item.question || '题目 #' + item.id}}</text>
+        <view wx:if="{{item.note}}" class="fav-note"><l-icon name="pen-line" size="16" tone="muted" /><text class="fav-note-t q-text">{{item.note}}</text></view>
+        <view class="m-ops" catch:tap="noop">
+          <kg-button variant="secondary" size="sm" icon="dumbbell" data-module="{{item.module}}" bind:click="onFavPractice">去练同模块</kg-button>
+          <kg-button variant="ghost" size="sm" icon="ellipsis" data-kind="fav" data-index="{{index}}" data-qid="{{item.id}}" data-note="{{item.note ? 1 : 0}}" bind:click="onOpsOpen">更多</kg-button>
         </view>
-      </view>
+      </kg-card>
     </block>
     </block>
   </view>
 </scroll-view>
 
+<!-- 复习清零庆祝态 -->
+<t-popup visible="{{celebrate}}" placement="center" bind:visible-change="onCelebrateVisible">
+  <view class="cb-card">
+    <view class="cb-ico"><l-icon name="party-popper" size="32" tone="ok" /></view>
+    <view class="cb-t">今日复习已清零！</view>
+    <view class="cb-s">{{celebrateN}} 道到期错题全部复习完成，遗忘曲线稳住了</view>
+    <view class="cb-btn"><kg-button variant="primary" size="lg" block bind:click="onCloseCelebrate">太棒了，继续</kg-button></view>
+  </view>
+</t-popup>
+
+<!-- 错题卡「更多」分组菜单 -->
+<t-popup visible="{{opsOpen}}" placement="bottom" bind:visible-change="onOpsVisible">
+  <view class="sheet">
+    <view class="sheet-handle" />
+    <view class="sheet-h">
+      <text class="sheet-t">更多操作</text>
+      <view class="sheet-x" hover-class="sheet-x--hover" bind:tap="onOpsClose"><l-icon name="x" size="24" tone="muted" /></view>
+    </view>
+    <block wx:if="{{opsKind === 'mistake'}}">
+      <t-cell-group title="学习" bordered>
+        <t-cell title="笔记" description="记方法、记陷阱，随解析展示" hover arrow data-act="note" data-qid="{{opsQid}}" bind:click="onOpsPick"><l-icon slot="left-icon" name="pen-line" size="20" tone="brand" /></t-cell>
+        <t-cell title="分享给队友" description="生成链接，答完可看大家选了啥" hover arrow data-act="share" data-index="{{opsIdx}}" bind:click="onOpsPick"><l-icon slot="left-icon" name="share-2" size="20" tone="brand" /></t-cell>
+      </t-cell-group>
+      <t-cell-group title="反馈" bordered>
+        <t-cell title="题目纠错" description="答案 / 解析 / 错字 / 图片缺失" hover arrow data-act="report" data-index="{{opsIdx}}" bind:click="onOpsPick"><l-icon slot="left-icon" name="flag" size="20" tone="warn" /></t-cell>
+      </t-cell-group>
+    </block>
+    <block wx:else>
+      <t-cell-group title="学习" bordered>
+        <t-cell title="{{opsHasNote ? '改笔记' : '写笔记'}}" hover arrow data-act="note" data-qid="{{opsQid}}" bind:click="onOpsPick"><l-icon slot="left-icon" name="pen-line" size="20" tone="brand" /></t-cell>
+      </t-cell-group>
+      <t-cell-group title="管理" bordered>
+        <t-cell title="取消收藏" hover data-act="unfav" data-qid="{{opsQid}}" bind:click="onOpsPick"><l-icon slot="left-icon" name="trash-2" size="20" tone="bad" /></t-cell>
+      </t-cell-group>
+    </block>
+  </view>
+</t-popup>
+
 <!-- 筛选与排序 -->
-<view wx:if="{{filterOpen}}" class="sheet-mask" bind:tap="onFilterClose">
-  <view class="sheet" catch:tap="noop">
+<t-popup visible="{{filterOpen}}" placement="bottom" bind:visible-change="onFilterVisible">
+  <view class="sheet">
+    <view class="sheet-handle" />
     <view class="sheet-h">
       <text class="sheet-t">筛选与排序</text>
-      <text class="sheet-x" bind:tap="onFilterClose">✕</text>
+      <view class="sheet-x" hover-class="sheet-x--hover" bind:tap="onFilterClose"><l-icon name="x" size="24" tone="muted" /></view>
     </view>
     <text class="sheet-st">排序</text>
-    <view class="chips">
-      <text
-        wx:for="{{SORTS}}"
-        wx:key="k"
-        class="chip {{sortBy === item.k ? 'on' : ''}}"
-        data-k="{{item.k}}"
-        bind:tap="onPickSort"
-      >{{item.t}}</text>
-    </view>
-    <block wx:if="{{modOptions.length}}">
+    <view class="sheet-chips"><kg-chip-row options="{{sortOpts}}" value="{{sortBy}}" bind:change="onPickSort" /></view>
+    <block wx:if="{{modOpts.length > 1}}">
       <text class="sheet-st">模块</text>
-      <view class="chips">
-        <text
-          wx:for="{{modOptions}}"
-          wx:key="*this"
-          class="chip {{filterMod === item ? 'on' : ''}}"
-          data-v="{{item}}"
-          bind:tap="onPickMod"
-        >{{item}}</text>
-      </view>
+      <view class="sheet-chips"><kg-chip-row options="{{modOpts}}" value="{{filterMod}}" bind:change="onPickMod" /></view>
     </block>
-    <block wx:if="{{typeOptions.length}}">
+    <block wx:if="{{typeOpts.length > 1}}">
       <text class="sheet-st">题型</text>
-      <view class="chips">
-        <text
-          wx:for="{{typeOptions}}"
-          wx:key="*this"
-          class="chip {{filterType === item ? 'on' : ''}}"
-          data-v="{{item}}"
-          bind:tap="onPickType"
-        >{{item}}</text>
-      </view>
+      <view class="sheet-chips"><kg-chip-row options="{{typeOpts}}" value="{{filterType}}" bind:change="onPickType" /></view>
     </block>
     <view class="sheet-row">
-      <view class="sheet-btn ghost" bind:tap="onFilterReset">重置</view>
-      <view class="sheet-btn" bind:tap="onFilterClose">完成（{{shown.length}} 题）</view>
+      <kg-button variant="ghost" size="lg" bind:click="onFilterReset">重置</kg-button>
+      <view class="sheet-row-grow"><kg-button variant="primary" size="lg" block bind:click="onFilterClose">完成（{{shown.length}} 题）</kg-button></view>
     </view>
   </view>
-</view>
+</t-popup>
 
 <!-- 题目纠错 -->
-<view wx:if="{{reportOpen}}" class="sheet-mask" bind:tap="onReportClose">
-  <view class="sheet" catch:tap="noop">
+<t-popup visible="{{reportOpen}}" placement="bottom" bind:visible-change="onReportVisible">
+  <view class="sheet">
+    <view class="sheet-handle" />
     <view class="sheet-h">
       <text class="sheet-t">题目纠错</text>
-      <text class="sheet-x" bind:tap="onReportClose">✕</text>
+      <view class="sheet-x" hover-class="sheet-x--hover" bind:tap="onReportClose"><l-icon name="x" size="24" tone="muted" /></view>
     </view>
-    <view class="chips">
-      <text
-        wx:for="{{REPORT_TYPES}}"
-        wx:key="*this"
-        class="chip {{reportType === item ? 'on' : ''}}"
-        data-t="{{item}}"
-        bind:tap="onPickReportType"
-      >{{item}}</text>
+    <text class="sheet-st">问题类型</text>
+    <view class="sheet-chips"><kg-chip-row options="{{reportTypeOpts}}" value="{{reportType}}" bind:change="onPickReportType" /></view>
+    <view class="sheet-ta">
+      <t-textarea value="{{reportDetail}}" placeholder="补充说明（选填，500 字以内）" maxlength="{{500}}" indicator autosize="{{taSize}}" bordered="{{false}}" bind:change="onReportDetail" />
     </view>
-    <textarea
-      class="sheet-ta"
-      value="{{reportDetail}}"
-      placeholder="补充说明（选填，500 字以内）"
-      maxlength="500"
-      bind:input="onReportDetail"
-    />
-    <view class="sheet-btn {{!reportType || reportBusy ? 'dis' : ''}}" bind:tap="onReportSubmit">{{reportBusy ? '提交中…' : '提交纠错'}}</view>
+    <view class="sheet-acts"><kg-button variant="primary" size="lg" block disabled="{{!reportType}}" loading="{{reportBusy}}" bind:click="onReportSubmit">提交纠错</kg-button></view>
   </view>
-</view>
+</t-popup>
 
 <!-- 题目笔记 -->
-<view wx:if="{{noteOpen}}" class="sheet-mask" bind:tap="onNoteClose">
-  <view class="sheet" catch:tap="noop">
+<t-popup visible="{{noteOpen}}" placement="bottom" bind:visible-change="onNoteVisible">
+  <view class="sheet">
+    <view class="sheet-handle" />
     <view class="sheet-h">
       <text class="sheet-t">我的笔记</text>
-      <text class="sheet-x" bind:tap="onNoteClose">✕</text>
+      <view class="sheet-x" hover-class="sheet-x--hover" bind:tap="onNoteClose"><l-icon name="x" size="24" tone="muted" /></view>
     </view>
-    <textarea
-      class="sheet-ta note-ta"
-      value="{{noteDraft}}"
-      placeholder="记下这题的方法 / 陷阱，下次遇到随解析展示"
-      maxlength="1000"
-      bind:input="onNoteInput"
-    />
+    <view class="sheet-ta note-ta">
+      <t-textarea value="{{noteDraft}}" placeholder="记下这题的方法 / 陷阱，下次遇到随解析展示" maxlength="{{1000}}" indicator autosize="{{noteTaSize}}" bordered="{{false}}" bind:change="onNoteInput" />
+    </view>
     <view class="sheet-row">
-      <view wx:if="{{noteHas}}" class="sheet-btn ghost danger" data-clear="1" bind:tap="onNoteSave">删除笔记</view>
-      <view class="sheet-btn {{noteBusy ? 'dis' : ''}}" bind:tap="onNoteSave">{{noteBusy ? '保存中…' : '保存'}}</view>
+      <kg-button wx:if="{{noteHas}}" variant="ghost" tone="bad" size="lg" icon="trash-2" data-clear="1" bind:click="onNoteSave">删除笔记</kg-button>
+      <view class="sheet-row-grow"><kg-button variant="primary" size="lg" block loading="{{noteBusy}}" bind:click="onNoteSave">保存</kg-button></view>
     </view>
   </view>
-</view>
+</t-popup>

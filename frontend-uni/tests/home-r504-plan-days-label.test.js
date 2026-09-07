@@ -35,7 +35,7 @@ describe('home.vue 今日计划头走 planDaysLabel（源锁）', () => {
 
   it('模板不再直接拼 days_left', () => {
     expect(src).not.toMatch(/距考试 \{\{ planToday\.days_left \}\}/);
-    expect(src).toMatch(/<text v-if="planDaysText" class="plan-days">\{\{ planDaysText \}\}<\/text>/);
+    expect(src).toMatch(/<text v-if="planDaysText" class="plan-(?:days|s)">\{\{ planDaysText \}\}<\/text>/);
   });
 
   it('computed planDaysText 调 planDaysLabel(days_left, phase_name)', () => {

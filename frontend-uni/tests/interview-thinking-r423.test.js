@@ -29,7 +29,8 @@ describe('interview.vue / api.js 接线（源锁）', () => {
     expect((h5.match(/feedSse\(dec\.decode\(value, \{ stream: true \}\), state, [^\n]*onDelta, onThinking\);/g) || []).length).toBe(2);
   });
   it('报告页占位读 loadingLabel，首次点评与重新生成都重置并更新 thinkSecs', () => {
-    expect(VUE).toContain('class="loading">{{ loadingLabel }}</view>');
+    // W5 起占位 = kg-skeleton + <text class="loading-t">
+    expect(VUE).toMatch(/class="loading" aria-busy="true">\s*<kg-skeleton preset="lines" \/>\s*<text class="loading-t">\{\{ loadingLabel \}\}<\/text>/);
     expect(VUE).toMatch(/loadingLabel\(\)\s*\{\s*return reviewThinkingLabel\(this\.thinkSecs\)/);
     expect((VUE.match(/onThinking: \(t\) => \{ this\.thinkSecs = thinkingSecs\(t\); \}/g) || []).length).toBe(2);
     expect((VUE.match(/this\.thinkSecs = 0;/g) || []).length).toBe(2);

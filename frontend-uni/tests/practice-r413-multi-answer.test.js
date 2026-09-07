@@ -11,10 +11,12 @@ describe('R413 多选题（answer 多字母）可作答（源文件锁）', () =
     expect(src).toMatch(/confirmMulti\(\)[\s\S]*?Object\.keys\(this\.cur\.options[\s\S]*?\.join\(''\)[\s\S]*?this\.commitPick\(k\)/);
   });
   it('选项正误标记按字母包含判断（多选正确项全部 ✓），有确认按钮且 ≥44px', () => {
-    expect(src).toMatch(/hasKey\(cur\.answer, k\)" class="omark good"/);
-    expect(src).toMatch(/hasKey\(picked, k\)" class="omark badm"/);
+    // W5 起选项走 kg-option-group：answer/picked 拆字母数组（ansKeys），多选暂存 multiSel 直接喂 modelValue，right/wrong 由 option-state.js 按包含判定
+    expect(src).toMatch(/<kg-option-group[\s\S]*?:model-value="picked \? ansKeys\(picked\) : multiSel"[\s\S]*?:answer="ansKeys\(cur\.answer\)"[\s\S]*?:multiple="isMulti"[\s\S]*?@select="pick"/);
+    expect(src).toMatch(/hasKey\(ans, k\)\s*\{/);
     expect(src).toMatch(/v-if="isMulti && !picked && !beiMode" class="multi-bar"/);
-    expect(src).toMatch(/\.multi-ok \{[^}]*min-height: 44px/);
+    // 确认按钮走 kg-button size="lg"（--btn-h-lg 44px）
+    expect(src).toMatch(/<kg-button variant="primary" size="lg" :disabled="!multiSel\.length" @click="confirmMulti">/);
     expect(src).not.toMatch(/k === this\.cur\.answer \?|k === cur\.answer"|k === picked\b/);
   });
   it('切题清空多选暂存', () => {
@@ -25,7 +27,7 @@ describe('R413 多选题（answer 多字母）可作答（源文件锁）', () =
 describe('R413 复习页作答后「下一题/确认答案」吸底（源文件锁）', () => {
   const book = readFileSync(fileURLToPath(new URL('../src/pages/book/book.vue', import.meta.url)), 'utf8');
   it('next-btn sticky 且让出 H5 TabBar 50px', () => {
-    const rule = (book.match(/\n:deep\(\.next-btn\) \{([^}]*)\}/) || [])[1] || '';
+    const rule = (book.match(/\n\.next-btn \{([^}]*)\}/) || [])[1] || '';
     expect(rule).toMatch(/position:\s*sticky/);
     expect(rule).toMatch(/bottom:\s*calc\(50px \+ env\(safe-area-inset-bottom\)/);
   });

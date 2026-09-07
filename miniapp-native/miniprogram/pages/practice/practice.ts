@@ -13,14 +13,16 @@ import type { AnswerLogItem, Question } from '../../api/types';
 import { anonUid } from '../../utils/auth';
 import { enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../utils/offline';
 import { imgUrl } from '../../utils/request';
+import { kpChain, qStatLine, sourceLabel } from '../../utils/q-stat';
 import { modName, recordStat, streakDays } from '../../utils/stats';
 
 const BADGE_MILESTONES = [3, 7, 14, 30, 60, 100];
 
 const FONT_LABELS = ['小', '标', '大'];
-const Q_FS = [28, 32, 36];
-const OPT_FS = [26, 30, 34];
-const EXP_FS = [24, 28, 32];
+// px 三档（对应 token --fs-sub / --fs-body / --fs-h3 附近）
+const Q_FS = [14, 16, 18];
+const OPT_FS = [13, 15, 17];
+const EXP_FS = [12, 14, 16];
 
 function fmtSecs(s: number): string {
   const m = Math.floor(s / 60);
@@ -56,6 +58,10 @@ Page({
     idx: 0,
     cur: null as PQuestion | null,
     curImg: '',
+    curStat: '',
+    curKp: '',
+    curSource: '',
+    loadErr: '',
     picked: '',
     right: 0,
     finished: false,
@@ -121,11 +127,23 @@ Page({
         return;
       }
       const items = d.items.map(toPQ);
-      this.setData({ loading: false, items, idx: 0, cur: items[0], curImg: imgUrl(items[0].image), picked: '', right: 0 });
+      this.setData({
+        loading: false,
+        loadErr: '',
+        items,
+        idx: 0,
+        cur: items[0],
+        curImg: imgUrl(items[0].image),
+        curStat: qStatLine(items[0]),
+        curKp: kpChain(items[0], modName(items[0].module)),
+        curSource: sourceLabel(items[0]),
+        picked: '',
+        right: 0,
+      });
       this.startTimer();
     } catch (e) {
       wx.showToast({ title: '加载失败：' + (e as Error).message, icon: 'none' });
-      this.setData({ loading: false });
+      this.setData({ loading: false, loadErr: (e as Error).message || '' });
     }
   },
 
@@ -246,7 +264,15 @@ Page({
     const { idx, items } = this.data;
     const next = idx + 1;
     if (next < items.length) {
-      this.setData({ idx: next, cur: items[next], curImg: imgUrl(items[next].image), picked: items[next]._picked || '' });
+      this.setData({
+        idx: next,
+        cur: items[next],
+        curImg: imgUrl(items[next].image),
+        curStat: qStatLine(items[next]),
+        curKp: kpChain(items[next], modName(items[next].module)),
+        curSource: sourceLabel(items[next]),
+        picked: items[next]._picked || '',
+      });
       if (!items[next]._picked) this.startTimer();
       return;
     }
@@ -261,6 +287,9 @@ Page({
       finished: true,
       cur: null,
       curImg: '',
+      curStat: '',
+      curKp: '',
+      curSource: '',
       pct: Math.round((right / items.length) * 100),
       totalSecs,
       wrongCount: items.filter((q) => q._picked && q._picked !== q.answer).length,

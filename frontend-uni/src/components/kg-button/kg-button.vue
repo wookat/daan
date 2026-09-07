@@ -60,6 +60,8 @@ export default {
 /* 非 scoped：custom-class 挂在 wd-button 根上，scoped 属性穿不进去 */
 .kg-btn { font-weight: 500; transition: background-color var(--dur-instant) var(--ease-standard), color var(--dur-instant) var(--ease-standard); }
 .kg-btn--lg { font-weight: 600; }
+/* wot medium 自带 min-width:120，行内工具位（筛选/批量）放不下且挤压同排分段控件；宽度由内容+padding 决定，与 sm/lg 一致 */
+.kg-btn.kg-btn--md { min-width: 0 !important; }
 .kg-btn.kg-btn--secondary { background: var(--brand-soft) !important; color: var(--brand-text) !important; border-color: transparent !important; }
 .kg-btn.kg-btn--secondary:active { background: var(--brand-soft-2) !important; }
 .kg-btn.kg-btn--ghost { background: var(--card) !important; color: var(--ink-2) !important; border: 1px solid var(--line) !important; }
@@ -76,9 +78,11 @@ export default {
 .kg-btn.kg-btn--tone-inverse.kg-btn--ghost { background: rgba(255, 255, 255, 0.16) !important; color: var(--on-brand) !important; border-color: transparent !important; }
 .kg-btn.is-disabled, .kg-btn[disabled] { opacity: 0.4 !important; pointer-events: none; }
 .kg-btn__in { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-8); }
-/* sm 命中区扩到 44 */
-.kg-btn--sm { position: relative; }
-.kg-btn--sm::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: var(--hit-min); transform: translateY(-50%); }
+/* sm(28)/md(36) 视觉高度不变，命中区纵向扩到 --hit-min（并排间距 ≥ sp-8 不会互相吞）。
+   uni-h5 给 button 默认 overflow:hidden 会把伸出的 ::after 裁掉，须放开 */
+.kg-btn.kg-btn--sm, .kg-btn.kg-btn--md { position: relative; overflow: visible !important; }
+/* 复用 wd-button 自带的 ::after（text 变体下它 display:none、宽 200% 做 hairline），全部覆写成命中层 */
+.kg-btn.kg-btn--sm::after, .kg-btn.kg-btn--md::after { content: ''; display: block; position: absolute; left: 0; right: 0; width: auto; top: 50%; height: var(--hit-min); border: none; transform: translateY(-50%); }
 @media (min-width: 1024px) {
   .kg-btn.kg-btn--primary:hover { background: var(--brand-press) !important; }
   .kg-btn.kg-btn--secondary:hover { background: var(--brand-soft-2) !important; }

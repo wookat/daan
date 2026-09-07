@@ -1,62 +1,64 @@
 <template>
-  <view class="wrap">
-    <view v-if="loading" class="spin">试卷加载中…</view>
+  <view class="page">
+    <kg-skeleton v-if="loading" preset="lines" />
 
-    <template v-if="!loading && items.length">
-      <view class="ex-cols">
-      <view class="ex-main">
-      <view class="topbar">
-        <text class="mod">{{ modName(cur.module) }}</text>
-        <text class="clock" :class="{ low: lowTime }">⏱ {{ fmtLeft }}</text>
-        <view class="top-btns">
-          <view class="tbtn" :class="{ on: cur._marked }" @click="toggleMark">{{ cur._marked ? '已标记' : '标记' }}</view>
+    <kg-two-col v-if="!loading && items.length">
+      <template #main>
+        <view class="topbar">
+          <kg-tag tone="module" :module="cur.module">{{ modName(cur.module) }}</kg-tag>
+          <text class="pos num">{{ idx + 1 }}/{{ items.length }}</text>
+          <view class="clock" :class="{ low: lowTime }" role="timer" aria-label="剩余时间">
+            <l-icon name="timer" :size="16" :tone="lowTime ? 'bad' : 'muted'" />
+            <text class="clock-t num">{{ fmtLeft }}</text>
+          </view>
         </view>
-      </view>
+        <kg-progress :value="idx + 1" :max="items.length" class="prog" />
 
-      <view class="meta-row"><text class="pos">{{ idx + 1 }}/{{ items.length }}</text></view>
-      <view class="progress"><view class="pfill" :style="{ width: ((idx + 1) / items.length) * 100 + '%' }"></view></view>
+        <view @touchstart="touchStart" @touchend="touchEnd">
+          <kg-question-card :q="qCard" :index="idx" :total="items.length" :font-level="fontLv" :show-meta="false">
+            <view v-if="cur.multi" class="multi-tip">多选题：可选多项{{ cur._picked ? '，已选 ' + cur._picked : '' }}，选完点「下一题」</view>
+            <kg-option-group
+              :options="optList"
+              :model-value="cur.multi ? (cur._picked || '').split('') : (cur._picked || '')"
+              :multiple="!!cur.multi"
+              :excluded="cur._excl || []"
+              :font-level="fontLv"
+              @select="pick"
+              @exclude="toggleExcl"
+            />
+          </kg-question-card>
+        </view>
 
-      <view class="card qcard" @touchstart="touchStart" @touchend="touchEnd">
-        <view
-          v-if="matInfo"
-          class="mat-fold"
-          role="button"
-          :aria-label="matOpen[idx] ? '收起材料' : '展开材料'"
-          @click="toggleMat"
+        <kg-action-bar
+          layout="answer"
+          :index="idx"
+          :total="items.length"
+          :primary-text="idx + 1 < items.length ? '下一题' : '交卷'"
+          @primary="idx + 1 < items.length ? next() : confirmSubmit()"
         >
-          <text class="mat-fold-t">📄 同上材料（与上一题相同）</text>
-          <text class="mat-fold-a">{{ matOpen[idx] ? '收起 ‹' : '展开 ›' }}</text>
-        </view>
-        <text class="q" :style="qStyle">{{ matInfo && !matOpen[idx] ? matInfo.stem : cur.question }}</text>
-        <image v-if="cur.image" :src="cur.image" class="qimg" mode="widthFix" />
-        <view v-if="cur.multi" class="multi-tip">多选题：可选多项{{ cur._picked ? '，已选 ' + cur._picked : '' }}，选完点「下一题」</view>
-        <view
-          v-for="(v, k) in cur.options"
-          :key="k"
-          class="opt"
-          :class="{ sel: (cur._picked || '').indexOf(k) !== -1, excl: (cur._excl || []).includes(k) }"
-          @click="pick(k)"
-          @longpress="toggleExcl(k)"
-        >
-          <text class="okey">{{ k }}</text>
-          <text class="otext" :style="optStyle">{{ v }}</text>
-        </view>
-      </view>
-
-      <view class="navrow">
-        <view class="nbtn" :class="{ dis: idx === 0 }" @click="prev">上一题</view>
-        <view class="nbtn acard-btn" @click="cardOpen = true">答题卡</view>
-        <view v-if="idx + 1 < items.length" class="nbtn main" @click="next">下一题</view>
-        <view v-else class="nbtn main" @click="confirmSubmit">交卷</view>
-      </view>
-      </view>
+          <template #tools>
+            <view class="kg-tool" :class="{ dis: idx === 0 }" role="button" aria-label="上一题" :aria-disabled="idx === 0 ? 'true' : 'false'" hover-class="tool-hover" @click="prev">
+              <l-icon name="chevron-left" :size="24" tone="ink-2" />
+            </view>
+            <view class="kg-tool" :class="{ on: cur._marked }" role="button" :aria-label="cur._marked ? '取消标记' : '标记本题'" :aria-pressed="cur._marked ? 'true' : 'false'" hover-class="tool-hover" @click="toggleMark">
+              <l-icon name="bookmark" :size="24" :tone="cur._marked ? 'warn' : 'ink-2'" :fill="cur._marked ? 'currentColor' : 'none'" />
+            </view>
+            <view class="kg-tool kg-tool--m" role="button" aria-label="答题卡" hover-class="tool-hover" @click="cardOpen = true">
+              <l-icon name="clipboard-list" :size="24" tone="ink-2" />
+            </view>
+          </template>
+        </kg-action-bar>
+      </template>
 
       <!-- #ifdef H5 -->
-      <view class="ex-side">
-        <view class="card side-card">
+      <template #aside>
+        <kg-card class="side-card">
           <view class="side-h">
             <text class="side-t">答题卡</text>
-            <text class="side-clock" :class="{ low: lowTime }">⏱ {{ fmtLeft }}</text>
+            <view class="clock" :class="{ low: lowTime }">
+              <l-icon name="timer" :size="16" :tone="lowTime ? 'bad' : 'muted'" />
+              <text class="clock-t num">{{ fmtLeft }}</text>
+            </view>
           </view>
           <view class="legend">
             <text class="lg"><text class="dot done"></text>已答</text>
@@ -67,47 +69,41 @@
             <view
               v-for="(q, i) in items"
               :key="i"
-              class="acard-n"
+              class="acard-n num"
               :class="{ done: q._picked, mark: q._marked, cur: i === idx }"
+              role="button"
+              :aria-label="'第 ' + (i + 1) + ' 题'"
               @click="goto(i)"
             >{{ i + 1 }}</view>
           </view>
-          <view class="acard-foot">已答 {{ answeredCount }}/{{ items.length }}</view>
-          <button class="btn" @click="confirmSubmit">交卷</button>
-          <view class="kbd-note">A–D 选择 · ←/→ 翻题 · Enter 下一题/交卷</view>
-        </view>
-      </view>
+          <text class="acard-foot">已答 {{ answeredCount }}/{{ items.length }}</text>
+          <kg-button block size="lg" @click="confirmSubmit">交卷</kg-button>
+          <text class="kbd-note">A–D 选择 · ←/→ 翻题 · Enter 下一题/交卷</text>
+        </kg-card>
+      </template>
       <!-- #endif -->
-      </view>
-    </template>
+    </kg-two-col>
 
-    <!-- 答题卡浮层 -->
-    <view v-if="cardOpen" class="mask" @click="cardOpen = false">
-      <view class="sheet" @click.stop>
-        <view class="sheet-h">
-          <text class="sheet-t">答题卡</text>
-          <view class="sheet-x" role="button" aria-label="关闭" @click="cardOpen = false"><l-icon name="x" :size="20" color="#6b7280" /></view>
-        </view>
-        <view class="legend">
-          <text class="lg"><text class="dot done"></text>已答</text>
-          <text class="lg"><text class="dot"></text>未答</text>
-          <text class="lg"><text class="dot mark"></text>标记</text>
-        </view>
-        <scroll-view scroll-y class="acard-scroll">
-          <view class="acard-grid">
-            <view
-              v-for="(q, i) in items"
-              :key="i"
-              class="acard-n"
-              :class="{ done: q._picked, mark: q._marked, cur: i === idx }"
-              @click="jumpTo(i)"
-            >{{ i + 1 }}</view>
-          </view>
-        </scroll-view>
-        <view class="acard-foot">已答 {{ answeredCount }}/{{ items.length }} · 剩余 {{ fmtLeft }}</view>
-        <button class="btn" @click="confirmSubmit">交卷</button>
+    <kg-sheet v-model="cardOpen" title="答题卡">
+      <view class="legend">
+        <text class="lg"><text class="dot done"></text>已答</text>
+        <text class="lg"><text class="dot"></text>未答</text>
+        <text class="lg"><text class="dot mark"></text>标记</text>
       </view>
-    </view>
+      <view class="acard-grid">
+        <view
+          v-for="(q, i) in items"
+          :key="i"
+          class="acard-n num"
+          :class="{ done: q._picked, mark: q._marked, cur: i === idx }"
+          role="button"
+          :aria-label="'第 ' + (i + 1) + ' 题'"
+          @click="jumpTo(i)"
+        >{{ i + 1 }}</view>
+      </view>
+      <text class="acard-foot">已答 {{ answeredCount }}/{{ items.length }} · 剩余 {{ fmtLeft }}</text>
+      <template #footer><kg-button block size="lg" @click="confirmSubmit">交卷</kg-button></template>
+    </kg-sheet>
   </view>
 </template>
 
@@ -119,9 +115,9 @@ import { splitMaterial, sameMaterial } from '../../material.js';
 import { crossedTimeAlert } from '../../exam-alert.js';
 import { toggleExcl, pickWithExcl, togglePickLetter } from '../../exam-excl.js';
 import { countAnswered, shouldPushProgress } from '../../exam-resume.js';
-import { fontSizes, normFontLv } from '../../font-size.js';
+import { normFontLv } from '../../font-size.js';
+import { MODULES, moduleLabel } from '../../module-meta.js';
 
-const MODS = { changshi: '常识判断', yanyu: '言语理解', shuliang: '数量关系', panduan: '判断推理', ziliao: '资料分析' };
 const PROG_KEY = 'examProgress';
 
 export default {
@@ -138,7 +134,6 @@ export default {
       qsecs: 0,
       qTimer: null,
       submitting: false,
-      matOpen: {},
       fontLv: normFontLv(uni.getStorageSync('fontLv')),
     };
   },
@@ -150,8 +145,22 @@ export default {
   },
   computed: {
     cur() { return this.items[this.idx] || {}; },
-    qStyle() { return { fontSize: fontSizes(this.fontLv).q }; },
-    optStyle() { return { fontSize: fontSizes(this.fontLv).opt }; },
+    /** KgQuestionCard 入参：资料分析同材料题组由组件折叠材料，其余题干原样 */
+    qCard() {
+      const q = this.cur;
+      const m = this.matInfo;
+      return {
+        id: q.id,
+        module: q.module,
+        stem: m ? m.stem : String(q.question || ''),
+        material: m ? m.material : '',
+        images: q.image ? [q.image] : [],
+      };
+    },
+    optList() {
+      const o = this.cur.options || {};
+      return Object.keys(o).map((k) => ({ key: k, text: String(o[k] == null ? '' : o[k]) }));
+    },
     matInfo() {
       const q = this.cur;
       if (!q || q.module !== 'ziliao' || this.idx === 0) return null;
@@ -229,16 +238,8 @@ export default {
     }
     // #endif
   },
-  watch: {
-    items() {
-      this.matOpen = {};
-    },
-  },
   methods: {
-    modName(m) { return MODS[m] || '行测'; },
-    toggleMat() {
-      this.matOpen = { ...this.matOpen, [this.idx]: !this.matOpen[this.idx] };
-    },
+    modName(m) { return MODULES[m] ? moduleLabel(m) : '行测'; },
     async start(opt) {
       if (!opt.mini && !opt.paper_id) {
         uni.showToast({ title: '链接缺少试卷参数，去卷库选卷', icon: 'none' });
@@ -253,7 +254,7 @@ export default {
         this.items = (d.items || []).map((q) => ({ ...q, _picked: '', _marked: false, _secs: 0 }));
         this._mini = !!opt.mini;
         this._endAt = Date.now() + d.paper.duration_min * 60 * 1000;
-        uni.setNavigationBarTitle({ title: d.paper.title.slice(0, 16) });
+        uni.setNavigationBarTitle({ title: opt.mini ? '迷你模考' : d.paper.title.slice(0, 16) });
         this.loading = false;
         this.startClock();
         this.saveProgress();
@@ -526,98 +527,44 @@ export default {
 </script>
 
 <style scoped>
-.wrap { padding: 24rpx; padding-bottom: calc(140rpx + env(safe-area-inset-bottom)); }
-.spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 60rpx 24rpx; }
-.card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
-.topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; gap: 12rpx; }
-.meta-row { display: flex; justify-content: flex-end; margin-bottom: 8rpx; }
-.pos { font-size: 24rpx; font-weight: 600; color: var(--ink-2); }
-.mod { font-size: 24rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 2rpx 12rpx; }
-.clock { font-size: 32rpx; font-weight: 700; color: #ef4444; font-variant-numeric: tabular-nums; }
-.clock.low, .side-clock.low { animation: clock-pulse 1s ease-in-out infinite; }
+.page { padding: var(--sp-16) var(--page-x) calc(var(--bar-h) + var(--sp-24) + env(safe-area-inset-bottom, 0px)); }
+.topbar { display: flex; align-items: center; gap: var(--sp-12); min-height: var(--hit-min); }
+.pos { flex: 1; font-size: var(--fs-sub); color: var(--ink-2); }
+.clock { display: inline-flex; align-items: center; gap: var(--sp-4); }
+.clock-t { font-size: var(--fs-h3); color: var(--ink); }
+.clock.low .clock-t { color: var(--bad-strong); }
+.clock.low { animation: clock-pulse 1s ease-in-out infinite; }
 @keyframes clock-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
-@media (prefers-reduced-motion: reduce) {
-  .clock.low, .side-clock.low { animation: none; }
+.prog { margin: var(--sp-8) 0 var(--sp-16); }
+.kg-tool.on { background: var(--warn-soft); }
+.kg-tool.dis { opacity: 0.4; }
+.tool-hover { background: var(--fill); }
+.legend { display: flex; gap: var(--sp-16); margin-bottom: var(--sp-12); }
+.lg { display: inline-flex; align-items: center; gap: var(--sp-4); font-size: var(--fs-caption); color: var(--ink-2); }
+.dot { width: 10px; height: 10px; border-radius: var(--r-full); background: var(--fill); border: 1px solid var(--line); display: inline-block; }
+.dot.done { background: var(--brand); border-color: var(--brand); }
+.dot.mark { background: var(--warn-soft); border-color: var(--warn); }
+.acard-grid { display: flex; flex-wrap: wrap; gap: var(--sp-8); padding: var(--sp-4) 0 var(--sp-12); }
+.acard-n {
+  width: var(--acard-cell); height: var(--acard-cell); line-height: var(--acard-cell); text-align: center; border-radius: var(--r-full);
+  background: var(--fill); border: 1px solid var(--line); font-size: var(--fs-sub); color: var(--ink-2); box-sizing: border-box;
 }
-.top-btns { display: flex; gap: 10rpx; }
-.tbtn { min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; font-size: 24rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 22rpx; background: var(--card); }
-.tbtn.on { color: #d97706; border-color: #f59e0b; background: var(--warn-soft); font-weight: 600; }
-.progress { height: 6rpx; background: #dbe6ff; border-radius: 999rpx; overflow: hidden; margin-bottom: 20rpx; }
-.pfill { height: 100%; background: linear-gradient(90deg, #5c82ff, var(--brand)); border-radius: 999rpx; transition: width 0.3s ease; }
-.q { font-size: 30rpx; line-height: 1.7; margin-bottom: 22rpx; white-space: pre-wrap; display: block; }
-.mat-fold {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #f0fdfa;
-  border: 1rpx solid #99f6e4;
-  border-radius: 12rpx;
-  padding: 14rpx 20rpx;
-  margin-bottom: 14rpx;
-}
-.mat-fold-t { font-size: 24rpx; color: #0f766e; }
-.mat-fold-a {
-  font-size: 24rpx;
-  color: #0d9488;
-  font-weight: 600;
-  flex-shrink: 0;
-  margin-left: 16rpx;
-}
-.qimg { width: 100%; border-radius: 12rpx; margin-bottom: 16rpx; background: var(--fill); }
-.opt { display: flex; align-items: center; border: 2rpx solid var(--line); border-radius: 20rpx; padding: 22rpx 24rpx; margin-bottom: 20rpx; font-size: 30rpx; line-height: 1.6; min-height: 44px; box-sizing: border-box; }
-.opt.sel { border-color: var(--brand-text); background: var(--brand-soft); }
-.multi-tip { font-size: 24rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 10rpx; padding: 10rpx 16rpx; margin-bottom: 16rpx; }
-.okey { flex-shrink: 0; width: 52rpx; height: 52rpx; line-height: 52rpx; text-align: center; border-radius: 50%; background: var(--soft-bg); color: var(--ink-2); font-weight: 600; font-size: 26rpx; margin-right: 20rpx; border: 1rpx solid var(--line); }
-.opt.sel .okey { background: var(--brand); color: #fff; border-color: var(--brand-text); }
-.opt.excl { opacity: 0.45; }
-.opt.excl .otext { text-decoration: line-through; }
-.otext { flex: 1; }
-.navrow { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: flex; gap: 16rpx; padding: 20rpx 24rpx calc(20rpx + env(safe-area-inset-bottom)); background: var(--card); border-top: 1rpx solid var(--line); }
-.nbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 28rpx; font-weight: 500; background: var(--card); }
-.nbtn.acard-btn { flex: 0 0 176rpx; border-color: var(--line); color: var(--ink-2); }
-.nbtn.main { background: var(--brand); color: #fff; }
-.nbtn.dis { opacity: 0.4; }
-.mask { position: fixed; inset: 0; background: rgba(15, 18, 25, 0.45); z-index: 90; display: flex; align-items: flex-end; }
-.sheet { width: 100%; background: var(--card); border-radius: 28rpx 28rpx 0 0; padding: 28rpx 28rpx calc(28rpx + env(safe-area-inset-bottom)); max-height: 75vh; display: flex; flex-direction: column; box-sizing: border-box; }
-.sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
-.sheet-t { font-size: 30rpx; font-weight: 600; }
-.sheet-x { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; font-size: 30rpx; color: var(--ink-2); margin: -6px -10rpx -6px 0; }
-.legend { display: flex; gap: 24rpx; margin-bottom: 16rpx; }
-.lg { display: inline-flex; align-items: center; gap: 8rpx; font-size: 24rpx; color: var(--ink-2); }
-.dot { width: 20rpx; height: 20rpx; border-radius: 50%; background: var(--soft-bg); border: 2rpx solid var(--line); display: inline-block; }
-.dot.done { background: var(--brand); border-color: var(--brand-text); }
-.dot.mark { background: var(--warn-soft); border-color: #f59e0b; }
-.acard-scroll { max-height: 40vh; }
-.acard-grid { display: flex; flex-wrap: wrap; gap: 20rpx; padding: 8rpx 0 20rpx; }
-.acard-n { width: 80rpx; height: 80rpx; min-width: 40px; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--soft-bg); border: 2rpx solid var(--line); font-size: 28rpx; font-weight: 600; color: var(--ink-2); box-sizing: border-box; }
-.acard-n.done { background: var(--brand); border-color: var(--brand-text); color: #fff; }
-.acard-n.mark { border-color: #f59e0b; }
-.acard-n.cur { box-shadow: 0 0 0 4rpx var(--brand-soft); border-color: var(--brand-text); }
-.acard-foot { text-align: center; font-size: 24rpx; color: var(--ink-2); padding: 8rpx 0 16rpx; }
-.btn { background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 28rpx; font-weight: 500; min-height: 44px; line-height: 44px; }
+.acard-n.done { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+.acard-n.mark { border-color: var(--warn); }
+.acard-n.cur { box-shadow: 0 0 0 2px var(--brand-soft-2); border-color: var(--brand); }
+.acard-foot { display: block; text-align: center; font-size: var(--fs-sub); color: var(--ink-3); padding: var(--sp-4) 0 var(--sp-12); }
 
 /* #ifdef H5 */
-.ex-side { display: none; }
-
-@media (min-width: 768px) {
-  .wrap { max-width: 1044px; margin: 0 auto; }
-  .opt:hover, .tbtn:hover, .nbtn:hover, .acard-n:hover, .btn:hover { cursor: pointer; }
-  .opt:hover { border-color: var(--brand-text); }
-}
-
+.page :deep(.kg-two__aside) { display: none; }
+.side-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-12); }
+.side-t { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); }
+.side-grid { max-height: 46vh; overflow-y: auto; }
+.kbd-note { display: block; text-align: center; font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-12); }
 @media (min-width: 1024px) {
-  .ex-cols { display: flex; gap: 32rpx; align-items: flex-start; }
-  .ex-main { flex: 1; min-width: 0; }
-  .ex-side { display: block; width: 320px; flex: none; position: sticky; top: 24rpx; }
-  .side-card { margin-bottom: 0; }
-  .side-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
-  .side-t { font-size: 30rpx; font-weight: 600; }
-  .side-clock { font-size: 28rpx; font-weight: 700; color: #ef4444; font-variant-numeric: tabular-nums; }
-  .side-grid { max-height: 46vh; overflow-y: auto; }
-  .kbd-note { text-align: center; font-size: 24rpx; color: var(--ink-2); margin-top: 16rpx; }
-  .navrow { position: static; padding: 0; background: transparent; border-top: none; margin-bottom: 24rpx; }
-  .navrow .acard-btn { display: none; }
-  .wrap { padding-bottom: 40rpx; }
+  .page { max-width: 1064px; margin: 0 auto; padding-bottom: var(--sp-24); }
+  .page :deep(.kg-two__aside) { display: block; }
+  .kg-tool, .acard-n { cursor: pointer; }
 }
 /* #endif */
 </style>
+.multi-tip { font-size: 24rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 10rpx; padding: 10rpx 16rpx; margin-bottom: 16rpx; }
