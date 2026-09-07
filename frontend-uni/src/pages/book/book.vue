@@ -1521,6 +1521,7 @@ export default {
       this.reviewing = false;
       this.clearReviewSnap();
       this.load();
+      uni.pageScrollTo({ scrollTop: 0, duration: 0 });
     },
     optClass(o) {
       if (!this.answered) return this.curMulti && (this.picked || '').includes(o) ? 'sel' : '';
