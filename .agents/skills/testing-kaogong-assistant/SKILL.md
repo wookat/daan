@@ -1748,3 +1748,10 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 有数据态占位回包要按页面的时间契约给值：plaza / inbox `fmtTime(ts)` 是 `new Date(ts*1000)`，占位必须给 **Unix 秒整数**，给毫秒或字符串会渲染 `NaN-NaN NaN:Na`（占位数据错误，不是产品缺陷）。
 - 进有数据态同时要 `route.abort()` 非 GET（inbox 进页会 `readCommentInbox()` 回写已读），保证 0 库写入。
 - 复用 sheet ✕ 负外边距法前先读该组件 `.sheet-h` 改前高度：头行本来 <28（export-confirm 22.7）时 `-6/-6` 会把头行抬到 28，要在文档如实登记而不是只写「不抬」。
+
+## R482 经验：monitor「真人行」口径与 `Script error.` 的判法
+
+- **真人 monitor 行**必须两侧交叉：中心 `GET /api/errors?site=kaogong`（key 从 VPS deploy `.env` 取、只在远端 shell 用、不打印）按 `internal=0` 初筛后，还要剔除出口在 `KG_PROBE_CIDRS`（`140.232.64.0/24`）的行——R392 之前的历史行 `internal` 全为 0，不代表真人；再用 Caddy **全部** `kaogong-origin.zalize.com-access*`（含 `.gz`）的 `POST /api/monitor/report` 按 `Cf-Connecting-Ip` / UA / `X-Kg-Probe` 归类对账，两边条数对得上才算口径闭合（R482：114 条里真人 2 条）。
+- `message="Script error."` + `stack=NULL` 是跨源脚本脱敏（规范 muted errors：`filename=""`、`error=null`），**不是本站代码抛错的证据**：本页脚本全同源（主 bundle `crossorigin`、内联 splash / route-preload），CSP 白名单里的 `career.zalize.com/nav.js` 已下线。判法：`rg "createElement\('script'"` / `rg career.zalize` 前端源码为 0 → 只能是页面外注入脚本。R482 起 `main.js` 已过滤（`isMaskedCrossOriginError`：message 匹配 ∧ 无 `error` ∧ 无 `filename`），生产复验用 `window.dispatchEvent(new ErrorEvent('error',{message:'Script error.'}))` 应 **0** 条 `/api/monitor/report`，而 `new ErrorEvent('error',{message:'Script error.',error:new Error('x')})` 或 `filename` 非空应照常上报。将来若加第三方 SDK，`<script>` 必须带 `crossorigin` 且对方返回 CORS 头，否则其报错也会被浏览器脱敏而被这道闸丢掉。
+- 中心告警阈值是 `internal=0` **≥1 条 / 15 min**（站点 1 h 节流），所以任何一条噪音真人行 = 一封告警；核「有没有发」只能查 D1 `alert_state`（无 HTTP 读接口，需 wrangler 登录态），本机没有时如实写「按代码应触发、送达未核」。
+- **部署前看宿主盘**：`deploy_h5.sh` 4/6 让行只等其它 compose build/prune 最多 300 s、超时不阻塞；若 `df` 非 root 可用已是 0（兄弟项目构建期常见），要手动中止（`kill_shell`），不要让它超时后在 0 B 盘上起重建。此时 1/6–3b 只 rsync + 预热、对运行容器无影响（dist 在镜像内，非 bind 挂载）。盘满时线上写入是否受影响用 `X-Kg-Probe: 1` 的 `POST /api/track {"event":"boot"}` 探（容器 uid 0 可用 ext4 root 保留块 ≈2.1 GB），落库后查 `growth_events` probe=1 行。
