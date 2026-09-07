@@ -1662,3 +1662,11 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 到期项脚本判「某表 X 时刻后有写入」必须先 `PRAGMA table_info` 看 `created_at` 类型：TEXT 型（`question_text_backup` 的 `'2026-08-02 …'`）与 `strftime('%s',…)` 比较是字串比较、恒真误报；只对 INTEGER 型列做 epoch 比较。
 - WAL「是否复用」不能只看字节：读 32 B 头 `ckpt_seq` + 逐帧 salt 是否与头一致（`struct.unpack('>IIIIII')`），有效帧数 < 帧槽数即已 checkpoint 复用；主库 mtime = 最近一次 checkpoint 写回时刻。
 
+
+## R467 经验：热区量测的三个假阴性来源 + 部署脚本 600 s 中止后的必做动作
+- `elementFromPoint` 命中带测试前必须 `el.scrollIntoView({block:'center'})`：目标在视口外或贴边时中心点 ±19 落到别处，会把已达标元素报成未命中（R467 第一版 `.ann-x .mg-go` 假阴性）。
+- 负外边距撑出的 40px 带会被**下方兄弟元素盖住**（`.pbadge-hit` 1440 +19、`.recap-h` 375 下半段）：这是真不命中，不是量测问题；修法 `position:relative; z-index:1`，源锁一起锁。
+- 「读数小」先看模板有没有 `@click`：`home.vue` `.tk-go` 16px 无 `@click`，外层 `.tk-row` 52 整行可点 → 不改，源锁反向锁「`.tk-go` 不含 min-height 且 `.tk-row` 挂 `@click`」防以后有人把它当漏审再抬。
+- 首页源码是 `src/pages/home/home.vue`，不是 `pages/index`（R465/R466 handoff 写错）。
+- `deploy_h5.sh` 远端 `compose up --build` 轮询上限 600 s；宿主层缓存被清（兄弟会话 `docker builder prune`）+ load >20 时 build 要 15–17 min，脚本会 FAIL 退出但 compose 仍在后台跑。**中止后**：① `ssh … 'docker compose ps' + /api/health rev` 等 rc=0；② 手工跑脚本 4c（`wrangler pages deploy`）——否则 `/` 静态层仍指旧 bundle，出现「后端新、前端旧」半发版；③ 手工跑 5b（五种 `Accept-Encoding` 都要 `application/javascript`）/ 6 回归 / perf。别第二次 `--skip-build` 去追，先看后台 compose 是否还活着（`pgrep -af 'docker compose'`）。
+- pip 层 `exit code: 4294967295` 且内核无 OOM → 先查同宿主是否有 `docker builder prune`/其它 build 并发（`ps -eo pid,etimes,cmd | grep -E 'buildkit|builder prune|compose'`），不是 requirements 问题。

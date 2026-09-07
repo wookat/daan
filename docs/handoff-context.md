@@ -2291,3 +2291,13 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 如实：375 为 360 仿真；搜索历史区 / 详情 `.d-copy` / 讨论有评论态 `.up .op .rx` / 面试 `.swap` 未在生产真实走到（源码 + dist + 源锁推断）；`.zl-link` 两行命中带 375 重叠 1.3px 登记不改；到期项脚本一次把 TEXT `created_at` 表误报为新写入已纠正（见取证 §5）。
 - 取证：`docs/iter/round-3/r466-secondary-pages-font-floor-hit-area-wal-reuse.md`；源锁 `frontend-uni/tests/secondary-r466-audit.test.js`。
 
+
+## R467（主循环页错题本 `pages/book` / 首页 `pages/home` 首次强制只读读数 → 可点元素 40px 修复；前端 2 文件 + 源锁，生产 `7e2e2b3` → `a49b52c`；部署脚本 600 s 中止后手工续跑 4c/5/6 一次）
+- 路径勘误：R465/R466 写的 `pages/index` 不存在，首页是 `src/pages/home/home.vue`。两页样式块 `<24rpx` **0 处**、生产 `<11.9px` 叶节点只剩 uni TabBar label → 字号维度无需改。
+- 热区改前一手（375/1440）：book `.seg-i` 30.4/33（`.seg` 36.2）、`.pbadge` 19.8/21（`<text @click.stop>`，`.mhead` 行=自身）、`.mg-go` 33.3/35（`@click.stop` 独立于 `.mg-row` 57 的 `toggleGroup`）、`.recap-h` 18/19、`.kbd-more` 17（桌面卡）；home `.ld-x` 22.7/23、`.ann-x` 19.8/20。**不改**：`.tk-go` 16/17 无 `@click`、外层 `.tk-row` 52.3/55 整行可点（±21 全命中）；`.searchbar` 33 是输入框在 44 行内。
+- 改法：`.pbadge` 模板包一层 `<view class="pbadge-hit" @click.stop>`（`inline-flex; min-height:40px; margin:-10px 0; max-width:40vw; position:relative; z-index:1`，`.pbadge` 保持 20px 药丸 + ellipsis、宽 146.4 同改前）；`.seg-i` 40 + `.seg padding 6→4rpx`（`.seg` 43.8 仍在 44 工具行内）；`.mg-go .recap-h(-11px, z-index) .recap-link .kbd-more(-4/-11px) .sheet-x 40×40(-6px)`；未走到态按源码补 `.rf-alt .resume-drop .manual-back .retry .sim-row`；home `.ld-x 40×40 .ann-x 40×40(-10px) .cb-go .cb-x`。`z-index:1` 是本地 dist 预检 `elementFromPoint(+19)` 被下方题干盖住后才加的。
+- 生产复验 375/1440：全部 40 / ±19 命中 ±21 不命中；`.mhead` 1440 21 / `.mg-row` 57 / `.sheet-h` 28 不抬；本地 dist 预检与生产逐项一致。本地门 vitest 657/657（+7 `tests/mainloop-r467-hitarea.test.js`，含 `.tk-go` 反向锁）/ eslint / build 绿。
+- **部署一手**：两次 `deploy_h5.sh --skip-build` 都在 600 s 轮询上限被脚本判 FAIL（compose 仍在后台跑）：第 1 次层缓存全失（`apt-get` 178 s）+ 同宿主兄弟会话 `docker builder prune -f --keep-storage 1GB` 并发、mem_avail 98 MB、load 25 → pip 层 `exit code 4294967295` rc=1（内核无 OOM，归因为推断）；第 2 次 17 min 后 rc=0，容器 00:48:06Z 起。旧容器全程 healthy 对外。**脚本中止 = 4c Pages / 5 校验 / 6 回归没跑**，线上出现「后端 `a49b52c`、`/` 仍旧 bundle `index-CbCTdalC.js`」半发版态 ~4 min，手工跑 4c 后切 `index-D6cTFb18.js`，5b/6/perf 全过（`/` 0.93 / LCP 2772；`/tiku/` 1.00）。
+- 到期项无增量（probe=0 33/1、growth 20/4、error_reason 7 / ≥09-11 0、push_subs 0、weekly 2、quick_check ok、WAL 4,124,152 B `ckpt_seq 1`、healthy 0 重启）；(c) R466 后 321 请求 404/monitor 0。宿主盘部署起点 **96% / 2.4 G**（历轮最低）→ 复验时 95% / 2.8 G。
+- 如实：375 为 360 仿真、真机未量、无 testing agent 录屏；`.recap-link .sheet-x .ann` 改前一手未取（源码推算）；book 强化卡/续练放弃/换卷/复习页、home 续练横幅未在生产走到；1440 `.recap-link` 未取到；`.mhead` 375 读 41.8 是时间标签折行（宽同改前，折行状态一致为推断）。
+- 取证：`docs/iter/round-3/r467-mainloop-book-home-hit-area.md`；源锁 `frontend-uni/tests/mainloop-r467-hitarea.test.js`。
