@@ -511,6 +511,7 @@
 import { md } from '../../md.js';
 import { request, anonUid, exportPdf, scanSheet, shareCreate, trackEvent, qShareText, shareVariant } from '../../api.js';
 import { buildBookUrl, parseBookOpts } from '../../book-url.js';
+import { setBookBadge } from '../../tabbar-badge.js';
 import { mistakePaper, paperGroups, inPaper } from '../../book-paper.js';
 import { cacheMistakes, getCachedMistakes } from '../../offline.js';
 import { qStatLine } from '../../q-stat.js';
@@ -1141,10 +1142,7 @@ export default {
         this.applyPendingKp();
         cacheMistakes(d.items, anonUid());
         this.loadMastery();
-        try {
-          if (this.dueTotal > 0) uni.setTabBarBadge({ index: 1, text: String(this.dueTotal > 99 ? '99+' : this.dueTotal) });
-          else uni.removeTabBarBadge({ index: 1 });
-        } catch (e) { /* tabBar 未就绪时忽略 */ }
+        setBookBadge(this.dueTotal);
       } catch (e) {
         if (seq !== this._loadSeq) return;
         const c = getCachedMistakes(anonUid());
