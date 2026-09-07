@@ -7,7 +7,7 @@ set -u
 LOG=/home/ubuntu/kaogong-reports/kaogong-ops.log
 mkdir -p "$(dirname "$LOG")"
 TS=$(date '+%F %T')
-# 1. 每日 DB 备份（本地保留 7 份）
+# 1. 每日 DB 备份（本地保留 3 份，30 天历史在 R2；主机 50G 盘紧张）
 BK=/home/ubuntu/kaogong-backups
 mkdir -p "$BK"
 docker exec deploy-kaogong-1 sqlite3 /data/data.db ".backup /data/daily.db" 2>/dev/null \
@@ -16,7 +16,7 @@ docker cp deploy-kaogong-1:/data/daily.db "$BK/data-$(date +%F).db" && docker ex
 gzip -f "$BK/data-$(date +%F).db"
 # 文件名为 data-YYYY-MM-DD.db.gz，按名排序即按日期排序
 # shellcheck disable=SC2012
-ls -t "$BK"/data-*.db.gz 2>/dev/null | tail -n +8 | xargs -r rm -f
+ls -t "$BK"/data-*.db.gz 2>/dev/null | tail -n +4 | xargs -r rm -f
 find "$BK" -name "pre-*.db.gz" -mtime +3 -delete 2>/dev/null
 # 1b. R2 离站上传（zalize-backups/kaogong-sqlite，保留 30 天）
 ENV_FILE=/home/ubuntu/.env

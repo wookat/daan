@@ -3,3 +3,4 @@ miniprogram/miniprogram_npm/
 miniprogram/**/*.js
 !miniprogram/**/*.config.js
 .DS_Store
+project.private.config.json

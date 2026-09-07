@@ -16,10 +16,12 @@ NOW = 1788524000.0  # 2026-09-04 12:xx UTC
 DAY = 86400
 
 
-def _line(ts, ua, uri="/tiku/q/1", status=200, kg_ua=None, ip="66.249.66.1"):
+def _line(ts, ua, uri="/tiku/q/1", status=200, kg_ua=None, ip="66.249.66.1", extra=None):
     headers = {"User-Agent": [ua], "X-Kg-Ip": [ip]}
     if kg_ua is not None:
         headers["X-Kg-Ua"] = [kg_ua]
+    for k, v in (extra or {}).items():
+        headers[k] = [v]
     return json.dumps({
         "ts": ts,
         "status": status,
@@ -238,7 +240,52 @@ def test_parse_crawler_stats_humans_summary(tmp_path):
     p.write_text(json.dumps(base))
     h = parse_crawler_stats(str(p), now=now)["humans"]
     assert h == {"api_7d": 47, "api_today": 17, "api5xx_7d": 2, "page_7d": 4, "ips_7d": 8, "ips_today": 3,
-                 "direct_7d": 0}  # R388 前的 JSON 无 direct 段→ 0
+                 "direct_7d": 0, "offhost_7d": 0}  # R388/R393 前的 JSON 无 direct/offhost 段→ 0
     base["humans"]["direct"] = {"2026-09-07": 30, "2026-09-05": 3, "2026-08-30": 999}
+    base["humans"]["offhost"] = {"2026-09-07": 5, "2026-09-01": 7, "2026-08-30": 999}
     p.write_text(json.dumps(base))
-    assert parse_crawler_stats(str(p), now=now)["humans"]["direct_7d"] == 33
+    h = parse_crawler_stats(str(p), now=now)["humans"]
+    assert h["direct_7d"] == 33 and h["offhost_7d"] == 12
+
+
+DEVIN_UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/137.0.0.0 Safari/537.36; Devin/1.0; +devin.ai")
+SITE = {"X-Forwarded-Host": "kaogong.zalize.com"}
+PREVIEW = {"X-Forwarded-Host": "kaogong-h5.pages.dev"}
+
+
+def test_humans_exclude_devin_ua_explicit_probe_header_and_preview_host():
+    """R393：Devin 自动化 UA / 校验工具 → 通用 bot；显式 X-Kg-Probe 静默剔除；非正式域名单计 offhost；
+    三者都不依赖探针网段配置。"""
+    lines = [
+        _line(NOW - 30, DEVIN_UA, "/tiku/", ip="2001:4860:7:30e::c4", extra=SITE),  # Google 预取代理转发
+        _line(NOW - 29, DEVIN_UA, "/api/notes?uid=u9", ip="140.232.64.4", extra=SITE),
+        _line(NOW - 28, "Mozilla/5.0 (compatible; Schema-Markup-Validator; +https://validator.schema.org/)",
+              "/tiku/q/234080", ip="74.125.213.41", extra=SITE),
+        _line(NOW - 27, HUMAN, "/api/track", ip="150.109.230.174", extra={**SITE, "X-Kg-Probe": "1"}),
+        _line(NOW - 26, HUMAN, "/api/track", ip="150.109.230.174", extra={**SITE, "X-Kg-Probe": "0"}),
+        _line(NOW - 25, HUMAN, "/api/home_bundle?uid=u1", ip="1.2.3.4", extra=PREVIEW),
+        _line(NOW - 24, HUMAN, "/tiku/q/1", ip="1.2.3.4", extra={"X-Forwarded-Host": "KaoGong.zalize.com"}),
+        _line(NOW - 23, HUMAN, "/api/profile?uid=u2", ip="5.6.7.8"),  # 无 X-Forwarded-Host（非 Functions 路径）照计
+        _line(NOW - DAY - 1, HUMAN, "/", ip="5.6.7.8", extra=PREVIEW),
+    ]
+    r = cs.aggregate(iter(lines), days=7, now=NOW)
+    h = r["humans"]
+    assert h["api"] == {"2026-09-04": 2}  # 带 X-Kg-Probe: 0 的 track + 无 host 头的 profile
+    assert h["page"] == {"2026-09-04": 1}
+    assert h["ips"] == {"2026-09-04": 3}
+    assert h["offhost"] == {"2026-09-04": 1, "2026-09-03": 1}
+    assert h["direct"] == {} and r["engines"] == {}
+    # 正式域名可配：预览域名也纳入时不再计 offhost
+    r2 = cs.aggregate(iter(lines), days=7, now=NOW, site_hosts=["kaogong.zalize.com", "kaogong-h5.pages.dev"])
+    assert r2["humans"]["offhost"] == {} and r2["humans"]["api"] == {"2026-09-04": 3}
+
+
+def test_bot_generic_covers_backend_probe_ua_markers():
+    """R393：后端 probe_request 的自动化 UA 签名，日报/周报的 BOT_GENERIC 必须全部能认出（两份清单不漂移）。"""
+    from app import auth
+
+    for marker in auth.PROBE_UA_MARKERS:
+        assert cs.is_generic_bot(f"Mozilla/5.0 {marker}1.0"), marker
+    for real in (HUMAN, MINIAPP, "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/137.0.0.0 Safari/537.36"):
+        assert not cs.is_generic_bot(real)

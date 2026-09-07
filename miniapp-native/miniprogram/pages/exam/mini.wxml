@@ -1,4 +1,4 @@
-<navbar title="迷你模考" back="{{true}}" />
+<navbar title="{{title}}" back="{{true}}" />
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
     <view wx:if="{{loading}}" class="card spin">试卷加载中…</view>
@@ -6,13 +6,14 @@
     <block wx:if="{{!loading && cur}}">
       <view class="topbar">
         <text class="tag tag-brand">{{idx + 1}}/{{items.length}}</text>
-        <text class="clock">⏱ {{fmtLeft}}</text>
+        <text class="clock {{lowTime ? 'low' : ''}}">⏱ {{fmtLeft}}</text>
         <text class="topinfo">已答 {{answered}}</text>
       </view>
       <view class="progress"><view class="pfill" style="width: {{((idx + 1) / items.length) * 100}}%" /></view>
 
       <view class="card">
         <text class="q" user-select>{{cur.question}}</text>
+        <image wx:if="{{cur.image}}" class="qimg" src="{{cur.image}}" mode="widthFix" bind:tap="onPreviewImg" />
         <view
           wx:for="{{cur.optList}}"
           wx:key="k"
