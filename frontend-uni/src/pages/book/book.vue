@@ -9,15 +9,16 @@
         <kg-button variant="text" size="sm" @click="exitReview">退出复习</kg-button>
       </view>
       <view class="q" :style="qStyle">{{ cur.question_text }}</view>
-      <view v-if="curLetter" class="opts">
+      <view v-if="curLetter" class="opts" :class="{ full: curOptFull }">
         <view
-          v-for="o in ['A', 'B', 'C', 'D']"
-          :key="o"
-          class="opt num"
-          :class="optClass(o)"
+          v-for="o in curOpts"
+          :key="o.k"
+          class="opt"
+          :class="[curOptFull ? 'full' : 'num', optClass(o.k)]"
           role="button"
-          @click="pick(o)"
-        >{{ o }}</view>
+          :aria-label="o.t ? o.k + '. ' + o.t : o.k"
+          @click="pick(o.k)"
+        ><text class="opt-k">{{ o.k }}</text><text v-if="o.t" class="opt-t" :style="optStyle">{{ o.t }}</text></view>
       </view>
       <view v-if="answered">
         <view class="verdict" :class="wasCorrect ? 'good' : 'badv'">
@@ -544,6 +545,7 @@ import { askQid, findAskSid } from '../../ask-link.js';
 import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid, reviewAskAnswer } from '../../review-similar.js';
 import { buildReviewSnap, parseReviewSnap } from '../../review-snap.js';
 import { reviewSummary } from '../../review-summary.js';
+import { reviewOptions, reviewOptionsFull } from '../../review-opts.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 
@@ -640,7 +642,13 @@ export default {
       return !!(this.filterMod || this.kpFilter || this.kp3Filter || this.srcFilter || this.rzFilter || this.pidFilter);
     },
     askableReview() {
-      return !!askPrefill(this.cur && this.cur.question_text, null);
+      return !!askPrefill(this.cur && this.cur.question_text, this.cur && this.cur.options);
+    },
+    curOpts() {
+      return reviewOptions(this.cur);
+    },
+    curOptFull() {
+      return reviewOptionsFull(this.curOpts);
     },
     reviewAskSeen() {
       void this.askSeenTick;
@@ -1453,7 +1461,7 @@ export default {
       uni.switchTab({ url: '/pages/ask/ask' });
     },
     askFromReview() {
-      const text = askPrefill(this.cur.question_text, null);
+      const text = askPrefill(this.cur.question_text, this.cur.options);
       if (!text) return;
       trackEvent('review_ask_click', this.cur.module || '');
       uni.setStorageSync('redoQuestion', text);
@@ -1581,7 +1589,7 @@ export default {
       uni.switchTab({ url: '/pages/ask/ask' });
     },
     redo(m) {
-      const text = askPrefill(m.question_text, null);
+      const text = askPrefill(m.question_text, m.options);
       if (!text) return;
       uni.setStorageSync('redoQuestion', text);
       const qid = askQid(m.question_id);
@@ -1911,6 +1919,10 @@ export default {
 .opt.bad { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); }
 .opt.dim { opacity: 0.4; }
 .opt.sel { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-text); }
+.opts.full { flex-direction: column; }
+.opt.full { flex: none; box-sizing: border-box; justify-content: flex-start; text-align: left; gap: var(--sp-8); padding: var(--sp-8) var(--sp-12); }
+.opt.full .opt-k { flex: none; font-weight: var(--fw-semibold); }
+.opt.full .opt-t { flex: 1; min-width: 0; line-height: var(--lh-body); word-break: break-word; }
 .verdict { font-size: var(--fs-body); font-weight: 600; margin: var(--sp-8) 0; line-height: var(--lh-body); }
 .verdict.good { color: var(--ok-strong); }
 .verdict.badv { color: var(--bad); }
