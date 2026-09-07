@@ -292,7 +292,7 @@ export default {
 .wrap { padding: 24rpx 32rpx 60rpx; }
 .card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 24rpx 28rpx; margin-bottom: 20rpx; }
 .empty { text-align: center; color: var(--ink-2); font-size: 25rpx; padding: 30rpx 0; line-height: 1.7; }
-.retry { display: inline-flex; align-items: center; min-height: 40px; margin-top: 4rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
+.retry { display: flex; align-items: center; justify-content: center; min-height: 40px; margin-top: 4rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 
 .hero { background: linear-gradient(135deg, #5b8af8, #2e5bff); border-radius: 32rpx; padding: 36rpx 32rpx; margin-bottom: 24rpx; box-shadow: 0 12rpx 36rpx rgba(46, 91, 255, 0.3); }
 .hero-t { display: flex; align-items: center; gap: 12rpx; color: #fff; font-size: 40rpx; font-weight: 800; }

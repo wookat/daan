@@ -79,7 +79,7 @@ export default {
 .empty-ico { font-size: 72rpx; }
 .empty-t { font-size: 28rpx; font-weight: 600; color: var(--ink); }
 .empty-d { font-size: 24rpx; color: var(--ink-2); }
-.retry { display: inline-flex; align-items: center; min-height: 40px; margin-top: 4rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
+.retry { display: flex; align-items: center; justify-content: center; min-height: 40px; margin-top: 4rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 
 /* #ifdef H5 */
 @media (min-width: 768px) {

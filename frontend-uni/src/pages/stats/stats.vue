@@ -932,7 +932,7 @@ export default {
 .cal-hr { display: flex; align-items: center; gap: 16rpx; }
 .h { font-size: 28rpx; font-weight: 600; margin-bottom: 14rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 20rpx; }
-.retry { display: inline-flex; align-items: center; min-height: 40px; margin-top: 4rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
+.retry { display: flex; align-items: center; justify-content: center; min-height: 40px; margin-top: 4rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 .todo-row { display: flex; align-items: center; gap: 18rpx; min-height: 112rpx; border-bottom: 1rpx solid var(--line); }
 .todo-row:last-of-type { border-bottom: none; }
 .todo-ico { width: 88rpx; height: 88rpx; border-radius: 20rpx; background: var(--brand-soft); display: flex; align-items: center; justify-content: center; font-size: 40rpx; flex-shrink: 0; }

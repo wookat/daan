@@ -317,7 +317,7 @@ export default {
 .card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
 .h { font-size: 30rpx; font-weight: 600; margin-bottom: 20rpx; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 40rpx 24rpx; }
-.retry { display: inline-flex; align-items: center; min-height: 40px; margin-top: 4rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
+.retry { display: flex; align-items: center; justify-content: center; min-height: 40px; margin-top: 4rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 .mini { display: flex; align-items: center; gap: 20rpx; background: linear-gradient(135deg, var(--warn-soft), var(--card)); border: 1rpx solid var(--line); }
 .mini-ico { flex-shrink: 0; font-size: 48rpx; }
 .mini-l { flex: 1; min-width: 0; }

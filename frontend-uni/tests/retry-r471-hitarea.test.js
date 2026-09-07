@@ -28,5 +28,15 @@ describe('R471 全仓「加载失败 → 重试 ›」文字链热区（源文�
       expect(r).toMatch(/min-height:\s*40px/);
       expect(r).not.toMatch(/min-height:\s*\d+rpx/);
     });
+
+    it(`${p.slice(SRC.length + 1)}：「加载失败：…」同容器内的 .retry 必须是块级 flex（独占一行，不与错误文案同行）`, () => {
+      const src = readFileSync(p, 'utf8');
+      const css = src.slice(src.indexOf('<style'));
+      const r = rule(css, '.retry');
+      if (/加载失败[^\n<]*<view class="retry"/.test(src)) {
+        expect(r).toMatch(/display:\s*flex/);
+        expect(r).not.toMatch(/inline-flex/);
+      }
+    });
   }
 });

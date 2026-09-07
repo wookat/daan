@@ -197,7 +197,7 @@ export default {
   font-weight: 700;
   color: var(--ink, #17181c);
 }
-.retry { display: inline-flex; align-items: center; min-height: 40px; margin-top: 4rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
+.retry { display: flex; align-items: center; justify-content: center; min-height: 40px; margin-top: 4rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 .cold-s {
   font-size: 24rpx;
   color: var(--ink-2, #5f6575);
