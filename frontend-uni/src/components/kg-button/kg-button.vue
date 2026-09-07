@@ -6,6 +6,7 @@
     :block="block"
     :loading="loading"
     :disabled="disabled"
+    :aria-disabled="disabled || loading ? 'true' : null"
     :custom-class="cls"
     @click="onClick"
   >
@@ -20,6 +21,7 @@
 /**
  * KgButton（COMPONENTS §1.1）：4 级 × 3 尺寸 × 6 态，薄封装 wd-button。
  * 高度/圆角/字号/padding 由 tokens.generated.css 的 --wot-button-* 决定；这里只翻译 variant → wot type/plain 并补 secondary/ghost/tone 的底色。
+ * H5 的 <uni-button> 不是原生 button，wd-button 的 disabled 只落 is-disabled 类，须显式 aria-disabled 才对辅助技术/axe 可见。
  */
 export const BUTTON_VARIANTS = ['primary', 'secondary', 'ghost', 'text'];
 export const BUTTON_SIZES = ['lg', 'md', 'sm'];
