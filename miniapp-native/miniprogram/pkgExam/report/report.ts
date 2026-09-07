@@ -193,6 +193,8 @@ Page({
       correct: pm[k].correct,
       pct: pm[k].n ? Math.round((pm[k].correct / pm[k].n) * 100) : 0,
       avgPct: modAvgPct(rank, k),
+      answered: pm[k].answered,
+      ansPct: pm[k].answered ? Math.round((pm[k].correct / pm[k].answered) * 100) : undefined,
     }));
     const order = (k: string) => {
       const i = MOD_ORDER.indexOf(k);
