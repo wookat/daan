@@ -356,15 +356,16 @@ export function submitDailySet(payload) {
   });
 }
 
+// 返回 Promise<boolean>：本次是否真的补投成功（调用方据此刷新「已完成」外显）
 export function flushDailySubmit() {
   const p = uni.getStorageSync(DAILY_PENDING_KEY);
-  if (!p || !p.date || !p.uid) return;
+  if (!p || !p.date || !p.uid) return Promise.resolve(false);
   const cnDay = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
   if (p.date !== cnDay) {
     uni.removeStorageSync(DAILY_PENDING_KEY);
-    return;
+    return Promise.resolve(false);
   }
-  submitDailySet(p).catch(() => {});
+  return submitDailySet(p).then(() => true).catch(() => false);
 }
 
 // 记录最近导出的试卷码（各端共用）

@@ -211,6 +211,7 @@
         <template v-else>今日全站同题 · {{ dailyStats.participants }} 人完成 · 击败 {{ dailyStats.beat_pct }}%</template>
         <template v-if="dailyStats.streak >= 2"> · 🔥 已连续参与 {{ dailyStats.streak }} 天</template>
       </view>
+      <view v-else-if="!beiMode && dailyErr" class="beat dsbeat dserr" role="button" @click="retryDailySubmit">今日全站同题 · 成绩上传失败，点此重试（回首页也会自动补传）</view>
       <view v-if="!beiMode && dailyStats && dailyBoard.length" class="dsboard">
         <view class="rr-t">今日排行榜<text v-if="dailyStats.my_rank" class="dsb-mine">我的名次：第 {{ dailyStats.my_rank }} 名</text></view>
         <view v-for="r in dailyBoard.slice(0, 10)" :key="r.rank" class="dsb-row">
@@ -444,6 +445,7 @@ export default {
       resultSent: false,
       percentile: null,
       dailyStats: null,
+      dailyErr: false,
       dailyBoard: [],
       redoReport: null,
       fixReport: null,
@@ -1317,7 +1319,12 @@ export default {
       this._dailyDate = '';
       if (!date) return;
       this._dailyDoneDate = date;
-      submitDailySet({ uid: anonUid(), nickname: pkNickname(), date, right: this.right, total: this.items.length, secs: this.totalSecs })
+      this.sendDailyResult({ uid: anonUid(), nickname: pkNickname(), date, right: this.right, total: this.items.length, secs: this.totalSecs });
+    },
+    // 成绩上报：成功挂全站成绩 + 榜；提交失败置 dailyErr 供完成页重试（payload 已在 dailyPendingSubmit，首页 onShow 也会补传）；榜失败不算失败
+    sendDailyResult(payload) {
+      this.dailyErr = false;
+      return submitDailySet(payload)
         .then((d) => {
           this.dailyStats = d;
           // #ifdef H5
@@ -1325,7 +1332,18 @@ export default {
           // #endif
           return request('/api/daily_set/board?uid=' + encodeURIComponent(anonUid())).then((b) => { this.dailyBoard = (b && b.items) || []; });
         })
-        .catch(() => {});
+        .catch(() => {
+          if (!this.dailyStats) this.dailyErr = true;
+        });
+    },
+    retryDailySubmit() {
+      const p = uni.getStorageSync('dailyPendingSubmit');
+      if (!p || !p.date || p.date !== this._dailyDoneDate) {
+        this.dailyErr = false;
+        return;
+      }
+      uni.showToast({ title: '重新上传成绩…', icon: 'none', duration: 1000 });
+      this.sendDailyResult(p);
     },
     _mapShizheng(q) {
       return {
@@ -2248,10 +2266,11 @@ export default {
       }
     },
     shareResult() {
-      if (this.dailyStats && this._dailyDoneDate) {
+      if (this._dailyDoneDate && (this.dailyStats || this.dailyErr)) {
+        const ds = this.dailyStats || {};
         let txt = '我完成了错题邦 ' + this._dailyDoneDate + ' 每日一练（全站同题 ' + this.items.length + ' 题），答对 ' + this.right + ' 题';
-        if (this.dailyStats.beat_pct != null) txt += '，击败全站 ' + this.dailyStats.beat_pct + '%';
-        if (this.dailyStats.streak >= 2) txt += '，已连续参与 ' + this.dailyStats.streak + ' 天';
+        if (ds.beat_pct != null) txt += '，击败全站 ' + ds.beat_pct + '%';
+        if (ds.streak >= 2) txt += '，已连续参与 ' + ds.streak + ' 天';
         txt += '！同题挑战我：https://kaogong.zalize.com/#/pages/practice/practice?daily=1&src=share';
         trackEvent('share_result_copy', 'practice', 'daily');
         uni.setClipboardData({
@@ -2373,6 +2392,7 @@ export default {
     async submitResult() {
       if (this.beiMode || this.resultSent || !this.items.length) return;
       this.dailyStats = null;
+      this.dailyErr = false;
       this.resultSent = true;
       this.dailyBoard = [];
       this.pushNudge = false;
@@ -2759,6 +2779,7 @@ export default {
 .multi-ok.dis { opacity: 0.45; }
 .acard-n.skip { background: var(--line); color: var(--ink-2); }
 .beat { margin-top: 10rpx; font-size: 25rpx; color: var(--brand-text); background: var(--soft-bg); border-radius: 999rpx; padding: 10rpx 26rpx; }
+.dsbeat.dserr { display: flex; align-items: center; justify-content: center; min-height: 40px; box-sizing: border-box; color: #b45309; background: #fef3c7; }
 .redoreport { width: 100%; margin-top: 24rpx; background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 18rpx; padding: 24rpx 28rpx; box-sizing: border-box; text-align: left; }
 .dsboard { width: 100%; margin-top: 24rpx; background: var(--soft-bg); border: 1rpx solid var(--line); border-radius: 18rpx; padding: 24rpx 28rpx; box-sizing: border-box; text-align: left; }
 .dsb-mine { float: right; font-size: 24rpx; font-weight: 600; color: var(--brand-text); }

@@ -661,7 +661,9 @@ export default {
     this.loadPracticeResume();
     this.loadReviewResume();
     this.loadDailySet();
-    flushDailySubmit();
+    flushDailySubmit().then((ok) => {
+      if (ok) this.syncDsDone();
+    });
     const wantSetup = uni.getStorageSync('openPlanSetup');
     if (wantSetup) {
       uni.removeStorageSync('openPlanSetup');
@@ -707,11 +709,15 @@ export default {
         .then((d) => {
           if (!d || !d.date || !(d.items || []).length) return;
           this.dsMeta = { date: d.date, participants: (d.stats && d.stats.participants) || 0 };
-          const done = uni.getStorageSync('dailyDone:' + anonUid());
-          this.dsDone = done && done.date === d.date ? done : null;
+          this.syncDsDone();
           uni.setStorageSync('dailySet', d);
         })
         .catch(() => {});
+    },
+    syncDsDone() {
+      if (!this.dsMeta) return;
+      const done = uni.getStorageSync('dailyDone:' + anonUid());
+      this.dsDone = done && done.date === this.dsMeta.date ? done : null;
     },
     goSearch() {
       uni.navigateTo({ url: '/pkgA/search/search' });
