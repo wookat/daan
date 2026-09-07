@@ -1714,3 +1714,11 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 后端单进程（`Dockerfile.runtime` uvicorn 无 `--workers`）→ 进程内字典即全局；改多 worker 前先换共享介质。请求体若加字段，合并键必须并入（当前 `body: dict` 只读 `uid`）。
 - 单测里 mock `llm.chat` 的并发用例要 `await asyncio.sleep(0)` 多轮让任务真正跑到 await（`_spin()`），否则断言早于协程进入合并点。
 - Caddy 按 IP 归因 UA 时用 `Counter` 取全量再下结论：141.11.46.193 是 `VivoBrowser`（系统浏览器）不是微信，R474 凭机型联想会错。
+
+## R476 经验：「要不要做聚合端点」先量墙钟；面试/任意功能漏斗的浏览形态判别；小程序两条官方硬约束
+- 「N 个并发请求要不要合成 1 个」不要凭请求数拍板：Playwright over CDP（`connect_over_cdp('http://localhost:29229')`，`X-Kg-Probe: 1`、探针 uid）+ `Network.emulateNetworkConditions`（4G latency 100 / 3G 300）在生产页面上量 `request→requestfinished` 的合并墙钟，同页同网况再 `fetch` 一个既有单端点作对照（脚本形态见 `/home/ubuntu/r476_fanout.py`，每网况 ≥5 轮、首轮冷启离群单列）。HTTP/2 下 9 并发 ≈ 1 RTT + 80–150 ms，收益 <1 RTT 就不值得把可独立渲染的卡片绑成最慢者决定首绘。R62 `home_bundle` 的前提是当时 origin 45 s 长尾，先核 Caddy 端点 p99/>1 s 条数确认前提还在不在。
+- Caddy 端点时延分布一次取：按 `uri.split('?')[0]` 归端点，`duration` 排序取 p50/p90/p99/max，`>1.0` 单列样本；「onShow 扇出」用同 (ip, uid) 2 s 窗口内 distinct 端点数 ≥5 聚簇即可复现每次切页的请求组。
+- 功能漏斗「有 A 请求没 B 请求」先看停留时长与前后页：同 uid 时间线里 A 后 3–6 s 下一请求已是别的页面、且 4–5 min 内十几个页面每页 2–8 s = 浏览一遍形态，不是「想做没做成」；写结论只能说「日志未观测到 B」，不立项提醒/自动续做。`interview_sessions` 只在回答成功后写入，question 请求 ≠ 面试。
+- 部署后 (c) 补量的时间 filter 用 `docker inspect -f '{{.State.StartedAt}}'` 的秒（本轮与脚本常量同秒），不要用 deploy 日志或估算。
+- 微信官方文档（`developers.weixin.qq.com/miniprogram/dev/framework/ability/network.html`）两条核过的硬约束：`wx.request` 最大并发 **10**（一页 onShow 9 连 + 飞行中 AI 长请求即顶满，多余的排队）；Referer `servicewechat.com/{appid}/{version}/` 的 `{version}=0` = 开发版/体验版/审核版三者、`devtools` = 开发者工具，报告里写「非正式版」不要写死「开发版」；进入后台 5 s 内未结束的请求回调 `fail interrupted`。
+

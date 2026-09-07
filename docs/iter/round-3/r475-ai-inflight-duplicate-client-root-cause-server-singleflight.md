@@ -92,3 +92,5 @@ probe=0 `answer_log` 33 / uid 1；growth 20 / 4；`error_reason` 7 / ≥09-11 **
 ## 8. 改动
 - `backend/app/ai_api.py`：`_ANALYSIS_INFLIGHT` + `_shared_mistake_analysis(uid, prompt)`；`api_mistake_analysis` 改调它，其余不动。
 - `backend/tests/test_mistake_analysis_singleflight.py`：新增 3 例。
+
+> R476 勘误：本文与 R474 所称「开发版」按微信官方文档（网络 › 使用限制）Referer 版本号 `0` = 开发版、体验版、审核版三者，应读作「非正式版」；结论不变。详见 `r476-postdeploy-natural-singleflight-interview-funnel-stats-fanout.md` §5。

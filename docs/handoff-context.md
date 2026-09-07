@@ -2368,3 +2368,13 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 部署：4-pre 无让行、compose build **78 s**（load 0.82 历轮最低；再证 R468 离群 = 宿主负载相关）、rev 一致、bundle 未变、7/7 200、perf 0.93/1.00。到期项无增量：probe=0 33/1、growth 20/4、error_reason 7 / ≥09-11 0、push_subs 0、weekly 2、exam_attempts probe=0 1/64、WAL 同字节、healthy 0 重启；(c) 新容器后 35 请求全本机，404/5xx/monitor 0。
 - 如实：「关弹层再点」无端侧日志/真机复现；`explain` 那对「网络切换流中断」为推断；single-flight 跨 worker 未验证（当前不需要）；141.11.46.193 与 21:41Z 小程序设备同机型是否同一台未核。
 - 待办：`explain/stream` 若再现同体飞行中重复 → 立项缓冲回放式合并；`mistakes/analysis` 请求体加字段时同步扩合并键；W8 分支合 main 时保留 `aiLoading` 守卫。
+
+## R476（R475 发版后 (c) 补量 + 自然 `mistakes/analysis` 合并命中观测 + 面试页「出题后不点评」非探针漏斗 + 成长页 9 请求扇出实测 → 只登记，0 代码不发版；生产仍 `2bad8bc`）
+- 自然 single-flight 命中**不可观测**：容器起 05:32:03Z（filter 与 `docker inspect StartedAt` 同秒）后非探针 `mistakes/analysis` 0 条；只有 R475 探针一手，不能写「已在真实用户上生效」。三条件核法挂着：同 uid 起点重叠 + duration 相近 + gzip size 全同。
+- 面试漏斗（Caddy 全文件 + `interview_sessions`）：非探针 `categories` 2 / `question` 2 / `answer*` **0** / `history` 2，两 uid（`umsagboriz4qyurnd` VivoBrowser 分享链路、`umst3tuisd7lgzaka` 原生小程序非正式版）都是 4–5 min 全站每页停 2–8 s 的浏览形态，出题后 3–4 s 即离开，`interview_sessions` 无其行 → 「出题后不点评」= 日志未观测到 answer，不是「想答没答成」，不立项续答提醒/自动点评。
+- 成长页 onShow 9 个 uid GET（H5 `pages/stats/stats.vue`；main 小程序只 2 个，W7 `w7-mp-flat-v3` 与 H5 同构 9 个）：后端 9 端点 p50 10–30 ms / p99 ≤762 ms / 全文件 >1 s 仅 3 条；生产 375 CDP 弱网仿真 9 并发墙钟 4G 中位 337 ms vs 单 `home_bundle` 182、3G 386 vs 306 → HTTP/2 下 9 并发 ≈ 1 RTT + 80–150 ms，`stats_bundle` 上限收益 <1 RTT 且会把 9 卡片绑成最慢者决定首绘 → **不立项**（R62 首页聚合的前提「origin 45 s 长尾」已随 R372/R373 消失）。
+- 小程序硬约束（微信官方文档核过）：`wx.request` 最大并发 **10**；W7 成长页 9 连 + 飞行中的 AI 长请求（20–40 s）会顶到上限排队（事发 21:42:07 = 9 + 2 条 analysis 在飞）。W7 合 main 前建议成长页 ≤8 或 AI 长请求单独计数；只登记，#619 不动 W7 文件。另「进入后台 5 s 内请求未结束回调 `fail interrupted`」——`aiLoading` 守卫在 catch 后复位可重发，服务端 single-flight 正好兜住。
+- R475 勘误：Referer 版本号 `0` = 开发版/体验版/审核版，非只「开发版」（R475 文档已加指针）。
+- 到期项 05:45–05:55Z 无增量：probe=0 33/1、growth 20/4、error_reason 7 / ≥09-11 0、push_subs 0、weekly 2、exam_attempts probe=0 1/64、WAL 同字节、healthy 0 重启；(c) 新容器后 `/assets/*` 404 / 5xx / monitor / 小程序 UA 全 0。
+- 如实：漏斗 n=2、「浏览形态」为停留时长 + 遍历时序推断、两设备是否同一人未核；扇出量测为 Chrome 侧节流（非真机/小程序）、`home_bundle` 作单请求对照非严格等体量、每网况 5 轮；0 代码无新门。取证：`docs/iter/round-3/r476-postdeploy-natural-singleflight-interview-funnel-stats-fanout.md`。下次 SOP-10 审计 ~R480。
+
