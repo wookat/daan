@@ -248,11 +248,15 @@ export default {
     this.remindTime = rs.time;
     this.themeMode = getThemeMode();
     this.offlineN = listPacks().length;
-    this.loadRemote();
-    this.loadBadges();
-    this.loadInbox();
+    this.refreshAccountData();
   },
   methods: {
+    refreshAccountData() {
+      this.user = getAuthUser();
+      this.loadRemote();
+      this.loadBadges();
+      this.loadInbox();
+    },
     maskPhone(p) {
       return p ? p.slice(0, 3) + '****' + p.slice(-4) : '';
     },
@@ -428,8 +432,12 @@ export default {
           if (!r.confirm) return;
           authLogout();
           clearAuth();
-          this.user = null;
-          this.loadRemote();
+          this.mistakeN = null;
+          this.profile = null;
+          this.growth = null;
+          this.badgeInfo = null;
+          this.inboxUnread = 0;
+          this.refreshAccountData();
           uni.showToast({ title: '已退出登录', icon: 'none' });
         },
       });

@@ -623,19 +623,22 @@ export default {
     if (this._onAuth) uni.$off('authChanged', this._onAuth);
   },
   onShow() {
-    this.authUser = getAuthUser();
-    this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
-    this.history = this.loadHist();
-    this.loadHeatmap();
-    if (this.$refs.predict) this.$refs.predict.load();
-    this.loadGrowth();
-    this.loadReco();
-    this.loadSlStats();
-    this.loadMastery();
-    this.loadExamTrend();
-    this.load();
+    this.refreshAccountData();
   },
   methods: {
+    refreshAccountData() {
+      this.authUser = getAuthUser();
+      this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
+      this.history = this.loadHist();
+      this.loadHeatmap();
+      if (this.$refs.predict) this.$refs.predict.load();
+      this.loadGrowth();
+      this.loadReco();
+      this.loadSlStats();
+      this.loadMastery();
+      this.loadExamTrend();
+      this.load();
+    },
     loadHist() {
       // 本地练习记录按当前身份隔离；无 uid 的历史记录一次性归属到当前身份（升级前设备默认单身份）
       try {
@@ -695,11 +698,15 @@ export default {
           if (!res.confirm) return;
           await authLogout();
           clearAuth();
-          this.authUser = null;
-          this.load();
-          this.loadGrowth();
-          this.loadReco();
-          this.loadSlStats();
+          this.hmDays = null;
+          this.svStreak = null;
+          this.kmCov = null;
+          this.examAttempts = null;
+          this.examTarget = null;
+          this.growth = null;
+          this.reco = null;
+          this.slStats = null;
+          this.refreshAccountData();
           uni.showToast({ title: '已退出登录', icon: 'none' });
         },
       });
