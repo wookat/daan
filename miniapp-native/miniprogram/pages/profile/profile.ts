@@ -31,6 +31,10 @@ Page({
   },
   onShow() {
     syncTabBar(this, 4);
+    this.refresh();
+  },
+  // 按当前登录态/uid 重拉全部页面数据：onShow 与退出登录后共用
+  refresh() {
     const user = getAuthUser();
     const avatarChar = user ? (user.nickname || user.phone || '用').slice(0, 1) : '游';
     const s = loadPStats();
@@ -212,7 +216,8 @@ Page({
     if (!res) return;
     await authLogout();
     clearAuth();
-    this.setData({ user: null, uid: anonUid() });
+    this.setData({ badgeInfo: null, nextMilestone: null, inboxUnread: 0, pkN: 0, mistakeN: 0, mastered: 0 });
+    this.refresh();
     wx.showToast({ title: '已退出登录', icon: 'none' });
   },
 });

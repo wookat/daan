@@ -83,7 +83,7 @@ export function postPracticeResult(
 ): Promise<PracticeResultResp> {
   return request<PracticeResultResp>('/api/practice_result', {
     method: 'POST',
-    data: { module, n, correct, secs },
+    data: { uid: anonUid(), module, n, correct, secs },
   });
 }
 

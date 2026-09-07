@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from app import db, omr
+from app import db, omr, push_api
 
 ACCOUNT_UID = "u999999"
 ANON_UID = "test-w1-guard-anon"
@@ -134,3 +134,88 @@ def test_malformed_json_body_is_not_treated_as_account_uid(client):
     r = client.post("/api/mistakes", content=b"{not json", headers={"Content-Type": "application/json"})
     assert r.status_code != 403
     assert r.status_code < 500
+
+
+# ---- W9-A：push/subscribe 是 R348-B1 后唯一绕过守卫的 JSON 端点（表单 Content-Type 不经中间件解析）----
+_PUSH_ENDPOINT = "https://push.example.test/w9-guard"
+
+
+def _push_sub(uid: str) -> dict:
+    return {"uid": uid, "sub": {"endpoint": _PUSH_ENDPOINT, "keys": {"p256dh": "k", "auth": "a"}}}
+
+
+def _push_rows(uid: str) -> int:
+    conn = db.get_conn()
+    push_api._ensure_table(conn)
+    try:
+        return conn.execute("SELECT COUNT(*) FROM push_subs WHERE uid=?", (uid,)).fetchone()[0]
+    finally:
+        conn.close()
+
+
+def _push_cleanup():
+    conn = db.get_conn()
+    conn.execute("DELETE FROM push_subs WHERE endpoint=?", (_PUSH_ENDPOINT,))
+    conn.commit()
+    conn.close()
+
+
+def _vapid_on(monkeypatch):
+    monkeypatch.setattr(push_api, "VAPID_PRIVATE", "test-private")
+    monkeypatch.setattr(push_api, "VAPID_PUBLIC", "test-public")
+
+
+def test_push_subscribe_form_content_type_account_uid_rejected(client, monkeypatch):
+    _vapid_on(monkeypatch)
+    before = _push_rows(ACCOUNT_UID)
+    r = client.post(
+        "/api/push/subscribe",
+        content=json.dumps(_push_sub(ACCOUNT_UID)).encode(),
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    assert r.status_code in (403, 422), r.text
+    assert _push_rows(ACCOUNT_UID) == before
+    r = client.post("/api/push/subscribe", json=_push_sub(ACCOUNT_UID))
+    assert r.status_code == 403, r.text
+    assert r.json()["detail"] == DENIED
+    assert _push_rows(ACCOUNT_UID) == before
+
+
+def test_push_subscribe_handler_checks_ownership_itself(monkeypatch):
+    """端点自身兜底（不依赖中间件解析出 uid）。"""
+    from fastapi import HTTPException
+
+    _vapid_on(monkeypatch)
+    with pytest.raises(HTTPException) as ei:
+        push_api.push_subscribe(_push_sub(ACCOUNT_UID), None)
+    assert ei.value.status_code == 403 and ei.value.detail == DENIED
+
+
+def test_push_subscribe_own_token_json_200_then_unsubscribe(client, monkeypatch):
+    _vapid_on(monkeypatch)
+    token, uid = _register(client, "13900000349")
+    try:
+        r = client.post("/api/push/subscribe", json=_push_sub(uid), headers={"Authorization": f"Bearer {token}"})
+        assert r.status_code == 200, r.text
+        assert _push_rows(uid) == 1
+        r = client.post("/api/push/unsubscribe", json={"endpoint": _PUSH_ENDPOINT})
+        assert r.status_code == 200, r.text
+        assert _push_rows(uid) == 0
+        r = client.post(
+            "/api/push/unsubscribe",
+            content=json.dumps({"endpoint": _PUSH_ENDPOINT}).encode(),
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+        assert r.status_code == 422, r.text
+    finally:
+        _push_cleanup()
+
+
+def test_push_subscribe_anon_uid_unaffected(client, monkeypatch):
+    _vapid_on(monkeypatch)
+    try:
+        r = client.post("/api/push/subscribe", json=_push_sub(ANON_UID))
+        assert r.status_code == 200, r.text
+        assert _push_rows(ANON_UID) == 1
+    finally:
+        _push_cleanup()

@@ -4,6 +4,7 @@ import time
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
+from starlette.concurrency import run_in_threadpool
 
 from . import auth, db, omr, pdf_export, taxonomy
 from .deps import rl
@@ -176,14 +177,14 @@ def api_paper_answers(body: dict, request: Request):
 @router.post("/api/scan_sheet")
 async def api_scan_sheet(request: Request, uid: str = Form(""), image: UploadFile = File(...)):
     # multipart 不经 guard_account_uid 中间件解析，账号 uid 归属在此校验
-    if not auth.owns_uid(uid, request.headers.get("authorization")):
+    if not await run_in_threadpool(auth.owns_uid, uid, request.headers.get("authorization")):
         raise HTTPException(403, "无权访问该账号数据，请重新登录")
     rl(request, "scan_sheet", 20, 300, uid)
     raw = await image.read()
     if len(raw) > 12 * 1024 * 1024:
         raise HTTPException(400, "图片过大，请控制在 12MB 以内")
     try:
-        rec = omr.recognize(raw)
+        rec = await run_in_threadpool(omr.recognize, raw)
     except ValueError as e:
         raise HTTPException(422, str(e))
     paper = db.get_paper_export(rec["code"])

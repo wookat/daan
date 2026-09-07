@@ -11,9 +11,9 @@ import threading
 import time
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Header, HTTPException
 
-from . import db
+from . import auth, db
 
 log = logging.getLogger("kg.push")
 router = APIRouter(prefix="/api/push")
@@ -42,11 +42,12 @@ def push_pubkey():
 
 
 @router.post("/subscribe")
-async def push_subscribe(request: Request):
+def push_subscribe(body: dict, authorization: str | None = Header(default=None)):
     if not (VAPID_PRIVATE and VAPID_PUBLIC):
         raise HTTPException(503, "推送未配置")
-    body = await request.json()
     uid = (body.get("uid") or "").strip()[:64]
+    if not auth.owns_uid(uid, authorization):
+        raise HTTPException(403, "无权访问该账号数据，请重新登录")
     sub = body.get("sub") or {}
     endpoint = (sub.get("endpoint") or "").strip()
     if not uid or not endpoint.startswith("https://") or not sub.get("keys"):
@@ -63,8 +64,7 @@ async def push_subscribe(request: Request):
 
 
 @router.post("/unsubscribe")
-async def push_unsubscribe(request: Request):
-    body = await request.json()
+def push_unsubscribe(body: dict):
     endpoint = (body.get("endpoint") or "").strip()
     if not endpoint:
         raise HTTPException(400, "缺少 endpoint")
