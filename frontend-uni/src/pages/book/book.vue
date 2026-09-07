@@ -232,7 +232,10 @@
             <text class="ai-err-t">分析失败：{{ aiErr }}</text>
             <view class="sheet-done" role="button" @click="aiAnalysis(true)">重试</view>
           </view>
-          <rich-text v-else :nodes="aiHtml" />
+          <view v-else>
+            <rich-text :nodes="aiHtml" />
+            <view class="sheet-done ai-regen" role="button" @click="aiAnalysis(true)">按当前错题重新生成</view>
+          </view>
         </view>
       </view>
       <!-- 扫描答题卡/手动录入已收进右下角 + 浮动菜单，错题列表作为页面主体 -->
@@ -1101,7 +1104,8 @@ export default {
         if (!text) throw new Error('AI 未返回内容，请稍后再试');
         this.aiHtml = md(text);
       } catch (e) {
-        this.aiErr = e.message || '请稍后重试';
+        if (this.aiHtml) uni.showToast({ title: '重新生成失败：' + (e.message || '请稍后重试'), icon: 'none' });
+        else this.aiErr = e.message || '请稍后重试';
       }
       this.aiLoading = false;
     },
@@ -1819,6 +1823,7 @@ export default {
 .ai-loading { text-align: center; color: var(--ink-2); font-size: 25rpx; padding: 60rpx 0; }
 .ai-err { padding: 40rpx 0 8rpx; text-align: center; }
 .ai-err-t { display: block; color: var(--ink-2); font-size: 25rpx; }
+.ai-regen { background: var(--brand-soft); color: var(--brand-text); }
 .mask { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 99; display: flex; align-items: flex-end; }
 /* #ifdef H5 */
 /* 错题本是 tab 页：H5 底部 TabBar（50px，z-index 998）常驻且高于 .mask，整个弹层收在 TabBar 上方（同 export-confirm.above-tabbar） */
