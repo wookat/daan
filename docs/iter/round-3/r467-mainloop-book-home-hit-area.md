@@ -60,7 +60,7 @@ R465 SKILL 新条要求每 10 轮 SOP-10 至少把 `pages/practice` `pages/book`
 | 00:10:51 | 第 1 次 `deploy_h5.sh --skip-build`：rsync 完成，远端 `compose up -d --build` 起；宿主 `mem_avail=438MB disk 2.4G(96%) load=4.64 other_builds=0` |
 | ~00:13–00:16 | 镜像层缓存不在（`#8 apt-get` 从头跑 178.5 s、`#5` 113 s）→ 推断是此前/同期兄弟会话 `docker builder prune` 清掉了 kaogong 的层缓存 |
 | 00:20:51 | 脚本 600 s 到 → FAIL 退出（线上仍 `7e2e2b3`，旧容器 healthy 未动）；现场 `mem_avail=293MB load=25.10 other_builds=2`（= 本次 compose 自身两进程，见 §1.5 R468 勘误） |
-| 00:22:05 | 手工 ssh：`docker builder prune -f --keep-storage 1GB`（PID 653735，非本仓库任何脚本）与 compose 并存；`free` avail **98 MB**；`docker system df` 挂起 >3 min |
+| 00:22:05 | ~~手工 ssh~~ **R469 勘误**：`docker builder prune -f --keep-storage 1GB`（PID 653735）是宿主 root cron `*/15` 的 `/usr/local/bin/recruit-disk-guard.sh`（盘 ≥80% 即跑），00:15:02Z 那次跑了 15 min 39 s 盖住整个 pip 层，不是兄弟会话手工（见 `r469-buildkit-cache-loss-recruit-disk-guard-prune-cron.md` §2a/2b）；`free` avail **98 MB**；`docker system df` 挂起 >3 min |
 | 00:27:27 | compose 退出 **rc=1**：`#10 RUN pip install … did not complete successfully: exit code: 4294967295`（=-1，非 pip 自身退出码；内核 20 min 内无 OOM 行）→ 推断为 buildkit 构建被并发 prune / 资源压力打断 |
 | 00:31:10 | 第 2 次 `deploy_h5.sh --skip-build`（盘 4.3G 91%、load 11.5、`other_builds=0`）；期间 ssh 一次 `Connection timed out during banner exchange`；`#10 pip` 313.5 s、`#11 COPY backend` 53 s |
 | 00:41:10 | 脚本 600 s 到 → 再 FAIL 退出（`other_builds=2` 同为自身；另见 `docker builder prune` PID 678467） |

@@ -91,7 +91,7 @@ SQLite 存于 docker volume `kaogong-data`（/data/data.db）。备份：`docker
 ## 重建容器失败时怎么归因（deploy_h5.sh 第 4 步，R431）
 宿主是 2 vCPU / 1.9 GiB、多产品共用一个 dockerd/buildkit（recruit / softcopyright / kaogong 同机
 各自 `docker compose up -d --build`），部署互相挤是常态。第 4 步现在：
-- 4-pre 打宿主快照（`deploy/host_probe.sh`：`mem_avail / disk_avail / load / other_builds`），
+- 4-pre 打宿主快照（`deploy/host_probe.sh`：`mem_avail / disk_avail / load / other_builds / prunes`），
   别家 build/up 进程在跑就等（15 s 一看，最多 300 s，超时只 WARN 不阻塞）。
 - compose 用 `setsid -f nohup bash -c 'docker compose up -d --build; echo KG_COMPOSE_EXIT rc=$?'`
   起，日志 `/tmp/kg-compose-<rev>-<utc>.log`（`/tmp/kg-compose.log` 为最新的软链），末行有退出码即

@@ -93,19 +93,22 @@ for u in "/tiku/" "/tiku/daily/" "/tiku/discuss/" "/robots.txt" "/sitemap.xml" "
 done
 
 step "4/6 重建容器（远端后台执行 + rev/StartedAt 轮询收敛，防高负载宿主 ssh 通道挂起）"
-# 4-pre 宿主快照 + 同机其它 compose build 让行：同一宿主多产品共用 dockerd/buildkit，别家 build 收尾
-# 会拖慢本家、且别家清理动作可能连带打断本家 build（R430b 首次重建在 exporting layers 被 client 侧 cancel）。
+# 4-pre 宿主快照 + 同机其它 compose build / docker prune 让行：同一宿主多产品共用 dockerd/buildkit，别家 build 收尾
+# 会拖慢本家、且别家清理动作可能连带打断本家 build（R430b 首次重建在 exporting layers 被 client 侧 cancel；
+# R467 pip 层 exit 4294967295 的 00:17–00:27Z 与同机磁盘守护 cron 00:15Z 起的 `builder prune --keep-storage 1GB` 重叠，该 cron 高水位时每 15 min 跑一次）。
 host_probe() { sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" bash -s < "$REPO_DIR/deploy/host_probe.sh" 2>/dev/null || echo "probe-failed"; }
 WAIT_DEADLINE=$((SECONDS + 300))
 while :; do
   HOST_SNAP=$(host_probe)
   echo "  host: $HOST_SNAP"
   OTHER=$(sed -n 's/.*other_builds=\([0-9]*\).*/\1/p' <<<"$HOST_SNAP")
-  [[ -z "$OTHER" || "$OTHER" == "0" || $SECONDS -ge $WAIT_DEADLINE ]] && break
-  echo "  WAIT: 宿主上有 $OTHER 个 docker compose build/up 相关进程在跑，15s 后再看（最多等 300s，超时不阻塞）"
+  PRUNES=$(sed -n 's/.*prunes=\([0-9]*\).*/\1/p' <<<"$HOST_SNAP")
+  BUSY=$(( ${OTHER:-0} + ${PRUNES:-0} ))
+  [[ "$BUSY" == "0" || $SECONDS -ge $WAIT_DEADLINE ]] && break
+  echo "  WAIT: 宿主上有 ${OTHER:-0} 个 docker compose build/up + ${PRUNES:-0} 个 docker prune/rmi 进程在跑，15s 后再看（最多等 300s，超时不阻塞）"
   sleep 15
 done
-[[ -n "$OTHER" && "$OTHER" != "0" ]] && echo "  WARN: 300s 后仍有其它 build 在跑，继续重建（并发 build 互相挤，收敛可能变慢）"
+[[ "${BUSY:-0}" != "0" ]] && echo "  WARN: 300s 后仍有其它 build/prune 在跑，继续重建（并发互相挤，层缓存可能被清、收敛变慢）"
 
 PREV_STARTED=$(sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" \
   "docker inspect deploy-kaogong-1 --format '{{.State.StartedAt}}' 2>/dev/null" || true)
