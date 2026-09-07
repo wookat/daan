@@ -19,11 +19,11 @@ describe('normFontLv', () => {
 
 describe('fontSizes', () => {
   it('three levels', () => {
-    expect(fontSizes(0)).toEqual({ q: '26rpx', opt: '25rpx' });
-    expect(fontSizes(1)).toEqual({ q: '30rpx', opt: '29rpx' });
-    expect(fontSizes(2)).toEqual({ q: '34rpx', opt: '33rpx' });
+    expect(fontSizes(0)).toEqual({ q: '26rpx', opt: '24rpx' });
+    expect(fontSizes(1)).toEqual({ q: '30rpx', opt: '28rpx' });
+    expect(fontSizes(2)).toEqual({ q: '34rpx', opt: '32rpx' });
   });
   it('invalid level uses standard', () => {
-    expect(fontSizes('big')).toEqual({ q: '30rpx', opt: '29rpx' });
+    expect(fontSizes('big')).toEqual({ q: '30rpx', opt: '28rpx' });
   });
 });
