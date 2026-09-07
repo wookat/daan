@@ -101,6 +101,7 @@ def parse_crawler_stats(path: str, now: float | None = None) -> dict | None:
         "ips_7d": _sum(hum, "ips"),
         "ips_today": int((hum.get("ips") or {}).get(today) or 0) if today else 0,
         "direct_7d": _sum(hum, "direct"),
+        "offhost_7d": _sum(hum, "offhost"),
     } if hum else None
     gen = raw.get("generated_at")
     return {

@@ -68,7 +68,10 @@ step "3/6 rsync backend/deploy/dist 到生产"
   backend deploy frontend knowledge frontend-uni/dist "$REMOTE:$REMOTE_DIR/" \
   --exclude '.git' --exclude '__pycache__' --exclude 'node_modules' --exclude '.env')
 
-step "3b 边缘缓存预热（重建前刷新入口级可缓存副本，容器重建窗口内 stale-if-error 必有副本可退）"
+# caches.default 按机房独立（不跨机房复制），本步只刷本机所在机房（生产 VPS→ICN）的副本：
+# 保护的是重建窗口内 VPS 自身 cron/脚本的请求；引擎与真人所在机房的 stale-if-error 副本
+# 来自它们各自的历史访问，不受本步影响（取证见 docs/iter/round-3/r395-edge-swr-stale-evidence.md）。
+step "3b 边缘缓存预热（重建前刷新入口级可缓存副本，仅本机所在机房）"
 for u in "/tiku/" "/tiku/daily/" "/tiku/discuss/" "/robots.txt" "/sitemap.xml" "/llms.txt" \
          "/tiku/yanyu/" "/tiku/changshi/" "/tiku/panduan/" "/tiku/shuliang/" \
          "/tiku/ziliao/" "/tiku/shenlun/" \

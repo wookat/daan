@@ -5,6 +5,8 @@ import type {
   AuthResp,
   CheckinBadgesResp,
   CheckinSummaryResp,
+  ExamAttemptItem,
+  ExamPapersResp,
   ExamReportResp,
   ExamRankResp,
   ExamStartResp,
@@ -278,27 +280,58 @@ export function fetchPaperQuestions(source: string): Promise<QuestionsResp> {
   return request<QuestionsResp>('/api/paper_questions?src=' + encodeURIComponent(source));
 }
 
-export function examStart(): Promise<ExamStartResp> {
+export function fetchExamPapers(p: { year?: number | null; region?: string | null } = {}): Promise<ExamPapersResp> {
+  let q = '/api/exam/papers?kind=zhenti&uid=' + encodeURIComponent(anonUid());
+  if (p.year) q += '&year=' + p.year;
+  if (p.region) q += '&region=' + encodeURIComponent(p.region);
+  return request<ExamPapersResp>(q);
+}
+
+export function fetchExamAttempts(limit = 10): Promise<{ items: ExamAttemptItem[] }> {
+  return request<{ items: ExamAttemptItem[] }>(
+    '/api/exam/attempts?limit=' + limit + '&uid=' + encodeURIComponent(anonUid())
+  );
+}
+
+/** 不传 paperId = 迷你模考（30 题混合）；传 paperId = 整卷全真模考 */
+export function examStart(paperId?: number): Promise<ExamStartResp> {
   return request<ExamStartResp>('/api/exam/start', {
     method: 'POST',
-    data: { uid: anonUid(), mini: true },
+    data: paperId ? { uid: anonUid(), paper_id: paperId } : { uid: anonUid(), mini: true },
   });
 }
 
+/** 服务端保存作答进度（picks/secs 以 question_id 为键，与 H5 同口径） */
+export function examProgress(
+  attemptId: number,
+  picks: Record<number, string>,
+  idx: number,
+  secs: Record<number, number>
+): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>('/api/exam/progress', {
+    method: 'POST',
+    data: { uid: anonUid(), attempt_id: attemptId, picks, idx, secs },
+  });
+}
+
+/** 交卷：picks/secs 以 1 起始题号为键（服务端判分口径） */
 export function examSubmit(
   attemptId: number,
   picks: Record<number, string>,
-  secs: Record<number, number>
+  secs: Record<number, number>,
+  timeout?: number
 ): Promise<ExamSubmitResp> {
   return request<ExamSubmitResp>('/api/exam/submit', {
     method: 'POST',
     data: { uid: anonUid(), attempt_id: attemptId, picks, secs },
+    timeout,
   });
 }
 
-export function fetchExamReport(attemptId: number): Promise<ExamReportResp> {
+export function fetchExamReport(attemptId: number, timeout?: number): Promise<ExamReportResp> {
   return request<ExamReportResp>(
-    '/api/exam/report/' + attemptId + '?uid=' + encodeURIComponent(anonUid())
+    '/api/exam/report/' + attemptId + '?uid=' + encodeURIComponent(anonUid()),
+    { timeout }
   );
 }
 

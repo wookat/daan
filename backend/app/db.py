@@ -3183,6 +3183,11 @@ def save_mistake(rec: dict) -> int:
         conn.commit()
         conn.close()
         return dup["id"]
+    explanation = rec.get("explanation")
+    if qid and not (explanation or "").strip():
+        # 快照写入侧回落：隔离/无官方解析的题，客户端传空时用 hs 兜底，与 list_mistakes/due_reviews 读取侧口径一致
+        hs_row = conn.execute("SELECT hs_explanation FROM questions WHERE id=?", (qid,)).fetchone()
+        explanation = (hs_row["hs_explanation"] if hs_row else None) or explanation
     cur = conn.execute(
         """INSERT INTO mistakes
            (created_at, module, question_type, question_text, user_answer,
@@ -3197,7 +3202,7 @@ def save_mistake(rec: dict) -> int:
             rec.get("correct_answer"),
             json.dumps(rec.get("methods", []), ensure_ascii=False),
             rec.get("error_reason"),
-            rec.get("explanation"),
+            explanation,
             (rec.get("uid") or None),
             rec.get("question_id"),
             rec.get("source"),
@@ -3225,10 +3230,11 @@ def mistakes_by_qids(uid: str, qids: list[int]) -> dict[int, dict]:
 
 
 def _paper_by_psource(conn) -> dict[str, dict]:
-    """卷 psource → {pid, title, psource}；同 source 多卷取 id 最大（最新）一张。复用卷库 TTL 缓存。"""
+    """真题卷 psource → {pid, title, psource}；同 source 多卷取 id 最大（最新）一张。
+    只看 kind=zhenti（mock 卷随机组题无主 source），与 H5 卷库 `kind=zhenti` 共用同一缓存键。"""
     _ensure_exam_tables(conn)
     out: dict[str, dict] = {}
-    for p in _list_exam_papers_base(conn, None, None, None):
+    for p in _list_exam_papers_base(conn, "zhenti", None, None):
         src = p.get("psource")
         if not src:
             continue
@@ -3246,6 +3252,7 @@ def list_mistakes(limit: int = 500, uid: str | None = None) -> list[dict]:
     args = (uid,) if uid else ()
     rows = conn.execute(
         f"""SELECT m.*, q.tag3, q.options AS q_options, q.question AS q_question,
+            q.hs_explanation AS q_hs,
             q.attempt_count, q.correct_ratio, q.most_wrong,
             q.source AS q_source, q.is_real AS q_is_real FROM mistakes m
             LEFT JOIN questions q ON q.id=m.question_id
@@ -3324,7 +3331,8 @@ def due_reviews(limit: int = 20, uid: str | None = None) -> list[dict]:
     _ensure_mistake_uid(conn)
     cl, args = _uid_clause(uid)
     rows = conn.execute(
-        "SELECT m.*, q.options AS q_options, q.question AS q_question FROM mistakes m "
+        "SELECT m.*, q.options AS q_options, q.question AS q_question, "
+        "q.hs_explanation AS q_hs FROM mistakes m "
         "LEFT JOIN questions q ON q.id=m.question_id "
         "WHERE (m.mastered IS NULL OR m.mastered=0) "
         f"AND (m.next_review IS NULL OR m.next_review <= ?){cl} "
@@ -3348,6 +3356,8 @@ def _hydrate_mistake(d: dict) -> None:
     stem = (d.pop("q_question", None) or "").strip()
     if stem and d["options"]:
         d["question_text"] = stem
+    hs = d.pop("q_hs", None)
+    d["explanation"] = d.get("explanation") or hs or ""
 
 
 def _ensure_review_log(conn):

@@ -147,6 +147,108 @@ def _parse_options(options) -> dict:
         return {}
 
 
+# ---- 解析/题干贴合度（解析串题 = 解析属于另一道题）----
+# 口径：解析汉字 bigram 去掉解题套话后，落在本题题干+选项 bigram 里的比例。串题解析几乎不复用题干词，
+# 贴合度 0.00–0.03；正常解析引用题干/选项词，通常 ≥0.08。只作分块取证的信号，不能单条自动改写。
+_HAN_RE = re.compile(r"[\u4e00-\u9fff]")
+_EXP_HEAD_RE = re.compile(r"^(?:解析|【解析】|-\d+-\s*解析)\s*")
+
+
+def _bigrams(text: str | None) -> set[str]:
+    s = "".join(_HAN_RE.findall(text or ""))
+    return {s[i:i + 2] for i in range(len(s) - 1)}
+
+
+EXP_FIT_STOP = _bigrams(
+    "第一步第二步第三步本题考查因此选择选项正确错误答案解析题干分析根据可知所以故选排除符合不符合属于关系"
+    "文段材料对应原文选是题选非题定义关键词提问方式"
+)
+EXP_FIT_MIN_GRAMS = 12
+EXP_FIT_LOW = 0.03
+
+
+def explanation_fit(row: dict) -> float | None:
+    """解析对本题题干+选项的 bigram 贴合度；解析太短（去套话后 <EXP_FIT_MIN_GRAMS）返回 None。"""
+    exp_grams = _bigrams(_EXP_HEAD_RE.sub("", row.get("explanation") or "")) - EXP_FIT_STOP
+    if len(exp_grams) < EXP_FIT_MIN_GRAMS:
+        return None
+    own = _bigrams(question_text(row)) - EXP_FIT_STOP
+    return len(exp_grams & own) / len(exp_grams)
+
+
+def misaligned_blocks(
+    rows: list[dict], min_rows: int = 4, max_gap: int = 3, low_ratio: float = 0.6, max_ok_run: int = 1
+) -> list[dict]:
+    """沿 id 找低贴合解析的连续段（解析数组整体错位的导入痕迹）：段内允许夹 ≤max_ok_run 行连续正常贴合
+    （块内已人工修好的题），遇 id 间隔 >max_gap 或更长的正常段即断开；只报 ≥min_rows 且低贴合占比 ≥low_ratio 的段。
+    rows 需按 id 升序且含 id/question/options/explanation；返回 [{lo, hi, rows, low, ratio}]。"""
+    scored = [(r["id"], f) for r in rows if (f := explanation_fit(r)) is not None]
+    blocks: list[dict] = []
+    cur: list[tuple[int, float]] = []
+    ok_run = 0
+
+    def flush():
+        while cur and cur[-1][1] >= EXP_FIT_LOW:  # 尾部正常行不属于段
+            cur.pop()
+        if len(cur) >= min_rows:
+            low = sum(1 for _, f in cur if f < EXP_FIT_LOW)
+            if low / len(cur) >= low_ratio:
+                blocks.append({"lo": cur[0][0], "hi": cur[-1][0], "rows": len(cur), "low": low, "ratio": round(low / len(cur), 2)})
+        cur.clear()
+
+    for i, f in scored:
+        is_low = f < EXP_FIT_LOW
+        if cur and i - cur[-1][0] > max_gap:
+            flush()
+            ok_run = 0
+        if is_low:
+            cur.append((i, f))
+            ok_run = 0
+        elif cur:
+            ok_run += 1
+            if ok_run > max_ok_run:
+                flush()
+                ok_run = 0
+            else:
+                cur.append((i, f))
+    flush()
+    return blocks
+
+
+# ---- 公式丢失解析（PDF 导入时公式/图片被整段抠掉，只剩「可得：，解得。」骨架）----
+# 数量/资料模块：任一标点相撞信号即判定（生产 246 条命中逐条人工核过，仅 `。。` 单独出现是笔误）；
+# 其他模块只认全角冒号后紧跟标点 / 连续顿号（`，，`/`。。` 在文字题里是笔误不是丢公式）。言语的「、、」是填空占位，不算。
+QUANT_MODULES = ("shuliang", "ziliao")
+_FD_COLON_RE = re.compile(r"：[。，、；]")
+_FD_ENUM_RE = re.compile(r"、、|、，|，、|、。")
+_FD_QUANT_RE = re.compile(r"，，|：。|：，|；。|(所求项|所求|括号内|未知项|下一项)(应)?(为|是)[。，；]")
+FOOTER_PAGE_RE = re.compile(r"\s*第\s*\d{1,3}\s*页\s*共\s*\d{1,3}\s*页\s*")
+FOOTER_SRC_RE = re.compile(r"\s*-\s*\d{1,3}\s*-\s*\d{4}\s*年[^，。；：、《》]{0,14}(?:《[^》]{1,12}》)?真题(?:卷)?(?:（[^）]{0,20}）)?\s*")
+
+
+def formula_dropped(row: dict) -> str | None:
+    """解析是否为「公式丢失」骨架；命中返回信号名，否则 None。row 需含 module/explanation。"""
+    e = row.get("explanation") or ""
+    if not e:
+        return None
+    if _FD_COLON_RE.search(e):
+        return "colon"
+    if _FD_ENUM_RE.search(e) and (row.get("module") or "") != "yanyu":
+        return "enum"
+    if (row.get("module") or "") in QUANT_MODULES and _FD_QUANT_RE.search(e):
+        return "quant"
+    return None
+
+
+def strip_page_footers(text: str | None) -> str:
+    """去掉 PDF 页脚「第 N 页共 M 页」/「-N- 20XX年…真题」串进正文的片段；无命中原样返回。"""
+    if not text:
+        return text or ""
+    out = FOOTER_PAGE_RE.sub("", text)
+    out = FOOTER_SRC_RE.sub("", out)
+    return out.strip() if out != text else text
+
+
 def score_question(row: dict) -> int:
     """row 需含 module/question/options/answer/explanation/hs_explanation/source/is_real/exam_year/exam_region/hs_down/hs_up。"""
     score = 0

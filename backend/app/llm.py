@@ -1,9 +1,12 @@
 """LLM 客户端：OpenAI 兼容中转，支持图片（base64）与文本。"""
 import asyncio
 import json
+import logging
 import os
 
 import httpx
+
+log = logging.getLogger("kg.llm")
 
 BASE_URL = os.environ.get("LLM_BASE_URL", "").rstrip("/")
 API_KEY = os.environ.get("LLM_API_KEY", "")
@@ -37,6 +40,26 @@ def _has_image(messages: list) -> bool:
         if isinstance(c, list) and any(p.get("type") == "image_url" for p in c):
             return True
     return False
+
+
+class EmptyReply(RuntimeError):
+    """HTTP 200 但 content 为空（如推理模型把 max_tokens 全耗在 reasoning 上、finish_reason=length）。"""
+
+
+class TruncatedReply(EmptyReply):
+    """HTTP 200、content 非空但 finish_reason=length：推理模型 reasoning 吃掉大半预算后正文被截断。"""
+
+
+def _content(data: dict, reject_truncated: bool = False) -> str:
+    choice = data["choices"][0]
+    text = choice["message"].get("content") or ""
+    if not text.strip():
+        raise EmptyReply("AI 未返回内容，请稍后再试")
+    if choice.get("finish_reason") == "length":
+        if reject_truncated:
+            raise TruncatedReply(f"AI 回复被截断（{len(text)} 字）")
+        log.warning("[llm] finish_reason=length, content %d chars returned as-is", len(text))
+    return text
 
 
 def _require_configured(base: str, key: str) -> None:
@@ -83,6 +106,7 @@ async def chat(messages: list, temperature: float = 0.2, max_tokens: int = 4000)
                     },
                 )
             if (resp.status_code in _QUOTA_CODES or resp.status_code >= 500) and _rescue_ok(messages):
+                log.warning("[llm] main %s status=%s, fallback to rescue %s", model, resp.status_code, RESCUE_MODEL)
                 resp = await client.post(
                     f"{RESCUE_BASE_URL}/v1/chat/completions",
                     headers={"Authorization": f"Bearer {RESCUE_API_KEY}"},
@@ -94,8 +118,7 @@ async def chat(messages: list, temperature: float = 0.2, max_tokens: int = 4000)
                     },
                 )
             resp.raise_for_status()
-            data = resp.json()
-            return data["choices"][0]["message"]["content"]
+            return _content(resp.json())
     raise RuntimeError("LLM 请求重试耗尽")
 
 
@@ -159,9 +182,9 @@ async def chat_fast(messages: list, temperature: float = 0.2, max_tokens: int = 
                     },
                 )
                 resp.raise_for_status()
-                return resp.json()["choices"][0]["message"]["content"]
-        except (httpx.HTTPError, KeyError, IndexError, ValueError):
-            pass
+                return _content(resp.json(), reject_truncated=True)
+        except (httpx.HTTPError, KeyError, IndexError, ValueError, EmptyReply) as e:
+            log.warning("[llm] rescue %s failed (%s: %s), fallback to %s", RESCUE_MODEL, type(e).__name__, e, TEXT_MODEL)
     return await chat(messages, temperature=temperature, max_tokens=max_tokens)
 
 
