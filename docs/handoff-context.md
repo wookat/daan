@@ -2474,3 +2474,12 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 顺带一手：`CHROME_PATH` 指向不存在文件时 lighthouse 照常跑通（chrome-launcher 回落自找 Chrome，机制为推断）——R487 那次不是 Chrome 路径问题。
 - 如实：本轮 0 产品代码；构造失败走的是 interstitial 路径、未复现 R487 具体失败类型；无 testing agent 录屏（未另行授权）。
 - 取证：`docs/iter/round-3/r488-perf-budget-lighthouse-stderr-retained.md`；补量脚本复用 `~/r487_post.sh`。
+
+### R489（2026-09-07）：6 个问答入口非探针漏斗只读盘点——5 个已埋点入口自 09-03 上线 0 真人点击（0 代码，生产仍 `896007c`）
+- **(c) / 到期项 0 增量**：R487 容器 108 请求（last 10:04:20Z）全本机/探针/bot；非探针 POST / analysis / explain 0；`umst3` 0 回访；`practice_ask_click` 仍只 R487 探针 2 行；`explain_cache qid` 0/82；时政 qid 非空 0/0；`error_reason` 7 / ≥09-11 0；WAL 同字节；Lighthouse「运行失败」本轮无部署无样本。
+- **`growth_events` 全表**：`search/review/report/fav/history_ask_click`（R326–R339，09-03 合入）probe=0 **合计 0 行**、probe=NULL 0 行，全表仅 1 行 `search_ask_click` probe=1（09-06 探针）；`ask_view_question` 0 行。7 个事件名在生产 bundle 各分包里都在（`X-Kg-Probe: 1` 拉取 grep 一手），不是没发上去。
+- **非探针问答漏斗（Caddy 08-31 起 5 文件 + DB）**：自然 `explain/stream` 提交 **2 uid / 3 次**——H5 `umsacie7` 09-05 17:07Z ×1（带 qid 234494；16:43→17:07 无任何 `*_ask_click` → 按排除法走的是当时唯一无埋点的练习页深链，推断）+ W7 `umst3` 09-06 21:40Z ×2；**全部是「刚做完题 → 深链讲解」形态**。H5 `umsagboriz` 问答页 6 对 GET = TabBar 直进来回切、0 提交。5 个入口 0、问答页自由输入 0。`ask_cur` 另 3 行 `umtp*` 全 probe=1。
+- **判定**：不立项。样本不足以判「没人用 = 缺陷」（R479 已核问答页热区、各入口页面 4 天内到访本身极少）；登记「R326–R339 五入口收益在真实流量 0 验证」，与 R486（R421 直通 0 验证）/ R487（`practice_ask_click` 真人首条）合并观察，指标 = 任一 `*_ask_click` probe=0 首行 / `explain_cache.qid` 首次非空。
+- 取证自纠：Caddy 轮转文件名 `…-access-<date>.log.gz`，glob 必须 `…-access*`（`…-access.log*` 只匹配当前文件，会漏 09-05 前全部）；`error_reason` 在 `mistakes` 不在 `answer_log`；容器起点 epoch 用 `StartedAt` 换算别手算。
+- 如实：排除法推断依赖「5 个埋点 09-05 前已上线且未静默失败」；`umsacie7` 两段不同出口 IP、身份不确定；0 库写入；无 testing agent 录屏（未另行授权）。
+- 取证：`docs/iter/round-3/r489-ask-entry-funnel-five-tracked-entries-zero-natural.md`；脚本/输出 `~/r489_db.sh` `~/r489_db.out` `~/r489_caddy.out` `~/r489_post.out`。
