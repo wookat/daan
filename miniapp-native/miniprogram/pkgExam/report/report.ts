@@ -9,7 +9,7 @@ import {
 } from '../../api/exam';
 import type { ExamAttempt, ExamRankFull, ExamReportFull, ExamReportFullItem } from '../../api/exam-types';
 import { modName } from '../../utils/stats';
-import { BASE_URL } from '../../utils/request';
+import { imgUrl } from '../../utils/request';
 import { paperAvgSecs } from '../../utils/kg-exam-timer';
 import {
   MOD_ORDER,
@@ -367,7 +367,7 @@ Page({
       ...it,
       statusText: it.correct ? '答对' : it.picked ? '答错' : '未答',
       optList: Object.keys(o).map((k) => ({ k, v: String(o[k] == null ? '' : o[k]) })),
-      imgUrl: it.image ? (/^https?:/.test(it.image) ? it.image : BASE_URL + it.image) : '',
+      imgUrl: imgUrl(it.image),
       statLine: qStatLine(it),
       timeLine: qTimeLine(it.secs, paperAvgSecs(r.items)),
       faved,

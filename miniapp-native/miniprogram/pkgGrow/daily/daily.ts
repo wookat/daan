@@ -13,6 +13,7 @@ import {
 import type { DailyBoardRow, DailySubmitResp, ShizhengQuestion } from '../../api/grow';
 import { anonUid } from '../../utils/auth';
 import { enqueueAnswers, enqueueMistake } from '../../utils/offline';
+import { imgUrl } from '../../utils/request';
 import { recordStat } from '../../utils/stats';
 import { cnDayKey, cnToday, ymd } from '../../utils/cn-date';
 import type { OptionItem } from '../../components/kg-option-group/index';
@@ -52,6 +53,7 @@ function toDQ(q: Question | ShizhengQuestion, sz: boolean): DQ {
   const note = sz ? (q as ShizhengQuestion).source_note : null;
   return {
     ...q,
+    image: imgUrl(q.image),
     _picked: '',
     _secs: 0,
     _logged: false,
