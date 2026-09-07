@@ -167,7 +167,7 @@
       <view class="plan-h">
         <text class="plan-t">今日计划</text>
         <view class="plan-hr">
-          <text v-if="planToday.days_left != null" class="plan-days">距考试 {{ planToday.days_left }} 天 · {{ planToday.phase_name }}</text>
+          <text v-if="planDaysText" class="plan-days">{{ planDaysText }}</text>
           <text class="plan-edit" @click="openSetup">编辑</text>
         </view>
       </view>
@@ -493,6 +493,7 @@ import { parsePendingPractice, parseRemotePractice } from '../../practice-progre
 import { parseReviewSnap } from '../../review-snap.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
+import { planDaysLabel } from '../../plan-days-label.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -556,6 +557,9 @@ export default {
     };
   },
   computed: {
+    planDaysText() {
+      return this.planToday ? planDaysLabel(this.planToday.days_left, this.planToday.phase_name) : '';
+    },
     showLanding() {
       if (this.landingHide) return false;
       return !Object.keys((this.pstats && this.pstats.days) || {}).length;
