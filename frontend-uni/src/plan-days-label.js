@@ -8,6 +8,11 @@ export function planDaysLabel(daysLeft, phaseName) {
   return `距考试 ${daysLeft} 天${phase}`;
 }
 
+// 「今天」取东八区日期，与服务端 plan.days_left / cn_day_start 同口径（浏览器本地时区不影响判定）
+export function cnTodayStr(nowMs = Date.now()) {
+  return new Date(nowMs + 8 * 3600e3).toISOString().slice(0, 10);
+}
+
 // 计划表单里的考试日期是否已过（YYYY-MM-DD 字串按字典序比较；空/非法格式 → false 交给「请先选择」校验）
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 export function isExamDatePast(dateStr, todayStr) {

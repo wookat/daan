@@ -4,7 +4,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { isExamDatePast, examDateFieldText } from '../src/plan-days-label.js';
+import { isExamDatePast, examDateFieldText, cnTodayStr } from '../src/plan-days-label.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
 
@@ -23,6 +23,15 @@ describe('isExamDatePast', () => {
     expect(isExamDatePast('2026/09/07', '2026-09-08')).toBe(false);
     expect(isExamDatePast('2026-09-07', '')).toBe(false);
     expect(isExamDatePast('2026-09-07', undefined)).toBe(false);
+  });
+});
+
+describe('cnTodayStr', () => {
+  it('东八区日期：UTC 09-07 17:20 → CN 09-08（与服务端 days_left 同口径；浏览器 UTC 时仍判已过）', () => {
+    expect(cnTodayStr(Date.UTC(2026, 8, 7, 17, 20))).toBe('2026-09-08');
+    expect(cnTodayStr(Date.UTC(2026, 8, 7, 15, 59))).toBe('2026-09-07');
+    expect(cnTodayStr(Date.UTC(2026, 8, 7, 16, 0))).toBe('2026-09-08');
+    expect(isExamDatePast('2026-09-07', cnTodayStr(Date.UTC(2026, 8, 7, 17, 20)))).toBe(true);
   });
 });
 
@@ -49,8 +58,9 @@ describe('home.vue 计划表单接线（源锁）', () => {
     expect(src).toMatch(/if \(this\.setupStep === 1 && this\.pfDatePast\) \{\s*uni\.showToast\(\{ title: '考试日期已过，请重新选择'/);
   });
 
-  it('pfDatePast / pfDateText 以本地日期（fmtDateStr(Date.now())）为「今天」', () => {
-    expect(src).toMatch(/pfDatePast\(\) \{\s*return isExamDatePast\(this\.pf\.exam_date, this\.fmtDateStr\(Date\.now\(\)\)\);/);
-    expect(src).toMatch(/pfDateText\(\) \{\s*return examDateFieldText\(this\.pf\.exam_date, this\.fmtDateStr\(Date\.now\(\)\)\);/);
+  it('pfDatePast / pfDateText 以东八区日期 cnTodayStr() 为「今天」，不用浏览器本地日期', () => {
+    expect(src).toMatch(/pfDatePast\(\) \{\s*return isExamDatePast\(this\.pf\.exam_date, cnTodayStr\(\)\);/);
+    expect(src).toMatch(/pfDateText\(\) \{\s*return examDateFieldText\(this\.pf\.exam_date, cnTodayStr\(\)\);/);
+    expect(src).not.toMatch(/isExamDatePast\(this\.pf\.exam_date, this\.fmtDateStr/);
   });
 });

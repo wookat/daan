@@ -493,7 +493,7 @@ import { parsePendingPractice, parseRemotePractice } from '../../practice-progre
 import { parseReviewSnap } from '../../review-snap.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
-import { planDaysLabel, isExamDatePast, examDateFieldText } from '../../plan-days-label.js';
+import { planDaysLabel, isExamDatePast, examDateFieldText, cnTodayStr } from '../../plan-days-label.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 const COLORS = {
@@ -561,10 +561,10 @@ export default {
       return this.planToday ? planDaysLabel(this.planToday.days_left, this.planToday.phase_name) : '';
     },
     pfDatePast() {
-      return isExamDatePast(this.pf.exam_date, this.fmtDateStr(Date.now()));
+      return isExamDatePast(this.pf.exam_date, cnTodayStr());
     },
     pfDateText() {
-      return examDateFieldText(this.pf.exam_date, this.fmtDateStr(Date.now()));
+      return examDateFieldText(this.pf.exam_date, cnTodayStr());
     },
     showLanding() {
       if (this.landingHide) return false;
