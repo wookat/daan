@@ -8,6 +8,7 @@ import type {
   ExamAttemptItem,
   ExamPapersResp,
   ExamReportResp,
+  ExamRankResp,
   ExamStartResp,
   ExamSubmitResp,
   FavFolder,
@@ -331,6 +332,12 @@ export function fetchExamReport(attemptId: number, timeout?: number): Promise<Ex
   return request<ExamReportResp>(
     '/api/exam/report/' + attemptId + '?uid=' + encodeURIComponent(anonUid()),
     { timeout }
+  );
+}
+
+export function fetchExamRank(attemptId: number): Promise<ExamRankResp> {
+  return request<ExamRankResp>(
+    '/api/exam/rank/' + attemptId + '?uid=' + encodeURIComponent(anonUid())
   );
 }
 

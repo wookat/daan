@@ -1,130 +1,163 @@
 <template>
-  <view class="wrap">
-    <view class="sbar">
-      <view class="sbox">
-        <l-icon name="search" :size="18" color="#9ca3af" />
-        <input v-model="kw" class="sinput" placeholder="题号 / 题干关键词 / 考点 / 申论" confirm-type="search" focus @confirm="doSearch" @input="onInput" />
-        <view v-if="kw" class="sclear" role="button" aria-label="清空搜索" @click="kw = ''; result = null; loadErr = ''; syncUrl()"><l-icon name="x" :size="16" color="#8a90a0" /></view>
-      </view>
-      <text class="scancel" @click="goBack">取消</text>
-    </view>
-    <view class="tabs">
-      <text v-for="t in TABS" :key="t.k" class="tab" :class="{ on: tab === t.k }" @click="tab = t.k; doSearch()">{{ t.n }}</text>
+  <view class="page">
+    <!-- 吸顶：搜索框 + 范围 chip -->
+    <view class="sticky">
+      <wd-search
+        v-model="kw"
+        placeholder="题号 / 题干关键词 / 考点 / 申论"
+        placeholder-left
+        focus
+        :maxlength="64"
+        cancel-txt="取消"
+        @search="doSearch"
+        @change="onInput"
+        @clear="onClear"
+        @cancel="goBack"
+      />
+      <kg-chip-row :model-value="tab" :options="tabChips" size="sm" class="tabs" @update:model-value="onTab" />
     </view>
 
-    <view v-if="loading" class="empty">搜索中…</view>
-    <view v-else-if="loadErr" class="empty">
-      <text class="empty-t">搜索失败：{{ loadErr }}</text>
-      <view class="retry" role="button" aria-label="重试搜索" @click="doSearch">重试 ›</view>
-    </view>
-    <template v-else-if="result">
-      <!-- 题号直达 -->
-      <view v-if="result.code_hit" class="card qitem" @click="toggleDetail(result.code_hit)">
-        <view class="q-top"><text class="q-code">{{ result.code_hit.code }}</text><text class="q-mod">{{ modName(result.code_hit.module) }}</text></view>
-        <rich-text class="q-text" :nodes="hl(result.code_hit.question)" />
-        <view v-if="detailWant === result.code_hit.id && !(detail && detail.id === result.code_hit.id)" class="q-loading">解析加载中…</view>
-        <view v-if="detail && detail.id === result.code_hit.id" class="q-detail">
-          <text v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: k === detail.answer }">{{ k }}. {{ v }}</text>
-          <text class="q-ans">答案：{{ detail.answer }}</text>
-          <text v-if="detail.explanation" class="q-exp">{{ detail.explanation }}</text>
-          <view class="d-acts">
-            <text v-if="detailAskSeen" class="d-copy seen" role="button" aria-label="回看 AI 详解" @click.stop="openSeenAsk">回看 AI 详解</text>
-            <text class="d-copy" role="button" aria-label="AI 详解本题" @click.stop="askFromSearch(detail)">AI 详解本题</text>
-            <text class="d-copy" role="button" aria-label="复制本题链接" @click.stop="copyQLink(detail.id)">复制本题链接</text>
-          </view>
+    <kg-two-col v-if="loading || loadErr || result" :aside-first="!!(result && result.code_hit)">
+      <template #main>
+        <view v-if="loading" class="skel" aria-busy="true">
+          <kg-skeleton preset="lines" />
+          <kg-skeleton preset="cards" />
         </view>
-      </view>
-      <view class="res-cols" :class="{ two: tab === 'all' && hasSide }">
-      <view class="res-side">
-      <!-- 考点 -->
-      <view v-if="showSec('topic') && result.topics && result.topics.length" class="sec">
-        <text class="sec-t">考点</text>
-        <view v-for="t in result.topics" :key="t.code" class="card titem" @click="goTopic(t)">
-          <view class="t-l">
-            <rich-text class="t-name" :nodes="hl(t.name)" />
-            <text class="t-sub">{{ t.module_name }} · {{ t.group_name }}{{ t.n ? ' · ' + t.n + ' 题' : '' }}</text>
+        <kg-empty-state
+          v-else-if="loadErr"
+          icon="wifi-off"
+          :title="'搜索失败：' + loadErr"
+          cta-text="重试"
+          @cta="doSearch"
+        />
+        <template v-else-if="result">
+          <!-- 题目 -->
+          <view v-if="showSec('question') && result.questions && result.questions.items.length" class="sec">
+            <kg-section-header :title="'题目 · ' + result.questions.total" />
+            <kg-card v-for="it in result.questions.items" :key="it.id" clickable class="qitem" @click="toggleDetail(it)">
+              <view class="q-top">
+                <text class="q-code num">{{ it.code }}</text>
+                <kg-tag v-if="it.is_real" tone="warn">真题{{ it.exam_year ? ' ' + it.exam_year : '' }}</kg-tag>
+                <kg-tag tone="module" :module="it.module">{{ modName(it.module) }}{{ it.submodule ? ' · ' + it.submodule : '' }}</kg-tag>
+              </view>
+              <rich-text class="q-text stem" :nodes="hl(it.question)" />
+              <view v-if="detailWant === it.id && !(detail && detail.id === it.id)" class="q-loading"><kg-skeleton preset="lines" /></view>
+              <view v-if="detail && detail.id === it.id" class="q-detail">
+                <text v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: k === detail.answer }">{{ k }}. {{ v }}</text>
+                <text class="q-ans">答案：<text class="num">{{ detail.answer }}</text></text>
+                <text v-if="detail.explanation" class="q-exp">{{ detail.explanation }}</text>
+                <view class="d-acts">
+                  <kg-button v-if="detailAskSeen" variant="text" size="sm" @click.stop="openSeenAsk">回看 AI 详解</kg-button>
+                  <kg-button variant="secondary" size="sm" icon="sparkles" @click.stop="askFromSearch(detail)">AI 详解本题</kg-button>
+                  <kg-button variant="text" size="sm" icon="copy" @click.stop="copyQLink(detail.id)">复制链接</kg-button>
+                </view>
+              </view>
+            </kg-card>
+            <kg-button
+              v-if="result.questions.total > result.questions.items.length"
+              variant="ghost"
+              size="md"
+              block
+              :loading="moreLoading"
+              :disabled="moreLoading"
+              class="more"
+              @click="loadMore"
+            >加载更多</kg-button>
           </view>
-          <text class="t-go">去练习 ›</text>
-        </view>
-      </view>
-      <!-- 试卷 -->
-      <view v-if="showSec('paper') && result.papers && result.papers.length" class="sec">
-        <text class="sec-t">试卷</text>
-        <view v-for="p in result.papers" :key="p.id" class="card titem" @click="goPaper(p)">
-          <view class="t-l">
-            <rich-text class="t-name" :nodes="hl(p.title)" />
-            <text class="t-sub">{{ p.year || '' }}{{ p.region ? ' · ' + p.region : '' }}</text>
-          </view>
-          <text class="t-go">去做卷 ›</text>
-        </view>
-      </view>
-      <!-- 申论真题 -->
-      <view v-if="showSec('shenlun') && result.shenlun && result.shenlun.length" class="sec">
-        <text class="sec-t">申论真题</text>
-        <view v-for="s in result.shenlun" :key="s.id" class="card titem" @click="goShenlun(s)">
-          <view class="t-l">
-            <rich-text class="t-name" :nodes="hl(s.question)" />
-            <text class="t-sub">{{ s.exam_year || '' }}{{ s.exam_region ? ' · ' + s.exam_region : '' }}{{ s.qtype ? ' · ' + s.qtype : '' }}</text>
-          </view>
-          <text class="t-go">去作答 ›</text>
-        </view>
-      </view>
-      <!-- 申论素材 -->
-      <view v-if="showSec('shenlun') && result.shenlun_mats && result.shenlun_mats.length" class="sec">
-        <text class="sec-t">申论素材</text>
-        <view v-for="m in result.shenlun_mats" :key="m.id" class="card titem" @click="goShenlunMat(m)">
-          <view class="t-l">
-            <text class="t-sub">{{ m.topic }}{{ m.type ? ' · ' + m.type : '' }}</text>
-            <rich-text class="mt-content" :nodes="hl(m.content)" />
-          </view>
-          <text class="t-go">素材库 ›</text>
-        </view>
-      </view>
-      </view>
-      <view class="res-main">
-      <!-- 题目 -->
-      <view v-if="showSec('question') && result.questions && result.questions.items.length" class="sec">
-        <text class="sec-t">题目（{{ result.questions.total }}）</text>
-        <view v-for="it in result.questions.items" :key="it.id" class="card qitem" @click="toggleDetail(it)">
+
+          <kg-empty-state
+            v-if="isEmpty"
+            icon="search"
+            :title="'没有找到「' + result.q + '」相关内容'"
+            desc="可尝试题号（如 ZL-JQ-2024-000914）、题干关键词或考点名"
+          />
+        </template>
+      </template>
+
+      <template v-if="result && !loading && !loadErr && (result.code_hit || hasSide)" #aside>
+        <!-- 题号直达 -->
+        <kg-card v-if="result.code_hit" clickable class="qitem hit" @click="toggleDetail(result.code_hit)">
           <view class="q-top">
-            <text class="q-code">{{ it.code }}</text>
-            <text v-if="it.is_real" class="q-real">真题{{ it.exam_year ? ' ' + it.exam_year : '' }}</text>
-            <text class="q-mod">{{ modName(it.module) }}{{ it.submodule ? ' · ' + it.submodule : '' }}</text>
+            <kg-tag tone="brand">题号直达</kg-tag>
+            <text class="q-code num">{{ result.code_hit.code }}</text>
+            <kg-tag tone="module" :module="result.code_hit.module">{{ modName(result.code_hit.module) }}</kg-tag>
           </view>
-          <rich-text class="q-text" :nodes="hl(it.question)" />
-          <view v-if="detailWant === it.id && !(detail && detail.id === it.id)" class="q-loading">解析加载中…</view>
-          <view v-if="detail && detail.id === it.id" class="q-detail">
+          <rich-text class="q-text stem" :nodes="hl(result.code_hit.question)" />
+          <view v-if="detailWant === result.code_hit.id && !(detail && detail.id === result.code_hit.id)" class="q-loading"><kg-skeleton preset="lines" /></view>
+          <view v-if="detail && detail.id === result.code_hit.id" class="q-detail">
             <text v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: k === detail.answer }">{{ k }}. {{ v }}</text>
-            <text class="q-ans">答案：{{ detail.answer }}</text>
+            <text class="q-ans">答案：<text class="num">{{ detail.answer }}</text></text>
             <text v-if="detail.explanation" class="q-exp">{{ detail.explanation }}</text>
             <view class="d-acts">
-              <text v-if="detailAskSeen" class="d-copy seen" role="button" aria-label="回看 AI 详解" @click.stop="openSeenAsk">回看 AI 详解</text>
-              <text class="d-copy" role="button" aria-label="AI 详解本题" @click.stop="askFromSearch(detail)">AI 详解本题</text>
-              <text class="d-copy" role="button" aria-label="复制本题链接" @click.stop="copyQLink(detail.id)">复制本题链接</text>
+              <kg-button v-if="detailAskSeen" variant="text" size="sm" @click.stop="openSeenAsk">回看 AI 详解</kg-button>
+              <kg-button variant="secondary" size="sm" icon="sparkles" @click.stop="askFromSearch(detail)">AI 详解本题</kg-button>
+              <kg-button variant="text" size="sm" icon="copy" @click.stop="copyQLink(detail.id)">复制链接</kg-button>
             </view>
           </view>
+        </kg-card>
+        <!-- 考点 -->
+        <view v-if="showSec('topic') && result.topics && result.topics.length" class="sec">
+          <kg-section-header title="考点" />
+          <kg-card v-for="t in result.topics" :key="t.code" clickable chevron class="titem" :padding="12" @click="goTopic(t)">
+            <view class="t-l">
+              <rich-text class="t-name" :nodes="hl(t.name)" />
+              <text class="t-sub">{{ t.module_name }} · {{ t.group_name }}{{ t.n ? ' · ' + t.n + ' 题' : '' }}</text>
+            </view>
+          </kg-card>
         </view>
-        <view v-if="result.questions.total > result.questions.items.length" class="more" @click="loadMore">{{ moreLoading ? '加载中…' : '加载更多' }}</view>
-      </view>
-      </view>
-      </view>
-      <view v-if="isEmpty" class="empty">
-        <text>没有找到「{{ result.q }}」相关内容</text>
-        <text>可尝试题号（如 ZL-JQ-2024-000914）、题干关键词或考点名</text>
-      </view>
-    </template>
-    <template v-else>
+        <!-- 试卷 -->
+        <view v-if="showSec('paper') && result.papers && result.papers.length" class="sec">
+          <kg-section-header title="试卷" />
+          <kg-card v-for="p in result.papers" :key="p.id" clickable chevron class="titem" :padding="12" @click="goPaper(p)">
+            <view class="t-l">
+              <rich-text class="t-name" :nodes="hl(p.title)" />
+              <text class="t-sub">{{ p.year || '' }}{{ p.region ? ' · ' + p.region : '' }}</text>
+            </view>
+          </kg-card>
+        </view>
+        <!-- 申论真题 -->
+        <view v-if="showSec('shenlun') && result.shenlun && result.shenlun.length" class="sec">
+          <kg-section-header title="申论真题" />
+          <kg-card v-for="s in result.shenlun" :key="s.id" clickable chevron class="titem" :padding="12" @click="goShenlun(s)">
+            <view class="t-l">
+              <rich-text class="t-name" :nodes="hl(s.question)" />
+              <text class="t-sub">{{ s.exam_year || '' }}{{ s.exam_region ? ' · ' + s.exam_region : '' }}{{ s.qtype ? ' · ' + s.qtype : '' }}</text>
+            </view>
+          </kg-card>
+        </view>
+        <!-- 申论素材 -->
+        <view v-if="showSec('shenlun') && result.shenlun_mats && result.shenlun_mats.length" class="sec">
+          <kg-section-header title="申论素材" />
+          <kg-card v-for="m in result.shenlun_mats" :key="m.id" clickable chevron class="titem" :padding="12" @click="goShenlunMat(m)">
+            <view class="t-l">
+              <text class="t-sub">{{ m.topic }}{{ m.type ? ' · ' + m.type : '' }}</text>
+              <rich-text class="mt-content" :nodes="hl(m.content)" />
+            </view>
+          </kg-card>
+        </view>
+      </template>
+    </kg-two-col>
+
+    <!-- 输入态（T5 段）：最近搜索 chips -->
+    <view v-else class="idle">
       <view v-if="hist.length" class="hist">
-        <view class="hist-top">
-          <text class="hist-t">搜索历史</text>
-          <view class="hist-clear" role="button" aria-label="清空搜索历史" @click="clearHist">清空</view>
-        </view>
+        <kg-section-header title="最近搜索" />
         <view class="hist-chips">
-          <text v-for="h in hist" :key="h" class="hist-chip" role="button" :aria-label="'搜索 ' + h" @click="kw = h; doSearch()">{{ h }}</text>
+          <view v-for="h in hist" :key="h" class="hist-chip" role="button" :aria-label="'搜索 ' + h" @click="kw = h; doSearch()">
+            <l-icon name="clock" :size="16" tone="muted" />
+            <text class="hist-chip-t">{{ h }}</text>
+          </view>
         </view>
+        <kg-button variant="text" size="sm" icon="trash-2" class="hist-clear" @click="clearHist">清空历史</kg-button>
       </view>
-      <view class="empty">支持搜索：题号语义码、题干关键词、考点名、试卷名、申论真题/素材</view>
-    </template>
+      <kg-empty-state
+        v-else
+        compact
+        icon="search"
+        title="搜题、考点、试卷、申论"
+        desc="支持题号语义码（如 ZL-JQ-2024-000914）、题干关键词、考点名、试卷名、申论真题/素材"
+      />
+    </view>
   </view>
 </template>
 
@@ -133,8 +166,9 @@ import { request, trackEvent } from '../../api.js';
 import { buildSearchUrl, buildTikuQPath } from '../../search-url.js';
 import { askPrefill } from '../../ask-prefill.js';
 import { askQid, findAskSid } from '../../ask-link.js';
+import { MODULES } from '../../module-meta.js';
 
-const MODS = { ziliao: '资料', shuliang: '数量', yanyu: '言语', panduan: '判断', changshi: '常识', shenlun: '申论' };
+const MODS = { shenlun: '申论' };
 
 export default {
   data() {
@@ -172,6 +206,9 @@ export default {
     this.askSeenTick++;
   },
   computed: {
+    tabChips() {
+      return this.TABS.map((t) => ({ label: t.n, value: t.k }));
+    },
     detailAskSeen() {
       void this.askSeenTick;
       return findAskSid(uni.getStorageSync('askSessions'), uni.getStorageSync('askCurSession'), this.detail && this.detail.id);
@@ -189,7 +226,17 @@ export default {
   },
   methods: {
     modName(m) {
-      return MODS[m] || m || '';
+      return MODULES[m] ? MODULES[m].short : MODS[m] || m || '';
+    },
+    onTab(k) {
+      this.tab = k;
+      this.doSearch();
+    },
+    onClear() {
+      this.kw = '';
+      this.result = null;
+      this.loadErr = '';
+      this.syncUrl();
     },
     openSeenAsk() {
       if (!this.detailAskSeen) return;
@@ -339,66 +386,32 @@ export default {
 </script>
 
 <style scoped>
-.wrap { min-height: 100vh; background: var(--fill); padding: 20rpx 24rpx 60rpx; box-sizing: border-box; }
-.sbar { display: flex; align-items: center; gap: 20rpx; }
-.sbox { flex: 1; display: flex; align-items: center; gap: 12rpx; background: var(--card); border-radius: 999rpx; padding: 14rpx 24rpx; }
-.sinput { flex: 1; font-size: 28rpx; }
-.sclear { color: var(--ink-3); font-size: 26rpx; padding: 0 8rpx; }
-.scancel { font-size: 28rpx; color: var(--ink-2); }
-.tabs { display: flex; gap: 12rpx; margin: 20rpx 0; }
-.tab { font-size: 26rpx; color: var(--ink-2); background: var(--card); border-radius: 999rpx; padding: 8rpx 28rpx; }
-.tab.on { color: #fff; background: var(--brand); font-weight: 600; }
-.card { background: var(--card); border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx; }
-.sec { margin-bottom: 12rpx; }
-.sec-t { display: block; font-size: 24rpx; color: var(--ink-2); margin: 12rpx 4rpx; }
-.titem { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }
-.t-l { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6rpx; }
-.t-name { font-size: 28rpx; color: var(--ink); font-weight: 600; }
-.t-sub { font-size: 22rpx; color: var(--ink-3); }
-.mt-content { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.t-go { font-size: 24rpx; color: var(--brand-text); flex-shrink: 0; }
-.qitem { display: flex; flex-direction: column; gap: 10rpx; }
-.q-top { display: flex; align-items: center; gap: 12rpx; flex-wrap: wrap; }
-.q-code { font-size: 20rpx; color: var(--ink-2); background: var(--fill); border-radius: 6rpx; padding: 2rpx 10rpx; font-family: monospace; }
-.q-real { font-size: 20rpx; color: var(--warn-strong); background: var(--warn-soft); border-radius: 6rpx; padding: 2rpx 10rpx; }
-.q-mod { font-size: 20rpx; color: var(--ink-3); }
-.q-text { font-size: 26rpx; color: var(--ink-2); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.q-loading { font-size: 24rpx; color: var(--ink-3); padding-top: 10rpx; }
-.q-detail { border-top: 1rpx solid var(--fill); padding-top: 14rpx; display: flex; flex-direction: column; gap: 8rpx; }
-.q-opt { font-size: 24rpx; color: var(--ink-2); }
+.page { padding: 0 var(--page-x) var(--sp-48); }
+.sticky { position: sticky; top: 0; z-index: var(--z-sticky); background: var(--bg); margin: 0 calc(-1 * var(--page-x)); padding: var(--sp-8) var(--page-x) var(--sp-8); }
+.sticky :deep(.wd-search) { background: var(--bg); --wot-search-cancel-color: var(--ink-2); --wot-search-placeholder-color: var(--ink-4); }
+.tabs { margin-top: var(--sp-4); }
+.skel { display: flex; flex-direction: column; gap: var(--sp-12); }
+.sec { margin-bottom: var(--sp-16); }
+.qitem { margin-bottom: var(--sp-8); }
+.q-top { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-8); margin-bottom: var(--sp-8); }
+.q-code { font-size: var(--fs-caption); color: var(--ink-3); }
+.stem { display: block; font-size: var(--fs-body); line-height: var(--lh-question); color: var(--ink); }
+.q-loading { margin-top: var(--sp-8); }
+.q-detail { margin-top: var(--sp-12); padding-top: var(--sp-12); border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: var(--sp-4); }
+.q-opt { font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--ink-2); }
 .q-opt.ans { color: var(--ok-strong); font-weight: 600; }
-.q-ans { font-size: 24rpx; color: var(--ok-strong); font-weight: 600; margin-top: 4rpx; }
-.q-exp { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; }
-.d-acts { display: flex; gap: 20rpx; }
-.d-copy { font-size: 22rpx; color: var(--brand-text); text-decoration: underline; cursor: pointer; padding: 4rpx 6rpx; align-self: flex-start; }
-.d-copy.seen { color: var(--ok-strong); }
-.more { text-align: center; font-size: 26rpx; color: var(--brand-text); padding: 16rpx; }
-.empty { display: flex; flex-direction: column; gap: 8rpx; text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 100rpx 40rpx; }
-.empty-t { font-size: 26rpx; color: var(--ink-2); }
-.retry { margin-top: 8rpx; font-size: 26rpx; color: var(--brand-text); font-weight: 600; }
-.hist { margin-top: 28rpx; }
-.hist-top { display: flex; align-items: center; justify-content: space-between; }
-.hist-t { font-size: 26rpx; font-weight: 600; color: var(--ink-2); }
-.hist-clear { font-size: 24rpx; color: var(--ink-3, #8a90a0); padding: 8rpx; }
-.hist-chips { display: flex; flex-wrap: wrap; gap: 16rpx; margin-top: 16rpx; }
-.hist-chip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 26rpx; color: var(--ink-1, #1f2430); background: var(--card, #fff); border: 1px solid var(--line, #e5e7eb); border-radius: 999rpx; padding: 10rpx 24rpx; }
-
-/* 桌面（H5）：≥1024 左考点/试卷侧栏 + 右题目列表（仅「全部」tab） */
-/* #ifdef H5 */
-@media (min-width: 768px) {
-  .wrap { max-width: 1044px; margin: 0 auto; }
-  .tab:hover, .titem:hover, .qitem:hover, .more:hover { cursor: pointer; }
-  .qitem:hover { box-shadow: 0 8rpx 24rpx rgba(31, 36, 48, 0.08); }
-}
-@media (min-width: 1024px) {
-  .res-cols.two { display: flex; gap: 32rpx; align-items: flex-start; }
-  .res-cols.two .res-side {
-    width: 300px;
-    flex: none;
-    position: sticky;
-    top: 24rpx;
-  }
-  .res-cols.two .res-main { flex: 1; min-width: 0; }
-}
-/* #endif */
+.q-ans { margin-top: var(--sp-4); font-size: var(--fs-sub); font-weight: 600; color: var(--ink); }
+.q-exp { font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--ink-2); }
+.d-acts { display: flex; flex-wrap: wrap; gap: var(--sp-4); margin-top: var(--sp-8); }
+.more { margin-top: var(--sp-8); }
+.titem { margin-bottom: var(--sp-8); }
+.t-l { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.t-name { font-size: var(--fs-body); color: var(--ink); }
+.t-sub { font-size: var(--fs-caption); color: var(--ink-3); }
+.mt-content { font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--ink-2); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.idle { padding-top: var(--sp-16); }
+.hist-chips { display: flex; flex-wrap: wrap; gap: var(--sp-8); }
+.hist-chip { display: inline-flex; align-items: center; gap: var(--sp-4); height: 32px; padding: 0 var(--sp-12); border-radius: var(--r-full); background: var(--card); border: 1px solid var(--line); max-width: 100%; }
+.hist-chip-t { font-size: var(--fs-sub); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hist-clear { margin-top: var(--sp-8); }
 </style>

@@ -165,6 +165,7 @@ Page({
     loading: true,
     imgSrc: '',
     err: '',
+    streak0: false,
   },
   _badge: 0,
   _tmpPath: '',
@@ -180,6 +181,7 @@ Page({
       const s = await fetchCheckinSummary();
       d = { ...s, badge: this._badge, quote: '' };
       d.quote = makeQuote(d);
+      this.setData({ streak0: !d.streak });
     } catch (e) {
       this.setData({ loading: false, err: (e as Error).message || '加载失败' });
       return;
@@ -195,7 +197,7 @@ Page({
               : reject(new Error('canvas 不可用'))
           );
       });
-      const dpr = wx.getSystemInfoSync().pixelRatio || 2;
+      const dpr = wx.getWindowInfo().pixelRatio || 2;
       node.width = W * dpr;
       node.height = H * dpr;
       const ctx = node.getContext('2d') as unknown as Ctx2D;

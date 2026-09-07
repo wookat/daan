@@ -1,74 +1,74 @@
 <template>
-  <view class="wrap reminders">
-    <view class="card group">
-      <view class="set-row">
-        <view class="ico"><l-icon name="alarm-clock" :size="18" color="#2e5bff" /></view>
-        <view class="grow">
-          <text class="nm">每日刷题提醒</text>
-          <text class="sub">每天 {{ time }} · 未完成今日目标时提醒</text>
-        </view>
-        <wd-switch :model-value="on" active-color="#2e5bff" size="22px" @change="toggle" />
-      </view>
-      <view class="set-row" :class="{ dim: !on }">
-        <view class="ico"><l-icon name="clock" :size="18" color="#2e5bff" /></view>
-        <view class="grow">
-          <text class="nm">提醒时间</text>
-          <text class="sub">建议安排在晚间黄金学习时段</text>
-        </view>
-        <picker mode="time" :value="time" :disabled="!on" @change="setTime">
-          <view class="time-v">{{ time }} ›</view>
-        </picker>
-      </view>
-    </view>
+  <view class="page reminders">
+    <kg-two-col aside-first>
+      <template #aside>
+        <wd-cell-group custom-class="cellcard" border>
+          <wd-cell title="每日刷题提醒" :label="'每天 ' + time + ' · 未完成今日目标时提醒'" center>
+            <template #icon><view class="ico"><l-icon name="alarm-clock" :size="20" tone="brand-text" /></view></template>
+            <wd-switch :model-value="on" size="24px" @change="toggle" />
+          </wd-cell>
+          <wd-datetime-picker
+            type="time"
+            :model-value="time"
+            :disabled="!on"
+            title="提醒时间"
+            @confirm="onTimeConfirm"
+          >
+            <wd-cell title="提醒时间" label="建议安排在晚间黄金学习时段" is-link :clickable="on" center :custom-class="on ? '' : 'is-dim'">
+              <template #icon><view class="ico"><l-icon name="clock" :size="20" tone="brand-text" /></view></template>
+              <text class="time-v num">{{ time }}</text>
+            </wd-cell>
+          </wd-datetime-picker>
+        </wd-cell-group>
 
-    <!-- #ifdef H5 -->
-    <view v-if="on && perm !== 'granted'" class="card warn-card">
-      <view class="warn-t"><l-icon name="bell" :size="15" color="#d97706" /><text>{{ perm === 'denied' ? '浏览器通知权限被拒绝' : '需要开启浏览器通知权限' }}</text></view>
-      <text class="warn-s">{{ perm === 'denied' ? '请在浏览器地址栏左侧站点设置中允许「通知」后刷新页面。' : '开启后才能在提醒时间收到今日目标进度提示。' }}</text>
-      <view v-if="perm !== 'denied'" class="warn-btn" @click="askPerm">开启通知权限</view>
-    </view>
-    <view v-if="perm === 'unsupported'" class="card warn-card">
-      <text class="warn-t">当前浏览器不支持通知</text>
-      <text class="warn-s">提醒仅在支持 Notification 的浏览器（且页面保持打开）时生效。</text>
-    </view>
-    <!-- #endif -->
+        <!-- #ifdef H5 -->
+        <kg-card v-if="on && perm !== 'granted'" class="warn-card">
+          <view class="warn-t">
+            <l-icon name="bell" :size="16" tone="warn" />
+            <text>{{ perm === 'denied' ? '浏览器通知权限被拒绝' : '需要开启浏览器通知权限' }}</text>
+          </view>
+          <text class="warn-s">{{ perm === 'denied' ? '请在浏览器地址栏左侧站点设置中允许「通知」后刷新页面。' : '开启后才能在提醒时间收到今日目标进度提示。' }}</text>
+          <kg-button v-if="perm !== 'denied'" variant="primary" size="md" block class="warn-btn" @click="askPerm">开启通知权限</kg-button>
+        </kg-card>
+        <kg-card v-if="perm === 'unsupported'" class="warn-card">
+          <view class="warn-t"><l-icon name="bell" :size="16" tone="warn" /><text>当前浏览器不支持通知</text></view>
+          <text class="warn-s">提醒仅在支持 Notification 的浏览器（且页面保持打开）时生效。</text>
+        </kg-card>
+        <!-- #endif -->
 
-    <!-- #ifdef H5 -->
-    <view v-if="pushSupported" class="card group">
-      <view class="set-row">
-        <view class="ico"><l-icon name="send" :size="18" color="#2e5bff" /></view>
-        <view class="grow">
-          <text class="nm">每日一练离线推送</text>
-          <text class="sub">每天早上推送全站同题 10 题，关闭页面也能收到</text>
-        </view>
-        <wd-switch :model-value="pushOn" :disabled="pushBusy" active-color="#2e5bff" size="22px" @change="togglePush" />
-      </view>
-    </view>
-    <!-- #endif -->
+        <!-- #ifdef H5 -->
+        <wd-cell-group v-if="pushSupported" custom-class="cellcard" border>
+          <wd-cell title="每日一练离线推送" label="每天早上推送全站同题 10 题，关闭页面也能收到" center>
+            <template #icon><view class="ico"><l-icon name="send" :size="20" tone="brand-text" /></view></template>
+            <wd-switch :model-value="pushOn" :disabled="pushBusy" size="24px" @change="togglePush" />
+          </wd-cell>
+        </wd-cell-group>
+        <!-- #endif -->
 
-    <!-- #ifdef MP-WEIXIN -->
-    <view v-if="mpSubscribeAvailable" class="card group">
-      <view class="set-row" @click="mpSubscribe">
-        <view class="ico"><l-icon name="send" :size="18" color="#2e5bff" /></view>
-        <view class="grow">
-          <text class="nm">微信订阅提醒</text>
-          <text class="sub">一次授权可收到一条服务通知</text>
-        </view>
-        <text class="time-v">去订阅 ›</text>
-      </view>
-    </view>
-    <!-- #endif -->
+        <!-- #ifdef MP-WEIXIN -->
+        <wd-cell-group v-if="mpSubscribeAvailable" custom-class="cellcard" border>
+          <wd-cell title="微信订阅提醒" label="一次授权可收到一条服务通知" is-link clickable center @click="mpSubscribe">
+            <template #icon><view class="ico"><l-icon name="send" :size="20" tone="brand-text" /></view></template>
+            <text class="time-v">去订阅</text>
+          </wd-cell>
+        </wd-cell-group>
+        <!-- #endif -->
+      </template>
 
-    <view class="sec-t">提醒样式预览</view>
-    <view class="push">
-      <view class="hd"><text class="appico">岸</text><text>错题邦 · {{ time }}</text></view>
-      <text class="tt">{{ done >= goal ? '今日目标已达成，保持手感再练一组？🎉' : '今晚还差 ' + previewLeft + ' 题就能守住连续打卡 🔥' }}</text>
-      <text class="bd">今日目标 {{ goal }} 题已完成 {{ done }} 题{{ done >= goal ? '' : '，练完守住连续打卡～' }}</text>
-    </view>
+      <template #main>
+        <kg-section-header title="提醒样式预览" />
+        <kg-card class="push">
+          <view class="hd"><text class="appico">岸</text><text>错题邦 · <text class="num">{{ time }}</text></text></view>
+          <text class="tt">{{ done >= goal ? '今日目标已达成，保持手感再练一组？' : '今晚还差 ' + previewLeft + ' 题就能守住连续打卡' }}</text>
+          <text class="bd">今日目标 {{ goal }} 题已完成 {{ done }} 题{{ done >= goal ? '' : '，练完守住连续打卡～' }}</text>
+        </kg-card>
 
-    <view class="card tip">
-      <text class="tip-t"><l-icon name="lightbulb" :size="14" color="#2e5bff" /> 提醒只在「有事可做」时打扰你：当天已达成目标则改为轻量鼓励；H5 端需保持页面打开才能收到通知。</text>
-    </view>
+        <kg-card class="tip" :padding="12">
+          <l-icon name="lightbulb" :size="16" tone="brand-text" />
+          <text class="tip-t">提醒只在「有事可做」时打扰你：当天已达成目标则改为轻量鼓励；H5 端需保持页面打开才能收到通知。</text>
+        </kg-card>
+      </template>
+    </kg-two-col>
   </view>
 </template>
 
@@ -131,6 +131,9 @@ export default {
       if (this.on && this.perm !== 'granted') await this.askPerm();
       // #endif
       uni.showToast({ title: this.on ? `已开启 · 每天 ${this.time} 提醒` : '已关闭提醒', icon: 'none' });
+    },
+    onTimeConfirm({ value }) {
+      this.setTime({ detail: { value } });
     },
     setTime(e) {
       this.time = e.detail.value;
@@ -211,41 +214,24 @@ export default {
 </script>
 
 <style scoped>
-.wrap { padding: 24rpx 32rpx 60rpx; }
-.card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); margin-bottom: 20rpx; }
-.group { padding: 4rpx 32rpx; }
-.set-row { display: flex; align-items: center; gap: 22rpx; min-height: 56px; border-top: 1rpx solid var(--line); }
-.set-row:first-child { border-top: none; }
-.set-row.dim .ico,
-.set-row.dim .wd-switch,
-.set-row.dim uni-switch { opacity: 0.5; }
-.set-row.dim .nm,
-.set-row.dim .time-v { color: var(--ink-2); }
-.ico { width: 68rpx; height: 68rpx; border-radius: 18rpx; background: var(--brand-soft); display: flex; align-items: center; justify-content: center; font-size: 32rpx; flex-shrink: 0; }
-.grow { flex: 1; min-width: 0; }
-.nm { display: block; font-size: 28rpx; font-weight: 600; color: var(--ink); }
-.sub { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 4rpx; }
-.time-v { font-size: 28rpx; color: var(--brand-text); font-weight: 600; }
+.page { padding: var(--sp-16) var(--page-x) var(--sp-48); }
+.ico { width: 36px; height: 36px; border-radius: var(--r-sm); background: var(--brand-soft); display: flex; align-items: center; justify-content: center; margin-right: var(--sp-12); flex-shrink: 0; }
+.time-v { font-size: var(--fs-body); color: var(--brand-text); font-weight: 600; }
+.reminders :deep(.is-dim) { opacity: 0.5; }
+.reminders :deep(.cellcard) { margin-bottom: var(--card-gap); }
+.reminders :deep(.wd-cell__left) { flex: 1 1 auto; min-width: 0; }
+.reminders :deep(.wd-cell__right) { flex: 0 0 auto; }
+.warn-card { background: var(--warn-soft); margin-bottom: var(--card-gap); }
+.warn-t { display: flex; align-items: center; gap: var(--sp-4); font-size: var(--fs-body); font-weight: 600; color: var(--warn-strong); }
+.warn-s { display: block; font-size: var(--fs-caption); line-height: var(--lh-sub); color: var(--warn-strong); margin-top: var(--sp-4); }
+.warn-btn { margin-top: var(--sp-12); }
 
-.warn-card { padding: 26rpx 30rpx; background: var(--warn-soft); }
-.warn-t { display: flex; align-items: center; gap: 8rpx; font-size: 28rpx; font-weight: 600; color: var(--warn); }
-.warn-s { display: block; font-size: 24rpx; color: #b45309; margin-top: 8rpx; line-height: 1.6; }
-.warn-btn { margin-top: 18rpx; min-height: 44px; display: flex; align-items: center; justify-content: center; background: var(--warn); color: #fff; border-radius: 999rpx; font-size: 26rpx; font-weight: 600; }
+.push { margin-bottom: var(--card-gap); }
+.push .hd { display: flex; align-items: center; gap: var(--sp-8); font-size: var(--fs-caption); color: var(--ink-2); margin-bottom: var(--sp-8); }
+.appico { width: 20px; height: 20px; border-radius: var(--r-xs); background: var(--brand); color: var(--on-brand); font-size: var(--fs-caption); font-weight: 600; display: flex; align-items: center; justify-content: center; }
+.tt { display: block; font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+.bd { display: block; font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--ink-2); margin-top: var(--sp-4); }
 
-.sec-t { font-size: 24rpx; color: var(--ink-2); margin: 28rpx 8rpx 14rpx; }
-.push { background: var(--card); border-radius: 24rpx; box-shadow: 0 6rpx 20rpx rgba(23, 24, 28, 0.08); padding: 24rpx 28rpx; margin-bottom: 20rpx; }
-.push .hd { display: flex; align-items: center; gap: 12rpx; font-size: 22rpx; color: var(--ink-2); margin-bottom: 10rpx; }
-.appico { width: 36rpx; height: 36rpx; border-radius: 10rpx; background: linear-gradient(135deg, #5b8af8, #2e5bff); color: #fff; font-size: 20rpx; font-weight: 800; display: flex; align-items: center; justify-content: center; }
-.tt { display: block; font-size: 28rpx; font-weight: 700; color: var(--ink); }
-.bd { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 6rpx; line-height: 1.6; }
-
-.tip { background: var(--brand-soft); box-shadow: none; padding: 22rpx 28rpx; }
-.tip-t { font-size: 24rpx; color: var(--brand-text); line-height: 1.6; }
-
-/* #ifdef H5 */
-@media (min-width: 768px) {
-  .wrap.reminders { max-width: 680px; }
-  .set-row:hover, .warn-btn:hover { cursor: pointer; }
-}
-/* #endif */
+.tip { display: flex; align-items: flex-start; gap: var(--sp-8); background: var(--brand-soft); }
+.tip-t { flex: 1; font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--brand-text); }
 </style>

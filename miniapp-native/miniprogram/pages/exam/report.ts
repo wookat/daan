@@ -1,4 +1,4 @@
-import { fetchExamReport } from '../../api/index';
+import { fetchExamReport, fetchExamRank } from '../../api/index';
 import type { ExamReportItem, ExamReportResp } from '../../api/types';
 import { modName } from '../../utils/stats';
 
@@ -22,7 +22,11 @@ Page({
     usedMin: 0,
     modRows: [] as ModRow[],
     detail: null as RQuestion | null,
+    loadErr: '',
+    // 同卷击败比例（/api/exam/rank，与 H5 同源）：样本 <10 不展示（迷你模考每次随机组卷，同卷只有本人）
+    rankText: '',
   },
+  _aid: 0,
 
   onLoad(query: Record<string, string | undefined>) {
     const aid = Number(query.attempt_id || 0);
@@ -31,10 +35,22 @@ Page({
       setTimeout(() => wx.navigateBack(), 1200);
       return;
     }
+    this._aid = aid;
     this.load(aid);
+  },
+  onReload() {
+    if (!this._aid) return;
+    this.setData({ loading: true, loadErr: '' });
+    this.load(this._aid);
   },
 
   async load(aid: number) {
+    fetchExamRank(aid)
+      .then((r) => {
+        const rankText = r.total >= 10 ? `超过 ${r.beaten_pct}% 考生 · 同卷第 ${r.rank}/${r.total}` : '';
+        this.setData({ rankText });
+      })
+      .catch(() => this.setData({ rankText: '' }));
     try {
       const d = await fetchExamReport(aid);
       const modRows: ModRow[] = Object.keys(d.attempt.per_module || {}).map((m) => {
@@ -59,7 +75,7 @@ Page({
       });
     } catch (e) {
       wx.showToast({ title: '加载失败：' + (e as Error).message, icon: 'none' });
-      this.setData({ loading: false });
+      this.setData({ loading: false, loadErr: (e as Error).message || '网络错误' });
     }
   },
 
@@ -82,11 +98,11 @@ Page({
     };
     this.setData({ detail });
   },
-  noop() {
-    /* 阻断浮层冒泡 */
-  },
   onCloseDetail() {
     this.setData({ detail: null });
+  },
+  onDetailVisible(e: WechatMiniprogram.CustomEvent<{ visible: boolean }>) {
+    if (!e.detail.visible) this.onCloseDetail();
   },
   onRetry() {
     // kind=mock 是即时生成的迷你卷，重考应重新组卷；真题卷重考同一卷

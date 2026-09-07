@@ -1,60 +1,66 @@
 <navbar title="{{mode === 'login' ? '登录' : '注册'}}" back="{{true}}" />
-<view class="wrap">
-  <view class="l-logo-box">
-    <view class="l-logo">岸</view>
-    <text class="l-app">错题邦</text>
-  </view>
-  <view class="card">
-    <text class="l-title">{{mode === 'login' ? '欢迎回来' : '创建账号'}}</text>
-    <text class="l-sub">登录后错题与进度多端同步</text>
-
-    <t-button
-      theme="primary"
-      block
-      size="large"
-      loading="{{wxBusy}}"
-      t-class="l-btn l-wxbtn"
-      bind:tap="onWxLogin"
-    >微信一键登录</t-button>
-
-    <view class="l-divider"><view class="l-line" /><text class="l-or">或手机号登录</text><view class="l-line" /></view>
-
-    <t-input
-      label="手机号"
-      type="number"
-      placeholder="请输入 11 位手机号"
-      value="{{phone}}"
-      maxlength="{{11}}"
-      bind:change="onPhone"
-    />
-    <t-input
-      label="密码"
-      type="password"
-      placeholder="至少 6 位"
-      value="{{password}}"
-      bind:change="onPassword"
-    />
-    <t-input
-      wx:if="{{mode === 'register'}}"
-      label="昵称"
-      placeholder="选填"
-      value="{{nickname}}"
-      bind:change="onNickname"
-    />
-
-    <text wx:if="{{err}}" class="l-err">{{err}}</text>
-
-    <t-button
-      theme="primary"
-      block
-      size="large"
-      loading="{{busy}}"
-      t-class="l-btn"
-      bind:tap="onSubmit"
-    >{{mode === 'login' ? '登录' : '注册并登录'}}</t-button>
-
-    <view class="l-switch" bind:tap="onSwitch">
-      {{mode === 'login' ? '没有账号？去注册' : '已有账号？去登录'}}
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <view class="l-logo-box">
+      <view class="l-logo">岸</view>
+      <text class="l-app">错题邦</text>
     </view>
+    <kg-card variant="raised" class="l-card">
+      <text class="l-title">{{mode === 'login' ? '欢迎回来' : '创建账号'}}</text>
+      <text class="l-sub">登录后错题与进度多端同步</text>
+
+      <t-button
+        theme="primary"
+        block
+        size="large"
+        icon="logo-wechat-stroke"
+        loading="{{wxBusy}}"
+        t-class="l-btn l-wxbtn"
+        bind:tap="onWxLogin"
+      >微信一键登录</t-button>
+
+      <view class="l-divider"><view class="l-line" /><text class="l-or">或手机号登录</text><view class="l-line" /></view>
+
+      <t-input
+        label="手机号"
+        type="number"
+        placeholder="请输入 11 位手机号"
+        value="{{phone}}"
+        maxlength="{{11}}"
+        bind:change="onPhone"
+      />
+      <t-input
+        label="密码"
+        type="password"
+        placeholder="至少 6 位"
+        value="{{password}}"
+        bind:change="onPassword"
+      />
+      <t-input
+        wx:if="{{mode === 'register'}}"
+        label="昵称"
+        placeholder="选填"
+        value="{{nickname}}"
+        bind:change="onNickname"
+      />
+
+      <view wx:if="{{err}}" class="l-err" role="alert">
+        <l-icon name="triangle-alert" size="16" tone="bad" />
+        <text>{{err}}</text>
+      </view>
+
+      <t-button
+        theme="primary"
+        block
+        size="large"
+        loading="{{busy}}"
+        t-class="l-btn"
+        bind:tap="onSubmit"
+      >{{mode === 'login' ? '登录' : '注册并登录'}}</t-button>
+
+      <t-button theme="light" variant="text" block size="large" t-class="l-switch" bind:tap="onSwitch">
+        {{mode === 'login' ? '没有账号？去注册' : '已有账号？去登录'}}
+      </t-button>
+    </kg-card>
   </view>
-</view>
+</scroll-view>

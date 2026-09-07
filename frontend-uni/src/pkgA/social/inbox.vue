@@ -1,40 +1,61 @@
 <template>
   <view class="wrap">
-    <view v-if="items.length" class="list">
-      <view v-for="(it, i) in items" :key="it.type + '-' + it.id + '-' + i" class="item" @click="openDiscuss(it)">
-        <view class="item-top">
-          <view class="who">
-            <view v-if="it.unread" class="dot" />
-            <template v-if="it.type === 'like'">
-              <text class="like-ico">👍</text>
-              <text class="act">有人赞了我的评论</text>
-            </template>
-            <template v-else>
-              <text class="nick">{{ it.nickname }}</text>
-              <text class="act">回复了我</text>
-            </template>
-          </view>
-          <text class="time">{{ fmtTime(it.created_at) }}</text>
+    <kg-two-col>
+      <template #main>
+        <view v-if="items.length" class="list">
+          <kg-card v-for="(it, i) in items" :key="it.type + '-' + it.id + '-' + i" clickable class="item" @click="openDiscuss(it)">
+            <view class="row">
+              <view class="avatar" :class="{ 'is-like': it.type === 'like' }" aria-hidden="true">
+                <l-icon v-if="it.type === 'like'" name="thumbs-up" :size="20" tone="brand-text" />
+                <text v-else class="avatar-t">{{ (it.nickname || '?').slice(0, 1) }}</text>
+              </view>
+              <view class="body">
+                <view class="hd">
+                  <view class="who">
+                    <view v-if="it.unread" class="dot" aria-label="未读" />
+                    <text v-if="it.type === 'like'" class="act">有人赞了我的评论</text>
+                    <template v-else>
+                      <text class="nick">{{ it.nickname }}</text>
+                      <text class="act">回复了我</text>
+                    </template>
+                  </view>
+                  <text class="time num">{{ fmtTime(it.created_at) }}</text>
+                </view>
+                <text v-if="it.type !== 'like'" class="content q-text ellip1">{{ it.content }}</text>
+                <text class="quote ellip1">我的评论：{{ it.parent_content }}</text>
+              </view>
+            </view>
+          </kg-card>
         </view>
-        <view v-if="it.type !== 'like'" class="content ellip2">{{ it.content }}</view>
-        <view class="quote ellip2">我的评论：{{ it.parent_content }}</view>
-      </view>
-    </view>
-    <view v-else-if="loaded && !logged" class="empty">
-      <view class="empty-ico">🔐</view>
-      <text class="empty-t">登录后查看消息</text>
-      <text class="empty-d">登录账号后，评论收到的回复和点赞会在这里提醒你</text>
-      <button class="login-btn" @click="goLogin">去登录</button>
-    </view>
-    <view v-else-if="loadErr" class="empty">
-      <text class="empty-t">加载失败：{{ loadErr }}</text>
-      <view class="retry" @click="load">重试 ›</view>
-    </view>
-    <view v-else-if="loaded" class="empty">
-      <view class="empty-ico">💬</view>
-      <text class="empty-t">暂无消息</text>
-      <text class="empty-d">去讨论区发表评论，收到回复或点赞会在这里提醒你</text>
-    </view>
+        <kg-empty-state
+          v-else-if="loaded && !logged"
+          icon="user-round"
+          title="登录后查看消息"
+          desc="登录账号后，评论收到的回复和点赞会在这里提醒你"
+          cta-text="去登录"
+          @cta="goLogin"
+        />
+        <kg-empty-state
+          v-else-if="loadErr"
+          icon="wifi-off"
+          :title="'加载失败：' + loadErr"
+          cta-text="重试"
+          @cta="load"
+        />
+        <kg-empty-state
+          v-else-if="loaded"
+          icon="message-circle"
+          title="暂无消息"
+          desc="去讨论区发表评论，收到回复或点赞会在这里提醒你"
+        />
+        <kg-skeleton v-else preset="cards" />
+      </template>
+      <template #aside>
+        <kg-card v-if="items.length" variant="soft">
+          <kg-stat-row :items="[{ label: '消息', value: items.length }, { label: '未读', value: unreadCount }]" />
+        </kg-card>
+      </template>
+    </kg-two-col>
   </view>
 </template>
 
@@ -44,6 +65,11 @@ import { fetchCommentInbox, readCommentInbox, getToken } from '../../api.js';
 export default {
   data() {
     return { items: [], loaded: false, logged: false, loadErr: '' };
+  },
+  computed: {
+    unreadCount() {
+      return this.items.filter((x) => x.unread).length;
+    },
   },
   onShow() {
     this.logged = !!getToken();
@@ -79,35 +105,25 @@ export default {
 </script>
 
 <style scoped>
-.wrap { padding: 24rpx 32rpx 60rpx; }
-.list { display: flex; flex-direction: column; gap: 18rpx; }
-.item { background: var(--card); border-radius: 24rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 24rpx 28rpx; }
-.item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
-.who { display: flex; align-items: center; gap: 10rpx; }
-.dot { width: 14rpx; height: 14rpx; border-radius: 50%; background: #2e5bff; }
-.nick { font-size: 26rpx; font-weight: 700; color: var(--ink); }
-.like-ico { font-size: 26rpx; }
-.act { font-size: 24rpx; color: var(--ink-2); }
-.time { font-size: 22rpx; color: var(--ink-2); }
-.content { font-size: 28rpx; color: var(--ink); line-height: 1.6; }
-.quote { font-size: 24rpx; color: var(--ink-2); background: var(--bg); border-radius: 12rpx; padding: 12rpx 18rpx; margin-top: 14rpx; }
-.ellip2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
-.empty { display: flex; flex-direction: column; align-items: center; gap: 12rpx; padding: 120rpx 0; }
-.empty-ico { font-size: 72rpx; }
-.empty-t { font-size: 28rpx; font-weight: 600; color: var(--ink); }
-.retry {
-  margin-top: 8rpx;
-  color: var(--brand-text);
-  font-size: 26rpx;
-  font-weight: 500;
-}
-.empty-d { font-size: 24rpx; color: var(--ink-2); }
-.login-btn { margin-top: 24rpx; background: var(--brand); color: #fff; font-size: 28rpx; border-radius: 18rpx; padding: 0 64rpx; }
+.wrap { padding: var(--sp-16) var(--page-x) var(--sp-48); }
+.list { display: flex; flex-direction: column; gap: var(--card-gap); }
+.row { display: flex; gap: var(--sp-12); align-items: flex-start; }
+.avatar { flex-shrink: 0; width: 40px; height: 40px; border-radius: var(--r-full); background: var(--brand-soft); display: flex; align-items: center; justify-content: center; }
+.avatar-t { font-size: var(--fs-body); font-weight: 600; color: var(--brand-text); }
+.body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-4); }
+.hd { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-8); }
+.who { display: flex; align-items: center; gap: var(--sp-8); min-width: 0; }
+.dot { flex-shrink: 0; width: 8px; height: 8px; border-radius: var(--r-full); background: var(--brand); }
+.nick { font-size: var(--fs-body); font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.act { font-size: var(--fs-sub); color: var(--ink-2); white-space: nowrap; }
+.time { flex-shrink: 0; font-size: var(--fs-caption); color: var(--ink-3); font-weight: 400; }
+.content { font-size: var(--fs-body); color: var(--ink); }
+.quote { font-size: var(--fs-sub); color: var(--ink-3); background: var(--fill); border-radius: var(--r-xs); padding: var(--sp-4) var(--sp-8); }
+.ellip1 { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* #ifdef H5 */
-@media (min-width: 768px) {
-  .wrap { max-width: 1044px; margin: 0 auto; }
-  .item:hover { cursor: pointer; box-shadow: 0 6rpx 20rpx rgba(23, 24, 28, 0.1); }
+@media (min-width: 1024px) {
+  .wrap { max-width: 1044px !important; }
 }
 /* #endif */
 </style>

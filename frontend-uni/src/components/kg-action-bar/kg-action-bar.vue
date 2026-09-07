@@ -58,5 +58,7 @@ export default {
 @keyframes kg-abar-in { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @media (min-width: 1024px) {
   .kg-abar { position: sticky; }
+  /* 仅移动端的工具（如答题卡：≥1024 由右栏常驻卡承担） */
+  .kg-abar__tools :deep(.kg-tool--m) { display: none; }
 }
 </style>

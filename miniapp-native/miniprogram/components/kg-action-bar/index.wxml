@@ -3,7 +3,7 @@
   <view class="kg-abar__row">
     <view wx:if="{{layout === 'answer' && total}}" class="kg-abar__idx num">{{index + 1}}/{{total}}</view>
     <slot />
-    <kg-button wx:if="{{secondaryText}}" variant="ghost" size="lg" disabled="{{disabled}}" bind:click="onSecondary">{{secondaryText}}</kg-button>
-    <kg-button wx:if="{{primaryText}}" variant="primary" size="lg" block="{{!secondaryText && layout !== 'answer'}}" disabled="{{disabled}}" loading="{{loading}}" bind:click="onPrimary">{{primaryText}}</kg-button>
+    <kg-button wx:if="{{secondaryText}}" class="kg-abar__btn" variant="ghost" size="lg" disabled="{{disabled}}" bind:click="onSecondary">{{secondaryText}}</kg-button>
+    <kg-button wx:if="{{primaryText}}" class="kg-abar__btn" variant="primary" size="lg" block="{{!secondaryText && layout !== 'answer'}}" disabled="{{disabled}}" loading="{{loading}}" bind:click="onPrimary">{{primaryText}}</kg-button>
   </view>
 </view>

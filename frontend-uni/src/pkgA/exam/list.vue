@@ -1,98 +1,136 @@
 <template>
-  <view class="wrap">
-    <view v-if="resume" class="card resume">
-      <view class="resume-l">
-        <text class="resume-t">未交卷：{{ resume.title }}</text>
-        <text class="resume-s">已答 {{ resume.answered }}/{{ resume.total }} 题 · 剩余 {{ fmtLeft(resume.leftSecs) }}</text>
-      </view>
-      <view class="resume-btns">
-        <view class="pbtn main rbtn" @click="continueExam">继续模考</view>
-        <view class="pbtn rbtn" role="button" aria-label="放弃未交卷进度" @click="dropResume">放弃</view>
-      </view>
-    </view>
+  <view class="page">
+    <kg-two-col>
+      <template #main>
+        <kg-card v-if="resume" variant="flat" class="resume" selected>
+          <view class="resume-l">
+            <text class="resume-t">未交卷：{{ resume.title }}</text>
+            <text class="resume-s">已答 {{ resume.answered }}/{{ resume.total }} 题 · 剩余 <text class="num">{{ fmtLeft(resume.leftSecs) }}</text></text>
+          </view>
+          <view class="resume-btns">
+            <kg-button size="md" @click="continueExam">继续模考</kg-button>
+            <kg-button size="md" variant="text" tone="bad" aria-label="放弃未交卷进度" @click="dropResume">放弃</kg-button>
+          </view>
+        </kg-card>
 
-    <view class="mini card" @click="startMini">
-      <text class="mini-ico">⚡</text>
-      <view class="mini-l">
-        <text class="mini-t">迷你模考</text>
-        <text class="mini-s">30 题 · 30 分钟 · 随机组卷，即刻开考</text>
-      </view>
-      <view class="mini-go">开始</view>
-    </view>
+        <kg-card variant="raised" class="mini">
+          <view class="mini-ico"><l-icon name="zap" :size="24" tone="warn" /></view>
+          <view class="mini-l">
+            <text class="mini-t">迷你模考</text>
+            <text class="mini-s">30 题 · 30 分钟 · 随机组卷，即刻开考</text>
+          </view>
+          <kg-button size="md" @click="startMini">开始</kg-button>
+        </kg-card>
 
-    <view v-if="prog.total > 0" class="card progcard">
-      <view class="prog-row">
-        <text class="prog-t">{{ prog.done === prog.total ? '全部刷完 🎉' : '已刷 ' + prog.done + '/' + prog.total + ' 卷' }}</text>
-        <text class="prog-p">{{ prog.pct }}%</text>
-      </view>
-      <view class="prog-bar" role="progressbar" :aria-valuenow="prog.pct" aria-valuemin="0" aria-valuemax="100" :aria-label="'已刷 ' + prog.done + '/' + prog.total + ' 卷'">
-        <view class="prog-fill" :style="{ width: prog.pct + '%' }" />
-      </view>
-    </view>
-
-    <view v-if="filters.years.length || filters.regions.length" class="filters">
-      <scroll-view scroll-x class="fscroll">
-        <text class="fchip" :class="{ on: !st }" @click="setSt('')">全部</text>
-        <text class="fchip" :class="{ on: st === 'todo' }" @click="setSt('todo')">没考过 {{ prog.total - prog.done }}</text>
-        <text class="fchip" :class="{ on: st === 'done' }" @click="setSt('done')">考过的 {{ prog.done }}</text>
-      </scroll-view>
-      <scroll-view v-if="filters.years.length" scroll-x class="fscroll">
-        <text class="fchip" :class="{ on: !year }" @click="setYear(null)">全部年份</text>
-        <text v-for="y in filters.years" :key="y.y" class="fchip" :class="{ on: year === y.y }" @click="setYear(y.y)">{{ y.y }}年</text>
-      </scroll-view>
-      <scroll-view v-if="filters.regions.length" scroll-x class="fscroll">
-        <text class="fchip" :class="{ on: !region }" @click="setRegion(null)">全部地区</text>
-        <text v-for="r in filters.regions" :key="r.r" class="fchip" :class="{ on: region === r.r }" @click="setRegion(r.r)">{{ r.r }}</text>
-      </scroll-view>
-    </view>
-
-    <view v-if="loading" class="spin">试卷加载中…</view>
-    <view v-else-if="loadErr" class="spin">加载失败：{{ loadErr }}<view class="retry" @click="load">重试 ›</view></view>
-    <view v-else-if="!shown.length" class="spin">暂无成套真题卷{{ year || region || st ? '，试试放宽筛选' : '' }}</view>
-
-    <view class="plist">
-    <view v-for="p in paged" :key="p.id" :id="'paper-' + p.id" class="card paper" :class="{ pinned: p.id === pinnedId }">
-      <view class="paper-top" @click="startPaper(p)">
-        <text v-if="p.id === pinnedId" class="pin-badge">邀你挑战的卷</text>
-        <text class="paper-t">{{ p.title }}</text>
-        <view class="paper-meta">
-          <text v-if="p.year" class="ptag">{{ p.year }}年</text>
-          <text v-if="p.region" class="ptag">{{ p.region }}</text>
-          <text class="pmeta">{{ p.n }} 题 · {{ p.duration_min }} 分钟{{ p.takers ? ' · ' + p.takers + ' 人考过' + (p.avg_score != null ? ' · 平均 ' + p.avg_score + ' 分' : '') : '' }}</text>
+        <view v-if="prog.total > 0" class="progrow">
+          <view class="prog-txt">
+            <text class="prog-t">{{ prog.done === prog.total ? '全部刷完 🎉' : '已刷 ' + prog.done + '/' + prog.total + ' 卷' }}</text>
+            <text class="prog-p num">{{ prog.pct }}%</text>
+          </view>
+          <kg-progress :value="prog.done" :max="prog.total" :aria-label="'已刷 ' + prog.done + '/' + prog.total + ' 卷'" />
         </view>
-        <text v-if="p.best_score != null" class="pbest">我的最好成绩 {{ p.best_score }} 分 · 已考 {{ p.attempt_count }} 次</text>
-        <text v-else class="pbest none">还没考过，来挑战一下</text>
-        <text v-if="p.psource && practicedState(p).show" class="ppracticed" :class="{ done: practicedState(p).done }">{{ practicedState(p).text }}</text>
-      </view>
-      <view class="paper-btns">
-        <view class="pbtn main" @click="startPaper(p)">开始模考</view>
-        <view v-if="p.psource" class="pbtn" @click="practicePaper(p)">按卷练习</view>
-        <view v-if="p.best_attempt_id" class="pbtn" @click="openBestReport(p)">看报告</view>
-        <view class="pbtn" @click="askExport(p)">{{ exportingId === p.id ? '导出中…' : '导出 PDF' }}</view>
-      </view>
-    </view>
-    <view v-if="hiddenN > 0" class="more" @click="showMore">展开更多（还有 {{ hiddenN }} 卷）</view>
-    </view>
 
-    <export-confirm
-      :visible="!!exportTarget"
-      :scope="exportTarget ? exportTarget.title : ''"
-      :count="exportTarget ? exportTarget.n : null"
-      :busy="!!exportingId"
-      @close="exportTarget = null"
-      @confirm="exportPaper"
-    />
-
-    <view v-if="attempts.length" class="card">
-      <view class="h">历史成绩</view>
-      <view v-for="a in attempts" :key="a.id" class="arow" @click="openReport(a)">
-        <view class="arow-l">
-          <text class="arow-t">{{ a.title }}</text>
-          <text class="arow-s">{{ fmtTime(a.submitted_at) }}</text>
+        <view v-if="filters.years.length || filters.regions.length" class="filters">
+          <wd-segmented :value="stLabel" :options="ST_LABELS" size="small" @change="onSt" />
+          <kg-chip-row v-if="filters.years.length" :options="yearOpts" :model-value="year == null ? '' : year" @update:model-value="setYear($event === '' ? null : $event)" />
+          <kg-chip-row v-if="filters.regions.length" class="region-row" :options="regionOpts" :model-value="region || ''" :scroll-to-selected="false" @update:model-value="setRegion($event || null)" />
         </view>
-        <text class="arow-score">{{ a.score }} 分</text>
+
+        <kg-skeleton v-if="loading" preset="cards" />
+        <kg-empty-state
+          v-else-if="loadErr"
+          icon="wifi-off"
+          title="试卷加载失败"
+          :desc="loadErr"
+          cta-text="重试"
+          @cta="load"
+        />
+        <kg-empty-state
+          v-else-if="!shown.length"
+          icon="inbox"
+          title="暂无成套真题卷"
+          :desc="year || region || st ? '试试放宽筛选条件' : '真题卷持续录入中，先来一场迷你模考'"
+          :cta-text="year || region || st ? '清除筛选' : '迷你模考'"
+          @cta="year || region || st ? clearFilters() : startMini()"
+        />
+
+        <view v-else class="plist">
+          <kg-card v-for="p in visible" :key="p.id" :id="'paper-' + p.id" variant="flat" class="paper" :selected="p.id === pinnedId">
+            <view class="paper-top" role="button" @click="startPaper(p)">
+              <kg-tag v-if="p.id === pinnedId" tone="brand">邀你挑战的卷</kg-tag>
+              <text class="paper-t">{{ p.title }}</text>
+              <view class="paper-meta">
+                <kg-tag v-if="p.year" tone="neutral">{{ p.year }}年</kg-tag>
+                <kg-tag v-if="p.region" tone="neutral">{{ p.region }}</kg-tag>
+                <text class="pmeta">{{ p.n }} 题 · {{ p.duration_min }} 分钟{{ p.takers ? ' · ' + p.takers + ' 人考过' + (p.avg_score != null ? ' · 平均 ' + p.avg_score + ' 分' : '') : '' }}</text>
+              </view>
+              <text v-if="p.best_score != null" class="pbest">我的最好成绩 <text class="num">{{ p.best_score }}</text> 分 · 已考 {{ p.attempt_count }} 次</text>
+              <text v-else class="pbest none">还没考过，来挑战一下</text>
+              <text v-if="p.psource && practicedState(p).show" class="ppracticed" :class="{ done: practicedState(p).done }">{{ practicedState(p).text }}</text>
+            </view>
+            <template #footer>
+              <view class="paper-btns">
+                <kg-button size="md" class="paper-main" @click="startPaper(p)">开始模考</kg-button>
+                <view class="more" role="button" :aria-label="'更多操作：' + p.title" hover-class="more--hover" @click="openMenu(p)">
+                  <l-icon name="ellipsis" :size="24" tone="ink-2" />
+                </view>
+              </view>
+            </template>
+          </kg-card>
+        </view>
+
+        <view v-if="!loading && !loadErr && visible.length < shown.length" class="more-row">
+          <kg-button variant="ghost" size="lg" block @click="pageN += 1">加载更多（还有 {{ shown.length - visible.length }} 卷）</kg-button>
+        </view>
+
+        <export-confirm
+          :visible="!!exportTarget"
+          :scope="exportTarget ? exportTarget.title : ''"
+          :count="exportTarget ? exportTarget.n : null"
+          :busy="!!exportingId"
+          @close="exportTarget = null"
+          @confirm="exportPaper"
+        />
+
+        <kg-card v-if="attempts.length" variant="flat" class="hist">
+          <text class="h">历史成绩</text>
+          <view v-for="a in attempts" :key="a.id" class="arow" role="button" hover-class="arow--hover" @click="openReport(a)">
+            <view class="arow-l">
+              <text class="arow-t">{{ a.title }}</text>
+              <text class="arow-s">{{ fmtTime(a.submitted_at) }}</text>
+            </view>
+            <text class="arow-score num">{{ a.score }} 分</text>
+            <l-icon name="chevron-right" :size="16" tone="faint" />
+          </view>
+        </kg-card>
+      </template>
+
+      <!-- #ifdef H5 -->
+      <template #aside>
+        <kg-card v-if="filters.regions.length" variant="flat">
+          <text class="h">按地区</text>
+          <view class="rg-wrap">
+            <view class="rg" :class="{ on: !region }" role="radio" :aria-checked="!region ? 'true' : 'false'" @click="setRegion(null)">全部地区</view>
+            <view v-for="r in filters.regions" :key="r.r" class="rg" :class="{ on: region === r.r }" role="radio" :aria-checked="region === r.r ? 'true' : 'false'" @click="setRegion(r.r)">{{ r.r }}</view>
+          </view>
+        </kg-card>
+      </template>
+      <!-- #endif -->
+    </kg-two-col>
+
+    <kg-sheet v-model="menuOpen" :title="menuPaper ? menuPaper.title : ''">
+      <view v-if="menuPaper" class="menu">
+        <view v-if="menuPaper.psource" class="menu-it" role="button" hover-class="menu-it--hover" @click="menuGo(practicePaper)">
+          <l-icon name="pencil-line" :size="20" tone="ink-2" /><text>按卷练习（不计时）</text>
+        </view>
+        <view v-if="menuPaper.best_attempt_id" class="menu-it" role="button" hover-class="menu-it--hover" @click="menuGo(openBestReport)">
+          <l-icon name="chart-column" :size="20" tone="ink-2" /><text>看最好成绩报告</text>
+        </view>
+        <view class="menu-it" role="button" hover-class="menu-it--hover" @click="menuGo(askExport)">
+          <l-icon name="file-text" :size="20" tone="ink-2" /><text>{{ exportingId === menuPaper.id ? '导出中…' : '导出 PDF' }}</text>
+        </view>
       </view>
-    </view>
+    </kg-sheet>
   </view>
 </template>
 
@@ -106,6 +144,8 @@ import { adoptServerExamProgress } from '../../exam-progress-sync.js';
 import { paperPracticedState } from '../../paper-continue.js';
 
 const PAGE = 20;
+const ST_LABELS = ['全部', '没考过', '考过的'];
+const ST_VALUES = ['', 'todo', 'done'];
 
 export default {
   data() {
@@ -122,11 +162,10 @@ export default {
       exportTarget: null,
       pinnedId: 0,
       resume: null,
-      visibleN: PAGE,
+      pageN: 1,
+      menuOpen: false,
+      menuPaper: null,
     };
-  },
-  onReachBottom() {
-    this.showMore();
   },
   created() {
     this._starting = false;
@@ -135,16 +174,23 @@ export default {
     shown() {
       return filterPapersByStatus(this.items, this.st);
     },
-    // 全量卷 100+ 张时一次渲染约 4 万 px 长列表，分批挂载
-    paged() {
-      return this.shown.slice(0, this.visibleN);
-    },
-    hiddenN() {
-      return this.shown.length - this.paged.length;
-    },
     prog() {
       return paperProgress(this.items);
     },
+    visible() {
+      return this.shown.slice(0, this.pageN * PAGE);
+    },
+    ST_LABELS() { return ST_LABELS; },
+    stLabel() { return ST_LABELS[Math.max(0, ST_VALUES.indexOf(this.st))]; },
+    yearOpts() {
+      return [{ value: '', label: '全部年份' }].concat(this.filters.years.map((y) => ({ value: y.y, label: y.y + '年' })));
+    },
+    regionOpts() {
+      return [{ value: '', label: '全部地区' }].concat(this.filters.regions.map((r) => ({ value: r.r, label: r.r })));
+    },
+  },
+  onReachBottom() {
+    if (this.visible.length < this.shown.length) this.pageN += 1;
   },
   onLoad(opts) {
     const p = parseExamListOpts(opts);
@@ -161,9 +207,6 @@ export default {
     this.loadResume();
   },
   methods: {
-    showMore() {
-      if (this.visibleN < this.shown.length) this.visibleN += PAGE;
-    },
     async load() {
       this.loadErr = '';
       const q = ['kind=zhenti', 'uid=' + encodeURIComponent(anonUid())];
@@ -217,10 +260,10 @@ export default {
       const pid = this._pendingPid;
       if (!pid) return;
       this._pendingPid = 0;
-      const idx = this.shown.findIndex((p) => p.id === pid);
-      if (idx < 0) return;
+      const at = this.shown.findIndex((p) => p.id === pid);
+      if (at < 0) return;
       this.pinnedId = pid;
-      if (idx >= this.visibleN) this.visibleN = idx + 1;
+      this.pageN = Math.max(this.pageN, Math.floor(at / PAGE) + 1);
       // #ifdef H5
       this.$nextTick(() => {
         if (typeof document !== 'undefined') {
@@ -277,9 +320,31 @@ export default {
       }
       // #endif
     },
-    setYear(y) { this.year = y; this.pinnedId = 0; this.visibleN = PAGE; this.syncUrl(); this.load(); },
-    setRegion(r) { this.region = r; this.pinnedId = 0; this.visibleN = PAGE; this.syncUrl(); this.load(); },
-    setSt(s) { this.st = s; this.pinnedId = 0; this.visibleN = PAGE; this.syncUrl(); },
+    setYear(y) { this.year = y; this.pinnedId = 0; this.pageN = 1; this.syncUrl(); this.load(); },
+    setRegion(r) { this.region = r; this.pinnedId = 0; this.pageN = 1; this.syncUrl(); this.load(); },
+    setSt(s) { this.st = s; this.pinnedId = 0; this.pageN = 1; this.syncUrl(); },
+    onSt(e) {
+      const i = ST_LABELS.indexOf(e && e.value);
+      this.setSt(i > 0 ? ST_VALUES[i] : '');
+    },
+    clearFilters() {
+      this.st = '';
+      this.year = null;
+      this.region = null;
+      this.pinnedId = 0;
+      this.pageN = 1;
+      this.syncUrl();
+      this.load();
+    },
+    openMenu(p) {
+      this.menuPaper = p;
+      this.menuOpen = true;
+    },
+    menuGo(fn) {
+      const p = this.menuPaper;
+      this.menuOpen = false;
+      if (p) fn.call(this, p);
+    },
     startPaper(p) {
       if (this._starting) return;
       uni.navigateTo({ url: '/pkgA/exam/exam?paper_id=' + p.id });
@@ -332,63 +397,65 @@ export default {
 </script>
 
 <style scoped>
-.wrap { padding: 24rpx; padding-bottom: 40rpx; }
-.card { background: var(--card); border-radius: var(--radius); padding: 28rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
-.h { font-size: 30rpx; font-weight: 600; margin-bottom: 20rpx; }
-.spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 40rpx 24rpx; }
-.retry { margin-top: 12rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
-.mini { display: flex; align-items: center; gap: 20rpx; background: linear-gradient(135deg, var(--warn-soft), var(--card)); border: 1rpx solid var(--line); }
-.mini-ico { flex-shrink: 0; font-size: 48rpx; }
-.mini-l { flex: 1; min-width: 0; }
-.mini-t { display: block; font-size: 30rpx; font-weight: 700; color: var(--ink); }
-.mini-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; }
-.mini-go { flex-shrink: 0; background: var(--brand); color: #fff; border-radius: 999rpx; padding: 0 36rpx; min-height: 38px; line-height: 38px; font-size: 26rpx; font-weight: 600; }
-.progcard { padding: 22rpx 28rpx; }
-.prog-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
-.prog-t { font-size: 26rpx; font-weight: 600; color: var(--ink); }
-.prog-p { font-size: 24rpx; font-weight: 600; color: var(--brand-text); }
-.prog-bar { height: 12rpx; background: var(--brand-soft); border-radius: 999rpx; overflow: hidden; }
-.prog-fill { height: 100%; min-width: 4rpx; background: var(--brand); border-radius: 999rpx; }
-.filters { margin-bottom: 20rpx; }
-.fscroll { white-space: nowrap; margin-bottom: 12rpx; }
-.fchip { display: inline-flex; align-items: center; min-height: 44px; box-sizing: border-box; font-size: 24rpx; color: var(--ink-2); background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 26rpx; margin-right: 12rpx; }
-.fchip.on { color: #fff; background: var(--brand); border-color: var(--brand-text); font-weight: 600; }
-.paper-top { min-height: 44px; }
-.paper.pinned { border-color: var(--brand); box-shadow: 0 4rpx 20rpx rgba(37, 99, 235, 0.18); }
-.pin-badge { display: inline-block; font-size: 22rpx; color: #fff; background: var(--brand); border-radius: 8rpx; padding: 4rpx 14rpx; margin-bottom: 10rpx; }
-.paper-t { font-size: 30rpx; font-weight: 600; color: var(--ink); line-height: 1.5; }
-.paper-meta { display: flex; align-items: center; gap: 12rpx; margin-top: 10rpx; flex-wrap: wrap; }
-.ptag { font-size: 22rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 8rpx; padding: 4rpx 14rpx; }
-.pmeta { font-size: 24rpx; color: var(--ink-2); }
-.pbest { display: block; font-size: 22rpx; color: var(--warn); margin-top: 10rpx; }
-.pbest.none { color: var(--ink-2); }
-.ppracticed { display: block; font-size: 22rpx; color: var(--ok-strong); margin-top: 6rpx; }
-.ppracticed.done { color: var(--brand-text); font-weight: 600; }
-.paper-btns { display: flex; gap: 12rpx; margin-top: 20rpx; }
-/* 一主多次：主按钮实底更宽，次按钮浅底无边框，避免一行四个描边药丸互相抢眼 */
-.pbtn { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; background: var(--brand-soft); color: var(--brand-text); border-radius: 999rpx; font-size: 24rpx; font-weight: 500; white-space: nowrap; }
-.pbtn.main { flex: 1.5; background: var(--brand); color: #fff; font-weight: 600; font-size: 26rpx; }
-.more { min-height: 44px; display: flex; align-items: center; justify-content: center; font-size: 26rpx; color: var(--brand-text); }
-.arow { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 12rpx 0; border-bottom: 1rpx solid var(--line); }
-.arow:last-child { border-bottom: none; }
-.arow-l { flex: 1; min-width: 0; margin-right: 16rpx; }
-.arow-t { display: block; font-size: 26rpx; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.arow-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
-.arow-score { flex-shrink: 0; font-size: 28rpx; font-weight: 700; color: var(--brand-text); }
-.resume { display: flex; align-items: center; gap: 20rpx; border-color: var(--brand); }
+.page { padding: var(--sp-16) var(--page-x) var(--sp-40); }
+.h { display: block; font-size: var(--fs-h3); font-weight: 600; color: var(--ink); margin-bottom: var(--sp-12); }
+.resume { display: flex; align-items: center; gap: var(--sp-12); margin-bottom: var(--card-gap); }
 .resume-l { flex: 1; min-width: 0; }
-.resume-t { display: block; font-size: 28rpx; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.resume-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; }
-.resume-btns { flex-shrink: 0; display: flex; gap: 12rpx; }
-.rbtn { flex: none; padding: 0 26rpx; }
+.resume-t { display: block; font-size: var(--fs-body); font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.resume-s { display: block; font-size: var(--fs-sub); color: var(--ink-3); margin-top: var(--sp-4); }
+.resume-btns { flex-shrink: 0; display: flex; flex-direction: column; align-items: stretch; gap: var(--sp-4); }
+.mini { display: flex; align-items: center; gap: var(--sp-12); margin-bottom: var(--card-gap); }
+.mini-ico { flex-shrink: 0; width: 40px; height: 40px; border-radius: var(--r-full); background: var(--warn-soft); display: flex; align-items: center; justify-content: center; }
+.mini-l { flex: 1; min-width: 0; }
+.mini-t { display: block; font-size: var(--fs-h3); font-weight: 600; color: var(--ink); }
+.mini-s { display: block; font-size: var(--fs-sub); color: var(--ink-3); margin-top: var(--sp-4); }
+.progrow { padding: var(--sp-4) 0 var(--sp-16); }
+.prog-txt { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-8); }
+.prog-t { font-size: var(--fs-sub); font-weight: 500; color: var(--ink); }
+.prog-p { font-size: var(--fs-sub); color: var(--brand-text); }
+.filters { display: flex; flex-direction: column; gap: var(--sp-12); margin-bottom: var(--sp-16); }
+.plist { display: flex; flex-direction: column; gap: var(--card-gap); }
+.plist .paper + .paper { margin-top: 0; }
+.paper-top { min-height: var(--hit-min); display: flex; flex-direction: column; gap: var(--sp-8); align-items: flex-start; }
+.paper-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); line-height: var(--lh-body); }
+.paper-meta { display: flex; align-items: center; gap: var(--sp-8); flex-wrap: wrap; }
+.pmeta { font-size: var(--fs-sub); color: var(--ink-3); }
+.pbest { font-size: var(--fs-sub); color: var(--warn-strong); }
+.pbest.none { color: var(--ink-3); }
+.ppracticed { font-size: var(--fs-sub); color: var(--ok-strong); }
+.ppracticed.done { color: var(--brand-text); font-weight: 500; }
+.paper-btns { display: flex; align-items: center; gap: var(--sp-8); }
+.paper-main { flex: 1; }
+.paper-btns :deep(.kg-btn) { flex: 1; }
+.more { flex-shrink: 0; width: var(--hit-min); height: var(--hit-min); border-radius: var(--r-full); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; }
+.more--hover { background: var(--fill); }
+.more-row { margin-top: var(--sp-16); }
+.hist { margin-top: var(--sp-24); }
+.arow { display: flex; align-items: center; gap: var(--sp-8); min-height: var(--cell-h); padding: var(--sp-8) 0; border-bottom: 1px solid var(--line); }
+.arow:last-child { border-bottom: none; padding-bottom: 0; }
+.arow--hover { background: var(--fill); }
+.arow-l { flex: 1; min-width: 0; }
+.arow-t { display: block; font-size: var(--fs-body); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.arow-s { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-4); }
+.arow-score { flex-shrink: 0; font-size: var(--fs-h3); color: var(--brand-text); }
+.menu { display: flex; flex-direction: column; }
+.menu-it { display: flex; align-items: center; gap: var(--sp-12); min-height: var(--cell-h); font-size: var(--fs-body); color: var(--ink); border-bottom: 1px solid var(--line); }
+.menu-it:last-child { border-bottom: none; }
+.menu-it--hover { background: var(--fill); }
+.rg-wrap { display: flex; flex-wrap: wrap; gap: var(--sp-8); }
+.rg { display: inline-flex; align-items: center; height: var(--chip-h); padding: 0 var(--sp-12); border-radius: var(--r-full); border: 1px solid var(--line); background: var(--card); color: var(--ink-2); font-size: var(--fs-sub); }
+.rg.on { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
 
-/* 桌面网格（仅 H5 ≥1024px） */
 /* #ifdef H5 */
+.page :deep(.kg-two__aside) { display: none; }
 @media (min-width: 1024px) {
-  .wrap { max-width: 1044px !important; margin: 0 auto; }
-  .plist { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24rpx; align-items: stretch; margin-bottom: 24rpx; }
-  .plist .paper { margin-bottom: 0; display: flex; flex-direction: column; }
+  .page { max-width: 1064px; margin: 0 auto; }
+  .page :deep(.kg-two__aside) { display: block; }
+  .region-row { display: none; }
+  .plist { display: grid; grid-template-columns: repeat(2, 1fr); align-items: stretch; }
+  .plist .paper { display: flex; flex-direction: column; }
   .plist .paper .paper-top { flex: 1; }
+  .paper-top, .more, .arow, .menu-it, .rg { cursor: pointer; }
 }
 /* #endif */
 </style>

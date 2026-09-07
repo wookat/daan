@@ -1,369 +1,355 @@
 <template>
-  <view class="wrap">
-    <view v-if="authUser" class="acct card">
-      <view class="acct-ava">{{ (authUser.nickname || '考').slice(0, 1) }}</view>
-      <view class="acct-main">
-        <text class="acct-name">{{ authUser.nickname }}</text>
-        <text class="acct-sub">{{ authUser.phone }} · 多端同步已开启</text>
-      </view>
-      <view class="acct-btn ghost" @click="doLogout">退出</view>
-    </view>
-    <!-- 未登录：轻量顶条，不占首屏大块 -->
-    <view v-else class="loginstrip" @click="goLogin">
-      <text class="ls-t">登录后错题与记录多端同步</text>
-      <text class="ls-btn">登录/注册 ›</text>
+  <view class="wrap stats">
+    <!-- 未登录：横幅（不占首屏大块） -->
+    <view v-if="!authUser" class="strip">
+      <kg-banner tone="info" icon="user-round" text="登录后错题与记录多端同步" action-text="登录 / 注册" :closable="false" @action="goLogin" />
     </view>
 
-    <view class="hero">
-      <view class="hero-top">
-        <text class="hero-t">学习统计</text>
-        <text class="hero-cal" @click="goCalendar">学习日历 ›</text>
+    <!-- 0 数据：整页折叠为 1 张解锁卡 -->
+    <template v-if="!hasData">
+      <kg-hero-card
+        variant="plain"
+        :label="'再答 ' + unlockLeft + ' 题解锁学习统计'"
+        :value="totalDone"
+        :total="UNLOCK_N"
+        unit="题"
+        :progress="unlockPct"
+        :primary="{ text: '去刷 10 题' }"
+        :secondary="{ text: '学习日历' }"
+        @primary="goPractice('')"
+        @secondary="goCalendar"
+      >
+        <text class="unlock-s">答满 {{ UNLOCK_N }} 题后，这里会出现学习热力图、五模块能力雷达、错题分布与考点掌握度地图</text>
+      </kg-hero-card>
+      <view v-if="loadErr" class="err-row">
+        <kg-empty-state compact icon="wifi-off" title="统计加载失败" :desc="loadErr" cta-text="重试" @cta="load" />
       </view>
-      <view class="hero-kpis">
-        <view class="hk">
-          <text class="hk-n">{{ totalDone }}</text>
-          <text class="hk-t">累计刷题(含模考)</text>
-        </view>
-        <view class="hk">
-          <text class="hk-n">{{ accPct }}%</text>
-          <text class="hk-t">总正确率</text>
-        </view>
-        <view class="hk">
-          <text class="hk-n">{{ streakDays }}</text>
-          <text class="hk-t">连续打卡(天)</text>
-        </view>
-      </view>
-    </view>
+    </template>
 
-    <predict-card ref="predict" />
+    <kg-two-col v-else>
+      <template #main>
+        <kg-hero-card variant="plain" label="累计刷题（含模考）" :value="totalDone" unit="题" :streak="streakDays" :secondary="{ text: '学习日历' }" @secondary="goCalendar">
+          <kg-stat-row :items="heroStats" />
+        </kg-hero-card>
 
-    <view class="sgrid">
+        <predict-card ref="predict" />
 
-    <view class="card">
-      <view class="hm-h">
-        <view class="h" style="margin-bottom: 0">学习热力图·近12周</view>
-        <text class="hm-total">学习 {{ hmTotal }} 次(含复习)</text>
-      </view>
-      <view class="hm-body">
-        <view class="hm-ylab">
-          <text v-for="w in ['一', '', '三', '', '五', '', '日']" :key="w + 'y'" class="hm-yl">{{ w }}</text>
-        </view>
-        <view class="hm-grid">
-          <view v-for="(col, ci) in hmCols" :key="ci" class="hm-col">
-            <view v-for="(c, ri) in col" :key="ri" class="hm-c" :class="'lv' + c.lv + (c.future ? ' fut' : '')" />
+        <!-- 今日待办 -->
+        <kg-card v-if="(reco && reco.items.length) || dueN" class="sec">
+          <kg-section-header title="今日待办" />
+          <view v-if="dueN" class="todo-row">
+            <view class="todo-ico is-warn"><l-icon name="book-open" :size="20" tone="warn" /></view>
+            <view class="todo-main">
+              <text class="todo-name">错题到期复习</text>
+              <text class="todo-meta">{{ dueN }} 题今日待复习</text>
+            </view>
+            <kg-button variant="primary" size="sm" @click="goBook">去复习</kg-button>
           </view>
-        </view>
-      </view>
-      <view class="hm-legend">
-        <text class="hm-note">统计练习/模考/复习作答</text>
-        <text class="hm-lt">少</text>
-        <view v-for="i in [0, 1, 2, 3, 4]" :key="'lg' + i" class="hm-c" :class="'lv' + i" />
-        <text class="hm-lt">多</text>
-      </view>
-    </view>
+          <view v-for="(r, i) in (reco ? reco.items : [])" :key="i" class="todo-row">
+            <view class="todo-ico"><l-icon name="target" :size="20" tone="brand" /></view>
+            <view class="todo-main">
+              <text class="todo-name">{{ r.label || r.submodule }}</text>
+              <text class="todo-meta">{{ r.reason }} · 正确率 {{ Math.round(r.acc * 100) }}%（{{ r.n }}题）</text>
+            </view>
+            <kg-button variant="primary" size="sm" @click="goSub(r.module, r.submodule, r.tag3, 'reco')">练10题</kg-button>
+          </view>
+          <text class="note">基于你的做题历史（正确率/近期趋势/遗忘曲线/考频）自动推荐</text>
+        </kg-card>
 
-    <view v-if="(reco && reco.items.length) || dueN" class="card">
-      <view class="h">今日待办</view>
-      <view v-if="dueN" class="todo-row">
-        <view class="todo-ico warn"><l-icon name="book-open" :size="20" color="#b45309" /></view>
-        <view class="todo-main">
-          <text class="todo-name">错题到期复习</text>
-          <text class="todo-meta">{{ dueN }} 题今日待复习</text>
-        </view>
-        <view class="todo-btn" @click="goBook">去复习</view>
-      </view>
-      <view v-for="(r, i) in (reco ? reco.items : [])" :key="i" class="todo-row">
-        <view class="todo-ico"><l-icon name="target" :size="20" color="#2e5bff" /></view>
-        <view class="todo-main">
-          <text class="todo-name">{{ r.label || r.submodule }}</text>
-          <text class="todo-meta">{{ r.reason }} · 正确率 {{ Math.round(r.acc * 100) }}%（{{ r.n }}题）</text>
-        </view>
-        <view class="todo-btn" @click="goSub(r.module, r.submodule, r.tag3, 'reco')">练10题</view>
-      </view>
-      <view class="rc-note">基于你的做题历史（正确率/近期趋势/遗忘曲线/考频）自动推荐</view>
-    </view>
-
-    <view class="card">
-      <view class="h">五模块能力雷达</view>
-      <view v-if="!hasRadar" class="radar-empty">
-        <view class="re-t">还没有能力数据</view>
-        <view class="re-s">刷几题就能生成你的五模块能力画像</view>
-        <button class="re-btn" @click="goPractice('')">去刷题</button>
-      </view>
-      <view v-else class="radar-flex">
-        <view class="radar-box">
-          <view class="radar">
-            <view v-for="i in 4" :key="'g' + i" class="ring" :style="ringStyle(i)" />
-            <view class="poly" :style="polyStyle" />
-            <view v-for="(a, i) in axes" :key="a.key" class="axis-label" :style="labelStyle(i)">
-              <text class="al-name">{{ a.name }}</text>
-              <text class="al-val">{{ a.pct }}%</text>
+        <!-- 热力图 -->
+        <kg-card class="sec">
+          <kg-section-header title="学习热力图 · 近 12 周">
+            <template #right><text class="hm-total">学习 {{ hmTotal }} 次(含复习)</text></template>
+          </kg-section-header>
+          <view class="hm-body">
+            <view class="hm-ylab">
+              <text v-for="w in ['一', '', '三', '', '五', '', '日']" :key="w + 'y'" class="hm-yl">{{ w }}</text>
+            </view>
+            <view class="hm-grid">
+              <view v-for="(col, ci) in hmCols" :key="ci" class="hm-col">
+                <view v-for="(c, ri) in col" :key="ri" class="hm-c" :class="'lv' + c.lv + (c.future ? ' fut' : '')" />
+              </view>
             </view>
           </view>
-        </view>
-        <view class="radar-side">
-          <view v-if="weakAxes.length" class="rs-t">最薄弱</view>
-          <view v-for="a in weakAxes" :key="a.key" class="rs-row">
-            <text class="rs-name">{{ a.name }}</text>
-            <text class="rs-pct">{{ a.pct }}%</text>
+          <view class="hm-legend">
+            <text class="hm-note">统计练习/模考/复习作答</text>
+            <text class="hm-lt">少</text>
+            <view v-for="i in [0, 1, 2, 3, 4]" :key="'lg' + i" class="hm-c" :class="'lv' + i" />
+            <text class="hm-lt">多</text>
           </view>
-          <view v-if="weakAxes.length" class="ghost-btn" @click="goPractice(weakAxes[0].key, 'weak')">去补弱</view>
-        </view>
-      </view>
-    </view>
+        </kg-card>
 
-    <view class="card">
-      <view class="h">错题模块分布</view>
-      <view v-if="loadErr && !byModule.length" class="spin">加载失败：{{ loadErr }}<view class="retry" @click="load">重试 ›</view></view>
-      <view v-else-if="!byModule.length" class="spin">暂无数据</view>
-      <view v-for="m in shownModules" :key="m.module" class="mrow" @click="goPractice(m.module)">
-        <view class="mrow-main">
-          <view class="blabel">
-            <text>{{ modName(m.module) }}</text>
-            <text class="bn">×{{ m.n }}</text>
+        <!-- 雷达 -->
+        <kg-card class="sec">
+          <kg-section-header title="五模块能力雷达" />
+          <kg-empty-state v-if="!hasRadar" compact icon="chart-column" title="还没有能力数据" desc="刷几题就能生成你的五模块能力画像" cta-text="去刷题" @cta="goPractice('')" />
+          <view v-else class="radar-flex">
+            <view class="radar-box">
+              <view class="radar">
+                <view v-for="i in 4" :key="'g' + i" class="ring" :style="ringStyle(i)" />
+                <view class="poly" :style="polyStyle" />
+                <view v-for="(a, i) in axes" :key="a.key" class="axis-label" :style="labelStyle(i)">
+                  <text class="al-name">{{ a.name }}</text>
+                  <text class="al-val num">{{ a.pct }}%</text>
+                </view>
+              </view>
+            </view>
+            <view class="radar-side">
+              <text v-if="weakAxes.length" class="rs-t">最薄弱</text>
+              <view v-for="a in weakAxes" :key="a.key" class="rs-row">
+                <text class="rs-name">{{ a.name }}</text>
+                <text class="rs-pct num">{{ a.pct }}%</text>
+              </view>
+              <kg-button v-if="weakAxes.length" variant="secondary" size="lg" block @click="goPractice(weakAxes[0].key, 'weak')">去补弱</kg-button>
+            </view>
           </view>
-          <view class="bar">
-            <view class="fill" :style="{ width: (m.n / total) * 100 + '%' }" />
+        </kg-card>
+
+        <!-- 错题模块分布 -->
+        <kg-card class="sec">
+          <kg-section-header title="错题模块分布" />
+          <kg-empty-state v-if="loadErr && !byModule.length" compact icon="wifi-off" title="加载失败" :desc="loadErr" cta-text="重试" @cta="load" />
+          <kg-empty-state v-else-if="!byModule.length" compact icon="inbox" title="暂无错题" desc="答错的题会汇集到这里，按模块统计" />
+          <view v-for="m in shownModules" :key="m.module" class="mrow" role="button" @click="goPractice(m.module)">
+            <view class="mrow-main">
+              <view class="blabel">
+                <text>{{ modName(m.module) }}</text>
+                <text class="bn num">×{{ m.n }}</text>
+              </view>
+              <kg-progress :value="m.n" :max="total" :module="m.module" />
+            </view>
+            <l-icon name="chevron-right" :size="20" tone="faint" />
           </view>
-        </view>
-        <text class="mrow-arrow">›</text>
-      </view>
-      <view v-if="byModule.length > 3" class="hist-more" @click="modOpen = !modOpen">{{ modOpen ? '收起' : '展开全部 ' + byModule.length + ' 个模块' }}</view>
-    </view>
+          <view v-if="byModule.length > 3" class="more" role="button" @click="modOpen = !modOpen">{{ modOpen ? '收起' : '展开全部 ' + byModule.length + ' 个模块' }}</view>
+        </kg-card>
 
-    <view class="card">
-      <view class="h">高频错题型 TOP10</view>
-      <view v-if="loadErr && !byType.length" class="spin">加载失败：{{ loadErr }}<view class="retry" @click="load">重试 ›</view></view>
-      <view v-else-if="!byType.length" class="spin">暂无数据</view>
-      <view v-else class="top-chips">
-        <view v-for="t in shownTypes" :key="t.question_type" class="top-chip" @click="goPractice('')">
-          <text class="tc-name">{{ typeName(t.question_type) }}</text>
-          <text class="tc-n">×{{ t.n }}</text>
-        </view>
-        <view v-if="byType.length > 5" class="top-chip more" @click="topOpen = !topOpen">{{ topOpen ? '收起' : '+' + (byType.length - 5) }}</view>
-      </view>
-    </view>
-
-    <view v-if="byReason.length" class="card">
-      <view class="h">错因分布</view>
-      <view v-for="r in byReason" :key="r.error_reason" class="brow">
-        <view class="blabel">
-          <text>{{ r.error_reason }}</text>
-          <text class="n">×{{ r.n }}</text>
-        </view>
-        <view class="bar">
-          <view class="fill rz" :style="{ width: (r.n / reasonTotal) * 100 + '%' }" />
-        </view>
-      </view>
-    </view>
-
-    <view v-if="trendHas" class="card">
-      <view class="h">近 7 日正确率</view>
-      <view class="trend">
-        <view v-for="t in trend" :key="t.key" class="tcol">
-          <text class="tpct">{{ t.done ? t.pct + '%' : '' }}</text>
-          <view class="tbar">
-            <view class="tfill" :class="{ lo: t.done && t.pct < 60 }" :style="{ height: (t.done ? Math.max(t.pct, 6) : 0) + '%' }" />
+        <!-- 高频错题型 -->
+        <kg-card class="sec">
+          <kg-section-header title="高频错题型 TOP10" />
+          <kg-empty-state v-if="loadErr && !byType.length" compact icon="wifi-off" title="加载失败" :desc="loadErr" cta-text="重试" @cta="load" />
+          <kg-empty-state v-else-if="!byType.length" compact icon="inbox" title="暂无数据" desc="错题积累后会按题型聚合" />
+          <view v-else class="top-chips">
+            <view v-for="t in shownTypes" :key="t.question_type" class="top-chip" role="button" @click="goPractice('')">
+              <text class="tc-name">{{ typeName(t.question_type) }}</text>
+              <text class="tc-n num">×{{ t.n }}</text>
+            </view>
+            <view v-if="byType.length > 5" class="top-chip is-more" role="button" @click="topOpen = !topOpen">{{ topOpen ? '收起' : '+' + (byType.length - 5) }}</view>
           </view>
-          <text class="tday">{{ t.label }}</text>
-        </view>
-      </view>
-    </view>
+        </kg-card>
 
-    <view v-if="growth && growth.weeks.length >= 2" class="card">
-      <view class="h">成长轨迹（周正确率）</view>
-      <view class="gw-tabs">
-        <text class="gw-tab" :class="{ on: gwMod === '' }" @click="gwMod = ''">整体</text>
-        <text v-for="m in gwMods" :key="m.key" class="gw-tab" :class="{ on: gwMod === m.key }" @click="gwMod = m.key">{{ m.name }}</text>
-      </view>
-      <view class="gw-row" v-for="w in growthRows" :key="w.week">
-        <text class="gw-wk">{{ w.label }}</text>
-        <view class="gw-bar">
-          <view class="gw-fill" :class="{ lo: w.pct < 60, mid: w.pct >= 60 && w.pct < 80 }" :style="{ width: w.pct + '%' }" />
-        </view>
-        <text class="gw-pct">{{ w.pct }}%<text class="gw-n">（{{ w.n }}题）</text></text>
-      </view>
-      <view v-if="growthDelta !== null" class="gw-delta" :class="{ up: growthDelta >= 0 }">
-        本周比上周{{ growthDelta >= 0 ? '提升' : '下降' }} {{ Math.abs(growthDelta) }} 个百分点
-      </view>
-    </view>
-
-    <view v-if="slStats && slStats.total" class="card">
-      <view class="cal-head">
-        <view class="h" style="margin-bottom: 0">申论学习</view>
-        <text class="coach-btn" @click="goShenlun">作答记录 ›</text>
-      </view>
-      <view class="sl-row">
-        <text class="sl-num">{{ slStats.total }}</text>
-        <text class="sl-lab">次 AI 批改</text>
-        <text v-if="slStats.last_at" class="sl-last">最近 {{ slLast }}</text>
-      </view>
-      <view class="sl-types">
-        <text v-for="t in slStats.by_type" :key="t.qtype" class="sl-chip">{{ t.qtype }} ×{{ t.n }}</text>
-      </view>
-      <template v-if="slStats.issues && slStats.issues.length">
-        <view class="sl-ih" @click="slIssuesOpen = !slIssuesOpen">近期问题点（{{ slStats.issues.length }}） {{ slIssuesOpen ? '▲' : '▼' }}</view>
-        <view v-if="slIssuesOpen">
-          <view v-for="(it, i) in slStats.issues" :key="i" class="sl-issue">
-            <text class="sl-ik" :class="{ adv: it.kind === '提升建议' }">{{ it.kind === '提升建议' ? '建议' : '遗漏' }}</text>
-            <text class="sl-it">{{ it.text }}</text>
+        <!-- 错因分布 -->
+        <kg-card v-if="byReason.length" class="sec">
+          <kg-section-header title="错因分布" />
+          <view v-for="r in byReason" :key="r.error_reason" class="brow">
+            <view class="blabel">
+              <text>{{ r.error_reason }}</text>
+              <text class="bn num">×{{ r.n }}</text>
+            </view>
+            <view class="bar"><view class="fill is-warn" :style="{ width: (r.n / reasonTotal) * 100 + '%' }" /></view>
           </view>
-          <view class="rc-note">来自你最近的 AI 批改结果，供针对性强化</view>
-        </view>
+        </kg-card>
+
+        <!-- 近 7 日 -->
+        <kg-card v-if="trendHas" class="sec">
+          <kg-section-header title="近 7 日正确率" />
+          <view class="trend7">
+            <view v-for="t in trend" :key="t.key" class="tcol">
+              <text class="tpct num">{{ t.done ? t.pct + '%' : '' }}</text>
+              <view class="tbar">
+                <view class="tfill" :class="{ 'is-lo': t.done && t.pct < 60 }" :style="{ height: (t.done ? Math.max(t.pct, 6) : 0) + '%' }" />
+              </view>
+              <text class="tday">{{ t.label }}</text>
+            </view>
+          </view>
+        </kg-card>
+
+        <!-- 成长轨迹 -->
+        <kg-card v-if="growth && growth.weeks.length >= 2" class="sec">
+          <kg-section-header title="成长轨迹（周正确率）" />
+          <kg-chip-row v-model="gwMod" :options="gwOptions" size="sm" />
+          <view class="gw-row" v-for="w in growthRows" :key="w.week">
+            <text class="gw-wk">{{ w.label }}</text>
+            <view class="bar thin">
+              <view class="fill is-ok" :class="{ 'is-bad': w.pct < 60, 'is-warn': w.pct >= 60 && w.pct < 80 }" :style="{ width: w.pct + '%' }" />
+            </view>
+            <text class="gw-pct num">{{ w.pct }}%<text class="gw-n">（{{ w.n }}题）</text></text>
+          </view>
+          <text v-if="growthDelta !== null" class="gw-delta" :class="{ 'is-up': growthDelta >= 0 }">
+            本周比上周{{ growthDelta >= 0 ? '提升' : '下降' }} {{ Math.abs(growthDelta) }} 个百分点
+          </text>
+        </kg-card>
+
+        <!-- 申论 -->
+        <kg-card v-if="slStats && slStats.total" class="sec">
+          <kg-section-header title="申论学习" more="作答记录" @more="goShenlun" />
+          <view class="sl-row">
+            <text class="sl-num num">{{ slStats.total }}</text>
+            <text class="sl-lab">次 AI 批改</text>
+            <text v-if="slStats.last_at" class="sl-last">最近 {{ slLast }}</text>
+          </view>
+          <view class="sl-types">
+            <kg-tag v-for="t in slStats.by_type" :key="t.qtype" tone="brand">{{ t.qtype }} ×{{ t.n }}</kg-tag>
+          </view>
+          <template v-if="slStats.issues && slStats.issues.length">
+            <view class="sl-ih" role="button" @click="slIssuesOpen = !slIssuesOpen">
+              <text>近期问题点（{{ slStats.issues.length }}）</text>
+              <l-icon name="chevron-down" :size="16" tone="muted" class="chev" :class="{ 'is-open': slIssuesOpen }" />
+            </view>
+            <view v-if="slIssuesOpen">
+              <view v-for="(it, i) in slStats.issues" :key="i" class="sl-issue">
+                <kg-tag :tone="it.kind === '提升建议' ? 'warn' : 'bad'">{{ it.kind === '提升建议' ? '建议' : '遗漏' }}</kg-tag>
+                <text class="sl-it">{{ it.text }}</text>
+              </view>
+              <text class="note">来自你最近的 AI 批改结果，供针对性强化</text>
+            </view>
+          </template>
+        </kg-card>
+
+        <!-- 模考趋势 -->
+        <kg-card v-if="examTrendD" class="sec">
+          <kg-section-header :title="'模考成绩趋势（近 ' + examTrendD.points.length + ' 次）'" />
+          <view class="trend et-wrap">
+            <view v-if="examTrendD.targetPct != null" class="et-target" :style="{ bottom: examTrendD.targetPct + '%' }">
+              <text class="et-target-t">目标 {{ examTrendD.target }} 分</text>
+            </view>
+            <view
+              v-for="p in examTrendD.points"
+              :key="p.id"
+              class="trend-col"
+              role="button"
+              :aria-label="'查看这次模考报告，得分 ' + p.score + ' 分'"
+              :tabindex="0"
+              @click="goExamReport(p.id)"
+              @keydown.enter="goExamReport(p.id)"
+            >
+              <view class="trend-bar" :class="{ 'is-bad': p.score < examTrendD.scaleMax * 0.6, 'is-warn': p.score >= examTrendD.scaleMax * 0.6 && p.score < examTrendD.scaleMax * 0.8 }" :style="{ height: Math.max((p.score / examTrendD.scaleMax) * 100, 4) + '%' }" />
+            </view>
+          </view>
+          <view class="trend-x">
+            <text>旧</text>
+            <text>最好 {{ examTrendD.best }} 分 · 最近 {{ examTrendD.latest }} 分</text>
+            <text>新</text>
+          </view>
+          <text class="note">点柱查看单次报告 · 不同卷难度不同，仅供参考</text>
+        </kg-card>
+
+        <!-- 正确率趋势 -->
+        <kg-card v-if="history.length >= 3" class="sec">
+          <kg-section-header :title="'正确率趋势（近 ' + trendData.length + ' 次）'" />
+          <view class="trend">
+            <view v-for="(p, i) in trendData" :key="i" class="trend-col">
+              <view class="trend-bar" :class="{ 'is-bad': p < 60, 'is-warn': p >= 60 && p < 80 }" :style="{ height: Math.max(p, 4) + '%' }" />
+            </view>
+          </view>
+          <view class="trend-x">
+            <text>旧</text>
+            <text>近 {{ trendData.length }} 次平均 {{ trendAvg }}%</text>
+            <text>新</text>
+          </view>
+        </kg-card>
+
+        <!-- 速度趋势 -->
+        <kg-card v-if="speedData.length >= 3" class="sec">
+          <kg-section-header title="做题速度趋势（平均每题用时）" />
+          <view class="trend">
+            <view v-for="(s, i) in speedData" :key="i" class="trend-col">
+              <view class="trend-bar" :class="{ 'is-bad': s > 90, 'is-warn': s > 60 && s <= 90 }" :style="{ height: Math.min(Math.max((s / 120) * 100, 6), 100) + '%' }" />
+            </view>
+          </view>
+          <view class="trend-x">
+            <text>旧</text>
+            <text>近 {{ speedData.length }} 次平均 {{ speedAvg }}s/题（越短越好）</text>
+            <text>新</text>
+          </view>
+        </kg-card>
+
+        <!-- 练习记录 -->
+        <kg-card v-if="history.length" class="sec">
+          <kg-section-header title="练习记录" more="逐题回看" @more="goPracticeHistory" />
+          <view v-for="(h, i) in history.slice(0, showAllHist ? 30 : 6)" :key="i" class="hist-row">
+            <text class="hist-time num">{{ fmtHist(h.t) }}</text>
+            <text class="hist-mod" :class="{ 'is-exam': h.exam }">{{ h.exam ? (h.exam === 'full' ? '全真模考' : '迷你模考') : h.module ? modName(h.module) : h.n >= 100 ? '全真模考' : '混合' }}</text>
+            <text class="hist-n num">{{ h.correct }}/{{ h.n }}</text>
+            <text class="hist-pct num" :class="{ 'is-bad': h.n && Math.round((h.correct / h.n) * 100) < 60 }">{{ h.n ? Math.round((h.correct / h.n) * 100) : 0 }}%</text>
+          </view>
+          <view v-if="history.length > 6" class="more" role="button" @click="showAllHist = !showAllHist">{{ showAllHist ? '收起' : '展开全部 ' + Math.min(history.length, 30) + ' 条' }}</view>
+        </kg-card>
+
+        <!-- 掌握度地图入口 -->
+        <kg-card class="sec" clickable chevron @click="goMasteryMap">
+          <view class="km-entry">
+            <view class="km-cov" :style="kmCovStyle"><view class="km-cov-in num">{{ kmCov != null ? kmCov + '%' : '--' }}</view></view>
+            <view class="grow">
+              <text class="km-entry-t">考点掌握度地图</text>
+              <text class="km-entry-s">三级考点五档色阶，看清每个考点的掌握度{{ kmCov != null ? '，已覆盖 ' + kmCov + '% 考点' : '' }}</text>
+            </view>
+          </view>
+        </kg-card>
+
+        <!-- 考点地图 -->
+        <kg-card v-if="subMap.length" class="sec">
+          <kg-section-header title="考点地图" />
+          <view v-for="g in subMap" :key="g.module" class="km-group">
+            <text class="km-mod">{{ g.name }}</text>
+            <view class="km-items">
+              <view v-for="s in g.subs" :key="s.sub" class="km-chip" :class="'is-' + s.lv" role="button" @click="goSub(g.module, s.sub)">
+                <text class="km-name">{{ s.sub }}</text>
+                <text class="km-pct num">{{ s.pct }}% · {{ s.done }}题</text>
+              </view>
+            </view>
+          </view>
+          <view class="km-legend">
+            <kg-tag tone="bad">&lt;60% 薄弱</kg-tag>
+            <kg-tag tone="warn">60–80%</kg-tag>
+            <kg-tag tone="ok">&gt;80% 掌握</kg-tag>
+            <text class="note">点考点直达专项练习</text>
+          </view>
+        </kg-card>
+
+        <kg-card class="sec" clickable chevron @click="goPlanSetup">
+          <view class="km-entry">
+            <view class="todo-ico"><l-icon name="calendar" :size="20" tone="brand" /></view>
+            <view class="grow">
+              <text class="km-entry-t">学习计划</text>
+              <text class="km-entry-s">报考画像与每日任务，可随时重新制定</text>
+            </view>
+          </view>
+        </kg-card>
       </template>
-    </view>
 
-    <view v-if="examTrendD" class="card">
-      <view class="h">模考成绩趋势（近 {{ examTrendD.points.length }} 次）</view>
-      <view class="trend et-wrap">
-        <view v-if="examTrendD.targetPct != null" class="et-target" :style="{ bottom: examTrendD.targetPct + '%' }">
-          <text class="et-target-t">目标 {{ examTrendD.target }} 分</text>
-        </view>
-        <view
-          v-for="p in examTrendD.points"
-          :key="p.id"
-          class="trend-col"
-          role="button"
-          :aria-label="'查看这次模考报告，得分 ' + p.score + ' 分'"
-          :tabindex="0"
-          @click="goExamReport(p.id)"
-          @keydown.enter="goExamReport(p.id)"
-        >
-          <view class="trend-bar" :class="{ lo: p.score < examTrendD.scaleMax * 0.6, mid: p.score >= examTrendD.scaleMax * 0.6 && p.score < examTrendD.scaleMax * 0.8 }" :style="{ height: Math.max((p.score / examTrendD.scaleMax) * 100, 4) + '%' }" />
-        </view>
-      </view>
-      <view class="trend-x">
-        <text>旧</text>
-        <text>最好 {{ examTrendD.best }} 分 · 最近 {{ examTrendD.latest }} 分</text>
-        <text>新</text>
-      </view>
-      <view class="et-note">点柱查看单次报告 · 不同卷难度不同，仅供参考</view>
-    </view>
-
-    <view v-if="history.length >= 3" class="card">
-      <view class="h">正确率趋势（近 {{ trendData.length }} 次）</view>
-      <view class="trend">
-        <view v-for="(p, i) in trendData" :key="i" class="trend-col">
-          <view class="trend-bar" :class="{ lo: p < 60, mid: p >= 60 && p < 80 }" :style="{ height: Math.max(p, 4) + '%' }" />
-        </view>
-      </view>
-      <view class="trend-x">
-        <text>旧</text>
-        <text>近 {{ trendData.length }} 次平均 {{ trendAvg }}%</text>
-        <text>新</text>
-      </view>
-    </view>
-
-    <view v-if="speedData.length >= 3" class="card">
-      <view class="h">做题速度趋势（平均每题用时）</view>
-      <view class="trend">
-        <view v-for="(s, i) in speedData" :key="i" class="trend-col">
-          <view class="trend-bar" :class="{ lo: s > 90, mid: s > 60 && s <= 90 }" :style="{ height: Math.min(Math.max((s / 120) * 100, 6), 100) + '%' }" />
-        </view>
-      </view>
-      <view class="trend-x">
-        <text>旧</text>
-        <text>近 {{ speedData.length }} 次平均 {{ speedAvg }}s/题（越短越好）</text>
-        <text>新</text>
-      </view>
-    </view>
-
-    <view v-if="history.length" class="card">
-      <view class="h hist-h">练习记录 <text class="hist-link" @click="goPracticeHistory">逐题回看 ›</text></view>
-      <view v-for="(h, i) in history.slice(0, showAllHist ? 30 : 6)" :key="i" class="hist-row">
-        <text class="hist-time">{{ fmtHist(h.t) }}</text>
-        <text class="hist-mod" :class="{ exam: h.exam }">{{ h.exam ? (h.exam === 'full' ? '全真模考' : '迷你模考') : h.module ? modName(h.module) : h.n >= 100 ? '全真模考' : '混合' }}</text>
-        <text class="hist-n">{{ h.correct }}/{{ h.n }}</text>
-        <text class="hist-pct" :class="{ lo: h.n && Math.round((h.correct / h.n) * 100) < 60 }">{{ h.n ? Math.round((h.correct / h.n) * 100) : 0 }}%</text>
-      </view>
-      <view v-if="history.length > 6" class="hist-more" @click="showAllHist = !showAllHist">{{ showAllHist ? '收起' : '展开全部 ' + Math.min(history.length, 30) + ' 条' }}</view>
-    </view>
-
-    <view class="card km-entry" @click="goMasteryMap">
-      <view class="km-cov" :style="kmCovStyle"><view class="km-cov-in">{{ kmCov != null ? kmCov + '%' : '--' }}</view></view>
-      <view class="grow">
-        <view class="h" style="margin: 0">考点掌握度地图</view>
-        <text class="km-entry-s">三级考点五档色阶，看清每个考点的掌握度{{ kmCov != null ? '，已覆盖 ' + kmCov + '% 考点' : '' }}</text>
-      </view>
-      <text class="km-entry-go">›</text>
-    </view>
-
-    <view v-if="subMap.length" class="card">
-      <view class="h">考点地图</view>
-      <view v-for="g in subMap" :key="g.module" class="km-group">
-        <view class="km-mod">{{ g.name }}</view>
-        <view class="km-items">
-          <view v-for="s in g.subs" :key="s.sub" class="km-chip" :class="s.lv" @click="goSub(g.module, s.sub)">
-            <text class="km-name">{{ s.sub }}</text>
-            <text class="km-pct">{{ s.pct }}% · {{ s.done }}题</text>
+      <template #aside>
+        <!-- 成就勋章 -->
+        <kg-card class="sec">
+          <kg-section-header title="成就勋章">
+            <template #right><text class="hm-total num">已获 {{ medals.filter((m) => m.got).length }}/{{ medals.length }}</text></template>
+          </kg-section-header>
+          <view class="medals">
+            <view v-for="md in medals" :key="md.name" class="medal" :class="{ 'is-got': md.got }">
+              <view class="m-ring" :style="medalRingStyle(md)"><view class="m-ring-in"><l-icon :name="md.icon" :size="22" :tone="md.got ? 'warn' : 'faint'" /></view></view>
+              <text class="m-name">{{ md.name }}</text>
+              <text class="m-sub">{{ md.got ? '已达成' : md.progress }}</text>
+            </view>
           </view>
-        </view>
-      </view>
-      <view class="km-legend"><text class="km-lg r">● &lt;60% 薄弱</text><text class="km-lg y">● 60–80%</text><text class="km-lg g">● &gt;80% 掌握</text><text class="km-lg">点考点直达专项练习</text></view>
-    </view>
+        </kg-card>
 
-    <view class="card list-card">
-      <view class="lrow" @click="goPlanSetup">
-        <view class="lrow-ico"><l-icon name="calendar" :size="20" color="#2e5bff" /></view>
-        <text class="lrow-name">学习计划<text class="lrow-sub">报考画像与每日任务，可随时重新制定</text></text>
-        <text class="lrow-arrow">›</text>
-      </view>
-      <view class="lrow" @click="secOpen.coach = !secOpen.coach">
-        <view class="lrow-ico"><l-icon name="bot-message-square" :size="20" color="#2e5bff" /></view>
-        <text class="lrow-name">AI 学习教练</text>
-        <text class="lrow-arrow">{{ secOpen.coach ? '▾' : '›' }}</text>
-      </view>
-      <view v-if="secOpen.coach" class="lrow-body">
-        <view class="cal-head">
-          <text class="coach-tip" style="padding: 0">个性化备考建议</text>
-          <text v-if="!coachLoading" class="coach-btn" @click="getCoach">{{ coachHtml ? '重新诊断' : '生成建议' }}</text>
-        </view>
-        <view v-if="coachLoading" class="coach-tip">教练正在分析你的学习数据…</view>
-        <rich-text v-else-if="coachHtml" class="coach-body" :nodes="coachHtml" />
-        <view v-else class="coach-tip">基于你的正确率、错因分布和打卡情况，生成个性化备考建议</view>
-      </view>
-      <view class="lrow" @click="secOpen.medal = !secOpen.medal">
-        <view class="lrow-ico"><l-icon name="medal" :size="20" color="#d97706" /></view>
-        <text class="lrow-name">成就勋章<text class="lrow-sub">已获 {{ medals.filter((m) => m.got).length }}/{{ medals.length }}</text></text>
-        <text class="lrow-arrow">{{ secOpen.medal ? '▾' : '›' }}</text>
-      </view>
-      <view v-if="secOpen.medal" class="lrow-body">
-        <view class="medals">
-          <view v-for="md in medals" :key="md.name" class="medal" :class="{ got: md.got }">
-            <view class="m-ring" :style="medalRingStyle(md)"><view class="m-ring-in"><l-icon :name="md.icon" :size="22" :color="md.got ? '#d97706' : '#b0b4c0'" /></view></view>
-            <text class="m-name">{{ md.name }}</text>
-            <text class="m-sub">{{ md.got ? '已达成' : md.progress }}</text>
+        <kg-card class="sec" clickable chevron @click="goCalendar">
+          <view class="km-entry">
+            <view class="todo-ico"><l-icon name="calendar-check" :size="20" tone="brand" /></view>
+            <view class="grow">
+              <text class="km-entry-t">学习日历</text>
+              <text class="km-entry-s">连续打卡 {{ streakDays }} 天 · 里程碑与打卡海报</text>
+            </view>
           </view>
-        </view>
-      </view>
-      <view class="lrow" @click="secOpen.bk = !secOpen.bk">
-        <view class="lrow-ico"><l-icon name="save" :size="20" color="#0d9488" /></view>
-        <text class="lrow-name">数据备份与迁移</text>
-        <text class="lrow-arrow">{{ secOpen.bk ? '▾' : '›' }}</text>
-      </view>
-      <view v-if="secOpen.bk" class="lrow-body">
-        <view class="bk-tip">免注册也能换机：生成恢复码备份学习数据，在新设备输入恢复码即可找回。</view>
-        <view v-if="backupCode" class="bk-code" @click="copyCode">恢复码：{{ backupCode }}（点击复制）</view>
-        <view class="row2">
-          <button class="bk-btn" :disabled="bkLoading" @click="doBackup">{{ backupCode ? '更新备份' : '生成恢复码' }}</button>
-          <button class="bk-btn ghost" :disabled="bkLoading" @click="doRestore">输入恢复码恢复</button>
-        </view>
-      </view>
-    </view>
-    </view>
+        </kg-card>
+      </template>
+    </kg-two-col>
   </view>
 </template>
 
 <script>
-import { request, snapPeek, anonUid, getAuthUser, authLogout, clearAuth, fetchCheckinSummary, trackEvent } from '../../api.js';
-import { md } from '../../md.js';
+import { request, snapPeek, anonUid, getAuthUser, fetchCheckinSummary, trackEvent } from '../../api.js';
 import { checkinStreak, dayKey } from '../../checkin.js';
 import { examTrend } from '../../exam-trend.js';
-
-// 旧版缓存的 AI 建议内联了旧紫色，读取时映射到品牌色
-function cleanCoach(s) {
-  return s.replace(/#4f46e5/g, '#2e5bff').replace(/#6366f1/g, '#5c82ff').replace(/#3730a3/g, '#2f5cd8').replace(/#f4f5ff/g, '#eef3ff');
-}
 
 const MODS = [
   { key: 'ziliao', name: '资料' },
@@ -373,11 +359,33 @@ const MODS = [
   { key: 'changshi', name: '常识' },
 ];
 
+/** 0 数据折叠阈值：答满该题数前整页只显示解锁卡 */
+const UNLOCK_N = 10;
+
 export default {
   data() {
-    return { authUser: getAuthUser(), loadErr: '', byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, backupCode: uni.getStorageSync('backupCode') || '', bkLoading: false, kmCov: null, history: [], showAllHist: false, coachHtml: cleanCoach(uni.getStorageSync('coachAdvice') || ''), coachLoading: false, growth: null, reco: null, dueN: 0, gwMod: '', slStats: null, slIssuesOpen: false, modOpen: false, topOpen: false, secOpen: { coach: false, medal: false, bk: false }, hmDays: null, svStreak: null, examAttempts: null, examTarget: null };
+    return { UNLOCK_N, authUser: getAuthUser(), loadErr: '', byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, kmCov: null, history: [], showAllHist: false, growth: null, reco: null, dueN: 0, gwMod: '', slStats: null, slIssuesOpen: false, modOpen: false, topOpen: false, hmDays: null, svStreak: null, examAttempts: null, examTarget: null };
   },
   computed: {
+    hasData() {
+      return this.totalDone > 0 || this.byModule.length > 0 || this.history.length > 0 || this.hmTotal > 0;
+    },
+    unlockLeft() {
+      return Math.max(UNLOCK_N - this.totalDone, 1);
+    },
+    unlockPct() {
+      return Math.min(100, Math.round((this.totalDone / UNLOCK_N) * 100));
+    },
+    heroStats() {
+      return [
+        { label: '总正确率', value: this.accPct + '%', tone: 'ok' },
+        { label: '连续打卡', value: this.streakDays, unit: '天', tone: 'brand' },
+        { label: '近 12 周学习', value: this.hmTotal, unit: '次' },
+      ];
+    },
+    gwOptions() {
+      return [{ label: '整体', value: '' }].concat(this.gwMods.map((m) => ({ label: m.name, value: m.key })));
+    },
     shownModules() {
       return this.modOpen ? this.byModule : this.byModule.slice(0, 3);
     },
@@ -624,6 +632,12 @@ export default {
     this.loadExamTrend();
     this.load();
   },
+  watch: {
+    // 解锁卡 → 完整页切换后 predict-card 才挂载，补一次加载
+    hasData(v) {
+      if (v) this.$nextTick(() => this.$refs.predict && this.$refs.predict.load());
+    },
+  },
   methods: {
     loadHist() {
       // 本地练习记录按当前身份隔离；无 uid 的历史记录一次性归属到当前身份（升级前设备默认单身份）
@@ -676,48 +690,6 @@ export default {
     goLogin() {
       uni.navigateTo({ url: '/pkgA/user/login' });
     },
-    doLogout() {
-      uni.showModal({
-        title: '退出登录',
-        content: '退出后本机回到匿名模式，账号数据仍保留在云端',
-        success: async (res) => {
-          if (!res.confirm) return;
-          await authLogout();
-          clearAuth();
-          this.authUser = null;
-          this.load();
-          this.loadGrowth();
-          this.loadReco();
-          this.loadSlStats();
-          uni.showToast({ title: '已退出登录', icon: 'none' });
-        },
-      });
-    },
-    async getCoach() {
-      this.coachLoading = true;
-      try {
-        const byMod = {};
-        for (const [k, v] of Object.entries(this.pstats.byModule || {})) {
-          byMod[k] = { 已做: v.done, 正确率: v.done ? Math.round((v.correct / v.done) * 100) + '%' : '无' };
-        }
-        const stats = {
-          累计刷题: this.totalDone,
-          总正确率: this.accPct + '%',
-          连续打卡天数: this.streakDays,
-          各模块: byMod,
-          错题模块分布: this.byModule.map((m) => this.modName(m.module) + '×' + m.n).join('、'),
-          错因分布: this.byReason.map((r) => r.error_reason + '×' + r.n).join('、'),
-          高频错题型TOP5: this.byType.slice(0, 5).map((t) => this.typeName(t.question_type) + '×' + t.n).join('、'),
-          近10次练习: this.history.slice(0, 10).map((h) => (this.modName(h.module) || '混合') + ' ' + h.correct + '/' + h.n),
-        };
-        const d = await request('/api/coach', { method: 'POST', data: { stats } });
-        this.coachHtml = md(d.advice || '');
-        uni.setStorageSync('coachAdvice', this.coachHtml);
-      } catch (e) {
-        uni.showToast({ title: '生成失败：' + e.message, icon: 'none' });
-      }
-      this.coachLoading = false;
-    },
     fmtHist(t) {
       const d = new Date(t);
       const p = (x) => (x < 10 ? '0' + x : x);
@@ -749,9 +721,9 @@ export default {
       };
     },
     medalRingStyle(md) {
-      const color = md.got ? '#f59e0b' : '#c7cad4';
+      const color = md.got ? 'var(--warn)' : 'var(--ink-4)';
       const pct = md.got ? 100 : md.pct;
-      return { background: `conic-gradient(${color} 0% ${pct}%, #eef0f4 ${pct}% 100%)` };
+      return { background: `conic-gradient(${color} 0% ${pct}%, var(--fill) ${pct}% 100%)` };
     },
     goBook() {
       uni.switchTab({ url: '/pages/book/book' });
@@ -774,52 +746,6 @@ export default {
     goSub(module, sub, tag3, source) {
       uni.setStorageSync('practicePreset', { module, submodule: sub, count: 10, adaptive: true, tag3: tag3 || null, source: source || null });
       uni.navigateTo({ url: '/pages/practice/practice' });
-    },
-    copyCode() {
-      uni.setClipboardData({ data: this.backupCode });
-    },
-    localData() {
-      const keys = ['pstats', 'dailyPlan', 'dailyGoal', 'groupSize', 'realMode', 'fontLv', 'beiMode', 'favQuestions', 'practiceHistory', 'coachAdvice', 'backupCode'];
-      const out = {};
-      keys.forEach((k) => {
-        const v = uni.getStorageSync(k);
-        if (v !== '' && v !== null && v !== undefined) out[k] = v;
-      });
-      return out;
-    },
-    async doBackup() {
-      this.bkLoading = true;
-      try {
-        const d = await request('/api/backup', { method: 'POST', data: { code: this.backupCode || null, data: this.localData() } });
-        this.backupCode = d.code;
-        uni.setStorageSync('backupCode', d.code);
-        uni.showModal({ title: '备份成功', content: '恢复码：' + d.code + '\n请记下或截图保存，在新设备输入即可恢复数据。', showCancel: false });
-      } catch (e) {
-        uni.showToast({ title: '备份失败：' + e.message, icon: 'none' });
-      }
-      this.bkLoading = false;
-    },
-    doRestore() {
-      uni.showModal({
-        title: '输入恢复码',
-        editable: true,
-        placeholderText: '如：AB3D5F7H',
-        success: async (res) => {
-          if (!res.confirm || !res.content) return;
-          try {
-            const d = await request('/api/backup?code=' + encodeURIComponent(res.content.trim()));
-            Object.entries(d.data || {}).forEach(([k, v]) => uni.setStorageSync(k, v));
-            uni.setStorageSync('backupCode', res.content.trim().toUpperCase());
-            this.backupCode = res.content.trim().toUpperCase();
-            this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
-            this.history = this.loadHist();
-            this.coachHtml = cleanCoach(uni.getStorageSync('coachAdvice') || '');
-            uni.showToast({ title: '恢复成功！', icon: 'success' });
-          } catch (e) {
-            uni.showToast({ title: '恢复失败：' + e.message, icon: 'none' });
-          }
-        },
-      });
     },
     async loadSlStats() {
       const uid = uni.getStorageSync('anonUid');
@@ -889,226 +815,164 @@ export default {
 </script>
 
 <style scoped>
-.hm-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
-.hm-total { font-size: 22rpx; color: var(--ink-2); }
-.hm-body { display: flex; gap: 10rpx; }
-.hm-ylab { display: flex; flex-direction: column; justify-content: space-between; padding: 2rpx 0; }
-.hm-yl { font-size: 18rpx; color: var(--ink-3); height: 26rpx; line-height: 26rpx; }
-.hm-grid { flex: 1; display: flex; gap: 6rpx; }
-.hm-col { flex: 1; display: flex; flex-direction: column; gap: 6rpx; }
-.hm-c { width: 100%; height: 26rpx; border-radius: 6rpx; background: var(--line); }
-.hm-c.lv1 { background: #bfd3fc; }
-.hm-c.lv2 { background: #85a9f9; }
-.hm-c.lv3 { background: #4a7bf7; }
-.hm-c.lv4 { background: #2f5cd8; }
+.wrap { padding: var(--sp-16) var(--page-x) calc(var(--sp-40) + 50px + env(safe-area-inset-bottom)); }
+.strip { margin-bottom: var(--card-gap); }
+.strip :deep(.kg-banner) { min-height: var(--hit-min); }
+.sec { margin-bottom: var(--card-gap); }
+.unlock-s { display: block; font-size: var(--fs-sub); color: var(--ink-3); line-height: var(--lh-sub); }
+.err-row { margin-top: var(--card-gap); }
+.note { display: block; font-size: var(--fs-caption); color: var(--ink-3); line-height: var(--lh-caption); margin-top: var(--sp-8); }
+.grow { flex: 1; min-width: 0; }
+.more { text-align: center; font-size: var(--fs-sub); color: var(--brand-text); min-height: var(--hit-min); display: flex; align-items: center; justify-content: center; }
+
+/* 热力图：4 档只用品牌色透明度，深色自动跟随 */
+.hm-total { font-size: var(--fs-caption); color: var(--ink-3); }
+.hm-body { display: flex; gap: var(--sp-4); margin-top: var(--sp-4); }
+.hm-ylab { display: flex; flex-direction: column; justify-content: space-between; padding: 1px 0; }
+.hm-yl { font-size: var(--fs-caption); color: var(--ink-3); height: 13px; line-height: 13px; }
+.hm-grid { flex: 1; display: flex; gap: 3px; }
+.hm-col { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.hm-c { width: 100%; height: 13px; border-radius: 3px; background: var(--fill); }
+.hm-c.lv1 { background: var(--brand-soft-2); }
+.hm-c.lv2 { background: var(--brand); opacity: 0.45; }
+.hm-c.lv3 { background: var(--brand); opacity: 0.7; }
+.hm-c.lv4 { background: var(--brand-press); }
 .hm-c.fut { opacity: 0; }
-.hm-legend { display: flex; align-items: center; gap: 8rpx; justify-content: flex-end; margin-top: 14rpx; }
-.hm-legend .hm-c { width: 26rpx; flex: none; }
-.hm-lt { font-size: 20rpx; color: var(--ink-3); }
-.hm-note { font-size: 20rpx; color: var(--ink-2); margin-right: auto; }
-.wrap { padding: 24rpx; }
-.card { background: var(--card); border-radius: var(--radius); padding: 24rpx; margin-bottom: 24rpx; border: 1rpx solid var(--line); box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
-.hero { background: var(--card); border: 1rpx solid var(--line); border-radius: var(--radius); padding: 30rpx 28rpx; margin-bottom: 24rpx; box-shadow: 0 4rpx 16rpx rgba(31, 36, 48, 0.05); }
-.hero-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22rpx; }
-.hero-t { font-size: 30rpx; font-weight: 700; color: var(--ink); }
-.hero-cal { font-size: 24rpx; color: var(--brand-text); padding: 14rpx 0 14rpx 20rpx; }
-.hero-kpis { display: flex; }
-.hk { flex: 1; text-align: center; }
-.hk-n { display: block; font-size: 44rpx; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
-.hk:nth-child(2) .hk-n { color: var(--ok); }
-.hk:nth-child(3) .hk-n { color: var(--brand-text); }
-.hk-t { display: block; font-size: 22rpx; color: var(--ink-3); margin-top: 4rpx; }
-.cal-hr { display: flex; align-items: center; gap: 16rpx; }
-.h { font-size: 28rpx; font-weight: 600; margin-bottom: 14rpx; }
-.spin { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 20rpx; }
-.retry { margin-top: 12rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
-.todo-row { display: flex; align-items: center; gap: 18rpx; min-height: 112rpx; border-bottom: 1rpx solid var(--line); }
+.hm-legend { display: flex; align-items: center; gap: var(--sp-4); justify-content: flex-end; margin-top: var(--sp-8); }
+.hm-legend .hm-c { width: 13px; flex: none; }
+.hm-lt { font-size: var(--fs-caption); color: var(--ink-3); }
+.hm-note { font-size: var(--fs-caption); color: var(--ink-3); margin-right: auto; }
+
+/* 待办 */
+.todo-row { display: flex; align-items: center; gap: var(--sp-12); min-height: 56px; border-bottom: 1px solid var(--line); }
 .todo-row:last-of-type { border-bottom: none; }
-.todo-ico { width: 88rpx; height: 88rpx; border-radius: 20rpx; background: var(--brand-soft); display: flex; align-items: center; justify-content: center; font-size: 40rpx; flex-shrink: 0; }
-.todo-ico.warn { background: var(--bad-soft); }
+.todo-ico { width: 40px; height: 40px; border-radius: var(--r-sm); background: var(--brand-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.todo-ico.is-warn { background: var(--warn-soft); }
 .todo-main { flex: 1; min-width: 0; }
-.todo-name { display: block; font-size: 28rpx; font-weight: 600; }
-.todo-meta { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 4rpx; }
-.todo-btn { height: 72rpx; line-height: 72rpx; padding: 0 30rpx; background: var(--brand); color: #fff; border-radius: 999rpx; font-size: 26rpx; font-weight: 600; flex-shrink: 0; }
-.radar-flex { display: flex; align-items: center; gap: 12rpx; padding: 30rpx 0 20rpx; }
+.todo-name { display: block; font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+.todo-meta { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: 2px; }
+
+/* 雷达 */
+.radar-flex { display: flex; align-items: center; gap: var(--sp-12); padding: var(--sp-16) 0 var(--sp-8); }
 .radar-box { flex: 1; display: flex; justify-content: center; }
-.radar { position: relative; width: 320rpx; height: 320rpx; }
-.radar-side { width: 220rpx; flex-shrink: 0; }
+.radar { position: relative; width: 160px; height: 160px; }
+.radar-side { width: 110px; flex-shrink: 0; }
 /* #ifdef H5 */
 @media (max-width: 413px) {
-  .radar-flex { flex-direction: column; gap: 30rpx; }
-  .radar-box { padding: 20rpx 0; }
+  .radar-flex { flex-direction: column; gap: var(--sp-16); }
+  .radar-box { padding: var(--sp-8) 0; }
   .radar-side { width: 100%; }
 }
 /* #endif */
-.theme-dark .ring { border-color: rgba(255, 255, 255, 0.18); }
-.theme-dark .poly { background: rgba(96, 141, 255, 0.45); }
-.rs-t { font-size: 22rpx; color: var(--ink-2); margin-bottom: 10rpx; }
-.rs-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8rpx; }
-.rs-name { font-size: 26rpx; font-weight: 600; }
-.rs-pct { font-size: 24rpx; color: var(--danger, #f04438); font-weight: 600; }
-.ghost-btn { margin-top: 16rpx; height: 72rpx; line-height: 68rpx; text-align: center; border: 2rpx solid var(--brand); color: var(--brand-text); border-radius: 999rpx; font-size: 26rpx; font-weight: 600; }
-.ring { position: absolute; border: 1rpx solid var(--line); border-radius: 50%; box-sizing: border-box; }
-.poly { position: absolute; inset: 0; background: rgba(46, 91, 255, 0.35); border-radius: 2rpx; }
+.rs-t { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-bottom: var(--sp-4); }
+.rs-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4); }
+.rs-name { font-size: var(--fs-sub); font-weight: 600; color: var(--ink); }
+.rs-pct { font-size: var(--fs-sub); color: var(--bad-strong); font-weight: 600; }
+.radar-side :deep(.kg-btn) { margin-top: var(--sp-8); }
+.ring { position: absolute; border: 1px solid var(--line-strong); border-radius: var(--r-full); box-sizing: border-box; }
+.poly { position: absolute; inset: 0; background: var(--brand); opacity: 0.35; border-radius: 1px; }
 .axis-label { position: absolute; transform: translate(-50%, -50%); text-align: center; white-space: nowrap; }
-.al-name { display: block; font-size: 24rpx; color: var(--ink); font-weight: 600; }
-.al-val { display: block; font-size: 20rpx; color: var(--brand-text); }
-.mrow { display: flex; align-items: center; gap: 16rpx; min-height: 112rpx; border-bottom: 1rpx solid var(--line); }
+.al-name { display: block; font-size: var(--fs-caption); color: var(--ink); font-weight: 600; }
+.al-val { display: block; font-size: var(--fs-caption); color: var(--brand-text); }
+
+/* 分布条 */
+.mrow { display: flex; align-items: center; gap: var(--sp-8); min-height: 56px; border-bottom: 1px solid var(--line); }
 .mrow:last-of-type { border-bottom: none; }
 .mrow-main { flex: 1; min-width: 0; }
-.mrow-arrow { font-size: 34rpx; color: var(--ink-3); flex-shrink: 0; padding: 0 6rpx; }
-.brow { margin: 14rpx 0; }
-.blabel { display: flex; justify-content: space-between; align-items: center; font-size: 26rpx; color: var(--ink); margin-bottom: 6rpx; }
-.bn { font-size: 24rpx; color: var(--ink-2); }
-.bar { background: var(--brand-soft); border-radius: 999rpx; height: 20rpx; position: relative; overflow: hidden; }
-.fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--brand); border-radius: 999rpx; transition: width 0.6s ease; }
-.top-chips { display: flex; flex-wrap: wrap; gap: 14rpx; }
-.top-chip { display: flex; align-items: center; gap: 8rpx; background: var(--brand-soft); border-radius: 999rpx; padding: 14rpx 24rpx; min-height: 44rpx; }
-.tc-name { font-size: 24rpx; color: var(--brand-text); font-weight: 600; }
-.tc-n { font-size: 22rpx; color: var(--ink-2); }
-.top-chip.more { background: var(--soft-bg); color: var(--ink-2); font-size: 24rpx; font-weight: 600; }
-.fill.rz { background: #f59e0b; }
-.trend { display: flex; align-items: flex-end; gap: 12rpx; height: 220rpx; padding-top: 8rpx; }
-.tcol { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
-.tpct { font-size: 18rpx; color: var(--brand-text); height: 28rpx; }
-.tbar { flex: 1; width: 36rpx; background: var(--soft-bg); border-radius: 999rpx; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
-.tfill { width: 100%; background: var(--brand); border-radius: 999rpx; }
-.tfill.lo { background: #f59e0b; }
-.tday { font-size: 20rpx; color: var(--ink-2); margin-top: 8rpx; }
-.radar-empty { text-align: center; padding: 30rpx 0 20rpx; }
-.re-t { font-size: 28rpx; font-weight: 600; }
-.re-s { font-size: 24rpx; color: var(--ink-2); margin: 8rpx 0 20rpx; }
-.re-btn { background: var(--brand); color: #fff; border-radius: 18rpx; font-size: 26rpx; font-weight: 600; width: 50%; }
-.medals { display: flex; flex-wrap: wrap; }
-.medal { width: 25%; box-sizing: border-box; text-align: center; padding: 14rpx 6rpx; }
-.medal .m-ico { filter: grayscale(1); opacity: 0.55; }
-.medal.got .m-ico { filter: none; opacity: 1; }
-.medal .m-name { color: var(--ink-2); }
-.medal.got .m-name { color: var(--ink); }
-.m-ring { width: 88rpx; height: 88rpx; border-radius: 50%; margin: 0 auto 6rpx; display: flex; align-items: center; justify-content: center; }
-.m-ring-in { width: 72rpx; height: 72rpx; border-radius: 50%; background: var(--card); display: flex; align-items: center; justify-content: center; }
-.m-ico { display: block; font-size: 48rpx; }
-.m-name { display: block; font-size: 22rpx; font-weight: 600; margin-top: 6rpx; }
-.m-sub { display: block; font-size: 18rpx; color: var(--ink-2); margin-top: 4rpx; }
-.cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
-.n { color: var(--brand-text); font-weight: 600; }
-.km-entry { display: flex; align-items: center; gap: 20rpx; }
-.km-entry .grow { flex: 1; min-width: 0; }
-.km-entry-s { display: block; font-size: 22rpx; color: var(--ink-2); margin-top: 6rpx; }
-.km-entry-go { font-size: 36rpx; color: var(--ink-3); }
-.km-cov { width: 92rpx; height: 92rpx; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.km-cov-in { width: 68rpx; height: 68rpx; border-radius: 50%; background: var(--card); display: flex; align-items: center; justify-content: center; font-size: 20rpx; font-weight: 700; color: var(--brand-text); }
-.km-group { margin-bottom: 18rpx; }
-.km-mod { font-size: 24rpx; font-weight: 600; color: var(--ink-2); margin-bottom: 10rpx; }
-.km-items { display: flex; flex-wrap: wrap; gap: 12rpx; }
-.km-chip { border-radius: 14rpx; padding: 10rpx 18rpx; }
-.km-chip.lo { background: #fee2e2; }
-.km-chip.lo .km-name, .km-chip.lo .km-pct { color: #b91c1c; }
-.km-chip.mid { background: #fef3c7; }
-.km-chip.mid .km-name, .km-chip.mid .km-pct { color: #b45309; }
-.km-chip.hi { background: #d1fae5; }
-.km-chip.hi .km-name, .km-chip.hi .km-pct { color: #047857; }
-.km-name { display: block; font-size: 24rpx; font-weight: 600; }
-.km-pct { display: block; font-size: 20rpx; margin-top: 2rpx; }
-.km-legend { display: flex; gap: 18rpx; flex-wrap: wrap; margin-top: 8rpx; }
-.list-card { padding: 0 24rpx; }
-.lrow { display: flex; align-items: center; gap: 18rpx; min-height: 112rpx; border-bottom: 1rpx solid var(--line); }
-.lrow:last-of-type { border-bottom: none; }
-.lrow-ico { width: 64rpx; height: 64rpx; border-radius: 16rpx; background: var(--brand-soft); display: flex; align-items: center; justify-content: center; font-size: 32rpx; flex-shrink: 0; }
-.lrow-name { flex: 1; font-size: 28rpx; font-weight: 600; }
-.lrow-sub { font-size: 22rpx; color: var(--ink-2); font-weight: 400; margin-left: 14rpx; }
-.lrow-arrow { font-size: 30rpx; color: var(--ink-3); padding: 0 6rpx; }
-.lrow-body { padding: 6rpx 0 24rpx; border-bottom: 1rpx solid var(--line); }
-.coach-btn {
-  font-size: 24rpx;
-  color: var(--brand-text);
-  background: var(--brand-soft);
-  border-radius: 999rpx;
-  padding: 8rpx 22rpx;
-}
-.coach-tip {
-  font-size: 24rpx;
-  color: var(--ink-2);
-  padding: 16rpx 0 4rpx;
-}
-.coach-body {
-  display: block;
-  font-size: 26rpx;
-  line-height: 1.7;
-  padding-top: 8rpx;
-}
-.hist-h { display: flex; align-items: center; justify-content: space-between; }
-.hist-link { font-size: 24rpx; font-weight: 500; color: var(--brand-text); }
-.hist-row { display: flex; align-items: center; gap: 16rpx; padding: 14rpx 0; border-bottom: 1rpx solid var(--fill); }
-.hist-time { font-size: 22rpx; color: var(--ink-2); width: 170rpx; }
-.gw-row { display: flex; align-items: center; gap: 14rpx; margin-bottom: 12rpx; }
-.gw-wk { font-size: 22rpx; color: var(--ink-2); width: 130rpx; flex-shrink: 0; }
-.gw-bar { flex: 1; height: 16rpx; background: var(--brand-soft); border-radius: 999rpx; overflow: hidden; }
-.gw-fill { height: 100%; background: #16a34a; border-radius: 999rpx; }
-.gw-fill.mid { background: #f59e0b; }
-.gw-fill.lo { background: #dc2626; }
-.gw-pct { font-size: 22rpx; width: 150rpx; text-align: right; flex-shrink: 0; }
-.gw-n { color: var(--ink-2); }
-.gw-tabs { display: flex; gap: 10rpx; margin-bottom: 14rpx; flex-wrap: wrap; }
-.gw-tab { font-size: 22rpx; color: var(--ink-2); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 4rpx 18rpx; background: var(--card); }
-.gw-tab.on { color: #fff; background: var(--brand); border-color: var(--brand-text); }
-.gw-delta { font-size: 24rpx; color: #dc2626; margin-top: 6rpx; }
-.gw-delta.up { color: #16a34a; }
-.rc-note { font-size: 20rpx; color: var(--ink-2); margin-top: 10rpx; }
-.sl-row { display: flex; align-items: baseline; gap: 10rpx; margin: 16rpx 0 12rpx; }
-.sl-num { font-size: 44rpx; font-weight: 700; color: var(--brand-text); }
-.sl-lab { font-size: 24rpx; color: var(--ink-2); }
-.sl-last { font-size: 22rpx; color: var(--ink-3); margin-left: auto; }
-.sl-types { display: flex; flex-wrap: wrap; gap: 10rpx; }
-.sl-chip { font-size: 22rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 999rpx; padding: 8rpx 18rpx; }
-.sl-ih { font-size: 24rpx; color: var(--ink-2); margin-top: 16rpx; padding: 10rpx 0; }
-.sl-issue { display: flex; align-items: flex-start; gap: 10rpx; margin-bottom: 10rpx; }
-.sl-ik { font-size: 20rpx; color: var(--bad-strong); background: var(--bad-soft); border-radius: 6rpx; padding: 2rpx 10rpx; flex-shrink: 0; margin-top: 2rpx; }
-.sl-ik.adv { color: #b45309; background: var(--warn-soft); }
-.sl-it { font-size: 22rpx; color: var(--ink-1); line-height: 1.6; }
-.trend { display: flex; align-items: flex-end; gap: 8rpx; height: 160rpx; padding-top: 12rpx; }
-.trend-col { flex: 1; height: 100%; display: flex; align-items: flex-end; }
-.trend-bar { width: 100%; border-radius: 6rpx 6rpx 0 0; background: #16a34a; min-height: 6rpx; }
-.trend-bar.mid { background: #f59e0b; }
-.trend-bar.lo { background: #dc2626; }
-.trend-x { display: flex; justify-content: space-between; font-size: 22rpx; color: var(--ink-2); margin-top: 10rpx; }
-.et-wrap { position: relative; }
-.et-target { position: absolute; left: 0; right: 0; border-top: 2rpx dashed var(--warn-strong); z-index: 1; pointer-events: none; }
-.et-target-t { position: absolute; right: 0; top: -30rpx; font-size: 20rpx; color: var(--warn-strong); }
-.et-note { font-size: 20rpx; color: var(--ink-2); margin-top: 8rpx; }
-.hist-mod { font-size: 24rpx; flex: 1; }
-.hist-mod.exam { color: #b45309; font-weight: 600; }
-.hist-n { font-size: 24rpx; color: var(--ink-2); }
-.hist-pct { font-size: 26rpx; font-weight: 700; color: #16a34a; width: 90rpx; text-align: right; }
-.hist-pct.lo { color: #dc2626; }
-.hist-more { text-align: center; font-size: 24rpx; color: var(--brand-text); padding: 14rpx 0 2rpx; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; }
-.km-lg { font-size: 20rpx; color: var(--ink-2); }
-.km-lg.r { color: #ef4444; }
-.km-lg.y { color: #f59e0b; }
-.km-lg.g { color: #10b981; }
-.bk-tip { font-size: 24rpx; color: var(--ink-2); line-height: 1.6; margin-bottom: 14rpx; }
-.bk-code { font-size: 26rpx; font-weight: 700; color: var(--brand-text); background: var(--brand-soft); border-radius: 14rpx; padding: 14rpx 22rpx; margin-bottom: 14rpx; }
-.row2 { display: flex; gap: 16rpx; }
-.bk-btn { flex: 1; background: var(--brand-soft); color: var(--brand-text); border-radius: 16rpx; font-size: 26rpx; font-weight: 600; }
-.bk-btn.ghost { background: var(--brand-soft); color: var(--brand-text); }
-.loginstrip { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; min-height: 44px; box-sizing: border-box; background: var(--brand-soft); border-radius: 16rpx; padding: 8rpx 26rpx; margin-bottom: 20rpx; }
-.ls-t { font-size: 24rpx; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ls-btn { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: var(--brand-text); }
-.acct { display: flex; align-items: center; gap: 20rpx; }
-.acct-ava { width: 88rpx; height: 88rpx; border-radius: 50%; background: var(--brand); color: #fff; font-size: 36rpx; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.acct-ava.anon { background: var(--ink-4); }
-.acct-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.acct-name { font-size: 32rpx; font-weight: 700; color: var(--ink); }
-.acct-sub { font-size: 24rpx; color: var(--ink-3); margin-top: 6rpx; }
-.acct-btn { flex-shrink: 0; min-height: 88rpx; display: flex; align-items: center; padding: 0 30rpx; border-radius: 16rpx; background: var(--brand); color: #fff; font-size: 28rpx; font-weight: 600; }
-.acct-btn.ghost { background: var(--fill); color: var(--ink-2); }
+.brow { margin: var(--sp-8) 0; }
+.blabel { display: flex; justify-content: space-between; align-items: center; font-size: var(--fs-sub); color: var(--ink); margin-bottom: var(--sp-4); }
+.bn { font-size: var(--fs-caption); color: var(--ink-3); }
+.bar { background: var(--prog-track); border-radius: var(--r-full); height: 8px; position: relative; overflow: hidden; }
+.bar.thin { height: 6px; flex: 1; }
+.fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--brand); border-radius: var(--r-full); transition: width var(--dur-slow) var(--ease-standard); }
+.fill.is-ok { background: var(--ok); }
+.fill.is-warn { background: var(--warn); }
+.fill.is-bad { background: var(--bad); }
+.top-chips { display: flex; flex-wrap: wrap; gap: var(--sp-8); }
+.top-chip { display: flex; align-items: center; gap: var(--sp-4); background: var(--brand-soft); border-radius: var(--r-full); padding: 0 var(--sp-12); min-height: 32px; }
+.tc-name { font-size: var(--fs-sub); color: var(--brand-text); font-weight: 600; }
+.tc-n { font-size: var(--fs-caption); color: var(--ink-3); }
+.top-chip.is-more { background: var(--fill); color: var(--ink-2); font-size: var(--fs-sub); font-weight: 600; }
 
-/* 桌面双栏仪表盘（仅 H5 ≥1024px） */
+/* 近 7 日 */
+.trend7 { display: flex; align-items: flex-end; gap: var(--sp-8); height: 110px; padding-top: var(--sp-4); }
+.tcol { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
+.tpct { font-size: var(--fs-caption); color: var(--brand-text); height: 14px; line-height: 14px; }
+.tbar { flex: 1; width: 18px; background: var(--prog-track); border-radius: var(--r-full); display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
+.tfill { width: 100%; background: var(--brand); border-radius: var(--r-full); }
+.tfill.is-lo { background: var(--warn); }
+.tday { font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-4); }
+
+/* 勋章 */
+.medals { display: flex; flex-wrap: wrap; }
+.medal { width: 25%; box-sizing: border-box; text-align: center; padding: var(--sp-8) var(--sp-4); }
+.medal .m-name { color: var(--ink-3); }
+.medal.is-got .m-name { color: var(--ink); }
+.m-ring { width: 44px; height: 44px; border-radius: var(--r-full); margin: 0 auto var(--sp-4); display: flex; align-items: center; justify-content: center; }
+.m-ring-in { width: 36px; height: 36px; border-radius: var(--r-full); background: var(--card); display: flex; align-items: center; justify-content: center; }
+.m-name { display: block; font-size: var(--fs-caption); font-weight: 600; margin-top: var(--sp-4); }
+.m-sub { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: 2px; }
+
+/* 掌握度入口 / 考点地图 */
+.km-entry { display: flex; align-items: center; gap: var(--sp-12); padding-right: var(--sp-24); }
+.km-entry-t { display: block; font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+.km-entry-s { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: 2px; }
+.km-cov { width: 46px; height: 46px; border-radius: var(--r-full); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.km-cov-in { width: 34px; height: 34px; border-radius: var(--r-full); background: var(--card); display: flex; align-items: center; justify-content: center; font-size: var(--fs-caption); font-weight: 600; color: var(--brand-text); }
+.km-group { margin-bottom: var(--sp-12); }
+.km-mod { display: block; font-size: var(--fs-sub); font-weight: 600; color: var(--ink-2); margin-bottom: var(--sp-4); }
+.km-items { display: flex; flex-wrap: wrap; gap: var(--sp-8); }
+.km-chip { border-radius: var(--r-sm); padding: var(--sp-4) var(--sp-8); min-height: 36px; box-sizing: border-box; }
+.km-chip.is-lo { background: var(--bad-soft); }
+.km-chip.is-lo .km-name, .km-chip.is-lo .km-pct { color: var(--bad-strong); }
+.km-chip.is-mid { background: var(--warn-soft); }
+.km-chip.is-mid .km-name, .km-chip.is-mid .km-pct { color: var(--warn-strong); }
+.km-chip.is-hi { background: var(--ok-soft); }
+.km-chip.is-hi .km-name, .km-chip.is-hi .km-pct { color: var(--ok-strong); }
+.km-name { display: block; font-size: var(--fs-sub); font-weight: 600; }
+.km-pct { display: block; font-size: var(--fs-caption); margin-top: 1px; }
+.km-legend { display: flex; gap: var(--sp-8); flex-wrap: wrap; align-items: center; margin-top: var(--sp-4); }
+.km-legend .note { margin-top: 0; }
+
+/* 记录 / 成长 / 申论 / 趋势 */
+.hist-row { display: flex; align-items: center; gap: var(--sp-8); min-height: 40px; border-bottom: 1px solid var(--fill); }
+.hist-time { font-size: var(--fs-caption); color: var(--ink-3); width: 84px; }
+.hist-mod { font-size: var(--fs-sub); flex: 1; color: var(--ink); }
+.hist-mod.is-exam { color: var(--warn-strong); font-weight: 600; }
+.hist-n { font-size: var(--fs-sub); color: var(--ink-3); }
+.hist-pct { font-size: var(--fs-sub); font-weight: 600; color: var(--ok-strong); width: 44px; text-align: right; }
+.hist-pct.is-bad { color: var(--bad-strong); }
+.gw-row { display: flex; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-8); }
+.gw-wk { font-size: var(--fs-caption); color: var(--ink-3); width: 66px; flex-shrink: 0; }
+.gw-pct { font-size: var(--fs-caption); color: var(--ink); width: 76px; text-align: right; flex-shrink: 0; }
+.gw-n { color: var(--ink-3); }
+.gw-delta { display: block; font-size: var(--fs-sub); color: var(--bad-strong); margin-top: var(--sp-4); }
+.gw-delta.is-up { color: var(--ok-strong); }
+.sec :deep(.kg-chips) { margin-bottom: var(--sp-8); }
+.sl-row { display: flex; align-items: baseline; gap: var(--sp-4); margin: var(--sp-8) 0; }
+.sl-num { font-size: var(--fs-h1); font-weight: 600; color: var(--brand-text); }
+.sl-lab { font-size: var(--fs-sub); color: var(--ink-3); }
+.sl-last { font-size: var(--fs-caption); color: var(--ink-3); margin-left: auto; }
+.sl-types { display: flex; flex-wrap: wrap; gap: var(--sp-8); }
+.sl-ih { display: flex; align-items: center; justify-content: space-between; font-size: var(--fs-sub); color: var(--ink-2); margin-top: var(--sp-8); min-height: var(--hit-min); }
+.chev { transition: transform var(--dur-instant) var(--ease-standard); }
+.chev.is-open { transform: rotate(180deg); }
+.sl-issue { display: flex; align-items: flex-start; gap: var(--sp-8); margin-bottom: var(--sp-8); }
+.sl-it { flex: 1; font-size: var(--fs-sub); color: var(--ink); line-height: var(--lh-sub); }
+.trend { display: flex; align-items: flex-end; gap: var(--sp-4); height: 80px; padding-top: var(--sp-8); }
+.trend-col { flex: 1; height: 100%; display: flex; align-items: flex-end; }
+.trend-bar { width: 100%; border-radius: 3px 3px 0 0; background: var(--ok); min-height: 3px; }
+.trend-bar.is-warn { background: var(--warn); }
+.trend-bar.is-bad { background: var(--bad); }
+.trend-x { display: flex; justify-content: space-between; font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-4); }
+.et-wrap { position: relative; }
+.et-target { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--warn-strong); z-index: 1; pointer-events: none; }
+.et-target-t { position: absolute; right: 0; top: -16px; font-size: var(--fs-caption); color: var(--warn-strong); }
+
 /* #ifdef H5 */
 @media (min-width: 1024px) {
-  .wrap { max-width: 1044px !important; margin: 0 auto; }
-  .sgrid { column-count: 2; column-gap: 24rpx; }
-  .sgrid > .card { break-inside: avoid; margin-bottom: 24rpx; }
+  .wrap.stats { max-width: 1064px; }
+  .radar { width: 200px; height: 200px; }
 }
 /* #endif */
 </style>

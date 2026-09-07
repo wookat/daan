@@ -1,56 +1,70 @@
 <template>
-  <view class="wrap pkres">
-    <view v-if="loading" class="card empty">加载中…</view>
-    <view v-else-if="errMsg" class="card empty err">
-      <text class="err-t">{{ errMsg }}</text>
-      <text class="err-s">对局可能未结束或链接不完整，也可以发起你自己的 PK</text>
-      <view class="act-btn main" @click="goChallenge">发起我的 PK 对局</view>
-    </view>
+  <view class="page">
+    <kg-skeleton v-if="loading" preset="cards" />
+    <kg-empty-state
+      v-else-if="errMsg"
+      icon="swords"
+      :title="errMsg"
+      desc="对局可能未结束或链接不完整，也可以发起你自己的 PK"
+      cta-text="发起我的 PK 对局"
+      @cta="goChallenge"
+    />
 
     <template v-else-if="d">
-      <view class="hero">
-        <text class="hero-t">⚔️ 答题 PK 战绩</text>
-        <text class="hero-s">{{ modLabel }} · 同组 {{ d.n_questions }} 题 · 挑战码 {{ d.code }}</text>
-      </view>
+      <kg-hero-card label="答题 PK 战绩" :value="d.creator.score + ' : ' + d.opponent.score">
+        <text class="hero-s">{{ resultText }} · {{ modLabel }} · 同组 {{ d.n_questions }} 题 · 挑战码 <text class="num">{{ d.code }}</text></text>
+      </kg-hero-card>
 
-      <view class="card vs">
+      <kg-card variant="flat" class="sec vs">
         <view class="p" :class="{ win: d.winner === 'creator' }">
-          <text v-if="d.winner === 'creator'" class="crown">👑</text>
-          <view class="av">{{ (d.creator.name || '?').slice(0, 1) }}</view>
+          <view class="av-wrap">
+            <l-icon v-if="d.winner === 'creator'" name="crown" :size="20" tone="warn" fill="currentColor" class="crown" />
+            <view class="av">{{ (d.creator.name || '?').slice(0, 1) }}</view>
+          </view>
           <text class="nm">{{ creatorName }}</text>
-          <text class="sc">{{ d.creator.score }}</text>
-          <text class="meta">答对 {{ d.creator.correct }}/{{ d.n_questions }} · {{ fmtMs(d.creator.time_ms) }}</text>
+          <text class="sc num">{{ d.creator.score }}</text>
+          <text class="meta num">答对 {{ d.creator.correct }}/{{ d.n_questions }} · {{ fmtMs(d.creator.time_ms) }}</text>
         </view>
         <view class="mid">
           <text class="mid-vs">VS</text>
-          <text class="mid-res">{{ resultText }}</text>
+          <kg-tag :tone="d.winner === 'draw' ? 'neutral' : 'brand'">{{ resultText }}</kg-tag>
         </view>
         <view class="p" :class="{ win: d.winner === 'opponent' }">
-          <text v-if="d.winner === 'opponent'" class="crown">👑</text>
-          <view class="av rival">{{ (d.opponent.name || '?').slice(0, 1) }}</view>
+          <view class="av-wrap">
+            <l-icon v-if="d.winner === 'opponent'" name="crown" :size="20" tone="warn" fill="currentColor" class="crown" />
+            <view class="av rival">{{ (d.opponent.name || '?').slice(0, 1) }}</view>
+          </view>
           <text class="nm">{{ opponentName }}</text>
-          <text class="sc">{{ d.opponent.score }}</text>
-          <text class="meta">答对 {{ d.opponent.correct }}/{{ d.n_questions }} · {{ fmtMs(d.opponent.time_ms) }}</text>
+          <text class="sc num">{{ d.opponent.score }}</text>
+          <text class="meta num">答对 {{ d.opponent.correct }}/{{ d.n_questions }} · {{ fmtMs(d.opponent.time_ms) }}</text>
         </view>
-      </view>
+      </kg-card>
 
-      <view class="card cta">
+      <kg-card variant="flat" class="sec">
+        <kg-stat-row :items="[
+          { label: creatorName + ' 答对', value: d.creator.correct, unit: '/' + d.n_questions, tone: d.winner === 'creator' ? 'brand' : undefined },
+          { label: '用时对比', value: fmtMs(d.creator.time_ms) + ' vs ' + fmtMs(d.opponent.time_ms) },
+          { label: opponentName + ' 答对', value: d.opponent.correct, unit: '/' + d.n_questions, tone: d.winner === 'opponent' ? 'brand' : undefined },
+        ]" />
+      </kg-card>
+
+      <kg-card variant="flat" class="sec cta">
         <text class="cta-t">不服来战？</text>
         <text class="cta-s">同组 10 题拼手速，答对 +80 分，越快加成越高</text>
-        <view class="act-btn main" @click="goChallenge">发起我的 PK 对局</view>
+      </kg-card>
+
+      <view class="reg-tip">
+        <kg-button variant="text" size="md" @click="goLogin">登录 / 注册错题邦，10万+ 题库免费刷</kg-button>
       </view>
 
-      <view class="reg-tip" @click="goLogin">
-        <text class="reg-t">登录 / 注册错题邦，10万+ 题库免费刷 ›</text>
-      </view>
+      <kg-action-bar layout="actions" primary-text="发起我的 PK 对局" @primary="goChallenge" />
     </template>
   </view>
 </template>
 
 <script>
 import { pkResult, trackEvent, canonicalizeSharePath } from '../../api.js';
-
-const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断' };
+import { MODULES, moduleLabel } from '../../module-meta.js';
 
 export default {
   data() {
@@ -58,7 +72,8 @@ export default {
   },
   computed: {
     modLabel() {
-      return NAMES[this.d && this.d.module] || '混合模块';
+      const m = this.d && this.d.module;
+      return MODULES[m] ? moduleLabel(m) : '混合模块';
     },
     sameName() {
       return !!(this.d && this.d.creator.name === this.d.opponent.name);
@@ -119,44 +134,30 @@ export default {
 </script>
 
 <style scoped>
-.wrap { padding: 24rpx 32rpx 60rpx; }
-.card { background: var(--card); border-radius: 28rpx; box-shadow: 0 2rpx 8rpx rgba(23, 24, 28, 0.04); padding: 24rpx 28rpx; margin-bottom: 20rpx; }
-.empty { text-align: center; color: var(--ink-2); font-size: 26rpx; padding: 30rpx 0; }
-.empty.err { padding: 70rpx 28rpx; }
-.err-t { display: block; font-size: 30rpx; font-weight: 600; color: var(--ink); }
-.err-s { display: block; font-size: 24rpx; color: var(--ink-2); margin-top: 12rpx; margin-bottom: 32rpx; }
-.empty.err .act-btn { max-width: 360rpx; margin: 0 auto; }
-
-.hero { background: linear-gradient(135deg, #5b8af8, #2e5bff); border-radius: 32rpx; padding: 36rpx 32rpx; margin-bottom: 24rpx; box-shadow: 0 12rpx 36rpx rgba(46, 91, 255, 0.3); }
-.hero-t { display: block; color: #fff; font-size: 40rpx; font-weight: 800; }
-.hero-s { display: block; color: rgba(255, 255, 255, 0.85); font-size: 24rpx; margin-top: 10rpx; }
-
-.vs { display: flex; align-items: stretch; padding: 32rpx 20rpx; }
-.p { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8rpx; position: relative; padding-top: 30rpx; }
-.crown { position: absolute; top: -6rpx; font-size: 34rpx; }
-.av { width: 96rpx; height: 96rpx; border-radius: 50%; background: var(--brand-soft); color: var(--brand-text); display: flex; align-items: center; justify-content: center; font-size: 36rpx; font-weight: 800; }
-.av.rival { background: #fef3c7; color: #d97706; }
-.p.win .av { box-shadow: 0 0 0 6rpx #fbbf24; }
-.nm { font-size: 24rpx; color: var(--ink); max-width: 220rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sc { font-size: 52rpx; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
+.page { padding: var(--sp-16) var(--page-x) calc(var(--bar-h) + var(--sp-24) + env(safe-area-inset-bottom, 0px)); }
+.sec { margin-top: var(--card-gap); }
+.hero-s { display: block; font-size: var(--fs-sub); color: var(--on-brand); opacity: 0.85; margin-top: var(--sp-8); }
+.vs { display: flex; align-items: stretch; gap: var(--sp-8); }
+.p { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: var(--sp-4); }
+.av-wrap { position: relative; padding-top: var(--sp-16); }
+.crown { position: absolute; top: -2px; left: 50%; transform: translateX(-50%); }
+.av { width: 48px; height: 48px; border-radius: var(--r-full); background: var(--brand-soft); color: var(--brand-text); display: flex; align-items: center; justify-content: center; font-size: var(--fs-h3); font-weight: 600; }
+.av.rival { background: var(--warn-soft); color: var(--warn-strong); }
+.p.win .av { box-shadow: 0 0 0 3px var(--warn); }
+.nm { font-size: var(--fs-sub); color: var(--ink); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sc { font-size: var(--fs-display); font-weight: 600; color: var(--ink); line-height: var(--lh-display); }
 .p.win .sc { color: var(--brand-text); }
-.meta { font-size: 22rpx; color: var(--ink-2); }
-.mid { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10rpx; padding: 0 12rpx; }
-.mid-vs { font-size: 36rpx; font-weight: 800; color: var(--ink-3); }
-.mid-res { font-size: 22rpx; color: var(--ink-2); text-align: center; max-width: 140rpx; }
-
-.cta { text-align: center; padding: 32rpx 28rpx; }
-.cta-t { display: block; font-size: 32rpx; font-weight: 800; color: var(--ink); }
-.cta-s { display: block; font-size: 24rpx; color: var(--ink-2); margin: 10rpx 0 24rpx; }
-.act-btn { min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; font-size: 30rpx; font-weight: 600; }
-.act-btn.main { background: var(--brand); color: #fff; }
-
-.reg-tip { text-align: center; padding: 20rpx 0; }
-.reg-t { font-size: 24rpx; color: var(--brand-text); }
+.meta { font-size: var(--fs-caption); color: var(--ink-2); text-align: center; }
+.mid { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-8); padding: 0 var(--sp-4); }
+.mid-vs { font-size: var(--fs-h2); font-weight: 600; color: var(--ink-3); }
+.cta { text-align: center; }
+.cta-t { display: block; font-size: var(--fs-h2); font-weight: 600; color: var(--ink); }
+.cta-s { display: block; font-size: var(--fs-sub); color: var(--ink-2); margin-top: var(--sp-8); }
+.reg-tip { display: flex; justify-content: center; padding: var(--sp-12) 0; }
 
 /* #ifdef H5 */
-@media (min-width: 768px) {
-  .wrap.pkres { max-width: 640px; }
+@media (min-width: 1024px) {
+  .page { max-width: 760px; margin: 0 auto; padding-bottom: var(--sp-24); }
 }
 /* #endif */
 </style>

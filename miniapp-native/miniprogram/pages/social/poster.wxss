@@ -1,68 +1,47 @@
-.page-scroll {
-  flex: 1;
-  height: 100%;
-}
-
 .wrap {
-  padding: 24rpx 32rpx 60rpx;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: var(--sp-12) var(--page-x) calc(var(--sp-40) + env(safe-area-inset-bottom));
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
-}
-
-.loading {
-  text-align: center;
-  color: var(--t3);
-  font-size: 26rpx;
-  padding: 60rpx 0;
 }
 
 .poster {
-  width: 620rpx;
-  border-radius: 24rpx;
-  box-shadow: var(--sh-brand);
+  width: 100%;
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-3);
+}
+
+.poster-skel {
+  aspect-ratio: 660 / 900;
+  overflow: hidden;
+  background: var(--fill);
 }
 
 .actions {
-  width: 620rpx;
-  margin-top: 28rpx;
+  width: 100%;
+  margin-top: var(--sp-16);
   display: flex;
   flex-direction: column;
-  gap: 16rpx;
-}
-
-.btn {
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999rpx;
-  font-size: 30rpx;
-  font-weight: 600;
-  background: var(--brand-500);
-  color: #fff;
-}
-
-.btn.off {
-  opacity: 0.5;
-}
-
-.btn.ghost {
-  background: var(--brand-50);
-  color: var(--brand-500);
-  border: none;
+  gap: var(--sp-8);
 }
 
 .tip {
   text-align: center;
-  font-size: 22rpx;
-  color: var(--t3);
-  margin-top: 6rpx;
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+  margin-top: var(--sp-4);
+}
+
+.tip-warn {
+  color: var(--warn-strong);
 }
 
 .hidden-canvas {
   position: absolute;
-  left: -9999rpx;
+  left: -9999px;
   top: 0;
   width: 660px;
   height: 900px;

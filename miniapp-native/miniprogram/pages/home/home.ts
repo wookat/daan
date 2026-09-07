@@ -1,5 +1,6 @@
 import {
   fetchCheckinBadges,
+  fetchCheckinSummary,
   fetchPlanToday,
   fetchProfile,
   fetchQuestionCounts,
@@ -8,26 +9,36 @@ import {
   trackEvent,
 } from '../../api/index';
 import type { CheckinBadgesResp, PlanTask, Profile } from '../../api/types';
+import { moduleMeta } from '../../utils/module-meta';
 import { getDailyGoal, setDailyGoal, streakDays, todayCount } from '../../utils/stats';
 import { syncTabBar } from '../../utils/tabbar';
 
 interface ModCard {
   key: string;
   name: string;
+  icon: string;
   color: string;
-  bg: string;
+  soft: string;
   count: string;
 }
 
-// count 为静态回退（口径同生产 2026-08 /api/question_counts），接口成功后由 fmtCount 实时覆盖
+// count 为静态回退（口径同生产 2026-08 /api/question_counts），接口成功后由 fmtCount 实时覆盖；
+// 颜色/图标取 utils/module-meta（语义 token，随深色模式切换）
+function modCard(key: string, count: string): ModCard {
+  const m = moduleMeta(key);
+  return { key, name: m.label, icon: m.icon, color: m.color, soft: m.soft, count };
+}
 const MODS: ModCard[] = [
-  { key: 'ziliao', name: '资料分析', color: '#14B8A6', bg: '#E6F9F6', count: '4,600+ 题' },
-  { key: 'shuliang', name: '数量关系', color: '#2e5bff', bg: '#eef3ff', count: '3.3 万题' },
-  { key: 'yanyu', name: '言语理解', color: '#F43F5E', bg: '#FEF0F2', count: '1.8 万题' },
-  { key: 'panduan', name: '判断推理', color: '#8B5CF6', bg: '#F3EFFE', count: '2.3 万题' },
-  { key: 'changshi', name: '常识判断', color: '#F59E0B', bg: '#FEF7E6', count: '3.1 万题' },
-  { key: '', name: '全模块混练', color: '#2e5bff', bg: '#dbe6ff', count: '10 万+ 题' },
+  modCard('ziliao', '4,600+ 题'),
+  modCard('shuliang', '3.3 万题'),
+  modCard('yanyu', '1.8 万题'),
+  modCard('panduan', '2.3 万题'),
+  modCard('changshi', '3.1 万题'),
+  { key: '', name: '全模块混练', icon: 'shuffle', color: 'var(--brand)', soft: 'var(--brand-soft)', count: '10 万+ 题' },
 ];
+
+const toOpts = (xs: Array<string | number>, suffix = ''): Array<{ value: string | number; label: string }> =>
+  xs.map((x) => ({ value: x, label: String(x) + suffix }));
 
 function fmtCount(n: number, total = false): string {
   if (total) return Math.floor(n / 10000) + ' 万+ 题';
@@ -71,10 +82,10 @@ Page({
       daily_minutes: 60,
       base_level: '零基础',
     } as Profile,
-    examTypes: ['国考', '省考', '事业单位', '其他'],
-    scoreChips: [60, 65, 70, 75, 80],
-    baseLevels: ['零基础', '有基础', '二战'],
-    minuteChips: [30, 60, 90, 120],
+    examTypeOpts: toOpts(['国考', '省考', '事业单位', '其他']),
+    scoreOpts: toOpts([60, 65, 70, 75, 80], '+'),
+    baseLevelOpts: toOpts(['零基础', '有基础', '二战']),
+    minuteOpts: toOpts([30, 60, 90, 120], ' 分钟'),
     dateStart: '',
     dateEnd: '',
     planTasks: [] as PlanTask[],
@@ -82,6 +93,7 @@ Page({
     daysLeft: null as number | null,
     dueReview: 0,
     dueLoaded: false,
+    clearedToday: 0,
     badgeStreak: 0,
     nextMilestone: null as { days: number; left: number; pct: number } | null,
     taskDoneN: 0,
@@ -116,9 +128,28 @@ Page({
     this.loadPlan();
     this.loadDueReview();
     this.loadBadges();
+    this.loadTodayServer();
   },
+  // 今日已练以服务端为准（answer_log+review_log，与统计页同源），本机 pstats 只做首屏占位与离线降级
+  async loadTodayServer() {
+    try {
+      const d = await fetchCheckinSummary();
+      if (d.today_n == null) return;
+      const today = d.today_n;
+      this._serverToday = today;
+      this.setData({
+        today,
+        clearedToday: d.cleared_today || 0,
+        goalPct: Math.min(100, Math.round((today / this.data.goal) * 100)),
+      });
+      this.updateTaskCard();
+    } catch (e) {
+      /* 非关键路径 */
+    }
+  },
+  _serverToday: null as number | null,
   refreshGoal() {
-    const today = todayCount();
+    const today = this._serverToday ?? todayCount();
     const goal = getDailyGoal();
     this.setData({
       today,
@@ -234,21 +265,21 @@ Page({
   onCloseSetup() {
     this.setData({ setupOpen: false });
   },
-  onSheetNoop() {
-    /* 阻止冒泡关闭 */
+  onSetupVisible(e: WechatMiniprogram.CustomEvent<{ visible: boolean }>) {
+    if (!e.detail.visible) this.onCloseSetup();
   },
   onSkipGuide() {
     wx.setStorageSync('planGuideHide', 1);
     this.setData({ guideHide: true });
     wx.showToast({ title: '已跳过，可在「我的」随时制定', icon: 'none' });
   },
-  onPfChip(e: WechatMiniprogram.TouchEvent) {
+  onPfChip(e: WechatMiniprogram.CustomEvent<{ value: string | number }>) {
     const key = String(e.currentTarget.dataset.key || '');
-    let val: string | number = String(e.currentTarget.dataset.val || '');
+    let val: string | number = e.detail.value;
     if (key === 'target_score' || key === 'daily_minutes') val = Number(val);
     this.setData({ ['pf.' + key]: val });
   },
-  onPfRegion(e: WechatMiniprogram.Input) {
+  onPfRegion(e: WechatMiniprogram.CustomEvent<{ value: string }>) {
     this.setData({ 'pf.target_region': e.detail.value });
   },
   onPfDate(e: WechatMiniprogram.PickerChange) {

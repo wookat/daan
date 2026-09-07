@@ -45,8 +45,8 @@ Page({
   onHideCreate() {
     this.setData({ showCreate: false });
   },
-  onNoop() {
-    /* 阻止冒泡关闭弹层 */
+  onCreateVisible(e: WechatMiniprogram.CustomEvent<{ visible: boolean }>) {
+    if (!e.detail.visible) this.onHideCreate();
   },
   onNameInput(e: WechatMiniprogram.CustomEvent<{ value: string }>) {
     this.setData({ newName: e.detail.value });
