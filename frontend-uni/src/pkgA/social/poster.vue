@@ -380,8 +380,8 @@ export default {
 .btn.retry { padding: 0 64rpx; }
 .poster { width: 640rpx; border-radius: 32rpx; box-shadow: 0 16rpx 48rpx rgba(44, 90, 214, 0.35); }
 .bar { width: 100%; margin-top: 32rpx; }
-.btn { background: var(--brand); color: #fff; font-size: 28rpx; border-radius: 18rpx; }
+.btn { background: var(--brand); color: #fff; font-size: 28rpx; line-height: 40px; min-height: 40px; border-radius: 18rpx; }
 .btn.ghost { background: var(--card); color: var(--brand-text); border: 1rpx solid var(--brand); margin-top: 16rpx; }
-.tip { text-align: center; font-size: 22rpx; color: var(--ink-3); margin-top: 18rpx; }
+.tip { text-align: center; font-size: 24rpx; color: var(--ink-3); margin-top: 18rpx; }
 .hidden-canvas { position: fixed; left: -9999rpx; top: 0; width: 660px; height: 900px; }
 </style>

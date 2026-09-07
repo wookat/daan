@@ -136,7 +136,7 @@ export default {
 .sub { font-size: 24rpx; color: var(--ink-3); }
 .bar { height: 12rpx; background: var(--fill); border-radius: 999rpx; overflow: hidden; margin-top: 16rpx; }
 .fill { height: 100%; background: var(--brand); border-radius: 999rpx; min-width: 6rpx; }
-.hint { font-size: 23rpx; color: var(--ink-3); margin-top: 14rpx; line-height: 1.6; }
+.hint { font-size: 24rpx; color: var(--ink-3); margin-top: 14rpx; line-height: 1.6; }
 .sync { display: flex; align-items: center; gap: 16rpx; background: var(--brand-soft); box-shadow: none; }
 .sync-t { flex: 1; font-size: 24rpx; color: var(--brand-text); line-height: 1.6; }
 .sync-btn { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: #fff; background: var(--brand); border-radius: 999rpx; padding: 10rpx 26rpx; }
@@ -147,9 +147,9 @@ export default {
 .ico { width: 68rpx; height: 68rpx; border-radius: 16rpx; color: #fff; font-size: 30rpx; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .grow { flex: 1; min-width: 0; }
 .nm { display: block; font-size: 27rpx; font-weight: 600; color: var(--ink); }
-.sub2 { display: block; font-size: 22rpx; color: var(--ink-3); margin-top: 4rpx; }
-.act { flex-shrink: 0; font-size: 24rpx; font-weight: 600; color: var(--brand-text); padding: 12rpx 16rpx; }
+.sub2 { display: block; font-size: 24rpx; color: var(--ink-3); margin-top: 4rpx; }
+.act { flex-shrink: 0; display: inline-flex; align-items: center; min-height: 40px; box-sizing: border-box; font-size: 24rpx; font-weight: 600; color: var(--brand-text); padding: 0 16rpx; }
 .act.del { color: var(--bad); }
 .act.dim { color: var(--ink-4); }
-.hint2 { font-size: 23rpx; color: var(--ink-3); line-height: 1.7; margin: 8rpx 10rpx; }
+.hint2 { font-size: 24rpx; color: var(--ink-3); line-height: 1.7; margin: 8rpx 10rpx; }
 </style>

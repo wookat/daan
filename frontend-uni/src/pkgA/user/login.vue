@@ -162,6 +162,11 @@ export default {
 }
 .seg-item {
   flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  box-sizing: border-box;
   text-align: center;
   padding: 18rpx 0;
   font-size: 30rpx;

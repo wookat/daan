@@ -101,7 +101,7 @@ export default {
 
 .join-input { width: 100%; background: var(--fill); border-radius: 999rpx; padding: 0 30rpx; min-height: 44px; font-size: 28rpx; margin-bottom: 26rpx; box-sizing: border-box; text-align: center; }
 
-.reg-tip { text-align: center; padding: 20rpx 0; }
+.reg-tip { display: flex; align-items: center; justify-content: center; min-height: 40px; box-sizing: border-box; padding: 20rpx 0; }
 .reg-t { font-size: 24rpx; color: var(--brand-text); }
 
 /* #ifdef H5 */
