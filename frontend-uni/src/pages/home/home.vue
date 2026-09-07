@@ -644,10 +644,19 @@ export default {
       return n;
     },
   },
+  onLoad() {
+    this._onAuth = () => {
+      if (anonUid() === this._acctUid) return;
+      this.resetAccountState();
+    };
+    uni.$on('authChanged', this._onAuth);
+  },
+  onUnload() {
+    if (this._onAuth) uni.$off('authChanged', this._onAuth);
+  },
   onShow() {
     this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
     this.daily = uni.getStorageSync('dailyPlan') || { days: {} };
-    this.szDaily = loadSzDaily(anonUid());
     this.groupSize = uni.getStorageSync('groupSize') || 10;
     this.dailyGoal = uni.getStorageSync('dailyGoal') || 20;
     if (!this.counts.length) this.counts = uni.getStorageSync('countsSnap') || [];
@@ -657,9 +666,6 @@ export default {
     this.calcWeeklyDot();
     this.checkComeback();
     this.checkReminder();
-    this.loadExamResume();
-    this.loadPracticeResume();
-    this.loadReviewResume();
     this.loadDailySet();
     flushDailySubmit().then((ok) => {
       if (ok) this.syncDsDone();
@@ -670,12 +676,33 @@ export default {
       // 立即弹出设置，不等 profile 请求返回（返回后表单会回填已有值）
       this.openSetup();
     }
-    this.loadHome().then(() => {
+    this.refreshAccountData().then(() => {
       if (wantSetup && this.setupOpen && this.profile) this.openSetup();
     });
     if (this.realMode) this.loadRealFilters();
   },
   methods: {
+    // 账号（uid）专属数据统一从这里拉：onShow 与登录态变化（authChanged）共用
+    refreshAccountData() {
+      this._acctUid = anonUid();
+      this.szDaily = loadSzDaily(this._acctUid);
+      this.loadExamResume();
+      this.loadPracticeResume();
+      this.loadReviewResume();
+      this.syncDsDone();
+      return this.loadHome();
+    },
+    resetAccountState() {
+      this.plan = null;
+      this.planFetched = false;
+      this.planToday = null;
+      this.profile = undefined;
+      this.profileFetched = false;
+      this.badgeInfo = null;
+      this.svTodayN = null;
+      this.dsDone = null;
+      this.refreshAccountData();
+    },
     closeLanding() {
       this.landingHide = true;
       uni.setStorageSync('landingHide', 1);

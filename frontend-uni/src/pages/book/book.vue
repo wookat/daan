@@ -865,6 +865,11 @@ export default {
     if (p.rz) this.rzFilter = p.rz;
     if (p.sort) this.sortBy = p.sort;
     if (p.review) uni.setStorageSync('autoStartReview', 1);
+    this._onAuth = () => {
+      if (anonUid() === this._acctUid) return;
+      this.resetAccountState();
+    };
+    uni.$on('authChanged', this._onAuth);
   },
   onReachBottom() {
     if (this.tab !== 'fav' && this.pageN < this.shownItems.length) this.pageN += 20;
@@ -884,8 +889,9 @@ export default {
     }
     const rvIntent = uni.getStorageSync('bookReviewIntent');
     if (rvIntent) uni.removeStorageSync('bookReviewIntent');
+    this._acctUid = anonUid();
     if (!this.reviewing) {
-      this.resumeInfo = parseReviewSnap(uni.getStorageSync('reviewSnap'), anonUid(), Date.now() / 1000);
+      this.resumeInfo = parseReviewSnap(uni.getStorageSync('reviewSnap'), this._acctUid, Date.now() / 1000);
       if (this.resumeInfo && rvIntent) {
         this.resumeReview();
       } else if (!this.resumeInfo) {
@@ -918,6 +924,7 @@ export default {
     // #endif
   },
   onUnload() {
+    if (this._onAuth) uni.$off('authChanged', this._onAuth);
     // #ifdef H5
     if (this._kbHandler && typeof window !== 'undefined') {
       window.removeEventListener('keydown', this._kbHandler);
@@ -926,6 +933,33 @@ export default {
     // #endif
   },
   methods: {
+    // 登录态变化（uid 已换）：清掉上一个账号的错题/到期/掌握度/AI 分析，按当前 uid 重拉
+    resetAccountState() {
+      this.items = [];
+      this.due = [];
+      this.dueTotal = 0;
+      this.masteryMods = {};
+      this.masteryT3 = {};
+      this.offlineView = false;
+      this.loadErr = '';
+      this.aiOpen = false;
+      this.aiHtml = '';
+      this.aiErr = '';
+      this.moreSheet = null;
+      this.batchMode = false;
+      this.selIds = {};
+      this.pageN = 20;
+      this.reviewing = false;
+      this.resumeInfo = null;
+      setBookBadge(0);
+      this._acctUid = anonUid();
+      this.resumeInfo = parseReviewSnap(uni.getStorageSync('reviewSnap'), this._acctUid, Date.now() / 1000);
+      if (!this.resumeInfo) {
+        this._reviewIntent = false;
+        this.restoreRemoteSnap();
+      }
+      this.load();
+    },
     filterByReason(name) {
       if (!name) return;
       this.tab = 'todo';
@@ -1164,7 +1198,12 @@ export default {
       return m ? [...new Set(m[0])].sort().join('') : '';
     },
     async master(m, on = true) {
-      await request('/api/mistakes/' + m.id, { method: 'PATCH', data: { uid: anonUid(), mastered: on ? 1 : 0 } });
+      try {
+        await request('/api/mistakes/' + m.id, { method: 'PATCH', data: { uid: anonUid(), mastered: on ? 1 : 0 } });
+      } catch (e) {
+        uni.showToast({ title: '操作失败：' + (e.message || '请稍后重试'), icon: 'none' });
+        return;
+      }
       m.mastered = on ? 1 : 0;
       m.mastered_at = on ? (m.mastered_at || Date.now() / 1000) : null;
       uni.showToast({ title: on ? '已掌握！' : '已恢复复习', icon: on ? 'success' : 'none' });
@@ -1711,7 +1750,12 @@ export default {
         title: '确定删除这道错题？',
         success: async (res) => {
           if (!res.confirm) return;
-          await request('/api/mistakes/' + m.id + '?uid=' + encodeURIComponent(anonUid()), { method: 'DELETE' });
+          try {
+            await request('/api/mistakes/' + m.id + '?uid=' + encodeURIComponent(anonUid()), { method: 'DELETE' });
+          } catch (e) {
+            uni.showToast({ title: '删除失败：' + (e.message || '请稍后重试'), icon: 'none' });
+            return;
+          }
           this.load();
         },
       });
