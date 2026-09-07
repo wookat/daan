@@ -1722,3 +1722,10 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 部署后 (c) 补量的时间 filter 用 `docker inspect -f '{{.State.StartedAt}}'` 的秒（本轮与脚本常量同秒），不要用 deploy 日志或估算。
 - 微信官方文档（`developers.weixin.qq.com/miniprogram/dev/framework/ability/network.html`）两条核过的硬约束：`wx.request` 最大并发 **10**（一页 onShow 9 连 + 飞行中 AI 长请求即顶满，多余的排队）；Referer `servicewechat.com/{appid}/{version}/` 的 `{version}=0` = 开发版/体验版/审核版三者、`devtools` = 开发者工具，报告里写「非正式版」不要写死「开发版」；进入后台 5 s 内未结束的请求回调 `fail interrupted`。
 
+
+## R477 经验：「同 uid 重复 AI 请求」判端侧成因的三件一手
+- 看**前置请求**：小程序问答页 `submitText/submitImage → ensureAccess()` 每次手动提交前会发一次 `GET /api/access_info`（无访问码时；全小程序只有 `ask.ts` 调它，`git grep fetchAccessInfo` 核），Caddy 里每条 `explain/stream` 前 1–2 s 有没有它，直接区分「手动重点」vs「代码自动重发」；`streamPost` 失败的降级路径是**非流式** `/api/explain`，看它有没有到源站再判降级是否发生。
+- 看**留存表**：`ask_cur.items[*].ts` 是端侧 `Date.now()`，与 Caddy 起点（`ts − duration`）对齐即可判断哪一次提交留了下来；rec 只在 `onMeta`/成功后 `unshift`，`catch` 不插入 → 「N 次请求只留 1 条 rec」= 只有 1 次端侧成功。`explain_cache` 是 `INSERT OR REPLACE`（同一条流末尾 3 ms 内写 `key` + `raw_key` 两行），分不出前一次有没有落过库，别拿它当次数证据。
+- 看**出口 IP 是否永久切换**：旧 IP 此后 0 新请求 + 新 IP 接管全部后续 = 网络切换；Caddy 对端侧已放弃的流仍记 200 + 完整时长 + 完整字节，源站「跑满」不能反推端侧收到了。
+- 只读查询模板：`ask_cur` / `ask_sessions` 行的 uid 先用 Caddy 三路（140.232.64.x / `X-Kg-Probe` / 自动化 UA）归类再谈「真实留存」；`api_ask_cur_get` 有 7×24 h 口径，过期时间 = `updated_at + 7 d`。
+- `docker logs --since/--until` 取容器日志时若返回极少（本轮 1 行），先确认容器日志是否落在同窗口（部署重建后 `docker logs` 只含新容器），别把「没日志」当「没异常」。

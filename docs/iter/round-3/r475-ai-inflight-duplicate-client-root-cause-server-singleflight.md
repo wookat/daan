@@ -94,3 +94,5 @@ probe=0 `answer_log` 33 / uid 1；growth 20 / 4；`error_reason` 7 / ≥09-11 **
 - `backend/tests/test_mistake_analysis_singleflight.py`：新增 3 例。
 
 > R476 勘误：本文与 R474 所称「开发版」按微信官方文档（网络 › 使用限制）Referer 版本号 `0` = 开发版、体验版、审核版三者，应读作「非正式版」；结论不变。详见 `r476-postdeploy-natural-singleflight-interview-funnel-stats-fanout.md` §5。
+
+> R477 坐实：§1 表「`explain/stream` ×2 更像网络切换后用户重点」由推断升为判定——第 2 条流前 1.4 s 有新出口 IP 的 `GET /api/access_info`（= `submitText → ensureAccess()` 的手动提交前置，代码无自动重试），`ask_cur` 里只留第 2 次的 rec（第 1 次走 `catch` 未入 `results`），旧 IP 此后 0 新请求。服务端两条都跑满 41.5 s 的机制（边缘未收到断开）仍为推断。详见 `r477-explain-stream-pair-network-switch-manual-retry-ask-retention.md` §3。

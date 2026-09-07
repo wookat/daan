@@ -2378,3 +2378,11 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 到期项 05:45–05:55Z 无增量：probe=0 33/1、growth 20/4、error_reason 7 / ≥09-11 0、push_subs 0、weekly 2、exam_attempts probe=0 1/64、WAL 同字节、healthy 0 重启；(c) 新容器后 `/assets/*` 404 / 5xx / monitor / 小程序 UA 全 0。
 - 如实：漏斗 n=2、「浏览形态」为停留时长 + 遍历时序推断、两设备是否同一人未核；扇出量测为 Chrome 侧节流（非真机/小程序）、`home_bundle` 作单请求对照非严格等体量、每网况 5 轮；0 代码无新门。取证：`docs/iter/round-3/r476-postdeploy-natural-singleflight-interview-funnel-stats-fanout.md`。下次 SOP-10 审计 ~R480。
 
+
+## R477（自然 `mistakes/analysis` 仍 0 + AI 问答真实触达后的会话留存只读盘点 + R475「explain ×2」形态坐实为网络切换→手动重点 → 只登记，0 代码不发版；生产仍 `2bad8bc`）
+- 自然 single-flight 命中仍**不可观测**：R475 容器起后 228 请求全部本机/探针，非探针 `mistakes/analysis` 0 条；三条件核法继续挂。
+- AI 问答留存（Caddy 全文件 + `ask_cur` / `ask_sessions` / `explain_cache` 只读）：非探针打开问答页 2 uid（`umsagboriz4qyurnd` H5 分享链路 6 次进页 0 提交；`umst3tuisd7lgzaka` 小程序非正式版 1 次）→ 提交 1 uid → `ask_cur` 留 1 条（1007 字讲解、`saved:false`、追问 0、评分 0、未归档）→ 之后 0 回访；`ask_sessions` 全表 1 行 + `ask_cur` 另 4 行 + `explain_cache` 82 行 / 21 hits **全是探针 uid**。服务端 `ask_cur` 7 天口径 → 该条 09-13 21:41Z 过期，在此之前若该 uid 回问答页 `GET ask/cur` 命中 = 「留存被用到」的首个可观测点。n=1 不立项。
+- R475 登记的 `explain/stream` ×2 **坐实**：第 1 条起点 21:40:02.8Z（IP 223.83.2.220）前 1.6 s 有 `GET /api/access_info`；第 2 条 21:40:09.0Z（IP **39.158.40.85**）前 1.4 s **又一次** `access_info`（全小程序只有 `ask.ts ensureAccess()` 调它 = `submitText` 手动提交；代码无自动重试，`streamPost` 失败降级的是非流式 `/api/explain`、全文件 0 条）；`ask_cur.items` 只 1 条 rec、端侧 ts 21:40:07.553Z 对应第 2 次（第 1 次走 `catch`：`setError` + 展开文本面板保留原文/答案，rec 不入 `results`）；旧 IP 此后 0 新请求。→ 网络切换致端侧首条流失败，用户 ~4.8 s 内手动重点；两条在源站都 200 跑满 41.5 s（12831 / 14843 B，两次独立生成；`explain_cache` 两行 `key`/`raw_key` 3 ms 内写于第 2 条末尾 21:40:50.63Z）。服务端合并/回放收益 = 1 次 LLM + ≈6 s、全文件仍 1 对 → 继续登记。「源站为何跑满」= 手机侧 socket 失效无 FIN/RST 到边缘、CF 继续拉源站流 → 推断未验证。R475 文档已加指针。
+- 顺带登记给 W7：`doExplain` 在 `onMeta` 就把 `loading` 复位（按钮解锁）而 `rec.streaming` 仍 true，理论上允许流中再提交（本对不是这条路径）。#619 不动 W7 文件。
+- 到期项 06:02Z 无增量：probe=0 33/1、growth 20/4、error_reason 7 / ≥09-11 0、push_subs 0、weekly 2、exam_attempts probe=0 1/64、WAL 同字节、healthy 0 重启；(c) 新容器后 `/assets/*` 404 / 5xx / monitor / 小程序 UA 全 0。
+- 如实：网络切换为 IP 永久切换 + 代码路径反推、无端侧日志/真机；rec 归属假设端侧时钟偏差 <5 s；两 IP 段均为运营商 NAT 池；`ask_cur` POST 2631 B vs 落库 1535 B 差值未逐字节核；0 代码无新门。取证：`docs/iter/round-3/r477-explain-stream-pair-network-switch-manual-retry-ask-retention.md`。下次 SOP-10 审计 ~R480。
