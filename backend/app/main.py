@@ -12,6 +12,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
+from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import Headers
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -241,7 +242,11 @@ async def guard_account_uid(request, call_next):
             uid = parsed.get("uid") if isinstance(parsed, dict) else None
         except (ValueError, TypeError):
             uid = None
-    if uid and auth.is_account_uid(uid) and not auth.owns_uid(uid, request.headers.get("authorization")):
+    if (
+        uid
+        and auth.is_account_uid(uid)
+        and not await run_in_threadpool(auth.owns_uid, uid, request.headers.get("authorization"))
+    ):
         return JSONResponse({"detail": "无权访问该账号数据，请重新登录"}, status_code=403)
     if body:
         async def _receive():

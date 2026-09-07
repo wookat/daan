@@ -53,9 +53,21 @@ EXP_AD_TAIL_RE = re.compile(r"[,，]?一个上岸考生分享经验和答疑的�
 # 交人工处理；PDF 逐字断开（「中 央 和 国 家」）全是单字，不算词表，照常归一。
 _CJK_WORD_RUN_RE = re.compile(r"(?<![\u4e00-\u9fff])[\u4e00-\u9fff]{1,4}(?: [\u4e00-\u9fff]{1,4}){2,}(?![\u4e00-\u9fff])")
 
+# 解析结论句的选项字母：只认结论式措辞（「故选 A」「因此，选择 A 选项」「正确答案为 A」「所以 A 项当选」），
+# 「排除 A、B」「若选 A 则…」类中间句不入；字母后紧接字母（「故选 AB」）不入（多选结论不判）。
+_CONCLUSION_LEAD = r"(?:故|因此|所以|因而|综上所述|综上|由此|据此|本题|此题|该题)"
+_LETTER = r"[（(]?\s*([A-Da-d])\s*[）)]?(?![A-Za-z])"
+ANSWER_CONCLUSION_RE = re.compile(
+    rf"{_CONCLUSION_LEAD}[，,]?\s*(?:本题|答案)?\s*(?:应该选择|应该选|应选择|应选|选择|选)\s*[：:]?\s*{_LETTER}"
+    rf"|(?:正确答案|本题答案|答案)\s*(?:应选择|应选|选择|选|应为|为|是|[：:])\s*[：:]?\s*{_LETTER}"
+    rf"|{_CONCLUSION_LEAD}[，,]?\s*{_LETTER}\s*(?:项|选项)?\s*(?:当选|正确|符合题意|为正确答案|为答案)"
+)
+_SINGLE_ANSWER_RE = re.compile(r"^[A-D]$")
+
 PENALTY_HS_SELFCHECK = 40
 PENALTY_HS_PIPELINE_NOTE = 15
 PENALTY_PSEUDO_ZH = 30
+PENALTY_ANSWER_CONFLICT = 30
 
 
 def hs_selfcheck_failed(hs: str) -> bool:
@@ -258,6 +270,27 @@ def formula_dropped(row: dict) -> str | None:
     return None
 
 
+def concluded_letter(text: str | None) -> str | None:
+    """解析最后一处结论式措辞所选的字母（大写）；无结论句返回 None。"""
+    last = None
+    for m in ANSWER_CONCLUSION_RE.finditer(text or ""):
+        last = next(g for g in m.groups() if g)
+    return last.upper() if last else None
+
+
+def answer_letter_conflict(row: dict) -> str | None:
+    """单选题 explanation / hs_explanation 结论字母与 answer 不一致时返回解析结论字母，否则 None。
+    多选（answer 多字母）/ 无结论句不判；只降分不下线，供 admin 排序人审。"""
+    answer = (row.get("answer") or "").strip().upper()
+    if not _SINGLE_ANSWER_RE.match(answer):
+        return None
+    for text in (row.get("explanation"), row.get("hs_explanation")):
+        letter = concluded_letter(text)
+        if letter and letter != answer:
+            return letter
+    return None
+
+
 def strip_page_footers(text: str | None) -> str:
     """去掉 PDF 页脚「第 N 页共 M 页」/「-N- 20XX年…真题」及串到字段尾部的下一节标题「二. 数量关系：…」；无命中原样返回。"""
     if not text:
@@ -337,6 +370,8 @@ def score_question(row: dict) -> int:
         score -= PENALTY_HS_PIPELINE_NOTE
     if row.get("module") == "yanyu" and pseudo_zh_hits(question_text(row)) >= PSEUDO_ZH_MIN_HITS:
         score -= PENALTY_PSEUDO_ZH
+    if answer_letter_conflict(row):
+        score -= PENALTY_ANSWER_CONFLICT
 
     return max(0, min(100, score))
 
