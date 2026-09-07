@@ -570,7 +570,9 @@ export default {
 
 /* cell 组：作为 cell 规范样板 */
 :deep(.cellcard) { display: block; border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--line); margin-bottom: var(--sp-4); }
-:deep(.cellcard .wd-cell__left) { flex: 0 1 auto; max-width: 60%; }
+/* 标题不换行、右侧值单行省略：wot 默认左右各 flex:1，长标题会被挤成两行 */
+:deep(.cellcard .wd-cell__left) { flex: 0 0 auto; max-width: 62%; }
+:deep(.cellcard .wd-cell__title) { white-space: nowrap; }
 :deep(.cellcard .wd-cell__value) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cell-ico { width: 32px; height: 32px; border-radius: var(--r-xs); background: var(--fill); display: flex; align-items: center; justify-content: center; margin-right: var(--sp-12); }
 
