@@ -41,11 +41,18 @@
 <script>
 import { authLogin, authRegister, authSso, mergeAnon, setAuth, trackEvent } from '../../api.js';
 
+const MERGE_FAIL_TIP = '已登录，但本机记录合并失败；退出后重新登录会再次合并';
+
 export default {
   data() {
     return { mode: 'login', phone: '', password: '', nickname: '', busy: false, err: '' };
   },
   methods: {
+    leave() {
+      // H5 的 navigateBack 只是 history.go(-1) 且永不 fail：深链/刷新直达（页面栈仅 1 页）时会停在登录页
+      if (getCurrentPages().length > 1) uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/stats/stats' }) });
+      else uni.switchTab({ url: '/pages/stats/stats' });
+    },
     async ssoLogin() {
       this.err = '';
       this.busy = true;
@@ -58,12 +65,12 @@ export default {
             await mergeAnon(anon);
             uni.showToast({ title: '本机记录已合并到账号', icon: 'success', duration: 2000 });
           } catch (e) {
-            /* 合并失败不阻断登录 */
+            uni.showToast({ title: MERGE_FAIL_TIP, icon: 'none', duration: 2500 });
           }
         } else {
           uni.showToast({ title: '登录成功', icon: 'success' });
         }
-        setTimeout(() => uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/stats/stats' }) }), 1200);
+        setTimeout(() => this.leave(), 1200);
       } catch (e) {
         this.err = e.message === '未登录 Zalize 统一账号' ? '请先在 account.zalize.com 登录后再试' : e.message || '登录失败';
       } finally {
@@ -100,12 +107,12 @@ export default {
             await mergeAnon(anon);
             uni.showToast({ title: '本机记录已合并到账号', icon: 'success', duration: 2000 });
           } catch (e) {
-            /* 合并失败不阻断登录 */
+            uni.showToast({ title: MERGE_FAIL_TIP, icon: 'none', duration: 2500 });
           }
         } else {
           uni.showToast({ title: this.mode === 'login' ? '登录成功' : '注册成功', icon: 'success' });
         }
-        setTimeout(() => uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/stats/stats' }) }), 1200);
+        setTimeout(() => this.leave(), 1200);
       } catch (e) {
         this.err = e.message || '操作失败';
       } finally {
