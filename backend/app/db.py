@@ -3324,7 +3324,7 @@ def list_mistakes(limit: int = 500, uid: str | None = None) -> list[dict]:
     args = (uid,) if uid else ()
     rows = conn.execute(
         f"""SELECT m.*, q.tag3, q.options AS q_options, q.question AS q_question,
-            q.hs_explanation AS q_hs,
+            q.hs_explanation AS q_hs, q.submodule AS q_submodule,
             q.attempt_count, q.correct_ratio, q.most_wrong,
             q.source AS q_source, q.is_real AS q_is_real FROM mistakes m
             LEFT JOIN questions q ON q.id=m.question_id
@@ -3404,7 +3404,7 @@ def due_reviews(limit: int = 20, uid: str | None = None) -> list[dict]:
     cl, args = _uid_clause(uid)
     rows = conn.execute(
         "SELECT m.*, q.options AS q_options, q.question AS q_question, "
-        "q.hs_explanation AS q_hs FROM mistakes m "
+        "q.hs_explanation AS q_hs, q.submodule AS q_submodule FROM mistakes m "
         "LEFT JOIN questions q ON q.id=m.question_id "
         "WHERE (m.mastered IS NULL OR m.mastered=0) "
         f"AND (m.next_review IS NULL OR m.next_review <= ?){cl} "
@@ -3430,6 +3430,7 @@ def _hydrate_mistake(d: dict) -> None:
         d["question_text"] = stem
     hs = d.pop("q_hs", None)
     d["explanation"] = d.get("explanation") or hs or ""
+    d["submodule"] = (d.pop("q_submodule", None) or "").strip() or None
 
 
 def _ensure_review_log(conn):

@@ -542,7 +542,7 @@ import { qStatLine } from '../../q-stat.js';
 import { fontSizes, normFontLv } from '../../font-size.js';
 import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
 import { askQid, findAskSid } from '../../ask-link.js';
-import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid, reviewAskAnswer } from '../../review-similar.js';
+import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid, reviewAskAnswer, similarSubmodule } from '../../review-similar.js';
 import { buildReviewSnap, parseReviewSnap } from '../../review-snap.js';
 import { reviewSummary } from '../../review-summary.js';
 import { reviewOptions, reviewOptionsFull } from '../../review-opts.js';
@@ -1404,8 +1404,7 @@ export default {
       // 答错自动加推：本轮末尾追加最多 2 道同类新题（不写 SRS，不影响复习记录）
       if (m._simFetched || m._requeued || !m.module) return;
       m._simFetched = true;
-      const qt = m.question_type || '';
-      const sub = qt.includes('-') ? qt.split('-').slice(1).join('-') : null;
+      const sub = similarSubmodule(m);
       try {
         let q = '/api/questions?limit=2&uid=' + encodeURIComponent(anonUid()) + '&module=' + encodeURIComponent(m.module);
         if (sub) q += '&submodule=' + encodeURIComponent(sub);
@@ -1605,12 +1604,10 @@ export default {
     reinforceFromMistake(m) {
       const qt = m.question_type || '';
       const sub = qt.includes('-') ? qt.split('-').slice(1).join('-') : qt || null;
-      this.startReinforce({ module: m.module, submodule: sub, tag3: m.tag3, mastery: null });
+      this.startReinforce({ module: m.module, submodule: similarSubmodule(m) || sub, tag3: m.tag3, mastery: null });
     },
     practiceSimilar(m) {
-      const qt = m.question_type || '';
-      const sub = qt.includes('-') ? qt.split('-').slice(1).join('-') : null;
-      uni.setStorageSync('practicePreset', { module: m.module, submodule: sub, count: 3 });
+      uni.setStorageSync('practicePreset', { module: m.module, submodule: similarSubmodule(m), count: 3 });
       uni.navigateTo({ url: '/pages/practice/practice' });
     },
     openReport(m) {
