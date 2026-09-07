@@ -96,7 +96,7 @@ export function adoptServerExamProgress(
     const secs = Number(rawSecs[id]);
     const ex = Array.isArray(rawExcl[id]) ? rawExcl[id].filter((x) => ['A', 'B', 'C', 'D'].includes(x)) : [];
     return {
-      ...q,
+      ...toEQ(q),
       _picked: typeof picks[id] === 'string' ? picks[id] : '',
       _marked: marked.has(Number(q.id)),
       _secs: Number.isFinite(secs) && secs > 0 ? Math.floor(secs) : 0,
