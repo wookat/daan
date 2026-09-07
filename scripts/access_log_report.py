@@ -16,7 +16,8 @@ import sys, json, argparse, datetime, ipaddress
 from collections import Counter
 
 BOT_ENGINES = {
-    "bingbot": "Bing", "googlebot": "Google", "baiduspider": "Baidu",
+    "bingbot": "Bing", "googlebot": "Google", "google-inspectiontool": "Google",
+    "baiduspider": "Baidu",
     "yandex": "Yandex", "sogou": "Sogou", "360spider": "360",
     "bytespider": "ByteDance", "duckduckbot": "DuckDuckGo",
     "applebot": "Apple", "petalbot": "Petal(华为)", "yisouspider": "Yisou(神马)",

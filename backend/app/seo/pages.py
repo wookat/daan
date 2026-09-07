@@ -819,18 +819,30 @@ def _render_question(qid: int) -> str:
         + "<!--QCOMMENTS-->"
     )
     title_head = qtext.replace("\n", " ")[:50]
+    # 站方单一解析的练习题不是 Q&A 社区页（Google QAPage 内容准则明确列为无效用例），
+    # 按 schema.org 教育资源建模：LearningResource ⊃ Question(选择题)，选项为 suggestedAnswer
     jsonld = {
         "@context": "https://schema.org",
-        "@type": "QAPage",
-        "mainEntity": {
+        "@type": "LearningResource",
+        "name": title_head,
+        "url": _url(f"/tiku/q/{qid}"),
+        "inLanguage": "zh-CN",
+        "learningResourceType": "真题" if r["is_real"] else "练习题",
+        "educationalLevel": "公务员考试",
+        "about": {"@type": "Thing", "name": topic["name"] if topic else mod_name},
+        "isPartOf": {"@type": "WebSite", "name": "错题邦", "url": SITE_BASE},
+        "hasPart": {
             "@type": "Question",
+            "eduQuestionType": "Multiple choice",
             "name": title_head,
             "text": qtext,
-            "answerCount": 1,
+            "suggestedAnswer": [
+                {"@type": "Answer", "position": i + 1, "text": f"{k}. {v}"}
+                for i, (k, v) in enumerate(sorted(options.items()))
+            ],
             "acceptedAnswer": {
                 "@type": "Answer",
                 "text": f'正确答案：{r["answer"] or ""}。{explanation[:500]}',
-                "url": _url(f"/tiku/q/{qid}"),
             },
         },
     }

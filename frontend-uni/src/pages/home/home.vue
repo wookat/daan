@@ -373,6 +373,7 @@
 import { request, snapPeek, anonUid, exportPdf, trackEvent, fetchCheckinBadges, fetchCheckinSummary, flushDailySubmit } from '../../api.js';
 import { checkinStreak, dayKey, loadSzDaily } from '../../checkin.js';
 import { parseExamProgress, fmtLeftSecs } from '../../exam-resume.js';
+import { setBookBadge } from '../../tabbar-badge.js';
 import { adoptServerExamProgress } from '../../exam-progress-sync.js';
 import { parsePendingPractice, parseRemotePractice } from '../../practice-progress.js';
 import { parseReviewSnap } from '../../review-snap.js';
@@ -1012,9 +1013,7 @@ export default {
       if (!plan) return;
       this.plan = plan;
       this.planFetched = true;
-      const due = plan.due_mistakes || 0;
-      if (due > 0) uni.setTabBarBadge({ index: 1, text: String(due > 99 ? '99+' : due) });
-      else uni.removeTabBarBadge({ index: 1 });
+      setBookBadge(plan.due_mistakes || 0);
     },
     async loadProfile() {
       try {
