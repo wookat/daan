@@ -33,7 +33,7 @@ filter `ts ≥ 1788759123`（05:32:03Z，与 `docker inspect StartedAt` 同秒�
 | 表 | 行 | 非探针行 |
 |---|---|---|
 | `ask_sessions`（归档会话） | 1（`umtpnlge4mrl9kyxq`，09-06 10:22Z，n=1） | **0**（该 uid 全部 10 请求出口 140.232.64.5） |
-| `ask_cur`（当前会话） | 5 | **1**：`umst3tuisd7lgzaka` sid 0、ts 21:41:01.653Z、1 item、1535 B |
+| `ask_cur`（当前会话） | 5 | **1**：`umst3tuisd7lgzaka` sid 0、ts 21:41:01.653Z、1 item、`length(items)` 1535 字符（SQLite `length()` 对 TEXT 计字符，UTF-8 约 2.6 KB） |
 | `explain_cache` | 82 / hits 21 / down 1 | 事发两行 hits 0、up/down 0 |
 
 `ask_cur` 那 1 条 item 的字段（只列长度）：`qid 0`、`module` 8 字、`module_name` 4 字、`question_type` 9 字、`question_text` 83 字、`explanation` **1007 字**（首段「【答案】C｜【方法】独立事件乘法｜…」，与 `explain_cache` 该 key 的 1007 字同长）、`explain_key` 64、`user_answer` 1（A）、`userText` 83、`saved` **false**、`fu` **[]**。
@@ -78,7 +78,7 @@ R475 §1 表「更像网络切换后端侧流中断 → 用户重点」= 推断�
 
 ### 3.4 顺带确认（不改）
 - `doExplain` 在 `onMeta` 就把 `loading` 置回 false（按钮解锁）而 `rec.streaming` 仍 true——理论上允许流未完成时再提交；但本对重复不是这条路径（第 2 次在第 1 次 meta 之前的 6 s 内、且第 1 次 rec 未落）。登记给 W7，不在 #619 动 W7 文件。
-- `ask_cur` 的 `POST` Content-Length 2631 vs 落库 1535 B（服务端 `json.dumps(items, ensure_ascii=False)` 重序列化）差值未逐字节核；字段集与 `toItems()` 一致，不影响结论。
+- `ask_cur` 的 `POST` Content-Length 2631 B vs 落库 `length(items)` 1535：后者是 SQLite 对 TEXT 的**字符数**（1007 字中文讲解为主，UTF-8 每字 3 B），换算约 2.6 KB，与请求体 2631 B（含 `uid/sid/ts` 外层）量级一致；字段集与 `toItems()` 一致，服务端未丢字段。
 
 ## 4. 到期项（06:02Z）
 | 项 | 值 |
