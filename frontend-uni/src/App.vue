@@ -232,7 +232,7 @@ html.theme-dark body {
   }
 }
 
-/* 桌面端：底部 tabbar 变左侧侧栏 */
+/* 桌面端：底部 tabbar 变左侧侧栏；208px 让位只给 tab 页（uni-page[type="tabBar"]），非 tab 页无侧栏不留空栏 */
 @media (min-width: 768px) {
   .uni-tabbar {
     top: 0 !important;
@@ -268,16 +268,15 @@ html.theme-dark body {
     font-size: 15px !important;
     line-height: 52px !important;
   }
-  uni-page-wrapper,
-  .uni-tabbar-page {
+  uni-page[type="tabBar"] uni-page-wrapper {
     padding-left: 208px;
     box-sizing: border-box;
   }
   uni-tabbar + .uni-placeholder {
     display: none;
   }
-  uni-page-body .banner,
-  uni-page-body .mask {
+  uni-page[type="tabBar"] uni-page-body .banner,
+  uni-page[type="tabBar"] uni-page-body .mask {
     left: 208px !important;
   }
 }
@@ -301,8 +300,15 @@ html.theme-dark body {
   uni-page-body .inputbar,
   uni-page-body .batchbar,
   uni-page-body .navrow {
-    left: calc((100vw - 1140px) / 2 + 208px) !important;
+    left: calc((100vw - 1140px) / 2) !important;
     right: calc((100vw - 1140px) / 2) !important;
+  }
+  uni-page[type="tabBar"] uni-page-body .banner,
+  uni-page[type="tabBar"] uni-page-body .mask,
+  uni-page[type="tabBar"] uni-page-body .inputbar,
+  uni-page[type="tabBar"] uni-page-body .batchbar,
+  uni-page[type="tabBar"] uni-page-body .navrow {
+    left: calc((100vw - 1140px) / 2 + 208px) !important;
   }
   uni-page-body .fabmenu {
     right: calc((100vw - 1140px) / 2 + 24px) !important;
@@ -323,8 +329,15 @@ html.theme-dark body {
   uni-page-body .inputbar,
   uni-page-body .batchbar,
   uni-page-body .navrow {
-    left: calc((100vw - 1280px) / 2 + 208px) !important;
+    left: calc((100vw - 1280px) / 2) !important;
     right: calc((100vw - 1280px) / 2) !important;
+  }
+  uni-page[type="tabBar"] uni-page-body .banner,
+  uni-page[type="tabBar"] uni-page-body .mask,
+  uni-page[type="tabBar"] uni-page-body .inputbar,
+  uni-page[type="tabBar"] uni-page-body .batchbar,
+  uni-page[type="tabBar"] uni-page-body .navrow {
+    left: calc((100vw - 1280px) / 2 + 208px) !important;
   }
   uni-page-body .fabmenu {
     right: calc((100vw - 1280px) / 2 + 24px) !important;

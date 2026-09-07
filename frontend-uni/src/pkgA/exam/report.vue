@@ -424,14 +424,19 @@ export default {
     modules() {
       const pm = (this.report && this.report.attempt.per_module) || {};
       const keys = MOD_ORDER.filter((k) => pm[k]).concat(Object.keys(pm).filter((k) => !MOD_ORDER.includes(k)));
-      return keys.map((k) => ({
-        key: k,
-        name: moduleLabel(k),
-        n: pm[k].n,
-        correct: pm[k].correct,
-        pct: pm[k].n ? Math.round((pm[k].correct / pm[k].n) * 100) : 0,
-        avgPct: modAvgPct(this.rankData, k),
-      }));
+      return keys.map((k) => {
+        const { n, correct, answered } = pm[k];
+        return {
+          key: k,
+          name: moduleLabel(k),
+          n,
+          correct,
+          answered,
+          pct: n ? Math.round((correct / n) * 100) : 0,
+          ansPct: answered == null ? undefined : answered ? Math.round((correct / answered) * 100) : 0,
+          avgPct: modAvgPct(this.rankData, k),
+        };
+      });
     },
     weakMod() {
       return weakModule(this.modules);

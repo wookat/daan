@@ -136,6 +136,8 @@ export interface ModuleRow {
   correct: number;
   pct: number;
   avgPct: number | null;
+  answered?: number;
+  ansPct?: number;
 }
 
 const PRACTICE_MODS = MOD_ORDER;
@@ -147,19 +149,39 @@ function validPct(v: number | null | undefined): v is number {
   return typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 100;
 }
 
-/** 薄弱模块：优先「低于全站均值 ≥5 个百分点」最大者，否则全卷最低且 <60% */
+/** 判定样本：按已答题数与已答正确率（answered=0 整模块未答不判）；无 answered 字段回落 n/pct */
+function judgePct(m: ModuleRow): number | null {
+  const cnt = m.answered == null ? m.n : m.answered;
+  if (!Number.isFinite(cnt) || cnt < MIN_N) return null;
+  const pct = m.ansPct == null ? m.pct : m.ansPct;
+  return validPct(pct) ? pct : null;
+}
+
+/** 部分作答时兜底文案附折算说明，与 paceRows refNote / H5 exam-weak.js 同写法 */
+function partialNote(m: ModuleRow): string {
+  return m.answered != null && m.answered < m.n ? '（按已答 ' + m.answered + '/' + m.n + ' 题折算）' : '';
+}
+
+/** 薄弱模块：优先「低于全站均值 ≥5 个百分点」最大者，否则全卷最低且 <60%（与 H5 exam-weak.js 同口径） */
 export function weakModule(modules: ModuleRow[]): { key: string; name: string; reason: string } | null {
-  const rows = modules.filter((m) => m && PRACTICE_MODS.includes(m.key) && Number.isFinite(m.n) && m.n >= MIN_N && validPct(m.pct));
+  const rows: Array<{ m: ModuleRow; pct: number }> = [];
+  for (const m of modules) {
+    if (!m || !PRACTICE_MODS.includes(m.key)) continue;
+    const pct = judgePct(m);
+    if (pct != null) rows.push({ m, pct });
+  }
   if (!rows.length) return null;
   let best: { m: ModuleRow; gap: number } | null = null;
-  for (const m of rows) {
-    if (!validPct(m.avgPct)) continue;
-    const gap = m.avgPct - m.pct;
-    if (gap >= MIN_GAP && (!best || gap > best.gap)) best = { m, gap };
+  for (const r of rows) {
+    if (!validPct(r.m.avgPct)) continue;
+    const gap = r.m.avgPct - r.pct;
+    if (gap >= MIN_GAP && (!best || gap > best.gap)) best = { m: r.m, gap };
   }
   if (best) return { key: best.m.key, name: best.m.name || best.m.key, reason: '低于全站均值 ' + Math.round(best.gap) + ' 个百分点' };
   const low = rows.slice().sort((a, b) => a.pct - b.pct)[0];
-  if (low && low.pct < LOW_PCT) return { key: low.key, name: low.name || low.key, reason: '本卷正确率 ' + low.pct + '%，全卷最低' };
+  if (low && low.pct < LOW_PCT) {
+    return { key: low.m.key, name: low.m.name || low.m.key, reason: '本卷正确率 ' + low.pct + '%，全卷最低' + partialNote(low.m) };
+  }
   return null;
 }
 

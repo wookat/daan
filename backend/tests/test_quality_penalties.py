@@ -63,6 +63,47 @@ def test_pseudo_zh_penalty_only_yanyu_and_threshold():
     assert quality.pseudo_zh_hits(normal) < quality.PSEUDO_ZH_MIN_HITS
 
 
+def test_answer_letter_conflict_penalty():
+    """W9-A：结论句字母与 answer 冲突（生产 q283745 形态：answer C / 解析「选择A」）扣 30。"""
+    consistent = "第一步，审题。第二步，排除 A、B。因此，选择 C 选项。"
+    base = quality.score_question(_row(answer="C", explanation=consistent, hs_explanation=consistent))
+    conflict = quality.score_question(
+        _row(answer="C", explanation="第一步，审题。第二步，排除 B、C。因此，选择A选项。", hs_explanation=consistent)
+    )
+    assert base - conflict == quality.PENALTY_ANSWER_CONFLICT
+    # hs 侧冲突同样命中；两侧都冲突也只扣一次
+    hs_conflict = "第一步，审题。第二步，排除 A、B。综上，本题选 B。"
+    hs_only = quality.score_question(_row(answer="C", explanation=consistent, hs_explanation=hs_conflict))
+    assert base - hs_only == quality.PENALTY_ANSWER_CONFLICT
+    both = quality.score_question(
+        _row(answer="C", explanation="第一步，审题。第二步，排除 B、C。因此，选择A选项。", hs_explanation=hs_conflict)
+    )
+    assert base - both == quality.PENALTY_ANSWER_CONFLICT
+
+
+def test_answer_letter_conflict_rule_scope():
+    f = quality.answer_letter_conflict
+    assert f({"answer": "C", "explanation": "因此，选择A选项。"}) == "A"
+    assert f({"answer": "c", "explanation": "故正确答案为（A）。"}) == "A"
+    assert f({"answer": "C", "explanation": "…", "hs_explanation": "排除 B、D。所以 A 项当选。"}) == "A"
+    # 只看最后一个结论式匹配：「排除A，故选B」answer=B 不判
+    assert f({"answer": "B", "explanation": "排除A，故选B。"}) is None
+    assert f({"answer": "B", "explanation": "若选 A 则与题干矛盾，排除 A、C、D，故选 B。"}) is None
+    assert f({"answer": "D", "explanation": "故选项 A 错误，B 项也不符。综上，本题选 D。"}) is None
+    # 中间句「排除 A、B」/「A 项错误」不是结论式，无结论句不判
+    assert f({"answer": "C", "explanation": "排除 A、B。"}) is None
+    assert f({"answer": "C", "explanation": "所以 A 项错误。"}) is None
+    assert f({"answer": "C", "explanation": "本题是 A 类题型，考查主旨。"}) is None
+    assert f({"answer": "C", "explanation": ""}) is None
+    # 多选不判（answer 多字母 / 结论多字母）
+    assert f({"answer": "ABD", "explanation": "故选A。"}) is None
+    assert f({"answer": "ABD", "explanation": "故选 ABD。"}) is None
+    assert f({"answer": "C", "explanation": "故选 AB。"}) is None
+    assert quality.score_question(_row(answer="ABD", explanation="故选 A。", hs_explanation="故选 A。")) == quality.score_question(
+        _row(answer="ABD", explanation="故选 ABD。", hs_explanation="故选 ABD。")
+    )
+
+
 def test_sanitize_hs():
     assert quality.sanitize_hs(None) == ""
     assert quality.sanitize_hs("  ") == ""
