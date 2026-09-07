@@ -34,6 +34,8 @@ interface ListOpts {
   region: string;
   pid: number;
   st: '' | 'todo' | 'done';
+  /** history：从「模考记录」入口进入，页题改名并定位到历史成绩 */
+  view: '' | 'history';
 }
 
 function parseListOpts(o: Record<string, string>): ListOpts {
@@ -50,6 +52,7 @@ function parseListOpts(o: Record<string, string>): ListOpts {
     region,
     pid: Number.isInteger(pid) && pid > 0 ? pid : 0,
     st: o.st === 'todo' || o.st === 'done' ? o.st : '',
+    view: o.view === 'history' ? 'history' : '',
   };
 }
 
@@ -110,6 +113,8 @@ Page({
     pageN: 1,
     resume: null as (ResumeInfo & { leftText: string }) | null,
     attempts: [] as AttemptVM[],
+    attemptsLoaded: false,
+    histView: false,
     menuPaper: null as PaperVM | null,
     menuOpen: false,
     exportTarget: null as PaperVM | null,
@@ -117,12 +122,14 @@ Page({
   },
   _pending: null as ListOpts | null,
   _pendingPid: 0,
+  _histScrolled: false,
 
   onLoad(opt: Record<string, string>) {
     const p = parseListOpts(opt);
     this._pending = p;
     this._pendingPid = p.pid;
     if (p.st) this.setData({ st: p.st, hasFilter: true });
+    if (p.view === 'history') this.setData({ histView: true });
   },
   onShow() {
     this.load();
@@ -159,6 +166,7 @@ Page({
       this.setData({ loadErr: (e as Error).message || '网络异常' });
     }
     this.setData({ loading: false });
+    this.scrollToHist();
   },
   recompute() {
     const shown = filterByStatus(this.data.items, this.data.st);
@@ -200,6 +208,14 @@ Page({
     } catch (e) {
       /* 非关键路径 */
     }
+    this.setData({ attemptsLoaded: true });
+    this.scrollToHist();
+  },
+  // 「模考记录」入口：卷库与成绩都到齐后定位一次（卷库在上方，提前滚会被后到的列表顶回）
+  scrollToHist() {
+    if (!this.data.histView || this._histScrolled || this.data.loading || !this.data.attemptsLoaded) return;
+    this._histScrolled = true;
+    setTimeout(() => this.setData({ scrollTo: 'hist' }), 80);
   },
   async loadResume() {
     const r: ResumeInfo | null = await resolveResume(examResume);

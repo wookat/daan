@@ -14,7 +14,7 @@ interface TabItem {
 }
 
 const TABS: Array<{ pagePath: string; text: string; name: string }> = [
-  { pagePath: '/pages/home/home', text: '首页', name: 'home' },
+  { pagePath: '/pages/home/home', text: '刷题', name: 'home' },
   { pagePath: '/pages/book/book', text: '错题本', name: 'book' },
   { pagePath: '/pages/exam/exam', text: '模考', name: 'timer' },
   { pagePath: '/pages/stats/stats', text: '统计', name: 'chart' },

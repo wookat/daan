@@ -2,6 +2,7 @@
 // 页面裸值门禁（SPEC §6.6 open question #6 的零依赖版，不引 stylelint）。
 // 扫 frontend-uni/src/**/*.vue 的 <style> 与 miniapp-native/miniprogram/**/*.wxss：
 //   裸 #hex / rgb() / rgba()（var() 之外）、font-size 用 rpx、font-weight 700/800/bold、word-break: break-all。
+//   页面层另加 v3 贴皮规则：box-shadow（none 除外）与渐变（*-gradient / --brand-grad）；真正浮层/分享图在同行加 /* kg-allow */ 放行。
 // 共享层（components/kg-*、l-icon、App.vue、uni.scss、app.wxss）命中 = error；业务页面先 warn（F5），页面组交付后加 --strict 转 error。
 // 用法：node tools/design-tokens/lint-pages.mjs [--strict] [--quiet] [--file=<子串>]（只看某文件的命中）
 import fs from 'node:fs';
@@ -21,6 +22,12 @@ const RULES = [
   { id: 'fw', re: /font-weight\s*:\s*(700|800|900|bold|bolder)\b/g, msg: 'font-weight 700/800/bold → 600' },
   { id: 'wb', re: /word-break\s*:\s*break-all/g, msg: 'word-break: break-all → .q-text（line-break:strict + overflow-wrap:anywhere）' },
 ];
+// 仅页面层（共享组件里 kg-card--raised / kg-sheet 等浮层本身是阴影的唯一合法归属）
+const PAGE_RULES = [
+  { id: 'no-shadow', re: /box-shadow\s*:(?!\s*none\b)/g, msg: '页面静态容器不用阴影（v3 贴皮，层级靠分组/字阶/留白）；固定浮层同行加 /* kg-allow */' },
+  { id: 'no-gradient', re: /(?:linear|conic|radial)-gradient\(|--brand-grad\b/g, msg: '页面不用渐变装饰；品牌色只给主按钮/进度/当前 Tab；分享图同行加 /* kg-allow */' },
+];
+const ALLOW_MARK = /kg-allow/;
 
 const SHARED = [
   /^frontend-uni\/src\/components\//,
@@ -85,9 +92,15 @@ for (const abs of files) {
   for (const { text, lineOffset } of styleBlocks(rel, src)) {
     const clean = stripAllowed(text);
     const lines = clean.split('\n');
+    const rawLines = text.split('\n');
     lines.forEach((line, i) => {
       if (shared && SHARED_ALLOW_LINE.test(line)) return;
       for (const rule of RULES) {
+        rule.re.lastIndex = 0;
+        if (rule.re.test(line)) hits.push({ line: lineOffset + i + 1, rule: rule.id, msg: rule.msg });
+      }
+      if (shared || ALLOW_MARK.test(rawLines[i] || '')) return;
+      for (const rule of PAGE_RULES) {
         rule.re.lastIndex = 0;
         if (rule.re.test(line)) hits.push({ line: lineOffset + i + 1, rule: rule.id, msg: rule.msg });
       }

@@ -245,6 +245,13 @@ Page({
     noteHas: false,
     noteBusy: false,
     recapOpen: false,
+    // 工具 4 格：动作型入口，复盘格带本月新增数徽标
+    toolItems: [
+      { key: 'redo', icon: 'shuffle', label: '错题重练' },
+      { key: 'ai', icon: 'sparkles', label: 'AI 分析' },
+      { key: 'manual', icon: 'pencil-line', label: '录入答案' },
+      { key: 'recap', icon: 'chart-column', label: '本月复盘' },
+    ],
     recap: { total: 0, byModule: [] as RecapRow[], byReason: [] as RecapRow[] },
     // 批量操作（H5 batchMode/selIds）
     batchMode: false,
@@ -491,7 +498,7 @@ Page({
   // ---------- AI 错题分析 ----------
   async onAiAnalysis() {
     this.setData({ aiOpen: true });
-    if (this.data.aiHtml) return;
+    if (this.data.aiHtml || this.data.aiLoading) return;
     this.setData({ aiLoading: true });
     try {
       const d = await mistakeAnalysis();
@@ -1045,6 +1052,18 @@ Page({
   },
   onToggleRecap() {
     this.setData({ recapOpen: !this.data.recapOpen });
+  },
+  onTool(e: WechatMiniprogram.CustomEvent<{ key: string }>) {
+    const k = e.detail.key;
+    if (k === 'redo') {
+      if (this.data.todoCount) this.onRedo();
+      else wx.showToast({ title: '暂无待掌握错题', icon: 'none' });
+    } else if (k === 'ai') this.onAiAnalysis();
+    else if (k === 'manual') this.onManualOpen();
+    else if (k === 'recap') {
+      if (this.data.recap.total) this.onToggleRecap();
+      else wx.showToast({ title: '本月还没有新增错题', icon: 'none' });
+    }
   },
   onCloseCelebrate() {
     if (!this.data.celebrate) return;

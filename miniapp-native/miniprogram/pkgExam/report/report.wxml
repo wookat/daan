@@ -26,7 +26,6 @@
 
     <block wx:if="{{!loading && report}}">
       <view class="hero">
-        <view class="hero-deco" />
         <text class="hero-s">{{report.paper.title}}</text>
         <view class="score-row">
           <text class="score num">{{report.attempt.score}}</text>

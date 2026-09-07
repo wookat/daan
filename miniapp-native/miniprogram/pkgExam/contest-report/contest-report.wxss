@@ -4,14 +4,13 @@
 .note { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-8); }
 .row--hover { background: var(--fill); }
 
-.hero { position: relative; overflow: hidden; background: var(--brand-grad); border-radius: var(--r-lg); padding: var(--sp-20) var(--card-pad); box-shadow: var(--sh-2); display: flex; flex-direction: column; }
-.hero-skel { background: var(--card); box-shadow: none; }
-.hero-deco { position: absolute; right: -40px; top: -60px; width: 180px; height: 180px; border-radius: var(--r-full); background: var(--on-brand); opacity: 0.08; }
-.hero-s { font-size: var(--fs-sub); color: var(--on-brand-2); position: relative; z-index: 1; }
-.score-row { display: flex; align-items: baseline; gap: var(--sp-4); margin-top: var(--sp-4); position: relative; z-index: 1; }
+.hero { background: var(--brand); border-radius: var(--r-lg); padding: var(--sp-20) var(--card-pad); display: flex; flex-direction: column; }
+.hero-skel { background: var(--card); }
+.hero-s { font-size: var(--fs-sub); color: var(--on-brand-2); }
+.score-row { display: flex; align-items: baseline; gap: var(--sp-4); margin-top: var(--sp-4); }
 .score { font-size: var(--fs-display); font-weight: 600; color: var(--on-brand); line-height: 1.1; }
 .score-u { font-size: var(--fs-body); color: var(--on-brand-2); }
-.hero-sub { display: flex; flex-direction: column; gap: var(--sp-4); margin-top: var(--sp-8); position: relative; z-index: 1; }
+.hero-sub { display: flex; flex-direction: column; gap: var(--sp-4); margin-top: var(--sp-8); }
 .hero-beat { font-size: var(--fs-h3); font-weight: 600; color: var(--on-brand); }
 .hero-line { font-size: var(--fs-sub); color: var(--on-brand); opacity: 0.85; }
 

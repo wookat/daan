@@ -1203,3 +1203,30 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 完成页按钮 y 坐标会因 dailyStats/登录条等动态区块变化，点「分享成绩」前先截图确认，否则可能误点「再来一组」把完成页顶掉。
 - 生产部署后旧 bundle chunk 名会 404（页面预取旧 hash 资源，console 里成串 `assets/*.js 404`）——属部署换 hash 的已知噪音，与 console.error 口径分开列报。
 - 收尾 reload 页面（清 hook）会让 app 以保护 uid 重新拉 `/api/profile` 并新增一个 `apiSnap:*` 缓存键、更新 `apiSnapIndex`——localStorage 相对备份多这两处属 app 正常行为，非污染。
+
+## 小程序（原生）v3 底部/导航栏走查新经验
+- 自定义 tabbar 是 fixed 覆盖层（模拟器 `windowHeight === screenHeight`），每个 tab 页都要滚到最底看最后一行是否被遮；页面底部应统一用 `calc(var(--tab-h) + var(--sp-24) + env(safe-area-inset-bottom))`。若页内还有第二个 fixed 底栏（如错题本批量态 `.batchbar`），页面在该态下需额外加底栏高度的 padding，否则内容不足一屏时最后一行永久被底栏遮住且无法滚出。
+- `app.json` 为 `navigationStyle: custom`，各页标题来自 `<navbar title="…">` 组件的静态属性——`wx.setNavigationBarTitle` 对它**无效**。验证"页面标题随参数变化"时必须看模拟器实际标题，不能只看 ts 里的 setNavigationBarTitle 调用；修法应把 title 绑定到 data（如 `title="{{histView ? '模考记录' : '真题卷库'}}"`）。
+- 取证页面路由/参数/状态可在 Console 输入 `var _p=getCurrentPages().slice(-1)[0]; JSON.stringify([_p.route,_p.options,_p.data.xxx])`（用 var 前缀而非直接长表达式，社区版 Console 长表达式偶发吃字导致 SyntaxError，属自伤红错，报告里要单独说明）。
+- 判断"纯色 vs 渐变"可用 PIL 对 `python3 /tmp/mpshot.py` 截图（1600×1122）按 1024×768 坐标缩放采样多个角/边像素，全部同值（品牌色 rgb(46,91,255)）即纯色。
+- Console 过滤框输入文本后 "N hidden" 计数不变时说明过滤未生效；消息量少时改为 Default levels 从顶到底逐屏 zoom 阅读。
+
+## 小程序（原生）密度/触控走查新经验（W7 4538b55）
+- `/tmp/mpshot.py` 会随 /tmp 清理丢失；需要时重建：`import -display :0 -window root` 全屏 1600×1200 → PIL crop `(1170, 85, 1585, 1010)` 得模拟器 415×925 图，存 `/home/ubuntu/screenshots/mp-v3/<name>.png`。点击坐标始终用 1024×768 空间（1 桌面 px ≈ 1.56 手机 px；390 手机宽 ≈ 250 桌面 px）。
+- 边缘命中测试：先 zoom 元素边缘定位分隔线/卡片边（zoom 输出是 1.56× 放大，`y = region_top + zoom_y/1.56`），再在边缘内 ~2 桌面 px（≈3 手机 px）单击，以 `页面路径` 栏/模拟器实际跳转为命中证据。**`kg-segmented` 的 tap 绑在 32px 的 `.kg-seg__item` 上，容器 2px padding 不响应**——命中高度 32 < `--hit-min` 44，属组件层既有问题（非 token 改动引入）。
+- 社区版 Console 打字会丢字（`_p`→`p`、`fontLv`→`fontv`）且 autocomplete 弹层会把后续字符吞进去：分两次 `type`（先 `var pg=…;` 再表达式），Enter 前先 zoom 输入行核对，按 Escape 关 autocomplete（注意在 Console 空输入时按 Escape 会打开 Request blocking 抽屉，点 X 关掉）。
+- 做题页字号三档是页内 `Q_FS/OPT_FS/EXP_FS` 数组 + inline `style="font-size:{{qFs}}px"`，与 `--fs-*` token 无关；验证用 `getCurrentPages().slice(-1)[0].data.{fontLv,fontLabel,qFs,optFs,expFs}`，标档应为 `1,标,16,15,14`，工具面板「字号大小」循环 标→大→小→标。
+- 首页 tab 切回后保留滚动位置，做首屏截图前先向下拖回顶部；`left_click_drag` 拖动带惯性易直接滚到底/顶，细调用 `scroll` 5 格。
+- 在做题页对已在错题本里的题答错不会新增 mistake（列表 id 集合不变），只会再记一条 answer_log。
+
+## 小程序（原生）W8 页面级排版走查新经验
+- computer 工具的 `scroll`/`left_click_drag` 有时完全打不动模拟器内的 scroll-view（点击正常）；此时用 `DISPLAY=:0 xdotool mousemove <x> <y>; xdotool click 5`（向下）/`click 4`（向上）循环 10–15 次即可滚动。屏幕真实分辩率 1600×1200，1024 空间坐标 ×1.5625 换算（模拟器中心约 1375,650）。调试器 Console 面板同理（672,1062），每次 1 格滚才能看全日志。
+- 我的页里程碑轨道（`.badge::before/::after` 连线 + `.badge-dot`）几何用 PIL 量：非白像素行找连线 y、列找圆点上下沿，连线 y 应 == 圆点中心 ±1，连线 x 范围应 == 首点左沿..末点右沿（首尾无外伸）。未解锁点点击是 1.5s 的 toast「连续打卡 N 天即可解锁」，wait ≤0.4s 后立刻 zoom 截图才能抓到；已解锁点会跳 `pages/social/poster?badge=N`。
+- 统计页预测卡/「已覆盖 x%」都依赖 mastery 非冷态（≥30 题作答）：匿名 uid `umtppgte7u8emh2vs` 在 2026-09-06 已由 27→30 题解锁（做题页答对 3 题，无新错题），之后冷态不可再在该 uid 复现；需要冷态请换新匿名 uid。
+- 错题本工具栏「筛选」是 `.textbtn`，有筛选条件时 `.on` → 品牌色；用 PIL 取字形最深像素比较（灰 ≈ (73,75,86)，品牌 ≈ (43,73,221)），并用非白像素行区间证明与「批量」同字号同基线。测完记得在 sheet 里「重置」→「完成」恢复。
+
+## H5 卷库分页 / 我的页 nowrap 走查经验（PR #622 合并复验）
+- 本地 SQLite 造 `exam_papers` 时 `kind` 必须为 `'zhenti'`（H5 卷库请求 `/api/exam/papers?kind=zhenti&uid=…`，不带 `kind` 的请求返回全部，容易误判「API 有数据但页面空」）。`question_ids` 需 ≥5 个有效题 id 才会进列表。插入后要重启 uvicorn（列表结果有进程内缓存）。
+- H5 卷库 `onReachBottom` 自动追加：用 375×812 CDP 模拟 + 鼠标滚轮滚到底即可触发；断言用 CDP 数 `真题卷 TESTnn` 卡片数 + 「加载更多」按钮是否消失，不点按钮。
+- uni-h5 基础样式 `uni-text{white-space:pre-line}` 会覆盖父级 `white-space:nowrap`：给 `.wd-cell__title` 加 nowrap 对 wd-cell 用 `<text>` 渲染的 title prop 无效，长标题仍会折行。验证时用 CDP 注入 ≥20 字标题观察高度（单行 32px，两行 48px），验完记得还原文本。要真正单行需把 nowrap 作用到 `.wd-cell__title uni-text` 或改用 title 插槽加自定义类。
+- `pkill -f "cdp.py hold"` 这类模式会连当前 shell 一起杀掉（命令行含相同字串），清理时改用 `pgrep -af` 找 PID 再 `kill`。

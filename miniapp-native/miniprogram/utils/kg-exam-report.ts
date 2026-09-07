@@ -275,7 +275,7 @@ export function examTrend(items: ExamAttempt[] | null | undefined, target: numbe
     .filter((a) => a && a.score != null && Number.isFinite(Number(a.score)) && a.submitted_at)
     .slice(0, cap)
     .reverse()
-    .map((a) => ({ id: a.id, score: Math.round(Number(a.score) * 10) / 10, kind: a.mini ? 'mini' : 'full', t: Number(a.submitted_at) }));
+    .map((a) => ({ id: a.id, score: Math.round(Number(a.score) * 10) / 10, kind: a.kind === 'mock' ? 'mini' : 'full', t: Number(a.submitted_at) }));
   if (base.length < 2) return null;
   const g = goalGap(0, target);
   const t = g ? g.target : null;

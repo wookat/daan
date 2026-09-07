@@ -1,90 +1,73 @@
-<navbar title="模考" />
+<navbar title="模考" large />
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
-    <!-- 迷你模考（kg-hero-card 小程序版未落地，页内按 raised 卡 + 1 按钮实现） -->
-    <view class="hero">
-      <view class="hero-deco"><l-icon name="file-text" size="32" tone="on-brand" /></view>
-      <view class="hero-top">
-        <kg-tag tone="brand" icon="timer">限时 25 分钟</kg-tag>
+    <!-- 焦点：未交卷续考优先，否则迷你模考；一屏一个主按钮 -->
+    <view wx:if="{{examResume}}" class="focus">
+      <text class="focus-k">未交卷</text>
+      <text class="focus-t">{{examResume.title}}</text>
+      <text class="focus-s">已答 {{examResume.answered}}/{{examResume.total}} 题，剩余 {{examResume.leftText}}</text>
+      <view class="focus-acts">
+        <kg-button variant="primary" size="lg" block bind:click="onResumeExam">继续作答</kg-button>
+        <kg-button variant="text" size="md" bind:click="onDropResume">放弃本次</kg-button>
       </view>
-      <text class="hero-t">迷你模考</text>
-      <text class="hero-s">30 题混合模块 · 交卷即出成绩报告与薄弱考点</text>
-      <view class="stat-row">
-        <view class="stat"><text class="stat-n num">30</text><text class="stat-k">题量</text></view>
-        <view class="stat"><text class="stat-n num">25<text class="stat-u">min</text></text><text class="stat-k">建议用时</text></view>
-        <view class="stat"><text class="stat-n num">5</text><text class="stat-k">覆盖模块</text></view>
-      </view>
-      <kg-button variant="primary" tone="inverse" size="lg" block icon="chevron-right" bind:click="onMini">开始迷你模考</kg-button>
+    </view>
+    <view wx:else class="focus">
+      <text class="focus-t">迷你模考</text>
+      <text class="focus-s">30 题混合五大模块，限时 30 分钟，交卷即出成绩报告与薄弱考点</text>
+      <view class="focus-acts"><kg-button variant="primary" size="lg" block bind:click="onMini">开始迷你模考</kg-button></view>
     </view>
 
-    <!-- 模考大赛 / 申论专区 入口 -->
-    <view class="entry-grid">
-      <kg-card variant="raised" clickable bind:click="onContest">
-        <view class="entry-c">
-          <view class="entry-ico"><l-icon name="trophy" size="24" tone="brand" /></view>
-          <text class="entry-t">模考大赛</text>
-          <text class="entry-s">同卷同时 · 实时排名</text>
-        </view>
-      </kg-card>
-      <kg-card variant="raised" clickable bind:click="onShenlun">
-        <view class="entry-c">
-          <view class="entry-ico"><l-icon name="pen-line" size="24" tone="brand" /></view>
-          <text class="entry-t">申论专区</text>
-          <text class="entry-s">真题 + AI 采分点批改</text>
-        </view>
-      </kg-card>
-    </view>
-
-    <kg-section-header title="真题卷库" more="全部卷库" bind:more="onAllPapers" />
-
-    <block wx:if="{{loading}}">
-      <kg-card wx:for="{{[1, 2, 3]}}" wx:key="*this" variant="raised" class="prow">
-        <t-skeleton theme="text" animation="gradient" />
-      </kg-card>
-    </block>
-    <kg-empty
-      wx:if="{{!loading && loadErr && !papers.length}}"
-      icon="wifi-off"
-      title="真题卷库加载失败"
-      desc="{{'请检查网络后重试 · ' + loadErr}}"
-      ctaText="重试"
-      bind:cta="onRetry"
-    />
-    <kg-empty
-      wx:elif="{{!loading && !papers.length}}"
-      icon="files"
-      title="真题卷搜集中"
-      desc="真题卷上线后可整卷计时作答，先用迷你模考体验完整报告"
-      ctaText="去迷你模考"
-      bind:cta="onMini"
-    />
-    <block wx:if="{{!loading && papers.length}}">
-      <kg-card
-        wx:for="{{papers}}"
+    <kg-group wx:if="{{recent.length}}" title="最近成绩" more="全部" bind:more="onAllAttempts">
+      <kg-row
+        wx:for="{{recent}}"
         wx:key="id"
-        variant="raised"
-        clickable
-        chevron
-        class="prow"
+        title="{{item.title}}"
+        desc="{{item.desc}}"
+        value="{{item.scoreText}}"
+        valueTone="{{item.scoreTone}}"
+        last="{{index === recent.length - 1}}"
         data-id="{{item.id}}"
-        bind:click="onPaperTap"
-      >
-        <view class="p-row">
-          <view class="p-badge">
-            <text class="pb-y num">{{item.yearShort}}</text>
-            <text class="pb-k">{{item.regionShort}}</text>
-          </view>
-          <view class="p-main">
-            <text class="p-t">{{item.title}}</text>
-            <text class="p-s">{{item.subText}}</text>
-          </view>
-          <kg-tag wx:if="{{item.best_score !== null && item.best_score !== undefined}}" tone="ok">最好 {{item.best_score}} 分</kg-tag>
-        </view>
-      </kg-card>
-      <view wx:if="{{total > papers.length}}" class="more">
-        <kg-button variant="ghost" size="md" block bind:click="onAllPapers">查看全部 {{total}} 套 · 按年份/地区筛选</kg-button>
+        bind:click="onAttemptTap"
+      />
+    </kg-group>
+
+    <kg-group title="真题卷库" more="{{total > papers.length ? '全部 ' + total + ' 套' : ''}}" bind:more="onAllPapers">
+      <view wx:if="{{loading}}" class="ph">
+        <view wx:for="{{[1, 2, 3]}}" wx:key="*this" class="ph-row"><t-skeleton theme="text" animation="gradient" /></view>
       </view>
-      <text wx:else class="list-end">共 {{total}} 套 · 已全部展示</text>
-    </block>
+      <kg-empty
+        wx:if="{{!loading && loadErr && !papers.length}}"
+        icon="wifi-off"
+        title="真题卷库加载失败"
+        desc="{{'请检查网络后重试 · ' + loadErr}}"
+        ctaText="重试"
+        bind:cta="onRetry"
+      />
+      <kg-empty
+        wx:elif="{{!loading && !papers.length}}"
+        icon="files"
+        title="真题卷搜集中"
+        desc="真题卷上线后可整卷计时作答，先用迷你模考体验完整报告"
+      />
+      <block wx:if="{{!loading && papers.length}}">
+        <kg-row
+          wx:for="{{papers}}"
+          wx:key="id"
+          title="{{item.title}}"
+          desc="{{item.subText}}"
+          value="{{item.best_score !== null && item.best_score !== undefined ? '最好 ' + item.best_score + ' 分' : ''}}"
+          valueTone="ok"
+          last="{{index === papers.length - 1}}"
+          data-id="{{item.id}}"
+          bind:click="onPaperTap"
+        />
+      </block>
+    </kg-group>
+    <text wx:if="{{!loading && papers.length && total <= papers.length}}" class="list-end">共 {{total}} 套，已全部展示</text>
+
+    <kg-group title="更多">
+      <kg-row icon="trophy" title="模考大赛" desc="全站同卷同时开考，交卷即出排名" bind:click="onContest" />
+      <kg-row icon="pen-line" title="申论专区" desc="真题作答与 AI 批改" last bind:click="onShenlun" />
+    </kg-group>
   </view>
 </scroll-view>

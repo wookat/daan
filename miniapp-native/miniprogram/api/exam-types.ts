@@ -31,18 +31,19 @@ export interface ExamPaperDetail extends ExamPaperInfo {
   psource?: string | null;
 }
 
+/** GET /api/exam/attempts 列项：只含已交卷；迷你模考为 kind='mock'（标题带时间与随机后缀） */
 export interface ExamAttempt {
   id: number;
   paper_id: number;
-  title?: string;
+  title: string;
+  kind: 'zhenti' | 'mock' | string;
+  year?: number | null;
+  region?: string | null;
+  duration_min?: number | null;
   started_at: number;
   submitted_at?: number | null;
   score?: number | null;
-  total?: number;
-  correct?: number;
-  answered?: number;
-  mini?: boolean | number;
-  event_id?: number | null;
+  per_module?: Record<string, { n: number; answered: number; correct: number; secs: number }>;
 }
 
 export interface ExamAttemptsResp {

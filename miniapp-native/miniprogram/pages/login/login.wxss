@@ -17,8 +17,7 @@
   width: 64px;
   height: 64px;
   border-radius: var(--r-lg);
-  background: var(--brand-grad);
-  box-shadow: var(--sh-2);
+  background: var(--brand);
   display: flex;
   align-items: center;
   justify-content: center;

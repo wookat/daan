@@ -1,12 +1,36 @@
-.kg-card { position: relative; --kg-surface: var(--card); background: var(--kg-surface); border-radius: var(--r-md); color: var(--ink); transition: background-color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard); }
+/* v3 贴皮：卡 = 白底圆角，无阴影无边框；层级靠位置与留白。
+   raised 仅供浮层（sheet/FAB）使用，页面静态内容一律 flat。 */
+.kg-card {
+  position: relative;
+  --kg-surface: var(--card);
+  background: var(--kg-surface);
+  border-radius: var(--r-md);
+  color: var(--ink);
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
 .kg-card--p16 { padding: var(--card-pad); }
 .kg-card--p12 { padding: var(--sp-12); }
-.kg-card--flat { border: 1px solid var(--line); }
-.kg-card--raised { box-shadow: var(--sh-1); }
+.kg-card--flat { }
+.kg-card--raised { box-shadow: var(--sh-2); }
 .kg-card--soft { --kg-surface: var(--fill); }
 .kg-card--hover { --kg-surface: var(--fill); }
-.kg-card.is-selected { border: 1px solid var(--brand); --kg-surface: var(--brand-soft); box-shadow: none; }
+.kg-card.is-selected {
+  box-shadow: inset 0 0 0 1px var(--brand);
+  --kg-surface: var(--brand-soft);
+}
 .kg-card__hd { margin-bottom: var(--sp-12); }
-.kg-card__ft { margin-top: var(--sp-12); padding-top: var(--sp-12); border-top: 1px solid var(--line); }
-.kg-card__chev { position: absolute; right: var(--sp-12); top: 50%; transform: translateY(-50%); }
-.kg-card--flat.is-clickable .kg-card__body { padding-right: var(--sp-20); }
+.kg-card__ft {
+  margin-top: var(--sp-12);
+  padding-top: var(--sp-12);
+  border-top: 1px solid var(--line);
+}
+.kg-card__chev {
+  position: absolute;
+  right: var(--sp-12);
+  top: 50%;
+  transform: translateY(-50%);
+}
+.kg-card.is-clickable .kg-card__body {
+  padding-right: var(--sp-20);
+}

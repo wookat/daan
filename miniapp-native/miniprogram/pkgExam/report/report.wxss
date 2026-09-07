@@ -7,14 +7,13 @@
 .row--hover { background: var(--fill); }
 
 /* 分数 hero */
-.hero { position: relative; overflow: hidden; background: var(--brand-grad); border-radius: var(--r-lg); padding: var(--sp-20) var(--card-pad); box-shadow: var(--sh-2); display: flex; flex-direction: column; }
-.hero-skel { background: var(--card); box-shadow: none; }
-.hero-deco { position: absolute; right: -40px; top: -60px; width: 180px; height: 180px; border-radius: var(--r-full); background: var(--on-brand); opacity: 0.08; }
-.hero-s { font-size: var(--fs-sub); color: var(--on-brand-2); position: relative; z-index: 1; }
-.score-row { display: flex; align-items: baseline; gap: var(--sp-4); margin-top: var(--sp-4); position: relative; z-index: 1; }
+.hero { background: var(--brand); border-radius: var(--r-lg); padding: var(--sp-20) var(--card-pad); display: flex; flex-direction: column; }
+.hero-skel { background: var(--card); }
+.hero-s { font-size: var(--fs-sub); color: var(--on-brand-2); }
+.score-row { display: flex; align-items: baseline; gap: var(--sp-4); margin-top: var(--sp-4); }
 .score { font-size: var(--fs-display); font-weight: 600; color: var(--on-brand); line-height: 1.1; }
 .score-u { font-size: var(--fs-body); color: var(--on-brand-2); }
-.hero-sub { display: flex; flex-direction: column; gap: var(--sp-4); margin-top: var(--sp-8); position: relative; z-index: 1; }
+.hero-sub { display: flex; flex-direction: column; gap: var(--sp-4); margin-top: var(--sp-8); }
 .hero-line { font-size: var(--fs-sub); color: var(--on-brand); opacity: 0.85; }
 .hero-beat { font-size: var(--fs-h3); font-weight: 600; color: var(--on-brand); margin-top: var(--sp-4); }
 
@@ -68,8 +67,8 @@
 
 /* CTA 行 */
 .cta { display: flex; align-items: center; gap: var(--sp-12); min-height: var(--cell-h); margin-top: var(--sp-12); padding: var(--sp-12) var(--sp-16); border-radius: var(--r-md); background: var(--brand-soft); }
-.cta-card { margin-top: var(--card-gap); background: var(--card); box-shadow: var(--sh-1); }
-.cta.next { background: var(--brand-soft); box-shadow: none; }
+.cta-card { margin-top: var(--card-gap); background: var(--card); }
+.cta.next { background: var(--brand-soft); }
 .cta--hover { opacity: 0.8; }
 .cta-l { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-4); }
 .cta-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }

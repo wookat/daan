@@ -1,64 +1,35 @@
 .wrap {
-  padding: var(--sp-12) var(--page-x) calc(80px + env(safe-area-inset-bottom));
+  padding: var(--sp-8) var(--page-x) calc(var(--tab-h) + var(--sp-24) + env(safe-area-inset-bottom));
 }
 
-/* 沉浸式品牌头部 */
-.hero-bleed {
+.nav-dot {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 225px;
-  background: var(--brand-grad);
-  overflow: hidden;
-  z-index: 0;
-}
-
-.bleed-c1,
-.bleed-c2 {
-  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
   border-radius: var(--r-full);
-  background: var(--on-brand);
+  background: var(--bad);
 }
 
-.bleed-c1 {
-  right: -60px;
-  top: -40px;
-  width: 220px;
-  height: 220px;
-  opacity: 0.08;
-}
-
-.bleed-c2 {
-  left: -40px;
-  bottom: -30px;
-  width: 160px;
-  height: 160px;
-  opacity: 0.06;
-}
-
-/* 用户信息（直接置于渐变上） */
-.u-card {
+/* 用户信息 */
+.user {
   display: flex;
   align-items: center;
   gap: var(--sp-12);
-  padding: var(--sp-4) var(--sp-4) var(--sp-20);
-  color: var(--on-brand);
-  position: relative;
-  z-index: 1;
+  padding: var(--sp-8) var(--sp-4) var(--sp-12);
 }
 
 .avatar {
-  width: 56px;
-  height: 56px;
+  width: var(--cell-h);
+  height: var(--cell-h);
   border-radius: var(--r-full);
-  background: var(--brand-press);
-  border: 2px solid var(--on-brand-2);
-  color: var(--on-brand);
+  background: var(--fill);
+  color: var(--ink-2);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--fs-h1);
+  font-size: var(--fs-h2);
   font-weight: 600;
   flex-shrink: 0;
 }
@@ -68,200 +39,187 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
+  gap: 2px;
 }
 
 .u-name {
-  font-size: var(--fs-h2);
+  font-size: var(--fs-h3);
   font-weight: 600;
-  color: var(--on-brand);
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .u-sub {
-  font-size: var(--fs-caption);
-  color: var(--on-brand-2);
-  margin-top: 2px;
+  font-size: var(--fs-sub);
+  color: var(--ink-3);
 }
 
-/* 数据概览条 */
-.u-stats {
-  display: block;
-  margin-bottom: var(--card-gap);
-}
-
-.u-stats-body {
+/* 一行四数 */
+.nums {
   display: flex;
-  padding: var(--sp-16) 0;
+  padding: 0 var(--sp-4);
 }
 
-.us-cell {
+.nums-it {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.nums-n {
+  font-size: var(--fs-h1);
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--ink);
+}
+
+.nums-k {
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+/* 成长组内块 */
+.badges-hd {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: var(--sp-16) var(--sp-16) 0;
+}
+
+.badges-t {
+  font-size: var(--fs-body);
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.badges-s {
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+.medals {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--sp-12) var(--sp-8);
+  padding: var(--sp-12) var(--sp-16) var(--sp-16);
+}
+
+.medal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-4);
+  text-align: center;
+}
+
+.m-name {
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+  line-height: 1.3;
+}
+
+.medal.is-got .m-name {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.m-sub {
+  font-size: 10px;
+  color: var(--ink-4);
+  line-height: 1.3;
+}
+
+.badges {
+  position: relative;
+}
+
+.badges::before {
+  content: '';
+  position: absolute;
+  left: var(--sp-16);
+  right: 0;
+  top: 0;
+  height: 1px;
+  background: var(--line);
+}
+
+.badges-row {
+  position: relative;
+  display: flex;
+  padding: var(--sp-12) var(--sp-16) var(--sp-12);
+}
+
+.badge::before,
+.badge::after {
+  content: '';
+  position: absolute;
+  top: calc(var(--sp-8) + 4px);
+  height: 2px;
+  background: var(--line);
+}
+
+.badge::before {
+  left: 0;
+  right: 50%;
+}
+
+.badge::after {
+  left: 50%;
+  right: 0;
+}
+
+.badge:first-child::before,
+.badge:last-child::after {
+  display: none;
+}
+
+.badge {
+  position: relative;
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  position: relative;
-}
-
-.us-cell + .us-cell {
-  border-left: 1px solid var(--line);
-}
-
-.us-n {
-  font-size: var(--fs-h1);
-  font-weight: 600;
-  line-height: 1.2;
-}
-
-.c-brand {
-  color: var(--brand-text);
-}
-
-.c-streak {
-  color: var(--streak);
-}
-
-.c-ok {
-  color: var(--ok-strong);
-}
-
-.c-info {
-  color: var(--info-strong);
-}
-
-.us-t {
-  font-size: var(--fs-caption);
-  color: var(--ink-3);
-  margin-top: var(--sp-4);
-}
-
-/* 徽章墙 */
-.badges {
-  display: block;
-  margin-bottom: var(--card-gap);
-}
-
-.badge-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: var(--sp-12);
-}
-
-.badge-cur {
-  font-size: var(--fs-body);
-  color: var(--ink);
-}
-
-.badge-b {
-  font-size: var(--fs-h2);
-  font-weight: 600;
-  color: var(--streak);
-}
-
-.badge-best {
-  font-size: var(--fs-caption);
-  color: var(--ink-3);
-}
-
-.ms-sub {
-  display: block;
-  font-size: var(--fs-caption);
-  color: var(--ink-3);
-  margin: var(--sp-8) 0 var(--sp-12);
-}
-
-.badge-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--sp-8);
-}
-
-.badge {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 72px;
-  padding: var(--sp-8) 0;
-  border-radius: var(--r-sm);
-  background: var(--streak-soft);
-  box-sizing: border-box;
-}
-
-.badge--hover {
-  opacity: 0.7;
-}
-
-.badge.off {
-  background: var(--fill);
-}
-
-.badge-ico {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.badge-d {
-  font-size: var(--fs-caption);
-  color: var(--ink-2);
-  margin-top: 2px;
-}
-
-.badge.off .badge-d {
+  min-height: var(--hit-min);
+  padding-top: var(--sp-8);
   color: var(--ink-4);
 }
 
-/* 列表：不用 theme=card（自带 32rpx 外边距会与 --page-x 叠加），圆角/裁切由页面自管以和其他卡片齐边 */
-.cells {
-  display: block;
-  margin-bottom: var(--card-gap);
-  border-radius: var(--r-md);
-  overflow: hidden;
-  --td-cell-vertical-padding: var(--sp-12);
-  --td-cell-horizontal-padding: var(--card-pad);
-  --td-cell-title-font-size: var(--fs-body);
-  --td-cell-description-font-size: var(--fs-caption);
-  --td-cell-note-font-size: var(--fs-sub);
-  --td-cell-group-title-font-size: var(--fs-caption);
-  --td-cell-group-title-color: var(--ink-3);
-  --td-cell-group-title-bg-color: transparent;
-  --td-cell-group-title-line-height: 32px;
-  --td-cell-group-title-padding-left: var(--sp-4);
+.badge-dot {
+  position: relative;
+  z-index: 1;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--card);
+  border: 2px solid var(--line);
+  box-sizing: border-box;
 }
 
-.cells-body {
-  border-radius: var(--r-md);
-  overflow: hidden;
+.badge.is-on {
+  color: var(--ink);
 }
 
-.row-ico {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--r-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: var(--sp-12);
-  flex-shrink: 0;
+.badge.is-on .badge-dot {
+  background: var(--warn);
+  border-color: var(--warn);
 }
 
-.bg-brand {
-  background: var(--brand-soft);
+.badge-n {
+  font-size: var(--fs-sub);
+  font-weight: 600;
+  line-height: 1;
 }
 
-.bg-streak {
-  background: var(--streak-soft);
+.badge-k {
+  font-size: var(--fs-caption);
+  font-weight: 400;
+  margin-left: 1px;
 }
 
-.bg-info {
-  background: var(--info-soft);
-}
-
-.bg-fill {
-  background: var(--fill);
+.row--hover {
+  opacity: 0.7;
 }

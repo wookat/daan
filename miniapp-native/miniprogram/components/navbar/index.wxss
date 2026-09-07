@@ -55,3 +55,19 @@
 .navbar-brand .nav-title {
   color: var(--on-brand);
 }
+
+/* v3 大标题页头（五 tab 用）：h1/600 左对齐，右侧最多一个图标按钮 */
+.navbar-large .nav-row { height: var(--cell-h); }
+.navbar-large .nav-title { font-size: var(--fs-h1); font-weight: 600; letter-spacing: 0; }
+.nav-right { margin-left: auto; display: flex; align-items: center; gap: var(--sp-4); }
+.nav-icon-btn {
+  width: var(--hit-min);
+  height: var(--hit-min);
+  margin-right: calc(-1 * var(--sp-12));
+  border-radius: var(--r-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.nav-icon-btn--hover { background: var(--fill); }

@@ -1,4 +1,4 @@
-<navbar title="真题卷库" back="{{true}}" />
+<navbar title="{{histView ? '模考记录' : '真题卷库'}}" back="{{true}}" />
 <scroll-view class="page-scroll" scroll-y type="list" scroll-into-view="{{scrollTo}}" scroll-with-animation>
   <view class="wrap">
     <kg-card wx:if="{{resume}}" variant="flat" selected class="resume">
@@ -88,8 +88,9 @@
       <kg-button variant="ghost" size="lg" block bind:click="onMore">加载更多（还有 {{shown.length - visible.length}} 卷）</kg-button>
     </view>
 
-    <kg-card wx:if="{{attempts.length}}" variant="flat" class="hist">
+    <kg-card wx:if="{{attempts.length || (histView && attemptsLoaded)}}" id="hist" variant="flat" class="hist">
       <text class="h">历史成绩</text>
+      <text wx:if="{{!attempts.length}}" class="hist-empty">还没有交卷的模考，从上方选一卷开考</text>
       <view wx:for="{{attempts}}" wx:key="id" class="arow" role="button" hover-class="arow--hover" data-id="{{item.id}}" bind:tap="onAttempt">
         <view class="arow-l">
           <text class="arow-t">{{item.title}}</text>

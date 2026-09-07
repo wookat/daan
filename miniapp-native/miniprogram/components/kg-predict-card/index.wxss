@@ -1,25 +1,13 @@
 .kg-pc {
   display: block;
-  margin-bottom: var(--card-gap);
-}
-
-.kg-pc__head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.kg-pc__title {
-  font-size: var(--fs-body);
-  font-weight: 600;
-  color: var(--ink);
+  border-radius: var(--r-sm);
 }
 
 .kg-pc__hero {
   display: flex;
   align-items: flex-end;
   gap: var(--sp-12);
-  margin: var(--sp-12) 0 var(--sp-4);
+  margin: 0 0 var(--sp-4);
 }
 
 .kg-pc__score-w {
@@ -211,7 +199,6 @@
   font-size: var(--fs-h3);
   font-weight: 600;
   color: var(--ink);
-  margin-top: var(--sp-4);
 }
 
 .kg-pc__cold-s {

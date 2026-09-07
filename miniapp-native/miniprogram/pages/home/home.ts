@@ -49,22 +49,20 @@ function modCard(key: string, count: string): ModCard {
   return { key, name: m.label, icon: m.icon, color: m.color, soft: m.soft, count };
 }
 const MODS: ModCard[] = [
-  modCard('ziliao', '4,600+ 题'),
+  modCard('ziliao', '4,600 题'),
   modCard('shuliang', '3.3 万题'),
   modCard('yanyu', '1.8 万题'),
   modCard('panduan', '2.3 万题'),
   modCard('changshi', '3.1 万题'),
-  { key: '', name: '全模块混练', icon: 'shuffle', color: 'var(--brand)', soft: 'var(--brand-soft)', count: '10 万+ 题' },
+  { key: '', name: '全模块混练', icon: 'shuffle', color: 'var(--brand)', soft: 'var(--brand-soft)', count: '10.9 万题' },
 ];
 
 const toOpts = (xs: Array<string | number>, suffix = ''): Array<{ value: string | number; label: string }> =>
   xs.map((x) => ({ value: x, label: String(x) + suffix }));
 
-function fmtCount(n: number, total = false): string {
-  if (total) return Math.floor(n / 10000) + ' 万+ 题';
+function fmtCount(n: number): string {
   if (n >= 10000) return (n / 10000).toFixed(1).replace(/\.0$/, '') + ' 万题';
-  const k = Math.floor(n / 100) * 100;
-  return k.toLocaleString('en-US') + '+ 题';
+  return String(Math.floor(n / 100) * 100).replace(/\B(?=(\d{3})+$)/g, ',') + ' 题';
 }
 
 function applyCounts(mods: ModCard[], counts: { module: string; n: number }[]): ModCard[] {
@@ -75,7 +73,7 @@ function applyCounts(mods: ModCard[], counts: { module: string; n: number }[]): 
     total += c.n;
   }
   return mods.map((m) => {
-    if (!m.key) return total ? { ...m, count: fmtCount(total, true) } : m;
+    if (!m.key) return total ? { ...m, count: fmtCount(total) } : m;
     return byMod[m.key] ? { ...m, count: fmtCount(byMod[m.key]) } : m;
   });
 }
@@ -119,6 +117,14 @@ Page({
     streak: 0,
     mods: MODS,
     goalChips: [20, 50, 100],
+    planOpen: false,
+    // 练习方式 4 格：只放去处（真题 / 模考 / 申论 / 拍题讲解），数据类信息不进格
+    quick: [
+      { key: 'real', icon: 'file-text', label: '真题模式' },
+      { key: 'exam', icon: 'timer', label: '模考' },
+      { key: 'shenlun', icon: 'pen-line', label: '申论' },
+      { key: 'ask', icon: 'camera', label: '拍题讲解' },
+    ],
     hasProfile: false,
     planLoaded: false,
     guideHide: false,
@@ -562,10 +568,42 @@ Page({
     wx.switchTab({ url: '/pages/book/book' });
   },
   onSetGoal(e: WechatMiniprogram.TouchEvent) {
-    const g = Number(e.currentTarget.dataset.goal);
+    this.applyGoal(Number(e.currentTarget.dataset.goal));
+  },
+  applyGoal(g: number) {
+    if (!g) return;
     setDailyGoal(g);
     this.refreshGoal();
     saveServerDailyGoal(g).catch(() => undefined);
+  },
+  // 目标改为 actionSheet 选择，不占首屏
+  onPickGoal() {
+    const chips = this.data.goalChips as number[];
+    wx.showActionSheet({
+      itemList: chips.map((g) => '每日 ' + g + ' 题'),
+      success: (r) => this.applyGoal(chips[r.tapIndex]),
+      fail: () => undefined,
+    });
+  },
+  onQuick(e: WechatMiniprogram.CustomEvent<{ key: string }>) {
+    const k = e.detail.key;
+    if (k === 'real') this.onRealPractice();
+    else if (k === 'exam') this.onGoExamList();
+    else if (k === 'shenlun') this.onGoShenlun();
+    else if (k === 'ask') this.onAsk();
+  },
+  onGoPlan() {
+    this.setData({ planOpen: true });
+  },
+  onPlanVisible(e: WechatMiniprogram.CustomEvent<{ visible: boolean }>) {
+    if (!e.detail.visible) this.setData({ planOpen: false });
+  },
+  onClosePlan() {
+    this.setData({ planOpen: false });
+  },
+  onPlanEdit() {
+    this.setData({ planOpen: false });
+    this.onOpenSetup();
   },
   onStartModule(e: WechatMiniprogram.TouchEvent) {
     const mod = String(e.currentTarget.dataset.mod || '');
@@ -655,6 +693,7 @@ Page({
     const idx = Number(e.currentTarget.dataset.index);
     const t = this.data.planTasks[idx];
     if (!t || t.done) return;
+    this.setData({ planOpen: false });
     if (t.type === 'mock') {
       // 真题/冲刺阶段（plan real）计划文案为「整卷全真模考」→ 卷库；其余阶段进模考 tab
       if (t.real || this.data.realMode) this.onGoExamList();
