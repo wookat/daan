@@ -104,6 +104,6 @@ export function initKeyboardFocus() {
   }
   initModalKeys()
   const st = document.createElement('style')
-  st.textContent = ':focus:not(:focus-visible){outline:none}:focus-visible{outline:2px solid #2e5bff;outline-offset:2px;border-radius:4px}'
+  st.textContent = ':focus:not(:focus-visible){outline:none}:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}'
   document.head.appendChild(st)
 }
