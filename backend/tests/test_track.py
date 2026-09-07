@@ -43,6 +43,15 @@ def test_track_practice_ask_click_whitelisted(client):
     assert _rows("utesttrack_pac") == [{"event": "practice_ask_click", "source": "shuliang", "ref": "296322"}]
 
 
+def test_track_book_ask_click_whitelisted(client):
+    r = client.post(
+        "/api/track",
+        json={"event": "book_ask_click", "uid": "utesttrack_bac", "source": "yanyu", "ref": "234494"},
+    )
+    assert r.status_code == 200
+    assert _rows("utesttrack_bac") == [{"event": "book_ask_click", "source": "yanyu", "ref": "234494"}]
+
+
 def test_track_slow_load_server_side_enrichment(client):
     r = client.post(
         "/api/track",

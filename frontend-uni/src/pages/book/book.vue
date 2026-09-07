@@ -1568,6 +1568,7 @@ export default {
       const ans = askAnswerLetter(m.user_answer);
       if (ans) uni.setStorageSync('redoAnswer', ans);
       else uni.removeStorageSync('redoAnswer');
+      trackEvent('book_ask_click', m.module || '', String(qid || ''));
       uni.switchTab({ url: '/pages/ask/ask' });
     },
     reinforceFromMistake(m) {
