@@ -157,6 +157,7 @@
     "color": "#6b7280",
     "selectedColor": "#2e5bff",
     "backgroundColor": "#ffffff",
+    "fontSize": "12px",
     "list": [
       { "pagePath": "pages/home/home", "text": "刷题", "iconPath": "static/tab/home.png", "selectedIconPath": "static/tab/home-on.png" },
       { "pagePath": "pages/book/book", "text": "错题本", "iconPath": "static/tab/book.png", "selectedIconPath": "static/tab/book-on.png" },
