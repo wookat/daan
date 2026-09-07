@@ -189,6 +189,9 @@ export default {
       return [{ value: '', label: '全部地区' }].concat(this.filters.regions.map((r) => ({ value: r.r, label: r.r })));
     },
   },
+  onReachBottom() {
+    if (this.visible.length < this.shown.length) this.pageN += 1;
+  },
   onLoad(opts) {
     const p = parseExamListOpts(opts);
     this._pendingFilter = p;
