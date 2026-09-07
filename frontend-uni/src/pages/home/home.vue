@@ -1403,8 +1403,8 @@ export default {
 .cb-t { display: block; font-size: 28rpx; font-weight: 700; color: #ffffff; }
 .cb-s { display: block; font-size: 24rpx; color: rgba(255, 255, 255, 0.85); margin-top: 4rpx; }
 .cb-r { flex-shrink: 0; display: flex; align-items: center; gap: 16rpx; }
-.cb-go { background: rgba(255, 255, 255, 0.2); color: #ffffff; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 12rpx 26rpx; }
-.cb-x { color: rgba(255, 255, 255, 0.75); font-size: 26rpx; padding: 8rpx; }
+.cb-go { display: inline-flex; align-items: center; min-height: 40px; box-sizing: border-box; background: rgba(255, 255, 255, 0.2); color: #ffffff; font-size: 25rpx; font-weight: 600; border-radius: 999rpx; padding: 0 26rpx; }
+.cb-x { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; color: rgba(255, 255, 255, 0.75); font-size: 26rpx; padding: 0; }
 
 /* 每日打卡提醒横幅 */
 .rmcard { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #6366f1, #4f46e5); border: none; box-shadow: 0 6rpx 16rpx rgba(99, 102, 241, 0.25); padding: 24rpx 28rpx; }
@@ -1445,7 +1445,7 @@ export default {
 .ann-c { flex: 1; }
 .ann-t { display: block; font-size: 25rpx; font-weight: 600; color: var(--info-strong); }
 .ann-b { display: block; font-size: 24rpx; color: var(--info-strong); margin-top: 4rpx; white-space: pre-wrap; }
-.ann-x { flex-shrink: 0; display: flex; align-items: center; padding: 4rpx 8rpx; }
+.ann-x { flex-shrink: 0; display: flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; margin: -10px -8rpx -10px 0; padding: 0; }
 
 /* Sheet */
 .mask { position: fixed; inset: 0; background: rgba(23, 24, 28, 0.45); z-index: 30; display: flex; align-items: flex-end; }
@@ -1506,7 +1506,7 @@ export default {
 
 /* 新访客价值主张首屏 */
 .landing { position: relative; background: linear-gradient(135deg, var(--brand), #4c7dff); color: #fff; padding: 36rpx 32rpx; }
-.ld-x { position: absolute; top: 16rpx; right: 24rpx; font-size: 26rpx; color: rgba(255, 255, 255, 0.75); padding: 8rpx; }
+.ld-x { position: absolute; top: 0; right: 8rpx; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; font-size: 26rpx; color: rgba(255, 255, 255, 0.75); padding: 0; }
 .ld-t { display: block; font-size: 40rpx; font-weight: 700; line-height: 1.35; }
 .ld-s { display: block; font-size: 24rpx; color: rgba(255, 255, 255, 0.88); margin-top: 10rpx; line-height: 1.6; }
 .ld-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14rpx; margin-top: 24rpx; }

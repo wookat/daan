@@ -448,7 +448,7 @@
           <view v-if="batchMode" class="bchk" :class="{ on: selIds[m.id] }">{{ selIds[m.id] ? '✓' : '' }}</view>
           <text class="tag">{{ tagName(m) }}</text>
           <text v-if="m.source === 'exam'" class="srcbadge">模考</text>
-          <text v-if="mistakePaper(m)" class="pbadge" @click.stop="pidFilter = mistakePaper(m).pid">{{ mistakePaper(m).psource }}</text>
+          <view v-if="mistakePaper(m)" class="pbadge-hit" @click.stop="pidFilter = mistakePaper(m).pid"><text class="pbadge">{{ mistakePaper(m).psource }}</text></view>
           <text v-if="m.times >= 2" class="timesbadge">错 {{ m.times }} 次</text>
           <text v-if="m.mastered" class="zhan">已掌握</text>
           <view v-else-if="nextReviewText(m)" class="duehint" :class="{ due: isDue(m) }">
@@ -1731,7 +1731,7 @@ export default {
 .e-s { font-size: 24rpx; color: var(--ink-2); line-height: 1.7; margin-bottom: 28rpx; }
 :deep(.e-btn2) { margin-top: 8rpx; min-width: 60%; min-height: 44px; border-radius: 18rpx !important; background: linear-gradient(135deg, #5c82ff, var(--brand)) !important; font-weight: 600; }
 .spin { text-align: center; color: var(--ink-2); font-size: 26rpx; border-left: none; }
-.retry { margin-top: 12rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
+.retry { display: inline-flex; align-items: center; min-height: 40px; margin-top: 4rpx; color: var(--brand-text); font-size: 26rpx; font-weight: 500; }
 .searchbar { display: flex; align-items: center; gap: 12rpx; background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 14rpx 26rpx; margin-bottom: 20rpx; }
 .searchinput { flex: 1; font-size: 26rpx; color: var(--ink); height: 40rpx; line-height: 40rpx; }
 .searchclear { display: flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; margin: -10px -12rpx -10px 0; }
@@ -1755,7 +1755,8 @@ export default {
 .rvbadge { font-size: 24rpx; color: var(--ink-2); background: var(--soft-bg); border-radius: 999rpx; padding: 4rpx 14rpx; }
 .rzbadge { font-size: 24rpx; color: #b45309; background: #fef3c7; border-radius: 999rpx; padding: 4rpx 14rpx; }
 .srcbadge { font-size: 24rpx; color: #6d28d9; background: #ede9fe; border-radius: 999rpx; padding: 4rpx 14rpx; }
-.pbadge { font-size: 24rpx; color: #0f766e; background: #ccfbf1; border-radius: 999rpx; padding: 4rpx 14rpx; max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pbadge-hit { position: relative; z-index: 1; display: inline-flex; align-items: center; min-height: 40px; margin: -10px 0; max-width: 40vw; }
+.pbadge { font-size: 24rpx; color: #0f766e; background: #ccfbf1; border-radius: 999rpx; padding: 4rpx 14rpx; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kpchip.gopaper { color: var(--brand-text); border-color: var(--brand); font-weight: 600; }
 .zhan { margin-left: auto; font-size: 24rpx; font-weight: 700; color: var(--ok); border: 3rpx solid var(--ok); border-radius: 8rpx; padding: 2rpx 12rpx; transform: rotate(-8deg); }
 .anscmp { margin-top: 12rpx; font-size: 24rpx; display: flex; gap: 12rpx; align-items: center; flex-wrap: wrap; }
@@ -1766,8 +1767,8 @@ export default {
 .rpill.right { background: var(--ok-soft); color: #15803d; }
 .zop { color: var(--ok); border: 1rpx solid var(--ok); }
 .segrow { display: flex; align-items: center; gap: 16rpx; margin-bottom: 20rpx; }
-.seg { flex: 1; display: flex; background: var(--fill); border-radius: 16rpx; padding: 6rpx; }
-.seg-i { flex: 1; text-align: center; padding: 14rpx 0; border-radius: 12rpx; font-size: 25rpx; color: var(--ink-2); }
+.seg { flex: 1; display: flex; background: var(--fill); border-radius: 16rpx; padding: 4rpx; }
+.seg-i { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 40px; box-sizing: border-box; padding: 0; border-radius: 12rpx; font-size: 25rpx; color: var(--ink-2); }
 .seg-i.on { background: var(--card); color: var(--ink); font-weight: 600; box-shadow: 0 2rpx 8rpx rgba(31, 35, 41, 0.08); }
 .filterbtn { display: inline-flex; align-items: center; gap: 6rpx; background: var(--card); border: 1rpx solid var(--line); border-radius: 999rpx; padding: 0 24rpx; min-height: 44px; box-sizing: border-box; flex-shrink: 0; }
 .filterbtn-t { font-size: 24rpx; color: var(--ink-2); }
@@ -1799,7 +1800,7 @@ export default {
 .mg-name { font-size: 29rpx; font-weight: 600; color: var(--ink); flex: 1; }
 .mg-badge { background: var(--fill); color: var(--ink-2); border-radius: 999rpx; font-size: 24rpx; padding: 4rpx 18rpx; }
 .mg-mst { font-size: 24rpx; color: var(--ink-3); white-space: nowrap; }
-.mg-go { font-size: 24rpx; color: var(--brand-text); padding: 18rpx 0 18rpx 24rpx; }
+.mg-go { display: inline-flex; align-items: center; min-height: 40px; font-size: 24rpx; color: var(--brand-text); padding: 0 0 0 24rpx; }
 .mg-sub { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding-left: 60rpx; border-bottom: 1rpx dashed var(--line); }
 .mg-sub-name { font-size: 26rpx; color: var(--ink); }
 .mg-sub3 { padding-left: 110rpx; min-height: 42px; }
@@ -1830,11 +1831,11 @@ export default {
 .rf-meta { font-size: 24rpx; color: var(--ink-2, #8a90a0); margin: 8rpx 0 26rpx; }
 .rf-btn { background: var(--brand, #2e5bff); color: #fff; border-radius: 999rpx; font-size: 28rpx; }
 .rf-row2 { display: flex; justify-content: center; gap: 48rpx; margin-top: 22rpx; }
-.rf-alt { font-size: 24rpx; color: var(--ink-2, #8a90a0); padding: 8rpx 16rpx; }
+.rf-alt { display: inline-flex; align-items: center; min-height: 40px; font-size: 24rpx; color: var(--ink-2, #8a90a0); padding: 0 16rpx; }
 .sheet { width: 100%; background: var(--card); border-radius: 24rpx 24rpx 0 0; padding: 28rpx 28rpx 48rpx; max-height: 70vh; overflow-y: auto; box-sizing: border-box; }
 .sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
 .sheet-t { font-size: 30rpx; font-weight: 600; }
-.sheet-x { font-size: 30rpx; color: var(--ink-2); padding: 10rpx 20rpx; }
+.sheet-x { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; margin: -6px -8rpx -6px 0; font-size: 30rpx; color: var(--ink-2); padding: 0; }
 .sheet-k { font-size: 24rpx; color: var(--ink-2); margin: 20rpx 0 10rpx; }
 .sheet-done { margin-top: 32rpx; background: var(--brand); color: #fff; text-align: center; border-radius: 999rpx; padding: 22rpx 0; font-size: 28rpx; font-weight: 500; }
 .scan-sum { font-size: 25rpx; color: var(--ink-2); margin: 8rpx 0 12rpx; }
@@ -1852,7 +1853,7 @@ export default {
 .manual-opt { flex: 1; text-align: center; line-height: 68rpx; border: 1rpx solid var(--line); border-radius: 12rpx; font-size: 28rpx; color: var(--ink-2); }
 .manual-opt.on { background: var(--brand); border-color: var(--brand-text); color: #fff; font-weight: 600; }
 .manual-codebar { margin: 0; }
-.manual-back { text-align: center; color: var(--ink-2); font-size: 25rpx; padding: 20rpx 0 4rpx; }
+.manual-back { display: flex; align-items: center; justify-content: center; min-height: 40px; color: var(--ink-2); font-size: 25rpx; padding: 8rpx 0 0; }
 .sheet-done.dim { opacity: 0.45; }
 .sheet-export { margin-top: 16rpx; margin-bottom: 110rpx; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--brand); color: var(--brand-text); text-align: center; border-radius: 999rpx; padding: 20rpx 0; font-size: 27rpx; font-weight: 500; }
 .xp-k { margin-top: 12rpx; font-size: 24rpx; font-weight: 700; color: #ea580c; border-left: 6rpx solid #ea580c; padding-left: 10rpx; }
@@ -1889,7 +1890,7 @@ export default {
 .resumecard { background: linear-gradient(180deg, #f59e0b, #d97706); border: none; box-shadow: 0 6rpx 16rpx rgba(217, 119, 6, 0.25); display: flex; justify-content: space-between; align-items: center; }
 .resume-ops { display: flex; flex-direction: column; align-items: center; gap: 8rpx; }
 .resumecard .duego { color: #b45309; }
-.resume-drop { font-size: 24rpx; color: rgba(255, 255, 255, 0.85); text-decoration: underline; padding: 4rpx 12rpx; }
+.resume-drop { display: inline-flex; align-items: center; min-height: 40px; margin: -10px 0; font-size: 24rpx; color: rgba(255, 255, 255, 0.85); text-decoration: underline; padding: 0 12rpx; }
 .redoentry { display: flex; justify-content: space-between; align-items: center; }
 .redo-l { display: flex; align-items: center; gap: 16rpx; flex: 1; min-width: 0; margin-right: 16rpx; }
 .redo-ico { width: 64rpx; height: 64rpx; border-radius: 50%; background: var(--brand-soft); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -1949,15 +1950,15 @@ export default {
 .rz { font-size: 26rpx; color: var(--ink-2); border: 1rpx solid var(--line); background: var(--soft-bg); border-radius: 999rpx; padding: 0 24rpx; min-height: 40px; box-sizing: border-box; display: inline-flex; align-items: center; }
 .rz.on { background: var(--brand); border-color: var(--brand-text); color: #fff; font-weight: 600; }
 .appended-tip { font-size: 24rpx; color: var(--brand, #2e5bff); background: var(--brand-soft, #eef3ff); border-radius: 10rpx; padding: 10rpx 16rpx; margin-bottom: 12rpx; }
-.sim-row { margin-top: 16rpx; text-align: center; }
+.sim-row { display: flex; align-items: center; justify-content: center; min-height: 40px; margin-top: 4rpx; text-align: center; }
 .sim-t { font-size: 25rpx; color: var(--brand, #2e5bff); font-weight: 600; }
-.recap-h { display: flex; justify-content: space-between; align-items: center; }
+.recap-h { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center; min-height: 40px; margin: -11px 0; }
 .recap-t { font-size: 26rpx; font-weight: 700; color: var(--ink-1, #1f2329); }
 .recap-x { font-size: 24rpx; color: var(--brand, #2e5bff); }
 .recap-sec { margin-top: 16rpx; }
 .recap-st { font-size: 24rpx; color: var(--ink-2); }
 .recap-row { display: flex; align-items: center; gap: 12rpx; margin-top: 10rpx; }
-.recap-link { cursor: pointer; }
+.recap-link { cursor: pointer; min-height: 40px; margin-top: 0; }
 .recap-link .recap-name { color: var(--brand-text, #2e5bff); }
 .recap-name { flex: 0 0 160rpx; font-size: 24rpx; color: var(--ink-1, #1f2329); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .recap-bar { flex: 1; height: 14rpx; background: var(--soft-bg); border-radius: 999rpx; overflow: hidden; }
@@ -1976,7 +1977,7 @@ export default {
 .kbd-row { display: flex; align-items: center; gap: 8rpx; margin-top: 14rpx; }
 .kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 40rpx; height: 40rpx; padding: 0 10rpx; box-sizing: border-box; background: var(--card); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 8rpx; font-size: 24rpx; font-weight: 600; color: var(--ink-2); }
 .kbd-d { font-size: 24rpx; color: var(--ink-2); margin-left: 8rpx; }
-.kbd-more { display: block; margin-top: 16rpx; font-size: 24rpx; color: var(--brand-text); cursor: pointer; }
+.kbd-more { display: inline-flex; align-items: center; min-height: 40px; margin: -4px 0 -11px; font-size: 24rpx; color: var(--brand-text); cursor: pointer; }
 
 /* 错题趋势卡（仅桌面侧栏展示） */
 .trendcard { display: none; }
