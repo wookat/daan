@@ -1685,4 +1685,7 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 同一类控件（`.retry`）别按簇修：`grep -rl 'class="retry"' src` 一次列全（17 页），历轮按簇只修了 6 页；源锁用「递归发现 + 阈值 ≥N」防漏扫，阈值是防漏扫下限不是页面总数断言。
 - **补 `min-height` 时改了 `display` 就是改布局**：`<view>` 在 uni H5 默认 `display:block`，`inline-flex` 会让「`加载失败：{{err}}<view class="retry">`」同容器的重试从独占一行变成贴着错误文案同行（R470 list + R471a 5 页，源锁/vitest 拦不住，生产失败态截图才看见）。要独占一行 + 40px 命中带用 `display: flex; align-items: center; justify-content: center`（R464 shenlun 写法）；只有 `.retry` 是独立子节点（父 `.empty` 是 flex 列）时 `inline-flex` 才等价。每次改 `display` 都要截一张失败态图，别只看 `h`/hits。
 - `git grep <组件名>` 命中的文件先看是 `<rank-card>` 标签还是本地同名 class（team.vue 的 `.rank-card` 是 `.card` 的修饰 class），别把同名 class 登成「另一挂载点」。
+- 宿主 TZ=CST：在宿主上用 python 过滤 caddy JSON `ts` 时 `datetime(...).timestamp()` 是本地时区 → 窗口提前 8 h（R471 把 R461 vivo 会话 272 行数进「新容器后」）；一律 `datetime(..., tzinfo=timezone.utc)`，或用 caddy 自带的 `-o cat` + `--since` 在 journalctl 侧过滤后再核 host。
+- `DEPLOY_RESUME=1` 前别先提 docs commit：4a rev 闸比的是本机 HEAD，HEAD 一动就被拒（设计如此）；先 resume 再提文档，或 `git checkout <部署 rev>` 跑完再切回分支。
+- `/api/monitor/report` 上报体只转发中心不落本地；核来源用 caddy 行的 `Cf-Connecting-Ip` + UA（`moto g power (2022)` = Lighthouse 移动仿真、本机出口 IP = 自己的 6b），别把部署 Lighthouse 触发的 1 条当用户侧 JS 错误。
 - 4-pre 让行 WAIT 期间别家 build 退出会提前放行（`other_builds=0`），不一定等满 300 s；但之后本家构建照样冷启（守护 `builder prune` 常驻），600 s FAIL → 等 `KG_COMPOSE_EXIT rc=0` → `DEPLOY_RESUME=1` 路径已是常态，不必每轮再登记为异常。

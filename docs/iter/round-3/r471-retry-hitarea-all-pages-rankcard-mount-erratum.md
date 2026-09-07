@@ -49,7 +49,12 @@
 
 ## 3. R471b 收口读数
 
-（部署完成后回填：rev / bundle / 回归 / perf / 生产 375·1440 `.retry` 读数 + 团队页截图 / 到期项 / (c)。）
+- 构建：`#9 77 s / #10 pip 242 s / #11 57 s / #16 export 333 s`，`KG_COMPOSE_EXIT rc=0 at 04:35:20Z`（20 min；守护 cron 04:15 / 04:30Z 两次触发 `disk guard triggered at 91% / 90%`；load 10–15、mem_avail 222–336 MB）→ 600 s FAIL 文案 → `DEPLOY_RESUME=1`：**第一次被 4a rev 闸拒**（本机 HEAD 已是 docs 提交 `7005bf2`，线上 `6e82179`；闸按设计不放松）→ `git checkout 6e82179` 后重跑 rc=0：rev 一致、Pages、bundle `index-ln5farCT.js` 一致、7 编码变体、回归全 200、perf `/` 0.97 / `/tiku/` 1.00；随部署 accessibility 0.94 WARN → 独立复跑 `perf-budget.sh` 一次**全 OK**（R429/R460/R464 同形态一次性）。容器 `StartedAt 04:35:18Z`，healthy 0 重启。
+- 生产 `6e82179` 375 / 1440 `.retry`：10 页 `h=40`、±19 命中 / ±21 不命中、`w`/`ph` 与本地 dist 预检（§2b）**逐项同值**；团队页截图「重试 ›」独占一行居中（`r471_post2_team_375.png`）。
+- 到期项 04:39Z 无增量：probe=0 33/1、growth 20/4、error_reason 7 / ≥09-11 0、push_subs 0、weekly 2、exam_attempts probe=0 1 / 64。
+- (c) 新容器起后（UTC 过滤）22 请求：`/assets/*` 404 0、小程序 UA 0、kaogong 非 2xx 0；重建窗口 04:15–04:40Z Caddy 5xx 只有 `sco.zalize.com` ×3、kaogong 0。
+- **`/api/monitor/report` ×1（04:36:06Z，登记）**：来源 IP `140.232.64.4` = 本机出口、UA `moto g power (2022) … Mobile Safari` = Lighthouse 移动仿真 → 是部署 6b 自己的 Lighthouse 在容器起后 48 s 触发（同刻后端 `[slow-req] 4.2s GET /tiku/` 冷启）；上报体只转发中心不落本地，**内容未知**；本机 3 次 375 加载（拦 monitor）0 上报、独立 `perf-budget.sh` 复跑 0 上报 → 一次性、与冷容器 + LH 节流相关（推断）。历史 25 条 monitor 全为本机 IP。
+- 首版宿主脚本用 naive `datetime(...).timestamp()` 过滤 caddy `ts`，宿主 TZ=CST 使窗口提前 8 h，把 R461 vivo 小程序会话 272 行数进「新容器后」——已改 UTC 重算，上面数字为纠正后值（如实登记）。
 
 ## 4. 如实边界
 - 375 为 360 仿真直读、真机未量、无 testing agent 录屏（未另行授权）。
