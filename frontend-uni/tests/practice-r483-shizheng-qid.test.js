@@ -28,3 +28,14 @@ describe('practice.vue 时政题号不进 AI 详解深链', () => {
     expect(SRC).toMatch(/findAskSid\(.*this\.cur && !this\.cur\._sz && this\.cur\.id\);/);
   });
 });
+
+// R487：练习页「用花生十三方法详解」是 6 个问答入口里唯一不打 growth_events 的（其余 5 个都有 *_ask_click），
+// 且 switchTab 不改 Referer——生产上练习页→问答页触达 / 带 qid 比例只读不可观测（explain_cache.qid 0/82 无法归因）。
+// ref 记 qid（时政记 'sz'）供与 explain_cache.qid 对账。
+describe('practice.vue AI 详解深链打点', () => {
+  it('deepExplain 在 switchTab 前打 practice_ask_click（source=module, ref=qid|sz）', () => {
+    const m = SRC.match(/deepExplain\(\) \{[\s\S]*?uni\.switchTab\(\{ url: '\/pages\/ask\/ask' \}\);/);
+    expect(m).not.toBeNull();
+    expect(m[0]).toMatch(/trackEvent\('practice_ask_click', q\.module \|\| '', q\._sz \? 'sz' : String\(qid \|\| ''\)\);\n\s*uni\.switchTab/);
+  });
+});

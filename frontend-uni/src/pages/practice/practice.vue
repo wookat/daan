@@ -2315,6 +2315,7 @@ export default {
       const ans = askAnswerLetter(this.picked);
       if (ans) uni.setStorageSync('redoAnswer', ans);
       else uni.removeStorageSync('redoAnswer');
+      trackEvent('practice_ask_click', q.module || '', q._sz ? 'sz' : String(qid || ''));
       uni.switchTab({ url: '/pages/ask/ask' });
     },
     async exportPaper() {
