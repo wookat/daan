@@ -1729,3 +1729,9 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 看**出口 IP 是否永久切换**：旧 IP 此后 0 新请求 + 新 IP 接管全部后续 = 网络切换；Caddy 对端侧已放弃的流仍记 200 + 完整时长 + 完整字节，源站「跑满」不能反推端侧收到了。
 - 只读查询模板：`ask_cur` / `ask_sessions` 行的 uid 先用 Caddy 三路（140.232.64.x / `X-Kg-Probe` / 自动化 UA）归类再谈「真实留存」；`api_ask_cur_get` 有 7×24 h 口径，过期时间 = `updated_at + 7 d`。
 - `docker logs --since/--until` 取容器日志时若返回极少（本轮 1 行），先确认容器日志是否落在同窗口（部署重建后 `docker logs` 只含新容器），别把「没日志」当「没异常」。
+
+## R478 经验：uid 归类与探针 uid 卫生
+- **探针一律用专用新 uid**（`anonUid()` 形态随机生成即可），不得复用任何在 R446/R452 身份表、`growth_events probe=0`、`ask_cur`/`ask_sessions` 里出现过的老 uid：R475 拿 `umsacie728f4ghcv8`（R446 判「身份不可考」）当探针，把「09-05 非探针会话」与「09-07 探针」混在同一 uid 下，R477 据此把它整条归成探针（R478 勘误）。
+- 给 `ask_cur`/`ask_sessions`/`explain_cache` 等**无 probe 列**的表归类时，不能只看当前 Caddy 文件（文件起点前的会话不可见）：对每个 uid 用 `pragma table_info` 枚举含 `uid`+`probe` 列的表（`answer_log`/`exam_attempts`/`growth_events`）统计 p0/p1/NULL，再与 R446/R452 身份表交叉；p1 行的时间若全在某次探针之后，之前的行不能算探针。
+- `kaogong-reports/app-log/*.log.gz` 的覆盖起点 = 首个归档的 StartedAt（当前 09-06 15:11Z），不是「14 天」（那是保留期）；下「N 天无 `[llm] stream` 告警」结论前先 `ls` 最早文件。uvicorn 访问日志行的时间是**响应开始**（流式请求 = meta 之前），与 Caddy `ts − duration` 反推起点在 ±30 ms 内可互证。
+- `explain/stream` 的 `event: error`（含 `chat_stream` 中途 `httpx` 异常）在服务端**不写日志**、Caddy 仍记 200：B 路径（meta 后失败）只能从端侧 / 用户反馈 / `ask_cur` 空 explanation 侧面看，服务端日志 0 ≠ 未发生。
