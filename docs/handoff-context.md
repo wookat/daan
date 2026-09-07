@@ -2358,3 +2358,13 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 口径坑：Caddy `ts` 是响应写出时刻，长请求起点 = ts − duration；`size` 是 `encode gzip` 后字节不能反推字数。另 `141.11.46.193` 面试页 API 14 次未归因（下轮到期项）。
 - 到期项 05:09Z 无增量：probe=0 33/1、growth 20/4、error_reason 7 / ≥09-11 0、push_subs 0、weekly 2、exam_attempts probe=0 1/64、healthy 0 重启、WAL 同字节；(c) R471b 容器起后 182 请求全本机/探针，`/assets/*` 404 0、5xx 0、monitor 仍 1 条。宿主 90% / 5.2 G、load 3.7、mem_avail 294 MB，守护 prune 04:45/05:00Z。
 - 如实：只覆盖当前 caddy 文件 + DB 全量；报告页卡片未在生产渲染（不造假 attempt）；小程序 4 并发未复现；0 代码无新门。取证：`docs/iter/round-3/r474-exam-report-reach-probe0-ai-duplicate-inflight.md`。下次 SOP-10 审计 ~R480。
+
+## R475（AI 同 uid 飞行中重复：客户端根因 = 原生小程序开发版 `onAiAnalysis` 只守 `aiHtml` 不守 `aiLoading`（关弹层再点入口即重发，非页面栈/超时）；服务端 `/api/mistakes/analysis` 同 uid single-flight 上线、成功不缓存；生产 `6e82179` → `2bad8bc`）
+- 根因（源码 + 时序）：事发客户端是 `miniapp-native` 开发版（Referer `servicewechat.com/…/0/`），当时 `pages/book/book.ts onAiAnalysis()` 守卫 `if (this.data.aiHtml) return`，加载中「重新分析」隐藏但可关弹层再点入口 → 每次一条 POST；4 条起点 0/+11/+23/+24 s、duration 完整、gzip size 各异 = 四篇独立生成。兄弟会话 W8 分支 `8db03a2`（09-06 22:53Z，事发后 71 min）已补 `aiLoading`，**未合 main / 未发正式版**，且只保护同页面实例。R474 §4 按 H5 `book.vue` 核守卫是核错对象（已加勘误指针）。
+- 设计（先论证再动手）：合并键 = `uid[:64]`（当前 `body: dict` 只读 `uid`，等价 (uid, body)；**加字段时键必须并入**）；只合并飞行中、成功不缓存（分析依赖当下错题统计、TTL 会返旧文、观测重复 100% 在飞行中）、失败不缓存（R398）；`asyncio.shield` 隔离等待者取消；进程内字典 = 全局（uvicorn 单进程无 `--workers`，改多 worker 前换共享介质）。`explain/stream` ×2 不同构（SSE 需缓冲回放、第 2 次多在第 1 次流被放弃后、全文件仅 1 对）→ 登记不改。
+- 实现 `backend/app/ai_api.py`：`_ANALYSIS_INFLIGHT` + `_shared_mistake_analysis(uid, prompt)`，`add_done_callback pop`；单测 `tests/test_mistake_analysis_singleflight.py` 3 例（4 并发 1 次 LLM 同文 + 结束再调重新打；失败全体 502 + 下一次重试；不同 uid 不合并）。门：pytest 504 / ruff / `npx pyright app` 0。
+- 生产一手（探针 uid `umsacie728f4ghcv8`，`X-Kg-Probe: 1`）：4 并发 → 4 份 sha 同 `5515b9b39352`、len 359、Caddy size 全 913、结束 05:36:25.460×3/.474；0.4 s 后再发 → sha `293513dddcf0`、42 s 完整耗时 = 成功未缓存、槽已清。容器 0 Traceback。
+- `141.11.46.193`：09-06 08:55–10:43Z 94 请求、V2405A **VivoBrowser**（不是微信）、`/s/fqpexz7g` 分享页 → 首页 → `interview/categories` ×1 + `interview/question` ×1（R474 写「14 次」是计数口径，按 `/api/interview` 前缀只有 2 条），uid `umsagboriz4qyurnd`，非探针 → 候选真人（分享链路带来），只到出题未点评，不改。
+- 部署：4-pre 无让行、compose build **78 s**（load 0.82 历轮最低；再证 R468 离群 = 宿主负载相关）、rev 一致、bundle 未变、7/7 200、perf 0.93/1.00。到期项无增量：probe=0 33/1、growth 20/4、error_reason 7 / ≥09-11 0、push_subs 0、weekly 2、exam_attempts probe=0 1/64、WAL 同字节、healthy 0 重启；(c) 新容器后 35 请求全本机，404/5xx/monitor 0。
+- 如实：「关弹层再点」无端侧日志/真机复现；`explain` 那对「网络切换流中断」为推断；single-flight 跨 worker 未验证（当前不需要）；141.11.46.193 与 21:41Z 小程序设备同机型是否同一台未核。
+- 待办：`explain/stream` 若再现同体飞行中重复 → 立项缓冲回放式合并；`mistakes/analysis` 请求体加字段时同步扩合并键；W8 分支合 main 时保留 `aiLoading` 守卫。

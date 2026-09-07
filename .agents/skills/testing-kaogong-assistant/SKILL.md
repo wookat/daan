@@ -1706,3 +1706,11 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 生产 `explain_cache` 可宿主直读核 AI 讲解是否真落正文（`length(explanation)`）；`mistakes/analysis` 无结果表，只能用 status+size 判「服务端成功」，渲染与否无证据。
 - 小程序客户端识别：Referer `https://servicewechat.com/<appid>/<版本号>/page-frame.html`，版本号 `0` 是开发/体验版（推断）；同一用户几秒内出口 IP 切换是移动网络常态，别当两个人。
 - 同 uid 同请求体的 AI 接口在飞行中重复（explain ×2 / analysis ×4）是 R474 登记的 R475 候选：先查客户端为何重发（本机无微信开发者工具复现不了），再论服务端 single-flight；`rl` 只限量不去重，`book.vue aiLoading` 守卫只管同一页面实例。
+
+## R475 经验：AI 接口飞行中重复的归因与服务端 single-flight 生产验证
+- 先认客户端：Referer `servicewechat.com` = 原生小程序 `miniapp-native`，**不要拿 H5 `frontend-uni` 源码去核守卫**（R474 犯过）；再用 `git log --all -S'<函数名>'` / `git show <commit>~1:<path>` 取事发时刻之前的版本，兄弟会话分支（如 `origin/devin/w7-mp-flat-v3`）的提交说明常已写明「生产实测」线索。
+- 重发形态判别：同页面重入 = 起点间隔十几秒、每条 duration 完整、全 200；超时重发 = 间隔 ≈ 客户端 timeout 且前一条 duration 也 ≈ timeout；页面栈多实例 = 起点几乎同刻。`gzip size` 各异 = 各自独立生成（合并后同 size 同刻结束）。
+- 验证 single-flight（探针 `X-Kg-Probe: 1`，写库 0）：同 uid 4 个 `curl` 并发（`&` + `wait`）比 `sha256(analysis)`/长度/结束时刻 → 应同 sha、Caddy 同 size、结束时刻差 ≤ 几十 ms；紧接再发 1 次应 sha 不同且耗时完整 = 成功未缓存、槽已清。脚本样板 `/home/ubuntu/r475_probe.sh`（生产 `ACCESS_CODE` 未配、`check_access` 直接放行，不用带头；uid 必须已有待掌握错题，否则走「错题本还没有待掌握的错题」短路不打 LLM、测不到合并）。
+- 后端单进程（`Dockerfile.runtime` uvicorn 无 `--workers`）→ 进程内字典即全局；改多 worker 前先换共享介质。请求体若加字段，合并键必须并入（当前 `body: dict` 只读 `uid`）。
+- 单测里 mock `llm.chat` 的并发用例要 `await asyncio.sleep(0)` 多轮让任务真正跑到 await（`_spin()`），否则断言早于协程进入合并点。
+- Caddy 按 IP 归因 UA 时用 `Counter` 取全量再下结论：141.11.46.193 是 `VivoBrowser`（系统浏览器）不是微信，R474 凭机型联想会错。

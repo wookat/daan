@@ -67,6 +67,7 @@ probe=0 answer_log 33/1、growth probe=0 20/4、`mistakes.error_reason` 7 / ≥0
 - `explain/stream` 2 次：起点 21:40:02（IP 223.83.2.220）/ 21:40:08Z（IP 39.158.40.85），请求体同为 446 B，41.5 / 41.7 s，`explain_cache` 21:40:50Z 落 2 行同文（1007 字，key 不同、写入机制本轮未核）。
 - 后端：`api_mistake_analysis` 每次都 `llm.chat(max_tokens=900)`，无缓存、无 per-uid single-flight；`rl("ai_mistake_analysis", 10, 300)` 只限量不去重。`explain/stream` 同样无飞行中合并。
 - 前端唯一调用点 `book.vue aiAnalysis()` 有 `aiLoading` 守卫（同一页面实例内不可能并发）；`api.js request()` 对 POST 不重试；`manifest.json` 无 `networkTimeout`。
+  - **R475 勘误**：这里核的是 H5 `frontend-uni`，但事发客户端是原生小程序开发版（`miniapp-native`，Referer `servicewechat.com`），当时源码 `pages/book/book.ts onAiAnalysis()` 守卫只有 `if (this.data.aiHtml) return`（加载中关弹层再点入口即重发），W8 分支 `8db03a2` 事发后 71 min 才补 `aiLoading`；另「141.11.46.193 面试页 API 14 次」按 `/api/interview` 前缀复数只有 2 条。见 `r475-ai-inflight-duplicate-client-root-cause-server-singleflight.md` §1/§4。
 
 推断（未验证）：4 次并发只可能来自页面实例重建 / 多 webview / 小程序 `wx.request` 自身超时后用户重点（本仓 MP-WEIXIN 路径本机无微信开发者工具，无法复现）；两次 explain 隔 6 s 且 IP 切换，更像网络切换致首次连接在客户端侧失败后重发（服务端仍跑完）。
 
