@@ -47,11 +47,16 @@ interface MRow extends Mistake {
   attempts?: string[];
 }
 
-// 题型标签统一粒度（H5 tagName）：去掉「模块名-」前缀（历史数据两种格式并存），无题型时用模块名
+// 来源站细题型（H5 tagName）：去掉「模块名-」前缀（历史数据两种格式并存），无题型时用模块名
 function tagName(m: Mistake): string {
   const qt = m.question_type || '';
   if (!qt) return modName(m.module);
   return qt.includes('-') ? qt.split('-').slice(1).join('-') : qt;
+}
+
+// 主题型标签（H5 groupKey）：分类树题型组优先，手录/对不回题库的行回退细题型
+function groupName(m: Mistake): string {
+  return m.type_group || tagName(m);
 }
 
 function fmtTs(ts: number): string {
@@ -321,7 +326,7 @@ Page({
       const all = (m.items || []).map((x) => ({
         ...x,
         modName: modName(x.module),
-        typeName: tagName(x),
+        typeName: groupName(x),
         open: false,
         optList: optList(x),
       }));
@@ -641,11 +646,15 @@ Page({
   async onRedo() {
     const { filterMod, filterType } = this.data;
     try {
-      const f: { module?: string | null; qtype?: string | null; noqt?: boolean } = {};
+      const f: { module?: string | null; qtype?: string | null; noqt?: boolean; sub?: string | null } = {};
       const modKey = Object.keys(MODULE_NAMES).find((k) => MODULE_NAMES[k] === filterMod) || null;
       if (filterType) {
         const typeIsMod = Object.keys(MODULE_NAMES).find((k) => MODULE_NAMES[k] === filterType);
-        if (typeIsMod) {
+        const isGroup = this.data.all.some((x) => x.type_group === filterType);
+        if (isGroup) {
+          f.sub = filterType;
+          if (modKey) f.module = modKey;
+        } else if (typeIsMod) {
           f.module = typeIsMod;
           f.noqt = true;
         } else {

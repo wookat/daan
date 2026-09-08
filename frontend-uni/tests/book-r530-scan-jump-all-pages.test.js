@@ -91,7 +91,7 @@ describe('错题本接入', () => {
   it('load() 真实回包后定位：待掌握/已掌握 tab、筛选不命中则清筛选、pageN 覆盖到目标、kbId + 展开 + 滚到卡；失败/账号切换清 pending', () => {
     expect(BOOK).toContain('        this.applyPendingKp();\n        this.applyPendingScanJump();\n');
     expect(BOOK).toContain("      const m = findScanMistake(this.items, qid);\n      if (!m) {\n        uni.showToast({ title: '错题本里未找到这道题', icon: 'none' });\n        return;\n      }\n      this.tab = m.mastered ? 'done' : 'todo';");
-    expect(BOOK).toContain('      if (!this.shownItems.includes(m)) {\n        this.filterMod = \'\';\n        this.kpFilter = \'\';\n        this.kp3Filter = \'\';\n        this.srcFilter = \'\';\n        this.pidFilter = 0;\n        this.rzFilter = \'\';\n      }');
+    expect(BOOK).toContain('      if (!this.shownItems.includes(m)) {\n        this.filterMod = \'\';\n        this.kpFilter = \'\';\n        this.qtFilter = \'\';\n        this.kp3Filter = \'\';\n        this.srcFilter = \'\';\n        this.pidFilter = 0;\n        this.rzFilter = \'\';\n      }');
     expect(BOOK).toContain('      this.pageN = pageNFor(this.shownItems.indexOf(m), this.pageN);\n      this.kbId = m.id;\n      if (!m.open) this.toggleCard(m);');
     expect(BOOK).toContain("      if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' });");
     expect(BOOK).toContain("          uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });\n        }\n        this._pendingScanQid = 0;\n      }\n      this.loading = false;\n    },");

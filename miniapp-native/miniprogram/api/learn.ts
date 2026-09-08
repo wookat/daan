@@ -246,6 +246,7 @@ export function mistakeAnalysis(): Promise<MistakeAnalysisResp> {
 export interface RedoFilter {
   limit?: number;
   qtype?: string | null;
+  sub?: string | null;
   module?: string | null;
   noqt?: boolean;
   rz?: string | null;
@@ -255,6 +256,7 @@ export interface RedoFilter {
 export function redoMistakesFiltered(f: RedoFilter): Promise<{ items: Question[]; skipped?: number }> {
   let q = '/api/mistakes/redo?limit=' + (f.limit || 10) + '&uid=' + encodeURIComponent(anonUid());
   if (f.qtype) q += '&qtype=' + encodeURIComponent(f.qtype);
+  if (f.sub) q += '&sub=' + encodeURIComponent(f.sub);
   if (f.module) q += '&module=' + encodeURIComponent(f.module);
   if (f.noqt) q += '&noqt=1';
   if (f.rz) q += '&rz=' + encodeURIComponent(f.rz);

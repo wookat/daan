@@ -116,7 +116,7 @@
             <kg-button v-if="tab !== 'fav'" variant="secondary" size="md" icon="sliders-horizontal" aria-label="筛选与排序" @click="filterOpen = true" />
             <kg-button v-if="tab !== 'fav' && shownItems.length" :variant="batchMode ? 'primary' : 'secondary'" size="md" @click="toggleBatch">{{ batchMode ? '完成' : '批量' }}</kg-button>
           </view>
-          <kg-chip-row v-if="tab !== 'fav' && chipList.length > 2" class="modchips" :options="chipList.map((c) => ({ label: c.name, value: c.key }))" :model-value="filterMod" @update:model-value="(v) => { filterMod = v; kpFilter = ''; kp3Filter = ''; }" />
+          <kg-chip-row v-if="tab !== 'fav' && chipList.length > 2" class="modchips" :options="chipList.map((c) => ({ label: c.name, value: c.key }))" :model-value="filterMod" @update:model-value="(v) => { filterMod = v; kpFilter = ''; qtFilter = ''; kp3Filter = ''; }" />
 
           <template v-if="tab === 'fav'">
             <kg-card clickable chevron class="entry" @click="openFavPage">
@@ -159,8 +159,8 @@
             <view class="entry-in">
               <view class="entry-ico"><l-icon name="rotate-ccw" :size="20" tone="brand" /></view>
               <view class="grow">
-                <text class="entry-t">{{ pidFilter ? '重练本卷错题 · ' + pidLabel : '错题重练' + (kp3Filter ? ' · ' + kp3Filter : kpFilter ? ' · ' + kpFilter : rzFilter ? ' · ' + rzFilter : srcFilter ? ' · ' + (srcFilter === 'exam' ? '模考错题' : '练习错题') : '') }}</text>
-                <text class="entry-s">{{ pidFilter ? '按卷面顺序只练本卷上次答错的题（答对过即不再算错）' : kp3Filter ? '只重练当前筛选考点的待掌握错题（最多 10 题）' : kpFilter ? '只重练当前筛选题型的待掌握错题（最多 10 题）' : rzFilter ? '只重练当前筛选错因的待掌握错题（最多 10 题）' : srcFilter ? '只重练当前筛选来源的待掌握错题（最多 10 题）' : '把待掌握错题按刷题模式重做一遍（最多 10 题）' }}</text>
+                <text class="entry-t">{{ pidFilter ? '重练本卷错题 · ' + pidLabel : '错题重练' + (kp3Filter ? ' · ' + kp3Filter : kpFilter ? ' · ' + (qtFilter ? kpFilter + ' · ' + qtFilter : kpFilter) : rzFilter ? ' · ' + rzFilter : srcFilter ? ' · ' + (srcFilter === 'exam' ? '模考错题' : '练习错题') : '') }}</text>
+                <text class="entry-s">{{ pidFilter ? '按卷面顺序只练本卷上次答错的题（答对过即不再算错）' : kp3Filter ? '只重练当前筛选考点的待掌握错题（最多 10 题）' : kpFilter ? (qtFilter ? '只重练当前细分题型的待掌握错题（最多 10 题）' : '重练该题型组下全部待掌握错题，含组内各细分题型（最多 10 题）') : rzFilter ? '只重练当前筛选错因的待掌握错题（最多 10 题）' : srcFilter ? '只重练当前筛选来源的待掌握错题（最多 10 题）' : '把待掌握错题按刷题模式重做一遍（最多 10 题）' }}</text>
               </view>
             </view>
           </kg-card>
@@ -170,7 +170,7 @@
             <view v-if="kw" class="searchclear" role="button" aria-label="清空搜索" @click="kw = ''"><l-icon name="x" :size="16" tone="muted" /></view>
           </view>
           <view v-if="tab !== 'fav' && (filterMod || kpFilter || kp3Filter || srcFilter || rzFilter || pidFilter)" class="curfilter">
-            <kg-tag v-if="filterMod || kpFilter || kp3Filter" tone="brand" icon="x" class="cf" @click="filterMod = ''; kpFilter = ''; kp3Filter = ''">{{ kp3Filter || kpFilter || modName(filterMod) }}</kg-tag>
+            <kg-tag v-if="filterMod || kpFilter || kp3Filter" tone="brand" icon="x" class="cf" @click="filterMod = ''; kpFilter = ''; qtFilter = ''; kp3Filter = ''">{{ kp3Filter || (kpFilter && qtFilter ? kpFilter + ' · ' + qtFilter : kpFilter) || modName(filterMod) }}</kg-tag>
             <kg-tag v-if="srcFilter" tone="brand" icon="x" class="cf" @click="srcFilter = ''">{{ srcFilter === 'exam' ? '模考错题' : '练习错题' }}</kg-tag>
             <kg-tag v-if="pidFilter" tone="brand" icon="x" class="cf" @click="pidFilter = 0">{{ pidLabel }}</kg-tag>
             <kg-button v-if="pidFilter" variant="text" size="sm" @click="goPaper(pidFilter)">练本卷 ›</kg-button>
@@ -211,7 +211,8 @@
           >
             <view class="mhead">
               <view v-if="batchMode" class="bchk" :class="{ on: selIds[m.id] }" role="checkbox" :aria-checked="String(!!selIds[m.id])"><l-icon v-if="selIds[m.id]" name="check" :size="14" tone="on-brand" /></view>
-              <kg-tag tone="brand">{{ tagName(m) }}</kg-tag>
+              <kg-tag tone="brand">{{ groupKey(m) }}</kg-tag>
+              <kg-tag v-if="fineType(m)" tone="neutral" class="finetag">{{ fineType(m) }}</kg-tag>
               <kg-tag v-if="m.source === 'exam'" tone="info">模考</kg-tag>
               <view v-if="mistakePaper(m)" class="pbadge-hit" role="button" @click.stop="pidFilter = mistakePaper(m).pid"><kg-tag tone="neutral" class="pbadge">{{ mistakePaper(m).psource }}</kg-tag></view>
               <kg-tag v-if="m.times >= 2" tone="bad">错 {{ m.times }} 次</kg-tag>
@@ -451,11 +452,17 @@
         <text class="sheet-k">排序</text>
         <kg-chip-row size="sm" :options="SORTS.map((s) => ({ label: s.name, value: s.k }))" :model-value="sortBy" :scroll-to-selected="false" @update:model-value="(v) => (sortBy = v)" />
         <text class="sheet-k">模块</text>
-        <kg-chip-row size="sm" :options="chipList.map((c) => ({ label: c.name, value: c.key }))" :model-value="filterMod" :scroll-to-selected="false" @update:model-value="(v) => { filterMod = v; kpFilter = ''; kp3Filter = ''; }" />
+        <kg-chip-row size="sm" :options="chipList.map((c) => ({ label: c.name, value: c.key }))" :model-value="filterMod" :scroll-to-selected="false" @update:model-value="(v) => { filterMod = v; kpFilter = ''; qtFilter = ''; kp3Filter = ''; }" />
         <template v-if="typeGroups.length > 1">
           <text class="sheet-k">题型</text>
           <view class="kpchips">
-            <kg-tag v-for="g in typeGroups" :key="g.name" :tone="kpFilter === g.name ? 'brand' : 'neutral'" class="kpchip" @click="kpFilter = kpFilter === g.name ? '' : g.name; kp3Filter = ''">{{ g.name }} ×{{ g.n }}</kg-tag>
+            <kg-tag v-for="g in typeGroups" :key="g.name" :tone="kpFilter === g.name ? 'brand' : 'neutral'" class="kpchip" @click="kpFilter = kpFilter === g.name ? '' : g.name; qtFilter = ''; kp3Filter = ''">{{ g.name }} ×{{ g.n }}</kg-tag>
+          </view>
+        </template>
+        <template v-if="fineTypes.length">
+          <text class="sheet-k">{{ kpFilter }} · 细分</text>
+          <view class="kpchips">
+            <kg-tag v-for="g in fineTypes" :key="g.name" :tone="qtFilter === g.name ? 'brand' : 'neutral'" class="kpchip" @click="qtFilter = qtFilter === g.name ? '' : g.name">{{ g.name }} ×{{ g.n }}</kg-tag>
           </view>
         </template>
         <template v-if="hasExamMistakes">
@@ -609,6 +616,7 @@ export default {
       masteryT3: {},
       kw: '',
       kpFilter: '',
+      qtFilter: '',
       kp3Filter: '',
       favKw: '',
       tab: 'todo',
@@ -739,6 +747,7 @@ export default {
       let base = this.tab === 'done' ? this.doneItems : this.todoItems;
       if (this.filterMod) base = base.filter((m) => m.module === this.filterMod);
       if (this.kpFilter) base = base.filter((m) => this.groupKey(m) === this.kpFilter);
+      if (this.kpFilter && this.qtFilter) base = base.filter((m) => this.tagName(m) === this.qtFilter);
       if (this.kp3Filter) base = base.filter((m) => m.tag3_name === this.kp3Filter);
       if (this.srcFilter === 'exam') base = base.filter((m) => m.source === 'exam');
       else if (this.srcFilter === 'practice') base = base.filter((m) => m.source !== 'exam');
@@ -747,7 +756,7 @@ export default {
       else if (this.rzFilter) base = base.filter((m) => m.error_reason === this.rzFilter);
       base = [...base];
       if (this.sortBy === 'times') base.sort((a, b) => (b.times || 1) - (a.times || 1));
-      else if (this.sortBy === 'type') base.sort((a, b) => String(a.question_type || a.module || '').localeCompare(String(b.question_type || b.module || ''), 'zh'));
+      else if (this.sortBy === 'type') base.sort((a, b) => (this.groupKey(a) + '\u0001' + this.tagName(a)).localeCompare(this.groupKey(b) + '\u0001' + this.tagName(b), 'zh'));
       else if (this.sortBy === 'reason') base.sort((a, b) => String(a.error_reason || '\uffff').localeCompare(String(b.error_reason || '\uffff'), 'zh'));
       else if (this.sortBy === 'due') base.sort((a, b) => (a.next_review || 9e12) - (b.next_review || 9e12));
       else if (this.sortBy === 'old') base.sort((a, b) => (a.created_at || 0) - (b.created_at || 0));
@@ -865,11 +874,29 @@ export default {
         .sort((a, b) => b.n - a.n)
         .slice(0, 12);
     },
+    // 选中题型组后的细分题型（来源站 question_type）；组内只有一种时不展示
+    fineTypes() {
+      if (this.tab === 'fav' || !this.kpFilter) return [];
+      let base = this.tab === 'done' ? this.doneItems : this.todoItems;
+      if (this.filterMod) base = base.filter((m) => m.module === this.filterMod);
+      const map = {};
+      for (const m of base) {
+        if (this.groupKey(m) !== this.kpFilter) continue;
+        const t = this.fineType(m);
+        if (!t) continue;
+        map[t] = (map[t] || 0) + 1;
+      }
+      const out = Object.entries(map)
+        .map(([name, n]) => ({ name, n }))
+        .sort((a, b) => b.n - a.n);
+      return out.length >= 2 ? out.slice(0, 12) : [];
+    },
   },
   watch: {
     tab() { this.pageN = 20; this.batchMode = false; this.selIds = {}; this.kbId = null; this.syncBookUrl(); },
     filterMod() { this.pageN = 20; this.syncBookUrl(); },
     kpFilter() { this.pageN = 20; this.syncBookUrl(); },
+    qtFilter() { this.pageN = 20; this.syncBookUrl(); },
     kw() { this.pageN = 20; },
     kp3Filter() { this.pageN = 20; this.syncBookUrl(); },
     sortBy() { this.pageN = 20; this.syncBookUrl(); },
@@ -882,6 +909,7 @@ export default {
     if (p.tab) this.tab = p.tab;
     if (p.mod) this.filterMod = p.mod;
     if (p.kp) this._pendingKp = p.kp;
+    if (p.qt) this._pendingQt = p.qt;
     if (p.kp3) this._pendingKp3 = p.kp3;
     this._pendingKpFix = !!(opts && (opts.kp || opts.kp3)) && !p.kp && !p.kp3;
     if (p.src) this.srcFilter = p.src;
@@ -1003,7 +1031,7 @@ export default {
     syncBookUrl() {
       // #ifdef H5
       if (typeof window !== 'undefined' && window.history) {
-        window.history.replaceState(null, '', buildBookUrl({ tab: this.tab, mod: this.filterMod, kp: this.kpFilter, kp3: this.kp3Filter, src: this.srcFilter, pid: this.pidFilter, rz: this.rzFilter, sort: this.sortBy }));
+        window.history.replaceState(null, '', buildBookUrl({ tab: this.tab, mod: this.filterMod, kp: this.kpFilter, qt: this.qtFilter, kp3: this.kp3Filter, src: this.srcFilter, pid: this.pidFilter, rz: this.rzFilter, sort: this.sortBy }));
       }
       // #endif
     },
@@ -1115,6 +1143,7 @@ export default {
       if (!this.shownItems.includes(m)) {
         this.filterMod = '';
         this.kpFilter = '';
+        this.qtFilter = '';
         this.kp3Filter = '';
         this.srcFilter = '';
         this.pidFilter = 0;
@@ -1240,8 +1269,29 @@ export default {
       this.kpFilter = sub || '';
       this.kp3Filter = t3 || '';
     },
+    // 题型筛选 → redo 查询串：题型组走 sub=（覆盖组内全部来源题型）、细分/无组的来源题型走 qtype=、模块名兜底走 module+noqt
+    redoTypeQuery() {
+      const kp = this.kpFilter;
+      const base = (this.tab === 'done' ? this.doneItems : this.todoItems).filter((m) => this.groupKey(m) === kp);
+      if (base.some((m) => m.type_group === kp)) {
+        let q = '&sub=' + encodeURIComponent(kp);
+        if (this.filterMod) q += '&module=' + this.filterMod;
+        if (this.qtFilter) q += '&qtype=' + encodeURIComponent(this.qtFilter);
+        return q;
+      }
+      const key = Object.keys(NAMES).find((k) => NAMES[k] === kp);
+      if (key) return '&module=' + key + '&noqt=1';
+      return '&qtype=' + encodeURIComponent(kp);
+    },
+    // 题型组（分类树二级，与掌握度地图/同考点强化同口径）；手录/对不回题库的行回退细题型、再回退模块名
     groupKey(m) {
-      return this.tagName(m) || '其他';
+      return m.type_group || this.tagName(m) || '其他';
+    },
+    // 与题型组同名时不重复展示细题型
+    fineType(m) {
+      if (!m.type_group || !m.question_type) return '';
+      const t = this.tagName(m);
+      return t && t !== m.type_group ? t : '';
     },
     // 题型标签统一粒度：去掉「模块名-」前缀（历史数据两种格式并存），无题型时用模块名
     tagName(m) {
@@ -1366,7 +1416,9 @@ export default {
         }
         return;
       }
+      const qt = this._pendingQt;
       this._pendingKp = '';
+      this._pendingQt = '';
       this._pendingKp3 = '';
       if (kp3) {
         const hit = this.items.find((m) => m.tag3_name === kp3);
@@ -1379,6 +1431,7 @@ export default {
       }
       if (kp && this.items.some((m) => this.groupKey(m) === kp)) {
         this.kpFilter = kp;
+        this.qtFilter = qt && this.items.some((m) => this.groupKey(m) === kp && this.tagName(m) === qt) ? qt : '';
         this.kp3Filter = '';
         return;
       }
@@ -1694,13 +1747,7 @@ export default {
       try {
         let q = '/api/mistakes/redo?limit=10&uid=' + encodeURIComponent(anonUid());
         if (this.kpFilter) {
-          const isModName = Object.values(NAMES).includes(this.kpFilter);
-          if (isModName) {
-            const key = Object.keys(NAMES).find((k) => NAMES[k] === this.kpFilter);
-            q += '&module=' + key + '&noqt=1';
-          } else {
-            q += '&qtype=' + encodeURIComponent(this.kpFilter);
-          }
+          q += this.redoTypeQuery();
         } else if (this.filterMod) {
           q += '&module=' + this.filterMod;
         }

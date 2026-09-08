@@ -31,6 +31,7 @@ describe('parseBookOpts', () => {
       tab: 'done',
       mod: 'yanyu',
       kp: '',
+      qt: '',
       kp3: '',
       src: 'practice',
       pid: 0,
@@ -42,6 +43,7 @@ describe('parseBookOpts', () => {
       tab: '',
       mod: '',
       kp: '',
+      qt: '',
       kp3: '',
       src: '',
       pid: 0,
@@ -49,7 +51,7 @@ describe('parseBookOpts', () => {
       sort: '',
       review: false,
     });
-    expect(parseBookOpts()).toEqual({ tab: '', mod: '', kp: '', kp3: '', src: '', pid: 0, rz: '', sort: '', review: false });
+    expect(parseBookOpts()).toEqual({ tab: '', mod: '', kp: '', qt: '', kp3: '', src: '', pid: 0, rz: '', sort: '', review: false });
   });
 
   it('pid 归卷筛选：正整数入链，非法 fail-closed（R368）', () => {

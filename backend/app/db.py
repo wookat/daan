@@ -2388,7 +2388,7 @@ def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: s
     return mistakes_redo(limit, qtype=qtype, module=module, noqt=noqt, uid=uid, reason=reason, source=source, tag3=tag3, mids=mids)["items"]
 
 
-def mistakes_redo(limit: int = 10, qtype: str | None = None, module: str | None = None, noqt: bool = False, uid: str | None = None, reason: str | None = None, source: str | None = None, tag3: str | None = None, mids: list[int] | None = None) -> dict:
+def mistakes_redo(limit: int = 10, qtype: str | None = None, module: str | None = None, noqt: bool = False, uid: str | None = None, reason: str | None = None, source: str | None = None, tag3: str | None = None, mids: list[int] | None = None, sub: str | None = None) -> dict:
     """同 mistakes_redo_questions，另回 skipped：本次扫到但对不回题库原题（手录题 / 题已下线 / 题干已对不回时政库）而被跳过的错题行数；
     同题干重复行不计。取够 limit 题后不再往后扫，所以 skipped 是【本次加载】口径而非全部待掌握行。"""
     conn = get_conn()
@@ -2407,6 +2407,10 @@ def mistakes_redo(limit: int = 10, qtype: str | None = None, module: str | None 
         args.append(module)
     if noqt:
         where += " AND (question_type IS NULL OR question_type='')"
+    if sub:
+        subs = taxonomy.group_submodules(module, sub)
+        where += f" AND question_id IN (SELECT id FROM questions WHERE submodule IN ({','.join('?' * len(subs))}))"
+        args.extend(subs)
     if reason == "未标注":
         where += " AND (error_reason IS NULL OR error_reason='')"
     elif reason:
@@ -3638,6 +3642,7 @@ def _hydrate_mistake(d: dict) -> None:
     hs = d.pop("q_hs", None)
     d["explanation"] = d.get("explanation") or hs or ""
     d["submodule"] = (d.pop("q_submodule", None) or "").strip() or None
+    d["type_group"] = taxonomy.group_name(d.get("module"), d["submodule"])
 
 
 def _ensure_review_log(conn):
