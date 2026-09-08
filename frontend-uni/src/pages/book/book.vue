@@ -21,10 +21,7 @@
         ><text class="opt-k">{{ o.k }}</text><text v-if="o.t" class="opt-t" :style="optStyle">{{ o.t }}</text></view>
       </view>
       <view v-if="answered">
-        <view class="verdict" :class="wasCorrect ? 'good' : 'badv'">
-          <template v-if="cur._extra">{{ wasCorrect ? '答对了，这个考法稳了 ✓' : '还没稳，仔细看讲解' }}</template>
-          <template v-else>{{ wasCorrect ? (cur._requeued ? '这次答对了，本轮已纠正 ✓' : '答对了！连对 ' + streak + ' 次') : '又错了，看讲解（稍后本轮会再出现）' }}（下次复习：{{ nextDays }} 天后）</template>
-        </view>
+        <view class="verdict" :class="wasCorrect ? 'good' : 'badv'">{{ verdictText }}</view>
         <view v-if="wasCorrect === false && cur._appended" class="appended-tip">已为你在本轮末尾加练 {{ cur._appended }} 道同类题</view>
         <view v-if="cur._extra && !wasCorrect && cur._saved" class="appended-tip">已加入错题本，之后会安排复习</view>
         <view v-if="!wasCorrect && reviewReasonMid(cur)" class="reasons">
@@ -61,6 +58,7 @@
           <text class="cb-s">到期 {{ celebrateN }} 道全部复习完成<template v-if="rSummary.pct !== null"> · 首答对 {{ rSummary.dueRight }} 道（{{ rSummary.pct }}%）</template></text>
           <text v-if="rSummary.dueWrong" class="cb-s">答错 {{ rSummary.dueWrong }} 道已重出巩固<template v-if="rSummary.corrected"> · 纠正 {{ rSummary.corrected }} 道</template></text>
           <text v-if="rSummary.extra" class="cb-s">加练同类题 {{ rSummary.extra }} 道 · 答对 {{ rSummary.extraRight }} 道</text>
+          <text v-if="rSummary.mastered" class="cb-s">达成掌握 {{ rSummary.mastered }} 道 · 已移到「已掌握」，不再安排复习</text>
         </template>
         <text v-else class="cb-s">{{ celebrateN }} 道到期错题全部复习完成，遗忘曲线稳住了</text>
       </view>
@@ -554,7 +552,7 @@ import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
 import { askQid, findAskSid } from '../../ask-link.js';
 import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid, reviewAskAnswer, similarSubmodule, hasSimilarPool } from '../../review-similar.js';
 import { buildReviewSnap, parseReviewSnap } from '../../review-snap.js';
-import { reviewSummary } from '../../review-summary.js';
+import { reviewSummary, reviewVerdict } from '../../review-summary.js';
 import { reviewOptions, reviewOptionsFull } from '../../review-opts.js';
 import { redoSkippedNote } from '../../book-redo-skipped.js';
 import { inlineSkipNote } from '../../paper-inline-note.js';
@@ -665,6 +663,17 @@ export default {
     },
     similarableReview() {
       return hasSimilarPool(this.cur);
+    },
+    verdictText() {
+      const c = this.cur || {};
+      return reviewVerdict({
+        extra: !!c._extra,
+        requeued: !!c._requeued,
+        wasCorrect: this.wasCorrect,
+        streak: this.streak,
+        nextDays: this.nextDays,
+        mastered: c._mastered === true,
+      });
     },
     curOpts() {
       return reviewOptions(this.cur);
@@ -1444,6 +1453,7 @@ export default {
       this.answered = r.answered;
       this.wasCorrect = r.wasCorrect;
       this.nextDays = r.nextDays;
+      this.streak = Number(this.rItems[this.rIdx]?._streak) || 0;
       this.reviewing = true;
       this.resumeInfo = null;
     },
@@ -1496,6 +1506,8 @@ export default {
         const res = await request('/api/review/' + this.cur.id, { method: 'POST', data: { correct, uid: anonUid() } });
         this.nextDays = res.next_review_days;
         this.streak = res.streak;
+        this.cur._streak = res.streak;
+        this.cur._mastered = res.mastered === true;
       } catch (e) {
         uni.showToast({ title: '记录失败：' + e.message, icon: 'none' });
       }

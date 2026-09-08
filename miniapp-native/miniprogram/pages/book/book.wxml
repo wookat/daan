@@ -25,8 +25,7 @@
         <block wx:if="{{answered}}">
           <view class="r-verdict {{wasCorrect ? 'vok' : 'vbad'}}">
             <l-icon name="{{wasCorrect ? 'circle-check' : 'circle-x'}}" size="16" tone="{{wasCorrect ? 'ok' : 'bad'}}" />
-            <text wx:if="{{rCur.extra}}">{{wasCorrect ? '答对了，这个考法稳了' : '还没稳，仔细看解析'}}</text>
-            <text wx:else>{{wasCorrect ? (rCur.requeued ? '这次答对了，本轮已纠正' : '答对了！连对 ' + rStreak + ' 次') : '又错了，看解析（稍后本轮会再出现）'}}（下次复习：{{nextDays}} 天后）</text>
+            <text>{{rVerdict}}</text>
           </view>
           <view wx:if="{{!wasCorrect && rCur.appended}}" class="appended-tip">已为你在本轮末尾加练 {{rCur.appended}} 道同类题</view>
           <view wx:if="{{!wasCorrect && !rCur.extra}}" class="reasons">
@@ -273,6 +272,7 @@
     <view class="cb-ico"><l-icon name="party-popper" size="32" tone="ok" /></view>
     <view class="cb-t">今日复习已清零！</view>
     <view class="cb-s">{{celebrateN}} 道到期错题全部复习完成，遗忘曲线稳住了</view>
+    <view wx:if="{{celebrateMastered}}" class="cb-s">达成掌握 {{celebrateMastered}} 道 · 已移到「已掌握」，不再安排复习</view>
     <view class="cb-btn"><kg-button variant="primary" size="lg" block bind:click="onCloseCelebrate">太棒了，继续</kg-button></view>
   </view>
 </t-popup>

@@ -67,6 +67,7 @@ export interface ReviewResp {
 export interface ReviewRecordResp {
   next_review_days: number;
   streak: number;
+  mastered: boolean;
 }
 
 export interface AuthResp {

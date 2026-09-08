@@ -35,6 +35,7 @@ import type { FavFolder, FavItem, Mistake } from '../../api/types';
 import { anonUid } from '../../utils/auth';
 import { md } from '../../utils/md';
 import { buildReviewSnap, parseReviewSnap, REVIEW_SNAP_KEY, type ReviewResume } from '../../utils/review-snap';
+import { reviewVerdict } from '../../utils/review-verdict';
 import { MODULE_NAMES, modName } from '../../utils/stats';
 import { syncTabBar } from '../../utils/tabbar';
 
@@ -128,6 +129,8 @@ interface RItem extends Mistake {
   extra?: boolean;
   simFetched?: boolean;
   appended?: number;
+  streak?: number;
+  masteredNow?: boolean;
 }
 
 interface RecapRow {
@@ -205,8 +208,10 @@ Page({
     wasCorrect: false,
     nextDays: 0,
     rStreak: 0,
+    rVerdict: '',
     celebrate: false,
     celebrateN: 0,
+    celebrateMastered: 0,
     reasonOpts: toOpts(REASONS),
     tabOpts: [
       { value: 'todo', label: '待掌握 0' },
@@ -877,7 +882,9 @@ Page({
     this.resetQ();
     if (r.answered) {
       this.paintOpts(r.picked || '', true);
-      this.setData({ answered: true, wasCorrect: r.wasCorrect, nextDays: r.nextDays });
+      const cur = rItems[r.rIdx];
+      const rStreak = Number(cur && cur.streak) || 0;
+      this.setData({ answered: true, wasCorrect: r.wasCorrect, nextDays: r.nextDays, rStreak, rVerdict: this.verdictFor(cur, r.wasCorrect, rStreak, r.nextDays) });
     } else if (r.picked) {
       this.paintOpts(r.picked, false);
     }
@@ -899,6 +906,18 @@ Page({
       answered: false,
       wasCorrect: false,
       nextDays: 0,
+      rStreak: 0,
+      rVerdict: '',
+    });
+  },
+  verdictFor(cur: RItem | null, wasCorrect: boolean, streak: number, nextDays: number): string {
+    return reviewVerdict({
+      extra: !!(cur && cur.extra),
+      requeued: !!(cur && cur.requeued),
+      wasCorrect,
+      streak,
+      nextDays,
+      mastered: !!(cur && cur.masteredNow),
     });
   },
   // WXML 表达式不支持方法调用（indexOf 等），选项的选中/对错态在这里算好再下发
@@ -940,18 +959,31 @@ Page({
     const cur = this.data.rCur;
     if (!cur) return;
     if (cur.extra) {
-      this.setData({ answered: true, wasCorrect: correct });
+      this.setData({ answered: true, wasCorrect: correct, rVerdict: this.verdictFor(cur, correct, 0, 0) });
       return;
     }
     const rItems = this.data.rItems;
     if (!correct && !cur.requeued) {
       rItems.push({ ...cur, requeued: true });
     }
-    this.setData({ answered: true, wasCorrect: correct, rItems });
+    this.setData({ answered: true, wasCorrect: correct, rItems, rVerdict: this.verdictFor(cur, correct, 0, 0) });
     if (!correct) this.appendSimilar(cur);
     try {
       const res = await postReviewRecord(cur.id, correct);
-      this.setData({ nextDays: res.next_review_days, rStreak: res.streak });
+      const idx = this.data.rIdx;
+      const mastered = res.mastered === true;
+      const item = this.data.rItems[idx];
+      if (item) {
+        item.streak = res.streak;
+        item.masteredNow = mastered;
+      }
+      this.setData({
+        nextDays: res.next_review_days,
+        rStreak: res.streak,
+        'rCur.streak': res.streak,
+        'rCur.masteredNow': mastered,
+        rVerdict: this.verdictFor({ ...cur, masteredNow: mastered }, correct, res.streak, res.next_review_days),
+      });
     } catch (e) {
       wx.showToast({ title: '记录失败：' + (e as Error).message, icon: 'none' });
     }
@@ -1014,9 +1046,11 @@ Page({
       this.resetQ();
       this.saveSnap();
     } else {
-      const n = this.data.rItems.length;
+      const items = this.data.rItems;
+      const n = items.length;
+      const celebrateMastered = items.filter((x) => !x.extra && x.masteredNow === true).length;
       this.exitReview();
-      this.setData({ celebrate: true, celebrateN: n });
+      this.setData({ celebrate: true, celebrateN: n, celebrateMastered });
       trackEvent('review_done_celebrate', 'book');
     }
   },
