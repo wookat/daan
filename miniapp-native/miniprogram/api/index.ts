@@ -2,6 +2,7 @@ import { request } from '../utils/request';
 import { anonUid, pkNickname } from '../utils/auth';
 import type {
   AnswerLogItem,
+  AnswerLogResp,
   AuthResp,
   CheckinBadgesResp,
   CheckinSummaryResp,
@@ -68,8 +69,8 @@ export function redoMistakes(limit = 10): Promise<QuestionsResp> {
 
 // ---------- 作答上报 ----------
 
-export function postAnswerLog(items: AnswerLogItem[]): Promise<void> {
-  return request<void>('/api/answer_log', {
+export function postAnswerLog(items: AnswerLogItem[]): Promise<AnswerLogResp> {
+  return request<AnswerLogResp>('/api/answer_log', {
     method: 'POST',
     data: { uid: anonUid(), items },
   });

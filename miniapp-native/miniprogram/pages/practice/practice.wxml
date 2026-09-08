@@ -153,6 +153,22 @@
         <l-icon name="trophy" size="16" tone="brand-text" />
         <text>本组正确率击败了 <text class="num">{{percentile}}</text>% 的刷题记录</text>
       </view>
+      <!-- 曾错题复习推进（/api/answer_log reviewed）：错题重练出三格报告，普通练习顺带答对曾错题出一行（practice.vue 同口径） -->
+      <view wx:if="{{redoReport}}" class="rr">
+        <text class="rr-t">错题重练效果</text>
+        <view class="rr-row">
+          <view class="rr-it"><text class="rr-v ok">{{redoReport.fixed}}</text><text class="rr-l">已纠正</text></view>
+          <view class="rr-it"><text class="rr-v bad">{{redoReport.still}}</text><text class="rr-l">仍错</text></view>
+          <view class="rr-it"><text class="rr-v brand">{{redoReport.mastered}}</text><text class="rr-l">达成掌握</text></view>
+        </view>
+        <text class="rr-tip">{{redoTip}}</text>
+        <kg-button variant="text" size="sm" bind:click="onGoReview">回错题本查看</kg-button>
+      </view>
+      <view wx:elif="{{fixReport}}" class="fr" hover-class="duenudge--hover" role="button" aria-label="{{fixText}}，回错题本查看" bind:tap="onGoReview">
+        <l-icon name="circle-check" size="16" tone="ok" />
+        <text class="fr-t">{{fixText}}</text>
+        <l-icon name="chevron-right" size="16" tone="muted" />
+      </view>
       <kg-button wx:if="{{wrongCount > 0}}" variant="secondary" size="md" icon="rotate-ccw" bind:click="onRedoWrong">只重练本组错题（{{wrongCount}}）</kg-button>
       <view wx:if="{{dueReview > 0}}" class="duenudge" hover-class="duenudge--hover" bind:tap="onGoReview">
         <l-icon name="alarm-clock" size="20" tone="streak" />
