@@ -391,6 +391,7 @@
         </template>
         <template v-else>
           <text class="scan-sum">{{ manualPaper.title || '试卷' }} · 卷码 {{ manualPaper.code }} · 共 {{ manualPaper.n }} 题 · 已选 {{ manualPickedCount }}</text>
+          <text v-if="manualPaper.n && paperSubmittedNote(manualPaper)" class="scan-note scan-dup">{{ paperSubmittedNote(manualPaper) }}</text>
           <text v-if="manualPaper.n && inlineSkipNote(manualPaper.inline_n)" class="scan-note">{{ inlineSkipNote(manualPaper.inline_n) }}</text>
           <text v-if="!manualPaper.n" class="manual-empty">这张卷的题目均为时政/手录题，不参与机读判分，无需在此录入；请对照卷末参考答案核对</text>
           <view v-else class="scan-list">
@@ -557,7 +558,7 @@ import { reviewSummary } from '../../review-summary.js';
 import { reviewOptions, reviewOptionsFull } from '../../review-opts.js';
 import { redoSkippedNote } from '../../book-redo-skipped.js';
 import { inlineSkipNote } from '../../paper-inline-note.js';
-import { scanPageLabel, scanPagesNote, scanDupNote, recordScanPage } from '../../paper-scan-pages.js';
+import { scanPageLabel, scanPagesNote, scanDupNote, paperSubmittedNote, recordScanPage } from '../../paper-scan-pages.js';
 import { scanRowJumpable, scanRowKey, findScanMistake, pageNFor } from '../../paper-scan-jump.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
@@ -950,6 +951,7 @@ export default {
     scanPageLabel,
     scanPagesNote,
     scanDupNote,
+    paperSubmittedNote,
     scanRowJumpable,
     scanRowKey,
     // 登录态变化（uid 已换）：清掉上一个账号的错题/到期/掌握度/AI 分析，按当前 uid 重拉
@@ -1063,7 +1065,7 @@ export default {
       if (this.manualLoading) return;
       this.manualLoading = true;
       try {
-        this.manualPaper = await request('/api/paper/' + encodeURIComponent(code));
+        this.manualPaper = await request('/api/paper/' + encodeURIComponent(code) + '?uid=' + encodeURIComponent(anonUid()));
         this.manualPicks = {};
       } catch (e) {
         uni.showToast({ title: e.message, icon: 'none', duration: 3000 });

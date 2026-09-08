@@ -3302,6 +3302,26 @@ def claim_paper_submit(uid: str, code: str, page: int, picks_hash: str) -> float
     return float(prev["created_at"]) if prev else now
 
 
+def paper_submitted_pages(uid: str, code: str) -> list[dict]:
+    """该 uid 对该卷已判过分的页（手动录入整卷 page 0、扫描答题卡 1..P）：每页首次/最近提交时刻与不同作答次数；表未建（从未有人判过分）返回空。"""
+    if not uid or not code:
+        return []
+    conn = get_conn()
+    try:
+        rows = conn.execute(
+            "SELECT page, MIN(created_at) AS first_at, MAX(created_at) AS last_at, COUNT(*) AS n "
+            "FROM paper_submits WHERE uid=? AND code=? GROUP BY page ORDER BY page",
+            (uid, code),
+        ).fetchall()
+    except sqlite3.OperationalError:
+        rows = []
+    conn.close()
+    return [
+        {"page": int(r["page"]), "first_at": float(r["first_at"]), "last_at": float(r["last_at"]), "n": int(r["n"])}
+        for r in rows
+    ]
+
+
 def get_paper_export(code: str) -> dict | None:
     conn = get_conn()
     try:
