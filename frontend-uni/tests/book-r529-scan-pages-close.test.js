@@ -35,11 +35,11 @@ describe('scanPagesNote', () => {
 
 describe('错题本接入', () => {
   it('结果 sheet 标题用 scanPageLabel，多页说明行在 inline 说明行之前', () => {
-    expect(BOOK).toContain("import { scanPageLabel, scanPagesNote } from '../../paper-scan-pages.js';");
+    expect(BOOK).toMatch(/import \{ scanPageLabel, scanPagesNote[^}]*\} from '\.\.\/\.\.\/paper-scan-pages\.js';/);
     expect(BOOK).toContain('    inlineSkipNote,\n    scanPageLabel,\n    scanPagesNote,\n');
     expect(BOOK).toContain("卷码 {{ scanResult.code }}{{ scanPageLabel(scanResult) ? ' · ' + scanPageLabel(scanResult) : '' }} · 已作答");
     expect(BOOK).toContain(
-      '<text v-if="scanPagesNote(scanResult)" class="scan-note">{{ scanPagesNote(scanResult) }}</text>\n' +
+      '<text v-if="scanPagesNote(scanResult, scanAcc)" class="scan-note">{{ scanPagesNote(scanResult, scanAcc) }}</text>\n' +
         '          <text v-if="inlineSkipNote(scanResult.inline_n)" class="scan-note">{{ inlineSkipNote(scanResult.inline_n) }}</text>',
     );
     expect(BOOK).not.toContain("' · 第 ' + scanResult.page + ' 页'");

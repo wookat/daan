@@ -415,14 +415,15 @@
       <kg-sheet :model-value="scanOpen && !!scanResult" :title="'对答案结果 · ' + ((scanResult && scanResult.title) || '试卷')" @update:model-value="(v) => { if (!v) closeScan(); }">
         <template v-if="scanResult">
           <text class="scan-sum">卷码 {{ scanResult.code }}{{ scanPageLabel(scanResult) ? ' · ' + scanPageLabel(scanResult) : '' }} · 已作答 {{ scanResult.answered }}/{{ scanResult.total }} · 答对 <text class="scan-good num">{{ scanResult.correct }}</text> 题{{ scanResult.saved ? ' · 已记入做题记录' : '' }}</text>
-          <text v-if="scanPagesNote(scanResult)" class="scan-note">{{ scanPagesNote(scanResult) }}</text>
+          <text v-if="scanPagesNote(scanResult, scanAcc)" class="scan-note">{{ scanPagesNote(scanResult, scanAcc) }}</text>
           <text v-if="inlineSkipNote(scanResult.inline_n)" class="scan-note">{{ inlineSkipNote(scanResult.inline_n) }}</text>
           <view class="scan-list">
-            <view v-for="r in scanResult.items" :key="r.no" class="scan-row">
+            <view v-for="r in scanResult.items" :key="r.no" class="scan-row" :class="{ jump: scanRowJumpable(scanResult, r) }" :role="scanRowJumpable(scanResult, r) ? 'button' : null" @click="scanRowJump(r)">
               <text class="scan-no num">{{ r.no }}</text>
               <text class="scan-pick" :class="{ good: r.correct, bad: r.status === 'ok' && !r.correct }">{{ r.status === 'blank' ? '未涂' : r.status === 'multi' ? '多涂 ' + r.picked : r.picked }}</text>
               <text class="scan-ans">答案 {{ r.answer || '—' }}</text>
               <text class="scan-mark">{{ r.correct ? '✓' : r.status === 'ok' ? '✗' : '—' }}</text>
+              <text v-if="scanRowJumpable(scanResult, r)" class="scan-jump">看错题 ›</text>
             </view>
           </view>
         </template>
@@ -555,7 +556,8 @@ import { reviewSummary } from '../../review-summary.js';
 import { reviewOptions, reviewOptionsFull } from '../../review-opts.js';
 import { redoSkippedNote } from '../../book-redo-skipped.js';
 import { inlineSkipNote } from '../../paper-inline-note.js';
-import { scanPageLabel, scanPagesNote } from '../../paper-scan-pages.js';
+import { scanPageLabel, scanPagesNote, recordScanPage } from '../../paper-scan-pages.js';
+import { scanRowJumpable, findScanMistake, pageNFor } from '../../paper-scan-jump.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 // 只描述作答形式、不是题型/考点的 question_type（时政题库存的是「单选」）：标签退回模块名
@@ -617,6 +619,7 @@ export default {
       scanning: false,
       scanOpen: false,
       scanResult: null,
+      scanAcc: {},
       manualOpen: false,
       manualCode: '',
       manualPaper: null,
@@ -945,6 +948,7 @@ export default {
     inlineSkipNote,
     scanPageLabel,
     scanPagesNote,
+    scanRowJumpable,
     // 登录态变化（uid 已换）：清掉上一个账号的错题/到期/掌握度/AI 分析，按当前 uid 重拉
     resetAccountState() {
       this.items = [];
@@ -961,6 +965,8 @@ export default {
       this.batchMode = false;
       this.selIds = {};
       this.pageN = 20;
+      this.scanAcc = {};
+      this._pendingScanQid = 0;
       this.reviewing = false;
       this.resumeInfo = null;
       setBookBadge(0);
@@ -1072,6 +1078,45 @@ export default {
       this.scanOpen = false;
       this.load();
     },
+    // 「✗」行 → 关结果 sheet → 列表重拉后定位并展开同 question_id 的错题卡（走既有卡片详情，不新造路由）
+    scanRowJump(r) {
+      if (!scanRowJumpable(this.scanResult, r)) return;
+      this._pendingScanQid = r.question_id;
+      trackEvent('book_scan_jump', this.scanResult.code || '', String(r.question_id));
+      this.closeScan();
+    },
+    async applyPendingScanJump() {
+      const qid = this._pendingScanQid;
+      if (!qid) return;
+      this._pendingScanQid = 0;
+      const m = findScanMistake(this.items, qid);
+      if (!m) {
+        uni.showToast({ title: '错题本里未找到这道题', icon: 'none' });
+        return;
+      }
+      this.tab = m.mastered ? 'done' : 'todo';
+      this.kw = '';
+      if (!this.shownItems.includes(m)) {
+        this.filterMod = '';
+        this.kpFilter = '';
+        this.kp3Filter = '';
+        this.srcFilter = '';
+        this.pidFilter = 0;
+        this.rzFilter = '';
+      }
+      await this.$nextTick();
+      this.pageN = pageNFor(this.shownItems.indexOf(m), this.pageN);
+      this.kbId = m.id;
+      if (!m.open) this.toggleCard(m);
+      await this.$nextTick();
+      // #ifdef H5
+      const el = typeof document !== 'undefined' && document.getElementById('mc-' + m.id);
+      if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      // #endif
+      // #ifndef H5
+      uni.pageScrollTo({ selector: '#mc-' + m.id, duration: 200 });
+      // #endif
+    },
     async manualSubmit() {
       if (this.manualSubmitting || !this.manualPickedCount) return;
       this.manualSubmitting = true;
@@ -1096,6 +1141,7 @@ export default {
           this.scanning = true;
           try {
             const d = await scanSheet({ filePath: res.tempFilePaths[0], uid: anonUid() });
+            this.scanAcc = recordScanPage(this.scanAcc, d);
             this.scanResult = d;
             this.scanOpen = true;
           } catch (e) {
@@ -1270,6 +1316,7 @@ export default {
         }
         this.offlineView = false;
         this.applyPendingKp();
+        this.applyPendingScanJump();
         cacheMistakes(d.items, anonUid());
         this.loadMastery();
         setBookBadge(this.dueTotal);
@@ -1288,6 +1335,7 @@ export default {
           this.loadErr = e.message || '网络异常';
           uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
         }
+        this._pendingScanQid = 0;
       }
       this.loading = false;
     },
@@ -1860,7 +1908,7 @@ export default {
 .kpchip { min-height: 40px; padding: 0 var(--sp-12); }
 
 /* 错题卡 */
-.mcard { margin-bottom: var(--card-gap); }
+.mcard { margin-bottom: var(--card-gap); scroll-margin-top: calc(var(--window-top, 0px) + var(--sp-8)); }
 .mcard.kbf { outline: 2px solid var(--brand); outline-offset: -2px; }
 .mhead { display: flex; align-items: center; gap: var(--sp-8); flex-wrap: wrap; }
 .mright { margin-left: auto; }
@@ -1952,6 +2000,8 @@ export default {
 .scan-pick.bad { color: var(--bad); }
 .scan-ans { width: 72px; color: var(--ink-3); }
 .scan-mark { width: 24px; text-align: right; color: var(--ink-4); }
+.scan-row.jump { min-height: var(--hit-min); }
+.scan-jump { margin-left: var(--sp-8); color: var(--brand); white-space: nowrap; }
 .manual-row { display: flex; align-items: center; gap: var(--sp-8); min-height: var(--hit-min); padding: var(--sp-4) 0; border-bottom: 1px solid var(--line); }
 .manual-opt { flex: 1; text-align: center; min-height: 36px; line-height: 36px; border: 1px solid var(--line); border-radius: var(--r-xs); font-size: var(--fs-body); color: var(--ink-2); }
 .manual-opt.on { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
