@@ -47,10 +47,25 @@
 ## 3. 本地门
 pytest 623（+2）/ ruff / pyright 0（`--pythonpath ~/venv-kg/bin/python`）；vitest 151 文件 1020（+13）/ eslint + tokens + edge 0 / build:h5；miniapp tsc 0 / eslint 0；`git diff --check` 空。
 
-## 4. 生产（发版与复验回填见 handoff R546）
-待 `deploy_h5.sh` + testing agent 黑盒：深链 `?mod=&kp=&qt=` 恢复 → 重练 → 返回地址栏仍含筛选 → 刷新仍在；复习 POST `secs` ∈ [1,3600]；列表卡连对标签随 streak 1→2→答错消失；375/1440；console/runtime/HTTP 分类计数；测试 uid 清零。
+## 4. 生产
+- 发版 `deploy_h5.sh --skip-build` `a707322a → 0a930550`（`~/r546/deploy.log`），回归全 200，bundle `index-CBJ12sqm.js`；Lighthouse `/` a11y 部署时 0.94、独立重跑 1.00（`~/r546/lh-home.json`），R545 同形态判瞬时。#686 已合入 main `f1b37191`。
+- 黑盒复验（testing agent，uid `test-r546-verify-3cfcd05ff5`，375×812 / 1440×900，报告 `~/r546-verify/R546-0a930550-production-verification.md`，录像 `~/screencasts/r546-0a930550-production/`）：
+
+| 项 | 结果 | 证据 |
+|---|---|---|
+| `mod=shuliang` / `kp+qt` 深链 → 重练 → 页内返回 → 刷新 | PASS ×2 视口 | 筛选与卡片数保留（`mod-reload-*.png`、`fine-return-375.png`、`fine-reload-1440.png`） |
+| 浏览器后退 / 复习退出 / 讨论页 navigateTo 返回 | PASS | 同样保留，无空白/死循环（`history6-375.png`、`history4-1440.png`） |
+| 复习 `secs` | PASS | 第一题 ≈5.5s → `secs:6`、第二题 ≈3.5s → `secs:4`（非累计）；`/api/attempts` `source=review` 行、`review_log.via=review`、卡片「用时 6s/4s」一致（`request-evidence.json`、`ui-timing.json`） |
+| 列表卡「连对 n/6」 | PASS | 0 隐藏 → 1/6 → 2/6 → 答错清零隐藏；非零 streak 卡标掌握后只显「已掌握」（`streak2-*.png`、`streak-reset-375.png`、`mastered-1440.png`）；375 多标签无溢出 |
+| 回归 | PASS | 1317 响应 = 1277×200 + 40×304；HTTP 失败/console/runtime/rejection 0；取消 17（15 图 + 2 XHR）单列；付费 AI 0 |
+| 清理 | PASS | 41 表精确删 23 行、`test-r546-%` 0 残留、`explain_cache` 82 行全表 SHA-256 前后一致 |
+
+- **既有/独立发现（非本轮回归，双视口复现）**：
+  - R546-1 P3：底部 tab 统计 → 错题本 `switchTab` 走无 query 路由且页面重建，筛选与 query 一起重置（375 2→5 题、1440 2→4 题，`stats-return-lost-*.png`）。筛选只活在 URL，切 tab 不带；候选修法 `onHide` 存 / `onLoad` 无 query 回填 sessionStorage。
+  - R546-2 P3：浏览器「前进」回到重练页变默认「言语理解 1/10」（`forward-redo-lost-375.png`）；redo 上下文不随 history 恢复。
 
 ## 5. 如实
 - 每日一练 `mid` 无生产样本可判，**未立项未改动**。
-- 小程序改动（secs / 连对标签）未上真机（R536-1 累计）。
+- 小程序改动（secs / 连对标签）未上真机（R536-1 累计），UNTESTED。
+- 连对 3–5 逐档与自然连对六次自动掌握未在生产走（单测覆盖）；异常 `secs` 只有单测。
 - `MASTER_STREAK=6` 是前端常量镜像服务端 `REVIEW_INTERVALS_DAYS` 长度，服务端改档位需同步两处（H5 / 小程序）。

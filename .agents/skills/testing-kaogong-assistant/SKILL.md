@@ -5,6 +5,12 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R546 补充（testing agent）— 错题本 URL 同步三路径 / 复习 `secs` 证据链 / 列表卡「连对 n/6」
+- **URL 回归分三条路径分别取证**：navigateTo/navigateBack 页内返回、tabBar `switchTab`（统计→错题本）、浏览器 back/forward。每条都记前后 URL、实际卡片数、`history.state`，不以一条外推另一条。R546 只修页内返回（`onShow` 同步 + `replaceState` 保留 router state）；**切 tab 走无 query 路由且页面重建，筛选与 query 一起重置是既有 P3**；浏览器「前进」回到重练页会变默认「言语 1/10」（redo 上下文未随 history 恢复）也是既有候选，单列不计回归。改掌握态后列表基准要随待掌握数据更新再数卡片。
+- **复习耗时证据链四点串联**：每题按「展示/开始 → 点击」边界记近似间隔，第二题用不同等待并在结果页停留，验非累计（约 5.5s → `secs:6`、3.5s → `secs:4`）；串 `POST /api/review/{mid}` body `secs` → `/api/attempts` `source=review` 行 `secs` → `review_log.via=review` → 卡片「用时 Ns」截图。`via=answer` 的练习连带推进行不是复习耗时行。
+- **连对标签强断言**：0 隐藏 → 答对 1 次「连对 1/6」→ 2 次「连对 2/6」→ 答错清零隐藏；「已掌握隐藏」要用**仍有非零 streak** 的卡去标掌握，并只读核 `mastered=1 AND review_streak>0`，别只验零值隐藏。同日第二次复习不在到期列表，用重练 answer_log 带 `mid` 推进 streak。
+- 清理顺序：停录屏 → 关隔离 context → 精确 UID 删除（41 张 uid 表）→ 独立只读第二次核全前缀零残留 + `explain_cache` 全表 SHA-256 前后一致（不只比行数）→ 结束遗留 viewport-holder 进程。
+
 ## R545 补充（testing agent）— 题型组 `type_group` / `redo?sub=` / 细分 `qt=`
 - **生产 taxonomy 选样先只读**：查 `questions.submodule / question_type / disabled` 再定 fixture，不假设 submodule 保留别名——生产 `submodule` 已基本统一到规范组名（`排列组合与概率` 6204 条，`'排列组合'` 0 条），碎片化来自 `mistakes.question_type`（`数量关系-排列组合` 去前缀 → `排列组合`）。别名分支无生产样本时列 UNTESTED，**不得改题库造覆盖**。可用样本：qid 63（排列组合）/ 64、381（概率问题）/ 8223（计算问题，作外组对照）；手录错题不传 `question_id`，选另一模块便于模块筛选对照。
 - **三个名字分开取证**：`questions.question_type` 原值（带模块前缀）、`mistakes.question_type` 存储值（已去前缀，`redo?qtype=` 用它）、`type_group` 规范组名（`redo?sub=` 用它）。保存 UI 真实请求，分别核 `sub` 单独、`sub+qtype`、`sub+module`、三者叠加；未知组回空、空串/空白/41 字 400。
