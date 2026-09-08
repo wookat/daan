@@ -168,7 +168,7 @@
 - [ ] [miniapp·P3·1 行] `api/exam.ts:199`（downloadFile fail `err.errMsg || '网络错误'`）与 `api/social.ts:74`（上传 `'上传失败'`）仍透出原始 errMsg，不在 W12D-2 files 范围；后续顺手改 `netFailMessage(err.errMsg, '上传失败，请检查网络后重试')`。
 - [ ] [miniapp·P3·真机] 11 处静态页卡 `raised → flat`（contest/exam list/discuss/plaza/reminders）与 `reminders.wxml:36` tip 卡 body-class（W10 #106）：W12D-2 只做 token 层级对齐，页面级改 flat 待真机截图定级后一次做。
 - [ ] [miniapp·待真机] `pkgExam/shenlun.wxml` 无 `.page-scroll` 容器（app.wxss 注明页面依赖 navbar+.page-scroll 分配高度）：仅源码证据，需模拟器确认滚动/底部遮挡后再立项。
-- [ ] [miniapp·待证据] profile 用 `fetchMistakes` 回包 `items.length` 显示错题数而接口默认 `limit=500`：>500 条用户才失真，生产是否有此量级未核（不查真人数据），待有证据再补 total 字段消费。
+- [x] [miniapp·待证据] profile 用 `fetchMistakes` 回包 `items.length` 显示错题数而接口默认 `limit=500`：>500 条用户才失真，生产是否有此量级未核（不查真人数据），待有证据再补 total 字段消费。→ **W14-B2 已修**：`/api/growth.mistakes{total,mastered,pending}` 聚合，H5 profile/stats + 小程序 profile 不再拉 `/api/mistakes` 计数（w14.md §3）。
 - [ ] [backend·待量化] `db._answer_state` 对 `/api/exam/papers?uid=` 全表扫 uid 的 answer_log：生产 5 次探针 0.22–0.59 s（49.6 KB 回包），无 uid 0.22–0.24 s，未达 P1 阈值且样本为 probe uid；待真实重度用户 uid 的服务端计时再定。
 - [ ] [backend·待量化] `_judge_paper` 逐题 `save_mistake` 各自开/提交连接（60 错题→60 次事务）：W10 锁竞争疑点未量化；mistakes 写路径属并行热点暂不动。
 - [ ] [content·沿用 W12-C] R8–R14（合成题族/克隆题分发互斥、hs 答题参考拒收、伪排错/整段复用软标签、空态文案）仍是文档建议未实现，归 content 轮。
@@ -181,10 +181,22 @@
 ## Deferred（W13 追加，详见 w13.md §6；W13 生产部署与回归已完成，见 w13.md §7，生产 rev `9b4a511c`）
 
 - [ ] [流程·P1] W13 部署后回归：`POST /api/questions/hs_import` 无 token 仍 401；`GET /api/daily_set/board` / `/api/exam/rank` / PK 周榜 name 全为「考友XXXX」或昵称（不再露 uid 前 6 位）；生产 `getComputedStyle(document.body).fontFamily` 为 Inter 栈（部署前实测 `"Times New Roman"`）；做题/报告解析卡不再出现「来源：original」。
-- [ ] [content·P1] R12 合成题族 3,130（全 ziliao）/ R13 克隆题 13,996（shuliang 10,942）存量占比高：先按 module 各抽 30 题人工判误报率，再决定是否加 `questions.synthetic_family/clone_of` 列并与 `/api/questions` 抽题互斥；不得在抽检前批量下架。
+- [x] [content·P1] R12 合成题族 3,130（全 ziliao）/ R13 克隆题 13,996（shuliang 10,942）存量占比高：先按 module 各抽 30 题人工判误报率，再决定是否加 `questions.synthetic_family/clone_of` 列并与 `/api/questions` 抽题互斥；不得在抽检前批量下架。→ **W14-C 抽检 148 对误报 1.4%（w14c-content-human.md）；W14-C1 以 `quality.family_key` 零 schema 在普通 `/api/questions` 抽题时互斥**（持久化列转 W14 deferred）。
 - [ ] [content·P2] R9 伪排错句存量 3,777 / R10 整段复用 8,647：批量重写依赖 LLM key（未配置）；先用台账样本做 prompt 改写示范 + 人工 20 条对照。
-- [ ] [content·P3] R8 存量 25 条（措辞精确，hard 规则）：可直接人工改写，随下一内容轮处理。
+- [x] [content·P3] R8 存量 25 条（措辞精确，hard 规则）：可直接人工改写，随下一内容轮处理。→ **W14-C1 交付 `w14c-r8-ledger.md` 25/25 逐题处置台账**（仅 dry-run，实际 PATCH 应用转 W14 deferred）。
 - [ ] [backend·P3·沿用 W12] `db.save_mistake` 存储 uid 未 strip 与读侧 `strip()` 不一致：`db.clean_uid` 已提供统一入口，下次触碰 mistakes 写路径时接入。
 - [ ] [backend·P3] `_RATE` sweep 仍按历史最大窗口回收（W12 deferred），评估 per-key window。
 - [ ] [user-journey·待产品决策] W13 user-journey 19 条中的新需求（备考小白首访引导、冲刺期错题优先入口、碎片时间「5 分钟一组」）需竞品证据与最小实现方案后立项，本轮不动。
 - [ ] [miniapp] W13 小程序零改动；W12/R545/R546 小程序真机清单（preloadRule 体积、断网中文、登录合并失败 toast、raised 深浅、连对进度）仍待开发者工具登录。
+
+## Deferred（W14 追加，详见 w14.md §6；分支 `devin/wf-w14-integration` 未建 PR/未部署）
+
+- [ ] [流程·P1] W14 部署后生产回归（`test-w14-*` uid，用后清理）：`GET /api/growth?uid=` 含 `mistakes{total,mastered,pending}` 且与 `/api/mistakes` 条数一致；H5 profile/stats 页 Network 无 `/api/mistakes` 列表请求；`GET /api/checkin/summary` `total == sum(days.n)`；`/api/questions?module=shuliang&limit=10` 连抽 20 组 `quality.family_key` 组内重复 0，`grouped=1` / `reinforce=1` 回包形状不变；容器日志 0 Traceback。
+- [ ] [content·P1] `python backend/tools/content_gate_dryrun.py --db <生产只读副本> --dist-sample 20` 逐模块出「互斥前/后」重复率（本机种子库基线仅 0.2%，不代表 109k 生产库）；据此决定是否加 `questions.synthetic_family/clone_of` 持久化列并让 SEO 相似题列表（`seo/pages.py` 同族串）复用 `family_key`。
+- [ ] [content·P1·待人工] W14-C 一手发现的题目内容缺陷：R12 合成题族答案偏 B（比重子题 B 87.6%，可盲选）、yanyu「做了统计/通报」模板 1,374 条多正确项、材料缺数据 11 条（w14c-content-human.md §1）。分发互斥不解决这些，需改答案/选项或 LLM 重写（key 未配）；先按台账人工处置样本 30 条再定批量方案。
+- [ ] [content·P2·待负责人] `w14c-r8-ledger.md` 25 条「最终文本」用 `PATCH /api/admin/questions/{qid}`（`X-Admin-Token`）逐题应用；q155207 需同时改 answer B→D；类型④ 缺图/缺表 11 条回原卷补齐，补不到再单题 `disabled=1`（不批量下架）。
+- [ ] [backend·P3] `_draw_questions` 极端小池（某 tag3 只剩同族题）会回填同族保量，属设计取舍；`--dist-sample --tag3` 抽到此类池时记录，若生产常见再考虑降 limit 提示。
+- [ ] [miniapp·真机] W14-B2 小程序 profile 错题数/勋章改走 `growth.mistakes`，仅 tsc + 静态核对；真机/模拟器清单追加：profile 顶栏错题数、「斩题十道」勋章计数、老后端（无 `mistakes` 字段）时沿用本机 pstats 不闪 0。
+- [ ] [工程·P2] `frontend-uni/tests/book-r541-review-mastered-verdict.test.js:106` 源锁在 main 上已随 R549（#695）失效（小程序 `book.ts` import 多了 `nextReviewText`），本轮顺手更新；R 类 PR 合入前应本地跑全量 vitest（GitHub Actions 禁用，无兜底）。
+- [ ] [backend·P3] `_judge_paper` 逐题事务 / `_answer_state` 全表扫 / `stats_bundle` 扇出合并：W12 待量化项沿用，B1/B2 未触碰。
+- [ ] [W9–W13 既有 deferred 原样保留] W13 部署后回归清单（已完成项见 w13.md §7）、R9/R10 存量重写待 LLM key、`save_mistake` uid strip、`_RATE` sweep、user-journey 三项待产品决策、小程序真机清单 —— 不重复立项。
