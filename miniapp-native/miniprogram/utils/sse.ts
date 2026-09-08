@@ -1,7 +1,7 @@
 // SSE 流式读取（对齐 frontend-uni/src/api-policy.js parseSseEvents + api.js makeUtf8Decoder/feedSse）
 // 小程序无 fetch 流 / TextDecoder：用 wx.request enableChunked + onChunkReceived，增量 UTF-8 解码后按空行切事件。
 
-import { BASE_URL } from './request';
+import { BASE_URL, netFailMessage } from './request';
 
 export interface SseEvent {
   type: string;
@@ -141,7 +141,7 @@ export function streamPost<M>(opts: StreamPostOptions<M>): Promise<SseState<M>> 
         }
         resolve(state);
       },
-      fail: (err) => fail(new StreamUnsupportedError(err.errMsg || '网络错误')),
+      fail: (err) => fail(new StreamUnsupportedError(netFailMessage(err && err.errMsg))),
     });
     if (!task || typeof task.onChunkReceived !== 'function') {
       fail(new StreamUnsupportedError('当前基础库不支持分块读取'));

@@ -237,3 +237,76 @@ def test_push_subscribe_anon_uid_unaffected(client, monkeypatch):
         assert _push_rows(ANON_UID) == 1
     finally:
         _push_cleanup()
+
+
+# ---- W12D-1：handler 普遍 uid.strip()[:64] 后查库，守卫对原串正则 → 前后空白越过 owns_uid（生产 %20u999999999 → 200）----
+PADDED_UIDS = (" " + ACCOUNT_UID, ACCOUNT_UID + " ", f" {ACCOUNT_UID} ", "\t" + ACCOUNT_UID + "\n")
+
+
+@pytest.mark.parametrize("padded", PADDED_UIDS, ids=["lead", "trail", "both", "tab-nl"])
+def test_is_account_uid_ignores_surrounding_whitespace(padded):
+    assert auth_mod.is_account_uid(padded) is True
+    assert auth_mod.owns_uid(padded, None) is False
+    assert auth_mod.is_account_uid(" anon-x") is False
+    assert auth_mod.owns_uid(" anon-x", None) is True
+
+
+def test_query_padded_account_uid_without_token_403(client):
+    r = client.get(f"/api/mistakes?uid=%20{ACCOUNT_UID}")
+    assert r.status_code == 403, r.text
+    assert r.json()["detail"] == DENIED
+    r = client.post(f"/api/review/1?uid={ACCOUNT_UID}%20", json={"correct": True})
+    assert r.status_code == 403, r.text
+
+
+def test_json_body_padded_account_uid_without_token_403(client):
+    before = _mistake_count(ACCOUNT_UID)
+    r = client.post("/api/mistakes", content=_mistake_body(f" {ACCOUNT_UID} "), headers={"Content-Type": "application/json"})
+    assert r.status_code == 403, r.text
+    assert r.json()["detail"] == DENIED
+    assert _mistake_count(ACCOUNT_UID) == before
+
+
+def test_multipart_scan_sheet_padded_account_uid_without_token_403(client, monkeypatch):
+    def _boom(_raw):
+        raise AssertionError("OMR 不应在守卫拒绝后执行")
+
+    monkeypatch.setattr(omr, "recognize", _boom)
+    r = client.post(
+        "/api/scan_sheet",
+        data={"uid": " " + ACCOUNT_UID},
+        files={"image": ("a.png", b"\x89PNG\r\n\x1a\nfake", "image/png")},
+    )
+    assert r.status_code == 403, r.text
+    assert r.json()["detail"] == DENIED
+
+
+def test_push_subscribe_padded_account_uid_without_token_403(client, monkeypatch):
+    _vapid_on(monkeypatch)
+    before = _push_rows(ACCOUNT_UID)
+    r = client.post("/api/push/subscribe", json=_push_sub(" " + ACCOUNT_UID))
+    assert r.status_code == 403, r.text
+    assert r.json()["detail"] == DENIED
+    assert _push_rows(ACCOUNT_UID) == before
+
+
+def test_padded_own_uid_with_token_and_padded_anon_uid_unchanged(client, monkeypatch):
+    token, uid = _register(client, "13900000350")
+    auth = {"Authorization": f"Bearer {token}"}
+    padded_anon = " anon-x-w12d1"
+    try:
+        r = client.post("/api/mistakes", content=_mistake_body(f" {uid} "), headers={**auth, "Content-Type": "application/json"})
+        assert r.status_code == 200, r.text
+        assert r.json()["id"]
+        r = client.get(f"/api/mistakes?uid=%20{uid}", headers=auth)
+        assert r.status_code == 200, r.text
+        r = client.post("/api/review/1?uid=%20" + uid, json={"correct": True}, headers=auth)
+        assert r.status_code != 403, r.text
+
+        r = client.post("/api/mistakes", content=_mistake_body(padded_anon), headers={"Content-Type": "application/json"})
+        assert r.status_code == 200, r.text
+        r = client.get(f"/api/mistakes?uid=%20{padded_anon.strip()}")
+        assert r.status_code == 200, r.text
+    finally:
+        for u in (uid, f" {uid} ", padded_anon, padded_anon.strip()):
+            _cleanup(u)

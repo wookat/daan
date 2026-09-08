@@ -12,7 +12,7 @@
 .kg-card--p16 { padding: var(--card-pad); }
 .kg-card--p12 { padding: var(--sp-12); }
 .kg-card--flat { }
-.kg-card--raised { box-shadow: var(--sh-2); }
+.kg-card--raised { box-shadow: var(--sh-1); }
 .kg-card--soft { --kg-surface: var(--fill); }
 .kg-card--hover { --kg-surface: var(--fill); }
 .kg-card.is-selected {

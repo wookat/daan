@@ -1,6 +1,18 @@
 import { authLogin, authRegister, authWxLogin, mergeAnon, trackEvent } from '../../api/index';
 import { setAuth } from '../../utils/auth';
 
+// 与 H5 pkgA/user/login.vue MERGE_FAIL_TIP 同文案：失败不阻断登录，anonUid 保留，下次登录再合并
+const MERGE_FAIL_TIP = '已登录，但本机记录合并失败；退出后重新登录会再次合并';
+
+async function mergeAnonWithToast(anon: string): Promise<void> {
+  try {
+    await mergeAnon(anon);
+    wx.showToast({ title: '本机记录已合并到账号', icon: 'success', duration: 2000 });
+  } catch (e) {
+    wx.showToast({ title: MERGE_FAIL_TIP, icon: 'none', duration: 2500 });
+  }
+}
+
 Page({
   data: {
     mode: 'login' as 'login' | 'register',
@@ -21,12 +33,7 @@ Page({
       const r = await authWxLogin(code);
       setAuth(r.token, r.user);
       if (anon && anon !== r.user.uid) {
-        try {
-          await mergeAnon(anon);
-          wx.showToast({ title: '本机记录已合并到账号', icon: 'success', duration: 2000 });
-        } catch (e) {
-          /* 合并失败不阻断登录 */
-        }
+        await mergeAnonWithToast(anon);
       } else {
         wx.showToast({ title: '登录成功', icon: 'success' });
       }
@@ -76,12 +83,7 @@ Page({
         }
       }
       if (anon && anon !== r.user.uid) {
-        try {
-          await mergeAnon(anon);
-          wx.showToast({ title: '本机记录已合并到账号', icon: 'success', duration: 2000 });
-        } catch (e) {
-          /* 合并失败不阻断登录 */
-        }
+        await mergeAnonWithToast(anon);
       } else {
         wx.showToast({ title: mode === 'login' ? '登录成功' : '注册成功', icon: 'success' });
       }
