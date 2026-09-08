@@ -37,20 +37,35 @@ export function scanAllPagesSummary(acc, r) {
   return sum;
 }
 
+// 秒级时间戳 → 「今天 HH:MM」/「M月D日 HH:MM」；无效返回 fallback。
+export function scanWhen(t, now = Date.now(), fallback = '此前') {
+  const ts = Number(t) || 0;
+  if (ts <= 0) return fallback;
+  const d = new Date(ts * 1000);
+  const hm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  const today = new Date(now);
+  const sameDay = d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
+  return (sameDay ? '今天 ' : d.getMonth() + 1 + '月' + d.getDate() + '日 ') + hm;
+}
+
 // 后端对同 uid 同卷同页完全相同的作答只落库一次（dup=true, dup_at=首次时刻）：重扫同一张卡 / 重复交卷不再翻倍做题记录、不打回复习进度。
 export function scanDupNote(r, now = Date.now()) {
   if (!r || !r.dup) return '';
   const what = Number(r.page) > 0 ? '这一页' : '这份答案';
-  const t = Number(r.dup_at) || 0;
-  let when = '此前';
-  if (t > 0) {
-    const d = new Date(t * 1000);
-    const hm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-    const today = new Date(now);
-    const sameDay = d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
-    when = (sameDay ? '今天 ' : d.getMonth() + 1 + '月' + d.getDate() + '日 ') + hm;
-  }
-  return what + '已于 ' + when + ' 判分并记入做题记录；本次答案完全相同，未重复记录，复习进度不受影响';
+  return what + '已于 ' + scanWhen(r.dup_at, now) + ' 判分并记入做题记录；本次答案完全相同，未重复记录，复习进度不受影响';
+}
+
+// 录入层：paper/{code}?uid= 回包 submitted_pages（该账号对该卷已判过分的记录：手动录入整卷 page 0、扫描答题卡 1..P）
+// → 进层即知已判过，不必录完再被告知 dup。
+export function paperSubmittedNote(p, now = Date.now()) {
+  const sp = (p && Array.isArray(p.submitted_pages) && p.submitted_pages) || [];
+  if (!sp.length) return '';
+  const label = (e) => {
+    const page = Number(e.page) || 0;
+    const n = Number(e.n) || 0;
+    return (page > 0 ? '答题卡第 ' + page + ' 页' : '手动录入') + ' ' + scanWhen(e.last_at || e.first_at, now) + (n > 1 ? '（' + n + ' 次不同作答）' : '');
+  };
+  return '这份卷你已判过分：' + sp.map(label).join(' · ') + '；再次交卷时作答完全相同不会重复记录，有改动会记为新的作答';
 }
 
 export function scanPagesNote(r, acc) {

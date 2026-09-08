@@ -57,7 +57,7 @@ describe('scanRowKey：v-for key 带可跳态（R531b 生产一手：同题号�
 
 describe('错题本接入', () => {
   it('结果 sheet 在汇总行下、页数说明行上出 scan-dup 说明行；import 与 methods 接入', () => {
-    expect(BOOK).toContain("import { scanPageLabel, scanPagesNote, scanDupNote, recordScanPage } from '../../paper-scan-pages.js';");
+    expect(BOOK).toContain("import { scanPageLabel, scanPagesNote, scanDupNote, paperSubmittedNote, recordScanPage } from '../../paper-scan-pages.js';");
     expect(BOOK).toContain(
       '<text v-if="scanDupNote(scanResult)" class="scan-note scan-dup">{{ scanDupNote(scanResult) }}</text>\n' +
         '          <text v-if="scanPagesNote(scanResult, scanAcc)" class="scan-note">{{ scanPagesNote(scanResult, scanAcc) }}</text>',

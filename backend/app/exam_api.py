@@ -59,10 +59,11 @@ def api_export_pdf(body: dict, request: Request):
 
 
 @router.get("/api/paper/{code}")
-def api_paper_info(code: str):
+def api_paper_info(code: str, uid: str = ""):
     paper = db.get_paper_export(code.strip().upper()[:16])
     if not paper:
         raise HTTPException(404, "未找到该卷码对应的导出记录，请核对卷面右上角/封面的卷码")
+    uid = str(uid or "").strip()[:64]
     return {
         "code": paper["code"],
         "title": paper.get("title"),
@@ -70,6 +71,7 @@ def api_paper_info(code: str):
         "pages": omr.sheet_pages(len(paper["question_ids"])),
         "inline_n": paper.get("inline_n") or 0,
         "created_at": paper.get("created_at"),
+        "submitted_pages": db.paper_submitted_pages(uid, paper["code"]) if uid else [],
     }
 
 def _grade(picked_raw, answer_raw) -> tuple[str, str, str, bool]:
