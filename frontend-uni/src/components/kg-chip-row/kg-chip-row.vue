@@ -1,5 +1,5 @@
 <template>
-  <scroll-view class="kg-chips" :class="[`kg-chips--${size}`]" scroll-x :scroll-into-view="scrollToSelected ? `kgchip-${String(modelValue)}` : ''" scroll-with-animation :show-scrollbar="false">
+  <scroll-view class="kg-chips" :class="[`kg-chips--${size}`, { 'kg-chips--wrap': wrap }]" :scroll-x="!wrap" :scroll-into-view="scrollToSelected && !wrap ? `kgchip-${String(modelValue)}` : ''" scroll-with-animation :show-scrollbar="false">
     <view class="kg-chips__row">
       <view
         v-for="o in options"
@@ -22,7 +22,8 @@
 </template>
 
 <script>
-/** KgChipRow（COMPONENTS §1.3）：横滚单选筛选行，右侧 24px 渐隐。>4 项或带计数用它，≤4 项互斥切视图用 wd-segmented。 */
+/** KgChipRow（COMPONENTS §1.3）：横滚单选筛选行，右侧 24px 渐隐。>4 项或带计数用它，≤4 项互斥切视图用 wd-segmented。
+ *  wrap：弹层/表单内的必选全集（如纠错类型）换成多行换行，不横滚不渐隐——选项全部可见，桌面端不依赖横向滚轮。 */
 export default {
   name: 'KgChipRow',
   props: {
@@ -34,6 +35,7 @@ export default {
     modelValue: { type: [String, Number], default: '' },
     size: { type: String, default: 'md', validator: (v) => v === 'md' || v === 'sm' },
     scrollToSelected: { type: Boolean, default: true },
+    wrap: { type: Boolean, default: false },
   },
   emits: ['update:modelValue'],
 };
@@ -45,6 +47,8 @@ export default {
 .kg-chips { --kg-chips-pad: calc((var(--hit-min) - var(--chip-h)) / 2); width: 100%; white-space: nowrap; margin: calc(-1 * var(--kg-chips-pad)) 0; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent); }
 .kg-chips--sm { --kg-chips-pad: calc((var(--hit-min) - 28px) / 2); }
 .kg-chips__row { display: inline-flex; gap: var(--sp-8); padding: var(--kg-chips-pad) var(--sp-24) var(--kg-chips-pad) 0; }
+.kg-chips--wrap { white-space: normal; -webkit-mask-image: none; mask-image: none; }
+.kg-chips--wrap .kg-chips__row { display: flex; flex-wrap: wrap; padding-right: 0; }
 .kg-chip {
   display: inline-flex; align-items: center; gap: var(--sp-4); flex-shrink: 0; white-space: nowrap;
   height: var(--chip-h); padding: 0 14px; border-radius: var(--r-full);

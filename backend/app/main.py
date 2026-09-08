@@ -249,6 +249,8 @@ async def guard_account_uid(request, call_next):
             uid = parsed.get("uid") if isinstance(parsed, dict) else None
         except (ValueError, TypeError):
             uid = None
+        if uid is not None and not isinstance(uid, str):
+            return JSONResponse({"detail": "uid 格式错误"}, status_code=400)
     if (
         uid
         and auth.is_account_uid(uid)

@@ -509,7 +509,7 @@
 
       <!-- 题目纠错 -->
       <kg-sheet v-model="reportOpen" title="题目纠错">
-        <kg-chip-row size="sm" :options="reportTypes.map((t) => ({ label: t, value: t }))" :model-value="reportType" :scroll-to-selected="false" @update:model-value="(v) => (reportType = v)" />
+        <kg-chip-row size="sm" :options="reportTypes.map((t) => ({ label: t, value: t }))" wrap :model-value="reportType" :scroll-to-selected="false" @update:model-value="(v) => (reportType = v)" />
         <textarea
           v-model="reportDetail"
           class="rp-detail"
