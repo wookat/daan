@@ -216,6 +216,8 @@
               <kg-tag v-if="fineType(m)" tone="neutral" class="finetag">{{ fineType(m) }}</kg-tag>
               <kg-tag v-if="m.source === 'exam'" tone="info">模考</kg-tag>
               <kg-tag v-else-if="m.source === 'manual'" tone="info">手录</kg-tag>
+              <view v-if="m.error_reason && !m.mastered && !batchMode" class="rzbadge-hit" role="button" :aria-label="'错因：' + m.error_reason + '，点击修改'" @click.stop="itemSheet(m)"><kg-tag tone="warn" icon="pen-line">{{ m.error_reason }}</kg-tag></view>
+              <kg-tag v-else-if="m.error_reason" tone="warn">{{ m.error_reason }}</kg-tag>
               <view v-if="mistakePaper(m)" class="pbadge-hit" role="button" @click.stop="pidFilter = mistakePaper(m).pid"><kg-tag tone="neutral" class="pbadge">{{ mistakePaper(m).psource }}</kg-tag></view>
               <kg-tag v-if="m.times >= 2" tone="bad">错 {{ m.times }} 次</kg-tag>
               <kg-tag v-if="!m.mastered && streakText(m)" tone="ok">{{ streakText(m) }}</kg-tag>
@@ -2078,7 +2080,7 @@ export default {
 .mright { margin-left: auto; }
 .mtime { white-space: nowrap; }
 .mhead .mright + .mtime { margin-left: 0; }
-.pbadge-hit { position: relative; z-index: 1; display: inline-flex; align-items: center; min-height: 40px; margin: -10px 0; max-width: 40vw; }
+.pbadge-hit, .rzbadge-hit { position: relative; z-index: 1; display: inline-flex; align-items: center; min-height: 40px; margin: -10px 0; max-width: 40vw; }
 .pbadge { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bchk { width: 24px; height: 24px; border-radius: var(--r-full); border: 2px solid var(--line-strong); flex-shrink: 0; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
 .bchk.on { background: var(--brand); border-color: var(--brand); }

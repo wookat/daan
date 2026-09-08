@@ -2741,7 +2741,7 @@ def save_answer_log_detail(uid: str, items: list[dict], probe: bool = False) -> 
         if mid is None or mid in advanced:
             continue
         advanced.add(mid)
-        res = _advance_review(conn, mid, True, uid, via="answer")
+        res = _advance_review(conn, mid, True, uid, via="answer", probe=probe)
         if res:
             reviewed.append({"mistake_id": mid, "streak": res["streak"], "mastered": res["mastered"]})
     conn.commit()
@@ -3287,6 +3287,9 @@ def _ensure_mistake_uid(conn):
         conn.execute("ALTER TABLE mistakes ADD COLUMN uid TEXT")
     if "question_id" not in cols:
         conn.execute("ALTER TABLE mistakes ADD COLUMN question_id INTEGER")
+    # 探针打标（与 answer_log.probe 同口径）：跨用户研究/看板剔除内部测试流量；本人列表/复习不受影响
+    if "probe" not in cols:
+        conn.execute("ALTER TABLE mistakes ADD COLUMN probe INTEGER")
 
 
 def _parse_options(raw: str | None) -> dict | None:
@@ -3465,7 +3468,7 @@ def norm_qtype(question_type) -> str | None:
     return t
 
 
-def save_mistake(rec: dict) -> int:
+def save_mistake(rec: dict, probe: bool = False) -> int:
     conn = get_conn()
     _ensure_mistake_uid(conn)
     qtext = rec.get("question_text")
@@ -3500,8 +3503,8 @@ def save_mistake(rec: dict) -> int:
     cur = conn.execute(
         """INSERT INTO mistakes
            (created_at, module, question_type, question_text, user_answer,
-            correct_answer, methods, error_reason, explanation, uid, question_id, source)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+            correct_answer, methods, error_reason, explanation, uid, question_id, source, probe)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         (
             time.time(),
             rec.get("module"),
@@ -3515,6 +3518,7 @@ def save_mistake(rec: dict) -> int:
             (rec.get("uid") or None),
             qid,
             rec.get("source"),
+            1 if probe else 0,
         ),
     )
     conn.commit()
@@ -3661,6 +3665,7 @@ def _hydrate_mistake(d: dict) -> None:
     """联查到题库题时 question_text 取规范题干（历史写入把选项行拼进了 question_text，
     与结构化 options 同时展示会重复）；未联查到（手录/已下架）保持原文。"""
     d["methods"] = json.loads(d.get("methods") or "[]")
+    d.pop("probe", None)
     d["options"] = _parse_options(d.pop("q_options", None))
     stem = (d.pop("q_question", None) or "").strip()
     if stem and d["options"]:
@@ -3683,6 +3688,7 @@ def _ensure_review_log(conn):
         ("picked", "ALTER TABLE review_log ADD COLUMN picked TEXT"),
         ("secs", "ALTER TABLE review_log ADD COLUMN secs INTEGER"),
         ("via", "ALTER TABLE review_log ADD COLUMN via TEXT"),
+        ("probe", "ALTER TABLE review_log ADD COLUMN probe INTEGER"),
     ]:
         if col not in cols:
             conn.execute(ddl)
@@ -3696,6 +3702,7 @@ def _advance_review(
     picked: str | None = None,
     secs: int | None = None,
     via: str = "review",
+    probe: bool = False,
 ) -> dict | None:
     """一次复习结果推进 SRS：写 review_log（有 uid 时）、更新 streak/next_review/mastered。错题不存在返回 None。
 
@@ -3709,7 +3716,7 @@ def _advance_review(
     if uid:
         _ensure_review_log(conn)
         conn.execute(
-            "INSERT INTO review_log (uid, mistake_id, correct, created_at, picked, secs, via) VALUES (?,?,?,?,?,?,?)",
+            "INSERT INTO review_log (uid, mistake_id, correct, created_at, picked, secs, via, probe) VALUES (?,?,?,?,?,?,?,?)",
             (
                 uid,
                 mid,
@@ -3718,6 +3725,7 @@ def _advance_review(
                 normalize_answer(picked)[:8] or None,
                 int(secs) if secs else None,
                 via,
+                1 if probe else 0,
             ),
         )
     streak = (row["review_streak"] or 0) + 1 if correct else 0
@@ -3735,11 +3743,16 @@ def _advance_review(
 
 
 def record_review(
-    mid: int, correct: bool, uid: str | None = None, picked: str | None = None, secs: int | None = None
+    mid: int,
+    correct: bool,
+    uid: str | None = None,
+    picked: str | None = None,
+    secs: int | None = None,
+    probe: bool = False,
 ) -> dict:
     conn = get_conn()
     _ensure_mistake_uid(conn)
-    res = _advance_review(conn, mid, correct, uid, picked=picked, secs=secs)
+    res = _advance_review(conn, mid, correct, uid, picked=picked, secs=secs, probe=probe)
     if res is None:
         conn.close()
         raise KeyError(mid)
