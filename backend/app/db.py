@@ -1445,7 +1445,7 @@ def daily_set_board(day: str, limit: int = 20, uid: str | None = None) -> list[d
     return [
         {
             "rank": i + 1,
-            "name": (r["nickname"] or "").strip()[:20] or r["uid"][:6] + "***",
+            "name": display_alias(r["uid"], r["nickname"]),
             "right": r["right"],
             "total": r["total"],
             "secs": r["secs"],
@@ -3292,6 +3292,20 @@ def _uid_clause(uid: str | None) -> tuple[str, tuple]:
     if not uid:
         return " AND uid IS NULL", ()
     return " AND uid=?", (uid,)
+
+
+def clean_uid(uid) -> str:
+    """uid 归一：去空白截 64；空串由调用方决定是否 400。"""
+    return str(uid or "").strip()[:64]
+
+
+def display_alias(uid: str, nickname: str | None) -> str:
+    """榜单展示名：昵称优先（去空白截 20），缺失时用 uid 派生的稳定化名，不暴露 uid。"""
+    n = str(nickname or "").strip()[:20]
+    if n and n.lower() not in ("null", "undefined"):
+        return n
+    h = hashlib.sha1(str(uid or "").encode()).hexdigest()[:4].upper()
+    return f"考友{h}"
 
 
 def _ensure_reminder_prefs(conn):
