@@ -2040,3 +2040,10 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - `rg -n "due_review_count\(" backend/app` 一次列全（study_api / report / push_api / plan）；差异若只在 `created_before=cn_day_start()` 这类切分参数，属 R438/R440 有意口径，不算不同源、不要加第三个口径。
 - 核「已掌握再答错」看 `save_mistake()` dup 分支的 UPDATE 字段清单（`mastered/mastered_at/review_streak/next_review/times`）对照 `book.vue` 分桶与统计用的字段（`mastered` 分桶、`mastered_at` 掌握统计），两侧字段集一致即成立。
 - 每轮 SSH 采样：`SSHPASS="$TICKETS_VPS_SSH_CREDENTIAL" sshpass -e ssh $TICKETS_VPS_SSH_USER@$TICKETS_VPS_SSH_HOST 'bash -s' < script.sh`；把密钥写 tmp 文件当 `-i` 会报 `error in libcrypto`（该凭据是密码不是私钥）。
+
+## R539 经验：给「静默掉题」类接口补计数字段的口径与验证法；缓存命中分支在生产容器内用隔离库验契约
+- 接口原本只回 `items` 而客户端不知道「本该有几条」时（如 `redo` 无 `mids`），补一个**「本次加载」口径**的 `skipped`（本次扫描里去重后未匹配的行数），别改成「全部未匹配」——后者要对全部行做题干匹配（每阶 LIKE 秒级，R534）。docstring 里把「不计什么」（重复题干 / 空题干 / 扫描停止后的行）写全，测试逐条锁；计数只在最终 fail-closed 处 `+1`（有 qid 但下线的行要**穿到**题干匹配再失败才计，不在 `byid` 落空处提前计，否则回落命中的行会被多算）。原 list 返回函数保留 wrapper，`rg` 其它调用点不动。
+- 前端加说明**复用已有文案函数**（R527 `redoSkippedNote(selected, loaded)`，`selected = items + skipped`），不新造 toast；已知选了几条的路径（`redoSel`）不要再叠加 `skipped` 双算。老后端兼容靠 `Number(undefined) || 0`，测试锁「无 `skipped` 键 → 无说明」。小程序端同文案放 `utils/*.ts`，vitest 用 `readFileSync` 源锁三文件 + 文案逐字等于 H5。
+- 生产复采 `redo`：容器内 `docker exec -i deploy-kaogong-1 python3 - <<'PY'`（**必须 `-i`**，否则 heredoc 进不了 python，段落静默空输出、rc 仍 0）+ `fastapi.testclient` 带 `X-Kg-Probe` 打真 uid，打印 `sorted(keys)`/`len(items)`/`skipped`；生产真人行若全能匹配，`skipped>0` 只能靠本地 `:8525` 造手录行一手（`~/r539/local_redo_after.out`），文档如实写「生产无自然样本」。
+- 验缓存命中分支（不能触发 LLM、不能碰生产库）：`docker exec -i -e DB_PATH=/tmp/rNNN.db -e ACCESS_CODE= deploy-kaogong-1 python3 -` 在**部署后的容器代码**上起 `TestClient`，`init_db()` 后直接 `INSERT explain_cache(explain_key, …, qid)` 造命中行（key 用应用同一 `explain_key()` 函数算），POST `/api/explain/stream` 读 SSE 首个 `meta` 的 `qid`/`cached`，跑完 `os.remove` 临时库并打印 `exists` 断言；这样验的是线上二进制而非本地源码。
+- R535 的「28 条无 qid 里 1 条未匹配」是「与 `shizheng_questions` 首行恒等」口径，不等于 redo 匹配口径（首行 LIKE + 归一化前缀比较）——同一行在两个口径下结论可以相反（`2836` redo 可命中），引用历轮结论时先对口径。
