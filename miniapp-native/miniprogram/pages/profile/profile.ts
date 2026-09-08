@@ -1,4 +1,4 @@
-import { authLogout, fetchCheckinBadges, fetchGrowth, fetchMistakes, fetchReminders } from '../../api/index';
+import { authLogout, fetchCheckinBadges, fetchGrowth, fetchReminders } from '../../api/index';
 import { fetchCommentInbox, pkMine } from '../../api/social';
 import type { CheckinBadgesResp } from '../../api/types';
 import { anonUid, clearAuth, getAuthUser, getToken } from '../../utils/auth';
@@ -56,7 +56,6 @@ Page({
     this.loadBadges();
     this.loadGrowth();
     this.loadReminder();
-    this.loadMistakes();
     this.loadSocial();
   },
   // 成就勋章：本机 bestStreak + 服务端累计/连签/已斩错题，任一数据回来即重算
@@ -105,26 +104,22 @@ Page({
   onPk() {
     wx.navigateTo({ url: '/pkgSocial/pk/pk' });
   },
-  // 累计刷题：服务端 answer_log 口径（与统计页/H5 同源），失败保留本机 pstats
+  // 累计刷题 + 错题计数：服务端 /api/growth 口径（与统计页/H5 同源），失败保留本机 pstats
   async loadGrowth() {
     try {
       const g = await fetchGrowth();
-      if (g.total && g.total.n != null) {
-        this.setData({ totalDone: g.total.n });
+      const patch: { totalDone?: number; mistakeN?: number; mastered?: number } = {};
+      if (g.total && g.total.n != null) patch.totalDone = g.total.n;
+      if (g.mistakes) {
+        patch.mistakeN = g.mistakes.total;
+        patch.mastered = g.mistakes.mastered;
+      }
+      if (Object.keys(patch).length) {
+        this.setData(patch);
         this.recomputeMedals();
       }
     } catch (e) {
       /* 离线：沿用本机 pstats */
-    }
-  },
-  async loadMistakes() {
-    try {
-      const d = await fetchMistakes();
-      const items = d.items || [];
-      this.setData({ mistakeN: items.length, mastered: items.filter((m) => m.mastered).length });
-      this.recomputeMedals();
-    } catch (e) {
-      /* 非关键路径 */
     }
   },
   async loadReminder() {

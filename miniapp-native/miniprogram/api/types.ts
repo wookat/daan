@@ -260,6 +260,8 @@ export interface GrowthResp {
   total: GrowthStat;
   modules: Record<string, GrowthStat>;
   weeks: GrowthWeek[];
+  /** 错题计数；老后端缺省 */
+  mistakes?: { total: number; mastered: number; pending: number };
 }
 
 export interface CheckinBadge {
