@@ -1,4 +1,4 @@
-.wrap { display: flex; flex-direction: column; padding: var(--sp-16) var(--page-x) calc(var(--sp-48) + env(safe-area-inset-bottom)); }
+.wrap { display: flex; flex-direction: column; padding: var(--sp-16) var(--page-x) calc(var(--sp-24) + env(safe-area-inset-bottom)); }
 .chips { margin: var(--sp-12) 0; }
 .grow { flex: 1; min-width: 0; }
 .fltbar { display: flex; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-12); flex-wrap: wrap; }

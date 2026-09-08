@@ -1,6 +1,8 @@
 .kg-seg { position: relative; display: flex; padding: 2px; border-radius: var(--r-sm); background: var(--fill); }
 .kg-seg__thumb { position: absolute; top: 2px; bottom: 2px; left: 2px; border-radius: calc(var(--r-sm) - 2px); background: var(--card); box-shadow: var(--sh-1); transition: transform var(--dur-base) var(--ease-standard); }
-.kg-seg__item { position: relative; flex: 1; min-width: 0; height: 32px; display: flex; align-items: center; justify-content: center; font-size: var(--fs-sub); color: var(--ink-3); font-weight: 500; }
+.kg-seg__item { position: relative; flex: 1; min-width: 0; height: 32px; padding: 0 var(--sp-8); box-sizing: border-box; display: flex; align-items: center; justify-content: center; font-size: var(--fs-sub); color: var(--ink-3); font-weight: 500; }
+/* 文字单行省略放在内层（外层不能 overflow:hidden，否则会裁掉 ::before 的 44px 命中扩展） */
+.kg-seg__label { display: block; min-width: 0; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .kg-seg__item::before { content: ''; position: absolute; left: 0; right: 0; top: calc((32px - var(--hit-min)) / 2); bottom: calc((32px - var(--hit-min)) / 2); }
 .kg-seg--sm .kg-seg__item { height: 28px; font-size: var(--fs-caption); }
 .kg-seg--sm .kg-seg__item::before { top: calc((28px - var(--hit-min)) / 2); bottom: calc((28px - var(--hit-min)) / 2); }

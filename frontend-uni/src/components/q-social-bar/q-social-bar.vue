@@ -2,7 +2,7 @@
   <view class="qsb">
     <!-- 我的笔记 -->
     <view v-if="!editing && note" class="mynote" @click="startEdit">
-      <text class="nb">📝 我的笔记：</text>{{ note }}
+      <view class="nb"><l-icon name="pencil-line" :size="16" tone="inherit" /><text>我的笔记：</text></view>{{ note }}
       <text class="edit">改</text>
     </view>
     <view v-else-if="editing" class="note-edit">
@@ -20,15 +20,15 @@
       </view>
     </view>
     <view class="qsb-row">
-      <text v-if="!note && !editing" class="qsb-link" @click="startEdit">📝 写笔记</text>
-      <text class="qsb-link" @click="openDiscuss">💬 讨论{{ count != null ? ' (' + count + ')' : '' }} ›</text>
-      <text class="qsb-link" @click="shareToMates">🔗 分享给队友</text>
+      <view v-if="!note && !editing" class="qsb-link" @click="startEdit"><l-icon name="pencil-line" :size="16" tone="inherit" /><text>写笔记</text></view>
+      <view class="qsb-link" @click="openDiscuss"><l-icon name="message-circle" :size="16" tone="inherit" /><text>讨论{{ count != null ? ' (' + count + ')' : '' }} ›</text></view>
+      <view class="qsb-link" @click="shareToMates"><l-icon name="share-2" :size="16" tone="inherit" /><text>分享给队友</text></view>
     </view>
     <view v-if="hot" class="hotc" @click="openDiscuss">
       <view class="hotc-top">
-        <text class="hotc-tag">🔥 热评</text>
+        <view class="hotc-tag"><l-icon name="flame" :size="16" tone="inherit" /><text>热评</text></view>
         <text class="hotc-nick">{{ hot.nickname }}</text>
-        <text v-if="hot.likes" class="hotc-likes">👍 {{ hot.likes }}</text>
+        <view v-if="hot.likes" class="hotc-likes"><l-icon name="thumbs-up" :size="16" tone="inherit" /><text>{{ hot.likes }}</text></view>
       </view>
       <view class="hotc-body">{{ hot.content }}</view>
     </view>
@@ -129,7 +129,7 @@ export default {
 <style scoped>
 .qsb { margin-top: 16rpx; }
 .mynote { background: var(--warn-soft); border-left: 6rpx solid var(--warn); border-radius: 0 12rpx 12rpx 0; padding: 14rpx 18rpx; font-size: var(--fs-caption); color: var(--ink-2); line-height: 1.6; }
-.nb { color: var(--warn-strong); font-weight: 600; }
+.nb { display: inline-flex; align-items: center; gap: var(--sp-4); vertical-align: middle; color: var(--warn-strong); font-weight: 600; }
 .edit { color: var(--brand-text); margin-left: 4rpx; font-size: var(--fs-caption); display: inline-flex; align-items: center; min-height: 40px; padding: 0 8rpx; margin-top: -10px; margin-bottom: -10px; vertical-align: middle; }
 .note-edit { background: var(--warn-soft); border-radius: 14rpx; padding: 16rpx 18rpx; }
 .note-ta { width: 100%; min-height: 100rpx; font-size: var(--fs-sub); line-height: 1.6; box-sizing: border-box; }
@@ -138,17 +138,17 @@ export default {
 .nop.save { color: var(--brand-text); font-weight: 600; }
 .nop.del { color: var(--bad-strong); }
 .qsb-row { display: flex; flex-wrap: wrap; gap: 0 32rpx; margin-top: 8rpx; }
-.qsb-link { font-size: var(--fs-caption); color: var(--brand-text); min-height: 40px; display: inline-flex; align-items: center; padding: 0 8rpx; margin: 0 -8rpx; }
+.qsb-link { font-size: var(--fs-caption); color: var(--brand-text); min-height: 40px; display: inline-flex; align-items: center; gap: var(--sp-4); padding: 0 8rpx; margin: 0 -8rpx; }
 .hotc { background: var(--fill); border-radius: 14rpx; padding: 14rpx 18rpx; margin-top: 14rpx; }
 .hotc-top { display: flex; align-items: center; gap: 12rpx; }
-.hotc-tag { font-size: var(--fs-caption); color: var(--warn-strong); background: var(--warn-soft); border-radius: 999rpx; padding: 2rpx 12rpx; font-weight: 600; }
+.hotc-tag { display: inline-flex; align-items: center; gap: 2px; font-size: var(--fs-caption); color: var(--warn-strong); background: var(--warn-soft); border-radius: 999rpx; padding: 2rpx 12rpx; font-weight: 600; }
 .hotc-nick { font-size: var(--fs-caption); color: var(--ink-2); font-weight: 600; }
-.hotc-likes { font-size: var(--fs-caption); color: var(--ink-3); margin-left: auto; }
+.hotc-likes { display: inline-flex; align-items: center; gap: 2px; font-size: var(--fs-caption); color: var(--ink-3); margin-left: auto; }
 .hotc-body { font-size: var(--fs-caption); color: var(--ink-2); line-height: 1.6; margin-top: 8rpx; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .firstc { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; background: var(--fill); border: 1rpx dashed var(--line); border-radius: 999rpx; padding: 12rpx 24rpx; margin-top: 14rpx; }
 .firstc-ph { font-size: var(--fs-caption); color: var(--ink-3); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .firstc-cta { font-size: var(--fs-caption); color: var(--brand-text); font-weight: 600; flex-shrink: 0; }
 /* #ifdef H5 */
-.hotc, .firstc { cursor: pointer; }
+.hotc, .firstc, .qsb-link, .mynote { cursor: pointer; }
 /* #endif */
 </style>
