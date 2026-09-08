@@ -234,6 +234,8 @@ async def guard_account_uid(request, call_next):
 
     匿名随机 uid 不受影响（其本身即凭据）。覆盖 query 与 JSON body 两处 uid。
     表单体（multipart/urlencoded）不在此解析，Form(uid) 端点自行校验 owns_uid。
+    body 里 uid 非字符串（数字/数组/对象）在此统一 400：中间件不经过 app 的异常处理器，
+    放行会在后续 str()/正则处变成 500。
     """
     uid = request.query_params.get("uid")
     body = b""
@@ -249,6 +251,8 @@ async def guard_account_uid(request, call_next):
             uid = parsed.get("uid") if isinstance(parsed, dict) else None
         except (ValueError, TypeError):
             uid = None
+        if uid is not None and not isinstance(uid, str):
+            return JSONResponse({"detail": "参数格式错误"}, status_code=400)
     if (
         uid
         and auth.is_account_uid(uid)
