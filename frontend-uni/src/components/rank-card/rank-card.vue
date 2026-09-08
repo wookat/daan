@@ -1,5 +1,5 @@
 <template>
-  <view v-if="data" class="rcard">
+  <kg-card v-if="data" variant="flat" class="rcard">
     <view class="r-head">
       <text class="r-title">全卷排名</text>
       <text v-if="data.small_sample" class="r-tag">样本 {{ data.total }} 人</text>
@@ -34,7 +34,7 @@
         <text class="r-bscore">{{ b.score }} 分</text>
       </view>
     </view>
-  </view>
+  </kg-card>
 </template>
 
 <script>
@@ -76,32 +76,31 @@ export default {
 </script>
 
 <style scoped>
-.rcard { background: var(--card); border-radius: 16rpx; padding: 28rpx; margin-bottom: 20rpx; box-shadow: var(--sh-1); }
 .r-head { display: flex; justify-content: space-between; align-items: center; }
 .r-title { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
-.r-tag { font-size: var(--fs-caption); color: var(--warn-strong); background: var(--warn-soft); border-radius: 999rpx; padding: 4rpx 16rpx; }
-.r-main { display: flex; align-items: center; gap: 40rpx; margin: 22rpx 0 10rpx; }
+.r-tag { font-size: var(--fs-caption); color: var(--warn-strong); background: var(--warn-soft); border-radius: var(--r-full); padding: 2px var(--sp-8); }
+.r-main { display: flex; align-items: center; gap: var(--sp-20); margin: var(--sp-12) 0 var(--sp-4); }
 .r-beat { display: flex; flex-direction: column; }
 .r-beat-n { font-size: var(--fs-h1); font-weight: 600; color: var(--brand-text); line-height: 1.1; }
 .r-beat-l { font-size: var(--fs-caption); color: var(--ink-2); }
 .r-beat-tiny { font-size: var(--fs-caption); color: var(--ink-2); line-height: 1.6; }
-.r-kv { display: flex; gap: 40rpx; }
+.r-kv { display: flex; gap: var(--sp-20); }
 .r-kv-i { display: flex; flex-direction: column; }
 .r-k { font-size: var(--fs-caption); color: var(--ink-3); }
 .r-v { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); }
 .r-v-s { font-size: var(--fs-caption); color: var(--ink-3); font-weight: 400; }
-.r-dist { display: flex; align-items: flex-end; gap: 6rpx; height: 140rpx; margin-top: 14rpx; }
+.r-dist { display: flex; align-items: flex-end; gap: var(--sp-4); height: 70px; margin-top: var(--sp-8); }
 .r-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
 .r-bar-w { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
-.r-bar { width: 60%; min-height: 4rpx; background: var(--line); border-radius: 4rpx 4rpx 0 0; }
+.r-bar { width: 60%; min-height: 2px; background: var(--line); border-radius: 2px 2px 0 0; }
 .r-bar.me { background: var(--brand); }
-.r-col-l { font-size: var(--fs-caption); color: var(--ink-3); margin-top: 4rpx; }
-.r-hint { font-size: var(--fs-caption); color: var(--ink-3); margin-top: 8rpx; }
-.r-board { margin-top: 22rpx; border-top: 1rpx solid var(--line); padding-top: 18rpx; }
-.r-board-t { font-size: var(--fs-sub); font-weight: 600; color: var(--ink); display: block; margin-bottom: 10rpx; }
-.r-brow { display: flex; align-items: center; gap: 16rpx; padding: 10rpx 12rpx; border-radius: 10rpx; }
+.r-col-l { font-size: var(--fs-caption); color: var(--ink-3); margin-top: 2px; }
+.r-hint { font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-4); }
+.r-board { margin-top: var(--sp-12); border-top: 1px solid var(--line); padding-top: var(--sp-8); }
+.r-board-t { font-size: var(--fs-sub); font-weight: 600; color: var(--ink); display: block; margin-bottom: var(--sp-4); }
+.r-brow { display: flex; align-items: center; gap: var(--sp-8); padding: var(--sp-4) 6px; border-radius: var(--r-xs); }
 .r-brow.me { background: var(--brand-soft); }
-.r-brank { width: 44rpx; font-size: var(--fs-sub); font-weight: 600; color: var(--ink-3); text-align: center; }
+.r-brank { width: 22px; font-size: var(--fs-sub); font-weight: 600; color: var(--ink-3); text-align: center; }
 .r-brow.me .r-brank { color: var(--brand-text); }
 .r-bname { flex: 1; font-size: var(--fs-sub); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .r-bme { font-size: var(--fs-caption); color: var(--brand-text); }

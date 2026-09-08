@@ -7,6 +7,18 @@ import { clearAccessCode, clearAuth, getAccessCode, getToken, setAccessCode } fr
 
 export const BASE_URL = 'https://kaogong.zalize.com';
 
+// wx fail 回调 errMsg（request:fail / request:fail timeout …）是平台内部文案，对外统一为中文；
+// 产出仍落在 kg-exam-progress isNetMsg（超时 / 网络错误）判定集合内，重试口径不变。对齐 H5 api-policy.netFailMessage。
+export const NET_FAIL_TEXT = '网络错误，请检查网络后重试';
+export const NET_TIMEOUT_TEXT = '请求超时，请稍后重试';
+export const isTimeoutMsg = (msg: string | undefined | null): boolean => /timeout|超时/i.test(String(msg || ''));
+export function netFailMessage(errMsg: string | undefined | null, fallback = NET_FAIL_TEXT): string {
+  const m = String(errMsg || '');
+  if (isTimeoutMsg(m)) return NET_TIMEOUT_TEXT;
+  if (!m || /:fail/.test(m)) return fallback;
+  return m;
+}
+
 /** 题图相对路径补全为绝对 URL */
 export function imgUrl(p: string | null | undefined): string {
   if (!p) return '';
@@ -78,7 +90,7 @@ function rawRequest<T>(path: string, opts: RequestOptions = {}): Promise<T> {
         }
         reject(new Error(authExpired ? '登录已过期，请重新登录' : detail || `HTTP ${res.statusCode}`));
       },
-      fail: (err) => reject(new Error(err.errMsg || '网络错误')),
+      fail: (err) => reject(new Error(netFailMessage(err && err.errMsg))),
     });
   });
 }

@@ -59,6 +59,11 @@
       "pages": ["daily/daily", "calendar/calendar", "weekly-report/weekly-report", "mastery-map/mastery-map"]
     }
   ],
+  "preloadRule": {
+    "pages/exam/exam": { "network": "all", "packages": ["pkgExam"] },
+    "pages/home/home": { "network": "wifi", "packages": ["pkgLearn", "pkgGrow"] },
+    "pages/profile/profile": { "network": "wifi", "packages": ["pkgSocial", "pkgGrow"] }
+  },
   "renderer": "webview",
   "componentFramework": "glass-easel",
   "lazyCodeLoading": "requiredComponents",
