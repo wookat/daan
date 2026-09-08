@@ -5,6 +5,13 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R545 补充（testing agent）— 题型组 `type_group` / `redo?sub=` / 细分 `qt=`
+- **生产 taxonomy 选样先只读**：查 `questions.submodule / question_type / disabled` 再定 fixture，不假设 submodule 保留别名——生产 `submodule` 已基本统一到规范组名（`排列组合与概率` 6204 条，`'排列组合'` 0 条），碎片化来自 `mistakes.question_type`（`数量关系-排列组合` 去前缀 → `排列组合`）。别名分支无生产样本时列 UNTESTED，**不得改题库造覆盖**。可用样本：qid 63（排列组合）/ 64、381（概率问题）/ 8223（计算问题，作外组对照）；手录错题不传 `question_id`，选另一模块便于模块筛选对照。
+- **三个名字分开取证**：`questions.question_type` 原值（带模块前缀）、`mistakes.question_type` 存储值（已去前缀，`redo?qtype=` 用它）、`type_group` 规范组名（`redo?sub=` 用它）。保存 UI 真实请求，分别核 `sub` 单独、`sub+qtype`、`sub+module`、三者叠加；未知组回空、空串/空白/41 字 400。
+- **URL 恢复分两条路径**：直达/刷新 `?kp=&qt=` 与「重练 → 页内返回 → 刷新」不能互相替代；后者是既有 P2（uni-app 返回重写地址，`mod=` 同样丢），用旧 `mod=` 筛选做对照区分 qt 专属问题与通用路由同步问题。
+- **版本锁定三证**：`/api/health` rev、index HTML bundle、runtime bundle 一致；设置期间若再发版（老板侧合 main 常见），暂停 UI 走查取得目标 rev 更新确认，报告写明版本链及本轮文件两 rev 是否一致。
+- 同源 API 负例产生的浏览器 network error 与应用 console/runtime error 分列；304 与 canceled 不算 HTTP 失败也不省略。CDP 脚本勿按同名 `cdp` 模块互相 import；原生输入深链用 percent-encoded 中文并在最终快照确认 URL。
+
 ## R544 补充（testing agent）— 选项键序归一 / 复习时间线合并 / 雷达「未练」口径
 - 选项键序与答案字母**分别取证**：R544 起 `options_json` 只重排 options 键序（单大写字母键按 A–D），`questions.answer` 不动；核题 1046897 时以容器 DB `answer='A'`（517）为准，不要按显示顺序猜答案。判分截图先经顶栏菜单关「自动下一题」。
 - 历次作答合并：同一新 uid 同一题按「练习错答 → 今日复习答对 → 展开看恰两行（复习 ✓ / 练习 ✗）→ 错题重练答对 → 恰三行」顺序做，中间不要额外作答污染「恰好 N 行」断言。`POST /api/review/<mid>` body 应含 `picked`；`GET /api/attempts` 项带 `source: practice|review`。
