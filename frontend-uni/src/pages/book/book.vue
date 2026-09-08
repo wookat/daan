@@ -551,7 +551,7 @@
 <script>
 import { md } from '../../md.js';
 import { request, anonUid, exportPdf, scanSheet, shareCreate, trackEvent, qShareText, shareVariant, isStaleUidErr } from '../../api.js';
-import { buildBookUrl, parseBookOpts } from '../../book-url.js';
+import { buildBookUrl, normalizeTabPageFullPath, parseBookOpts } from '../../book-url.js';
 import { setBookBadge } from '../../tabbar-badge.js';
 import { mistakePaper, paperGroups, inPaper } from '../../book-paper.js';
 import { cacheMistakes, getCachedMistakes } from '../../offline.js';
@@ -906,6 +906,9 @@ export default {
     rzFilter() { this.pageN = 20; this.syncBookUrl(); },
   },
   onLoad(opts) {
+    // #ifdef H5
+    normalizeTabPageFullPath(this.$page);
+    // #endif
     const p = parseBookOpts(opts);
     if (p.tab) this.tab = p.tab;
     if (p.mod) this.filterMod = p.mod;
