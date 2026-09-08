@@ -5,6 +5,12 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R547 补充（testing agent）— 错题本 tabBar KeepAlive 复用 / 重练 history 条件
+- **切 tab 保筛选按三条入口分别取证**：①地址栏冷深链 `?mod=` ②UI 筛选后 F5（URL 带 mod/kp/qt）③首页 tab 无 query 入口再 UI 筛选。每条记切走前/切回后的 URL、**当前列表 `.mcard` 数**（不是顶部「待掌握 N」全本总数）、只读观察组件 uid / `$page.fullPath` 证同实例。修前只有①②丢（带 query 的 fullPath 匹配不到 tabBar 复用），③本就保留，别把③的 PASS 外推成①②。
+- **「显式深链立即覆盖」与「覆盖后再切 tab」分开**：运行中地址栏手输深链走 popstate 新建实例、旧 tab 实例仍在 Map，再切 tab 会回旧实例（既有 P4，不算回归）；要验「刷新后带 query 实例」，用 **B 深链 F5 → 切 tab** 作对照，不要拿手输当刷新。
+- **重练 browser forward 分「未作答」「答 1 题」两种条件**，逐点存原始 `localStorage`（uni 存的是 `{"type":"object","data":{...}}`，从 `data` 解包读 `pendingSession.items/source`、`redoSet`）。未答时二者皆无 → 前进走默认 `start(lastModule)`，模块随 `lastModule`，**不要固定断言「言语理解」**；答 1 题后前进弹「继续上次练习」可恢复。
+- 问答页只读 GET `cur/sessions` 与真实付费生成请求分开分类；截图若 `Page.captureScreenshot` 返回大于 viewport 的合成面，保留原图并记录严格 viewport 裁切参数，不冒称原图即 375×812。
+
 ## R546 补充（testing agent）— 错题本 URL 同步三路径 / 复习 `secs` 证据链 / 列表卡「连对 n/6」
 - **URL 回归分三条路径分别取证**：navigateTo/navigateBack 页内返回、tabBar `switchTab`（统计→错题本）、浏览器 back/forward。每条都记前后 URL、实际卡片数、`history.state`，不以一条外推另一条。R546 只修页内返回（`onShow` 同步 + `replaceState` 保留 router state）；**切 tab 走无 query 路由且页面重建，筛选与 query 一起重置是既有 P3**；浏览器「前进」回到重练页会变默认「言语 1/10」（redo 上下文未随 history 恢复）也是既有候选，单列不计回归。改掌握态后列表基准要随待掌握数据更新再数卡片。
 - **复习耗时证据链四点串联**：每题按「展示/开始 → 点击」边界记近似间隔，第二题用不同等待并在结果页停留，验非累计（约 5.5s → `secs:6`、3.5s → `secs:4`）；串 `POST /api/review/{mid}` body `secs` → `/api/attempts` `source=review` 行 `secs` → `review_log.via=review` → 卡片「用时 Ns」截图。`via=answer` 的练习连带推进行不是复习耗时行。
