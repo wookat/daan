@@ -109,6 +109,22 @@ export function postMistake(m: {
   });
 }
 
+/** 手录错题（source='manual'，免 AI，服务端 manual_mistake.normalize 校验，非法入参 400 detail 中文原因） */
+export function postManualMistake(m: {
+  source: 'manual';
+  module: string;
+  question_text: string;
+  correct_answer: string;
+  user_answer: string | null;
+  error_reason: string | null;
+  explanation: string | null;
+}): Promise<{ id: number }> {
+  return request<{ id: number }>('/api/mistakes', {
+    method: 'POST',
+    data: { uid: anonUid(), ...m },
+  });
+}
+
 export function patchMistake(id: number, data: Partial<Mistake>): Promise<void> {
   return request<void>('/api/mistakes/' + id, { method: 'PATCH', data: { uid: anonUid(), ...data } });
 }

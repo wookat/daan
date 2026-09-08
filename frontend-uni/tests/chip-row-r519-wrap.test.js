@@ -19,11 +19,12 @@ describe('KgChipRow wrap', () => {
     expect(CHIP).toMatch(/\.kg-chips \{[^\n]*white-space: nowrap;[^\n]*mask-image: linear-gradient\(90deg, #000 calc\(100% - 24px\), transparent\); \}/);
     expect(CHIP).toMatch(/\.kg-chips__row \{ display: inline-flex; gap: var\(--sp-8\);/);
   });
-  it('book.vue 只有纠错弹层用 wrap；筛选/错因行仍横滚', () => {
+  it('book.vue 只有纠错弹层与手录模块行用 wrap；筛选/错因行仍横滚', () => {
     const rows = BOOK.match(/<kg-chip-row[^\n]*\/>/g) || [];
-    expect(rows.length).toBeGreaterThan(1);
+    expect(rows.length).toBeGreaterThan(2);
     const wrapped = rows.filter((r) => /\swrap\s/.test(r));
-    expect(wrapped.length).toBe(1);
-    expect(wrapped[0]).toContain('reportTypes.map');
+    expect(wrapped.length).toBe(2);
+    expect(wrapped.some((r) => r.includes('reportTypes.map'))).toBe(true);
+    expect(wrapped.some((r) => r.includes('MANUAL_MODULES'))).toBe(true);
   });
 });

@@ -841,6 +841,42 @@
   color: var(--on-brand);
 }
 
+/* ---- 手录错题 ---- */
+.entry-ans {
+  display: flex;
+  gap: var(--sp-12);
+}
+
+.entry-ans-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.entry-row {
+  border-bottom: 0;
+  padding: 0;
+}
+
+.manual-opt.bad.on {
+  background: var(--bad);
+  border-color: var(--bad);
+}
+
+.entry-err {
+  display: block;
+  color: var(--bad);
+  font-size: var(--fs-sub);
+  margin-top: var(--sp-8);
+}
+
+.entry-hint {
+  display: block;
+  text-align: center;
+  font-size: var(--fs-caption);
+  color: var(--ink-4);
+  margin: var(--sp-8) 0 0;
+}
+
 /* ---- 强化建议 ---- */
 .rf {
   display: flex;
@@ -866,4 +902,16 @@
   justify-content: center;
   gap: var(--sp-16);
   margin-top: var(--sp-8);
+}
+
+.rf-inline {
+  border-top: 1px solid var(--line);
+  margin-top: var(--sp-12);
+  padding-top: var(--sp-12);
+  text-align: left;
+}
+
+.rf-k {
+  font-size: var(--fs-sub);
+  color: var(--ink-3);
 }
