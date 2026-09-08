@@ -37,7 +37,7 @@ import { anonUid } from '../../utils/auth';
 import { emptyManualEntry, letterRow, MANUAL_MODULES, manualEntryBody, manualEntryError, manualSavedToast, toggleLetter } from '../../utils/manual-entry';
 import { md } from '../../utils/md';
 import { buildReviewSnap, parseReviewSnap, reviewElapsedSecs, REVIEW_SNAP_KEY, type ReviewResume } from '../../utils/review-snap';
-import { nextReviewText, reviewVerdict, streakProgressText } from '../../utils/review-verdict';
+import { nextReviewText, reviewVerdict, streakProgressText, similarRoom, reviewDueLeft, reviewDoneCopy } from '../../utils/review-verdict';
 import { MODULE_NAMES, modName } from '../../utils/stats';
 import { syncTabBar } from '../../utils/tabbar';
 
@@ -232,6 +232,8 @@ Page({
     celebrateN: 0,
     celebrateMastered: 0,
     celebrateNext: '',
+    dueLeft: 0,
+    celebrateCopy: reviewDoneCopy(0, 0),
     reasonOpts: toOpts(REASONS),
     tabOpts: [
       { value: 'todo', label: '待掌握 0' },
@@ -368,6 +370,10 @@ Page({
         due: r.items || [],
         dueTotal: r.total || (r.items || []).length,
       });
+      if (this.data.celebrate) {
+        const dueLeft = this.data.dueTotal;
+        this.setData({ dueLeft, celebrateCopy: reviewDoneCopy(this.data.celebrateN, dueLeft) });
+      }
       this.applyTab();
       this.restoreSnap();
       if (wx.getStorageSync('autoStartReview') && (r.items || []).length && !this.data.reviewing) {
@@ -1085,15 +1091,17 @@ Page({
   // 答错自动加推：本轮末尾追加最多 2 道同类新题（extra 题不写 SRS，不影响复习记录）
   async appendSimilar(cur: RItem) {
     if (cur.simFetched || cur.requeued || !cur.module) return;
+    const room = similarRoom(this.data.rItems);
+    if (!room) return;
     const idx = this.data.rIdx;
     this.setData({ [`rItems[${idx}].simFetched`]: true, 'rCur.simFetched': true });
     const qt = cur.question_type || '';
     const sub = qt.indexOf('-') > -1 ? qt.split('-').slice(1).join('-') : null;
     try {
-      const d = await fetchQuestions({ limit: 2, module: cur.module, submodule: sub });
+      const d = await fetchQuestions({ limit: room, module: cur.module, submodule: sub });
       const add: RItem[] = (d.items || [])
         .filter((x) => x.id !== cur.question_id)
-        .slice(0, 2)
+        .slice(0, room)
         .map((x) => ({
           id: -1,
           question_id: x.id,
@@ -1140,11 +1148,21 @@ Page({
       this.saveSnap();
     } else {
       const items = this.data.rItems;
-      const n = items.length;
+      const n = items.filter((x) => !x.extra && !x.requeued).length;
       const celebrateMastered = items.filter((x) => !x.extra && x.masteredNow === true).length;
       const celebrateNext = nextReviewText(items);
+      const dueLeft = reviewDueLeft(this.data.dueTotal, n);
       this.exitReview();
-      this.setData({ celebrate: true, celebrateN: n, celebrateMastered, celebrateNext, reinforce: null, reinforceItems: [] });
+      this.setData({
+        celebrate: true,
+        celebrateN: n,
+        celebrateMastered,
+        celebrateNext,
+        dueLeft,
+        celebrateCopy: reviewDoneCopy(n, dueLeft),
+        reinforce: null,
+        reinforceItems: [],
+      });
       trackEvent('review_done_celebrate', 'book');
       this.fetchReinforce();
     }
@@ -1193,6 +1211,13 @@ Page({
   onCloseCelebrate() {
     if (!this.data.celebrate) return;
     this.setData({ celebrate: false, reinforce: null });
+  },
+  async onContinueReview() {
+    trackEvent('review_entry_click', 'next_batch');
+    this.setData({ celebrate: false, reinforce: null });
+    await this.load();
+    if (this.data.due.length) this.startReview();
+    else wx.showToast({ title: '到期错题已复习完', icon: 'none' });
   },
   onCelebrateVisible(e: VisibleChange) {
     if (!e.detail.visible) this.onCloseCelebrate();

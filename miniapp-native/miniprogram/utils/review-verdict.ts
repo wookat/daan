@@ -41,6 +41,44 @@ export function nextReviewText(items: NextReviewItem[] | null | undefined): stri
   return '下次复习：' + parts.join(' · ');
 }
 
+/** 服务端 /api/review 单次下发上限（与 H5 review-summary.js REVIEW_BATCH 同口径） */
+export const REVIEW_BATCH = 20;
+/** 答错自动加练同类题每轮总上限（与 H5 REVIEW_EXTRA_MAX 同口径） */
+export const REVIEW_EXTRA_MAX = 6;
+
+/** 本轮还能再追加几道加练同类题（0 表示已达上限）。 */
+export function similarRoom(items: Array<{ extra?: boolean }> | null | undefined, perItem = 2, max = REVIEW_EXTRA_MAX): number {
+  const extra = Array.isArray(items) ? items.filter((x) => x && x.extra).length : 0;
+  return Math.max(0, Math.min(perItem, max - extra));
+}
+
+/** 一组做完后剩余到期数的本地估算（服务端重拉前先显示）。 */
+export function reviewDueLeft(dueTotal: number | undefined, done: number | undefined): number {
+  return Math.max(0, (Number(dueTotal) || 0) - (Number(done) || 0));
+}
+
+export interface ReviewDoneCopy {
+  cleared: boolean;
+  title: string;
+  line: string;
+  cta: string;
+}
+
+/** 一组复习完成后的小结口径（与 H5 reviewDoneCopy 同口径）：剩余到期 >0 不宣称「清零」。 */
+export function reviewDoneCopy(done: number | undefined, left: number | undefined): ReviewDoneCopy {
+  const n = Number(done) || 0;
+  const l = Math.max(0, Number(left) || 0);
+  if (l > 0) {
+    return {
+      cleared: false,
+      title: '本组复习完成',
+      line: `本组 ${n} 道复习完成 · 还有 ${l} 道到期待复习`,
+      cta: `继续复习下一组（${Math.min(l, REVIEW_BATCH)} 道）›`,
+    };
+  }
+  return { cleared: true, title: '今日复习已清零！', line: `${n} 道到期错题全部复习完成，遗忘曲线稳住了`, cta: '' };
+}
+
 export interface ReviewVerdictArgs {
   extra?: boolean;
   requeued?: boolean;

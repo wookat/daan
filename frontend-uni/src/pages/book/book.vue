@@ -51,16 +51,17 @@
     </kg-card>
 
     <!-- 复习清零庆祝态 -->
-    <kg-sheet :model-value="celebrate" title="今日复习已清零" @update:model-value="(v) => { if (!v) closeCelebrate(); }">
+    <kg-sheet :model-value="celebrate" :title="doneCopy.title" @update:model-value="(v) => { if (!v) closeCelebrate(); }">
       <view class="cb">
         <l-icon name="party-popper" :size="48" tone="ok" />
         <template v-if="rSummary">
-          <text class="cb-s">到期 {{ celebrateN }} 道全部复习完成<template v-if="rSummary.pct !== null"> · 首答对 {{ rSummary.dueRight }} 道（{{ rSummary.pct }}%）</template></text>
+          <text class="cb-s">{{ doneCopy.cleared ? '到期 ' + celebrateN + ' 道全部复习完成' : '本组 ' + celebrateN + ' 道复习完成' }}<template v-if="rSummary.pct !== null"> · 首答对 {{ rSummary.dueRight }} 道（{{ rSummary.pct }}%）</template></text>
+          <text v-if="!doneCopy.cleared" class="cb-s cb-left">还有 {{ dueLeft }} 道到期待复习</text>
           <text v-if="rSummary.dueWrong" class="cb-s">答错 {{ rSummary.dueWrong }} 道已重出巩固<template v-if="rSummary.corrected"> · 纠正 {{ rSummary.corrected }} 道</template></text>
           <text v-if="rSummary.extra" class="cb-s">加练同类题 {{ rSummary.extra }} 道 · 答对 {{ rSummary.extraRight }} 道</text>
           <text v-if="rSummary.mastered" class="cb-s">达成掌握 {{ rSummary.mastered }} 道 · 已移到「已掌握」，不再安排复习</text>
         </template>
-        <text v-else class="cb-s">{{ celebrateN }} 道到期错题全部复习完成，遗忘曲线稳住了</text>
+        <text v-else class="cb-s">{{ doneCopy.line }}</text>
         <text v-if="nextText" class="cb-s cb-next">{{ nextText }}</text>
       </view>
       <!-- 同考点强化建议（spec-03）随小结一屏展示：「回错题本」始终直接回列表，不再先弹推荐层 -->
@@ -71,7 +72,14 @@
       </view>
       <template #footer>
         <view class="sheet-acts">
-          <template v-if="reinforce">
+          <template v-if="!doneCopy.cleared">
+            <kg-button variant="primary" size="lg" block class="cb-next-batch" @click="continueReview">{{ doneCopy.cta }}</kg-button>
+            <view class="rf-row2">
+              <kg-button v-if="reinforce" variant="text" size="md" @click="startReinforce(reinforce)">强化 5 道新题</kg-button>
+              <kg-button variant="text" size="md" @click="closeCelebrate">回错题本</kg-button>
+            </view>
+          </template>
+          <template v-else-if="reinforce">
             <kg-button variant="primary" size="lg" block @click="startReinforce(reinforce)">强化 5 道新题（未做过）›</kg-button>
             <view class="rf-row2">
               <kg-button v-if="reinforceItems.length > 1" variant="text" size="md" @click="swapReinforce">换个考点</kg-button>
@@ -598,7 +606,7 @@ import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
 import { askQid, findAskSid } from '../../ask-link.js';
 import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid, reviewAskAnswer, similarSubmodule, hasSimilarPool } from '../../review-similar.js';
 import { buildReviewSnap, parseReviewSnap, reviewElapsedSecs } from '../../review-snap.js';
-import { nextReviewText, reviewSummary, reviewVerdict, streakProgressText } from '../../review-summary.js';
+import { nextReviewText, reviewSummary, reviewVerdict, streakProgressText, similarRoom, reviewDueLeft, reviewDoneCopy } from '../../review-summary.js';
 import { reviewOptions, reviewOptionsFull } from '../../review-opts.js';
 import { redoSkippedNote } from '../../book-redo-skipped.js';
 import { MANUAL_MODULES, MANUAL_LETTERS, MANUAL_QUESTION_MAX, MANUAL_EXPLANATION_MAX, emptyManualEntry, toggleLetter, manualEntryError, manualEntryBody, manualSavedToast } from '../../book-manual-entry.js';
@@ -625,6 +633,7 @@ export default {
       offlineView: false,
       due: [],
       dueTotal: 0,
+      dueLeft: 0,
       autoReview: false,
       reviewing: false,
       fontLv: normFontLv(uni.getStorageSync('fontLv')),
@@ -720,6 +729,9 @@ export default {
     },
     similarableReview() {
       return hasSimilarPool(this.cur);
+    },
+    doneCopy() {
+      return reviewDoneCopy(this.celebrateN, this.dueLeft);
     },
     verdictText() {
       const c = this.cur || {};
@@ -1464,6 +1476,7 @@ export default {
         this.items = d.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
         this.due = r.items;
         this.dueTotal = r.total || r.items.length;
+        if (this.celebrate) this.dueLeft = this.dueTotal;
         if (this.autoReview) {
           this.autoReview = false;
           if (this.due.length && !this.reviewing) this.startReview();
@@ -1667,15 +1680,17 @@ export default {
     async appendSimilar(m) {
       // 答错自动加推：本轮末尾追加最多 2 道同类新题（不写 SRS，不影响复习记录）
       if (m._simFetched || m._requeued || !hasSimilarPool(m)) return;
+      const room = similarRoom(this.rItems);
+      if (!room) return;
       m._simFetched = true;
       const sub = similarSubmodule(m);
       try {
-        let q = '/api/questions?limit=2&uid=' + encodeURIComponent(anonUid()) + '&module=' + encodeURIComponent(m.module);
+        let q = '/api/questions?limit=' + room + '&uid=' + encodeURIComponent(anonUid()) + '&module=' + encodeURIComponent(m.module);
         if (sub) q += '&submodule=' + encodeURIComponent(sub);
         const d = await request(q);
         const add = (d.items || [])
           .filter((x) => x.id !== m.question_id)
-          .slice(0, 2)
+          .slice(0, room)
           .map(similarItemFromQuestion)
           .filter(Boolean);
         if (add.length) {
@@ -1743,6 +1758,7 @@ export default {
         this.saveReviewSnap();
       } else {
         this.celebrateN = this.rItems.filter((q) => !q._extra && !q._requeued).length;
+        this.dueLeft = reviewDueLeft(this.dueTotal, this.celebrateN);
         this.rSummary = reviewSummary(this.rItems);
         this.nextText = nextReviewText(this.rItems);
         this.reinforce = null;
@@ -1756,6 +1772,13 @@ export default {
     closeCelebrate() {
       this.celebrate = false;
       this.reinforce = null;
+    },
+    async continueReview() {
+      trackEvent('review_entry_click', 'next_batch');
+      this.closeCelebrate();
+      await this.load();
+      if (this.due.length) this.startReview();
+      else uni.showToast({ title: '到期错题已复习完', icon: 'none' });
     },
     async fetchReinforce() {
       try {
@@ -2187,6 +2210,7 @@ export default {
 .cb { display: flex; flex-direction: column; align-items: center; gap: var(--sp-8); padding: var(--sp-16) 0; text-align: center; }
 .cb-s { font-size: var(--fs-sub); color: var(--ink-2); line-height: var(--lh-sub); }
 .cb-next { color: var(--ink); font-weight: 500; }
+.cb-left { color: var(--warn-strong); font-weight: 500; }
 .rf { display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-8) 0; }
 .rf-inline { border-top: 1px solid var(--line); padding-top: var(--sp-12); }
 .rf-k { font-size: var(--fs-sub); color: var(--ink-3); }

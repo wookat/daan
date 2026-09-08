@@ -289,8 +289,8 @@
 <t-popup visible="{{celebrate}}" placement="center" bind:visible-change="onCelebrateVisible">
   <view class="cb-card">
     <view class="cb-ico"><l-icon name="party-popper" size="32" tone="ok" /></view>
-    <view class="cb-t">今日复习已清零！</view>
-    <view class="cb-s">{{celebrateN}} 道到期错题全部复习完成，遗忘曲线稳住了</view>
+    <view class="cb-t">{{celebrateCopy.title}}</view>
+    <view class="cb-s {{celebrateCopy.cleared ? '' : 'cb-left'}}">{{celebrateCopy.line}}</view>
     <view wx:if="{{celebrateMastered}}" class="cb-s">达成掌握 {{celebrateMastered}} 道 · 已移到「已掌握」，不再安排复习</view>
     <view wx:if="{{celebrateNext}}" class="cb-s cb-next">{{celebrateNext}}</view>
     <view wx:if="{{reinforce}}" class="rf rf-inline">
@@ -299,7 +299,14 @@
       <text class="rf-meta">{{reinforceMeta}}</text>
     </view>
     <view class="cb-btn">
-      <block wx:if="{{reinforce}}">
+      <block wx:if="{{!celebrateCopy.cleared}}">
+        <kg-button variant="primary" size="lg" block bind:click="onContinueReview">{{celebrateCopy.cta}}</kg-button>
+        <view class="rf-row2">
+          <kg-button wx:if="{{reinforce}}" variant="text" size="md" bind:click="onStartReinforce">强化 5 道新题</kg-button>
+          <kg-button variant="text" size="md" bind:click="onCloseCelebrate">回错题本</kg-button>
+        </view>
+      </block>
+      <block wx:elif="{{reinforce}}">
         <kg-button variant="primary" size="lg" block bind:click="onStartReinforce">强化 5 道新题（未做过）›</kg-button>
         <view class="rf-row2">
           <kg-button wx:if="{{reinforceItems.length > 1}}" variant="text" size="md" bind:click="onSwapReinforce">换个考点</kg-button>

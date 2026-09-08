@@ -45,6 +45,40 @@ export function nextReviewText(rItems) {
   return '下次复习：' + parts.join(' · ');
 }
 
+/** 服务端 /api/review 单次下发上限（due_reviews limit），一组复习即一批。 */
+export const REVIEW_BATCH = 20;
+/** 答错自动加练同类题每轮总上限（每题最多 2 道），复习会话有界、不随错题数线性膨胀。 */
+export const REVIEW_EXTRA_MAX = 6;
+
+/** 本轮还能再追加几道加练同类题（0 表示已达上限）。 */
+export function similarRoom(rItems, perItem = 2, max = REVIEW_EXTRA_MAX) {
+  const extra = Array.isArray(rItems) ? rItems.filter((x) => x && typeof x === 'object' && x._extra).length : 0;
+  return Math.max(0, Math.min(perItem, max - extra));
+}
+
+/** 一组做完后剩余到期数的本地估算（服务端重拉前先显示）：到期总数 − 本组到期条目数，下限 0。 */
+export function reviewDueLeft(dueTotal, done) {
+  return Math.max(0, (Number(dueTotal) || 0) - (Number(done) || 0));
+}
+
+/**
+ * 一组复习完成后的小结口径：到期总数超过一组时不宣称「清零」。
+ * left>0 → 本组完成 + 剩余到期 + 「继续下一组」CTA；left=0 → 今日清零（原文案）。
+ */
+export function reviewDoneCopy(done, left) {
+  const n = Number(done) || 0;
+  const l = Math.max(0, Number(left) || 0);
+  if (l > 0) {
+    return {
+      cleared: false,
+      title: '本组复习完成',
+      line: `本组 ${n} 道复习完成 · 还有 ${l} 道到期待复习`,
+      cta: `继续复习下一组（${Math.min(l, REVIEW_BATCH)} 道）›`,
+    };
+  }
+  return { cleared: true, title: '今日复习已清零', line: `${n} 道到期错题全部复习完成，遗忘曲线稳住了`, cta: '' };
+}
+
 /** rItems → 本轮小结；非数组/空返回 null。无 _res 的条目不计入对应分子分母。 */
 export function reviewSummary(rItems) {
   if (!Array.isArray(rItems) || rItems.length === 0) return null;
