@@ -31,7 +31,7 @@
         </view>
 
         <view v-if="filters.years.length || filters.regions.length" class="filters">
-          <wd-segmented :value="stLabel" :options="ST_LABELS" size="small" @change="onSt" />
+          <wd-segmented ref="seg" :value="stLabel" :options="ST_LABELS" size="small" @change="onSt" />
           <kg-chip-row v-if="filters.years.length" :options="yearOpts" :model-value="year == null ? '' : year" @update:model-value="setYear($event === '' ? null : $event)" />
           <kg-chip-row v-if="filters.regions.length" class="region-row" :options="regionOpts" :model-value="region || ''" :scroll-to-selected="false" @update:model-value="setRegion($event || null)" />
         </view>
@@ -144,12 +144,14 @@ import { paperProgress } from '../../exam-list-progress.js';
 import { adoptServerExamProgress } from '../../exam-progress-sync.js';
 import { paperPracticedState } from '../../paper-continue.js';
 import { paperModsText } from '../../exam-paper-mods.js';
+import { segResizeMixin } from '../../seg-resize.js';
 
 const PAGE = 20;
 const ST_LABELS = ['全部', '没考过', '考过的'];
 const ST_VALUES = ['', 'todo', 'done'];
 
 export default {
+  mixins: [segResizeMixin],
   data() {
     return {
       items: [],

@@ -35,7 +35,7 @@ import type { FavFolder, FavItem, Mistake } from '../../api/types';
 import { anonUid } from '../../utils/auth';
 import { md } from '../../utils/md';
 import { buildReviewSnap, parseReviewSnap, reviewElapsedSecs, REVIEW_SNAP_KEY, type ReviewResume } from '../../utils/review-snap';
-import { reviewVerdict, streakProgressText } from '../../utils/review-verdict';
+import { nextReviewText, reviewVerdict, streakProgressText } from '../../utils/review-verdict';
 import { MODULE_NAMES, modName } from '../../utils/stats';
 import { syncTabBar } from '../../utils/tabbar';
 
@@ -147,6 +147,7 @@ interface RItem extends Mistake {
   appended?: number;
   streak?: number;
   masteredNow?: boolean;
+  nextDays?: number;
 }
 
 interface RecapRow {
@@ -228,6 +229,7 @@ Page({
     celebrate: false,
     celebrateN: 0,
     celebrateMastered: 0,
+    celebrateNext: '',
     reasonOpts: toOpts(REASONS),
     tabOpts: [
       { value: 'todo', label: '待掌握 0' },
@@ -999,6 +1001,7 @@ Page({
       if (item) {
         item.streak = res.streak;
         item.masteredNow = mastered;
+        item.nextDays = res.next_review_days;
       }
       this.setData({
         nextDays: res.next_review_days,
@@ -1072,8 +1075,9 @@ Page({
       const items = this.data.rItems;
       const n = items.length;
       const celebrateMastered = items.filter((x) => !x.extra && x.masteredNow === true).length;
+      const celebrateNext = nextReviewText(items);
       this.exitReview();
-      this.setData({ celebrate: true, celebrateN: n, celebrateMastered });
+      this.setData({ celebrate: true, celebrateN: n, celebrateMastered, celebrateNext });
       trackEvent('review_done_celebrate', 'book');
     }
   },

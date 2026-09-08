@@ -21,6 +21,30 @@ export function reviewVerdict({ extra, requeued, wasCorrect, streak, nextDays, m
   return head + '（下次复习：' + (Number(nextDays) || 0) + ' 天后）';
 }
 
+/**
+ * 清零小结「下次复习」一句：按每题服务端回的 `_nextDays`（非加练、未掌握、最后一次作答的条目）聚合，
+ * 例：「下次复习：明天 2 道 · 3 天后 1 道」；没有天数样本返回 ''。同一错题重出（_requeued）以最后一条为准。
+ */
+export function nextReviewText(rItems) {
+  if (!Array.isArray(rItems)) return '';
+  const byMid = new Map();
+  for (const x of rItems) {
+    if (!x || typeof x !== 'object' || x._extra) continue;
+    const d = Number(x._nextDays);
+    if (!Number.isFinite(d) || d <= 0) continue;
+    const key = x.id != null ? String(x.id) : x;
+    if (x._mastered === true) byMid.delete(key);
+    else byMid.set(key, Math.round(d));
+  }
+  const counts = new Map();
+  for (const d of byMid.values()) counts.set(d, (counts.get(d) || 0) + 1);
+  if (!counts.size) return '';
+  const parts = [...counts.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([d, n]) => (d === 1 ? '明天' : d + ' 天后') + ' ' + n + ' 道');
+  return '下次复习：' + parts.join(' · ');
+}
+
 /** rItems → 本轮小结；非数组/空返回 null。无 _res 的条目不计入对应分子分母。 */
 export function reviewSummary(rItems) {
   if (!Array.isArray(rItems) || rItems.length === 0) return null;

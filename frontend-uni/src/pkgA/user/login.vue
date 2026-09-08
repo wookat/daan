@@ -8,7 +8,7 @@
       </view>
 
       <kg-card class="card">
-        <wd-segmented :value="modeLabel" :options="modeOpts" class="seg" @change="onModeChange" />
+        <wd-segmented ref="seg" :value="modeLabel" :options="modeOpts" class="seg" @change="onModeChange" />
 
         <view class="field">
           <wd-input
@@ -58,6 +58,7 @@
 
 <script>
 import { authLogin, authRegister, authSso, mergeAnon, setAuth, trackEvent } from '../../api.js';
+import { segResizeMixin } from '../../seg-resize.js';
 const MERGE_FAIL_TIP = '已登录，但本机记录合并失败；退出后重新登录会再次合并';
 
 const MODE_OPTS = [
@@ -66,6 +67,7 @@ const MODE_OPTS = [
 ];
 
 export default {
+  mixins: [segResizeMixin],
   data() {
     return { mode: 'login', phone: '', password: '', nickname: '', busy: false, err: '', fieldErr: { phone: '', password: '' } };
   },

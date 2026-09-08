@@ -18,6 +18,10 @@ def api_export_pdf(body: dict, request: Request):
     ids = [int(i) for i in (body.get("question_ids") or [])[:140]]
     items = body.get("items") or []
     questions = db.questions_by_ids(ids) if ids else []
+    notes = pdf_export.parse_mistake_notes(body.get("mistakes"))
+    for q in questions:
+        if q.get("id") in notes:
+            q.update(notes[int(q["id"])])
     for it in items[:140]:
         if isinstance(it, dict) and (it.get("question") or "").strip():
             questions.append(
@@ -29,6 +33,7 @@ def api_export_pdf(body: dict, request: Request):
                     "answer": it.get("answer") or "",
                     "analysis": it.get("analysis") or "",
                     "material": it.get("material") or "",
+                    **pdf_export.mistake_note(it),
                 }
             )
     if not questions:

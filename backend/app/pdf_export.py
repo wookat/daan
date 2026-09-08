@@ -97,6 +97,48 @@ def _styles(font: str) -> dict:
 
 
 _MAT_SEP = re.compile(r"问题\s*[：:]")
+_LETTERS = re.compile(r"[A-F]+")
+NOTE_REASON_MAX = 24
+
+
+def mistake_note(raw) -> dict:
+    """错题导出的个人批注（我的错答 / 错因）归一：选项字母去重升序、错因截断；都为空时返回 {}。"""
+    if not isinstance(raw, dict):
+        return {}
+    out = {}
+    m = _LETTERS.search(str(raw.get("picked") or "").upper())
+    if m:
+        out["my_answer"] = "".join(sorted(set(m.group(0))))
+    reason = re.sub(r"\s+", " ", str(raw.get("reason") or "")).strip()[:NOTE_REASON_MAX]
+    if reason:
+        out["error_reason"] = reason
+    return out
+
+
+def parse_mistake_notes(raw) -> dict[int, dict]:
+    """`mistakes` 体：{question_id: {picked, reason}} → {int(qid): mistake_note}，非法键/空批注丢弃。"""
+    if not isinstance(raw, dict):
+        return {}
+    out: dict[int, dict] = {}
+    for k, v in list(raw.items())[:140]:
+        try:
+            qid = int(k)
+        except (TypeError, ValueError):
+            continue
+        note = mistake_note(v)
+        if note:
+            out[qid] = note
+    return out
+
+
+def note_text(q: dict) -> str:
+    """参考答案页每题后的个人批注文案；无批注返回 ''。"""
+    parts = []
+    if q.get("my_answer"):
+        parts.append("我的错答 " + str(q["my_answer"]))
+    if q.get("error_reason"):
+        parts.append("错因：" + str(q["error_reason"]))
+    return " · ".join(parts)
 
 
 def _split_material(qtext: str) -> tuple[str, str] | None:
@@ -181,6 +223,9 @@ def build_paper_pdf(
     meta = f"共 {n} 题 · 建议用时 {max(5, round(n * 0.9))} 分钟 · {date}"
     if paper_code:
         meta += f" · 卷码 {paper_code}"
+    noted = sum(1 for q in questions if note_text(q))
+    if include_answers and noted:
+        meta += f" · {noted} 题附我的错答/错因"
     if answer_sheet and include_questions and paper_code and len(sheet_rows) < n:
         meta += (
             f" · 答题卡 {len(sheet_rows)} 题（时政/手录题 {n - len(sheet_rows)} 题不参与机读判分，请对照参考答案核对）"
@@ -246,14 +291,13 @@ def build_paper_pdf(
         story.extend(_answer_table(questions, st, font))
         for i, q in enumerate(questions, 1):
             ana = (q.get("analysis") or q.get("explanation") or q.get("hs_explanation") or "").strip()
-            if not ana:
+            note = note_text(q)
+            if not ana and not note:
                 continue
-            story.append(
-                Paragraph(
-                    f"<b>{i}. 答案 {_esc(q.get('answer') or '—')}</b>　{_esc(ana[:600])}",
-                    st["ans"],
-                )
-            )
+            head = f"<b>{i}. 答案 {_esc(q.get('answer') or '—')}</b>"
+            if note:
+                head += f'　<font color="#C0392B">{_esc(note)}</font>'
+            story.append(Paragraph(f"{head}　{_esc(ana[:600])}", st["ans"]))
 
     doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
     data = buf.getvalue()

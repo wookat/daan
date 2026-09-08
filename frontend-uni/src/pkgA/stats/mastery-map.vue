@@ -40,7 +40,7 @@
           <kg-chip-row v-model="curMod" :options="modChips" class="tabs" />
 
           <view class="toolbar">
-            <wd-segmented :value="viewLabel" :options="viewOpts" size="small" @change="onViewChange" />
+            <wd-segmented ref="seg" :value="viewLabel" :options="viewOpts" size="small" @change="onViewChange" />
           </view>
 
           <!-- 二级题型卡 + 三级考点 -->
@@ -121,6 +121,7 @@
 <script>
 import { request, snapPeek, anonUid } from '../../api.js';
 import { buildMasteryUrl, parseMasteryOpts } from '../../mastery-url.js';
+import { segResizeMixin } from '../../seg-resize.js';
 
 const LEVELS = [
   { key: 'untouched', label: '未接触' },
@@ -135,6 +136,7 @@ const VIEW_OPTS = [
 ];
 
 export default {
+  mixins: [segResizeMixin],
   data() {
     return { LEVELS, map: null, cold: false, nTotal: 0, need: 30, curMod: '', selected: null, selGrp: null, err: '', view: 'grid' };
   },
