@@ -5,6 +5,12 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## 卡面错因标签与探针打标补充（R551）
+
+- **R551 起 H5 列表卡 mhead 直显 `error_reason`**（warn 色 + pen-line，位置在「手录/模考」后、卷码 badge 前）：未掌握且非批量时为 `role=button` 热区 `.rzbadge-hit`，点开既有「更多操作」层的错因自评；已掌握/批量下为只读 `kg-tag`。R550 段「错因仅在更多操作中显示」已过时，卡面无标签只在 `error_reason` 为空时成立。改选 chip **不会自动关层**，卡面更新口径为「关层后」。
+- 以卡面标签断言时用 `.rzbadge-hit`/`kg-tag--warn` scope，不要用全页文本匹配（顶部错因筛选 chip 与卡面标签同文案）。
+- `mistakes.probe` / `review_log.probe` 与 `answer_log.probe` 同口径（`X-Kg-Probe` 头 / 探针网段 / 自动化 UA 三路径）；黑盒复验产生的行应全为 1，`GET /api/mistakes` items **不得**含 `probe` 键。`review_log.probe` 列是首次 review 写入时懒迁移，初次只读核 schema 若无该列不是缺陷。`probe=0` 分支在生产无法用伪造 `X-Kg-Ip` 验证（公网边缘覆写），只能标 UNTESTED 或用本地 TestClient。
+
 ## 手录/复习强化生产黑盒补充（R550）
 
 - 优先真实 FAB「手录错题」生成 null-qid fixture；正常数据不走直调 API。仅在测试授权明确允许时，从页面上下文 fetch 验非法体与长度边界；预期 400 和对应 browser-log resource error 必须独立分类，不能声称所有错误为零。
