@@ -96,12 +96,43 @@ def _mistake_text(q: dict) -> str:
     return base + ("\n" + opt_text if opt_text else "")
 
 
+def _mistake_rec(uid: str, q: dict, qid: int, picked: str, correct_ans: str) -> dict:
+    return {
+        "uid": uid[:64],
+        "question_id": qid,
+        "module": q.get("module"),
+        "question_type": q.get("submodule"),
+        "question_text": _mistake_text(q),
+        "user_answer": picked,
+        "correct_answer": correct_ans,
+        "explanation": q.get("explanation") or q.get("hs_explanation") or "",
+        "source": "exam",
+    }
+
+
+def _persist_graded(uid: str, code: str, page: int, log_items: list[dict], wrong: list[dict], probe: bool) -> tuple[bool, float | None]:
+    """同一 uid 对同一卷同一页提交完全相同的作答（重扫同一张卡 / 手动录入重复交卷）只记一次：
+    否则 answer_log 翻倍、mistakes.times 递增、已推进的复习进度（review_streak/next_review）被打回。
+    整卷模考（code=None，每次 attempt 本身就是独立一次作答）不去重。
+    返回 (本次是否落库, 首次相同提交时刻|None)。"""
+    if not uid or not log_items:
+        return False, None
+    dup_at = db.claim_paper_submit(uid[:64], code, page, db.paper_picks_hash(log_items)) if code else None
+    if dup_at is not None:
+        return False, dup_at
+    for rec in wrong:
+        db.save_mistake(rec)
+    db.save_answer_log(uid[:64], log_items, probe=probe)
+    return True, None
+
+
 def _judge_paper(uid: str, paper: dict, picks: dict[int, str], secs: dict[int, int] | None = None, probe: bool = False) -> dict:
     """picks: {题号(从1开始): 'A'}；secs: {题号: 用时秒}；与扫描答题卡同一套判分/落库逻辑。"""
     qids = paper["question_ids"]
     questions = {q["id"]: q for q in db.questions_by_ids(qids)}
     results = []
     log_items = []
+    wrong = []
     for i, qid in enumerate(qids):
         q = questions.get(qid)
         if not q:
@@ -132,21 +163,8 @@ def _judge_paper(uid: str, paper: dict, picks: dict[int, str], secs: dict[int, i
                 }
             )
             if not is_correct:
-                db.save_mistake(
-                    {
-                        "uid": uid[:64],
-                        "question_id": qid,
-                        "module": q.get("module"),
-                        "question_type": q.get("submodule"),
-                        "question_text": _mistake_text(q),
-                        "user_answer": picked,
-                        "correct_answer": correct_ans,
-                        "explanation": q.get("explanation") or q.get("hs_explanation") or "",
-                        "source": "exam",
-                    }
-                )
-    if uid and log_items:
-        db.save_answer_log(uid[:64], log_items, probe=probe)
+                wrong.append(_mistake_rec(uid, q, qid, picked, correct_ans))
+    saved, dup_at = _persist_graded(uid, paper["code"], 0, log_items, wrong, probe)
     answered = [r for r in results if r["status"] == "ok"]
     return {
         "code": paper["code"],
@@ -155,7 +173,9 @@ def _judge_paper(uid: str, paper: dict, picks: dict[int, str], secs: dict[int, i
         "inline_n": paper.get("inline_n") or 0,
         "answered": len(answered),
         "correct": sum(1 for r in answered if r["correct"]),
-        "saved": bool(uid and log_items),
+        "saved": saved,
+        "dup": dup_at is not None,
+        "dup_at": dup_at,
         "items": results,
     }
 
@@ -201,6 +221,7 @@ async def api_scan_sheet(request: Request, uid: str = Form(""), image: UploadFil
     questions = {q["id"]: q for q in db.questions_by_ids(page_ids)}
     results = []
     log_items = []
+    wrong = []
     for slot, qid in enumerate(page_ids):
         q = questions.get(qid)
         if not q:
@@ -229,21 +250,8 @@ async def api_scan_sheet(request: Request, uid: str = Form(""), image: UploadFil
                 }
             )
             if not is_correct:
-                db.save_mistake(
-                    {
-                        "uid": uid[:64],
-                        "question_id": qid,
-                        "module": q.get("module"),
-                        "question_type": q.get("submodule"),
-                        "question_text": _mistake_text(q),
-                        "user_answer": picked,
-                        "correct_answer": correct_ans,
-                        "explanation": q.get("explanation") or q.get("hs_explanation") or "",
-                        "source": "exam",
-                    }
-                )
-    if uid and log_items:
-        db.save_answer_log(uid[:64], log_items, probe=auth.probe_request(request))
+                wrong.append(_mistake_rec(uid, q, qid, picked, correct_ans))
+    saved, dup_at = _persist_graded(uid, rec["code"], page, log_items, wrong, auth.probe_request(request))
     answered = [r for r in results if r["status"] == "ok"]
     return {
         "code": rec["code"],
@@ -254,7 +262,9 @@ async def api_scan_sheet(request: Request, uid: str = Form(""), image: UploadFil
         "inline_n": paper.get("inline_n") or 0,
         "answered": len(answered),
         "correct": sum(1 for r in answered if r["correct"]),
-        "saved": bool(uid and log_items),
+        "saved": saved,
+        "dup": dup_at is not None,
+        "dup_at": dup_at,
         "items": results,
     }
 
