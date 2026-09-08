@@ -2943,7 +2943,7 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - (c)（`~/r529/r529_post.out`，07:15Z）：容器窗 63 请求 5xx/assets 404/monitor/mpUA/非探针 POST/401·403/Traceback 全 0、重建窗源站 5xx 0（09-08 503 仍 75 = R525-2）；`/` 4.7G / mem 368 MB / load 1.26；WAL `4,173,592` 同字节；probe=0 各表同 R528；`umst3` 32/45/22/1 新增 0、`mistake 1953/2784/2914/2915` 不变；任意 uid 三表 04:52Z 起 0、`paper_exports` 05:22Z 后 0（仍 4 列）；`scan_sheet/paper_answers/paper/{code}` 全历史仍全探针。簇 09-08 至 07:06:37Z 6575/6499（15.4 行/分、UA 14、每 IP ≤2），**07:06Z 后 9 min 无新行**（是否停待复查）；无新的外部真人证据。
 - 四道把关：QA = 后端 2 例 + 前端 5 例源锁 + 本地真 `scan_sheet` p1/p2 两路 375/1440；UX = 页标签与卡面页眉「第 1/2 页」同口径、提示行 375 两行 / 1440 单行、三路关闭同出口；交叉 = 生产历史 n=93 卷真回 `pages:2` + bundle 同路径客户端替换复采；合规/安全 = 新字段只读、生产 0 写入 0 PDF 0 LLM、非 kaogong 资源未动。
 - 未做/登记：小程序 `pages/book` 结果 sheet 未接 `pages`（并入 R528-1 P3）；生产 `scan_sheet` 真上传不做；涂卡图合成非实拍（只证页范围契约不证识别鲁棒性）；`umst3` 单页卷录入层「共 12 题」与替换后结果 sheet「1/2 页」不同源属预期。
-- 取证：`docs/iter/round-3/r529-scan-sheet-pages-close-refresh.md`；`~/r529/{local_r529.py,local_{375,1440}_{pre,post}.out,scan_resp_post_p{1,2}.json,sheet{1,2}{,_filled}.png,prod_r529.py,prod_{375,1440}.out,prod_{375,1440}/,r529_pre.sh,r529_pre.out,r529_post.sh,r529_post.out,r529_deploy.log}`。
+- 取证：`docs/iter/round-3/r529-scan-sheet-pages-close-refresh.md`；`~/r529/{local_r529.py,local_{375,1440}_{pre,post}.out,scan_resp_post_p{1,2}.json,sheet{1,2}{,_filled}.png,prod_r529.py,prod_{375,1440}.out,prod_{375,1440}_scan_result_p{1,2}.png,prod_{375,1440}_after_done.png,r529_pre.sh,r529_pre.out,r529_post.sh,r529_post.out,r529_deploy.log}`。
 - 下一步 R530：(c) 补量 + 到期项/簇（07:06Z 后簇是否停）；四维下一候选一手核（扫描结果 sheet 逐题行「✗」是否可直达该题错题详情/讲解 / 多页卷第 2 页扫完后是否有「本卷 P 页已全部判分」汇总 / 录入层对多页卷是否需分页）→ 命中即论证→实修→发版→复采。
 
 ### W9（守卫/阻塞收口 + 桌面让位/薄弱判定口径集成轮，分支 devin/wf-w9-integration，未建 PR/未部署）

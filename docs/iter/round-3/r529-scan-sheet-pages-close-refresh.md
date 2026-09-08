@@ -40,7 +40,7 @@
 - `./deploy/deploy_h5.sh --skip-build`：compose `Built / Recreate / Started`，`KG_COMPOSE_EXIT rc=0`；后端 `/api/health` 版本 `74d56fef`；CF Pages 上传成功；bundle 首轮读旧 `index-tS3hWG0W.js`（传播窗）→ 重试后 `index-pYlODHuD.js` = 本机 `dist/build/h5`；identity / gzip / br / 组合 Accept-Encoding 四路一致；`/api/stats` / questions / `/tiku/` / robots / indexnow / admin 回归全 200。
 - 6b Lighthouse 全 OK：`/` perf 0.99 / a11y 1.00 / bp 1.00 / seo 1.00 / LCP 1396 / CLS 0.06；`/tiku/` 1.00 / 1.00 / 1.00 / 1.00 / LCP 960 / CLS 0。`DEPLOY_RC=0`。
 
-## 4. 生产只读复采（`~/r529/prod_r529.py`，uid `umst3`，`X-Kg-Probe: 1`，非 GET 全 abort；`prod_{375,1440}.out` + 截图 `prod_{W}/scan_result_p{1,2}.png`）
+## 4. 生产只读复采（`~/r529/prod_r529.py`，uid `umst3`，`X-Kg-Probe: 1`，非 GET 全 abort；`prod_{375,1440}.out` + 截图 `prod_{W}_scan_result_p{1,2}.png`）
 
 | 段 | 证明对象 | 375 | 1440 |
 |---|---|---|---|
