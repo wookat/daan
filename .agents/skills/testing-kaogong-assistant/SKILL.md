@@ -5,6 +5,20 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R549 补充 — 安全录入边界与 PDF 的非 UID 数据清理
+- 做「禁止付费 AI/OCR」的 UX 研究时，错题本「手动录入答案」可能只是卷码/答题卡 lookup，而非自由编写错题；先走真实表单确认，再决定是否能免费创建 `question_id=null`。如果只能走 AI，明确标 UNTESTED，不用 API fixture 冒充用户录入链路。
+- `POST /api/export/pdf` 会写**全局、非 UID scoped** 的 `paper_exports`。UI 导出前按当前部署实现从实际题序推导 code，并只读确认该 code 不存在；若已存在，不覆盖。清理时在停止录屏、关闭 context 后，校验新行 code/题序/title/created_at，再只删这一行；独立只读复查。仅清 UID-bearing 表不够。
+- PDF 验收要下载实际文件并阅读/`pdftotext`，分别核题干、答题卡、答案、解析、个人错因。请求成功不等于所有内容齐全；paper 标题本地日期与服务端打印日期可能不同，跨时区时需另立边界取证。
+- 响应式组件可能缓存测量：宽度切换后有错位时，保留 resize 后与同宽刷新后的对照；以部署 chunk 的测量触发条件作根因线索，不把仅 resize 可见的问题描述为所有桌面首访缺陷。
+- 本轮使用现有 `venv-kg` websocket、系统 Python paramiko/Pillow、CDP 29229、`wmctrl` 以及 `pdftotext`；不需要本地产品服务。
+- 多状态联动的 chip（如「含我的错答/错因」依赖「含解析」）：要从「依赖项关闭后的可见灰态」**单击**验证能否一步恢复，而不只测默认态开/关（R549 A① 生产 FAIL 即此形态）。
+- 清零/完成类 CTA 的验收要记录点击后的**完整后续**（既有强化推荐层等会先于目标页出现），不把文案正确等同于一步直达。
+- 网络/运行时审计以**关闭隔离 context 后的最终** `network-audit.json` 计数为准，不引用中间快照。
+- 发版期间老板侧可能并行发版（W 系列）：抽检开始前先核 `/api/health` rev 与 bundle；若已漂移，由 lead `git diff <预期rev> <线上rev>` 核本轮文件无差后再决定是否改在新 rev 上抽检，报告按实际 rev 命名。
+
+### Devin Secrets Needed（生产只读与精确清理）
+- `TICKETS_VPS_SSH_HOST`、`TICKETS_VPS_SSH_USER`、`TICKETS_VPS_SSH_CREDENTIAL`；使用已有环境绑定，不输出值。
+
 ## R548 补充（testing agent）— 练习快照和版本漂移取证
 - **R548 起重练/普通练习启动即写 `pendingSession`**（快照 `redo:1|0`、redo 时 `source:'redo'`），未作答后退→前进 / F5 应恢复同一集合（done=0 直接 adopt、无弹窗，redo 有「继续错题重练」toast）；R547 段「未答时二者皆无 → 前进走默认 start」的描述是修前形态，只用于对照旧版。
 - 以原始 `pendingSession` JSON wrapper 的 `.data` 为准；测试脚本的派生摘要可能把普通练习的 `lastModule` 错误写成 null，逐项对照原始值后再出报告。
