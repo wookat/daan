@@ -1,6 +1,6 @@
 # W11-C 内容审计：解析 / 花生十三讲解 / 生成型文案是否「像人写的」
 
-- 日期：2026-09-08（UTC）。基线：PR #643 head `40773c5`（= main + W10）。
+- 日期：2026-09-08（UTC）。基线：origin/main `de94fde`（#643 W10 已合入；审计期间生产 `/api/health` rev 从 `94803e0b` 更新为 `de94fde`，即生产已含 W10）。
 - 数据：生产只读 `GET /api/questions?module=…&limit=10&uid=test-w11-ch-*`，五模块各 7 组 × 10 题（模拟练习组），去重后 **535 题**（changshi 110 / yanyu 110 / shuliang 109 / panduan 109 / ziliao 97）。样本、抽样与统计脚本在审计机 `~/w11c/{sample.json,fetch.py,analyze.py}`（不入库）。生产零写入、零 AI 调用。
 - 生产 `/api/health` 抽样时 rev=`94803e0b`，复核 SEO 页时 rev=`de94fde`（两次结论一致）。
 - 不重复上报：W3-C 三类清洗（统计前缀 / 广告尾句 / 汉字空格：对 535 题 explanation 重跑 `quality.sanitize_explanation` **0 题会被改动**，确认已清干净）、R400–R407 公式/OCR、w9/w10 已登记的「结论字母 ≠ answer」（本次 535 题 `answer_letter_conflict` 0 命中）。
