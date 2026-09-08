@@ -59,6 +59,10 @@ interface SubGroup {
   name: string;
   subs: SubChip[];
 }
+/** 雷达轴带已答题数：薄弱/有数据按 n>0 判，0% 全错模块不再被当未答隐藏 */
+interface StatAxis extends RadarAxis {
+  n: number;
+}
 function pctTone(pct: number): string {
   return pct < 60 ? 'bad' : pct < 80 ? 'warn' : 'ok';
 }
@@ -85,9 +89,9 @@ Page({
     hmTotal: 0,
     hmCols: [] as HeatCell[][],
     // 雷达
-    axes: [] as RadarAxis[],
+    axes: [] as StatAxis[],
     hasRadar: false,
-    weakAxes: [] as RadarAxis[],
+    weakAxes: [] as StatAxis[],
     // 错题
     byModule: [] as ModRow[],
     shownModules: [] as ModRow[],
@@ -155,15 +159,15 @@ Page({
     const { cols, total: hmTotal } = buildHeatmap(days);
     const streak = this._svStreak != null ? this._svStreak : streakFromDays(ps.days || {});
 
-    const axes: RadarAxis[] = MODS.map((m) => {
+    const axes: StatAxis[] = MODS.map((m) => {
       if (g && g.modules) {
         const s = g.modules[m.key] || { n: 0, c: 0 };
-        return { ...m, pct: s.n ? Math.round((s.c / s.n) * 100) : 0 };
+        return { ...m, n: s.n, pct: s.n ? Math.round((s.c / s.n) * 100) : 0 };
       }
       const s = ps.byModule[m.key] || { done: 0, correct: 0 };
-      return { ...m, pct: s.done ? Math.round((s.correct / s.done) * 100) : 0 };
+      return { ...m, n: s.done, pct: s.done ? Math.round((s.correct / s.done) * 100) : 0 };
     });
-    const weakAxes = axes.filter((a) => a.pct > 0).sort((a, b) => a.pct - b.pct).slice(0, 2);
+    const weakAxes = axes.filter((a) => a.n > 0).sort((a, b) => a.pct - b.pct).slice(0, 2);
 
     // 近 7 日正确率（本机 pstats，H5 同源）
     const dc = ps.daysCorrect || {};
@@ -207,7 +211,7 @@ Page({
       hmTotal,
       hmCols: cols,
       axes,
-      hasRadar: axes.some((a) => a.pct > 0),
+      hasRadar: axes.some((a) => a.n > 0),
       weakAxes,
       trendBars,
       trendHas,
