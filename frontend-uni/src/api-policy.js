@@ -15,6 +15,12 @@ export function netFailMessage(errMsg, fallback = NET_FAIL_TEXT) {
   return m;
 }
 
+// 失败横幅文案：自带「再试 / 重试」结尾的错误（含上面两条网络文案）不再追加「，请重试」。
+export function failBannerText(error, prefix = '失败：') {
+  const e = String(error || '');
+  return prefix + e + (/再试|重试/.test(e) ? '' : '，请重试');
+}
+
 // 非 2xx 响应的统一判定：detail 提取（对象数组回落状态码防 [object Object]）、
 // 登录态本身失效判定（访问码/管理令牌 401 不踢登录）、对外错误文案。
 export function classifyHttpError({ status, detail, path }) {

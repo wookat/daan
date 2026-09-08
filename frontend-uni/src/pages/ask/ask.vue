@@ -154,7 +154,7 @@
           </view>
           <view class="msg ai"><kg-card variant="soft" class="bubble ab"><text class="spin">{{ loadingText }}</text><kg-skeleton preset="lines" /></kg-card></view>
         </view>
-        <kg-banner v-if="error" tone="bad" icon="triangle-alert" :text="'失败：' + error + (error.includes('再试') ? '' : '，请重试')" :closable="false" />
+        <kg-banner v-if="error" tone="bad" icon="triangle-alert" :text="errorText" :closable="false" />
       </template>
 
       <!-- 会话列表：桌面辅栏 / 移动端跟随主列 -->
@@ -194,7 +194,7 @@
 
     <!-- 新题文字输入 sheet -->
     <kg-sheet v-model="textOpen" title="粘贴题目文字">
-      <kg-banner v-if="error" tone="bad" icon="triangle-alert" :text="'失败：' + error + (error.includes('再试') ? '' : '，请重试')" :closable="false" class="sheet-err" />
+      <kg-banner v-if="error" tone="bad" icon="triangle-alert" :text="errorText" :closable="false" class="sheet-err" />
       <textarea v-model="qtext" class="ta" placeholder="粘贴题干和选项…" :maxlength="-1" auto-height />
       <text class="label">你选的答案（可选，填了会帮你分析错因）</text>
       <view class="ans-chips">
@@ -231,6 +231,7 @@
 <script>
 import { md } from '../../md.js';
 import { request, uploadExplain, streamExplain, anonUid, hasAccessCode, fetchAccessInfo, promptAccessCode, trackEvent } from '../../api.js';
+import { failBannerText } from '../../api-policy.js';
 import { isNativeApp, pickImageNative } from '../../native.js';
 import { setBookBadge } from '../../tabbar-badge.js';
 import { mergeAskSessions, upsertLocalSession, addTombstone, removeTombstone, pruneTombstones, filterTombstoned, sanitizeCurItems, parseRemoteCur } from '../../ask-sessions.js';
@@ -262,6 +263,9 @@ export default {
   computed: {
     convo() {
       return [...this.results].reverse();
+    },
+    errorText() {
+      return failBannerText(this.error);
     },
   },
   onShow() {
