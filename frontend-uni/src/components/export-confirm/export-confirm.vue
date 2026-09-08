@@ -63,7 +63,7 @@ export default {
   },
   methods: {
     toggleMine() {
-      this.withMine = !this.withMine;
+      this.withMine = !this.withNotes;
       if (this.withMine && !this.only) this.withAns = true;
     },
     onConfirm() {

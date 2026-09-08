@@ -103,7 +103,7 @@ describe('R541 源锁', () => {
     expect(types).toMatch(/interface ReviewRecordResp \{[^}]*mastered: boolean;/s);
     expect(wxml).toContain('<text>{{rVerdict}}</text>');
     expect(wxml).not.toContain('下次复习：{{nextDays}}');
-    expect(ts).toContain("import { reviewVerdict, streakProgressText } from '../../utils/review-verdict'");
+    expect(ts).toContain("import { nextReviewText, reviewVerdict, streakProgressText } from '../../utils/review-verdict'");
     expect(ts).toContain("'rCur.masteredNow': mastered");
     expect(ts).toContain('const celebrateMastered = items.filter((x) => !x.extra && x.masteredNow === true).length;');
     expect(wxml).toContain('达成掌握 {{celebrateMastered}} 道');
