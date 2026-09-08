@@ -6,11 +6,12 @@ const subName = (qt) => (qt && qt.includes('-') ? qt.split('-').slice(1).join('-
  * items → 薄弱考点前 3（错题数倒序）。
  * /api/questions 不回 tag3_name，展示名只能取 question_type 子名；同子名多个 tag3 合并为一条，
  * 合并后 tag3 仅在唯一时保留，否则置 null 走 submodule 强化入口。
+ * 时政题（_sz）不在 questions 强化池内，不计入薄弱考点。
  */
 export function weakSpots(items, modName) {
   const byTag = {};
   for (const q of items || []) {
-    if (!q || !q._picked || q._picked === q.answer) continue;
+    if (!q || q._sz || !q._picked || q._picked === q.answer) continue;
     const key = q.tag3 || q.question_type || q.module || 'other';
     if (!byTag[key]) {
       const sub = subName(q.question_type || '');

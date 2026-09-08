@@ -50,6 +50,13 @@ describe('weakSpots', () => {
     ]);
   });
 
+  it('R524：时政题（_sz）不计入薄弱考点——纯时政组返回空，混合组只留普通题', () => {
+    const sz = (extra) => wrong({ module: '时政', question_type: '单选', tag3: null, id: 118, _sz: true, ...extra });
+    expect(weakSpots([sz(), sz({ id: 69 })], modName)).toEqual([]);
+    const r = weakSpots([sz(), wrong({ question_type: '言语理解-逻辑填空', tag3: 'YY-LJ-01' })], modName);
+    expect(r).toEqual([{ key: 'YY-LJ-01', name: '逻辑填空', module: 'yanyu', submodule: '逻辑填空', tag3: 'YY-LJ-01', n: 1 }]);
+  });
+
   it('无 question_type 时 name 退化为模块名，不同模块同名不合并', () => {
     const r = weakSpots([wrong({ tag3: 'x' }), wrong({ module: 'ziliao', tag3: 'y' })], modName);
     expect(r.map((w) => w.name).sort()).toEqual(['言语理解', '资料分析']);
