@@ -5,6 +5,19 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## 手录/复习强化生产黑盒补充（R550）
+
+- 优先真实 FAB「手录错题」生成 null-qid fixture；正常数据不走直调 API。仅在测试授权明确允许时，从页面上下文 fetch 验非法体与长度边界；预期 400 和对应 browser-log resource error 必须独立分类，不能声称所有错误为零。
+- 手录表单的正确答案/我的答案均有 A–D；用 `.entry-ans-col` 分别 scope，模块用 radio role 避免导航同名命中。375 sheet 内有独立滚动区，截图需包含滚动后提交按钮。错因选中可能仅在「更多操作」中显示，不把全页筛选词当卡片 badge 证据。
+- 强化候选需要当天 review_log 的合格样本及至少 5 道未做题；普通练习错答不一定足够。先真实错答并在 UI 标错因、完成自然到期复习；用回包判断 picked，不能 DB 改 next_review 或造候选。练习启动可能使用 `practiceLaunch` storage，而非 literal URL 参数；核真实 `/api/questions?mode=reinforce&limit=5...`、题 ID 与该 UID answer_log 交集。
+- 区分「小结状态已置开」与「DOM 已渲染」：GET suggest 可能在 Vue 下一次 DOM patch 前发出。可用被动 MutationObserver 记录标题出现时间并和 CDP requestWillBeSent 比较；不得把 40ms 左右的渲染时差描述成点击返回后再请求。
+- 手录-only PDF 可没有机读答题卡，应核正文、参考答案/解析及个人批注。下载 PDF 产生全局非 UID `paper_exports`，清理前后比全表 hash/set；精确校验本次 code、created_at、question_ids 后删除，不能只按前缀或全表删除。
+- CDP Python 若无 Playwright，可在现有隔离 venv 中 `python -m pip install playwright`；连接已有 Chromium 不需重新下载浏览器。本轮工具版本 1.62.0。控制进程关闭 context 后不要再 wait_for_timeout，否则出现 harness TargetClosedError；清理前确认 context 消失和 holder 退出。
+
+### Devin Secrets Needed
+
+沿用本文件 SSH 审计流程的 `TICKETS_VPS_SSH_HOST`、`TICKETS_VPS_SSH_USER`、`TICKETS_VPS_SSH_CREDENTIAL`；不要把值写入证据或报告。
+
 ## R549 补充 — 安全录入边界与 PDF 的非 UID 数据清理
 - 做「禁止付费 AI/OCR」的 UX 研究时，错题本「手动录入答案」可能只是卷码/答题卡 lookup，而非自由编写错题；先走真实表单确认，再决定是否能免费创建 `question_id=null`。如果只能走 AI，明确标 UNTESTED，不用 API fixture 冒充用户录入链路。
 - `POST /api/export/pdf` 会写**全局、非 UID scoped** 的 `paper_exports`。UI 导出前按当前部署实现从实际题序推导 code，并只读确认该 code 不存在；若已存在，不覆盖。清理时在停止录屏、关闭 context 后，校验新行 code/题序/title/created_at，再只删这一行；独立只读复查。仅清 UID-bearing 表不够。
