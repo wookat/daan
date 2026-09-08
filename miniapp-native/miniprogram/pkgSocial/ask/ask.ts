@@ -116,6 +116,8 @@ function blankRec(ts: number): Rec {
 }
 
 function applyMeta(r: Rec, m: ExplainMeta): void {
+  // 服务端确认的题号优先，否则保留深链带入的（缓存命中 / 题干未命中题库时服务端不回 qid）
+  r.qid = askQid(m.qid) || r.qid;
   r.module = m.module || '';
   r.module_name = m.module_name || '';
   r.question_type = m.question_type || '';
@@ -395,6 +397,7 @@ Page({
         filePath: img || null,
         text: txt || null,
         userAnswer: uans || null,
+        questionId: qid || null,
         onMeta: (m) => {
           applyMeta(rec, m);
           this.results.unshift(rec);
