@@ -179,8 +179,3 @@ export default {
 .note { display: block; margin-top: var(--sp-8); font-size: var(--fs-sub); color: var(--ink-3); text-align: center; }
 .err { display: block; margin-top: var(--sp-12); font-size: var(--fs-sub); color: var(--bad-strong); text-align: center; }
 </style>
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 40px;
-  box-sizing: border-box;
