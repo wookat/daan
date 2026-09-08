@@ -3303,7 +3303,7 @@ def claim_paper_submit(uid: str, code: str, page: int, picks_hash: str) -> float
 
 
 def paper_submitted_pages(uid: str, code: str) -> list[dict]:
-    """该 uid 对该卷已判过分的页（手动录入记为第 1 页）：每页首次/最近提交时刻与不同作答次数；表未建（从未有人判过分）返回空。"""
+    """该 uid 对该卷已判过分的页（手动录入整卷 page 0、扫描答题卡 1..P）：每页首次/最近提交时刻与不同作答次数；表未建（从未有人判过分）返回空。"""
     if not uid or not code:
         return []
     conn = get_conn()
