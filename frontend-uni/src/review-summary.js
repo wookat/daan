@@ -1,5 +1,14 @@
 // 复习轮末小结统计（fail-closed 纯函数）：仅消费 item 上的 _res 首答判分留痕
 
+/** 服务端 REVIEW_INTERVALS_DAYS 共 5 档，第 6 次连对移出复习计划（mastered） */
+export const MASTER_STREAK = 6;
+
+/** 列表卡连对进度「连对 n/6」；0 连对或已达阈值（已掌握另有标签）返回 ''。 */
+export function streakProgressText(streak) {
+  const n = Number(streak) || 0;
+  return n > 0 && n < MASTER_STREAK ? `连对 ${n}/${MASTER_STREAK}` : '';
+}
+
 /** 单题作答判定文案；`mastered` 为服务端 /api/review/{mid} 回包（连对达阈值即移出复习计划，不再有「下次复习」）。 */
 export function reviewVerdict({ extra, requeued, wasCorrect, streak, nextDays, mastered }) {
   if (extra) return wasCorrect ? '答对了，这个考法稳了 ✓' : '还没稳，仔细看讲解';

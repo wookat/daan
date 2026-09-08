@@ -65,6 +65,7 @@ export interface Mistake {
   mastered?: number;
   error_reason?: string | null;
   times?: number;
+  review_streak?: number;
   tag3_name?: string | null;
   type_group?: string | null;
   created_at?: number | string;

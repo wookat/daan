@@ -1,6 +1,15 @@
 // 复习单题作答判定文案（与 H5 review-summary.js reviewVerdict 同口径；WXML 不能调函数，在页面层算好下发）。
 // `mastered` 来自服务端 /api/review/{mid} 回包：连对达阈值即移出复习计划，此时不再有「下次复习」。
 
+/** 服务端 REVIEW_INTERVALS_DAYS 共 5 档，第 6 次连对移出复习计划（与 H5 review-summary.js MASTER_STREAK 同口径） */
+export const MASTER_STREAK = 6;
+
+/** 列表卡连对进度「连对 n/6」；0 连对或已达阈值返回 ''。 */
+export function streakProgressText(streak: number | undefined): string {
+  const n = Number(streak) || 0;
+  return n > 0 && n < MASTER_STREAK ? `连对 ${n}/${MASTER_STREAK}` : '';
+}
+
 export interface ReviewVerdictArgs {
   extra?: boolean;
   requeued?: boolean;

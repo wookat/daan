@@ -100,3 +100,37 @@ def test_review_secs_and_picked_are_sanitized(client):
     items = client.get(f"/api/attempts?uid={uid}&question_id={qid}").json()["items"]
     assert items == [{**items[0], "source": "review", "picked": "BD", "secs": None}]
     _cleanup()
+
+
+def test_review_secs_upper_clamp(client):
+    # R546：复习 secs 客户端上限 1h，服务端兜底 86400（超大/非有限值不得 500）
+    _cleanup()
+    uid = PFX + "clamp"
+    (qid,) = seed_questions(1, ("ziliao",))[:1]
+    mid = _mistake(client, uid, qid)
+    r = client.post(f"/api/review/{mid}", json={"uid": uid, "correct": True, "secs": 10**12})
+    assert r.status_code == 200
+    r = client.post(f"/api/review/{mid}", json={"uid": uid, "correct": True, "secs": 5.7})
+    assert r.status_code == 200
+    items = client.get(f"/api/attempts?uid={uid}&question_id={qid}").json()["items"]
+    assert [a["secs"] for a in items] == [5, 86400]
+    _cleanup()
+
+
+def test_mistakes_list_carries_review_streak(client):
+    # R546：列表卡「连对 n/6」消费 /api/mistakes 的 review_streak（连对+1 / 答错清零）
+    _cleanup()
+    uid = PFX + "streak"
+    (qid,) = seed_questions(1, ("ziliao",))[:1]
+    mid = _mistake(client, uid, qid)
+
+    def row():
+        return next(m for m in client.get(f"/api/mistakes?uid={uid}").json()["items"] if m["id"] == mid)
+
+    assert row()["review_streak"] == 0
+    client.post(f"/api/review/{mid}", json={"uid": uid, "correct": True})
+    client.post(f"/api/review/{mid}", json={"uid": uid, "correct": True})
+    assert row()["review_streak"] == 2
+    client.post(f"/api/review/{mid}", json={"uid": uid, "correct": False})
+    assert row()["review_streak"] == 0
+    _cleanup()

@@ -125,6 +125,7 @@
                 <text wx:elif="{{item.typeName && item.typeName !== item.modName}}">{{item.typeName}}</text>
                 <text wx:if="{{item.error_reason}}" class="m-meta-warn">{{item.error_reason}}</text>
                 <text wx:if="{{item.times > 1}}" class="m-meta-bad">错 {{item.times}} 次</text>
+                <text wx:if="{{item.streakText}}" class="m-meta-ok">{{item.streakText}}</text>
               </view>
             </view>
             <l-icon wx:if="{{!batchMode}}" class="m-chev" name="{{item.open ? 'chevron-up' : 'chevron-down'}}" size="16" tone="faint" />

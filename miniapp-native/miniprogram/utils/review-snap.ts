@@ -93,3 +93,10 @@ export function parseReviewSnap(raw: unknown, uid: string, now: number): ReviewR
     nextDays: Number(o.nextDays) || 0,
   };
 }
+
+// 单题作答用时（秒，与 H5 reviewElapsedSecs 同口径）：无起点/异常时钟回 undefined，上限 1h
+export const REVIEW_SECS_MAX = 3600;
+export function reviewElapsedSecs(startMs: number | undefined, nowMs: number): number | undefined {
+  if (!startMs || !(startMs > 0) || !(nowMs >= startMs)) return undefined;
+  return Math.min(REVIEW_SECS_MAX, Math.max(1, Math.round((nowMs - startMs) / 1000)));
+}

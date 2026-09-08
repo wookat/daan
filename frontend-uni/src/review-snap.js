@@ -70,3 +70,10 @@ export function parseReviewSnap(raw, uid, now) {
     nextDays: Number(s.nextDays) || 0,
   };
 }
+
+// 单题作答用时（秒）：从题目展示到判定；无起点/异常时钟回 undefined（不上送），上限 1h 防挂机
+export const REVIEW_SECS_MAX = 3600;
+export function reviewElapsedSecs(startMs, nowMs) {
+  if (!(startMs > 0) || !(nowMs >= startMs)) return undefined;
+  return Math.min(REVIEW_SECS_MAX, Math.max(1, Math.round((nowMs - startMs) / 1000)));
+}

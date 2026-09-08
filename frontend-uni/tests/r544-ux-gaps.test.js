@@ -61,7 +61,7 @@ describe('R544-4 统计五维：未练模块显「未练」而非 0%；仅 1 模
 
 describe('R544-5 历次作答合并复习记录（/api/attempts source=practice|review）', () => {
   it('复习作答上送 picked；历次作答行显示「练习/复习」来源', () => {
-    expect(book).toMatch(/data: \{ correct, uid: anonUid\(\), picked: this\.picked \|\| undefined \}/);
+    expect(book).toMatch(/data: \{ correct, uid: anonUid\(\), picked: this\.picked \|\| undefined, secs: this\.reviewSecs\(\) \}/);
     expect(book).toMatch(/<text class="att-src">\{\{ a\.source === 'review' \? '复习' : '练习' \}\}<\/text>/);
   });
 });
@@ -79,8 +79,8 @@ describe('R544 小程序同口径', () => {
     expect(statsWxml).toMatch(/\{\{weakAxes\.length >= 2 \? '去补弱' : '继续练'\}\} ›/);
   });
   it('复习上送 picked；历次作答行带来源', () => {
-    expect(apiTs).toMatch(/postReviewRecord\(mid: number, correct: boolean, picked\?: string\)/);
-    expect(bookTs).toMatch(/postReviewRecord\(cur\.id, correct, picked\)/);
+    expect(apiTs).toMatch(/postReviewRecord\(mid: number, correct: boolean, picked\?: string, secs\?: number\)/);
+    expect(bookTs).toMatch(/postReviewRecord\(cur\.id, correct, picked, reviewElapsedSecs\(this\._qStart, Date\.now\(\)\)\)/);
     expect(bookTs).toMatch(/\(a\.source === 'review' \? '复习' : '练习'\)/);
   });
 });
