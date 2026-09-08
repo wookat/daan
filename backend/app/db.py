@@ -3242,7 +3242,9 @@ def get_reminder_prefs(uid: str) -> list[dict]:
     return [dict(r) for r in rows]
 
 
-def save_paper_export(code: str, question_ids: list[int], title: str) -> None:
+def save_paper_export(code: str, question_ids: list[int], title: str, inline_n: int = 0) -> None:
+    """inline_n：卷内无题库 id 的内联题（时政/手录）数，不占答题卡槽位、不参与机读判分；
+    供 paper/{code}、paper_answers、scan_sheet 回包向用户说明「卷有 N+M 题、只判 N 题」。"""
     conn = get_conn()
     conn.execute(
         """CREATE TABLE IF NOT EXISTS paper_exports (
@@ -3252,9 +3254,10 @@ def save_paper_export(code: str, question_ids: list[int], title: str) -> None:
             question_ids TEXT NOT NULL
         )"""
     )
+    add_column_if_missing(conn, "paper_exports", "inline_n", "INTEGER DEFAULT 0")
     conn.execute(
-        "INSERT OR REPLACE INTO paper_exports (code, created_at, title, question_ids) VALUES (?,?,?,?)",
-        (code, time.time(), title, json.dumps(question_ids)),
+        "INSERT OR REPLACE INTO paper_exports (code, created_at, title, question_ids, inline_n) VALUES (?,?,?,?,?)",
+        (code, time.time(), title, json.dumps(question_ids), int(inline_n or 0)),
     )
     conn.commit()
     conn.close()
@@ -3273,6 +3276,7 @@ def get_paper_export(code: str) -> dict | None:
         return None
     d = dict(row)
     d["question_ids"] = json.loads(d["question_ids"] or "[]")
+    d["inline_n"] = int(d.get("inline_n") or 0)
     return d
 
 
