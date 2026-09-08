@@ -1976,3 +1976,10 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 生产手动录入层的 `n=0` 卷直接用 08-03 探针造的 `question_ids='[]'` 卷码（`select code from paper_exports where question_ids='[]'`），`GET /api/paper/{code}` 只读；`n>0` 对照用最新的 `错题重练卷` 卷码。断言 `.manual-empty` 计数、`.manual-row` 计数、`.sheet-acts` 内「交卷判分」/「换一份试卷」按钮计数四个数一起看。
 - 「复制两份」漂移核不要只比 diff：先在**模板段**（`<template>…</template>`）grep 方法名与其开关字段，0 命中 = 死代码，删掉比抽共享函数更小；源锁写成「A 文件不含 X，B 文件仍含 `async X(opts) {`」两条，防止以后有人再复制回去。
 - 发版后 `5/6 线上 bundle hash 校验` 首轮读到旧 hash 是 Pages 传播窗口（脚本自带 5 s 重试），不要在第一轮就判失败；等 `OK: 线上 bundle 与本机构建一致` 再开生产复采。
+
+## R528 经验：结果 sheet「N/N」范围口径与 `inline_n`、生产只读复采回包字段型改动
+- 导出卷的**机读范围 ≠ 卷面题数**（R525 契约：内联时政/手录题不占槽、不判分）。凡是显示「已作答 x/y · 答对 z」的结果层（手动录入结果 / 扫描结果 / 录入层「共 N 题」），`y` 只是 `paper_exports.question_ids` 长度；核口径时要拿一张**混合卷**（`~/r526/mix.pdf` / 卷码 `340F4B53`，`question_ids=[111,112,110]` + 2 时政内联）对着卷末参考答案题数看有没有说明「另 M 题不参与机读判分」。M 来自后端 `inline_n`（`paper/{code}` / `paper_answers` / `scan_sheet` 三个回包同字段），前端统一走 `src/paper-inline-note.js inlineSkipNote()`；`total/answered/correct/items` 不含内联题，断言 `.scan-row` 数 = `total` 而不是 = 卷面题数。
+- `paper_exports.inline_n` 是**写时幂等加列**（`save_paper_export` 里 `add_column_if_missing`），生产在首次导出前 `pragma table_info` 仍 4 列，但 `GET paper/{code}` 已回 `inline_n:0`（`dict.get` 兜底）——复采时 `cols` 没有该列不是缺陷，历史行也不回填；断言用 API 回包不用列存在。
+- 生产复采「回包字段驱动的显示层」而又不能在生产造样本（导出会写 `paper_exports`、上传答题卡会写 `answer_log/mistakes`）：`ctx.route` 里对**同一真 GET** `r.fetch()` 后只改目标字段再 `fulfill`（保留其余真值），对被 abort 的 POST 用本地真回包 JSON（先在 `:8525` 真打一次存 `local_scan_resp.json`）`fulfill`，其余非 GET 照旧 abort。文档必须写明「生产段证明的是 bundle 显示层，服务端 `>0` 形态只有本地一手」，`ABORTED` 列表要原样贴出。
+- 结果 sheet 的说明行用 `.kg-sheet__in .scan-note` 取；录入层关掉后其 `.scan-note` 仍在 DOM 但 `0×0`，读几何时按 `w>0` 过滤或分别读，不要把 `0×0` 当成没渲染。
+- 6b `/` a11y 0.94 单次 WARN 而本轮首页 0 改动时，直接本机 `CHROME_PATH=… npx --yes lighthouse <url> --only-categories=accessibility --output=json --chrome-flags="--headless=new --no-sandbox"` 复采 ×3 读 `categories.accessibility.score` 与 `audits` 里 `score not in (None,1)` 的项；三次全 1 且 0 失败审计即按 R429 间歇记档，不为此再发版。

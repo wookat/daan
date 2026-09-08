@@ -33,15 +33,32 @@
 
 ## 3. 发版
 
-（见下）
+- `./deploy/deploy_h5.sh --skip-build`（`~/r528/r528_deploy.log`）：预检 mem 466 MB / disk 4.7 G（91%）/ load 0.59 / 兄弟 0；旧容器日志快照 `kaogong-app-b0d3c3e6-…-to-20260908T063843Z.log.gz`；compose `KG_COMPOSE_EXIT rc=0 at 06:40:03Z`（~1.3 min）；新容器 `started=2026-09-08T06:40:03Z` healthy 0 重启；后端 rev = 本机 `a52c3d92`。
+- 5/6 bundle：前两次读旧 `index-DXKcHBUS.js`（传播窗 5 s 重试）→ 第三次 `index-tS3hWG0W.js` = 本机构建；5b 各 Accept-Encoding 变体 OK；gzip 124 KB ≤ 160 KB。
+- 6b：`/` perf 0.99 / LCP 1683 / CLS 0 / bp 0.96 / seo 1.00、**a11y 0.94 WARN**；`/tiku/` 1.00/1.00/1.00/1.00、LCP 952。本轮首页 0 改动；按 SKILL（R429 间歇）本机 `npx lighthouse --only-categories=accessibility` 对生产复采 ×3 → **1 / 1 / 1、0 失败审计**（`~/r528/lh_a11y_{1,2,3}.json`）→ 定性为单次抖动，不改。
+- `DEPLOY_RC=0`，回归全 200。生产 `b0d3c3e6` → `a52c3d92`。
 
 ## 4. 生产只读复采
 
-（见下）
+`~/r528/prod_r528.py`（uid `umst3tuisd7lgzaka`、`X-Kg-Probe: 1`、非 GET 全 abort；`prod_375.out` / `prod_1440.out` + 截图）：
+
+- **服务端新字段（真回包）**：`GET /api/paper/9D29E4AB` 200 `{n:12, inline_n:0, …}`、`GET /api/paper/259CBA70` 200 `{n:0, inline_n:0}`（历史全内联空卷）、`GET /api/paper/ZZZZZZZZ` 404；生产 `paper_exports` 仍 4 列（`inline_n` 列在首次导出时幂等加列，加列前 `dict.get` → 0，读路径不依赖列存在）。
+- **§0-D 历史卷形态**（真回包 `inline_n:0`）：录入层 12 行 `1..12`、`MANUAL_NOTE []`、「交卷判分」1 —— 历史卷不出说明行（两视口）。
+- **说明行前端路径**（客户端 route 把同一真 GET 回包的 `inline_n` 改为 2；`POST paper_answers` 被 abort 后 fulfill 为本地 R528 真 `scan_sheet` 回包形态 `{page 1, total 3, inline_n 2, correct 2}`）：
+  - 375：录入层 `另 2 题为时政/手录题，不参与机读判分，请对照卷末参考答案核对` 343×42（两行）；结果 sheet 文本 `卷码 9D29E4AB · 第 1 页 · 已作答 3/3 · 答对 2 题 · 已记入做题记录 | 说明行 | 1 D 答案 D ✓ / 2 A 答案 C ✗ / 3 B 答案 B ✓`，`ROWS 3`，说明行 343×42 / 13px。
+  - 1440：录入层说明行 433×21（单行）；结果 sheet 同文本，说明行 448×21 / 13px。
+  - 两视口 `ABORTED = [POST track boot, POST paper_answers {code:9D29E4AB, picks:{1:D,2:A,3:B}}]`、`GET_NON2XX []`、`ERRS []`；bundle `index-tS3hWG0W.js`。
+- 如实：生产 `inline_n>0` 的服务端形态只有本地一手（§2，不在生产造导出 / 不上传答题卡）；生产段证明的是**生产 bundle 的显示层对回包字段的处理**，回包由客户端改写/fulfill，服务端 0 写入（见 §5 对账）。
 
 ## 5. (c) / 到期项 / 簇
 
-（见下）
+`~/r528/r528_post.sh` → `r528_post.out`（06:44Z）：
+
+- 新容器窗（06:40:03Z→06:44Z）134 请求：5xx 0、assets 404 0、monitor 仅探针 1、mpUA 0、非探针 POST 0、401/403 0、Traceback 0；重建窗（06:38:43Z→06:40:03Z）源站 5xx 0（09-08 503 仍 75 条全落 00:28/00:29/01:03 = R525-2，无新增）。
+- WAL `4,173,592` 同字节（R526/R527 起同值；mtime 13:22:50 → 14:13:27 → 14:42:29 +0800 每轮变化但字节不变，mtime 变化原因未核，只认字节 + 各表计数）；disk 4.1 G；mem 267 MB；load 0.39。
+- probe=0 各表同 R527：`answer_log 53/2`、`growth 26/4`、`explain_cache qid nonnull 0/82`、`error_reason 0`、`*_ask_click 0`、`reinforce_log 2/2`、`push_subs 0`。`umst3` 四表 32/45/22/1 新增 0；`mistake 1953/2784/2914/2915/2934` 不变。
+- 任意 uid `answer_log/mistakes/review_log` 04:52Z 起 0 新行；`paper_exports` 05:22Z 后 0（仍 38 行 / 4 空卷）；`export/pdf` 09-08 0 请求；`scan_sheet/paper_answers/paper/{code}` 全历史 18 条仍全探针（本轮新增 10 条 `GET paper/*` 全 `X-Kg-Probe: 1`）；`paper/scan` 09-08 45 行非探针 0。
+- 簇：09-08 至 06:44Z 6298 行 / 6225 IP（15.6 行/分、UA 14、每 IP ≤2、200:6226 + 503:72）仍在跑；日报 humans 09-08 5849/5782 基本全簇。无新的外部真人证据。
 
 ## 6. 登记 / 未做
 
