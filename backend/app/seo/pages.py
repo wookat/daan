@@ -774,7 +774,8 @@ def _render_question(qid: int, version: float | None = None) -> str:
     explanation = hs or raw_exp
     hs_html = _e(hs).replace("\n", "<br>")
     raw_html = _e(raw_exp).replace("\n", "<br>")
-    if hs and raw_exp:
+    # 与 H5 exp-dup.js isExplanationCovered 同口径：原解析（≥20 字）已被 hs 整段包含时不再复读
+    if hs and raw_exp and not (len(raw_exp) >= 20 and raw_exp in hs):
         exp_html = f"<p><b>花生十三方法解析</b></p><p>{hs_html}</p><p><b>原解析</b></p><p>{raw_html}</p>"
     elif hs:
         exp_html = f"<p><b>花生十三方法解析</b></p><p>{hs_html}</p>"
