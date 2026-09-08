@@ -2988,8 +2988,18 @@ def submodule_progress(uid: str, module: str | None = None) -> dict:
     return {r["submodule"]: {"n": r["n"], "c": r["c"] or 0} for r in rows}
 
 
+def mistake_counts(conn, uid: str) -> dict:
+    """本人错题计数 {total, mastered, pending}：个人页/统计页只要数字时不必拉 list_mistakes 全表。"""
+    _ensure_mistake_uid(conn)
+    row = conn.execute(
+        "SELECT COUNT(*) n, COALESCE(SUM(mastered=1),0) m FROM mistakes WHERE uid=?", (uid,)
+    ).fetchone()
+    total, mastered = row["n"], row["m"]
+    return {"total": total, "mastered": mastered, "pending": total - mastered}
+
+
 def growth_stats(uid: str) -> dict:
-    """按周（近 8 周）返回整体和各模块正确率成长曲线。"""
+    """按周（近 8 周）返回整体和各模块正确率成长曲线，附错题计数。"""
     conn = get_conn()
     _ensure_answer_log(conn)
     since = time.time() - 8 * 7 * 86400
@@ -3010,6 +3020,7 @@ def growth_stats(uid: str) -> dict:
            GROUP BY module""",
         (uid,),
     ).fetchall()
+    mistakes = mistake_counts(conn, uid)
     conn.close()
     weeks: dict = {}
     for r in rows:
@@ -3022,6 +3033,7 @@ def growth_stats(uid: str) -> dict:
         "total": {"n": total["n"], "c": total["c"]},
         "modules": {r["module"]: {"n": r["n"], "c": r["c"]} for r in mod_rows},
         "weeks": list(weeks.values()),
+        "mistakes": mistakes,
     }
 
 
