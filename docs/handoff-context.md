@@ -2861,6 +2861,16 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：`docs/iter/round-3/r522-sz-answer-loop-local-prod-readonly.md`；`~/r522/*.out|*.png`、`~/r522_db.sh`/`~/r522_db.out`、`~/r522_pre.out`。
 - 下一步 R523：(c) 补量 + 到期项/簇；四维下一候选先一手核：练习页「错题重练效果」块与 R371 `reviewed` 回包的口径（已纠正/仍错/达成掌握是否用服务端结果）、错题本「按模块查看」→ 时政筛选态的到期项与「开始复习」是否吃 NULL-qid 行；下次含发版时顺带上 R522-1 文案。
 
+### R523（2026-09-08）：R522 登记项 R522-1 实修上线（完成页「仍错的已重置复习，明天优先再练」→「已回到今日待复习」）+ 「错题重练效果」块与 R371 `reviewed` 口径核（正确不改）+ 时政 NULL-qid 复习入口核（R522 本地一手已覆盖，不改）；生产 `2e608c0c` → `6d568b6c`（04:25:52Z）；代码 PR #659
+- 论证：`save_mistake()` 重复命中 `next_review=time.time()` 立即到期，完成页同屏「今日还有 N 题到期待复习」（本地 N=1 / 生产 `umst3` N=30）与「明天优先再练」矛盾 → 只改文案对齐错题本「今日待复习」口径，不动 SRS；源锁 `tests/practice-r523-redo-still-copy.test.js` 同时锁后端 `time.time()` 绑定（语义改了先红）与新文案。
+- 块口径：`fixed/still` 按本地 `_picked===answer`（不依赖回包），`mastered=reviewedMasteredCount(_reviewed)`（`/api/answer_log` 回包 `reviewed[].mastered===true`）；R522 本地选对/选错两路读数与之一致。
+- 改后生产 375/1440（`~/r523/prod_redo_still_copy.py`，`umst3` 只读 `GET redo?mids=2914` → 写 `redoSet` → 练习页 1/1 → 选错 → 完成）：sec-tip「答对的已推进复习计划；仍错的已重置复习，已回到今日待复习」+ 同屏「今日还有 30 题到期待复习」；abort `POST answer_log {qid:null,mid:2914}` / `POST mistakes {question_id:null}`；bundle `index-BCpYYxJh.js` = 本机；errs []。
+- (c)：新容器窗（04:25:52Z→04:29Z，120 请求）5xx/assets 404/monitor/mpUA/非探针 POST/Traceback 全 0；重建窗源站 5xx 0；WAL `4,173,592`；probe=0 各表同 R522；`umst3` 四表 32/45/22/1 新增 0。簇 09-08 至 04:29Z 4174/4115 仍在跑，日报 humans 3957 基本全簇。无新的外部真人证据。
+- 发版：预检 mem 318 MB / disk 5.5 G / load 0.55 / 兄弟 0；compose ~1 min；6b 全 OK；`DEPLOY_RC=0`。门：vitest 134/916、eslint、tokens、lint-pages 0 error、build:h5；pytest 568 / ruff；`diff --check` 空。
+- 如实：复习入口只有本地合成一手（生产未提交复习）；完成页读数来自 abort 后客户端状态；本机 CDP 非真机；0 LLM；无 testing agent 录屏。
+- 取证：`docs/iter/round-3/r523-redo-effect-card-still-copy-today.md`；`~/r523/prod_375.out|prod_1440.out|prod_done_*.png`、`~/r523_pre.out`/`~/r523_post.out`/`~/r523_deploy.log`。
+- 下一步 R524：(c) 补量 + 到期项/簇；四维下一候选先一手核（错题本「按模块查看」时政筛选态下批量条「重练所选」对 NULL-qid 行的 `mids=` 路径生产只读一手；练习页完成页「强化 5 道新题」对时政组的池口径）；R521-1 提示待 UX 定。
+
 ### W9（守卫/阻塞收口 + 桌面让位/薄弱判定口径集成轮，分支 devin/wf-w9-integration，未建 PR/未部署）
 - 集成：origin/main `35be115c`（#639）切 `devin/wf-w9-integration`，依次 merge W9-A（`132fa744`）/ W9-B（`17cc21c1`）/ W9-C（`3846f83e`），三次无冲突；dropped 无。生产 `/api/health` rev=`10e2eb82` 在 R510 分支上、是 main 的后代（+7 提交含 R511 `0c532532`）→ 生产 = main 超集无漂移；**R510/R511 尚未合 main**，与 W9-A 的 `main.py` 改动 merge-tree 预演无冲突。全量本地验证三端：backend ruff / pyright 0 / pytest 525（基线 516）；frontend-uni（Node 22.23.2）lint / vitest 843（基线 824）/ build:h5；miniapp tsc 0 / lint 0。
 - W9-A（backend）：`/api/push/subscribe|unsubscribe` 改 `def(body: dict)`（非 JSON Content-Type 由 FastAPI 422，补上 R348-B1 守卫后唯一残余绕过）+ subscribe 显式 `owns_uid` 403；`guard_account_uid` 的 `owns_uid`（内含 httpx 5s）与 `scan_sheet` 的 OpenCV 走 `run_in_threadpool`；`init_db` 建 `idx_q_reinforce` 前 `_ensure_question_stat_cols`（新库 adaptive 不再 `no such column` 500）；`quality.answer_letter_conflict` 只取最后一处结论式字母、单选冲突扣 30 不下线。本地新库 uvicorn 实测：form 422 且 push_subs 0 行 / JSON 无 token 403 / 匿名 200→unsubscribe 200 归零 / scan_sheet 非法图 422 / PRAGMA 含 correct_ratio 且 adaptive 空库与 6 条作答后均 200 / 日志 0 error。**生产回归待部署**。
