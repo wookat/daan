@@ -3,13 +3,13 @@
 // 扫 frontend-uni/src/**/*.vue 的 <style> 与 miniapp-native/miniprogram/**/*.wxss：
 //   裸 #hex / rgb() / rgba()（var() 之外）、font-size 用 rpx、font-weight 700/800/bold、word-break: break-all。
 //   页面层另加 v3 贴皮规则：box-shadow（none 除外）与渐变（*-gradient / --brand-grad）；真正浮层/分享图在同行加 /* kg-allow */ 放行。
-// 共享层（components/kg-*、l-icon、App.vue、uni.scss、app.wxss）命中 = error；业务页面先 warn（F5），页面组交付后加 --strict 转 error。
-// 用法：node tools/design-tokens/lint-pages.mjs [--strict] [--quiet] [--file=<子串>]（只看某文件的命中）
+// 共享层（components/kg-*、l-icon、App.vue、uni.scss、app.wxss）命中 = error；业务页面与 components/ 下非 kg-* 业务组件（rank-card/predict-card 等）同页面层 warn（F5），页面组交付后加 --strict 转 error。
+// 用法：node tools/design-tokens/lint-pages.mjs [--strict] [--quiet] [--file=<子串>]（只看某文件的命中）；KG_LINT_ROOT 可指向 fixture 仓根（单测用）
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const ROOT = process.env.KG_LINT_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const args = new Set(process.argv.slice(2));
 const STRICT = args.has('--strict');
 const QUIET = args.has('--quiet');
@@ -30,7 +30,7 @@ const PAGE_RULES = [
 const ALLOW_MARK = /kg-allow/;
 
 const SHARED = [
-  /^frontend-uni\/src\/components\//,
+  /^frontend-uni\/src\/components\/(kg-[\w-]+|l-icon)\//,
   /^frontend-uni\/src\/App\.vue$/,
   /^frontend-uni\/src\/uni\.scss$/,
   /^miniapp-native\/miniprogram\/components\//,

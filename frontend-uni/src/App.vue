@@ -194,6 +194,32 @@ html.theme-dark body {
 .theme-dark .uni-textarea-placeholder {
   color: var(--ink-4) !important;
 }
+/* 原生 uni.showModal：uni-h5 写死 #fff/#999 且按钮色走 cancelColor/confirmColor 内联 style（#000/#007aff），不随 .theme-dark；全仓无调用传 *Color，故 !important 覆盖 */
+.theme-dark uni-modal .uni-modal {
+  background: var(--card);
+  color: var(--ink);
+}
+.theme-dark uni-modal .uni-modal__bd {
+  color: var(--ink-2);
+}
+.theme-dark uni-modal .uni-modal__textarea {
+  background: var(--fill);
+  color: var(--ink);
+}
+.theme-dark uni-modal .uni-modal__ft::after,
+.theme-dark uni-modal .uni-modal__btn::after {
+  border-color: var(--line);
+}
+.theme-dark uni-modal .uni-modal__btn {
+  color: var(--ink) !important;
+  border-color: var(--line);
+}
+.theme-dark uni-modal .uni-modal__btn:active {
+  background: var(--fill);
+}
+.theme-dark uni-modal .uni-modal__btn_primary {
+  color: var(--brand-text) !important;
+}
 /* #endif */
 
 /* 桌面/宽屏适配：内容居中限宽 */
@@ -208,19 +234,10 @@ html.theme-dark body {
   }
 }
 
-/* 宽屏（≥768px）：shadcn/ui 风格打磨——细描边卡片 + 轻阴影 + hover 抬升 */
+/* 宽屏（≥768px）：细描边，不叠阴影 */
 @media (min-width: 768px) {
-  uni-page-body .card,
-  uni-page-body .stat-c,
   uni-page-body .cellcard {
     border: 1px solid var(--line);
-    box-shadow: var(--sh-1);
-    transition: box-shadow var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard);
-  }
-  uni-page-body .card:hover,
-  uni-page-body .stat-c:hover {
-    box-shadow: var(--sh-2);
-    cursor: pointer;
   }
   uni-page-body .searchbar {
     border: 1px solid var(--line);

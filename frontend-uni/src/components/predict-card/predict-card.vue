@@ -1,5 +1,5 @@
 <template>
-  <view v-if="loading" class="pcard">
+  <kg-card v-if="loading" variant="flat" class="pcard">
     <view class="p-head">
       <text class="p-title">能力预测分</text>
     </view>
@@ -8,8 +8,8 @@
       <view class="p-skel-b" />
       <view class="p-skel-b sm" />
     </view>
-  </view>
-  <view v-else-if="data" class="pcard">
+  </kg-card>
+  <kg-card v-else-if="data" variant="flat" class="pcard">
     <!-- 冷启动 -->
     <view v-if="data.status === 'cold'" class="p-cold">
       <text class="p-title">能力预测分</text>
@@ -50,7 +50,7 @@
         </view>
       </view>
     </template>
-  </view>
+  </kg-card>
 </template>
 
 <script>
@@ -88,47 +88,47 @@ export default {
 </script>
 
 <style scoped>
-.pcard { background: var(--card); border-radius: 16rpx; padding: 28rpx; margin-bottom: 20rpx; box-shadow: var(--sh-1); }
+.pcard { margin-bottom: var(--card-gap); }
 .p-head { display: flex; justify-content: space-between; align-items: center; }
 .p-title { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
-.p-conf { font-size: var(--fs-caption); color: var(--ink-2); background: var(--fill); border-radius: 999rpx; padding: 4rpx 16rpx; }
-.p-hero { display: flex; align-items: flex-end; gap: 24rpx; margin: 20rpx 0 8rpx; }
+.p-conf { font-size: var(--fs-caption); color: var(--ink-2); background: var(--fill); border-radius: var(--r-full); padding: 2px var(--sp-8); }
+.p-hero { display: flex; align-items: flex-end; gap: var(--sp-12); margin: var(--sp-8) 0 var(--sp-4); }
 .p-score-w { display: flex; align-items: baseline; }
 .p-score { font-size: var(--fs-h1); font-weight: 600; color: var(--brand-text); line-height: 1; }
-.p-unit { font-size: var(--fs-caption); color: var(--ink-2); margin-left: 6rpx; }
-.p-meta { display: flex; flex-direction: column; gap: 6rpx; padding-bottom: 6rpx; }
+.p-unit { font-size: var(--fs-caption); color: var(--ink-2); margin-left: var(--sp-4); }
+.p-meta { display: flex; flex-direction: column; gap: var(--sp-4); padding-bottom: var(--sp-4); }
 .p-delta { font-size: var(--fs-caption); color: var(--ok-strong); font-weight: 600; }
 .p-delta.down { color: var(--bad-strong); }
 .p-n { font-size: var(--fs-caption); color: var(--ink-3); }
-.p-chart { display: flex; align-items: flex-end; gap: 8rpx; height: 200rpx; margin: 20rpx 0 8rpx; }
+.p-chart { display: flex; align-items: flex-end; gap: var(--sp-4); height: 100px; margin: var(--sp-8) 0 var(--sp-4); }
 .p-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
 .p-col-v { font-size: var(--fs-caption); color: var(--ink-3); }
 .p-col-v.hot { color: var(--brand-text); font-weight: 600; }
 .p-bar-w { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
-.p-bar { width: 40%; max-width: 24rpx; min-height: 8rpx; background: var(--brand-soft-2); border-radius: 6rpx 6rpx 0 0; }
+.p-bar { width: 40%; max-width: var(--sp-12); min-height: var(--sp-4); background: var(--brand-soft-2); border-radius: 3px 3px 0 0; }
 .p-bar.hot { background: var(--brand); }
-.p-col-l { font-size: var(--fs-caption); color: var(--ink-3); margin-top: 6rpx; }
-.p-mods { margin-top: 16rpx; display: flex; flex-direction: column; gap: 14rpx; }
-.p-mod { display: flex; align-items: center; gap: 14rpx; }
-.p-mod-n { width: 120rpx; font-size: var(--fs-caption); color: var(--ink-2); }
-.p-mod-bar { flex: 1; height: 14rpx; background: var(--fill); border-radius: 999rpx; overflow: hidden; }
-.p-mod-fill { height: 100%; background: var(--brand); border-radius: 999rpx; }
-.p-mod-s { width: 100rpx; text-align: right; font-size: var(--fs-caption); color: var(--ink); font-weight: 600; }
+.p-col-l { font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-4); }
+.p-mods { margin-top: var(--sp-8); display: flex; flex-direction: column; gap: var(--sp-8); }
+.p-mod { display: flex; align-items: center; gap: var(--sp-8); }
+.p-mod-n { width: 60px; font-size: var(--fs-caption); color: var(--ink-2); }
+.p-mod-bar { flex: 1; height: var(--sp-8); background: var(--fill); border-radius: var(--r-full); overflow: hidden; }
+.p-mod-fill { height: 100%; background: var(--brand); border-radius: var(--r-full); }
+.p-mod-s { width: 50px; text-align: right; font-size: var(--fs-caption); color: var(--ink); font-weight: 600; }
 .p-mod-mx { font-size: var(--fs-caption); color: var(--ink-3); font-weight: 400; }
-.p-mod-t { width: 30rpx; text-align: center; font-size: var(--fs-caption); color: var(--ink-3); }
+.p-mod-t { width: 16px; text-align: center; font-size: var(--fs-caption); color: var(--ink-3); }
 .p-mod-t.up { color: var(--ok-strong); }
 .p-mod-t.down { color: var(--bad-strong); }
-.p-skel { display: flex; flex-direction: column; gap: 14rpx; margin-top: 20rpx; }
-.p-skel-b { height: 24rpx; border-radius: 8rpx; background: var(--fill); width: 70%; animation: p-skel-pulse 1.2s ease-in-out infinite; }
-.p-skel-b.lg { height: 60rpx; width: 40%; }
+.p-skel { display: flex; flex-direction: column; gap: var(--sp-8); margin-top: var(--sp-8); }
+.p-skel-b { height: var(--sp-12); border-radius: var(--r-xs); background: var(--fill); width: 70%; animation: p-skel-pulse 1.2s ease-in-out infinite; }
+.p-skel-b.lg { height: 30px; width: 40%; }
 .p-skel-b.sm { width: 50%; }
 @keyframes p-skel-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.45; }
 }
-.p-cold { display: flex; flex-direction: column; gap: 10rpx; }
-.p-cold-t { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); margin-top: 8rpx; }
+.p-cold { display: flex; flex-direction: column; gap: var(--sp-4); }
+.p-cold-t { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); margin-top: var(--sp-4); }
 .p-cold-s { font-size: var(--fs-caption); color: var(--ink-2); }
-.p-cold-bar { height: 12rpx; background: var(--fill); border-radius: 999rpx; overflow: hidden; margin-top: 6rpx; }
-.p-cold-fill { height: 100%; background: var(--brand); border-radius: 999rpx; }
+.p-cold-bar { height: 6px; background: var(--fill); border-radius: var(--r-full); overflow: hidden; margin-top: var(--sp-4); }
+.p-cold-fill { height: 100%; background: var(--brand); border-radius: var(--r-full); }
 </style>
