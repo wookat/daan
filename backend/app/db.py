@@ -2402,6 +2402,14 @@ def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: s
                 if len(out) >= limit:
                     break
                 continue
+        else:
+            d = _shizheng_redo_item(conn, head)
+            if d:
+                d["mistake_id"] = r["id"]
+                out.append(d)
+                if len(out) >= limit:
+                    break
+                continue
         esc = lambda s: s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         cands = conn.execute(
             "SELECT * FROM questions WHERE question LIKE ? ESCAPE '\\' AND (disabled IS NULL OR disabled=0) LIMIT 80",
@@ -2429,12 +2437,9 @@ def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: s
                 q = c
                 break
         if not q:
-            d = _shizheng_redo_item(conn, head) if not r["question_id"] else None
-            if not d:
-                continue
-        else:
-            d = dict(q)
-            d["options"] = json.loads(d.get("options") or "{}")
+            continue
+        d = dict(q)
+        d["options"] = json.loads(d.get("options") or "{}")
         d["mistake_id"] = r["id"]
         out.append(d)
         if len(out) >= limit:
@@ -2445,7 +2450,8 @@ def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: s
 
 def _shizheng_redo_item(conn, head: str) -> dict | None:
     """时政错题的题号属于 shizheng_questions（写入侧 question_id 置空、题干首行=原题干），按题干回原题；
-    与 shizheng_daily 同形态并带 _sz，刷题页按时政题处理（不写 question_id、不挂社交/纠错）。"""
+    与 shizheng_daily 同形态并带 _sz，刷题页按时政题处理（不写 question_id、不挂社交/纠错）。
+    无 question_id 的行先走这里的索引等值查，未命中才回落到 questions 的 LIKE 前缀扫（每次扫全部活跃行）。"""
     if not head:
         return None
     r = conn.execute("SELECT * FROM shizheng_questions WHERE question=?", (head,)).fetchone()
