@@ -2069,3 +2069,12 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 小程序纯函数（如 `utils/review-advance.ts`）在 vitest 里用 `esbuild --format=esm` 转译后 `import()` 真跑，回包直接用本地接口打印的 JSON 喂进去；`mastered === true` 严判逐值锁（`1/'true'/null/缺键` 不算）。WXML 绑定 / `setData` 键 / `mid:` 上送用 `readFileSync` 源锁。
 - 小程序新 UI 只能 tsc + eslint + 源码核，**无真机/DevTools**：token 用前 `rg -n "\-\-bg-2" miniapp-native` 核存在（仓库只有 `--bg`），`l-icon` tone 只接受组件 `TONES` 里的值（`muted` 对应 `--ink-3`），新绑定的方法名（`onGoReview`）先 `rg` 确认页面里已有，否则 tsc 不会报、真机才炸。
 - `redoSet` 来源多样（错题本 redo / 收藏 / 成绩报告 / 练习历史 / 本组错题重练），只有错题本来源的题带 `mistake_id`；判「错题重练报告 vs 普通答对曾错题一行」不能只看 `mode`，`redoReportOf` 为 null 时要回落 `fixReport`。
+
+## PR #682（W12）经验：账号 uid 空白守卫复验 + 本地 H5 分包 spinner 的 harness 假阳性
+- 守卫三路径（query / JSON body / multipart Form）都走 `owns_uid(uid.strip())`：`%20u1`、`%09u1`、`%0Au1`、`%E3%80%80u1`(U+3000)、`%C2%A0u1`(NBSP)、`u01`、`u`+300 位数字 无 token 一律 403；`U1`、`u1%00`、`%E2%80%8Bu1`(ZWSP)、`u1%2B` 不匹配 `^u\d+$` 视为匿名（200 空列表，不是泄露——`list_mistakes` 精确匹配 uid）。重复 query `?uid=a&uid=b` starlette `.get` 与 FastAPI 参数都取**最后一个**，守卫与 handler 同口径。
+- 守卫归一化 ≠ 存储归一化：`POST /api/mistakes` 把 `rec["uid"]` 原样存库（`' u1 '`），`GET /api/mistakes?uid=` 却 `strip()` 后查 → 带空白 uid 写入的行本人也读不到（口径缝隙，不是越权）。审计脚本用 `select id,uid from mistakes` 看原始值再下结论；`uid=''`/无 uid 只回 `uid IS NULL` 的匿名行。
+- 限流：`login` 错密 11 次第 11 次 429；`_sweep_rate` 用 max window 做 horizon，300s 键在 3600s 键存在时不会提前回收，10 hits@now-100 sweep 后仍 429。
+- 本地 uvicorn 同源托管 dist/build/h5 时若某 tab 页（统计/日历）卡 spinner 40s → 「连接服务器超时，点击屏幕重试」+ console `Async component timed out after 20000ms`，而 curl 后端 3ms 正常、uvicorn 日志根本没有该 chunk 请求：先看长驻 CDP holder（`hold.py` 之类）是否 eval 一律 `{"timeout":true}`——holder socket 卡死会连带页面 chunk 加载挂起；开一条新 ws 连接 / kill holder 重起后 chunk 在 1ms 内加载完成。别把这种情况报成 PR 回归，但也别只凭 `window.__errs` 判「无错」，要另用 browser_console 复核。
+- 用 `setsid nohup python3 hold.py … & echo $! > hold.pid` 写 PID 时，若整段包在一条 `bash -c` 里 `$!` 可能是子 bash 包装进程而不是 python；重起后用 `pgrep -f "python3 hold.py" > hold.pid` 校正，杀时同样避免 `pkill -f hold.py`（会杀到自己）。
+- 练习历史路由是 `#/pkgA/stats/practice-history`（`#/pkgA/practice/history` 是空白页）；报告页 `#/pkgA/exam/report?attempt_id=` 只有 ≥2 个已提交 attempt 才有排名卡，能力预测卡需 answer_log 行 ≥ 若干且 `predict.status==ok`；种子脚本写 answer_log 前先 `db._ensure_answer_log(conn)`。
+- 造 `git worktree add /tmp/x <main-sha>` 跑 PR 新 lint-pages 脚本对比 main：PR 脚本扫 main 树多出的 warn 应恰好是 PR 修掉的组件（本次 rank-card/predict-card 各 1 条 no-shadow → 22 vs 20）。
