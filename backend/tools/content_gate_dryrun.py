@@ -3,9 +3,11 @@
 只读：用 sqlite3 `?mode=ro` URI 打开，脚本内只有 SELECT。用法（仓库根目录）：
     python backend/tools/content_gate_dryrun.py --db data.db
     python backend/tools/content_gate_dryrun.py --db /data/data.db --module ziliao --limit 5000 --out /tmp/ledger.md
+    python backend/tools/content_gate_dryrun.py --db data.db --dist-sample 20   # 分发互斥抽样统计（只打印，不写台账）
 """
 import argparse
 import os
+import random
 import sqlite3
 import sys
 import time
@@ -13,7 +15,7 @@ from collections import Counter, defaultdict
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
-from app import quality
+from app import qbank_api, quality
 
 SAMPLE_N = 10
 # R10/R13 近似比对两两 O(n²)，同 submodule 组内最多取这么多条（超出部分只做精确 shell 比对），台账如实标注
@@ -198,17 +200,154 @@ def _matched_fragment(rule: str, r: dict) -> str:
     return ""
 
 
+DIST_MODULES = ("ziliao", "shuliang", "yanyu", "panduan", "changshi")
+DIST_GROUP = 10
+
+
+def _dist_pools(conn, module: str, submodule: str | None = None, tag3: str | None = None) -> list[list[int]]:
+    """复刻 db._pick_scan 的 is_real×has_hs 分层，返回 [real&hs, real, hs, 其它] 四层 id。"""
+    pools: dict = {(1, 1): [], (1, 0): [], (0, 1): [], (0, 0): []}
+    where, args = ["disabled=0", "module=?"], [module]
+    for col, val in (("submodule", submodule), ("tag3", tag3)):
+        if val:
+            where.append(f"{col}=?")
+            args.append(val)
+    for r in conn.execute(f"SELECT id, is_real, COALESCE(has_hs,0) hs FROM questions WHERE {' AND '.join(where)}", args):
+        pools[(1 if r["is_real"] else 0, 1 if r["hs"] else 0)].append(r["id"])
+    return [pools[(1, 1)], pools[(1, 0)], pools[(0, 1)], pools[(0, 0)]]
+
+
+def _dist_draw(tiers: list[list[int]], n: int, exclude: set) -> list[int]:
+    """复刻 db.random_questions 非 adaptive 路径：60% 先从 real 层、其余按 has_hs DESC 分层，末尾 shuffle。"""
+    ex = set(exclude)
+
+    def draw(tier_set: list[list[int]], want: int) -> list[int]:
+        out: list[int] = []
+        for tier in tier_set:
+            if len(out) >= want:
+                break
+            cand = [i for i in tier if i not in ex]
+            picked = random.sample(cand, min(want - len(out), len(cand)))
+            out += picked
+            ex.update(picked)
+        return out
+
+    ids = draw([tiers[0], tiers[1]], max(1, round(n * 0.6)))
+    ids += draw([tiers[0] + tiers[2], tiers[1] + tiers[3]], n - len(ids))
+    random.shuffle(ids)
+    return ids
+
+
+def _dist_rows(conn, ids: list[int], has_mh: bool) -> list[dict]:
+    if not ids:
+        return []
+    cols = "id, module, submodule, source, question, options, has_hs" + (", material_hash" if has_mh else "")
+    by_id = {r["id"]: dict(r) for r in conn.execute(f"SELECT {cols} FROM questions WHERE id IN ({','.join('?' * len(ids))})", ids)}
+    return [by_id[i] for i in ids if i in by_id]
+
+
+def _dup_rate(items: list[dict]) -> float:
+    return len(qbank_api._split_family(items)[1]) / len(items) if items else 0.0
+
+
+def dist_sample(conn, k: int, module: str | None = None, submodule: str | None = None, tag3: str | None = None) -> str:
+    """只读模拟 /api/questions 普通路径：每模块连抽 K/5 组（余数从前往后各加 1 组；指定 --module 时 K 组全在该模块，
+    可再按 --submodule/--tag3 收窄池）、每组 DIST_GROUP 题，统计去重前/后组内同族重复率、被回填题数与去重逻辑耗时增量
+    （split + 过采补位 + dedupe，基础抽题耗时另列）。"""
+    has_mh = any(r[1] == "material_hash" for r in conn.execute("PRAGMA table_info(questions)"))
+    if module:
+        per_mod = {module: k}
+    else:
+        per_mod = {m: k // len(DIST_MODULES) + (1 if i < k % len(DIST_MODULES) else 0) for i, m in enumerate(DIST_MODULES)}
+    scope = "".join(f"，{n}={v}" for n, v in (("submodule", submodule), ("tag3", tag3)) if v)
+    lines = [
+        f"# 分发互斥抽样（只读，K={k}，每组 {DIST_GROUP} 题，material_hash 列：{'有' if has_mh else '无'}{scope}）",
+        "",
+        "| module | 组数 | 池大小 | 去重前重复率 | 去重后重复率 | 触发过采组 | 回填题数 | 基础抽题 p50/p95 ms | 去重增量 p50/p95 ms |",
+        "|---|---|---|---|---|---|---|---|---|",
+    ]
+    tot_before: list[float] = []
+    tot_after: list[float] = []
+    tot_extra: list[float] = []
+    tot_backfill = 0
+    for mod, groups in per_mod.items():
+        tiers = _dist_pools(conn, mod, submodule, tag3)
+        pool_n = sum(len(t) for t in tiers)
+        before: list[float] = []
+        after: list[float] = []
+        base_ms: list[float] = []
+        extra_ms: list[float] = []
+        oversampled = backfill = 0
+        for _ in range(groups):
+            t0 = time.perf_counter()
+            items = _dist_rows(conn, _dist_draw(tiers, DIST_GROUP, set()), has_mh)
+            t1 = time.perf_counter()
+            dropped = qbank_api._split_family(items)[1]
+            final = items
+            if dropped:
+                oversampled += 1
+                have = {q["id"] for q in items}
+                extra = _dist_rows(conn, _dist_draw(tiers, DIST_GROUP * 3, have), has_mh)
+                extra.sort(key=lambda q: 0 if q.get("has_hs") else 1)
+                final = qbank_api._dedupe_family(items + extra, DIST_GROUP)
+                kept_ids = {q["id"] for q in qbank_api._split_family(items + extra)[0]}
+                backfill += sum(1 for q in final if q["id"] not in kept_ids)
+            t2 = time.perf_counter()
+            before.append(len(dropped) / len(items) if items else 0.0)
+            after.append(_dup_rate(final))
+            base_ms.append((t1 - t0) * 1000)
+            extra_ms.append((t2 - t1) * 1000)
+        tot_before += before
+        tot_after += after
+        tot_extra += extra_ms
+        tot_backfill += backfill
+        lines.append(
+            f"| {mod} | {groups} | {pool_n} | {_pct(before)} | {_pct(after)} | {oversampled} | {backfill} "
+            f"| {_p(base_ms, 50):.1f}/{_p(base_ms, 95):.1f} | {_p(extra_ms, 50):.1f}/{_p(extra_ms, 95):.1f} |"
+        )
+    lines += [
+        "",
+        (
+            f"- 合计 {len(tot_before)} 组：去重前组内同族重复率 {_pct(tot_before)} → 去重后 {_pct(tot_after)}；回填 {tot_backfill} 题；"
+            f"去重增量 p50 {_p(tot_extra, 50):.1f} ms / p95 {_p(tot_extra, 95):.1f} ms"
+        ),
+        "- 重复率 = 组内被 qbank_api._split_family 判为同族（family_key 相同或 R13 近似克隆）的题数 / 组内题数；回填 = 最终组里来自被剔除项的题数（同族题不够换时才出现）。",
+        "- 抽题在脚本内按 db.random_questions 非 adaptive 路径复刻（is_real×has_hs 分层、无 uid 排除），不经 HTTP，不写库。",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def _pct(xs: list[float]) -> str:
+    return f"{sum(xs) / len(xs) * 100:.1f}%" if xs else "—"
+
+
+def _p(xs: list[float], pct: int) -> float:
+    if not xs:
+        return 0.0
+    s = sorted(xs)
+    return s[min(len(s) - 1, round((pct / 100) * (len(s) - 1)))]
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--db", required=True, help="SQLite 路径（只读打开）")
     ap.add_argument("--module", default=None)
+    ap.add_argument("--submodule", default=None, help="仅 --dist-sample：收窄抽题池")
+    ap.add_argument("--tag3", default=None, help="仅 --dist-sample：收窄抽题池")
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--out", default=DEFAULT_OUT, help="台账 markdown 输出路径；'-' 只打印不写文件")
+    ap.add_argument("--dist-sample", type=int, default=None, metavar="K", help="只读模拟分发互斥：连抽 K 组×10 题（五模块各 K/5），只打印统计")
+    ap.add_argument("--seed", type=int, default=None, help="--dist-sample 的随机种子（便于复现）")
     args = ap.parse_args(argv)
 
     conn = open_ro(args.db)
     try:
         dv0 = conn.execute("PRAGMA data_version").fetchone()[0]
+        if args.dist_sample is not None:
+            if args.seed is not None:
+                random.seed(args.seed)
+            print(dist_sample(conn, max(1, args.dist_sample), args.module, args.submodule, args.tag3))
+            return 0
         rows = load_rows(conn, args.module, args.limit)
         hits = scan(rows)
         dv1 = conn.execute("PRAGMA data_version").fetchone()[0]
