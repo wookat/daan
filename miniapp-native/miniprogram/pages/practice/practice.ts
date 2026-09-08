@@ -25,7 +25,7 @@ import {
   setFav,
 } from '../../api/learn';
 import type { Announcement } from '../../api/learn';
-import type { AnswerLogItem, Question } from '../../api/types';
+import type { AnswerLogItem, AnswerLogReviewed, Question } from '../../api/types';
 import { askPrefill, openExplain } from '../../utils/ask-prefill';
 import { anonUid } from '../../utils/auth';
 import { enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../utils/offline';
@@ -39,6 +39,8 @@ import {
 } from '../../utils/practice-progress';
 import type { PendingSession, ProgressQuestion } from '../../utils/practice-progress';
 import { redoSkippedNote } from '../../utils/redo-note';
+import { fixReportOf, fixReportText, redoReportOf, redoReportTip } from '../../utils/review-advance';
+import type { FixReport, RedoReport } from '../../utils/review-advance';
 import { imgUrl } from '../../utils/request';
 import { kpChain, qStatLine, sourceLabel } from '../../utils/q-stat';
 import { modName, recordStat, streakDays } from '../../utils/stats';
@@ -139,6 +141,10 @@ Page({
     wrongCount: 0,
     answeredCount: 0,
     dueReview: 0,
+    redoReport: null as RedoReport | null,
+    redoTip: '',
+    fixReport: null as FixReport | null,
+    fixText: '',
     timerText: '00:00',
     overtime: false,
     targetSecs: 60,
@@ -191,6 +197,8 @@ Page({
   _starting: false,
   _bestStreak: 0,
   _favSeq: 0,
+  _reviewed: [] as AnswerLogReviewed[],
+  _logPending: [] as Promise<unknown>[],
 
   onLoad(query: Record<string, string>) {
     const savedFont = wx.getStorageSync('fontLv');
@@ -255,9 +263,15 @@ Page({
     this._submodule = args.submodule;
     this._ptitle = args.ptitle;
     this._resultSent = false;
+    this._reviewed = [];
+    this._logPending = [];
     this.setData({
       loading: true,
       finished: false,
+      redoReport: null,
+      redoTip: '',
+      fixReport: null,
+      fixText: '',
       loadErr: '',
       loadHint: args.real ? '正在按真题筛选出题…' : '正在出题…',
       moduleName: modName(args.module || ''),
@@ -658,6 +672,7 @@ Page({
       const pending = qs.filter((q) => q._picked && !q._logged);
       const items: AnswerLogItem[] = pending.map((q) => ({
         qid: q.id || null,
+        mid: q.mistake_id || undefined,
         module: q.module || this._module || null,
         submodule: q.submodule || null,
         correct: q._picked === q.answer,
@@ -670,8 +685,13 @@ Page({
         pending.forEach((q) => {
           q._logged = true;
         });
+        const p = postAnswerLog(items);
+        this._logPending.push(p);
         try {
-          await postAnswerLog(items);
+          const r = await p;
+          if (r && Array.isArray(r.reviewed) && r.reviewed.length) {
+            this._reviewed = this._reviewed.concat(r.reviewed);
+          }
         } catch (err) {
           enqueueAnswers(uid, items);
         }
@@ -679,6 +699,27 @@ Page({
     } catch (e) {
       /* 非关键路径 */
     }
+  },
+
+  // 复习推进由 /api/answer_log 服务端统一完成；这里只等在途落库请求回来，汇总效果报告（practice.vue syncRedoReviews 同口径）
+  async syncRedoReviews(items: PQuestion[]) {
+    try {
+      await Promise.all(this._logPending.map((p) => p.catch(() => null)));
+    } catch (e) {
+      /* 非关键路径 */
+    }
+    this._logPending = [];
+    const reviewed = this._reviewed;
+    this._reviewed = [];
+    const mode = this._args ? this._args.mode : '';
+    const redoReport = mode === 'redo' || mode === 'redoset' ? redoReportOf(items, reviewed) : null;
+    const fixReport = redoReport ? null : fixReportOf(reviewed);
+    this.setData({
+      redoReport,
+      redoTip: redoReportTip(redoReport),
+      fixReport,
+      fixText: fixReportText(fixReport),
+    });
   },
 
   async saveWrong(q: PQuestion, picked: string) {
@@ -792,6 +833,7 @@ Page({
     this.clearServerProgress();
     if (beiMode) return;
     await this.logAttempts(items);
+    await this.syncRedoReviews(items);
     this.loadDueReview();
     if (!this._resultSent) {
       this._resultSent = true;

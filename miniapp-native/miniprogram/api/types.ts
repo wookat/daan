@@ -21,6 +21,8 @@ export interface Question {
   image_credit?: string | null;
   /** 时政题（shizheng_daily / mistakes redo 回源）：id 属 shizheng_questions，不得当题库 id 用 */
   _sz?: boolean;
+  /** 错题重练（/api/mistakes/redo）回源时对应的 mistakes.id，answer_log 以 mid 上送让无 qid 行也能推进复习 */
+  mistake_id?: number;
 }
 
 export interface QuestionsResp {
@@ -29,6 +31,7 @@ export interface QuestionsResp {
 
 export interface AnswerLogItem {
   qid: number | null;
+  mid?: number;
   module: string | null;
   submodule: string | null;
   correct: boolean;
@@ -36,6 +39,18 @@ export interface AnswerLogItem {
   picked: string;
   source: string | null;
   t?: number;
+}
+
+/** /api/answer_log 回包：reviewed = 本次作答里答对的曾错题（服务端已推进复习计划） */
+export interface AnswerLogReviewed {
+  mistake_id: number;
+  streak: number;
+  mastered: boolean;
+}
+
+export interface AnswerLogResp {
+  saved: number;
+  reviewed?: AnswerLogReviewed[];
 }
 
 export interface Mistake {
