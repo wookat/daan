@@ -95,7 +95,7 @@ def test_leaderboard_counts_real_only_but_shows_own(client):
     _all_right(client, rc, "r427-real-b", right=False)
     lb = client.get("/api/pk/leaderboard", params={"uid": "r427-real-c"}).json()
     names = {e["uid"] for e in lb["items"]}
-    assert "r427-r***" in names and lb["my_rank"] is None
+    assert db.display_alias("r427-real-a", None) in names and lb["my_rank"] is None
     assert all(not e["uid"].startswith("r427-p") for e in lb["items"]), lb
     # 探针看自己：本人对局计入
     lb2 = client.get("/api/pk/leaderboard", params={"uid": "r427-probe-a"}).json()

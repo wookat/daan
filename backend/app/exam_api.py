@@ -162,6 +162,7 @@ def _judge_paper(uid: str, paper: dict, picks: dict[int, str], secs: dict[int, i
                     "correct": is_correct,
                     "picked": picked,
                     "secs": (secs or {}).get(i + 1) or 0,
+                    "source": "exam",
                 }
             )
             if not is_correct:
@@ -249,6 +250,7 @@ async def api_scan_sheet(request: Request, uid: str = Form(""), image: UploadFil
                     "correct": is_correct,
                     "picked": picked,
                     "secs": 0,
+                    "source": "exam",
                 }
             )
             if not is_correct:
@@ -274,9 +276,14 @@ async def api_scan_sheet(request: Request, uid: str = Form(""), image: UploadFil
 def api_papers():
     return {"items": db.list_papers()}
 
-def _clean_int_map(raw: dict, as_str: bool = False) -> dict:
+def _clean_int_map(raw, as_str: bool = False) -> dict:
+    """缺省/null 视为空；形状错误（list/str）直接 400，不能当空答卷交掉。"""
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        raise HTTPException(400, "picks/secs 需为对象")
     out: dict = {}
-    for k, v in (raw or {}).items():
+    for k, v in raw.items():
         try:
             out[int(k)] = str(v or "")[:8] if as_str else max(0, min(int(v or 0), 86400))
         except (TypeError, ValueError):
@@ -488,8 +495,8 @@ def api_exam_submit(body: dict, request: Request):
     paper = db.get_exam_paper(attempt["paper_id"])
     if not paper:
         raise HTTPException(404, "试卷不存在")
-    picks = _clean_int_map(body.get("picks") or {}, as_str=True)
-    secs = _clean_int_map(body.get("secs") or {})
+    picks = _clean_int_map(body.get("picks"), as_str=True)
+    secs = _clean_int_map(body.get("secs"))
     qids = attempt.get("question_ids") or db.exam_active_qids(paper["question_ids"])
     marks = _clean_marks(body.get("marks"), len(qids))
     judged = _judge_paper(uid, {"code": None, "title": paper["title"], "question_ids": qids}, picks, secs,

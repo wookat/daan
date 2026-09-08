@@ -65,7 +65,7 @@ def init_pk_db():
 
 
 def _clean_uid(uid) -> str:
-    u = str(uid or "").strip()[:64]
+    u = db.clean_uid(uid)
     if not u:
         raise HTTPException(400, "缺少 uid")
     return u
@@ -385,7 +385,7 @@ def api_pk_leaderboard(uid: str = ""):
     for m in rows:
         w_uid = m[f"{m['winner']}_uid"]
         w_name = m[f"{m['winner']}_name"]
-        e = wins.setdefault(w_uid, {"uid": w_uid, "name": w_name or "匿名考友", "wins": 0})
+        e = wins.setdefault(w_uid, {"uid": w_uid, "name": db.display_alias(w_uid, w_name), "wins": 0})
         e["wins"] += 1
     ranked = sorted(wins.values(), key=lambda x: -x["wins"])[:20]
     my_rank = None
@@ -398,5 +398,5 @@ def api_pk_leaderboard(uid: str = ""):
                 break
     for i, e in enumerate(ranked):
         e["rank"] = i + 1
-        e["uid"] = e["uid"][:6] + "***"
+        e["uid"] = db.display_alias(e["uid"], None)
     return {"items": ranked, "week_start": monday.strftime("%Y-%m-%d"), "my_rank": my_rank, "my_wins": my_wins}
