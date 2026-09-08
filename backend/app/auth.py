@@ -127,10 +127,24 @@ def probe_request(request: Request) -> bool:
 
 
 _RATE: dict[str, list[float]] = {}
+_RATE_SWEEP_EVERY = 60.0
+_rate_sweep = {"at": 0.0, "window": 0}
+
+
+def _sweep_rate(now: float) -> None:
+    """每 60s 丢弃最近一次命中已超出最大窗口的键（login:/reg:<ip> 等随扫描 IP 无限增长）。"""
+    if now - _rate_sweep["at"] < _RATE_SWEEP_EVERY:
+        return
+    _rate_sweep["at"] = now
+    horizon = now - _rate_sweep["window"]
+    for k in [k for k, ts in _RATE.items() if not ts or ts[-1] < horizon]:
+        _RATE.pop(k, None)
 
 
 def rate_limit(key: str, limit: int = 10, window: int = 300):
     now = time.time()
+    _rate_sweep["window"] = max(_rate_sweep["window"], window)
+    _sweep_rate(now)
     hits = [t for t in _RATE.get(key, []) if now - t < window]
     if len(hits) >= limit:
         raise HTTPException(429, "操作过于频繁，请稍后再试")
@@ -271,8 +285,11 @@ _ACCOUNT_UID_RE = re.compile(r"^u\d+$")
 
 
 def is_account_uid(uid: object) -> bool:
-    """账号态 uid（u<id>，可被枚举），区别于随机匿名 uid。非字符串（JSON body 里的数字/数组/对象）一律不是账号 uid。"""
-    return isinstance(uid, str) and bool(_ACCOUNT_UID_RE.match(uid))
+    """账号态 uid（u<id>，可被枚举），区别于随机匿名 uid。非字符串（JSON body 里的数字/数组/对象）一律不是账号 uid。
+
+    与 handler 的 `uid.strip()[:64]` 同口径判定：前后空白不改变归属（' u1' 即 u1）。
+    """
+    return isinstance(uid, str) and bool(_ACCOUNT_UID_RE.match(uid.strip()))
 
 
 def owns_uid(uid: str, authorization: str | None) -> bool:
@@ -280,7 +297,7 @@ def owns_uid(uid: str, authorization: str | None) -> bool:
     if not is_account_uid(uid):
         return True
     row = get_user_by_token(authorization)
-    return bool(row) and user_uid(row["id"]) == uid
+    return bool(row) and user_uid(row["id"]) == uid.strip()
 
 
 def require_user(authorization: str | None):
