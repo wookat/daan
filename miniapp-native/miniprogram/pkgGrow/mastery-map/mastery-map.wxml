@@ -15,7 +15,7 @@
 
     <block wx:elif="{{map}}">
       <!-- 覆盖度总览 -->
-      <kg-card variant="raised" class="sec head">
+      <kg-card variant="raised" class="sec" body-class="head">
         <kg-progress shape="ring" value="{{map.coverage.pct}}" size="{{72}}" aria-label="考点覆盖度" />
         <view class="head-r">
           <text class="head-t">考点掌握度地图</text>
