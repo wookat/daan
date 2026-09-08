@@ -167,7 +167,7 @@
 - [ ] [miniapp·P2·并行热点·沿用 W12-C #138] `practice.wxml` hs/xp/explanation 三独立 `wx:if` 未做 `isExplanationCovered` 同口径去重；建议抽纯函数 `utils/exp-dup.ts` 再在 practice.ts 接线。
 - [ ] [miniapp·P3·1 行] `api/exam.ts:199`（downloadFile fail `err.errMsg || '网络错误'`）与 `api/social.ts:74`（上传 `'上传失败'`）仍透出原始 errMsg，不在 W12D-2 files 范围；后续顺手改 `netFailMessage(err.errMsg, '上传失败，请检查网络后重试')`。
 - [ ] [miniapp·P3·真机] 11 处静态页卡 `raised → flat`（contest/exam list/discuss/plaza/reminders）与 `reminders.wxml:36` tip 卡 body-class（W10 #106）：W12D-2 只做 token 层级对齐，页面级改 flat 待真机截图定级后一次做。
-- [ ] [miniapp·待真机] `pkgExam/shenlun.wxml` 无 `.page-scroll` 容器（app.wxss 注明页面依赖 navbar+.page-scroll 分配高度）：仅源码证据，需模拟器确认滚动/底部遮挡后再立项。
+- [ ] [miniapp·待真机] `pkgExam/shenlun.wxml` 无 `.page-scroll` 容器（app.wxss 注明页面依赖 navbar+.page-scroll 分配高度）：仅源码证据，需模拟器确认滚动/底部遮挡后再立项。 → W15 纳入 W15-M1 后实施失败 dropped，精确修法见「W15 追加」。
 - [x] [miniapp·待证据] profile 用 `fetchMistakes` 回包 `items.length` 显示错题数而接口默认 `limit=500`：>500 条用户才失真，生产是否有此量级未核（不查真人数据），待有证据再补 total 字段消费。→ **W14-B2 已修**：`/api/growth.mistakes{total,mastered,pending}` 聚合，H5 profile/stats + 小程序 profile 不再拉 `/api/mistakes` 计数（w14.md §3）。
 - [ ] [backend·待量化] `db._answer_state` 对 `/api/exam/papers?uid=` 全表扫 uid 的 answer_log：生产 5 次探针 0.22–0.59 s（49.6 KB 回包），无 uid 0.22–0.24 s，未达 P1 阈值且样本为 probe uid；待真实重度用户 uid 的服务端计时再定。
 - [ ] [backend·待量化] `_judge_paper` 逐题 `save_mistake` 各自开/提交连接（60 错题→60 次事务）：W10 锁竞争疑点未量化；mistakes 写路径属并行热点暂不动。
@@ -192,7 +192,7 @@
 ## Deferred（W14 追加，详见 w14.md §6；分支 `devin/wf-w14-integration` 未建 PR/未部署）
 
 - [ ] [流程·P1] W14 部署后生产回归（`test-w14-*` uid，用后清理）：`GET /api/growth?uid=` 含 `mistakes{total,mastered,pending}` 且与 `/api/mistakes` 条数一致；H5 profile/stats 页 Network 无 `/api/mistakes` 列表请求；`GET /api/checkin/summary` `total == sum(days.n)`；`/api/questions?module=shuliang&limit=10` 连抽 20 组 `quality.family_key` 组内重复 0，`grouped=1` / `reinforce=1` 回包形状不变；容器日志 0 Traceback。
-- [ ] [content·P1] `python backend/tools/content_gate_dryrun.py --db <生产只读副本> --dist-sample 20` 逐模块出「互斥前/后」重复率（本机种子库基线仅 0.2%，不代表 109k 生产库）；据此决定是否加 `questions.synthetic_family/clone_of` 持久化列并让 SEO 相似题列表（`seo/pages.py` 同族串）复用 `family_key`。
+- [x] [content·P1] `python backend/tools/content_gate_dryrun.py --db <生产只读副本> --dist-sample 20` 逐模块出「互斥前/后」重复率（本机种子库基线仅 0.2%，不代表 109k 生产库）；据此决定是否加 `questions.synthetic_family/clone_of` 持久化列并让 SEO 相似题列表（`seo/pages.py` 同族串）复用 `family_key`。→ **W15 关闭：不加列**（w14.md §7 K=500 0.3%→0 + w15c §2 180 对误报 3.3%）；SEO 相似题复用 `_split_family` 归入 W15-C1（dropped，见 W15 追加）。
 - [ ] [content·P1·待人工] W14-C 一手发现的题目内容缺陷：R12 合成题族答案偏 B（比重子题 B 87.6%，可盲选）、yanyu「做了统计/通报」模板 1,374 条多正确项、材料缺数据 11 条（w14c-content-human.md §1）。分发互斥不解决这些，需改答案/选项或 LLM 重写（key 未配）；先按台账人工处置样本 30 条再定批量方案。
 - [ ] [content·P2·待负责人] `w14c-r8-ledger.md` 25 条「最终文本」用 `PATCH /api/admin/questions/{qid}`（`X-Admin-Token`）逐题应用；q155207 需同时改 answer B→D；类型④ 缺图/缺表 11 条回原卷补齐，补不到再单题 `disabled=1`（不批量下架）。
 - [ ] [backend·P3] `_draw_questions` 极端小池（某 tag3 只剩同族题）会回填同族保量，属设计取舍；`--dist-sample --tag3` 抽到此类池时记录，若生产常见再考虑降 limit 提示。
@@ -202,3 +202,32 @@
 - [ ] [W9–W13 既有 deferred 原样保留] W13 部署后回归清单（已完成项见 w13.md §7）、R9/R10 存量重写待 LLM key、`save_mistake` uid strip、`_RATE` sweep、user-journey 三项待产品决策、小程序真机清单 —— 不重复立项。
 - [x] [W14 部署后回归] growth.mistakes / checkin total / H5 无 mistakes 计数请求 / 生产 --dist-sample 前后对照 —— 已完成，见 w14.md §7；deploy_h5.sh 4c 加 Node ≥22 预检。
 - [ ] [content·P1] R8 25 条台账（w14c-r8-ledger.md）`PATCH /api/admin/questions/{qid}` 逐题应用，仍待负责人执行。
+
+## Deferred（W15 追加，详见 w15.md §2/§6；分支 `devin/wf-w15-integration` 未建 PR/未部署；本轮仅合入 W15-H1，W15-C1/W15-M1 实施失败 dropped）
+
+- [x] [frontend-h5·P1] **W15-H1 已合入**：`api.js` GET in-flight 合并 + 只读白名单 3 s TTL（`api-get-cache.js`）；`exam.vue/share-q.vue/login.vue` `</style>` 外孤儿 CSS 归位（dist 已含 `.multi-tip/.multi-bar/.multi-hint`）；`a11y-focus.js` 焦点环排除原生文本控件、输入容器 `:focus-within`；`exp-dup.js` 归一化 + 句级覆盖率；`q-social-bar` emoji→l-icon；stats 雷达轴标/侧栏 nowrap。本机 7 切 tab 50→28（600 ms）/ 50→42（1200 ms）。
+- [ ] [流程·P1] W15 部署后生产回归（`test-w15-*` uid，用后清理）：H5 首页↔我的↔统计 7 切 tab 总请求数与每页 `home_bundle/growth` ≤1 次；模考多选题「多选提示」有 `--brand-soft` 底色胶囊（本机未构造多选 UI，只核到 dist CSS）；搜索框聚焦 input 无方形环、容器 `--brand` 描边、kg-button Tab 聚焦仍有环；统计雷达「数量」375 横排（本机基线未复现竖排，需生产 375 复核）；社交条 l-icon Chrome/Safari 一致；Lighthouse `/` 与 `/tiku/` 不低于部署前（0.98/1.00/1.00、1.00/1.00/1.00）。
+- [ ] [frontend-h5·P2] W15-H1 验收「7 切 tab ≤20」未达成：600 ms 停留 28（其中 `exam/resume`/`practice/resume`/`review/cur`/`review` 各 2 + `track` 2 为非幂等/埋点，按设计不缓存），≥1.2 s 回到 38–42（3 s TTL 到期回源）。要到 ≤20 需页面层去掉 resume/review 重复拉取（落 practice/home/book 热点）或放宽 TTL/失效策略，需单独论证，不在请求层擅自放宽。
+- [ ] [content·P1·W16 首位候选] **W15-C1 dropped**（实施失败无分支）：生成型文案模板感改写——`seo/pages.py:873` description 截到 ≤70 字最后句读、`re.sub(r'\s+',' ')` 去换行、年份地区拼法「2016年广西真题」、CTA 每页 1 主 + 1 次级文字链、删「（免费）→」；`:727-741` 相似题 LIMIT 24 后复用 `qbank_api._split_family` 截 8；`:438/:583/:682` 列表页 description 同口径；`plan.py:66-181`/`report.py:187-208` 去「专属/开启/助力/一起」、首句必含用户数据、focus 空时返回 None；新增 `tests/test_w15_copy_snapshot.py` + `docs/iter/workflow/w15c-copy-samples.md`。**前置**：先取 ≥40 条真实输出（生产 `/tiku/q/*` 30 页只读 + `test-w15-copy-01..03` 造当日 answer_log ≥30 题后 GET plan/today、home_bundle、predict ≥10 条，结束全表 DELETE LEFTOVER 0；周报有数据分支本地库取样）。一手证据见 w15c-content-human.md §5。
+- [ ] [miniapp·P1] **W15-M1 dropped**（实施失败无分支，main 现状静态核对见 w15.md §1）：① `pkgExam/shenlun/shenlun.wxml:2` `<view class="wrap">` → `<scroll-view class="page-scroll" scroll-y type="list">`（pkgExam 其余 5 页均有，`app.wxss:18`），shenlun.wxss 去重复安全区 padding；② `utils/request.ts:64` 默认 `timeout=180000` → GET 12000 + 超时（`isTimeoutMsg`）重试一次 20000，非 GET/显式 timeout 不变；③ `kg-answer-card/index.ts groupCells` grouped=false 单组 + wxss `repeat(auto-fill,minmax(40px,1fr))` 与容器左右 padding；④ `pkgSocial/pk-result/pk-result.wxss:117-120 .mid{width:72px;flex-shrink:0}` → `min-width:56px;flex:0 1 auto` + 胜者标签 ellipsis、两侧 `min-width:0`；⑤ `kg-segmented/index.wxss:3 .kg-seg__item` 加 `padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis`；⑥ `scripts/request-timeout.test.ts`、`answer-card-group.test.ts`、`page-scroll-lock.test.ts`。真机/DevTools 回归清单沿用方案原文。
+- [ ] [frontend-h5·P1·W14 沿用] kg-card chevron 覆盖（`kg-card.vue:13` 仍 `v-if="clickable && chevron"`）：W15 三项均未含此文件，仍待单文件处理。
+- [ ] [W16 首位 backend P1] PK `random_match` 匹配遗留测试对局：`pk.py:244-247` 只按 `status='waiting' AND COALESCE(probe,0)=?` 配对无 `created_at` 窗口，09-03 前 probe=NULL 测试对局被当真人；修法 `created_at > now-7d`，超期 waiting 由 sweep 置 expired；遗留 waiting 清理需负责人授权后在生产执行（本轮未动生产库）。
+- [ ] [frontend-h5·P1·热点 book.vue] 复习完成弹层「今日复习已清零／到期 N 道全部复习完成」与首屏「今日待复习 9」口径矛盾（`book.vue:54-63` vs `:93 dueTotal`=到期+当日新错+同类加练）：待 R550 线释放后弹层标题改「到期 N 道复习完成」，副文案用 rItems 区分「今日新错 M 道明天到期」，不新增状态。
+- [ ] [frontend-h5·P2·热点 book.vue] 错题本 FAB（`book.vue:579/2204`）遮挡时间与桌面侧栏：评估改列表尾部/页头「录入」入口而非加 padding；来源 chip 折两行改单行 ellipsis 并保持时间右对齐。
+- [ ] [frontend-h5·P2·全站 blast radius] `kg-card.vue:39 .kg-card + .kg-card{margin-top:var(--card-gap)}` 泄漏到 grid/flex 容器致首页更多练习/AI 问答桌面卡不等高：根因修法去兄弟 margin、由 kg-group/列表容器 gap 承担，需全页面截图回归且涉 home.vue 热点，单独一轮。
+- [ ] [frontend-h5·P3] `home.vue:135`「今天主攻」chip 在 focus 为空时仍渲染（W15-C1 后端改 None 后前端需 `v-if`）；`weekly-report.vue:12-13` 空态去「专属」。
+- [ ] [frontend-h5·等 PR #498] 卷库 list.vue 多主按钮/套话/分段高度：与 #498（list.vue/report.vue/exam-next.js）重叠，#498 合入或关闭后按 W14-C/W12-C 清单复核。
+- [ ] [miniapp·P2] 组件旁路迁移（一手口径：裸 t-popup 4 wxml=book/home/team/ask，裸 t-button 1=login，手写 sheet/mask 8 wxml=practice/book/home/team/mastery-map/pk/ask/shenlun）统一走 kg-sheet/kg-button；book/home/practice 热点待释放后分批。原报告「11 处/3 处」口径失实，不作 P1。
+- [ ] [miniapp] profile 运行时核对（W14-B2 后仍未真机）；`practice.ts:218` 读 `query.count` 而非 `n` 与 H5 入参口径待核（本轮未找到 H5 侧 `n` 参数一手证据）。
+- [ ] [backend·P3] `db.py:3785 save_backup json[:500000]` 静默截断 → 超限 413/明确错误并记 trackEvent；`db.py:2696 save_answer_log_detail` 已有 qid/module 校验（非「完全未校验」），补 `correct∈{0,1}`、secs 范围、picked 长度上限需一手复核后再定。
+- [ ] [backend·W12/W13 既有] `save_mistake`（`db.py:3468/3476/3515`）uid 未过 `clean_uid`：下次触碰 mistakes 写路径时接入，不单独立项。
+- [ ] [backend/docs] ARCHITECTURE「域内自持 SQL」描述与 db.py 集中 SQL 不符，随下次 backend 项顺带更新。
+- [ ] [content·人工] R8 25 条按 `w14c-r8-ledger.md` 由负责人 `PATCH /api/admin/questions/{qid}`，先 q155207（答案 B 实为 D）/ q334431（hs 自述存疑，SEO 可见）再其余 23；本轮不重复改写。
+- [ ] [content·人工+规则] 真题同题异答 17 对（yanyu 7 / panduan 10，6 对页面核实）回原卷定源后 PATCH；content_gate 增 M12：R13 both-real 命中且 answer 不同 → hard。
+- [ ] [content·规则+人工] M11 hs 中段字母≠结论（q219287/q4270/q145539/q129/q260581 等，宽正则候选 80 行，现有 `hs_letter_inconsistent` 命中 0）：`quality.py` 增三种形态检测，新批次 hard，存量 80 行人工。
+- [ ] [content·清洗] 广告残片嵌句（题干 508 行/解析 533 行，`一个上岸|上岸考生|分享经验和答|扫码|中公`）：M15 残片词 hard + 存量脚本清洗，另开清洗单（W3-C 同类，尾句正则不命中）。
+- [ ] [content·生成侧·仅新批次] M13 合成题换壳不换数（shuliang 28/40、ziliao 18/39）、M13b 资料分析组内字母 >60% 软标（460 组）、M14 伪精度「保留 N 位小数」整数答案（19 行）——只约束新批次，不改存量。
+- [ ] [content·叫法] 小程序侧统一：tab「刷题」/任务「专项练习」/删「强化练习」「去强化」，「成绩报告」「全站同卷模考」「弱项/薄弱考点」（w15c §5.3），与 H5 W14-C §5.1 清单合并一次做。
+- [x] [content·数据结论] R12/R13 持久化列（`questions.synthetic_family/clone_of`）决策：**不加列**。依据 w14.md §7 生产 `--dist-sample` K=500 同族 0.3%→0、增量 p95 0.8 ms，与 w15c §2 180 对人工抽检误报 3.3%；W14 追加中「据此决定是否加持久化列」一条据此关闭。
+- [ ] [新需求提案·待产品排期] 首访引导（匿名首屏一句话 + 一个主按钮）、冲刺模式按错频分档、首页 5 题快练入口、PK 异步对局说明文案、分享页展示解析与分享者作答、周报未结束周实时预览（`report.py:242-249` 现恒 pending）。
+- [ ] [W9–W14 既有 deferred 原样保留] W14 部署后回归已完成（w14.md §7）；R9/R10 存量重写待 LLM key、`_RATE` per-key window、`_judge_paper` 事务/`_answer_state` 全表扫待量化、小程序 practice 三份渲染去重、`exam.ts:199/social.ts:74` errMsg、11 处 raised→flat、favQuestions uid 隔离、user-journey 三项、小程序真机清单 —— 不重复立项。
