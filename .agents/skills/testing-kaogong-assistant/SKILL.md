@@ -1894,3 +1894,11 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - H5 卷库 `onReachBottom` 自动追加：用 375×812 CDP 模拟 + 鼠标滚轮滚到底即可触发；断言用 CDP 数 `真题卷 TESTnn` 卡片数 + 「加载更多」按钮是否消失，不点按钮。
 - uni-h5 基础样式 `uni-text{white-space:pre-line}` 会覆盖父级 `white-space:nowrap`：给 `.wd-cell__title` 加 nowrap 对 wd-cell 用 `<text>` 渲染的 title prop 无效，长标题仍会折行。验证时用 CDP 注入 ≥20 字标题观察高度（单行 32px，两行 48px），验完记得还原文本。要真正单行需把 nowrap 作用到 `.wd-cell__title uni-text` 或改用 title 插槽加自定义类。
 - `pkill -f "cdp.py hold"` 这类模式会连当前 shell 一起杀掉（命令行含相同字串），清理时改用 `pgrep -af` 找 PID 再 `kill`。
+
+## H5 W9 走查经验（桌面壳 / tabbar / 报告薄弱模块 / 焦点环）
+- 本地后端可直接托管 H5 dist（`uvicorn app.main:app --port 8766` + `DB_PATH=/tmp/xxx/app.db`），Chrome 用 `--remote-debugging-port` 起，通过 CDP `Emulation.setDeviceMetricsOverride` 在 375 / 1440 间切换视口；覆盖需由一个长驻 CDP 连接持有（连接断开即失效），测量脚本另开连接即可。
+- CDP 选 target 时优先匹配本地端口 URL；共享 VM 上其它代理的 DevTools 会抢焦点，截图用 `Page.captureScreenshot` 更稳，GUI 截图前先 `wmctrl -i -a <chrome wid>`。
+- 桌面壳判定：`uni-page[type="tabBar"]` 的 `uni-page-wrapper` padding-left 208，非 tab 页 0；1440 下固定条（.batchbar/.mask/.banner）tab 页 left 应为 `(1440-1280)/2+208=288`，非 tab 页 80/全宽。`/#/pkgA/exam/papers` 未注册于 pages.json，会渲染空壳——用 `exam/list`、`exam/contest` 代替。
+- 报告页薄弱模块：要造「整模块未答」用 `/api/exam/start` + `/api/exam/submit`，`picks` 键为 **1 起的题号字符串**，题目 id 为 int（拼 SQL 要 `str()`）；后端返回 per_module `{n,answered,correct}`；整模块未答不进候选，部分作答时文案带「（按已答 a/n 题折算）」。uvicorn 有进程内缓存，改 DB 后需重启。
+- 外观模式切换点 profile「外观模式」cell 循环 跟随系统→浅色→深色（toast「外观模式：深色」，`html.theme-dark`）；深色下 `--brand` 仍为 #2e5bff（只有 `--brand-text` 变 #8fa8ff）。焦点环校验：CDP `Input.dispatchKeyEvent Tab` 后读 `getComputedStyle(activeElement).outlineColor`，再 `style.setProperty('--brand','#ff5722')` 看环是否变橙。注意 `uni-button` tabIndex=-1，Tab 只落在 `role=button tabindex=0` 的 uni-view 上。
+- 用 CDP `Input.dispatchMouseEvent` 点击页面可避免 computer 工具抢窗口焦点；结束后清理 `localStorage` 的 `themeMode`/`anonUid`/`apiSnap:*`。
