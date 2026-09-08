@@ -56,7 +56,8 @@ def test_exam_attempt_probe_excluded_from_cross_user_aggregates(client):
     qs = seed_questions()[:5]
     pid = _seed_paper("R418 探针口径卷", [q for q in qs])
     real, probe_uid = "r418-real-anon", "test-r418-probe"
-    _cleanup([real, probe_uid])
+    more_real = [f"r418-real-anon-{i}" for i in range(4)]
+    _cleanup([real, probe_uid, *more_real])
     try:
         # 真人（无探针头）满分交卷；探针（显式头）交白卷两次
         aid_real = _submit(client, real, pid, {str(i + 1): "A" for i in range(5)})
@@ -79,15 +80,18 @@ def test_exam_attempt_probe_excluded_from_cross_user_aggregates(client):
         # 卷库卡片「X 人考过 · 均分」与同卷社会证明、比赛分数池同口径
         social = db.exam_paper_social(pid)
         assert social["n"] == 1
-        db._papers_cache.clear()
-        papers = {p["id"]: p for p in client.get("/api/exam/papers?uid=" + real).json()["items"]}
-        assert papers[pid]["takers"] == 1
         conn = db.get_conn()
         pool = _score_pool(conn, {"paper_id": pid})
         conn.close()
         assert pool["n"] == 1
+        # 卷库列表 ≥5 真人才透出（W10-A）：凑满 5 真人后 takers=5，探针不计入（否则为 6）
+        for u in more_real:
+            _submit(client, u, pid, {"1": "A"})
+        db._papers_cache.clear()
+        papers = {p["id"]: p for p in client.get("/api/exam/papers?uid=" + real).json()["items"]}
+        assert papers[pid]["takers"] == 5
     finally:
-        _cleanup([real, probe_uid])
+        _cleanup([real, probe_uid, *more_real])
 
 
 def _tmp_db(tmp_path):

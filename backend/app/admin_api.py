@@ -8,7 +8,7 @@ from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import Response
 
 from . import db, llm, ops_status, similarity, taxonomy
-from .deps import ACCESS_CODE, IMPORT_TOKEN, check_admin
+from .deps import ACCESS_CODE, IMPORT_TOKEN, check_admin, clamp_limit
 
 router = APIRouter()
 
@@ -110,7 +110,7 @@ def api_admin_similar_questions(qid: int, limit: int = 10, x_admin_token: str | 
     check_admin(x_admin_token)
     conn = db.get_conn()
     try:
-        items = similarity.find_similar(conn, qid, limit=min(limit, 50))
+        items = similarity.find_similar(conn, qid, limit=clamp_limit(limit, 50))
     finally:
         conn.close()
     return {"qid": qid, "items": items}
@@ -296,7 +296,7 @@ def api_admin_batches(x_admin_token: str | None = Header(None)):
 @router.get("/api/admin/batches/{bid}/sample")
 def api_admin_batch_sample(bid: str, limit: int = 10, x_admin_token: str | None = Header(None)):
     check_admin(x_admin_token)
-    return {"items": db.admin_batch_sample(bid, min(limit, 50)), "reviews": db.sample_reviews(bid)}
+    return {"items": db.admin_batch_sample(bid, clamp_limit(limit, 50)), "reviews": db.sample_reviews(bid)}
 
 
 @router.post("/api/admin/batches/{bid}/sample_reviews")

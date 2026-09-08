@@ -45,6 +45,12 @@
           <wd-cell title="讨论消息" :value="inboxUnread ? inboxUnread + ' 条未读' : ''" is-link clickable @click="goInbox">
             <template #icon><view class="cell-ico"><l-icon name="message-circle" :size="20" tone="brand" /></view></template>
           </wd-cell>
+          <wd-cell title="PK 对战" value="和考友同题比拼" is-link clickable @click="goPk">
+            <template #icon><view class="cell-ico"><l-icon name="swords" :size="20" tone="brand" /></view></template>
+          </wd-cell>
+          <wd-cell title="学习小队" :value="teamName || '组队打卡互相监督'" is-link clickable @click="goTeam">
+            <template #icon><view class="cell-ico"><l-icon name="users" :size="20" tone="brand" /></view></template>
+          </wd-cell>
           <wd-cell title="练习历史" value="逐题回看 · 错题重练" is-link clickable @click="goPracticeHistory">
             <template #icon><view class="cell-ico"><l-icon name="clock" :size="20" tone="brand" /></view></template>
           </wd-cell>
@@ -192,6 +198,7 @@ export default {
       daily: { days: {} },
       favN: 0,
       inboxUnread: 0,
+      teamName: '',
       dailyGoal: 20,
       fontLv: 1,
       sfxOn: true,
@@ -295,6 +302,7 @@ export default {
     this.remindTime = rs.time;
     this.themeMode = getThemeMode();
     this.offlineN = listPacks().length;
+    this.teamName = this.peekTeamName();
     this.refreshAccountData();
   },
   methods: {
@@ -314,6 +322,12 @@ export default {
     },
     maskPhone(p) {
       return p ? p.slice(0, 3) + '****' + p.slice(-4) : '';
+    },
+    /** 只读小队页留下的快照，不新增请求 */
+    peekTeamName() {
+      const snap = snapPeek('/api/team/mine?uid=' + encodeURIComponent(anonUid()));
+      const t = snap && snap.items && snap.items[0];
+      return t && t.name ? t.name : '';
     },
     // #ifdef H5
     async installPwa() {
@@ -490,6 +504,12 @@ export default {
         return;
       }
       uni.navigateTo({ url: '/pkgA/social/inbox' });
+    },
+    goPk() {
+      uni.navigateTo({ url: '/pkgA/pk/pk' });
+    },
+    goTeam() {
+      uni.navigateTo({ url: '/pkgA/team/team' });
     },
     goExamList() {
       uni.navigateTo({ url: '/pkgA/exam/list' });
