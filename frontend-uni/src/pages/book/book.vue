@@ -418,7 +418,7 @@
           <text v-if="scanPagesNote(scanResult, scanAcc)" class="scan-note">{{ scanPagesNote(scanResult, scanAcc) }}</text>
           <text v-if="inlineSkipNote(scanResult.inline_n)" class="scan-note">{{ inlineSkipNote(scanResult.inline_n) }}</text>
           <view class="scan-list">
-            <view v-for="r in scanResult.items" :key="r.no" class="scan-row" :class="{ jump: scanRowJumpable(scanResult, r) }" :role="scanRowJumpable(scanResult, r) ? 'button' : null" @click="scanRowJump(r)">
+            <view v-for="r in scanResult.items" :key="r.no" class="scan-row" :class="{ jump: scanRowJumpable(scanResult, r) }" :role="scanRowJumpable(scanResult, r) ? 'button' : null" v-on="scanRowJumpable(scanResult, r) ? { click: () => scanRowJump(r) } : {}">
               <text class="scan-no num">{{ r.no }}</text>
               <text class="scan-pick" :class="{ good: r.correct, bad: r.status === 'ok' && !r.correct }">{{ r.status === 'blank' ? '未涂' : r.status === 'multi' ? '多涂 ' + r.picked : r.picked }}</text>
               <text class="scan-ans">答案 {{ r.answer || '—' }}</text>

@@ -73,12 +73,13 @@ describe('多页卷整卷合计', () => {
 });
 
 describe('错题本接入', () => {
-  it('结果行：可跳行带 jump/role=button + 「看错题 ›」，点击走 scanRowJump → closeScan；说明行传 scanAcc', () => {
+  it('结果行：仅可跳行挂 click 监听（a11y-focus 只给有监听的元素补 tabindex/role）+ jump/role=button + 「看错题 ›」，点击走 scanRowJump → closeScan；说明行传 scanAcc', () => {
     expect(BOOK).toContain("import { scanRowJumpable, findScanMistake, pageNFor } from '../../paper-scan-jump.js';");
     expect(BOOK).toContain("import { scanPageLabel, scanPagesNote, recordScanPage } from '../../paper-scan-pages.js';");
     expect(BOOK).toContain(
-      '<view v-for="r in scanResult.items" :key="r.no" class="scan-row" :class="{ jump: scanRowJumpable(scanResult, r) }" :role="scanRowJumpable(scanResult, r) ? \'button\' : null" @click="scanRowJump(r)">',
+      '<view v-for="r in scanResult.items" :key="r.no" class="scan-row" :class="{ jump: scanRowJumpable(scanResult, r) }" :role="scanRowJumpable(scanResult, r) ? \'button\' : null" v-on="scanRowJumpable(scanResult, r) ? { click: () => scanRowJump(r) } : {}">',
     );
+    expect(BOOK).not.toContain('class="scan-row" :class="{ jump: scanRowJumpable(scanResult, r) }" :role="scanRowJumpable(scanResult, r) ? \'button\' : null" @click=');
     expect(BOOK).toContain('<text v-if="scanRowJumpable(scanResult, r)" class="scan-jump">看错题 ›</text>');
     expect(BOOK).toContain('<text v-if="scanPagesNote(scanResult, scanAcc)" class="scan-note">{{ scanPagesNote(scanResult, scanAcc) }}</text>');
     expect(BOOK).toContain(
