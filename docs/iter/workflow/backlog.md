@@ -178,7 +178,7 @@
 - [ ] [W9/W10/W11 既有 deferred 原样保留] 小程序 stats onShow 9 请求量化、request.ts 韧性四项、H5 predict/stats 重复请求、reminders aside-first、favorites grid、md.js/md.ts、密度类、报告页 a11y 两项、async 端点其余同步 SQLite、profile 日期口径、kg-tag nowrap 加固（W11 #149 本轮未动）、模考交卷宽限产品决策（W11 #145）、answer_log.correct 服务端复判（W11 #146）—— 均不重复立项。
 - [ ] [流程] W12 集成时生产 `/api/health` rev=`cda7af0d`（R544 提交）是 main `e612ea67` 祖先（`merge-base --is-ancestor` 成立）→ 生产 = main 子集无漂移；三分支 merge-base 均 `7f53a5a4` 未 rebase，与 R544 文件无交集，集成实合三次无冲突。验收=本机实跑门禁（GitHub Actions 保持禁用）+ 部署后只读探针复采（`X-Kg-Probe: 1`）。
 
-## Deferred（W13 追加，详见 w13.md §6）
+## Deferred（W13 追加，详见 w13.md §6；W13 生产部署与回归已完成，见 w13.md §7，生产 rev `9b4a511c`）
 
 - [ ] [流程·P1] W13 部署后回归：`POST /api/questions/hs_import` 无 token 仍 401；`GET /api/daily_set/board` / `/api/exam/rank` / PK 周榜 name 全为「考友XXXX」或昵称（不再露 uid 前 6 位）；生产 `getComputedStyle(document.body).fontFamily` 为 Inter 栈（部署前实测 `"Times New Roman"`）；做题/报告解析卡不再出现「来源：original」。
 - [ ] [content·P1] R12 合成题族 3,130（全 ziliao）/ R13 克隆题 13,996（shuliang 10,942）存量占比高：先按 module 各抽 30 题人工判误报率，再决定是否加 `questions.synthetic_family/clone_of` 列并与 `/api/questions` 抽题互斥；不得在抽检前批量下架。
