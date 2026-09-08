@@ -200,6 +200,13 @@ done
 
 step "4c CF Pages 部署（kaogong.zalize.com 静态层；动态路由经 functions 代理回源 kaogong-origin）"
 : "${CLOUDFLARE_API_TOKEN:?need CLOUDFLARE_API_TOKEN (Pages deploy)}"
+# wrangler 4.129 要求 Node ≥22；shell 默认 Node 20 时切到 nvm 22，否则后端已上线而静态层落空
+if [[ "$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)" -lt 22 ]]; then
+  # shellcheck disable=SC1090
+  source "${NVM_DIR:-$HOME/.nvm}/nvm.sh" 2>/dev/null && nvm use 22 >/dev/null \
+    || { echo "FAIL: Pages 部署需 Node ≥22（当前 $(node -v 2>/dev/null || echo none)），nvm 22 不可用"; exit 1; }
+  echo "node $(node -v) (nvm)"
+fi
 PAGES_DIR=$(mktemp -d)
 cp -r "$DIST" "$PAGES_DIR/dist"
 mkdir -p "$PAGES_DIR/functions"

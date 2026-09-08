@@ -200,3 +200,5 @@
 - [ ] [工程·P2] `frontend-uni/tests/book-r541-review-mastered-verdict.test.js:106` 源锁在 main 上已随 R549（#695）失效（小程序 `book.ts` import 多了 `nextReviewText`），本轮顺手更新；R 类 PR 合入前应本地跑全量 vitest（GitHub Actions 禁用，无兜底）。
 - [ ] [backend·P3] `_judge_paper` 逐题事务 / `_answer_state` 全表扫 / `stats_bundle` 扇出合并：W12 待量化项沿用，B1/B2 未触碰。
 - [ ] [W9–W13 既有 deferred 原样保留] W13 部署后回归清单（已完成项见 w13.md §7）、R9/R10 存量重写待 LLM key、`save_mistake` uid strip、`_RATE` sweep、user-journey 三项待产品决策、小程序真机清单 —— 不重复立项。
+- [x] [W14 部署后回归] growth.mistakes / checkin total / H5 无 mistakes 计数请求 / 生产 --dist-sample 前后对照 —— 已完成，见 w14.md §7；deploy_h5.sh 4c 加 Node ≥22 预检。
+- [ ] [content·P1] R8 25 条台账（w14c-r8-ledger.md）`PATCH /api/admin/questions/{qid}` 逐题应用，仍待负责人执行。
