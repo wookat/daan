@@ -118,3 +118,11 @@
 - [ ] [content·P3·沿用台账] 解析模板化 / explanation 与 hs 重复 /「确认答案为 X」句式：W2 #43、W3 #68、W9 #91 已判 LLM 重写成本受「不反复触发 AI」约束，不立项。
 - [ ] [数据结论·沿用 W9 #93] 单一 uid 主导历史 answer_log：09-03 起 `REAL_TRAFFIC`/`PRACTICE_POOL` 已在 refresh_question_stats、排名、卷库 takers、分享统计等全部聚合处过滤，此前流量不回填；报告簇非探针 0 次、`attempt_count>=1` 仅 911/109371 题 —— 无真人样本支撑留存/漏斗结论，下一步是获客而非功能推断。
 - [ ] [流程] W10 集成时生产 `/api/health` rev=`22a38390` = #640 head，已是 main `bd6514f6` 祖先（`merge-base --is-ancestor` 成立）→ 生产 = main 子集无漂移；W10 三分支基于 `241bafd6` 未 rebase，靠 merge-tree 预演 + 集成分支实合三次无冲突。W9 登记的「R510/R511 尚未合 main」已随 #640 合入解决。
+
+## Deferred（W11-C 内容审计追加，详见 w11c-content-human.md）
+- [x] [content·P1] hs 内部字母自相矛盾（q192759 比对句「与选项A一致」/ q178903 引文「D项“集中；贩卖”」贴错字母）：`quality.hs_self_conflict` 与 `answer_letter_conflict` 同档扣 30，535 题回放仅命中这 2 题、0 误报；数据本身留 admin 低分人审，不改库。
+- [x] [content·P2] SEO 题页原解析被 hs 整段包含时双份渲染（16/535，`/tiku/q/181497`）：`_render_question` 与 H5 `exp-dup.js` 同口径去重。
+- [ ] [content·P2·生成期] hs 尾句「确认答案为X。」417/535，panduan 109/109，35 个 10 题组里 21 组连续 ≥5：需在 hs 生成 prompt 加「结尾不用固定句式」+ 后处理轮换收束句；受「不反复触发 AI」约束，只对新生成批次生效，存量不重写。
+- [ ] [content·P2·生成期] hs 不提任一非答案选项 336/535（shuliang 106/109）、且无排他词 222/535：生成 prompt 加「至少一句说明其它选项为何不成立」；静态规则 R5 只打标不扣分（数量题以过程为主属正常）。
+- [ ] [h5·P3·并行会话范围] home.vue kg-hero-card label「拍题 AI 讲解 · 错题按遗忘曲线复习 · 迷你模考」仍是中点串，待 R5xx 线合入后改为一句焦点句。
+- [ ] [content·未验证] hs 方法名（关键词定位法 / 关系层级法 / 415 份数法）是否忠实花生十三体系原教材，需教研核对。
