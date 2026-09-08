@@ -1,6 +1,7 @@
 // API 封装：H5 同源相对路径；小程序 / App 必须用绝对域名（可用 VITE_API_BASE 覆盖）
 import { isNativeApp, savePdfNative } from './native';
 import { isTimeoutMsg, isNetMsg, netFailMessage, classifyHttpError, snapCacheable, snapFresh, snapPushIndex, isStaleUidResponse, isStaleUidErr, parseSseEvents, trackRetryable, trackQueuePush, trackReplayPayload } from './api-policy';
+import { createGetCache, getTtl, isTrackPath } from './api-get-cache';
 
 export { isStaleUidErr };
 
@@ -318,22 +319,33 @@ function guardStaleUid(path, data) {
   return data;
 }
 
+// 同 path（含 query）GET 在途合并 + 只读白名单 3s 内存缓存：一次 onShow 多组件各自拉 home_bundle/growth 只发一次；
+// key 已含 uid，切号再由 uid 判定整体作废。opts.ttl 可覆盖（0 = 仅合并不缓存）
+const getCache = createGetCache();
+
 export function request(path, opts = {}) {
   const method = (opts.method || 'GET').toUpperCase();
+  // 写请求让短缓存整体作废：答题/签到后紧接着读 today、growth 必须拿到新值；埋点 track 不动任何读模型，不作废
+  if (method !== 'GET' && !isTrackPath(path)) getCache.clear();
   if (method !== 'GET') return withAuthRetry(() => rawRequest(path, opts));
   if (opts.timeout != null) return withAuthRetry(() => rawRequest(path, opts).then((d) => guardStaleUid(path, d)));
+  const ttl = opts.ttl != null ? opts.ttl : getTtl(path);
+  const key = opts.data == null ? path : path + '#' + JSON.stringify(opts.data);
   // GET 默认 12s 超时；超时自动重试一次（幂等安全）——共享 origin 长尾为单请求级，重试大概率命中热路径
   return withAuthRetry(() =>
-    rawRequest(path, { ...opts, timeout: 12000 })
-      .catch((e) => {
-        if (!isTimeoutErr(e)) throw e;
-        return rawRequest(path, { ...opts, timeout: 20000 });
-      })
-      .then((data) => {
-        guardStaleUid(path, data);
-        if (snapCacheable(path)) snapSave(path, data);
-        return data;
-      })
+    getCache
+      .run(key, uni.getStorageSync('anonUid'), ttl, () =>
+        rawRequest(path, { ...opts, timeout: 12000 })
+          .catch((e) => {
+            if (!isTimeoutErr(e)) throw e;
+            return rawRequest(path, { ...opts, timeout: 20000 });
+          })
+          .then((data) => {
+            guardStaleUid(path, data);
+            if (snapCacheable(path)) snapSave(path, data);
+            return data;
+          })
+      )
       .catch((e) => {
         // 最后一跳：仅超时/网络错误回退最近成功快照，HTTP 业务错误（401/422 等）必须透出
         if (!isNetErr(e) || !snapCacheable(path)) throw e;

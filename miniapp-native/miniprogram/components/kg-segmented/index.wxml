@@ -8,5 +8,5 @@
     aria-selected="{{index === activeIndex ? 'true' : 'false'}}"
     data-value="{{item.value}}"
     bind:tap="onTap"
-  >{{item.label}}</view>
+  ><text class="kg-seg__label">{{item.label}}</text></view>
 </view>

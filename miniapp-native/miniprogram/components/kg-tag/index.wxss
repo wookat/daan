@@ -3,6 +3,7 @@
   height: var(--tag-h); padding: 0 var(--sp-8); border-radius: var(--r-xs);
   font-size: var(--fs-caption); font-weight: 500; line-height: 1; white-space: nowrap;
   background: var(--fill); color: var(--ink-2);
+  max-width: 100%; box-sizing: border-box;
 }
 .kg-tag--brand { background: var(--brand-soft); color: var(--brand-text); }
 .kg-tag--ok { background: var(--ok-soft); color: var(--ok-strong); }
