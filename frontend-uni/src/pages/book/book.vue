@@ -412,9 +412,10 @@
       </kg-sheet>
 
       <!-- 对答案结果 -->
-      <kg-sheet :model-value="scanOpen && !!scanResult" :title="'对答案结果 · ' + ((scanResult && scanResult.title) || '试卷')" @update:model-value="(v) => { if (!v) scanOpen = false; }">
+      <kg-sheet :model-value="scanOpen && !!scanResult" :title="'对答案结果 · ' + ((scanResult && scanResult.title) || '试卷')" @update:model-value="(v) => { if (!v) closeScan(); }">
         <template v-if="scanResult">
-          <text class="scan-sum">卷码 {{ scanResult.code }}{{ scanResult.page ? ' · 第 ' + scanResult.page + ' 页' : '' }} · 已作答 {{ scanResult.answered }}/{{ scanResult.total }} · 答对 <text class="scan-good num">{{ scanResult.correct }}</text> 题{{ scanResult.saved ? ' · 已记入做题记录' : '' }}</text>
+          <text class="scan-sum">卷码 {{ scanResult.code }}{{ scanPageLabel(scanResult) ? ' · ' + scanPageLabel(scanResult) : '' }} · 已作答 {{ scanResult.answered }}/{{ scanResult.total }} · 答对 <text class="scan-good num">{{ scanResult.correct }}</text> 题{{ scanResult.saved ? ' · 已记入做题记录' : '' }}</text>
+          <text v-if="scanPagesNote(scanResult)" class="scan-note">{{ scanPagesNote(scanResult) }}</text>
           <text v-if="inlineSkipNote(scanResult.inline_n)" class="scan-note">{{ inlineSkipNote(scanResult.inline_n) }}</text>
           <view class="scan-list">
             <view v-for="r in scanResult.items" :key="r.no" class="scan-row">
@@ -425,7 +426,7 @@
             </view>
           </view>
         </template>
-        <template #footer><kg-button variant="primary" size="lg" block @click="scanOpen = false; load()">完成</kg-button></template>
+        <template #footer><kg-button variant="primary" size="lg" block @click="closeScan">完成</kg-button></template>
       </kg-sheet>
 
       <!-- #ifdef H5 -->
@@ -554,6 +555,7 @@ import { reviewSummary } from '../../review-summary.js';
 import { reviewOptions, reviewOptionsFull } from '../../review-opts.js';
 import { redoSkippedNote } from '../../book-redo-skipped.js';
 import { inlineSkipNote } from '../../paper-inline-note.js';
+import { scanPageLabel, scanPagesNote } from '../../paper-scan-pages.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 // 只描述作答形式、不是题型/考点的 question_type（时政题库存的是「单选」）：标签退回模块名
@@ -941,6 +943,8 @@ export default {
   },
   methods: {
     inlineSkipNote,
+    scanPageLabel,
+    scanPagesNote,
     // 登录态变化（uid 已换）：清掉上一个账号的错题/到期/掌握度/AI 分析，按当前 uid 重拉
     resetAccountState() {
       this.items = [];
@@ -1062,6 +1066,11 @@ export default {
       if (cur[no] === L) delete cur[no];
       else cur[no] = L;
       this.manualPicks = cur;
+    },
+    closeScan() {
+      if (!this.scanOpen) return;
+      this.scanOpen = false;
+      this.load();
     },
     async manualSubmit() {
       if (this.manualSubmitting || !this.manualPickedCount) return;

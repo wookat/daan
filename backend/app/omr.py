@@ -30,6 +30,11 @@ CODE_X0 = (PAGE_W - CODE_BITS * CODE_PITCH) / 2
 ROWS = 25
 COLS = 2
 PER_PAGE = ROWS * COLS
+
+
+def sheet_pages(n_slots: int) -> int:
+    """答题卡页数：与 pdf_export 出卡 / exam_api 回读同一公式（槽位数按 PER_PAGE 分页，至少 1 页）。"""
+    return max(1, -(-int(n_slots or 0) // PER_PAGE))
 GRID_Y0 = 60.0         # 第一行格子顶边 y
 ROW_H = 8.6
 COL_X0 = (16.0, 110.0)  # 每列起点 x
