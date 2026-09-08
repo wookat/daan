@@ -393,8 +393,9 @@ export default {
       return this.topOpen ? this.byType : this.byType.slice(0, 5);
     },
     weakAxes() {
+      // 有作答（n>0）即有数据；全错模块 pct=0 仍是最薄弱
       return this.axes
-        .filter((a) => a.pct > 0)
+        .filter((a) => a.n > 0)
         .sort((a, b) => a.pct - b.pct)
         .slice(0, 2);
     },
@@ -582,14 +583,16 @@ export default {
       return MODS.map((m) => {
         if (sv) {
           const s = sv[m.key] || { n: 0, c: 0 };
-          return { ...m, pct: s.n ? Math.round((s.c / s.n) * 100) : 0 };
+          const n = s.n || 0;
+          return { ...m, n, pct: n ? Math.round(((s.c || 0) / n) * 100) : 0 };
         }
         const s = this.pstats.byModule[m.key] || { done: 0, correct: 0 };
-        return { ...m, pct: s.done ? Math.round((s.correct / s.done) * 100) : 0 };
+        const n = s.done || 0;
+        return { ...m, n, pct: n ? Math.round(((s.correct || 0) / n) * 100) : 0 };
       });
     },
     hasRadar() {
-      return this.axes.some((a) => a.pct > 0);
+      return this.axes.some((a) => a.n > 0);
     },
     kmCovStyle() {
       const pct = this.kmCov || 0;
