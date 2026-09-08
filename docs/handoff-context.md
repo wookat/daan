@@ -3032,6 +3032,13 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 取证：`docs/iter/round-3/r537-caddy-deadblock-miniapp-qid-coverage.md`。
 - 下一步 R538：(c) 补量 + 到期项/簇（09:34Z 段何时停 / **09-09 00:00Z 后是否接续** / 6 h 内 Caddy `zalize.com` 续期行确认 0）；四维对标粉笔错题本 P0/P1 下一候选一手核（H5「已掌握」后再答错的回流形态 / 「恢复复习」批量对 `_sz` 行 / 到期推送数与首页到期数同源）→ 命中即论证→实修→本地全绿→发版→复采。
 
+### R538（2026-09-08，取证轮）：三候选一手核均成立不改码；Caddy `zalize.com` 续期行 reload 后确认 0；簇仍在跑、日界未到；0 产品代码 0 部署（生产仍 `8ede6eb7`）；从 R537 分支（#675）续开
+- A「已掌握」后再答错：`save_mistake()` dup 分支 `mastered=0, mastered_at=NULL, review_streak=0, next_review=now, times+1` → 回「待复习」今日到期；`book.vue` todo/done 按 `mastered` 分桶、掌握统计按 `mastered_at`，两侧一致。B「恢复复习」批量走 `PATCH /api/mistakes/{id}` 逐 id，与 `question_id` 无关，`_sz` 行恢复后进 `due_reviews`（LEFT JOIN 允许 NULL）。C 推送 `due_review_count(uid)` 与首页 `plan.py` `due(created_before=cn_day_start) + new_today` 同一函数，差异为 R438/R440 有意切分（当日新错题单列）。三项不立项。
+- (c)（`~/r537/r538_c1.out` 11:33Z）：Caddy 两域 renew/queue 行 0（跨两个 10-min tick）、源站 704 请求 5xx 0；簇 09:34Z 段至 **11:33:40Z 仍在跑**（11h 1359 行/390 IP），**09-09 日界未到**；非探针非 GET 0、redo 自然样本 0、容器 healthy 0 重启、DB `1324/360/37/38/82`、null qid 28、WAL 同字节。
+- 存量判断：R520 P0/P1 已全部上线复采；R521–R538 候选核结果均为「成立不改」或 P3；当前无新的有一手证据的 H5 P0/P1 可立项，剩余缺口为小程序整包/上传通道（资源）与需真人数据的 P3 → 建议后续降频为到期项复查 + 真人首条触发实修。
+- 取证：`docs/iter/round-3/r538-mastered-reflow-push-due-source.md`。环境蓝图无需更新。
+- 下一步 R539：09-09 00:00Z 日界后簇是否接续 / Caddy 6 h 窗满确认 / R534 后 redo 自然首样本 / `explain_cache.qid` 首个非空行；真人无 qid 非时政行或深链缓存命中行一旦出现 → R536-2 / R537-1 转实修。
+
 ### W9（守卫/阻塞收口 + 桌面让位/薄弱判定口径集成轮，分支 devin/wf-w9-integration，未建 PR/未部署）
 - 集成：origin/main `35be115c`（#639）切 `devin/wf-w9-integration`，依次 merge W9-A（`132fa744`）/ W9-B（`17cc21c1`）/ W9-C（`3846f83e`），三次无冲突；dropped 无。生产 `/api/health` rev=`10e2eb82` 在 R510 分支上、是 main 的后代（+7 提交含 R511 `0c532532`）→ 生产 = main 超集无漂移；**R510/R511 尚未合 main**，与 W9-A 的 `main.py` 改动 merge-tree 预演无冲突。全量本地验证三端：backend ruff / pyright 0 / pytest 525（基线 516）；frontend-uni（Node 22.23.2）lint / vitest 843（基线 824）/ build:h5；miniapp tsc 0 / lint 0。
 - W9-A（backend）：`/api/push/subscribe|unsubscribe` 改 `def(body: dict)`（非 JSON Content-Type 由 FastAPI 422，补上 R348-B1 守卫后唯一残余绕过）+ subscribe 显式 `owns_uid` 403；`guard_account_uid` 的 `owns_uid`（内含 httpx 5s）与 `scan_sheet` 的 OpenCV 走 `run_in_threadpool`；`init_db` 建 `idx_q_reinforce` 前 `_ensure_question_stat_cols`（新库 adaptive 不再 `no such column` 500）；`quality.answer_letter_conflict` 只取最后一处结论式字母、单选冲突扣 30 不下线。本地新库 uvicorn 实测：form 422 且 push_subs 0 行 / JSON 无 token 403 / 匿名 200→unsubscribe 200 归零 / scan_sheet 非法图 422 / PRAGMA 含 correct_ratio 且 adaptive 空库与 6 条作答后均 200 / 日志 0 error。**生产回归待部署**。
