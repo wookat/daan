@@ -4,6 +4,17 @@
 export const isTimeoutMsg = (msg) => /timeout|超时/i.test(String(msg));
 export const isNetMsg = (msg) => isTimeoutMsg(msg) || /网络错误|request:fail/i.test(String(msg));
 
+// uni fail 回调的 errMsg（request:fail / request:fail timeout / uploadFile:fail …）是平台内部文案，
+// 对外统一为中文；产出仍落在 isTimeoutMsg / isNetMsg 的判定集合内（超时 / 网络错误），上层分类与重试口径不变。
+export const NET_FAIL_TEXT = '网络错误，请检查网络后重试';
+export const NET_TIMEOUT_TEXT = '请求超时，请稍后重试';
+export function netFailMessage(errMsg, fallback = NET_FAIL_TEXT) {
+  const m = String(errMsg || '');
+  if (isTimeoutMsg(m)) return NET_TIMEOUT_TEXT;
+  if (!m || /:fail/.test(m)) return fallback;
+  return m;
+}
+
 // 非 2xx 响应的统一判定：detail 提取（对象数组回落状态码防 [object Object]）、
 // 登录态本身失效判定（访问码/管理令牌 401 不踢登录）、对外错误文案。
 export function classifyHttpError({ status, detail, path }) {

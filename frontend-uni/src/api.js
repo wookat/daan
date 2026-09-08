@@ -1,6 +1,6 @@
 // API 封装：H5 同源相对路径；小程序 / App 必须用绝对域名（可用 VITE_API_BASE 覆盖）
 import { isNativeApp, savePdfNative } from './native';
-import { isTimeoutMsg, isNetMsg, classifyHttpError, snapCacheable, snapFresh, snapPushIndex, isStaleUidResponse, isStaleUidErr, parseSseEvents, trackRetryable, trackQueuePush, trackReplayPayload } from './api-policy';
+import { isTimeoutMsg, isNetMsg, netFailMessage, classifyHttpError, snapCacheable, snapFresh, snapPushIndex, isStaleUidResponse, isStaleUidErr, parseSseEvents, trackRetryable, trackQueuePush, trackReplayPayload } from './api-policy';
 
 export { isStaleUidErr };
 
@@ -259,7 +259,7 @@ function rawRequest(path, { method = 'GET', data, header = {}, timeout = 180000 
           reject(new Error(message));
         }
       },
-      fail: (err) => reject(new Error(err.errMsg || '网络错误')),
+      fail: (err) => reject(new Error(netFailMessage(err && err.errMsg))),
     });
   });
 }
@@ -402,7 +402,7 @@ export async function exportPdf(body) {
       responseType: 'arraybuffer',
       timeout: 120000,
       success: resolve,
-      fail: (err) => reject(new Error(err.errMsg || '网络错误')),
+      fail: (err) => reject(new Error(netFailMessage(err && err.errMsg))),
     });
   });
   if (res.statusCode < 200 || res.statusCode >= 300) throw new Error('HTTP ' + res.statusCode);
@@ -574,7 +574,7 @@ export function streamExplain({ filePath, text, userAnswer, questionId, onMeta, 
           if (res.statusCode >= 200 && res.statusCode < 300) finish();
           else reject(new Error('HTTP ' + res.statusCode));
         },
-        fail: (err) => reject(new Error(err.errMsg || '网络错误')),
+        fail: (err) => reject(new Error(netFailMessage(err && err.errMsg))),
       });
       const decode = makeUtf8Decoder();
       if (task && task.onChunkReceived) {
@@ -676,7 +676,7 @@ export function scanSheet({ filePath, uid }) {
           reject(e);
         }
       },
-      fail: (err) => reject(new Error(err.errMsg || '上传失败')),
+      fail: (err) => reject(new Error(netFailMessage(err && err.errMsg, '上传失败，请检查网络后重试'))),
     });
   });
 }
@@ -704,7 +704,7 @@ export function uploadExplain({ filePath, text, userAnswer }) {
               reject(e);
             }
           },
-          fail: (err) => reject(new Error(err.errMsg || '上传失败')),
+          fail: (err) => reject(new Error(netFailMessage(err && err.errMsg, '上传失败，请检查网络后重试'))),
         });
       } else {
         rawRequest('/api/explain', {

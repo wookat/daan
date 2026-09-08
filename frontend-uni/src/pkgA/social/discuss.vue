@@ -143,7 +143,7 @@ export default {
       draft: '',
       busy: false,
       replyTo: null,
-      logged: false,
+      logged: !!getToken(),
       autoFocus: false,
       inboxUnread: 0,
     };
@@ -165,11 +165,7 @@ export default {
     },
   },
   onShow() {
-    const l = !!getToken();
-    if (l !== this.logged) {
-      this.logged = l;
-      if (this.qid) this.load();
-    }
+    this.syncLogged();
     this.loadInbox();
   },
   onLoad(opts) {
@@ -180,20 +176,13 @@ export default {
       return;
     }
     this.draft = uni.getStorageSync('dcDraft:' + this.qid) || '';
-    if (opts.focus === '1' && getToken()) {
-      setTimeout(() => {
-        this.autoFocus = true;
-      }, 300);
+    if (opts.focus === '1') {
+      this._wantFocus = true;
+      setTimeout(() => this.focusCompose(), 300);
     }
     this.loadQuestion();
     this.load();
-    this._onAuth = () => {
-      const l = !!getToken();
-      if (l !== this.logged) {
-        this.logged = l;
-        if (this.qid) this.load();
-      }
-    };
+    this._onAuth = () => this.syncLogged();
     uni.$on('authChanged', this._onAuth);
   },
   onUnload() {
@@ -260,6 +249,20 @@ export default {
       if (this.sort === s) return;
       this.sort = s;
       this.load();
+    },
+    // 登录态以 token 为准：变化时重拉评论（登录后才有 mine/liked）；带着「抢首评」意图登录回来则接上聚焦
+    syncLogged() {
+      const l = !!getToken();
+      if (l === this.logged) return;
+      this.logged = l;
+      if (this.qid) this.load();
+      if (l && this._wantFocus) this.focusCompose();
+    },
+    // focus=1 落点：登录态直接聚焦输入框；游客弹登录门（与点输入框同一弹层），意图保留到登录回来
+    focusCompose() {
+      if (!this.ensureLogin()) return;
+      this._wantFocus = false;
+      this.autoFocus = true;
     },
     ensureLogin() {
       if (this.logged) return true;
