@@ -41,4 +41,11 @@
 
 ### 5.2 生产复验
 
-（发版后回填）
+- 发版：`deploy_h5.sh --skip-build` `cda7af0d → 42df6d14`（#683 首发；接口回归全 200；Lighthouse `/` a11y 部署时 0.94、独立重跑 1.00，首页非本轮改动，判瞬时）。设置期间老板侧把 main（W12 #682）合入分支并再发版 → 生产 `a707322a`（42df6d14 是其祖先，R545 涉及的 db/taxonomy/study_api/book.vue/book-url 两 rev 无差异；HEAD pytest 621 / vitest 1009）。#683 已合入 main `7566e0ba`。
+- 黑盒复验（testing agent，rev `a707322a` / bundle `index-Dxu3v3c0.js`，uid `test-r545-verify-0d1e368ad7`，375×812 / 1440×900；报告 `~/r545-verify/R545-a707322a-production-verification.md`，录像 `~/screencasts/r545-a707322a-production/`）：
+  - 选样（只读）：生产 `questions.submodule='排列组合'` 0 条、`'概率问题'` 1 条且 disabled；规范 `排列组合与概率` 6204 条 —— 生产碎片化来源是 `mistakes.question_type`（`数量关系-排列组合` / `数量关系-概率问题` 去前缀）而非 submodule。fixture 取 qid 63（排列组合）+ 64/381（概率问题）+ 8223（计算问题）+ 1 条手录，5 条错题 3284–3288。**alias→组名归一在生产无样本，UNTESTED（后端单测覆盖）**；未改题库。
+  - 接口 PASS：`/api/mistakes` 与到期 `/api/review` 每条带 `type_group`，3 条为「排列组合与概率」、手录 null；`redo?sub=排列组合与概率` → `[63,64,381]`，`+qtype=概率问题` → `[64,381]`，`+module=shuliang` 同上叠加正确；未知组空；空串/空白/41 字 → 400。
+  - UI PASS（双视口）：题型 chips 只有「排列组合与概率 ×3」（无「排列组合 ×1 / 概率问题 ×2」平级）；点组出「排列组合与概率 · 细分」行「概率问题 ×2 / 排列组合 ×1」；卡片 brand 组名 + neutral 细题型；细分后 2 条、当前筛选「排列组合与概率 · 概率问题」；重练请求 `sub=`（1/3）、细分 `sub=&qtype=概率问题`（1/2）；直达 `?kp=&qt=` 刷新恢复两级、细分再点取消、切模块/清组去 `qt`、外组 `qt` 丢弃；手录卡片 fallback 不变。
+  - 回归 PASS：tab 切换 / 模块筛选 / 桌面按题型排序 / 复习 1/5 / 首页统计；1271 响应 = 1223×200 + 45×304 + 3×预期 400，应用 console/rejection 0；导航取消 22（18 图 4 XHR）分列；375 无横向溢出、焦点环可见；付费 AI 0；`explain_cache` 82 不变。
+  - **P2 既有（非 R545 回归）**：选筛选（组+细分，或旧 `mod=shuliang` 对照）→ 重练 → 页内返回，UI 仍保留筛选但地址栏退回无 `kp/qt/mod`，此时刷新丢筛选。uni-app 返回时重写地址、`syncBookUrl` 只在 watch 里触发；下一轮 onShow 补同步。
+  - 清理：关闭 context 后枚举 41 张 uid 表精确删 10 行（5 mistakes + 5 growth_events），`test-r545-%` LEFTOVER 0（只读复查一致）。
