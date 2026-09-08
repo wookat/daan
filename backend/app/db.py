@@ -3263,6 +3263,45 @@ def save_paper_export(code: str, question_ids: list[int], title: str, inline_n: 
     conn.close()
 
 
+def paper_picks_hash(items: list[dict]) -> str:
+    """同一 uid 对同一卷同一页提交的「有效作答集合」指纹（question_id + 归一后 picked）；
+    空白/多涂行不落库故不入指纹。"""
+    parts = sorted(f"{it.get('question_id')}:{normalize_answer(it.get('picked'))}" for it in items)
+    return hashlib.sha1("|".join(parts).encode()).hexdigest()
+
+
+def claim_paper_submit(uid: str, code: str, page: int, picks_hash: str) -> float | None:
+    """记一次判分提交；同 (uid, code, page, 指纹) 已存在时不写并返回首次提交时刻，供调用方跳过重复落库。
+    同卷同页但答案不同视为新一次作答（正常返回 None）。"""
+    conn = get_conn()
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS paper_submits (
+            uid TEXT NOT NULL,
+            code TEXT NOT NULL,
+            page INTEGER NOT NULL,
+            picks_hash TEXT NOT NULL,
+            created_at REAL NOT NULL,
+            PRIMARY KEY (uid, code, page, picks_hash)
+        )"""
+    )
+    now = time.time()
+    cur = conn.execute(
+        "INSERT OR IGNORE INTO paper_submits (uid, code, page, picks_hash, created_at) VALUES (?,?,?,?,?)",
+        (uid, code, int(page), picks_hash, now),
+    )
+    claimed = cur.rowcount == 1
+    if claimed:
+        conn.commit()
+        conn.close()
+        return None
+    prev = conn.execute(
+        "SELECT created_at FROM paper_submits WHERE uid=? AND code=? AND page=? AND picks_hash=?",
+        (uid, code, int(page), picks_hash),
+    ).fetchone()
+    conn.close()
+    return float(prev["created_at"]) if prev else now
+
+
 def get_paper_export(code: str) -> dict | None:
     conn = get_conn()
     try:

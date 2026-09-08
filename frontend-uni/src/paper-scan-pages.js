@@ -37,6 +37,22 @@ export function scanAllPagesSummary(acc, r) {
   return sum;
 }
 
+// 后端对同 uid 同卷同页完全相同的作答只落库一次（dup=true, dup_at=首次时刻）：重扫同一张卡 / 重复交卷不再翻倍做题记录、不打回复习进度。
+export function scanDupNote(r, now = Date.now()) {
+  if (!r || !r.dup) return '';
+  const what = Number(r.page) > 0 ? '这一页' : '这份答案';
+  const t = Number(r.dup_at) || 0;
+  let when = '此前';
+  if (t > 0) {
+    const d = new Date(t * 1000);
+    const hm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    const today = new Date(now);
+    const sameDay = d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
+    when = (sameDay ? '今天 ' : d.getMonth() + 1 + '月' + d.getDate() + '日 ') + hm;
+  }
+  return what + '已于 ' + when + ' 判分并记入做题记录；本次答案完全相同，未重复记录，复习进度不受影响';
+}
+
 export function scanPagesNote(r, acc) {
   const page = Number(r && r.page) || 0;
   const pages = Number(r && r.pages) || 0;

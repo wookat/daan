@@ -415,6 +415,7 @@
       <kg-sheet :model-value="scanOpen && !!scanResult" :title="'对答案结果 · ' + ((scanResult && scanResult.title) || '试卷')" @update:model-value="(v) => { if (!v) closeScan(); }">
         <template v-if="scanResult">
           <text class="scan-sum">卷码 {{ scanResult.code }}{{ scanPageLabel(scanResult) ? ' · ' + scanPageLabel(scanResult) : '' }} · 已作答 {{ scanResult.answered }}/{{ scanResult.total }} · 答对 <text class="scan-good num">{{ scanResult.correct }}</text> 题{{ scanResult.saved ? ' · 已记入做题记录' : '' }}</text>
+          <text v-if="scanDupNote(scanResult)" class="scan-note scan-dup">{{ scanDupNote(scanResult) }}</text>
           <text v-if="scanPagesNote(scanResult, scanAcc)" class="scan-note">{{ scanPagesNote(scanResult, scanAcc) }}</text>
           <text v-if="inlineSkipNote(scanResult.inline_n)" class="scan-note">{{ inlineSkipNote(scanResult.inline_n) }}</text>
           <view class="scan-list">
@@ -556,7 +557,7 @@ import { reviewSummary } from '../../review-summary.js';
 import { reviewOptions, reviewOptionsFull } from '../../review-opts.js';
 import { redoSkippedNote } from '../../book-redo-skipped.js';
 import { inlineSkipNote } from '../../paper-inline-note.js';
-import { scanPageLabel, scanPagesNote, recordScanPage } from '../../paper-scan-pages.js';
+import { scanPageLabel, scanPagesNote, scanDupNote, recordScanPage } from '../../paper-scan-pages.js';
 import { scanRowJumpable, findScanMistake, pageNFor } from '../../paper-scan-jump.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
@@ -948,6 +949,7 @@ export default {
     inlineSkipNote,
     scanPageLabel,
     scanPagesNote,
+    scanDupNote,
     scanRowJumpable,
     // 登录态变化（uid 已换）：清掉上一个账号的错题/到期/掌握度/AI 分析，按当前 uid 重拉
     resetAccountState() {
@@ -1992,6 +1994,7 @@ export default {
 .scan-sum { display: block; font-size: var(--fs-sub); color: var(--ink-3); margin: var(--sp-4) 0 var(--sp-8); }
 .manual-empty { display: block; font-size: var(--fs-sub); color: var(--ink-3); line-height: 1.6; padding: var(--sp-8) 0 var(--sp-12); }
 .scan-note { display: block; font-size: var(--fs-sub); color: var(--ink-3); line-height: 1.6; margin: 0 0 var(--sp-8); }
+.scan-dup { color: var(--warn-strong); background: var(--warn-soft); border-radius: var(--r-sm); padding: var(--sp-8); }
 .scan-good { color: var(--ok); }
 .scan-row { display: flex; align-items: center; min-height: 36px; border-bottom: 1px solid var(--line); font-size: var(--fs-sub); }
 .scan-no { width: 36px; color: var(--ink-4); }

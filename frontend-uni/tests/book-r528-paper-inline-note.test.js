@@ -25,6 +25,7 @@ describe('错题本接入', () => {
     expect(BOOK).toContain('  methods: {\n    inlineSkipNote,');
     expect(BOOK).toContain(
       "已作答 {{ scanResult.answered }}/{{ scanResult.total }} · 答对 <text class=\"scan-good num\">{{ scanResult.correct }}</text> 题{{ scanResult.saved ? ' · 已记入做题记录' : '' }}</text>\n" +
+        '          <text v-if="scanDupNote(scanResult)" class="scan-note scan-dup">{{ scanDupNote(scanResult) }}</text>\n' +
         '          <text v-if="scanPagesNote(scanResult, scanAcc)" class="scan-note">{{ scanPagesNote(scanResult, scanAcc) }}</text>\n' +
         '          <text v-if="inlineSkipNote(scanResult.inline_n)" class="scan-note">{{ inlineSkipNote(scanResult.inline_n) }}</text>\n' +
         '          <view class="scan-list">\n            <view v-for="r in scanResult.items" :key="r.no" class="scan-row"',
