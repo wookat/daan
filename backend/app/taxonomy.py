@@ -57,6 +57,30 @@ def groups_for(module: str, submodule: str | None) -> list[dict]:
     return [g for m in tree()["modules"] if m["key"] == module for g in m["groups"]]
 
 
+def group_name(module: str | None, submodule: str | None) -> str | None:
+    """题型组规范名：submodule 命中分组名/别名时回规范组名，否则回 submodule 原文。"""
+    sub = (submodule or "").strip()
+    if not sub:
+        return None
+    gs = alias_index().get((module or "", sub))
+    return gs[0]["name"] if gs else sub
+
+
+def group_submodules(module: str | None, name: str) -> list[str]:
+    """题型组在题库 submodule 列上的全部取值（组名 + aliases）；未知组只回自身。"""
+    name = (name or "").strip()
+    if not name:
+        return []
+    out = {name}
+    for m in tree()["modules"]:
+        if module and m["key"] != module:
+            continue
+        for g in m["groups"]:
+            if g["name"] == name:
+                out.update(g.get("aliases", []))
+    return sorted(out)
+
+
 def candidate_topics(module: str, submodule: str | None) -> list[dict]:
     out = []
     for g in groups_for(module, submodule):

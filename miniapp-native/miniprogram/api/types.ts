@@ -66,6 +66,7 @@ export interface Mistake {
   error_reason?: string | null;
   times?: number;
   tag3_name?: string | null;
+  type_group?: string | null;
   created_at?: number | string;
   options?: Record<string, string> | null;
 }

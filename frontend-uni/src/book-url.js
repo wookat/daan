@@ -26,6 +26,7 @@ export function buildBookUrl(f) {
   if (o.tab !== 'fav') {
     if (MODS.includes(o.mod)) parts.push('mod=' + o.mod);
     if (validKp(o.kp)) parts.push('kp=' + encodeURIComponent(o.kp));
+    if (validKp(o.kp) && validKp(o.qt)) parts.push('qt=' + encodeURIComponent(o.qt));
     if (validKp(o.kp3)) parts.push('kp3=' + encodeURIComponent(o.kp3));
     if (SRCS.includes(o.src)) parts.push('src=' + o.src);
     if (parsePid(o.pid)) parts.push('pid=' + parsePid(o.pid));
@@ -55,10 +56,17 @@ export function parseBookOpts(opts) {
   } catch (e) {
     kp3 = '';
   }
+  let qt = typeof o.qt === 'string' ? o.qt : '';
+  try {
+    qt = decodeURIComponent(qt);
+  } catch (e) {
+    qt = '';
+  }
   return {
     tab: TABS.includes(o.tab) ? o.tab : '',
     mod: MODS.includes(o.mod) ? o.mod : '',
     kp: validKp(kp) ? kp : '',
+    qt: validKp(kp) && validKp(qt) ? qt : '',
     kp3: validKp(kp3) ? kp3 : '',
     src: SRCS.includes(o.src) ? o.src : '',
     pid: parsePid(o.pid),

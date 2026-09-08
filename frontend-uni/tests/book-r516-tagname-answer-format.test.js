@@ -32,8 +32,8 @@ describe('book.vue tagName', () => {
     expect(tagName({ module: 'yanyu', question_type: null })).toBe('言语理解');
     expect(tagName({ module: 'changshi', question_type: '' })).toBe('常识判断');
   });
-  it('操作单标题与分组键仍走 tagName（时政操作单标题为「时政 · 更多操作」）', () => {
+  it('操作单标题仍走 tagName（时政操作单标题为「时政 · 更多操作」）；分组键 R545 起题型组优先、无组回退 tagName', () => {
     expect(BOOK).toContain(":title=\"moreSheet ? tagName(moreSheet.m) + ' · 更多操作' : ''\"");
-    expect(BOOK).toContain("return this.tagName(m) || '其他';");
+    expect(BOOK).toContain("return m.type_group || this.tagName(m) || '其他';");
   });
 });
