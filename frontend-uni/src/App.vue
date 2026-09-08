@@ -137,6 +137,8 @@ html {
 }
 body {
   background: var(--bg);
+  /* uni-modal/uni-toast/uni-actionsheet 挂在 uni-page 之外，page 选择器的字体规则覆盖不到 */
+  font-family: var(--font-sans);
 }
 body::after {
   /* 禁用 uni-h5 的 shadow-preload：本产品不用 page-head shadow，避免向 dcloud CDN 发第三方请求 */

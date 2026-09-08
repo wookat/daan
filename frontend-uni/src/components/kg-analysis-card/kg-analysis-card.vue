@@ -12,7 +12,7 @@
       <text v-if="statLine">{{ statLine }}</text>
       <text v-if="stats && stats.avgSecs" class="num">· 平均用时 {{ stats.avgSecs }}s</text>
     </view>
-    <text v-if="source" class="kg-ana__src">来源：{{ source }}</text>
+    <text v-if="sourceText" class="kg-ana__src">来源：{{ sourceText }}</text>
     <view v-if="tags && tags.length" class="kg-ana__tags">
       <kg-tag v-for="t in tags" :key="t" tone="neutral">{{ t }}</kg-tag>
     </view>
@@ -22,7 +22,7 @@
 
 <script>
 import { md } from '../../md.js';
-import { qStatLine } from '../../q-stat.js';
+import { qSourceText, qStatLine } from '../../q-stat.js';
 
 /**
  * KgAnalysisCard（COMPONENTS §2.1）：默认折叠 3 行的解析卡。底部数据行复用 q-stat.js 口径（样本 <5 不显示）；
@@ -47,6 +47,7 @@ export default {
     isRight() { return this.pickedText === this.answerText; },
     html() { return md(this.analysis || '暂无解析'); },
     isCollapsed() { return this.collapsed && !this.open; },
+    sourceText() { return qSourceText(this.source); },
     statLine() {
       const s = this.stats;
       if (!s) return '';

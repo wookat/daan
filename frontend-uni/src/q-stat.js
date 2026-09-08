@@ -15,3 +15,10 @@ export function qStatLine(q) {
   if (q.most_wrong && q.most_wrong !== q.answer) s += ` · 易错项 ${q.most_wrong}`;
   return s;
 }
+
+// 来源行：original/unknown/ai 是库内占位值（同 backend quality.py / 小程序 q-stat.ts sourceLabel），不是可展示的出处
+const SOURCE_PLACEHOLDER = /^(original|unknown|ai)$/i;
+export function qSourceText(source) {
+  const s = (source == null ? '' : String(source)).trim();
+  return SOURCE_PLACEHOLDER.test(s) ? '' : s;
+}
