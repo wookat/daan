@@ -115,8 +115,9 @@
 }
 
 .mid {
-  width: 72px;
-  flex-shrink: 0;
+  min-width: 56px;
+  max-width: 40%;
+  flex: 0 1 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -161,4 +162,17 @@
     max-width: 640px;
     margin: 0 auto;
   }
+}
+
+/* 胜者标签「长昵称 获胜」：随 .mid 收缩省略，不撑破两侧选手列 */
+.mid-tag {
+  display: block;
+  max-width: 100%;
+}
+
+.mid-res {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

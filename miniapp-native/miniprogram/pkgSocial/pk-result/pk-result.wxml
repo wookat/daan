@@ -35,7 +35,7 @@
         </view>
         <view class="mid">
           <text class="mid-vs">VS</text>
-          <kg-tag tone="{{d.winner === 'draw' ? 'neutral' : 'warn'}}">{{resultText}}</kg-tag>
+          <kg-tag class="mid-tag" tone="{{d.winner === 'draw' ? 'neutral' : 'warn'}}"><text class="mid-res">{{resultText}}</text></kg-tag>
         </view>
         <view class="p {{d.winner === 'opponent' ? 'win' : ''}}">
           <view class="crown"><l-icon wx:if="{{d.winner === 'opponent'}}" name="crown" size="20" tone="streak" /></view>

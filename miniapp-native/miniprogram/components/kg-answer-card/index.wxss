@@ -14,8 +14,9 @@
 .kg-ac__dot--wrong { background: var(--bad-soft); border-color: var(--bad); }
 .kg-ac__grp { margin-bottom: var(--sp-12); }
 .kg-ac__grp-t { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-bottom: var(--sp-8); }
-.kg-ac__grid { display: flex; flex-wrap: wrap; gap: var(--sp-8); }
-.kg-ac__n { width: 44px; height: 44px; border-radius: var(--r-sm); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: var(--fs-sub); color: var(--ink-2); background: var(--card); box-sizing: border-box; }
+/* 等分网格：列数随容器宽自适应（375 宽 7 列不落单、不贴边裁切），格高保持 44 命中区 */
+.kg-ac__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: var(--sp-8); }
+.kg-ac__n { min-width: 0; height: 44px; border-radius: var(--r-sm); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: var(--fs-sub); color: var(--ink-2); background: var(--card); box-sizing: border-box; }
 .kg-ac__n--hover { background: var(--fill); }
 .kg-ac__n.is-done { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-text); font-weight: 600; }
 .kg-ac__n.is-marked { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); font-weight: 600; }

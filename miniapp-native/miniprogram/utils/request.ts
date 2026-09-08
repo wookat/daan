@@ -60,8 +60,13 @@ export function promptAccessCode(): Promise<boolean> {
   return askCode();
 }
 
+/** GET 默认 12s 超时，超时再以 20s 重试一次（幂等）；非 GET 或显式 timeout 不重试。对齐 H5 api.js request() */
+export const GET_TIMEOUT = 12000;
+export const GET_RETRY_TIMEOUT = 20000;
+export const DEFAULT_TIMEOUT = 180000;
+
 function rawRequest<T>(path: string, opts: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', data, header = {}, timeout = 180000 } = opts;
+  const { method = 'GET', data, header = {}, timeout = DEFAULT_TIMEOUT } = opts;
   return new Promise((resolve, reject) => {
     wx.request({
       url: BASE_URL + path,
@@ -95,14 +100,23 @@ function rawRequest<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   });
 }
 
+function sendRequest<T>(path: string, opts: RequestOptions = {}): Promise<T> {
+  const method = opts.method || 'GET';
+  if (method !== 'GET' || opts.timeout != null) return rawRequest<T>(path, opts);
+  return rawRequest<T>(path, { ...opts, timeout: GET_TIMEOUT }).catch((e: Error) => {
+    if (!isTimeoutMsg(e && e.message)) throw e;
+    return rawRequest<T>(path, { ...opts, timeout: GET_RETRY_TIMEOUT });
+  });
+}
+
 export async function request<T>(path: string, opts?: RequestOptions): Promise<T> {
   try {
-    return await rawRequest<T>(path, opts);
+    return await sendRequest<T>(path, opts);
   } catch (e) {
     if (String((e as Error).message).includes('访问码')) {
       clearAccessCode();
       const ok = await askCode();
-      if (ok) return rawRequest<T>(path, opts);
+      if (ok) return sendRequest<T>(path, opts);
       throw new Error('该功能需访问码，已取消');
     }
     throw e;
