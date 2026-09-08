@@ -379,7 +379,7 @@
 </template>
 
 <script>
-import { request, BASE_URL, anonUid, pkNickname, exportPdf, removeFav, setFav, fetchCheckinBadges, getAuthUser, trackEvent, submitDailySet } from '../../api.js';
+import { request, BASE_URL, anonUid, pkNickname, removeFav, setFav, fetchCheckinBadges, getAuthUser, trackEvent, submitDailySet } from '../../api.js';
 import { drawOffline, enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../offline.js';
 import { dayKey, loadSzDaily, saveSzDaily } from '../../checkin.js';
 import { splitMaterial, sameMaterial } from '../../material.js';
@@ -438,10 +438,6 @@ export default {
       reportDetail: '',
       reportBusy: false,
       reportTypes: ['答案错误', '解析错误', '题干或选项错字', '图片缺失', '分类错误', '重复题', '其他'],
-      exporting: false,
-      expSheet: true,
-      expAns: true,
-      expOnly: false,
       papers: [],
       paperRegion: null,
       subProg: {},
@@ -832,6 +828,8 @@ export default {
       }
     }
     const redoSet = uni.getStorageSync('redoSet');
+    const redoNote = uni.getStorageSync('redoNote');
+    uni.removeStorageSync('redoNote');
     if (redoSet && redoSet.length) {
       uni.removeStorageSync('redoSet');
       this._redoItems = redoSet;
@@ -852,7 +850,8 @@ export default {
       this.lastSubmodule = null;
       this.session = true;
       this.startQTimer();
-      uni.showToast({ title: '错题重练开始', icon: 'none' });
+      if (redoNote) uni.showToast({ title: '错题重练开始 · ' + redoNote, icon: 'none', duration: 3500 });
+      else uni.showToast({ title: '错题重练开始', icon: 'none' });
       return;
     }
     const preset = uni.getStorageSync('practicePreset');
@@ -2400,35 +2399,6 @@ export default {
       else uni.removeStorageSync('redoAnswer');
       trackEvent('practice_ask_click', q.module || '', q._sz ? 'sz' : String(qid || ''));
       uni.switchTab({ url: '/pages/ask/ask' });
-    },
-    async exportPaper() {
-      if (this.exporting) return;
-      this.exporting = true;
-      try {
-        const limit = this.groupSize || 20;
-        const realQ = this.realMode
-          ? '&real=1' +
-            (this.realYear ? '&year=' + this.realYear : '') +
-            (this.realRegion ? '&region=' + encodeURIComponent(this.realRegion) : '')
-          : '';
-        const uid = uni.getStorageSync('anonUid');
-        const d = await request('/api/questions?limit=' + limit + realQ + (uid ? '&uid=' + encodeURIComponent(uid) : ''));
-        const ids = (d.items || []).map((q) => q.id).filter(Boolean);
-        if (!ids.length) throw new Error('没有可导出的题目');
-        const date = new Date();
-        const title = (this.realMode ? '真题精选卷' : '练习卷') + ' ' + (date.getMonth() + 1) + '月' + date.getDate() + '日';
-        await exportPdf({
-          title,
-          question_ids: ids,
-          include_answers: this.expOnly || this.expAns,
-          answer_sheet: !this.expOnly && this.expSheet,
-          include_questions: !this.expOnly,
-        });
-        uni.showToast({ title: 'PDF 已开始下载', icon: 'none' });
-      } catch (e) {
-        uni.showToast({ title: '导出失败：' + e.message, icon: 'none' });
-      }
-      this.exporting = false;
     },
     goBook() {
       uni.switchTab({ url: '/pages/book/book' });

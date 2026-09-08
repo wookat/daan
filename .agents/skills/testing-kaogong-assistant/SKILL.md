@@ -1969,3 +1969,10 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 错题本批量「标已掌握/恢复复习/删除」**不是** `mids=` 单次接口：`book.vue batchMaster()/batchDel()` 对 `Object.keys(selIds)` 并发逐行 `PATCH /api/mistakes/{mid} {uid,mastered}` / `DELETE /api/mistakes/{mid}?uid=`，按 `mistakes.id` 走 `WHERE id=? AND uid=?`，与 `question_id` 无关；核 NULL-qid 行时直接按同形态直打 API（URL 含中文 `module=时政` 要 `urllib.parse.quote`，否则 `UnicodeEncodeError`），断 `mastered_at` 置值/清空、别 uid 404、`shizheng_questions` 行数不变。`GET /api/mistakes` 不吃 `module`/`mastered` 参数（筛选在前端 `shownPage`）。
 - 导出确认层 `sheetless` 只有 `book.vue` 需要传：`home.vue`/`practice.vue exportPaper()`/`pkgA/exam/list.vue` 题源是 `GET /api/questions`（`questions` 表）或 `paper.question_ids`，不传 `items` → 不可能有内联题，不要给它们补 prop。
 - SSH 只读复采脚本必须 `SSHPASS="$TICKETS_VPS_SSH_CREDENTIAL" sshpass -e ssh …`；裸 `sshpass -e` 会报「SSHPASS environment variable not set」而 `.out` 只有一行错误，别把它当生产读数。
+
+## R527 经验：跨页 toast 会被盖、生产无样本时如何只读触发同一前端路径
+- **跨页导航前的 `uni.showToast` 会被下一页 `onLoad` 的 toast 立即盖掉**（uni toast 单例）。凡是「本页算出说明 → `navigateTo` → 下一页开场 toast」的形态，说明文案要通过 storage 交给下一页（`setStorageSync('xxxNote')`，下一页读后立即 `removeStorageSync`，且清理放在任何 `return` 之前），再由下一页并入自己的开场 toast；断言时看**目标页**的 `.uni-toast` 文本，不要在源页截 toast 就下结论。
+- 生产复采「回包少于勾选数」这类前端分支，`umst3` 未必有对应样本（本轮 9 条 NULL-qid 全为时政且能回 `shizheng_questions`，无真手录行）：先 `mode=ro` 查该 uid 的样本形态（`mistakes.question_id IS NULL` 逐行按题干首行去 `shizheng_questions` 对），没有就用一个**不属于本 uid 的 mid**（后端按 `uid` 过滤后自然缺一条）触发同一路径，只读、0 写入；文档里必须写明「服务端跳过手录题」只有本地一手，生产证明的是前端文案/清理路径。
+- 生产手动录入层的 `n=0` 卷直接用 08-03 探针造的 `question_ids='[]'` 卷码（`select code from paper_exports where question_ids='[]'`），`GET /api/paper/{code}` 只读；`n>0` 对照用最新的 `错题重练卷` 卷码。断言 `.manual-empty` 计数、`.manual-row` 计数、`.sheet-acts` 内「交卷判分」/「换一份试卷」按钮计数四个数一起看。
+- 「复制两份」漂移核不要只比 diff：先在**模板段**（`<template>…</template>`）grep 方法名与其开关字段，0 命中 = 死代码，删掉比抽共享函数更小；源锁写成「A 文件不含 X，B 文件仍含 `async X(opts) {`」两条，防止以后有人再复制回去。
+- 发版后 `5/6 线上 bundle hash 校验` 首轮读到旧 hash 是 Pages 传播窗口（脚本自带 5 s 重试），不要在第一轮就判失败；等 `OK: 线上 bundle 与本机构建一致` 再开生产复采。
