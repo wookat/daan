@@ -62,7 +62,7 @@ describe('W9-C 小程序：practice_result 带 uid / 退出登录后刷新 / exa
   it('profile.ts：onShow 与 onLogout 共用 refresh()；退出后先清服务端派生态再重拉', () => {
     const ts = mp('pages/profile/profile.ts');
     expect(ts).toMatch(/onShow\(\) \{\s*syncTabBar\(this, 4\);\s*this\.refresh\(\);\s*\}/);
-    expect(ts).toMatch(/refresh\(\) \{[\s\S]*?this\.loadBadges\(\);\s*this\.loadGrowth\(\);\s*this\.loadReminder\(\);\s*this\.loadMistakes\(\);\s*this\.loadSocial\(\);\s*\}/);
+    expect(ts).toMatch(/refresh\(\) \{[\s\S]*?this\.loadBadges\(\);\s*this\.loadGrowth\(\);\s*this\.loadReminder\(\);\s*this\.loadSocial\(\);\s*\}/);
     expect(ts).toMatch(
       /clearAuth\(\);\s*this\.setData\(\{ badgeInfo: null, nextMilestone: null, inboxUnread: 0, pkN: 0, mistakeN: 0, mastered: 0 \}\);\s*this\.refresh\(\);/
     );

@@ -42,9 +42,10 @@ def _call(uid: str):
 
 
 async def _spin(n: int = 5):
-    """让并发任务都跑到各自的 await（进入合并点 + 首个 LLM 协程开始执行）。"""
+    """让并发任务都跑到各自的 await（进入合并点 + 首个 LLM 协程开始执行）；
+    统计查询走线程池，需真实让出时间片而非仅让出事件循环。"""
     for _ in range(n):
-        await asyncio.sleep(0)
+        await asyncio.sleep(0.05)
 
 
 def test_concurrent_same_uid_share_one_llm_call(monkeypatch, _mistake_uid, _no_gate):

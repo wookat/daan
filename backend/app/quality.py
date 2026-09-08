@@ -465,6 +465,21 @@ def is_clone(a: tuple[str, str], b: tuple[str, str], ratio: float = CLONE_STEM_R
     return sm.real_quick_ratio() >= ratio and sm.quick_ratio() >= ratio and sm.ratio() >= ratio
 
 
+def family_key(row: dict) -> str | None:
+    """分发互斥用的题族键（同键题在一组内只出一道）：ziliao 同材料 → 'mh:'+material_hash；
+    R12 合成题族 → 'fam:'+族键；选项集合非空 → 'ck:'+归一题干（R13 克隆的精确形态）；否则 None（不参与去重）。"""
+    mh = row.get("material_hash")
+    if (row.get("module") or "") == "ziliao" and mh and mh != "-":
+        return f"mh:{mh}"
+    fam = synthetic_family_key(row)
+    if fam:
+        return f"fam:{fam}"
+    stem, opts = clone_key(row.get("question"), row.get("options"))
+    if opts and stem:
+        return f"ck:{stem}"
+    return None
+
+
 def score_question(row: dict) -> int:
     """row 需含 module/question/options/answer/explanation/hs_explanation/source/is_real/exam_year/exam_region/hs_down/hs_up。"""
     score = 0

@@ -363,19 +363,12 @@ export default {
     async loadRemote() {
       const uid = anonUid();
       // 快照即显：uid API 长尾下先用最近成功快照铺屏，真实响应到达后覆盖
-      const mp = '/api/mistakes?uid=' + encodeURIComponent(uid) + '&limit=1';
       const pp = '/api/profile?uid=' + encodeURIComponent(uid);
       const gp = '/api/growth?uid=' + encodeURIComponent(uid);
-      const mSnap = snapPeek(mp);
-      if (mSnap) this.mistakeN = mSnap.total != null ? mSnap.total : (mSnap.items || []).length;
       const pSnap = snapPeek(pp);
       if (pSnap) this.profile = pSnap.profile || null;
       const gSnap = snapPeek(gp);
-      if (gSnap) this.growth = gSnap;
-      try {
-        const d = await request(mp);
-        this.mistakeN = d.total != null ? d.total : (d.items || []).length;
-      } catch (e) { /* 非关键路径 */ }
+      if (gSnap) this.applyGrowth(gSnap, uid);
       try {
         const d = await request(pp);
         this.profile = d.profile || null;
@@ -386,12 +379,22 @@ export default {
         }
       } catch (e) { /* 非关键路径 */ }
       try {
-        this.growth = await request(gp);
+        this.applyGrowth(await request(gp), uid);
       } catch (e) { /* 非关键路径 */ }
       try {
         const d = await request('/api/announcement');
         this.announce = d.item || null;
       } catch (e) { /* 非关键路径 */ }
+    },
+    /** 错题数取 /api/growth 聚合字段；老后端无 mistakes 时过渡一轮只读旧 /api/mistakes 快照，再无则 0 */
+    applyGrowth(g, uid) {
+      this.growth = g;
+      if (g.mistakes) {
+        this.mistakeN = g.mistakes.total || 0;
+        return;
+      }
+      const legacy = snapPeek('/api/mistakes?uid=' + encodeURIComponent(uid) + '&limit=1');
+      this.mistakeN = legacy ? (legacy.items || []).length : 0;
     },
     /** 本地练习记录按当前身份隔离（与 stats.vue 同口径） */
     localHist() {

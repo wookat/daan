@@ -364,7 +364,7 @@ const UNLOCK_N = 10;
 
 export default {
   data() {
-    return { UNLOCK_N, authUser: getAuthUser(), loadErr: '', byModule: [], byType: [], byReason: [], masteredCount: 0, pstats: { byModule: {}, days: {} }, kmCov: null, history: [], showAllHist: false, growth: null, reco: null, dueN: 0, gwMod: '', slStats: null, slIssuesOpen: false, modOpen: false, topOpen: false, hmDays: null, svStreak: null, examAttempts: null, examTarget: null };
+    return { UNLOCK_N, authUser: getAuthUser(), loadErr: '', byModule: [], byType: [], byReason: [], pstats: { byModule: {}, days: {} }, kmCov: null, history: [], showAllHist: false, growth: null, reco: null, dueN: 0, gwMod: '', slStats: null, slIssuesOpen: false, modOpen: false, topOpen: false, hmDays: null, svStreak: null, examAttempts: null, examTarget: null };
   },
   computed: {
     hasData() {
@@ -539,6 +539,11 @@ export default {
     streakDays() {
       if (this.svStreak != null) return this.svStreak;
       return checkinStreak(this.pstats);
+    },
+    masteredCount() {
+      // 已掌握道数取 /api/growth 聚合字段（loadGrowth 已先铺快照），不再为一个数字拉错题全表
+      const m = this.growth && this.growth.mistakes;
+      return m ? m.mastered || 0 : 0;
     },
     medals() {
       const done = this.totalDone;
@@ -829,16 +834,11 @@ export default {
     async load() {
       this.loadErr = '';
       const sp = '/api/stats?uid=' + encodeURIComponent(anonUid());
-      const mp = '/api/mistakes?uid=' + encodeURIComponent(anonUid());
       // 快照即显：先用最近成功快照铺屏，真实响应到达后覆盖，避免 origin 长尾下长时间空白
       const sSnap = snapPeek(sp);
       if (sSnap) this.applyStats(sSnap);
-      const mSnap = snapPeek(mp);
-      if (mSnap) this.masteredCount = (mSnap.items || []).filter((m) => m.mastered).length;
       try {
         this.applyStats(await request(sp));
-        const mk = await request(mp);
-        this.masteredCount = (mk.items || []).filter((m) => m.mastered).length;
       } catch (e) {
         if (isStaleUidErr(e)) return;
         this.loadErr = e.message || '网络异常';

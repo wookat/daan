@@ -10,6 +10,7 @@ import time
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from starlette.concurrency import run_in_threadpool
 
 from . import db, llm, sse
 from .deps import as_int, rl
@@ -195,6 +196,13 @@ def _update_review(sid: int, review: str) -> None:
     conn.close()
 
 
+def _load_session(sid: int, uid: str):
+    conn = db.get_conn()
+    row = conn.execute("SELECT * FROM interview_sessions WHERE id=? AND uid=?", (sid, uid)).fetchone()
+    conn.close()
+    return row
+
+
 def _validate(request: Request, body: dict) -> tuple[str, dict, str, int]:
     uid = str(body.get("uid") or "").strip()
     if not uid:
@@ -236,7 +244,7 @@ async def api_answer_stream(body: dict, request: Request):
                 "scores": scores, "total": total, "summary": summary,
                 "category": q["category"], "question_id": q["id"],
             }
-            sid = _save_session(uid, q, answer, duration, scores, total, "")
+            sid = await run_in_threadpool(_save_session, uid, q, answer, duration, scores, total, "")
             meta["session_id"] = sid
             yield "event: meta\ndata: " + json.dumps(meta, ensure_ascii=False) + "\n\n"
             parts: list[str] = []
@@ -245,7 +253,7 @@ async def api_answer_stream(body: dict, request: Request):
                 parts,
             ):
                 yield line
-            _update_review(sid, "".join(parts))
+            await run_in_threadpool(_update_review, sid, "".join(parts))
             yield "event: done\ndata: " + json.dumps({"session_id": sid, "summary": summary}) + "\n\n"
         except Exception as e:
             yield "event: error\ndata: " + json.dumps({"message": _friendly_ai_err(e)}, ensure_ascii=False) + "\n\n"
@@ -261,9 +269,7 @@ async def api_review_regen_stream(sid: int, body: dict, request: Request):
     if not uid:
         raise HTTPException(400, "缺少 uid")
     rl(request, "itv_regen", 10, 600, uid)
-    conn = db.get_conn()
-    row = conn.execute("SELECT * FROM interview_sessions WHERE id=? AND uid=?", (sid, uid)).fetchone()
-    conn.close()
+    row = await run_in_threadpool(_load_session, sid, uid)
     if not row:
         raise HTTPException(404, "记录不存在")
     if len((row["review"] or "").strip()) >= REVIEW_MIN_LEN:
@@ -284,7 +290,7 @@ async def api_review_regen_stream(sid: int, body: dict, request: Request):
                 yield line
             full = "".join(parts)
             if full.strip():
-                _update_review(sid, full)
+                await run_in_threadpool(_update_review, sid, full)
             yield "event: done\ndata: " + json.dumps({"session_id": sid}) + "\n\n"
         except Exception as e:
             yield "event: error\ndata: " + json.dumps({"message": _friendly_ai_err(e)}, ensure_ascii=False) + "\n\n"
@@ -302,7 +308,7 @@ async def api_answer(body: dict, request: Request):
         review = await llm.chat(_review_prompt(q, answer, scores, summary), max_tokens=REVIEW_MAX_TOKENS, think=False)
     except Exception as e:
         raise HTTPException(502, _friendly_ai_err(e)) from e
-    sid = _save_session(uid, q, answer, duration, scores, total, review)
+    sid = await run_in_threadpool(_save_session, uid, q, answer, duration, scores, total, review)
     return {
         "session_id": sid, "scores": scores, "total": total, "summary": summary,
         "review": review, "category": q["category"], "question_id": q["id"],

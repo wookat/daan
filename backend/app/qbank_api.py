@@ -7,11 +7,49 @@ import time
 
 from fastapi import APIRouter, Header, HTTPException, Request
 
-from . import content_gate, db, taxonomy
+from . import content_gate, db, quality, taxonomy
 from .auth import probe_request
 from .deps import check_import_token, clamp_limit
 
 router = APIRouter()
+
+
+def _split_family(items: list[dict]) -> tuple[list[dict], list[dict]]:
+    """保序拆成 (首见题, 被剔除的同族题)：同 family_key 或 R13 近似克隆视为同族；family_key 为 None 且无选项的题不参与。"""
+    kept: list[dict] = []
+    dropped: list[dict] = []
+    seen: set[str] = set()
+    clones: list[tuple[str, str]] = []
+    for q in items:
+        fk = quality.family_key(q)
+        ck = quality.clone_key(q.get("question"), q.get("options"))
+        if (fk is not None and fk in seen) or any(quality.is_clone(ck, c) for c in clones):
+            dropped.append(q)
+            continue
+        kept.append(q)
+        if fk is not None:
+            seen.add(fk)
+        if ck[1]:
+            clones.append(ck)
+    return kept, dropped
+
+
+def _dedupe_family(items: list[dict], limit: int) -> list[dict]:
+    """一组内同族只放行首见题，不足 limit 时按原序回填被剔除项保证题量，再截断到 limit。"""
+    kept, dropped = _split_family(items)
+    return (kept + dropped)[:limit]
+
+
+def _draw_questions(module, limit: int, **kw) -> list[dict]:
+    """普通抽题：先按原量抽，组内无同族则原样返回（零额外开销）；有同族才过采 3 倍补位，
+    首抽排在前面以保留 has_hs/未做过优先，再 _dedupe_family。"""
+    items = db.random_questions(module, limit, **kw)
+    if limit <= 0 or not _split_family(items)[1]:
+        return items
+    have = {q["id"] for q in items}
+    extra = [q for q in db.random_questions(module, limit * 3, **kw) if q["id"] not in have]
+    extra.sort(key=lambda q: 0 if q.get("has_hs") else 1)
+    return _dedupe_family(items + extra, limit)
 
 
 @router.get("/api/taxonomy")
@@ -149,9 +187,9 @@ def api_questions(
             "counts": db.question_counts(),
         }
     return {
-        "items": db.random_questions(
-            module, clamp_limit(limit, 50), submodule, real_only=bool(real), year=year, region=region, uid=uid,
-            adaptive=bool(adaptive), tag3=tag3,
+        "items": _draw_questions(
+            module, clamp_limit(limit, 50), submodule=submodule, real_only=bool(real), year=year, region=region,
+            uid=uid, adaptive=bool(adaptive), tag3=tag3,
         ),
         "counts": db.question_counts(),
     }

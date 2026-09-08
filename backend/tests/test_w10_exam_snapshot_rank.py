@@ -94,6 +94,10 @@ def test_snapshot_used_for_submit_when_question_disabled_mid_exam(client):
         _set_disabled(qids[1], 0)
 
 
+def _wrong_pick(answer) -> str:
+    return next(ch for ch in "ABCD" if ch not in db.normalize_answer(answer))
+
+
 def test_mini_mock_rank_pool_spans_all_mock_papers(client):
     seed_questions()
     uids = ["test-w10-rank-a", "test-w10-rank-b"]
@@ -101,9 +105,14 @@ def test_mini_mock_rank_pool_spans_all_mock_papers(client):
     for u in uids:
         r = client.post("/api/exam/start", json={"uid": u, "mini": 1})
         assert r.status_code == 200, r.text
-        aid, n = r.json()["attempt_id"], len(r.json()["items"])
+        aid, items = r.json()["attempt_id"], r.json()["items"]
         assert r.json()["paper"]["kind"] == "mock"
-        picks = {str(i + 1): "A" for i in range(n if u == uids[0] else n // 2)}
+        # 随机卷答案不可预知：a 按题库答案全对、b 全错，排名与卷面无关
+        answers = {q["id"]: q["answer"] for q in db.questions_by_ids([i["id"] for i in items])}
+        picks = {
+            str(i + 1): (db.normalize_answer(answers[it["id"]]) if u == uids[0] else _wrong_pick(answers[it["id"]]))
+            for i, it in enumerate(items)
+        }
         assert client.post("/api/exam/submit", json={"uid": u, "attempt_id": aid, "picks": picks}).status_code == 200
         aids[u] = aid
     pids = {db.get_exam_attempt(a)["paper_id"] for a in aids.values()}

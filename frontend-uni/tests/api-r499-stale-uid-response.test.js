@@ -85,7 +85,7 @@ describe('tab 页 catch 对旧身份回包静默（不 toast / 不置 loadErr / 
   });
 
   it('stats.vue load() catch 对旧身份 return，不置 loadErr / 不 toast', () => {
-    const m = stats.match(/this\.masteredCount = \(mk\.items \|\| \[\]\)\.filter\(\(m\) => m\.mastered\)\.length;\n {6}\} catch \(e\) \{\n {8}if \(isStaleUidErr\(e\)\) return;\n {8}this\.loadErr = /);
+    const m = stats.match(/this\.applyStats\(await request\(sp\)\);\n {6}\} catch \(e\) \{\n {8}if \(isStaleUidErr\(e\)\) return;\n {8}this\.loadErr = /);
     expect(m).not.toBeNull();
     expect(stats).toMatch(/import \{[^}]*isStaleUidErr[^}]*\} from '\.\.\/\.\.\/api\.js';/);
   });
