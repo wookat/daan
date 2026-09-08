@@ -16,6 +16,13 @@ describe('scanWhen', () => {
     expect(scanWhen(null, now, '')).toBe('');
     expect(scanDupNote({ dup: true, dup_at: t(9, 8, 9, 5), page: 1 }, now)).toContain('今天 09:05');
   });
+  it('同一 created_at：结果 sheet dup 说明行与录入层提示行时刻文案逐字相同（同源 scanWhen，跨日含月日）', () => {
+    for (const at of [t(9, 8, 9, 5), t(9, 5, 8, 46), t(12, 31, 23, 59)]) {
+      const when = scanWhen(at, now);
+      expect(scanDupNote({ dup: true, dup_at: at, page: 0 }, now)).toContain('已于 ' + when + ' 判分');
+      expect(paperSubmittedNote({ n: 1, submitted_pages: [{ page: 0, first_at: at, last_at: at, n: 1 }] }, now)).toContain('手动录入 ' + when + '；');
+    }
+  });
 });
 
 describe('paperSubmittedNote', () => {

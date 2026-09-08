@@ -29,7 +29,8 @@ def test_paper_info_submitted_pages_read_only_and_isolated(client):
     assert e["n"] == 1 and e["first_at"] == e["last_at"] > 0
 
     # 完全相同 → dup，n 不增；改一题 → 新作答，n=2、last_at ≥ first_at
-    assert client.post("/api/paper_answers", json=body).json()["dup"] is True
+    dup = client.post("/api/paper_answers", json=body).json()
+    assert dup["dup"] is True and dup["dup_at"] == e["first_at"]  # 结果 sheet dup_at 与录入层 first_at 同一 created_at
     assert client.get(f"/api/paper/R532SUB?uid={uid}").json()["submitted_pages"][0]["n"] == 1
     body2 = {**body, "picks": {"1": "D", "2": "B", "3": "C"}}
     assert client.post("/api/paper_answers", json=body2).json()["saved"] is True

@@ -2008,3 +2008,9 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 生产只读复采「有历史」形态：route 拦 `/api/paper/`，先 `r.fetch()` 拿**真回包**并原样记录（`REAL_GET_UNDER_ROUTE`），只改 `submitted_pages` 一个字段再 `fulfill`；这证明的是 bundle 显示层 + 字段位置，**不是**服务端「有记录 → 非空」（生产 `paper_submits` 表不存在，不造写入）。文档必须分开写「真 GET / 客户端替换 / 推断」三类。
 - 本地走查脚本收尾：结果 sheet 关闭后 `closeScan()` 已自动关，再点 ✕ 会 30 s timeout；`close_sheet()` 前判 `is_visible()`。
 - 到期项「簇隔日是否再起」类结论：Caddy 簇观测窗内「N 分钟无新行」只能写「观测窗内已停」，不能写「已停」；R532 一手：07:06Z 停 → 09:34Z 同日再起（同 UA 对 / 同请求头集合 / 每 IP 1）。复查脚本按小时 `rows/ips` + 最近 10 min 逐分钟；`deploy 6b` Lighthouse（moto g UA、无显式头）的 `monitor/report`/`track` POST 出口是本机 `140.232.64.4`，归探针网段，不要当非探针 POST 记账。
+
+## R533 经验：导出卷「卷码」与真题卷「pid」两套口径 + 重导同码 + 生产 DB 只读脚本细节
+- 错题本「按卷筛选 / 练本卷 / 重练本卷错题」（R368/R369）键是 `m.paper.pid`（`db._paper_by_psource()` 只映射 `kind=zhenti` 真题卷 `psource`）；扫描答题卡 / 手动录入 / R532 提示行的卷是 `paper_exports.code`（`md5(",".join(id 序))[:8]`）。**两者没有映射列**：导出卷判分产生的错题 `paper` 为 `null`（本地 47 条 0 带 `paper`），任何「录入层/结果 sheet → 按卷筛选」直达都不成立；要做只能服务端按 `paper_exports.question_ids` 反查（R532-1）。
+- 同一题集（同 id 序）重复导出得**同一卷码**；`save_paper_export` `INSERT OR REPLACE` 刷新 `created_at/title`，`paper_submits` 按 `code` 不动 → 重导后再进录入层 R532 提示行仍出（本地一手 `~/r533/c_reexport.out`）。导出请求体字段是 `question_ids`（不是 `ids`，传错 400「没有可导出的题目」）。
+- 时间口径同源锁：结果 sheet `dup_at` 与录入层 `submitted_pages[].first_at/last_at` 都是 `paper_submits.created_at`，前端都过 `scanWhen`；核「同源」看 pytest `dup["dup_at"] == first_at` + vitest 同一 `created_at` 两行文案逐字相同，不要再造第二种格式函数。
+- 生产 DB 只读脚本：`paper_submits` 可能不存在，先 `select count(*) from sqlite_master where name=…` 判表，输出里的「paper_submits 0」要写清是**表计数不是行数**；WAL 字节 `ls -l /var/lib/docker/volumes/deploy_kaogong-data/_data/` 需 `sudo`（不加只会静默无输出）；Python 3.12 `utcfromtimestamp` 会 DeprecationWarning，用 `fromtimestamp(ts, timezone.utc)`。非探针头非 GET 记账时按 `Cf-Connecting-Ip` 归网段：`140.232.64.0/24` 是本机出口（deploy Lighthouse / 走查 / 兄弟会话），`POST /` 403 的直连 IP 是扫描器，都不是真人写。
