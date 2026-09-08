@@ -1951,3 +1951,12 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 直打源站 `curl https://kaogong-origin…/api/questions?mode=reinforce` 无浏览器 UA 会 403（边缘规则），(c) 里会出现 `probe=1` 的 403 行，是本机探针不是真人。
 - `GET /api/mistakes/redo?mids=a,b,c` 回包顺序按 `COALESCE(next_review, created_at), created_at DESC`（与不带 `mids` 一致），不是参数顺序；断言顺序时按 `mistake_id` 集合 + 服务端排序核，勿按勾选顺序。
 - 探针脚本 `~/r524/prod_sz_weakspot.py <375|1440> <mids> <tag>`：redo → 写 `redoSet` → 逐题选错项 → 完成页抓 `.sec-t` 列表 + `.wr-row` CTA → 点击并抓 reinforce 回包/toast；改后期望 `CTA_ABSENT` + `REINFORCE_REQ []`。
+
+## R525 经验：导出 PDF 含无题库 id 的题（时政 NULL-qid / 手录）时的取证与机读契约
+- **PDF 内容口径必须本地真生成**：生产 `POST /api/export/pdf` 一律 abort（0 写入 `paper_exports`），abort 前抓到的请求体只证明「勾选 → `question_ids`/`items` 拆分」形态；正文/选项/答案/解析/答题卡要用本地 `:85xx` 服务同请求体 `curl -o x.pdf` 落盘后 `pdftotext -layout` / `pdfinfo` 核。UI 侧 Playwright `response.body()` 对触发下载的响应拿到 0 bytes（浏览器已消费），UI 只断 200 / toast「PDF 已开始下载」/ `paper_exports` 落库。
+- **机读答题卡的判据是槽位 ↔ `paper_exports.question_ids` 同序**，不是页面好看：`scan_sheet`/`paper_answers` 按槽 i → `question_ids[i]` 对回，凡是无 id 的内联题（`items[]`）占槽就是串槽/越界。核法：答题卡页 `pdftotext -layout` 取以数字开头的行数 vs `select question_ids from paper_exports where code=?` 的长度；全内联卷改后应 **无答题卡页**（`pdfinfo` 页数少 1）。
+- 卷内题号与机读槽标号分离：正文/答案页题号不重编（用户对照锚点），机读槽标号沿用卷内题号（混合卷会跳号，卷首 meta 已解释）；断言时按 `(卷内题号, id)` 元组核，不要期望槽 1..N 连续。
+- 确认层与 PDF 的「不上机读」数要同源：`book.vue exportSheetless` 与 `exportSelected()` 拼 `items` 的过滤谓词必须逐字相同（源锁同串），`export-confirm.vue sheetlessNote` 五分支（`only` / `!withSheet` / `sheetless<=0` → 空；`sheetless>=count` → 「所选均为…」；否则「其中 M 题…」）；首页导出入口全有 id 不传 prop 即无提示。
+- 生产复采脚本 `~/r525/prod_export_sel.py <375|1440> <sz|all> [maxpick]`：确认层是 `.sheet`、选项 chip `.expchip`、提示 `.opt-note.sheetless`、按钮 `.confirm-btn`（首版用 `.export-confirm/.seg/.pop` 全落空）；切「仅答案」后提示应消失（`NOTE_ONLY False`）。注意 `<tag>` 决定截图文件名，换选题重跑同 tag 会覆盖上一张。
+- 复习答错「同类题加练」对 `_sz` 的判据：`review-similar.js hasSimilarPool()` 只认五模块 key，本地把目标 mid `next_review` 置到期、其它推后，答错后读 `SIMILAR_BTN` + `page.on('response')` 里有无 `/api/questions?` 请求；要配一条普通模块到期项做对照（应出按钮 + 200 有题），否则「没请求」分不清 fail-closed 与坏掉。
+- 09-08 源站 503 全日分钟分布法：`status==503` 按 `%H:%M` 计数，再和宿主 `/tmp/kg-compose-<rev>-<ts>.log` 的 `KG_COMPOSE_EXIT rc=0 at …` 对时——落在收尾前 1–2 分钟的就是「重建窗 5xx」（R469 §4），要写成时序推断，不要写成 OOM。
