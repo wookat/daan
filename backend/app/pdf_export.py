@@ -176,11 +176,18 @@ def build_paper_pdf(
     )
     story = []
     n = len(questions)
+    sheet_rows = sheet_questions(questions)
     date = time.strftime("%Y-%m-%d", time.gmtime(time.time() + 8 * 3600))
     story.append(Paragraph(_esc(title if include_questions else title + " · 参考答案"), st["title"]))
     meta = f"共 {n} 题 · 建议用时 {max(5, round(n * 0.9))} 分钟 · {date}"
     if paper_code:
         meta += f" · 卷码 {paper_code}"
+    if answer_sheet and include_questions and paper_code and len(sheet_rows) < n:
+        meta += (
+            f" · 答题卡 {len(sheet_rows)} 题（时政/手录题 {n - len(sheet_rows)} 题不参与机读判分，请对照参考答案核对）"
+            if sheet_rows
+            else " · 本卷均为时政/手录题，无机读答题卡，请对照参考答案核对"
+        )
     story.append(Spacer(1, 3))
     story.append(Paragraph(meta, st["meta"]))
     if include_questions:
@@ -251,10 +258,16 @@ def build_paper_pdf(
 
     doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
     data = buf.getvalue()
-    if answer_sheet and paper_code and include_questions:
+    if answer_sheet and paper_code and include_questions and sheet_rows:
         # 答题卡放在最前，方便用户先拿到/单独打印第一页
-        data = _append_pdf(_omr_sheet_pdf(questions, title, paper_code), data)
+        data = _append_pdf(_omr_sheet_pdf(sheet_rows, title, paper_code), data)
     return data
+
+
+def sheet_questions(questions: list[dict]) -> list[tuple[int, dict]]:
+    """答题卡只放有题库 id 的题（与 save_paper_export 存的 question_ids 同序，scan_sheet/paper_answers 按槽位对回）；
+    时政/手录等内联题无 id、判分对不回，不占槽位。返回 (卷内题号, 题) 保留原编号。"""
+    return [(i, q) for i, q in enumerate(questions, 1) if q.get("id")]
 
 
 def _append_pdf(main: bytes, extra: bytes) -> bytes:
@@ -270,15 +283,15 @@ def _append_pdf(main: bytes, extra: bytes) -> bytes:
     return out.getvalue()
 
 
-def _omr_sheet_pdf(questions: list[dict], title: str, paper_code: str) -> bytes:
-    """机读答题卡：四角定位块 + 卷码条 + 涂黑框网格（几何与 omr.py 共用）。"""
+def _omr_sheet_pdf(rows: list[tuple[int, dict]], title: str, paper_code: str) -> bytes:
+    """机读答题卡：四角定位块 + 卷码条 + 涂黑框网格（几何与 omr.py 共用）。rows = sheet_questions() 的 (题号, 题)。"""
     from reportlab.pdfgen import canvas as rl_canvas
 
     font = _ensure_font()
     hei = _ensure_hei()
     buf = io.BytesIO()
     c = rl_canvas.Canvas(buf, pagesize=A4)
-    n = len(questions)
+    n = len(rows)
     pages = max(1, math.ceil(n / omr.PER_PAGE))
 
     def X(x):
@@ -323,11 +336,11 @@ def _omr_sheet_pdf(questions: list[dict], title: str, paper_code: str) -> bytes:
             idx = start + slot
             if idx >= n:
                 break
-            q = questions[idx]
+            num, q = rows[idx]
             nx, ix, cy_mid = omr.slot_label_pos(slot)
             c.setFont(hei, 9.5)
             c.setFillColor(colors.black)
-            c.drawRightString(X(nx + omr.NUM_W - 2), Y(cy_mid + 1.2), str(idx + 1))
+            c.drawRightString(X(nx + omr.NUM_W - 2), Y(cy_mid + 1.2), str(num))
             code = qcode.build_code({**q, "is_real": None})  # 答题卡用短码（不含年份）
             if code:
                 c.setFont(font, 5.5)

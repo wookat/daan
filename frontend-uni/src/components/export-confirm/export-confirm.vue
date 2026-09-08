@@ -19,6 +19,7 @@
         <text class="expchip" :class="{ on: withSheet && !only }" @click="only = false; withSheet = !withSheet">含答题卡</text>
       </view>
       <view class="opt-note">{{ only ? '只导出参考答案页，不含题目' : '导出题目' + (withAns ? ' + 答案解析' : '') + (withSheet ? ' + 机读答题卡' : '') }}</view>
+      <view v-if="sheetlessNote" class="opt-note sheetless">{{ sheetlessNote }}</view>
       <view class="confirm-btn" :class="{ dim: busy }" :aria-disabled="String(!!busy)" @click="onConfirm">{{ busy ? '正在生成 PDF…' : '确认导出' }}</view>
     </view>
   </view>
@@ -33,6 +34,8 @@ export default {
     count: { type: Number, default: null },
     busy: { type: Boolean, default: false },
     aboveTabbar: { type: Boolean, default: false },
+    /** 无题库 id 的题数（时政/手录）：只进正文与参考答案，不上机读答题卡。 */
+    sheetless: { type: Number, default: 0 },
   },
   data() {
     return { withAns: true, withSheet: true, only: false };
@@ -40,6 +43,11 @@ export default {
   computed: {
     countText() {
       return this.count != null ? this.count + ' 题' : '按当前设置组卷';
+    },
+    sheetlessNote() {
+      if (this.only || !this.withSheet || !(this.sheetless > 0)) return '';
+      if (this.count != null && this.sheetless >= this.count) return '所选均为时政/手录题，无机读答题卡，请对照参考答案核对';
+      return '其中 ' + this.sheetless + ' 题（时政/手录）不上机读答题卡，请对照参考答案核对';
     },
   },
   methods: {

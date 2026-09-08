@@ -479,6 +479,7 @@
         :visible="exportConfirm"
         :scope="exportSel ? '错题本 · 已选' : '错题本 · 当前筛选'"
         :count="Math.min(exportList.length, 100)"
+        :sheetless="exportSheetless"
         :busy="exporting"
         above-tabbar
         @close="closeExport"
@@ -750,6 +751,9 @@ export default {
     selItems() {
       const base = this.tab === 'done' ? this.doneItems : this.todoItems;
       return base.filter((m) => this.selIds[m.id]);
+    },
+    exportSheetless() {
+      return this.exportList.slice(0, 100).filter((m) => !m.question_id && (m.question_text || '').trim()).length;
     },
     exportList() {
       return this.exportSel ? this.selItems : this.shownItems;
