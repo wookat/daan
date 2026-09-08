@@ -5266,7 +5266,9 @@ def reinforce_questions(uid: str, tag3: str | None = None, module: str | None = 
         out = got[:limit]
         seen = {q["id"] for q in out}
     if len(out) < limit and submodule:
-        for q in _pick("submodule=?", [submodule], limit - len(out), seen):
+        # 同名二级题型跨模块存在（如「逻辑判断」也散在常识/言语），带 module 既保同模块也走 idx_q_pick 前缀
+        sub_cond, sub_args = ("module=? AND submodule=?", [module, submodule]) if module else ("submodule=?", [submodule])
+        for q in _pick(sub_cond, sub_args, limit - len(out), seen):
             out.append(q)
             seen.add(q["id"])
     if len(out) < limit and module:

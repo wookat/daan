@@ -548,6 +548,8 @@ import { reviewSummary } from '../../review-summary.js';
 import { reviewOptions, reviewOptionsFull } from '../../review-opts.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
+// 只描述作答形式、不是题型/考点的 question_type（时政题库存的是「单选」）：标签退回模块名
+const ANSWER_FORMATS = ['单选', '多选', '判断', '不定项'];
 
 function extractLetter(s) {
   const m = /[A-D]+/.exec(String(s || '').toUpperCase());
@@ -1140,7 +1142,7 @@ export default {
     // 题型标签统一粒度：去掉「模块名-」前缀（历史数据两种格式并存），无题型时用模块名
     tagName(m) {
       const qt = m.question_type || '';
-      if (!qt) return this.modName(m.module);
+      if (!qt || ANSWER_FORMATS.includes(qt)) return this.modName(m.module);
       return qt.includes('-') ? qt.split('-').slice(1).join('-') : qt;
     },
     unfavItem(f) {
