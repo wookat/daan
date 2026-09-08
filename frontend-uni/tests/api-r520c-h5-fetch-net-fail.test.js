@@ -4,9 +4,30 @@
 // fetchNet / readNet 落到 netFailMessage('') = NET_FAIL_TEXT；HTTP 非 2xx / SSE error 事件 / 访问码分支不受影响。
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { netFailMessage, NET_FAIL_TEXT, isNetMsg } from '../src/api-policy';
+import { netFailMessage, NET_FAIL_TEXT, NET_TIMEOUT_TEXT, isNetMsg, failBannerText } from '../src/api-policy';
 
 const API = readFileSync(new URL('../src/api.js', import.meta.url), 'utf8');
+const ASK = readFileSync(new URL('../src/pages/ask/ask.vue', import.meta.url), 'utf8');
+
+// 生产 36ed9af1 复采命中：问答页失败横幅原判据 error.includes('再试')，网络文案以「重试」结尾 →
+// 「失败：网络错误，请检查网络后重试，请重试」双尾。判据收敛到 api-policy.failBannerText（再试|重试 均不追加）。
+describe('问答页失败横幅：网络文案不再双「请重试」', () => {
+  it('failBannerText：自带再试/重试结尾不追加，其它错误追加「，请重试」', () => {
+    expect(failBannerText(NET_FAIL_TEXT)).toBe('失败：网络错误，请检查网络后重试');
+    expect(failBannerText(NET_TIMEOUT_TEXT)).toBe('失败：请求超时，请稍后重试');
+    expect(failBannerText('模型繁忙，请稍后再试')).toBe('失败：模型繁忙，请稍后再试');
+    expect(failBannerText('HTTP 502')).toBe('失败：HTTP 502，请重试');
+    expect(failBannerText('生成失败')).toBe('失败：生成失败，请重试');
+    expect(failBannerText('')).toBe('失败：，请重试');
+    expect(failBannerText(NET_FAIL_TEXT)).not.toMatch(/重试，请重试/);
+  });
+  it('ask.vue 两处 kg-banner 均用 errorText 计算属性（源锁），不再内联 includes(再试)', () => {
+    expect((ASK.match(/<kg-banner v-if="error"[^\n]*:text="errorText"/g) || []).length).toBe(2);
+    expect(ASK).not.toMatch(/error\.includes\('再试'\)/);
+    expect(ASK).toMatch(/errorText\(\) \{\s*return failBannerText\(this\.error\);/);
+    expect(ASK).toMatch(/import \{ failBannerText \} from '\.\.\/\.\.\/api-policy\.js';/);
+  });
+});
 
 describe('api.js H5 原生 fetch 网络失败 → 中文口径', () => {
   it('不再有裸 fetch(BASE_URL …)；四个 H5 端点全经 fetchNet', () => {
