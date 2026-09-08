@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { scanDupNote } from '../src/paper-scan-pages.js';
-import { scanRowJumpable } from '../src/paper-scan-jump.js';
+import { scanRowJumpable, scanRowKey } from '../src/paper-scan-jump.js';
 
 const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8');
 const wrong = { no: 2, question_id: 112, status: 'ok', correct: false, picked: 'A', answer: 'C' };
@@ -35,6 +35,23 @@ describe('scanRowJumpable 对 dup 回包', () => {
     expect(scanRowJumpable({ saved: false, dup: false }, wrong)).toBe(false);
     expect(scanRowJumpable({ saved: false, dup: true }, { ...wrong, correct: true })).toBe(false);
     expect(scanRowJumpable({ saved: false, dup: true }, { ...wrong, status: 'blank' })).toBe(false);
+  });
+});
+
+describe('scanRowKey：v-for key 带可跳态（R531b 生产一手：同题号行可跳→不可跳复用 DOM 残留 tabindex=0）', () => {
+  it('同 no 可跳与不可跳 key 不同；不可跳 key 即题号', () => {
+    expect(scanRowKey({ saved: true }, wrong)).toBe('2:jump');
+    expect(scanRowKey({ saved: false, dup: true }, wrong)).toBe('2:jump');
+    expect(scanRowKey({ saved: false }, wrong)).toBe('2');
+    expect(scanRowKey({ saved: true }, { ...wrong, correct: true })).toBe('2');
+    expect(scanRowKey({ saved: true }, { ...wrong, status: 'blank' })).toBe('2');
+    expect(scanRowKey({ saved: true }, { ...wrong, no: 7 })).toBe('7:jump');
+  });
+  it('模板 v-for 用 scanRowKey 而非裸 r.no', () => {
+    expect(BOOK).toContain('<view v-for="r in scanResult.items" :key="scanRowKey(scanResult, r)" class="scan-row"');
+    expect(BOOK).not.toContain(':key="r.no" class="scan-row"');
+    expect(BOOK).toContain("import { scanRowJumpable, scanRowKey, findScanMistake, pageNFor } from '../../paper-scan-jump.js';");
+    expect(BOOK).toContain('    scanRowJumpable,\n    scanRowKey,\n');
   });
 });
 

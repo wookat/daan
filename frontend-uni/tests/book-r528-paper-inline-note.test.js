@@ -28,7 +28,7 @@ describe('错题本接入', () => {
         '          <text v-if="scanDupNote(scanResult)" class="scan-note scan-dup">{{ scanDupNote(scanResult) }}</text>\n' +
         '          <text v-if="scanPagesNote(scanResult, scanAcc)" class="scan-note">{{ scanPagesNote(scanResult, scanAcc) }}</text>\n' +
         '          <text v-if="inlineSkipNote(scanResult.inline_n)" class="scan-note">{{ inlineSkipNote(scanResult.inline_n) }}</text>\n' +
-        '          <view class="scan-list">\n            <view v-for="r in scanResult.items" :key="r.no" class="scan-row"',
+        '          <view class="scan-list">\n            <view v-for="r in scanResult.items" :key="scanRowKey(scanResult, r)" class="scan-row"',
     );
   });
 

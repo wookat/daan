@@ -4,6 +4,12 @@ export function scanRowJumpable(res, r) {
   return !!(res && (res.saved || res.dup) && r && r.status === 'ok' && !r.correct && r.question_id);
 }
 
+// v-for key 带可跳态：a11y-focus 在挂 click 监听时给宿主补 tabindex/keydown 且不回收，
+// 同题号行在「可跳 → 不可跳」两次结果间复用 DOM 会留下无动作的键盘落点；换 key 强制重建节点。
+export function scanRowKey(res, r) {
+  return String(r && r.no) + (scanRowJumpable(res, r) ? ':jump' : '');
+}
+
 export function findScanMistake(items, qid) {
   const id = Number(qid) || 0;
   if (!id || !Array.isArray(items)) return null;
