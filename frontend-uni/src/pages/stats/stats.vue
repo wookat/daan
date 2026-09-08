@@ -90,17 +90,17 @@
                 <view class="poly" :style="polyStyle" />
                 <view v-for="(a, i) in axes" :key="a.key" class="axis-label" :style="labelStyle(i)">
                   <text class="al-name">{{ a.name }}</text>
-                  <text class="al-val num">{{ a.pct }}%</text>
+                  <text class="al-val num" :class="{ none: !a.n }">{{ a.n ? a.pct + '%' : '未练' }}</text>
                 </view>
               </view>
             </view>
             <view class="radar-side">
-              <text v-if="weakAxes.length" class="rs-t">最薄弱</text>
+              <text v-if="weakAxes.length" class="rs-t">{{ weakTitle }}</text>
               <view v-for="a in weakAxes" :key="a.key" class="rs-row">
                 <text class="rs-name">{{ a.name }}</text>
                 <text class="rs-pct num">{{ a.pct }}%</text>
               </view>
-              <kg-button v-if="weakAxes.length" variant="secondary" size="lg" block @click="goPractice(weakAxes[0].key, 'weak')">去补弱</kg-button>
+              <kg-button v-if="weakAxes.length" variant="secondary" size="lg" block @click="goPractice(weakAxes[0].key, 'weak')">{{ weakAxes.length >= 2 ? '去补弱' : '继续练' }}</kg-button>
             </view>
           </view>
         </kg-card>
@@ -398,6 +398,10 @@ export default {
         .filter((a) => a.n > 0)
         .sort((a, b) => a.pct - b.pct)
         .slice(0, 2);
+    },
+    weakTitle() {
+      // 仅 1 个模块有作答时无从比较「最薄弱」
+      return this.weakAxes.length >= 2 ? '最薄弱' : '已练模块';
     },
     slLast() {
       if (!this.slStats || !this.slStats.last_at) return '';
@@ -905,6 +909,7 @@ export default {
 .axis-label { position: absolute; transform: translate(-50%, -50%); text-align: center; white-space: nowrap; }
 .al-name { display: block; font-size: var(--fs-caption); color: var(--ink); font-weight: 600; }
 .al-val { display: block; font-size: var(--fs-caption); color: var(--brand-text); }
+.al-val.none { color: var(--ink-3); }
 
 /* 分布条 */
 .mrow { display: flex; align-items: center; gap: var(--sp-8); min-height: 56px; border-bottom: 1px solid var(--line); }

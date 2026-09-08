@@ -338,10 +338,12 @@ export function fetchReinforceSuggest(): Promise<{ items: ReinforceItem[]; picke
 }
 
 export interface AttemptItem {
-  picked: string;
+  picked: string | null;
   correct: boolean;
-  secs: number;
+  secs: number | null;
   created_at: number;
+  /** practice=练习作答（answer_log）；review=复习作答（review_log） */
+  source: 'practice' | 'review';
 }
 export function fetchAttempts(questionId: number): Promise<{ items: AttemptItem[] }> {
   return request<{ items: AttemptItem[] }>(

@@ -503,7 +503,15 @@ def api_review_cur_get(uid: str = ""):
 def api_review_record(mid: int, body: dict):
     try:
         uid = (body.get("uid") or "").strip()[:64] or None
-        return db.record_review(mid, bool(body.get("correct")), uid=uid)
+        picked = body.get("picked")
+        secs = body.get("secs")
+        return db.record_review(
+            mid,
+            bool(body.get("correct")),
+            uid=uid,
+            picked=picked if isinstance(picked, str) else None,
+            secs=int(secs) if isinstance(secs, (int, float)) and not isinstance(secs, bool) and secs > 0 else None,
+        )
     except KeyError:
         raise HTTPException(404, "错题不存在") from None
 

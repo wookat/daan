@@ -237,6 +237,7 @@
               <view class="att-h">历次作答 · {{ m.attempts.length }} 次</view>
               <view v-for="(a, ai) in m.attempts" :key="ai" class="att-row">
                 <text class="att-mark" :class="a.correct ? 'aok' : 'abad'">{{ a.correct ? '✓ 对' : '✗ 错' }}</text>
+                <text class="att-src">{{ a.source === 'review' ? '复习' : '练习' }}</text>
                 <text class="att-pick">选 {{ a.picked || '—' }}</text>
                 <text v-if="a.secs" class="att-secs">用时 {{ a.secs }}s</text>
                 <text class="att-time">{{ fmt(a.created_at) }}</text>
@@ -903,9 +904,10 @@ export default {
     this.favs = (uni.getStorageSync('favQuestions') || []).map((f) => ({ ...f, _open: false }));
     if (uni.getStorageSync('bookShowFavs')) {
       uni.removeStorageSync('bookShowFavs');
-      if (this.favs.length) this.tab = 'fav';
+      this.tab = 'fav';
+    } else if (this.tab === 'fav' && !this.favs.length) {
+      this.tab = 'todo';
     }
-    if (this.tab === 'fav' && !this.favs.length) this.tab = 'todo';
     if (uni.getStorageSync('autoStartReview')) {
       uni.removeStorageSync('autoStartReview');
       this.autoReview = true;
@@ -1503,7 +1505,10 @@ export default {
       }
       if (!correct) this.appendSimilar(this.cur);
       try {
-        const res = await request('/api/review/' + this.cur.id, { method: 'POST', data: { correct, uid: anonUid() } });
+        const res = await request('/api/review/' + this.cur.id, {
+          method: 'POST',
+          data: { correct, uid: anonUid(), picked: this.picked || undefined },
+        });
         this.nextDays = res.next_review_days;
         this.streak = res.streak;
         this.cur._streak = res.streak;
@@ -1952,11 +1957,12 @@ export default {
 .att-mark { font-weight: 600; }
 .att-mark.aok { color: var(--ok); }
 .att-mark.abad { color: var(--bad); }
+.att-src { color: var(--ink-3); }
 .att-pick { color: var(--ink); }
 .att-secs { color: var(--ink-3); }
 .att-time { margin-left: auto; color: var(--ink-4); font-size: var(--fs-caption); }
 .mfoot { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-8); margin-top: var(--sp-8); border-top: 1px solid var(--line); padding-top: var(--sp-4); }
-.hint { font-size: var(--fs-caption); color: var(--ink-4); }
+.hint { font-size: var(--fs-caption); color: var(--ink-3); }
 .acts { display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap; }
 .xp-k { margin-top: var(--sp-8); font-size: var(--fs-caption); font-weight: 600; color: var(--warn-strong); border-left: 3px solid var(--warn); padding-left: var(--sp-8); }
 .xp-body { margin-top: var(--sp-4); font-size: var(--fs-sub); color: var(--ink); background: var(--warn-soft); border-radius: var(--r-xs); padding: var(--sp-8); line-height: var(--lh-sub); }

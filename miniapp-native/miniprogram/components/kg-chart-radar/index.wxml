@@ -5,6 +5,6 @@
   </view>
   <view wx:for="{{labels}}" wx:key="key" class="kg-radar__lab" style="{{item.style}}">
     <text class="kg-radar__name">{{item.name}}</text>
-    <text class="kg-radar__val num">{{item.pct}}%</text>
+    <text class="kg-radar__val num {{item.n === 0 ? 'is-none' : ''}}">{{item.val}}</text>
   </view>
 </view>

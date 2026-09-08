@@ -1,5 +1,4 @@
 """管理后台 API 与页面（统一 check_admin 门禁；令牌错误全局限速防暴破）。"""
-import json
 import os
 import re
 
@@ -86,7 +85,7 @@ def api_admin_update_question(qid: int, body: dict, x_admin_token: str | None = 
             raise HTTPException(400, "answer 需为选项键内的字母（多选按字母升序拼接）")
         body["answer"] = ans
     if "options" in body:
-        body["options"] = json.dumps(body["options"], ensure_ascii=False)
+        body["options"] = db.options_json(body["options"])
     if not db.admin_update_question(qid, body):
         raise HTTPException(400, "无可更新字段或题目不存在")
     if "tag3" in body:
