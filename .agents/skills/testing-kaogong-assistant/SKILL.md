@@ -5,6 +5,13 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## 分组复习运行时取证补充（R552）
+
+- 分组/重出/加练分别记账：为每个视口记录独立 fixture mid 集，按 mid 回读 review_log；同一隔离 uid 重复两宽测试时，不把累计日志数当单组数。页面授权造数可用 null-qid 手录题保证答案确定；加练仍须真实题库回包，不能 mock。
+- 六题上限测试逐次保留只读 `reviewSnap` 与请求：八题首四题答错时预期总条目 11/14/17/18，加练数 2/4/6/6。第四次不应新增 questions 请求；头部计数与最终小结另以截图核对，不只看 storage。
+- CDP `Runtime.consoleAPICalled` 必须同时审计 `warning` 和 `error`；仅统计 error 会漏掉 uni-app loading 配对等警告。网络取消按 requestId 与 response 对齐：已收到 200 的资源仍可能取消，取消数不能简单等同 requests−responses。
+- 并发复习边界仅在明确授权的隔离 uid 上模拟：组内增加一条到期项，完成后核服务端剩余数更新；下一组 CTA 尚显示时通过页面上下文完成剩余项，再点 CTA 核真实空回包和提示。此类 API 辅助日志应与纯 UI 核心组日志分开。
+
 ## 卡面错因标签与探针打标补充（R551）
 
 - **R551 起 H5 列表卡 mhead 直显 `error_reason`**（warn 色 + pen-line，位置在「手录/模考」后、卷码 badge 前）：未掌握且非批量时为 `role=button` 热区 `.rzbadge-hit`，点开既有「更多操作」层的错因自评；已掌握/批量下为只读 `kg-tag`。R550 段「错因仅在更多操作中显示」已过时，卡面无标签只在 `error_reason` 为空时成立。改选 chip **不会自动关层**，卡面更新口径为「关层后」。
