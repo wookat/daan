@@ -26,6 +26,8 @@ export interface ExplainMeta {
   question_text?: string | null;
   explain_key?: string | null;
   cached?: boolean;
+  /** 服务端按 question_id 直通题库确认的题号；缓存命中或未命中题库时为空 */
+  qid?: number | null;
 }
 
 export interface ExplainResp extends ExplainMeta {
@@ -36,6 +38,8 @@ export interface ExplainArgs extends SseHandlers<ExplainMeta> {
   filePath?: string | null;
   text?: string | null;
   userAnswer?: string | null;
+  /** 题库题号（刷题/搜索/历史/收藏深链带入）：服务端题干命中即跳过识题 LLM 并以题库答案为准；图片题不带 */
+  questionId?: number | null;
 }
 
 // 非流式 /api/explain：图片走 wx.uploadFile，文字走 x-www-form-urlencoded
@@ -74,7 +78,7 @@ export function uploadExplain({ filePath, text, userAnswer }: ExplainArgs): Prom
 
 // 流式优先：文字题走 /api/explain/stream（enableChunked）；图片题或分块不可用时降级 uploadExplain
 export async function streamExplain(args: ExplainArgs): Promise<ExplainResp> {
-  const { filePath, text, userAnswer, onMeta, onDelta } = args;
+  const { filePath, text, userAnswer, questionId, onMeta, onDelta } = args;
   const fallback = async () => {
     const d = await uploadExplain({ filePath, text, userAnswer });
     if (onMeta) onMeta(d);
@@ -90,7 +94,11 @@ export async function streamExplain(args: ExplainArgs): Promise<ExplainResp> {
         'X-Access-Code': getAccessCode(),
         ...authHeader(),
       },
-      data: { text, ...(userAnswer ? { user_answer: userAnswer } : {}) },
+      data: {
+        text,
+        ...(userAnswer ? { user_answer: userAnswer } : {}),
+        ...(questionId && questionId > 0 ? { question_id: questionId } : {}),
+      },
       onMeta,
       onDelta,
     });
