@@ -391,7 +391,8 @@
         </template>
         <template v-else>
           <text class="scan-sum">{{ manualPaper.title || '试卷' }} · 卷码 {{ manualPaper.code }} · 共 {{ manualPaper.n }} 题 · 已选 {{ manualPickedCount }}</text>
-          <view class="scan-list">
+          <text v-if="!manualPaper.n" class="manual-empty">这张卷的题目均为时政/手录题，不参与机读判分，无需在此录入；请对照卷末参考答案核对</text>
+          <view v-else class="scan-list">
             <view v-for="no in manualPaper.n" :key="no" class="manual-row">
               <text class="scan-no num">{{ no }}</text>
               <text v-for="L in ['A','B','C','D']" :key="L" class="manual-opt num" :class="{ on: manualPicks[no] === L }" role="button" @click="manualPick(no, L)">{{ L }}</text>
@@ -402,7 +403,7 @@
           <view class="sheet-acts">
             <kg-button v-if="!manualPaper" variant="primary" size="lg" block :loading="manualLoading" @click="manualLookup(manualCode)">{{ manualLoading ? '查找中…' : '查找试卷' }}</kg-button>
             <template v-else>
-              <kg-button variant="primary" size="lg" block :disabled="!manualPickedCount" :loading="manualSubmitting" @click="manualSubmit">{{ manualSubmitting ? '判分中…' : '交卷判分（' + manualPickedCount + ' 题）' }}</kg-button>
+              <kg-button v-if="manualPaper.n" variant="primary" size="lg" block :disabled="!manualPickedCount" :loading="manualSubmitting" @click="manualSubmit">{{ manualSubmitting ? '判分中…' : '交卷判分（' + manualPickedCount + ' 题）' }}</kg-button>
               <kg-button variant="text" size="md" block @click="manualPaper = null">‹ 换一份试卷</kg-button>
             </template>
           </view>
@@ -549,6 +550,7 @@ import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid, reviewAs
 import { buildReviewSnap, parseReviewSnap } from '../../review-snap.js';
 import { reviewSummary } from '../../review-summary.js';
 import { reviewOptions, reviewOptionsFull } from '../../review-opts.js';
+import { redoSkippedNote } from '../../book-redo-skipped.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 // 只描述作答形式、不是题型/考点的 question_type（时政题库存的是「单选」）：标签退回模块名
@@ -1596,6 +1598,7 @@ export default {
         }
         trackEvent('book_redo_sel', 'book', String(d.items.length));
         uni.setStorageSync('redoSet', d.items);
+        uni.setStorageSync('redoNote', redoSkippedNote(ids.length, d.items.length));
         uni.navigateTo({ url: '/pages/practice/practice' });
       } catch (e) {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
@@ -1926,6 +1929,7 @@ export default {
 .ai-loading { display: flex; flex-direction: column; gap: var(--sp-12); padding: var(--sp-12) 0; }
 .ai-err { display: grid; gap: var(--sp-12); padding: var(--sp-12) 0; text-align: center; }
 .scan-sum { display: block; font-size: var(--fs-sub); color: var(--ink-3); margin: var(--sp-4) 0 var(--sp-8); }
+.manual-empty { display: block; font-size: var(--fs-sub); color: var(--ink-3); line-height: 1.6; padding: var(--sp-8) 0 var(--sp-12); }
 .scan-good { color: var(--ok); }
 .scan-row { display: flex; align-items: center; min-height: 36px; border-bottom: 1px solid var(--line); font-size: var(--fs-sub); }
 .scan-no { width: 36px; color: var(--ink-4); }
