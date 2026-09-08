@@ -38,6 +38,11 @@ function maskFocusables(mask) {
 // 弹层层级以「打开顺序栈」为唯一事实：多个 .mask 同 z-index 时 DOM 顺序
 // 决定层叠序，与打开顺序无关，会导致后开的弹层被盖住、Esc 关错层。
 // 入栈时按栈深提升 z-index，Esc/Tab/焦点均作用于栈顶；决策见 modal-policy.js。
+// 基准运行时读 --z-overlay（与 KgSheet 同源），栈内层才能压过同档的 wd-popup。
+function overlayBase() {
+  return parseInt(window.getComputedStyle(document.documentElement).getPropertyValue('--z-overlay'), 10)
+}
+
 function initModalKeys() {
   let stack = []
   const sync = () => {
@@ -49,7 +54,7 @@ function initModalKeys() {
     document.querySelectorAll('.mask').forEach((m) => {
       if (!visible(m) || stack.some((s) => s.mask === m)) return
       stack.push({ mask: m, lastFocus: document.activeElement })
-      m.style.zIndex = String(zIndexFor(stack.length))
+      m.style.zIndex = String(zIndexFor(stack.length, overlayBase()))
       const { el, needsTabindex } = pickFocusTarget(maskFocusables(m), m.firstElementChild || m)
       if (needsTabindex) el.setAttribute('tabindex', '-1')
       el.focus()
