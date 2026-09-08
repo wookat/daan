@@ -25,10 +25,10 @@ describe('book 页接入', () => {
   it('POST /api/review 回包 next_review_days 落 item.nextDays；清零时 celebrateNext 下发；CTA「回错题本」', () => {
     const ts = read('../miniprogram/pages/book/book.ts');
     const wxml = read('../miniprogram/pages/book/book.wxml');
-    expect(ts).toContain("import { nextReviewText, reviewVerdict, streakProgressText } from '../../utils/review-verdict';");
+    expect(ts).toContain("import { nextReviewText, reviewVerdict, streakProgressText, similarRoom, reviewDueLeft, reviewDoneCopy } from '../../utils/review-verdict';");
     expect(ts).toContain('item.nextDays = res.next_review_days;');
     expect(ts).toContain('const celebrateNext = nextReviewText(items);');
-    expect(ts).toContain('this.setData({ celebrate: true, celebrateN: n, celebrateMastered, celebrateNext, reinforce: null, reinforceItems: [] });');
+    expect(ts).toContain('celebrateNext,\n        dueLeft,\n        celebrateCopy: reviewDoneCopy(n, dueLeft),\n        reinforce: null,\n        reinforceItems: [],');
     expect(wxml).toContain('<view wx:if="{{celebrateNext}}" class="cb-s cb-next">{{celebrateNext}}</view>');
     expect(wxml).toContain('bind:click="onCloseCelebrate">回错题本</kg-button>');
     expect(wxml).not.toContain('太棒了，继续');

@@ -155,6 +155,11 @@
   font-weight: 500;
 }
 
+.cb-left {
+  color: var(--warn-strong);
+  font-weight: 500;
+}
+
 .cb-btn {
   margin-top: var(--sp-20);
 }
