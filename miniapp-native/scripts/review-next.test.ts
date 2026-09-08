@@ -28,7 +28,7 @@ describe('book 页接入', () => {
     expect(ts).toContain("import { nextReviewText, reviewVerdict, streakProgressText } from '../../utils/review-verdict';");
     expect(ts).toContain('item.nextDays = res.next_review_days;');
     expect(ts).toContain('const celebrateNext = nextReviewText(items);');
-    expect(ts).toContain('this.setData({ celebrate: true, celebrateN: n, celebrateMastered, celebrateNext });');
+    expect(ts).toContain('this.setData({ celebrate: true, celebrateN: n, celebrateMastered, celebrateNext, reinforce: null, reinforceItems: [] });');
     expect(wxml).toContain('<view wx:if="{{celebrateNext}}" class="cb-s cb-next">{{celebrateNext}}</view>');
     expect(wxml).toContain('bind:click="onCloseCelebrate">回错题本</kg-button>');
     expect(wxml).not.toContain('太棒了，继续');

@@ -70,6 +70,7 @@ export interface Mistake {
   type_group?: string | null;
   created_at?: number | string;
   options?: Record<string, string> | null;
+  source?: string | null;
 }
 
 export interface MistakesResp {

@@ -123,6 +123,7 @@
                 <text>{{item.modName}}</text>
                 <text wx:if="{{item.tag3_name}}">{{item.tag3_name}}</text>
                 <text wx:elif="{{item.typeName && item.typeName !== item.modName}}">{{item.typeName}}</text>
+                <text wx:if="{{item.source === 'manual'}}">手录</text>
                 <text wx:if="{{item.error_reason}}" class="m-meta-warn">{{item.error_reason}}</text>
                 <text wx:if="{{item.times > 1}}" class="m-meta-bad">错 {{item.times}} 次</text>
                 <text wx:if="{{item.streakText}}" class="m-meta-ok">{{item.streakText}}</text>
@@ -211,7 +212,39 @@
 </kg-sheet>
 
 <!-- 手动录入答案（按卷） -->
-<kg-sheet visible="{{manualOpen}}" title="手动录入答案" bind:close="onManualClose">
+<!-- 手录错题（免 AI，不对回题库；question_id=NULL 走复习/PDF 路径，不参与重练） -->
+<kg-sheet visible="{{entryOpen}}" title="手录错题" bind:close="onEntryClose">
+  <text class="sheet-k">模块</text>
+  <view class="sheet-chips"><kg-chip-row size="sm" options="{{manualModOpts}}" value="{{entry.module}}" bind:change="onEntryModule" /></view>
+  <text class="sheet-k">题干（可连选项一起粘贴，选项一行一个如「A. …」）</text>
+  <view class="sheet-ta">
+    <t-textarea value="{{entry.question}}" placeholder="例：下列节气中，白昼最长的是： A. 春分 B. 夏至 C. 秋分 D. 冬至" maxlength="{{2000}}" indicator autosize="{{entryTaSize}}" bordered="{{false}}" bind:change="onEntryQuestion" />
+  </view>
+  <view class="entry-ans">
+    <view class="entry-ans-col">
+      <text class="sheet-k">正确答案 *</text>
+      <view class="manual-row entry-row"><text wx:for="{{entryCorrectRow}}" wx:key="L" class="manual-opt num {{item.on ? 'on' : ''}}" data-l="{{item.L}}" bind:tap="onEntryCorrect">{{item.L}}</text></view>
+    </view>
+    <view class="entry-ans-col">
+      <text class="sheet-k">我的答案（选填）</text>
+      <view class="manual-row entry-row"><text wx:for="{{entryPickedRow}}" wx:key="L" class="manual-opt num bad {{item.on ? 'on' : ''}}" data-l="{{item.L}}" bind:tap="onEntryPicked">{{item.L}}</text></view>
+    </view>
+  </view>
+  <text class="sheet-k">错因（选填）</text>
+  <view class="sheet-chips"><kg-chip-row size="sm" options="{{reasonOpts}}" value="{{entry.reason}}" bind:change="onEntryReason" /></view>
+  <text class="sheet-k">解析 / 笔记（选填）</text>
+  <view class="sheet-ta">
+    <t-textarea value="{{entry.explanation}}" placeholder="复习时会显示在答案下方" maxlength="{{2000}}" autosize="{{taSize}}" bordered="{{false}}" bind:change="onEntryExplanation" />
+  </view>
+  <text wx:if="{{entryErr}}" class="entry-err">{{entryErr}}</text>
+  <view slot="footer" class="sheet-acts">
+    <kg-button variant="primary" size="lg" block loading="{{entrySaving}}" bind:click="onEntrySubmit">{{entrySaving ? '保存中…' : '加入错题本'}}</kg-button>
+    <text class="entry-hint">不用 AI、不消耗额度；手录题参与复习计划与 PDF 导出，不参与「错题重练」</text>
+    <kg-button variant="text" size="md" block bind:click="onEntryToPaper">有纸质试卷？按卷码录入答题卡 ›</kg-button>
+  </view>
+</kg-sheet>
+
+<kg-sheet visible="{{manualOpen}}" title="按卷码录入答案" bind:close="onManualClose">
   <block wx:if="{{!manualPaper}}">
     <text class="sheet-k">输入卷面上的卷码</text>
     <view class="codebar">
@@ -252,22 +285,7 @@
   <view slot="footer" class="sheet-acts"><kg-button variant="primary" size="lg" block bind:click="onScanDone">完成</kg-button></view>
 </kg-sheet>
 
-<!-- 强化建议（复习清零后） -->
-<kg-sheet visible="{{!reviewing && reinforce !== null}}" title="本轮复习完成！趁热打铁强化一下？" bind:close="onReinforceClose">
-  <view wx:if="{{reinforce}}" class="rf">
-    <text class="rf-name">{{reinforce.tag3_name || reinforce.submodule}}</text>
-    <text class="rf-meta">{{reinforceMeta}}</text>
-  </view>
-  <view slot="footer" class="sheet-acts">
-    <kg-button variant="primary" size="lg" block bind:click="onStartReinforce">强化 5 道新题（未做过）</kg-button>
-    <view class="rf-row2">
-      <kg-button wx:if="{{reinforceItems.length > 1}}" variant="text" size="md" bind:click="onSwapReinforce">换个考点</kg-button>
-      <kg-button variant="text" size="md" bind:click="onReinforceClose">下次再说</kg-button>
-    </view>
-  </view>
-</kg-sheet>
-
-<!-- 复习清零庆祝态 -->
+<!-- 复习清零庆祝态；同考点强化建议随小结一屏展示，「回错题本」始终直接回列表 -->
 <t-popup visible="{{celebrate}}" placement="center" bind:visible-change="onCelebrateVisible">
   <view class="cb-card">
     <view class="cb-ico"><l-icon name="party-popper" size="32" tone="ok" /></view>
@@ -275,7 +293,21 @@
     <view class="cb-s">{{celebrateN}} 道到期错题全部复习完成，遗忘曲线稳住了</view>
     <view wx:if="{{celebrateMastered}}" class="cb-s">达成掌握 {{celebrateMastered}} 道 · 已移到「已掌握」，不再安排复习</view>
     <view wx:if="{{celebrateNext}}" class="cb-s cb-next">{{celebrateNext}}</view>
-    <view class="cb-btn"><kg-button variant="primary" size="lg" block bind:click="onCloseCelebrate">回错题本</kg-button></view>
+    <view wx:if="{{reinforce}}" class="rf rf-inline">
+      <text class="rf-k">趁热打铁：今天错得最多的考点</text>
+      <text class="rf-name">{{reinforce.tag3_name || reinforce.submodule}}</text>
+      <text class="rf-meta">{{reinforceMeta}}</text>
+    </view>
+    <view class="cb-btn">
+      <block wx:if="{{reinforce}}">
+        <kg-button variant="primary" size="lg" block bind:click="onStartReinforce">强化 5 道新题（未做过）›</kg-button>
+        <view class="rf-row2">
+          <kg-button wx:if="{{reinforceItems.length > 1}}" variant="text" size="md" bind:click="onSwapReinforce">换个考点</kg-button>
+          <kg-button variant="text" size="md" bind:click="onCloseCelebrate">回错题本</kg-button>
+        </view>
+      </block>
+      <kg-button wx:else variant="primary" size="lg" block bind:click="onCloseCelebrate">回错题本</kg-button>
+    </view>
   </view>
 </t-popup>
 

@@ -6,7 +6,7 @@ import time
 
 from fastapi import APIRouter, HTTPException, Request
 
-from . import auth, db, kb, plan, taxonomy
+from . import auth, db, kb, manual_mistake, plan, taxonomy
 from .deps import as_int, clamp_limit, rl
 from .social import api_checkin_badges, api_checkin_summary
 
@@ -385,6 +385,11 @@ def api_practice_resume(uid: str):
 @router.post("/api/mistakes")
 def api_save_mistake(rec: dict, request: Request):
     rl(request, "mistake", 240, 3600, str(rec.get("uid") or "").strip() or None)
+    if manual_mistake.is_manual(rec):
+        try:
+            rec = manual_mistake.normalize(rec)
+        except ValueError as e:
+            raise HTTPException(400, str(e)) from None
     rec["question_id"] = as_int(rec.get("question_id"), 0) or None
     mid = db.save_mistake(rec)
     return {"id": mid}

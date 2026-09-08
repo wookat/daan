@@ -10,6 +10,7 @@ import {
   fetchQuestions,
   fetchReviewDue,
   patchMistake,
+  postManualMistake,
   postQuestionReport,
   postReviewRecord,
   renameFavFolder,
@@ -33,6 +34,7 @@ import {
 } from '../../api/learn';
 import type { FavFolder, FavItem, Mistake } from '../../api/types';
 import { anonUid } from '../../utils/auth';
+import { emptyManualEntry, letterRow, MANUAL_MODULES, manualEntryBody, manualEntryError, manualSavedToast, toggleLetter } from '../../utils/manual-entry';
 import { md } from '../../utils/md';
 import { buildReviewSnap, parseReviewSnap, reviewElapsedSecs, REVIEW_SNAP_KEY, type ReviewResume } from '../../utils/review-snap';
 import { nextReviewText, reviewVerdict, streakProgressText } from '../../utils/review-verdict';
@@ -272,7 +274,7 @@ Page({
     toolItems: [
       { key: 'redo', icon: 'shuffle', label: '错题重练' },
       { key: 'ai', icon: 'sparkles', label: 'AI 分析' },
-      { key: 'manual', icon: 'pencil-line', label: '录入答案' },
+      { key: 'manual', icon: 'pencil-line', label: '手录错题' },
       { key: 'recap', icon: 'chart-column', label: '本月复盘' },
     ],
     recap: { total: 0, byModule: [] as RecapRow[], byReason: [] as RecapRow[] },
@@ -285,7 +287,16 @@ Page({
     aiOpen: false,
     aiLoading: false,
     aiHtml: '',
-    // 手动录入答案（按卷）
+    // 手录错题（自由录入，免 AI；H5 entry*）
+    entryOpen: false,
+    entry: emptyManualEntry(),
+    entryErr: '',
+    entrySaving: false,
+    entryCorrectRow: letterRow(''),
+    entryPickedRow: letterRow(''),
+    entryTaSize: { minHeight: 112 },
+    manualModOpts: MANUAL_MODULES,
+    // 按卷码录入答题卡答案
     manualOpen: false,
     manualCode: '',
     manualLoading: false,
@@ -547,6 +558,62 @@ Page({
   },
   onManualClose() {
     this.setData({ manualOpen: false });
+  },
+  // ---------- 手录错题（H5 entryOpenSheet/entrySubmit） ----------
+  onEntryOpen() {
+    const e = this.data.entry;
+    const fresh = !e.question && !e.correct ? emptyManualEntry() : e;
+    this.setData({ entryOpen: true, entryErr: '', entry: fresh, entryCorrectRow: letterRow(fresh.correct), entryPickedRow: letterRow(fresh.picked) });
+    trackEvent('manual_entry_open');
+  },
+  onEntryClose() {
+    this.setData({ entryOpen: false });
+  },
+  onEntryToPaper() {
+    this.setData({ entryOpen: false });
+    this.onManualOpen();
+  },
+  onEntryModule(e: ChipChange) {
+    this.setData({ 'entry.module': String(e.detail.value || ''), entryErr: '' });
+  },
+  onEntryQuestion(e: ChipChange) {
+    this.setData({ 'entry.question': String(e.detail.value || '') });
+  },
+  onEntryExplanation(e: ChipChange) {
+    this.setData({ 'entry.explanation': String(e.detail.value || '') });
+  },
+  onEntryReason(e: ChipChange) {
+    const v = String(e.detail.value || '');
+    this.setData({ 'entry.reason': this.data.entry.reason === v ? '' : v });
+  },
+  onEntryCorrect(e: WechatMiniprogram.TouchEvent) {
+    const next = toggleLetter(this.data.entry.correct, String(e.currentTarget.dataset.l || ''));
+    this.setData({ 'entry.correct': next, entryCorrectRow: letterRow(next), entryErr: '' });
+  },
+  onEntryPicked(e: WechatMiniprogram.TouchEvent) {
+    const next = toggleLetter(this.data.entry.picked, String(e.currentTarget.dataset.l || ''));
+    this.setData({ 'entry.picked': next, entryPickedRow: letterRow(next), entryErr: '' });
+  },
+  async onEntrySubmit() {
+    if (this.data.entrySaving) return;
+    const err = manualEntryError(this.data.entry);
+    if (err) {
+      this.setData({ entryErr: err });
+      return;
+    }
+    this.setData({ entrySaving: true, entryErr: '' });
+    try {
+      const d = await postManualMistake(manualEntryBody(this.data.entry));
+      const tip = manualSavedToast(d && d.id, this.data.all);
+      this.setData({ entry: emptyManualEntry(), entryCorrectRow: letterRow(''), entryPickedRow: letterRow(''), entryOpen: false });
+      wx.showToast({ title: tip, icon: 'none' });
+      trackEvent('manual_entry_save');
+      await this.load();
+    } catch (e) {
+      this.setData({ entryErr: (e instanceof Error && e.message) || '保存失败，请重试' });
+    } finally {
+      this.setData({ entrySaving: false });
+    }
   },
   onManualCode(e: WechatMiniprogram.CustomEvent<{ value: string }>) {
     this.setData({ manualCode: String(e.detail.value || '') });
@@ -1077,23 +1144,20 @@ Page({
       const celebrateMastered = items.filter((x) => !x.extra && x.masteredNow === true).length;
       const celebrateNext = nextReviewText(items);
       this.exitReview();
-      this.setData({ celebrate: true, celebrateN: n, celebrateMastered, celebrateNext });
+      this.setData({ celebrate: true, celebrateN: n, celebrateMastered, celebrateNext, reinforce: null, reinforceItems: [] });
       trackEvent('review_done_celebrate', 'book');
+      this.fetchReinforce();
     }
   },
   // ---------- 强化建议（H5 fetchReinforce/swapReinforce/startReinforce） ----------
   async fetchReinforce() {
     try {
       const d = await fetchReinforceSuggest();
-      const items = d.items || [];
-      if (d.picked) {
-        this.setData({ reinforceItems: items, reinforce: d.picked, reinforceMeta: reinforceMeta(d.picked) });
-        return;
-      }
+      if (!this.data.celebrate) return;
+      this.setData({ reinforceItems: d.items || [], reinforce: d.picked || null, reinforceMeta: d.picked ? reinforceMeta(d.picked) : '' });
     } catch (e) {
       /* 非关键路径 */
     }
-    wx.showToast({ title: '本轮复习完成！', icon: 'success' });
   },
   onSwapReinforce() {
     const { reinforceItems, reinforce } = this.data;
@@ -1105,14 +1169,11 @@ Page({
   onStartReinforce() {
     const r = this.data.reinforce;
     if (!r) return;
-    this.setData({ reinforce: null });
+    this.setData({ reinforce: null, celebrate: false });
     let url = '/pages/practice/practice?count=5&source=reinforce&adaptive=1&module=' + encodeURIComponent(r.module);
     if (r.submodule) url += '&submodule=' + encodeURIComponent(r.submodule);
     if (r.tag3) url += '&tag3=' + encodeURIComponent(r.tag3);
     wx.navigateTo({ url });
-  },
-  onReinforceClose() {
-    this.setData({ reinforce: null });
   },
   onToggleRecap() {
     this.setData({ recapOpen: !this.data.recapOpen });
@@ -1123,7 +1184,7 @@ Page({
       if (this.data.todoCount) this.onRedo();
       else wx.showToast({ title: '暂无待掌握错题', icon: 'none' });
     } else if (k === 'ai') this.onAiAnalysis();
-    else if (k === 'manual') this.onManualOpen();
+    else if (k === 'manual') this.onEntryOpen();
     else if (k === 'recap') {
       if (this.data.recap.total) this.onToggleRecap();
       else wx.showToast({ title: '本月还没有新增错题', icon: 'none' });
@@ -1131,8 +1192,7 @@ Page({
   },
   onCloseCelebrate() {
     if (!this.data.celebrate) return;
-    this.setData({ celebrate: false });
-    this.fetchReinforce();
+    this.setData({ celebrate: false, reinforce: null });
   },
   onCelebrateVisible(e: VisibleChange) {
     if (!e.detail.visible) this.onCloseCelebrate();

@@ -63,22 +63,22 @@
         <text v-else class="cb-s">{{ celebrateN }} 道到期错题全部复习完成，遗忘曲线稳住了</text>
         <text v-if="nextText" class="cb-s cb-next">{{ nextText }}</text>
       </view>
-      <template #footer><kg-button variant="primary" size="lg" block @click="closeCelebrate">回错题本 ›</kg-button></template>
-    </kg-sheet>
-
-    <!-- 复习完成后：同考点强化卡（spec-03） -->
-    <kg-sheet :model-value="!reviewing && !!reinforce" title="本轮复习完成！趁热打铁强化一下？" @update:model-value="(v) => { if (!v) reinforce = null; }">
-      <view v-if="reinforce" class="rf">
+      <!-- 同考点强化建议（spec-03）随小结一屏展示：「回错题本」始终直接回列表，不再先弹推荐层 -->
+      <view v-if="reinforce" class="rf rf-inline">
+        <text class="rf-k">趁热打铁：今天错得最多的考点</text>
         <text class="rf-name">{{ reinforce.tag3_name || reinforce.submodule }}</text>
         <text class="rf-meta">{{ reinforce.module_name }}<template v-if="reinforce.tag3_name"> · {{ reinforce.submodule }}</template> · 掌握度 {{ Math.round(reinforce.mastery * 100) }}%（{{ reinforce.level_name }}） · 今日错 {{ reinforce.wrong_today }} 道</text>
       </view>
       <template #footer>
         <view class="sheet-acts">
-          <kg-button variant="primary" size="lg" block @click="startReinforce(reinforce)">强化 5 道新题（未做过）</kg-button>
-          <view class="rf-row2">
-            <kg-button v-if="reinforceItems.length > 1" variant="text" size="md" @click="swapReinforce">换个考点</kg-button>
-            <kg-button variant="text" size="md" @click="reinforce = null">下次再说</kg-button>
-          </view>
+          <template v-if="reinforce">
+            <kg-button variant="primary" size="lg" block @click="startReinforce(reinforce)">强化 5 道新题（未做过）›</kg-button>
+            <view class="rf-row2">
+              <kg-button v-if="reinforceItems.length > 1" variant="text" size="md" @click="swapReinforce">换个考点</kg-button>
+              <kg-button variant="text" size="md" @click="closeCelebrate">回错题本</kg-button>
+            </view>
+          </template>
+          <kg-button v-else variant="primary" size="lg" block @click="closeCelebrate">回错题本 ›</kg-button>
         </view>
       </template>
     </kg-sheet>
@@ -215,6 +215,7 @@
               <kg-tag tone="brand">{{ groupKey(m) }}</kg-tag>
               <kg-tag v-if="fineType(m)" tone="neutral" class="finetag">{{ fineType(m) }}</kg-tag>
               <kg-tag v-if="m.source === 'exam'" tone="info">模考</kg-tag>
+              <kg-tag v-else-if="m.source === 'manual'" tone="info">手录</kg-tag>
               <view v-if="mistakePaper(m)" class="pbadge-hit" role="button" @click.stop="pidFilter = mistakePaper(m).pid"><kg-tag tone="neutral" class="pbadge">{{ mistakePaper(m).psource }}</kg-tag></view>
               <kg-tag v-if="m.times >= 2" tone="bad">错 {{ m.times }} 次</kg-tag>
               <kg-tag v-if="!m.mastered && streakText(m)" tone="ok">{{ streakText(m) }}</kg-tag>
@@ -538,11 +539,42 @@
         <template #footer><kg-button variant="primary" size="lg" block :disabled="!reportType || reportBusy" :loading="reportBusy" @click="submitReport">{{ reportBusy ? '提交中…' : '提交纠错' }}</kg-button></template>
       </kg-sheet>
 
-      <!-- 右下角「＋」：扫描答题卡 / 手动录入 -->
+      <!-- 手录错题（免 AI，不对回题库；同时政/内联题走 question_id=NULL 复习与 PDF 路径） -->
+      <kg-sheet v-model="entryOpen" title="手录错题">
+        <text class="sheet-k">模块</text>
+        <kg-chip-row size="sm" :options="MANUAL_MODULES" wrap :model-value="entry.module" :scroll-to-selected="false" @update:model-value="(v) => (entry.module = v)" />
+        <text class="sheet-k">题干（可连选项一起粘贴，选项一行一个如「A. …」）</text>
+        <textarea v-model="entry.question" class="rp-detail entry-q" placeholder="例：下列节气中，白昼最长的是：
+A. 春分  B. 夏至  C. 秋分  D. 冬至" :maxlength="MANUAL_QUESTION_MAX" aria-label="题干" />
+        <view class="entry-ans">
+          <view class="entry-ans-col">
+            <text class="sheet-k">正确答案<text class="entry-req">*</text></text>
+            <view class="manual-row entry-row"><text v-for="L in MANUAL_LETTERS" :key="'c' + L" class="manual-opt num" :class="{ on: entry.correct.includes(L) }" role="button" :aria-pressed="entry.correct.includes(L)" @click="entry.correct = toggleLetter(entry.correct, L)">{{ L }}</text></view>
+          </view>
+          <view class="entry-ans-col">
+            <text class="sheet-k">我的答案（选填）</text>
+            <view class="manual-row entry-row"><text v-for="L in MANUAL_LETTERS" :key="'p' + L" class="manual-opt num bad" :class="{ on: entry.picked.includes(L) }" role="button" :aria-pressed="entry.picked.includes(L)" @click="entry.picked = toggleLetter(entry.picked, L)">{{ L }}</text></view>
+          </view>
+        </view>
+        <text class="sheet-k">错因（选填）</text>
+        <kg-chip-row size="sm" :options="REASONS.map((rz) => ({ label: rz, value: rz }))" :model-value="entry.reason" :scroll-to-selected="false" @update:model-value="(v) => (entry.reason = entry.reason === v ? '' : v)" />
+        <text class="sheet-k">解析 / 笔记（选填）</text>
+        <textarea v-model="entry.explanation" class="rp-detail entry-x" placeholder="复习时会显示在答案下方" :maxlength="MANUAL_EXPLANATION_MAX" aria-label="解析" />
+        <text v-if="entryErr" class="scan-note entry-err" role="alert">{{ entryErr }}</text>
+        <template #footer>
+          <view class="sheet-acts">
+            <kg-button variant="primary" size="lg" block :loading="entrySaving" @click="entrySubmit">{{ entrySaving ? '保存中…' : '加入错题本' }}</kg-button>
+            <text class="scan-note entry-hint">不用 AI、不消耗额度；手录题参与复习计划与 PDF 导出，不参与「错题重练」</text>
+          </view>
+        </template>
+      </kg-sheet>
+
+      <!-- 右下角「＋」：手录错题 / 扫描答题卡 / 卷码录入 -->
       <view v-if="tab !== 'fav' && !batchMode" class="fabmenu">
         <template v-if="fabOpen">
+          <kg-button variant="secondary" size="lg" icon="pencil-line" @click="fabOpen = false; entryOpenSheet()">手录错题</kg-button>
           <kg-button variant="secondary" size="lg" icon="scan-line" @click="fabOpen = false; scanSheetPick()">{{ scanning ? '识别中…' : '扫描答题卡' }}</kg-button>
-          <kg-button variant="secondary" size="lg" icon="pencil-line" @click="fabOpen = false; manualOpenSheet()">手动录入答案</kg-button>
+          <kg-button variant="secondary" size="lg" icon="file-text" @click="fabOpen = false; manualOpenSheet()">按卷码录入答案</kg-button>
         </template>
         <view class="fab-main" :class="{ open: fabOpen }" role="button" :aria-label="fabOpen ? '收起' : '录入错题'" @click="fabOpen = !fabOpen"><l-icon name="plus" :size="28" tone="on-brand" /></view>
       </view>
@@ -567,6 +599,7 @@ import { buildReviewSnap, parseReviewSnap, reviewElapsedSecs } from '../../revie
 import { nextReviewText, reviewSummary, reviewVerdict, streakProgressText } from '../../review-summary.js';
 import { reviewOptions, reviewOptionsFull } from '../../review-opts.js';
 import { redoSkippedNote } from '../../book-redo-skipped.js';
+import { MANUAL_MODULES, MANUAL_LETTERS, MANUAL_QUESTION_MAX, MANUAL_EXPLANATION_MAX, emptyManualEntry, toggleLetter, manualEntryError, manualEntryBody, manualSavedToast } from '../../book-manual-entry.js';
 import { inlineSkipNote } from '../../paper-inline-note.js';
 import { scanPageLabel, scanPagesNote, scanDupNote, paperSubmittedNote, recordScanPage } from '../../paper-scan-pages.js';
 import { scanRowJumpable, scanRowKey, findScanMistake, pageNFor } from '../../paper-scan-jump.js';
@@ -634,6 +667,14 @@ export default {
       scanOpen: false,
       scanResult: null,
       scanAcc: {},
+      entryOpen: false,
+      entry: emptyManualEntry(),
+      entryErr: '',
+      entrySaving: false,
+      MANUAL_MODULES,
+      MANUAL_LETTERS,
+      MANUAL_QUESTION_MAX,
+      MANUAL_EXPLANATION_MAX,
       manualOpen: false,
       manualCode: '',
       manualPaper: null,
@@ -1084,7 +1125,7 @@ export default {
         }
         return;
       }
-      if (this.batchMode || this.manualOpen || this.celebrate || this.reinforce || this.aiOpen) return;
+      if (this.batchMode || this.manualOpen || this.entryOpen || this.celebrate || this.reinforce || this.aiOpen) return;
       const list = this.shownPage;
       if (!list.length) return;
       if (k === 'j' || k === 'k' || k === 'ArrowDown' || k === 'ArrowUp') {
@@ -1102,6 +1143,32 @@ export default {
       }
     },
     // #endif
+    toggleLetter,
+    entryOpenSheet() {
+      if (!this.entry.question && !this.entry.correct) this.entry = emptyManualEntry();
+      this.entryErr = '';
+      this.entryOpen = true;
+      trackEvent('manual_entry_open');
+    },
+    async entrySubmit() {
+      if (this.entrySaving) return;
+      this.entryErr = manualEntryError(this.entry);
+      if (this.entryErr) return;
+      this.entrySaving = true;
+      try {
+        const d = await request('/api/mistakes', { method: 'POST', data: manualEntryBody(this.entry, anonUid()) });
+        const tip = manualSavedToast(d && d.id, this.items);
+        this.entry = emptyManualEntry();
+        this.entryOpen = false;
+        uni.showToast({ title: tip, icon: 'none' });
+        trackEvent('manual_entry_save');
+        await this.load();
+      } catch (e) {
+        this.entryErr = (e && e.message) || '保存失败，请重试';
+      } finally {
+        this.entrySaving = false;
+      }
+    },
     manualOpenSheet() {
       this.recentPapers = uni.getStorageSync('recentPapers') || [];
       this.manualPaper = null;
@@ -1676,25 +1743,25 @@ export default {
         this.celebrateN = this.rItems.filter((q) => !q._extra && !q._requeued).length;
         this.rSummary = reviewSummary(this.rItems);
         this.nextText = nextReviewText(this.rItems);
+        this.reinforce = null;
+        this.reinforceItems = [];
         this.exitReview();
         this.celebrate = true;
         trackEvent('review_done_celebrate', 'book');
+        this.fetchReinforce();
       }
     },
     closeCelebrate() {
       this.celebrate = false;
-      this.fetchReinforce();
+      this.reinforce = null;
     },
     async fetchReinforce() {
       try {
         const d = await request('/api/reinforce/suggest?uid=' + encodeURIComponent(anonUid()));
+        if (!this.celebrate) return;
         this.reinforceItems = d.items || [];
-        if (d.picked) {
-          this.reinforce = d.picked;
-          return;
-        }
+        this.reinforce = d.picked || null;
       } catch (e) { /* 非关键路径 */ }
-      uni.showToast({ title: '本轮复习完成！', icon: 'success' });
     },
     swapReinforce() {
       const i = this.reinforceItems.findIndex((x) => x.skill === this.reinforce.skill);
@@ -1702,6 +1769,7 @@ export default {
     },
     startReinforce(item) {
       this.reinforce = null;
+      this.celebrate = false;
       uni.setStorageSync('practiceLaunch', {
         kind: 'reinforce',
         module: item.module,
@@ -2104,11 +2172,22 @@ export default {
 .manual-opt { flex: 1; text-align: center; min-height: 36px; line-height: 36px; border: 1px solid var(--line); border-radius: var(--r-xs); font-size: var(--fs-body); color: var(--ink-2); }
 .manual-opt.on { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
 .manual-codebar { margin: 0; }
+.entry-q { margin-top: 0; min-height: 112px; }
+.entry-x { margin-top: 0; min-height: 64px; }
+.entry-ans { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-12); }
+.entry-ans-col { min-width: 0; }
+.entry-row { border-bottom: 0; padding: 0; }
+.entry-req { color: var(--bad); margin-left: 2px; }
+.manual-opt.bad.on { background: var(--bad); border-color: var(--bad); }
+.entry-err { color: var(--bad); margin-top: var(--sp-8); }
+.entry-hint { text-align: center; margin: 0; }
 .rp-detail { width: 100%; box-sizing: border-box; min-height: 88px; background: var(--fill); border-radius: var(--r-sm); padding: var(--sp-12); font-size: var(--fs-sub); color: var(--ink); margin-top: var(--sp-12); }
 .cb { display: flex; flex-direction: column; align-items: center; gap: var(--sp-8); padding: var(--sp-16) 0; text-align: center; }
 .cb-s { font-size: var(--fs-sub); color: var(--ink-2); line-height: var(--lh-sub); }
 .cb-next { color: var(--ink); font-weight: 500; }
 .rf { display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-8) 0; }
+.rf-inline { border-top: 1px solid var(--line); padding-top: var(--sp-12); }
+.rf-k { font-size: var(--fs-sub); color: var(--ink-3); }
 .rf-name { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); }
 .rf-meta { font-size: var(--fs-sub); color: var(--ink-3); line-height: var(--lh-sub); }
 .rf-row2 { display: flex; justify-content: center; gap: var(--sp-16); }
