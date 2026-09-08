@@ -9,15 +9,16 @@
         <kg-button variant="text" size="sm" @click="exitReview">退出复习</kg-button>
       </view>
       <view class="q" :style="qStyle">{{ cur.question_text }}</view>
-      <view v-if="curLetter" class="opts">
+      <view v-if="curLetter" class="opts" :class="{ full: curOptFull }">
         <view
-          v-for="o in ['A', 'B', 'C', 'D']"
-          :key="o"
-          class="opt num"
-          :class="optClass(o)"
+          v-for="o in curOpts"
+          :key="o.k"
+          class="opt"
+          :class="[curOptFull ? 'full' : 'num', optClass(o.k)]"
           role="button"
-          @click="pick(o)"
-        >{{ o }}</view>
+          :aria-label="o.t ? o.k + '. ' + o.t : o.k"
+          @click="pick(o.k)"
+        ><text class="opt-k">{{ o.k }}</text><text v-if="o.t" class="opt-t" :style="optStyle">{{ o.t }}</text></view>
       </view>
       <view v-if="answered">
         <view class="verdict" :class="wasCorrect ? 'good' : 'badv'">
@@ -32,7 +33,7 @@
         </view>
         <view :style="optStyle"><rich-text :nodes="curHtml" /></view>
         <view class="sim-rows">
-          <kg-button v-if="!wasCorrect && cur.module && !cur._extra" variant="text" size="md" block @click="similarFromReview">还不稳？练 3 道同类题巩固 ›</kg-button>
+          <kg-button v-if="!wasCorrect && similarableReview && !cur._extra" variant="text" size="md" block @click="similarFromReview">还不稳？练 3 道同类题巩固 ›</kg-button>
           <kg-button v-if="askableReview" variant="text" size="md" block aria-label="看不懂？AI 详解本题" @click="askFromReview">看不懂？AI 详解本题 ›</kg-button>
           <kg-button v-if="reviewAskSeen" variant="text" size="md" block aria-label="回看 AI 详解" @click="openSeenAsk">回看 AI 详解 ›</kg-button>
         </view>
@@ -541,11 +542,14 @@ import { qStatLine } from '../../q-stat.js';
 import { fontSizes, normFontLv } from '../../font-size.js';
 import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
 import { askQid, findAskSid } from '../../ask-link.js';
-import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid, reviewAskAnswer } from '../../review-similar.js';
+import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid, reviewAskAnswer, similarSubmodule, hasSimilarPool } from '../../review-similar.js';
 import { buildReviewSnap, parseReviewSnap } from '../../review-snap.js';
 import { reviewSummary } from '../../review-summary.js';
+import { reviewOptions, reviewOptionsFull } from '../../review-opts.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
+// 只描述作答形式、不是题型/考点的 question_type（时政题库存的是「单选」）：标签退回模块名
+const ANSWER_FORMATS = ['单选', '多选', '判断', '不定项'];
 
 function extractLetter(s) {
   const m = /[A-D]+/.exec(String(s || '').toUpperCase());
@@ -640,7 +644,16 @@ export default {
       return !!(this.filterMod || this.kpFilter || this.kp3Filter || this.srcFilter || this.rzFilter || this.pidFilter);
     },
     askableReview() {
-      return !!askPrefill(this.cur && this.cur.question_text, null);
+      return !!askPrefill(this.cur && this.cur.question_text, this.cur && this.cur.options);
+    },
+    similarableReview() {
+      return hasSimilarPool(this.cur);
+    },
+    curOpts() {
+      return reviewOptions(this.cur);
+    },
+    curOptFull() {
+      return reviewOptionsFull(this.curOpts);
     },
     reviewAskSeen() {
       void this.askSeenTick;
@@ -1129,7 +1142,7 @@ export default {
     // 题型标签统一粒度：去掉「模块名-」前缀（历史数据两种格式并存），无题型时用模块名
     tagName(m) {
       const qt = m.question_type || '';
-      if (!qt) return this.modName(m.module);
+      if (!qt || ANSWER_FORMATS.includes(qt)) return this.modName(m.module);
       return qt.includes('-') ? qt.split('-').slice(1).join('-') : qt;
     },
     unfavItem(f) {
@@ -1394,10 +1407,9 @@ export default {
     },
     async appendSimilar(m) {
       // 答错自动加推：本轮末尾追加最多 2 道同类新题（不写 SRS，不影响复习记录）
-      if (m._simFetched || m._requeued || !m.module) return;
+      if (m._simFetched || m._requeued || !hasSimilarPool(m)) return;
       m._simFetched = true;
-      const qt = m.question_type || '';
-      const sub = qt.includes('-') ? qt.split('-').slice(1).join('-') : null;
+      const sub = similarSubmodule(m);
       try {
         let q = '/api/questions?limit=2&uid=' + encodeURIComponent(anonUid()) + '&module=' + encodeURIComponent(m.module);
         if (sub) q += '&submodule=' + encodeURIComponent(sub);
@@ -1453,7 +1465,7 @@ export default {
       uni.switchTab({ url: '/pages/ask/ask' });
     },
     askFromReview() {
-      const text = askPrefill(this.cur.question_text, null);
+      const text = askPrefill(this.cur.question_text, this.cur.options);
       if (!text) return;
       trackEvent('review_ask_click', this.cur.module || '');
       uni.setStorageSync('redoQuestion', text);
@@ -1513,6 +1525,7 @@ export default {
       this.reviewing = false;
       this.clearReviewSnap();
       this.load();
+      uni.pageScrollTo({ scrollTop: 0, duration: 0 });
     },
     optClass(o) {
       if (!this.answered) return this.curMulti && (this.picked || '').includes(o) ? 'sel' : '';
@@ -1581,7 +1594,7 @@ export default {
       uni.switchTab({ url: '/pages/ask/ask' });
     },
     redo(m) {
-      const text = askPrefill(m.question_text, null);
+      const text = askPrefill(m.question_text, m.options);
       if (!text) return;
       uni.setStorageSync('redoQuestion', text);
       const qid = askQid(m.question_id);
@@ -1596,12 +1609,10 @@ export default {
     reinforceFromMistake(m) {
       const qt = m.question_type || '';
       const sub = qt.includes('-') ? qt.split('-').slice(1).join('-') : qt || null;
-      this.startReinforce({ module: m.module, submodule: sub, tag3: m.tag3, mastery: null });
+      this.startReinforce({ module: m.module, submodule: similarSubmodule(m) || sub, tag3: m.tag3, mastery: null });
     },
     practiceSimilar(m) {
-      const qt = m.question_type || '';
-      const sub = qt.includes('-') ? qt.split('-').slice(1).join('-') : null;
-      uni.setStorageSync('practicePreset', { module: m.module, submodule: sub, count: 3 });
+      uni.setStorageSync('practicePreset', { module: m.module, submodule: similarSubmodule(m), count: 3 });
       uni.navigateTo({ url: '/pages/practice/practice' });
     },
     openReport(m) {
@@ -1632,7 +1643,7 @@ export default {
     itemSheet(m) {
       const acts = [];
       if (m.tag3) acts.push({ t: '同考点强化 5 道新题', f: () => this.reinforceFromMistake(m) });
-      if (m.module) acts.push({ t: '练3道同类', f: () => this.practiceSimilar(m) });
+      if (hasSimilarPool(m)) acts.push({ t: '练3道同类', f: () => this.practiceSimilar(m) });
       if (m.question_id) acts.push({ t: '题目纠错', f: () => this.openReport(m) });
       if (m.question_id) acts.push({ t: '分享给队友', f: () => this.shareToMates(m) });
       if (!m.mastered) acts.push({ t: '标为已掌握', f: () => this.master(m) });
@@ -1911,6 +1922,10 @@ export default {
 .opt.bad { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); }
 .opt.dim { opacity: 0.4; }
 .opt.sel { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-text); }
+.opts.full { flex-direction: column; }
+.opt.full { flex: none; box-sizing: border-box; justify-content: flex-start; text-align: left; gap: var(--sp-8); padding: var(--sp-8) var(--sp-12); }
+.opt.full .opt-k { flex: none; font-weight: var(--fw-semibold); }
+.opt.full .opt-t { flex: 1; min-width: 0; line-height: var(--lh-body); word-break: break-word; }
 .verdict { font-size: var(--fs-body); font-weight: 600; margin: var(--sp-8) 0; line-height: var(--lh-body); }
 .verdict.good { color: var(--ok-strong); }
 .verdict.badv { color: var(--bad); }

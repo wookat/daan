@@ -12,13 +12,14 @@ const Q = {
 };
 
 describe('similarItemFromQuestion', () => {
-  it('保留 question_id/question_type 并拼接题干选项', () => {
+  it('保留 question_id/question_type；结构化选项有效时题干只留 stem、options 原样保留（R514）', () => {
     const it_ = similarItemFromQuestion(Q);
     expect(it_._extra).toBe(true);
     expect(it_.question_id).toBe(646);
     expect(it_.question_type).toBe('常识判断-历史');
     expect(it_.module).toBe('changshi');
-    expect(it_.question_text).toBe('下列有关中国古代史的说法正确的是？\nA.甲 B.乙 C.丙 D.丁');
+    expect(it_.question_text).toBe('下列有关中国古代史的说法正确的是？');
+    expect(it_.options).toEqual({ A: '甲', B: '乙', C: '丙', D: '丁' });
     expect(it_.correct_answer).toBe('B');
     expect(it_.explanation).toBe('解析文本');
   });
@@ -48,7 +49,7 @@ describe('mistakeRecFromExtra', () => {
       question_id: 646,
       module: 'changshi',
       question_type: '常识判断-历史',
-      question_text: item.question_text,
+      question_text: '下列有关中国古代史的说法正确的是？\nA.甲 B.乙 C.丙 D.丁',
       user_answer: 'A',
       correct_answer: 'B',
       explanation: '解析文本',

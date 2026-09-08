@@ -70,14 +70,21 @@ async def _validation_handler(request: Request, exc: RequestValidationError):
     return await request_validation_exception_handler(request, exc)
 
 
+@app.exception_handler(OverflowError)
 @app.exception_handler(ValueError)
 @app.exception_handler(TypeError)
 async def _bad_param_handler(request: Request, exc: Exception):
     """/api 端点内残余裸 int()/float() 遇畸形参数统一 JSON 400（与 deps.as_int 同文案），
-    非 /api 路径保留原 500 语义供监控上报。"""
-    if not request.url.path.startswith("/api/"):
-        raise exc
-    return JSONResponse({"detail": "参数格式错误"}, status_code=400)
+    非 /api 路径保留原 500 语义供监控上报。
+
+    OverflowError 来自 pydantic 放行的任意精度 int 绑定 SQLite INTEGER（>2^63−1 的
+    year/id）：/api 同 400；公开 HTML 页族按「不存在」回品牌 404。"""
+    path = request.url.path
+    if path.startswith("/api/"):
+        return JSONResponse({"detail": "参数格式错误"}, status_code=400)
+    if isinstance(exc, OverflowError) and path.startswith(("/tiku", "/s/", "/p/")):
+        return seo._not_found("页面不存在")
+    raise exc
 
 
 _ETAG_TYPES = ("text/html", "xml", "text/plain")

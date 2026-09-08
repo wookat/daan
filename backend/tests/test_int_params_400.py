@@ -148,3 +148,40 @@ def test_bad_param_handler_only_masks_api_paths():
     assert resp.status_code == 400 and resp.body == b'{"detail":"' + BAD.encode() + b'"}'
     with pytest.raises(ValueError):
         asyncio.run(_bad_param_handler(req("/tiku/q/1"), ValueError("x")))
+
+
+BIG = "99999999999999999999"
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        f"/api/question/{BIG}",
+        f"/api/questions?module=yanyu&year={BIG}",
+        f"/api/exam/papers?year={BIG}",
+        f"/api/mock/events/{BIG}",
+    ],
+)
+def test_int_overflow_api_400(client, path):
+    """R511：pydantic 放行 >2^63−1 的 int，绑定 SQLite 抛 OverflowError（此前 500）→ JSON 400。"""
+    r = client.get(path)
+    assert r.status_code == 400, r.text
+    assert r.json() == {"detail": BAD}
+
+
+def test_int_overflow_seo_page_404(client):
+    r = client.get(f"/tiku/q/{BIG}/")
+    assert r.status_code == 404, r.text
+    assert "text/html" in r.headers["content-type"]
+
+
+def test_bad_param_handler_overflow_non_seo_reraises():
+    import asyncio
+
+    from starlette.requests import Request
+
+    from app.main import _bad_param_handler
+
+    req = Request({"type": "http", "method": "GET", "path": "/healthz", "headers": [], "query_string": b""})
+    with pytest.raises(OverflowError):
+        asyncio.run(_bad_param_handler(req, OverflowError("x")))
