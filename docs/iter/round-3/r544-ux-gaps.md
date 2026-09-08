@@ -30,7 +30,20 @@ pytest **606**（R542 基线 599，+9 — 见上）/ ruff 0 / pyright 0；fronte
 
 ## 4. 生产（发版 + 黑盒复验）
 
-见 handoff R544 条目「生产」段（发版后回填）。
+发版 `deploy_h5.sh --skip-build`：`74a5d62a → cda7af0d`，脚本内接口回归全 200、bundle 各编码变体校验通过、Lighthouse `/` perf 0.99 / a11y 1.0 / LCP 1087 ms，`/tiku/` perf 1.0。只读核：`seed_runs.__option_order_v1 = '200'`（与走查前统计的 200 行一致）、`questions` 乱序 0、题 1046897 options `A517/B516/C515/D514`、`answer` 仍 `A`；容器 healthy、20 min 内 Traceback 0。
+
+黑盒复验（testing agent，隔离 uid `test-r544-verify-dd47d4d800`，375×812 + 1440×900，bundle `index-CBPOsyWr.js` 与生产 index.html 一致）：报告 `~/r544-verify/R544-production-verification.md`（含 30 张截图），录像 `~/screencasts/r544-cda7af0d-production/r544-cda7af0d-production-edited.mp4`。
+
+| # | 结果 | 一手 |
+| --- | --- | --- |
+| 1 收藏入口 | PASS | 待掌握 1 / 收藏 0 → 「我的收藏 0题」直落收藏 tab `kg-empty__t「还没有本机收藏」`；tabBar 无意图进入回待掌握 |
+| 2 选项顺序 | PASS | 深链练习 / 错题重练 / SEO `/tiku/q/1046897` 三处 A/B/C/D；选 B 判错自动入本（`mistakes user_answer=B correct_answer=A`）、重练选 A 判对 `reviewed {mistake 3278, streak 2}`；另 4 题屏幕 + 20 题接口键序全序 |
+| 3 提示对比度 | PASS | `.hint` computed `rgb(107,114,128)` 白底 4.83:1；点击展开正常 |
+| 4 雷达口径 | PASS | 单模块（数量 12 次 92%）四轴「未练」/「已练模块」/「继续练」；加练言语 5 全错 → 「最薄弱」/ 言语 0% 首位 / 「去补弱」；双视口截图 |
+| 5 历史合并 | PASS | 复习答 A 后历次作答恰两行「复习 A ✓ / 练习 B ✗」，重练后三行无重复；`POST /api/review/3278` body `picked:"A"`；`GET /api/attempts` 项带 `source`；`review_log` 懒迁移后列 `picked/secs/via` 存在，行 325 `via=review picked=A`、行 326 `via=answer` |
+| 回归 | PASS | 964 响应全 200、console error / unhandledrejection 0、375 无横向溢出、桌面 Tab 焦点环可见、付费 AI 请求 0；2 条 tab 图标 `ERR_ABORTED canceled` 为切视口刷新取消、非错误 |
+
+清理：41 张含 uid 表精确删 36 行，`test-r544-verify-%` LEFTOVER 0；`explain_cache` 82 行未变。未测：小程序真机、读屏、全量题库/多选选项顺序、AI/PDF。
 
 ## 5. 如实 / 风险
 

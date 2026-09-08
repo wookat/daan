@@ -5,6 +5,14 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R544 补充（testing agent）— 选项键序归一 / 复习时间线合并 / 雷达「未练」口径
+- 选项键序与答案字母**分别取证**：R544 起 `options_json` 只重排 options 键序（单大写字母键按 A–D），`questions.answer` 不动；核题 1046897 时以容器 DB `answer='A'`（517）为准，不要按显示顺序猜答案。判分截图先经顶栏菜单关「自动下一题」。
+- 历次作答合并：同一新 uid 同一题按「练习错答 → 今日复习答对 → 展开看恰两行（复习 ✓ / 练习 ✗）→ 错题重练答对 → 恰三行」顺序做，中间不要额外作答污染「恰好 N 行」断言。`POST /api/review/<mid>` body 应含 `picked`；`GET /api/attempts` 项带 `source: practice|review`。
+- `review_log` 的 `picked/secs/via` 列是**懒迁移**（首次 `_ensure_review_log` 调用时 ALTER），发版后基线 PRAGMA 可能还没有这三列，调用一次复习/attempts 后再核；`via=review` 行 `picked` 须与 POST 一致，`via=answer`（练习连带推进）行不应在 attempts 重复出现；NULL 值 ≠ 列缺失。
+- 雷达单/双模块口径：先在只练一个模块时截 375/1440（四轴「未练」`.al-val.none`、标题「已练模块」、按钮「继续练」）再练第二模块（「最薄弱」/「去补弱」）；报告列出分母（目标错答/重练也计入 answer_log）。
+- 收藏空态入口必须在**待掌握非空**前提下验收（待掌握 0 时旧逻辑也能撞对）；`kg-empty-state` 渲染后 DOM 类为 `.kg-empty__t`，不是组件名。同时核 tabBar 无意图进入回待掌握。
+- 计数分开：HTTP 非 2xx / console error / 导航取消（`ERR_ABORTED canceled=true`，切视口刷新时 tab 图标常见）三类分列，勿混。系统 `python3` 无 websocket 模块，CDP 脚本用 `/home/ubuntu/venv-kg/bin/python`；paramiko 用系统 python3。
+
 ## R422b 补充（testing agent）— 长题干 SSE 免 gzip / 含图路径已可用 / explain_cache 时间窗清理
 - **长题干 SSE 缓冲陷阱**：meta 事件 ≥512 B（题干 ≥~110 字，言语/资料题居多）时若边缘（Caddy `encode gzip`）对 `text/event-stream` 压缩，浏览器会在首字前 60–110 s 零信号、thinking 全部挤到末尾。生产 Caddyfile 已用 `@nosse not path */stream` + `encode @nosse gzip` 排除；复验口径：用 `/tmp/cdp174/holdsse422.py`（= holdsse421 + `rec.hdrs{ce,ct,cl,te}` 取 `Response.headers`）核 `hdrs.ce === null`（不是 `gzip`），再用 `performance.getEntriesByType('resource')` 里 `/api/explain/stream` 的 `encodedBodySize == decodedBodySize` 双证；thinking 判「逐秒」看 `thinking[0].t`（应 ≈ tMeta+2 s）、间隔 min/max、以及 `done 前 5 s 内 thinking 数 == 0`；`tFirstDelta` 应早于 `tDone` ≥ 数秒。之前只测短题干数量题会漏掉此类问题，回归至少各测一道 ≥150 字言语题（无 qid + 深链）。
 - 取长题干样本：`/tiku/q/235804`（2022 国考副省级 多空综合，题干 180 字，选项 预测渗透/主导贯穿/判断投射/反映覆盖，答案 A）。避免缓存只需改一个无关字（如「战争目的」→「目标」、「基础」→「基石」），识题不受影响（module yanyu / 逻辑填空）。
