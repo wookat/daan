@@ -1940,3 +1940,7 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 生产练习页 abort `POST mistakes` 后 UI 仍显示「已自动存入错题本」并写 `localStorage.offlineQueue`（离线队列设计）：用一次性 context 跑，关闭即丢；千万别在持久 profile 里跑，否则下次进站会把队列回放到生产。
 - 复习完成态：`nextReview()` 末题 → `exitReview()`（`load()` 重拉）→ 再开 celebrate sheet；判「列表是否刷新」看 sheet 打开瞬间身后 body 文本即可。sheet 里 kg-button 的文字节点被 `uni-button` 拦 pointer events，`get_by_text` 会超时，用 `locator('uni-button, button', has_text=…)`。
 - 「候选真人」错因聚合等功能项立项前先 `select error_reason,count(*) … where uid in (候选集)`——本轮全库 7 行 / 候选 4 行，数据不足就不立项，不为空视图造运营数据。
+
+## R523 经验：完成页文案 vs 服务端语义对账 + 生产单题重练取证捷径
+- 完成页/结果卡文案要与它描述的服务端字段对账：「明天优先再练」对应的 `save_mistake()` 重复命中分支是 `next_review=time.time()`（当天到期），同屏还有 `GET /api/review` 计数「今日还有 N 题到期待复习」——两句同屏就是矛盾证据，截 `document.body.innerText` 一次即可同时拿到。改文案时源锁要连后端绑定一起锁（`db.py` 正则到 `(time.time(), rec.get("user_answer")`），语义改了测试先红。
+- 生产只读跑到「完成页」不必走 9 题：`GET /api/mistakes/redo?limit=25&uid=…&mids=<一条 mistake_id>`（GET，带 `X-Kg-Probe: 1`）拿 items 后 `localStorage.setItem('redoSet', JSON.stringify({type:'object', data: items}))`（uni H5 storage 形态，`getStorageSync` 会解包 `data`），再 `goto #/pages/practice/practice` 即「1/1」；末题选完后 `locator("uni-button, button", has_text="完成")` `count()` >0 才点（两视口本轮均出现，脚本按 count 分支不要硬等）。非 GET 仍全 abort，完成页 `redoReport` 由本地 `_picked` 算出，与落库无关。
