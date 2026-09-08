@@ -1944,3 +1944,10 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 ## R523 经验：完成页文案 vs 服务端语义对账 + 生产单题重练取证捷径
 - 完成页/结果卡文案要与它描述的服务端字段对账：「明天优先再练」对应的 `save_mistake()` 重复命中分支是 `next_review=time.time()`（当天到期），同屏还有 `GET /api/review` 计数「今日还有 N 题到期待复习」——两句同屏就是矛盾证据，截 `document.body.innerText` 一次即可同时拿到。改文案时源锁要连后端绑定一起锁（`db.py` 正则到 `(time.time(), rec.get("user_answer")`），语义改了测试先红。
 - 生产只读跑到「完成页」不必走 9 题：`GET /api/mistakes/redo?limit=25&uid=…&mids=<一条 mistake_id>`（GET，带 `X-Kg-Probe: 1`）拿 items 后 `localStorage.setItem('redoSet', JSON.stringify({type:'object', data: items}))`（uni H5 storage 形态，`getStorageSync` 会解包 `data`），再 `goto #/pages/practice/practice` 即「1/1」；末题选完后 `locator("uni-button, button", has_text="完成")` `count()` >0 才点（两视口本轮均出现，脚本按 count 分支不要硬等）。非 GET 仍全 abort，完成页 `redoReport` 由本地 `_picked` 算出，与落库无关。
+
+## R524 经验：完成页「薄弱考点 → 强化 5 道新题」死入口取证 + `mids=` 回包顺序
+- 「强化 5 道新题」类 CTA 的真判据是**点击后的请求与回包**，不是卡是否渲染：`page.on('response')` 抓 `mode=reinforce` 的 URL + `items` 数 + 随后的 toast（`uni-toast` / `.uni-toast__content` 文本），改前时政组恒 `items:[]` + 「该考点暂无新题」。回包 0 条时 `_reinforce_log_add` 不触发，`reinforce_log` 行数不变**不能**当「未写入」证据（R516 判据仍是网络层拦下改普通 GET）。
+- 池口径核法：先 `grep -n "shizheng" backend/app/db.py` 看 `reinforce_questions()` 有无分支，再在生产库只读 `select count(*) from questions where module='时政'`（0 行）——「域不匹配」与「数据稀缺」要分开写。
+- 直打源站 `curl https://kaogong-origin…/api/questions?mode=reinforce` 无浏览器 UA 会 403（边缘规则），(c) 里会出现 `probe=1` 的 403 行，是本机探针不是真人。
+- `GET /api/mistakes/redo?mids=a,b,c` 回包顺序按 `COALESCE(next_review, created_at), created_at DESC`（与不带 `mids` 一致），不是参数顺序；断言顺序时按 `mistake_id` 集合 + 服务端排序核，勿按勾选顺序。
+- 探针脚本 `~/r524/prod_sz_weakspot.py <375|1440> <mids> <tag>`：redo → 写 `redoSet` → 逐题选错项 → 完成页抓 `.sec-t` 列表 + `.wr-row` CTA → 点击并抓 reinforce 回包/toast；改后期望 `CTA_ABSENT` + `REINFORCE_REQ []`。
