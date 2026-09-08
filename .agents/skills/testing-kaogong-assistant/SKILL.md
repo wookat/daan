@@ -1931,3 +1931,12 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 旧基线对照法：`git worktree add /tmp/base <old-sha>` + 把新测试文件拷进去跑 → 预期 fail 即证明旧代码缺此行为；结果**不是**当前分支回归，报告里写清是对照，跑完 `git worktree remove`。
 - 后端加返回形态（如 redo 开始返回 `_sz` 题）要顺手核**小程序端**同页是否有 `_sz` 分支：`miniapp-native/.../practice.ts` 之前一律 `q.id`，`toPQ()` 置空 `id` 即让 wxml `wx:if="{{cur.id}}"` 与 ts `if (!q.id)` 门一起 fail-closed；小程序门只有 `npm run typecheck` + `npm run lint`（无单测），真机/开发者工具另算。
 - pyright 门在 `~/r521/gate_backend.out` 里曾是 `pyright: command not found`（裸 `pyright`）——那不算过；必须 `cd backend && npx -y pyright app` 看到 `0 errors` 才写「pyright 0」。
+
+## R522 经验：时政（`_sz`）作答闭环本地一手 + 生产只读对账的分工
+- **要证「作答后落库」就本地起服务**：`cd backend && DB_PATH=~/rNNN/app.db IMPORT_TOKEN=x ADMIN_TOKEN=x LLM_API_KEY=x LLM_BASE_URL=http://localhost:1/v1 KG_BOOT_QUIET_S=0 python3 -m uvicorn app.main:app --port 8522`，Python `sqlite3` 直接种 `shizheng_questions` + NULL-qid `mistakes`（题干首行 = `question`），本机 Chrome CDP 新 context 注入 `anonUid` 后放行 POST；生产只做同路径 abort 抓请求体 + `mode=ro` 审前后对账。两边分别写清「本地落库」vs「生产只有请求体」。
+- 本地错题本没有 `.modchips`（单模块时不渲染 chip 行），入口用 `pg.locator('.entry', has_text='错题重练')`；练习页选项是 `.kg-opt`；末题选对会**直接进完成态**（无「完成」按钮），选错才有「完成」——脚本先 `count()` 再点。
+- 完成页取证读 `.hero-s`：「错题已自动加入错题本」只在 `autoSaved` 时拼接；选对路径 hero 没有它是预期，不是缺陷。
+- 时政 `_sz` 写入侧三处（`answer_log.items[].qid` / `mistakes.question_id` / offline 兜底）全 `null`，`mid` 带 `mistake_id`；库里同时看 `questions where question like '<种子题干>%'` 应为 0，并故意让种子 `shizheng_questions.id` 撞一个已存在的 `questions.id`，证明两域不串。
+- 生产练习页 abort `POST mistakes` 后 UI 仍显示「已自动存入错题本」并写 `localStorage.offlineQueue`（离线队列设计）：用一次性 context 跑，关闭即丢；千万别在持久 profile 里跑，否则下次进站会把队列回放到生产。
+- 复习完成态：`nextReview()` 末题 → `exitReview()`（`load()` 重拉）→ 再开 celebrate sheet；判「列表是否刷新」看 sheet 打开瞬间身后 body 文本即可。sheet 里 kg-button 的文字节点被 `uni-button` 拦 pointer events，`get_by_text` 会超时，用 `locator('uni-button, button', has_text=…)`。
+- 「候选真人」错因聚合等功能项立项前先 `select error_reason,count(*) … where uid in (候选集)`——本轮全库 7 行 / 候选 4 行，数据不足就不立项，不为空视图造运营数据。
