@@ -232,7 +232,7 @@
               { label: '达成掌握', value: redoReport.mastered, tone: 'brand' },
             ]"
           />
-          <text class="sec-tip">答对的已推进复习计划<template v-if="redoReport.still">；仍错的已重置复习，明天优先再练</template></text>
+          <text class="sec-tip">答对的已推进复习计划<template v-if="redoReport.still">；仍错的已重置复习，已回到今日待复习</template></text>
           <kg-button variant="text" size="sm" @click="goReview">回错题本查看</kg-button>
         </kg-card>
         <kg-card v-else-if="!beiMode && fixReport" class="sec" clickable chevron @click="goReview">
