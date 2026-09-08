@@ -91,6 +91,16 @@ async def api_explain(
     return {**meta, "explanation": explanation}
 
 
+def _cached_qid(hit: dict, question_id: int | None) -> int | None:
+    """缓存命中时的题号：落库的 qid 优先，其次请求带的深链 qid；都没有回 None（客户端保留本地值）。"""
+    q = hit.get("qid")
+    if isinstance(q, int) and q > 0:
+        return q
+    if isinstance(question_id, int) and question_id > 0:
+        return question_id
+    return None
+
+
 @router.post("/api/explain/stream")
 async def api_explain_stream(
     request: Request,
@@ -133,6 +143,7 @@ async def api_explain_stream(
                         "user_answer": hit.get("user_answer") or user_answer,
                         "explain_key": rk,
                         "cached": True,
+                        "qid": _cached_qid(hit, question_id),
                     }
                     yield "event: meta\ndata: " + json.dumps(meta0, ensure_ascii=False) + "\n\n"
                     yield "data: " + json.dumps({"d": hit["explanation"]}, ensure_ascii=False) + "\n\n"

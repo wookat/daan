@@ -2348,6 +2348,12 @@ def import_questions(items: list[dict], batch: str | None = None) -> dict:
 
 def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: str | None = None, noqt: bool = False, uid: str | None = None, reason: str | None = None, source: str | None = None, tag3: str | None = None, mids: list[int] | None = None) -> list[dict]:
     """把待掌握错题匹配回题库原题，供刷题页重练。mids 限定为用户勾选的错题行（仍受 uid 隔离与 mastered=0 约束）。"""
+    return mistakes_redo(limit, qtype=qtype, module=module, noqt=noqt, uid=uid, reason=reason, source=source, tag3=tag3, mids=mids)["items"]
+
+
+def mistakes_redo(limit: int = 10, qtype: str | None = None, module: str | None = None, noqt: bool = False, uid: str | None = None, reason: str | None = None, source: str | None = None, tag3: str | None = None, mids: list[int] | None = None) -> dict:
+    """同 mistakes_redo_questions，另回 skipped：本次扫到但对不回题库原题（手录题 / 题已下线 / 题干已对不回时政库）而被跳过的错题行数；
+    同题干重复行不计。取够 limit 题后不再往后扫，所以 skipped 是【本次加载】口径而非全部待掌握行。"""
     conn = get_conn()
     _ensure_mistake_uid(conn)
     cl, cargs = _uid_clause(uid)
@@ -2382,6 +2388,7 @@ def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: s
     ).fetchall()
     out = []
     seen = set()
+    skipped = 0
     for r in rows:
         full = (r["question_text"] or "").strip()
         head = full.split("\n")[0].strip()
@@ -2437,6 +2444,7 @@ def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: s
                 q = c
                 break
         if not q:
+            skipped += 1
             continue
         d = dict(q)
         d["options"] = json.loads(d.get("options") or "{}")
@@ -2445,7 +2453,7 @@ def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: s
         if len(out) >= limit:
             break
     conn.close()
-    return out
+    return {"items": out, "skipped": skipped}
 
 
 def _shizheng_redo_item(conn, head: str) -> dict | None:

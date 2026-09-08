@@ -220,7 +220,7 @@ def api_mistakes_redo(limit: int = 10, qtype: str | None = None, module: str | N
     if t3 is not None and t3 not in taxonomy.topic_index():
         raise HTTPException(400, "无效的考点")
     ids = _parse_redo_mids(mids)
-    return {"items": db.mistakes_redo_questions(clamp_limit(limit, 25), qtype=qtype, module=module, noqt=bool(noqt), uid=uid, reason=rz, source=src, tag3=t3, mids=ids)}
+    return db.mistakes_redo(clamp_limit(limit, 25), qtype=qtype, module=module, noqt=bool(noqt), uid=uid, reason=rz, source=src, tag3=t3, mids=ids)
 
 _REPORT_REASONS = {"答案有误", "题目有错字/乱码", "选项有问题", "图片不清晰/缺失", "解析有误", "其他"}
 

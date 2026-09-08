@@ -38,6 +38,7 @@ import {
   readPendingSession,
 } from '../../utils/practice-progress';
 import type { PendingSession, ProgressQuestion } from '../../utils/practice-progress';
+import { redoSkippedNote } from '../../utils/redo-note';
 import { imgUrl } from '../../utils/request';
 import { kpChain, qStatLine, sourceLabel } from '../../utils/q-stat';
 import { modName, recordStat, streakDays } from '../../utils/stats';
@@ -111,6 +112,7 @@ interface LaunchArgs {
   region: string;
   adaptive: boolean;
   ptitle: string;
+  skipped: number;
 }
 
 Page({
@@ -213,6 +215,7 @@ Page({
       region: realFromQuery ? dec(query.region) : String(wx.getStorageSync('realRegion') || ''),
       adaptive: query.adaptive === '1' || (!!query.tag3 && query.adaptive !== '0'),
       ptitle: dec(query.ptitle),
+      skipped: Math.max(0, Number(query.skipped) || 0),
     };
     this._args = args;
     flushOfflineQueue();
@@ -263,7 +266,7 @@ Page({
     });
     const limit = args.count || 10;
     try {
-      let d: { items: Question[] };
+      let d: { items: Question[]; skipped?: number };
       if (args.mode === 'redo') {
         d = await redoMistakesFiltered({ limit, module: args.module, qtype: args.submodule });
       } else if (args.mode === 'redoset') {
@@ -304,7 +307,11 @@ Page({
         return;
       }
       this.adopt(d.items.map(toPQ), 0, 0, 0, 0);
-      if (args.mode === 'redo' || args.mode === 'redoset') wx.showToast({ title: '错题重练开始', icon: 'none' });
+      if (args.mode === 'redo' || args.mode === 'redoset') {
+        const note = redoSkippedNote(d.items.length + (Number(d.skipped) || args.skipped), d.items.length);
+        if (note) wx.showToast({ title: '错题重练开始 · ' + note, icon: 'none', duration: 3500 });
+        else wx.showToast({ title: '错题重练开始', icon: 'none' });
+      }
       wx.setStorageSync('lastModule', args.module || '');
     } catch (e) {
       // 无网络：用已下载的离线题包（本地判分，作答记录进队列待同步）
@@ -805,7 +812,7 @@ Page({
       wrong.map((q) => ({ ...q, _picked: '', _secs: 0, _logged: false, _excl: [], optList: undefined }))
     );
     const a = this._args as LaunchArgs;
-    this.start({ ...a, mode: 'redoset', count: wrong.length, ptitle: '本组错题重练' });
+    this.start({ ...a, mode: 'redoset', count: wrong.length, ptitle: '本组错题重练', skipped: 0 });
   },
 
   // ---------- 每题社交态：收藏 / 笔记 / 讨论计数 ----------

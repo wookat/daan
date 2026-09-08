@@ -252,7 +252,7 @@ export interface RedoFilter {
   src?: string | null;
   t3?: string | null;
 }
-export function redoMistakesFiltered(f: RedoFilter): Promise<{ items: Question[] }> {
+export function redoMistakesFiltered(f: RedoFilter): Promise<{ items: Question[]; skipped?: number }> {
   let q = '/api/mistakes/redo?limit=' + (f.limit || 10) + '&uid=' + encodeURIComponent(anonUid());
   if (f.qtype) q += '&qtype=' + encodeURIComponent(f.qtype);
   if (f.module) q += '&module=' + encodeURIComponent(f.module);
@@ -260,7 +260,7 @@ export function redoMistakesFiltered(f: RedoFilter): Promise<{ items: Question[]
   if (f.rz) q += '&rz=' + encodeURIComponent(f.rz);
   if (f.src) q += '&src=' + f.src;
   if (f.t3) q += '&t3=' + encodeURIComponent(f.t3);
-  return request<{ items: Question[] }>(q);
+  return request<{ items: Question[]; skipped?: number }>(q);
 }
 
 export interface PaperInfo {
