@@ -391,6 +391,7 @@
         </template>
         <template v-else>
           <text class="scan-sum">{{ manualPaper.title || '试卷' }} · 卷码 {{ manualPaper.code }} · 共 {{ manualPaper.n }} 题 · 已选 {{ manualPickedCount }}</text>
+          <text v-if="manualPaper.n && inlineSkipNote(manualPaper.inline_n)" class="scan-note">{{ inlineSkipNote(manualPaper.inline_n) }}</text>
           <text v-if="!manualPaper.n" class="manual-empty">这张卷的题目均为时政/手录题，不参与机读判分，无需在此录入；请对照卷末参考答案核对</text>
           <view v-else class="scan-list">
             <view v-for="no in manualPaper.n" :key="no" class="manual-row">
@@ -414,6 +415,7 @@
       <kg-sheet :model-value="scanOpen && !!scanResult" :title="'对答案结果 · ' + ((scanResult && scanResult.title) || '试卷')" @update:model-value="(v) => { if (!v) scanOpen = false; }">
         <template v-if="scanResult">
           <text class="scan-sum">卷码 {{ scanResult.code }}{{ scanResult.page ? ' · 第 ' + scanResult.page + ' 页' : '' }} · 已作答 {{ scanResult.answered }}/{{ scanResult.total }} · 答对 <text class="scan-good num">{{ scanResult.correct }}</text> 题{{ scanResult.saved ? ' · 已记入做题记录' : '' }}</text>
+          <text v-if="inlineSkipNote(scanResult.inline_n)" class="scan-note">{{ inlineSkipNote(scanResult.inline_n) }}</text>
           <view class="scan-list">
             <view v-for="r in scanResult.items" :key="r.no" class="scan-row">
               <text class="scan-no num">{{ r.no }}</text>
@@ -551,6 +553,7 @@ import { buildReviewSnap, parseReviewSnap } from '../../review-snap.js';
 import { reviewSummary } from '../../review-summary.js';
 import { reviewOptions, reviewOptionsFull } from '../../review-opts.js';
 import { redoSkippedNote } from '../../book-redo-skipped.js';
+import { inlineSkipNote } from '../../paper-inline-note.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 // 只描述作答形式、不是题型/考点的 question_type（时政题库存的是「单选」）：标签退回模块名
@@ -937,6 +940,7 @@ export default {
     // #endif
   },
   methods: {
+    inlineSkipNote,
     // 登录态变化（uid 已换）：清掉上一个账号的错题/到期/掌握度/AI 分析，按当前 uid 重拉
     resetAccountState() {
       this.items = [];
@@ -1930,6 +1934,7 @@ export default {
 .ai-err { display: grid; gap: var(--sp-12); padding: var(--sp-12) 0; text-align: center; }
 .scan-sum { display: block; font-size: var(--fs-sub); color: var(--ink-3); margin: var(--sp-4) 0 var(--sp-8); }
 .manual-empty { display: block; font-size: var(--fs-sub); color: var(--ink-3); line-height: 1.6; padding: var(--sp-8) 0 var(--sp-12); }
+.scan-note { display: block; font-size: var(--fs-sub); color: var(--ink-3); line-height: 1.6; margin: 0 0 var(--sp-8); }
 .scan-good { color: var(--ok); }
 .scan-row { display: flex; align-items: center; min-height: 36px; border-bottom: 1px solid var(--line); font-size: var(--fs-sub); }
 .scan-no { width: 36px; color: var(--ink-4); }

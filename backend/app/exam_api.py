@@ -41,6 +41,7 @@ def api_export_pdf(body: dict, request: Request):
         code,
         [int(q["id"]) for q in questions if q.get("id")],
         str(body.get("title") or "自选练习卷")[:40],
+        inline_n=sum(1 for q in questions if not q.get("id")),
     )
     data = pdf_export.build_paper_pdf(
         title=str(body.get("title") or "自选练习卷")[:40],
@@ -66,6 +67,7 @@ def api_paper_info(code: str):
         "code": paper["code"],
         "title": paper.get("title"),
         "n": len(paper["question_ids"]),
+        "inline_n": paper.get("inline_n") or 0,
         "created_at": paper.get("created_at"),
     }
 
@@ -149,6 +151,7 @@ def _judge_paper(uid: str, paper: dict, picks: dict[int, str], secs: dict[int, i
         "code": paper["code"],
         "title": paper.get("title"),
         "total": len(results),
+        "inline_n": paper.get("inline_n") or 0,
         "answered": len(answered),
         "correct": sum(1 for r in answered if r["correct"]),
         "saved": bool(uid and log_items),
@@ -246,6 +249,7 @@ async def api_scan_sheet(request: Request, uid: str = Form(""), image: UploadFil
         "page": page,
         "title": paper.get("title"),
         "total": len(results),
+        "inline_n": paper.get("inline_n") or 0,
         "answered": len(answered),
         "correct": sum(1 for r in answered if r["correct"]),
         "saved": bool(uid and log_items),
