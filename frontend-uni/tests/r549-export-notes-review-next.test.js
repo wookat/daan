@@ -56,17 +56,38 @@ describe('export-confirm 「含我的错答/错因」', () => {
     expect(evalComputed('optNote', { withNotes: false, only: false, withAns: false, withSheet: true })).toBe('导出题目 + 机读答题卡');
   });
 
-  it('toggleMine 打开时若非「仅答案」则顺带打开「含解析」（批注只能落在参考答案页）', () => {
+  // 组件状态机：chip 的「亮/灭」= withNotes（含 reviewable / only / withAns 联动），toggleMine 按亮灭翻转，而非只翻 withMine。
+  function confirmState(init) {
     const m = /toggleMine\(\) \{\n([\s\S]*?)\n {4}\},/.exec(CONFIRM);
     const fn = new Function('(function(){' + m[1] + '}).call(this)');
-    const ctx = { withMine: false, only: false, withAns: false };
-    fn.call(ctx);
-    expect(ctx).toEqual({ withMine: true, only: false, withAns: true });
-    fn.call(ctx);
-    expect(ctx).toEqual({ withMine: false, only: false, withAns: true });
-    const only = { withMine: false, only: true, withAns: false };
-    fn.call(only);
-    expect(only).toEqual({ withMine: true, only: true, withAns: false });
+    const st = { reviewable: true, withAns: true, withSheet: true, only: false, withMine: true, ...init };
+    Object.defineProperty(st, 'withNotes', { get: () => evalComputed('withNotes', st) });
+    st.toggleMine = () => fn.call(st);
+    return st;
+  }
+
+  it('toggleMine 打开时若非「仅答案」则顺带打开「含解析」（批注只能落在参考答案页）', () => {
+    const st = confirmState({ withMine: false, withAns: false });
+    st.toggleMine();
+    expect([st.withMine, st.withAns, st.withNotes]).toEqual([true, true, true]);
+    st.toggleMine();
+    expect([st.withMine, st.withAns, st.withNotes]).toEqual([false, true, false]);
+    const only = confirmState({ withMine: false, only: true, withAns: false });
+    only.toggleMine();
+    expect([only.withMine, only.withAns, only.withNotes]).toEqual([true, false, true]);
+  });
+
+  it('默认开 → 关「含解析」使 chip 灭 → 单击 chip 一次即亮并勾回含解析（R549 生产复验 A① 单击边界）', () => {
+    const st = confirmState();
+    expect(st.withNotes).toBe(true);
+    st.only = false;
+    st.withAns = false; // 模板 「含解析」 chip：only = false; withAns = !withAns
+    expect(st.withNotes).toBe(false);
+    expect(st.withMine).toBe(true); // 内部仍 true，旧实现单击只翻成 false → 仍灭
+    st.toggleMine();
+    expect([st.withMine, st.withAns, st.withNotes]).toEqual([true, true, true]);
+    st.toggleMine();
+    expect([st.withMine, st.withAns, st.withNotes]).toEqual([false, true, false]);
   });
 });
 
