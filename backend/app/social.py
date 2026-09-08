@@ -814,7 +814,7 @@ def api_checkin_summary(uid: str):
             t = days.setdefault(r["d"], {"n": 0, "correct": 0})
             t["n"] += r["n"]
             t["correct"] = (t["correct"] or 0) + (r["c"] or 0)
-    total = conn.execute("SELECT COUNT(*) FROM answer_log WHERE uid=?", (u,)).fetchone()[0]
+    total = sum(d["n"] for d in days.values())
     today = _cn_now().strftime("%Y-%m-%d")
     day0 = _cn_now().replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
     cleared_today = conn.execute(
