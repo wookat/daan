@@ -52,6 +52,16 @@ def test_track_book_ask_click_whitelisted(client):
     assert _rows("utesttrack_bac") == [{"event": "book_ask_click", "source": "yanyu", "ref": "234494"}]
 
 
+def test_track_book_scan_jump_whitelisted(client):
+    # R530：对答案结果 sheet「✗」行 → 错题卡（source=卷码，ref=question_id）
+    r = client.post(
+        "/api/track",
+        json={"event": "book_scan_jump", "uid": "utesttrack_bsj", "source": "340F4B53", "ref": "112"},
+    )
+    assert r.status_code == 200
+    assert _rows("utesttrack_bsj") == [{"event": "book_scan_jump", "source": "340F4B53", "ref": "112"}]
+
+
 def test_track_nudge_funnel_events_whitelisted(client):
     for ev, ref in (("login_nudge_dismiss", None), ("push_nudge_dismiss", None), ("push_nudge_fail", "denied")):
         r = client.post("/api/track", json={"event": ev, "uid": "utesttrack_nudge", "ref": ref})
