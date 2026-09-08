@@ -460,9 +460,27 @@ export async function exportPdf(body) {
 // #endif
 
 // #ifdef H5
+// 原生 fetch / 流读取的网络层失败是浏览器英文 TypeError（Chrome「Failed to fetch」等），不经 uni.request fail 回调，
+// 这里落到与 request() 同一中文口径（api-policy.netFailMessage），上层 isNetMsg 分类不变。
+async function fetchNet(url, init) {
+  try {
+    return await fetch(url, init);
+  } catch (e) {
+    throw new Error(netFailMessage(''));
+  }
+}
+
+async function readNet(reader) {
+  try {
+    return await reader.read();
+  } catch (e) {
+    throw new Error(netFailMessage(''));
+  }
+}
+
 // 导出试卷 PDF 并触发浏览器下载（H5）。
 export async function exportPdf(body) {
-  const resp = await fetch(BASE_URL + '/api/export/pdf', {
+  const resp = await fetchNet(BASE_URL + '/api/export/pdf', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -513,7 +531,7 @@ export async function streamExplain({ file, text, userAnswer, questionId, onMeta
     if (text) fd.append('text', text);
     if (userAnswer) fd.append('user_answer', userAnswer);
     if (questionId > 0) fd.append('question_id', String(questionId));
-    const resp = await fetch(BASE_URL + '/api/explain/stream', {
+    const resp = await fetchNet(BASE_URL + '/api/explain/stream', {
       method: 'POST',
       headers: { 'X-Access-Code': getCode(), ...authHeader() },
       body: fd,
@@ -527,7 +545,7 @@ export async function streamExplain({ file, text, userAnswer, questionId, onMeta
     const dec = new TextDecoder();
     const state = { buf: '', full: '', meta: null };
     for (;;) {
-      const { done, value } = await reader.read();
+      const { done, value } = await readNet(reader);
       if (done) break;
       feedSse(dec.decode(value, { stream: true }), state, onMeta, onDelta, onThinking);
     }
@@ -741,7 +759,7 @@ export function interviewSession(id) {
 // #ifdef H5
 // H5 流式点评：onMeta({scores,total,summary}) 一次，onThinking({secs,chars}) 推理中逐秒，onDelta(fullText) 增量，onDone({session_id})。
 export async function streamInterview({ questionId, answer, durationSec, onMeta, onDelta, onThinking }) {
-  const resp = await fetch(BASE_URL + '/api/interview/answer/stream', {
+  const resp = await fetchNet(BASE_URL + '/api/interview/answer/stream', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Access-Code': getCode(), ...authHeader() },
     body: JSON.stringify({ uid: anonUid(), question_id: questionId, answer, duration_sec: durationSec || 0 }),
@@ -755,7 +773,7 @@ export async function streamInterview({ questionId, answer, durationSec, onMeta,
   const dec = new TextDecoder();
   const state = { buf: '', full: '', meta: null, done: null, errMsg: '点评失败' };
   for (;;) {
-    const { done, value } = await reader.read();
+    const { done, value } = await readNet(reader);
     if (done) break;
     feedSse(dec.decode(value, { stream: true }), state, onMeta, onDelta, onThinking);
   }
@@ -765,7 +783,7 @@ export async function streamInterview({ questionId, answer, durationSec, onMeta,
 
 // H5 中断 session 重新生成点评：onThinking({secs,chars}) 推理中，onDelta(fullText) 增量，完成返回 { review }。
 export async function streamInterviewReviewRegen({ sessionId, onDelta, onThinking }) {
-  const resp = await fetch(BASE_URL + '/api/interview/sessions/' + sessionId + '/review/stream', {
+  const resp = await fetchNet(BASE_URL + '/api/interview/sessions/' + sessionId + '/review/stream', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Access-Code': getCode(), ...authHeader() },
     body: JSON.stringify({ uid: anonUid() }),
@@ -779,7 +797,7 @@ export async function streamInterviewReviewRegen({ sessionId, onDelta, onThinkin
   const dec = new TextDecoder();
   const state = { buf: '', full: '', errMsg: '点评失败' };
   for (;;) {
-    const { done, value } = await reader.read();
+    const { done, value } = await readNet(reader);
     if (done) break;
     feedSse(dec.decode(value, { stream: true }), state, null, onDelta, onThinking);
   }
