@@ -48,6 +48,13 @@ R541 收口了「复习页第 6 次答对」的掌握反馈。同一主循环还
 - **未发版**：改动全在小程序源码，服务端 `/api/answer_log` 契约生产早已具备（R371 起）；VPS 生产仍 `74a5d62a`。
 - 小程序上真机需 macOS/Windows 微信开发者工具上传（R536-1）；本轮改动加入待上传清单（R536 / R539 / R541 / R542）。
 
+## 4b. (c) 到期项（13:14Z 只读，`~/r542/c.out`）
+
+- rev `74a5d62a`，容器 healthy 0 重启，R541 后容器 5xx/Traceback 0，源站 12:45Z 后 1124 请求 5xx 0。
+- 抓取簇 09:34Z 段仍在跑（12h 1294 行/363 IP，13h 前 14 min 547 行/239 IP），09-09 日界未到；非探针非 GET 仅 1 条 `POST /api/track`（`Cf-Connecting-Ip 140.232.64.4`，本机 6b Lighthouse）→ 真人 0。
+- redo 自然样本 0、answer_log 自然 POST 0；Caddy `zalize.com` 续期行 reload 后 ~2 h 仍 0（6 h 窗 17:17Z 满）。
+- DB `1324/360/37/38/82`、`explain_cache.qid` 非空 0、null qid 28、`max(review_streak)=2`、WAL 同字节 → 0 写入。
+
 ## 5. 如实
 
 - 小程序只有 **Node 打桩 + tsc 真码 + 本地真接口** 一手，**无真机 / 无 DevTools 运行时**，WXML/WXSS 渲染未肉眼验证。
