@@ -330,7 +330,8 @@ def api_exam_start(body: dict, request: Request):
     pinfo, ordered = _exam_paper_payload(paper)
     if len(ordered) < 5:
         raise HTTPException(400, "试卷题目不足")
-    attempt_id = db.start_exam_attempt(uid, pid, probe=auth.probe_request(request))
+    attempt_id = db.start_exam_attempt(uid, pid, probe=auth.probe_request(request),
+                                       question_ids=[i["id"] for i in ordered])
     return {"attempt_id": attempt_id, "paper": pinfo, "items": ordered}
 
 
@@ -471,9 +472,9 @@ def api_exam_submit(body: dict, request: Request):
         raise HTTPException(404, "试卷不存在")
     picks = _clean_int_map(body.get("picks") or {}, as_str=True)
     secs = _clean_int_map(body.get("secs") or {})
-    marks = _clean_marks(body.get("marks"), len(db.exam_active_qids(paper["question_ids"])))
-    judged = _judge_paper(uid, {"code": None, "title": paper["title"],
-                                "question_ids": db.exam_active_qids(paper["question_ids"])}, picks, secs,
+    qids = attempt.get("question_ids") or db.exam_active_qids(paper["question_ids"])
+    marks = _clean_marks(body.get("marks"), len(qids))
+    judged = _judge_paper(uid, {"code": None, "title": paper["title"], "question_ids": qids}, picks, secs,
                           probe=auth.probe_request(request))
     per_module: dict = {}
     for r in judged["items"]:
@@ -522,7 +523,7 @@ def api_exam_report(attempt_id: int, uid: str = ""):
     paper = db.get_exam_paper(attempt["paper_id"])
     if not paper:
         raise HTTPException(404, "试卷不存在")
-    qids = db.exam_active_qids(paper["question_ids"])
+    qids = attempt.get("question_ids") or db.exam_active_qids(paper["question_ids"])
     questions = {q["id"]: q for q in db.questions_by_ids(qids)}
     picks = {int(k): v for k, v in attempt["answers"].items()}
     smap = {int(k): v for k, v in (attempt.get("secs") or {}).items()}

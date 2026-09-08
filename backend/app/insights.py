@@ -190,9 +190,15 @@ def api_exam_rank(attempt_id: int, uid: str = ""):
     conn = db.get_conn()
     db._ensure_exam_tables(conn)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ea_paper ON exam_attempts(paper_id, submitted_at)")
-    # 同卷全体用户：每人取该卷最高分（含历史作答者，冷启动分母）；探针场次剔除，本人始终在池内
-    pool = f"paper_id=? AND submitted_at IS NOT NULL AND ({db.REAL_TRAFFIC} OR uid=?)"
-    pool_args = (attempt["paper_id"], attempt["uid"])
+    # 同卷全体用户：每人取该卷最高分（含历史作答者，冷启动分母）；探针场次剔除，本人始终在池内。
+    # 迷你模考每场随机新卷（同为 30 题百分制），池按 kind=mock 全体场次，否则恒为 1/1
+    paper = db.get_exam_paper(attempt["paper_id"])
+    if paper and paper["kind"] == "mock":
+        scope, scope_args = "paper_id IN (SELECT id FROM exam_papers WHERE kind='mock')", ()
+    else:
+        scope, scope_args = "paper_id=?", (attempt["paper_id"],)
+    pool = f"{scope} AND submitted_at IS NOT NULL AND ({db.REAL_TRAFFIC} OR uid=?)"
+    pool_args = (*scope_args, attempt["uid"])
     rows = conn.execute(
         f"SELECT uid, MAX(score) s, MIN(submitted_at) t FROM exam_attempts WHERE {pool} GROUP BY uid",
         pool_args,
@@ -218,8 +224,8 @@ def api_exam_rank(attempt_id: int, uid: str = ""):
            JOIN (SELECT uid u, MAX(score) s FROM exam_attempts
                  WHERE {pool} GROUP BY uid) b
              ON a.uid=b.u AND a.score=b.s
-           WHERE a.paper_id=? AND a.submitted_at IS NOT NULL GROUP BY a.uid""",
-        (*pool_args, attempt["paper_id"]),
+           WHERE a.{scope} AND a.submitted_at IS NOT NULL GROUP BY a.uid""",
+        (*pool_args, *scope_args),
     ).fetchall()
     conn.close()
     mod_ratios: dict[str, list[float]] = {}

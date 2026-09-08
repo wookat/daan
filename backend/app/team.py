@@ -348,9 +348,11 @@ def _full_question(qid: int) -> dict | None:
     return items[0] if items else None
 
 
-def _sharer_invite(conn, s) -> dict | None:
+def _sharer_invite(conn, s, viewer_uid: str | None) -> dict | None:
     """分享者所在小队的邀请信息（用于落地页「和 TA 组队刷题」引导）。
-    优先取分享时绑定的 team_id，否则取分享者最近加入的小队。"""
+    优先取分享时绑定的 team_id，否则取分享者最近加入的小队；分享者本人与已在队者不邀请。"""
+    if viewer_uid and viewer_uid == s["from_uid"]:
+        return None
     t = None
     if s["team_id"]:
         t = conn.execute("SELECT * FROM teams WHERE id=?", (s["team_id"],)).fetchone()
@@ -361,6 +363,8 @@ def _sharer_invite(conn, s) -> dict | None:
             (s["from_uid"],),
         ).fetchone()
     if not t:
+        return None
+    if viewer_uid and _member(conn, t["id"], viewer_uid):
         return None
     n = conn.execute("SELECT COUNT(*) FROM team_members WHERE team_id=?", (t["id"],)).fetchone()[0]
     if n >= TEAM_MAX_MEMBERS:
@@ -464,7 +468,7 @@ def api_share_detail(sid: str, uid: str = ""):
         "question": q,
         "created_at": s["created_at"],
     }
-    out["team_invite"] = _sharer_invite(conn, s)
+    out["team_invite"] = _sharer_invite(conn, s, u)
     if is_sharer or answered:
         full = _full_question(s["question_id"]) or {}
         out["question"] = {**q, "answer": full.get("answer"), "explanation": full.get("explanation")}
@@ -509,7 +513,7 @@ def api_share_answer(sid: str, body: dict, request: Request):
     )
     conn.commit()
     answers = _answers_payload(conn, s["id"])
-    team_invite = _sharer_invite(conn, s)
+    team_invite = _sharer_invite(conn, s, uid)
     conn.close()
     # 裂变埋点：分享作答同步写 answer_log（source=share）
     db.save_answer_log(uid, [{

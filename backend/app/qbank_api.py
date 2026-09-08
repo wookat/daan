@@ -9,7 +9,7 @@ from fastapi import APIRouter, Header, HTTPException, Request
 
 from . import db, taxonomy
 from .auth import probe_request
-from .deps import check_import_token
+from .deps import check_import_token, clamp_limit
 
 router = APIRouter()
 
@@ -89,7 +89,7 @@ def api_questions_export(
     x_import_token: str | None = Header(None),
 ):
     check_import_token(x_import_token)
-    return {"items": db.export_questions(offset, min(limit, 500), module, missing_only=not all)}
+    return {"items": db.export_questions(offset, clamp_limit(limit, 500), module, missing_only=not all)}
 
 
 @router.post("/api/questions/import")
@@ -132,18 +132,18 @@ def api_questions(
         return {
             "items": db.reinforce_questions(
                 uid.strip()[:64], tag3=tag3, module=module, submodule=submodule,
-                limit=min(limit, 10),
+                limit=clamp_limit(limit, 10),
             ),
             "counts": db.question_counts(),
         }
     if grouped and module == "ziliao" and not real:
         return {
-            "items": db.grouped_ziliao_questions(min(limit, 50), uid=uid),
+            "items": db.grouped_ziliao_questions(clamp_limit(limit, 50), uid=uid),
             "counts": db.question_counts(),
         }
     return {
         "items": db.random_questions(
-            module, min(limit, 50), submodule, real_only=bool(real), year=year, region=region, uid=uid,
+            module, clamp_limit(limit, 50), submodule, real_only=bool(real), year=year, region=region, uid=uid,
             adaptive=bool(adaptive), tag3=tag3,
         ),
         "counts": db.question_counts(),
