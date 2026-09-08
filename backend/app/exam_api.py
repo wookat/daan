@@ -128,7 +128,7 @@ def _persist_graded(uid: str, code: str, page: int, log_items: list[dict], wrong
     if dup_at is not None:
         return False, dup_at
     for rec in wrong:
-        db.save_mistake(rec)
+        db.save_mistake(rec, probe=probe)
     db.save_answer_log(uid[:64], log_items, probe=probe)
     return True, None
 

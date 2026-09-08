@@ -391,7 +391,7 @@ def api_save_mistake(rec: dict, request: Request):
         except ValueError as e:
             raise HTTPException(400, str(e)) from None
     rec["question_id"] = as_int(rec.get("question_id"), 0) or None
-    mid = db.save_mistake(rec)
+    mid = db.save_mistake(rec, probe=auth.probe_request(request))
     return {"id": mid}
 
 
@@ -508,7 +508,7 @@ def api_review_cur_get(uid: str = ""):
 
 
 @router.post("/api/review/{mid}")
-def api_review_record(mid: int, body: dict):
+def api_review_record(mid: int, body: dict, request: Request):
     try:
         uid = (body.get("uid") or "").strip()[:64] or None
         picked = body.get("picked")
@@ -521,6 +521,7 @@ def api_review_record(mid: int, body: dict):
             secs=min(int(secs), 86400)
             if isinstance(secs, (int, float)) and not isinstance(secs, bool) and math.isfinite(secs) and secs > 0
             else None,
+            probe=auth.probe_request(request),
         )
     except KeyError:
         raise HTTPException(404, "错题不存在") from None
