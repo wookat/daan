@@ -270,9 +270,9 @@ def _has_bindings_table(conn) -> bool:
 _ACCOUNT_UID_RE = re.compile(r"^u\d+$")
 
 
-def is_account_uid(uid: str | None) -> bool:
-    """账号态 uid（u<id>，可被枚举），区别于随机匿名 uid。"""
-    return bool(uid) and bool(_ACCOUNT_UID_RE.match(uid))
+def is_account_uid(uid: object) -> bool:
+    """账号态 uid（u<id>，可被枚举），区别于随机匿名 uid。非字符串（JSON body 里的数字/数组/对象）一律不是账号 uid。"""
+    return isinstance(uid, str) and bool(_ACCOUNT_UID_RE.match(uid))
 
 
 def owns_uid(uid: str, authorization: str | None) -> bool:

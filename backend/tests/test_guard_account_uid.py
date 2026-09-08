@@ -3,6 +3,7 @@ import json
 
 import pytest
 
+from app import auth as auth_mod
 from app import db, omr, push_api
 
 ACCOUNT_UID = "u999999"
@@ -134,6 +135,23 @@ def test_malformed_json_body_is_not_treated_as_account_uid(client):
     r = client.post("/api/mistakes", content=b"{not json", headers={"Content-Type": "application/json"})
     assert r.status_code != 403
     assert r.status_code < 500
+
+
+# ---- R519：JSON body 里 uid 为非字符串（数字/数组/对象）时守卫不得 500（生产 09-08 01:30Z 5 条 Traceback）----
+@pytest.mark.parametrize("bad_uid", [1, ["u1"], {"u": 1}, True], ids=["int", "list", "dict", "bool"])
+def test_non_string_uid_in_json_body_is_400_not_500(client, bad_uid):
+    assert auth_mod.is_account_uid(bad_uid) is False
+    body = json.dumps({"uid": bad_uid, "question_text": "x", "user_answer": "A", "correct_answer": "B"}).encode()
+    for path in ("/api/mistakes", "/api/answer_log", "/api/team/create"):
+        r = client.post(path, content=body, headers={"Content-Type": "application/json"})
+        assert r.status_code == 400, (path, r.text)
+        assert r.json()["detail"] == "uid 格式错误"
+
+
+def test_null_uid_in_json_body_left_to_endpoint(client):
+    assert auth_mod.is_account_uid(None) is False
+    r = client.post("/api/mistakes", json={"uid": None, "question_text": "x"}, headers={"Content-Type": "application/json"})
+    assert r.status_code != 403 and r.status_code < 500, r.text
 
 
 # ---- W9-A：push/subscribe 是 R348-B1 后唯一绕过守卫的 JSON 端点（表单 Content-Type 不经中间件解析）----
