@@ -1506,6 +1506,7 @@ export default {
         (launch.tag3 ? '&tag3=' + encodeURIComponent(launch.tag3) : '');
       try {
         const d = await request(q);
+        uni.hideLoading();
         if (!d.items || !d.items.length) {
           uni.showToast({ title: '该考点暂无新题，换个考点试试', icon: 'none' });
           return;
@@ -1526,9 +1527,9 @@ export default {
         this.startQTimer();
         uni.showToast({ title: '同考点强化开始：均为未做过的新题', icon: 'none', duration: 1500 });
       } catch (e) {
+        uni.hideLoading();
         uni.showToast({ title: '组题失败：' + e.message, icon: 'none' });
       } finally {
-        uni.hideLoading();
         this._starting = false;
       }
     },
