@@ -7,7 +7,7 @@ import time
 
 from fastapi import APIRouter, Header, HTTPException, Request
 
-from . import db, taxonomy
+from . import content_gate, db, taxonomy
 from .auth import probe_request
 from .deps import check_import_token, clamp_limit
 
@@ -96,15 +96,22 @@ def api_questions_export(
 def api_questions_import(body: dict, x_import_token: str | None = Header(None)):
     check_import_token(x_import_token)
     batch = "b" + time.strftime("%Y%m%d%H%M%S")
-    result = db.import_questions(body.get("items") or [], batch=batch)
+    accepted, receipt = content_gate.gate_questions(body.get("items") or [])
+    if receipt["batch_rejected"]:
+        raise HTTPException(422, {"error": "batch_rejected", "receipt": receipt})
+    result = db.import_questions(accepted, batch=batch)
+    result["receipt"] = receipt
     return result
 
 
 @router.post("/api/questions/hs_import")
 def api_questions_hs_import(body: dict, x_import_token: str | None = Header(None)):
     check_import_token(x_import_token)
-    n = db.import_hs_explanations(body.get("items") or [])
-    return {"updated": n}
+    accepted, receipt = content_gate.gate_hs(body.get("items") or [])
+    if receipt["batch_rejected"]:
+        raise HTTPException(422, {"error": "batch_rejected", "receipt": receipt})
+    n = db.import_hs_explanations(accepted)
+    return {"updated": n, "receipt": receipt}
 
 
 @router.get("/api/question_counts")
