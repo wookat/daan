@@ -62,7 +62,7 @@
             <view class="rs-row">
               <view class="rs-main">
                 <text class="rs-t">有一组未做完的练习</text>
-                <text class="rs-s">{{ practiceResume.ptitle || prModName(practiceResume.module) }} · 已做 {{ practiceResume.done }}/{{ practiceResume.total }} 题</text>
+                <text class="rs-s">{{ prLabel(practiceResume) }} · 已做 {{ practiceResume.done }}/{{ practiceResume.total }} 题</text>
               </view>
               <kg-button variant="text" size="sm" aria-label="继续未做完的练习" @click="prContinue">去继续 ›</kg-button>
               <view class="rs-x" role="button" aria-label="放弃未完成练习" @click="prDrop"><l-icon name="x" :size="16" tone="muted" /></view>
@@ -376,7 +376,7 @@ import { checkinStreak, dayKey, loadSzDaily } from '../../checkin.js';
 import { parseExamProgress, fmtLeftSecs } from '../../exam-resume.js';
 import { setBookBadge } from '../../tabbar-badge.js';
 import { adoptServerExamProgress } from '../../exam-progress-sync.js';
-import { parsePendingPractice, parseRemotePractice } from '../../practice-progress.js';
+import { parsePendingPractice, parseRemotePractice, REDO_PENDING_TITLE } from '../../practice-progress.js';
 import { parseReviewSnap } from '../../review-snap.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
@@ -751,6 +751,11 @@ export default {
     },
     prModName(m) {
       return modLabel(m) || '上次练习';
+    },
+    prLabel(r) {
+      if (r.ptitle) return r.ptitle;
+      if (r.redo) return REDO_PENDING_TITLE;
+      return this.prModName(r.module);
     },
     prContinue() {
       uni.setStorageSync('practiceLaunch', { kind: 'resume' });

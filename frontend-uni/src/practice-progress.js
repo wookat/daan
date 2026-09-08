@@ -44,7 +44,38 @@ export function parsePendingPractice(saved, now) {
     total: saved.items.length,
     module: typeof saved.lastModule === 'string' ? saved.lastModule : '',
     ptitle: typeof saved.ptitle === 'string' ? saved.ptitle : '',
+    redo: isRedoPending(saved),
   };
+}
+
+// R548：错题重练场次的 pendingSession 以 redo=1 标记（无模块、无卷名，仅靠此位与普通练习区分）
+export function isRedoPending(saved) {
+  return !!saved && (saved.redo === 1 || saved.redo === true);
+}
+
+export const REDO_PENDING_TITLE = '错题重练';
+
+// 续练卡/续练弹窗标题：按卷会话显卷名，错题重练显「错题重练」，普通练习为空（由调用方回落模块名）
+export function pendingTitle(saved) {
+  if (!saved) return '';
+  if (typeof saved.ptitle === 'string' && saved.ptitle) return saved.ptitle;
+  return isRedoPending(saved) ? REDO_PENDING_TITLE : '';
+}
+
+// 练习页运行时挂在题目上的作答态字段；重练原题集须剥掉后才能作为「再来一组」的干净母本
+const PRACTICE_RUNTIME_KEYS = ['_picked', '_secs', '_excl', '_logged', '_saved', '_mid', '_reason', '_reported'];
+
+export function stripPracticeRuntime(q) {
+  if (!q || typeof q !== 'object') return q;
+  const out = { ...q };
+  for (const k of PRACTICE_RUNTIME_KEYS) delete out[k];
+  return out;
+}
+
+// 从 pendingSession 恢复错题重练母本（_redoItems）；非重练快照返回 null
+export function redoItemsFromPending(saved) {
+  if (!isRedoPending(saved) || !Array.isArray(saved.items) || !saved.items.length) return null;
+  return saved.items.map(stripPracticeRuntime);
 }
 
 // R323：首页续练卡数据——/api/practice/resume 应答 -> {done,total,module}（无效/空/已做完返回 null）
