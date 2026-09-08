@@ -63,6 +63,11 @@ ANSWER_CONCLUSION_RE = re.compile(
     rf"|{_CONCLUSION_LEAD}[，,]?\s*{_LETTER}\s*(?:项|选项)?\s*(?:当选|正确|符合题意|为正确答案|为答案)"
 )
 _SINGLE_ANSWER_RE = re.compile(r"^[A-D]$")
+# hs 讲解内部自相矛盾（结论字母与 answer 一致，answer_letter_conflict 抓不到）：
+# 「计算结果与选项A一致，确认答案为D」比对句字母 ≠ 结论字母；「D项“集中；贩卖”」引号里的原文其实是 A 项文本。
+_HS_MATCH_LETTER_RE = re.compile(r"(?:计算)?结果与选项\s*([A-D])\s*(?:项)?一致")
+_QUOTED_OPTION_RE = re.compile(r"([A-D])\s*项\s*[“\"‘']([^”\"’'\n]{2,40})[”\"’']")
+_OPT_NORM_RE = re.compile(r"[\s；;，,、“”\"'‘’。]")
 
 PENALTY_HS_SELFCHECK = 40
 PENALTY_HS_PIPELINE_NOTE = 15
@@ -291,6 +296,46 @@ def answer_letter_conflict(row: dict) -> str | None:
     return None
 
 
+def hs_letter_inconsistent(text: str | None) -> tuple[str, str] | None:
+    """讲解中「结果与选项X一致」的 X 与其后结论字母不同时返回 (X, 结论字母)，否则 None。"""
+    m = None
+    for m in _HS_MATCH_LETTER_RE.finditer(text or ""):
+        pass
+    if not m:
+        return None
+    concluded = concluded_letter(text)
+    if concluded and concluded != m.group(1):
+        return (m.group(1), concluded)
+    return None
+
+
+def option_quote_mislabel(row: dict, text: str | None) -> list[tuple[str, str]]:
+    """解析里「X项“原文”」引用的原文与 options[X] 不符、却与另一选项 Y 完全一致 → [(X, Y)]。
+    只认整段文本相等（归一空白/标点），转述、缩写不报。"""
+    opts = {k.strip().upper(): _OPT_NORM_RE.sub("", str(v)) for k, v in _parse_options(row.get("options")).items()}
+    if len(opts) < 2:
+        return []
+    hits = []
+    for letter, quoted in _QUOTED_OPTION_RE.findall(text or ""):
+        q = _OPT_NORM_RE.sub("", quoted)
+        if not q or opts.get(letter) == q:
+            continue
+        other = next((k for k, v in opts.items() if k != letter and v == q), None)
+        if other:
+            hits.append((letter, other))
+    return hits
+
+
+def hs_self_conflict(row: dict) -> str | None:
+    """hs_explanation 内部自相矛盾：字母比对句与结论不同 / 选项引文贴错字母。命中返回信号名，否则 None。"""
+    hs = row.get("hs_explanation")
+    if hs_letter_inconsistent(hs):
+        return "letter"
+    if option_quote_mislabel(row, hs):
+        return "quote"
+    return None
+
+
 def strip_page_footers(text: str | None) -> str:
     """去掉 PDF 页脚「第 N 页共 M 页」/「-N- 20XX年…真题」及串到字段尾部的下一节标题「二. 数量关系：…」；无命中原样返回。"""
     if not text:
@@ -370,7 +415,7 @@ def score_question(row: dict) -> int:
         score -= PENALTY_HS_PIPELINE_NOTE
     if row.get("module") == "yanyu" and pseudo_zh_hits(question_text(row)) >= PSEUDO_ZH_MIN_HITS:
         score -= PENALTY_PSEUDO_ZH
-    if answer_letter_conflict(row):
+    if answer_letter_conflict(row) or hs_self_conflict(row):
         score -= PENALTY_ANSWER_CONFLICT
 
     return max(0, min(100, score))
