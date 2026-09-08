@@ -67,6 +67,7 @@ def api_paper_info(code: str):
         "code": paper["code"],
         "title": paper.get("title"),
         "n": len(paper["question_ids"]),
+        "pages": omr.sheet_pages(len(paper["question_ids"])),
         "inline_n": paper.get("inline_n") or 0,
         "created_at": paper.get("created_at"),
     }
@@ -247,6 +248,7 @@ async def api_scan_sheet(request: Request, uid: str = Form(""), image: UploadFil
     return {
         "code": rec["code"],
         "page": page,
+        "pages": omr.sheet_pages(len(qids)),
         "title": paper.get("title"),
         "total": len(results),
         "inline_n": paper.get("inline_n") or 0,

@@ -1,6 +1,5 @@
 """试卷/答题卡 PDF 生成（A4 打印排版）。"""
 import io
-import math
 import os
 import re
 import time
@@ -292,7 +291,7 @@ def _omr_sheet_pdf(rows: list[tuple[int, dict]], title: str, paper_code: str) ->
     buf = io.BytesIO()
     c = rl_canvas.Canvas(buf, pagesize=A4)
     n = len(rows)
-    pages = max(1, math.ceil(n / omr.PER_PAGE))
+    pages = omr.sheet_pages(n)
 
     def X(x):
         return x * mm
