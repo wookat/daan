@@ -307,6 +307,10 @@ def init_db():
     conn.close()
     _seed_questions()
     _seed_shizheng()
+    conn = get_conn()
+    _normalize_option_order(conn)
+    conn.commit()
+    conn.close()
 
 
 def _seed_bank_path(name: str) -> str | None:
@@ -361,7 +365,7 @@ def _seed_questions(path: str | None = None) -> int:
                     q.get("module"),
                     q.get("question_type"),
                     stem,
-                    json.dumps(q.get("options", {}), ensure_ascii=False),
+                    options_json(q.get("options", {})),
                     q.get("answer"),
                     q.get("explanation"),
                     q.get("source"),
@@ -416,7 +420,7 @@ def _seed_shizheng():
                 (
                     q.get("date"),
                     q.get("question"),
-                    json.dumps(q.get("options", {}), ensure_ascii=False),
+                    options_json(q.get("options", {})),
                     q.get("answer"),
                     q.get("explanation"),
                     q.get("source_note"),
@@ -2251,6 +2255,39 @@ def normalize_answer(raw, opts: dict | None = None) -> str:
     return "".join(letters)
 
 
+def options_json(opts) -> str:
+    """选项落库序列化：键全为单个大写字母时按 A/B/C/D 升序（多端展示按键序枚举）。"""
+    if not isinstance(opts, dict):
+        opts = {}
+    keys = list(opts)
+    if keys and all(isinstance(k, str) and len(k) == 1 and "A" <= k <= "Z" for k in keys):
+        opts = {k: opts[k] for k in sorted(keys)}
+    return json.dumps(opts, ensure_ascii=False)
+
+
+def _normalize_option_order(conn):
+    """历史题 options 键序按导入 JSON 原样落库（如 A/D/B/C），一次性重写为字母序。"""
+    _ensure_seed_tables(conn)
+    flag = "__option_order_v1"
+    if conn.execute("SELECT 1 FROM seed_runs WHERE path=?", (flag,)).fetchone():
+        return 0
+    fixed = 0
+    for table in ("questions", "shizheng_questions"):
+        rows = conn.execute(f"SELECT id, options FROM {table} WHERE options IS NOT NULL").fetchall()
+        for r in rows:
+            d = _parse_options(r["options"])
+            if not d:
+                continue
+            norm = options_json(d)
+            if norm != r["options"]:
+                conn.execute(f"UPDATE {table} SET options=? WHERE id=?", (norm, r["id"]))
+                fixed += 1
+    conn.execute(
+        "INSERT OR REPLACE INTO seed_runs (path, fingerprint, ran_at) VALUES (?,?,?)", (flag, str(fixed), time.time())
+    )
+    return fixed
+
+
 def _bad_options(opts: dict) -> bool:
     vals = [str(v).strip() for v in opts.values()]
     if len(vals) < 2 or any(not v for v in vals) or len(set(vals)) < len(vals):
@@ -2316,7 +2353,7 @@ def import_questions(items: list[dict], batch: str | None = None) -> dict:
                 q.get("module"),
                 q.get("question_type"),
                 q.get("question"),
-                json.dumps(opts, ensure_ascii=False),
+                options_json(opts),
                 answer,
                 q.get("explanation"),
                 q.get("source"),
@@ -2700,7 +2737,7 @@ def save_answer_log_detail(uid: str, items: list[dict], probe: bool = False) -> 
         if mid is None or mid in advanced:
             continue
         advanced.add(mid)
-        res = _advance_review(conn, mid, True, uid)
+        res = _advance_review(conn, mid, True, uid, via="answer")
         if res:
             reviewed.append({"mistake_id": mid, "streak": res["streak"], "mastered": res["mastered"]})
     conn.commit()
@@ -3064,16 +3101,47 @@ def daily_plan(uid: str) -> dict:
     }
 
 
+_ATTEMPT_DEDUPE_SECS = 3
+
+
 def question_attempts(uid: str, question_id: int, limit: int = 20) -> list[dict]:
+    """某题历次作答时间线：练习作答（answer_log，source='practice'）+ 复习作答（review_log，source='review'）合并倒序。
+
+    练习连带推进复习的 review_log 行（via='answer'，或历史 NULL 行与某条练习作答相隔 <3s）不重复计。"""
     conn = get_conn()
     _ensure_answer_log(conn)
+    _ensure_mistake_uid(conn)
+    _ensure_review_log(conn)
     rows = conn.execute(
         """SELECT created_at, correct, secs, picked FROM answer_log
            WHERE uid=? AND question_id=? ORDER BY created_at DESC LIMIT ?""",
         (uid, question_id, limit),
     ).fetchall()
+    items = [{**dict(r), "source": "practice"} for r in rows]
+    practice_ts = [r["created_at"] for r in rows]
+    rrows = conn.execute(
+        """SELECT r.created_at, r.correct, r.secs, r.picked, r.via FROM review_log r
+           JOIN mistakes m ON m.id = r.mistake_id
+           WHERE r.uid=? AND m.question_id=? ORDER BY r.created_at DESC LIMIT ?""",
+        (uid, question_id, limit),
+    ).fetchall()
     conn.close()
-    return [dict(r) for r in rows]
+    for r in rrows:
+        if r["via"] == "answer":
+            continue
+        if r["via"] is None and any(abs(t - r["created_at"]) < _ATTEMPT_DEDUPE_SECS for t in practice_ts):
+            continue
+        items.append(
+            {
+                "created_at": r["created_at"],
+                "correct": r["correct"],
+                "secs": r["secs"],
+                "picked": r["picked"],
+                "source": "review",
+            }
+        )
+    items.sort(key=lambda x: x["created_at"], reverse=True)
+    return items[:limit]
 
 
 def mistake_analysis_stats(uid: str) -> dict:
@@ -3579,10 +3647,28 @@ def _ensure_review_log(conn):
             uid TEXT, mistake_id INTEGER, correct INTEGER, created_at REAL)"""
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_rl_uid ON review_log(uid, created_at)")
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(review_log)")}
+    for col, ddl in [
+        ("picked", "ALTER TABLE review_log ADD COLUMN picked TEXT"),
+        ("secs", "ALTER TABLE review_log ADD COLUMN secs INTEGER"),
+        ("via", "ALTER TABLE review_log ADD COLUMN via TEXT"),
+    ]:
+        if col not in cols:
+            conn.execute(ddl)
 
 
-def _advance_review(conn, mid: int, correct: bool, uid: str | None) -> dict | None:
-    """一次复习结果推进 SRS：写 review_log（有 uid 时）、更新 streak/next_review/mastered。错题不存在返回 None。"""
+def _advance_review(
+    conn,
+    mid: int,
+    correct: bool,
+    uid: str | None,
+    picked: str | None = None,
+    secs: int | None = None,
+    via: str = "review",
+) -> dict | None:
+    """一次复习结果推进 SRS：写 review_log（有 uid 时）、更新 streak/next_review/mastered。错题不存在返回 None。
+
+    via='answer' 表示由练习 answer_log 连带推进（同一次作答已在 answer_log 有行，历次作答时间线不重复计）。"""
     cl, args = _uid_clause(uid)
     row = conn.execute(
         f"SELECT review_streak FROM mistakes WHERE id=?{cl}", (mid, *args)
@@ -3592,8 +3678,16 @@ def _advance_review(conn, mid: int, correct: bool, uid: str | None) -> dict | No
     if uid:
         _ensure_review_log(conn)
         conn.execute(
-            "INSERT INTO review_log (uid, mistake_id, correct, created_at) VALUES (?,?,?,?)",
-            (uid, mid, 1 if correct else 0, time.time()),
+            "INSERT INTO review_log (uid, mistake_id, correct, created_at, picked, secs, via) VALUES (?,?,?,?,?,?,?)",
+            (
+                uid,
+                mid,
+                1 if correct else 0,
+                time.time(),
+                normalize_answer(picked)[:8] or None,
+                int(secs) if secs else None,
+                via,
+            ),
         )
     streak = (row["review_streak"] or 0) + 1 if correct else 0
     days = REVIEW_INTERVALS_DAYS[min(streak - 1, len(REVIEW_INTERVALS_DAYS) - 1)] if correct else 1
@@ -3609,10 +3703,12 @@ def _advance_review(conn, mid: int, correct: bool, uid: str | None) -> dict | No
     return {"streak": streak, "next_review_days": days, "mastered": bool(mastered)}
 
 
-def record_review(mid: int, correct: bool, uid: str | None = None) -> dict:
+def record_review(
+    mid: int, correct: bool, uid: str | None = None, picked: str | None = None, secs: int | None = None
+) -> dict:
     conn = get_conn()
     _ensure_mistake_uid(conn)
-    res = _advance_review(conn, mid, correct, uid)
+    res = _advance_review(conn, mid, correct, uid, picked=picked, secs=secs)
     if res is None:
         conn.close()
         raise KeyError(mid)

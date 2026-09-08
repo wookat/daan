@@ -117,10 +117,10 @@ export function fetchReviewDue(): Promise<ReviewResp> {
   return request<ReviewResp>('/api/review?uid=' + encodeURIComponent(anonUid()));
 }
 
-export function postReviewRecord(mid: number, correct: boolean): Promise<ReviewRecordResp> {
+export function postReviewRecord(mid: number, correct: boolean, picked?: string): Promise<ReviewRecordResp> {
   return request<ReviewRecordResp>('/api/review/' + mid, {
     method: 'POST',
-    data: { uid: anonUid(), correct },
+    data: { uid: anonUid(), correct, picked: picked || undefined },
   });
 }
 

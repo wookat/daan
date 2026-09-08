@@ -5,3 +5,4 @@
 .kg-radar__lab { position: absolute; transform: translate(-50%, -50%); text-align: center; white-space: nowrap; line-height: 1.2; }
 .kg-radar__name { display: block; font-size: var(--fs-caption); color: var(--ink-2); font-weight: 500; }
 .kg-radar__val { display: block; font-size: var(--fs-caption); color: var(--ink); font-weight: 600; }
+.kg-radar__val.is-none { color: var(--ink-3); font-weight: 400; }

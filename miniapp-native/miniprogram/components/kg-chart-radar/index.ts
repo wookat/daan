@@ -4,9 +4,12 @@ export interface RadarAxis {
   key: string;
   name: string;
   pct: number;
+  /** 已答题数；缺省视为有数据，0 时标签显「未练」而非 0% */
+  n?: number;
 }
 
 interface LabelPos extends RadarAxis {
+  val: string;
   style: string;
 }
 
@@ -43,7 +46,11 @@ Component({
       const c = size / 2;
       const labels = axes.map((a, i) => {
         const ang = (Math.PI * 2 * i) / n - Math.PI / 2;
-        return { ...a, style: `left:${(c + labR * Math.cos(ang)).toFixed(1)}px;top:${(c + labR * Math.sin(ang)).toFixed(1)}px` };
+        return {
+          ...a,
+          val: a.n === 0 ? '未练' : `${a.pct}%`,
+          style: `left:${(c + labR * Math.cos(ang)).toFixed(1)}px;top:${(c + labR * Math.sin(ang)).toFixed(1)}px`,
+        };
       });
       this.setData({
         rings,

@@ -67,7 +67,17 @@ function fmtTs(ts: number): string {
 }
 
 function fmtAttempts(items: AttemptItem[]): string[] {
-  return items.map((a) => fmtTs(a.created_at) + ' · 选 ' + (a.picked || '—') + ' · ' + (a.correct ? '对' : '错') + (a.secs ? ' · ' + a.secs + 's' : ''));
+  return items.map(
+    (a) =>
+      fmtTs(a.created_at) +
+      ' · ' +
+      (a.source === 'review' ? '复习' : '练习') +
+      ' · 选 ' +
+      (a.picked || '—') +
+      ' · ' +
+      (a.correct ? '对' : '错') +
+      (a.secs ? ' · ' + a.secs + 's' : '')
+  );
 }
 
 const LETTERS = ['A', 'B', 'C', 'D'];
@@ -944,18 +954,18 @@ Page({
       return;
     }
     this.paintOpts(o, true);
-    this.recordReview(o === this.data.rLetter);
+    this.recordReview(o === this.data.rLetter, o);
   },
   onConfirmMulti() {
     if (this.data.answered || !this.data.picked) return;
     this.paintOpts(this.data.picked, true);
-    this.recordReview(this.data.picked === this.data.rLetter);
+    this.recordReview(this.data.picked === this.data.rLetter, this.data.picked);
   },
   onSelfJudge(e: WechatMiniprogram.TouchEvent) {
     if (this.data.answered) return;
     this.recordReview(e.currentTarget.dataset.ok === '1');
   },
-  async recordReview(correct: boolean) {
+  async recordReview(correct: boolean, picked?: string) {
     const cur = this.data.rCur;
     if (!cur) return;
     if (cur.extra) {
@@ -969,7 +979,7 @@ Page({
     this.setData({ answered: true, wasCorrect: correct, rItems, rVerdict: this.verdictFor(cur, correct, 0, 0) });
     if (!correct) this.appendSimilar(cur);
     try {
-      const res = await postReviewRecord(cur.id, correct);
+      const res = await postReviewRecord(cur.id, correct, picked);
       const idx = this.data.rIdx;
       const mastered = res.mastered === true;
       const item = this.data.rItems[idx];

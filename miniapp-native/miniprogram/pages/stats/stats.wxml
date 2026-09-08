@@ -40,12 +40,12 @@
         <view wx:else class="blk radar-flex">
           <kg-chart-radar axes="{{axes}}" size="{{184}}" />
           <view class="radar-side">
-            <text wx:if="{{weakAxes.length}}" class="rs-t">最薄弱</text>
+            <text wx:if="{{weakAxes.length}}" class="rs-t">{{weakAxes.length >= 2 ? '最薄弱' : '已练模块'}}</text>
             <view wx:for="{{weakAxes}}" wx:key="key" class="rs-row">
               <text class="rs-name">{{item.name}}</text>
               <text class="rs-pct num">{{item.pct}}%</text>
             </view>
-            <text wx:if="{{weakAxes.length}}" class="rs-link" bind:tap="onGoWeak">去补弱 ›</text>
+            <text wx:if="{{weakAxes.length}}" class="rs-link" bind:tap="onGoWeak">{{weakAxes.length >= 2 ? '去补弱' : '继续练'}} ›</text>
           </view>
         </view>
         <view wx:if="{{trendHas}}" class="blk">
