@@ -645,7 +645,10 @@ Page({
         return;
       }
       wx.setStorageSync('redoSet', d.items);
-      wx.navigateTo({ url: '/pages/practice/practice?mode=redoset&source=redo&count=' + d.items.length });
+      const skipped = Math.max(0, Number(d.skipped) || 0);
+      wx.navigateTo({
+        url: '/pages/practice/practice?mode=redoset&source=redo&count=' + d.items.length + (skipped ? '&skipped=' + skipped : ''),
+      });
     } catch (err) {
       wx.showToast({ title: '加载失败：' + (err as Error).message, icon: 'none' });
     }

@@ -1699,6 +1699,7 @@ export default {
           return;
         }
         uni.setStorageSync('redoSet', d.items);
+        uni.setStorageSync('redoNote', redoSkippedNote(d.items.length + (Number(d.skipped) || 0), d.items.length));
         uni.navigateTo({ url: '/pages/practice/practice' });
       } catch (e) {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
