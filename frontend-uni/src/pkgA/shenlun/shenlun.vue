@@ -1,6 +1,6 @@
 <template>
   <view class="page">
-    <wd-segmented :value="tabLabel" :options="tabOpts" class="seg" @change="onTabChange" />
+    <wd-segmented ref="seg" :value="tabLabel" :options="tabOpts" class="seg" @change="onTabChange" />
 
     <!-- 真题列表 -->
     <template v-if="tab === 'q' && !detail">
@@ -221,6 +221,7 @@ import { toggleQFav as qfavToggle, missingSnapIds, mergeQFavSync } from '../../s
 import { qNavState } from '../../shenlun-qnav.js';
 import { parseWordLimit, wordState } from '../../shenlun-words.js';
 import { adoptServerDraft } from '../../shenlun-draft.js';
+import { segResizeMixin } from '../../seg-resize.js';
 
 const QTYPES = ['全部', '归纳概括', '综合分析', '提出对策', '贯彻执行', '大作文'];
 const MTYPES = ['全部', '金句', '案例', '政策理论', '范文'];
@@ -231,6 +232,7 @@ const TABS = [
 ];
 
 export default {
+  mixins: [segResizeMixin],
   data() {
     return {
       QTYPES,

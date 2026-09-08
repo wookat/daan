@@ -24,7 +24,7 @@
       <template #main>
         <!-- 排序 -->
         <view class="toolbar">
-          <wd-segmented :value="sortLabel" :options="sortOpts" size="small" @change="onSortChange" />
+          <wd-segmented ref="seg" :value="sortLabel" :options="sortOpts" size="small" @change="onSortChange" />
           <text class="cnt">共 <text class="num">{{ total }}</text> 条</text>
           <view class="msg" role="button" aria-label="消息" @click="goInbox">
             <l-icon name="bell" :size="20" tone="ink-2" />
@@ -120,6 +120,7 @@
 <script>
 import { deleteOwnComment, fetchCommentInbox, fetchComments, getToken, likeComment, postComment, reportComment, request } from '../../api.js';
 import { MODULES, moduleLabel } from '../../module-meta.js';
+import { segResizeMixin } from '../../seg-resize.js';
 
 const SORT_OPTS = [
   { label: '最热', value: 'hot' },
@@ -130,6 +131,7 @@ const REPORT_REASONS = ['广告导流', '人身攻击', '违法违规', '色情�
 const AV_TONES = ['warn', 'ok', 'brand', 'bad', 'info'];
 
 export default {
+  mixins: [segResizeMixin],
   data() {
     return {
       qid: null,

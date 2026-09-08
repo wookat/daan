@@ -1,7 +1,7 @@
 <template>
   <view class="wrap">
     <!-- 顶部分段 -->
-    <wd-segmented :value="tabLabel" :options="tabOpts" class="seg" @change="onTabChange" />
+    <wd-segmented ref="seg" :value="tabLabel" :options="tabOpts" class="seg" @change="onTabChange" />
 
     <template v-if="tab === 'fav'">
       <kg-skeleton v-if="loading" preset="cards" />
@@ -135,6 +135,7 @@ import { askPrefill } from '../../ask-prefill.js';
 import { askQid, findAskSid } from '../../ask-link.js';
 import { buildFavoritesUrl, parseFavoritesOpts } from '../../favorites-url.js';
 import { MODULES, MODULE_KEYS, moduleLabel } from '../../module-meta.js';
+import { segResizeMixin } from '../../seg-resize.js';
 
 // 收藏页模块筛选项：题库 5 模块（module-meta 单一来源）+ 本地时政收藏
 const MOD_KEYS = [...MODULE_KEYS, '时政'];
@@ -144,6 +145,7 @@ const TAB_OPTS = [
 ];
 
 export default {
+  mixins: [segResizeMixin],
   data() {
     return {
       tab: 'fav',

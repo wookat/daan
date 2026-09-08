@@ -54,7 +54,7 @@ describe('R481 R410 后从未整页过审的剩余页面：字号下限与可点
 
   it('小队邀请页「登录 / 注册 ›」是 kg-button text lg；登录页「登录 / 注册」走 wd-segmented，项命中由 App.vue ::after 扩到 --hit-min', () => {
     expect(templateOf(pages.join)).toMatch(/<view class="reg-tip">\s*<kg-button variant="text" size="lg" @click="goLogin">登录 \/ 注册账号，打卡记录多端同步 ›<\/kg-button>/);
-    expect(templateOf(pages.login)).toMatch(/<wd-segmented :value="modeLabel" :options="modeOpts" class="seg" @change="onModeChange" \/>/);
+    expect(templateOf(pages.login)).toMatch(/<wd-segmented ref="seg" :value="modeLabel" :options="modeOpts" class="seg" @change="onModeChange" \/>/);
     expect(legacyHit(expect, pages.login, '.seg-item')).toBe('componentized');
     const seg = rule(styleOf(app), '.wd-segmented__item::after');
     expect(seg).toMatch(/content:\s*''/);

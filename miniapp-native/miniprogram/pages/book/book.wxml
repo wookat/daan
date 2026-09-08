@@ -274,7 +274,8 @@
     <view class="cb-t">今日复习已清零！</view>
     <view class="cb-s">{{celebrateN}} 道到期错题全部复习完成，遗忘曲线稳住了</view>
     <view wx:if="{{celebrateMastered}}" class="cb-s">达成掌握 {{celebrateMastered}} 道 · 已移到「已掌握」，不再安排复习</view>
-    <view class="cb-btn"><kg-button variant="primary" size="lg" block bind:click="onCloseCelebrate">太棒了，继续</kg-button></view>
+    <view wx:if="{{celebrateNext}}" class="cb-s cb-next">{{celebrateNext}}</view>
+    <view class="cb-btn"><kg-button variant="primary" size="lg" block bind:click="onCloseCelebrate">回错题本</kg-button></view>
   </view>
 </t-popup>
 

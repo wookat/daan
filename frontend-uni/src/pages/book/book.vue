@@ -61,8 +61,9 @@
           <text v-if="rSummary.mastered" class="cb-s">达成掌握 {{ rSummary.mastered }} 道 · 已移到「已掌握」，不再安排复习</text>
         </template>
         <text v-else class="cb-s">{{ celebrateN }} 道到期错题全部复习完成，遗忘曲线稳住了</text>
+        <text v-if="nextText" class="cb-s cb-next">{{ nextText }}</text>
       </view>
-      <template #footer><kg-button variant="primary" size="lg" block @click="closeCelebrate">太棒了，继续 ›</kg-button></template>
+      <template #footer><kg-button variant="primary" size="lg" block @click="closeCelebrate">回错题本 ›</kg-button></template>
     </kg-sheet>
 
     <!-- 复习完成后：同考点强化卡（spec-03） -->
@@ -495,6 +496,7 @@
         :count="Math.min(exportList.length, 100)"
         :sheetless="exportSheetless"
         :busy="exporting"
+        reviewable
         above-tabbar
         @close="closeExport"
         @confirm="exportMistakes"
@@ -552,6 +554,7 @@
 import { md } from '../../md.js';
 import { request, anonUid, exportPdf, scanSheet, shareCreate, trackEvent, qShareText, shareVariant, isStaleUidErr } from '../../api.js';
 import { buildBookUrl, normalizeTabPageFullPath, parseBookOpts } from '../../book-url.js';
+import { exportNote, exportNotesMap } from '../../book-export.js';
 import { setBookBadge } from '../../tabbar-badge.js';
 import { mistakePaper, paperGroups, inPaper } from '../../book-paper.js';
 import { cacheMistakes, getCachedMistakes } from '../../offline.js';
@@ -561,7 +564,7 @@ import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
 import { askQid, findAskSid } from '../../ask-link.js';
 import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid, reviewAskAnswer, similarSubmodule, hasSimilarPool } from '../../review-similar.js';
 import { buildReviewSnap, parseReviewSnap, reviewElapsedSecs } from '../../review-snap.js';
-import { reviewSummary, reviewVerdict, streakProgressText } from '../../review-summary.js';
+import { nextReviewText, reviewSummary, reviewVerdict, streakProgressText } from '../../review-summary.js';
 import { reviewOptions, reviewOptionsFull } from '../../review-opts.js';
 import { redoSkippedNote } from '../../book-redo-skipped.js';
 import { inlineSkipNote } from '../../paper-inline-note.js';
@@ -593,6 +596,7 @@ export default {
       celebrate: false,
       celebrateN: 0,
       rSummary: null,
+      nextText: '',
       reinforce: null,
       reinforceItems: [],
       rItems: [],
@@ -1218,7 +1222,10 @@ export default {
       try {
         const list = this.exportList.slice(0, 100);
         if (!list.length) throw new Error(this.exportSel ? '没有选中的错题' : '当前筛选没有错题');
+        const { with_notes: withNotes, ...pdfOpts } = opts || {};
+        const note = (m) => (withNotes ? exportNote(m) : {});
         const ids = list.filter((m) => m.question_id).map((m) => m.question_id);
+        const mistakes = exportNotesMap(list, withNotes);
         const items = list
           .filter((m) => !m.question_id && (m.question_text || '').trim())
           .map((m) => ({
@@ -1226,6 +1233,7 @@ export default {
             question: m.question_text,
             answer: extractLetter(m.correct_answer) || '',
             analysis: m.explanation || '',
+            ...note(m),
           }));
         const d = new Date();
         const title = '错题重练卷 ' + (d.getMonth() + 1) + '月' + d.getDate() + '日';
@@ -1233,7 +1241,8 @@ export default {
           title,
           question_ids: ids,
           items,
-          ...opts,
+          ...(mistakes ? { mistakes } : {}),
+          ...pdfOpts,
         });
         this.exportConfirm = false;
         this.exportSel = false;
@@ -1579,6 +1588,7 @@ export default {
         });
         this.nextDays = res.next_review_days;
         this.streak = res.streak;
+        this.cur._nextDays = res.next_review_days;
         this.cur._streak = res.streak;
         this.cur._mastered = res.mastered === true;
       } catch (e) {
@@ -1665,6 +1675,7 @@ export default {
       } else {
         this.celebrateN = this.rItems.filter((q) => !q._extra && !q._requeued).length;
         this.rSummary = reviewSummary(this.rItems);
+        this.nextText = nextReviewText(this.rItems);
         this.exitReview();
         this.celebrate = true;
         trackEvent('review_done_celebrate', 'book');
@@ -2096,6 +2107,7 @@ export default {
 .rp-detail { width: 100%; box-sizing: border-box; min-height: 88px; background: var(--fill); border-radius: var(--r-sm); padding: var(--sp-12); font-size: var(--fs-sub); color: var(--ink); margin-top: var(--sp-12); }
 .cb { display: flex; flex-direction: column; align-items: center; gap: var(--sp-8); padding: var(--sp-16) 0; text-align: center; }
 .cb-s { font-size: var(--fs-sub); color: var(--ink-2); line-height: var(--lh-sub); }
+.cb-next { color: var(--ink); font-weight: 500; }
 .rf { display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-8) 0; }
 .rf-name { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); }
 .rf-meta { font-size: var(--fs-sub); color: var(--ink-3); line-height: var(--lh-sub); }
