@@ -403,9 +403,40 @@ def api_me(authorization: str | None = Header(None)):
     return {"user": _user_payload(row)}
 
 
-# 各 uid 数据表：uid 直接可改列的表 + 有 (uid,...) 主键需去重的表
-_UID_TABLES = ["answer_log", "mistakes", "shenlun_answers", "review_log", "exam_attempts", "exam_progress"]
-_UID_PK_TABLES = ["shenlun_mat_favs", "shenlun_qfavs", "shenlun_drafts", "user_state", "question_favs", "question_notes", "fav_folders", "comment_likes", "user_profile", "reminder_prefs", "reinforce_log"]
+# 归并范围按 schema 自省：库内任何 uid / *_uid 列都归并，新增表无需登记；账号身份表除外
+_MERGE_SKIP_TABLES = frozenset({"merged_anon", "users", "auth_tokens", "zalize_bindings"})
+
+
+def _uid_columns(conn) -> list[tuple[str, str, bool]]:
+    """库内全部 (table, col, keyed)；keyed=该列参与主键或唯一索引，归并时目标 uid 同键行优先保留。"""
+    out: list[tuple[str, str, bool]] = []
+    names = [r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")]
+    for t in names:
+        if t in _MERGE_SKIP_TABLES or t.startswith("sqlite_"):
+            continue
+        cols = conn.execute(f'PRAGMA table_info("{t}")').fetchall()
+        uid_cols = [c["name"] for c in cols if c["name"] == "uid" or c["name"].endswith("_uid")]
+        if not uid_cols:
+            continue
+        keyed = {c["name"] for c in cols if c["pk"]}
+        for ix in conn.execute(f'PRAGMA index_list("{t}")').fetchall():
+            if ix["unique"]:
+                keyed.update(r["name"] for r in conn.execute(f'PRAGMA index_info("{ix["name"]}")'))
+        out.extend((t, c, c in keyed) for c in uid_cols)
+    return out
+
+
+def merge_uid_rows(conn, anon: str, target: str) -> dict[str, int]:
+    """把 anon 的行改写为 target；返回 {table.col: 改写行数}。键冲突时保留 target 原行并丢弃 anon 行。"""
+    merged: dict[str, int] = {}
+    for t, col, keyed in _uid_columns(conn):
+        if keyed:
+            cur = conn.execute(f'UPDATE OR IGNORE "{t}" SET "{col}"=? WHERE "{col}"=?', (target, anon))
+            conn.execute(f'DELETE FROM "{t}" WHERE "{col}"=?', (anon,))
+        else:
+            cur = conn.execute(f'UPDATE "{t}" SET "{col}"=? WHERE "{col}"=?', (target, anon))
+        merged[f"{t}.{col}"] = cur.rowcount
+    return merged
 
 
 @router.post("/merge_anon")
@@ -419,28 +450,7 @@ def api_merge_anon(body: dict, authorization: str | None = Header(None)):
     if re.fullmatch(r"u\d+", anon):
         raise HTTPException(400, "无效的匿名 uid")
     conn = db.get_conn()
-    # 确保相关表/列存在（兼容空库）
-    db._ensure_answer_log(conn)
-    db._ensure_mistake_uid(conn)
-    db._ensure_shenlun_answers(conn)
-    db._ensure_mat_favs(conn)
-    db._ensure_qfavs(conn)
-    db._ensure_sl_drafts(conn)
-    db._ensure_user_state(conn)
-    db._ensure_review_log(conn)
-    db._ensure_exam_tables(conn)
-    db._ensure_exam_progress(conn)
-    db._ensure_user_profile(conn)
-    db._ensure_reminder_prefs(conn)
-    db._ensure_reinforce_log(conn)
-    merged: dict[str, int] = {}
-    for t in _UID_TABLES:
-        cur = conn.execute(f"UPDATE {t} SET uid=? WHERE uid=?", (target, anon))
-        merged[t] = cur.rowcount
-    for t in _UID_PK_TABLES:
-        cur = conn.execute(f"UPDATE OR IGNORE {t} SET uid=? WHERE uid=?", (target, anon))
-        merged[t] = cur.rowcount
-        conn.execute(f"DELETE FROM {t} WHERE uid=?", (anon,))
+    merged = merge_uid_rows(conn, anon, target)
     conn.execute(
         "INSERT OR IGNORE INTO merged_anon (user_id, anon_uid, merged_at) VALUES (?,?,?)",
         (row["id"], anon, time.time()),
