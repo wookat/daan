@@ -68,6 +68,18 @@ export function paperWrongItems(items) {
   return out;
 }
 
+// 完成页错题重练入口（按卷 + 普通练习统一，与小程序「只重练本组错题」对齐）：无答错题不显示；文案随归卷态
+export function wrongRetryPlan(items, ptitle) {
+  const n = paperWrongItems(items).length;
+  if (!n) return null;
+  const paper = paperFinishState(ptitle).isPaper;
+  return {
+    n,
+    label: (paper ? '重练本卷错题（' : '只重练本组错题（') + n + ' 题）',
+    toast: paper ? '只重练本卷错题' : '只重练本组错题',
+  };
+}
+
 // 按卷练习完成页归卷：有卷名走本卷完成态，fail-closed（非字符串/空串走通用完成态）
 export function paperFinishState(ptitle) {
   if (typeof ptitle === 'string' && ptitle.trim()) {
