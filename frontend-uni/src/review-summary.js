@@ -1,5 +1,17 @@
 // 复习轮末小结统计（fail-closed 纯函数）：仅消费 item 上的 _res 首答判分留痕
 
+/** 单题作答判定文案；`mastered` 为服务端 /api/review/{mid} 回包（连对达阈值即移出复习计划，不再有「下次复习」）。 */
+export function reviewVerdict({ extra, requeued, wasCorrect, streak, nextDays, mastered }) {
+  if (extra) return wasCorrect ? '答对了，这个考法稳了 ✓' : '还没稳，仔细看讲解';
+  if (wasCorrect && mastered === true) return '答对了！连对 ' + (Number(streak) || 0) + ' 次 · 已掌握，移出复习计划 ✓';
+  const head = wasCorrect
+    ? requeued
+      ? '这次答对了，本轮已纠正 ✓'
+      : '答对了！连对 ' + (Number(streak) || 0) + ' 次'
+    : '又错了，看讲解（稍后本轮会再出现）';
+  return head + '（下次复习：' + (Number(nextDays) || 0) + ' 天后）';
+}
+
 /** rItems → 本轮小结；非数组/空返回 null。无 _res 的条目不计入对应分子分母。 */
 export function reviewSummary(rItems) {
   if (!Array.isArray(rItems) || rItems.length === 0) return null;
@@ -12,6 +24,7 @@ export function reviewSummary(rItems) {
     extra: 0,
     extraRight: 0,
     extraWrong: 0,
+    mastered: 0,
     pct: null,
   };
   for (const x of rItems) {
@@ -28,6 +41,7 @@ export function reviewSummary(rItems) {
       if (x._res === true) s.dueRight++;
       else if (x._res === false) s.dueWrong++;
     }
+    if (!x._extra && x._mastered === true) s.mastered++;
   }
   const judged = s.dueRight + s.dueWrong;
   if (judged > 0) s.pct = Math.round((s.dueRight / judged) * 100);
