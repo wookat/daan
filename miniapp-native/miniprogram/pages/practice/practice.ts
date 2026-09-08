@@ -85,6 +85,8 @@ function toPQ(q: Question | ProgressQuestion): PQuestion {
   const excl = Array.isArray(pq._excl) ? pq._excl : [];
   return {
     ...q,
+    // 时政题（_sz）的 id 属 shizheng_questions，与题库 id 撞号：置空让作答/错题/收藏/讨论/纠错/分享全部按无题号 fail-closed（H5 practice.vue 同口径）
+    id: q._sz ? null : q.id,
     _picked: pq._picked || '',
     _secs: pq._secs || 0,
     _logged: !!pq._logged,

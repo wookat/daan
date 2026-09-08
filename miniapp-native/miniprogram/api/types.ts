@@ -19,6 +19,8 @@ export interface Question {
   most_wrong?: string | null;
   image?: string | null;
   image_credit?: string | null;
+  /** 时政题（shizheng_daily / mistakes redo 回源）：id 属 shizheng_questions，不得当题库 id 用 */
+  _sz?: boolean;
 }
 
 export interface QuestionsResp {

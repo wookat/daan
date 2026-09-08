@@ -2429,15 +2429,47 @@ def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: s
                 q = c
                 break
         if not q:
-            continue
-        d = dict(q)
-        d["options"] = json.loads(d.get("options") or "{}")
+            d = _shizheng_redo_item(conn, head) if not r["question_id"] else None
+            if not d:
+                continue
+        else:
+            d = dict(q)
+            d["options"] = json.loads(d.get("options") or "{}")
         d["mistake_id"] = r["id"]
         out.append(d)
         if len(out) >= limit:
             break
     conn.close()
     return out
+
+
+def _shizheng_redo_item(conn, head: str) -> dict | None:
+    """时政错题的题号属于 shizheng_questions（写入侧 question_id 置空、题干首行=原题干），按题干回原题；
+    与 shizheng_daily 同形态并带 _sz，刷题页按时政题处理（不写 question_id、不挂社交/纠错）。"""
+    if not head:
+        return None
+    r = conn.execute("SELECT * FROM shizheng_questions WHERE question=?", (head,)).fetchone()
+    if not r:
+        return None
+    try:
+        options = json.loads(r["options"] or "{}")
+    except json.JSONDecodeError:
+        options = {}
+    expl = r["explanation"] or ""
+    if r["source_note"]:
+        expl += "\n【出处】" + r["source_note"]
+    return {
+        "id": r["id"],
+        "date": r["date"],
+        "question": r["question"],
+        "options": options,
+        "answer": r["answer"],
+        "explanation": expl,
+        "source_note": r["source_note"],
+        "module": "时政",
+        "question_type": "单选",
+        "_sz": True,
+    }
 
 
 def admin_batches() -> list[dict]:

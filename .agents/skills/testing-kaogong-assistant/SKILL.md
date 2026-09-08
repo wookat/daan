@@ -1923,3 +1923,11 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - **发版后 (c) 对不上的社交/资料表增量先按 uid 命名 + 边缘 `probe=` 标归因**：`shared_questions.from_uid` / `user_profile.uid` 为 `test-w1x-*` 且同刻 `POST share/create|profile` 带 `probe=1` → 兄弟会话造数（推断，写「未求证」）；两表无 probe 列、看板需人工剔。
 - **6b Lighthouse 单次抖动形态**：相邻两次发版（改动仅问答页横幅文案，首页无关）一次 `/` perf 0.85 / LCP 3576、一次 0.99 / 1555；a11y 一次 0.94 一次 1.00（R429 形态）。单次 WARN 不阻塞也不下结论，下一次发版或手工重跑对照后再写。
 - `r5xx_pre.sh` 类只读脚本必须经 `sshpass -e ssh $TICKETS_VPS_SSH_USER@$TICKETS_VPS_SSH_HOST bash -s < script` 在宿主跑；本机直跑会得到 `no such object: deploy-kaogong-1` 与 `MemAvailable 5.6 GB`（本机数据）——不要误当生产读数。
+
+## R521 经验：时政错题（`question_id IS NULL`）重练回源的一手核与复采
+- **「错题重练少题」先查 id 域**：时政题（`shizheng_daily` / `_sz:true`）写错题时**有意** `question_id: null`（`shizheng_questions.id` 与 `questions.id` 独立自增、数值撞号），凡是「按 `question_id` 回 `questions`」的路径（redo / reinforce / 社交 / 纠错 / 统计）对时政题天然回不到；判「丢题还是本来没题」用宿主只读脚本：`select id,question_text from mistakes where question_id is null` 取首行题干去 `shizheng_questions.question` 精确匹配（R521 27/28 命中，剩 1 行手录题）。**不要回填 `question_id`**，两个 id 域一混社交/统计就串题。
+- redo 回源后的时政对象是 `shizheng_daily` 形态（`_sz:true`、`module:'时政'`、`question_type:'单选'`、`explanation` 末尾「\n【出处】…」、保留 `mistake_id`）；探针只读 `id/mistake_id/module/_sz/answer/nopt` 就够判形态，别把 `id 118` 拿去 `GET /api/questions/118`（那是另一道题）。
+- **错题本模块筛选探针要点真 chip**：`#/pages/book/book?mod=时政` 不生效（`book-url.js parseBookOpts()` 只认内部模块 key 白名单），要 `page.locator('.modchips .kg-chip', has_text='时政').click()`；再用 `async with pg.expect_response(lambda r: '/api/mistakes/redo' in r.url)` 包住 `.entry` 点击——首版脚本只点不抓、返回体为空，改前 UI 读数就此漏掉（改前证据只能靠库查询 + 旧基线 worktree 跑新用例）。**发版前先把改前 UI 抓包跑通再发**，否则改前/改后对照缺一半。
+- 旧基线对照法：`git worktree add /tmp/base <old-sha>` + 把新测试文件拷进去跑 → 预期 fail 即证明旧代码缺此行为；结果**不是**当前分支回归，报告里写清是对照，跑完 `git worktree remove`。
+- 后端加返回形态（如 redo 开始返回 `_sz` 题）要顺手核**小程序端**同页是否有 `_sz` 分支：`miniapp-native/.../practice.ts` 之前一律 `q.id`，`toPQ()` 置空 `id` 即让 wxml `wx:if="{{cur.id}}"` 与 ts `if (!q.id)` 门一起 fail-closed；小程序门只有 `npm run typecheck` + `npm run lint`（无单测），真机/开发者工具另算。
+- pyright 门在 `~/r521/gate_backend.out` 里曾是 `pyright: command not found`（裸 `pyright`）——那不算过；必须 `cd backend && npx -y pyright app` 看到 `0 errors` 才写「pyright 0」。
