@@ -2852,3 +2852,7 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - W11-C（小程序，P2）：`stats.ts` `interface StatAxis extends RadarAxis {n}`，growth `s.n` / pstats `s.done`，`weakAxes`/`hasRadar` 改 `a.n > 0`，wxml/wxss 零 diff（`rs-row {{item.pct}}%` 已能渲染 0%）；测试落 `frontend-uni/tests/miniapp-w11-weak-axes.test.js` 4 例（`miniapp-native/.gitignore:3` 忽略 `miniprogram/**/*.js`，同 miniapp-w9/r506 惯例）。静态核对 L63/165/168/170/214 全对上、`a.pct > 0` 0 处。**运行时未核**（Linux 无微信开发者工具，真机清单已追加）。
 - 数据纪律：全部在本机临时库 `~/w11int/db/app.db` + 本机 Chrome；生产零请求；本机造数 `test-w11-int-*` 随临时库丢弃；未触发 LLM、未改配置、未部署。
 - 遗留台账：docs/iter/workflow/backlog.md「Deferred（W11 追加）」（部署后回归清单、模考交卷超时宽限需产品决策、answer_log.correct 服务端复判口径、exam source='exam' 1 行、App.vue 桌面死 CSS + cellcard 描边阴影、kg-tag nowrap 加固、kg-card raised sh-2 + 11 处静态 raised 真机、W11-C 真机清单、小程序测试落点工程债、W11-C 内容缺口成本论证、方法名教研核对、W9/W10 沿用项、流程）；详证 docs/iter/workflow/w11.md。审方被拒 14 条（KgTag/KgCard 生产 41 tag/15 卡 0 命中误报、签到口径有意设计、搜索 FTS 无慢日志、#649/#650/#498 重复等）见 w11.md §2。
+
+### W12-C 内容审计（content-human，只读，不改库）
+- 报告 `docs/iter/workflow/w12c-content-human.md`：生产 `GET /api/questions` 五模块 6 组×10 题去重 296 题（uid `test-w12-*`，零写入零 AI）。W11-C 之外的新维度：① `source='original'` 合成题占分发样本 34%，ziliao「同比增长 28%」母版 13/56 且同组成串（ziliao-5 4/10）、shuliang-0 同结构克隆对相隔 1 题（P1）；② 合成题 explanation 伪排错句 11/102 vs 真题 0/194（P1）；③ hs 引用答题参考 2/296（R8 拒收）；④ hs 数字归一后整段复用 4 题组 0.97–1.0；⑤ 小程序 practice.wxml hs/原解析未去重（H5/SEO 已）。W11-C 项复核值：尾句 213/296、无非答案字母 105/296、原解析空 15、裸排除 0。规则 R8–R14 与 `hs_import` 批次级钩子设计见报告 §4/§5，未写代码。样本与脚本在审计机 `~/w12c/`，不入库。
+

@@ -130,6 +130,15 @@
 - [ ] [h5·P3·并行会话范围] home.vue kg-hero-card label「拍题 AI 讲解 · 错题按遗忘曲线复习 · 迷你模考」仍是中点串，待 R5xx 线合入后改为一句焦点句。
 - [ ] [content·未验证] hs 方法名（关键词定位法 / 关系层级法 / 415 份数法）是否忠实花生十三体系原教材，需教研核对。
 
+## Deferred（W12-C 内容审计追加，详见 w12c-content-human.md）
+- [ ] [content·P1·分发+入库] 站内合成题（`source='original'`，样本 102/296=34%）同族成串：ziliao「同比增长 28% + 40/30/20/10 + 对联收尾」母版 13/56，`ziliao-5` 组 4/10、`ziliao-1` 4/10；shuliang-0 组 q173852/q172616 同结构克隆（选项与答案全同）相隔 1 题。建议 R12/R13 入库打 `synthetic_family`/`clone_of` 软标签，`/api/questions` 组题同 family ≤1；全库占比未测，先跑一次只读统计再定优先级。
+- [ ] [content·P1·合成题管线] 合成题 explanation 伪排错句 11/102（真题 0/194）：「A、B、D均是绝对化或无据判断。」原句 4 题（q144271/q388517/q282791/q158128）。R9 软标签 + 合成题生成 prompt 要求每个错项一句具体理由；存量 17 题（R8 2 + R10 4 + R9 11）并入既有「30 题人工评审」样本，不单独触发 AI。
+- [ ] [content·P2·入库拒收] hs 引用答题参考「与题给答案一致」(q376665)「官方解析已定位」(q265323)：R8 在 `import_hs_explanations` 前拒收（现无任何拒收路径，`hs_import` 仅回 `{updated}`），回执增 `rejected/flagged`。
+- [ ] [content·P2·入库软规则] hs 数字归一后整段复用 ratio ≥0.9（q145225/q175395/q155542/q176921 一组 0.97–1.0）：R10 `shell_dup` 软标签，同批次 ≥3 互相命中拒收重生成。
+- [ ] [miniapp·P2·真机清单] 练习页 `practice.wxml:110-128` hs 与原解析各自 `wx:if` 独立渲染，原解析被 hs 整段包含时（样本 8/296）读两遍；H5 `exp-dup.js isExplanationCovered` / SEO 已同口径，小程序补同一函数（`utils/` 新增纯函数 + kg-question-view 同改）。
+- [ ] [content·P3] 空态「暂无…」残留：小程序 report.wxml 暂无成绩报告 / inbox 暂无消息 / shenlun 暂无题目、暂无素材 / pk 暂无对手 / offline-pack 暂无题目 → 「还没有…，<下一步>」；SEO 列表页描述「花生十三方法讲解」(`seo/pages.py:102/597/696`) 与题页「花生十三方法解析」统一为「解析」。随下次触碰对应文件顺手改，不单独立项。
+- [ ] [content·未验证] `~/w12c/arith.py` 本地复算命中 8 题算式可疑（q274061/q162875/q162266/q183130/q296745/q266079/q265323/q569952），解析器误报率高未人工核实；R11 只作 fail-closed 软标签的动机，不作缺陷。
+
 ## Deferred（W11 追加，详见 w11.md §5）
 
 - [ ] [部署后回归·W11] 部署前 `git merge-base --is-ancestor f4d52d67 <deploy_rev>`；部署后 `/api/health` rev 为 W11 集成提交、`docker logs` Traceback/locked/5xx 0。W11-A：匿名 `test-w11-a1` `POST /api/team/create` + `POST /api/practice/progress` → 注册临时账号 → `merge_anon` → `/api/team/mine?uid=账号` 见队、`/api/practice/resume` 恢复；再调一次 merged 全 0；结束按 uid 精确清理 `test-w11-*` 于 teams/team_members/practice_progress/daily_set_entries/merged_anon 与临时账号（LEFTOVER 0），不动 `umteojq4sltdhorhm`。W11-B：生产 `#/pages/stats/stats` 375/1440 只读打开无报错（探针无数据 → 空态不变）。W11-C：macOS/Windows 微信开发者工具核统计页。Python 3.10 下 backend pytest 未实跑（本机 3.12）。
