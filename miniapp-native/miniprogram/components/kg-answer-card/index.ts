@@ -14,9 +14,12 @@ interface CellGroup {
   cells: Array<AnswerCell & { i: number }>;
 }
 
-function groupCells(cells: AnswerCell[]): CellGroup[] {
+/** grouped=false 时全部题号归为一组（不按 module 断行）；grouped=true 才按相邻 module 分段 */
+export function groupCells(cells: AnswerCell[], grouped = true): CellGroup[] {
+  const list = cells || [];
+  if (!grouped) return list.length ? [{ key: 'all', module: '', cells: list.map((c, i) => ({ ...c, i })) }] : [];
   const groups: CellGroup[] = [];
-  (cells || []).forEach((c, i) => {
+  list.forEach((c, i) => {
     const m = c.module || '';
     const last = groups[groups.length - 1];
     if (last && last.module === m) last.cells.push({ ...c, i });
@@ -45,8 +48,8 @@ Component({
   },
   data: { groups: [] as CellGroup[] },
   observers: {
-    cells(cells: AnswerCell[]) {
-      this.setData({ groups: groupCells(cells) });
+    'cells, grouped'(cells: AnswerCell[], grouped: boolean) {
+      this.setData({ groups: groupCells(cells, grouped) });
     },
   },
   methods: {

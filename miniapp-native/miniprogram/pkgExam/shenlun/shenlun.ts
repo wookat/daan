@@ -69,6 +69,7 @@ interface HistVM extends ShenlunHistoryItem {
 
 Page({
   data: {
+    scrollTop: 0,
     tab: 'q',
     tabOpts: TABS,
     // 题库
@@ -400,13 +401,17 @@ Page({
       this.updateWordText();
       this.syncDraft(id);
       this.loadHistory(id);
-      wx.pageScrollTo({ scrollTop: 0, duration: 0 });
+      this.scrollToTop();
     } catch (e) {
       wx.showToast({ title: '加载失败：' + (e as Error).message, icon: 'none' });
     }
   },
   backToList() {
     this.setData({ detail: null });
+  },
+  /** 页面主体是 scroll-view，wx.pageScrollTo 不作用于它；scroll-top 同值不触发，先置 1 再归 0 */
+  scrollToTop() {
+    this.setData({ scrollTop: 1 }, () => this.setData({ scrollTop: 0 }));
   },
   toggleMat() {
     this.setData({ showMat: !this.data.showMat });

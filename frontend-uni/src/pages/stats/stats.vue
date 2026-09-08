@@ -900,15 +900,16 @@ export default {
 }
 /* #endif */
 .rs-t { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-bottom: var(--sp-4); }
-.rs-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4); }
-.rs-name { font-size: var(--fs-sub); font-weight: 600; color: var(--ink); }
-.rs-pct { font-size: var(--fs-sub); color: var(--bad-strong); font-weight: 600; }
+.rs-row { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-4); }
+.rs-name { min-width: 4em; white-space: nowrap; font-size: var(--fs-sub); font-weight: 600; color: var(--ink); }
+.rs-pct { flex-shrink: 0; white-space: nowrap; font-size: var(--fs-sub); color: var(--bad-strong); font-weight: 600; }
 .radar-side :deep(.kg-btn) { margin-top: var(--sp-8); }
 .ring { position: absolute; border: 1px solid var(--line-strong); border-radius: var(--r-full); box-sizing: border-box; }
 .poly { position: absolute; inset: 0; background: var(--brand); opacity: 0.35; border-radius: 1px; }
-.axis-label { position: absolute; transform: translate(-50%, -50%); text-align: center; white-space: nowrap; }
-.al-name { display: block; font-size: var(--fs-caption); color: var(--ink); font-weight: 600; }
-.al-val { display: block; font-size: var(--fs-caption); color: var(--brand-text); }
+.axis-label { position: absolute; transform: translate(-50%, -50%); min-width: 3em; text-align: center; white-space: nowrap; }
+/* H5 全局 uni-text{white-space:pre-line} 优先级高于父级继承，须落在 text 本身；否则贴边轴标「数量」逐字竖排 */
+.al-name { display: block; white-space: nowrap; font-size: var(--fs-caption); color: var(--ink); font-weight: 600; }
+.al-val { display: block; white-space: nowrap; font-size: var(--fs-caption); color: var(--brand-text); }
 .al-val.none { color: var(--ink-3); }
 
 /* 分布条 */
