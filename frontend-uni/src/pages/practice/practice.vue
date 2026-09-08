@@ -397,7 +397,7 @@ import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 import { qStatLine, qDifficulty } from '../../q-stat.js';
 import { toggleExcl, pickWithExcl, exclVisible } from '../../exam-excl.js';
-import { collectPracticeProgress, adoptPracticeResume } from '../../practice-progress.js';
+import { collectPracticeProgress, adoptPracticeResume, pendingTitle, redoItemsFromPending, REDO_PENDING_TITLE } from '../../practice-progress.js';
 import { weakSpots as buildWeakSpots } from '../../weak-spots.js';
 import { isExplanationCovered } from '../../exp-dup.js';
 import { reviewedMasteredCount, fixReportText } from '../../review-advance.js';
@@ -848,8 +848,11 @@ export default {
       this.percentile = null;
       this.lastModule = null;
       this.lastSubmodule = null;
+      this._source = 'redo';
+      this._ptitle = null;
       this.session = true;
       this.startQTimer();
+      this.saveSession();
       if (redoNote) uni.showToast({ title: '错题重练开始 · ' + redoNote, icon: 'none', duration: 3500 });
       else uni.showToast({ title: '错题重练开始', icon: 'none' });
       return;
@@ -1624,6 +1627,7 @@ export default {
         this.percentile = null;
         this.session = true;
         this.startQTimer();
+        this.saveSession();
         uni.showToast({ title: '错题重练再来一组', icon: 'none' });
         return;
       }
@@ -1764,6 +1768,7 @@ export default {
         this.percentile = null;
         this.session = true;
         this.startQTimer();
+        this.saveSession();
         uni.setStorageSync('lastModule', module || '');
         this.offline = false;
         this._autoRetried = false;
@@ -2081,6 +2086,7 @@ export default {
         lastSubmodule: this.lastSubmodule,
         source: this._source || '',
         ptitle: this._ptitle || '',
+        redo: this._redoItems && this._redoItems.length && !this.lastModule ? 1 : 0,
       });
       clearTimeout(this._ppTimer);
       this._ppTimer = setTimeout(() => this.pushPracticeProgress(), 1500);
@@ -2115,11 +2121,13 @@ export default {
       this.lastSubmodule = s.lastSubmodule;
       this._source = (typeof s.source === 'string' && s.source) || null;
       this._ptitle = (typeof s.ptitle === 'string' && s.ptitle) || null;
+      this._redoItems = redoItemsFromPending(s);
       this.autoSaved = false;
       this.resultSent = false;
       this.percentile = null;
       this.session = true;
       this.startQTimer();
+      if (this._redoItems) uni.showToast({ title: '继续' + REDO_PENDING_TITLE, icon: 'none' });
     },
     adoptRemoteSnap(snap) {
       this.items = snap.items;
@@ -2221,9 +2229,10 @@ export default {
         this.adoptLocalPending(s);
         return true;
       }
+      const title = pendingTitle(s);
       uni.showModal({
         title: '继续上次练习？',
-        content: (s.ptitle ? '「' + s.ptitle + '」' : '') + '上次还有一组未做完（' + done + '/' + s.items.length + ' 题），是否继续？',
+        content: (title ? '「' + title + '」' : '') + '上次还有一组未做完（' + done + '/' + s.items.length + ' 题），是否继续？',
         confirmText: '继续',
         cancelText: '不用了',
         success: (res) => {
