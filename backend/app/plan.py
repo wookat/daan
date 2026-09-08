@@ -62,11 +62,10 @@ def _phase(days_left: int | None, base_level: str | None) -> str:
 
 def _review_sub(due: int, new_today: int) -> str:
     """复习任务副标：今日新错题不计入任务，但首页「今日到期 N 题」/错题本队列包含它们，需在文案里对上口径。"""
+    extra = f"，今天新错的 {new_today} 道想练随时练" if new_today else ""
     if due:
-        return f"还有 {due} 道到期" + (f" · 另 {new_today} 道今日新错可随时巩固" if new_today else "")
-    if new_today:
-        return f"今日到期错题已清 · 另 {new_today} 道今日新错可随时巩固"
-    return "今日到期错题已清"
+        return f"还有 {due} 道到期{extra}"
+    return f"到期的都复习完了{extra}"
 
 
 def today_plan(uid: str) -> dict:
@@ -116,7 +115,7 @@ def today_plan(uid: str) -> dict:
                 "key": "reinforce",
                 "type": "reinforce",
                 "title": f"同考点强化：{label} {n} 题",
-                "sub": f"今日复习仍薄弱 · 掌握度 {round(picked['mastery'] * 100)}%",
+                "sub": f"复习完还是薄弱，掌握度 {round(picked['mastery'] * 100)}%",
                 "target": n,
                 "done_n": min(done_n, n),
                 "done": done_n >= n,
@@ -147,7 +146,7 @@ def today_plan(uid: str) -> dict:
             "key": f"practice_{i}",
             "type": "practice",
             "title": f"专项练习：{sub} {n} 题",
-            "sub": f"{w['reason']} · 正确率 {round(w['acc'] * 100)}%",
+            "sub": f"{w['reason']}，最近正确率 {round(w['acc'] * 100)}%",
             "target": n,
             "done_n": min(done_n, n),
             "done": done_n >= n,
@@ -163,7 +162,7 @@ def today_plan(uid: str) -> dict:
             "key": "practice_mix",
             "type": "practice",
             "title": ("真题" if real else "综合") + f"刷题 {n} 题",
-            "sub": "巩固全模块手感" if weak else "先刷起来，积累弱项数据后推荐更准",
+            "sub": "各模块都摸一遍，保持手感" if weak else "先做起来，攒够错题才看得出弱项",
             "target": n,
             "done_n": max(0, min(others, n)),
             "done": others >= n,
@@ -178,7 +177,7 @@ def today_plan(uid: str) -> dict:
         "key": "mock",
         "type": "mock",
         "title": "本周模考 1 次",
-        "sub": "已完成，下周继续" if mock_done else ("真题卷或迷你模考均可" if not real else "建议整卷全真模考"),
+        "sub": "这周已经做过了" if mock_done else ("真题卷或迷你模考都算" if not real else "做一套整卷，按考试时间来"),
         "target": 1,
         "done_n": 1 if mock_done else 0,
         "done": mock_done,

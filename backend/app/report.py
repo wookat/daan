@@ -182,13 +182,13 @@ def _build(uid: str, ws: float) -> dict | None:
         # 徽章（规则版，至多 3 枚）
         badges = []
         if cur["days"] >= 7:
-            badges.append({"key": "streak7", "title": "全勤一周", "desc": "本周 7 天都有练习"})
+            badges.append({"key": "streak7", "title": "全勤一周", "desc": "七天一天没落"})
         if cur["n"] >= 30 and cur["acc"] > (prev["acc"] or 0) and prev["n"] >= 10:
-            badges.append({"key": "acc_up", "title": "正确率提升", "desc": f"较上周提升 {round((cur['acc'] - prev['acc']) * 100)} 个百分点"})
+            badges.append({"key": "acc_up", "title": "正确率提升", "desc": f"比上周高了 {round((cur['acc'] - prev['acc']) * 100)} 个百分点"})
         if mock:
-            badges.append({"key": "mock_done", "title": "完成模考", "desc": f"本周模考最高 {mock['score']} 分"})
+            badges.append({"key": "mock_done", "title": "完成模考", "desc": f"最高 {mock['score']} 分" + (f"，一周做了 {mock['n_exams']} 套" if mock["n_exams"] > 1 else "")})
         if ups and len(badges) < 3:
-            badges.append({"key": "mastery_up", "title": "考点进阶", "desc": f"{ups[0]['submodule']} 正确率上升"})
+            badges.append({"key": "mastery_up", "title": "考点进步", "desc": f"{ups[0]['submodule']}正确率从 {round(ups[0]['prev_acc'] * 100)}% 到 {round(ups[0]['acc'] * 100)}%"})
         badges = badges[:3]
 
         # 下周行动
@@ -196,16 +196,17 @@ def _build(uid: str, ws: float) -> dict | None:
         weak = db.recommend_stats(uid, top=3)["items"]
         actions = []
         if due:
-            actions.append({"type": "review", "title": f"清理 {due} 道到期错题", "url": "/pages/book/book"})
+            actions.append({"type": "review", "title": f"先把 {due} 道到期错题复习掉", "url": "/pages/book/book"})
         for w in weak[:2]:
             tag = w.get("tag3")
             actions.append({
                 "type": "practice",
-                "title": f"专项突破：{w.get('label') or w.get('submodule')}",
+                "title": f"{w.get('label') or w.get('submodule')}：{w.get('reason') or '巩固提升'}，多练几组",
                 "url": ("/pages/practice/practice?tag3=" + tag) if tag else
                        ("/pages/practice/practice?module=" + (w.get("module") or "") + "&submodule=" + (w.get("submodule") or "")),
             })
-        actions.append({"type": "mock", "title": "参加下周六全站模考大赛", "url": "/pkgA/exam/contest"})
+        if not mock:
+            actions.append({"type": "mock", "title": "这周没模考，周六九点来一套", "url": "/pkgA/exam/contest"})
 
         return {
             "status": "ok",

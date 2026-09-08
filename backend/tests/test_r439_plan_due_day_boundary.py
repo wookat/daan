@@ -79,7 +79,7 @@ def test_plan_counts_last_night_review_as_due_at_push_hour(client, monkeypatch):
     _mistake(client, uid, q_new)
     assert db.due_review_count(uid) == 2
     task = _review_task(uid)
-    assert task and task["sub"] == "还有 1 道到期 · 另 1 道今日新错可随时巩固" and task["target"] == 1
+    assert task and task["sub"] == "还有 1 道到期，今天新错的 1 道想练随时练" and task["target"] == 1
     _cleanup()
 
 
@@ -96,12 +96,12 @@ def test_r440_review_sub_reconciles_home_due_count(client, monkeypatch):
     monkeypatch.setattr(db.time, "time", lambda: PUSH_HOUR_TODAY)
     db.record_review(m_old, True, uid)  # 今早复习掉 → due=0, reviewed=1
     task = _review_task(uid)
-    assert task and task["done"] is True and task["sub"] == "今日到期错题已清"
+    assert task and task["done"] is True and task["sub"] == "到期的都复习完了"
 
     _mistake(client, uid, q_new)  # 今日新错：首页 due_mistakes=1，计划任务不回退
     assert db.daily_plan(uid)["due_mistakes"] == 1
     task = _review_task(uid)
     assert task and task["done"] is True and task["target"] == 1
-    assert task["sub"] == "今日到期错题已清 · 另 1 道今日新错可随时巩固"
-    assert plan._review_sub(0, 0) == "今日到期错题已清"
+    assert task["sub"] == "到期的都复习完了，今天新错的 1 道想练随时练"
+    assert plan._review_sub(0, 0) == "到期的都复习完了"
     _cleanup()

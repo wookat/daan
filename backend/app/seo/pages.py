@@ -1,5 +1,6 @@
 """行测 SSR 页族：/tiku 首页、search、daily、discuss、papers、q、year、topic。"""
 import json
+import re
 import time
 from functools import lru_cache
 from urllib.parse import quote
@@ -7,7 +8,7 @@ from urllib.parse import quote
 from fastapi import HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from .. import db, taxonomy
+from .. import db, quality, taxonomy
 from .common import (
     PAGE_SIZE,
     SITE_BASE,
@@ -700,12 +701,61 @@ def _render_topic(code: str, page: int, version: tuple = (0, None)) -> str:
     )
 
 
+_WS_RE = re.compile(r"\s+")
+_SNIPPET_BREAK_RE = re.compile(r"[\u3002\uff1f\uff01\uff1b\uff0c\u3001\uff1a\.?!;,:]")
+
+
+def _snippet(text: str, limit: int) -> str:
+    """description 用题干片断：空白/换行折成单空格；超长时退到 limit 内最后一个句读处截断（句读还不到一半则硬截），尾追“…”。"""
+    s = _WS_RE.sub(" ", (text or "").strip())
+    if len(s) <= limit:
+        return s.rstrip(" ，、：,:;；")
+    head = s[:limit]
+    cut = max((m.end() for m in _SNIPPET_BREAK_RE.finditer(head)), default=0)
+    if cut < limit // 2:
+        cut = limit
+    return head[:cut].rstrip(" \uff0c\u3001\uff1a,:;\uff1b") + "…"
+
+
+def _question_description(r, mod_name: str, topic_name: str | None) -> str:
+    src = f"{r['exam_year']}年" if r["exam_year"] else ""
+    src += r["exam_region"] or ""
+    head = mod_name + (f"·{r['submodule']}" if r["submodule"] else "")
+    head += f"（{src}真题）" if r["is_real"] else "练习题"
+    tail = f"考点“{topic_name}”，" if topic_name else ""
+    return f"{head}：{_snippet(r['question'] or '', 70)} {tail}答案与解析在页内，点选项即可作答。"
+
+
+def _similar_questions(conn, r, qid: int, limit: int = 8) -> list:
+    """同考点相似题：同 tag3 优先、不足时同 module/submodule 回填；候选连同本题一起过 split_family，
+    本题的同族题与候选内部同族题只留首见（与练习抽题同口径），仍不足时按原序回填被剔除项。"""
+    cols = "id, question, options, module, submodule, material_hash, source"
+    over = limit * 3
+    cands: list = []
+    if r["tag3"]:
+        cands = conn.execute(
+            f"SELECT {cols} FROM questions WHERE tag3=? AND id!=? AND disabled=0 ORDER BY id DESC LIMIT ?",
+            (r["tag3"], qid, over),
+        ).fetchall()
+    if len(cands) < over:
+        have = [qid] + [s["id"] for s in cands]
+        placeholders = ",".join("?" * len(have))
+        cands += conn.execute(
+            f"SELECT {cols} FROM questions WHERE module=? AND submodule IS ? AND id NOT IN ({placeholders}) "
+            f"AND disabled=0 ORDER BY id DESC LIMIT ?",
+            [r["module"], r["submodule"], *have, over - len(cands)],
+        ).fetchall()
+    kept, dropped = quality.split_family([dict(r)] + [dict(c) for c in cands])
+    kept = [c for c in kept if c["id"] != qid]
+    return (kept + dropped)[:limit]
+
+
 @lru_cache(maxsize=4096)
 def _render_question(qid: int, version: float | None = None) -> str:
     conn = db.get_conn()
     r = conn.execute(
         "SELECT id, module, submodule, tag3, question, options, answer, explanation, hs_explanation, "
-        "is_real, exam_year, exam_region, image, image_credit, material_hash "
+        "is_real, exam_year, exam_region, image, image_credit, material_hash, source "
         "FROM questions WHERE id=? AND disabled=0",
         (qid,),
     ).fetchone()
@@ -724,21 +774,7 @@ def _render_question(qid: int, version: float | None = None) -> str:
         )[:8]
         if len(group) < 2:
             group = []
-    similar = []
-    if r["tag3"]:
-        similar = conn.execute(
-            "SELECT id, question FROM questions WHERE tag3=? AND id!=? AND disabled=0 "
-            "ORDER BY id DESC LIMIT 8",
-            (r["tag3"], qid),
-        ).fetchall()
-    if len(similar) < 8:
-        have = [qid] + [s["id"] for s in similar]
-        placeholders = ",".join("?" * len(have))
-        similar += conn.execute(
-            f"SELECT id, question FROM questions WHERE module=? AND submodule IS ? AND id NOT IN ({placeholders}) "
-            f"AND disabled=0 ORDER BY id DESC LIMIT ?",
-            [r["module"], r["submodule"], *have, 8 - len(similar)],
-        ).fetchall()
+    similar = _similar_questions(conn, r, qid)
     conn.close()
 
     mod_name = _module_name(r["module"]) or r["module"] or ""
@@ -767,7 +803,7 @@ def _render_question(qid: int, version: float | None = None) -> str:
         f'<b>{_e(k)}.</b> {_e(v)}</a>'
         for k, v in sorted(options.items())
     )
-    cta_label = "在线做这道题 + 同考点练习（免费）→" if r["tag3"] else "在线做这道题（免费）→"
+    cta_label = "做这道题，再来五道同考点 ›" if r["tag3"] else "去练习页做这道题 ›"
     cta_html = f'<a class="cta cta-w" href="{practice_href}">{cta_label}</a>'
     hs = (r["hs_explanation"] or "").strip()
     raw_exp = (r["explanation"] or "").strip()
@@ -784,14 +820,14 @@ def _render_question(qid: int, version: float | None = None) -> str:
     src = " ".join(filter(None, [f'{r["exam_year"]}年' if r["exam_year"] else "", r["exam_region"] or "", "真题" if r["is_real"] else "练习题"]))
     group_html = "".join(
         (
-            f'<li><b>本题</b> {_e((g["question"] or "").strip().replace(chr(10), " ")[:60])}…</li>'
+            f'<li><b>本题</b> {_e(_snippet(g["question"], 60))}</li>'
             if g["id"] == qid
-            else f'<li><a href="/tiku/q/{g["id"]}">{_e((g["question"] or "").strip().replace(chr(10), " ")[:60])}…</a></li>'
+            else f'<li><a href="/tiku/q/{g["id"]}">{_e(_snippet(g["question"], 60))}</a></li>'
         )
         for g in group
     )
     sim_html = "".join(
-        f'<li><a href="/tiku/q/{s["id"]}">{_e((s["question"] or "").strip().replace(chr(10), " ")[:60])}…</a></li>'
+        f'<li><a href="/tiku/q/{s["id"]}">{_e(_snippet(s["question"], 60))}</a></li>'
         for s in similar
     )
     crumbs = [("题库", "/tiku/"), (mod_name, f'/tiku/{r["module"]}/')]
@@ -809,9 +845,8 @@ def _render_question(qid: int, version: float | None = None) -> str:
         + f" · {_e(src)}</p>"
         + f"<p>{_e(qtext)}</p>"
         + img_html
-        + '<p class="meta">点选项直接作答 · 免费无需注册 · 做错自动进错题本</p>'
+        + '<p class="meta">点选项就能作答，不用注册；做错的题会记进错题本。</p>'
         + opts_html
-        + cta_html
         + '<details class="ans"><summary>先想一想，再看答案与解析 ▸</summary>'
         + f'<p><b>正确答案：{_e(r["answer"] or "见解析")}</b></p>{exp_html}'
         + cta_html
@@ -870,7 +905,7 @@ def _render_question(qid: int, version: float | None = None) -> str:
     }
     return _page(
         f"{title_head}_{mod_name}题库_错题邦",
-        f"{mod_name}{('·' + r['submodule']) if r['submodule'] else ''}{src}：{qtext[:70]} 附答案与解析，在线刷同考点题目。",
+        _question_description(r, mod_name, topic["name"] if topic else None),
         f"/tiku/q/{qid}",
         body,
         [jsonld, _breadcrumb_ld(crumbs)],
