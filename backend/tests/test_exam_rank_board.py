@@ -75,7 +75,9 @@ def test_board_order_masking_and_me(client):
     b = d["board"]
     assert [r["rank"] for r in b] == [1, 2, 3, 4]
     assert [r["score"] for r in b] == [80.0, 60.0, 60.0, 40.0]
-    assert b[1]["name"] == "test-b***" and b[2]["name"] == "test-b***"
+    assert b[1]["name"] == db.display_alias("test-board-anon2", None)
+    assert b[2]["name"] == db.display_alias("test-board-anon3", None)
+    assert b[1]["name"] != b[2]["name"] and all("test-b" not in r["name"] for r in b)
     assert [r["me"] for r in b] == [False, False, False, True]
     # 既有字段不回归
     assert d["rank"] == 4 and d["total"] == 4
@@ -103,7 +105,7 @@ def test_board_blank_nickname_falls_back_to_masked_uid(client):
     _attempt(pid, uid, 70.0, time.time() - 10)
     my = _attempt(pid, "test-board-me03", 30.0, time.time())
     d = client.get(f"/api/exam/rank/{my}?uid=test-board-me03").json()
-    assert d["board"][0]["name"] == uid[:6] + "***"
+    assert d["board"][0]["name"] == db.display_alias(uid, None) and uid not in d["board"][0]["name"]
     conn = _conn()
     conn.execute("DELETE FROM users WHERE id=?", (int(uid[1:]),))
     conn.commit()

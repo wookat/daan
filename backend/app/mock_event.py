@@ -4,7 +4,6 @@
 窗口内交卷（首次）计入排名，窗口外该卷退化为普通试卷、不影响比赛榜单。
 排名在赛后首次访问时按事务惰性冻结；无人建赛时自动兜底生成下周六场次。
 """
-import hashlib
 import json
 import random
 import sqlite3
@@ -77,7 +76,7 @@ def ensure_window_index(conn) -> bool:
 
 
 def _clean_uid(uid) -> str:
-    u = str(uid or "").strip()[:64]
+    u = db.clean_uid(uid)
     if not u:
         raise HTTPException(400, "缺少 uid")
     return u
@@ -88,13 +87,7 @@ def _clean_nickname(nickname) -> str | None:
     return None if not n or n.lower() in ("null", "undefined") else n
 
 
-def _alias(uid: str, nickname: str | None) -> str:
-    """榜单展示名：报名时留存的昵称优先，缺失时用 uid 派生的稳定化名（不暴露 uid）。"""
-    nickname = _clean_nickname(nickname)
-    if nickname:
-        return nickname
-    h = hashlib.sha1(uid.encode()).hexdigest()[:4].upper()
-    return f"考友{h}"
+_alias = db.display_alias
 
 
 def _saturday_window(now: float) -> tuple[float, float]:

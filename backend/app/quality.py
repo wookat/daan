@@ -8,6 +8,7 @@
 """
 import json
 import re
+from difflib import SequenceMatcher
 
 _STRUCT_HINTS = ("因此", "所以", "故选", "故答案", "综上", "第一步", "第二步", "步骤", "代入", "排除", "由题", "根据")
 
@@ -344,6 +345,124 @@ def strip_page_footers(text: str | None) -> str:
     out = FOOTER_SRC_RE.sub("", out)
     out = FOOTER_SECTION_RE.sub("", out)
     return out.strip() if out != text else text
+
+
+# ---- 入库门禁静态规则 R8–R13（w12c-content-human.md §4）：纯函数，只判定不改写 ----
+# R8 流水线内部措辞（引用「答题参考」而非讲依据）：hard 拒收。
+ANSWER_REF_RE = re.compile(r"与题给答案一致|官方解析(?:已定位|有误)?|题库答案|参考答案(?:为|是)|标准答案(?:为|是)|给定答案")
+# R9 伪排错句：句首 2–3 个选项字母 + 封闭谓语表，句内无引文/具体化词（「A、C为包含关系，D为容纳关系」有理由，不入）。
+_HOLLOW_LEAD_RE = re.compile(r"^\s*[A-D](?:\s*[、,，]\s*[A-D]){1,2}\s*(?:项|选项)?")
+_HOLLOW_PRED_RE = re.compile(r"均是绝对化|无据判断|均不符|无关|语义不合|计算错误|均属错误")
+_HOLLOW_CONCRETE_RE = re.compile(r"[“”\"‘’「」『』]|因为|说的是|对应|违反|属于")
+_SENTENCE_SPLIT_RE = re.compile(r"[。！？；!?;\n]+")
+# R10 整段复用壳：数字/字母/常见单位归一后比对（批内 ratio≥0.9）。
+_SHELL_NUM_RE = re.compile(r"[0-9０-９][0-9０-９.．,，]*[%％‰]?")
+_SHELL_UNIT_RE = re.compile(r"#(?:亿元|万元|万人|亿|万|千|百|元|人|个|倍|天|小时|分钟|秒|米|千米|公里|吨|升|平方米|立方米|岁|次|件|台|页|年|月|日)")
+_SHELL_ALPHA_RE = re.compile(r"[A-Za-zＡ-Ｚａ-ｚ]+")
+SHELL_DUP_RATIO = 0.9
+SHELL_MIN_LEN = 20  # 壳短于此（「解析。」「故选X。」）不具模板识别度，不参与比对
+# R11 算式复算：只认 a[×÷+-]b=c 三元纯数字（两侧无数字/运算符/≈/约/%/‰ 粘连；连式「30+20-8=42」、斜杠除法「40/12=3余4」、
+# 结果带万/亿量级「112×800=8.96万」、日期「6+14=9月20日」、ASCII x 连式「25x100+200=2700」不认），误差 >2% 判可疑。匹配前先剔除运算符/等号两侧空白。
+_ARITH_RE = re.compile(
+    r"(?<![\d.%‰≈约≒~×÷*/xX＋+－\-−])(\d+(?:\.\d+)?)([×÷＋+－\-−])(\d+(?:\.\d+)?)[=＝](\d+(?:\.\d+)?)(?![\d.%‰×÷*/xX＋+－\-−=＝余又万亿月日])"
+)
+_ARITH_WS_RE = re.compile(r"\s*([×÷*/xX＋+－\-−=＝])\s*")
+ARITH_TOLERANCE = 0.02
+_ARITH_APPROX_BEFORE_RE = re.compile(r"(?:约|大约|约为|近似|≈|≒|~)\s*$")
+# R12 合成题族指纹（source='original' 站内合成题的母版）：命中 ≥2 项即视为同族。
+_FAMILY_FPS = (
+    re.compile(r"同比增长\s*28\s*[%％]"),
+    re.compile(r"[（(]\s*2023\s*年为"),
+    re.compile(r"。[^。\n]{10,16}。\s*问题[：:]"),
+)
+_FAMILY_SUBITEMS_RE = tuple(re.compile(rf"(?<![\d.]){n}\s*[%％]") for n in (40, 30, 20, 10))
+FAMILY_MIN_FPS = 2
+# R13 克隆题：题干数字→# 归一后 ratio≥0.7 且 options 值集合相同。
+CLONE_STEM_RATIO = 0.7
+_STEM_NORM_RE = re.compile(r"[\s，,。.、；;：:（）()【】\[\]“”\"‘’]+")
+
+
+def hs_answer_reference(text: str | None) -> bool:
+    """R8：讲解/解析引用「答题参考」（与题给答案一致 / 官方解析 / 参考答案为…）。"""
+    return bool(ANSWER_REF_RE.search(text or ""))
+
+
+def hollow_exclusion(text: str | None) -> list[str]:
+    """R9：返回命中的伪排错句（「A、B、D均是绝对化或无据判断」式，无任何具体理由）。"""
+    hits = []
+    for s in _SENTENCE_SPLIT_RE.split(text or ""):
+        if _HOLLOW_LEAD_RE.match(s) and _HOLLOW_PRED_RE.search(s) and not _HOLLOW_CONCRETE_RE.search(s):
+            hits.append(s.strip())
+    return hits
+
+
+def shell_signature(text: str | None) -> str:
+    """R10：hs 去数字/单位/字母归一后的「壳」，供批内 SequenceMatcher 比对。"""
+    s = _SHELL_NUM_RE.sub("#", text or "")
+    s = _SHELL_UNIT_RE.sub("#", s)
+    s = _SHELL_ALPHA_RE.sub("X", s)
+    return re.sub(r"\s+", "", s)
+
+
+def shell_similar(sig_a: str, sig_b: str, ratio: float = SHELL_DUP_RATIO) -> bool:
+    if len(sig_a) < SHELL_MIN_LEN or len(sig_b) < SHELL_MIN_LEN:
+        return False
+    sm = SequenceMatcher(None, sig_a, sig_b)
+    return sm.real_quick_ratio() >= ratio and sm.quick_ratio() >= ratio and sm.ratio() >= ratio
+
+
+def arith_suspect(text: str | None) -> list[str]:
+    """R11：返回复算误差 >ARITH_TOLERANCE 的算式原文（「12×3=48」）；百分比/约等/省略前项不判。"""
+    hits = []
+    text = _ARITH_WS_RE.sub(r"\1", text or "")
+    for m in _ARITH_RE.finditer(text):
+        if _ARITH_APPROX_BEFORE_RE.search(text[max(0, m.start() - 4) : m.start()]):
+            continue
+        a, op, b, c = float(m.group(1)), m.group(2), float(m.group(3)), float(m.group(4))
+        if op == "×":
+            got = a * b
+        elif op == "÷":
+            if b == 0:
+                continue
+            got = a / b
+        elif op in "＋+":
+            got = a + b
+        else:
+            got = a - b
+        if abs(got - c) > ARITH_TOLERANCE * max(abs(c), abs(got), 1e-9):
+            hits.append(m.group(0).strip())
+    return hits
+
+
+def _norm_stem(text: str | None) -> str:
+    return _STEM_NORM_RE.sub("", _SHELL_NUM_RE.sub("#", text or ""))
+
+
+def synthetic_family_key(question: dict) -> str | None:
+    """R12：source='original' 且题干命中 ≥FAMILY_MIN_FPS 项母版指纹时返回族键（命中指纹组合，如 "f0+f1+sub"），否则 None。"""
+    if (question.get("source") or "") != "original":
+        return None
+    stem = question.get("question") or ""
+    hits = [f"f{i}" for i, fp in enumerate(_FAMILY_FPS) if fp.search(stem)]
+    if all(fp.search(stem) for fp in _FAMILY_SUBITEMS_RE):
+        hits.append("sub")
+    if len(hits) < FAMILY_MIN_FPS:
+        return None
+    return "+".join(hits)
+
+
+def clone_key(question: str | None, options) -> tuple[str, str]:
+    """R13：(题干数字→# 归一, 选项值集合键)；两题 options 键相同且题干 ratio≥CLONE_STEM_RATIO 视为克隆。"""
+    opts = _parse_options(options)
+    vals = sorted(_STEM_NORM_RE.sub("", str(v)) for v in opts.values() if str(v).strip())
+    return _norm_stem(question), "|".join(vals)
+
+
+def is_clone(a: tuple[str, str], b: tuple[str, str], ratio: float = CLONE_STEM_RATIO) -> bool:
+    if not a[1] or a[1] != b[1] or not a[0] or not b[0]:
+        return False
+    sm = SequenceMatcher(None, a[0], b[0])
+    return sm.real_quick_ratio() >= ratio and sm.quick_ratio() >= ratio and sm.ratio() >= ratio
 
 
 def score_question(row: dict) -> int:

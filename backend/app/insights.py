@@ -249,7 +249,7 @@ def api_exam_rank(attempt_id: int, uid: str = ""):
     board = [
         {
             "rank": i + 1,
-            "name": (names.get(r["uid"]) or "").strip()[:20] or r["uid"][:6] + "***",
+            "name": db.display_alias(r["uid"], names.get(r["uid"])),
             "score": r["s"],
             "me": r["uid"] == attempt["uid"],
         }

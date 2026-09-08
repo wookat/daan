@@ -3126,6 +3126,15 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 数据纪律：全部在本机临时库 `~/w11int/db/app.db` + 本机 Chrome；生产零请求；本机造数 `test-w11-int-*` 随临时库丢弃；未触发 LLM、未改配置、未部署。
 - 遗留台账：docs/iter/workflow/backlog.md「Deferred（W11 追加）」（部署后回归清单、模考交卷超时宽限需产品决策、answer_log.correct 服务端复判口径、exam source='exam' 1 行、App.vue 桌面死 CSS + cellcard 描边阴影、kg-tag nowrap 加固、kg-card raised sh-2 + 11 处静态 raised 真机、W11-C 真机清单、小程序测试落点工程债、W11-C 内容缺口成本论证、方法名教研核对、W9/W10 沿用项、流程）；详证 docs/iter/workflow/w11.md。审方被拒 14 条（KgTag/KgCard 生产 41 tag/15 卡 0 命中误报、签到口径有意设计、搜索 FTS 无慢日志、#649/#650/#498 重复等）见 w11.md §2。
 
+### W13（内容入库门禁 R8–R13 fail-closed + 榜单展示名「考友XXXX」口径统一 + H5 body 字体/解析卡来源占位值集成轮，分支 devin/wf-w13-integration）
+- 集成：origin/main `58188f7e`（#687/#688 R546/R547）切 `devin/wf-w13-integration`，依次 merge W13-C1（`9c7083fd`）/ W13-B1（`bef1018c`）/ W13-H1（`d8baad05`），三次无冲突；integrate 子会话因组织并发上限（HTTP 429）未能创建，由项目负责人本机集成。diff 21 files +1169/−31。报告 `docs/iter/workflow/w13.md`，dry-run 台账 `docs/iter/workflow/w13-content-gate-ledger.md`。
+- W13-C1（content，P1）：`quality.py` R8–R13 纯函数 + 新 `content_gate.py`（`gate_hs/gate_questions` → accepted+receipt；R8 逐条拒收、R9/R10 批内≥3 整批 422、R11–R13 软标、异常 fail-closed）+ `qbank_api.py` 两条 import 路由前置门禁（响应追加 `receipt`，`db.py` 零改动）+ `tools/content_gate_dryrun.py` 只读扫描。生产库只读 dry-run：R8 25 / R9 3,777 / R10 8,647+3,013 / R11 105 / R12 3,130（全 ziliao）/ R13 13,996（shuliang 10,942）；只拦新批次，存量处置留人工抽检后另立项。
+- W13-B1（backend，P2）：`db.display_alias(uid, nickname)`（昵称优先，否则「考友」+sha1[:4]）替换 insights exam rank / `daily_set_board` / pk 周榜三处 `uid[:6]+'***'`（原会露 uid 前缀），`mock_event._alias` 委托；team/pk/social/mock_event/report 五处 `_clean_uid` → `db.clean_uid`；`exam_api._clean_int_map` 非 dict → 400（原 `[]` 当空卷交、str 500），`log_items` 补 `source='exam'`（backlog 既定「触碰即补」）。两处旧 `***` 测试期望有意改为新契约。
+- W13-H1（H5，P1）：`App.vue` H5 `body{font-family: var(--font-sans)}`——生产 CDP 实测 `body`/`.uni-toast` computed 为 `"Times New Roman"`（uni-modal/toast 挂在 `uni-page-body` 外），修后三者一致 Inter 栈；`q-stat.js qSourceText` 过滤 original/unknown/ai（与小程序 `q-stat.ts sourceLabel` 同口径），`kg-analysis-card` `v-if="sourceText"`。
+- 门禁：ruff 通过 / pytest **678**（py3.12；py3.10 下 `test_conn_begin_immediate` 为解释器版本既有失败）/ H5 lint+tokens 通过、vitest **1031**、build:h5 通过 / 小程序 tsc+eslint 通过（零改动）。本地 uvicorn 实测 hs_import R8 拒收、R9×3 → 422、无 token 401、daily board 名「考友B5E7」；exam/submit 形状守卫仅单测覆盖。
+- 数据纪律：生产仅 health ×1 + 首页 CDP 只读 ×1；dry-run 对生产库 `?mode=ro`；本机造数随 `/tmp/w13.db` 丢弃；未部署。
+- 遗留：部署后回归清单（hs_import 401 / 三榜单展示名 / 生产 body 字体 / 解析卡来源）；R12/R13 存量高占比需人工抽检后再决定加列与分发互斥；R9 存量重写需 LLM key；`save_mistake` uid strip 可接 `db.clean_uid`。
+
 ### W12-C 内容审计（content-human，只读，不改库）
 - 报告 `docs/iter/workflow/w12c-content-human.md`：生产 `GET /api/questions` 五模块 6 组×10 题去重 296 题（uid `test-w12-*`，零写入零 AI）。W11-C 之外的新维度：① `source='original'` 合成题占分发样本 34%，ziliao「同比增长 28%」母版 13/56 且同组成串（ziliao-5 4/10）、shuliang-0 同结构克隆对相隔 1 题（P1）；② 合成题 explanation 伪排错句 11/102 vs 真题 0/194（P1）；③ hs 引用答题参考 2/296（R8 拒收）；④ hs 数字归一后整段复用 4 题组 0.97–1.0；⑤ 小程序 practice.wxml hs/原解析未去重（H5/SEO 已）。W11-C 项复核值：尾句 213/296、无非答案字母 105/296、原解析空 15、裸排除 0。规则 R8–R14 与 `hs_import` 批次级钩子设计见报告 §4/§5，未写代码。样本与脚本在审计机 `~/w12c/`，不入库。
 

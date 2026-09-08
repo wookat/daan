@@ -88,7 +88,7 @@ def init_team_db():
 
 
 def _clean_uid(uid) -> str:
-    u = str(uid or "").strip()[:64]
+    u = db.clean_uid(uid)
     if not u:
         raise HTTPException(400, "缺少 uid")
     return u
