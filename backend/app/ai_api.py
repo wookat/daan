@@ -6,6 +6,7 @@ import time
 
 from fastapi import APIRouter, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
+from starlette.concurrency import run_in_threadpool
 
 from . import db, engine, kb, llm, sse
 from .deps import cache_key, check_access, friendly_ai_err, rl
@@ -50,7 +51,7 @@ async def api_explain(
         mime = image.content_type or "image/jpeg"
     if text and not image:
         raw_key = cache_key(text, user_answer)
-        hit = db.get_explain_cache(raw_key)
+        hit = await run_in_threadpool(db.get_explain_cache, raw_key)
         if hit:
             return {
                 "module": hit.get("module"),
@@ -67,7 +68,7 @@ async def api_explain(
         ua = user_answer or extracted.get("user_answer")
         key = cache_key(extracted.get("question_text"), ua)
         raw_key = cache_key(text, ua) if text else None
-        cached = db.get_explain_cache(key) or (db.get_explain_cache(raw_key) if raw_key else None)
+        cached = await run_in_threadpool(_explain_cached, key, raw_key)
         if cached:
             explanation = cached["explanation"]
         else:
@@ -85,10 +86,18 @@ async def api_explain(
         "cached": bool(cached),
     }
     if not cached and not suspect:
-        db.save_explain_cache(key, meta, explanation)
-        if raw_key and raw_key != key:
-            db.save_explain_cache(raw_key, meta, explanation)
+        await run_in_threadpool(_save_explain, key, raw_key, meta, explanation)
     return {**meta, "explanation": explanation}
+
+
+def _explain_cached(key: str, raw_key: str | None) -> dict | None:
+    return db.get_explain_cache(key) or (db.get_explain_cache(raw_key) if raw_key else None)
+
+
+def _save_explain(key: str, raw_key: str | None, meta: dict, explanation: str) -> None:
+    db.save_explain_cache(key, meta, explanation)
+    if raw_key and raw_key != key:
+        db.save_explain_cache(raw_key, meta, explanation)
 
 
 def _cached_qid(hit: dict, question_id: int | None) -> int | None:
@@ -133,7 +142,7 @@ async def api_explain_stream(
         try:
             if text and not image:
                 rk = cache_key(text, user_answer)
-                hit = db.get_explain_cache(rk)
+                hit = await run_in_threadpool(db.get_explain_cache, rk)
                 if hit:
                     meta0 = {
                         "module": hit.get("module"),
@@ -149,11 +158,11 @@ async def api_explain_stream(
                     yield "data: " + json.dumps({"d": hit["explanation"]}, ensure_ascii=False) + "\n\n"
                     yield "event: done\ndata: {}\n\n"
                     return
-            extracted = _linked() or await engine.extract_question(image_b64, mime, text)
+            extracted = await run_in_threadpool(_linked) or await engine.extract_question(image_b64, mime, text)
             ua = user_answer or extracted.get("user_answer")
             key = cache_key(extracted.get("question_text"), ua)
             raw_key = cache_key(text, ua) if text else None
-            cached = db.get_explain_cache(key) or (db.get_explain_cache(raw_key) if raw_key else None)
+            cached = await run_in_threadpool(_explain_cached, key, raw_key)
             suspect = engine.is_suspect(extracted.get("question_text", ""))
             meta = {
                 "module": None if suspect else extracted.get("module"),
@@ -176,9 +185,7 @@ async def api_explain_stream(
                     yield line
                 full = "".join(parts)
                 if full.strip() and not suspect:
-                    db.save_explain_cache(key, meta, full)
-                    if raw_key and raw_key != key:
-                        db.save_explain_cache(raw_key, meta, full)
+                    await run_in_threadpool(_save_explain, key, raw_key, meta, full)
             yield "event: done\ndata: {}\n\n"
         except Exception as e:
             yield "event: error\ndata: " + json.dumps({"message": friendly_ai_err(e)}, ensure_ascii=False) + "\n\n"
@@ -339,7 +346,7 @@ async def api_mistake_analysis(body: dict, request: Request, x_access_code: str 
     uid = (body.get("uid") or "").strip()
     if not uid:
         raise HTTPException(400, "缺少 uid")
-    stats = db.mistake_analysis_stats(uid[:64])
+    stats = await run_in_threadpool(db.mistake_analysis_stats, uid[:64])
     if not stats["mistake_types"]:
         return {"analysis": "错题本还没有待掌握的错题，先去刷题吧。"}
     prompt = (

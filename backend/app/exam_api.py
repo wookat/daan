@@ -214,14 +214,14 @@ async def api_scan_sheet(request: Request, uid: str = Form(""), image: UploadFil
         rec = await run_in_threadpool(omr.recognize, raw)
     except ValueError as e:
         raise HTTPException(422, str(e))
-    paper = db.get_paper_export(rec["code"])
+    paper = await run_in_threadpool(db.get_paper_export, rec["code"])
     if not paper:
         raise HTTPException(404, f"未找到卷码 {rec['code']} 对应的导出记录")
     qids = paper["question_ids"]
     page = max(1, rec["page"])
     start = (page - 1) * omr.PER_PAGE
     page_ids = qids[start : start + omr.PER_PAGE]
-    questions = {q["id"]: q for q in db.questions_by_ids(page_ids)}
+    questions = {q["id"]: q for q in await run_in_threadpool(db.questions_by_ids, page_ids)}
     results = []
     log_items = []
     wrong = []
@@ -255,7 +255,9 @@ async def api_scan_sheet(request: Request, uid: str = Form(""), image: UploadFil
             )
             if not is_correct:
                 wrong.append(_mistake_rec(uid, q, qid, picked, correct_ans))
-    saved, dup_at = _persist_graded(uid, rec["code"], page, log_items, wrong, auth.probe_request(request))
+    saved, dup_at = await run_in_threadpool(
+        _persist_graded, uid, rec["code"], page, log_items, wrong, auth.probe_request(request)
+    )
     answered = [r for r in results if r["status"] == "ok"]
     return {
         "code": rec["code"],

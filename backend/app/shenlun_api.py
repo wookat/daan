@@ -2,6 +2,7 @@
 import time
 
 from fastapi import APIRouter, Header, HTTPException, Request
+from starlette.concurrency import run_in_threadpool
 
 from . import db, llm
 from .deps import check_access, check_import_token, friendly_ai_err, rl
@@ -44,7 +45,7 @@ async def api_shenlun_grade(body: dict, request: Request, x_access_code: str | N
         raise HTTPException(400, "缺少题目或作答内容")
     if len(answer) > 3000:
         raise HTTPException(400, "作答内容过长")
-    q = db.shenlun_question(int(qid))
+    q = await run_in_threadpool(db.shenlun_question, int(qid))
     if not q:
         raise HTTPException(404, "题目不存在")
     is_essay = "大作文" in (q.get("qtype") or "")
@@ -80,7 +81,7 @@ async def api_shenlun_grade(body: dict, request: Request, x_access_code: str | N
         raise HTTPException(502, f"批改失败：{friendly_ai_err(e)}") from e
     uid = (body.get("uid") or "").strip()[:64]
     if uid:
-        db.save_shenlun_answer(uid, int(qid), answer, result)
+        await run_in_threadpool(db.save_shenlun_answer, uid, int(qid), answer, result)
     return {"result": result, "essay": is_essay}
 
 
