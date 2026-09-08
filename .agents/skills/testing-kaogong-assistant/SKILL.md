@@ -1894,3 +1894,12 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - H5 卷库 `onReachBottom` 自动追加：用 375×812 CDP 模拟 + 鼠标滚轮滚到底即可触发；断言用 CDP 数 `真题卷 TESTnn` 卡片数 + 「加载更多」按钮是否消失，不点按钮。
 - uni-h5 基础样式 `uni-text{white-space:pre-line}` 会覆盖父级 `white-space:nowrap`：给 `.wd-cell__title` 加 nowrap 对 wd-cell 用 `<text>` 渲染的 title prop 无效，长标题仍会折行。验证时用 CDP 注入 ≥20 字标题观察高度（单行 32px，两行 48px），验完记得还原文本。要真正单行需把 nowrap 作用到 `.wd-cell__title uni-text` 或改用 title 插槽加自定义类。
 - `pkill -f "cdp.py hold"` 这类模式会连当前 shell 一起杀掉（命令行含相同字串），清理时改用 `pgrep -af` 找 PID 再 `kill`。
+
+## 生产 H5 回归（W10 de94fde）新经验
+- **Chrome 直连生产走 HTTP/3(QUIC/UDP) 会随机卡 12–45 s**（`performance.getEntriesByType("resource")` 里 `nextHopProtocol:"h3"`，超时的条目 protocol 为空；curl 同接口 0.2 s 正常）。表现为页面「连接服务器超时」、分享按钮长时间「生成分享链接…」。解法：读 `/proc/<chrome pid>/cmdline` 原样重启 Chrome 并插入 `--disable-quic`（用 Python 按 `\0` 切参数，别在 bash 里 `printf %q` 词切——会把 `--user-agent` 截成 `Mozilla/5.0`，丢掉 `Devin/1.0` 标识，探针流量会被记成真实流量），之后全部 `h2` 且 <300 ms。重启后要重新起 `cdp.py hold 375 812 mobile`。
+- 共享 VM 上 Chrome 被 DevTools 遮住时 `Page.captureScreenshot` 与部分 `Runtime.evaluate` 会挂起直至超时：截图前先 `wmctrl -i -a <chrome wid>`（可加 `-b add,above`，结束后 `remove,above`），并给 cdp 命令套 `timeout 15`。
+- 分享落地页 `/s/<sid>` 就是 SPA（`uni-page` 存在，之后 hash 路由继续可用），非静态页；「和 TA 组队刷题 · 一键加入」CTA 在 `<template v-if="revealed">` 内——**非成员必须先作答一题才会出现**（会写一条 `shared_answers`），只看未作答态会误判「门控失效」。分享者本人 `is_sharer:true` 直接 revealed。
+- 我的页「学习小队」右值来自 `apiSnap:/api/team/mine?uid=…` 快照：建队后**首次返回仍显示静态文案**（快照未刷新），再进一次小队页再返回才显示队名；报告里要区分「首次返回」与「二次返回」。
+- 迷你模考交卷会把答错题自动写进 `mistakes`（uid=自己），清理时 `GET /api/mistakes?uid=` 列出后逐条 `DELETE /api/mistakes/<id>?uid=<uid>`。注意 `DELETE /api/mistakes/<id>` **不带 uid 时无属主校验**（`_uid_clause(None)` 不加条件），只删自己的行。
+- 后端畸形参数矩阵（当前生产）：query `count=abc`→200（未知参数忽略）、`limit=abc`/路径 `rank/abc`→422、JSON body `module` 为 dict→400；但 JSON body **`uid` 为非字符串（int/list/dict）→ 500**（`/api/mistakes` `/api/answer_log` `/api/team/create`），`uid:null`→200 并写入无主行。紧随写请求 200/<0.4 s 说明写锁未泄漏。
+- 生产 `exam_papers` 目前所有卷 `takers=0/avg_score=null`（无卷达到 `_SOCIAL_MIN_N=5` 真实考生），社会证明门控只能「空真」通过，要写明。
