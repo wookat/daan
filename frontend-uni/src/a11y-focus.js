@@ -85,6 +85,19 @@ function initModalKeys() {
   )
 }
 
+// 键盘焦点环只给按钮/链接/选项；原生文本控件不画环（uni 的 <input> 会在容器胶囊内再套一个方框），
+// 改由输入容器 :focus-within 描边——已知容器优先，裸露的 uni-input/uni-textarea 宿主兜底
+const TEXT_CTRL = ':not(input):not(textarea):not(.uni-input-input):not(.uni-textarea-textarea)'
+const INPUT_BOX = ['.searchbar', '.wd-search__block', '.wd-input', '.kg-input', '.search']
+const RING = 'outline:2px solid var(--brand);outline-offset:-1px'
+export const FOCUS_CSS = [
+  ':focus:not(:focus-visible){outline:none}',
+  TEXT_CTRL + ':focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}',
+  INPUT_BOX.map((s) => s + ':focus-within').join(',') + '{' + RING + '}',
+  'uni-input:focus-within,uni-textarea:focus-within{' + RING + '}',
+  INPUT_BOX.map((s) => s + ' uni-input:focus-within,' + s + ' uni-textarea:focus-within').join(',') + '{outline:none}',
+].join('')
+
 export function initKeyboardFocus() {
   if (typeof window === 'undefined' || window.__kgA11yFocus) return
   window.__kgA11yFocus = true
@@ -109,6 +122,6 @@ export function initKeyboardFocus() {
   }
   initModalKeys()
   const st = document.createElement('style')
-  st.textContent = ':focus:not(:focus-visible){outline:none}:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}'
+  st.textContent = FOCUS_CSS
   document.head.appendChild(st)
 }

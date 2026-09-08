@@ -267,11 +267,12 @@ export default {
 .tc-s { display: block; font-size: var(--fs-caption); color: var(--ink-2); margin-top: var(--sp-4); }
 .reg-tip { display: flex; justify-content: center; padding: var(--sp-12) 0; }
 
+.multi-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-12); margin-top: var(--sp-8); }
+.multi-hint { font-size: var(--fs-caption); color: var(--ink-2); }
+
 /* #ifdef H5 */
 @media (min-width: 1024px) {
   .page { max-width: 760px; margin: 0 auto; padding-bottom: var(--sp-24); }
 }
 /* #endif */
 </style>
-.multi-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-12); margin-top: var(--sp-8); }
-.multi-hint { font-size: var(--fs-caption); color: var(--ink-2); }

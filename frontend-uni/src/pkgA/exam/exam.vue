@@ -554,6 +554,8 @@ export default {
 .acard-n.cur { box-shadow: 0 0 0 2px var(--brand-soft-2); border-color: var(--brand); }
 .acard-foot { display: block; text-align: center; font-size: var(--fs-sub); color: var(--ink-3); padding: var(--sp-4) 0 var(--sp-12); }
 
+.multi-tip { font-size: var(--fs-caption); line-height: 1.5; color: var(--brand-text); background: var(--brand-soft); border-radius: var(--r-xs); padding: var(--sp-4) var(--sp-8); margin-bottom: var(--sp-8); }
+
 /* #ifdef H5 */
 .page :deep(.kg-two__aside) { display: none; }
 .side-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-12); }
@@ -567,4 +569,3 @@ export default {
 }
 /* #endif */
 </style>
-.multi-tip { font-size: 24rpx; color: var(--brand-text); background: var(--brand-soft); border-radius: 10rpx; padding: 10rpx 16rpx; margin-bottom: 16rpx; }
