@@ -1904,3 +1904,12 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 报告页薄弱模块：要造「整模块未答」用 `/api/exam/start` + `/api/exam/submit`，`picks` 键为 **1 起的题号字符串**，题目 id 为 int（拼 SQL 要 `str()`）；后端返回 per_module `{n,answered,correct}`；整模块未答不进候选，部分作答时文案带「（按已答 a/n 题折算）」。uvicorn 有进程内缓存，改 DB 后需重启。
 - 外观模式切换点 profile「外观模式」cell 循环 跟随系统→浅色→深色（toast「外观模式：深色」，`html.theme-dark`）；深色下 `--brand` 仍为 #2e5bff（只有 `--brand-text` 变 #8fa8ff）。焦点环校验：CDP `Input.dispatchKeyEvent Tab` 后读 `getComputedStyle(activeElement).outlineColor`，再 `style.setProperty('--brand','#ff5722')` 看环是否变橙。注意 `uni-button` tabIndex=-1，Tab 只落在 `role=button tabindex=0` 的 uni-view 上。
 - 用 CDP `Input.dispatchMouseEvent` 点击页面可避免 computer 工具抢窗口焦点；结束后清理 `localStorage` 的 `themeMode`/`anonUid`/`apiSnap:*`。
+
+## 生产 H5 回归（W10 de94fde）新经验
+- **Chrome 直连生产走 HTTP/3(QUIC/UDP) 会随机卡 12–45 s**（`performance.getEntriesByType("resource")` 里 `nextHopProtocol:"h3"`，超时的条目 protocol 为空；curl 同接口 0.2 s 正常）。表现为页面「连接服务器超时」、分享按钮长时间「生成分享链接…」。解法：读 `/proc/<chrome pid>/cmdline` 原样重启 Chrome 并插入 `--disable-quic`（用 Python 按 `\0` 切参数，别在 bash 里 `printf %q` 词切——会把 `--user-agent` 截成 `Mozilla/5.0`，丢掉 `Devin/1.0` 标识，探针流量会被记成真实流量），之后全部 `h2` 且 <300 ms。重启后要重新起 `cdp.py hold 375 812 mobile`。
+- 共享 VM 上 Chrome 被 DevTools 遮住时 `Page.captureScreenshot` 与部分 `Runtime.evaluate` 会挂起直至超时：截图前先 `wmctrl -i -a <chrome wid>`（可加 `-b add,above`，结束后 `remove,above`），并给 cdp 命令套 `timeout 15`。
+- 分享落地页 `/s/<sid>` 就是 SPA（`uni-page` 存在，之后 hash 路由继续可用），非静态页；「和 TA 组队刷题 · 一键加入」CTA 在 `<template v-if="revealed">` 内——**非成员必须先作答一题才会出现**（会写一条 `shared_answers`），只看未作答态会误判「门控失效」。分享者本人 `is_sharer:true` 直接 revealed。
+- 我的页「学习小队」右值来自 `apiSnap:/api/team/mine?uid=…` 快照：建队后**首次返回仍显示静态文案**（快照未刷新），再进一次小队页再返回才显示队名；报告里要区分「首次返回」与「二次返回」。
+- 迷你模考交卷会把答错题自动写进 `mistakes`（uid=自己），清理时 `GET /api/mistakes?uid=` 列出后逐条 `DELETE /api/mistakes/<id>?uid=<uid>`。注意 `DELETE /api/mistakes/<id>` **不带 uid 时无属主校验**（`_uid_clause(None)` 不加条件），只删自己的行。
+- 后端畸形参数矩阵（当前生产）：query `count=abc`→200（未知参数忽略）、`limit=abc`/路径 `rank/abc`→422、JSON body `module` 为 dict→400；JSON body **`uid` 为非字符串（int/list/dict）在 de94fde 上 → 500**（`/api/mistakes` `/api/answer_log` `/api/team/create`，根因 `guard_account_uid` 中间件不经异常处理器；PR #649 起统一 400，合入后复测应为 400），`uid:null`→200 并写入无主行。紧随写请求 200/<0.4 s 说明写锁未泄漏。
+- 生产 `exam_papers` 目前所有卷 `takers=0/avg_score=null`（无卷达到 `_SOCIAL_MIN_N=5` 真实考生），社会证明门控只能「空真」通过，要写明。
