@@ -110,6 +110,10 @@
   color: var(--bad);
 }
 
+.m-meta-ok {
+  color: var(--ok-strong);
+}
+
 /* 复习清零庆祝态（t-popup center） */
 .cb-card {
   width: 280px;

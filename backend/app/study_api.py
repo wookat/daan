@@ -1,5 +1,6 @@
 """学习记录域：画像/计划、作答日志、错题本、SRS 复习、提醒、统计与反馈纠错。"""
 import json
+import math
 import re
 import time
 
@@ -512,7 +513,9 @@ def api_review_record(mid: int, body: dict):
             bool(body.get("correct")),
             uid=uid,
             picked=picked if isinstance(picked, str) else None,
-            secs=int(secs) if isinstance(secs, (int, float)) and not isinstance(secs, bool) and secs > 0 else None,
+            secs=min(int(secs), 86400)
+            if isinstance(secs, (int, float)) and not isinstance(secs, bool) and math.isfinite(secs) and secs > 0
+            else None,
         )
     except KeyError:
         raise HTTPException(404, "错题不存在") from None

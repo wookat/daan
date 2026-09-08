@@ -34,14 +34,15 @@ import {
 import type { FavFolder, FavItem, Mistake } from '../../api/types';
 import { anonUid } from '../../utils/auth';
 import { md } from '../../utils/md';
-import { buildReviewSnap, parseReviewSnap, REVIEW_SNAP_KEY, type ReviewResume } from '../../utils/review-snap';
-import { reviewVerdict } from '../../utils/review-verdict';
+import { buildReviewSnap, parseReviewSnap, reviewElapsedSecs, REVIEW_SNAP_KEY, type ReviewResume } from '../../utils/review-snap';
+import { reviewVerdict, streakProgressText } from '../../utils/review-verdict';
 import { MODULE_NAMES, modName } from '../../utils/stats';
 import { syncTabBar } from '../../utils/tabbar';
 
 interface MRow extends Mistake {
   modName: string;
   typeName: string;
+  streakText: string;
   open: boolean;
   optList: { k: string; v: string; ok: boolean; bad: boolean }[];
   attempts?: string[];
@@ -305,6 +306,7 @@ Page({
   _manualPicks: {} as Record<string, string>,
   _snapTimer: 0 as ReturnType<typeof setTimeout> | 0,
   _reviewIntent: false,
+  _qStart: 0,
   onShow() {
     syncTabBar(this, 1);
     // 首页「继续未完成复习」→ tabBar 页无法带参，走 storage 意图位（H5 bookReviewIntent）
@@ -327,6 +329,7 @@ Page({
         ...x,
         modName: modName(x.module),
         typeName: groupName(x),
+        streakText: x.mastered ? '' : streakProgressText(x.review_streak),
         open: false,
         optList: optList(x),
       }));
@@ -928,6 +931,7 @@ Page({
       rStreak: 0,
       rVerdict: '',
     });
+    this._qStart = Date.now();
   },
   verdictFor(cur: RItem | null, wasCorrect: boolean, streak: number, nextDays: number): string {
     return reviewVerdict({
@@ -988,7 +992,7 @@ Page({
     this.setData({ answered: true, wasCorrect: correct, rItems, rVerdict: this.verdictFor(cur, correct, 0, 0) });
     if (!correct) this.appendSimilar(cur);
     try {
-      const res = await postReviewRecord(cur.id, correct, picked);
+      const res = await postReviewRecord(cur.id, correct, picked, reviewElapsedSecs(this._qStart, Date.now()));
       const idx = this.data.rIdx;
       const mastered = res.mastered === true;
       const item = this.data.rItems[idx];

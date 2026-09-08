@@ -216,6 +216,7 @@
               <kg-tag v-if="m.source === 'exam'" tone="info">模考</kg-tag>
               <view v-if="mistakePaper(m)" class="pbadge-hit" role="button" @click.stop="pidFilter = mistakePaper(m).pid"><kg-tag tone="neutral" class="pbadge">{{ mistakePaper(m).psource }}</kg-tag></view>
               <kg-tag v-if="m.times >= 2" tone="bad">错 {{ m.times }} 次</kg-tag>
+              <kg-tag v-if="!m.mastered && streakText(m)" tone="ok">{{ streakText(m) }}</kg-tag>
               <kg-tag v-if="m.mastered" tone="ok" class="mright">已掌握</kg-tag>
               <kg-tag v-else-if="nextReviewText(m)" :tone="isDue(m) ? 'warn' : 'neutral'" class="mright">{{ nextReviewText(m) }}</kg-tag>
               <text class="meta mtime">{{ fmt(m.created_at) }}</text>
@@ -559,8 +560,8 @@ import { fontSizes, normFontLv } from '../../font-size.js';
 import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
 import { askQid, findAskSid } from '../../ask-link.js';
 import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid, reviewAskAnswer, similarSubmodule, hasSimilarPool } from '../../review-similar.js';
-import { buildReviewSnap, parseReviewSnap } from '../../review-snap.js';
-import { reviewSummary, reviewVerdict } from '../../review-summary.js';
+import { buildReviewSnap, parseReviewSnap, reviewElapsedSecs } from '../../review-snap.js';
+import { reviewSummary, reviewVerdict, streakProgressText } from '../../review-summary.js';
 import { reviewOptions, reviewOptionsFull } from '../../review-opts.js';
 import { redoSkippedNote } from '../../book-redo-skipped.js';
 import { inlineSkipNote } from '../../paper-inline-note.js';
@@ -962,6 +963,9 @@ export default {
     }
     this.load();
     // #ifdef H5
+    // 离开本页时 vue-router 会用它自己记的（不含筛选 query 的）地址覆写当前历史条目，返回后地址栏丢 mod/kp/qt；
+    // 深链首次进入时 kp/qt 尚未由 applyPendingKp 落地，此时不同步以免抹掉入参
+    if (!this._pendingKp && !this._pendingKp3) this.syncBookUrl();
     if (!this._kbHandler && typeof window !== 'undefined') {
       this._kbHandler = (e) => this.onKeydown(e);
       window.addEventListener('keydown', this._kbHandler);
@@ -1031,7 +1035,7 @@ export default {
     syncBookUrl() {
       // #ifdef H5
       if (typeof window !== 'undefined' && window.history) {
-        window.history.replaceState(null, '', buildBookUrl({ tab: this.tab, mod: this.filterMod, kp: this.kpFilter, qt: this.qtFilter, kp3: this.kp3Filter, src: this.srcFilter, pid: this.pidFilter, rz: this.rzFilter, sort: this.sortBy }));
+        window.history.replaceState(window.history.state, '', buildBookUrl({ tab: this.tab, mod: this.filterMod, kp: this.kpFilter, qt: this.qtFilter, kp3: this.kp3Filter, src: this.srcFilter, pid: this.pidFilter, rz: this.rzFilter, sort: this.sortBy }));
       }
       // #endif
     },
@@ -1319,6 +1323,9 @@ export default {
     modName(m) {
       return NAMES[m] || m || '';
     },
+    streakText(m) {
+      return streakProgressText(m.review_streak);
+    },
     masteryClass(m) {
       if (m.mastered) return 'lv-good';
       if (!m.review_count) return 'lv-new';
@@ -1509,6 +1516,7 @@ export default {
       this.wasCorrect = r.wasCorrect;
       this.nextDays = r.nextDays;
       this.streak = Number(this.rItems[this.rIdx]?._streak) || 0;
+      this._qStart = Date.now();
       this.reviewing = true;
       this.resumeInfo = null;
     },
@@ -1520,6 +1528,10 @@ export default {
       this.answered = false;
       this.wasCorrect = false;
       this.nextDays = 0;
+      this._qStart = Date.now();
+    },
+    reviewSecs() {
+      return reviewElapsedSecs(this._qStart, Date.now());
     },
     async pick(o) {
       if (this.answered) return;
@@ -1560,7 +1572,7 @@ export default {
       try {
         const res = await request('/api/review/' + this.cur.id, {
           method: 'POST',
-          data: { correct, uid: anonUid(), picked: this.picked || undefined },
+          data: { correct, uid: anonUid(), picked: this.picked || undefined, secs: this.reviewSecs() },
         });
         this.nextDays = res.next_review_days;
         this.streak = res.streak;
