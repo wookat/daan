@@ -4,7 +4,7 @@ export const BOOK_PATH = '/#/pages/book/book';
 const TABS = ['done', 'fav'];
 const MODS = ['ziliao', 'shuliang', 'yanyu', 'panduan', 'changshi', 'shenlun'];
 const SRCS = ['exam', 'practice'];
-const SORTS = ['due', 'times', 'type', 'reason'];
+const SORTS = ['old', 'due', 'times', 'type', 'reason'];
 const RZS = ['粗心大意', '概念不清', '方法不会', '纯蒙的', '未标注'];
 const KP_MAX = 40;
 

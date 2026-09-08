@@ -198,15 +198,29 @@ _REDO_REASONS = {"粗心大意", "概念不清", "方法不会", "纯蒙的", "�
 _REDO_SOURCES = {"exam", "practice"}
 
 
+_REDO_MIDS_MAX = 25
+
+
+def _parse_redo_mids(raw: str | None) -> list[int] | None:
+    """`mids=1,2,3`：批量勾选重练。非正整数 / 空列表 / 超上限一律 400，不静默截断。"""
+    if raw is None:
+        return None
+    parts = [p.strip() for p in raw.split(",") if p.strip()]
+    if not parts or len(parts) > _REDO_MIDS_MAX or not all(p.isdigit() and int(p) > 0 for p in parts):
+        raise HTTPException(400, "无效的错题 ID")
+    return list(dict.fromkeys(int(p) for p in parts))
+
+
 @router.get("/api/mistakes/redo")
-def api_mistakes_redo(limit: int = 10, qtype: str | None = None, module: str | None = None, noqt: int = 0, uid: str | None = None, rz: str | None = None, src: str | None = None, t3: str | None = None):
+def api_mistakes_redo(limit: int = 10, qtype: str | None = None, module: str | None = None, noqt: int = 0, uid: str | None = None, rz: str | None = None, src: str | None = None, t3: str | None = None, mids: str | None = None):
     if rz is not None and rz not in _REDO_REASONS:
         raise HTTPException(400, "无效的错因")
     if src is not None and src not in _REDO_SOURCES:
         raise HTTPException(400, "无效的来源")
     if t3 is not None and t3 not in taxonomy.topic_index():
         raise HTTPException(400, "无效的考点")
-    return {"items": db.mistakes_redo_questions(clamp_limit(limit, 25), qtype=qtype, module=module, noqt=bool(noqt), uid=uid, reason=rz, source=src, tag3=t3)}
+    ids = _parse_redo_mids(mids)
+    return {"items": db.mistakes_redo_questions(clamp_limit(limit, 25), qtype=qtype, module=module, noqt=bool(noqt), uid=uid, reason=rz, source=src, tag3=t3, mids=ids)}
 
 _REPORT_REASONS = {"答案有误", "题目有错字/乱码", "选项有问题", "图片不清晰/缺失", "解析有误", "其他"}
 

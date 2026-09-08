@@ -477,11 +477,11 @@
 
       <export-confirm
         :visible="exportConfirm"
-        scope="错题本 · 当前筛选"
-        :count="Math.min(shownItems.length, 100)"
+        :scope="exportSel ? '错题本 · 已选' : '错题本 · 当前筛选'"
+        :count="Math.min(exportList.length, 100)"
         :busy="exporting"
         above-tabbar
-        @close="exportConfirm = false"
+        @close="closeExport"
         @confirm="exportMistakes"
       />
 
@@ -501,9 +501,11 @@
         <text class="bb-n">已选 {{ selCount }}</text>
         <kg-button variant="text" size="md" aria-label="退出批量" @click="toggleBatch">退出</kg-button>
         <view class="bb-acts">
-          <kg-button v-if="tab === 'todo'" variant="secondary" size="lg" :disabled="!selCount || batchBusy" @click="batchMaster(true)">标已掌握</kg-button>
-          <kg-button v-else variant="secondary" size="lg" :disabled="!selCount || batchBusy" @click="batchMaster(false)">恢复复习</kg-button>
-          <kg-button variant="secondary" size="lg" tone="bad" :disabled="!selCount || batchBusy" @click="batchDel">删除</kg-button>
+          <kg-button v-if="tab === 'todo'" variant="primary" size="md" aria-label="重练所选错题" :disabled="!selCount || batchBusy" @click="redoSel">重练</kg-button>
+          <kg-button variant="secondary" size="md" aria-label="导出所选为 PDF" :disabled="!selCount || batchBusy || exporting" @click="openExportSel">导出</kg-button>
+          <kg-button v-if="tab === 'todo'" variant="secondary" size="md" :disabled="!selCount || batchBusy" @click="batchMaster(true)">标已掌握</kg-button>
+          <kg-button v-else variant="secondary" size="md" :disabled="!selCount || batchBusy" @click="batchMaster(false)">恢复复习</kg-button>
+          <kg-button variant="secondary" size="md" tone="bad" :disabled="!selCount || batchBusy" @click="batchDel">删除</kg-button>
         </view>
       </view>
 
@@ -603,6 +605,7 @@ export default {
       filterOpen: false,
       exporting: false,
       exportConfirm: false,
+      exportSel: false,
       scanning: false,
       scanOpen: false,
       scanResult: null,
@@ -631,6 +634,7 @@ export default {
       REASONS: ['粗心大意', '概念不清', '方法不会', '纯蒙的'],
       SORTS: [
         { k: 'time', name: '最新' },
+        { k: 'old', name: '最早' },
         { k: 'due', name: '待复习优先' },
         { k: 'times', name: '错次多' },
         { k: 'type', name: '按题型' },
@@ -723,6 +727,7 @@ export default {
       else if (this.sortBy === 'type') base.sort((a, b) => String(a.question_type || a.module || '').localeCompare(String(b.question_type || b.module || ''), 'zh'));
       else if (this.sortBy === 'reason') base.sort((a, b) => String(a.error_reason || '\uffff').localeCompare(String(b.error_reason || '\uffff'), 'zh'));
       else if (this.sortBy === 'due') base.sort((a, b) => (a.next_review || 9e12) - (b.next_review || 9e12));
+      else if (this.sortBy === 'old') base.sort((a, b) => (a.created_at || 0) - (b.created_at || 0));
       const k = this.kw.trim().toLowerCase();
       if (k) {
         base = base.filter(
@@ -740,6 +745,14 @@ export default {
     },
     selCount() {
       return Object.keys(this.selIds).length;
+    },
+    // 批量勾选的错题行（只看当前 tab，与 batchMaster/batchDel 同源；筛选变化后被隐藏的已选项仍算）
+    selItems() {
+      const base = this.tab === 'done' ? this.doneItems : this.todoItems;
+      return base.filter((m) => this.selIds[m.id]);
+    },
+    exportList() {
+      return this.exportSel ? this.selItems : this.shownItems;
     },
     weekTrend() {
       if (!this.items.length) return null;
@@ -1073,12 +1086,21 @@ export default {
         },
       });
     },
+    openExportSel() {
+      if (!this.selCount) return;
+      this.exportSel = true;
+      this.exportConfirm = true;
+    },
+    closeExport() {
+      this.exportConfirm = false;
+      this.exportSel = false;
+    },
     async exportMistakes(opts) {
       if (this.exporting) return;
       this.exporting = true;
       try {
-        const list = this.shownItems.slice(0, 100);
-        if (!list.length) throw new Error('当前筛选没有错题');
+        const list = this.exportList.slice(0, 100);
+        if (!list.length) throw new Error(this.exportSel ? '没有选中的错题' : '当前筛选没有错题');
         const ids = list.filter((m) => m.question_id).map((m) => m.question_id);
         const items = list
           .filter((m) => !m.question_id && (m.question_text || '').trim())
@@ -1097,6 +1119,7 @@ export default {
           ...opts,
         });
         this.exportConfirm = false;
+        this.exportSel = false;
         uni.showToast({ title: 'PDF 已开始下载', icon: 'none' });
       } catch (e) {
         uni.showToast({ title: '导出失败：' + e.message, icon: 'none' });
@@ -1552,6 +1575,30 @@ export default {
       uni.setStorageSync('practiceLaunch', { kind: 'paper', source: g.psource, pid: g.pid, title: g.title || g.psource, untimed: true, wrong: true });
       uni.navigateTo({ url: '/pages/practice/practice' });
     },
+    // 批量勾选 → 只重练选中行（后端仍按 uid/mastered 约束，最多 25 题与接口上限一致）
+    async redoSel() {
+      const ids = this.selItems.filter((m) => !m.mastered).map((m) => m.id);
+      if (!ids.length || this.batchBusy) return;
+      if (ids.length > 25) {
+        uni.showToast({ title: '一次最多重练 25 题，请减少勾选', icon: 'none' });
+        return;
+      }
+      this.batchBusy = true;
+      try {
+        const d = await request('/api/mistakes/redo?limit=25&uid=' + encodeURIComponent(anonUid()) + '&mids=' + ids.join(','));
+        if (!d.items || !d.items.length) {
+          uni.showToast({ title: '选中的错题未能匹配到题库原题', icon: 'none' });
+          return;
+        }
+        trackEvent('book_redo_sel', 'book', String(d.items.length));
+        uni.setStorageSync('redoSet', d.items);
+        uni.navigateTo({ url: '/pages/practice/practice' });
+      } catch (e) {
+        uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
+      } finally {
+        this.batchBusy = false;
+      }
+    },
     async redoAll() {
       if (this.pidFilter) return this.redoPaper();
       try {
@@ -1896,9 +1943,10 @@ export default {
 .rf-row2 { display: flex; justify-content: center; gap: var(--sp-16); }
 
 /* 批量操作条 / 浮钮 */
-.batchbar { position: fixed; left: var(--page-x); right: var(--page-x); bottom: calc(50px + var(--sp-12) + env(safe-area-inset-bottom)); z-index: var(--z-bar); background: var(--card); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--sh-2); padding: var(--sp-8) var(--sp-12); display: flex; align-items: center; gap: var(--sp-8); }
+.batchbar { position: fixed; left: var(--page-x); right: var(--page-x); bottom: calc(50px + var(--sp-12) + env(safe-area-inset-bottom)); z-index: var(--z-bar); background: var(--card); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--sh-2); padding: var(--sp-8) var(--sp-12); display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-8); }
 .bb-n { font-size: var(--fs-sub); color: var(--ink-3); flex: 1; }
-.bb-acts { display: flex; gap: var(--sp-8); }
+/* 动作组容不下时整体折到第二行右对齐，不让单个按钮被挤窄 */
+.bb-acts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--sp-8); margin-left: auto; }
 .fabmenu { position: fixed; right: var(--sp-16); bottom: calc(50px + env(safe-area-inset-bottom) + var(--sp-16)); z-index: var(--z-bar); display: flex; flex-direction: column; align-items: flex-end; gap: var(--sp-8); }
 /* #ifndef H5 */
 .fabmenu { bottom: calc(env(safe-area-inset-bottom) + var(--sp-16)); }
