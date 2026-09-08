@@ -49,15 +49,17 @@ def test_social_proof_per_user_best_score(client):
 
 
 def test_paper_list_social_proof(client):
+    """卷列表社会证明需 ≥5 个真人样本（W10-A）；同人取最高分。"""
     pid = _seed_paper("卷库列表社会证明测试卷", seed_questions()[:5])
     empty_pid = _seed_paper("卷库列表无人考过测试卷", seed_questions()[:5])
     _seed_attempt(pid, "u1", 40)
     _seed_attempt(pid, "u1", 60)  # 同人取最高分
-    _seed_attempt(pid, "u2", 80)
+    for u, s in (("u2", 80), ("u3", 70), ("u4", 70), ("u5", 70)):
+        _seed_attempt(pid, u, s)
     db._papers_cache.clear()
     html = client.get("/tiku/papers/").text
-    assert "已有 2 人模考 · 平均 70.0 分" in html
+    assert "已有 5 人模考 · 平均 70.0 分" in html
     d = client.get("/api/exam/papers?kind=zhenti").json()
     by_id = {p["id"]: p for p in d["items"]}
-    assert by_id[pid]["takers"] == 2 and by_id[pid]["avg_score"] == 70.0
+    assert by_id[pid]["takers"] == 5 and by_id[pid]["avg_score"] == 70.0
     assert by_id[empty_pid]["takers"] == 0 and by_id[empty_pid]["avg_score"] is None

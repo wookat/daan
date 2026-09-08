@@ -58,6 +58,11 @@ def as_int(v, default: int = 0) -> int:
         raise HTTPException(400, "参数格式错误") from None
 
 
+def clamp_limit(limit, cap: int, floor: int = 0) -> int:
+    """分页 limit 夹到 [floor, cap]：SQLite `LIMIT -1` 等于不限行数，负值/畸形必须在入口截住。"""
+    return min(max(as_int(limit, floor), floor), cap)
+
+
 def friendly_ai_err(e: Exception) -> str:
     if isinstance(e, httpx.HTTPStatusError):
         code = e.response.status_code

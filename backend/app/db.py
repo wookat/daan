@@ -35,6 +35,30 @@ class _ConnProxy:
         except Exception:
             pass
 
+    def _failed(self, e: BaseException):
+        """语句失败即回滚（残留写事务会锁全站写路径）；参数绑定失败归为参数错误，由 /api 统一映射 400。"""
+        try:
+            if self._conn.in_transaction:
+                self._conn.rollback()
+        except Exception:
+            pass
+        if isinstance(e, (sqlite3.InterfaceError, sqlite3.ProgrammingError)) and "binding parameter" in str(e):
+            raise ValueError("参数格式错误") from e
+
+    def execute(self, *args, **kwargs):
+        try:
+            return self._conn.execute(*args, **kwargs)
+        except Exception as e:
+            self._failed(e)
+            raise
+
+    def executemany(self, *args, **kwargs):
+        try:
+            return self._conn.executemany(*args, **kwargs)
+        except Exception as e:
+            self._failed(e)
+            raise
+
     def __getattr__(self, name):
         return getattr(self._conn, name)
 
@@ -63,6 +87,9 @@ def get_conn():
         conn.execute(f"PRAGMA mmap_size={SQLITE_MMAP_BYTES}")
         conn.execute(f"PRAGMA journal_size_limit={SQLITE_WAL_LIMIT_BYTES}")
         _local.conn = conn
+    elif conn.in_transaction:
+        # 上一请求在语句之间抛出（Python 层异常）未走到 close()，事务残留会持写锁；复用前兜底回滚
+        conn.rollback()
     return _ConnProxy(conn)
 
 
@@ -855,7 +882,7 @@ def shenlun_questions(qtype: str | None = None, year: int | None = None, region:
                    LENGTH(material) material_len
             FROM shenlun_questions WHERE {' AND '.join(where)}
             ORDER BY exam_year DESC, id LIMIT ? OFFSET ?""",
-        (*args, min(limit, 50), offset),
+        (*args, min(max(limit, 0), 50), offset),
     ).fetchall()
     total = conn.execute(
         f"SELECT COUNT(*) FROM shenlun_questions WHERE {' AND '.join(where)}", args
@@ -1118,7 +1145,7 @@ def shenlun_answer_history(uid: str, qid: int | None = None, limit: int = 20) ->
                    q.qtype, q.question
             FROM shenlun_answers a LEFT JOIN shenlun_questions q ON q.id=a.qid
             WHERE {where} ORDER BY a.id DESC LIMIT ?""",
-        (*args, min(limit, 50)),
+        (*args, min(max(limit, 0), 50)),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -1203,7 +1230,7 @@ def shenlun_materials(topic: str | None = None, mtype: str | None = None, limit:
         args.append(mtype)
     rows = conn.execute(
         f"SELECT * FROM shenlun_materials WHERE {' AND '.join(where)} ORDER BY id LIMIT ? OFFSET ?",
-        (*args, min(limit, 50), offset),
+        (*args, min(max(limit, 0), 50), offset),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -1506,7 +1533,7 @@ def questions_by_tag3(code: str, offset: int = 0, limit: int = 20) -> list[dict]
     rows = conn.execute(
         "SELECT id, module, submodule, tag3, question, options, answer, explanation, is_real, exam_year, exam_region "
         "FROM questions WHERE tag3=? AND disabled=0 ORDER BY id DESC LIMIT ? OFFSET ?",
-        (code, min(limit, 50), offset),
+        (code, min(max(limit, 0), 50), offset),
     ).fetchall()
     conn.close()
     out = []
@@ -1546,7 +1573,7 @@ def tag3_review_list(limit: int = 100, module: str | None = None) -> dict:
                   q.module, q.submodule, q.question, q.options, q.explanation, q.answer, q.tag3 AS cur_tag3
            FROM tag3_review r LEFT JOIN questions q ON q.id=r.question_id
            WHERE {cond} ORDER BY r.id DESC LIMIT ?""",
-        args + [min(limit, 300)],
+        args + [min(max(limit, 0), 300)],
     ).fetchall()
     conn.close()
     return {"total": total, "items": [dict(r) for r in rows]}
@@ -1888,7 +1915,7 @@ def admin_search_questions(
         f"SELECT id, module, submodule, question, options, answer, explanation, hs_explanation, "
         f"hs_up, hs_down, is_real, exam_year, exam_region, source, disabled, tag3, quality_score "
         f"FROM questions {clause} ORDER BY {order} LIMIT ? OFFSET ?",
-        (*args, min(limit, 50), offset),
+        (*args, min(max(limit, 0), 50), offset),
     ).fetchall()
     conn.close()
     out = []
@@ -1943,7 +1970,7 @@ def dup_cluster_list(offset: int = 0, limit: int = 20, status: str = "open") -> 
            WHERE d.status=?
            GROUP BY d.cluster_id ORDER BY n DESC, d.cluster_id
            LIMIT ? OFFSET ?""",
-        (status, min(limit, 100), offset),
+        (status, min(max(limit, 0), 100), offset),
     ).fetchall()
     conn.close()
     return {"total": total, "items": [dict(r) for r in rows]}
@@ -2013,7 +2040,7 @@ def admin_flagged_cache(limit: int = 30) -> list[dict]:
     rows = conn.execute(
         "SELECT key, module, question_type, question_text, user_answer, explanation, hits, up, down "
         "FROM explain_cache WHERE down>0 ORDER BY down DESC, hits DESC LIMIT ?",
-        (min(limit, 100),),
+        (min(max(limit, 0), 100),),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -3566,6 +3593,7 @@ def _ensure_exam_tables(conn):
     add_column_if_missing(conn, "exam_attempts", "secs", "TEXT")
     add_column_if_missing(conn, "exam_attempts", "marks", "TEXT")
     add_column_if_missing(conn, "exam_attempts", "probe", "INTEGER")
+    add_column_if_missing(conn, "exam_attempts", "question_ids", "TEXT")
 
 
 def upsert_exam_paper(title: str, kind: str, year: int | None, region: str | None,
@@ -3605,6 +3633,7 @@ def _refresh_papers_cache(key: tuple) -> None:
 
 
 _PSOURCE_MIN_N = 20  # 对齐练习流按卷启动的最少题数守卫
+_SOCIAL_MIN_N = 5  # 卷卡「N 人考过 · 平均分」至少真人样本，低于此不外显
 
 
 def _dominant_paper_source(qids: list[int], src_by_qid: dict[int, str]) -> str | None:
@@ -3701,8 +3730,10 @@ def _list_exam_papers_base(conn, kind: str | None, year: int | None,
         d["mods"] = _paper_module_counts(d["_qids"], mod_by_qid)
         d["psource"] = _dominant_paper_source(qids_by_paper[d["id"]], src_by_qid)
         soc = takers.get(d["id"])
-        d["takers"] = soc["n"] if soc else 0
-        d["avg_score"] = soc["avg"] if soc else None
+        if soc and soc["n"] >= _SOCIAL_MIN_N:
+            d["takers"], d["avg_score"] = soc["n"], soc["avg"]
+        else:
+            d["takers"], d["avg_score"] = 0, None
         base.append(d)
     _papers_cache[key] = (time.time(), base)
     return base
@@ -3826,9 +3857,11 @@ def create_mock_paper(n: int = 30, duration_min: int = 30) -> int:
     return pid
 
 
-def start_exam_attempt(uid: str, paper_id: int, probe: bool = False) -> int:
+def start_exam_attempt(uid: str, paper_id: int, probe: bool = False,
+                       question_ids: list[int] | None = None) -> int:
     """开考建 attempt；顺带清掉本人过期未交卷的，以及同卷「进过页面但一题未答」的空场次（连同进度行）。
-    probe=True 标记探针场次：同卷人数/均分/排行榜/分数池等跨用户聚合剔除，本人报告不受影响。"""
+    probe=True 标记探针场次：同卷人数/均分/排行榜/分数池等跨用户聚合剔除，本人报告不受影响。
+    question_ids 为下发题序快照，判分/报告按它对位，不受事后禁题影响。"""
     conn = get_conn()
     _ensure_exam_tables(conn)
     _ensure_exam_progress(conn)
@@ -3845,8 +3878,9 @@ def start_exam_attempt(uid: str, paper_id: int, probe: bool = False) -> int:
         conn.execute(f"DELETE FROM exam_progress WHERE attempt_id IN ({marks})", stale)
         conn.execute(f"DELETE FROM exam_attempts WHERE id IN ({marks})", stale)
     cur = conn.execute(
-        "INSERT INTO exam_attempts (uid, paper_id, started_at, probe) VALUES (?,?,?,?)",
-        (uid, paper_id, time.time(), 1 if probe else 0),
+        "INSERT INTO exam_attempts (uid, paper_id, started_at, probe, question_ids) VALUES (?,?,?,?,?)",
+        (uid, paper_id, time.time(), 1 if probe else 0,
+         json.dumps(question_ids) if question_ids else None),
     )
     conn.commit()
     aid = cur.lastrowid
@@ -3884,6 +3918,7 @@ def get_exam_attempt(attempt_id: int) -> dict | None:
     d["per_module"] = json.loads(d["per_module"] or "{}")
     d["secs"] = json.loads(d.get("secs") or "{}")
     d["marks"] = json.loads(d.get("marks") or "[]")
+    d["question_ids"] = json.loads(d.get("question_ids") or "[]")
     return d
 
 
@@ -4198,7 +4233,7 @@ def list_exam_attempts(uid: str, paper_id: int | None = None, limit: int = 50) -
                    p.title, p.kind, p.year, p.region, p.duration_min
             FROM exam_attempts a JOIN exam_papers p ON p.id=a.paper_id
             WHERE {where} ORDER BY a.id DESC LIMIT ?""",
-        (*args, min(limit, 100)),
+        (*args, min(max(limit, 0), 100)),
     ).fetchall()
     conn.close()
     out = []
@@ -4730,7 +4765,7 @@ def admin_users(keyword: str | None = None, offset: int = 0, limit: int = 20,
                   MIN(created_at) first_seen, MAX(created_at) last_seen
            FROM answer_log WHERE {where} GROUP BY uid {having}
            ORDER BY last_seen DESC LIMIT ? OFFSET ?""",
-        args + ([_day_start(-inactive_days + 1)] if inactive_days else []) + [min(limit, 50), offset],
+        args + ([_day_start(-inactive_days + 1)] if inactive_days else []) + [min(max(limit, 0), 50), offset],
     ).fetchall()
     out = []
     for r in rows:
@@ -4783,7 +4818,7 @@ def admin_shizheng(offset: int = 0, limit: int = 20) -> dict:
     rows = conn.execute(
         "SELECT id, date, question, options, answer, explanation, source_note FROM shizheng_questions "
         "ORDER BY date DESC, id DESC LIMIT ? OFFSET ?",
-        (min(limit, 50), offset),
+        (min(max(limit, 0), 50), offset),
     ).fetchall()
     conn.close()
     out = []

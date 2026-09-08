@@ -6,7 +6,7 @@ import time
 from fastapi import APIRouter, HTTPException, Request
 
 from . import auth, db, kb, plan, taxonomy
-from .deps import as_int, rl
+from .deps import as_int, clamp_limit, rl
 from .social import api_checkin_badges, api_checkin_summary
 
 router = APIRouter()
@@ -206,7 +206,7 @@ def api_mistakes_redo(limit: int = 10, qtype: str | None = None, module: str | N
         raise HTTPException(400, "无效的来源")
     if t3 is not None and t3 not in taxonomy.topic_index():
         raise HTTPException(400, "无效的考点")
-    return {"items": db.mistakes_redo_questions(min(limit, 25), qtype=qtype, module=module, noqt=bool(noqt), uid=uid, reason=rz, source=src, tag3=t3)}
+    return {"items": db.mistakes_redo_questions(clamp_limit(limit, 25), qtype=qtype, module=module, noqt=bool(noqt), uid=uid, reason=rz, source=src, tag3=t3)}
 
 _REPORT_REASONS = {"答案有误", "题目有错字/乱码", "选项有问题", "图片不清晰/缺失", "解析有误", "其他"}
 
