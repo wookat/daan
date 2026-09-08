@@ -3135,7 +3135,7 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 数据纪律：生产仅 health ×1 + 首页 CDP 只读 ×1；dry-run 对生产库 `?mode=ro`；本机造数随 `/tmp/w13.db` 丢弃；未部署。
 - 遗留：部署后回归清单（hs_import 401 / 三榜单展示名 / 生产 body 字体 / 解析卡来源）；R12/R13 存量高占比需人工抽检后再决定加列与分发互斥；R9 存量重写需 LLM key；`save_mistake` uid strip 可接 `db.clean_uid`。
 
-- 上线与回归（2026-09-08 18:13Z）：#691 合入 main `9b4a511c` 后 `deploy_h5.sh --skip-build` 发版 `b0747ae4 → 9b4a511c`（bundle `index-C6y4w2jt.js`，Traceback 0）；4c 因 npx 解析到 wrangler 4.86.0 认证失败，改钉 `wrangler@4.129.1` 手工完成 Pages 部署 + 5/5b/6 校验（建议脚本钉版本）。生产回归：hs_import 无 token 401；日榜 `考友CB8C`；exam/submit `picks=[]|"abc"|123`、`secs=[1]` 均 400；`document.body` computed font Inter 栈。`test-w13-%` 40 行 + mock 卷 281 精确清理，LEFTOVER 0。详见 w13.md §7。
+- 上线与回归（2026-09-08 18:13Z）：#691 合入 main `9b4a511c` 后 `deploy_h5.sh --skip-build` 发版 `b0747ae4 → 9b4a511c`（bundle `index-C6y4w2jt.js`，Traceback 0）；4c 因 npx 解析到 wrangler 4.86.0 认证失败，改钉 `wrangler@4.129.1` 手工完成 Pages 部署 + 5/5b/6 校验（本 PR 已把脚本钉为 `wrangler@4.129.1`）。生产回归：hs_import 无 token 401；日榜 `考友CB8C`；exam/submit `picks=[]|"abc"|123`、`secs=[1]` 均 400；`document.body` computed font Inter 栈。`test-w13-%` 40 行 + mock 卷 281 精确清理，LEFTOVER 0。详见 w13.md §7。
 
 ### W12-C 内容审计（content-human，只读，不改库）
 - 报告 `docs/iter/workflow/w12c-content-human.md`：生产 `GET /api/questions` 五模块 6 组×10 题去重 296 题（uid `test-w12-*`，零写入零 AI）。W11-C 之外的新维度：① `source='original'` 合成题占分发样本 34%，ziliao「同比增长 28%」母版 13/56 且同组成串（ziliao-5 4/10）、shuliang-0 同结构克隆对相隔 1 题（P1）；② 合成题 explanation 伪排错句 11/102 vs 真题 0/194（P1）；③ hs 引用答题参考 2/296（R8 拒收）；④ hs 数字归一后整段复用 4 题组 0.97–1.0；⑤ 小程序 practice.wxml hs/原解析未去重（H5/SEO 已）。W11-C 项复核值：尾句 213/296、无非答案字母 105/296、原解析空 15、裸排除 0。规则 R8–R14 与 `hs_import` 批次级钩子设计见报告 §4/§5，未写代码。样本与脚本在审计机 `~/w12c/`，不入库。

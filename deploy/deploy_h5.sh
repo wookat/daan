@@ -205,7 +205,7 @@ cp -r "$DIST" "$PAGES_DIR/dist"
 mkdir -p "$PAGES_DIR/functions"
 cp -r "$REPO_DIR/deploy/cf-pages/functions/." "$PAGES_DIR/functions/"
 cp "$REPO_DIR/deploy/cf-pages/_routes.json" "$REPO_DIR/deploy/cf-pages/_headers" "$PAGES_DIR/dist/"
-(cd "$PAGES_DIR" && npx wrangler pages deploy dist --project-name kaogong-h5 --branch main --commit-dirty=true)
+(cd "$PAGES_DIR" && npx -y wrangler@4.129.1 pages deploy dist --project-name kaogong-h5 --branch main --commit-dirty=true)
 rm -rf "$PAGES_DIR"
 
 # Pages 新部署发布后别名域切换存在数秒~数十秒传播窗口，校验采用窗口内轮询而非单次探测
