@@ -234,6 +234,7 @@ async def guard_account_uid(request, call_next):
 
     匿名随机 uid 不受影响（其本身即凭据）。覆盖 query 与 JSON body 两处 uid。
     表单体（multipart/urlencoded）不在此解析，Form(uid) 端点自行校验 owns_uid。
+    uid 原串直接交给 is_account_uid/owns_uid，二者内部 strip 与 handler 的 `uid.strip()[:64]` 同口径。
     """
     uid = request.query_params.get("uid")
     body = b""
