@@ -490,10 +490,10 @@ export default {
     // #ifdef H5
     onExKeydown(e) {
       if (typeof window === 'undefined' || window.innerWidth < 1024) return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return;
       const tag = (e.target && e.target.tagName) || '';
       if (/INPUT|TEXTAREA|SELECT/.test(tag) || (e.target && e.target.isContentEditable)) return;
-      if (this.loading || !this.items.length || this.submitting || this.cardOpen) return;
+      if (this.loading || !this.items.length || this.submitting || this.cardOpen || this.resumeOpen) return;
       const k = e.key;
       if (/^[a-dA-D]$/.test(k)) {
         const K = k.toUpperCase();

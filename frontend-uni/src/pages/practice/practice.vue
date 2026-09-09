@@ -1972,7 +1972,7 @@ export default {
     // #ifdef H5
     onPKeydown(e) {
       if (typeof window === 'undefined' || window.innerWidth < 1024) return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return;
       const tag = (e.target && e.target.tagName) || '';
       if (/INPUT|TEXTAREA|SELECT/.test(tag) || (e.target && e.target.isContentEditable)) return;
       if (!this.session || !this.cur) return;

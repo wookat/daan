@@ -93,6 +93,17 @@ describe('practice.vue 继续上次练习层', () => {
     const kd = slice(PRACTICE, '    onPKeydown(e) {', '      const k = e.key;');
     expect(kd).toContain('this.quitOpen || this.resumeOpen');
   });
+
+  // 生产 ccd045d9 1440 FAIL：恢复层 X 上按 Enter → a11y 宿主 keydown 已 preventDefault 并 click 关层 →
+  // 同一事件冒泡到 window 时层已关、恢复已完成 → 页面快捷键把这次 Enter 当「下一题」（模考 2/30 → 3/30）。
+  // 已被当作激活消费的按键（defaultPrevented）不再进页面快捷键。
+  it('页面快捷键忽略已被弹层按钮激活消费的 keydown（defaultPrevented）——练习页与模考页', () => {
+    const p = slice(PRACTICE, '    onPKeydown(e) {', '      const k = e.key;');
+    expect(p).toContain('e.altKey || e.defaultPrevented) return;');
+    const x = slice(EXAM, '    onExKeydown(e) {', '      const k = e.key;');
+    expect(x).toContain('e.altKey || e.defaultPrevented) return;');
+    expect(x).toContain('this.cardOpen || this.resumeOpen) return;');
+  });
 });
 
 describe('exam.vue 继续上次模考层', () => {
