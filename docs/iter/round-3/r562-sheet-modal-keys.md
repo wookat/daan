@@ -139,3 +139,22 @@ testing agent 中途实时口径（终报另回填）：D1 plain / D2 / D3 在 3
 - 修法（#738）：`pageKey(href) = origin + pathname + search + hash 路由路径（去 hash query）`，`validMarker` 按页面身份比对；跨路由 replace 拷贝的残留标记仍无效（路径不同）。jsdom 回归「D1 ?mod 变体」修前 FAIL / 修后 PASS；`pageKey/validMarker` 纯函数用例补 query/search/origin/非字符串 u 分支。
 - 本地复验（`~/r562/d1mod_local.py`，本地 dist + 生产 API）：375 & 1440 → Back1 关层、`?mod=yanyu` 保留、焦点回「筛选与排序」；Back2 离开错题本；`d3_local.py` D1/D2/D3 无回归。
 - 另：「首页 → tabBar 错题本」为 uni `switchTab`（`state.replaced=true`）把首页条目 replace 掉，最后一次 Back 回到进入前的上一 document 而非「首页」——uni 既有语义、非本轮；D 系列口径为「离开错题本」。
+
+## 11. 生产黑盒复验三（`5d162588`，#738 发版）→ D1 ?mod 变体四象限 PASS，R562 闭环
+
+发版 `deploy_h5.sh --skip-build` `27f5508a → 5d162588`（`index-BPuwWvgI.js`；perf-budget `/` LCP 1931ms、`/tiku/` 1.00 全过）。testing agent 报告 `~/kaogong-reports/r562-sheet-modal-keys-5d162588-prod-verify.md`、账本 `~/r562-modal-5d162588/`（83 张截图 + `verification-ledger.json` 逐步 DOM/history/focus）、录像 `~/screencasts/r562-5d162588-verified/`。
+
+| 断言 | 375 go_back | 375 Alt+Left | 1440 go_back | 1440 Alt+Left |
+|---|---|---|---|---|
+| 选模块 → Esc，URL 保留 `?mod=shuliang` | PASS | PASS | PASS | PASS |
+| 重开 → Back1 关层、保留模块、焦点回「筛选与排序」 | PASS | PASS | PASS | PASS |
+| Back2 离开错题本到真实上一 document | PASS | PASS | PASS | PASS |
+
+- Back1 后 `history.state.__kgSheet` 实值仍为首次开层留下的旧 `{t:1,u:'…/book'}`（u 无 query）：**设计如此**——它就是哑条目，靠该标记被下一次 Back 补跳；复验二写「marker 应消失」是口径错，已改为只记录实值不断言（SKILL 同步）。
+- 窄回归 375：D1 plain（关层、marker 清、归焦点、再 Back 离页）/ D2（Esc 后一次 Back 离页）/ D3（只关导出 → 关筛选 → 离页）/ E picker（Esc 回「提醒时间」cell、`inert`、即时与 3100ms 后各 5 次 Tab 不进 picker、重开「取消」→ Tab「完成」→ Esc 归还）全 PASS。
+- 审计：console error/warning、runtime exception、rejection、uni/loading warning、付费 AI/OCR 均 0；2515 请求 = 2470 真实完成 200 + 9 harness 初始化 document 200 + 36 自然资源取消（15 条先 200 后取消不重复计）；非 2xx / API 取消 / orphan / unresolved 0；144 条 API 双证全覆盖、245 条非 API 缺 ExtraInfo 独立证据（分账披露）。
+- 清理：精确删 5 行；41 表本轮 exact/子前缀 0；共享 `test-r562-modal-%` 既有 42 行逐字段保留；users 与保护 hash/count 回基线。
+- harness 偏差 2 处（空错题本不渲染筛选按钮 → 先 POST 一条本轮 uid 真实 mistake 再 fresh context；picker 重开同名标题定位冲突 → 改按时间 cell）均纠正后完成，不影响结论。
+- UNTESTED：真机手势 / 其它浏览器 / 小程序 / IME / 全部 29 处 sheet / F5 / 更多操作·手录完整回归（复验二已 PASS，本轮未重跑）/ 删除 `uni-modal` ARIA（既有单列）/ 通知实际投递。
+
+R562 累计：#736（实现）→ 生产一 `a5164498` D1/D2/D3 + picker FAIL → #737 → 生产二 `27f5508a` 仅 D1 ?mod FAIL → #738 → 生产三 `5d162588` 全 PASS。三个 PR 均已合入 main。

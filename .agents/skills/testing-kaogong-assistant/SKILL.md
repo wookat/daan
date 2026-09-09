@@ -37,6 +37,15 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 - 文本控件：手录 `textarea` 有内容时首次 Esc 只退出控件（层仍开、草稿保留），再 Esc 才关；空 textarea 直接关。IME 组合中（`isComposing`）Esc/Tab 不当弹层键。
 - Back 序列（`history.state.__kgSheet:{t,u}`）：层开着 `go_back()` → 层关、URL 不变、`state.__kgSheet` 消失；X/Esc 关层后 **一次** Back 离页（哑条目自动补跳，用户感知一次）；叠层（筛选 → 导出确认）Back 只关栈顶。实测坑：vue-router 对同 URL pop 的 `afterEach` 先于 `sheet-history` popstate 触发，任何「按落地 state 覆写 prev」的改法都会重现「第一次 Back 不关层」。
 - 手录层再开：`page.get_by_text('手录错题')` 会命中已关闭 popup 里 `display:none` 的标题 → `count()>0` 但不可点、30s 超时；要用 `.fabmenu` 作用域取菜单项，且 Esc 后等 ≥800ms（遮罩 leave 动画期间点 fab 会被吃掉）。
+- **Back 序列口径修正（生产 a5164498 → #737 27f5508a → #738 5d162588 三轮复验沉淀）**：
+  - 「离页」断言 = 离开错题本到**真实上一 history entry**，不是字面首页：`uni.switchTab` 会 replace 首页条目（`state.__type__:"switchTab"`、`replaced:true`），首页 → tabBar 错题本 → …最终 Back 可能落到再前一个 document。记录前后 URL/state/document 请求。
+  - **必测 `?mod` 变体**（27f5508a 四象限 FAIL 形态）：新 context 开筛选层 → 选模块 chip → Esc 关 → 断言 hash query 含 `?mod=` → 重开 → Back1 层关、URL 仍带 `?mod=`、焦点回 `uni-button[aria-label="筛选与排序"]` → Back2 离页。`book.vue syncBookUrl` 用 `replaceState(history.state,'',…?mod=)` 就地改哑条目 URL 不改 state，所以 Back1 后 `history.state.__kgSheet` **仍是旧 `{t:1,u:'…/book'}`（u 无 query）——这是设计（哑条目靠它被下一次 Back 补跳），只记录实际值不作 PASS/FAIL 断言**；#738 起 `validMarker` 按 `pageKey`（忽略 hash 内 query）判本页。不要 reset history/storage 让该分支通过。
+  - 四象限：375 / 1440 × `page.go_back()` / 真 Chrome `Alt+Left`；D3 叠层（筛选 → 导出确认 `.mask`）Back 只关栈顶，首 Back 后筛选层必须仍在。
+  - chip 定位用 `.wd-popup:visible #kgchip-<mod>`（无 `.kg-chip-row` 类；子 span `pointer-events:none`）；空错题本不渲染筛选按钮，需先造一条本轮 uid 的真实 mistake（普通 `/api/mistakes` POST + probe 头，不触发付费）再 fresh context。
+- **datetime-picker 离场态**：`wd-datetime-picker` `hide-when-close=false` 不卸载，`getClientRects().length===1` 不等于开着；记录 `wd-slide-up-leave*` 类、`inert`、rect y、activeElement，Esc 后**立即与 ≥3s 后**各 Tab×5 均不得进入离屏「取消/完成」（期望焦点回「提醒时间」`.wd-cell`）；重开须去 `inert`、焦点「取消」→ Tab「完成」。离场遮罩早期短暂获焦与禁止的离屏控件获焦要分开记。
+- 删除确认是原生 `uni-modal`（非 `.wd-popup`/`.mask`），无 `role=dialog` 属既有、单列不混入 KgSheet 结论。
+- 共享前缀（如 `test-r562-modal-%`）可能已有别轮 fixture：写入前记 exact uid 与前缀计数，选唯一子前缀，清理只清本轮 exact/子前缀，全部含 uid 表核 0，其余共享行保留并单列披露。
+- 网络分账：真实 200 / harness 初始化拦截 200（inert bootstrap document 不算服务端成功）/ 无响应取消 / 200 后取消（preload chunk `responseReceived` 后 `loadingFailed` 归取消不重复计成功）。
 - Lighthouse `/` LCP 违例先看 `environment.benchmarkIndex`（perf-budget.sh 自 R562 打印 INFO/WARN）：空闲 ~2600 → LCP ~1.0–1.4s；双核占满 ~1230 → 2.3s、perf 0.82；TTFB/观测 LCP 全程正常。低于 1800 的跑分不作回归结论，空闲后重跑；`/tiku/` 静态页不受影响可作对照。
 - 小程序收藏 tab cloud-only 已审计：本机 `favQuestions` 唯一写入方 `pkgExam/report/report.ts toggleDetailFav`，报告项 `question_id` 恒非空 → 云端必有对应行，不会丢本机收藏。
 
