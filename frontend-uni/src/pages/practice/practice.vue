@@ -398,7 +398,7 @@ import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 import { qStatLine, qDifficulty } from '../../q-stat.js';
 import { toggleExcl, pickWithExcl, exclVisible } from '../../exam-excl.js';
-import { collectPracticeProgress, adoptPracticeResume, pendingTitle, redoItemsFromPending, dailyFromPending, dailyPendingFor, cnDayOf, REDO_PENDING_TITLE } from '../../practice-progress.js';
+import { collectPracticeProgress, adoptPracticeResume, pendingTitle, redoItemsFromPending, dailyFromPending, dailyPendingFor, cnDayOf, REDO_PENDING_TITLE, unlinkedWrongItems, relinkMistakeIds, patchPendingMistake } from '../../practice-progress.js';
 import { weakSpots as buildWeakSpots } from '../../weak-spots.js';
 import { isExplanationCovered } from '../../exp-dup.js';
 import { reviewedMasteredCount, fixReportText, reviewedFromPending } from '../../review-advance.js';
@@ -2097,8 +2097,27 @@ export default {
       this.percentile = null;
       this.session = true;
       this.startQTimer();
+      this.relinkWrongMids();
       if (this._redoItems) uni.showToast({ title: '继续' + REDO_PENDING_TITLE, icon: 'none' });
       else if (daily) uni.showToast({ title: '继续' + (daily.past ? '往期每日一练' : '今日一练') + ' · 第 ' + (this.idx + 1) + '/' + this.items.length + ' 题', icon: 'none' });
+    },
+    // 恢复的错题若快照缺 _mid（POST 回包前就退出/刷新），按本人错题本回填，错因自评才有 mid 可 PATCH
+    async relinkWrongMids() {
+      const lost = unlinkedWrongItems(this.items);
+      if (!lost.length) return;
+      const items = this.items;
+      let d;
+      try {
+        d = await request('/api/mistakes?uid=' + anonUid());
+      } catch (e) { return; }
+      const pre = lost.filter((q) => q._reason).map((q) => [q, q._reason]);
+      if (this.items !== items || !relinkMistakeIds(items, d && d.items)) return;
+      // 回填前用户已在本地选了错因：补发一次 PATCH
+      pre.forEach(([q, rz]) => {
+        if (q._mid && q._reason === rz) request('/api/mistakes/' + q._mid, { method: 'PATCH', data: { uid: anonUid(), error_reason: rz } }).catch(() => {});
+      });
+      this.$forceUpdate();
+      if (this.session && items.some((x) => !x._picked)) this.saveSession();
     },
     adoptRemoteSnap(snap) {
       this.items = snap.items;
@@ -2117,6 +2136,7 @@ export default {
       this.session = true;
       this.startQTimer();
       this.saveSession();
+      this.relinkWrongMids();
     },
     resumeNow() {
       const s = uni.getStorageSync('pendingSession');
@@ -2309,7 +2329,13 @@ export default {
         this.autoSaved = true;
       }
       // 回包晚于作答时的 saveSession，补写快照让 _mid/_saved 跨退出/刷新不丢（否则恢复后错因自评无 mid 可 PATCH）
-      if (this.session && this.items.some((x) => !x._picked)) this.saveSession();
+      if (this.session && this.items.some((x) => !x._picked)) {
+        this.saveSession();
+        return;
+      }
+      // 已「退出并保留」才回包：直接补进已存快照；「不保留」快照已清则不重建
+      const kept = patchPendingMistake(uni.getStorageSync('pendingSession'), q);
+      if (kept) uni.setStorageSync('pendingSession', kept);
     },
     shareResult() {
       if (this._dailyDoneDate && (this.dailyStats || this.dailyErr)) {

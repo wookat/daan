@@ -54,8 +54,25 @@ describe('R559 错因 chip 取消语义', () => {
   it('saveWrong 回包/入队后补写 pendingSession（会话仍在且未全答完），恢复后 _mid 可 PATCH', () => {
     const fn = practice.slice(practice.indexOf('async saveWrong() {'), practice.indexOf('shareResult() {'));
     expect(fn).toContain('q._mid = res.id;');
-    expect(fn).toMatch(/\}\n\s+\/\/[^\n]*\n\s+if \(this\.session && this\.items\.some\(\(x\) => !x\._picked\)\) this\.saveSession\(\);\n\s+\},\n\s*$/);
+    expect(fn).toMatch(/if \(this\.session && this\.items\.some\(\(x\) => !x\._picked\)\) \{\n\s+this\.saveSession\(\);\n\s+return;\n\s+\}/);
     expect(practice).toMatch(/this\.saveWrong\(\);[\s\S]{0,120}\}\n\s+this\.saveSession\(\);/);
     expect(practice).toMatch(/leave\(keep\) \{[\s\S]*?this\.session = false;/);
+  });
+
+  // R559-fix-2（c8fabd0f 生产复验仍 FAIL 的两个窗口）：① 答错后极速 F5（POST 被新 Document 取消，回包永不到）；
+  // ② 「退出并保留」后才回包（leave 已 session=false/items=[]，#728 的 saveSession 分支不成立）。
+  it('saveWrong 晚回包：会话已退出则 patchPendingMistake 补进已存快照，不重建已清快照', () => {
+    const fn = practice.slice(practice.indexOf('async saveWrong() {'), practice.indexOf('shareResult() {'));
+    expect(fn).toMatch(/const kept = patchPendingMistake\(uni\.getStorageSync\('pendingSession'\), q\);\n\s+if \(kept\) uni\.setStorageSync\('pendingSession', kept\);\n\s+\},\n\s*$/);
+  });
+
+  it('恢复（本地快照 / 服务端快照）后 relinkWrongMids 按本人错题本回填 _mid，已选错因补发 PATCH', () => {
+    expect(practice).toMatch(/this\.startQTimer\(\);\n\s+this\.relinkWrongMids\(\);\n\s+if \(this\._redoItems\)/);
+    expect(practice).toMatch(/adoptRemoteSnap\(snap\) \{[\s\S]*?this\.saveSession\(\);\n\s+this\.relinkWrongMids\(\);\n\s+\},/);
+    const fn = practice.slice(practice.indexOf('async relinkWrongMids() {'), practice.indexOf('adoptRemoteSnap(snap) {'));
+    expect(fn).toContain("d = await request('/api/mistakes?uid=' + anonUid());");
+    expect(fn).toContain('if (this.items !== items || !relinkMistakeIds(items, d && d.items)) return;');
+    expect(fn).toContain("if (q._mid && q._reason === rz) request('/api/mistakes/' + q._mid, { method: 'PATCH', data: { uid: anonUid(), error_reason: rz } }).catch(() => {});");
+    expect(fn).toContain('if (this.session && items.some((x) => !x._picked)) this.saveSession();');
   });
 });

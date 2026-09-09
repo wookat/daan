@@ -1,5 +1,6 @@
 import {
   fetchCheckinBadges,
+  fetchMistakes,
   fetchReviewDue,
   postAnswerLog,
   postMistake,
@@ -36,9 +37,12 @@ import { drawOffline } from '../../utils/offline-pack';
 import {
   adoptPracticeResume,
   collectPracticeProgress,
+  patchPendingMistake,
   PENDING_KEY,
   PP_CLEARED_KEY,
   readPendingSession,
+  relinkMistakeIds,
+  unlinkedWrongItems,
 } from '../../utils/practice-progress';
 import type { PendingSession, ProgressQuestion } from '../../utils/practice-progress';
 import { redoSkippedNote } from '../../utils/redo-note';
@@ -96,10 +100,10 @@ function toPQ(q: Question | ProgressQuestion): PQuestion {
     _picked: pq._picked || '',
     _secs: pq._secs || 0,
     _logged: !!pq._logged,
-    _saved: false,
+    _saved: !!pq._saved,
     _excl: excl,
-    _mid: null,
-    _reason: '',
+    _mid: Number.isInteger(pq._mid) && (pq._mid as number) > 0 ? (pq._mid as number) : null,
+    _reason: typeof pq._reason === 'string' ? pq._reason : '',
     _reported: false,
     optList: optListOf(q.options, excl),
   };
@@ -202,6 +206,8 @@ Page({
   _shareTitle: '',
   _badgeChecking: false,
   _starting: false,
+  _unloaded: false,
+  _adoptSeq: 0,
   _bestStreak: 0,
   _favSeq: 0,
   _reviewed: [] as AnswerLogReviewed[],
@@ -258,6 +264,7 @@ Page({
     this.flushProgress();
     // 中途退出：把已答未上报的作答补报（与 practice.vue quit 对齐）
     this.logAttempts(this.data.items);
+    this._unloaded = true;
   },
 
   // ---------- 启动 / 续做 ----------
@@ -365,6 +372,7 @@ Page({
   // 统一进入作答态：items 已带 _picked（续做）或全空（新开）
   adopt(items: PQuestion[], idx: number, right: number, streak: number, bestStreak: number) {
     this._bestStreak = bestStreak;
+    this._adoptSeq++;
     const i = Math.min(Math.max(idx, 0), items.length - 1);
     const cur = items[i];
     this.setData({
@@ -392,6 +400,7 @@ Page({
     if (!cur._picked) this.startTimer();
     else this.stopTimer();
     this.saveSession();
+    this.relinkWrongMids();
   },
 
   // 本地 pendingSession（24h）优先，其次服务端 /api/practice/resume；都没有则按上次模块开练
@@ -756,7 +765,44 @@ Page({
     // 回包晚于作答时的 saveSession：把 _mid/_saved 写回 items 再补快照，恢复后错因自评才有 mid 可 PATCH
     const i = this.data.items.findIndex((it) => it === q || (q.id != null && it.id === q.id));
     if (i < 0 || this.data.finished) return;
+    if (this._unloaded) {
+      // 页面已退出才回包：只补已存快照，不用旧实例覆盖新会话
+      const kept = patchPendingMistake(readPendingSession(), q);
+      if (kept) wx.setStorageSync(PENDING_KEY, kept);
+      return;
+    }
     this.setData({ [`items[${i}]._mid`]: q._mid, [`items[${i}]._saved`]: true });
+    this.saveSession();
+  },
+  // 恢复的题组里「答错但没 _mid」的题（回包前退出/杀进程）：用本人错题本回填，错因自评才能 PATCH
+  async relinkWrongMids() {
+    const seq = this._adoptSeq;
+    if (!unlinkedWrongItems(this.data.items).length) return;
+    let d: Awaited<ReturnType<typeof fetchMistakes>>;
+    try {
+      d = await fetchMistakes();
+    } catch (e) {
+      return;
+    }
+    // 回包期间换了一组（再来一组/重开）或已退出/结算：旧组的回填作废
+    if (this._unloaded || this._adoptSeq !== seq || this.data.finished) return;
+    const items = this.data.items;
+    // cur 可能是 items[idx] 的副本（setData 后），错因只写在 cur 上：先同步再回填，再写回 cur
+    const cur = this.data.cur;
+    const at = items[this.data.idx];
+    const same = !!cur && !!at && cur !== at && ((cur.id != null && cur.id === at.id) || cur.question === at.question);
+    if (same && cur._reason && !at._reason) at._reason = cur._reason;
+    const pre = unlinkedWrongItems(items).filter((q) => q._reason).map((q) => [q, q._reason] as const);
+    if (!relinkMistakeIds(items, d && d.items)) return;
+    pre.forEach(([q, rz]) => {
+      if (q._mid && q._reason === rz) patchMistakeReason(q._mid, rz).catch(() => {});
+    });
+    if (same && !cur._mid && at._mid) {
+      cur._mid = at._mid;
+      cur._saved = true;
+      if (!cur._reason && at._reason) cur._reason = at._reason;
+    }
+    this.setData(cur ? { items, cur } : { items });
     this.saveSession();
   },
   // 错因自评（答错后）；错题已落库则 PATCH error_reason
