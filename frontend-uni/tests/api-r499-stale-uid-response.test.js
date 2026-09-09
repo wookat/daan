@@ -60,7 +60,7 @@ describe('api.js request() GET 回包统一过旧身份守卫', () => {
     expect(g).toBeGreaterThan(-1);
     expect(s).toBeGreaterThan(g);
     expect(body).toMatch(/if \(opts\.timeout != null\) return withAuthRetry\(\(\) => rawRequest\(path, opts\)\.then\(\(d\) => guardStaleUid\(path, d\)\)\);/);
-    expect(body).toMatch(/if \(method !== 'GET'\) return withAuthRetry\(\(\) => rawRequest\(path, opts\)\);/);
+    expect(body).toMatch(/if \(method !== 'GET'\) \{[^}]*return withAuthRetry\(\(\) => rawRequest\(path, opts\)\)\.finally\(\(\) => getCache\.clear\(\)\);\s*\}/);
   });
 
   it('旧身份错误不是网络错误 → 不会触发 stale_fallback 快照回退', () => {
