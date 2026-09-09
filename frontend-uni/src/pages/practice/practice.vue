@@ -1236,7 +1236,7 @@ export default {
       } else {
         if (qid) setFav(qid).catch(() => {});
         const { question, options, answer, explanation, hs_explanation, xp_explanation, xp_school, module, submodule, is_real, exam_year, exam_region, image, image_credit } = this.cur;
-        this.favs.unshift({ t: Date.now(), question, options, answer, explanation, hs_explanation, xp_explanation, xp_school, module: this.cur._sz ? '时政' : module, submodule, is_real, exam_year, exam_region, image, image_credit });
+        this.favs.unshift({ t: Date.now(), id: qid || null, question, options, answer, explanation, hs_explanation, xp_explanation, xp_school, module: this.cur._sz ? '时政' : module, submodule, is_real, exam_year, exam_region, image, image_credit });
         if (this.favs.length > 200) this.favs.length = 200;
         uni.showToast({ title: '已收藏，可在错题本查看', icon: 'none', duration: 900 });
       }

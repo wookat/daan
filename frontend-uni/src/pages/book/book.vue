@@ -594,7 +594,8 @@ A. 春分  B. 夏至  C. 秋分  D. 冬至" :maxlength="MANUAL_QUESTION_MAX" ari
 
 <script>
 import { md } from '../../md.js';
-import { request, anonUid, exportPdf, scanSheet, shareCreate, trackEvent, qShareText, shareVariant, isStaleUidErr } from '../../api.js';
+import { request, anonUid, exportPdf, scanSheet, shareCreate, trackEvent, qShareText, shareVariant, isStaleUidErr, fetchFavs, removeFav } from '../../api.js';
+import { cloudFavId } from '../../exam-fav.js';
 import { buildBookUrl, normalizeTabPageFullPath, parseBookOpts } from '../../book-url.js';
 import { exportNote, exportNotesMap } from '../../book-export.js';
 import { setBookBadge } from '../../tabbar-badge.js';
@@ -1401,9 +1402,19 @@ export default {
     },
     unfav(i) {
       if (i < 0) return;
-      this.favs.splice(i, 1);
-      uni.setStorageSync('favQuestions', this.favs.map(({ _open, ...f }) => f));
+      const [f] = this.favs.splice(i, 1);
+      uni.setStorageSync('favQuestions', this.favs.map(({ _open, ...x }) => x));
       if (!this.favs.length) this.tab = 'todo';
+      this.unfavCloud(f);
+      uni.showToast({ title: '已取消收藏', icon: 'none', duration: 900 });
+    },
+    // 本机收藏与云收藏（question_favs）同步取消；题库题按 id，历史无 id 条目按题干回查云列表
+    async unfavCloud(f) {
+      try {
+        let qid = cloudFavId(f);
+        if (!qid && f && f.question) qid = cloudFavId(f, (await fetchFavs()).items);
+        if (qid) await removeFav(qid);
+      } catch (e) { /* 云端同步失败不回滚本机；下次收藏页合并仍以云端为准 */ }
     },
     isDue(m) {
       return !m.next_review || m.next_review <= Date.now() / 1000;
