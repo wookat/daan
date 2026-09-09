@@ -3,6 +3,15 @@ name: testing-kaogong-assistant
 description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## R568 经验：慢 origin 下 cache-first 首屏 vs 稳定态分账 + 宿主级阻塞时的复验/清理收口
+- 更多操作层标题自 R568 起为 `moreTitle` = `组名 · 简称`（「法律 · 个税」），与卡面/chip 同口径；四值（显示 / 库内 `question_type` / URL `qt` / redo `qtype`）仍分开断言，后三者不变。统计页 0 作答：`/api/growth total=0` + `/api/stats` 分布非空 → hero 总正确率 `—`、其余卡仍渲染（`hasData()` 不变）；总数 0 不等于分布空，两口径一起断言。
+- 错题本带筛选（`?mod=&qt=`）物理 F5 是 cache-first：先渲染本地缓存全量卡 + 待复习 0，真实回包后才收敛为筛选态。慢 origin（本轮 ~30s）下这两个状态相隔很久，**必须两态各截时间戳截图 + 对齐 API request/abort/response 时间线**，不能凭早期一张截图判「筛选丢失」（本轮 1440 F5 初判 FAIL 后纠正为既有 P2 R568-1）。
+- 取消归因要存 CDP 单调时间戳 + wallTime：12/15/20s 处 abort + 同 uid 重试是前端超时处理的一致证据，不是「uid 切换」；未直接埋点的因果只能标「推断」。
+- 原生 UI 重试仍拉不到卡（fresh 冷加载两次失败、`/api/review` 520）→ 下游功能用例一律 UNTESTED/blocked，**不得用 fixture JSON 灌应用状态冒充生产 E2E 覆盖**。HTTP 520 body / cf-ray / Browser Log 网络 error 与 JS runtime exception 分列。
+- 静态审计脚本容错 curl exit 28 / status 000 / 无 body：记 exit code、耗时、stderr；拿不到响应头 = 未观测，不是「部署头被去掉」。
+- 清理写请求后 SSH 超时（本轮 280s）是二义状态：**不盲目重发 DELETE**，先跑独立只读 41 表精确/前缀核证，再单独补五类 hash；报告保留「删除回执缺失」偏差即便只读证明 0 行。宿主 load >20 / mem_avail <250MB 时把 hash 全表扫描与删除拆成独立 SSH 会话。
+- 宿主被同机他家 build/prune/celery 压垮（health 19–44s、mistakes 17–81s、520）时：只读采样 `uptime/free/df/ps` 归因、`report_blocker` 上报，不 kill 他家进程、不叠 compose/build/prune；后端 0 改动的发版可只跑 Pages 4c/5/5b/6 段，health rev 对账留 `DEPLOY_RESUME=1`；复验报告写「部分 PASS / 环境阻塞 / 不判整轮通过」。
+
 ## R567 经验：题型「显示 / 库内值 / URL qt / redo qtype」四值分账 + 前后端归一化同口径
 - 错题 `question_type` 写入 → 库内值经后端 `db.norm_qtype`（只去 `资料分析/数量关系/言语理解/判断推理/常识判断/常识/时政` + `-`），fixture 写完**必须 GET `/api/mistakes` 回读**库内值再拿它做后续断言；前端任何「见 `-` 就切首段」都是错口径（`法律-个税`/`政治-理论`/`图形推理-空间类` 会被切坏，生产 R567 D FAIL：redo `qtype=个税` → 200 `items:[]`）。H5 `tagName` / 小程序 `tagName` 与 `type-label.js qtypeName` 共用同一份模块名单，改名单要三处同改。
 - 复验把四个值分开断言：卡头/chip/当前筛选/重练入口**显示**（`fineTypeLabel(type_group, fine)` 简称，如「个税」）、库内 `question_type`、URL `?qt=`（应 = 库内值，物理 F5 后仍是）、`GET /api/mistakes/redo?...&qtype=`（应 = 库内值）。redo 只认 `items` 非空且 qid 命中，HTTP 200 空数组 = FAIL。更多操作层标题 `tagName · 更多操作` 是 raw 值（R567-1 登记），不是缺陷。
