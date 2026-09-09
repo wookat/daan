@@ -304,9 +304,9 @@
         <!-- #endif -->
 
         <view class="done-acts">
-          <kg-button v-if="paperFinish().isPaper && paperWrongN() > 0" size="lg" block @click="retryPaperWrong">重练本卷错题（{{ paperWrongN() }} 题）</kg-button>
-          <kg-button v-if="paperFinish().isPaper" :variant="paperWrongN() > 0 ? 'ghost' : 'primary'" size="lg" block @click="goExamList">回卷库</kg-button>
-          <kg-button v-else size="lg" block @click="retryGroup">再来一组</kg-button>
+          <kg-button v-if="!beiMode && wrongRetry()" size="lg" block icon="rotate-ccw" @click="retryWrong">{{ wrongRetry().label }}</kg-button>
+          <kg-button v-if="paperFinish().isPaper" :variant="wrongRetry() ? 'ghost' : 'primary'" size="lg" block @click="goExamList">回卷库</kg-button>
+          <kg-button v-else :variant="!beiMode && wrongRetry() ? 'ghost' : 'primary'" size="lg" block @click="retryGroup">再来一组</kg-button>
           <kg-button v-if="!beiMode" variant="ghost" size="lg" block icon="share-2" @click="shareResult">分享成绩</kg-button>
           <kg-button variant="text" size="md" block @click="quit">返回首页</kg-button>
         </view>
@@ -392,7 +392,7 @@ import { requestNotificationPermission } from '../../reminder.js';
 import { announce } from '../../a11y-live.js';
 import { pickAnnounceText } from '../../live-policy.js';
 // #endif
-import { paperContinuePlan, paperQuery, paperFinishState, paperShareText, paperWrongItems, paperWrongPlan, paperWrongLaunch } from '../../paper-continue.js';
+import { paperContinuePlan, paperQuery, paperFinishState, paperShareText, paperWrongItems, paperWrongPlan, paperWrongLaunch, wrongRetryPlan } from '../../paper-continue.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 import { qStatLine, qDifficulty } from '../../q-stat.js';
@@ -1593,14 +1593,15 @@ export default {
     paperFinish() {
       return paperFinishState(this._ptitle);
     },
-    // 完成页按卷错题数：模板方法调用规避非响应式 _ptitle 影响的缓存
-    paperWrongN() {
-      return paperWrongItems(this.items).length;
+    // 完成页错题重练入口（按卷/普通练习）：模板方法调用规避非响应式 _ptitle 影响的缓存
+    wrongRetry() {
+      return wrongRetryPlan(this.items, this._ptitle);
     },
-    // 完成页「重练本卷错题」：就地以本会话答错题重开会话，保留 _source/_ptitle 归卷
-    retryPaperWrong() {
+    // 完成页「只重练本组/本卷错题」：就地以本会话答错题重开会话，保留 _source/_ptitle/lastModule；落 pendingSession 供刷新/前进恢复
+    retryWrong() {
+      const plan = wrongRetryPlan(this.items, this._ptitle);
       const wrong = paperWrongItems(this.items);
-      if (!wrong.length) return;
+      if (!plan || !wrong.length) return;
       this.items = wrong;
       this.idx = 0;
       this.picked = '';
@@ -1612,7 +1613,8 @@ export default {
       this.percentile = null;
       this.session = true;
       this.startQTimer();
-      uni.showToast({ title: '只重练本卷错题', icon: 'none' });
+      this.saveSession();
+      uni.showToast({ title: plan.toast, icon: 'none' });
     },
     // 完成页「再来一组」：错题重练场次重用同一组错题，其余按原模块重新抽题
     retryGroup() {
