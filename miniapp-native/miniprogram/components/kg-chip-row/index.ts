@@ -7,6 +7,7 @@ Component({
     value: { type: null, value: '' },
     size: { type: String, value: 'md' },
     scrollToSelected: { type: Boolean, value: true },
+    toggle: { type: Boolean, value: false },
   },
   data: { scrollTo: '' },
   observers: {
@@ -19,7 +20,11 @@ Component({
   methods: {
     onTap(e: WechatMiniprogram.TouchEvent) {
       const { value, disabled } = e.currentTarget.dataset as { value: string | number; disabled?: boolean };
-      if (disabled || value === this.data.value) return;
+      if (disabled) return;
+      if (value === this.data.value) {
+        if (this.data.toggle) this.triggerEvent('change', { value: '' });
+        return;
+      }
       this.triggerEvent('change', { value });
     },
   },

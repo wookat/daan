@@ -26,7 +26,7 @@
         <view v-if="cur._extra && !wasCorrect && cur._saved" class="appended-tip">已加入错题本，之后会安排复习</view>
         <view v-if="!wasCorrect && reviewReasonMid(cur)" class="reasons">
           <text class="rz-t">错因自评：</text>
-          <kg-chip-row size="sm" :options="REASONS.map((rz) => ({ label: rz, value: rz }))" :model-value="cur.error_reason || ''" :scroll-to-selected="false" @update:model-value="setReviewReason" />
+          <kg-chip-row size="sm" :options="REASONS.map((rz) => ({ label: rz, value: rz }))" :model-value="cur.error_reason || ''" :scroll-to-selected="false" toggle @update:model-value="setReviewReason" />
         </view>
         <view :style="optStyle"><rich-text :nodes="curHtml" /></view>
         <view class="sim-rows">
@@ -1712,7 +1712,7 @@ export default {
       try {
         await request('/api/mistakes/' + mid, { method: 'PATCH', data: { uid: anonUid(), error_reason: rz } });
         this.saveReviewSnap();
-        trackEvent('review_reason_tag', rz);
+        trackEvent('review_reason_tag', rz || '未标注');
       } catch (e) { /* 非关键路径 */ }
     },
     async saveExtraWrong(item) {

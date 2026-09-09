@@ -759,9 +759,10 @@ Page({
     const rz = String(e.currentTarget.dataset.rz || '');
     const cur = this.data.cur;
     if (!cur || !rz) return;
-    cur._reason = rz;
-    this.setData({ 'cur._reason': rz });
-    if (cur._mid) patchMistakeReason(cur._mid, rz).catch(() => {});
+    const next = cur._reason === rz ? '' : rz;
+    cur._reason = next;
+    this.setData({ 'cur._reason': next });
+    if (cur._mid) patchMistakeReason(cur._mid, next).catch(() => {});
   },
 
   // ---------- 导航（下一题 / 答题卡） ----------

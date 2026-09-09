@@ -493,15 +493,16 @@ Page({
   async onReason(e: WechatMiniprogram.TouchEvent) {
     const rz = String(e.currentTarget.dataset.rz || '');
     const d = this.data.detail;
-    if (!d || !d.mistake_id || !rz || d.error_reason === rz) return;
+    if (!d || !d.mistake_id || !rz) return;
     const prev = d.error_reason || null;
-    this.setData({ 'detail.error_reason': rz });
+    const next = prev === rz ? '' : rz;
+    this.setData({ 'detail.error_reason': next });
     try {
-      await patchMistake(d.mistake_id, { error_reason: rz });
+      await patchMistake(d.mistake_id, { error_reason: next });
       const r = this.data.report;
       if (r) {
         const it = r.items.find((x) => x.no === d.no);
-        if (it) it.error_reason = rz;
+        if (it) it.error_reason = next;
         this.derive(r, this.data.rank);
       }
     } catch (err) {

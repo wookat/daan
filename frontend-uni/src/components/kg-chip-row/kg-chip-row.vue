@@ -11,7 +11,7 @@
         :hover-stay-time="80"
         role="radio"
         :aria-checked="o.value === modelValue ? 'true' : 'false'"
-        @click="$emit('update:modelValue', o.value)"
+        @click="$emit('update:modelValue', toggle && o.value === modelValue ? '' : o.value)"
       >
         <l-icon v-if="o.icon" :name="o.icon" :size="16" tone="inherit" />
         <text>{{ o.label }}</text>
@@ -23,7 +23,8 @@
 
 <script>
 /** KgChipRow（COMPONENTS §1.3）：横滚单选筛选行，右侧 24px 渐隐。>4 项或带计数用它，≤4 项互斥切视图用 wd-segmented。
- *  wrap：弹层/表单内的必选全集（如纠错类型）换成多行换行，不横滚不渐隐——选项全部可见，桌面端不依赖横向滚轮。 */
+ *  wrap：弹层/表单内的必选全集（如纠错类型）换成多行换行，不横滚不渐隐——选项全部可见，桌面端不依赖横向滚轮。
+ *  toggle：可选标签（如错因自评）再点已选项清空为 ''；筛选行默认关闭（再点已选项原值回发）。 */
 export default {
   name: 'KgChipRow',
   props: {
@@ -36,6 +37,7 @@ export default {
     size: { type: String, default: 'md', validator: (v) => v === 'md' || v === 'sm' },
     scrollToSelected: { type: Boolean, default: true },
     wrap: { type: Boolean, default: false },
+    toggle: { type: Boolean, default: false },
   },
   emits: ['update:modelValue'],
 };

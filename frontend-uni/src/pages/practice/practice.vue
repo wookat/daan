@@ -1909,11 +1909,12 @@ export default {
     },
     async setReason(rz) {
       const q = this.cur;
-      q._reason = rz;
+      const next = q._reason === rz ? '' : rz;
+      q._reason = next;
       this.$forceUpdate();
       if (q._mid) {
         try {
-          await request('/api/mistakes/' + q._mid, { method: 'PATCH', data: { uid: anonUid(), error_reason: rz } });
+          await request('/api/mistakes/' + q._mid, { method: 'PATCH', data: { uid: anonUid(), error_reason: next } });
         } catch (e) { /* 非关键路径 */ }
       }
     },

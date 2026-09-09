@@ -30,7 +30,7 @@
           <view wx:if="{{!wasCorrect && rCur.appended}}" class="appended-tip">已为你在本轮末尾加练 {{rCur.appended}} 道同类题</view>
           <view wx:if="{{!wasCorrect && !rCur.extra}}" class="reasons">
             <text class="rz-t">错因自评</text>
-            <view class="reasons-row"><kg-chip-row size="sm" options="{{reasonOpts}}" value="{{rCur.error_reason || ''}}" bind:change="onReviewReason" /></view>
+            <view class="reasons-row"><kg-chip-row size="sm" options="{{reasonOpts}}" value="{{rCur.error_reason || ''}}" toggle bind:change="onReviewReason" /></view>
           </view>
           <text wx:if="{{rCur.explanation}}" class="m-exp q-text" user-select>{{rCur.explanation}}</text>
           <view class="r-next"><kg-button variant="primary" size="lg" block bind:click="onNextReview">{{rIdx + 1 < rItems.length ? '下一题' : '完成复习'}}</kg-button></view>

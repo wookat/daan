@@ -1131,12 +1131,12 @@ Page({
   async onReviewReason(e: ChipChange) {
     const rz = String(e.detail.value || '');
     const cur = this.data.rCur;
-    if (!rz || !cur || cur.extra) return;
+    if (!cur || cur.extra) return;
     const i = this.data.rIdx;
     this.setData({ 'rCur.error_reason': rz, [`rItems[${i}].error_reason`]: rz });
     try {
       await patchMistake(cur.id, { error_reason: rz });
-      trackEvent('review_reason_tag', rz);
+      trackEvent('review_reason_tag', rz || '未标注');
     } catch (err) {
       /* 非关键路径 */
     }
