@@ -26,7 +26,8 @@ export function validMarker(state, href) {
 
 /**
  * popstate 决策（纯函数）。prev/land：离开/落到的条目上的有效弹层 token（无则 null）；isOpen(token)：该弹层是否仍打开；
- * skipping：上一步是否刚为跳过哑条目补过一次 back。
+ * skipping：正在从更深页面返回、逐条跳过本页哑条目（落到本页真条目就停）；从本页哑条目上离开的链不算 skipping，
+ * 连续开关多次留下的一串哑条目也要一直补 back 到真正离页。
  * 返回 { type: 'close'|'back'|'none', token?, skipping }。
  */
 export function popAction(prev, land, isOpen, skipping) {
@@ -35,7 +36,7 @@ export function popAction(prev, land, isOpen, skipping) {
     return isOpen(land) ? { type: 'none', skipping: false } : { type: 'back', skipping: true }
   }
   if (prev != null && isOpen(prev)) return { type: 'close', token: prev, skipping: false }
-  if (land != null && !isOpen(land)) return { type: 'back', skipping: true }
+  if (land != null && !isOpen(land)) return { type: 'back', skipping: prev == null || skipping }
   if (skipping) return { type: 'none', skipping: false }
   if (prev != null) return { type: 'back', skipping: false }
   return { type: 'none', skipping: false }
