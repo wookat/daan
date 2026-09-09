@@ -3,6 +3,14 @@ name: testing-kaogong-assistant
 description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## R564 经验：恢复确认层（F5 后「继续上次练习/模考？」）与弹层按钮 Enter 激活的复验口径
+- 弹层按钮上的 Enter/Space 激活必须断言**同题/同页**（题号计数器、题干、picked、`pendingSession`/`examProgress` 整对象、attempt id），不能只看层关：a11y 宿主把 keydown 转 click 时已 `preventDefault`，同一事件仍会冒泡到 `window` 的页面快捷键，层已关时会被当「下一题」。修法口径：页面级快捷键统一 `if (e.defaultPrevented) return`。Escape 作对照组一起录。
+- 恢复层隐式关层（Esc / Back / X / 遮罩）= 继续，但会发一条 `practice_resume_cont` 埋点：断言「0 业务请求」要排除 `/api/track`，分别核 `progress` POST / `questions` GET / `exam/start` 条数；显式丢弃则恰 1 空 qids progress + 1 新 GET（模考恰 1 `exam/start`）。
+- 任何新埋点事件名先核后端 `/api/track` 白名单：审计非 2xx 时把 `/api/track` 400 `无效事件` 单列，不能混在「全 200」里；前端新增事件名即后端改动，本地门要跑 pytest `test_track_whitelist_sync`。
+- 物理 F5 恢复层是「页面一进来就开」的第一个 sheet，History token 边界在这里必现：F5 → Esc → F5 → Back 必须关层留页；每步记 `history.state.__kgSheet`，新 token 不得与当前条目残留 marker 相同。
+- 模考恢复后核 nav 标题（迷你模考 vs 试卷名）与 `attempt`/`endAt`；练习恢复要在「错答停在反馈态」和「答对已推进」两种前置各测一次 F5。
+- 跨设备快照用第二个 context 同 uid 写 `POST /api/practice/progress` 造真回包，再在无本机 `pendingSession` 的 context 进练习页；本地只有源码契约时如实写 UNTESTED。
+
 ## R563 经验：原生 `uni-modal`/`uni-actionsheet` 键盘复验 + History 哑条目链离页口径
 - 原生层焦点时序要分两条测：记录 click/focusin 真实时间戳并在 visibility 过渡内立即发 CDP Shift+Tab（属按键早于可聚焦时刻的窗口）；再独立测焦点已入层后的 Shift+Tab。「过渡期进不了层」不是「重试抢走了层内焦点」的证据；observer 重复安装时先去重 focus trace。
 - `uni-actionsheet` 桌面宽度下可见控件不同：核取消 cell 的祖先与 client rect，不只看它自身 computed display（1440 取消父级隐藏、只循环日期）；证据文件名按观察到的状态起名，不按期望目标。
