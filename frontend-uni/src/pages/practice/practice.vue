@@ -2308,6 +2308,8 @@ export default {
         q._saved = true;
         this.autoSaved = true;
       }
+      // 回包晚于作答时的 saveSession，补写快照让 _mid/_saved 跨退出/刷新不丢（否则恢复后错因自评无 mid 可 PATCH）
+      if (this.session && this.items.some((x) => !x._picked)) this.saveSession();
     },
     shareResult() {
       if (this._dailyDoneDate && (this.dailyStats || this.dailyErr)) {

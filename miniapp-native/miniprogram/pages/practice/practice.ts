@@ -753,6 +753,11 @@ Page({
     } catch (e) {
       enqueueMistake({ uid: anonUid(), ...m });
     }
+    // 回包晚于作答时的 saveSession：把 _mid/_saved 写回 items 再补快照，恢复后错因自评才有 mid 可 PATCH
+    const i = this.data.items.findIndex((it) => it === q || (q.id != null && it.id === q.id));
+    if (i < 0 || this.data.finished) return;
+    this.setData({ [`items[${i}]._mid`]: q._mid, [`items[${i}]._saved`]: true });
+    this.saveSession();
   },
   // 错因自评（答错后）；错题已落库则 PATCH error_reason
   onSetReason(e: WechatMiniprogram.TouchEvent) {
