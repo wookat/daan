@@ -514,7 +514,7 @@
       />
 
       <!-- 批量操作条 -->
-      <kg-sheet :model-value="!!moreSheet" :title="moreSheet ? tagName(moreSheet.m) + ' · 更多操作' : ''" @update:model-value="(v) => { if (!v) moreSheet = null; }">
+      <kg-sheet :model-value="!!moreSheet" :title="moreSheet ? moreTitle(moreSheet.m) + ' · 更多操作' : ''" @update:model-value="(v) => { if (!v) moreSheet = null; }">
         <template v-if="moreSheet">
           <view v-if="!moreSheet.m.mastered" class="reasons more-reasons">
             <text class="rz-t">错因自评：</text>
@@ -1396,6 +1396,11 @@ export default {
     },
     fineLabel(m) {
       return fineTypeLabel(m.type_group, this.fineType(m));
+    },
+    /** 更多操作层标题与卡面同口径（组名 + 展示简称），筛选/redo 仍用原值 */
+    moreTitle(m) {
+      const fine = this.fineType(m) ? this.fineLabel(m) : '';
+      return fine ? this.groupKey(m) + ' · ' + fine : this.tagName(m);
     },
     fineTypeLabel,
     // 题型标签统一粒度：去掉「模块名-」前缀（历史数据两种格式并存，与后端 norm_qtype 同口径），无题型时用模块名

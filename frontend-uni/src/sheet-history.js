@@ -28,9 +28,10 @@ export function validMarker(state, href) {
  * popstate 决策（纯函数）。prev/land：离开/落到的条目上的有效弹层 token（无则 null）；isOpen(token)：该弹层是否仍打开；
  * skipping：正在从更深页面返回、逐条跳过本页哑条目（落到本页真条目就停）；从本页哑条目上离开的链不算 skipping，
  * 连续开关多次留下的一串哑条目也要一直补 back 到真正离页。
+ * away：从哑条目上离开但落到的不是本页真条目（地址栏/书签改 hash、Forward 到别页等前向导航）——不是 Back，不补 back。
  * 返回 { type: 'close'|'back'|'none', token?, skipping }。
  */
-export function popAction(prev, land, isOpen, skipping) {
+export function popAction(prev, land, isOpen, skipping, away = false) {
   if (prev != null && land === prev) {
     // 从更深页面返回到弹层条目：弹层仍开着（KeepAlive 页保留状态）则保持一致；已关则是哑条目，跳过
     return isOpen(land) ? { type: 'none', skipping: false } : { type: 'back', skipping: true }
@@ -38,7 +39,7 @@ export function popAction(prev, land, isOpen, skipping) {
   if (prev != null && isOpen(prev)) return { type: 'close', token: prev, skipping: false }
   if (land != null && !isOpen(land)) return { type: 'back', skipping: prev == null || skipping }
   if (skipping) return { type: 'none', skipping: false }
-  if (prev != null) return { type: 'back', skipping: false }
+  if (prev != null && !away) return { type: 'back', skipping: false }
   return { type: 'none', skipping: false }
 }
 
@@ -54,6 +55,14 @@ let installed = false
 let routerHooked = false
 let curHref = null
 let popping = false
+let prevKey = null
+let histLen = 0
+
+function syncPrev() {
+  prev = validMarker(window.history.state, window.location.href)
+  prevKey = prev != null ? pageKey(window.location.href) : null
+  histLen = window.history.length
+}
 
 /** vue-router history 的 popstate 监听（同步、早于其 afterEach 微任务）：标记「本次 afterEach 由 popstate 引发」 */
 export function noteHistoryPop() {
@@ -80,15 +89,17 @@ export function noteRouteChange() {
     delete rest.__kgSheet
     window.history.replaceState(rest, '')
   }
-  prev = validMarker(window.history.state, window.location.href)
+  syncPrev()
 }
 
 function onPop() {
   popping = false
   curHref = window.location.href
   const land = validMarker(window.history.state, window.location.href)
-  const act = popAction(prev, land, (t) => open.has(t), skipping)
-  prev = land
+  // Back 从哑条目落回本页真条目：同页且历史长度不变；地址栏/书签改 hash 会新建条目（长度增）或落到别页
+  const away = prev != null && land == null && (window.history.length > histLen || pageKey(window.location.href) !== prevKey)
+  const act = popAction(prev, land, (t) => open.has(t), skipping, away)
+  syncPrev()
   skipping = act.skipping
   if (act.type === 'close') {
     const close = open.get(act.token)
@@ -105,7 +116,7 @@ export function installSheetHistory(router) {
     installed = true
     window.addEventListener('popstate', onPop)
     curHref = window.location.href
-    prev = validMarker(window.history.state, window.location.href)
+    syncPrev()
   }
   if (!routerHooked && router && typeof router.afterEach === 'function') {
     routerHooked = true
@@ -128,6 +139,8 @@ export function sheetOpened(close) {
     const u = window.location.href
     window.history.pushState({ ...window.history.state, __kgSheet: { t, u } }, '', u)
     prev = t
+    prevKey = pageKey(u)
+    histLen = window.history.length
   }
   return t
 }
@@ -142,6 +155,8 @@ export function _resetSheetHistory() {
   seq = 0
   open.clear()
   prev = null
+  prevKey = null
+  histLen = 0
   skipping = false
   curHref = null
   popping = false

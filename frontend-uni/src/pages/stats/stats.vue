@@ -378,7 +378,7 @@ export default {
     },
     heroStats() {
       return [
-        { label: '总正确率', value: this.accPct + '%', tone: 'ok' },
+        { label: '总正确率', value: this.totalDone ? this.accPct + '%' : '—', tone: 'ok' },
         { label: '连续打卡', value: this.streakDays, unit: '天', tone: 'brand' },
         { label: '近 12 周学习', value: this.hmTotal, unit: '次' },
       ];
