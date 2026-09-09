@@ -60,6 +60,14 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 - 深链 Document 导航仍可能消费持久化的预取包直接跳过骨架：等可见骨架谓词 + 真被挂起的请求；单测骨架按钮时换冷模块并写明与指定 URL 的差异。URL `count=` 不核实际 `n/N` 前不要报「按 count 出题」。
 - 在路由拦截下测骨架退出时，Document 导航会取消无关的首页/progress 请求：把 requestId/时间戳与 Document 导航一起记录，和有意阻断分开列；不要因 console.error 为 0 且所有**已收到**响应为 200 就写「资源错误/取消为 0」。
 
+## R557 补充（testing agent）— 每日一练本地续练链路 / 首页重入预取分账 / 动画截图 / 并发漂移归属
+- 每日一练续练要走完整持久链：自然入口开今日一练 → **0 答物理 F5** → 答 2 题退出 → hero「继续今日一练 · 第 k/N 题」与续练卡「每日一练 · 今日全站同题」两入口各恢复一次 → 做完看打卡 + `POST /api/daily_set/submit`（date=今日、total）+ `daily_set_entries` 一行；不要用手写本地快照代替。普通/重练标签回归放在打卡**之前**做（打卡后 hero 变「再练 10 题」，测不到「继续目标」回落）；同 uid 的 `answer_log` 按 `source`（`daily`/NULL/`redo`）分组核证，别把全 uid 行数都称每日一练。
+- 首页重入会 `prefetchModule` 顺带 GET `/api/daily_set`，即使练习页是本地恢复：判「没重拉覆盖」只数**点击 hero 前后窗口**的 daily GET 起始时间戳，并独立比对 qid 序 / picks / idx / `daily.date,past` / `source`；整段会话的 GET 总数不是重置证据。
+- toast / action-sheet / modal 有淡入淡出：即时截图可能拍到半透明残影，等 sheet/modal hidden、toast opacity 稳定后再拍首页证据；拍早了按 harness 偏差单列，不记产品缺陷。
+- 每日完成页的可见结果是「今日全站同题 · 参与/击败」「今日排行榜」等控件，**没有**字面「全站成绩」；等真实控件渲染再关联 submit payload、`dailyPlan.days[今日]` 与 `daily_set_entries`。今日已完成后 hero「再练 10 题」有意开普通新题（`source=home_hero`、`daily=null`），不是重放当日题组。
+- 「五类全局 hash 不变」遇同机并发写入（本轮 `answer_log` 1396→1406 全为 `test-w17-h5-a/probe=1`）：保留基线 hash 与时间戳，只读算「基线之前行」的 hash 证明原行未动 + 按 uid/probe 归属新增行；报 FAIL 但写明归属，绝不删其他前缀。
+- 每日一练启动自 0e42420f 起 `answer_log.source='daily'`（之前 NULL）；查每日样本要按 rev 时间分段。练习页 URL 不支持 `count=`（0 写入方，题量走 `practiceLaunch.count`），手拼 `?count=5` 出 10 题是既有口径不是 bug。
+
 ## R549 补充 — 安全录入边界与 PDF 的非 UID 数据清理
 - 做「禁止付费 AI/OCR」的 UX 研究时，错题本「手动录入答案」可能只是卷码/答题卡 lookup，而非自由编写错题；先走真实表单确认，再决定是否能免费创建 `question_id=null`。如果只能走 AI，明确标 UNTESTED，不用 API fixture 冒充用户录入链路。
 - `POST /api/export/pdf` 会写**全局、非 UID scoped** 的 `paper_exports`。UI 导出前按当前部署实现从实际题序推导 code，并只读确认该 code 不存在；若已存在，不覆盖。清理时在停止录屏、关闭 context 后，校验新行 code/题序/title/created_at，再只删这一行；独立只读复查。仅清 UID-bearing 表不够。
