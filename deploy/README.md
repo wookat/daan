@@ -2,7 +2,15 @@
 
 ## 当前架构（2026-08 起）：Cloudflare Pages 静态层 + 服务器回源
 
-- `kaogong.zalize.com` DNS = CNAME `kaogong-h5.pages.dev`（CF proxied）。
+- `kaogong.zalize.com` DNS = CNAME `kaogong-h5-zalize.pages.dev`（CF proxied）。
+  **2026-09-10 Cloudflare 账号迁移**：`zalize.com` zone 已由老板迁到新账号
+  `583090ace6fb9a02db3f2625487ed865`；Pages 项目名 `kaogong-h5` 在旧账号占用不可复用，
+  新账号重建为 `kaogong-h5-zalize`（同 dist + functions + `_headers`/`_routes.json`，
+  `KG_EDGE_KEY` 已从宿主 Caddyfile matcher 取值重挂），自定义域从旧项目摘下→挂到新项目→
+  CNAME 改指新项目，切换窗口约 70s（403/522）。旧账号项目 `kaogong-h5` 保留未删（只剩 `*.pages.dev`）。
+  Pages 部署凭证改为新账号 Global API Key + 邮箱（org secrets `CLOUDFLARE_NEW_GLOBAL_API_KEY` /
+  `CLOUDFLARE_NEW_ACCOUNT_EMAIL`，脚本内映射为 wrangler 的 `CLOUDFLARE_API_KEY`/`CLOUDFLARE_EMAIL`），
+  旧 `CLOUDFLARE_API_TOKEN` 对新账号无权限且会被 wrangler 优先读取，脚本已 `unset`。
 - 静态层（`/`、`/index.html`、`/assets/*`、`/static/*`）由 Pages CDN 直出，
   `/assets/*` 长缓存 immutable（`deploy/cf-pages/_headers`）。
 - 其余全部路径（`/api/*`、`/admin`、`/tiku/*`、`/sw.js`、`/robots.txt`、`/sitemap.xml`、
@@ -12,7 +20,7 @@
   与 `deploy/cf-pages/_routes.json`。同源代理 ⇒ 无 CORS 问题。
 - 安全头（CSP/HSTS 等）：静态层由 `_headers` 下发，动态层由 functions 注入，
   与原 Caddyfile 口径一致；`/tiku/*` 保持可收录，`/api/*`、`/admin` noindex。
-- 部署：`deploy/deploy_h5.sh` 新增 4c 步（需 `CLOUDFLARE_API_TOKEN`），
+- 部署：`deploy/deploy_h5.sh` 新增 4c 步（需 `CLOUDFLARE_NEW_GLOBAL_API_KEY` + `CLOUDFLARE_NEW_ACCOUNT_EMAIL`），
   服务器 rsync + 容器重建照旧（origin 仍需完整 dist 供 SSR/兜底）。
 - **回滚**：把 `kaogong.zalize.com` DNS 改回 `A 150.109.230.174 dns-only`，并把宿主 Caddyfile 的
   `kaogong.zalize.com` 站点块恢复（`/etc/caddy/Caddyfile.bak-r453` 里有原块；或按下面「旧方案」
@@ -32,7 +40,7 @@
   周报 `cron_access_report.sh` 与小时级归档 crontab 条目已切到 origin 日志 glob，R184）。
 - **origin 域收口**（R86）：functions 回源请求带共享密钥头 `X-Kg-Edge`
   （值在 Pages 项目环境变量 `KG_EDGE_KEY`，`npx wrangler pages secret put KG_EDGE_KEY
-  --project-name kaogong-h5` 设置，不入仓库）；宿主 Caddy `kaogong-origin` 块对
+  --project-name kaogong-h5-zalize` 设置，不入仓库）；宿主 Caddy `kaogong-origin` 块对
   无/错该头的请求直接 403（拒绝绕过边缘缓存的直连爬虫），并在 access log 中
   filter 删除该头防泄漏。轮换密钥：先 `wrangler pages secret put` 新值并重新部署
   functions，再改 Caddyfile matcher 值 reload（顺序不可反，否则 403 自伤）。

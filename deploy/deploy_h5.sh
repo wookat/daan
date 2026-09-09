@@ -199,7 +199,15 @@ for u in "/api/stats" \
 done
 
 step "4c CF Pages 部署（kaogong.zalize.com 静态层；动态路由经 functions 代理回源 kaogong-origin）"
-: "${CLOUDFLARE_API_TOKEN:?need CLOUDFLARE_API_TOKEN (Pages deploy)}"
+# 2026-09-10 起 zalize.com 与 Pages 项目在新 Cloudflare 账号（583090ac…，项目 kaogong-h5-zalize），
+# 凭证为账号 Global API Key + 邮箱（org secrets CLOUDFLARE_NEW_GLOBAL_API_KEY / CLOUDFLARE_NEW_ACCOUNT_EMAIL）；
+# 旧账号的 CLOUDFLARE_API_TOKEN 对新账号无权限，须显式 unset 否则 wrangler 优先用它而报错
+: "${CLOUDFLARE_NEW_GLOBAL_API_KEY:?need CLOUDFLARE_NEW_GLOBAL_API_KEY (new CF account, Pages deploy)}"
+: "${CLOUDFLARE_NEW_ACCOUNT_EMAIL:?need CLOUDFLARE_NEW_ACCOUNT_EMAIL (new CF account, Pages deploy)}"
+export CLOUDFLARE_API_KEY="$CLOUDFLARE_NEW_GLOBAL_API_KEY" CLOUDFLARE_EMAIL="$CLOUDFLARE_NEW_ACCOUNT_EMAIL"
+export CLOUDFLARE_ACCOUNT_ID="${KG_CF_ACCOUNT_ID:-583090ace6fb9a02db3f2625487ed865}"
+unset CLOUDFLARE_API_TOKEN
+PAGES_PROJECT="${KG_PAGES_PROJECT:-kaogong-h5-zalize}"
 # wrangler 4.129 要求 Node ≥22；shell 默认 Node 20 时切到 nvm 22，否则后端已上线而静态层落空
 if [[ "$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)" -lt 22 ]]; then
   # shellcheck disable=SC1090
@@ -212,7 +220,7 @@ cp -r "$DIST" "$PAGES_DIR/dist"
 mkdir -p "$PAGES_DIR/functions"
 cp -r "$REPO_DIR/deploy/cf-pages/functions/." "$PAGES_DIR/functions/"
 cp "$REPO_DIR/deploy/cf-pages/_routes.json" "$REPO_DIR/deploy/cf-pages/_headers" "$PAGES_DIR/dist/"
-(cd "$PAGES_DIR" && npx -y wrangler@4.129.1 pages deploy dist --project-name kaogong-h5 --branch main --commit-dirty=true)
+(cd "$PAGES_DIR" && npx -y wrangler@4.129.1 pages deploy dist --project-name "$PAGES_PROJECT" --branch main --commit-dirty=true)
 rm -rf "$PAGES_DIR"
 
 # Pages 新部署发布后别名域切换存在数秒~数十秒传播窗口，校验采用窗口内轮询而非单次探测
