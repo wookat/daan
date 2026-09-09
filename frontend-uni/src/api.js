@@ -157,6 +157,12 @@ export function fetchFavs(folderId, module) {
   return request(p);
 }
 
+// 收藏对账专用：只接受服务端真实回包。显式 timeout 走 request 的直连分支——不进 GET 合并缓存、
+// 网络错误不回退 apiSnap 快照（快照是 POST 之前的旧列表，拿它对账会把刚收藏的题当「别处已取消」删掉）
+export function fetchFavsLive() {
+  return request(`/api/favs?uid=${encodeURIComponent(anonUid())}`, { timeout: 12000 });
+}
+
 export function setFav(questionId, folderId) {
   return request('/api/favs', { method: 'POST', data: { uid: anonUid(), question_id: questionId, folder_id: folderId || null } });
 }

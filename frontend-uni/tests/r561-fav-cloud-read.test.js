@@ -130,7 +130,7 @@ describe('syncCloudFavs', () => {
     let calls = 0;
     let resolve;
     vi.doMock('../src/api.js', () => ({
-      fetchFavs: () => {
+      fetchFavsLive: () => {
         calls++;
         return new Promise((r) => {
           resolve = r;
@@ -153,7 +153,15 @@ describe('syncCloudFavs', () => {
   });
 
   it('请求失败返回 null 且不动本机存储', async () => {
-    vi.doMock('../src/api.js', () => ({ fetchFavs: () => Promise.reject(new Error('net')) }));
+    vi.doMock('../src/api.js', () => ({ fetchFavsLive: () => Promise.reject(new Error('net')) }));
+    const { syncCloudFavs } = await import('../src/fav-sync.js');
+    store.favQuestions = [{ t: 1, id: 5, question: '甲' }];
+    expect(await syncCloudFavs()).toBe(null);
+    expect(store.favQuestions).toEqual([{ t: 1, id: 5, question: '甲' }]);
+  });
+
+  it('回包无 items 数组（非真实列表）返回 null 且不动本机存储', async () => {
+    vi.doMock('../src/api.js', () => ({ fetchFavsLive: () => Promise.resolve({}) }));
     const { syncCloudFavs } = await import('../src/fav-sync.js');
     store.favQuestions = [{ t: 1, id: 5, question: '甲' }];
     expect(await syncCloudFavs()).toBe(null);
@@ -161,9 +169,23 @@ describe('syncCloudFavs', () => {
   });
 });
 
+describe('R561-fix 对账不吃 apiSnap 快照（生产 E3：POST 后阻断 GET，旧空快照被当云列表把刚收藏的题清掉）', () => {
+  const API = readFileSync(new URL('../src/api.js', import.meta.url), 'utf8');
+  it('fetchFavsLive 显式 timeout 走 request 直连分支：不进 getCache、网络错误不回退 snapLoad', () => {
+    expect(API).toContain("export function fetchFavsLive() {\n  return request(`/api/favs?uid=${encodeURIComponent(anonUid())}`, { timeout: 12000 });\n}");
+    const req = API.slice(API.indexOf('export function request('), API.indexOf('export function anonUid('));
+    const direct = req.indexOf('if (opts.timeout != null) return withAuthRetry(() => rawRequest(path, opts).then((d) => guardStaleUid(path, d)));');
+    expect(direct).toBeGreaterThan(-1);
+    expect(req.indexOf('const snap = snapLoad(path);')).toBeGreaterThan(direct);
+    expect(req.indexOf('getCache\n      .run(')).toBeGreaterThan(direct);
+  });
+});
+
 describe('R561 页面接线（源锁）', () => {
-  it('fav-sync 只读 fetchFavs + reconcileFavs，失败吞掉返回 null', () => {
-    expect(SYNC).toContain("import { fetchFavs } from './api.js';");
+  it('fav-sync 只读 fetchFavsLive + reconcileFavs，失败吞掉返回 null', () => {
+    expect(SYNC).toContain("import { fetchFavsLive } from './api.js';");
+    expect(SYNC).not.toContain('fetchFavs()');
+    expect(SYNC).toContain('if (!d || !Array.isArray(d.items)) return null;');
     expect(SYNC).toContain("import { reconcileFavs } from './exam-fav.js';");
     expect(SYNC).toContain('.catch(() => null)');
   });
