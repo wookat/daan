@@ -51,18 +51,19 @@ def test_question_page_cta_deeplinks_same_question(client):
     assert m
     href, label = m.group(1), m.group(2)
     assert f"/#/pages/practice/practice?qid={qids[0]}&tag3=ZL-PJ-04&module=ziliao&source=seo_q" in href
-    assert label == "在线做这道题 + 同考点练习（免费）→"
+    assert label == "做这道题，再来五道同考点 ›"
 
     html = client.get(f"/tiku/q/{qids[1]}").text
     m = re.search(r'class="cta cta-w" href="([^"]+)">([^<]+)</a>', html)
     assert m
     assert f"/#/pages/practice/practice?qid={qids[1]}&module=ziliao&source=seo_q" in m.group(1)
-    assert m.group(2) == "在线做这道题（免费）→"
+    assert m.group(2) == "去练习页做这道题 ›"
     assert "继续刷题" not in html
 
 
 def test_question_page_first_fold_funnel(client):
-    """首屏就能做题：选项是带 pick 的深链、CTA 在答案之前、答案/解析默认折叠但仍在 DOM（供收录）。"""
+    """首屏就能做题：选项是带 pick 的深链（首屏唯一动作，不再叠一个 CTA）；答案/解析默认折叠但仍在 DOM（供收录），
+    看完解析后才出唯一一个「再来几道」CTA。"""
     from app.seo import pages
 
     qids = seed_questions()
@@ -78,9 +79,11 @@ def test_question_page_first_fold_funnel(client):
     assert "<details open" not in html
     assert '<details class="ans"><summary>先想一想，再看答案与解析' in html
     assert "正确答案：" in html and "测试解析" in html
-    # 选项→CTA→答案 的页面顺序；价值主张在选项上方
-    assert html.index("点选项直接作答") < html.index('class="opt"') < html.index('class="cta cta-w"') < html.index("<b>正确答案：")
-    assert html.count('class="cta cta-w"') == 2
+    # 提示→选项→答案→解析→CTA 的页面顺序；CTA 全页只有一个
+    ans_at = html.index("<b>正确答案：")
+    assert html.index("点选项就能作答") < html.index('class="opt"') < ans_at < html.index("测试解析", ans_at) < html.index('class="cta cta-w"')
+    assert html.count('class="cta cta-w"') == 1
+    assert "· 免费无需注册 ·" not in html
     assert "返回「" not in html
     assert f"题目 #{qids[0]}" not in html
 

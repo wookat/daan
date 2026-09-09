@@ -14,24 +14,7 @@ from .deps import check_import_token, clamp_limit
 router = APIRouter()
 
 
-def _split_family(items: list[dict]) -> tuple[list[dict], list[dict]]:
-    """保序拆成 (首见题, 被剔除的同族题)：同 family_key 或 R13 近似克隆视为同族；family_key 为 None 且无选项的题不参与。"""
-    kept: list[dict] = []
-    dropped: list[dict] = []
-    seen: set[str] = set()
-    clones: list[tuple[str, str]] = []
-    for q in items:
-        fk = quality.family_key(q)
-        ck = quality.clone_key(q.get("question"), q.get("options"))
-        if (fk is not None and fk in seen) or any(quality.is_clone(ck, c) for c in clones):
-            dropped.append(q)
-            continue
-        kept.append(q)
-        if fk is not None:
-            seen.add(fk)
-        if ck[1]:
-            clones.append(ck)
-    return kept, dropped
+_split_family = quality.split_family
 
 
 def _dedupe_family(items: list[dict], limit: int) -> list[dict]:
