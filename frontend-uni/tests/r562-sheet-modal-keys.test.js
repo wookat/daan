@@ -14,26 +14,26 @@ const POPUP = readFileSync(new URL('../node_modules/wot-design-uni/components/wd
 
 const el = (classes) => ({ classList: { contains: (c) => classes.includes(c) } });
 
-describe('modalEntry：两类弹层归一为 { box, hit, layers }', () => {
+describe('modalEntry：两类弹层归一为 { box, hit, layers }（R563 起追加 panel/kind，原形状不变）', () => {
   it('.mask 自身即遮罩：box=hit=mask，仅提自身 z-index', () => {
     const m = el(['mask']);
-    expect(modalEntry(m, null)).toEqual({ box: m, hit: m, layers: [m] });
+    expect(modalEntry(m, null)).toMatchObject({ box: m, hit: m, layers: [m] });
   });
 
   it('wd-popup：焦点圈在 popup，Esc 点同级 .wd-overlay，overlay+popup 一起提 z-index（保持 DOM 序 overlay 在下）', () => {
     const p = el(['wd-transition', 'kg-sheet', 'wd-popup', 'wd-popup--bottom']);
     const ov = el(['wd-transition', 'wd-overlay']);
-    expect(modalEntry(p, ov)).toEqual({ box: p, hit: ov, layers: [ov, p] });
+    expect(modalEntry(p, ov)).toMatchObject({ box: p, hit: ov, layers: [ov, p] });
   });
 
   it('无遮罩 popup（modal=false）：只圈定焦点，Esc 不关（hit=null）', () => {
     const p = el(['wd-popup']);
-    expect(modalEntry(p, null)).toEqual({ box: p, hit: null, layers: [p] });
+    expect(modalEntry(p, null)).toMatchObject({ box: p, hit: null, layers: [p] });
   });
 
   it('classList 缺失的节点按 .mask 语义兜底（不抛）', () => {
     const m = {};
-    expect(modalEntry(m, null)).toEqual({ box: m, hit: m, layers: [m] });
+    expect(modalEntry(m, null)).toMatchObject({ box: m, hit: m, layers: [m] });
   });
 });
 
@@ -160,8 +160,8 @@ describe('依赖前提（wot-design-uni 安装版本）', () => {
 
 describe('a11y-focus 源锁：栈收 .mask 与 .wd-popup，Esc 点 hit、Tab 圈 box', () => {
   it('入栈选择器同时含两类；wd-popup 用同级 .wd-overlay 作 hit', () => {
-    expect(A11Y).toContain("document.querySelectorAll('.mask, .wd-popup')");
-    expect(A11Y).toContain("modalEntry(node, node.classList.contains('wd-popup') ? overlayOf(node) : null)");
+    expect(A11Y).toContain("document.querySelectorAll('.mask, .wd-popup, ' + NATIVE_LAYER_SEL)");
+    expect(A11Y).toContain("return modalEntry(node, node.classList.contains('wd-popup') ? overlayOf(node) : null)");
     expect(A11Y).toMatch(/function overlayOf\(popup\)[\s\S]*c\.classList\.contains\('wd-overlay'\)/);
   });
 
@@ -169,7 +169,7 @@ describe('a11y-focus 源锁：栈收 .mask 与 .wd-popup，Esc 点 hit、Tab 圈
     expect(A11Y).toContain("if (action === 'dismiss') {\n        if (!top.hit) return");
     expect(A11Y).toContain('top.hit.click()');
     expect(A11Y).toContain('const items = maskFocusables(top.box)');
-    expect(A11Y).toContain('modalKeyAction(e.key, e.isComposing, isTextWithValue(document.activeElement))');
+    expect(A11Y).toContain('modalKeyAction(e.key, e.isComposing, isTextWithValue(a), onLayerButton)');
   });
 
   it('Tab 序含原生文本控件（实测手录层两个 <textarea> 无 tabindex，仅 [tabindex] 会把题干/解析跳过）', () => {

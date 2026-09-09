@@ -1,7 +1,22 @@
 // 键盘可达性：uni-app h5 把交互元素编译为无 tabindex 的 uni-view/uni-text div，<button> 也是自定义元素
 // <uni-button>（非原生 button，不在 Tab 序列），整站无任何键盘落点。在 Vue runtime 挂 click 监听时给宿主补 tabindex + Enter/Space 激活；
 // role=button 延迟到 rAF 只给叶子级短文本元素，避免 button 角色扁平化容器子树语义。
-import { reconcileStack, zIndexFor, pickFocusTarget, pickRestoreTarget, nextTabIndex, modalEntry, modalKeyAction, isTextWithValue, isTransitionLeaving } from './modal-policy.js'
+import {
+  reconcileStack,
+  zIndexFor,
+  pickFocusTarget,
+  pickRestoreTarget,
+  nextTabIndex,
+  modalEntry,
+  modalKeyAction,
+  isTextWithValue,
+  isTransitionLeaving,
+  NATIVE_LAYER_SEL,
+  NATIVE_BTN_SEL,
+  nativeKind,
+  initialFocusables,
+  shouldSwallowKeyup,
+} from './modal-policy.js'
 
 export const HOST_RE = /^UNI-(VIEW|TEXT|IMAGE|LABEL|BUTTON)$/
 
@@ -31,6 +46,49 @@ function visible(el) {
 // 弹层是否「开着」：进入离场动画即视为关闭（焦点立即归还，不等 display:none；不隐藏的 picker 离屏后不再圈焦点）
 function modalOpen(el) {
   return el.isConnected && visible(el) && !isTransitionLeaving(el.className)
+}
+
+// uni-actionsheet 宿主常驻可见，开合看内部遮罩（v-show + uni-fade）；其余层看节点自身
+function actionsheetMask(el) {
+  return el.querySelector('.uni-actionsheet__mask')
+}
+function layerOpen(el) {
+  if (nativeKind(el) === 'uni-actionsheet') {
+    const m = actionsheetMask(el)
+    return !!m && modalOpen(m)
+  }
+  return modalOpen(el)
+}
+
+function entryFor(node) {
+  const kind = nativeKind(node)
+  if (kind === 'uni-modal') return modalEntry(node, null, node.querySelector('.uni-modal') || node)
+  if (kind === 'uni-actionsheet') return modalEntry(node, actionsheetMask(node), node.querySelector('.uni-actionsheet') || node)
+  return modalEntry(node, node.classList.contains('wd-popup') ? overlayOf(node) : null)
+}
+
+// uni 原生层补 dialog 语义：面板 role=dialog + aria-modal，标题/正文作 labelledby/describedby，div 按钮补 tabindex + role=button
+// （actionsheet 的标题占位空 cell 不补）。只写 uni 不管的属性，Vue patch 不会抹掉。
+let nativeIdSeq = 0
+function ensureId(el, prefix) {
+  if (!el.id) el.id = prefix + ++nativeIdSeq
+  return el.id
+}
+function decorateNativeLayer({ kind, panel }) {
+  if (!kind) return
+  panel.setAttribute('role', 'dialog')
+  panel.setAttribute('aria-modal', 'true')
+  const title = panel.querySelector('.uni-modal__title, .uni-actionsheet__title')
+  if (title && (title.textContent || '').trim()) panel.setAttribute('aria-labelledby', ensureId(title, 'kg-dlg-t'))
+  else panel.removeAttribute('aria-labelledby')
+  const body = panel.querySelector('.uni-modal__bd')
+  if (body && (body.textContent || '').trim()) panel.setAttribute('aria-describedby', ensureId(body, 'kg-dlg-d'))
+  else panel.removeAttribute('aria-describedby')
+  panel.querySelectorAll(NATIVE_BTN_SEL).forEach((b) => {
+    if (!(b.textContent || '').trim()) return
+    b.setAttribute('tabindex', '0')
+    b.setAttribute('role', 'button')
+  })
 }
 
 // 补 tabindex 的宿主 + 原生文本控件（uni 的 <textarea>/<input> 内层原生元素无 tabindex 属性，手录表单靠它们进 Tab 序）
@@ -63,6 +121,9 @@ function overlayBase() {
 
 function initModalKeys() {
   let stack = []
+  // 入栈代数：按下→抬起期间变化 = 这次按键开了新层，它的 keyup 不得再驱动新层（uni-modal Enter=确定）
+  let gen = 0
+  let armed = null
   // 最近一次 focusin 的祖先链：触发元素若在弹层显示的同一次 DOM 批量中被卸掉（fab 菜单项），
   // MutationObserver 回调时 activeElement 已是 body，只能靠它找回归还位置。
   let focusChain = []
@@ -74,55 +135,82 @@ function initModalKeys() {
     return a && a !== document.body ? ancestorChain(a) : focusChain
   }
   const sync = () => {
-    const { removed, kept } = reconcileStack(stack, (s) => modalOpen(s.box))
+    const { removed, kept } = reconcileStack(stack, (s) => layerOpen(s.box))
     stack = kept
     removed.forEach(({ lastFocus }) => {
       const el = pickRestoreTarget(lastFocus, (n) => n.isConnected && visible(n), maskFocusables)
       if (el && typeof el.focus === 'function') el.focus()
     })
-    document.querySelectorAll('.mask, .wd-popup').forEach((node) => {
+    document.querySelectorAll('.mask, .wd-popup, ' + NATIVE_LAYER_SEL).forEach((node) => {
       // 离场后仍挂载且不 display:none 的弹层（hide-when-close=false 的 picker）滑到屏外仍在 Tab 序里 → inert 摘出
       const leaving = isTransitionLeaving(node.className)
       if (node.inert !== leaving) node.inert = leaving
-      if (!modalOpen(node) || stack.some((s) => s.box === node)) return
-      const entry = modalEntry(node, node.classList.contains('wd-popup') ? overlayOf(node) : null)
+      if (!layerOpen(node) || stack.some((s) => s.box === node)) return
+      const entry = entryFor(node)
+      decorateNativeLayer(entry)
       stack.push({ ...entry, lastFocus: openerChain() })
+      gen++
       entry.layers.forEach((m) => {
         m.style.zIndex = String(zIndexFor(stack.length, overlayBase()))
       })
-      const { el, needsTabindex } = pickFocusTarget(maskFocusables(entry.box), entry.box.firstElementChild || entry.box)
+      const fallback = entry.kind ? entry.panel : entry.box.firstElementChild || entry.box
+      const { el, needsTabindex } = pickFocusTarget(initialFocusables(entry.kind, maskFocusables(entry.box)), fallback)
       if (needsTabindex) el.setAttribute('tabindex', '-1')
       el.focus()
     })
   }
   const mo = new MutationObserver(sync)
   mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] })
+  window.addEventListener(
+    'keydown',
+    (e) => {
+      armed = { key: e.key, gen, consumed: false }
+    },
+    true
+  )
+  window.addEventListener(
+    'keyup',
+    (e) => {
+      if (shouldSwallowKeyup(armed, e.key, gen)) e.stopImmediatePropagation()
+      armed = null
+    },
+    true
+  )
+  const consume = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (armed && armed.key === e.key) armed.consumed = true
+  }
   document.addEventListener(
     'keydown',
     (e) => {
       const top = stack.length ? stack[stack.length - 1] : null
       if (!top) return
-      const action = modalKeyAction(e.key, e.isComposing, isTextWithValue(document.activeElement))
+      const a = document.activeElement
+      const onLayerButton = !!top.kind && !!a && a !== top.box && top.box.contains(a) && a.matches(NATIVE_BTN_SEL)
+      const action = modalKeyAction(e.key, e.isComposing, isTextWithValue(a), onLayerButton)
       if (!action) return
       if (action === 'blur') {
-        e.preventDefault()
-        e.stopPropagation()
-        const { el, needsTabindex } = pickFocusTarget([], top.box.firstElementChild || top.box)
+        consume(e)
+        const { el, needsTabindex } = pickFocusTarget([], top.kind ? top.panel : top.box.firstElementChild || top.box)
         if (needsTabindex) el.setAttribute('tabindex', '-1')
         el.focus()
         return
       }
       if (action === 'dismiss') {
         if (!top.hit) return
-        e.preventDefault()
-        e.stopPropagation()
+        consume(e)
         top.hit.click()
         return
       }
-      e.preventDefault()
-      e.stopPropagation()
+      if (action === 'activate') {
+        consume(e)
+        a.click()
+        return
+      }
+      consume(e)
       const items = maskFocusables(top.box)
-      const ni = nextTabIndex(items.length, items.indexOf(document.activeElement), e.shiftKey)
+      const ni = nextTabIndex(items.length, items.indexOf(a), e.shiftKey)
       if (ni >= 0) items[ni].focus()
     },
     true
