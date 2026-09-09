@@ -6,9 +6,9 @@
       <kg-card variant="raised" class="sec"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
     </view>
 
-    <kg-empty wx:elif="{{empty}}" icon="calendar" title="上周没有学习记录" desc="{{stateDesc}}" cta-text="去刷题" bind:cta="onGoPractice" />
+    <kg-empty wx:elif="{{empty}}" icon="calendar" title="这一周没有练题记录" desc="{{stateDesc}}" cta-text="去刷题" bind:cta="onGoPractice" />
 
-    <kg-empty wx:elif="{{pending}}" icon="clock" title="该周尚未结束" desc="{{stateDesc}}" cta-text="查看上一周周报" bind:cta="onPrevWeek" />
+    <kg-empty wx:elif="{{pending}}" icon="clock" title="这周还没过完" desc="{{stateDesc}}" cta-text="查看上一周周报" bind:cta="onPrevWeek" />
 
     <kg-empty wx:elif="{{error}}" icon="wifi-off" title="加载失败" desc="{{error}}" cta-text="重试" bind:cta="onReload" />
 

@@ -30,8 +30,8 @@
     <kg-section-header title="提醒样式预览" />
     <kg-card variant="raised" class="push">
       <view class="hd"><text class="appico">岸</text><text class="hd-t">错题邦 · <text class="num">{{time}}</text></text></view>
-      <text class="tt">{{reached ? '今日目标已达成，保持手感再练一组？' : '今晚还差 ' + left + ' 题就能守住连续打卡'}}</text>
-      <text class="bd">今日目标 {{goal}} 题已完成 {{done}} 题{{reached ? '' : '，练完守住连续打卡～'}}</text>
+      <text class="tt">{{reached ? '今日目标已完成' : '今天还差 ' + left + ' 题到目标'}}</text>
+      <text class="bd">今日目标 {{goal}} 题，已做 {{done}} 题</text>
     </kg-card>
     <kg-card variant="soft" padding="12" class="tip">
       <l-icon name="lightbulb" size="16" tone="brand-text" />

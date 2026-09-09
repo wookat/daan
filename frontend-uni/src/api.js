@@ -2,6 +2,7 @@
 import { isNativeApp, savePdfNative } from './native';
 import { isTimeoutMsg, isNetMsg, netFailMessage, classifyHttpError, snapCacheable, snapFresh, snapPushIndex, isStaleUidResponse, isStaleUidErr, parseSseEvents, trackRetryable, trackQueuePush, trackReplayPayload } from './api-policy';
 import { createGetCache, getTtl, isTrackPath } from './api-get-cache';
+import { qShareCopy } from './exam-copy.js';
 
 export { isStaleUidErr };
 
@@ -972,7 +973,7 @@ export function trackEvent(event, source, ref) {
     });
 }
 
-// 分享文案 A/B：按 uid 稳定分桶（a=好奇型，b=挑战型），用于 share_open/share_answer/share_copy 漏斗对比
+// 分享分桶：按 uid 稳定分 a/b，只随 URL 下发供 share_open/share_answer/share_copy 漏斗对比
 export function shareVariant() {
   const uid = anonUid();
   let h = 0;
@@ -980,13 +981,10 @@ export function shareVariant() {
   return h % 2 === 0 ? 'a' : 'b';
 }
 
-export function qShareText(mod, sid) {
-  const v = shareVariant();
-  const url = `https://kaogong.zalize.com/s/${sid}?v=${v}`;
-  if (v === 'b') {
-    return `【${mod}】敢不敢挑战这道题？不少人都做错了，答完立刻看你击败了多少人：${url}`;
-  }
-  return `【${mod}】我刚做了一道题，你能做对吗？答完就能看到大家选了啥：${url}`;
+/** correct: true/false 为分享者本题真实结果；未作答（如题面社交栏）不传 */
+export function qShareText(mod, sid, correct) {
+  const url = `https://kaogong.zalize.com/s/${sid}?v=${shareVariant()}`;
+  return qShareCopy(mod, url, correct);
 }
 
 // 把分享落地页地址栏回写为服务端短链（/s/{sid}、/p/{rid}），地址栏转发/浏览器原生分享

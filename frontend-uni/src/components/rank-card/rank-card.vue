@@ -5,12 +5,12 @@
       <text v-if="data.small_sample" class="r-tag">样本 {{ data.total }} 人</text>
     </view>
     <view class="r-main">
-      <view v-if="!tinySample" class="r-beat">
-        <text class="r-beat-n">{{ data.beaten_pct }}%</text>
-        <text class="r-beat-l">已击败{{ data.small_sample ? '（样本 ' + data.total + ' 人）' : '考生' }}</text>
+      <view v-if="beatView.pct != null" class="r-beat">
+        <text class="r-beat-n">{{ beatView.pct }}%</text>
+        <text class="r-beat-l">{{ beatView.label }}</text>
       </view>
       <view v-else class="r-beat">
-        <text class="r-beat-tiny">参与人数仍较少（{{ data.total }} 人），暂不计算击败比例</text>
+        <text class="r-beat-tiny">{{ beatView.line }}</text>
       </view>
       <view class="r-kv">
         <view class="r-kv-i"><text class="r-k">排名</text><text class="r-v">{{ data.rank }}<text class="r-v-s">/{{ data.total }}</text></text></view>
@@ -25,7 +25,7 @@
       </view>
     </view>
     <text class="r-hint">你在 {{ data.my_bucket * 10 }}-{{ data.my_bucket * 10 + 10 }} 分段（蓝色）</text>
-    <!-- 同卷排行榜（每人取最高分口径，与击败比例一致） -->
+    <!-- 同卷排行榜（每人取最高分口径，与超过比例一致） -->
     <view v-if="boardRows" class="r-board">
       <text class="r-board-t">同卷排行榜</text>
       <view v-for="b in boardRows" :key="b.rank + b.name" class="r-brow" :class="{ me: b.me }">
@@ -40,6 +40,7 @@
 <script>
 import { request, anonUid } from '../../api.js';
 import { examBoardRows } from '../../exam-board.js';
+import { rankCardView } from '../../exam-copy.js';
 
 export default {
   name: 'RankCard',
@@ -48,8 +49,8 @@ export default {
     return { data: null };
   },
   computed: {
-    tinySample() {
-      return !!this.data && this.data.total < 10;
+    beatView() {
+      return rankCardView(this.data);
     },
     boardRows() {
       return examBoardRows(this.data);

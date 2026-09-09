@@ -8,8 +8,8 @@
       <template #main>
         <kg-hero-card :label="r.event.title + (r.event.phase === 'ended' ? '（排名已冻结）' : '（实时排名）')" :value="r.score" unit="分">
           <view class="hero-sub">
-            <text class="hero-beat num">击败 {{ r.pct }}% 考生</text>
-            <text class="hero-line num">第 {{ r.rank }} 名 / {{ r.total }} 人 · 全场平均 {{ r.avg }} 分</text>
+            <text class="hero-beat num">{{ rankLine(r.total, r.pct) }}</text>
+            <text class="hero-line num">{{ contestHeroLine(r) }}</text>
           </view>
         </kg-hero-card>
 
@@ -18,7 +18,7 @@
         <kg-card variant="flat" class="sec">
           <kg-stat-row :items="[
             { label: '排名', value: r.rank + '/' + r.total, tone: 'brand' },
-            { label: '击败', value: r.pct, unit: '%' },
+            { label: '超过考友', value: r.pct, unit: '%' },
             { label: '全场平均', value: r.avg, unit: '分' },
           ]" />
         </kg-card>
@@ -49,7 +49,7 @@
 
         <kg-card variant="flat" class="sec">
           <text class="h">本卷薄弱考点</text>
-          <text v-if="!r.weak_tags.length" class="note">本卷错题较少，暂未形成薄弱考点结论，继续保持！</text>
+          <text v-if="!r.weak_tags.length" class="note">{{ weakNoteText }}</text>
           <view v-for="t in r.weak_tags" :key="t.tag3" class="wrow" role="button" hover-class="row--hover" @click="goPractice(t.tag3)">
             <view class="wrow-l">
               <text class="wrow-t">{{ t.name || t.tag3 }}</text>
@@ -94,6 +94,7 @@
 <script>
 import { request, anonUid, isNetErr } from '../../api.js';
 import { moduleLabel } from '../../module-meta.js';
+import { rankLine, contestHeroLine, weakNote, contestCorrectTotal } from '../../exam-copy.js';
 
 export default {
   data() {
@@ -108,9 +109,17 @@ export default {
     }
     this.load();
   },
+  computed: {
+    weakNoteText() {
+      const [correct, total] = contestCorrectTotal(this.r);
+      return weakNote(correct, total);
+    },
+  },
   methods: {
     modName(m) { return moduleLabel(m); },
     round1(v) { return Math.round(v * 10) / 10; },
+    rankLine,
+    contestHeroLine,
     async load() {
       this.loadErr = '';
       try {

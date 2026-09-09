@@ -68,19 +68,19 @@
       <view v-if="reinforce" class="rf rf-inline">
         <text class="rf-k">趁热打铁：今天错得最多的考点</text>
         <text class="rf-name">{{ reinforce.tag3_name || reinforce.submodule }}</text>
-        <text class="rf-meta">{{ reinforce.module_name }}<template v-if="reinforce.tag3_name"> · {{ reinforce.submodule }}</template> · 掌握度 {{ Math.round(reinforce.mastery * 100) }}%（{{ reinforce.level_name }}） · 今日错 {{ reinforce.wrong_today }} 道</text>
+        <text class="rf-meta">{{ reinforce.module_name }}<template v-if="reinforce.tag3_name"> · {{ reinforce.submodule }}</template>，掌握度 {{ Math.round(reinforce.mastery * 100) }}%（{{ reinforce.level_name }}），今天错 {{ reinforce.wrong_today }} 道</text>
       </view>
       <template #footer>
         <view class="sheet-acts">
           <template v-if="!doneCopy.cleared">
             <kg-button variant="primary" size="lg" block class="cb-next-batch" @click="continueReview">{{ doneCopy.cta }}</kg-button>
             <view class="rf-row2">
-              <kg-button v-if="reinforce" variant="text" size="md" @click="startReinforce(reinforce)">强化 5 道新题</kg-button>
+              <kg-button v-if="reinforce" variant="text" size="md" @click="startReinforce(reinforce)">练同考点</kg-button>
               <kg-button variant="text" size="md" @click="closeCelebrate">回错题本</kg-button>
             </view>
           </template>
           <template v-else-if="reinforce">
-            <kg-button variant="primary" size="lg" block @click="startReinforce(reinforce)">强化 5 道新题（未做过）›</kg-button>
+            <kg-button variant="primary" size="lg" block @click="startReinforce(reinforce)">练同考点：5 道没做过的题 ›</kg-button>
             <view class="rf-row2">
               <kg-button v-if="reinforceItems.length > 1" variant="text" size="md" @click="swapReinforce">换个考点</kg-button>
               <kg-button variant="text" size="md" @click="closeCelebrate">回错题本</kg-button>
@@ -103,7 +103,7 @@
               { label: '累计错题', value: items.length, unit: '题' },
             ]" />
             <kg-button v-if="due.length" variant="primary" size="lg" block class="head-cta" @click="startReviewFromCard">开始复习</kg-button>
-            <text v-else-if="items.length" class="head-tip">今日没有到期错题 · 待掌握 {{ todoItems.length }} · 已掌握 {{ doneItems.length }}</text>
+            <text v-else-if="items.length" class="head-tip">今天没有到期错题，待掌握 {{ todoItems.length }}，已掌握 {{ doneItems.length }}</text>
           </kg-card>
           <kg-card v-if="resumeInfo" variant="soft" class="resumecard" role="button" aria-label="继续刚才的复习">
             <view class="rs-row">
@@ -169,7 +169,7 @@
               <view class="entry-ico"><l-icon name="rotate-ccw" :size="20" tone="brand" /></view>
               <view class="grow">
                 <text class="entry-t">{{ pidFilter ? '重练本卷错题 · ' + pidLabel : '错题重练' + (kp3Filter ? ' · ' + kp3Filter : kpFilter ? ' · ' + (qtFilter ? kpFilter + ' · ' + qtFilter : kpFilter) : rzFilter ? ' · ' + rzFilter : srcFilter ? ' · ' + (srcFilter === 'exam' ? '模考错题' : '练习错题') : '') }}</text>
-                <text class="entry-s">{{ pidFilter ? '按卷面顺序只练本卷上次答错的题（答对过即不再算错）' : kp3Filter ? '只重练当前筛选考点的待掌握错题（最多 10 题）' : kpFilter ? (qtFilter ? '只重练当前细分题型的待掌握错题（最多 10 题）' : '重练该题型组下全部待掌握错题，含组内各细分题型（最多 10 题）') : rzFilter ? '只重练当前筛选错因的待掌握错题（最多 10 题）' : srcFilter ? '只重练当前筛选来源的待掌握错题（最多 10 题）' : '把待掌握错题按刷题模式重做一遍（最多 10 题）' }}</text>
+                <text class="entry-s">{{ pidFilter ? '按卷面顺序只练本卷上次答错的题（答对过即不再算错）' : kp3Filter ? '只重练当前筛选考点的待掌握错题（最多 10 题）' : kpFilter ? (qtFilter ? '只重练当前细分题型的待掌握错题（最多 10 题）' : '重练该题型组下全部待掌握错题，含组内各细分题型（最多 10 题）') : rzFilter ? '只重练当前筛选错因的待掌握错题（最多 10 题）' : srcFilter ? '只重练当前筛选来源的待掌握错题（最多 10 题）' : '重练待掌握的错题，一次最多 10 题' }}</text>
               </view>
             </view>
           </kg-card>
@@ -1946,7 +1946,7 @@ export default {
     },
     itemSheet(m) {
       const acts = [];
-      if (m.tag3) acts.push({ t: '同考点强化 5 道新题', f: () => this.reinforceFromMistake(m) });
+      if (m.tag3) acts.push({ t: '练同考点 5 道新题', f: () => this.reinforceFromMistake(m) });
       if (hasSimilarPool(m)) acts.push({ t: '练3道同类', f: () => this.practiceSimilar(m) });
       if (m.question_id) acts.push({ t: '题目纠错', f: () => this.openReport(m) });
       if (m.question_id) acts.push({ t: '分享给队友', f: () => this.shareToMates(m) });
@@ -1973,7 +1973,7 @@ export default {
         const mod = d.submodule || this.modName(d.module) || '行测';
         trackEvent('share_copy', 'book_' + shareVariant(), d.sid);
         uni.setClipboardData({
-          data: qShareText(mod, d.sid),
+          data: qShareText(mod, d.sid, false),
           success: () => uni.showToast({ title: '分享链接已复制，发给队友吧', icon: 'none' }),
         });
       } catch (e) {
