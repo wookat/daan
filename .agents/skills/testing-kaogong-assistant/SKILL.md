@@ -3,6 +3,16 @@ name: testing-kaogong-assistant
 description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## R563 经验：原生 `uni-modal`/`uni-actionsheet` 键盘复验 + History 哑条目链离页口径
+- 原生层焦点时序要分两条测：记录 click/focusin 真实时间戳并在 visibility 过渡内立即发 CDP Shift+Tab（属按键早于可聚焦时刻的窗口）；再独立测焦点已入层后的 Shift+Tab。「过渡期进不了层」不是「重试抢走了层内焦点」的证据；observer 重复安装时先去重 focus trace。
+- `uni-actionsheet` 桌面宽度下可见控件不同：核取消 cell 的祖先与 client rect，不只看它自身 computed display（1440 取消父级隐藏、只循环日期）；证据文件名按观察到的状态起名，不按期望目标。
+- 练习退出走 History 感知的 sheet 时，显式 End/Keep 必须在「首次开层」和「Esc→重开 / Back→重开 / 继续→重开 / Tab」历史后各测一次：`navigateBack` 可能被哑条目消费而不离页，**断言最终 URL 与页面内容**，不能只看 pendingSession 删除或 quit 事件；空壳页上的「返回首页」是 harness 的诚实恢复手段，不是 End 已导航的证据。
+- 取消侧效应观察窗：答对自动下一题 1200ms 会重启 1500ms 进度保存 debounce，答后只等 2200ms 不够零 POST 窗口（4200ms 静默足够）；先等最后一次 pending 变更与网络完成，再快照整个 pendingSession 并开始计数；把先前作答的自动保存与显式 keep/clear 分开归类，不静默丢弃。
+- 需要精确 N 条哑条目时：题页开答题卡 sheet 也会多一条；375 的 ArrowLeft 练习快捷键是桌面限定（`innerWidth >= 1024`）；要保住首题以进真实深页，先点可见「看解析」再点 `.qsb-link` 含「讨论」→ `#/pkgA/social/discuss?qid=…`（只读）。
+- 错题本模块 chip 反映该用户错题实际模块：yanyu-only fixture 用 `#kgchip-yanyu` 断言 `?mod=yanyu`，不假定 `#kgchip-shuliang` 存在。
+- 双向护栏都要保留：同页多次关层后 End 必须离开 practice；两条哑条目后进入深页再 Back 必须停在原 practice。每步记 `history.length/state`（Back 不减 length，后续 push 会替换 forward）；D1 首次 Back 后旧 marker 保留是设计，判 URL/query、焦点归还与第二次 Back 离页。
+- quit/history 类分支按 UID 分开、按精确 UID 核网络与 DB 事件条数；CDP 键盘 helper 记 rawKeyDown/keyUp 与 modifiers（Shift=8），Tab 序列 helper 显式传反向参数。
+
 ## Production CDP recording and audit safeguards
 - Trace actual navigation writers before attributing launcher coverage: exam-library “开始模考” may navigate to the standalone `pkgA/exam/exam?paper_id=…`, while “更多 → 按卷练习（不计时）” writes `practiceLaunch` with `untimed:true` and exercises `practice.startPaper`. Never count the standalone route as execution of an unreachable internal practice timed branch.
 - Verify a physical F5 reload by a new Document request and the native recovery UI. Playwright `page.keyboard.press('F5')` may send a page key event without activating the browser reload accelerator; if so use the foreground computer keyboard, not an assumed successful reload.
