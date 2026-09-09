@@ -41,11 +41,20 @@
 - 本地门：后端 pytest 746 / ruff / pyright 0；H5 lint 0 error / vitest 185 文件 1438 / `build:h5`（`index-Dy4_Z6uC.js`）/ `git diff --check` 空。发版 `deploy_h5.sh --skip-build` rc=0，health `{"ok":true,"rev":"09d664a4"}`，6b LH `/` 全过（a11y 1.00、LCP 1701 ms）、`/tiku/` 全 1.00。
 
 ## 5. 生产复验二（`09d664a4`，`index-Dy4_Z6uC.js`；报告 `~/r566/report-prod-2.md`、截图 `~/r566/prod-shots-2/`）
-（testing agent 窄复验 R1–R5 进行中；结果回填见 PR #746 评论与 `docs/handoff-context.md` R566 段。口径修正：我的复验指令写首页标题应为「首页」，实为 `pages.json` 首页静态「刷题」——既有配置非覆盖，PASS。）
+375 + 1440 窄复验 R1–R5 **全 PASS**（53 张截图 `~/r566/fix-run/verification-ledger.json`，录像 `~/screencasts/r566-fix-production/`、`r566-fix-persistence-fallback/`）：
+- R1 普通完成返回首页、真实错题重练 → 答 1 → 物理 F5 → Esc → 完成 → 返回首页均落 `#/`，redo 恢复保持 1/2 同题 + 完整 pending +「错题重练」双标题；**runtime exception / unhandled rejection / console error 均 0**，标题异常未复现。
+- R2 两尺寸各真实连续 75 题：同 uid 150 条 `answer_log` **全部 200 = DB 150 行**，首末 272.3 s（实际跨旧 120/h 阈值）；`offlineQueue` 未创建（源码 key 核对，非清空造出）。
+- R3 按卷（375 client 220 / scroll 338 省略、1440 全显）/ 模块 · 子模块 / 错题重练 / 每日一练标题正确；返回后上一页标题分别「真题卷库 / 错题本 / 刷题」未被覆盖。口径修正：我的指令写首页应为「首页」，实为 `pages.json` 首页静态「刷题」——既有配置非覆盖，PASS。
+- R4 冷直达「刷题」→「综合 · 专项练习」1/10；R5 两尺寸全对恰一键「回卷库」回原卷库 history entry，Back 到首页不重入练习页。
+- 分账：2658 请求 = 2361 HTTPS 200 + 290 data URL + 7 CSP 阻断（见 R566-1）；792 API 全 200、track 12 全 200、自然取消 / orphan / 付费 0；8 条 SW warning 为 Playwright 阻止 SW 注册（harness）；2 次 harness 定位/准备超时与一次窗口未最大化补录已披露。精确清 6 新 + 6 旧 uid 208 行、41 表 `test-r566-%` 残留 0、五类 count/hash、taxonomy、真实卷、共享 R562 42 行不变。
+
+### 5.1 登记 R566-1（部署配置观察，非本轮代码）
+生产 `/` HTML **间歇**被 Cloudflare 边缘注入 `<script src="https://static.cloudflareinsights.com/beacon.min.js/…" data-cf-beacon>`（CDP 原始 Document body：cf-ray `a38844ebef8c5d68-PDX` 18:31:19Z **含**、`a3884d8aec385939-PDX` 18:37:12Z **不含**；我用浏览器 UA curl 三次不含），被本站 CSP `script-src 'self' 'unsafe-inline' https://career.zalize.com` 阻断 → 7 条 loadingFailed(csp) + 7 条 browser security error。仓库 CSP（Caddy / `deploy/cf-pages/_headers` / `functions/[[path]].js`）从未放行该域，非本轮引入。**不改代码**，需老板决定：关闭 Cloudflare Web Analytics 自动注入，或 CSP 放行 `static.cloudflareinsights.com`（script-src）+ `cloudflareinsights.com`（connect-src）。原证 `~/r566/prod-shots-2/beacon-response-evidence.json` + 两份 `*-document-response.html`。
 
 ## 6. 边界与登记
 - 标题 40 字兑底、同值不重复调的调用次数仅单测；自然 >40 字卷名生产未见。
 - 小程序无改动；无真机（R536-1 累计）。
-- 429 复验二只做同节奏 75 题一次，未做常速长卷；600/h 是否被自然用户触达需 ≥7 天回看 Caddy 429 行（探针分账）。
+- 429 复验二两尺寸各 75 题（同 uid 150 条跨旧阈值），未做 600/h 与 IP 桶耗尽、`review_cursor` 高频、离线重传 / 真实 SW；600/h 是否被自然用户触达需 ≥7 天回看 Caddy 429 行（探针分账）。
+- R566-1 Cloudflare beacon 注入为边缘配置（间歇），非代码；browser error ≠ 0 已如实分账。
 - 「回卷库」`quit` 语义只在 `back === '返回卷库'`（上一页是卷库）成立；从首页 / 深链进按卷仍 `list`。
 - 环境蓝图无需更新（本轮无新装依赖）。
