@@ -168,7 +168,7 @@
             <view class="entry-in">
               <view class="entry-ico"><l-icon name="rotate-ccw" :size="20" tone="brand" /></view>
               <view class="grow">
-                <text class="entry-t">{{ pidFilter ? '重练本卷错题 · ' + pidLabel : '错题重练' + (kp3Filter ? ' · ' + kp3Filter : kpFilter ? ' · ' + (qtFilter ? kpFilter + ' · ' + qtFilter : kpFilter) : rzFilter ? ' · ' + rzFilter : srcFilter ? ' · ' + (srcFilter === 'exam' ? '模考错题' : '练习错题') : '') }}</text>
+                <text class="entry-t">{{ pidFilter ? '重练本卷错题 · ' + pidLabel : '错题重练' + (kp3Filter ? ' · ' + kp3Filter : kpFilter ? ' · ' + (qtFilter ? kpFilter + ' · ' + fineTypeLabel(kpFilter, qtFilter) : kpFilter) : rzFilter ? ' · ' + rzFilter : srcFilter ? ' · ' + (srcFilter === 'exam' ? '模考错题' : '练习错题') : '') }}</text>
                 <text class="entry-s">{{ pidFilter ? '按卷面顺序只练本卷上次答错的题（答对过即不再算错）' : kp3Filter ? '只重练当前筛选考点的待掌握错题（最多 10 题）' : kpFilter ? (qtFilter ? '只重练当前细分题型的待掌握错题（最多 10 题）' : '重练该题型组下全部待掌握错题，含组内各细分题型（最多 10 题）') : rzFilter ? '只重练当前筛选错因的待掌握错题（最多 10 题）' : srcFilter ? '只重练当前筛选来源的待掌握错题（最多 10 题）' : '重练待掌握的错题，一次最多 10 题' }}</text>
               </view>
             </view>
@@ -179,7 +179,7 @@
             <view v-if="kw" class="searchclear" role="button" aria-label="清空搜索" @click="kw = ''"><l-icon name="x" :size="16" tone="muted" /></view>
           </view>
           <view v-if="tab !== 'fav' && (filterMod || kpFilter || kp3Filter || srcFilter || rzFilter || pidFilter)" class="curfilter">
-            <kg-tag v-if="filterMod || kpFilter || kp3Filter" tone="brand" icon="x" class="cf" @click="filterMod = ''; kpFilter = ''; qtFilter = ''; kp3Filter = ''">{{ kp3Filter || (kpFilter && qtFilter ? kpFilter + ' · ' + qtFilter : kpFilter) || modName(filterMod) }}</kg-tag>
+            <kg-tag v-if="filterMod || kpFilter || kp3Filter" tone="brand" icon="x" class="cf" @click="filterMod = ''; kpFilter = ''; qtFilter = ''; kp3Filter = ''">{{ kp3Filter || (kpFilter && qtFilter ? kpFilter + ' · ' + fineTypeLabel(kpFilter, qtFilter) : kpFilter) || modName(filterMod) }}</kg-tag>
             <kg-tag v-if="srcFilter" tone="brand" icon="x" class="cf" @click="srcFilter = ''">{{ srcFilter === 'exam' ? '模考错题' : '练习错题' }}</kg-tag>
             <kg-tag v-if="pidFilter" tone="brand" icon="x" class="cf" @click="pidFilter = 0">{{ pidLabel }}</kg-tag>
             <kg-button v-if="pidFilter" variant="text" size="sm" @click="goPaper(pidFilter)">练本卷 ›</kg-button>
@@ -221,7 +221,7 @@
             <view class="mhead">
               <view v-if="batchMode" class="bchk" :class="{ on: selIds[m.id] }" role="checkbox" :aria-checked="String(!!selIds[m.id])"><l-icon v-if="selIds[m.id]" name="check" :size="14" tone="on-brand" /></view>
               <kg-tag tone="brand">{{ groupKey(m) }}</kg-tag>
-              <kg-tag v-if="fineType(m)" tone="neutral" class="finetag">{{ fineType(m) }}</kg-tag>
+              <kg-tag v-if="fineType(m)" tone="neutral" class="finetag">{{ fineLabel(m) }}</kg-tag>
               <kg-tag v-if="m.source === 'exam'" tone="info">模考</kg-tag>
               <kg-tag v-else-if="m.source === 'manual'" tone="info">手录</kg-tag>
               <view v-if="m.error_reason && !m.mastered && !batchMode" class="rzbadge-hit" role="button" :aria-label="'错因：' + m.error_reason + '，点击修改'" @click.stop="itemSheet(m)"><kg-tag tone="warn" icon="pen-line">{{ m.error_reason }}</kg-tag></view>
@@ -475,7 +475,7 @@
         <template v-if="fineTypes.length">
           <text class="sheet-k">{{ kpFilter }} · 细分</text>
           <view class="kpchips">
-            <kg-tag v-for="g in fineTypes" :key="g.name" :tone="qtFilter === g.name ? 'brand' : 'neutral'" class="kpchip" @click="qtFilter = qtFilter === g.name ? '' : g.name">{{ g.name }} ×{{ g.n }}</kg-tag>
+            <kg-tag v-for="g in fineTypes" :key="g.name" :tone="qtFilter === g.name ? 'brand' : 'neutral'" class="kpchip" @click="qtFilter = qtFilter === g.name ? '' : g.name">{{ fineTypeLabel(kpFilter, g.name) }} ×{{ g.n }}</kg-tag>
           </view>
         </template>
         <template v-if="hasExamMistakes">
@@ -611,6 +611,7 @@ import { buildReviewSnap, parseReviewSnap, reviewElapsedSecs } from '../../revie
 import { nextReviewText, reviewSummary, reviewVerdict, streakProgressText, similarRoom, reviewDueLeft, reviewDoneCopy } from '../../review-summary.js';
 import { reviewOptions, reviewOptionsFull } from '../../review-opts.js';
 import { redoSkippedNote } from '../../book-redo-skipped.js';
+import { fineTypeLabel } from '../../type-label.js';
 import { MANUAL_MODULES, MANUAL_LETTERS, MANUAL_QUESTION_MAX, MANUAL_EXPLANATION_MAX, emptyManualEntry, toggleLetter, manualEntryError, manualEntryBody, manualSavedToast } from '../../book-manual-entry.js';
 import { inlineSkipNote } from '../../paper-inline-note.js';
 import { scanPageLabel, scanPagesNote, scanDupNote, paperSubmittedNote, recordScanPage } from '../../paper-scan-pages.js';
@@ -1393,6 +1394,10 @@ export default {
       const t = this.tagName(m);
       return t && t !== m.type_group ? t : '';
     },
+    fineLabel(m) {
+      return fineTypeLabel(m.type_group, this.fineType(m));
+    },
+    fineTypeLabel,
     // 题型标签统一粒度：去掉「模块名-」前缀（历史数据两种格式并存），无题型时用模块名
     tagName(m) {
       const qt = m.question_type || '';

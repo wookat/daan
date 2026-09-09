@@ -208,8 +208,10 @@ Page({
     }
   },
   begin(items: DQ[], date: string, past: boolean) {
+    const kind = this.data.kind;
     this.setData({
       state: 'play',
+      title: past ? (kind === 'shizheng' ? '往期时政补练' : '往期每日一练') : kind === 'shizheng' ? '时政每日一练' : '每日一练',
       items,
       date,
       past,

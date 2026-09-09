@@ -52,7 +52,7 @@ describe('R545 主标签 / 题型组聚合', () => {
     expect(vm.fineType(items[4])).toBe('');
   });
   it('卡片头：主 tag 用 groupKey，细题型 tag 条件展示', () => {
-    expect(book).toMatch(/<kg-tag tone="brand">\{\{ groupKey\(m\) \}\}<\/kg-tag>\s*<kg-tag v-if="fineType\(m\)" tone="neutral" class="finetag">\{\{ fineType\(m\) \}\}<\/kg-tag>/);
+    expect(book).toMatch(/<kg-tag tone="brand">\{\{ groupKey\(m\) \}\}<\/kg-tag>\s*<kg-tag v-if="fineType\(m\)" tone="neutral" class="finetag">\{\{ fineLabel\(m\) \}\}<\/kg-tag>/);
   });
 });
 
