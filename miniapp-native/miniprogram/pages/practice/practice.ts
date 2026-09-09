@@ -28,6 +28,8 @@ import type { Announcement } from '../../api/learn';
 import type { AnswerLogItem, AnswerLogReviewed, Question } from '../../api/types';
 import { askPrefill, openExplain } from '../../utils/ask-prefill';
 import { anonUid } from '../../utils/auth';
+import { doneBarPlan } from '../../utils/done-bar';
+import type { DoneAct, DoneBar } from '../../utils/done-bar';
 import { enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../utils/offline';
 import { drawOffline } from '../../utils/offline-pack';
 import {
@@ -139,6 +141,7 @@ Page({
     navTitle: '专项练习',
     totalSecs: 0,
     wrongCount: 0,
+    doneBar: doneBarPlan(0, false) as DoneBar,
     answeredCount: 0,
     dueReview: 0,
     redoReport: null as RedoReport | null,
@@ -182,6 +185,8 @@ Page({
     noteBusy: false,
   },
   _args: null as LaunchArgs | null,
+  // 最近一次非「本组错题重练」的启动参数：重练后「再来一组」回到原题组规模/标题（H5 retryGroup → start(lastModule) 同口径）
+  _groupArgs: null as LaunchArgs | null,
   _source: null as string | null,
   _module: null as string | null,
   _submodule: null as string | null,
@@ -258,6 +263,7 @@ Page({
     if (this._starting) return;
     this._starting = true;
     this._args = args;
+    if (args.mode !== 'redoset') this._groupArgs = args;
     this._source = args.source;
     this._module = args.module;
     this._submodule = args.submodule;
@@ -815,6 +821,7 @@ Page({
     this.clearAutoTimer();
     const { items, right, beiMode } = this.data;
     const totalSecs = items.reduce((s, q) => s + (q._secs || 0), 0);
+    const wrongN = items.filter((q) => q._picked && q._picked !== q.answer).length;
     this.setData({
       finished: true,
       cur: null,
@@ -824,7 +831,8 @@ Page({
       curSource: '',
       pct: Math.round((right / items.length) * 100),
       totalSecs,
-      wrongCount: items.filter((q) => q._picked && q._picked !== q.answer).length,
+      wrongCount: wrongN,
+      doneBar: doneBarPlan(wrongN, beiMode),
       dueReview: 0,
       cardOpen: false,
       toolsOpen: false,
@@ -1049,8 +1057,19 @@ Page({
     wx.switchTab({ url: '/pages/book/book' });
   },
   onRetry() {
-    const a = this._args as LaunchArgs;
+    const a = (this._groupArgs || this._args) as LaunchArgs;
     this.start({ ...a, mode: a.mode === 'redoset' ? '' : a.mode });
+  },
+  runDoneAct(act: DoneAct) {
+    if (act === 'redo') this.onRedoWrong();
+    else if (act === 'retry') this.onRetry();
+    else this.onQuit();
+  },
+  onDonePrimary() {
+    this.runDoneAct(this.data.doneBar.primaryAct);
+  },
+  onDoneSecondary() {
+    this.runDoneAct(this.data.doneBar.secondaryAct);
   },
   onQuit() {
     wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/home/home' }) });

@@ -19,10 +19,10 @@ function fnBody(startMarker, endMarker) {
   return PRACTICE.slice(i, j);
 }
 
-describe('R553-fix ① practice.vue 六处启动器 loading 与交互配对', () => {
+// R554：startExam 为死码（60402715 起模考入口改走 pages/exam）已删除，五处启动器去掉该项。
+describe('R553-fix ① practice.vue 五处启动器 loading 与交互配对', () => {
   const cases = [
-    ['async startPaper(p, untimed = false, wantWrong = false) {', '    async startExam(full) {', "const d = await request('/api/paper_questions?' + paperQuery(p, untimed, anonUid()));\n        uni.hideLoading();", '加载失败：'],
-    ['async startExam(full) {', '    finishExam() {', "items = d.items || [];\n        }\n        uni.hideLoading();", '加载失败：'],
+    ['async startPaper(p, untimed = false, wantWrong = false) {', '    confirmFinishExam() {', "const d = await request('/api/paper_questions?' + paperQuery(p, untimed, anonUid()));\n        uni.hideLoading();", '加载失败：'],
     ['async startShizheng(archiveDate) {', '    async reviewShizheng() {', "'/api/shizheng/daily');\n        uni.hideLoading();", '加载失败：'],
     ['async reviewShizheng() {', '    markShizhengDone() {', "const d = await request('/api/shizheng/daily');\n        uni.hideLoading();", '加载失败：'],
   ];
