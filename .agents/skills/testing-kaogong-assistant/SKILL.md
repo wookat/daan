@@ -21,6 +21,16 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 # Testing 考公错题助手
 
+## R558 补充（testing agent）— 错答反馈层级几何 / 自动推进时序 / 看解析埋点 / due 资格
+
+- Separate eligibility from due-label rendering: the current `due_mix_questions` excludes question IDs answered within the last 30 minutes, including just-created wrong answers. Prefer existing eligible fixtures or wait for eligibility; when explicitly authorized, create an unattempted question-linked mistake through the browser's normal `/api/mistakes` API with the isolated UID/probe. Disclose API fixture setup separately from UI test assertions; never backdate production `answer_log` rows to force eligibility.
+- Read feedback geometry after save/scroll settle: record `.kg-banner`, `.kg-ana`, `.kg-ana__src`, `.kg-ana__tags`, `.kg-ana__social`, `.reasons`, `.xp-card`, and actual `.deep-acts .kg-btn` tops in one evaluation. Compare relative distances, not raw tops from different scroll positions or different question texts. Historical pixel observations are not universal thresholds.
+- A locator screenshot of a tall `.after` can contain a sticky action bar over the last controls. Pair an untouched full-page screenshot with lower viewport evidence; state clipping rather than silently hiding product UI for a cleaner image.
+- Measure timer duration using passive UI mutation events with `Runtime.consoleAPICalled.timestamp`, from visible success/看解析 to visible question counter change. Keep Network timestamp and wallTime mapping in the ledger; do not call request-to-next latency the same thing as feedback-to-next latency.
+- For stay-here tests, record action-removal latency and a separate >=3s same-question observation. Verify `/api/track` body, HTTP response, and read-only `growth_events` event/source/probe independently; distinguish ordinary `practice` from `redo` or daily source.
+- Reason chips currently select/change but do not toggle off on a repeated click. Test actual `aria-pressed` and PATCH behavior without assuming cancellation; an unselected separate wrong question is the clean test of optionality.
+- Cold homepage primary CTA can differ from returning-visitor CTA. Inspect visible text before choosing a role selector. Uni modal actions and answer-card number cells may not be buttons with the imagined accessible names; inspect or use visible UI coordinates rather than repeating selector timeouts.
+
 ## 分组复习运行时取证补充（R552）
 
 - 分组/重出/加练分别记账：为每个视口记录独立 fixture mid 集，按 mid 回读 review_log；同一隔离 uid 重复两宽测试时，不把累计日志数当单组数。页面授权造数可用 null-qid 手录题保证答案确定；加练仍须真实题库回包，不能 mock。
