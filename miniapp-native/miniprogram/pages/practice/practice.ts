@@ -29,6 +29,7 @@ import type { AnswerLogItem, AnswerLogReviewed, Question } from '../../api/types
 import { askPrefill, openExplain } from '../../utils/ask-prefill';
 import { anonUid } from '../../utils/auth';
 import { doneBarPlan } from '../../utils/done-bar';
+import { backLabel } from '../../utils/back-label';
 import type { DoneAct, DoneBar } from '../../utils/done-bar';
 import { enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../utils/offline';
 import { drawOffline } from '../../utils/offline-pack';
@@ -141,6 +142,7 @@ Page({
     navTitle: '专项练习',
     totalSecs: 0,
     wrongCount: 0,
+    backLabel: '返回首页',
     doneBar: doneBarPlan(0, false) as DoneBar,
     answeredCount: 0,
     dueReview: 0,
@@ -209,6 +211,7 @@ Page({
     const savedFont = wx.getStorageSync('fontLv');
     if (savedFont === 0 || savedFont === 2) this.applyFont(savedFont);
     this.setData({
+      backLabel: backLabel(getCurrentPages()),
       beiMode: !!wx.getStorageSync('beiMode'),
       autoNext: !wx.getStorageSync('autoNextOff'),
       timedMode: !!wx.getStorageSync('timedMode'),
@@ -833,7 +836,7 @@ Page({
       pct: Math.round((right / items.length) * 100),
       totalSecs,
       wrongCount: wrongN,
-      doneBar: doneBarPlan(wrongN, beiMode),
+      doneBar: doneBarPlan(wrongN, beiMode, this.data.backLabel),
       dueReview: 0,
       cardOpen: false,
       toolsOpen: false,

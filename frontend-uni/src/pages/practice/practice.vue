@@ -7,14 +7,14 @@
       title="题目加载失败"
       :desc="loadFailMsg || '网络不稳定或服务暂时无响应'"
       cta-text="重试"
-      secondary-text="返回首页"
+      :secondary-text="backLabel"
       @cta="retryStart"
       @secondary="quit"
     />
     <view v-else-if="!session" class="pskel">
       <kg-skeleton preset="lines" />
       <text class="pskel-hint" role="status">{{ loadHint }}</text>
-      <kg-button variant="text" size="md" @click="quit">返回首页</kg-button>
+      <kg-button variant="text" size="md" @click="quit">{{ backLabel }}</kg-button>
     </view>
 
     <!-- 作答（T3） -->
@@ -308,7 +308,7 @@
           <kg-button v-if="paperFinish().isPaper" :variant="wrongRetry() ? 'ghost' : 'primary'" size="lg" block @click="goExamList">回卷库</kg-button>
           <kg-button v-else :variant="!beiMode && wrongRetry() ? 'ghost' : 'primary'" size="lg" block @click="retryGroup">再来一组</kg-button>
           <kg-button v-if="!beiMode" variant="ghost" size="lg" block icon="share-2" @click="shareResult">分享成绩</kg-button>
-          <kg-button variant="text" size="md" block @click="quit">返回首页</kg-button>
+          <kg-button variant="text" size="md" block @click="quit">{{ backLabel }}</kg-button>
         </view>
       </template>
     </kg-two-col>
@@ -403,6 +403,7 @@ import { isExplanationCovered } from '../../exp-dup.js';
 import { reviewedMasteredCount, fixReportText, reviewedFromPending } from '../../review-advance.js';
 import { leadQidOf, leadPickOf, mergeLead, leadHintText } from '../../leadq.js';
 import { quitSummary } from '../../quit-summary.js';
+import { backLabel } from '../../back-label.js';
 
 
 function loadPStats() {
@@ -453,6 +454,7 @@ export default {
       dailyBoard: [],
       redoReport: null,
       fixReport: null,
+      backLabel: '返回首页',
       examMode: false,
       examLeft: 0,
       examTimer: null,
@@ -769,6 +771,7 @@ export default {
   },
   onShow() {
     this.askSeenTick++;
+    this.backLabel = backLabel(getCurrentPages());
     // #ifdef H5
     if (!this._pkHandler && typeof window !== 'undefined') {
       this._pkHandler = (e) => this.onPKeydown(e);
