@@ -39,6 +39,10 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 - 云失败降级：阻断 `GET /api/favs`（own uid）→ 本机列表/数量不变、无 console error；阻断 `POST /api/favs` 后在题页收藏 → `favQuestions` 该条目 `id === null`（local-only），下次对账不被删。
 - 恢复码恢复后 `favQuestions` 全部 `id` 置 `null`（`favsLocalOnly`），这是指定语义不是缺陷。
 - R560-2/3 几何：375 错题本空态 `.kg-empty__d`（或对应 desc 节点）`scrollHeight <= clientHeight`；卡面长试卷标签 `.pbadge` `scrollHeight == clientHeight == 20`，内部 `.kg-tag__t` 单行 ellipsis。R560-4：单条删除弹窗标题「删除这道错题？」、正文含「不可恢复」、确认按钮字面「删除」。
+- **对账 GET 不得吃 `apiSnap` 快照（R561 复验一真实 FAIL → #734）**：`request()` 对展示型 GET 网络失败会回退 `apiSnap:<path>` 旧快照并打 `stale_fallback`；对账若拿到快照会把 POST 之后新收藏的题当「别处已取消」删掉。`syncCloudFavs` 自 #734 起走 `fetchFavsLive()`（显式 `timeout` → 直连分支，不读/不写快照）。**阻断 GET 的测试必须两种前置都做**：① 无快照冷 context；② 先经普通 `fetchFavs` 路径（收藏夹与笔记页）建立 `items: []` 旧空快照、再题页真实 POST 收藏、实际等 >60s 过 grace、再阻断本人 GET。期望②：本机卡/`id`/「我的」计数不变、0 DELETE、只读 DB 行仍在、`stale_fallback` 对 `/api/favs` 0 次、旧快照不被 live GET 改写；解除后 GET 200 仍唯一同 id。仅①通过不能写「GET 失败保留本地」PASS。判定必须同时看 storage / 可见计数 / 真实云行 / DELETE 次数——"云行仍在"是区分「客户端误删」与「服务端真取消」的关键。
+- 不得伪造成功后端响应；CDP 响应阶段挂起只是延迟真实响应，放行/丢弃前先独立记录服务端已落库状态。
+- 分账口径：网络失败（reject）/ 快照回退（`stale_fallback` track）/ HTTP 业务失败（非 2xx）/ 有意 abort / 导航取消 分开计；request-level probe 头与 ExtraInfo 独立配对分开计（缓存字体可能缺前者、缓存/取消事件缺后者，data URL 单列），缺口如实披露。
+- R561-1 既有疑 P3：`TypeError: Cannot set properties of null (setting 'scrollLeft')`（uni-h5 `scroll-view` KeepAlive 激活恢复 scrollLeft），复现序列 `book?tab=fav → 收藏夹与笔记 → 重练全部收藏 → 未答退出 → Back 回 book?tab=fav`；正常/快速切 tab 与空收藏最小 Back 序列不复现；R560 基线 bundle 本地同样复现（`~/r561repro/repro.py`）。出现时单列、保留精确序列/时序/tab/bundle 偏移/栈，不混入当轮主项 FAIL，也不写「console 0」。
 
 ## R560 补充（testing agent）— 收藏双存储 / 历史无 id 条目 fixture / 云失败边界 / 冷 context 对照
 

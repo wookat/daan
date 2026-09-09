@@ -54,4 +54,39 @@ R560 handoff 登记：① R560-1 更多操作层键盘模态；② R560-2 375 �
 
 ## 5. 发版与生产复验
 
-（发版后回填）
+### 5.1 发版一 `9c31576b → 59c01a19`（#733，`index-CmQPo610.js`）
+
+`deploy_h5.sh --skip-build`，rev 谱系闸 OK、compose 单次 rc=0、bundle gzip 125KB；6b LH `/` LCP 1891ms（本次通过；R560-5 四次违例仍登记，不据单次通过下结论）。
+
+### 5.2 复验一（testing agent，`59c01a19`，uid `test-w561-*`；报告 `~/kaogong-reports/r561-fav-cloud-read-59c01a19-prod-verify.md`、审计 `~/r561-59c01a19/`、录像 `~/screencasts/r561-59c01a19-{mobile,desktop,get-failure}/`，#733 评论附截图）
+
+**主项 E 真实 FAIL（R561-2，P2）**，其余全 PASS：
+
+- PASS A 云独有导入（fixture context POST QID322075 → 新冷 context 错题本收藏 tab GET 200 后卡片出现、本地 `id=322075`、`t=faved_at×1000`、「我的」1、收藏夹同题、重练该题星星亮）；B 别处 DELETE >60s 后切回消失且 H5 不发 DELETE；C 无 id 精确题干认领 id / 不匹配保留不误删；D GET 挂起期间取消 → DELETE 200 + 放行旧 GET 不复活、等待窗口只 1 条共享 GET；E-nosnap 无快照阻断 GET 本地保留；E-POST 失败 `id=null` local-only 且恢复 GET 后仍在、云无行；F 空态两段文案 375 `38/38` 无裁切、真实按卷答错 QID347906「2022年上海市考行测真题」标签 `20/20` 单行 ellipsis、单条删除标题/正文/「删除」按钮 + 取消保留 DB / 确认 DELETE 200 + 掌握/批量层文案；G 1440 抽检；R560 有 id 取消 DELETE 云残留 0。
+- **FAIL E3（旧空快照）**：正常 GET 云收藏为空 → 产品自然保存 `apiSnap:/api/favs?uid=…` = `items: []` → 题页真实收藏 QID265309 POST 200（DB 行在，快照仍旧）→ 实际等待 76.64s（过 60s grace）→ CDP 请求阶段 abort 本人 GET → `request()` 网络错误分支 `snapLoad` 回退旧空快照 + `trackEvent('stale_fallback')` → `reconcileFavs` 把「有 id 云无 且 >60s」判为别处已取消 → 本机 `favQuestions=[]`、错题本空态、「我的」0；DB 行仍在、0 DELETE；解除阻断 GET 200 后恢复。根因：`apiSnap` 是展示型 GET 的离线兜底，对**对账**语义不安全（快照 ≠ 当前服务端事实）；无快照的冷 context 走 reject 路径所以 E-nosnap PASS——「阻断 GET 保留本地」这一断言在有旧快照的真实用户机器上不成立。
+- R561-1（既有，疑 P3）：4 条 `TypeError: Cannot set properties of null (setting 'scrollLeft')`，栈 `index-CmQPo610.js:25:148104`（uni-h5 `scroll-view` KeepAlive `onActivated` 恢复 scrollLeft 处），复现序列 `book?tab=fav → 收藏夹与笔记 → 重练全部收藏 → 未答退出 → Back 回 book?tab=fav`；正常/46.9ms 快速切 tab、空收藏最小 Back 序列均未复现。本人本地用 R560 基线 bundle `index-DzMqodGp.js` 与 R561 `index-CmQPo610.js` 同脚本（`~/r561repro/repro.py`，本地后端 + 系统 Chrome headless）对照：**两版各 2 条同形态错误** → 不是 R561 引入，登记既有 P3，不在热修中扩范围；产品源码根因未定位，只确认 uni-h5 位置线索。
+- 分账：2171 请求 = 2163 配对 200 + 7 有意 abort + 1 导航图片取消；非 2xx/orphan/unresolved/付费 AI-OCR 0；warning/runtimeException/rejection/loading warning 0（console error 仅上述 4 条）；API request-level probe 全覆盖但 1 缓存字体缺头、883 条 ExtraInfo 独立证据缺口（如实）；41 表精确清 11 行、独立 exact/prefix 残留 0、保护 hash/count 回基线。harness 4 次浏览器命令错误 + 1 次 schema 探索错误（`exam_papers` 无 `psource` 列）已披露。
+
+### 5.3 热修 #734 `fetchFavsLive`（从合并后 main `ab264986` 开 `devin/1788948173-r561-fix-fav-sync-live`）
+
+- `api.js` +`fetchFavsLive()` = `request('/api/favs?uid=…', { timeout: 12000 })`：`request()` 已有 `if (opts.timeout != null) return withAuthRetry(() => rawRequest(...))` 提前返回，天然绕开 `getCache.run` 合并与 `catch → snapLoad` 回退、成功也不 `snapSave`，不改 `request` 本体。
+- `fav-sync.js syncCloudFavs` 改用 `fetchFavsLive`，且 `!Array.isArray(d.items)` 一律返 `null`（非真实列表 = 云端不可用）。三处调用方、in-flight 去重、`_favSeq`、grace、local-only、restore 清 id 全不变。收藏夹页与 `book.vue unfavCloud` 按题干回查仍用 `fetchFavs()`（展示/查 id，快照回退无害，有意不改）。
+- 测试：mock 改 `fetchFavsLive`；源锁 `{ timeout: 12000 }` 且 `request` 中 `snapLoad`/`getCache.run` 均在直连提前返回之后；+「回包无 items → null 不动本机」。本地门 H5 vitest 1324（+2）/ eslint 0 / build:h5（`index-DRZEZ0Yi.js`）/ diff --check 空。
+- 发版二 `59c01a19 → 2c0868b3`（#734 合入 `cb90f2f5`），compose 单次 rc=0，bundle gzip 125KB；6b LH `/` perf 0.90 / **a11y 0.94** / LCP 3272ms（`/tiku/` 全 1.00、LCP 881ms）——热修未改首页文件、bundle 仅收藏对账路径变化，a11y 0.94 与 R560 发版 6b 同形态（warm-up 时曾出现、独立重跑 1.00），并入 R560-5 复采项，不归因本轮。
+
+### 5.4 复验二（testing agent，`2c0868b3` / `index-DRZEZ0Yi.js`，uid `test-w561fix-*`；报告 `~/kaogong-reports/r561-fix-2c0868b3-prod-verify.md`、审计 `~/r561fix-2c0868b3/`、录像 `~/screencasts/r561fix-2c0868b3-{mobile,desktop,regressions}/`，#734 评论附截图）
+
+**E3′ 主项 + 窄回归全 PASS**：
+
+- E3′ 前置：经「我的 → 我的收藏 → 收藏夹与笔记」普通 `fetchFavs` 路径 GET 200 建立 `apiSnap` = `items: []`（冷启动直接 hash 进空收藏页不触发普通 GET，路径已调整并核实键存在）→ 首页「免注册立即开练」进入 daily 题页星星真实 POST 200 收藏 QID240319、本地 `id` 正确、SQLite 云行在。
+- E3′ 故障：实际等待 61.711s → 本人 book/profile GET 均 `ERR_ABORTED`（XHR status 0）→ 卡片/完整本地条目/收藏 chip 1/「我的」1/DB 行全保持、0 DELETE、`stale_fallback` 0；恢复：真实 GET 200 后仍唯一同 id，live GET 未改写旧空 snapshot。1440 同 context 抽检同结果。
+- 可选变体：旧非空 snapshot 含已远端取消的 240319 → 阻断 live GET 不复活旧题。
+- 回归：A 同 uid fresh context 真实 GET 导入云题（profile-first，book 亦 1 题无重复）；B >200s 后另一 context UI 取消 DELETE 200 → cold 对账后消失、cold 不发 DELETE；D book→profile→book 三次 onShow 共享 1 个 GET，响应挂起 1.851s 期间取消 DELETE 200、放行旧回包不复活；E-nosnap 两次 GET abort 保留；E-POST 真实 POST abort → `id=null`、云无行、解除后 GET 200 空列表仍保留 local-only。
+- 分账：823 请求 = 812 配对 200 + 9 故意 abort + 2 自然图片取消；non-2xx/orphan/unresolved/缺 loading 终态 0；console error/warn/runtime/rejection/loading-warning/付费 AI-OCR/stale_fallback 全 0；request-level probe 全覆盖，255 条缺 ExtraInfo 独立证据（API 21 条：9 abort + 12 成功读）如实；41 表精确清 4 行、独立 exact/`test-w561fix-%` 残留 0、users 及五类保护 hash/count 回基线；harness 异常 0。
+- UNTESTED：非数组 `items` 自然回包、HTTP 4xx/5xx、真实 12s 超时、小程序/真机（R536-1 累计）、恢复码、模考 writer、完整普通练习入口（本轮星星入口为 daily 题页）；本轮未出现 R561-1 `scrollLeft` 不代表已修复。
+
+### 5.5 结论与登记
+
+- R561 主项（跨端收藏读侧对账）+ R560-2/3/4 在 `2c0868b3` 生产验证通过；**#733 单独版本 `59c01a19` 在有旧空快照 + GET 失败下会误删本机收藏（R561-2，P2，已由 #734 修复）**，上线窗口约 09:39–10:10Z、非测试收藏 0 新增。
+- 教训：`request()` 的 `apiSnap` 离线兜底只适用于展示型 GET，**任何拿服务端列表做"删除本地"决策的对账读侧必须走不读快照的直连路径**；「阻断 GET」测试必须同时覆盖无快照与旧快照两种前置，且以「云行仍在 + 0 DELETE + 本机被清」三者并存判定客户端误删。
+- R561-1 既有 P3（uni-h5 scroll-view scrollLeft）：R560/R561 bundle 本地同复现，产品源码根因未定位，登记不修；R560-1 `kg-sheet` 键盘模态、R560-5 `/` LCP（本轮发版二 LCP 3272ms / a11y 0.94 再次出现）继续登记。
