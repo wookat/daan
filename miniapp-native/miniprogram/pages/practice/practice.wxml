@@ -90,7 +90,7 @@
 
       <!-- 错因自评 -->
       <view wx:if="{{picked && picked !== cur.answer}}" class="reasons" role="group" aria-label="错因自评">
-        <text class="rz-t">错因自评</text>
+        <text class="rz-t">错因自评（选填）</text>
         <view wx:for="{{reasons}}" wx:key="*this" class="rz {{cur._reason === item ? 'on' : ''}}" role="button" data-rz="{{item}}" bind:tap="onSetReason">{{item}}</view>
       </view>
 

@@ -33,7 +33,7 @@
           unit="题"
           :progress="Math.min((todayCount / dailyGoal) * 100, 100)"
           :streak="streakShown"
-          :primary="{ text: todayDone ? '再练 10 题' : '继续目标' }"
+          :primary="{ text: heroPrimaryText }"
           @primary="heroPrimary"
         >
           <view class="hero-links">
@@ -376,7 +376,7 @@ import { checkinStreak, dayKey, loadSzDaily } from '../../checkin.js';
 import { parseExamProgress, fmtLeftSecs } from '../../exam-resume.js';
 import { setBookBadge } from '../../tabbar-badge.js';
 import { adoptServerExamProgress } from '../../exam-progress-sync.js';
-import { parsePendingPractice, parseRemotePractice, REDO_PENDING_TITLE } from '../../practice-progress.js';
+import { parsePendingPractice, parseRemotePractice, dailyPendingTitle, cnDayOf, REDO_PENDING_TITLE } from '../../practice-progress.js';
 import { parseReviewSnap } from '../../review-snap.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
@@ -500,6 +500,16 @@ export default {
     },
     todayDone() {
       return !!this.daily.days[dayKey()];
+    },
+    // 今日同题本机有未做完快照时，hero 主按钮与续练卡同一落点（startDaily 会接着做），文案直说待续题号
+    dailyPendingToday() {
+      const r = this.practiceResume;
+      return r && r.daily && !r.daily.past && r.daily.date === cnDayOf(Date.now()) ? r : null;
+    },
+    heroPrimaryText() {
+      if (this.todayDone) return '再练 10 题';
+      const r = this.dailyPendingToday;
+      return r ? '继续今日一练 · 第 ' + (r.done + 1) + '/' + r.total + ' 题' : '继续目标';
     },
     szTodayDone() {
       return !!this.szDaily.days[dayKey()];
@@ -766,6 +776,7 @@ export default {
     prLabel(r) {
       if (r.ptitle) return r.ptitle;
       if (r.redo) return REDO_PENDING_TITLE;
+      if (r.daily) return dailyPendingTitle(r.daily);
       return this.prModName(r.module);
     },
     prContinue() {

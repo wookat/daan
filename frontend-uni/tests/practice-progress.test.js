@@ -78,7 +78,7 @@ describe('parsePendingPractice（R323 首页续练卡·本机快照）', () => {
 
   it('有效快照返回 done/total/module', () => {
     const r = parsePendingPractice({ t: now - 1000, items, lastModule: 'yanyu' }, now);
-    expect(r).toEqual({ done: 1, total: 3, module: 'yanyu', ptitle: '', redo: false });
+    expect(r).toEqual({ done: 1, total: 3, module: 'yanyu', ptitle: '', redo: false, daily: null });
   });
 
   it('fail-closed：空/无 items/超 24h/全部已答返回 null', () => {

@@ -45,7 +45,32 @@ export function parsePendingPractice(saved, now) {
     module: typeof saved.lastModule === 'string' ? saved.lastModule : '',
     ptitle: typeof saved.ptitle === 'string' ? saved.ptitle : '',
     redo: isRedoPending(saved),
+    daily: dailyFromPending(saved, now),
   };
+}
+
+// 每日一练场次的 pendingSession 以 daily:{date,past} 标记（无模块、无卷名）；恢复时据此还原打卡/全站成绩语义。
+// 跨日后接着做昨天的题组按往期补练处理（不打今日卡、不提交全站成绩）
+export function dailyFromPending(saved, now = Date.now()) {
+  const d = saved && saved.daily;
+  if (!d || typeof d !== 'object' || !/^\d{4}-\d{2}-\d{2}$/.test(String(d.date || ''))) return null;
+  return { date: d.date, past: !!d.past || d.date !== cnDayOf(now) };
+}
+
+export function dailyPendingTitle(d) {
+  if (!d) return '';
+  return d.past ? '往期每日一练 · ' + d.date : '每日一练 · 今日全站同题';
+}
+
+export function cnDayOf(now) {
+  return new Date(now + 8 * 3600e3).toISOString().slice(0, 10);
+}
+
+// 开每日一练前先看本机是否已有同一天的未做完题组（daily_set 按日固定，重开会从第 1 题覆盖进度）
+export function dailyPendingFor(saved, day, now) {
+  const p = parsePendingPractice(saved, now);
+  if (!p || !p.daily || p.daily.date !== day) return null;
+  return p;
 }
 
 // R548：错题重练场次的 pendingSession 以 redo=1 标记（无模块、无卷名，仅靠此位与普通练习区分）
@@ -56,10 +81,11 @@ export function isRedoPending(saved) {
 export const REDO_PENDING_TITLE = '错题重练';
 
 // 续练卡/续练弹窗标题：按卷会话显卷名，错题重练显「错题重练」，普通练习为空（由调用方回落模块名）
-export function pendingTitle(saved) {
+export function pendingTitle(saved, now = Date.now()) {
   if (!saved) return '';
   if (typeof saved.ptitle === 'string' && saved.ptitle) return saved.ptitle;
-  return isRedoPending(saved) ? REDO_PENDING_TITLE : '';
+  if (isRedoPending(saved)) return REDO_PENDING_TITLE;
+  return dailyPendingTitle(dailyFromPending(saved, now));
 }
 
 // 练习页运行时挂在题目上的作答态字段；重练原题集须剥掉后才能作为「再来一组」的干净母本
