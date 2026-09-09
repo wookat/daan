@@ -46,14 +46,20 @@ describe('R553 practice.vue 完成页接线', () => {
     expect(PRACTICE).toMatch(/import \{[^}]*wrongRetryPlan[^}]*\} from '\.\.\/\.\.\/paper-continue\.js'/);
     expect(PRACTICE).toContain('wrongRetry() {\n      return wrongRetryPlan(this.items, this._ptitle);');
   });
-  it('普通与按卷完成页共用一个重练按钮：!beiMode && wrongRetry() 显示，文案取 plan.label', () => {
-    expect(PRACTICE).toContain('<kg-button v-if="!beiMode && wrongRetry()" size="lg" block icon="rotate-ccw" @click="retryWrong">{{ wrongRetry().label }}</kg-button>');
+  it('普通与按卷完成页共用一个重练入口：R565 起走固定底栏 doneBar()，主位文案取 wrongRetryPlan().label（不再是行内 kg-button）', () => {
+    expect(PRACTICE).toContain(':primary-text="doneBar().primary"');
+    expect(PRACTICE).toContain('@primary="doneAct(doneBar().primaryAct)"');
+    expect(PRACTICE).toContain("if (act === 'redo') this.retryWrong();");
+    expect(PRACTICE).not.toContain('@click="retryWrong"');
     expect(PRACTICE).not.toContain('retryPaperWrong');
     expect(PRACTICE).not.toContain('paperWrongN()');
   });
-  it('有错题时「再来一组」/「回卷库」降为 ghost，避免与重练按钮双主按钮', () => {
-    expect(PRACTICE).toContain('<kg-button v-if="paperFinish().isPaper" :variant="wrongRetry() ? \'ghost\' : \'primary\'" size="lg" block @click="goExamList">回卷库</kg-button>');
-    expect(PRACTICE).toContain('<kg-button v-else :variant="!beiMode && wrongRetry() ? \'ghost\' : \'primary\'" size="lg" block @click="retryGroup">再来一组</kg-button>');
+  it('有错题时「再来一组」/「回卷库」降为底栏 ghost 次位，避免与重练按钮双主按钮（doneBarPlan 单测见 r565-done-bar）', () => {
+    expect(PRACTICE).toContain(':secondary-text="doneBar().secondary"');
+    expect(PRACTICE).toContain("else if (act === 'retry') this.retryGroup();");
+    expect(PRACTICE).toContain("else if (act === 'list') this.goExamList();");
+    expect(PRACTICE).not.toContain('@click="retryGroup"');
+    expect(PRACTICE).not.toContain('@click="goExamList"');
   });
   it('retryWrong 就地重开会话：保留 lastModule/_source/_ptitle，重置计数，落 pendingSession，toast 随归卷态', () => {
     const i = PRACTICE.indexOf('    retryWrong() {');

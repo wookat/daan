@@ -80,6 +80,18 @@ export function wrongRetryPlan(items, ptitle) {
   };
 }
 
+// 完成页固定底栏（与小程序 utils/done-bar.ts doneBarPlan 同口径）：有错题 → 主「只重练本组/本卷错题」+ 次「再来一组 / 回卷库」；
+// 无错题/背题 → 主「再来一组 / 回卷库」+ 次「返回…」（按实际落点文案）。act: redo | retry | list | quit
+export function doneBarPlan(items, ptitle, beiMode, back) {
+  const paper = paperFinishState(ptitle).isPaper;
+  const again = paper ? { text: '回卷库', act: 'list' } : { text: '再来一组', act: 'retry' };
+  const retry = beiMode ? null : wrongRetryPlan(items, ptitle);
+  if (retry) {
+    return { primary: retry.label, primaryAct: 'redo', secondary: again.text, secondaryAct: again.act };
+  }
+  return { primary: again.text, primaryAct: again.act, secondary: (typeof back === 'string' && back.trim()) || '返回', secondaryAct: 'quit' };
+}
+
 // 按卷练习完成页归卷：有卷名走本卷完成态，fail-closed（非字符串/空串走通用完成态）
 export function paperFinishState(ptitle) {
   if (typeof ptitle === 'string' && ptitle.trim()) {

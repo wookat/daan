@@ -1,5 +1,5 @@
 <template>
-  <view class="page" :class="{ 'has-bar': session && cur }">
+  <view class="page" :class="{ 'has-bar': session }">
     <!-- 加载失败 / 骨架（本页仅承载答题会话，选题在首页） -->
     <kg-empty-state
       v-if="!session && loadState === 'fail'"
@@ -304,12 +304,20 @@
         <!-- #endif -->
 
         <view class="done-acts">
-          <kg-button v-if="!beiMode && wrongRetry()" size="lg" block icon="rotate-ccw" @click="retryWrong">{{ wrongRetry().label }}</kg-button>
-          <kg-button v-if="paperFinish().isPaper" :variant="wrongRetry() ? 'ghost' : 'primary'" size="lg" block @click="goExamList">回卷库</kg-button>
-          <kg-button v-else :variant="!beiMode && wrongRetry() ? 'ghost' : 'primary'" size="lg" block @click="retryGroup">再来一组</kg-button>
           <kg-button v-if="!beiMode" variant="ghost" size="lg" block icon="share-2" @click="shareResult">分享成绩</kg-button>
-          <kg-button variant="text" size="md" block @click="quit">{{ backLabel }}</kg-button>
+          <kg-button v-if="doneBar().secondaryAct !== 'quit'" variant="text" size="md" block @click="quit">{{ backLabel }}</kg-button>
         </view>
+
+        <!-- 结算态固定底栏（小程序 doneBar 同口径）：主出路不再随长页沉到首屏之下 -->
+        <kg-action-bar
+          layout="actions"
+          class="done-bar"
+          :class="{ 'done-bar--long': doneBar().primaryAct === 'redo' }"
+          :primary-text="doneBar().primary"
+          :secondary-text="doneBar().secondary"
+          @primary="doneAct(doneBar().primaryAct)"
+          @secondary="doneAct(doneBar().secondaryAct)"
+        />
       </template>
     </kg-two-col>
 
@@ -418,7 +426,7 @@ import { requestNotificationPermission } from '../../reminder.js';
 import { announce } from '../../a11y-live.js';
 import { pickAnnounceText } from '../../live-policy.js';
 // #endif
-import { paperContinuePlan, paperQuery, paperFinishState, paperShareText, paperWrongItems, paperWrongPlan, paperWrongLaunch, wrongRetryPlan } from '../../paper-continue.js';
+import { paperContinuePlan, paperQuery, paperFinishState, paperShareText, paperWrongItems, paperWrongPlan, paperWrongLaunch, wrongRetryPlan, doneBarPlan } from '../../paper-continue.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 import { qStatLine, qDifficulty } from '../../q-stat.js';
@@ -1599,6 +1607,16 @@ export default {
     wrongRetry() {
       return wrongRetryPlan(this.items, this._ptitle);
     },
+    // 完成页固定底栏两出路（与小程序 doneBarPlan 同口径）；模板方法调用规避非响应式 _ptitle
+    doneBar() {
+      return doneBarPlan(this.items, this._ptitle, this.beiMode, this.backLabel);
+    },
+    doneAct(act) {
+      if (act === 'redo') this.retryWrong();
+      else if (act === 'retry') this.retryGroup();
+      else if (act === 'list') this.goExamList();
+      else this.quit();
+    },
     // 完成页「只重练本组/本卷错题」：就地以本会话答错题重开会话，保留 _source/_ptitle/lastModule；落 pendingSession 供刷新/前进恢复
     retryWrong() {
       const plan = wrongRetryPlan(this.items, this._ptitle);
@@ -2735,6 +2753,9 @@ export default {
 .nudge-t { display: block; font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
 .nudge-s { display: block; margin-top: var(--sp-4); font-size: var(--fs-caption); color: var(--ink-2); }
 .done-acts { display: flex; flex-direction: column; gap: var(--sp-12); margin-top: var(--sp-24); }
+/* 结算底栏：主按钮文案带题数（「只重练本组错题（N 题）」）时给主位更多宽度，375 不换行 */
+.done-bar.done-bar--long :deep(.kg-btn--primary) { flex: 1.7; }
+.done-bar :deep(.kg-btn) { min-width: 0; }
 
 /* #ifdef H5 */
 .page :deep(.kg-two__aside) { display: none; }

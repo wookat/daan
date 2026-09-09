@@ -113,11 +113,11 @@ Page({
             saved.items.filter((q) => q._picked).length +
             '/' +
             saved.items.length +
-            ' 题）',
+            ' 题）。重新开始会丢弃这些作答，从第 1 题重新计时。',
           confirmText: '继续',
           cancelText: '重新开始',
           success: (r) => resolve(!!r.confirm),
-          fail: () => resolve(false),
+          fail: () => resolve(true),
         });
       });
       if (resume) {

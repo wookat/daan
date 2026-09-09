@@ -3,6 +3,11 @@ name: testing-kaogong-assistant
 description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## R565 经验：Lighthouse 模拟 LCP 二值跳变的归因法 + 结算态固定底栏的复验口径
+- `perf-budget.sh` 默认是 **simulated** 节流：LCP 违例先把 JSON 落盘（`lighthouse <url> --output=json --output-path=…`），对比 `audits.metrics.details.items[0]` 的 `observedFirstContentfulPaint/observedLargestContentfulPaint`（真实首屏）与 `firstContentfulPaint/largestContentfulPaint`（Lantern 模拟）；再从 `audits['network-requests'].details.items` 数「`networkEndTime` < 观测 FCP 且 `priority ∈ {High, VeryHigh}`」的请求数/字节。通过 vs 违例样本若观测值一致（≈0.2 s）而 High 请求数 3 ↔ 47（`route-preload` 的 modulepreload chunk 赶在观测 FCP 前完成），就是 Lantern 关键链敏感（同 R443），不是首页回归；benchmarkIndex 高低（R562）只解释倍率，不解释二值跳变。`--throttling-method=devtools` 复核会报「loaded too slowly… incomplete」，只作方向证据不作基准。
+- 结算态固定底栏（练习完成页 `.done-bar`，模考报告已有）复验：① 375 底栏 `getBoundingClientRect().bottom === innerHeight` 且 `position:fixed`，两键各一行（`height ≈ 44`，主位文案「只重练本组错题（10 题）」两位数题数也不换行）；② 页内最后一个控件（「分享成绩」/ 文字「返回…」）滚到底后 `bottom <= 底栏 top`（`.page.has-bar` 88 px 留白）；③ 四态文案/落点：有错题「只重练…/再来一组」、按卷「重练本卷…/回卷库」、全对「再来一组/返回…」、背题不出重练，且点主位后与 R553 `retryWrong`（同 qid 集合、`pendingSession` 落 redo）/ 次位 `retryGroup`（新 GET 1/10）语义不变；④ 1440 底栏 `sticky` 在两栏容器内不遮右栏；⑤ 「分享成绩」仍在页内可点。本机预检可用 dist `http.server` + Playwright `route('**/api/**')` 把 GET 转发生产（`X-Kg-Probe: 1`）、非 GET 本地 200/abort，0 生产写入。
+- 小程序原生 `wx.showModal` 没有 Esc/遮罩/Back 隐式关闭，H5 R564「隐式关层=丢进度」口径不适用；核小程序恢复确认只看两点：`fail` 回调是否被当成 cancel（弹窗失败 ≠ 用户选择），content 是否写明 cancel 的代价（`cancelText` 限 4 字放不下）。
+
 ## R564 经验：恢复确认层（F5 后「继续上次练习/模考？」）与弹层按钮 Enter 激活的复验口径
 - 弹层按钮上的 Enter/Space 激活必须断言**同题/同页**（题号计数器、题干、picked、`pendingSession`/`examProgress` 整对象、attempt id），不能只看层关：a11y 宿主把 keydown 转 click 时已 `preventDefault`，同一事件仍会冒泡到 `window` 的页面快捷键，层已关时会被当「下一题」。修法口径：页面级快捷键统一 `if (e.defaultPrevented) return`。Escape 作对照组一起录。
 - 恢复层隐式关层（Esc / Back / X / 遮罩）= 继续，但会发一条 `practice_resume_cont` 埋点：断言「0 业务请求」要排除 `/api/track`，分别核 `progress` POST / `questions` GET / `exam/start` 条数；显式丢弃则恰 1 空 qids progress + 1 新 GET（模考恰 1 `exam/start`）。

@@ -420,7 +420,7 @@ Page({
         title: '继续上次练习？',
         content:
           (local.ptitle ? '「' + local.ptitle + '」' : '') +
-          '上次还有一组未做完（' + done + '/' + local.items.length + ' 题），是否继续？',
+          '上次还有一组未做完（' + done + '/' + local.items.length + ' 题）。选「不用了」会清掉这组进度并开新一组（已答记录仍进错题本）。',
         confirmText: '继续',
         cancelText: '不用了',
         success: (res) => {
