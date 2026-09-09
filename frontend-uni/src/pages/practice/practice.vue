@@ -400,7 +400,7 @@ import { toggleExcl, pickWithExcl, exclVisible } from '../../exam-excl.js';
 import { collectPracticeProgress, adoptPracticeResume, pendingTitle, redoItemsFromPending, REDO_PENDING_TITLE } from '../../practice-progress.js';
 import { weakSpots as buildWeakSpots } from '../../weak-spots.js';
 import { isExplanationCovered } from '../../exp-dup.js';
-import { reviewedMasteredCount, fixReportText } from '../../review-advance.js';
+import { reviewedMasteredCount, fixReportText, reviewedFromPending } from '../../review-advance.js';
 import { leadQidOf, leadPickOf, mergeLead, leadHintText } from '../../leadq.js';
 import { quitSummary } from '../../quit-summary.js';
 
@@ -1060,6 +1060,7 @@ export default {
       uni.showLoading({ title: '加载试卷…', mask: true });
       try {
         const d = await request('/api/paper_questions?' + paperQuery(p, untimed, anonUid()));
+        uni.hideLoading();
         let items = d.items || [];
         let wrongOnly = false;
         if (items.length < 20) {
@@ -1143,9 +1144,9 @@ export default {
           uni.showToast({ title: p.title + ' 开始：交卷后统一判分', icon: 'none', duration: 1800 });
         }
       } catch (e) {
+        uni.hideLoading();
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       } finally {
-        uni.hideLoading();
         this._starting = false;
       }
     },
@@ -1182,6 +1183,7 @@ export default {
           const d = await request('/api/questions?limit=25');
           items = d.items || [];
         }
+        uni.hideLoading();
         if (items.length < 5) {
           uni.showToast({ title: '题目不足，稍后再试', icon: 'none' });
           return;
@@ -1211,9 +1213,9 @@ export default {
         }, 1000);
         uni.showToast({ title: (full ? '全真模考开始' : '模考开始') + '：交卷后统一判分', icon: 'none', duration: 1500 });
       } catch (e) {
+        uni.hideLoading();
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       } finally {
-        uni.hideLoading();
         this._starting = false;
       }
     },
@@ -1316,6 +1318,7 @@ export default {
       }
       if (this._starting) return;
       this._starting = true;
+      let fallback = false;
       uni.showLoading({ title: '出题中…', mask: true });
       try {
         // 首页预取的题组按日确定，date 匹配当日即可复用（秒开，不再等网络）
@@ -1325,6 +1328,7 @@ export default {
         const d = past
           ? await request('/api/daily_set?date=' + encodeURIComponent(archiveDate))
           : cached && cached.date === cnDay && (cached.items || []).length ? cached : await request('/api/daily_set');
+        uni.hideLoading();
         if (!d.items || !d.items.length) throw new Error('empty');
         this._dailyDate = d.date;
         this._dailyPast = d.date !== cnDay;
@@ -1343,14 +1347,15 @@ export default {
         this.startQTimer();
         uni.showToast({ title: this._dailyPast ? '往期每日一练 · ' + d.date : '每日一练 · 今日全站同题', icon: 'none' });
       } catch (e) {
-        // 接口异常回退随机抽题，每日一练不因后端故障不可用
+        // 接口异常回退随机抽题，每日一练不因后端故障不可用；start() 有 _starting 互斥，须在 finally 复位后再回退
+        uni.hideLoading();
         this._dailyDate = '';
         this._dailyPast = false;
-        this.start(this.dailyModule);
+        fallback = true;
       } finally {
-        uni.hideLoading();
         this._starting = false;
       }
+      if (fallback) this.start(this.dailyModule);
     },
     markDailyDone() {
       if (!this._daily) return;
@@ -1415,6 +1420,7 @@ export default {
       try {
         const past = archiveDate && archiveDate !== dayKey();
         const d = await request(past ? '/api/shizheng/daily?date=' + encodeURIComponent(archiveDate) : '/api/shizheng/daily');
+        uni.hideLoading();
         if (!d.items || !d.items.length) {
           uni.showToast({ title: '时政题库准备中，敬请期待', icon: 'none' });
           return;
@@ -1436,9 +1442,9 @@ export default {
         this.session = true;
         this.startQTimer();
       } catch (e) {
+        uni.hideLoading();
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       } finally {
-        uni.hideLoading();
         this._starting = false;
       }
     },
@@ -1452,6 +1458,7 @@ export default {
       uni.showLoading({ title: '加载回顾…', mask: true });
       try {
         const d = await request('/api/shizheng/daily');
+        uni.hideLoading();
         this._shizheng = false;
         this.lastModule = '时政';
         this.items = (d.items || []).map((q, i) => ({
@@ -1469,9 +1476,8 @@ export default {
         this.session = true;
         this.stopQTimer();
       } catch (e) {
-        uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
-      } finally {
         uni.hideLoading();
+        uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
     },
     markShizhengDone() {
@@ -1690,6 +1696,7 @@ export default {
       if (this._starting) return;
       this._starting = true;
       this._lastStartArgs = [module, submodule, count, adaptive, forceReal, tag3, source, year];
+      this._reviewed = [];
       // 推荐埋点：记录本次练习的入口来源（reco/weak 等），随 answer_log 落库
       this._source = source || null;
       this._ptitle = null;
@@ -2090,6 +2097,7 @@ export default {
         source: this._source || '',
         ptitle: this._ptitle || '',
         redo: this._redoItems && this._redoItems.length && !this.lastModule ? 1 : 0,
+        reviewed: this._reviewed || [],
       });
       clearTimeout(this._ppTimer);
       this._ppTimer = setTimeout(() => this.pushPracticeProgress(), 1500);
@@ -2125,6 +2133,7 @@ export default {
       this._source = (typeof s.source === 'string' && s.source) || null;
       this._ptitle = (typeof s.ptitle === 'string' && s.ptitle) || null;
       this._redoItems = redoItemsFromPending(s);
+      this._reviewed = reviewedFromPending(s);
       this.autoSaved = false;
       this.resultSent = false;
       this.percentile = null;
@@ -2532,6 +2541,8 @@ export default {
             const r = await p;
             if (r && Array.isArray(r.reviewed) && r.reviewed.length) {
               this._reviewed = (this._reviewed || []).concat(r.reviewed);
+              // 回包晚于作答时的 saveSession，补写快照让 reviewed 跨刷新不丢；已全答完则不重复清快照
+              if (this.session && this.items.some((q) => !q._picked)) this.saveSession();
             }
           } catch (err) {
             // 断网：进本地队列，恢复网络后自动同步（按 key 去重）
