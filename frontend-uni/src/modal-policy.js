@@ -33,6 +33,14 @@ export function modalEntry(el, overlay) {
   return { box: el, hit: el, layers: [el] }
 }
 
+// wot wd-transition 离场态：关闭后先挂 `wd-<name>-leave(-active|-to)`，动画结束才 display:none；
+// hide-when-close=false 的 popup（wd-datetime-picker 为避免 picker-view 隐藏时乱发 change 有意不隐藏）会永久留在
+// 离屏的 leave-to 态且仍有 client rect，仅按几何可见会把它当作开着的模态层。
+const LEAVE_RE = /^wd-[\w-]*-leave(-active|-to)?$/
+export function isTransitionLeaving(className) {
+  return String(className || '').split(/\s+/).some((c) => LEAVE_RE.test(c))
+}
+
 // keydown → 弹层动作：输入法组合中的 Escape/Tab 交给 IME，不当弹层键；
 // 焦点在有内容的文本控件时首次 Escape 只退出该控件（blur），避免一键掉表单草稿；再按才关层。
 export function modalKeyAction(key, isComposing, textWithValue) {

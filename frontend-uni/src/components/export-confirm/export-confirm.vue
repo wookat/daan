@@ -27,6 +27,11 @@
 </template>
 
 <script>
+// #ifdef H5
+import { sheetOpened, sheetClosed } from '../../sheet-history.js';
+// #endif
+
+// H5 浏览器 Back 先关本层（与 KgSheet 同走 sheet-history；叠在筛选层之上时 Back 逐层关）
 export default {
   name: 'ExportConfirm',
   props: {
@@ -42,6 +47,31 @@ export default {
   },
   data() {
     return { withAns: true, withSheet: true, only: false, withMine: true };
+  },
+  watch: {
+    visible(v) {
+      // #ifdef H5
+      if (v) {
+        if (this._histTok == null) this._histTok = sheetOpened(() => this.$emit('close'));
+      } else if (this._histTok != null) {
+        sheetClosed(this._histTok);
+        this._histTok = null;
+      }
+      // #endif
+    },
+  },
+  mounted() {
+    // #ifdef H5
+    if (this.visible) this._histTok = sheetOpened(() => this.$emit('close'));
+    // #endif
+  },
+  beforeUnmount() {
+    // #ifdef H5
+    if (this._histTok != null) {
+      sheetClosed(this._histTok);
+      this._histTok = null;
+    }
+    // #endif
   },
   computed: {
     countText() {

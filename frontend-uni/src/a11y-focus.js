@@ -1,7 +1,7 @@
 // 键盘可达性：uni-app h5 把交互元素编译为无 tabindex 的 uni-view/uni-text div，<button> 也是自定义元素
 // <uni-button>（非原生 button，不在 Tab 序列），整站无任何键盘落点。在 Vue runtime 挂 click 监听时给宿主补 tabindex + Enter/Space 激活；
 // role=button 延迟到 rAF 只给叶子级短文本元素，避免 button 角色扁平化容器子树语义。
-import { reconcileStack, zIndexFor, pickFocusTarget, pickRestoreTarget, nextTabIndex, modalEntry, modalKeyAction, isTextWithValue } from './modal-policy.js'
+import { reconcileStack, zIndexFor, pickFocusTarget, pickRestoreTarget, nextTabIndex, modalEntry, modalKeyAction, isTextWithValue, isTransitionLeaving } from './modal-policy.js'
 
 export const HOST_RE = /^UNI-(VIEW|TEXT|IMAGE|LABEL|BUTTON)$/
 
@@ -26,6 +26,11 @@ function assignRoles() {
 // 两者均 position:fixed（offsetParent 恒为 null），可见性用 getClientRects 判断（wd-popup 关闭后 display:none）
 function visible(el) {
   return el.getClientRects().length > 0
+}
+
+// 弹层是否「开着」：进入离场动画即视为关闭（焦点立即归还，不等 display:none；不隐藏的 picker 离屏后不再圈焦点）
+function modalOpen(el) {
+  return el.isConnected && visible(el) && !isTransitionLeaving(el.className)
 }
 
 // 补 tabindex 的宿主 + 原生文本控件（uni 的 <textarea>/<input> 内层原生元素无 tabindex 属性，手录表单靠它们进 Tab 序）
@@ -69,14 +74,17 @@ function initModalKeys() {
     return a && a !== document.body ? ancestorChain(a) : focusChain
   }
   const sync = () => {
-    const { removed, kept } = reconcileStack(stack, (s) => s.box.isConnected && visible(s.box))
+    const { removed, kept } = reconcileStack(stack, (s) => modalOpen(s.box))
     stack = kept
     removed.forEach(({ lastFocus }) => {
       const el = pickRestoreTarget(lastFocus, (n) => n.isConnected && visible(n), maskFocusables)
       if (el && typeof el.focus === 'function') el.focus()
     })
     document.querySelectorAll('.mask, .wd-popup').forEach((node) => {
-      if (!visible(node) || stack.some((s) => s.box === node)) return
+      // 离场后仍挂载且不 display:none 的弹层（hide-when-close=false 的 picker）滑到屏外仍在 Tab 序里 → inert 摘出
+      const leaving = isTransitionLeaving(node.className)
+      if (node.inert !== leaving) node.inert = leaving
+      if (!modalOpen(node) || stack.some((s) => s.box === node)) return
       const entry = modalEntry(node, node.classList.contains('wd-popup') ? overlayOf(node) : null)
       stack.push({ ...entry, lastFocus: openerChain() })
       entry.layers.forEach((m) => {
