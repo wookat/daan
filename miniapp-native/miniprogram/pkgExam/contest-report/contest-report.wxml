@@ -13,8 +13,8 @@
         <text class="hero-s">{{heroLabel}}</text>
         <view class="score-row"><text class="score num">{{r.score}}</text><text class="score-u">分</text></view>
         <view class="hero-sub">
-          <text class="hero-beat num">击败 {{r.pct}}% 考生</text>
-          <text class="hero-line num">第 {{r.rank}} 名 / {{r.total}} 人 · 全场平均 {{r.avg}} 分</text>
+          <text class="hero-beat num">{{heroBeat}}</text>
+          <text class="hero-line num">{{heroLine}}</text>
         </view>
       </view>
 
@@ -58,7 +58,7 @@
 
       <kg-card variant="flat" class="sec">
         <text class="h">本卷薄弱考点</text>
-        <text wx:if="{{!r.weak_tags.length}}" class="note">本卷错题较少，暂未形成薄弱考点结论，继续保持！</text>
+        <text wx:if="{{!r.weak_tags.length}}" class="note">{{weakNote}}</text>
         <view wx:for="{{r.weak_tags}}" wx:key="tag3" class="wrow" hover-class="row--hover" data-tag3="{{item.tag3}}" bind:tap="onWeakTag">
           <view class="wrow-l">
             <text class="wrow-t">{{item.name || item.tag3}}</text>

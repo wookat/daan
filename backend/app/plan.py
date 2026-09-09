@@ -68,6 +68,14 @@ def _review_sub(due: int, new_today: int) -> str:
     return f"到期的都复习完了{extra}"
 
 
+def _practice_sub(reason: str, acc: float) -> str:
+    """专项练习副标：reason 本身已说正确率时不再重复指标名。"""
+    pct = round(acc * 100)
+    if reason == "正确率偏低":
+        return f"最近正确率只有 {pct}%"
+    return f"{reason}，最近正确率 {pct}%"
+
+
 def today_plan(uid: str) -> dict:
     profile = db.get_user_profile(uid)
     if not profile:
@@ -146,7 +154,7 @@ def today_plan(uid: str) -> dict:
             "key": f"practice_{i}",
             "type": "practice",
             "title": f"专项练习：{sub} {n} 题",
-            "sub": f"{w['reason']}，最近正确率 {round(w['acc'] * 100)}%",
+            "sub": _practice_sub(w["reason"], w["acc"]),
             "target": n,
             "done_n": min(done_n, n),
             "done": done_n >= n,

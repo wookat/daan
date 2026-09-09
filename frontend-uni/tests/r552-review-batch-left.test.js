@@ -18,7 +18,7 @@ describe('R552 reviewDoneCopy / reviewDueLeft（H5）', () => {
     const c = reviewDoneCopy(20, 10);
     expect(c.cleared).toBe(false);
     expect(c.title).toBe('本组复习完成');
-    expect(c.line).toBe('本组 20 道复习完成 · 还有 10 道到期待复习');
+    expect(c.line).toBe('本组 20 道复习完成，还有 10 道到期');
     expect(c.cta).toBe('继续复习下一组（10 道）›');
     expect(reviewDoneCopy(20, 45).cta).toBe('继续复习下一组（20 道）›');
     expect(REVIEW_BATCH).toBe(20);
@@ -29,7 +29,7 @@ describe('R552 reviewDoneCopy / reviewDueLeft（H5）', () => {
       const c = reviewDoneCopy(7, left);
       expect(c.cleared).toBe(true);
       expect(c.title).toBe('今日复习已清零');
-      expect(c.line).toBe('7 道到期错题全部复习完成，遗忘曲线稳住了');
+      expect(c.line).toBe('7 道到期错题全部复习完成');
       expect(c.cta).toBe('');
     }
   });
@@ -91,7 +91,7 @@ describe('R552 源锁：H5 book.vue', () => {
     expect(i).toBeGreaterThan(0);
     const blk = BOOK.slice(i, BOOK.indexOf('</template>', i));
     expect(blk).toContain('class="cb-next-batch" @click="continueReview">{{ doneCopy.cta }}</kg-button>');
-    expect(blk).toContain('<kg-button v-if="reinforce" variant="text" size="md" @click="startReinforce(reinforce)">强化 5 道新题</kg-button>');
+    expect(blk).toContain('<kg-button v-if="reinforce" variant="text" size="md" @click="startReinforce(reinforce)">练同考点</kg-button>');
     expect(blk).toContain('@click="closeCelebrate">回错题本</kg-button>');
     expect(BOOK).toContain('<template v-else-if="reinforce">');
     expect(BOOK).toContain('<kg-button v-else variant="primary" size="lg" block @click="closeCelebrate">回错题本 ›</kg-button>');

@@ -33,8 +33,8 @@
           unit="题"
           :progress="Math.min((todayCount / dailyGoal) * 100, 100)"
           :streak="streakShown"
-          :primary="{ text: todayDone ? '再练一组' : '继续目标' }"
-          @primary="startDaily"
+          :primary="{ text: todayDone ? '再练 10 题' : '继续目标' }"
+          @primary="heroPrimary"
         >
           <view class="hero-links">
             <text v-if="dsMeta && dsDone" class="hero-ds">今日全站同题 · 答对 {{ dsDone.right }}/{{ dsDone.total }}<template v-if="dsDone.rank"> · 第 {{ dsDone.rank }} 名</template><template v-if="dsDone.streak >= 2"> · 连 {{ dsDone.streak }} 天</template></text>
@@ -137,7 +137,7 @@
           </view>
         </kg-card>
         <kg-card v-else-if="plan && (plan.due_mistakes || (plan.weak || []).length || (plan.yesterday || {}).n)" class="sec plan">
-          <kg-section-header title="学习计划 · 今日建议">
+          <kg-section-header title="今天做什么">
             <template #right>
               <text v-if="(plan.yesterday || {}).n" class="plan-y">昨日练 {{ plan.yesterday.n }} 题 · 正确率 {{ Math.round((plan.yesterday.correct / plan.yesterday.n) * 100) }}%</text>
               <text v-else class="plan-y">昨日未练习</text>
@@ -193,7 +193,7 @@
             <view class="modrow-in">
               <view class="modrow-ico"><l-icon name="zap" :size="24" tone="brand" /></view>
               <view class="grow">
-                <text class="modrow-t">智能刷题：攻克薄弱项</text>
+                <text class="modrow-t">按弱项出题</text>
                 <text class="modrow-s">你的 {{ modName(weakModule) }} 正确率较低，建议专项练习</text>
               </view>
             </view>
@@ -382,6 +382,7 @@ import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 import { planDaysLabel, isExamDatePast, examDateFieldText, cnTodayStr, planCardMark } from '../../plan-days-label.js';
 import { MODULE_KEYS, moduleLabel } from '../../module-meta.js';
+import { todayShown } from '../../home-today.js';
 
 // module-meta.js 只含行测五模块；申论不是练习模块但会出现在续练/薄弱项文案里
 const EXTRA_NAMES = { shenlun: '申论' };
@@ -424,6 +425,7 @@ export default {
       annOpen: false,
       badgeInfo: null,
       svTodayN: null,
+      svLocalAtSync: 0,
       weeklyDot: false,
       comeback: null,
       reminderBanner: false,
@@ -474,12 +476,14 @@ export default {
     dueReview() {
       return (this.plan && this.plan.due_mistakes) || 0;
     },
-    todayCount() {
-      // 服务端 answer_log（Asia/Shanghai 日界，按当前 uid）为准；
-      // 本地 pstats 不分身份，仅在服务端未返回（离线）时降级使用
-      if (this.svTodayN != null) return this.svTodayN;
+    todayLocal() {
       const days = (this.pstats && this.pstats.days) || {};
       return days[dayKey()] || 0;
+    },
+    todayCount() {
+      // 服务端 answer_log（Asia/Shanghai 日界，按当前 uid）为准，叠加本机自上次 summary 以来的增量；
+      // 本地 pstats 不分身份，仅在服务端未返回（离线）时单独使用
+      return todayShown(this.svTodayN, this.svLocalAtSync, this.todayLocal);
     },
     weakModule() {
       let worst = null;
@@ -598,6 +602,7 @@ export default {
       this.profileFetched = false;
       this.badgeInfo = null;
       this.svTodayN = null;
+      this.svLocalAtSync = 0;
       this.dsDone = null;
       this.refreshAccountData();
     },
@@ -702,6 +707,11 @@ export default {
     },
     startDaily() {
       this.launch({ kind: 'daily' });
+    },
+    // 今日同题已完成后出普通一组新题（daily_set 按日固定，重进是同 10 题；重做走「补练往期」）
+    heroPrimary() {
+      if (this.todayDone) this.startPreset(this.dailyModule, null, 10, false, null, 'home_hero');
+      else this.startDaily();
     },
     openSzArchive() {
       this.pickArchiveDay((d) => {
@@ -914,17 +924,19 @@ export default {
       uni.setStorageSync('autoStartReview', 1);
       uni.switchTab({ url: '/pages/book/book' });
     },
-    async loadBadges() {
+    async loadBadges(localAtReq) {
       try {
         this.badgeInfo = await fetchCheckinBadges();
       } catch (e) { /* 非关键路径 */ }
       try {
-        this.applySummary(await fetchCheckinSummary());
+        this.applySummary(await fetchCheckinSummary(), localAtReq);
       } catch (e) { /* 非关键路径 */ }
     },
-    applySummary(d) {
+    // localAtReq：发请求时的本机今日数，作为之后本地增量的基线
+    applySummary(d, localAtReq) {
       if (d && d.today_n != null) {
         this.svTodayN = d.today_n;
+        this.svLocalAtSync = localAtReq;
         if (d.today_n > 0) this.reminderBanner = false;
       }
     },
@@ -936,20 +948,21 @@ export default {
       const p = '/api/home_bundle?uid=' + encodeURIComponent(uid);
       const snap = snapPeek(p);
       if (snap) this.applyBundle(snap, true);
+      const localAtReq = this.todayLocal;
       try {
-        this.applyBundle(await request(p));
+        this.applyBundle(await request(p), false, localAtReq);
       } catch (e) {
         if (isStaleUidErr(e)) return;
         this.loadPlan();
-        this.loadBadges();
+        this.loadBadges(localAtReq);
         await this.loadProfile();
       }
     },
     // stale=true 为快照即显：跳过日界敏感的 summary（今日刷题数/提醒横幅），防昨日快照误报今日进度
-    applyBundle(d, stale) {
+    applyBundle(d, stale, localAtReq) {
       this.applyPlan(d.plan);
       if (d.badges) this.badgeInfo = d.badges;
-      if (!stale) this.applySummary(d.summary);
+      if (!stale) this.applySummary(d.summary, localAtReq);
       this.profile = d.profile || null;
       this.profileFetched = true;
       const g = adoptServerDailyGoal(this.dailyGoal, this.profile);

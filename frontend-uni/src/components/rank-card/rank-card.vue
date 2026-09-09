@@ -5,12 +5,12 @@
       <text v-if="data.small_sample" class="r-tag">样本 {{ data.total }} 人</text>
     </view>
     <view class="r-main">
-      <view v-if="!tinySample" class="r-beat">
-        <text class="r-beat-n">{{ data.beaten_pct }}%</text>
-        <text class="r-beat-l">已击败{{ data.small_sample ? '（样本 ' + data.total + ' 人）' : '考生' }}</text>
+      <view v-if="beatView.pct != null" class="r-beat">
+        <text class="r-beat-n">{{ beatView.pct }}%</text>
+        <text class="r-beat-l">{{ beatView.label }}</text>
       </view>
       <view v-else class="r-beat">
-        <text class="r-beat-tiny">参与人数仍较少（{{ data.total }} 人），暂不计算击败比例</text>
+        <text class="r-beat-tiny">{{ beatView.line }}</text>
       </view>
       <view class="r-kv">
         <view class="r-kv-i"><text class="r-k">排名</text><text class="r-v">{{ data.rank }}<text class="r-v-s">/{{ data.total }}</text></text></view>
@@ -25,7 +25,7 @@
       </view>
     </view>
     <text class="r-hint">你在 {{ data.my_bucket * 10 }}-{{ data.my_bucket * 10 + 10 }} 分段（蓝色）</text>
-    <!-- 同卷排行榜（每人取最高分口径，与击败比例一致） -->
+    <!-- 同卷排行榜（每人取最高分口径，与超过比例一致） -->
     <view v-if="boardRows" class="r-board">
       <text class="r-board-t">同卷排行榜</text>
       <view v-for="b in boardRows" :key="b.rank + b.name" class="r-brow" :class="{ me: b.me }">
@@ -40,6 +40,7 @@
 <script>
 import { request, anonUid } from '../../api.js';
 import { examBoardRows } from '../../exam-board.js';
+import { rankCardView } from '../../exam-copy.js';
 
 export default {
   name: 'RankCard',
@@ -48,8 +49,8 @@ export default {
     return { data: null };
   },
   computed: {
-    tinySample() {
-      return !!this.data && this.data.total < 10;
+    beatView() {
+      return rankCardView(this.data);
     },
     boardRows() {
       return examBoardRows(this.data);
@@ -80,13 +81,13 @@ export default {
 .r-title { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
 .r-tag { font-size: var(--fs-caption); color: var(--warn-strong); background: var(--warn-soft); border-radius: var(--r-full); padding: 2px var(--sp-8); }
 .r-main { display: flex; align-items: center; gap: var(--sp-20); margin: var(--sp-12) 0 var(--sp-4); }
-.r-beat { display: flex; flex-direction: column; }
+.r-beat { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .r-beat-n { font-size: var(--fs-h1); font-weight: 600; color: var(--brand-text); line-height: 1.1; }
 .r-beat-l { font-size: var(--fs-caption); color: var(--ink-2); }
 .r-beat-tiny { font-size: var(--fs-caption); color: var(--ink-2); line-height: 1.6; }
-.r-kv { display: flex; gap: var(--sp-20); }
+.r-kv { display: flex; gap: var(--sp-20); flex-shrink: 0; }
 .r-kv-i { display: flex; flex-direction: column; }
-.r-k { font-size: var(--fs-caption); color: var(--ink-3); }
+.r-k { font-size: var(--fs-caption); color: var(--ink-3); white-space: nowrap; }
 .r-v { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); }
 .r-v-s { font-size: var(--fs-caption); color: var(--ink-3); font-weight: 400; }
 .r-dist { display: flex; align-items: flex-end; gap: var(--sp-4); height: 70px; margin-top: var(--sp-8); }

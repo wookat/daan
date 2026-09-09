@@ -95,7 +95,8 @@ Page({
   data: {
     view: 'home' as View,
     module: '',
-    modOpts: MODULE_KEYS.map((k) => ({ value: k, label: MODULES[k].label })).concat({ value: '', label: '混合' }),
+    // 默认选中「混合」(value '')：放首位，kg-chip-row 观察者才不会把首屏滚到行尾
+    modOpts: [{ value: '', label: '混合' }].concat(MODULE_KEYS.map((k) => ({ value: k, label: MODULES[k].label }))),
     joinCode: '',
     myWins: 0,
     myRank: 0,

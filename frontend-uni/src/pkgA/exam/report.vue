@@ -23,7 +23,7 @@
       <template #main>
         <kg-hero-card :label="report.paper.title" :value="report.attempt.score" unit="分">
           <view class="hero-sub">
-            <text class="hero-line">答对 {{ report.correct }}/{{ report.total }}（已答 {{ report.answered }}）· 用时 {{ usedTime }}</text>
+            <text class="hero-line">{{ heroLine }}</text>
             <text v-if="prevDeltaText" class="hero-line">较上次同卷 {{ prevDeltaText }}</text>
             <text v-if="beatText" class="hero-beat num">{{ beatText }}</text>
           </view>
@@ -65,7 +65,7 @@
             class="cta"
             role="button"
             tabindex="0"
-            :aria-label="'去专项强化' + weakMod.name"
+            :aria-label="'去专项练习' + weakMod.name"
             @click="goWeak"
             @keydown.enter="goWeak"
           >
@@ -73,7 +73,7 @@
               <text class="cta-t">薄弱模块：{{ weakMod.name }}</text>
               <text class="cta-d">{{ weakMod.reason }}</text>
             </view>
-            <text class="cta-go">去专项强化</text>
+            <text class="cta-go">去专项练习</text>
           </view>
         </kg-card>
 
@@ -104,7 +104,7 @@
 
         <kg-card variant="flat" class="sec">
           <text class="h">本卷薄弱考点</text>
-          <text v-if="!(report.weak_tags && report.weak_tags.length)" class="note">本卷错题较少，暂未形成薄弱考点结论，继续保持！</text>
+          <text v-if="!(report.weak_tags && report.weak_tags.length)" class="note">{{ weakNoteText }}</text>
           <view v-for="t in report.weak_tags || []" :key="t.tag3" class="wrow" role="button" hover-class="row--hover" @click="goPractice(t.tag3)">
             <view class="wrow-l">
               <text class="wrow-t">{{ t.name || t.tag3 }}</text>
@@ -139,7 +139,7 @@
         <view v-if="redoCount" class="cta" role="button" aria-label="本卷错题重练" @click="redoWrong">
           <view class="cta-l">
             <text class="cta-t">本卷错题重练（{{ redoCount }} 题）</text>
-            <text class="cta-d">按刷题模式把本卷答错的题重做一遍{{ wrongTotal > redoCount ? '（本轮先练前 ' + redoCount + ' 题）' : '' }}</text>
+            <text class="cta-d">{{ redoDescText }}</text>
           </view>
           <l-icon name="chevron-right" :size="20" tone="brand" />
         </view>
@@ -240,9 +240,9 @@
             @click="setDetailReason(rz)"
           >{{ rz }}</text>
         </view>
-        <view v-if="detail.tag3" class="cta" role="button" :aria-label="'练同类题：' + detail.tag3 + '，同考点强化 5 道新题'" @click="reinforceDetail">
+        <view v-if="detail.tag3" class="cta" role="button" :aria-label="'练同考点：' + detail.tag3 + '，5 道新题'" @click="reinforceDetail">
           <view class="cta-l"><text class="cta-t">练同类题：{{ detail.tag3 }}</text></view>
-          <text class="cta-go">强化 5 道新题</text>
+          <text class="cta-go">练同考点</text>
         </view>
         <view class="d-links">
           <kg-button v-if="detailAskSeen" variant="text" size="md" @click="openSeenAsk">回看 AI 详解</kg-button>
@@ -305,6 +305,7 @@ import { modAvgPct } from '../../exam-mod-avg.js';
 import { weakModule } from '../../exam-weak.js';
 import { nextPaper } from '../../exam-next.js';
 import { moduleLabel } from '../../module-meta.js';
+import { rankLine, reportHeroLine, weakNote, redoDesc } from '../../exam-copy.js';
 const PACE_TAG = { over: '超时', fast: '偏快', ok: '合理', skip: '未作答' };
 const MOD_ORDER = ['changshi', 'yanyu', 'shuliang', 'panduan', 'ziliao'];
 
@@ -379,11 +380,20 @@ export default {
       if (!d) return null;
       return { attemptCount: d.attempt_count, accuracy: d.correct_ratio, mostWrong: d.most_wrong, avgSecs: d.avg_secs };
     },
-    /** 击败比例：rank-card 同源数据（/api/exam/rank），样本 <10 不显示 */
+    /** 相对排名：rank-card 同源数据（/api/exam/rank），样本 <10 不显示 */
     beatText() {
       const r = this.rankData;
-      if (!r || !(r.total >= 10) || r.beaten_pct == null) return '';
-      return '击败 ' + r.beaten_pct + '% 考生';
+      if (!r || !(r.total >= 10)) return '';
+      return rankLine(r.total, r.beaten_pct);
+    },
+    heroLine() {
+      return reportHeroLine(this.report, this.usedTime);
+    },
+    weakNoteText() {
+      return weakNote(this.report.correct, this.report.total);
+    },
+    redoDescText() {
+      return redoDesc(this.wrongTotal, this.redoCount);
     },
     statItems() {
       const items = [

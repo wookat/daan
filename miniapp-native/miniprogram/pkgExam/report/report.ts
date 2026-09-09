@@ -36,6 +36,36 @@ import {
   type NextReco,
 } from '../../utils/kg-exam-report';
 
+const RANK_MIN_SAMPLE = 10;
+
+/** 与 H5 exam-copy.rankLine 同文：样本 <10 只说人数，比例一律写「超过 P% 的考友」 */
+function rankLine(total: number, pct: number | null | undefined): string {
+  if (!(total > 0)) return '';
+  if (total < RANK_MIN_SAMPLE || pct == null) return `参与人数还少（${total} 人）`;
+  if (pct <= 0) return `还没超过其他考友（共 ${total} 人）`;
+  return `超过 ${pct}% 的考友`;
+}
+
+function rankCardLine(rank: ExamRankFull | null): string {
+  if (!rank) return '';
+  if (rank.total < RANK_MIN_SAMPLE) return `参与人数还少（${rank.total} 人），暂不算比例`;
+  return rankLine(rank.total, rank.beaten_pct);
+}
+
+function heroLine(r: ExamReportFull, usedTime: string): string {
+  const answered = r.answered == null ? r.total : r.answered;
+  const blank = answered < r.total ? `，${r.total - answered} 题未答` : '';
+  return `答对 ${r.correct}/${r.total}${blank}，用时 ${usedTime}`;
+}
+
+function weakNote(correct: number, total: number): string {
+  return total > 0 && correct >= total ? '全对，没有薄弱考点' : '本卷错题少，看不出薄弱考点';
+}
+
+function redoDesc(wrongTotal: number, redoCount: number): string {
+  return wrongTotal > redoCount ? `答错 ${wrongTotal} 题，这轮先重练前 ${redoCount} 题` : `答错 ${wrongTotal} 题，按刷题模式重练一遍`;
+}
+
 interface PaceVM {
   key: string;
   name: string;
@@ -97,11 +127,15 @@ Page({
     loadErr: '',
     report: null as ExamReportFull | null,
     usedTime: '-',
+    heroLine: '',
+    weakNote: '',
+    redoDesc: '',
     prevDeltaText: '',
     beatText: '',
+    rankBeatBig: false,
+    rankCardLine: '',
     statItems: [] as StatItem[],
     rank: null as ExamRankFull | null,
-    rankTiny: false,
     dist: [] as DistVM[],
     bucketText: '',
     board: null as BoardRow[] | null,
@@ -229,7 +263,7 @@ Page({
       .map((name) => ({ name, n: cnt[name], pct: Math.round((cnt[name] / wrong.length) * 100) }))
       .sort((x, y) => y.n - x.n);
 
-    const beatText = rank && rank.total >= 10 && rank.beaten_pct != null ? '击败 ' + rank.beaten_pct + '% 考生' : '';
+    const beatText = rank && rank.total >= RANK_MIN_SAMPLE ? rankLine(rank.total, rank.beaten_pct) : '';
     let dist: DistVM[] = [];
     if (rank && Array.isArray(rank.distribution)) {
       const max = Math.max(...rank.distribution, 1);
@@ -237,11 +271,17 @@ Page({
     }
     const mb = rank && rank.my_bucket != null ? rank.my_bucket : null;
 
+    const usedTime = usedTimeText(a.started_at, a.submitted_at);
+    const redoCount = buildExamRedoSet(items).length;
     this.setData({
-      usedTime: usedTimeText(a.started_at, a.submitted_at),
+      usedTime,
+      heroLine: heroLine(r, usedTime),
+      weakNote: weakNote(r.correct, r.total),
+      redoDesc: redoDesc(wrong.length, redoCount),
       statItems,
       beatText,
-      rankTiny: !!rank && rank.total < 10,
+      rankBeatBig: !!rank && rank.total >= RANK_MIN_SAMPLE && rank.beaten_pct != null && rank.beaten_pct > 0,
+      rankCardLine: rankCardLine(rank),
       dist,
       bucketText: mb != null ? '你在 ' + mb * 10 + '-' + (mb * 10 + 10) + ' 分段（蓝色）' : '',
       board: examBoardRows(rank),
@@ -250,7 +290,7 @@ Page({
       paceRows,
       cells,
       markCount: markedNos(items).length,
-      redoCount: buildExamRedoSet(items).length,
+      redoCount,
       wrongTotal: wrong.length,
       reasonRows,
     });

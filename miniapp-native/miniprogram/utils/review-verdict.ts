@@ -72,11 +72,11 @@ export function reviewDoneCopy(done: number | undefined, left: number | undefine
     return {
       cleared: false,
       title: '本组复习完成',
-      line: `本组 ${n} 道复习完成 · 还有 ${l} 道到期待复习`,
+      line: `本组 ${n} 道复习完成，还有 ${l} 道到期`,
       cta: `继续复习下一组（${Math.min(l, REVIEW_BATCH)} 道）›`,
     };
   }
-  return { cleared: true, title: '今日复习已清零！', line: `${n} 道到期错题全部复习完成，遗忘曲线稳住了`, cta: '' };
+  return { cleared: true, title: '今日复习已清零！', line: `${n} 道到期错题全部复习完成`, cta: '' };
 }
 
 export interface ReviewVerdictArgs {
@@ -97,6 +97,6 @@ export function reviewVerdict(a: ReviewVerdictArgs): string {
     ? a.requeued
       ? '这次答对了，本轮已纠正'
       : '答对了！连对 ' + streak + ' 次'
-    : '又错了，看解析（稍后本轮会再出现）';
+    : '又错了，看解析，稍后本轮会再出现';
   return head + '（下次复习：' + nextDays + ' 天后）';
 }

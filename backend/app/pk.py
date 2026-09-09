@@ -25,6 +25,8 @@ PER_Q_MS_CAP = 30_000
 BASE_SCORE = 80
 SPEED_BONUS_MAX = 20
 PK_MODULES = {"ziliao", "shuliang", "yanyu", "panduan", "changshi"}
+# 随机匹配只接这么新的等待局；更旧的仍可凭挑战码加入
+PK_MATCH_WINDOW_S = 72 * 3600
 _MULTI_RE = re.compile(r"不定项|多选")
 
 
@@ -242,9 +244,9 @@ def api_pk_random(body: dict, request: Request):
     conn = db.get_conn()
     where = (
         "status='waiting' AND opponent_uid IS NULL AND creator_uid!=? AND creator_score IS NOT NULL"
-        " AND COALESCE(probe,0)=?"
+        " AND COALESCE(probe,0)=? AND created_at>?"
     )
-    args: list = [uid, 1 if probe_request(request) else 0]
+    args: list = [uid, 1 if probe_request(request) else 0, time.time() - PK_MATCH_WINDOW_S]
     if module:
         where += " AND module=?"
         args.append(module)

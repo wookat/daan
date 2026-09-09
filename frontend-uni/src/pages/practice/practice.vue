@@ -186,7 +186,7 @@
           :progress="Math.round((right / (items.length || 1)) * 100)"
         >
           <text class="hero-s">答对 {{ right }}/{{ items.length }} · 最高连对 {{ bestStreak }} 题<template v-if="autoSaved">，错题已自动加入错题本</template></text>
-          <text v-if="percentile != null" class="hero-s">本组正确率击败了 {{ percentile }}% 的刷题记录</text>
+          <text v-if="percentile != null" class="hero-s">{{ percentileLine(percentile) }}</text>
         </kg-hero-card>
         <kg-hero-card v-else label="本组背完" :value="items.length" unit="题">
           <text class="hero-s">已浏览 {{ items.length }} 道题的答案与解析</text>
@@ -246,7 +246,7 @@
               <text class="wr-name">{{ w.name }}</text>
               <text class="wr-meta">本组错 {{ w.n }} 题</text>
             </view>
-            <kg-button variant="ghost" size="sm" @click="reinforceWeak(w)">强化 5 道新题</kg-button>
+            <kg-button variant="ghost" size="sm" @click="reinforceWeak(w)">练同考点</kg-button>
           </view>
         </kg-card>
 
@@ -382,6 +382,7 @@
 import { request, BASE_URL, anonUid, pkNickname, removeFav, setFav, fetchCheckinBadges, getAuthUser, trackEvent, submitDailySet } from '../../api.js';
 import { drawOffline, enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../offline.js';
 import { dayKey, loadSzDaily, saveSzDaily } from '../../checkin.js';
+import { dailySetLine, dailySetShareTail, percentileLine, percentileShareTail } from '../../exam-copy.js';
 import { splitMaterial, sameMaterial } from '../../material.js';
 import { normFontLv } from '../../font-size.js';
 import { MODULES, moduleLabel } from '../../module-meta.js';
@@ -702,11 +703,8 @@ export default {
     dailyStatsText() {
       const d = this.dailyStats;
       if (!d) return '';
-      let s;
-      if (d.already) s = `今日全站同题成绩已记录（首次 ${d.my_right} 对） · ${d.participants} 人完成`;
-      else if (d.beat_pct == null) s = '今日全站同题 · 你是今天第 1 位完成者';
-      else s = `今日全站同题 · ${d.participants} 人完成 · 击败 ${d.beat_pct}%`;
-      if (d.streak >= 2) s += ` · 已连续参与 ${d.streak} 天`;
+      let s = dailySetLine(d);
+      if (d.streak >= 2) s += `，已连续参与 ${d.streak} 天`;
       return s;
     },
     totalSecs() {
@@ -905,6 +903,7 @@ export default {
     },
   },
   methods: {
+    percentileLine,
     exclVisible,
     isExplanationCovered,
     toggleMat() {
@@ -2295,7 +2294,7 @@ export default {
       if (this._dailyDoneDate && (this.dailyStats || this.dailyErr)) {
         const ds = this.dailyStats || {};
         let txt = '我完成了错题邦 ' + this._dailyDoneDate + ' 每日一练（全站同题 ' + this.items.length + ' 题），答对 ' + this.right + ' 题';
-        if (ds.beat_pct != null) txt += '，击败全站 ' + ds.beat_pct + '%';
+        txt += dailySetShareTail(ds);
         if (ds.streak >= 2) txt += '，已连续参与 ' + ds.streak + ' 天';
         txt += '！同题挑战我：https://kaogong.zalize.com/#/pages/practice/practice?daily=1&src=share';
         trackEvent('share_result_copy', 'practice', 'daily');
@@ -2311,7 +2310,7 @@ export default {
         paperBase ||
         '我在错题邦刷了 ' + this.items.length + ' 道' + (this.lastModule ? this.modName(this.lastModule) : '行测') + '题，正确率 ' + pct + '%';
       if (this.bestStreak >= 3) txt += '，最高连对 ' + this.bestStreak + ' 题';
-      if (this.percentile != null) txt += '，击败了 ' + this.percentile + '% 的刷题记录';
+      txt += percentileShareTail(this.percentile);
       txt += paperBase ? '！也来练这套卷：https://kaogong.zalize.com/#/pkgA/exam/list' : '！一起来刷：https://kaogong.zalize.com';
       trackEvent('share_result_copy', 'practice', paperBase ? 'paper' : this.lastModule || null);
       uni.setClipboardData({

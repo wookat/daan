@@ -32,7 +32,7 @@
           <text class="score-u">分</text>
         </view>
         <view class="hero-sub">
-          <text class="hero-line">答对 {{report.correct}}/{{report.total}}（已答 {{report.answered}}）· 用时 {{usedTime}}</text>
+          <text class="hero-line">{{heroLine}}</text>
           <text wx:if="{{prevDeltaText}}" class="hero-line">较上次同卷 {{prevDeltaText}}</text>
           <text wx:if="{{beatText}}" class="hero-beat num">{{beatText}}</text>
         </view>
@@ -54,11 +54,11 @@
           <kg-tag wx:if="{{rank.small_sample}}" tone="neutral">样本 {{rank.total}} 人</kg-tag>
         </view>
         <view class="r-main">
-          <view wx:if="{{!rankTiny}}" class="r-beat">
+          <view wx:if="{{rankBeatBig}}" class="r-beat">
             <text class="r-beat-n num">{{rank.beaten_pct}}%</text>
-            <text class="r-beat-l">已击败{{rank.small_sample ? '（样本 ' + rank.total + ' 人）' : '考生'}}</text>
+            <text class="r-beat-l">超过的考友</text>
           </view>
-          <text wx:else class="r-beat-tiny">参与人数仍较少（{{rank.total}} 人），暂不计算击败比例</text>
+          <text wx:else class="r-beat-tiny">{{rankCardLine}}</text>
           <view class="r-kv">
             <view class="r-kv-i"><text class="r-k">排名</text><text class="r-v num">{{rank.rank}}<text class="r-v-s">/{{rank.total}}</text></text></view>
             <view class="r-kv-i"><text class="r-k">平均分</text><text class="r-v num">{{rank.avg}}</text></view>
@@ -103,7 +103,7 @@
             <text class="cta-t">薄弱模块：{{weakMod.name}}</text>
             <text class="cta-d">{{weakMod.reason}}</text>
           </view>
-          <text class="cta-go">去专项强化</text>
+          <text class="cta-go">去专项练习</text>
         </view>
       </kg-card>
 
@@ -134,7 +134,7 @@
 
       <kg-card variant="flat" class="sec">
         <text class="h">本卷薄弱考点</text>
-        <text wx:if="{{!report.weak_tags || !report.weak_tags.length}}" class="note">本卷错题较少，暂未形成薄弱考点结论，继续保持！</text>
+        <text wx:if="{{!report.weak_tags || !report.weak_tags.length}}" class="note">{{weakNote}}</text>
         <view wx:for="{{report.weak_tags}}" wx:key="tag3" class="wrow" hover-class="row--hover" data-tag3="{{item.tag3}}" bind:tap="onWeakTag">
           <view class="wrow-l">
             <text class="wrow-t">{{item.name || item.tag3}}</text>
@@ -161,7 +161,7 @@
       <view wx:if="{{redoCount}}" class="cta cta-card" hover-class="cta--hover" bind:tap="redoWrong">
         <view class="cta-l">
           <text class="cta-t">本卷错题重练（{{redoCount}} 题）</text>
-          <text class="cta-d">按刷题模式把本卷答错的题重做一遍{{wrongTotal > redoCount ? '（本轮先练前 ' + redoCount + ' 题）' : ''}}</text>
+          <text class="cta-d">{{redoDesc}}</text>
         </view>
         <l-icon name="chevron-right" size="20" tone="brand" />
       </view>
@@ -235,7 +235,7 @@
     </view>
     <view wx:if="{{detail.tag3}}" class="cta" hover-class="cta--hover" bind:tap="reinforceDetail">
       <view class="cta-l"><text class="cta-t">练同类题：{{detail.tag3}}</text></view>
-      <text class="cta-go">强化 5 道新题</text>
+      <text class="cta-go">练同考点</text>
     </view>
     <view wx:if="{{detail.question_id}}" class="d-links">
       <kg-button variant="text" size="md" tone="neutral" disabled="{{detail.reported}}" bind:click="openQc">{{detail.reported ? '已提交纠错，感谢反馈' : '题目有问题？纠错'}}</kg-button>

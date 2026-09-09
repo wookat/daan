@@ -231,3 +231,22 @@
 - [x] [content·数据结论] R12/R13 持久化列（`questions.synthetic_family/clone_of`）决策：**不加列**。依据 w14.md §7 生产 `--dist-sample` K=500 同族 0.3%→0、增量 p95 0.8 ms，与 w15c §2 180 对人工抽检误报 3.3%；W14 追加中「据此决定是否加持久化列」一条据此关闭。
 - [ ] [新需求提案·待产品排期] 首访引导（匿名首屏一句话 + 一个主按钮）、冲刺模式按错频分档、首页 5 题快练入口、PK 异步对局说明文案、分享页展示解析与分享者作答、周报未结束周实时预览（`report.py:242-249` 现恒 pending）。
 - [ ] [W9–W14 既有 deferred 原样保留] W14 部署后回归已完成（w14.md §7）；R9/R10 存量重写待 LLM key、`_RATE` per-key window、`_judge_paper` 事务/`_answer_state` 全表扫待量化、小程序 practice 三份渲染去重、`exam.ts:199/social.ts:74` errMsg、11 处 raised→flat、favQuestions uid 隔离、user-journey 三项、小程序真机清单 —— 不重复立项。
+
+## Deferred（W17 追加，详见 w17.md §5/§6；分支 `devin/wf-w17-integration`，合入 W17-B1 + W17-H1 + W17-C1，集成阶段修正 2 处）
+
+- [x] [backend·P1] **W17-B1 已合入**：`insights.py api_exam_rank` 顶部与 board 同一份有序列表（本人条目=本次 attempt）；`pk.py` `PK_MATCH_WINDOW_S=72h` waiting 匹配窗口（过期局仍可凭码 join）。W15「W16 首位 backend P1」PK 窗口项据此关闭；遗留 waiting 局清理仍需负责人授权（本轮未动）。
+- [x] [frontend-h5·P1] **W17-H1 已合入**：`home-today.js todayShown()` 乐观增量、hero 达标后「再练 10 题」走普通一组、计划卡两处文案、pk.vue/pk.ts「混合」置首。
+- [x] [content·P1] **W17-C1 已合入**（W15-C1 dropped 项的后半：生成型文案）：`exam-copy.js` 统一相对排名/报告结论/周报空态/分享句/叫法，台账 w17c-content-human.md 76 条。
+- [ ] [流程·P1] W17 部署后生产回归（`test-w17-*` uid，用后清理）：见 w17.md §5——rank 顶部/board 同序号、PK 72h 窗口、首页首帧、达标后题 id≠daily_set、PK chip scrollLeft=0、报告/周报/错题本/PK/分享文案截图、rank-card 不竖排、Lighthouse 不降。
+- [ ] [backend·产品口径·待负责人裁定] 同分并列名次：现为「同分先交卷者在前、序号即排名」（顶部与榜单一致）；若要竞争排名 1,2,2,4，改 `insights.py` board/顶部 rank 为 `1+count(s>score)`（约 3 行）+ `test_exam_rank_board.test_board_order_masking_and_me` 断言 `[1,2,3,4]→[1,2,2,4]`。
+- [ ] [backend·P2] `/api/report/weekly.mock` 无 `total` 字段，周报模考行无法套「<10 人不展示比例」规则（`report.py`），C1 只统一了措辞。
+- [ ] [content·P2·C1 files 之外] 「击败」残留 7 处：miniapp `pages/share/share.ts:12`、`pkgGrow/daily/daily.ts:73/410`、`pages/practice/practice.wxml:155`；backend `push_api.py:91`、`seo/pages.py:210`；H5 `pkgA/share/pk-result.vue:15` 四段中点串；H5 `pkgA/settings/reminders.vue:62-63`/`reminder.js:54` 与小程序 reminders 文案未同步；`q-social-bar` 两参调用 `qShareText` 走中性句。一次做完并加禁词扫描范围。
+- [ ] [frontend-h5·P1·热点 home.vue] 首页首屏三主按钮三横幅违反「一屏一焦点」（h5-visual P1）：需页面级重排论证（哪个横幅降为文字链/合并到「今天做什么」），不逐点改。
+- [ ] [frontend-h5·P2] 报告页「全卷排名」块内「排名/平均分」小 stat 与上方三栏 kg-stat 信息重复：本轮只在组件层修竖排（`rank-card.vue` flex-shrink/nowrap），研究建议「平均分并入上方三栏、删块内小 stat」需 report.vue 页面级重排。
+- [ ] [数据·待负责人] 同卷排行榜外露内部测试昵称（「R34体验官」「R25」等）：属历史测试账号数据，改昵称或按 uid/昵称前缀过滤需负责人定，不在代码层擅自过滤。
+- [ ] [miniapp·P2] kg-card `variant="raised"` 71 处/21 文件 + 6 处手写 brand-grad（比 W14 台账「11 处」多）；lint-pages 只禁裸 box-shadow/gradient 不禁 variant 属性，收敛需单独一轮 + 模拟器逐页截图。
+- [ ] [backend·P2] 测试覆盖缺口：report.py 19%、zalize_sso 27%、social 32%、mock_event 46%、admin_api 45%（整体 70%）；随下次触碰对应模块补。
+- [ ] [rejected] 375px 下做题页 `a/b/c/d/Enter` 快捷键不触发：`practice.vue` `innerWidth<1024` 守卫是设计（移动端不监听键盘），非缺陷。
+- [ ] [流程] PR #498 分支相对 origin/main 零差异，建议关闭；W15「等 PR #498」项随之复核。
+- [ ] [环境] Python 3.10 下 backend 全量 pytest 10 例环境失败（`test_crawler_stats.py` `datetime.UTC` ×9、`test_conn_begin_immediate.py` `sqlite_errorcode` ×1，均 3.11+ API）：生产容器与实施方为 3.12 不受影响；本机门禁改用 3.12 或在这两处加版本兼容（不改断言）。
+- [ ] [部署] compose 部署非零停机窗口（W16 观察）：仍 deferred。

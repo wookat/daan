@@ -9,8 +9,8 @@
     <kg-empty-state
       v-else-if="empty"
       icon="calendar"
-      title="上周没有学习记录"
-      :desc="range + '\n本周刷起来，下周一就能看到你的专属周报'"
+      title="这一周没有练题记录"
+      :desc="weeklyEmptyDesc(range)"
       cta-text="去刷题"
       @cta="goPractice()"
     />
@@ -19,8 +19,8 @@
     <kg-empty-state
       v-else-if="pending"
       icon="clock"
-      title="该周尚未结束"
-      :desc="range + '\n周报会在下周一自动生成，先看看上一周的吧'"
+      title="这周还没过完"
+      :desc="weeklyPendingDesc(range)"
       cta-text="查看上一周周报"
       @cta="goPrevWeek()"
     />
@@ -95,7 +95,7 @@
             <text class="h">模考回顾</text>
             <template v-if="r.mock">
               <text class="mk-line">本周模考最高 <text class="mk-n num">{{ r.mock.score }}</text> 分（共 {{ r.mock.n_exams }} 次）</text>
-              <text v-if="r.mock.event_title" class="mk-line sub">{{ r.mock.event_title }}：<template v-if="r.mock.rank">第 {{ r.mock.rank }} 名 · </template>击败 {{ r.mock.pct }}%</text>
+              <text v-if="r.mock.event_title" class="mk-line sub">{{ weeklyMockLine(r.mock) }}</text>
               <kg-button variant="text" size="md" icon="chevron-right" class="link" @click="openAttempt(r.mock.attempt_id)">查看成绩报告</kg-button>
             </template>
             <template v-else>
@@ -139,6 +139,7 @@
 <script>
 import { request, snapPeek, anonUid } from '../../api.js';
 import { fmtDayHour } from '../../contest-time.js';
+import { weeklyMockLine, weeklyEmptyDesc, weeklyPendingDesc } from '../../exam-copy.js';
 
 const W = 660;
 const H = 760;
@@ -226,6 +227,9 @@ export default {
     this.load();
   },
   methods: {
+    weeklyMockLine,
+    weeklyEmptyDesc,
+    weeklyPendingDesc,
     pct(v) { return Math.round((v || 0) * 100); },
     mins(s) { return Math.round((s || 0) / 60) + ' 分钟'; },
     async load() {
