@@ -11,6 +11,7 @@ import { join } from 'node:path';
 const SRC = fileURLToPath(new URL('../src/', import.meta.url));
 const PRACTICE = readFileSync(join(SRC, 'pages/practice/practice.vue'), 'utf8');
 const CARD = readFileSync(join(SRC, 'components/kg-question-card/kg-question-card.vue'), 'utf8');
+const HOME = readFileSync(join(SRC, 'pages/home/home.vue'), 'utf8');
 
 describe('R555 普通练习混入到期错题（H5）', () => {
   it('start() 主请求与放宽回退带 mix_due=1，且只在有 uid 时', () => {
@@ -19,8 +20,19 @@ describe('R555 普通练习混入到期错题（H5）', () => {
     expect(PRACTICE).toMatch(/'\/api\/questions\?limit=' \+ limit \+ realQ \+ uidQ \+ mixQ \+ \(module \? '&module=' \+ module : ''\)/);
     expect(PRACTICE).toMatch(/'\/api\/questions\?limit=' \+ limit \+ uidQ \+ mixQ \+ \(module \? '&module=' \+ module : ''\)/);
   });
-  it('中场预取下一组同样带 mix_due=1（「再来一组」命中预取包时口径一致）', () => {
-    expect(PRACTICE).toMatch(/prefetchNextGroup\(\) \{[\s\S]*?'&uid=' \+ encodeURIComponent\(uid\) \+ '&mix_due=1'/);
+  it('中场预取下一组带 mix_due=1 + exclude=当组题 id，且不足一组不缓存（R555 复验 FAIL：当组未答完的到期题被再次混入 → 再来一组只有 9 题）', () => {
+    const at = PRACTICE.indexOf('prefetchNextGroup() {');
+    const body = PRACTICE.slice(at, PRACTICE.indexOf('takePrefetch(', at));
+    expect(body).toMatch(/'&mix_due=1&exclude=' \+ seenIds\.join\(','\)/);
+    expect(body).toMatch(/if \(items\.length >= limit\) uni\.setStorageSync\('prefetchPack'/);
+    expect(body).not.toMatch(/if \(items\.length\) uni\.setStorageSync/);
+  });
+  it('首页 prefetchModule 写入的 prefetchPack 同样带 mix_due=1——首页→模块首组命中预取包时不再绕过混入（R555 复验 FAIL 修）', () => {
+    expect(HOME).toMatch(/prefetchModule\(module\) \{[\s\S]*?'&uid=' \+ encodeURIComponent\(uid\) \+ '&mix_due=1'/);
+    // prefetchPack 只有这两处写入方；takePrefetch 仍拒 submodule/adaptive/real/tag3
+    const writers = [PRACTICE, HOME].reduce((n, s) => n + (s.match(/setStorageSync\('prefetchPack'/g) || []).length, 0);
+    expect(writers).toBe(2);
+    expect(PRACTICE).toMatch(/takePrefetch\([^)]*\) \{\n\s+if \(submodule \|\| adaptive \|\| forceReal \|\| tag3 \|\| this\.realMode\) return null;/);
   });
   it('强化练习（mode=reinforce）与错题重练（/api/mistakes/redo）不带 mix_due', () => {
     const at = PRACTICE.indexOf("'/api/questions?mode=reinforce&limit=' + (launch.count || 5) +");

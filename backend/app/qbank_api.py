@@ -44,6 +44,15 @@ def due_mix_slots(limit: int) -> int:
     return max(0, min(DUE_MIX_MAX, limit // 5))
 
 
+def parse_exclude(raw: str | None, cap: int = 100) -> set[int]:
+    out: set[int] = set()
+    for tok in (raw or "").split(",")[:cap]:
+        tok = tok.strip()
+        if tok.isdigit():
+            out.add(int(tok))
+    return out
+
+
 def interleave_due(items: list[dict], due: list[dict], limit: int) -> list[dict]:
     """把到期错题均匀插进新题组（不占首题，n=10/k=2 → 第 5、8 位），总量仍 ≤ limit；
     新题不足时错题只补空位不再顶掉新题。"""
@@ -179,6 +188,7 @@ def api_questions(
     tag3: str | None = None,
     mode: str | None = None,
     mix_due: int = 0,
+    exclude: str | None = None,
 ):
     if mode == "reinforce" and uid:
         # 错题同考点强化：严格只出该 uid 未做过的新题，中等难度优先
@@ -202,9 +212,10 @@ def api_questions(
     # 到期错题混入：仅普通练习（无真题/年份/地区/考点/自适应筛选）且客户端显式 mix_due=1；
     # random_questions 排除已答过的题，普通练习本身永远抽不到自己的错题，答对推进复习只能靠这里
     if mix_due and uid and not (real or year or region or tag3 or adaptive):
+        # exclude=当前组题 id（中场预取下一组时未答完的到期题尚无 answer_log，否则会被再次选中）
         due = db.due_mix_questions(
             uid.strip()[:64], due_mix_slots(n), module=module, submodule=submodule,
-            exclude={q["id"] for q in items},
+            exclude={q["id"] for q in items} | parse_exclude(exclude),
         )
         items = interleave_due(items, due, n)
     return {"items": items, "counts": db.question_counts()}
