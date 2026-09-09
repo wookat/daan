@@ -140,7 +140,8 @@ def api_attempts(uid: str, question_id: int):
 @router.post("/api/answer_log")
 def api_answer_log(body: dict, request: Request):
     uid = (body.get("uid") or "").strip()
-    rl(request, "alog", 120, 3600, uid)
+    # 逐题上送：一张 130 题行测卷 1h 内答完即 130 次，120/h 会把尾段作答打进离线队列（R566 生产复验 429×31）
+    rl(request, "alog", 600, 3600, uid)
     items = body.get("items")
     if not uid or not isinstance(items, list) or not items:
         raise HTTPException(400, "缺少 uid 或答题记录")
@@ -281,7 +282,7 @@ def api_practice_progress(body: dict, request: Request):
     uid = (body.get("uid") or "").strip()[:64]
     if not uid:
         raise HTTPException(400, "缺少 uid")
-    rl(request, "ppro", 120, 3600, uid)
+    rl(request, "ppro", 600, 3600, uid)
     raw_qids = body.get("qids")
     if not isinstance(raw_qids, list) or len(raw_qids) > 100:
         raise HTTPException(400, "无效的练习进度")
@@ -489,7 +490,7 @@ def api_review_cur_save(body: dict, request: Request):
     uid = str(body.get("uid") or "").strip()[:64]
     if not uid:
         raise HTTPException(400, "缺少 uid")
-    rl(request, "rcur", 120, 3600, uid)
+    rl(request, "rcur", 600, 3600, uid)
     snap = body.get("snap")
     if snap is None:
         db.clear_review_cur(uid)

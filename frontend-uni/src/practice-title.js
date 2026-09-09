@@ -4,6 +4,15 @@
 export const PRACTICE_TITLE_DEFAULT = '刷题';
 const PTITLE_MAX = 40;
 
+// leave() 已 navigateBack 后 session 才置 false，watcher 晚于页面出栈触发；此时改标题会 fail:page not found
+// 并改到上一页头上，只在练习页仍是栈顶时同步
+export function practicePageOnTop(pages) {
+  if (!Array.isArray(pages) || !pages.length) return false;
+  const p = pages[pages.length - 1];
+  const r = (p && (p.route || (p.$page && p.$page.route))) || '';
+  return String(r).replace(/^\//, '').split('?')[0] === 'pages/practice/practice';
+}
+
 export function practiceNavTitle(ctx, modName) {
   if (!ctx || !ctx.session) return PRACTICE_TITLE_DEFAULT;
   if (typeof ctx.ptitle === 'string' && ctx.ptitle.trim()) return ctx.ptitle.trim().slice(0, PTITLE_MAX);

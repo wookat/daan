@@ -439,7 +439,7 @@ import { leadQidOf, leadPickOf, mergeLead, leadHintText } from '../../leadq.js';
 import { quitSummary } from '../../quit-summary.js';
 import { resumeAsk, resumeDismissAction } from '../../resume-ask.js';
 import { backLabel } from '../../back-label.js';
-import { practiceNavTitle } from '../../practice-title.js';
+import { practiceNavTitle, practicePageOnTop } from '../../practice-title.js';
 
 
 function loadPStats() {
@@ -979,8 +979,9 @@ export default {
         (m) => this.modName(m)
       );
       if (title === this._navTitle) return;
+      if (!practicePageOnTop(getCurrentPages())) return;
       this._navTitle = title;
-      uni.setNavigationBarTitle({ title });
+      uni.setNavigationBarTitle({ title, fail: () => {} });
     },
     imgUrl(p) {
       return /^https?:/.test(p) ? p : (BASE_URL || '') + p;
