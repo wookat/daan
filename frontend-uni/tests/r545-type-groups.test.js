@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { BOOK_PATH, buildBookUrl, parseBookOpts } from '../src/book-url.js';
+import { qtypeName } from '../src/type-label.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
 const book = read('../src/pages/book/book.vue');
@@ -16,7 +17,7 @@ const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语
 const ANSWER_FORMATS = ['单选', '多选', '判断', '不定项'];
 const mkVm = (state) => {
   const vm = { tab: 'todo', filterMod: '', kpFilter: '', qtFilter: '', ...state };
-  const method = (name, args) => new Function('vm', 'NAMES', 'ANSWER_FORMATS', `return function(${args}){${fn(name, args)}}.bind(vm)`)(vm, NAMES, ANSWER_FORMATS);
+  const method = (name, args) => new Function('vm', 'NAMES', 'ANSWER_FORMATS', 'qtypeName', `return function(${args}){${fn(name, args)}}.bind(vm)`)(vm, NAMES, ANSWER_FORMATS, qtypeName);
   vm.modName = (k) => NAMES[k] || k;
   vm.tagName = method('tagName', 'm');
   vm.groupKey = method('groupKey', 'm');

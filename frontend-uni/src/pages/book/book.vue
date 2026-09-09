@@ -611,7 +611,7 @@ import { buildReviewSnap, parseReviewSnap, reviewElapsedSecs } from '../../revie
 import { nextReviewText, reviewSummary, reviewVerdict, streakProgressText, similarRoom, reviewDueLeft, reviewDoneCopy } from '../../review-summary.js';
 import { reviewOptions, reviewOptionsFull } from '../../review-opts.js';
 import { redoSkippedNote } from '../../book-redo-skipped.js';
-import { fineTypeLabel } from '../../type-label.js';
+import { fineTypeLabel, qtypeName } from '../../type-label.js';
 import { MANUAL_MODULES, MANUAL_LETTERS, MANUAL_QUESTION_MAX, MANUAL_EXPLANATION_MAX, emptyManualEntry, toggleLetter, manualEntryError, manualEntryBody, manualSavedToast } from '../../book-manual-entry.js';
 import { inlineSkipNote } from '../../paper-inline-note.js';
 import { scanPageLabel, scanPagesNote, scanDupNote, paperSubmittedNote, recordScanPage } from '../../paper-scan-pages.js';
@@ -1398,11 +1398,11 @@ export default {
       return fineTypeLabel(m.type_group, this.fineType(m));
     },
     fineTypeLabel,
-    // 题型标签统一粒度：去掉「模块名-」前缀（历史数据两种格式并存），无题型时用模块名
+    // 题型标签统一粒度：去掉「模块名-」前缀（历史数据两种格式并存，与后端 norm_qtype 同口径），无题型时用模块名
     tagName(m) {
       const qt = m.question_type || '';
       if (!qt || ANSWER_FORMATS.includes(qt)) return this.modName(m.module);
-      return qt.includes('-') ? qt.split('-').slice(1).join('-') : qt;
+      return qtypeName(qt);
     },
     unfavItem(f) {
       this.unfav(this.favs.indexOf(f));
