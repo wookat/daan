@@ -672,6 +672,7 @@ Page({
   },
   onStayHere() {
     this.clearAutoTimer();
+    trackEvent('practice_stay_here', this._source || 'practice');
   },
 
   // answer_log 上报：先标记 _logged 再发请求，避免在途并发重复落库；失败入离线队列（对齐 practice.vue）

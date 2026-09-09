@@ -37,7 +37,7 @@ def test_frontend_track_events_all_whitelisted():
 def test_r347_events_accepted(client):
     from app import db
 
-    for ev in ("review_similar_auto", "review_similar_click", "review_reason_tag", "share_poster"):
+    for ev in ("review_similar_auto", "review_similar_click", "review_reason_tag", "share_poster", "practice_stay_here"):
         r = client.post("/api/track", json={"event": ev, "uid": f"utesttrack_{ev}"})
         assert r.status_code == 200
         conn = db.get_conn()

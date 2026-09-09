@@ -75,18 +75,6 @@
             :closable="false"
             @action="stayHere"
           />
-          <view v-if="picked && picked !== cur.answer" class="reasons" role="group" aria-label="错因自评">
-            <text class="rz-t">错因自评（选填）</text>
-            <view
-              v-for="rz in REASONS"
-              :key="rz"
-              class="rz"
-              :class="{ on: cur._reason === rz }"
-              role="button"
-              :aria-pressed="cur._reason === rz ? 'true' : 'false'"
-              @click="setReason(rz)"
-            >{{ rz }}</view>
-          </view>
           <kg-analysis-card
             :answer="cur.answer"
             :picked="beiMode ? '' : picked"
@@ -108,6 +96,18 @@
               <q-social-bar v-if="cur.id && !cur._sz" :question-id="cur.id" />
             </template>
           </kg-analysis-card>
+          <view v-if="picked && picked !== cur.answer" class="reasons" role="group" aria-label="错因自评">
+            <text class="rz-t">错因自评（选填）</text>
+            <view
+              v-for="rz in REASONS"
+              :key="rz"
+              class="rz"
+              :class="{ on: cur._reason === rz }"
+              role="button"
+              :aria-pressed="cur._reason === rz ? 'true' : 'false'"
+              @click="setReason(rz)"
+            >{{ rz }}</view>
+          </view>
           <kg-card v-if="cur.xp_explanation" variant="soft" class="xp-card">
             <text class="xp-k">{{ cur.xp_school || '第二名师视角' }}</text>
             <text class="xp-b q-text">{{ cur.xp_explanation }}</text>
@@ -2229,6 +2229,7 @@ export default {
         clearTimeout(this.autoTimer);
         this.autoTimer = null;
       }
+      trackEvent('practice_stay_here', this._source || 'practice');
     },
     toggleAutoNext() {
       this.autoNext = !this.autoNext;
