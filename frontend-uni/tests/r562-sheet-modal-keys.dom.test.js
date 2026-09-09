@@ -256,4 +256,40 @@ describe('KgSheet（wd-popup）进入 a11y 弹层栈', () => {
     key(document.activeElement, 'Escape');
     expect(s.state.open).toBe(false);
   });
+
+  // 生产 FAIL（a5164498）：wd-datetime-picker 的 popup 是 hide-when-close=false，Esc 后永久停在离屏的
+  // wd-slide-up-leave-to 态（getClientRects 仍为 1），焦点被继续圈在离屏的「取消/完成」上
+  it('离场态即视为关闭：popup 挂上 -leave 类（不 display:none）→ 出栈、焦点归还触发项、Tab 不再圈在离屏控件', async () => {
+    const trigger = view('cell', () => {});
+    document.body.appendChild(trigger);
+    trigger.focus();
+    const wrap = view('wd-popup-wrapper');
+    const overlay = view('wd-transition wd-overlay', () => {
+      overlay.style.display = 'none';
+      popup.className = 'wd-transition wd-popup wd-popup--bottom wd-slide-up-leave-to wd-slide-up-leave-active';
+    });
+    const popup = view('wd-transition wd-popup wd-popup--bottom wd-slide-up-enter-to wd-slide-up-enter-active');
+    const cancel = view('wd-datetime-picker__action', () => overlay.click());
+    const done = view('wd-datetime-picker__action', () => overlay.click());
+    popup.append(cancel, done);
+    wrap.append(overlay, popup);
+    document.body.appendChild(wrap);
+    await tick();
+    expect(document.activeElement).toBe(cancel);
+    key(document.activeElement, 'Escape');
+    await tick();
+    expect(popup.getClientRects().length).toBe(1);
+    expect(document.activeElement).toBe(trigger);
+    // 离屏但仍挂载的 popup 从 Tab 序摘出（实测：不摘出时原生 Tab 两步就落回离屏「取消」）
+    expect(popup.inert).toBe(true);
+    const e = key(document.activeElement, 'Tab');
+    expect(e.defaultPrevented).toBe(false);
+    expect(document.activeElement).toBe(trigger);
+    // 重开：enter 类替换 leave 类 → 再入栈
+    overlay.style.display = '';
+    popup.className = 'wd-transition wd-popup wd-popup--bottom wd-slide-up-enter-to wd-slide-up-enter-active';
+    await tick();
+    expect(popup.inert).toBe(false);
+    expect(document.activeElement).toBe(cancel);
+  });
 });

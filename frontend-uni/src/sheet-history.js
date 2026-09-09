@@ -42,13 +42,25 @@ let skipping = false
 let installed = false
 let routerHooked = false
 let curHref = null
+let popping = false
+
+/** vue-router history 的 popstate 监听（同步、早于其 afterEach 微任务）：标记「本次 afterEach 由 popstate 引发」 */
+export function noteHistoryPop() {
+  popping = true
+}
 
 /**
  * 路由 push/replace 后同步「当前条目」；replace 拷过来的跨页残留标记顺手清掉（由 router.afterEach 调用）。
- * 同 URL 不动：实测 Back 关层时 vue-router 对同 URL pop 的 afterEach 先于本模块 popstate 触发（NAVIGATION_DUPLICATED），
- * 若此时按落地 state 覆写 prev，popstate 里就丢了「离开的是弹层条目」这一事实，层关不掉。
+ * popstate 引发的 afterEach 不动：vue-router 的 afterEach 先于本模块 popstate 触发（同 URL 为 NAVIGATION_DUPLICATED），
+ * 若此时按落地 state 覆写 prev，popstate 里就丢了「离开的是弹层条目」这一事实，层关不掉；
+ * 离开/落地由 onPop 统一判。仅比对 href 不够：uni 切 tab 会在 afterEach 之后再 replaceState 抹掉 query，
+ * 页面自身（错题本筛选）也会不经 router 改写 URL，curHref 就与真实地址错位。
  */
 export function noteRouteChange() {
+  if (popping) {
+    popping = false
+    return
+  }
   if (window.location.href === curHref) return
   curHref = window.location.href
   const st = window.history.state
@@ -61,6 +73,7 @@ export function noteRouteChange() {
 }
 
 function onPop() {
+  popping = false
   curHref = window.location.href
   const land = validMarker(window.history.state, window.location.href)
   const act = popAction(prev, land, (t) => open.has(t), skipping)
@@ -86,6 +99,8 @@ export function installSheetHistory(router) {
   if (!routerHooked && router && typeof router.afterEach === 'function') {
     routerHooked = true
     router.afterEach(noteRouteChange)
+    const h = router.options && router.options.history
+    if (h && typeof h.listen === 'function') h.listen(noteHistoryPop)
   }
 }
 
@@ -114,6 +129,7 @@ export function _resetSheetHistory() {
   prev = null
   skipping = false
   curHref = null
+  popping = false
   if (installed && typeof window !== 'undefined') window.removeEventListener('popstate', onPop)
   installed = false
   routerHooked = false

@@ -3,7 +3,29 @@
 // 真机实测基线：错题本更多操作层打开 → 浏览器 Back → 直接回首页（R560-1）。这里锁定修后序列：
 // Back 只关层；X/Esc 关后 Back 一次离页；从更深页面返回落到哑条目自动跳过；跨页残留标记不生效。
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { sheetOpened, sheetClosed, noteRouteChange, installSheetHistory, _resetSheetHistory } from '../src/sheet-history.js';
+import { sheetOpened, sheetClosed, noteRouteChange, noteHistoryPop, installSheetHistory, _resetSheetHistory } from '../src/sheet-history.js';
+
+// 模拟 vue-router 4 的 popstate 链：其 history 监听先于本模块（createRouter 时就 addEventListener），同步回调
+// history.listen 订阅者，之后对同 URL / 跨 URL pop 都会跑到 afterEach（同 URL 为 NAVIGATION_DUPLICATED，仍触发 afterEach）
+function mockRouter() {
+  const after = [];
+  const listeners = [];
+  const onPop = () => {
+    listeners.forEach((l) => l());
+    after.forEach((fn) => fn());
+  };
+  window.addEventListener('popstate', onPop);
+  return {
+    afterEach: (fn) => after.push(fn),
+    options: { history: { listen: (fn) => listeners.push(fn) } },
+    push(pos, hash) {
+      window.history.replaceState({ ...window.history.state, forward: hash }, '');
+      window.history.pushState(pageState(pos), '', '/#' + hash);
+      after.forEach((fn) => fn());
+    },
+    detach: () => window.removeEventListener('popstate', onPop),
+  };
+}
 
 const flush = () => new Promise((r) => setTimeout(r, 20));
 
@@ -144,6 +166,83 @@ describe('sheet-history：Back 先关层', () => {
     await back();
     await flush();
     expect(window.location.hash).toBe('#/pages/home/home');
+  });
+
+  // 生产 FAIL（a5164498 D1）：首页 → 错题本 tab（uni 在 afterEach 之后再 replaceState 改 URL）/ 错题本自身 syncBookUrl 写 ?mod=
+  // → curHref 与真实地址错位 → 开层后 Back：afterEach 先跑、href 与 curHref 不同而被当成新路由 → prev 被落地 state（无标记）覆写 → 层关不掉
+  it('D1：页面不经 router 改写 URL 后开层 → Back 仍关层不离页（popstate 引发的 afterEach 不动 prev）', async () => {
+    const r = mockRouter();
+    installSheetHistory(r);
+    window.history.replaceState(window.history.state, '', '/#/pages/book/book?mod=yanyu');
+    let open = true;
+    const t = sheetOpened(() => { open = false; });
+    expect(window.history.state.__kgSheet).toEqual({ t, u: window.location.href });
+    await back();
+    expect(open).toBe(false);
+    expect(window.location.hash).toBe('#/pages/book/book?mod=yanyu');
+    expect(window.history.state.__kgSheet).toBeUndefined();
+    sheetClosed(t);
+    await back();
+    expect(window.location.hash).toBe('#/pages/home/home');
+    r.detach();
+  });
+
+  it('D2：同库序列下 Esc/X 关层后一次 Back 离页；关层后 router push 更深页面仍正常同步 prev', async () => {
+    const r = mockRouter();
+    installSheetHistory(r);
+    window.history.replaceState(window.history.state, '', '/#/pages/book/book?mod=yanyu');
+    const t = sheetOpened(() => {});
+    sheetClosed(t);
+    await back();
+    await flush();
+    expect(window.location.hash).toBe('#/pages/home/home');
+    // 回到错题本再来一轮：关层后 push 更深页（非 pop 的 afterEach 照常同步），Back 一次回错题本不跳过
+    window.history.forward();
+    await flush();
+    expect(window.location.hash).toBe('#/pages/book/book?mod=yanyu');
+    const t2 = sheetOpened(() => {});
+    sheetClosed(t2);
+    r.push(2, '/pages/practice/practice');
+    await back();
+    await flush();
+    expect(window.location.hash).toBe('#/pages/book/book?mod=yanyu');
+    expect(window.history.state.__kgSheet).toBeUndefined();
+    await back();
+    expect(window.location.hash).toBe('#/pages/home/home');
+    r.detach();
+  });
+
+  it('D3：筛选层上叠导出确认层（两层都登记）→ Back 关顶层 → Back 关下层 → Back 离页（带 router 链）', async () => {
+    const r = mockRouter();
+    installSheetHistory(r);
+    let a = true;
+    let b = true;
+    const ta = sheetOpened(() => { a = false; });
+    const tb = sheetOpened(() => { b = false; });
+    await back();
+    expect([a, b]).toEqual([true, false]);
+    sheetClosed(tb);
+    await back();
+    expect(a).toBe(false);
+    expect(window.location.hash).toBe('#/pages/book/book');
+    sheetClosed(ta);
+    await back();
+    expect(window.location.hash).toBe('#/pages/home/home');
+    r.detach();
+  });
+
+  it('history.listen 标记后 afterEach 未触发（导航被取消）→ 标记由 popstate 清掉，不影响下一次 router push 同步', async () => {
+    installSheetHistory({ afterEach: () => {}, options: { history: { listen: () => {} } } });
+    noteHistoryPop();
+    window.dispatchEvent(new window.PopStateEvent('popstate', { state: window.history.state }));
+    window.history.pushState(pageState(2), '', '/#/pages/practice/practice');
+    noteRouteChange();
+    const t = sheetOpened(() => {});
+    expect(window.history.state.__kgSheet.t).toBe(t);
+    sheetClosed(t);
+    await back();
+    await flush();
+    expect(window.location.hash).toBe('#/pages/book/book');
   });
 
   it('无 vue-router state（position 缺失）不叠条目，Back 行为与修前一致', async () => {
