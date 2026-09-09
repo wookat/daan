@@ -2,7 +2,7 @@
 // - collectPracticeProgress：本地题组 -> /api/practice/progress 载荷
 // - adoptPracticeResume：/api/practice/resume 应答 -> 可直接接管的题组
 // - parsePendingPractice / parseRemotePractice：首页「继续上次练习」卡片摘要
-import type { Question } from '../api/types';
+import type { Mistake, Question } from '../api/types';
 import type { PracticeProgressPayload, PracticeResumeResp } from '../api/learn';
 
 export interface ProgressQuestion extends Question {
@@ -10,6 +10,9 @@ export interface ProgressQuestion extends Question {
   _excl?: string[];
   _logged?: boolean;
   _secs?: number;
+  _saved?: boolean;
+  _mid?: number | null;
+  _reason?: string;
 }
 
 export interface PendingSession {
@@ -143,6 +146,56 @@ export function parseRemotePractice(d: PracticeResumeResp | null): ResumeBrief |
     module: typeof d.module === 'string' ? d.module : '',
     ptitle: typeof d.ptitle === 'string' ? d.ptitle : '',
   };
+}
+
+function isMid(v: unknown): v is number {
+  return Number.isInteger(v) && (v as number) > 0;
+}
+
+function headOf(text: unknown): string {
+  return typeof text === 'string' ? text.split('\n')[0].trim() : '';
+}
+
+// 恢复的会话里「已答错但没有错题 id」的题：POST /api/mistakes 回包前就退出/杀进程，快照没来得及带上 _mid
+export function unlinkedWrongItems<T extends ProgressQuestion>(items: T[]): T[] {
+  if (!Array.isArray(items)) return [];
+  return items.filter((q) => !!q && !!q._picked && !!q.answer && q._picked !== q.answer && !isMid(q._mid));
+}
+
+// 用本人错题本回填 _mid/_saved/_reason（题库题按 question_id，内联题按题干首行）；返回回填条数
+export function relinkMistakeIds(items: ProgressQuestion[], mistakes: Mistake[] | null | undefined): number {
+  const lost = unlinkedWrongItems(items);
+  if (!lost.length || !Array.isArray(mistakes)) return 0;
+  const byQid = new Map<number, Mistake>();
+  const byText = new Map<string, Mistake>();
+  for (const m of mistakes) {
+    if (!m || !isMid(m.id)) continue;
+    if (isMid(m.question_id) && !byQid.has(m.question_id)) byQid.set(m.question_id, m);
+    const head = headOf(m.question_text);
+    if (head && !byText.has(head)) byText.set(head, m);
+  }
+  let n = 0;
+  for (const q of lost) {
+    const m = (!q._sz && isMid(q.id) && byQid.get(q.id)) || byText.get(headOf(q.question)) || null;
+    if (!m) continue;
+    q._mid = m.id;
+    q._saved = true;
+    if (!q._reason && typeof m.error_reason === 'string' && m.error_reason) q._reason = m.error_reason;
+    n++;
+  }
+  return n;
+}
+
+// 页面已卸载后 POST 才回包：把 _mid/_saved 直接补进已存快照；快照已清/不含该题则不重建
+export function patchPendingMistake(saved: PendingSession | null, q: ProgressQuestion | null): PendingSession | null {
+  if (!saved || !Array.isArray(saved.items) || !q || !isMid(q._mid)) return null;
+  const i = saved.items.findIndex(
+    (it) => !!it && (it === q || (isMid(q.id) && it.id === q.id) || (!!q.question && it.question === q.question))
+  );
+  if (i < 0 || isMid(saved.items[i]._mid)) return null;
+  const items = saved.items.slice();
+  items[i] = { ...items[i], _mid: q._mid, _saved: true };
+  return { ...saved, items };
 }
 
 export function readPendingSession(): PendingSession | null {

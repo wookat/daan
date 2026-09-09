@@ -97,7 +97,7 @@ describe('R548 practice.vue 接线', () => {
     const tr = script.slice(script.indexOf('tryResume() {'), script.indexOf('async rateHs('));
     expect(tr).toContain('const title = pendingTitle(s);');
     expect(tr).toContain("content: (title ? '「' + title + '」' : '') + '上次还有一组未做完（'");
-    expect(script).toContain("import { collectPracticeProgress, adoptPracticeResume, pendingTitle, redoItemsFromPending, dailyFromPending, dailyPendingFor, cnDayOf, REDO_PENDING_TITLE } from '../../practice-progress.js';");
+    expect(script).toMatch(/import \{ collectPracticeProgress, adoptPracticeResume, pendingTitle, redoItemsFromPending, dailyFromPending, dailyPendingFor, cnDayOf, REDO_PENDING_TITLE[^}]*\} from '\.\.\/\.\.\/practice-progress\.js';/);
   });
 
   it('完成页 redoReport 与「再来一组」仍按 _redoItems && !lastModule 判重练（恢复后语义不丢）', () => {

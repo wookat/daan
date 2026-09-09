@@ -50,6 +50,32 @@ describe('R559 小程序错因 chip 取消语义', () => {
     expect(fn).toContain('const i = this.data.items.findIndex((it) => it === q || (q.id != null && it.id === q.id));');
     expect(fn).toContain('if (i < 0 || this.data.finished) return;');
     expect(fn).toContain('this.setData({ [`items[${i}]._mid`]: q._mid, [`items[${i}]._saved`]: true });');
-    expect(fn).toMatch(/_saved`\]: true \}\);\n\s+this\.saveSession\(\);\n\s+\},\n\s*\/\/[^\n]*\n\s*$/);
+    expect(fn).toMatch(/_saved`\]: true \}\);\n\s+this\.saveSession\(\);\n\s+\},\n/);
+  });
+
+  // R559-fix-2：① toPQ 恢复时原一律 _saved:false/_mid:null，掉了 #728 写进快照的 _mid；② 页面已卸载后才回包，旧实例 saveSession 会覆盖新会话快照；
+  // ③ 回包前杀进程/切后台被回收 → 快照永远没 _mid，恢复后按本人错题本回填。
+  it('toPQ 保留快照里的 _mid/_saved/_reason；onUnload 置 _unloaded，晚回包只补已存快照', () => {
+    expect(practice).toContain('_saved: !!pq._saved,');
+    expect(practice).toContain('_mid: Number.isInteger(pq._mid) && (pq._mid as number) > 0 ? (pq._mid as number) : null,');
+    expect(practice).toContain("_reason: typeof pq._reason === 'string' ? pq._reason : '',");
+    expect(practice).toMatch(/onUnload\(\) \{[\s\S]*?this\.logAttempts\(this\.data\.items\);\n\s+this\._unloaded = true;\n\s+\},/);
+    const fn = practice.slice(practice.indexOf('async saveWrong(q: PQuestion, picked: string) {'), practice.indexOf('onSetReason('));
+    expect(fn).toMatch(/if \(this\._unloaded\) \{\n[^\n]*\n\s+const kept = patchPendingMistake\(readPendingSession\(\), q\);\n\s+if \(kept\) wx\.setStorageSync\(PENDING_KEY, kept\);\n\s+return;\n\s+\}/);
+  });
+
+  it('adopt 后 relinkWrongMids 按本人错题本回填 _mid，已选错因补发 PATCH，再补快照', () => {
+    expect(practice).toMatch(/this\.saveSession\(\);\n\s+this\.relinkWrongMids\(\);\n\s+\},\n\n\s+\/\/ 本地 pendingSession/);
+    const fn = practice.slice(practice.indexOf('async relinkWrongMids() {'), practice.indexOf('// ---------- 导航'));
+    expect(fn).toContain('d = await fetchMistakes();');
+    expect(practice).toMatch(/adopt\(items: PQuestion\[\][^\n]*\{\n\s+this\._bestStreak = bestStreak;\n\s+this\._adoptSeq\+\+;/);
+    expect(fn).toContain('const seq = this._adoptSeq;');
+    expect(fn).toContain('if (this._unloaded || this._adoptSeq !== seq || this.data.finished) return;');
+    // cur 与 items[idx] 可能不同引用：先把 cur 上的错因同步到 items，回填后再把 _mid 写回 cur
+    expect(fn).toContain('if (same && cur._reason && !at._reason) at._reason = cur._reason;');
+    expect(fn).toMatch(/if \(same && !cur\._mid && at\._mid\) \{\n\s+cur\._mid = at\._mid;\n\s+cur\._saved = true;/);
+    expect(fn).toContain('if (!relinkMistakeIds(items, d && d.items)) return;');
+    expect(fn).toContain('if (q._mid && q._reason === rz) patchMistakeReason(q._mid, rz).catch(() => {});');
+    expect(fn).toMatch(/this\.setData\(cur \? \{ items, cur \} : \{ items \}\);\n\s+this\.saveSession\(\);/);
   });
 });

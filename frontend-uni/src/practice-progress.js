@@ -104,6 +104,46 @@ export function redoItemsFromPending(saved) {
   return saved.items.map(stripPracticeRuntime);
 }
 
+// 恢复的会话里「已答错但没有错题 id」的题：POST /api/mistakes 回包前就退出/刷新，快照没来得及带上 _mid
+export function unlinkedWrongItems(items) {
+  if (!Array.isArray(items)) return [];
+  return items.filter((q) => q && q._picked && q.answer && q._picked !== q.answer && !q._mid);
+}
+
+// 用本人错题本回填 _mid/_saved/_reason（题库题按 question_id，内联题按题干首行）；返回回填条数
+export function relinkMistakeIds(items, mistakes) {
+  const lost = unlinkedWrongItems(items);
+  if (!lost.length || !Array.isArray(mistakes)) return 0;
+  const byQid = new Map();
+  const byText = new Map();
+  for (const m of mistakes) {
+    if (!m || !Number.isInteger(m.id) || m.id <= 0) continue;
+    if (Number.isInteger(m.question_id) && m.question_id > 0 && !byQid.has(m.question_id)) byQid.set(m.question_id, m);
+    const head = typeof m.question_text === 'string' ? m.question_text.split('\n')[0].trim() : '';
+    if (head && !byText.has(head)) byText.set(head, m);
+  }
+  let n = 0;
+  for (const q of lost) {
+    const m = (!q._sz && Number.isInteger(q.id) && byQid.get(q.id)) || byText.get(String(q.question || '').split('\n')[0].trim()) || null;
+    if (!m) continue;
+    q._mid = m.id;
+    q._saved = true;
+    if (!q._reason && typeof m.error_reason === 'string' && m.error_reason) q._reason = m.error_reason;
+    n++;
+  }
+  return n;
+}
+
+// 「退出并保留」后 POST 才回包：把 _mid/_saved 直接补进已存快照（找不到该题/快照已清则返回 null 不写）
+export function patchPendingMistake(saved, q) {
+  if (!saved || !Array.isArray(saved.items) || !q || !Number.isInteger(q._mid) || q._mid <= 0) return null;
+  const i = saved.items.findIndex((it) => it && (it === q || (Number.isInteger(q.id) && it.id === q.id) || (q.question && it.question === q.question)));
+  if (i < 0 || saved.items[i]._mid) return null;
+  const items = saved.items.slice();
+  items[i] = { ...items[i], _mid: q._mid, _saved: true };
+  return { ...saved, items };
+}
+
 // R323：首页续练卡数据——/api/practice/resume 应答 -> {done,total,module}（无效/空/已做完返回 null）
 export function parseRemotePractice(d) {
   if (!d || !Array.isArray(d.items) || !d.items.length) return null;
