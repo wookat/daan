@@ -366,6 +366,17 @@
       </template>
     </kg-sheet>
 
+    <!-- 继续上次练习：关层（X / Esc / Back / 遮罩）= 继续；「开新一组」会清本机 + 服务端进度，必须显式点按 -->
+    <kg-sheet v-model="resumeOpen" :title="resumeAsk ? resumeAsk.title : '继续上次练习？'">
+      <text class="quit-tip">{{ resumeAsk ? resumeAsk.tip : '' }}</text>
+      <template #footer>
+        <view class="sheet-acts">
+          <kg-button variant="primary" size="lg" block @click="resumePick(true)">{{ resumeAsk ? resumeAsk.cont : '继续' }}</kg-button>
+          <kg-button variant="ghost" size="lg" block tone="bad" @click="resumePick(false)">{{ resumeAsk ? resumeAsk.drop : '不用了' }}</kg-button>
+        </view>
+      </template>
+    </kg-sheet>
+
     <!-- 题目纠错 -->
     <kg-sheet v-model="reportOpen" title="题目纠错">
       <view class="rp-types" role="group" aria-label="问题类型">
@@ -418,6 +429,7 @@ import { isExplanationCovered } from '../../exp-dup.js';
 import { reviewedMasteredCount, fixReportText, reviewedFromPending } from '../../review-advance.js';
 import { leadQidOf, leadPickOf, mergeLead, leadHintText } from '../../leadq.js';
 import { quitSummary } from '../../quit-summary.js';
+import { resumeAsk, resumeDismissAction } from '../../resume-ask.js';
 import { backLabel } from '../../back-label.js';
 
 
@@ -482,6 +494,8 @@ export default {
       toolsOpen: false,
       quitOpen: false,
       quitSum: null,
+      resumeOpen: false,
+      resumeAsk: null,
       qsecs: 0,
       qTimer: null,
       fontLv: normFontLv(uni.getStorageSync('fontLv')),
@@ -917,6 +931,9 @@ export default {
     },
     idx() {
       this.multiSel = [];
+    },
+    resumeOpen(v) {
+      if (!v && resumeDismissAction(this._resumeAct) === 'cont') this.resumePick(true);
     },
   },
   methods: {
@@ -1959,7 +1976,7 @@ export default {
       const tag = (e.target && e.target.tagName) || '';
       if (/INPUT|TEXTAREA|SELECT/.test(tag) || (e.target && e.target.isContentEditable)) return;
       if (!this.session || !this.cur) return;
-      if (this.cardOpen || this.toolsOpen || this.reportOpen || this.paperSheet || this.customOpen) return;
+      if (this.cardOpen || this.toolsOpen || this.reportOpen || this.paperSheet || this.customOpen || this.quitOpen || this.resumeOpen) return;
       const k = e.key;
       if (/^[a-dA-D]$/.test(k) && !this.picked && !this.beiMode) {
         const K = k.toUpperCase();
@@ -2218,20 +2235,15 @@ export default {
             this.adoptRemoteSnap(snap);
             return;
           }
-          uni.showModal({
-            title: '继续上次练习？',
-            content: (snap.ptitle ? '「' + snap.ptitle + '」' : '') + '在其他设备还有一组未做完（' + done + '/' + snap.items.length + ' 题），是否继续？',
-            confirmText: '继续',
-            cancelText: '不用了',
-            success: (res) => {
-              if (res.confirm) {
-                this.adoptRemoteSnap(snap);
-              } else {
-                this.clearServerProgress();
-                this.startDefault();
-              }
-            },
-          });
+          this.askResume(
+            'remote',
+            { title: snap.ptitle, done, total: snap.items.length },
+            () => this.adoptRemoteSnap(snap),
+            () => {
+              this.clearServerProgress();
+              this.startDefault();
+            }
+          );
         })
         .catch(() => {
           this._srvResuming = false;
@@ -2255,21 +2267,16 @@ export default {
         return true;
       }
       const title = pendingTitle(s);
-      uni.showModal({
-        title: '继续上次练习？',
-        content: (title ? '「' + title + '」' : '') + '上次还有一组未做完（' + done + '/' + s.items.length + ' 题），是否继续？',
-        confirmText: '继续',
-        cancelText: '不用了',
-        success: (res) => {
-          if (res.confirm) {
-            this.adoptLocalPending(s);
-          } else {
-            uni.removeStorageSync('pendingSession');
-            this.clearServerProgress();
-            this.start(s.lastModule || uni.getStorageSync('lastModule') || null, null, null, false, undefined, null, 'direct');
-          }
-        },
-      });
+      this.askResume(
+        'local',
+        { title, done, total: s.items.length },
+        () => this.adoptLocalPending(s),
+        () => {
+          uni.removeStorageSync('pendingSession');
+          this.clearServerProgress();
+          this.start(s.lastModule || uni.getStorageSync('lastModule') || null, null, null, false, undefined, null, 'direct');
+        }
+      );
       return true;
     },
     async rateHs(q, up) {
@@ -2581,6 +2588,19 @@ export default {
       }
       this.quitSum = sum;
       this.quitOpen = true;
+    },
+    askResume(kind, info, cont, drop) {
+      this._resumeAct = { cont, drop, picked: false };
+      this.resumeAsk = resumeAsk(kind, info);
+      this.resumeOpen = true;
+    },
+    resumePick(cont) {
+      const act = this._resumeAct;
+      if (!act || act.picked) return;
+      act.picked = true;
+      this.resumeOpen = false;
+      trackEvent(cont ? 'practice_resume_cont' : 'practice_resume_drop', this._source || 'practice');
+      (cont ? act.cont : act.drop)();
     },
     quitPick(keep) {
       this.quitOpen = false;

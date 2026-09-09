@@ -265,6 +265,26 @@ describe('sheet-history：Back 先关层', () => {
     expect(window.location.hash).toBe('#/pages/book/book');
   });
 
+  // R564 本地复现：F5 恢复层 Esc 关掉（哑条目留为当前条目）→ 再 F5 → 恢复层再开 → Back 不关层。
+  // 刷新后 seq 归零，新 token 与哑条目的 t 相同，落回哑条目被判成「层仍开着」。
+  it('刷新落在哑条目上再开层：新 token 不与哑条目重合，Back 关层并留在本页，再 Back 跳过哑条目离页', async () => {
+    const t0 = sheetOpened(() => {});
+    sheetClosed(t0); // Esc 关：哑条目仍是当前条目
+    expect(window.history.state.__kgSheet.t).toBe(t0);
+    _resetSheetHistory(); // 模拟 F5：模块状态归零，history 保留
+    installSheetHistory();
+    let open = true;
+    const t = sheetOpened(() => { open = false; });
+    expect(t).not.toBe(t0);
+    await back();
+    expect(open).toBe(false);
+    expect(window.location.hash).toBe('#/pages/book/book');
+    sheetClosed(t);
+    await back();
+    await flush();
+    expect(window.location.hash).toBe('#/pages/home/home');
+  });
+
   it('无 vue-router state（position 缺失）不叠条目，Back 行为与修前一致', async () => {
     window.history.replaceState(null, '', '/#/pages/book/book');
     let open = true;

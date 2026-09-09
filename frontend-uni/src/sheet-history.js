@@ -118,6 +118,9 @@ export function installSheetHistory(router) {
 export function sheetOpened(close) {
   const app = typeof getApp === 'function' ? getApp() : null
   installSheetHistory(app && app.$router)
+  // 刷新后 seq 归零，而当前条目可能就是上次留下的哑条目：新 token 不得与其重合，否则 Back 落回哑条目会被当成「层仍开着」
+  const stale = validMarker(window.history.state, window.location.href)
+  if (stale != null && stale > seq) seq = stale
   const t = ++seq
   open.set(t, close)
   if (canPush(window.history.state)) {
@@ -135,6 +138,7 @@ export function sheetClosed(t) {
 
 /** 测试用：重置模块状态 */
 export function _resetSheetHistory() {
+  seq = 0
   open.clear()
   prev = null
   skipping = false

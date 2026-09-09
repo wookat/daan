@@ -104,6 +104,17 @@
       <text class="acard-foot">已答 {{ answeredCount }}/{{ items.length }} · 剩余 {{ fmtLeft }}</text>
       <template #footer><kg-button block size="lg" @click="confirmSubmit">交卷</kg-button></template>
     </kg-sheet>
+
+    <!-- 继续上次模考：关层（X / Esc / Back / 遮罩）= 继续；「重新开始」丢弃未交卷作答，必须显式点按 -->
+    <kg-sheet v-model="resumeOpen" :title="resumeAsk ? resumeAsk.title : '继续上次模考？'">
+      <text class="resume-tip">{{ resumeAsk ? resumeAsk.tip : '' }}</text>
+      <template #footer>
+        <view class="resume-acts">
+          <kg-button variant="primary" size="lg" block @click="resumePick(true)">{{ resumeAsk ? resumeAsk.cont : '继续' }}</kg-button>
+          <kg-button variant="ghost" size="lg" block tone="bad" @click="resumePick(false)">{{ resumeAsk ? resumeAsk.drop : '重新开始' }}</kg-button>
+        </view>
+      </template>
+    </kg-sheet>
   </view>
 </template>
 
@@ -115,6 +126,7 @@ import { splitMaterial, sameMaterial } from '../../material.js';
 import { crossedTimeAlert } from '../../exam-alert.js';
 import { toggleExcl, pickWithExcl, togglePickLetter } from '../../exam-excl.js';
 import { countAnswered, shouldPushProgress } from '../../exam-resume.js';
+import { resumeAsk, resumeDismissAction } from '../../resume-ask.js';
 import { normFontLv } from '../../font-size.js';
 import { MODULES, moduleLabel } from '../../module-meta.js';
 
@@ -130,12 +142,19 @@ export default {
       idx: 0,
       leftSecs: 0,
       cardOpen: false,
+      resumeOpen: false,
+      resumeAsk: null,
       timer: null,
       qsecs: 0,
       qTimer: null,
       submitting: false,
       fontLv: normFontLv(uni.getStorageSync('fontLv')),
     };
+  },
+  watch: {
+    resumeOpen(v) {
+      if (!v && resumeDismissAction(this._resumeAct) === 'cont') this.resumePick(true);
+    },
   },
   created() {
     this._endAt = 0;
@@ -184,12 +203,13 @@ export default {
       countAnswered(saved.items) > 0
     ) {
       const resume = await new Promise((resolve) => {
-        uni.showModal({
-          title: '继续上次模考？',
-          content: '检测到未交卷的进度（已答 ' + countAnswered(saved.items) + '/' + saved.items.length + ' 题）',
-          confirmText: '继续', cancelText: '重新开始',
-          success: (r) => resolve(r.confirm), fail: () => resolve(false),
+        this._resumeAct = { resolve, picked: false };
+        this.resumeAsk = resumeAsk('exam', {
+          title: saved.paper && saved.paper.title,
+          done: countAnswered(saved.items),
+          total: saved.items.length,
         });
+        this.resumeOpen = true;
       });
       if (resume) {
         this._progPushed = true;
@@ -199,6 +219,7 @@ export default {
         this.items = saved.items;
         this.idx = Math.min(saved.idx || 0, saved.items.length - 1);
         this._endAt = saved.endAt;
+        uni.setNavigationBarTitle({ title: this._mini ? '迷你模考' : String((saved.paper && saved.paper.title) || '全真模考').slice(0, 16) });
         this.loading = false;
         this.startClock();
         return;
@@ -240,6 +261,13 @@ export default {
   },
   methods: {
     modName(m) { return MODULES[m] ? moduleLabel(m) : '行测'; },
+    resumePick(cont) {
+      const act = this._resumeAct;
+      if (!act || act.picked) return;
+      act.picked = true;
+      this.resumeOpen = false;
+      act.resolve(!!cont);
+    },
     async start(opt) {
       if (!opt.mini && !opt.paper_id) {
         uni.showToast({ title: '链接缺少试卷参数，去卷库选卷', icon: 'none' });
@@ -540,6 +568,8 @@ export default {
 .kg-tool.dis { opacity: 0.4; }
 .tool-hover { background: var(--fill); }
 .legend { display: flex; gap: var(--sp-16); margin-bottom: var(--sp-12); }
+.resume-tip { display: block; font-size: var(--fs-sub); color: var(--ink-3); line-height: 1.6; padding: var(--sp-4) 0 var(--sp-8); }
+.resume-acts { display: grid; gap: var(--sp-8); }
 .lg { display: inline-flex; align-items: center; gap: var(--sp-4); font-size: var(--fs-caption); color: var(--ink-2); }
 .dot { width: 10px; height: 10px; border-radius: var(--r-full); background: var(--fill); border: 1px solid var(--line); display: inline-block; }
 .dot.done { background: var(--brand); border-color: var(--brand); }
