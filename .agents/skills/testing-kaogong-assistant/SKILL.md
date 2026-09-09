@@ -47,6 +47,13 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 沿用本文件 SSH 审计流程的 `TICKETS_VPS_SSH_HOST`、`TICKETS_VPS_SSH_USER`、`TICKETS_VPS_SSH_CREDENTIAL`；不要把值写入证据或报告。
 
+## R555 补充（testing agent）— 预取包热路径 / 下一组完整性 / 自动下一题竞态 / 全局 hash 分账
+- 热路径（首页 `prefetchModule` → 模块首组）与冷路径（直接 `start()`）分开测：首页模块 sheet 停到预取请求回包再点「全部随机」，被动记录 `prefetchPack` set/remove，把回包有序 id 与 `pendingSession` id 逐位比对，并确认启动时**没有**新 `/api/questions` 请求——只看「10 题有 due 标签」不能证明消费的是预取包。
+- 下一组完整性要留五层证据：当组全部 qid、中场请求的 `exclude` query、原始回包、客户端过滤后缓存的包、实际下一组 id/数量。预取时刻**故意留一道到期题未答**，否则 30 min `answer_log` 排除会掩盖显式 `exclude` 是否生效；一次正常满包不证明「不足一组不缓存 → 实时重拉」分支。
+- 自动下一题 helper 要等当前作答落地、再等可见 `.pos` 变化或反馈稳定后才读下一题；固定 sleep 500ms 后立刻读 `.pos` 会撞转场，把上一题答案点到下一张卡上造出一条非计划错题。用状态谓词而非固定延迟；任何非计划写入都要披露并只清授权 uid。
+- 模块名也出现在隐藏 SEO 导航里，点击限定可见 `role=button`；完成页退出后先核实际路由再选下一个入口——`practice.vue quit()` 在页面栈 >1 时 `navigateBack`，按钮文案「返回首页」从错题本 redo 进来实际回错题本。
+- 生产保护对象核证把「本轮 uid 精确清理 0 残留」与「五类全局 hash 不变」分开：同机其他会话并发写入时只按 uid/probe/时间戳只读归属，绝不清其他前缀；无 HTTP 响应的取消请求与响应状态总数分开计数。
+
 ## R549 补充 — 安全录入边界与 PDF 的非 UID 数据清理
 - 做「禁止付费 AI/OCR」的 UX 研究时，错题本「手动录入答案」可能只是卷码/答题卡 lookup，而非自由编写错题；先走真实表单确认，再决定是否能免费创建 `question_id=null`。如果只能走 AI，明确标 UNTESTED，不用 API fixture 冒充用户录入链路。
 - `POST /api/export/pdf` 会写**全局、非 UID scoped** 的 `paper_exports`。UI 导出前按当前部署实现从实际题序推导 code，并只读确认该 code 不存在；若已存在，不覆盖。清理时在停止录屏、关闭 context 后，校验新行 code/题序/title/created_at，再只删这一行；独立只读复查。仅清 UID-bearing 表不够。
