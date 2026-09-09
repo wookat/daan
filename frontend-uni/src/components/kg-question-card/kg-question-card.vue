@@ -6,6 +6,7 @@
       <text v-if="stars" class="kg-q__stars" aria-label="难度">{{ stars }}</text>
       <text v-if="accText" class="kg-q__acc num">{{ accText }}</text>
       <kg-tag v-if="q.isReal" tone="warn">真题</kg-tag>
+      <kg-tag v-if="q.dueMix" tone="info">曾错题 · 到期复习</kg-tag>
     </view>
     <view v-if="q.material" class="kg-q__mat" :class="{ 'is-open': matOpen }">
       <view class="kg-q__mat-hd" role="button" :aria-expanded="matOpen ? 'true' : 'false'" @click="matOpen = !matOpen">
@@ -32,7 +33,7 @@ import { fontSizes } from '../../font-size.js';
 
 /**
  * KgQuestionCard（COMPONENTS §2.1）：meta 行 + 材料折叠 + 题干 + 图片。选项/解析是独立组件（模考不显解析、分享页选项只读）。
- * q: {id, module, tag3, stem, material?, images?, difficulty?(1-5), accuracy?(0-100), attemptCount?, isReal?, groupSeq?}
+ * q: {id, module, tag3, stem, material?, images?, difficulty?(1-5), accuracy?(0-100), attemptCount?, isReal?, dueMix?, groupSeq?}
  */
 export default {
   name: 'KgQuestionCard',

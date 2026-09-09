@@ -60,7 +60,7 @@ describe('R542 小程序源锁', () => {
   const types = mp('api/types.ts');
 
   it('answer_log 条目带 mid（无 qid 的重练题也能推进 SRS）', () => {
-    expect(ts).toMatch(/mid: q\.mistake_id \|\| undefined/);
+    expect(ts).toMatch(/mid: q\.mistake_id \|\| q\.due_mid \|\| undefined/);
     expect(types).toMatch(/interface AnswerLogItem \{[\s\S]*?mid\?: number;/);
     expect(types).toMatch(/interface Question \{[\s\S]*?mistake_id\?: number;/);
   });

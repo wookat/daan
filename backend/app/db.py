@@ -3639,6 +3639,50 @@ def due_review_count(uid: str | None = None, created_before: float | None = None
     return n
 
 
+def due_mix_questions(
+    uid: str, limit: int, module: str | None = None, submodule: str | None = None, exclude: set | None = None
+) -> list[dict]:
+    """普通练习混入的到期错题：本 uid 未掌握且已到期（next_review NULL/≤now）、题库仍有效的行测题，
+    最早到期优先；同题多条错题只取最早一条；本次练习会话（近 30 分钟）已作答过的不重出。
+    返回 questions 行（同 random_questions 形态）并附 due_mid / due_streak，
+    供客户端标「曾错题」、answer_log 答对后按 qid 连带推进复习。"""
+    if not uid or limit <= 0:
+        return []
+    conn = get_conn()
+    _ensure_mistake_uid(conn)
+    _ensure_answer_log(conn)
+    now = time.time()
+    where = ["m.uid=?", "(m.mastered IS NULL OR m.mastered=0)", "(m.next_review IS NULL OR m.next_review<=?)",
+             "m.question_id IS NOT NULL", "q.disabled=0",
+             "NOT EXISTS (SELECT 1 FROM answer_log a WHERE a.uid=m.uid AND a.question_id=m.question_id AND a.created_at>?)"]
+    args: list = [uid, now, now - _HISTORY_SESSION_GAP]
+    if module:
+        where.append("q.module=?")
+        args.append(module)
+    if submodule:
+        where.append("q.submodule=?")
+        args.append(submodule)
+    rows = conn.execute(
+        "SELECT q.*, m.id AS due_mid, m.module AS m_module, COALESCE(m.review_streak,0) AS due_streak "
+        f"FROM mistakes m JOIN questions q ON q.id=m.question_id WHERE {' AND '.join(where)} "
+        "ORDER BY m.next_review IS NOT NULL, m.next_review, m.created_at, m.id LIMIT ?",
+        (*args, limit * 4),
+    ).fetchall()
+    conn.close()
+    out: list[dict] = []
+    seen: set = set(exclude or ())
+    for r in rows:
+        d = dict(r)
+        if d["id"] in seen or foreign_module_qid(d.pop("m_module"), d["id"]):
+            continue
+        seen.add(d["id"])
+        d["options"] = json.loads(d.get("options") or "{}")
+        out.append(d)
+        if len(out) >= limit:
+            break
+    return out
+
+
 def due_reviews(limit: int = 20, uid: str | None = None) -> list[dict]:
     conn = get_conn()
     _ensure_mistake_uid(conn)

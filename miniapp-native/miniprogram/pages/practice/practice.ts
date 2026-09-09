@@ -305,6 +305,7 @@ Page({
           region: args.region || null,
           grouped: args.module === 'ziliao' && !args.submodule && !args.tag3 && !args.real,
           mode: args.mode === 'reinforce' ? ('reinforce' as const) : ('' as const),
+          mixDue: args.mode !== 'reinforce',
         };
         d = await drawQuestions(base);
         // 逐级放宽（practice.vue start 同序）：去 tag3 → 去 submodule → 去年份地区 → 去真题
@@ -319,7 +320,7 @@ Page({
         }
         if (!d.items.length && args.real) {
           wx.showToast({ title: '真题还在搜集中，已切回题库模式', icon: 'none' });
-          d = await drawQuestions({ limit, module: args.module });
+          d = await drawQuestions({ limit, module: args.module, mixDue: true });
         }
       }
       if (!d.items || !d.items.length) {
@@ -678,7 +679,7 @@ Page({
       const pending = qs.filter((q) => q._picked && !q._logged);
       const items: AnswerLogItem[] = pending.map((q) => ({
         qid: q.id || null,
-        mid: q.mistake_id || undefined,
+        mid: q.mistake_id || q.due_mid || undefined,
         module: q.module || this._module || null,
         submodule: q.submodule || null,
         correct: q._picked === q.answer,

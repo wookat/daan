@@ -50,10 +50,13 @@ export interface LearnDrawParams {
   region?: string | null;
   grouped?: boolean;
   mode?: 'reinforce' | '';
+  /** 普通练习混入 ≤2 道本人到期错题（服务端在真题/考点/自适应筛选下忽略） */
+  mixDue?: boolean;
 }
 export function drawQuestions(p: LearnDrawParams): Promise<{ items: Question[] }> {
   let q = '/api/questions?limit=' + p.limit + '&uid=' + encodeURIComponent(anonUid());
   if (p.mode) q += '&mode=' + p.mode;
+  if (p.mixDue) q += '&mix_due=1';
   if (p.real) {
     q += '&real=1';
     if (p.year) q += '&year=' + p.year;

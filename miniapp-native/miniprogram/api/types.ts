@@ -23,6 +23,9 @@ export interface Question {
   _sz?: boolean;
   /** 错题重练（/api/mistakes/redo）回源时对应的 mistakes.id，answer_log 以 mid 上送让无 qid 行也能推进复习 */
   mistake_id?: number;
+  /** 普通练习混入的本人到期错题（/api/questions?mix_due=1）对应的 mistakes.id；卡面标「曾错题」，answer_log 以 mid 上送 */
+  due_mid?: number;
+  due_streak?: number;
 }
 
 export interface QuestionsResp {
