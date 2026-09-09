@@ -88,12 +88,6 @@
         <kg-button wx:if="{{!beiMode && picked === cur.answer && autoNext}}" variant="text" size="sm" bind:click="onStayHere">看解析</kg-button>
       </view>
 
-      <!-- 错因自评 -->
-      <view wx:if="{{picked && picked !== cur.answer}}" class="reasons" role="group" aria-label="错因自评">
-        <text class="rz-t">错因自评（选填）</text>
-        <view wx:for="{{reasons}}" wx:key="*this" class="rz {{cur._reason === item ? 'on' : ''}}" role="button" data-rz="{{item}}" bind:tap="onSetReason">{{item}}</view>
-      </view>
-
       <!-- 解析卡（kg-analysis-card 小程序版未落地，页内实现） -->
       <kg-card wx:if="{{picked || beiMode}}" variant="flat" class="exp-card">
         <view wx:if="{{timedMode && !beiMode && picked}}" class="exp-row">
@@ -131,6 +125,12 @@
         <view wx:if="{{favNote}}" class="exp-block">
           <text class="exp-lab">我的笔记</text>
           <text class="exp-text q-text" style="font-size: {{expFs}}px" user-select>{{favNote}}</text>
+        </view>
+
+        <!-- 错因自评放在解析之后、讲解区操作之前（practice.vue 同口径）：看过「为什么错」才分得清概念不清/方法不会/粗心 -->
+        <view wx:if="{{picked && picked !== cur.answer}}" class="reasons" role="group" aria-label="错因自评">
+          <text class="rz-t">错因自评（选填）</text>
+          <view wx:for="{{reasons}}" wx:key="*this" class="rz {{cur._reason === item ? 'on' : ''}}" role="button" data-rz="{{item}}" bind:tap="onSetReason">{{item}}</view>
         </view>
 
         <!-- 讲解区操作：AI 详解 / 讨论 / 笔记 / 纠错 -->

@@ -573,7 +573,7 @@ def api_track(body: dict, request: Request):
         "practice_ask_click", "book_ask_click", "ask_view_question",
         "review_similar_auto", "review_similar_click", "review_reason_tag", "review_resume_click", "home_review_resume_click", "share_poster",
         "book_go_paper", "book_redo_paper", "book_redo_sel", "practice_quit_keep", "practice_quit_end",
-        "book_scan_jump", "manual_entry_open", "manual_entry_save",
+        "book_scan_jump", "manual_entry_open", "manual_entry_save", "practice_stay_here",
     }:
         raise HTTPException(400, "无效事件")
     uid = str(body.get("uid") or "").strip()[:64] or None
