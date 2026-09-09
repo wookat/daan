@@ -9,7 +9,7 @@
     @update:model-value="$emit('update:modelValue', $event)"
     @close="$emit('close')"
   >
-    <view class="kg-sheet__in" :class="{ 'is-dialog': position === 'center' }">
+    <view class="kg-sheet__in" :class="{ 'is-dialog': position === 'center' }" role="dialog" aria-modal="true" :aria-label="title || undefined">
       <view v-if="position === 'bottom'" class="kg-sheet__grab" />
       <view v-if="title" class="kg-sheet__hd">
         <text class="kg-sheet__t">{{ title }}</text>
@@ -24,7 +24,11 @@
 </template>
 
 <script>
-/** KgSheet（COMPONENTS §1.11）：wd-popup 封装，≥1024 自动改 dialog 形态。遮罩色走 --wot-overlay-bg；层级 wd-popup 只认内联 z-index prop，运行时读 --z-overlay（须压过 uni-h5 壳 tabbar/page-head 998）。 */
+/** KgSheet（COMPONENTS §1.11）：wd-popup 封装，≥1024 自动改 dialog 形态。遮罩色走 --wot-overlay-bg；层级 wd-popup 只认内联 z-index prop，运行时读 --z-overlay（须压过 uni-h5 壳 tabbar/page-head 998）。
+ * H5 键盘/返回：Esc 关、Tab 圈定、焦点归还由 a11y-focus 全局栈按 .wd-popup 接管；浏览器 Back 先关层不离页由 sheet-history 接管。 */
+// #ifdef H5
+import { sheetOpened, sheetClosed } from '../../sheet-history.js';
+// #endif
 const Z_OVERLAY_FALLBACK = 1000;
 
 function readZOverlay() {
@@ -51,8 +55,21 @@ export default {
       return this.position === 'center' ? base + 'width:480px;border-radius:var(--r-lg)' : base + 'border-radius:var(--r-lg) var(--r-lg) 0 0';
     },
   },
+  watch: {
+    modelValue(v) {
+      // #ifdef H5
+      if (v) {
+        if (this._histTok == null) this._histTok = sheetOpened(() => this.$emit('update:modelValue', false));
+      } else if (this._histTok != null) {
+        sheetClosed(this._histTok);
+        this._histTok = null;
+      }
+      // #endif
+    },
+  },
   mounted() {
     // #ifdef H5
+    if (this.modelValue) this._histTok = sheetOpened(() => this.$emit('update:modelValue', false));
     const mq = window.matchMedia && window.matchMedia('(min-width: 1024px)');
     if (mq) {
       this.wide = mq.matches;
@@ -63,6 +80,10 @@ export default {
   },
   beforeUnmount() {
     // #ifdef H5
+    if (this._histTok != null) {
+      sheetClosed(this._histTok);
+      this._histTok = null;
+    }
     const mq = window.matchMedia && window.matchMedia('(min-width: 1024px)');
     if (mq && this._mqOff) mq.removeEventListener ? mq.removeEventListener('change', this._mqOff) : mq.removeListener(this._mqOff);
     // #endif

@@ -1,6 +1,7 @@
 <script>
 // #ifdef H5
 import { initReminderLoop } from './reminder.js'
+import { installSheetHistory } from './sheet-history.js'
 // #endif
 import { applyTheme, watchSystemTheme } from './theme.js'
 import { flushOfflineQueue, watchNetwork } from './offline.js'
@@ -13,6 +14,7 @@ export default {
     const m = h.match(/^#\/pages\/(exam|shenlun|user)\//)
     if (m) window.location.replace(window.location.pathname + h.replace('#/pages/', '#/pkgA/'))
     initReminderLoop()
+    installSheetHistory(this.$router)
     // 无障碍：uni 运行时生成的页面结构无 main landmark，给当前页 uni-page-body 挂 role="main"
     const markMain = () => {
       const bodies = document.querySelectorAll('uni-page-body')
