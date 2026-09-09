@@ -37,7 +37,7 @@ describe('practice 页接线', () => {
     expect(wxml).not.toMatch(/primaryText="再来一组"/);
   });
   it('finish() 与 wrongCount 同源算 doneBar；primary/secondary 按 act 分派到 onRedoWrong/onRetry/onQuit', () => {
-    expect(ts).toMatch(/const wrongN = items\.filter\(\(q\) => q\._picked && q\._picked !== q\.answer\)\.length;[\s\S]*?wrongCount: wrongN,\n\s+doneBar: doneBarPlan\(wrongN, beiMode\),/);
+    expect(ts).toMatch(/const wrongN = items\.filter\(\(q\) => q\._picked && q\._picked !== q\.answer\)\.length;[\s\S]*?wrongCount: wrongN,\n\s+doneBar: doneBarPlan\(wrongN, beiMode, this\.data\.backLabel\),/);
     expect(ts).toMatch(/runDoneAct\(act: DoneAct\) \{\n\s+if \(act === 'redo'\) this\.onRedoWrong\(\);\n\s+else if \(act === 'retry'\) this\.onRetry\(\);\n\s+else this\.onQuit\(\);/);
     expect(ts).toMatch(/onDonePrimary\(\) \{\n\s+this\.runDoneAct\(this\.data\.doneBar\.primaryAct\);/);
     expect(ts).toMatch(/onDoneSecondary\(\) \{\n\s+this\.runDoneAct\(this\.data\.doneBar\.secondaryAct\);/);

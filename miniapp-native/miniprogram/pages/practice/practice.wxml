@@ -20,7 +20,7 @@
       title="题目加载失败"
       desc="{{loadErr || '网络不稳定或服务暂时无响应'}}"
       ctaText="重试"
-      secondaryText="返回"
+      secondaryText="{{backLabel}}"
       bind:cta="onRetry"
       bind:secondary="onQuit"
     />
