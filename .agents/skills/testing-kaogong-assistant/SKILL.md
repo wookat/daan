@@ -31,6 +31,14 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 - Reason chips (R559+) toggle off on a repeated click in practice/review/report and the more-actions sheet; the top-of-book reason *filter* row stays non-toggle. Test actual `aria-pressed` and PATCH behavior for both; an unselected separate wrong question is the clean test of optionality.
 - Cold homepage primary CTA can differ from returning-visitor CTA. Inspect visible text before choosing a role selector. Uni modal actions and answer-card number cells may not be buttons with the imagined accessible names; inspect or use visible UI coordinates rather than repeating selector timeouts.
 
+## R560 补充（testing agent）— 收藏双存储 / 历史无 id 条目 fixture / 云失败边界 / 冷 context 对照
+
+- H5 收藏有两套存储：本机 `favQuestions`（localStorage；刷题页星星与模考报告写入，错题本「收藏」tab 与「我的」计数只读它）与云端 `question_favs`（`/api/favs`；「收藏夹与笔记」页读并按题干合并本地条目）。判「取消收藏一致性」要同时核 ①本地列表 ②`DELETE /api/favs?uid&question_id` ③只读 DB 行 ④收藏夹页 ⑤同 uid **新隔离 context** 的收藏夹页；只看本地列表消失会漏云残留（R560 F1 形态）。
+- #731 起本地条目带 `id`（题库题 qid；时政/内联 `null`）。测「历史无 id 条目」路径用 fixture：先 `POST /api/favs`（probe 头）云端收藏题 X，再向 `favQuestions` 预置不带 `id`、`question` 与 X 题干逐字一致的条目 → F5 → 取消 → 期望先 `GET /api/favs?uid=` 再 DELETE；「不误删」对照用题干云端不存在的本地条目 → 只有 GET、无 DELETE，云端其它行原样。
+- 云失败边界：有意 abort DELETE 时按指定语义是「本地清空、云行保留、toast 仍出」，这是 PASS 不是 FAIL；解除后到云收藏页真实取消并核 DB 恢复干净，abort 计入分账。
+- 错题卡「更多操作」层没有收藏入口；收藏只能在题页星星 / 模考报告 / 收藏夹页操作，测试指令别写「卡片收藏」。
+- 关闭第二 context 前先等所有 preload/chunk 请求拿到 response（`page.waitForLoadState('networkidle')`），否则审计会留「有请求无终态」条目只能记 UNTESTED。
+
 ## R559 补充（testing agent）— 错因取消 / 逐点击 DB 快照 / fresh vs 恢复分测 / 回滚拦截 / curl 分账
 
 - For per-click persistence checks, use serial UID/MID-only SQLite `mode=ro` snapshots and await each snapshot before the next mutation. Full-table count/hash scans belong at baseline/end: their latency can make a selected-state snapshot actually contain the next cleared state. Mark crossed snapshots invalid and retest rather than pairing them with the wrong screenshot.

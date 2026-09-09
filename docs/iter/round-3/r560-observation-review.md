@@ -85,3 +85,18 @@ PASS：空态/去刷题、造数与 DB 一致、错因选/改/取消 PATCH+SQL N
 - 修法（最小、只 H5，0 后端/协议改动）：① `practice.vue toggleFav` 与 `exam-fav.js toggleFav` 本地条目补 `id`（题库题 qid；时政/内联为 `null`）；② `book.vue unfav` 先落本地（现状不变）再 `unfavCloud(f)`：`cloudFavId(f)` 有 id 直接 `removeFav`，历史无 id 条目 `fetchFavs()` 按题干回查云列表命中才删（时政本地收藏不会误删云端）；云端失败不回滚本地（与刷题页 `removeFav(...).catch(() => {})` 同口径）；补 toast「已取消收藏」。
 - 验证方式（生产黑盒）：题页收藏 → 错题本取消 → 期望 `DELETE /api/favs?uid&question_id` 200、DB `question_favs` 行消失、收藏夹页与新 context 均 0；历史无 id 条目路径：预置不带 id 的 `favQuestions` + 云端同题 → 取消时 `GET /api/favs` 回查 + DELETE；时政本地条目取消 → 无 DELETE。
 - 与现状对比：修前 DELETE 0 / 云残留；修后双写一致，刷题页/模考报告/错题本三处取消收藏口径统一。
+
+## 6. 实修落地与生产复验
+
+- PR #731（`devin/1788941921-r560-research`，从 main `e25b6c93`（#730）开，已合入 `10667e8c`）：`exam-fav.js`（`toggleFav` 条目补 `id` + 新纯函数 `cloudFavId`）/ `practice.vue toggleFav` 补 `id` / `book.vue unfav → unfavCloud` / 测试 `exam-fav.test.js`（+5）、`book-r560-unfav-cloud-sync.test.js`（源锁 +3）；6 文件 +172/-5（含本文档）。
+- 本地门：H5 vitest 176 文件 **1299**（+8）/ eslint 0 error（lint-pages 20 warn 与 main 基线逐字一致）/ tokens check / build:h5 / `diff --check` 空；后端、小程序 0 改动未跑。
+- 发版：`deploy_h5.sh --skip-build`（`DEPLOY_WAIT_SECS=900`）`bf36ec10 → 9c31576b`，bundle `index-DzMqodGp.js`（gzip 125KB），谱系闸 OK、compose 单次 rc=0、6/6 接口回归全 200；6b LH `/` 0.99/**0.94**/0.96/1.00（a11y 0.94 为容器刚重建 warm-up 形态，R554 同）→ 独立重跑两次 a11y 1.00，但 `/` performance 0.85/0.86、LCP 3560/3507ms **两次违例**（发版时 1833ms）；`/tiku/` 三次全 1.00 / LCP ≤880ms。R560 未改首页任何文件、bundle 体积不变，第三次 0.85/3672ms、第四次仅 performance 0.85/LCP 3713/FCP 2629（simulate 150ms RTT，curl 直连 `/` TTFB 99ms、bundle 82ms 无异常）→ 发版后 4 次连续违例、发版 6b 同 bundle 1833ms 通过；R560 未改首页任何文件、bundle hash/体积与 6b 通过时一致，无法归因本轮，登记 R560-5（`/` LCP 首屏关键路径 HTML→index→pages-home chunk 是否需 preload/内联）下轮先复采再论证；不作 R560 回归结论也不粉饰。
+- 生产黑盒（testing agent，`~/kaogong-reports/r560-unfav-cloud-sync-9c31576b-prod-verify.md`、`~/r560v-9c31576b/`、录像 `~/screencasts/r560v-9c31576b-{mobile,desktop}/`，#731 评论附截图；uid `test-w560v-*`，全程 probe）：
+  - A 375：题页星星收藏 QID322075 `POST /api/favs` 200、`favQuestions[0].id === 322075` → 错题本取消 → `DELETE /api/favs?uid&question_id=322075` 200、toast「已取消收藏」、本地清空、只读 DB 行消失；原 context 与同 uid 新冷 context「收藏夹与笔记」均 0 题（修前同路径为 1 题残留）。**PASS**
+  - B 历史无 id 条目（QID283148 云端收藏 + 预置无 id 本地条目 → F5 → 取消）：先 `GET /api/favs` 200 再 DELETE 200，DB 消失。**PASS**
+  - C 不误删（本地条目题干云端不存在）：仅 GET 200、**无 DELETE**，本地清空，云 QID182176 行与 UI 不变。**PASS**
+  - D 回归：练习页星星收藏/取消仍 POST/DELETE 200；取消最后一条回 `tab='todo'`、收藏 chip 计数消失；R559 错因选→改→同项取消恰 3 个 PATCH、DB 值→值→NULL、四 chip `aria-pressed=false`。**PASS**
+  - E 1440 完整 A 路径 **PASS**。云失败边界（有意 abort DELETE）：本地不回滚、云行保留、toast 仍出（指定语义）；解除后云页取消 DELETE 200 恢复。
+  - 审计：1160 请求 = 1156 配对 200 + 2 导航图片取消 + 1 有意 abort + 1 关第二 context 前未获终态的 preload（UNTESTED）；probe 缺失 0；console/runtime/rejection/loading warn/付费 0；41 表精确清 5 行 0 残留，五类 hash/count 起终一致。
+  - UNTESTED：小程序、模考报告收藏 writer 完整入口（仅单测）、真实时政/内联 `id:null` writer 入口、HTTP 非 2xx（非 abort）失败、重复题干多云匹配。
+- 登记（未修）：R560-1 更多操作层键盘模态（Escape/焦点圈定/Back）；R560-2 375 空态说明 line-clamp 裁切；R560-3 375 长试卷标签纵向裁切；R560-4 删除确认无「不可恢复」措辞/撤销。
