@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isFaved, toggleFav } from '../src/exam-fav.js';
+import { isFaved, toggleFav, cloudFavId } from '../src/exam-fav.js';
 
 const item = {
   question: '甲题干',
@@ -61,5 +61,36 @@ describe('toggleFav', () => {
     const { list, added } = toggleFav([{ question: '旧题' }], { question: '' });
     expect(added).toBe(false);
     expect(list.length).toBe(1);
+  });
+});
+
+describe('toggleFav 云端 id', () => {
+  it('题库题带 question_id 时本地条目记 id，供错题本取消收藏同步云端', () => {
+    const { list } = toggleFav([], { ...item, question_id: 182003 });
+    expect(list[0].id).toBe(182003);
+  });
+
+  it('无 question_id（时政/内联）则 id 为 null', () => {
+    const { list } = toggleFav([], item);
+    expect(list[0].id).toBe(null);
+  });
+});
+
+describe('cloudFavId', () => {
+  it('新条目直接用自带 id，不依赖云列表', () => {
+    expect(cloudFavId({ id: 7, question: '甲' })).toBe(7);
+    expect(cloudFavId({ id: 7, question: '甲' }, [{ id: 9, question: '甲' }])).toBe(7);
+  });
+
+  it('历史条目无 id：按题干在云收藏列表回查', () => {
+    const cloud = [{ id: 11, question: '乙' }, { id: 182003, question: '甲题干' }];
+    expect(cloudFavId({ question: '甲题干' }, cloud)).toBe(182003);
+  });
+
+  it('云列表无同题干 / 无题干 / 非法输入 → null（时政本地收藏不误删云端）', () => {
+    expect(cloudFavId({ question: '丙' }, [{ id: 11, question: '乙' }])).toBe(null);
+    expect(cloudFavId({ question: '' }, [{ id: 11, question: '' }])).toBe(null);
+    expect(cloudFavId({ question: '甲' })).toBe(null);
+    expect(cloudFavId(null, [{ id: 1, question: '甲' }])).toBe(null);
   });
 });

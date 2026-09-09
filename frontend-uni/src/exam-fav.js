@@ -16,6 +16,7 @@ export function toggleFav(favs, item) {
   }
   list.unshift({
     t: Date.now(),
+    id: item.question_id || null,
     question: item.question,
     options: item.options,
     answer: item.answer,
@@ -31,4 +32,13 @@ export function toggleFav(favs, item) {
   });
   if (list.length > FAV_LIMIT) list.length = FAV_LIMIT;
   return { list, added: true };
+}
+
+// 本机收藏条目对应的云端题库 id：新条目自带 id，历史条目按题干在云收藏列表里回查
+export function cloudFavId(fav, cloudItems) {
+  if (!fav) return null;
+  if (fav.id) return fav.id;
+  const list = Array.isArray(cloudItems) ? cloudItems : [];
+  const hit = fav.question && list.find((it) => it && it.id && it.question === fav.question);
+  return hit ? hit.id : null;
 }
