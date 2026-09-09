@@ -165,6 +165,8 @@
 
 <script>
 import { request, snapPeek, getAuthUser, authLogout, clearAuth, anonUid, fetchCheckinBadges, fetchCommentInbox } from '../../api.js';
+import { syncCloudFavs } from '../../fav-sync.js';
+import { favsLocalOnly } from '../../exam-fav.js';
 import { md } from '../../md.js';
 import { getReminderSettings } from '../../reminder.js';
 import { cycleThemeMode, getThemeMode, THEME_LABELS } from '../../theme.js';
@@ -294,6 +296,9 @@ export default {
     this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
     this.daily = uni.getStorageSync('dailyPlan') || { days: {} };
     this.favN = (uni.getStorageSync('favQuestions') || []).length;
+    syncCloudFavs().then((list) => {
+      if (list) this.favN = list.length;
+    });
     this.dailyGoal = uni.getStorageSync('dailyGoal') || 20;
     this.fontLv = normFontLv(uni.getStorageSync('fontLv'));
     this.sfxOn = uni.getStorageSync('sfxOff') ? false : true;
@@ -470,6 +475,7 @@ export default {
           try {
             const d = await request('/api/backup?code=' + encodeURIComponent(res.content.trim()));
             Object.entries(d.data || {}).forEach(([k, v]) => uni.setStorageSync(k, v));
+            uni.setStorageSync('favQuestions', favsLocalOnly(uni.getStorageSync('favQuestions') || []));
             uni.setStorageSync('backupCode', res.content.trim().toUpperCase());
             this.backupCode = res.content.trim().toUpperCase();
             this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };

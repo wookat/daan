@@ -380,6 +380,8 @@
 
 <script>
 import { request, BASE_URL, anonUid, pkNickname, removeFav, setFav, fetchCheckinBadges, getAuthUser, trackEvent, submitDailySet } from '../../api.js';
+import { markFavLocalOnly } from '../../exam-fav.js';
+import { syncCloudFavs } from '../../fav-sync.js';
 import { drawOffline, enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../offline.js';
 import { dayKey, loadSzDaily, saveSzDaily } from '../../checkin.js';
 import { dailySetLine, dailySetShareTail, percentileLine, percentileShareTail } from '../../exam-copy.js';
@@ -779,6 +781,7 @@ export default {
     this.pstats = loadPStats();
     this.loginNudgeOff = !!getAuthUser() || !!uni.getStorageSync('loginNudgeDismissed');
     this.favs = uni.getStorageSync('favQuestions') || [];
+    this.syncFavs();
     this.realMode = uni.getStorageSync('realMode') ? true : false;
     this.realYear = uni.getStorageSync('realYear') || null;
     this.realRegion = uni.getStorageSync('realRegion') || null;
@@ -1225,21 +1228,38 @@ export default {
     openPoster() {
       uni.navigateTo({ url: '/pkgA/social/poster' });
     },
+    // 顶栏星星与错题本收藏 tab 同口径：云收藏对账后刷新本机列表（别处收藏过的题星星也亮）
+    async syncFavs() {
+      const seq = this._favSeq || 0;
+      const list = await syncCloudFavs();
+      if (!list) return;
+      if ((this._favSeq || 0) !== seq) {
+        uni.setStorageSync('favQuestions', this.favs);
+        return;
+      }
+      this.favs = list;
+    },
     toggleFav() {
       if (!this.cur) return;
       const qid = this.cur._sz ? null : this.cur.id;
       const i = this.favs.findIndex((f) => f.question === this.cur.question);
       if (i >= 0) {
         this.favs.splice(i, 1);
+        this._favSeq = (this._favSeq || 0) + 1;
         if (qid) removeFav(qid).catch(() => {});
         uni.showToast({ title: '已取消收藏', icon: 'none', duration: 900 });
       } else {
-        if (qid) setFav(qid).catch(() => {});
+        const favQ = this.cur.question;
+        if (qid) setFav(qid).catch(() => this.favLocalOnly(favQ));
         const { question, options, answer, explanation, hs_explanation, xp_explanation, xp_school, module, submodule, is_real, exam_year, exam_region, image, image_credit } = this.cur;
         this.favs.unshift({ t: Date.now(), id: qid || null, question, options, answer, explanation, hs_explanation, xp_explanation, xp_school, module: this.cur._sz ? '时政' : module, submodule, is_real, exam_year, exam_region, image, image_credit });
         if (this.favs.length > 200) this.favs.length = 200;
         uni.showToast({ title: '已收藏，可在错题本查看', icon: 'none', duration: 900 });
       }
+      uni.setStorageSync('favQuestions', this.favs);
+    },
+    favLocalOnly(question) {
+      this.favs = markFavLocalOnly(uni.getStorageSync('favQuestions') || [], question);
       uni.setStorageSync('favQuestions', this.favs);
     },
     async startDaily(archiveDate, src) {

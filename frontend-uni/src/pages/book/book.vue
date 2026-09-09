@@ -137,13 +137,13 @@
                 </view>
               </view>
             </kg-card>
-            <kg-empty-state v-if="!favs.length" compact icon="star" title="还没有本机收藏" desc="刷题时点顶栏星星即可收藏好题" />
+            <kg-empty-state v-if="!favs.length" compact icon="star" title="还没有收藏" desc="刷题时点顶栏星星收藏好题；小程序、其他设备的收藏也会同步到这里" />
             <view v-if="favs.length > 3" class="searchbar">
               <l-icon name="search" :size="16" tone="muted" />
               <input v-model="favKw" class="searchinput" placeholder="搜收藏题干或题型" confirm-type="search" />
               <view v-if="favKw" class="searchclear" role="button" aria-label="清空搜索" @click="favKw = ''"><l-icon name="x" :size="16" tone="muted" /></view>
             </view>
-            <kg-card v-for="f in favShown" :key="f.t" clickable class="mcard" @click="f._open = !f._open">
+            <kg-card v-for="f in favShown" :key="f.id ? 'q' + f.id : 't' + f.t" clickable class="mcard" @click="f._open = !f._open">
               <view class="mhead">
                 <kg-tag tone="brand">{{ f.submodule || modName(f.module) }}</kg-tag>
                 <kg-tag v-if="f.is_real" tone="neutral">真题{{ f.exam_year ? ' · ' + f.exam_year : '' }}{{ f.exam_region ? ' · ' + f.exam_region : '' }}</kg-tag>
@@ -196,7 +196,7 @@
             v-else-if="tab !== 'fav' && !items.length"
             icon="folder-plus"
             title="错题本还是空的"
-            desc="刷题或拍题讲解时答错的题会汇集到这里，之后按遗忘曲线安排复习；右下角「＋」可扫描答题卡或手动录入答案"
+            desc="刷题或拍题时答错的题会汇集到这里，按遗忘曲线安排复习；也可用右下角「＋」录入"
             cta-text="去刷题"
             secondary-text="拍题录入"
             @cta="goPractice"
@@ -596,6 +596,7 @@ A. 春分  B. 夏至  C. 秋分  D. 冬至" :maxlength="MANUAL_QUESTION_MAX" ari
 import { md } from '../../md.js';
 import { request, anonUid, exportPdf, scanSheet, shareCreate, trackEvent, qShareText, shareVariant, isStaleUidErr, fetchFavs, removeFav } from '../../api.js';
 import { cloudFavId } from '../../exam-fav.js';
+import { syncCloudFavs } from '../../fav-sync.js';
 import { buildBookUrl, normalizeTabPageFullPath, parseBookOpts } from '../../book-url.js';
 import { exportNote, exportNotesMap } from '../../book-export.js';
 import { setBookBadge } from '../../tabbar-badge.js';
@@ -1000,6 +1001,7 @@ export default {
     } else if (this.tab === 'fav' && !this.favs.length) {
       this.tab = 'todo';
     }
+    this.syncFavs();
     if (uni.getStorageSync('autoStartReview')) {
       uni.removeStorageSync('autoStartReview');
       this.autoReview = true;
@@ -1400,9 +1402,23 @@ export default {
     unfavItem(f) {
       this.unfav(this.favs.indexOf(f));
     },
+    // 收藏 tab 与小程序同口径：本机先显，云收藏对账后以云端为准刷新（别处收藏/取消在此可见）
+    async syncFavs() {
+      const seq = this._favSeq || 0;
+      const list = await syncCloudFavs();
+      if (!list) return;
+      if ((this._favSeq || 0) !== seq) {
+        // 等待期间本机取消了收藏：云列表取自 DELETE 之前，不拿它覆盖本机态
+        uni.setStorageSync('favQuestions', this.favs.map(({ _open, ...x }) => x));
+        return;
+      }
+      const open = new Set(this.favs.filter((f) => f._open).map((f) => f.question));
+      this.favs = list.map((f) => ({ ...f, _open: open.has(f.question) }));
+    },
     unfav(i) {
       if (i < 0) return;
       const [f] = this.favs.splice(i, 1);
+      this._favSeq = (this._favSeq || 0) + 1;
       uni.setStorageSync('favQuestions', this.favs.map(({ _open, ...x }) => x));
       if (!this.favs.length) this.tab = 'todo';
       this.unfavCloud(f);
@@ -2032,6 +2048,7 @@ export default {
       uni.showModal({
         title: '删除选中的 ' + this.selCount + ' 道错题？',
         content: '删除后不可恢复，也不再进入复习队列',
+        confirmText: '删除',
         success: async (res) => {
           if (!res.confirm) return;
           this.batchBusy = true;
@@ -2052,7 +2069,9 @@ export default {
     },
     del(m) {
       uni.showModal({
-        title: '确定删除这道错题？',
+        title: '删除这道错题？',
+        content: m.mastered ? '删除后不可恢复' : '删除后不可恢复，也不再进入复习队列；只是暂时不想复习可选「标为已掌握」',
+        confirmText: '删除',
         success: async (res) => {
           if (!res.confirm) return;
           try {

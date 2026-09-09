@@ -296,7 +296,7 @@ import { buildExamRedoSet } from '../../exam-redo.js';
 import { buildExamReportShareText } from '../../exam-share.js';
 import { reviewStep } from '../../exam-review.js';
 import { markedNos, nextNavMode } from '../../exam-marks.js';
-import { isFaved, toggleFav } from '../../exam-fav.js';
+import { isFaved, toggleFav, markFavLocalOnly } from '../../exam-fav.js';
 import { qStatLine } from '../../q-stat.js';
 import { qTimeLine, paperAvgSecs } from '../../exam-time.js';
 import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
@@ -643,7 +643,13 @@ export default {
       const { list, added } = toggleFav(this.favs, d);
       this.favs = list;
       uni.setStorageSync('favQuestions', list);
-      if (d.question_id) (added ? setFav(d.question_id) : removeFav(d.question_id)).catch(() => {});
+      if (d.question_id) {
+        (added ? setFav(d.question_id) : removeFav(d.question_id)).catch(() => {
+          if (!added) return;
+          this.favs = markFavLocalOnly(uni.getStorageSync('favQuestions') || [], d.question);
+          uni.setStorageSync('favQuestions', this.favs);
+        });
+      }
       uni.showToast({ title: added ? '已收藏，可在收藏与笔记查看' : '已取消收藏', icon: 'none', duration: 900 });
     },
     cycleNavMode() {
