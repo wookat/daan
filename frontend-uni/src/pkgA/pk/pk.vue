@@ -179,7 +179,8 @@ export default {
       return this.questions[this.qIndex] || null;
     },
     modOpts() {
-      return Object.keys(MODS).map((k) => ({ value: k, label: MODS[k] })).concat({ value: '', label: '混合' });
+      // 默认选中「混合」(value '')：放首位，kg-chip-row 默认 scrollToSelected 才不会把首屏滚到行尾
+      return [{ value: '', label: '混合' }].concat(Object.keys(MODS).map((k) => ({ value: k, label: MODS[k] })));
     },
     quizQ() {
       const q = this.curQ;
