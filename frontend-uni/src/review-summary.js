@@ -17,7 +17,7 @@ export function reviewVerdict({ extra, requeued, wasCorrect, streak, nextDays, m
     ? requeued
       ? '这次答对了，本轮已纠正 ✓'
       : '答对了！连对 ' + (Number(streak) || 0) + ' 次'
-    : '又错了，看讲解（稍后本轮会再出现）';
+    : '又错了，看讲解，稍后本轮会再出现';
   return head + '（下次复习：' + (Number(nextDays) || 0) + ' 天后）';
 }
 
@@ -63,7 +63,7 @@ export function reviewDueLeft(dueTotal, done) {
 
 /**
  * 一组复习完成后的小结口径：到期总数超过一组时不宣称「清零」。
- * left>0 → 本组完成 + 剩余到期 + 「继续下一组」CTA；left=0 → 今日清零（原文案）。
+ * left>0 → 本组完成 + 剩余到期 + 「继续下一组」CTA；left=0 → 今日清零。
  */
 export function reviewDoneCopy(done, left) {
   const n = Number(done) || 0;
@@ -72,11 +72,11 @@ export function reviewDoneCopy(done, left) {
     return {
       cleared: false,
       title: '本组复习完成',
-      line: `本组 ${n} 道复习完成 · 还有 ${l} 道到期待复习`,
+      line: `本组 ${n} 道复习完成，还有 ${l} 道到期`,
       cta: `继续复习下一组（${Math.min(l, REVIEW_BATCH)} 道）›`,
     };
   }
-  return { cleared: true, title: '今日复习已清零', line: `${n} 道到期错题全部复习完成，遗忘曲线稳住了`, cta: '' };
+  return { cleared: true, title: '今日复习已清零', line: `${n} 道到期错题全部复习完成`, cta: '' };
 }
 
 /** rItems → 本轮小结；非数组/空返回 null。无 _res 的条目不计入对应分子分母。 */

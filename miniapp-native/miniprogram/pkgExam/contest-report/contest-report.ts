@@ -14,6 +14,20 @@ interface ModVM {
 
 const fmtSecs = (s: number | null | undefined) => (!s ? '0 分' : Math.round(s / 60) + ' 分');
 const round1 = (v: number) => Math.round(v * 10) / 10;
+const RANK_MIN_SAMPLE = 10;
+
+/** 与 H5 exam-copy.rankLine 同文 */
+function rankLine(total: number, pct: number | null | undefined): string {
+  if (!(total > 0)) return '';
+  if (total < RANK_MIN_SAMPLE || pct == null) return `参与人数还少（${total} 人）`;
+  if (pct <= 0) return `还没超过其他考友（共 ${total} 人）`;
+  return `超过 ${pct}% 的考友`;
+}
+
+function weakNote(mods: MockReportResp['modules']): string {
+  const [correct, total] = (mods || []).reduce<[number, number]>((acc, m) => [acc[0] + (m.correct || 0), acc[1] + (m.n || 0)], [0, 0]);
+  return total > 0 && correct >= total ? '全对，没有薄弱考点' : '本卷错题少，看不出薄弱考点';
+}
 
 Page({
   data: {
@@ -22,6 +36,9 @@ Page({
     err: '',
     r: null as MockReportResp | null,
     heroLabel: '',
+    heroBeat: '',
+    heroLine: '',
+    weakNote: '',
     smallText: '',
     statItems: [] as Array<{ label: string; value: string; unit?: string; tone?: string }>,
     goalText: '',
@@ -52,12 +69,15 @@ Page({
       this.setData({
         r,
         heroLabel: r.event.title + (r.event.phase === 'ended' ? '（排名已冻结）' : '（实时排名）'),
+        heroBeat: rankLine(r.total, r.pct),
+        heroLine: `第 ${r.rank} 名 / ${r.total} 人，全场平均 ${r.avg} 分`,
+        weakNote: weakNote(r.modules),
         smallText: r.small_sample
           ? '本场参赛 ' + r.total + ' 人，样本较少，排名仅供参考；历史同卷共 ' + r.history_pool.n + ' 人作答、平均 ' + r.history_pool.avg + ' 分（含比赛窗口外练习）'
           : '',
         statItems: [
           { label: '排名', value: r.rank + '/' + r.total, tone: 'brand' },
-          { label: '击败', value: String(r.pct), unit: '%' },
+          { label: '超过考友', value: String(r.pct), unit: '%' },
           { label: '全场平均', value: String(r.avg), unit: '分' },
         ],
         goalText:

@@ -123,7 +123,7 @@ describe('book.vue 源锁：清零小结 × 强化建议合并', () => {
     expect(BOOK).not.toContain('>下次再说</kg-button>');
     const cb = BOOK.slice(BOOK.indexOf(':title="doneCopy.title"'), BOOK.indexOf('<!-- 列表模式 -->'));
     expect(cb).toContain('<view v-if="reinforce" class="rf rf-inline">');
-    expect(cb).toContain('@click="startReinforce(reinforce)">强化 5 道新题（未做过）›');
+    expect(cb).toContain('@click="startReinforce(reinforce)">练同考点：5 道没做过的题 ›');
     expect(cb).toContain('@click="closeCelebrate">回错题本</kg-button>');
     expect(cb).toContain('<kg-button v-else variant="primary" size="lg" block @click="closeCelebrate">回错题本 ›</kg-button>');
   });

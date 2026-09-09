@@ -157,7 +157,7 @@ Page({
         empty: true,
         pending: false,
         range,
-        stateDesc: range + '\n本周刷起来，下周一就能看到你的专属周报',
+        stateDesc: range + '\n这周做过题，下周一这里就有周报',
       });
       return;
     }
@@ -168,7 +168,7 @@ Page({
         pending: true,
         empty: false,
         range,
-        stateDesc: range + '\n周报会在下周一自动生成，先看看上一周的吧',
+        stateDesc: range + '\n周一再来看，先看上一周的',
       });
       return;
     }
@@ -184,7 +184,7 @@ Page({
     ];
     let mockSub = '';
     if (d.mock && d.mock.event_title) {
-      mockSub = d.mock.event_title + '：' + (d.mock.rank ? `第 ${d.mock.rank} 名 · ` : '') + `击败 ${d.mock.pct}%`;
+      mockSub = d.mock.event_title + '：' + (d.mock.rank ? `第 ${d.mock.rank} 名，` : '') + `超过 ${d.mock.pct}% 的考友`;
     }
     this.setData({
       empty: false,

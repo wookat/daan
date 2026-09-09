@@ -86,6 +86,7 @@
 <script>
 import { shareDetail, shareAnswer, trackEvent, teamJoin, qShareText, canonicalizeSharePath } from '../../api.js';
 import { MODULES, moduleLabel } from '../../module-meta.js';
+import { shareBeatLine } from '../../exam-copy.js';
 import { togglePickLetter } from '../../exam-excl.js';
 
 const modName = (m) => (MODULES[m] ? moduleLabel(m) : m === 'shenlun' ? '申论' : m || '行测');
@@ -137,12 +138,7 @@ export default {
       return `${this.answers.length || this.d.n_answered} 人已作答`;
     },
     beatText() {
-      const s = this.qStats;
-      if (!s || !s.total || !this.myResult) return '';
-      if (s.total < 5) return `🎯 全站第 ${s.total} 个作答本题的人，把题发给更多考友一起比比`;
-      if (this.myResult.correct && s.beat_pct != null) return `🏆 你击败了全站 ${s.beat_pct}% 的作答者（共 ${s.total} 人做过这题）`;
-      if (s.acc != null) return `全站共 ${s.total} 人做过这题，正确率 ${s.acc}%，再战同类题赢回来`;
-      return '';
+      return shareBeatLine(this.qStats, this.myResult);
     },
   },
   onLoad(query) {
@@ -220,7 +216,7 @@ export default {
       const mod = this.d.question.submodule || modName(this.d.question.module);
       trackEvent('share_copy', 'share_q', this.sid);
       uni.setClipboardData({
-        data: qShareText(mod, this.sid),
+        data: qShareText(mod, this.sid, this.myResult ? !!this.myResult.correct : undefined),
         success: () => uni.showToast({ title: '分享链接已复制', icon: 'none' }),
       });
     },

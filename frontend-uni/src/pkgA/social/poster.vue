@@ -228,7 +228,7 @@ function drawExamPoster(ctx, d) {
   ctx.fillText('分', pad + sw + 14, 318);
 
   const stats = [[`${d.correct}/${d.total}`, '答对题数']];
-  if (d.beatenPct != null) stats.push([d.beatenPct + '%', '已击败考生']);
+  if (d.beatenPct != null) stats.push([d.beatenPct + '%', '超过的考友']);
   roundRect(ctx, pad, 420, W - pad * 2, 128, 20);
   ctx.fillStyle = 'rgba(255,255,255,0.12)';
   ctx.fill();

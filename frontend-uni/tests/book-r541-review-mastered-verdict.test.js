@@ -24,7 +24,7 @@ describe('R541 复习卡「已掌握」判定文案（H5）', () => {
 
   it('requeue 复制体答对 → 本轮已纠正；答错 → 稍后再出现（原口径不变）', () => {
     expect(reviewVerdict({ requeued: true, wasCorrect: true, streak: 1, nextDays: 1 })).toBe('这次答对了，本轮已纠正 ✓（下次复习：1 天后）');
-    expect(reviewVerdict({ wasCorrect: false, streak: 0, nextDays: 1 })).toBe('又错了，看讲解（稍后本轮会再出现）（下次复习：1 天后）');
+    expect(reviewVerdict({ wasCorrect: false, streak: 0, nextDays: 1 })).toBe('又错了，看讲解，稍后本轮会再出现（下次复习：1 天后）');
   });
 
   it('extra 加练题不写 SRS：文案不带下次复习，也不受 mastered 影响', () => {
@@ -116,7 +116,7 @@ describe('R541 小程序 reviewVerdict 与 H5 同结构（小程序用「解析�
     expect(mpReviewVerdict({ wasCorrect: true, streak: 6, nextDays: 30, mastered: true })).toBe('答对了！连对 6 次 · 已掌握，移出复习计划');
     expect(mpReviewVerdict({ wasCorrect: true, streak: 2, nextDays: 3, mastered: false })).toBe('答对了！连对 2 次（下次复习：3 天后）');
     expect(mpReviewVerdict({ requeued: true, wasCorrect: true, streak: 1, nextDays: 1 })).toBe('这次答对了，本轮已纠正（下次复习：1 天后）');
-    expect(mpReviewVerdict({ wasCorrect: false, nextDays: 1 })).toBe('又错了，看解析（稍后本轮会再出现）（下次复习：1 天后）');
+    expect(mpReviewVerdict({ wasCorrect: false, nextDays: 1 })).toBe('又错了，看解析，稍后本轮会再出现（下次复习：1 天后）');
     expect(mpReviewVerdict({ extra: true, wasCorrect: true, mastered: true })).toBe('答对了，这个考法稳了');
     expect(mpReviewVerdict({ extra: true, wasCorrect: false })).toBe('还没稳，仔细看解析');
   });
