@@ -45,10 +45,34 @@
 
 ## 生产复验
 
-（发版后回填）
+### 生产一（`09d664a4` / `index-DbkPgCj4.js`，375，`~/r567/prod/report.md`，录像 `~/screencasts/r567-labels-375/`）
+
+- 身份 / A fixture（6 条真实题库题，probe=1）/ B375 卡面「个税」「加强削弱」「政治常识」/ F HTTP / 审计 / 精确清理 PASS。
+- **D375 FAIL（P1）**：POST `question_type=常识判断-法律-个税` → 后端 `norm_qtype` 落库 **`法律-个税`**（GET 回读 `type_group=法律`），H5 `tagName()` 再次无条件切首段 → 筛选 URL `qt=个税`（F5 保留错值）、重练 `GET /api/mistakes/redo?sub=法律&qtype=个税` → 200 `{items:[],skipped:0}`，toast「错题未能匹配到题库原题」。**既有缺陷**（`tagName` 的 `split('-').slice(1)` 早于 R567；R567 研究④「H5 tagName 口径」量化本身就是按这个错口径算的），本轮的 `fineTypeLabel` 只改展示、没引入也没修它；R545 起细分 chips/`qt` URL 把这个值暴露成可点筛选 + redo 参数后才成为可感知失败。1440 与其余回归按 P1 中止。
+- 归因（代码）：后端 `db.norm_qtype` 只去 `_QTYPE_MOD_PREFIXES = (资料分析, 数量关系, 言语理解, 判断推理, 常识判断, 常识, 时政)` + `-`；redo 查询 `question_type=?` 精确匹配库内值。生产库只读：非测试错题含 `-` 的 `question_type` 只有 `政治-理论`×2 / `法律-民法典` / `法律-劳动`（无模块前缀残留）；题库 `图形推理-空间类` 61 行 → 任何「见 `-` 就切」都会把细分名切坏。
+
+### 热修 `6ae243a0`（H5 + 小程序，0 后端）
+
+- `type-label.js` 新 `qtypeName(qt)`：首段 ∈ 同一份 7 个模块名且余段非空才去前缀（与 `norm_qtype` 同口径）；`book.vue tagName()` 改走它 → 筛选值 / `qt` URL / `&qtype=` = 库内 `question_type`；展示仍 `fineTypeLabel(type_group, fine)`。小程序 `book.ts tagName` 同口径（避免 H5/小程序分叉）。
+- 测试：`r567-type-label.test.js` 补 `qtypeName` 正反例 + H5/小程序接线源锁；`r545-type-groups.test.js`、`book-r516-tagname-answer-format.test.js` 两个 `new Function` 动态 harness 注入 `qtypeName`；R516 用例 `政治-理论 → 理论` 改为 `常识判断-政治-理论 → 政治-理论` / `政治-理论` 原样（旧断言锁的正是本次坐实的错口径）。
+- 本地门：H5 vitest 186 文件 1446 / eslint 0 / build:h5（`index-CLSTMI1s.js` / `pages-book-book.DAWcePg7.js`）；小程序 tsc / lint 0 / vitest 73；diff --check 空。
+- 发版：后端无改动且宿主 compose 被同机 `docker builder prune` 挤住（见 handoff），**只手动跑 `deploy_h5.sh` 4c 段**（同命令：新账号 `kaogong-h5-zalize` `wrangler pages deploy`），bundle / 各 Accept-Encoding 变体 JS MIME / 6 项回归 200 手工核过；health 仍 `09d664a4`。
+
+### 生产二（`09d664a4` / `index-CLSTMI1s.js`，375+1440，`~/r567/prod/report-2.md`，录像 `~/screencasts/r567-fix-375/`、`~/screencasts/r567-fix-1440/`）
+
+- 身份：HTML / 实际执行 Script / 两目标资产 SHA256 = 本地 dist。
+- A：新 UID 6 条真实题库 fixture（先 GET 回读库内值再写）。B/C 375+1440：「法律」+「个税」展示，URL **`qt=法律-个税`**，物理 F5 同 raw 值且只剩目标卡；逻辑 `逻辑判断(加强削弱)` / 政治 `政治常识` 同样 URL = 库内原值、展示按 R567 设计。
+- D 375+1440：重练请求 `sub=法律&qtype=法律-个税` → 200 items = [4178]，进 practice 1/1、顶栏「错题重练」（R566 回归）；375 另两组 redo 分别回 571 / 139 正常启动。
+- 回归：收藏 tab / 收藏后 F5 / 更多操作层标题为 raw「法律-个税 · 更多操作」（**该处未做简称，登记 R567-1**）/ 删除确认取消 / 内置复习 1/6 进出 PASS。
+- F：六类资源 200、CSP/HSTS 在、JS MIME 正确 + immutable。
+- 审计：1029 请求 = 899 HTTPS 200 + 114 data URL + 16 tab 图标自然取消；127 API 全 200 probe=1；console error / uni warning 0；应用来源 runtime/rejection 0（harness 字符串 `wait_for_function` 撞 CSP 各 1，10 条 SW warning = Playwright 阻止注册）。
+- 清理：精确清本人 11 行（mistakes 6 / question_favs 1 / growth_events 3 / practice_progress 1），41 表本人残留 0，前缀 `test-r567-%` 11→22→11（他 UID 旧 11 行保留）；五类 hash / taxonomy / 卷 / 共享 42 行不变。
+- **UNTESTED**：`#/pages/review/review` 独立路由新 Document 直达重定向首页（我的测试指令写了一个不存在的独立复习页，非缺陷，改测真实入口）；小程序无真机；真实 SW/offline、跨设备、其它浏览器。
 
 ## UNTESTED / 登记
 
+- **R567-1**：更多操作层标题 `tagName(m) · 更多操作` 显示库内 raw 值「法律-个税」，与卡头/chip 的简称不一致（低优，是否走 `fineLabel` 下轮决定）。
+- 教训：任何「见 `-` 就切」的题型处理都是错口径——前端归一化必须与后端 `norm_qtype` 共用同一份模块名单；复验必须把「显示文案 / 库内 `question_type` / URL `qt` / redo `qtype`」四个值分开断言，且 redo 只认 items 非空不认 HTTP 200。
 - 小程序往期标题只有源锁，无真机（R536-1 累计）。
 - 全角括号 / `·` / `/` 分隔的组名前缀在生产题库无样本，仅单测。
 - 「政治常识」类无分隔符前缀保持原样（有意）。

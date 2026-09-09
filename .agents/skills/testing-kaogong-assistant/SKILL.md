@@ -3,6 +3,13 @@ name: testing-kaogong-assistant
 description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## R567 经验：题型「显示 / 库内值 / URL qt / redo qtype」四值分账 + 前后端归一化同口径
+- 错题 `question_type` 写入 → 库内值经后端 `db.norm_qtype`（只去 `资料分析/数量关系/言语理解/判断推理/常识判断/常识/时政` + `-`），fixture 写完**必须 GET `/api/mistakes` 回读**库内值再拿它做后续断言；前端任何「见 `-` 就切首段」都是错口径（`法律-个税`/`政治-理论`/`图形推理-空间类` 会被切坏，生产 R567 D FAIL：redo `qtype=个税` → 200 `items:[]`）。H5 `tagName` / 小程序 `tagName` 与 `type-label.js qtypeName` 共用同一份模块名单，改名单要三处同改。
+- 复验把四个值分开断言：卡头/chip/当前筛选/重练入口**显示**（`fineTypeLabel(type_group, fine)` 简称，如「个税」）、库内 `question_type`、URL `?qt=`（应 = 库内值，物理 F5 后仍是）、`GET /api/mistakes/redo?...&qtype=`（应 = 库内值）。redo 只认 `items` 非空且 qid 命中，HTTP 200 空数组 = FAIL。更多操作层标题 `tagName · 更多操作` 是 raw 值（R567-1 登记），不是缺陷。
+- 一组至少造两条不同细分（同 `type_group`）才会出细分 chips；375 下细分 chip 可能在筛选 sheet 视口下方，先 `scrollIntoView` 再截。复习不是独立路由（`#/pages/review/review` 新 Document 直达会重定向首页），要走错题本「开始复习」入口。
+- harness：字符串形式 `page.wait_for_function` 撞站点 CSP（unsafe-eval）会真产生 1 runtime exception + 1 rejection，用 locator 等待或函数式 evaluate；截图前等真实 URL/标题/控件就绪而不是固定 1 s（375 首次 redo 截图拍早，改抽录像帧并标注来源）；收藏 tab 成功后文案「收藏」→「收藏 1」，定位用稳定选择器。
+- 清理：同前缀 `test-r567-%` 有其他 UID 的既有行，只按本人 UID 精确删并报「前缀总数 前→中→后」，不宣称整个前缀残留 0。
+
 ## R566 经验：练习页动态 nav 标题的复验口径 + 逐题上送端点限速与「持久化」分账
 - 标题断言同时取 `document.title` 与 `.uni-page-head__title` 文本，再单独量 `clientWidth/scrollWidth` + `white-space/overflow/text-overflow`：375 下真实卷名（≈22 字）**省略是设计**（uni-h5 `pageHead.css` 自带 nowrap+ellipsis），不是「标题被截」缺陷；40 字兑底只有单测，自然卷名到不了。
 - 「返回首页/返回卷库」类离页复验除 URL/内容外必须开 `Runtime.exceptionThrown` + `unhandledrejection`：`leave()` 先 `navigateBack/switchTab` 再 `session=false`，watcher 若在页面出栈后调 `uni.setNavigationBarTitle`（无回调 → promise）就是 `fail page not found` rejection（R566 生产 2 次）。修法是栈顶守卫（`practicePageOnTop(getCurrentPages())`）+ 回调式调用；复验断言「落点正确 且 rejection 0」缺一不可，同时核上一页标题（真题卷库 / 错题本 / 首页「刷题」= `pages.json` 首页静态标题，不是练习页覆盖）。
