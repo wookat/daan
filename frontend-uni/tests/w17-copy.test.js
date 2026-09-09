@@ -164,7 +164,7 @@ describe('W17-C1 源锁：H5 模板与小程序同源字符串', () => {
     expect(H5.weekly).toContain('weeklyMockLine(r.mock)');
     // 模板直接调用的纯函数必须挂到 methods（否则运行时 "t.xxx is not a function"，本地 dist 截图曾复现）
     expect(H5.weekly).toMatch(/methods: \{\s*weeklyMockLine,\s*weeklyEmptyDesc,\s*weeklyPendingDesc,/);
-    expect(H5.contest).toMatch(/\n    rankLine,\n    contestHeroLine,\n/);
+    expect(H5.contest).toMatch(/\n {4}rankLine,\n {4}contestHeroLine,\n/);
     expect(H5.practice).toMatch(/methods: \{\s*percentileLine,/);
     expect(H5.poster).toContain("'超过的考友'");
     expect(H5.shareQ).toContain('shareBeatLine(this.qStats, this.myResult)');

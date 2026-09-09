@@ -81,13 +81,13 @@ export default {
 .r-title { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
 .r-tag { font-size: var(--fs-caption); color: var(--warn-strong); background: var(--warn-soft); border-radius: var(--r-full); padding: 2px var(--sp-8); }
 .r-main { display: flex; align-items: center; gap: var(--sp-20); margin: var(--sp-12) 0 var(--sp-4); }
-.r-beat { display: flex; flex-direction: column; }
+.r-beat { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .r-beat-n { font-size: var(--fs-h1); font-weight: 600; color: var(--brand-text); line-height: 1.1; }
 .r-beat-l { font-size: var(--fs-caption); color: var(--ink-2); }
 .r-beat-tiny { font-size: var(--fs-caption); color: var(--ink-2); line-height: 1.6; }
-.r-kv { display: flex; gap: var(--sp-20); }
+.r-kv { display: flex; gap: var(--sp-20); flex-shrink: 0; }
 .r-kv-i { display: flex; flex-direction: column; }
-.r-k { font-size: var(--fs-caption); color: var(--ink-3); }
+.r-k { font-size: var(--fs-caption); color: var(--ink-3); white-space: nowrap; }
 .r-v { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); }
 .r-v-s { font-size: var(--fs-caption); color: var(--ink-3); font-weight: 400; }
 .r-dist { display: flex; align-items: flex-end; gap: var(--sp-4); height: 70px; margin-top: var(--sp-8); }
