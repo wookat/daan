@@ -1,6 +1,7 @@
 """题库域：抽题、考点树、时政每日、导入导出与题图上传（导入统一 check_import_token）。"""
 import base64
 import json
+import math
 import os
 import re
 import time
@@ -33,6 +34,29 @@ def _draw_questions(module, limit: int, **kw) -> list[dict]:
     extra = [q for q in db.random_questions(module, limit * 3, **kw) if q["id"] not in have]
     extra.sort(key=lambda q: 0 if q.get("has_hs") else 1)
     return _dedupe_family(items + extra, limit)
+
+
+DUE_MIX_MAX = 2
+
+
+def due_mix_slots(limit: int) -> int:
+    """一组里最多混入几道到期错题：≥5 题起混、每 5 题 1 道、上限 2，其余仍是新题。"""
+    return max(0, min(DUE_MIX_MAX, limit // 5))
+
+
+def interleave_due(items: list[dict], due: list[dict], limit: int) -> list[dict]:
+    """把到期错题均匀插进新题组（不占首题，n=10/k=2 → 第 5、8 位），总量仍 ≤ limit；
+    新题不足时错题只补空位不再顶掉新题。"""
+    if not due:
+        return items[:limit]
+    k = min(len(due), limit)
+    fresh = items[: max(0, limit - k)]
+    n = len(fresh) + k
+    out = list(fresh)
+    for i, q in enumerate(due[:k]):
+        pos = min(len(out), math.ceil((i + 1) * n / (k + 1)))
+        out.insert(pos, q)
+    return out
 
 
 @router.get("/api/taxonomy")
@@ -154,6 +178,7 @@ def api_questions(
     grouped: int = 0,
     tag3: str | None = None,
     mode: str | None = None,
+    mix_due: int = 0,
 ):
     if mode == "reinforce" and uid:
         # 错题同考点强化：严格只出该 uid 未做过的新题，中等难度优先
@@ -169,13 +194,20 @@ def api_questions(
             "items": db.grouped_ziliao_questions(clamp_limit(limit, 50), uid=uid),
             "counts": db.question_counts(),
         }
-    return {
-        "items": _draw_questions(
-            module, clamp_limit(limit, 50), submodule=submodule, real_only=bool(real), year=year, region=region,
-            uid=uid, adaptive=bool(adaptive), tag3=tag3,
-        ),
-        "counts": db.question_counts(),
-    }
+    n = clamp_limit(limit, 50)
+    items = _draw_questions(
+        module, n, submodule=submodule, real_only=bool(real), year=year, region=region,
+        uid=uid, adaptive=bool(adaptive), tag3=tag3,
+    )
+    # 到期错题混入：仅普通练习（无真题/年份/地区/考点/自适应筛选）且客户端显式 mix_due=1；
+    # random_questions 排除已答过的题，普通练习本身永远抽不到自己的错题，答对推进复习只能靠这里
+    if mix_due and uid and not (real or year or region or tag3 or adaptive):
+        due = db.due_mix_questions(
+            uid.strip()[:64], due_mix_slots(n), module=module, submodule=submodule,
+            exclude={q["id"] for q in items},
+        )
+        items = interleave_due(items, due, n)
+    return {"items": items, "counts": db.question_counts()}
 
 @router.get("/api/submodule_progress")
 def api_submodule_progress(uid: str, module: str | None = None):

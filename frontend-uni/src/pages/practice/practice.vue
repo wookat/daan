@@ -665,6 +665,7 @@ export default {
         accuracy: q.correct_ratio,
         attemptCount: q.attempt_count,
         isReal: !!q.is_real,
+        dueMix: !!q.due_mid,
         groupSeq: q.group_seq || 0,
       };
     },
@@ -1604,7 +1605,8 @@ export default {
       if (pk && pk.module === module && pk.limit === limit && pk.uid === uid && Date.now() - pk.ts < 5 * 60 * 1000) return;
       const seen = new Set(this.items.map((q) => q.id));
       request(
-        '/api/questions?limit=' + limit + (uid ? '&uid=' + encodeURIComponent(uid) : '') + (module ? '&module=' + module : ''),
+        '/api/questions?limit=' + limit + (uid ? '&uid=' + encodeURIComponent(uid) + '&mix_due=1' : '') +
+          (module ? '&module=' + module : ''),
         { timeout: 45000 }
       )
         .then((d) => {
@@ -1646,6 +1648,8 @@ export default {
         : '';
       const uid = uni.getStorageSync('anonUid');
       const uidQ = uid ? '&uid=' + encodeURIComponent(uid) : '';
+      // 普通练习混入 ≤2 道本人到期错题（服务端在真题/考点/自适应筛选下忽略）：抽题排除答过的题，否则永远碰不到自己的错题
+      const mixQ = uid ? '&mix_due=1' : '';
       const adQ = adaptive && uid ? '&adaptive=1' : '';
       const grpQ = module === 'ziliao' && !submodule && !tag3 && !this.realMode ? '&grouped=1' : '';
       const tagQ = tag3 ? '&tag3=' + encodeURIComponent(tag3) : '';
@@ -1663,7 +1667,7 @@ export default {
         let d = pre
           ? { items: pre }
           : await request(
-              '/api/questions?limit=' + limit + realQ + uidQ + adQ + grpQ + tagQ +
+              '/api/questions?limit=' + limit + realQ + uidQ + mixQ + adQ + grpQ + tagQ +
                 (module ? '&module=' + module : '') +
                 (submodule ? '&submodule=' + encodeURIComponent(submodule) : ''),
               { timeout: 20000 }
@@ -1677,7 +1681,7 @@ export default {
         }
         if (!d.items.length && submodule) {
           this.lastSubmodule = null;
-          d = await request('/api/questions?limit=' + limit + realQ + uidQ + (module ? '&module=' + module : ''));
+          d = await request('/api/questions?limit=' + limit + realQ + uidQ + mixQ + (module ? '&module=' + module : ''));
         }
         if (!d.items.length && this.realMode && (this.realYear || this.realRegion)) {
           uni.showToast({ title: '该年份/地区暂无此模块真题，已放宽筛选', icon: 'none' });
@@ -1685,7 +1689,7 @@ export default {
         }
         if (!d.items.length && this.realMode) {
           uni.showToast({ title: '真题还在搜集中，已切回题库模式', icon: 'none' });
-          d = await request('/api/questions?limit=' + limit + uidQ + (module ? '&module=' + module : ''));
+          d = await request('/api/questions?limit=' + limit + uidQ + mixQ + (module ? '&module=' + module : ''));
         }
         const lead = await leadP;
         const items = mergeLead(lead, d.items);
@@ -2455,7 +2459,7 @@ export default {
         const pending = qs.filter((q) => q._picked && !q._logged);
         const items = pending.map((q) => ({
           qid: q._sz ? null : q.id || null,
-          mid: q.mistake_id || undefined,
+          mid: q.mistake_id || q.due_mid || undefined,
           module: q.module || this.lastModule || null,
           submodule: q.submodule || null,
           correct: q._picked === q.answer,

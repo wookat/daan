@@ -50,6 +50,7 @@
         <view class="tagrow">
           <kg-tag wx:if="{{cur.is_real}}" tone="warn" icon="flag">真题{{cur.exam_year ? ' · ' + cur.exam_year : ''}}{{cur.exam_region ? ' · ' + cur.exam_region : ''}}</kg-tag>
           <kg-tag wx:if="{{cur.submodule}}" tone="module" module="{{cur.module}}">{{cur.submodule}}</kg-tag>
+          <kg-tag wx:if="{{cur.due_mid}}" tone="info">曾错题 · 到期复习</kg-tag>
         </view>
         <text class="q q-text" style="font-size: {{qFs}}px" user-select>{{cur.question}}</text>
         <text wx:if="{{curStat}}" class="q-meta">{{curStat}}</text>
