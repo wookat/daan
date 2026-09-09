@@ -354,6 +354,18 @@
       </view>
     </kg-sheet>
 
+    <!-- 中途退出：关层（X / Esc / Back / 遮罩）= 继续做题；两种离开都要显式点按，键盘 Esc 不再等于「结束本组」 -->
+    <kg-sheet v-model="quitOpen" :title="quitSum ? quitSum.title : '退出练习'">
+      <text class="quit-tip">保留后可从首页「有一组未做完的练习」继续；结束本组不保留进度（已答记录仍进错题本）</text>
+      <template #footer>
+        <view class="sheet-acts">
+          <kg-button variant="primary" size="lg" block @click="quitPick(true)">保留进度并退出</kg-button>
+          <kg-button variant="ghost" size="lg" block tone="bad" @click="quitPick(false)">结束本组并退出</kg-button>
+          <kg-button variant="text" size="md" block @click="quitOpen = false">继续做题</kg-button>
+        </view>
+      </template>
+    </kg-sheet>
+
     <!-- 题目纠错 -->
     <kg-sheet v-model="reportOpen" title="题目纠错">
       <view class="rp-types" role="group" aria-label="问题类型">
@@ -468,6 +480,8 @@ export default {
       autoTimer: null,
       cardOpen: false,
       toolsOpen: false,
+      quitOpen: false,
+      quitSum: null,
       qsecs: 0,
       qTimer: null,
       fontLv: normFontLv(uni.getStorageSync('fontLv')),
@@ -2565,16 +2579,13 @@ export default {
         this.leave(false);
         return;
       }
-      uni.showModal({
-        title: sum.title,
-        content: '保留后可从首页「有一组未做完的练习」继续',
-        confirmText: '保留进度',
-        cancelText: '结束本组',
-        success: (r) => {
-          trackEvent(r.confirm ? 'practice_quit_keep' : 'practice_quit_end', this._source || 'practice');
-          this.leave(!!r.confirm);
-        },
-      });
+      this.quitSum = sum;
+      this.quitOpen = true;
+    },
+    quitPick(keep) {
+      this.quitOpen = false;
+      trackEvent(keep ? 'practice_quit_keep' : 'practice_quit_end', this._source || 'practice');
+      this.leave(keep);
     },
     leave(keep) {
       if (!this.beiMode && this.items.length) this.logAttempts(this.items);
@@ -2674,6 +2685,8 @@ export default {
 .tool-name { font-size: var(--fs-body); color: var(--ink); }
 .tool-val { font-size: var(--fs-sub); color: var(--ink-3); flex-shrink: 0; }
 .tool-val.on { color: var(--brand-text); font-weight: 600; }
+.quit-tip { display: block; font-size: var(--fs-sub); color: var(--ink-3); line-height: 1.6; padding: var(--sp-4) 0 var(--sp-8); }
+.sheet-acts { display: grid; gap: var(--sp-8); }
 .rp-types { display: flex; flex-wrap: wrap; gap: var(--sp-8); margin-bottom: var(--sp-16); }
 .rp-detail {
   width: 100%; box-sizing: border-box; min-height: 96px; background: var(--fill); border-radius: var(--r-sm);

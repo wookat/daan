@@ -16,6 +16,7 @@ import {
   nativeKind,
   initialFocusables,
   shouldSwallowKeyup,
+  shouldRetryFocus,
 } from './modal-policy.js'
 
 export const HOST_RE = /^UNI-(VIEW|TEXT|IMAGE|LABEL|BUTTON)$/
@@ -134,6 +135,19 @@ function initModalKeys() {
     const a = document.activeElement
     return a && a !== document.body ? ancestorChain(a) : focusChain
   }
+  // uni-actionsheet 面板 visibility:hidden→visible 走 0.3s transition，入栈那一帧 focus() 静默失败；逐帧重试直到拿到焦点或该层不再是栈顶
+  const focusInto = (el, box) => {
+    let tries = 0
+    const attempt = () => {
+      if (box.contains(document.activeElement)) return
+      el.focus()
+      if (box.contains(document.activeElement)) return
+      const top = stack.length ? stack[stack.length - 1] : null
+      if (!top || top.box !== box || !el.isConnected) return
+      if (shouldRetryFocus(tries++)) requestAnimationFrame(attempt)
+    }
+    attempt()
+  }
   const sync = () => {
     const { removed, kept } = reconcileStack(stack, (s) => layerOpen(s.box))
     stack = kept
@@ -156,7 +170,7 @@ function initModalKeys() {
       const fallback = entry.kind ? entry.panel : entry.box.firstElementChild || entry.box
       const { el, needsTabindex } = pickFocusTarget(initialFocusables(entry.kind, maskFocusables(entry.box)), fallback)
       if (needsTabindex) el.setAttribute('tabindex', '-1')
-      el.focus()
+      focusInto(el, entry.box)
     })
   }
   const mo = new MutationObserver(sync)

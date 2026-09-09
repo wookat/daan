@@ -327,4 +327,35 @@ describe('uni-actionsheet：进栏 + Esc 点遮罩 + 菜单项可 Tab/Enter', ()
     expect(s.log).toEqual([-1, 1]);
     expect(document.activeElement).toBe(open);
   });
+
+  // 生产 e8c11732 375 复验 FAIL：首页时政「往期」打开后 activeElement 仍是背景触发项，首 Tab 才进首个日期。
+  // 根因：.uni-actionsheet 的 visibility:hidden→visible 走 0.3s transition，入栏那一帧 focus() 被浏览器静默拒绝。
+  it('入栏首帧 focus() 被拒（visibility 过渡）→ 逐帧重试直到落到首个菜单项；用户已先 Tab 进层则不再抢', async () => {
+    const s = uniActionSheetSim(['2026-09-08（昨天）', '2026-09-07（前天）']);
+    const open = view('open', () => s.show());
+    document.body.appendChild(open);
+    open.focus();
+    const realFocus = s.cells[0].focus;
+    let refused = 3;
+    s.cells[0].focus = function () {
+      if (refused-- > 0) return;
+      realFocus.call(this);
+    };
+    await press(' ');
+    expect(document.activeElement).toBe(open);
+    await new Promise((r) => setTimeout(r, 120));
+    expect(document.activeElement).toBe(s.cells[0]);
+    expect(refused).toBeLessThan(0);
+    await press('Escape');
+    expect(document.activeElement).toBe(open);
+
+    // 重试期间用户已 Shift+Tab 进层（落末项「取消」）：重试不得把焦点拉回首项
+    refused = 2;
+    await press(' ');
+    expect(document.activeElement).toBe(open);
+    await press('Tab', { shiftKey: true });
+    expect(document.activeElement).toBe(s.cancelCell);
+    await new Promise((r) => setTimeout(r, 120));
+    expect(document.activeElement).toBe(s.cancelCell);
+  });
 });
