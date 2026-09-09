@@ -3,6 +3,13 @@ name: testing-kaogong-assistant
 description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## R566 经验：练习页动态 nav 标题的复验口径 + 逐题上送端点限速与「持久化」分账
+- 标题断言同时取 `document.title` 与 `.uni-page-head__title` 文本，再单独量 `clientWidth/scrollWidth` + `white-space/overflow/text-overflow`：375 下真实卷名（≈22 字）**省略是设计**（uni-h5 `pageHead.css` 自带 nowrap+ellipsis），不是「标题被截」缺陷；40 字兑底只有单测，自然卷名到不了。
+- 「返回首页/返回卷库」类离页复验除 URL/内容外必须开 `Runtime.exceptionThrown` + `unhandledrejection`：`leave()` 先 `navigateBack/switchTab` 再 `session=false`，watcher 若在页面出栈后调 `uni.setNavigationBarTitle`（无回调 → promise）就是 `fail page not found` rejection（R566 生产 2 次）。修法是栈顶守卫（`practicePageOnTop(getCurrentPages())`）+ 回调式调用；复验断言「落点正确 且 rejection 0」缺一不可，同时核上一页标题（真题卷库 / 错题本 / 首页「刷题」= `pages.json` 首页静态标题，不是练习页覆盖）。
+- 0 答快照会**静默采纳**不弹恢复层；要走显式恢复层须可见答 1 题、等持久化落地再物理 F5。按卷 0 答 F5 断言：同 75 qid、1/75、`pendingSession.ptitle` 与顶栏一致。
+- 逐题 `POST /api/answer_log` 每题 1 次：连续 75 题 UI 自动化会撞 uid 桶限速（R566 前 120/h → 31×429，DB 恰少 31 行；R566 起 600/h）。审计要把 answer_log 每条响应码单列，429 走 `enqueueAnswers` 离线队列（本机保留、下次 flush 重试），**不能算已持久化**，也不能因为完成页出现就略过；复验限速改动要同节奏重跑并核 DB 行数 = 上送条数 + 本机队列为空。
+- 卷库来源按卷全对完成页只剩一键「回卷库」= `quit()`（`navigateBack` 回**原**卷库条目，`history.length` 不增）；从首页/深链进的按卷仍是 `goExamList()` 压新层。断言用「回库后一次 Back 到首页」区分两者。
+
 ## R565 经验：Lighthouse 模拟 LCP 二值跳变的归因法 + 结算态固定底栏的复验口径
 - `perf-budget.sh` 默认是 **simulated** 节流：LCP 违例先把 JSON 落盘（`lighthouse <url> --output=json --output-path=…`），对比 `audits.metrics.details.items[0]` 的 `observedFirstContentfulPaint/observedLargestContentfulPaint`（真实首屏）与 `firstContentfulPaint/largestContentfulPaint`（Lantern 模拟）；再从 `audits['network-requests'].details.items` 数「`networkEndTime` < 观测 FCP 且 `priority ∈ {High, VeryHigh}`」的请求数/字节。通过 vs 违例样本若观测值一致（≈0.2 s）而 High 请求数 3 ↔ 47（`route-preload` 的 modulepreload chunk 赶在观测 FCP 前完成），就是 Lantern 关键链敏感（同 R443），不是首页回归；benchmarkIndex 高低（R562）只解释倍率，不解释二值跳变。`--throttling-method=devtools` 复核会报「loaded too slowly… incomplete」，只作方向证据不作基准。
 - 结算态固定底栏（练习完成页 `.done-bar`，模考报告已有）复验：① 375 底栏 `getBoundingClientRect().bottom === innerHeight` 且 `position:fixed`，两键各一行（`height ≈ 44`，主位文案「只重练本组错题（10 题）」两位数题数也不换行）；② 页内最后一个控件（「分享成绩」/ 文字「返回…」）滚到底后 `bottom <= 底栏 top`（`.page.has-bar` 88 px 留白）；③ 四态文案/落点：有错题「只重练…/再来一组」、按卷「重练本卷…/回卷库」、全对「再来一组/返回…」、背题不出重练，且点主位后与 R553 `retryWrong`（同 qid 集合、`pendingSession` 落 redo）/ 次位 `retryGroup`（新 GET 1/10）语义不变；④ 1440 底栏 `sticky` 在两栏容器内不遮右栏；⑤ 「分享成绩」仍在页内可点。本机预检可用 dist `http.server` + Playwright `route('**/api/**')` 把 GET 转发生产（`X-Kg-Probe: 1`）、非 GET 本地 200/abort，0 生产写入。
