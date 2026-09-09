@@ -48,4 +48,14 @@ describe('R559 错因 chip 取消语义', () => {
     expect(api).toContain('raise HTTPException(400, "错因不在可选范围")');
     expect(api).toContain('body = {**body, "error_reason": rz or None}');
   });
+
+  // R559-fix（生产复验坐实）：pick() 里 saveWrong() 异步、saveSession() 同步先落快照 → 答错后立刻退出保留/刷新，
+  // 恢复出的题 _saved:false 且无 _mid，错因自评点了不发 PATCH 静默丢失。回包后补写快照（与 reviewed 回包同口径）。
+  it('saveWrong 回包/入队后补写 pendingSession（会话仍在且未全答完），恢复后 _mid 可 PATCH', () => {
+    const fn = practice.slice(practice.indexOf('async saveWrong() {'), practice.indexOf('shareResult() {'));
+    expect(fn).toContain('q._mid = res.id;');
+    expect(fn).toMatch(/\}\n\s+\/\/[^\n]*\n\s+if \(this\.session && this\.items\.some\(\(x\) => !x\._picked\)\) this\.saveSession\(\);\n\s+\},\n\s*$/);
+    expect(practice).toMatch(/this\.saveWrong\(\);[\s\S]{0,120}\}\n\s+this\.saveSession\(\);/);
+    expect(practice).toMatch(/leave\(keep\) \{[\s\S]*?this\.session = false;/);
+  });
 });

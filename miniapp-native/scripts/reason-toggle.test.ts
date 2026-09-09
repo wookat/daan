@@ -43,4 +43,13 @@ describe('R559 小程序错因 chip 取消语义', () => {
     expect(report).toContain('if (it) it.error_reason = next;');
     expect(report).toContain("this.setData({ 'detail.error_reason': prev });");
   });
+
+  // R559-fix：onPick 里 saveWrong 异步、saveSession 同步先落快照（items 只写 _picked/_secs）→ 恢复出的题无 _mid，错因自评不发 PATCH。
+  it('练习页 saveWrong 回包后把 _mid/_saved 写回 items[i] 并补写快照', () => {
+    const fn = practice.slice(practice.indexOf('async saveWrong(q: PQuestion, picked: string) {'), practice.indexOf('onSetReason('));
+    expect(fn).toContain('const i = this.data.items.findIndex((it) => it === q || (q.id != null && it.id === q.id));');
+    expect(fn).toContain('if (i < 0 || this.data.finished) return;');
+    expect(fn).toContain('this.setData({ [`items[${i}]._mid`]: q._mid, [`items[${i}]._saved`]: true });');
+    expect(fn).toMatch(/_saved`\]: true \}\);\n\s+this\.saveSession\(\);\n\s+\},\n\s*\/\/[^\n]*\n\s*$/);
+  });
 });
