@@ -439,6 +439,7 @@ import { leadQidOf, leadPickOf, mergeLead, leadHintText } from '../../leadq.js';
 import { quitSummary } from '../../quit-summary.js';
 import { resumeAsk, resumeDismissAction } from '../../resume-ask.js';
 import { backLabel } from '../../back-label.js';
+import { practiceNavTitle } from '../../practice-title.js';
 
 
 function loadPStats() {
@@ -808,6 +809,8 @@ export default {
   onShow() {
     this.askSeenTick++;
     this.backLabel = backLabel(getCurrentPages());
+    this._navTitle = '';
+    this.syncNavTitle();
     // #ifdef H5
     if (!this._pkHandler && typeof window !== 'undefined') {
       this._pkHandler = (e) => this.onPKeydown(e);
@@ -891,6 +894,7 @@ export default {
       this.lastSubmodule = null;
       this._source = 'redo';
       this._ptitle = null;
+      this._reinforce = null;
       this.session = true;
       this.startQTimer();
       this.saveSession();
@@ -937,6 +941,9 @@ export default {
     items() {
       this.matOpen = {};
     },
+    session() {
+      this.syncNavTitle();
+    },
     idx() {
       this.multiSel = [];
     },
@@ -953,6 +960,27 @@ export default {
     },
     modName(m) {
       return MODULES[m] ? moduleLabel(m) : m === 'shenlun' ? '申论' : m || '未知';
+    },
+    // 导航栏标题随会话来源（卷名 / 错题重练 / 每日一练 / 模块 · 专项练习），与小程序 navTitleFor 同口径；非会话态回「刷题」
+    syncNavTitle() {
+      const title = practiceNavTitle(
+        {
+          session: this.session,
+          ptitle: this._ptitle,
+          source: this._source,
+          daily: this._daily,
+          dailyPast: this._dailyPast,
+          shizheng: this._shizheng,
+          szPast: this._szPast,
+          reinforce: !!this._reinforce,
+          module: this.lastModule,
+          submodule: this.lastSubmodule,
+        },
+        (m) => this.modName(m)
+      );
+      if (title === this._navTitle) return;
+      this._navTitle = title;
+      uni.setNavigationBarTitle({ title });
     },
     imgUrl(p) {
       return /^https?:/.test(p) ? p : (BASE_URL || '') + p;
@@ -1157,6 +1185,7 @@ export default {
         this.paperSheet = false;
         this._source = untimed ? (p.source || null) : null;
         this._ptitle = untimed ? (p.title || null) : null;
+        this._reinforce = null;
         this.items = items;
         this.idx = 0;
         this.picked = '';
@@ -1173,6 +1202,7 @@ export default {
           this.examMode = false;
           if (this.examTimer) clearInterval(this.examTimer);
           this.startQTimer();
+          this.saveSession();
           uni.showToast({ title: wrongOnly ? '只练本卷上次答错的题' : p.title + ' 开始：不计时逐题练', icon: 'none', duration: 1800 });
         } else {
           this.examMode = true;
@@ -1344,6 +1374,7 @@ export default {
         this.lastSubmodule = null;
         this._source = 'daily';
         this._ptitle = null;
+        this._reinforce = null;
         this._redoItems = null;
         this._reviewed = [];
         this.session = true;
@@ -1719,6 +1750,7 @@ export default {
       // 推荐埋点：记录本次练习的入口来源（reco/weak 等），随 answer_log 落库
       this._source = source || null;
       this._ptitle = null;
+      this._reinforce = null;
       this.session = false;
       this.beginLoadState();
       this.lastModule = module;
@@ -2155,6 +2187,7 @@ export default {
       this.lastSubmodule = s.lastSubmodule;
       this._source = (typeof s.source === 'string' && s.source) || null;
       this._ptitle = (typeof s.ptitle === 'string' && s.ptitle) || null;
+      this._reinforce = null;
       this._redoItems = redoItemsFromPending(s);
       this._reviewed = reviewedFromPending(s);
       const daily = dailyFromPending(s, Date.now());
@@ -2199,6 +2232,7 @@ export default {
       this.lastSubmodule = snap.submodule || null;
       this._source = snap.source || null;
       this._ptitle = snap.ptitle || null;
+      this._reinforce = null;
       this.autoSaved = false;
       this.resultSent = false;
       this.percentile = null;

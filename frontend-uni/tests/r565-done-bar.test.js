@@ -19,17 +19,26 @@ describe('doneBarPlan', () => {
       secondaryAct: 'retry',
     });
   });
-  it('按卷有错题：主「重练本卷错题（N 题）」，次「回卷库」list', () => {
-    expect(doneBarPlan([W, R], '2023 国考行测', false, '返回卷库')).toEqual({
+  it('按卷有错题：主「重练本卷错题（N 题）」，次「回卷库」（非卷库来源 list；从卷库进来 quit 回上一页）', () => {
+    expect(doneBarPlan([W, R], '2023 国考行测', false, '返回首页')).toEqual({
       primary: '重练本卷错题（1 题）',
       primaryAct: 'redo',
       secondary: '回卷库',
       secondaryAct: 'list',
     });
+    expect(doneBarPlan([W, R], '2023 国考行测', false, '返回卷库')).toEqual({
+      primary: '重练本卷错题（1 题）',
+      primaryAct: 'redo',
+      secondary: '回卷库',
+      secondaryAct: 'quit',
+    });
   });
   it('全对：主「再来一组」，次按实际落点文案 quit；按卷全对主「回卷库」', () => {
     expect(doneBarPlan([R, R], '', false, '返回错题本')).toEqual({ primary: '再来一组', primaryAct: 'retry', secondary: '返回错题本', secondaryAct: 'quit' });
-    expect(doneBarPlan([R], '2023 国考行测', false, '返回卷库')).toEqual({ primary: '回卷库', primaryAct: 'list', secondary: '返回卷库', secondaryAct: 'quit' });
+    expect(doneBarPlan([R], '2023 国考行测', false, '返回首页')).toEqual({ primary: '回卷库', primaryAct: 'list', secondary: '返回首页', secondaryAct: 'quit' });
+  });
+  it('R566：从卷库进来的按卷全对不再同时给「回卷库」+「返回卷库」，只剩单键「回卷库」quit', () => {
+    expect(doneBarPlan([R], '2023 国考行测', false, '返回卷库')).toEqual({ primary: '回卷库', primaryAct: 'quit', secondary: '', secondaryAct: 'quit' });
   });
   it('背题模式不出重练（即便有 _picked≠answer 的条目），主「再来一组」次「返回」', () => {
     expect(doneBarPlan([W, W], '', true, '返回首页')).toEqual({ primary: '再来一组', primaryAct: 'retry', secondary: '返回首页', secondaryAct: 'quit' });
