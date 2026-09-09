@@ -169,7 +169,6 @@
         <text class="fr-t">{{fixText}}</text>
         <l-icon name="chevron-right" size="16" tone="muted" />
       </view>
-      <kg-button wx:if="{{wrongCount > 0}}" variant="secondary" size="md" icon="rotate-ccw" bind:click="onRedoWrong">只重练本组错题（{{wrongCount}}）</kg-button>
       <view wx:if="{{dueReview > 0}}" class="duenudge" hover-class="duenudge--hover" bind:tap="onGoReview">
         <l-icon name="alarm-clock" size="20" tone="streak" />
         <view class="duenudge-l">
@@ -202,7 +201,8 @@
   </kg-button>
 </kg-action-bar>
 
-<kg-action-bar wx:if="{{finished}}" layout="actions" primaryText="再来一组" secondaryText="返回" bind:primary="onRetry" bind:secondary="onQuit" />
+<!-- 结算态操作栏：有错题时主按钮「只重练本组错题（N 题）」、「再来一组」降次级（practice.vue R553 同层级）；无错题/背题维持「再来一组 / 返回」 -->
+<kg-action-bar wx:if="{{finished}}" layout="actions" primaryText="{{doneBar.primary}}" secondaryText="{{doneBar.secondary}}" bind:primary="onDonePrimary" bind:secondary="onDoneSecondary" />
 
 <!-- 答题卡 -->
 <kg-sheet visible="{{cardOpen}}" title="答题卡" bind:close="onCloseCard">

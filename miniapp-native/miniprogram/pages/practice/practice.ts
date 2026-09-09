@@ -28,6 +28,8 @@ import type { Announcement } from '../../api/learn';
 import type { AnswerLogItem, AnswerLogReviewed, Question } from '../../api/types';
 import { askPrefill, openExplain } from '../../utils/ask-prefill';
 import { anonUid } from '../../utils/auth';
+import { doneBarPlan } from '../../utils/done-bar';
+import type { DoneAct, DoneBar } from '../../utils/done-bar';
 import { enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../utils/offline';
 import { drawOffline } from '../../utils/offline-pack';
 import {
@@ -139,6 +141,7 @@ Page({
     navTitle: '专项练习',
     totalSecs: 0,
     wrongCount: 0,
+    doneBar: doneBarPlan(0, false) as DoneBar,
     answeredCount: 0,
     dueReview: 0,
     redoReport: null as RedoReport | null,
@@ -815,6 +818,7 @@ Page({
     this.clearAutoTimer();
     const { items, right, beiMode } = this.data;
     const totalSecs = items.reduce((s, q) => s + (q._secs || 0), 0);
+    const wrongN = items.filter((q) => q._picked && q._picked !== q.answer).length;
     this.setData({
       finished: true,
       cur: null,
@@ -824,7 +828,8 @@ Page({
       curSource: '',
       pct: Math.round((right / items.length) * 100),
       totalSecs,
-      wrongCount: items.filter((q) => q._picked && q._picked !== q.answer).length,
+      wrongCount: wrongN,
+      doneBar: doneBarPlan(wrongN, beiMode),
       dueReview: 0,
       cardOpen: false,
       toolsOpen: false,
@@ -1051,6 +1056,17 @@ Page({
   onRetry() {
     const a = this._args as LaunchArgs;
     this.start({ ...a, mode: a.mode === 'redoset' ? '' : a.mode });
+  },
+  runDoneAct(act: DoneAct) {
+    if (act === 'redo') this.onRedoWrong();
+    else if (act === 'retry') this.onRetry();
+    else this.onQuit();
+  },
+  onDonePrimary() {
+    this.runDoneAct(this.data.doneBar.primaryAct);
+  },
+  onDoneSecondary() {
+    this.runDoneAct(this.data.doneBar.secondaryAct);
   },
   onQuit() {
     wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/home/home' }) });
