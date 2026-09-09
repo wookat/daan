@@ -30,7 +30,7 @@ describe('R544-1 「我的 → 我的收藏 0题」落收藏 tab（生产实测�
     expect(book).not.toMatch(/if \(this\.favs\.length\) this\.tab = 'fav'/);
   });
   it('收藏空态仍存在（0 收藏进入 fav tab 有引导而非空白）', () => {
-    expect(book).toMatch(/<kg-empty-state\s+v-if="!favs\.length"\s+compact\s+icon="star"\s+title="还没有本机收藏"/);
+    expect(book).toMatch(/<kg-empty-state\s+v-if="!favs\.length"\s+compact\s+icon="star"\s+title="还没有收藏"/);
   });
 });
 

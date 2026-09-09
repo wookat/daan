@@ -34,7 +34,9 @@ export default {
   height: var(--tag-h); padding: 0 var(--sp-8); border-radius: var(--r-xs);
   font-size: var(--fs-caption); font-weight: 500; line-height: 1; white-space: nowrap;
   background: var(--fill); color: var(--ink-3);
+  max-width: 100%;
 }
+.kg-tag__t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kg-tag--brand { background: var(--brand-soft); color: var(--brand-text); }
 .kg-tag--ok { background: var(--ok-soft); color: var(--ok-strong); }
 .kg-tag--bad { background: var(--bad-soft); color: var(--bad-strong); }

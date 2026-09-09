@@ -31,9 +31,18 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 - Reason chips (R559+) toggle off on a repeated click in practice/review/report and the more-actions sheet; the top-of-book reason *filter* row stays non-toggle. Test actual `aria-pressed` and PATCH behavior for both; an unselected separate wrong question is the clean test of optionality.
 - Cold homepage primary CTA can differ from returning-visitor CTA. Inspect visible text before choosing a role selector. Uni modal actions and answer-card number cells may not be buttons with the imagined accessible names; inspect or use visible UI coordinates rather than repeating selector timeouts.
 
+## R561 补充 — 收藏读侧云端对账（H5 错题本收藏 tab / 题页星星 / 我的·收藏数）
+
+- R561 起 H5 三处读侧在 `onShow` 先渲染本机 `favQuestions` 再 `GET /api/favs?uid=` 对账（`fav-sync.js syncCloudFavs`，同一时刻只发一次）。判「跨端收藏可见」：fixture 用 probe 头 `POST /api/favs`（或第二隔离 context 在收藏夹页收藏）造云端行 → **新冷 context**（本机 `favQuestions` 为空）打开错题本「收藏」tab → 期望 GET 200 后卡片出现、`favQuestions[0].id` 等于 qid、「我的」收藏数与题页该题星星一致；只看本机 storage 预置的条目不能证明读侧对账。
+- 对账语义（测试断言口径）：有 id 条目以云为准——云端被别处 `DELETE` 后，H5 切走再回（触发 onShow）该条目应消失；**收藏后 60s 内**云端未落库的有 id 条目会被保留（grace），测「别处取消消失」要用 `t` 早于 60s 的条目或直接用云端 fixture；无 id 条目（时政/内联/历史/云写失败降级）永远保留、不发 DELETE。
+- 竞态：等待 GET 期间在本机取消收藏 → 页面丢弃这次云结果（不复活），云端 DELETE 走 R560 `unfavCloud`；用 CDP 暂停 `GET /api/favs` 响应 → 点取消 → 放行，期望列表仍无该条目、storage 无该条目、DELETE 200。
+- 云失败降级：阻断 `GET /api/favs`（own uid）→ 本机列表/数量不变、无 console error；阻断 `POST /api/favs` 后在题页收藏 → `favQuestions` 该条目 `id === null`（local-only），下次对账不被删。
+- 恢复码恢复后 `favQuestions` 全部 `id` 置 `null`（`favsLocalOnly`），这是指定语义不是缺陷。
+- R560-2/3 几何：375 错题本空态 `.kg-empty__d`（或对应 desc 节点）`scrollHeight <= clientHeight`；卡面长试卷标签 `.pbadge` `scrollHeight == clientHeight == 20`，内部 `.kg-tag__t` 单行 ellipsis。R560-4：单条删除弹窗标题「删除这道错题？」、正文含「不可恢复」、确认按钮字面「删除」。
+
 ## R560 补充（testing agent）— 收藏双存储 / 历史无 id 条目 fixture / 云失败边界 / 冷 context 对照
 
-- H5 收藏有两套存储：本机 `favQuestions`（localStorage；刷题页星星与模考报告写入，错题本「收藏」tab 与「我的」计数只读它）与云端 `question_favs`（`/api/favs`；「收藏夹与笔记」页读并按题干合并本地条目）。判「取消收藏一致性」要同时核 ①本地列表 ②`DELETE /api/favs?uid&question_id` ③只读 DB 行 ④收藏夹页 ⑤同 uid **新隔离 context** 的收藏夹页；只看本地列表消失会漏云残留（R560 F1 形态）。
+- H5 收藏有两套存储：本机 `favQuestions`（localStorage；刷题页星星与模考报告写入，错题本「收藏」tab 与「我的」计数 R561 前只读它、R561 起 onShow 与云端对账）与云端 `question_favs`（`/api/favs`；「收藏夹与笔记」页读并按题干合并本地条目）。判「取消收藏一致性」要同时核 ①本地列表 ②`DELETE /api/favs?uid&question_id` ③只读 DB 行 ④收藏夹页 ⑤同 uid **新隔离 context** 的收藏夹页；只看本地列表消失会漏云残留（R560 F1 形态）。
 - #731 起本地条目带 `id`（题库题 qid；时政/内联 `null`）。测「历史无 id 条目」路径用 fixture：先 `POST /api/favs`（probe 头）云端收藏题 X，再向 `favQuestions` 预置不带 `id`、`question` 与 X 题干逐字一致的条目 → F5 → 取消 → 期望先 `GET /api/favs?uid=` 再 DELETE；「不误删」对照用题干云端不存在的本地条目 → 只有 GET、无 DELETE，云端其它行原样。
 - 云失败边界：有意 abort DELETE 时按指定语义是「本地清空、云行保留、toast 仍出」，这是 PASS 不是 FAIL；解除后到云收藏页真实取消并核 DB 恢复干净，abort 计入分账。
 - 错题卡「更多操作」层没有收藏入口；收藏只能在题页星星 / 模考报告 / 收藏夹页操作，测试指令别写「卡片收藏」。
