@@ -97,12 +97,9 @@
         <template #main>
           <!-- 首屏：今日待复习 N · 预计 M 分钟 · 累计 K + 开始复习 -->
           <kg-card v-if="!loading || items.length || due.length" class="head">
-            <kg-stat-row :items="[
-              { label: '今日待复习', value: dueTotal, unit: '题', tone: due.length ? 'brand' : undefined },
-              { label: '预计', value: due.length ? Math.max(1, Math.ceil(due.length * 0.8)) : 0, unit: '分钟' },
-              { label: '累计错题', value: items.length, unit: '题' },
-            ]" />
+            <kg-stat-row :items="headStats" />
             <kg-button v-if="due.length" variant="primary" size="lg" block class="head-cta" @click="startReviewFromCard">开始复习</kg-button>
+            <text v-else-if="items.length && !dueSynced" class="head-tip">{{ offlineView ? '离线中 · 今日待复习需联网后同步' : '正在同步今日待复习…' }}</text>
             <text v-else-if="items.length" class="head-tip">今天没有到期错题，待掌握 {{ todoItems.length }}，已掌握 {{ doneItems.length }}</text>
           </kg-card>
           <kg-card v-if="resumeInfo" variant="soft" class="resumecard" role="button" aria-label="继续刚才的复习">
@@ -636,6 +633,7 @@ export default {
       offlineView: false,
       due: [],
       dueTotal: 0,
+      dueSynced: false,
       dueLeft: 0,
       autoReview: false,
       reviewing: false,
@@ -788,6 +786,16 @@ export default {
     },
     todoItems() {
       return this.items.filter((m) => !m.mastered);
+    },
+    // 到期数只来自 /api/review 真实回包；快照即显/离线兜底期间未知，显「—」而非 0
+    headStats() {
+      const known = this.dueSynced;
+      const n = this.due.length;
+      return [
+        { label: '今日待复习', value: known ? this.dueTotal : '—', unit: '题', tone: n ? 'brand' : undefined },
+        { label: '预计', value: known ? (n ? Math.max(1, Math.ceil(n * 0.8)) : 0) : '—', unit: '分钟' },
+        { label: '累计错题', value: this.items.length, unit: '题' },
+      ];
     },
     hasExamMistakes() {
       return this.items.some((m) => m.source === 'exam');
@@ -1068,6 +1076,7 @@ export default {
       this.items = [];
       this.due = [];
       this.dueTotal = 0;
+      this.dueSynced = false;
       this.masteryMods = {};
       this.masteryT3 = {};
       this.offlineView = false;
@@ -1505,7 +1514,10 @@ export default {
           this.items = snap.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
         }
       }
-      if (this.items.length) this.loading = false;
+      if (this.items.length) {
+        this.loading = false;
+        this.applyPendingKp(true);
+      }
       try {
         const uq = 'uid=' + encodeURIComponent(anonUid());
         const [d, r] = await Promise.all([request('/api/mistakes?' + uq), request('/api/review?' + uq)]);
@@ -1513,6 +1525,7 @@ export default {
         this.items = d.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
         this.due = r.items;
         this.dueTotal = r.total || r.items.length;
+        this.dueSynced = true;
         if (this.celebrate) this.dueLeft = this.dueTotal;
         if (this.autoReview) {
           this.autoReview = false;
@@ -1534,6 +1547,7 @@ export default {
         if (c && c.items && c.items.length) {
           this.items = c.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
           this.offlineView = true;
+          this.applyPendingKp();
           uni.showToast({ title: '当前无网络，展示已缓存的错题', icon: 'none' });
         } else {
           this.loadErr = e.message || '网络异常';
@@ -1544,20 +1558,23 @@ export default {
       this.loading = false;
     },
     // 入向 ?kp=/?kp3= 深链：列表到达后校验命中才生效（fail-closed：无命中丢弃并纠正 URL）
-    applyPendingKp() {
+    // provisional：按屏上快照先落地筛选，不消费 pending、无命中不纠正 URL，真实回包后再终判一次
+    applyPendingKp(provisional = false) {
       const kp = this._pendingKp;
       const kp3 = this._pendingKp3;
       if (!kp && !kp3) {
-        if (this._pendingKpFix) {
+        if (this._pendingKpFix && !provisional) {
           this._pendingKpFix = false;
           this.syncBookUrl();
         }
         return;
       }
       const qt = this._pendingQt;
-      this._pendingKp = '';
-      this._pendingQt = '';
-      this._pendingKp3 = '';
+      if (!provisional) {
+        this._pendingKp = '';
+        this._pendingQt = '';
+        this._pendingKp3 = '';
+      }
       if (kp3) {
         const hit = this.items.find((m) => m.tag3_name === kp3);
         if (hit) {
@@ -1573,6 +1590,10 @@ export default {
         this.kp3Filter = '';
         return;
       }
+      if (provisional) return;
+      this.kpFilter = '';
+      this.qtFilter = '';
+      this.kp3Filter = '';
       this.syncBookUrl();
     },
     async loadMastery() {
