@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { modalEntry, modalKeyAction, isTextWithValue, pickRestoreTarget } from '../src/modal-policy.js';
-import { popAction, validMarker, markerOf, canPush } from '../src/sheet-history.js';
+import { popAction, validMarker, markerOf, canPush, pageKey } from '../src/sheet-history.js';
 
 const A11Y = readFileSync(new URL('../src/a11y-focus.js', import.meta.url), 'utf8');
 const SHEET = readFileSync(new URL('../src/components/kg-sheet/kg-sheet.vue', import.meta.url), 'utf8');
@@ -128,6 +128,14 @@ describe('sheet-history 标记有效性', () => {
     expect(validMarker(st, 'http://x/#/pages/home/home')).toBeNull();
     expect(validMarker({ position: 1 }, 'http://x/')).toBeNull();
     expect(validMarker(null, 'http://x/')).toBeNull();
+    // 同页面仅 query 不同（book syncBookUrl 就地 replaceState 写 ?mod=）仍有效；路径不同 / origin 不同无效
+    expect(validMarker(st, 'http://x/#/pages/book/book?mod=shuliang&sort=due')).toBe(7);
+    expect(validMarker(st, 'http://x/?r=1#/pages/book/book')).toBeNull();
+    expect(validMarker(st, 'http://y/#/pages/book/book')).toBeNull();
+    expect(validMarker({ __kgSheet: { t: 1, u: 42 } }, 'http://x/#/pages/book/book')).toBeNull();
+    expect(pageKey('http://x/#/pages/book/book?mod=a')).toBe('http://x/#/pages/book/book');
+    expect(pageKey('http://x/index.html#/pkgA/exam/list')).toBe('http://x/index.html#/pkgA/exam/list');
+    expect(pageKey('not a url')).toBe('not a url');
   });
 
   it('只在 vue-router 已写入 position 的 state 上叠条目（否则 delta 计算为 NaN）', () => {

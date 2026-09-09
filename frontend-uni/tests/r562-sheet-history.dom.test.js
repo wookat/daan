@@ -187,6 +187,26 @@ describe('sheet-history：Back 先关层', () => {
     r.detach();
   });
 
+  it('D1 ?mod 变体（生产 27f5508a FAIL）：开层 → Esc 关 → 页面就地 replaceState 写 ?mod= 到哑条目 → 重开 → Back 关层 → Back 离页（哑条目 URL 只差 query 仍视为本页）', async () => {
+    const r = mockRouter();
+    installSheetHistory(r);
+    const t1 = sheetOpened(() => {});
+    sheetClosed(t1);
+    // book.vue syncBookUrl：选筛选 chip 后 replaceState(history.state, '', '?mod=shuliang')，标记 u 仍是无 query 的旧 href
+    window.history.replaceState(window.history.state, '', '/#/pages/book/book?mod=shuliang');
+    expect(window.history.state.__kgSheet).toEqual({ t: t1, u: 'http://localhost:3000/#/pages/book/book' });
+    let open = true;
+    const t2 = sheetOpened(() => { open = false; });
+    await back();
+    expect(open).toBe(false);
+    expect(window.location.hash).toBe('#/pages/book/book?mod=shuliang');
+    sheetClosed(t2);
+    await back();
+    await flush();
+    expect(window.location.hash).toBe('#/pages/home/home');
+    r.detach();
+  });
+
   it('D2：同库序列下 Esc/X 关层后一次 Back 离页；关层后 router push 更深页面仍正常同步 prev', async () => {
     const r = mockRouter();
     installSheetHistory(r);
