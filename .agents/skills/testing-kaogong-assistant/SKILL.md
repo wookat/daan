@@ -3,6 +3,17 @@ name: testing-kaogong-assistant
 description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## Production CDP recording and audit safeguards
+- Daily fallback probes must invalidate **both** `dailySet` and `apiSnap:/api/daily_set`, then reload with the route interception active to reset the in-memory GET cache. Removing only raw `dailySet` can still return cached success and never exercise the fallback. Count the homepage prefetch failure separately from the subsequent user-click failure.
+- For reviewed-persistence tests, the default “答对自动跳下一题” can advance before a delayed screenshot. If testing the exact answered-item F5 state, disable it through the practice tools switch first; otherwise report the actual saved idx and do not claim a manual Next click.
+- Reinforcement fixtures need today's review log plus an incorrect answer or a qualifying error_reason such as `概念不清`; an all-correct group without that reason legitimately has no suggestion. Do not call the launcher directly to work around this.
+- Init-script DOM observers must wait for `document.documentElement` / DOMContentLoaded before `.observe()`. Audit `Runtime.exceptionThrown` in addition to console calls, and separate harness-source exceptions from application exceptions without claiming a globally error-free run.
+- Before recording, bring the **test context page** to the foreground, maximize its actual window (use `wmctrl` window ID if multiple Chrome windows exist), and inspect a desktop screenshot. `page.set_viewport_size(1440,900)` can produce full Playwright screenshots while the physical test window remains narrow and clips the GUI recording; maximizing the background Chrome is insufficient. Recheck after viewport switches.
+- UID switching should navigate once and wait for the required API responses; avoid immediate `goto` followed by `reload`, which can cancel `/api/mistakes`, `/api/review`, and `/api/review/cur`. Always distinguish API cancellations from image cancellations in final counts.
+- Attribute loading-pair warnings by stack/function and timestamp, not just text: a warning-free reinforcement path does not imply a warning-free paper-practice path.
+- For wrong-only retry recovery, compare qid order and cleared selections in `pendingSession`. After answering but before pressing Next, F5 may legitimately restore the answered item and its feedback. Verify both the user-facing fix-report count and independent SRS rows across reloads.
+- Untimed paper practice is a paper's “更多操作 → 按卷练习（不计时）” action; clicking the paper title can start a timed exam instead. Capture completion CTA screenshots after scrolling to the buttons, not only the score header.
+
 # Testing 考公错题助手
 
 ## 分组复习运行时取证补充（R552）
