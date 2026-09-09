@@ -42,4 +42,10 @@ describe('practice 页接线', () => {
     expect(ts).toMatch(/onDonePrimary\(\) \{\n\s+this\.runDoneAct\(this\.data\.doneBar\.primaryAct\);/);
     expect(ts).toMatch(/onDoneSecondary\(\) \{\n\s+this\.runDoneAct\(this\.data\.doneBar\.secondaryAct\);/);
   });
+  it('重练后「再来一组」回到原题组参数：start 记 _groupArgs（redoset 不覆盖），onRetry 优先用它', () => {
+    // 此前 onRedoWrong 把 _args 改成 {mode:'redoset', count: wrong.length, ptitle:'本组错题重练'}，
+    // 再来一组沿用 → 新一组只有 N 题且标题仍是「本组错题重练」；H5 retryGroup → start(lastModule) 用 groupSize 无此问题。
+    expect(ts).toMatch(/this\._args = args;\n\s+if \(args\.mode !== 'redoset'\) this\._groupArgs = args;/);
+    expect(ts).toMatch(/onRetry\(\) \{\n\s+const a = \(this\._groupArgs \|\| this\._args\) as LaunchArgs;\n\s+this\.start\(\{ \.\.\.a, mode: a\.mode === 'redoset' \? '' : a\.mode \}\);/);
+  });
 });

@@ -185,6 +185,8 @@ Page({
     noteBusy: false,
   },
   _args: null as LaunchArgs | null,
+  // 最近一次非「本组错题重练」的启动参数：重练后「再来一组」回到原题组规模/标题（H5 retryGroup → start(lastModule) 同口径）
+  _groupArgs: null as LaunchArgs | null,
   _source: null as string | null,
   _module: null as string | null,
   _submodule: null as string | null,
@@ -261,6 +263,7 @@ Page({
     if (this._starting) return;
     this._starting = true;
     this._args = args;
+    if (args.mode !== 'redoset') this._groupArgs = args;
     this._source = args.source;
     this._module = args.module;
     this._submodule = args.submodule;
@@ -1054,7 +1057,7 @@ Page({
     wx.switchTab({ url: '/pages/book/book' });
   },
   onRetry() {
-    const a = this._args as LaunchArgs;
+    const a = (this._groupArgs || this._args) as LaunchArgs;
     this.start({ ...a, mode: a.mode === 'redoset' ? '' : a.mode });
   },
   runDoneAct(act: DoneAct) {
