@@ -54,6 +54,12 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 - 模块名也出现在隐藏 SEO 导航里，点击限定可见 `role=button`；完成页退出后先核实际路由再选下一个入口——`practice.vue quit()` 在页面栈 >1 时 `navigateBack`，按钮文案「返回首页」从错题本 redo 进来实际回错题本。
 - 生产保护对象核证把「本轮 uid 精确清理 0 残留」与「五类全局 hash 不变」分开：同机其他会话并发写入时只按 uid/probe/时间戳只读归属，绝不清其他前缀；无 HTTP 响应的取消请求与响应状态总数分开计数。
 
+## R556 补充（testing agent）— 路由感知返回文案 / 重练与同类题取数差异 / 缓存跳过骨架
+- 路由感知返回文案要测全三处可见控件（加载骨架 text 按钮、加载失败层 secondary、完成页底部）并**点到实际落点**：H5 首页可能归一为 `#/` 而非 `#/pages/home/home`；进入前后各记一次错题本筛选 query；换来源再进只证「文案重算正确」，不要顺手声称「同一 Vue 实例复用」（那需要单独度量）。
+- 错题本「重练」消费 `/api/mistakes/redo` + `redoSet`，**不拉 `/api/questions`**：只 block questions 不会进加载失败层。要触发失败层用真实可达的取新题入口（错题本「更多操作 → 练 3 道同类」、首页模块卡），并在报告里与原重练触发区分。
+- 深链 Document 导航仍可能消费持久化的预取包直接跳过骨架：等可见骨架谓词 + 真被挂起的请求；单测骨架按钮时换冷模块并写明与指定 URL 的差异。URL `count=` 不核实际 `n/N` 前不要报「按 count 出题」。
+- 在路由拦截下测骨架退出时，Document 导航会取消无关的首页/progress 请求：把 requestId/时间戳与 Document 导航一起记录，和有意阻断分开列；不要因 console.error 为 0 且所有**已收到**响应为 200 就写「资源错误/取消为 0」。
+
 ## R549 补充 — 安全录入边界与 PDF 的非 UID 数据清理
 - 做「禁止付费 AI/OCR」的 UX 研究时，错题本「手动录入答案」可能只是卷码/答题卡 lookup，而非自由编写错题；先走真实表单确认，再决定是否能免费创建 `question_id=null`。如果只能走 AI，明确标 UNTESTED，不用 API fixture 冒充用户录入链路。
 - `POST /api/export/pdf` 会写**全局、非 UID scoped** 的 `paper_exports`。UI 导出前按当前部署实现从实际题序推导 code，并只读确认该 code 不存在；若已存在，不覆盖。清理时在停止录屏、关闭 context 后，校验新行 code/题序/title/created_at，再只删这一行；独立只读复查。仅清 UID-bearing 表不够。
