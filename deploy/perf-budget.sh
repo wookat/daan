@@ -19,6 +19,8 @@ MIN_SEO="${MIN_SEO:-0.95}"
 MAX_LCP_MS="${MAX_LCP_MS:-3000}"
 MAX_CLS="${MAX_CLS:-0.10}"
 MAX_BUNDLE_GZ_KB="${MAX_BUNDLE_GZ_KB:-160}"
+# Lighthouse 本机 CPU 基准（environment.benchmarkIndex）低于此值时 performance/LCP 只作 WARN 提示不可信，仍按预算判定
+MIN_BENCH="${MIN_BENCH:-1800}"
 
 FAIL=0
 
@@ -53,13 +55,21 @@ for u in "${URLS[@]}"; do
          echo "FAIL Lighthouse 运行失败: $u (rc=$rc, load=$(cut -d' ' -f1-3 /proc/loadavg 2>/dev/null))"
          echo "---- lighthouse stderr (tail 20) ----"; tail -n 20 "$err"; echo "----"
          FAIL=1; continue; }
-  python3 - "$out" "$u" "$MIN_PERF" "$MIN_A11Y" "$MIN_BP" "$MIN_SEO" "$MAX_LCP_MS" "$MAX_CLS" <<'EOF' || FAIL=1
+  python3 - "$out" "$u" "$MIN_PERF" "$MIN_A11Y" "$MIN_BP" "$MIN_SEO" "$MAX_LCP_MS" "$MAX_CLS" "$MIN_BENCH" <<'EOF' || FAIL=1
 import json, sys
-p, u, mperf, ma11y, mbp, mseo, mlcp, mcls = sys.argv[1:9]
+p, u, mperf, ma11y, mbp, mseo, mlcp, mcls, mbench = sys.argv[1:10]
 r = json.load(open(p))
 cats = r["categories"]
 lcp = r["audits"]["largest-contentful-paint"]["numericValue"]
 cls = r["audits"]["cumulative-layout-shift"]["numericValue"]
+env = r.get("environment", {})
+bench = float(env.get("benchmarkIndex") or 0)
+metrics = (r["audits"].get("metrics", {}).get("details", {}).get("items") or [{}])[0]
+print(f"INFO {u} benchmarkIndex={bench:.0f} observedLCP={metrics.get('observedLargestContentfulPaint')}ms "
+      f"observedFCP={metrics.get('observedFirstContentfulPaint')}ms TTFB={r['audits']['server-response-time']['numericValue']:.0f}ms")
+if bench and bench < float(mbench):
+    print(f"WARN {u} 本机 benchmarkIndex {bench:.0f} < {mbench}：Lantern 模拟的 performance/LCP 随本机 CPU 空闲度漂移，"
+          f"本次分数不可作回归结论（R562 实测：空闲 ~2600 → LCP ~1.0–1.4s；双核占满 ~1230 → LCP 2.3s），请空闲后重跑")
 rows = [
     ("performance", cats["performance"]["score"], float(mperf), ">="),
     ("accessibility", cats["accessibility"]["score"], float(ma11y), ">="),

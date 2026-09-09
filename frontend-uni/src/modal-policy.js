@@ -22,6 +22,46 @@ export function zIndexFor(depth, base = BASE_Z) {
   return (base > 0 ? base : BASE_Z) + depth
 }
 
+// 弹层节点 → 栈条目：box = 焦点圈定范围，hit = Esc 时派发 click 的遮罩，layers = 入栈需提 z-index 的节点。
+// .mask 自身即遮罩；wd-popup（KgSheet / wd-datetime-picker）的遮罩是同级 .wd-overlay
+// （wot closeOnClickModal 默认 true，点遮罩 → update:modelValue false + close，等价用户点遮罩）；
+// 无遮罩（modal=false）的 popup 只圈定焦点，Esc 不关（hit=null）。
+export function modalEntry(el, overlay) {
+  if (el.classList && el.classList.contains('wd-popup')) {
+    return { box: el, hit: overlay || null, layers: overlay ? [overlay, el] : [el] }
+  }
+  return { box: el, hit: el, layers: [el] }
+}
+
+// keydown → 弹层动作：输入法组合中的 Escape/Tab 交给 IME，不当弹层键；
+// 焦点在有内容的文本控件时首次 Escape 只退出该控件（blur），避免一键掉表单草稿；再按才关层。
+export function modalKeyAction(key, isComposing, textWithValue) {
+  if (isComposing) return null
+  if (key === 'Escape') return textWithValue ? 'blur' : 'dismiss'
+  if (key === 'Tab') return 'cycle'
+  return null
+}
+
+export function isTextWithValue(el) {
+  if (!el) return false
+  const tag = el.tagName
+  if (tag !== 'INPUT' && tag !== 'TEXTAREA') return false
+  return typeof el.value === 'string' && el.value.length > 0
+}
+
+// 关层后焦点归还：chain = 打开时的 activeElement 及其祖先链（由近到远）。触发元素仍在 → 归还它；
+// 触发元素已被卸掉（如 fab 菜单项 v-if 随菜单收起）→ 归还最近仍在的祖先内首个可聚焦项（fab 主按钮），避免落到 body。
+export function pickRestoreTarget(chain, alive, focusablesIn) {
+  if (!chain.length) return null
+  if (alive(chain[0])) return chain[0]
+  for (let i = 1; i < chain.length; i++) {
+    if (!alive(chain[i])) continue
+    const f = focusablesIn(chain[i])
+    if (f.length) return f[0]
+  }
+  return null
+}
+
 // 打开时焦点落点：有可聚焦元素取首个；空弹层落到 fallback 并补 tabindex=-1。
 export function pickFocusTarget(focusables, fallback) {
   if (focusables.length) return { el: focusables[0], needsTabindex: false }

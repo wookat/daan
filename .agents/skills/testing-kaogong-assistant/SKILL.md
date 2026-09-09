@@ -31,6 +31,15 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 - Reason chips (R559+) toggle off on a repeated click in practice/review/report and the more-actions sheet; the top-of-book reason *filter* row stays non-toggle. Test actual `aria-pressed` and PATCH behavior for both; an unselected separate wrong question is the clean test of optionality.
 - Cold homepage primary CTA can differ from returning-visitor CTA. Inspect visible text before choosing a role selector. Uni modal actions and answer-card number cells may not be buttons with the imagined accessible names; inspect or use visible UI coordinates rather than repeating selector timeouts.
 
+## R562 补充 — `kg-sheet` 键盘模态 / Back 先关层 / LCP 归因 benchmarkIndex
+
+- 弹层键盘矩阵（H5 ≥1024 键盘、也适用 375 外接键盘）：打开 → `document.activeElement` 应是层内「关闭」（`.kg-sheet__x`，`aria-label=关闭`）；层 DOM 为 `.wd-popup-wrapper > .wd-overlay + .wd-popup.kg-sheet`，`role=dialog aria-modal=true aria-label=<title>` 在 `.kg-sheet__in` 上；Tab×N / Shift+Tab 全程 `popup.contains(activeElement)`；Esc → `.wd-popup:visible` 归 0（`getClientRects().length`，关闭后 `display:none` 不卸载，别用 `count()`）；关后焦点归还触发元素；手录层触发项（fab 菜单「手录错题」）在层开着时已被 `v-if` 卸掉 → 期望归还 `.fab-main`（`aria-label=录入错题`），落 `BODY` 即 FAIL。
+- 文本控件：手录 `textarea` 有内容时首次 Esc 只退出控件（层仍开、草稿保留），再 Esc 才关；空 textarea 直接关。IME 组合中（`isComposing`）Esc/Tab 不当弹层键。
+- Back 序列（`history.state.__kgSheet:{t,u}`）：层开着 `go_back()` → 层关、URL 不变、`state.__kgSheet` 消失；X/Esc 关层后 **一次** Back 离页（哑条目自动补跳，用户感知一次）；叠层（筛选 → 导出确认）Back 只关栈顶。实测坑：vue-router 对同 URL pop 的 `afterEach` 先于 `sheet-history` popstate 触发，任何「按落地 state 覆写 prev」的改法都会重现「第一次 Back 不关层」。
+- 手录层再开：`page.get_by_text('手录错题')` 会命中已关闭 popup 里 `display:none` 的标题 → `count()>0` 但不可点、30s 超时；要用 `.fabmenu` 作用域取菜单项，且 Esc 后等 ≥800ms（遮罩 leave 动画期间点 fab 会被吃掉）。
+- Lighthouse `/` LCP 违例先看 `environment.benchmarkIndex`（perf-budget.sh 自 R562 打印 INFO/WARN）：空闲 ~2600 → LCP ~1.0–1.4s；双核占满 ~1230 → 2.3s、perf 0.82；TTFB/观测 LCP 全程正常。低于 1800 的跑分不作回归结论，空闲后重跑；`/tiku/` 静态页不受影响可作对照。
+- 小程序收藏 tab cloud-only 已审计：本机 `favQuestions` 唯一写入方 `pkgExam/report/report.ts toggleDetailFav`，报告项 `question_id` 恒非空 → 云端必有对应行，不会丢本机收藏。
+
 ## R561 补充 — 收藏读侧云端对账（H5 错题本收藏 tab / 题页星星 / 我的·收藏数）
 
 - R561 起 H5 三处读侧在 `onShow` 先渲染本机 `favQuestions` 再 `GET /api/favs?uid=` 对账（`fav-sync.js syncCloudFavs`，同一时刻只发一次）。判「跨端收藏可见」：fixture 用 probe 头 `POST /api/favs`（或第二隔离 context 在收藏夹页收藏）造云端行 → **新冷 context**（本机 `favQuestions` 为空）打开错题本「收藏」tab → 期望 GET 200 后卡片出现、`favQuestions[0].id` 等于 qid、「我的」收藏数与题页该题星星一致；只看本机 storage 预置的条目不能证明读侧对账。

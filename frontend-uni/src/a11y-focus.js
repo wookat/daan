@@ -1,7 +1,7 @@
 // 键盘可达性：uni-app h5 把交互元素编译为无 tabindex 的 uni-view/uni-text div，<button> 也是自定义元素
 // <uni-button>（非原生 button，不在 Tab 序列），整站无任何键盘落点。在 Vue runtime 挂 click 监听时给宿主补 tabindex + Enter/Space 激活；
 // role=button 延迟到 rAF 只给叶子级短文本元素，避免 button 角色扁平化容器子树语义。
-import { reconcileStack, zIndexFor, pickFocusTarget, nextTabIndex } from './modal-policy.js'
+import { reconcileStack, zIndexFor, pickFocusTarget, pickRestoreTarget, nextTabIndex, modalEntry, modalKeyAction, isTextWithValue } from './modal-policy.js'
 
 export const HOST_RE = /^UNI-(VIEW|TEXT|IMAGE|LABEL|BUTTON)$/
 
@@ -20,19 +20,32 @@ function assignRoles() {
   })
 }
 
-// 弹层（.mask 遮罩 + 内层 sheet）键盘支持：全站弹层统一为
-// <view class="mask" @click="close"> + 内层 @click.stop，点遮罩即关闭，
-// 故对 mask dispatch click 等价于用户点遮罩。Esc 关闭、Tab 圈定在弹层内、
-// 打开时焦点移入、关闭后焦点归还。
-// .mask 为 position:fixed（offsetParent 恒为 null），可见性用 getClientRects 判断
+// 弹层键盘支持：Esc 关闭、Tab 圈定在弹层内、打开时焦点移入、关闭后焦点归还。两类弹层同入一栈：
+// 1) <view class="mask" @click="close"> + 内层 @click.stop（export-confirm）：对 mask dispatch click 等价用户点遮罩；
+// 2) wd-popup（KgSheet 封装、wd-datetime-picker）：焦点圈在 .wd-popup，Esc 点同级 .wd-overlay（见 modal-policy modalEntry）。
+// 两者均 position:fixed（offsetParent 恒为 null），可见性用 getClientRects 判断（wd-popup 关闭后 display:none）
 function visible(el) {
   return el.getClientRects().length > 0
 }
 
+// 补 tabindex 的宿主 + 原生文本控件（uni 的 <textarea>/<input> 内层原生元素无 tabindex 属性，手录表单靠它们进 Tab 序）
+export const FOCUSABLE_SEL = '[tabindex], input, textarea, select, button, a[href]'
+
 function maskFocusables(mask) {
-  return Array.from(mask.querySelectorAll('[tabindex]')).filter(
-    (el) => el !== mask && visible(el) && el.getAttribute('tabindex') !== '-1'
+  return Array.from(mask.querySelectorAll(FOCUSABLE_SEL)).filter(
+    (el) => el !== mask && visible(el) && el.getAttribute('tabindex') !== '-1' && !el.disabled
   )
+}
+
+function ancestorChain(el) {
+  const chain = []
+  for (let n = el; n && n !== document.body && n !== document.documentElement; n = n.parentElement) chain.push(n)
+  return chain
+}
+
+function overlayOf(popup) {
+  const p = popup.parentElement
+  return p ? Array.from(p.children).find((c) => c !== popup && c.classList.contains('wd-overlay')) || null : null
 }
 
 // 弹层层级以「打开顺序栈」为唯一事实：多个 .mask 同 z-index 时 DOM 顺序
@@ -45,17 +58,31 @@ function overlayBase() {
 
 function initModalKeys() {
   let stack = []
+  // 最近一次 focusin 的祖先链：触发元素若在弹层显示的同一次 DOM 批量中被卸掉（fab 菜单项），
+  // MutationObserver 回调时 activeElement 已是 body，只能靠它找回归还位置。
+  let focusChain = []
+  document.addEventListener('focusin', (e) => {
+    focusChain = ancestorChain(e.target)
+  })
+  const openerChain = () => {
+    const a = document.activeElement
+    return a && a !== document.body ? ancestorChain(a) : focusChain
+  }
   const sync = () => {
-    const { removed, kept } = reconcileStack(stack, (s) => s.mask.isConnected && visible(s.mask))
+    const { removed, kept } = reconcileStack(stack, (s) => s.box.isConnected && visible(s.box))
     stack = kept
     removed.forEach(({ lastFocus }) => {
-      if (lastFocus && lastFocus.isConnected && typeof lastFocus.focus === 'function') lastFocus.focus()
+      const el = pickRestoreTarget(lastFocus, (n) => n.isConnected && visible(n), maskFocusables)
+      if (el && typeof el.focus === 'function') el.focus()
     })
-    document.querySelectorAll('.mask').forEach((m) => {
-      if (!visible(m) || stack.some((s) => s.mask === m)) return
-      stack.push({ mask: m, lastFocus: document.activeElement })
-      m.style.zIndex = String(zIndexFor(stack.length, overlayBase()))
-      const { el, needsTabindex } = pickFocusTarget(maskFocusables(m), m.firstElementChild || m)
+    document.querySelectorAll('.mask, .wd-popup').forEach((node) => {
+      if (!visible(node) || stack.some((s) => s.box === node)) return
+      const entry = modalEntry(node, node.classList.contains('wd-popup') ? overlayOf(node) : null)
+      stack.push({ ...entry, lastFocus: openerChain() })
+      entry.layers.forEach((m) => {
+        m.style.zIndex = String(zIndexFor(stack.length, overlayBase()))
+      })
+      const { el, needsTabindex } = pickFocusTarget(maskFocusables(entry.box), entry.box.firstElementChild || entry.box)
       if (needsTabindex) el.setAttribute('tabindex', '-1')
       el.focus()
     })
@@ -65,19 +92,28 @@ function initModalKeys() {
   document.addEventListener(
     'keydown',
     (e) => {
-      if (e.key !== 'Escape' && e.key !== 'Tab') return
       const top = stack.length ? stack[stack.length - 1] : null
       if (!top) return
-      const m = top.mask
-      if (e.key === 'Escape') {
+      const action = modalKeyAction(e.key, e.isComposing, isTextWithValue(document.activeElement))
+      if (!action) return
+      if (action === 'blur') {
         e.preventDefault()
         e.stopPropagation()
-        m.click()
+        const { el, needsTabindex } = pickFocusTarget([], top.box.firstElementChild || top.box)
+        if (needsTabindex) el.setAttribute('tabindex', '-1')
+        el.focus()
+        return
+      }
+      if (action === 'dismiss') {
+        if (!top.hit) return
+        e.preventDefault()
+        e.stopPropagation()
+        top.hit.click()
         return
       }
       e.preventDefault()
       e.stopPropagation()
-      const items = maskFocusables(m)
+      const items = maskFocusables(top.box)
       const ni = nextTabIndex(items.length, items.indexOf(document.activeElement), e.shiftKey)
       if (ni >= 0) items[ni].focus()
     },
