@@ -407,8 +407,15 @@ def api_list_mistakes(uid: str = ""):
 
 @router.patch("/api/mistakes/{mid}")
 def api_update_mistake(mid: int, body: dict):
-    """按 uid 隔离：只允许改自己的错题（uid 缺省时仅匹配无归属历史记录）。"""
+    """按 uid 隔离：只允许改自己的错题（uid 缺省时仅匹配无归属历史记录）。
+    error_reason 只收四档错因或空（空/None → NULL，即「未标注」，供再点已选项取消）。"""
     uid = str(body.get("uid") or "").strip()[:64] or None
+    if "error_reason" in body:
+        rz = body["error_reason"]
+        rz = "" if rz is None else str(rz).strip()
+        if rz and rz not in manual_mistake.MANUAL_REASONS:
+            raise HTTPException(400, "错因不在可选范围")
+        body = {**body, "error_reason": rz or None}
     if not db.update_mistake(mid, body, uid=uid):
         raise HTTPException(404, "错题不存在")
     return {"ok": True}

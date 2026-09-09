@@ -236,7 +236,8 @@
             class="chip"
             :class="{ on: detail.error_reason === rz }"
             role="button"
-            :aria-label="'错因自评：' + rz + (detail.error_reason === rz ? '，已选中' : '')"
+            :aria-pressed="detail.error_reason === rz ? 'true' : 'false'"
+            :aria-label="'错因自评：' + rz + (detail.error_reason === rz ? '，已选中，再点取消' : '')"
             @click="setDetailReason(rz)"
           >{{ rz }}</text>
         </view>
@@ -709,10 +710,10 @@ export default {
       const d = this.detail;
       if (!d || !d.mistake_id) return;
       const prev = d.error_reason || null;
-      if (prev === rz) return;
-      d.error_reason = rz;
+      const next = prev === rz ? '' : rz;
+      d.error_reason = next;
       try {
-        await request('/api/mistakes/' + d.mistake_id, { method: 'PATCH', data: { uid: anonUid(), error_reason: rz } });
+        await request('/api/mistakes/' + d.mistake_id, { method: 'PATCH', data: { uid: anonUid(), error_reason: next } });
       } catch (e) {
         d.error_reason = prev;
         uni.showToast({ title: '错因保存失败：' + e.message, icon: 'none' });
