@@ -115,6 +115,22 @@ describe('sheet-history popAction 决策表', () => {
     expect(popAction(1, null, openSet(1), a.skipping)).toEqual({ type: 'close', token: 1, skipping: false });
   });
 
+  it('R563-fix-2：从本页哑条目离开、落到更早一条哑条目（连开关多次）→ 继续 back 且不置 skipping，落到真条目再补一跳离页', () => {
+    const a = popAction(3, 2, openSet(), false);
+    expect(a).toEqual({ type: 'back', skipping: false });
+    const b = popAction(2, 1, openSet(), a.skipping);
+    expect(b).toEqual({ type: 'back', skipping: false });
+    expect(popAction(1, null, openSet(), b.skipping)).toEqual({ type: 'back', skipping: false });
+  });
+
+  it('R563-fix-2 护栏：从更深页面返回穿过多条哑条目 → skipping 一直保持，落到真条目停住不离页', () => {
+    const a = popAction(null, 2, openSet(), false);
+    expect(a).toEqual({ type: 'back', skipping: true });
+    const b = popAction(2, 1, openSet(), a.skipping);
+    expect(b).toEqual({ type: 'back', skipping: true });
+    expect(popAction(1, null, openSet(), b.skipping)).toEqual({ type: 'none', skipping: false });
+  });
+
   it('无标记普通历史移动不干预', () => {
     expect(popAction(null, null, openSet(), false)).toEqual({ type: 'none', skipping: false });
   });
