@@ -203,9 +203,19 @@ def api_exam_rank(attempt_id: int, uid: str = ""):
         f"SELECT uid, MAX(score) s, MIN(submitted_at) t FROM exam_attempts WHERE {pool} GROUP BY uid",
         pool_args,
     ).fetchall()
-    top = sorted(rows, key=lambda r: (-r["s"], r["t"]))[:10]
+    # 唯一口径：本人以本次 attempt（分/交卷时间）入池，榜单序号与顶部排名同出这一份有序列表
+    me = attempt["uid"]
+    ranked = sorted(
+        (
+            (attempt["score"], attempt["submitted_at"], r["uid"]) if r["uid"] == me
+            else (r["s"], r["t"], r["uid"])
+            for r in rows
+        ),
+        key=lambda e: (-e[0], e[1]),
+    )
+    top = ranked[:10]
     # 登录用户 uid 形如 u<id>，昵称在 users 表；匿名 uid 回落脱敏
-    user_ids = [int(r["uid"][1:]) for r in top if re.fullmatch(r"u\d+", r["uid"])]
+    user_ids = [int(u[1:]) for _, _, u in top if re.fullmatch(r"u\d+", u)]
     names = {}
     if user_ids:
         marks = ",".join("?" * len(user_ids))
@@ -247,19 +257,14 @@ def api_exam_rank(attempt_id: int, uid: str = ""):
         if len(rs) >= 2
     }
     board = [
-        {
-            "rank": i + 1,
-            "name": db.display_alias(r["uid"], names.get(r["uid"])),
-            "score": r["s"],
-            "me": r["uid"] == attempt["uid"],
-        }
-        for i, r in enumerate(top)
+        {"rank": i + 1, "name": db.display_alias(u, names.get(u)), "score": s, "me": u == me}
+        for i, (s, _, u) in enumerate(top)
     ]
-    scores = sorted((r["s"] for r in rows), reverse=True)
+    scores = [s for s, _, _ in ranked]
     n = len(scores)
     my = attempt["score"]
     below = sum(1 for s in scores if s < my)
-    rank = sum(1 for s in scores if s > my) + 1
+    rank = next(i + 1 for i, (_, _, u) in enumerate(ranked) if u == me)
     beaten = round(100 * below / n) if n > 1 else 100
     avg = round(sum(scores) / n, 1) if n else 0
     # 分数分布直方图（0-100 均分 10 桶）
