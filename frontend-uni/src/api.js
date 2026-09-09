@@ -325,9 +325,13 @@ const getCache = createGetCache();
 
 export function request(path, opts = {}) {
   const method = (opts.method || 'GET').toUpperCase();
-  // 写请求让短缓存整体作废：答题/签到后紧接着读 today、growth 必须拿到新值；埋点 track 不动任何读模型，不作废
-  if (method !== 'GET' && !isTrackPath(path)) getCache.clear();
-  if (method !== 'GET') return withAuthRetry(() => rawRequest(path, opts));
+  // 写请求让短缓存整体作废：答题/签到后紧接着读 today、growth 必须拿到新值；埋点 track 不动任何读模型，不作废。
+  // 发起时与落地后各作废一次：写在途期间发出的 GET 读到的是写前快照，不能在写落地后继续当新值复用
+  if (method !== 'GET') {
+    if (isTrackPath(path)) return withAuthRetry(() => rawRequest(path, opts));
+    getCache.clear();
+    return withAuthRetry(() => rawRequest(path, opts)).finally(() => getCache.clear());
+  }
   if (opts.timeout != null) return withAuthRetry(() => rawRequest(path, opts).then((d) => guardStaleUid(path, d)));
   const ttl = opts.ttl != null ? opts.ttl : getTtl(path);
   const key = opts.data == null ? path : path + '#' + JSON.stringify(opts.data);

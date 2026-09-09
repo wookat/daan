@@ -1,9 +1,9 @@
-// 键盘可达性：uni-app h5 把交互元素编译为无 tabindex 的 uni-view/uni-text div，
-// 整站无任何键盘落点。在 Vue runtime 挂 click 监听时给宿主补 tabindex + Enter/Space 激活；
+// 键盘可达性：uni-app h5 把交互元素编译为无 tabindex 的 uni-view/uni-text div，<button> 也是自定义元素
+// <uni-button>（非原生 button，不在 Tab 序列），整站无任何键盘落点。在 Vue runtime 挂 click 监听时给宿主补 tabindex + Enter/Space 激活；
 // role=button 延迟到 rAF 只给叶子级短文本元素，避免 button 角色扁平化容器子树语义。
 import { reconcileStack, zIndexFor, pickFocusTarget, nextTabIndex } from './modal-policy.js'
 
-const HOST_RE = /^UNI-(VIEW|TEXT|IMAGE|LABEL)$/
+export const HOST_RE = /^UNI-(VIEW|TEXT|IMAGE|LABEL|BUTTON)$/
 
 let rolePending = []
 let roleScheduled = false

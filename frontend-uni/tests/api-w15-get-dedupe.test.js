@@ -149,8 +149,10 @@ describe('createGetCache', () => {
 });
 
 describe('api.js request() 接线源锁', () => {
-  it('非 GET 与带 opts.timeout 的 GET 不进合并层，且写请求清空缓存', () => {
-    expect(reqBody).toMatch(/if \(method !== 'GET' && !isTrackPath\(path\)\) getCache\.clear\(\);\s*(\/\/[^\n]*\n\s*)?if \(method !== 'GET'\) return withAuthRetry\(\(\) => rawRequest\(path, opts\)\);/);
+  it('非 GET 与带 opts.timeout 的 GET 不进合并层，且写请求发起时与落地后各清空缓存一次（埋点除外）', () => {
+    expect(reqBody).toMatch(
+      /if \(method !== 'GET'\) \{\s*if \(isTrackPath\(path\)\) return withAuthRetry\(\(\) => rawRequest\(path, opts\)\);\s*getCache\.clear\(\);\s*return withAuthRetry\(\(\) => rawRequest\(path, opts\)\)\.finally\(\(\) => getCache\.clear\(\)\);\s*\}/
+    );
     expect(reqBody).toMatch(/if \(opts\.timeout != null\) return withAuthRetry\(\(\) => rawRequest\(path, opts\)\.then/);
   });
 
