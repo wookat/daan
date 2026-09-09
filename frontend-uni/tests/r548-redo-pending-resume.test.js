@@ -36,7 +36,7 @@ describe('R548 pendingSession redo 标记', () => {
     const now = 1700000000000;
     const items = [{ ...redoItem, _picked: '' }, { ...redoItem, id: 12 }];
     expect(parsePendingPractice({ t: now, items, lastModule: null, redo: 1 }, now)).toEqual({
-      done: 0, total: 2, module: '', ptitle: '', redo: true,
+      done: 0, total: 2, module: '', ptitle: '', redo: true, daily: null,
     });
     expect(parsePendingPractice({ t: now, items, lastModule: 'yanyu' }, now).redo).toBe(false);
   });
@@ -97,7 +97,7 @@ describe('R548 practice.vue 接线', () => {
     const tr = script.slice(script.indexOf('tryResume() {'), script.indexOf('async rateHs('));
     expect(tr).toContain('const title = pendingTitle(s);');
     expect(tr).toContain("content: (title ? '「' + title + '」' : '') + '上次还有一组未做完（'");
-    expect(script).toContain("import { collectPracticeProgress, adoptPracticeResume, pendingTitle, redoItemsFromPending, REDO_PENDING_TITLE } from '../../practice-progress.js';");
+    expect(script).toContain("import { collectPracticeProgress, adoptPracticeResume, pendingTitle, redoItemsFromPending, dailyFromPending, dailyPendingFor, cnDayOf, REDO_PENDING_TITLE } from '../../practice-progress.js';");
   });
 
   it('完成页 redoReport 与「再来一组」仍按 _redoItems && !lastModule 判重练（恢复后语义不丢）', () => {
@@ -114,6 +114,6 @@ describe('R548 practice.vue 接线', () => {
 describe('R548 首页续练卡', () => {
   it('标签：卷名 > 错题重练 > 模块名', () => {
     expect(home).toContain('{{ prLabel(practiceResume) }} · 已做 {{ practiceResume.done }}/{{ practiceResume.total }} 题');
-    expect(home).toMatch(/prLabel\(r\) \{\s*if \(r\.ptitle\) return r\.ptitle;\s*if \(r\.redo\) return REDO_PENDING_TITLE;\s*return this\.prModName\(r\.module\);/);
+    expect(home).toMatch(/prLabel\(r\) \{\s*if \(r\.ptitle\) return r\.ptitle;\s*if \(r\.redo\) return REDO_PENDING_TITLE;\s*if \(r\.daily\) return dailyPendingTitle\(r\.daily\);\s*return this\.prModName\(r\.module\);/);
   });
 });

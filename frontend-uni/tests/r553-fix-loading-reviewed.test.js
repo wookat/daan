@@ -93,7 +93,7 @@ describe('R553-fix ② practice.vue reviewed 随 pendingSession 持久', () => {
   it('saveSession 快照带 reviewed；adoptLocalPending 经 reviewedFromPending 还原', () => {
     expect(PRACTICE).toContain("import { reviewedMasteredCount, fixReportText, reviewedFromPending } from '../../review-advance.js';");
     const save = fnBody('    saveSession() {', '    pushPracticeProgress() {');
-    expect(save).toContain("redo: this._redoItems && this._redoItems.length && !this.lastModule ? 1 : 0,\n        reviewed: this._reviewed || [],\n      });");
+    expect(save).toContain("redo: this._redoItems && this._redoItems.length && !this.lastModule ? 1 : 0,\n        reviewed: this._reviewed || [],\n        daily: this._daily && this._dailyDate ? { date: this._dailyDate, past: !!this._dailyPast } : null,\n      });");
     const adopt = fnBody('    adoptLocalPending(s) {', '    adoptRemoteSnap(snap) {');
     expect(adopt).toContain('this._redoItems = redoItemsFromPending(s);\n      this._reviewed = reviewedFromPending(s);');
   });

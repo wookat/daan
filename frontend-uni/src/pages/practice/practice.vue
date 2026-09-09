@@ -76,7 +76,7 @@
             @action="stayHere"
           />
           <view v-if="picked && picked !== cur.answer" class="reasons" role="group" aria-label="错因自评">
-            <text class="rz-t">错因自评</text>
+            <text class="rz-t">错因自评（选填）</text>
             <view
               v-for="rz in REASONS"
               :key="rz"
@@ -398,7 +398,7 @@ import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 import { qStatLine, qDifficulty } from '../../q-stat.js';
 import { toggleExcl, pickWithExcl, exclVisible } from '../../exam-excl.js';
-import { collectPracticeProgress, adoptPracticeResume, pendingTitle, redoItemsFromPending, REDO_PENDING_TITLE } from '../../practice-progress.js';
+import { collectPracticeProgress, adoptPracticeResume, pendingTitle, redoItemsFromPending, dailyFromPending, dailyPendingFor, cnDayOf, REDO_PENDING_TITLE } from '../../practice-progress.js';
 import { weakSpots as buildWeakSpots } from '../../weak-spots.js';
 import { isExplanationCovered } from '../../exp-dup.js';
 import { reviewedMasteredCount, fixReportText, reviewedFromPending } from '../../review-advance.js';
@@ -1251,12 +1251,18 @@ export default {
         uni.showToast({ title: '每日一练按做题模式进行', icon: 'none', duration: 1200 });
       }
       if (this._starting) return;
+      const cnDay = cnDayOf(Date.now());
+      // 同一天的题组本机已有未做完快照时接着做，不重拉同一组从第 1 题覆盖进度
+      const pend = uni.getStorageSync('pendingSession');
+      if (!this.session && dailyPendingFor(pend, archiveDate || cnDay, Date.now())) {
+        this.adoptLocalPending(pend);
+        return;
+      }
       this._starting = true;
       let fallback = false;
       uni.showLoading({ title: '出题中…', mask: true });
       try {
         // 首页预取的题组按日确定，date 匹配当日即可复用（秒开，不再等网络）
-        const cnDay = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
         const past = archiveDate && archiveDate !== cnDay;
         const cached = uni.getStorageSync('dailySet');
         const d = past
@@ -1277,8 +1283,13 @@ export default {
         this.percentile = null;
         this.lastModule = null;
         this.lastSubmodule = null;
+        this._source = 'daily';
+        this._ptitle = null;
+        this._redoItems = null;
+        this._reviewed = [];
         this.session = true;
         this.startQTimer();
+        this.saveSession();
         uni.showToast({ title: this._dailyPast ? '往期每日一练 · ' + d.date : '每日一练 · 今日全站同题', icon: 'none' });
       } catch (e) {
         // 接口异常回退随机抽题，每日一练不因后端故障不可用；start() 有 _starting 互斥，须在 finally 复位后再回退
@@ -2039,6 +2050,7 @@ export default {
         ptitle: this._ptitle || '',
         redo: this._redoItems && this._redoItems.length && !this.lastModule ? 1 : 0,
         reviewed: this._reviewed || [],
+        daily: this._daily && this._dailyDate ? { date: this._dailyDate, past: !!this._dailyPast } : null,
       });
       clearTimeout(this._ppTimer);
       this._ppTimer = setTimeout(() => this.pushPracticeProgress(), 1500);
@@ -2075,12 +2087,17 @@ export default {
       this._ptitle = (typeof s.ptitle === 'string' && s.ptitle) || null;
       this._redoItems = redoItemsFromPending(s);
       this._reviewed = reviewedFromPending(s);
+      const daily = dailyFromPending(s, Date.now());
+      this._daily = !!daily;
+      this._dailyDate = daily ? daily.date : '';
+      this._dailyPast = daily ? daily.past : false;
       this.autoSaved = false;
       this.resultSent = false;
       this.percentile = null;
       this.session = true;
       this.startQTimer();
       if (this._redoItems) uni.showToast({ title: '继续' + REDO_PENDING_TITLE, icon: 'none' });
+      else if (daily) uni.showToast({ title: '继续' + (daily.past ? '往期每日一练' : '今日一练') + ' · 第 ' + (this.idx + 1) + '/' + this.items.length + ' 题', icon: 'none' });
     },
     adoptRemoteSnap(snap) {
       this.items = snap.items;
