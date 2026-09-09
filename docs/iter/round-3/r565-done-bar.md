@@ -59,11 +59,18 @@
 - 小程序：`tsc --noEmit` 0、`lint` 0、vitest **14 文件 71 通过**（+1 文件 +2）。
 - 本机 dist（`python3 -m http.server 8566`）+ 生产 API 只读代理（GET 转发带 `X-Kg-Probe: 1`，写请求本地 200/abort，0 生产写入）CDP 走查：375×667 结算态底栏 `position:fixed` top 598 / bottom 667，两键 136 + 195 px 各一行，「只重练本组错题（7 题）」不换行，页内「分享成绩 / 返回首页」位于底栏之上不被遮；1440 底栏 `sticky`，391 + 629 px。截图 `~/r565/shots/done-{375,1440}-*.png`。
 
-## 3. 生产复验
-（发版后由测试代理回填：rev / bundle / 用例 A–F / 请求分账 / 清理。）
+## 3. 生产复验（`27e52f96 → 4e9137b3`，bundle `index-DZIsT9KZ.js`；发版 6b LH `/` 0.98/1.00/1.00/1.00 LCP 1977 ms、`/tiku/` 全 1.00）
+375 主流程 + 1440 A/C 抽检，真实 UI 作答、物理 F5、DOM/存储/请求审计，6 个 `test-r565-4e9137b3-*` uid，**A–F 全 PASS、无 P0/P1**（PR #745 评论附截图；报告 `~/r565/prod/report.md`、53 张截图索引 `verification-ledger.json`、录像 `~/screencasts/r565-production-completion/`）：
+- A 普通错 2/10：主「只重练本组错题（2 题）」/ 次「再来一组」；375 `fixed` bottom=667、1440 `sticky` top 807；两键 44 px 单行、主 flex 1.7；`.has-bar` 88 px，滚到底「分享成绩」bottom 531 / 文字返回 579 ≤ 底栏 top 598。点主位就地重开恰原 2 个错 qid（588512/634004，题干一致）；物理 F5 → 恢复层 → 继续仍 1/2、pending 整对象不变；重练全对后「再来一组 / 返回首页」；「再来一组」两次分别走无缓存 1 GET 与 prefetchPack 0 GET，均 1/10、十 qid 与前组零交集。
+- B 全对 10/10：主「再来一组」/ 次「返回首页」→ `#/`，页内无重复返回。
+- C 真实 75 题不计时卷（卷库卡「按卷练习（不计时）」→ `paper_questions?pid=5`、0 `exam/start`）：完成页卷名 +「重练本卷错题（1 题）/ 回卷库」+ 页内文字返回；回卷库 → `#/pkgA/exam/list`；几何同 A。
+- D 背题：无重练、无分享，主「再来一组」。E 分享 → 「成绩已复制」toast；完成态 F5 回普通 1/10（既有行为，不声称结算态跨刷新保留）。F 练习中「下一题/完成」正常；R564 恢复层（答 2 F5 → 继续 3/10，0 questions GET / 0 progress POST，1 条 `practice_resume_cont` 200）正常。
+- 分账：2777 CDP 事件 = 2402 HTTPS 全 200 + 375 `data:` 图标；API 824 条非 2xx 0、`/api/track` 400 0（13 条全 200）；console error / runtime / uni warning / 付费 0；9 条 console warning 为 Playwright 阻止 Service Worker 注册（harness）。清理精确删 245 行、41 表残留 0、共享 R562 42 行与保护 hash 保持。
+- 我的测试指令两处口径修正（非缺陷）：同模块重练 `pendingSession.redo=0` 是 R553 设计（`retryWrong` 保留 `lastModule`，`redo` 只标错题本重练）；「再来一组」命中 R555 中场预取 0 GET 合法。4 次 harness 定位偏差（`.mod-tile`→`.kg-mod`、卷库入口文案「模考」非「真题卷库」等）已修正披露。
+- 登记 **R565-1 既有 UX**：按卷练习页面标题仍静态「刷题」、内容头为当前题模块（`practice.vue` 无 `setNavigationBarTitle`），完成页归卷态正确；候选小改「按卷会话 nav 标题显卷名」。
 
 ## 4. 边界与登记
 - 1.1 的 devtools 节流样本不完整（Lighthouse 超时告警），真实低端机/弱网表现未验证；无 RUM。
 - 1.2 粉笔无一手截图，只作方向对照；未复制任何竞品素材。
 - 小程序两处改动仅 tsc/eslint/源锁，未上真机（R536-1 累计）。
-- H5 `redo`/`daily`/`remote` 来源完成页在本地只走了普通 `module=` 路径，其余来源与按卷完成页交生产复验。
+- 生产未覆盖：按卷全对分支与按卷主位实际重练、`redo`/`daily`/`remote` 来源完成页（次位「返回错题本 / 返回」两态）、跨设备恢复、SW/offline、IME、其它浏览器。
