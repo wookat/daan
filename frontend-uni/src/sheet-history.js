@@ -8,10 +8,20 @@ export function markerOf(state) {
   return m && typeof m.t === 'number' ? m : null
 }
 
-/** 弹层条目对当前 URL 才有效：vue-router replace 会把旧 state 整体拷到新条目，跨页残留的标记视为无 */
+/** 页面身份：origin + pathname + hash 路由路径（不含 query）——页面自己 replaceState 改筛选参数（book syncBookUrl）不换页 */
+export function pageKey(href) {
+  try {
+    const u = new URL(href)
+    return u.origin + u.pathname + u.search + u.hash.split('?')[0]
+  } catch {
+    return String(href || '')
+  }
+}
+
+/** 弹层条目对当前页面才有效：vue-router replace 会把旧 state 整体拷到新条目，跨页残留的标记视为无 */
 export function validMarker(state, href) {
   const m = markerOf(state)
-  return m && m.u === href ? m.t : null
+  return m && typeof m.u === 'string' && pageKey(m.u) === pageKey(href) ? m.t : null
 }
 
 /**

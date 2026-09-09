@@ -96,3 +96,46 @@ Lighthouse 12.x `simulate`（cpuSlowdownMultiplier 4），生产 `2c0868b3` 同 
 - 小程序 `t-popup` 层键盘无意义（无键盘），Back 手势由微信原生栈接管 → 小程序侧不做。
 - R561-1 `scrollLeft` 既有 P3 继续登记，与本轮无关。
 - 本地 probe 唯一 console error `The script has an unsupported MIME type ('text/html')` 为本地静态服务器 `sw.js` 404 回退 HTML，非产品。
+
+## 9. 生产黑盒复验一（`a5164498`，#736 发版）→ 两条真实 FAIL → 热修 #737
+
+报告 `~/kaogong-reports/r562-sheet-modal-keys-a5164498-prod-verify.md`（testing agent，375 + 1440，Playwright `page.go_back()` 与真 Chrome Alt+Left 两种 Back）。
+
+| 项 | 结果 | 处置 |
+|---|---|---|
+| A 更多操作 / B 筛选 / C 手录：role=dialog、aria-label、初焦点、Tab/Shift+Tab 圈定（26–36 次）、Esc 归焦点、手录两阶段 Esc、`.fab-main` 归还 | PASS | — |
+| D1 首层开着 Back | **FAIL** 两宽：`__kgSheet` 被清但层仍开、焦点仍在 X | 根因见下，#737 |
+| D2 Esc/X 关层后一次 Back 离页 | **FAIL** 两宽：第一次 Back 仍在错题本 | #737 |
+| D3 筛选层叠导出确认层逐层 Back | **FAIL**：第一次两层都不关、第二次两层同消失 | #737（含 ExportConfirm 未登记 token） |
+| D4 物理 F5 落哑条目 | PASS（观察口径） | — |
+| E picker 初焦点/Tab | PASS；**Esc 后焦点释放 FAIL**：视觉滑出后 >20s 仍 `wd-slide-up-leave-active`、rects=1、焦点留「取消」、Tab 圈离屏取消/完成 | #737 |
+| F 删除确认（`uni-modal`）无 `role=dialog` | FAIL（**既有、非 R562 范围**，R562 只改 `KgSheet`） | 登记 R562-1 |
+| F 错题本内切「收藏」tab 不发 GET（云 fixture 不出现）；同 uid 冷 context onShow GET 200 导入 | 入口语义差异，**不构成 R561 对账坏**；登记 R562-2 待论证「切 tab 是否应拉云」 | 登记 |
+| F export `.mask` Tab/Esc、练习页键盘、Esc 不离页 | PASS | — |
+| G console/runtime/loading warn 0、付费 0、DB 精确清 10 行 0 残留 | PASS | — |
+| UNTESTED | 真实 IME、`position` 缺失分支、真机/其它浏览器/29 处全部 sheet、picker 遮罩禁用分支、手录提交/导出/订阅 | |
+
+### 9.1 D1/D2/D3 根因（本地 `~/r562/d1_repro2.py` 对生产逐步 History 快照 + 源码）
+
+- 设计前提「同 URL 的 afterEach 可用 `href === curHref` 识别并忽略」不成立：错题本 `syncBookUrl` 写 `?mod=`、uni tabBar 切换在 afterEach **之后**再 `replaceState` 改 URL，都不经 router → `curHref` 与真实地址错位。
+- 开层后 Back：vue-router 的 popstate 监听（`createRouter` 时注册，先于本模块）先跑 afterEach，`href !== curHref` 被当成新路由 → `prev` 被落地条目（无标记）覆写 → 本模块 `onPop` 的 `popAction(prev=null, land=null)` 判成 noop → 层不关（D1）；哑条目同理不被补跳（D2）；叠层 token 与条目错位（D3）。生产日志坐实：失败序列 Back 后**没有**本模块的 `history.back()` 调用，成功序列（B：从 about:blank 前进回来，`curHref` 恰好对齐）有。
+- 修法：不再猜，订阅 `router.options.history.listen(noteHistoryPop)`（vue-router 4 `createWebHashHistory`，生产 bundle 核为 function，同步、在其 popstate 处理最前）打 `popping`；`noteRouteChange` 见标记即跳过、由 `onPop` 决定 `prev`；`onPop` 也清标记兜底导航被取消的情况。
+- 新增回归 `r562-sheet-history.dom.test.js`：mock router 复刻 listen → afterEach 顺序，D1（页面自改 URL 后开层）/ D2 / D3 / 标记兜底 4 例；**修前源码 D1、D2 两例 FAIL**（已核），修后 13 例全过。
+
+### 9.2 picker 焦点根因
+
+`wd-datetime-picker` 内 `wd-popup :hide-when-close="false"`（wot 注释：picker-view 隐藏时改值会触发多次 change），关闭后 `wd-transition` 不加 `display:none`，永久停在 `wd-slide-up-leave-to/-active`、屏外 y≈812、`getClientRects().length===1` → 旧 `visible()` 几何判断视为仍开着。修：`isTransitionLeaving(className)`（`/^wd-[\w-]*-leave(-active|-to)?$/`）纳入 `modalOpen`，进入离场即出栈归还焦点；并对离场态 popup 设 `inert`（本地实测不摘出时原生 Tab 两步仍落回离屏「取消」）。
+
+### 9.3 热修本地门与本地复验（#737，`27f5508a`）
+
+vitest 全量 1375（+5）/ eslint + tokens 0 / build:h5 / `diff --check` 空。本地 dist + 生产 API 反代（`~/r562/d3_local.py`、`picker_local.py`）：D1/D2/D3 375 与 1440 `page.go_back()` 全 PASS（层逐层关、`__kgSheet` 随之消失、焦点回触发按钮、最后一次 Back 回首页）；提醒页 picker Esc → 焦点回「提醒时间」cell、Tab ×3 不进 popup、重开焦点「取消」→ Tab「完成」→ Esc 再归还。headless Playwright 不处理 Alt+Left（状态零变化，harness 限制非产品），真 Chrome Alt+Left 交生产复验二。
+
+## 10. 生产黑盒复验二（`27f5508a`，#737 发版）→ 1 条新 FAIL（D1 ?mod 变体）→ 热修 #738
+
+testing agent 中途实时口径（终报另回填）：D1 plain / D2 / D3 在 375 & 1440 × `page.go_back()` & 真 Chrome Alt+Left 全 PASS；E picker Esc 归还「提醒时间」cell、popup `inert`、即时与 ≥3s 后各 5 次 Tab 不进 picker、重开「取消」→ Tab「完成」→ Esc 归还 PASS；更多操作/手录窄回归 PASS；`uni-modal` 删除确认无 role 单列（既有）。
+
+- **FAIL D1 ?mod 变体**（四象限同一现象）：错题本 → 筛选 → 选模块 chip → Esc → URL 变 `?mod=…` → 重开筛选 → Back1 视觉关层/焦点回按钮，但 `history.state.__kgSheet` 残留 `{t:1, u:'…/book'}`（u 无 query）→ Back2 只退到无 query 的错题本条目、未离页。
+- 根因：`book.vue syncBookUrl` 用 `history.replaceState(history.state, '', '?mod=…')` **就地改哑条目 URL**（不经 router），标记 `u` 仍是旧 href；`validMarker` 严格 `m.u === href` → 哑条目判为「跨页残留」不再补跳。
+- 修法（#738）：`pageKey(href) = origin + pathname + search + hash 路由路径（去 hash query）`，`validMarker` 按页面身份比对；跨路由 replace 拷贝的残留标记仍无效（路径不同）。jsdom 回归「D1 ?mod 变体」修前 FAIL / 修后 PASS；`pageKey/validMarker` 纯函数用例补 query/search/origin/非字符串 u 分支。
+- 本地复验（`~/r562/d1mod_local.py`，本地 dist + 生产 API）：375 & 1440 → Back1 关层、`?mod=yanyu` 保留、焦点回「筛选与排序」；Back2 离开错题本；`d3_local.py` D1/D2/D3 无回归。
+- 另：「首页 → tabBar 错题本」为 uni `switchTab`（`state.replaced=true`）把首页条目 replace 掉，最后一次 Back 回到进入前的上一 document 而非「首页」——uni 既有语义、非本轮；D 系列口径为「离开错题本」。
