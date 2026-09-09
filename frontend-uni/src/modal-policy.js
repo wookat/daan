@@ -81,6 +81,13 @@ export function shouldSwallowKeyup(armed, key, gen) {
   return !!armed && armed.key === key && (armed.consumed || armed.gen !== gen)
 }
 
+// 入栈首帧 focus() 可能静默失败（uni-actionsheet 面板 visibility 走 0.3s transition，那一帧计算值仍 hidden）；
+// 按帧重试上限 ≈ 0.5s（30 帧 @60Hz），超过即放弃，避免层被卡住时永远轮询
+export const FOCUS_RETRY_MAX = 30
+export function shouldRetryFocus(tries) {
+  return tries < FOCUS_RETRY_MAX
+}
+
 // wot wd-transition 离场态：关闭后先挂 `wd-<name>-leave(-active|-to)`，动画结束才 display:none；
 // hide-when-close=false 的 popup（wd-datetime-picker 为避免 picker-view 隐藏时乱发 change 有意不隐藏）会永久留在
 // 离屏的 leave-to 态且仍有 client rect，仅按几何可见会把它当作开着的模态层。

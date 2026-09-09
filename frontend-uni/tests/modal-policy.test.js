@@ -101,7 +101,7 @@ describe('nextTabIndex', () => {
 });
 
 // R563：uni-h5 原生层（uni.showModal / uni.showActionSheet）进栈的纯决策
-import { modalEntry, modalKeyAction, nativeKind, initialFocusables, shouldSwallowKeyup, isTransitionLeaving, NATIVE_BTN_SEL } from '../src/modal-policy.js';
+import { modalEntry, modalKeyAction, nativeKind, initialFocusables, shouldSwallowKeyup, shouldRetryFocus, FOCUS_RETRY_MAX, isTransitionLeaving, NATIVE_BTN_SEL } from '../src/modal-policy.js';
 
 const tag = (tagName, cls = []) => ({ tagName, classList: { contains: (c) => cls.includes(c) } });
 
@@ -142,6 +142,13 @@ describe('R563 原生层条目', () => {
     expect(shouldSwallowKeyup({ key: 'Escape', gen: 3, consumed: true }, 'Escape', 3)).toBe(true);
     expect(shouldSwallowKeyup({ key: 'Enter', gen: 3, consumed: true }, 'Escape', 4)).toBe(false);
     expect(shouldSwallowKeyup(null, 'Enter', 4)).toBe(false);
+  });
+
+  it('入栈首帧 focus 被拒后逐帧重试，上限 30 帧（≈ 0.5s，覆盖 uni-actionsheet 0.3s visibility 过渡）后放弃', () => {
+    expect(FOCUS_RETRY_MAX).toBe(30);
+    expect(shouldRetryFocus(0)).toBe(true);
+    expect(shouldRetryFocus(29)).toBe(true);
+    expect(shouldRetryFocus(30)).toBe(false);
   });
 
   it('Enter/Space 在原生层 div 按钮上 → activate；不在按钮上 → null（Enter 留给 uni 确定）；Escape/Tab 优先级不变', () => {
