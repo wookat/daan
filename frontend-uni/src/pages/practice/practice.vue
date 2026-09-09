@@ -1603,15 +1603,19 @@ export default {
       const uid = uni.getStorageSync('anonUid') || '';
       const pk = uni.getStorageSync('prefetchPack');
       if (pk && pk.module === module && pk.limit === limit && pk.uid === uid && Date.now() - pk.ts < 5 * 60 * 1000) return;
-      const seen = new Set(this.items.map((q) => q.id));
+      const seenIds = this.items.map((q) => q.id).filter((id) => Number.isInteger(id));
+      const seen = new Set(seenIds);
+      // 当组未答完的到期题尚无 answer_log，服务端要靠 exclude 才不会再次混入下一组
       request(
-        '/api/questions?limit=' + limit + (uid ? '&uid=' + encodeURIComponent(uid) + '&mix_due=1' : '') +
+        '/api/questions?limit=' + limit +
+          (uid ? '&uid=' + encodeURIComponent(uid) + '&mix_due=1&exclude=' + seenIds.join(',') : '') +
           (module ? '&module=' + module : ''),
         { timeout: 45000 }
       )
         .then((d) => {
           const items = ((d && d.items) || []).filter((q) => !seen.has(q.id));
-          if (items.length) uni.setStorageSync('prefetchPack', { module, limit, uid, items, ts: Date.now() });
+          // 不足一组不缓存（否则「再来一组」只出 N-1 题），交给启动时实时拉取
+          if (items.length >= limit) uni.setStorageSync('prefetchPack', { module, limit, uid, items, ts: Date.now() });
         })
         .catch(() => {});
     },

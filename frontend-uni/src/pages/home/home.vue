@@ -683,7 +683,8 @@ export default {
       const pk = uni.getStorageSync('prefetchPack');
       if (pk && pk.module === module && pk.limit === limit && pk.uid === uid && Date.now() - pk.ts < 5 * 60 * 1000) return;
       request(
-        '/api/questions?limit=' + limit + (uid ? '&uid=' + encodeURIComponent(uid) : '') + (module ? '&module=' + module : ''),
+        '/api/questions?limit=' + limit + (uid ? '&uid=' + encodeURIComponent(uid) + '&mix_due=1' : '') +
+          (module ? '&module=' + module : ''),
         { timeout: 15000 }
       )
         .then((d) => {

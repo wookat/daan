@@ -142,6 +142,11 @@ def test_mix_due_skips_same_session_and_filters(client):
         assert not [q for q in _draw(client, uid, module="ziliao", mix_due=1, **extra) if q.get("due_mid")], extra
     r = client.get("/api/questions", params={"limit": 10, "mix_due": 1, "module": "ziliao"})
     assert r.status_code == 200 and not [q for q in r.json()["items"] if q.get("due_mid")]
+    # 中场预取下一组：当组未答完的到期题尚无 answer_log，靠 exclude=当组题 id 不再混入；非法 token 忽略
+    assert [q["due_mid"] for q in _draw(client, uid, module="ziliao", mix_due=1) if q.get("due_mid")] == [m_old]
+    ex = _draw(client, uid, module="ziliao", mix_due=1, exclude=f"{zl[1]},abc,,-1")
+    assert not [q for q in ex if q.get("due_mid")] and all(q["id"] != zl[1] for q in ex)
+    assert len(ex) <= 10 and len({q["id"] for q in ex}) == len(ex)
 
 
 def test_mix_due_wrong_again_resets_streak_not_duplicate(client):
