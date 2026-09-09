@@ -96,7 +96,6 @@
               <q-social-bar v-if="cur.id && !cur._sz" :question-id="cur.id" />
             </template>
           </kg-analysis-card>
-          <!-- 错因自评放在主解析之后：看过「为什么错」才分得清概念不清/方法不会/粗心 -->
           <view v-if="picked && picked !== cur.answer" class="reasons" role="group" aria-label="错因自评">
             <text class="rz-t">错因自评（选填）</text>
             <view
