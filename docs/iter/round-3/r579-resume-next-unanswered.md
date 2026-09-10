@@ -58,10 +58,35 @@ H5 `vitest 197 文件 1541` / `npm run lint` 0 error / `build:h5` OK（`index-BY
 
 ## 发版 / 生产复验 / 清理
 
-（发版与复验回填见下节；R579 研究 uid `test-r579-m1` 与账号 `u34`（`19900000579`）及其 15 行 `answer_log` 等按精确 uid 清理，独立只读 41 表 0 残留——回填。）
+### 发版（0 后端 → 只发 Pages 静态层，`~/r579/pages_deploy.sh`）
+
+`index-Cjpb2IwU.js → index-BYl-YCS-.js`，preview `https://6259ec9f.kaogong-h5-zalize.pages.dev`；线上 bundle 与本机构建 SHA 一致；`/api/stats` `/api/questions` `/tiku/` `/robots.txt` `/indexnow-key.txt` `/admin` 全 200；health 前后均 `ec8206e5`（后端未动）。
+
+### 生产复验（`~/r579/verify.py`，连既有 Chrome CDP，每尺寸独立新 uid，`X-Kg-Probe: 1`）
+
+同一脚本 375（`test-r579-v375b`）与 1440（`test-r579-v1440`）各 **13/13 PASS**、API 各 53 条非 2xx 0、console error / pageerror 0：
+
+| 步 | 断言 | 375 | 1440 |
+|---|---|---|---|
+| A | 首页 CTA 进每日一练 1/10；答 3 题后停在第 3 题反馈态（3/10、选项已锁） | PASS | PASS |
+| B | 顶栏返回 → 首页 hero「继续今日一练 · 第 **4**/10 题」、续练卡「已做 3/10 题」、本机 `pendingSession.idx=2` 且前 3 题 `_picked` | PASS | PASS |
+| C | 点继续 → 落点 **4/10**、无反馈、选项可点；顶栏「每日一练」 | PASS | PASS |
+| D | 删本机 `pendingSession`/`practiceLaunch` + F5 → 远端续练卡「每日一练 · 今日全站同题 · 已做 3/10 题」、hero「第 4/10 题」、恢复落点 4/10 无反馈；顶栏「每日一练」 | PASS | PASS |
+| E | API 非 2xx = 0；console error / pageerror = 0 | PASS | PASS |
+
+修前对照（研究阶段 `c0-home-logged` / `c1-resumed` 截图）：同一状态 hero「第 4/10 题」、落点却 3/10 且第 3 题反馈已可见——即本轮修的缺陷；修后 hero/落点同源 `next`。
+
+路径偏差如实登记：脚本初版等「保留进度并退出」退出层，实际顶栏返回直接回首页（`quit()` 只挂页内退出按钮；顶栏返回走 uni-h5 navigateBack，`onUnload` 不清 pendingSession——每答一题 `saveSession()` 已落盘，故进度默认保留）。改为容忍退出层不出现、按真实首页/落点断言；两尺寸重跑各 13/13。
+
+### 清理（`~/r579/clean579.py` ro → clean → ro，三次独立 SSH）
+
+- ro1：`test-r579-m1` 1（`merged_anon`）、`test-r579-v375` 9、`test-r579-v375b` 10、`test-r579-v1440` 10、`u34` 37（`answer_log` 15 / `mistakes` 10 / `growth_events` 7 / `practice_results` 2 / `reinforce_log` 1 / `daily_set_entries` 1 / `practice_progress` 1）+ `auth_tokens`/`merged_anon` `user_id=34` 各 1 + `users` 1；前缀 `test-r579-%` 30；共享 `test-r562-modal-%` 42。
+- clean：删 **69** 行回执齐全；after 五 uid 全空、users 空、前缀 0、共享 42、8 张保护表（排除本轮 uid）digest 前后一致。
+- ro2（独立会话）：0 残留、`intUserId` 空、前缀 0、共享 42、digest 与 clean.after 一致；`reinforce_log` 总数回 R578 基线 2。
 
 ## 登记
 
 - **R577-1** → 「一次核实未复现」：本轮 `total.n == COUNT(answer_log)` 三个时点逐点相等；键冲突分支（目标账号已有同题行）UNTESTED。
 - **R579-1（P3）** `growth_stats total.n = COUNT(*) answer_log`（含 `session-report` 强化）而「错题本」计 `mistakes`——两口径本就不同，不是缺陷，登记以免再误读。
-- UNTESTED：远端快照跨设备真实恢复落点（仅单测 + 源码）、小程序真机（R536-1 累计）、`merge_anon` 键冲突分支、自然样本。
+- **R579-2（P3 UX，待论证）** 练习页顶栏返回不经退出层直接离页（进度默认保留），只有页内「退出」按钮走 R563 三选项层——两条出口语义不一致但都不丢进度，本轮不改。
+- UNTESTED：远端快照**跨设备**真实恢复（本轮用同机删本机键 + F5 模拟远端路径）、小程序真机（R536-1 累计）、`merge_anon` 键冲突分支、往期每日一练恢复落点、普通练习/错题重练/强化场的 resumeIndex 落点（同函数，仅单测）、自然样本。
