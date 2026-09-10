@@ -3,6 +3,12 @@ name: testing-kaogong-assistant
 description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## R571 经验：`apiSnap` 旧快照兜底（resolve 路径）的复验口径 + 浏览器在线态不是 Vue 响应式
+- `apiSnap:<path>` 的 localStorage 值是原始 JSON 字符串 `{t,d}`；`mistakesCache` 是 uni wrapper `{type:"object",data:{ts,uid,items}}`——两者别套同一个解码器。R571 起 `request()` 兜底回包带 `staleAt(data)>0` 身份：测旧快照态必须先拿到本人 `/api/mistakes` + `/api/review` 真实 200（两快照存在），再 `route.abort` 两条 GET 并 F5。断言：列表仍渲染、头卡 `—/—` + 「今日待复习需网络恢复后同步」、横幅「网络不稳定 · 展示刚刚缓存的错题，可稍后重试」+「重试」、`mistakesCache` **原字节**不变（不只比条数）、恰 2 条 `stale_fallback`。「不写旧角标」= 冷 Document 空角标未被旧 review 快照写上（uni tabBar 角标本来随 Document 重置），不是「跨 Document 保留原数字」。
+- resolve 路径不进 catch → **没有 toast** 是正确行为，别把缺 toast 记 FAIL；只有两条 API 都无快照才到真 reject 分支（R569 B′ 精确删两键）。
+- 在线态：`navigator.onLine` 不是响应式依赖，快照时刻不变时 computed 文案不会重算——必须在**同一 Document** 先进旧快照态，再 `context.set_offline(True)` 点「重试」，记录 `navigator.onLine` 与横幅各是什么（R571 生产 C FAIL 就是这样抓到的），不能用整页刷新掩盖。R571 热修后口径：断网点重试 / 不点按钮 `offline` 事件 ≈300ms 换「当前离线 · … 联网后自动更新」；`online` 事件不点按钮恰 1 mistakes + 1 review GET；全真实回包后再切网 0 额外 GET、横幅不再出现（监听已摘）。恢复测试先 unroute 再 `set_offline(False)`。
+- 练习页原生页头返回 ≠ 工具栏 `aria-label="退出练习"`（后者才 `quit()` 开「保留/结束/继续」层）。R563 E 前置 = 多题且答 ≥1 题；误点页头 Back 后可 Forward → R548「继续上次练习」恢复**同一** session（不算第二次 redo 启动），再走正确入口。
+
 ## R569/R570 经验：cache-first 首帧两态 + 「离线」两层 + History 问题的基线复现归因
 - 错题本带 `?kp/?qt/?kp3` 深链 F5 自 R569 起首帧就是筛选态（provisional：缓存命中即落地、不消费 pending、不校正 URL），真实回包后终判（命不中 fail-closed 清筛选 + `syncBookUrl`）。复验断言分两帧：回包前「1 卡 + `—题/—分钟` + 『正在同步今日待复习…』、无『开始复习』/无『今天没有到期错题』」；回包后「同 1 卡 + 真实到期数/分钟 + CTA」。真 0 到期必须另起用例（PATCH 已掌握 → review `total 0` → F5 显 `0 题 / 0 分钟` + 『今天没有到期错题』，**不是** `—`）。
 - 「离线」有两层，指令必须写清测哪层：① `api.js request()` GET 网络失败回退 `apiSnap:<path>` 快照（R90，`stale_fallback` 埋点）——两条 API 都有快照时页面**不进 catch**，header 直接显旧 5/4，这是既有分层不是 FAIL；② `book.vue` catch 兜底——只有两条 API 都无快照时到达，显离线 banner + 「离线中 · 今日待复习需联网后同步」+ `—/—`。要测 ②，按当前 uid **精确删** `apiSnap:/api/mistakes?uid=…` 与 `apiSnap:/api/review?uid=…` 两键及 `apiSnapIndex` 对应项，`mistakesCache` 保留（byte-for-byte 核对），再 abort + F5。
