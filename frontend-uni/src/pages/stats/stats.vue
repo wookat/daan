@@ -352,6 +352,7 @@ import { request, snapPeek, anonUid, getAuthUser, fetchCheckinSummary, trackEven
 import { checkinStreak, dayKey, cnWeekKey } from '../../checkin.js';
 import { examTrend } from '../../exam-trend.js';
 import { snapshotViewMixin } from '../../snapshot-view.js';
+import { setBookBadge } from '../../tabbar-badge.js';
 
 const MODS = [
   { key: 'ziliao', name: '资料' },
@@ -852,6 +853,7 @@ export default {
             } else {
               this.dueSynced = false;
             }
+            if (this.dueSynced) setBookBadge(this.dueN);
           } catch (e) { /* 非关键路径 */ }
         })(),
       ]);
