@@ -84,5 +84,5 @@ git diff --check        空
 
 ## 8. 登记
 
-- **R585-1**（P3）`clean585.py` clean 模式回执偶发为空 → 下一轮把 digest 计算移到 `ro` 侧或拉长 timeout，clean 只打印删除计数。
+- **R585-1**（P3 候选）我的页只有 mistakes 总数没有到期数，冷进我的页同样不刷错题本角标；另拉 `/api/review` 不是最小改动，等样本再论证。**R585-2**（P3 工具）`clean585.py` clean 模式回执偶发为空 → 下一轮把 digest 计算移到 `ro` 侧或拉长 timeout，clean 只打印删除计数。
 - R584-2 / R584-3 / R580-1 继续等样本不主动改。
