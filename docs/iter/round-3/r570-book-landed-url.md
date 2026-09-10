@@ -23,4 +23,19 @@
 
 ## 生产复验（Pages `index-BE-SJK0E.js` / 后端 `09d664a4`，`~/r570/prod/report.md`，PR #750 评论附截图）
 
-（见 PR #750 评论与 handoff R570 节；本文件在复验完成后回填。）
+**结论：主 D 375/1440 PASS + 回归 PASS；R563 E 因 origin 间歇慢未建立前置 → UNTESTED（环境），不判整轮全通过。**
+
+| 项 | 结果 | 事实 |
+|---|---|---|
+| D 375（错题本 → 常识判断 → 法律/个税 → 原生 F5 → 更多操作 X → 重练 → 页头返回） | PASS | 落地 `?mod=changshi&kp=法律&qt=法律-个税`、1 张个税卡、`history.state.__kgSheet` 空；再 F5 保持；再一次 Back 一次离页 |
+| D 1440 同流程 | PASS（有限一次无 hold 重试） | 初次 redo 启动 12s/20s 超时 abort（origin 慢），重试后同 PASS |
+| 修复机制证据 | PASS | 两尺寸 `__hist` 钩子捕获链落地后 book chunk `Proxy.syncBookUrl` 的 replaceState 补回 kp/qt；`history.length` 11→11 / 10→10 无新增条目 |
+| redo 四值 | PASS | `sub=法律&qtype=法律-个税` 200 非空命中 4178，实际进入 1/1 练习 |
+| R562 D1 `?mod` Back 375+1440 / R568 C3 / 直接 Back / R569 A 首帧 375+1440 / 部署身份 SHA256 | PASS | 直接 Back 离页区间只有 router 滚动 state replace，无 `syncBookUrl` 调用 |
+| R563 E「结束本组并退出」 | UNTESTED（环境） | 需多题部分作答前置；多题 redo 启动两次超时，按「不为等 origin 无限重试」收口 |
+
+审计：API 181 = 116×200 + 16×503（15 POST `/api/track` + 1 GET `/api/mistakes`）+ 49 abort（44 符合 12s/20s 超时模式、5 导航关联）；CDP 520 = 0；末次独立 health 503/52.78s 空 body——宿主级间歇慢（R568 P0 登记同源，只读探测 load 19.5 / mem_avail 279MB / disk 95%，本刻无他家 build/prune）。应用 console error / runtime exception / unhandledrejection / uni warning 0；SW 注册 warning 16 为 Playwright harness。清理：一次精确 DELETE 22 行（R570 两 uid 17 + R569 专用 D fixture `test-r569-d-1788997993` 5），独立只读 41 表扫描 0 残留；共享 R562 42 行逐行一致、五类 hash/papers/taxonomy 不变。
+
+UNTESTED：R563 E（环境）、真机/小程序（R536-1 累计）、真实 SW、其它浏览器、跨设备、kp3 专项落地。
+
+录像：`~/screencasts/r570-main-375/`、`~/screencasts/r570-main-1440/`（含先阻塞后有限重试 PASS）、`~/screencasts/r570-exit-375/`（仅证 E 启动阻塞）。
