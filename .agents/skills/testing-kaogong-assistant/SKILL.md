@@ -3,6 +3,13 @@ name: testing-kaogong-assistant
 description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## R584 经验：复习页是错题本页内模式 + 串行链枚举要连 `api.js` 包装一起搜 + 清账要盘全表 `test-%` 不只本轮前缀
+
+- 生产**没有** `/pages/review/review`（`pages.json` 无此页）：复习 = `pages/book/book` 页内 `reviewing` 模式，脚本入口是先写 storage `autoStartReview=1` 再冷加载 `#/pages/book/book`（首页「开始复习」CTA 同路径）。走查前先 `grep -n '"path"' src/pages.json` 核路由，别照页面名猜。
+- 枚举串行链只 grep `await request(` 会漏掉 `fetchFavs / removeFav / fetchCheckinBadges / fetchCheckinSummary` 这类 `api.js` 导出包装：先 `grep -n '^export function' src/api.js` 拿包装名，再搜 `await (request|<包装名>)(`；归类时按「后一请求是否需要前一回包/副作用」「是否条件回退」「调用点是否只在失败回退分支」三问定，不按方法名。
+- 每轮清账除了本轮前缀，追加一次 `ro 'test-%'` 全景盘点（`~/r584/clean584.py ro 'test-%'`）：R584 借此发现别轮 `test-r567-shots-375` 11 行残留（含 `review_cur`，该表按 `_ensure_review_cur` 惰性建表，早期枚举可能没这张表）。走查脚本 `add_init_script` 只覆盖本次 context，浏览器持久 profile 里旧 `anonUid` 可能被之后的走查再写回——收尾多盘一次。
+- 「进度已保留」类续卡的走查顺序会污染下一张截图：进入复习模式再离开会写零进度 `reviewSnap`（本机 2h TTL）+ `POST /api/review/cur`，同 uid 后续错题本截图会多出续卡；要么换 uid，要么先清 storage 与 `review_cur`。
+
 ## R583 经验：串行链要按「加载器内部」逐个找 + 到期行类文案用轮询序列取证 + 宿主慢先三段分账再下判
 
 - 页面顶层 `Promise.all` 齐了不等于没有串行：`stats.vue` 顶层 8 个加载器并发，但 `loadReco()` 内部 recommend → review 仍串行。排查口径：对每个 `async load*()` 方法体 grep 相邻两处 `await request(`，再核两端点是否真依赖（`loadProfile → plan/today` 那种是真依赖，不改）。
