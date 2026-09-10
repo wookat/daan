@@ -3,6 +3,15 @@ name: testing-kaogong-assistant
 description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## R580 经验：离页类断言的入口/出口分账 + 「请求已发 ≠ 服务端已落 ≠ 客户端拿到回包」+ 清理脚本必须在宿主上跑
+
+- 练习页三条离页入口不是同一路径：runtime 顶栏返回 `onPageHeadBackButton → navigateBack/reLaunch → removePage → onUnload`；浏览器 Back `history.listen(direction==='back') → removeCurrentPages → onUnload`；页内退出图标 `quit() → quitSummary → (全答完 null 不弹层) → leave()`。**只有页内出口经过 `quit()`**，断言「离页副作用」时三条都要跑，且顶栏/Back 只能靠 `onUnload` 兜住。
+- 全答完停末题反馈态离页要求 `POST /api/practice_result` 恰 1、当前日每日一练 `POST /api/daily_set/submit` 恰 1、`answer_log` 恰 N 条无重复（`resultSent` 与 `_logged` 在**首个 `await` 前**置位，`leave → onUnload` 二次触发不重复）；往期补练 `daily_set/submit` 必须 0 次。断言按 `(uid, 表) 计数` 取服务端一手，不看 toast。
+- 生产请求结果分五档分别记录：sent / response HTTP 状态 / `requestfailed`（含 harness 硬 reload 造成的 `net::ERR_ABORTED`）/ console·pageerror / harness 断言。fin11 一手：宿主 ≈60s 不回 + 4×503，客户端 abort 但服务端 `answer_log 10 / daily_set_entries 1 / practice_results 1` 已落——**客户端 abort 不等于服务端未处理**，判 FAIL 前先 SSH 只读对账；`wait_posts` 慢宿主用 ≥75s。
+- 同一 Document 只改 hash 不触发 uni 路由 Back（`history.state` null/unknown 方向识别失败）——离页类复验必须 `about:blank` 冷加载 → 首页 CTA 真 `navigateTo` 进练习页；探针 `trace` 里见 `hook:onUnload` 才算真卸载。UID 必须在 `add_init_script` 里 app bootstrap 前写入。
+- 清理脚本 `~/r5xx/clean5xx.py` 的库路径是宿主 Docker volume，**必须经 SSH stdin 在宿主上跑**：`ssh … 'sudo -n timeout 170 python3 -u - ro|clean' < clean5xx.py`；本机直跑 `sqlite3.OperationalError: unable to open database file` 不是「已清理」。ro → clean → ro 三次独立 SSH，回执逐表相等 + 保护表 digest 前后一致才算完。
+- `practice_results.uid` 历史 287/288 空（列后加），自然对账不能按 uid；`practice_result` 接口无幂等键，任何「客户端重投」设计前要先加服务端幂等键（R580-1）。
+
 ## R579 经验：续练「四个数」分账 + `merge_anon` 一手取证 + 退出层不是必经路径
 
 - 续练类断言必须分四个数：`done`（已答数）、`idx`（快照保存的下标，可能指向**已答**题——答完第 3 题停在反馈态即 `idx=2`）、落地下标（`resumeIndex`：当前题已答则其后第一道未答）、首页题号文案 `next`（= 落地下标 + 1）。R579 前 hero 用 `done+1`、落点用 `idx` → 「第 4/10」却落 3/10；修后 hero/落点同源。复验固定「答 k 题停在第 k 题反馈态 → 退出 → 首页 hero 第 k+1 / 续练卡已做 k → 落点 k+1 且无反馈、选项可点」，本机与远端（删 `pendingSession`+`practiceLaunch` 后 F5，远端用服务端 `picks` 判已答）各跑一遍。小程序首页只显「已做 n/N」，不要拿题号断言它。
