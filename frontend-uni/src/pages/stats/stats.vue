@@ -833,21 +833,28 @@ export default {
       const vp = '/api/review?uid=' + encodeURIComponent(anonUid());
       const vSnap = snapPeek(vp);
       if (vSnap) this.dueN = vSnap.total || 0;
-      try {
-        const d = await request(rp);
-        this.noteSnapshot(d);
-        this.reco = d;
-      } catch (e) { /* 非关键路径 */ }
-      try {
-        const d = await request(vp);
-        // 旧快照的到期数不当「今日待复习」陈述（与错题本 R571 同口径）：保留快照/上轮值撑行，dueSynced 置 false
-        if (!this.noteSnapshot(d)) {
-          this.dueN = d.total || 0;
-          this.dueSynced = true;
-        } else {
-          this.dueSynced = false;
-        }
-      } catch (e) { /* 非关键路径 */ }
+      // 两个端点互不依赖：并发发出，到期行不等推荐回包（非关键路径，各自失败只影响自身）
+      await Promise.all([
+        (async () => {
+          try {
+            const d = await request(rp);
+            this.noteSnapshot(d);
+            this.reco = d;
+          } catch (e) { /* 非关键路径 */ }
+        })(),
+        (async () => {
+          try {
+            const d = await request(vp);
+            // 旧快照的到期数不当「今日待复习」陈述（与错题本 R571 同口径）：保留快照/上轮值撑行，dueSynced 置 false
+            if (!this.noteSnapshot(d)) {
+              this.dueN = d.total || 0;
+              this.dueSynced = true;
+            } else {
+              this.dueSynced = false;
+            }
+          } catch (e) { /* 非关键路径 */ }
+        })(),
+      ]);
     },
     paintStats(d) {
       this.byModule = d.by_module;
