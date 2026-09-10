@@ -3,6 +3,13 @@ name: testing-kaogong-assistant
 description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## R578 经验：完整 H5 链路黑盒脚本 + 第三级 `module` 回退的触发条件 + 「同页开下一场」类断言
+
+- 端到端脚本模板 `~/r578/journey.py <uid> <w> <qid> <tag3>`：`/home/ubuntu/venv-kg/bin/python`（系统 python 无 playwright）连既有 Chrome CDP `:29229`，`extra_http_headers={'X-Kg-Probe':'1'}`；深链 `#/pages/practice/practice?qid=&tag3=&module=`；题包用 `question` 字段（不是 `stem`）与 `.kg-q__stem` 对齐，按 `answer` 反选造全错；抓 `weak` 卡文本/按钮、点「练同考点」、录 reinforce 回包 `id/module/submodule/question_type/tag3` 与 `NAV TITLE`；产物 `q1/done/done-full/reinforce-q1 .png/.txt + journey.json + reqs.json`。别在末尾接 `| tail`（会被环境判成后台）。
+- 第三级 `module` 回退**只有**在「精确 tag3 活跃题全被本 uid 答过」且「同 `module+submodule` 活跃池剔本人已答后为 0」时才触发——挑「tag3 活跃题 = 领跑包」且该题 `submodule` 池 ≤ 1 的组（`ZL-JQ-05` / `ziliao/现期计算`），先答完领跑包再点练同考点。回查必须带 `disabled` 列（`ZL-JQ-05` 第 4 题、`现期计算` 第 2 题都是 disabled，光看 count 会误判）。
+- 「同页开下一场」（练同考点 / 只重练本组错题 / 再来一组 / 每日一练）时 `session` 不翻转：断言首题**无**上一场领跑横幅、顶栏按当前来源（`… · 强化练习` / `错题重练` / `每日一练`）。R578 前生产两处都残留（375/1440 实拍）。
+- `practice_progress` 的来源列叫 `psource`（无 `source`）。清理脚本 `q578c.sh <uid> ro|clean` 通用列扫描 41 表，`clean` 后打印 `after {} TOTAL 0` + `reinforce_log` 总数差。
+
 ## R577 经验：生产 SQLite 只读探测必须走已有索引 + 强化回退分支的一手验证法
 
 - `questions` 10.9 万行，`group by tag3 ... having` 套子查询在生产宿主（load 15–20）跑 ≈200s 被 `timeout` 杀；先 `select name, sql from sqlite_master where type='index'` 拿到 `idx_q_reinforce(tag3, disabled, correct_ratio, id)` / `idx_q_pick(module, submodule, is_real, disabled, …)`，用 `indexed by idx_q_reinforce` 只分组出 `n<10` 的 tag3（17 个）再逐 tag3 点查原字段 → 1.3s。原则：窄列、先分组后点查、每步单独计时打印，不写一条大 SQL。
