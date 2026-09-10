@@ -44,7 +44,7 @@ describe('R553-fix ① practice.vue 五处启动器 loading 与交互配对', ()
   }
 
   it('startDaily：回包后 hideLoading；catch 只置 fallback，finally 复位 _starting 后再 start() 回退（互斥不再挡死）', () => {
-    const fn = fnBody('async startDaily(archiveDate, src) {', '    markDailyDone() {');
+    const fn = fnBody('async startDaily(archiveDate, src) {', '    markDailyDone(silent = false) {');
     expect(fn).toContain('let fallback = false;');
     const hide = fn.indexOf("await request('/api/daily_set');\n        uni.hideLoading();");
     expect(hide).toBeGreaterThan(0);

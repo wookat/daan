@@ -436,7 +436,7 @@ import { weakSpots as buildWeakSpots } from '../../weak-spots.js';
 import { isExplanationCovered } from '../../exp-dup.js';
 import { reviewedMasteredCount, fixReportText, reviewedFromPending } from '../../review-advance.js';
 import { leadQidOf, leadPickOf, mergeLead, leadHintText } from '../../leadq.js';
-import { quitSummary } from '../../quit-summary.js';
+import { allAnswered, quitSummary } from '../../quit-summary.js';
 import { resumeAsk, resumeDismissAction } from '../../resume-ask.js';
 import { backLabel } from '../../back-label.js';
 import { practiceNavTitle, practicePageOnTop } from '../../practice-title.js';
@@ -930,6 +930,8 @@ export default {
     // #endif
   },
   onUnload() {
+    // 顶栏/浏览器返回不经 quit()：全部答完就视同完成
+    this.finalizeIfAnswered();
     // #ifdef H5
     if (this._pkHandler && typeof window !== 'undefined') {
       window.removeEventListener('keydown', this._pkHandler);
@@ -1399,7 +1401,7 @@ export default {
       }
       if (fallback) this.start(this.dailyModule);
     },
-    markDailyDone() {
+    markDailyDone(silent = false) {
       if (!this._daily) return;
       this._daily = false;
       const past = this._dailyPast;
@@ -1417,14 +1419,16 @@ export default {
       this._dailyDate = '';
       if (!date) return;
       this._dailyDoneDate = date;
-      this.sendDailyResult({ uid: anonUid(), nickname: pkNickname(), date, right: this.right, total: this.items.length, secs: this.totalSecs });
+      this.sendDailyResult({ uid: anonUid(), nickname: pkNickname(), date, right: this.right, total: this.items.length, secs: this.totalSecs }, silent);
     },
     // 成绩上报：成功挂全站成绩 + 榜；提交失败置 dailyErr 供完成页重试（payload 已在 dailyPendingSubmit，首页 onShow 也会补传）；榜失败不算失败
-    sendDailyResult(payload) {
+    // silent：离页视同完成，只落数据，不拉榜/不起推送提示
+    sendDailyResult(payload, silent = false) {
       this.dailyErr = false;
       return submitDailySet(payload)
         .then((d) => {
           this.dailyStats = d;
+          if (silent) return d;
           // #ifdef H5
           this.initPushNudge();
           // #endif
@@ -2540,7 +2544,16 @@ export default {
         this.submitResult();
       }
     },
-    async submitResult() {
+    // 已全部答完却没走到完成页就离开（顶栏/浏览器返回、页内退出）：视同完成——落成绩、每日一练打卡，不再静默丢掉这一组
+    finalizeIfAnswered() {
+      if (!this.session || this.resultSent || this.examMode || this.beiMode || this._shizheng) return false;
+      if (!allAnswered(this.items)) return false;
+      this.markDailyDone(true);
+      this.submitResult(true);
+      return true;
+    },
+    // silent：离页视同完成，只落数据（成绩/历史/作答补报），不出完成页才有的提示与到期数
+    async submitResult(silent = false) {
       if (this.beiMode || this.resultSent || !this.items.length) return;
       this.dailyStats = null;
       this.dailyErr = false;
@@ -2549,7 +2562,8 @@ export default {
       this.pushNudge = false;
       this.pushNudgeDone = false;
       this.dueReview = 0;
-      if (this.loginNudgeN) trackEvent('login_nudge_show');
+      if (this.loginNudgeN && !silent) trackEvent('login_nudge_show');
+      const items = this.items;
       uni.removeStorageSync('pendingSession');
       this.clearServerProgress();
       try {
@@ -2573,11 +2587,12 @@ export default {
         });
         if (d.percentile != null) this.percentile = d.percentile;
       } catch (e) { /* 非关键路径 */ }
-      await this.logAttempts(this.items);
+      await this.logAttempts(items);
+      if (silent) return;
       await this.syncRedoReviews();
       this.loadDueReview();
       // #ifdef H5
-      if (this.items.length >= 5) this.initPushNudge();
+      if (items.length >= 5) this.initPushNudge();
       // #endif
     },
     // 复习推进由 /api/answer_log 服务端统一完成（任何场次答对曾错题都算）；这里只等在途落库请求回来，汇总效果报告
@@ -2675,10 +2690,13 @@ export default {
       this.leave(keep);
     },
     leave(keep) {
+      const done = this.finalizeIfAnswered();
       if (!this.beiMode && this.items.length) this.logAttempts(this.items);
       this._reviewed = [];
       this._logPending = [];
-      if (keep) {
+      if (done) {
+        // 视同完成：submitResult 已清本机/远端快照
+      } else if (keep) {
         clearTimeout(this._ppTimer);
         this.pushPracticeProgress();
       } else {
