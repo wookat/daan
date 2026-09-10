@@ -1,6 +1,6 @@
 # R588：练习页换题 / 进完成页不回页首（H5 + 小程序小修）+ R586-1 窄 digest 有命中实战转正
 
-日期 2026-09-11 · 分支 `devin/1789059399-r588-practice-scroll-top`（从 #765 分支开，链含 #742–#765）→ PR 见 handoff · 0 后端 · Pages `index-k16i1KRf → COAMONvv` · health 全程 `ec8206e5`
+日期 2026-09-11 · 分支 `devin/1789059399-r588-practice-scroll-top`（从 #765 分支开，链含 #742–#765）→ PR #766 · 0 后端 · Pages `index-k16i1KRf → COAMONvv` · health 全程 `ec8206e5`
 
 ## 1. 研究（只读）
 
