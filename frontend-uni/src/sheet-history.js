@@ -57,6 +57,7 @@ let curHref = null
 let popping = false
 let prevKey = null
 let histLen = 0
+const landedFns = new Set()
 
 function syncPrev() {
   prev = validMarker(window.history.state, window.location.href)
@@ -99,6 +100,7 @@ function onPop() {
   // Back 从哑条目落回本页真条目：同页且历史长度不变；地址栏/书签改 hash 会新建条目（长度增）或落到别页
   const away = prev != null && land == null && (window.history.length > histLen || pageKey(window.location.href) !== prevKey)
   const act = popAction(prev, land, (t) => open.has(t), skipping, away)
+  const landed = skipping && land == null && !away && act.type === 'none'
   syncPrev()
   skipping = act.skipping
   if (act.type === 'close') {
@@ -106,7 +108,19 @@ function onPop() {
     if (close) close()
   } else if (act.type === 'back') {
     window.history.back()
+  } else if (landed) {
+    for (const fn of landedFns) fn(window.location.href)
   }
+}
+
+/**
+ * 跳过哑条目链后落到本页真条目时回调（href 为落地地址）。哑条目是在弹层打开那一刻的 URL 上 push 的，
+ * 之后页面 replaceState 改的只是最上面那条（哑条目），真条目仍是弹层打开前的 query；页面据此把 URL 重新对齐到当前状态。
+ * 返回取消订阅函数。
+ */
+export function onSheetHistoryLanded(fn) {
+  landedFns.add(fn)
+  return () => landedFns.delete(fn)
 }
 
 /** 启动时装（App.vue onLaunch，传 app.$router）：刷新后落在哑条目上也能在首次 Back 时补跳，不依赖有弹层先打开 */
@@ -160,6 +174,7 @@ export function _resetSheetHistory() {
   skipping = false
   curHref = null
   popping = false
+  landedFns.clear()
   if (installed && typeof window !== 'undefined') window.removeEventListener('popstate', onPop)
   installed = false
   routerHooked = false

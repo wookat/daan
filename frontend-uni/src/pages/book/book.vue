@@ -595,6 +595,8 @@ import { request, anonUid, exportPdf, scanSheet, shareCreate, trackEvent, qShare
 import { cloudFavId } from '../../exam-fav.js';
 import { syncCloudFavs } from '../../fav-sync.js';
 import { buildBookUrl, normalizeTabPageFullPath, parseBookOpts } from '../../book-url.js';
+import { isBookHref } from '../../book-url.js';
+import { onSheetHistoryLanded } from '../../sheet-history.js';
 import { exportNote, exportNotesMap } from '../../book-export.js';
 import { setBookBadge } from '../../tabbar-badge.js';
 import { mistakePaper, paperGroups, inPaper } from '../../book-paper.js';
@@ -996,6 +998,12 @@ export default {
       this.resetAccountState();
     };
     uni.$on('authChanged', this._onAuth);
+    // #ifdef H5
+    // 筛选层/更多操作层留下的哑条目被 Back 跳过后落回本页真条目：那条的 query 是弹层打开前的（层内改筛选只改了哑条目），按当前筛选重写
+    this._offLanded = onSheetHistoryLanded((href) => {
+      if (isBookHref(href) && !this._pendingKp && !this._pendingKp3) this.syncBookUrl();
+    });
+    // #endif
   },
   onReachBottom() {
     if (this.tab !== 'fav' && this.pageN < this.shownItems.length) this.pageN += 20;
@@ -1057,6 +1065,10 @@ export default {
   onUnload() {
     if (this._onAuth) uni.$off('authChanged', this._onAuth);
     // #ifdef H5
+    if (this._offLanded) {
+      this._offLanded();
+      this._offLanded = null;
+    }
     if (this._kbHandler && typeof window !== 'undefined') {
       window.removeEventListener('keydown', this._kbHandler);
       this._kbHandler = null;
