@@ -4,6 +4,7 @@ description: How to run and test the 答岸 app (FastAPI + uni-app H5 frontend +
 ---
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 ## R579 经验：续练「四个数」分账 + `merge_anon` 一手取证 + 退出层不是必经路径
 
 - 续练类断言必须分四个数：`done`（已答数）、`idx`（快照保存的下标，可能指向**已答**题——答完第 3 题停在反馈态即 `idx=2`）、落地下标（`resumeIndex`：当前题已答则其后第一道未答）、首页题号文案 `next`（= 落地下标 + 1）。R579 前 hero 用 `done+1`、落点用 `idx` → 「第 4/10」却落 3/10；修后 hero/落点同源。复验固定「答 k 题停在第 k 题反馈态 → 退出 → 首页 hero 第 k+1 / 续练卡已做 k → 落点 k+1 且无反馈、选项可点」，本机与远端（删 `pendingSession`+`practiceLaunch` 后 F5，远端用服务端 `picks` 判已答）各跑一遍。小程序首页只显「已做 n/N」，不要拿题号断言它。
@@ -32,6 +33,8 @@ description: How to run and test the 答岸 app (FastAPI + uni-app H5 frontend +
 - 骨架计数选择器是 **`.kg-skel`**（`kg-skeleton` 组件根类），不是 `.kg-skeleton`——R575 复验第一版用错选择器得到全 0 假阴性，重验才有效；删到最后一张（0 卡）会有 ≈175ms 一帧骨架（`loading = !items.length`），断言「无骨架」只对「仍有剩余卡」成立。
 - 研究脚本截图路由**先核 `pages.json`**：每日一练没有独立页（`#/pkgA/daily/daily` 不存在，空白页是脚本错），入口是首页 `startDaily()` 进练习页；guest 截图只覆盖首页/我的，登录态路径交生产复验。
 
+=======
+>>>>>>> cd7d8926 (docs: R574 两轮生产复验回填（C1NhelQ3 A–E PASS + F 两条既有 FAIL → 热修 BmUQ_r2w F1–F5 PASS，时序纠正）+ handoff + 测试 SKILL)
 ## R574 经验：收藏页「本机 + 云」双写形态的取消复验 + 派生式 chips 的深链断言
 - 收藏在生产不是单源：题页 `toggleFav` 与 R561 `syncCloudFavs`（进练习页时触发）都会把**云收藏写进本机 `favQuestions`**，`favorites.vue load()` 再按 `question` 去重合并。凡「取消收藏」类复验必须先走一次真实「重练全部收藏 → 返回」把本机副本造出来，再取消云条目并断言：`DELETE /api/favs` 恰 1 条、`uni.getStorageSync('favQuestions')` 无该题、F5 后仍收缩；否则只测纯云用户会漏掉「复活要第二次取消」（R574 生产 F）。反向也要测：阻断 own DELETE → toast 且本机数组不动（清本机必须在 removeFav 成功之后）。
 - 取消后是 `load()` 全量重拉再收缩（既有设计），宿主慢时先见重载骨架数秒（375 DELETE 9.4s + GET 4.0s）——**截图时间戳必须与 DELETE 响应时刻对齐**再下「响应后仍 N 卡」结论；R574 复验一就是把响应前截图误报成复活证据。指令里不要写「立即 1 卡」，写「DELETE 200 + 后续 GET 完成后 1 卡」。
