@@ -374,22 +374,31 @@ export default {
       if (pSnap) this.profile = pSnap.profile || null;
       const gSnap = snapPeek(gp);
       if (gSnap) this.applyGrowth(gSnap, uid);
-      try {
-        const d = await request(pp);
-        this.profile = d.profile || null;
-        const g = adoptServerDailyGoal(this.dailyGoal, this.profile);
-        if (g != null) {
-          this.dailyGoal = g;
-          uni.setStorageSync('dailyGoal', g);
-        }
-      } catch (e) { /* 非关键路径 */ }
-      try {
-        this.applyGrowth(await request(gp), uid);
-      } catch (e) { /* 非关键路径 */ }
-      try {
-        const d = await request('/api/announcement');
-        this.announce = d.item || null;
-      } catch (e) { /* 非关键路径 */ }
+      // 三个端点互不依赖：并发发出，各自失败只影响自身（非关键路径）
+      await Promise.all([
+        (async () => {
+          try {
+            const d = await request(pp);
+            this.profile = d.profile || null;
+            const g = adoptServerDailyGoal(this.dailyGoal, this.profile);
+            if (g != null) {
+              this.dailyGoal = g;
+              uni.setStorageSync('dailyGoal', g);
+            }
+          } catch (e) { /* 非关键路径 */ }
+        })(),
+        (async () => {
+          try {
+            this.applyGrowth(await request(gp), uid);
+          } catch (e) { /* 非关键路径 */ }
+        })(),
+        (async () => {
+          try {
+            const d = await request('/api/announcement');
+            this.announce = d.item || null;
+          } catch (e) { /* 非关键路径 */ }
+        })(),
+      ]);
     },
     /** 错题数取 /api/growth 聚合字段；老后端无 mistakes 时过渡一轮只读旧 /api/mistakes 快照，再无则 0 */
     applyGrowth(g, uid) {
