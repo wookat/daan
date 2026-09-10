@@ -3,6 +3,13 @@ name: testing-kaogong-assistant
 description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## R581 经验：「同秒双行」类结论先并排打印时间戳 + Caddy 客户端归属 + 小程序离页路径只能源锁
+
+- 只读 DB 邻近对（`~/r581/q581a.sh`）必须把两行 `created_at` 并排打印再下判：R580 记的「09-07 同秒 NULL/有 uid 双行」实为 `19:57:57` vs `20:00:28`（151s），是读串。窄窗 Caddy（`q581b.sh`，`ts` ±600s 过滤 `practice_result`）用 UA + Referer 归属客户端：`Referer https://servicewechat.com/…` + UA 含 `wv` = **微信小程序**请求，不是 H5；`Referer https://kaogong.zalize.com/` = H5。Caddy access log 无 body，payload 只能靠 DB 行的 `n/correct/secs` 侧证。
+- 小程序上送字段的「有/无」要对源码时间线（`git log -S"uid: anonUid()" -- miniapp-native/...`）：设备上跑的是旧开发包时 NULL uid 是版本差，不是缺陷。
+- 30 天写路径分账（`q581c.sh`）按 `X-Kg-Probe` / UA(`X11; Linux x86_64` harness) / Referer 三分 natural / wx-mp / harness；非 2xx 归 harness 的不能拿来证明「自然会丢」。
+- 小程序 `pages/practice/practice.ts` 全答完离页：`onPick` 末题只 `saveSession()`、`finish()` 只挂 `onNext`/`autoNext(仅答对 1.2s)`，直接返回走 `onUnload → flushProgress` 把 N/N 写快照；R581 加 `finalizeIfAnswered()`（`_resultSent` 先置位 → 清 `_progressTimer` → 删快照 + `clearServerProgress` → `logAttempts` → `postPracticeResult`）+ `flushProgress` `_resultSent` 闸。无运行时通道（R536-1）→ 只有 `frontend-uni/tests/r581-miniapp-finalize-on-leave.test.js` 源锁 + `tsc`；`scripts/reason-toggle.test.ts` 的 `onUnload` 正则要随结构改。
+
 ## R580 经验：离页类断言的入口/出口分账 + 「请求已发 ≠ 服务端已落 ≠ 客户端拿到回包」+ 清理脚本必须在宿主上跑
 
 - 练习页三条离页入口不是同一路径：runtime 顶栏返回 `onPageHeadBackButton → navigateBack/reLaunch → removePage → onUnload`；浏览器 Back `history.listen(direction==='back') → removeCurrentPages → onUnload`；页内退出图标 `quit() → quitSummary → (全答完 null 不弹层) → leave()`。**只有页内出口经过 `quit()`**，断言「离页副作用」时三条都要跑，且顶栏/Back 只能靠 `onUnload` 兜住。
