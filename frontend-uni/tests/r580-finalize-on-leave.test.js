@@ -87,3 +87,61 @@ describe('practice.vue 离页视同完成', () => {
     expect(practice).toContain('this.markDailyDone();\n        this.markShizhengDone();\n        this.submitResult();');
   });
 });
+
+describe('api.js submitDailySet 同 (date, uid) 在途去重——离页视同完成后首页 onShow 补投不再重复 POST', () => {
+  // api.js 含 #ifdef 双定义导出不能整模块导入，抓每日投递片段求值（同 R571 做法）
+  const api = readFileSync(new URL('../src/api.js', import.meta.url), 'utf8');
+  const seg = api.slice(api.indexOf("const DAILY_PENDING_KEY = 'dailyPendingSubmit';"), api.indexOf('// 记录最近导出的试卷码'));
+  function make() {
+    const store = {}; const calls = []; let resolve;
+    const uni = {
+      setStorageSync: (k, v) => { store[k] = v; },
+      getStorageSync: (k) => (k in store ? store[k] : ''),
+      removeStorageSync: (k) => { delete store[k]; },
+    };
+    const request = (url, opt) => { calls.push({ url, data: opt.data }); return new Promise((r) => { resolve = r; }); };
+    const mod = new Function('uni', 'request', seg.replace(/^export /gm, '') + '\nreturn { submitDailySet, flushDailySubmit };')(uni, request);
+    return { ...mod, store, calls, finish: (d) => resolve(d) };
+  }
+  const cnDay = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+  const payload = { uid: 'u1', date: cnDay, right: 0, total: 10, secs: 30 };
+
+  it('在途期间再次 submitDailySet / flushDailySubmit 复用同一 Promise，只发 1 次 POST；成功后 flush 也回 true 供首页刷新外显', async () => {
+    const m = make();
+    const p1 = m.submitDailySet(payload);
+    expect(m.store.dailyPendingSubmit).toEqual(payload);
+    const p2 = m.submitDailySet({ ...payload });
+    const f = m.flushDailySubmit();
+    expect(p2).toBe(p1);
+    expect(m.calls).toHaveLength(1);
+    m.finish({ my_right: 0, my_rank: 3, streak: 1 });
+    await expect(p1).resolves.toMatchObject({ my_rank: 3 });
+    await expect(f).resolves.toBe(true);
+    expect(m.store.dailyPendingSubmit).toBeUndefined();
+    expect(m.store['dailyDone:u1']).toMatchObject({ date: cnDay, total: 10, rank: 3 });
+  });
+
+  it('结清后再次提交会真的重新 POST（重试路径不被在途标记卡死）；不同 date/uid 不合并', async () => {
+    const m = make();
+    const p1 = m.submitDailySet(payload);
+    m.finish({ my_right: 0 });
+    await p1;
+    m.submitDailySet(payload);
+    expect(m.calls).toHaveLength(2);
+    m.submitDailySet({ ...payload, uid: 'u2' });
+    expect(m.calls).toHaveLength(3);
+  });
+
+  it('失败后在途标记清除，flushDailySubmit 可再补投', async () => {
+    let reject; let n = 0;
+    const store = {}; const uni = { setStorageSync: (k, v) => { store[k] = v; }, getStorageSync: (k) => (k in store ? store[k] : ''), removeStorageSync: (k) => { delete store[k]; } };
+    const request = () => { n += 1; return new Promise((_, rj) => { reject = rj; }); };
+    const mod = new Function('uni', 'request', seg.replace(/^export /gm, '') + '\nreturn { submitDailySet, flushDailySubmit };')(uni, request);
+    const p1 = mod.submitDailySet(payload).catch(() => 'failed');
+    reject(new Error('net'));
+    expect(await p1).toBe('failed');
+    expect(store.dailyPendingSubmit).toMatchObject({ date: cnDay });
+    mod.flushDailySubmit();
+    expect(n).toBe(2);
+  });
+});
