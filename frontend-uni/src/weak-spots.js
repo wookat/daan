@@ -4,18 +4,19 @@ const subName = (qt) => (qt && qt.includes('-') ? qt.split('-').slice(1).join('-
 
 /**
  * items → 薄弱考点前 3（错题数倒序）。
- * /api/questions 不回 tag3_name，展示名只能取 question_type 子名；同子名多个 tag3 合并为一条，
- * 合并后 tag3 仅在唯一时保留，否则置 null 走 submodule 强化入口。
+ * /api/questions 不回 tag3_name，展示名取 question_type 子名，缺 question_type 时退到题库 submodule 列
+ * （题页考点链同一来源），再退模块名；同名多个 tag3 合并为一条，合并后 tag3 仅在唯一时保留，否则置 null。
+ * submodule 强化入口传题库 submodule 列原值（后端 reinforce 回退按该列过滤，question_type 子名与它多数不同值）。
  * 时政题（_sz）不在 questions 强化池内，不计入薄弱考点。
  */
 export function weakSpots(items, modName) {
   const byTag = {};
   for (const q of items || []) {
     if (!q || q._sz || !q._picked || q._picked === q.answer) continue;
-    const key = q.tag3 || q.question_type || q.module || 'other';
+    const sub = subName(q.question_type || '') || q.submodule || null;
+    const key = q.tag3 || q.question_type || (q.submodule ? q.module + '|' + q.submodule : q.module) || 'other';
     if (!byTag[key]) {
-      const sub = subName(q.question_type || '');
-      byTag[key] = { key, name: sub || modName(q.module), module: q.module, submodule: sub, tag3: q.tag3 || null, n: 0 };
+      byTag[key] = { key, name: sub || modName(q.module), module: q.module, submodule: q.submodule || sub, tag3: q.tag3 || null, n: 0 };
     }
     byTag[key].n++;
   }

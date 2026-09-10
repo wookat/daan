@@ -246,9 +246,11 @@ export default {
       const d = new Date(ts * 1000);
       return `${d.getMonth() + 1}/${d.getDate()}`;
     },
-    async load() {
-      // 已有列表在手时（onShow 回来 / 取消收藏 / 移动后）后台刷新不铺骨架，列表原地收缩
-      this.loading = !this.items.length;
+    async load(opts) {
+      // 已有列表在手时（onShow 回来 / 取消收藏 / 移动后）后台刷新不铺骨架，列表原地收缩；
+      // 取消收藏删到 0 条时列表状态已由云端回执确认（known），空态直出、不铺骨架等对账
+      const known = !!opts && opts.known === true;
+      this.loading = !known && !this.items.length;
       this.favErr = '';
       this.beginSnapshotRound();
       try {
@@ -408,7 +410,7 @@ export default {
             const next = dropFavItem(this.items, this.folders, it);
             this.items = next.items;
             this.folders = next.folders;
-            this.load();
+            this.load({ known: true });
           } catch (e) {
             uni.showToast({ title: e.message, icon: 'none' });
           }

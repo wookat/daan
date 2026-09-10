@@ -69,7 +69,9 @@ describe('favorites.vue 接线', () => {
 
   it('load：已有列表时不铺骨架；两回包逐一登记；有旧快照且手上已有真实列表 → 不覆盖、只提示；全真实才 settle 并记 _liveAt', () => {
     const load = method('load');
-    expect(load).toContain('this.loading = !this.items.length;');
+    // R576：known（取消收藏后云端已确认）时删到 0 条也不铺骨架，空态直出；其余入口（onShow/重试/新建夹）语义不变
+    expect(load).toContain('const known = !!opts && opts.known === true;');
+    expect(load).toContain('this.loading = !known && !this.items.length;');
     expect(load).toContain('this.beginSnapshotRound();');
     expect(load).toContain('const staleF = this.noteSnapshot(f);');
     expect(load).toContain('const staleV = this.noteSnapshot(v);');
@@ -94,7 +96,7 @@ describe('favorites.vue 接线', () => {
     const del = unfav.indexOf('await removeFav(it.id)');
     const loc = unfav.indexOf("uni.setStorageSync('favQuestions', locals)");
     const drop = unfav.indexOf('const next = dropFavItem(this.items, this.folders, it);');
-    const reload = unfav.indexOf('this.load();');
+    const reload = unfav.indexOf('this.load({ known: true });');
     expect(del).toBeGreaterThan(0);
     expect(del).toBeLessThan(loc);
     expect(loc).toBeLessThan(drop);
@@ -111,12 +113,13 @@ describe('小程序同口径（源锁）', () => {
   const WXML = read('../../miniapp-native/miniprogram/pkgSocial/favorites/favorites.wxml');
   it('load 已有列表不铺骨架；onUnfav 先 dropFavItem 再 render 再 load；错误空态仅在无列表时', () => {
     expect(TS).toContain("import { dropFavItem } from '../../utils/fav-list';");
-    expect(TS).toContain('this.setData({ loading: !this.items.length, favErr: \'\' });');
+    expect(TS).toContain('const known = !!opts && opts.known === true;');
+    expect(TS).toContain('this.setData({ loading: !known && !this.items.length, favErr: \'\' });');
     const del = TS.indexOf('await deleteFav(it.id as number)');
     const drop = TS.indexOf('const next = dropFavItem(this.items, this.data.folders, it);');
     expect(del).toBeGreaterThan(0);
     expect(del).toBeLessThan(drop);
-    expect(TS.indexOf('this.render();', drop)).toBeLessThan(TS.indexOf('this.load();', drop));
+    expect(TS.indexOf('this.render();', drop)).toBeLessThan(TS.indexOf('this.load({ known: true });', drop));
     expect(WXML).toContain('wx:elif="{{favErr && !hasItems}}"');
   });
 });

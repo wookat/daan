@@ -92,7 +92,7 @@ describe('接入：仓库内所有用 wd-segmented 的页面', () => {
       expect(tags.length, p).toBeGreaterThan(0);
       for (const t of tags) expect(t, p).toContain('ref="seg"');
       expect(src, p).toContain("import { segResizeMixin } from '../../seg-resize.js';");
-      expect(src, p).toMatch(/\n  mixins: \[segResizeMixin[,\]]/);
+      expect(src, p).toMatch(/\n {2}mixins: \[segResizeMixin[,\]]/);
     }
   });
 });

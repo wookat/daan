@@ -99,9 +99,11 @@ Page({
   },
 
   // ---------- 收藏 ----------
-  async load() {
-    // 已有列表在手时（onShow 回来 / 取消收藏 / 移动后）后台刷新不铺骨架，列表原地收缩（与 H5 同口径）
-    this.setData({ loading: !this.items.length, favErr: '' });
+  async load(opts?: { known?: boolean }) {
+    // 已有列表在手时（onShow 回来 / 取消收藏 / 移动后）后台刷新不铺骨架，列表原地收缩（与 H5 同口径）；
+    // 取消收藏删到 0 条时列表状态已由云端回执确认（known），空态直出不铺骨架；bind:cta 传入的是事件对象，known 不为 true
+    const known = !!opts && opts.known === true;
+    this.setData({ loading: !known && !this.items.length, favErr: '' });
     try {
       const [f, v] = await Promise.all([fetchFavFolders(), fetchFavs()]);
       const folders = f.items;
@@ -342,7 +344,7 @@ Page({
           this.items = next.items;
           this.setData({ folders: next.folders, hasItems: this.items.length > 0 });
           this.render();
-          this.load();
+          this.load({ known: true });
         } catch (err) {
           toastInfo((err as Error).message);
         }
