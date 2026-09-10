@@ -56,8 +56,18 @@
 - 先只读拿权威 uid → `BEGIN IMMEDIATE` 精确删（含 `users` 该行）→ SSH 回执 **250s 超时（删除回执缺失，未重发 DELETE）** → 独立只读复核：`users` phone 行 0、`u33`/`33` 在 41 张 uid 表 **0 残留**、`test-r576-shots` 0、共享 `test-r562-modal-%` **42 行不变**、8 张保护表（剔本轮 uid）SHA-256 与清理前**一致**。
 - 每日一练排行榜第 1 名「R576走查」随 `daily_set_entries` 删除消失（全站同题榜为真实用户保留）。
 
+## 发版与生产复验（`~/r576/pages_deploy.sh` / `~/r576/prod/verify.py` / `clean_v.py`）
+
+- 发版：Pages 静态层 `index-DCzSOweZ → index-Cf9A4ts2`（第一次拉线上仍旧 bundle，脚本重试后一致；六类路由 200，收藏 chunk `pkgA-social-favorites.D0y8iKGF.js`），后端 0 改动 health 全程 `{"ok":true,"rev":"ec8206e5"}`。
+- 复验（375×812@2x 与 1440×900 各一新匿名 uid `test-r576-v-375` / `test-r576-v-1440`，`X-Kg-Probe: 1`，首页 CTA「免注册立即开练」→ 每日一练全选 A 答完 10 题 → 完成页）：
+  - **A 完成页薄弱考点 PASS**：今日全站同题 10 题中 6 题无 `question_type`（含 `245604 中心理解 / 334391 类比推理` 等，均有 `submodule` 与 `tag3`）；答对 3/10、错 7；卡面三条 = `中心理解 / 混搭填空 / 类比推理`（旧 bundle 同题同答法实拍为 `言语理解 / 混搭填空 / 判断推理`，见上文研究段），有 `question_type` 的「混搭填空」仍取子名。两尺寸一致。
+  - **A2 「练同考点」PASS**：点第一条 → `GET /api/questions?mode=reinforce&limit=5&uid=…&module=yanyu&submodule=中心理解&tag3=YY-ZX-05` 200，回包 5 题 `submodule` 全为 `中心理解`（`tag3` 全 `YY-ZX-05`——后端首选 `tag3` 分支已够 5 题，`module+submodule` 回退分支本轮生产**未被触发**，只有源码 + 单测）；进入练习页顶栏「言语理解 · 中心理解」1/5；`reinforce_log` 各 1 行。
+  - **B 收藏删到 0 卡 PASS**：curl `POST /api/favs` 预置 1 条云收藏（qid 4178）→ 收藏页 1 卡 → 取消收藏确认 → `MutationObserver` 全程 17 次 DOM 变更 `.kg-skel` **最大 0**、200ms 时已是空态「这里还没有收藏 / 去刷题 / 登录同步收藏」、6s 后台对账后仍空态 0 卡；清理前只读 `question_favs` 该 uid 0 行（DELETE 已落库）。两尺寸一致。
+  - 审计：两尺寸各 67 条 API 全 200，非 2xx 0；console error/warning 0、pageerror 0。
+- 清理：`clean_v.py ro → clean → ro`，两 uid 各 24 行（`mistakes 7 / practice_results 1 / answer_log 10 / reinforce_log 1 / growth_events 4 / daily_set_entries 1`）共 48 行删除回执齐全；独立只读 41 张 uid 表 0 残留、共享 `test-r562-modal-%` 42 行不变、5 张保护表（剔本轮 uid）SHA-256 前后一致。
+
 ## 证据分类
 
-- 已核实：CF RUM 字段值与本窗口无注入；题库覆盖数字；完成页实拍模块名；`reinforce_questions` 回退按 `submodule` 列（源码）；R575-1 机制与 175ms；清理 0 残留。
+- 已核实：CF RUM 字段值与本窗口无注入；题库覆盖数字；完成页实拍模块名（旧 bundle）→ 子模块名（新 bundle）；「练同考点」请求带 `submodule` 列原值且回包同子模块；收藏删到 0 卡 `.kg-skel` 0；`reinforce_questions` 回退按 `submodule` 列（源码）；R575-1 机制与 175ms；两阶段清理 0 残留。
 - 推断：「用户把模块名当考点/点了练同考点得到同模块题会困惑」是 UX 推断；`auto_install=true` + `ruleset.enabled=false` 的语义。
-- UNTESTED（发版前）：生产 UI 完成页新展示名 / 「练同考点」请求带 `submodule` 原值 / 强化回包属同子模块；收藏删到 0 卡 `.kg-skel` 0；小程序真机（R536-1 累计）；真 offline/SW；跨设备；自然 `redo`/`stale_fallback` 样本。
+- UNTESTED：后端 `module+submodule` 回退分支在生产实际取题（本轮 `tag3` 已够）；无 `tag3` 无 `question_type` 的 `module|submodule` 分桶（生产今日题全带 `tag3`，仅单测）；有 `question_type` 且子名 ≠ `submodule` 的条目点「练同考点」；小程序真机（R536-1 累计）；真 offline/SW；跨设备；自然 `redo`/`stale_fallback` 样本。
