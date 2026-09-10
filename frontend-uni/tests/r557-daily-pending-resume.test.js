@@ -42,7 +42,7 @@ describe('R557 pendingSession daily 标记', () => {
   it('parsePendingPractice 透出 daily；旧快照（无 daily 位）为 null，与 redo/ptitle 互不干扰', () => {
     const items = [q(1, 'B'), q(2)];
     expect(parsePendingPractice({ t: now, items, lastModule: null, daily: { date: TODAY } }, now)).toEqual({
-      done: 1, total: 2, module: '', ptitle: '', redo: false, daily: { date: TODAY, past: false },
+      done: 1, next: 2, total: 2, module: '', ptitle: '', redo: false, daily: { date: TODAY, past: false },
     });
     expect(parsePendingPractice({ t: now, items, lastModule: 'yanyu' }, now).daily).toBe(null);
     expect(parsePendingPractice({ t: now, items, redo: 1 }, now)).toMatchObject({ redo: true, daily: null });
@@ -121,7 +121,7 @@ describe('R557 home.vue hero 与续练卡同落点', () => {
   it('hero 主按钮文案：今日已完成「再练 10 题」> 同日未做完每日快照「继续今日一练 · 第 k/N 题」> 「继续目标」', () => {
     expect(home).toContain(':primary="{ text: heroPrimaryText }"');
     expect(home).toContain("if (this.todayDone) return '再练 10 题';");
-    expect(home).toContain("return r ? '继续今日一练 · 第 ' + (r.done + 1) + '/' + r.total + ' 题' : '继续目标';");
+    expect(home).toContain("return r ? '继续今日一练 · 第 ' + r.next + '/' + r.total + ' 题' : '继续目标';");
     expect(home).toMatch(/dailyPendingToday\(\) \{\s*const r = this\.practiceResume;\s*return r && r\.daily && !r\.daily\.past && r\.daily\.date === cnDayOf\(Date\.now\(\)\) \? r : null;/);
   });
 

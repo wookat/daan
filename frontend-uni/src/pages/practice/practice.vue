@@ -431,7 +431,7 @@ import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 import { qStatLine, qDifficulty } from '../../q-stat.js';
 import { toggleExcl, pickWithExcl, exclVisible } from '../../exam-excl.js';
-import { collectPracticeProgress, adoptPracticeResume, pendingTitle, redoItemsFromPending, dailyFromPending, dailyPendingFor, cnDayOf, REDO_PENDING_TITLE, unlinkedWrongItems, relinkMistakeIds, patchPendingMistake } from '../../practice-progress.js';
+import { collectPracticeProgress, adoptPracticeResume, pendingTitle, redoItemsFromPending, dailyFromPending, dailyPendingFor, cnDayOf, REDO_PENDING_TITLE, unlinkedWrongItems, relinkMistakeIds, patchPendingMistake, resumeIndex } from '../../practice-progress.js';
 import { weakSpots as buildWeakSpots } from '../../weak-spots.js';
 import { isExplanationCovered } from '../../exp-dup.js';
 import { reviewedMasteredCount, fixReportText, reviewedFromPending } from '../../review-advance.js';
@@ -2186,7 +2186,7 @@ export default {
     adoptLocalPending(s) {
       s.items.forEach((q) => { if (q._picked) q._logged = true; });
       this.items = s.items;
-      this.idx = Math.min(s.idx, s.items.length - 1);
+      this.idx = resumeIndex(s.items, s.idx);
       this.picked = this.items[this.idx]._picked || '';
       this.right = s.right;
       this.streak = s.streak;

@@ -511,7 +511,7 @@ export default {
     heroPrimaryText() {
       if (this.todayDone) return '再练 10 题';
       const r = this.dailyPendingToday;
-      return r ? '继续今日一练 · 第 ' + (r.done + 1) + '/' + r.total + ' 题' : '继续目标';
+      return r ? '继续今日一练 · 第 ' + r.next + '/' + r.total + ' 题' : '继续目标';
     },
     szTodayDone() {
       return !!this.szDaily.days[dayKey()];

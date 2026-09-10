@@ -33,6 +33,19 @@ export function collectPracticeProgress(items, idx, right, streak, bestStreak, m
   };
 }
 
+// 续做落点：快照 idx 停在已作答题（答错看反馈时退出）则接着其后第一道未答题（其后没有再从头找），
+// 未答题原地不动；首页「第 k/N 题」、恢复 toast 与落地题号共用此口径。已答题仍可从答题卡回看。
+export function resumeIndex(items, idx, picked = (q) => !!(q && q._picked)) {
+  const n = Array.isArray(items) ? items.length : 0;
+  if (!n) return 0;
+  const i = Number.isInteger(idx) && idx >= 0 ? Math.min(idx, n - 1) : 0;
+  if (!picked(items[i])) return i;
+  const after = items.findIndex((q, k) => k > i && !picked(q));
+  if (after !== -1) return after;
+  const any = items.findIndex((q) => !picked(q));
+  return any !== -1 ? any : i;
+}
+
 // R323：首页续练卡数据——本机 pendingSession 快照 -> {done,total,module}（无效/超期/已做完返回 null）
 export function parsePendingPractice(saved, now) {
   if (!saved || !Array.isArray(saved.items) || !saved.items.length) return null;
@@ -42,6 +55,7 @@ export function parsePendingPractice(saved, now) {
   if (done >= saved.items.length) return null;
   return {
     done,
+    next: resumeIndex(saved.items, saved.idx) + 1,
     total: saved.items.length,
     module: typeof saved.lastModule === 'string' ? saved.lastModule : '',
     ptitle: typeof saved.ptitle === 'string' ? saved.ptitle : '',
@@ -156,12 +170,12 @@ export function patchPendingMistake(saved, q) {
 export function parseRemotePractice(d, now = Date.now()) {
   if (!d || !Array.isArray(d.items) || !d.items.length) return null;
   const picks = d.picks && typeof d.picks === 'object' ? d.picks : {};
-  const done = d.items.filter(
-    (q) => q && (picks[q.id] != null || picks[String(q.id)] != null)
-  ).length;
+  const picked = (q) => !!q && (picks[q.id] != null || picks[String(q.id)] != null);
+  const done = d.items.filter(picked).length;
   if (done >= d.items.length) return null;
   return {
     done,
+    next: resumeIndex(d.items, d.idx, picked) + 1,
     total: d.items.length,
     module: typeof d.module === 'string' ? d.module : '',
     ptitle: typeof d.ptitle === 'string' ? d.ptitle : '',
@@ -193,7 +207,7 @@ export function adoptPracticeResume(d, now = Date.now()) {
   const clamp = (v, hi) => (Number.isInteger(v) && v >= 0 ? Math.min(v, hi) : 0);
   return {
     items,
-    idx: clamp(d.idx, n - 1),
+    idx: resumeIndex(items, d.idx),
     right: clamp(d.right, n),
     streak: clamp(d.streak, n),
     bestStreak: clamp(d.best_streak, 10000),

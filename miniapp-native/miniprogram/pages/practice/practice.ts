@@ -38,6 +38,7 @@ import {
   adoptPracticeResume,
   collectPracticeProgress,
   patchPendingMistake,
+  resumeIndex,
   PENDING_KEY,
   PP_CLEARED_KEY,
   readPendingSession,
@@ -460,7 +461,7 @@ Page({
     this._source = s.source || null;
     this._ptitle = s.ptitle || '';
     this.setData({ moduleName: modName(s.lastModule || ''), navTitle: s.ptitle || modName(s.lastModule || '') + ' · 续做' });
-    this.adopt(s.items.map(toPQ), s.idx, s.right, s.streak, s.bestStreak);
+    this.adopt(s.items.map(toPQ), resumeIndex(s.items, s.idx), s.right, s.streak, s.bestStreak);
   },
   startFallback(module: string) {
     const a = this._args as LaunchArgs;
