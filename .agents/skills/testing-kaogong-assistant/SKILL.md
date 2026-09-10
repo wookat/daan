@@ -3,6 +3,14 @@ name: testing-kaogong-assistant
 description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## R587 经验：走查脚本先 stub `/api/track` + 绝对定位控件与文字的几何要按热区/glyph 两口径量 + 自动几何审计只当线索
+
+- 生产走查脚本导航前一律 `ctx.route('**/api/track', r => r.fulfill(200, '{"ok":true,"stubbed":true}'))`：uni-h5 首页/错题本一进页就发 track，不 stub 则「只看不答」也落 `growth_events`（R586 落 1 行）；R587 stub 后 20 路由 + 4 尺寸复验两 uid 独立 `ro` `{}`，0 清理。stub 命中数也要打出来（验证 route 真生效）。
+- `position:absolute` 的 ✕ 之类控件与相邻文字要量两条线：44px **热区**左缘（点文字末字会不会触发关闭）与 **glyph** 左缘（视觉叠字）；`.hero-x{right:8;44×44}` 从卡片右缘向内占 52px、压在内容列 32px，文字右缘 = `Range.getBoundingClientRect()`（不能用容器宽，容器是 flex 拉满的）。修法优先「结构预留（`padding-right`）+ 文案收短」双保险，只收文案下次改文案又叠。文案宽用页面同字体 canvas `measureText` 量候选再定稿。
+- 自动几何审计（`docW`、`scrollWidth>clientWidth`、`getClientRects().length>1`）报出的 OVER/CLIP 只是线索：uni-h5 空 wrapper、chip 行预期横滚、`docW` 345<360 都是误报，必须回到截图 + 量测坐实才算缺陷。
+- 复验点击类断言：点文案末字后 `document.querySelector('.hero-wrap')` 仍在 = 不误触；点 ✕ 中心后 hero 消失且 `localStorage.landingHide` 落 1；每个尺寸新 `browser_context`（首页 hero 是 `showLanding` 态，关一次就没了）。
+- 清理脚本保护表 digest 改窄论证：clean 只 `DELETE … WHERE uid IN (精确)` 不 UPDATE → 非目标行只可能被误删 → 每张 uid 表算「非目标行 `count(*)/sum(rowid)/max(rowid)`」前后相等即完备（宿主 41 表 0.08s vs 旧 10 表逐行 sha256 60.54s）；共享 fixture `test-r562-modal-%` 是前缀误删风险点仍逐行 sha256。脚本若日后加 UPDATE 要回 `--full`。`~/r587/clean587.py` 未在有命中的真实 clean 上跑过，转正前先实战一次。
+
 ## R586 经验：窄屏折行先量 flex 链再改 + 清理脚本「空回执」= timeout 杀在 commit 后 print 前
 
 - 窄屏文字折行不要只看截图：同 bundle 下用 `getBoundingClientRect` 量 `.cal-head → .cal-title → .cal-ym` 每层宽 + canvas `measureText` 同字体量文案宽，行数 = `height / lineHeight`；四档 360/375/390/1440 一起量才能说清「哪档折、差多少」（R586：可用 92.5/100.6 vs 文案 104.4）。同一 flex 行里不可压的 `kg-tag` 会先抢宽，热区 `.cal-btn` 没 `flex-shrink:0` 会被压到 <44 也要顺手量。
