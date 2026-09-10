@@ -7,6 +7,7 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 - R575 起取消收藏是 **DELETE 成功 → 本地收缩（`dropFavItem`）→ 后台 `load()` 对账**，且已有列表时不铺骨架：断言改为「DELETE 200 响应后**下一帧**卡数 −1、无 `kg-skeleton`」+「后续 GET 完成后仍 −1」两段；不再接受「先骨架再收缩」。阻断 own DELETE → 卡/本机/云三方不变（收缩在 `await removeFav` 之后）。
 - 旧快照回滚专项：先真实加载一次（`_liveAt`），阻断 `GET /api/favs`（或 `/api/favs/folders`）后取消一条云收藏 → DELETE 200、卡 −1、横幅「网络不稳定 · 展示 N 前缓存的收藏」+「重试」出现、**列表不被旧快照铺回**（R561-fix 同型）；解除阻断点「重试」→ 横幅消失、卡数与只读 DB 一致。冷 Document 首进即阻断则允许旧快照铺屏 + 横幅（有胜于无）。
 - 同题干「本机 + 云」两条并存（R574 F 前置：`重练全部收藏 → 返回` 造本机副本，再阻断 `favQuestions` 清理不可行，改用 `id:null` local-only 与云同题各一条）：取消云条目只删被点那条、本机同题按 R574 口径清理；`dropFavItem` 不按 `question` 匹配。
+- 骨架计数选择器是 **`.kg-skel`**（`kg-skeleton` 组件根类），不是 `.kg-skeleton`——R575 复验第一版用错选择器得到全 0 假阴性，重验才有效；删到最后一张（0 卡）会有 ≈175ms 一帧骨架（`loading = !items.length`），断言「无骨架」只对「仍有剩余卡」成立。
 - 研究脚本截图路由**先核 `pages.json`**：每日一练没有独立页（`#/pkgA/daily/daily` 不存在，空白页是脚本错），入口是首页 `startDaily()` 进练习页；guest 截图只覆盖首页/我的，登录态路径交生产复验。
 
 ## R574 经验：收藏页「本机 + 云」双写形态的取消复验 + 派生式 chips 的深链断言
