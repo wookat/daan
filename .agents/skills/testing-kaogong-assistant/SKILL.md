@@ -3,6 +3,13 @@ name: testing-kaogong-assistant
 description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## R582 经验：页面「慢」先分「发出时刻」与「往返时长」+ 复验要覆盖宿主快窗与慢窗
+
+- 宿主慢不是全部原因：用 CDP `page.on('request'/'response')` 打相对时刻表（`~/r582/timing.py <route> <base> <width>`，`about:blank` 冷加载 + `X-Kg-Probe`），把每条 `/api/*` 的**发出时刻**和**回包时刻**并排列出——「发出被前一条回包卡住」（串行 `await`）是本产品代码可控的部分，「单次往返 5s」才是宿主。我的页 `loadRemote` 三个 `try { await request() }` 串行让 growth 白等 5.4s，同页 `favs`/`badges` 早就同 tick 发出可对照。
+- 改编排类修复的生产复验口径：断言「五请求同 tick 发出」（结构事实），不要拿「总耗时变短」当证据——修后那次宿主恰好快（2.3s）不能归功于改动；必须再取一次慢窗（1440 窗 profile 4.55s）看串行叠加是否消失。
+- 单测装载 Vue 方法体做运行时断言：`methodBody(src, 'async loadRemote\\(\\)')` 切出方法体 → `new Function('request', …, 'return async function(){' + body + '}')` 注入 fake `request`（返回手控 Promise）→ 断言发出顺序数组 + 先 resolve 慢请求以外的那条看字段先落地；比只做正则源锁更能锁「不再串行」。
+- `walk580b.py` 场景参数化（`abc` / `cd` / `e`）后补测 1440 C/D 只需 `walk580b.py <prefix> 1440 cd`，清理前缀跟着轮次改（`clean582.py` 由 `clean580.py` 只改 `PREFIX` + `digest` 的 `startswith`）。
+
 ## R581 经验：「同秒双行」类结论先并排打印时间戳 + Caddy 客户端归属 + 小程序离页路径只能源锁
 
 - 只读 DB 邻近对（`~/r581/q581a.sh`）必须把两行 `created_at` 并排打印再下判：R580 记的「09-07 同秒 NULL/有 uid 双行」实为 `19:57:57` vs `20:00:28`（151s），是读串。窄窗 Caddy（`q581b.sh`，`ts` ±600s 过滤 `practice_result`）用 UA + Referer 归属客户端：`Referer https://servicewechat.com/…` + UA 含 `wv` = **微信小程序**请求，不是 H5；`Referer https://kaogong.zalize.com/` = H5。Caddy access log 无 body，payload 只能靠 DB 行的 `n/correct/secs` 侧证。
