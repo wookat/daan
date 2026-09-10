@@ -3,6 +3,12 @@ name: testing-kaogong-assistant
 description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## R577 经验：生产 SQLite 只读探测必须走已有索引 + 强化回退分支的一手验证法
+
+- `questions` 10.9 万行，`group by tag3 ... having` 套子查询在生产宿主（load 15–20）跑 ≈200s 被 `timeout` 杀；先 `select name, sql from sqlite_master where type='index'` 拿到 `idx_q_reinforce(tag3, disabled, correct_ratio, id)` / `idx_q_pick(module, submodule, is_real, disabled, …)`，用 `indexed by idx_q_reinforce` 只分组出 `n<10` 的 tag3（17 个）再逐 tag3 点查原字段 → 1.3s。原则：窄列、先分组后点查、每步单独计时打印，不写一条大 SQL。
+- 验证 `reinforce_questions` 第二级 `module+submodule` 回退：挑活跃题数 < limit 的 tag3（同一 tag3 内 `submodule` 多为异值、`question_type` 大量 NULL，要按题库原字段选），新 uid 真实 GET `mode=reinforce&limit=5&module=&submodule=&tag3=`，回包 id 回查 `module/submodule/tag3/question_type`：精确 tag3 题数 + 其它 tag3 但同 `submodule` 的题数 = limit 即坐实；出现异 `submodule` 才说明第三级 `module` 回退触发。满额回包会写 `reinforce_log` 1 行（不满额不写，是既有去重设计），清理只删该 uid 该表并读总数差 = 1。
+- 「零自然样本」只能写「窗内无合格样本」；同一账号「累计做题」三页（我的/统计/首页）同源 `/api/growth total.n`，与本机 `pendingSession` 进度不是同口径，比对差异先想清数据源和拍照时刻再登记。
+
 ## R575 经验：收藏页「本地收缩 + 后台对账」的复验口径 + 研究脚本路由必须先核 pages.json
 - R575 起取消收藏是 **DELETE 成功 → 本地收缩（`dropFavItem`）→ 后台 `load()` 对账**，且已有列表时不铺骨架：断言改为「DELETE 200 响应后**下一帧**卡数 −1、无 `kg-skeleton`」+「后续 GET 完成后仍 −1」两段；不再接受「先骨架再收缩」。阻断 own DELETE → 卡/本机/云三方不变（收缩在 `await removeFav` 之后）。
 - 旧快照回滚专项：先真实加载一次（`_liveAt`），阻断 `GET /api/favs`（或 `/api/favs/folders`）后取消一条云收藏 → DELETE 200、卡 −1、横幅「网络不稳定 · 展示 N 前缓存的收藏」+「重试」出现、**列表不被旧快照铺回**（R561-fix 同型）；解除阻断点「重试」→ 横幅消失、卡数与只读 DB 一致。冷 Document 首进即阻断则允许旧快照铺屏 + 横幅（有胜于无）。
