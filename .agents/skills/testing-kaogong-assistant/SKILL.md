@@ -3,6 +3,12 @@ name: testing-kaogong-assistant
 description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## R574 经验：收藏页「本机 + 云」双写形态的取消复验 + 派生式 chips 的深链断言
+- 收藏在生产不是单源：题页 `toggleFav` 与 R561 `syncCloudFavs`（进练习页时触发）都会把**云收藏写进本机 `favQuestions`**，`favorites.vue load()` 再按 `question` 去重合并。凡「取消收藏」类复验必须先走一次真实「重练全部收藏 → 返回」把本机副本造出来，再取消云条目并断言：`DELETE /api/favs` 恰 1 条、`uni.getStorageSync('favQuestions')` 无该题、F5 后仍收缩；否则只测纯云用户会漏掉「复活要第二次取消」（R574 生产 F）。反向也要测：阻断 own DELETE → toast 且本机数组不动（清本机必须在 removeFav 成功之后）。
+- 取消后是 `load()` 全量重拉再收缩（既有设计），宿主慢时先见重载骨架数秒（375 DELETE 9.4s + GET 4.0s）——**截图时间戳必须与 DELETE 响应时刻对齐**再下「响应后仍 N 卡」结论；R574 复验一就是把响应前截图误报成复活证据。指令里不要写「立即 1 卡」，写「DELETE 200 + 后续 GET 完成后 1 卡」。
+- 派生式 chips（`favModulePlan`）断言口径：present 集按**全部 items**（非当前夹）算；单模块 + 深链 `?mod=<无收藏模块>` 是 **3 枚**（全部 / 深链模块 / present 模块，按 `MOD_KEYS` 序）不是 2 枚；单模块无深链整行不渲染（用 CTA y 坐标上移量作可感知证据）。
+- 收藏页 URL 回写与 R546 `book.vue` 同型：`replaceState` 必须传 `window.history.state`（`null` 会抹 vue-router state），`onShow` 在 `load()` 后回写、深链 `?folder=` 尚未落地（`_pendingFolder != null`）时让位；断言 `history.state` 非 null + `position` 保留即可，`__id__` 本就不存在。
+
 ## R572 经验：tabBar KeepAlive 页的「暖轮」必测 + `stale_fallback` 埋点按调用方计数
 - 统计/错题本/首页/我的是 uni tabBar KeepAlive 页：冷 Document（F5）旧快照态 PASS **不代表**暖轮 PASS——`data` 里上一轮真实回包留下的 `dueSynced=true` 等「已同步」标志会跨 `onShow → refresh` 沿用。R572 生产 F 就是：真实 2 due → 切错题本 → 只 `route.abort` `/api/review` → 切回统计，横幅出现但仍「2 题今日待复习」（375/1440 同复现）。凡「未同步显 —/待同步」类断言，必须补一条**同一 Document 内先真实后阻断再切回**的序列；恢复用可见「重试」按钮，先 unroute 再点。
 - 统计页故障注入用 `route.abort` 十端点 + 原生 F5（不是 `page.reload()` 才会命中 `snapPeek` 首帧）；`stale_fallback` 事件条数 ≥ 失败 GET 数：埋点在 `getCache.run` 在途合并之外按调用方各记一条（`/api/predict` 两处消费 → 1 GET 2 事件，R572-1），审计以 request-ledger 的唯一失败 GET 为准、事件数只作上界。

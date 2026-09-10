@@ -44,10 +44,18 @@
 - `syncUrl`：`replaceState(window.history.state, …)` 保住 router state；`onShow` 在 `load()` 后 `if (this._pendingFolder == null) this.syncUrl()`（深链 `?folder=` 由 load 落地前让位，与 R546 `_pendingKp` 守卫同理）。
 - 测试：H5 `r574-fav-module-opts.test.js` +2（10）；小程序 `fav-module-opts.test.ts` +1（7）。本地门：H5 eslint 0 / vitest 194 文件 1513 / build:h5 `index-BmUQ_r2w`；小程序 tsc / lint 0 / vitest 16 文件 80；diff --check 空。
 
+## 生产复验二（Pages `index-C1NhelQ3 → BmUQ_r2w`，favorites chunk `pkgA-social-favorites.oBB9a3Dt.js`；后端 0 改动 health 7 次 `ec8206e5`）
+
+- F1 云取消 375 + 1440：真实「重练全部收藏」触发 `syncCloudFavs` 写本机 → 返回 → 取消言语云收藏：各恰 1 条 `DELETE /api/favs` 200、本机 `favQuestions` 该题清除、终态 1 卡 / 行隐藏、原生 F5 保持、只读 DB 仅剩常识 4178 → **PASS**。**时序纠正**：复验一「DELETE 200 后仍 2 卡」截图实际早于 DELETE 响应；真实序列是 DELETE → `load()` 重载骨架 → 收缩（375 DELETE 9.4s + GET 4.0s，1440 0.34s + 0.29s，宿主慢）。「删后重拉」是既有设计，不是即时本地更新——我复验指令写「立即 1 卡」为口径过严，不算 FAIL。
+- F2 本机 local-only（`id:null`）取消：只清本机、**0 DELETE**、云 GET 前后逐字段相等 → PASS。F3 阻断 own DELETE：网络错误 toast、2 卡 / 本机数组 / 云两行均保留（不误删本机）→ PASS。
+- F4：notes→收藏→重练→返回地址栏无 `tab=note` 且 UI 收藏 tab、F5 仍收藏；`?mod=yanyu` 重练返回保留筛选与 query；`history.state` 非 null、回返前后对象相等、`position=2` 保留（`__id__` 本就不存在）；`?folder=9` 首进 / 新建夹移入后 F5 地址栏始终保留 folder、显示夹内 1 卡 → PASS。F5 回归 A 单模块隐藏 / B 3 枚 / C 空数量深链 3 枚 + 空态 + 恢复 → PASS。
+- 审计：API 87 = 85×200 + 2 主动 abort，非 2xx / 超时 / 导航取消 / 未终态 0；Runtime.exception / rejection 0；应用 console 10 条全为 `scrollLeft null`（R561-1 既有）；SW harness warning 10 / controller error 5 / setup error 1 分列（等待方式、过早断言、选择器偏差，更正后核验）。身份：10 个 Document 目标 bundle + chunk，runtime / 线上 / dist hash 一致。清理：`test-r574-w-%` 0→15→0，独立 41 表 0 残留，共享 R562 42 行逐字段保持，五类 hash / papers 不变。
+
 ## 证据分类
 
-- 已核实：8/8 单模块、`/api/favs` stale 0、chip 行静态 6 枚、375 首屏占位（截图）；生产复验一 A–E/1440 PASS、F 两条既有 FAIL（见上）。
+- 已核实：8/8 单模块、`/api/favs` stale 0、chip 行静态 6 枚、375 首屏占位（截图）；生产复验一 A–E/1440 PASS、F 两条既有 FAIL（见上）；复验二 F1–F5 + 1440 F1 PASS（热修生效）。
 - 推断：粉笔 / 夸克按已有分类生成筛选（凭产品使用经验，未逐版本核对）。
-- UNTESTED：真机 / 小程序（R536-1 累计）、真实 SW/offline、深链 `?mod=` 指向无收藏模块的生产态（单测覆盖）。
+- UNTESTED：真机 / 小程序 `onUnfav`（仅 tsc / 源锁，R536-1 累计）、真实 SW/offline、其它浏览器、DELETE 业务 HTTP 错误分支（只测了网络阻断）、练习**完成**后返回收藏页、1440 F2–F5。
 - 基础设施受阻：研究阶段宿主 load 25 / health 22.9s；复验一窗口 load 15.6 / health 1.3s 可用。
-- 登记 R574-2（P3）：练习页入口 `scrollLeft null` TypeError（R561-1 既有）本轮再次出现 2 条，未修。
+- 登记 R574-2（P3）：练习页入口 `scrollLeft null` TypeError（R561-1 既有）两轮再次出现 2 + 10 条，未修。
+- 登记 R574-3（P3 UX）：收藏页取消后走 `load()` 全量重拉再收缩，宿主慢时骨架可见数秒；可改为本地先收缩再后台对账，本轮不改（涉及 R561 对账口径）。
