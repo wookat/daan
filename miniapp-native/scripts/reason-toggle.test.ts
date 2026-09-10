@@ -59,7 +59,8 @@ describe('R559 小程序错因 chip 取消语义', () => {
     expect(practice).toContain('_saved: !!pq._saved,');
     expect(practice).toContain('_mid: Number.isInteger(pq._mid) && (pq._mid as number) > 0 ? (pq._mid as number) : null,');
     expect(practice).toContain("_reason: typeof pq._reason === 'string' ? pq._reason : '',");
-    expect(practice).toMatch(/onUnload\(\) \{[\s\S]*?this\.logAttempts\(this\.data\.items\);\n\s+this\._unloaded = true;\n\s+\},/);
+    // R581：logAttempts 归入 `if (!this.finalizeIfAnswered()) { … }`，_unloaded 仍在 onUnload 末尾置位
+    expect(practice).toMatch(/onUnload\(\) \{[\s\S]*?this\.logAttempts\(this\.data\.items\);\n\s+\}\n\s+this\._unloaded = true;\n\s+\},/);
     const fn = practice.slice(practice.indexOf('async saveWrong(q: PQuestion, picked: string) {'), practice.indexOf('onSetReason('));
     expect(fn).toMatch(/if \(this\._unloaded\) \{\n[^\n]*\n\s+const kept = patchPendingMistake\(readPendingSession\(\), q\);\n\s+if \(kept\) wx\.setStorageSync\(PENDING_KEY, kept\);\n\s+return;\n\s+\}/);
   });

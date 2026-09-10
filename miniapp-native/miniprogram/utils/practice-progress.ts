@@ -37,6 +37,11 @@ function clamp(v: unknown, hi: number): number {
   return Number.isInteger(v) && (v as number) >= 0 ? Math.min(v as number, hi) : 0;
 }
 
+// 全部答完（与 H5 quit-summary allAnswered 同口径）：空数组不算答完
+export function allAnswered(items: ProgressQuestion[] | null | undefined): boolean {
+  return Array.isArray(items) && items.length > 0 && items.every((q) => !!(q && q._picked));
+}
+
 // 续做落点（与 H5 resumeIndex 同口径）：快照 idx 停在已答题则接着其后第一道未答题（其后没有再从头找），未答题原地不动
 export function resumeIndex(items: ProgressQuestion[], idx: unknown): number {
   const n = Array.isArray(items) ? items.length : 0;
