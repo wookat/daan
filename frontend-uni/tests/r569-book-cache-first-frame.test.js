@@ -108,7 +108,7 @@ describe('R569 load()：快照铺屏后即 provisional 落地；离线兜底也�
   });
   it('离线兜底分支（缓存有错题）应用深链筛选', () => {
     const off = load.slice(load.indexOf('const c = getCachedMistakes'), load.indexOf('uni.showToast({ title: this.offlineText'));
-    expect(off).toContain('this.offlineView = true;\n          this.applyPendingKp();');
+    expect(off).toContain('this.showSnapshot(c.ts || 0);\n          this.applyPendingKp();');
   });
   it('dueSynced 只在真实 /api/review 回包后置真，换账号重置', () => {
     // R571 起再加一层：/api/review 若是 request() 旧快照兜底（staleAt>0）同样不置真

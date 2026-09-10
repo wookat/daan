@@ -80,44 +80,71 @@ describe('book.vue load()：旧快照不当已同步、不回写 mistakesCache�
   });
   it('真 reject 的离线兜底分支带 mistakesCache.ts 进横幅，toast 文案与横幅同源', () => {
     const off = load.slice(load.indexOf('const c = getCachedMistakes'), load.indexOf('} else {'));
-    expect(off).toContain('this.setSnapshotView(c.ts || 0);\n          this.offlineView = true;\n          this.applyPendingKp();');
+    expect(off).toContain('this.showSnapshot(c.ts || 0);\n          this.applyPendingKp();');
     expect(off).toContain('uni.showToast({ title: this.offlineText, icon: \'none\' });');
   });
-  it('setSnapshotView：全真实 → 清横幅；任一旧快照 → 取最旧时刻并只挂一次 online 监听', () => {
-    const src = method('setSnapshotView');
-    const fn = new Function('...ats', src.replace(/\/\/ #(ifdef|endif)[^\n]*/g, ''));
+  it('setSnapshotView：全真实 → 清横幅并摘监听；任一旧快照 → 取最旧时刻、采样 onLine 落 data，online/offline 各挂一次', () => {
+    const strip = (s) => s.replace(/\/\/ #(ifdef|endif)[^\n]*/g, '');
+    const fn = new Function('...ats', strip(method('setSnapshotView')));
+    const show = new Function('snapAt', strip(method('showSnapshot')));
+    const unbind = new Function(strip(method('unbindNet')));
     const add = vi.fn();
-    globalThis.window = { addEventListener: add };
-    const vm = { offlineView: true, snapAt: 5, load: vi.fn(), setSnapshotView: fn };
+    const remove = vi.fn();
+    globalThis.window = { addEventListener: add, removeEventListener: remove };
+    const nav = { onLine: true };
+    const navDesc = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+    Object.defineProperty(globalThis, 'navigator', { value: nav, configurable: true, writable: true });
+    const vm = { offlineView: true, snapAt: 5, netOnline: null, load: vi.fn(), setSnapshotView: fn, showSnapshot: show, unbindNet: unbind };
     vm.setSnapshotView(0, 0);
     expect(vm).toMatchObject({ offlineView: false, snapAt: 0 });
     expect(add).not.toHaveBeenCalled();
     vm.setSnapshotView(0, NOW - 1000);
-    expect(vm).toMatchObject({ offlineView: true, snapAt: NOW - 1000 });
+    expect(vm).toMatchObject({ offlineView: true, snapAt: NOW - 1000, netOnline: true });
+    nav.onLine = false;
     vm.setSnapshotView(NOW - 9000, NOW - 1000);
     expect(vm.snapAt).toBe(NOW - 9000);
-    expect(add).toHaveBeenCalledTimes(1);
-    expect(add.mock.calls[0][0]).toBe('online');
-    expect(add.mock.calls[0][2]).toEqual({ once: true });
-    add.mock.calls[0][1]();
+    expect(vm.netOnline).toBe(false);
+    expect(add).toHaveBeenCalledTimes(2);
+    expect(add.mock.calls.map((c) => c[0]).sort()).toEqual(['offline', 'online']);
+    const handler = add.mock.calls[0][1];
+    expect(add.mock.calls[1][1]).toBe(handler);
+    handler({ type: 'offline' });
+    expect(vm.netOnline).toBe(false);
+    expect(vm.load).not.toHaveBeenCalled();
+    handler({ type: 'online' });
+    expect(vm.netOnline).toBe(true);
     expect(vm.load).toHaveBeenCalledTimes(1);
-    expect(vm._onOnline).toBeNull();
+    vm.setSnapshotView(0, 0);
+    expect(remove).toHaveBeenCalledTimes(2);
+    expect(vm._onNet).toBeNull();
+    // 真 reject 分支：旧 mistakesCache 无 ts 也要进快照态（snapAt=0 不编造时间）并挂监听
+    vm.showSnapshot(0);
+    expect(vm).toMatchObject({ offlineView: true, snapAt: 0, netOnline: false });
+    expect(add).toHaveBeenCalledTimes(4);
     delete globalThis.window;
+    if (navDesc) Object.defineProperty(globalThis, 'navigator', navDesc);
+    else delete globalThis.navigator;
+  });
+  it('横幅文案的在线态来自 data.netOnline（不直读非响应式的 navigator.onLine）：同一快照时刻下断网重试也能换句', () => {
+    const m = script.match(/\n {4}offlineText\(\) \{([\s\S]*?)\n {4}\},/);
+    expect(m).toBeTruthy();
+    expect(m[1].trim()).toBe('return snapshotNotice(this.snapAt, this.netOnline);');
+    expect(m[1]).not.toContain('navigator');
+    expect(script).toContain('netOnline: null,');
   });
   it('模板：横幅文案走 offlineText、带「重试」动作重拉；head-tip 不再断言「离线中」', () => {
     expect(tpl).toContain('<kg-banner v-if="offlineView" tone="warn" icon="plane" :text="offlineText" action-text="重试" :closable="false" class="offbar" @action="load" />');
     expect(tpl).toContain("{{ offlineView ? '今日待复习需网络恢复后同步' : '正在同步今日待复习…' }}");
     expect(tpl).not.toContain('离线中 ·');
   });
-  it('offlineText 计算：navigator 不可用时传 null；onUnload 摘掉 online 监听', () => {
+  it('导入与状态；navigator 不可用时采样为 null；onUnload 摘掉 online/offline 监听', () => {
     expect(script).toContain("import { staleAt } from '../../api.js';");
     expect(script).toContain("import { snapshotNotice } from '../../snapshot-notice.js';");
     expect(script).toContain('snapAt: 0,');
-    const m = script.match(/\n {4}offlineText\(\) \{([\s\S]*?)\n {4}\},/);
-    expect(m).toBeTruthy();
-    expect(m[1]).toContain("typeof navigator.onLine === 'boolean' ? navigator.onLine : null");
-    expect(m[1]).toContain('return snapshotNotice(this.snapAt, online);');
+    expect(method('showSnapshot')).toContain(
+      "this.netOnline = typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean' ? navigator.onLine : null;"
+    );
     const unload = script.slice(script.indexOf('\n  onUnload() {'), script.indexOf('\n  methods: {'));
-    expect(unload).toContain("window.removeEventListener('online', this._onOnline);");
+    expect(unload).toContain('this.unbindNet();');
   });
 });

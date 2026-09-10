@@ -636,6 +636,7 @@ export default {
       loadErr: '',
       offlineView: false,
       snapAt: 0,
+      netOnline: null,
       due: [],
       dueTotal: 0,
       dueSynced: false,
@@ -728,8 +729,7 @@ export default {
   computed: {
     qStyle() { return { fontSize: fontSizes(this.fontLv).q }; },
     offlineText() {
-      const online = typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean' ? navigator.onLine : null;
-      return snapshotNotice(this.snapAt, online);
+      return snapshotNotice(this.snapAt, this.netOnline);
     },
     hasFilter() {
       return !!(this.filterMod || this.kpFilter || this.kp3Filter || this.srcFilter || this.rzFilter || this.pidFilter);
@@ -1076,10 +1076,7 @@ export default {
       this._offLanded();
       this._offLanded = null;
     }
-    if (this._onOnline && typeof window !== 'undefined') {
-      window.removeEventListener('online', this._onOnline);
-      this._onOnline = null;
-    }
+    this.unbindNet();
     if (this._kbHandler && typeof window !== 'undefined') {
       window.removeEventListener('keydown', this._kbHandler);
       this._kbHandler = null;
@@ -1575,8 +1572,7 @@ export default {
         const c = getCachedMistakes(anonUid());
         if (c && c.items && c.items.length) {
           this.items = c.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
-          this.setSnapshotView(c.ts || 0);
-          this.offlineView = true;
+          this.showSnapshot(c.ts || 0);
           this.applyPendingKp();
           uni.showToast({ title: this.offlineText, icon: 'none' });
         } else {
@@ -1587,25 +1583,40 @@ export default {
       }
       this.loading = false;
     },
-    // 旧快照展示态：取最旧的快照时刻作横幅时间，首次进入时在 H5 监听 online 一次以兑现「联网后自动更新」；全真实回包时清除
+    // 旧快照展示态：取最旧的快照时刻作横幅时间，每次进入采样 navigator.onLine（非响应式，需落到 data）；
+    // H5 监听 online/offline：断网即时改文案、联网自动重拉以兑现「联网后自动更新」；全真实回包时清除
     setSnapshotView(...ats) {
       const ts = ats.filter((t) => t > 0);
       if (!ts.length) {
         this.offlineView = false;
         this.snapAt = 0;
+        this.unbindNet();
         return;
       }
-      this.snapAt = Math.min(...ts);
+      this.showSnapshot(Math.min(...ts));
+    },
+    // snapAt=0 表示快照时刻未知（旧 mistakesCache 无 ts），横幅不编造时间
+    showSnapshot(snapAt) {
+      this.snapAt = snapAt;
+      this.netOnline = typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean' ? navigator.onLine : null;
       this.offlineView = true;
       // #ifdef H5
-      if (!this._onOnline && typeof window !== 'undefined') {
-        this._onOnline = () => {
-          this._onOnline = null;
-          if (this.offlineView) this.load();
+      if (!this._onNet && typeof window !== 'undefined') {
+        this._onNet = (e) => {
+          this.netOnline = e.type === 'online';
+          if (this.netOnline && this.offlineView) this.load();
         };
-        window.addEventListener('online', this._onOnline, { once: true });
+        window.addEventListener('online', this._onNet);
+        window.addEventListener('offline', this._onNet);
       }
       // #endif
+    },
+    unbindNet() {
+      if (this._onNet && typeof window !== 'undefined') {
+        window.removeEventListener('online', this._onNet);
+        window.removeEventListener('offline', this._onNet);
+      }
+      this._onNet = null;
     },
     // 入向 ?kp=/?kp3= 深链：列表到达后校验命中才生效（fail-closed：无命中丢弃并纠正 URL）
     // provisional：按屏上快照先落地筛选，不消费 pending、无命中不纠正 URL，真实回包后再终判一次
