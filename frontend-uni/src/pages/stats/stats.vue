@@ -1,5 +1,6 @@
 <template>
   <view class="wrap stats">
+    <kg-banner v-if="offlineView" tone="warn" icon="plane" :text="offlineText" action-text="重试" :closable="false" class="offbar" @action="refreshAccountData" />
     <!-- 未登录：横幅（不占首屏大块） -->
     <view v-if="!authUser" class="strip">
       <kg-banner tone="info" icon="user-round" text="登录后错题与记录多端同步" action-text="登录 / 注册" :closable="false" @action="goLogin" />
@@ -41,7 +42,7 @@
             <view class="todo-ico is-warn"><l-icon name="book-open" :size="20" tone="warn" /></view>
             <view class="todo-main">
               <text class="todo-name">错题到期复习</text>
-              <text class="todo-meta">{{ dueN }} 题今日待复习</text>
+              <text class="todo-meta">{{ dueSynced ? dueN + ' 题今日待复习' : offlineView ? '到期数需网络恢复后同步' : '正在同步到期数…' }}</text>
             </view>
             <kg-button variant="primary" size="sm" @click="goBook">去复习</kg-button>
           </view>
@@ -350,6 +351,7 @@
 import { request, snapPeek, anonUid, getAuthUser, fetchCheckinSummary, trackEvent, isStaleUidErr } from '../../api.js';
 import { checkinStreak, dayKey, cnWeekKey } from '../../checkin.js';
 import { examTrend } from '../../exam-trend.js';
+import { snapshotViewMixin } from '../../snapshot-view.js';
 
 const MODS = [
   { key: 'ziliao', name: '资料' },
@@ -363,8 +365,9 @@ const MODS = [
 const UNLOCK_N = 10;
 
 export default {
+  mixins: [snapshotViewMixin({ noun: '统计', reload: 'refreshAccountData' })],
   data() {
-    return { UNLOCK_N, authUser: getAuthUser(), loadErr: '', byModule: [], byType: [], byReason: [], pstats: { byModule: {}, days: {} }, kmCov: null, history: [], showAllHist: false, growth: null, reco: null, dueN: 0, gwMod: '', slStats: null, slIssuesOpen: false, modOpen: false, topOpen: false, hmDays: null, svStreak: null, examAttempts: null, examTarget: null };
+    return { UNLOCK_N, authUser: getAuthUser(), loadErr: '', byModule: [], byType: [], byReason: [], pstats: { byModule: {}, days: {} }, kmCov: null, history: [], showAllHist: false, growth: null, reco: null, dueN: 0, dueSynced: false, gwMod: '', slStats: null, slIssuesOpen: false, modOpen: false, topOpen: false, hmDays: null, svStreak: null, examAttempts: null, examTarget: null };
   },
   computed: {
     hasData() {
@@ -643,6 +646,7 @@ export default {
   },
   onUnload() {
     if (this._onAuth) uni.$off('authChanged', this._onAuth);
+    this.unbindNet();
   },
   onShow() {
     this.refreshAccountData();
@@ -655,6 +659,7 @@ export default {
   },
   methods: {
     refreshAccountData() {
+      this.beginSnapshotRound();
       this.authUser = getAuthUser();
       this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
       this.history = this.loadHist();
@@ -675,6 +680,8 @@ export default {
       this.examTarget = null;
       this.growth = null;
       this.reco = null;
+      this.dueN = 0;
+      this.dueSynced = false;
       this.slStats = null;
       this.refreshAccountData();
     },
@@ -699,6 +706,8 @@ export default {
           request('/api/exam/attempts?uid=' + uid + '&limit=20'),
           request('/api/profile?uid=' + uid)
         ]);
+        this.noteSnapshot(att);
+        this.noteSnapshot(prof);
         this.examAttempts = att.items || [];
         this.examTarget = prof.profile && prof.profile.target_score != null ? prof.profile.target_score : null;
       } catch (e) {
@@ -711,6 +720,7 @@ export default {
     async loadHeatmap() {
       try {
         const d = await fetchCheckinSummary();
+        this.noteSnapshot(d);
         this.hmDays = d.days || {};
         if (d.streak != null) this.svStreak = d.streak;
         if (!this._hmTracked) {
@@ -773,6 +783,7 @@ export default {
       if (snap) this.kmCov = snap.cold ? null : snap.coverage.pct;
       try {
         const d = await request(p);
+        this.noteSnapshot(d);
         this.kmCov = d.cold ? null : d.coverage.pct;
       } catch (e) { /* 非关键路径 */ }
     },
@@ -793,7 +804,9 @@ export default {
       const snap = snapPeek(p);
       if (snap) this.slStats = snap;
       try {
-        this.slStats = await request(p);
+        const d = await request(p);
+        this.noteSnapshot(d);
+        this.slStats = d;
       } catch (e) { /* 非关键路径 */ }
     },
     goShenlun() {
@@ -806,7 +819,9 @@ export default {
       const snap = snapPeek(p);
       if (snap) this.growth = snap;
       try {
-        this.growth = await request(p);
+        const d = await request(p);
+        this.noteSnapshot(d);
+        this.growth = d;
       } catch (e) { /* 非关键路径 */ }
     },
     async loadReco() {
@@ -819,24 +834,35 @@ export default {
       const vSnap = snapPeek(vp);
       if (vSnap) this.dueN = vSnap.total || 0;
       try {
-        this.reco = await request(rp);
+        const d = await request(rp);
+        this.noteSnapshot(d);
+        this.reco = d;
       } catch (e) { /* 非关键路径 */ }
       try {
         const d = await request(vp);
-        this.dueN = d.total || 0;
+        // 旧快照的到期数不当「今日待复习」陈述（与错题本 R571 同口径）：保留快照值撑行，dueSynced 留 false
+        if (!this.noteSnapshot(d)) {
+          this.dueN = d.total || 0;
+          this.dueSynced = true;
+        }
       } catch (e) { /* 非关键路径 */ }
     },
-    applyStats(d) {
+    paintStats(d) {
       this.byModule = d.by_module;
       this.byType = d.by_type;
       this.byReason = d.by_reason || [];
+    },
+    /** 真实 request 回包（snapPeek 铺屏走 paintStats）：登记快照态，主回包真实才 settle 本轮 */
+    applyStats(d) {
+      this.paintStats(d);
+      if (!this.noteSnapshot(d)) this.settleSnapshotRound();
     },
     async load() {
       this.loadErr = '';
       const sp = '/api/stats?uid=' + encodeURIComponent(anonUid());
       // 快照即显：先用最近成功快照铺屏，真实响应到达后覆盖，避免 origin 长尾下长时间空白
       const sSnap = snapPeek(sp);
-      if (sSnap) this.applyStats(sSnap);
+      if (sSnap) this.paintStats(sSnap);
       try {
         this.applyStats(await request(sp));
       } catch (e) {
@@ -853,6 +879,7 @@ export default {
 .wrap { padding: var(--sp-16) var(--page-x) calc(var(--sp-40) + 50px + env(safe-area-inset-bottom)); }
 .strip { margin-bottom: var(--card-gap); }
 .strip :deep(.kg-banner) { min-height: var(--hit-min); }
+.offbar { margin-bottom: var(--sp-12); }
 .sec { margin-bottom: var(--card-gap); }
 .unlock-s { display: block; font-size: var(--fs-sub); color: var(--ink-3); line-height: var(--lh-sub); }
 .err-row { margin-top: var(--card-gap); }

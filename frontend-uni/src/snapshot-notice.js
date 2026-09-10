@@ -15,10 +15,11 @@ export function snapshotAgeText(snapAt, now = Date.now()) {
 /**
  * @param {number} snapAt 快照时刻（ms），0 = 未知
  * @param {boolean|null} online navigator.onLine（端不支持传 null → 不断言离线）
+ * @param {string} noun 页面数据名词（错题 / 统计）
  */
-export function snapshotNotice(snapAt, online, now = Date.now()) {
+export function snapshotNotice(snapAt, online, now = Date.now(), noun = '错题') {
   const head = online === false ? '当前离线' : '网络不稳定';
-  const what = snapAt ? snapshotAgeText(snapAt, now) + '缓存的错题' : '已缓存的错题';
+  const what = snapAt ? snapshotAgeText(snapAt, now) + '缓存的' + noun : '已缓存的' + noun;
   const tail = online === false ? '联网后自动更新' : '可稍后重试';
   return head + ' · 展示' + what + '，' + tail;
 }
