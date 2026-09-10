@@ -3,6 +3,7 @@ name: testing-kaogong-assistant
 description: How to run and test the 答岸 app (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+<<<<<<< HEAD
 ## R579 经验：续练「四个数」分账 + `merge_anon` 一手取证 + 退出层不是必经路径
 
 - 续练类断言必须分四个数：`done`（已答数）、`idx`（快照保存的下标，可能指向**已答**题——答完第 3 题停在反馈态即 `idx=2`）、落地下标（`resumeIndex`：当前题已答则其后第一道未答）、首页题号文案 `next`（= 落地下标 + 1）。R579 前 hero 用 `done+1`、落点用 `idx` → 「第 4/10」却落 3/10；修后 hero/落点同源。复验固定「答 k 题停在第 k 题反馈态 → 退出 → 首页 hero 第 k+1 / 续练卡已做 k → 落点 k+1 且无反馈、选项可点」，本机与远端（删 `pendingSession`+`practiceLaunch` 后 F5，远端用服务端 `picks` 判已答）各跑一遍。小程序首页只显「已做 n/N」，不要拿题号断言它。
@@ -16,6 +17,8 @@ description: How to run and test the 答岸 app (FastAPI + uni-app H5 frontend +
 - 「同页开下一场」（练同考点 / 只重练本组错题 / 再来一组 / 每日一练）时 `session` 不翻转：断言首题**无**上一场领跑横幅、顶栏按当前来源（练同考点 `… · 强化练习`、错题本 redo `错题重练`、每日一练 `每日一练`）。R578 前生产两处都残留（375/1440 实拍）；修后 375/1440 复验 PASS。**注**：完成页「只重练本组错题」是 `retryWrong()` 就地重开，源码不改 `_source/_reinforce`，顶栏沿用本场来源（强化场重练仍「… · 强化练习」）——不要拿「错题重练」当断言（R578 复验指令初版错在这），是否应改显归 R578-1 论证。
 - `practice_progress` 的来源列叫 `psource`（无 `source`）。清理脚本 `q578c.sh <uid> ro|clean` 通用列扫描 41 表，`clean` 后打印 `after {} TOTAL 0` + `reinforce_log` 总数差。
 
+=======
+>>>>>>> b28d35fc (docs: R577 研究/设计轮（不立项）——后端 module+submodule 强化回退生产一手验证（ZL-JQ-04 2+3 题全 ziliao/比重）+ ec8206e5 后自然样本窗内 0 + 375 登录态我的/统计走查无 P0/P1 + 生产 SQLite 索引探测教训入 SKILL + handoff/状态.md)
 ## R577 经验：生产 SQLite 只读探测必须走已有索引 + 强化回退分支的一手验证法
 
 - `questions` 10.9 万行，`group by tag3 ... having` 套子查询在生产宿主（load 15–20）跑 ≈200s 被 `timeout` 杀；先 `select name, sql from sqlite_master where type='index'` 拿到 `idx_q_reinforce(tag3, disabled, correct_ratio, id)` / `idx_q_pick(module, submodule, is_real, disabled, …)`，用 `indexed by idx_q_reinforce` 只分组出 `n<10` 的 tag3（17 个）再逐 tag3 点查原字段 → 1.3s。原则：窄列、先分组后点查、每步单独计时打印，不写一条大 SQL。
