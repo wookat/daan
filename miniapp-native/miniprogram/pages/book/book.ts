@@ -223,6 +223,7 @@ Page({
     reviewing: false,
     rItems: [] as RItem[],
     rIdx: 0,
+    scrollTop: 0,
     rCur: null as RItem | null,
     rLetter: '',
     rMulti: false,
@@ -927,6 +928,10 @@ Page({
     this.setData({ reviewing: true, rItems, rIdx: 0, resumeInfo: null });
     this.resetQ();
     this.saveSnap();
+    this.scrollToTop();
+  },
+  scrollToTop() {
+    this.setData({ scrollTop: 1 }, () => this.setData({ scrollTop: 0 }));
   },
   // ---------- 复习断点（H5 saveReviewSnap/clearReviewSnap/restoreRemoteSnap/resumeReview） ----------
   saveSnap() {
@@ -1151,6 +1156,7 @@ Page({
       this.setData({ rIdx: this.data.rIdx + 1 });
       this.resetQ();
       this.saveSnap();
+      this.scrollToTop();
     } else {
       const items = this.data.rItems;
       const n = items.filter((x) => !x.extra && !x.requeued).length;
@@ -1234,5 +1240,6 @@ Page({
     this.setData({ reviewing: false, rItems: [], rCur: null });
     this.clearSnap();
     this.load();
+    this.scrollToTop();
   },
 });

@@ -3,6 +3,12 @@ name: testing-kaogong-assistant
 description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## R589 经验：复习模式走查要「读完解析」再换题 + 落地断言看 rhead top + 起点回顶别被 scrollIntoView 抵消
+
+- 错题本复习模式（`book?review=1` 冷进即 `startReview`，或列表点「开始复习」）换题同样不回顶（R588 同型，`nextReview()` 只 `rIdx++`）。走查模拟用户要 `scrollTo(0, scrollHeight)` 读完解析再点 sticky `.review .next-btn`（`scroll_into_view_if_needed` 只是把 sticky 按钮滚进来，滚动量不足以暴露）；落地断言除 `scrollY===0` 还要看 `.review .rhead` top（修前 y 被夹到 0–4 看似正常，只有新题比视口高才现形：三场 14 次换题里 1 次 r6 资料分析题 y=122、rhead −49）。每题点 A 会触发加练同类 / 重排，列表 8 → 22，循环上限要放到 60 才能走到小结。
+- 「列表下滑后点开始复习回顶」这项，Playwright `click()` / `scroll_into_view_if_needed()` 会先把按钮滚回视口把 y 归 0，等于没测；要 `window.scrollTo(0,400)` 后 `locator.evaluate('el => el.click()')` 直接派发（R589 1440 y=400 → 首题 y=0）。
+- H5 `exitReview` 的 `uni.pageScrollTo` 字面量被 R513 源锁（`tests/book-r513-exit-review-scroll-top.test.js`）锁住，抽 helper 时保留该处直调，不为通过改测试。
+
 ## R588 经验：链路走查每步量 `scrollY` 不只截图 + 换题回顶 H5/小程序两套机制 + 窄 digest 清理模板转正
 
 - 「答题 → 完成页」这类多步链路，每步落地都记 `{scrollY, scrollHeight, innerHeight, 关键元素 top}`（`~/r588/scroll588.py` 的 `MEAS`），只看截图会把「首屏是头图下半段」当成截图时机差异（R582 就漏了）。残余滚动量会被新页高夹住：短题页高 ≈ 视口时 `scrollY` 被夹到 0/1 看起来正常，长题 / 完成页（页高 1502）才现形 —— 复验要让答错后再 `mouse.wheel` 手动下滑一段，再点「下一题」，断言落地 `scrollY === 0` 且顶栏 `n/10` 元素 `top >= .uni-page-head bottom`。

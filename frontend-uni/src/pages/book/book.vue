@@ -1686,6 +1686,14 @@ export default {
       this.reviewing = true;
       this.resumeInfo = null;
       this.saveReviewSnap();
+      this.scrollToTop();
+    },
+    scrollToTop() {
+      try {
+        uni.pageScrollTo({ scrollTop: 0, duration: 0 });
+      } catch (e) {
+        /* 不支持则不滚 */
+      }
     },
     saveReviewSnap() {
       const snap = buildReviewSnap(this, anonUid(), Date.now() / 1000);
@@ -1876,6 +1884,7 @@ export default {
         this.rIdx++;
         this.resetQ();
         this.saveReviewSnap();
+        this.scrollToTop();
       } else {
         this.celebrateN = this.rItems.filter((q) => !q._extra && !q._requeued).length;
         this.dueLeft = reviewDueLeft(this.dueTotal, this.celebrateN);
