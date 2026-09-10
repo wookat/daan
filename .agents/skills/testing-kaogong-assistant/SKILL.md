@@ -7,7 +7,7 @@ description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 fr
 
 - 端到端脚本模板 `~/r578/journey.py <uid> <w> <qid> <tag3>`：`/home/ubuntu/venv-kg/bin/python`（系统 python 无 playwright）连既有 Chrome CDP `:29229`，`extra_http_headers={'X-Kg-Probe':'1'}`；深链 `#/pages/practice/practice?qid=&tag3=&module=`；题包用 `question` 字段（不是 `stem`）与 `.kg-q__stem` 对齐，按 `answer` 反选造全错；抓 `weak` 卡文本/按钮、点「练同考点」、录 reinforce 回包 `id/module/submodule/question_type/tag3` 与 `NAV TITLE`；产物 `q1/done/done-full/reinforce-q1 .png/.txt + journey.json + reqs.json`。别在末尾接 `| tail`（会被环境判成后台）。
 - 第三级 `module` 回退**只有**在「精确 tag3 活跃题全被本 uid 答过」且「同 `module+submodule` 活跃池剔本人已答后为 0」时才触发——挑「tag3 活跃题 = 领跑包」且该题 `submodule` 池 ≤ 1 的组（`ZL-JQ-05` / `ziliao/现期计算`），先答完领跑包再点练同考点。回查必须带 `disabled` 列（`ZL-JQ-05` 第 4 题、`现期计算` 第 2 题都是 disabled，光看 count 会误判）。
-- 「同页开下一场」（练同考点 / 只重练本组错题 / 再来一组 / 每日一练）时 `session` 不翻转：断言首题**无**上一场领跑横幅、顶栏按当前来源（`… · 强化练习` / `错题重练` / `每日一练`）。R578 前生产两处都残留（375/1440 实拍）。
+- 「同页开下一场」（练同考点 / 只重练本组错题 / 再来一组 / 每日一练）时 `session` 不翻转：断言首题**无**上一场领跑横幅、顶栏按当前来源（练同考点 `… · 强化练习`、错题本 redo `错题重练`、每日一练 `每日一练`）。R578 前生产两处都残留（375/1440 实拍）；修后 375/1440 复验 PASS。**注**：完成页「只重练本组错题」是 `retryWrong()` 就地重开，源码不改 `_source/_reinforce`，顶栏沿用本场来源（强化场重练仍「… · 强化练习」）——不要拿「错题重练」当断言（R578 复验指令初版错在这），是否应改显归 R578-1 论证。
 - `practice_progress` 的来源列叫 `psource`（无 `source`）。清理脚本 `q578c.sh <uid> ro|clean` 通用列扫描 41 表，`clean` 后打印 `after {} TOTAL 0` + `reinforce_log` 总数差。
 
 ## R577 经验：生产 SQLite 只读探测必须走已有索引 + 强化回退分支的一手验证法

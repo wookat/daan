@@ -51,17 +51,32 @@
 
 H5 `vitest` 196 文件 1530 全过、`npm run lint` 0、`build:h5` → `index-Cjpb2IwU.js`；`git diff --check` 空；小程序/后端 0 改动不跑。
 
-## 发版 / 生产复验
+## 发版 / 生产复验（回填）
 
-见本文末尾「回填」段（发版后补）。
+- 发版：PR #757 分支 `devin/1789034915-r578-session-switch-reset`（commit `27e09ece`），只跑 `~/r578/pages_deploy.sh`（R576 同款 Pages 静态层，后端 0 改动不叠 build）：线上 bundle `index-Cf9A4ts2 → index-Cjpb2IwU` 与本机构建一致，六类资源 200，health 前后 `ec8206e5`，`PAGES_DEPLOY_OK`。宿主同刻 mem_avail 214–218MB / health 0.77–1.29s。
+- 复验（`journey.py` 加长：练同考点首题读 `.lead-tag` + 顶栏，再答完 5 题 → 完成页「只重练本组错题」读顶栏/横幅），375 uid `test-r578-v-1789035046`、1440 uid `test-r578-v-1789035121-w`，同 fixture `qid=795021&tag3=ZL-JQ-05`：
+
+| 项 | 375 | 1440 |
+|---|---|---|
+| 领跑首题横幅「刚才那题在这里作答，之后 2 题同考点练习」+ 顶栏「资料分析 · 专项练习」（本场应有） | PASS | PASS |
+| 完成页薄弱考点「现期计算 / 本组错 3 题 / 练同考点」 | PASS | PASS |
+| 练同考点回包 `mode=reinforce&…&submodule=现期计算&tag3=ZL-JQ-05` 200、5 题全 `ziliao` 异 submodule（第三级回退再现） | PASS | PASS |
+| **练同考点首题 `.lead-tag` = null（横幅已清）** | PASS | PASS |
+| **顶栏「资料分析 · 强化练习」**（修前实拍「资料分析 · 专项练习」） | PASS | PASS |
+| 强化场答完 → 「只重练本组错题」→ 首题 `.lead-tag` = null | PASS | PASS |
+| 「只重练本组错题」顶栏仍「资料分析 · 强化练习」 | 口径：源码 `retryWrong()` 只重赋 `items/idx/…`，不改 `_source/_reinforce`，顶栏沿用本场来源是既有行为（R553 起）；我复验指令初版写「错题重练」是口径错。是否应改显「错题重练」登记 **R578-1（P3 UX）** 待论证，本轮不改 | 同 |
+| API 52 全 200、console/pageerror 0 | PASS | PASS |
+
+- 截图：`~/r578/j375/{q1,done,reinforce-q1,reinforce-done,redo-q1}.png`、`~/r578/j1440/` 同名；修前对照 `~/r578/j375-pre/reinforce-q1.png`（横幅 + 「专项练习」）。
+- 清理：两 uid 各 22 行（mistakes 8 / practice_results 2 / answer_log 8 / reinforce_log 1 / growth_events 2 / practice_progress 1）→ `after {} TOTAL 0`，`reinforce_log` 总数 `4 → 3 → 2` 回到基线。
 
 ## 验证过 / 未验证
 
 - 验证过（一手）：完整 H5「深链领跑 → 完成页薄弱考点（submodule 原值）→ 练同考点 → 5 题落地」；第三级 `module` 回退在生产真实触发（候选池 0/0 → module 补 5，回查原字段）；`reinforce_log` 满额写 1 行与精确清理 0 残留；两处既有 UX 缺陷（横幅残留、标题不重算）实拍；本地门。
-- 未验证：**R577-1** `merge_anon` 计数（未走登录链路）；子名 ≠ `submodule` 条目点「练同考点」（本例子名 = 列值）；`module|submodule` 分桶（仍仅单测）；`retryWrong / retryGroup / 每日一练 → 练同考点` 的标题重算在生产的表现（本轮只跑练同考点一条路径，发版后复验补 1–2 条）；小程序真机（R536-1 累计）、真实 SW/offline、跨设备、其它浏览器。
+- 未验证：**R577-1** `merge_anon` 计数（未走登录链路）；子名 ≠ `submodule` 条目点「练同考点」（本例子名 = 列值）；`module|submodule` 分桶（仍仅单测）；`retryGroup / 每日一练 → 练同考点` 在生产的表现（复验覆盖了练同考点 + 只重练本组错题两条同页路径；每日一练 → 练同考点只有源码推断）；小程序真机（R536-1 累计）、真实 SW/offline、跨设备、其它浏览器。
 
 ## 下一轮候选（R579）
 
 1. **R577-1**：走一次登录/合并链路，`merge_anon` 前后只读 `answer_log`（按 uid）计数定性 +1。
-2. 375 生产截图走查「练同考点」落地页首题（R578 修后）与完成页第二次「再来一组」路径，择一用户可感知小改。
+2. 375 生产截图走查每日一练完成页 → 练同考点（R576 实拍顶栏残留「每日一练」的同型，R578 修后应「… · 强化练习」）与「再来一组」路径，择一用户可感知小改。
 3. 自然样本继续回看；宿主压力只登记。
