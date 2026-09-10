@@ -59,3 +59,30 @@ describe('favorites.vue 接线', () => {
     expect(VUE).toContain("if (this.modFilter) list = list.filter((it) => it.module === this.modFilter);");
   });
 });
+
+// 生产复验 F 坐实的两条既有（非 R574 引入，源码早于本轮）：
+// 1) 云条目取消收藏只 DELETE 云端，题页 toggleFav / syncCloudFavs 写进 favQuestions 的同题本机条目在 load() 合并时复活（卡仍在、chip 不收缩）；
+// 2) 进练习页再返回后地址栏回到旧 ?tab=/?mod=（R546 book.vue 同型：replaceState(null) 抹 router state + onShow 不重写）。
+describe('favorites.vue 取消收藏与 URL 回写（R574 生产 F 既有缺陷修）', () => {
+  const VUE = read('../src/pkgA/social/favorites.vue');
+  const method = (name) => {
+    const m = VUE.match(new RegExp(`\\n {4}${name}\\([^)]*\\) \\{([\\s\\S]*?)\\n {4}\\},`));
+    expect(m, name).toBeTruthy();
+    return m[1];
+  };
+  it('unfav：云条目先 removeFav 再清本机同题（按 question，有 id 时也按 id），本机条目只清本机；removeFav 失败不动本机', () => {
+    const unfav = method('unfav');
+    expect(unfav).toContain('if (!it._local) await removeFav(it.id);');
+    expect(unfav).toContain("filter((x) => x.question !== it.question && !(it.id != null && x.id === it.id))");
+    expect(unfav.indexOf('await removeFav(it.id)')).toBeLessThan(unfav.indexOf("uni.setStorageSync('favQuestions', locals)"));
+    expect(unfav).not.toContain('} else {\n              await removeFav(it.id);');
+  });
+  it('syncUrl 保留 history.state；onShow 在 load() 后重写地址栏，深链 ?folder= 尚未落地时让位', () => {
+    expect(method('syncUrl')).toContain("window.history.replaceState(window.history.state, '', buildFavoritesUrl(");
+    const m = VUE.match(/\n {2}onShow\(\) \{([\s\S]*?)\n {2}\},/);
+    expect(m).toBeTruthy();
+    const onShow = m[1];
+    expect(onShow).toContain('if (this._pendingFolder == null) this.syncUrl();');
+    expect(onShow.indexOf('this.load();')).toBeLessThan(onShow.indexOf('this.syncUrl()'));
+  });
+});

@@ -59,4 +59,12 @@ describe('pkgSocial/favorites 接线', () => {
     expect(TS).not.toContain("...MOD_KEYS.map((m) => ({ label: modName(m), value: m }))");
     expect(WXML).toContain('<view wx:if="{{modChipsVisible}}" class="chips"><kg-chip-row options="{{modOpts}}" value="{{modFilter}}" bind:change="onModFilter" /></view>');
   });
+  it('onUnfav：云条目先 deleteFav 再清本机同题（报告页收藏同时写本机与云端，只删云端会在 load() 合并时复活）', () => {
+    const i = TS.indexOf('onUnfav(');
+    const body = TS.slice(i, TS.indexOf('onAsk(', i) > 0 ? TS.indexOf('onAsk(', i) : i + 1500);
+    expect(body).toContain('if (!it._local) await deleteFav(it.id as number);');
+    expect(body).toContain("filter((x) => x.question !== it.question)");
+    expect(body.indexOf('await deleteFav(')).toBeLessThan(body.indexOf("wx.setStorageSync('favQuestions', locals)"));
+    expect(body).not.toContain('} else {\n            await deleteFav(');
+  });
 });

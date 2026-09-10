@@ -200,6 +200,9 @@ export default {
     this.askSeenTick++;
     this.logged = !!getToken();
     this.load();
+    // 与 book.vue 同口径（R546）：进深页时 router 用自己缓存的地址覆写本条目，返回后地址栏丢 tab/mod，回来重写一次；
+    // 深链 ?folder= 尚未落地（load 里才应用）时让位，否则会把入参抹掉
+    if (this._pendingFolder == null) this.syncUrl();
   },
   watch: {
     tab() {
@@ -216,7 +219,7 @@ export default {
     syncUrl() {
       // #ifdef H5
       if (typeof window !== 'undefined' && window.history) {
-        window.history.replaceState(null, '', buildFavoritesUrl({ tab: this.tab === 'note' ? 'note' : '', mod: this.modFilter, folder: this.folderId }));
+        window.history.replaceState(window.history.state, '', buildFavoritesUrl({ tab: this.tab === 'note' ? 'note' : '', mod: this.modFilter, folder: this.folderId }));
       }
       // #endif
     },
@@ -379,12 +382,10 @@ export default {
         success: async (r) => {
           if (!r.confirm) return;
           try {
-            if (it._local) {
-              const locals = (uni.getStorageSync('favQuestions') || []).filter((x) => x.question !== it.question);
-              uni.setStorageSync('favQuestions', locals);
-            } else {
-              await removeFav(it.id);
-            }
+            if (!it._local) await removeFav(it.id);
+            // 云条目也清本机同题：题页/错题本对账（syncCloudFavs）会把云收藏写进 favQuestions，只删云端的话 load() 合并时它会以本机条目复活
+            const locals = (uni.getStorageSync('favQuestions') || []).filter((x) => x.question !== it.question && !(it.id != null && x.id === it.id));
+            uni.setStorageSync('favQuestions', locals);
             this.load();
           } catch (e) {
             uni.showToast({ title: e.message, icon: 'none' });

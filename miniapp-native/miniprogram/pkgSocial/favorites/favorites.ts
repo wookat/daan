@@ -331,12 +331,10 @@ Page({
       success: async (r) => {
         if (!r.confirm) return;
         try {
-          if (it._local) {
-            const locals = ((wx.getStorageSync('favQuestions') as LocalFav[]) || []).filter((x) => x.question !== it.question);
-            wx.setStorageSync('favQuestions', locals);
-          } else {
-            await deleteFav(it.id as number);
-          }
+          if (!it._local) await deleteFav(it.id as number);
+          // 云条目也清本机同题（题页/报告页收藏同时写本机 favQuestions 与云端，只删云端的话 load() 合并时会以本机条目复活），与 H5 同口径
+          const locals = ((wx.getStorageSync('favQuestions') as LocalFav[]) || []).filter((x) => x.question !== it.question);
+          wx.setStorageSync('favQuestions', locals);
           this.load();
         } catch (err) {
           toastInfo((err as Error).message);

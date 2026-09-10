@@ -30,9 +30,24 @@
 - 测试：H5 `tests/r574-fav-module-opts.test.js`（8：纯函数 6 + 源锁 2）；小程序 `scripts/fav-module-opts.test.ts`（6）。
 - 本地门：H5 eslint 0 / vitest 194 文件 1511 / build:h5；小程序 tsc / lint 0 / vitest 16 文件 79；`git diff --check` 空；0 后端。
 
+## 发版 + 生产复验一（Pages 静态层 `index-D0Aywqly → C1NhelQ3`，favorites chunk `pkgA-social-favorites.CHuIoHvV.js`；后端 0 改动 health 仍 `ec8206e5`）
+
+- 宿主窗口：load 15.6 / mem_avail 228MB / disk 89% / health 1.3s（比研究阶段 22.9s 好，仍宿主级慢）。只跑 4c/5/5b/6（`~/r574/pages_deploy.sh`，与 R567–R573 同做法）：bundle 一致、7 种 Accept-Encoding 全 javascript、7 条回归 200。
+- A 单模块（chip 行不渲染、CTA/卡上移、F5 / 切夹保持）/ B 两模块（3 枚按 MOD_KEYS、`?mod=yanyu` F5 保留高亮、全部去 mod）/ C 深链无收藏模块（单模块 changshi + `?mod=shuliang` → 全部/数量/常识 3 枚 + 空态 + 切回全部；**我复验指令原写「2 枚」为口径错**，按函数应 3 枚）/ D 本机 local-only（阻断 POST → `id:null` 言语 + 云常识 → 3 枚，F5 保持；删 local → 单卡行隐藏）/ E 切夹不闪 / 1440 抽检：**PASS**。
+- **F FAIL（既有，非 R574 引入）**：B 用户「重练全部收藏」→ 练习页 → 返回 → 取消言语云收藏：`DELETE /api/favs` 200 后卡以 `_local` 复活、仍 2 卡 / 3 枚，第二次（本机分支）删才收缩。根因：题页 `toggleFav` 与 `syncCloudFavs`（R561）都把云收藏写进本机 `favQuestions`，`favorites.vue unfav` 云分支只 `removeFav`，`load()` 合并时同题本机条目复活；小程序 `onUnfav` 同形（报告页收藏同时写本机+云）。源码早于本轮（`unfav` 未在 R574 diff 内），按「既有」归因，不另跑基线 bundle。
+- **F 附带 FAIL（既有）**：练习页返回后地址栏回到旧 `?tab=note` 而 UI 在收藏 tab——R546 `book.vue` 同型（`syncUrl` `replaceState(null)` 抹 router state + `onShow` 不重写），`favorites.vue` 当年未一并修。
+- 审计：API 65×200 + 1 主动 abort，超时/未终态 0；Runtime.exception / rejection 0；应用 console 2 条同一 `scrollLeft null` TypeError（练习入口，R561-1 既有 P3）。清理：本轮 `test-r574-v-%` + 研究阶段 `test-r574-shots` 11 行（mistakes 2 / favs 3 / growth 6）精确清，共享 42 行不动（细节见 testing agent 报告）。
+
+## 热修（同 PR，`favorites.vue` + 小程序 `favorites.ts`）
+
+- `unfav`：云条目 `await removeFav(it.id)` **成功后**再清本机 `favQuestions` 同题（`question` 相等，或 `it.id != null && x.id === it.id`）；本机条目仍只清本机；removeFav 失败 toast 不动本机。小程序 `onUnfav` 同口径（按 `question`）。
+- `syncUrl`：`replaceState(window.history.state, …)` 保住 router state；`onShow` 在 `load()` 后 `if (this._pendingFolder == null) this.syncUrl()`（深链 `?folder=` 由 load 落地前让位，与 R546 `_pendingKp` 守卫同理）。
+- 测试：H5 `r574-fav-module-opts.test.js` +2（10）；小程序 `fav-module-opts.test.ts` +1（7）。本地门：H5 eslint 0 / vitest 194 文件 1513 / build:h5 `index-BmUQ_r2w`；小程序 tsc / lint 0 / vitest 16 文件 80；diff --check 空。
+
 ## 证据分类
 
-- 已核实：8/8 单模块、`/api/favs` stale 0、chip 行静态 6 枚、375 首屏占位（截图）。
+- 已核实：8/8 单模块、`/api/favs` stale 0、chip 行静态 6 枚、375 首屏占位（截图）；生产复验一 A–E/1440 PASS、F 两条既有 FAIL（见上）。
 - 推断：粉笔 / 夸克按已有分类生成筛选（凭产品使用经验，未逐版本核对）。
 - UNTESTED：真机 / 小程序（R536-1 累计）、真实 SW/offline、深链 `?mod=` 指向无收藏模块的生产态（单测覆盖）。
-- 基础设施受阻：宿主 load 25 / health 22.9s，生产复验窗口需择时。
+- 基础设施受阻：研究阶段宿主 load 25 / health 22.9s；复验一窗口 load 15.6 / health 1.3s 可用。
+- 登记 R574-2（P3）：练习页入口 `scrollLeft null` TypeError（R561-1 既有）本轮再次出现 2 条，未修。
