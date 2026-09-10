@@ -3067,9 +3067,21 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 =======
 =======
+=======
+### R585（2026-09-11，研究 + H5 实修 + 生产复验 + R584-1 清账；统计页冷加载同步错题本角标 + AI 问答 placeholder 收短；H5 only 0 后端）：分支 `devin/1789053641-r585-stats-badge-ask-placeholder`（从 #762 分支开，链含 #742–#762）→ PR #763；取证 `docs/iter/round-3/r585-stats-badge-ask-placeholder.md`
+- 研究：宿主只读 load 10.6–15 / mem_avail 173MB / disk 88.6% / health 0.37s `ec8206e5`；167.8h 自然 `POST /api/practice_result` 200×4、非 2xx/status 0 **0**（非 2xx 全 harness）→ R580-1 继续不实施。375 走查（`~/r585/walk585.py`）命中两条一手小缺陷：① 统计页 `loadReco()` 拿到 `/api/review` 真实回包只写 `dueN` 不 `setBookBadge()`（首页/错题本/问答页都刷）→ 冷进统计页底栏无角标；② 问答页底部输入条可用宽 360/375/390 = 99/114/129px，原 placeholder「先拍题或粘贴题目开始」130px /「对讲解有疑问？追问 AI…」147px 三档全截断。
+- 实修（`9454e24e`）：`stats.vue` 引 `setBookBadge`，review 分支 `if (this.dueSynced) setBookBadge(this.dueN)`（只在真实回包后；旧快照 / 失败不碰；0 允许清）；`ask.vue` 两条 placeholder → 「拍题或粘贴题目」91px /「有疑问？追问 AI」95px；测试 `tests/r585-stats-badge-ask-placeholder.test.js`。第一版把 badge 写进 `if` 块内撞 R572 源锁 → 改块后调用。
+- 本地门：lint 0 / vitest 202 文件 1571 / build:h5 `index-tCexIcFM` / diff --check 空。发版 Pages only（`~/r585/pages_deploy.sh`），线上同名、health 前后 `ec8206e5`。
+- 生产复验（`~/r585/verify585.py`，375/1440 各 4 场）：A 冷进统计 1.2s/2.0s 角标「8」与到期行同 tick；B review 改 `total:0` → 角标清空；C 本机快照改 `total:3` + 阻断 review → 角标仍 8、到期行「需网络恢复后同步」；D `.uni-input-placeholder` scrollWidth == clientWidth、canvas 91/95 ≤ 114，旧文案 130/147 —— **全 PASS**；API 52+52 全 2xx，唯一 failed/console 为 C 主动 abort。口径纠正：第一版 `nth-child(3)` 点到错题本非统计（重跑）；`uni` 非 window 全局。
+- 清账：R584-1 精确 37 uid（41 剔 `test-r562-modal-a/b`、`test-r567-shots-375`、`test-r584-shots`）552 行 / 16 表 → 独立 `ro` `{}`、共享 42、保护表 digest 一致（clean 回执一次为空，登记 R585-1）；本轮 3 uid 63 行 → `{}`。
+- 未验证：追问态 placeholder 真实渲染（仅同字体 canvas）、360 真机、登录态统计页、小程序端未改、小程序真机（R536-1）、真 SW/offline、其它浏览器、跨设备。
+- 下一步 R586：① 375 生产截图走查每日一练完成页 / 错题本首屏择一小改；② R585-1 清理脚本回执；③ 自然样本回看（`practice_result` 自然非 2xx 首例即触发 R580-1）；④ R584-2/-3 等样本不主动改。
+
+>>>>>>> fc53d276 (docs(R585): 生产复验回填（tCexIcFM 375/1440 A–D 全 PASS）+ R584-1 37 uid 清账取证 + handoff + 状态.md + SKILL)
 ### R584（2026-09-11，研究/设计轮·不立项；全站加载器串行链只读枚举 + 375/1440 错题本·复习模式走查 + 自然样本 + 测试残留清账；0 代码 0 发版）：文档随 #762 分支提交；取证 `docs/iter/round-3/r584-loader-chain-audit.md`
 - 枚举（源码逐读，`await request` + `api.js` 导出包装两遍搜）：R582/R583 后 H5 已无「互不依赖却串行」的首屏链；剩余串行全是真依赖（`home.setFocus` POST→GET、`profile.getCoach` stats→coach、`book.unfavCloud` fetchFavs→removeFav）、条件回退（`practice.start` 4 级、`startDaily`）、浏览器 API 链（`pushNudgeGo`）或仅 `home_bundle` 失败回退才进入的 `home.loadBadges`（全文件唯一调用点、7d 0 次进入）。唯一「请求不依赖、应用依赖」的后置是 `book.load()` 的 `/api/mastery/map`（375 慢窗 mistakes 5.08s 回后才发、5.63s 回），但掌握度只在「按模块查看」侧卡（375 第 8 卡后、1440 右栏第 4 卡）非首屏 → 登记 R584-3 不改。**不做全站重构。**
 - 走查（`~/r584/walk584.py`，uid `test-r584-shots` 10 答 8 错）：**生产无 `/pages/review/review`**，复习 = `pages/book/book` 页内模式（storage `autoStartReview=1`），脚本第一版走错路由已改；375 慢窗 favs/review/cur/mistakes/review 同 tick 0.0 发、2.56–5.08s 回，快窗 0.61–0.63s；1440 0.97–1.05s；API 84 + 20 全 2xx、requestfailed 0、console/pageerror 0；首屏无 P0/P1。顺带：0 答离开复习会留 `rIdx=0 answered=false` 零进度快照（本机 + `review/cur`）→ 下次显「上次复习中断在第 1/8 题 · 进度已保留」，生产 `review_cur` 自然仅 1 行且非零进度 → 登记 R584-2（P3，无样本不改）。

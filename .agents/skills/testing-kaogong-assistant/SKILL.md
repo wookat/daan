@@ -8,9 +8,19 @@ description: How to run and test the 答岸 app (FastAPI + uni-app H5 frontend +
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 =======
 =======
+=======
+## R585 经验：tabBar 选择器按文案定位 + `uni` 不是 window 全局 + 旧快照隔离复验用「改本机 apiSnap + 阻断请求」
+
+- 生产 H5 底栏 `.uni-tabbar__item` 用 `nth-child(n)` 会错位（R585 第一版 `nth-child(3)` 点到的是错题本不是统计，B/C 结果整批无效）；一律用 `.uni-tabbar__item:has-text("统计")`，并在结果里带上 `pg.url` 断言落在目标页。角标读 `t[1].querySelector('.uni-tabbar__badge')`（错题本 index 1）。
+- 页面 `evaluate` 里 `uni.setTabBarBadge` 不可用（`uni` 是模块内引用，不挂 window）。要验「旧快照不刷角标」：先让首页真实回包把角标定在 8，`localStorage` 里把 `apiSnap:/api/review?uid=…` 的 `"total"` 改成另一个值，再 `route.abort` 该 GET，切到目标页 —— 角标仍 8 且到期行「需网络恢复后同步」即隔离成立。注意 `route.fulfill` 的假回包会被 `snapSave` 写进本机快照（下一场景要先覆盖）。
+- placeholder 截断直接量 `.ib-inp .uni-input-placeholder`（uni-h5 把 placeholder 渲染成独立 div）：`scrollWidth > clientWidth` 即截断；`getAttribute('placeholder')` 在 `uni-input` 外层拿不到。可用宽取 `.uni-input-input` 盒宽减 padding。
+- 清理脚本 clean 模式 stdout 可能为空（R585 一次，原因未明）：不把「有回执」当已清，也不把「无回执」当未清 —— 必须再独立跑一次 `ro` 看目标 uid 命中 `{}` + 共享 42 + 保护表 digest。
+
+>>>>>>> fc53d276 (docs(R585): 生产复验回填（tCexIcFM 375/1440 A–D 全 PASS）+ R584-1 37 uid 清账取证 + handoff + 状态.md + SKILL)
 ## R584 经验：复习页是错题本页内模式 + 串行链枚举要连 `api.js` 包装一起搜 + 清账要盘全表 `test-%` 不只本轮前缀
 
 - 生产**没有** `/pages/review/review`（`pages.json` 无此页）：复习 = `pages/book/book` 页内 `reviewing` 模式，脚本入口是先写 storage `autoStartReview=1` 再冷加载 `#/pages/book/book`（首页「开始复习」CTA 同路径）。走查前先 `grep -n '"path"' src/pages.json` 核路由，别照页面名猜。
