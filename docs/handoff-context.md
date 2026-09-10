@@ -3077,9 +3077,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 实修（`9454e24e`）：`stats.vue` 引 `setBookBadge`，review 分支 `if (this.dueSynced) setBookBadge(this.dueN)`（只在真实回包后；旧快照 / 失败不碰；0 允许清）；`ask.vue` 两条 placeholder → 「拍题或粘贴题目」91px /「有疑问？追问 AI」95px；测试 `tests/r585-stats-badge-ask-placeholder.test.js`。第一版把 badge 写进 `if` 块内撞 R572 源锁 → 改块后调用。
 - 本地门：lint 0 / vitest 202 文件 1571 / build:h5 `index-tCexIcFM` / diff --check 空。发版 Pages only（`~/r585/pages_deploy.sh`），线上同名、health 前后 `ec8206e5`。
 - 生产复验（`~/r585/verify585.py`，375/1440 各 4 场）：A 冷进统计 1.2s/2.0s 角标「8」与到期行同 tick；B review 改 `total:0` → 角标清空；C 本机快照改 `total:3` + 阻断 review → 角标仍 8、到期行「需网络恢复后同步」；D `.uni-input-placeholder` scrollWidth == clientWidth、canvas 91/95 ≤ 114，旧文案 130/147 —— **全 PASS**；API 52+52 全 2xx，唯一 failed/console 为 C 主动 abort。口径纠正：第一版 `nth-child(3)` 点到错题本非统计（重跑）；`uni` 非 window 全局。
-- 清账：R584-1 精确 37 uid（41 剔 `test-r562-modal-a/b`、`test-r567-shots-375`、`test-r584-shots`）552 行 / 16 表 → 独立 `ro` `{}`、共享 42、保护表 digest 一致（clean 回执一次为空，登记 R585-1）；本轮 3 uid 63 行 → `{}`。
+- 清账：R584-1 精确 37 uid（41 剔 `test-r562-modal-a/b`、`test-r567-shots-375`、`test-r584-shots`）552 行 / 16 表 → 独立 `ro` `{}`、共享 42、保护表 digest 一致（clean 回执一次为空，登记 R585-2）；本轮 3 uid 63 行 → `{}`。
 - 未验证：追问态 placeholder 真实渲染（仅同字体 canvas）、360 真机、登录态统计页、小程序端未改、小程序真机（R536-1）、真 SW/offline、其它浏览器、跨设备。
-- 下一步 R586：① 375 生产截图走查每日一练完成页 / 错题本首屏择一小改；② R585-1 清理脚本回执；③ 自然样本回看（`practice_result` 自然非 2xx 首例即触发 R580-1）；④ R584-2/-3 等样本不主动改。
+- 下一步 R586：① 375 生产截图走查每日一练完成页 / 错题本首屏择一小改；② R585-2 清理脚本回执；③ 自然样本回看（`practice_result` 自然非 2xx 首例即触发 R580-1）；④ R584-2/-3 等样本不主动改。
 
 >>>>>>> fc53d276 (docs(R585): 生产复验回填（tCexIcFM 375/1440 A–D 全 PASS）+ R584-1 37 uid 清账取证 + handoff + 状态.md + SKILL)
 ### R584（2026-09-11，研究/设计轮·不立项；全站加载器串行链只读枚举 + 375/1440 错题本·复习模式走查 + 自然样本 + 测试残留清账；0 代码 0 发版）：文档随 #762 分支提交；取证 `docs/iter/round-3/r584-loader-chain-audit.md`
