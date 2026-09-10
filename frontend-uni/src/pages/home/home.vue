@@ -17,7 +17,7 @@
         <!-- Hero：零作答 = 一句价值 + 1 CTA（可关闭）；有记录 = 今日已练 N/goal + 1 主按钮 + 连签 -->
         <view v-if="showLanding" class="hero-wrap">
           <kg-hero-card
-            label="拍题 AI 讲解 · 错题按遗忘曲线复习 · 迷你模考"
+            label="拍题 AI 讲解 · 遗忘曲线复习 · 迷你模考"
             value="10万+"
             unit="行测题免费刷，免注册即练"
             :primary="{ text: '免注册立即开练' }"
@@ -1243,6 +1243,7 @@ export default {
 
 /* Hero */
 .hero-wrap { position: relative; }
+.hero-wrap :deep(.kg-hero__top) { padding-right: var(--sp-32); }
 .hero-wrap :deep(.kg-hero__num) { white-space: nowrap; flex-shrink: 0; }
 .hero-wrap :deep(.kg-hero__total) { min-width: 0; line-height: var(--lh-body); }
 .hero-x { position: absolute; top: var(--sp-8); right: var(--sp-8); width: var(--hit-min); height: var(--hit-min); display: flex; align-items: center; justify-content: center; border-radius: var(--r-full); }
