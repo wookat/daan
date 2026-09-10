@@ -124,10 +124,14 @@ describe('stats.vue 接线', () => {
     expect(tpl).toContain("{{ dueSynced ? dueN + ' 题今日待复习' : offlineView ? '到期数需网络恢复后同步' : '正在同步到期数…' }}");
     expect(tpl).not.toContain('{{ dueN }} 题今日待复习');
   });
-  it('/api/review：旧快照不置 dueSynced（snapPeek 值只撑行）；真实回包才写 dueN + dueSynced', () => {
+  it('/api/review：旧快照不置 dueSynced（snapPeek 值只撑行）且清上一轮的已同步态；真实回包才写 dueN + dueSynced', () => {
     const reco = method('loadReco');
     expect(reco).toContain("if (vSnap) this.dueN = vSnap.total || 0;");
-    expect(reco).toContain('if (!this.noteSnapshot(d)) {\n          this.dueN = d.total || 0;\n          this.dueSynced = true;\n        }');
+    // 同一 Document 内切 tab 回来（onShow → refreshAccountData）review 回退旧快照：上一轮 dueSynced=true 不能沿用（生产 F FAIL）
+    expect(reco).toContain('if (!this.noteSnapshot(d)) {\n          this.dueN = d.total || 0;\n          this.dueSynced = true;\n        } else {\n          this.dueSynced = false;\n        }');
+    // 错题本同形：load() 暖轮 review 旧快照同样清 dueSynced（due 列表保留，headStats 显 —）
+    const book = read('../src/pages/book/book.vue');
+    expect(book).toContain('if (this.due.length && !this.reviewing) this.startReview();\n          }\n        }\n        if (staleR) this.dueSynced = false;\n        this.setSnapshotView(staleD, staleR);');
     expect(script).toContain('dueN: 0, dueSynced: false,');
     expect(method('resetAccountState')).toContain('this.dueN = 0;\n      this.dueSynced = false;');
   });

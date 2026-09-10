@@ -840,10 +840,12 @@ export default {
       } catch (e) { /* 非关键路径 */ }
       try {
         const d = await request(vp);
-        // 旧快照的到期数不当「今日待复习」陈述（与错题本 R571 同口径）：保留快照值撑行，dueSynced 留 false
+        // 旧快照的到期数不当「今日待复习」陈述（与错题本 R571 同口径）：保留快照/上轮值撑行，dueSynced 置 false
         if (!this.noteSnapshot(d)) {
           this.dueN = d.total || 0;
           this.dueSynced = true;
+        } else {
+          this.dueSynced = false;
         }
       } catch (e) { /* 非关键路径 */ }
     },

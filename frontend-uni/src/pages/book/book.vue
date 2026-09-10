@@ -1557,6 +1557,7 @@ export default {
             if (this.due.length && !this.reviewing) this.startReview();
           }
         }
+        if (staleR) this.dueSynced = false;
         this.setSnapshotView(staleD, staleR);
         this.applyPendingKp();
         this.applyPendingScanJump();
