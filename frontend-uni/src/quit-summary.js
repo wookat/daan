@@ -1,3 +1,8 @@
+// 全部答完（停在末题反馈态未按「完成」）：离页时视同完成而非中途退出
+export function allAnswered(items) {
+  return Array.isArray(items) && items.length > 0 && items.every((q) => !!(q && q._picked));
+}
+
 // 练习中途「退出」：已答且还有未答时才值得问一句要不要保留进度；返回 null 表示直接退出即可
 export function quitSummary(items, eligible) {
   if (!eligible || !Array.isArray(items) || !items.length) return null;
