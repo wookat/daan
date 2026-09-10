@@ -5,6 +5,7 @@ import { setFav } from '../../api/social';
 import type { FavFolder, NoteItem, Question } from '../../api/types';
 import { askPrefill, askQid, findAskSid } from '../../utils/ask-sessions';
 import { getToken } from '../../utils/auth';
+import { dropFavItem } from '../../utils/fav-list';
 import { favModulePlan } from '../../utils/fav-module-opts';
 import { MODULE_KEYS, MODULES, moduleLabel } from '../../utils/module-meta';
 import { toastInfo } from '../../utils/toast';
@@ -99,7 +100,8 @@ Page({
 
   // ---------- 收藏 ----------
   async load() {
-    this.setData({ loading: true, favErr: '' });
+    // 已有列表在手时（onShow 回来 / 取消收藏 / 移动后）后台刷新不铺骨架，列表原地收缩（与 H5 同口径）
+    this.setData({ loading: !this.items.length, favErr: '' });
     try {
       const [f, v] = await Promise.all([fetchFavFolders(), fetchFavs()]);
       const folders = f.items;
@@ -335,6 +337,11 @@ Page({
           // 云条目也清本机同题（题页/报告页收藏同时写本机 favQuestions 与云端，只删云端的话 load() 合并时会以本机条目复活），与 H5 同口径
           const locals = ((wx.getStorageSync('favQuestions') as LocalFav[]) || []).filter((x) => x.question !== it.question);
           wx.setStorageSync('favQuestions', locals);
+          // 云端已确认删除：列表先本地收缩，再后台对账（不铺骨架）
+          const next = dropFavItem(this.items, this.data.folders, it);
+          this.items = next.items;
+          this.setData({ folders: next.folders, hasItems: this.items.length > 0 });
+          this.render();
           this.load();
         } catch (err) {
           toastInfo((err as Error).message);

@@ -6,7 +6,7 @@
     <!-- 收藏题目 -->
     <block wx:if="{{tab === 'fav'}}">
       <kg-card wx:if="{{loading}}" variant="raised"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
-      <kg-empty wx:elif="{{favErr}}" icon="wifi-off" title="加载失败：{{favErr}}" ctaText="重试" bind:cta="load" />
+      <kg-empty wx:elif="{{favErr && !hasItems}}" icon="wifi-off" title="加载失败：{{favErr}}" ctaText="重试" bind:cta="load" />
       <kg-empty
         wx:elif="{{!hasItems}}"
         icon="star"
