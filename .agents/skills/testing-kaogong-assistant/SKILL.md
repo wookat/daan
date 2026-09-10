@@ -3,6 +3,14 @@ name: testing-kaogong-assistant
 description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## R588 经验：链路走查每步量 `scrollY` 不只截图 + 换题回顶 H5/小程序两套机制 + 窄 digest 清理模板转正
+
+- 「答题 → 完成页」这类多步链路，每步落地都记 `{scrollY, scrollHeight, innerHeight, 关键元素 top}`（`~/r588/scroll588.py` 的 `MEAS`），只看截图会把「首屏是头图下半段」当成截图时机差异（R582 就漏了）。残余滚动量会被新页高夹住：短题页高 ≈ 视口时 `scrollY` 被夹到 0/1 看起来正常，长题 / 完成页（页高 1502）才现形 —— 复验要让答错后再 `mouse.wheel` 手动下滑一段，再点「下一题」，断言落地 `scrollY === 0` 且顶栏 `n/10` 元素 `top >= .uni-page-head bottom`。
+- 回顶机制两端不同：H5 页面滚动在 document，`uni.pageScrollTo({scrollTop:0, duration:0})` 在 uni-shared 里 `duration 0` 同步置 `documentElement.scrollTop`（`book.vue` 既有）；小程序练习页主体是 `<scroll-view class="page-scroll">`，`wx.pageScrollTo` 无效（`scripts/page-scroll-lock.test.ts` 锁此规则），要绑 `scroll-top="{{scrollTop}}"` 并 `setData({scrollTop:1}, () => setData({scrollTop:0}))`（同值不触发，shenlun 同法）。H5 挂 `watch.idx` 一处覆盖下一题 / 答题卡跳题 / 完成 / 同页新一场；答错的 `revealAfter` 不改 `idx` 不会被抵消（复验答错反馈态 y>0 仍成立）。
+- 完成页成绩头图是 `kg-hero-card`：标题文字节点 `本组完成`（按卷 `本卷完成`）、大数字 `.kg-hero__num`（R588 第一场用「无子节点且全数字」找大数字失败，因 `20` 与 `%` 是兄弟 text 节点 —— 直接用组件 class）。
+- 首页 CTA「免注册立即开练」→ 练习页切换时刻偶见 `/api/home_bundle` `requestfailed` 紧接 `api.js` 重试 200：归「页面切换取消在途请求」（推断），不计自然失败、不算缺陷。
+- 清理模板转正 `~/r588/clean588.py` + `run_clean588.sh <ro|clean> <out> [uids.json]`（`KG_CLEAN_TIMEOUT=300`）：两批有命中实战 40 + 63 行 ro→clean→ro 回执逐表相等、after/独立 ro `{}`、共享 42、41 表窄聚合 before==after，clean 单趟 0.2s。仍是三步：独立 `ro` → `clean`（看 `receipt {"deleted":…}` 与 before 逐表相等）→ 独立 `ro` `{}`；多轮 uid 最后合并一次 `ro`。
+
 ## R587 经验：走查脚本先 stub `/api/track` + 绝对定位控件与文字的几何要按热区/glyph 两口径量 + 自动几何审计只当线索
 
 - 生产走查脚本导航前一律 `ctx.route('**/api/track', r => r.fulfill(200, '{"ok":true,"stubbed":true}'))`：uni-h5 首页/错题本一进页就发 track，不 stub 则「只看不答」也落 `growth_events`（R586 落 1 行）；R587 stub 后 20 路由 + 4 尺寸复验两 uid 独立 `ro` `{}`，0 清理。stub 命中数也要打出来（验证 route 真生效）。
