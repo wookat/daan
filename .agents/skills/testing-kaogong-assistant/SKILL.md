@@ -3,6 +3,13 @@ name: testing-kaogong-assistant
 description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## R586 经验：窄屏折行先量 flex 链再改 + 清理脚本「空回执」= timeout 杀在 commit 后 print 前
+
+- 窄屏文字折行不要只看截图：同 bundle 下用 `getBoundingClientRect` 量 `.cal-head → .cal-title → .cal-ym` 每层宽 + canvas `measureText` 同字体量文案宽，行数 = `height / lineHeight`；四档 360/375/390/1440 一起量才能说清「哪档折、差多少」（R586：可用 92.5/100.6 vs 文案 104.4）。同一 flex 行里不可压的 `kg-tag` 会先抢宽，热区 `.cal-btn` 没 `flex-shrink:0` 会被压到 <44 也要顺手量。
+- 生产日历路由是 `/pages/stats/calendar`（`pages.json`），复验要点「上个月」再点「下个月」看往期月份文案同样单行、`isCurMonth` 时下个月 `dis`。
+- 清理脚本 stdout 为空的一手原因：宿主 `state()` 单趟 27–84s（10 张保护表全表 digest），clean 两趟 >170s 被 `sudo timeout 170` SIGTERM 杀在 `commit()` 之后、末尾唯一 `print` 之前 → exit 124、stdout 空、**数据已删**。launcher 必须落 `EXIT`（124=timeout）和 stderr；脚本 commit 后要先单独吐一行 `{"deleted":…}` 再算 after 态。模板 `~/r586/clean586.py` + `run_clean586.sh`（`KG_CLEAN_TIMEOUT=400`）。stdout 空 ≠ 已清/未清，仍必须独立 `ro` 复核（目标 `{}` + 共享 42 + digest）。
+- 底栏切 tab 时 `static/tab/home-on.png / book.png` `requestfailed ERR_ABORTED` 是 uni-h5 换图标 src 取消在途请求，归「框架/非 API」一类，不计入自然失败。
+
 ## R585 经验：tabBar 选择器按文案定位 + `uni` 不是 window 全局 + 旧快照隔离复验用「改本机 apiSnap + 阻断请求」
 
 - 生产 H5 底栏 `.uni-tabbar__item` 用 `nth-child(n)` 会错位（R585 第一版 `nth-child(3)` 点到的是错题本不是统计，B/C 结果整批无效）；一律用 `.uni-tabbar__item:has-text("统计")`，并在结果里带上 `pg.url` 断言落在目标页。角标读 `t[1].querySelector('.uni-tabbar__badge')`（错题本 index 1）。
