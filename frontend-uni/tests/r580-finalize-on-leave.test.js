@@ -83,6 +83,23 @@ describe('practice.vue 离页视同完成', () => {
     expect(sd).toContain('this.dailyStats = d;\n          if (silent) return d;');
   });
 
+  it('离页视同完成的 payload 全部在首个 await 之前同步取值（leave()/卸载随后清 items/session 不影响成绩、打卡、作答补报）', () => {
+    const sr = fnBody('    async submitResult(silent = false) {', '    async syncRedoReviews() {');
+    // submitResult 首个 await 就是 practice_result 请求本身：uid/module/n/correct/secs 在调用时刻求值
+    expect(sr.indexOf('await ')).toBe(sr.indexOf("await request('/api/practice_result', {"));
+    expect(sr).toContain("data: { uid: anonUid(), module: this.lastModule || '', n: this.items.length, correct: this.right, secs: this.totalSecs }");
+    // 作答补报用提前取下的 items 引用，不再读 this.items
+    expect(sr).toContain('await this.logAttempts(items);');
+    // markDailyDone 同步构造 payload 后才交给 sendDailyResult（其中才有网络等待）
+    const md = fnBody('    markDailyDone(silent = false) {', '    sendDailyResult(payload, silent = false) {');
+    expect(md).not.toContain('await ');
+    // 二次触发（页内退出 leave → navigateBack → onUnload）靠 resultSent 幂等：finalizeIfAnswered 与 submitResult 均以 resultSent 为闸
+    const fin = fnBody('    finalizeIfAnswered() {', '    async submitResult(silent = false) {');
+    expect(fin).toContain('this.resultSent');
+    expect(sr).toContain('if (this.beiMode || this.resultSent || !this.items.length) return;\n');
+    expect(sr).toContain('this.resultSent = true;');
+  });
+
   it('自然完成路径（idx 走到末尾）仍按原顺序 markDailyDone → submitResult，不带 silent', () => {
     expect(practice).toContain('this.markDailyDone();\n        this.markShizhengDone();\n        this.submitResult();');
   });
