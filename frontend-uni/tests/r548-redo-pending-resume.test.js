@@ -36,7 +36,7 @@ describe('R548 pendingSession redo 标记', () => {
     const now = 1700000000000;
     const items = [{ ...redoItem, _picked: '' }, { ...redoItem, id: 12 }];
     expect(parsePendingPractice({ t: now, items, lastModule: null, redo: 1 }, now)).toEqual({
-      done: 0, total: 2, module: '', ptitle: '', redo: true, daily: null,
+      done: 0, next: 1, total: 2, module: '', ptitle: '', redo: true, daily: null,
     });
     expect(parsePendingPractice({ t: now, items, lastModule: 'yanyu' }, now).redo).toBe(false);
   });

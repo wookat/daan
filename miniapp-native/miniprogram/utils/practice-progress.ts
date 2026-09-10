@@ -37,6 +37,19 @@ function clamp(v: unknown, hi: number): number {
   return Number.isInteger(v) && (v as number) >= 0 ? Math.min(v as number, hi) : 0;
 }
 
+// 续做落点（与 H5 resumeIndex 同口径）：快照 idx 停在已答题则接着其后第一道未答题（其后没有再从头找），未答题原地不动
+export function resumeIndex(items: ProgressQuestion[], idx: unknown): number {
+  const n = Array.isArray(items) ? items.length : 0;
+  if (!n) return 0;
+  const i = clamp(idx, n - 1);
+  const picked = (q: ProgressQuestion) => !!(q && q._picked);
+  if (!picked(items[i])) return i;
+  const after = items.findIndex((q, k) => k > i && !picked(q));
+  if (after !== -1) return after;
+  const any = items.findIndex((q) => !picked(q));
+  return any !== -1 ? any : i;
+}
+
 export function collectPracticeProgress(
   items: ProgressQuestion[],
   idx: number,
@@ -103,7 +116,7 @@ export function adoptPracticeResume(d: PracticeResumeResp | null): ResumeSnap | 
   });
   return {
     items,
-    idx: clamp(d.idx, items.length - 1),
+    idx: resumeIndex(items, d.idx),
     right: clamp(d.right, items.length),
     streak: clamp(d.streak, items.length),
     bestStreak: clamp(d.best_streak, 10000),
