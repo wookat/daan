@@ -5,6 +5,7 @@ import { setFav } from '../../api/social';
 import type { FavFolder, NoteItem, Question } from '../../api/types';
 import { askPrefill, askQid, findAskSid } from '../../utils/ask-sessions';
 import { getToken } from '../../utils/auth';
+import { favModulePlan } from '../../utils/fav-module-opts';
 import { MODULE_KEYS, MODULES, moduleLabel } from '../../utils/module-meta';
 import { toastInfo } from '../../utils/toast';
 
@@ -77,7 +78,8 @@ Page({
     rows: [] as FavRow[],
     notes: [] as NoteRow[],
     modFilter: '',
-    modOpts: [{ label: '全部模块', value: '' }, ...MOD_KEYS.map((m) => ({ label: modName(m), value: m }))],
+    modOpts: [{ label: '全部模块', value: '' }],
+    modChipsVisible: false,
     curFolderName: '全部收藏',
   },
 
@@ -138,6 +140,7 @@ Page({
 
   render() {
     const { folderId, modFilter, folders } = this.data;
+    const plan = favModulePlan(this.items, modFilter, MOD_KEYS, modName);
     let list = this.items;
     if (folderId != null) list = list.filter((it) => it.folder_id === folderId);
     if (modFilter) list = list.filter((it) => it.module === modFilter);
@@ -167,7 +170,7 @@ Page({
       const f = folders.find((x) => x.id === folderId);
       curFolderName = f ? '「' + f.name + '」' : '本夹';
     }
-    this.setData({ rows, curFolderName });
+    this.setData({ rows, curFolderName, modOpts: plan.opts, modChipsVisible: plan.visible });
   },
 
   onTab(e: WechatMiniprogram.CustomEvent<{ value: 'fav' | 'note' }>) {

@@ -53,8 +53,8 @@
           </kg-card>
         </template>
         <template #main>
-          <!-- 模块筛选 -->
-          <kg-chip-row v-model="modFilter" :options="modOpts" class="chips" />
+          <!-- 模块筛选：只列本人有收藏的模块，只有 1 个模块时不显示 -->
+          <kg-chip-row v-if="modChipsVisible" v-model="modFilter" :options="modOpts" class="chips" />
 
           <kg-empty-state
             v-if="!shownItems.length"
@@ -133,6 +133,7 @@
 import { createFavFolder, deleteFavFolder, fetchFavFolders, fetchFavs, fetchNotes, getToken, removeFav, renameFavFolder, setFav, trackEvent } from '../../api.js';
 import { askPrefill } from '../../ask-prefill.js';
 import { askQid, findAskSid } from '../../ask-link.js';
+import { favModulePlan } from '../../fav-module-opts.js';
 import { buildFavoritesUrl, parseFavoritesOpts } from '../../favorites-url.js';
 import { MODULES, MODULE_KEYS, moduleLabel } from '../../module-meta.js';
 import { segResizeMixin } from '../../seg-resize.js';
@@ -168,8 +169,14 @@ export default {
     tabLabel() {
       return (TAB_OPTS.find((o) => o.value === this.tab) || TAB_OPTS[0]).label;
     },
+    modPlan() {
+      return favModulePlan(this.items, this.modFilter, MOD_KEYS, (m) => this.modName(m));
+    },
     modOpts() {
-      return [{ label: '全部模块', value: '' }, ...MOD_KEYS.map((m) => ({ label: this.modName(m), value: m }))];
+      return this.modPlan.opts;
+    },
+    modChipsVisible() {
+      return this.modPlan.visible;
     },
     shownItems() {
       let list = this.items;
