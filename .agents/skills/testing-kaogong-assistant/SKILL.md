@@ -3,6 +3,14 @@ name: testing-kaogong-assistant
 description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## R569/R570 经验：cache-first 首帧两态 + 「离线」两层 + History 问题的基线复现归因
+- 错题本带 `?kp/?qt/?kp3` 深链 F5 自 R569 起首帧就是筛选态（provisional：缓存命中即落地、不消费 pending、不校正 URL），真实回包后终判（命不中 fail-closed 清筛选 + `syncBookUrl`）。复验断言分两帧：回包前「1 卡 + `—题/—分钟` + 『正在同步今日待复习…』、无『开始复习』/无『今天没有到期错题』」；回包后「同 1 卡 + 真实到期数/分钟 + CTA」。真 0 到期必须另起用例（PATCH 已掌握 → review `total 0` → F5 显 `0 题 / 0 分钟` + 『今天没有到期错题』，**不是** `—`）。
+- 「离线」有两层，指令必须写清测哪层：① `api.js request()` GET 网络失败回退 `apiSnap:<path>` 快照（R90，`stale_fallback` 埋点）——两条 API 都有快照时页面**不进 catch**，header 直接显旧 5/4，这是既有分层不是 FAIL；② `book.vue` catch 兜底——只有两条 API 都无快照时到达，显离线 banner + 「离线中 · 今日待复习需联网后同步」+ `—/—`。要测 ②，按当前 uid **精确删** `apiSnap:/api/mistakes?uid=…` 与 `apiSnap:/api/review?uid=…` 两键及 `apiSnapIndex` 对应项，`mistakesCache` 保留（byte-for-byte 核对），再 abort + F5。
+- 生产 FAIL 归因铁律：同 fixture（生产专用 uid 只读转发 GET、非 GET 本地 200 不写生产）同流程在**基线 bundle** 上复跑一次再下结论；两套都复现 = 既有，单独立轮修，不动当前 PR。本地服务两套 dist 用 `python -m http.server` 各占端口，Playwright `route.fulfill(ctx.request.get(...))`（`route.continue_(url=)` 跨协议会报 `New URL must have same protocol`）。
+- History 类问题用 `window.__hist` 钩子（`pushState/replaceState` 包一层记 `u` + 调用栈前 4 帧，`popstate/hashchange` 记 `location.href`）逐条对账；「最终 URL 变了」≠「有人 replaceState 改了 URL」——R569 D 是链式补跳落到「开层前 query」的真条目。R570 起链落地会触发 `onSheetHistoryLanded` → book chunk `syncBookUrl` 一次 replaceState 补回全筛选，复验断言：落地 URL 含 kp/qt、`history.state.__kgSheet` 为空、1 卡、随后 F5 保持、再一次 Back 离页；直接从哑条目 Back 离页 / 层开着 / 地址栏改 hash（`away`）时 `__hist` 里**不得**出现该次 replaceState。
+- 哑条目复现序列的 chip 点击用宿主 id `#kgchip-changshi`，`.modchips` 内嵌 text locator 会被宿主 `uni-view` 拦截 pointer events。
+- 练习页「结束本组并退出」（R563 E）要在多题且部分作答后才走 quitSummary 三选项层；未作答单题直接退出是既有门槛不是 FAIL。redo/深页启动在 origin 间歇慢（health 5s+）时 12s+20s 自动重试 abort → 记录 CDP 时间戳按环境分账为 UNTESTED，不为等 origin 无限重试。
+
 ## R568 经验：慢 origin 下 cache-first 首屏 vs 稳定态分账 + 宿主级阻塞时的复验/清理收口
 - 更多操作层标题自 R568 起为 `moreTitle` = `组名 · 简称`（「法律 · 个税」），与卡面/chip 同口径；四值（显示 / 库内 `question_type` / URL `qt` / redo `qtype`）仍分开断言，后三者不变。统计页 0 作答：`/api/growth total=0` + `/api/stats` 分布非空 → hero 总正确率 `—`、其余卡仍渲染（`hasData()` 不变）；总数 0 不等于分布空，两口径一起断言。
 - 错题本带筛选（`?mod=&qt=`）物理 F5 是 cache-first：先渲染本地缓存全量卡 + 待复习 0，真实回包后才收敛为筛选态。慢 origin（本轮 ~30s）下这两个状态相隔很久，**必须两态各截时间戳截图 + 对齐 API request/abort/response 时间线**，不能凭早期一张截图判「筛选丢失」（本轮 1440 F5 初判 FAIL 后纠正为既有 P2 R568-1）。
